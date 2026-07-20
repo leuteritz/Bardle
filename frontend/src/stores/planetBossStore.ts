@@ -5,6 +5,8 @@ import {
   BOSS_HP_LEVEL_SCALE,
   BOSS_HP_CPS_SCALE,
   BOSS_HP_POWER_SCALE,
+  BOSS_HP_PER_CHAMPION_STAR,
+  BOSS_HP_PER_GALAXY,
   BOSS_ENRAGE_BASE_SECONDS,
   BOSS_ENRAGE_LEVEL_STEP,
   BOSS_ENRAGE_MAX_SECONDS,
@@ -115,12 +117,25 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const hpSectionMult = sectionConfig?.difficultyMultiplier ?? 1
       const enrageSectionMult = sectionConfig?.enrageMultiplier ?? 1
 
+      // Gegengewicht zu den Schadensquellen im Star-Fight-Modal: Team-Stärke
+      // (Summe der Stern-Level aller aufgestellten Champions) und Galaxie-
+      // Fortschritt skalieren die Boss-HP mit
+      const battleStore = useBattleStore()
+      const totalChampionStars = battleStore.headerSlots.reduce(
+        (sum, name) => (name ? sum + getChampionStarLevel(name) : sum),
+        0,
+      )
+      const championMult = 1 + totalChampionStars * BOSS_HP_PER_CHAMPION_STAR
+      const galaxyMult = 1 + (galaxyStore.currentGalaxy - 1) * BOSS_HP_PER_GALAXY
+
       const maxHP = Math.floor(
         BOSS_BASE_HP *
           (1 + level / BOSS_HP_LEVEL_SCALE) *
           (1 + cps / BOSS_HP_CPS_SCALE) *
           (1 + power / BOSS_HP_POWER_SCALE) *
-          hpSectionMult,
+          hpSectionMult *
+          championMult *
+          galaxyMult,
       )
 
       const bonusSeconds =

@@ -138,6 +138,10 @@ export const BATTLE_RETURN_TICK_MS = 250 // countdown refresh of the "Return to 
 // Planet Boss Fight
 export const BOSS_BASE_HP = 200
 export const BOSS_HP_LEVEL_SCALE = 10
+// Gegengewicht zu den vielen sichtbaren Schadensquellen im Star-Fight-Modal:
+// jeder Champion-Stern im Team und jede erreichte Galaxie skalieren die HP mit
+export const BOSS_HP_PER_CHAMPION_STAR = 0.1 // +10% HP per star level of each slotted champion
+export const BOSS_HP_PER_GALAXY = 0.2 // +20% HP per galaxy beyond the first
 export const BOSS_HP_CPS_SCALE = 50
 export const BOSS_HP_POWER_SCALE = 5000
 export const BOSS_ENRAGE_BASE_SECONDS = 30

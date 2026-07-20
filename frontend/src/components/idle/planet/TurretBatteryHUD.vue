@@ -14,23 +14,16 @@
       >
         <img :src="turretImage" alt="" draggable="false" />
       </div>
-      <span class="tbh-dmg">{{ t.dmg }} dmg</span>
+      <!-- Info-Plate im Striker-Stil: Slot-Nummer + dmg/s -->
+      <div class="tbh-plate">
+        <span class="tbh-plate-name">Slot {{ t.slotNum }}</span>
+        <span class="tbh-plate-stats">{{ t.dmg }} dmg/s</span>
+      </div>
     </div>
 
     <!-- Cooldown-Ringe: EIN Canvas für alle Turrets, ein Draw-Pass pro Frame —
          statt 6 SVGs mit durchgehender stroke-dasharray-Animation -->
     <canvas ref="ringCanvas" class="tbh-ring-canvas" />
-
-    <!-- Ein Label pro belegter Flanke, unter der Spalte -->
-    <div
-      v-for="side in activeSides"
-      :key="'caption-' + side.key"
-      class="tbh-caption"
-      :style="{ left: `${side.xPct}%`, top: `${captionYPct}%` }"
-    >
-      <span class="tbh-caption-title">Turret Battery</span>
-      <span class="tbh-caption-dps">{{ side.dps }} dmg/s</span>
-    </div>
 
     <!-- Kometen-Volleys Richtung Boss -->
     <span
@@ -89,6 +82,7 @@ const bossAlive = computed(() => {
 
 interface TurretEntry {
   slotId: string
+  slotNum: number
   dmg: number
   xPct: number
   yPct: number
@@ -106,6 +100,7 @@ const turrets = computed<TurretEntry[]>(() =>
       const mul = s.jungleBuff?.active ? s.jungleBuff.multiplier : 1
       return {
         slotId: s.id,
+        slotNum,
         dmg:
           Math.round(
             PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(s.level) * mul * 10,
@@ -116,26 +111,7 @@ const turrets = computed<TurretEntry[]>(() =>
     }),
 )
 
-// Label pro belegter Flanke mit der Flanken-Summe
-const activeSides = computed(() => {
-  const sides: { key: string; xPct: number; dps: number }[] = []
-  for (const [key, xPct] of [
-    ['left', TURRET_BATTERY_LEFT_X_PCT],
-    ['right', TURRET_BATTERY_RIGHT_X_PCT],
-  ] as const) {
-    const dps = turrets.value
-      .filter((t) => t.xPct === xPct)
-      .reduce((sum, t) => sum + t.dmg, 0)
-    if (dps > 0) sides.push({ key, xPct, dps: Math.round(dps * 10) / 10 })
-  }
-  return sides
-})
-
 const totalDps = computed(() => Math.round(planetShopStore.autoAttackDPS * 10) / 10)
-
-const captionYPct = computed(
-  () => TURRET_BATTERY_Y_PCT + TURRET_BATTERY_SPACING_PCT + 10,
-)
 
 // Arena-Größe für Kometen-Flugvektoren + Schnips-Richtung
 const rootEl = ref<HTMLDivElement | null>(null)
@@ -409,46 +385,61 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.tbh-dmg {
-  font-size: 0.72rem;
-  font-weight: 900;
-  color: color-mix(in srgb, var(--tc) 55%, #f0e6cc);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  text-shadow:
-    0 0 8px color-mix(in srgb, var(--tc) 45%, transparent),
-    0 1px 2px rgba(0, 0, 0, 0.95);
-}
-
-/* ── Caption pro Flanke ──────────────────────────────────────────────────── */
-.tbh-caption {
-  position: absolute;
-  transform: translate(-50%, -50%);
+/* ── Info-Plate unter dem Planeten — gleicher Stil wie die Striker-Plates
+   (.rsq-plate): dunkle Karte, Farb-Signaturlinie oben, Name + Stats ──────── */
+.tbh-plate {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
+  min-width: 74px;
+  margin-top: 6px;
+  padding: 3px 9px 4px;
+  border-radius: 4px;
+  background: rgba(8, 5, 2, 0.92);
+  border: 1px solid color-mix(in srgb, var(--tc) 40%, #3a2410);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
 }
 
-.tbh-caption-title {
-  font-size: 0.6rem;
+/* Signaturlinie oben — wie bei den Striker-Plates */
+.tbh-plate::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--tc) 75%, #e8c060),
+    transparent
+  );
+}
+
+.tbh-plate-name {
+  font-size: 0.68rem;
   font-weight: 900;
-  letter-spacing: 0.26em;
+  letter-spacing: 0.08em;
+  color: rgba(240, 230, 204, 0.85);
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--tc) 65%, #f0e6cc);
   white-space: nowrap;
-  text-shadow: 0 0 8px color-mix(in srgb, var(--tc) 40%, transparent), 0 1px 2px rgba(0, 0, 0, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-.tbh-caption-dps {
-  font-size: 1.05rem;
-  font-weight: 900;
-  color: color-mix(in srgb, var(--tc) 45%, #fff);
-  font-variant-numeric: tabular-nums;
+.tbh-plate-stats {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: color-mix(in srgb, var(--tc) 70%, #f0e6cc);
+  text-transform: uppercase;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   text-shadow:
-    0 0 12px color-mix(in srgb, var(--tc) 55%, transparent),
-    0 2px 3px rgba(0, 0, 0, 0.95);
+    0 0 8px color-mix(in srgb, var(--tc) 40%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 /* ── Komet Richtung Boss ─────────────────────────────────────────────────── */

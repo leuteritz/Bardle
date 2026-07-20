@@ -60,12 +60,15 @@ export const planetBossCategory: EncyclopediaCategory = {
       name: 'Boss Hit Points',
       icon: '/img/BardAbilities/BardChimeMeep.png',
       description:
-        'Boss HP scales with the current level, CPS, and Combat Power. ' +
-        'Base: 200 HP. Each level adds +10 HP. ' +
-        'High CPS and high Power also increase the boss HP pool.',
+        'Boss HP scales with the current level, CPS, Combat Power, your team ' +
+        'strength (total star levels of slotted champions) and the current galaxy. ' +
+        'Base: 200 HP. High CPS, high Power, strong champions and deep galaxies ' +
+        'all increase the boss HP pool.',
       lore: 'The more powerful the player, the more fearsome the boss.',
       formula:
-        'Boss HP = BOSS_BASE_HP + (Level × BOSS_HP_LEVEL_SCALE) + (CPS / BOSS_HP_CPS_SCALE) + (Power / BOSS_HP_POWER_SCALE)\n' +
+        'Boss HP = BOSS_BASE_HP × (1 + Level/BOSS_HP_LEVEL_SCALE) × (1 + CPS/BOSS_HP_CPS_SCALE) × (1 + Power/BOSS_HP_POWER_SCALE) × Section × Champions × Galaxy\n' +
+        'Champions = 1 + Σ star levels × BOSS_HP_PER_CHAMPION_STAR (0.1)\n' +
+        'Galaxy = 1 + (Galaxy − 1) × BOSS_HP_PER_GALAXY (0.2)\n' +
         'BOSS_BASE_HP = 200 | BOSS_HP_LEVEL_SCALE = 10\n' +
         'BOSS_HP_CPS_SCALE = 50 | BOSS_HP_POWER_SCALE = 5,000',
     },
