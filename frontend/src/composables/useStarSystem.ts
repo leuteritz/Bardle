@@ -7,7 +7,7 @@ import { useWindowFocus } from './useWindowFocus'
 import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { getOrbitPos } from '../utils/orbitMath'
-import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_SPEED_MULTIPLIER } from '../config/constants'
+import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING, SUN_RADIUS, STAR_BEHIND_SUN_SPEED_MULTIPLIER, HOVER_SPEED_MULTIPLIER } from '../config/constants'
 import { usePlanetShopStore } from '../stores/planetShopStore'
 import { useOrbitScale } from './useOrbitScale'
 import type { PlanetType, StarType } from '../types'
@@ -327,7 +327,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
 
       const isHovered = !sIsBehind && !reducedMotion && hoveredStarId?.value === star.id
       const targetMul = sIsBehind
-        ? BEHIND_SUN_SPEED_MULTIPLIER
+        ? STAR_BEHIND_SUN_SPEED_MULTIPLIER
         : isHovered
           ? HOVER_SPEED_MULTIPLIER
           : 1.0

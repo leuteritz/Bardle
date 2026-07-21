@@ -807,7 +807,10 @@ export const STAR_BURST_DELAY_BETWEEN_SHOTS = 200 // ms between individual shots
 export const STAR_BURST_COOLDOWN = 10_000 // ms cooldown after a full burst completes
 
 // Champion Orbit
-export const BEHIND_SUN_SPEED_MULTIPLIER = 3.5
+export const BEHIND_SUN_SPEED_MULTIPLIER = 4
+// Sterne (Star Fights) rasen hinter der Sonne noch schneller durch, damit die
+// Eclipse-Phase (Boss unantastbar) möglichst kurz bleibt — gilt nur für Sterne
+export const STAR_BEHIND_SUN_SPEED_MULTIPLIER = 8
 export const HOVER_SPEED_MULTIPLIER = 0.3
 export const AVATAR_SIZE_LARGE = 40
 export const AVATAR_SIZE_SMALL = 32
