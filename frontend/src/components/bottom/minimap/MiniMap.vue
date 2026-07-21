@@ -13,12 +13,16 @@
           <!-- ── HUD-Panel: Ankunft · Entfernung · Tempo ── -->
           <MiniMapHudPanel />
 
-          <!-- ── Rescue progress: saved / required champion stars ── -->
+          <!-- ── Rescue progress: saved / required champion stars ──
+               Hidden while the role is being chosen (and during the departure
+               spin) so it fades in together with the arrival HUD at takeoff. -->
           <div
             v-if="
               !galaxyStore.isComplete &&
               !galaxyStore.isGalaxyTransitioning &&
               !galaxyStore.bossPhaseActive &&
+              !galaxyStore.pendingRoleSelection &&
+              !galaxyStore.isRescueRotating &&
               !isArrived
             "
             class="star-progress"
