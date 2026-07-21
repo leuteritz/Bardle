@@ -49,8 +49,15 @@
           <img :src="t.image" alt="" draggable="false" />
 
           <!-- Boss-Zielscheibe: liegt während der Aim-Phase über dem GANZEN
-               Planeten-Bild — rotierender Dash-Ring + pulsierende Tönung -->
-          <span v-if="roleBehaviorStore.autoAimSlotId === t.slotId" class="tbh-aim-lock" />
+               Planeten-Bild — rotierendes Reticle-Icon + pulsierende Tönung -->
+          <span v-if="roleBehaviorStore.autoAimSlotId === t.slotId" class="tbh-aim-lock">
+            <Icon
+              icon="game-icons:targeting"
+              class="tbh-aim-lock-icon"
+              width="100%"
+              height="100%"
+            />
+          </span>
 
           <!-- Cooldown-Pill nur für Turrets — eigener 100ms-Ticker in
                der Kind-Komponente, re-rendert nicht die ganze Batterie -->
@@ -1268,8 +1275,7 @@ onUnmounted(() => {
 }
 
 /* ── Boss-Zielscheibe (Aim-Phase): liegt über dem GANZEN Planeten-Bild —
-   rotierender Dash-Ring außen, pulsierende rote Tönung über dem Bild.
-   Nur transform/opacity (GPU), keine Blur-Schatten ───────────────────────── */
+   rotierendes Reticle-Icon (game-icons:targeting) + pulsierende Tönung ───── */
 .tbh-aim-lock {
   position: absolute;
   inset: -9px;
@@ -1279,13 +1285,13 @@ onUnmounted(() => {
   animation: tbh-aim-in 0.2s ease-out both;
 }
 
-/* Rotierender gestrichelter Zielring — etwas größer als der Planet */
-.tbh-aim-lock::before {
-  content: '';
+/* Reticle-Icon füllt die ganze Zielfläche und dreht sich langsam — der
+   drop-shadow-Glow rastert einmal, die Rotation ist reiner GPU-Transform */
+.tbh-aim-lock-icon {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  border: 4px dashed #ff5040;
+  color: #ff5040;
+  filter: drop-shadow(0 0 6px rgba(255, 60, 40, 0.8));
   animation: tbh-aim-spin 2.2s linear infinite;
   will-change: transform;
 }
@@ -1470,7 +1476,7 @@ onUnmounted(() => {
   .tbh-strike-bolt,
   .tbh-strike-mark,
   .tbh-aim-lock,
-  .tbh-aim-lock::before,
+  .tbh-aim-lock-icon,
   .tbh-aim-lock::after,
   .tbh-comet,
   .tbh-eclipse,

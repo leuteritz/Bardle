@@ -2726,6 +2726,7 @@ export const USED_GAME_ICONS = new Set<string>([
   // Admin — StarFightModal instant-kill button
   'game-icons:skull', // Admin kill button in StarFightModal
   'game-icons:planet-core', // Vacant planet slot ghost emblem (PlanetBatteryHUD)
+  'game-icons:targeting', // Boss strike aim reticle over the target (RoleStrikerSquad, PlanetBatteryHUD)
   // Champion Shop / Select Panel — tier collapse-all header button
   'game-icons:contract', // Collapse-all tiers (ChampionShopComponent & ChampionSelectPanel)
   'game-icons:expand', // Expand-all tiers (ChampionShopComponent & ChampionSelectPanel)

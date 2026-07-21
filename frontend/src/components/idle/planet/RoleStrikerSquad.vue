@@ -97,8 +97,10 @@
         </svg>
 
         <!-- Boss-Zielscheibe: liegt während der Aim-Phase über dem GANZEN
-             Portrait — rotierender Dash-Ring + pulsierende rote Tönung -->
-        <span v-if="roleBehaviorStore.autoAimRole === s.role" class="rsq-aim-lock" />
+             Portrait — rotierendes Reticle-Icon + pulsierende rote Tönung -->
+        <span v-if="roleBehaviorStore.autoAimRole === s.role" class="rsq-aim-lock">
+          <Icon icon="game-icons:targeting" class="rsq-aim-lock-icon" width="100%" height="100%" />
+        </span>
 
         <!-- "Attack!"-Callout über die gesamte Choreografie (Windup + Schnips) -->
         <Transition name="rsq-atk">
@@ -1480,8 +1482,8 @@ onUnmounted(() => {
 }
 
 /* ── Boss-Zielscheibe (Aim-Phase): liegt über dem GANZEN Portrait —
-   rotierender Dash-Ring außen, pulsierende rote Tönung über dem Bild,
-   dazu roter Glüh-Rand am Portrait. Nur transform/opacity (GPU) ──────────── */
+   rotierendes Reticle-Icon (game-icons:targeting) + pulsierende rote
+   Tönung über dem Bild, dazu roter Glüh-Rand am Portrait ─────────────────── */
 .rsq-aim-lock {
   position: absolute;
   inset: -10px;
@@ -1491,13 +1493,13 @@ onUnmounted(() => {
   animation: rsq-aim-in 0.2s ease-out both;
 }
 
-/* Rotierender gestrichelter Zielring — etwas größer als das Portrait */
-.rsq-aim-lock::before {
-  content: '';
+/* Reticle-Icon füllt die ganze Zielfläche und dreht sich langsam — der
+   drop-shadow-Glow rastert einmal, die Rotation ist reiner GPU-Transform */
+.rsq-aim-lock-icon {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  border: 4px dashed #ff5040;
+  color: #ff5040;
+  filter: drop-shadow(0 0 6px rgba(255, 60, 40, 0.8));
   animation: rsq-aim-spin 2.2s linear infinite;
   will-change: transform;
 }
@@ -1665,7 +1667,7 @@ onUnmounted(() => {
   .rsq-strike-bolt,
   .rsq-strike-mark,
   .rsq-aim-lock,
-  .rsq-aim-lock::before,
+  .rsq-aim-lock-icon,
   .rsq-aim-lock::after,
   .rsq-atk-enter-active,
   .rsq-vacant-emblem,
