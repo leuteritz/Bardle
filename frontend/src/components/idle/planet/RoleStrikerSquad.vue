@@ -110,8 +110,15 @@
         <!-- Down-Overlay: Champion liegt am Boden bis zum Revive -->
         <span v-if="s.isDown" class="rsq-down">{{ s.downSecs }}s</span>
 
-        <!-- Eclipse-Tag: Champion steht hinter der Sonne — kämpft nicht -->
-        <span v-if="s.behind && !s.isDown" class="rsq-eclipse">Eclipsed</span>
+        <!-- Eclipse-Medaillon: Champion steht hinter der Sonne — kämpft nicht
+             (gleiches Icon-Medaillon wie im Command Panel) -->
+        <span
+          v-if="s.behind && !s.isDown"
+          class="rsq-eclipse"
+          title="Behind the Sun — combat paused"
+        >
+          <Icon icon="game-icons:eclipse-flare" width="24" height="24" />
+        </span>
 
         <!-- Cooldown-Pill am unteren Portraitrand -->
         <span v-if="!s.isDown" class="rsq-cdpill" :class="{ 'rsq-cdpill--ready': s.secs === 0 }">
@@ -215,6 +222,7 @@ import type { ChampionRole } from '@/types'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
 import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/arcGuide'
 import { activeChampionBehindState } from '@/utils/activeChampionBehindState'
+import { Icon } from '@iconify/vue'
 
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -1359,24 +1367,39 @@ onUnmounted(() => {
   transition: opacity 0.4s ease, filter 0.4s ease;
 }
 
+/* Medaillon-Design identisch zum Command Panel (champ-card-eclipse-medal) */
 .rsq-eclipse {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: rgba(10, 6, 0, 0.82);
-  border: 1px solid rgba(232, 192, 64, 0.4);
-  font-size: 0.58rem;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(232, 192, 64, 0.85);
-  white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, rgba(38, 26, 8, 0.95), rgba(10, 7, 3, 0.95));
+  border: 2px solid #5c3310;
+  box-shadow:
+    0 0 0 1px rgba(200, 144, 64, 0.35),
+    0 0 12px rgba(232, 192, 64, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.7);
+  color: #e8c040;
   z-index: 4;
   pointer-events: none;
+  animation: rsq-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+.rsq-eclipse :deep(svg) {
+  filter: drop-shadow(0 0 4px rgba(232, 192, 64, 0.55));
+}
+
+@keyframes rsq-eclipse-breathe {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ── Strike-Bolt: schneller Bone-Silber-Komet Boss → getroffener Champion —
@@ -1561,6 +1584,7 @@ onUnmounted(() => {
   .rsq-proj,
   .rsq-impact-burst,
   .rsq-spark,
+  .rsq-eclipse,
   .rsq-impact-num,
   .rsq-pop-enter-active,
   .rsq-float--hit::before,

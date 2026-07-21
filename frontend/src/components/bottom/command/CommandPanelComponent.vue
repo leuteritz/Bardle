@@ -106,8 +106,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
               <img src="/img/roles/jungle.png" alt="" draggable="false" />
             </div>
 
-            <!-- Eclipse: Planet hinter der Sonne — kühler Schatten + großes
-                 Medaillon unten mittig (Kachel-Mitte gehört dem Jungle-Buff-Chip) -->
+            <!-- Eclipse: Planet hinter der Sonne — kühler Schatten + Medaillon
+                 unten mittig (oben mittig sitzt der Jungle-Buff-Chip) -->
             <Transition name="cmd-eclipse">
               <div v-if="slotBehindSun(slot)" class="cmd-eclipse-veil" />
             </Transition>
@@ -443,12 +443,13 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   z-index: 3;
 }
 
-/* Einkreis-Ring: pulsierender Kreis mittig um den Planeten */
+/* Einkreis-Ring: pulsierender Kreis um den Buff-Chip oben mittig
+   (Ring-Zentrum = Chip-Zentrum: top 5px + 18px halbe Chip-Höhe = 23px) */
 .cmd-buff-ring {
   position: absolute;
-  top: 50%;
+  top: 23px;
   left: 50%;
-  width: 74%;
+  width: 46px;
   aspect-ratio: 1;
   margin: 0;
   transform: translate(-50%, -50%);
@@ -462,14 +463,15 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   z-index: 4;
 }
 
-/* Countdown-Chip (mittig in der Kachel, füllt den Einkreis-Ring) */
+/* Countdown-Chip (oben mittig — unten mittig sitzt das Eclipse-Medaillon,
+   beide gleich groß, damit die Kachel symmetrisch bleibt) */
 .cmd-buff-chip {
   position: absolute;
-  top: 50%;
+  top: 5px;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 38px;
-  height: 38px;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, rgba(22, 42, 26, 0.96), rgba(6, 14, 8, 0.96));
   display: grid;
@@ -496,8 +498,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 }
 
 .cmd-buff-chip img {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 2px rgba(92, 230, 106, 0.7));
@@ -534,8 +536,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   z-index: 2;
 }
 
-/* Medaillon unten mittig — die Kachel-Mitte bleibt für den Jungle-Buff-Chip
-   frei, oben liegt nichts → keine Überlappung mit anderen Indikatoren */
+/* Medaillon unten mittig — Gegenstück zum Jungle-Buff-Chip oben mittig,
+   beide 36px → keine Überlappung, symmetrisches Kachel-Layout */
 .cmd-eclipse-medal {
   position: absolute;
   bottom: 5px;

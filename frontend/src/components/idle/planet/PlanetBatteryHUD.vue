@@ -41,8 +41,15 @@
                der Kind-Komponente, re-rendert nicht die ganze Batterie -->
           <TurretCdPill v-if="t.isTurret" />
 
-          <!-- Eclipse-Tag: Planet steht hinter der Sonne — kein Kampf -->
-          <span v-if="behindSlotIds.has(t.slotId)" class="tbh-eclipse">Eclipsed</span>
+          <!-- Eclipse-Medaillon: Planet steht hinter der Sonne — kein Kampf
+               (gleiches Icon-Medaillon wie im Command Panel) -->
+          <span
+            v-if="behindSlotIds.has(t.slotId)"
+            class="tbh-eclipse"
+            title="Behind the Sun — combat paused"
+          >
+            <Icon icon="game-icons:eclipse-flare" width="20" height="20" />
+          </span>
 
           <!-- Roter Schadens-Float: Nova (alle sichtbaren Planeten) -->
           <span
@@ -138,6 +145,7 @@ import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
 import TurretCdPill from '@/components/idle/planet/TurretCdPill.vue'
 import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/arcGuide'
 import { playerSlotInForeground } from '@/utils/foregroundGate'
+import { Icon } from '@iconify/vue'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import {
   GAME_TICK_INTERVAL_MS,
@@ -623,24 +631,39 @@ onUnmounted(() => {
   transition: opacity 0.4s ease, filter 0.4s ease;
 }
 
+/* Medaillon-Design identisch zum Command Panel (cmd-eclipse-medal) */
 .tbh-eclipse {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: rgba(10, 6, 0, 0.82);
-  border: 1px solid rgba(232, 192, 64, 0.4);
-  font-size: 0.52rem;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(232, 192, 64, 0.85);
-  white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, rgba(38, 26, 8, 0.95), rgba(10, 7, 3, 0.95));
+  border: 2px solid #5c3310;
+  box-shadow:
+    0 0 0 1px rgba(200, 144, 64, 0.35),
+    0 0 12px rgba(232, 192, 64, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.7);
+  color: #e8c040;
   z-index: 4;
   pointer-events: none;
+  animation: tbh-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+.tbh-eclipse :deep(svg) {
+  filter: drop-shadow(0 0 4px rgba(232, 192, 64, 0.55));
+}
+
+@keyframes tbh-eclipse-breathe {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ── Leerer Slot: Geister-Platzhalter — gestrichelter Ring + Slot-Nummer ── */
@@ -964,7 +987,8 @@ onUnmounted(() => {
   .tbh-impact-num,
   .tbh-strike-bolt,
   .tbh-strike-mark,
-  .tbh-comet {
+  .tbh-comet,
+  .tbh-eclipse {
     animation: none;
   }
 }
