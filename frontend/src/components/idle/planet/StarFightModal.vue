@@ -131,28 +131,16 @@
                 </div>
               </Transition>
               <div class="sf-hp-row">
-                <div
+                <!-- Star-Despawn-Ring: Restzeit, bis der Stern verschwindet -->
+                <BossTimerRing
                   v-if="starSecsLeft !== null"
-                  class="sf-star-ring"
-                  :class="starTimerStateClass"
+                  :secs="starSecsLeft"
+                  label="SEC"
+                  :pct="starTimePct / 100"
+                  :color="starRingColor"
+                  :pulse="starRingCritical"
                   title="Time until the star vanishes"
-                >
-                  <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
-                    <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
-                    <circle cx="50" cy="50" r="44" class="sf-star-ring-track" />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="44"
-                      class="sf-star-ring-arc"
-                      :style="{ strokeDasharray: starRingDashArray }"
-                    />
-                  </svg>
-                  <div class="sf-star-ring-inner">
-                    <span class="sf-star-ring-secs">{{ starSecsLeft }}</span>
-                    <span class="sf-star-ring-label">SEC</span>
-                  </div>
-                </div>
+                />
 
                 <div class="sf-hp-center">
                   <div
@@ -197,79 +185,44 @@
 
                 <!-- Strike-Ring: Auto-Attack des Bosses — kurzer Cooldown,
                      trifft EIN zufälliges Ziel (Champion oder Turret) -->
-                <div
-                  class="sf-auto-ring"
+                <BossTimerRing
+                  :secs="autoSecsLeft"
+                  label="STRIKE"
+                  :pct="autoRingPct"
+                  color="#d8d0c0"
+                  :badge="`${autoDmgDisplay} dmg`"
                   title="Strike — the boss jabs one random living champion or turret planet"
-                >
-                  <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
-                    <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
-                    <circle cx="50" cy="50" r="44" class="sf-star-ring-track" />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="44"
-                      class="sf-auto-ring-arc"
-                      :style="{ strokeDasharray: autoRingDashArray }"
-                    />
-                  </svg>
-                  <div class="sf-star-ring-inner">
-                    <span class="sf-auto-ring-secs">{{ autoSecsLeft }}</span>
-                    <span class="sf-auto-ring-label">STRIKE</span>
-                  </div>
-                  <span class="sf-ring-dmg sf-ring-dmg--auto">{{ autoDmgDisplay }} dmg</span>
-                </div>
+                />
 
                 <!-- Rage-Ring: Cooldown bis zur nächsten Rage bzw. Restdauer -->
-                <div
-                  class="sf-rage-ring"
-                  :class="{ 'sf-rage-ring--active': rageActive }"
+                <BossTimerRing
+                  :secs="rageSecsLeft"
+                  label="RAGE"
+                  :pct="rageRingPct"
+                  :color="rageActive ? '#ff5c85' : '#ff2e63'"
+                  :text-color="rageActive ? '#ffb0c4' : undefined"
+                  :label-color="rageActive ? 'rgba(255, 120, 150, 0.85)' : undefined"
+                  :pulse="rageActive"
+                  :intense-glow="rageActive"
+                  :badge="`×${BOSS_RAGE_DMG_MULT} dmg`"
+                  badge-color="rgba(255, 92, 133, 0.75)"
                   :title="
                     rageActive
                       ? 'The boss is raging — double damage!'
                       : 'Time until the boss enrages'
                   "
-                >
-                  <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
-                    <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
-                    <circle cx="50" cy="50" r="44" class="sf-star-ring-track" />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="44"
-                      class="sf-rage-ring-arc"
-                      :style="{ strokeDasharray: rageRingDashArray }"
-                    />
-                  </svg>
-                  <div class="sf-star-ring-inner">
-                    <span class="sf-rage-ring-secs">{{ rageSecsLeft }}</span>
-                    <span class="sf-rage-ring-label">RAGE</span>
-                  </div>
-                  <span class="sf-ring-dmg sf-ring-dmg--rage">×{{ BOSS_RAGE_DMG_MULT }} dmg</span>
-                </div>
+                />
 
                 <!-- Nova-Ring: Cooldown der Shock Nova — läuft synchron zum
                      Ring des Boss-Sterns im Idle-Orbit -->
-                <div
-                  class="sf-nova-ring"
+                <BossTimerRing
+                  :secs="novaSecsLeft"
+                  label="NOVA"
+                  :pct="novaRingPct"
+                  color="#ff8a30"
+                  :badge="`${novaDmgDisplay} dmg`"
                   title="Shock Nova — the boss unleashes a wave that hits every champion, every turret planet and the player"
-                >
-                  <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
-                    <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
-                    <circle cx="50" cy="50" r="44" class="sf-star-ring-track" />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="44"
-                      class="sf-nova-ring-arc"
-                      :style="{ strokeDasharray: novaRingDashArray }"
-                    />
-                  </svg>
-                  <div class="sf-star-ring-inner">
-                    <span class="sf-nova-ring-secs">{{ novaSecsLeft }}</span>
-                    <span class="sf-nova-ring-label">NOVA</span>
-                  </div>
-                  <span class="sf-ring-dmg sf-ring-dmg--nova">{{ novaDmgDisplay }} dmg</span>
-                </div>
+                />
               </div>
 
             </div>
@@ -320,6 +273,7 @@ import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
 import PlanetBatteryHUD from '@/components/idle/planet/PlanetBatteryHUD.vue'
+import BossTimerRing from '@/components/idle/planet/BossTimerRing.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 
 // ── Stores ───────────────────────────────────────────────────────────────
@@ -377,22 +331,17 @@ const starTimePct = computed(() => {
   return Math.max(0, Math.min(100, remaining * 100))
 })
 
-// Ring-Geometrie: r=44 im 100er-viewBox → Umfang 2πr
-const STAR_RING_CIRCUMFERENCE = 2 * Math.PI * 44
-
-const starRingDashArray = computed(
-  () =>
-    `${(starTimePct.value / 100) * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
+// Ampel-Zustand des Despawn-Rings: Gold → Warn-Orange → Kritisch-Rot (+Puls)
+const starRingCritical = computed(
+  () => starSecsLeft.value !== null && starSecsLeft.value <= STAR_FIGHT_TIMER_CRITICAL_S,
 )
 
-const starTimerStateClass = computed(() => ({
-  'sf-star-ring--warning':
-    starSecsLeft.value !== null &&
-    starSecsLeft.value <= STAR_FIGHT_TIMER_WARNING_S &&
-    starSecsLeft.value > STAR_FIGHT_TIMER_CRITICAL_S,
-  'sf-star-ring--critical':
-    starSecsLeft.value !== null && starSecsLeft.value <= STAR_FIGHT_TIMER_CRITICAL_S,
-}))
+const starRingColor = computed(() => {
+  if (starRingCritical.value) return '#ff5040'
+  if (starSecsLeft.value !== null && starSecsLeft.value <= STAR_FIGHT_TIMER_WARNING_S)
+    return '#e8a030'
+  return '#e8c040'
+})
 
 // ── Curse ─────────────────────────────────────────────────────────────────
 const activeCurse = computed(() => {
@@ -431,10 +380,6 @@ const rageRingPct = computed(() => {
   return Math.max(0, Math.min(1, 1 - (roleBehaviorStore.rageReadyAt - now.value) / interval))
 })
 
-const rageRingDashArray = computed(
-  () => `${rageRingPct.value * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
-)
-
 // ── Shock Nova: Cooldown-Ring (synchron zum Boss-Stern im Idle-Orbit) ────
 // Zeitstempel-basiert wie der Star-Despawn-Ring — füllt smooth statt in
 // 1s-Tick-Stufen
@@ -451,10 +396,6 @@ const novaRingPct = computed(() => {
     Math.min(1, 1 - (roleBehaviorStore.novaReadyAt - now.value) / BOSS_NOVA_INTERVAL_MS),
   )
 })
-
-const novaRingDashArray = computed(
-  () => `${novaRingPct.value * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
-)
 
 // ── Damage-Badges unter den Fähigkeits-Ringen ────────────────────────────
 const autoDmgDisplay = computed(() =>
@@ -488,10 +429,6 @@ const autoRingPct = computed(() => {
     Math.min(1, 1 - (roleBehaviorStore.autoReadyAt - now.value) / BOSS_AUTO_INTERVAL_MS),
   )
 })
-
-const autoRingDashArray = computed(
-  () => `${autoRingPct.value * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
-)
 
 // Schneller Jab des Boss-Sprites bei jedem Auto-Attack + Info-Callout,
 // welches Random-Ziel (Champion oder Planet) getroffen wurde
@@ -852,13 +789,11 @@ function emberStyle(i: number): Record<string, string> {
   .sf-ember,
   .sf-modal-planet-bg--galaxy,
   .sf-hp-track--critical,
-  .sf-star-ring--critical .sf-star-ring-secs,
   .sf-pp-pip--current,
   .sf-curse-veil-layer--edge,
   .sf-curse-veil-layer--smoke,
   .sf-rage-veil-layer--edge,
   .sf-rage-veil-layer--flames,
-  .sf-rage-ring--active .sf-rage-ring-secs,
   .sf-arena-wrap--strike :deep(.boss-img),
   .sf-arena-wrap--jab :deep(.boss-img),
   .sf-arena-wrap--hit :deep(.boss-img),
@@ -909,211 +844,8 @@ function emberStyle(i: number): Record<string, string> {
   transform: scale(0.94);
 }
 
-/* ── Star-Despawn-Ringe — flankieren die HP-Bar, synchron links + rechts ── */
-.sf-star-ring {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  flex-shrink: 0;
-  pointer-events: none;
-}
-
-.sf-star-ring-svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.sf-star-ring-disc {
-  fill: rgba(10, 5, 0, 0.62);
-  stroke: rgba(120, 60, 10, 0.4);
-  stroke-width: 1;
-}
-
-.sf-star-ring-track {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.08);
-  stroke-width: 5;
-}
-
-/* Kein drop-shadow: der Arc transitioniert alle 200 ms — ein Filter würde
-   das SVG dauerhaft jede Frame neu rastern */
-.sf-star-ring-arc {
-  fill: none;
-  stroke: #e8c040;
-  stroke-width: 5;
-  stroke-linecap: round;
-  transition: stroke-dasharray 0.2s linear;
-}
-
-.sf-star-ring-inner {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-}
-
-.sf-star-ring-secs {
-  font-size: 1.8rem;
-  font-weight: 900;
-  line-height: 1;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 14px rgba(232, 192, 64, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-}
-
-.sf-star-ring-label {
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.26em;
-  color: rgba(232, 192, 64, 0.6);
-  text-transform: uppercase;
-}
-
-/* ── Rage-Ring — Crimson, klar getrennt vom goldenen Stern-Timer ─────────── */
-.sf-rage-ring {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  flex-shrink: 0;
-  pointer-events: none;
-}
-
-.sf-rage-ring-arc {
-  fill: none;
-  stroke: #ff2e63;
-  stroke-width: 5;
-  stroke-linecap: round;
-  transition: stroke-dasharray 0.2s linear;
-}
-
-.sf-rage-ring-secs {
-  font-size: 1.8rem;
-  font-weight: 900;
-  line-height: 1;
-  color: #ff2e63;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 14px rgba(255, 46, 99, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-}
-
-.sf-rage-ring-label {
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.26em;
-  color: rgba(255, 46, 99, 0.6);
-  text-transform: uppercase;
-}
-
-/* ── Nova-Ring — Ember-Orange, gleicher Stil wie Star-/Rage-Ring ─────────── */
-.sf-nova-ring {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  flex-shrink: 0;
-  pointer-events: none;
-}
-
-.sf-nova-ring-arc {
-  fill: none;
-  stroke: #ff8a30;
-  stroke-width: 5;
-  stroke-linecap: round;
-  transition: stroke-dasharray 0.2s linear;
-}
-
-.sf-nova-ring-secs {
-  font-size: 1.8rem;
-  font-weight: 900;
-  line-height: 1;
-  color: #ff8a30;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 14px rgba(255, 138, 48, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-}
-
-.sf-nova-ring-label {
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.26em;
-  color: rgba(255, 138, 48, 0.6);
-  text-transform: uppercase;
-}
-
-/* Aktive Rage: Ring + Zahl glühen heller und pulsieren (transform/opacity) */
-.sf-rage-ring--active .sf-rage-ring-arc {
-  stroke: #ff5c85;
-}
-
-.sf-rage-ring--active .sf-rage-ring-secs {
-  color: #ffb0c4;
-  text-shadow:
-    0 0 18px rgba(255, 46, 99, 0.85),
-    0 0 38px rgba(255, 30, 80, 0.45),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-  animation: sf-rage-secs-pulse 0.6s ease-in-out infinite alternate;
-}
-
-.sf-rage-ring--active .sf-rage-ring-label {
-  color: rgba(255, 120, 150, 0.85);
-}
-
-@keyframes sf-rage-secs-pulse {
-  from {
-    transform: scale(1);
-  }
-  to {
-    transform: scale(1.12);
-  }
-}
-
-/* Warnung ≤ STAR_FIGHT_TIMER_WARNING_S */
-.sf-star-ring--warning .sf-star-ring-arc {
-  stroke: #e8a030;
-}
-.sf-star-ring--warning .sf-star-ring-secs {
-  color: #e8a030;
-}
-.sf-star-ring--warning .sf-star-ring-secs {
-  text-shadow:
-    0 0 14px rgba(232, 160, 48, 0.55),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-}
-.sf-star-ring--warning .sf-star-ring-label {
-  color: rgba(232, 160, 48, 0.65);
-}
-
-/* Kritisch ≤ STAR_FIGHT_TIMER_CRITICAL_S */
-.sf-star-ring--critical .sf-star-ring-arc {
-  stroke: #ff5040;
-}
-.sf-star-ring--critical .sf-star-ring-secs {
-  color: #ff5040;
-  text-shadow:
-    0 0 14px rgba(255, 60, 40, 0.65),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-  animation: sf-star-ring-crit-pulse 0.7s ease-in-out infinite alternate;
-}
-.sf-star-ring--critical .sf-star-ring-label {
-  color: rgba(255, 80, 64, 0.7);
-}
-
-@keyframes sf-star-ring-crit-pulse {
-  from {
-    transform: scale(1);
-  }
-  to {
-    transform: scale(1.12);
-  }
-}
-
+/* Die vier Countdown-Ringe (Star-Despawn, Strike, Rage, Nova) sind die
+   geteilte Komponente BossTimerRing.vue — Styles leben dort. */
 
 /* ── Main Layout ──────────────────────────────────────────────────────────── */
 .sf-main {
@@ -1165,8 +897,8 @@ function emberStyle(i: number): Record<string, string> {
   display: none;
 }
 
-/* Arena-eigener Enrage-/Star-Ring aus — ersetzt durch die beiden
-   synchronen .sf-star-ring-Countdowns oben links + rechts */
+/* Arena-eigener Enrage-/Star-Ring aus — ersetzt durch die synchronen
+   BossTimerRing-Countdowns links + rechts der HP-Bar */
 .sf-arena-wrap :deep(.enrage-ring) {
   display: none;
 }
@@ -1670,42 +1402,6 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-/* ── Strike-Ring (Auto-Attack) — Bone-Silber, Stil wie Star-/Rage-Ring ──── */
-.sf-auto-ring {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  flex-shrink: 0;
-  pointer-events: none;
-}
-
-.sf-auto-ring-arc {
-  fill: none;
-  stroke: #d8d0c0;
-  stroke-width: 5;
-  stroke-linecap: round;
-  transition: stroke-dasharray 0.2s linear;
-}
-
-.sf-auto-ring-secs {
-  font-size: 1.8rem;
-  font-weight: 900;
-  line-height: 1;
-  color: #d8d0c0;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 14px rgba(216, 208, 192, 0.45),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-}
-
-.sf-auto-ring-label {
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.26em;
-  color: rgba(216, 208, 192, 0.6);
-  text-transform: uppercase;
-}
-
 /* ── Eclipse: Boss hinter der Sonne — gedimmt + Status-Chip ──────────────── */
 .sf-arena-wrap--eclipsed :deep(.boss-img) {
   opacity: 0.5;
@@ -1801,33 +1497,6 @@ function emberStyle(i: number): Record<string, string> {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
   }
-}
-
-/* ── Damage-Badges unter den Fähigkeits-Ringen — Wert direkt am Cooldown ── */
-.sf-ring-dmg {
-  position: absolute;
-  top: calc(100% - 2px);
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-.sf-ring-dmg--auto {
-  color: rgba(216, 208, 192, 0.75);
-}
-
-.sf-ring-dmg--rage {
-  color: rgba(255, 92, 133, 0.75);
-}
-
-.sf-ring-dmg--nova {
-  color: rgba(255, 138, 48, 0.75);
 }
 
 .sf-atk-emblem--rage .sf-atk-num {
@@ -2087,31 +1756,7 @@ function emberStyle(i: number): Record<string, string> {
     gap: 12px;
   }
 
-  .sf-star-ring,
-  .sf-rage-ring,
-  .sf-nova-ring,
-  .sf-auto-ring {
-    width: 72px;
-    height: 72px;
-  }
-
-  .sf-star-ring-secs,
-  .sf-rage-ring-secs,
-  .sf-nova-ring-secs,
-  .sf-auto-ring-secs {
-    font-size: 1.3rem;
-  }
-
-  .sf-star-ring-label,
-  .sf-rage-ring-label,
-  .sf-nova-ring-label,
-  .sf-auto-ring-label {
-    font-size: 0.48rem;
-  }
-
-  .sf-ring-dmg {
-    font-size: 0.58rem;
-  }
+  /* Ring-Kompaktgrößen: siehe BossTimerRing.vue (eigene max-height-Query) */
 
   .sf-hp-track {
     height: 24px;

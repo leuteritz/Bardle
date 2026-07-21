@@ -188,7 +188,7 @@ function resetSearch() {
 }
 
 /** Arrow-key navigation between filter chips (mirrors the Shop). */
-function onChipKeydown(event: KeyboardEvent, _id: string) {
+function onChipKeydown(event: KeyboardEvent) {
   const panel = (event.target as HTMLElement).closest('.cs-filter-panel')
   if (!panel) return
   const chips = Array.from(panel.querySelectorAll<HTMLElement>('.trait-chip[tabindex="0"]'))
@@ -589,7 +589,7 @@ function onImgError(e: Event) {
                   :style="`--chip-color: ${trait.color}`"
                   tabindex="0"
                   @click="toggleTrait(trait.id)"
-                  @keydown="onChipKeydown($event, trait.id)"
+                  @keydown="onChipKeydown($event)"
                 >
                   <Icon :icon="trait.icon" class="trait-chip-icon" />
                   {{ trait.name }}
@@ -618,7 +618,7 @@ function onImgError(e: Event) {
                   :style="`--chip-color: ${origin.color}`"
                   tabindex="0"
                   @click="toggleTrait(origin.origin)"
-                  @keydown="onChipKeydown($event, origin.origin)"
+                  @keydown="onChipKeydown($event)"
                 >
                   <Icon :icon="origin.icon" class="trait-chip-icon" />
                   {{ origin.origin }}
