@@ -101,10 +101,6 @@ const visibleGroups = computed(() => {
     .filter((category) => category.entries.length > 0)
 })
 
-const visibleCount = computed(() =>
-  visibleGroups.value.reduce((sum, c) => sum + c.entries.length, 0),
-)
-
 /* ── Search highlighting ── */
 
 interface TextSegment {
@@ -260,11 +256,11 @@ const panelFrameStyle = {
         <!-- Header -->
         <div class="enc-header flex items-center gap-3 shrink-0">
           <Icon icon="game-icons:wax-tablet" width="28" height="28" class="enc-header-icon" />
-          <div class="flex-1 min-w-0">
-            <h2 class="enc-title">Bardle Codex</h2>
+          <div class="flex items-baseline gap-2 flex-1 min-w-0 whitespace-nowrap overflow-hidden">
+            <h2 class="enc-title">Codex</h2>
             <p class="enc-header-stats">
-              <span class="enc-header-count">{{ visibleCount }} / {{ totalEntryCount }}</span>
-              entries · {{ encyclopediaData.length }} categories
+              <span class="enc-header-count">{{ totalEntryCount }}</span> entries ·
+              <span class="enc-header-count">{{ encyclopediaData.length }}</span> categories
             </p>
           </div>
           <button class="enc-close" aria-label="Close encyclopedia" @click="closePanel">✕</button>
@@ -509,7 +505,6 @@ const panelFrameStyle = {
   color: #e8c040;
 }
 .enc-header-stats {
-  margin-top: clamp(3px, 0.25vw, 5px);
   font-family: 'Segoe UI', system-ui, sans-serif;
   font-size: clamp(11px, 0.72vw, 13.5px);
   font-weight: 600;
