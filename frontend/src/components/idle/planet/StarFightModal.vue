@@ -85,6 +85,11 @@
               <div v-if="bossBehindSun" class="sf-eclipse-veil" aria-hidden="true">
                 <span class="sf-eclipse-scrim" />
                 <span class="sf-eclipse-corona" />
+                <!-- Großes Eclipse-Medaillon auf dem Boss — gleiches Icon wie
+                     bei Champions (rsq-eclipse) und Planeten (tbh-eclipse) -->
+                <span class="sf-eclipse-medal" title="Behind the Sun — combat paused">
+                  <Icon icon="game-icons:eclipse-flare" width="56" height="56" />
+                </span>
               </div>
             </Transition>
 
@@ -825,6 +830,7 @@ function emberStyle(i: number): Record<string, string> {
   .sf-boss-wave,
   .sf-boss-flare,
   .sf-eclipse-corona,
+  .sf-eclipse-medal,
   .sf-eclipse-banner-title {
     animation: none;
   }
@@ -1500,6 +1506,33 @@ function emberStyle(i: number): Record<string, string> {
   to {
     opacity: 1;
   }
+}
+
+/* Großes Eclipse-Medaillon mittig auf dem Boss (Anker 50 % / 41 % wie
+   Flare/Welle) — Medaillon-Design identisch zu rsq-eclipse/tbh-eclipse,
+   nur hochskaliert für das Boss-Sprite */
+.sf-eclipse-medal {
+  position: absolute;
+  left: 50%;
+  top: 41%;
+  transform: translate(-50%, -50%);
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, rgba(38, 26, 8, 0.95), rgba(10, 7, 3, 0.95));
+  border: 3px solid #5c3310;
+  box-shadow:
+    0 0 0 2px rgba(200, 144, 64, 0.35),
+    0 0 26px rgba(232, 192, 64, 0.35),
+    0 4px 12px rgba(0, 0, 0, 0.7);
+  color: #e8c040;
+  pointer-events: none;
+  animation: sf-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+.sf-eclipse-medal :deep(svg) {
+  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.55));
 }
 
 .sf-eclipse-fade-enter-active,
