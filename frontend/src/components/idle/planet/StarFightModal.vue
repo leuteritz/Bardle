@@ -725,23 +725,27 @@ function emberStyle(i: number): Record<string, string> {
   /* flacher Deep-Space-Ton wie im Shop (#111008) — kein Verlauf, damit der
      geteilte CosmicStageBackground identisch wirkt */
   background: #111008;
-  border: 1px solid rgba(120, 60, 10, 0.55);
-  /* exakt dieselbe Außen-Rundung wie das Bard-Profil (.rp-modal): Kurve der
-     Bottom-Bar-Notches, skaliert mit dem HUD (BOTTOM_BAR_NOTCH_R × --hud-scale) */
+  /* exakt derselbe Holzrahmen + Außen-Rundung wie das Bard-Profil
+     (.rp-modal): 4px Holz, doppelter Inset-Saum, Notch-Kurve × --hud-scale */
+  border: 4px solid #7a4e20;
   border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
   box-shadow:
-    0 0 60px rgba(200, 80, 0, 0.22),
-    0 0 120px rgba(140, 40, 0, 0.12),
-    0 24px 80px rgba(0, 0, 0, 0.97);
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310,
+    0 25px 60px rgba(0, 0, 0, 0.95),
+    0 0 0 1px #2a1608;
   overflow: hidden;
 }
 
+/* Galaxy-Boss: gleicher Holzrahmen, zusätzlich violetter Außen-Glow */
 .sf-modal--galaxy {
-  border-color: rgba(120, 20, 160, 0.55);
   box-shadow:
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310,
     0 0 70px rgba(160, 40, 220, 0.26),
     0 0 130px rgba(100, 10, 140, 0.14),
-    0 24px 80px rgba(0, 0, 0, 0.97);
+    0 25px 60px rgba(0, 0, 0, 0.95),
+    0 0 0 1px #2a1608;
 }
 
 /* ── Gold Topbar ──────────────────────────────────────────────────────────── */
@@ -1550,9 +1554,9 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
   z-index: 5;
   overflow: hidden;
-  /* folgt der Außen-Rundung des Modals — sonst zeichnet der inset-Glow
-     eckige Säume in die runden Ecken */
-  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
+  /* folgt der Innen-Rundung des Modals (Außenradius − 4px Holzrahmen) —
+     sonst zeichnet der inset-Glow eckige Säume in die runden Ecken */
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1) - 4px);
 }
 
 .sf-curse-veil-layer {
@@ -1562,7 +1566,7 @@ function emberStyle(i: number): Record<string, string> {
 
 /* Innerer Rand-Glow: dichter violetter Saum entlang aller vier Kanten */
 .sf-curse-veil-layer--edge {
-  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1) - 4px);
   box-shadow:
     inset 0 0 70px 18px rgba(110, 25, 180, 0.5),
     inset 0 0 160px 40px rgba(80, 15, 140, 0.3);
@@ -1633,9 +1637,9 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
   z-index: 5;
   overflow: hidden;
-  /* folgt der Außen-Rundung des Modals — sonst zeichnet der inset-Glow
-     eckige Säume in die runden Ecken */
-  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
+  /* folgt der Innen-Rundung des Modals (Außenradius − 4px Holzrahmen) —
+     sonst zeichnet der inset-Glow eckige Säume in die runden Ecken */
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1) - 4px);
 }
 
 .sf-rage-veil-layer {
@@ -1644,7 +1648,7 @@ function emberStyle(i: number): Record<string, string> {
 }
 
 .sf-rage-veil-layer--edge {
-  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1) - 4px);
   box-shadow:
     inset 0 0 70px 18px rgba(220, 30, 70, 0.45),
     inset 0 0 170px 44px rgba(160, 15, 45, 0.3);
