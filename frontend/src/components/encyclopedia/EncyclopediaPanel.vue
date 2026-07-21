@@ -247,11 +247,11 @@ const panelFrameStyle = {
       />
     </Transition>
 
-    <!-- Panel -->
+    <!-- Panel — über dem Event-Log (900), unter dem Star-Fight-Modal (1000) -->
     <Transition name="slide">
       <div
         v-if="gameStore.isEncyclopediaOpen"
-        class="enc-panel fixed right-0 top-0 z-[130] flex flex-col overflow-hidden"
+        class="enc-panel fixed right-0 top-0 z-[950] flex flex-col overflow-hidden"
         :style="panelFrameStyle"
       >
         <!-- Gold accent line -->
