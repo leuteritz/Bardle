@@ -262,7 +262,10 @@ const panelFrameStyle = {
           <Icon icon="game-icons:wax-tablet" width="28" height="28" class="enc-header-icon" />
           <div class="flex-1 min-w-0">
             <h2 class="enc-title">Bardle Codex</h2>
-            <p class="enc-subtitle">Knowledge of the cosmic wanderer</p>
+            <p class="enc-header-stats">
+              <span class="enc-header-count">{{ visibleCount }} / {{ totalEntryCount }}</span>
+              entries · {{ encyclopediaData.length }} categories
+            </p>
           </div>
           <button class="enc-close" aria-label="Close encyclopedia" @click="closePanel">✕</button>
         </div>
@@ -433,11 +436,6 @@ const panelFrameStyle = {
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="enc-footer flex items-center justify-between shrink-0">
-          <span class="enc-footer-count">{{ visibleCount }} / {{ totalEntryCount }} entries</span>
-          <span class="enc-footer-note">{{ encyclopediaData.length }} categories · © Leuteritz</span>
-        </div>
       </div>
     </Transition>
   </Teleport>
@@ -510,12 +508,20 @@ const panelFrameStyle = {
   line-height: 1;
   color: #e8c040;
 }
-.enc-subtitle {
-  margin-top: 3px;
+.enc-header-stats {
+  margin-top: clamp(3px, 0.25vw, 5px);
   font-family: 'Segoe UI', system-ui, sans-serif;
-  font-size: clamp(9px, 0.58vw, 11px);
-  letter-spacing: 0.04em;
-  color: #8a8172;
+  font-size: clamp(11px, 0.72vw, 13.5px);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #b4ab96;
+  white-space: nowrap;
+}
+.enc-header-count {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(12px, 0.78vw, 15px);
+  font-weight: 700;
+  color: #e8c040;
 }
 .enc-close {
   width: clamp(26px, 1.7vw, 32px);
@@ -609,6 +615,9 @@ const panelFrameStyle = {
 /* ── Content / groups ── */
 .enc-content {
   padding: 4px var(--enc-pad) var(--enc-pad);
+  /* Ohne Footer reicht der Scrollbereich bis zur gerundeten Unterkante —
+     extra Luft, damit die letzte Karte nicht vom Bogen angeschnitten wird */
+  padding-bottom: calc(var(--enc-arc, 40px) * 0.6 + var(--enc-pad));
 }
 .enc-group {
   margin-top: clamp(8px, 0.65vw, 12px);
@@ -803,28 +812,6 @@ const panelFrameStyle = {
   font-family: 'Segoe UI', system-ui, sans-serif;
   font-size: clamp(10.5px, 0.64vw, 12px);
   color: #6b6558;
-}
-
-/* ── Footer ── */
-.enc-footer {
-  padding: clamp(6px, 0.5vw, 9px) var(--enc-pad);
-  /* Left text clears the rounded bottom-left corner (mirrors the command
-     panel arc) — shifted right so it doesn't sit inside the curve. */
-  padding-left: calc(var(--enc-arc, 40px) + var(--enc-pad));
-  background: #1e1006;
-  border-top: 1px solid #5c3310;
-}
-.enc-footer-count {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: clamp(9.5px, 0.58vw, 11px);
-  font-weight: 600;
-  color: #c89040;
-}
-.enc-footer-note {
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  font-style: italic;
-  font-size: clamp(9px, 0.55vw, 10.5px);
-  color: #8a8172;
 }
 
 /* ── Scrollbars ── */
