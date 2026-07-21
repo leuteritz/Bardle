@@ -135,13 +135,16 @@
       </div>
     </template>
     <div v-else class="cs-detail-empty">
-      <div class="cs-detail-empty-box">
-        <span class="cs-detail-empty-mark">✦</span>
+      <CosmicStageBackground />
+      <div class="cs-detail-empty-content">
+        <div class="cs-detail-empty-box">
+          <Icon icon="game-icons:click" width="38" height="38" class="cs-detail-empty-icon" />
+        </div>
+        <span class="cs-detail-empty-title">Select a Champion</span>
+        <span class="cs-detail-empty-text">
+          Click a champion card to view traits, origin, tier and recruit cost.
+        </span>
       </div>
-      <span class="cs-detail-empty-title">Select a Champion</span>
-      <span class="cs-detail-empty-text">
-        Click a champion card to view traits, origin, tier and recruit cost.
-      </span>
     </div>
   </aside>
 </template>
@@ -149,6 +152,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { Icon } from '@iconify/vue'
+import CosmicStageBackground from '../../../ui/CosmicStageBackground.vue'
 import { formatNumber } from '../../../../config/numberFormat'
 import type { ShopChampionDetail } from '../../../../types'
 
@@ -159,7 +163,7 @@ import type { ShopChampionDetail } from '../../../../types'
  */
 export default defineComponent({
   name: 'ChampionDetailPanel',
-  components: { Icon },
+  components: { Icon, CosmicStageBackground },
   props: {
     detail: {
       type: Object as () => ShopChampionDetail | null,
@@ -517,34 +521,44 @@ export default defineComponent({
   filter: brightness(1.12);
 }
 
-/* Empty state — no champion selected yet */
+/* Empty state — no champion selected yet. Sits on the shared cosmic starfield
+   (CosmicStageBackground paints absolutely inside; content stays above it). */
 .cs-detail-empty {
+  position: relative;
   flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #111008;
+  overflow: hidden;
+}
+.cs-detail-empty-content {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  padding: 24px;
   text-align: center;
 }
 .cs-detail-empty-box {
-  width: 72px;
-  height: 72px;
+  width: 84px;
+  height: 84px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #141410;
+  background: rgba(20, 20, 16, 0.85);
   border: 2px dashed #5c3310;
   border-radius: 4px;
   margin-bottom: 4px;
 }
-.cs-detail-empty-mark {
-  font-size: 34px;
-  line-height: 1;
+.cs-detail-empty-icon {
   color: #c89040;
-  opacity: 0.75;
-  animation: cs-empty-pulse 2.6s ease-in-out infinite;
+  /* Periodic "tap": a short press-down with a gold flash, then a long rest —
+     reads as "click here" instead of a generic pulse. */
+  animation: cs-empty-tap 3.2s ease-in-out infinite;
 }
 .cs-detail-empty-title {
   font-size: 17px;
@@ -552,19 +566,31 @@ export default defineComponent({
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #e8c040;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 .cs-detail-empty-text {
   max-width: 230px;
   font-size: 12.5px;
   line-height: 1.5;
   color: #a08c68;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
-@keyframes cs-empty-pulse {
-  0%, 100% { opacity: 0.45; transform: scale(1); }
-  50%      { opacity: 0.9;  transform: scale(1.12); }
+@keyframes cs-empty-tap {
+  0%, 78%, 100% {
+    transform: translate(0, 0) scale(1);
+    filter: drop-shadow(0 0 0 rgba(232, 192, 64, 0));
+  }
+  84% {
+    transform: translate(1px, 3px) scale(0.9);
+    filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.55));
+  }
+  92% {
+    transform: translate(0, 0) scale(1.04);
+    filter: drop-shadow(0 0 10px rgba(232, 192, 64, 0.35));
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cs-detail-empty-mark {
+  .cs-detail-empty-icon {
     animation: none;
   }
 }

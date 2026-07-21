@@ -2731,6 +2731,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:hearts', // HP-Bars — Sonne (PlayerHPBar, PauseOverlay) + Bosse (PlanetRescueOverlay, StarFightModal)
   'game-icons:healing', // Support Heal/Tick stat (roleData)
   'game-icons:cuckoo-clock', // Support planet CD stat (was timer)
+  'game-icons:click', // Champion Shop detail panel — empty state (ChampionDetailPanel)
   // Mission icon replacements (invalid → valid)
   'game-icons:arrow-cursor', // Nimble Fingers reward (was finger-pointing)
   'game-icons:greek-temple', // Building Master mission (was temple)
