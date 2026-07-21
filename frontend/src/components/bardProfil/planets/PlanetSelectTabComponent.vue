@@ -656,20 +656,21 @@ function chooseBuilding(buildingId: string) {
             </div>
           </Transition>
         </template>
+
+        <!-- Rücksprung in den Star Fight: erscheint nur, wenn der Tab aus dem
+             Fight-Modal heraus geöffnet wurde und der Stern noch lebt — gleicher
+             Button wie im Team-Tab (SigilBoardComponent). Sitzt im ps-detail und
+             zentriert sich damit auf die Breite des rechten Bereichs (gleiche
+             Mitte wie das Locked-Panel-Label). -->
+        <BattleReturnButton />
       </div>
     </div>
-
-    <!-- Rücksprung in den Star Fight: erscheint nur, wenn der Tab aus dem
-         Fight-Modal heraus geöffnet wurde und der Stern noch lebt — gleicher
-         Button wie im Team-Tab (SigilBoardComponent) -->
-    <BattleReturnButton />
   </div>
 </template>
 
 <style scoped>
 /* ── Root ──────────────────────────────────────────────────────────────────── */
 .ps-tab {
-  position: relative; /* Anker für den absolut positionierten BattleReturnButton */
   height: 100%;
   overflow: hidden;
   background: #111008;
