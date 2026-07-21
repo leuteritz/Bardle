@@ -1,5 +1,6 @@
 <template>
-  <div v-if="bossAlive" ref="rootEl" class="tbh" aria-hidden="true">
+  <!-- kein aria-hidden mehr: die Slot-Einheiten sind klickbar -->
+  <div v-if="bossAlive" ref="rootEl" class="tbh">
     <!-- Gestrichelte Führungslinie im Stil der Striker-Arc-Guide: ein runder
          Ellipsenbogen um den Boss, auf dem alle 6 Slot-Anker liegen.
          pathLength normiert die Dash-Länge unabhängig von der Arena-Größe. -->
@@ -25,6 +26,16 @@
           'tbh-unit--firing': t.isTurret && volleyFlash && !behindSlotIds.has(t.slotId),
         }"
         :style="t.isTurret ? lungeStyle(t) : undefined"
+        :title="
+          t.filled
+            ? `Slot ${t.slotNum} — open Planets tab`
+            : t.purchased
+              ? `Slot ${t.slotNum} is empty — assign a planet`
+              : t.unlockable
+                ? `Unlock Slot ${t.slotNum} for ${formatNumber(t.cost)} chimes`
+                : `Slot ${t.slotNum} is locked`
+        "
+        @click="onSlotClick(t)"
       >
         <div
           v-if="t.filled"
@@ -70,9 +81,31 @@
           </span>
         </div>
 
-        <!-- Leerer Slot: Geister-Platzhalter auf dem Anker -->
-        <div v-else class="tbh-planet tbh-planet--vacant">
-          <span class="tbh-vacant-num">{{ t.slotNum }}</span>
+        <!-- Leerer Slot — gleiche Zustandssprache wie das Command-Panel-Dock:
+             gekauft+leer → grün gestrichelt mit ＋ · freischaltbar → grüner
+             Puls + UNLOCK + Preis · gesperrt → gedimmt mit Schloss + Preis -->
+        <div
+          v-else
+          class="tbh-planet tbh-planet--vacant"
+          :class="{
+            'tbh-planet--vacant-empty': t.purchased,
+            'tbh-planet--vacant-unlock': !t.purchased && t.unlockable,
+            'tbh-planet--vacant-locked': !t.purchased && !t.unlockable,
+          }"
+        >
+          <span v-if="t.purchased" class="tbh-vacant-plus">＋</span>
+          <img
+            v-else
+            src="/img/lock.png"
+            alt=""
+            class="tbh-vacant-lock"
+            draggable="false"
+          />
+          <span v-if="!t.purchased && t.unlockable" class="tbh-vacant-unlock-label">UNLOCK</span>
+          <div v-if="!t.purchased" class="tbh-vacant-cost">
+            <img src="/img/BardAbilities/BardChime.png" class="tbh-vacant-chime" alt="" />
+            <span>{{ formatNumber(t.cost) }}</span>
+          </div>
         </div>
 
         <!-- Info-Plate: HP-Bar → Slot-Nummer → dmg/s (Turret) bzw. Rolle -->
@@ -147,6 +180,9 @@ import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils
 import { playerSlotInForeground } from '@/utils/foregroundGate'
 import { Icon } from '@iconify/vue'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
+import { useUiStore } from '@/stores/uiStore'
+import { useStarGroupStore } from '@/stores/starGroupStore'
+import { formatNumber } from '@/config/numberFormat'
 import {
   GAME_TICK_INTERVAL_MS,
   PLANET_SLOT_MAX_HP,
@@ -168,8 +204,25 @@ import {
 const bossStore = usePlanetBossStore()
 const planetShopStore = usePlanetShopStore()
 const roleBehaviorStore = useRoleBehaviorStore()
+const uiStore = useUiStore()
 
 const VACANT_COLOR = '#8a8070'
+
+// Klick auf einen Slot: Fight-Modal schließen (liegt über dem Profil-Menü)
+// und den Planets-Tab mit vorausgewähltem Slot öffnen — gleiches Verhalten
+// wie das Planet-Dock im Command Panel (inkl. Kauf-Versuch bei gesperrten
+// Slots). Die Stern-ID wird als Battle-Return-Kontext gemerkt (Muster wie
+// openRolePicker in RoleStrikerSquad).
+function onSlotClick(t: SlotEntry) {
+  const starGroupStore = useStarGroupStore()
+  const starId = starGroupStore.activeFightStarId
+  if (starId) uiStore.setBattleReturn(starId)
+  starGroupStore.closeStarFightModal()
+  uiStore.requestOpenPlanetsTab(t.slotId)
+  if (!t.purchased) {
+    planetShopStore.buySlot(t.slotId)
+  }
+}
 
 // Slot-Winkel auf dem Ellipsenbogen (Striker-Konvention: 0° = rechts,
 // 90° = unten): linke Reihen um 180° gefächert, rechte um 0°/360° — Reihe 0
@@ -189,6 +242,9 @@ interface SlotEntry {
   slotNum: number
   isLeft: boolean
   filled: boolean
+  purchased: boolean
+  unlockable: boolean
+  cost: number
   isTurret: boolean
   image: string
   color: string
@@ -205,7 +261,7 @@ interface SlotEntry {
 // (Reihe 0–2), Slot 4–6 → rechte. Gefüllte Slots tragen das Planet-Image
 // ihrer Rolle; nur Turrets feuern zurück und zeigen dmg/s.
 const entries = computed<SlotEntry[]>(() =>
-  planetShopStore.slots.map((s) => {
+  planetShopStore.slots.map((s, index) => {
     const slotNum = parseInt(s.id.replace('slot_', ''), 10)
     const isLeft = slotNum <= 3
     const row = (slotNum - 1) % 3
@@ -220,6 +276,9 @@ const entries = computed<SlotEntry[]>(() =>
       slotNum,
       isLeft,
       filled,
+      purchased: s.purchased,
+      unlockable: !s.purchased && planetShopStore.canUnlockPlanetSlot(index),
+      cost: planetShopStore.getSlotCost(s.id),
       isTurret: filled && s.role === 'turret_planet',
       image: roleDef?.image ?? '',
       color: roleDef?.color ?? VACANT_COLOR,
@@ -590,9 +649,20 @@ onUnmounted(() => {
   transform: translate(-50%, -50%);
 }
 
-/* Einheit = Planet-Box (Plate ist absolut) — Schnips bewegt beides zusammen */
+/* Einheit = Planet-Box (Plate ist absolut) — Schnips bewegt beides zusammen.
+   Klickbar: öffnet den Planets-Tab mit vorausgewähltem Slot (wie das
+   Command-Panel-Dock), daher pointer-events trotz HUD-Root wieder an */
 .tbh-unit {
   position: relative;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.tbh-unit:hover {
+  transform: translateY(-1px);
+}
+.tbh-unit:active {
+  transform: translateY(0) scale(0.96);
 }
 
 .tbh-planet {
@@ -666,26 +736,142 @@ onUnmounted(() => {
   }
 }
 
-/* ── Leerer Slot: Geister-Platzhalter — gestrichelter Ring + Slot-Nummer ── */
+/* ── Leerer Slot — Zustandssprache 1:1 vom Command-Panel-Dock ───────────── */
 .tbh-planet--vacant {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 2px dashed rgba(138, 128, 112, 0.5);
+  gap: 2px;
   border-radius: 50%;
-  opacity: 0.55;
 }
 
 .tbh-planet--vacant::before {
   display: none;
 }
 
-.tbh-vacant-num {
-  font-size: 1.1rem;
+/* Gekauft, aber noch kein Planet zugewiesen → grün gestrichelt, atmet */
+.tbh-planet--vacant-empty {
+  border: 2px dashed rgba(82, 184, 48, 0.52);
+  background: radial-gradient(circle, rgba(8, 18, 6, 0.7), rgba(5, 12, 4, 0.85));
+  box-shadow: inset 0 0 14px rgba(52, 160, 24, 0.06);
+  animation: tbh-empty-breathe 3s ease-in-out infinite;
+}
+.tbh-unit:hover .tbh-planet--vacant-empty {
+  border-color: rgba(110, 192, 64, 0.82);
+  box-shadow:
+    inset 0 0 14px rgba(82, 184, 48, 0.12),
+    0 0 8px rgba(82, 184, 48, 0.2);
+}
+
+.tbh-vacant-plus {
+  font-size: 1.4rem;
+  line-height: 1;
+  color: rgba(116, 212, 72, 0.75);
+  text-shadow: 0 0 10px rgba(82, 184, 48, 0.38);
+  animation: tbh-empty-icon-pulse 3s ease-in-out infinite;
+}
+
+/* Freischaltbar → grüner Kauf-Puls + UNLOCK + Preis */
+.tbh-planet--vacant-unlock {
+  border: 2px solid rgba(110, 192, 64, 0.45);
+  background: radial-gradient(circle, rgba(18, 30, 10, 0.72), rgba(12, 20, 6, 0.82));
+  animation: tbh-afford-pulse 2.2s ease-in-out infinite;
+}
+.tbh-unit:hover .tbh-planet--vacant-unlock {
+  border-color: #6ec040;
+  box-shadow:
+    0 0 18px rgba(110, 192, 64, 0.6),
+    0 0 36px rgba(110, 192, 64, 0.18);
+  animation: none;
+}
+
+.tbh-vacant-unlock-label {
+  font-size: 0.5rem;
   font-weight: 900;
-  color: rgba(138, 128, 112, 0.75);
+  letter-spacing: 0.1em;
+  color: #90e050;
+  text-shadow: 0 0 6px rgba(144, 224, 80, 0.7);
+}
+
+/* Gesperrt → gedimmt mit Schloss */
+.tbh-planet--vacant-locked {
+  border: 2px dashed rgba(138, 128, 112, 0.5);
+  background: radial-gradient(circle, rgba(20, 16, 8, 0.6), rgba(12, 10, 4, 0.8));
+  opacity: 0.55;
+  filter: grayscale(40%);
+}
+
+.tbh-vacant-lock {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  opacity: 0.85;
+}
+
+/* Preis-Chip unter dem Slot-Kreis (Position wie die Info-Plates) */
+.tbh-vacant-cost {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #e8c040;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.tbh-planet--vacant-unlock .tbh-vacant-cost {
+  color: #f0d060;
+  text-shadow: 0 0 6px rgba(232, 192, 64, 0.6);
+}
+
+.tbh-vacant-chime {
+  width: 12px;
+  height: 12px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+@keyframes tbh-empty-breathe {
+  0%,
+  100% {
+    border-color: rgba(82, 184, 48, 0.38);
+  }
+  50% {
+    border-color: rgba(82, 184, 48, 0.68);
+  }
+}
+
+@keyframes tbh-empty-icon-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes tbh-afford-pulse {
+  0%,
+  100% {
+    border-color: rgba(110, 192, 64, 0.35);
+    box-shadow: 0 0 6px rgba(110, 192, 64, 0.15);
+  }
+  50% {
+    border-color: #6ec040;
+    box-shadow:
+      0 0 16px rgba(110, 192, 64, 0.55),
+      0 0 28px rgba(110, 192, 64, 0.16);
+  }
 }
 
 /* Schnips beim Salvenstart: kurz vom Boss weg ausholen, dann samt Pill und
@@ -988,7 +1174,10 @@ onUnmounted(() => {
   .tbh-strike-bolt,
   .tbh-strike-mark,
   .tbh-comet,
-  .tbh-eclipse {
+  .tbh-eclipse,
+  .tbh-planet--vacant-empty,
+  .tbh-vacant-plus,
+  .tbh-planet--vacant-unlock {
     animation: none;
   }
 }
