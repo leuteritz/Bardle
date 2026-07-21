@@ -396,11 +396,13 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
 
         const pRelY = (py - sy) / Math.max(targetSlotRy, 1)
         const pIsBehind = pRelY < -0.05
-        const pDepth = Math.max(0, Math.min(1, (pRelY + 1) / 2))
 
         if (!slot.cleared) {
-          const isForeground = !pIsBehind && pDepth > 0.65
-          activePlanetPositions.set(slot.planetId, { cx: px, cy: py, isForeground })
+          // Kampf-Gate folgt dem Stern, nicht dem lokalen Mini-Orbit: der Planet
+          // gilt genau dann als "hinter der Sonne", wenn sein STERN hinter der
+          // Sonne fliegt (sIsBehind) — synchron zum visuellen Layering im
+          // Idle-Orbit und zum Eclipse-Status im Star-Fight-Modal.
+          activePlanetPositions.set(slot.planetId, { cx: px, cy: py, isForeground: !sIsBehind })
         }
 
         let animState: PlanetRenderEntry['animState'] = 'normal'
