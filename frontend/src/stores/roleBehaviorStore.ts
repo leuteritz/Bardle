@@ -319,10 +319,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         return
       }
 
+      // Zünden erst im Tick NACH Erreichen von 0 — so ist "0s" + voller Ring
+      // im UI einen Tick lang sichtbar, bevor die Rage losgeht
+      const rageWasReady = this.rageCooldownMs <= 0
       this.rageCooldownMs = Math.max(0, this.rageCooldownMs - tickMs)
       // readyAt jeden Tick nachführen — Ringe interpolieren daraus pro Frame
       this.rageReadyAt = now + this.rageCooldownMs
-      if (this.rageCooldownMs <= 0) {
+      if (rageWasReady) {
         this.rageActiveUntil = now + this.rageDurationMs
         addEvent(
           `${activeBoss.bossName} flies into a rage! (×${BOSS_RAGE_DMG_MULT} dmg, ${Math.round(this.rageDurationMs / 1000)}s)`,
@@ -372,10 +375,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         return
       }
 
+      // Zünden erst im Tick NACH Erreichen von 0 — "0s" + voller Ring sind
+      // im UI einen Tick lang sichtbar, bevor die Welle losbricht
+      const novaWasReady = this.novaCooldownMs <= 0
       this.novaCooldownMs = Math.max(0, this.novaCooldownMs - tickMs)
       // readyAt jeden Tick nachführen — selbstkorrigierend nach Pausen
       this.novaReadyAt = now + this.novaCooldownMs
-      if (this.novaCooldownMs > 0) return
+      if (!novaWasReady) return
 
       // Vordergrund-Gate: Steht der Boss hinter der Sonne, wartet die Nova
       // bei vollem Ring, bis er wieder sichtbar ist
@@ -507,9 +513,12 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         this.autoNextTargetSlotId = rolled && 'slotId' in rolled ? rolled.slotId : null
       }
 
+      // Zünden erst im Tick NACH Erreichen von 0 — "0s" + voller Ring sind
+      // im UI einen Tick lang sichtbar, bevor der Strike einschlägt
+      const strikeWasReady = this.autoCooldownMs <= 0
       this.autoCooldownMs = Math.max(0, this.autoCooldownMs - tickMs)
       this.autoReadyAt = now + this.autoCooldownMs
-      if (this.autoCooldownMs > 0) return
+      if (!strikeWasReady) return
 
       if (!this.autoNextTargetRole && !this.autoNextTargetSlotId) return
 
