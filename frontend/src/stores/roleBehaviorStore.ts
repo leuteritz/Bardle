@@ -29,6 +29,7 @@ import {
   BOSS_NOVA_PLAYER_DAMAGE,
   BOSS_AUTO_INTERVAL_MS,
   BOSS_AUTO_ATTACK_DAMAGE,
+  BOSS_AUTO_AIM_MS,
   SUPPORT_HEAL_RANGE,
   SUPPORT_PLANET_HEAL_AMOUNT,
   SUPPORT_PLANET_HEAL_INTERVAL_MS,
@@ -207,10 +208,12 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     autoTargetRole: null as ChampionRole | null,
     autoTargetSlotId: null as string | null,
     autoDmg: 0,
-    // Vorab ausgewürfeltes NÄCHSTES Strike-Ziel — das UI kündigt es an,
-    // der nächste Strike trifft exakt dieses Ziel (sofern noch am Leben)
-    autoNextTargetRole: null as ChampionRole | null,
-    autoNextTargetSlotId: null as string | null,
+    // Anvisier-Phase: bei vollem Ring wählt der Boss ein sichtbares Ziel und
+    // hält BOSS_AUTO_AIM_MS lang die Zielscheibe darauf, bevor der Bolt fliegt
+    autoAimRole: null as ChampionRole | null,
+    autoAimSlotId: null as string | null,
+    autoAimUntil: 0,
+    autoAimCounter: 0,
 
     // Boss Rage — interval + duration are rolled fresh PER STAR: the cooldown
     // keeps counting across boss transitions within the same star fight
@@ -451,7 +454,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     },
 
     /** Zielpool des Strikes: lebende Orbit-Champions + Spieler-Planeten
-     *  (jede Planetenart) mit Rest-HP. Liefert ein Zufallsziel oder null. */
+     *  (jede Planetenart) mit Rest-HP — nur Ziele VOR der Sonne, wer dahinter
+     *  steht, kann nicht anvisiert werden. Liefert ein Zufallsziel oder null. */
     _rollStrikeTarget(
       roles: Set<string>,
     ): { role: ChampionRole } | { slotId: string } | null {
@@ -461,10 +465,11 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           roles.has(role) &&
           this.championHp[role].max > 0 &&
           this.championHp[role].current > 0 &&
-          this.championDownUntil[role] <= 0,
+          this.championDownUntil[role] <= 0 &&
+          championInForeground(getChampionNameByRole(role)),
       )
       const planetTargets = planetShopStore.activeSlots.filter(
-        (s) => (s.currentHp ?? 1) > 0,
+        (s) => (s.currentHp ?? 1) > 0 && playerSlotInForeground(s.id),
       )
       const poolSize = champTargets.length + planetTargets.length
       if (poolSize === 0) return null
@@ -475,10 +480,24 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         : { slotId: planetTargets[pick - champTargets.length].id }
     },
 
-    /** Boss ability "Strike": on a short cooldown the boss jabs ONE living
-     *  target — an orbiting champion or a turret planet. The NEXT victim is
-     *  pre-rolled and announced via autoNextTarget*; rage doubles the damage,
-     *  which is what makes the rage phase truly dangerous. */
+    /** Anvisier-Phase abbrechen — Zielscheibe verschwindet im UI */
+    _clearStrikeAim() {
+      this.autoAimRole = null
+      this.autoAimSlotId = null
+      this.autoAimUntil = 0
+    },
+
+    /** Boss ability "Strike" — Phasen-Ablauf:
+     *  1. Cooldown läuft herunter (Ring füllt sich).
+     *  2. Ring voll: steht der Boss hinter der Sonne, wartet er bei vollem
+     *     Ring, bis er wieder vorn ist.
+     *  3. Der Boss wählt zufällig EIN sichtbares Ziel (Champion oder
+     *     Spieler-Planet, nicht hinter der Sonne) und hält BOSS_AUTO_AIM_MS
+     *     lang die Zielscheibe darauf (autoAim*).
+     *  4. Stirbt das Ziel oder wandert es hinter die Sonne, bricht das
+     *     Anvisieren ab und ein neues Ziel wird gewählt.
+     *  5. Feuern: Bolt fliegt, Schaden fällt, Cooldown startet neu.
+     *  Rage verdoppelt den Schaden — das macht die Rage-Phase gefährlich. */
     _tickBossAutoAttack(roles: Set<string>, tickMs: number) {
       const bossStore = usePlanetBossStore()
       const activeBoss = bossStore.activeBoss
@@ -490,45 +509,56 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         this.autoReadyAt = 0
         this.autoTargetRole = null
         this.autoTargetSlotId = null
-        this.autoNextTargetRole = null
-        this.autoNextTargetSlotId = null
+        this._clearStrikeAim()
         return
       }
 
-      // Angekündigtes Ziel validieren bzw. (nach)würfeln — das Label zeigt
-      // damit immer den Gegner, den der nächste Strike treffen wird
-      const nextRole = this.autoNextTargetRole
-      const nextValid = nextRole
-        ? roles.has(nextRole) &&
-          this.championHp[nextRole].current > 0 &&
-          this.championDownUntil[nextRole] <= 0
-        : this.autoNextTargetSlotId
-          ? usePlanetShopStore().purchasedSlots.some(
-              (s) => s.id === this.autoNextTargetSlotId && (s.currentHp ?? 1) > 0,
-            )
-          : false
-      if (!nextValid) {
-        const rolled = this._rollStrikeTarget(roles)
-        this.autoNextTargetRole = rolled && 'role' in rolled ? rolled.role : null
-        this.autoNextTargetSlotId = rolled && 'slotId' in rolled ? rolled.slotId : null
+      // Phase 1: Cooldown herunterzählen — Ring füllt sich
+      if (this.autoCooldownMs > 0) {
+        this.autoCooldownMs = Math.max(0, this.autoCooldownMs - tickMs)
+        this.autoReadyAt = now + this.autoCooldownMs
+        return
       }
 
-      // Zünden erst im Tick NACH Erreichen von 0 — "0s" + voller Ring sind
-      // im UI einen Tick lang sichtbar, bevor der Strike einschlägt
-      const strikeWasReady = this.autoCooldownMs <= 0
-      this.autoCooldownMs = Math.max(0, this.autoCooldownMs - tickMs)
-      this.autoReadyAt = now + this.autoCooldownMs
-      if (!strikeWasReady) return
+      // Phase 2: Boss hinter der Sonne → kann nicht ausführen, wartet bei
+      // vollem Ring; ein laufendes Anvisieren wird abgebrochen
+      if (!bossPlanetInForeground(activeBoss.planetId)) {
+        this._clearStrikeAim()
+        return
+      }
 
-      if (!this.autoNextTargetRole && !this.autoNextTargetSlotId) return
+      // Phase 3: noch kein Ziel im Visier → zufällig eines der sichtbaren
+      // Ziele wählen und die Zielscheibe daraufsetzen
+      if (!this.autoAimRole && !this.autoAimSlotId) {
+        const rolled = this._rollStrikeTarget(roles)
+        if (!rolled) return
+        this.autoAimRole = 'role' in rolled ? rolled.role : null
+        this.autoAimSlotId = 'slotId' in rolled ? rolled.slotId : null
+        this.autoAimUntil = now + BOSS_AUTO_AIM_MS
+        this.autoAimCounter++
+        return
+      }
 
-      // Vordergrund-Gate: Boss UND Ziel müssen sichtbar sein — der Strike
-      // wartet bei vollem Ring (CD 0), bis beide vor der Sonne stehen
-      const targetVisible = this.autoNextTargetRole
-        ? championInForeground(getChampionNameByRole(this.autoNextTargetRole))
-        : playerSlotInForeground(this.autoNextTargetSlotId!)
-      if (!bossPlanetInForeground(activeBoss.planetId) || !targetVisible) return
+      // Phase 4: Visier validieren — Ziel tot, down oder hinter der Sonne →
+      // abbrechen, nächster Tick wählt ein neues Ziel
+      const aimRole = this.autoAimRole
+      const aimValid = aimRole
+        ? roles.has(aimRole) &&
+          this.championHp[aimRole].current > 0 &&
+          this.championDownUntil[aimRole] <= 0 &&
+          championInForeground(getChampionNameByRole(aimRole))
+        : usePlanetShopStore().activeSlots.some(
+            (s) => s.id === this.autoAimSlotId && (s.currentHp ?? 1) > 0,
+          ) && playerSlotInForeground(this.autoAimSlotId!)
+      if (!aimValid) {
+        this._clearStrikeAim()
+        return
+      }
 
+      // Zielscheibe noch nicht lang genug auf dem Opfer → weiter anvisieren
+      if (now < this.autoAimUntil) return
+
+      // Phase 5: Feuern — Bolt fliegt, Schaden fällt, Cooldown startet neu
       this.autoCooldownMs = BOSS_AUTO_INTERVAL_MS
       this.autoReadyAt = now + BOSS_AUTO_INTERVAL_MS
 
@@ -539,34 +569,29 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           (raging ? BOSS_RAGE_DMG_MULT : 1),
       )
 
-      if (this.autoNextTargetRole) {
-        const role = this.autoNextTargetRole
-        const hp = this.championHp[role]
+      if (aimRole) {
+        const hp = this.championHp[aimRole]
         hp.current = Math.max(0, hp.current - dmg)
-        this.autoTargetRole = role
+        this.autoTargetRole = aimRole
         this.autoTargetSlotId = null
 
         if (hp.current <= 0) {
           const { addEvent } = useEventLog()
-          this.championDownUntil[role] = now + CHAMPION_REVIVE_MS
+          this.championDownUntil[aimRole] = now + CHAMPION_REVIVE_MS
           addEvent(
-            `${getChampionNameByRole(role)} is knocked out by ${activeBoss.bossName}! (${CHAMPION_REVIVE_MS / 1000}s)`,
-            role,
+            `${getChampionNameByRole(aimRole)} is knocked out by ${activeBoss.bossName}! (${CHAMPION_REVIVE_MS / 1000}s)`,
+            aimRole,
           )
         }
-      } else if (this.autoNextTargetSlotId) {
-        usePlanetShopStore().takeDamage(this.autoNextTargetSlotId, dmg)
+      } else if (this.autoAimSlotId) {
+        usePlanetShopStore().takeDamage(this.autoAimSlotId, dmg)
         this.autoTargetRole = null
-        this.autoTargetSlotId = this.autoNextTargetSlotId
+        this.autoTargetSlotId = this.autoAimSlotId
       }
 
       this.autoDmg = dmg
       this.autoCounter++
-
-      // Direkt das nächste Opfer ankündigen
-      const rolled = this._rollStrikeTarget(roles)
-      this.autoNextTargetRole = rolled && 'role' in rolled ? rolled.role : null
-      this.autoNextTargetSlotId = rolled && 'slotId' in rolled ? rolled.slotId : null
+      this._clearStrikeAim()
     },
 
     /** Every orbiting role fires a star attack at the active boss on its own

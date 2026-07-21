@@ -173,12 +173,14 @@
                     </div>
                   </div>
 
-                  <!-- Strike-Ziel: kündigt an, wen der nächste Strike trifft -->
+                  <!-- Strike-Ziel-Ansage: erscheint, sobald der Ring voll ist
+                       und der Boss sein Opfer im Visier hat — verschwindet
+                       mit dem Abschuss -->
                   <Transition name="sf-callout" mode="out-in">
-                    <div v-if="strikeNextTarget" :key="strikeNextTarget" class="sf-strike-next">
-                      <span class="sf-strike-next-label">Next Strike</span>
+                    <div v-if="strikeAimTarget" :key="strikeAimTarget" class="sf-strike-next">
+                      <span class="sf-strike-next-label">Strike</span>
                       <span class="sf-strike-next-arrow">→</span>
-                      <span class="sf-strike-next-name">{{ strikeNextTarget }}</span>
+                      <span class="sf-strike-next-name">{{ strikeAimTarget }}</span>
                     </div>
                   </Transition>
                 </div>
@@ -281,6 +283,24 @@ const starGroupStore = useStarGroupStore()
 const bossStore = usePlanetBossStore()
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
+
+// headerSlots-Index je Rolle (SLOT_ROLES-Reihenfolge aus getOrbitingRoles)
+const ROLE_SLOT_INDEX: Record<ChampionRole, number> = {
+  top: 0,
+  jungle: 1,
+  mid: 2,
+  adc: 3,
+  support: 4,
+}
+
+// Strike-Ziel-Ansage: nur während der Anvisier-Phase gesetzt — zeigt unter
+// der HP-Leiste, wen der Boss gerade im Visier hat (Champion-Name bzw. Slot)
+const strikeAimTarget = computed(() => {
+  const role = roleBehaviorStore.autoAimRole
+  if (role) return battleStore.headerSlots[ROLE_SLOT_INDEX[role]] ?? role.toUpperCase()
+  const slotId = roleBehaviorStore.autoAimSlotId
+  return slotId ? slotId.replace('slot_', 'Slot ') : null
+})
 
 // ── Reactive values ───────────────────────────────────────────────────────
 const isShaking = ref(false)
@@ -435,14 +455,6 @@ const autoRingPct = computed(() => {
 const bossJabActive = ref(false)
 let bossJabTimeout: ReturnType<typeof setTimeout> | null = null
 
-const ROLE_SLOT_INDEX: Record<ChampionRole, number> = {
-  top: 0,
-  jungle: 1,
-  mid: 2,
-  adc: 3,
-  support: 4,
-}
-
 // ── Eclipse-Status: Boss hinter der Sonne? (250ms-Tick liest die 60fps-
 // aktualisierte, nicht-reaktive Positions-Map) ───────────────────────────
 const bossBehindSun = computed(() => {
@@ -450,15 +462,6 @@ const bossBehindSun = computed(() => {
   const boss = activeBoss.value
   if (!boss) return false
   return !bossPlanetInForeground(boss.planetId)
-})
-
-// Ziel-Ansage: zeigt permanent, welchen Gegner der NÄCHSTE Strike trifft —
-// der Store würfelt das Ziel vorab aus (autoNextTarget*)
-const strikeNextTarget = computed(() => {
-  const role = roleBehaviorStore.autoNextTargetRole
-  if (role) return battleStore.headerSlots[ROLE_SLOT_INDEX[role]] ?? role.toUpperCase()
-  const slotId = roleBehaviorStore.autoNextTargetSlotId
-  return slotId ? slotId.replace('slot_', 'Slot ') : null
 })
 
 watch(
@@ -1448,8 +1451,8 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-/* ── Strike-Ziel-Ansage unter der HP-Leiste: "STRIKE → NAME" — kurz,
-   eindeutig, der Name als heller Held der Zeile ──────────────────────────── */
+/* ── Strike-Ziel-Ansage unter der HP-Leiste: "STRIKE → NAME" — nur während
+   der Anvisier-Phase sichtbar, Crimson passend zur Zielscheibe ────────────── */
 .sf-strike-next {
   position: absolute;
   top: calc(100% + 5px);
@@ -1467,14 +1470,14 @@ function emberStyle(i: number): Record<string, string> {
   font-weight: 900;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(216, 208, 192, 0.65);
+  color: rgba(255, 140, 120, 0.75);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 .sf-strike-next-arrow {
   font-size: 0.95rem;
   font-weight: 900;
-  color: rgba(240, 228, 200, 0.55);
+  color: rgba(255, 160, 140, 0.6);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
@@ -1483,10 +1486,10 @@ function emberStyle(i: number): Record<string, string> {
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #fff4d8;
+  color: #ffd8cc;
   text-shadow:
-    0 0 14px rgba(232, 220, 190, 0.7),
-    0 0 30px rgba(216, 208, 192, 0.3),
+    0 0 14px rgba(255, 90, 60, 0.7),
+    0 0 30px rgba(255, 60, 40, 0.3),
     0 2px 3px rgba(0, 0, 0, 0.95);
 }
 

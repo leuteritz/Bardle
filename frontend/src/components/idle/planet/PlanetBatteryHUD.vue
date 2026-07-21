@@ -48,6 +48,10 @@
         >
           <img :src="t.image" alt="" draggable="false" />
 
+          <!-- Boss-Zielscheibe: liegt während der Aim-Phase über dem GANZEN
+               Planeten-Bild — rotierender Dash-Ring + pulsierende Tönung -->
+          <span v-if="roleBehaviorStore.autoAimSlotId === t.slotId" class="tbh-aim-lock" />
+
           <!-- Cooldown-Pill nur für Turrets — eigener 100ms-Ticker in
                der Kind-Komponente, re-rendert nicht die ganze Batterie -->
           <TurretCdPill v-if="t.isTurret" />
@@ -165,6 +169,7 @@
       class="tbh-strike-mark"
       :style="{ left: m.xPct + '%', top: m.yPct + '%' }"
     />
+
 
     <!-- Kometen-Volleys Richtung Boss -->
     <span
@@ -383,6 +388,7 @@ interface AutoMark {
 }
 const autoMarks = ref<AutoMark[]>([])
 
+
 watch(
   () => roleBehaviorStore.autoCounter,
   () => {
@@ -404,7 +410,8 @@ watch(
       later(BOSS_AUTO_HIT_DELAY_MS + 80, () => {
         autoBolts.value = autoBolts.value.filter((b) => b.id !== id)
       })
-      later(BOSS_AUTO_HIT_DELAY_MS + 250, () => {
+      // Reticle verschwindet exakt beim Einschlag des Bolts
+      later(BOSS_AUTO_HIT_DELAY_MS + 80, () => {
         autoMarks.value = autoMarks.value.filter((m) => m.id !== id)
       })
     }
@@ -1260,6 +1267,71 @@ onUnmounted(() => {
   }
 }
 
+/* ── Boss-Zielscheibe (Aim-Phase): liegt über dem GANZEN Planeten-Bild —
+   rotierender Dash-Ring außen, pulsierende rote Tönung über dem Bild.
+   Nur transform/opacity (GPU), keine Blur-Schatten ───────────────────────── */
+.tbh-aim-lock {
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 4;
+  animation: tbh-aim-in 0.2s ease-out both;
+}
+
+/* Rotierender gestrichelter Zielring — etwas größer als der Planet */
+.tbh-aim-lock::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px dashed #ff5040;
+  animation: tbh-aim-spin 2.2s linear infinite;
+  will-change: transform;
+}
+
+/* Rote Tönung über der kompletten Planetenfläche — pulsiert deutlich */
+.tbh-aim-lock::after {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 60, 40, 0.16) 0%,
+    rgba(255, 60, 40, 0.3) 62%,
+    rgba(255, 50, 30, 0.55) 100%
+  );
+  animation: tbh-aim-tint-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes tbh-aim-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes tbh-aim-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes tbh-aim-tint-pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* ── Boss-Treffer: roter Flash-Overlay (nur ::after — kollidiert nicht mit
    der Snap-Animation auf dem Element selbst) ─────────────────────────────── */
 .tbh-planet--hit::after {
@@ -1397,6 +1469,9 @@ onUnmounted(() => {
   .tbh-impact-num,
   .tbh-strike-bolt,
   .tbh-strike-mark,
+  .tbh-aim-lock,
+  .tbh-aim-lock::before,
+  .tbh-aim-lock::after,
   .tbh-comet,
   .tbh-eclipse,
   .tbh-vacant-emblem,

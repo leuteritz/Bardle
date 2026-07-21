@@ -22,6 +22,7 @@
       :style="{ left: m.xPct + '%', top: m.yPct + '%' }"
     />
 
+
     <!-- Unbesetzte Rollen: Geister-Platzhalter auf derselben Arc-Position —
          Klick öffnet den Team-Tab mit dem passenden Rollen-Slot -->
     <button
@@ -60,6 +61,7 @@
         'rsq-item--hit': hitRoles.has(s.role),
         'rsq-item--down': s.isDown,
         'rsq-item--behind': s.behind && !s.isDown,
+        'rsq-item--aimed': roleBehaviorStore.autoAimRole === s.role,
       }"
       :style="{
         '--rc': s.color,
@@ -93,6 +95,10 @@
             :style="{ strokeDasharray: s.dash }"
           />
         </svg>
+
+        <!-- Boss-Zielscheibe: liegt während der Aim-Phase über dem GANZEN
+             Portrait — rotierender Dash-Ring + pulsierende rote Tönung -->
+        <span v-if="roleBehaviorStore.autoAimRole === s.role" class="rsq-aim-lock" />
 
         <!-- "Attack!"-Callout über die gesamte Choreografie (Windup + Schnips) -->
         <Transition name="rsq-atk">
@@ -539,6 +545,7 @@ interface AutoMark {
 }
 const autoMarks = ref<AutoMark[]>([])
 
+
 watch(
   () => roleBehaviorStore.autoCounter,
   () => {
@@ -562,7 +569,8 @@ watch(
       later(BOSS_AUTO_HIT_DELAY_MS + 80, () => {
         autoBolts.value = autoBolts.value.filter((b) => b.id !== id)
       })
-      later(BOSS_AUTO_HIT_DELAY_MS + 250, () => {
+      // Reticle verschwindet exakt beim Einschlag des Bolts
+      later(BOSS_AUTO_HIT_DELAY_MS + 80, () => {
         autoMarks.value = autoMarks.value.filter((m) => m.id !== id)
       })
     }
@@ -1471,6 +1479,80 @@ onUnmounted(() => {
   }
 }
 
+/* ── Boss-Zielscheibe (Aim-Phase): liegt über dem GANZEN Portrait —
+   rotierender Dash-Ring außen, pulsierende rote Tönung über dem Bild,
+   dazu roter Glüh-Rand am Portrait. Nur transform/opacity (GPU) ──────────── */
+.rsq-aim-lock {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 4;
+  animation: rsq-aim-in 0.2s ease-out both;
+}
+
+/* Rotierender gestrichelter Zielring — etwas größer als das Portrait */
+.rsq-aim-lock::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px dashed #ff5040;
+  animation: rsq-aim-spin 2.2s linear infinite;
+  will-change: transform;
+}
+
+/* Rote Tönung über der kompletten Portraitfläche — pulsiert deutlich */
+.rsq-aim-lock::after {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 60, 40, 0.16) 0%,
+    rgba(255, 60, 40, 0.3) 62%,
+    rgba(255, 50, 30, 0.55) 100%
+  );
+  animation: rsq-aim-tint-pulse 0.6s ease-in-out infinite alternate;
+}
+
+/* Portrait-Rand glüht rot, solange der Boss zielt */
+.rsq-item--aimed .rsq-portrait {
+  border-color: #ff5040;
+  box-shadow:
+    0 0 0 2px rgba(40, 4, 0, 0.9),
+    0 0 22px rgba(255, 60, 40, 0.75),
+    0 5px 12px rgba(0, 0, 0, 0.7);
+}
+
+@keyframes rsq-aim-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes rsq-aim-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rsq-aim-tint-pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Boss-Treffer: großer Crit-Slam statt kleinem Float — die Zahl knallt von
    oben rein, überschwingt und schwebt dann glühend davon */
 .rsq-float--hit {
@@ -1582,6 +1664,9 @@ onUnmounted(() => {
   .rsq-float--hit::before,
   .rsq-strike-bolt,
   .rsq-strike-mark,
+  .rsq-aim-lock,
+  .rsq-aim-lock::before,
+  .rsq-aim-lock::after,
   .rsq-atk-enter-active,
   .rsq-vacant-emblem,
   .rsq-vacant-ring,
