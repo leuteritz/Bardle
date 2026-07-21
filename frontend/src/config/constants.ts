@@ -2612,17 +2612,77 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:rocket-thruster',
   'game-icons:hourglass',
   'game-icons:tower',
-  // Encyclopedia
-  'game-icons:galaxy',
-  'game-icons:scroll-quill',
-  'game-icons:map',
-  'game-icons:crystal-growth',
-  'game-icons:sword-spade',
-  // Encyclopedia — new materials (artwork pending, materialsAndItems.ts)
-  'game-icons:frozen-orb', // Comet Ice
-  'game-icons:metal-bar', // Star Iron
-  'game-icons:atom-core', // Plasma Core
-  'game-icons:dust-cloud', // Aether Dust
+  // Encyclopedia — category icons (config/encyclopedia/*)
+  'game-icons:galaxy', // Galaxies category
+  'game-icons:stone-path', // Sections entry (worldAndMeta.ts)
+  'game-icons:sword-spade', // Items & Sets category
+  'game-icons:solar-power', // Sun & Star Forge category
+  'game-icons:tree-growth', // Meep Skill Tree category
+  'game-icons:visored-helm', // Champions & Team category
+  'game-icons:orbital-rays', // Orbit Combat category
+  'game-icons:crossed-slashes', // Star Fights category
+  'game-icons:orbital', // Planet Slots category
+  'game-icons:divided-spiral', // Prestige & Universes category
+  // Encyclopedia — entry icons (config/encyclopedia/*)
+  'game-icons:life-support', // Sun HP entry
+  'game-icons:progression', // Level System entry
+  'game-icons:gift-of-knowledge', // Augments entry
+  'game-icons:card-random', // Augment Pool entry
+  'game-icons:village', // Chime Buildings entry
+  'game-icons:meteor-impact', // Comet Origin entry
+  'game-icons:sunset', // Sun Phases entry
+  'game-icons:beam-wake', // Solar Rays entry
+  'game-icons:tree-branch', // Forge Branches entry
+  'game-icons:falling-leaf', // Forge Leaves entry
+  'game-icons:anvil', // Relics entry
+  'game-icons:north-star-shuriken', // Constellations entry
+  'game-icons:trade', // Cosmic Bargain entry
+  'game-icons:sprout', // Meep Skill Tree entry
+  'game-icons:pan-flute', // Melody Branch entry
+  'game-icons:drum-kit', // Resonance Branch entry
+  'game-icons:ufo', // Cosmos Branch entry
+  'game-icons:war-axe', // Battle Branch entry
+  'game-icons:guards', // Warden Branch entry
+  'game-icons:stone-sphere', // Orbit Slots entry
+  'game-icons:gears', // Planet Roles entry
+  'game-icons:ascending-block', // Attunement entry
+  'game-icons:jungle', // Jungle Buffs entry
+  'game-icons:tv', // Auto-Battle entry
+  'game-icons:perspective-dice-six-faces-random', // Win Probability entry
+  'game-icons:podium', // MMR & Ranks entry
+  'game-icons:flying-flag', // League Points entry
+  'game-icons:sea-dragon', // Drakes & Baron entry
+  'game-icons:crowned-heart', // Honor & MVP entry
+  'game-icons:knight-banner', // Recruitment entry
+  'game-icons:rank-2', // Champion Tiers entry
+  'game-icons:meeple-army', // Team Roster entry
+  'game-icons:chain-lightning', // Traits & Origins entry
+  'game-icons:sword-array', // Orbit Combat entry
+  'game-icons:juggler', // Role Abilities entry
+  'game-icons:life-bar', // Champion HP entry
+  'game-icons:angry-eyes', // Boss Attacks entry
+  'game-icons:star-struck', // Star Types entry
+  'game-icons:crossed-axes', // Fight Flow entry
+  'game-icons:missile-swarm', // Turret Salvos entry
+  'game-icons:health-decrease', // Boss HP entry
+  'game-icons:fire-breath', // Enrage entry
+  'game-icons:present', // Boss Rewards entry
+  'game-icons:stairs', // Galaxy Progression entry
+  'game-icons:evil-comet', // Galaxy Boss entry
+  'game-icons:ladder', // Galaxy Tiers entry
+  'game-icons:direction-signs', // Expeditions entry
+  'game-icons:money-stack', // Expedition Rewards entry
+  'game-icons:shop', // Item Shop entry
+  'game-icons:cut-diamond', // Item Rarities entry
+  'game-icons:three-keys', // Set Bonuses entry
+  'game-icons:spiky-explosion', // Prestige entry
+  'game-icons:andromeda-chain', // Universes entry
+  // Encyclopedia — panel UI (EncyclopediaPanel.vue)
+  'game-icons:abacus', // Formula toggle button
+  'game-icons:bookmark', // Bookmark (off state)
+  'game-icons:bookmarklet', // Bookmark (on state) + Saved filter chip
+  'game-icons:stack', // "All" filter chip
+  'game-icons:tied-scroll', // Empty search state
   // Admin Panel
   'game-icons:alien-egg',
   'game-icons:star-medal',
@@ -2663,9 +2723,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:radar-dish', // Cosmic Frequency reward
   'game-icons:electric', // Synergy Master reward + Buildings encyclopedia
   'game-icons:laurel-crown', // Legendary Symphony reward
-  // Encyclopedia categories (augments, battle, resources)
-  'game-icons:katana', // Battle category icon
-  'game-icons:star-key', // Augments category icon
+  // Encyclopedia categories (battle, resources)
+  'game-icons:katana', // Battle Broadcast category icon
   'game-icons:gem-chain', // Resources category icon
   // Role replacements (invalid → valid)
   'game-icons:wizard-staff', // Mid role icon (was magic-wand)
@@ -2691,11 +2750,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:wax-tablet', // 📖 Encyclopedia tab button (App.vue + EncyclopediaPanel)
   'game-icons:rolled-cloth', // 📜 Expedition icon fallback (ExpeditionActiveComponent)
   'game-icons:fingers-crossed', // ✌️ Double Tap augment icon
-  'game-icons:plain-square', // ⚪ Common rarity (augmentsAndBattle.ts)
-  'game-icons:ice-iris', // 🔵 Rare rarity (augmentsAndBattle.ts)
-  'game-icons:crystal-eye', // 🟣 Epic/Legendary rarity (augmentsAndBattle.ts)
-  'game-icons:spanner', // 🔧 Upgrades encyclopedia entry
-  'game-icons:goblin', // 👹 Planet Boss encyclopedia category
+  'game-icons:goblin', // 👹 Planet Bosses encyclopedia category
   'game-icons:papyrus', // 🗺️ Expeditions encyclopedia category
   'game-icons:rank-3', // ⬆️ Leveling encyclopedia category
   'game-icons:sundial', // ⏳ Loading indicator in BattleStartScreenComponent
@@ -2877,6 +2932,14 @@ export const ROLE_HOVER_COLORS: Record<string, string> = {
 // element/role stands out. 0 = fully hidden. Single source for both TS logic
 // and the --hover-dim-opacity CSS variable in the orbit components.
 export const HOVER_DIM_OPACITY = 0
+
+// ── Encyclopedia (EncyclopediaPanel.vue) ────────────────────────────────────
+/** localStorage key for bookmarked codex entries (UI preference, not game state). */
+export const ENCYCLOPEDIA_BOOKMARKS_STORAGE_KEY = 'bardle-codex-bookmarks'
+/** How long the "Copied ✓" feedback stays on a formula copy button. */
+export const ENCYCLOPEDIA_COPY_FEEDBACK_MS = 1200
+/** Flash-highlight duration after jumping to a related entry. */
+export const ENCYCLOPEDIA_FLASH_MS = 1600
 
 // ── Resource-Star Color Palette ────────────────────────────────────────────
 // Six realistic stellar spectral colors for resource stars (no champion).

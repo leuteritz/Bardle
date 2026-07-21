@@ -1,9 +1,13 @@
-import { resourcesCategory, levelingCategory } from './resourcesAndLeveling'
-import { buildingsCategory, abilitiesCategory } from './buildingsAndUpgrades'
-import { augmentsCategory, battleCategory, championsCategory } from './augmentsAndBattle'
-import { planetEventsCategory, planetBossCategory, expeditionsCategory } from './planetsAndExpeditions'
-import { materialsCategory, itemsCategory } from './materialsAndItems'
-import { universesCategory, constantsCategory } from './universesAndConstants'
+import { resourcesCategory, levelingCategory, buildingsCategory } from './coreProgression'
+import { sunForgeCategory, meepTreeCategory, planetSlotsCategory } from './sunAndForge'
+import { battleCategory, championsCategory } from './battleAndChampions'
+import { orbitCombatCategory, starFightsCategory, planetBossCategory } from './combatAndStars'
+import {
+  galaxiesCategory,
+  expeditionsCategory,
+  itemsCategory,
+  prestigeCategory,
+} from './worldAndMeta'
 import type { EncyclopediaCategory } from './types'
 
 export type { EncyclopediaEntry, EncyclopediaCategory } from './types'
@@ -12,15 +16,16 @@ export const encyclopediaData: EncyclopediaCategory[] = [
   resourcesCategory,
   levelingCategory,
   buildingsCategory,
-  abilitiesCategory,
-  augmentsCategory,
+  sunForgeCategory,
+  meepTreeCategory,
+  planetSlotsCategory,
   battleCategory,
   championsCategory,
-  planetEventsCategory,
+  orbitCombatCategory,
+  starFightsCategory,
   planetBossCategory,
+  galaxiesCategory,
   expeditionsCategory,
-  materialsCategory,
   itemsCategory,
-  universesCategory,
-  constantsCategory,
+  prestigeCategory,
 ]
