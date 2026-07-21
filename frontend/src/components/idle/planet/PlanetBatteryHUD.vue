@@ -105,26 +105,20 @@
             width="30"
             height="30"
           />
-          <img
-            v-else
-            src="/img/lock.png"
-            alt=""
-            class="tbh-vacant-lock"
-            draggable="false"
-          />
+          <img v-else src="/img/lock.png" alt="" class="tbh-vacant-lock" draggable="false" />
           <span v-if="t.purchased || t.unlockable" class="tbh-vacant-pill">＋</span>
         </div>
 
         <!-- Vacant-Plate seitlich — gleiche Anker-Position wie die Info-Plate
              der befüllten Slots; leere Slots zeigen den Zuweisungs-Hinweis,
              gesperrte den Freischalt-Preis -->
-        <div v-if="!t.filled" class="tbh-plate-anchor">
+        <div v-if="!t.filled" class="tbh-plate-anchor tbh-vacant-plate-anchor">
           <div
             class="tbh-vacant-plate"
             :class="{ 'tbh-vacant-plate--locked': !t.purchased && !t.unlockable }"
           >
             <span class="tbh-vacant-name">
-              Slot {{ t.slotNum }} · {{ t.purchased ? 'Vacant' : 'Locked' }}
+              Slot {{ t.slotNum }}<template v-if="t.purchased"> · Vacant</template>
             </span>
             <span v-if="t.purchased" class="tbh-vacant-hint">Assign a planet</span>
             <span v-else class="tbh-vacant-hint tbh-vacant-hint--cost">
@@ -317,8 +311,7 @@ const entries = computed<SlotEntry[]>(() =>
           PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(s.level) * mul * 10,
         ) / 10,
       xPct: Math.round((50 + Math.cos(rad) * TURRET_ARC_RX_PCT) * 10) / 10,
-      yPct:
-        Math.round((TURRET_ARC_CENTER_Y_PCT + Math.sin(rad) * TURRET_ARC_RY_PCT) * 10) / 10,
+      yPct: Math.round((TURRET_ARC_CENTER_Y_PCT + Math.sin(rad) * TURRET_ARC_RY_PCT) * 10) / 10,
     }
   }),
 )
@@ -724,7 +717,9 @@ onUnmounted(() => {
 .tbh-planet--eclipsed {
   opacity: 0.5;
   filter: grayscale(55%);
-  transition: opacity 0.4s ease, filter 0.4s ease;
+  transition:
+    opacity 0.4s ease,
+    filter 0.4s ease;
 }
 
 /* Medaillon-Design identisch zum Command Panel (cmd-eclipse-medal) */
@@ -788,7 +783,9 @@ onUnmounted(() => {
     0 0 0 2px rgba(6, 3, 0, 0.9),
     inset 0 0 18px rgba(0, 0, 0, 0.8),
     0 5px 12px rgba(0, 0, 0, 0.7);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 .tbh-unit:hover .tbh-planet--vacant-empty {
   border-style: solid;
@@ -895,6 +892,17 @@ onUnmounted(() => {
   to {
     opacity: 1;
   }
+}
+
+/* Vacant-Plate-Anker ohne translateY(-50%): der Transform würde die Karte
+   auf Halb-Pixel schieben und das pixelige Chime-Icon unscharf rendern —
+   Flex-Zentrierung über die volle Slot-Höhe wird dagegen pixel-gesnappt */
+.tbh-vacant-plate-anchor {
+  top: 0;
+  bottom: 0;
+  transform: none;
+  display: flex;
+  align-items: center;
 }
 
 /* Vacant-Plate seitlich neben dem Slot — gestrichelte, gedimmte Karte mit
@@ -1016,7 +1024,9 @@ onUnmounted(() => {
     0 5px 12px rgba(0, 0, 0, 0.7);
   opacity: 0.6;
   filter: grayscale(40%);
-  transition: border-color 0.18s ease, opacity 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    opacity 0.18s ease;
 }
 .tbh-unit:hover .tbh-planet--vacant-locked {
   border-color: rgba(170, 160, 140, 0.7);
@@ -1040,8 +1050,8 @@ onUnmounted(() => {
 }
 
 .tbh-vacant-chime {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   image-rendering: pixelated;
   flex-shrink: 0;
 }
