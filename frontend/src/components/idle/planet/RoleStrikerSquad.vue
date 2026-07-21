@@ -43,12 +43,9 @@
       <svg class="rsq-ring rsq-vacant-ring" viewBox="0 0 100 100">
         <circle class="rsq-vacant-ring-dash" cx="50" cy="50" r="44" />
       </svg>
-      <div class="rsq-badge rsq-vacant-badge">
-        <img :src="v.roleImage" alt="" draggable="false" />
-      </div>
       <span class="rsq-cdpill rsq-vacant-pill">＋</span>
       <div class="rsq-vacant-plate">
-        <span class="rsq-vacant-name">{{ v.label }} · Vacant</span>
+        <span class="rsq-vacant-name">{{ v.label }}</span>
         <span class="rsq-vacant-hint">Assign a champion</span>
       </div>
     </button>
@@ -967,11 +964,6 @@ onUnmounted(() => {
   stroke: color-mix(in srgb, var(--rc, #c8922a) 85%, transparent);
 }
 
-.rsq-vacant:hover .rsq-vacant-hint {
-  opacity: 1;
-  color: color-mix(in srgb, var(--rc, #c8922a) 45%, #fff);
-}
-
 .rsq-vacant:active {
   transform: translate(-50%, -50%) scale(0.96);
 }
@@ -1038,16 +1030,6 @@ onUnmounted(() => {
   }
 }
 
-.rsq-vacant-badge {
-  border-style: dashed;
-  opacity: 0.75;
-}
-
-.rsq-vacant-badge img {
-  filter: grayscale(0.6);
-  opacity: 0.8;
-}
-
 /* ＋-Pill statt Cooldown — lädt zum Befüllen des Slots ein */
 .rsq-vacant-pill {
   font-size: 0.8rem;
@@ -1105,10 +1087,15 @@ onUnmounted(() => {
   font-size: 0.74rem;
   font-weight: 900;
   letter-spacing: 0.08em;
-  color: rgba(240, 230, 204, 0.6);
+  color: color-mix(in srgb, var(--rc, #c8922a) 75%, #f0e6cc);
   text-transform: uppercase;
   white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  transition: color 0.18s ease;
+}
+
+.rsq-vacant:hover .rsq-vacant-name {
+  color: color-mix(in srgb, var(--rc, #c8922a) 45%, #fff);
 }
 
 .rsq-vacant-hint {
@@ -1120,6 +1107,11 @@ onUnmounted(() => {
   text-transform: uppercase;
   white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.rsq-vacant:hover .rsq-vacant-hint {
+  opacity: 1;
+  color: color-mix(in srgb, var(--rc, #c8922a) 45%, #fff);
 }
 
 /* ── Mündungsblitz Richtung Boss ─────────────────────────────────────────── */
