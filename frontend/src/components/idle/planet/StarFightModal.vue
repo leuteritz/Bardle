@@ -79,6 +79,15 @@
               @shake="handleShake"
             />
 
+            <!-- ── Eclipse-Schleier: Boss hinter der Sonne — gleißende Korona
+                 legt sich über die Arena, der Boss wird zur Silhouette ────── -->
+            <Transition name="sf-eclipse-fade">
+              <div v-if="bossBehindSun" class="sf-eclipse-veil" aria-hidden="true">
+                <span class="sf-eclipse-scrim" />
+                <span class="sf-eclipse-corona" />
+              </div>
+            </Transition>
+
             <!-- ── Planet Battery: alle 6 Planet-Slots auf dem Bogen — nur
                  Turrets feuern Salven (geteilter Takt mit dem Idle-Orbit) ── -->
             <PlanetBatteryHUD v-if="activeBoss" />
@@ -124,10 +133,17 @@
               </div>
 
               <!-- Eclipse-Status: Boss steht hinter der Sonne — kein Kampf,
-                   alle Fähigkeiten warten bei vollem Ring -->
+                   Klicks richten keinen Schaden an, Fähigkeiten warten -->
               <Transition name="sf-callout">
-                <div v-if="bossBehindSun" class="sf-eclipse-chip">
-                  ✦ Behind the Sun — combat paused
+                <div v-if="bossBehindSun" class="sf-eclipse-banner">
+                  <span class="sf-eclipse-banner-line" />
+                  <div class="sf-eclipse-banner-core">
+                    <span class="sf-eclipse-banner-title">✦ Behind the Sun ✦</span>
+                    <span class="sf-eclipse-banner-sub">
+                      Combat paused — the boss cannot be hit
+                    </span>
+                  </div>
+                  <span class="sf-eclipse-banner-line sf-eclipse-banner-line--right" />
                 </div>
               </Transition>
               <div class="sf-hp-row">
@@ -808,7 +824,8 @@ function emberStyle(i: number): Record<string, string> {
   .sf-arena-wrap--hit :deep(.boss-img),
   .sf-boss-wave,
   .sf-boss-flare,
-  .sf-eclipse-chip {
+  .sf-eclipse-corona,
+  .sf-eclipse-banner-title {
     animation: none;
   }
 }
@@ -1425,27 +1442,122 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-/* ── Eclipse: Boss hinter der Sonne — gedimmt + Status-Chip ──────────────── */
+/* ── Eclipse: Boss hinter der Sonne — Silhouette + Korona-Schleier + Banner ── */
+/* Boss wird zur dunklen Silhouette vor dem gleißenden Sonnenlicht */
 .sf-arena-wrap--eclipsed :deep(.boss-img) {
-  opacity: 0.5;
-  filter: grayscale(55%);
+  opacity: 0.35;
+  filter: grayscale(85%) brightness(0.5);
   transition: opacity 0.4s ease, filter 0.4s ease;
 }
 
-.sf-eclipse-chip {
-  display: inline-flex;
+/* Schleier über der Arena: dunkler Rand-Scrim + pulsierende Sonnen-Korona.
+   z-index 2: über Arena/Boss (z1), unter HUD (z3) — Klicks gehen durch
+   (pointer-events: none), landen auf dem Boss und zeigen dort "ECLIPSED" */
+.sf-eclipse-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.sf-eclipse-scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 41%,
+    rgba(255, 190, 60, 0.08) 0%,
+    rgba(8, 4, 0, 0.45) 55%,
+    rgba(0, 0, 0, 0.68) 100%
+  );
+}
+
+/* Korona am Boss-Anker (50 % / 41 % — wie Flare/Welle): nur opacity/transform
+   animiert, der Verlauf wird EINMAL gerastert (FPS-freundlich) */
+.sf-eclipse-corona {
+  position: absolute;
+  left: 50%;
+  top: 41%;
+  width: min(48%, 520px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 236, 170, 0.75) 0%,
+    rgba(255, 200, 80, 0.4) 30%,
+    rgba(232, 140, 30, 0.18) 52%,
+    transparent 70%
+  );
+  animation: sf-eclipse-corona-pulse 2.4s ease-in-out infinite alternate;
+  will-change: opacity;
+}
+
+@keyframes sf-eclipse-corona-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sf-eclipse-fade-enter-active,
+.sf-eclipse-fade-leave-active {
+  transition: opacity 0.45s ease;
+}
+.sf-eclipse-fade-enter-from,
+.sf-eclipse-fade-leave-to {
+  opacity: 0;
+}
+
+/* Banner im HUD: großer Titel + Erklärzeile zwischen goldenen Linien */
+.sf-eclipse-banner {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.72rem;
+  gap: 14px;
+  width: min(560px, 88%);
+}
+
+.sf-eclipse-banner-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.65));
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.35);
+}
+.sf-eclipse-banner-line--right {
+  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.65));
+}
+
+.sf-eclipse-banner-core {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.sf-eclipse-banner-title {
+  font-size: 1.25rem;
   font-weight: 900;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: rgba(232, 192, 64, 0.75);
+  color: #ffe9b0;
   text-shadow:
-    0 0 12px rgba(232, 192, 64, 0.4),
+    0 0 16px rgba(255, 210, 90, 0.75),
+    0 0 36px rgba(232, 150, 30, 0.4),
     0 2px 3px rgba(0, 0, 0, 0.95);
   animation: sf-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+
+.sf-eclipse-banner-sub {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(232, 192, 64, 0.6);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 @keyframes sf-eclipse-breathe {

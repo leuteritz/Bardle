@@ -14,7 +14,13 @@
           'boss-aura--critical': bossHPPercent < 25,
         }"
       />
-      <img :src="bossImage" class="boss-img" alt="Boss" @click="handleClick($event)" />
+      <img
+        :src="bossImage"
+        class="boss-img"
+        :class="{ 'boss-img--eclipsed': bossEclipsed }"
+        alt="Boss"
+        @click="handleClick($event)"
+      />
       <div class="boss-ground-shadow" />
     </div>
 
@@ -72,9 +78,11 @@
               v-for="dmg in damageFloats"
               :key="dmg.id"
               class="damage-number"
+              :class="{ 'damage-number--blocked': dmg.blocked }"
               :style="{ left: dmg.x + 'px', top: dmg.y + 'px' }"
             >
-              -{{ formatNumber(dmg.value) }}
+              <template v-if="dmg.blocked">✦ ECLIPSED ✦</template>
+              <template v-else>-{{ formatNumber(dmg.value) }}</template>
             </span>
           </TransitionGroup>
         </div>
@@ -122,6 +130,7 @@ import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { ROLE_BY_KEY } from '../../../config/constants'
 import { formatNumber } from '../../../config/numberFormat'
+import { bossPlanetInForeground } from '../../../utils/foregroundGate'
 
 const CYCLE_MS = 2600
 const IMPACT_OFFSET_MS = Math.round(0.36 * CYCLE_MS)
@@ -248,13 +257,24 @@ function pickRandomBossImage(): string {
   return list.length > 0 ? list[Math.floor(Math.random() * list.length)] : '/img/Boss/Boss1.png'
 }
 
+// Boss hinter der Sonne? (250ms-Tick liest die 60fps-aktualisierte,
+// nicht-reaktive Positions-Map) — Klicks richten dann keinen Schaden an
+const bossEclipsed = computed(() => {
+  void now.value
+  const boss = activeBoss.value
+  if (!boss) return false
+  return !bossPlanetInForeground(boss.planetId)
+})
+
 const isHit = ref(false)
 let dmgIdCounter = 0
-const damageFloats = reactive<Array<{ id: number; value: number; x: number; y: number }>>([])
+const damageFloats = reactive<
+  Array<{ id: number; value: number; x: number; y: number; blocked?: boolean }>
+>([])
 
 const MAX_DAMAGE_FLOATS = 24
 
-function spawnFloat(value: number, x?: number, y?: number) {
+function spawnFloat(value: number, x?: number, y?: number, blocked?: boolean) {
   if (!isMounted) return
   // Deckel gegen Klick-Spam: älteste Zahl verwerfen statt unbegrenzt stapeln
   if (damageFloats.length >= MAX_DAMAGE_FLOATS) damageFloats.shift()
@@ -266,7 +286,7 @@ function spawnFloat(value: number, x?: number, y?: number) {
     fx = r.left + r.width * (0.4 + Math.random() * 0.2)
     fy = r.top + r.height * (0.2 + Math.random() * 0.3)
   }
-  damageFloats.push({ id, value, x: fx, y: fy })
+  damageFloats.push({ id, value, x: fx, y: fy, blocked })
   setTimeout(
     () => {
       if (!isMounted) return
@@ -290,6 +310,11 @@ function triggerHit(hitMs: number, shakeMs: number) {
 function handleClick(event: MouseEvent) {
   if (!isMounted) return
   if (!activeBoss.value || activeBoss.value.defeated || activeBoss.value.expired) return
+  // Hinter der Sonne: kein Schaden — statt Schadenszahl ein "ECLIPSED"-Float
+  if (bossEclipsed.value) {
+    spawnFloat(0, event.clientX, event.clientY, true)
+    return
+  }
   bossStore.dealClickDamage()
   spawnFloat(activeBoss.value.clickDamagePerHit ?? 1, event.clientX, event.clientY)
   triggerHit(160, 320)
@@ -665,6 +690,18 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   transform: scale(0.95);
 }
 
+/* Hinter der Sonne: Boss unantastbar — kein Hover-Feedback, Verbots-Cursor */
+.boss-img--eclipsed {
+  cursor: not-allowed;
+}
+.boss-img--eclipsed:hover {
+  transform: none;
+  filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
+}
+.boss-img--eclipsed:active {
+  transform: none;
+}
+
 .boss-ground-shadow {
   position: absolute;
   bottom: -8px;
@@ -952,6 +989,15 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   white-space: nowrap;
   transform: translate(-50%, -50%);
   letter-spacing: 0.04em;
+}
+/* Blockierter Klick hinter der Sonne: gedämpftes Gold statt Schadenszahl */
+.damage-number--blocked {
+  font-size: 0.95rem;
+  letter-spacing: 0.16em;
+  color: #c8a050;
+  text-shadow:
+    0 0 10px rgba(232, 192, 64, 0.45),
+    0 2px 3px #000;
 }
 .dmg-float-enter-active {
   animation: dmgUp 0.9s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;

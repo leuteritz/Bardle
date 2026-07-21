@@ -31,6 +31,7 @@ import {
   tierSpawnWeights,
 } from '../config/championTiers'
 import { activeMidCurse } from '../utils/activeMidCurse'
+import { bossPlanetInForeground } from '../utils/foregroundGate'
 import { ROLE_MID_CURSE_DAMAGE_AMP } from '../config/constants'
 import { useGameStore } from './gameStore'
 import { useShopStore } from './shopStore'
@@ -320,6 +321,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     dealClickDamage(): boolean {
       const boss = this.activeBoss
       if (!boss || boss.defeated || boss.expired) return false
+      // Vordergrund-Gate: hinter der Sonne ist der Boss unantastbar — auch
+      // Spieler-Klicks im Star-Fight-Modal richten dann keinen Schaden an
+      if (!bossPlanetInForeground(boss.planetId)) return false
       const solar = useSolarUpgradeStore()
       const clickDamage = Math.ceil(boss.clickDamagePerHit * solar.dmgMultiplier)
       const defeated = this.dealDamage(clickDamage)
