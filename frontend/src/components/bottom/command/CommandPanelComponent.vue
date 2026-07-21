@@ -28,17 +28,38 @@ function roleImage(role: PlanetRoleType): string {
   return PLANET_ROLES[role].image.replace(PLANET_IMAGE_DIR, PLANET_IMAGE_THUMB_DIR)
 }
 
-// Ticker für Buff-Countdown-Ring UND Eclipse-Status: activeUntil ist reaktiv,
-// Date.now() und die 60fps-Positions-Map (activePlayerPlanetPositions) nicht —
-// der Intervall-Ref treibt beide Bindings an.
+// Ticker für den Buff-Countdown-Ring: activeUntil ist reaktiv, Date.now() nicht.
 const buffNow = ref(Date.now())
 let buffTicker = 0
+
+// Eclipse-Status: die 60fps-Positions-Map (activePlayerPlanetPositions) ist
+// bewusst nicht reaktiv — ein rAF-Check spiegelt Zustandswechsel SOFORT in ein
+// reaktives Set (Re-Render nur beim Flip, nicht pro Frame; kein Poll-Lag mehr).
+const eclipsedSlotIds = ref<ReadonlySet<string>>(new Set())
+let eclipseFrame = 0
+
+function pollEclipse() {
+  const next = new Set<string>()
+  for (const slot of slots.value) {
+    if (slot.purchased && slot.role && !playerSlotInForeground(slot.id)) next.add(slot.id)
+  }
+  const cur = eclipsedSlotIds.value
+  if (next.size !== cur.size || [...next].some((id) => !cur.has(id))) {
+    eclipsedSlotIds.value = next
+  }
+  eclipseFrame = requestAnimationFrame(pollEclipse)
+}
+
 onMounted(() => {
   buffTicker = window.setInterval(() => {
     buffNow.value = Date.now()
   }, 250)
+  eclipseFrame = requestAnimationFrame(pollEclipse)
 })
-onUnmounted(() => window.clearInterval(buffTicker))
+onUnmounted(() => {
+  window.clearInterval(buffTicker)
+  cancelAnimationFrame(eclipseFrame)
+})
 
 function buffMsLeft(slot: PlanetSlot): number {
   return slot.jungleBuff?.active ? Math.max(0, slot.jungleBuff.activeUntil - buffNow.value) : 0
@@ -50,10 +71,9 @@ function buffProgress(slot: PlanetSlot): number {
 }
 
 // Eclipse: Planet fliegt gerade hinter der Sonne → nimmt nicht am Kampf teil
-// (gleiches Gate wie combat-/roleBehaviorStore, gepollt über den 250ms-Ticker)
+// (gleiches Gate wie combat-/roleBehaviorStore, per rAF verzögerungsfrei gespiegelt)
 function slotBehindSun(slot: PlanetSlot): boolean {
-  void buffNow.value
-  return slot.purchased && !!slot.role && !playerSlotInForeground(slot.id)
+  return eclipsedSlotIds.value.has(slot.id)
 }
 
 function handleSlotClick(slot: (typeof slots.value)[number]) {
@@ -107,19 +127,16 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             </div>
 
             <!-- Eclipse: Planet hinter der Sonne — kühler Schatten + Medaillon
-                 unten mittig (oben mittig sitzt der Jungle-Buff-Chip) -->
-            <Transition name="cmd-eclipse">
-              <div v-if="slotBehindSun(slot)" class="cmd-eclipse-veil" />
-            </Transition>
-            <Transition name="cmd-eclipse">
-              <div
-                v-if="slotBehindSun(slot)"
-                class="cmd-eclipse-medal"
-                title="Behind the Sun — combat paused"
-              >
-                <Icon icon="game-icons:eclipse-flare" width="24" height="24" />
-              </div>
-            </Transition>
+                 unten mittig (oben mittig sitzt der Jungle-Buff-Chip).
+                 Bewusst ohne Transition: der Status soll sofort umschalten. -->
+            <div v-if="slotBehindSun(slot)" class="cmd-eclipse-veil" />
+            <div
+              v-if="slotBehindSun(slot)"
+              class="cmd-eclipse-medal"
+              title="Behind the Sun — combat paused"
+            >
+              <Icon icon="game-icons:eclipse-flare" width="24" height="24" />
+            </div>
           </template>
 
           <template v-else-if="slot.purchased">
@@ -570,15 +587,6 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   to {
     opacity: 1;
   }
-}
-
-.cmd-eclipse-enter-active,
-.cmd-eclipse-leave-active {
-  transition: opacity 0.3s ease;
-}
-.cmd-eclipse-enter-from,
-.cmd-eclipse-leave-to {
-  opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

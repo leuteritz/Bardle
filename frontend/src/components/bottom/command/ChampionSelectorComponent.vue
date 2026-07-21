@@ -96,16 +96,15 @@ function onSlotLeave() {
           <!-- Eclipse: Champion fliegt gerade hinter der Sonne — Fähigkeiten
                warten, kein Angriff möglich. Großes Medaillon mittig im
                Porträt, klar getrennt von Ability-Pill (oben rechts) und
-               Rollen-Label (unten). -->
-          <Transition name="champ-eclipse">
-            <div
-              v-if="!championInForeground(slot)"
-              class="champ-card-eclipse-medal"
-              title="Behind the Sun — combat paused"
-            >
-              <Icon icon="game-icons:eclipse-flare" width="30" height="30" />
-            </div>
-          </Transition>
+               Rollen-Label (unten). Bewusst ohne Transition: der Status
+               soll sofort umschalten. -->
+          <div
+            v-if="!championInForeground(slot)"
+            class="champ-card-eclipse-medal"
+            title="Behind the Sun — combat paused"
+          >
+            <Icon icon="game-icons:eclipse-flare" width="30" height="30" />
+          </div>
         </template>
 
         <!-- role label -->
@@ -343,15 +342,6 @@ function onSlotLeave() {
   to {
     opacity: 1;
   }
-}
-
-.champ-eclipse-enter-active,
-.champ-eclipse-leave-active {
-  transition: opacity 0.3s ease;
-}
-.champ-eclipse-enter-from,
-.champ-eclipse-leave-to {
-  opacity: 0;
 }
 
 /* ability just triggered → card flash */
