@@ -925,7 +925,7 @@ export const BOSS_NOVA_PLAYER_DAMAGE = 5 // damage each nova deals to the player
 // auch diesen Schaden, wodurch die Rage-Phase deutlich bedrohlicher wird
 export const BOSS_AUTO_INTERVAL_MS = 3000 // cooldown between two boss auto-attacks
 export const BOSS_AUTO_ATTACK_DAMAGE = 8 // base single-target damage per auto-attack
-export const BOSS_AUTO_AIM_MS = 1200 // telegraph: reticle locks onto the victim before the bolt fires
+export const BOSS_AUTO_AIM_MS = 900 // telegraph: reticle locks onto the victim before the bolt fires (< 1 game tick → shot follows on the very next tick)
 export const BOSS_AUTO_HIT_DELAY_MS = 450 // flight time of the strike bolt → impact flash + damage label
 // 6 feste Anker auf einem Ellipsenbogen um den Boss (Gegenstück zum unteren
 // Striker-Halbkreis): Slots 1–3 auf der linken Bogenhälfte, 4–6 rechts —

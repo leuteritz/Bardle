@@ -513,11 +513,12 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         return
       }
 
-      // Phase 1: Cooldown herunterzählen — Ring füllt sich
+      // Phase 1: Cooldown herunterzählen — erreicht er JETZT 0, geht es im
+      // selben Tick direkt mit der Zielsuche weiter (kein verlorener Tick)
       if (this.autoCooldownMs > 0) {
         this.autoCooldownMs = Math.max(0, this.autoCooldownMs - tickMs)
         this.autoReadyAt = now + this.autoCooldownMs
-        return
+        if (this.autoCooldownMs > 0) return
       }
 
       // Phase 2: Boss hinter der Sonne → kann nicht ausführen, wartet bei
