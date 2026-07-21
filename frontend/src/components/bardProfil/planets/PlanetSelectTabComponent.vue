@@ -12,6 +12,7 @@ import {
 import type { PlanetRole, PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
+import RpgFrame from '@/components/ui/RpgFrame.vue'
 import { MATERIALS } from '@/config/materials'
 import {
   STAR_PHASE_DATA,
@@ -612,6 +613,7 @@ function chooseBuilding(buildingId: string) {
           <Transition name="ps-pop">
             <div v-if="configPickerOpen" class="ps-pop-scrim" @click.self="configPickerOpen = false">
               <div class="ps-pop">
+                <RpgFrame />
                 <div class="ps-pop-head">
                   <span class="ps-pop-title">
                     {{ activeSlot.role === 'harvest_node' ? 'Select Material' : 'Select Building' }}
@@ -1866,20 +1868,19 @@ img.ps-role-icon {
 }
 
 .ps-pop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 460px;
   max-height: 80%;
-  overflow-y: auto;
+  /* Rahmen kommt als SVG-Overlay (RpgFrame) — Scroll liegt jetzt im Grid,
+     damit der Rahmen beim Scrollen stehen bleibt */
+  overflow: hidden;
   background: #16140e;
-  border: 4px solid #7a4e20;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
-    0 12px 40px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85);
   border-radius: 5px;
   padding: 1rem 1.1rem 1.2rem;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
 }
 
 .ps-pop-head {
@@ -1933,6 +1934,10 @@ img.ps-role-icon {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 0.55rem;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
 
 .ps-config-btn {

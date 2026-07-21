@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import RpgFrame from '@/components/ui/RpgFrame.vue'
 import { useGameStore } from '@/stores/gameStore'
 import { usePersistence } from '@/composables/usePersistence'
 import { AUGMENTS } from '@/config/augments'
@@ -40,6 +41,7 @@ const rarityLabel: Record<string, string> = {
       class="fixed inset-0 z-[200] flex items-center justify-center rpg-overlay"
     >
       <div class="relative w-full max-w-3xl mx-4 overflow-hidden rpg-frame">
+        <RpgFrame />
         <!-- Gold Accent -->
         <div class="rpg-accent-bar"></div>
 

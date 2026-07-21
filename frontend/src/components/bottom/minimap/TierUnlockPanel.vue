@@ -1,5 +1,6 @@
 <template>
   <div class="tier-unlock">
+    <RpgFrame />
     <div class="tier-gold-line" aria-hidden="true" />
 
     <div class="tier-head">
@@ -58,6 +59,7 @@
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import RpgFrame from '../../ui/RpgFrame.vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { useGameStore } from '../../../stores/gameStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
@@ -68,7 +70,7 @@ import { formatNumber } from '../../../config/numberFormat'
 
 export default defineComponent({
   name: 'TierUnlockPanel',
-  components: { Icon },
+  components: { Icon, RpgFrame },
   setup() {
     const galaxyStore = useGalaxyStore()
     const gameStore = useGameStore()
@@ -133,12 +135,10 @@ export default defineComponent({
   width: 308px;
   max-width: 90%;
   background: #111008;
-  border: 4px solid #7a4e20;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
-    0 8px 28px rgba(0, 0, 0, 0.85);
+  /* Rahmen kommt als SVG-Overlay (RpgFrame) — kein CSS-Border mehr */
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.85);
   border-radius: 5px;
+  overflow: hidden;
   padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;

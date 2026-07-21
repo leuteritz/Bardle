@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import RpgFrame from '../../ui/RpgFrame.vue'
 import { useGameStore } from '../../../stores/gameStore'
 import { universes } from '../../../config/universes'
 import type { ModifierEffects } from '../../../types'
@@ -98,6 +99,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
         @click.self="gameStore.closePrestigeModal()"
       >
         <div class="relative w-full max-w-4xl mx-4 overflow-hidden rpg-frame">
+          <RpgFrame />
           <!-- Gold Accent -->
           <div class="rpg-accent-bar"></div>
 

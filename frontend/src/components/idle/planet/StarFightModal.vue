@@ -15,6 +15,7 @@
 
       <!-- ── Modal ─────────────────────────────────────────────────────── -->
       <div class="sf-modal" :class="{ 'sf-modal--galaxy': isGalaxyBoss }">
+        <RpgFrame />
         <!-- ── Gold Topbar ─────────────────────────────────────────────── -->
         <div class="sf-topbar" />
 
@@ -298,6 +299,7 @@ import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
 import PlanetBatteryHUD from '@/components/idle/planet/PlanetBatteryHUD.vue'
 import BossTimerRing from '@/components/idle/planet/BossTimerRing.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
+import RpgFrame from '@/components/ui/RpgFrame.vue'
 
 // ── Stores ───────────────────────────────────────────────────────────────
 const starGroupStore = useStarGroupStore()
@@ -746,23 +748,18 @@ function emberStyle(i: number): Record<string, string> {
   /* flacher Deep-Space-Ton wie im Shop (#111008) — kein Verlauf, damit der
      geteilte CosmicStageBackground identisch wirkt */
   background: #111008;
-  /* exakt derselbe Holzrahmen + Außen-Rundung wie das Bard-Profil
-     (.rp-modal): 4px Holz, doppelter Inset-Saum, Notch-Kurve × --hud-scale */
-  border: 4px solid #7a4e20;
+  /* exakt derselbe Rahmen + Außen-Rundung wie das Bard-Profil (.rp-modal):
+     SVG-Overlay (RpgFrame), Notch-Kurve × --hud-scale */
   border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
   box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
     0 25px 60px rgba(0, 0, 0, 0.95),
     0 0 0 1px #2a1608;
   overflow: hidden;
 }
 
-/* Galaxy-Boss: gleicher Holzrahmen, zusätzlich violetter Außen-Glow */
+/* Galaxy-Boss: gleicher Rahmen, zusätzlich violetter Außen-Glow */
 .sf-modal--galaxy {
   box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
     0 0 70px rgba(160, 40, 220, 0.26),
     0 0 130px rgba(100, 10, 140, 0.14),
     0 25px 60px rgba(0, 0, 0, 0.95),

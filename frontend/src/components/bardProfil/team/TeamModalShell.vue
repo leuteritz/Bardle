@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import RpgFrame from '@/components/ui/RpgFrame.vue'
 
 withDefaults(
   defineProps<{
@@ -19,6 +20,7 @@ const emit = defineEmits<{ close: [] }>()
 <template>
   <div class="tms-backdrop" @click.self="emit('close')">
     <div class="tms-panel" :class="`tms-panel--${size}`">
+      <RpgFrame />
       <div class="tms-gold-line" />
       <button
         v-if="hideHeader"
@@ -63,11 +65,8 @@ const emit = defineEmits<{ close: [] }>()
   flex-direction: column;
   overflow: hidden;
   background: #111008;
-  border: 4px solid #7a4e20;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
-    0 12px 48px rgba(0, 0, 0, 0.85);
+  /* Rahmen kommt als SVG-Overlay (RpgFrame) — kein CSS-Border mehr */
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.85);
   border-radius: 4px;
 }
 .tms-panel--md {

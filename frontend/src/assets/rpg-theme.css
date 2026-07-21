@@ -65,25 +65,19 @@
   --rpg-slot-empty-icon-glow:    rgba(82, 184, 48, 0.38);
 }
 
-/* ── Wooden Frame (containers, modals) — 5-layer carved groove ── */
+/* ── Modal shell (containers, modals) ── */
 /*
- * Box-shadow layering wins over border-image (breaks with border-radius) and
- * pseudo-elements (layout complexity). 5 inset rings create a genuine carved-
- * wood look: deepest-dark → inner-brown → mid-brown → warm-sheen, plus outer
- * elevation shadows for depth. The same stack is shared by .rpg-wood-frame
- * so all structural frames look identical.
+ * Der sichtbare Holzrahmen kommt seit dem Frame-Redesign als SVG-Overlay aus
+ * components/ui/RpgFrame.vue (Schatten → Holz → Goldlinie, gleiche Technik wie
+ * Header/Bottom-Bar/Encyclopedia) — hier bleiben nur Grundfläche, Rundung und
+ * Außen-Schatten. <RpgFrame /> als direktes Kind des .rpg-frame-Elements setzen.
  */
 .rpg-frame {
   background: var(--rpg-bg-deep);
-  border: 3px solid var(--rpg-wood);
   border-radius: 4px;
   box-shadow:
     0 6px 28px rgba(0, 0, 0, 0.85),
-    0 2px 8px  rgba(0, 0, 0, 0.55),
-    inset 0 0 0 1px var(--rpg-wood-dark),
-    inset 0 0 0 3px var(--rpg-wood-inner),
-    inset 0 0 0 5px var(--rpg-wood-mid),
-    inset 0 1px 0 rgba(196, 154, 108, 0.28);
+    0 2px 8px  rgba(0, 0, 0, 0.55);
   overflow: hidden;
 }
 

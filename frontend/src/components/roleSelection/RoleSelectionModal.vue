@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import RpgFrame from '@/components/ui/RpgFrame.vue'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { ROLES } from '@/config/constants'
@@ -178,6 +179,7 @@ function choose(role: RoleDef) {
       class="fixed inset-0 z-[210] flex items-center justify-center role-overlay"
     >
       <div class="relative w-full mx-4 overflow-hidden role-frame">
+        <RpgFrame />
         <!-- Gold accent bar -->
         <div class="role-accent-bar"></div>
 
@@ -374,10 +376,7 @@ function choose(role: RoleDef) {
   /* fluid: compact on 1280-1512 laptops, roomy on 1920+, capped at 1000px */
   max-width: min(clamp(600px, 48vw + 60px, 1000px), calc(100vw - 32px));
   background: #111008;
-  border: 4px solid #7a4e20;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310;
+  /* Rahmen kommt als SVG-Overlay (RpgFrame) — kein CSS-Border mehr */
   border-radius: 4px;
 }
 

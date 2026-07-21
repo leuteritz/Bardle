@@ -2,6 +2,7 @@
   <Transition name="obj-pop">
     <div v-if="show" ref="overlayEl" class="objective-overlay">
       <div ref="modalEl" class="objective-modal" :style="modalStyle">
+        <RpgFrame />
         <!-- Gold accent bar -->
         <div class="accent-bar" />
 
@@ -403,6 +404,7 @@ import type { ObjectiveFighter } from '@/types'
 import { useBattleStore } from '@/stores/battleStore'
 import { useFitScale } from '@/composables/useFitScale'
 import ObjectiveResultSummary from './ObjectiveResultSummary.vue'
+import RpgFrame from '@/components/ui/RpgFrame.vue'
 import {
   OBJECTIVE_BASE_DPS_PER_CHAMP,
   OBJECTIVE_BARON_WIN_BONUS,
@@ -999,8 +1001,8 @@ onUnmounted(_stopFloatScheduler)
   width: 880px;
   flex-shrink: 0;
   background: #111008;
-  border: 4px solid #7a4e20;
-  box-shadow: inset 0 0 0 2px #3e200a, inset 0 0 0 4px #5c3310, 0 20px 50px rgba(0, 0, 0, 0.95);
+  /* Rahmen kommt als SVG-Overlay (RpgFrame) — kein CSS-Border mehr */
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95);
   border-radius: 4px;
   overflow: hidden;
   display: flex;
