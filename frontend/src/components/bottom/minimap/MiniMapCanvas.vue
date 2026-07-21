@@ -1137,34 +1137,6 @@ export default defineComponent({
       ctx.fill()
     }
 
-    function drawWaitingState(ctx: CanvasRenderingContext2D, w: number, h: number) {
-      const nowMs = Date.now()
-      const cx = w / 2
-      const cy = h / 2
-
-      // The galaxy overview IS the waiting screen — the flight departs from
-      // here once a role is chosen ("Choose your Role" label is a DOM overlay).
-      drawNormalMap(ctx, w, h)
-
-      // Centered player sun in its current phase state, on a dark scrim
-      drawSunScrim(ctx, cx, cy, MINIMAP_WAIT_SUN_R, 1)
-
-      // Expanding gold ripple rings — "waiting for input" beacon
-      for (let ring = 0; ring < 3; ring++) {
-        const rippleT = (nowMs / 2200 + ring / 3) % 1
-        const rippleR = MINIMAP_WAIT_SUN_R * (1.5 + rippleT * 2.5)
-        const rippleA = (1 - rippleT) * 0.3
-        ctx.beginPath()
-        ctx.arc(cx, cy, rippleR, 0, Math.PI * 2)
-        ctx.strokeStyle = `rgba(232,192,64,${rippleA.toFixed(3)})`
-        ctx.lineWidth = 1.4
-        ctx.stroke()
-      }
-
-      const phase = STAR_PHASE_DATA[solarUpgradeStore.starPhase] ?? STAR_PHASE_DATA[0]
-      drawPhaseSun(ctx, cx, cy, MINIMAP_WAIT_SUN_R, phase, nowMs)
-    }
-
     function drawCanvas(timestamp = performance.now()) {
       const canvas = canvasEl.value
       if (!canvas) return
@@ -1185,7 +1157,9 @@ export default defineComponent({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, w, h)
       if (galaxyStore.pendingRoleSelection) {
-        drawWaitingState(ctx, w, h)
+        // Waiting for role selection: plain galaxy overview only — the
+        // "Choose your Role" label is a DOM overlay in MiniMap.vue.
+        drawNormalMap(ctx, w, h)
         return
       }
       if (galaxyStore.isRescueRotating) {

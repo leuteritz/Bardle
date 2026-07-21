@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
+import { useUiStore } from './uiStore'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
 import { unlockedChampionTierCount } from '../config/championTiers'
 import type { ChampionRole } from '../types'
@@ -19,6 +20,7 @@ import {
   GALAXY_BOSS_ESCORT_PER_GALAXY,
   GALAXY_BOSS_ESCORT_MAX,
   GALAXY_BOSS_WAVE_SIZE,
+  RESCUE_ROTATION_DURATION_MS,
   MAX_STAR_LEVEL,
   TIER_UNLOCK_CHIMES_BASE,
   TIER_UNLOCK_CHIMES_GROWTH,
@@ -313,6 +315,14 @@ export const useGalaxyStore = defineStore('galaxy', {
     confirmRoleSelection(role: ChampionRole) {
       this.nextStarRole = role
       this.pendingRoleSelection = false
+      // The rescue rotation is a camera pan of the idle orbit background —
+      // its rAF driver pauses while the Bard profile is open, so the pan
+      // would never finish there. Skip it and depart immediately instead.
+      if (useUiStore().bardActiveTab !== null) {
+        this.travelPendingAfterRotation = false
+        this.startChampionTravel()
+        return
+      }
       this.travelPendingAfterRotation = true
       this.startRescueRotation()
     },
@@ -326,6 +336,15 @@ export const useGalaxyStore = defineStore('galaxy', {
     },
 
     tickChampionTravel() {
+      // Safety net: the rotation is normally ended by the orbit rAF loop,
+      // which pauses while the Bard profile is open or the tab is hidden —
+      // end an expired rotation here so the departure never stalls.
+      if (
+        this.rescueRotationPhase === 'rotating' &&
+        Date.now() - this.rescueRotationStartTime >= RESCUE_ROTATION_DURATION_MS
+      ) {
+        this.endRescueRotation()
+      }
       if (this.championTravelState !== 'traveling') return
       const now = Date.now()
       this._travelTickMs = now
