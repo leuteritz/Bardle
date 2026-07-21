@@ -102,10 +102,17 @@
             draggable="false"
           />
           <span v-if="!t.purchased && t.unlockable" class="tbh-vacant-unlock-label">UNLOCK</span>
-          <div v-if="!t.purchased" class="tbh-vacant-cost">
-            <img src="/img/BardAbilities/BardChime.png" class="tbh-vacant-chime" alt="" />
-            <span>{{ formatNumber(t.cost) }}</span>
-          </div>
+        </div>
+
+        <!-- Preis-Chip als Geschwister des Kreises: bleibt so außerhalb von
+             opacity/grayscale des Locked-Zustands (sonst wird er mit gedimmt) -->
+        <div
+          v-if="!t.filled && !t.purchased"
+          class="tbh-vacant-cost"
+          :class="{ 'tbh-vacant-cost--unlock': t.unlockable }"
+        >
+          <img src="/img/BardAbilities/BardChime.png" class="tbh-vacant-chime" alt="" />
+          <span>{{ formatNumber(t.cost) }}</span>
         </div>
 
         <!-- Info-Plate: HP-Bar → Slot-Nummer → dmg/s (Turret) bzw. Rolle -->
@@ -809,12 +816,16 @@ onUnmounted(() => {
   opacity: 0.85;
 }
 
-/* Preis-Chip unter dem Slot-Kreis (Position wie die Info-Plates) */
+/* Preis-Chip mittig unter dem Slot-Kreis — Zentrierung über left/right +
+   margin:auto statt translateX(-50%): kein Halb-Pixel-Versatz, der das
+   kleine Chime-Icon unscharf rendern würde */
 .tbh-vacant-cost {
   position: absolute;
   top: calc(100% + 2px);
-  left: 50%;
-  transform: translateX(-50%);
+  left: -50%;
+  right: -50%;
+  margin: 0 auto;
+  width: max-content;
   display: flex;
   align-items: center;
   gap: 3px;
@@ -828,14 +839,14 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
-.tbh-planet--vacant-unlock .tbh-vacant-cost {
+.tbh-vacant-cost--unlock {
   color: #f0d060;
   text-shadow: 0 0 6px rgba(232, 192, 64, 0.6);
 }
 
 .tbh-vacant-chime {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   image-rendering: pixelated;
   flex-shrink: 0;
 }
