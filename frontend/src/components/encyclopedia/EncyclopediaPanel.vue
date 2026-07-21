@@ -232,6 +232,7 @@ const panelFrameStyle = {
   bottom: `calc(${BOTTOM_BAR_HEIGHT}px * var(--hud-scale, 0.75))`,
   width: `calc(${BOTTOM_BAR_SIDE_W}px * var(--hud-scale, 0.75))`,
   borderBottomLeftRadius: `calc(${HUD_PANEL_ARC_R}px * var(--hud-scale, 0.75))`,
+  '--enc-arc': `calc(${HUD_PANEL_ARC_R}px * var(--hud-scale, 0.75))`,
 }
 </script>
 
@@ -807,6 +808,9 @@ const panelFrameStyle = {
 /* ── Footer ── */
 .enc-footer {
   padding: clamp(6px, 0.5vw, 9px) var(--enc-pad);
+  /* Left text clears the rounded bottom-left corner (mirrors the command
+     panel arc) — shifted right so it doesn't sit inside the curve. */
+  padding-left: calc(var(--enc-arc, 40px) + var(--enc-pad));
   background: #1e1006;
   border-top: 1px solid #5c3310;
 }
