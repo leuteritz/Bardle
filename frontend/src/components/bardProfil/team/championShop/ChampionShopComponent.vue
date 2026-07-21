@@ -872,9 +872,24 @@ const shopChampionNames = computed(() =>
       return shopTotalByTier.value.get(tier) ?? 0
     }
 
-    // ── Collapsible tier sections (collapsed by default) ──
+    // ── Collapsible tier sections ──
+    // All tiers start collapsed EXCEPT the currently active (spawning) tier, so
+    // opening the shop immediately shows the champions the player can meet now.
     const ALL_TIER_KEYS = CHAMPION_TIERS_BY_STAR.map((t) => t.starLevel)
-    const collapsedTiers = ref(new Set<number>(ALL_TIER_KEYS))
+    const collapsedTiers = ref(
+      new Set<number>(ALL_TIER_KEYS.filter((t) => t !== galaxyStore.requiredStarLevel)),
+    )
+    // When a new tier becomes active (galaxy progress) while the shop is open,
+    // expand it right away.
+    watch(
+      () => galaxyStore.requiredStarLevel,
+      (star) => {
+        if (!collapsedTiers.value.has(star)) return
+        const next = new Set(collapsedTiers.value)
+        next.delete(star)
+        collapsedTiers.value = next
+      },
+    )
     // While searching/filtering, force every tier open so matches are never hidden.
     const searchOrFilterActive = computed(
       () => searchQuery.value.trim() !== '' || hasActiveFilter.value,
