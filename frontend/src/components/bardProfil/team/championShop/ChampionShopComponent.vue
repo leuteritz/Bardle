@@ -1090,17 +1090,14 @@ const shopChampionNames = computed(() =>
       selectedChampion.value = list[(selectedIndex.value + 1) % list.length]
     }
 
-    // Keep the selection valid: auto-select the first visible champion when the
-    // list changes (filtering, search, recruiting) and the selection is stale.
-    watch(
-      visibleChampionList,
-      (list) => {
-        if (!selectedChampion.value || !list.includes(selectedChampion.value)) {
-          selectedChampion.value = list[0] ?? null
-        }
-      },
-      { immediate: true },
-    )
+    // No auto-select: the panel shows its empty state until the player clicks a
+    // card. Only clear the selection when it goes stale (filtered out; a bought
+    // champion is re-pointed by handleBuy before this runs).
+    watch(visibleChampionList, (list) => {
+      if (selectedChampion.value && !list.includes(selectedChampion.value)) {
+        selectedChampion.value = null
+      }
+    })
 
     // Selecting a champion (card click or prev/next) expands its tier section
     // so the highlighted card is always visible in the grid.

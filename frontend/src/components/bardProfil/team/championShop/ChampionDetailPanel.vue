@@ -135,8 +135,13 @@
       </div>
     </template>
     <div v-else class="cs-detail-empty">
-      <span class="cs-detail-empty-mark">✦</span>
-      <span>Select a champion</span>
+      <div class="cs-detail-empty-box">
+        <span class="cs-detail-empty-mark">✦</span>
+      </div>
+      <span class="cs-detail-empty-title">Select a Champion</span>
+      <span class="cs-detail-empty-text">
+        Click a champion card to view traits, origin, tier and recruit cost.
+      </span>
     </div>
   </aside>
 </template>
@@ -512,21 +517,56 @@ export default defineComponent({
   filter: brightness(1.12);
 }
 
-/* Empty state */
+/* Empty state — no champion selected yet */
 .cs-detail-empty {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  color: #7a6040;
-  font-size: 13px;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+}
+.cs-detail-empty-box {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #141410;
+  border: 2px dashed #5c3310;
+  border-radius: 4px;
+  margin-bottom: 4px;
 }
 .cs-detail-empty-mark {
-  font-size: 30px;
-  color: #7a4e20;
-  opacity: 0.6;
+  font-size: 34px;
+  line-height: 1;
+  color: #c89040;
+  opacity: 0.75;
+  animation: cs-empty-pulse 2.6s ease-in-out infinite;
+}
+.cs-detail-empty-title {
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #e8c040;
+}
+.cs-detail-empty-text {
+  max-width: 230px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #a08c68;
+}
+@keyframes cs-empty-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50%      { opacity: 0.9;  transform: scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-detail-empty-mark {
+    animation: none;
+  }
 }
 
 /* Compact layout on flatter viewports (Full HD) */
