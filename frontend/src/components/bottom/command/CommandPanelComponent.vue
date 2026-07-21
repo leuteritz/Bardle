@@ -39,14 +39,16 @@ const eclipsedSlotIds = ref<ReadonlySet<string>>(new Set())
 let eclipseFrame = 0
 
 function pollEclipse() {
-  const next = new Set<string>()
-  for (const slot of slots.value) {
-    if (slot.purchased && slot.role && !playerSlotInForeground(slot.id)) next.add(slot.id)
-  }
   const cur = eclipsedSlotIds.value
-  if (next.size !== cur.size || [...next].some((id) => !cur.has(id))) {
-    eclipsedSlotIds.value = next
+  const next = new Set<string>()
+  let changed = false
+  for (const slot of slots.value) {
+    if (slot.purchased && slot.role && !playerSlotInForeground(slot.id)) {
+      next.add(slot.id)
+      if (!cur.has(slot.id)) changed = true
+    }
   }
+  if (changed || next.size !== cur.size) eclipsedSlotIds.value = next
   eclipseFrame = requestAnimationFrame(pollEclipse)
 }
 

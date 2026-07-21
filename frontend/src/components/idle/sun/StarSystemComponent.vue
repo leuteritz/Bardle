@@ -1105,6 +1105,10 @@ function starBodyBackStyle(star: StarRenderEntry) {
     ...starWrapStyle(star),
     ...starBodyVisualStyle(star),
     opacity: (star.opacity * starHoverDimFactor(star.id)).toFixed(3),
+    // Back-Layer-Sterne bekommen opacity + filter pro Frame inline geschrieben —
+    // eine Transition würde dabei jeden Frame neu anlaufen (Style-Recalc +
+    // Animations-Engine pro Stern pro Frame) und nie sichtbar zu Ende laufen.
+    transition: 'none',
   }
 }
 

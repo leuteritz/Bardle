@@ -4,11 +4,14 @@ import { useGameStore } from '@/stores/gameStore'
 import { useUiStore } from '@/stores/uiStore'
 
 const _isDocHidden = ref(typeof document !== 'undefined' ? document.hidden : false)
-let _initialized = false
 
-export function useRenderingPaused() {
-  if (!_initialized && typeof document !== 'undefined') {
-    _initialized = true
+// App-lebenslanges Singleton: useRenderingPaused() wird aus Per-Frame-Loops
+// aufgerufen (foregroundGate → roleBehaviorStore, Minimap, Eclipse-Poll, …).
+// Ohne Memoisierung würde JEDER Aufruf zwei frische computed()- und readonly()-
+// Instanzen allozieren — 60fps-Garbage ohne Mehrwert. Lazy erstellt, damit
+// Pinia beim ersten Aufruf bereits installiert ist.
+function createInstance() {
+  if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
       _isDocHidden.value = document.hidden
     })
@@ -37,4 +40,11 @@ export function useRenderingPaused() {
     isRenderingPaused: readonly(isRenderingPaused),
     isIdleRenderingPaused: readonly(isIdleRenderingPaused),
   }
+}
+
+let _instance: ReturnType<typeof createInstance> | null = null
+
+export function useRenderingPaused() {
+  if (!_instance) _instance = createInstance()
+  return _instance
 }
