@@ -1,7 +1,16 @@
 <script setup lang="ts">
-import { watch, computed, ref } from 'vue'
+import { watch, computed, ref, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
+import {
+  BOTTOM_FRAME_STROKE_SHADOW,
+  BOTTOM_FRAME_STROKE_WOOD,
+  BOTTOM_FRAME_STROKE_GOLD,
+  BOTTOM_FRAME_W_SHADOW,
+  BOTTOM_FRAME_W_WOOD,
+  BOTTOM_FRAME_W_GOLD,
+  BOTTOM_BAR_EDGE_INSET,
+} from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useBattleStore } from '@/stores/battleStore'
@@ -51,6 +60,59 @@ const menuItems: {
    (26 Nodes + fitView) bei jedem Tab-Wechsel verursachte spürbare FPS-Drops. */
 const treeTabMounted = ref(false)
 
+/* ── SVG-Holzrahmen (gleiche Technik wie BottomBar / Header / Encyclopedia):
+   Schatten → Holz → Goldlinie als Strokes über dem Content. Maße + Eckradius
+   werden vom gerenderten Modal gelesen (Radius = notch-r × hud-scale). */
+const modalRef = ref<HTMLDivElement | null>(null)
+const modalW = ref(0)
+const modalH = ref(0)
+const modalR = ref(0)
+
+let frameObserver: ResizeObserver | null = null
+
+function measureModal(el: HTMLElement) {
+  const rect = el.getBoundingClientRect()
+  modalW.value = rect.width
+  modalH.value = rect.height
+  modalR.value = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0
+}
+
+watch(modalRef, (el) => {
+  frameObserver?.disconnect()
+  frameObserver = null
+  if (el) {
+    measureModal(el)
+    frameObserver = new ResizeObserver(() => measureModal(el))
+    frameObserver.observe(el)
+  }
+})
+
+/** Geschlossene Rundrect-Kontur, um BOTTOM_BAR_EDGE_INSET nach innen versetzt —
+    gleiche Konstruktion wie framePath in BottomBarComponent / EncyclopediaPanel. */
+const modalFramePath = computed(() => {
+  const O = BOTTOM_BAR_EDGE_INSET
+  const W = modalW.value
+  const H = modalH.value
+  const r = Math.max(0, modalR.value - O)
+  return [
+    `M ${O + r},${O}`,
+    `L ${W - O - r},${O}`,
+    `A ${r},${r} 0 0,1 ${W - O},${O + r}`,
+    `L ${W - O},${H - O - r}`,
+    `A ${r},${r} 0 0,1 ${W - O - r},${H - O}`,
+    `L ${O + r},${H - O}`,
+    `A ${r},${r} 0 0,1 ${O},${H - O - r}`,
+    `L ${O},${O + r}`,
+    `A ${r},${r} 0 0,1 ${O + r},${O}`,
+    'Z',
+  ].join(' ')
+})
+
+onUnmounted(() => {
+  frameObserver?.disconnect()
+  frameObserver = null
+})
+
 watch(
   () => uiStore.bardActiveTab,
   (val) => {
@@ -84,7 +146,41 @@ watch(
 
     <Transition name="modal-pop">
       <div v-if="uiStore.bardActiveTab !== null" class="rp-wrapper">
-        <div class="flex flex-col rp-modal">
+        <div ref="modalRef" class="flex flex-col rp-modal">
+          <!-- Rahmen über dem Content — identischer Aufbau wie .bar-frame der
+               Bottom-Bar / .enc-frame (Schatten → Holz → Goldlinie) -->
+          <svg
+            v-if="modalW && modalH"
+            class="rp-frame"
+            :width="modalW"
+            :height="modalH"
+            aria-hidden="true"
+          >
+            <path
+              :d="modalFramePath"
+              fill="none"
+              :stroke="BOTTOM_FRAME_STROKE_SHADOW"
+              :stroke-width="BOTTOM_FRAME_W_SHADOW"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              :d="modalFramePath"
+              fill="none"
+              :stroke="BOTTOM_FRAME_STROKE_WOOD"
+              :stroke-width="BOTTOM_FRAME_W_WOOD"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              :d="modalFramePath"
+              fill="none"
+              :stroke="BOTTOM_FRAME_STROKE_GOLD"
+              :stroke-width="BOTTOM_FRAME_W_GOLD"
+              stroke-linecap="round"
+            />
+          </svg>
+
           <div class="rp-accent-bar" />
 
           <div class="flex items-center flex-shrink-0 rp-modal-header">
@@ -278,17 +374,23 @@ watch(
   position: relative;
   overflow: hidden;
   background: #111008;
-  border: 4px solid #7a4e20;
   /* same curve as the bottom-bar notches directly beside the modal, where the
      minimap/command panels meet the scoreboard strip (BOTTOM_BAR_NOTCH_R ×
      --hud-scale) — corner and notch share one curvature at every resolution */
   border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
   box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
     0 25px 60px rgba(0, 0, 0, 0.95),
     0 0 0 1px #2a1608;
   height: 100%;
+}
+
+/* Rahmen-SVG ÜBER dem Content (Muster: Bottom-Bar .bar-frame / .enc-frame) —
+   Content scrollt sichtbar unter den Strichen durch, der Rahmen bleibt zu */
+.rp-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
 }
 
 .rp-accent-bar {
