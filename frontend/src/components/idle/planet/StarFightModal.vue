@@ -726,7 +726,9 @@ function emberStyle(i: number): Record<string, string> {
      geteilte CosmicStageBackground identisch wirkt */
   background: #111008;
   border: 1px solid rgba(120, 60, 10, 0.55);
-  border-radius: 5px;
+  /* exakt dieselbe Außen-Rundung wie das Bard-Profil (.rp-modal): Kurve der
+     Bottom-Bar-Notches, skaliert mit dem HUD (BOTTOM_BAR_NOTCH_R × --hud-scale) */
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
   box-shadow:
     0 0 60px rgba(200, 80, 0, 0.22),
     0 0 120px rgba(140, 40, 0, 0.12),
@@ -1548,6 +1550,9 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
   z-index: 5;
   overflow: hidden;
+  /* folgt der Außen-Rundung des Modals — sonst zeichnet der inset-Glow
+     eckige Säume in die runden Ecken */
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
 }
 
 .sf-curse-veil-layer {
@@ -1557,6 +1562,7 @@ function emberStyle(i: number): Record<string, string> {
 
 /* Innerer Rand-Glow: dichter violetter Saum entlang aller vier Kanten */
 .sf-curse-veil-layer--edge {
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
   box-shadow:
     inset 0 0 70px 18px rgba(110, 25, 180, 0.5),
     inset 0 0 160px 40px rgba(80, 15, 140, 0.3);
@@ -1627,6 +1633,9 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
   z-index: 5;
   overflow: hidden;
+  /* folgt der Außen-Rundung des Modals — sonst zeichnet der inset-Glow
+     eckige Säume in die runden Ecken */
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
 }
 
 .sf-rage-veil-layer {
@@ -1635,6 +1644,7 @@ function emberStyle(i: number): Record<string, string> {
 }
 
 .sf-rage-veil-layer--edge {
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
   box-shadow:
     inset 0 0 70px 18px rgba(220, 30, 70, 0.45),
     inset 0 0 170px 44px rgba(160, 15, 45, 0.3);
