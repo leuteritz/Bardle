@@ -81,9 +81,10 @@
           </span>
         </div>
 
-        <!-- Leerer Slot — gleiche Zustandssprache wie das Command-Panel-Dock:
-             gekauft+leer → grün gestrichelt mit ＋ · freischaltbar → grüner
-             Puls + UNLOCK + Preis · gesperrt → gedimmt mit Schloss + Preis -->
+        <!-- Leerer Slot — gekauft+leer im Geister-Platzhalter-Stil der
+             Striker-Vacants (rotierender Dash-Ring, geisterhaftes Planet-
+             Emblem, ＋-Pill, seitliche Vacant-Plate) · freischaltbar →
+             grüner Puls + UNLOCK + Preis · gesperrt → gedimmt mit Schloss -->
         <div
           v-else
           class="tbh-planet tbh-planet--vacant"
@@ -93,7 +94,13 @@
             'tbh-planet--vacant-locked': !t.purchased && !t.unlockable,
           }"
         >
-          <span v-if="t.purchased" class="tbh-vacant-plus">＋</span>
+          <template v-if="t.purchased">
+            <svg class="tbh-vacant-ring" viewBox="0 0 100 100">
+              <circle class="tbh-vacant-ring-dash" cx="50" cy="50" r="46" />
+            </svg>
+            <Icon class="tbh-vacant-emblem" icon="game-icons:planet-core" width="30" height="30" />
+            <span class="tbh-vacant-pill">＋</span>
+          </template>
           <img
             v-else
             src="/img/lock.png"
@@ -113,6 +120,15 @@
         >
           <img src="/img/BardAbilities/BardChime.png" class="tbh-vacant-chime" alt="" />
           <span>{{ formatNumber(t.cost) }}</span>
+        </div>
+
+        <!-- Vacant-Plate seitlich — gleiche Anker-Position wie die Info-Plate
+             der befüllten Slots, aber gestrichelt/gedimmt mit Hinweis -->
+        <div v-if="!t.filled && t.purchased" class="tbh-plate-anchor">
+          <div class="tbh-vacant-plate">
+            <span class="tbh-vacant-name">Slot {{ t.slotNum }} · Vacant</span>
+            <span class="tbh-vacant-hint">Assign a planet</span>
+          </div>
         </div>
 
         <!-- Info-Plate: HP-Bar → Slot-Nummer → dmg/s (Turret) bzw. Rolle -->
@@ -757,26 +773,182 @@ onUnmounted(() => {
   display: none;
 }
 
-/* Gekauft, aber noch kein Planet zugewiesen → grün gestrichelt, atmet */
+/* Gekauft, aber noch kein Planet zugewiesen — Geister-Platzhalter im Stil
+   der Striker-Vacants (rsq-vacant): gestrichelter Kreis mit subtilem grünen
+   Kern-Glow, geisterhaftes Planet-Emblem, rotierender Warte-Ring, ＋-Pill */
 .tbh-planet--vacant-empty {
-  border: 2px dashed rgba(82, 184, 48, 0.52);
-  background: radial-gradient(circle, rgba(8, 18, 6, 0.7), rgba(5, 12, 4, 0.85));
-  box-shadow: inset 0 0 14px rgba(52, 160, 24, 0.06);
-  animation: tbh-empty-breathe 3s ease-in-out infinite;
+  border: 2px dashed rgba(110, 192, 64, 0.45);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(82, 184, 48, 0.1) 0%, transparent 68%),
+    rgba(8, 5, 2, 0.72);
+  box-shadow:
+    0 0 0 2px rgba(6, 3, 0, 0.9),
+    inset 0 0 18px rgba(0, 0, 0, 0.8),
+    0 5px 12px rgba(0, 0, 0, 0.7);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 .tbh-unit:hover .tbh-planet--vacant-empty {
-  border-color: rgba(110, 192, 64, 0.82);
+  border-style: solid;
+  border-color: rgba(110, 192, 64, 0.85);
   box-shadow:
-    inset 0 0 14px rgba(82, 184, 48, 0.12),
-    0 0 8px rgba(82, 184, 48, 0.2);
+    0 0 0 2px rgba(6, 3, 0, 0.9),
+    0 0 16px rgba(82, 184, 48, 0.4),
+    inset 0 0 18px rgba(0, 0, 0, 0.8),
+    0 5px 12px rgba(0, 0, 0, 0.7);
 }
 
-.tbh-vacant-plus {
-  font-size: 1.4rem;
-  line-height: 1;
-  color: rgba(116, 212, 72, 0.75);
-  text-shadow: 0 0 10px rgba(82, 184, 48, 0.38);
-  animation: tbh-empty-icon-pulse 3s ease-in-out infinite;
+/* Geister-Planet-Emblem — "hier gehört ein Planet hin", atmet leise */
+.tbh-vacant-emblem {
+  color: #6ec040;
+  opacity: 0.35;
+  filter: grayscale(0.5);
+  animation: tbh-vacant-breathe 2.8s ease-in-out infinite alternate;
+}
+.tbh-unit:hover .tbh-vacant-emblem {
+  /* Breathe-Animation aus, sonst überschreiben ihre Keyframes die Opacity */
+  animation: none;
+  opacity: 0.65;
+  filter: grayscale(0);
+  transform: scale(1.06);
+}
+
+@keyframes tbh-vacant-breathe {
+  from {
+    opacity: 0.22;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 0.48;
+    transform: scale(1.04);
+  }
+}
+
+/* Gestrichelter Warte-Ring — rotiert langsam (nur transform, GPU) */
+.tbh-vacant-ring {
+  position: absolute;
+  inset: -5px;
+  width: calc(100% + 10px);
+  height: calc(100% + 10px);
+  pointer-events: none;
+  animation: tbh-vacant-spin 14s linear infinite;
+  will-change: transform;
+}
+
+.tbh-vacant-ring-dash {
+  fill: none;
+  stroke: rgba(110, 192, 64, 0.5);
+  stroke-width: 3;
+  stroke-dasharray: 7 11;
+  stroke-linecap: round;
+  transition: stroke 0.18s ease;
+}
+.tbh-unit:hover .tbh-vacant-ring-dash {
+  stroke: rgba(144, 224, 80, 0.85);
+}
+
+@keyframes tbh-vacant-spin {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: rotate(270deg);
+  }
+}
+
+/* ＋-Pill am unteren Kreisrand — lädt zum Zuweisen ein (wie rsq-vacant-pill) */
+.tbh-vacant-pill {
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  min-width: 26px;
+  padding: 1px 7px;
+  border-radius: 9px;
+  text-align: center;
+  background: linear-gradient(to bottom, rgba(46, 122, 26, 0.55), #0c0803);
+  border: 1px solid rgba(110, 192, 64, 0.6);
+  box-shadow:
+    0 0 8px rgba(82, 184, 48, 0.3),
+    0 2px 5px rgba(0, 0, 0, 0.75);
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #b8f088;
+  text-shadow: 0 0 8px rgba(82, 184, 48, 0.6);
+  z-index: 3;
+  animation: tbh-vacant-pill-pulse 1.6s ease-in-out infinite alternate;
+}
+.tbh-unit:hover .tbh-vacant-pill {
+  animation: none;
+  opacity: 1;
+  color: #d8ffb0;
+  border-color: #6ec040;
+}
+
+@keyframes tbh-vacant-pill-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Vacant-Plate seitlich neben dem Slot — gestrichelte, gedimmte Karte mit
+   Goldlinien-Echo oben (wie rsq-vacant-plate, aber am Plate-Anker der HUD) */
+.tbh-vacant-plate {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 82px;
+  padding: 4px 10px 5px;
+  border-radius: 4px;
+  background: rgba(8, 5, 2, 0.82);
+  border: 1px dashed rgba(110, 192, 64, 0.4);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+  transition: border-color 0.18s ease;
+}
+
+.tbh-vacant-plate::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 4px 4px 0 0;
+  opacity: 0.55;
+  background: linear-gradient(to right, transparent, #8ed060, transparent);
+}
+
+.tbh-unit:hover .tbh-vacant-plate {
+  border-color: rgba(144, 224, 80, 0.7);
+}
+
+.tbh-vacant-name {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: rgba(240, 230, 204, 0.6);
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.tbh-vacant-hint {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: rgba(144, 224, 80, 0.7);
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  transition: color 0.18s ease;
+}
+.tbh-unit:hover .tbh-vacant-hint {
+  color: #c8f0a0;
 }
 
 /* Freischaltbar → grüner Kauf-Puls + UNLOCK + Preis */
@@ -849,26 +1021,6 @@ onUnmounted(() => {
   height: 14px;
   image-rendering: pixelated;
   flex-shrink: 0;
-}
-
-@keyframes tbh-empty-breathe {
-  0%,
-  100% {
-    border-color: rgba(82, 184, 48, 0.38);
-  }
-  50% {
-    border-color: rgba(82, 184, 48, 0.68);
-  }
-}
-
-@keyframes tbh-empty-icon-pulse {
-  0%,
-  100% {
-    opacity: 0.65;
-  }
-  50% {
-    opacity: 1;
-  }
 }
 
 @keyframes tbh-afford-pulse {
@@ -1186,8 +1338,9 @@ onUnmounted(() => {
   .tbh-strike-mark,
   .tbh-comet,
   .tbh-eclipse,
-  .tbh-planet--vacant-empty,
-  .tbh-vacant-plus,
+  .tbh-vacant-emblem,
+  .tbh-vacant-ring,
+  .tbh-vacant-pill,
   .tbh-planet--vacant-unlock {
     animation: none;
   }
