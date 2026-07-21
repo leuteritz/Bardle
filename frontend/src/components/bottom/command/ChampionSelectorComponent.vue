@@ -50,7 +50,7 @@ function onSlotLeave() {
         'champ-card--eclipsed': slot !== null && !championInForeground(slot),
       }"
       :style="{
-        '--role-color': ROLES[i].orbit.color,
+        '--role-color': ROLES[i].color,
         '--hover-role-color': ROLE_HOVER_COLORS[ROLES[i].key],
       }"
       :title="

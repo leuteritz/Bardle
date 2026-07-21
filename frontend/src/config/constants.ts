@@ -1254,7 +1254,10 @@ export const ROLES = [
       ry: SUN_RADIUS * 5.43,
       tiltDeg: -8,
       tiltRad: -0.1396,
-      color: '#12B8FF',
+      // Helle Variante der Support-Rollenfarbe (#b8c8d8) — wie bei allen
+      // anderen Rollen ist orbit.color nur die Neon-Version derselben Farbe
+      // (vorher #12B8FF, kollidierte mit Mids Orbit-Blau #3694FF)
+      color: '#E2ECF8',
       speed: 0.00014,
       championSize: SUN_RADIUS * 1.0,
     },

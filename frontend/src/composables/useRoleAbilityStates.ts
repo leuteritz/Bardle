@@ -57,7 +57,9 @@ export function useRoleAbilityStates() {
         role,
         image: roleData.image,
         short: roleData.short,
-        color: roleData.orbit.color,
+        // Kanonische Rollen-Farbe (ROLES[].color) — orbit.color sind die
+        // Neon-Varianten der Orbit-Bahnen und weichen z. T. stark ab (Support)
+        color: roleData.color,
         hasChampion,
         onCooldown: cdMs > 0 && !isFlashing,
         timer: fmtCd(cdMs),
