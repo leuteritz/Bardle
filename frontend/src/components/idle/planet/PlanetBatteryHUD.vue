@@ -81,10 +81,11 @@
           </span>
         </div>
 
-        <!-- Leerer Slot — gekauft+leer im Geister-Platzhalter-Stil der
-             Striker-Vacants (rotierender Dash-Ring, geisterhaftes Planet-
-             Emblem, ＋-Pill, seitliche Vacant-Plate) · freischaltbar →
-             grüner Puls + UNLOCK + Preis · gesperrt → gedimmt mit Schloss -->
+        <!-- Leerer Slot — ALLE unbefüllten Zustände im Geister-Platzhalter-
+             Stil der Striker-Vacants (rotierender Dash-Ring, ＋-Pill,
+             seitliche Vacant-Plate): gekauft+leer → grün mit Planet-Emblem ·
+             freischaltbar → grüner Kauf-Puls mit Schloss · gesperrt →
+             graues Schloss, gedimmt -->
         <div
           v-else
           class="tbh-planet tbh-planet--vacant"
@@ -94,13 +95,16 @@
             'tbh-planet--vacant-locked': !t.purchased && !t.unlockable,
           }"
         >
-          <template v-if="t.purchased">
-            <svg class="tbh-vacant-ring" viewBox="0 0 100 100">
-              <circle class="tbh-vacant-ring-dash" cx="50" cy="50" r="46" />
-            </svg>
-            <Icon class="tbh-vacant-emblem" icon="game-icons:planet-core" width="30" height="30" />
-            <span class="tbh-vacant-pill">＋</span>
-          </template>
+          <svg class="tbh-vacant-ring" viewBox="0 0 100 100">
+            <circle class="tbh-vacant-ring-dash" cx="50" cy="50" r="46" />
+          </svg>
+          <Icon
+            v-if="t.purchased"
+            class="tbh-vacant-emblem"
+            icon="game-icons:planet-core"
+            width="30"
+            height="30"
+          />
           <img
             v-else
             src="/img/lock.png"
@@ -108,26 +112,25 @@
             class="tbh-vacant-lock"
             draggable="false"
           />
-          <span v-if="!t.purchased && t.unlockable" class="tbh-vacant-unlock-label">UNLOCK</span>
-        </div>
-
-        <!-- Preis-Chip als Geschwister des Kreises: bleibt so außerhalb von
-             opacity/grayscale des Locked-Zustands (sonst wird er mit gedimmt) -->
-        <div
-          v-if="!t.filled && !t.purchased"
-          class="tbh-vacant-cost"
-          :class="{ 'tbh-vacant-cost--unlock': t.unlockable }"
-        >
-          <img src="/img/BardAbilities/BardChime.png" class="tbh-vacant-chime" alt="" />
-          <span>{{ formatNumber(t.cost) }}</span>
+          <span v-if="t.purchased || t.unlockable" class="tbh-vacant-pill">＋</span>
         </div>
 
         <!-- Vacant-Plate seitlich — gleiche Anker-Position wie die Info-Plate
-             der befüllten Slots, aber gestrichelt/gedimmt mit Hinweis -->
-        <div v-if="!t.filled && t.purchased" class="tbh-plate-anchor">
-          <div class="tbh-vacant-plate">
-            <span class="tbh-vacant-name">Slot {{ t.slotNum }} · Vacant</span>
-            <span class="tbh-vacant-hint">Assign a planet</span>
+             der befüllten Slots; leere Slots zeigen den Zuweisungs-Hinweis,
+             gesperrte den Freischalt-Preis -->
+        <div v-if="!t.filled" class="tbh-plate-anchor">
+          <div
+            class="tbh-vacant-plate"
+            :class="{ 'tbh-vacant-plate--locked': !t.purchased && !t.unlockable }"
+          >
+            <span class="tbh-vacant-name">
+              Slot {{ t.slotNum }} · {{ t.purchased ? 'Vacant' : 'Locked' }}
+            </span>
+            <span v-if="t.purchased" class="tbh-vacant-hint">Assign a planet</span>
+            <span v-else class="tbh-vacant-hint tbh-vacant-hint--cost">
+              <img src="/img/BardAbilities/BardChime.png" class="tbh-vacant-chime" alt="" />
+              {{ formatNumber(t.cost) }}
+            </span>
           </div>
         </div>
 
@@ -951,74 +954,94 @@ onUnmounted(() => {
   color: #c8f0a0;
 }
 
-/* Freischaltbar → grüner Kauf-Puls + UNLOCK + Preis */
-.tbh-planet--vacant-unlock {
-  border: 2px solid rgba(110, 192, 64, 0.45);
-  background: radial-gradient(circle, rgba(18, 30, 10, 0.72), rgba(12, 20, 6, 0.82));
-  animation: tbh-afford-pulse 2.2s ease-in-out infinite;
-}
-.tbh-unit:hover .tbh-planet--vacant-unlock {
-  border-color: #6ec040;
-  box-shadow:
-    0 0 18px rgba(110, 192, 64, 0.6),
-    0 0 36px rgba(110, 192, 64, 0.18);
-  animation: none;
-}
-
-.tbh-vacant-unlock-label {
-  font-size: 0.5rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  color: #90e050;
-  text-shadow: 0 0 6px rgba(144, 224, 80, 0.7);
-}
-
-/* Gesperrt → gedimmt mit Schloss */
-.tbh-planet--vacant-locked {
-  border: 2px dashed rgba(138, 128, 112, 0.5);
-  background: radial-gradient(circle, rgba(20, 16, 8, 0.6), rgba(12, 10, 4, 0.8));
-  opacity: 0.55;
-  filter: grayscale(40%);
-}
-
-.tbh-vacant-lock {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  opacity: 0.85;
-}
-
-/* Preis-Chip mittig unter dem Slot-Kreis — Zentrierung über left/right +
-   margin:auto statt translateX(-50%): kein Halb-Pixel-Versatz, der das
-   kleine Chime-Icon unscharf rendern würde */
-.tbh-vacant-cost {
-  position: absolute;
-  top: calc(100% + 2px);
-  left: -50%;
-  right: -50%;
-  margin: 0 auto;
-  width: max-content;
+/* Preis-Zeile in der Plate (unlock/locked) — Gold statt Grün, mit Chime */
+.tbh-vacant-hint--cost {
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.45);
   font-size: 0.62rem;
-  font-weight: 800;
+  letter-spacing: 0.04em;
   color: #e8c040;
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
-.tbh-vacant-cost--unlock {
+.tbh-unit:hover .tbh-vacant-hint--cost {
   color: #f0d060;
   text-shadow: 0 0 6px rgba(232, 192, 64, 0.6);
 }
 
+/* Locked-Plate: graue Variante der Vacant-Karte */
+.tbh-vacant-plate--locked {
+  border-color: rgba(138, 128, 112, 0.35);
+}
+.tbh-vacant-plate--locked::before {
+  background: linear-gradient(to right, transparent, #8a8070, transparent);
+}
+.tbh-unit:hover .tbh-vacant-plate--locked {
+  border-color: rgba(170, 160, 140, 0.6);
+}
+
+/* Freischaltbar — gleicher Geister-Look, aber mit Kauf-Puls: das Schloss
+   sitzt mittig, der grüne Puls signalisiert "jetzt leistbar" */
+.tbh-planet--vacant-unlock {
+  border: 2px dashed rgba(110, 192, 64, 0.55);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(82, 184, 48, 0.12) 0%, transparent 68%),
+    rgba(8, 5, 2, 0.72);
+  box-shadow:
+    0 0 0 2px rgba(6, 3, 0, 0.9),
+    inset 0 0 18px rgba(0, 0, 0, 0.8),
+    0 5px 12px rgba(0, 0, 0, 0.7);
+  animation: tbh-afford-pulse 2.2s ease-in-out infinite;
+}
+.tbh-unit:hover .tbh-planet--vacant-unlock {
+  border-style: solid;
+  border-color: #6ec040;
+  box-shadow:
+    0 0 0 2px rgba(6, 3, 0, 0.9),
+    0 0 18px rgba(110, 192, 64, 0.6),
+    inset 0 0 18px rgba(0, 0, 0, 0.8),
+    0 5px 12px rgba(0, 0, 0, 0.7);
+  animation: none;
+}
+
+/* Gesperrt — gleicher Geister-Look in Grau, gedimmt mit Schloss */
+.tbh-planet--vacant-locked {
+  border: 2px dashed rgba(138, 128, 112, 0.45);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(138, 128, 112, 0.08) 0%, transparent 68%),
+    rgba(8, 5, 2, 0.72);
+  box-shadow:
+    0 0 0 2px rgba(6, 3, 0, 0.9),
+    inset 0 0 18px rgba(0, 0, 0, 0.8),
+    0 5px 12px rgba(0, 0, 0, 0.7);
+  opacity: 0.6;
+  filter: grayscale(40%);
+  transition: border-color 0.18s ease, opacity 0.18s ease;
+}
+.tbh-unit:hover .tbh-planet--vacant-locked {
+  border-color: rgba(170, 160, 140, 0.7);
+  opacity: 0.8;
+}
+
+/* Ring-Farbe je Zustand: grün (empty/unlock, Default) · grau (locked) */
+.tbh-planet--vacant-locked .tbh-vacant-ring-dash {
+  stroke: rgba(138, 128, 112, 0.4);
+}
+.tbh-unit:hover .tbh-planet--vacant-locked .tbh-vacant-ring-dash {
+  stroke: rgba(170, 160, 140, 0.65);
+}
+
+/* Schloss mittig im Kreis — das zentrale "Image" der gesperrten Slots */
+.tbh-vacant-lock {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  opacity: 0.85;
+}
+
 .tbh-vacant-chime {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   image-rendering: pixelated;
   flex-shrink: 0;
 }
@@ -1027,13 +1050,19 @@ onUnmounted(() => {
   0%,
   100% {
     border-color: rgba(110, 192, 64, 0.35);
-    box-shadow: 0 0 6px rgba(110, 192, 64, 0.15);
+    box-shadow:
+      0 0 0 2px rgba(6, 3, 0, 0.9),
+      0 0 6px rgba(110, 192, 64, 0.15),
+      inset 0 0 18px rgba(0, 0, 0, 0.8),
+      0 5px 12px rgba(0, 0, 0, 0.7);
   }
   50% {
     border-color: #6ec040;
     box-shadow:
+      0 0 0 2px rgba(6, 3, 0, 0.9),
       0 0 16px rgba(110, 192, 64, 0.55),
-      0 0 28px rgba(110, 192, 64, 0.16);
+      inset 0 0 18px rgba(0, 0, 0, 0.8),
+      0 5px 12px rgba(0, 0, 0, 0.7);
   }
 }
 
