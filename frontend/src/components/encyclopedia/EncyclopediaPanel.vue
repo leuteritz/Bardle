@@ -7,6 +7,13 @@ import type { EncyclopediaEntry } from '../../config/encyclopedia'
 import {
   BOTTOM_BAR_HEIGHT,
   BOTTOM_BAR_SIDE_W,
+  BOTTOM_BAR_EDGE_INSET,
+  BOTTOM_FRAME_STROKE_SHADOW,
+  BOTTOM_FRAME_STROKE_WOOD,
+  BOTTOM_FRAME_STROKE_GOLD,
+  BOTTOM_FRAME_W_SHADOW,
+  BOTTOM_FRAME_W_WOOD,
+  BOTTOM_FRAME_W_GOLD,
   HUD_PANEL_ARC_R,
   ENCYCLOPEDIA_BOOKMARKS_STORAGE_KEY,
   ENCYCLOPEDIA_COPY_FEEDBACK_MS,
@@ -212,9 +219,14 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  readLayout()
+  window.addEventListener('resize', readLayout)
+})
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('resize', readLayout)
   if (copyTimer) clearTimeout(copyTimer)
   if (flashTimer) clearTimeout(flashTimer)
 })
@@ -222,14 +234,45 @@ onUnmounted(() => {
 /* ── Layout: same width as the command panel, sitting flush on top of it.
    The bottom-left corner mirrors the command panel's rounded top-left arc,
    so the two panels form a waist where they meet and the command panel's
-   rounding stays visible. ── */
+   rounding stays visible. Frame + background replicate the bottom bar
+   (flat #1e1006 fill, SVG triple stroke shadow → wood → gold). ── */
 
-const panelFrameStyle = {
-  bottom: `calc(${BOTTOM_BAR_HEIGHT}px * var(--hud-scale, 0.75))`,
-  width: `calc(${BOTTOM_BAR_SIDE_W}px * var(--hud-scale, 0.75))`,
-  borderBottomLeftRadius: `calc(${HUD_PANEL_ARC_R}px * var(--hud-scale, 0.75))`,
-  '--enc-arc': `calc(${HUD_PANEL_ARC_R}px * var(--hud-scale, 0.75))`,
+const hudScale = ref(0.75)
+const viewportH = ref(window.innerHeight)
+
+function readLayout() {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--hud-scale')
+  const parsed = parseFloat(raw)
+  hudScale.value = Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+  viewportH.value = window.innerHeight
 }
+
+const panelW = computed(() => BOTTOM_BAR_SIDE_W * hudScale.value)
+const panelH = computed(() => viewportH.value - BOTTOM_BAR_HEIGHT * hudScale.value)
+const panelArc = computed(() => HUD_PANEL_ARC_R * hudScale.value)
+
+/** Visible edge of the panel (left + rounded bottom-left + bottom), open at
+    the screen-attached top/right edges — same construction as framePath in
+    BottomBarComponent. */
+const encFramePath = computed(() => {
+  const O = BOTTOM_BAR_EDGE_INSET
+  const W = panelW.value
+  const H = panelH.value
+  const arc = panelArc.value
+  return [
+    `M ${O},0`,
+    `L ${O},${H - arc - O}`,
+    `A ${arc},${arc} 0 0,0 ${arc + O},${H - O}`,
+    `L ${W},${H - O}`,
+  ].join(' ')
+})
+
+const panelFrameStyle = computed(() => ({
+  bottom: `${BOTTOM_BAR_HEIGHT * hudScale.value}px`,
+  width: `${panelW.value}px`,
+  borderBottomLeftRadius: `${panelArc.value}px`,
+  '--enc-arc': `${panelArc.value}px`,
+}))
 </script>
 
 <template>
@@ -250,9 +293,33 @@ const panelFrameStyle = {
         class="enc-panel fixed right-0 top-0 z-[950] flex flex-col overflow-hidden"
         :style="panelFrameStyle"
       >
-        <!-- Innenrahmen über dem Content: die inset-Linien liegen sonst unter
-             den scrollenden Karten und werden an der Rundung überdeckt -->
-        <div class="enc-frame" aria-hidden="true"></div>
+        <!-- Rahmen über dem Content — identischer Aufbau wie .bar-frame der
+             Bottom-Bar (Schatten → Holz → Goldlinie), Content scrollt darunter -->
+        <svg class="enc-frame" :width="panelW" :height="panelH" aria-hidden="true">
+          <path
+            :d="encFramePath"
+            fill="none"
+            :stroke="BOTTOM_FRAME_STROKE_SHADOW"
+            :stroke-width="BOTTOM_FRAME_W_SHADOW"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            :d="encFramePath"
+            fill="none"
+            :stroke="BOTTOM_FRAME_STROKE_WOOD"
+            :stroke-width="BOTTOM_FRAME_W_WOOD"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            :d="encFramePath"
+            fill="none"
+            :stroke="BOTTOM_FRAME_STROKE_GOLD"
+            :stroke-width="BOTTOM_FRAME_W_GOLD"
+            stroke-linecap="round"
+          />
+        </svg>
 
         <!-- Gold accent line -->
         <div class="enc-accent shrink-0"></div>
@@ -465,23 +532,17 @@ const panelFrameStyle = {
    narrow Full-HD panel stays readable and 4K doesn't look lost. */
 .enc-panel {
   --enc-pad: clamp(10px, 0.85vw, 18px);
-  background: #111008;
-  border-left: 4px solid #7a4e20;
-  border-bottom: 4px solid #7a4e20;
+  /* Flat header brown — same fill as the bottom bar's .bar-bg */
+  background: #1e1006;
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6);
 }
-/* Innenrahmen als Overlay ÜBER dem Content (Muster: Bottom-Bar .bar-frame) —
-   so scrollen die Karten sichtbar unter den Rahmenlinien und der Bogen
-   unten links bleibt immer geschlossen */
+/* Rahmen-SVG ÜBER dem Content (Muster: Bottom-Bar .bar-frame) — Karten
+   scrollen sichtbar unter den Strichen durch, der Bogen bleibt geschlossen */
 .enc-frame {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 10;
-  border-radius: inherit;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310;
 }
 .enc-accent {
   height: 3px;
@@ -617,7 +678,7 @@ const panelFrameStyle = {
 }
 .enc-group-header {
   padding: clamp(5px, 0.4vw, 7px) 2px;
-  background: linear-gradient(180deg, #111008 72%, transparent);
+  background: linear-gradient(180deg, #1e1006 72%, transparent);
 }
 .enc-group-icon {
   color: #c89040;
