@@ -11,7 +11,11 @@
         :tiltDeg="tierOrbitDimensions[i].tiltDeg"
         :visible="tierIsBehind[i]"
         :abilityActive="hoveredPlanetTier === i"
-        :dimmed="hoveredChampionRole !== null || (hoveredPlanetSlotId !== null && hoveredPlanetTier !== i)"
+        :dimmed="
+          starFocusActive ||
+          hoveredChampionRole !== null ||
+          (hoveredPlanetSlotId !== null && hoveredPlanetTier !== i)
+        "
       />
     </template>
   </svg>
@@ -149,6 +153,7 @@ import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS } from '../../../sto
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY, GAME_TICK_INTERVAL_MS } from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
+import { useStarGroupStore } from '@/stores/starGroupStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
@@ -221,7 +226,11 @@ export default defineComponent({
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
     const uiStore = useUiStore()
+    const starGroupStore = useStarGroupStore()
     const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
+    // Stern-Fokus (Timer-Bar, Minimap oder Stern im Orbit gehovert):
+    // alle Planeten samt Orbits blenden aus, nur der Stern bleibt sichtbar.
+    const starFocusActive = computed(() => starGroupStore.hoveredTimerStarId !== null)
     const localStates = new Map<string, LocalPlanetState>()
     const planetSpeedMuls = new Map<string, number>()
     const renderPositions = ref<PlanetRenderPos[]>([])
@@ -487,9 +496,12 @@ export default defineComponent({
         const slotNum = parseInt(slot.id.replace('slot_', ''), 10) - 1
 
         const hPlanetId = uiStore.hoveredPlanetSlotId
-        // Dim when focusing a champion (all planets recede) or another planet.
+        // Dim when focusing a champion or a star (all planets recede) or
+        // another planet.
         const isDimmed =
-          uiStore.hoveredChampionRole !== null || (hPlanetId !== null && slot.id !== hPlanetId)
+          starGroupStore.hoveredTimerStarId !== null ||
+          uiStore.hoveredChampionRole !== null ||
+          (hPlanetId !== null && slot.id !== hPlanetId)
 
         newPositions.push({
           id: slot.id,
@@ -595,6 +607,7 @@ export default defineComponent({
       hoveredChampionRole,
       hoveredPlanetSlotId,
       hoveredPlanetTier,
+      starFocusActive,
       HOVER_DIM_OPACITY,
       allSlots,
       slotsWithRole,

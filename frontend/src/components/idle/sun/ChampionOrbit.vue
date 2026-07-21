@@ -169,6 +169,7 @@ import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { useSynergyStore } from '../../../stores/synergyStore'
 import { usePlanetShopStore } from '../../../stores/planetShopStore'
+import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { useUiStore } from '../../../stores/uiStore'
 import { ROLE_HOVER_COLORS } from '@/config/constants'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
@@ -243,6 +244,7 @@ export default defineComponent({
     const roleBehaviorStore = useRoleBehaviorStore()
     const synergyStore = useSynergyStore()
     const planetShopStore = usePlanetShopStore()
+    const starGroupStore = useStarGroupStore()
     const uiStore = useUiStore()
 
     const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
@@ -251,9 +253,10 @@ export default defineComponent({
       hoveredChampionRole.value ? (ROLE_HOVER_COLORS[hoveredChampionRole.value] ?? null) : null,
     )
 
-    // Dim a champion when focusing a planet (all champions recede) or a champion
-    // of a different role (same-role champions stay full).
+    // Dim a champion when focusing a planet or a star (all champions recede)
+    // or a champion of a different role (same-role champions stay full).
     function isChampionDimmed(pos: ChampionRenderPos): boolean {
+      if (starGroupStore.hoveredTimerStarId !== null) return true
       if (hoveredPlanetSlotId.value !== null) return true
       return hoveredChampionRole.value !== null && pos.primaryRole !== hoveredChampionRole.value
     }

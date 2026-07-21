@@ -13,6 +13,8 @@
           :ry="tier.ry"
           :tiltDeg="tier.tiltDeg"
           :visible="starOrbitVisible[i]"
+          :abilityActive="starTrackFocused(i)"
+          :dimmed="starTrackDimmed(i)"
         />
       </template>
 
@@ -263,8 +265,9 @@ const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
 const hoveredPlanetSlotId = computed(() => uiStore.hoveredPlanetSlotId)
 
 // Dim a role's orbit ring when the player is focusing a different role
-// (champion-slot hover) or any planet (planet-tile hover).
+// (champion-slot hover), any planet (planet-tile hover) or a star.
 function roleOrbitDimmed(role: ChampionRole): boolean {
+  if (starGroupStore.hoveredTimerStarId !== null) return true
   if (hoveredPlanetSlotId.value !== null) return true
   return hoveredChampionRole.value !== null && role !== hoveredChampionRole.value
 }
@@ -275,23 +278,36 @@ const effectiveHoveredStarId = computed(
   () => hoveredStarId.value ?? hoveredSummaryStarId.value ?? starGroupStore.hoveredTimerStarId,
 )
 
-// Externer Stern-Fokus (Header-Timer-Bar oder Minimap): alle ANDEREN Sterne
-// werden ausgeblendet — analog zum Command-Panel-Hover über Champions/Planeten.
-// Direkter Hover im Orbit selbst (Stern/Summary) löst das Dimmen bewusst nicht
-// aus, dort bleibt nur der Highlight-Puls auf dem gehoverten Stern.
-const externalStarFocusActive = computed(
-  () =>
-    starGroupStore.hoveredTimerStarId !== null &&
-    hoveredStarId.value === null &&
-    hoveredSummaryStarId.value === null,
-)
+// Stern-Fokus: sobald ein Stern gehovert wird (Orbit-Stern, Reward-Summary,
+// Header-Timer-Bar oder Minimap), bleibt nur dieser Stern samt Bahn sichtbar —
+// alle anderen Sterne, Champions und Planeten blenden aus. Umgekehrt blenden
+// beim Command-Panel-Hover über Champions/Planeten alle Sterne aus.
+const starFocusActive = computed(() => starGroupStore.hoveredTimerStarId !== null)
 
 function isStarHoverDimmed(starId: string): boolean {
-  return externalStarFocusActive.value && starId !== starGroupStore.hoveredTimerStarId
+  if (hoveredChampionRole.value !== null || hoveredPlanetSlotId.value !== null) return true
+  return starFocusActive.value && starId !== starGroupStore.hoveredTimerStarId
 }
 
 function starHoverDimFactor(starId: string): number {
   return isStarHoverDimmed(starId) ? HOVER_DIM_OPACITY : 1
+}
+
+// Stern-Orbit-Tracks: beim Stern-Fokus bleibt nur die Bahn des gehoverten
+// Sterns sichtbar (mit Fokus-Glow), beim Champion-/Planeten-Hover dimmen alle.
+function hoveredStarType(): string | null {
+  const id = starGroupStore.hoveredTimerStarId
+  if (id === null) return null
+  return starRenders.value.find((s) => s.id === id)?.starType ?? null
+}
+
+function starTrackFocused(tierIndex: number): boolean {
+  return starFocusActive.value && hoveredStarType() === (tierIndex === 0 ? 'champion' : 'resource')
+}
+
+function starTrackDimmed(tierIndex: number): boolean {
+  if (hoveredChampionRole.value !== null || hoveredPlanetSlotId.value !== null) return true
+  return starFocusActive.value && !starTrackFocused(tierIndex)
 }
 
 // ── Per-Frame-DOM-Updates am Vue-Rendering vorbei ─────────────────────────────
@@ -534,7 +550,12 @@ const { orbitScale } = useOrbitScale()
 const scaledStarOrbitTiers = computed(() =>
   ORBIT_TIERS.star.map((tier, i) => {
     const type = i === 0 ? 'champion' : 'resource'
-    const activeStar = starRenders.value.find(s => s.starType === type)
+    // Beim Stern-Fokus die Geometrie des gehoverten Sterns bevorzugen —
+    // mehrere Sterne desselben Typs können unterschiedliche Bahnen haben.
+    const hoveredId = starGroupStore.hoveredTimerStarId
+    const activeStar =
+      starRenders.value.find(s => s.id === hoveredId && s.starType === type) ??
+      starRenders.value.find(s => s.starType === type)
     if (activeStar) {
       return { ...tier, rx: activeStar.orbitRx, ry: activeStar.orbitRy }
     }
@@ -1282,9 +1303,9 @@ function starCountStyle(star: StarRenderEntry) {
 
 }
 
-/* ── Externer Stern-Fokus (Header-Timer-Bar / Minimap): alle anderen Sterne
-   ausblenden — gleiches Muster wie der Command-Panel-Hover über Champions
-   und Planeten (--hover-dim-opacity kommt vom Layer-Div). ── */
+/* ── Hover-Fokus (Stern gehovert oder Champion-/Planeten-Hover im Command
+   Panel): nicht fokussierte Sterne ausblenden — gleiches Muster wie bei
+   Champions und Planeten (--hover-dim-opacity kommt vom Layer-Div). ── */
 .star-body-wrap--hover-dimmed {
   pointer-events: none;
 }
