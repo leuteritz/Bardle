@@ -257,16 +257,10 @@ const panelFrameStyle = {
         <!-- Gold accent line -->
         <div class="enc-accent shrink-0"></div>
 
-        <!-- Header -->
-        <div class="enc-header flex items-center gap-3 shrink-0">
+        <!-- Header — Icon + Codex zentriert, Close-Button absolut rechts -->
+        <div class="enc-header relative flex items-center justify-center gap-2.5 shrink-0">
           <Icon icon="game-icons:wax-tablet" width="28" height="28" class="enc-header-icon" />
-          <div class="flex items-baseline gap-2 flex-1 min-w-0 whitespace-nowrap overflow-hidden">
-            <h2 class="enc-title">Codex</h2>
-            <p class="enc-header-stats">
-              <span class="enc-header-count">{{ totalEntryCount }}</span> entries ·
-              <span class="enc-header-count">{{ encyclopediaData.length }}</span> categories
-            </p>
-          </div>
+          <h2 class="enc-title">Codex</h2>
           <button class="enc-close" aria-label="Close encyclopedia" @click="closePanel">✕</button>
         </div>
 
@@ -518,21 +512,11 @@ const panelFrameStyle = {
   line-height: 1;
   color: #e8c040;
 }
-.enc-header-stats {
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  font-size: clamp(11px, 0.72vw, 13.5px);
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  color: #b4ab96;
-  white-space: nowrap;
-}
-.enc-header-count {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: clamp(12px, 0.78vw, 15px);
-  font-weight: 700;
-  color: #e8c040;
-}
 .enc-close {
+  position: absolute;
+  right: var(--enc-pad);
+  top: 50%;
+  transform: translateY(-50%);
   width: clamp(26px, 1.7vw, 32px);
   height: clamp(26px, 1.7vw, 32px);
   display: flex;
