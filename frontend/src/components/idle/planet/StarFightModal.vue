@@ -1322,17 +1322,26 @@ function emberStyle(i: number): Record<string, string> {
    überstreicht Champions UND Turret-Planeten auf jeder Auflösung. Bei ~62 %
    der Laufzeit (= BOSS_WAVE_HIT_DELAY_MS von BOSS_WAVE_TRAVEL_MS) passiert
    der Ring die Ziele — dort feuern Hit-Flash + Damage-Labels. */
+/* FPS-freundlich: Element in FINALER Größe angelegt, Ring als radialer
+   Verlauf statt border + box-shadow-Blur — so wird die Welle genau EINMAL
+   gerastert und die Animation skaliert nur von klein auf 1 (GPU-Minify);
+   das alte ×11-Hochskalieren eines 9%-Elements mit Blur-Schatten zwang den
+   Browser mitten in der Animation zu teuren Re-Rastern der Blur-Layer */
 .sf-boss-wave {
   position: absolute;
   left: 50%;
   top: 41%;
-  width: 9%;
+  width: 100%;
   aspect-ratio: 1;
   border-radius: 50%;
-  border: 3px solid rgba(255, 70, 40, 0.9);
-  box-shadow:
-    0 0 26px rgba(255, 60, 30, 0.65),
-    inset 0 0 18px rgba(255, 90, 40, 0.4);
+  background: radial-gradient(
+    circle,
+    transparent 0 40%,
+    rgba(255, 90, 40, 0.3) 42.5%,
+    rgba(255, 70, 40, 0.9) 45%,
+    rgba(255, 120, 50, 0.45) 47.5%,
+    transparent 51%
+  );
   opacity: 0;
   pointer-events: none;
   z-index: 3;
@@ -1342,27 +1351,32 @@ function emberStyle(i: number): Record<string, string> {
 
 /* Nachzügler-Ring: dünner, minimal verzögert — gibt der Welle Tiefe */
 .sf-boss-wave--echo {
-  border-width: 2px;
-  border-color: rgba(255, 130, 60, 0.7);
-  box-shadow: 0 0 16px rgba(255, 90, 30, 0.45);
+  background: radial-gradient(
+    circle,
+    transparent 0 43%,
+    rgba(255, 130, 60, 0.65) 45.5%,
+    transparent 48.5%
+  );
   animation-delay: 0.1s;
 }
 
 @keyframes sf-boss-wave-expand {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.12);
+    transform: translate(-50%, -50%) scale(0.011);
   }
   10% {
     opacity: 1;
   }
+  /* 62 % = BOSS_WAVE_HIT_DELAY_MS: Ring passiert die Ziele — entspricht dem
+     alten Look (scale 7.6 von 11 ≙ 0.69 der Endgröße) */
   62% {
     opacity: 0.85;
-    transform: translate(-50%, -50%) scale(7.6);
+    transform: translate(-50%, -50%) scale(0.69);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(11);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
