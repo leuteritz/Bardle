@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
+import { useUiStore } from './uiStore'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
 import { unlockedChampionTierCount } from '../config/championTiers'
 import type { ChampionRole } from '../types'
@@ -20,6 +21,8 @@ import {
   GALAXY_BOSS_ESCORT_MAX,
   GALAXY_BOSS_WAVE_SIZE,
   RESCUE_ROTATION_DURATION_MS,
+  GALAXY_TRANS_WARP_MS,
+  GALAXY_TRANS_DECEL_MS,
   MAX_STAR_LEVEL,
   TIER_UNLOCK_CHIMES_BASE,
   TIER_UNLOCK_CHIMES_GROWTH,
@@ -481,6 +484,19 @@ export const useGalaxyStore = defineStore('galaxy', {
       // the tier-unlock cost first (see unlockNextTier / TierUnlockPanel).
       if (!this.isComplete || this.pendingTransition || this.nextTierLocked) return
       this.pendingTransition = true
+      // The warp state machine normally runs in the orbit-background rAF
+      // loop, which pauses while the Bard profile is open — the hyperspace
+      // animation would only start after closing it. Drive the transition
+      // with wall-clock timers in that case; the loop skips a transition
+      // that is already running (guard on isGalaxyTransitioning).
+      if (useUiStore().bardActiveTab !== null) {
+        this.setGalaxyTransitioning(true)
+        window.setTimeout(() => this.commitAdvance(), GALAXY_TRANS_WARP_MS)
+        window.setTimeout(
+          () => this.setGalaxyTransitioning(false),
+          GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS,
+        )
+      }
     },
 
     // Pay the Chimes + Material cost to unlock the next tier. Returns true on success.

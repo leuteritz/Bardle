@@ -1931,7 +1931,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     } else {
     const pendingTrans = galaxyStore.pendingTransition
 
-    if (pendingTrans && !wasPendingTransition) {
+    // Skip transitions already driven elsewhere: requestTransition() runs the
+    // warp on wall-clock timers while the Bard profile is open (this loop is
+    // paused there) — starting it again here would advance two galaxies.
+    if (pendingTrans && !wasPendingTransition && !galaxyStore.isGalaxyTransitioning) {
       if (prefersReducedMotion.value) {
         galaxyStore.commitAdvance()
       } else {
