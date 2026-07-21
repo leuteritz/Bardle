@@ -1,5 +1,6 @@
 <template>
-  <div class="rpg-frame flex flex-col h-full">
+  <div class="rpg-frame cs-layout h-full">
+    <div class="cs-left">
     <!-- ── Header: Search + Role Filter ── -->
     <div class="rpg-header cs-header">
       <div class="cs-search-row">
@@ -296,184 +297,26 @@
           <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
             <div v-show="!isTierCollapsed(group.tier)" class="tier-body-inner">
               <div v-if="group.champions.length" class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
-              <!-- Grid slot: fixed height, holds layout space -->
-              <div
-                v-for="(champion, index) in group.champions"
-                :key="champion.name"
-                class="champion-card-slot"
-                :class="[getCardClass(champion.name), { 'is-last-row': isLastRow(index, group.champions.length), 'is-first-row': isFirstRow(index) }]"
-                :data-role="CHAMPION_ROLES[champion.name]"
-                @click="handleBuy(champion.name)"
-                @mouseenter="dismissNewOnHover(champion.name)"
-              >
-          <!-- Visual card: expands absolutely out of grid slot on hover -->
-          <div class="card-inner">
-
-            <!-- Role badge pill: top-right — champion's role -->
-            <div
-              class="role-badge-pill"
-              :style="{ background: ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.color }"
-            >
-              {{ ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.label }}
-            </div>
-
-            <!-- Tier badge: top-left — Cosmic/Champion Tier (★N) -->
-            <div
-              v-if="!isOwned(champion.name)"
-              class="tier-badge"
-              :style="{ '--tier-c': getTierColor(champion.name) }"
-              :title="getChampionDetail(champion.name).cosmic.name"
-            >
-              {{ getChampionTierLabel(champion.name) }}
-            </div>
-
-            <!-- Trait/origin badges — revealed on hover as a right-aligned
-                 column under the role pill (identity group: role → traits) -->
-            <div class="card-top-traits">
-              <div
-                v-for="trait in getChampionDetail(champion.name).traits"
-                :key="trait.id"
-                class="card-trait-badge"
-                :style="{ '--tc': trait.color }"
-              >
-                <Icon :icon="trait.icon" class="card-trait-icon" />
-                <span>{{ trait.name }}</span>
-              </div>
-              <div
-                v-if="getChampionDetail(champion.name).origin"
-                class="card-trait-badge"
-                :style="{ '--tc': getChampionDetail(champion.name).origin!.color }"
-              >
-                <Icon
-                  :icon="getChampionDetail(champion.name).origin!.icon"
-                  class="card-trait-icon"
+                <ChampionShopCard
+                  v-for="champion in group.champions"
+                  :key="champion.name"
+                  :name="champion.name"
+                  :image="battleStore.getChampionImage(champion.name)"
+                  :role="CHAMPION_ROLES[champion.name]"
+                  :role-badge="ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]"
+                  :tier-color="getTierColor(champion.name)"
+                  :tier-name="getChampionDetail(champion.name).cosmic.name"
+                  :star-level="getChampionDetail(champion.name).starLevel"
+                  :card-class="getCardClass(champion.name)"
+                  :owned="isOwned(champion.name)"
+                  :locked="isLocked(champion.name)"
+                  :buyable="isUnlocked(champion.name) && canAffordChampion(champion.name)"
+                  :selected="selectedChampion === champion.name"
+                  :is-new="isNew(champion.name)"
+                  :locked-tooltip="getLockedTooltip(champion.name)"
+                  @select="selectChampion"
+                  @hover="dismissNewOnHover"
                 />
-                <span>{{ getChampionDetail(champion.name).origin!.origin }}</span>
-              </div>
-            </div>
-
-            <!-- Image layer: clipped to card-inner bounds -->
-            <div class="card-img-layer">
-              <img
-                :src="battleStore.getChampionImage(champion.name)"
-                :alt="champion.name"
-                loading="lazy"
-                decoding="async"
-                class="absolute inset-0 object-cover object-top w-full h-full rpg-img card-img-scale"
-                :class="isLocked(champion.name) ? 'grayscale' : ''"
-              />
-
-              <img
-                v-if="isLocked(champion.name)"
-                src="/img/lock.png"
-                alt="Locked"
-                class="lock-overlay"
-              />
-
-              <div
-                class="absolute inset-0 card-overlay"
-                :class="
-                  isUnlocked(champion.name) && canAffordChampion(champion.name)
-                    ? 'card-overlay--buyable'
-                    : 'card-overlay--default'
-                "
-              />
-
-              <div
-                v-if="
-                  isUnlocked(champion.name) &&
-                  !isOwned(champion.name) &&
-                  canAffordChampion(champion.name)
-                "
-                class="absolute inset-0 pointer-events-none card-shimmer card-shimmer-anim"
-              />
-            </div>
-
-            <!-- Content: always anchored to bottom of card-inner -->
-            <div class="card-content">
-              <div class="flex flex-col">
-                <!-- 1. Name — always visible -->
-                <span
-                  class="text-base font-black leading-tight tracking-wide champion-name"
-                  :class="
-                    isOwned(champion.name) || isLocked(champion.name)
-                      ? 'champion-name--dim'
-                      : 'champion-name--bright'
-                  "
-                >
-                  {{ truncate(champion.name, 12) }}
-                </span>
-
-                <!-- 2. Costs — revealed on hover: materials row, chimes row below -->
-                <div class="card-bottom-section">
-                  <div
-                    v-if="isUnlocked(champion.name) && !isOwned(champion.name)"
-                    class="flex flex-col items-start gap-1.5"
-                  >
-                    <div class="flex flex-wrap items-center gap-1">
-                      <span
-                        v-for="(qty, matId) in getMaterialCost(champion.name)"
-                        :key="matId"
-                        class="cost-badge"
-                        :class="
-                          hasEnoughMaterial(String(matId), qty as number)
-                            ? 'cost-badge--ok'
-                            : 'cost-badge--missing'
-                        "
-                        :style="{ '--cost-c': MATERIAL_COLOR[String(matId)] }"
-                      >
-                        <img
-                          :src="getMaterialImage(String(matId))"
-                          :alt="getMaterialName(String(matId))"
-                          class="rpg-img inline-block w-4 h-4 object-contain align-middle"
-                        />
-                        {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
-                          formatNumber(qty as number)
-                        }}
-                      </span>
-                    </div>
-                    <span
-                      class="cost-badge chimes-cost-badge"
-                      :class="canAffordChimes(champion.name) ? 'cost-badge--ok' : 'cost-badge--missing'"
-                      :title="canAffordChimes(champion.name) ? '' : 'Not enough Chimes'"
-                    >
-                      <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="rpg-img chime-cost-img inline-block object-contain align-middle" />
-                      {{ formatNumber(gameStore.chimes) }}/{{ formatNumber(getChimesPrice(champion.name)) }}
-                    </span>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-
-            <!-- Locked Tooltip -->
-            <div v-if="isLocked(champion.name)" class="locked-tooltip">
-              {{ getLockedTooltip(champion.name) }}
-            </div>
-
-          </div>
-
-          <!-- New champion badge (outside card-inner so it's not clipped) -->
-          <RpgBadgeTooltip>
-            <Transition name="champion-badge-fade">
-              <RpgNotifyBadge
-                v-if="isNew(champion.name)"
-                :count="1"
-                variant="shop"
-                label="New champion"
-                hoverable
-              />
-            </Transition>
-            <template #tip>
-              <div class="new-champ-tip">
-                <div class="new-champ-tip__title">New Champion</div>
-                <div class="new-champ-tip__text">
-                  {{ champion.name }} was recently unlocked — recruit to add them to your roster.
-                </div>
-              </div>
-            </template>
-          </RpgBadgeTooltip>
-            </div>
               </div>
               <p v-else class="tier-all-recruited">All recruited ✓</p>
             </div>
@@ -488,174 +331,70 @@
             <span class="cross-role-divider-label">Other Roles</span>
           </div>
           <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
-            <div
+            <ChampionShopCard
               v-for="champion in crossRoleChampions"
               :key="'cross-' + champion.name"
-              class="champion-card-slot cross-role-card"
-              :class="getCardClass(champion.name)"
-              :data-role="CHAMPION_ROLES[champion.name]"
-              @click="handleBuy(champion.name)"
-              @mouseenter="dismissNewOnHover(champion.name)"
-            >
-              <div class="card-inner">
-                <!-- Role badge pill — inside card-inner so it tracks the expanding card edge -->
-                <div
-                  class="role-badge-pill"
-                  :style="{ background: ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.color }"
-                >
-                  {{ ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.label }}
-                </div>
-                <!-- Tier badge: top-left — Cosmic/Champion Tier (★N) -->
-                <div
-                  v-if="!isOwned(champion.name)"
-                  class="tier-badge"
-                  :style="{ '--tier-c': getTierColor(champion.name) }"
-                  :title="getChampionDetail(champion.name).cosmic.name"
-                >
-                  {{ getChampionTierLabel(champion.name) }}
-                </div>
-                <div class="card-top-traits">
-                  <div
-                    v-for="trait in getChampionDetail(champion.name).traits"
-                    :key="trait.id"
-                    class="card-trait-badge"
-                    :style="{ '--tc': trait.color }"
-                  >
-                    <Icon :icon="trait.icon" class="card-trait-icon" />
-                    <span>{{ trait.name }}</span>
-                  </div>
-                  <div
-                    v-if="getChampionDetail(champion.name).origin"
-                    class="card-trait-badge"
-                    :style="{ '--tc': getChampionDetail(champion.name).origin!.color }"
-                  >
-                    <Icon
-                      :icon="getChampionDetail(champion.name).origin!.icon"
-                      class="card-trait-icon"
-                    />
-                    <span>{{ getChampionDetail(champion.name).origin!.origin }}</span>
-                  </div>
-                </div>
-                <div class="card-img-layer">
-                  <img
-                    :src="battleStore.getChampionImage(champion.name)"
-                    :alt="champion.name"
-                    loading="lazy"
-                    decoding="async"
-                    class="absolute inset-0 object-cover object-top w-full h-full rpg-img card-img-scale"
-                    :class="isLocked(champion.name) ? 'grayscale' : ''"
-                  />
-                  <img
-                    v-if="isLocked(champion.name)"
-                    src="/img/lock.png"
-                    alt="Locked"
-                    class="lock-overlay"
-                  />
-                  <div
-                    class="absolute inset-0 card-overlay"
-                    :class="
-                      isUnlocked(champion.name) && canAffordChampion(champion.name)
-                        ? 'card-overlay--buyable'
-                        : 'card-overlay--default'
-                    "
-                  />
-                  <div
-                    v-if="isUnlocked(champion.name) && !isOwned(champion.name) && canAffordChampion(champion.name)"
-                    class="absolute inset-0 pointer-events-none card-shimmer card-shimmer-anim"
-                  />
-                </div>
-
-                <div class="card-content">
-                  <div class="flex flex-col">
-                    <span
-                      class="text-base font-black leading-tight tracking-wide champion-name"
-                      :class="
-                        isOwned(champion.name) || isLocked(champion.name)
-                          ? 'champion-name--dim'
-                          : 'champion-name--bright'
-                      "
-                    >
-                      {{ truncate(champion.name, 12) }}
-                    </span>
-
-                    <div class="card-bottom-section">
-                      <div
-                        v-if="isUnlocked(champion.name) && !isOwned(champion.name)"
-                        class="flex flex-col items-start gap-1.5"
-                      >
-                        <div class="flex flex-wrap items-center gap-1">
-                          <span
-                            v-for="(qty, matId) in getMaterialCost(champion.name)"
-                            :key="matId"
-                            class="cost-badge"
-                            :class="
-                              hasEnoughMaterial(String(matId), qty as number)
-                                ? 'cost-badge--ok'
-                                : 'cost-badge--missing'
-                            "
-                            :style="{ '--cost-c': MATERIAL_COLOR[String(matId)] }"
-                          >
-                            <img
-                              :src="getMaterialImage(String(matId))"
-                              :alt="getMaterialName(String(matId))"
-                              class="rpg-img inline-block w-4 h-4 object-contain align-middle"
-                            />
-                            {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
-                              formatNumber(qty as number)
-                            }}
-                          </span>
-                        </div>
-                        <span
-                          class="cost-badge chimes-cost-badge"
-                          :class="canAffordChimes(champion.name) ? 'cost-badge--ok' : 'cost-badge--missing'"
-                          :title="canAffordChimes(champion.name) ? '' : 'Not enough Chimes'"
-                        >
-                          <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="rpg-img chime-cost-img inline-block object-contain align-middle" />
-                          {{ formatNumber(gameStore.chimes) }}/{{ formatNumber(getChimesPrice(champion.name)) }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="isLocked(champion.name)" class="locked-tooltip">
-                  {{ getLockedTooltip(champion.name) }}
-                </div>
-              </div>
-            </div>
+              class="cross-role-card"
+              :name="champion.name"
+              :image="battleStore.getChampionImage(champion.name)"
+              :role="CHAMPION_ROLES[champion.name]"
+              :role-badge="ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]"
+              :tier-color="getTierColor(champion.name)"
+              :tier-name="getChampionDetail(champion.name).cosmic.name"
+              :star-level="getChampionDetail(champion.name).starLevel"
+              :card-class="getCardClass(champion.name)"
+              :owned="isOwned(champion.name)"
+              :locked="isLocked(champion.name)"
+              :buyable="isUnlocked(champion.name) && canAffordChampion(champion.name)"
+              :selected="selectedChampion === champion.name"
+              :is-new="isNew(champion.name)"
+              :locked-tooltip="getLockedTooltip(champion.name)"
+              @select="selectChampion"
+              @hover="dismissNewOnHover"
+            />
           </div>
         </div>
       </Transition>
     </div>
+    </div>
+
+    <!-- ══ Champion detail panel (right side) ══ -->
+    <ChampionDetailPanel
+      :detail="detail"
+      :index="selectedIndex"
+      :total="visibleChampionList.length"
+      @prev="selectPrev"
+      @next="selectNext"
+      @buy="handleBuy"
+    />
   </div>
 </template>
 
 <script lang="ts">
-import { ref, onMounted, onUnmounted, defineComponent, computed, watch } from 'vue'
+import { ref, defineComponent, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '../../../stores/battleStore'
-import { useInventoryStore } from '../../../stores/inventoryStore'
-import { useGameStore } from '../../../stores/gameStore'
-import { useUiStore } from '../../../stores/uiStore'
-import RpgNotifyBadge from '../../ui/RpgNotifyBadge.vue'
-import RpgBadgeTooltip from '../../ui/RpgBadgeTooltip.vue'
-import { truncate, formatNumber } from '../../../config/numberFormat'
-import { getChampionRoles, CHAMPION_ROLES } from '../../../config/championRoles'
-import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../config/championTraits'
-import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../config/championOrigins'
-import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, isChampionTierUnlocked, championTierSpawnPercent, CHAMPION_TIERS_BY_STAR } from '../../../config/championTiers'
-import { useGalaxyStore } from '../../../stores/galaxyStore'
-import { MATERIALS } from '../../../config/materials'
-import { getHomePlanetConfig } from '../../../config/championHomePlanets'
-import { PLANET_TYPE_NAMES, CHIMES_COST_ICON, ROLES, MATERIAL_COLOR } from '../../../config/constants'
-import { getChampionNames } from '../../../config/championData'
-import { useActionToast } from '../../../composables/useActionToast'
-import type { ChampionRole } from '../../../types'
+import { useBattleStore } from '../../../../stores/battleStore'
+import { useInventoryStore } from '../../../../stores/inventoryStore'
+import { useGameStore } from '../../../../stores/gameStore'
+import { useUiStore } from '../../../../stores/uiStore'
+import ChampionShopCard from './ChampionShopCard.vue'
+import ChampionDetailPanel from './ChampionDetailPanel.vue'
+import { getChampionRoles, CHAMPION_ROLES } from '../../../../config/championRoles'
+import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../../config/championTraits'
+import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../../config/championOrigins'
+import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, isChampionTierUnlocked, championTierSpawnPercent, CHAMPION_TIERS_BY_STAR } from '../../../../config/championTiers'
+import { useGalaxyStore } from '../../../../stores/galaxyStore'
+import { MATERIALS } from '../../../../config/materials'
+import { getHomePlanetConfig } from '../../../../config/championHomePlanets'
+import { PLANET_TYPE_NAMES, ROLES, MATERIAL_COLOR } from '../../../../config/constants'
+import { getChampionNames } from '../../../../config/championData'
+import { useActionToast } from '../../../../composables/useActionToast'
+import type { ChampionRole, ShopChampionDetail } from '../../../../types'
 
 
 export default defineComponent({
   name: 'ChampionShopComponent',
-  components: { Icon, RpgNotifyBadge, RpgBadgeTooltip },
+  components: { Icon, ChampionShopCard, ChampionDetailPanel },
   props: {
     initialRole: { type: String, default: 'all' },
     showClose: { type: Boolean, default: false },
@@ -819,10 +558,6 @@ export default defineComponent({
       return getChampionTier(name).color
     }
 
-    function getChampionTierLabel(name: string): string {
-      return `★${getChampionStarLevel(name)}`
-    }
-
     function canAffordChimes(name: string): boolean {
       return gameStore.chimes >= getChimesPrice(name)
     }
@@ -847,8 +582,15 @@ export default defineComponent({
 
     function handleBuy(name: string) {
       if (!canClickBuy(name)) return
+      const idx = visibleChampionList.value.indexOf(name)
       battleStore.recruitChampion(name)
       showToast(`${name} recruited!`)
+      // Keep the detail panel in place: jump to the champion that now occupies
+      // the recruited champion's list position (or the last one).
+      const list = visibleChampionList.value
+      if (list.length > 0 && idx >= 0) {
+        selectedChampion.value = list[Math.min(idx, list.length - 1)]
+      }
     }
 
     function hasEnoughMaterial(matId: string, qty: number): boolean {
@@ -1296,26 +1038,6 @@ const shopChampionNames = computed(() =>
       }, 75)
     }
 
-    // ── Window width for last-row detection ──
-    const windowWidth = ref(window.innerWidth)
-    function onWindowResize() { windowWidth.value = window.innerWidth }
-
-    const colCount = computed(() => {
-      if (windowWidth.value >= 768) return 4
-      if (windowWidth.value >= 640) return 3
-      return 2
-    })
-
-    // Row detection per tier group: drives the hover-expand up/down direction
-    // so first-row cards expand downward and last-row cards expand upward.
-    function isFirstRow(i: number): boolean {
-      return i < colCount.value
-    }
-    function isLastRow(i: number, len: number): boolean {
-      const cols = colCount.value
-      return i >= Math.floor((len - 1) / cols) * cols
-    }
-
     function getChampionDetail(name: string) {
       const traitIds = CHAMPION_TRAITS[name] ?? []
       const traits = TRAIT_DEFINITIONS.filter((t) => (traitIds as string[]).includes(t.id))
@@ -1326,10 +1048,113 @@ const shopChampionNames = computed(() =>
       return { traits, origin, cosmic, starLevel }
     }
 
-    onMounted(() => {
-      window.addEventListener('resize', onWindowResize)
+    // ── Detail panel selection ──
+    // Defined last in setup: the immediate watch below reads through
+    // tierGroups → searchOrFilterActive → hasActiveFilter, so every computed
+    // above must already be initialized (TDZ) before it first runs.
+    const selectedChampion = ref<string | null>(null)
+
+    // Flat, tier-ordered list of every champion currently shown in the grid
+    // (unlocked tier sections first, cross-role search results appended) —
+    // drives the prev/next navigation in the detail panel.
+    const visibleChampionList = computed(() => {
+      const names: string[] = []
+      for (const g of tierGroups.value) {
+        if (g.isGalaxyLocked) continue
+        for (const c of g.champions) names.push(c.name)
+      }
+      for (const c of crossRoleChampions.value) {
+        if (!names.includes(c.name)) names.push(c.name)
+      }
+      return names
     })
-    onUnmounted(() => window.removeEventListener('resize', onWindowResize))
+
+    const selectedIndex = computed(() =>
+      selectedChampion.value ? visibleChampionList.value.indexOf(selectedChampion.value) : -1,
+    )
+
+    function selectChampion(name: string) {
+      selectedChampion.value = name
+    }
+
+    function selectPrev() {
+      const list = visibleChampionList.value
+      if (list.length === 0) return
+      const i = selectedIndex.value
+      selectedChampion.value = list[(i - 1 + list.length) % list.length]
+    }
+
+    function selectNext() {
+      const list = visibleChampionList.value
+      if (list.length === 0) return
+      selectedChampion.value = list[(selectedIndex.value + 1) % list.length]
+    }
+
+    // Keep the selection valid: auto-select the first visible champion when the
+    // list changes (filtering, search, recruiting) and the selection is stale.
+    watch(
+      visibleChampionList,
+      (list) => {
+        if (!selectedChampion.value || !list.includes(selectedChampion.value)) {
+          selectedChampion.value = list[0] ?? null
+        }
+      },
+      { immediate: true },
+    )
+
+    // Selecting a champion (card click or prev/next) expands its tier section
+    // so the highlighted card is always visible in the grid.
+    watch(selectedChampion, (name) => {
+      if (!name) return
+      const star = getChampionStarLevel(name)
+      if (collapsedTiers.value.has(star) && !isTierGalaxyLocked(star)) {
+        const next = new Set(collapsedTiers.value)
+        next.delete(star)
+        collapsedTiers.value = next
+      }
+    })
+
+    // Everything the detail panel renders for the selected champion.
+    const detail = computed<ShopChampionDetail | null>(() => {
+      const name = selectedChampion.value
+      if (!name) return null
+      const d = getChampionDetail(name)
+      const role = CHAMPION_ROLES[name] as keyof typeof ROLE_BADGE | undefined
+      const badge = role ? ROLE_BADGE[role] : undefined
+      const cost = getMaterialCost(name)
+      const materials = Object.entries(cost).map(([id, qty]) => ({
+        id,
+        name: getMaterialName(id),
+        image: getMaterialImage(id),
+        need: qty,
+        have: inventoryStore.collectedMaterials[id] ?? 0,
+        ok: hasEnoughMaterial(id, qty),
+        color: MATERIAL_COLOR[id],
+      }))
+      return {
+        name,
+        image: battleStore.getChampionImage(name),
+        roleLabel: badge?.label ?? '',
+        roleColor: badge?.color ?? '#c89040',
+        traits: d.traits,
+        origin: d.origin,
+        starLevel: d.starLevel,
+        tierName: d.cosmic.name,
+        tierColor: d.cosmic.color,
+        tierIcon: d.cosmic.icon,
+        tierDescription: d.cosmic.description,
+        spawnPercent: championTierSpawnPercent(d.starLevel, galaxyStore.currentGalaxy),
+        locked: isLocked(name),
+        lockedHint: getLockedTooltip(name),
+        materials,
+        chimes: {
+          need: getChimesPrice(name),
+          have: gameStore.chimes,
+          ok: canAffordChimes(name),
+        },
+        canBuy: canClickBuy(name),
+      }
+    })
 
     return {
       filteredChampions,
@@ -1343,8 +1168,6 @@ const shopChampionNames = computed(() =>
       onTierEnter,
       onTierAfterEnter,
       onTierLeave,
-      isFirstRow,
-      isLastRow,
       traitChips,
       originChips,
       filterChampionCount,
@@ -1360,9 +1183,6 @@ const shopChampionNames = computed(() =>
       activeTraitChips,
       unlockedCount,
       battleStore,
-      inventoryStore,
-      gameStore,
-      truncate,
       CHAMPION_ROLES,
       roleChips,
       getChampionRoles,
@@ -1377,7 +1197,6 @@ const shopChampionNames = computed(() =>
       getMaterialCost,
       getChimesPrice,
       getTierColor,
-      getChampionTierLabel,
       canAffordChimes,
       canAffordChampion,
       canClickBuy,
@@ -1385,7 +1204,6 @@ const shopChampionNames = computed(() =>
       hasEnoughMaterial,
       getMaterialName,
       getMaterialImage,
-      formatNumber,
       getLockedTooltip,
       getCardClass,
       setActiveRole,
@@ -1401,9 +1219,14 @@ const shopChampionNames = computed(() =>
       dismissNewOnHover,
       getChampionDetail,
       crossRoleChampions,
+      selectedChampion,
+      selectChampion,
+      selectPrev,
+      selectNext,
+      selectedIndex,
+      visibleChampionList,
+      detail,
       ROLE_BADGE,
-      CHIMES_COST_ICON,
-      MATERIAL_COLOR,
     }
   },
 })
@@ -1415,6 +1238,19 @@ const shopChampionNames = computed(() =>
   border: none;
   box-shadow: none;
   --text-transition-dur: 0.22s;
+}
+/* ── Two-column layout: grid (left) + champion detail panel (right) ── */
+.cs-layout {
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+}
+.cs-left {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 /* Header sits on the same deep surface as the tier grid below — no separate
    panel color, no hard border. The divider is the same left-anchored fading
@@ -1453,353 +1289,13 @@ const shopChampionNames = computed(() =>
   color: var(--rpg-text-dim);
 }
 
-/* ══ Grid slot — invisible, holds layout space only ══ */
-.champion-card-slot {
-  height: 140px;
-  position: relative;
-  z-index: 1;
-}
-.champion-card-slot:hover {
-  z-index: 20;
-}
-
-/* Card state: pointer-events / opacity / filter on the slot */
-.card-owned {
-  opacity: 0.55;
-  filter: grayscale(30%);
-  cursor: default;
-  pointer-events: none;
-}
-.card-buyable { cursor: pointer; }
-.card-unlocked {
-  opacity: 0.7;
-  cursor: default;
-  transition: opacity 0.2s ease;
-}
-.card-unlocked:hover {
-  opacity: 1;
-}
-.card-locked {
-  opacity: 0.4;
-  filter: grayscale(55%);
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-/* ══ Visual card — expands absolutely out of the grid slot ══ */
-.card-inner {
-  position: absolute;
-  inset: 0;
-  border-radius: var(--bp-radius);
-  border: 1px solid var(--rpg-wood-mid);
-  overflow: hidden;
-  transition:
-    bottom 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    top 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    left 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    right 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    border-color 0.25s ease;
-  /* box-shadow snaps deliberately — transitioning the large glow blurs forced
-     full repaints every frame of the expand animation */
-}
-/* ── Role-specific card borders ── */
-.champion-card-slot[data-role="top"]     { --role-c: #e05050; --role-c-hi: #f07070; }
-.champion-card-slot[data-role="jungle"]  { --role-c: #50c060; --role-c-hi: #70d880; }
-.champion-card-slot[data-role="mid"]     { --role-c: #5090e8; --role-c-hi: #70a8f8; }
-.champion-card-slot[data-role="adc"]     { --role-c: #e89840; --role-c-hi: #f0b060; }
-.champion-card-slot[data-role="support"] { --role-c: #b8c8d8; --role-c-hi: #d0dde8; }
-
-/* Thicker role-colored frame so the champion's role reads at a glance */
-.champion-card-slot[data-role] .card-inner {
-  border-width: 3px;
-  border-color: var(--role-c);
-}
-
-/* Role hover glow — excluded on buyable/owned so state styles always dominate */
-.champion-card-slot[data-role="top"]:not(.card-buyable):not(.card-owned):hover .card-inner {
-  border-color: #f07070;
-  box-shadow: inset 0 0 0 1px rgba(224,80,80,0.25), 0 0 14px rgba(224,80,80,0.35);
-}
-.champion-card-slot[data-role="jungle"]:not(.card-buyable):not(.card-owned):hover .card-inner {
-  border-color: #70d880;
-  box-shadow: inset 0 0 0 1px rgba(80,192,96,0.25), 0 0 14px rgba(80,192,96,0.40);
-}
-.champion-card-slot[data-role="mid"]:not(.card-buyable):not(.card-owned):hover .card-inner {
-  border-color: #70a8f8;
-  box-shadow: inset 0 0 0 1px rgba(80,144,232,0.30), 0 0 16px rgba(80,144,232,0.45);
-}
-.champion-card-slot[data-role="adc"]:not(.card-buyable):not(.card-owned):hover .card-inner {
-  border-color: #f0b060;
-  box-shadow: inset 0 0 0 1px rgba(232,152,64,0.25), 0 0 16px rgba(232,152,64,0.40);
-}
-.champion-card-slot[data-role="support"]:not(.card-buyable):not(.card-owned):hover .card-inner {
-  border-color: #d0dde8;
-  box-shadow: inset 0 0 0 1px rgba(184,200,216,0.30), 0 0 16px rgba(184,200,216,0.35);
-}
-
-/* Buyable pulse — role inset glow complements the gold buyable border.
-   Shadows are static on pseudo-elements; only opacity animates (compositor-only,
-   no per-frame repaints — animating box-shadow directly caused scroll jank). */
-.card-buyable.champion-card-slot:not(:hover)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--bp-radius);
-  pointer-events: none;
-  box-shadow: 0 0 26px rgba(232, 192, 64, 0.12);
-  animation: card-glow-pulse 2.5s ease-in-out infinite;
-  animation-play-state: var(--pulse-play, running);
-}
-.card-buyable.champion-card-slot:not(:hover) .card-inner::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--role-c, #e8c040) 35%, transparent);
-  animation: card-ring-pulse 2.5s ease-in-out infinite;
-  animation-play-state: var(--pulse-play, running);
-}
-/* While the shop list scrolls (.is-scrolling set by the modal's scroll
-   container), freeze the pulse glows and skip card hit-testing — otherwise
-   the animated shadows plus hover-expands firing under the cursor cause
-   per-frame repaints that tank the scroll frame rate. */
+/* Card visuals live in ChampionShopCard.vue. While the shop list scrolls
+   (.is-scrolling set by the modal's scroll container), freeze the card pulse
+   glows and skip card hit-testing — otherwise the animated shadows firing
+   under the cursor cause per-frame repaints that tank the scroll frame rate. */
 .is-scrolling .champion-card-slot {
   pointer-events: none;
   --pulse-play: paused;
-}
-
-@keyframes card-glow-pulse {
-  0%, 100% { opacity: 0; }
-  50%      { opacity: 1; }
-}
-@keyframes card-ring-pulse {
-  0%, 100% { opacity: 0.43; }
-  50%      { opacity: 1; }
-}
-
-.card-buyable .card-inner {
-  border-color: var(--rpg-gold-dim);
-  box-shadow: 0 0 20px rgba(232, 192, 64, 0.12);
-}
-.champion-card-slot.card-buyable:hover .card-inner {
-  border-color: #e8c040;
-  box-shadow:
-    0 0 38px rgba(232, 192, 64, 0.55),
-    0 0 70px rgba(200, 144, 64, 0.25),
-    inset 0 0 0 2px rgba(232, 192, 64, 0.58),
-    0 20px 50px rgba(0, 0, 0, 0.95);
-}
-.champion-card-slot:hover .card-inner {
-  bottom: -100px;
-  left: -50px;
-  right: -50px;
-  border-color: #c89040;
-  box-shadow:
-    inset 0 0 0 1px #5c3310,
-    0 20px 50px rgba(0, 0, 0, 0.95),
-    0 0 30px rgba(200, 144, 64, 0.18);
-}
-
-/* ── Edge-column overflow prevention ── */
-/* Mobile: 2-col grid */
-@media (max-width: 639px) {
-  .champion-card-slot:nth-child(2n+1):hover .card-inner { left: 0; right: -100px; }
-  .champion-card-slot:nth-child(2n):hover .card-inner   { left: -100px; right: 0; }
-}
-/* Small: 3-col grid */
-@media (min-width: 640px) and (max-width: 767px) {
-  .champion-card-slot:nth-child(3n+1):hover .card-inner { left: 0; right: -100px; }
-  .champion-card-slot:nth-child(3n):hover .card-inner   { left: -100px; right: 0; }
-}
-/* Medium+: 4-col grid */
-@media (min-width: 768px) {
-  .champion-card-slot:nth-child(4n+1):hover .card-inner { left: 0; right: -100px; }
-  .champion-card-slot:nth-child(4n):hover .card-inner   { left: -100px; right: 0; }
-}
-
-/* Last-row cards expand upward instead of downward */
-.is-last-row:hover .card-inner {
-  top: -100px;
-  bottom: 0;
-}
-/* First-row cards always expand downward, overriding is-last-row when only one row exists */
-.is-first-row:hover .card-inner {
-  top: 0;
-  bottom: -100px;
-}
-
-
-/* ── Image layer: clipped within card-inner ── */
-.card-img-layer {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: var(--bp-radius);
-}
-
-/* Image scale on expand via hovered card slot */
-.card-img-scale {
-  transition: transform 0.5s ease;
-}
-.champion-card-slot:hover .card-img-scale {
-  transform: scale(1.04);
-}
-
-/* ── Gradient overlays ── */
-.card-overlay {
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.85) 0%,
-    rgba(0, 0, 0, 0.45) 50%,
-    rgba(0, 0, 0, 0.15) 100%
-  );
-}
-.card-overlay--buyable {
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.9) 0%,
-    rgba(0, 0, 0, 0.35) 50%,
-    transparent 100%
-  );
-}
-.card-overlay--default {
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.85) 0%,
-    rgba(0, 0, 0, 0.45) 50%,
-    rgba(0, 0, 0, 0.1) 100%
-  );
-}
-
-/* ── Shimmer ── */
-.card-shimmer {
-  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.07), transparent);
-}
-.card-shimmer-anim {
-  transform: translateX(-100%);
-  transition: transform 0.7s ease;
-}
-.card-buyable:hover .card-shimmer-anim {
-  transform: translateX(100%);
-}
-
-/* ── Card content: always anchored to bottom of card-inner ── */
-.card-content {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 8px;
-  z-index: 10;
-  transition: transform var(--text-transition-dur) ease;
-}
-.champion-card-slot:hover .card-content {
-  transform: translateY(-2px);
-}
-
-/* ── Champion name ── */
-.champion-name {
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
-  transition: transform var(--text-transition-dur) ease, text-shadow var(--text-transition-dur) ease;
-}
-.champion-name--bright { color: rgba(255, 255, 255, 0.95); }
-.champion-name--dim { color: rgba(255, 255, 255, 0.45); }
-.champion-card-slot:hover .champion-name--bright {
-  transform: scale(1.08);
-  transform-origin: left bottom;
-  text-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.9),
-    0 0 12px rgba(232, 192, 64, 0.25);
-}
-.champion-card-slot:hover .champion-name--dim {
-  transform: scale(1.06);
-  transform-origin: left bottom;
-}
-
-/* ── Lock-Icon Overlay ── */
-.lock-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -60%);
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  z-index: 12;
-  opacity: 0.85;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.9));
-  pointer-events: none;
-}
-
-/* ── Cost badges — identical in resting and expanded states ── */
-.cost-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1;
-  padding: 0.2rem 0.45rem;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--bp-radius);
-  transition:
-    background var(--text-transition-dur) ease,
-    border-color var(--text-transition-dur) ease,
-    color var(--text-transition-dur) ease;
-}
-/* Affordable: tinted in the material's own color (--cost-c, set inline from
-   MATERIAL_COLOR — same palette as the header materials grid). Falls back to
-   the standard chimes gold when no material color is set. */
-.cost-badge--ok {
-  color: var(--cost-c, var(--rpg-gold));
-  background: color-mix(in srgb, var(--cost-c, var(--rpg-gold)) 12%, transparent);
-  border-color: color-mix(in srgb, var(--cost-c, var(--rpg-gold)) 50%, transparent);
-}
-.cost-badge--missing {
-  color: #cc6050;
-  background: rgba(204, 96, 80, 0.10);
-  border-color: rgba(204, 96, 80, 0.45);
-}
-
-/* Chimes cost badge: larger and sky-teal to distinguish from material gold */
-.chimes-cost-badge {
-  font-size: 0.95rem;
-  padding: 0.22rem 0.5rem;
-}
-/* Chime icon: one step above the 16px material icons — explicit px so the
-   500×500 source can never render at natural size */
-.chime-cost-img {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-/* Chimes affordable state uses the game-wide chimes gold via the .cost-badge--ok
-   fallback (no --cost-c set on the chimes badge); missing stays red. */
-
-
-/* ── Locked tooltip ── */
-.locked-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.4rem 0.75rem;
-  background: var(--rpg-bg-tooltip);
-  border: 2px solid var(--rpg-wood-mid);
-  border-radius: var(--bp-radius);
-  font-size: 0.6rem;
-  color: var(--rpg-text-muted);
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  z-index: 10;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-}
-.card-inner:hover .locked-tooltip {
-  opacity: 1;
 }
 
 /* ── Header-Bar ── */
@@ -1824,121 +1320,6 @@ const shopChampionNames = computed(() =>
 /* ── Grid area — same horizontal inset as the header so search bar and tier
    headers align on one left edge ── */
 .cs-grid { padding: 12px 14px; }
-
-/* ── New-champion badge tooltip content (panel frame lives in RpgBadgeTooltip) ── */
-.new-champ-tip {
-  padding: 8px 12px 9px;
-  max-width: 240px;
-}
-
-.new-champ-tip__title {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #e8c040;
-  margin-bottom: 4px;
-}
-
-.new-champ-tip__text {
-  font-size: 0.8rem;
-  line-height: 1.35;
-  color: #e8e0cc;
-}
-
-.champion-badge-fade-leave-active {
-  transition: opacity 0.2s ease;
-  pointer-events: none;
-}
-.champion-badge-fade-leave-to { opacity: 0; }
-
-/* ══ Trait/origin badges — hover-only, right-aligned column under the role
-   pill so role → traits → origin read as one identity group at the top ══ */
-.card-top-traits {
-  position: absolute;
-  top: 32px;
-  right: 5px;
-  z-index: 15;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  opacity: 0;
-  transform: translateY(-4px);
-  pointer-events: none;
-  transition: opacity 0.22s ease, transform 0.25s ease;
-}
-.champion-card-slot:hover .card-top-traits {
-  opacity: 1;
-  transform: translateY(0);
-}
-/* Costs (materials + chimes) are hover-only — the resting card shows just
-   name, tier and role. Expands as a stacked column, one row per resource. */
-.card-bottom-section {
-  display: flex;
-  flex-direction: column;
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.3s ease, opacity 0.22s ease, margin 0.3s ease;
-}
-.champion-card-slot:hover .card-bottom-section {
-  max-height: 160px;
-  opacity: 1;
-  margin-top: 6px;
-}
-/* Readability over the busy champion art: near-opaque dark fill, and the text
-   keeps the trait's own hue but lightened toward white (color-mix) so every
-   trait color clears contrast on the dark fill — dark violets/greens included. */
-.card-trait-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 8px 4px 6px;
-  border-radius: var(--bp-radius);
-  background: rgba(10, 8, 4, 0.92);
-  border: 1px solid var(--tc, #7a4e20);
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1;
-  color: color-mix(in srgb, var(--tc, #e8c040) 60%, #fff);
-  text-transform: uppercase;
-  white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.65),
-    0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
-}
-/* Champion Tier (star level) badge — slightly stronger fill to read as the primary tag */
-.card-cosmic-badge {
-  background: color-mix(in srgb, var(--tc, #7a4e20) 18%, rgba(0, 0, 0, 0.6));
-  border-width: 1px;
-}
-.card-trait-icon {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-  color: var(--tc, #e8c040);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .card-content,
-  .champion-name,
-  .cost-badge,
-  .card-bottom-section,
-  .card-top-traits {
-    transition: none !important;
-  }
-  .card-inner {
-    animation: none !important;
-    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
-  }
-  .champion-card-slot::after,
-  .card-inner::after {
-    animation: none !important;
-  }
-}
 
 /* ── Cross-role search results ── */
 .cross-role-section {
@@ -2001,22 +1382,6 @@ const shopChampionNames = computed(() =>
   letter-spacing: 0.03em;
 }
 
-.role-badge-pill {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  z-index: 15;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #111008;
-  padding: 3px 7px;
-  border-radius: 3px;
-  line-height: 1.2;
-  pointer-events: none;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
-}
-
 /* ── Cross-role chip: trait/origin found in another role ── */
 .trait-chip--cross-role {
   opacity: 0.55;
@@ -2048,25 +1413,6 @@ const shopChampionNames = computed(() =>
   color: #b89a5a;
   background: transparent;
   border: 1px solid #5c3310;
-}
-
-.tier-badge {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  z-index: 15;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  color: var(--tier-c);
-  background: rgba(0, 0, 0, 0.78);
-  border: 1px solid color-mix(in srgb, var(--tier-c) 70%, #111);
-  padding: 3px 7px;
-  border-radius: 3px;
-  line-height: 1.2;
-  pointer-events: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7), 0 0 8px color-mix(in srgb, var(--tier-c) 25%, transparent);
 }
 
 .cross-role-fade-enter-active {
@@ -2130,4 +1476,5 @@ const shopChampionNames = computed(() =>
   color: rgba(200, 164, 90, 0.55);
   margin-right: 2px;
 }
+
 </style>

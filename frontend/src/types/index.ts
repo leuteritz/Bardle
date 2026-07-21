@@ -944,3 +944,35 @@ export interface RoleBehaviorState {
   // ADC
   adcBurstCooldownMs: number
 }
+
+/* ── Champion Shop detail panel ── */
+export interface ShopDetailMaterial {
+  id: string
+  name: string
+  image: string
+  need: number
+  have: number
+  ok: boolean
+  color?: string
+}
+
+/** Everything the shop's champion detail panel renders for one champion. */
+export interface ShopChampionDetail {
+  name: string
+  image: string
+  roleLabel: string
+  roleColor: string
+  traits: Array<{ id: string; name: string; icon: string; color: string }>
+  origin: { origin: string; icon: string; color: string } | null
+  starLevel: number
+  tierName: string
+  tierColor: string
+  tierIcon: string
+  tierDescription: string
+  spawnPercent: number | null
+  locked: boolean
+  lockedHint: string
+  materials: ShopDetailMaterial[]
+  chimes: { need: number; have: number; ok: boolean }
+  canBuy: boolean
+}

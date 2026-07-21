@@ -81,7 +81,7 @@ const emit = defineEmits<{ close: [] }>()
 /* Full-height variant: fills the tab up to the backdrop padding, so the modal
    keeps the same 20px gap above and below and never overlaps the app header. */
 .tms-panel--xl {
-  width: min(920px, 96%);
+  width: min(1340px, 96%);
   height: 100%;
 }
 .tms-gold-line {
