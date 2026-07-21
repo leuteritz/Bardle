@@ -62,12 +62,22 @@
 
   <!-- ② Front-Layer -->
   <Teleport to="body">
-    <div class="star-sys-layer star-sys-front" aria-hidden="true">
+    <div
+      class="star-sys-layer star-sys-front"
+      aria-hidden="true"
+      :style="{ '--hover-dim-opacity': HOVER_DIM_OPACITY }"
+    >
       <canvas ref="hintFrontCanvas" class="orbit-hints-canvas" />
 
       <template v-for="star in frontStars" :key="star.id">
         <div
-          :class="['star-body-wrap', { 'star-hovered': hoveredSummaryStarId === star.id || starGroupStore.hoveredTimerStarId === star.id }]"
+          :class="[
+            'star-body-wrap',
+            {
+              'star-hovered': hoveredSummaryStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
+              'star-body-wrap--hover-dimmed': isStarHoverDimmed(star.id),
+            },
+          ]"
           :style="starWrapStyle(star)"
           :ref="(el) => setMapEl(starWrapEls, star.id, el)"
           @click="handleStarClick(star)"
@@ -128,7 +138,13 @@
             getStarRewardSummary(star).materials.length > 0 ||
             getStarRewardSummary(star).champion
           "
-          :class="['star-reward-summary', { 'star-reward-summary--star-hovered': hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id }]"
+          :class="[
+            'star-reward-summary',
+            {
+              'star-reward-summary--star-hovered': hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
+              'star-reward-summary--hover-dimmed': isStarHoverDimmed(star.id),
+            },
+          ]"
           :style="rewardSummaryStyle(star)"
           :ref="(el) => setMapEl(summaryEls, star.id, el)"
           @click="handleStarClick(star)"
@@ -235,6 +251,7 @@ import {
   STAR_BURST_COOLDOWN,
   STAR_BURST_DELAY_BETWEEN_SHOTS,
   BOSS_NOVA_INTERVAL_MS,
+  HOVER_DIM_OPACITY,
 } from '../../../config/constants'
 import { CHAMPION_ROLES } from '../../../config/championRoles'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
@@ -257,6 +274,25 @@ const hoveredSummaryStarId = ref<string | null>(null)
 const effectiveHoveredStarId = computed(
   () => hoveredStarId.value ?? hoveredSummaryStarId.value ?? starGroupStore.hoveredTimerStarId,
 )
+
+// Externer Stern-Fokus (Header-Timer-Bar oder Minimap): alle ANDEREN Sterne
+// werden ausgeblendet — analog zum Command-Panel-Hover über Champions/Planeten.
+// Direkter Hover im Orbit selbst (Stern/Summary) löst das Dimmen bewusst nicht
+// aus, dort bleibt nur der Highlight-Puls auf dem gehoverten Stern.
+const externalStarFocusActive = computed(
+  () =>
+    starGroupStore.hoveredTimerStarId !== null &&
+    hoveredStarId.value === null &&
+    hoveredSummaryStarId.value === null,
+)
+
+function isStarHoverDimmed(starId: string): boolean {
+  return externalStarFocusActive.value && starId !== starGroupStore.hoveredTimerStarId
+}
+
+function starHoverDimFactor(starId: string): number {
+  return isStarHoverDimmed(starId) ? HOVER_DIM_OPACITY : 1
+}
 
 // ── Per-Frame-DOM-Updates am Vue-Rendering vorbei ─────────────────────────────
 // Vue rendert nur bei strukturellen Änderungen (Stern/Planet kommt/geht,
@@ -397,9 +433,11 @@ function drawHintCanvases() {
 
   const strokeWidth = 5 * planetShopStore.orbitSunScale
   for (const star of stars) {
+    const dim = starHoverDimFactor(star.id)
+    if (dim <= 0.002) continue
     const color = orbitHintColor(star)
-    drawHintRing(backC, star, 14, star.hintOpacity * 0.65, color, strokeWidth, cw / 2, ch / 2)
-    drawHintRing(frontC, star, 16, star.hintOpacity * 0.8, color, strokeWidth, cw / 2, ch / 2)
+    drawHintRing(backC, star, 14, star.hintOpacity * 0.65 * dim, color, strokeWidth, cw / 2, ch / 2)
+    drawHintRing(frontC, star, 16, star.hintOpacity * 0.8 * dim, color, strokeWidth, cw / 2, ch / 2)
   }
 }
 
@@ -433,12 +471,13 @@ function applyFrames() {
     // (inkl. der teuren box-shadows) auslösen.
     const starTransform = `translate(${star.x - half}px, ${star.y - half}px) scale(${star.scale.toFixed(2)})`
     const starOpacity = star.opacity.toFixed(3)
+    const dimFactor = starHoverDimFactor(star.id)
 
     if (star.isBehind) {
       const body = starBackEls.get(star.id)
       if (body) {
         body.style.transform = starTransform
-        body.style.opacity = starOpacity
+        body.style.opacity = (star.opacity * dimFactor).toFixed(3)
         body.style.filter = star.filterStyle
       }
     } else {
@@ -456,7 +495,7 @@ function applyFrames() {
     const count = countEls.get(star.id)
     if (count) {
       count.style.transform = `translate(${star.x}px, ${star.y - half - 25}px) translateX(-50%) translateY(-100%)`
-      count.style.opacity = starOpacity
+      count.style.opacity = (star.opacity * dimFactor).toFixed(3)
     }
 
     if (star.id === cursedId) {
@@ -807,7 +846,8 @@ function drawCooldownRings() {
     if (!state && !isNovaStar) continue
 
     const r = (starSize(star.starType) / 2 + 9) * star.scale
-    const alpha = star.opacity
+    const alpha = star.opacity * starHoverDimFactor(star.id)
+    if (alpha <= 0.02) continue
     const bursting = !isNovaStar && state!.shotsLeft > 0
     // Nova: Zeitstempel-Interpolation pro Frame — smooth wie die Burst-Ringe,
     // statt im 1s-Raster des Store-Ticks zu springen
@@ -1024,12 +1064,16 @@ function starBodyVisualStyle(star: StarRenderEntry) {
     '--star-rgb': `${r}, ${g}, ${b}`,
     '--ring-inset': `-${ringInset}px`,
     filter: star.filterStyle || undefined,
-    transition: 'filter 0.3s ease',
+    transition: 'filter 0.3s ease, opacity 0.15s ease',
   }
 }
 
 function starBodyBackStyle(star: StarRenderEntry) {
-  return { ...starWrapStyle(star), ...starBodyVisualStyle(star) }
+  return {
+    ...starWrapStyle(star),
+    ...starBodyVisualStyle(star),
+    opacity: (star.opacity * starHoverDimFactor(star.id)).toFixed(3),
+  }
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -1124,7 +1168,7 @@ function starCountStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   return {
     transform: `translate(${star.x}px, ${star.y - s / 2 - 25}px) translateX(-50%) translateY(-100%)`,
-    opacity: String(star.opacity.toFixed(3)),
+    opacity: (star.opacity * starHoverDimFactor(star.id)).toFixed(3),
   }
 }
 </script>
@@ -1236,6 +1280,18 @@ function starCountStyle(star: StarRenderEntry) {
     filter: drop-shadow(0 0 14px #ffe066) brightness(1.25);
   }
 
+}
+
+/* ── Externer Stern-Fokus (Header-Timer-Bar / Minimap): alle anderen Sterne
+   ausblenden — gleiches Muster wie der Command-Panel-Hover über Champions
+   und Planeten (--hover-dim-opacity kommt vom Layer-Div). ── */
+.star-body-wrap--hover-dimmed {
+  pointer-events: none;
+}
+
+.star-body-wrap--hover-dimmed .star-body {
+  opacity: var(--hover-dim-opacity, 0.08);
+  filter: grayscale(1) brightness(0.65);
 }
 
 .star-body--champion::after,
@@ -1363,6 +1419,12 @@ function starCountStyle(star: StarRenderEntry) {
   /* Eigener Compositor-Layer: bewegt sich pro Frame per transform,
      ohne will-change malt der Browser die Box samt Schatten jedes Mal neu */
   will-change: transform;
+  transition: opacity 150ms ease;
+}
+
+.star-reward-summary--hover-dimmed {
+  opacity: var(--hover-dim-opacity, 0.08);
+  pointer-events: none;
 }
 
 .summary-inner {
