@@ -52,6 +52,15 @@
                der Kind-Komponente, re-rendert nicht die ganze Batterie -->
           <TurretCdPill v-if="t.isTurret" />
 
+          <!-- Cooldown-Ring als Mini-Canvas IN der Einheit: schnipst mit der
+               Snap-Animation mit (Kind des transformierten .tbh-unit) und
+               repaintet pro Frame nur ~90×90px statt der ganzen Arena -->
+          <canvas
+            v-if="t.isTurret"
+            :ref="(el) => setRingCanvas(t.slotId, el)"
+            class="tbh-ring-canvas"
+          />
+
           <!-- Eclipse-Medaillon: Planet steht hinter der Sonne — kein Kampf
                (gleiches Icon-Medaillon wie im Command Panel) -->
           <span
@@ -140,10 +149,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Cooldown-Ringe: EIN Canvas für alle Turrets, ein Draw-Pass pro Frame —
-         statt 6 SVGs mit durchgehender stroke-dasharray-Animation -->
-    <canvas ref="ringCanvas" class="tbh-ring-canvas" />
 
     <!-- Strike-Bolt: Projektil vom Boss zum per Auto-Attack getroffenen Turret -->
     <span
@@ -440,82 +445,94 @@ const guidePath = computed(() => {
   return `M ${p1.x} ${p1.y} A ${TURRET_ARC_RX_PCT} ${TURRET_ARC_RY_PCT} 0 1 1 ${p2.x} ${p2.y}`
 })
 
-// ── Cooldown-Ringe auf EINEM Canvas — ein Draw-Pass pro Frame statt sechs
-// dauerhaft repaintender SVG-dasharray-Animationen ────────────────────────
-const ringCanvas = ref<HTMLCanvasElement | null>(null)
+// ── Cooldown-Ringe auf Mini-Canvases IN den Einheiten — sie schnipsen als
+// Kinder des transformierten .tbh-unit gratis mit der Snap-Animation mit,
+// und pro Frame werden nur ~90×90px pro Turret repaintet statt eines
+// arena-großen Layers (voller Clear + Textur-Upload jede Frame = FPS-Killer)
+const ringCanvases = new Map<string, HTMLCanvasElement>()
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const TWO_PI = Math.PI * 2
+// Rand um den Ring für Glüh-Spitze (r 3) + halbe Strichstärke (1.5)
+const RING_CANVAS_PAD = 5
 let lastVolleyMs = Date.now()
 let ringAnimFrame = 0
 
+function setRingCanvas(slotId: string, el: unknown) {
+  if (el instanceof HTMLCanvasElement) {
+    ringCanvases.set(slotId, el)
+    startRingLoop()
+  } else {
+    ringCanvases.delete(slotId)
+    if (ringCanvases.size === 0) stopRingLoop()
+  }
+}
+
+function startRingLoop() {
+  // Bei reduced motion steht der Ring statisch voll — einmal zeichnen reicht
+  if (reducedMotion) {
+    drawRings()
+    return
+  }
+  if (!ringAnimFrame) ringAnimFrame = requestAnimationFrame(drawRings)
+}
+
+function stopRingLoop() {
+  cancelAnimationFrame(ringAnimFrame)
+  ringAnimFrame = 0
+}
+
 function drawRings() {
-  const cv = ringCanvas.value
-  const c = cv?.getContext('2d')
-  if (cv && c) {
-    c.clearRect(0, 0, cv.width, cv.height)
-    const { w, h } = arenaSize.value
-    // Radius folgt der CSS-Planetengröße: clamp(54px, 7vh, 76px) / 2 + Saum
-    const planetPx = Math.max(54, Math.min(76, window.innerHeight * 0.07))
-    const r = planetPx / 2 + 7
-    const progress = reducedMotion
-      ? 1
-      : Math.min(1, (Date.now() - lastVolleyMs) / GAME_TICK_INTERVAL_MS)
+  // Radius folgt der CSS-Planetengröße: clamp(54px, 7vh, 76px) / 2 + Saum
+  const planetPx = Math.max(54, Math.min(76, window.innerHeight * 0.07))
+  const r = planetPx / 2 + 7
+  const side = Math.round(r + RING_CANVAS_PAD) * 2
+  const progress = reducedMotion
+    ? 1
+    : Math.min(1, (Date.now() - lastVolleyMs) / GAME_TICK_INTERVAL_MS)
 
-    for (const t of turretEntries.value) {
-      // Turrets hinter der Sonne pausieren — kein Cooldown-Ring
-      if (behindSlotIds.value.has(t.slotId)) continue
-      const cx = (t.xPct / 100) * w
-      const cy = (t.yPct / 100) * h
+  for (const [slotId, cv] of ringCanvases) {
+    // Backing-Store folgt der Viewport-Höhe (7vh) — billiger Check pro Frame
+    if (cv.width !== side) {
+      cv.width = side
+      cv.height = side
+    }
+    const c = cv.getContext('2d')
+    if (!c) continue
+    c.clearRect(0, 0, side, side)
 
-      // Leise Spur, damit der Ring auch bei wenig Fortschritt lesbar ist
+    // Turrets hinter der Sonne pausieren — kein Cooldown-Ring
+    if (behindSlotIds.value.has(slotId)) continue
+    const cx = side / 2
+    const cy = side / 2
+
+    // Leise Spur, damit der Ring auch bei wenig Fortschritt lesbar ist
+    c.beginPath()
+    c.arc(cx, cy, r, 0, TWO_PI)
+    c.strokeStyle = 'rgba(255,255,255,0.09)'
+    c.lineWidth = 3
+    c.stroke()
+
+    if (progress <= 0.004) continue
+    const start = -Math.PI / 2
+    const end = start + progress * TWO_PI
+    const hot = progress > 0.92
+    c.beginPath()
+    c.arc(cx, cy, r, start, end)
+    c.strokeStyle = hot ? 'rgba(255,150,140,0.9)' : 'rgba(220,90,80,0.6)'
+    c.lineWidth = 3
+    c.lineCap = 'round'
+    c.stroke()
+
+    // Glüh-Spitze am Ende des Bogens
+    if (progress < 1) {
       c.beginPath()
-      c.arc(cx, cy, r, 0, TWO_PI)
-      c.strokeStyle = 'rgba(255,255,255,0.09)'
-      c.lineWidth = 3
-      c.stroke()
-
-      if (progress <= 0.004) continue
-      const start = -Math.PI / 2
-      const end = start + progress * TWO_PI
-      const hot = progress > 0.92
-      c.beginPath()
-      c.arc(cx, cy, r, start, end)
-      c.strokeStyle = hot ? 'rgba(255,150,140,0.9)' : 'rgba(220,90,80,0.6)'
-      c.lineWidth = 3
-      c.lineCap = 'round'
-      c.stroke()
-
-      // Glüh-Spitze am Ende des Bogens
-      if (progress < 1) {
-        c.beginPath()
-        c.arc(cx + Math.cos(end) * r, cy + Math.sin(end) * r, hot ? 3 : 2.2, 0, TWO_PI)
-        c.fillStyle = 'rgba(255,180,170,0.85)'
-        c.fill()
-      }
+      c.arc(cx + Math.cos(end) * r, cy + Math.sin(end) * r, hot ? 3 : 2.2, 0, TWO_PI)
+      c.fillStyle = 'rgba(255,180,170,0.85)'
+      c.fill()
     }
   }
-  // Bei reduced motion steht der Ring statisch voll — kein Dauer-Loop nötig
   if (!reducedMotion) ringAnimFrame = requestAnimationFrame(drawRings)
 }
-
-function sizeRingCanvas() {
-  const cv = ringCanvas.value
-  if (cv) {
-    cv.width = arenaSize.value.w
-    cv.height = arenaSize.value.h
-  }
-}
-
-watch(arenaSize, sizeRingCanvas)
-
-// Canvas existiert nur, solange das Root-v-if greift — Loop daran koppeln
-watch(ringCanvas, (cv) => {
-  cancelAnimationFrame(ringAnimFrame)
-  if (cv) {
-    sizeRingCanvas()
-    ringAnimFrame = requestAnimationFrame(drawRings)
-  }
-})
 
 // Schnips-Vektor: Einheitsvektor Richtung Boss × Lunge-Distanz — jeder
 // Turret stößt entlang seiner eigenen Flugachse vor
@@ -1108,11 +1125,16 @@ onUnmounted(() => {
   }
 }
 
-/* ── Cooldown-Ring-Canvas — ein Layer über allen Turrets ─────────────────── */
+/* ── Cooldown-Ring-Canvas — Mini-Canvas mittig ÜBER dem Planeten, als Kind
+   der Einheit bewegt es sich mit der Snap-Animation (GPU-Transform) mit;
+   Anzeigegröße = Attribut-Größe aus drawRings(), kein CSS-Stretching ──────── */
 .tbh-ring-canvas {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   pointer-events: none;
+  z-index: 2;
 }
 
 /* ── Info-Plate seitlich neben dem Planeten — linke Flanke links vom Image,
