@@ -486,10 +486,11 @@ function applyFrames() {
     // gratis, aber jede Scale-Änderung kann eine Re-Rasterung des Layers
     // (inkl. der teuren box-shadows) auslösen.
     const starTransform = `translate(${star.x - half}px, ${star.y - half}px) scale(${star.scale.toFixed(2)})`
-    const starOpacity = star.opacity.toFixed(3)
+    const focus = isFocusStar(star.id)
+    const starOpacity = focus ? '1' : star.opacity.toFixed(3)
     const dimFactor = starHoverDimFactor(star.id)
 
-    if (star.isBehind) {
+    if (star.isBehind && !focus) {
       const body = starBackEls.get(star.id)
       if (body) {
         body.style.transform = starTransform
@@ -511,7 +512,7 @@ function applyFrames() {
     const count = countEls.get(star.id)
     if (count) {
       count.style.transform = `translate(${star.x}px, ${star.y - half - 25}px) translateX(-50%) translateY(-100%)`
-      count.style.opacity = (star.opacity * dimFactor).toFixed(3)
+      count.style.opacity = focus ? '1' : (star.opacity * dimFactor).toFixed(3)
     }
 
     if (star.id === cursedId) {
@@ -614,8 +615,16 @@ const activeRoleOrbits = computed(() => {
     })
 })
 
-const backStars = computed(() => starRenders.value.filter((s) => s.isBehind))
-const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))
+// Fokussierter Stern (Timer-Bar/Minimap/Orbit-Hover): bleibt auch hinter der
+// Sonne voll sichtbar — er wandert in den Front-Layer (inkl. Reward-Panel und
+// Planeten-Zähler) und ignoriert Behind-Fade/Blur. Nur Optik: das Kampf-
+// Gating (star.isBehind, Burst-Feuer, Foreground-Targeting) bleibt unberührt.
+function isFocusStar(starId: string): boolean {
+  return starGroupStore.hoveredTimerStarId === starId
+}
+
+const backStars = computed(() => starRenders.value.filter((s) => s.isBehind && !isFocusStar(s.id)))
+const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind || isFocusStar(s.id)))
 
 const cursedStarId = computed(() => {
   const curse = roleBehaviorStore.activeCurse
@@ -1063,7 +1072,7 @@ function starWrapStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   return {
     transform: `translate(${star.x - s / 2}px, ${star.y - s / 2}px) scale(${star.scale.toFixed(2)})`,
-    opacity: String(star.opacity.toFixed(3)),
+    opacity: isFocusStar(star.id) ? '1' : String(star.opacity.toFixed(3)),
     width: `${s}px`,
     height: `${s}px`,
   }
@@ -1084,7 +1093,8 @@ function starBodyVisualStyle(star: StarRenderEntry) {
     boxShadow: starBoxShadow(star.starColor, s),
     '--star-rgb': `${r}, ${g}, ${b}`,
     '--ring-inset': `-${ringInset}px`,
-    filter: star.filterStyle || undefined,
+    // Fokussierter Stern: kein Behind-Blur — er soll vor der Sonne klar lesbar sein
+    filter: (isFocusStar(star.id) ? '' : star.filterStyle) || undefined,
     transition: 'filter 0.3s ease, opacity 0.15s ease',
   }
 }
@@ -1189,7 +1199,9 @@ function starCountStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   return {
     transform: `translate(${star.x}px, ${star.y - s / 2 - 25}px) translateX(-50%) translateY(-100%)`,
-    opacity: (star.opacity * starHoverDimFactor(star.id)).toFixed(3),
+    opacity: isFocusStar(star.id)
+      ? '1'
+      : (star.opacity * starHoverDimFactor(star.id)).toFixed(3),
   }
 }
 </script>
