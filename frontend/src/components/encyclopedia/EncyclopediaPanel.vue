@@ -250,6 +250,10 @@ const panelFrameStyle = {
         class="enc-panel fixed right-0 top-0 z-[950] flex flex-col overflow-hidden"
         :style="panelFrameStyle"
       >
+        <!-- Innenrahmen über dem Content: die inset-Linien liegen sonst unter
+             den scrollenden Karten und werden an der Rundung überdeckt -->
+        <div class="enc-frame" aria-hidden="true"></div>
+
         <!-- Gold accent line -->
         <div class="enc-accent shrink-0"></div>
 
@@ -470,10 +474,20 @@ const panelFrameStyle = {
   background: #111008;
   border-left: 4px solid #7a4e20;
   border-bottom: 4px solid #7a4e20;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6);
+}
+/* Innenrahmen als Overlay ÜBER dem Content (Muster: Bottom-Bar .bar-frame) —
+   so scrollen die Karten sichtbar unter den Rahmenlinien und der Bogen
+   unten links bleibt immer geschlossen */
+.enc-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: inherit;
   box-shadow:
     inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
-    -10px 0 30px rgba(0, 0, 0, 0.6);
+    inset 0 0 0 4px #5c3310;
 }
 .enc-accent {
   height: 3px;
