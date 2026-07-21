@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { Icon } from '@iconify/vue'
 import {
   usePlanetShopStore,
   PLANET_ROLES,
@@ -9,6 +10,7 @@ import {
 import type { PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import { formatNumber } from '@/config/numberFormat'
+import { playerSlotInForeground } from '@/utils/foregroundGate'
 import { PLANET_IMAGE_DIR, PLANET_IMAGE_THUMB_DIR } from '@/config/constants'
 import ChampionSelectorComponent from '@/components/bottom/command/ChampionSelectorComponent.vue'
 
@@ -26,8 +28,9 @@ function roleImage(role: PlanetRoleType): string {
   return PLANET_ROLES[role].image.replace(PLANET_IMAGE_DIR, PLANET_IMAGE_THUMB_DIR)
 }
 
-// Ticker für den Buff-Countdown-Ring: activeUntil ist reaktiv, Date.now()
-// nicht — der Intervall-Ref treibt die Restzeit-Bindings der Chips an.
+// Ticker für Buff-Countdown-Ring UND Eclipse-Status: activeUntil ist reaktiv,
+// Date.now() und die 60fps-Positions-Map (activePlayerPlanetPositions) nicht —
+// der Intervall-Ref treibt beide Bindings an.
 const buffNow = ref(Date.now())
 let buffTicker = 0
 onMounted(() => {
@@ -44,6 +47,13 @@ function buffMsLeft(slot: PlanetSlot): number {
 function buffProgress(slot: PlanetSlot): number {
   if (!slot.role || !slot.jungleBuff?.active) return 0
   return Math.min(1, buffMsLeft(slot) / JUNGLE_BUFF_DEFS[slot.role].durationMs)
+}
+
+// Eclipse: Planet fliegt gerade hinter der Sonne → nimmt nicht am Kampf teil
+// (gleiches Gate wie combat-/roleBehaviorStore, gepollt über den 250ms-Ticker)
+function slotBehindSun(slot: PlanetSlot): boolean {
+  void buffNow.value
+  return slot.purchased && !!slot.role && !playerSlotInForeground(slot.id)
 }
 
 function handleSlotClick(slot: (typeof slots.value)[number]) {
@@ -72,6 +82,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             'cmd-planet-tile--empty-slot': slot.purchased && !slot.role,
             'cmd-planet-tile--locked': !slot.purchased && !planetStore.canUnlockPlanetSlot(index),
             'cmd-planet-tile--buy': !slot.purchased,
+            'cmd-planet-tile--eclipsed': slotBehindSun(slot),
           }"
           :style="slot.purchased && slot.role ? { '--role-color': roleColor(slot.role) } : {}"
           @click="handleSlotClick(slot)"
@@ -94,6 +105,21 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             >
               <img src="/img/roles/jungle.png" alt="" draggable="false" />
             </div>
+
+            <!-- Eclipse: Planet hinter der Sonne — kühler Schatten + großes
+                 Medaillon unten mittig (Kachel-Mitte gehört dem Jungle-Buff-Chip) -->
+            <Transition name="cmd-eclipse">
+              <div v-if="slotBehindSun(slot)" class="cmd-eclipse-veil" />
+            </Transition>
+            <Transition name="cmd-eclipse">
+              <div
+                v-if="slotBehindSun(slot)"
+                class="cmd-eclipse-medal"
+                title="Behind the Sun — combat paused"
+              >
+                <Icon icon="game-icons:eclipse-flare" width="24" height="24" />
+              </div>
+            </Transition>
           </template>
 
           <template v-else-if="slot.purchased">
@@ -485,11 +511,80 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   filter: drop-shadow(0 0 3px rgba(255, 64, 64, 0.8));
 }
 
+/* ── Eclipse: Planet hinter der Sonne ──
+   Kachel kühlt ab (Grayscale, Rollen-Glow aus), dunkler Schleier legt sich
+   über das Planetenbild, goldener ✦-Chip atmet oben rechts — gleiche
+   Designsprache wie der Eclipse-Status im StarFightModal. */
+.cmd-planet-tile--eclipsed {
+  border-color: rgba(122, 78, 32, 0.4);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.6);
+}
+.cmd-planet-tile--eclipsed .cmd-tile-planet-img {
+  filter: grayscale(65%) brightness(0.5) saturate(0.6);
+}
+.cmd-tile-planet-img {
+  transition: transform 0.18s ease, filter 0.4s ease;
+}
+
+.cmd-eclipse-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6, 8, 16, 0.4), rgba(2, 3, 8, 0.62));
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Medaillon unten mittig — die Kachel-Mitte bleibt für den Jungle-Buff-Chip
+   frei, oben liegt nichts → keine Überlappung mit anderen Indikatoren */
+.cmd-eclipse-medal {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, rgba(38, 26, 8, 0.95), rgba(10, 7, 3, 0.95));
+  border: 2px solid #5c3310;
+  box-shadow:
+    0 0 0 1px rgba(200, 144, 64, 0.35),
+    0 0 12px rgba(232, 192, 64, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.7);
+  color: #e8c040;
+  z-index: 6;
+  pointer-events: none;
+  animation: cmd-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+.cmd-eclipse-medal :deep(svg) {
+  filter: drop-shadow(0 0 4px rgba(232, 192, 64, 0.55));
+}
+
+@keyframes cmd-eclipse-breathe {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.cmd-eclipse-enter-active,
+.cmd-eclipse-leave-active {
+  transition: opacity 0.3s ease;
+}
+.cmd-eclipse-enter-from,
+.cmd-eclipse-leave-to {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cmd-planet-tile--empty-slot,
   .cmd-tile-icon--empty,
   .cmd-planet-tile--buy:not(.cmd-planet-tile--locked),
-  .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-chime-img {
+  .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-chime-img,
+  .cmd-eclipse-medal {
     animation: none;
   }
 }

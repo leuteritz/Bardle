@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useRoleAbilityStates } from '@/composables/useRoleAbilityStates'
+import { championInForeground } from '@/utils/foregroundGate'
 import { ROLES, ROLE_HOVER_COLORS } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
@@ -45,6 +47,7 @@ function onSlotLeave() {
         'champ-card--last': i === headerSlots.length - 1,
         'champ-card--flash': roleAbilities[i].isFlashing,
         'champ-card--cd': roleAbilities[i].onCooldown && slot !== null,
+        'champ-card--eclipsed': slot !== null && !championInForeground(slot),
       }"
       :style="{
         '--role-color': ROLES[i].orbit.color,
@@ -89,6 +92,20 @@ function onSlotLeave() {
             {{ roleAbilities[i].timer }}
           </span>
           <span v-else class="champ-card-ready-dot" aria-hidden="true" />
+
+          <!-- Eclipse: Champion fliegt gerade hinter der Sonne — Fähigkeiten
+               warten, kein Angriff möglich. Großes Medaillon mittig im
+               Porträt, klar getrennt von Ability-Pill (oben rechts) und
+               Rollen-Label (unten). -->
+          <Transition name="champ-eclipse">
+            <div
+              v-if="!championInForeground(slot)"
+              class="champ-card-eclipse-medal"
+              title="Behind the Sun — combat paused"
+            >
+              <Icon icon="game-icons:eclipse-flare" width="30" height="30" />
+            </div>
+          </Transition>
         </template>
 
         <!-- role label -->
@@ -271,6 +288,72 @@ function onSlotLeave() {
   pointer-events: none;
 }
 
+/* ── Eclipse: Champion hinter der Sonne ──
+   Porträt taucht in kühlen Schatten, Rollen-Glow erlischt, goldener
+   ✦-Chip atmet oben links — synchron zum Idle-Orbit & StarFightModal. */
+.champ-card--eclipsed .champ-card-portrait {
+  filter: grayscale(70%) brightness(0.45) saturate(0.6);
+}
+.champ-card--eclipsed .champ-card-body {
+  border-color: color-mix(in srgb, var(--role-color, #c89040) 32%, #241c10);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.65);
+}
+.champ-card--eclipsed .champ-card-bar {
+  opacity: 0.35;
+  box-shadow: none;
+}
+.champ-card--eclipsed .champ-card-ready-dot {
+  opacity: 0.35;
+  box-shadow: none;
+}
+.champ-card--eclipsed .champ-card-label {
+  color: rgba(200, 188, 160, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.champ-card-eclipse-medal {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, rgba(38, 26, 8, 0.95), rgba(10, 7, 3, 0.95));
+  border: 2px solid #5c3310;
+  box-shadow:
+    0 0 0 1px rgba(200, 144, 64, 0.35),
+    0 0 14px rgba(232, 192, 64, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.7);
+  color: #e8c040;
+  z-index: 4;
+  pointer-events: none;
+  animation: champ-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+.champ-card-eclipse-medal :deep(svg) {
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.55));
+}
+
+@keyframes champ-eclipse-breathe {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.champ-eclipse-enter-active,
+.champ-eclipse-leave-active {
+  transition: opacity 0.3s ease;
+}
+.champ-eclipse-enter-from,
+.champ-eclipse-leave-to {
+  opacity: 0;
+}
+
 /* ability just triggered → card flash */
 .champ-card--flash .champ-card-body {
   animation: champ-card-flash 0.45s ease-out;
@@ -343,7 +426,8 @@ function onSlotLeave() {
 @media (prefers-reduced-motion: reduce) {
   .champ-card--filled:hover .champ-card-hover-glow,
   .champ-card--flash .champ-card-body,
-  .champ-card--flash .champ-card-ready-dot {
+  .champ-card--flash .champ-card-ready-dot,
+  .champ-card-eclipse-medal {
     animation: none;
   }
 }

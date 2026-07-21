@@ -2840,6 +2840,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:three-friends', // Assists stat
   'game-icons:podium-winner', // Win/Loss stat (BottomScoreboard)
   'game-icons:sword-spin', // "Return to Battle" floating button (BattleReturnButton)
+  // Command panel — eclipse state (champion/planet behind the sun)
+  'game-icons:eclipse-flare', // Eclipse medallion (ChampionSelectorComponent + CommandPanelComponent)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
