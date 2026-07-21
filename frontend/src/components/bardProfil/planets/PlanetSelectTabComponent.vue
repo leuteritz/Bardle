@@ -11,6 +11,7 @@ import {
 } from '@/stores/planetShopStore'
 import type { PlanetRole, PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import { MATERIALS } from '@/config/materials'
 import {
   STAR_PHASE_DATA,
@@ -657,12 +658,18 @@ function chooseBuilding(buildingId: string) {
         </template>
       </div>
     </div>
+
+    <!-- Rücksprung in den Star Fight: erscheint nur, wenn der Tab aus dem
+         Fight-Modal heraus geöffnet wurde und der Stern noch lebt — gleicher
+         Button wie im Team-Tab (SigilBoardComponent) -->
+    <BattleReturnButton />
   </div>
 </template>
 
 <style scoped>
 /* ── Root ──────────────────────────────────────────────────────────────────── */
 .ps-tab {
+  position: relative; /* Anker für den absolut positionierten BattleReturnButton */
   height: 100%;
   overflow: hidden;
   background: #111008;
