@@ -102,6 +102,49 @@ export function drawDesert(
     duneG.appendChild(arc)
   }
 
+  // Large eroded impact basin with a raised rim
+  const basin = svgEl('circle')
+  setAttrs(basin, {
+    cx: cx + r * 0.34,
+    cy: cy + r * 0.28,
+    r: r * 0.15,
+    fill: 'rgba(120,60,15,0.30)',
+  })
+  duneG.appendChild(basin)
+  const basinRim = svgEl('circle')
+  setAttrs(basinRim, {
+    cx: cx + r * 0.33,
+    cy: cy + r * 0.27,
+    r: r * 0.15,
+    fill: 'none',
+    stroke: 'rgba(245,200,120,0.35)',
+    'stroke-width': r * 0.018,
+  })
+  duneG.appendChild(basinRim)
+
+  // Dry canyon carving across the highlands
+  const canyon = svgEl('path')
+  setAttrs(canyon, {
+    d: `M${cx - r * 0.55},${cy - r * 0.35} Q${cx - r * 0.25},${cy - r * 0.18} ${cx - r * 0.05},${cy - r * 0.3} T${cx + r * 0.35},${cy - r * 0.22}`,
+    fill: 'none',
+    stroke: 'rgba(105,52,12,0.45)',
+    'stroke-width': r * 0.022,
+    'stroke-linecap': 'round',
+  })
+  duneG.appendChild(canyon)
+
+  // Drifting dust-storm veil
+  const stormVeil = svgEl('ellipse')
+  setAttrs(stormVeil, {
+    cx: cx - r * 0.25,
+    cy: cy + r * 0.42,
+    rx: r * 0.4,
+    ry: r * 0.12,
+    fill: 'rgba(235,190,120,0.22)',
+    transform: `rotate(-8 ${cx - r * 0.25} ${cy + r * 0.42})`,
+  })
+  duneG.appendChild(stormVeil)
+
   // Small dark rocks
   for (const [ox, oy, rr] of [
     [-0.18, 0.28, 0.028],

@@ -58,6 +58,58 @@ export function drawGasGiant(
     bandG.appendChild(rect)
   }
 
+  // Curved shear highlights along band boundaries — bands read as wrapping
+  // around the sphere instead of flat stripes
+  for (const [oy, bow, light, op] of [
+    [-0.5, -0.07, true, 0.3],
+    [-0.27, -0.05, false, 0.35],
+    [-0.05, -0.03, true, 0.28],
+    [0.17, 0.04, false, 0.32],
+    [0.36, 0.06, true, 0.26],
+    [0.54, 0.08, false, 0.28],
+  ] as [number, number, boolean, number][]) {
+    const shear = svgEl('path')
+    setAttrs(shear, {
+      d: `M${cx - r},${cy + r * oy} Q${cx},${cy + r * (oy + bow)} ${cx + r},${cy + r * oy}`,
+      fill: 'none',
+      stroke: light ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)',
+      'stroke-width': r * 0.028,
+      opacity: op,
+    })
+    bandG.appendChild(shear)
+  }
+
+  // Small white oval storms drifting between bands
+  for (const [ox, oy, rx, ry, op] of [
+    [-0.35, -0.32, 0.055, 0.03, 0.6],
+    [0.15, 0.35, 0.045, 0.025, 0.55],
+    [-0.2, 0.52, 0.04, 0.022, 0.5],
+  ] as [number, number, number, number, number][]) {
+    const oval = svgEl('ellipse')
+    setAttrs(oval, {
+      cx: cx + r * ox,
+      cy: cy + r * oy,
+      rx: r * rx,
+      ry: r * ry,
+      fill: 'rgba(255,252,240,0.75)',
+      opacity: op,
+    })
+    bandG.appendChild(oval)
+  }
+
+  // Polar hoods — darker haze caps at both poles
+  for (const oy of [-0.8, 0.8]) {
+    const hood = svgEl('ellipse')
+    setAttrs(hood, {
+      cx,
+      cy: cy + r * oy,
+      rx: r * 0.6,
+      ry: r * 0.22,
+      fill: 'rgba(0,0,0,0.28)',
+    })
+    bandG.appendChild(hood)
+  }
+
   // 3-layer storm
   const scx = cx + r * 0.28,
     scy = cy + r * 0.14

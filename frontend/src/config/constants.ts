@@ -164,6 +164,16 @@ export const PLANET_TYPE_NAMES: Record<string, string> = {
   desert: 'Desert Planet',
   jungle: 'Jungle Planet',
   ringed: 'Ringed Planet',
+  crystal: 'Crystal Planet',
+  toxic: 'Toxic Planet',
+  void: 'Void Planet',
+  aurora: 'Aurora Planet',
+  shattered: 'Shattered Planet',
+  storm: 'Storm Planet',
+  bloom: 'Bloom Planet',
+  neon: 'Neon Planet',
+  obsidian: 'Obsidian Planet',
+  coral: 'Coral Planet',
 }
 
 // Title rotation

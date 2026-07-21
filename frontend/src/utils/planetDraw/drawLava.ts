@@ -31,6 +31,60 @@ export function drawLava(svg: SVGSVGElement, id: string, cx: number, cy: number,
   const crackG = svgEl('g')
   crackG.setAttribute('clip-path', `url(#lvc-${id})`)
 
+  // Cooled basalt plates — matte crust slabs between the glowing cracks
+  for (const [pts, op] of [
+    [
+      [
+        [-0.5, -0.45],
+        [-0.12, -0.55],
+        [-0.15, -0.15],
+        [-0.45, -0.1],
+      ],
+      0.5,
+    ],
+    [
+      [
+        [0.22, -0.5],
+        [0.55, -0.38],
+        [0.5, -0.05],
+        [0.25, -0.1],
+      ],
+      0.45,
+    ],
+    [
+      [
+        [-0.45, 0.25],
+        [-0.1, 0.28],
+        [-0.05, 0.6],
+        [-0.4, 0.55],
+      ],
+      0.4,
+    ],
+    [
+      [
+        [0.35, 0.3],
+        [0.6, 0.35],
+        [0.5, 0.6],
+        [0.32, 0.52],
+      ],
+      0.4,
+    ],
+  ] as [number[][], number][]) {
+    const d =
+      pts
+        .map(([ox, oy], i) => `${i === 0 ? 'M' : 'L'}${cx + r * ox},${cy + r * oy}`)
+        .join(' ') + ' Z'
+    const plate = svgEl('path')
+    setAttrs(plate, {
+      d,
+      fill: 'rgba(30,14,12,0.6)',
+      stroke: 'rgba(90,30,15,0.4)',
+      'stroke-width': r * 0.008,
+      opacity: op,
+    })
+    crackG.appendChild(plate)
+  }
+
   const crackPaths = [
     `M ${cx - r * 0.08} ${cy - r * 0.52} L ${cx + r * 0.18} ${cy - r * 0.05} L ${cx + r * 0.05} ${cy + r * 0.48}`,
     `M ${cx + r * 0.42} ${cy - r * 0.3} L ${cx - r * 0.08} ${cy + r * 0.18} L ${cx + r * 0.28} ${cy + r * 0.58}`,
@@ -90,6 +144,26 @@ export function drawLava(svg: SVGSVGElement, id: string, cx: number, cy: number,
       opacity: 0.92,
     })
     crackG.appendChild(hCore)
+  }
+
+  // Scattered ember specks — small vents glowing across the night crust
+  for (const [ox, oy, er, op] of [
+    [-0.32, -0.3, 0.014, 0.8],
+    [0.35, -0.42, 0.012, 0.7],
+    [-0.5, 0.32, 0.013, 0.75],
+    [0.5, 0.05, 0.011, 0.65],
+    [0.18, -0.55, 0.01, 0.6],
+    [-0.15, 0.55, 0.012, 0.7],
+  ] as [number, number, number, number][]) {
+    const speck = svgEl('circle')
+    setAttrs(speck, {
+      cx: cx + r * ox,
+      cy: cy + r * oy,
+      r: r * er,
+      fill: '#ff8830',
+      opacity: op,
+    })
+    crackG.appendChild(speck)
   }
 
   svg.appendChild(crackG)

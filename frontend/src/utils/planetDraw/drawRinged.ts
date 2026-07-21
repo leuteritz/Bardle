@@ -89,6 +89,20 @@ export function drawRinged(
   })
   svg.appendChild(ringBack)
 
+  // Cassini-like division — dark gap splitting the ring system (back half)
+  const gapBack = svgEl('ellipse')
+  setAttrs(gapBack, {
+    cx,
+    cy,
+    rx: r * 1.42,
+    ry: r * 0.31,
+    fill: 'none',
+    stroke: 'rgba(10,8,4,0.55)',
+    'stroke-width': r * 0.035,
+    'clip-path': `url(#rnbc-${id})`,
+  })
+  svg.appendChild(gapBack)
+
   // ── Planet body ──
   const planet = svgEl('circle')
   setAttrs(planet, { cx, cy, r: r * 0.92, fill: `url(#rnpg-${id})` })
@@ -142,4 +156,18 @@ export function drawRinged(
     'clip-path': `url(#rnfc-${id})`,
   })
   svg.appendChild(ringFront)
+
+  // Cassini-like division — dark gap (front half)
+  const gapFront = svgEl('ellipse')
+  setAttrs(gapFront, {
+    cx,
+    cy,
+    rx: r * 1.42,
+    ry: r * 0.31,
+    fill: 'none',
+    stroke: 'rgba(10,8,4,0.55)',
+    'stroke-width': r * 0.035,
+    'clip-path': `url(#rnfc-${id})`,
+  })
+  svg.appendChild(gapFront)
 }

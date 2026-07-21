@@ -148,6 +148,16 @@ export type PlanetType =
   | 'desert'
   | 'jungle'
   | 'ringed'
+  | 'crystal'
+  | 'toxic'
+  | 'void'
+  | 'aurora'
+  | 'shattered'
+  | 'storm'
+  | 'bloom'
+  | 'neon'
+  | 'obsidian'
+  | 'coral'
 
 export type StarType = 'champion' | 'resource' | 'galaxy_boss' | 'boss_escort'
 

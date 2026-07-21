@@ -31,6 +31,51 @@ export function drawJungle(
   const cloudG = svgEl('g')
   cloudG.setAttribute('clip-path', `url(#jc-${id})`)
 
+  // Terrain beneath the clouds — dark canopy patches give the surface depth
+  for (const [ox, oy, rx, ry, rot, op] of [
+    [-0.2, 0.05, 0.32, 0.2, -10, 0.5],
+    [0.25, 0.28, 0.24, 0.15, 15, 0.45],
+    [0.1, -0.3, 0.22, 0.14, -18, 0.4],
+    [-0.4, -0.35, 0.16, 0.1, 20, 0.35],
+  ] as [number, number, number, number, number, number][]) {
+    const pcx = cx + r * ox
+    const pcy = cy + r * oy
+    const canopy = svgEl('ellipse')
+    setAttrs(canopy, {
+      cx: pcx,
+      cy: pcy,
+      rx: r * rx,
+      ry: r * ry,
+      fill: 'rgba(6,45,12,0.6)',
+      opacity: op,
+      transform: `rotate(${rot} ${pcx} ${pcy})`,
+    })
+    cloudG.appendChild(canopy)
+  }
+
+  // Winding rivers glinting through the canopy
+  for (const [d, op] of [
+    [
+      `M${cx - r * 0.45},${cy - r * 0.1} Q${cx - r * 0.2},${cy + r * 0.08} ${cx - r * 0.02},${cy - r * 0.02} T${cx + r * 0.35},${cy + r * 0.1}`,
+      0.6,
+    ],
+    [
+      `M${cx - r * 0.1},${cy + r * 0.5} Q${cx + r * 0.05},${cy + r * 0.3} ${cx + r * 0.3},${cy + r * 0.38}`,
+      0.5,
+    ],
+  ] as [string, number][]) {
+    const river = svgEl('path')
+    setAttrs(river, {
+      d,
+      fill: 'none',
+      stroke: 'rgba(120,220,230,0.55)',
+      'stroke-width': r * 0.014,
+      'stroke-linecap': 'round',
+      opacity: op,
+    })
+    cloudG.appendChild(river)
+  }
+
   // Multi-layer cloud system: outer soft + inner brighter
   const cloudDefs: [number, number, number, number, number, number, number][] = [
     [cx - r * 0.18, cy - r * 0.46, r * 0.42, r * 0.17, -12, 0.42, 0.62],

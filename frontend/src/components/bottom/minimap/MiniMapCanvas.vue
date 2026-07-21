@@ -118,6 +118,16 @@ const PLANET_TYPE_PALETTES: Record<PlanetType, typeof STAR_PALETTE> = {
   'desert':    { base: '#c8a048', shadow: '#604010', highlight: '#f0d080', atmo: 'rgba(200,160,60,0.4)',  ring: false },
   'jungle':    { base: '#50a840', shadow: '#102808', highlight: '#90e870', atmo: 'rgba(60,180,50,0.4)',   ring: false },
   'ringed':    { base: '#9060c0', shadow: '#200840', highlight: '#c090f0', atmo: 'rgba(140,80,220,0.45)', ring: true  },
+  'crystal':   { base: '#40d0c0', shadow: '#083838', highlight: '#b0fff0', atmo: 'rgba(70,220,200,0.45)', ring: false },
+  'toxic':     { base: '#94c428', shadow: '#243008', highlight: '#d8f070', atmo: 'rgba(160,220,50,0.45)', ring: false },
+  'void':      { base: '#402060', shadow: '#0a0418', highlight: '#a860e8', atmo: 'rgba(150,60,240,0.5)',  ring: false },
+  'aurora':    { base: '#4878a0', shadow: '#0a1830', highlight: '#80ffd0', atmo: 'rgba(90,255,190,0.4)',  ring: false },
+  'shattered': { base: '#786450', shadow: '#1c1006', highlight: '#ffb060', atmo: 'rgba(255,140,50,0.4)',  ring: false },
+  'storm':     { base: '#4a5a9a', shadow: '#0a0e28', highlight: '#aabcf0', atmo: 'rgba(110,150,255,0.45)', ring: false },
+  'bloom':     { base: '#f0a8c4', shadow: '#4a1c38', highlight: '#ffe0ec', atmo: 'rgba(255,170,200,0.45)', ring: false },
+  'neon':      { base: '#1e2630', shadow: '#04060a', highlight: '#8cf0ff', atmo: 'rgba(80,200,255,0.4)',  ring: false },
+  'obsidian':  { base: '#2a2a32', shadow: '#040406', highlight: '#c8d0e8', atmo: 'rgba(180,190,220,0.3)', ring: false },
+  'coral':     { base: '#40c8c0', shadow: '#043045', highlight: '#a0f0e8', atmo: 'rgba(90,230,220,0.45)', ring: false },
 }
 
 /** Small pulsing sun marker (player origin / idle position) in the mock's gold palette. */

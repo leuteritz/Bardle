@@ -68,7 +68,53 @@ export function drawRocky(svg: SVGSVGElement, id: string, cx: number, cy: number
     })
     texG.appendChild(rim)
   }
+
+  // Ejecta rays fanning out from the largest impact crater
+  for (const [dx, dy, len, op] of [
+    [0.5, -0.3, 0.34, 0.22],
+    [0.9, 0.15, 0.3, 0.18],
+    [0.2, 0.95, 0.28, 0.2],
+    [-0.6, 0.7, 0.26, 0.16],
+    [-0.95, -0.2, 0.3, 0.18],
+  ] as [number, number, number, number][]) {
+    const bx = cx + r * -0.28
+    const by = cy + r * -0.18
+    const ray = svgEl('line')
+    setAttrs(ray, {
+      x1: bx + dx * r * 0.14,
+      y1: by + dy * r * 0.14,
+      x2: bx + dx * r * (0.14 + len),
+      y2: by + dy * r * (0.14 + len),
+      stroke: 'rgba(225,195,155,0.5)',
+      'stroke-width': r * 0.022,
+      'stroke-linecap': 'round',
+      opacity: op,
+    })
+    texG.appendChild(ray)
+  }
+
+  // Faint equatorial dust haze
+  const dust = svgEl('ellipse')
+  setAttrs(dust, {
+    cx: cx + r * 0.05,
+    cy: cy + r * 0.02,
+    rx: r * 0.85,
+    ry: r * 0.16,
+    fill: 'rgba(200,165,120,0.10)',
+  })
+  texG.appendChild(dust)
   svg.appendChild(texG)
+
+  // Terminator — day/night boundary creeping in from the far side
+  const termGrad = svgEl('linearGradient')
+  setAttrs(termGrad, { id: `rterm-${id}`, x1: '0%', y1: '0%', x2: '100%', y2: '30%' })
+  addGradStop(termGrad, '0%', 'rgba(0,0,0,0)')
+  addGradStop(termGrad, '62%', 'rgba(0,0,0,0)')
+  addGradStop(termGrad, '100%', 'rgba(10,4,0,0.55)')
+  defs.appendChild(termGrad)
+  const term = svgEl('circle')
+  setAttrs(term, { cx, cy, r: r * 0.92, fill: `url(#rterm-${id})` })
+  svg.appendChild(term)
 
   const limb = svgEl('circle')
   setAttrs(limb, { cx, cy, r: r * 0.92, fill: `url(#rlimb-${id})` })

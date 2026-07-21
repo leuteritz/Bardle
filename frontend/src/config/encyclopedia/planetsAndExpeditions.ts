@@ -41,11 +41,13 @@ export const planetEventsCategory: EncyclopediaCategory = {
       name: 'Planet Types',
       icon: '/img/BardAbilities/BardW.png',
       description:
-        'There are 8 different planet types: Rocky, Ice, Gas Giant, Lava, Ocean, Desert, Jungle, Ringed. ' +
+        'There are 18 different planet types: Rocky, Ice, Gas Giant, Lava, Ocean, Desert, Jungle, Ringed, ' +
+        'Crystal, Toxic, Void, Aurora, Shattered, Storm, Bloom, Neon, Obsidian, Coral. ' +
         'The type affects visual appearance but has no influence on rewards.',
       lore: 'Every world has its own story — its own beauty.',
       formula:
-        'PLANET_TYPE_NAMES = { rocky, ice, gas-giant, lava, ocean, desert, jungle, ringed }',
+        'PLANET_TYPE_NAMES = { rocky, ice, gas-giant, lava, ocean, desert, jungle, ringed,\n' +
+        '  crystal, toxic, void, aurora, shattered, storm, bloom, neon, obsidian, coral }',
     },
   ],
 }

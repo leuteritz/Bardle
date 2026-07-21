@@ -103,6 +103,41 @@ export function drawIce(svg: SVGSVGElement, id: string, cx: number, cy: number, 
   })
   crackG.appendChild(cap2)
 
+  // Pressure ridges — faint frozen-sea texture between the cracks
+  for (const [d, op] of [
+    [`M${cx - r * 0.6},${cy + r * 0.05} Q${cx - r * 0.2},${cy - r * 0.05} ${cx + r * 0.2},${cy + r * 0.08}`, 0.3],
+    [`M${cx - r * 0.5},${cy + r * 0.32} Q${cx},${cy + r * 0.22} ${cx + r * 0.45},${cy + r * 0.35}`, 0.25],
+    [`M${cx - r * 0.35},${cy - r * 0.25} Q${cx + r * 0.05},${cy - r * 0.32} ${cx + r * 0.4},${cy - r * 0.2}`, 0.22],
+  ] as [string, number][]) {
+    const ridge = svgEl('path')
+    setAttrs(ridge, {
+      d,
+      fill: 'none',
+      stroke: 'rgba(255,255,255,0.4)',
+      'stroke-width': r * 0.01,
+      opacity: op,
+    })
+    crackG.appendChild(ridge)
+  }
+
+  // Frozen melt ponds — slightly darker teal patches on the shell
+  for (const [ox, oy, rx, ry, op] of [
+    [0.25, 0.15, 0.14, 0.09, 0.35],
+    [-0.3, 0.35, 0.11, 0.07, 0.3],
+    [-0.05, -0.2, 0.09, 0.06, 0.25],
+  ] as [number, number, number, number, number][]) {
+    const pond = svgEl('ellipse')
+    setAttrs(pond, {
+      cx: cx + r * ox,
+      cy: cy + r * oy,
+      rx: r * rx,
+      ry: r * ry,
+      fill: 'rgba(30,110,160,0.4)',
+      opacity: op,
+    })
+    crackG.appendChild(pond)
+  }
+
   svg.appendChild(crackG)
 
   // Atmospheric rim glow

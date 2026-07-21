@@ -49,6 +49,17 @@ export function drawOcean(svg: SVGSVGElement, id: string, cx: number, cy: number
     { cx: cx + r * 0.3, cy: cy + r * 0.3, rx: r * 0.12, ry: r * 0.07, rot: -20, color: '#46924a' },
   ]
   for (const c of continents) {
+    // Shallow-water shelf halo beneath each landmass — coasts read as coasts
+    const shelf = svgEl('ellipse')
+    setAttrs(shelf, {
+      cx: c.cx,
+      cy: c.cy,
+      rx: c.rx * 1.3,
+      ry: c.ry * 1.35,
+      fill: 'rgba(90,210,230,0.35)',
+      transform: `rotate(${c.rot} ${c.cx} ${c.cy})`,
+    })
+    contG.appendChild(shelf)
     const e = svgEl('ellipse')
     setAttrs(e, {
       cx: c.cx,
@@ -60,6 +71,56 @@ export function drawOcean(svg: SVGSVGElement, id: string, cx: number, cy: number
       transform: `rotate(${c.rot} ${c.cx} ${c.cy})`,
     })
     contG.appendChild(e)
+    // Interior relief — a darker ridge stripe through the landmass
+    const ridge = svgEl('ellipse')
+    setAttrs(ridge, {
+      cx: c.cx + c.rx * 0.15,
+      cy: c.cy + c.ry * 0.1,
+      rx: c.rx * 0.55,
+      ry: c.ry * 0.35,
+      fill: 'rgba(30,70,25,0.4)',
+      transform: `rotate(${c.rot} ${c.cx} ${c.cy})`,
+    })
+    contG.appendChild(ridge)
+  }
+
+  // Archipelago chains trailing off the continents
+  for (const [ox, oy, s, op] of [
+    [0.02, 0.34, 0.024, 0.8],
+    [0.1, 0.4, 0.018, 0.7],
+    [0.18, 0.44, 0.014, 0.6],
+    [-0.48, 0.05, 0.02, 0.7],
+    [-0.55, 0.14, 0.015, 0.6],
+    [0.4, -0.34, 0.018, 0.7],
+    [0.48, -0.4, 0.013, 0.55],
+  ] as [number, number, number, number][]) {
+    const isle = svgEl('circle')
+    setAttrs(isle, {
+      cx: cx + r * ox,
+      cy: cy + r * oy,
+      r: r * s,
+      fill: '#4a9448',
+      opacity: op,
+    })
+    contG.appendChild(isle)
+  }
+
+  // Sun glitter — sparkling water trail under the specular highlight
+  for (const [ox, oy, rx, op] of [
+    [-0.2, -0.22, 0.05, 0.5],
+    [-0.13, -0.14, 0.035, 0.4],
+    [-0.08, -0.06, 0.025, 0.3],
+  ] as [number, number, number, number][]) {
+    const glit = svgEl('ellipse')
+    setAttrs(glit, {
+      cx: cx + r * ox,
+      cy: cy + r * oy,
+      rx: r * rx,
+      ry: r * rx * 0.45,
+      fill: 'rgba(255,255,255,0.55)',
+      opacity: op,
+    })
+    contG.appendChild(glit)
   }
 
   // Polar ice caps
