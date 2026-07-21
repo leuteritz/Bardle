@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
-import { useUiStore } from './uiStore'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
 import { unlockedChampionTierCount } from '../config/championTiers'
 import type { ChampionRole } from '../types'
@@ -315,14 +314,6 @@ export const useGalaxyStore = defineStore('galaxy', {
     confirmRoleSelection(role: ChampionRole) {
       this.nextStarRole = role
       this.pendingRoleSelection = false
-      // The rescue rotation is a camera pan of the idle orbit background —
-      // its rAF driver pauses while the Bard profile is open, so the pan
-      // would never finish there. Skip it and depart immediately instead.
-      if (useUiStore().bardActiveTab !== null) {
-        this.travelPendingAfterRotation = false
-        this.startChampionTravel()
-        return
-      }
       this.travelPendingAfterRotation = true
       this.startRescueRotation()
     },

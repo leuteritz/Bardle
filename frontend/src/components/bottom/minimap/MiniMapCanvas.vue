@@ -1064,6 +1064,10 @@ export default defineComponent({
     function drawRotationTransition(ctx: CanvasRenderingContext2D, w: number, h: number) {
       const nowMs = Date.now()
       const elapsed = Math.max(0, nowMs - galaxyStore.rescueRotationStartTime)
+      // The orbit rAF loop normally ends the rotation, but it pauses while
+      // the Bard profile is open — finish it from here too, so the departure
+      // transition hands over to the flight without closing the modal first.
+      if (elapsed >= RESCUE_ROTATION_DURATION_MS) galaxyStore.endRescueRotation()
       const t = Math.min(elapsed / RESCUE_ROTATION_DURATION_MS, 1)
       const te = easeInOut(t)
 
