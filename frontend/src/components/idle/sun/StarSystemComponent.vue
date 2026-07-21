@@ -113,6 +113,7 @@
       >
         <div
           class="star-status-badge-anchor"
+          :class="{ 'star-status-badge-anchor--dimmed': isStarHoverDimmed(star.id) }"
           :ref="(el) => setMapEl(curseBadgeEls, star.id, el)"
           :style="{
             transform: `translate(${star.x - starSize(star.starType) / 2 - 48}px, ${star.y - 14}px)`,
@@ -1753,6 +1754,13 @@ function starCountStyle(star: StarRenderEntry) {
   top: 0;
   left: 0;
   pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+/* Hover-Fokus (Champion/Planet im Command Panel oder anderer Stern):
+   Fluch-Chip blendet mit seinem Stern aus */
+.star-status-badge-anchor--dimmed {
+  opacity: var(--hover-dim-opacity, 0.08);
 }
 
 .star-curse-chip {
