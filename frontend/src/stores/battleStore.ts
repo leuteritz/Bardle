@@ -281,6 +281,10 @@ export const useBattleStore = defineStore('battle', {
     // then return to the landing screen instead of searching the next planet.
     // Cancelable (toggle off) while the match/honor is still running.
     stopRequested: false,
+    // UI focus: player clicked a team-column card to spotlight that champion's
+    // dot on the map (others dim). "team-idx" of the focused champion, or ''
+    // for none. Transient — never persisted, cleared on each new battle.
+    focusedChampionId: '',
     battleEverStarted: false,
     currentBattleId: 0,
     timeUntilNextBattle: 0,
@@ -1069,6 +1073,7 @@ export const useBattleStore = defineStore('battle', {
         this.resultCountdownTimer = null
       }
       this.resultCountdown = 0
+      this.focusedChampionId = ''
       this.resetTeamStats(this.team1)
       this.resetTeamStats(this.team2)
       this.battleTime = 0
@@ -2373,6 +2378,15 @@ export const useBattleStore = defineStore('battle', {
           this.startCountdown()
         }
       }
+    },
+
+    /**
+     * Spotlight a champion's dot on the map from a team-column click. Clicking
+     * the same champion again clears the focus (toggle).
+     */
+    toggleFocusedChampion(team: 1 | 2, idx: number) {
+      const key = `${team}-${idx}`
+      this.focusedChampionId = this.focusedChampionId === key ? '' : key
     },
 
     stopAutoBattle() {

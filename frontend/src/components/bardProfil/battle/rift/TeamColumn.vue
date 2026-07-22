@@ -15,8 +15,11 @@
           'champ-card--mvp': champ.name && champ.name === mvpLiveName,
           'champ-card--buff-blue': hasBuff(idx, 'blue'),
           'champ-card--buff-red': hasBuff(idx, 'red'),
+          'champ-card--clickable': !!champ.name,
+          'champ-card--focused': isFocused(idx),
         },
       ]"
+      @click="champ.name && battleStore.toggleFocusedChampion(side === 'blue' ? 1 : 2, idx)"
     >
       <!-- Full-bleed portrait: the image IS the card background, no inner frame -->
       <img
@@ -101,6 +104,11 @@ function champBuffs(idx: number) {
 
 function hasBuff(idx: number, type: 'blue' | 'red'): boolean {
   return champBuffs(idx).some((b) => b.type === type)
+}
+
+/** This card is the currently spotlighted champion. */
+function isFocused(idx: number): boolean {
+  return battleStore.focusedChampionId === `${props.side === 'blue' ? 1 : 2}-${idx}`
 }
 
 /** Live MVP across both teams (updates as the battle progresses). */
@@ -190,6 +198,34 @@ function hpClass(hp: number): string {
 .champ-card--blue::after { left: 0; }
 .champ-card--red::after { right: 0; }
 .champ-card--bard { --team-rgb: 232, 192, 64; }
+
+/* ── Clickable / focused card ──
+   Clicking a card spotlights that champion's dot on the map. Hover hints it,
+   the selected card carries a crisp bright ring (drawn via ::before so it never
+   fights the buff/MVP box-shadows). */
+.champ-card--clickable {
+  cursor: pointer;
+}
+.champ-card--clickable:hover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  z-index: 2;
+}
+.champ-card--focused::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 18px rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  z-index: 2;
+}
 
 .portrait {
   position: absolute;

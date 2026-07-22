@@ -189,10 +189,16 @@
         :key="`${pos.team}-${pos.idx}`"
         v-show="champAt(pos.team, pos.idx)?.name"
         class="champ-marker"
-        :class="{ 'champ-marker--mvp': isMvp(pos.team, pos.idx) }"
+        :class="{
+          'champ-marker--mvp': isMvp(pos.team, pos.idx),
+          'champ-marker--focused': isFocused(pos.team, pos.idx),
+          'champ-marker--dimmed': hasFocus && !isFocused(pos.team, pos.idx),
+        }"
         :style="{ left: pos.x + '%', top: pos.y + '%' }"
       >
         <div class="champ-portrait-wrap">
+          <!-- Spotlight ring when this champion is focused from a team card -->
+          <span v-if="isFocused(pos.team, pos.idx)" class="focus-ring" aria-hidden="true" />
           <!-- Live MVP: rotating gold ring + floating crown -->
           <template v-if="isMvp(pos.team, pos.idx)">
             <span class="mvp-ring" aria-hidden="true" />
@@ -341,6 +347,13 @@ function champAt(team: 1 | 2, idx: number): ChampionState | undefined {
 /** True for the champion currently leading the live MVP race (both teams). */
 function isMvp(team: 1 | 2, idx: number): boolean {
   return battleStore.liveMvpId === `${team}-${idx}`
+}
+
+/** A team-column card is currently spotlighting one champion. */
+const hasFocus = computed(() => battleStore.focusedChampionId !== '')
+/** True for the champion the player clicked to spotlight. */
+function isFocused(team: 1 | 2, idx: number): boolean {
+  return battleStore.focusedChampionId === `${team}-${idx}`
 }
 
 function hpClass(champ: ChampionState | undefined): string {
@@ -1137,16 +1150,46 @@ const structureMarkers = computed(() => {
   flex-direction: column;
   align-items: center;
   pointer-events: none;
-  transition: left 0.5s linear, top 0.5s linear;
+  transition: left 0.5s linear, top 0.5s linear, opacity 0.25s ease;
   z-index: 4;
 }
 /* Live MVP floats above the pack so its crown/ring never hides behind others */
 .champ-marker--mvp {
   z-index: 7;
 }
+/* ── Team-card spotlight ── */
+/* Non-focused dots recede so the picked champion pops */
+.champ-marker--dimmed {
+  opacity: 0.28;
+}
+/* Focused dot floats above everything and scales up a touch */
+.champ-marker--focused {
+  z-index: 8;
+}
 
 .champ-portrait-wrap {
   position: relative;
+  transition: transform 0.2s ease;
+}
+.champ-marker--focused .champ-portrait-wrap {
+  transform: scale(1.28);
+}
+
+/* Bright neutral spotlight ring hugging the focused portrait (behind the face) */
+.focus-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.6),
+    inset 0 0 8px rgba(255, 255, 255, 0.4);
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* ── Live MVP highlight ── */
