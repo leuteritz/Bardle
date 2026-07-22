@@ -336,6 +336,13 @@
       </div>
 
       <div v-else class="tier-groups">
+        <!-- ── Epic section heading: Champions ── -->
+        <div v-if="showChampions && tierGroups.length > 0" class="shop-section-heading">
+          <span class="shop-heading-line shop-heading-line--left"></span>
+          <span class="shop-heading-text">Champions</span>
+          <span class="shop-heading-line shop-heading-line--right"></span>
+        </div>
+
         <!-- Tier section: header (click to collapse) + its own grid -->
         <div v-for="group in showChampions ? tierGroups : []" :key="group.tier" class="tier-group">
           <!-- Tier section: collapsible header (click to toggle) + its grid -->
@@ -413,9 +420,15 @@
         </div>
 
         <!-- ── Item sections: same collapsible headers, one per category ── -->
-        <div v-if="showItems" ref="itemsSectionRef">
-          <div v-if="showChampions" class="cross-role-divider item-shop-divider">
-            <span class="cross-role-divider-label">Items</span>
+        <div v-if="showItems && itemGroups.length > 0" ref="itemsSectionRef">
+          <!-- ── Epic section heading: Items ── -->
+          <div
+            class="shop-section-heading"
+            :class="{ 'shop-section-heading--follow': showChampions }"
+          >
+            <span class="shop-heading-line shop-heading-line--left"></span>
+            <span class="shop-heading-text">Items</span>
+            <span class="shop-heading-line shop-heading-line--right"></span>
           </div>
           <div v-for="group in itemGroups" :key="'cat-' + group.id" class="tier-group">
             <div
@@ -1350,14 +1363,14 @@ const shopChampionNames = computed(() =>
       }, SHOP_JUMP_SPY_LOCK_MS)
     }
 
-    // Puts the first item category header (Weapons) at the very top of the grid.
+    // Puts the "Items" section heading (with the open Weapons group right under
+    // it) at the very top of the grid.
     function scrollToItemsTop() {
       const grid = gridRef.value
       const section = itemsSectionRef.value
       if (!grid || !section) return
-      const firstGroup = section.querySelector<HTMLElement>('.tier-group') ?? section
       const top =
-        firstGroup.getBoundingClientRect().top -
+        section.getBoundingClientRect().top -
         grid.getBoundingClientRect().top +
         grid.scrollTop -
         SHOP_JUMP_SCROLL_OFFSET_PX
@@ -1945,7 +1958,7 @@ const shopChampionNames = computed(() =>
   border-color: rgba(200, 144, 64, 0.6);
 }
 
-/* ── Item sections: category icon in the tier-style header + domain divider ── */
+/* ── Item sections: category icon in the tier-style header ── */
 .item-cat-header-img {
   width: 16px;
   height: 16px;
@@ -1953,9 +1966,71 @@ const shopChampionNames = computed(() =>
   flex-shrink: 0;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
 }
-.item-shop-divider {
-  margin-top: 18px;
-  margin-bottom: 10px;
+
+/* ── Epic section headings: one big centered line per domain ── */
+.shop-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 6px 0 14px;
+}
+/* The Items heading needs extra air when it follows the champion tiers. */
+.shop-section-heading--follow {
+  margin-top: 28px;
+}
+.shop-heading-text {
+  position: relative;
+  flex-shrink: 0;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  line-height: 1.15;
+  color: #eccf82;
+  text-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.85),
+    0 0 22px rgba(232, 192, 64, 0.35);
+  white-space: nowrap;
+}
+.shop-heading-line {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+}
+.shop-heading-line--left {
+  background: linear-gradient(to right, transparent, #5c3310 45%, #c89040);
+}
+.shop-heading-line--right {
+  background: linear-gradient(to left, transparent, #5c3310 45%, #c89040);
+}
+/* ✦ ornaments where the lines meet the title */
+.shop-heading-line::after {
+  content: '✦';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-54%);
+  font-size: 13px;
+  line-height: 1;
+  color: #c89040;
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
+}
+.shop-heading-line--left::after {
+  right: -6px;
+}
+.shop-heading-line--right::after {
+  left: -6px;
+}
+
+/* Compact heading on flatter viewports (Full HD) */
+@media (max-height: 1100px) {
+  .shop-heading-text {
+    font-size: 22px;
+  }
+  .shop-section-heading--follow {
+    margin-top: 22px;
+  }
 }
 
 /* ── Header-Bar ── */
