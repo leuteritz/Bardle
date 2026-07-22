@@ -39,7 +39,7 @@ const meepTreeStore = useMeepTreeStore()
 const { resetGame } = usePersistence()
 
 const championBadgeCount = computed(() => battleStore.newlyUnlockedChampions.length)
-const skillBadgeCount = computed(() => meepTreeStore.buyableNodeCount)
+const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
 const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
 )

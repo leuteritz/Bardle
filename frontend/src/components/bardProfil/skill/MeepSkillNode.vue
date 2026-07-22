@@ -24,9 +24,17 @@ const state = computed(() => meepTree.nodeState(props.data.node.id))
 /** Vorgänger gekauft, aber noch nicht genug Meeps → weniger stark gedimmt */
 const reachable = computed(() => state.value === 'locked' && meepTree.isUnlocked(props.data.node.id))
 
+/** Learnable + noch nicht angesehen → Notify-Badge über dem Node zeigen. */
+const notifying = computed(() => meepTree.notifyingNodeIds.includes(props.data.node.id))
+
 const tooltip = computed(
   () => `${props.data.node.name} — ${props.data.node.effect}\n${props.data.node.desc}`,
 )
+
+/** Hover über den Node quittiert die Notify — Badge weg, Header-Zahl sinkt. */
+function acknowledge() {
+  meepTree.acknowledgeNode(props.data.node.id)
+}
 
 function handleBuy() {
   if (state.value !== 'buyable') return
@@ -41,6 +49,7 @@ function handleBuy() {
     :class="['msn-root', `msn-root--${state}`, { 'msn-root--reachable': reachable }]"
     :style="{ '--branch-color': data.color }"
     :title="tooltip"
+    @mouseenter="acknowledge"
   >
     <!-- Unsichtbare Handles im Kreiszentrum → Kanten laufen exakt auf die Mitte zu -->
     <Handle type="target" :position="Position.Top" class="msn-handle" />
@@ -53,6 +62,11 @@ function handleBuy() {
       @click.stop="handleBuy"
     >
       <img :src="MEEP_TREE_PLACEHOLDER_ICON" :alt="data.node.name" class="msn-icon" />
+
+      <!-- Notify-Badge: dieser Skill ist gerade lernbar und noch nicht angesehen -->
+      <Transition name="msn-notify">
+        <span v-if="notifying" class="msn-notify" aria-label="Ready to learn">!</span>
+      </Transition>
 
       <!-- Kosten- / Aktiv-Badge mittig unter dem Kreis -->
       <span v-if="state === 'bought'" class="msn-badge msn-badge--bought">✓</span>
@@ -206,6 +220,62 @@ function handleBuy() {
   width: 48px;
   height: 48px;
   object-fit: contain;
+}
+
+/* ── Notify-Badge über dem Kreis ──────────────────────────── */
+/* Gleiche Sprache wie die RPG-Notifys (Shop/Expedition/Forge): kleiner,
+   pulsierender Kreis — hier in Skill-Tree-Magenta, oben rechts am Node. */
+.msn-notify {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  z-index: 5;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom, #ec4899, #be185d);
+  border: 2px solid #f9a8d4;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  box-shadow:
+    0 0 8px rgba(236, 72, 153, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  animation: msn-notify-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes msn-notify-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 6px rgba(236, 72, 153, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 14px rgba(236, 72, 153, 0.9),
+      0 0 24px rgba(190, 24, 93, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+}
+
+.msn-notify-enter-active,
+.msn-notify-leave-active {
+  transition:
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.18s ease;
+}
+.msn-notify-enter-from,
+.msn-notify-leave-to {
+  transform: scale(0);
+  opacity: 0;
 }
 
 /* ── Badge am Kreisrand ───────────────────────────────────── */

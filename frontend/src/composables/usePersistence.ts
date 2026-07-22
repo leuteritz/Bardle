@@ -228,6 +228,7 @@ export function usePersistence() {
       },
       meepTree: {
         bought: [...meepTreeStore.bought],
+        acknowledged: [...meepTreeStore.acknowledged],
       },
     }
 
@@ -586,6 +587,7 @@ export function usePersistence() {
       // Restore meepTreeStore — missing key (old saves) keeps an empty tree
       const meepTreeStore = useMeepTreeStore()
       meepTreeStore.bought = [...(saved.meepTree?.bought ?? [])]
+      meepTreeStore.acknowledged = [...(saved.meepTree?.acknowledged ?? [])]
 
       // Recalculate derived CPS/CPC after all levels (buildings + solar + forge) are restored
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()

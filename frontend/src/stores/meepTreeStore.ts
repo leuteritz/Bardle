@@ -21,6 +21,10 @@ export const useMeepTreeStore = defineStore('meepTree', {
   state: () => ({
     /** Bought node ids */
     bought: [] as string[],
+    /** Node ids the player has already looked at (hovered) while they were
+     *  learnable — hides that node's "ready to learn" notification until it
+     *  leaves the buyable state and becomes affordable again. */
+    acknowledged: [] as string[],
   }),
 
   getters: {
@@ -71,6 +75,26 @@ export const useMeepTreeStore = defineStore('meepTree', {
         0,
       )
     },
+
+    /** Learnable nodes the player has NOT yet looked at — drives every
+     *  "skill ready" notify badge (header slot, profile tab, and the badge
+     *  hovering over the node itself). */
+    notifyingNodeIds(): string[] {
+      const ids: string[] = []
+      for (const branch of MEEP_TREE_BRANCHES) {
+        for (const n of branch.nodes) {
+          if (this.nodeState(n.id) === 'buyable' && !this.acknowledged.includes(n.id)) {
+            ids.push(n.id)
+          }
+        }
+      }
+      return ids
+    },
+
+    /** Count behind the notify badges — shrinks as nodes get hovered. */
+    unseenBuyableCount(): number {
+      return this.notifyingNodeIds.length
+    },
   },
 
   actions: {
@@ -87,6 +111,21 @@ export const useMeepTreeStore = defineStore('meepTree', {
       const prereqMet = !prev || this.isBought(prev.id)
       if (prereqMet && useGameStore().meeps >= entry.node.cost) return 'buyable'
       return 'locked'
+    },
+
+    /** Mark a node as looked at → removes its notify badge and drops the
+     *  header/tab counts by one. No-op once already acknowledged or bought. */
+    acknowledgeNode(id: string) {
+      if (this.nodeState(id) !== 'buyable') return
+      if (!this.acknowledged.includes(id)) this.acknowledged.push(id)
+    },
+
+    /** Drop acknowledgements for nodes that are no longer learnable so they
+     *  re-notify once they become affordable again. Called from the game tick. */
+    syncAcknowledged() {
+      if (this.acknowledged.length === 0) return
+      const next = this.acknowledged.filter((id) => this.nodeState(id) === 'buyable')
+      if (next.length !== this.acknowledged.length) this.acknowledged = next
     },
 
     /** Prerequisite is met but the node may still be unaffordable. */
@@ -122,6 +161,7 @@ export const useMeepTreeStore = defineStore('meepTree', {
 
     resetTree() {
       this.bought = []
+      this.acknowledged = []
     },
   },
 })

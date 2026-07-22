@@ -35,7 +35,7 @@ const expeditionBadgeCount = computed(
 )
 const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
 const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
-const skillBadgeCount = computed(() => meepTreeStore.buyableNodeCount)
+const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
 
 const menuItems: {
   id: BardTabId

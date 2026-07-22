@@ -540,6 +540,9 @@ export const useGameStore = defineStore('game', {
       combatStore.tick()
       const playerStore = usePlayerStore()
       playerStore.regenTick()
+      // Skill-tree notifications: drop stale acknowledgements so a node that
+      // became unaffordable re-notifies once the player can afford it again.
+      useMeepTreeStore().syncAcknowledged()
     },
 
     // Credits offline Chimes and closes the modal
