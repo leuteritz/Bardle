@@ -46,7 +46,6 @@ const entries = computed<SkinEntry[]>(() => {
 })
 
 const selected = computed(() => skinStore.getSelectedSkin(props.champion))
-const alternateCount = computed(() => entries.value.length - 1)
 
 function equip(entry: SkinEntry) {
   if (entry.id === selected.value) return
@@ -61,11 +60,7 @@ function equip(entry: SkinEntry) {
     <div class="csk-header">
       <Icon icon="game-icons:cape" width="26" height="26" class="csk-header-icon" />
       <div class="csk-header-text">
-        <div class="csk-title">{{ champion }} — Skins</div>
-        <div class="csk-subtitle">
-          {{ alternateCount }} alternate {{ alternateCount === 1 ? 'skin' : 'skins' }} · applies
-          everywhere the champion appears
-        </div>
+        <div class="csk-title">{{ champion }} Skins</div>
       </div>
     </div>
 
@@ -133,13 +128,6 @@ function equip(entry: SkinEntry) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.csk-subtitle {
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: rgba(200, 144, 64, 0.65);
-  margin-top: 3px;
-}
-
 /* ── gallery ── */
 .csk-scroll {
   flex: 1;
