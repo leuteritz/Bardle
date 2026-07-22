@@ -1203,6 +1203,7 @@ export const useBattleStore = defineStore('battle', {
       if (gameStore.isGamePaused) {
         if (battleResult) gameStore.pauseStats.battleWins++
         else gameStore.pauseStats.battleLosses++
+        gameStore.pauseStats.battleLp += actualLpChange
       }
 
       this.totalBattleTime += this.battleTime

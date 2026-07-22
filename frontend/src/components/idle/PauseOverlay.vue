@@ -115,6 +115,10 @@
               <span class="battle-strip__sep">·</span>
               <span class="battle-strip__losses">{{ pauseBattleLosses }}L</span>
             </span>
+            <span
+              class="battle-strip__lp"
+              :class="pauseBattleLp > 0 ? 'lp--pos' : pauseBattleLp < 0 ? 'lp--neg' : 'lp--zero'"
+            >{{ pauseBattleLp > 0 ? '+' : '' }}{{ pauseBattleLp }} LP</span>
             <span v-if="pauseBattleChimes > 0" class="battle-strip__chimes">
               <img src="/img/BardAbilities/BardChime.png" alt="" class="battle-strip__chime-img" />
               +{{ formatNumber(pauseBattleChimes) }}
@@ -183,6 +187,10 @@ import {
   PAUSE_SUN_MIN_DIAMETER,
   PAUSE_SUN_MAX_DIAMETER,
   PAUSE_SUN_VH_FACTOR,
+  PAUSE_COMPACT_VIEWPORT_H,
+  PAUSE_SUN_COMPACT_MIN_DIAMETER,
+  PAUSE_SUN_COMPACT_MAX_DIAMETER,
+  PAUSE_SUN_COMPACT_VH_FACTOR,
 } from '@/config/constants'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
@@ -196,12 +204,11 @@ const planetShopStore = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
 
 function computeSunDiameter(): number {
-  return Math.round(
-    Math.min(
-      PAUSE_SUN_MAX_DIAMETER,
-      Math.max(PAUSE_SUN_MIN_DIAMETER, window.innerHeight * PAUSE_SUN_VH_FACTOR),
-    ),
-  )
+  const compact = window.innerHeight <= PAUSE_COMPACT_VIEWPORT_H
+  const min = compact ? PAUSE_SUN_COMPACT_MIN_DIAMETER : PAUSE_SUN_MIN_DIAMETER
+  const max = compact ? PAUSE_SUN_COMPACT_MAX_DIAMETER : PAUSE_SUN_MAX_DIAMETER
+  const factor = compact ? PAUSE_SUN_COMPACT_VH_FACTOR : PAUSE_SUN_VH_FACTOR
+  return Math.round(Math.min(max, Math.max(min, window.innerHeight * factor)))
 }
 
 const sunDiameter = ref(computeSunDiameter())
@@ -279,6 +286,7 @@ const pauseKills = computed(() => gameStore.pauseStats.kills)
 const pauseBattleWins = computed(() => gameStore.pauseStats.battleWins)
 const pauseBattleLosses = computed(() => gameStore.pauseStats.battleLosses)
 const pauseBattleChimes = computed(() => gameStore.pauseStats.battleChimes)
+const pauseBattleLp = computed(() => gameStore.pauseStats.battleLp)
 const pauseBattleTotal = computed(() => pauseBattleWins.value + pauseBattleLosses.value)
 const pauseMaterialEntries = computed(() =>
   Object.entries(gameStore.pauseStats.materialsEarned).map(([id, amount]) => {
@@ -329,6 +337,8 @@ function particleStyle(i: number): Record<string, string> {
   align-items: center;
   justify-content: center;
   padding: clamp(12px, 3vh, 40px);
+  /* Das Panel endet immer oberhalb der Bottom-Bar (Scoreboard-Streifen) */
+  padding-bottom: calc(var(--bottom-center-strip-h, 79px) + 12px);
   background:
     radial-gradient(ellipse at 50% 110%, rgba(255, 200, 80, 0.08) 0%, transparent 55%),
     rgba(8, 4, 0, 0.85);
@@ -726,6 +736,24 @@ function particleStyle(i: number): Record<string, string> {
   color: rgba(216, 200, 160, 0.35);
   font-weight: 700;
 }
+.battle-strip__lp {
+  font-size: clamp(0.85rem, 1.25vw, 1.1rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lp--pos {
+  color: #74d448;
+  text-shadow: 0 0 10px rgba(116, 212, 72, 0.35);
+}
+.lp--neg {
+  color: #cc6050;
+  text-shadow: 0 0 10px rgba(204, 96, 80, 0.3);
+}
+.lp--zero {
+  color: rgba(216, 200, 160, 0.5);
+}
 .battle-strip__chimes {
   display: inline-flex;
   align-items: center;
@@ -920,6 +948,63 @@ function particleStyle(i: number): Record<string, string> {
   }
   .stat-tile:first-child {
     grid-column: 1 / -1;
+  }
+}
+
+/* ── Kompakt: flache Viewports (Full HD) ──────────────────
+   Threshold = PAUSE_COMPACT_VIEWPORT_H in constants.ts; Sonnen-Band spiegelt
+   PAUSE_SUN_COMPACT_* (120px / 17vh / 190px). */
+@media (max-height: 1100px) {
+  .pause-panel {
+    gap: 10px;
+    padding: 16px 26px 14px;
+  }
+  .pause-title {
+    font-size: 2.2rem;
+  }
+  .pause-timer {
+    margin-top: 4px;
+  }
+  .pause-timer__value {
+    font-size: 1.6rem;
+  }
+  .pause-meta-row {
+    margin-top: 6px;
+    gap: 16px;
+  }
+  .meta-chip__value {
+    font-size: 1rem;
+  }
+  .sun-hero {
+    width: clamp(120px, 17vh, 190px);
+    height: clamp(120px, 17vh, 190px);
+  }
+  .sun-phase-label {
+    margin-top: -8px;
+    font-size: 1rem;
+  }
+  .chime-readout {
+    gap: 10px;
+  }
+  .chime-img {
+    width: 44px;
+    height: 44px;
+  }
+  .chime-value {
+    font-size: 2rem;
+  }
+  .stat-grid {
+    grid-auto-rows: 68px;
+    gap: 8px;
+  }
+  .battle-strip {
+    padding: 7px 12px;
+  }
+  .callout {
+    padding: 5px 12px 5px 6px;
+  }
+  .continue-btn {
+    padding: 9px 0;
   }
 }
 

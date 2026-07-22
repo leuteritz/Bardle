@@ -978,6 +978,15 @@ export const PAUSE_SUN_MIN_DIAMETER = 160
 export const PAUSE_SUN_MAX_DIAMETER = 300
 export const PAUSE_SUN_VH_FACTOR = 0.24
 
+/** Compact band for flat viewports (Full HD): below this viewport height the pause
+ *  overlay switches to its compact layout and the sun shrinks so the panel never
+ *  reaches the bottom bar. Keep in sync with the @media (max-height) block in
+ *  PauseOverlay.vue. */
+export const PAUSE_COMPACT_VIEWPORT_H = 1100
+export const PAUSE_SUN_COMPACT_MIN_DIAMETER = 120
+export const PAUSE_SUN_COMPACT_MAX_DIAMETER = 190
+export const PAUSE_SUN_COMPACT_VH_FACTOR = 0.17
+
 export interface SunGrowthStage {
   stage: number
   chimesThreshold: number
