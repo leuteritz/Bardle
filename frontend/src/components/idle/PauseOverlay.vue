@@ -109,55 +109,52 @@
             </div>
           </div>
 
-          <!-- Auto-battle record during the pause -->
-          <div v-if="pauseBattleTotal > 0" class="battle-strip">
+          <!-- Auto-battle record during the pause — feste Höhe, Werte poppen ein -->
+          <div class="battle-strip">
             <span class="battle-strip__label">
               <Icon icon="game-icons:battle-gear" width="14" height="14" class="battle-strip__icon" aria-hidden="true" />
               Auto Battle
             </span>
-            <span class="battle-strip__record">
-              <span class="battle-strip__wins">{{ pauseBattleWins }}W</span>
-              <span class="battle-strip__sep">·</span>
-              <span class="battle-strip__losses">{{ pauseBattleLosses }}L</span>
-            </span>
-            <span
-              class="battle-strip__lp"
-              :class="pauseBattleLp > 0 ? 'lp--pos' : pauseBattleLp < 0 ? 'lp--neg' : 'lp--zero'"
-            >{{ pauseBattleLp > 0 ? '+' : '' }}{{ pauseBattleLp }} LP</span>
-            <span v-if="pauseBattleChimes > 0" class="battle-strip__chimes">
-              <img src="/img/BardAbilities/BardChime.png" alt="" class="battle-strip__chime-img" />
-              +{{ formatNumber(pauseBattleChimes) }}
-            </span>
+            <template v-if="pauseBattleTotal > 0">
+              <span class="battle-strip__record">
+                <span class="battle-strip__wins">{{ pauseBattleWins }}W</span>
+                <span class="battle-strip__sep">·</span>
+                <span class="battle-strip__losses">{{ pauseBattleLosses }}L</span>
+              </span>
+              <span
+                class="battle-strip__lp"
+                :class="pauseBattleLp > 0 ? 'lp--pos' : pauseBattleLp < 0 ? 'lp--neg' : 'lp--zero'"
+              >{{ pauseBattleLp > 0 ? '+' : '' }}{{ pauseBattleLp }} LP</span>
+              <span v-if="pauseBattleChimes > 0" class="battle-strip__chimes">
+                <img src="/img/BardAbilities/BardChime.png" alt="" class="battle-strip__chime-img" />
+                +{{ formatNumber(pauseBattleChimes) }}
+              </span>
+            </template>
+            <span v-else class="battle-strip__idle">No battles finished yet</span>
           </div>
 
-          <!-- Awaiting on return -->
-          <div v-if="hasCallouts" class="callout-section">
+          <!-- Awaiting on return — immer gerendert mit fester Zeilenhöhe, damit
+               aufpoppende Badges die Panel-Höhe (und den Fit-Scale) nie ändern -->
+          <div class="callout-section">
             <span class="callout-heading">Awaiting your return</span>
-            <div class="callout-row">
-              <div v-if="isPlanetDiscovered" class="callout callout--champion">
+            <TransitionGroup
+              v-if="callouts.length > 0"
+              tag="div"
+              name="callout-pop"
+              class="callout-row"
+            >
+              <div v-for="c in callouts" :key="c.key" class="callout" :class="c.cls">
                 <span class="callout-orb" aria-hidden="true">
-                  <Icon icon="game-icons:barbute" width="16" height="16" class="callout-orb__icon" />
-                </span>
-                <span class="callout__text">Champion found</span>
-              </div>
-              <div v-if="gameStore.pendingAugmentSelections.length > 0" class="callout callout--level">
-                <span class="callout-orb" aria-hidden="true">
-                  <Icon icon="game-icons:upgrade" width="16" height="16" class="callout-orb__icon" />
+                  <Icon :icon="c.icon" width="16" height="16" class="callout-orb__icon" />
                 </span>
                 <span class="callout__text">
-                  Level-Up
-                  <span class="callout__count">×{{ gameStore.pendingAugmentSelections.length }}</span>
+                  {{ c.text }}
+                  <span v-if="c.count > 0" class="callout__count">×{{ c.count }}</span>
                 </span>
               </div>
-              <div v-if="pendingStars > 0" class="callout callout--star">
-                <span class="callout-orb" aria-hidden="true">
-                  <Icon icon="game-icons:star-formation" width="16" height="16" class="callout-orb__icon" />
-                </span>
-                <span class="callout__text">
-                  {{ pendingStars === 1 ? 'Star spawned' : 'Stars spawned' }}
-                  <span class="callout__count">×{{ pendingStars }}</span>
-                </span>
-              </div>
+            </TransitionGroup>
+            <div v-else class="callout-row">
+              <span class="callout-empty">All quiet so far — the cosmos drifts on</span>
             </div>
           </div>
 
@@ -311,12 +308,45 @@ const isPlanetDiscovered = computed(
   () => galaxyStore.championTravelState === 'champion_available',
 )
 
-const hasCallouts = computed(
-  () =>
-    isPlanetDiscovered.value ||
-    gameStore.pendingAugmentSelections.length > 0 ||
-    pendingStars.value > 0,
-)
+interface PauseCallout {
+  key: string
+  icon: string
+  text: string
+  count: number
+  cls: string
+}
+
+const callouts = computed<PauseCallout[]>(() => {
+  const list: PauseCallout[] = []
+  if (isPlanetDiscovered.value) {
+    list.push({
+      key: 'champion',
+      icon: 'game-icons:barbute',
+      text: 'Champion found',
+      count: 0,
+      cls: 'callout--champion',
+    })
+  }
+  if (gameStore.pendingAugmentSelections.length > 0) {
+    list.push({
+      key: 'level',
+      icon: 'game-icons:upgrade',
+      text: 'Level-Up',
+      count: gameStore.pendingAugmentSelections.length,
+      cls: 'callout--level',
+    })
+  }
+  if (pendingStars.value > 0) {
+    list.push({
+      key: 'stars',
+      icon: 'game-icons:star-formation',
+      text: pendingStars.value === 1 ? 'Star spawned' : 'Stars spawned',
+      count: pendingStars.value,
+      cls: 'callout--star',
+    })
+  }
+  return list
+})
 
 function unpause() {
   window.focus()
@@ -719,10 +749,17 @@ function particleStyle(i: number): Record<string, string> {
   justify-content: space-between;
   gap: clamp(10px, 1.4vw, 16px);
   width: 100%;
-  padding: clamp(8px, 1.1vh, 11px) clamp(12px, 1.6vw, 16px);
+  height: 40px;
+  padding: 0 clamp(12px, 1.6vw, 16px);
   background: rgba(255, 200, 80, 0.05);
   border: 1px solid rgba(122, 78, 32, 0.55);
   border-radius: 12px;
+}
+.battle-strip__idle {
+  font-size: clamp(0.68rem, 0.95vw, 0.78rem);
+  font-style: italic;
+  letter-spacing: 0.06em;
+  color: rgba(216, 200, 160, 0.32);
 }
 .battle-strip__label {
   display: inline-flex;
@@ -813,17 +850,30 @@ function particleStyle(i: number): Record<string, string> {
   text-transform: uppercase;
   color: rgba(216, 200, 160, 0.42);
 }
+/* Feste Höhe: reservierter Platz, egal ob 0 oder 3 Badges — das Panel bleibt stabil */
 .callout-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: center;
   gap: 8px;
+  height: 42px;
+  width: 100%;
+  overflow: hidden;
+}
+.callout-empty {
+  font-size: clamp(0.68rem, 0.95vw, 0.78rem);
+  font-style: italic;
+  letter-spacing: 0.06em;
+  color: rgba(216, 200, 160, 0.32);
 }
 /* One shared callout style — modifiers only swap the accent color (--co-color). */
 .callout {
   position: relative;
   display: inline-flex;
   align-items: center;
+  min-width: 0;
+  flex-shrink: 1;
   gap: 9px;
   padding: 7px 16px 7px 8px;
   border-radius: 999px;
@@ -893,6 +943,9 @@ function particleStyle(i: number): Record<string, string> {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .callout__count {
   font-size: 1.05em;
@@ -900,6 +953,29 @@ function particleStyle(i: number): Record<string, string> {
   color: var(--co-color);
   font-variant-numeric: tabular-nums;
   text-shadow: 0 0 10px color-mix(in srgb, var(--co-color) 55%, transparent);
+}
+
+/* Badge-Pop: neue Callouts federn in die reservierte Zeile ein */
+.callout-pop-enter-active {
+  transition:
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.25s ease;
+}
+.callout-pop-enter-from {
+  opacity: 0;
+  transform: scale(0.5);
+}
+.callout-pop-leave-active {
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+.callout-pop-leave-to {
+  opacity: 0;
+  transform: scale(0.7);
+}
+.callout-pop-move {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ── Continue button ──────────────────────────────────── */
@@ -976,6 +1052,11 @@ function particleStyle(i: number): Record<string, string> {
   .callout-orb__icon,
   .pause-timer__value {
     animation: none;
+  }
+  .callout-pop-enter-active,
+  .callout-pop-leave-active,
+  .callout-pop-move {
+    transition: opacity 0.15s;
   }
   .continue-btn,
   .pause-fade-enter-active,
