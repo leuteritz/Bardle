@@ -54,7 +54,7 @@ function handleBuy() {
     >
       <img :src="MEEP_TREE_PLACEHOLDER_ICON" :alt="data.node.name" class="msn-icon" />
 
-      <!-- Kosten- / Aktiv-Badge am unteren Kreisrand -->
+      <!-- Kosten- / Aktiv-Badge mittig unter dem Kreis -->
       <span v-if="state === 'bought'" class="msn-badge msn-badge--bought">✓</span>
       <span v-else class="msn-badge" :class="`msn-badge--${state}`">
         <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="msn-badge__icon" />
@@ -209,15 +209,17 @@ function handleBuy() {
 }
 
 /* ── Badge am Kreisrand ───────────────────────────────────── */
+/* Meep-Kosten als gerahmter Pill-Badge (Icon + Zahl) komplett unterhalb des
+   Kreises, horizontal zentriert — überlappt den Kreisrand nicht. */
 .msn-badge {
   position: absolute;
-  bottom: -11px;
+  top: calc(100% + 5px);
   left: 50%;
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 1px 8px;
+  gap: 4px;
+  padding: 1px 9px;
   border-radius: 999px;
   border: 1px solid var(--rpg-border-row);
   background: var(--rpg-bg-deep);
@@ -255,8 +257,10 @@ function handleBuy() {
 }
 
 /* ── Label unter dem Kreis ────────────────────────────────── */
+/* Genug Abstand, damit der Badge (endet ~27px unter dem Kreis) nicht mit dem
+   Node-Namen kollidiert. */
 .msn-label {
-  margin-top: 14px;
+  margin-top: 34px;
   display: flex;
   flex-direction: column;
   align-items: center;

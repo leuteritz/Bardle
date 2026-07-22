@@ -12,8 +12,8 @@ export const MEEP_TREE_PLACEHOLDER_ICON = '/img/BardAbilities/Bard-128.png'
 /** Meep cost badge icon (pre-scaled, shown at ~14px in every node badge). */
 export const MEEP_TREE_BADGE_ICON = '/img/BardAbilities/BardMeep-64.png'
 
-/** Start node artwork (pre-scaled 128px variant of BardChime.png). */
-export const MEEP_TREE_START_ICON = '/img/BardAbilities/BardChime-128.png'
+/** Start node artwork (pre-scaled 128px variant of BardMeep.png). */
+export const MEEP_TREE_START_ICON = '/img/BardAbilities/BardMeep-128.png'
 
 /** Folded effect bag produced by the store from all bought nodes. */
 export interface MeepTreeEffects {
