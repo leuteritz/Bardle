@@ -344,7 +344,12 @@
         </div>
 
         <!-- Tier section: header (click to collapse) + its own grid -->
-        <div v-for="group in showChampions ? tierGroups : []" :key="group.tier" class="tier-group">
+        <div
+          v-for="group in showChampions ? tierGroups : []"
+          :key="group.tier"
+          class="tier-group"
+          :data-tier-section="group.tier"
+        >
           <!-- Tier section: collapsible header (click to toggle) + its grid -->
           <div
             class="tier-header"
@@ -1080,12 +1085,10 @@ const shopChampionNames = computed(() =>
     }
 
     // ── Collapsible tier sections ──
-    // All tiers start collapsed EXCEPT the currently active (spawning) tier, so
-    // opening the shop immediately shows the champions the player can meet now.
+    // Every tier starts collapsed when the shop opens; the "Champions" quick-jump
+    // expands the highest unlocked tier on demand.
     const ALL_TIER_KEYS = CHAMPION_TIERS_BY_STAR.map((t) => t.starLevel)
-    const collapsedTiers = ref(
-      new Set<number>(ALL_TIER_KEYS.filter((t) => t !== galaxyStore.requiredStarLevel)),
-    )
+    const collapsedTiers = ref(new Set<number>(ALL_TIER_KEYS))
     // When a new tier becomes active (galaxy progress) while the shop is open,
     // expand it right away.
     watch(
@@ -1161,8 +1164,9 @@ const shopChampionNames = computed(() =>
       node.style.height = '0'
     }
 
-    // Auto-open the tier of any freshly-unlocked (recruitable) champion so the new
-    // champion is visible among its tier — mirrors the "New champion" badge set.
+    // Auto-open the tier of a champion that unlocks WHILE the shop is open so
+    // the new champion is visible among its tier — mirrors the "New champion"
+    // badge set. Not immediate: on open every tier stays collapsed.
     watch(
       () => battleStore.newlyUnlockedChampions,
       (names) => {
@@ -1173,7 +1177,7 @@ const shopChampionNames = computed(() =>
         }
         collapsedTiers.value = next
       },
-      { immediate: true, deep: true },
+      { deep: true },
     )
 
     const crossRoleChampions = computed(() => {
@@ -1377,6 +1381,21 @@ const shopChampionNames = computed(() =>
       grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
     }
 
+    // Puts the highest unlocked tier's header (freshly expanded) at the very
+    // top of the grid — mirrors scrollToItemsTop for the champion domain.
+    function scrollToTierTop(tier: number) {
+      const grid = gridRef.value
+      if (!grid) return
+      const section = grid.querySelector<HTMLElement>(`[data-tier-section="${tier}"]`)
+      if (!section) return
+      const top =
+        section.getBoundingClientRect().top -
+        grid.getBoundingClientRect().top +
+        grid.scrollTop -
+        SHOP_JUMP_SCROLL_OFFSET_PX
+      grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+    }
+
     let jumpSettleTimer: ReturnType<typeof setTimeout> | null = null
     function jumpTo(target: 'champions' | 'items') {
       const grid = gridRef.value
@@ -1386,11 +1405,30 @@ const shopChampionNames = computed(() =>
       activeJump.value = target
       lockSpy()
       if (target === 'champions') {
+        // The jump lands on the highest unlocked tier, expanded, header at the
+        // top edge of the grid.
+        const unlocked = tierGroups.value.filter((g) => !g.isGalaxyLocked)
+        const highest = unlocked[unlocked.length - 1]
         if (jumpSettleTimer !== null) {
           clearTimeout(jumpSettleTimer)
           jumpSettleTimer = null
         }
-        grid.scrollTo({ top: 0, behavior: 'smooth' })
+        if (!highest) {
+          grid.scrollTo({ top: 0, behavior: 'smooth' })
+          return
+        }
+        if (collapsedTiers.value.has(highest.tier)) {
+          const next = new Set(collapsedTiers.value)
+          next.delete(highest.tier)
+          collapsedTiers.value = next
+        }
+        nextTick(() => scrollToTierTop(highest.tier))
+        // Correct the position once the expand animation settled (same trick
+        // as the items jump below).
+        jumpSettleTimer = setTimeout(() => {
+          jumpSettleTimer = null
+          scrollToTierTop(highest.tier)
+        }, SHOP_JUMP_EXPAND_SETTLE_MS)
         return
       }
       // The jump always lands on an OPEN first category (Weapons), header at
