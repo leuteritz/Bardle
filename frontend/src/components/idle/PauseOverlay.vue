@@ -523,6 +523,9 @@ function particleStyle(i: number): Record<string, string> {
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  /* Feste Zeilenhöhe: alle drei Tiles exakt gleich groß, egal wie viel
+     Inhalt (HP-Leiste, Material-Chips) eine einzelne Kachel hat. */
+  grid-auto-rows: clamp(84px, 11vh, 104px);
   gap: clamp(8px, 1.2vw, 12px);
   width: 100%;
 }
@@ -534,7 +537,9 @@ function particleStyle(i: number): Record<string, string> {
   text-align: center;
   gap: 7px;
   padding: clamp(10px, 1.4vh, 14px) clamp(10px, 1.4vw, 14px);
-  min-height: clamp(64px, 9vh, 84px);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background: rgba(255, 200, 80, 0.05);
   border: 1px solid rgba(122, 78, 32, 0.55);
   border-radius: 12px;
