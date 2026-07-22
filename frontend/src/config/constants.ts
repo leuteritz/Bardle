@@ -622,6 +622,12 @@ export const MOVE_FIGHT_GATHER_LEAD_T = 80
 export const MOVE_SIEGE_HOLD_T = 120
 /** Default travel duration of a movement order */
 export const MOVE_ORDER_TRAVEL_T = 120
+/** Game-seconds before a kill that its killer AND victim converge on the kill
+ *  spot — guarantees an enemy dot is adjacent at the moment of every death. */
+export const MOVE_KILL_CONVERGE_LEAD_T = 70
+/** Game-seconds the killer lingers over the corpse after a kill (so the map
+ *  clearly shows who scored it before both move on). */
+export const MOVE_KILL_KILLER_HOLD_T = 55
 // ── Final push choreography (endgame at the 50:00 clock mark) ──────────────
 /** Game-second the endgame push begins — 50:00 on the match clock */
 export const FINAL_PUSH_START_T = 3000

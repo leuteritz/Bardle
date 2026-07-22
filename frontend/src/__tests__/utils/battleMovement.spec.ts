@@ -11,7 +11,6 @@ import {
   RED_FOUNTAIN,
   BLUE_NEXUS,
   RED_NEXUS,
-  MOVE_RESPAWN_WALK_SECONDS,
   BATTLE_TOTAL_GAME_SECONDS,
   FINAL_PUSH_START_T,
   FINAL_PUSH_DEFENDER_LEAD_T,
@@ -56,16 +55,28 @@ describe('buildMovementSchedules', () => {
     }
   })
 
-  it('a killed champion is at its fountain right after the kill and walks back', () => {
-    const kill = timeline.events.find((e) => e.type === 'kill' && e.team === 2)
+  it('a killed champion dies at the kill spot, then treks back via its fountain', () => {
+    const kill = timeline.events.find((e) => e.type === 'kill' && e.team === 2 && e.location)
     expect(kill).toBeDefined()
     const victimIdx = kill!.victimIdx ?? 0
     const sched = schedules.t1[victimIdx]
+    // At the moment of death the victim is drawn at the kill location (an enemy
+    // is right there), NOT teleported to base.
     const atDeath = positionAt(sched, kill!.t + 1)
     expect(atDeath.kind).toBe('respawn-walk')
-    expect(Math.hypot(atDeath.x - BLUE_FOUNTAIN.x, atDeath.y - BLUE_FOUNTAIN.y)).toBeLessThan(8)
-    const midWalk = positionAt(sched, kill!.t + MOVE_RESPAWN_WALK_SECONDS / 2)
-    expect(Math.hypot(midWalk.x - BLUE_FOUNTAIN.x, midWalk.y - BLUE_FOUNTAIN.y)).toBeGreaterThan(5)
+    expect(Math.hypot(atDeath.x - kill!.location!.x, atDeath.y - kill!.location!.y)).toBeLessThan(8)
+    // The respawn-walk segment starts at the kill spot and routes back through
+    // the champion's own fountain before returning to the action.
+    const seg = sched.find(
+      (s) => s.kind === 'respawn-walk' && kill!.t >= s.tStart && kill!.t <= s.tEnd,
+    )
+    expect(seg).toBeDefined()
+    expect(
+      Math.hypot(seg!.path[0].x - kill!.location!.x, seg!.path[0].y - kill!.location!.y),
+    ).toBeLessThan(6)
+    expect(
+      seg!.path.some((p) => Math.hypot(p.x - BLUE_FOUNTAIN.x, p.y - BLUE_FOUNTAIN.y) < 2),
+    ).toBe(true)
   })
 
   it('the winning team ends at the enemy nexus', () => {
@@ -120,7 +131,9 @@ describe('buildMovementSchedules', () => {
     for (const seed of [1, 42, 1337]) {
       const tl = generateTimeline(seed, 0.55)
       const scheds = buildMovementSchedules(tl, seed)
-      const ev = tl.events.find((e) => (e.type === 'turret' || e.type === 'inhibitor') && e.participants)!
+      const ev = tl.events.find(
+        (e) => (e.type === 'turret' || e.type === 'inhibitor') && e.participants,
+      )!
       const attackers = ev.team === 1 ? ev.participants!.t1 : ev.participants!.t2
       const teamScheds = ev.team === 1 ? scheds.t1 : scheds.t2
       let minDist = Infinity

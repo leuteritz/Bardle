@@ -11,6 +11,8 @@ import {
   MOVE_FIGHT_GATHER_LEAD_T,
   MOVE_SIEGE_HOLD_T,
   MOVE_ORDER_TRAVEL_T,
+  MOVE_KILL_CONVERGE_LEAD_T,
+  MOVE_KILL_KILLER_HOLD_T,
   FINAL_PUSH_START_T,
   FINAL_PUSH_STAGGER_T,
   FINAL_PUSH_DEFENDER_LEAD_T,
@@ -153,7 +155,12 @@ function buildChampionSchedule(
       })
     }
     // attackers siege the structure they are about to destroy (direct path, like a fight)
-    if ((e.type === 'turret' || e.type === 'inhibitor') && e.location && inFight && e.team === team) {
+    if (
+      (e.type === 'turret' || e.type === 'inhibitor') &&
+      e.location &&
+      inFight &&
+      e.team === team
+    ) {
       orders.push({
         t: Math.max(0, e.t - MOVE_FIGHT_GATHER_LEAD_T),
         location: jittered(e.location, rng, 2),
@@ -161,6 +168,25 @@ function buildChampionSchedule(
         kind: 'fight',
         priority: true,
       })
+    }
+    // Every kill drags its killer AND its victim onto the kill spot just before
+    // it lands, so a death is never drawn with no enemy nearby. Group fights
+    // resolve naturally: several kills share one location, gathering everyone
+    // involved at that point. Priority so it preempts any lane/roam drift.
+    if (e.type === 'kill' && e.location) {
+      const isKiller = e.team === team && e.killerIdx === idx
+      const isVictim = e.team !== team && e.victimIdx === idx
+      if (isKiller || isVictim) {
+        orders.push({
+          t: Math.max(0, e.t - MOVE_KILL_CONVERGE_LEAD_T),
+          location: jittered(e.location, rng, isKiller ? 2.5 : 1.5),
+          // killer lingers over the corpse; the victim only needs to be there at death
+          holdUntil: isKiller ? e.t + MOVE_KILL_KILLER_HOLD_T : e.t,
+          kind: 'fight',
+          priority: true,
+          travelT: MOVE_KILL_CONVERGE_LEAD_T,
+        })
+      }
     }
   }
 
@@ -200,7 +226,11 @@ function buildChampionSchedule(
     }
   } else {
     // laners drift around their hold point now and then
-    for (let t = MOVE_WALKOUT_END_T + 120; t < TIMELINE_NEXUS_FALL_T - 500; t += 320 + Math.floor(rng() * 260)) {
+    for (
+      let t = MOVE_WALKOUT_END_T + 120;
+      t < TIMELINE_NEXUS_FALL_T - 500;
+      t += 320 + Math.floor(rng() * 260)
+    ) {
       orders.push({
         t,
         location: laneHoldPoint(role, team, rng),
@@ -266,10 +296,12 @@ function buildChampionSchedule(
 
   orders.sort((a, b) => a.t - b.t)
 
-  // 3) Deaths interrupt everything: snap to fountain, then walk back
-  const deaths: number[] = []
+  // 3) Deaths interrupt everything: fall where killed, then trek back
+  const deaths: { t: number; location?: MapPoint }[] = []
   for (const e of timeline.events) {
-    if (e.type === 'kill' && e.victimIdx === idx && e.team !== team) deaths.push(e.t)
+    if (e.type === 'kill' && e.victimIdx === idx && e.team !== team) {
+      deaths.push({ t: e.t, location: e.location })
+    }
   }
 
   // 4) Convert to segments
@@ -279,7 +311,11 @@ function buildChampionSchedule(
   const jungleWalkoutTarget = teamBuffEvents[0]?.location ?? circuit[0]
   const walkoutPath =
     role === 'jungle'
-      ? [fountain, ...subPath(lanePath, team === 1 ? 0.06 : 0.94, team === 1 ? 0.2 : 0.8, 3).slice(1), { ...jungleWalkoutTarget }]
+      ? [
+          fountain,
+          ...subPath(lanePath, team === 1 ? 0.06 : 0.94, team === 1 ? 0.2 : 0.8, 3).slice(1),
+          { ...jungleWalkoutTarget },
+        ]
       : team === 1
         ? subPath(lanePath, 0, holdFrac)
         : subPath(lanePath, 1, holdFrac)
@@ -293,19 +329,27 @@ function buildChampionSchedule(
     const path = order.via
       ? [cursorPos, ...order.via.map((p) => jittered(p, rng, 1.5)), order.location]
       : [cursorPos, jittered(midpoint(cursorPos, order.location), rng, 5), order.location]
-    const travelEnd = Math.min(order.holdUntil, travelStart + (order.travelT ?? MOVE_ORDER_TRAVEL_T))
+    const travelEnd = Math.min(
+      order.holdUntil,
+      travelStart + (order.travelT ?? MOVE_ORDER_TRAVEL_T),
+    )
     segments.push({ tStart: travelStart, tEnd: travelEnd, path, kind: order.kind })
     cursorPos = order.location
     cursorT = Math.max(travelEnd, order.holdUntil)
   }
 
   // splice death interruptions in
-  for (const deathT of deaths) {
-    const returnTo = positionFromSegments(segments, deathT + MOVE_RESPAWN_WALK_SECONDS + 1) ?? cursorPos
+  for (const { t: deathT, location } of deaths) {
+    const returnTo =
+      positionFromSegments(segments, deathT + MOVE_RESPAWN_WALK_SECONDS + 1) ?? cursorPos
+    // Die AT the kill spot (the converge order put both fighters there), then
+    // fall back through the fountain and walk out again — the death reads at
+    // the skirmish, not teleported to base.
+    const deathSpot = location ? jittered(location, rng, 1.5) : fountain
     segments.push({
       tStart: deathT,
       tEnd: deathT + MOVE_RESPAWN_WALK_SECONDS,
-      path: [fountain, jittered(midpoint(fountain, returnTo), rng, 4), returnTo],
+      path: [deathSpot, fountain, jittered(midpoint(fountain, returnTo), rng, 4), returnTo],
       kind: 'respawn-walk',
     })
   }
