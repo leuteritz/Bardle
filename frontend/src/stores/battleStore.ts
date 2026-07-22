@@ -2389,6 +2389,11 @@ export const useBattleStore = defineStore('battle', {
       this.focusedChampionId = this.focusedChampionId === key ? '' : key
     },
 
+    /** Drop the champion spotlight (e.g. player clicked the map). */
+    clearFocusedChampion() {
+      this.focusedChampionId = ''
+    },
+
     stopAutoBattle() {
       this.autoBattleEnabled = false
       if (this.autoBattleTimer) clearTimeout(this.autoBattleTimer)

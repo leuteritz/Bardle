@@ -1,5 +1,5 @@
 <template>
-  <div class="map-stage">
+  <div class="map-stage" @click="battleStore.clearFocusedChampion()">
     <div class="map-square">
       <img src="/img/minimap.png" alt="Minimap" class="map-bg" />
       <div class="map-vignette" />
