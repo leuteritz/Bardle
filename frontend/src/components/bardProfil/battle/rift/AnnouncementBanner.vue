@@ -448,6 +448,32 @@ const subline = computed(() => {
   50% { text-shadow: 0 0 30px rgba(240, 104, 32, 1); }
 }
 
+/* Full HD / WUXGA (flattest viewports): trim the banner ~18% so it doesn't
+   crowd the board. 2K/4K keep the larger default sizes above. */
+@media (max-height: 1100px) {
+  .banner {
+    gap: clamp(9px, 1.5cqh, 15px);
+    min-width: clamp(240px, 26cqw, 380px);
+    max-width: min(480px, 50cqw);
+    padding: clamp(7px, 1.2cqh, 12px) clamp(18px, 2.2cqw, 34px);
+  }
+  .banner-portrait {
+    width: clamp(38px, 6cqh, 52px);
+    height: clamp(38px, 6cqh, 52px);
+  }
+  .banner-structure-icon {
+    width: clamp(36px, 5.6cqh, 50px);
+    height: clamp(36px, 5.6cqh, 50px);
+  }
+  .banner-headline {
+    font-size: clamp(16px, 2.9cqh, 24px);
+    letter-spacing: 3px;
+  }
+  .banner-sub {
+    font-size: clamp(10px, 1.6cqh, 13px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .banner-sweep,
   .banner-headline,
