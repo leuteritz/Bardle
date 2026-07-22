@@ -10,10 +10,10 @@
             ref="searchInputRef"
             v-model="searchQuery"
             type="text"
-            placeholder="Search champion or trait..."
+            placeholder="Search champions, traits or items..."
             class="rpg-search w-full pl-9 pr-9 py-2.5"
             :aria-expanded="filterOpen"
-            aria-label="Search champions and traits"
+            aria-label="Search champions, traits and items"
             @blur="onSearchBlur"
             @focus="onSearchFocus"
           />
@@ -99,6 +99,29 @@
         >
           <Icon v-if="chip.icon" :icon="chip.icon" class="trait-chip-icon" />
           {{ chip.label }}
+          <span class="chip-dismiss">×</span>
+        </button>
+        <button
+          v-for="cat in activeItemCatChips"
+          :key="'cat-' + cat.id"
+          class="trait-chip trait-chip--active"
+          :style="`--chip-color: ${cat.color}`"
+          :title="`Remove ${cat.label} filter`"
+          @click="toggleItemCat(cat.id)"
+        >
+          <img :src="cat.image" :alt="cat.label" class="role-chip-img" />
+          {{ cat.label }}
+          <span class="chip-dismiss">×</span>
+        </button>
+        <button
+          v-for="r in activeRarityChips"
+          :key="'rar-' + r.id"
+          class="trait-chip trait-chip--active"
+          :style="`--chip-color: ${r.color}`"
+          :title="`Remove ${r.label} filter`"
+          @click="toggleRarity(r.id)"
+        >
+          {{ r.label }}
           <span class="chip-dismiss">×</span>
         </button>
       </div>
@@ -222,6 +245,45 @@
           </TransitionGroup>
         </div>
 
+        <!-- Section: Item Category (items only) -->
+        <div class="filter-divider">
+          <span class="filter-divider-label">Item Category</span>
+        </div>
+        <div class="cs-filter-row cs-filter-row--wrap">
+          <button
+            v-for="cat in ITEM_CATEGORIES"
+            :key="cat.id"
+            class="trait-chip role-chip"
+            :class="{ 'trait-chip--active': activeItemCats.includes(cat.id) }"
+            :style="`--chip-color: ${cat.color}`"
+            :title="cat.label"
+            @click="toggleItemCat(cat.id)"
+          >
+            <img :src="cat.image" :alt="cat.label" class="role-chip-img" />
+            {{ cat.label }}
+            <span v-if="activeItemCats.includes(cat.id)" class="chip-dismiss">×</span>
+          </button>
+        </div>
+
+        <!-- Section: Item Rarity (items only) -->
+        <div class="filter-divider">
+          <span class="filter-divider-label">Rarity</span>
+        </div>
+        <div class="cs-filter-row cs-filter-row--wrap">
+          <button
+            v-for="r in ITEM_RARITIES"
+            :key="r.id"
+            class="trait-chip"
+            :class="{ 'trait-chip--active': activeRarities.includes(r.id) }"
+            :style="`--chip-color: ${r.color}`"
+            :title="`${r.label} items`"
+            @click="toggleRarity(r.id)"
+          >
+            {{ r.label }}
+            <span v-if="activeRarities.includes(r.id)" class="chip-dismiss">×</span>
+          </button>
+        </div>
+
       </div>
       </Transition>
     </div>
@@ -229,26 +291,23 @@
     <!-- ── Champion Grid ── -->
     <div class="flex-1 min-h-0 overflow-y-auto rpg-scrollbar cs-grid">
       <!-- Empty: current role has no matches but cross-role does -->
-      <div
-        v-if="filteredChampions.length === 0 && crossRoleChampions.length > 0"
-        class="cross-role-only-state"
-      >
+      <div v-if="crossRoleOnly" class="cross-role-only-state">
         <p class="empty-label">Not in this role</p>
       </div>
       <!-- Empty: nothing anywhere -->
       <div
-        v-else-if="filteredChampions.length === 0 && crossRoleChampions.length === 0"
+        v-else-if="nothingFound"
         class="flex flex-col items-center justify-center gap-4 py-12"
       >
         <div class="flex items-center justify-center empty-icon-box w-14 h-14">
           <Icon icon="game-icons:magnifying-glass" width="32" height="32" style="color: #7a4e20; opacity: 0.4" />
         </div>
-        <p class="empty-label">No champion found.</p>
+        <p class="empty-label">No results found.</p>
       </div>
 
       <div v-else class="tier-groups">
         <!-- Tier section: header (click to collapse) + its own grid -->
-        <div v-for="group in tierGroups" :key="group.tier" class="tier-group">
+        <div v-for="group in showChampions ? tierGroups : []" :key="group.tier" class="tier-group">
           <!-- Tier section: collapsible header (click to toggle) + its grid -->
           <div
             class="tier-header"
@@ -322,6 +381,57 @@
             </div>
           </Transition>
         </div>
+
+        <!-- ── Item sections: same collapsible headers, one per category ── -->
+        <template v-if="showItems">
+          <div v-if="showChampions" class="cross-role-divider item-shop-divider">
+            <span class="cross-role-divider-label">Items</span>
+          </div>
+          <div v-for="group in itemGroups" :key="'cat-' + group.id" class="tier-group">
+            <div
+              class="tier-header"
+              :class="{ 'is-collapsed': isItemCatCollapsed(group.id) }"
+              :style="{ '--tier-c': group.color }"
+              role="button"
+              tabindex="0"
+              :aria-expanded="!isItemCatCollapsed(group.id)"
+              @click="toggleItemCatSection(group.id)"
+              @keydown.enter.prevent="toggleItemCatSection(group.id)"
+              @keydown.space.prevent="toggleItemCatSection(group.id)"
+            >
+              <span class="tier-header-chevron">▾</span>
+              <img :src="group.image" :alt="group.label" class="item-cat-header-img" />
+              <span class="tier-header-label">{{ group.label }}</span>
+              <span class="tier-header-line"></span>
+              <span class="tier-header-counter">
+                <span class="tier-header-count">{{ group.ownedCount }}/{{ group.totalCount }}</span>
+              </span>
+            </div>
+            <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
+              <div v-show="!isItemCatCollapsed(group.id)" class="tier-body-inner">
+                <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+                  <ItemShopCard
+                    v-for="item in group.items"
+                    :key="item.id"
+                    :id="item.id"
+                    :name="item.name"
+                    :icon="item.icon"
+                    :rarity-label="item.rarityLabel"
+                    :rarity-color="item.rarityColor"
+                    :category-label="group.label"
+                    :category-image="group.image"
+                    :category-color="group.color"
+                    :owned-count="item.ownedCount"
+                    :is-set="!!item.setId"
+                    :buyable="item.buyable"
+                    :selected="selectedItem === item.id"
+                    @select="selectItem"
+                  />
+                </div>
+              </div>
+            </Transition>
+          </div>
+        </template>
       </div>
 
       <!-- ── Cross-role search results ── -->
@@ -358,11 +468,21 @@
     </div>
     </div>
 
-    <!-- ══ Champion detail panel (right side) ══ -->
+    <!-- ══ Detail panel (right side): item or champion / empty state ══ -->
+    <ItemDetailPanel
+      v-if="itemDetail"
+      :detail="itemDetail"
+      :index="selectedIndex"
+      :total="visibleEntries.length"
+      @prev="selectPrev"
+      @next="selectNext"
+      @buy="handleBuyItem"
+    />
     <ChampionDetailPanel
+      v-else
       :detail="detail"
       :index="selectedIndex"
-      :total="visibleChampionList.length"
+      :total="visibleEntries.length"
       @prev="selectPrev"
       @next="selectNext"
       @buy="handleBuy"
@@ -379,6 +499,11 @@ import { useGameStore } from '../../../../stores/gameStore'
 import { useUiStore } from '../../../../stores/uiStore'
 import ChampionShopCard from './ChampionShopCard.vue'
 import ChampionDetailPanel from './ChampionDetailPanel.vue'
+import ItemShopCard from './ItemShopCard.vue'
+import ItemDetailPanel from './ItemDetailPanel.vue'
+import { useItemStore } from '../../../../stores/itemStore'
+import { SHOP_ITEMS, ITEM_CATEGORIES, ITEM_RARITIES } from '../../../../config/items'
+import { ITEM_SETS } from '../../../../config/sets'
 import { getChampionRoles, CHAMPION_ROLES } from '../../../../config/championRoles'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../../config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../../config/championOrigins'
@@ -389,12 +514,18 @@ import { getHomePlanetConfig } from '../../../../config/championHomePlanets'
 import { PLANET_TYPE_NAMES, ROLES, MATERIAL_COLOR } from '../../../../config/constants'
 import { getChampionNames } from '../../../../config/championData'
 import { useActionToast } from '../../../../composables/useActionToast'
-import type { ChampionRole, ShopChampionDetail } from '../../../../types'
+import type {
+  ChampionRole,
+  ShopChampionDetail,
+  ShopItemDetail,
+  ItemCategory,
+  ItemRarity,
+} from '../../../../types'
 
 
 export default defineComponent({
   name: 'ChampionShopComponent',
-  components: { Icon, ChampionShopCard, ChampionDetailPanel },
+  components: { Icon, ChampionShopCard, ChampionDetailPanel, ItemShopCard, ItemDetailPanel },
   props: {
     initialRole: { type: String, default: 'all' },
     showClose: { type: Boolean, default: false },
@@ -408,11 +539,15 @@ export default defineComponent({
     const uiStore = useUiStore()
     const galaxyStore = useGalaxyStore()
     const { showToast } = useActionToast()
+    const itemStore = useItemStore()
     const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
     const activeTraits = ref<string[]>([])
     // Active cosmic-tier filter chip — 'all' or a star level (1..MAX_STAR_LEVEL).
     const activeTier = ref<'all' | number>('all')
+    // Item-domain filter chips (unified shop): categories + rarities, multi-select.
+    const activeItemCats = ref<ItemCategory[]>([])
+    const activeRarities = ref<ItemRarity[]>([])
     const filterOpen = ref(false)
     const searchInputRef = ref<HTMLInputElement | null>(null)
     // Tier chips / sections are the 6 Champion Tiers (weak→strong), not price tiers.
@@ -479,10 +614,24 @@ export default defineComponent({
       activeTraits.value = []
     }
 
-    /** Clears role + tier + trait filters but keeps the search text. */
+    function toggleItemCat(id: ItemCategory) {
+      activeItemCats.value = activeItemCats.value.includes(id)
+        ? activeItemCats.value.filter((c) => c !== id)
+        : [...activeItemCats.value, id]
+    }
+
+    function toggleRarity(id: ItemRarity) {
+      activeRarities.value = activeRarities.value.includes(id)
+        ? activeRarities.value.filter((r) => r !== id)
+        : [...activeRarities.value, id]
+    }
+
+    /** Clears role + tier + trait + item filters but keeps the search text. */
     function clearFilters() {
       activeTraits.value = []
       activeTier.value = 'all'
+      activeItemCats.value = []
+      activeRarities.value = []
       setActiveRole('all')
     }
 
@@ -490,13 +639,20 @@ export default defineComponent({
       searchQuery.value = ''
       activeTraits.value = []
       activeTier.value = 'all'
+      activeItemCats.value = []
+      activeRarities.value = []
       setActiveRole('all')
     }
 
     let blurTimer: ReturnType<typeof setTimeout> | null = null
     function onSearchBlur() {
       blurTimer = setTimeout(() => {
-        if (!searchQuery.value.trim() && activeTraits.value.length === 0) {
+        if (
+          !searchQuery.value.trim() &&
+          activeTraits.value.length === 0 &&
+          activeItemCats.value.length === 0 &&
+          activeRarities.value.length === 0
+        ) {
           filterOpen.value = false
         }
       }, 200)
@@ -906,18 +1062,30 @@ const shopChampionNames = computed(() =>
       else next.add(tier)
       collapsedTiers.value = next
     }
-    // Collapse-all only governs the tiers the player can actually open.
+    // Collapse-all governs the openable tiers plus the item category sections.
     const allTiersCollapsed = computed(() => {
       if (searchOrFilterActive.value) return false
       const unlocked = tierGroups.value.filter((g) => !g.isGalaxyLocked)
-      return unlocked.length > 0 && unlocked.every((g) => collapsedTiers.value.has(g.tier))
+      const itemsCollapsed = ITEM_CATEGORIES.every((c) => collapsedItemCats.value.has(c.id))
+      return (
+        unlocked.length > 0 &&
+        unlocked.every((g) => collapsedTiers.value.has(g.tier)) &&
+        itemsCollapsed
+      )
     })
     function toggleAllTiers() {
       const unlockedKeys = tierGroups.value.filter((g) => !g.isGalaxyLocked).map((g) => g.tier)
       const next = new Set(collapsedTiers.value)
-      if (allTiersCollapsed.value) for (const k of unlockedKeys) next.delete(k)
-      else for (const k of unlockedKeys) next.add(k)
+      const nextCats = new Set(collapsedItemCats.value)
+      if (allTiersCollapsed.value) {
+        for (const k of unlockedKeys) next.delete(k)
+        for (const c of ITEM_CATEGORIES) nextCats.delete(c.id)
+      } else {
+        for (const k of unlockedKeys) next.add(k)
+        for (const c of ITEM_CATEGORIES) nextCats.add(c.id)
+      }
       collapsedTiers.value = next
+      collapsedItemCats.value = nextCats
     }
 
     // Tier expand/collapse animation — animate height 0 ↔ scrollHeight, then clear
@@ -1006,7 +1174,133 @@ const shopChampionNames = computed(() =>
     )
     const hasActiveFilter = computed(
       () =>
+        activeTraits.value.length > 0 ||
+        activeTier.value !== 'all' ||
+        activeRole.value !== 'all' ||
+        activeItemCats.value.length > 0 ||
+        activeRarities.value.length > 0,
+    )
+
+    // ── Unified shop: domain visibility ──
+    // A champion-only filter hides the item sections and vice versa; with no
+    // domain-specific filter (or filters in both domains) both stay visible.
+    const championFiltersActive = computed(
+      () =>
         activeTraits.value.length > 0 || activeTier.value !== 'all' || activeRole.value !== 'all',
+    )
+    const itemFiltersActive = computed(
+      () => activeItemCats.value.length > 0 || activeRarities.value.length > 0,
+    )
+    const showChampions = computed(
+      () => !itemFiltersActive.value || championFiltersActive.value,
+    )
+    const showItems = computed(
+      () => !championFiltersActive.value || itemFiltersActive.value,
+    )
+
+    // ── Items: search + chip filtering, grouped by category ──
+    const RARITY_BY_ID = new Map(ITEM_RARITIES.map((r) => [r.id, r]))
+    const RARITY_RANK = new Map(ITEM_RARITIES.map((r, i) => [r.id, i]))
+
+    const filteredItems = computed(() =>
+      SHOP_ITEMS.filter((item) => {
+        if (activeItemCats.value.length > 0 && !activeItemCats.value.includes(item.category))
+          return false
+        if (activeRarities.value.length > 0 && !activeRarities.value.includes(item.rarity))
+          return false
+        if (searchQuery.value.trim()) {
+          const q = searchQuery.value.toLowerCase().trim()
+          return (
+            item.name.toLowerCase().includes(q) ||
+            item.description.toLowerCase().includes(q) ||
+            item.rarity.includes(q)
+          )
+        }
+        return true
+      }),
+    )
+
+    function canAffordItem(itemId: string): boolean {
+      const item = SHOP_ITEMS.find((i) => i.id === itemId)
+      if (!item) return false
+      if (gameStore.chimes < item.price) return false
+      if (item.materialCost && !inventoryStore.hasMaterials(item.materialCost)) return false
+      return true
+    }
+
+    // Category buckets in ITEM_CATEGORIES order; while searching/filtering only
+    // categories with matches render (mirrors the champion tier sections).
+    // Cards sort rarity → price so progression reads top-to-bottom.
+    const itemGroups = computed(() => {
+      const byCat = new Map<ItemCategory, typeof filteredItems.value>()
+      for (const item of filteredItems.value) {
+        const bucket = byCat.get(item.category) ?? byCat.set(item.category, []).get(item.category)!
+        bucket.push(item)
+      }
+      const cats = searchOrFilterActive.value
+        ? ITEM_CATEGORIES.filter((c) => (byCat.get(c.id)?.length ?? 0) > 0)
+        : ITEM_CATEGORIES
+      return cats.map((c) => ({
+        ...c,
+        ownedCount: SHOP_ITEMS.filter(
+          (i) => i.category === c.id && (itemStore.ownedItems[i.id] ?? 0) > 0,
+        ).length,
+        totalCount: SHOP_ITEMS.filter((i) => i.category === c.id).length,
+        items: (byCat.get(c.id) ?? [])
+          .slice()
+          .sort(
+            (a, b) =>
+              (RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0) ||
+              a.price - b.price,
+          )
+          .map((item) => ({
+            ...item,
+            rarityLabel: RARITY_BY_ID.get(item.rarity)?.label ?? item.rarity,
+            rarityColor: RARITY_BY_ID.get(item.rarity)?.color ?? '#e8c040',
+            ownedCount: itemStore.ownedItems[item.id] ?? 0,
+            buyable: canAffordItem(item.id),
+          })),
+      }))
+    })
+
+    const visibleItemsCount = computed(() =>
+      showItems.value ? itemGroups.value.reduce((sum, g) => sum + g.items.length, 0) : 0,
+    )
+
+    // ── Grid empty states across both domains ──
+    const crossRoleOnly = computed(
+      () =>
+        showChampions.value &&
+        filteredChampions.value.length === 0 &&
+        crossRoleChampions.value.length > 0 &&
+        visibleItemsCount.value === 0,
+    )
+    const nothingFound = computed(
+      () =>
+        (!showChampions.value || filteredChampions.value.length === 0) &&
+        crossRoleChampions.value.length === 0 &&
+        visibleItemsCount.value === 0 &&
+        searchOrFilterActive.value,
+    )
+
+    // ── Collapsible item category sections (all start collapsed) ──
+    const collapsedItemCats = ref(new Set<ItemCategory>(ITEM_CATEGORIES.map((c) => c.id)))
+    function isItemCatCollapsed(cat: ItemCategory): boolean {
+      return searchOrFilterActive.value ? false : collapsedItemCats.value.has(cat)
+    }
+    function toggleItemCatSection(cat: ItemCategory) {
+      const next = new Set(collapsedItemCats.value)
+      if (next.has(cat)) next.delete(cat)
+      else next.add(cat)
+      collapsedItemCats.value = next
+    }
+
+    // ── Active filter summary chips for the item domain ──
+    const activeItemCatChips = computed(() =>
+      ITEM_CATEGORIES.filter((c) => activeItemCats.value.includes(c.id)),
+    )
+    const activeRarityChips = computed(() =>
+      ITEM_RARITIES.filter((r) => activeRarities.value.includes(r.id)),
     )
 
     // ── Active filter summary chips (shown even with the panel collapsed) ──
@@ -1068,15 +1362,18 @@ const shopChampionNames = computed(() =>
     // tierGroups → searchOrFilterActive → hasActiveFilter, so every computed
     // above must already be initialized (TDZ) before it first runs.
     const selectedChampion = ref<string | null>(null)
+    const selectedItem = ref<string | null>(null)
 
     // Flat, tier-ordered list of every champion currently shown in the grid
     // (unlocked tier sections first, cross-role search results appended) —
-    // drives the prev/next navigation in the detail panel.
+    // handleBuy re-points the detail panel through this list.
     const visibleChampionList = computed(() => {
       const names: string[] = []
-      for (const g of tierGroups.value) {
-        if (g.isGalaxyLocked) continue
-        for (const c of g.champions) names.push(c.name)
+      if (showChampions.value) {
+        for (const g of tierGroups.value) {
+          if (g.isGalaxyLocked) continue
+          for (const c of g.champions) names.push(c.name)
+        }
       }
       for (const c of crossRoleChampions.value) {
         if (!names.includes(c.name)) names.push(c.name)
@@ -1084,33 +1381,84 @@ const shopChampionNames = computed(() =>
       return names
     })
 
-    const selectedIndex = computed(() =>
-      selectedChampion.value ? visibleChampionList.value.indexOf(selectedChampion.value) : -1,
-    )
+    // Unified grid order for prev/next: champion tiers → item sections →
+    // cross-role search results (matches the visual top-to-bottom order).
+    type ShopEntry = { kind: 'champion' | 'item'; id: string }
+    const visibleEntries = computed<ShopEntry[]>(() => {
+      const entries: ShopEntry[] = []
+      if (showChampions.value) {
+        for (const g of tierGroups.value) {
+          if (g.isGalaxyLocked) continue
+          for (const c of g.champions) entries.push({ kind: 'champion', id: c.name })
+        }
+      }
+      if (showItems.value) {
+        for (const g of itemGroups.value) {
+          for (const item of g.items) entries.push({ kind: 'item', id: item.id })
+        }
+      }
+      for (const c of crossRoleChampions.value) {
+        if (!entries.some((e) => e.kind === 'champion' && e.id === c.name)) {
+          entries.push({ kind: 'champion', id: c.name })
+        }
+      }
+      return entries
+    })
+
+    const selectedIndex = computed(() => {
+      if (selectedItem.value) {
+        return visibleEntries.value.findIndex(
+          (e) => e.kind === 'item' && e.id === selectedItem.value,
+        )
+      }
+      if (selectedChampion.value) {
+        return visibleEntries.value.findIndex(
+          (e) => e.kind === 'champion' && e.id === selectedChampion.value,
+        )
+      }
+      return -1
+    })
 
     function selectChampion(name: string) {
       selectedChampion.value = name
+      selectedItem.value = null
+    }
+
+    function selectItem(id: string) {
+      selectedItem.value = id
+      selectedChampion.value = null
+    }
+
+    function applyEntry(entry: ShopEntry) {
+      if (entry.kind === 'champion') selectChampion(entry.id)
+      else selectItem(entry.id)
     }
 
     function selectPrev() {
-      const list = visibleChampionList.value
+      const list = visibleEntries.value
       if (list.length === 0) return
       const i = selectedIndex.value
-      selectedChampion.value = list[(i - 1 + list.length) % list.length]
+      applyEntry(list[(i - 1 + list.length) % list.length])
     }
 
     function selectNext() {
-      const list = visibleChampionList.value
+      const list = visibleEntries.value
       if (list.length === 0) return
-      selectedChampion.value = list[(selectedIndex.value + 1) % list.length]
+      applyEntry(list[(selectedIndex.value + 1) % list.length])
     }
 
     // No auto-select: the panel shows its empty state until the player clicks a
     // card. Only clear the selection when it goes stale (filtered out; a bought
     // champion is re-pointed by handleBuy before this runs).
-    watch(visibleChampionList, (list) => {
-      if (selectedChampion.value && !list.includes(selectedChampion.value)) {
+    watch(visibleEntries, (list) => {
+      if (
+        selectedChampion.value &&
+        !list.some((e) => e.kind === 'champion' && e.id === selectedChampion.value)
+      ) {
         selectedChampion.value = null
+      }
+      if (selectedItem.value && !list.some((e) => e.kind === 'item' && e.id === selectedItem.value)) {
+        selectedItem.value = null
       }
     })
 
@@ -1123,6 +1471,17 @@ const shopChampionNames = computed(() =>
         const next = new Set(collapsedTiers.value)
         next.delete(star)
         collapsedTiers.value = next
+      }
+    })
+
+    // Same for items: expand the selected item's category section.
+    watch(selectedItem, (id) => {
+      if (!id) return
+      const item = SHOP_ITEMS.find((i) => i.id === id)
+      if (item && collapsedItemCats.value.has(item.category)) {
+        const next = new Set(collapsedItemCats.value)
+        next.delete(item.category)
+        collapsedItemCats.value = next
       }
     })
 
@@ -1167,6 +1526,63 @@ const shopChampionNames = computed(() =>
         canBuy: canClickBuy(name),
       }
     })
+
+    // Everything the item detail panel renders for the selected item.
+    const itemDetail = computed<ShopItemDetail | null>(() => {
+      const id = selectedItem.value
+      if (!id) return null
+      const item = SHOP_ITEMS.find((i) => i.id === id)
+      if (!item) return null
+      const cat = ITEM_CATEGORIES.find((c) => c.id === item.category)
+      const rar = RARITY_BY_ID.get(item.rarity)
+      const set = item.setId ? ITEM_SETS.find((s) => s.setId === item.setId) : undefined
+      const materials = Object.entries(item.materialCost ?? {}).map(([matId, qty]) => ({
+        id: matId,
+        name: getMaterialName(matId),
+        image: getMaterialImage(matId),
+        need: qty,
+        have: inventoryStore.collectedMaterials[matId] ?? 0,
+        ok: hasEnoughMaterial(matId, qty),
+        color: MATERIAL_COLOR[matId],
+      }))
+      return {
+        id: item.id,
+        name: item.name,
+        icon: item.icon,
+        description: item.description,
+        category: item.category,
+        categoryLabel: cat?.label ?? item.category,
+        categoryImage: cat?.image ?? '',
+        categoryColor: cat?.color ?? '#7a4e20',
+        rarity: item.rarity,
+        rarityLabel: rar?.label ?? item.rarity,
+        rarityColor: rar?.color ?? '#e8c040',
+        ownedCount: itemStore.ownedItems[item.id] ?? 0,
+        set: set
+          ? {
+              name: set.setName,
+              icon: set.icon,
+              description: set.description,
+              active: itemStore.activeSetBonuses.some((b) => b.setId === set.setId),
+            }
+          : null,
+        materials,
+        chimes: {
+          need: item.price,
+          have: gameStore.chimes,
+          ok: gameStore.chimes >= item.price,
+        },
+        canBuy: canAffordItem(item.id),
+      }
+    })
+
+    function handleBuyItem(id: string) {
+      if (!canAffordItem(id)) return
+      const item = SHOP_ITEMS.find((i) => i.id === id)
+      if (!item) return
+      itemStore.buyItem(id)
+      showToast(`${item.name} purchased!`)
+    }
 
     return {
       filteredChampions,
@@ -1237,8 +1653,29 @@ const shopChampionNames = computed(() =>
       selectNext,
       selectedIndex,
       visibleChampionList,
+      visibleEntries,
       detail,
       ROLE_BADGE,
+      // ── Unified shop: items ──
+      ITEM_CATEGORIES,
+      ITEM_RARITIES,
+      activeItemCats,
+      activeRarities,
+      toggleItemCat,
+      toggleRarity,
+      activeItemCatChips,
+      activeRarityChips,
+      showChampions,
+      showItems,
+      itemGroups,
+      crossRoleOnly,
+      nothingFound,
+      isItemCatCollapsed,
+      toggleItemCatSection,
+      selectedItem,
+      selectItem,
+      itemDetail,
+      handleBuyItem,
     }
   },
 })
@@ -1305,9 +1742,23 @@ const shopChampionNames = computed(() =>
    (.is-scrolling set by the modal's scroll container), freeze the card pulse
    glows and skip card hit-testing — otherwise the animated shadows firing
    under the cursor cause per-frame repaints that tank the scroll frame rate. */
-.is-scrolling .champion-card-slot {
+.is-scrolling .champion-card-slot,
+.is-scrolling .item-card-slot {
   pointer-events: none;
   --pulse-play: paused;
+}
+
+/* ── Item sections: category icon in the tier-style header + domain divider ── */
+.item-cat-header-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+}
+.item-shop-divider {
+  margin-top: 18px;
+  margin-bottom: 10px;
 }
 
 /* ── Header-Bar ── */
@@ -1376,7 +1827,8 @@ const shopChampionNames = computed(() =>
 /* Hover-expanded cards can spill past the group box (single-row groups expand
    downward) — lift the paint containment while a card in the group is hovered
    so the expansion isn't clipped. */
-.tier-group:has(.champion-card-slot:hover) {
+.tier-group:has(.champion-card-slot:hover),
+.tier-group:has(.item-card-slot:hover) {
   content-visibility: visible;
 }
 

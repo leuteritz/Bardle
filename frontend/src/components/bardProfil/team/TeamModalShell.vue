@@ -10,8 +10,10 @@ withDefaults(
     size?: 'md' | 'lg' | 'xl'
     /** Hides the title header — content owns the top area, close floats top-right. */
     hideHeader?: boolean
+    /** Suppresses the floating close button — the content renders its own. */
+    hideClose?: boolean
   }>(),
-  { subtitle: '', size: 'lg', hideHeader: false },
+  { subtitle: '', size: 'lg', hideHeader: false, hideClose: false },
 )
 
 const emit = defineEmits<{ close: [] }>()
@@ -23,7 +25,7 @@ const emit = defineEmits<{ close: [] }>()
       <RpgFrame />
       <div class="tms-gold-line" />
       <button
-        v-if="hideHeader"
+        v-if="hideHeader && !hideClose"
         class="tms-close tms-close--floating"
         aria-label="Close"
         @click="emit('close')"

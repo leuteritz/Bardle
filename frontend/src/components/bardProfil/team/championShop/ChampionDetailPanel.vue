@@ -140,9 +140,9 @@
         <div class="cs-detail-empty-box">
           <Icon icon="game-icons:click" width="38" height="38" class="cs-detail-empty-icon" />
         </div>
-        <span class="cs-detail-empty-title">Select a Champion</span>
+        <span class="cs-detail-empty-title">Select a Card</span>
         <span class="cs-detail-empty-text">
-          Click a champion card to view traits, origin, tier and recruit cost.
+          Click a champion or item card to view its details and buy it here.
         </span>
       </div>
     </div>

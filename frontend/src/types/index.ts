@@ -976,3 +976,23 @@ export interface ShopChampionDetail {
   chimes: { need: number; have: number; ok: boolean }
   canBuy: boolean
 }
+
+/** Everything the unified shop's item detail panel renders for one item. */
+export interface ShopItemDetail {
+  id: string
+  name: string
+  icon: string
+  description: string
+  category: ItemCategory
+  categoryLabel: string
+  categoryImage: string
+  categoryColor: string
+  rarity: ItemRarity
+  rarityLabel: string
+  rarityColor: string
+  ownedCount: number
+  set: { name: string; icon: string; description: string; active: boolean } | null
+  materials: ShopDetailMaterial[]
+  chimes: { need: number; have: number; ok: boolean }
+  canBuy: boolean
+}

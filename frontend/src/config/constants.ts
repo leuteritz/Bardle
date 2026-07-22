@@ -2880,7 +2880,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:cycle', // Swap champion button (SigilDetailsPanel)
   'game-icons:shopping-bag', // Shop action button (SigilBoardComponent)
   'game-icons:switch-weapon', // Champion picker modal header (TeamTabComponent)
-  'game-icons:knapsack', // Items shop main tab (TeamTabComponent)
+  'game-icons:knapsack', // Unified shop — item detail "Owned" row (ItemDetailPanel)
   'game-icons:cape', // Skins button (SigilDetailsPanel) + skin gallery modal (ChampionSkinsPanel)
   // Battle tab redesign (landing / rift / honor)
   'game-icons:sword-clash', // COMBAT stat group header (BattleLandingScreen)

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
@@ -19,7 +18,6 @@ import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
 import ChampionSkinsPanel from './ChampionSkinsPanel.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
-import ItemShopComponent from './ItemShopComponent.vue'
 
 type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | 'skins' | null
 
@@ -57,8 +55,6 @@ watch(selectedRole, () => {
 const activeModal = ref<TeamModal>(null)
 const pickerSubSlot = ref(-1)
 const shopRole = ref<ChampionRole | 'all'>('all')
-const shopTab = ref<'champions' | 'items'>('champions')
-const itemShopCategory = ref<ItemCategory>('weapon')
 const equipCategory = ref<ItemCategory>('weapon')
 
 const roleIndex = computed(() => selectedRole.value ?? uiStore.rolesActiveSlot)
@@ -103,7 +99,6 @@ function openPicker(subSlot: number = -1) {
 
 function openShop(role: ChampionRole | 'all' = 'all') {
   shopRole.value = role
-  shopTab.value = 'champions'
   activeModal.value = 'shop'
 }
 
@@ -194,7 +189,6 @@ watch(
     if (!name) return
     const roles = getChampionRoles(name)
     shopRole.value = roles.length > 0 ? roles[0] : 'all'
-    shopTab.value = 'champions'
     activeModal.value = 'shop'
   },
   { immediate: true },
@@ -311,63 +305,22 @@ onUnmounted(() => {
       icon="game-icons:barbute"
       size="xl"
       hide-header
+      hide-close
       @close="closeModal"
     >
-      <!-- primary division: Champions vs Items -->
-      <div class="team-shop-switch">
-        <button
-          class="shop-switch-btn"
-          :class="{ 'shop-switch-btn--active': shopTab === 'champions' }"
-          @click="shopTab = 'champions'"
-        >
-          <Icon icon="game-icons:barbute" width="26" height="26" class="shop-switch-icon" />
-          Champions
-        </button>
-        <button
-          class="shop-switch-btn"
-          :class="{ 'shop-switch-btn--active': shopTab === 'items' }"
-          @click="shopTab = 'items'"
-        >
-          <Icon icon="game-icons:knapsack" width="26" height="26" class="shop-switch-icon" />
-          Items
-        </button>
-      </div>
-      <div v-if="shopTab === 'items'" class="team-shop-tabs">
-        <button
-          v-for="cat in [
-            { id: 'weapon', label: 'Weapon' },
-            { id: 'armor', label: 'Armor' },
-            { id: 'artefact', label: 'Artefact' },
-          ]"
-          :key="cat.id"
-          class="modal-tab"
-          :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
-          @click="itemShopCategory = cat.id as ItemCategory"
-        >
-          <img
-            :src="`/img/itemShop/${cat.id}.png`"
-            :alt="cat.label"
-            width="18"
-            height="18"
-            loading="eager"
-            class="team-shop-tab-img"
-          />
-          {{ cat.label }}
-        </button>
-      </div>
+      <!-- Unified shop: champions + items in one grid; the close button lives
+           in the shop's own search row (the modal has no header of its own). -->
       <div
         class="team-shop-content"
         :class="{ 'is-scrolling': shopScrolling }"
         @scroll.passive="onShopScroll"
       >
         <ChampionShopComponent
-          v-if="shopTab === 'champions'"
           :initial-role="shopRole"
-          :show-close="false"
+          show-close
           @role-change="handleShopRoleChange"
           @close="closeModal"
         />
-        <ItemShopComponent v-else :category="itemShopCategory" />
       </div>
     </TeamModalShell>
 
@@ -430,100 +383,7 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
-/* shop modal — primary Champions/Items switch (headerless shell) */
-.team-shop-switch {
-  display: flex;
-  gap: 10px;
-  padding: 12px 58px 10px 14px; /* right inset clears the floating close button */
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
-  flex-shrink: 0;
-}
-.shop-switch-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  height: 54px;
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.5);
-  background: rgba(14, 10, 4, 0.85);
-  border: 2px solid rgba(92, 51, 16, 0.5);
-  border-radius: 5px;
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    border-color 0.15s,
-    background 0.15s,
-    box-shadow 0.15s;
-}
-.shop-switch-btn:hover {
-  color: #e8c040;
-  border-color: rgba(200, 144, 64, 0.7);
-}
-.shop-switch-btn--active {
-  color: #f0d870;
-  background: rgba(30, 16, 6, 0.97);
-  border-color: #c89040;
-  box-shadow:
-    inset 0 0 0 1px rgba(92, 51, 16, 0.5),
-    0 0 12px rgba(232, 192, 64, 0.22);
-}
-.shop-switch-icon {
-  flex-shrink: 0;
-}
-
-/* item category sub-tabs */
-.team-shop-tabs {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(92, 51, 16, 0.5);
-  background: #1e1006;
-  flex-shrink: 0;
-}
-.team-shop-tabs .modal-tab {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 6px 14px;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.55);
-  background: rgba(14, 10, 4, 0.85);
-  border: 1px solid rgba(92, 51, 16, 0.4);
-  border-radius: 4px;
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    border-color 0.15s,
-    background 0.15s;
-}
-.team-shop-tabs .modal-tab:hover {
-  color: #e8c040;
-  border-color: rgba(122, 78, 32, 0.8);
-}
-.team-shop-tabs .modal-tab--active {
-  color: #f0d870;
-  background: rgba(30, 16, 6, 0.97);
-  border-color: #c89040;
-  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
-}
-.team-shop-tab-img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
+/* unified shop modal content (the shop owns its own header row + close) */
 .team-shop-content {
   flex: 1;
   min-height: 0;

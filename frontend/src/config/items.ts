@@ -1,4 +1,33 @@
-import type { ShopItem } from '../types'
+import type { ShopItem, ItemCategory, ItemRarity } from '../types'
+
+/* ── Unified shop: item category + rarity definitions (chips, section headers,
+   detail panel). Images are the former item-shop tab icons. ── */
+export interface ItemCategoryDef {
+  id: ItemCategory
+  label: string
+  image: string
+  color: string
+}
+
+export const ITEM_CATEGORIES: ItemCategoryDef[] = [
+  { id: 'weapon', label: 'Weapons', image: '/img/itemShop/weapon.png', color: '#e07850' },
+  { id: 'armor', label: 'Armor', image: '/img/itemShop/armor.png', color: '#7ea8d8' },
+  { id: 'artefact', label: 'Artefacts', image: '/img/itemShop/artefact.png', color: '#b87ed8' },
+]
+
+export interface ItemRarityDef {
+  id: ItemRarity
+  label: string
+  color: string
+}
+
+/* Colors mirror the --rpg-rarity-* CSS variables in rpg-theme.css. */
+export const ITEM_RARITIES: ItemRarityDef[] = [
+  { id: 'common', label: 'Common', color: '#5b8dd9' },
+  { id: 'rare', label: 'Rare', color: '#a87ed8' },
+  { id: 'epic', label: 'Epic', color: '#d9a03e' },
+  { id: 'legendary', label: 'Legendary', color: '#e8c040' },
+]
 
 export const SHOP_ITEMS: ShopItem[] = [
   // ── Weapons: Swords ──────────────────────────────────────────────────────────
