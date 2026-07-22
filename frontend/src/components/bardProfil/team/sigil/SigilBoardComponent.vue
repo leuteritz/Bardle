@@ -19,8 +19,7 @@ import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
-import NewChampionsTip from '@/components/ui/NewChampionsTip.vue'
-import ExpeditionReadyTip from '@/components/ui/ExpeditionReadyTip.vue'
+import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 
 const props = defineProps<{
@@ -248,7 +247,7 @@ watch(
           hoverable
         />
         <template #tip="{ close }">
-          <NewChampionsTip @picked="close" />
+          <RpgBadgeTooltipBody kind="champions" :close="close" />
         </template>
       </RpgBadgeTooltip>
     </button>
@@ -262,7 +261,7 @@ watch(
       <RpgBadgeTooltip>
         <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" hoverable />
         <template #tip="{ close }">
-          <ExpeditionReadyTip @collected="close" />
+          <RpgBadgeTooltipBody kind="expedition" :close="close" />
         </template>
       </RpgBadgeTooltip>
     </button>

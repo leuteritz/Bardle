@@ -18,10 +18,7 @@ import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 import ActionToast from '@/components/bardProfil/ActionToast.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
-import ExpeditionReadyTip from '@/components/ui/ExpeditionReadyTip.vue'
-import NewChampionsTip from '@/components/ui/NewChampionsTip.vue'
-import ForgeReadyTip from '@/components/ui/ForgeReadyTip.vue'
-import SkillReadyTip from '@/components/ui/SkillReadyTip.vue'
+import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
 
 const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()
@@ -120,13 +117,13 @@ watch(
                   <RpgBadgeTooltip>
                     <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
                     <template #tip="{ close }">
-                      <ExpeditionReadyTip @collected="close" />
+                      <RpgBadgeTooltipBody kind="expedition" :close="close" />
                     </template>
                   </RpgBadgeTooltip>
                   <RpgBadgeTooltip>
                     <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
                     <template #tip="{ close }">
-                      <NewChampionsTip @picked="close" />
+                      <RpgBadgeTooltipBody kind="champions" :close="close" />
                     </template>
                   </RpgBadgeTooltip>
                 </div>
@@ -134,7 +131,7 @@ watch(
                   <RpgBadgeTooltip>
                     <span class="mini-badge mini-badge--forge">✦</span>
                     <template #tip>
-                      <ForgeReadyTip />
+                      <RpgBadgeTooltipBody kind="forge" />
                     </template>
                   </RpgBadgeTooltip>
                 </div>
@@ -142,7 +139,7 @@ watch(
                   <RpgBadgeTooltip>
                     <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
                     <template #tip>
-                      <SkillReadyTip />
+                      <RpgBadgeTooltipBody kind="skill" />
                     </template>
                   </RpgBadgeTooltip>
                 </div>
@@ -201,7 +198,7 @@ watch(
   </Teleport>
 </template>
 
-<!-- xp-tt Level-Tooltip → ersetzt durch ui/RpgBadgeTooltip.vue + LevelProgressTip.vue -->
+<!-- xp-tt Level-Tooltip → ersetzt durch ui/RpgBadgeTooltip.vue + RpgBadgeTooltipBody.vue -->
 
 <style scoped>
 .team-badge-row {

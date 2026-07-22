@@ -20,11 +20,7 @@ import {
   CENTER_CHIMES_TOOLTIP_GAP_PX,
 } from '../../config/constants'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
-import ExpeditionReadyTip from '../ui/ExpeditionReadyTip.vue'
-import NewChampionsTip from '../ui/NewChampionsTip.vue'
-import ForgeReadyTip from '../ui/ForgeReadyTip.vue'
-import SkillReadyTip from '../ui/SkillReadyTip.vue'
-import LevelProgressTip from '../ui/LevelProgressTip.vue'
+import RpgBadgeTooltipBody from '../ui/RpgBadgeTooltipBody.vue'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
@@ -362,7 +358,7 @@ onUnmounted(() => {
         </div>
       </div>
       <template #tip>
-        <LevelProgressTip />
+        <RpgBadgeTooltipBody kind="level" />
       </template>
       </RpgBadgeTooltip>
 
@@ -371,7 +367,7 @@ onUnmounted(() => {
           <span class="arc-level-text">{{ gameStore.level }}</span>
         </div>
         <template #tip>
-          <LevelProgressTip />
+          <RpgBadgeTooltipBody kind="level" />
         </template>
       </RpgBadgeTooltip>
 
@@ -390,7 +386,7 @@ onUnmounted(() => {
           </button>
         </Transition>
         <template #tip="{ close }">
-          <ExpeditionReadyTip @collected="close" />
+          <RpgBadgeTooltipBody kind="expedition" :close="close" />
         </template>
       </RpgBadgeTooltip>
 
@@ -407,7 +403,7 @@ onUnmounted(() => {
           </button>
         </Transition>
         <template #tip>
-          <ForgeReadyTip />
+          <RpgBadgeTooltipBody kind="forge" />
         </template>
       </RpgBadgeTooltip>
 
@@ -424,7 +420,7 @@ onUnmounted(() => {
           </button>
         </Transition>
         <template #tip="{ close }">
-          <NewChampionsTip @picked="close" />
+          <RpgBadgeTooltipBody kind="champions" :close="close" />
         </template>
       </RpgBadgeTooltip>
 
@@ -441,7 +437,7 @@ onUnmounted(() => {
           </button>
         </Transition>
         <template #tip>
-          <SkillReadyTip />
+          <RpgBadgeTooltipBody kind="skill" />
         </template>
       </RpgBadgeTooltip>
     </div>
@@ -1097,6 +1093,6 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   CHAMPION BADGE TOOLTIP → moved to ui/RpgBadgeTooltip.vue + NewChampionsTip.vue
+   CHAMPION BADGE TOOLTIP → moved to ui/RpgBadgeTooltip.vue + RpgBadgeTooltipBody.vue
    ================================================================ */
 </style>

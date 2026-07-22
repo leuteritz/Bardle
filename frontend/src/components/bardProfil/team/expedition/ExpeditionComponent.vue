@@ -80,7 +80,7 @@
             <RpgBadgeTooltip>
               <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" hoverable />
               <template #tip="{ close }">
-                <ExpeditionReadyTip @collected="close" />
+                <RpgBadgeTooltipBody kind="expedition" :close="close" />
               </template>
             </RpgBadgeTooltip>
           </button>
@@ -379,7 +379,7 @@ import { useActionToast } from '@/composables/useActionToast'
 import type { ChampionRole, AvailableExpeditionSlot, ExpeditionMission } from '@/types'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
-import ExpeditionReadyTip from '@/components/ui/ExpeditionReadyTip.vue'
+import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
 
 const ROLE_IMG: Record<string, string> = {
   top:     '/img/roles/top.png',
@@ -391,7 +391,7 @@ const ROLE_IMG: Record<string, string> = {
 
 export default defineComponent({
   name: 'ExpeditionComponent',
-  components: { Icon, RpgNotifyBadge, RpgBadgeTooltip, ExpeditionReadyTip },
+  components: { Icon, RpgNotifyBadge, RpgBadgeTooltip, RpgBadgeTooltipBody },
   setup() {
     const expeditionStore = useExpeditionStore()
     const battleStore = useBattleStore()
