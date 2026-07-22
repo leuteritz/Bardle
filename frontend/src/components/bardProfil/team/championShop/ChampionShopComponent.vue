@@ -60,6 +60,32 @@
         <button v-if="showClose" class="modal-close-btn" @click="$emit('close')">✕</button>
       </div>
 
+      <!-- ── Quick jump: scroll straight to the champion or item sections ── -->
+      <div class="cs-jump-row" aria-label="Jump to section">
+        <button
+          class="cs-jump-btn"
+          :class="{ 'cs-jump-btn--active': activeJump === 'champions' }"
+          :disabled="!showChampions"
+          :title="showChampions ? 'Jump to champions' : 'Hidden by item filters'"
+          @click="jumpTo('champions')"
+        >
+          <Icon icon="game-icons:crested-helmet" width="17" height="17" class="cs-jump-icon" />
+          Champions
+          <span class="cs-jump-count">{{ filteredChampions.length }}</span>
+        </button>
+        <button
+          class="cs-jump-btn"
+          :class="{ 'cs-jump-btn--active': activeJump === 'items' }"
+          :disabled="!showItems"
+          :title="showItems ? 'Jump to items' : 'Hidden by champion filters'"
+          @click="jumpTo('items')"
+        >
+          <Icon icon="game-icons:light-backpack" width="17" height="17" class="cs-jump-icon" />
+          Items
+          <span class="cs-jump-count">{{ visibleItemsCount }}</span>
+        </button>
+      </div>
+
       <!-- ── Active filter summary: always visible while filters are set ── -->
       <div v-if="hasActiveFilter" class="cs-active-filters">
         <button class="trait-chip trait-chip--clear-all" @click="clearFilters">
@@ -289,7 +315,11 @@
     </div>
 
     <!-- ── Champion Grid ── -->
-    <div class="flex-1 min-h-0 overflow-y-auto rpg-scrollbar cs-grid">
+    <div
+      ref="gridRef"
+      class="flex-1 min-h-0 overflow-y-auto rpg-scrollbar cs-grid"
+      @scroll.passive="onGridScroll"
+    >
       <!-- Empty: current role has no matches but cross-role does -->
       <div v-if="crossRoleOnly" class="cross-role-only-state">
         <p class="empty-label">Not in this role</p>
@@ -383,7 +413,7 @@
         </div>
 
         <!-- ── Item sections: same collapsible headers, one per category ── -->
-        <template v-if="showItems">
+        <div v-if="showItems" ref="itemsSectionRef">
           <div v-if="showChampions" class="cross-role-divider item-shop-divider">
             <span class="cross-role-divider-label">Items</span>
           </div>
@@ -431,7 +461,7 @@
               </div>
             </Transition>
           </div>
-        </template>
+        </div>
       </div>
 
       <!-- ── Cross-role search results ── -->
@@ -491,7 +521,7 @@
 </template>
 
 <script lang="ts">
-import { ref, defineComponent, computed, watch } from 'vue'
+import { ref, defineComponent, computed, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '../../../../stores/battleStore'
 import { useInventoryStore } from '../../../../stores/inventoryStore'
@@ -511,7 +541,14 @@ import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, required
 import { useGalaxyStore } from '../../../../stores/galaxyStore'
 import { MATERIALS } from '../../../../config/materials'
 import { getHomePlanetConfig } from '../../../../config/championHomePlanets'
-import { PLANET_TYPE_NAMES, ROLES, MATERIAL_COLOR } from '../../../../config/constants'
+import {
+  PLANET_TYPE_NAMES,
+  ROLES,
+  MATERIAL_COLOR,
+  SHOP_JUMP_SCROLL_OFFSET_PX,
+  SHOP_JUMP_SPY_THRESHOLD,
+  SHOP_JUMP_SPY_LOCK_MS,
+} from '../../../../config/constants'
 import { getChampionNames } from '../../../../config/championData'
 import { useActionToast } from '../../../../composables/useActionToast'
 import type {
@@ -1295,6 +1332,76 @@ const shopChampionNames = computed(() =>
       collapsedItemCats.value = next
     }
 
+    // ── Quick jump (Champions ↔ Items) with a scroll spy on the grid ──
+    const gridRef = ref<HTMLElement | null>(null)
+    const itemsSectionRef = ref<HTMLElement | null>(null)
+    const activeJump = ref<'champions' | 'items'>('champions')
+    // While a smooth jump scroll is in flight the spy is muted, otherwise the
+    // passing sections would flip the highlight back and forth mid-animation.
+    let spyLocked = false
+    let spyLockTimer: ReturnType<typeof setTimeout> | null = null
+    function lockSpy() {
+      spyLocked = true
+      if (spyLockTimer !== null) clearTimeout(spyLockTimer)
+      spyLockTimer = setTimeout(() => {
+        spyLocked = false
+        spyLockTimer = null
+      }, SHOP_JUMP_SPY_LOCK_MS)
+    }
+
+    function jumpTo(target: 'champions' | 'items') {
+      const grid = gridRef.value
+      if (!grid) return
+      if (target === 'champions' && !showChampions.value) return
+      if (target === 'items' && !showItems.value) return
+      activeJump.value = target
+      lockSpy()
+      if (target === 'champions') {
+        grid.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
+      // Land on content, not on three collapsed headers: open the first
+      // category if every item section is currently collapsed.
+      if (ITEM_CATEGORIES.every((c) => collapsedItemCats.value.has(c.id))) {
+        const next = new Set(collapsedItemCats.value)
+        next.delete(ITEM_CATEGORIES[0].id)
+        collapsedItemCats.value = next
+      }
+      nextTick(() => {
+        const el = itemsSectionRef.value
+        if (!el) return
+        const top =
+          el.getBoundingClientRect().top -
+          grid.getBoundingClientRect().top +
+          grid.scrollTop -
+          SHOP_JUMP_SCROLL_OFFSET_PX
+        grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+      })
+    }
+
+    function onGridScroll() {
+      if (spyLocked) return
+      const grid = gridRef.value
+      const el = itemsSectionRef.value
+      if (!grid) return
+      if (!el || !showItems.value) {
+        activeJump.value = 'champions'
+        return
+      }
+      if (!showChampions.value) {
+        activeJump.value = 'items'
+        return
+      }
+      const rel = el.getBoundingClientRect().top - grid.getBoundingClientRect().top
+      activeJump.value = rel <= grid.clientHeight * SHOP_JUMP_SPY_THRESHOLD ? 'items' : 'champions'
+    }
+
+    // Domain filters can remove the section the highlight points at.
+    watch([showChampions, showItems], ([champs, items]) => {
+      if (!champs && items) activeJump.value = 'items'
+      else if (!items) activeJump.value = 'champions'
+    })
+
     // ── Active filter summary chips for the item domain ──
     const activeItemCatChips = computed(() =>
       ITEM_CATEGORIES.filter((c) => activeItemCats.value.includes(c.id)),
@@ -1676,6 +1783,12 @@ const shopChampionNames = computed(() =>
       selectItem,
       itemDetail,
       handleBuyItem,
+      visibleItemsCount,
+      gridRef,
+      itemsSectionRef,
+      activeJump,
+      jumpTo,
+      onGridScroll,
     }
   },
 })
@@ -1746,6 +1859,71 @@ const shopChampionNames = computed(() =>
 .is-scrolling .item-card-slot {
   pointer-events: none;
   --pulse-play: paused;
+}
+
+/* ── Quick-jump row: two flat segments under the search bar ── */
+.cs-jump-row {
+  display: flex;
+  gap: 6px;
+  padding-top: 2px;
+}
+.cs-jump-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.55);
+  background: rgba(14, 10, 4, 0.85);
+  border: 1px solid rgba(92, 51, 16, 0.5);
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+}
+.cs-jump-btn:hover:not(:disabled) {
+  color: #e8c040;
+  border-color: rgba(200, 144, 64, 0.7);
+}
+.cs-jump-btn--active {
+  color: #f0d870;
+  background: rgba(30, 16, 6, 0.97);
+  border-color: #c89040;
+  box-shadow:
+    inset 0 0 0 1px rgba(92, 51, 16, 0.5),
+    0 0 10px rgba(232, 192, 64, 0.18);
+}
+.cs-jump-btn:disabled {
+  opacity: 0.35;
+  filter: grayscale(55%);
+  cursor: not-allowed;
+}
+.cs-jump-icon {
+  flex-shrink: 0;
+  color: currentColor;
+}
+.cs-jump-count {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  line-height: 1.5;
+  color: #b89a5a;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(122, 78, 32, 0.5);
+}
+.cs-jump-btn--active .cs-jump-count {
+  color: #e8c040;
+  border-color: rgba(200, 144, 64, 0.6);
 }
 
 /* ── Item sections: category icon in the tier-style header + domain divider ── */

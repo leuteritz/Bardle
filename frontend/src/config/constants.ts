@@ -2373,6 +2373,14 @@ export const ADMIN_LEVEL_AUGMENT_QUEUE_MAX = 10
 // ── UI Timing ─────────────────────────────────────────────────────────────────
 export const TOAST_DURATION_MS = 800
 
+// ── Unified shop quick-jump (ChampionShopComponent) ──────────────────────────
+/** Gap kept above the items section after a jump scroll (px). */
+export const SHOP_JUMP_SCROLL_OFFSET_PX = 8
+/** Items count as "active" once their section top passes this viewport share. */
+export const SHOP_JUMP_SPY_THRESHOLD = 0.4
+/** Scroll-spy stays locked this long after a jump so smooth-scroll can settle. */
+export const SHOP_JUMP_SPY_LOCK_MS = 700
+
 // ── Music ─────────────────────────────────────────────────────────────────────
 export const MUSIC_DEFAULT_VOLUME = 0.1
 export const MUSIC_FADE_DURATION_MS = 1500
@@ -2881,6 +2889,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:shopping-bag', // Shop action button (SigilBoardComponent)
   'game-icons:switch-weapon', // Champion picker modal header (TeamTabComponent)
   'game-icons:knapsack', // Unified shop — item detail "Owned" row (ItemDetailPanel)
+  'game-icons:crested-helmet', // Unified shop — Champions quick-jump button (ChampionShopComponent)
+  'game-icons:light-backpack', // Unified shop — Items quick-jump button (ChampionShopComponent)
   'game-icons:cape', // Skins button (SigilDetailsPanel) + skin gallery modal (ChampionSkinsPanel)
   // Battle tab redesign (landing / rift / honor)
   'game-icons:sword-clash', // COMBAT stat group header (BattleLandingScreen)
