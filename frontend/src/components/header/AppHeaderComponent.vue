@@ -5,6 +5,7 @@ import { useUiStore } from '../../stores/uiStore'
 import { useBattleStore } from '../../stores/battleStore'
 import { useExpeditionStore } from '../../stores/expeditionStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
+import { useMeepTreeStore } from '../../stores/meepTreeStore'
 import { formatNumber } from '../../config/numberFormat'
 import { usePersistence } from '../../composables/usePersistence'
 import {
@@ -22,6 +23,7 @@ import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
 import ExpeditionReadyTip from '../ui/ExpeditionReadyTip.vue'
 import NewChampionsTip from '../ui/NewChampionsTip.vue'
 import ForgeReadyTip from '../ui/ForgeReadyTip.vue'
+import SkillReadyTip from '../ui/SkillReadyTip.vue'
 import LevelProgressTip from '../ui/LevelProgressTip.vue'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
@@ -33,9 +35,11 @@ const uiStore = useUiStore()
 const battleStore = useBattleStore()
 const expeditionStore = useExpeditionStore()
 const solarStore = useSolarUpgradeStore()
+const meepTreeStore = useMeepTreeStore()
 const { resetGame } = usePersistence()
 
 const championBadgeCount = computed(() => battleStore.newlyUnlockedChampions.length)
+const skillBadgeCount = computed(() => meepTreeStore.buyableNodeCount)
 const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
 )
@@ -87,12 +91,14 @@ const badgeSlotStyles = computed(() => {
     expedition: styleAt(Math.PI - thetas[0]), // mirrored to the left side
     forge: styleAt(thetas[0]),
     champion: styleAt(thetas[1]),
+    skill: styleAt(Math.PI - thetas[1]), // left side, outer slot (mirror of champion)
   }
 })
 
 const expedBadgeStyle = computed(() => badgeSlotStyles.value.expedition)
 const forgeBadgeStyle = computed(() => badgeSlotStyles.value.forge)
 const champBadgeStyle = computed(() => badgeSlotStyles.value.champion)
+const skillBadgeStyle = computed(() => badgeSlotStyles.value.skill)
 
 function openShopTab() {
   uiStore.openBardModal()
@@ -102,6 +108,11 @@ function openShopTab() {
 function openTeamTab() {
   uiStore.openBardModal()
   uiStore.setBardTab('team')
+}
+
+function openTreeTab() {
+  uiStore.openBardModal()
+  uiStore.setBardTab('tree')
 }
 
 function handleReset() {
@@ -414,6 +425,23 @@ onUnmounted(() => {
         </Transition>
         <template #tip="{ close }">
           <NewChampionsTip @picked="close" />
+        </template>
+      </RpgBadgeTooltip>
+
+      <RpgBadgeTooltip>
+        <Transition name="header-badge">
+          <button
+            v-if="skillBadgeCount > 0"
+            class="header-notif-badge header-notif-badge--skill"
+            :style="skillBadgeStyle"
+            :aria-label="`${skillBadgeCount} skill(s) ready to learn`"
+            @click.stop="openTreeTab"
+          >
+            {{ skillBadgeCount }}
+          </button>
+        </Transition>
+        <template #tip>
+          <SkillReadyTip />
         </template>
       </RpgBadgeTooltip>
     </div>
@@ -1023,6 +1051,17 @@ onUnmounted(() => {
   --badge-glow-a: rgba(6, 182, 212, 0.5);
   --badge-glow-b: rgba(6, 182, 212, 0.9);
   --badge-glow-c: rgba(8, 145, 178, 0.4);
+}
+
+.header-notif-badge--skill {
+  background: linear-gradient(to bottom, #ec4899, #be185d);
+  border: 2px solid #f9a8d4;
+  box-shadow:
+    0 0 8px rgba(236, 72, 153, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --badge-glow-a: rgba(236, 72, 153, 0.5);
+  --badge-glow-b: rgba(236, 72, 153, 0.9);
+  --badge-glow-c: rgba(190, 24, 93, 0.4);
 }
 
 .header-notif-badge:hover {

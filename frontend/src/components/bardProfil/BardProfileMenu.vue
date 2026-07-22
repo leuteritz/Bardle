@@ -6,6 +6,7 @@ import { useUiStore } from '@/stores/uiStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import type { BardTabId } from '@/stores/uiStore'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
@@ -20,11 +21,13 @@ import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import ExpeditionReadyTip from '@/components/ui/ExpeditionReadyTip.vue'
 import NewChampionsTip from '@/components/ui/NewChampionsTip.vue'
 import ForgeReadyTip from '@/components/ui/ForgeReadyTip.vue'
+import SkillReadyTip from '@/components/ui/SkillReadyTip.vue'
 
 const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()
 const battleStore = useBattleStore()
 const solarStore = useSolarUpgradeStore()
+const meepTreeStore = useMeepTreeStore()
 const { newlyUnlockedChampions } = storeToRefs(battleStore)
 
 const expeditionBadgeCount = computed(
@@ -32,6 +35,7 @@ const expeditionBadgeCount = computed(
 )
 const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
 const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
+const skillBadgeCount = computed(() => meepTreeStore.buyableNodeCount)
 
 const menuItems: {
   id: BardTabId
@@ -131,6 +135,14 @@ watch(
                     <span class="mini-badge mini-badge--forge">✦</span>
                     <template #tip>
                       <ForgeReadyTip />
+                    </template>
+                  </RpgBadgeTooltip>
+                </div>
+                <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
+                  <RpgBadgeTooltip>
+                    <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
+                    <template #tip>
+                      <SkillReadyTip />
                     </template>
                   </RpgBadgeTooltip>
                 </div>
@@ -236,6 +248,14 @@ watch(
   --tb-glow-a: rgba(232, 192, 64, 0.55);
   --tb-glow-b: rgba(240, 208, 96, 0.95);
   --tb-glow-c: rgba(200, 144, 64, 0.45);
+}
+
+.mini-badge--skill {
+  background: linear-gradient(135deg, #ec4899, #be185d);
+  border: 1.5px solid #f9a8d4;
+  --tb-glow-a: rgba(236, 72, 153, 0.5);
+  --tb-glow-b: rgba(236, 72, 153, 0.9);
+  --tb-glow-c: rgba(190, 24, 93, 0.4);
 }
 
 .mini-badge--shop {

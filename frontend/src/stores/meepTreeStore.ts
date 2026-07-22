@@ -62,6 +62,15 @@ export const useMeepTreeStore = defineStore('meepTree', {
     boughtCount(): number {
       return this.bought.length
     },
+
+    /** Nodes the player could learn right now (prerequisite met + affordable). */
+    buyableNodeCount(): number {
+      return MEEP_TREE_BRANCHES.reduce(
+        (sum, branch) =>
+          sum + branch.nodes.filter((n) => this.nodeState(n.id) === 'buyable').length,
+        0,
+      )
+    },
   },
 
   actions: {
