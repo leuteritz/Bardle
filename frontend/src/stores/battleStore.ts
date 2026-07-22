@@ -1200,6 +1200,11 @@ export const useBattleStore = defineStore('battle', {
         this.currentWinStreak = 0
       }
 
+      if (gameStore.isGamePaused) {
+        if (battleResult) gameStore.pauseStats.battleWins++
+        else gameStore.pauseStats.battleLosses++
+      }
+
       this.totalBattleTime += this.battleTime
       this.lastMmrChange = actualMmrChange
       this.lastLpChange = actualLpChange
@@ -1219,6 +1224,7 @@ export const useBattleStore = defineStore('battle', {
         gameStore.totalChimesEarned += baronBounty
         gameStore.chimesEarnedForLevel += baronBounty
         gameStore.calculateLevel()
+        if (gameStore.isGamePaused) gameStore.pauseStats.battleChimes += baronBounty
       }
 
       logger.info('Battle', `Result: ${battleResult ? 'WIN' : 'LOSS'}`, {
@@ -1448,6 +1454,7 @@ export const useBattleStore = defineStore('battle', {
         gameStore.totalChimesEarned += tribute
         gameStore.chimesEarnedForLevel += tribute
         gameStore.calculateLevel()
+        if (gameStore.isGamePaused) gameStore.pauseStats.battleChimes += tribute
       }
       if (mvpBuffGranted) gameStore.activateMvpBuff()
       if (this.lastAutoBattleResult) {

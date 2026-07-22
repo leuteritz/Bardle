@@ -103,6 +103,9 @@ export const useGameStore = defineStore('game', {
     pauseStats: {
       kills: 0,
       materialsEarned: {} as Record<string, number>,
+      battleWins: 0,
+      battleLosses: 0,
+      battleChimes: 0,
     },
 
     currentUniverse: 1,
@@ -262,6 +265,9 @@ export const useGameStore = defineStore('game', {
     resetPauseStats() {
       this.pauseStats.kills = 0
       this.pauseStats.materialsEarned = {}
+      this.pauseStats.battleWins = 0
+      this.pauseStats.battleLosses = 0
+      this.pauseStats.battleChimes = 0
     },
 
     setPauseState(paused: boolean) {

@@ -2748,6 +2748,7 @@ export const USED_GAME_ICONS = new Set<string>([
   // Role replacements (invalid → valid)
   'game-icons:wizard-staff', // Mid role icon (was magic-wand)
   'game-icons:hearts', // HP-Bars — Sonne (PlayerHPBar, PauseOverlay) + Bosse (PlanetRescueOverlay, StarFightModal)
+  'game-icons:battle-gear', // Auto-Battle-Pausenstatistik (PauseOverlay)
   'game-icons:healing', // Support Heal/Tick stat (roleData)
   'game-icons:cuckoo-clock', // Support planet CD stat (was timer)
   'game-icons:click', // Champion Shop detail panel — empty state (ChampionDetailPanel)

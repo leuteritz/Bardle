@@ -104,6 +104,23 @@
             </div>
           </div>
 
+          <!-- Auto-battle record during the pause -->
+          <div v-if="pauseBattleTotal > 0" class="battle-strip">
+            <span class="battle-strip__label">
+              <Icon icon="game-icons:battle-gear" width="14" height="14" class="battle-strip__icon" aria-hidden="true" />
+              Auto Battle
+            </span>
+            <span class="battle-strip__record">
+              <span class="battle-strip__wins">{{ pauseBattleWins }}W</span>
+              <span class="battle-strip__sep">·</span>
+              <span class="battle-strip__losses">{{ pauseBattleLosses }}L</span>
+            </span>
+            <span v-if="pauseBattleChimes > 0" class="battle-strip__chimes">
+              <img src="/img/BardAbilities/BardChime.png" alt="" class="battle-strip__chime-img" />
+              +{{ formatNumber(pauseBattleChimes) }}
+            </span>
+          </div>
+
           <!-- Awaiting on return -->
           <div v-if="hasCallouts" class="callout-section">
             <span class="callout-heading">Awaiting your return</span>
@@ -259,6 +276,10 @@ const timerChars = computed(() => {
 })
 
 const pauseKills = computed(() => gameStore.pauseStats.kills)
+const pauseBattleWins = computed(() => gameStore.pauseStats.battleWins)
+const pauseBattleLosses = computed(() => gameStore.pauseStats.battleLosses)
+const pauseBattleChimes = computed(() => gameStore.pauseStats.battleChimes)
+const pauseBattleTotal = computed(() => pauseBattleWins.value + pauseBattleLosses.value)
 const pauseMaterialEntries = computed(() =>
   Object.entries(gameStore.pauseStats.materialsEarned).map(([id, amount]) => {
     const mat = MATERIALS.find((m) => m.id === id)
@@ -654,6 +675,74 @@ function particleStyle(i: number): Record<string, string> {
   height: 14px;
   object-fit: contain;
   image-rendering: pixelated;
+}
+
+/* ── Auto-battle strip ────────────────────────────────── */
+.battle-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(10px, 1.4vw, 16px);
+  width: 100%;
+  padding: clamp(8px, 1.1vh, 11px) clamp(12px, 1.6vw, 16px);
+  background: rgba(255, 200, 80, 0.05);
+  border: 1px solid rgba(122, 78, 32, 0.55);
+  border-radius: 12px;
+}
+.battle-strip__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(0.6rem, 0.85vw, 0.7rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.5);
+  white-space: nowrap;
+}
+.battle-strip__icon {
+  color: rgba(216, 200, 160, 0.55);
+  flex-shrink: 0;
+}
+.battle-strip__record {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: clamp(0.95rem, 1.4vw, 1.2rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.battle-strip__wins {
+  color: #74d448;
+  text-shadow: 0 0 10px rgba(116, 212, 72, 0.35);
+}
+.battle-strip__losses {
+  color: #cc6050;
+  text-shadow: 0 0 10px rgba(204, 96, 80, 0.3);
+}
+.battle-strip__sep {
+  color: rgba(216, 200, 160, 0.35);
+  font-weight: 700;
+}
+.battle-strip__chimes {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: clamp(0.85rem, 1.25vw, 1.1rem);
+  font-weight: 800;
+  line-height: 1;
+  color: #f0d060;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px rgba(240, 208, 96, 0.4);
+  white-space: nowrap;
+}
+.battle-strip__chime-img {
+  width: clamp(16px, 2.2vh, 20px);
+  height: clamp(16px, 2.2vh, 20px);
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.5));
 }
 
 /* ── Callouts ─────────────────────────────────────────── */
