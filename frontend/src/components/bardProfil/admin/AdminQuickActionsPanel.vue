@@ -13,10 +13,13 @@ import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { useItemStore } from '@/stores/itemStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useSkinStore } from '@/stores/skinStore'
+import { getChampionSkins } from '@/utils/championSkins'
 import {
   ADMIN_QUICK_RESOURCE_AMOUNT,
   ALLIES_PER_ROLE,
   GALAXY_BOSS_SPAWN_ANIM_MS,
+  SKIN_ORIGINAL,
   createEmptyAllyRows,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
@@ -33,6 +36,7 @@ const { triggerNow: triggerNebula } = useNebulaTrigger()
 const roleBehaviorStore = useRoleBehaviorStore()
 const itemStore = useItemStore()
 const planetBossStore = usePlanetBossStore()
+const skinStore = useSkinStore()
 
 const editingKey = ref<string | null>(null)
 const editingValue = ref<string>('')
@@ -236,6 +240,12 @@ function fillAllResources() {
   battleStore.addAllRecruitableChampions()
 }
 
+/** Equip a random look: the default (Original) or any bundled alternate skin. */
+function assignRandomSkin(name: string) {
+  const options = [SKIN_ORIGINAL, ...getChampionSkins(name).filter((s) => s !== SKIN_ORIGINAL)]
+  skinStore.setSkin(name, options[Math.floor(Math.random() * options.length)])
+}
+
 function fillTeamWithRandomChampions() {
   battleStore.unlockAllChampions()
   const roles: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
@@ -258,6 +268,7 @@ function fillTeamWithRandomChampions() {
     if (!pick) return
     used.add(pick)
     battleStore.setHeaderSlot(slotIndex, pick)
+    assignRandomSkin(pick)
 
     const secondaryPool = pool.filter(
       (name) => !used.has(name) && (CHAMPION_ROLES[name] ?? []).includes(role),
@@ -268,6 +279,7 @@ function fillTeamWithRandomChampions() {
       const secondary = secondaryPool.splice(idx, 1)[0]
       used.add(secondary)
       battleStore.setSecondarySlot(slotIndex, subIndex, secondary)
+      assignRandomSkin(secondary)
     }
   })
 
