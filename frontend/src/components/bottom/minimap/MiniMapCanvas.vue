@@ -10,6 +10,7 @@ import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useBattleStore } from '@/stores/battleStore'
 import { livePlanetAngles } from '@/composables/useStarSystem'
 import type { StarPlanetSlot } from '@/stores/starGroupStore'
 import type { PlanetType } from '@/types'
@@ -285,13 +286,16 @@ export default defineComponent({
     const planetBossStore = usePlanetBossStore()
     const solarUpgradeStore = useSolarUpgradeStore()
 
+    const battleStore = useBattleStore()
+    // keyed by URL, not name — the URL changes when the player equips a skin
     const championImageCache = new Map<string, HTMLImageElement>()
 
     function getOrLoadChampionImage(name: string): HTMLImageElement | null {
-      if (championImageCache.has(name)) return championImageCache.get(name)!
+      const src = battleStore.getChampionImage(name)
+      if (championImageCache.has(src)) return championImageCache.get(src)!
       const img = new Image()
-      img.src = `/img/champion/${name}.jpg`
-      img.onload = () => championImageCache.set(name, img)
+      img.src = src
+      img.onload = () => championImageCache.set(src, img)
       return null
     }
 
@@ -853,7 +857,11 @@ export default defineComponent({
       ctx.beginPath()
       ctx.arc(px, py, r * 0.88, 0, Math.PI * 2)
       ctx.clip()
-      ctx.drawImage(img, px - r, py - r, r * 2, r * 2)
+      // centered square source crop — splash-art skins are wide, icons square
+      const side = Math.min(img.naturalWidth, img.naturalHeight)
+      const sx = (img.naturalWidth - side) / 2
+      const sy = (img.naturalHeight - side) / 2
+      ctx.drawImage(img, sx, sy, side, side, px - r, py - r, r * 2, r * 2)
       ctx.restore()
       // gold ring around champion planet
       ctx.save()

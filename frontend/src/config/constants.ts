@@ -1987,6 +1987,15 @@ export const SIGIL_ALLY_HOVER_SCALE = 1.4
 export const SIGIL_ALLY_HOVER_DIM_OPACITY = 0.45
 export const SIGIL_ALLY_HOVER_PING_MS = 450
 
+// ── Champion skins (Team tab) ─────────────────────────────────────────────────
+/** Skin file basename of the default look. Selecting it (or having no entry in
+ *  skinStore) renders the classic champion icon from /img/champion/. */
+export const SKIN_ORIGINAL = 'OriginalSkin'
+/** Aspect ratio of bundled splash arts (1280×~730) — skin gallery cards. */
+export const SKIN_CARD_ASPECT_RATIO = '16 / 9'
+/** Skin gallery grid — min card width (px); the grid auto-fills columns. */
+export const SKIN_CARD_MIN_WIDTH = 300
+
 // Sigil escalation — the sigil grows more epic with every filled slot:
 // each main lights its pentagon vertex + spoke, each ally lights a rune tick,
 // each full role (main + all allies) gains a spinning aura; global stages below
@@ -2872,6 +2881,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:shopping-bag', // Shop action button (SigilBoardComponent)
   'game-icons:switch-weapon', // Champion picker modal header (TeamTabComponent)
   'game-icons:knapsack', // Items shop main tab (TeamTabComponent)
+  'game-icons:cape', // Skins button (SigilDetailsPanel) + skin gallery modal (ChampionSkinsPanel)
   // Battle tab redesign (landing / rift / honor)
   'game-icons:sword-clash', // COMBAT stat group header (BattleLandingScreen)
   'game-icons:crown-coin', // FARM & ECONOMY stat group header (BattleLandingScreen)

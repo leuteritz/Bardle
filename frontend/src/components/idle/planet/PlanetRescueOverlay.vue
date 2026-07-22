@@ -264,7 +264,7 @@ const homePlanetChampion = computed(() => bossStore.activeBoss?.homePlanetChampi
 const homePlanetChampionImage = computed(() => {
   const name = homePlanetChampion.value
   if (!name) return null
-  return name === 'Bard' ? '/img/BardAbilities/Bard.png' : `/img/champion/${name}.jpg`
+  return battleStore.getChampionImage(name)
 })
 
 function emberStyle(i: number): Record<string, string> {

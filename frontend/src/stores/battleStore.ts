@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
 import { useAugmentStore } from './augmentStore'
+import { useSkinStore } from './skinStore'
 import {
   createEmptyAllyRows,
   ELO_K_FACTOR,
@@ -118,6 +119,7 @@ import {
   reseedTimelineFrom,
 } from '../utils/battleTimeline'
 import { fetchChampionNames } from '../utils/champions'
+import { getChampionIconPath } from '../utils/championSkins'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
 import { CHAMPION_ROLES } from '../config/championRoles'
@@ -541,7 +543,7 @@ export const useBattleStore = defineStore('battle', {
         case 'Bard':
           return '/img/BardAbilities/Bard.png'
         default:
-          return '/img/champion/' + name + '.jpg'
+          return useSkinStore().getSkinImage(name) ?? getChampionIconPath(name)
       }
     },
 

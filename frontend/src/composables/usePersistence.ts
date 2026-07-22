@@ -15,6 +15,7 @@ import { usePlanetShopStore, computePlanetMaxHp } from '@/stores/planetShopStore
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/starForgeStore'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
+import { useSkinStore } from '@/stores/skinStore'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -136,6 +137,9 @@ export function usePersistence() {
           t1: battleStore.team1.map((c) => ({ name: c.name, role: c.role })),
           t2: battleStore.team2.map((c) => ({ name: c.name, role: c.role })),
         },
+      },
+      skins: {
+        selectedSkins: { ...useSkinStore().selectedSkins },
       },
       expeditions: {
         activeExpeditions: expeditionStore.activeExpeditions,
@@ -376,6 +380,15 @@ export function usePersistence() {
           b.battlePhaseStartTimestamp > 0
         ) {
           battleStore.restoreTeams(b.battleTeams.t1, b.battleTeams.t2)
+        }
+      }
+
+      // Restore skinStore — entries for unknown skins are dropped by setSkin
+      if (saved.skins?.selectedSkins && typeof saved.skins.selectedSkins === 'object') {
+        const skinStore = useSkinStore()
+        skinStore.resetSkins()
+        for (const [champion, skin] of Object.entries(saved.skins.selectedSkins)) {
+          if (typeof skin === 'string') skinStore.setSkin(champion, skin)
         }
       }
 
@@ -721,6 +734,7 @@ export function usePersistence() {
     battleStore.honoredChampions = []
     battleStore.honorsSettled = false
     // 6. Reset remaining stores
+    useSkinStore().resetSkins()
     const inventoryStore = useInventoryStore()
     inventoryStore.$reset()
     const expeditionStore = useExpeditionStore()

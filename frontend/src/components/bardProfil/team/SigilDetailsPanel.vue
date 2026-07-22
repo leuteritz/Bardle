@@ -4,14 +4,17 @@ import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
+import { useSkinStore } from '@/stores/skinStore'
 import {
   ROLES,
   ALLIES_PER_ROLE,
+  SKIN_ORIGINAL,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_SPLASH_HEIGHT,
   ORBIT_ROLE_ABILITIES,
   OBJECTIVE_ROLE_ABILITIES,
 } from '@/config/constants'
+import { getChampionSkins, formatSkinName } from '@/utils/championSkins'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
@@ -30,6 +33,7 @@ const emit = defineEmits<{
   'pick-ally': [subSlot: number]
   'clear-ally': [subSlot: number]
   'pick-equipment': [category: ItemCategory]
+  'pick-skins': []
   /** Hovered ally row — mirrored as a spotlight on the sigil board (null = none). */
   'hover-ally': [subSlot: number | null]
 }>()
@@ -39,6 +43,7 @@ const splashHeightPx = `${TEAM_SIGIL_SPLASH_HEIGHT}px`
 
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
+const skinStore = useSkinStore()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 
@@ -101,6 +106,15 @@ function allyTraits(name: string) {
 }
 
 const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[cat]).length)
+
+/** Alternate skins bundled for the main champion (excluding the default look). */
+const skinCount = computed(() =>
+  main.value ? getChampionSkins(main.value).filter((s) => s !== SKIN_ORIGINAL).length : 0,
+)
+/** Human-readable name of the currently equipped skin ("Original" by default). */
+const equippedSkinName = computed(() =>
+  main.value ? formatSkinName(skinStore.getSelectedSkin(main.value)) : '',
+)
 const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== null).length)
 </script>
 
@@ -178,6 +192,17 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
 
       <div class="sdp-splash-bottom">
         <div class="sdp-name">{{ main ?? 'No Champion' }}</div>
+        <button
+          v-if="main && skinCount > 0"
+          class="sdp-skins-btn"
+          type="button"
+          :title="`Equipped: ${equippedSkinName}`"
+          @click.stop="emit('pick-skins')"
+        >
+          <Icon icon="game-icons:cape" width="17" height="17" class="sdp-skins-btn-icon" />
+          <span>Skins</span>
+          <span class="sdp-skins-btn-count">{{ skinCount }}</span>
+        </button>
       </div>
     </div>
 
@@ -548,6 +573,45 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   align-items: flex-end;
   gap: 10px;
 }
+/* skins button — sits opposite the name in the splash bottom row */
+.sdp-skins-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(200, 144, 64, 0.55);
+  color: #e8c040;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+.sdp-skins-btn:hover {
+  border-color: #c89040;
+  background: rgba(30, 16, 6, 0.85);
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.25);
+}
+.sdp-skins-btn-icon {
+  flex-shrink: 0;
+}
+.sdp-skins-btn-count {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(200, 144, 64, 0.18);
+  border: 1px solid rgba(200, 144, 64, 0.35);
+  font-size: 11px;
+  line-height: 1.3;
+  color: #f0d870;
+}
+
 .sdp-name {
   flex: 1;
   min-width: 0;

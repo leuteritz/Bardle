@@ -16,11 +16,12 @@ import TeamModalShell from './TeamModalShell.vue'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
+import ChampionSkinsPanel from './ChampionSkinsPanel.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
 import ItemShopComponent from './ItemShopComponent.vue'
 
-type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | null
+type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | 'skins' | null
 
 const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partial<
   Record<ChampionRole, number>
@@ -65,6 +66,8 @@ const roleDef = computed(() => ROLES[roleIndex.value])
 const currentEquipment = computed(() => itemStore.slotEquipment[roleIndex.value])
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
+/** Main champion of the selected role — the skin gallery browses this one. */
+const mainChampion = computed(() => headerSlots.value[roleIndex.value])
 const roleFilteredChampions = computed(() =>
   availableChampions.value.filter((c) => getChampionRoles(c).includes(roleDef.value.key)),
 )
@@ -116,6 +119,11 @@ function openSynergies() {
 function openEquipment(category: ItemCategory) {
   equipCategory.value = category
   activeModal.value = 'equipment'
+}
+
+function openSkins() {
+  if (!mainChampion.value) return
+  activeModal.value = 'skins'
 }
 
 function closeModal() {
@@ -263,6 +271,7 @@ onUnmounted(() => {
         @pick-ally="openPicker"
         @clear-ally="clearAlly"
         @pick-equipment="openEquipment"
+        @pick-skins="openSkins"
         @hover-ally="hoveredAllySub = $event"
       />
       <TeamSynergiesPanel
@@ -360,6 +369,17 @@ onUnmounted(() => {
         />
         <ItemShopComponent v-else :category="itemShopCategory" />
       </div>
+    </TeamModalShell>
+
+    <TeamModalShell
+      v-if="activeModal === 'skins' && mainChampion"
+      :title="`${mainChampion} — Skins`"
+      icon="game-icons:cape"
+      size="xl"
+      hide-header
+      @close="closeModal"
+    >
+      <ChampionSkinsPanel class="team-modal-fill" :champion="mainChampion" />
     </TeamModalShell>
 
     <TeamModalShell

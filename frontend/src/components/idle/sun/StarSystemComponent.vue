@@ -1178,7 +1178,7 @@ const rewardSummaries = computed(() => {
       if (!champion && boss.isChampionPlanet && boss.homePlanetChampion) {
         champion = {
           name: boss.homePlanetChampion,
-          image: `/img/champion/${boss.homePlanetChampion}.jpg`,
+          image: battleStore.getChampionImage(boss.homePlanetChampion),
         }
       }
     }

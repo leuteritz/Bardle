@@ -47,8 +47,10 @@
 import { computed } from 'vue'
 import { MATERIALS } from '@/config/materials'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useBattleStore } from '@/stores/battleStore'
 
 const bossStore = usePlanetBossStore()
+const battleStore = useBattleStore()
 
 const activeBoss = computed(() => bossStore.activeBoss)
 const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
@@ -57,7 +59,7 @@ const homePlanetChampion = computed(() => activeBoss.value?.homePlanetChampion ?
 const homePlanetChampionImage = computed(() => {
   const name = homePlanetChampion.value
   if (!name) return null
-  return name === 'Bard' ? '/img/BardAbilities/Bard.png' : `/img/champion/${name}.jpg`
+  return battleStore.getChampionImage(name)
 })
 
 const totalChimes = computed(() =>
