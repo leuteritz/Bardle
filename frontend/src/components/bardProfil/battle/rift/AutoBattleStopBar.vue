@@ -20,7 +20,7 @@
         }}
       </span>
     </span>
-    <span v-if="battleStore.stopRequested" class="stop-fab-dot" />
+    <span v-if="battleStore.stopRequested" class="stop-fab-hazard" aria-hidden="true" />
   </button>
 </template>
 
@@ -100,15 +100,14 @@ const battleStore = useBattleStore()
   color: #b07868;
 }
 
-/* ── Armed: stop is queued, gold pulse, cancelable ── */
+/* ── Armed: stop is queued, cancelable. Steady gold frame (no breathing glow) ── */
 .stop-fab--armed {
   background: #1c1507;
   border-color: #e8c040;
   box-shadow:
     inset 0 0 0 1px #5c4410,
     0 4px 18px rgba(0, 0, 0, 0.65),
-    0 0 24px rgba(232, 192, 64, 0.4);
-  animation: stop-armed-glow 1.8s ease-in-out infinite;
+    0 0 22px rgba(232, 192, 64, 0.32);
 }
 .stop-fab--armed:hover {
   background: #241c09;
@@ -124,39 +123,29 @@ const battleStore = useBattleStore()
   color: #b09848;
 }
 
-.stop-fab-dot {
+/* Caution-tape chip: diagonal gold/dark stripes that march (barber-pole),
+   reading as a deliberate "armed / queued" state — not a breathing status dot. */
+.stop-fab-hazard {
   flex-shrink: 0;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: #e8c040;
-  box-shadow: 0 0 9px rgba(232, 192, 64, 0.9);
-  animation: stop-dot-pulse 1.2s ease-in-out infinite;
+  width: 13px;
+  height: clamp(24px, 3cqh, 30px);
+  border-radius: 3px;
+  border: 1px solid #8a6a18;
+  background-image: repeating-linear-gradient(
+    45deg,
+    #e8c040 0,
+    #e8c040 8px,
+    #241a05 8px,
+    #241a05 16px
+  );
+  /* diagonal tile = period(16px) × √2 ≈ 22.63px → scrolling one tile loops seamlessly */
+  background-size: 22.63px 22.63px;
+  animation: stop-hazard-march 0.6s linear infinite;
 }
 
-@keyframes stop-armed-glow {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 0 0 1px #5c4410,
-      0 4px 18px rgba(0, 0, 0, 0.65),
-      0 0 18px rgba(232, 192, 64, 0.3);
-  }
-  50% {
-    box-shadow:
-      inset 0 0 0 1px #5c4410,
-      0 4px 18px rgba(0, 0, 0, 0.65),
-      0 0 38px rgba(232, 192, 64, 0.6);
-  }
-}
-
-@keyframes stop-dot-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
+@keyframes stop-hazard-march {
+  to {
+    background-position: 22.63px 0;
   }
 }
 
@@ -172,10 +161,7 @@ const battleStore = useBattleStore()
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stop-fab--armed {
-    animation: none;
-  }
-  .stop-fab-dot {
+  .stop-fab-hazard {
     animation: none;
   }
 }
