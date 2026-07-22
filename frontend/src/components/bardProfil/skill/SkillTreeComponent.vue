@@ -158,6 +158,14 @@ const nodeTypes = {
   z-index: 1;
 }
 
+/* A node whose skill just became learnable lifts its WHOLE wrapper above the
+   neighbouring nodes, so its notify badge is never hidden behind another
+   node's effect label. Vue Flow writes z-index inline → override with
+   !important. Reverts automatically once the badge (v-if) is gone. */
+:deep(.vue-flow__node:has(.msn-notify)) {
+  z-index: 50 !important;
+}
+
 /* ── Vue-Flow Controls → RPG-Holzrahmen-Stil ─────────────── */
 :deep(.vue-flow__controls) {
   background: var(--rpg-bg-icon);
