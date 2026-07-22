@@ -189,9 +189,15 @@
         :key="`${pos.team}-${pos.idx}`"
         v-show="champAt(pos.team, pos.idx)?.name"
         class="champ-marker"
+        :class="{ 'champ-marker--mvp': isMvp(pos.team, pos.idx) }"
         :style="{ left: pos.x + '%', top: pos.y + '%' }"
       >
         <div class="champ-portrait-wrap">
+          <!-- Live MVP: rotating gold ring + floating crown -->
+          <template v-if="isMvp(pos.team, pos.idx)">
+            <span class="mvp-ring" aria-hidden="true" />
+            <Icon icon="game-icons:imperial-crown" class="mvp-crown" width="18" height="18" />
+          </template>
           <img
             :src="battleStore.getChampionImage(champAt(pos.team, pos.idx)?.name ?? '')"
             :alt="champAt(pos.team, pos.idx)?.name"
@@ -204,6 +210,7 @@
                 'champ-img--victor': revealedWinner !== null && pos.team === revealedWinner,
                 'champ-img--buff-blue': champBuffs(pos.team, pos.idx).includes('blue'),
                 'champ-img--buff-red': champBuffs(pos.team, pos.idx).includes('red'),
+                'champ-img--mvp': isMvp(pos.team, pos.idx),
               },
             ]"
           />
@@ -223,7 +230,13 @@
         <div class="champ-hp">
           <div class="champ-hp-fill" :class="hpClass(champAt(pos.team, pos.idx))" :style="{ width: hpWidth(pos) + '%' }" />
         </div>
-        <div class="champ-name" :class="pos.team === 1 ? 'champ-name--blue' : 'champ-name--red'">
+        <div
+          class="champ-name"
+          :class="[
+            pos.team === 1 ? 'champ-name--blue' : 'champ-name--red',
+            { 'champ-name--mvp': isMvp(pos.team, pos.idx) },
+          ]"
+        >
           {{ champAt(pos.team, pos.idx)?.name }}
         </div>
       </div>
@@ -323,6 +336,11 @@ function trailColor(trail: ChampionTrail): string {
 
 function champAt(team: 1 | 2, idx: number): ChampionState | undefined {
   return team === 1 ? battleStore.team1[idx] : battleStore.team2[idx]
+}
+
+/** True for the champion currently leading the live MVP race (both teams). */
+function isMvp(team: 1 | 2, idx: number): boolean {
+  return battleStore.liveMvpId === `${team}-${idx}`
 }
 
 function hpClass(champ: ChampionState | undefined): string {
@@ -1122,9 +1140,82 @@ const structureMarkers = computed(() => {
   transition: left 0.5s linear, top 0.5s linear;
   z-index: 4;
 }
+/* Live MVP floats above the pack so its crown/ring never hides behind others */
+.champ-marker--mvp {
+  z-index: 7;
+}
 
 .champ-portrait-wrap {
   position: relative;
+}
+
+/* ── Live MVP highlight ── */
+/* Rotating conic gold ring hugging the portrait — masked hollow so only the
+   halo around the dot shows. Sits behind the face (negative z-index). */
+.mvp-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 54px;
+  height: 54px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    #a5720c,
+    #ffe884,
+    #e8c040,
+    #fff6d0,
+    #e8c040,
+    #a5720c
+  );
+  -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%);
+  mask: radial-gradient(circle, transparent 62%, #000 64%);
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.85));
+  animation: mvp-ring-spin 3.2s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+@keyframes mvp-ring-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Floating crown above the MVP portrait */
+.mvp-crown {
+  position: absolute;
+  top: -17px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffe07a;
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.95)) drop-shadow(0 1px 1px #000);
+  animation: mvp-crown-bob 1.8s ease-in-out infinite;
+  z-index: 3;
+}
+@keyframes mvp-crown-bob {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-2.5px);
+  }
+}
+
+/* Gold border + breathing glow on the MVP portrait (keeps team/buff box-shadow) */
+.champ-img--mvp {
+  border-color: #ffe884 !important;
+  animation: mvp-img-glow 1.6s ease-in-out infinite;
+}
+@keyframes mvp-img-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 8px 1px rgba(232, 192, 64, 0.75);
+  }
+  50% {
+    box-shadow: 0 0 15px 4px rgba(232, 192, 64, 1);
+  }
 }
 
 .champ-img {
@@ -1248,6 +1339,11 @@ const structureMarkers = computed(() => {
 }
 .champ-name--blue { color: #cfe0ff; }
 .champ-name--red { color: #ffd0d0; }
+.champ-name--mvp {
+  color: #ffe07a !important;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(232, 192, 64, 0.9), 0 1px 2px #000;
+}
 
 /* ── Controls ── */
 .map-controls {
@@ -1384,7 +1480,10 @@ const structureMarkers = computed(() => {
   .lane-glow-core,
   .lane-push-label,
   .structure-breach,
-  .champ-img--victor {
+  .champ-img--victor,
+  .mvp-ring,
+  .mvp-crown,
+  .champ-img--mvp {
     animation: none;
   }
 }

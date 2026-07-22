@@ -510,6 +510,36 @@ export const useBattleStore = defineStore('battle', {
       state.isAutoBattleInitialized &&
       state.battlePhase === 'playing' &&
       state.battlePhaseStartTimestamp > 0,
+    /**
+     * Identity ("team-idx") of the champion currently leading the MVP race in
+     * the live battle, or '' when no match is running / stats are still ~0.
+     * Mirrors accumulateBattleStats()'s scoring (own vs enemy multipliers), so
+     * the on-map highlight tracks who is actually winning MVP right now.
+     */
+    liveMvpId(state): string {
+      if (state.battlePhase !== 'playing' || state.battlePhaseStartTimestamp === 0) return ''
+      let bestKey = ''
+      let best = -Infinity
+      state.team1.forEach((champ, i) => {
+        if (!champ.name) return
+        const score =
+          mvpScore(champ, state.battleTrack.objectiveParticipationsT1[i] ?? 0) *
+          MVP_OWN_TEAM_SCORE_MULT
+        if (score > best) {
+          best = score
+          bestKey = `1-${i}`
+        }
+      })
+      state.team2.forEach((champ, i) => {
+        if (!champ.name) return
+        const score = mvpScore(champ) * MVP_ENEMY_TEAM_SCORE_MULT
+        if (score > best) {
+          best = score
+          bestKey = `2-${i}`
+        }
+      })
+      return best > 0 ? bestKey : ''
+    },
     // Display-only totals of the running battle, mirroring accumulateBattleStats().
     liveBattleStats(state): LiveBattleStats {
       const live = zeroLiveBattleStats()
