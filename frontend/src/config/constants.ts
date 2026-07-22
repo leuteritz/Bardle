@@ -2904,6 +2904,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:light-backpack', // Unified shop — Items quick-jump button (ChampionShopComponent)
   'game-icons:cape', // Skins button (SigilDetailsPanel) + skin gallery modal (ChampionSkinsPanel)
   // Battle tab redesign (landing / rift / honor)
+  'game-icons:power-button', // STOP AUTO-BATTLE bar → return to landing (AutoBattleStopBar)
   'game-icons:sword-clash', // COMBAT stat group header (BattleLandingScreen)
   'game-icons:crown-coin', // FARM & ECONOMY stat group header (BattleLandingScreen)
   'game-icons:stone-tower', // OBJECTIVES stat group header (BattleLandingScreen)

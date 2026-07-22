@@ -277,6 +277,10 @@ export const useBattleStore = defineStore('battle', {
     // Transient view flag: player peeks at the landing (career stats) screen
     // while a battle keeps simulating. Never persisted.
     isViewingLanding: false,
+    // Player pressed "STOP AUTO-BATTLE": finish the current match + honor phase,
+    // then return to the landing screen instead of searching the next planet.
+    // Cancelable (toggle off) while the match/honor is still running.
+    stopRequested: false,
     battleEverStarted: false,
     currentBattleId: 0,
     timeUntilNextBattle: 0,
@@ -401,7 +405,8 @@ export const useBattleStore = defineStore('battle', {
       state.drakeBuffs.includes('chemtech') ? DRAKE_CHEMTECH_ENEMY_DPS_MULT : 1,
     /** Hextech buff: player click damage in objective fights. */
     objectiveClickDamage: (state): number =>
-      OBJECTIVE_CLICK_DAMAGE * (state.drakeBuffs.includes('hextech') ? DRAKE_HEXTECH_CLICK_MULT : 1),
+      OBJECTIVE_CLICK_DAMAGE *
+      (state.drakeBuffs.includes('hextech') ? DRAKE_HEXTECH_CLICK_MULT : 1),
     /** Cloud buff: ally respawn time multiplier for the rest of the battle. */
     allyRespawnMult: (state): number =>
       state.drakeBuffs.includes('cloud') ? DRAKE_CLOUD_RESPAWN_MULT : 1,
@@ -443,25 +448,27 @@ export const useBattleStore = defineStore('battle', {
     /** Cosmetic jungle-buff auras a champion currently carries, with remaining
      * game-seconds. Death strips buffs: a dead/walking-back champion shows
      * none, and a buff earned before the latest death never comes back. */
-    championBuffs: (state) => (team: 1 | 2, idx: number): Array<{ type: 'blue' | 'red'; remaining: number }> => {
-      const champ = (team === 1 ? state.team1 : state.team2)[idx]
-      if (!champ || champ.respawnState === 'walking-back') return []
-      const respawnUntil = (team === 1 ? state.respawnUntil.t1 : state.respawnUntil.t2)[idx] ?? 0
-      const lastDeathT = respawnUntil - MOVE_RESPAWN_WALK_SECONDS
-      return state.buffFeed
-        .filter(
-          (e) =>
-            e.team === team &&
-            e.championIdx === idx &&
-            state.battleTime >= e.t &&
-            state.battleTime - e.t < JUNGLE_BUFF_CARRY_DURATION_T &&
-            lastDeathT <= e.t,
-        )
-        .map((e) => ({
-          type: e.buffType,
-          remaining: JUNGLE_BUFF_CARRY_DURATION_T - (state.battleTime - e.t),
-        }))
-    },
+    championBuffs:
+      (state) =>
+      (team: 1 | 2, idx: number): Array<{ type: 'blue' | 'red'; remaining: number }> => {
+        const champ = (team === 1 ? state.team1 : state.team2)[idx]
+        if (!champ || champ.respawnState === 'walking-back') return []
+        const respawnUntil = (team === 1 ? state.respawnUntil.t1 : state.respawnUntil.t2)[idx] ?? 0
+        const lastDeathT = respawnUntil - MOVE_RESPAWN_WALK_SECONDS
+        return state.buffFeed
+          .filter(
+            (e) =>
+              e.team === team &&
+              e.championIdx === idx &&
+              state.battleTime >= e.t &&
+              state.battleTime - e.t < JUNGLE_BUFF_CARRY_DURATION_T &&
+              lastDeathT <= e.t,
+          )
+          .map((e) => ({
+            type: e.buffType,
+            remaining: JUNGLE_BUFF_CARRY_DURATION_T - (state.battleTime - e.t),
+          }))
+      },
     team1Kills: (state): number => state.team1.reduce((s, c) => s + c.kills, 0),
     team2Kills: (state): number => state.team2.reduce((s, c) => s + c.kills, 0),
     team1Gold: (state): number => state.team1.reduce((s, c) => s + c.gold, 0),
@@ -600,7 +607,10 @@ export const useBattleStore = defineStore('battle', {
       this.recruitedChampions.push(name)
       this.recruitableChampions = this.recruitableChampions.filter((c) => c.name !== name)
       this.dismissNewChampion(name)
-      logger.info('Battle', `Recruited: ${name}`, { materialCost: recruit.materialCost, chimesPrice: recruit.chimesPrice })
+      logger.info('Battle', `Recruited: ${name}`, {
+        materialCost: recruit.materialCost,
+        chimesPrice: recruit.chimesPrice,
+      })
       return true
     },
 
@@ -801,7 +811,10 @@ export const useBattleStore = defineStore('battle', {
           // Only open the interactive modal when the scripted result is still ahead —
           // during background catch-up spawn+result apply together and no modal opens.
           const resultStillAhead = this.timeline!.events.some(
-            (ev) => ev.type === 'objectiveResult' && ev.objective === e.objective && ev.t > targetGameTime,
+            (ev) =>
+              ev.type === 'objectiveResult' &&
+              ev.objective === e.objective &&
+              ev.t > targetGameTime,
           )
           // Hidden tabs skip the interactive fight — background catch-up keeps
           // using the scripted objectiveResult instead of freezing time unseen.
@@ -862,7 +875,13 @@ export const useBattleStore = defineStore('battle', {
       if (!e.structureId || !e.structureTier || !e.team) return
       if (this.destroyedStructures.includes(e.structureId)) return
       this.destroyedStructures.push(e.structureId)
-      this.structureFeed.push({ id: e.structureId, tier: e.structureTier, team: e.team, lane: e.lane, t: e.t })
+      this.structureFeed.push({
+        id: e.structureId,
+        tier: e.structureTier,
+        team: e.team,
+        lane: e.lane,
+        t: e.t,
+      })
       if (this.structureFeed.length > STRUCTURE_FEED_MAX) {
         this.structureFeed.splice(0, this.structureFeed.length - STRUCTURE_FEED_MAX)
       }
@@ -870,7 +889,10 @@ export const useBattleStore = defineStore('battle', {
 
     _shiftWinProbability(delta: number) {
       if (delta === 0) return
-      this.currentWinProbability = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, this.currentWinProbability + delta))
+      this.currentWinProbability = Math.max(
+        WINPROB_MIN,
+        Math.min(WINPROB_MAX, this.currentWinProbability + delta),
+      )
     },
 
     _creditObjective(
@@ -939,7 +961,9 @@ export const useBattleStore = defineStore('battle', {
           // cosmetic pseudo-HP, deterministic per champion and ~1.5s time slice
           team[i].hpPercent = walking
             ? 100
-            : 35 + ((i * 53 + Math.floor(gameTime / 90) * 31 + teamNo * 17 + this.battleSeed % 97) % 66)
+            : 35 +
+              ((i * 53 + Math.floor(gameTime / 90) * 31 + teamNo * 17 + (this.battleSeed % 97)) %
+                66)
         }
       }
       apply(this.team1, this.respawnUntil.t1, 1)
@@ -960,7 +984,10 @@ export const useBattleStore = defineStore('battle', {
     },
 
     /** Restore persisted team rosters (names + roles) without re-randomizing. */
-    restoreTeams(t1: Array<{ name: string; role: BattleRole }>, t2: Array<{ name: string; role: BattleRole }>) {
+    restoreTeams(
+      t1: Array<{ name: string; role: BattleRole }>,
+      t2: Array<{ name: string; role: BattleRole }>,
+    ) {
       const build = (list: Array<{ name: string; role: BattleRole }>) =>
         list.map((c, i) => {
           const champ = makeChampionState(c.name, 'Silver', i)
@@ -1085,7 +1112,8 @@ export const useBattleStore = defineStore('battle', {
         gameStore.activeModifier,
       )
       const effectiveOpponentPower = opponent.power * (battleMods.enemySpeedMultiplier ?? 1)
-      const drainReduction = (battleMods.enemyMaxHPDrainPerSecond ?? 0) * BATTLE_DRAIN_REFERENCE_SECONDS
+      const drainReduction =
+        (battleMods.enemyMaxHPDrainPerSecond ?? 0) * BATTLE_DRAIN_REFERENCE_SECONDS
       const finalOpponentPower = Math.max(
         effectiveOpponentPower * BATTLE_OPPONENT_POWER_MIN_FRACTION,
         effectiveOpponentPower * (1 - drainReduction),
@@ -1123,8 +1151,12 @@ export const useBattleStore = defineStore('battle', {
       this.timeline = timeline
       this.predeterminedWin = timeline.winner === 1
       // Jump targets for the admin drake/baron shortcuts
-      const firstDrake = timeline.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'drake')
-      const baron = timeline.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'baron')
+      const firstDrake = timeline.events.find(
+        (e) => e.type === 'objectiveSpawn' && e.objective === 'drake',
+      )
+      const baron = timeline.events.find(
+        (e) => e.type === 'objectiveSpawn' && e.objective === 'baron',
+      )
       this.drakeEventTime = firstDrake?.t ?? 0
       this.baronEventTime = baron?.t ?? 0
     },
@@ -1170,7 +1202,8 @@ export const useBattleStore = defineStore('battle', {
         gameStore.activeModifier,
       )
       const effectiveOpponentPower = opponent.power * (battleMods.enemySpeedMultiplier ?? 1)
-      const drainReduction = (battleMods.enemyMaxHPDrainPerSecond ?? 0) * BATTLE_DRAIN_REFERENCE_SECONDS
+      const drainReduction =
+        (battleMods.enemyMaxHPDrainPerSecond ?? 0) * BATTLE_DRAIN_REFERENCE_SECONDS
       const finalOpponentPower = Math.max(
         effectiveOpponentPower * BATTLE_OPPONENT_POWER_MIN_FRACTION,
         effectiveOpponentPower * (1 - drainReduction),
@@ -1406,8 +1439,10 @@ export const useBattleStore = defineStore('battle', {
           .map((c, i) => ({
             name: c.name,
             weight:
-              Math.pow(scoreOf(c, this.battleTrack.objectiveParticipationsT1[i]), HONOR_WEIGHT_EXP) *
-              HONOR_OWN_TEAM_WEIGHT_MULT,
+              Math.pow(
+                scoreOf(c, this.battleTrack.objectiveParticipationsT1[i]),
+                HONOR_WEIGHT_EXP,
+              ) * HONOR_OWN_TEAM_WEIGHT_MULT,
           })),
         ...this.team2
           .filter((c) => c.name)
@@ -1649,12 +1684,19 @@ export const useBattleStore = defineStore('battle', {
         this.resultCountdownTimer = null
       }
       this.resultCountdown = 0
+      // Honor phase settled — if the player requested a stop during the match,
+      // leave for the landing screen instead of starting the next planet search.
+      if (this.stopRequested) {
+        this.returnToLanding()
+        return
+      }
       void this.proceedToNextBattle()
     },
 
     async startAutoBattle() {
       if (this.autoBattleEnabled) return
       this.autoBattleEnabled = true
+      this.stopRequested = false
       if (!_visibilityHandler) {
         _visibilityHandler = () => {
           if (!document.hidden) this.syncFromTimestamps()
@@ -1750,7 +1792,10 @@ export const useBattleStore = defineStore('battle', {
      * fight. Both teams stack damage each tick (DPS ∝ alive participants); the
      * team with more TOTAL damage when the objective dies secures it.
      */
-    _openObjectiveModal(type: 'drake' | 'baron', participants: { t1: number[]; t2: number[] } | null) {
+    _openObjectiveModal(
+      type: 'drake' | 'baron',
+      participants: { t1: number[]; t2: number[] } | null,
+    ) {
       const maxHP = type === 'drake' ? DRAKE_OBJECTIVE_HP : BARON_OBJECTIVE_HP
       this.activeObjective = type
       this.activeObjectiveParticipants = participants
@@ -1862,12 +1907,16 @@ export const useBattleStore = defineStore('battle', {
       const dpsMult = side === 'own' ? this.objectiveOwnDpsMult : this.objectiveEnemyDpsMult
       const buffIdx = this.objectiveBuffTarget[side]
       // this side is taunted while the OPPOSING top's Challenge window is active
-      const opposingTop = (side === 'own' ? this.objectiveFighters!.t2 : this.objectiveFighters!.t1).find(
-        (f) => f.role === 'top',
-      )
-      const tauntActive = !!opposingTop && this._isStanding(opposingTop) && opposingTop.abilityActiveUntil > now
+      const opposingTop = (
+        side === 'own' ? this.objectiveFighters!.t2 : this.objectiveFighters!.t1
+      ).find((f) => f.role === 'top')
+      const tauntActive =
+        !!opposingTop && this._isStanding(opposingTop) && opposingTop.abilityActiveUntil > now
       const tauntedIdxs = tauntActive
-        ? fighters.filter((f) => this._isStanding(f)).slice(0, OBJECTIVE_TOP_TAUNT_TARGETS).map((f) => f.idx)
+        ? fighters
+            .filter((f) => this._isStanding(f))
+            .slice(0, OBJECTIVE_TOP_TAUNT_TARGETS)
+            .map((f) => f.idx)
         : []
 
       let total = 0
@@ -1909,7 +1958,8 @@ export const useBattleStore = defineStore('battle', {
       if (this._objAbilityAccumMs < OBJECTIVE_ABILITY_TICK_S * 1000) return
       this._objAbilityAccumMs -= OBJECTIVE_ABILITY_TICK_S * 1000
 
-      const aoe = this.activeObjective === 'baron' ? OBJECTIVE_AOE_DPS_BARON : OBJECTIVE_AOE_DPS_DRAKE
+      const aoe =
+        this.activeObjective === 'baron' ? OBJECTIVE_AOE_DPS_BARON : OBJECTIVE_AOE_DPS_DRAKE
       for (const side of ['own', 'enemy'] as const) {
         const fighters = side === 'own' ? this.objectiveFighters!.t1 : this.objectiveFighters!.t2
         for (const f of fighters) {
@@ -1963,7 +2013,9 @@ export const useBattleStore = defineStore('battle', {
       const living = fighters.filter((f) => f.alive)
       if (living.length === 0) return fighters
       const raw = living.map(
-        () => OBJECTIVE_FIGHTER_WEIGHT_MIN + Math.random() * (OBJECTIVE_FIGHTER_WEIGHT_MAX - OBJECTIVE_FIGHTER_WEIGHT_MIN),
+        () =>
+          OBJECTIVE_FIGHTER_WEIGHT_MIN +
+          Math.random() * (OBJECTIVE_FIGHTER_WEIGHT_MAX - OBJECTIVE_FIGHTER_WEIGHT_MIN),
       )
       const rawSum = raw.reduce((a, b) => a + b, 0)
       living.forEach((f, i) => {
@@ -2052,13 +2104,19 @@ export const useBattleStore = defineStore('battle', {
         objective === 'drake' ? this.activeDrakeType : null,
       )
 
-      const newProb = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, this.currentWinProbability + (ownWin ? bonus : -bonus)))
+      const newProb = Math.max(
+        WINPROB_MIN,
+        Math.min(WINPROB_MAX, this.currentWinProbability + (ownWin ? bonus : -bonus)),
+      )
       this.currentWinProbability = newProb
       this.objectiveWinDelta = ownWin ? bonus : -bonus
 
       if (this.timeline) {
         const newSeed =
-          (this.battleSeed ^ Math.imul(this.battleTime + 1, 2654435761) ^ (this.objectiveOverrides.length + 1)) >>> 0
+          (this.battleSeed ^
+            Math.imul(this.battleTime + 1, 2654435761) ^
+            (this.objectiveOverrides.length + 1)) >>>
+          0
         this.objectiveOverrides.push({ t: this.battleTime, newSeed, prob: newProb })
         this.timeline = reseedTimelineFrom(
           this.timeline,
@@ -2108,7 +2166,11 @@ export const useBattleStore = defineStore('battle', {
     /** Unfreeze after a fight: clear the modal, then continue the paused simulation. */
     _closeObjectiveModalAndResume() {
       this._clearObjectiveModal()
-      if (this.battlePhase === 'playing' && this.battlePhaseStartTimestamp > 0 && !this.battleSimIntervalId) {
+      if (
+        this.battlePhase === 'playing' &&
+        this.battlePhaseStartTimestamp > 0 &&
+        !this.battleSimIntervalId
+      ) {
         this.startBattleSimulation(true)
       }
     },
@@ -2291,6 +2353,52 @@ export const useBattleStore = defineStore('battle', {
         document.removeEventListener('visibilitychange', _visibilityHandler)
         _visibilityHandler = null
       }
+    },
+
+    /**
+     * Toggle the pending "stop after this match" request from the live board.
+     * While a match or its honor screen is still running the stop is deferred
+     * (and can be toggled off again to keep battling). If neither is active
+     * (search / idle wait between matches) there is nothing left to finish, so
+     * drop straight to the landing screen.
+     */
+    requestStopAutoBattle() {
+      const matchLive = this.battlePhase === 'playing' && this.battlePhaseStartTimestamp > 0
+      const inHonor = this.showAutoBattleResult
+      if (!matchLive && !inHonor) {
+        this.returnToLanding()
+        return
+      }
+      this.stopRequested = !this.stopRequested
+    },
+
+    /**
+     * Tear down the running auto-battle loop and return the player to the
+     * landing screen (true idle state). Career / all-time stats are untouched;
+     * a later START BATTLE re-initializes a fresh loop via
+     * initializePersistentAutoBattle().
+     */
+    returnToLanding() {
+      this.stopRequested = false
+      this.stopAutoBattle()
+      this.pauseBattleSimulation()
+      this.timerIds.forEach((id) => clearTimeout(id))
+      this.timerIds = []
+      if (this.resultCountdownTimer) {
+        clearInterval(this.resultCountdownTimer)
+        this.resultCountdownTimer = null
+      }
+      this.resultCountdown = 0
+      this.showAutoBattleResult = false
+      this.simulationReadyToStart = false
+      this.isViewingLanding = false
+      this.isAutoBattleInitialized = false
+      // Reset the transient phase timestamps so a fresh START BATTLE begins clean.
+      this.battlePhaseStartTimestamp = 0
+      this.resultPhaseStartTimestamp = 0
+      this.searchingPhaseStartTimestamp = 0
+      this.autoBattleTimerEndTimestamp = 0
+      this.timeUntilNextBattle = 0
     },
   },
 })

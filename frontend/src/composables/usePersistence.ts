@@ -117,6 +117,7 @@ export function usePersistence() {
         newlyUnlockedChampions: [...battleStore.newlyUnlockedChampions],
         battleEverStarted: battleStore.battleEverStarted,
         isAutoBattleInitialized: battleStore.isAutoBattleInitialized,
+        stopRequested: battleStore.stopRequested,
         resultPhaseStartTimestamp: battleStore.resultPhaseStartTimestamp,
         battlePhaseStartTimestamp: battleStore.battlePhaseStartTimestamp,
         autoBattleTimerEndTimestamp: battleStore.autoBattleTimerEndTimestamp,
@@ -327,6 +328,7 @@ export function usePersistence() {
           battleStore.newlyUnlockedChampions = b.newlyUnlockedChampions
         battleStore.battleEverStarted = b.battleEverStarted ?? false
         battleStore.isAutoBattleInitialized = b.isAutoBattleInitialized ?? false
+        battleStore.stopRequested = b.stopRequested ?? false
         battleStore.resultPhaseStartTimestamp = b.resultPhaseStartTimestamp ?? 0
         battleStore.battlePhaseStartTimestamp = b.battlePhaseStartTimestamp ?? 0
         battleStore.autoBattleTimerEndTimestamp = b.autoBattleTimerEndTimestamp ?? 0
@@ -357,7 +359,8 @@ export function usePersistence() {
           battleStore.objectiveOverrides = b.objectiveOverrides
             .filter(
               (o: unknown): o is { t: number; newSeed: number; prob: number } =>
-                typeof o === 'object' && o !== null &&
+                typeof o === 'object' &&
+                o !== null &&
                 typeof (o as { t?: unknown }).t === 'number' &&
                 typeof (o as { newSeed?: unknown }).newSeed === 'number' &&
                 typeof (o as { prob?: unknown }).prob === 'number',
@@ -366,10 +369,14 @@ export function usePersistence() {
         }
         // Battle-scoped drake buffs — interactively-resolved drakes are not replayable
         battleStore.drakeBuffs = Array.isArray(b.drakeBuffs)
-          ? b.drakeBuffs.filter((t: unknown): t is DrakeTypeId => typeof t === 'string' && t in DRAKE_TYPES)
+          ? b.drakeBuffs.filter(
+              (t: unknown): t is DrakeTypeId => typeof t === 'string' && t in DRAKE_TYPES,
+            )
           : []
         battleStore.drakeBuffsT2 = Array.isArray(b.drakeBuffsT2)
-          ? b.drakeBuffsT2.filter((t: unknown): t is DrakeTypeId => typeof t === 'string' && t in DRAKE_TYPES)
+          ? b.drakeBuffsT2.filter(
+              (t: unknown): t is DrakeTypeId => typeof t === 'string' && t in DRAKE_TYPES,
+            )
           : []
         // Mid-battle rosters (needed for deterministic timeline resume)
         if (
@@ -432,7 +439,10 @@ export function usePersistence() {
               itemStore.slotEquipment[i] = {
                 weapon: saved.items.slotEquipment[i].weapon ?? null,
                 armor: saved.items.slotEquipment[i].armor ?? null,
-                artefact: saved.items.slotEquipment[i].artefact ?? saved.items.slotEquipment[i].misc ?? null,
+                artefact:
+                  saved.items.slotEquipment[i].artefact ??
+                  saved.items.slotEquipment[i].misc ??
+                  null,
               }
             }
           }
@@ -452,8 +462,7 @@ export function usePersistence() {
         galaxyStore.mapSeed = gx.mapSeed ?? galaxyStore.mapSeed
         // Ältere Saves kennen die Galaxie-Historie nicht → Zeitmessung der
         // laufenden Galaxie startet ab jetzt, Archiv beginnt leer.
-        galaxyStore.galaxyStartedAtInGameTime =
-          gx.galaxyStartedAtInGameTime ?? gameStore.inGameTime
+        galaxyStore.galaxyStartedAtInGameTime = gx.galaxyStartedAtInGameTime ?? gameStore.inGameTime
         galaxyStore.completedGalaxies = Array.isArray(gx.completedGalaxies)
           ? gx.completedGalaxies
           : []
@@ -492,7 +501,9 @@ export function usePersistence() {
           galaxyStore.championTravelDurationMs =
             gx.championTravelDurationMs ?? galaxyStore.championTravelDurationMs
           galaxyStore.championTravelBaseDurationMs =
-            gx.championTravelBaseDurationMs ?? gx.championTravelDurationMs ?? galaxyStore.championTravelBaseDurationMs
+            gx.championTravelBaseDurationMs ??
+            gx.championTravelDurationMs ??
+            galaxyStore.championTravelBaseDurationMs
         } else {
           galaxyStore.startChampionTravel()
         }
@@ -712,6 +723,7 @@ export function usePersistence() {
     battleStore.team2 = []
     battleStore.isAutoBattleInitialized = false
     battleStore.isViewingLanding = false
+    battleStore.stopRequested = false
     battleStore.autoBattleEnabled = false
     battleStore.lastAutoBattleResult = null
     battleStore.showAutoBattleResult = false

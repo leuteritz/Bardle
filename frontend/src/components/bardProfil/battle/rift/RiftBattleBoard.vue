@@ -13,6 +13,9 @@
       <DrakeBuffBadges />
       <!-- Objective fight (drake/baron) centers within the board middle, on scoreboard height -->
       <ObjectiveModalComponent />
+      <!-- Persistent stop control: floats over the map's top edge, so it never
+           steals layout height (the square map keeps its full size) -->
+      <AutoBattleStopBar />
     </div>
     <KillFeedTicker />
     <AnnouncementBanner />
@@ -25,6 +28,7 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import TeamColumn from './TeamColumn.vue'
 import RiftMinimap from './RiftMinimap.vue'
 import KillFeedTicker from './KillFeedTicker.vue'
+import AutoBattleStopBar from './AutoBattleStopBar.vue'
 import DrakeBuffBadges from './DrakeBuffBadges.vue'
 import AnnouncementBanner from './AnnouncementBanner.vue'
 import ObjectiveModalComponent from '../ObjectiveModalComponent.vue'
