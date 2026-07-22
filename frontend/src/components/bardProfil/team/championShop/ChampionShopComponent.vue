@@ -630,17 +630,6 @@ export default defineComponent({
     } as const
 
     watch(
-      () => uiStore.pendingChampionSearch,
-      (name) => {
-        if (name) {
-          searchQuery.value = name
-          uiStore.clearPendingChampionSearch()
-        }
-      },
-      { immediate: true },
-    )
-
-    watch(
       () => props.initialRole,
       (val) => {
         activeRole.value = val as ChampionRole | 'all'
@@ -1605,6 +1594,21 @@ const shopChampionNames = computed(() =>
       selectedItem.value = id
       selectedChampion.value = null
     }
+
+    // Deep-link from a notify-badge tooltip: fill the search with the champion
+    // name and select it so the detail panel opens on the right. Defined here
+    // (after selectChampion/selectedChampion) so the immediate run can touch
+    // them without a temporal-dead-zone crash.
+    watch(
+      () => uiStore.pendingChampionSearch,
+      (name) => {
+        if (!name) return
+        searchQuery.value = name
+        selectChampion(name)
+        uiStore.clearPendingChampionSearch()
+      },
+      { immediate: true },
+    )
 
     function applyEntry(entry: ShopEntry) {
       if (entry.kind === 'champion') selectChampion(entry.id)
