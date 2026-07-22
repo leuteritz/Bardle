@@ -17,6 +17,7 @@
           'champ-card--buff-red': hasBuff(idx, 'red'),
           'champ-card--clickable': !!champ.name,
           'champ-card--focused': isFocused(idx),
+          'champ-card--muted': !!champ.name && hasFocus && !isFocused(idx),
         },
       ]"
       @click="champ.name && battleStore.toggleFocusedChampion(side === 'blue' ? 1 : 2, idx)"
@@ -110,6 +111,9 @@ function hasBuff(idx: number, type: 'blue' | 'red'): boolean {
 function isFocused(idx: number): boolean {
   return battleStore.focusedChampionId === `${props.side === 'blue' ? 1 : 2}-${idx}`
 }
+
+/** Any champion (either team) is currently spotlighted. */
+const hasFocus = computed(() => battleStore.focusedChampionId !== '')
 
 /** Live MVP across both teams (updates as the battle progresses). */
 const mvpLiveName = computed(() => {
@@ -215,16 +219,35 @@ function hpClass(hp: number): string {
   pointer-events: none;
   z-index: 2;
 }
+/* Selected card pops hard: thick bright ring + inner glow + a gold-white
+   corner sheen; the portrait brightens and the rest of the column recedes. */
+.champ-card--focused {
+  z-index: 3;
+}
 .champ-card--focused::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 8px;
   box-shadow:
-    inset 0 0 0 2px #ffffff,
-    inset 0 0 18px rgba(255, 255, 255, 0.4);
+    inset 0 0 0 3px #ffffff,
+    inset 0 0 26px rgba(255, 255, 255, 0.6);
   pointer-events: none;
   z-index: 2;
+}
+.champ-card--focused .portrait {
+  filter: brightness(1.18) saturate(1.12) contrast(1.04);
+}
+.champ-card--focused .champ-name {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.55), 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* Non-selected cards recede while one is spotlighted */
+.champ-card--muted {
+  opacity: 0.42;
+  filter: saturate(0.7) brightness(0.85);
+  transition: opacity 0.2s ease, filter 0.2s ease;
 }
 
 .portrait {
