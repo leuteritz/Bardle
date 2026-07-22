@@ -15,6 +15,7 @@
         </div>
 
         <div class="pause-panel">
+          <RpgFrame />
           <!-- Header -->
           <header class="pause-header">
             <h1 class="pause-title">Paused</h1>
@@ -168,6 +169,7 @@ import {
 } from '@/config/constants'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
+import RpgFrame from '@/components/ui/RpgFrame.vue'
 
 const { windowFocused } = useWindowFocus()
 const galaxyStore = useGalaxyStore()
@@ -340,9 +342,12 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Panel ────────────────────────────────────────────── */
+/* Same frame as the BardProfileMenu modal (.rp-modal): flat dark body, the
+   bottom-bar notch curvature and the gold accent line along the top edge. */
 .pause-panel {
   position: relative;
   z-index: 1;
+  overflow: hidden;
   width: min(560px, 94vw);
   max-height: 100%;
   display: flex;
@@ -350,12 +355,22 @@ function particleStyle(i: number): Record<string, string> {
   align-items: center;
   gap: clamp(14px, 2.4vh, 24px);
   padding: clamp(22px, 4vh, 40px) clamp(20px, 4vw, 44px) clamp(18px, 3vh, 30px);
-  background: #1e1006;
-  border: 1px solid rgba(122, 78, 32, 0.8);
-  border-radius: 18px;
+  background: #111008;
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
   box-shadow:
-    0 40px 100px rgba(0, 0, 0, 0.75),
-    inset 0 1px 0 rgba(255, 200, 80, 0.12);
+    0 25px 60px rgba(0, 0, 0, 0.95),
+    0 0 0 1px #2a1608;
+}
+.pause-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
+  box-shadow: 0 0 8px rgba(200, 150, 30, 0.5);
+  pointer-events: none;
 }
 
 /* ── Header ───────────────────────────────────────────── */
