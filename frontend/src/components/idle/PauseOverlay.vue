@@ -14,7 +14,12 @@
           <span v-for="i in 14" :key="i" class="particle" :style="particleStyle(i)" />
         </div>
 
-        <div class="pause-panel">
+        <div ref="stageEl" class="pause-stage" @click.self="unpause">
+          <div
+            ref="panelEl"
+            class="pause-panel"
+            :style="{ transform: `scale(${panelScale})` }"
+          >
           <RpgFrame />
           <!-- Header -->
           <header class="pause-header">
@@ -164,6 +169,7 @@
             Resume journey
           </button>
           <span class="pause-hint">or click anywhere to continue</span>
+          </div>
         </div>
       </div>
     </Transition>
@@ -174,6 +180,7 @@
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useWindowFocus } from '@/composables/useWindowFocus'
+import { useFitScale } from '@/composables/useFitScale'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'
 import { usePlayerStore } from '@/stores/playerStore'
@@ -187,16 +194,20 @@ import {
   PAUSE_SUN_MIN_DIAMETER,
   PAUSE_SUN_MAX_DIAMETER,
   PAUSE_SUN_VH_FACTOR,
-  PAUSE_COMPACT_VIEWPORT_H,
-  PAUSE_SUN_COMPACT_MIN_DIAMETER,
-  PAUSE_SUN_COMPACT_MAX_DIAMETER,
-  PAUSE_SUN_COMPACT_VH_FACTOR,
+  PAUSE_PANEL_MAX_SCALE,
 } from '@/config/constants'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 
 const { windowFocused } = useWindowFocus()
+
+const stageEl = ref<HTMLElement | null>(null)
+const panelEl = ref<HTMLElement | null>(null)
+const { scale: panelScale } = useFitScale(stageEl, panelEl, {
+  maxScale: PAUSE_PANEL_MAX_SCALE,
+  padding: 0,
+})
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
 const playerStore = usePlayerStore()
@@ -204,11 +215,12 @@ const planetShopStore = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
 
 function computeSunDiameter(): number {
-  const compact = window.innerHeight <= PAUSE_COMPACT_VIEWPORT_H
-  const min = compact ? PAUSE_SUN_COMPACT_MIN_DIAMETER : PAUSE_SUN_MIN_DIAMETER
-  const max = compact ? PAUSE_SUN_COMPACT_MAX_DIAMETER : PAUSE_SUN_MAX_DIAMETER
-  const factor = compact ? PAUSE_SUN_COMPACT_VH_FACTOR : PAUSE_SUN_VH_FACTOR
-  return Math.round(Math.min(max, Math.max(min, window.innerHeight * factor)))
+  return Math.round(
+    Math.min(
+      PAUSE_SUN_MAX_DIAMETER,
+      Math.max(PAUSE_SUN_MIN_DIAMETER, window.innerHeight * PAUSE_SUN_VH_FACTOR),
+    ),
+  )
 }
 
 const sunDiameter = ref(computeSunDiameter())
@@ -336,15 +348,25 @@ function particleStyle(i: number): Record<string, string> {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(12px, 3vh, 40px);
-  /* Das Panel endet immer oberhalb der Bottom-Bar (Scoreboard-Streifen) */
-  padding-bottom: calc(var(--bottom-center-strip-h, 79px) + 12px);
   background:
     radial-gradient(ellipse at 50% 110%, rgba(255, 200, 80, 0.08) 0%, transparent 55%),
     rgba(8, 4, 0, 0.85);
   backdrop-filter: blur(10px) saturate(0.85);
   -webkit-backdrop-filter: blur(10px) saturate(0.85);
-  overflow-y: auto;
+  overflow: hidden;
+}
+
+/* Verfügbare Bühne: alles oberhalb der Bottom-Bar. useFitScale passt das Panel
+   uniform hier ein — schrumpft auf Full HD, wächst (bis max scale) auf 2K/4K. */
+.pause-stage {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--bottom-center-strip-h, 79px) + 12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── Particles ────────────────────────────────────────── */
@@ -374,13 +396,16 @@ function particleStyle(i: number): Record<string, string> {
 
 /* ── Panel ────────────────────────────────────────────── */
 /* Same frame as the BardProfileMenu modal (.rp-modal): flat dark body, the
-   bottom-bar notch curvature and the gold accent line along the top edge. */
+   bottom-bar notch curvature and the gold accent line along the top edge.
+   Feste Design-Breite (PAUSE_PANEL_DESIGN_WIDTH) — Größenanpassung übernimmt
+   ausschließlich useFitScale per transform: scale(). */
 .pause-panel {
   position: relative;
   z-index: 1;
   overflow: hidden;
-  width: min(560px, 94vw);
-  max-height: 100%;
+  width: 560px;
+  flex-shrink: 0;
+  transform-origin: center center;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -925,7 +950,8 @@ function particleStyle(i: number): Record<string, string> {
 .pause-fade-enter-active {
   transition: opacity 0.3s ease;
 }
-.pause-fade-enter-active .pause-panel {
+/* Pop-in auf der Stage — das Panel selbst trägt den inline Fit-Scale-Transform */
+.pause-fade-enter-active .pause-stage {
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .pause-fade-leave-active {
@@ -934,78 +960,11 @@ function particleStyle(i: number): Record<string, string> {
 .pause-fade-enter-from {
   opacity: 0;
 }
-.pause-fade-enter-from .pause-panel {
+.pause-fade-enter-from .pause-stage {
   transform: scale(0.94) translateY(14px);
 }
 .pause-fade-leave-to {
   opacity: 0;
-}
-
-/* ── Narrow screens ───────────────────────────────────── */
-@media (max-width: 480px) {
-  .stat-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .stat-tile:first-child {
-    grid-column: 1 / -1;
-  }
-}
-
-/* ── Kompakt: flache Viewports (Full HD) ──────────────────
-   Threshold = PAUSE_COMPACT_VIEWPORT_H in constants.ts; Sonnen-Band spiegelt
-   PAUSE_SUN_COMPACT_* (120px / 17vh / 190px). */
-@media (max-height: 1100px) {
-  .pause-panel {
-    gap: 10px;
-    padding: 16px 26px 14px;
-  }
-  .pause-title {
-    font-size: 2.2rem;
-  }
-  .pause-timer {
-    margin-top: 4px;
-  }
-  .pause-timer__value {
-    font-size: 1.6rem;
-  }
-  .pause-meta-row {
-    margin-top: 6px;
-    gap: 16px;
-  }
-  .meta-chip__value {
-    font-size: 1rem;
-  }
-  .sun-hero {
-    width: clamp(120px, 17vh, 190px);
-    height: clamp(120px, 17vh, 190px);
-  }
-  .sun-phase-label {
-    margin-top: -8px;
-    font-size: 1rem;
-  }
-  .chime-readout {
-    gap: 10px;
-  }
-  .chime-img {
-    width: 44px;
-    height: 44px;
-  }
-  .chime-value {
-    font-size: 2rem;
-  }
-  .stat-grid {
-    grid-auto-rows: 68px;
-    gap: 8px;
-  }
-  .battle-strip {
-    padding: 7px 12px;
-  }
-  .callout {
-    padding: 5px 12px 5px 6px;
-  }
-  .continue-btn {
-    padding: 9px 0;
-  }
 }
 
 /* ── Reduced motion ───────────────────────────────────── */
@@ -1021,7 +980,7 @@ function particleStyle(i: number): Record<string, string> {
   .continue-btn,
   .pause-fade-enter-active,
   .pause-fade-leave-active,
-  .pause-fade-enter-active .pause-panel {
+  .pause-fade-enter-active .pause-stage {
     transition: opacity 0.15s;
   }
 }
