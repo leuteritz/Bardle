@@ -61,26 +61,15 @@
     </div>
 
     <!-- New champion badge (outside card-inner so it's not clipped) -->
-    <RpgBadgeTooltip>
-      <Transition name="champion-badge-fade">
-        <RpgNotifyBadge v-if="isNew" :count="1" variant="shop" label="New champion" hoverable />
-      </Transition>
-      <template #tip>
-        <div class="new-champ-tip">
-          <div class="new-champ-tip__title">New Champion</div>
-          <div class="new-champ-tip__text">
-            {{ name }} was recently unlocked — recruit to add them to your roster.
-          </div>
-        </div>
-      </template>
-    </RpgBadgeTooltip>
+    <Transition name="champion-badge-fade">
+      <RpgNotifyBadge v-if="isNew" :count="1" variant="shop" label="New champion" />
+    </Transition>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
 import RpgNotifyBadge from '../../../ui/RpgNotifyBadge.vue'
-import RpgBadgeTooltip from '../../../ui/RpgBadgeTooltip.vue'
 import { truncate } from '../../../../config/numberFormat'
 
 /**
@@ -89,7 +78,7 @@ import { truncate } from '../../../../config/numberFormat'
  */
 export default defineComponent({
   name: 'ChampionShopCard',
-  components: { RpgNotifyBadge, RpgBadgeTooltip },
+  components: { RpgNotifyBadge },
   props: {
     name: { type: String, required: true },
     image: { type: String, required: true },
@@ -427,25 +416,6 @@ export default defineComponent({
   pointer-events: none;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7), 0 0 8px color-mix(in srgb, var(--tier-c) 25%, transparent);
-}
-
-/* ── New-champion badge tooltip content ── */
-.new-champ-tip {
-  padding: 8px 12px 9px;
-  max-width: 240px;
-}
-.new-champ-tip__title {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #e8c040;
-  margin-bottom: 4px;
-}
-.new-champ-tip__text {
-  font-size: 0.8rem;
-  line-height: 1.35;
-  color: #e8e0cc;
 }
 
 .champion-badge-fade-leave-active {

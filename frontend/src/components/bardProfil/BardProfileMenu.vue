@@ -17,8 +17,6 @@ import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSele
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 import ActionToast from '@/components/bardProfil/ActionToast.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
-import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
-import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
 
 const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()
@@ -114,34 +112,14 @@ watch(
                   class="absolute bottom-0 rp-tab-indicator left-2 right-2"
                 />
                 <div v-if="item.id === 'team'" class="team-badge-row">
-                  <RpgBadgeTooltip>
-                    <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
-                    <template #tip="{ close }">
-                      <RpgBadgeTooltipBody kind="expedition" :close="close" />
-                    </template>
-                  </RpgBadgeTooltip>
-                  <RpgBadgeTooltip>
-                    <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
-                    <template #tip="{ close }">
-                      <RpgBadgeTooltipBody kind="champions" :close="close" />
-                    </template>
-                  </RpgBadgeTooltip>
+                  <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
+                  <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
                 </div>
                 <div v-if="item.id === 'shop' && forgeBadgeReady" class="team-badge-row">
-                  <RpgBadgeTooltip>
-                    <span class="mini-badge mini-badge--forge">✦</span>
-                    <template #tip>
-                      <RpgBadgeTooltipBody kind="forge" />
-                    </template>
-                  </RpgBadgeTooltip>
+                  <span class="mini-badge mini-badge--forge">✦</span>
                 </div>
                 <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
-                  <RpgBadgeTooltip>
-                    <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
-                    <template #tip>
-                      <RpgBadgeTooltipBody kind="skill" />
-                    </template>
-                  </RpgBadgeTooltip>
+                  <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
                 </div>
               </button>
             </div>
@@ -198,7 +176,6 @@ watch(
   </Teleport>
 </template>
 
-<!-- xp-tt Level-Tooltip → ersetzt durch ui/RpgBadgeTooltip.vue + RpgBadgeTooltipBody.vue -->
 
 <style scoped>
 .team-badge-row {

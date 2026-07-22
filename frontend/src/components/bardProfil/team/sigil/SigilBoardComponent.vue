@@ -18,8 +18,6 @@ import {
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
-import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
-import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 
 const props = defineProps<{
@@ -239,17 +237,11 @@ watch(
     <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
       <Icon icon="game-icons:shopping-bag" width="26" height="26" class="sigil-action-icon" />
       Shop
-      <RpgBadgeTooltip>
-        <RpgNotifyBadge
-          :count="shopBadgeCount"
-          variant="shop"
-          label="Champions available in shop"
-          hoverable
-        />
-        <template #tip="{ close }">
-          <RpgBadgeTooltipBody kind="champions" :close="close" />
-        </template>
-      </RpgBadgeTooltip>
+      <RpgNotifyBadge
+        :count="shopBadgeCount"
+        variant="shop"
+        label="Champions available in shop"
+      />
     </button>
 
     <!-- Rücksprung zum laufenden StarFight — mittig zwischen Shop + Expedition -->
@@ -258,12 +250,7 @@ watch(
     <button class="sigil-action sigil-action--expedition" @click.stop="emit('open-expedition')">
       <Icon icon="game-icons:campfire" width="26" height="26" class="sigil-action-icon" />
       Expedition
-      <RpgBadgeTooltip>
-        <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" hoverable />
-        <template #tip="{ close }">
-          <RpgBadgeTooltipBody kind="expedition" :close="close" />
-        </template>
-      </RpgBadgeTooltip>
+      <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
     </button>
 
     <!-- scaled sigil stage -->

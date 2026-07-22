@@ -5,9 +5,6 @@ const props = defineProps<{
   count: number
   label?: string
   variant?: 'default' | 'shop'
-  /** re-enables pointer events so a wrapping RpgBadgeTooltip can hover the
-      badge — clicks still bubble to the underlying button/card */
-  hoverable?: boolean
 }>()
 
 const display = computed(() => String(props.count))
@@ -17,10 +14,7 @@ const display = computed(() => String(props.count))
   <span
     v-if="count > 0"
     class="rpg-notify-badge"
-    :class="[
-      variant === 'shop' ? 'rpg-notify-badge--shop' : '',
-      hoverable ? 'rpg-notify-badge--hoverable' : '',
-    ]"
+    :class="[variant === 'shop' ? 'rpg-notify-badge--shop' : '']"
     :aria-label="label ?? `${count} action(s) available`"
   >{{ display }}</span>
 </template>
@@ -60,11 +54,6 @@ const display = computed(() => String(props.count))
   --badge-glow-a: rgba(6, 182, 212, 0.5);
   --badge-glow-b: rgba(6, 182, 212, 0.9);
   --badge-glow-c: rgba(8, 145, 178, 0.4);
-}
-
-.rpg-notify-badge--hoverable {
-  pointer-events: auto;
-  cursor: pointer;
 }
 
 @keyframes rpg-badge-pulse {
