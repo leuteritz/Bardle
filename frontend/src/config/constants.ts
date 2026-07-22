@@ -629,7 +629,7 @@ export const MOVE_KILL_CONVERGE_LEAD_T = 70
  *  clearly shows who scored it before both move on). */
 export const MOVE_KILL_KILLER_HOLD_T = 55
 /** Game-seconds a kill-spot marker stays on the minimap after a kill lands. */
-export const KILL_MARK_WINDOW_T = 100
+export const KILL_MARK_WINDOW_T = 190
 // ── Final push choreography (endgame at the 50:00 clock mark) ──────────────
 /** Game-second the endgame push begins — 50:00 on the match clock */
 export const FINAL_PUSH_START_T = 3000

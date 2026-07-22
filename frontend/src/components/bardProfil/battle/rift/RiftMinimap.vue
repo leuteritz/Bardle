@@ -133,7 +133,6 @@
         <div class="fight-aoe" />
         <div class="clash-ring clash-ring--gold" />
         <div class="clash-ring clash-ring--red" />
-        <span class="fight-star">★</span>
         <span class="dmg-float" :style="{ animationDelay: (fi * 0.4) + 's' }">-{{ 180 + ((fight.until * 7) % 420) }}</span>
         <span class="dmg-float dmg-float--second" :style="{ animationDelay: (fi * 0.4 + 0.7) + 's' }">-{{ 90 + ((fight.until * 13) % 260) }}</span>
       </div>
@@ -195,9 +194,10 @@
           '--mk-scale': String(1 + Math.min(mark.tier - 1, 4) * 0.22),
         }"
       >
+        <span class="kill-mark-aoe" />
         <span class="kill-mark-ring" />
         <span class="kill-mark-flash" />
-        <Icon icon="game-icons:saber-slash" class="kill-mark-icon" width="20" height="20" />
+        <Icon icon="game-icons:saber-slash" class="kill-mark-icon" width="26" height="26" />
         <span v-if="mark.tier >= 2" class="kill-mark-tier">{{ mark.tier }}×</span>
       </div>
 
@@ -1070,16 +1070,6 @@ const structureMarkers = computed(() => {
   animation-delay: 0.5s;
 }
 
-.fight-star {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 15px;
-  color: #e8c040;
-  text-shadow: 0 0 8px #000;
-}
-
 .dmg-float {
   position: absolute;
   left: 50%;
@@ -1448,59 +1438,79 @@ const structureMarkers = computed(() => {
 .kill-mark--blue { --kc: 96, 165, 250; }
 .kill-mark--red { --kc: 248, 113, 113; }
 
+/* Soft danger zone: a wide tinted circle that holds, so the kill area reads as
+   a place on the map — not just a fleeting icon. */
+.kill-mark-aoe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--kc), 0.32), rgba(var(--kc), 0.12) 55%, transparent 72%);
+  box-shadow: inset 0 0 12px rgba(var(--kc), 0.35);
+  animation: kill-aoe 2.6s ease-out forwards;
+}
 .kill-mark-ring {
   position: absolute;
   left: 0;
   top: 0;
-  width: 30px;
-  height: 30px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  border: 2px solid rgba(var(--kc), 0.9);
-  box-shadow: 0 0 10px rgba(var(--kc), 0.6);
-  animation: kill-ring 1.3s ease-out forwards;
+  border: 2.5px solid rgba(var(--kc), 0.95);
+  box-shadow: 0 0 14px rgba(var(--kc), 0.7);
+  animation: kill-ring 2.4s ease-out forwards;
 }
 .kill-mark-flash {
   position: absolute;
   left: 0;
   top: 0;
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(255, 240, 220, 0.9),
-    rgba(var(--kc), 0.5) 45%,
+    rgba(255, 240, 220, 0.95),
+    rgba(var(--kc), 0.55) 45%,
     transparent 70%
   );
-  animation: kill-flash 1s ease-out forwards;
+  animation: kill-flash 1.2s ease-out forwards;
 }
 .kill-mark-icon {
   position: absolute;
   left: 0;
   top: 0;
   color: #fff;
-  filter: drop-shadow(0 0 4px rgba(var(--kc), 1)) drop-shadow(0 1px 1px #000);
-  animation: kill-icon 1.3s ease-out forwards;
+  filter: drop-shadow(0 0 5px rgba(var(--kc), 1)) drop-shadow(0 1px 1px #000);
+  animation: kill-icon 2.4s ease-out forwards;
 }
 .kill-mark-tier {
   position: absolute;
   left: 0;
   top: 0;
-  padding: 0 4px;
-  font-size: 10px;
+  padding: 0 5px;
+  font-size: 11px;
   font-weight: 800;
-  line-height: 1.3;
+  line-height: 1.35;
   color: #1e1006;
   background: linear-gradient(to bottom, #ffe9a0, #e8c060 55%, #c89040);
   border: 1px solid #8a5c18;
   border-radius: 4px;
   box-shadow: 0 0 8px rgba(232, 192, 64, 0.7), 0 1px 2px rgba(0, 0, 0, 0.6);
-  animation: kill-tier 1.3s ease-out forwards;
+  animation: kill-tier 2.4s ease-out forwards;
 }
 
+@keyframes kill-aoe {
+  0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  14% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  70% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(1.12); opacity: 0; }
+}
 @keyframes kill-ring {
   0% { transform: translate(-50%, -50%) scale(0.35); opacity: 0.95; }
-  100% { transform: translate(-50%, -50%) scale(1.9); opacity: 0; }
+  55% { opacity: 0.55; }
+  100% { transform: translate(-50%, -50%) scale(1.85); opacity: 0; }
 }
 @keyframes kill-flash {
   0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.9; }
@@ -1508,15 +1518,15 @@ const structureMarkers = computed(() => {
 }
 @keyframes kill-icon {
   0% { transform: translate(-50%, -50%) scale(1.7) rotate(-12deg); opacity: 0; }
-  16% { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
-  70% { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
+  12% { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
+  75% { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(1.05); opacity: 0; }
 }
 @keyframes kill-tier {
-  0% { transform: translate(7px, -17px) scale(0.6); opacity: 0; }
-  20% { transform: translate(7px, -17px) scale(1); opacity: 1; }
-  75% { transform: translate(7px, -17px) scale(1); opacity: 1; }
-  100% { transform: translate(7px, -17px) scale(1); opacity: 0; }
+  0% { transform: translate(9px, -20px) scale(0.6); opacity: 0; }
+  16% { transform: translate(9px, -20px) scale(1); opacity: 1; }
+  80% { transform: translate(9px, -20px) scale(1); opacity: 1; }
+  100% { transform: translate(9px, -20px) scale(1); opacity: 0; }
 }
 
 /* ── Controls ── */
@@ -1658,6 +1668,7 @@ const structureMarkers = computed(() => {
   .mvp-ring,
   .mvp-crown,
   .champ-img--mvp,
+  .kill-mark-aoe,
   .kill-mark-ring,
   .kill-mark-flash,
   .kill-mark-icon,
