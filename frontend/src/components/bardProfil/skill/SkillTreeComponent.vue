@@ -8,6 +8,7 @@ import {
   type NodeTypesObject,
 } from '@vue-flow/core'
 import { Controls } from '@vue-flow/controls'
+import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { MEEP_TREE_BRANCHES } from '@/config/meepTree'
@@ -124,6 +125,28 @@ const nodeTypes = {
 <template>
   <div class="st-canvas">
     <CosmicStageBackground />
+
+    <!-- Admin toolbar: unlock / reset the whole tree at once -->
+    <div class="st-admin">
+      <span class="st-admin-tag">Admin</span>
+      <button
+        class="st-admin-btn st-admin-btn--unlock"
+        title="Learn every skill for free"
+        @click="meepTree.adminUnlockAll()"
+      >
+        <Icon icon="game-icons:padlock-open" width="18" height="18" />
+        Unlock All
+      </button>
+      <button
+        class="st-admin-btn st-admin-btn--reset"
+        title="Unlearn every skill"
+        @click="meepTree.adminResetAll()"
+      >
+        <Icon icon="game-icons:broom" width="18" height="18" />
+        Reset All
+      </button>
+    </div>
+
     <VueFlow
       :nodes="nodes"
       :edges="edges"
@@ -156,6 +179,70 @@ const nodeTypes = {
 .st-flow {
   position: relative;
   z-index: 1;
+}
+
+/* ── Admin toolbar (top-left overlay) ────────────────────── */
+.st-admin {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--rpg-bg-icon);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: var(--bp-radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+}
+
+.st-admin-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rpg-text-muted);
+  padding-right: 4px;
+  border-right: 1px solid var(--rpg-border-row);
+}
+
+.st-admin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  font-family: 'MedievalSharp', cursive;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: var(--bp-radius);
+  border: 1px solid var(--rpg-wood-mid);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.st-admin-btn--unlock {
+  color: #7ad84a;
+  border-color: #2e5a1a;
+}
+.st-admin-btn--unlock:hover {
+  background: #13220c;
+  border-color: #52b830;
+  color: #9cf06a;
+}
+
+.st-admin-btn--reset {
+  color: #cc6050;
+  border-color: #5a221a;
+}
+.st-admin-btn--reset:hover {
+  background: #220f0c;
+  border-color: #cc6050;
+  color: #e88070;
 }
 
 /* A node whose skill just became learnable lifts its WHOLE wrapper above the

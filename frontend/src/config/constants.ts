@@ -2841,6 +2841,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:queen-crown', // ★12 Ascendant
   'game-icons:teleport', // Admin Galaxy Jump — warp button
   'game-icons:sun-radiations', // Admin Star Phase panel — header icon
+  'game-icons:padlock-open', // Admin: Unlock-all button in the Skill Tree tab (SkillTreeComponent)
+  'game-icons:broom', // Admin: Reset-all button in the Skill Tree tab (SkillTreeComponent)
   'game-icons:sand-clock', // Time-in-phase indicator (BardStatsTab Star Forge stage)
   'game-icons:cursor', // Click mission icon (missionStore)
   // Star Forge — tree branch nodes (config/starForge.ts)

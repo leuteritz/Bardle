@@ -163,5 +163,30 @@ export const useMeepTreeStore = defineStore('meepTree', {
       this.bought = []
       this.acknowledged = []
     },
+
+    /** Production-affecting nodes must refresh the cached CPS/CPC values. */
+    refreshProduction() {
+      const gameStore = useGameStore()
+      const shopStore = useShopStore()
+      gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
+      gameStore.chimesPerClick = shopStore.calculateTotalCPC()
+    },
+
+    /** Admin: instantly learn every tree node for free and refresh production. */
+    adminUnlockAll() {
+      this.bought = MEEP_TREE_BRANCHES.flatMap((b) => b.nodes.map((n) => n.id))
+      this.acknowledged = []
+      this.refreshProduction()
+      logger.info('Game', 'Admin: unlocked all Meep tree nodes', { count: this.bought.length })
+    },
+
+    /** Admin: unlearn every tree node and refresh production. */
+    adminResetAll() {
+      const count = this.bought.length
+      this.bought = []
+      this.acknowledged = []
+      this.refreshProduction()
+      logger.info('Game', 'Admin: reset all Meep tree nodes', { count })
+    },
   },
 })
