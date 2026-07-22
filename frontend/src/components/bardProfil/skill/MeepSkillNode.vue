@@ -58,7 +58,7 @@ function handleBuy() {
       <span v-if="state === 'bought'" class="msn-badge msn-badge--bought">✓</span>
       <span v-else class="msn-badge" :class="`msn-badge--${state}`">
         <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="msn-badge__icon" />
-        {{ data.node.cost }}
+        <span class="msn-badge__num">{{ data.node.cost }}</span>
       </span>
     </button>
 
@@ -213,26 +213,33 @@ function handleBuy() {
    Kreises, horizontal zentriert — überlappt den Kreisrand nicht. */
 .msn-badge {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 1px 9px;
+  justify-content: center;
+  gap: 6px;
+  padding: 3px 12px;
   border-radius: 999px;
   border: 1px solid var(--rpg-border-row);
   background: var(--rpg-bg-deep);
-  font-size: 12.5px;
+  font-size: 17px;
   font-weight: 800;
-  line-height: 1.5;
   color: var(--rpg-text-dim);
   white-space: nowrap;
 }
 
 .msn-badge__icon {
-  height: 14px;
+  height: 20px;
   width: auto;
+  flex-shrink: 0;
+}
+
+/* line-height: 1 hält die Ziffern in der Flex-Mitte — Icon und Zahl sitzen
+   dadurch als Paar zentriert im Pill. */
+.msn-badge__num {
+  line-height: 1;
 }
 
 /* Kosten-Badge in der Zweigfarbe — gesperrt dezent getönt, kaufbar kräftig
@@ -252,15 +259,15 @@ function handleBuy() {
   border-color: color-mix(in srgb, var(--branch-color) 65%, var(--rpg-border-row));
   background: var(--rpg-bg-deep);
   color: var(--branch-color);
-  font-size: 13px;
-  padding: 1px 9px;
+  font-size: 17px;
+  padding: 3px 12px;
 }
 
 /* ── Label unter dem Kreis ────────────────────────────────── */
-/* Genug Abstand, damit der Badge (endet ~27px unter dem Kreis) nicht mit dem
+/* Genug Abstand, damit der Badge (endet ~31px unter dem Kreis) nicht mit dem
    Node-Namen kollidiert. */
 .msn-label {
-  margin-top: 34px;
+  margin-top: 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
