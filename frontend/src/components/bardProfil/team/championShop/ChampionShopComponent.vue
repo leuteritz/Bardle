@@ -1596,15 +1596,13 @@ const shopChampionNames = computed(() =>
     }
 
     // Deep-link from a notify-badge tooltip: fill the search with the champion
-    // name and select it so the detail panel opens on the right. Defined here
-    // (after selectChampion/selectedChampion) so the immediate run can touch
-    // them without a temporal-dead-zone crash.
+    // name — the search watcher below then auto-selects it (exact match) in the
+    // detail panel. Placed after selectedChampion so its immediate run is safe.
     watch(
       () => uiStore.pendingChampionSearch,
       (name) => {
         if (!name) return
         searchQuery.value = name
-        selectChampion(name)
         uiStore.clearPendingChampionSearch()
       },
       { immediate: true },
@@ -1614,6 +1612,30 @@ const shopChampionNames = computed(() =>
       if (entry.kind === 'champion') selectChampion(entry.id)
       else selectItem(entry.id)
     }
+
+    // Resolve an entry's display name (champion name, or item name by id).
+    function entryName(entry: ShopEntry): string {
+      if (entry.kind === 'champion') return entry.id
+      return SHOP_ITEMS.find((i) => i.id === entry.id)?.name ?? entry.id
+    }
+
+    // Auto-select the first search hit so the detail panel updates live as the
+    // player types. Prefers an exact name match (so a full name or a tooltip
+    // deep-link lands on that exact champion/item), else the first visible card
+    // in grid order. An empty query keeps the "no auto-select until click"
+    // default view.
+    watch(
+      searchQuery,
+      (raw) => {
+        const q = raw.trim().toLowerCase()
+        if (!q) return
+        const list = visibleEntries.value
+        if (list.length === 0) return
+        const exact = list.find((e) => entryName(e).toLowerCase() === q)
+        applyEntry(exact ?? list[0])
+      },
+      { immediate: true },
+    )
 
     function selectPrev() {
       const list = visibleEntries.value
@@ -1628,8 +1650,9 @@ const shopChampionNames = computed(() =>
       applyEntry(list[(selectedIndex.value + 1) % list.length])
     }
 
-    // No auto-select: the panel shows its empty state until the player clicks a
-    // card. Only clear the selection when it goes stale (filtered out; a bought
+    // Without a search the panel shows its empty state until the player clicks a
+    // card (search auto-select is handled by the searchQuery watcher above).
+    // Here we only clear the selection when it goes stale (filtered out; a bought
     // champion is re-pointed by handleBuy before this runs).
     watch(visibleEntries, (list) => {
       if (
