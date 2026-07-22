@@ -391,10 +391,11 @@ function particleStyle(i: number): Record<string, string> {
    Der Bottom-Abstand reserviert zusätzlich die volle Höhe des MVP-Honor-Buff-
    Badges (MvpBuffOverlay: sitzt 16px über dem Scoreboard-Streifen, ~64px hoch,
    z-index über dem Overlay) — dauerhaft, damit das Panel beim Erscheinen des
-   Buffs nicht springt. */
+   Buffs nicht springt. Oben spiegelt derselbe Abstand den Buff-Puffer, damit
+   das Panel harmonisch mit gleichem Luftraum über und unter sich sitzt. */
 .pause-stage {
   position: absolute;
-  top: 12px;
+  top: clamp(88px, 10vh, 112px);
   left: 12px;
   right: 12px;
   bottom: calc(var(--bottom-center-strip-h, 79px) + clamp(88px, 10vh, 112px));
