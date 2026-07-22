@@ -55,28 +55,42 @@ describe('buildMovementSchedules', () => {
     }
   })
 
-  it('a killed champion dies at the kill spot, then treks back via its fountain', () => {
-    const kill = timeline.events.find((e) => e.type === 'kill' && e.team === 2 && e.location)
+  it('a killed champion respawns at its fountain and walks back', () => {
+    const kill = timeline.events.find((e) => e.type === 'kill' && e.team === 2)
     expect(kill).toBeDefined()
     const victimIdx = kill!.victimIdx ?? 0
     const sched = schedules.t1[victimIdx]
-    // At the moment of death the victim is drawn at the kill location (an enemy
-    // is right there), NOT teleported to base.
+    // Right after death the victim is drawn at (near) its own fountain — it
+    // respawned there and now walks back.
     const atDeath = positionAt(sched, kill!.t + 1)
     expect(atDeath.kind).toBe('respawn-walk')
-    expect(Math.hypot(atDeath.x - kill!.location!.x, atDeath.y - kill!.location!.y)).toBeLessThan(8)
-    // The respawn-walk segment starts at the kill spot and routes back through
-    // the champion's own fountain before returning to the action.
+    expect(Math.hypot(atDeath.x - BLUE_FOUNTAIN.x, atDeath.y - BLUE_FOUNTAIN.y)).toBeLessThan(8)
+    // The respawn-walk segment starts at the fountain and ends back in the field.
     const seg = sched.find(
       (s) => s.kind === 'respawn-walk' && kill!.t >= s.tStart && kill!.t <= s.tEnd,
     )
     expect(seg).toBeDefined()
     expect(
-      Math.hypot(seg!.path[0].x - kill!.location!.x, seg!.path[0].y - kill!.location!.y),
-    ).toBeLessThan(6)
-    expect(
-      seg!.path.some((p) => Math.hypot(p.x - BLUE_FOUNTAIN.x, p.y - BLUE_FOUNTAIN.y) < 2),
-    ).toBe(true)
+      Math.hypot(seg!.path[0].x - BLUE_FOUNTAIN.x, seg!.path[0].y - BLUE_FOUNTAIN.y),
+    ).toBeLessThan(2)
+    const returnPt = seg!.path[seg!.path.length - 1]
+    expect(Math.hypot(returnPt.x - BLUE_FOUNTAIN.x, returnPt.y - BLUE_FOUNTAIN.y)).toBeGreaterThan(
+      5,
+    )
+  })
+
+  it('the Cloud drake buff shortens the own team respawn walk', () => {
+    const full = buildMovementSchedules(timeline, 42, 1)
+    const buffed = buildMovementSchedules(timeline, 42, 0.5)
+    const kill = timeline.events.find((e) => e.type === 'kill' && e.team === 2)!
+    const victimIdx = kill.victimIdx ?? 0
+    const pick = (scheds: typeof full) =>
+      scheds.t1[victimIdx].find(
+        (s) => s.kind === 'respawn-walk' && kill.t >= s.tStart && kill.t <= s.tEnd,
+      )!
+    const segFull = pick(full)
+    const segBuff = pick(buffed)
+    expect(segBuff.tEnd - segBuff.tStart).toBeLessThan(segFull.tEnd - segFull.tStart)
   })
 
   it('the winning team ends at the enemy nexus', () => {

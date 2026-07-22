@@ -241,7 +241,12 @@
           <span class="champ-level" :class="pos.team === 1 ? 'champ-level--blue' : 'champ-level--red'">
             {{ champAt(pos.team, pos.idx)?.level ?? 1 }}
           </span>
-          <span v-if="pos.walking" class="walk-indicator">⟳</span>
+          <span
+            v-if="pos.walking && battleStore.respawnSecondsLeft(pos.team, pos.idx) > 0"
+            class="respawn-count"
+          >
+            {{ battleStore.respawnSecondsLeft(pos.team, pos.idx) }}
+          </span>
           <span v-if="champBuffs(pos.team, pos.idx).length" class="champ-buffs">
             <span
               v-for="b in champBuffs(pos.team, pos.idx)"
@@ -1383,14 +1388,23 @@ const structureMarkers = computed(() => {
   color: #ffd0d0;
 }
 
-.walk-indicator {
+/* Death timer on a respawning dot: compact gold seconds badge */
+.respawn-count {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  font-size: 11px;
-  color: #e8c040;
-  text-shadow: 0 0 4px #000;
-  animation: obj-spin 1.4s linear infinite;
+  top: -7px;
+  right: -7px;
+  min-width: 14px;
+  padding: 0 3px;
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  text-align: center;
+  color: #1e1006;
+  background: linear-gradient(to bottom, #ffe9a0, #e8c060 55%, #c89040);
+  border: 1px solid #8a5c18;
+  border-radius: 7px;
+  box-shadow: 0 0 6px rgba(232, 192, 64, 0.7), 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 .champ-hp {
@@ -1650,7 +1664,6 @@ const structureMarkers = computed(() => {
   .dmg-float,
   .fight-aoe,
   .obj-label--soon,
-  .walk-indicator,
   .structure-burst,
   .structure-ember,
   .structure-x--punch,

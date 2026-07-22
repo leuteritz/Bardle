@@ -414,6 +414,29 @@ export const useBattleStore = defineStore('battle', {
     /** Cloud buff: ally respawn time multiplier for the rest of the battle. */
     allyRespawnMult: (state): number =>
       state.drakeBuffs.includes('cloud') ? DRAKE_CLOUD_RESPAWN_MULT : 1,
+    /**
+     * Death-timer helpers for the map dots + team cards. Remaining respawn is
+     * shown in real-equivalent seconds (game-time runs 60× real time), and the
+     * fraction drains a ring. Cloud-buff aware for the own team so a shorter
+     * respawn reads shorter everywhere.
+     */
+    respawnSecondsLeft:
+      (state) =>
+      (team: 1 | 2, idx: number): number => {
+        const until = (team === 1 ? state.respawnUntil.t1 : state.respawnUntil.t2)[idx] ?? 0
+        const remaining = until - state.battleTime
+        return remaining > 0 ? Math.ceil(remaining / 60) : 0
+      },
+    respawnFraction:
+      (state) =>
+      (team: 1 | 2, idx: number): number => {
+        const until = (team === 1 ? state.respawnUntil.t1 : state.respawnUntil.t2)[idx] ?? 0
+        const remaining = until - state.battleTime
+        if (remaining <= 0) return 0
+        const mult = team === 1 && state.drakeBuffs.includes('cloud') ? DRAKE_CLOUD_RESPAWN_MULT : 1
+        const total = MOVE_RESPAWN_WALK_SECONDS * mult
+        return Math.max(0, Math.min(1, remaining / total))
+      },
     /** Infernal buff: flat burn DPS credited to the own side in later objective fights. */
     objectiveBurnDps: (state): number =>
       state.drakeBuffs.includes('infernal') ? DRAKE_INFERNAL_BURN_DPS : 0,

@@ -35,7 +35,11 @@
       <!-- Team-tinted scrim keeps name/KDA readable over any splash art -->
       <div class="scrim" />
 
-      <span v-if="champ.respawnState === 'walking-back'" class="respawn-tag">⟳</span>
+      <!-- Death timer while respawning / walking back (Cloud-buff aware) -->
+      <div v-if="champ.respawnState === 'walking-back'" class="death-timer">
+        <span class="death-timer-ring" :style="{ '--p': respawnPct(idx) + '%' }" />
+        <span class="death-timer-num">{{ respawnSecs(idx) }}</span>
+      </div>
 
       <!-- Live-MVP chip: gold banner in the card's top corner (mirrored per side) -->
       <span v-if="champ.name && champ.name === mvpLiveName" class="mvp-chip">♛ MVP</span>
@@ -114,6 +118,14 @@ function isFocused(idx: number): boolean {
 
 /** Any champion (either team) is currently spotlighted. */
 const hasFocus = computed(() => battleStore.focusedChampionId !== '')
+
+/** Death-timer readouts for a respawning champion of this column. */
+function respawnSecs(idx: number): number {
+  return battleStore.respawnSecondsLeft(props.side === 'blue' ? 1 : 2, idx)
+}
+function respawnPct(idx: number): number {
+  return battleStore.respawnFraction(props.side === 'blue' ? 1 : 2, idx) * 100
+}
 
 /** Live MVP across both teams (updates as the battle progresses). */
 const mvpLiveName = computed(() => {
@@ -299,18 +311,36 @@ function hpClass(hp: number): string {
   justify-content: center;
 }
 
-/* Death overlay: spinner centered on the greyed-out portrait — the card
-   center is the only zone no other badge (MVP, buffs, level, name) uses */
-.respawn-tag {
+/* Death timer: a draining gold ring with the remaining respawn seconds,
+   centered on the greyed-out portrait — the card center is the only zone no
+   other badge (MVP, buffs, level, name) uses. */
+.death-timer {
   position: absolute;
   top: 42%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: clamp(16px, 3cqh, 22px);
-  color: #e8c040;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.8);
-  animation: respawn-spin 1.4s linear infinite;
+  width: clamp(26px, 5cqh, 36px);
+  height: clamp(26px, 5cqh, 36px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1;
+}
+.death-timer-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(#e8c040 var(--p, 100%), rgba(0, 0, 0, 0.55) 0);
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%);
+  mask: radial-gradient(circle, transparent 58%, #000 60%);
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.6));
+}
+.death-timer-num {
+  font-size: clamp(12px, 2.4cqh, 16px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #ffe9a0;
+  text-shadow: 0 0 6px #000, 0 1px 2px #000;
 }
 
 .info {
@@ -565,13 +595,7 @@ function hpClass(hp: number): string {
 .hp--mid { background: #c9d137; }
 .hp--low { background: #d15a37; }
 
-@keyframes respawn-spin {
-  0% { transform: translate(-50%, -50%) rotate(0); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .respawn-tag { animation: none; }
   .champ-card--mvp { animation: none; }
 }
 </style>

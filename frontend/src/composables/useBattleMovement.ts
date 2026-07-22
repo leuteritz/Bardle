@@ -54,7 +54,11 @@ export function useBattleMovement() {
       schedules = null
       return
     }
-    schedules = buildMovementSchedules(battleStore.timeline, battleStore.battleSeed)
+    schedules = buildMovementSchedules(
+      battleStore.timeline,
+      battleStore.battleSeed,
+      battleStore.allyRespawnMult,
+    )
     scheduleSeed = battleStore.battleSeed
   }
 
@@ -135,7 +139,13 @@ export function useBattleMovement() {
   }
 
   watch(
-    () => [battleStore.timeline, battleStore.battleSeed, battleStore.objectiveOverrides.length] as const,
+    () =>
+      [
+        battleStore.timeline,
+        battleStore.battleSeed,
+        battleStore.objectiveOverrides.length,
+        battleStore.allyRespawnMult,
+      ] as const,
     () => {
       rebuildSchedules()
       sample()

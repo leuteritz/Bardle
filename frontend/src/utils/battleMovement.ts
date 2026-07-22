@@ -105,9 +105,12 @@ function fountainOf(team: 1 | 2): MapPoint {
 export function buildMovementSchedules(
   timeline: BattleTimeline,
   seed: number,
+  allyRespawnMult = 1,
 ): { t1: ChampionSchedule[]; t2: ChampionSchedule[] } {
   const build = (team: 1 | 2): ChampionSchedule[] =>
-    BATTLE_ROLES.map((role, idx) => buildChampionSchedule(timeline, seed, team, idx, role))
+    BATTLE_ROLES.map((role, idx) =>
+      buildChampionSchedule(timeline, seed, team, idx, role, allyRespawnMult),
+    )
   return { t1: build(1), t2: build(2) }
 }
 
@@ -123,7 +126,12 @@ function buildChampionSchedule(
   team: 1 | 2,
   idx: number,
   role: BattleRole,
+  allyRespawnMult: number,
 ): ChampionSchedule {
+  // Own team (team 1) revives faster while the Cloud drake buff is held — the
+  // walk-back window must match the store's respawnUntil (see battleStore kill).
+  const respawnDur =
+    team === 1 ? Math.round(MOVE_RESPAWN_WALK_SECONDS * allyRespawnMult) : MOVE_RESPAWN_WALK_SECONDS
   const rng = createRng((seed ^ Math.imul(team, 0x2545f491) ^ Math.imul(idx + 1, 0x9e3779b9)) >>> 0)
   const endgameRoute = winnerKillRoute(timeline)
   const fountain = fountainOf(team)
@@ -296,12 +304,10 @@ function buildChampionSchedule(
 
   orders.sort((a, b) => a.t - b.t)
 
-  // 3) Deaths interrupt everything: fall where killed, then trek back
-  const deaths: { t: number; location?: MapPoint }[] = []
+  // 3) Deaths interrupt everything: respawn at the fountain, then walk back
+  const deaths: number[] = []
   for (const e of timeline.events) {
-    if (e.type === 'kill' && e.victimIdx === idx && e.team !== team) {
-      deaths.push({ t: e.t, location: e.location })
-    }
+    if (e.type === 'kill' && e.victimIdx === idx && e.team !== team) deaths.push(e.t)
   }
 
   // 4) Convert to segments
@@ -338,18 +344,15 @@ function buildChampionSchedule(
     cursorT = Math.max(travelEnd, order.holdUntil)
   }
 
-  // splice death interruptions in
-  for (const { t: deathT, location } of deaths) {
-    const returnTo =
-      positionFromSegments(segments, deathT + MOVE_RESPAWN_WALK_SECONDS + 1) ?? cursorPos
-    // Die AT the kill spot (the converge order put both fighters there), then
-    // fall back through the fountain and walk out again — the death reads at
-    // the skirmish, not teleported to base.
-    const deathSpot = location ? jittered(location, rng, 1.5) : fountain
+  // splice death interruptions in: the champion respawns at its own fountain
+  // and walks slowly back to where its schedule expects it (continuing the
+  // script). The walk length equals the respawn timer, Cloud-buff aware.
+  for (const deathT of deaths) {
+    const returnTo = positionFromSegments(segments, deathT + respawnDur + 1) ?? cursorPos
     segments.push({
       tStart: deathT,
-      tEnd: deathT + MOVE_RESPAWN_WALK_SECONDS,
-      path: [deathSpot, fountain, jittered(midpoint(fountain, returnTo), rng, 4), returnTo],
+      tEnd: deathT + respawnDur,
+      path: [fountain, jittered(midpoint(fountain, returnTo), rng, 4), returnTo],
       kind: 'respawn-walk',
     })
   }
