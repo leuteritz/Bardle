@@ -548,6 +548,7 @@ import {
   SHOP_JUMP_SCROLL_OFFSET_PX,
   SHOP_JUMP_SPY_THRESHOLD,
   SHOP_JUMP_SPY_LOCK_MS,
+  SHOP_JUMP_EXPAND_SETTLE_MS,
 } from '../../../../config/constants'
 import { getChampionNames } from '../../../../config/championData'
 import { useActionToast } from '../../../../composables/useActionToast'
@@ -1349,6 +1350,21 @@ const shopChampionNames = computed(() =>
       }, SHOP_JUMP_SPY_LOCK_MS)
     }
 
+    // Puts the first item category header (Weapons) at the very top of the grid.
+    function scrollToItemsTop() {
+      const grid = gridRef.value
+      const section = itemsSectionRef.value
+      if (!grid || !section) return
+      const firstGroup = section.querySelector<HTMLElement>('.tier-group') ?? section
+      const top =
+        firstGroup.getBoundingClientRect().top -
+        grid.getBoundingClientRect().top +
+        grid.scrollTop -
+        SHOP_JUMP_SCROLL_OFFSET_PX
+      grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+    }
+
+    let jumpSettleTimer: ReturnType<typeof setTimeout> | null = null
     function jumpTo(target: 'champions' | 'items') {
       const grid = gridRef.value
       if (!grid) return
@@ -1357,26 +1373,29 @@ const shopChampionNames = computed(() =>
       activeJump.value = target
       lockSpy()
       if (target === 'champions') {
+        if (jumpSettleTimer !== null) {
+          clearTimeout(jumpSettleTimer)
+          jumpSettleTimer = null
+        }
         grid.scrollTo({ top: 0, behavior: 'smooth' })
         return
       }
-      // Land on content, not on three collapsed headers: open the first
-      // category if every item section is currently collapsed.
-      if (ITEM_CATEGORIES.every((c) => collapsedItemCats.value.has(c.id))) {
+      // The jump always lands on an OPEN first category (Weapons), header at
+      // the top edge of the grid.
+      const firstCat = itemGroups.value[0]?.id
+      if (firstCat && collapsedItemCats.value.has(firstCat)) {
         const next = new Set(collapsedItemCats.value)
-        next.delete(ITEM_CATEGORIES[0].id)
+        next.delete(firstCat)
         collapsedItemCats.value = next
       }
-      nextTick(() => {
-        const el = itemsSectionRef.value
-        if (!el) return
-        const top =
-          el.getBoundingClientRect().top -
-          grid.getBoundingClientRect().top +
-          grid.scrollTop -
-          SHOP_JUMP_SCROLL_OFFSET_PX
-        grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
-      })
+      nextTick(scrollToItemsTop)
+      // While the section is still expanding, the grid's scrollHeight is too
+      // small to put the header at the top — correct once the animation settled.
+      if (jumpSettleTimer !== null) clearTimeout(jumpSettleTimer)
+      jumpSettleTimer = setTimeout(() => {
+        jumpSettleTimer = null
+        scrollToItemsTop()
+      }, SHOP_JUMP_EXPAND_SETTLE_MS)
     }
 
     function onGridScroll() {

@@ -2380,6 +2380,8 @@ export const SHOP_JUMP_SCROLL_OFFSET_PX = 8
 export const SHOP_JUMP_SPY_THRESHOLD = 0.4
 /** Scroll-spy stays locked this long after a jump so smooth-scroll can settle. */
 export const SHOP_JUMP_SPY_LOCK_MS = 700
+/** Corrective scroll runs after the section expand animation (0.28s) settles. */
+export const SHOP_JUMP_EXPAND_SETTLE_MS = 350
 
 // ── Music ─────────────────────────────────────────────────────────────────────
 export const MUSIC_DEFAULT_VOLUME = 0.1
