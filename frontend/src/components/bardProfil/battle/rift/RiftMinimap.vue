@@ -191,7 +191,7 @@
         :style="{
           left: mark.x + '%',
           top: mark.y + '%',
-          '--mk-scale': String(1 + Math.min(mark.tier - 1, 4) * 0.22),
+          '--mk-scale': String(1 + Math.min(mark.tier - 1, 4) * 0.38),
         }"
       >
         <span class="kill-mark-aoe" />
@@ -1433,7 +1433,8 @@ const structureMarkers = computed(() => {
   height: 0;
   transform: translate(-50%, -50%) scale(var(--mk-scale, 1));
   pointer-events: none;
-  z-index: 3;
+  /* above the champion dots (z 4 / mvp 7 / focused 8) so the burst reads on top */
+  z-index: 9;
 }
 .kill-mark--blue { --kc: 96, 165, 250; }
 .kill-mark--red { --kc: 248, 113, 113; }
