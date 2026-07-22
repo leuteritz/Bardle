@@ -387,13 +387,17 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* Verfügbare Bühne: alles oberhalb der Bottom-Bar. useFitScale passt das Panel
-   uniform hier ein — schrumpft auf Full HD, wächst (bis max scale) auf 2K/4K. */
+   uniform hier ein — schrumpft auf Full HD, wächst (bis max scale) auf 2K/4K.
+   Der Bottom-Abstand reserviert zusätzlich die volle Höhe des MVP-Honor-Buff-
+   Badges (MvpBuffOverlay: sitzt 16px über dem Scoreboard-Streifen, ~64px hoch,
+   z-index über dem Overlay) — dauerhaft, damit das Panel beim Erscheinen des
+   Buffs nicht springt. */
 .pause-stage {
   position: absolute;
   top: 12px;
   left: 12px;
   right: 12px;
-  bottom: calc(var(--bottom-center-strip-h, 79px) + 12px);
+  bottom: calc(var(--bottom-center-strip-h, 79px) + clamp(88px, 10vh, 112px));
   display: flex;
   align-items: center;
   justify-content: center;
