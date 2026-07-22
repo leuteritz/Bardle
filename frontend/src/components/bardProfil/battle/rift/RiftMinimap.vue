@@ -183,6 +183,24 @@
         <span class="nexus-label">NEXUS DESTROYED</span>
       </div>
 
+      <!-- Kill-spot markers: a short burst wherever a kill just landed -->
+      <div
+        v-for="mark in killMarkers"
+        :key="mark.id"
+        class="kill-mark"
+        :class="mark.team === 1 ? 'kill-mark--blue' : 'kill-mark--red'"
+        :style="{
+          left: mark.x + '%',
+          top: mark.y + '%',
+          '--mk-scale': String(1 + Math.min(mark.tier - 1, 4) * 0.22),
+        }"
+      >
+        <span class="kill-mark-ring" />
+        <span class="kill-mark-flash" />
+        <Icon icon="game-icons:saber-slash" class="kill-mark-icon" width="20" height="20" />
+        <span v-if="mark.tier >= 2" class="kill-mark-tier">{{ mark.tier }}×</span>
+      </div>
+
       <!-- Champions -->
       <div
         v-for="pos in positions"
@@ -298,6 +316,7 @@ import {
   STRUCTURE_BURST_GAME_SECONDS,
   FINAL_PUSH_START_T,
   JUNGLE_BUFF_RESPAWN_T,
+  KILL_MARK_WINDOW_T,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
 import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION, JUNGLE_BUFF_CAMPS } from '@/config/battleRoutes'
@@ -355,6 +374,32 @@ const hasFocus = computed(() => battleStore.focusedChampionId !== '')
 function isFocused(team: 1 | 2, idx: number): boolean {
   return battleStore.focusedChampionId === `${team}-${idx}`
 }
+
+/**
+ * Kills that landed in the last KILL_MARK_WINDOW_T game-seconds — each drives a
+ * short burst marker on the map at the exact spot the kill happened. Tinted by
+ * the killer's team; multikills (double/triple/…) render larger + tagged.
+ */
+const killMarkers = computed(() => {
+  const now = battleStore.battleTime
+  const events = battleStore.timeline?.events
+  if (!events) return []
+  const out: Array<{ id: string; x: number; y: number; team: 1 | 2; tier: number }> = []
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i]
+    if (e.type !== 'kill' || !e.location) continue
+    if (e.t <= now && e.t > now - KILL_MARK_WINDOW_T) {
+      out.push({
+        id: `${i}-${e.t}`,
+        x: e.location.x,
+        y: e.location.y,
+        team: (e.team ?? 1) as 1 | 2,
+        tier: e.multikillTier ?? 1,
+      })
+    }
+  }
+  return out
+})
 
 function hpClass(champ: ChampionState | undefined): string {
   const hp = champ?.hpPercent ?? 100
@@ -1388,6 +1433,92 @@ const structureMarkers = computed(() => {
   text-shadow: 0 0 6px rgba(232, 192, 64, 0.9), 0 1px 2px #000;
 }
 
+/* ── Kill-spot markers ──
+   A short burst — expanding ring + flash + slash icon — at the exact spot a
+   kill landed, tinted by the killer's team. Multikills scale up via --mk-scale
+   and get a count tag. Sits under the champion dots (z-index 3). */
+.kill-mark {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%) scale(var(--mk-scale, 1));
+  pointer-events: none;
+  z-index: 3;
+}
+.kill-mark--blue { --kc: 96, 165, 250; }
+.kill-mark--red { --kc: 248, 113, 113; }
+
+.kill-mark-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(var(--kc), 0.9);
+  box-shadow: 0 0 10px rgba(var(--kc), 0.6);
+  animation: kill-ring 1.3s ease-out forwards;
+}
+.kill-mark-flash {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 240, 220, 0.9),
+    rgba(var(--kc), 0.5) 45%,
+    transparent 70%
+  );
+  animation: kill-flash 1s ease-out forwards;
+}
+.kill-mark-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #fff;
+  filter: drop-shadow(0 0 4px rgba(var(--kc), 1)) drop-shadow(0 1px 1px #000);
+  animation: kill-icon 1.3s ease-out forwards;
+}
+.kill-mark-tier {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #1e1006;
+  background: linear-gradient(to bottom, #ffe9a0, #e8c060 55%, #c89040);
+  border: 1px solid #8a5c18;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.7), 0 1px 2px rgba(0, 0, 0, 0.6);
+  animation: kill-tier 1.3s ease-out forwards;
+}
+
+@keyframes kill-ring {
+  0% { transform: translate(-50%, -50%) scale(0.35); opacity: 0.95; }
+  100% { transform: translate(-50%, -50%) scale(1.9); opacity: 0; }
+}
+@keyframes kill-flash {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+}
+@keyframes kill-icon {
+  0% { transform: translate(-50%, -50%) scale(1.7) rotate(-12deg); opacity: 0; }
+  16% { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
+  70% { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.05); opacity: 0; }
+}
+@keyframes kill-tier {
+  0% { transform: translate(7px, -17px) scale(0.6); opacity: 0; }
+  20% { transform: translate(7px, -17px) scale(1); opacity: 1; }
+  75% { transform: translate(7px, -17px) scale(1); opacity: 1; }
+  100% { transform: translate(7px, -17px) scale(1); opacity: 0; }
+}
+
 /* ── Controls ── */
 .map-controls {
   position: absolute;
@@ -1526,7 +1657,11 @@ const structureMarkers = computed(() => {
   .champ-img--victor,
   .mvp-ring,
   .mvp-crown,
-  .champ-img--mvp {
+  .champ-img--mvp,
+  .kill-mark-ring,
+  .kill-mark-flash,
+  .kill-mark-icon,
+  .kill-mark-tier {
     animation: none;
   }
 }
