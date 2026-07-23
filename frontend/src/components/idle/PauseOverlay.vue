@@ -20,6 +20,10 @@
             class="pause-panel"
             :style="{ transform: `scale(${panelScale})` }"
           >
+          <!-- Shared cosmic starfield inside the panel — same backdrop component
+               as the shop/skill-tree tabs. Sits above the flat panel fill
+               (#111008) but below the content (z-index: -1). -->
+          <CosmicStageBackground class="pause-cosmic-bg" />
           <RpgFrame />
           <!-- Header -->
           <header class="pause-header">
@@ -196,6 +200,7 @@ import {
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
+import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 
 const { windowFocused } = useWindowFocus()
 
@@ -462,6 +467,14 @@ function particleStyle(i: number): Record<string, string> {
   background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
   box-shadow: 0 0 8px rgba(200, 150, 30, 0.5);
   pointer-events: none;
+}
+
+/* Cosmic starfield sits between the flat panel fill (#111008) and the panel
+   content: z-index -1 keeps it above the panel background but below every
+   in-flow child (header, sun hero, stats …). The panel's overflow:hidden clips
+   the starfield's overscan; RpgFrame (z-index 30) still draws over the top. */
+.pause-panel .pause-cosmic-bg {
+  z-index: -1;
 }
 
 /* ── Header ───────────────────────────────────────────── */
