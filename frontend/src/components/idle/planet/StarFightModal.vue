@@ -879,26 +879,28 @@ function emberStyle(i: number): Record<string, string> {
     transform 0.18s ease;
 }
 
-/* ✕-Glyph separat — dreht + wächst beim Hover für ein modernes Feedback */
+/* ✕-Glyph separat — wächst sanft beim Hover (kein Rotieren) */
 .sf-close-x {
   display: block;
-  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.18s ease;
 }
 
-/* Hover: warmer Danger-Glow signalisiert "schließen", ✕ dreht auf 90° */
+/* Hover: Button hebt sich leicht an, warmer Danger-Glow signalisiert
+   "schließen", ✕ skaliert sanft */
 .sf-close-btn:hover {
   border-color: #c85038;
   background: linear-gradient(to bottom, #3a1408, #200a04);
   color: #ff8f6a;
+  transform: translateY(-2px);
   box-shadow:
     inset 0 0 0 1px #5c2410,
     inset 0 1px 0 rgba(255, 150, 110, 0.28),
     0 0 18px rgba(200, 70, 40, 0.5),
-    0 4px 14px rgba(0, 0, 0, 0.65);
+    0 6px 16px rgba(0, 0, 0, 0.7);
 }
 
 .sf-close-btn:hover .sf-close-x {
-  transform: rotate(90deg) scale(1.1);
+  transform: scale(1.12);
 }
 
 .sf-close-btn:focus-visible {
@@ -911,13 +913,7 @@ function emberStyle(i: number): Record<string, string> {
 }
 
 .sf-close-btn:active {
-  transform: scale(0.92);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sf-close-btn:hover .sf-close-x {
-    transform: rotate(90deg);
-  }
+  transform: translateY(0) scale(0.92);
 }
 
 /* Die vier Countdown-Ringe (Star-Despawn, Strike, Rage, Nova) sind die
