@@ -47,17 +47,12 @@ function pump() {
 }
 
 function announce(payload: HeraldPayload) {
+  // Milestones play sequentially — each gets its full display window. A batch
+  // flushed together (e.g. warp + newly-unlocked champion at a galaxy boundary)
+  // queues in order instead of stomping one another; the oldest is dropped once
+  // the queue is full so a burst can never grow unbounded.
   if (queue.value.length >= HERALD_QUEUE_MAX) queue.value.shift()
   queue.value.push({ ...payload, id: ++idCounter })
-  // A fresh milestone preempts the banner on screen: drop the current one so the
-  // new one spawns centered instead of waiting behind a stale message.
-  if (current.value) {
-    if (displayTimer) {
-      clearTimeout(displayTimer)
-      displayTimer = null
-    }
-    current.value = null
-  }
   pump()
 }
 

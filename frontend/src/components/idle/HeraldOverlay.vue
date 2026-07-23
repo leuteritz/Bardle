@@ -72,6 +72,9 @@ const seenChampions = new Set<string>()
 // Champions unlocked (home-planet boss defeated) but not yet heralded — held
 // until the next champion-star approach flight departs, see below.
 const pendingChampions: string[] = []
+// A completed warp waiting to be heralded — likewise deferred to the first
+// champion-star approach of the new galaxy (after its role selection).
+let pendingWarp: { headline: string; subline: string } | null = null
 
 function canAnnounce(): boolean {
   return armed && document.visibilityState === 'visible'
@@ -80,8 +83,9 @@ function canAnnounce(): boolean {
 onMounted(() => {
   armTimer = setTimeout(() => {
     for (const name of battleStore.newlyUnlockedChampions) seenChampions.add(name)
-    // Anything buffered before arming came from loadGame(), not a real unlock.
+    // Anything buffered before arming came from loadGame(), not a real event.
     pendingChampions.length = 0
+    pendingWarp = null
     armed = true
     armTimer = null
   }, HERALD_ARM_DELAY_MS)
@@ -93,19 +97,19 @@ onBeforeUnmount(() => {
 })
 
 // ── Warp / new galaxy ──
+// Buffer the warp; the new galaxy's first champion-star approach reveals it, so
+// the banner lands after the player has picked the role for that first star —
+// same beat as the champion herald. The theme + galaxy number are already set
+// by commitAdvance() at this point, so capture them now.
 watch(
   () => galaxyStore.currentGalaxy,
   (now, prev) => {
-    if (!canAnnounce() || now <= (prev ?? now)) return
+    if (now <= (prev ?? now)) return
     const theme = GALAXY_THEMES[galaxyStore.currentThemeIndex]
-    announce({
-      kind: 'warp',
-      eyebrow: 'WARP COMPLETE',
+    pendingWarp = {
       headline: theme?.name ?? 'Unknown Reaches',
       subline: `Galaxy ${now} reached`,
-      icon: 'game-icons:spiral-thrust',
-      accent: HERALD_ACCENT_WARP,
-    })
+    }
   },
 )
 
@@ -125,14 +129,27 @@ watch(
 )
 
 // The approach flight starts (championTravelState → 'traveling'). Flush the
-// buffered champions as the ship departs for the next champion star — but never
-// on a flight to the galaxy-boss core (no champion is waiting there).
+// buffered warp + champions as the ship departs for the next champion star — but
+// never on a flight to the galaxy-boss core (no champion is waiting there).
+// Warp first ("welcome to the new galaxy"), then the champions it carried over.
 watch(
   () => galaxyStore.championTravelState,
   (now, prev) => {
     if (now !== 'traveling' || prev === 'traveling') return
     if (galaxyStore.travelingToGalaxyBoss) return
-    if (!canAnnounce() || pendingChampions.length === 0) return
+    if (!canAnnounce()) return
+    if (!pendingWarp && pendingChampions.length === 0) return
+    if (pendingWarp) {
+      announce({
+        kind: 'warp',
+        eyebrow: 'WARP COMPLETE',
+        headline: pendingWarp.headline,
+        subline: pendingWarp.subline,
+        icon: 'game-icons:spiral-thrust',
+        accent: HERALD_ACCENT_WARP,
+      })
+      pendingWarp = null
+    }
     for (const name of pendingChampions) {
       announce({
         kind: 'champion',
