@@ -2860,6 +2860,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:padlock', // Galaxy-locked tier header icon (ChampionShopComponent)
   // Herald milestone overlay
   'game-icons:spiral-thrust', // Warp / new-galaxy herald medallion (HeraldOverlay)
+  'game-icons:upgrade', // Admin "Rank Up" test button (AdminQuickActionsPanel)
   // Champion Tiers — champion star-level classification (championTiers.ts, TierUnlockPanel, champion cards)
   'game-icons:walking-boot', // ★1 Wanderer
   'game-icons:polar-star', // ★2 Star Drifter

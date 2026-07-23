@@ -288,6 +288,11 @@ function fillTeamWithRandomChampions() {
   itemStore.adminFillRandomEquipment()
 }
 
+// Force a single rank promotion — fires the rank-up herald for testing.
+function rankUp() {
+  battleStore.adminPromoteRank()
+}
+
 function resetAllCooldowns() {
   roleBehaviorStore.supportHealCooldownMs = 0
   roleBehaviorStore.supportPlanetHealCooldownMs = 0
@@ -421,6 +426,12 @@ function resetAllCooldowns() {
         <Icon icon="game-icons:dice-six-faces-random" class="admin-btn-icon" /> Random Team Fill
       </button>
       <button
+        class="admin-spawn-btn admin-spawn-btn--rankup flex items-center gap-1.5 px-3 py-1.5"
+        @click="rankUp"
+      >
+        <Icon icon="game-icons:upgrade" class="admin-btn-icon" /> Rank Up
+      </button>
+      <button
         class="admin-spawn-btn admin-spawn-btn--cooldown flex items-center gap-1.5 px-3 py-1.5"
         @click="resetAllCooldowns"
       >
@@ -494,7 +505,7 @@ function resetAllCooldowns() {
   flex: 1;
   min-height: 0;
   display: grid;
-  /* 9 Buttons → symmetrisches 3×3-Raster auf jeder Desktop-Auflösung */
+  /* Action-Buttons fließen in ein 3-Spalten-Raster auf jeder Desktop-Auflösung */
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-rows: minmax(38px, 1fr);
   gap: 8px;
@@ -787,6 +798,16 @@ function resetAllCooldowns() {
 .admin-spawn-btn--travel:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+.admin-spawn-btn--rankup {
+  color: #e8c040;
+  border-color: #5c4410;
+  background: linear-gradient(to bottom, #1e1808, #120e04);
+}
+.admin-spawn-btn--rankup:hover {
+  background: linear-gradient(to bottom, #2a2010, #1a1408);
+  border-color: #c89040;
+  color: #f4d868;
 }
 .admin-spawn-btn--cooldown {
   color: #60c8e8;

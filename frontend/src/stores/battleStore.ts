@@ -1633,6 +1633,36 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
+    // Admin-only: force a single rank promotion so the rank-up herald can be
+    // tested on demand. Reuses promoteRank(); the LP gate for Master/Grandmaster
+    // is satisfied first so those tiers advance too. Capped at Challenger.
+    // MMR is raised to the new tier's floor so rank + MMR stay consistent (the
+    // MMR system is tier-granular, see MMR_RANK_THRESHOLDS) and the promotion
+    // doesn't get corrected away on the next battle.
+    adminPromoteRank() {
+      const tier = this.currentRank.tier
+      if (tier === 'Challenger') return
+      if (tier === 'Master') this.currentRank.lp = LP_MASTER_PROMOTION_THRESHOLD
+      else if (tier === 'Grandmaster') this.currentRank.lp = LP_GRANDMASTER_PROMOTION_THRESHOLD
+      this.promoteRank()
+
+      // Tier floor from the canonical MMR table. Emerald is absent there
+      // (RANK_TIERS/MMR mismatch) → fall back to the nearest lower tier present.
+      const newTier = this.currentRank.tier
+      const entry = MMR_RANK_THRESHOLDS.find((t) => t.tier === newTier)
+      let floor = entry?.minMMR ?? 0
+      if (!entry) {
+        for (let i = RANK_TIERS.indexOf(newTier as (typeof RANK_TIERS)[number]) - 1; i >= 0; i--) {
+          const below = MMR_RANK_THRESHOLDS.find((t) => t.tier === RANK_TIERS[i])
+          if (below) {
+            floor = below.minMMR
+            break
+          }
+        }
+      }
+      this.mmr = Math.max(this.mmr, floor)
+    },
+
     calculateLPChange(mmrChange: number, won: boolean) {
       const lpChange = won ? LP_BASE_CHANGE : -LP_BASE_CHANGE
       const mmrFactor = Math.abs(mmrChange) / ELO_K_FACTOR
