@@ -17,11 +17,13 @@ import {
   COMET_PHASE_DATA,
   STATS_TAB_PHASE_DOT_SCALE,
   STATS_TAB_COMET_DOT_PX,
+  STATS_TAB_DECK_RESIZE,
   SUN_PHASE_DISPLAY_OFFSET,
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import { AUGMENTS } from '@/config/augments'
+import { formatNumber } from '@/config/numberFormat'
 import { AUGMENT_RARITY_COLOR } from '@/composables/useRarityColors'
 import { renderGalaxySnapshot } from '@/utils/galaxySnapshot'
 import type { AugmentDefinition } from '@/types'
@@ -177,6 +179,7 @@ onMounted(() => {
 onUnmounted(() => {
   cancelAnimationFrame(rafId)
   clearInterval(ticker)
+  stopResize() // drop any in-flight drag listeners + restore body cursor
 })
 
 /* ── Phase dwell time (evolve time gate) ─────────────────────── */
@@ -384,6 +387,118 @@ const totalChips = computed<BuffChip[]>(() => {
   return chips
 })
 
+/* ── Per-column context search (Journey / Augments / Archive) ──── */
+const journeySearch = ref('')
+const augmentSearch = ref('')
+const archiveSearch = ref('')
+
+interface JourneyStat {
+  key: string
+  label: string
+  value: string
+  img?: string
+  icon?: string
+  valueClass?: string
+}
+
+/* Data-driven Journey rows so the header search can filter them */
+const journeyStats = computed<JourneyStat[]>(() => [
+  { key: 'cps', label: 'Chimes / Sec', img: '/img/BardAbilities/BardChime.png', value: formatNumber(chimesPerSecond.value) },
+  { key: 'cpc', label: 'Chimes / Click', img: '/img/BardAbilities/BardChime.png', value: formatNumber(chimesPerClick.value) },
+  { key: 'total-chimes', label: 'Total Chimes', img: '/img/BardAbilities/BardChime.png', value: formatNumber(animChimes.value) },
+  { key: 'meeps', label: 'Meeps Guided', img: '/img/BardAbilities/BardMeep.png', value: formatNumber(animMeeps.value), valueClass: 'sf-srow-val--green' },
+  { key: 'clicks', label: 'Total Clicks', img: '/img/BardAbilities/BardChime.png', value: formatNumber(animClicks.value) },
+  { key: 'stars', label: 'Stars Rescued', img: '/img/star.png', value: formatNumber(animStars.value) },
+  { key: 'galaxies', label: 'Galaxies Freed', icon: 'game-icons:galaxy', value: String(archive.value.length) },
+  { key: 'power', label: 'Total Power', icon: 'game-icons:embrassed-energy', value: formatNumber(totalPower.value) },
+  { key: 'production', label: 'Lifetime Production', icon: 'game-icons:factory', value: formatNumber(lifetimeProduction.value) },
+  { key: 'champions', label: 'Champions Recruited', icon: 'game-icons:backup', value: String(championsRecruited.value) },
+  { key: 'planets', label: 'Planets Colonized', icon: 'game-icons:jupiter', value: String(planetsColonized.value) },
+  { key: 'rank', label: 'Battle Rank', icon: 'game-icons:rank-1', value: battleRank.value },
+  { key: 'winrate', label: 'Win Rate', icon: 'game-icons:pie-chart', value: `${winRatePct.value}%` },
+  { key: 'streak', label: 'Best Win Streak', icon: 'game-icons:flame', value: String(bestWinStreak.value) },
+  { key: 'kda', label: 'Career KDA', icon: 'game-icons:daggers', value: careerKda.value },
+  { key: 'penta', label: 'Pentakills', icon: 'game-icons:pentacle', value: String(pentakills.value) },
+])
+
+const filteredJourneyStats = computed(() => {
+  const q = journeySearch.value.trim().toLowerCase()
+  if (!q) return journeyStats.value
+  return journeyStats.value.filter((s) => s.label.toLowerCase().includes(q))
+})
+
+const filteredChips = computed(() => {
+  const q = augmentSearch.value.trim().toLowerCase()
+  if (!q) return totalChips.value
+  return totalChips.value.filter((c) => c.label.toLowerCase().includes(q) || c.key.includes(q))
+})
+
+const filteredAugCards = computed(() => {
+  const q = augmentSearch.value.trim().toLowerCase()
+  if (!q) return augCards.value
+  return augCards.value.filter(
+    (c) =>
+      c.aug.name.toLowerCase().includes(q) ||
+      c.aug.effectLine.toLowerCase().includes(q) ||
+      c.aug.rarity.toLowerCase().includes(q),
+  )
+})
+
+const filteredArchive = computed(() => {
+  const q = archiveSearch.value.trim().toLowerCase()
+  if (!q) return archive.value
+  return archive.value.filter((rec) => `galaxy ${rec.galaxy}`.includes(q))
+})
+
+/* ── Resizable deck columns — drag the two dividers to rebalance the
+   three panels. Side columns are px-driven; the middle flexes and is
+   protected by MIN_MIDDLE so it can never collapse. ────────────────── */
+const deckEl = ref<HTMLElement | null>(null)
+const col1Width = ref<number>(STATS_TAB_DECK_RESIZE.DEFAULT_LEFT)
+const col3Width = ref<number>(STATS_TAB_DECK_RESIZE.DEFAULT_RIGHT)
+const resizeSide = ref<'left' | 'right' | null>(null)
+
+const deckStyle = computed(() => ({
+  gridTemplateColumns: `${col1Width.value}px minmax(0, 1fr) ${col3Width.value}px`,
+}))
+
+let resizeStartX = 0
+let resizeStartW = 0
+let resizeDeckWidth = 0
+
+function startResize(side: 'left' | 'right', e: PointerEvent) {
+  resizeSide.value = side
+  resizeStartX = e.clientX
+  resizeStartW = side === 'left' ? col1Width.value : col3Width.value
+  resizeDeckWidth = deckEl.value?.clientWidth ?? 0
+  window.addEventListener('pointermove', onResizeMove)
+  window.addEventListener('pointerup', stopResize)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  e.preventDefault()
+}
+
+function onResizeMove(e: PointerEvent) {
+  const R = STATS_TAB_DECK_RESIZE
+  const delta = e.clientX - resizeStartX
+  if (resizeSide.value === 'left') {
+    const maxByMiddle = resizeDeckWidth - col3Width.value - R.MIN_MIDDLE
+    const max = Math.min(R.MAX_LEFT, maxByMiddle)
+    col1Width.value = Math.max(R.MIN_SIDE, Math.min(resizeStartW + delta, max))
+  } else if (resizeSide.value === 'right') {
+    const maxByMiddle = resizeDeckWidth - col1Width.value - R.MIN_MIDDLE
+    const max = Math.min(R.MAX_RIGHT, maxByMiddle)
+    col3Width.value = Math.max(R.MIN_SIDE, Math.min(resizeStartW - delta, max))
+  }
+}
+
+function stopResize() {
+  resizeSide.value = null
+  window.removeEventListener('pointermove', onResizeMove)
+  window.removeEventListener('pointerup', stopResize)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
 </script>
 
 <template>
@@ -500,11 +615,20 @@ const totalChips = computed<BuffChip[]>(() => {
     </section>
 
     <!-- ══ Panel deck: stats | augments | galaxy archive ══ -->
-    <div class="sf-deck">
+    <div ref="deckEl" class="sf-deck" :style="deckStyle">
       <!-- ─ Journey stats ─ -->
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
           <span class="sf-p-title">Journey</span>
+          <label class="sf-search-wrap">
+            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="13" height="13" />
+            <input
+              v-model="journeySearch"
+              class="sf-search"
+              type="text"
+              placeholder="Search stats…"
+            />
+          </label>
         </header>
         <div class="sf-p-body sf-stats-body rpg-scrollbar">
           <!-- Idle play-time — the panel's hero stat: far left, oversized -->
@@ -528,86 +652,12 @@ const totalChips = computed<BuffChip[]>(() => {
             </div>
           </div>
 
-          <div class="sf-srow">
-            <img class="sf-ico" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-            <span class="sf-srow-lbl">Chimes / Sec</span>
-            <span class="sf-srow-val">{{ $formatNumber(chimesPerSecond) }}</span>
-          </div>
-
-          <div class="sf-srow">
-            <img class="sf-ico" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-            <span class="sf-srow-lbl">Chimes / Click</span>
-            <span class="sf-srow-val">{{ $formatNumber(chimesPerClick) }}</span>
-          </div>
-          <div class="sf-srow">
-            <img class="sf-ico" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-            <span class="sf-srow-lbl">Total Chimes</span>
-            <span class="sf-srow-val">{{ $formatNumber(animChimes) }}</span>
-          </div>
-          <div class="sf-srow">
-            <img class="sf-ico" src="/img/BardAbilities/BardMeep.png" alt="" aria-hidden="true" />
-            <span class="sf-srow-lbl">Meeps Guided</span>
-            <span class="sf-srow-val sf-srow-val--green">{{ $formatNumber(animMeeps) }}</span>
-          </div>
-          <div class="sf-srow">
-            <img class="sf-ico" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-            <span class="sf-srow-lbl">Total Clicks</span>
-            <span class="sf-srow-val">{{ $formatNumber(animClicks) }}</span>
-          </div>
-          <div class="sf-srow">
-            <img class="sf-ico" src="/img/star.png" alt="" aria-hidden="true" />
-            <span class="sf-srow-lbl">Stars Rescued</span>
-            <span class="sf-srow-val">{{ $formatNumber(animStars) }}</span>
-          </div>
-          <div class="sf-srow">
-            <Icon icon="game-icons:galaxy" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">Galaxies Freed</span>
-            <span class="sf-srow-val">{{ archive.length }}</span>
-          </div>
-          <div class="sf-srow">
-            <Icon icon="game-icons:embrassed-energy" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">Total Power</span>
-            <span class="sf-srow-val">{{ $formatNumber(totalPower) }}</span>
-          </div>
-          <div class="sf-srow">
-            <Icon icon="game-icons:factory" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">Lifetime Production</span>
-            <span class="sf-srow-val">{{ $formatNumber(lifetimeProduction) }}</span>
-          </div>
-          <div class="sf-srow">
-            <Icon icon="game-icons:backup" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">Champions Recruited</span>
-            <span class="sf-srow-val">{{ championsRecruited }}</span>
-          </div>
-          <div class="sf-srow">
-            <Icon icon="game-icons:jupiter" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">Planets Colonized</span>
-            <span class="sf-srow-val">{{ planetsColonized }}</span>
-          </div>
-          <div class="sf-srow">
-            <Icon icon="game-icons:rank-1" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">Battle Rank</span>
-            <span class="sf-srow-val">{{ battleRank }}</span>
-          </div>
-          <div class="sf-srow">
-            <Icon icon="game-icons:pie-chart" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">Win Rate</span>
-            <span class="sf-srow-val">{{ winRatePct }}%</span>
-          </div>
-          <div class="sf-srow">
-            <Icon icon="game-icons:flame" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">Best Win Streak</span>
-            <span class="sf-srow-val">{{ bestWinStreak }}</span>
-          </div>
-          <div class="sf-srow">
-            <Icon icon="game-icons:daggers" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">Career KDA</span>
-            <span class="sf-srow-val">{{ careerKda }}</span>
-          </div>
-          <div class="sf-srow">
-            <Icon icon="game-icons:pentacle" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">Pentakills</span>
-            <span class="sf-srow-val">{{ pentakills }}</span>
+          <div v-if="filteredJourneyStats.length === 0" class="sf-empty-line">No stats match</div>
+          <div v-for="s in filteredJourneyStats" :key="s.key" class="sf-srow">
+            <img v-if="s.img" class="sf-ico" :src="s.img" alt="" aria-hidden="true" />
+            <Icon v-else :icon="s.icon!" class="sf-ico sf-ico--tint" width="22" height="22" />
+            <span class="sf-srow-lbl">{{ s.label }}</span>
+            <span class="sf-srow-val" :class="s.valueClass">{{ s.value }}</span>
           </div>
         </div>
       </section>
@@ -616,11 +666,22 @@ const totalChips = computed<BuffChip[]>(() => {
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
           <span class="sf-p-title">Augments</span>
+          <label class="sf-search-wrap">
+            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="13" height="13" />
+            <input
+              v-model="augmentSearch"
+              class="sf-search"
+              type="text"
+              placeholder="Search augments…"
+            />
+          </label>
         </header>
         <div class="sf-p-body rpg-scrollbar">
           <div class="sf-buff-chips">
-            <div v-if="totalChips.length === 0" class="sf-empty-line">No buffs active yet</div>
-            <div v-for="chip in totalChips" :key="chip.key" class="sf-chip-buff">
+            <div v-if="filteredChips.length === 0" class="sf-empty-line">
+              {{ totalChips.length === 0 ? 'No buffs active yet' : 'No buffs match' }}
+            </div>
+            <div v-for="chip in filteredChips" :key="chip.key" class="sf-chip-buff">
               <Icon :icon="chip.icon" width="14" height="14" class="sf-chip-buff-icon" />
               <span class="sf-chip-buff-lbl">{{ chip.label }}</span>
               <span class="sf-chip-buff-val" :class="chip.positive ? 'is-up' : 'is-down'">
@@ -629,13 +690,19 @@ const totalChips = computed<BuffChip[]>(() => {
             </div>
           </div>
 
-          <div v-if="augCards.length === 0" class="sf-empty-block">
+          <div v-if="filteredAugCards.length === 0" class="sf-empty-block">
             <Icon icon="game-icons:gems" width="28" height="28" class="sf-empty-icon" />
-            <span>No augments active yet — level up to pick your first one</span>
+            <span>
+              {{
+                augCards.length === 0
+                  ? 'No augments active yet — level up to pick your first one'
+                  : 'No augments match your search'
+              }}
+            </span>
           </div>
           <div v-else class="sf-aug-grid">
             <div
-              v-for="card in augCards"
+              v-for="card in filteredAugCards"
               :key="card.key"
               class="sf-aug-card"
               :style="{ '--rarity': card.color }"
@@ -664,18 +731,28 @@ const totalChips = computed<BuffChip[]>(() => {
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
           <span class="sf-p-title">Galaxy Archive</span>
+          <label class="sf-search-wrap">
+            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="13" height="13" />
+            <input
+              v-model="archiveSearch"
+              class="sf-search"
+              type="text"
+              placeholder="Search galaxies…"
+            />
+          </label>
         </header>
         <div class="sf-p-body rpg-scrollbar">
-          <div v-if="archive.length === 0" class="sf-empty-block">
+          <div v-if="filteredArchive.length === 0" class="sf-empty-block">
             <Icon icon="game-icons:spiral-arrow" width="28" height="28" class="sf-empty-icon" />
-            <span
+            <span v-if="archive.length === 0"
               >No galaxies freed yet — rescue every star and defeat the core to preserve your first
               map here.</span
             >
+            <span v-else>No galaxies match your search</span>
           </div>
           <div v-else class="sf-arch-list">
             <div
-              v-for="rec in archive"
+              v-for="rec in filteredArchive"
               :key="rec.galaxy"
               class="sf-arch-card"
               :title="`Galaxy ${rec.galaxy} — freed ${archiveDate(rec)}`"
@@ -711,6 +788,26 @@ const totalChips = computed<BuffChip[]>(() => {
           </div>
         </div>
       </section>
+
+      <!-- Drag handles sitting on the two column dividers -->
+      <div
+        class="sf-deck-handle sf-deck-handle--left"
+        :class="{ 'is-active': resizeSide === 'left' }"
+        :style="{ left: col1Width + 'px' }"
+        title="Drag to resize the Journey column"
+        @pointerdown="startResize('left', $event)"
+      >
+        <span class="sf-deck-handle-grip" />
+      </div>
+      <div
+        class="sf-deck-handle sf-deck-handle--right"
+        :class="{ 'is-active': resizeSide === 'right' }"
+        :style="{ right: col3Width + 'px' }"
+        title="Drag to resize the Galaxy Archive column"
+        @pointerdown="startResize('right', $event)"
+      >
+        <span class="sf-deck-handle-grip" />
+      </div>
     </div>
   </div>
 </template>
@@ -788,6 +885,48 @@ const totalChips = computed<BuffChip[]>(() => {
   min-height: 0;
   overflow-y: auto;
   padding: 10px 12px;
+}
+
+/* ─── Header context search — identical across all three panels ─── */
+.sf-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 168px;
+}
+.sf-search-ico {
+  position: absolute;
+  left: 8px;
+  color: #6a5a3a;
+  pointer-events: none;
+}
+.sf-search {
+  width: 100%;
+  padding: 5px 9px 5px 27px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--rpg-text);
+  background: #111008;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.sf-search::placeholder {
+  color: var(--rpg-text-dim);
+  font-weight: 400;
+}
+.sf-search:focus {
+  border-color: #7a4e20;
+  box-shadow: 0 0 0 1px rgba(122, 78, 32, 0.45);
+}
+.sf-search-wrap:focus-within .sf-search-ico {
+  color: #c89040;
 }
 
 /* ─── Solar strip (row 1) ───────────────────────────────────── */
@@ -1164,15 +1303,55 @@ const totalChips = computed<BuffChip[]>(() => {
 
 /* ─── Panel deck (row 2) ────────────────────────────────────── */
 .sf-deck {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(228px, 290px) minmax(0, 1fr) minmax(238px, 330px);
+  /* grid-template-columns is driven inline by deckStyle (drag-resizable);
+     this is only the pre-hydration fallback */
+  grid-template-columns: 264px minmax(0, 1fr) 288px;
   gap: 0;
 }
 /* Vertical dividers between the three areas (their own padding forms the gutter) */
 .sf-deck .sf-col + .sf-col {
   border-left: 1px solid #4a2c12;
+}
+
+/* ─ Resizable column dividers ─ */
+.sf-deck-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  touch-action: none;
+}
+.sf-deck-handle--left {
+  transform: translateX(-50%);
+}
+.sf-deck-handle--right {
+  transform: translateX(50%);
+}
+/* the visible grip pill, centered on the divider line */
+.sf-deck-handle-grip {
+  width: 4px;
+  height: 34px;
+  border-radius: 3px;
+  background: #4a2c12;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s,
+    height 0.15s;
+}
+.sf-deck-handle:hover .sf-deck-handle-grip,
+.sf-deck-handle.is-active .sf-deck-handle-grip {
+  background: #c89040;
+  box-shadow: 0 0 9px rgba(200, 144, 64, 0.55);
+  height: 48px;
 }
 
 /* ─ Journey stats panel ─ */

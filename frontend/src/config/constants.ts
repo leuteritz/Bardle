@@ -1922,6 +1922,24 @@ export const STATS_TAB_PHASE_DOT_SCALE = 0.25
  *  fixed tiny size below every sun dot, true to the comet being a small rock. */
 export const STATS_TAB_COMET_DOT_PX = 8
 
+/** Bard Stats panel deck — user-resizable column widths (px). The two side
+ *  columns (Journey / Galaxy Archive) are drag-resized; the middle (Augments)
+ *  flexes to fill the rest and is protected by MIN_MIDDLE. */
+export const STATS_TAB_DECK_RESIZE = {
+  /** initial width of the left (Journey) column */
+  DEFAULT_LEFT: 264,
+  /** initial width of the right (Galaxy Archive) column */
+  DEFAULT_RIGHT: 288,
+  /** smallest either side column may shrink to */
+  MIN_SIDE: 200,
+  /** largest the left column may grow to */
+  MAX_LEFT: 400,
+  /** largest the right column may grow to */
+  MAX_RIGHT: 440,
+  /** the middle (Augments) column never shrinks below this */
+  MIN_MIDDLE: 260,
+} as const
+
 // ── Star Forge (Shop tab) ─────────────────────────────────────────────────────
 // Tree geometry — the tree lives on a square stage, nodes placed on 3 polar rings.
 export const FORGE_STAGE_SIZE = 820
