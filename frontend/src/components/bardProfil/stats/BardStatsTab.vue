@@ -844,8 +844,8 @@ function stopResize() {
                     <Icon
                       class="sf-arch-star-ico"
                       icon="game-icons:round-star"
-                      width="12"
-                      height="12"
+                      width="15"
+                      height="15"
                     />
                     <span class="sf-arch-star-n">{{ archiveRescued(rec) }}</span>
                   </span>
@@ -853,8 +853,8 @@ function stopResize() {
                     <Icon
                       class="sf-arch-star-ico"
                       icon="game-icons:cracked-glass"
-                      width="12"
-                      height="12"
+                      width="15"
+                      height="15"
                     />
                     <span class="sf-arch-star-n">{{ archiveFailed(rec) }}</span>
                   </span>
@@ -865,14 +865,14 @@ function stopResize() {
                     class="sf-arch-info-item sf-arch-info-time"
                     title="Time spent in this galaxy"
                   >
-                    <Icon class="sf-arch-info-ico" icon="game-icons:duration" width="12" height="12" />
+                    <Icon class="sf-arch-info-ico" icon="game-icons:duration" width="15" height="15" />
                     {{ formatDuration(rec.durationSeconds * 1000) }}
                   </span>
                   <span
                     class="sf-arch-info-item sf-arch-info-date"
                     title="Date this galaxy was freed"
                   >
-                    <Icon class="sf-arch-info-ico" icon="game-icons:calendar" width="12" height="12" />
+                    <Icon class="sf-arch-info-ico" icon="game-icons:calendar" width="15" height="15" />
                     {{ archiveDate(rec) }}
                   </span>
                 </div>
@@ -1785,8 +1785,8 @@ function stopResize() {
   position: absolute;
   top: 7px;
   left: 7px;
-  padding: 3px 9px;
-  font-size: 12px;
+  padding: 4px 10px;
+  font-size: 14px;
   font-weight: 900;
   letter-spacing: 0.05em;
   color: var(--rpg-gold);
@@ -1810,8 +1810,8 @@ function stopResize() {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
-  font-size: 11px;
+  padding: 3px 9px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
@@ -1856,8 +1856,8 @@ function stopResize() {
 .sf-arch-info-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: 5px;
+  font-size: 13px;
   line-height: 1;
   font-weight: 700;
   letter-spacing: 0.03em;
