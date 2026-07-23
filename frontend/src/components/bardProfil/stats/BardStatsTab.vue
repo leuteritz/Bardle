@@ -403,22 +403,93 @@ interface JourneyStat {
 
 /* Data-driven Journey rows so the header search can filter them */
 const journeyStats = computed<JourneyStat[]>(() => [
-  { key: 'cps', label: 'Chimes / Sec', img: '/img/BardAbilities/BardChime.png', value: formatNumber(chimesPerSecond.value) },
-  { key: 'cpc', label: 'Chimes / Click', img: '/img/BardAbilities/BardChime.png', value: formatNumber(chimesPerClick.value) },
-  { key: 'total-chimes', label: 'Total Chimes', img: '/img/BardAbilities/BardChime.png', value: formatNumber(animChimes.value) },
-  { key: 'meeps', label: 'Meeps Guided', img: '/img/BardAbilities/BardMeep.png', value: formatNumber(animMeeps.value), valueClass: 'sf-srow-val--green' },
-  { key: 'clicks', label: 'Total Clicks', img: '/img/BardAbilities/BardChime.png', value: formatNumber(animClicks.value) },
-  { key: 'stars', label: 'Stars Rescued', img: '/img/star.png', value: formatNumber(animStars.value) },
-  { key: 'galaxies', label: 'Galaxies Freed', icon: 'game-icons:galaxy', value: String(archive.value.length) },
-  { key: 'power', label: 'Total Power', icon: 'game-icons:embrassed-energy', value: formatNumber(totalPower.value) },
-  { key: 'production', label: 'Lifetime Production', icon: 'game-icons:factory', value: formatNumber(lifetimeProduction.value) },
-  { key: 'champions', label: 'Champions Recruited', icon: 'game-icons:backup', value: String(championsRecruited.value) },
-  { key: 'planets', label: 'Planets Colonized', icon: 'game-icons:jupiter', value: String(planetsColonized.value) },
+  {
+    key: 'cps',
+    label: 'Chimes / Sec',
+    img: '/img/BardAbilities/BardChime.png',
+    value: formatNumber(chimesPerSecond.value),
+  },
+  {
+    key: 'cpc',
+    label: 'Chimes / Click',
+    img: '/img/BardAbilities/BardChime.png',
+    value: formatNumber(chimesPerClick.value),
+  },
+  {
+    key: 'total-chimes',
+    label: 'Total Chimes',
+    img: '/img/BardAbilities/BardChime.png',
+    value: formatNumber(animChimes.value),
+  },
+  {
+    key: 'meeps',
+    label: 'Meeps Guided',
+    img: '/img/BardAbilities/BardMeep.png',
+    value: formatNumber(animMeeps.value),
+    valueClass: 'sf-srow-val--green',
+  },
+  {
+    key: 'clicks',
+    label: 'Total Clicks',
+    img: '/img/BardAbilities/BardChime.png',
+    value: formatNumber(animClicks.value),
+  },
+  {
+    key: 'stars',
+    label: 'Stars Rescued',
+    img: '/img/star.png',
+    value: formatNumber(animStars.value),
+  },
+  {
+    key: 'galaxies',
+    label: 'Galaxies Freed',
+    icon: 'game-icons:galaxy',
+    value: String(archive.value.length),
+  },
+  {
+    key: 'power',
+    label: 'Total Power',
+    icon: 'game-icons:embrassed-energy',
+    value: formatNumber(totalPower.value),
+  },
+  {
+    key: 'production',
+    label: 'Lifetime Production',
+    icon: 'game-icons:factory',
+    value: formatNumber(lifetimeProduction.value),
+  },
+  {
+    key: 'champions',
+    label: 'Champions Recruited',
+    icon: 'game-icons:backup',
+    value: String(championsRecruited.value),
+  },
+  {
+    key: 'planets',
+    label: 'Planets Colonized',
+    icon: 'game-icons:jupiter',
+    value: String(planetsColonized.value),
+  },
   { key: 'rank', label: 'Battle Rank', icon: 'game-icons:rank-1', value: battleRank.value },
-  { key: 'winrate', label: 'Win Rate', icon: 'game-icons:pie-chart', value: `${winRatePct.value}%` },
-  { key: 'streak', label: 'Best Win Streak', icon: 'game-icons:flame', value: String(bestWinStreak.value) },
+  {
+    key: 'winrate',
+    label: 'Win Rate',
+    icon: 'game-icons:pie-chart',
+    value: `${winRatePct.value}%`,
+  },
+  {
+    key: 'streak',
+    label: 'Best Win Streak',
+    icon: 'game-icons:flame',
+    value: String(bestWinStreak.value),
+  },
   { key: 'kda', label: 'Career KDA', icon: 'game-icons:daggers', value: careerKda.value },
-  { key: 'penta', label: 'Pentakills', icon: 'game-icons:pentacle', value: String(pentakills.value) },
+  {
+    key: 'penta',
+    label: 'Pentakills',
+    icon: 'game-icons:pentacle',
+    value: String(pentakills.value),
+  },
 ])
 
 const filteredJourneyStats = computed(() => {
@@ -770,21 +841,37 @@ function stopResize() {
                 <!-- Stars rescued / lost, top-right over the map -->
                 <span class="sf-arch-stars">
                   <span class="sf-arch-star sf-arch-star--won" title="Stars rescued">
-                    <Icon icon="game-icons:round-star" width="12" height="12" />
-                    {{ archiveRescued(rec) }}
+                    <Icon
+                      class="sf-arch-star-ico"
+                      icon="game-icons:round-star"
+                      width="12"
+                      height="12"
+                    />
+                    <span class="sf-arch-star-n">{{ archiveRescued(rec) }}</span>
                   </span>
                   <span class="sf-arch-star sf-arch-star--lost" title="Stars lost">
-                    <Icon icon="game-icons:cracked-glass" width="12" height="12" />
-                    {{ archiveFailed(rec) }}
+                    <Icon
+                      class="sf-arch-star-ico"
+                      icon="game-icons:cracked-glass"
+                      width="12"
+                      height="12"
+                    />
+                    <span class="sf-arch-star-n">{{ archiveFailed(rec) }}</span>
                   </span>
                 </span>
                 <!-- Time spent + date freed, over the map's lower edge -->
                 <div class="sf-arch-info">
-                  <span class="sf-arch-info-item sf-arch-info-time" title="Time spent in this galaxy">
+                  <span
+                    class="sf-arch-info-item sf-arch-info-time"
+                    title="Time spent in this galaxy"
+                  >
                     <Icon icon="game-icons:sand-clock" width="12" height="12" />
                     {{ formatDuration(rec.durationSeconds * 1000) }}
                   </span>
-                  <span class="sf-arch-info-item sf-arch-info-date" title="Date this galaxy was freed">
+                  <span
+                    class="sf-arch-info-item sf-arch-info-date"
+                    title="Date this galaxy was freed"
+                  >
                     <Icon icon="game-icons:calendar" width="12" height="12" />
                     {{ archiveDate(rec) }}
                   </span>
@@ -1733,6 +1820,16 @@ function stopResize() {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
 }
+.sf-arch-star-ico {
+  flex-shrink: 0;
+  /* round-star / cracked-glass glyphs sit a hair low in their viewBox —
+     lift them so icon and number share the same optical center */
+  position: relative;
+  top: -2px;
+}
+.sf-arch-star-n {
+  line-height: 1;
+}
 .sf-arch-star--won {
   color: #e8c040;
   border: 1px solid rgba(232, 192, 64, 0.4);
@@ -1761,6 +1858,7 @@ function stopResize() {
   align-items: center;
   gap: 4px;
   font-size: 11px;
+  line-height: 1;
   font-weight: 700;
   letter-spacing: 0.03em;
   font-variant-numeric: tabular-nums;
