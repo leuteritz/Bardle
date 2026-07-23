@@ -1209,49 +1209,74 @@ const totalChips = computed<BuffChip[]>(() => {
 
 .sf-chips {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
+/* Level / Galaxy / Universe — the panel's headline trio: larger, modern
+   cards with a colored top accent bar and a glowing oversized value. */
 .sf-chip {
   flex: 1;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 5px 4px;
-  background: #111008;
-  border-radius: 5px;
+  gap: 4px;
+  padding: 12px 6px 10px;
+  background: #141008;
+  border: 1px solid #241a0c;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.sf-chip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
 }
 .sf-chip--gold {
-  border: 1px solid #5c3310;
+  border-color: #5c3310;
+}
+.sf-chip--gold::before {
+  background: #c89040;
 }
 .sf-chip--green {
-  border: 1px solid #4a6a2a;
+  border-color: #3f6a26;
+}
+.sf-chip--green::before {
+  background: #52b830;
 }
 .sf-chip--rare {
-  border: 1px solid #6a4a80;
+  border-color: #5a3f78;
+}
+.sf-chip--rare::before {
+  background: #9a6fd0;
 }
 
 .sf-chip-lbl {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #7a6848;
+  color: #8a7a58;
 }
 
 .sf-chip-val {
-  font-size: 15px;
+  font-size: 26px;
   font-weight: 900;
   line-height: 1;
   color: var(--rpg-gold);
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.3);
 }
 .sf-chip--green .sf-chip-val {
   color: var(--rpg-green-light);
+  text-shadow: 0 0 12px rgba(110, 192, 64, 0.3);
 }
 .sf-chip--rare .sf-chip-val {
   color: var(--rpg-rarity-rare);
+  text-shadow: 0 0 12px rgba(154, 111, 208, 0.3);
 }
 
 /* Unified stat row — every Journey stat (except the Level/Galaxy/Universe
