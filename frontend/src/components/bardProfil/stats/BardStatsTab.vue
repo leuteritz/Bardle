@@ -591,14 +591,13 @@ function stopResize() {
           role="button"
           @click="uiStore.setBardTab('shop')"
         >
-          {{ solarStore.isCometState ? 'Ignite' : 'Evolve' }}
+          Evolve
         </div>
         <div v-else-if="solarStore.branchesReadyForEvolve" class="sf-pill sf-pill--wait">
-          {{ solarStore.isCometState ? 'Igniting in' : 'Evolving in' }}
-          {{ formatDuration(dwellRemainingMs) }}
+          Evolving in {{ formatDuration(dwellRemainingMs) }}
         </div>
         <div v-else class="sf-pill sf-pill--hint" role="button" @click="uiStore.setBardTab('shop')">
-          {{ solarStore.isCometState ? 'Ignite' : 'Evolve' }}
+          Evolve
         </div>
       </div>
 
