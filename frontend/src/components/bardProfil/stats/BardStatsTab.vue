@@ -1027,13 +1027,13 @@ const filteredAugCards = computed(() => {
 }
 
 .sf-solar-age {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
+  /* Fixed width so the ticking phase time never reflows the solar strip */
+  --sf-age-width: 150px;
+  width: var(--sf-age-width);
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
   color: var(--rpg-text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
