@@ -7,6 +7,9 @@ import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { useAugmentStore } from '@/stores/augmentStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useBattleStore } from '@/stores/battleStore'
+import { useShopStore } from '@/stores/shopStore'
+import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import type { CompletedGalaxyRecord } from '@/stores/galaxyStore'
 import {
@@ -28,6 +31,9 @@ const galaxyStore = useGalaxyStore()
 const synergyStore = useSynergyStore()
 const augmentStore = useAugmentStore()
 const solarStore = useSolarUpgradeStore()
+const battleStore = useBattleStore()
+const shopStore = useShopStore()
+const planetShopStore = usePlanetShopStore()
 const uiStore = useUiStore()
 
 const {
@@ -50,6 +56,19 @@ const { cpsSynergyMultiplier, powerSynergyMultiplier, dpsSynergyMultiplier } =
 const { temporaryCPSMultiplier } = storeToRefs(augmentStore)
 
 const dpsPct = computed(() => Math.round((dpsSynergyMultiplier.value - 1) * 100))
+
+/* ── Extra lifetime / journey stats (read-only from their stores) ─── */
+const totalPower = computed(() => gameStore.totalPower)
+const lifetimeProduction = computed(() => shopStore.totalLifetimeProduction)
+const championsRecruited = computed(() => battleStore.ownedChampions.length)
+const planetsColonized = computed(() => planetShopStore.purchasedSlots.length)
+const battleRank = computed(
+  () => `${battleStore.currentRank.tier} ${battleStore.currentRank.division}`,
+)
+const winRatePct = computed(() => Math.round(battleStore.winRate))
+const bestWinStreak = computed(() => battleStore.bestWinStreak)
+const careerKda = computed(() => battleStore.careerKda.toFixed(2))
+const pentakills = computed(() => battleStore.allTime.multikills.penta)
 
 /* ── Count-up animation on mount ─────────────────────────────── */
 const countUpProgress = ref(0)
@@ -541,9 +560,54 @@ const totalChips = computed<BuffChip[]>(() => {
             <span class="sf-srow-val">{{ $formatNumber(animStars) }}</span>
           </div>
           <div class="sf-srow">
-            <Icon icon="game-icons:galaxy" class="sf-ico sf-ico--tint" width="17" height="17" />
+            <Icon icon="game-icons:galaxy" class="sf-ico sf-ico--tint" width="22" height="22" />
             <span class="sf-srow-lbl">Galaxies Freed</span>
             <span class="sf-srow-val">{{ archive.length }}</span>
+          </div>
+          <div class="sf-srow">
+            <Icon icon="game-icons:embrassed-energy" class="sf-ico sf-ico--tint" width="22" height="22" />
+            <span class="sf-srow-lbl">Total Power</span>
+            <span class="sf-srow-val">{{ $formatNumber(totalPower) }}</span>
+          </div>
+          <div class="sf-srow">
+            <Icon icon="game-icons:factory" class="sf-ico sf-ico--tint" width="22" height="22" />
+            <span class="sf-srow-lbl">Lifetime Production</span>
+            <span class="sf-srow-val">{{ $formatNumber(lifetimeProduction) }}</span>
+          </div>
+          <div class="sf-srow">
+            <Icon icon="game-icons:backup" class="sf-ico sf-ico--tint" width="22" height="22" />
+            <span class="sf-srow-lbl">Champions Recruited</span>
+            <span class="sf-srow-val">{{ championsRecruited }}</span>
+          </div>
+          <div class="sf-srow">
+            <Icon icon="game-icons:jupiter" class="sf-ico sf-ico--tint" width="22" height="22" />
+            <span class="sf-srow-lbl">Planets Colonized</span>
+            <span class="sf-srow-val">{{ planetsColonized }}</span>
+          </div>
+          <div class="sf-srow">
+            <Icon icon="game-icons:rank-1" class="sf-ico sf-ico--tint" width="22" height="22" />
+            <span class="sf-srow-lbl">Battle Rank</span>
+            <span class="sf-srow-val">{{ battleRank }}</span>
+          </div>
+          <div class="sf-srow">
+            <Icon icon="game-icons:pie-chart" class="sf-ico sf-ico--tint" width="22" height="22" />
+            <span class="sf-srow-lbl">Win Rate</span>
+            <span class="sf-srow-val">{{ winRatePct }}%</span>
+          </div>
+          <div class="sf-srow">
+            <Icon icon="game-icons:flame" class="sf-ico sf-ico--tint" width="22" height="22" />
+            <span class="sf-srow-lbl">Best Win Streak</span>
+            <span class="sf-srow-val">{{ bestWinStreak }}</span>
+          </div>
+          <div class="sf-srow">
+            <Icon icon="game-icons:daggers" class="sf-ico sf-ico--tint" width="22" height="22" />
+            <span class="sf-srow-lbl">Career KDA</span>
+            <span class="sf-srow-val">{{ careerKda }}</span>
+          </div>
+          <div class="sf-srow">
+            <Icon icon="game-icons:pentacle" class="sf-ico sf-ico--tint" width="22" height="22" />
+            <span class="sf-srow-lbl">Pentakills</span>
+            <span class="sf-srow-val">{{ pentakills }}</span>
           </div>
         </div>
       </section>

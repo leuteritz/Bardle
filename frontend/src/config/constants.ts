@@ -2948,6 +2948,16 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:sword-spin', // "Return to Battle" floating button (BattleReturnButton)
   // Eclipse state (champion/planet behind the sun)
   'game-icons:eclipse-flare', // Eclipse medallion (ChampionSelectorComponent, CommandPanelComponent, RoleStrikerSquad, PlanetBatteryHUD)
+  // Bard Stats — Journey lifetime stat rows (BardStatsTab)
+  'game-icons:embrassed-energy', // Total Power stat row
+  'game-icons:factory', // Lifetime Production stat row
+  'game-icons:backup', // Champions Recruited stat row
+  'game-icons:jupiter', // Planets Colonized stat row
+  'game-icons:rank-1', // Battle Rank stat row
+  'game-icons:pie-chart', // Win Rate stat row
+  'game-icons:flame', // Best Win Streak stat row
+  'game-icons:daggers', // Career KDA stat row
+  'game-icons:pentacle', // Pentakills stat row
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
