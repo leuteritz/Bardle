@@ -14,17 +14,14 @@
           <MiniMapHudPanel />
 
           <!-- ── Rescue progress: saved / required champion stars ──
-               Hidden while the role is being chosen (and during the departure
-               spin) so it fades in together with the arrival HUD at takeoff. -->
+               Driven by the exact same trigger as the arrival countdown HUD
+               (championTravelState === 'traveling') so both instrument rows
+               fade in together at takeoff — never the counter a beat late.
+               Every non-travel phase (role pick, departure spin, arrival,
+               boss dock, warp) is a non-'traveling' state, so this stays
+               hidden there just like before. -->
           <div
-            v-if="
-              !galaxyStore.isComplete &&
-              !galaxyStore.isGalaxyTransitioning &&
-              !galaxyStore.bossPhaseActive &&
-              !galaxyStore.pendingRoleSelection &&
-              !galaxyStore.isRescueRotating &&
-              !isArrived
-            "
+            v-if="galaxyStore.championTravelState === 'traveling'"
             class="star-progress"
           >
             <div class="star-progress-row">
