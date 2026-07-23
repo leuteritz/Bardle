@@ -509,15 +509,10 @@ const totalChips = computed<BuffChip[]>(() => {
             </div>
           </div>
 
-          <div class="sf-hero-row">
-            <img
-              class="sf-ico sf-ico--lg"
-              src="/img/BardAbilities/BardChime.png"
-              alt=""
-              aria-hidden="true"
-            />
+          <div class="sf-srow">
+            <img class="sf-ico" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
             <span class="sf-srow-lbl">Chimes / Sec</span>
-            <span class="sf-hero-val">{{ $formatNumber(chimesPerSecond) }}</span>
+            <span class="sf-srow-val">{{ $formatNumber(chimesPerSecond) }}</span>
           </div>
 
           <div class="sf-srow">
@@ -1195,44 +1190,23 @@ const totalChips = computed<BuffChip[]>(() => {
   color: var(--rpg-rarity-rare);
 }
 
-.sf-hero-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
-  background: linear-gradient(to right, #1a1008, #120d07);
-  border: 1px solid #3e200a;
-  border-radius: 5px;
-}
-
-.sf-hero-val {
-  font-size: 20px;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--rpg-gold);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
+/* Unified stat row — every Journey stat (except the Level/Galaxy/Universe
+   chips) shares this one size & style: big, readable, modern. */
 .sf-srow {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 5px 10px;
+  gap: 10px;
+  padding: 8px 12px;
   background: #141008;
   border: 1px solid #241a0c;
   border-radius: 5px;
 }
 
 .sf-ico {
-  width: 17px;
-  height: 17px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   object-fit: contain;
-}
-.sf-ico--lg {
-  width: 24px;
-  height: 24px;
 }
 .sf-ico--tint {
   color: #c89040;
@@ -1241,7 +1215,7 @@ const totalChips = computed<BuffChip[]>(() => {
 .sf-srow-lbl {
   flex: 1;
   min-width: 0;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1252,7 +1226,7 @@ const totalChips = computed<BuffChip[]>(() => {
 }
 
 .sf-srow-val {
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1;
   color: var(--rpg-gold);
