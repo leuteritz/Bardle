@@ -125,7 +125,7 @@
           <div class="champ-hp-bar-shine" />
         </div>
         <span v-if="pos.isDown" class="champ-hp-text champ-hp-text--down">
-          DOWN {{ pos.downSecs }}s
+          {{ pos.downSecs }}s
         </span>
         <span v-else class="champ-hp-text">{{ pos.currentHp }} / {{ pos.maxHp }}</span>
       </div>
