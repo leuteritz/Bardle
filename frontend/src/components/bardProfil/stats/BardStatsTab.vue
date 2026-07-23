@@ -232,14 +232,6 @@ const playTime = computed(() => formatDuration(inGameTime.value * 1000))
 /* ── Galaxy Archive (completed-galaxy memories) ──────────────── */
 const archive = computed(() => [...completedGalaxies.value].sort((a, b) => b.galaxy - a.galaxy))
 
-function archiveRescued(rec: CompletedGalaxyRecord): number {
-  return rec.attemptResults.filter((r) => r === 'rescued').length
-}
-
-function archiveFailed(rec: CompletedGalaxyRecord): number {
-  return rec.attemptResults.filter((r) => r === 'failed').length
-}
-
 function archiveDate(rec: CompletedGalaxyRecord): string {
   return new Date(rec.completedAt).toLocaleDateString()
 }
@@ -765,25 +757,19 @@ function stopResize() {
                   class="sf-arch-img"
                   loading="lazy"
                 />
-                <div class="sf-arch-title">
-                  <span class="sf-arch-galaxy">Galaxy {{ rec.galaxy }}</span>
+                <!-- Galaxy number badge, top-left over the map -->
+                <span class="sf-arch-badge">Galaxy {{ rec.galaxy }}</span>
+                <!-- Time spent + date freed, over the map's lower edge -->
+                <div class="sf-arch-info">
+                  <span class="sf-arch-info-item sf-arch-info-time" title="Time spent in this galaxy">
+                    <Icon icon="game-icons:sand-clock" width="12" height="12" />
+                    {{ formatDuration(rec.durationSeconds * 1000) }}
+                  </span>
+                  <span class="sf-arch-info-item sf-arch-info-date" title="Date this galaxy was freed">
+                    <Icon icon="game-icons:calendar" width="12" height="12" />
+                    {{ archiveDate(rec) }}
+                  </span>
                 </div>
-              </div>
-              <div class="sf-arch-meta">
-                <span class="sf-arch-stat sf-arch-stat--rescued" title="Stars rescued">
-                  ✦ {{ archiveRescued(rec) }}
-                </span>
-                <span
-                  v-if="archiveFailed(rec) > 0"
-                  class="sf-arch-stat sf-arch-stat--failed"
-                  title="Stars lost"
-                >
-                  ✕ {{ archiveFailed(rec) }}
-                </span>
-                <span class="sf-arch-stat sf-arch-stat--time" title="Time to free this galaxy">
-                  <Icon icon="game-icons:sand-clock" width="11" height="11" />
-                  {{ formatDuration(rec.durationSeconds * 1000) }}
-                </span>
               </div>
             </div>
           </div>
@@ -1688,38 +1674,38 @@ function stopResize() {
   object-fit: cover;
 }
 
-/* Name plate over the map's lower edge — readable on any galaxy color */
-.sf-arch-title {
+/* Galaxy number badge — top-left chip floating over the map */
+.sf-arch-badge {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: var(--rpg-gold);
+  background: rgba(8, 6, 3, 0.8);
+  border: 1px solid rgba(200, 144, 64, 0.45);
+  border-radius: 4px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+
+/* Time + date, over the map's lower edge — readable on any galaxy color */
+.sf-arch-info {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 9px 5px;
-  background: linear-gradient(to top, rgba(8, 6, 3, 0.92), rgba(8, 6, 3, 0));
+  padding: 16px 9px 6px;
+  background: linear-gradient(to top, rgba(8, 6, 3, 0.94), rgba(8, 6, 3, 0));
 }
 
-.sf-arch-galaxy {
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  color: var(--rpg-gold);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  white-space: nowrap;
-}
-
-.sf-arch-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 9px 6px;
-  border-top: 1px solid #241a0c;
-}
-
-.sf-arch-stat {
+.sf-arch-info-item {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1727,17 +1713,14 @@ function stopResize() {
   font-weight: 700;
   letter-spacing: 0.03em;
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
   white-space: nowrap;
 }
-.sf-arch-stat--rescued {
-  color: var(--rpg-gold);
+.sf-arch-info-time {
+  color: #ffd88a;
 }
-.sf-arch-stat--failed {
-  color: #cc6050;
-}
-.sf-arch-stat--time {
-  margin-left: auto;
-  color: var(--rpg-text-muted);
+.sf-arch-info-date {
+  color: #c8b890;
 }
 
 /* ─ Shared empty states ─ */
