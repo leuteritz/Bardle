@@ -1204,14 +1204,16 @@ const filteredAugCards = computed(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  /* headroom for the dwell clock floating above the track */
-  padding-top: 20px;
+  /* headroom for the dwell clock floating just above the track */
+  padding-top: 10px;
 }
 
 .sf-timeline-track {
   position: absolute;
-  /* vertical center of the 36px dot slot (+20px clock headroom) */
-  top: 38px;
+  /* dot-slot center = padding-top(10) + half of 36px slot = 28px;
+     the 2px line is centered on it (top 27 → line spans 27–29, center 28),
+     so it passes exactly through the vertical middle of every sun dot */
+  top: 27px;
   /* 7 columns × 14% + space-between → first/last dot centers sit exactly
      at 7% / 93%, so the line starts at the first sun and ends at the last */
   left: 7%;
@@ -1252,10 +1254,10 @@ const filteredAugCards = computed(() => {
   }
 }
 
-/* Floating dwell clock above the active segment */
+/* Floating dwell clock just above the active segment's line */
 .sf-tl-timer {
   position: absolute;
-  top: 0;
+  top: 4px;
   transform: translateX(-50%);
   /* fixed box: ticking digits never resize or shift the label */
   width: 92px;
