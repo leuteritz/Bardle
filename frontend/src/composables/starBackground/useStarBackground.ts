@@ -35,47 +35,8 @@ import {
   FLIGHT_BURST_LEN_FACTOR,
   FLIGHT_BURST_WIDTH,
   STAR_PHASE_DATA,
-  COMET_BG_MAX_COUNT,
-  COMET_BG_INTERVAL_MIN_SEC,
-  COMET_BG_INTERVAL_MAX_SEC,
-  COMET_BG_FIRST_DELAY_MIN_SEC,
-  COMET_BG_FIRST_DELAY_MAX_SEC,
-  COMET_BG_SPEED_MIN,
-  COMET_BG_SPEED_MAX,
-  COMET_BG_TAIL_MIN,
-  COMET_BG_TAIL_MAX,
-  COMET_BG_WIDTH_MIN,
-  COMET_BG_WIDTH_MAX,
-  COMET_BG_PARTIAL_LIFE_MIN_SEC,
-  COMET_BG_PARTIAL_LIFE_MAX_SEC,
-  COMET_BG_COUNT_WEIGHTS,
-  COMET_BG_EVENT_COOLDOWN_BONUS_SEC,
-  COMET_BG_STAGGER_MAX_SEC,
-  COMET_BG_VARIANT_WEIGHTS,
-  COMET_BG_DRIFTER_SPEED_MIN,
-  COMET_BG_DRIFTER_SPEED_MAX,
-  COMET_BG_DRIFTER_TAIL_MULT,
-  COMET_BG_DRIFTER_ALPHA_MULT,
-  COMET_BG_FLASH_SPEED_MIN,
-  COMET_BG_FLASH_SPEED_MAX,
-  COMET_BG_FLASH_TAIL_MULT,
-  COMET_BG_FLASH_ALPHA_MULT,
-  COMET_BG_ARC_TURN_RATE_MIN,
-  COMET_BG_ARC_TURN_RATE_MAX,
-  COMET_BG_ARC_LIFE_MARGIN,
-  COMET_BG_TWIN_CHANCE,
-  COMET_BG_DIAGONAL_CHANCE,
-  COMET_BG_ANGLE_JITTER_RAD,
-  COMET_BG_FADE_IN_FRAC,
-  COMET_BG_FADE_OUT_FRAC,
-  COMET_BG_ALPHA,
-  COMET_BG_TWIN_OFFSET_MIN,
-  COMET_BG_TWIN_OFFSET_MAX,
-  COMET_BG_TWIN_SCALE,
-  COMET_BG_TINT_WHITE_MIX,
   FOCUS_POLL_INTERVAL_MS,
 } from '../../config/constants'
-import { GALAXY_THEMES } from '../../config/galaxyThemes'
 import { useWindowFocus } from '../useWindowFocus'
 
 /** FLIGHT_STREAK_ALPHA as a 2-digit hex suffix for 8-digit-hex canvas colors. */
@@ -1188,64 +1149,6 @@ function pickOrbitStarColor(): [number, number, number] {
   return cat.colors[Math.floor(Math.random() * cat.colors.length)]
 }
 
-/** Ambient background comet — free cartesian flight across the canvas, unlike
- *  the radial center-outward flow of stars/streaks. */
-type BgComet = {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  len: number
-  width: number
-  life: number
-  maxLife: number
-  /** true → partial burn: alpha envelope fades in/out; false → full crossing */
-  fades: boolean
-  /** Entry delay (s) — staggers multi-comet events; no movement/draw until 0. */
-  delay: number
-  /** Velocity rotation rate (rad/s) — 0 = straight, ≠0 = curved arc comet. */
-  curve: number
-  /** Brightness scale: drifters render dimmer, flashes brighter. */
-  alphaMult: number
-  r: number
-  g: number
-  b: number
-  sparkPhase: number
-}
-
-type CometVariant = keyof typeof COMET_BG_VARIANT_WEIGHTS
-
-/** Heading pool (screen space, y grows downward): TL→BR dive, TR→BL, shallow
- *  left→right, steep top→down, right→left, and an ascending BL→TR flight. */
-const COMET_HEADING_POOL = [
-  Math.PI / 4,
-  (Math.PI * 3) / 4,
-  0,
-  Math.PI / 2,
-  Math.PI,
-  -Math.PI / 4,
-]
-
-function rollCometVariant(): CometVariant {
-  let rand = Math.random()
-  for (const [variant, weight] of Object.entries(COMET_BG_VARIANT_WEIGHTS)) {
-    rand -= weight
-    if (rand <= 0) return variant as CometVariant
-  }
-  return 'crossing'
-}
-
-/** Pastel comet tint from the current galaxy's (dark, low-alpha) nebula color:
- *  parse the rgb components and mix them toward white so the comet reads as
- *  white-hot with a subtle per-galaxy mood. */
-function cometTintForGalaxy(themeIndex: number): { r: number; g: number; b: number } {
-  const theme = GALAXY_THEMES[themeIndex % GALAXY_THEMES.length]
-  const m = theme.nebulaColors[0].match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
-  const mix = (v: number) => Math.round(v + (255 - v) * COMET_BG_TINT_WHITE_MIX)
-  if (!m) return { r: 230, g: 235, b: 255 }
-  return { r: mix(Number(m[1])), g: mix(Number(m[2])), b: mix(Number(m[3])) }
-}
-
 export function useStarBackground(options: { frozen?: boolean } = {}) {
   // frozen = statisches Sternenfeld (Shop): kein Heranfliegen, keine Galaxien/Nebel-Spawns,
   // keine Galaxy-/Warp-Mutationen — nur In-Place-Twinkle.
@@ -1266,12 +1169,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   let burstCooldown =
     FLIGHT_BURST_INTERVAL_MIN_SEC +
     Math.random() * (FLIGHT_BURST_INTERVAL_MAX_SEC - FLIGHT_BURST_INTERVAL_MIN_SEC)
-  /** Rare ambient comets crossing the canvas; spawned in-loop (auto-pauses with
-   *  the RAF loop), finite — spliced when done, no timers, no extra cleanup. */
-  const bgComets: BgComet[] = []
-  let cometCooldown =
-    COMET_BG_FIRST_DELAY_MIN_SEC +
-    Math.random() * (COMET_BG_FIRST_DELAY_MAX_SEC - COMET_BG_FIRST_DELAY_MIN_SEC)
   const galaxyPool: Array<{ el: SVGSVGElement; active: boolean }> = []
   const nebulaPool: Array<{ el: SVGSVGElement; active: boolean }> = []
   let nextStarId = 1
@@ -1552,7 +1449,18 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     svg.style.transform = initTransform
     svg.style.visibility = 'visible'
     slot.active = true
-    galaxies.push({ el: svg, x, y, scale: 0.05, maxScale, lifetime, elapsed: 0, rot, _lastOpacity: '0', _lastTransform: initTransform })
+    galaxies.push({
+      el: svg,
+      x,
+      y,
+      scale: 0.05,
+      maxScale,
+      lifetime,
+      elapsed: 0,
+      rot,
+      _lastOpacity: '0',
+      _lastTransform: initTransform,
+    })
   }
 
   function scheduleNextGalaxy(): void {
@@ -1609,7 +1517,17 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     svg.style.transform = initTransform
     svg.style.visibility = 'visible'
     slot.active = true
-    emissionNebulas.push({ el: svg, angle, dist, baseSpeed, scale: 0.02, maxScale, size, _lastOpacity: '0', _lastTransform: initTransform })
+    emissionNebulas.push({
+      el: svg,
+      angle,
+      dist,
+      baseSpeed,
+      scale: 0.02,
+      maxScale,
+      size,
+      _lastOpacity: '0',
+      _lastTransform: initTransform,
+    })
   }
 
   function scheduleNextEmission(): void {
@@ -1717,165 +1635,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   }
 
   // ── Haupt-Animationsschleife ───────────────────────────────────────────────
-  /** Spawn one ambient comet with the given heading, entry delay and a rolled
-   *  behavior variant: full crossing, partial burn (ignites/burns out
-   *  on-screen), slow drifter, fast flash, or curved arc. Crossings in
-   *  single-comet events may bring a twin companion. */
-  function spawnOneComet(
-    w: number,
-    h: number,
-    heading: number,
-    delay: number,
-    allowTwin: boolean,
-  ): void {
-    if (bgComets.length >= COMET_BG_MAX_COUNT) return
-    const tint = cometTintForGalaxy(useGalaxyStore().currentThemeIndex)
-    const variant = rollCometVariant()
-
-    let speed = COMET_BG_SPEED_MIN + Math.random() * (COMET_BG_SPEED_MAX - COMET_BG_SPEED_MIN)
-    let len = COMET_BG_TAIL_MIN + Math.random() * (COMET_BG_TAIL_MAX - COMET_BG_TAIL_MIN)
-    const width = COMET_BG_WIDTH_MIN + Math.random() * (COMET_BG_WIDTH_MAX - COMET_BG_WIDTH_MIN)
-    let alphaMult = 1
-    let curve = 0
-    if (variant === 'drifter') {
-      speed =
-        COMET_BG_DRIFTER_SPEED_MIN +
-        Math.random() * (COMET_BG_DRIFTER_SPEED_MAX - COMET_BG_DRIFTER_SPEED_MIN)
-      len *= COMET_BG_DRIFTER_TAIL_MULT
-      alphaMult = COMET_BG_DRIFTER_ALPHA_MULT
-    } else if (variant === 'flash') {
-      speed =
-        COMET_BG_FLASH_SPEED_MIN +
-        Math.random() * (COMET_BG_FLASH_SPEED_MAX - COMET_BG_FLASH_SPEED_MIN)
-      len *= COMET_BG_FLASH_TAIL_MULT
-      alphaMult = COMET_BG_FLASH_ALPHA_MULT
-    } else if (variant === 'arc') {
-      curve =
-        (COMET_BG_ARC_TURN_RATE_MIN +
-          Math.random() * (COMET_BG_ARC_TURN_RATE_MAX - COMET_BG_ARC_TURN_RATE_MIN)) *
-        (Math.random() < 0.5 ? 1 : -1)
-    }
-
-    const ux = Math.cos(heading)
-    const uy = Math.sin(heading)
-
-    if (variant === 'partial') {
-      // Partial burn: ignites at a visible point, fades out before any edge.
-      const maxLife =
-        COMET_BG_PARTIAL_LIFE_MIN_SEC +
-        Math.random() * (COMET_BG_PARTIAL_LIFE_MAX_SEC - COMET_BG_PARTIAL_LIFE_MIN_SEC)
-      bgComets.push({
-        x: w * (0.1 + Math.random() * 0.6),
-        y: h * (0.05 + Math.random() * 0.6),
-        vx: ux * speed,
-        vy: uy * speed,
-        len,
-        width,
-        life: 0,
-        maxLife,
-        fades: true,
-        delay,
-        curve: 0,
-        alphaMult: 1,
-        r: tint.r,
-        g: tint.g,
-        b: tint.b,
-        sparkPhase: Math.random() * Math.PI * 2,
-      })
-      return
-    }
-
-    // Crossing geometry (also drifter/flash/arc): aim through a random interior
-    // target and back the head up along the flight path until just past the
-    // entry edge, so the comet appears almost immediately, crosses the target
-    // and exits another edge.
-    const diag = Math.hypot(w, h)
-    const targetX = w * (0.25 + Math.random() * 0.5)
-    const targetY = h * (0.25 + Math.random() * 0.5)
-    // Distance (backwards from the target) to the edge the comet enters from.
-    const backX = ux > 0 ? targetX / ux : ux < 0 ? (targetX - w) / ux : Infinity
-    const backY = uy > 0 ? targetY / uy : uy < 0 ? (targetY - h) / uy : Infinity
-    const backup = Math.min(backX, backY) + len + 60
-    let maxLife = (backup + diag + len + 100) / speed
-    // A curved path is longer than the straight-line estimate.
-    if (variant === 'arc') maxLife *= COMET_BG_ARC_LIFE_MARGIN
-    const head: BgComet = {
-      x: targetX - ux * backup,
-      y: targetY - uy * backup,
-      vx: ux * speed,
-      vy: uy * speed,
-      len,
-      width,
-      life: 0,
-      maxLife,
-      fades: false,
-      delay,
-      curve,
-      alphaMult,
-      r: tint.r,
-      g: tint.g,
-      b: tint.b,
-      sparkPhase: Math.random() * Math.PI * 2,
-    }
-    bgComets.push(head)
-    if (
-      allowTwin &&
-      variant === 'crossing' &&
-      Math.random() < COMET_BG_TWIN_CHANCE &&
-      bgComets.length < COMET_BG_MAX_COUNT
-    ) {
-      // Twin pair: a smaller companion offset perpendicular to the flight path.
-      const off =
-        COMET_BG_TWIN_OFFSET_MIN +
-        Math.random() * (COMET_BG_TWIN_OFFSET_MAX - COMET_BG_TWIN_OFFSET_MIN)
-      const side = Math.random() < 0.5 ? 1 : -1
-      const twinSpeed = speed * (0.9 + Math.random() * 0.2)
-      bgComets.push({
-        ...head,
-        x: head.x - uy * off * side,
-        y: head.y + ux * off * side,
-        vx: ux * twinSpeed,
-        vy: uy * twinSpeed,
-        // Slower companion needs proportionally more time to finish the crossing
-        maxLife: head.maxLife * (speed / twinSpeed),
-        len: len * COMET_BG_TWIN_SCALE,
-        width: Math.max(1, width * COMET_BG_TWIN_SCALE),
-        sparkPhase: Math.random() * Math.PI * 2,
-      })
-    }
-  }
-
-  /** Sky event: rolls how many comets appear (mostly 1, rarely up to 5), each
-   *  fully independent — own heading, behavior variant and a staggered entry
-   *  delay so multi-events read as "the sky comes alive", not a volley.
-   *  Returns the rolled count for the cooldown size penalty. */
-  function spawnCometEvent(w: number, h: number): number {
-    let rand = Math.random()
-    let count = 1
-    for (let i = 0; i < COMET_BG_COUNT_WEIGHTS.length; i++) {
-      rand -= COMET_BG_COUNT_WEIGHTS[i]
-      if (rand <= 0) {
-        count = i + 1
-        break
-      }
-    }
-    count = Math.min(count, COMET_BG_MAX_COUNT - bgComets.length)
-    for (let i = 0; i < count; i++) {
-      // Single comets keep the signature TL→BR bias; comets in multi-events
-      // scatter uniformly across the full heading pool.
-      let heading: number
-      if (count === 1 && Math.random() < COMET_BG_DIAGONAL_CHANCE) {
-        heading = COMET_HEADING_POOL[0]
-      } else {
-        heading = COMET_HEADING_POOL[Math.floor(Math.random() * COMET_HEADING_POOL.length)]
-      }
-      heading += (Math.random() * 2 - 1) * COMET_BG_ANGLE_JITTER_RAD
-      const delay = i === 0 ? 0 : Math.random() * COMET_BG_STAGGER_MAX_SEC
-      spawnOneComet(w, h, heading, delay, count === 1)
-    }
-    return count
-  }
-
   function animateStars(timestamp: number): void {
     // Kein Fokus, Tab versteckt oder Bard-Modal offen → sofort abbrechen,
     // nächsten Frame NICHT anfordern (Restart via watch/onWindowFocus)
@@ -1893,95 +1652,95 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     let hyperActive = false
     let speedMultiplier = 0
     if (!isFrozen) {
-    const gameStore = useGameStore()
-    hyperActive = gameStore.isHyperspaceActive
-    if (hyperActive && !wasHyperspaceActive) hyperspaceElapsed = 0
-    wasHyperspaceActive = hyperActive
-    if (hyperActive) hyperspaceElapsed += delta
+      const gameStore = useGameStore()
+      hyperActive = gameStore.isHyperspaceActive
+      if (hyperActive && !wasHyperspaceActive) hyperspaceElapsed = 0
+      wasHyperspaceActive = hyperActive
+      if (hyperActive) hyperspaceElapsed += delta
 
-    const galaxyStore = useGalaxyStore()
+      const galaxyStore = useGalaxyStore()
 
-    // ── Champion-Rettungs-Kameraschwenk (runs even while background is paused) ──
-    if (galaxyStore.isRescueRotating) {
-      if (prefersReducedMotion.value) {
-        galaxyStore.endRescueRotation()
-      } else {
-        const elapsed = Date.now() - galaxyStore.rescueRotationStartTime
-        const t = Math.min(elapsed / RESCUE_ROTATION_DURATION_MS, 1)
-        // sin-Kurve: langsam starten, in der Mitte peak, wieder langsam enden
-        const angularDelta =
-          (RESCUE_ROTATION_TOTAL_RAD / RESCUE_ROTATION_DURATION_MS) *
-          (delta * 1000) *
-          Math.sin(t * Math.PI)
-        const dir = galaxyStore.rescueRotationDirection
-        for (const star of stars) star.angle += angularDelta * dir
-        for (const d of dustPatches) d.angle += angularDelta * dir
-        for (const c of starClusters) c.angle += angularDelta * dir
-        if (t >= 1) galaxyStore.endRescueRotation()
-      }
-    }
-
-    if (galaxyStore.starsBackgroundPaused) {
-      // Kein Early-Return: der Frame wird statisch (delta = 0, speedMultiplier
-      // bleibt 0) weitergezeichnet. Beim Tab-Rückwechsel alloziert
-      // handleVisibilityChange() den Canvas-Backing-Store via resizeCanvas()
-      // neu (leert ihn dabei) — ohne Neuzeichnen blieben sonst alle Sterne
-      // unsichtbar, bis die Pause endet (Champion-Stern besiegt).
-      delta = 0
-    } else {
-    const pendingTrans = galaxyStore.pendingTransition
-
-    // Skip transitions already driven elsewhere: requestTransition() runs the
-    // warp on wall-clock timers while the Bard profile is open (this loop is
-    // paused there) — starting it again here would advance two galaxies.
-    if (pendingTrans && !wasPendingTransition && !galaxyStore.isGalaxyTransitioning) {
-      if (prefersReducedMotion.value) {
-        galaxyStore.commitAdvance()
-      } else {
-        galaxyTransPhase = 'warp'
-        galaxyTransElapsed = 0
-        galaxyTransDir = Math.random() * Math.PI * 2
-        galaxyStore.setGalaxyTransitioning(true)
-      }
-    }
-    wasPendingTransition = pendingTrans
-
-    if (galaxyTransPhase !== 'idle') {
-      galaxyTransElapsed += delta * 1000
-      if (galaxyTransPhase === 'warp') {
-        if (galaxyTransElapsed >= GALAXY_TRANS_WARP_MS) {
-          galaxyStore.commitAdvance()
-          galaxyTransPhase = 'decel'
-          galaxyTransElapsed -= GALAXY_TRANS_WARP_MS
-        }
-      } else if (galaxyTransPhase === 'decel') {
-        if (galaxyTransElapsed >= GALAXY_TRANS_DECEL_MS) {
-          galaxyTransPhase = 'idle'
-          galaxyTransElapsed = 0
-          galaxyStore.setGalaxyTransitioning(false)
+      // ── Champion-Rettungs-Kameraschwenk (runs even while background is paused) ──
+      if (galaxyStore.isRescueRotating) {
+        if (prefersReducedMotion.value) {
+          galaxyStore.endRescueRotation()
+        } else {
+          const elapsed = Date.now() - galaxyStore.rescueRotationStartTime
+          const t = Math.min(elapsed / RESCUE_ROTATION_DURATION_MS, 1)
+          // sin-Kurve: langsam starten, in der Mitte peak, wieder langsam enden
+          const angularDelta =
+            (RESCUE_ROTATION_TOTAL_RAD / RESCUE_ROTATION_DURATION_MS) *
+            (delta * 1000) *
+            Math.sin(t * Math.PI)
+          const dir = galaxyStore.rescueRotationDirection
+          for (const star of stars) star.angle += angularDelta * dir
+          for (const d of dustPatches) d.angle += angularDelta * dir
+          for (const c of starClusters) c.angle += angularDelta * dir
+          if (t >= 1) galaxyStore.endRescueRotation()
         }
       }
-    }
 
-    if (galaxyStore.isRescueRotating) {
-      speedMultiplier = 0
-    } else if (galaxyTransPhase === 'warp') {
-      const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_WARP_MS, 1)
-      speedMultiplier = 1 + 44 * (t * t * t)
-    } else if (galaxyTransPhase === 'decel') {
-      const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_DECEL_MS, 1)
-      speedMultiplier = 1 + 44 * Math.pow(1 - t, 3.5)
-    } else {
-      const solar = useSolarUpgradeStore()
-      const flightBonus = 1 + solar.flightSpeedLevel * SOLAR_STAR_SPEED_BONUS
-      // Comet origin state: stars drift noticeably faster — the comet races
-      // through space (streak trails stay off, they need hyperActive/warp).
-      const cometBoost = solar.isCometState ? COMET_DRIFT_SPEED_MULT : 1
-      speedMultiplier = hyperActive
-        ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19
-        : flightBonus * cometBoost
-    }
-    }
+      if (galaxyStore.starsBackgroundPaused) {
+        // Kein Early-Return: der Frame wird statisch (delta = 0, speedMultiplier
+        // bleibt 0) weitergezeichnet. Beim Tab-Rückwechsel alloziert
+        // handleVisibilityChange() den Canvas-Backing-Store via resizeCanvas()
+        // neu (leert ihn dabei) — ohne Neuzeichnen blieben sonst alle Sterne
+        // unsichtbar, bis die Pause endet (Champion-Stern besiegt).
+        delta = 0
+      } else {
+        const pendingTrans = galaxyStore.pendingTransition
+
+        // Skip transitions already driven elsewhere: requestTransition() runs the
+        // warp on wall-clock timers while the Bard profile is open (this loop is
+        // paused there) — starting it again here would advance two galaxies.
+        if (pendingTrans && !wasPendingTransition && !galaxyStore.isGalaxyTransitioning) {
+          if (prefersReducedMotion.value) {
+            galaxyStore.commitAdvance()
+          } else {
+            galaxyTransPhase = 'warp'
+            galaxyTransElapsed = 0
+            galaxyTransDir = Math.random() * Math.PI * 2
+            galaxyStore.setGalaxyTransitioning(true)
+          }
+        }
+        wasPendingTransition = pendingTrans
+
+        if (galaxyTransPhase !== 'idle') {
+          galaxyTransElapsed += delta * 1000
+          if (galaxyTransPhase === 'warp') {
+            if (galaxyTransElapsed >= GALAXY_TRANS_WARP_MS) {
+              galaxyStore.commitAdvance()
+              galaxyTransPhase = 'decel'
+              galaxyTransElapsed -= GALAXY_TRANS_WARP_MS
+            }
+          } else if (galaxyTransPhase === 'decel') {
+            if (galaxyTransElapsed >= GALAXY_TRANS_DECEL_MS) {
+              galaxyTransPhase = 'idle'
+              galaxyTransElapsed = 0
+              galaxyStore.setGalaxyTransitioning(false)
+            }
+          }
+        }
+
+        if (galaxyStore.isRescueRotating) {
+          speedMultiplier = 0
+        } else if (galaxyTransPhase === 'warp') {
+          const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_WARP_MS, 1)
+          speedMultiplier = 1 + 44 * (t * t * t)
+        } else if (galaxyTransPhase === 'decel') {
+          const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_DECEL_MS, 1)
+          speedMultiplier = 1 + 44 * Math.pow(1 - t, 3.5)
+        } else {
+          const solar = useSolarUpgradeStore()
+          const flightBonus = 1 + solar.flightSpeedLevel * SOLAR_STAR_SPEED_BONUS
+          // Comet origin state: stars drift noticeably faster — the comet races
+          // through space (streak trails stay off, they need hyperActive/warp).
+          const cometBoost = solar.isCometState ? COMET_DRIFT_SPEED_MULT : 1
+          speedMultiplier = hyperActive
+            ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19
+            : flightBonus * cometBoost
+        }
+      }
     }
 
     const w = starsContainer.value?.clientWidth ?? window.innerWidth
@@ -2288,7 +2047,13 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         for (const d of cometDebris) {
           const dNorm = d.dist / maxDist
           d.dist +=
-            d.baseSpeed * dNorm * dNorm * WARP_SPEED_MAX * speedMultiplier * COMET_DEBRIS_SPEED_MULT * delta
+            d.baseSpeed *
+            dNorm *
+            dNorm *
+            WARP_SPEED_MAX *
+            speedMultiplier *
+            COMET_DEBRIS_SPEED_MULT *
+            delta
           d.spin += d.spinSpeed * delta
           if (d.dist > maxDist) {
             d.angle = Math.random() * Math.PI * 2
@@ -2326,110 +2091,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       }
     }
 
-    // ── Background comets — rare diagonal flybys across the whole canvas.
-    // In-loop spawn (delta accumulator like the streak bursts) → pauses with
-    // the RAF loop for free; finite array, spliced when done, no timers.
-    if (ctx && !isFrozen) {
-      cometCooldown -= delta
-      if (
-        cometCooldown <= 0 &&
-        galaxyTransPhase === 'idle' &&
-        !hyperActive &&
-        bgComets.length < COMET_BG_MAX_COUNT
-      ) {
-        const eventSize = spawnCometEvent(w, h)
-        // Bigger events pay a cooldown penalty — average comet rate stays flat.
-        cometCooldown =
-          COMET_BG_INTERVAL_MIN_SEC +
-          Math.random() * (COMET_BG_INTERVAL_MAX_SEC - COMET_BG_INTERVAL_MIN_SEC) +
-          (eventSize - 1) * COMET_BG_EVENT_COOLDOWN_BONUS_SEC
-      }
-      for (let i = bgComets.length - 1; i >= 0; i--) {
-        const c = bgComets[i]
-        // Staggered entry: hold the comet fully inactive until its delay is up.
-        if (c.delay > 0) {
-          c.delay -= delta
-          continue
-        }
-        c.life += delta
-        // Arc comets: rotate the velocity a little each frame → curved path.
-        if (c.curve !== 0) {
-          const rot = c.curve * delta
-          const cosR = Math.cos(rot)
-          const sinR = Math.sin(rot)
-          const nvx = c.vx * cosR - c.vy * sinR
-          c.vy = c.vx * sinR + c.vy * cosR
-          c.vx = nvx
-        }
-        c.x += c.vx * delta
-        c.y += c.vy * delta
-        if (c.life > c.maxLife) {
-          bgComets.splice(i, 1)
-          continue
-        }
-        // Partial burns fade in/out; crossings fly at full strength and simply
-        // enter/leave via the screen edges.
-        let env = 1
-        if (c.fades) {
-          const p = c.life / c.maxLife
-          if (p < COMET_BG_FADE_IN_FRAC) env = p / COMET_BG_FADE_IN_FRAC
-          else if (p > 1 - COMET_BG_FADE_OUT_FRAC) env = (1 - p) / COMET_BG_FADE_OUT_FRAC
-        } else {
-          // Safety fade in the last 0.3s: a crossing that hasn't left the screen
-          // yet (e.g. a strongly curved arc) dissolves instead of popping out.
-          env = Math.min(1, (c.maxLife - c.life) / 0.3)
-        }
-        if (env < 0.03) continue
-        const cSpeed = Math.hypot(c.vx, c.vy)
-        const cux = c.vx / cSpeed
-        const cuy = c.vy / cSpeed
-        const tailX = c.x - cux * c.len
-        const tailY = c.y - cuy * c.len
-        // Skip drawing while a crossing is still on its off-screen approach.
-        const margin = 40
-        if (
-          (c.x < -margin && tailX < -margin) ||
-          (c.x > w + margin && tailX > w + margin) ||
-          (c.y < -margin && tailY < -margin) ||
-          (c.y > h + margin && tailY > h + margin)
-        ) {
-          continue
-        }
-        const flicker = 1 + 0.25 * Math.sin(c.sparkPhase + c.life * 18)
-        ctx.save()
-        ctx.globalAlpha = env
-        ctx.lineCap = 'round'
-        // Outer tinted tail — alphaMult dims drifters / brightens flashes
-        const tailAlpha = Math.min(1, COMET_BG_ALPHA * c.alphaMult)
-        const grad = ctx.createLinearGradient(tailX, tailY, c.x, c.y)
-        grad.addColorStop(0, `rgba(${c.r},${c.g},${c.b},0)`)
-        grad.addColorStop(1, `rgba(${c.r},${c.g},${c.b},${tailAlpha})`)
-        ctx.beginPath()
-        ctx.moveTo(tailX, tailY)
-        ctx.lineTo(c.x, c.y)
-        ctx.strokeStyle = grad
-        ctx.lineWidth = c.width
-        ctx.stroke()
-        // Hot white inner tail (shorter, thinner) — bright without shadowBlur
-        ctx.beginPath()
-        ctx.moveTo(c.x - cux * c.len * 0.55, c.y - cuy * c.len * 0.55)
-        ctx.lineTo(c.x, c.y)
-        ctx.strokeStyle = `rgba(255,255,255,${Math.min(1, 0.5 * c.alphaMult).toFixed(3)})`
-        ctx.lineWidth = c.width * 0.45
-        ctx.stroke()
-        // Head: tinted halo + white-hot core, subtly flickering
-        ctx.beginPath()
-        ctx.arc(c.x, c.y, c.width * 2.2 * flicker, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${Math.min(1, 0.25 * c.alphaMult).toFixed(3)})`
-        ctx.fill()
-        ctx.beginPath()
-        ctx.arc(c.x, c.y, c.width * 0.9 * flicker, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255,255,255,${Math.min(1, 0.9 * c.alphaMult).toFixed(3)})`
-        ctx.fill()
-        ctx.restore()
-      }
-    }
-
     // ── Galaxy-SVG-Animation ───────────────────────────────────────────────
     for (let i = galaxies.length - 1; i >= 0; i--) {
       const g = galaxies[i]
@@ -2445,9 +2106,15 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         opacity *= Math.max(0, 1 - fadeTime * 3)
       }
       const gOpStr = opacity.toFixed(2)
-      if (g._lastOpacity !== gOpStr) { g.el.style.opacity = gOpStr; g._lastOpacity = gOpStr }
+      if (g._lastOpacity !== gOpStr) {
+        g.el.style.opacity = gOpStr
+        g._lastOpacity = gOpStr
+      }
       const gTrStr = `translate(${g.x}px,${g.y}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
-      if (g._lastTransform !== gTrStr) { g.el.style.transform = gTrStr; g._lastTransform = gTrStr }
+      if (g._lastTransform !== gTrStr) {
+        g.el.style.transform = gTrStr
+        g._lastTransform = gTrStr
+      }
       if (p >= 1) {
         g.el.style.visibility = 'hidden'
         const poolSlot = galaxyPool.find((s) => s.el === g.el)
@@ -2483,9 +2150,15 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         opacity *= Math.max(0, 1 - fadeTime * 2)
       }
       const nOpStr = opacity.toFixed(3)
-      if (n._lastOpacity !== nOpStr) { n.el.style.opacity = nOpStr; n._lastOpacity = nOpStr }
+      if (n._lastOpacity !== nOpStr) {
+        n.el.style.opacity = nOpStr
+        n._lastOpacity = nOpStr
+      }
       const nTrStr = `translate(${wx.toFixed(1)}px,${wy.toFixed(1)}px) scale(${n.scale.toFixed(3)}) translate(${-hw}px,${-hw}px)`
-      if (n._lastTransform !== nTrStr) { n.el.style.transform = nTrStr; n._lastTransform = nTrStr }
+      if (n._lastTransform !== nTrStr) {
+        n.el.style.transform = nTrStr
+        n._lastTransform = nTrStr
+      }
       if (n.dist > maxDist) {
         n.el.style.visibility = 'hidden'
         const poolSlot = nebulaPool.find((s) => s.el === n.el)
@@ -2514,7 +2187,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const newMaxDist = Math.hypot(w / 2, h / 2) + 20
       const scale = newMaxDist / oldMaxDist
       for (const star of stars) star.dist = star.dist * scale
-      for (const d of dustPatches) { d.cachedGradient = null; d._cachedRx = -1; d._cachedOpacity = -1 }
+      for (const d of dustPatches) {
+        d.cachedGradient = null
+        d._cachedRx = -1
+        d._cachedOpacity = -1
+      }
     }, 150)
   }
 
@@ -2591,7 +2268,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     emissionNebulas.length = 0
     dustPatches.length = 0
     starClusters.length = 0
-    bgComets.length = 0
     window.removeEventListener('resize', handleResize)
     starCanvas.value?.removeEventListener('contextrestored', handleContextRestored)
     removeFocusListener?.()

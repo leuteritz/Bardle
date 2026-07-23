@@ -8,8 +8,13 @@
     <div class="csb-stars csb-stars--mid" />
     <div class="csb-stars csb-stars--near" />
     <div class="csb-stars csb-stars--bright" />
+    <BackgroundComets />
   </div>
 </template>
+
+<script setup lang="ts">
+import BackgroundComets from './BackgroundComets.vue'
+</script>
 
 <style scoped>
 .cosmic-stage-bg {

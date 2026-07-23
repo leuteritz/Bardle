@@ -21,6 +21,8 @@
       class="star-canvas"
       :class="{ 'star-canvas-hidden': !windowFocused }"
     ></canvas>
+
+    <BackgroundComets :pause-on-bard-tab="true" />
   </div>
 </template>
 
@@ -28,6 +30,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useStarBackground } from '../../composables/starBackground'
 import { useWindowFocus } from '../../composables/useWindowFocus'
+import BackgroundComets from '../ui/BackgroundComets.vue'
 
 const props = withDefaults(
   defineProps<{
