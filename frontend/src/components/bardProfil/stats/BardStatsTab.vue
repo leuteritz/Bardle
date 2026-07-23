@@ -591,27 +591,29 @@ function stopResize() {
           role="button"
           @click="uiStore.setBardTab('shop')"
         >
-          {{ solarStore.isCometState ? 'Ignite · Shop' : 'Evolve · Shop' }}
+          {{ solarStore.isCometState ? 'Ignite' : 'Evolve' }}
         </div>
         <div v-else-if="solarStore.branchesReadyForEvolve" class="sf-pill sf-pill--wait">
           {{ solarStore.isCometState ? 'Igniting in' : 'Evolving in' }}
           {{ formatDuration(dwellRemainingMs) }}
         </div>
         <div v-else class="sf-pill sf-pill--hint" role="button" @click="uiStore.setBardTab('shop')">
-          {{ solarStore.isCometState ? 'Ignite in Shop →' : 'Evolve in Shop →' }}
+          {{ solarStore.isCometState ? 'Ignite' : 'Evolve' }}
         </div>
-        <!-- TEMP: admin dwell-skip — remove later (incl. adminSkipDwellTime in solarUpgradeStore) -->
-        <button
-          v-if="!isMax && !dwellMet"
-          class="sf-dev-skip"
-          type="button"
-          title="Admin: skip the remaining dwell time of this phase"
-          @click.stop="solarStore.adminSkipDwellTime()"
-        >
-          DEV · Skip Time
-        </button>
-        <!-- /TEMP -->
       </div>
+
+      <!-- TEMP: admin dwell-skip — floated in the strip corner so it never
+           affects the layout (remove later incl. adminSkipDwellTime in solarUpgradeStore) -->
+      <button
+        v-if="!isMax && !dwellMet"
+        class="sf-dev-skip"
+        type="button"
+        title="Admin: skip the remaining dwell time of this phase"
+        @click.stop="solarStore.adminSkipDwellTime()"
+      >
+        DEV · Skip
+      </button>
+      <!-- /TEMP -->
     </section>
 
     <!-- ══ Panel deck: stats | augments | galaxy archive ══ -->
@@ -931,6 +933,7 @@ function stopResize() {
 
 /* ─── Solar strip (row 1) ───────────────────────────────────── */
 .sf-solar {
+  position: relative;
   flex-shrink: 0;
   align-items: center;
   gap: clamp(14px, 2.5vw, 34px);
@@ -1055,28 +1058,33 @@ function stopResize() {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 6px 12px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   text-align: center;
-  border-radius: 5px;
+  border-radius: 6px;
   white-space: nowrap;
   transition:
     box-shadow 0.15s,
     color 0.15s,
-    border-color 0.15s;
+    border-color 0.15s,
+    transform 0.12s;
 }
 .sf-pill--ready {
   background: rgba(26, 42, 16, 0.9);
   border: 1px solid #52b830;
-  color: #7ac060;
-  box-shadow: 0 0 14px rgba(82, 184, 48, 0.3);
+  color: #8adc50;
+  box-shadow: 0 0 16px rgba(82, 184, 48, 0.35);
   cursor: pointer;
 }
 .sf-pill--ready:hover {
-  box-shadow: 0 0 22px rgba(82, 184, 48, 0.5);
+  box-shadow: 0 0 24px rgba(82, 184, 48, 0.55);
+  transform: translateY(-1px);
+}
+.sf-pill--hint:hover {
+  transform: translateY(-1px);
 }
 .sf-pill--max {
   background: #1e1a06;
@@ -1100,9 +1108,14 @@ function stopResize() {
   border-color: #5c3310;
 }
 
-/* TEMP: admin dwell-skip chip */
+/* TEMP: admin dwell-skip chip — floated into the strip's top-right corner so
+   it is out of the flow and never influences the strip / status-button layout */
 .sf-dev-skip {
-  padding: 3px 8px;
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  z-index: 4;
+  padding: 2px 7px;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.1em;
