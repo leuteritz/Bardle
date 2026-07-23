@@ -52,7 +52,9 @@
             <Icon icon="game-icons:skull" width="12" height="12" />
             ADMIN
           </button>
-          <button class="sf-close-btn" aria-label="Close" @click="handleClose">✕</button>
+          <button class="sf-close-btn" aria-label="Close" title="Close" @click="handleClose">
+            <span class="sf-close-x" aria-hidden="true">✕</span>
+          </button>
         </div>
 
         <!-- ── Main Layout ──────────────────────────────────────────────── -->
@@ -836,41 +838,86 @@ function emberStyle(i: number): Record<string, string> {
 /* ── Floating Controls (ersetzen den Header) ─────────────────────────────── */
 .sf-corner-controls {
   position: absolute;
-  top: 10px;
-  right: 12px;
+  /* sauber in die obere rechte Ecke gesetzt — der Inset räumt die
+     abgerundete Modal-Ecke (--bottom-notch-r × --hud-scale) frei, sodass der
+     Button klar an der Ecke sitzt statt in der Rundung zu kleben */
+  top: 16px;
+  right: 18px;
   z-index: 6;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
+/* ── Close-Button — großes Hauptsteuerelement in der Modal-Ecke ───────────── */
 .sf-close-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 48px;
+  height: 48px;
   padding: 0;
-  border-radius: 4px;
-  border: 1px solid rgba(120, 60, 10, 0.55);
-  background: rgba(16, 8, 0, 0.75);
-  color: #c8a050;
-  font-size: 0.8rem;
+  border-radius: 5px;
+  /* gleicher Holz-Gold-Rahmen wie das Modal — doppelte Innenlinie gibt Tiefe */
+  border: 2px solid #7a4e20;
+  background: linear-gradient(to bottom, #241608, #140b04);
+  color: #e8c040;
+  font-size: 1.55rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  box-shadow:
+    inset 0 0 0 1px #3e200a,
+    inset 0 1px 0 rgba(232, 192, 64, 0.2),
+    0 3px 10px rgba(0, 0, 0, 0.6);
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
 
+/* ✕-Glyph separat — dreht + wächst beim Hover für ein modernes Feedback */
+.sf-close-x {
+  display: block;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Hover: warmer Danger-Glow signalisiert "schließen", ✕ dreht auf 90° */
 .sf-close-btn:hover {
-  border-color: rgba(200, 146, 42, 0.7);
-  background: rgba(30, 16, 4, 0.9);
-  color: #e8c040;
-  box-shadow: 0 0 8px rgba(200, 146, 42, 0.3);
+  border-color: #c85038;
+  background: linear-gradient(to bottom, #3a1408, #200a04);
+  color: #ff8f6a;
+  box-shadow:
+    inset 0 0 0 1px #5c2410,
+    inset 0 1px 0 rgba(255, 150, 110, 0.28),
+    0 0 18px rgba(200, 70, 40, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.65);
+}
+
+.sf-close-btn:hover .sf-close-x {
+  transform: rotate(90deg) scale(1.1);
+}
+
+.sf-close-btn:focus-visible {
+  outline: none;
+  border-color: #e8c040;
+  box-shadow:
+    inset 0 0 0 1px #5c3310,
+    0 0 0 2px rgba(232, 192, 64, 0.55),
+    0 3px 10px rgba(0, 0, 0, 0.6);
 }
 
 .sf-close-btn:active {
-  transform: scale(0.94);
+  transform: scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-close-btn:hover .sf-close-x {
+    transform: rotate(90deg);
+  }
 }
 
 /* Die vier Countdown-Ringe (Star-Despawn, Strike, Rage, Nova) sind die
