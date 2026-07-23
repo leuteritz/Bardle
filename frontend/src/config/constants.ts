@@ -1842,6 +1842,18 @@ export const EVENT_LOG_MAX_SIZE = 12
 /** Milliseconds before an event auto-dismisses from the log */
 export const EVENT_LOG_DISMISS_MS = 7_000
 
+// Herald — large centered milestone announcements (HeraldOverlay / useHerald)
+/** How long a single herald banner stays on screen (ms) */
+export const HERALD_DISPLAY_MS = 2_000
+/** Max queued heralds; oldest is dropped past this */
+export const HERALD_QUEUE_MAX = 3
+/** Grace period after mount before heralds arm — swallows the state jumps that
+ *  loadGame() causes so a loaded save never fires a spurious warp/rank banner. */
+export const HERALD_ARM_DELAY_MS = 1_500
+/** Accent color (r,g,b) per herald kind; rank-ups pull from RANK_TIER_COLORS. */
+export const HERALD_ACCENT_WARP = '150, 120, 255'
+export const HERALD_ACCENT_CHAMPION = '232, 192, 64'
+
 // Projectile system
 /** Total travel duration of a projectile shot (ms) */
 export const PROJECTILE_SHOT_DURATION_MS = 520
@@ -2846,6 +2858,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:locked-fortress', // Locked-tier header icon
   // Champion Shop — galaxy-locked Champion Tier row header
   'game-icons:padlock', // Galaxy-locked tier header icon (ChampionShopComponent)
+  // Herald milestone overlay
+  'game-icons:spiral-thrust', // Warp / new-galaxy herald medallion (HeraldOverlay)
   // Champion Tiers — champion star-level classification (championTiers.ts, TierUnlockPanel, champion cards)
   'game-icons:walking-boot', // ★1 Wanderer
   'game-icons:polar-star', // ★2 Star Drifter

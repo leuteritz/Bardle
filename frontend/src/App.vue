@@ -23,6 +23,7 @@ import EventLogOverlay from '@/components/idle/EventLogOverlay.vue'
 import NebulaFlythroughComponent from '@/components/idle/NebulaFlythroughComponent.vue'
 import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
 import PauseOverlay from '@/components/idle/PauseOverlay.vue'
+import HeraldOverlay from '@/components/idle/HeraldOverlay.vue'
 import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 
 const gameStore = useGameStore()
@@ -55,6 +56,7 @@ watch(
     <EventLogOverlay />
     <OfflineProgressModal />
     <PauseOverlay />
+    <HeraldOverlay />
     <StarTimerBarsComponent />
 
     <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
