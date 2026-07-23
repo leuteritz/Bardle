@@ -103,7 +103,8 @@ const STAR_LAYERS: BgStar[][] = (() => {
   for (let i = 0; i < cfg.COUNT; i++) {
     const size = cfg.SIZE_MIN_PX + rnd() * (cfg.SIZE_MAX_PX - cfg.SIZE_MIN_PX)
     const tintRoll = rnd()
-    const layer = size < cfg.LAYER_SIZE_CUTOFFS_PX[0] ? 0 : size < cfg.LAYER_SIZE_CUTOFFS_PX[1] ? 1 : 2
+    const layer =
+      size < cfg.LAYER_SIZE_CUTOFFS_PX[0] ? 0 : size < cfg.LAYER_SIZE_CUTOFFS_PX[1] ? 1 : 2
     layers[layer].push({
       x: rnd() * 100,
       y: rnd() * 100,
@@ -233,7 +234,9 @@ const dwellElapsedMs = computed(() =>
 const dwellRemainingMs = computed(() => Math.max(0, dwellRequiredMs.value - dwellElapsedMs.value))
 const dwellMet = computed(() => dwellRemainingMs.value <= 0)
 const dwellPct = computed(() =>
-  dwellRequiredMs.value <= 0 ? 100 : Math.min(100, (dwellElapsedMs.value / dwellRequiredMs.value) * 100),
+  dwellRequiredMs.value <= 0
+    ? 100
+    : Math.min(100, (dwellElapsedMs.value / dwellRequiredMs.value) * 100),
 )
 
 /* Active timeline segment (current dot → next dot) filled by dwell progress */
@@ -259,9 +262,7 @@ const phaseAge = computed(() => {
 const playTime = computed(() => formatDuration(inGameTime.value * 1000))
 
 /* ── Galaxy Archive (completed-galaxy memories) ──────────────── */
-const archive = computed(() =>
-  [...completedGalaxies.value].sort((a, b) => b.galaxy - a.galaxy),
-)
+const archive = computed(() => [...completedGalaxies.value].sort((a, b) => b.galaxy - a.galaxy))
 
 function archiveRescued(rec: CompletedGalaxyRecord): number {
   return rec.attemptResults.filter((r) => r === 'rescued').length
@@ -296,7 +297,8 @@ const augmentCount = computed(() => augCards.value.length)
 const buffCPSPct = computed(() => {
   const mod = activeModifier.value
   const total =
-    (mod.cpsMultiplier ?? 1) - 1 +
+    (mod.cpsMultiplier ?? 1) -
+    1 +
     (abilityCPSMultiplier.value - 1) +
     (cpsSynergyMultiplier.value - 1) +
     (temporaryCPSMultiplier.value - 1)
@@ -341,27 +343,81 @@ interface BuffChip {
 const totalChips = computed<BuffChip[]>(() => {
   const chips: BuffChip[] = []
   if (buffCPSPct.value > 0)
-    chips.push({ key: 'cps', icon: 'game-icons:lyre', label: 'Production', value: `+${buffCPSPct.value}%`, positive: true })
+    chips.push({
+      key: 'cps',
+      icon: 'game-icons:lyre',
+      label: 'Production',
+      value: `+${buffCPSPct.value}%`,
+      positive: true,
+    })
   if (buffCPCPct.value > 0)
-    chips.push({ key: 'cpc', icon: 'game-icons:hand', label: 'Click', value: `+${buffCPCPct.value}%`, positive: true })
+    chips.push({
+      key: 'cpc',
+      icon: 'game-icons:hand',
+      label: 'Click',
+      value: `+${buffCPCPct.value}%`,
+      positive: true,
+    })
   if (buffPowerSynergyPct.value > 0 || buffPowerFlat.value > 0) {
     const parts: string[] = []
     if (buffPowerSynergyPct.value > 0) parts.push(`+${buffPowerSynergyPct.value}%`)
     if (buffPowerFlat.value > 0) parts.push(`+${buffPowerFlat.value}`)
-    chips.push({ key: 'power', icon: 'game-icons:magic-swirl', label: 'Power', value: parts.join(' & '), positive: true })
+    chips.push({
+      key: 'power',
+      icon: 'game-icons:magic-swirl',
+      label: 'Power',
+      value: parts.join(' & '),
+      positive: true,
+    })
   }
   if (buffMeepPct.value > 0)
-    chips.push({ key: 'meep', icon: 'game-icons:crystal-ball', label: 'Meep Power', value: `+${buffMeepPct.value}%`, positive: true })
+    chips.push({
+      key: 'meep',
+      icon: 'game-icons:crystal-ball',
+      label: 'Meep Power',
+      value: `+${buffMeepPct.value}%`,
+      positive: true,
+    })
   if (dpsPct.value > 0)
-    chips.push({ key: 'dps', icon: 'game-icons:crossed-swords', label: 'Combat DPS', value: `+${dpsPct.value}%`, positive: true })
+    chips.push({
+      key: 'dps',
+      icon: 'game-icons:crossed-swords',
+      label: 'Combat DPS',
+      value: `+${dpsPct.value}%`,
+      positive: true,
+    })
   if (buffCDRPct.value > 0)
-    chips.push({ key: 'cdr', icon: 'game-icons:sand-clock', label: 'Cooldowns', value: `-${buffCDRPct.value}%`, positive: false })
+    chips.push({
+      key: 'cdr',
+      icon: 'game-icons:sand-clock',
+      label: 'Cooldowns',
+      value: `-${buffCDRPct.value}%`,
+      positive: false,
+    })
   if (buffExpPct.value > 0)
-    chips.push({ key: 'exp', icon: 'game-icons:treasure-map', label: 'Expeditions', value: `+${buffExpPct.value}%`, positive: true })
+    chips.push({
+      key: 'exp',
+      icon: 'game-icons:treasure-map',
+      label: 'Expeditions',
+      value: `+${buffExpPct.value}%`,
+      positive: true,
+    })
   if (buffCostPct.value > 0)
-    chips.push({ key: 'cost', icon: 'game-icons:stone-wall', label: 'Build Cost', value: `-${buffCostPct.value}%`, positive: false })
+    chips.push({
+      key: 'cost',
+      icon: 'game-icons:stone-wall',
+      label: 'Build Cost',
+      value: `-${buffCostPct.value}%`,
+      positive: false,
+    })
   if (buffEnemyPct.value > 0)
-    chips.push({ key: 'enemy', icon: 'game-icons:turtle', label: 'Enemy Speed', value: `-${buffEnemyPct.value}%`, positive: false })
+    chips.push({
+      key: 'enemy',
+      icon: 'game-icons:turtle',
+      label: 'Enemy Speed',
+      value: `-${buffEnemyPct.value}%`,
+      positive: false,
+    })
   return chips
 })
 
@@ -373,9 +429,7 @@ const searchQuery = computed(() => buffSearch.value.trim().toLowerCase())
 const filteredChips = computed(() => {
   const q = searchQuery.value
   if (!q) return totalChips.value
-  return totalChips.value.filter(
-    (c) => c.label.toLowerCase().includes(q) || c.key.includes(q),
-  )
+  return totalChips.value.filter((c) => c.label.toLowerCase().includes(q) || c.key.includes(q))
 })
 
 const filteredAugCards = computed(() => {
@@ -394,12 +448,7 @@ const filteredAugCards = computed(() => {
   <div class="sf-root" :style="phaseVars">
     <!-- ══ Ambient space backdrop ══ -->
     <div class="sf-bg" aria-hidden="true">
-      <div
-        v-for="(layer, li) in STAR_LAYERS"
-        :key="li"
-        class="sf-drift"
-        :class="`sf-drift--${li}`"
-      >
+      <div v-for="(layer, li) in STAR_LAYERS" :key="li" class="sf-drift" :class="`sf-drift--${li}`">
         <span
           v-for="(s, si) in layer"
           :key="si"
@@ -438,7 +487,9 @@ const filteredAugCards = computed(() => {
         </div>
         <div class="sf-solar-meta">
           <span class="sf-kicker">{{ phaseDisplayLabel }}</span>
-          <span class="sf-phase-name">{{ solarStore.isCometState ? COMET_PHASE_DATA.name : phase.name }}</span>
+          <span class="sf-phase-name">{{
+            solarStore.isCometState ? COMET_PHASE_DATA.name : phase.name
+          }}</span>
           <span class="sf-solar-age">{{ phaseAge ?? '—' }}</span>
         </div>
       </div>
@@ -473,7 +524,11 @@ const filteredAugCards = computed(() => {
           <div class="sf-tl-dot-slot">
             <div
               class="sf-tl-dot"
-              :class="{ 'is-done': dot.done, 'is-current': dot.current, 'sf-tl-dot--comet': dot.comet }"
+              :class="{
+                'is-done': dot.done,
+                'is-current': dot.current,
+                'sf-tl-dot--comet': dot.comet,
+              }"
               :style="{
                 width: dot.size + 'px',
                 height: dot.size + 'px',
@@ -485,7 +540,11 @@ const filteredAugCards = computed(() => {
               }"
             />
           </div>
-          <span class="sf-tl-lbl" :class="{ 'is-current': dot.current }" :style="dot.current ? { color: dot.color } : undefined">
+          <span
+            class="sf-tl-lbl"
+            :class="{ 'is-current': dot.current }"
+            :style="dot.current ? { color: dot.color } : undefined"
+          >
             {{ dot.label }}
           </span>
         </div>
@@ -502,7 +561,8 @@ const filteredAugCards = computed(() => {
           {{ solarStore.isCometState ? 'Ignite · Shop' : 'Evolve · Shop' }}
         </div>
         <div v-else-if="solarStore.branchesReadyForEvolve" class="sf-pill sf-pill--wait">
-          {{ solarStore.isCometState ? 'Igniting in' : 'Evolving in' }} {{ formatDuration(dwellRemainingMs) }}
+          {{ solarStore.isCometState ? 'Igniting in' : 'Evolving in' }}
+          {{ formatDuration(dwellRemainingMs) }}
         </div>
         <div v-else class="sf-pill sf-pill--hint" role="button" @click="uiStore.setBardTab('shop')">
           {{ solarStore.isCometState ? 'Ignite in Shop →' : 'Evolve in Shop →' }}
@@ -549,7 +609,12 @@ const filteredAugCards = computed(() => {
           </div>
 
           <div class="sf-hero-row">
-            <img class="sf-ico sf-ico--lg" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+            <img
+              class="sf-ico sf-ico--lg"
+              src="/img/BardAbilities/BardChime.png"
+              alt=""
+              aria-hidden="true"
+            />
             <span class="sf-srow-lbl">Chimes / Sec</span>
             <span class="sf-hero-val">{{ $formatNumber(chimesPerSecond) }}</span>
           </div>
@@ -594,12 +659,7 @@ const filteredAugCards = computed(() => {
             Augments
             <span class="sf-p-count">{{ augmentCount }}</span>
           </span>
-          <input
-            v-model="buffSearch"
-            class="sf-search"
-            type="text"
-            placeholder="Search…"
-          />
+          <input v-model="buffSearch" class="sf-search" type="text" placeholder="Search…" />
         </header>
         <div class="sf-p-body rpg-scrollbar">
           <div class="sf-buff-chips">
@@ -664,7 +724,10 @@ const filteredAugCards = computed(() => {
         <div class="sf-p-body rpg-scrollbar">
           <div v-if="archive.length === 0" class="sf-empty-block">
             <Icon icon="game-icons:spiral-arrow" width="28" height="28" class="sf-empty-icon" />
-            <span>No galaxies freed yet — rescue every star and defeat the core to preserve your first map here.</span>
+            <span
+              >No galaxies freed yet — rescue every star and defeat the core to preserve your first
+              map here.</span
+            >
           </div>
           <div v-else class="sf-arch-list">
             <div
@@ -725,7 +788,11 @@ const filteredAugCards = computed(() => {
   overflow: hidden;
   padding: 12px;
   background:
-    radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--sun-glow1) 14%, transparent), transparent 45%),
+    radial-gradient(
+      circle at 88% 0%,
+      color-mix(in srgb, var(--sun-glow1) 14%, transparent),
+      transparent 45%
+    ),
     radial-gradient(120% 120% at 12% 100%, #16110b, #0a0806 72%);
   color: var(--rpg-text);
 }
@@ -827,7 +894,12 @@ const filteredAugCards = computed(() => {
   width: 90px;
   height: 2px;
   border-radius: 2px;
-  background: linear-gradient(to left, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.25) 60%, transparent);
+  background: linear-gradient(
+    to left,
+    rgba(255, 255, 255, 0.9),
+    rgba(255, 255, 255, 0.25) 60%,
+    transparent
+  );
   transform: rotate(16deg);
   opacity: 0;
   animation: sf-shooting 14s linear infinite;
@@ -872,7 +944,9 @@ const filteredAugCards = computed(() => {
   background: rgba(13, 12, 7, 0.85);
   border: 1px solid #4a2c12;
   border-radius: 6px;
-  box-shadow: inset 0 0 0 1px #2c1806, 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow:
+    inset 0 0 0 1px #2c1806,
+    0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 .sf-col {
@@ -1023,7 +1097,9 @@ const filteredAugCards = computed(() => {
   white-space: nowrap;
 }
 .sf-solar-id:hover .sf-phase-name {
-  text-shadow: 0 0 14px var(--phase-glow), 0 0 26px var(--phase-glow);
+  text-shadow:
+    0 0 14px var(--phase-glow),
+    0 0 26px var(--phase-glow);
 }
 
 .sf-solar-age {
@@ -1061,7 +1137,10 @@ const filteredAugCards = computed(() => {
   text-align: center;
   border-radius: 5px;
   white-space: nowrap;
-  transition: box-shadow 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    box-shadow 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 .sf-pill--ready {
   background: rgba(26, 42, 16, 0.9);
@@ -1108,7 +1187,9 @@ const filteredAugCards = computed(() => {
   border-radius: 4px;
   opacity: 0.5;
   cursor: pointer;
-  transition: opacity 0.15s, box-shadow 0.15s;
+  transition:
+    opacity 0.15s,
+    box-shadow 0.15s;
 }
 .sf-dev-skip:hover {
   opacity: 1;
@@ -1124,13 +1205,13 @@ const filteredAugCards = computed(() => {
   align-items: flex-start;
   justify-content: space-between;
   /* headroom for the dwell clock floating above the track */
-  padding-top: 14px;
+  padding-top: 20px;
 }
 
 .sf-timeline-track {
   position: absolute;
-  /* vertical center of the 36px dot slot (+14px clock headroom) */
-  top: 31px;
+  /* vertical center of the 36px dot slot (+20px clock headroom) */
+  top: 38px;
   /* 7 columns × 14% + space-between → first/last dot centers sit exactly
      at 7% / 93%, so the line starts at the first sun and ends at the last */
   left: 7%;
@@ -1177,14 +1258,14 @@ const filteredAugCards = computed(() => {
   top: 0;
   transform: translateX(-50%);
   /* fixed box: ticking digits never resize or shift the label */
-  width: 76px;
+  width: 92px;
   text-align: center;
   cursor: help;
   z-index: 2;
 }
 
 .sf-tl-clock {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 900;
   letter-spacing: 0.03em;
   color: #e8e4d8;
@@ -1221,7 +1302,9 @@ const filteredAugCards = computed(() => {
   border-radius: 50%;
   background: #1c1c18;
   border: 1px solid #3e200a;
-  transition: box-shadow 0.2s ease, background 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 /* Reached phases render as miniature suns in their real palette */
 .sf-tl-dot.is-done,
@@ -1238,7 +1321,9 @@ const filteredAugCards = computed(() => {
   box-shadow: 0 0 8px color-mix(in srgb, var(--dot-glow) 55%, transparent);
 }
 .sf-tl-dot.is-current {
-  box-shadow: 0 0 12px var(--dot-glow), 0 0 22px color-mix(in srgb, var(--dot-glow) 50%, transparent);
+  box-shadow:
+    0 0 12px var(--dot-glow),
+    0 0 22px color-mix(in srgb, var(--dot-glow) 50%, transparent);
   animation: sf-dot-pulse var(--pulse-speed) ease-in-out infinite;
 }
 /* Comet origin dot — a rocky speck with a faint gold rim; it marks the very
@@ -1261,10 +1346,14 @@ const filteredAugCards = computed(() => {
 @keyframes sf-dot-pulse {
   0%,
   100% {
-    box-shadow: 0 0 8px var(--dot-glow), 0 0 14px color-mix(in srgb, var(--dot-glow) 50%, transparent);
+    box-shadow:
+      0 0 8px var(--dot-glow),
+      0 0 14px color-mix(in srgb, var(--dot-glow) 50%, transparent);
   }
   50% {
-    box-shadow: 0 0 16px var(--dot-glow), 0 0 28px color-mix(in srgb, var(--dot-glow) 60%, transparent);
+    box-shadow:
+      0 0 16px var(--dot-glow),
+      0 0 28px color-mix(in srgb, var(--dot-glow) 60%, transparent);
   }
 }
 
@@ -1508,7 +1597,9 @@ const filteredAugCards = computed(() => {
   border-left: 3px solid var(--rarity);
   border-radius: 5px;
   box-shadow: inset 0 0 10px color-mix(in srgb, var(--rarity) 8%, transparent);
-  transition: box-shadow 0.15s, background 0.15s;
+  transition:
+    box-shadow 0.15s,
+    background 0.15s;
 }
 .sf-aug-card:hover {
   background: #221f18;
@@ -1583,7 +1674,9 @@ const filteredAugCards = computed(() => {
   border: 1px solid #3e200a;
   border-radius: 5px;
   overflow: hidden;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
 }
 .sf-arch-card:hover {
   border-color: #7a4e20;
