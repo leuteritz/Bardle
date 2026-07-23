@@ -322,11 +322,14 @@ export const useGalaxyStore = defineStore('galaxy', {
     },
 
     startChampionTravel() {
-      const baseDuration = CHAMPION_TRAVEL_BASE_MS + (this.currentGalaxy - 1) * CHAMPION_TRAVEL_SCALE_MS
+      const baseDuration =
+        CHAMPION_TRAVEL_BASE_MS + (this.currentGalaxy - 1) * CHAMPION_TRAVEL_SCALE_MS
       this.championTravelBaseDurationMs = baseDuration
       this.championTravelState = 'traveling'
       this.championTravelStartTime = Date.now()
-      this.championTravelDurationMs = Math.round(baseDuration / useSolarUpgradeStore().flightSpeedMultiplier)
+      this.championTravelDurationMs = Math.round(
+        baseDuration / useSolarUpgradeStore().flightSpeedMultiplier,
+      )
     },
 
     tickChampionTravel() {
@@ -449,9 +452,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       if (!this.isComplete) return
       // One record per galaxy number; a same-run re-call keeps the identical
       // record, an admin-replay of the galaxy replaces it with the fresh run.
-      const existing = this.completedGalaxies.findIndex(
-        (r) => r.galaxy === this.currentGalaxy,
-      )
+      const existing = this.completedGalaxies.findIndex((r) => r.galaxy === this.currentGalaxy)
       if (existing >= 0 && this.completedGalaxies[existing].mapSeed === this.mapSeed) return
       const inGameTime = useGameStore().inGameTime
       if (existing >= 0) this.completedGalaxies.splice(existing, 1)
@@ -484,18 +485,25 @@ export const useGalaxyStore = defineStore('galaxy', {
       // the tier-unlock cost first (see unlockNextTier / TierUnlockPanel).
       if (!this.isComplete || this.pendingTransition || this.nextTierLocked) return
       this.pendingTransition = true
-      // The warp state machine normally runs in the orbit-background rAF
-      // loop, which pauses while the Bard profile is open — the hyperspace
-      // animation would only start after closing it. Drive the transition
-      // with wall-clock timers in that case; the loop skips a transition
-      // that is already running (guard on isGalaxyTransitioning).
-      if (useUiStore().bardActiveTab !== null) {
-        this.setGalaxyTransitioning(true)
-        window.setTimeout(() => this.commitAdvance(), GALAXY_TRANS_WARP_MS)
-        window.setTimeout(
-          () => this.setGalaxyTransitioning(false),
-          GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS,
-        )
+      // If the Bard profile is open, close it first so the hyperspace warp
+      // plays in full view: the orbit-background rAF loop (paused while the
+      // profile is open) resumes on close and drives the transition from the
+      // pendingTransition flag.
+      const ui = useUiStore()
+      if (ui.bardActiveTab !== null) {
+        ui.closeBardModal()
+        // With reduced motion the background loop never restarts, so nothing
+        // would drive the warp — advance the galaxy on wall-clock timers
+        // instead (the loop skips a transition already running via the
+        // isGalaxyTransitioning guard).
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          this.setGalaxyTransitioning(true)
+          window.setTimeout(() => this.commitAdvance(), GALAXY_TRANS_WARP_MS)
+          window.setTimeout(
+            () => this.setGalaxyTransitioning(false),
+            GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS,
+          )
+        }
       }
     },
 
@@ -544,9 +552,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         this.currentThemeIndex = 0
         this.usedThemeIndices = [0]
       } else {
-        let available = allNonHomeThemeIndices().filter(
-          (i) => !this.usedThemeIndices.includes(i),
-        )
+        let available = allNonHomeThemeIndices().filter((i) => !this.usedThemeIndices.includes(i))
         if (available.length === 0) {
           // Alle Themes gesehen → Zyklus neu starten, aber ohne direkte Wiederholung.
           this.usedThemeIndices = [0]
