@@ -10,8 +10,8 @@ import { clampPercent } from '../utils/math'
 import {
   CHAMPION_TRAVEL_BASE_MS,
   CHAMPION_TRAVEL_SCALE_MS,
-  RESOURCE_STAR_INTERVAL_MS,
-  RESOURCE_STAR_DURATION_MS,
+  RESOURCE_STAR_INTERVAL_MIN_MS,
+  RESOURCE_STAR_INTERVAL_MAX_MS,
   GALAXY_STARS_BASE_REQUIRED,
   GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS,
   GALAXY_STAR_FAILED_SIGNAL_MS,
@@ -178,11 +178,10 @@ export const useGalaxyStore = defineStore('galaxy', {
     // Champion-Ankunfts-Signal
     championJustArrived: false,
     galaxyBossJustSpawned: false,
-    // Ressourcen-Stern Flyby
-    resourceStarActive: false,
+    // Ressourcen-Stern Flyby — Scheduler feuert zufällig gestaffelte Spawns,
+    // bis zu RESOURCE_STAR_MAX_CONCURRENT Sterne existieren gleichzeitig.
     resourceStarElapsedMs: 0,
-    resourceStarDurationMs: 0,
-    pendingResourceStars: 0,
+    resourceStarNextIntervalMs: 0,
     pendingChampionStar: false,
     // Champion-Rettungs-Rotationsanimation
     rescueRotationPhase: 'idle' as 'idle' | 'rotating',
@@ -292,10 +291,6 @@ export const useGalaxyStore = defineStore('galaxy', {
       return Math.max(0, this.effectiveTravelDurationMs - elapsed)
     },
 
-    resourceStarRemainingMs(): number {
-      return this.resourceStarActive ? Math.max(0, this.resourceStarDurationMs) : 0
-    },
-
     starsBackgroundPaused(): boolean {
       if (this.rescueRotationPhase === 'rotating') return false
       // Auch der komplette Endkampf am Galaxiekern (Eskorten-Wellen + Boss)
@@ -371,22 +366,29 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
     },
 
-    tickResourceStar(deltaMs: number) {
-      if (this.championTravelState !== 'traveling') return
-      if (this.resourceStarActive) {
-        this.resourceStarDurationMs -= deltaMs
-        if (this.resourceStarDurationMs <= 0) {
-          this.resourceStarActive = false
-          this.resourceStarElapsedMs = 0
-        }
-      } else {
-        this.resourceStarElapsedMs += deltaMs
-        if (this.resourceStarElapsedMs >= RESOURCE_STAR_INTERVAL_MS) {
-          this.resourceStarActive = true
-          this.resourceStarDurationMs = RESOURCE_STAR_DURATION_MS
-          this.resourceStarElapsedMs = 0
-        }
+    _rollResourceStarInterval(): number {
+      return (
+        RESOURCE_STAR_INTERVAL_MIN_MS +
+        Math.random() * (RESOURCE_STAR_INTERVAL_MAX_MS - RESOURCE_STAR_INTERVAL_MIN_MS)
+      )
+    },
+
+    // Läuft im 1s-Game-Tick (auch während Pause). Gibt `true` zurück, sobald das
+    // zufällig gestaffelte Intervall abgelaufen ist und ein neuer Resource-Star
+    // gespawnt werden soll. Der Aufrufer (gameStore.tick) respektiert dabei das
+    // Concurrency-Limit. Nur während der Champion-Reise aktiv.
+    tickResourceStar(deltaMs: number): boolean {
+      if (this.championTravelState !== 'traveling') return false
+      if (this.resourceStarNextIntervalMs <= 0) {
+        this.resourceStarNextIntervalMs = this._rollResourceStarInterval()
       }
+      this.resourceStarElapsedMs += deltaMs
+      if (this.resourceStarElapsedMs >= this.resourceStarNextIntervalMs) {
+        this.resourceStarElapsedMs = 0
+        this.resourceStarNextIntervalMs = this._rollResourceStarInterval()
+        return true
+      }
+      return false
     },
 
     startRescueRotation() {
@@ -542,10 +544,8 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.pendingTransition = false
       this.pendingRoleSelection = false
       this.galaxyBossJustSpawned = false
-      this.resourceStarActive = false
       this.resourceStarElapsedMs = 0
-      this.resourceStarDurationMs = 0
-      this.pendingResourceStars = 0
+      this.resourceStarNextIntervalMs = 0
       this.pendingChampionStar = false
       if (this.currentGalaxy === 1) {
         // Galaxie 1 ist immer das vertraute Blau (Blue Veil).

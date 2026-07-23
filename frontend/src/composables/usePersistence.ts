@@ -184,7 +184,6 @@ export function usePersistence() {
         championTravelDurationMs: galaxyStore.championTravelDurationMs,
         championTravelBaseDurationMs: galaxyStore.championTravelBaseDurationMs,
         travelingToGalaxyBoss: galaxyStore.travelingToGalaxyBoss,
-        resourceStarActive: galaxyStore.resourceStarActive,
         resourceStarElapsedMs: galaxyStore.resourceStarElapsedMs,
         pendingRoleSelection: galaxyStore.pendingRoleSelection,
         nextStarRole: galaxyStore.nextStarRole,
@@ -479,7 +478,6 @@ export function usePersistence() {
         galaxyStore.usedThemeIndices = gx.usedThemeIndices ?? [
           ...new Set([0, galaxyStore.currentThemeIndex]),
         ]
-        galaxyStore.resourceStarActive = gx.resourceStarActive ?? false
         galaxyStore.resourceStarElapsedMs = gx.resourceStarElapsedMs ?? 0
         // Legacy saves from the old boss-search phase → spawn boss right away.
         // While flying toward the boss star, the boss must NOT be pending yet.

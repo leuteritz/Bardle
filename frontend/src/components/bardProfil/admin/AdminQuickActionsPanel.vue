@@ -186,8 +186,8 @@ function startBossPhase() {
   galaxyStore.rescueRotationPhase = 'idle'
   galaxyStore.championTravelState = 'idle'
   galaxyStore.travelingToGalaxyBoss = false
-  galaxyStore.resourceStarActive = false
-  galaxyStore.pendingResourceStars = 0
+  galaxyStore.resourceStarElapsedMs = 0
+  galaxyStore.resourceStarNextIntervalMs = 0
   galaxyStore.pendingChampionStar = false
   galaxyStore.galaxyBossDefeated = false
 

@@ -7,6 +7,7 @@ import { CHAMPION_ROLES } from '../config/championRoles'
 import {
   RESOURCE_STAR_PLANET_COUNT,
   RESOURCE_STAR_DURATION_MS,
+  RESOURCE_STAR_MAX_CONCURRENT,
   CHAMPION_STAR_DURATION_MS,
   STAR_ORBIT_SPEED_RESOURCE,
   STAR_ORBIT_SPEED_CHAMPION,
@@ -101,7 +102,9 @@ function pickResourceStarColor(): [number, number, number] {
   return RESOURCE_STAR_COLORS[Math.floor(Math.random() * RESOURCE_STAR_COLORS.length)]
 }
 
-const adminStarTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+// Resource-Stars, deren Despawn bereits läuft (Slots geräumt, Entfernung nach
+// STAR_DESPAWN_DELAY_MS eingeplant) — verhindert doppeltes Einplanen pro Tick.
+const resourceDespawnScheduled = new Set<string>()
 
 export const useStarGroupStore = defineStore('starGroup', {
   state: () => ({
@@ -116,6 +119,9 @@ export const useStarGroupStore = defineStore('starGroup', {
   getters: {
     hasActiveResourceStar(): boolean {
       return this.activeStars.some((s) => s.starType === 'resource')
+    },
+    activeResourceStarCount(): number {
+      return this.activeStars.filter((s) => s.starType === 'resource').length
     },
     hasActiveChampionStar(): boolean {
       return this.activeStars.some((s) => s.starType === 'champion')
@@ -205,12 +211,13 @@ export const useStarGroupStore = defineStore('starGroup', {
     },
 
     spawnResourceStar() {
-      if (this.hasActiveResourceStar) return
+      if (this.activeResourceStarCount >= RESOURCE_STAR_MAX_CONCURRENT) return
       const tier = ORBIT_TIERS.star[1]
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'resource',
-        starAngle: Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
+        starAngle:
+          Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
         orbitRx: tier.rx,
         orbitRy: tier.ry,
@@ -224,55 +231,28 @@ export const useStarGroupStore = defineStore('starGroup', {
       this.activeStars.push(star)
     },
 
+    // Admin-Testbutton: erzwingt einen Resource-Star unabhängig vom Limit.
+    // Despawn läuft über denselben Timer-Tick wie regulär gespawnte Sterne.
     forceSpawnResourceStar() {
-      const galaxyStore = useGalaxyStore()
       const tier = ORBIT_TIERS.star[1]
-      const starId = `star-${++starIdCounter}`
       const star: StarGroup = {
-        id: starId,
+        id: `star-${++starIdCounter}`,
         starType: 'resource',
-        starAngle: Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
+        starAngle:
+          Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
         orbitRx: tier.rx,
         orbitRy: tier.ry,
         orbitTilt: tier.tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
-        planetSlots: this._buildResourcePlanetSlots(STAR_FORCED_PLANET_MIN + Math.floor(Math.random() * STAR_FORCED_PLANET_RANGE)),
+        planetSlots: this._buildResourcePlanetSlots(
+          STAR_FORCED_PLANET_MIN + Math.floor(Math.random() * STAR_FORCED_PLANET_RANGE),
+        ),
         spawnedAt: Date.now(),
         durationMs: RESOURCE_STAR_DURATION_MS,
         starColor: pickResourceStarColor(),
       }
       this.activeStars.push(star)
-
-      galaxyStore.resourceStarActive = true
-      galaxyStore.resourceStarDurationMs = RESOURCE_STAR_DURATION_MS
-      galaxyStore.resourceStarElapsedMs = 0
-
-      const timeout = setTimeout(() => {
-        adminStarTimeouts.delete(starId)
-        galaxyStore.resourceStarActive = false
-        galaxyStore.resourceStarElapsedMs = 0
-        this._removeAdminResourceStar(starId)
-      }, RESOURCE_STAR_DURATION_MS)
-      adminStarTimeouts.set(starId, timeout)
-    },
-
-    _removeAdminResourceStar(starId: string) {
-      const bossStore = usePlanetBossStore()
-      const idx = this.activeStars.findIndex((s) => s.id === starId)
-      if (idx === -1) return
-      const star = this.activeStars[idx]
-      if (this.activeFightStarId === starId) this.closeStarFightModal()
-      for (const slot of star.planetSlots) {
-        if (!slot.cleared) {
-          slot.cleared = true
-          bossStore.removeBoss(slot.planetId)
-        }
-      }
-      setTimeout(() => {
-        const currentIdx = this.activeStars.findIndex((s) => s.id === starId)
-        if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
-      }, 600)
     },
 
     spawnChampionStar() {
@@ -299,9 +279,13 @@ export const useStarGroupStore = defineStore('starGroup', {
         cleared: false,
       })
       bossStore.spawnBoss(champId, champConfig.type, true)
-      const champName = bossStore.activeBosses.find(b => b.planetId === champId)?.homePlanetChampion
+      const champName = bossStore.activeBosses.find(
+        (b) => b.planetId === champId,
+      )?.homePlanetChampion
       const role = champName ? CHAMPION_ROLES[champName] : undefined
-      const champStarColor: [number, number, number] = role ? hexToRgb(ROLE_COLORS[role]) : [255, 255, 255]
+      const champStarColor: [number, number, number] = role
+        ? hexToRgb(ROLE_COLORS[role])
+        : [255, 255, 255]
 
       for (let i = 1; i < totalCount; i++) {
         const config = pickConfig()
@@ -395,7 +379,8 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'galaxy_boss',
-        starAngle: Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
+        starAngle:
+          Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
         starDirection: 1,
         orbitRx: ORBIT_TIERS.star[1].rx,
         orbitRy: ORBIT_TIERS.star[1].ry,
@@ -475,10 +460,6 @@ export const useStarGroupStore = defineStore('starGroup', {
         }
 
         if (star.planetSlots.every((p) => p.cleared)) {
-          if (adminStarTimeouts.has(star.id)) {
-            clearTimeout(adminStarTimeouts.get(star.id))
-            adminStarTimeouts.delete(star.id)
-          }
           // Im Timeout per ID suchen — ein eingefrorener Index zeigt auf den
           // falschen Stern, sobald zwischenzeitlich gespawnt/entfernt wurde
           // (z. B. mehrere Eskorten gleichzeitig durch Splash-Damage besiegt).
@@ -504,32 +485,44 @@ export const useStarGroupStore = defineStore('starGroup', {
       }
     },
 
-    clearResourceStar() {
-      const bossStore = usePlanetBossStore()
-      const toRemove = this.activeStars.filter((s) => s.starType === 'resource')
-      if (toRemove.length === 0) return
-
-      for (const star of toRemove) {
-        if (adminStarTimeouts.has(star.id)) {
-          clearTimeout(adminStarTimeouts.get(star.id))
-          adminStarTimeouts.delete(star.id)
+    // Läuft im 1s-Game-Tick (auch während Pause): despawnt jeden Resource-Star,
+    // dessen Despawn-Timer abgelaufen ist ODER dessen Planeten alle gerettet/
+    // gekillt wurden. So verschwinden Sterne auch während der Pause korrekt.
+    tickResourceStars() {
+      const now = Date.now()
+      for (const star of this.activeStars) {
+        if (star.starType !== 'resource') continue
+        if (resourceDespawnScheduled.has(star.id)) continue
+        const allCleared = star.planetSlots.every((s) => s.cleared)
+        const expired =
+          star.spawnedAt !== undefined &&
+          star.durationMs !== undefined &&
+          now >= star.spawnedAt + star.durationMs
+        if (allCleared || expired) {
+          this._despawnResourceStar(star.id)
         }
-        if (this.activeFightStarId === star.id) this.closeStarFightModal()
-        const starRef = star
-        setTimeout(() => {
-          for (const slot of starRef.planetSlots) {
-            if (!slot.cleared) {
-              slot.cleared = true
-              bossStore.removeBoss(slot.planetId)
-            }
-          }
-          // One JS tick later so the render loop sees allSlotsCleared and fires the vanish effect
-          setTimeout(() => {
-            const currentIdx = this.activeStars.indexOf(starRef)
-            if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
-          }, 0)
-        }, STAR_DESPAWN_DELAY_MS)
       }
+    },
+
+    _despawnResourceStar(starId: string) {
+      const bossStore = usePlanetBossStore()
+      const star = this.activeStars.find((s) => s.id === starId)
+      if (!star) return
+      resourceDespawnScheduled.add(starId)
+      if (this.activeFightStarId === starId) this.closeStarFightModal()
+      // Slots sofort räumen → Kampf endet, und der Render-Loop sieht
+      // allSlotsCleared und zündet den Vanish-Effekt.
+      for (const slot of star.planetSlots) {
+        if (!slot.cleared) {
+          slot.cleared = true
+          bossStore.removeBoss(slot.planetId)
+        }
+      }
+      setTimeout(() => {
+        const idx = this.activeStars.findIndex((s) => s.id === starId)
+        if (idx !== -1) this.activeStars.splice(idx, 1)
+        resourceDespawnScheduled.delete(starId)
+      }, STAR_DESPAWN_DELAY_MS)
     },
 
     tickChampionStar() {
@@ -570,10 +563,7 @@ export const useStarGroupStore = defineStore('starGroup', {
     },
 
     clearAll() {
-      for (const timeout of adminStarTimeouts.values()) {
-        clearTimeout(timeout)
-      }
-      adminStarTimeouts.clear()
+      resourceDespawnScheduled.clear()
       this.activeStars = []
     },
   },

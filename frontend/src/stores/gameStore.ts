@@ -412,7 +412,9 @@ export const useGameStore = defineStore('game', {
       const nextUniverse = targetUniverse ?? this.currentUniverse + 1
       logger.info('Game', `Prestige reset -> Universe ${nextUniverse}`)
       this.currentUniverse = nextUniverse
-      this.chimesToUniverseRescue = Math.ceil(this.chimesToUniverseRescue * UNIVERSE_RESCUE_COST_MULTIPLIER)
+      this.chimesToUniverseRescue = Math.ceil(
+        this.chimesToUniverseRescue * UNIVERSE_RESCUE_COST_MULTIPLIER,
+      )
       this.chimesForNextUniverse = 0
       this.prestigeAvailable = false
       this.chimes = 0
@@ -500,8 +502,14 @@ export const useGameStore = defineStore('game', {
       const planetEventStore = usePlanetEventStore()
       planetEventStore.checkAndMaybeSpawnEvent()
       const galaxyStore = useGalaxyStore()
-      galaxyStore.tickResourceStar(GAME_TICK_INTERVAL_MS)
       const starGroupStore = useStarGroupStore()
+      // Zufällig gestaffelte Resource-Star-Spawns; spawnResourceStar respektiert
+      // das Concurrency-Limit selbst. Läuft auch während Pause weiter, damit
+      // Sterne im Pause-Overlay erscheinen, bekämpft werden und despawnen.
+      if (galaxyStore.tickResourceStar(GAME_TICK_INTERVAL_MS)) {
+        starGroupStore.spawnResourceStar()
+      }
+      starGroupStore.tickResourceStars()
       starGroupStore.tickChampionStar()
       const roleBehaviorStore = useRoleBehaviorStore()
       roleBehaviorStore.tick()
@@ -526,7 +534,12 @@ export const useGameStore = defineStore('game', {
       const autoAttackDPS = planetShopStore.foregroundAutoAttackDPS
       if (autoAttackDPS > 0 && planetBossStore.isBossActive) {
         const target = planetBossStore.activeBoss
-        if (target && !target.defeated && !target.expired && bossPlanetInForeground(target.planetId)) {
+        if (
+          target &&
+          !target.defeated &&
+          !target.expired &&
+          bossPlanetInForeground(target.planetId)
+        ) {
           planetBossStore.turretVolleyCounter++
           setTimeout(() => {
             if (target.defeated || target.expired) return
@@ -658,7 +671,9 @@ export const useGameStore = defineStore('game', {
         abilityCPSPerLevel: base.abilityCPSPerLevel,
         abilityCPCPerLevel: base.abilityCPCPerLevel,
         abilityMeepCostPerLevel: base.abilityMeepCostPerLevel,
-        abilityPowerPerLevel: (base.abilityPowerPerLevel ?? ABILITY_POWER_PER_LEVEL_DEFAULT) + (aug.abilityPowerPerLevel ?? 0),
+        abilityPowerPerLevel:
+          (base.abilityPowerPerLevel ?? ABILITY_POWER_PER_LEVEL_DEFAULT) +
+          (aug.abilityPowerPerLevel ?? 0),
         cooldownMultiplier: aug.cooldownMultiplier,
         enemySpeedMultiplier: aug.enemySpeedMultiplier,
         enemyMaxHPDrainPerSecond: aug.enemyMaxHPDrainPerSecond,
@@ -711,7 +726,8 @@ export const useGameStore = defineStore('game', {
       return this.abilityLevels[1] * perLevel
     },
     abilityMeepCostMultiplier(): number {
-      const perLevel = this.activeModifier.abilityMeepCostPerLevel ?? ABILITY_MEEP_COST_PER_LEVEL_DEFAULT
+      const perLevel =
+        this.activeModifier.abilityMeepCostPerLevel ?? ABILITY_MEEP_COST_PER_LEVEL_DEFAULT
       return Math.max(ABILITY_MEEP_COST_MIN_MULTIPLIER, 1 - this.abilityLevels[2] * perLevel)
     },
     abilityCPCMultiplier(): number {

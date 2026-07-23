@@ -7,7 +7,13 @@ import { useWindowFocus } from './useWindowFocus'
 import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { getOrbitPos } from '../utils/orbitMath'
-import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING, SUN_RADIUS, STAR_BEHIND_SUN_SPEED_MULTIPLIER, HOVER_SPEED_MULTIPLIER } from '../config/constants'
+import {
+  STAR_SPAWN_DURATION_MS,
+  STAR_SPAWN_FLY_EASING,
+  SUN_RADIUS,
+  STAR_BEHIND_SUN_SPEED_MULTIPLIER,
+  HOVER_SPEED_MULTIPLIER,
+} from '../config/constants'
 import { usePlanetShopStore } from '../stores/planetShopStore'
 import { useOrbitScale } from './useOrbitScale'
 import type { PlanetType, StarType } from '../types'
@@ -54,9 +60,16 @@ export interface StarRenderEntry {
   planets: PlanetRenderEntry[]
 }
 
-function spawnVanishEffect(x: number, y: number, starColor: [number, number, number], size: number) {
+function spawnVanishEffect(
+  x: number,
+  y: number,
+  starColor: [number, number, number],
+  size: number,
+) {
   const [r, g, b] = starColor
-  const r2 = Math.round(r * 0.55), g2 = Math.round(g * 0.55), b2 = Math.round(b * 0.55)
+  const r2 = Math.round(r * 0.55),
+    g2 = Math.round(g * 0.55),
+    b2 = Math.round(b * 0.55)
   const gradient = `radial-gradient(circle, rgb(${r},${g},${b}) 0%, rgb(${r2},${g2},${b2}) 45%, rgb(0,0,0) 100%)`
   const shadow = [
     `0 0 14px rgba(${r},${g},${b},0.9)`,
@@ -190,27 +203,11 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
     { immediate: true },
   )
 
-  watch(
-    () => galaxyStore.resourceStarActive,
-    (active, wasActive) => {
-      if (active) {
-        if (isRenderingPaused.value) {
-          galaxyStore.pendingResourceStars++
-        } else {
-          starGroupStore.spawnResourceStar()
-        }
-      } else if (wasActive && starGroupStore.hasActiveResourceStar) {
-        starGroupStore.clearResourceStar()
-      }
-    },
-  )
+  // Resource-Stars werden komplett im gameStore.tick gespawnt/despawnt (läuft
+  // auch während Pause) — hier kein Watcher mehr nötig.
 
   watch(windowFocused, (focused) => {
     if (focused) {
-      if (galaxyStore.pendingResourceStars > 0) {
-        starGroupStore.spawnResourceStar()
-        galaxyStore.pendingResourceStars = 0
-      }
       if (galaxyStore.pendingChampionStar) {
         starGroupStore.spawnChampionStar()
         galaxyStore.pendingChampionStar = false

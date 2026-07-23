@@ -187,6 +187,7 @@ import { useGameStore } from '@/stores/gameStore'
 import { usePlayerStore } from '@/stores/playerStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useStarGroupStore } from '@/stores/starGroupStore'
 import { formatNumber } from '@/config/numberFormat'
 import { MATERIALS } from '@/config/materials'
 import {
@@ -215,6 +216,7 @@ const gameStore = useGameStore()
 const playerStore = usePlayerStore()
 const planetShopStore = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
+const starGroupStore = useStarGroupStore()
 
 function computeSunDiameter(): number {
   return Math.round(
@@ -242,7 +244,6 @@ const sunPhaseLabelColor = computed(() => {
   return 'phasePrimary' in p ? p.phasePrimary : p.accent
 })
 
-const pendingStars = computed(() => galaxyStore.pendingResourceStars)
 const hpPercent = computed(() => playerStore.hpPercent)
 
 const hpColor = computed(() => {
@@ -284,6 +285,34 @@ onUnmounted(() => {
 const accumulatedChimes = computed(() => {
   void pauseTick.value
   return Math.max(0, gameStore.chimes - pauseStartChimes.value)
+})
+
+// Während der Pause laufen Resource-Stars weiter: sie werden per Passivschaden
+// bekämpft und despawnen bei Timer-Ende. Hier live pro Stern: Restsekunden bis
+// zum Verschwinden + Planeten (übrig/gesamt). pauseTick treibt die 1s-Reaktivität.
+interface PauseResourceStar {
+  id: string
+  secs: number
+  remainingPlanets: number
+  total: number
+}
+
+const activeResourceStars = computed<PauseResourceStar[]>(() => {
+  void pauseTick.value
+  const now = Date.now()
+  return starGroupStore.activeStars
+    .filter((s) => s.starType === 'resource')
+    .map((s) => {
+      const total = s.planetSlots.length
+      const remainingPlanets = s.planetSlots.filter((p) => !p.cleared).length
+      const remainingMs =
+        s.spawnedAt !== undefined && s.durationMs !== undefined
+          ? Math.max(0, s.spawnedAt + s.durationMs - now)
+          : 0
+      return { id: s.id, secs: Math.ceil(remainingMs / 1000), remainingPlanets, total }
+    })
+    .filter((s) => s.remainingPlanets > 0 && s.secs > 0)
+    .sort((a, b) => a.secs - b.secs)
 })
 
 const timerChars = computed(() => {
@@ -341,12 +370,12 @@ const callouts = computed<PauseCallout[]>(() => {
       cls: 'callout--level',
     })
   }
-  if (pendingStars.value > 0) {
+  for (const s of activeResourceStars.value) {
     list.push({
-      key: 'stars',
+      key: `star-${s.id}`,
       icon: 'game-icons:star-formation',
-      text: pendingStars.value === 1 ? 'Star spawned' : 'Stars spawned',
-      count: pendingStars.value,
+      text: `${s.secs}s · ${s.remainingPlanets}/${s.total}`,
+      count: 0,
       cls: 'callout--star',
     })
   }

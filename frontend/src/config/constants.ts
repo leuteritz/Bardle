@@ -126,8 +126,10 @@ export const CHAMPION_TRAVEL_BASE_LY = 500 // 500 LY for Galaxy 1
 export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LY per Galaxy
 export const SKIP_DURATION_SECONDS = 5 // minimap skip-to-arrival shortcut
 
-// Resource star flyby
-export const RESOURCE_STAR_INTERVAL_MS = 120_000 // every 2 min a flyby
+// Resource star flyby — mehrere Sterne erscheinen zufällig gestaffelt während der Reise
+export const RESOURCE_STAR_INTERVAL_MIN_MS = 12_000 // frühester Abstand bis zum nächsten Spawn
+export const RESOURCE_STAR_INTERVAL_MAX_MS = 40_000 // spätester Abstand bis zum nächsten Spawn
+export const RESOURCE_STAR_MAX_CONCURRENT = 3 // max. gleichzeitig aktive Resource-Stars
 export const RESOURCE_STAR_DURATION_MS = 45_000 // flyby lasts 45s
 export const RESOURCE_STAR_PLANET_COUNT = 3 // max. planets per flyby
 export const CHAMPION_STAR_DURATION_MS = 60_000 // champion star window: 60s
