@@ -69,6 +69,9 @@ const battleStore = useBattleStore()
 let armed = false
 let armTimer: ReturnType<typeof setTimeout> | null = null
 const seenChampions = new Set<string>()
+// Champions unlocked (home-planet boss defeated) but not yet heralded — held
+// until the next champion-star approach flight departs, see below.
+const pendingChampions: string[] = []
 
 function canAnnounce(): boolean {
   return armed && document.visibilityState === 'visible'
@@ -77,6 +80,8 @@ function canAnnounce(): boolean {
 onMounted(() => {
   armTimer = setTimeout(() => {
     for (const name of battleStore.newlyUnlockedChampions) seenChampions.add(name)
+    // Anything buffered before arming came from loadGame(), not a real unlock.
+    pendingChampions.length = 0
     armed = true
     armTimer = null
   }, HERALD_ARM_DELAY_MS)
@@ -105,13 +110,30 @@ watch(
 )
 
 // ── New champion available in the shop ──
+// Don't herald at unlock time (home-planet boss defeat). Buffer the champion and
+// let the champion-star approach flight below reveal it, so the banner lands on
+// the visible departure moment right after the player has picked the next role.
 watch(
   () => battleStore.newlyUnlockedChampions.length,
   () => {
     for (const name of battleStore.newlyUnlockedChampions) {
       if (seenChampions.has(name)) continue
       seenChampions.add(name)
-      if (!canAnnounce()) continue
+      pendingChampions.push(name)
+    }
+  },
+)
+
+// The approach flight starts (championTravelState → 'traveling'). Flush the
+// buffered champions as the ship departs for the next champion star — but never
+// on a flight to the galaxy-boss core (no champion is waiting there).
+watch(
+  () => galaxyStore.championTravelState,
+  (now, prev) => {
+    if (now !== 'traveling' || prev === 'traveling') return
+    if (galaxyStore.travelingToGalaxyBoss) return
+    if (!canAnnounce() || pendingChampions.length === 0) return
+    for (const name of pendingChampions) {
       announce({
         kind: 'champion',
         eyebrow: 'NEW CHAMPION',
@@ -122,6 +144,7 @@ watch(
         round: true,
       })
     }
+    pendingChampions.length = 0
   },
 )
 
