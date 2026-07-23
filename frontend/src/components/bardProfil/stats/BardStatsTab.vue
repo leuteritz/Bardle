@@ -865,14 +865,14 @@ function stopResize() {
                     class="sf-arch-info-item sf-arch-info-time"
                     title="Time spent in this galaxy"
                   >
-                    <Icon icon="game-icons:sand-clock" width="12" height="12" />
+                    <Icon class="sf-arch-info-ico" icon="game-icons:duration" width="12" height="12" />
                     {{ formatDuration(rec.durationSeconds * 1000) }}
                   </span>
                   <span
                     class="sf-arch-info-item sf-arch-info-date"
                     title="Date this galaxy was freed"
                   >
-                    <Icon icon="game-icons:calendar" width="12" height="12" />
+                    <Icon class="sf-arch-info-ico" icon="game-icons:calendar" width="12" height="12" />
                     {{ archiveDate(rec) }}
                   </span>
                 </div>
@@ -1870,6 +1870,13 @@ function stopResize() {
 }
 .sf-arch-info-date {
   color: #c8b890;
+}
+/* High-contrast white icon + dark outline halo so the small glyphs stay
+   clearly readable in front of their value on any galaxy image */
+.sf-arch-info-ico {
+  flex-shrink: 0;
+  color: #ffffff;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 1)) drop-shadow(0 1px 2px rgba(0, 0, 0, 1));
 }
 
 /* ─ Shared empty states ─ */

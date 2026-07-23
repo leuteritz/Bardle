@@ -2979,6 +2979,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:calendar', // Galaxy Archive card — date freed overlay
   'game-icons:round-star', // Galaxy Archive card — stars rescued badge
   'game-icons:cracked-glass', // Galaxy Archive card — stars lost badge
+  'game-icons:duration', // Galaxy Archive card — time-spent overlay (valid replacement for invalid sand-clock)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
