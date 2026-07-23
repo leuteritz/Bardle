@@ -2374,30 +2374,6 @@ export const PLANET_TAB_SUN_MAX_DIAMETER = 560
 /** Fixed base diameter (px) of the orbiting planet image (kept small vs. the sun). */
 export const PLANET_TAB_PLANET_DIAMETER = 112
 
-// ── Bard Stats Tab starfield ──────────────────────────────────────────────────
-/** Generated backdrop starfield on the Star Forge stage (BardStatsTab).
- *  Seeded PRNG keeps the layout stable across renders — change SEED to reshuffle. */
-export const STATS_TAB_STARFIELD = {
-  /** total stars across all drift layers */
-  COUNT: 130,
-  /** fixed PRNG seed */
-  SEED: 20260703,
-  SIZE_MIN_PX: 1,
-  SIZE_MAX_PX: 3.2,
-  /** stars at least this big get a glow halo */
-  BRIGHT_THRESHOLD_PX: 2.4,
-  /** size cutoffs that split stars into slow/mid/fast drift layers (parallax by depth) */
-  LAYER_SIZE_CUTOFFS_PX: [1.75, 2.5],
-  OPACITY_MIN: 0.25,
-  OPACITY_MAX: 0.9,
-  TWINKLE_MIN_S: 3,
-  TWINKLE_MAX_S: 9,
-  /** share of stars tinted in the current phase color */
-  PHASE_TINT_SHARE: 0.08,
-  /** share of stars tinted cool blue */
-  BLUE_TINT_SHARE: 0.06,
-} as const
-
 // ── Admin ─────────────────────────────────────────────────────────────────────
 /** Max augment selections queued by a single admin level grant (keeps a "+500 levels" from queueing 500 modals) */
 export const ADMIN_LEVEL_AUGMENT_QUEUE_MAX = 10

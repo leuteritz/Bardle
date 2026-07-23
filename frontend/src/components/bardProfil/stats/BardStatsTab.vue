@@ -12,12 +12,12 @@ import type { CompletedGalaxyRecord } from '@/stores/galaxyStore'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
-  STATS_TAB_STARFIELD,
   STATS_TAB_PHASE_DOT_SCALE,
   STATS_TAB_COMET_DOT_PX,
   SUN_PHASE_DISPLAY_OFFSET,
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
+import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import { AUGMENTS } from '@/config/augments'
 import { AUGMENT_RARITY_COLOR } from '@/composables/useRarityColors'
 import { renderGalaxySnapshot } from '@/utils/galaxySnapshot'
@@ -69,60 +69,6 @@ const animChimes = computed(() => Math.floor(totalChimesEarned.value * countUpPr
 const animStars = computed(() => Math.floor(starsRescued.value * countUpProgress.value))
 const animMeeps = computed(() => Math.floor(meeps.value * countUpProgress.value))
 const animClicks = computed(() => Math.floor(totalClicks.value * countUpProgress.value))
-
-/* ── Generated backdrop starfield ────────────────────────────── */
-/* Seeded PRNG (mulberry32) so the sky layout is identical on every render */
-function mulberry32(seed: number) {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-interface BgStar {
-  x: number
-  y: number
-  size: number
-  opacity: number
-  twinkleDur: number
-  twinkleDelay: number
-  bright: boolean
-  tint: 'white' | 'phase' | 'blue'
-}
-
-/* Three drift layers by star size: small stars drift slowest (far),
-   big stars fastest (near) — cheap parallax depth. */
-const STAR_LAYERS: BgStar[][] = (() => {
-  const cfg = STATS_TAB_STARFIELD
-  const rnd = mulberry32(cfg.SEED)
-  const layers: BgStar[][] = [[], [], []]
-  for (let i = 0; i < cfg.COUNT; i++) {
-    const size = cfg.SIZE_MIN_PX + rnd() * (cfg.SIZE_MAX_PX - cfg.SIZE_MIN_PX)
-    const tintRoll = rnd()
-    const layer =
-      size < cfg.LAYER_SIZE_CUTOFFS_PX[0] ? 0 : size < cfg.LAYER_SIZE_CUTOFFS_PX[1] ? 1 : 2
-    layers[layer].push({
-      x: rnd() * 100,
-      y: rnd() * 100,
-      size,
-      opacity: cfg.OPACITY_MIN + rnd() * (cfg.OPACITY_MAX - cfg.OPACITY_MIN),
-      twinkleDur: cfg.TWINKLE_MIN_S + rnd() * (cfg.TWINKLE_MAX_S - cfg.TWINKLE_MIN_S),
-      twinkleDelay: -rnd() * cfg.TWINKLE_MAX_S,
-      bright: size >= cfg.BRIGHT_THRESHOLD_PX,
-      tint:
-        tintRoll < cfg.PHASE_TINT_SHARE
-          ? 'phase'
-          : tintRoll < cfg.PHASE_TINT_SHARE + cfg.BLUE_TINT_SHARE
-            ? 'blue'
-            : 'white',
-    })
-  }
-  return layers
-})()
 
 /* ── Star phase (sun + timeline) ─────────────────────────────── */
 const totalPhases = STAR_PHASE_DATA.length
@@ -446,32 +392,8 @@ const filteredAugCards = computed(() => {
 
 <template>
   <div class="sf-root" :style="phaseVars">
-    <!-- ══ Ambient space backdrop ══ -->
-    <div class="sf-bg" aria-hidden="true">
-      <div v-for="(layer, li) in STAR_LAYERS" :key="li" class="sf-drift" :class="`sf-drift--${li}`">
-        <span
-          v-for="(s, si) in layer"
-          :key="si"
-          class="sf-star"
-          :class="{
-            'sf-star--bright': s.bright,
-            'sf-star--phase': s.tint === 'phase',
-            'sf-star--blue': s.tint === 'blue',
-          }"
-          :style="{
-            left: s.x + '%',
-            top: s.y + '%',
-            width: s.size + 'px',
-            height: s.size + 'px',
-            '--star-opacity': s.opacity,
-            animationDuration: s.twinkleDur + 's',
-            animationDelay: s.twinkleDelay + 's',
-          }"
-        />
-      </div>
-      <div class="sf-nebula" />
-      <div class="sf-shooting-star" />
-    </div>
+    <!-- ══ Shared cosmic backdrop — same component as Shop / Team / Planets ══ -->
+    <CosmicStageBackground />
 
     <!-- ══ Solar strip: mini sun + phase identity + evolution timeline ══ -->
     <section class="sf-panel sf-solar">
@@ -787,166 +709,25 @@ const filteredAugCards = computed(() => {
   height: 100%;
   overflow: hidden;
   padding: 12px;
-  background:
-    radial-gradient(
-      circle at 88% 0%,
-      color-mix(in srgb, var(--sun-glow1) 14%, transparent),
-      transparent 45%
-    ),
-    radial-gradient(120% 120% at 12% 100%, #16110b, #0a0806 72%);
+  background: #111008; /* same deep-space base as Shop / Team / Planets */
   color: var(--rpg-text);
-}
-
-/* ─── Ambient backdrop ──────────────────────────────────────── */
-.sf-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.sf-drift {
-  position: absolute;
-  inset: -14px;
-  animation: sf-stars-drift 90s ease-in-out infinite alternate;
-}
-.sf-drift--1 {
-  animation-duration: 65s;
-  animation-direction: alternate-reverse;
-  animation-delay: -22s;
-}
-.sf-drift--2 {
-  animation-duration: 45s;
-  animation-delay: -10s;
-}
-
-.sf-star {
-  position: absolute;
-  border-radius: 50%;
-  background: #ffffff;
-  opacity: var(--star-opacity);
-  animation: sf-star-twinkle 6s ease-in-out infinite;
-}
-.sf-star--bright {
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.55);
-}
-.sf-star--phase {
-  background: color-mix(in srgb, white 55%, var(--phase-primary));
-}
-.sf-star--phase.sf-star--bright {
-  box-shadow: 0 0 6px var(--phase-glow);
-}
-.sf-star--blue {
-  background: #a8c8ff;
-}
-.sf-star--blue.sf-star--bright {
-  box-shadow: 0 0 6px rgba(140, 180, 255, 0.6);
-}
-
-@keyframes sf-star-twinkle {
-  0%,
-  100% {
-    opacity: var(--star-opacity);
-  }
-  50% {
-    opacity: calc(var(--star-opacity) * 0.3);
-  }
-}
-
-@keyframes sf-stars-drift {
-  from {
-    transform: translate(0, 0);
-  }
-  to {
-    transform: translate(7px, -5px);
-  }
-}
-
-.sf-nebula {
-  position: absolute;
-  top: -25%;
-  left: 28%;
-  width: 50%;
-  height: 75%;
-  background: radial-gradient(
-    ellipse 50% 40% at 50% 50%,
-    color-mix(in srgb, var(--phase-glow) 60%, #6040a0) 0%,
-    transparent 70%
-  );
-  opacity: 0.06;
-  animation: sf-nebula-drift 60s ease-in-out infinite alternate;
-}
-
-@keyframes sf-nebula-drift {
-  from {
-    transform: translate(0, 0) scale(1);
-  }
-  to {
-    transform: translate(-4%, 6%) scale(1.12);
-  }
-}
-
-.sf-shooting-star {
-  position: absolute;
-  top: 14%;
-  left: -8%;
-  width: 90px;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(
-    to left,
-    rgba(255, 255, 255, 0.9),
-    rgba(255, 255, 255, 0.25) 60%,
-    transparent
-  );
-  transform: rotate(16deg);
-  opacity: 0;
-  animation: sf-shooting 14s linear infinite;
-}
-
-@keyframes sf-shooting {
-  0%,
-  91% {
-    transform: translate(0, 0) rotate(16deg);
-    opacity: 0;
-  }
-  92% {
-    opacity: 0.9;
-  }
-  97% {
-    transform: translate(52vw, 16vh) rotate(16deg);
-    opacity: 0;
-  }
-  100% {
-    transform: translate(52vw, 16vh) rotate(16deg);
-    opacity: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .sf-timeline-fill--active,
-  .sf-drift,
-  .sf-star,
-  .sf-nebula,
-  .sf-shooting-star,
   .sf-mini-sun,
   .sf-mini-ring {
     animation: none;
   }
 }
 
-/* ─── Shared panel chrome ───────────────────────────────────── */
+/* ─── Frameless sections: no per-panel border/box — the areas are set apart
+   by thin dividers only, and the shared cosmic backdrop shows through. ─── */
 .sf-panel {
   position: relative;
   z-index: 1;
   display: flex;
-  background: rgba(13, 12, 7, 0.85);
-  border: 1px solid #4a2c12;
-  border-radius: 6px;
-  box-shadow:
-    inset 0 0 0 1px #2c1806,
-    0 8px 24px rgba(0, 0, 0, 0.45);
+  background: transparent;
 }
 
 .sf-col {
@@ -1010,7 +791,9 @@ const filteredAugCards = computed(() => {
   flex-shrink: 0;
   align-items: center;
   gap: clamp(14px, 2.5vw, 34px);
-  padding: 8px 16px;
+  padding: 8px 16px 14px;
+  /* divider that sets the solar strip apart from the panel deck below */
+  border-bottom: 1px solid #4a2c12;
 }
 
 .sf-solar-id {
@@ -1381,7 +1164,11 @@ const filteredAugCards = computed(() => {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(228px, 290px) minmax(0, 1fr) minmax(238px, 330px);
-  gap: 10px;
+  gap: 0;
+}
+/* Vertical dividers between the three areas (their own padding forms the gutter) */
+.sf-deck .sf-col + .sf-col {
+  border-left: 1px solid #4a2c12;
 }
 
 /* ─ Journey stats panel ─ */
