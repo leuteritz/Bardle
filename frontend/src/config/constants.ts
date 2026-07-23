@@ -1926,10 +1926,10 @@ export const STATS_TAB_COMET_DOT_PX = 8
  *  columns (Journey / Galaxy Archive) are drag-resized; the middle (Augments)
  *  flexes to fill the rest and is protected by MIN_MIDDLE. */
 export const STATS_TAB_DECK_RESIZE = {
-  /** initial width of the left (Journey) column */
-  DEFAULT_LEFT: 264,
-  /** initial width of the right (Galaxy Archive) column */
-  DEFAULT_RIGHT: 288,
+  /** initial width of the left (Journey) column — starts fully expanded (= MAX_LEFT) */
+  DEFAULT_LEFT: 400,
+  /** initial width of the right (Galaxy Archive) column — starts fully expanded (= MAX_RIGHT) */
+  DEFAULT_RIGHT: 440,
   /** smallest either side column may shrink to */
   MIN_SIDE: 200,
   /** largest the left column may grow to */

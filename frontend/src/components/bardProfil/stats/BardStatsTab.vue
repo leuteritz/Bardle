@@ -1309,7 +1309,7 @@ function stopResize() {
   display: grid;
   /* grid-template-columns is driven inline by deckStyle (drag-resizable);
      this is only the pre-hydration fallback */
-  grid-template-columns: 264px minmax(0, 1fr) 288px;
+  grid-template-columns: 400px minmax(0, 1fr) 440px;
   gap: 0;
 }
 /* Vertical dividers between the three areas (their own padding forms the gutter) */
