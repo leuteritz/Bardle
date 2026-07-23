@@ -742,7 +742,10 @@ const filteredAugCards = computed(() => {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 7px 12px;
+  padding: 6px 12px;
+  /* fixed height so all three section headers match exactly — only their
+     column widths differ */
+  min-height: 40px;
   border-bottom: 1px solid #2c1806;
 }
 
@@ -750,16 +753,16 @@ const filteredAugCards = computed(() => {
   display: flex;
   align-items: baseline;
   gap: 7px;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--rpg-wood);
   white-space: nowrap;
 }
 
 .sf-p-count {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0;
   color: var(--rpg-gold);
@@ -770,7 +773,7 @@ const filteredAugCards = computed(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
