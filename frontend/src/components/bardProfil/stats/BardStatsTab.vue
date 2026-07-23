@@ -1269,9 +1269,12 @@ const filteredAugCards = computed(() => {
 }
 
 .sf-tl-lbl {
-  font-size: 9px;
+  /* Full-width box centered on the dot: the current-phase weight change never
+     nudges neighbours, and every label keeps the same size. */
+  width: 100%;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #6a5a3a;
   text-align: center;
