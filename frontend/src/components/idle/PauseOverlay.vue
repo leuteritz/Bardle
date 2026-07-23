@@ -634,12 +634,15 @@ function particleStyle(i: number): Record<string, string> {
   width: 100%;
 }
 .stat-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  /* Feste Zeilen: Label · Value · Bar-Slot. Der Bar-Slot (6px = HP-Bar-Höhe)
+     ist in JEDER Kachel reserviert, auch bei Kills/Materials ohne Bar — so
+     sitzen Label und Value in allen drei Tiles auf exakt gleicher Höhe. */
+  grid-template-rows: auto auto 6px;
+  align-content: center;
+  justify-items: center;
+  row-gap: 7px;
   text-align: center;
-  gap: 7px;
   padding: clamp(10px, 1.4vh, 14px) clamp(10px, 1.4vw, 14px);
   height: 100%;
   min-height: 0;
@@ -680,6 +683,7 @@ function particleStyle(i: number): Record<string, string> {
   color: #cc6050;
 }
 .stat-tile__value {
+  max-width: 100%;
   font-size: clamp(1.05rem, 1.6vw, 1.4rem);
   font-weight: 800;
   line-height: 1.1;
@@ -701,6 +705,7 @@ function particleStyle(i: number): Record<string, string> {
 .hp-bar-track {
   position: relative;
   width: 100%;
+  justify-self: stretch; /* volle Zellbreite trotz justify-items: center */
   height: 6px;
   background: rgba(0, 0, 0, 0.55);
   border-radius: 3px;
