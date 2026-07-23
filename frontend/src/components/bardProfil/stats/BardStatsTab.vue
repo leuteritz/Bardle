@@ -439,10 +439,7 @@ const filteredAugCards = computed(() => {
         <div class="sf-solar-meta">
           <span class="sf-kicker">{{ phaseDisplayLabel }}</span>
           <span class="sf-phase-name">{{ solarStore.isCometState ? COMET_PHASE_DATA.name : phase.name }}</span>
-          <span class="sf-solar-age">
-            <Icon icon="game-icons:sand-clock" width="10" height="10" />
-            {{ phaseAge ?? '—' }} in phase
-          </span>
+          <span class="sf-solar-age">{{ phaseAge ?? '—' }} in phase</span>
         </div>
       </div>
 
