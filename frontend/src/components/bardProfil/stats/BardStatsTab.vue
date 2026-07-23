@@ -237,8 +237,6 @@ const augCards = computed<AugCard[]>(() =>
   }),
 )
 
-const augmentCount = computed(() => augCards.value.length)
-
 /* ── Aggregate buff chips (augments + abilities + synergies) ─── */
 const buffCPSPct = computed(() => {
   const mod = activeModifier.value
@@ -367,27 +365,6 @@ const totalChips = computed<BuffChip[]>(() => {
   return chips
 })
 
-/* ── Shared search: filters buff chips AND augment cards ─────── */
-const buffSearch = ref('')
-
-const searchQuery = computed(() => buffSearch.value.trim().toLowerCase())
-
-const filteredChips = computed(() => {
-  const q = searchQuery.value
-  if (!q) return totalChips.value
-  return totalChips.value.filter((c) => c.label.toLowerCase().includes(q) || c.key.includes(q))
-})
-
-const filteredAugCards = computed(() => {
-  const q = searchQuery.value
-  if (!q) return augCards.value
-  return augCards.value.filter(
-    (c) =>
-      c.aug.name.toLowerCase().includes(q) ||
-      c.aug.effectLine.toLowerCase().includes(q) ||
-      c.aug.rarity.toLowerCase().includes(q),
-  )
-})
 </script>
 
 <template>
@@ -509,12 +486,14 @@ const filteredAugCards = computed(() => {
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
           <span class="sf-p-title">Journey</span>
-          <span class="sf-p-aside">
-            <Icon icon="game-icons:sand-clock" width="11" height="11" />
-            {{ playTime }}
-          </span>
         </header>
         <div class="sf-p-body sf-stats-body rpg-scrollbar">
+          <!-- Idle play-time — the panel's hero stat: far left, oversized -->
+          <div class="sf-playtime">
+            <span class="sf-playtime-lbl">Play Time</span>
+            <span class="sf-playtime-val">{{ playTime }}</span>
+          </div>
+
           <div class="sf-chips">
             <div class="sf-chip sf-chip--gold">
               <span class="sf-chip-lbl">Level</span>
@@ -577,18 +556,12 @@ const filteredAugCards = computed(() => {
       <!-- ─ Augments & buffs ─ -->
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
-          <span class="sf-p-title">
-            Augments
-            <span class="sf-p-count">{{ augmentCount }}</span>
-          </span>
-          <input v-model="buffSearch" class="sf-search" type="text" placeholder="Search…" />
+          <span class="sf-p-title">Augments</span>
         </header>
         <div class="sf-p-body rpg-scrollbar">
           <div class="sf-buff-chips">
-            <div v-if="filteredChips.length === 0" class="sf-empty-line">
-              {{ totalChips.length === 0 ? 'No buffs active yet' : 'No buffs match' }}
-            </div>
-            <div v-for="chip in filteredChips" :key="chip.key" class="sf-chip-buff">
+            <div v-if="totalChips.length === 0" class="sf-empty-line">No buffs active yet</div>
+            <div v-for="chip in totalChips" :key="chip.key" class="sf-chip-buff">
               <Icon :icon="chip.icon" width="14" height="14" class="sf-chip-buff-icon" />
               <span class="sf-chip-buff-lbl">{{ chip.label }}</span>
               <span class="sf-chip-buff-val" :class="chip.positive ? 'is-up' : 'is-down'">
@@ -597,19 +570,13 @@ const filteredAugCards = computed(() => {
             </div>
           </div>
 
-          <div v-if="filteredAugCards.length === 0" class="sf-empty-block">
+          <div v-if="augCards.length === 0" class="sf-empty-block">
             <Icon icon="game-icons:gems" width="28" height="28" class="sf-empty-icon" />
-            <span>
-              {{
-                augmentCount === 0
-                  ? 'No augments active yet — level up to pick your first one'
-                  : 'No augments match your search'
-              }}
-            </span>
+            <span>No augments active yet — level up to pick your first one</span>
           </div>
           <div v-else class="sf-aug-grid">
             <div
-              v-for="card in filteredAugCards"
+              v-for="card in augCards"
               :key="card.key"
               class="sf-aug-card"
               :style="{ '--rarity': card.color }"
@@ -637,11 +604,7 @@ const filteredAugCards = computed(() => {
       <!-- ─ Galaxy archive ─ -->
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
-          <span class="sf-p-title">
-            Galaxy Archive
-            <span class="sf-p-count">{{ archive.length }}</span>
-          </span>
-          <span class="sf-p-aside">freed</span>
+          <span class="sf-p-title">Galaxy Archive</span>
         </header>
         <div class="sf-p-body rpg-scrollbar">
           <div v-if="archive.length === 0" class="sf-empty-block">
@@ -758,27 +721,6 @@ const filteredAugCards = computed(() => {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--rpg-wood);
-  white-space: nowrap;
-}
-
-.sf-p-count {
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 0;
-  color: var(--rpg-gold);
-  font-variant-numeric: tabular-nums;
-}
-
-.sf-p-aside {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rpg-text-muted);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -1181,6 +1123,31 @@ const filteredAugCards = computed(() => {
   gap: 6px;
 }
 
+/* Idle play-time hero: oversized, left-aligned, modern */
+.sf-playtime {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  margin-bottom: 4px;
+}
+.sf-playtime-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--rpg-text-muted);
+}
+.sf-playtime-val {
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--rpg-gold);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 14px rgba(232, 192, 64, 0.25);
+}
+
 .sf-chips {
   display: flex;
   gap: 6px;
@@ -1298,27 +1265,6 @@ const filteredAugCards = computed(() => {
 }
 
 /* ─ Augments panel ─ */
-.sf-search {
-  width: min(150px, 45%);
-  padding: 4px 9px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--rpg-text);
-  background: #111008;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.sf-search::placeholder {
-  color: var(--rpg-text-dim);
-  font-weight: 400;
-}
-.sf-search:focus {
-  border-color: #7a4e20;
-}
-
 .sf-buff-chips {
   display: flex;
   flex-wrap: wrap;
