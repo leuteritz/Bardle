@@ -2279,8 +2279,8 @@ export const FLIGHT_BURST_WIDTH = 2.5
  *  game that idles on screen for hours. */
 export const COMET_BG_MAX_COUNT = 5
 /** Seconds between comet sky events (randomized within this range). */
-export const COMET_BG_INTERVAL_MIN_SEC = 18
-export const COMET_BG_INTERVAL_MAX_SEC = 45
+export const COMET_BG_INTERVAL_MIN_SEC = 8
+export const COMET_BG_INTERVAL_MAX_SEC = 20
 /** Comets per sky event — index = count-1. Mostly 1, a 5-comet "meteor
  *  moment" is the rare jackpot. */
 export const COMET_BG_COUNT_WEIGHTS = [0.62, 0.24, 0.09, 0.035, 0.015]
@@ -2291,8 +2291,8 @@ export const COMET_BG_EVENT_COOLDOWN_BONUS_SEC = 6
  *  read as "the sky comes alive", not a synchronized volley. */
 export const COMET_BG_STAGGER_MAX_SEC = 1.8
 /** First comet after load appears sooner, so the effect is discoverable. */
-export const COMET_BG_FIRST_DELAY_MIN_SEC = 8
-export const COMET_BG_FIRST_DELAY_MAX_SEC = 20
+export const COMET_BG_FIRST_DELAY_MIN_SEC = 3
+export const COMET_BG_FIRST_DELAY_MAX_SEC = 8
 /** Head speed in px/s. */
 export const COMET_BG_SPEED_MIN = 550
 export const COMET_BG_SPEED_MAX = 1100
