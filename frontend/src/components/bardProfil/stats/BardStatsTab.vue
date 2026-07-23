@@ -232,6 +232,14 @@ const playTime = computed(() => formatDuration(inGameTime.value * 1000))
 /* ── Galaxy Archive (completed-galaxy memories) ──────────────── */
 const archive = computed(() => [...completedGalaxies.value].sort((a, b) => b.galaxy - a.galaxy))
 
+function archiveRescued(rec: CompletedGalaxyRecord): number {
+  return rec.attemptResults.filter((r) => r === 'rescued').length
+}
+
+function archiveFailed(rec: CompletedGalaxyRecord): number {
+  return rec.attemptResults.filter((r) => r === 'failed').length
+}
+
 function archiveDate(rec: CompletedGalaxyRecord): string {
   return new Date(rec.completedAt).toLocaleDateString()
 }
@@ -759,6 +767,17 @@ function stopResize() {
                 />
                 <!-- Galaxy number badge, top-left over the map -->
                 <span class="sf-arch-badge">Galaxy {{ rec.galaxy }}</span>
+                <!-- Stars rescued / lost, top-right over the map -->
+                <span class="sf-arch-stars">
+                  <span class="sf-arch-star sf-arch-star--won" title="Stars rescued">
+                    <Icon icon="game-icons:round-star" width="12" height="12" />
+                    {{ archiveRescued(rec) }}
+                  </span>
+                  <span class="sf-arch-star sf-arch-star--lost" title="Stars lost">
+                    <Icon icon="game-icons:cracked-glass" width="12" height="12" />
+                    {{ archiveFailed(rec) }}
+                  </span>
+                </span>
                 <!-- Time spent + date freed, over the map's lower edge -->
                 <div class="sf-arch-info">
                   <span class="sf-arch-info-item sf-arch-info-time" title="Time spent in this galaxy">
@@ -1689,6 +1708,38 @@ function stopResize() {
   border-radius: 4px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
+}
+
+/* Stars rescued / lost — two tinted mini-badges, top-right over the map */
+.sf-arch-stars {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.sf-arch-star {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  border-radius: 4px;
+  background: rgba(8, 6, 3, 0.82);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+.sf-arch-star--won {
+  color: #e8c040;
+  border: 1px solid rgba(232, 192, 64, 0.4);
+}
+.sf-arch-star--lost {
+  color: #e08a7a;
+  border: 1px solid rgba(204, 96, 80, 0.4);
 }
 
 /* Time + date, over the map's lower edge — readable on any galaxy color */

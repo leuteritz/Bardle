@@ -2977,6 +2977,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:daggers', // Career KDA stat row
   'game-icons:pentacle', // Pentakills stat row
   'game-icons:calendar', // Galaxy Archive card — date freed overlay
+  'game-icons:round-star', // Galaxy Archive card — stars rescued badge
+  'game-icons:cracked-glass', // Galaxy Archive card — stars lost badge
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
