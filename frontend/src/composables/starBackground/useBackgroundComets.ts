@@ -43,6 +43,12 @@ import {
   COMET_BG_TWIN_OFFSET_MAX,
   COMET_BG_TWIN_SCALE,
   COMET_BG_TINT_WHITE_MIX,
+  COMET_BG_COSMIC_INTERVAL_MIN_SEC,
+  COMET_BG_COSMIC_INTERVAL_MAX_SEC,
+  COMET_BG_COSMIC_FIRST_DELAY_MIN_SEC,
+  COMET_BG_COSMIC_FIRST_DELAY_MAX_SEC,
+  COMET_BG_COSMIC_MAX_COUNT,
+  COMET_BG_COSMIC_COUNT_WEIGHTS,
 } from '../../config/constants'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -76,14 +82,7 @@ type CometVariant = keyof typeof COMET_BG_VARIANT_WEIGHTS
 
 /** Heading pool (screen space, y grows downward): TL→BR dive, TR→BL, shallow
  *  left→right, steep top→down, right→left, and an ascending BL→TR flight. */
-const COMET_HEADING_POOL = [
-  Math.PI / 4,
-  (Math.PI * 3) / 4,
-  0,
-  Math.PI / 2,
-  Math.PI,
-  -Math.PI / 4,
-]
+const COMET_HEADING_POOL = [Math.PI / 4, (Math.PI * 3) / 4, 0, Math.PI / 2, Math.PI, -Math.PI / 4]
 
 function rollCometVariant(): CometVariant {
   let rand = Math.random()
@@ -117,9 +116,31 @@ function cometTintForGalaxy(themeIndex: number): { r: number; g: number; b: numb
  * @param options.pauseOnBardTab — freeze the loop while a bard tab is open
  *   (idle-orbit backdrop sits behind those tabs; the cosmic backdrop lives
  *   *inside* them and must keep running, so it leaves this false).
+ * @param options.variant — spawn-intensity preset. 'orbit' (default) uses the
+ *   baseline cadence; 'cosmic' fires more often, sooner and in bigger bursts.
+ *   Only frequency/count differ — the comet look and behavior variants are
+ *   identical across presets.
  */
-export function useBackgroundComets(options: { pauseOnBardTab?: boolean } = {}) {
+export function useBackgroundComets(
+  options: { pauseOnBardTab?: boolean; variant?: 'orbit' | 'cosmic' } = {},
+) {
   const pauseOnBardTab = options.pauseOnBardTab ?? false
+  const isCosmic = options.variant === 'cosmic'
+
+  // Resolve the spawn tuning for this variant. Everything else (speeds, tails,
+  // twin/arc/flash behavior, tint) stays shared across both presets.
+  const intervalMinSec = isCosmic ? COMET_BG_COSMIC_INTERVAL_MIN_SEC : COMET_BG_INTERVAL_MIN_SEC
+  const intervalMaxSec = isCosmic ? COMET_BG_COSMIC_INTERVAL_MAX_SEC : COMET_BG_INTERVAL_MAX_SEC
+  const firstDelayMinSec = isCosmic
+    ? COMET_BG_COSMIC_FIRST_DELAY_MIN_SEC
+    : COMET_BG_FIRST_DELAY_MIN_SEC
+  const firstDelayMaxSec = isCosmic
+    ? COMET_BG_COSMIC_FIRST_DELAY_MAX_SEC
+    : COMET_BG_FIRST_DELAY_MAX_SEC
+  const maxCount = isCosmic ? COMET_BG_COSMIC_MAX_COUNT : COMET_BG_MAX_COUNT
+  const countWeights: readonly number[] = isCosmic
+    ? COMET_BG_COSMIC_COUNT_WEIGHTS
+    : COMET_BG_COUNT_WEIGHTS
 
   const cometCanvas = ref<HTMLCanvasElement>()
   const prefersReducedMotion = ref(false)
@@ -131,9 +152,7 @@ export function useBackgroundComets(options: { pauseOnBardTab?: boolean } = {}) 
   /** Rare ambient comets crossing the canvas; spawned in-loop (auto-pauses with
    *  the RAF loop), finite — spliced when done, no timers, no extra cleanup. */
   const bgComets: BgComet[] = []
-  let cometCooldown =
-    COMET_BG_FIRST_DELAY_MIN_SEC +
-    Math.random() * (COMET_BG_FIRST_DELAY_MAX_SEC - COMET_BG_FIRST_DELAY_MIN_SEC)
+  let cometCooldown = firstDelayMinSec + Math.random() * (firstDelayMaxSec - firstDelayMinSec)
 
   let animFrame = 0
   let lastTimestamp = 0
@@ -165,7 +184,7 @@ export function useBackgroundComets(options: { pauseOnBardTab?: boolean } = {}) 
     delay: number,
     allowTwin: boolean,
   ): void {
-    if (bgComets.length >= COMET_BG_MAX_COUNT) return
+    if (bgComets.length >= maxCount) return
     const tint = cometTintForGalaxy(galaxyStore.currentThemeIndex)
     const variant = rollCometVariant()
 
@@ -259,7 +278,7 @@ export function useBackgroundComets(options: { pauseOnBardTab?: boolean } = {}) 
       allowTwin &&
       variant === 'crossing' &&
       Math.random() < COMET_BG_TWIN_CHANCE &&
-      bgComets.length < COMET_BG_MAX_COUNT
+      bgComets.length < maxCount
     ) {
       // Twin pair: a smaller companion offset perpendicular to the flight path.
       const off =
@@ -289,14 +308,14 @@ export function useBackgroundComets(options: { pauseOnBardTab?: boolean } = {}) 
   function spawnCometEvent(w: number, h: number): number {
     let rand = Math.random()
     let count = 1
-    for (let i = 0; i < COMET_BG_COUNT_WEIGHTS.length; i++) {
-      rand -= COMET_BG_COUNT_WEIGHTS[i]
+    for (let i = 0; i < countWeights.length; i++) {
+      rand -= countWeights[i]
       if (rand <= 0) {
         count = i + 1
         break
       }
     }
-    count = Math.min(count, COMET_BG_MAX_COUNT - bgComets.length)
+    count = Math.min(count, maxCount - bgComets.length)
     for (let i = 0; i < count; i++) {
       // Single comets keep the signature TL→BR bias; comets in multi-events
       // scatter uniformly across the full heading pool.
@@ -343,12 +362,12 @@ export function useBackgroundComets(options: { pauseOnBardTab?: boolean } = {}) 
     // In-loop spawn (delta accumulator) → pauses with the RAF loop for free;
     // finite array, spliced when done, no timers.
     cometCooldown -= delta
-    if (cometCooldown <= 0 && !transitioning && !hyperActive && bgComets.length < COMET_BG_MAX_COUNT) {
+    if (cometCooldown <= 0 && !transitioning && !hyperActive && bgComets.length < maxCount) {
       const eventSize = spawnCometEvent(w, h)
       // Bigger events pay a cooldown penalty — average comet rate stays flat.
       cometCooldown =
-        COMET_BG_INTERVAL_MIN_SEC +
-        Math.random() * (COMET_BG_INTERVAL_MAX_SEC - COMET_BG_INTERVAL_MIN_SEC) +
+        intervalMinSec +
+        Math.random() * (intervalMaxSec - intervalMinSec) +
         (eventSize - 1) * COMET_BG_EVENT_COOLDOWN_BONUS_SEC
     }
     for (let i = bgComets.length - 1; i >= 0; i--) {

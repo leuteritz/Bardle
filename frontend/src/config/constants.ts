@@ -2348,6 +2348,24 @@ export const COMET_BG_TWIN_SCALE = 0.6
 /** White-mix applied to the dark galaxy nebula color → pastel comet tint. */
 export const COMET_BG_TINT_WHITE_MIX = 0.55
 
+/* ── Cosmic-background comet variant ──────────────────────────────────────────
+ * The flat cosmic backdrop (shop, planets, menus) gets a livelier sky than the
+ * idle-orbit backdrop: comet sky events fire more often, start sooner and lean
+ * toward bigger multi-comet bursts. Values above are the idle-orbit baseline;
+ * these override interval / first-delay / count only for the 'cosmic' variant.
+ * The behavior variants (crossing/partial/drifter/flash/arc) stay identical. */
+/** Seconds between comet sky events in the cosmic backdrop (more frequent). */
+export const COMET_BG_COSMIC_INTERVAL_MIN_SEC = 3
+export const COMET_BG_COSMIC_INTERVAL_MAX_SEC = 9
+/** First comet in the cosmic backdrop appears almost right away. */
+export const COMET_BG_COSMIC_FIRST_DELAY_MIN_SEC = 1
+export const COMET_BG_COSMIC_FIRST_DELAY_MAX_SEC = 4
+/** More comets may share the sky at once than the idle-orbit cap of 5. */
+export const COMET_BG_COSMIC_MAX_COUNT = 8
+/** Per-event count weights (index = count-1) — biased toward multi-comet bursts
+ *  so the cosmic backdrop regularly shows 2–5 comets, not mostly singles. */
+export const COMET_BG_COSMIC_COUNT_WEIGHTS = [0.24, 0.26, 0.2, 0.14, 0.08, 0.05, 0.02, 0.01]
+
 // ── Planet Tab stage sizing ───────────────────────────────────────────────────
 /** Sun image diameter (px) in the Planet Tab at the smallest phase radius. */
 export const PLANET_TAB_SUN_MIN_DIAMETER = 340

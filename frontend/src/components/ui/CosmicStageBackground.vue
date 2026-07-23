@@ -8,7 +8,7 @@
     <div class="csb-stars csb-stars--mid" />
     <div class="csb-stars csb-stars--near" />
     <div class="csb-stars csb-stars--bright" />
-    <BackgroundComets />
+    <BackgroundComets variant="cosmic" />
   </div>
 </template>
 
