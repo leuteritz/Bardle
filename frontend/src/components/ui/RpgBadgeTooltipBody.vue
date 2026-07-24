@@ -119,15 +119,22 @@ const upgradeableSlots = computed<PlanetUpgradeRow[]>(() => {
     })
 })
 
-function levelUpOne(id: string) {
-  planetShopStore.levelUpPlanet(id)
-  // When the last affordable upgrade is spent the header badge unmounts, which
-  // closes this tooltip automatically — no explicit close needed here.
-}
-
+// Buy every affordable level-up for one slot at once. When the last affordable
+// upgrade anywhere is spent the header badge unmounts, which closes this tooltip
+// automatically — no explicit close needed.
 function levelUpMax(id: string) {
   const n = planetShopStore.getMaxAffordableLevelCount(id)
   if (n > 0) planetShopStore.levelUpPlanetTimes(id, n)
+}
+
+// Buy all possible upgrades across every slot, spending chimes greedily in slot
+// order until the budget runs dry.
+function buyAllUpgrades() {
+  for (const s of planetShopStore.slots) {
+    if (!s.purchased || !s.role) continue
+    const n = planetShopStore.getMaxAffordableLevelCount(s.id)
+    if (n > 0) planetShopStore.levelUpPlanetTimes(s.id, n)
+  }
 }
 </script>
 
@@ -265,30 +272,24 @@ function levelUpMax(id: string) {
               </span>
             </span>
           </div>
-          <div class="pu-tt__actions">
-            <button
-              class="pu-tt__buy"
-              :aria-label="`Level up ${slot.name}`"
-              @click.stop="levelUpOne(slot.id)"
-            >
-              <Icon icon="game-icons:upgrade" width="14" height="14" />
-              Level Up
-            </button>
-            <button
-              v-if="slot.count > 1"
-              class="pu-tt__max"
-              :aria-label="`Level up ${slot.name} ${slot.count} times`"
-              @click.stop="levelUpMax(slot.id)"
-            >
-              Max ×{{ slot.count }}
-            </button>
-          </div>
+          <button
+            class="pu-tt__buy"
+            :aria-label="`Level up ${slot.name} ${slot.count} time${slot.count === 1 ? '' : 's'}`"
+            @click.stop="levelUpMax(slot.id)"
+          >
+            <Icon icon="game-icons:upgrade" width="14" height="14" />
+            Level Up ×{{ slot.count }}
+          </button>
         </li>
       </ul>
+      <button class="pu-tt__buyall" @click.stop="buyAllUpgrades">
+        <Icon icon="game-icons:upgrade" width="15" height="15" />
+        Buy All
+        <span class="pu-tt__buyall-count">{{ planetLevelCount }}</span>
+      </button>
       <div class="bt__hint">
-        <strong class="pu-tt__hint-count">{{ planetLevelCount }}</strong>
-        level-up{{ planetLevelCount === 1 ? '' : 's' }} affordable ·
-        {{ $formatNumber(gameStore.chimes) }} Chimes
+        <Icon :icon="CHIMES_COST_ICON" width="12" height="12" class="pu-tt__cost-ico" />
+        {{ $formatNumber(gameStore.chimes) }} Chimes available
       </div>
     </template>
   </div>
@@ -720,20 +721,13 @@ function levelUpMax(id: string) {
   flex-shrink: 0;
 }
 
-.pu-tt__actions {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 3px;
-}
-
 .pu-tt__buy {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 4px 9px;
+  padding: 5px 10px;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #6ec040;
   border-radius: 4px;
@@ -759,33 +753,52 @@ function levelUpMax(id: string) {
   transform: scale(0.96);
 }
 
-.pu-tt__max {
-  padding: 2px 6px;
-  background: #16140e;
-  border: 1px solid #3a8040;
-  border-radius: 3px;
-  color: #6ee7b7;
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+/* Buy-all bar — full-width primary action beneath the list */
+.pu-tt__buyall {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: calc(100% - 24px);
+  margin: 6px 12px 4px;
+  padding: 7px 10px;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transition:
-    background 0.12s,
     filter 0.12s,
     transform 0.12s;
 }
 
-.pu-tt__max:hover {
-  background: #1c2a18;
-  filter: brightness(1.1);
+.pu-tt__buyall:hover {
+  filter: brightness(1.12);
 }
 
-.pu-tt__max:active {
-  transform: scale(0.96);
+.pu-tt__buyall:active {
+  transform: scale(0.98);
 }
 
-.pu-tt__hint-count {
-  color: #6ee7b7;
+.pu-tt__buyall-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 0.7rem;
   font-weight: 900;
+  line-height: 1;
 }
 </style>
