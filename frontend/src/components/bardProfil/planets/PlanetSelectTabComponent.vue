@@ -568,16 +568,28 @@ function chooseBuilding(buildingId: string) {
           </Transition>
         </div>
 
-        <!-- Purchased + role locked: cosmic stage + frameless fixed upgrade menu -->
+        <!-- Purchased + role locked: cosmic stage with LEVEL crown above the sun,
+             name + HP directly beneath it, and a bundled action dock at the bottom.
+             The corners are intentionally empty — every readout the player acts on
+             lives right next to the Level-Up button now. -->
         <template v-else-if="activeSlot && activeSlot.purchased && activeSlot.role">
-          <!-- Centered cosmic stage: sun + orbiting planet fill the full width;
-               name → HP → Level-Up form the bottom-center hero. The side panel is
-               dissolved — every numeric readout is a floating HUD chip in a corner
-               (clear of the top-center jungle-buff banner). -->
           <div class="ps-stage" :style="[{ '--rc': activeRoleColor }, sunPhaseStyle]">
-            <!-- Top spacer balances the hero band below so the sun sits at the
-                 vertical middle (spacer flex === band flex). -->
-            <div class="ps-topspacer" aria-hidden="true" />
+            <!-- LEVEL crown — big + modern, centered above the sun. While a jungle
+                 buff is live the top-center banner claims this spot, so the crown
+                 fades out for its duration and returns afterwards. -->
+            <div class="ps-crown-band">
+              <Transition name="ps-crown-fade">
+                <div v-if="!activeSlot.jungleBuff?.active" class="ps-crown">
+                  <span class="ps-crown-rule ps-crown-rule--l" aria-hidden="true" />
+                  <div class="ps-crown-core">
+                    <span class="ps-crown-label">Level</span>
+                    <span class="ps-crown-value">{{ activeSlot.level }}</span>
+                  </div>
+                  <span class="ps-crown-rule ps-crown-rule--r" aria-hidden="true" />
+                </div>
+              </Transition>
+            </div>
+
             <!-- Central body (comet rock or phase sun) + orbiting planet -->
             <div class="ps-system" :class="{ 'ps-system--comet': solarStore.isCometState }">
               <CometDisc v-if="solarStore.isCometState" :diameter="200" />
@@ -598,10 +610,63 @@ function chooseBuilding(buildingId: string) {
               </Transition>
             </div>
 
-            <!-- Level-Up hero — its own flex band so the button centers VERTICALLY
-                 in the gap between the sun and the name/HP unit (not glued to the
-                 title). -->
-            <div class="ps-hero-band">
+            <!-- Balancing gap: same flex weight as the crown band above the sun, so
+                 the sun stays vertically centered between crown and bottom cluster. -->
+            <div class="ps-hero-gap" aria-hidden="true" />
+
+            <!-- Name + HP unit — kept large, directly under the sun. -->
+            <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
+              <div class="ps-planet-role-label">{{ activeRoleName }}</div>
+              <div
+                v-if="activeSlot.maxHp > 0"
+                class="ps-planet-hp"
+                :class="`ps-planet-hp--${activeHpTier}`"
+              >
+                <div class="ps-planet-hp-text">
+                  <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
+                  <span class="ps-hp-pct">{{ Math.round(hpPercent) }}%</span>
+                </div>
+                <div class="ps-hp-bar-track">
+                  <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }">
+                    <span class="ps-hp-bar-shine" aria-hidden="true" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action dock — upgrade effect (current → next), Max HP and the config
+                 chip bundled right on top of the Level-Up CTA. -->
+            <div class="ps-action-dock">
+              <div class="ps-dock-info">
+                <div class="ps-info-pill">
+                  <span class="ps-info-label">Effect</span>
+                  <span class="ps-info-vals">
+                    <span class="ps-info-now">{{ activeSlotBonusText }}</span>
+                    <span class="ps-info-arrow">→</span>
+                    <span class="ps-info-next">{{ nextBonusText }}</span>
+                  </span>
+                  <span v-if="maxAffordableCount > 0" class="ps-info-gain">after +{{ maxAffordableCount }}</span>
+                </div>
+                <div class="ps-info-pill">
+                  <span class="ps-info-label">Max HP</span>
+                  <span class="ps-info-vals">
+                    <span class="ps-info-now">{{ currentMaxHp }}</span>
+                    <span class="ps-info-arrow">→</span>
+                    <span class="ps-info-next">{{ nextMaxHp }}</span>
+                  </span>
+                </div>
+                <button
+                  v-if="isConfigurableRole && configChip"
+                  class="ps-config-chip"
+                  @click="configPickerOpen = !configPickerOpen"
+                >
+                  <span class="ps-config-chip-verb">{{ configChip.verb }}:</span>
+                  <img v-if="configChip.icon" :src="configChip.icon" class="ps-config-chip-icon" alt="" />
+                  <span class="ps-config-chip-name">{{ configChip.name }}</span>
+                  <span class="ps-config-chip-caret">▾</span>
+                </button>
+              </div>
+
               <div class="ps-dock-buy ps-hero-buy">
                 <button
                   class="ps-level-btn"
@@ -629,65 +694,6 @@ function chooseBuilding(buildingId: string) {
                 </button>
                 <span v-if="maxAffordableCount > 0" class="ps-buy-badge" aria-hidden="true">{{ maxAffordableCount }}</span>
               </div>
-            </div>
-
-            <!-- Name + HP unit — kept large at the stage's bottom. -->
-            <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
-              <div class="ps-planet-role-label">{{ activeRoleName }}</div>
-              <div
-                v-if="activeSlot.maxHp > 0"
-                class="ps-planet-hp"
-                :class="`ps-planet-hp--${activeHpTier}`"
-              >
-                <div class="ps-planet-hp-text">
-                  <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
-                  <span class="ps-hp-pct">{{ Math.round(hpPercent) }}%</span>
-                </div>
-                <div class="ps-hp-bar-track">
-                  <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }">
-                    <span class="ps-hp-bar-shine" aria-hidden="true" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Distributed HUD · top-left: level medallion + config chip -->
-          <div class="ps-hud ps-hud--tl" :style="{ '--rc': activeRoleColor }">
-            <div class="ps-level-chip">
-              <span class="ps-level-chip-label">Level</span>
-              <span class="ps-level-chip-value">{{ activeSlot.level }}</span>
-            </div>
-            <button
-              v-if="isConfigurableRole && configChip"
-              class="ps-config-chip"
-              @click="configPickerOpen = !configPickerOpen"
-            >
-              <span class="ps-config-chip-verb">{{ configChip.verb }}:</span>
-              <img v-if="configChip.icon" :src="configChip.icon" class="ps-config-chip-icon" alt="" />
-              <span class="ps-config-chip-name">{{ configChip.name }}</span>
-              <span class="ps-config-chip-caret">▾</span>
-            </button>
-          </div>
-
-          <!-- Distributed HUD · top-right: effect + Max-HP stat cards -->
-          <div class="ps-hud ps-hud--tr" :style="{ '--rc': activeRoleColor }">
-            <div class="ps-stat-card">
-              <span class="ps-stat-label">Effect</span>
-              <span class="ps-stat-vals">
-                <span class="ps-stat-now">{{ activeSlotBonusText }}</span>
-                <span class="ps-stat-arrow">→</span>
-                <span class="ps-stat-next">{{ nextBonusText }}</span>
-              </span>
-              <span v-if="maxAffordableCount > 0" class="ps-stat-gain">after +{{ maxAffordableCount }}</span>
-            </div>
-            <div class="ps-stat-card">
-              <span class="ps-stat-label">Max HP</span>
-              <span class="ps-stat-vals">
-                <span class="ps-stat-now">{{ currentMaxHp }}</span>
-                <span class="ps-stat-arrow">→</span>
-                <span class="ps-stat-next">{{ nextMaxHp }}</span>
-              </span>
             </div>
           </div>
 
@@ -810,143 +816,195 @@ function chooseBuilding(buildingId: string) {
   border-radius: 3px;
 }
 
-/* ── Panel-less layout: centered stage + distributed HUD chips ──────────────── */
-/* Corner HUD clusters float over the cosmic stage. The container ignores pointer
-   events so it never blocks the stage; only its interactive children opt back in.
-   Semi-transparent flat fills (no blur) let the starfield read through. */
-.ps-hud {
-  position: absolute;
-  z-index: 5;
+/* ── Level crown — big, modern level readout centered above the sun ─────────── */
+/* Its own flex band with the same weight as the balancing gap below the sun, so
+   the sun stays vertically centered between the crown and the bottom cluster. */
+.ps-crown-band {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: clamp(6px, 0.9vh, 11px);
-  pointer-events: none;
+  align-items: center;
+  justify-content: center;
 }
 
-.ps-hud > * {
-  pointer-events: auto;
+.ps-crown {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(10px, 1.4vw, 22px);
 }
 
-.ps-hud--tl {
-  top: clamp(12px, 2vh, 24px);
-  left: clamp(12px, 1vw, 24px);
-  align-items: flex-start;
+/* Flanking accent rules in the role color — echo the name label's framed look */
+.ps-crown-rule {
+  width: clamp(28px, 6vw, 74px);
+  height: 2px;
+  border-radius: 2px;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--rc, #e8c040) 50%, transparent);
 }
 
-.ps-hud--tr {
-  top: clamp(12px, 2vh, 24px);
-  right: clamp(12px, 1vw, 24px);
-  align-items: flex-end;
+.ps-crown-rule--l {
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--rc, #e8c040) 85%, transparent)
+  );
 }
 
-/* Level medallion — compact gold-accented chip */
-.ps-level-chip {
+.ps-crown-rule--r {
+  background: linear-gradient(
+    to left,
+    transparent,
+    color-mix(in srgb, var(--rc, #e8c040) 85%, transparent)
+  );
+}
+
+.ps-crown-core {
   display: inline-flex;
   align-items: baseline;
-  gap: 7px;
-  padding: clamp(5px, 0.7vh, 9px) clamp(10px, 0.8vw, 15px);
-  background: rgba(20, 17, 10, 0.82);
-  border: 1px solid #5c3310;
-  border-radius: 5px;
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(232, 192, 64, 0.12);
+  gap: clamp(8px, 0.8vw, 14px);
 }
 
-.ps-level-chip-label {
-  font-size: clamp(0.6rem, 1vh, 0.76rem);
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.ps-level-chip-value {
-  font-size: clamp(1.4rem, 2.4vh, 2rem);
+.ps-crown-label {
+  font-size: clamp(0.72rem, 1.2vh, 0.95rem);
   font-weight: 800;
-  line-height: 0.9;
-  color: #e8c040;
-  text-shadow: 0 0 12px rgba(232, 192, 64, 0.4);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ps-crown-value {
+  font-size: clamp(2.4rem, 5.4vh, 4rem);
+  font-weight: 900;
+  line-height: 0.85;
+  color: var(--rc, #e8c040);
+  text-shadow:
+    0 0 22px color-mix(in srgb, var(--rc, #e8c040) 55%, transparent),
+    0 2px 6px rgba(0, 0, 0, 0.7);
   font-variant-numeric: tabular-nums;
 }
 
-/* Floating stat cards (Effect / Max HP) — right-aligned readouts */
-.ps-stat-card {
-  --rc: #e8c040;
-  min-width: clamp(150px, 15vw, 210px);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: clamp(6px, 0.8vh, 10px) clamp(10px, 0.8vw, 14px);
-  background: rgba(20, 17, 10, 0.82);
-  border: 1px solid #3a2a10;
-  border-radius: 5px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-  text-align: right;
+/* Crown fade — plays when the jungle-buff banner claims the top-center spot */
+.ps-crown-fade-enter-active,
+.ps-crown-fade-leave-active {
+  transition:
+    opacity 240ms ease,
+    transform 240ms ease;
 }
 
-.ps-stat-label {
+.ps-crown-fade-enter-from,
+.ps-crown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+}
+
+/* ── Action dock — info cluster + Level-Up CTA bundled at the stage bottom ───── */
+.ps-action-dock {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(8px, 1.1vh, 14px);
+  margin-top: clamp(6px, 1vh, 14px);
+}
+
+/* Row of modern stat pills — effect preview, max hp, config chip. Wraps cleanly
+   on narrow panels; centered so it reads as one unit above the button. */
+.ps-dock-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: clamp(6px, 0.8vw, 12px);
+}
+
+.ps-info-pill {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: clamp(6px, 0.8vh, 10px) clamp(10px, 0.9vw, 15px);
+  background: rgba(20, 17, 10, 0.86);
+  border: 1px solid #3a2a10;
+  border-radius: 5px;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(232, 192, 64, 0.1);
+}
+
+.ps-info-label {
   font-size: clamp(0.6rem, 0.95vh, 0.74rem);
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.5);
 }
 
-.ps-stat-vals {
+.ps-info-vals {
   display: inline-flex;
   align-items: baseline;
-  justify-content: flex-end;
-  gap: 6px;
-  font-size: clamp(0.95rem, 1.6vh, 1.25rem);
+  gap: 7px;
+  font-size: clamp(0.98rem, 1.7vh, 1.3rem);
   font-weight: 800;
   line-height: 1.1;
   flex-wrap: wrap;
 }
 
-.ps-stat-now {
+.ps-info-now {
   color: #e2d6ab;
 }
 
-.ps-stat-arrow {
+.ps-info-arrow {
   color: var(--rc, #e8c040);
   font-weight: 900;
 }
 
-.ps-stat-next {
+.ps-info-next {
   color: var(--rc, #e8c040);
   text-shadow: 0 0 8px color-mix(in srgb, var(--rc, #e8c040) 45%, transparent);
 }
 
-.ps-stat-gain {
-  font-size: clamp(0.6rem, 0.9vh, 0.74rem);
+.ps-info-gain {
+  font-size: clamp(0.58rem, 0.85vh, 0.72rem);
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.42);
 }
 
-/* Level-Up hero wrapper — centered inside its band. Enlarged CTA. (Reuses
-   .ps-dock-buy for the badge + hover-fade behaviour.) Descendant selector beats
-   .ps-dock-buy's `margin-left: auto` (defined later) that would else shove it
-   right; the band already centers it, so margins are just zeroed. */
-.ps-hero-band .ps-hero-buy {
+/* Config chip sits as a pill sibling in the dock row */
+.ps-dock-info .ps-config-chip {
+  flex: 1 1 200px;
+  justify-content: center;
+}
+
+/* Level-Up CTA — enlarged, centered under the info row. (Reuses .ps-dock-buy for
+   the badge + hover-fade behaviour.) The descendant selector beats .ps-dock-buy's
+   `margin-left: auto`, so the button centers instead of sticking right. */
+.ps-action-dock .ps-hero-buy {
   position: relative;
-  margin: 0;
+  margin: 0 auto;
   min-width: 0;
-  width: clamp(260px, 30vw, 400px);
+  width: 100%;
+  max-width: 440px;
 }
 
 .ps-hero-buy .ps-level-btn {
-  padding: clamp(0.6rem, 1.1vh, 0.95rem) 0.9rem clamp(0.55rem, 1vh, 0.85rem);
+  padding: clamp(0.55rem, 1vh, 0.9rem) 0.9rem clamp(0.5rem, 0.9vh, 0.8rem);
 }
 
 .ps-hero-buy .ps-level-btn-main {
-  font-size: clamp(1.2rem, 2vh, 1.65rem);
+  font-size: clamp(1.15rem, 1.9vh, 1.6rem);
 }
 
 .ps-hero-buy .ps-level-btn-cost {
-  font-size: clamp(1rem, 1.55vh, 1.25rem);
+  font-size: clamp(1rem, 1.5vh, 1.22rem);
 }
 
 .ps-hero-buy .ps-level-chime {
@@ -1436,24 +1494,11 @@ function chooseBuilding(buildingId: string) {
   container-type: size;
 }
 
-/* Empty spacer above the sun — same flex weight as the hero band, so the sun
-   ends up vertically centered in the stage. */
-.ps-topspacer {
+/* Balancing gap below the sun — same flex weight as the crown band above it, so
+   the sun stays vertically centered between the crown and the bottom cluster. */
+.ps-hero-gap {
   flex: 1 1 0;
-  min-height: 0;
-}
-
-/* Dedicated band that vertically centers the Level-Up button in the gap between
-   the sun and the bottom name/HP unit (exact midpoint between the two). */
-.ps-hero-band {
-  position: relative;
-  z-index: 2;
-  flex: 1 1 0;
-  min-height: 0;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-height: clamp(6px, 1.5vh, 20px);
 }
 
 /* Big sun rendered in the CURRENT phase's colors (mirrors SunComponent palette) */
@@ -3112,6 +3157,28 @@ img.ps-role-icon {
   font-size: 12px;
   color: rgba(180, 130, 50, 0.5);
   letter-spacing: 0.05em;
+}
+
+/* ── Compact height (Full HD ~950px viewport) ───────────────────────────────── */
+/* Shrink the sun cap, crown and dock so crown + sun + name/HP + dock all fit the
+   flattest desktop viewport without overflow. 2K/4K keep the roomy defaults. */
+@media (max-height: 1100px) {
+  .ps-system {
+    height: min(var(--ps-sun-d, 340px), 46vh);
+  }
+
+  .ps-crown-value {
+    font-size: clamp(2rem, 4.6vh, 3rem);
+  }
+
+  .ps-action-dock {
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .ps-info-pill {
+    padding: 5px 11px;
+  }
 }
 
 /* ── Narrow-window fallback ─────────────────────────────────────────────────── */
