@@ -142,12 +142,12 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
 export const PLANET_ROLES_LIST: PlanetRole[] = Object.values(PLANET_ROLES)
 
 export const JUNGLE_BUFF_DEFS: Record<PlanetRoleType, JungleBuffDef> = {
-  turret_planet:    { name: 'Mark of the Hunter',   multiplier: 2.5, durationMs: 15_000 },
-  harvest_node:     { name: "Scavenger's Blessing",  multiplier: 3.0, durationMs: 12_000 },
-  expedition_relay: { name: 'Warp Trail',            multiplier: 2.0, durationMs: 20_000 },
-  shield_barrier:   { name: 'Aegis Pulse',           multiplier: 1.5, durationMs: 15_000 },
-  time_capsule:     { name: 'Temporal Rift',         multiplier: 2.0, durationMs: 30_000 },
-  resonance_tower:  { name: 'Resonant Smite',        multiplier: 2.0, durationMs: 18_000 },
+  turret_planet: { name: 'Mark of the Hunter', multiplier: 2.5, durationMs: 15_000 },
+  harvest_node: { name: "Scavenger's Blessing", multiplier: 3.0, durationMs: 12_000 },
+  expedition_relay: { name: 'Warp Trail', multiplier: 2.0, durationMs: 20_000 },
+  shield_barrier: { name: 'Aegis Pulse', multiplier: 1.5, durationMs: 15_000 },
+  time_capsule: { name: 'Temporal Rift', multiplier: 2.0, durationMs: 30_000 },
+  resonance_tower: { name: 'Resonant Smite', multiplier: 2.0, durationMs: 18_000 },
 }
 
 // ── Attunement (per-planet leveling) helpers ───────────────────────────────
@@ -160,9 +160,7 @@ export function planetMilestoneCount(level: number): number {
 
 export function planetLevelBonusMultiplier(level: number): number {
   return (
-    1 +
-    (level - 1) * PLANET_LEVEL_BONUS_PCT +
-    planetMilestoneCount(level) * PLANET_MILESTONE_BONUS
+    1 + (level - 1) * PLANET_LEVEL_BONUS_PCT + planetMilestoneCount(level) * PLANET_MILESTONE_BONUS
   )
 }
 
@@ -266,10 +264,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
      *  feuern nicht (Kampf passiert nur im Vordergrund). */
     foregroundAutoAttackDPS(state): number {
       return state.slots
-        .filter(
-          (s) =>
-            s.purchased && s.role === 'turret_planet' && playerSlotInForeground(s.id),
-        )
+        .filter((s) => s.purchased && s.role === 'turret_planet' && playerSlotInForeground(s.id))
         .reduce((sum, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
           return (
@@ -321,9 +316,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
           return (
             prod *
             (1 +
-              PLANET_ROLES.time_capsule.bonusPerSlot *
-                planetLevelBonusMultiplier(slot.level) *
-                mul)
+              PLANET_ROLES.time_capsule.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul)
           )
         }, 1)
     },
@@ -343,6 +336,13 @@ export const usePlanetShopStore = defineStore('planetShop', {
         }
       }
       return result
+    },
+
+    /** Purchased, role-assigned slots whose next level is affordable right now
+     *  (Sun-Phase met + enough Chimes). Drives the planet-tab notify badges
+     *  (header tab badge + footer Level-Up badge). */
+    affordableUpgradeCount(): number {
+      return this.slots.filter((s) => s.purchased && !!s.role && this.canLevelUpPlanet(s.id)).length
     },
   },
 
@@ -400,7 +400,8 @@ export const usePlanetShopStore = defineStore('planetShop', {
     planetLevelUpBlockReason(slotId: string): 'phase' | 'chimes' | null {
       const slot = this.getSlot(slotId)
       if (!slot || !slot.purchased) return 'phase'
-      if (useSolarUpgradeStore().starPhase < this.getPlanetLevelRequiredPhase(slotId)) return 'phase'
+      if (useSolarUpgradeStore().starPhase < this.getPlanetLevelRequiredPhase(slotId))
+        return 'phase'
       if (useGameStore().chimes < planetLevelUpCost(slot)) return 'chimes'
       return null
     },

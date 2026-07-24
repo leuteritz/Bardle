@@ -656,6 +656,9 @@ function chooseBuilding(buildingId: string) {
                   </template>
                 </span>
               </button>
+              <!-- Notify badge: pulses over the button while a level-up is
+                   affordable, fades away as soon as the button is hovered. -->
+              <span v-if="maxAffordableCount > 0" class="ps-buy-badge" aria-hidden="true">✦</span>
             </div>
           </div>
 
@@ -1465,6 +1468,7 @@ function chooseBuilding(buildingId: string) {
 
 /* Zone 3: Max button — vertically centered in the footer band */
 .ps-dock-buy {
+  position: relative;
   flex-shrink: 0;
   margin-left: auto;
   display: flex;
@@ -1473,6 +1477,59 @@ function chooseBuilding(buildingId: string) {
   justify-content: center;
   gap: 0.25rem;
   min-width: 190px;
+}
+
+/* Footer notify badge — pulses over the Level-Up button while an upgrade is
+   affordable, and steps aside (fades) the moment the button is hovered. */
+.ps-buy-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 5;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  color: #06301f;
+  background: linear-gradient(135deg, #34d399, #059669);
+  border: 1.5px solid #6ee7b7;
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.7);
+  pointer-events: none;
+  animation: ps-buy-badge-pulse 1.6s ease-in-out infinite;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.ps-dock-buy:hover .ps-buy-badge {
+  opacity: 0;
+  animation: none;
+}
+
+@keyframes ps-buy-badge-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 5px rgba(52, 211, 153, 0.5);
+  }
+  50% {
+    transform: scale(1.18);
+    box-shadow:
+      0 0 12px rgba(52, 211, 153, 0.95),
+      0 0 20px rgba(5, 150, 105, 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-buy-badge {
+    animation: none;
+  }
 }
 
 /* Star-fight return CTA overlays the dock — offset so its center lands on the

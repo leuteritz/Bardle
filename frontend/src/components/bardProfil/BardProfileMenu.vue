@@ -7,6 +7,7 @@ import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
+import { usePlanetShopStore } from '@/stores/planetShopStore'
 import type { BardTabId } from '@/stores/uiStore'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
@@ -23,6 +24,7 @@ const expeditionStore = useExpeditionStore()
 const battleStore = useBattleStore()
 const solarStore = useSolarUpgradeStore()
 const meepTreeStore = useMeepTreeStore()
+const planetShopStore = usePlanetShopStore()
 const { newlyUnlockedChampions } = storeToRefs(battleStore)
 
 const expeditionBadgeCount = computed(
@@ -31,6 +33,8 @@ const expeditionBadgeCount = computed(
 const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
 const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
 const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
+// Planet tab: number of planet slots whose next level is affordable right now.
+const planetBadgeCount = computed(() => planetShopStore.affordableUpgradeCount)
 
 const menuItems: {
   id: BardTabId
@@ -120,6 +124,12 @@ watch(
                 </div>
                 <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
                   <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
+                </div>
+                <div v-if="item.id === 'planets' && planetBadgeCount > 0" class="team-badge-row">
+                  <span
+                    class="mini-badge mini-badge--planet"
+                    :title="`${planetBadgeCount} planet ${planetBadgeCount === 1 ? 'upgrade' : 'upgrades'} ready — level up your orbit slots`"
+                  >{{ planetBadgeCount }}</span>
                 </div>
               </button>
             </div>
@@ -238,6 +248,14 @@ watch(
   --tb-glow-a: rgba(6, 182, 212, 0.5);
   --tb-glow-b: rgba(6, 182, 212, 0.9);
   --tb-glow-c: rgba(8, 145, 178, 0.4);
+}
+
+.mini-badge--planet {
+  background: linear-gradient(135deg, #34d399, #059669);
+  border: 1.5px solid #6ee7b7;
+  --tb-glow-a: rgba(52, 211, 153, 0.5);
+  --tb-glow-b: rgba(52, 211, 153, 0.9);
+  --tb-glow-c: rgba(5, 150, 105, 0.45);
 }
 
 @keyframes team-badge-pulse {
