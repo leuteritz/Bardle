@@ -1281,10 +1281,11 @@ function chooseBuilding(buildingId: string) {
 .ps-planet-readout {
   --rc: #e8c040;
   width: 100%;
+  margin-top: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.05rem;
 }
 
 /* ── Config target chip ────────────────────────────────────────────────────── */
