@@ -464,6 +464,33 @@ function chooseBuilding(buildingId: string) {
       <div class="ps-detail" :style="sunPhaseStyle">
         <!-- shared cosmic backdrop (same starfield as Shop / Team / Skill Tree) -->
         <CosmicStageBackground />
+
+        <!-- Jungle-buff takeover: while the selected slot is buffed the whole
+             detail panel is rimmed with an animated emerald veil and a bold,
+             centered banner reads out the active buff + remaining duration. -->
+        <Transition name="ps-buff-veil">
+          <div
+            v-if="activeSlot?.jungleBuff?.active"
+            class="ps-buff-overlay"
+            aria-hidden="true"
+          >
+            <span class="ps-buff-veil-edge" />
+            <div class="ps-buff-banner">
+              <span class="ps-buff-banner-emblem">
+                <img class="ps-buff-banner-leaf" src="/img/roles/jungle.png" alt="" />
+              </span>
+              <div class="ps-buff-banner-text">
+                <span class="ps-buff-banner-kicker">Jungle Buff</span>
+                <span class="ps-buff-banner-name">{{ activeSlot.jungleBuff.buffType }}</span>
+                <span class="ps-buff-banner-mult">×{{ activeSlot.jungleBuff.multiplier }} power</span>
+              </div>
+              <div class="ps-buff-banner-timer">
+                <span class="ps-buff-banner-secs">{{ jungleBuffSecsLeft }}</span>
+                <span class="ps-buff-banner-unit">sec left</span>
+              </div>
+            </div>
+          </div>
+        </Transition>
         <!-- Locked slot -->
         <div v-if="activeSlot && !activeSlot.purchased" class="ps-locked-panel">
           <span class="ps-locked-panel-icon">
@@ -611,15 +638,6 @@ function chooseBuilding(buildingId: string) {
               </div>
             </div>
 
-            <!-- Jungle buff — compact in-place badge, top-right corner (no layout shift) -->
-            <Transition name="ps-buff-pop">
-              <div v-if="activeSlot.jungleBuff?.active" class="ps-jungle-buff-chip">
-                <img class="ps-jungle-buff-leaf" src="/img/roles/jungle.png" alt="Jungle buff" />
-                <span class="ps-jungle-buff-name">{{ activeSlot.jungleBuff.buffType }}</span>
-                <span class="ps-jungle-buff-mult">×{{ activeSlot.jungleBuff.multiplier }}</span>
-                <span class="ps-jungle-buff-timer">{{ jungleBuffSecsLeft }}s</span>
-              </div>
-            </Transition>
           </div>
 
           <!-- Upgrade dock: one slim bar — level/rank, effect preview, Max buy.
@@ -2197,59 +2215,179 @@ img.ps-role-icon {
   );
 }
 
-/* ── Jungle Buff — compact in-place chip (top-right of stage) ───────────────── */
-/* Absolutely positioned so showing/hiding the buff never shifts the stage or the
-   upgrade panel below it. */
-.ps-jungle-buff-chip {
+/* ── Jungle Buff — full-panel takeover (edge veil + centered banner) ─────────── */
+/* Overlay fills the whole detail panel but never eats clicks: pointer-events are
+   off, so the upgrade dock underneath stays fully usable. */
+.ps-buff-overlay {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 4;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* Emerald rim veil — dense at the border, fully transparent through the middle
+   so the sun + orbiting planet read cleanly. A pulsing inset glow + a soft edge
+   wash sell the "charged" state. */
+.ps-buff-veil-edge {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #5ce66a;
+  background: radial-gradient(
+    118% 92% at 50% 50%,
+    transparent 52%,
+    rgba(92, 230, 106, 0.06) 74%,
+    rgba(92, 230, 106, 0.16) 90%,
+    rgba(92, 230, 106, 0.28) 100%
+  );
+  box-shadow:
+    inset 0 0 6px 1px rgba(92, 230, 106, 0.4),
+    inset 0 0 55px 8px rgba(92, 230, 106, 0.16),
+    inset 0 0 120px 26px rgba(92, 230, 106, 0.1);
+  animation: ps-buff-veil-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes ps-buff-veil-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Centered top banner — bold, high-contrast, readable across every desktop res. */
+.ps-buff-banner {
+  position: absolute;
+  top: clamp(12px, 2.4vh, 26px);
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px 7px 9px;
-  background: #0c1209;
-  border: 1px solid #3a8040;
-  border-radius: 4px;
+  gap: clamp(10px, 1vw, 16px);
+  padding: clamp(7px, 0.9vh, 12px) clamp(14px, 1.1vw, 22px) clamp(7px, 0.9vh, 12px)
+    clamp(9px, 0.8vw, 14px);
+  background: linear-gradient(135deg, #163d20 0%, #0a1a0e 100%);
+  border: 2px solid #5ce66a;
+  border-radius: 5px;
   box-shadow:
-    0 0 10px #5ce66a44,
-    inset 0 0 6px #5ce66a14;
-  animation: ps-buff-pulse 1.8s ease-in-out infinite;
-}
-
-.ps-jungle-buff-leaf {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  image-rendering: auto;
-  filter: drop-shadow(0 0 4px #5ce66a88);
-}
-
-.ps-jungle-buff-name {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #a0e880;
-  letter-spacing: 0.03em;
+    0 6px 22px rgba(0, 0, 0, 0.6),
+    0 0 22px rgba(92, 230, 106, 0.4),
+    inset 0 1px 0 rgba(160, 240, 128, 0.35);
   white-space: nowrap;
 }
 
-.ps-jungle-buff-mult {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #5ce66a;
-  text-shadow: 0 0 8px #5ce66a66;
+/* Framed leaf emblem */
+.ps-buff-banner-emblem {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: clamp(38px, 4.4vh, 56px);
+  height: clamp(38px, 4.4vh, 56px);
+  background: radial-gradient(circle at 50% 36%, #1e4425 0%, #0a180d 100%);
+  border: 1px solid #5ce66a;
+  border-radius: 5px;
+  box-shadow: inset 0 0 10px rgba(92, 230, 106, 0.35);
 }
 
-.ps-jungle-buff-timer {
-  font-size: 0.82rem;
+.ps-buff-banner-leaf {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 5px rgba(92, 230, 106, 0.8));
+}
+
+.ps-buff-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.1;
+}
+
+.ps-buff-banner-kicker {
+  font-size: clamp(0.6rem, 1.1vh, 0.78rem);
   font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7fdc8f;
+}
+
+.ps-buff-banner-name {
+  font-size: clamp(1.05rem, 2vh, 1.55rem);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  color: #eafff0;
+  text-shadow: 0 0 10px rgba(92, 230, 106, 0.55);
+}
+
+.ps-buff-banner-mult {
+  font-size: clamp(0.72rem, 1.25vh, 0.92rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
   color: #5ce66a;
-  background: #162a1a;
+}
+
+/* Big countdown block — the "how long is left" the request calls out. */
+.ps-buff-banner-timer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: clamp(52px, 5vw, 76px);
+  margin-left: clamp(2px, 0.4vw, 8px);
+  padding: clamp(3px, 0.5vh, 7px) clamp(8px, 0.7vw, 12px);
+  background: rgba(6, 20, 10, 0.72);
   border: 1px solid #3a8040;
-  border-radius: 3px;
-  padding: 1px 6px;
-  line-height: 20px;
+  border-radius: 5px;
+}
+
+.ps-buff-banner-secs {
+  font-size: clamp(1.35rem, 2.9vh, 2.1rem);
+  font-weight: 900;
+  line-height: 1;
+  color: #6ee7b7;
+  text-shadow: 0 0 12px rgba(92, 230, 106, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+.ps-buff-banner-unit {
+  margin-top: 2px;
+  font-size: clamp(0.56rem, 1vh, 0.72rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8fd8a0;
+}
+
+/* Veil + banner enter/leave */
+.ps-buff-veil-enter-active,
+.ps-buff-veil-leave-active {
+  transition: opacity 260ms ease;
+}
+
+.ps-buff-veil-enter-active .ps-buff-banner,
+.ps-buff-veil-leave-active .ps-buff-banner {
+  transition:
+    opacity 260ms ease,
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ps-buff-veil-enter-from,
+.ps-buff-veil-leave-to {
+  opacity: 0;
+}
+
+.ps-buff-veil-enter-from .ps-buff-banner,
+.ps-buff-veil-leave-to .ps-buff-banner {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px) scale(0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-buff-veil-edge {
+    animation: none;
+  }
 }
 
 /* Pulsing green glow on the orbiting planet itself — follows it on its path. */
@@ -2283,19 +2421,6 @@ img.ps-role-icon {
 }
 
 /* Stage chip enter/leave */
-.ps-buff-pop-enter-active,
-.ps-buff-pop-leave-active {
-  transition:
-    opacity 220ms ease,
-    transform 220ms ease;
-}
-
-.ps-buff-pop-enter-from,
-.ps-buff-pop-leave-to {
-  opacity: 0;
-  transform: translateY(-6px) scale(0.9);
-}
-
 /* ── Config-Sektion ────────────────────────────────────────────────────────── */
 /* ── Config picker popover ─────────────────────────────────────────────────── */
 .ps-pop-scrim {
