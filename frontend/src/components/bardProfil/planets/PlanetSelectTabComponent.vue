@@ -595,9 +595,10 @@ function chooseBuilding(buildingId: string) {
               </Transition>
             </div>
 
-            <!-- Bottom-center hero: big Level-Up sits BETWEEN the sun and the
-                 name/HP unit (name still reads as the HP bar's title). -->
-            <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
+            <!-- Level-Up hero — its own flex band so the button centers VERTICALLY
+                 in the gap between the sun and the name/HP unit (not glued to the
+                 title). -->
+            <div class="ps-hero-band">
               <div class="ps-dock-buy ps-hero-buy">
                 <button
                   class="ps-level-btn"
@@ -625,7 +626,10 @@ function chooseBuilding(buildingId: string) {
                 </button>
                 <span v-if="maxAffordableCount > 0" class="ps-buy-badge" aria-hidden="true">{{ maxAffordableCount }}</span>
               </div>
+            </div>
 
+            <!-- Name + HP unit — kept large at the stage's bottom. -->
+            <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
               <div class="ps-planet-role-label">{{ activeRoleName }}</div>
               <div
                 v-if="activeSlot.maxHp > 0"
@@ -919,16 +923,15 @@ function chooseBuilding(buildingId: string) {
   color: rgba(255, 255, 255, 0.45);
 }
 
-/* Level-Up hero wrapper — sits between the sun and the name/HP unit, centered.
-   Enlarged CTA. (Reuses .ps-dock-buy for the badge + hover-fade behaviour.)
-   Descendant selector needed so these horizontal margins beat .ps-dock-buy's
-   `margin-left: auto` (defined later in the file) that would else shove it right. */
-.ps-planet-readout .ps-hero-buy {
+/* Level-Up hero wrapper — centered inside its band. Enlarged CTA. (Reuses
+   .ps-dock-buy for the badge + hover-fade behaviour.) Descendant selector beats
+   .ps-dock-buy's `margin-left: auto` (defined later) that would else shove it
+   right; the band already centers it, so margins are just zeroed. */
+.ps-hero-band .ps-hero-buy {
   position: relative;
-  margin: 0 auto clamp(0.5rem, 1.1vh, 0.9rem);
+  margin: 0;
   min-width: 0;
   width: clamp(260px, 30vw, 400px);
-  align-self: center;
 }
 
 .ps-hero-buy .ps-level-btn {
@@ -1421,9 +1424,24 @@ function chooseBuilding(buildingId: string) {
   position: relative;
   z-index: 1;
   width: 100%;
-  flex: 1;
+  /* Shares the stage height with the hero band below (2:1) so the Level-Up
+     button gets its own centered zone without starving the sun. */
+  flex: 2 1 0;
   min-height: 160px;
   container-type: size;
+}
+
+/* Dedicated band that vertically centers the Level-Up button in the gap between
+   the sun system and the bottom name/HP unit. */
+.ps-hero-band {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Big sun rendered in the CURRENT phase's colors (mirrors SunComponent palette) */
