@@ -550,35 +550,39 @@ function chooseBuilding(buildingId: string) {
               </Transition>
             </div>
 
-            <div class="ps-planet-role-label" :style="{ color: activeRoleColor }">
-              {{ activeRoleName }}
-            </div>
-
-            <!-- Config target chip (Harvester / Resonator only) -->
-            <button
-              v-if="isConfigurableRole && configChip"
-              class="ps-config-chip"
-              @click="configPickerOpen = !configPickerOpen"
-            >
-              <span class="ps-config-chip-verb">{{ configChip.verb }}:</span>
-              <img v-if="configChip.icon" :src="configChip.icon" class="ps-config-chip-icon" alt="" />
-              <span class="ps-config-chip-name">{{ configChip.name }}</span>
-              <span class="ps-config-chip-caret">▾</span>
-            </button>
-
-            <!-- HP -->
-            <div
-              v-if="activeSlot.maxHp > 0"
-              class="ps-planet-hp"
-              :class="`ps-planet-hp--${activeHpTier}`"
-            >
-              <div class="ps-planet-hp-text">
-                <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
-                <span class="ps-hp-pct">{{ Math.round(hpPercent) }}%</span>
+            <!-- Readout: planet-type name sits directly on top of its HP bar as
+                 one tight unit (name → optional config chip → HP). -->
+            <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
+              <div class="ps-planet-role-label">
+                {{ activeRoleName }}
               </div>
-              <div class="ps-hp-bar-track">
-                <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }">
-                  <span class="ps-hp-bar-shine" aria-hidden="true" />
+
+              <!-- Config target chip (Harvester / Resonator only) -->
+              <button
+                v-if="isConfigurableRole && configChip"
+                class="ps-config-chip"
+                @click="configPickerOpen = !configPickerOpen"
+              >
+                <span class="ps-config-chip-verb">{{ configChip.verb }}:</span>
+                <img v-if="configChip.icon" :src="configChip.icon" class="ps-config-chip-icon" alt="" />
+                <span class="ps-config-chip-name">{{ configChip.name }}</span>
+                <span class="ps-config-chip-caret">▾</span>
+              </button>
+
+              <!-- HP -->
+              <div
+                v-if="activeSlot.maxHp > 0"
+                class="ps-planet-hp"
+                :class="`ps-planet-hp--${activeHpTier}`"
+              >
+                <div class="ps-planet-hp-text">
+                  <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
+                  <span class="ps-hp-pct">{{ Math.round(hpPercent) }}%</span>
+                </div>
+                <div class="ps-hp-bar-track">
+                  <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }">
+                    <span class="ps-hp-bar-shine" aria-hidden="true" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1267,12 +1271,20 @@ function chooseBuilding(buildingId: string) {
   }
 }
 
-/* Role label / chip / hp sit above the backdrop, below the system */
-.ps-stage > .ps-planet-role-label,
-.ps-stage > .ps-config-chip,
-.ps-stage > .ps-planet-hp {
+/* Readout (name + chip + hp) sits above the backdrop, below the system */
+.ps-stage > .ps-planet-readout {
   position: relative;
   z-index: 1;
+}
+
+/* Name + HP form one tight unit — the type name reads as the HP bar's title */
+.ps-planet-readout {
+  --rc: #e8c040;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 /* ── Config target chip ────────────────────────────────────────────────────── */
@@ -1922,16 +1934,45 @@ img.ps-role-icon {
   filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.55));
 }
 
-/* ── Rollenname ────────────────────────────────────────────────────────────── */
+/* ── Rollenname (planet-type title above the HP bar) ───────────────────────── */
 .ps-planet-role-label {
-  font-size: 1.05rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: clamp(1.5rem, 2.4vw, 2.1rem);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-align: center;
   text-transform: uppercase;
-  text-shadow: 0 0 14px currentColor;
-  min-height: 1.2em;
-  width: 100%;
+  line-height: 1;
+  color: var(--rc, #e8c040);
+  text-shadow:
+    0 0 18px color-mix(in srgb, var(--rc, #e8c040) 55%, transparent),
+    0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Flanking accent rules on either side of the name → framed, modern title */
+.ps-planet-role-label::before,
+.ps-planet-role-label::after {
+  content: '';
+  width: clamp(24px, 5vw, 60px);
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--rc, #e8c040) 80%, transparent)
+  );
+  box-shadow: 0 0 8px color-mix(in srgb, var(--rc, #e8c040) 45%, transparent);
+}
+
+/* Right rule mirrors the gradient direction */
+.ps-planet-role-label::after {
+  background: linear-gradient(
+    to left,
+    transparent,
+    color-mix(in srgb, var(--rc, #e8c040) 80%, transparent)
+  );
 }
 
 /* ── Jungle Buff — compact in-place chip (top-right of stage) ───────────────── */
