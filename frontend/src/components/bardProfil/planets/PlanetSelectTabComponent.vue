@@ -650,6 +650,17 @@ function chooseBuilding(buildingId: string) {
             <div class="ps-readout-band">
               <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
                 <div class="ps-planet-role-label">{{ activeRoleName }}</div>
+
+                <!-- Permanent planet effect — always visible. Its value flips to the
+                     post-upgrade value (in confirm-green) while the button is hovered. -->
+                <div
+                  class="ps-planet-effect"
+                  :class="{ 'ps-planet-effect--preview': previewHover }"
+                >
+                  <span class="ps-planet-effect-label">Effect</span>
+                  <span class="ps-planet-effect-value">{{ previewHover ? nextBonusText : activeSlotBonusText }}</span>
+                </div>
+
                 <div
                   v-if="activeSlot.maxHp > 0"
                   class="ps-planet-hp"
@@ -678,30 +689,9 @@ function chooseBuilding(buildingId: string) {
             </div>
 
             <!-- Action dock — pinned to the stage bottom so the sun stays centered.
-                 The permanent info box is gone: hovering the button reveals the
-                 effect preview here and extends the HP bar above. -->
+                 Hovering the button previews the upgrade directly on the two
+                 permanent readouts above (effect value + HP bar) — no popover. -->
             <div class="ps-action-dock">
-              <Transition name="ps-hover-pop">
-                <div v-if="previewHover" class="ps-hover-preview" :style="{ '--rc': activeRoleColor }">
-                  <div class="ps-hover-row">
-                    <span class="ps-hover-label">Effect</span>
-                    <span class="ps-hover-vals">
-                      <span class="ps-hover-now">{{ activeSlotBonusText }}</span>
-                      <span class="ps-hover-arrow">→</span>
-                      <span class="ps-hover-next">{{ nextBonusText }}</span>
-                    </span>
-                  </div>
-                  <div class="ps-hover-row">
-                    <span class="ps-hover-label">Max HP</span>
-                    <span class="ps-hover-vals">
-                      <span class="ps-hover-now">{{ currentMaxHp }}</span>
-                      <span class="ps-hover-arrow">→</span>
-                      <span class="ps-hover-next">{{ nextMaxHp }}</span>
-                    </span>
-                  </div>
-                </div>
-              </Transition>
-
               <!-- Config chip stays as a small standalone control (not part of the
                    removed info box) — only for configurable roles. -->
               <button
@@ -957,8 +947,8 @@ function chooseBuilding(buildingId: string) {
 
 /* ── Action dock — Level-Up CTA pinned to the stage bottom ──────────────────── */
 /* Absolutely positioned so it never affects the flex centering above it: the sun
-   stays dead-center while the button floats at the bottom. The permanent info box
-   is gone — the effect preview only appears on hover (ps-hover-preview). */
+   stays dead-center while the button floats at the bottom. Hovering the button
+   previews the upgrade on the two permanent readouts (effect value + HP bar). */
 .ps-action-dock {
   position: absolute;
   left: 50%;
@@ -972,92 +962,6 @@ function chooseBuilding(buildingId: string) {
   flex-direction: column;
   align-items: center;
   gap: clamp(7px, 1vh, 12px);
-}
-
-/* Hover effect preview — floats above the button on hover, so nothing shifts and
-   the corners stay clean. A downward caret points at the button. */
-.ps-hover-preview {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 11px;
-  width: max-content;
-  max-width: min(90%, 460px);
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: clamp(9px, 1.1vh, 14px) clamp(13px, 1.1vw, 20px);
-  background: #16140e;
-  border: 2px solid color-mix(in srgb, var(--rc, #e8c040) 60%, #5c3310);
-  border-radius: 5px;
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.75),
-    0 0 18px color-mix(in srgb, var(--rc, #e8c040) 25%, transparent);
-  pointer-events: none;
-}
-
-.ps-hover-preview::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 7px solid transparent;
-  border-top-color: color-mix(in srgb, var(--rc, #e8c040) 60%, #5c3310);
-}
-
-.ps-hover-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: clamp(10px, 1vw, 22px);
-  white-space: nowrap;
-}
-
-.ps-hover-label {
-  font-size: clamp(0.62rem, 1vh, 0.76rem);
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.ps-hover-vals {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-  font-size: clamp(0.95rem, 1.6vh, 1.2rem);
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.ps-hover-now {
-  color: #e2d6ab;
-}
-
-.ps-hover-arrow {
-  color: var(--rc, #e8c040);
-  font-weight: 900;
-}
-
-.ps-hover-next {
-  color: var(--rc, #e8c040);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--rc, #e8c040) 45%, transparent);
-}
-
-/* Hover popover enter/leave */
-.ps-hover-pop-enter-active,
-.ps-hover-pop-leave-active {
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
-}
-
-.ps-hover-pop-enter-from,
-.ps-hover-pop-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(6px);
 }
 
 /* Config chip — small standalone control above the button (configurable roles) */
@@ -2569,6 +2473,53 @@ img.ps-role-icon {
     transparent,
     color-mix(in srgb, var(--rc, #e8c040) 80%, transparent)
   );
+}
+
+/* ── Permanent planet effect (between name and HP bar) ──────────────────────── */
+/* Always visible in the role color; on button hover the value flips to the
+   post-upgrade value in confirm-green (mirrors the HP bar's preview language). */
+.ps-planet-effect {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: clamp(5px, 0.9vh, 10px) 0 clamp(4px, 0.7vh, 8px);
+  padding: clamp(3px, 0.5vh, 6px) clamp(10px, 0.9vw, 14px);
+  background: rgba(20, 17, 10, 0.72);
+  border: 1px solid color-mix(in srgb, var(--rc, #e8c040) 40%, #3a2a10);
+  border-radius: 5px;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.ps-planet-effect-label {
+  font-size: clamp(0.6rem, 0.95vh, 0.74rem);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.ps-planet-effect-value {
+  font-size: clamp(1rem, 1.7vh, 1.3rem);
+  font-weight: 800;
+  color: var(--rc, #e8c040);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--rc, #e8c040) 40%, transparent);
+  font-variant-numeric: tabular-nums;
+  transition:
+    color 180ms ease,
+    text-shadow 180ms ease;
+}
+
+/* Preview: value + frame flip to confirm-green while the upgrade button is held */
+.ps-planet-effect--preview {
+  border-color: #5ce66a;
+  background: rgba(12, 26, 14, 0.72);
+}
+
+.ps-planet-effect--preview .ps-planet-effect-value {
+  color: #7cf089;
+  text-shadow: 0 0 10px rgba(92, 230, 106, 0.55);
 }
 
 /* ── Jungle Buff — full-panel takeover (edge veil + centered banner) ─────────── */
