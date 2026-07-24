@@ -504,7 +504,13 @@ function chooseBuilding(buildingId: string) {
 </script>
 
 <template>
-  <div class="ps-tab" :style="{ '--hp-seg': HP_BAR_SEGMENTS }">
+  <div class="ps-tab" :style="[{ '--hp-seg': HP_BAR_SEGMENTS }, sunPhaseStyle]">
+    <!-- ONE shared cosmic backdrop for the whole tab — rail and detail panel sit
+         on the same continuous starfield instead of two separate surfaces. The
+         phase vars live on this root, so the near stars carry the sun's tint
+         across both columns. -->
+    <CosmicStageBackground />
+
     <!-- Full-height split: left rail (6 slots) + right detail panel.
          No in-tab header — Chimes/CPS live permanently in the global app header. -->
     <div class="ps-split">
@@ -544,6 +550,12 @@ function chooseBuilding(buildingId: string) {
             class="ps-slot-notify"
             :aria-label="`${slotUpgradeCount(slot)} upgrade(s) affordable`"
           >{{ slotUpgradeCount(slot) }}</span>
+
+          <!-- Selection caret — a role-colored gem on the rail's inner edge that
+               points at the detail panel, so "which orbit am I looking at" reads
+               at a glance without a heavy 2px border swap (which would shift the
+               card's inner layout by a pixel). -->
+          <span v-if="selectedSlotId === slot.id" class="ps-slot-caret" aria-hidden="true" />
 
           <div class="ps-slot-icon">
             <template v-if="!slot.purchased">
@@ -613,13 +625,14 @@ function chooseBuilding(buildingId: string) {
         </button>
       </div>
 
-      <!-- RIGHT DETAIL ─────────────────────────────────────────────── -->
-      <!-- sunPhaseStyle on the wrapper: the shared backdrop's near stars
-           inherit the phase tint in EVERY detail state, not just the stage -->
-      <div class="ps-detail" :style="sunPhaseStyle">
-        <!-- shared cosmic backdrop (same starfield as Shop / Team / Skill Tree) -->
-        <CosmicStageBackground />
+      <!-- Gold seam — the only hard edge between rail and stage; replaces the old
+           opaque wooden border so the starfield reads as one surface behind it. -->
+      <span class="ps-rail-seam" aria-hidden="true" />
 
+      <!-- RIGHT DETAIL ─────────────────────────────────────────────── -->
+      <!-- sunPhaseStyle stays on the wrapper too: the stage's own children read
+           --ps-sun-d / --phase-* from here. -->
+      <div class="ps-detail" :style="sunPhaseStyle">
         <!-- Jungle-buff takeover: while the selected slot is buffed the whole
              detail panel is rimmed with an animated emerald veil and a bold,
              centered banner reads out the active buff + remaining duration. -->
@@ -1069,33 +1082,85 @@ function chooseBuilding(buildingId: string) {
 <style scoped>
 /* ── Root ──────────────────────────────────────────────────────────────────── */
 .ps-tab {
+  position: relative;
   height: 100%;
   overflow: hidden;
-  background: #111008;
+  /* Deep-space base for the shared starfield — one surface for the WHOLE tab,
+     rail included. Everything above it is layered with z-index. */
+  background: #0b0a06;
   display: flex;
   flex-direction: column;
 }
 
+/* Depth wash over the shared starfield: a warm bloom bleeding out of the sun's
+   side and a cold counter-tone in the far corner. Flat radial tints only — no
+   blur, no texture. */
+.ps-tab::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      110% 90% at 62% 42%,
+      color-mix(in srgb, var(--phase-glow, #ff8c42) 12%, transparent) 0%,
+      transparent 62%
+    ),
+    radial-gradient(80% 70% at 0% 100%, rgba(46, 34, 96, 0.22) 0%, transparent 64%),
+    radial-gradient(70% 60% at 4% 0%, rgba(92, 51, 16, 0.2) 0%, transparent 60%);
+}
+
 /* ── Split layout (full height, no header) ─────────────────────────────────── */
 .ps-split {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: 1;
   min-height: 0;
 }
 
-/* Left rail: 6 slots filling the full column height */
+/* Left rail: 6 slots filling the full column height. No opaque panel any more —
+   only a vertical scrim that damps the shared starfield just enough to keep the
+   labels readable, so rail and stage read as ONE space. Width is unchanged. */
 .ps-rail {
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
   width: clamp(210px, 16vw, 320px);
   display: flex;
   flex-direction: column;
   gap: clamp(6px, 0.8vh, 12px);
   padding: clamp(8px, 1vh, 14px);
-  background: #16120a;
-  border-right: 3px solid #5c3310;
+  background: linear-gradient(
+    to right,
+    rgba(9, 8, 5, 0.92) 0%,
+    rgba(13, 11, 7, 0.82) 55%,
+    rgba(9, 8, 5, 0.7) 100%
+  );
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
+}
+
+/* Vertical gold seam — same language as the modal goldline, turned 90°. Sits as
+   its own flex item so the rail can scroll without dragging it along. */
+.ps-rail-seam {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 3px;
+  align-self: stretch;
+  background: linear-gradient(
+    to bottom,
+    #5c3310,
+    #c89040 16%,
+    #e8c060 50%,
+    #c89040 84%,
+    #5c3310
+  );
+  box-shadow:
+    0 0 14px rgba(200, 144, 64, 0.35),
+    0 0 3px rgba(232, 192, 96, 0.6);
 }
 
 /* Right detail panel — column layout: stage (flexible, dominates) on top +
@@ -1103,6 +1168,7 @@ function chooseBuilding(buildingId: string) {
    the full remaining width AND height, so it stays the visual hero. */
 .ps-detail {
   position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -1478,11 +1544,17 @@ function chooseBuilding(buildingId: string) {
   align-items: center;
   gap: clamp(10px, 0.8vw, 18px);
   padding: clamp(8px, 1.2vh, 18px) clamp(10px, 0.8vw, 18px);
+  padding-left: clamp(15px, 1vw, 24px);
   min-width: 0;
   text-align: left;
-  background: linear-gradient(160deg, #17140d 0%, #100e08 100%);
-  border: 1px solid #2e1e0a;
+  /* Translucent card — the shared starfield keeps showing through, so the rail
+     never reads as a pasted-on panel. */
+  background: linear-gradient(150deg, rgba(32, 27, 17, 0.82) 0%, rgba(13, 11, 7, 0.88) 100%);
+  border: 1px solid #2e2416;
   border-radius: var(--bp-radius);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(232, 192, 64, 0.06);
   cursor: pointer;
   color: inherit;
   transition:
@@ -1492,31 +1564,84 @@ function chooseBuilding(buildingId: string) {
     transform 180ms ease;
 }
 
-/* Left color accent — lights up in the planet's role color on hover/active */
+/* Left accent rail — always present in the planet's role color (dim), so every
+   card carries its identity at rest and only intensifies on hover/active. */
 .ps-slot-btn::before {
   content: '';
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
-  background: var(--rc, transparent);
+  width: 4px;
+  background: var(--rc, #3a2c12);
   border-radius: var(--bp-radius) 0 0 var(--bp-radius);
-  opacity: 0;
-  transition: opacity 180ms ease;
+  opacity: 0.4;
+  transition:
+    opacity 180ms ease,
+    box-shadow 180ms ease;
   pointer-events: none;
 }
 
-.ps-slot-btn:hover::before,
+.ps-slot-btn:hover::before {
+  opacity: 0.8;
+}
+
 .ps-slot-btn--active::before {
-  opacity: 0.95;
-  box-shadow: 0 0 10px var(--rc, transparent);
+  opacity: 1;
+  box-shadow: 0 0 12px var(--rc, #e8c040);
+}
+
+/* Selection caret — role-colored gem straddling the card's inner edge */
+.ps-slot-caret {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  right: -1px;
+  width: 13px;
+  height: 13px;
+  transform: translate(50%, -50%) rotate(45deg);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--rc, #52b830) 88%, white) 0%,
+    var(--rc, #52b830) 100%
+  );
+  border-radius: 3px;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--rc, #52b830) 60%, transparent);
+  pointer-events: none;
 }
 
 .ps-slot-icon {
+  position: relative;
   flex-shrink: 0;
   display: grid;
   place-items: center;
+}
+
+/* Role-colored halo behind the planet — gives the bare sprite a light source and
+   ties the card to its role without another frame. Slots without a role resolve
+   --rc to transparent, so the halo simply doesn't exist there. */
+.ps-slot-icon::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 155%;
+  height: 155%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--rc, transparent) 34%, transparent) 0%,
+    transparent 68%
+  );
+  opacity: 0.65;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.ps-slot-btn:hover .ps-slot-icon::before,
+.ps-slot-btn--active .ps-slot-icon::before {
+  opacity: 1;
 }
 
 .ps-slot-info {
@@ -1559,10 +1684,12 @@ function chooseBuilding(buildingId: string) {
 }
 
 .ps-slot-sub {
-  font-size: clamp(0.9rem, 1.2vh, 1.25rem);
+  font-size: clamp(0.95rem, 1.25vh, 1.3rem);
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: rgba(200, 160, 80, 0.8);
+  color: rgba(212, 174, 96, 0.9);
+  /* readable over the starfield showing through the translucent card */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1570,8 +1697,11 @@ function chooseBuilding(buildingId: string) {
 }
 
 .ps-slot-btn:hover {
-  background: linear-gradient(160deg, #1d1911 0%, #14110a 100%);
+  background: linear-gradient(150deg, rgba(44, 37, 23, 0.86) 0%, rgba(18, 15, 9, 0.9) 100%);
   border-color: #5c3310;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(232, 192, 64, 0.12);
   transform: translateY(-1px);
 }
 
@@ -1583,10 +1713,24 @@ function chooseBuilding(buildingId: string) {
     0 0 12px rgba(232, 192, 64, 0.4);
 }
 
+/* Active: the border stays 1px (a 2px swap would shift the whole card's inner
+   layout by a pixel on every selection) — the "selected" weight comes from a
+   role-tinted wash, a ring shadow and the caret on the inner edge. */
 .ps-slot-btn--active {
-  background: #1a2010;
-  border: 2px solid var(--rc, #52b830);
-  box-shadow: 0 0 10px color-mix(in oklch, var(--rc, #52b830) 30%, transparent);
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--rc, #52b830) 16%, rgba(20, 17, 11, 0.9)) 0%,
+    rgba(12, 11, 7, 0.92) 72%
+  );
+  border-color: var(--rc, #52b830);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--rc, #52b830) 45%, transparent),
+    0 0 20px color-mix(in srgb, var(--rc, #52b830) 30%, transparent),
+    inset 0 0 24px color-mix(in srgb, var(--rc, #52b830) 12%, transparent);
+}
+
+.ps-slot-btn--active:hover {
+  transform: translateY(-1px);
 }
 
 /* ── Per-slot affordable-upgrade notify badge (top-right, clear of buff) ─────── */
@@ -1621,7 +1765,7 @@ function chooseBuilding(buildingId: string) {
 
 /* ── Sidebar jungle-buff highlight — prominent, overlay-only (no layout shift) ── */
 .ps-slot-btn--buffed {
-  background: #0f1a0c;
+  background: linear-gradient(150deg, rgba(20, 40, 18, 0.86) 0%, rgba(10, 20, 10, 0.9) 100%);
   border-color: #5ce66a;
   animation: ps-buff-pulse 1.8s ease-in-out infinite;
 }
@@ -1719,6 +1863,7 @@ function chooseBuilding(buildingId: string) {
 /* Planet image — bare planet, no frame/token; scales with the card box (height
    & width), capped so it never crowds the text on a narrow rail nor balloons. */
 .ps-slot-btn-img {
+  position: relative;
   width: clamp(48px, min(62cqh, 36cqw), 108px);
   height: clamp(48px, min(62cqh, 36cqw), 108px);
   object-fit: contain;
@@ -1743,11 +1888,12 @@ function chooseBuilding(buildingId: string) {
 }
 
 .ps-slot-btn-label {
-  font-size: clamp(0.85rem, 1.1vh, 1.15rem);
+  font-size: clamp(0.88rem, 1.15vh, 1.2rem);
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgba(200, 160, 80, 0.8);
+  color: rgba(206, 168, 92, 0.85);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2062,7 +2208,22 @@ function chooseBuilding(buildingId: string) {
    Rotstichiger Rahmen, ausgelöschtes Planetenbild, Wrack-Emblem darüber. */
 .ps-slot-btn--down {
   border-color: #7a3a2c;
-  background: linear-gradient(180deg, #1e100c 0%, #140a08 100%);
+  background: linear-gradient(150deg, rgba(38, 18, 13, 0.88) 0%, rgba(18, 10, 8, 0.9) 100%);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.5),
+    inset 0 0 20px rgba(168, 64, 44, 0.1);
+}
+
+/* The accent rail goes red too — a destroyed planet must not still read in its
+   role color, that is the state the card is no longer in. */
+.ps-slot-btn--down::before {
+  background: #a8402c;
+  opacity: 0.9;
+}
+
+.ps-slot-btn--down .ps-slot-icon::before {
+  background: radial-gradient(circle, rgba(204, 96, 80, 0.28) 0%, transparent 68%);
+  opacity: 1;
 }
 
 .ps-slot-btn--down .ps-slot-btn-img {
@@ -3795,7 +3956,7 @@ img.ps-role-icon {
   opacity: 1;
   filter: none;
   cursor: pointer;
-  background: linear-gradient(180deg, #0d1a0a 0%, #0a140a 100%);
+  background: linear-gradient(150deg, rgba(16, 34, 12, 0.84) 0%, rgba(10, 20, 10, 0.88) 100%);
   border-color: rgba(82, 184, 48, 0.55);
   box-shadow:
     0 0 10px rgba(82, 184, 48, 0.25),
@@ -3824,7 +3985,7 @@ img.ps-role-icon {
 }
 
 .ps-slot-btn--affordable:hover {
-  background: linear-gradient(180deg, #101f0c 0%, #0d1a0a 100%);
+  background: linear-gradient(150deg, rgba(22, 44, 16, 0.88) 0%, rgba(13, 26, 10, 0.9) 100%);
   border-color: #6de030;
   box-shadow:
     0 0 20px rgba(82, 184, 48, 0.65),
@@ -3845,8 +4006,8 @@ img.ps-role-icon {
 
 /* Can't afford */
 .ps-slot-btn--cant-afford {
-  opacity: 0.4;
-  filter: grayscale(60%);
+  opacity: 0.5;
+  filter: grayscale(55%);
   cursor: pointer;
 }
 
