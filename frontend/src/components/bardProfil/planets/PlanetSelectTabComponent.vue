@@ -639,15 +639,23 @@ function chooseBuilding(buildingId: string) {
                 <span class="ps-level-btn-main">
                   ✦ Level Up<template v-if="maxAffordableCount > 0"> +{{ maxAffordableCount }}</template>
                 </span>
-                <span class="ps-level-btn-cost">
-                  <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
-                  {{ $formatNumber(maxAffordableCount > 0 ? maxCost : levelUpCost) }}
+                <!-- Second line is always present → fixed button/footer height.
+                     When phase-locked it carries the requirement instead of the
+                     cost (the old free-flowing hint used to grow the footer). -->
+                <span
+                  class="ps-level-btn-cost"
+                  :class="{ 'ps-level-btn-cost--req': levelUpReason === 'phase' }"
+                >
+                  <template v-if="levelUpReason === 'phase'">
+                    <Icon icon="game-icons:sun" width="16" height="16" class="ps-level-req-icon" />
+                    Requires Phase {{ levelUpReqPhase }}
+                  </template>
+                  <template v-else>
+                    <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
+                    {{ $formatNumber(maxAffordableCount > 0 ? maxCost : levelUpCost) }}
+                  </template>
                 </span>
               </button>
-              <span v-if="levelUpReason === 'chimes'" class="ps-level-hint">Not enough Chimes</span>
-              <span v-else-if="levelUpReason === 'phase'" class="ps-level-hint">
-                Requires Sun Phase {{ levelUpReqPhase }} · current {{ store.currentSunStage }}
-              </span>
             </div>
           </div>
 
@@ -1440,17 +1448,18 @@ function chooseBuilding(buildingId: string) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.25rem;
+  gap: 0.1rem;
 }
 
 /* Zone 2: effect + HP preview — takes the flexible middle, wraps below when
    the panel gets too narrow for one row */
 .ps-dock-effect {
-  flex: 1 1 220px;
+  flex: 1 1 240px;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  justify-content: center;
+  gap: 0.3rem;
 }
 
 /* Zone 3: Max button (+ hint only when blocked) */
@@ -1461,7 +1470,7 @@ function chooseBuilding(buildingId: string) {
   flex-direction: column;
   align-items: stretch;
   gap: 0.25rem;
-  min-width: 165px;
+  min-width: 190px;
 }
 
 /* Target value + its "after +N" tag stay glued together when the row wraps */
@@ -1474,11 +1483,11 @@ function chooseBuilding(buildingId: string) {
 
 /* Marks the preview target as the post-Max state ("after +N") */
 .ps-preview-gain {
-  font-size: 0.64rem;
+  font-size: clamp(0.68rem, 1vh, 0.82rem);
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.45);
   white-space: nowrap;
 }
 
@@ -1489,20 +1498,20 @@ function chooseBuilding(buildingId: string) {
 
 /* Modern level readout: small muted caps label over a big bold number */
 .ps-level-label {
-  font-size: 0.62rem;
+  font-size: clamp(0.72rem, 1vh, 0.9rem);
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5);
   white-space: nowrap;
 }
 
 .ps-level-value {
-  font-size: 1.55rem;
+  font-size: clamp(2rem, 2.8vh, 2.7rem);
   font-weight: 800;
-  line-height: 1;
+  line-height: 0.9;
   color: #e8c040;
-  text-shadow: 0 0 12px rgba(232, 192, 64, 0.35);
+  text-shadow: 0 0 14px rgba(232, 192, 64, 0.4);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1525,8 +1534,8 @@ function chooseBuilding(buildingId: string) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  padding: 0.42rem 0.4rem 0.38rem;
+  gap: 2px;
+  padding: 0.4rem 0.5rem 0.36rem;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #6ec040;
   border-radius: var(--bp-radius);
@@ -1571,24 +1580,25 @@ function chooseBuilding(buildingId: string) {
 }
 
 .ps-level-btn-main {
-  font-size: 0.92rem;
+  font-size: clamp(1.02rem, 1.5vh, 1.28rem);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  line-height: 1.1;
 }
 
 .ps-level-btn-cost {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.78rem;
+  gap: 5px;
+  font-size: clamp(0.9rem, 1.3vh, 1.08rem);
   font-weight: 700;
   opacity: 0.95;
 }
 
 .ps-level-chime {
-  width: 15px;
-  height: 15px;
+  width: clamp(17px, 2.2vh, 22px);
+  height: clamp(17px, 2.2vh, 22px);
   image-rendering: pixelated;
 }
 
@@ -1597,46 +1607,55 @@ function chooseBuilding(buildingId: string) {
   margin: 0 1px;
 }
 
-.ps-level-hint {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #cc6050;
-  letter-spacing: 0.03em;
-  text-align: center;
+/* Phase-lock requirement shown inline on the button's second line (keeps the
+   footer height fixed — no free-flowing hint that grows the layout). */
+.ps-level-btn-cost--req {
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.ps-level-req-icon {
+  color: #ffd76a;
 }
 
 /* ── Effect preview rows ───────────────────────────────────────────────────── */
 .ps-preview-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.76rem;
+  gap: 0.5rem;
+  font-size: clamp(0.95rem, 1.5vh, 1.2rem);
   font-weight: 700;
   min-width: 0;
+  line-height: 1.15;
   flex-wrap: wrap;
 }
 
 .ps-preview-label {
-  flex: 0 0 3.6rem;
-  color: rgba(255, 255, 255, 0.4);
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  font-size: clamp(0.72rem, 1.1vh, 0.9rem);
+  font-weight: 800;
+  padding: 0.1rem 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
 }
 
 .ps-preview-now {
-  color: #d4c89a;
+  color: #e2d6ab;
 }
 
 .ps-preview-arrow {
   color: var(--rc, #e8c040);
   font-weight: 900;
+  font-size: 1.15em;
 }
 
 .ps-preview-next {
   color: var(--rc, #e8c040);
   font-weight: 800;
-  text-shadow: 0 0 6px color-mix(in oklch, var(--rc, #e8c040) 40%, transparent);
+  text-shadow: 0 0 8px color-mix(in oklch, var(--rc, #e8c040) 45%, transparent);
 }
 
 /* ── Permanent role choice ─────────────────────────────────────────────────── */
