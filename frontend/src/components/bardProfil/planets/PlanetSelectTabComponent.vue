@@ -570,27 +570,21 @@ function chooseBuilding(buildingId: string) {
 
         <!-- Purchased + role locked: cosmic stage + frameless fixed upgrade menu -->
         <template v-else-if="activeSlot && activeSlot.purchased && activeSlot.role">
-          <!-- Stage: planet orbiting the current-phase sun, over the shared
-               cosmic backdrop rendered by the ps-detail wrapper -->
+          <!-- Centered cosmic stage: sun + orbiting planet fill the full width;
+               name → HP → Level-Up form the bottom-center hero. The side panel is
+               dissolved — every numeric readout is a floating HUD chip in a corner
+               (clear of the top-center jungle-buff banner). -->
           <div class="ps-stage" :style="[{ '--rc': activeRoleColor }, sunPhaseStyle]">
-            <!-- Central body (comet rock or phase sun) + orbiting planet share
-                 one centered system -->
+            <!-- Central body (comet rock or phase sun) + orbiting planet -->
             <div class="ps-system" :class="{ 'ps-system--comet': solarStore.isCometState }">
               <CometDisc v-if="solarStore.isCometState" :diameter="200" />
               <div v-else class="ps-stage-sun" />
               <!-- The whole orbit wrapper is keyed per slot: the old planet fades
-                   out at ITS orbit position, the new one fades in at its own —
-                   no visible position jump of a stale image. -->
-              <!-- type="transition" is required: the wrapper runs an INFINITE
-                   orbit keyframe animation, and without the explicit type Vue
-                   would wait for its animationend (never fires) instead of the
-                   0.15s opacity transitionend — deadlocking mode="out-in". -->
+                   out at ITS orbit position, the new one fades in at its own — no
+                   visible position jump. type="transition" required (infinite
+                   orbit keyframe would otherwise deadlock mode="out-in"). -->
               <Transition name="ps-planet-swap" mode="out-in" type="transition">
-                <div
-                  :key="activeSlot.id"
-                  class="ps-planet-preview-wrap"
-                  :style="orbitPhaseStyle"
-                >
+                <div :key="activeSlot.id" class="ps-planet-preview-wrap" :style="orbitPhaseStyle">
                   <img
                     :src="activeImage"
                     class="ps-planet-preview-img"
@@ -601,26 +595,9 @@ function chooseBuilding(buildingId: string) {
               </Transition>
             </div>
 
-            <!-- Readout: planet-type name sits directly on top of its HP bar as
-                 one tight unit (name → optional config chip → HP). -->
+            <!-- Bottom-center hero: name → HP → Level-Up (kept large) -->
             <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
-              <div class="ps-planet-role-label">
-                {{ activeRoleName }}
-              </div>
-
-              <!-- Config target chip (Harvester / Resonator only) -->
-              <button
-                v-if="isConfigurableRole && configChip"
-                class="ps-config-chip"
-                @click="configPickerOpen = !configPickerOpen"
-              >
-                <span class="ps-config-chip-verb">{{ configChip.verb }}:</span>
-                <img v-if="configChip.icon" :src="configChip.icon" class="ps-config-chip-icon" alt="" />
-                <span class="ps-config-chip-name">{{ configChip.name }}</span>
-                <span class="ps-config-chip-caret">▾</span>
-              </button>
-
-              <!-- HP -->
+              <div class="ps-planet-role-label">{{ activeRoleName }}</div>
               <div
                 v-if="activeSlot.maxHp > 0"
                 class="ps-planet-hp"
@@ -636,67 +613,73 @@ function chooseBuilding(buildingId: string) {
                   </div>
                 </div>
               </div>
-            </div>
 
+              <div class="ps-dock-buy ps-hero-buy">
+                <button
+                  class="ps-level-btn"
+                  :class="{ 'ps-level-btn--locked': maxAffordableCount === 0 }"
+                  :disabled="maxAffordableCount === 0"
+                  :title="maxAffordableCount > 0 ? 'Level up as much as you can afford' : (levelUpReason === 'phase' ? `Requires Sun Phase ${levelUpReqPhase}` : 'Not enough Chimes')"
+                  @click="attune(maxAffordableCount)"
+                >
+                  <span class="ps-level-btn-main">
+                    ✦ Level Up<template v-if="maxAffordableCount > 0"> +{{ maxAffordableCount }}</template>
+                  </span>
+                  <span
+                    class="ps-level-btn-cost"
+                    :class="{ 'ps-level-btn-cost--req': levelUpReason === 'phase' }"
+                  >
+                    <template v-if="levelUpReason === 'phase'">
+                      <Icon icon="game-icons:sun" width="16" height="16" class="ps-level-req-icon" />
+                      Requires Phase {{ levelUpReqPhase }}
+                    </template>
+                    <template v-else>
+                      <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
+                      {{ $formatNumber(maxAffordableCount > 0 ? maxCost : levelUpCost) }}
+                    </template>
+                  </span>
+                </button>
+                <span v-if="maxAffordableCount > 0" class="ps-buy-badge" aria-hidden="true">{{ maxAffordableCount }}</span>
+              </div>
+            </div>
           </div>
 
-          <!-- Upgrade dock: one slim bar — level/rank, effect preview, Max buy.
-               Hints only appear when the buy is actually blocked. -->
-          <div class="ps-dock" :style="{ '--rc': activeRoleColor }">
-            <div class="ps-dock-status">
-              <span class="ps-level-label">Level</span>
-              <span class="ps-level-value">{{ activeSlot.level }}</span>
+          <!-- Distributed HUD · top-left: level medallion + config chip -->
+          <div class="ps-hud ps-hud--tl" :style="{ '--rc': activeRoleColor }">
+            <div class="ps-level-chip">
+              <span class="ps-level-chip-label">Level</span>
+              <span class="ps-level-chip-value">{{ activeSlot.level }}</span>
             </div>
+            <button
+              v-if="isConfigurableRole && configChip"
+              class="ps-config-chip"
+              @click="configPickerOpen = !configPickerOpen"
+            >
+              <span class="ps-config-chip-verb">{{ configChip.verb }}:</span>
+              <img v-if="configChip.icon" :src="configChip.icon" class="ps-config-chip-icon" alt="" />
+              <span class="ps-config-chip-name">{{ configChip.name }}</span>
+              <span class="ps-config-chip-caret">▾</span>
+            </button>
+          </div>
 
-            <div class="ps-dock-effect">
-              <div class="ps-preview-row">
-                <span class="ps-preview-label">Effect</span>
-                <span class="ps-preview-now">{{ activeSlotBonusText }}</span>
-                <span class="ps-preview-arrow">→</span>
-                <span class="ps-preview-next-wrap">
-                  <span class="ps-preview-next">{{ nextBonusText }}</span>
-                  <span v-if="maxAffordableCount > 0" class="ps-preview-gain">after +{{ maxAffordableCount }}</span>
-                </span>
-              </div>
-              <div class="ps-preview-row">
-                <span class="ps-preview-label">Max HP</span>
-                <span class="ps-preview-now">{{ currentMaxHp }}</span>
-                <span class="ps-preview-arrow">→</span>
-                <span class="ps-preview-next">{{ nextMaxHp }}</span>
-              </div>
+          <!-- Distributed HUD · top-right: effect + Max-HP stat cards -->
+          <div class="ps-hud ps-hud--tr" :style="{ '--rc': activeRoleColor }">
+            <div class="ps-stat-card">
+              <span class="ps-stat-label">Effect</span>
+              <span class="ps-stat-vals">
+                <span class="ps-stat-now">{{ activeSlotBonusText }}</span>
+                <span class="ps-stat-arrow">→</span>
+                <span class="ps-stat-next">{{ nextBonusText }}</span>
+              </span>
+              <span v-if="maxAffordableCount > 0" class="ps-stat-gain">after +{{ maxAffordableCount }}</span>
             </div>
-
-            <div class="ps-dock-buy">
-              <button
-                class="ps-level-btn"
-                :class="{ 'ps-level-btn--locked': maxAffordableCount === 0 }"
-                :disabled="maxAffordableCount === 0"
-                :title="maxAffordableCount > 0 ? 'Level up as much as you can afford' : (levelUpReason === 'phase' ? `Requires Sun Phase ${levelUpReqPhase}` : 'Not enough Chimes')"
-                @click="attune(maxAffordableCount)"
-              >
-                <span class="ps-level-btn-main">
-                  ✦ Level Up<template v-if="maxAffordableCount > 0"> +{{ maxAffordableCount }}</template>
-                </span>
-                <!-- Second line is always present → fixed button/footer height.
-                     When phase-locked it carries the requirement instead of the
-                     cost (the old free-flowing hint used to grow the footer). -->
-                <span
-                  class="ps-level-btn-cost"
-                  :class="{ 'ps-level-btn-cost--req': levelUpReason === 'phase' }"
-                >
-                  <template v-if="levelUpReason === 'phase'">
-                    <Icon icon="game-icons:sun" width="16" height="16" class="ps-level-req-icon" />
-                    Requires Phase {{ levelUpReqPhase }}
-                  </template>
-                  <template v-else>
-                    <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
-                    {{ $formatNumber(maxAffordableCount > 0 ? maxCost : levelUpCost) }}
-                  </template>
-                </span>
-              </button>
-              <!-- Notify badge: shows how many levels are affordable; pulses
-                   over the button and fades away as soon as it is hovered. -->
-              <span v-if="maxAffordableCount > 0" class="ps-buy-badge" aria-hidden="true">{{ maxAffordableCount }}</span>
+            <div class="ps-stat-card">
+              <span class="ps-stat-label">Max HP</span>
+              <span class="ps-stat-vals">
+                <span class="ps-stat-now">{{ currentMaxHp }}</span>
+                <span class="ps-stat-arrow">→</span>
+                <span class="ps-stat-next">{{ nextMaxHp }}</span>
+              </span>
             </div>
           </div>
 
@@ -750,11 +733,8 @@ function chooseBuilding(buildingId: string) {
           </Transition>
         </template>
 
-        <!-- Rücksprung in den Star Fight: erscheint nur, wenn der Tab aus dem
-             Fight-Modal heraus geöffnet wurde und der Stern noch lebt — gleicher
-             Button wie im Team-Tab (SigilBoardComponent). Sitzt im ps-detail und
-             zentriert sich damit auf die Breite des rechten Bereichs (gleiche
-             Mitte wie das Locked-Panel-Label). -->
+        <!-- Return-to-Star-Fight CTA — floats bottom-right, available in every
+             slot state; only visible while the jumped-from star fight is live. -->
         <BattleReturnButton />
       </div>
     </div>
@@ -820,6 +800,132 @@ function chooseBuilding(buildingId: string) {
 .ps-detail::-webkit-scrollbar-thumb {
   background: #5c3310;
   border-radius: 3px;
+}
+
+/* ── Panel-less layout: centered stage + distributed HUD chips ──────────────── */
+/* Corner HUD clusters float over the cosmic stage. The container ignores pointer
+   events so it never blocks the stage; only its interactive children opt back in.
+   Semi-transparent flat fills (no blur) let the starfield read through. */
+.ps-hud {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 0.9vh, 11px);
+  pointer-events: none;
+}
+
+.ps-hud > * {
+  pointer-events: auto;
+}
+
+.ps-hud--tl {
+  top: clamp(12px, 2vh, 24px);
+  left: clamp(12px, 1vw, 24px);
+  align-items: flex-start;
+}
+
+.ps-hud--tr {
+  top: clamp(12px, 2vh, 24px);
+  right: clamp(12px, 1vw, 24px);
+  align-items: flex-end;
+}
+
+/* Level medallion — compact gold-accented chip */
+.ps-level-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: clamp(5px, 0.7vh, 9px) clamp(10px, 0.8vw, 15px);
+  background: rgba(20, 17, 10, 0.82);
+  border: 1px solid #5c3310;
+  border-radius: 5px;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(232, 192, 64, 0.12);
+}
+
+.ps-level-chip-label {
+  font-size: clamp(0.6rem, 1vh, 0.76rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.ps-level-chip-value {
+  font-size: clamp(1.4rem, 2.4vh, 2rem);
+  font-weight: 800;
+  line-height: 0.9;
+  color: #e8c040;
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Floating stat cards (Effect / Max HP) — right-aligned readouts */
+.ps-stat-card {
+  --rc: #e8c040;
+  min-width: clamp(150px, 15vw, 210px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: clamp(6px, 0.8vh, 10px) clamp(10px, 0.8vw, 14px);
+  background: rgba(20, 17, 10, 0.82);
+  border: 1px solid #3a2a10;
+  border-radius: 5px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  text-align: right;
+}
+
+.ps-stat-label {
+  font-size: clamp(0.6rem, 0.95vh, 0.74rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.ps-stat-vals {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: clamp(0.95rem, 1.6vh, 1.25rem);
+  font-weight: 800;
+  line-height: 1.1;
+  flex-wrap: wrap;
+}
+
+.ps-stat-now {
+  color: #e2d6ab;
+}
+
+.ps-stat-arrow {
+  color: var(--rc, #e8c040);
+  font-weight: 900;
+}
+
+.ps-stat-next {
+  color: var(--rc, #e8c040);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--rc, #e8c040) 45%, transparent);
+}
+
+.ps-stat-gain {
+  font-size: clamp(0.6rem, 0.9vh, 0.74rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Level-Up hero wrapper inside the readout — centered, capped width.
+   (Reuses .ps-dock-buy for the badge + hover-fade behaviour.) */
+.ps-hero-buy {
+  position: relative;
+  margin: clamp(0.4rem, 0.9vh, 0.7rem) 0 0;
+  min-width: 0;
+  width: clamp(220px, 26vw, 320px);
+  align-self: center;
 }
 
 /* ── Leerstate ─────────────────────────────────────────────────────────────── */
@@ -1619,10 +1725,26 @@ function chooseBuilding(buildingId: string) {
   }
 }
 
-/* Star-fight return CTA overlays the dock — offset so its center lands on the
-   footer's vertical center (footer ≈ 70px tall, button ≈ 50px → ~10px). */
+/* Star-fight return CTA floats in the bottom-right corner (footer is gone), clear
+   of the bottom-center hero. Overrides the component's default centered anchor. */
 .ps-detail :deep(.brb) {
-  bottom: clamp(9px, 1.1vh, 20px);
+  left: auto;
+  right: clamp(14px, 1.5vw, 28px);
+  bottom: clamp(14px, 1.6vh, 26px);
+  transform: none;
+}
+
+.ps-detail :deep(.brb:hover) {
+  transform: translateY(-1px);
+}
+
+.ps-detail :deep(.brb:active) {
+  transform: scale(0.97);
+}
+
+.ps-detail :deep(.brb-slide-enter-from),
+.ps-detail :deep(.brb-slide-leave-to) {
+  transform: translateY(12px);
 }
 
 /* Target value + its "after +N" tag stay glued together when the row wraps */
