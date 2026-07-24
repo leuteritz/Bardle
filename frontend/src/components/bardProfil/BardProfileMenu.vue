@@ -33,8 +33,13 @@ const expeditionBadgeCount = computed(
 const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
 const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
 const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
-// Planet tab: number of planet slots whose next level is affordable right now.
-const planetBadgeCount = computed(() => planetShopStore.affordableUpgradeCount)
+// Planet tab: TOTAL affordable level-ups across all six orbit slots right now
+// (matches the middle-header planet badge).
+const planetBadgeCount = computed(() => planetShopStore.affordableLevelCount)
+// Compact label — the total can climb high, so cap the glyph at 99+.
+const planetBadgeLabel = computed(() =>
+  planetBadgeCount.value > 99 ? '99+' : String(planetBadgeCount.value),
+)
 
 const menuItems: {
   id: BardTabId
@@ -128,8 +133,8 @@ watch(
                 <div v-if="item.id === 'planets' && planetBadgeCount > 0" class="team-badge-row">
                   <span
                     class="mini-badge mini-badge--planet"
-                    :title="`${planetBadgeCount} planet ${planetBadgeCount === 1 ? 'upgrade' : 'upgrades'} ready — level up your orbit slots`"
-                  >{{ planetBadgeCount }}</span>
+                    :title="`${planetBadgeCount} planet ${planetBadgeCount === 1 ? 'level-up' : 'level-ups'} affordable — level up your orbit slots`"
+                  >{{ planetBadgeLabel }}</span>
                 </div>
               </button>
             </div>
