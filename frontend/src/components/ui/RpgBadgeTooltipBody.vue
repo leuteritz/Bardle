@@ -127,6 +127,12 @@ function levelUpMax(id: string) {
   if (n > 0) planetShopStore.levelUpPlanetTimes(id, n)
 }
 
+// Open the Bard modal on the Planets tab with this orbit slot pre-selected.
+function openPlanetSlot(id: string) {
+  uiStore.requestOpenPlanetsTab(id)
+  props.close?.()
+}
+
 // Buy all possible upgrades across every slot, spending chimes greedily in slot
 // order until the budget runs dry.
 function buyAllUpgrades() {
@@ -263,6 +269,8 @@ function buyAllUpgrades() {
           :key="slot.id"
           class="pu-tt__item"
           :style="{ '--rc': slot.color }"
+          :title="`Open ${slot.name} in Planets`"
+          @click.stop="openPlanetSlot(slot.id)"
         >
           <span class="pu-tt__frame">
             <img :src="slot.image" class="pu-tt__img" :alt="slot.name" />
@@ -645,6 +653,12 @@ function buyAllUpgrades() {
   align-items: center;
   gap: 9px;
   padding: 7px 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.pu-tt__item:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .pu-tt__item + .pu-tt__item {
