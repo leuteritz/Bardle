@@ -595,25 +595,9 @@ function chooseBuilding(buildingId: string) {
               </Transition>
             </div>
 
-            <!-- Bottom-center hero: name → HP → Level-Up (kept large) -->
+            <!-- Bottom-center hero: big Level-Up sits BETWEEN the sun and the
+                 name/HP unit (name still reads as the HP bar's title). -->
             <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
-              <div class="ps-planet-role-label">{{ activeRoleName }}</div>
-              <div
-                v-if="activeSlot.maxHp > 0"
-                class="ps-planet-hp"
-                :class="`ps-planet-hp--${activeHpTier}`"
-              >
-                <div class="ps-planet-hp-text">
-                  <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
-                  <span class="ps-hp-pct">{{ Math.round(hpPercent) }}%</span>
-                </div>
-                <div class="ps-hp-bar-track">
-                  <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }">
-                    <span class="ps-hp-bar-shine" aria-hidden="true" />
-                  </div>
-                </div>
-              </div>
-
               <div class="ps-dock-buy ps-hero-buy">
                 <button
                   class="ps-level-btn"
@@ -640,6 +624,23 @@ function chooseBuilding(buildingId: string) {
                   </span>
                 </button>
                 <span v-if="maxAffordableCount > 0" class="ps-buy-badge" aria-hidden="true">{{ maxAffordableCount }}</span>
+              </div>
+
+              <div class="ps-planet-role-label">{{ activeRoleName }}</div>
+              <div
+                v-if="activeSlot.maxHp > 0"
+                class="ps-planet-hp"
+                :class="`ps-planet-hp--${activeHpTier}`"
+              >
+                <div class="ps-planet-hp-text">
+                  <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
+                  <span class="ps-hp-pct">{{ Math.round(hpPercent) }}%</span>
+                </div>
+                <div class="ps-hp-bar-track">
+                  <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }">
+                    <span class="ps-hp-bar-shine" aria-hidden="true" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -918,14 +919,31 @@ function chooseBuilding(buildingId: string) {
   color: rgba(255, 255, 255, 0.45);
 }
 
-/* Level-Up hero wrapper inside the readout — centered, capped width.
-   (Reuses .ps-dock-buy for the badge + hover-fade behaviour.) */
+/* Level-Up hero wrapper — sits between the sun and the name/HP unit, centered.
+   Enlarged CTA. (Reuses .ps-dock-buy for the badge + hover-fade behaviour.) */
 .ps-hero-buy {
   position: relative;
-  margin: clamp(0.4rem, 0.9vh, 0.7rem) 0 0;
+  margin: 0 0 clamp(0.5rem, 1.1vh, 0.9rem);
   min-width: 0;
-  width: clamp(220px, 26vw, 320px);
+  width: clamp(260px, 30vw, 400px);
   align-self: center;
+}
+
+.ps-hero-buy .ps-level-btn {
+  padding: clamp(0.6rem, 1.1vh, 0.95rem) 0.9rem clamp(0.55rem, 1vh, 0.85rem);
+}
+
+.ps-hero-buy .ps-level-btn-main {
+  font-size: clamp(1.2rem, 2vh, 1.65rem);
+}
+
+.ps-hero-buy .ps-level-btn-cost {
+  font-size: clamp(1rem, 1.55vh, 1.25rem);
+}
+
+.ps-hero-buy .ps-level-chime {
+  width: clamp(19px, 2.5vh, 25px);
+  height: clamp(19px, 2.5vh, 25px);
 }
 
 /* ── Leerstate ─────────────────────────────────────────────────────────────── */
