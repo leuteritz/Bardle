@@ -34,6 +34,7 @@
       :class="{
         'planet-orbit-item--healing': pos.isHealing,
         'planet-orbit-item--hover-focus': pos.id === hoveredPlanetSlotId,
+        'planet-orbit-item--down': pos.isDown,
       }"
       :style="{
         width: pos.size + 'px',
@@ -67,6 +68,7 @@
         'planet-orbit-item--healing': pos.isHealing,
         'planet-orbit-item--jungle-buffed': pos.isJungleBuffed,
         'planet-orbit-item--hover-focus': pos.id === hoveredPlanetSlotId,
+        'planet-orbit-item--down': pos.isDown,
       }"
       :style="{
         width: pos.size + 'px',
@@ -115,7 +117,8 @@
         />
         <div class="planet-hp-bar-shine" />
       </div>
-      <span class="planet-hp-text">{{ pos.currentHp }} / {{ pos.maxHp }}</span>
+      <span v-if="pos.isDown" class="planet-hp-text planet-hp-text--down">{{ pos.downSecs }}s</span>
+      <span v-else class="planet-hp-text">{{ pos.currentHp }} / {{ pos.maxHp }}</span>
     </div>
 
     <!-- Jungle Buff — Countdown-Chip (schräg oben rechts am Planeten) -->
@@ -180,6 +183,8 @@ interface PlanetRenderPos {
   isBehind: boolean
   isForeground: boolean
   isTurret: boolean
+  isDown: boolean
+  downSecs: number
   zIndex: number
   color: string
   hintOpacity: number
@@ -316,7 +321,7 @@ export default defineComponent({
 
       for (const pos of positions) {
         if (!hasLiveBoss) break
-        if (!pos.isTurret || pos.isBehind || pos.opacity <= 0.02) continue
+        if (!pos.isTurret || pos.isBehind || pos.isDown || pos.opacity <= 0.02) continue
         const r = pos.size / 2 + 8
         const alpha = pos.opacity
         drewAny = true
@@ -368,7 +373,9 @@ export default defineComponent({
         if (isIdleRenderingPaused.value) return
         // Gleiche Bedingung wie der Cooldown-Ring (nicht hinter der Sonne):
         // jeder Turret, dessen Ring voll läuft, verschießt auch ein Projektil
-        const turretPlanets = renderPositions.value.filter((p) => p.isTurret && !p.isBehind)
+        const turretPlanets = renderPositions.value.filter(
+          (p) => p.isTurret && !p.isBehind && !p.isDown,
+        )
         if (turretPlanets.length === 0 || planetBossStore.activeBosses.length === 0) return
 
         const bossPlanetIds = planetBossStore.activeBosses
@@ -482,11 +489,6 @@ export default defineComponent({
           speedMul: newMul,
         })
 
-        // Zerstörter Planet: verlässt den sichtbaren Orbit und fällt aus
-        // activePlayerPlanetPositions — damit ist er weder Ziel noch Schütze.
-        // Seine Bahn läuft oben aber weiter, also kehrt er beim Respawn an der
-        // richtigen Stelle zurück statt an den Startwinkel zu springen.
-        if (isPlanetDown(slot)) continue
 
         const relY = (ls.y - cy) / Math.max(ry, 1)
         const isBehind = relY < -0.05
@@ -512,6 +514,14 @@ export default defineComponent({
         const maxHp = slot.maxHp ?? PLANET_SLOT_MAX_HP
         const hpPercent = (currentHp / Math.max(maxHp, 1)) * 100
         const isHealing = Date.now() < (slot.healingUntilMs ?? 0)
+
+        // Zerstört: Der Planet bleibt sichtbar, aber ausgegraut — gleiche
+        // Darstellung wie ein gefallener Champion im ChampionOrbit; die HP-Zahl
+        // weicht dem Respawn-Countdown.
+        const isDown = isPlanetDown(slot)
+        const downSecs = isDown
+          ? Math.max(0, Math.ceil((slot.downUntilMs - Date.now()) / 1000))
+          : 0
 
         const jb = slot.jungleBuff
         const isJungleBuffed = !!jb?.active
@@ -544,6 +554,8 @@ export default defineComponent({
           isBehind,
           isForeground,
           isTurret,
+          isDown,
+          downSecs,
           zIndex,
           color,
           hintOpacity,
@@ -577,6 +589,13 @@ export default defineComponent({
       // das Command Panel und der Planeten-Tab lesen sie auch dann, wenn dieser
       // Layer gerade unter dem Bard-Profil verdeckt ist.
       for (const pos of newPositions) {
+        // Zerstörte Planeten bleiben sichtbar (ausgegraut), zählen aber nicht
+        // als Kampfobjekte: kein Ziel für Salven, kein Turret-Schütze und kein
+        // Empfänger von Jungle-Buffs oder Heilung.
+        if (pos.isDown) {
+          activePlayerPlanetPositions.delete(pos.id)
+          continue
+        }
         activePlayerPlanetPositions.set(pos.id, {
           cx: pos.x,
           cy: pos.y,
@@ -753,6 +772,19 @@ export default defineComponent({
   animation: slotHeal 0.9s ease-out;
 }
 
+/* ── Zerstört: bleibt in der Bahn, aber ausgegraut ─────────────────────────
+   Exakt die Behandlung eines gefallenen Champions (champion-orbit-avatar--down):
+   entsättigt, abgedunkelt, roter Schimmer, alle laufenden Effekt-Animationen
+   aus — der Planet ist sichtbar da, aber erkennbar außer Gefecht. */
+.planet-orbit-item--down {
+  filter: grayscale(1) brightness(0.55) !important;
+  animation: none !important;
+}
+
+.planet-orbit-item--down .planet-orbit-portrait {
+  filter: drop-shadow(0 0 8px rgba(120, 20, 20, 0.55));
+}
+
 @keyframes slotHeal {
   0% {
     filter: drop-shadow(0 0 0px #52b830);
@@ -868,6 +900,14 @@ export default defineComponent({
     0 0 3px rgba(232, 160, 20, 0.6),
     0 1px 2px rgba(0, 0, 0, 0.95);
   line-height: 1;
+}
+
+/* Zerstört: Restzeit statt HP-Zahl — gleiche Sprache wie champ-hp-text--down */
+.planet-hp-text--down {
+  color: #ff6050;
+  text-shadow:
+    0 0 4px rgba(255, 60, 40, 0.7),
+    0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
 /* ── Jungle Buff — Planet Glow (applied to the item itself, not clipped) ─── */
