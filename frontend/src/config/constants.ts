@@ -1508,6 +1508,15 @@ export const PLANET_HARVEST_INTERVAL_TICKS = 30 // harvest_node: 1 Material ever
 export const JUNGLE_BUFF_RANGE = 120 // px, screen-space proximity radius for jungle buff trigger
 export const JUNGLE_BUFF_COOLDOWN_MS = 30_000 // 30s cooldown between jungle buff triggers
 
+// Material rarity colors (WoW-style tiers) — used by the harvest target picker in
+// PlanetSelectTabComponent to color material medallions, names and rarity badges.
+export const MATERIAL_RARITY_COLOR: Record<string, string> = {
+  common: '#c8c8c8',
+  uncommon: '#4dff35',
+  rare: '#5aabff',
+  epic: '#c37aff',
+}
+
 export const MEEP_POWER_MULTIPLIER = 100
 
 // Ability defaults (??-operator fallbacks)
