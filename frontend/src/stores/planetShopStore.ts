@@ -340,9 +340,19 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
     /** Purchased, role-assigned slots whose next level is affordable right now
      *  (Sun-Phase met + enough Chimes). Drives the planet-tab notify badges
-     *  (header tab badge + footer Level-Up badge). */
-    affordableUpgradeCount(): number {
-      return this.slots.filter((s) => s.purchased && !!s.role && this.canLevelUpPlanet(s.id)).length
+     *  (header tab badge + footer Level-Up badge). Logic is inlined (not via the
+     *  canLevelUpPlanet action) so the reactive chimes/phase reads are tracked
+     *  by this getter's computed and the badge updates live. */
+    affordableUpgradeCount(state): number {
+      const starPhase = useSolarUpgradeStore().starPhase
+      const chimes = useGameStore().chimes
+      return state.slots.filter(
+        (s) =>
+          s.purchased &&
+          !!s.role &&
+          starPhase >= planetLevelRequiredPhase(s.level + 1) &&
+          chimes >= planetLevelUpCost(s),
+      ).length
     },
   },
 

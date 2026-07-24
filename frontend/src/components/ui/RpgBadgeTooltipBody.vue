@@ -6,6 +6,7 @@ import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useBattleStore } from '@/stores/battleStore'
+import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useActionToast } from '@/composables/useActionToast'
 import { CHAMPION_ROLES } from '@/config/championRoles'
@@ -18,7 +19,7 @@ import type { ChampionRole } from '@/types'
    (expedition/champions) close the surrounding tooltip via the `close` prop
    handed down from RpgBadgeTooltip's #tip slot. */
 const props = defineProps<{
-  kind: 'level' | 'expedition' | 'forge' | 'champions' | 'skill'
+  kind: 'level' | 'expedition' | 'forge' | 'champions' | 'skill' | 'planet'
   /** close callback from RpgBadgeTooltip's #tip slot — lets interactive
       tooltips dismiss themselves after an action */
   close?: () => void
@@ -29,6 +30,7 @@ const meepTree = useMeepTreeStore()
 const expeditionStore = useExpeditionStore()
 const solarStore = useSolarUpgradeStore()
 const battleStore = useBattleStore()
+const planetShopStore = usePlanetShopStore()
 const uiStore = useUiStore()
 const { showToast } = useActionToast()
 
@@ -76,6 +78,9 @@ function pickChampion(name: string) {
 
 /* ── skill ──────────────────────────────────────────────────────────── */
 const skillCount = computed(() => meepTree.buyableNodeCount)
+
+/* ── planet ─────────────────────────────────────────────────────────── */
+const planetUpgradeCount = computed(() => planetShopStore.affordableUpgradeCount)
 </script>
 
 <template>
@@ -188,6 +193,24 @@ const skillCount = computed(() => meepTree.buyableNodeCount)
       </div>
       <div class="bt__hint">Open the Skill Tree to learn</div>
     </template>
+
+    <!-- ══════════ PLANET ══════════ -->
+    <template v-else-if="kind === 'planet'">
+      <div class="bt__title">Planet Upgrades Ready</div>
+      <div class="pl-tt__body">
+        <img src="/img/planet.png" class="pl-tt__icon" alt="" aria-hidden="true" />
+        <div class="pl-tt__lines">
+          <span class="pl-tt__next">
+            <strong>{{ planetUpgradeCount }}</strong> orbit slot{{
+              planetUpgradeCount === 1 ? '' : 's'
+            }}
+            ready to level up
+          </span>
+          <span class="pl-tt__chimes">{{ $formatNumber(gameStore.chimes) }} Chimes available</span>
+        </div>
+      </div>
+      <div class="bt__hint">Open Planets to attune your orbit slots</div>
+    </template>
   </div>
 </template>
 
@@ -218,6 +241,11 @@ const skillCount = computed(() => meepTree.buyableNodeCount)
 /* skill badge uses a pink accent instead of gold */
 .bt--skill .bt__title {
   color: #ec4899;
+}
+
+/* planet badge uses an emerald accent instead of gold */
+.bt--planet .bt__title {
+  color: #34d399;
 }
 
 .bt__hint {
@@ -513,6 +541,45 @@ const skillCount = computed(() => meepTree.buyableNodeCount)
 }
 
 .sk-tt__meeps {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #e8c040;
+}
+
+/* ── planet ─────────────────────────────────────────────────────────── */
+.pl-tt__body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+
+.pl-tt__icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.55));
+}
+
+.pl-tt__lines {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pl-tt__next {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #e8e0cc;
+}
+
+.pl-tt__next strong {
+  color: #6ee7b7;
+}
+
+.pl-tt__chimes {
   font-size: 0.75rem;
   font-weight: 600;
   color: #e8c040;

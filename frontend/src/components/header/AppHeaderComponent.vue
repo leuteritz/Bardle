@@ -6,6 +6,7 @@ import { useBattleStore } from '../../stores/battleStore'
 import { useExpeditionStore } from '../../stores/expeditionStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import { useMeepTreeStore } from '../../stores/meepTreeStore'
+import { usePlanetShopStore } from '../../stores/planetShopStore'
 import { formatNumber } from '../../config/numberFormat'
 import { usePersistence } from '../../composables/usePersistence'
 import {
@@ -32,6 +33,7 @@ const battleStore = useBattleStore()
 const expeditionStore = useExpeditionStore()
 const solarStore = useSolarUpgradeStore()
 const meepTreeStore = useMeepTreeStore()
+const planetShopStore = usePlanetShopStore()
 const { resetGame } = usePersistence()
 
 const championBadgeCount = computed(() => battleStore.newlyUnlockedChampions.length)
@@ -40,6 +42,8 @@ const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
 )
 const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
+// Planet tab: how many orbit slots can afford their next level right now.
+const planetBadgeCount = computed(() => planetShopStore.affordableUpgradeCount)
 
 /* Badge anchors on the arc ellipse (θ = π/2 at the apex where the level badge
    sits). Slots are solved numerically so the edge-to-edge pixel gap is the
@@ -68,7 +72,7 @@ const badgeSlotStyles = computed(() => {
   const thetas: number[] = []
   let last = levelCenter
   let need = levelR + nR + gap // level ↔ first badge
-  for (let th = Math.PI / 2; th > 0.02 && thetas.length < 2; th -= 0.003) {
+  for (let th = Math.PI / 2; th > 0.02 && thetas.length < 3; th -= 0.003) {
     const p = notifCenter(th)
     if (Math.hypot(p.x - last.x, p.y - last.y) >= need) {
       thetas.push(th)
@@ -76,8 +80,8 @@ const badgeSlotStyles = computed(() => {
       need = nD + gap // badge ↔ badge
     }
   }
-  // Arc too short to fit both slots → spread the remainder evenly.
-  while (thetas.length < 2) thetas.push((thetas[thetas.length - 1] ?? Math.PI / 2) / 2)
+  // Arc too short to fit all slots → spread the remainder evenly.
+  while (thetas.length < 3) thetas.push((thetas[thetas.length - 1] ?? Math.PI / 2) / 2)
 
   const styleAt = (th: number) => ({
     left: `${cx + cx * Math.cos(th)}px`,
@@ -88,6 +92,7 @@ const badgeSlotStyles = computed(() => {
     forge: styleAt(thetas[0]),
     champion: styleAt(thetas[1]),
     skill: styleAt(Math.PI - thetas[1]), // left side, outer slot (mirror of champion)
+    planet: styleAt(thetas[2]), // right side, outermost slot
   }
 })
 
@@ -95,6 +100,7 @@ const expedBadgeStyle = computed(() => badgeSlotStyles.value.expedition)
 const forgeBadgeStyle = computed(() => badgeSlotStyles.value.forge)
 const champBadgeStyle = computed(() => badgeSlotStyles.value.champion)
 const skillBadgeStyle = computed(() => badgeSlotStyles.value.skill)
+const planetBadgeStyle = computed(() => badgeSlotStyles.value.planet)
 
 function openShopTab() {
   uiStore.openBardModal()
@@ -109,6 +115,11 @@ function openTeamTab() {
 function openTreeTab() {
   uiStore.openBardModal()
   uiStore.setBardTab('tree')
+}
+
+function openPlanetsTab() {
+  uiStore.openBardModal()
+  uiStore.setBardTab('planets')
 }
 
 function handleReset() {
@@ -438,6 +449,23 @@ onUnmounted(() => {
         </Transition>
         <template #tip>
           <RpgBadgeTooltipBody kind="skill" />
+        </template>
+      </RpgBadgeTooltip>
+
+      <RpgBadgeTooltip>
+        <Transition name="header-badge">
+          <button
+            v-if="planetBadgeCount > 0"
+            class="header-notif-badge header-notif-badge--planet"
+            :style="planetBadgeStyle"
+            :aria-label="`${planetBadgeCount} planet upgrade(s) ready`"
+            @click.stop="openPlanetsTab"
+          >
+            {{ planetBadgeCount }}
+          </button>
+        </Transition>
+        <template #tip>
+          <RpgBadgeTooltipBody kind="planet" />
         </template>
       </RpgBadgeTooltip>
     </div>
@@ -1058,6 +1086,17 @@ onUnmounted(() => {
   --badge-glow-a: rgba(236, 72, 153, 0.5);
   --badge-glow-b: rgba(236, 72, 153, 0.9);
   --badge-glow-c: rgba(190, 24, 93, 0.4);
+}
+
+.header-notif-badge--planet {
+  background: linear-gradient(to bottom, #34d399, #059669);
+  border: 2px solid #6ee7b7;
+  box-shadow:
+    0 0 8px rgba(52, 211, 153, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --badge-glow-a: rgba(52, 211, 153, 0.5);
+  --badge-glow-b: rgba(52, 211, 153, 0.9);
+  --badge-glow-c: rgba(5, 150, 105, 0.45);
 }
 
 .header-notif-badge:hover {
