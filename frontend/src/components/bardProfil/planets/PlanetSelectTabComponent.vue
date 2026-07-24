@@ -669,13 +669,13 @@ function chooseBuilding(buildingId: string) {
               <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
                 <div class="ps-planet-role-label">{{ activeRoleName }}</div>
 
-                <!-- Permanent planet effect — always visible. Its value flips to the
-                     post-upgrade value (in confirm-green) while the button is hovered. -->
+                <!-- Permanent planet effect — always visible, label-free: the value
+                     alone carries the line. It flips to the post-upgrade value (in
+                     confirm-green) while the upgrade button is hovered. -->
                 <div
                   class="ps-planet-effect"
                   :class="{ 'ps-planet-effect--preview': previewHover }"
                 >
-                  <span class="ps-planet-effect-label">Effect</span>
                   <span class="ps-planet-effect-value">{{ previewHover ? nextBonusText : activeSlotBonusText }}</span>
                 </div>
 
@@ -2643,14 +2643,16 @@ img.ps-role-icon {
 }
 
 /* ── Permanent planet effect (between name and HP bar) ──────────────────────── */
-/* Always visible in the role color; on button hover the value flips to the
-   post-upgrade value in confirm-green (mirrors the HP bar's preview language). */
+/* Label-free: the effect text alone fills the pill, so it can run big without
+   competing with the role title above. Always in the role color; on button hover
+   value + frame flip to confirm-green (mirrors the HP bar's preview language). */
 .ps-planet-effect {
   display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: clamp(5px, 0.9vh, 10px) 0 clamp(4px, 0.7vh, 8px);
-  padding: clamp(3px, 0.5vh, 6px) clamp(10px, 0.9vw, 14px);
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  margin: clamp(6px, 1.1vh, 12px) 0 clamp(5px, 0.9vh, 10px);
+  padding: clamp(5px, 0.8vh, 10px) clamp(14px, 1.4vw, 22px);
   background: rgba(20, 17, 10, 0.72);
   border: 1px solid color-mix(in srgb, var(--rc, #e8c040) 40%, #3a2a10);
   border-radius: 5px;
@@ -2659,19 +2661,15 @@ img.ps-role-icon {
     background 180ms ease;
 }
 
-.ps-planet-effect-label {
-  font-size: clamp(0.6rem, 0.95vh, 0.74rem);
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
-}
-
 .ps-planet-effect-value {
-  font-size: clamp(1rem, 1.7vh, 1.3rem);
+  font-size: clamp(1.15rem, 2.1vh, 1.65rem);
   font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
   color: var(--rc, #e8c040);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--rc, #e8c040) 40%, transparent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--rc, #e8c040) 45%, transparent);
   font-variant-numeric: tabular-nums;
   transition:
     color 180ms ease,
