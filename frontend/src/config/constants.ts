@@ -837,14 +837,8 @@ export const AVATAR_SIZE_SMALL = 32
 export const ORBIT_RADIUS_SCALE = 1.8
 
 // ── Geteilte Orbit-Phase der Spieler-Planeten (Idle-Orbit ↔ Planeten-Tab) ────
-/** Kepler-Anteil der Winkelgeschwindigkeit: nahe den Bahn-Scheiteln schneller. */
-export const PLANET_ORBIT_KEPLER_BOOST = 0.5
-/** Wie schnell der Behind-Sun-Speedup ein-/ausgeblendet wird (Lerp pro Frame). */
-export const PLANET_ORBIT_BEHIND_SPEED_LERP = 0.04
 /** Normierte y-Schwelle (relativ zum Bahn-Radius), ab der ein Planet hinter der Sonne steht. */
 export const PLANET_ORBIT_BEHIND_REL_Y = -0.05
-/** Frame-Delta-Deckel der Orbit-Integration (ms) — verhindert Sprünge nach Tab-Pausen. */
-export const PLANET_ORBIT_MAX_STEP_MS = 50
 /**
  * Anteil des Umlaufs, den die Planeten-Tab-Keyframes (`ps-planet-orbit`) vor der
  * Sonne verbringen. Muss zum z-index-Wechsel bei 70 % / 71 % passen.

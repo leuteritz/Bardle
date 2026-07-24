@@ -1,21 +1,17 @@
 // ── Geteilte Orbit-Phase der Spieler-Planeten ───────────────────────────────
 // Idle-Orbit (PlanetOrbit.vue) und Planeten-Tab zeigen denselben Planeten auf
-// derselben Bahn. Der Idle-Layer pausiert aber, sobald ein Profil-Tab offen ist
-// (useRenderingPaused) — ohne geteilten Zustand liefen beide Ansichten
-// auseinander und der Planet stünde im Tab zu einem völlig anderen Zeitpunkt
-// hinter der Sonne als im Orbit.
+// derselben Bahn — der Tab nur stark verkleinert und auf einer eigenen
+// Keyframe-Ellipse.
 //
-// Staffellauf: Der Idle-Orbit schreibt seinen Winkel pro Frame nach
-// `planetOrbitPhases`. Öffnet sich der Tab, übernimmt er diese Winkel, dreht sie
-// mit derselben Regel weiter und legt das Ergebnis beim Verlassen in
-// `planetOrbitHandoff` ab — der Idle-Orbit übernimmt es beim nächsten Frame und
-// setzt die Position hart, statt sie von der alten Stelle nachzuziehen.
+// Der Idle-Orbit ist die einzige Quelle der Bahnwinkel: Er simuliert auch dann
+// weiter, wenn ein Bard-Tab ihn verdeckt (dann headless, ohne zu zeichnen), und
+// schreibt seinen Winkel pro Frame nach `planetOrbitPhases`. Der Tab liest nur
+// und übersetzt den Winkel in den Fortschritt seiner Keyframes — dadurch
+// verschwindet der Planet dort exakt dann und so lange hinter der Sonne wie im
+// Idle-Orbit.
 import {
-  BEHIND_SUN_SPEED_MULTIPLIER,
   ORBIT_TIERS,
   PLANET_ORBIT_BEHIND_REL_Y,
-  PLANET_ORBIT_BEHIND_SPEED_LERP,
-  PLANET_ORBIT_KEPLER_BOOST,
   PLANET_TAB_ORBIT_FOREGROUND_PROGRESS,
 } from '@/config/constants'
 
@@ -30,9 +26,6 @@ export interface PlanetOrbitPhaseEntry {
 
 /** Live-Winkel je Slot — vom Idle-Orbit pro Frame geschrieben. */
 export const planetOrbitPhases = new Map<string, PlanetOrbitPhaseEntry>()
-
-/** Vom Planeten-Tab zurückgegebene Winkel — der Idle-Orbit springt darauf. */
-export const planetOrbitHandoff = new Map<string, PlanetOrbitPhaseEntry>()
 
 function normalizeAngle(angle: number): number {
   const wrapped = angle % TWO_PI
@@ -53,33 +46,6 @@ export function orbitTierForSlotIndex(index: number): { ratio: number; tiltRad: 
 /** Startwinkel eines Slots — identisch zur Erstbelegung im Idle-Orbit. */
 export function initialOrbitAngle(index: number, count: number): number {
   return (index / Math.max(count, 1)) * TWO_PI
-}
-
-/** Ein Integrationsschritt des Bahnwinkels (Kepler-Anteil inklusive). */
-export function advanceOrbitAngle(
-  angle: number,
-  direction: 1 | -1,
-  baseSpeed: number,
-  speedMul: number,
-  dtMs: number,
-): number {
-  const keplerBoost = 1 + PLANET_ORBIT_KEPLER_BOOST * (1 - Math.abs(Math.cos(angle)))
-  return angle + direction * baseSpeed * keplerBoost * speedMul * dtMs
-}
-
-/** Weiche Annäherung des Behind-the-Sun-Speedups an sein Ziel. */
-export function approachBehindSpeedMul(current: number, isBehind: boolean): number {
-  const target = isBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1
-  return current + (target - current) * PLANET_ORBIT_BEHIND_SPEED_LERP
-}
-
-/**
- * Normierte Bildschirm-y-Lage (in ry-Einheiten) für einen Bahnwinkel — dieselbe
- * Größe, aus der der Idle-Orbit `isBehind` ableitet, nur direkt aus dem Winkel
- * statt aus der geglätteten Pixelposition.
- */
-export function orbitRelY(angle: number, ratio: number, tiltRad: number): number {
-  return ratio * Math.cos(angle) * Math.sin(tiltRad) + Math.sin(angle) * Math.cos(tiltRad)
 }
 
 /**
@@ -113,9 +79,7 @@ export function orbitEclipsePhase(
   // Halbe Winkelbreite, um die der verdeckte Bogen kürzer ist als ein Halbkreis.
   const trim = Math.abs(Math.asin(ratioAtThreshold))
 
-  const psi = normalizeAngle(
-    direction === 1 ? angle + phaseShift : Math.PI - (angle + phaseShift),
-  )
+  const psi = normalizeAngle(direction === 1 ? angle + phaseShift : Math.PI - (angle + phaseShift))
   const psiEnter = Math.PI + trim
   const psiExit = TWO_PI - trim
 

@@ -25,20 +25,37 @@ function createInstance() {
   )
 
   /**
-   * Pause signal for the idle layer's render loops (star system, orbits, sun
-   * canvas, galaxy minimap, …). While a bard-profile tab is open, the idle
-   * layer sits invisible under a near-opaque overlay — rendering it at 60fps
-   * only steals frame budget. Das Star-Fight-Modal pausiert den Layer NICHT:
-   * die Orbits laufen sichtbar weiter, damit die Vordergrund/Hintergrund-
+   * Pause signal for the idle layer's OUTPUT — DOM writes, canvas paints and
+   * anything feeding Vue's render pipeline. While a bard-profile tab is open,
+   * the idle layer sits invisible under a near-opaque overlay: painting it at
+   * 60fps only steals frame budget. Das Star-Fight-Modal pausiert den Layer
+   * NICHT: die Orbits laufen sichtbar weiter, damit die Vordergrund/Hintergrund-
    * Mechanik (hinter der Sonne = kein Kampf) live mit dem Modal synchron ist.
+   *
+   * ACHTUNG: Das ist ausdrücklich KEIN Stopp der Simulation — siehe
+   * `isIdleSimulationPaused`.
    */
   const isIdleRenderingPaused = computed(
     () => isRenderingPaused.value || uiStore.bardActiveTab !== null,
   )
 
+  /**
+   * Pause signal for the idle layer's SIMULATION — orbit angles, behind-the-sun
+   * state and the screen positions the combat logic reads. Diese läuft weiter,
+   * während ein Bard-Tab offen ist: Champions sollen ihre Fähigkeiten auch dann
+   * zünden, Planeten und Champions weiter hinter die Sonne wandern und der
+   * Eclipse-Status im Command Panel live bleiben. Kostet fast nichts, weil im
+   * verdeckten Zustand nur noch Mathematik läuft und kein Pixel gezeichnet wird.
+   *
+   * Gestoppt wird nur bei echtem Stillstand: Tab im Hintergrund, Fenster ohne
+   * Fokus oder pausiertes Spiel — dort friert absichtlich das ganze Spiel ein.
+   */
+  const isIdleSimulationPaused = computed(() => isRenderingPaused.value)
+
   return {
     isRenderingPaused: readonly(isRenderingPaused),
     isIdleRenderingPaused: readonly(isIdleRenderingPaused),
+    isIdleSimulationPaused: readonly(isIdleSimulationPaused),
   }
 }
 

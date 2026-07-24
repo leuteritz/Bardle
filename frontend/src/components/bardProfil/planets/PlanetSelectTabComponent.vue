@@ -24,20 +24,13 @@ import {
   HP_COLOR_THRESHOLD_HIGH,
   HP_COLOR_THRESHOLD_LOW,
   MATERIAL_RARITY_COLOR,
-  PLANET_ORBIT_BEHIND_REL_Y,
-  PLANET_ORBIT_MAX_STEP_MS,
   PLANET_TAB_ORBIT_PERIOD_SEC,
 } from '@/config/constants'
 import {
-  advanceOrbitAngle,
-  approachBehindSpeedMul,
   initialOrbitAngle,
   orbitEclipsePhase,
-  orbitRelY,
   orbitTierForSlotIndex,
-  planetOrbitHandoff,
   planetOrbitPhases,
-  type PlanetOrbitPhaseEntry,
 } from '@/utils/planetOrbitPhase'
 import { useActionToast } from '@/composables/useActionToast'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
@@ -96,19 +89,16 @@ const activeSlotIndex = computed(() =>
   store.slots.findIndex((s) => s.id === selectedSlotId.value),
 )
 
-// ── Orbit-Phase — synchron zum Idle-Orbit ──────────────────────────────────
-// Der Idle-Layer pausiert, sobald dieser Tab offen ist (useRenderingPaused).
-// Ohne geteilten Zustand stünde derselbe Planet hier zu einer ganz anderen Zeit
-// hinter der Sonne als im Orbit. Also übernimmt der Tab die geteilten Bahnwinkel,
-// dreht ALLE Orbit-Slots mit derselben Regel weiter — nicht nur den sichtbaren,
-// sonst driften die Bahnen gegeneinander — und reicht sie über planetOrbitHandoff
-// zurück, damit der Idle-Orbit nahtlos dort weitermacht.
+// ── Orbit-Phase — gespiegelt aus dem Idle-Orbit ────────────────────────────
+// Der Idle-Layer zeichnet zwar nicht, während dieser Tab offen ist, simuliert
+// aber weiter (useRenderingPaused → isIdleSimulationPaused). Er ist damit die
+// EINZIGE Quelle der Bahnwinkel; dieser Tab liest sie nur und übersetzt sie in
+// den Fortschritt der Keyframe-Animation. Selbst weiterdrehen dürfte er nicht —
+// beide Loops zusammen würden den Orbit doppelt so schnell laufen lassen.
 // Reihenfolge und Filter müssen exakt PlanetOrbit.vue entsprechen: der Index in
 // dieser Liste bestimmt, auf welchem Orbit-Tier (und damit welcher Ellipse) der
 // Slot läuft.
 const orbitSlots = computed(() => store.purchasedSlots.filter((s) => s.role !== null))
-
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const planetOrbitEl = ref<HTMLElement | null>(null)
 /** Aktiver Planet steht gerade hinter der Sonne — treibt die Eclipse-Darstellung. */
@@ -135,45 +125,13 @@ const orbitPhaseStyle = computed(() => ({
 }))
 
 let orbitFrame = 0
-let orbitLastTs = 0
 
-function tickOrbit(ts: number) {
-  const dt = orbitLastTs === 0 ? 16 : Math.min(ts - orbitLastTs, PLANET_ORBIT_MAX_STEP_MS)
-  orbitLastTs = ts
-
-  const slots = orbitSlots.value
-  let activeSeen = false
-
-  for (let i = 0; i < slots.length; i++) {
-    const slot = slots[i]
-    const { ratio, tiltRad } = orbitTierForSlotIndex(i)
-    const prev = planetOrbitPhases.get(slot.id)
-    const prevAngle = prev?.angle ?? initialOrbitAngle(i, slots.length)
-
-    const behind = orbitRelY(prevAngle, ratio, tiltRad) < PLANET_ORBIT_BEHIND_REL_Y
-    const speedMul = approachBehindSpeedMul(prev?.speedMul ?? 1, behind)
-    const angle = reducedMotion
-      ? prevAngle
-      : advanceOrbitAngle(prevAngle, slot.direction, slot.baseSpeed, speedMul, dt)
-
-    const next: PlanetOrbitPhaseEntry = { angle, speedMul }
-    planetOrbitPhases.set(slot.id, next)
-    // Jeden Frame zurückreichen statt erst beim Unmount: Der Idle-Orbit greift
-    // den Winkel beim ersten Frame nach dem Schließen ab — auch dann, wenn diese
-    // Komponente vorher hart aus dem DOM genommen wurde.
-    planetOrbitHandoff.set(slot.id, next)
-
-    if (slot.id === selectedSlotId.value) {
-      activeSeen = true
-      const phase = orbitEclipsePhase(angle, slot.direction, ratio, tiltRad)
-      // Direkt aufs Element statt über einen ref: 60 Re-Renders pro Sekunde
-      // dieser großen Komponente nur für eine CSS-Variable wären Verschwendung.
-      planetOrbitEl.value?.style.setProperty('--orbit-delay', orbitDelayFor(phase.progress))
-      if (orbitBehind.value !== phase.isBehind) orbitBehind.value = phase.isBehind
-    }
-  }
-
-  if (!activeSeen && orbitBehind.value) orbitBehind.value = false
+function tickOrbit() {
+  const phase = eclipsePhaseOf(selectedSlotId.value)
+  // Direkt aufs Element statt über einen ref: 60 Re-Renders pro Sekunde dieser
+  // großen Komponente nur für eine CSS-Variable wären Verschwendung.
+  planetOrbitEl.value?.style.setProperty('--orbit-delay', orbitDelayFor(phase.progress))
+  if (orbitBehind.value !== phase.isBehind) orbitBehind.value = phase.isBehind
   orbitFrame = requestAnimationFrame(tickOrbit)
 }
 

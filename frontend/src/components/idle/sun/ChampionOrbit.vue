@@ -482,6 +482,16 @@ export default defineComponent({
         }
       }
 
+      // Ab hier nur noch Sichtbares. Unter dem Bard-Profil endet der Frame: die
+      // Bahnwinkel, activeChampionBehindState und die Screen-Positionen für die
+      // Kampflogik sind oben schon aktualisiert — Champions zünden ihre
+      // Fähigkeiten also weiter und wandern weiter hinter die Sonne, es wird nur
+      // nichts davon gezeichnet.
+      if (isIdleRenderingPaused.value) {
+        animFrame = requestAnimationFrame(animate)
+        return
+      }
+
       // ── Projektil-System ──────────────────────────────────────────────────────
       if (!reducedMotion) {
         tickShots(dt)
@@ -518,9 +528,11 @@ export default defineComponent({
       { immediate: true, deep: true },
     )
 
-    const { isIdleRenderingPaused } = useRenderingPaused()
+    const { isIdleRenderingPaused, isIdleSimulationPaused } = useRenderingPaused()
 
-    watch(isIdleRenderingPaused, (paused) => {
+    // Gestoppt wird nur bei echtem Stillstand. Ein offenes Bard-Profil hält den
+    // Loop am Leben — er läuft dann headless (siehe Ausstieg oben).
+    watch(isIdleSimulationPaused, (paused) => {
       if (paused) {
         cancelAnimationFrame(animFrame)
         animFrame = 0

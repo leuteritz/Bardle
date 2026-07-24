@@ -156,7 +156,7 @@ import { useUiStore } from '@/stores/uiStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
-import { planetOrbitHandoff, planetOrbitPhases } from '../../../utils/planetOrbitPhase'
+import { planetOrbitPhases } from '../../../utils/planetOrbitPhase'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
@@ -441,20 +441,6 @@ export default defineComponent({
           localStates.set(slot.id, ls)
         }
 
-        // Der Planeten-Tab hat den Orbit weitergedreht, während dieser Layer
-        // pausiert war. Winkel übernehmen und die Position hart darauf setzen —
-        // der Planet war währenddessen unsichtbar, ein Lerp von der alten Stelle
-        // würde ihn nur sichtbar nachziehen lassen.
-        const handoff = planetOrbitHandoff.get(slot.id)
-        if (handoff) {
-          ls.orbitAngle = handoff.angle
-          const handoffPos = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, cx, cy)
-          ls.x = handoffPos.x
-          ls.y = handoffPos.y
-          planetSpeedMuls.set(slot.id, handoff.speedMul)
-          planetOrbitHandoff.delete(slot.id)
-        }
-
         const prevRelY = (ls.y - cy) / Math.max(ry, 1)
         const prevIsBehind = prevRelY < -0.05
         const targetMul = prevIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
@@ -558,12 +544,12 @@ export default defineComponent({
           localStates.delete(key)
           planetSpeedMuls.delete(key)
           planetOrbitPhases.delete(key)
-          planetOrbitHandoff.delete(key)
         }
       }
 
-      renderPositions.value = newPositions
-
+      // Positionen und Eclipse-Status gehen IMMER raus: der Kampf (foregroundGate),
+      // das Command Panel und der Planeten-Tab lesen sie auch dann, wenn dieser
+      // Layer gerade unter dem Bard-Profil verdeckt ist.
       for (const pos of newPositions) {
         activePlayerPlanetPositions.set(pos.id, {
           cx: pos.x,
@@ -574,6 +560,16 @@ export default defineComponent({
       for (const key of activePlayerPlanetPositions.keys()) {
         if (!newPositions.some((p) => p.id === key)) activePlayerPlanetPositions.delete(key)
       }
+
+      // Ab hier nur noch Sichtbares. Unter dem Bard-Profil endet der Frame: kein
+      // Vue-Re-Render, kein Canvas-Paint, keine Projektil-Choreografie — nur die
+      // Orbit-Mathematik oben ist gelaufen.
+      if (isIdleRenderingPaused.value) {
+        animFrame = requestAnimationFrame(animate)
+        return
+      }
+
+      renderPositions.value = newPositions
 
       const tierCount = ORBIT_TIERS.planet.length
       for (let i = 0; i < tierCount; i++) {
@@ -594,9 +590,11 @@ export default defineComponent({
       animFrame = requestAnimationFrame(animate)
     }
 
-    const { isIdleRenderingPaused } = useRenderingPaused()
+    const { isIdleRenderingPaused, isIdleSimulationPaused } = useRenderingPaused()
 
-    watch(isIdleRenderingPaused, (paused) => {
+    // Gestoppt wird nur bei echtem Stillstand. Ein offenes Bard-Profil hält den
+    // Loop am Leben — er läuft dann headless (siehe Ausstieg oben).
+    watch(isIdleSimulationPaused, (paused) => {
       if (paused) {
         cancelAnimationFrame(animFrame)
         animFrame = 0
@@ -605,6 +603,7 @@ export default defineComponent({
         animFrame = requestAnimationFrame(animate)
       }
     })
+
 
     onMounted(() => {
       window.addEventListener('resize', updateScreenCenter)

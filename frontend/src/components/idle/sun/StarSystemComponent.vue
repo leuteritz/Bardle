@@ -259,6 +259,7 @@ import {
 import { CHAMPION_ROLES } from '../../../config/championRoles'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
+import { activeStarCombatState } from '../../../utils/activeStarCombatState'
 import type { ChampionRole } from '../../../types'
 
 const uiStore = useUiStore()
@@ -572,7 +573,7 @@ const scaledStarOrbitTiers = computed(() =>
 )
 const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
-const { isIdleRenderingPaused } = useRenderingPaused()
+const { isIdleRenderingPaused, isIdleSimulationPaused } = useRenderingPaused()
 
 // ── Midlaner Fluch-Timer ──────────────────────────────────────────────────────
 const curseSecsLeft = ref(0)
@@ -790,26 +791,60 @@ function effectiveBurstCooldown(): number {
   return glaciated ? STAR_BURST_COOLDOWN * ROLE_MID_CURSE_ATTACK_SLOW : STAR_BURST_COOLDOWN
 }
 
-function fireEnemyShot(fromX: number, fromY: number) {
+/** Zielwahl einer Salve: zufälliger sichtbarer Spieler-Planet, sonst der Bard in der Mitte. */
+function pickEnemyShotTarget(): { x: number; y: number; slotId: string | null } {
   const foregroundSlots = [...activePlayerPlanetPositions.entries()].filter(
     ([, p]) => p.isForeground,
   )
-
-  let targetX: number
-  let targetY: number
-  let targetSlotId: string | null = null
-
   if (foregroundSlots.length > 0) {
     const [slotId, slotPos] = foregroundSlots[Math.floor(Math.random() * foregroundSlots.length)]
-    targetX = slotPos.cx
-    targetY = slotPos.cy
-    targetSlotId = slotId
+    return { x: slotPos.cx, y: slotPos.cy, slotId }
+  }
+  return { x: window.innerWidth / 2, y: window.innerHeight / 2, slotId: null }
+}
+
+/** Trefferschaden einer Salve — Fluch-Abschwächung inklusive. */
+function applyEnemyShotDamage(slotId: string | null) {
+  const curse = roleBehaviorStore.activeCurse
+  const weakened = curse?.type === 'weakness' && Date.now() < curse.activeUntil
+  const dmg = weakened
+    ? Math.max(1, Math.round(ENEMY_PROJECTILE_DAMAGE * ROLE_MID_CURSE_ATTACK_DEBUFF))
+    : ENEMY_PROJECTILE_DAMAGE
+  if (slotId) {
+    planetShopStore.takeDamage(slotId, dmg)
   } else {
-    targetX = window.innerWidth / 2
-    targetY = window.innerHeight / 2
+    playerStore.takeDamage(dmg)
+  }
+}
+
+/**
+ * Salve ohne Projektil — unter dem Bard-Profil fliegt nichts, also wird der
+ * Treffer sofort verrechnet statt beim Einschlag.
+ *
+ * Der Tank-Intercept wird dabei nachgebildet: Ohne diesen Zweig verlöre der
+ * Spieler den Schild-Schutz seines Top-Laners genau dann, wenn er ihn nicht
+ * sehen kann. Die Ausweichrichtung ist frei gewählt — sie steuert nur die
+ * Animation, die hier ohnehin niemand sieht.
+ */
+function fireEnemyShotHeadless() {
+  const target = pickEnemyShotTarget()
+  const topLaneName = battleStore.headerSlots[0]
+
+  if (target.slotId === null && topLaneName && roleBehaviorStore.tankShieldActive) {
+    if (!activeChampionBehindState[topLaneName]) {
+      const topChamp = combatStore.champions.find((c) => c.name === topLaneName)
+      if (topChamp) {
+        roleBehaviorStore.triggerIntercept(0, -1, topChamp.screenX, topChamp.screenY)
+        return
+      }
+    }
   }
 
-  const capturedSlotId = targetSlotId
+  applyEnemyShotDamage(target.slotId)
+}
+
+function fireEnemyShot(fromX: number, fromY: number) {
+  const { x: targetX, y: targetY, slotId: capturedSlotId } = pickEnemyShotTarget()
   const capturedTopLaneName = battleStore.headerSlots[0]
   spawnEnemyShot(fromX, fromY, targetX, targetY, true, true, {
     trailColor: ENEMY_TRAIL_COLOR,
@@ -838,16 +873,7 @@ function fireEnemyShot(fromX: number, fromY: number) {
           }
         : undefined,
     onHit() {
-      const curse = roleBehaviorStore.activeCurse
-      const weakened = curse?.type === 'weakness' && Date.now() < curse.activeUntil
-      const dmg = weakened
-        ? Math.max(1, Math.round(ENEMY_PROJECTILE_DAMAGE * ROLE_MID_CURSE_ATTACK_DEBUFF))
-        : ENEMY_PROJECTILE_DAMAGE
-      if (capturedSlotId) {
-        planetShopStore.takeDamage(capturedSlotId, dmg)
-      } else {
-        playerStore.takeDamage(dmg)
-      }
+      applyEnemyShotDamage(capturedSlotId)
     },
   })
 }
@@ -946,19 +972,24 @@ function enemyAttackLoop(ts: number) {
   enemyLastTs = ts
 
   if (!reducedMotion) {
-    tickEnemyShots(dt)
+    // Unter dem Bard-Profil läuft der Salven-Takt weiter, aber ohne Projektile:
+    // Treffer werden dann sofort verrechnet statt beim Einschlag. Der Zustand
+    // kommt aus activeStarCombatState statt aus der Render-Liste — die wird im
+    // verdeckten Zustand bewusst nicht mehr fortgeschrieben.
+    const headless = isIdleRenderingPaused.value
+    if (!headless) tickEnemyShots(dt)
 
-    for (const star of starRenders.value) {
+    for (const [starId, star] of activeStarCombatState) {
       if (star.isBehind) continue
 
       // Boss-Stern: feuert nicht im Burst-Takt — seine Shock Nova läuft über
       // den Store-Cooldown (siehe novaCounter-Watch), Ring kommt aus dem Store
-      if (star.id === novaStarId.value) {
-        starBurstStates.delete(star.id)
+      if (starId === novaStarId.value) {
+        starBurstStates.delete(starId)
         continue
       }
 
-      let state = starBurstStates.get(star.id)
+      let state = starBurstStates.get(starId)
       if (!state) {
         state = {
           cooldownMs: STAR_BURST_COOLDOWN,
@@ -966,13 +997,14 @@ function enemyAttackLoop(ts: number) {
           shotsLeft: 0,
           shotDelayMs: 0,
         }
-        starBurstStates.set(star.id, state)
+        starBurstStates.set(starId, state)
       }
 
       if (state.shotsLeft > 0) {
         state.shotDelayMs -= dt
         if (state.shotDelayMs <= 0) {
-          fireEnemyShot(star.x, star.y)
+          if (headless) fireEnemyShotHeadless()
+          else fireEnemyShot(star.x, star.y)
           state.shotsLeft -= 1
           if (state.shotsLeft === 0) {
             state.cooldownMs = effectiveBurstCooldown()
@@ -984,7 +1016,7 @@ function enemyAttackLoop(ts: number) {
       } else {
         state.cooldownMs -= dt
         if (state.cooldownMs <= 0) {
-          const count = star.planets.filter((p) => !p.isBehind && p.animState === 'normal').length
+          const count = star.firablePlanets
           if (count > 0) {
             state.shotsLeft = count
             state.shotDelayMs = 0
@@ -996,9 +1028,13 @@ function enemyAttackLoop(ts: number) {
       }
     }
 
-    const activeStarIds = new Set(starRenders.value.map((s) => s.id))
     for (const id of starBurstStates.keys()) {
-      if (!activeStarIds.has(id)) starBurstStates.delete(id)
+      if (!activeStarCombatState.has(id)) starBurstStates.delete(id)
+    }
+
+    if (headless) {
+      enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
+      return
     }
 
     // ── Fluch-Timer aktualisieren (ganze Sekunden → max. 1 Re-Render/s) ──────
@@ -1016,21 +1052,27 @@ function enemyAttackLoop(ts: number) {
   enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
 }
 
-watch(isIdleRenderingPaused, (paused) => {
+// Gestoppt wird nur bei echtem Stillstand — unter dem Bard-Profil feuern die
+// Sterne headless weiter (siehe oben).
+watch(isIdleSimulationPaused, (paused) => {
   if (paused) {
     cancelAnimationFrame(enemyAnimFrame)
     enemyAnimFrame = 0
   } else if (!enemyAnimFrame) {
-    // Nach langem Hintergrund-Aufenthalt können die Canvas-Buffer vom Browser
-    // verworfen worden sein → frisch allozieren; hintCanvasesDirty erzwingt
-    // den vollständigen Neuaufbau der Orbit-Hints im nächsten Frame.
-    resetCanvasIfContextLost(hintBackCanvas.value)
-    resetCanvasIfContextLost(hintFrontCanvas.value)
-    resetCanvasIfContextLost(cooldownCanvas.value)
-    hintCanvasesDirty = true
     enemyLastTs = 0
     enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
   }
+})
+
+// Zurück aus dem verdeckten Zustand: Nach langem Hintergrund-Aufenthalt können
+// die Canvas-Buffer vom Browser verworfen worden sein → frisch allozieren;
+// hintCanvasesDirty erzwingt den vollständigen Neuaufbau der Orbit-Hints.
+watch(isIdleRenderingPaused, (paused) => {
+  if (paused) return
+  resetCanvasIfContextLost(hintBackCanvas.value)
+  resetCanvasIfContextLost(hintFrontCanvas.value)
+  resetCanvasIfContextLost(cooldownCanvas.value)
+  hintCanvasesDirty = true
 })
 // ─────────────────────────────────────────────────────────────────────────────
 

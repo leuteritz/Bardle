@@ -6,6 +6,7 @@ import { useGalaxyStore } from '../stores/galaxyStore'
 import { useWindowFocus } from './useWindowFocus'
 import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
+import { activeStarCombatState } from '../utils/activeStarCombatState'
 import { getOrbitPos } from '../utils/orbitMath'
 import {
   STAR_SPAWN_DURATION_MS,
@@ -145,7 +146,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
   const galaxyStore = useGalaxyStore()
   const planetShopStore = usePlanetShopStore()
   const { windowFocused } = useWindowFocus()
-  const { isRenderingPaused, isIdleRenderingPaused } = useRenderingPaused()
+  const { isRenderingPaused, isIdleRenderingPaused, isIdleSimulationPaused } = useRenderingPaused()
 
   const starRenders = shallowRef<StarRenderEntry[]>([])
   let structureSig: string | null = null
@@ -492,6 +493,29 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
       }
     }
 
+    // Kampfrelevanter Sternzustand — geht immer raus, damit der Salven-Takt in
+    // StarSystemComponent auch unter dem Bard-Profil weiterläuft.
+    for (const r of newRenders) {
+      activeStarCombatState.set(r.id, {
+        x: r.x,
+        y: r.y,
+        isBehind: r.isBehind,
+        firablePlanets: r.planets.filter((p) => !p.isBehind && p.animState === 'normal').length,
+      })
+    }
+    for (const id of activeStarCombatState.keys()) {
+      if (!newRenders.some((r) => r.id === id)) activeStarCombatState.delete(id)
+    }
+
+    // Ab hier nur noch Sichtbares. Unter dem Bard-Profil endet der Frame: die
+    // Stern- und Planetenbahnen sind oben schon weitergedreht und
+    // activePlanetPositions ist aktuell, also bleibt der Eclipse-Status der
+    // Boss-Planeten korrekt — es wird nur nichts davon ausgegeben.
+    if (isIdleRenderingPaused.value) {
+      animFrame = requestAnimationFrame(animate)
+      return
+    }
+
     if (sig !== structureSig) {
       // Strukturelle Änderung → Vue rendert neu (Mount/Unmount/Layer-Wechsel)
       structureSig = sig
@@ -520,9 +544,11 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
     animFrame = requestAnimationFrame(animate)
   }
 
-  // The orbit loop had no pause guard at all — it kept burning ~60fps of
-  // orbit math under the bard overlay, on blurred windows and hidden tabs.
-  watch(isIdleRenderingPaused, (paused) => {
+  // Gestoppt wird nur bei echtem Stillstand (blurred window, hidden tab,
+  // pausiertes Spiel). Unter dem Bard-Profil läuft der Loop headless weiter —
+  // ohne Ausgabe kostet er nur die Bahn-Mathematik, hält aber Sternflug und
+  // Eclipse-Status der Boss-Planeten korrekt am Laufen.
+  watch(isIdleSimulationPaused, (paused) => {
     if (paused) {
       cancelAnimationFrame(animFrame)
       animFrame = 0
@@ -533,7 +559,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
   })
 
   onMounted(() => {
-    if (!isIdleRenderingPaused.value) {
+    if (!isIdleSimulationPaused.value) {
       animFrame = requestAnimationFrame(animate)
     }
   })
