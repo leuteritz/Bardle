@@ -12,6 +12,8 @@ import {
 } from '@/stores/planetShopStore'
 import type { PlanetRole, PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useGameStore } from '@/stores/gameStore'
+import { toRoman } from '@/utils/roman'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import { MATERIALS } from '@/config/materials'
 import {
@@ -50,6 +52,7 @@ const CPS_BUILDINGS = [
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
+const gameStore = useGameStore()
 
 // Display numbering counts the comet as phase 1 (sun phases render as index + 2).
 function displaySunPhase(phaseIndex: number): number {
@@ -187,6 +190,24 @@ onMounted(() => {
 onUnmounted(() => {
   cancelAnimationFrame(orbitFrame)
 })
+
+// ── Gesperrter Slot: die beiden Tore, die ihn öffnen ───────────────────────
+// Beide Bedingungen werden getrennt und mit Ist-Werten gezeigt: der Spieler soll
+// sofort sehen, WORAN es hängt, statt nur "gesperrt" zu lesen.
+const lockOrbitNumber = computed(() =>
+  activeSlot.value ? Number(activeSlot.value.id.replace('slot_', '')) : 0,
+)
+const lockCost = computed(() => (activeSlot.value ? store.getSlotCost(activeSlot.value.id) : 0))
+const lockRequiredPhase = computed(() => store.getSlotRequiredPhase(activeSlotIndex.value))
+const lockPhaseMet = computed(
+  () => !solarStore.isCometState && store.currentSunStage >= lockRequiredPhase.value,
+)
+const lockChimesMet = computed(() => gameStore.chimes >= lockCost.value)
+/** Anteil der Kosten, den der Spieler schon zusammen hat (0 … 1) — füllt den Sparbalken. */
+const lockChimeProgress = computed(() =>
+  lockCost.value > 0 ? Math.min(1, gameStore.chimes / lockCost.value) : 1,
+)
+const lockCanUnlock = computed(() => store.canUnlockPlanetSlot(activeSlotIndex.value))
 
 // Permanent planet choice: clicking a role arms a confirm step before it locks.
 const pendingRoleId = ref<PlanetRoleType | null>(null)
@@ -710,50 +731,96 @@ function chooseBuilding(buildingId: string) {
             </div>
           </div>
         </Transition>
-        <!-- Locked slot -->
-        <div v-if="activeSlot && !activeSlot.purchased" class="ps-locked-panel">
-          <span class="ps-locked-panel-icon">
-            <img src="/img/lock.png" alt="Locked" class="lock-icon" />
-          </span>
-          <span class="ps-locked-panel-title">
-            Orbit {{ activeSlot.id.replace('slot_', '') }} · Locked
-          </span>
-          <div class="ps-locked-panel-cost-row">
-            <img src="/img/BardAbilities/BardChime.png" class="ps-locked-panel-chime" alt="" />
-            <span class="ps-locked-panel-cost">{{ $formatNumber(store.getSlotCost(activeSlot.id)) }}</span>
+        <!-- ══ Locked slot — sealed orbit ══════════════════════════════════
+             Hero composition instead of the old stacked label list: the empty
+             lane is drawn as a dashed orbit around the star, and the two things
+             that actually gate it (Sun Phase, Chimes) become full readouts with
+             live current values, so the player sees WHAT is missing, not just
+             "locked". -->
+        <div v-if="activeSlot && !activeSlot.purchased" class="ps-lock">
+          <div class="ps-lock-head">
+            <span class="ps-lock-kicker">✦ Sealed Orbit ✦</span>
+            <h2 class="ps-lock-title">Orbit {{ toRoman(lockOrbitNumber) }}</h2>
+            <span class="ps-lock-sub">
+              An empty lane around your star — claim it to settle a planet here.
+            </span>
           </div>
-          <span class="ps-locked-panel-cost-label">C H I M E S</span>
-          <div class="ps-locked-panel-divider" />
-          <div
-            class="ps-locked-panel-sun-req"
-            :class="{ 'ps-locked-panel-sun-req--met': !solarStore.isCometState && store.currentSunStage >= store.getSlotRequiredPhase(activeSlotIndex) }"
-          >
-            <Icon icon="game-icons:sun" width="16" height="16" class="ps-sun-req-icon" />
-            <span class="ps-sun-req-label">Phase {{ displaySunPhase(store.getSlotRequiredPhase(activeSlotIndex)) }}</span>
-            <span class="ps-sun-req-sep">·</span>
-            <span class="ps-sun-req-current">Current {{ currentDisplayPhase }}</span>
+
+          <!-- Empty orbit: two dashed rings drifting around a sealed core -->
+          <div class="ps-lock-hero" :class="{ 'ps-lock-hero--ready': lockCanUnlock }">
+            <span class="ps-lock-ring ps-lock-ring--outer" aria-hidden="true" />
+            <span class="ps-lock-ring ps-lock-ring--inner" aria-hidden="true" />
+            <span class="ps-lock-core">
+              <img src="/img/lock.png" alt="Locked" class="ps-lock-core-img" />
+            </span>
+            <span class="ps-lock-index" aria-hidden="true">{{ lockOrbitNumber }}</span>
           </div>
-          <button
-            v-if="store.canUnlockPlanetSlot(activeSlotIndex)"
-            class="ps-locked-panel-buy-btn"
-            @click="buySlot(activeSlot.id)"
-          >
-            ✦ Unlock
+
+          <!-- The two gates, each with its live current value -->
+          <div class="ps-lock-gates">
+            <div class="ps-lock-gate" :class="{ 'ps-lock-gate--met': lockPhaseMet }">
+              <span class="ps-lock-gate-medal">
+                <Icon icon="game-icons:sun" width="30" height="30" />
+              </span>
+              <span class="ps-lock-gate-body">
+                <span class="ps-lock-gate-label">Sun Phase</span>
+                <span class="ps-lock-gate-value">{{ displaySunPhase(lockRequiredPhase) }}</span>
+                <span class="ps-lock-gate-note">You are at {{ currentDisplayPhase }}</span>
+              </span>
+              <span class="ps-lock-gate-state" aria-hidden="true">{{ lockPhaseMet ? '✓' : '✕' }}</span>
+            </div>
+
+            <div class="ps-lock-gate" :class="{ 'ps-lock-gate--met': lockChimesMet }">
+              <span class="ps-lock-gate-medal ps-lock-gate-medal--chime">
+                <img src="/img/BardAbilities/BardChime.png" alt="" />
+              </span>
+              <span class="ps-lock-gate-body">
+                <span class="ps-lock-gate-label">Chimes</span>
+                <span class="ps-lock-gate-value">{{ $formatNumber(lockCost) }}</span>
+                <!-- Sparfortschritt: sagt mehr als ein bloßes "zu teuer" -->
+                <span class="ps-lock-gate-bar">
+                  <span
+                    class="ps-lock-gate-bar-fill"
+                    :style="{ width: lockChimeProgress * 100 + '%' }"
+                  />
+                </span>
+                <span class="ps-lock-gate-note">
+                  {{ $formatNumber(gameStore.chimes) }} saved · {{ Math.floor(lockChimeProgress * 100) }}%
+                </span>
+              </span>
+              <span class="ps-lock-gate-state" aria-hidden="true">{{ lockChimesMet ? '✓' : '✕' }}</span>
+            </div>
+          </div>
+
+          <button v-if="lockCanUnlock" class="ps-lock-cta" @click="buySlot(activeSlot.id)">
+            <span class="ps-lock-cta-main">✦ Claim Orbit {{ toRoman(lockOrbitNumber) }}</span>
+            <span class="ps-lock-cta-cost">
+              <img src="/img/BardAbilities/BardChime.png" alt="" />
+              {{ $formatNumber(lockCost) }}
+            </span>
           </button>
-          <span v-else-if="solarStore.isCometState" class="ps-locked-panel-hint">
-            Your comet has no planetary system yet — ignite it into a star in the Star Forge.
-          </span>
-          <span v-else-if="store.currentSunStage < store.getSlotRequiredPhase(activeSlotIndex)" class="ps-locked-panel-hint">
-            Reach Sun Phase {{ displaySunPhase(store.getSlotRequiredPhase(activeSlotIndex)) }} to unlock
-          </span>
-          <span v-else class="ps-locked-panel-hint">Not enough Chimes yet</span>
+          <div v-else class="ps-lock-blocked">
+            <span v-if="solarStore.isCometState">
+              Your comet has no planetary system yet — ignite it into a star in the Star Forge.
+            </span>
+            <span v-else-if="!lockPhaseMet">
+              Grow your star to Phase {{ displaySunPhase(lockRequiredPhase) }} to break the seal.
+            </span>
+            <span v-else>Keep collecting — the orbit opens once you can pay for it.</span>
+          </div>
         </div>
 
         <!-- Purchased, no role yet: one-time permanent planet choice -->
         <div v-else-if="activeSlot && activeSlot.purchased && !activeSlot.role" class="ps-choose">
           <div class="ps-choose-head">
-            <span class="ps-choose-title">Choose this planet's calling</span>
-            <span class="ps-choose-warn">Permanent — this cannot be changed later</span>
+            <span class="ps-choose-kicker">✦ Orbit {{ toRoman(lockOrbitNumber) }} · Unsettled ✦</span>
+            <h2 class="ps-choose-title">Choose this planet's calling</h2>
+            <!-- lock.png statt eines neuen game-icons-Eintrags: dieselbe Sperr-
+                 Grafik trägt schon Sidebar und Lock-Hero in diesem Tab. -->
+            <span class="ps-choose-warn">
+              <img src="/img/lock.png" alt="" class="ps-choose-warn-lock" />
+              Permanent — a calling cannot be changed later
+            </span>
           </div>
           <div class="ps-role-grid ps-role-grid--choose">
             <button
@@ -764,13 +831,15 @@ function chooseBuilding(buildingId: string) {
               :style="{ '--rc': role.color }"
               @click="pickRole(role.id)"
             >
-              <img v-if="role.icon.startsWith('/')" class="ps-role-icon" :src="role.icon" :alt="role.name" />
-              <Icon v-else-if="role.icon.includes(':')" :icon="role.icon" class="ps-role-icon ps-role-icon--gi" />
-              <span v-else class="ps-role-icon">{{ role.icon }}</span>
+              <span class="ps-role-medal">
+                <img v-if="role.icon.startsWith('/')" class="ps-role-icon" :src="role.icon" :alt="role.name" />
+                <Icon v-else-if="role.icon.includes(':')" :icon="role.icon" class="ps-role-icon ps-role-icon--gi" />
+                <span v-else class="ps-role-icon">{{ role.icon }}</span>
+              </span>
               <span class="ps-role-name">{{ role.name }}</span>
               <div class="ps-role-divider" />
               <span class="ps-role-effect">{{ bonusText(role) }}</span>
-              <div v-if="pendingRoleId === role.id" class="ps-role-badge">Selected</div>
+              <div v-if="pendingRoleId === role.id" class="ps-role-badge">✓ Selected</div>
             </button>
           </div>
           <Transition name="ps-config-slide">
@@ -2856,16 +2925,20 @@ function chooseBuilding(buildingId: string) {
 }
 
 /* ── Permanent role choice ─────────────────────────────────────────────────── */
+/* ══ Unsettled slot — pick a calling ══════════════════════════════════════════
+   Same hero rhythm as the sealed orbit: kicker → big title → warning, then the
+   six callings as full cards instead of the old 0.67rem micro-tiles. */
 .ps-choose {
-  position: relative; /* paints above the ps-detail cosmic backdrop */
+  position: relative; /* paints above the shared cosmic backdrop */
   flex: 1;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.8rem;
-  padding: 1rem 1.2rem;
+  justify-content: safe center;
+  gap: clamp(10px, 1.8vh, 22px);
+  padding: clamp(14px, 2.2vh, 30px) clamp(16px, 2vw, 40px);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
@@ -2875,34 +2948,57 @@ function chooseBuilding(buildingId: string) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: clamp(4px, 0.7vh, 9px);
   text-align: center;
 }
 
-.ps-choose-title {
-  font-size: 1.1rem;
+.ps-choose-kicker {
+  font-size: clamp(0.68rem, 1.1vh, 0.86rem);
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
+  color: rgba(200, 160, 80, 0.6);
+}
+
+.ps-choose-title {
+  font-size: clamp(1.5rem, 3.1vh, 2.5rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.05;
   color: #e8c040;
-  text-shadow: 0 0 12px rgba(232, 192, 64, 0.35);
+  text-shadow:
+    0 0 20px rgba(232, 192, 64, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
 .ps-choose-warn {
-  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(0.7rem, 1.15vh, 0.88rem);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #cc6050;
-  padding: 0.2rem 0.6rem;
+  color: #e08070;
+  padding: clamp(4px, 0.6vh, 7px) clamp(10px, 1vw, 16px);
   border: 1px solid #5c2a20;
   border-radius: 4px;
-  background: rgba(60, 16, 12, 0.5);
+  background: rgba(60, 16, 12, 0.55);
+}
+
+.ps-choose-warn-lock {
+  width: clamp(14px, 1.8vh, 19px);
+  height: clamp(14px, 1.8vh, 19px);
+  object-fit: contain;
+  filter: sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.1);
 }
 
 .ps-role-grid--choose {
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.6rem;
+  gap: clamp(8px, 1vw, 16px);
+  width: min(940px, 100%);
+  margin: 0 auto;
 }
 
 /* ── Permanence confirm bar ────────────────────────────────────────────────── */
@@ -2911,35 +3007,42 @@ function chooseBuilding(buildingId: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: clamp(12px, 1.4vw, 24px);
   flex-wrap: wrap;
-  padding: 0.8rem 1rem;
-  background: #16140e;
-  border: 2px solid var(--rc);
+  width: min(940px, 100%);
+  margin: 0 auto;
+  padding: clamp(11px, 1.5vh, 18px) clamp(14px, 1.4vw, 22px);
+  background: linear-gradient(150deg, rgba(30, 26, 16, 0.92) 0%, rgba(14, 12, 8, 0.94) 100%);
+  border: 1px solid var(--rc);
   border-radius: var(--bp-radius);
-  box-shadow: 0 0 18px color-mix(in oklch, var(--rc) 25%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--rc) 40%, transparent),
+    0 0 26px color-mix(in oklch, var(--rc) 28%, transparent),
+    0 6px 20px rgba(0, 0, 0, 0.6);
 }
 
 .ps-confirm-text {
-  font-size: 0.8rem;
+  font-size: clamp(0.88rem, 1.5vh, 1.15rem);
   font-weight: 600;
-  color: #d4c89a;
+  line-height: 1.45;
+  color: #ddd0a4;
   flex: 1;
-  min-width: 200px;
+  min-width: 240px;
 }
 
 .ps-confirm-actions {
   display: flex;
-  gap: 0.6rem;
+  gap: clamp(8px, 0.8vw, 14px);
   flex-shrink: 0;
 }
 
 .ps-confirm-cancel,
 .ps-confirm-ok {
-  padding: 0.5rem 1.1rem;
-  font-size: 0.78rem;
+  padding: clamp(8px, 1.1vh, 13px) clamp(16px, 1.6vw, 28px);
+  font-size: clamp(0.82rem, 1.35vh, 1rem);
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   border-radius: var(--bp-radius);
   cursor: pointer;
   transition:
@@ -2978,15 +3081,20 @@ function chooseBuilding(buildingId: string) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.85rem 0.5rem 0.75rem;
-  background: #131210;
-  border: 1px solid #2e1e0a;
+  gap: clamp(5px, 0.8vh, 10px);
+  padding: clamp(12px, 1.8vh, 22px) clamp(8px, 0.8vw, 16px);
+  /* translucent like the rail cards — the shared starfield keeps showing through */
+  background: linear-gradient(150deg, rgba(30, 25, 17, 0.82) 0%, rgba(13, 11, 7, 0.88) 100%);
+  border: 1px solid #2e2416;
   border-radius: var(--bp-radius);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(232, 192, 64, 0.05);
   cursor: pointer;
   text-align: center;
   color: inherit;
   position: relative;
+  overflow: hidden;
   transition:
     border-color 180ms ease,
     background 180ms ease,
@@ -2995,6 +3103,28 @@ function chooseBuilding(buildingId: string) {
   width: 100%;
   /* Inhalt vertikal zentriert innerhalb der Karte */
   justify-content: center;
+}
+
+/* Top accent in the calling's color — dim at rest, lit when armed */
+.ps-role-option::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--rc);
+  opacity: 0.35;
+  transition: opacity 180ms ease;
+}
+
+.ps-role-option:hover::before {
+  opacity: 0.75;
+}
+
+.ps-role-option--selected::before {
+  opacity: 1;
+  box-shadow: 0 0 12px var(--rc);
 }
 
 .ps-role-option:focus-visible {
@@ -3006,19 +3136,52 @@ function chooseBuilding(buildingId: string) {
 }
 
 .ps-role-option:hover {
-  background: #1a1812;
+  background: linear-gradient(150deg, rgba(44, 37, 24, 0.86) 0%, rgba(18, 15, 10, 0.9) 100%);
   border-color: color-mix(in oklch, var(--rc) 70%, transparent);
-  box-shadow: 0 0 10px color-mix(in oklch, var(--rc) 20%, transparent);
-  transform: translateY(-1px);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.55),
+    0 0 14px color-mix(in oklch, var(--rc) 22%, transparent);
+  transform: translateY(-2px);
 }
 
+/* Armed: 1px border kept (a 2px swap would nudge the whole card's contents) —
+   the weight comes from a color wash and a ring shadow. */
 .ps-role-option--selected {
-  background: #141812;
-  border: 2px solid var(--rc);
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--rc) 16%, rgba(20, 17, 11, 0.9)) 0%,
+    rgba(12, 11, 7, 0.92) 72%
+  );
+  border-color: var(--rc);
   box-shadow:
-    0 0 18px color-mix(in oklch, var(--rc) 35%, transparent),
-    inset 0 0 20px color-mix(in oklch, var(--rc) 6%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--rc) 45%, transparent),
+    0 0 24px color-mix(in oklch, var(--rc) 35%, transparent),
+    inset 0 0 26px color-mix(in oklch, var(--rc) 10%, transparent);
   transform: translateY(-2px);
+}
+
+/* Framed medallion around the calling's icon — same language as the target chip
+   and the lock gates, and it gives the small sprites a proper stage. */
+.ps-role-medal {
+  display: grid;
+  place-items: center;
+  width: clamp(52px, 7vh, 78px);
+  height: clamp(52px, 7vh, 78px);
+  background: radial-gradient(circle at 45% 35%, #1a1710 0%, #0a0906 100%);
+  border: 1px solid color-mix(in srgb, var(--rc) 45%, #3a2a10);
+  border-radius: 6px;
+  box-shadow: inset 0 0 14px color-mix(in srgb, var(--rc) 14%, transparent);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.ps-role-option:hover .ps-role-medal,
+.ps-role-option--selected .ps-role-medal {
+  border-color: var(--rc);
+  box-shadow:
+    inset 0 0 18px color-mix(in srgb, var(--rc) 22%, transparent),
+    0 0 14px color-mix(in srgb, var(--rc) 25%, transparent);
 }
 
 .ps-role-icon {
@@ -3029,19 +3192,19 @@ function chooseBuilding(buildingId: string) {
 }
 
 span.ps-role-icon {
-  font-size: 2rem;
+  font-size: clamp(1.9rem, 3.4vh, 2.8rem);
   line-height: 1;
 }
 
 img.ps-role-icon {
-  width: 32px;
-  height: 32px;
+  width: 64%;
+  height: 64%;
   object-fit: contain;
   image-rendering: pixelated;
 }
 .ps-role-icon--gi {
-  width: 32px;
-  height: 32px;
+  width: 60%;
+  height: 60%;
   color: var(--rc, #c89040);
 }
 
@@ -3052,11 +3215,12 @@ img.ps-role-icon {
 }
 
 .ps-role-name {
-  font-size: 0.73rem;
-  font-weight: 700;
-  color: #d4c89a;
-  letter-spacing: 0.03em;
+  font-size: clamp(0.92rem, 1.6vh, 1.25rem);
+  font-weight: 800;
+  color: #e4d8ae;
+  letter-spacing: 0.05em;
   line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .ps-role-option--selected .ps-role-name {
@@ -3064,8 +3228,8 @@ img.ps-role-icon {
 }
 
 .ps-role-divider {
-  width: 55%;
-  height: 1px;
+  width: 62%;
+  height: 2px;
   background: linear-gradient(
     to right,
     transparent,
@@ -3075,26 +3239,28 @@ img.ps-role-icon {
 }
 
 .ps-role-effect {
-  font-size: 0.67rem;
+  font-size: clamp(0.8rem, 1.35vh, 1.05rem);
   font-weight: 800;
   color: var(--rc);
-  line-height: 1.3;
-  text-shadow: 0 0 6px color-mix(in oklch, var(--rc) 40%, transparent);
+  line-height: 1.35;
+  text-wrap: balance;
+  text-shadow: 0 0 8px color-mix(in oklch, var(--rc) 40%, transparent);
 }
 
 .ps-role-badge {
   position: absolute;
-  top: 4px;
-  right: 5px;
-  background: color-mix(in oklch, var(--rc) 18%, #0d0c07);
-  border: 1px solid color-mix(in oklch, var(--rc) 55%, transparent);
+  top: 7px;
+  right: 7px;
+  background: color-mix(in oklch, var(--rc) 20%, #0d0c07);
+  border: 1px solid color-mix(in oklch, var(--rc) 60%, transparent);
   color: var(--rc);
-  font-size: 0.5rem;
-  font-weight: 800;
-  padding: 0.12rem 0.3rem;
+  font-size: clamp(0.58rem, 0.95vh, 0.72rem);
+  font-weight: 900;
+  padding: 3px 7px;
   border-radius: 3px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--rc) 30%, transparent);
 }
 
 /* ── HP ────────────────────────────────────────────────────────────────────── */
@@ -4206,46 +4372,6 @@ img.ps-role-icon {
   color: #90e050;
 }
 
-/* ── Sun requirement row in locked panel ───────────────────────────────────── */
-.ps-locked-panel-sun-req {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: rgba(40, 10, 10, 0.6);
-  border: 1px solid rgba(180, 50, 50, 0.4);
-  border-radius: var(--bp-radius);
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: rgba(220, 100, 80, 0.8);
-  transition: border-color 0.25s, background 0.25s, color 0.25s;
-}
-
-.ps-locked-panel-sun-req--met {
-  background: rgba(10, 40, 10, 0.6);
-  border-color: rgba(80, 200, 60, 0.45);
-  color: #80e050;
-}
-
-.ps-sun-req-icon {
-  flex-shrink: 0;
-  color: inherit;
-}
-
-.ps-sun-req-label {
-  font-weight: 800;
-}
-
-.ps-sun-req-sep {
-  opacity: 0.4;
-}
-
-.ps-sun-req-current {
-  font-size: 0.66rem;
-  opacity: 0.6;
-  font-weight: 600;
-}
-
 /* ── Config Slide Transition ───────────────────────────────────────────────── */
 .ps-config-slide-enter-active {
   transition:
@@ -4270,117 +4396,383 @@ img.ps-role-icon {
   max-height: 0;
 }
 
-/* ── Locked Slot Panel ─────────────────────────────────────────────────────── */
-.ps-locked-panel {
-  position: relative; /* paints above the ps-detail cosmic backdrop */
+/* ══ Locked slot — sealed orbit ═══════════════════════════════════════════════
+   Replaces the old stacked label list (12px title, 11px caption) with a hero:
+   title band → empty-orbit visual → the two gates as full readouts → CTA.
+   Everything scales with clamp()/vh so it stays legible on Full HD and doesn't
+   look lost on 4K. */
+.ps-lock {
+  position: relative; /* paints above the shared cosmic backdrop */
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  padding: 24px 16px;
+  /* safe centering: on the flattest viewports the content may exceed the panel —
+     plain `center` would then clip the TOP out of the scroll range */
+  justify-content: safe center;
+  gap: clamp(10px, 1.8vh, 24px);
+  padding: clamp(14px, 2.4vh, 34px) clamp(16px, 2vw, 40px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
 
-.ps-locked-panel-icon {
+.ps-lock-head {
   display: flex;
-  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.35));
-  animation: ps-lock-bob 3s ease-in-out infinite;
-}
-.ps-locked-panel-icon .lock-icon {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  image-rendering: auto;
-}
-
-.ps-locked-panel-title {
-  font-size: 12px;
-  font-weight: 800;
-  color: rgba(200, 160, 60, 0.5);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(3px, 0.6vh, 8px);
   text-align: center;
 }
 
-.ps-locked-panel-cost-row {
+.ps-lock-kicker {
+  font-size: clamp(0.68rem, 1.1vh, 0.86rem);
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(200, 160, 80, 0.65);
+}
+
+.ps-lock-title {
+  font-size: clamp(1.8rem, 3.6vh, 3rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: #e8c040;
+  text-shadow:
+    0 0 22px rgba(232, 192, 64, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.ps-lock-sub {
+  max-width: 46ch;
+  font-size: clamp(0.82rem, 1.35vh, 1.05rem);
+  font-weight: 600;
+  line-height: 1.4;
+  color: rgba(212, 200, 160, 0.62);
+}
+
+/* ── Empty orbit visual ─────────────────────────────────────────────────────
+   Two dashed rings turning at different speeds around a sealed core — reads as
+   "a lane exists here, nothing is in it yet" without faking a planet. */
+.ps-lock-hero {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: clamp(180px, 26vh, 320px);
+  height: clamp(180px, 26vh, 320px);
+}
+
+.ps-lock-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px dashed rgba(200, 144, 64, 0.32);
+  transition: border-color 300ms ease;
+}
+
+.ps-lock-ring--outer {
+  inset: 0;
+  animation: ps-lock-spin 48s linear infinite;
+}
+
+.ps-lock-ring--inner {
+  inset: 16%;
+  border-style: dotted;
+  border-color: rgba(200, 144, 64, 0.2);
+  animation: ps-lock-spin 30s linear infinite reverse;
+}
+
+/* Ready to claim → the seal turns green and the rings pick up the CTA color */
+.ps-lock-hero--ready .ps-lock-ring {
+  border-color: rgba(110, 192, 64, 0.5);
+}
+.ps-lock-hero--ready .ps-lock-core {
+  border-color: #6ec040;
+  box-shadow:
+    0 0 0 1px rgba(110, 192, 64, 0.4),
+    0 0 34px rgba(82, 184, 48, 0.4),
+    inset 0 0 26px rgba(82, 184, 48, 0.14);
+}
+
+.ps-lock-core {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46%;
+  height: 46%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 42% 34%, #1c1710 0%, #0a0906 70%);
+  border: 2px solid #5c3310;
+  box-shadow:
+    0 0 0 1px rgba(200, 144, 64, 0.28),
+    0 0 30px rgba(0, 0, 0, 0.8),
+    inset 0 0 26px rgba(200, 144, 64, 0.08);
+  transition:
+    border-color 300ms ease,
+    box-shadow 300ms ease;
+}
+
+.ps-lock-core-img {
+  width: 46%;
+  height: 46%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.45));
+  animation: ps-lock-bob 3s ease-in-out infinite;
+}
+
+/* Ghost numeral behind the core — depth cue, never competes with the text */
+.ps-lock-index {
+  position: absolute;
+  z-index: -1;
+  font-size: clamp(7rem, 20vh, 15rem);
+  font-weight: 900;
+  line-height: 1;
+  color: rgba(232, 192, 64, 0.05);
+  pointer-events: none;
+  user-select: none;
+}
+
+@keyframes ps-lock-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── The two gates ────────────────────────────────────────────────────────── */
+.ps-lock-gates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: clamp(8px, 1vw, 16px);
+  width: min(720px, 100%);
+}
+
+.ps-lock-gate {
+  --gc: #cc6050;
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 4px;
+  gap: clamp(9px, 0.9vw, 15px);
+  padding: clamp(9px, 1.2vh, 15px) clamp(12px, 1.1vw, 18px);
+  background: linear-gradient(150deg, rgba(28, 22, 16, 0.86) 0%, rgba(12, 10, 7, 0.9) 100%);
+  border: 1px solid color-mix(in srgb, var(--gc) 40%, #2e2416);
+  border-radius: 5px;
+  box-shadow: inset 0 0 24px color-mix(in srgb, var(--gc) 6%, transparent);
+  transition:
+    border-color 300ms ease,
+    box-shadow 300ms ease;
 }
 
-.ps-locked-panel-chime {
-  width: 40px;
-  height: 40px;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 0 10px rgba(232, 192, 64, 0.7));
-  animation: ps-chime-bob 2s ease-in-out infinite;
+/* Erfüllt → grün. Der Zustandswechsel ist die eigentliche Information. */
+.ps-lock-gate--met {
+  --gc: #52b830;
 }
 
-.ps-locked-panel-cost {
-  font-size: clamp(28px, 4.5vh, 40px);
-  font-weight: 800;
+.ps-lock-gate-medal {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: clamp(42px, 5.4vh, 60px);
+  height: clamp(42px, 5.4vh, 60px);
+  background: radial-gradient(circle at 45% 35%, #1a1710 0%, #0a0906 100%);
+  border: 1px solid color-mix(in srgb, var(--gc) 50%, #3a2a10);
+  border-radius: 5px;
   color: #e8c040;
-  letter-spacing: 0.02em;
-  text-shadow:
-    0 0 12px rgba(232, 192, 64, 0.8),
-    0 0 28px rgba(232, 192, 64, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.9);
-  line-height: 1;
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--gc) 16%, transparent);
 }
 
-.ps-locked-panel-cost-label {
-  font-size: 11px;
+.ps-lock-gate-medal :deep(svg) {
+  width: 62%;
+  height: 62%;
+  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.5));
+}
+
+.ps-lock-gate-medal--chime img {
+  width: 66%;
+  height: 66%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.6));
+}
+
+.ps-lock-gate-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ps-lock-gate-label {
+  font-size: clamp(0.62rem, 1vh, 0.78rem);
   font-weight: 800;
-  color: rgba(200, 160, 60, 0.45);
-  letter-spacing: 0.14em;
-  margin-top: -4px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
 }
 
-.ps-locked-panel-divider {
-  width: 80px;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(200, 144, 64, 0.4), transparent);
-  margin: 4px 0;
+.ps-lock-gate-value {
+  font-size: clamp(1.25rem, 2.4vh, 1.85rem);
+  font-weight: 900;
+  line-height: 1.05;
+  color: #e8c040;
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.45);
+  font-variant-numeric: tabular-nums;
 }
 
-.ps-locked-panel-buy-btn {
-  padding: 10px 36px;
+.ps-lock-gate-note {
+  font-size: clamp(0.66rem, 1.05vh, 0.82rem);
+  font-weight: 700;
+  color: color-mix(in srgb, var(--gc) 70%, #8a8272);
+}
+
+/* Sparbalken — zeigt, wie weit die Kosten schon zusammen sind */
+.ps-lock-gate-bar {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: 3px 0 2px;
+  background: #14110c;
+  border: 1px solid #241d12;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ps-lock-gate-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(to bottom, #f0c840, #b8860f);
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
+  transition: width 0.4s ease;
+}
+
+.ps-lock-gate--met .ps-lock-gate-bar-fill {
+  background: linear-gradient(to bottom, #6ee04a, #2f9a24);
+  box-shadow: 0 0 8px rgba(92, 230, 106, 0.5);
+}
+
+.ps-lock-gate-state {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: clamp(24px, 3vh, 30px);
+  height: clamp(24px, 3vh, 30px);
+  font-size: clamp(0.85rem, 1.5vh, 1.05rem);
+  font-weight: 900;
+  line-height: 1;
+  color: var(--gc);
+  background: color-mix(in srgb, var(--gc) 14%, rgba(8, 7, 4, 0.9));
+  border: 1px solid color-mix(in srgb, var(--gc) 55%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--gc) 28%, transparent);
+}
+
+/* ── CTA / blocked note ───────────────────────────────────────────────────── */
+.ps-lock-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: min(420px, 100%);
+  padding: clamp(10px, 1.4vh, 16px) clamp(20px, 2vw, 34px);
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #6ec040;
-  border-radius: var(--bp-radius);
+  border-radius: 5px;
   color: #fff;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
   cursor: pointer;
+  box-shadow:
+    0 0 22px rgba(82, 184, 48, 0.35),
+    0 4px 14px rgba(0, 0, 0, 0.55);
   transition:
     filter 180ms ease,
     transform 180ms ease,
     box-shadow 180ms ease;
+  animation: ps-lock-cta-pulse 2.4s ease-in-out infinite;
 }
 
-.ps-locked-panel-buy-btn:hover {
-  filter: brightness(1.15);
-  transform: translateY(-1px);
+.ps-lock-cta:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+  animation: none;
 }
 
-.ps-locked-panel-buy-btn:focus-visible {
+.ps-lock-cta:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.ps-lock-cta:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px rgba(232, 192, 64, 0.9),
-    0 0 14px rgba(232, 192, 64, 0.5);
+    0 0 16px rgba(232, 192, 64, 0.5);
 }
 
-.ps-locked-panel-buy-btn:active {
-  transform: translateY(0) scale(0.97);
+.ps-lock-cta-main {
+  font-size: clamp(1rem, 1.9vh, 1.4rem);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
 }
 
-.ps-locked-panel-hint {
-  font-size: 12px;
-  color: rgba(180, 130, 50, 0.5);
-  letter-spacing: 0.05em;
+.ps-lock-cta-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(0.78rem, 1.3vh, 0.98rem);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+
+.ps-lock-cta-cost img {
+  width: clamp(16px, 2vh, 22px);
+  height: clamp(16px, 2vh, 22px);
+  image-rendering: pixelated;
+}
+
+@keyframes ps-lock-cta-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 16px rgba(82, 184, 48, 0.28),
+      0 4px 14px rgba(0, 0, 0, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(82, 184, 48, 0.6),
+      0 0 52px rgba(82, 184, 48, 0.18),
+      0 4px 14px rgba(0, 0, 0, 0.55);
+  }
+}
+
+.ps-lock-blocked {
+  max-width: 52ch;
+  padding: clamp(8px, 1.1vh, 13px) clamp(14px, 1.4vw, 22px);
+  text-align: center;
+  font-size: clamp(0.8rem, 1.3vh, 1rem);
+  font-weight: 700;
+  line-height: 1.45;
+  color: rgba(212, 160, 90, 0.72);
+  background: rgba(20, 15, 8, 0.7);
+  border: 1px solid #3a2a14;
+  border-radius: 5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-lock-ring--outer,
+  .ps-lock-ring--inner,
+  .ps-lock-core-img,
+  .ps-lock-cta {
+    animation: none;
+  }
 }
 
 /* ── Compact height (Full HD ~950px viewport) ───────────────────────────────── */
