@@ -1030,24 +1030,17 @@ function chooseBuilding(buildingId: string) {
   line-height: 16px;
 }
 
-/* Planet token — scales with the card box (height & width), capped so it never
-   crowds the text on a narrow rail nor balloons on 4K. */
+/* Planet image — bare planet, no frame/token; scales with the card box (height
+   & width), capped so it never crowds the text on a narrow rail nor balloons. */
 .ps-slot-btn-img {
-  width: clamp(40px, min(52cqh, 30cqw), 92px);
-  height: clamp(40px, min(52cqh, 30cqw), 92px);
+  width: clamp(48px, min(62cqh, 36cqw), 108px);
+  height: clamp(48px, min(62cqh, 36cqw), 108px);
   object-fit: contain;
-  padding: clamp(3px, 1cqh, 7px);
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 38%, #1e1a11 0%, #0c0a06 100%);
-  box-shadow:
-    inset 0 0 0 1px #2e1e0a,
-    0 2px 8px rgba(0, 0, 0, 0.5);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.55));
 }
 
 .ps-slot-btn--active .ps-slot-btn-img {
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--rc, #52b830) 60%, #2e1e0a),
-    0 0 12px color-mix(in srgb, var(--rc, #52b830) 35%, transparent);
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--rc, #52b830) 45%, transparent));
 }
 
 .ps-slot-btn-placeholder {
