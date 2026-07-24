@@ -460,9 +460,22 @@ export default defineComponent({
           ls.y = pos.y
         }
 
-        // Bahnzustand teilen: Sobald ein Profil-Tab öffnet, pausiert dieser Layer
-        // — der Planeten-Tab setzt dann genau hier auf und dreht weiter.
-        planetOrbitPhases.set(slot.id, { angle: ls.orbitAngle, speedMul: newMul })
+        // Bahnzustand für den Planeten-Tab teilen — bewusst der Winkel der
+        // GEGLÄTTETEN Position, nicht der rohe Integrationswinkel ls.orbitAngle.
+        // isForeground unten entsteht aus ls.y, und der Lerp zieht ls.y dem
+        // Winkel um einige Frames nach. Nähme der Tab den rohen Winkel, liefe
+        // seine Bahn dem Eclipse-Medaillon im Command Panel sichtbar voraus.
+        // Rückrechnung der Ellipse: u = rx·cos(A), v = ry·sin(A).
+        const relXPx = ls.x - cx
+        const relYPx = ls.y - cy
+        const cosTilt = Math.cos(tiltRad)
+        const sinTilt = Math.sin(tiltRad)
+        const ellipseU = (relXPx * cosTilt + relYPx * sinTilt) / Math.max(rx, 1)
+        const ellipseV = (-relXPx * sinTilt + relYPx * cosTilt) / Math.max(ry, 1)
+        planetOrbitPhases.set(slot.id, {
+          angle: Math.atan2(ellipseV, ellipseU),
+          speedMul: newMul,
+        })
 
         const relY = (ls.y - cy) / Math.max(ry, 1)
         const isBehind = relY < -0.05

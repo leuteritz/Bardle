@@ -731,14 +731,18 @@ function chooseBuilding(buildingId: string) {
                 </div>
               </Transition>
 
-              <!-- Eclipse medallion — same emblem the idle layer uses for champions
-                   and planets behind the sun. Sits on the sun's face because the
-                   planet itself is fully occluded while this shows. -->
-              <Transition name="ps-eclipse-fade">
-                <span v-if="orbitBehind" class="ps-eclipse-medal" title="Behind the Sun — out of reach">
-                  <Icon icon="game-icons:eclipse-flare" width="104" height="104" />
-                </span>
-              </Transition>
+              <!-- Eclipse medallion — same emblem and same source of truth as the
+                   Command Panel's, sitting on the sun's face because the planet
+                   itself is occluded while this shows. Deliberately without a
+                   transition: the Command Panel switches its medallion instantly,
+                   and a fade here would make this one linger behind it. -->
+              <span
+                v-if="orbitBehind"
+                class="ps-eclipse-medal"
+                title="Behind the Sun — out of reach"
+              >
+                <Icon icon="game-icons:eclipse-flare" width="104" height="104" />
+              </span>
             </div>
 
             <!-- Name + HP unit — directly under the sun (top of the bottom balancing
@@ -2068,13 +2072,14 @@ function chooseBuilding(buildingId: string) {
   }
 }
 
-.ps-eclipse-fade-enter-active,
-.ps-eclipse-fade-leave-active {
-  transition: opacity 0.4s ease;
+/* Nur das Erscheinen darf weich sein. Beim Verlassen der Sonne muss das Banner
+   im selben Frame gehen wie das Medaillon (das gar keine Transition hat) —
+   ein Fade-Out ließe es hinter dem wieder auftauchenden Planeten zurückhängen. */
+.ps-eclipse-fade-enter-active {
+  transition: opacity 0.28s ease;
 }
 
-.ps-eclipse-fade-enter-from,
-.ps-eclipse-fade-leave-to {
+.ps-eclipse-fade-enter-from {
   opacity: 0;
 }
 
