@@ -197,6 +197,13 @@ function hpPctOf(slot: PlanetSlot): number {
   return Math.round(Math.max(0, Math.min(100, (slot.currentHp / slot.maxHp) * 100)))
 }
 
+// How many levels this rail slot can afford right now (0 when locked / no role /
+// blocked by phase or chimes). Drives the per-slot notify badge.
+function slotUpgradeCount(slot: PlanetSlot): number {
+  if (!slot.purchased || !slot.role) return 0
+  return store.getMaxAffordableLevelCount(slot.id)
+}
+
 const activeHpTier = computed(() =>
   activeSlot.value ? hpTier(activeSlot.value.currentHp, activeSlot.value.maxHp) : 'high',
 )
@@ -385,6 +392,15 @@ function chooseBuilding(buildingId: string) {
             <span class="ps-slot-buff-mult">×{{ slot.jungleBuff.multiplier }}</span>
             <span class="ps-slot-buff-timer">{{ buffSecsLeft(slot) }}s</span>
           </span>
+
+          <!-- Affordable-upgrade notify badge — pinned top-LEFT so it never
+               collides with the jungle-buff badge (top-right); shows the count
+               of levels this slot can afford right now. -->
+          <span
+            v-if="slotUpgradeCount(slot) > 0"
+            class="ps-slot-notify"
+            :aria-label="`${slotUpgradeCount(slot)} upgrade(s) affordable`"
+          >{{ slotUpgradeCount(slot) }}</span>
 
           <div class="ps-slot-icon">
             <template v-if="!slot.purchased">
@@ -656,9 +672,9 @@ function chooseBuilding(buildingId: string) {
                   </template>
                 </span>
               </button>
-              <!-- Notify badge: pulses over the button while a level-up is
-                   affordable, fades away as soon as the button is hovered. -->
-              <span v-if="maxAffordableCount > 0" class="ps-buy-badge" aria-hidden="true">✦</span>
+              <!-- Notify badge: shows how many levels are affordable; pulses
+                   over the button and fades away as soon as it is hovered. -->
+              <span v-if="maxAffordableCount > 0" class="ps-buy-badge" aria-hidden="true">{{ maxAffordableCount }}</span>
             </div>
           </div>
 
@@ -961,6 +977,36 @@ function chooseBuilding(buildingId: string) {
   background: #1a2010;
   border: 2px solid var(--rc, #52b830);
   box-shadow: 0 0 10px color-mix(in oklch, var(--rc, #52b830) 30%, transparent);
+}
+
+/* ── Per-slot affordable-upgrade notify badge (top-left, clear of buff) ─────── */
+.ps-slot-notify {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  z-index: 3;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  color: #06301f;
+  background: linear-gradient(135deg, #34d399, #059669);
+  border: 1.5px solid #6ee7b7;
+  border-radius: 9px;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.65);
+  pointer-events: none;
+  animation: ps-buy-badge-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-slot-notify {
+    animation: none;
+  }
 }
 
 /* ── Sidebar jungle-buff highlight — prominent, overlay-only (no layout shift) ── */
