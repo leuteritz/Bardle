@@ -21,6 +21,9 @@ import {
   PLANET_TAB_SUN_MAX_DIAMETER,
   PLANET_TAB_PLANET_DIAMETER,
   SUN_PHASE_DISPLAY_OFFSET,
+  HP_BAR_SEGMENTS,
+  HP_COLOR_THRESHOLD_HIGH,
+  HP_COLOR_THRESHOLD_LOW,
 } from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
@@ -177,6 +180,26 @@ const hpPercent = computed(() => {
   if (!activeSlot.value || activeSlot.value.maxHp === 0) return 100
   return Math.max(0, Math.min(100, (activeSlot.value.currentHp / activeSlot.value.maxHp) * 100))
 })
+
+// Health-state color tier — shared by the rail slots and the stage bar. Reuses
+// the game-wide HP color thresholds so the green → gold → red language matches
+// the rest of the UI (CommandPanel etc.).
+function hpTier(current: number, max: number): 'high' | 'mid' | 'low' {
+  const frac = max > 0 ? current / max : 1
+  if (frac > HP_COLOR_THRESHOLD_HIGH) return 'high'
+  if (frac > HP_COLOR_THRESHOLD_LOW) return 'mid'
+  return 'low'
+}
+
+// Rounded HP percent for a rail slot (0–100).
+function hpPctOf(slot: PlanetSlot): number {
+  if (!slot || slot.maxHp === 0) return 100
+  return Math.round(Math.max(0, Math.min(100, (slot.currentHp / slot.maxHp) * 100)))
+}
+
+const activeHpTier = computed(() =>
+  activeSlot.value ? hpTier(activeSlot.value.currentHp, activeSlot.value.maxHp) : 'high',
+)
 
 const now = ref(Date.now())
 let nowInterval = 0
@@ -336,7 +359,7 @@ function chooseBuilding(buildingId: string) {
 </script>
 
 <template>
-  <div class="ps-tab">
+  <div class="ps-tab" :style="{ '--hp-seg': HP_BAR_SEGMENTS }">
     <!-- Full-height split: left rail (6 slots) + right detail panel.
          No in-tab header — Chimes/CPS live permanently in the global app header. -->
     <div class="ps-split">
@@ -396,11 +419,15 @@ function chooseBuilding(buildingId: string) {
                 {{ slot.role ? PLANET_ROLES[slot.role].name : 'No role' }}
                 <span class="ps-slot-sub-att">· Lvl {{ slot.level }}</span>
               </span>
-              <div v-if="slot.maxHp > 0" class="ps-slot-btn-hp-track">
-                <div
-                  class="ps-slot-btn-hp-fill"
-                  :style="{ width: Math.max(0, Math.min(100, (slot.currentHp / slot.maxHp) * 100)) + '%' }"
-                />
+              <div
+                v-if="slot.maxHp > 0"
+                class="ps-slot-hp"
+                :class="`ps-slot-hp--${hpTier(slot.currentHp, slot.maxHp)}`"
+              >
+                <div class="ps-slot-hp-track">
+                  <div class="ps-slot-hp-fill" :style="{ width: hpPctOf(slot) + '%' }" />
+                </div>
+                <span class="ps-slot-hp-val">{{ hpPctOf(slot) }}%</span>
               </div>
             </template>
           </div>
@@ -540,12 +567,19 @@ function chooseBuilding(buildingId: string) {
             </button>
 
             <!-- HP -->
-            <div v-if="activeSlot.maxHp > 0" class="ps-planet-hp">
+            <div
+              v-if="activeSlot.maxHp > 0"
+              class="ps-planet-hp"
+              :class="`ps-planet-hp--${activeHpTier}`"
+            >
               <div class="ps-planet-hp-text">
                 <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
+                <span class="ps-hp-pct">{{ Math.round(hpPercent) }}%</span>
               </div>
               <div class="ps-hp-bar-track">
-                <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }" />
+                <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }">
+                  <span class="ps-hp-bar-shine" aria-hidden="true" />
+                </div>
               </div>
             </div>
 
@@ -966,28 +1000,105 @@ function chooseBuilding(buildingId: string) {
   color: var(--rc, #52b830);
 }
 
-.ps-slot-btn-hp-text {
-  font-size: 0.55rem;
-  color: #c05050;
-  line-height: 1.2;
-  white-space: nowrap;
+/* ── Rail slot HP — modern segmented bar with health-state color ───────────── */
+.ps-slot-hp {
+  --hp-a: #2f9a24;
+  --hp-b: #6ee04a;
+  --hp-glow: #5ce66a;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   width: 100%;
-  text-align: center;
+  margin-top: 1px;
 }
 
-.ps-slot-btn-hp-track {
-  width: 100%;
-  height: 5px;
-  background: #2a1a1a;
-  border-radius: 2px;
+.ps-slot-hp--high {
+  --hp-a: #2f9a24;
+  --hp-b: #6ee04a;
+  --hp-glow: #5ce66a;
+}
+.ps-slot-hp--mid {
+  --hp-a: #b8860f;
+  --hp-b: #f0c840;
+  --hp-glow: #e8c040;
+}
+.ps-slot-hp--low {
+  --hp-a: #b32626;
+  --hp-b: #e85040;
+  --hp-glow: #e84040;
+}
+
+.ps-slot-hp-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 16px;
+  background: #241512;
+  border: 1px solid #12100c;
+  border-radius: 4px;
   overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.65);
 }
 
-.ps-slot-btn-hp-fill {
+/* Segment ticks (count driven by HP_BAR_SEGMENTS via --hp-seg on the root) */
+.ps-slot-hp-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(100% / var(--hp-seg, 8) - 1px),
+    rgba(0, 0, 0, 0.45) calc(100% / var(--hp-seg, 8) - 1px),
+    rgba(0, 0, 0, 0.45) calc(100% / var(--hp-seg, 8))
+  );
+}
+
+.ps-slot-hp-fill {
+  position: relative;
   height: 100%;
-  background: linear-gradient(to right, #cc3030, #e84040);
   border-radius: 2px;
-  transition: width 0.3s ease;
+  background: linear-gradient(to bottom, var(--hp-b), var(--hp-a));
+  box-shadow: 0 0 6px color-mix(in srgb, var(--hp-glow) 45%, transparent);
+  transition:
+    width 0.35s ease,
+    background 0.35s ease;
+}
+
+/* Glossy top highlight */
+.ps-slot-hp-fill::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 55% 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.42), transparent);
+  border-radius: 2px 2px 0 0;
+}
+
+.ps-slot-hp-val {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--hp-glow);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--hp-glow) 40%, transparent);
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+  text-align: right;
+}
+
+/* Low HP → gentle pulse to draw the eye (shared keyframe with the stage bar) */
+.ps-slot-hp--low .ps-slot-hp-fill {
+  animation: ps-hp-low-pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes ps-hp-low-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.45);
+  }
 }
 
 /* ── Hero-Body (Planet oben, Rollen-Grid unten) ────────────────────────────── */
@@ -1691,43 +1802,111 @@ img.ps-role-icon {
 
 /* ── HP ────────────────────────────────────────────────────────────────────── */
 .ps-planet-hp {
+  --hp-a: #2f9a24;
+  --hp-b: #6ee04a;
+  --hp-glow: #5ce66a;
   width: 100%;
-  max-width: 360px;
+  max-width: 560px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.ps-planet-hp--high {
+  --hp-a: #2f9a24;
+  --hp-b: #6ee04a;
+  --hp-glow: #5ce66a;
+}
+.ps-planet-hp--mid {
+  --hp-a: #b8860f;
+  --hp-b: #f0c840;
+  --hp-glow: #e8c040;
+}
+.ps-planet-hp--low {
+  --hp-a: #b32626;
+  --hp-b: #e85040;
+  --hp-glow: #e84040;
 }
 
 .ps-planet-hp-text {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .ps-hp-values {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #e8c040;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f0e6c8;
   letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ps-hp-pct {
+  margin-left: auto;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--hp-glow);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--hp-glow) 45%, transparent);
+  font-variant-numeric: tabular-nums;
 }
 
 .ps-hp-bar-track {
+  position: relative;
   width: 100%;
-  max-width: 360px;
-  height: 8px;
-  background: #1c1c18;
-  border: 1px solid #3a2a10;
-  border-radius: 3px;
+  height: 30px;
+  background: #241512;
+  border: 2px solid #0e0c08;
+  border-radius: 5px;
   overflow: hidden;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.7),
+    0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Segment ticks (count driven by HP_BAR_SEGMENTS via --hp-seg on the root) */
+.ps-hp-bar-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(100% / var(--hp-seg, 8) - 1.5px),
+    rgba(0, 0, 0, 0.5) calc(100% / var(--hp-seg, 8) - 1.5px),
+    rgba(0, 0, 0, 0.5) calc(100% / var(--hp-seg, 8))
+  );
 }
 
 .ps-hp-bar-fill {
+  position: relative;
   height: 100%;
-  background: linear-gradient(to right, #cc3030, #e84040);
   border-radius: 3px;
-  transition: width 0.3s ease;
+  background: linear-gradient(to bottom, var(--hp-b), var(--hp-a));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--hp-glow) 55%, transparent);
+  transition:
+    width 0.35s ease,
+    background 0.35s ease;
+}
+
+/* Glossy top shine over the fill */
+.ps-hp-bar-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0.05) 45%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.ps-planet-hp--low .ps-hp-bar-fill {
+  animation: ps-hp-low-pulse 1.2s ease-in-out infinite;
 }
 
 /* ── Planetenbild ──────────────────────────────────────────────────────────── */
