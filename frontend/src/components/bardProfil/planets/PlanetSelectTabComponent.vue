@@ -920,10 +920,12 @@ function chooseBuilding(buildingId: string) {
 }
 
 /* Level-Up hero wrapper — sits between the sun and the name/HP unit, centered.
-   Enlarged CTA. (Reuses .ps-dock-buy for the badge + hover-fade behaviour.) */
-.ps-hero-buy {
+   Enlarged CTA. (Reuses .ps-dock-buy for the badge + hover-fade behaviour.)
+   Descendant selector needed so these horizontal margins beat .ps-dock-buy's
+   `margin-left: auto` (defined later in the file) that would else shove it right. */
+.ps-planet-readout .ps-hero-buy {
   position: relative;
-  margin: 0 0 clamp(0.5rem, 1.1vh, 0.9rem);
+  margin: 0 auto clamp(0.5rem, 1.1vh, 0.9rem);
   min-width: 0;
   width: clamp(260px, 30vw, 400px);
   align-self: center;
