@@ -575,6 +575,9 @@ function chooseBuilding(buildingId: string) {
                dissolved — every numeric readout is a floating HUD chip in a corner
                (clear of the top-center jungle-buff banner). -->
           <div class="ps-stage" :style="[{ '--rc': activeRoleColor }, sunPhaseStyle]">
+            <!-- Top spacer balances the hero band below so the sun sits at the
+                 vertical middle (spacer flex === band flex). -->
+            <div class="ps-topspacer" aria-hidden="true" />
             <!-- Central body (comet rock or phase sun) + orbiting planet -->
             <div class="ps-system" :class="{ 'ps-system--comet': solarStore.isCometState }">
               <CometDisc v-if="solarStore.isCometState" :diameter="200" />
@@ -1424,15 +1427,24 @@ function chooseBuilding(buildingId: string) {
   position: relative;
   z-index: 1;
   width: 100%;
-  /* Shares the stage height with the hero band below (2:1) so the Level-Up
-     button gets its own centered zone without starving the sun. */
-  flex: 2 1 0;
+  /* Sized to the sun itself (no empty slack below it), so the equal-flex spacer
+     above and hero band below can center it in the stage AND put the button at
+     the exact midpoint between the sun and the name/HP unit. */
+  flex: 0 0 auto;
+  height: min(var(--ps-sun-d, 380px), 56vh);
   min-height: 160px;
   container-type: size;
 }
 
+/* Empty spacer above the sun — same flex weight as the hero band, so the sun
+   ends up vertically centered in the stage. */
+.ps-topspacer {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
 /* Dedicated band that vertically centers the Level-Up button in the gap between
-   the sun system and the bottom name/HP unit. */
+   the sun and the bottom name/HP unit (exact midpoint between the two). */
 .ps-hero-band {
   position: relative;
   z-index: 2;
@@ -1591,7 +1603,9 @@ function chooseBuilding(buildingId: string) {
 .ps-planet-readout {
   --rc: #e8c040;
   width: 100%;
-  margin-top: auto;
+  /* No margin-top:auto — the flex spacer/band above own the free space now;
+     an auto margin here would starve them and collapse the centering. */
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
