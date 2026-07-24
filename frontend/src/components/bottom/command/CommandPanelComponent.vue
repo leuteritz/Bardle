@@ -584,24 +584,33 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   border-radius: 0 0 4px 0;
 }
 
-/* Keil an der linken Kante — zeigt zum geöffneten Modal. Die Kachel clippt ihn
-   zur Hälfte, wodurch er als eingeschobene Spitze liest. */
+/* Keile an beiden Seitenkanten — fassen die Kachel symmetrisch ein und zeigen
+   von links zum geöffneten Modal. Die Kachel clippt sie zur Hälfte, wodurch sie
+   als eingeschobene Spitzen lesen. */
 .cmd-select-tether {
   position: absolute;
   z-index: 8;
   top: 50%;
-  left: 0;
   width: 11px;
   height: 11px;
-  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 2px;
   background: linear-gradient(
     135deg,
     color-mix(in srgb, var(--sel, #e8c040) 85%, white) 0%,
     var(--sel, #e8c040) 100%
   );
-  border-radius: 2px;
   box-shadow: 0 0 10px color-mix(in srgb, var(--sel, #e8c040) 70%, transparent);
   pointer-events: none;
+}
+
+.cmd-select-tether--l {
+  left: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.cmd-select-tether--r {
+  right: 0;
+  transform: translate(50%, -50%) rotate(45deg);
 }
 
 @keyframes cmd-select-pulse {

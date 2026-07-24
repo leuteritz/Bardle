@@ -111,6 +111,36 @@ const planetOrbitEl = ref<HTMLElement | null>(null)
 /** Aktiver Planet steht gerade hinter der Sonne — treibt die Eclipse-Darstellung. */
 const orbitBehind = ref(false)
 
+/**
+ * Alle Slots, die gerade hinter der Sonne stehen — treibt die Sidebar-Kacheln.
+ * Gefüllt aus derselben rAF-Schleife wie `orbitBehind` und aus derselben
+ * Positions-Map wie das Command Panel, damit alle drei Anzeigen im selben Frame
+ * umschalten. Ein reaktives Set statt eines Computeds: die Positions-Map ist
+ * bewusst nicht reaktiv, und ein Re-Render soll nur beim Zustandswechsel
+ * ausgelöst werden, nicht 60-mal pro Sekunde.
+ */
+const eclipsedSlotIds = ref<ReadonlySet<string>>(new Set())
+
+function syncEclipsedSlots() {
+  const cur = eclipsedSlotIds.value
+  const next = new Set<string>()
+  for (const slot of store.slots) {
+    if (slot.purchased && slot.role && !playerSlotInForeground(slot.id)) next.add(slot.id)
+  }
+  if (next.size !== cur.size || [...next].some((id) => !cur.has(id))) {
+    eclipsedSlotIds.value = next
+  }
+}
+
+/**
+ * Zerstört schlägt Eclipse: Ein Wrack ist gar nicht mehr im Orbit, "hinter der
+ * Sonne" wäre die falsche Aussage — dieselbe Rangfolge wie auf der Bühne und im
+ * Command Panel.
+ */
+function isSlotEclipsed(slot: PlanetSlot): boolean {
+  return eclipsedSlotIds.value.has(slot.id) && !isPlanetDown(slot)
+}
+
 function orbitDelayFor(progress: number): string {
   return `-${(progress * PLANET_TAB_ORBIT_PERIOD_SEC).toFixed(3)}s`
 }
@@ -144,6 +174,9 @@ function tickOrbit() {
   // Schwelle würde unweigerlich wieder auseinanderlaufen.
   const behind = slotId !== null && !playerSlotInForeground(slotId)
   if (orbitBehind.value !== behind) orbitBehind.value = behind
+
+  // Im gleichen Frame wie die Bühne — sonst hinkte die Sidebar hinterher.
+  syncEclipsedSlots()
 
   orbitFrame = requestAnimationFrame(tickOrbit)
 }
@@ -530,6 +563,7 @@ function chooseBuilding(buildingId: string) {
             'ps-slot-btn--cant-afford': !slot.purchased && !store.canUnlockPlanetSlot(slotIndex),
             'ps-slot-btn--buffed': slot.jungleBuff?.active,
             'ps-slot-btn--down': isPlanetDown(slot),
+            'ps-slot-btn--eclipsed': isSlotEclipsed(slot),
           }"
           :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
           @click="selectSlot(slot.id)"
@@ -578,6 +612,17 @@ function chooseBuilding(buildingId: string) {
               <!-- Zerstört: Wrack-Emblem legt sich über das Planetenbild -->
               <span v-if="isPlanetDown(slot)" class="ps-slot-down-emblem" aria-hidden="true">
                 <Icon icon="game-icons:fragmented-meteor" width="30" height="30" />
+              </span>
+              <!-- Hinter der Sonne: dasselbe Medaillon wie auf der Bühne und im
+                   Command Panel, aus derselben Positions-Map im selben Frame —
+                   bewusst ohne Transition, damit es exakt mit den anderen
+                   beiden umschaltet. -->
+              <span
+                v-else-if="isSlotEclipsed(slot)"
+                class="ps-slot-eclipse-emblem"
+                title="Behind the Sun — out of reach"
+              >
+                <Icon icon="game-icons:eclipse-flare" width="32" height="32" />
               </span>
             </template>
           </div>
@@ -2205,6 +2250,78 @@ function chooseBuilding(buildingId: string) {
      positions the planet on its orbit. tickOrbit stops advancing the angle under
      reduced motion — same as the idle orbit — so the planet simply holds still
      at its correct spot instead of snapping onto the sun's center. */
+}
+
+/* ── Planet hinter der Sonne — Sidebar-Kachel ──────────────────────────────── */
+/* Weicher als der Zerstört-Zustand: der Planet ist nur vorübergehend außer
+   Reichweite. Die Kachel kühlt ab (Rollenfarbe weicht kaltem Blau), das
+   Planetenbild fällt in den Schatten, das goldene Eclipse-Medaillon trägt die
+   Aussage — gleiche Bildsprache wie Bühne und Command Panel. */
+.ps-slot-btn--eclipsed {
+  border-color: #39405a;
+  background: linear-gradient(150deg, rgba(18, 20, 32, 0.82) 0%, rgba(9, 10, 16, 0.88) 100%);
+}
+
+.ps-slot-btn--eclipsed::before {
+  background: #46527a;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.ps-slot-btn--eclipsed .ps-slot-btn-img {
+  filter: grayscale(65%) brightness(0.5) saturate(0.6);
+  transition: filter 0.4s ease;
+}
+
+.ps-slot-btn--eclipsed .ps-slot-icon::before {
+  background: radial-gradient(circle, rgba(90, 110, 170, 0.22) 0%, transparent 68%);
+  opacity: 1;
+}
+
+/* Medaillon mittig auf dem Planeten — Größe folgt dem Kachel-Container wie das
+   Planetenbild, damit es auf 4K nicht schrumpft und auf Full HD nicht überdeckt. */
+.ps-slot-eclipse-emblem {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: clamp(30px, min(40cqh, 24cqw), 58px);
+  height: clamp(30px, min(40cqh, 24cqw), 58px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(38, 26, 8, 0.95), rgba(8, 8, 12, 0.95));
+  border: 2px solid #5c3310;
+  box-shadow:
+    0 0 0 1px rgba(200, 144, 64, 0.35),
+    0 0 14px rgba(232, 192, 64, 0.32),
+    0 2px 6px rgba(0, 0, 0, 0.7);
+  color: #e8c040;
+  pointer-events: none;
+  animation: ps-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+
+.ps-slot-eclipse-emblem :deep(svg) {
+  width: 62%;
+  height: 62%;
+  filter: drop-shadow(0 0 4px rgba(232, 192, 64, 0.55));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-slot-eclipse-emblem {
+    animation: none;
+  }
+}
+
+/* Ausgewählt + verfinstert: die Auswahl bleibt führend (Gem + Rahmen), die
+   Kachel kühlt aber trotzdem ab — beide Aussagen dürfen nebeneinander stehen. */
+.ps-slot-btn--eclipsed.ps-slot-btn--active {
+  border-color: var(--rc, #52b830);
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--rc, #52b830) 10%, rgba(18, 20, 32, 0.88)) 0%,
+    rgba(9, 10, 16, 0.9) 72%
+  );
 }
 
 /* ── Zerstörter Planet — Sidebar-Kachel ────────────────────────────────────── */
