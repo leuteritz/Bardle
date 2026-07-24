@@ -547,6 +547,8 @@ export const useGameStore = defineStore('game', {
           }, TURRET_PROJECTILE_FLIGHT_MS)
         }
       }
+      // Zerstörte Planeten nach Ablauf ihrer Ausfallzeit zurückholen
+      planetShopStore.tickRespawn()
       // harvest_node: periodic material harvest
       planetShopStore.tickHarvest(this.inGameTime)
       const combatStore = useCombatStore()

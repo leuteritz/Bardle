@@ -8,6 +8,7 @@ import {
   PLANET_ROLES,
   planetLevelBonusMultiplier,
   computePlanetMaxHp,
+  isPlanetDown,
 } from '@/stores/planetShopStore'
 import type { PlanetRole, PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
@@ -25,6 +26,7 @@ import {
   HP_COLOR_THRESHOLD_LOW,
   MATERIAL_RARITY_COLOR,
   PLANET_TAB_ORBIT_PERIOD_SEC,
+  PLANET_RESPAWN_MS,
 } from '@/config/constants'
 import {
   initialOrbitAngle,
@@ -290,6 +292,26 @@ function buffSecsLeft(slot: PlanetSlot): number {
   return Math.max(0, Math.ceil((jb.activeUntil - now.value) / 1000))
 }
 
+// ── Zerstörter Planet: Ausfallzeit bis zur Rückkehr ────────────────────────
+function downSecsLeftOf(slot: PlanetSlot): number {
+  return Math.max(0, Math.ceil((slot.downUntilMs - now.value) / 1000))
+}
+
+/** Anteil der bereits abgelaufenen Ausfallzeit (0 … 1) — füllt den Respawn-Balken. */
+function downProgressOf(slot: PlanetSlot): number {
+  if (!isPlanetDown(slot)) return 0
+  const remaining = Math.max(0, slot.downUntilMs - now.value)
+  return Math.max(0, Math.min(1, 1 - remaining / PLANET_RESPAWN_MS))
+}
+
+const activeDown = computed(() => (activeSlot.value ? isPlanetDown(activeSlot.value) : false))
+const activeDownSecsLeft = computed(() =>
+  activeSlot.value ? downSecsLeftOf(activeSlot.value) : 0,
+)
+const activeDownProgress = computed(() =>
+  activeSlot.value ? downProgressOf(activeSlot.value) : 0,
+)
+
 // Hero-Planet + Rollen-Grid: alle 6 Rollen in einem einheitlichen, scanbaren
 // Grid statt 3-links/3-rechts-Split (bessere Scannbarkeit, geringere kognitive Last).
 const roles = PLANET_ROLES_LIST
@@ -368,9 +390,12 @@ const nextMaxHp = computed(() =>
 // lengthens even at full health.
 const previewHover = ref(false)
 
-// Während der Eclipse ist der Level-Up gesperrt — dann wäre eine Vorschau auf
-// den Zugewinn irreführend, also bleiben Effekt und HP-Bar auf den Ist-Werten.
-const previewActive = computed(() => previewHover.value && !orbitBehind.value)
+// Hinter der Sonne oder zerstört: Level-Up gesperrt.
+const levelUpBlocked = computed(() => orbitBehind.value || activeDown.value)
+
+// Bei gesperrtem Level-Up wäre eine Vorschau auf den Zugewinn irreführend, also
+// bleiben Effekt und HP-Bar auf den Ist-Werten.
+const previewActive = computed(() => previewHover.value && !levelUpBlocked.value)
 
 const hpGainAmount = computed(() => Math.max(0, nextMaxHp.value - currentMaxHp.value))
 
@@ -396,9 +421,9 @@ const hpPreviewPct = computed(() =>
 )
 
 function attune(count: number) {
-  // Hinter der Sonne ist der Planet außer Reichweite — der Button ist dann
-  // deaktiviert, dieser Guard fängt Tastatur-/Programmauslösung mit ab.
-  if (!activeSlot.value || orbitBehind.value) return
+  // Hinter der Sonne oder zerstört ist der Planet außer Reichweite — der Button
+  // ist dann deaktiviert, dieser Guard fängt Tastatur-/Programmauslösung mit ab.
+  if (!activeSlot.value || levelUpBlocked.value) return
   const before = activeSlot.value.level
   const gained = store.levelUpPlanetTimes(activeSlot.value.id, count)
   if (gained > 0) {
@@ -494,6 +519,7 @@ function chooseBuilding(buildingId: string) {
             'ps-slot-btn--affordable': !slot.purchased && store.canUnlockPlanetSlot(slotIndex),
             'ps-slot-btn--cant-afford': !slot.purchased && !store.canUnlockPlanetSlot(slotIndex),
             'ps-slot-btn--buffed': slot.jungleBuff?.active,
+            'ps-slot-btn--down': isPlanetDown(slot),
           }"
           :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
           @click="selectSlot(slot.id)"
@@ -533,6 +559,10 @@ function chooseBuilding(buildingId: string) {
                 alt=""
               />
               <span v-else class="ps-slot-btn-placeholder">＋</span>
+              <!-- Zerstört: Wrack-Emblem legt sich über das Planetenbild -->
+              <span v-if="isPlanetDown(slot)" class="ps-slot-down-emblem" aria-hidden="true">
+                <Icon icon="game-icons:fragmented-meteor" width="30" height="30" />
+              </span>
             </template>
           </div>
 
@@ -556,8 +586,20 @@ function chooseBuilding(buildingId: string) {
               >
                 {{ slot.role ? PLANET_ROLES[slot.role].name : 'No role yet' }}
               </span>
+              <!-- Zerstört: Der Respawn-Balken ersetzt die HP-Leiste — eine
+                   0-%-HP-Anzeige würde nur wie ein Sonderfall aussehen, statt
+                   die eigentliche Information zu zeigen: wann er zurückkommt. -->
+              <div v-if="isPlanetDown(slot)" class="ps-slot-down">
+                <div class="ps-slot-down-track">
+                  <div
+                    class="ps-slot-down-fill"
+                    :style="{ width: downProgressOf(slot) * 100 + '%' }"
+                  />
+                </div>
+                <span class="ps-slot-down-val">{{ downSecsLeftOf(slot) }}s</span>
+              </div>
               <div
-                v-if="slot.maxHp > 0"
+                v-else-if="slot.maxHp > 0"
                 class="ps-slot-hp"
                 :class="`ps-slot-hp--${hpTier(slot.currentHp, slot.maxHp)}`"
               >
@@ -717,6 +759,7 @@ function chooseBuilding(buildingId: string) {
                    planet passes behind the sun in lockstep with the idle orbit. -->
               <Transition name="ps-planet-swap" mode="out-in" type="transition">
                 <div
+                  v-if="!activeDown"
                   :key="activeSlot.id"
                   ref="planetOrbitEl"
                   class="ps-planet-preview-wrap"
@@ -731,13 +774,39 @@ function chooseBuilding(buildingId: string) {
                 </div>
               </Transition>
 
+              <!-- Zerstört: Der Planet ist aus der Bahn — an seiner Stelle steht
+                   ein Wrack-Emblem auf der Sonne, umlegt von einem Ring, der die
+                   Ausfallzeit abfährt. Größter Blickfang der Stage, weil es die
+                   einzige Information ist, auf die der Spieler warten kann. -->
+              <div v-if="activeDown" class="ps-down-core" aria-live="polite">
+                <svg class="ps-down-ring" viewBox="0 0 100 100" aria-hidden="true">
+                  <circle class="ps-down-ring-track" cx="50" cy="50" r="46" />
+                  <circle
+                    class="ps-down-ring-fill"
+                    cx="50"
+                    cy="50"
+                    r="46"
+                    :style="{ '--ring-progress': activeDownProgress }"
+                  />
+                </svg>
+                <Icon
+                  icon="game-icons:fragmented-meteor"
+                  width="96"
+                  height="96"
+                  class="ps-down-icon"
+                />
+                <span class="ps-down-secs">{{ activeDownSecsLeft }}<i>s</i></span>
+              </div>
+
               <!-- Eclipse medallion — same emblem and same source of truth as the
                    Command Panel's, sitting on the sun's face because the planet
                    itself is occluded while this shows. Deliberately without a
                    transition: the Command Panel switches its medallion instantly,
-                   and a fade here would make this one linger behind it. -->
+                   and a fade here would make this one linger behind it.
+                   A destroyed planet suppresses it: it isn't in orbit at all,
+                   so "behind the sun" would be the wrong story. -->
               <span
-                v-if="orbitBehind"
+                v-if="orbitBehind && !activeDown"
                 class="ps-eclipse-medal"
                 title="Behind the Sun — out of reach"
               >
@@ -751,7 +820,10 @@ function chooseBuilding(buildingId: string) {
             <div class="ps-readout-band">
               <div
                 class="ps-planet-readout"
-                :class="{ 'ps-planet-readout--eclipsed': orbitBehind }"
+                :class="{
+                  'ps-planet-readout--eclipsed': orbitBehind && !activeDown,
+                  'ps-planet-readout--down': activeDown,
+                }"
                 :style="{ '--rc': activeRoleColor }"
               >
                 <div class="ps-planet-role-label">{{ activeRoleName }}</div>
@@ -792,10 +864,22 @@ function chooseBuilding(buildingId: string) {
                 </div>
               </div>
 
-              <!-- Eclipse banner — states why the readout is dimmed and the
+              <!-- Status banner — states why the readout is dimmed and the
                    Level-Up button is locked. Lives in the free space between the
-                   readout and the action dock, so nothing above it shifts. -->
-              <Transition name="ps-eclipse-fade">
+                   readout and the action dock, so nothing above it shifts.
+                   Destruction outranks the eclipse: it is the harder state and
+                   the one with a timer attached. -->
+              <div v-if="activeDown" class="ps-eclipse-banner ps-eclipse-banner--down">
+                <span class="ps-eclipse-banner-line" aria-hidden="true" />
+                <div class="ps-eclipse-banner-core">
+                  <span class="ps-eclipse-banner-title">✦ Planet Destroyed ✦</span>
+                  <span class="ps-eclipse-banner-sub">
+                    Rebuilding — returns at full HP in {{ activeDownSecsLeft }}s
+                  </span>
+                </div>
+                <span class="ps-eclipse-banner-line ps-eclipse-banner-line--right" aria-hidden="true" />
+              </div>
+              <Transition v-else name="ps-eclipse-fade">
                 <div v-if="orbitBehind" class="ps-eclipse-banner">
                   <span class="ps-eclipse-banner-line" aria-hidden="true" />
                   <div class="ps-eclipse-banner-core">
@@ -844,13 +928,17 @@ function chooseBuilding(buildingId: string) {
               >
                 <button
                   class="ps-level-btn"
-                  :class="{ 'ps-level-btn--locked': maxAffordableCount === 0 || orbitBehind }"
-                  :disabled="maxAffordableCount === 0 || orbitBehind"
-                  :title="orbitBehind ? 'Behind the Sun — level-up paused until the planet returns' : (maxAffordableCount > 0 ? 'Level up as much as you can afford' : (levelUpReason === 'phase' ? `Requires Sun Phase ${levelUpReqPhase}` : 'Not enough Chimes'))"
+                  :class="{ 'ps-level-btn--locked': maxAffordableCount === 0 || levelUpBlocked }"
+                  :disabled="maxAffordableCount === 0 || levelUpBlocked"
+                  :title="activeDown ? `Destroyed — rebuilding, back in ${activeDownSecsLeft}s` : (orbitBehind ? 'Behind the Sun — level-up paused until the planet returns' : (maxAffordableCount > 0 ? 'Level up as much as you can afford' : (levelUpReason === 'phase' ? `Requires Sun Phase ${levelUpReqPhase}` : 'Not enough Chimes')))"
                   @click="attune(maxAffordableCount)"
                 >
                   <span class="ps-level-btn-main">
-                    <template v-if="orbitBehind">
+                    <template v-if="activeDown">
+                      <Icon icon="game-icons:fragmented-meteor" width="18" height="18" class="ps-level-req-icon" />
+                      Destroyed
+                    </template>
+                    <template v-else-if="orbitBehind">
                       <Icon icon="game-icons:eclipse-flare" width="18" height="18" class="ps-level-req-icon" />
                       Behind the Sun
                     </template>
@@ -860,9 +948,10 @@ function chooseBuilding(buildingId: string) {
                   </span>
                   <span
                     class="ps-level-btn-cost"
-                    :class="{ 'ps-level-btn-cost--req': levelUpReason === 'phase' || orbitBehind }"
+                    :class="{ 'ps-level-btn-cost--req': levelUpReason === 'phase' || levelUpBlocked }"
                   >
-                    <template v-if="orbitBehind">Out of reach</template>
+                    <template v-if="activeDown">Back in {{ activeDownSecsLeft }}s</template>
+                    <template v-else-if="orbitBehind">Out of reach</template>
                     <template v-else-if="levelUpReason === 'phase'">
                       <Icon icon="game-icons:sun" width="16" height="16" class="ps-level-req-icon" />
                       Requires Phase {{ levelUpReqPhase }}
@@ -873,7 +962,7 @@ function chooseBuilding(buildingId: string) {
                     </template>
                   </span>
                 </button>
-                <span v-if="maxAffordableCount > 0 && !orbitBehind" class="ps-buy-badge" aria-hidden="true">{{ maxAffordableCount }}</span>
+                <span v-if="maxAffordableCount > 0 && !levelUpBlocked" class="ps-buy-badge" aria-hidden="true">{{ maxAffordableCount }}</span>
               </div>
             </div>
           </div>
@@ -1966,6 +2055,203 @@ function chooseBuilding(buildingId: string) {
      positions the planet on its orbit. tickOrbit stops advancing the angle under
      reduced motion — same as the idle orbit — so the planet simply holds still
      at its correct spot instead of snapping onto the sun's center. */
+}
+
+/* ── Zerstörter Planet — Sidebar-Kachel ────────────────────────────────────── */
+/* Härter als jeder andere Slot-Zustand: Der Planet ist raus, nicht nur passiv.
+   Rotstichiger Rahmen, ausgelöschtes Planetenbild, Wrack-Emblem darüber. */
+.ps-slot-btn--down {
+  border-color: #7a3a2c;
+  background: linear-gradient(180deg, #1e100c 0%, #140a08 100%);
+}
+
+.ps-slot-btn--down .ps-slot-btn-img {
+  filter: grayscale(100%) brightness(0.3) contrast(0.85);
+}
+
+.ps-slot-down-emblem {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  color: #e08070;
+  filter: drop-shadow(0 0 8px rgba(204, 96, 80, 0.75));
+  pointer-events: none;
+  animation: ps-down-pulse 1.5s ease-in-out infinite alternate;
+}
+
+/* Respawn-Leiste — ersetzt die HP-Leiste, gleiche Geometrie, andere Aussage */
+.ps-slot-down {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.ps-slot-down-track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  background: #14100e;
+  border: 1px solid #3a2018;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ps-slot-down-fill {
+  height: 100%;
+  background: linear-gradient(to bottom, #e08070, #a8402c);
+  box-shadow: 0 0 8px rgba(224, 128, 112, 0.5);
+  transition: width 0.5s linear;
+}
+
+.ps-slot-down-val {
+  min-width: 30px;
+  text-align: right;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #f0b0a0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Zerstörter Planet — Bühne im Detailbereich ────────────────────────────── */
+/* Ersetzt den orbitierenden Planeten mittig auf der Sonne: Wrack-Emblem im
+   Countdown-Ring, darunter die Restzeit in großer Ziffer. Bewusst der größte
+   Blickfang der Bühne — es ist die einzige Information, auf die man wartet. */
+.ps-down-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  width: min(220px, 66cqmin);
+  height: min(220px, 66cqmin);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.ps-down-core > * {
+  grid-area: 1 / 1;
+}
+
+.ps-down-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ps-down-ring-track {
+  fill: rgba(10, 6, 5, 0.82);
+  stroke: #4a2418;
+  stroke-width: 5;
+}
+
+/* stroke-dasharray über den Umfang (2πr ≈ 289) — --ring-progress füllt ihn */
+.ps-down-ring-fill {
+  fill: none;
+  stroke: #e08070;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 289;
+  stroke-dashoffset: calc(289 - 289 * var(--ring-progress, 0));
+  filter: drop-shadow(0 0 6px rgba(224, 128, 112, 0.7));
+  transition: stroke-dashoffset 0.5s linear;
+}
+
+.ps-down-icon {
+  align-self: center;
+  justify-self: center;
+  width: min(96px, 30cqmin);
+  height: min(96px, 30cqmin);
+  color: #e08070;
+  filter: drop-shadow(0 0 16px rgba(204, 96, 80, 0.8));
+  transform: translateY(-11%);
+  animation: ps-down-pulse 1.5s ease-in-out infinite alternate;
+}
+
+.ps-down-secs {
+  align-self: end;
+  justify-self: center;
+  margin-bottom: 12%;
+  font-size: clamp(1.5rem, 3.4vh, 2.4rem);
+  font-weight: 900;
+  line-height: 1;
+  color: #ffd0c0;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 18px rgba(224, 128, 112, 0.7),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.ps-down-secs i {
+  font-style: normal;
+  font-size: 0.5em;
+  opacity: 0.75;
+  margin-left: 1px;
+}
+
+/* Readout während der Ausfallzeit — stärker zurückgenommen als bei der Eclipse:
+   die Werte gelten gerade nicht, der Planet trägt nichts bei. */
+.ps-planet-readout--down {
+  opacity: 0.45;
+  filter: grayscale(70%);
+}
+
+/* Banner in Rot statt Gold — Verlust, nicht bloß Pause */
+.ps-eclipse-banner--down .ps-eclipse-banner-line {
+  background: linear-gradient(to right, transparent, rgba(224, 128, 112, 0.7));
+  box-shadow: 0 0 8px rgba(204, 96, 80, 0.4);
+}
+
+.ps-eclipse-banner--down .ps-eclipse-banner-line--right {
+  background: linear-gradient(to left, transparent, rgba(224, 128, 112, 0.7));
+}
+
+.ps-eclipse-banner--down .ps-eclipse-banner-title {
+  color: #ffd0c0;
+  text-shadow:
+    0 0 16px rgba(224, 128, 112, 0.8),
+    0 0 36px rgba(168, 64, 44, 0.45),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+.ps-eclipse-banner--down .ps-eclipse-banner-sub {
+  color: rgba(240, 176, 160, 0.75);
+}
+
+@keyframes ps-down-pulse {
+  from {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+/* Das Bühnen-Emblem trägt bereits ein translateY — Puls darf es nicht wegwerfen */
+@keyframes ps-down-icon-pulse {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ps-down-icon {
+  animation-name: ps-down-icon-pulse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-slot-down-emblem,
+  .ps-down-icon {
+    animation: none;
+  }
 }
 
 /* ── Eclipse — planet passing behind the sun, in sync with the idle orbit ───── */

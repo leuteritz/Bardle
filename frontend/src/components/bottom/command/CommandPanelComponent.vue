@@ -6,6 +6,7 @@ import {
   usePlanetShopStore,
   PLANET_ROLES,
   JUNGLE_BUFF_DEFS,
+  isPlanetDown,
 } from '@/stores/planetShopStore'
 import type { PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -67,6 +68,11 @@ function buffMsLeft(slot: PlanetSlot): number {
   return slot.jungleBuff?.active ? Math.max(0, slot.jungleBuff.activeUntil - buffNow.value) : 0
 }
 
+/** Restliche Ausfallzeit eines zerstörten Planeten in ganzen Sekunden. */
+function downSecsLeft(slot: PlanetSlot): number {
+  return Math.max(0, Math.ceil((slot.downUntilMs - buffNow.value) / 1000))
+}
+
 function buffProgress(slot: PlanetSlot): number {
   if (!slot.role || !slot.jungleBuff?.active) return 0
   return Math.min(1, buffMsLeft(slot) / JUNGLE_BUFF_DEFS[slot.role].durationMs)
@@ -104,7 +110,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             'cmd-planet-tile--empty-slot': slot.purchased && !slot.role,
             'cmd-planet-tile--locked': !slot.purchased && !planetStore.canUnlockPlanetSlot(index),
             'cmd-planet-tile--buy': !slot.purchased,
-            'cmd-planet-tile--eclipsed': slotBehindSun(slot),
+            'cmd-planet-tile--eclipsed': slotBehindSun(slot) && !isPlanetDown(slot),
+            'cmd-planet-tile--down': isPlanetDown(slot),
           }"
           :style="slot.purchased && slot.role ? { '--role-color': roleColor(slot.role) } : {}"
           @click="handleSlotClick(slot)"
@@ -130,15 +137,28 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
             <!-- Eclipse: Planet hinter der Sonne — kühler Schatten + Medaillon
                  unten mittig (oben mittig sitzt der Jungle-Buff-Chip).
-                 Bewusst ohne Transition: der Status soll sofort umschalten. -->
-            <div v-if="slotBehindSun(slot)" class="cmd-eclipse-veil" />
-            <div
-              v-if="slotBehindSun(slot)"
-              class="cmd-eclipse-medal"
-              title="Behind the Sun — combat paused"
-            >
-              <Icon icon="game-icons:eclipse-flare" width="24" height="24" />
-            </div>
+                 Bewusst ohne Transition: der Status soll sofort umschalten.
+                 Ein zerstörter Planet verdrängt die Eclipse-Anzeige: er ist gar
+                 nicht mehr im Orbit, "hinter der Sonne" wäre dann irreführend. -->
+            <template v-if="!isPlanetDown(slot)">
+              <div v-if="slotBehindSun(slot)" class="cmd-eclipse-veil" />
+              <div
+                v-if="slotBehindSun(slot)"
+                class="cmd-eclipse-medal"
+                title="Behind the Sun — combat paused"
+              >
+                <Icon icon="game-icons:eclipse-flare" width="24" height="24" />
+              </div>
+            </template>
+
+            <!-- Zerstört: Wrack-Emblem mit Respawn-Countdown, füllt die Kachel -->
+            <template v-else>
+              <div class="cmd-down-veil" />
+              <div class="cmd-down-core" :title="`Destroyed — back in ${downSecsLeft(slot)}s`">
+                <Icon icon="game-icons:fragmented-meteor" width="26" height="26" />
+                <span class="cmd-down-timer">{{ downSecsLeft(slot) }}s</span>
+              </div>
+            </template>
           </template>
 
           <template v-else-if="slot.purchased">
@@ -553,6 +573,69 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   background: linear-gradient(180deg, rgba(6, 8, 16, 0.4), rgba(2, 3, 8, 0.62));
   pointer-events: none;
   z-index: 2;
+}
+
+/* ── Zerstört: Planet ist aus dem Orbit raus und wartet auf seinen Respawn ──
+   Deutlich härter als die Eclipse — die Kachel liegt komplett brach, das
+   Planetenbild ist fast ausgelöscht, ein rotes Wrack-Emblem trägt den Timer. */
+.cmd-planet-tile--down {
+  border-color: rgba(150, 62, 48, 0.55);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.78);
+}
+.cmd-planet-tile--down .cmd-tile-planet-img {
+  filter: grayscale(100%) brightness(0.28) contrast(0.8);
+}
+
+.cmd-down-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(28, 6, 4, 0.62), rgba(3, 2, 4, 0.82));
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cmd-down-core {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  color: #e08070;
+  pointer-events: none;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.cmd-down-core :deep(svg) {
+  filter: drop-shadow(0 0 6px rgba(204, 96, 80, 0.7));
+  animation: cmd-down-pulse 1.4s ease-in-out infinite alternate;
+}
+
+.cmd-down-timer {
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #f0b0a0;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes cmd-down-pulse {
+  from {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmd-down-core :deep(svg) {
+    animation: none;
+  }
 }
 
 /* Medaillon unten mittig — Gegenstück zum Jungle-Buff-Chip oben mittig,

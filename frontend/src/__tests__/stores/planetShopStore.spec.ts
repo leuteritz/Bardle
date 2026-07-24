@@ -3,18 +3,22 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   usePlanetShopStore,
   PLANET_ROLES,
+  JUNGLE_BUFF_DEFS,
   planetLevelBonusMultiplier,
   planetMilestoneCount,
   planetRankTier,
   computePlanetMaxHp,
   planetLevelUpCost,
   planetLevelRequiredPhase,
+  isPlanetDown,
 } from '../../stores/planetShopStore'
+import type { PlanetRoleType } from '../../stores/planetShopStore'
 import { useGameStore } from '../../stores/gameStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import {
   PLANET_SLOT_MAX_HP,
   PLANET_SLOT_SUN_PHASE_REQUIREMENTS,
+  PLANET_RESPAWN_MS,
   STAR_PHASE_DATA,
 } from '../../config/constants'
 
@@ -237,6 +241,97 @@ describe('planetShopStore — Attunement leveling', () => {
         planetLevelUpCost({ baseCost: slot.baseCost, level: 2 }) +
         planetLevelUpCost({ baseCost: slot.baseCost, level: 3 })
       expect(store.getBulkLevelUpCost(slot.id, 3)).toBe(expected)
+    })
+  })
+
+  // ─── Destruction + respawn ─────────────────────────────────────────────────
+  describe('destroyed planets', () => {
+    function armed(role: PlanetRoleType = 'turret_planet', level = 3) {
+      const store = usePlanetShopStore()
+      const slot = store.slots[0]
+      slot.purchased = true
+      slot.role = role
+      slot.level = level
+      slot.maxHp = computePlanetMaxHp(level)
+      slot.currentHp = slot.maxHp
+      slot.downUntilMs = 0
+      return { store, slot }
+    }
+
+    it('takeDamage above remaining HP destroys the planet and starts the timer', () => {
+      const { store, slot } = armed()
+      store.takeDamage(slot.id, slot.maxHp + 500)
+      expect(slot.currentHp).toBe(0)
+      expect(isPlanetDown(slot)).toBe(true)
+      expect(slot.downUntilMs).toBeGreaterThan(Date.now())
+      expect(slot.downUntilMs).toBeLessThanOrEqual(Date.now() + PLANET_RESPAWN_MS)
+    })
+
+    it('surviving damage leaves the planet alive', () => {
+      const { store, slot } = armed()
+      store.takeDamage(slot.id, 1)
+      expect(slot.currentHp).toBe(slot.maxHp - 1)
+      expect(isPlanetDown(slot)).toBe(false)
+    })
+
+    it('a destroyed planet contributes no role bonus', () => {
+      const { store, slot } = armed('turret_planet')
+      expect(store.autoAttackDPS).toBeGreaterThan(0)
+      store.takeDamage(slot.id, slot.maxHp)
+      expect(store.autoAttackDPS).toBe(0)
+    })
+
+    it('a destroyed harvester stops harvesting', () => {
+      const { store, slot } = armed('harvest_node')
+      slot.slotConfig = { materialId: 'iron' }
+      expect(store.activeHarvestSlots).toHaveLength(1)
+      store.takeDamage(slot.id, slot.maxHp)
+      expect(store.activeHarvestSlots).toHaveLength(0)
+    })
+
+    it('cannot be healed back while destroyed', () => {
+      const { store, slot } = armed()
+      store.takeDamage(slot.id, slot.maxHp)
+      store.healSlot(slot.id, 999)
+      expect(slot.currentHp).toBe(0)
+      expect(isPlanetDown(slot)).toBe(true)
+    })
+
+    it('takes no further damage while destroyed (timer is not extended)', () => {
+      const { store, slot } = armed()
+      store.takeDamage(slot.id, slot.maxHp)
+      const downUntil = slot.downUntilMs
+      store.takeDamage(slot.id, 50)
+      expect(slot.downUntilMs).toBe(downUntil)
+    })
+
+    it('tickRespawn restores full HP once the timer expires', () => {
+      const { store, slot } = armed('turret_planet', 4)
+      store.takeDamage(slot.id, slot.maxHp)
+
+      // Timer läuft noch → nichts passiert
+      store.tickRespawn()
+      expect(isPlanetDown(slot)).toBe(true)
+      expect(slot.currentHp).toBe(0)
+
+      slot.downUntilMs = Date.now() - 1
+      store.tickRespawn()
+      expect(isPlanetDown(slot)).toBe(false)
+      expect(slot.maxHp).toBe(computePlanetMaxHp(4))
+      expect(slot.currentHp).toBe(slot.maxHp)
+      expect(store.autoAttackDPS).toBeGreaterThan(0)
+    })
+
+    it('destruction clears an active jungle buff and blocks new ones', () => {
+      const { store, slot } = armed()
+      store.applyJungleBuff(slot.id, JUNGLE_BUFF_DEFS.turret_planet)
+      expect(slot.jungleBuff?.active).toBe(true)
+
+      store.takeDamage(slot.id, slot.maxHp)
+      expect(slot.jungleBuff).toBeNull()
+
+      store.applyJungleBuff(slot.id, JUNGLE_BUFF_DEFS.turret_planet)
+      expect(slot.jungleBuff).toBeNull()
     })
   })
 })

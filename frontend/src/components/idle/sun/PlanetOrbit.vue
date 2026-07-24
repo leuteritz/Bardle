@@ -149,7 +149,12 @@
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
-import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS } from '../../../stores/planetShopStore'
+import {
+  usePlanetShopStore,
+  PLANET_ROLES,
+  JUNGLE_BUFF_DEFS,
+  isPlanetDown,
+} from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY, GAME_TICK_INTERVAL_MS, PLANET_ORBIT_FOREGROUND_DEPTH } from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
@@ -476,6 +481,12 @@ export default defineComponent({
           angle: Math.atan2(ellipseV, ellipseU),
           speedMul: newMul,
         })
+
+        // Zerstörter Planet: verlässt den sichtbaren Orbit und fällt aus
+        // activePlayerPlanetPositions — damit ist er weder Ziel noch Schütze.
+        // Seine Bahn läuft oben aber weiter, also kehrt er beim Respawn an der
+        // richtigen Stelle zurück statt an den Startwinkel zu springen.
+        if (isPlanetDown(slot)) continue
 
         const relY = (ls.y - cy) / Math.max(ry, 1)
         const isBehind = relY < -0.05

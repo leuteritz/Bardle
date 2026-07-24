@@ -22,6 +22,16 @@ export function logPlanetDamaged(planetName: string, amount: number, source?: st
   addEvent(msg, 'combat')
 }
 
+export function logPlanetDestroyed(planetName: string, downSeconds: number) {
+  const { addEvent } = useEventLog()
+  addEvent(`${planetName} destroyed — back in ${safeNumber(downSeconds)}s.`, 'combat')
+}
+
+export function logPlanetRestored(planetName: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`${planetName} is back online at full HP.`, 'planet')
+}
+
 export function logSupportSalary(roleName: string, planetName: string, amount: number) {
   const { addEvent } = useEventLog()
   addEvent(`${roleName} +${safeNumber(amount)} on ${planetName}.`, 'support')
@@ -29,18 +39,13 @@ export function logSupportSalary(roleName: string, planetName: string, amount: n
 
 export function logPlanetSaved(planetName: string, source?: string) {
   const { addEvent } = useEventLog()
-  addEvent(
-    source ? `${source} saves ${planetName}.` : `${planetName} saved.`,
-    'planet',
-  )
+  addEvent(source ? `${source} saves ${planetName}.` : `${planetName} saved.`, 'planet')
 }
 
 export function logChimeGain(amount: number, source?: string) {
   const { addEvent } = useEventLog()
   addEvent(
-    source
-      ? `+${safeNumber(amount)} Chimes from ${source}.`
-      : `+${safeNumber(amount)} Chimes.`,
+    source ? `+${safeNumber(amount)} Chimes from ${source}.` : `+${safeNumber(amount)} Chimes.`,
     'chime',
   )
 }

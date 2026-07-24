@@ -51,7 +51,13 @@ import { usePlayerStore } from './playerStore'
 import { useBattleStore } from './battleStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useCombatStore } from './combatStore'
-import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS, type PlanetSlot } from './planetShopStore'
+import {
+  usePlanetShopStore,
+  PLANET_ROLES,
+  JUNGLE_BUFF_DEFS,
+  isPlanetDown,
+  type PlanetSlot,
+} from './planetShopStore'
 import { useStarGroupStore } from './starGroupStore'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../utils/activePlayerPlanetPositions'
@@ -66,11 +72,19 @@ import { useEventLog } from '@/composables/useEventLog'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 
 export const CURSE_DEFS: Record<MidCurseType, { name: string; icon: string; effect: string }> = {
-  corruption: { name: 'Corruption',  icon: 'game-icons:skull-crossed-bones', effect: '8 damage/sec.' },
-  weakness:   { name: 'Weakness',    icon: 'game-icons:sword-wound',         effect: 'Enemy attack −60%' },
-  banishment: { name: 'Hexblight',   icon: 'game-icons:death-zone',          effect: 'Player damage ×1.8' },
-  glaciation: { name: 'Petrify',     icon: 'game-icons:ice-bolt',            effect: 'Enemy attack 3× slower' },
-  damnation:  { name: 'Damnation',   icon: 'game-icons:death-skull',         effect: 'Instant 20% MaxHP damage' },
+  corruption: {
+    name: 'Corruption',
+    icon: 'game-icons:skull-crossed-bones',
+    effect: '8 damage/sec.',
+  },
+  weakness: { name: 'Weakness', icon: 'game-icons:sword-wound', effect: 'Enemy attack −60%' },
+  banishment: { name: 'Hexblight', icon: 'game-icons:death-zone', effect: 'Player damage ×1.8' },
+  glaciation: { name: 'Petrify', icon: 'game-icons:ice-bolt', effect: 'Enemy attack 3× slower' },
+  damnation: {
+    name: 'Damnation',
+    icon: 'game-icons:death-skull',
+    effect: 'Instant 20% MaxHP damage',
+  },
 }
 
 const CURSE_TYPES = Object.keys(CURSE_DEFS) as MidCurseType[]
@@ -367,7 +381,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         }
 
         if (!bossAlive && hp.current < hp.max) {
-          hp.current = Math.min(hp.max, hp.current + hp.max * CHAMPION_HP_REGEN_FRAC * (tickMs / 1000))
+          hp.current = Math.min(
+            hp.max,
+            hp.current + hp.max * CHAMPION_HP_REGEN_FRAC * (tickMs / 1000),
+          )
         }
       }
 
@@ -439,9 +456,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           novaSecs,
       )
       // Hinter der Sonne wird nicht getroffen — nur sichtbare Slots
-      const planetSlots = planetShopStore.activeSlots.filter((s) =>
-        playerSlotInForeground(s.id),
-      )
+      const planetSlots = planetShopStore.activeSlots.filter((s) => playerSlotInForeground(s.id))
       if (planetDmg > 0 && planetSlots.length > 0) {
         for (const slot of planetSlots) planetShopStore.takeDamage(slot.id, planetDmg)
         this.planetHitAt = now
@@ -456,9 +471,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     /** Zielpool des Strikes: lebende Orbit-Champions + Spieler-Planeten
      *  (jede Planetenart) mit Rest-HP — nur Ziele VOR der Sonne, wer dahinter
      *  steht, kann nicht anvisiert werden. Liefert ein Zufallsziel oder null. */
-    _rollStrikeTarget(
-      roles: Set<string>,
-    ): { role: ChampionRole } | { slotId: string } | null {
+    _rollStrikeTarget(roles: Set<string>): { role: ChampionRole } | { slotId: string } | null {
       const planetShopStore = usePlanetShopStore()
       const champTargets = (Object.keys(this.championHp) as ChampionRole[]).filter(
         (role) =>
@@ -708,10 +721,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         .filter((entry) => entry !== null)
 
       const healablePlanets = damagedCandidates
-        // Planeten hinter der Sonne empfangen keinen Heal
+        // Planeten hinter der Sonne empfangen keinen Heal, zerstörte ebenso
+        // wenig — die kommen erst nach ihrer Ausfallzeit mit vollen HP zurück.
         .filter(
           (entry) =>
-            entry.slot.currentHp < entry.slot.maxHp && playerSlotInForeground(entry.slot.id),
+            !isPlanetDown(entry.slot) &&
+            entry.slot.currentHp < entry.slot.maxHp &&
+            playerSlotInForeground(entry.slot.id),
         )
         .map((entry) => {
           const dist = Math.hypot(
@@ -733,7 +749,9 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           if (healAmount <= 0) continue
 
           planetShopStore.healSlot(slot.id, healAmount)
-          spawnFloat(healAmount, pos.cx, pos.cy - HEAL_FLOAT_Y_OFFSET, HEAL_FLOAT_DURATION_MS, { healFloat: true })
+          spawnFloat(healAmount, pos.cx, pos.cy - HEAL_FLOAT_Y_OFFSET, HEAL_FLOAT_DURATION_MS, {
+            healFloat: true,
+          })
 
           throttledEvent(`support-heal-${slot.id}`, 4000, () => {
             addEvent(
@@ -838,9 +856,15 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         if (!defeated) {
           const pos = activePlanetPositions.get(activeBoss.planetId)
           if (pos) {
-            spawnFloat(ROLE_MID_CURSE_DOT_DPS, pos.cx + (Math.random() - 0.5) * 40, pos.cy - 50, 1000, {
-              curseFloat: true,
-            })
+            spawnFloat(
+              ROLE_MID_CURSE_DOT_DPS,
+              pos.cx + (Math.random() - 0.5) * 40,
+              pos.cy - 50,
+              1000,
+              {
+                curseFloat: true,
+              },
+            )
           }
         }
       }
@@ -860,10 +884,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       if (!midChamp || (midChamp.screenX === 0 && midChamp.screenY === 0)) return
 
       // Vordergrund-Gate: Fluch wartet bei CD 0, bis Mid und Boss sichtbar sind
-      if (
-        !championInForeground(midName) ||
-        !bossPlanetInForeground(activeBoss.planetId)
-      ) {
+      if (!championInForeground(midName) || !bossPlanetInForeground(activeBoss.planetId)) {
         return
       }
 
@@ -886,7 +907,9 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       activeMidCurse.activeUntil = curse.activeUntil
 
       this.midCurseFlashActive = true
-      window.setTimeout(() => { this.midCurseFlashActive = false }, ROLE_MID_CURSE_CAST_MS)
+      window.setTimeout(() => {
+        this.midCurseFlashActive = false
+      }, ROLE_MID_CURSE_CAST_MS)
       this.midCurseCooldownMs = ROLE_MID_CURSE_INTERVAL_MS
 
       if (type === 'damnation') {
@@ -919,15 +942,16 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           activeBoss &&
           !activeBoss.defeated &&
           !activeBoss.expired &&
-          (!championInForeground(championName) ||
-            !bossPlanetInForeground(activeBoss.planetId))
+          (!championInForeground(championName) || !bossPlanetInForeground(activeBoss.planetId))
         ) {
           return
         }
 
         this.adcBurstCooldownMs = ROLE_ADC_BURST_INTERVAL_MS
         this.adcBurstActive = true
-        window.setTimeout(() => { this.adcBurstActive = false }, 350)
+        window.setTimeout(() => {
+          this.adcBurstActive = false
+        }, 350)
 
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
           throttledEvent(`adc-burst-${activeBoss.planetId}`, 10000, () => {
@@ -971,7 +995,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
       const { addEvent } = useEventLog()
       const championName = getChampionNameByRole('top')
-      addEvent(`${championName}'s shield absorbs a shot! (${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s rebuild)`, 'top')
+      addEvent(
+        `${championName}'s shield absorbs a shot! (${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s rebuild)`,
+        'top',
+      )
 
       setTimeout(() => {
         this.tankInterceptActive = false

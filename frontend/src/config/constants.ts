@@ -1526,6 +1526,13 @@ export const UNIVERSE_RESCUE_COST_MULTIPLIER = 2
 export const PLANET_HARVEST_INTERVAL_TICKS = 30 // harvest_node: 1 Material every 30 ticks
 export const JUNGLE_BUFF_RANGE = 120 // px, screen-space proximity radius for jungle buff trigger
 export const JUNGLE_BUFF_COOLDOWN_MS = 30_000 // 30s cooldown between jungle buff triggers
+/**
+ * Ausfallzeit eines zerstörten Planeten. Während dieser Zeit trägt er keinen
+ * Rollen-Bonus bei, ist kein Ziel und fliegt nicht im Orbit; danach kehrt er mit
+ * vollen HP zurück. Deutlich länger als CHAMPION_REVIVE_MS (8s), weil Planeten
+ * viel mehr HP haben und entsprechend selten fallen.
+ */
+export const PLANET_RESPAWN_MS = 30_000
 
 // Material rarity colors (WoW-style tiers) — used by the harvest target picker in
 // PlanetSelectTabComponent to color material medallions, names and rarity badges.
@@ -3011,6 +3018,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:sword-spin', // "Return to Battle" floating button (BattleReturnButton)
   // Eclipse state (champion/planet behind the sun)
   'game-icons:eclipse-flare', // Eclipse medallion (ChampionSelectorComponent, CommandPanelComponent, RoleStrikerSquad, PlanetBatteryHUD, PlanetSelectTabComponent)
+  // Destroyed planet, waiting out its respawn timer
+  'game-icons:fragmented-meteor', // Wreck emblem (CommandPanelComponent, PlanetSelectTabComponent)
   // Bard Stats — Journey lifetime stat rows (BardStatsTab)
   'game-icons:embrassed-energy', // Total Power stat row
   'game-icons:factory', // Lifetime Production stat row

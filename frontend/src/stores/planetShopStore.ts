@@ -22,10 +22,12 @@ import {
   PLANET_MILESTONE_BONUS,
   PLANET_MAX_BULK_LEVELS,
   PLANET_RANK_TIERS,
+  PLANET_RESPAWN_MS,
 } from '@/config/constants'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { getOrbitSunRadius, getOrbitSunScale } from '../utils/orbitMath'
 import { playerSlotInForeground } from '../utils/foregroundGate'
+import { logPlanetDestroyed, logPlanetRestored } from '@/config/gameEventLogger'
 
 export type PlanetRoleType =
   | 'turret_planet'
@@ -79,7 +81,19 @@ export interface PlanetSlot {
   currentHp: number
   maxHp: number
   healingUntilMs: number
+  /** Zeitpunkt, ab dem ein zerstörter Planet zurückkehrt (0 = intakt). */
+  downUntilMs: number
   jungleBuff: JungleBuff | null
+}
+
+/** Planet zerstört und noch in der Ausfallzeit? */
+export function isPlanetDown(slot: Pick<PlanetSlot, 'downUntilMs'>): boolean {
+  return slot.downUntilMs > 0
+}
+
+/** Anzeigename eines Slots — Rollenname, solange eine Rolle gewählt ist. */
+function planetLabel(slot: PlanetSlot): string {
+  return slot.role ? PLANET_ROLES[slot.role].name : slot.id.replace('slot_', 'Slot ')
 }
 
 export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
@@ -207,6 +221,7 @@ const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
   currentHp: PLANET_SLOT_MAX_HP,
   maxHp: PLANET_SLOT_MAX_HP,
   healingUntilMs: 0,
+  downUntilMs: 0,
   jungleBuff: null,
 }))
 
@@ -250,7 +265,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
     autoAttackDPS(state): number {
       return state.slots
-        .filter((s) => s.purchased && s.role === 'turret_planet')
+        .filter((s) => s.purchased && s.role === 'turret_planet' && !isPlanetDown(s))
         .reduce((sum, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
           return (
@@ -264,7 +279,13 @@ export const usePlanetShopStore = defineStore('planetShop', {
      *  feuern nicht (Kampf passiert nur im Vordergrund). */
     foregroundAutoAttackDPS(state): number {
       return state.slots
-        .filter((s) => s.purchased && s.role === 'turret_planet' && playerSlotInForeground(s.id))
+        .filter(
+          (s) =>
+            s.purchased &&
+            s.role === 'turret_planet' &&
+            !isPlanetDown(s) &&
+            playerSlotInForeground(s.id),
+        )
         .reduce((sum, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
           return (
@@ -276,13 +297,19 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
     activeHarvestSlots(state): { materialId: string }[] {
       return state.slots
-        .filter((s) => s.purchased && s.role === 'harvest_node' && s.slotConfig?.materialId)
+        .filter(
+          (s) =>
+            s.purchased &&
+            s.role === 'harvest_node' &&
+            !isPlanetDown(s) &&
+            s.slotConfig?.materialId,
+        )
         .map((s) => ({ materialId: s.slotConfig!.materialId! }))
     },
 
     planetExpeditionRewardMultiplier(state): number {
       return state.slots
-        .filter((s) => s.purchased && s.role === 'expedition_relay')
+        .filter((s) => s.purchased && s.role === 'expedition_relay' && !isPlanetDown(s))
         .reduce((prod, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
           return (
@@ -297,7 +324,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
     planetBossDamageReduction(state): number {
       const total = state.slots
-        .filter((s) => s.purchased && s.role === 'shield_barrier')
+        .filter((s) => s.purchased && s.role === 'shield_barrier' && !isPlanetDown(s))
         .reduce((sum, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
           return (
@@ -310,7 +337,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
     planetOfflineBoostMultiplier(state): number {
       return state.slots
-        .filter((s) => s.purchased && s.role === 'time_capsule')
+        .filter((s) => s.purchased && s.role === 'time_capsule' && !isPlanetDown(s))
         .reduce((prod, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
           return (
@@ -324,7 +351,12 @@ export const usePlanetShopStore = defineStore('planetShop', {
     resonanceTowerBuildingMultipliers(state): Record<string, number> {
       const result: Record<string, number> = {}
       for (const slot of state.slots) {
-        if (slot.purchased && slot.role === 'resonance_tower' && slot.slotConfig?.buildingId) {
+        if (
+          slot.purchased &&
+          slot.role === 'resonance_tower' &&
+          !isPlanetDown(slot) &&
+          slot.slotConfig?.buildingId
+        ) {
           const bId = slot.slotConfig.buildingId
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
           result[bId] =
@@ -596,20 +628,44 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
     takeDamage(slotId: string, amount: number): void {
       const slot = this.getSlot(slotId)
-      if (!slot || !slot.purchased) return
+      if (!slot || !slot.purchased || isPlanetDown(slot)) return
       slot.currentHp = Math.max(0, slot.currentHp - amount)
+      if (slot.currentHp > 0) return
+
+      // Zerstört: Der Planet verlässt den Orbit, sein Rollen-Bonus fällt aus und
+      // er ist kein Ziel mehr. tickRespawn holt ihn mit vollen HP zurück.
+      slot.downUntilMs = Date.now() + PLANET_RESPAWN_MS
+      slot.jungleBuff = null
+      logPlanetDestroyed(planetLabel(slot), PLANET_RESPAWN_MS / 1000)
+    },
+
+    /** Abgelaufene Ausfallzeiten beenden — pro Game-Tick aufgerufen. */
+    tickRespawn(): void {
+      const now = Date.now()
+      for (const slot of this.slots) {
+        if (slot.downUntilMs === 0 || now < slot.downUntilMs) continue
+        slot.downUntilMs = 0
+        slot.maxHp = computePlanetMaxHp(slot.level)
+        slot.currentHp = slot.maxHp
+        slot.healingUntilMs = 0
+        logPlanetRestored(planetLabel(slot))
+      }
     },
 
     healSlot(slotId: string, amount: number): void {
       const slot = this.getSlot(slotId)
-      if (!slot || !slot.purchased) return
+      // Ein zerstörter Planet ist nicht heilbar — er kommt erst nach seiner
+      // Ausfallzeit zurück, sonst könnte Support den Tod sofort aufheben.
+      if (!slot || !slot.purchased || isPlanetDown(slot)) return
       slot.currentHp = Math.min(slot.maxHp, slot.currentHp + amount)
       slot.healingUntilMs = Date.now() + 1000
     },
 
     applyJungleBuff(slotId: string, def: JungleBuffDef): void {
       const slot = this.getSlot(slotId)
-      if (!slot || !slot.purchased) return
+      // Zerstörte Planeten sind nicht bebuffbar — sie stehen ohnehin nicht mehr
+      // in activePlayerPlanetPositions, dies ist die Absicherung im Store selbst.
+      if (!slot || !slot.purchased || isPlanetDown(slot)) return
       slot.jungleBuff = {
         active: true,
         buffType: def.name,

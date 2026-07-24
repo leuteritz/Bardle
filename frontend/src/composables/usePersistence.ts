@@ -547,8 +547,12 @@ export function usePersistence() {
             slot.level = sv.level ?? 1
             slot.slotConfig = sv.slotConfig ?? undefined
             // currentHp/maxHp are not persisted; derive from level on load.
+            // Same for the respawn timer: a session always starts with every
+            // planet intact rather than resuming someone else's countdown.
             slot.maxHp = computePlanetMaxHp(slot.level)
             slot.currentHp = slot.maxHp
+            slot.downUntilMs = 0
+            slot.healingUntilMs = 0
           }
         }
       }
@@ -786,6 +790,9 @@ export function usePersistence() {
       s.level = 1
       s.maxHp = computePlanetMaxHp(1)
       s.currentHp = s.maxHp
+      s.downUntilMs = 0
+      s.healingUntilMs = 0
+      s.jungleBuff = null
     })
     planetShopStoreR.activeRoleModalSlotId = null
 
