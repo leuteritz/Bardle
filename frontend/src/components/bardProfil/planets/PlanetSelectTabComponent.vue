@@ -3378,8 +3378,11 @@ img.ps-role-icon {
   display: inline-flex;
   align-items: center;
   gap: clamp(5px, 0.5vw, 9px);
-  min-width: 0;
-  max-width: min(240px, 45%);
+  /* Deliberately no max-width: a percentage cap here resolves against the pill's
+     own shrink-to-fit width and squeezes the chip into an ellipsis. The chip is
+     allowed to take the room its name needs — if the line runs out, the pill's
+     flex-wrap drops the chip onto its own row instead of truncating it. */
+  flex-shrink: 0;
   padding: clamp(3px, 0.4vh, 5px) clamp(7px, 0.7vw, 11px) clamp(3px, 0.4vh, 5px)
     clamp(4px, 0.4vw, 6px);
   background: rgba(10, 9, 5, 0.7);
@@ -3451,16 +3454,19 @@ img.ps-role-icon {
   color: color-mix(in srgb, var(--tc) 70%, #6a5a30);
 }
 
+/* Never truncated: the target name is the answer to "what does this planet work
+   on" — an ellipsis would hide exactly the word the player is looking for. It
+   stays on one line for every real material/building name and may only ever
+   wrap, never clip. */
 .ps-effect-target-name {
   font-size: clamp(0.95rem, 1.7vh, 1.35rem);
   font-weight: 800;
   line-height: 1.15;
   color: var(--tc);
   text-shadow: 0 0 9px color-mix(in srgb, var(--tc) 35%, transparent);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 /* Swap affordance — quiet at rest, turns on hover so the chip reads as clickable
