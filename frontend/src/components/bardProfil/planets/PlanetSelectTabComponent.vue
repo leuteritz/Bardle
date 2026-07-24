@@ -385,16 +385,20 @@ function chooseBuilding(buildingId: string) {
           :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
           @click="selectSlot(slot.id)"
         >
-          <!-- Jungle buff aura + badge (overlay only → no layout shift) -->
+          <!-- Jungle buff aura + modern RPG buff medallion — pinned top-LEFT so it
+               never collides with the notify badge (top-right). Overlay only → no
+               layout shift. -->
           <span v-if="slot.jungleBuff?.active" class="ps-slot-buff-ring" aria-hidden="true" />
           <span v-if="slot.jungleBuff?.active" class="ps-slot-buff-badge">
-            <img class="ps-slot-buff-leaf" src="/img/roles/jungle.png" alt="Jungle buff" />
+            <span class="ps-slot-buff-emblem">
+              <img class="ps-slot-buff-leaf" src="/img/roles/jungle.png" alt="Jungle buff" />
+            </span>
             <span class="ps-slot-buff-mult">×{{ slot.jungleBuff.multiplier }}</span>
             <span class="ps-slot-buff-timer">{{ buffSecsLeft(slot) }}s</span>
           </span>
 
-          <!-- Affordable-upgrade notify badge — pinned top-LEFT so it never
-               collides with the jungle-buff badge (top-right); shows the count
+          <!-- Affordable-upgrade notify badge — pinned top-RIGHT so it never
+               collides with the jungle-buff medallion (top-left); shows the count
                of levels this slot can afford right now. -->
           <span
             v-if="slotUpgradeCount(slot) > 0"
@@ -979,11 +983,11 @@ function chooseBuilding(buildingId: string) {
   box-shadow: 0 0 10px color-mix(in oklch, var(--rc, #52b830) 30%, transparent);
 }
 
-/* ── Per-slot affordable-upgrade notify badge (top-left, clear of buff) ─────── */
+/* ── Per-slot affordable-upgrade notify badge (top-right, clear of buff) ─────── */
 .ps-slot-notify {
   position: absolute;
   top: -7px;
-  left: -7px;
+  right: -7px;
   z-index: 3;
   min-width: 18px;
   height: 18px;
@@ -1044,47 +1048,66 @@ function chooseBuilding(buildingId: string) {
   }
 }
 
-/* Buff badge — pinned to the slot's top-right, overlapping the edge */
+/* Modern RPG buff medallion — pinned to the slot's top-LEFT, overlapping the
+   edge (opposite corner from the notify badge → never collide). Flat dark green
+   pill with a framed leaf emblem, glowing multiplier and a segmented timer. */
 .ps-slot-buff-badge {
   position: absolute;
   top: -9px;
-  right: -8px;
-  z-index: 2;
+  left: -8px;
+  z-index: 4;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px 3px 6px;
-  background: #0c1209;
-  border: 1px solid #3a8040;
-  border-radius: 4px;
-  box-shadow: 0 0 10px #5ce66a55;
+  gap: 4px;
+  padding: 2px 7px 2px 2px;
+  background: linear-gradient(135deg, #16281a 0%, #0a130c 100%);
+  border: 1px solid #4aa050;
+  border-radius: 5px;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.55),
+    0 0 10px #5ce66a44,
+    inset 0 1px 0 #5ce66a33;
   pointer-events: none;
 }
 
+/* Framed leaf emblem — a compact medallion inside the pill */
+.ps-slot-buff-emblem {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  background: radial-gradient(circle at 50% 38%, #1c3a20 0%, #0a150c 100%);
+  border: 1px solid #3a8040;
+  border-radius: 4px;
+  box-shadow: inset 0 0 6px #5ce66a33;
+}
+
 .ps-slot-buff-leaf {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
   image-rendering: auto;
-  filter: drop-shadow(0 0 4px #5ce66a88);
+  filter: drop-shadow(0 0 3px #5ce66aaa);
 }
 
 .ps-slot-buff-mult {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #5ce66a;
+  font-size: 0.92rem;
+  font-weight: 900;
+  color: #7cf089;
   text-shadow: 0 0 6px #5ce66a66;
   line-height: 1;
 }
 
 .ps-slot-buff-timer {
-  font-size: 0.74rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  color: #a0e880;
-  background: #162a1a;
-  border-radius: 2px;
-  padding: 1px 5px;
-  line-height: 16px;
+  letter-spacing: 0.02em;
+  color: #bdf0a8;
+  background: #0a150c;
+  border: 1px solid #2a5a2e;
+  border-radius: 3px;
+  padding: 1px 4px;
+  line-height: 1.4;
 }
 
 /* Planet image — bare planet, no frame/token; scales with the card box (height
