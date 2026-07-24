@@ -404,10 +404,15 @@ function chooseBuilding(buildingId: string) {
           </div>
 
           <div class="ps-slot-info">
-            <span class="ps-slot-btn-label">Orbit {{ slot.id.replace('slot_', '') }}</span>
+            <div class="ps-slot-info-head">
+              <span class="ps-slot-btn-label">Orbit {{ slot.id.replace('slot_', '') }}</span>
+              <span v-if="slot.purchased && slot.role" class="ps-slot-lvl-badge">
+                Lv {{ slot.level }}
+              </span>
+            </div>
             <template v-if="!slot.purchased">
               <span class="ps-slot-phase-badge">
-                <Icon icon="game-icons:sun" width="9" height="9" />
+                <Icon icon="game-icons:sun" width="16" height="16" />
                 Phase {{ displaySunPhase(store.getSlotRequiredPhase(slotIndex)) }}
               </span>
             </template>
@@ -416,8 +421,7 @@ function chooseBuilding(buildingId: string) {
                 class="ps-slot-sub"
                 :style="slot.role ? { color: PLANET_ROLES[slot.role].color } : {}"
               >
-                {{ slot.role ? PLANET_ROLES[slot.role].name : 'No role' }}
-                <span class="ps-slot-sub-att">· Lvl {{ slot.level }}</span>
+                {{ slot.role ? PLANET_ROLES[slot.role].name : 'No role yet' }}
               </span>
               <div
                 v-if="slot.maxHp > 0"
@@ -728,11 +732,11 @@ function chooseBuilding(buildingId: string) {
 /* Left rail: 6 slots filling the full column height */
 .ps-rail {
   flex-shrink: 0;
-  width: clamp(180px, 15vw, 220px);
+  width: clamp(210px, 16vw, 320px);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px;
+  gap: clamp(6px, 0.8vh, 12px);
+  padding: clamp(8px, 1vh, 14px);
   background: #16120a;
   border-right: 3px solid #5c3310;
   overflow-y: auto;
@@ -825,18 +829,21 @@ function chooseBuilding(buildingId: string) {
 }
 
 /* ── Slot rail buttons (horizontal cards, fill full height) ─────────────────── */
+/* container-type: size lets the card's own content scale with its height/width
+   (cqh/cqw) so every slot uses its full box on Full HD → 4K alike. */
 .ps-slot-btn {
   position: relative;
+  container-type: size;
   display: flex;
   flex: 1 1 0;
-  min-height: 52px;
+  min-height: clamp(64px, 9vh, 140px);
   flex-direction: row;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
+  gap: clamp(10px, 0.8vw, 18px);
+  padding: clamp(8px, 1.2vh, 18px) clamp(10px, 0.8vw, 18px);
   min-width: 0;
   text-align: left;
-  background: #131210;
+  background: linear-gradient(160deg, #17140d 0%, #100e08 100%);
   border: 1px solid #2e1e0a;
   border-radius: var(--bp-radius);
   cursor: pointer;
@@ -844,43 +851,91 @@ function chooseBuilding(buildingId: string) {
   transition:
     border-color 180ms ease,
     background 180ms ease,
-    box-shadow 180ms ease;
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+/* Left color accent — lights up in the planet's role color on hover/active */
+.ps-slot-btn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--rc, transparent);
+  border-radius: var(--bp-radius) 0 0 var(--bp-radius);
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+}
+
+.ps-slot-btn:hover::before,
+.ps-slot-btn--active::before {
+  opacity: 0.95;
+  box-shadow: 0 0 10px var(--rc, transparent);
 }
 
 .ps-slot-icon {
   flex-shrink: 0;
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
 }
 
 .ps-slot-info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  justify-content: center;
+  gap: clamp(4px, 0.6vh, 9px);
   min-width: 0;
   flex: 1;
 }
 
+/* Header row: orbit label on the left, level badge pushed right */
+.ps-slot-info-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.ps-slot-lvl-badge {
+  flex-shrink: 0;
+  padding: 2px clamp(6px, 0.5vw, 11px);
+  font-size: clamp(0.66rem, 0.95vh, 0.86rem);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+  color: #ffe9a8;
+  background: linear-gradient(to bottom, #3a2a10, #241806);
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.ps-slot-btn--active .ps-slot-lvl-badge {
+  color: #fff2c8;
+  border-color: var(--rc, #6ec040);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--rc, #6ec040) 40%, transparent);
+}
+
 .ps-slot-sub {
-  font-size: 0.72rem;
+  font-size: clamp(0.9rem, 1.2vh, 1.25rem);
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: rgba(200, 160, 80, 0.7);
+  color: rgba(200, 160, 80, 0.8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.ps-slot-sub-att {
-  color: #e8c040;
+  line-height: 1.15;
 }
 
 .ps-slot-btn:hover {
-  background: #1a1812;
+  background: linear-gradient(160deg, #1d1911 0%, #14110a 100%);
   border-color: #5c3310;
+  transform: translateY(-1px);
 }
 
 .ps-slot-btn:focus-visible {
@@ -975,29 +1030,49 @@ function chooseBuilding(buildingId: string) {
   line-height: 16px;
 }
 
+/* Planet token — scales with the card box (height & width), capped so it never
+   crowds the text on a narrow rail nor balloons on 4K. */
 .ps-slot-btn-img {
-  width: 40px;
-  height: 40px;
+  width: clamp(40px, min(52cqh, 30cqw), 92px);
+  height: clamp(40px, min(52cqh, 30cqw), 92px);
   object-fit: contain;
-  border-radius: 3px;
+  padding: clamp(3px, 1cqh, 7px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #1e1a11 0%, #0c0a06 100%);
+  box-shadow:
+    inset 0 0 0 1px #2e1e0a,
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.ps-slot-btn--active .ps-slot-btn-img {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--rc, #52b830) 60%, #2e1e0a),
+    0 0 12px color-mix(in srgb, var(--rc, #52b830) 35%, transparent);
 }
 
 .ps-slot-btn-placeholder {
-  font-size: 1.5rem;
-  color: rgba(90, 142, 224, 0.35);
+  width: clamp(40px, min(52cqh, 30cqw), 92px);
+  height: clamp(40px, min(52cqh, 30cqw), 92px);
+  display: grid;
+  place-items: center;
+  font-size: clamp(1.6rem, 6cqh, 2.6rem);
   line-height: 1;
-  height: 40px;
-  display: flex;
-  align-items: center;
+  color: rgba(90, 142, 224, 0.4);
+  border-radius: 50%;
+  border: 1px dashed rgba(90, 142, 224, 0.3);
+  background: radial-gradient(circle at 50% 38%, #14140e 0%, #0c0a06 100%);
 }
 
 .ps-slot-btn-label {
-  font-size: 0.78rem;
+  font-size: clamp(0.85rem, 1.1vh, 1.15rem);
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgba(200, 160, 80, 0.75);
+  color: rgba(200, 160, 80, 0.8);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .ps-slot-btn--active .ps-slot-btn-label {
@@ -1036,7 +1111,7 @@ function chooseBuilding(buildingId: string) {
   position: relative;
   flex: 1;
   min-width: 0;
-  height: 16px;
+  height: clamp(13px, 1.5vh, 22px);
   background: #241512;
   border: 1px solid #12100c;
   border-radius: 4px;
@@ -1081,12 +1156,12 @@ function chooseBuilding(buildingId: string) {
 
 .ps-slot-hp-val {
   flex-shrink: 0;
-  font-size: 0.82rem;
+  font-size: clamp(0.74rem, 1vh, 1rem);
   font-weight: 800;
   color: var(--hp-glow);
   text-shadow: 0 0 6px color-mix(in srgb, var(--hp-glow) 40%, transparent);
   font-variant-numeric: tabular-nums;
-  min-width: 34px;
+  min-width: 36px;
   text-align: right;
 }
 
@@ -2355,15 +2430,13 @@ img.ps-role-icon {
 
 /* Lock icon */
 .ps-slot-btn-lock {
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
+  display: grid;
+  place-items: center;
+  opacity: 0.75;
 }
 .ps-slot-btn-lock .lock-icon {
-  width: 22px;
-  height: 22px;
+  width: clamp(30px, min(40cqh, 24cqw), 60px);
+  height: clamp(30px, min(40cqh, 24cqw), 60px);
   object-fit: contain;
   image-rendering: auto;
 }
@@ -2405,14 +2478,14 @@ img.ps-role-icon {
 
 /* ── Slot phase badge ──────────────────────────────────────────────────────── */
 .ps-slot-phase-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 2px;
-  font-size: 0.55rem;
+  gap: 5px;
+  font-size: clamp(0.75rem, 1vh, 0.95rem);
   font-weight: 800;
-  color: rgba(200, 160, 60, 0.5);
+  color: rgba(200, 160, 60, 0.6);
   letter-spacing: 0.03em;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .ps-slot-btn--affordable .ps-slot-phase-badge {
