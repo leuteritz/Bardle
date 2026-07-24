@@ -156,6 +156,7 @@ import { useUiStore } from '@/stores/uiStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
+import { planetOrbitHandoff, planetOrbitPhases } from '../../../utils/planetOrbitPhase'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
@@ -440,6 +441,20 @@ export default defineComponent({
           localStates.set(slot.id, ls)
         }
 
+        // Der Planeten-Tab hat den Orbit weitergedreht, während dieser Layer
+        // pausiert war. Winkel übernehmen und die Position hart darauf setzen —
+        // der Planet war währenddessen unsichtbar, ein Lerp von der alten Stelle
+        // würde ihn nur sichtbar nachziehen lassen.
+        const handoff = planetOrbitHandoff.get(slot.id)
+        if (handoff) {
+          ls.orbitAngle = handoff.angle
+          const handoffPos = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, cx, cy)
+          ls.x = handoffPos.x
+          ls.y = handoffPos.y
+          planetSpeedMuls.set(slot.id, handoff.speedMul)
+          planetOrbitHandoff.delete(slot.id)
+        }
+
         const prevRelY = (ls.y - cy) / Math.max(ry, 1)
         const prevIsBehind = prevRelY < -0.05
         const targetMul = prevIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
@@ -458,6 +473,10 @@ export default defineComponent({
           ls.x = pos.x
           ls.y = pos.y
         }
+
+        // Bahnzustand teilen: Sobald ein Profil-Tab öffnet, pausiert dieser Layer
+        // — der Planeten-Tab setzt dann genau hier auf und dreht weiter.
+        planetOrbitPhases.set(slot.id, { angle: ls.orbitAngle, speedMul: newMul })
 
         const relY = (ls.y - cy) / Math.max(ry, 1)
         const isBehind = relY < -0.05
@@ -538,6 +557,8 @@ export default defineComponent({
         if (!purchased.some((s) => s.id === key)) {
           localStates.delete(key)
           planetSpeedMuls.delete(key)
+          planetOrbitPhases.delete(key)
+          planetOrbitHandoff.delete(key)
         }
       }
 

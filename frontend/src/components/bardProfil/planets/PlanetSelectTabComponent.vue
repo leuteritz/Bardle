@@ -24,7 +24,21 @@ import {
   HP_COLOR_THRESHOLD_HIGH,
   HP_COLOR_THRESHOLD_LOW,
   MATERIAL_RARITY_COLOR,
+  PLANET_ORBIT_BEHIND_REL_Y,
+  PLANET_ORBIT_MAX_STEP_MS,
+  PLANET_TAB_ORBIT_PERIOD_SEC,
 } from '@/config/constants'
+import {
+  advanceOrbitAngle,
+  approachBehindSpeedMul,
+  initialOrbitAngle,
+  orbitEclipsePhase,
+  orbitRelY,
+  orbitTierForSlotIndex,
+  planetOrbitHandoff,
+  planetOrbitPhases,
+  type PlanetOrbitPhaseEntry,
+} from '@/utils/planetOrbitPhase'
 import { useActionToast } from '@/composables/useActionToast'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
@@ -82,14 +96,92 @@ const activeSlotIndex = computed(() =>
   store.slots.findIndex((s) => s.id === selectedSlotId.value),
 )
 
-// Each slot enters the stage at its own point of the orbit (a stable per-slot
-// phase offset via negative animation-delay), so switching planets never shows
-// them all at the same position — like a real system, every orbit is desynced.
-const ORBIT_PERIOD_SEC = 26
-const orbitPhaseStyle = computed(() => {
-  const idx = Math.max(0, activeSlotIndex.value)
-  const count = Math.max(1, store.slots.length)
-  return { '--orbit-delay': `-${((idx * ORBIT_PERIOD_SEC) / count).toFixed(2)}s` }
+// ── Orbit-Phase — synchron zum Idle-Orbit ──────────────────────────────────
+// Der Idle-Layer pausiert, sobald dieser Tab offen ist (useRenderingPaused).
+// Ohne geteilten Zustand stünde derselbe Planet hier zu einer ganz anderen Zeit
+// hinter der Sonne als im Orbit. Also übernimmt der Tab die geteilten Bahnwinkel,
+// dreht ALLE Orbit-Slots mit derselben Regel weiter — nicht nur den sichtbaren,
+// sonst driften die Bahnen gegeneinander — und reicht sie über planetOrbitHandoff
+// zurück, damit der Idle-Orbit nahtlos dort weitermacht.
+// Reihenfolge und Filter müssen exakt PlanetOrbit.vue entsprechen: der Index in
+// dieser Liste bestimmt, auf welchem Orbit-Tier (und damit welcher Ellipse) der
+// Slot läuft.
+const orbitSlots = computed(() => store.purchasedSlots.filter((s) => s.role !== null))
+
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+const planetOrbitEl = ref<HTMLElement | null>(null)
+/** Aktiver Planet steht gerade hinter der Sonne — treibt die Eclipse-Darstellung. */
+const orbitBehind = ref(false)
+
+function orbitDelayFor(progress: number): string {
+  return `-${(progress * PLANET_TAB_ORBIT_PERIOD_SEC).toFixed(3)}s`
+}
+
+function eclipsePhaseOf(slotId: string | null): { progress: number; isBehind: boolean } {
+  const slots = orbitSlots.value
+  const idx = slotId ? slots.findIndex((s) => s.id === slotId) : -1
+  if (idx < 0) return { progress: 0, isBehind: false }
+  const { ratio, tiltRad } = orbitTierForSlotIndex(idx)
+  const angle = planetOrbitPhases.get(slots[idx].id)?.angle ?? initialOrbitAngle(idx, slots.length)
+  return orbitEclipsePhase(angle, slots[idx].direction, ratio, tiltRad)
+}
+
+// Wird nur bei Slot-Wechsel neu ausgewertet (die Phasen-Map ist bewusst nicht
+// reaktiv) und gibt dem frisch eingeblendeten Planeten sofort die richtige
+// Bahnposition, bevor der Frame-Loop übernimmt.
+const orbitPhaseStyle = computed(() => ({
+  '--orbit-delay': orbitDelayFor(eclipsePhaseOf(selectedSlotId.value).progress),
+}))
+
+let orbitFrame = 0
+let orbitLastTs = 0
+
+function tickOrbit(ts: number) {
+  const dt = orbitLastTs === 0 ? 16 : Math.min(ts - orbitLastTs, PLANET_ORBIT_MAX_STEP_MS)
+  orbitLastTs = ts
+
+  const slots = orbitSlots.value
+  let activeSeen = false
+
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i]
+    const { ratio, tiltRad } = orbitTierForSlotIndex(i)
+    const prev = planetOrbitPhases.get(slot.id)
+    const prevAngle = prev?.angle ?? initialOrbitAngle(i, slots.length)
+
+    const behind = orbitRelY(prevAngle, ratio, tiltRad) < PLANET_ORBIT_BEHIND_REL_Y
+    const speedMul = approachBehindSpeedMul(prev?.speedMul ?? 1, behind)
+    const angle = reducedMotion
+      ? prevAngle
+      : advanceOrbitAngle(prevAngle, slot.direction, slot.baseSpeed, speedMul, dt)
+
+    const next: PlanetOrbitPhaseEntry = { angle, speedMul }
+    planetOrbitPhases.set(slot.id, next)
+    // Jeden Frame zurückreichen statt erst beim Unmount: Der Idle-Orbit greift
+    // den Winkel beim ersten Frame nach dem Schließen ab — auch dann, wenn diese
+    // Komponente vorher hart aus dem DOM genommen wurde.
+    planetOrbitHandoff.set(slot.id, next)
+
+    if (slot.id === selectedSlotId.value) {
+      activeSeen = true
+      const phase = orbitEclipsePhase(angle, slot.direction, ratio, tiltRad)
+      // Direkt aufs Element statt über einen ref: 60 Re-Renders pro Sekunde
+      // dieser großen Komponente nur für eine CSS-Variable wären Verschwendung.
+      planetOrbitEl.value?.style.setProperty('--orbit-delay', orbitDelayFor(phase.progress))
+      if (orbitBehind.value !== phase.isBehind) orbitBehind.value = phase.isBehind
+    }
+  }
+
+  if (!activeSeen && orbitBehind.value) orbitBehind.value = false
+  orbitFrame = requestAnimationFrame(tickOrbit)
+}
+
+onMounted(() => {
+  orbitFrame = requestAnimationFrame(tickOrbit)
+})
+onUnmounted(() => {
+  cancelAnimationFrame(orbitFrame)
 })
 
 // Permanent planet choice: clicking a role arms a confirm step before it locks.
@@ -311,6 +403,10 @@ const nextMaxHp = computed(() =>
 // lengthens even at full health.
 const previewHover = ref(false)
 
+// Während der Eclipse ist der Level-Up gesperrt — dann wäre eine Vorschau auf
+// den Zugewinn irreführend, also bleiben Effekt und HP-Bar auf den Ist-Werten.
+const previewActive = computed(() => previewHover.value && !orbitBehind.value)
+
 const hpGainAmount = computed(() => Math.max(0, nextMaxHp.value - currentMaxHp.value))
 
 const hpPreviewCurrent = computed(() =>
@@ -335,7 +431,9 @@ const hpPreviewPct = computed(() =>
 )
 
 function attune(count: number) {
-  if (!activeSlot.value) return
+  // Hinter der Sonne ist der Planet außer Reichweite — der Button ist dann
+  // deaktiviert, dieser Guard fängt Tastatur-/Programmauslösung mit ab.
+  if (!activeSlot.value || orbitBehind.value) return
   const before = activeSlot.value.level
   const gained = store.levelUpPlanetTimes(activeSlot.value.id, count)
   if (gained > 0) {
@@ -648,10 +746,17 @@ function chooseBuilding(buildingId: string) {
               <div v-else class="ps-stage-sun" />
               <!-- The whole orbit wrapper is keyed per slot: the old planet fades
                    out at ITS orbit position, the new one fades in at its own — no
-                   visible position jump. type="transition" required (infinite
-                   orbit keyframe would otherwise deadlock mode="out-in"). -->
+                   visible position jump. type="transition" required (the orbit
+                   keyframe would otherwise deadlock mode="out-in").
+                   The keyframe is scrubbed by tickOrbit via --orbit-delay, so the
+                   planet passes behind the sun in lockstep with the idle orbit. -->
               <Transition name="ps-planet-swap" mode="out-in" type="transition">
-                <div :key="activeSlot.id" class="ps-planet-preview-wrap" :style="orbitPhaseStyle">
+                <div
+                  :key="activeSlot.id"
+                  ref="planetOrbitEl"
+                  class="ps-planet-preview-wrap"
+                  :style="orbitPhaseStyle"
+                >
                   <img
                     :src="activeImage"
                     class="ps-planet-preview-img"
@@ -660,13 +765,26 @@ function chooseBuilding(buildingId: string) {
                   />
                 </div>
               </Transition>
+
+              <!-- Eclipse medallion — same emblem the idle layer uses for champions
+                   and planets behind the sun. Sits on the sun's face because the
+                   planet itself is fully occluded while this shows. -->
+              <Transition name="ps-eclipse-fade">
+                <span v-if="orbitBehind" class="ps-eclipse-medal" title="Behind the Sun — out of reach">
+                  <Icon icon="game-icons:eclipse-flare" width="48" height="48" />
+                </span>
+              </Transition>
             </div>
 
             <!-- Name + HP unit — directly under the sun (top of the bottom balancing
                  band). Hovering the upgrade button extends the HP bar with a bright
                  ghost segment showing the HP the next level-up would grant. -->
             <div class="ps-readout-band">
-              <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
+              <div
+                class="ps-planet-readout"
+                :class="{ 'ps-planet-readout--eclipsed': orbitBehind }"
+                :style="{ '--rc': activeRoleColor }"
+              >
                 <div class="ps-planet-role-label">{{ activeRoleName }}</div>
 
                 <!-- Permanent planet effect — always visible, label-free: the value
@@ -674,29 +792,29 @@ function chooseBuilding(buildingId: string) {
                      confirm-green) while the upgrade button is hovered. -->
                 <div
                   class="ps-planet-effect"
-                  :class="{ 'ps-planet-effect--preview': previewHover }"
+                  :class="{ 'ps-planet-effect--preview': previewActive }"
                 >
-                  <span class="ps-planet-effect-value">{{ previewHover ? nextBonusText : activeSlotBonusText }}</span>
+                  <span class="ps-planet-effect-value">{{ previewActive ? nextBonusText : activeSlotBonusText }}</span>
                 </div>
 
                 <div
                   v-if="activeSlot.maxHp > 0"
                   class="ps-planet-hp"
-                  :class="[`ps-planet-hp--${activeHpTier}`, { 'ps-planet-hp--preview': previewHover }]"
+                  :class="[`ps-planet-hp--${activeHpTier}`, { 'ps-planet-hp--preview': previewActive }]"
                 >
                   <div class="ps-planet-hp-text">
-                    <span class="ps-hp-values">{{ previewHover ? hpPreviewCurrent : activeSlot.currentHp }} / {{ previewHover ? nextMaxHp : activeSlot.maxHp }}</span>
-                    <span class="ps-hp-pct">{{ previewHover ? hpPreviewPct : Math.round(hpPercent) }}%</span>
+                    <span class="ps-hp-values">{{ previewActive ? hpPreviewCurrent : activeSlot.currentHp }} / {{ previewActive ? nextMaxHp : activeSlot.maxHp }}</span>
+                    <span class="ps-hp-pct">{{ previewActive ? hpPreviewPct : Math.round(hpPercent) }}%</span>
                   </div>
                   <div class="ps-hp-bar-track">
                     <div
                       class="ps-hp-bar-fill"
-                      :style="{ width: (previewHover ? hpSolidPreviewPct : hpPercent) + '%' }"
+                      :style="{ width: (previewActive ? hpSolidPreviewPct : hpPercent) + '%' }"
                     >
                       <span class="ps-hp-bar-shine" aria-hidden="true" />
                     </div>
                     <div
-                      v-if="previewHover && hpGhostPreviewPct > 0"
+                      v-if="previewActive && hpGhostPreviewPct > 0"
                       class="ps-hp-bar-ghost"
                       :style="{ left: hpSolidPreviewPct + '%', width: hpGhostPreviewPct + '%' }"
                       aria-hidden="true"
@@ -704,6 +822,20 @@ function chooseBuilding(buildingId: string) {
                   </div>
                 </div>
               </div>
+
+              <!-- Eclipse banner — states why the readout is dimmed and the
+                   Level-Up button is locked. Lives in the free space between the
+                   readout and the action dock, so nothing above it shifts. -->
+              <Transition name="ps-eclipse-fade">
+                <div v-if="orbitBehind" class="ps-eclipse-banner">
+                  <span class="ps-eclipse-banner-line" aria-hidden="true" />
+                  <div class="ps-eclipse-banner-core">
+                    <span class="ps-eclipse-banner-title">✦ Behind the Sun ✦</span>
+                    <span class="ps-eclipse-banner-sub">Out of reach until it comes back around</span>
+                  </div>
+                  <span class="ps-eclipse-banner-line ps-eclipse-banner-line--right" aria-hidden="true" />
+                </div>
+              </Transition>
             </div>
 
             <!-- Action dock — pinned to the stage bottom so the sun stays centered.
@@ -743,19 +875,26 @@ function chooseBuilding(buildingId: string) {
               >
                 <button
                   class="ps-level-btn"
-                  :class="{ 'ps-level-btn--locked': maxAffordableCount === 0 }"
-                  :disabled="maxAffordableCount === 0"
-                  :title="maxAffordableCount > 0 ? 'Level up as much as you can afford' : (levelUpReason === 'phase' ? `Requires Sun Phase ${levelUpReqPhase}` : 'Not enough Chimes')"
+                  :class="{ 'ps-level-btn--locked': maxAffordableCount === 0 || orbitBehind }"
+                  :disabled="maxAffordableCount === 0 || orbitBehind"
+                  :title="orbitBehind ? 'Behind the Sun — level-up paused until the planet returns' : (maxAffordableCount > 0 ? 'Level up as much as you can afford' : (levelUpReason === 'phase' ? `Requires Sun Phase ${levelUpReqPhase}` : 'Not enough Chimes'))"
                   @click="attune(maxAffordableCount)"
                 >
                   <span class="ps-level-btn-main">
-                    ✦ Level Up<template v-if="maxAffordableCount > 0"> +{{ maxAffordableCount }}</template>
+                    <template v-if="orbitBehind">
+                      <Icon icon="game-icons:eclipse-flare" width="18" height="18" class="ps-level-req-icon" />
+                      Behind the Sun
+                    </template>
+                    <template v-else>
+                      ✦ Level Up<template v-if="maxAffordableCount > 0"> +{{ maxAffordableCount }}</template>
+                    </template>
                   </span>
                   <span
                     class="ps-level-btn-cost"
-                    :class="{ 'ps-level-btn-cost--req': levelUpReason === 'phase' }"
+                    :class="{ 'ps-level-btn-cost--req': levelUpReason === 'phase' || orbitBehind }"
                   >
-                    <template v-if="levelUpReason === 'phase'">
+                    <template v-if="orbitBehind">Out of reach</template>
+                    <template v-else-if="levelUpReason === 'phase'">
                       <Icon icon="game-icons:sun" width="16" height="16" class="ps-level-req-icon" />
                       Requires Phase {{ levelUpReqPhase }}
                     </template>
@@ -765,7 +904,7 @@ function chooseBuilding(buildingId: string) {
                     </template>
                   </span>
                 </button>
-                <span v-if="maxAffordableCount > 0" class="ps-buy-badge" aria-hidden="true">{{ maxAffordableCount }}</span>
+                <span v-if="maxAffordableCount > 0 && !orbitBehind" class="ps-buy-badge" aria-hidden="true">{{ maxAffordableCount }}</span>
               </div>
             </div>
           </div>
@@ -1785,9 +1924,13 @@ function chooseBuilding(buildingId: string) {
   --orb-x: min(150px, 46cqmin);
   --orb-y: min(40px, 12.5cqmin);
   transform: translate(-50%, -50%);
-  /* 26s must match ORBIT_PERIOD_SEC in the script (per-slot phase offset). */
+  /* The keyframe is never played — it is scrubbed. tickOrbit writes the negative
+     --orbit-delay that corresponds to the planet's real orbit angle, so the
+     position (and the z-swap behind the sun) always matches the idle orbit.
+     26s must stay in sync with PLANET_TAB_ORBIT_PERIOD_SEC in constants.ts. */
   animation: ps-planet-orbit 26s linear infinite;
   animation-delay: var(--orbit-delay, 0s);
+  animation-play-state: paused;
 }
 
 @keyframes ps-sun-pulse {
@@ -1847,8 +1990,130 @@ function chooseBuilding(buildingId: string) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ps-stage-sun,
-  .ps-planet-preview-wrap {
+  .ps-stage-sun {
+    animation: none;
+  }
+  /* .ps-planet-preview-wrap keeps its (paused) keyframe on purpose: it is what
+     positions the planet on its orbit. tickOrbit stops advancing the angle under
+     reduced motion — same as the idle orbit — so the planet simply holds still
+     at its correct spot instead of snapping onto the sun's center. */
+}
+
+/* ── Eclipse — planet passing behind the sun, in sync with the idle orbit ───── */
+/* Medallion sits on the sun's face: the planet itself is fully occluded while
+   this shows. Same emblem and framing as rsq-eclipse / tbh-eclipse / sf-eclipse-medal. */
+.ps-eclipse-medal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  width: min(84px, 26cqmin);
+  height: min(84px, 26cqmin);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(38, 26, 8, 0.95), rgba(10, 7, 3, 0.95));
+  border: 3px solid #5c3310;
+  box-shadow:
+    0 0 0 2px rgba(200, 144, 64, 0.35),
+    0 0 26px rgba(232, 192, 64, 0.35),
+    0 4px 12px rgba(0, 0, 0, 0.7);
+  color: #e8c040;
+  pointer-events: none;
+  animation: ps-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+
+.ps-eclipse-medal :deep(svg) {
+  width: min(48px, 15cqmin);
+  height: min(48px, 15cqmin);
+  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.55));
+}
+
+/* Readout recedes while the planet is out of reach — dimmed, never unreadable,
+   so the player can still compare values during the eclipse. */
+.ps-planet-readout--eclipsed {
+  opacity: 0.62;
+  filter: saturate(70%);
+  transition:
+    opacity 320ms ease,
+    filter 320ms ease;
+}
+
+/* Banner in the free space between readout and action dock — states why the
+   readout is dimmed and the button is locked. Same language as the Star Fight. */
+.ps-eclipse-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(520px, 92%);
+  margin-top: clamp(8px, 1.6vh, 20px);
+}
+
+.ps-eclipse-banner-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.65));
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.35);
+}
+
+.ps-eclipse-banner-line--right {
+  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.65));
+}
+
+.ps-eclipse-banner-core {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.ps-eclipse-banner-title {
+  font-size: clamp(0.95rem, 1.7vh, 1.25rem);
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #ffe9b0;
+  text-shadow:
+    0 0 16px rgba(255, 210, 90, 0.75),
+    0 0 36px rgba(232, 150, 30, 0.4),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+  animation: ps-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+
+.ps-eclipse-banner-sub {
+  font-size: clamp(0.6rem, 1vh, 0.72rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(232, 192, 64, 0.62);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+@keyframes ps-eclipse-breathe {
+  from {
+    opacity: 0.65;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ps-eclipse-fade-enter-active,
+.ps-eclipse-fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+
+.ps-eclipse-fade-enter-from,
+.ps-eclipse-fade-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-eclipse-medal,
+  .ps-eclipse-banner-title {
     animation: none;
   }
 }

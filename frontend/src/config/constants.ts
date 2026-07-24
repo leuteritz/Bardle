@@ -836,6 +836,23 @@ export const AVATAR_SIZE_LARGE = 40
 export const AVATAR_SIZE_SMALL = 32
 export const ORBIT_RADIUS_SCALE = 1.8
 
+// ── Geteilte Orbit-Phase der Spieler-Planeten (Idle-Orbit ↔ Planeten-Tab) ────
+/** Kepler-Anteil der Winkelgeschwindigkeit: nahe den Bahn-Scheiteln schneller. */
+export const PLANET_ORBIT_KEPLER_BOOST = 0.5
+/** Wie schnell der Behind-Sun-Speedup ein-/ausgeblendet wird (Lerp pro Frame). */
+export const PLANET_ORBIT_BEHIND_SPEED_LERP = 0.04
+/** Normierte y-Schwelle (relativ zum Bahn-Radius), ab der ein Planet hinter der Sonne steht. */
+export const PLANET_ORBIT_BEHIND_REL_Y = -0.05
+/** Frame-Delta-Deckel der Orbit-Integration (ms) — verhindert Sprünge nach Tab-Pausen. */
+export const PLANET_ORBIT_MAX_STEP_MS = 50
+/**
+ * Anteil des Umlaufs, den die Planeten-Tab-Keyframes (`ps-planet-orbit`) vor der
+ * Sonne verbringen. Muss zum z-index-Wechsel bei 70 % / 71 % passen.
+ */
+export const PLANET_TAB_ORBIT_FOREGROUND_PROGRESS = 0.7
+/** Dauer der `ps-planet-orbit`-Keyframes in Sekunden — Basis fürs Phasen-Scrubbing. */
+export const PLANET_TAB_ORBIT_PERIOD_SEC = 26
+
 // Role Behavior — orbit abilities per role
 export const ROLE_SUPPORT_HEAL_INTERVAL_MS = 8000 // heal player every 8s
 export const ROLE_SUPPORT_HEAL_AMOUNT = 5 // +5 HP per heal
@@ -2991,7 +3008,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:podium-winner', // Win/Loss stat (BottomScoreboard)
   'game-icons:sword-spin', // "Return to Battle" floating button (BattleReturnButton)
   // Eclipse state (champion/planet behind the sun)
-  'game-icons:eclipse-flare', // Eclipse medallion (ChampionSelectorComponent, CommandPanelComponent, RoleStrikerSquad, PlanetBatteryHUD)
+  'game-icons:eclipse-flare', // Eclipse medallion (ChampionSelectorComponent, CommandPanelComponent, RoleStrikerSquad, PlanetBatteryHUD, PlanetSelectTabComponent)
   // Bard Stats — Journey lifetime stat rows (BardStatsTab)
   'game-icons:embrassed-energy', // Total Power stat row
   'game-icons:factory', // Lifetime Production stat row
