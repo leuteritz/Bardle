@@ -52,6 +52,12 @@ export const useUiStore = defineStore('ui', () => {
     bardActiveTab.value = 'planets'
   }
 
+  // Der Planet-Tab schreibt seine Auswahl hierher zurück, damit dieselbe Kachel
+  // im Command Panel mitmarkiert werden kann — eine Quelle für beide Ansichten.
+  function setPlanetActiveSlot(slotId: string) {
+    planetActiveSlotId.value = slotId
+  }
+
   function setRolesActiveSlot(index: number) {
     rolesActiveSlot.value = index
   }
@@ -105,6 +111,7 @@ export const useUiStore = defineStore('ui', () => {
     requestOpenRolesTab,
     clearRolesOpenPending,
     requestOpenPlanetsTab,
+    setPlanetActiveSlot,
     setRolesActiveSlot,
     requestOpenTeamTabWithSearch,
     clearPendingChampionSearch,

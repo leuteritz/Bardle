@@ -68,6 +68,9 @@ function initSlot() {
     store.slots.find((s) => s.purchased)?.id ??
     store.slots[0]?.id ??
     null
+  // Auch die abgeleitete Erst-Auswahl wandert in den Store: das Command Panel
+  // markiert dieselbe Kachel und darf dafür nicht auf den ersten Klick warten.
+  if (selectedSlotId.value) uiStore.setPlanetActiveSlot(selectedSlotId.value)
 }
 
 onMounted(initSlot)
@@ -81,6 +84,7 @@ watch(
 
 function selectSlot(id: string) {
   selectedSlotId.value = id
+  uiStore.setPlanetActiveSlot(id)
 }
 
 const activeSlot = computed(() => {

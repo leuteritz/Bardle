@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import {
@@ -84,6 +84,15 @@ function slotBehindSun(slot: PlanetSlot): boolean {
   return eclipsedSlotIds.value.has(slot.id)
 }
 
+// Spiegel der Planet-Tab-Auswahl: solange der Tab offen ist, trägt genau die
+// Kachel des dort gewählten Orbits eine Ziel-Markierung — der Spieler sieht auf
+// einen Blick, welchen Planeten er im Modal gerade bearbeitet. Ist der Tab zu,
+// gibt es keine Auswahl zu spiegeln (die letzte bleibt aber im Store erhalten,
+// damit ein erneutes Öffnen wieder beim selben Orbit landet).
+const selectedSlotId = computed(() =>
+  uiStore.bardActiveTab === 'planets' ? uiStore.planetActiveSlotId : null,
+)
+
 function handleSlotClick(slot: (typeof slots.value)[number]) {
   uiStore.requestOpenPlanetsTab(slot.id)
   if (!slot.purchased) {
@@ -112,6 +121,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             'cmd-planet-tile--buy': !slot.purchased,
             'cmd-planet-tile--eclipsed': slotBehindSun(slot) && !isPlanetDown(slot),
             'cmd-planet-tile--down': isPlanetDown(slot),
+            'cmd-planet-tile--selected': selectedSlotId === slot.id,
           }"
           :style="slot.purchased && slot.role ? { '--role-color': roleColor(slot.role) } : {}"
           @click="handleSlotClick(slot)"
@@ -174,6 +184,23 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
               <img src="/img/BardAbilities/BardChime.png" class="cmd-tile-chime-img" alt="Chimes" />
               <span class="cmd-tile-cost-value">{{ formatNumber(planetStore.getSlotCost(slot.id)) }}</span>
             </div>
+          </template>
+
+          <!-- ── Ziel-Markierung: dieser Orbit ist im Planet-Tab geöffnet ──
+               Reticle aus vier Eckwinkeln (HUD-Sprache, bleibt auch auf der
+               60px-Kachel lesbar) + Innenschein in der Rollenfarbe. Der Keil an
+               der linken Kante zeigt zum Modal und liest sich als Verbindung
+               zwischen beiden Ansichten — dasselbe Gem wie in der Sidebar. -->
+          <template v-if="selectedSlotId === slot.id">
+            <div class="cmd-select-glow" />
+            <div class="cmd-select-reticle">
+              <span class="cmd-sel-corner cmd-sel-corner--tl" />
+              <span class="cmd-sel-corner cmd-sel-corner--tr" />
+              <span class="cmd-sel-corner cmd-sel-corner--bl" />
+              <span class="cmd-sel-corner cmd-sel-corner--br" />
+            </div>
+            <span class="cmd-select-tether cmd-select-tether--l" />
+            <span class="cmd-select-tether cmd-select-tether--r" />
           </template>
         </div>
       </div>
@@ -462,6 +489,139 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   text-shadow: 0 0 6px rgba(144, 224, 80, 0.7);
 }
 
+/* ── Ausgewählt: dieser Orbit ist gerade im Planet-Tab offen ────────────────
+   Markiert genau die Kachel, die im Modal bearbeitet wird. Rollenfarbe, wenn
+   der Slot eine Rolle trägt — sonst Gold, damit auch leere und gesperrte Slots
+   sichtbar markiert werden. Alles nur Overlay: kein Layout-Shift, keine
+   Konkurrenz zu Buff-/Eclipse-/Zerstört-Zuständen, die weiter darunter laufen. */
+.cmd-planet-tile--selected {
+  --sel: var(--role-color, #e8c040);
+  border-color: var(--sel);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--sel) 55%, transparent),
+    0 0 18px color-mix(in srgb, var(--sel) 45%, transparent),
+    0 4px 14px rgba(0, 0, 0, 0.6),
+    inset 0 0 18px color-mix(in srgb, var(--sel) 12%, transparent);
+  transform: translateY(-2px);
+  animation: cmd-select-pulse 2s ease-in-out infinite;
+  z-index: 2;
+}
+
+.cmd-planet-tile--selected:hover {
+  transform: translateY(-3px);
+}
+
+/* Kaufbare Kacheln tragen ihren eigenen grünen Puls mit höherer Spezifität —
+   als Auswahl muss die Markierung ihn übersteuern, sonst bliebe nur das
+   Reticle übrig. */
+.cmd-planet-tile--selected.cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
+  border-color: var(--sel);
+  animation: cmd-select-pulse 2s ease-in-out infinite;
+}
+
+/* Gesperrte Kacheln sind stark abgedunkelt — als Auswahl müssen sie trotzdem
+   ablesbar bleiben. */
+.cmd-planet-tile--selected.cmd-planet-tile--locked {
+  opacity: 0.85;
+  filter: grayscale(15%);
+}
+
+/* Innenschein in der Auswahlfarbe, über Vignette und Schleiern */
+.cmd-select-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    color-mix(in srgb, var(--sel, #e8c040) 16%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+/* Vier Eckwinkel — HUD-Reticle statt zweitem Rahmen */
+.cmd-select-reticle {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.cmd-sel-corner {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--sel, #e8c040);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--sel, #e8c040) 70%, transparent));
+}
+
+.cmd-sel-corner--tl {
+  top: 3px;
+  left: 3px;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 4px 0 0 0;
+}
+.cmd-sel-corner--tr {
+  top: 3px;
+  right: 3px;
+  border-left: none;
+  border-bottom: none;
+  border-radius: 0 4px 0 0;
+}
+.cmd-sel-corner--bl {
+  bottom: 3px;
+  left: 3px;
+  border-right: none;
+  border-top: none;
+  border-radius: 0 0 0 4px;
+}
+.cmd-sel-corner--br {
+  bottom: 3px;
+  right: 3px;
+  border-left: none;
+  border-top: none;
+  border-radius: 0 0 4px 0;
+}
+
+/* Keil an der linken Kante — zeigt zum geöffneten Modal. Die Kachel clippt ihn
+   zur Hälfte, wodurch er als eingeschobene Spitze liest. */
+.cmd-select-tether {
+  position: absolute;
+  z-index: 8;
+  top: 50%;
+  left: 0;
+  width: 11px;
+  height: 11px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--sel, #e8c040) 85%, white) 0%,
+    var(--sel, #e8c040) 100%
+  );
+  border-radius: 2px;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--sel, #e8c040) 70%, transparent);
+  pointer-events: none;
+}
+
+@keyframes cmd-select-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--sel) 45%, transparent),
+      0 0 14px color-mix(in srgb, var(--sel) 32%, transparent),
+      0 4px 14px rgba(0, 0, 0, 0.6),
+      inset 0 0 16px color-mix(in srgb, var(--sel) 10%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--sel) 75%, transparent),
+      0 0 26px color-mix(in srgb, var(--sel) 60%, transparent),
+      0 4px 14px rgba(0, 0, 0, 0.6),
+      inset 0 0 22px color-mix(in srgb, var(--sel) 18%, transparent);
+  }
+}
+
 /* ── Jungle Buff states ─────────────────────────────────────────────────────
    Gleiche Designsprache wie der Countdown-Chip am Orbit-Planeten:
    Jungle-Grün, weicher Puls-Glow und ein konischer Ring, der mit der
@@ -679,6 +839,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   .cmd-tile-icon--empty,
   .cmd-planet-tile--buy:not(.cmd-planet-tile--locked),
   .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-chime-img,
+  .cmd-planet-tile--selected,
+  .cmd-planet-tile--selected.cmd-planet-tile--buy:not(.cmd-planet-tile--locked),
   .cmd-eclipse-medal {
     animation: none;
   }
