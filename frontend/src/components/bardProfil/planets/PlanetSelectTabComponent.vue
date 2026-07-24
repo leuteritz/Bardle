@@ -1448,6 +1448,7 @@ function chooseBuilding(buildingId: string) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: center;
   gap: 0.1rem;
 }
 
@@ -1462,15 +1463,22 @@ function chooseBuilding(buildingId: string) {
   gap: 0.3rem;
 }
 
-/* Zone 3: Max button (+ hint only when blocked) */
+/* Zone 3: Max button — vertically centered in the footer band */
 .ps-dock-buy {
   flex-shrink: 0;
   margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  justify-content: center;
   gap: 0.25rem;
   min-width: 190px;
+}
+
+/* Star-fight return CTA overlays the dock — offset so its center lands on the
+   footer's vertical center (footer ≈ 70px tall, button ≈ 50px → ~10px). */
+.ps-detail :deep(.brb) {
+  bottom: clamp(9px, 1.1vh, 20px);
 }
 
 /* Target value + its "after +N" tag stay glued together when the row wraps */
