@@ -11,7 +11,7 @@
 // Idle-Orbit.
 import {
   ORBIT_TIERS,
-  PLANET_ORBIT_BEHIND_REL_Y,
+  PLANET_ORBIT_FOREGROUND_DEPTH,
   PLANET_TAB_ORBIT_FOREGROUND_PROGRESS,
 } from '@/config/constants'
 
@@ -49,47 +49,51 @@ export function initialOrbitAngle(index: number, count: number): number {
 }
 
 /**
- * Bahnwinkel → Phase im Planeten-Tab.
+ * Bahnwinkel → Fortschritt (0 … 1) in den `ps-planet-orbit`-Keyframes.
  *
- * relY(A) lässt sich als R·sin(A + φ) schreiben, also liegt der Bogen hinter der
- * Sonne zwischen zwei festen Winkeln. `psi` dreht die Bahn so, dass sie
- * unabhängig von der Laufrichtung immer vorwärts durch denselben Bogen läuft.
+ * relY(A) lässt sich als R·sin(A + φ) schreiben, der Vordergrundbogen liegt also
+ * zwischen zwei festen Winkeln. `psi` dreht die Bahn so, dass sie unabhängig von
+ * der Laufrichtung immer vorwärts durch denselben Bogen läuft, gemessen ab dem
+ * Austrittspunkt — dadurch bleibt die Rechnung frei von Intervall-Sonderfällen,
+ * auch wenn die Schwelle (wie hier) im positiven relY-Bereich liegt.
  *
- * Das Ergebnis wird stückweise linear auf die `ps-planet-orbit`-Keyframes
- * abgebildet: der Vordergrundbogen auf 0 … 70 %, der Bogen hinter der Sonne auf
- * 70 … 100 %. Dadurch fallen Eintritt und Austritt im Tab exakt auf dieselben
- * Zeitpunkte wie im Idle-Orbit — und weil der Winkel dort wie hier mit derselben
- * Regel weitergedreht wird, stimmt auch die Dauer der Verdeckung.
+ * Die Grenze ist bewusst die Vordergrund-Schwelle und nicht die Sonnenkante:
+ * genau an ihr schaltet das Command Panel sein Eclipse-Medaillon. Verdeckung im
+ * Tab und Medaillon dort gehen damit gemeinsam an und aus.
+ *
+ * Das Ergebnis wird stückweise linear abgebildet: Vordergrundbogen auf 0 … 70 %,
+ * verdeckter Bogen auf 70 … 100 % — passend zum z-index-Wechsel der Keyframes.
  */
 export function orbitEclipsePhase(
   angle: number,
   direction: 1 | -1,
   ratio: number,
   tiltRad: number,
-): { progress: number; isBehind: boolean } {
+): number {
   const ampX = ratio * Math.sin(tiltRad)
   const ampY = Math.cos(tiltRad)
   const amplitude = Math.hypot(ampX, ampY)
   const phaseShift = Math.atan2(ampX, ampY)
 
-  // Sonderfall einer entarteten Bahn: dann gibt es keinen Bogen hinter der Sonne.
-  if (amplitude < 1e-6) return { progress: 0, isBehind: false }
+  // Sonderfall einer entarteten Bahn: dann gibt es keinen verdeckten Bogen.
+  if (amplitude < 1e-6) return 0
 
-  const ratioAtThreshold = Math.max(-1, Math.min(1, PLANET_ORBIT_BEHIND_REL_Y / amplitude))
-  // Halbe Winkelbreite, um die der verdeckte Bogen kürzer ist als ein Halbkreis.
-  const trim = Math.abs(Math.asin(ratioAtThreshold))
+  const foregroundRelY = 2 * PLANET_ORBIT_FOREGROUND_DEPTH - 1
+  const ratioAtThreshold = Math.max(-1, Math.min(1, foregroundRelY / amplitude))
+  // Vorzeichenbehaftet: verschiebt die Grenzen symmetrisch um den Halbkreis.
+  const skew = Math.asin(ratioAtThreshold)
+
+  // Bogenlängen: psiEnter = π − skew, psiExit = 2π + skew.
+  const behindArc = Math.PI + 2 * skew
+  const foregroundArc = TWO_PI - behindArc
+  const psiExit = TWO_PI + skew
 
   const psi = normalizeAngle(direction === 1 ? angle + phaseShift : Math.PI - (angle + phaseShift))
-  const psiEnter = Math.PI + trim
-  const psiExit = TWO_PI - trim
+  // Zurückgelegter Weg seit dem Austritt aus der Verdeckung — wächst monoton
+  // von 0 (Austritt) bis 2π und macht jede Intervall-Fallunterscheidung obsolet.
+  const travelled = normalizeAngle(psi - psiExit)
 
   const fg = PLANET_TAB_ORBIT_FOREGROUND_PROGRESS
-  if (psi >= psiEnter && psi < psiExit) {
-    const behindArc = psiExit - psiEnter
-    return { progress: fg + (1 - fg) * ((psi - psiEnter) / behindArc), isBehind: true }
-  }
-
-  const foregroundArc = TWO_PI - (psiExit - psiEnter)
-  const travelled = normalizeAngle(psi - psiExit)
-  return { progress: fg * (travelled / foregroundArc), isBehind: false }
+  if (travelled < foregroundArc) return fg * (travelled / foregroundArc)
+  return fg + (1 - fg) * ((travelled - foregroundArc) / behindArc)
 }

@@ -837,8 +837,16 @@ export const AVATAR_SIZE_SMALL = 32
 export const ORBIT_RADIUS_SCALE = 1.8
 
 // ── Geteilte Orbit-Phase der Spieler-Planeten (Idle-Orbit ↔ Planeten-Tab) ────
-/** Normierte y-Schwelle (relativ zum Bahn-Radius), ab der ein Planet hinter der Sonne steht. */
-export const PLANET_ORBIT_BEHIND_REL_Y = -0.05
+/**
+ * Tiefen-Schwelle, ab der ein Orbit-Objekt als „im Vordergrund" gilt — also am
+ * Kampf teilnimmt und kein Eclipse-Medaillon trägt. Einzige Quelle für diese
+ * Grenze: PlanetOrbit leitet daraus `isForeground` ab, das Command Panel
+ * schaltet daran sein Medaillon, und der Planeten-Tab richtet Verdeckung wie
+ * Medaillon danach aus.
+ *
+ * `depth = (relY + 1) / 2`, die Schwelle entspricht also `relY > 0.3`.
+ */
+export const PLANET_ORBIT_FOREGROUND_DEPTH = 0.65
 /**
  * Anteil des Umlaufs, den die Planeten-Tab-Keyframes (`ps-planet-orbit`) vor der
  * Sonne verbringen. Muss zum z-index-Wechsel bei 70 % / 71 % passen.

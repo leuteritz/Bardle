@@ -151,7 +151,7 @@ import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'v
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
-import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY, GAME_TICK_INTERVAL_MS } from '@/config/constants'
+import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY, GAME_TICK_INTERVAL_MS, PLANET_ORBIT_FOREGROUND_DEPTH } from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
@@ -472,7 +472,9 @@ export default defineComponent({
         const size = Math.round(baseSize * parallaxScale)
         const opacity = isBehind ? 0.15 + depth * 0.28 : 0.82 + depth * 0.18
         const zIndex = Math.floor(9 + depth * 6)
-        const isForeground = !isBehind && depth > 0.65
+        // Geteilte Schwelle: Command Panel und Planeten-Tab richten ihr
+        // Eclipse-Medaillon exakt an diesem Wert aus.
+        const isForeground = !isBehind && depth > PLANET_ORBIT_FOREGROUND_DEPTH
 
         const visibleFactor = Math.max(0, Math.min(1, (relY + 0.05 + 0.12) / 0.12))
         const hintOpacity = Math.max(0, 1 - visibleFactor)

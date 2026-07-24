@@ -32,6 +32,7 @@ import {
   orbitTierForSlotIndex,
   planetOrbitPhases,
 } from '@/utils/planetOrbitPhase'
+import { playerSlotInForeground } from '@/utils/foregroundGate'
 import { useActionToast } from '@/composables/useActionToast'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
@@ -108,10 +109,10 @@ function orbitDelayFor(progress: number): string {
   return `-${(progress * PLANET_TAB_ORBIT_PERIOD_SEC).toFixed(3)}s`
 }
 
-function eclipsePhaseOf(slotId: string | null): { progress: number; isBehind: boolean } {
+function orbitProgressOf(slotId: string | null): number {
   const slots = orbitSlots.value
   const idx = slotId ? slots.findIndex((s) => s.id === slotId) : -1
-  if (idx < 0) return { progress: 0, isBehind: false }
+  if (idx < 0) return 0
   const { ratio, tiltRad } = orbitTierForSlotIndex(idx)
   const angle = planetOrbitPhases.get(slots[idx].id)?.angle ?? initialOrbitAngle(idx, slots.length)
   return orbitEclipsePhase(angle, slots[idx].direction, ratio, tiltRad)
@@ -121,17 +122,23 @@ function eclipsePhaseOf(slotId: string | null): { progress: number; isBehind: bo
 // reaktiv) und gibt dem frisch eingeblendeten Planeten sofort die richtige
 // Bahnposition, bevor der Frame-Loop übernimmt.
 const orbitPhaseStyle = computed(() => ({
-  '--orbit-delay': orbitDelayFor(eclipsePhaseOf(selectedSlotId.value).progress),
+  '--orbit-delay': orbitDelayFor(orbitProgressOf(selectedSlotId.value)),
 }))
 
 let orbitFrame = 0
 
 function tickOrbit() {
-  const phase = eclipsePhaseOf(selectedSlotId.value)
+  const slotId = selectedSlotId.value
   // Direkt aufs Element statt über einen ref: 60 Re-Renders pro Sekunde dieser
   // großen Komponente nur für eine CSS-Variable wären Verschwendung.
-  planetOrbitEl.value?.style.setProperty('--orbit-delay', orbitDelayFor(phase.progress))
-  if (orbitBehind.value !== phase.isBehind) orbitBehind.value = phase.isBehind
+  planetOrbitEl.value?.style.setProperty('--orbit-delay', orbitDelayFor(orbitProgressOf(slotId)))
+
+  // Das Medaillon hängt an EXAKT derselben Quelle wie das im Command Panel —
+  // dieselbe Positions-Map, im selben rAF-Takt gelesen. Ein eigener Nachbau der
+  // Schwelle würde unweigerlich wieder auseinanderlaufen.
+  const behind = slotId !== null && !playerSlotInForeground(slotId)
+  if (orbitBehind.value !== behind) orbitBehind.value = behind
+
   orbitFrame = requestAnimationFrame(tickOrbit)
 }
 
@@ -729,7 +736,7 @@ function chooseBuilding(buildingId: string) {
                    planet itself is fully occluded while this shows. -->
               <Transition name="ps-eclipse-fade">
                 <span v-if="orbitBehind" class="ps-eclipse-medal" title="Behind the Sun — out of reach">
-                  <Icon icon="game-icons:eclipse-flare" width="48" height="48" />
+                  <Icon icon="game-icons:eclipse-flare" width="104" height="104" />
                 </span>
               </Transition>
             </div>
@@ -1966,26 +1973,28 @@ function chooseBuilding(buildingId: string) {
   top: 50%;
   z-index: 4;
   transform: translate(-50%, -50%);
-  width: min(84px, 26cqmin);
-  height: min(84px, 26cqmin);
+  /* Deutlich auf der Sonnenscheibe: gut halb so breit wie der Sonnenkern, damit
+     das Medaillon auf Full HD wie auf 4K sofort ins Auge fällt. */
+  width: min(168px, 52cqmin);
+  height: min(168px, 52cqmin);
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(38, 26, 8, 0.95), rgba(10, 7, 3, 0.95));
-  border: 3px solid #5c3310;
+  background: radial-gradient(circle at 35% 30%, rgba(38, 26, 8, 0.96), rgba(10, 7, 3, 0.96));
+  border: 4px solid #5c3310;
   box-shadow:
-    0 0 0 2px rgba(200, 144, 64, 0.35),
-    0 0 26px rgba(232, 192, 64, 0.35),
-    0 4px 12px rgba(0, 0, 0, 0.7);
+    0 0 0 3px rgba(200, 144, 64, 0.4),
+    0 0 44px rgba(232, 192, 64, 0.45),
+    0 6px 20px rgba(0, 0, 0, 0.75);
   color: #e8c040;
   pointer-events: none;
   animation: ps-eclipse-breathe 1.6s ease-in-out infinite alternate;
 }
 
 .ps-eclipse-medal :deep(svg) {
-  width: min(48px, 15cqmin);
-  height: min(48px, 15cqmin);
-  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.55));
+  width: min(104px, 32cqmin);
+  height: min(104px, 32cqmin);
+  filter: drop-shadow(0 0 14px rgba(232, 192, 64, 0.65));
 }
 
 /* Readout recedes while the planet is out of reach — dimmed, never unreadable,
