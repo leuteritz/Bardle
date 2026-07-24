@@ -746,14 +746,14 @@ function chooseBuilding(buildingId: string) {
             </span>
           </div>
 
-          <!-- Empty orbit: two dashed rings drifting around a sealed core -->
+          <!-- The seal itself: one solid wood-framed plate with a slow halo.
+               No rings, no ghost numeral — the orbit number is already the
+               headline above, repeating it here only added noise. -->
           <div class="ps-lock-hero" :class="{ 'ps-lock-hero--ready': lockCanUnlock }">
-            <span class="ps-lock-ring ps-lock-ring--outer" aria-hidden="true" />
-            <span class="ps-lock-ring ps-lock-ring--inner" aria-hidden="true" />
+            <span class="ps-lock-halo" aria-hidden="true" />
             <span class="ps-lock-core">
               <img src="/img/lock.png" alt="Locked" class="ps-lock-core-img" />
             </span>
-            <span class="ps-lock-index" aria-hidden="true">{{ lockOrbitNumber }}</span>
           </div>
 
           <!-- The two gates, each with its live current value -->
@@ -4455,93 +4455,95 @@ img.ps-role-icon {
   color: rgba(212, 200, 160, 0.62);
 }
 
-/* ── Empty orbit visual ─────────────────────────────────────────────────────
-   Two dashed rings turning at different speeds around a sealed core — reads as
-   "a lane exists here, nothing is in it yet" without faking a planet. */
+/* ── The seal ───────────────────────────────────────────────────────────────
+   One solid wood-framed plate carrying the lock, wrapped in a soft halo that
+   breathes. Nothing spins, nothing is dashed — the seal reads as a closed
+   object, not as decoration around an empty middle. */
 .ps-lock-hero {
   position: relative;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: clamp(180px, 26vh, 320px);
-  height: clamp(180px, 26vh, 320px);
+  width: clamp(150px, 21vh, 250px);
+  height: clamp(150px, 21vh, 250px);
 }
 
-.ps-lock-ring {
+/* Halo — the only motion here; a slow, wide bloom under the plate */
+.ps-lock-halo {
   position: absolute;
-  border-radius: 50%;
-  border: 2px dashed rgba(200, 144, 64, 0.32);
-  transition: border-color 300ms ease;
-}
-
-.ps-lock-ring--outer {
   inset: 0;
-  animation: ps-lock-spin 48s linear infinite;
-}
-
-.ps-lock-ring--inner {
-  inset: 16%;
-  border-style: dotted;
-  border-color: rgba(200, 144, 64, 0.2);
-  animation: ps-lock-spin 30s linear infinite reverse;
-}
-
-/* Ready to claim → the seal turns green and the rings pick up the CTA color */
-.ps-lock-hero--ready .ps-lock-ring {
-  border-color: rgba(110, 192, 64, 0.5);
-}
-.ps-lock-hero--ready .ps-lock-core {
-  border-color: #6ec040;
-  box-shadow:
-    0 0 0 1px rgba(110, 192, 64, 0.4),
-    0 0 34px rgba(82, 184, 48, 0.4),
-    inset 0 0 26px rgba(82, 184, 48, 0.14);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(200, 144, 64, 0.22) 0%,
+    rgba(200, 144, 64, 0.07) 42%,
+    transparent 70%
+  );
+  animation: ps-lock-halo-breathe 3.6s ease-in-out infinite alternate;
+  transition: background 320ms ease;
 }
 
 .ps-lock-core {
   position: relative;
   display: grid;
   place-items: center;
-  width: 46%;
-  height: 46%;
+  width: 68%;
+  height: 68%;
   border-radius: 50%;
-  background: radial-gradient(circle at 42% 34%, #1c1710 0%, #0a0906 70%);
-  border: 2px solid #5c3310;
+  background: radial-gradient(circle at 42% 32%, #1e1a12 0%, #0a0906 72%);
+  /* project frame language, rolled into a disc */
+  border: 4px solid #7a4e20;
   box-shadow:
-    0 0 0 1px rgba(200, 144, 64, 0.28),
-    0 0 30px rgba(0, 0, 0, 0.8),
-    inset 0 0 26px rgba(200, 144, 64, 0.08);
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 5px #5c3310,
+    inset 0 0 34px rgba(200, 144, 64, 0.1),
+    0 10px 30px rgba(0, 0, 0, 0.75);
   transition:
-    border-color 300ms ease,
-    box-shadow 300ms ease;
+    border-color 320ms ease,
+    box-shadow 320ms ease;
 }
 
 .ps-lock-core-img {
-  width: 46%;
-  height: 46%;
+  width: 42%;
+  height: 42%;
   object-fit: contain;
-  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.45));
+  filter: drop-shadow(0 0 14px rgba(200, 144, 64, 0.5));
   animation: ps-lock-bob 3s ease-in-out infinite;
 }
 
-/* Ghost numeral behind the core — depth cue, never competes with the text */
-.ps-lock-index {
-  position: absolute;
-  z-index: -1;
-  font-size: clamp(7rem, 20vh, 15rem);
-  font-weight: 900;
-  line-height: 1;
-  color: rgba(232, 192, 64, 0.05);
-  pointer-events: none;
-  user-select: none;
+/* Ready to claim → the whole seal shifts to the CTA's green */
+.ps-lock-hero--ready .ps-lock-halo {
+  background: radial-gradient(
+    circle,
+    rgba(82, 184, 48, 0.26) 0%,
+    rgba(82, 184, 48, 0.08) 42%,
+    transparent 70%
+  );
 }
 
-@keyframes ps-lock-spin {
+.ps-lock-hero--ready .ps-lock-core {
+  border-color: #4f8a2a;
+  box-shadow:
+    inset 0 0 0 2px #14310a,
+    inset 0 0 0 5px #2e7a1a,
+    inset 0 0 34px rgba(82, 184, 48, 0.16),
+    0 0 34px rgba(82, 184, 48, 0.35),
+    0 10px 30px rgba(0, 0, 0, 0.75);
+}
+
+.ps-lock-hero--ready .ps-lock-core-img {
+  filter: sepia(1) saturate(4) hue-rotate(60deg) brightness(1.1)
+    drop-shadow(0 0 14px rgba(110, 192, 64, 0.55));
+}
+
+@keyframes ps-lock-halo-breathe {
   from {
-    transform: rotate(0deg);
+    opacity: 0.55;
+    transform: scale(0.94);
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: scale(1.04);
   }
 }
 
@@ -4767,8 +4769,7 @@ img.ps-role-icon {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ps-lock-ring--outer,
-  .ps-lock-ring--inner,
+  .ps-lock-halo,
   .ps-lock-core-img,
   .ps-lock-cta {
     animation: none;
