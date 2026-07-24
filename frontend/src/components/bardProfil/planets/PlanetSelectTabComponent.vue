@@ -499,16 +499,18 @@ function capitalize(s: string): string {
   return s ? s[0].toUpperCase() + s.slice(1) : s
 }
 
-// Rich descriptor for the in-tab assignment card: what this planet currently
-// harvests/boosts, plus the accent color (material → rarity tier, building → gold).
+// Descriptor for the target chip inside the effect line: what this planet
+// currently harvests/boosts, plus the accent color (material → rarity tier,
+// building → gold). The name has to stay short — it sits inline in a sentence,
+// the longer `sub` only shows up in the chip's tooltip.
 const configTarget = computed(() => {
   const role = activeSlot.value?.role
   if (role === 'harvest_node') {
     const m = selectedMaterial.value
     return {
       kicker: 'Harvesting',
-      name: m?.name ?? 'No material set',
-      sub: m ? `${capitalize(m.rarity)} material` : 'Tap to choose a material',
+      name: m?.name ?? 'Pick a material',
+      sub: m ? `${capitalize(m.rarity)} material` : 'No material set yet',
       icon: m?.image ?? null,
       color: m ? rarityColorOf(m.rarity) : '#8a7a50',
       chosen: !!m,
@@ -518,8 +520,8 @@ const configTarget = computed(() => {
     const b = selectedBuilding.value
     return {
       kicker: 'Boosting',
-      name: b?.name ?? 'No building set',
-      sub: b ? 'CPS booster building' : 'Tap to choose a building',
+      name: b?.name ?? 'Pick a building',
+      sub: b ? 'CPS booster building' : 'No building set yet',
       icon: b?.icon ?? null,
       color: b ? '#e8c040' : '#8a7a50',
       chosen: !!b,
@@ -895,9 +897,40 @@ function chooseBuilding(buildingId: string) {
                      confirm-green) while the upgrade button is hovered. -->
                 <div
                   class="ps-planet-effect"
-                  :class="{ 'ps-planet-effect--preview': previewActive }"
+                  :class="{
+                    'ps-planet-effect--preview': previewActive,
+                    'ps-planet-effect--targeted': isConfigurableRole && !!configTarget,
+                  }"
                 >
                   <span class="ps-planet-effect-value">{{ previewActive ? nextBonusText : activeSlotBonusText }}</span>
+
+                  <!-- Configurable roles (Harvester / Resonator) carry their target
+                       INSIDE the effect line instead of in a separate dock card:
+                       "1 Material every 30s › Ashen Ore" reads as one sentence, and
+                       the target sits where the player already looks for what this
+                       planet does. Clicking the chip opens the picker. -->
+                  <template v-if="isConfigurableRole && configTarget">
+                    <span class="ps-effect-arrow" aria-hidden="true">›</span>
+                    <button
+                      class="ps-effect-target"
+                      :class="{ 'ps-effect-target--empty': !configTarget.chosen }"
+                      :style="{ '--tc': configTarget.color }"
+                      :title="`${configTarget.kicker}: ${configTarget.name} — ${configTarget.sub}. Click to change.`"
+                      @click="configPickerOpen = true"
+                    >
+                      <span class="ps-effect-target-medal">
+                        <img
+                          v-if="configTarget.icon"
+                          :src="configTarget.icon"
+                          class="ps-effect-target-icon"
+                          alt=""
+                        />
+                        <span v-else class="ps-effect-target-icon-missing">?</span>
+                      </span>
+                      <span class="ps-effect-target-name">{{ configTarget.name }}</span>
+                      <span class="ps-effect-target-swap" aria-hidden="true">⟳</span>
+                    </button>
+                  </template>
                 </div>
 
                 <div
@@ -957,32 +990,9 @@ function chooseBuilding(buildingId: string) {
                  Hovering the button previews the upgrade directly on the two
                  permanent readouts above (effect value + HP bar) — no popover. -->
             <div class="ps-action-dock">
-              <!-- Assignment card — big, self-explanatory readout of what this
-                   configurable planet harvests/boosts; the whole card opens the
-                   picker. Accent color = material rarity / building gold. -->
-              <button
-                v-if="isConfigurableRole && configTarget"
-                class="ps-assign"
-                :class="{ 'ps-assign--empty': !configTarget.chosen }"
-                :style="{ '--tc': configTarget.color }"
-                :title="`Change ${configTarget.kicker.toLowerCase()} target`"
-                @click="configPickerOpen = true"
-              >
-                <span class="ps-assign-medal">
-                  <img v-if="configTarget.icon" :src="configTarget.icon" class="ps-assign-icon" alt="" />
-                  <span v-else class="ps-assign-icon-missing">?</span>
-                </span>
-                <span class="ps-assign-text">
-                  <span class="ps-assign-kicker">{{ configTarget.kicker }}</span>
-                  <span class="ps-assign-name">{{ configTarget.name }}</span>
-                  <span class="ps-assign-sub">{{ configTarget.sub }}</span>
-                </span>
-                <span class="ps-assign-change">
-                  <span class="ps-assign-change-icon" aria-hidden="true">⟳</span>
-                  <span class="ps-assign-change-text">Change</span>
-                </span>
-              </button>
-
+              <!-- Only the Level-Up CTA lives here now — the harvest/resonance
+                   target moved up into the effect line, where the player already
+                   reads what this planet does. -->
               <div
                 class="ps-dock-buy ps-hero-buy"
                 @mouseenter="previewHover = true"
@@ -1346,155 +1356,6 @@ function chooseBuilding(buildingId: string) {
   flex-direction: column;
   align-items: center;
   gap: clamp(7px, 1vh, 12px);
-}
-
-/* Assignment card — full-width, self-explanatory target readout above the button.
-   Left rarity/gold accent stripe, framed icon medallion, kicker + name + sub, and
-   a Change affordance on the right. */
-.ps-assign {
-  --tc: #e8c040;
-  position: relative;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: clamp(9px, 0.9vw, 14px);
-  padding: clamp(7px, 0.9vh, 11px) clamp(11px, 1vw, 16px);
-  padding-left: clamp(14px, 1.1vw, 19px);
-  background: linear-gradient(120deg, #17140d 0%, #100e08 100%);
-  border: 1px solid color-mix(in srgb, var(--tc) 45%, #2e1e0a);
-  border-radius: 5px;
-  cursor: pointer;
-  text-align: left;
-  color: inherit;
-  overflow: hidden;
-  transition:
-    border-color 180ms ease,
-    background 180ms ease,
-    transform 180ms ease,
-    box-shadow 180ms ease;
-}
-
-/* Left accent stripe in the target color */
-.ps-assign::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--tc);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--tc) 60%, transparent);
-}
-
-.ps-assign:hover {
-  border-color: var(--tc);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-}
-
-.ps-assign:focus-visible {
-  outline: none;
-  border-color: var(--tc);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc) 70%, transparent);
-}
-
-/* Unset state reads as a gentle call-to-action */
-.ps-assign--empty {
-  border-style: dashed;
-}
-
-.ps-assign-medal {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: clamp(38px, 4.6vh, 50px);
-  height: clamp(38px, 4.6vh, 50px);
-  background: radial-gradient(circle at 50% 38%, #1a1710 0%, #0b0906 100%);
-  border: 1px solid color-mix(in srgb, var(--tc) 55%, #3a2a10);
-  border-radius: 6px;
-  box-shadow: inset 0 0 8px color-mix(in srgb, var(--tc) 18%, transparent);
-}
-
-.ps-assign-icon {
-  width: 78%;
-  height: 78%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--tc) 55%, transparent));
-}
-
-.ps-assign-icon-missing {
-  font-size: 1.4rem;
-  font-weight: 900;
-  color: color-mix(in srgb, var(--tc) 70%, #6a5a30);
-}
-
-.ps-assign-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  flex: 1;
-}
-
-.ps-assign-kicker {
-  font-size: clamp(0.56rem, 0.9vh, 0.7rem);
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.ps-assign-name {
-  font-size: clamp(0.95rem, 1.5vh, 1.2rem);
-  font-weight: 800;
-  line-height: 1.15;
-  color: var(--tc);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--tc) 35%, transparent);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ps-assign-sub {
-  font-size: clamp(0.6rem, 0.95vh, 0.74rem);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: rgba(200, 190, 160, 0.6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ps-assign-change {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  background: rgba(20, 17, 10, 0.7);
-  border: 1px solid color-mix(in srgb, var(--tc) 45%, #3a2a10);
-  border-radius: 4px;
-  color: color-mix(in srgb, var(--tc) 85%, #fff);
-  font-size: clamp(0.66rem, 1vh, 0.8rem);
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.ps-assign-change-icon {
-  font-size: 1.05em;
-  line-height: 1;
-  transition: transform 300ms ease;
-}
-
-.ps-assign:hover .ps-assign-change-icon {
-  transform: rotate(180deg);
-}
-
-.ps-assign:hover .ps-assign-change {
-  background: color-mix(in srgb, var(--tc) 16%, #14110a);
-  border-color: var(--tc);
 }
 
 /* Level-Up CTA — enlarged, fills the dock width. (Reuses .ps-dock-buy for the
@@ -3490,6 +3351,149 @@ img.ps-role-icon {
 .ps-planet-effect--preview .ps-planet-effect-value {
   color: #7cf089;
   text-shadow: 0 0 10px rgba(92, 230, 106, 0.55);
+}
+
+/* ── Harvest / Resonance target — inline inside the effect line ─────────────── */
+/* The target used to be a separate card wedged between the HP bar and the buy
+   button. It belongs to the SENTENCE, not to the dock: "1 Material every 30s ›
+   Ashen Ore" says what the planet does and what it does it to, in one read. */
+.ps-planet-effect--targeted {
+  flex-wrap: wrap;
+  gap: clamp(6px, 0.7vw, 12px);
+  padding-right: clamp(8px, 0.9vw, 14px);
+}
+
+/* Connector — carries the eye from the effect into its target */
+.ps-effect-arrow {
+  flex-shrink: 0;
+  font-size: clamp(1.1rem, 2vh, 1.5rem);
+  font-weight: 700;
+  line-height: 1;
+  color: color-mix(in srgb, var(--rc, #e8c040) 55%, transparent);
+  transition: color 180ms ease;
+}
+
+.ps-effect-target {
+  --tc: #e8c040;
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(5px, 0.5vw, 9px);
+  min-width: 0;
+  max-width: min(240px, 45%);
+  padding: clamp(3px, 0.4vh, 5px) clamp(7px, 0.7vw, 11px) clamp(3px, 0.4vh, 5px)
+    clamp(4px, 0.4vw, 6px);
+  background: rgba(10, 9, 5, 0.7);
+  border: 1px solid color-mix(in srgb, var(--tc) 45%, #3a2a10);
+  border-radius: 5px;
+  cursor: pointer;
+  color: inherit;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+.ps-effect-target:hover {
+  border-color: var(--tc);
+  background: color-mix(in srgb, var(--tc) 14%, rgba(10, 9, 5, 0.8));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--tc) 30%, transparent);
+}
+
+.ps-effect-target:focus-visible {
+  outline: none;
+  border-color: var(--tc);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc) 70%, transparent);
+}
+
+/* Nothing picked yet — a Harvester without a material produces nothing, so the
+   empty chip has to nag: dashed frame plus a slow amber breath. */
+.ps-effect-target--empty {
+  border-style: dashed;
+  animation: ps-target-nag 2.2s ease-in-out infinite;
+}
+
+@keyframes ps-target-nag {
+  0%,
+  100% {
+    border-color: color-mix(in srgb, var(--tc) 40%, #3a2a10);
+    box-shadow: none;
+  }
+  50% {
+    border-color: var(--tc);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--tc) 35%, transparent);
+  }
+}
+
+.ps-effect-target-medal {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: clamp(26px, 3.4vh, 38px);
+  height: clamp(26px, 3.4vh, 38px);
+  background: radial-gradient(circle at 50% 38%, #1a1710 0%, #0b0906 100%);
+  border: 1px solid color-mix(in srgb, var(--tc) 55%, #3a2a10);
+  border-radius: 4px;
+  box-shadow: inset 0 0 8px color-mix(in srgb, var(--tc) 18%, transparent);
+}
+
+.ps-effect-target-icon {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--tc) 55%, transparent));
+}
+
+.ps-effect-target-icon-missing {
+  font-size: clamp(0.95rem, 1.6vh, 1.25rem);
+  font-weight: 900;
+  color: color-mix(in srgb, var(--tc) 70%, #6a5a30);
+}
+
+.ps-effect-target-name {
+  font-size: clamp(0.95rem, 1.7vh, 1.35rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--tc);
+  text-shadow: 0 0 9px color-mix(in srgb, var(--tc) 35%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Swap affordance — quiet at rest, turns on hover so the chip reads as clickable
+   without a permanent "Change" label eating the line. */
+.ps-effect-target-swap {
+  flex-shrink: 0;
+  font-size: clamp(0.85rem, 1.5vh, 1.15rem);
+  line-height: 1;
+  color: color-mix(in srgb, var(--tc) 60%, transparent);
+  transition:
+    transform 300ms ease,
+    color 180ms ease;
+}
+
+.ps-effect-target:hover .ps-effect-target-swap {
+  color: color-mix(in srgb, var(--tc) 90%, white);
+  transform: rotate(180deg);
+}
+
+/* While the upgrade preview runs, the changed VALUE is the story — the target
+   stays visible but steps back so the green number carries the line. */
+.ps-planet-effect--preview .ps-effect-arrow {
+  color: rgba(124, 240, 137, 0.5);
+}
+
+.ps-planet-effect--preview .ps-effect-target {
+  opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-effect-target--empty {
+    animation: none;
+  }
 }
 
 /* ── Jungle Buff — full-panel takeover (edge veil + centered banner) ─────────── */
