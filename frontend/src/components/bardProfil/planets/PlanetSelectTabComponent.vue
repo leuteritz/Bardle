@@ -302,6 +302,38 @@ const nextMaxHp = computed(() =>
   computePlanetMaxHp((activeSlot.value?.level ?? 1) + previewLevelGain.value),
 )
 
+// ── HP-bar hover preview ────────────────────────────────────────────────────
+// Hovering the upgrade button previews the post-level-up state: the effect chip
+// pops up and the HP bar extends. On level-up the store grows currentHp by the
+// exact Max-HP delta (see planetShopStore levelUpPlanetTimes), so the gained HP
+// is always nextMaxHp − currentMaxHp. We render it as a bright "ghost" segment
+// appended to the current fill, both scaled to the NEW max so the bar visibly
+// lengthens even at full health.
+const previewHover = ref(false)
+
+const hpGainAmount = computed(() => Math.max(0, nextMaxHp.value - currentMaxHp.value))
+
+const hpPreviewCurrent = computed(() =>
+  activeSlot.value ? activeSlot.value.currentHp + hpGainAmount.value : 0,
+)
+
+// Solid part of the preview fill (existing current HP), scaled to the new max.
+const hpSolidPreviewPct = computed(() => {
+  if (!activeSlot.value || nextMaxHp.value === 0) return 0
+  return Math.max(0, Math.min(100, (activeSlot.value.currentHp / nextMaxHp.value) * 100))
+})
+
+// Ghost extension (the HP gained), sitting right after the solid part.
+const hpGhostPreviewPct = computed(() => {
+  if (nextMaxHp.value === 0) return 0
+  const raw = (hpGainAmount.value / nextMaxHp.value) * 100
+  return Math.max(0, Math.min(100 - hpSolidPreviewPct.value, raw))
+})
+
+const hpPreviewPct = computed(() =>
+  Math.round(Math.min(100, (hpPreviewCurrent.value / (nextMaxHp.value || 1)) * 100)),
+)
+
 function attune(count: number) {
   if (!activeSlot.value) return
   const before = activeSlot.value.level
@@ -574,9 +606,9 @@ function chooseBuilding(buildingId: string) {
              lives right next to the Level-Up button now. -->
         <template v-else-if="activeSlot && activeSlot.purchased && activeSlot.role">
           <div class="ps-stage" :style="[{ '--rc': activeRoleColor }, sunPhaseStyle]">
-            <!-- LEVEL crown — big + modern, centered above the sun. While a jungle
-                 buff is live the top-center banner claims this spot, so the crown
-                 fades out for its duration and returns afterwards. -->
+            <!-- LEVEL crown — big + modern, sits directly above the sun (bottom of
+                 the top balancing band). While a jungle buff is live the top-center
+                 banner claims this spot, so the crown fades out and returns after. -->
             <div class="ps-crown-band">
               <Transition name="ps-crown-fade">
                 <div v-if="!activeSlot.jungleBuff?.active" class="ps-crown">
@@ -590,7 +622,9 @@ function chooseBuilding(buildingId: string) {
               </Transition>
             </div>
 
-            <!-- Central body (comet rock or phase sun) + orbiting planet -->
+            <!-- Central body (comet rock or phase sun) + orbiting planet — the exact
+                 vertical center: crown band above and readout band below carry equal
+                 flex weight, so the sun is always dead-centered. -->
             <div class="ps-system" :class="{ 'ps-system--comet': solarStore.isCometState }">
               <CometDisc v-if="solarStore.isCometState" :diameter="200" />
               <div v-else class="ps-stage-sun" />
@@ -610,64 +644,82 @@ function chooseBuilding(buildingId: string) {
               </Transition>
             </div>
 
-            <!-- Balancing gap: same flex weight as the crown band above the sun, so
-                 the sun stays vertically centered between crown and bottom cluster. -->
-            <div class="ps-hero-gap" aria-hidden="true" />
-
-            <!-- Name + HP unit — kept large, directly under the sun. -->
-            <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
-              <div class="ps-planet-role-label">{{ activeRoleName }}</div>
-              <div
-                v-if="activeSlot.maxHp > 0"
-                class="ps-planet-hp"
-                :class="`ps-planet-hp--${activeHpTier}`"
-              >
-                <div class="ps-planet-hp-text">
-                  <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
-                  <span class="ps-hp-pct">{{ Math.round(hpPercent) }}%</span>
-                </div>
-                <div class="ps-hp-bar-track">
-                  <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }">
-                    <span class="ps-hp-bar-shine" aria-hidden="true" />
+            <!-- Name + HP unit — directly under the sun (top of the bottom balancing
+                 band). Hovering the upgrade button extends the HP bar with a bright
+                 ghost segment showing the HP the next level-up would grant. -->
+            <div class="ps-readout-band">
+              <div class="ps-planet-readout" :style="{ '--rc': activeRoleColor }">
+                <div class="ps-planet-role-label">{{ activeRoleName }}</div>
+                <div
+                  v-if="activeSlot.maxHp > 0"
+                  class="ps-planet-hp"
+                  :class="[`ps-planet-hp--${activeHpTier}`, { 'ps-planet-hp--preview': previewHover }]"
+                >
+                  <div class="ps-planet-hp-text">
+                    <span class="ps-hp-values">{{ previewHover ? hpPreviewCurrent : activeSlot.currentHp }} / {{ previewHover ? nextMaxHp : activeSlot.maxHp }}</span>
+                    <span class="ps-hp-pct">{{ previewHover ? hpPreviewPct : Math.round(hpPercent) }}%</span>
+                  </div>
+                  <div class="ps-hp-bar-track">
+                    <div
+                      class="ps-hp-bar-fill"
+                      :style="{ width: (previewHover ? hpSolidPreviewPct : hpPercent) + '%' }"
+                    >
+                      <span class="ps-hp-bar-shine" aria-hidden="true" />
+                    </div>
+                    <div
+                      v-if="previewHover && hpGhostPreviewPct > 0"
+                      class="ps-hp-bar-ghost"
+                      :style="{ left: hpSolidPreviewPct + '%', width: hpGhostPreviewPct + '%' }"
+                      aria-hidden="true"
+                    />
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Action dock — upgrade effect (current → next), Max HP and the config
-                 chip bundled right on top of the Level-Up CTA. -->
+            <!-- Action dock — pinned to the stage bottom so the sun stays centered.
+                 The permanent info box is gone: hovering the button reveals the
+                 effect preview here and extends the HP bar above. -->
             <div class="ps-action-dock">
-              <div class="ps-dock-info">
-                <div class="ps-info-pill">
-                  <span class="ps-info-label">Effect</span>
-                  <span class="ps-info-vals">
-                    <span class="ps-info-now">{{ activeSlotBonusText }}</span>
-                    <span class="ps-info-arrow">→</span>
-                    <span class="ps-info-next">{{ nextBonusText }}</span>
-                  </span>
-                  <span v-if="maxAffordableCount > 0" class="ps-info-gain">after +{{ maxAffordableCount }}</span>
+              <Transition name="ps-hover-pop">
+                <div v-if="previewHover" class="ps-hover-preview" :style="{ '--rc': activeRoleColor }">
+                  <div class="ps-hover-row">
+                    <span class="ps-hover-label">Effect</span>
+                    <span class="ps-hover-vals">
+                      <span class="ps-hover-now">{{ activeSlotBonusText }}</span>
+                      <span class="ps-hover-arrow">→</span>
+                      <span class="ps-hover-next">{{ nextBonusText }}</span>
+                    </span>
+                  </div>
+                  <div class="ps-hover-row">
+                    <span class="ps-hover-label">Max HP</span>
+                    <span class="ps-hover-vals">
+                      <span class="ps-hover-now">{{ currentMaxHp }}</span>
+                      <span class="ps-hover-arrow">→</span>
+                      <span class="ps-hover-next">{{ nextMaxHp }}</span>
+                    </span>
+                  </div>
                 </div>
-                <div class="ps-info-pill">
-                  <span class="ps-info-label">Max HP</span>
-                  <span class="ps-info-vals">
-                    <span class="ps-info-now">{{ currentMaxHp }}</span>
-                    <span class="ps-info-arrow">→</span>
-                    <span class="ps-info-next">{{ nextMaxHp }}</span>
-                  </span>
-                </div>
-                <button
-                  v-if="isConfigurableRole && configChip"
-                  class="ps-config-chip"
-                  @click="configPickerOpen = !configPickerOpen"
-                >
-                  <span class="ps-config-chip-verb">{{ configChip.verb }}:</span>
-                  <img v-if="configChip.icon" :src="configChip.icon" class="ps-config-chip-icon" alt="" />
-                  <span class="ps-config-chip-name">{{ configChip.name }}</span>
-                  <span class="ps-config-chip-caret">▾</span>
-                </button>
-              </div>
+              </Transition>
 
-              <div class="ps-dock-buy ps-hero-buy">
+              <!-- Config chip stays as a small standalone control (not part of the
+                   removed info box) — only for configurable roles. -->
+              <button
+                v-if="isConfigurableRole && configChip"
+                class="ps-config-chip ps-config-chip--dock"
+                @click="configPickerOpen = !configPickerOpen"
+              >
+                <span class="ps-config-chip-verb">{{ configChip.verb }}:</span>
+                <img v-if="configChip.icon" :src="configChip.icon" class="ps-config-chip-icon" alt="" />
+                <span class="ps-config-chip-name">{{ configChip.name }}</span>
+                <span class="ps-config-chip-caret">▾</span>
+              </button>
+
+              <div
+                class="ps-dock-buy ps-hero-buy"
+                @mouseenter="previewHover = true"
+                @mouseleave="previewHover = false"
+              >
                 <button
                   class="ps-level-btn"
                   :class="{ 'ps-level-btn--locked': maxAffordableCount === 0 }"
@@ -817,8 +869,10 @@ function chooseBuilding(buildingId: string) {
 }
 
 /* ── Level crown — big, modern level readout centered above the sun ─────────── */
-/* Its own flex band with the same weight as the balancing gap below the sun, so
-   the sun stays vertically centered between the crown and the bottom cluster. */
+/* Top balancing band — equal flex weight to the readout band below the sun, so
+   the sun sits dead-center between them. The crown is pinned to the BOTTOM of this
+   band (justify-content: flex-end) so the level reads as sitting right above the
+   sun, with a small gap. */
 .ps-crown-band {
   position: relative;
   z-index: 2;
@@ -826,8 +880,10 @@ function chooseBuilding(buildingId: string) {
   min-height: 0;
   width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  padding-bottom: clamp(8px, 1.4vh, 18px);
 }
 
 .ps-crown {
@@ -899,93 +955,118 @@ function chooseBuilding(buildingId: string) {
   transform: translateY(-8px) scale(0.96);
 }
 
-/* ── Action dock — info cluster + Level-Up CTA bundled at the stage bottom ───── */
+/* ── Action dock — Level-Up CTA pinned to the stage bottom ──────────────────── */
+/* Absolutely positioned so it never affects the flex centering above it: the sun
+   stays dead-center while the button floats at the bottom. The permanent info box
+   is gone — the effect preview only appears on hover (ps-hover-preview). */
 .ps-action-dock {
-  position: relative;
-  z-index: 2;
-  flex: 0 0 auto;
+  position: absolute;
+  left: 50%;
+  bottom: clamp(14px, 2.2vh, 30px);
+  transform: translateX(-50%);
+  z-index: 4;
   width: 100%;
-  max-width: 640px;
+  max-width: 440px;
+  padding: 0 1rem;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: clamp(8px, 1.1vh, 14px);
-  margin-top: clamp(6px, 1vh, 14px);
+  align-items: center;
+  gap: clamp(7px, 1vh, 12px);
 }
 
-/* Row of modern stat pills — effect preview, max hp, config chip. Wraps cleanly
-   on narrow panels; centered so it reads as one unit above the button. */
-.ps-dock-info {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  justify-content: center;
-  gap: clamp(6px, 0.8vw, 12px);
-}
-
-.ps-info-pill {
-  flex: 1 1 200px;
-  min-width: 0;
+/* Hover effect preview — floats above the button on hover, so nothing shifts and
+   the corners stay clean. A downward caret points at the button. */
+.ps-hover-preview {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 11px;
+  width: max-content;
+  max-width: min(90%, 460px);
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: clamp(6px, 0.8vh, 10px) clamp(10px, 0.9vw, 15px);
-  background: rgba(20, 17, 10, 0.86);
-  border: 1px solid #3a2a10;
+  gap: 5px;
+  padding: clamp(9px, 1.1vh, 14px) clamp(13px, 1.1vw, 20px);
+  background: #16140e;
+  border: 2px solid color-mix(in srgb, var(--rc, #e8c040) 60%, #5c3310);
   border-radius: 5px;
   box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(232, 192, 64, 0.1);
+    0 10px 30px rgba(0, 0, 0, 0.75),
+    0 0 18px color-mix(in srgb, var(--rc, #e8c040) 25%, transparent);
+  pointer-events: none;
 }
 
-.ps-info-label {
-  font-size: clamp(0.6rem, 0.95vh, 0.74rem);
+.ps-hover-preview::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: color-mix(in srgb, var(--rc, #e8c040) 60%, #5c3310);
+}
+
+.ps-hover-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: clamp(10px, 1vw, 22px);
+  white-space: nowrap;
+}
+
+.ps-hover-label {
+  font-size: clamp(0.62rem, 1vh, 0.76rem);
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.5);
 }
 
-.ps-info-vals {
+.ps-hover-vals {
   display: inline-flex;
   align-items: baseline;
   gap: 7px;
-  font-size: clamp(0.98rem, 1.7vh, 1.3rem);
+  font-size: clamp(0.95rem, 1.6vh, 1.2rem);
   font-weight: 800;
   line-height: 1.1;
-  flex-wrap: wrap;
 }
 
-.ps-info-now {
+.ps-hover-now {
   color: #e2d6ab;
 }
 
-.ps-info-arrow {
+.ps-hover-arrow {
   color: var(--rc, #e8c040);
   font-weight: 900;
 }
 
-.ps-info-next {
+.ps-hover-next {
   color: var(--rc, #e8c040);
   text-shadow: 0 0 8px color-mix(in srgb, var(--rc, #e8c040) 45%, transparent);
 }
 
-.ps-info-gain {
-  font-size: clamp(0.58rem, 0.85vh, 0.72rem);
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
+/* Hover popover enter/leave */
+.ps-hover-pop-enter-active,
+.ps-hover-pop-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
 }
 
-/* Config chip sits as a pill sibling in the dock row */
-.ps-dock-info .ps-config-chip {
-  flex: 1 1 200px;
-  justify-content: center;
+.ps-hover-pop-enter-from,
+.ps-hover-pop-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
 }
 
-/* Level-Up CTA — enlarged, centered under the info row. (Reuses .ps-dock-buy for
-   the badge + hover-fade behaviour.) The descendant selector beats .ps-dock-buy's
+/* Config chip — small standalone control above the button (configurable roles) */
+.ps-config-chip--dock {
+  align-self: center;
+}
+
+/* Level-Up CTA — enlarged, fills the dock width. (Reuses .ps-dock-buy for the
+   badge + hover-fade behaviour.) The descendant selector beats .ps-dock-buy's
    `margin-left: auto`, so the button centers instead of sticking right. */
 .ps-action-dock .ps-hero-buy {
   position: relative;
@@ -1473,8 +1554,10 @@ function chooseBuilding(buildingId: string) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.9rem 1rem;
+  gap: 0;
+  /* Extra bottom padding reserves the band the absolute action dock floats in, so
+     the flex-centered crown + sun + readout never overlap the Level-Up button. */
+  padding: 0.9rem 1rem clamp(96px, 15vh, 150px);
   overflow: hidden;
 }
 
@@ -1492,13 +1575,25 @@ function chooseBuilding(buildingId: string) {
   height: min(var(--ps-sun-d, 380px), 56vh);
   min-height: 160px;
   container-type: size;
+  /* Sits between the crown band (above) and readout band (below), which carry
+     equal flex weight — so the sun is always exactly vertically centered. */
 }
 
-/* Balancing gap below the sun — same flex weight as the crown band above it, so
-   the sun stays vertically centered between the crown and the bottom cluster. */
-.ps-hero-gap {
+/* Bottom balancing band — equal flex weight to the crown band above the sun, so
+   the sun sits dead-center between them. The name/HP readout is pinned to the TOP
+   of this band (justify-content: flex-start) so it reads as sitting right beneath
+   the sun. The empty lower part is the "some space" before the action dock. */
+.ps-readout-band {
+  position: relative;
+  z-index: 2;
   flex: 1 1 0;
-  min-height: clamp(6px, 1.5vh, 20px);
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: clamp(8px, 1.4vh, 18px);
 }
 
 /* Big sun rendered in the CURRENT phase's colors (mirrors SunComponent palette) */
@@ -1636,12 +1731,6 @@ function chooseBuilding(buildingId: string) {
   .ps-planet-preview-wrap {
     animation: none;
   }
-}
-
-/* Readout (name + chip + hp) sits above the backdrop, below the system */
-.ps-stage > .ps-planet-readout {
-  position: relative;
-  z-index: 1;
 }
 
 /* Name + HP form one tight unit — the type name reads as the HP bar's title */
@@ -2378,6 +2467,54 @@ img.ps-role-icon {
 
 .ps-planet-hp--low .ps-hp-bar-fill {
   animation: ps-hp-low-pulse 1.2s ease-in-out infinite;
+}
+
+/* ── HP-bar hover preview (extends toward the post-level-up value) ──────────── */
+/* Ghost extension: a bright, striped, pulsing slice appended right after the
+   current fill, representing the HP the next level-up would grant — so the bar
+   visibly grows on hover even at full health. Both fill + ghost are scaled to the
+   NEW max, and the fill's width transition makes the growth animate smoothly. */
+.ps-hp-bar-ghost {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 0 3px 3px 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(150, 255, 170, 0.55) 0,
+    rgba(150, 255, 170, 0.55) 5px,
+    rgba(110, 224, 74, 0.4) 5px,
+    rgba(110, 224, 74, 0.4) 10px
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(180, 255, 190, 0.5),
+    0 0 12px rgba(120, 240, 120, 0.6);
+  animation: ps-hp-ghost-pulse 1.1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ps-hp-ghost-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Values + percent flip to confirm-green while previewing → "this is what you'll
+   have after the upgrade". */
+.ps-planet-hp--preview .ps-hp-values,
+.ps-planet-hp--preview .ps-hp-pct {
+  color: #7cf089;
+  text-shadow: 0 0 10px rgba(92, 230, 106, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-hp-bar-ghost {
+    animation: none;
+  }
 }
 
 /* ── Planetenbild ──────────────────────────────────────────────────────────── */
@@ -3171,13 +3308,14 @@ img.ps-role-icon {
     font-size: clamp(2rem, 4.6vh, 3rem);
   }
 
-  .ps-action-dock {
-    gap: 8px;
-    margin-top: 6px;
+  /* Reserve a little less for the dock and tighten it on flat viewports. */
+  .ps-stage {
+    padding-bottom: clamp(84px, 13vh, 128px);
   }
 
-  .ps-info-pill {
-    padding: 5px 11px;
+  .ps-action-dock {
+    gap: 7px;
+    bottom: clamp(10px, 1.8vh, 22px);
   }
 }
 
