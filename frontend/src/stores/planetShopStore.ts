@@ -354,6 +354,33 @@ export const usePlanetShopStore = defineStore('planetShop', {
           chimes >= planetLevelUpCost(s),
       ).length
     },
+
+    /** TOTAL number of level-ups affordable right now, summed across all six
+     *  orbit slots (each evaluated with the full chimes budget — mirrors the
+     *  per-slot sidebar notify counts so the header total equals their sum).
+     *  Drives the middle-header planet notify badge. Inlined for live reactive
+     *  tracking of chimes/phase, same as `affordableUpgradeCount`. */
+    affordableLevelCount(state): number {
+      const starPhase = useSolarUpgradeStore().starPhase
+      const chimes = useGameStore().chimes
+      let total = 0
+      for (const s of state.slots) {
+        if (!s.purchased || !s.role) continue
+        let budget = chimes
+        let level = s.level
+        let count = 0
+        while (count < PLANET_MAX_BULK_LEVELS) {
+          if (starPhase < planetLevelRequiredPhase(level + 1)) break
+          const cost = planetLevelUpCost({ baseCost: s.baseCost, level })
+          if (budget < cost) break
+          budget -= cost
+          level++
+          count++
+        }
+        total += count
+      }
+      return total
+    },
   },
 
   actions: {

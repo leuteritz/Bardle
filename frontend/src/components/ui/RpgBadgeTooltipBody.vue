@@ -6,11 +6,16 @@ import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useBattleStore } from '@/stores/battleStore'
-import { usePlanetShopStore } from '@/stores/planetShopStore'
+import { usePlanetShopStore, PLANET_ROLES } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useActionToast } from '@/composables/useActionToast'
 import { CHAMPION_ROLES } from '@/config/championRoles'
-import { CHAMP_TOOLTIP_MAX_VISIBLE, ROLE_BY_KEY, STAR_PHASE_DATA } from '@/config/constants'
+import {
+  CHAMP_TOOLTIP_MAX_VISIBLE,
+  ROLE_BY_KEY,
+  STAR_PHASE_DATA,
+  CHIMES_COST_ICON,
+} from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
 /* Shared body for every notify-badge hover tooltip (rendered inside the
@@ -80,7 +85,50 @@ function pickChampion(name: string) {
 const skillCount = computed(() => meepTree.buyableNodeCount)
 
 /* ── planet ─────────────────────────────────────────────────────────── */
-const planetUpgradeCount = computed(() => planetShopStore.affordableUpgradeCount)
+// Total level-ups affordable across all six slots (matches the header badge).
+const planetLevelCount = computed(() => planetShopStore.affordableLevelCount)
+
+interface PlanetUpgradeRow {
+  id: string
+  name: string
+  color: string
+  image: string
+  level: number
+  count: number
+  nextCost: number
+}
+
+// One row per orbit slot that has at least one affordable level-up right now.
+// Reactive: reads chimes + slots + phase via the store getters, so rows update
+// (and vanish) live as the player buys from inside the tooltip.
+const upgradeableSlots = computed<PlanetUpgradeRow[]>(() => {
+  void gameStore.chimes // ensure re-eval when chimes change
+  return planetShopStore.slots
+    .filter((s) => s.purchased && !!s.role && planetShopStore.getMaxAffordableLevelCount(s.id) > 0)
+    .map((s) => {
+      const role = PLANET_ROLES[s.role!]
+      return {
+        id: s.id,
+        name: role.name,
+        color: role.color,
+        image: role.image,
+        level: s.level,
+        count: planetShopStore.getMaxAffordableLevelCount(s.id),
+        nextCost: planetShopStore.getPlanetLevelUpCost(s.id),
+      }
+    })
+})
+
+function levelUpOne(id: string) {
+  planetShopStore.levelUpPlanet(id)
+  // When the last affordable upgrade is spent the header badge unmounts, which
+  // closes this tooltip automatically — no explicit close needed here.
+}
+
+function levelUpMax(id: string) {
+  const n = planetShopStore.getMaxAffordableLevelCount(id)
+  if (n > 0) planetShopStore.levelUpPlanetTimes(id, n)
+}
 </script>
 
 <template>
@@ -196,20 +244,52 @@ const planetUpgradeCount = computed(() => planetShopStore.affordableUpgradeCount
 
     <!-- ══════════ PLANET ══════════ -->
     <template v-else-if="kind === 'planet'">
-      <div class="bt__title">Planet Upgrades Ready</div>
-      <div class="pl-tt__body">
-        <img src="/img/planet.png" class="pl-tt__icon" alt="" aria-hidden="true" />
-        <div class="pl-tt__lines">
-          <span class="pl-tt__next">
-            <strong>{{ planetUpgradeCount }}</strong> orbit slot{{
-              planetUpgradeCount === 1 ? '' : 's'
-            }}
-            ready to level up
+      <div class="bt__title">Orbit Upgrades</div>
+      <ul class="pu-tt__list">
+        <li
+          v-for="slot in upgradeableSlots"
+          :key="slot.id"
+          class="pu-tt__item"
+          :style="{ '--rc': slot.color }"
+        >
+          <span class="pu-tt__frame">
+            <img :src="slot.image" class="pu-tt__img" :alt="slot.name" />
           </span>
-          <span class="pl-tt__chimes">{{ $formatNumber(gameStore.chimes) }} Chimes available</span>
-        </div>
+          <div class="pu-tt__meta">
+            <span class="pu-tt__name">{{ slot.name }}</span>
+            <span class="pu-tt__sub">
+              <span class="pu-tt__lv">Lv {{ slot.level }}</span>
+              <span class="pu-tt__cost">
+                <Icon :icon="CHIMES_COST_ICON" width="12" height="12" class="pu-tt__cost-ico" />
+                {{ $formatNumber(slot.nextCost) }}
+              </span>
+            </span>
+          </div>
+          <div class="pu-tt__actions">
+            <button
+              class="pu-tt__buy"
+              :aria-label="`Level up ${slot.name}`"
+              @click.stop="levelUpOne(slot.id)"
+            >
+              <Icon icon="game-icons:upgrade" width="14" height="14" />
+              Level Up
+            </button>
+            <button
+              v-if="slot.count > 1"
+              class="pu-tt__max"
+              :aria-label="`Level up ${slot.name} ${slot.count} times`"
+              @click.stop="levelUpMax(slot.id)"
+            >
+              Max ×{{ slot.count }}
+            </button>
+          </div>
+        </li>
+      </ul>
+      <div class="bt__hint">
+        <strong class="pu-tt__hint-count">{{ planetLevelCount }}</strong>
+        level-up{{ planetLevelCount === 1 ? '' : 's' }} affordable ·
+        {{ $formatNumber(gameStore.chimes) }} Chimes
       </div>
-      <div class="bt__hint">Open Planets to attune your orbit slots</div>
     </template>
   </div>
 </template>
@@ -546,42 +626,166 @@ const planetUpgradeCount = computed(() => planetShopStore.affordableUpgradeCount
   color: #e8c040;
 }
 
-/* ── planet ─────────────────────────────────────────────────────────── */
-.pl-tt__body {
+/* ── planet — interactive orbit-upgrade list ────────────────────────── */
+.bt--planet {
+  min-width: 268px;
+}
+
+.pu-tt__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 2px;
+  display: flex;
+  flex-direction: column;
+}
+
+.pu-tt__item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 9px;
+  padding: 7px 12px;
 }
 
-.pl-tt__icon {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
+.pu-tt__item + .pu-tt__item {
+  border-top: 1px solid #221a10;
+}
+
+/* role-tinted planet medallion */
+.pu-tt__frame {
   flex-shrink: 0;
-  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.55));
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  background: radial-gradient(circle at 50% 38%, #191712 0%, #0c0a06 100%);
+  border: 1px solid var(--rc, #3a8040);
+  border-radius: 4px;
+  box-shadow: inset 0 0 6px color-mix(in srgb, var(--rc, #3a8040) 30%, transparent);
 }
 
-.pl-tt__lines {
+.pu-tt__img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--rc, #3a8040) 55%, transparent));
+}
+
+.pu-tt__meta {
+  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.pl-tt__next {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #e8e0cc;
+.pu-tt__name {
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--rc, #e8e0cc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.pl-tt__next strong {
-  color: #6ee7b7;
+.pu-tt__sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
-.pl-tt__chimes {
-  font-size: 0.75rem;
-  font-weight: 600;
+.pu-tt__lv {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #ffe9a8;
+  background: linear-gradient(to bottom, #3a2a10, #241806);
+  border: 1px solid #5c3310;
+  border-radius: 3px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+
+.pu-tt__cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.74rem;
+  font-weight: 700;
   color: #e8c040;
+}
+
+.pu-tt__cost-ico {
+  color: #e8c040;
+  flex-shrink: 0;
+}
+
+.pu-tt__actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+}
+
+.pu-tt__buy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 9px;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition:
+    filter 0.12s,
+    transform 0.12s;
+}
+
+.pu-tt__buy:hover {
+  filter: brightness(1.12);
+}
+
+.pu-tt__buy:active {
+  transform: scale(0.96);
+}
+
+.pu-tt__max {
+  padding: 2px 6px;
+  background: #16140e;
+  border: 1px solid #3a8040;
+  border-radius: 3px;
+  color: #6ee7b7;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    filter 0.12s,
+    transform 0.12s;
+}
+
+.pu-tt__max:hover {
+  background: #1c2a18;
+  filter: brightness(1.1);
+}
+
+.pu-tt__max:active {
+  transform: scale(0.96);
+}
+
+.pu-tt__hint-count {
+  color: #6ee7b7;
+  font-weight: 900;
 }
 </style>

@@ -42,8 +42,12 @@ const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
 )
 const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
-// Planet tab: how many orbit slots can afford their next level right now.
-const planetBadgeCount = computed(() => planetShopStore.affordableUpgradeCount)
+// Planet tab: TOTAL affordable level-ups across all six orbit slots right now.
+const planetBadgeCount = computed(() => planetShopStore.affordableLevelCount)
+// Compact badge label — the total can climb high, so cap the glyph at 99+.
+const planetBadgeLabel = computed(() =>
+  planetBadgeCount.value > 99 ? '99+' : String(planetBadgeCount.value),
+)
 
 /* Badge anchors on the arc ellipse (θ = π/2 at the apex where the level badge
    sits). Slots are solved numerically so the edge-to-edge pixel gap is the
@@ -458,14 +462,14 @@ onUnmounted(() => {
             v-if="planetBadgeCount > 0"
             class="header-notif-badge header-notif-badge--planet"
             :style="planetBadgeStyle"
-            :aria-label="`${planetBadgeCount} planet upgrade(s) ready`"
+            :aria-label="`${planetBadgeCount} planet level-up(s) affordable`"
             @click.stop="openPlanetsTab"
           >
-            {{ planetBadgeCount }}
+            {{ planetBadgeLabel }}
           </button>
         </Transition>
-        <template #tip>
-          <RpgBadgeTooltipBody kind="planet" />
+        <template #tip="{ close }">
+          <RpgBadgeTooltipBody kind="planet" :close="close" />
         </template>
       </RpgBadgeTooltip>
     </div>
