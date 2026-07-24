@@ -252,6 +252,11 @@ function buyAllUpgrades() {
     <!-- ══════════ PLANET ══════════ -->
     <template v-else-if="kind === 'planet'">
       <div class="bt__title">Orbit Upgrades</div>
+      <button class="pu-tt__buyall" @click.stop="buyAllUpgrades">
+        <Icon icon="game-icons:upgrade" width="15" height="15" />
+        Buy All
+        <span class="pu-tt__buyall-count">{{ planetLevelCount }}</span>
+      </button>
       <ul class="pu-tt__list">
         <li
           v-for="slot in upgradeableSlots"
@@ -282,11 +287,6 @@ function buyAllUpgrades() {
           </button>
         </li>
       </ul>
-      <button class="pu-tt__buyall" @click.stop="buyAllUpgrades">
-        <Icon icon="game-icons:upgrade" width="15" height="15" />
-        Buy All
-        <span class="pu-tt__buyall-count">{{ planetLevelCount }}</span>
-      </button>
       <div class="bt__hint">
         <Icon :icon="CHIMES_COST_ICON" width="12" height="12" class="pu-tt__cost-ico" />
         {{ $formatNumber(gameStore.chimes) }} Chimes available
