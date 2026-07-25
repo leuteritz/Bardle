@@ -4,12 +4,6 @@
     <div class="roster-head">
       <span class="roster-rule" />
       <span class="roster-title">YOUR TEAM</span>
-      <span
-        class="ready-badge"
-        :class="hasFullTeam ? 'ready-badge--full' : 'ready-badge--open'"
-      >
-        {{ teamProgress }} / 5 {{ hasFullTeam ? 'READY' : 'FILLED' }}
-      </span>
       <span class="roster-rule" />
     </div>
 
@@ -139,8 +133,6 @@ function tintFor(color: string): string {
 }
 
 const battleStore = useBattleStore()
-const teamProgress = computed(() => battleStore.headerSlots.filter((s) => s !== null).length)
-const hasFullTeam = computed(() => teamProgress.value >= 5)
 
 // Career kills merged with the running battle, same display-only pattern as
 // the landing stat panels (career accumulates once the battle finalizes).
@@ -334,24 +326,6 @@ const mvpHolder = computed<string | null>(() => {
   padding-left: 8px;
   color: #e8c040;
   text-shadow: 0 0 20px rgba(232, 192, 64, 0.28);
-}
-
-.ready-badge {
-  font-size: clamp(10px, 1.25vh, 13px);
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  padding: 3px 12px;
-  border-radius: 4px;
-}
-.ready-badge--full {
-  color: #8ee060;
-  border: 1px solid #3f6b24;
-  background: #16250e;
-}
-.ready-badge--open {
-  color: #cc6050;
-  border: 1px solid #64302a;
-  background: #24100d;
 }
 
 /* ── Card row: five equal champ-select tiles ── */
