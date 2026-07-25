@@ -1570,6 +1570,9 @@ export const RANK_EMBLEM_IMAGES: Record<string, string> = {
   Challenger: '/img/RankBorder/RankChallenger.png',
 }
 
+/** Win streak from which the ladder flank paints the streak "hot" (BattleLandingScreen) */
+export const HOT_WIN_STREAK_THRESHOLD = 3
+
 export const RANK_TIER_COLORS: Record<string, string> = {
   Iron: '#8a9098',
   Bronze: '#c87832',
@@ -3093,8 +3096,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:cape', // Skins button (SigilDetailsPanel) + skin gallery modal (ChampionSkinsPanel)
   // Battle tab redesign (landing / rift / honor)
   'game-icons:power-button', // STOP AUTO-BATTLE bar → return to landing (AutoBattleStopBar)
-  'game-icons:sword-clash', // COMBAT flank header on the rank band (BattleLandingScreen)
-  'game-icons:crown-coin', // CONQUEST flank header on the rank band (BattleLandingScreen)
+  'game-icons:sword-clash', // LEGEND flank header on the rank band (BattleLandingScreen)
+  'game-icons:crown-coin', // LADDER flank header on the rank band (BattleLandingScreen)
   'game-icons:laurels-trophy', // MVP band (HonorGrantPanel) + MVP showcase (VictorySplashPanel)
   'game-icons:medal', // Grant honor header + medal stamp (HonorGrantPanel)
   'game-icons:watchtower', // Turrets (BATTLE_STAT_GAME_ICONS — ScoreTopBar, BottomScoreboard, KillFeedTicker, AnnouncementBanner)

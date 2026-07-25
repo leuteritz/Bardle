@@ -24,6 +24,10 @@
           </span>
         </span>
         <span class="row-label">{{ row.label }}</span>
+        <!-- Optional share bar (win/loss split) directly under its number -->
+        <span v-if="row.bar !== undefined" class="row-bar">
+          <span class="row-bar-fill" :style="{ width: row.bar + '%' }" />
+        </span>
       </div>
     </div>
   </div>
@@ -40,6 +44,8 @@ export interface RankStatRow {
      so the landing page mirrors the scoreboards' iconography */
   gameIcon?: string
   image?: string
+  /** 0–100: renders a slim share bar under the row (used for the win/loss split) */
+  bar?: number
 }
 
 export interface RankStatGroup {
@@ -105,13 +111,34 @@ defineProps<{
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(9px, 1.8vh, 26px);
+  gap: clamp(8px, 1.2vh, 18px);
 }
 
 .column-row {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+.stat-column--right .column-row {
+  align-items: flex-end;
+}
+
+/* Win/loss split — the loss share is the exposed track behind the fill */
+.row-bar {
+  align-self: stretch;
+  margin-top: 4px;
+  height: 5px;
+  background: #4a2018;
+  border: 1px solid #241d10;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.row-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(to right, #2e7a1a, #52b830);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .row-value-line {
@@ -158,13 +185,17 @@ defineProps<{
    cards enough height — the numbers stay large, only the air between them goes. */
 @media (max-height: 1100px) {
   .column-rows {
-    gap: 10px;
+    gap: 6px;
   }
   .row-value {
-    font-size: 26px;
+    font-size: 24px;
   }
   .column-header {
     padding-bottom: 4px;
+  }
+  .row-bar {
+    margin-top: 3px;
+    height: 4px;
   }
 }
 </style>

@@ -12,11 +12,8 @@
       RANK UP
     </button>
 
-    <!-- ── Secondary: ladder record ribbon ── -->
-    <LadderRecordRibbon class="landing-layer" />
-
     <!-- ── Focus 1: rank + LP, flanked by the headline career numbers ── -->
-    <RankBandPanel class="landing-layer" :left-group="combatGroup" :right-group="conquestGroup" />
+    <RankBandPanel class="landing-layer" :left-group="ladderGroup" :right-group="legendGroup" />
 
     <!-- ── Focus 2: team roster, full stage width ── -->
     <TeamRosterPanel class="roster-slot landing-layer" />
@@ -74,9 +71,8 @@ import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useBattleScoreboardStats } from '@/composables/useBattleScoreboardStats'
 import { formatNumber } from '@/config/numberFormat'
-import { BATTLE_STAT_GAME_ICONS, BATTLE_STAT_IMAGES } from '@/config/constants'
+import { BATTLE_STAT_GAME_ICONS, HOT_WIN_STREAK_THRESHOLD } from '@/config/constants'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
-import LadderRecordRibbon from './LadderRecordRibbon.vue'
 import RankBandPanel from './RankBandPanel.vue'
 import { type RankStatGroup } from './RankStatColumn.vue'
 import TeamRosterPanel from './TeamRosterPanel.vue'
@@ -109,10 +105,52 @@ const buttonSubline = computed(() => {
 // scoreboard via useBattleScoreboardStats so both always show the same numbers.
 const { live, kills, kdaStr } = useBattleScoreboardStats()
 
-// The two flanks of the rank band. Deliberately short: four headline numbers a
-// side, big enough to read at a glance — the full breakdown lives in Bard Stats.
-const combatGroup = computed<RankStatGroup>(() => ({
-  title: 'COMBAT',
+const winRateStr = computed(() =>
+  battleStore.totalBattles === 0
+    ? '0.0'
+    : ((battleStore.totalWins / battleStore.totalBattles) * 100).toFixed(1),
+)
+
+/** Win share for the split bar — 50/50 before the first game, so an empty
+ *  record never reads as an all-loss season. */
+const winSharePct = computed(() =>
+  battleStore.totalBattles === 0
+    ? 50
+    : (battleStore.totalWins / battleStore.totalBattles) * 100,
+)
+
+// ── The two flanks of the rank band ──
+// Left is the ladder record that explains the rank in the middle; right is the
+// career the player brags about. Five numbers a side, large enough to read at a
+// glance — the exhaustive breakdown belongs in Bard Stats, not on this screen.
+const ladderGroup = computed<RankStatGroup>(() => ({
+  title: 'LADDER',
+  icon: 'game-icons:crown-coin',
+  color: '#e8c040',
+  rows: [
+    { label: 'Wins', value: formatNumber(battleStore.totalWins), color: '#52b830' },
+    { label: 'Losses', value: formatNumber(battleStore.totalLosses), color: '#cc6050' },
+    {
+      label: 'Winrate',
+      value: `${winRateStr.value}%`,
+      color: '#e8c040',
+      bar: winSharePct.value,
+    },
+    {
+      // the personal best rides along in the label instead of costing a row
+      label:
+        battleStore.bestWinStreak > 0
+          ? `Streak · best ${battleStore.bestWinStreak}W`
+          : 'Win Streak',
+      value: `${battleStore.currentWinStreak}W`,
+      color: battleStore.currentWinStreak >= HOT_WIN_STREAK_THRESHOLD ? '#f06820' : undefined,
+    },
+    { label: 'MMR', value: formatNumber(battleStore.mmr) },
+  ],
+}))
+
+const legendGroup = computed<RankStatGroup>(() => ({
+  title: 'LEGEND',
   icon: 'game-icons:sword-clash',
   color: '#cc6050',
   rows: [
@@ -124,6 +162,11 @@ const combatGroup = computed<RankStatGroup>(() => ({
     },
     { label: 'KDA', value: kdaStr.value, color: '#e8c040' },
     {
+      label: 'Champ Dmg',
+      value: formatNumber(battleStore.allTime.damage + live.value.damage),
+      gameIcon: BATTLE_STAT_GAME_ICONS.damage,
+    },
+    {
       label: 'Pentakills',
       value: formatNumber(
         battleStore.allTime.multikills.penta + battleStore.liveBattleStats.multikills.penta,
@@ -131,37 +174,6 @@ const combatGroup = computed<RankStatGroup>(() => ({
       color: '#ff9a40',
     },
     { label: 'MVP Awards', value: formatNumber(battleStore.allTime.mvpAwards), color: '#e8c040' },
-  ],
-}))
-
-const conquestGroup = computed<RankStatGroup>(() => ({
-  title: 'CONQUEST',
-  icon: 'game-icons:crown-coin',
-  color: '#e8c040',
-  rows: [
-    {
-      label: 'Total Gold',
-      value: formatNumber(battleStore.allTime.gold + live.value.gold),
-      color: '#e8c040',
-      image: BATTLE_STAT_IMAGES.gold,
-    },
-    {
-      label: 'Champ Dmg',
-      value: formatNumber(battleStore.allTime.damage + live.value.damage),
-      gameIcon: BATTLE_STAT_GAME_ICONS.damage,
-    },
-    {
-      label: 'Dragons',
-      value: formatNumber(battleStore.allTime.dragons + live.value.dragons),
-      color: '#6ee0a0',
-      image: BATTLE_STAT_IMAGES.dragons,
-    },
-    {
-      label: 'Barons',
-      value: formatNumber(battleStore.allTime.barons + live.value.barons),
-      color: '#c9a0f5',
-      image: BATTLE_STAT_IMAGES.barons,
-    },
   ],
 }))
 </script>
@@ -246,7 +258,7 @@ const conquestGroup = computed<RankStatGroup>(() => ({
 .roster-slot {
   /* takes nearly all spare height — the rank band only sinks what is left over
      once the cards hit their cap */
-  flex: 6 1 auto;
+  flex: 12 1 auto;
   min-width: 0;
   min-height: 0;
   max-height: clamp(260px, 38vh, 470px);
