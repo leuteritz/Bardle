@@ -31,6 +31,7 @@
         :title="!hasFullTeam && !isBattleLive ? `${5 - teamProgress} role(s) still open` : ''"
         @click="$emit('start')"
       >
+        <span class="battle-btn-edge" />
         <span class="battle-btn-face">
           <Icon
             v-if="isStarting"
@@ -56,9 +57,6 @@
           </span>
           <span v-else>START BATTLE</span>
         </span>
-        <span class="battle-btn-sub">
-          {{ buttonSubline }}
-        </span>
       </button>
       <div class="action-rule action-rule--right" />
     </div>
@@ -77,7 +75,7 @@ import RankBandPanel from './RankBandPanel.vue'
 import { type RankStatGroup } from './RankStatColumn.vue'
 import TeamRosterPanel from './TeamRosterPanel.vue'
 
-const props = defineProps<{ isStarting: boolean }>()
+defineProps<{ isStarting: boolean }>()
 defineEmits<{ start: [] }>()
 
 const battleStore = useBattleStore()
@@ -92,14 +90,6 @@ const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
 function adminRankUp() {
   battleStore.adminPromoteRank()
 }
-
-/** Second line inside the button — says what the click actually does. */
-const buttonSubline = computed(() => {
-  if (props.isStarting) return 'SEARCHING FOR A PLANET'
-  if (isBattleLive.value) return 'BATTLE IN PROGRESS'
-  if (!hasFullTeam.value) return 'FILL EVERY ROLE TO QUEUE UP'
-  return `QUEUE WITH ${teamProgress.value} CHAMPIONS`
-})
 
 // Career totals merged with the running battle — shared with the bottom-bar
 // scoreboard via useBattleScoreboardStats so both always show the same numbers.
@@ -284,22 +274,23 @@ const legendGroup = computed<RankStatGroup>(() => ({
 }
 
 .battle-btn {
+  position: relative;
   flex-shrink: 0;
+  overflow: hidden;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  min-width: clamp(250px, 21vw, 380px);
-  padding: clamp(7px, 1vh, 11px) clamp(20px, 2vw, 32px);
+  min-width: clamp(270px, 23vw, 420px);
+  padding: clamp(10px, 1.5vh, 17px) clamp(30px, 3.2vw, 56px);
   font-family: inherit;
-  background: linear-gradient(to bottom, #1e2e12, #131e0c);
+  background: linear-gradient(to bottom, #24380f 0%, #172708 52%, #0f1c06 100%);
   border: 2px solid #4a8a28;
   border-radius: 5px;
   box-shadow:
+    inset 0 1px 0 rgba(160, 255, 120, 0.14),
     inset 0 0 0 1px #0e1a08,
     0 0 24px rgba(74, 138, 40, 0.35);
-  color: #8ee060;
+  color: #a8f078;
   cursor: pointer;
   transition:
     background 0.15s,
@@ -309,70 +300,110 @@ const legendGroup = computed<RankStatGroup>(() => ({
   animation: battle-btn-glow 2.6s ease-in-out infinite;
 }
 .battle-btn:hover:not(:disabled) {
-  background: linear-gradient(to bottom, #28401a, #1a2a10);
-  border-color: #6ec040;
-  box-shadow:
-    inset 0 0 0 1px #0e1a08,
-    0 0 44px rgba(82, 184, 48, 0.6);
+  background: linear-gradient(to bottom, #2e4614 0%, #1d310b 52%, #142408 100%);
+  border-color: #7ad84a;
+  transform: translateY(-2px);
 }
 .battle-btn:active:not(:disabled) {
-  transform: scale(0.985);
+  transform: translateY(0) scale(0.985);
+}
+
+/* Energy line along the bottom edge — the button's own signature accent */
+.battle-btn-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #8ee060, transparent);
+  opacity: 0.65;
+  transition:
+    height 0.15s ease,
+    opacity 0.15s ease;
+  pointer-events: none;
+}
+.battle-btn:hover:not(:disabled) .battle-btn-edge {
+  height: 3px;
+  opacity: 1;
+}
+
+/* Light streak — parked out of sight, sweeps once per hover cycle */
+.battle-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -45%;
+  width: 32%;
+  background: linear-gradient(to right, transparent, rgba(220, 255, 200, 0.16), transparent);
+  transform: skewX(-18deg);
+  pointer-events: none;
+}
+.battle-btn:hover:not(:disabled)::after {
+  animation: battle-btn-sheen 1.2s ease-in-out infinite;
+}
+
+@keyframes battle-btn-sheen {
+  0% {
+    left: -45%;
+  }
+  100% {
+    left: 130%;
+  }
 }
 
 .battle-btn-face {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(8px, 0.8vw, 13px);
-  font-size: clamp(14px, 1.75vh, 20px);
+  gap: clamp(10px, 1vw, 16px);
+  font-size: clamp(16px, 2.1vh, 25px);
   font-weight: 700;
-  letter-spacing: 4px;
+  letter-spacing: 6px;
   line-height: 1.1;
-}
-
-.battle-btn-sub {
-  font-size: clamp(7px, 0.9vh, 9px);
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: #5d8a44;
+  /* the trailing letter-space would push the label off centre */
+  padding-left: 6px;
+  text-shadow: 0 0 16px rgba(120, 220, 80, 0.35);
 }
 
 .battle-btn--locked {
-  background: linear-gradient(to bottom, #150e06, #0e0904) !important;
+  background: linear-gradient(to bottom, #17100a, #0d0805) !important;
   border-color: #3a2010 !important;
-  color: #6a4a22 !important;
+  color: #7a5628 !important;
   cursor: not-allowed !important;
-  box-shadow: none !important;
+  box-shadow: inset 0 0 0 1px #0a0704 !important;
   animation: none;
 }
-.battle-btn--locked .battle-btn-sub {
-  color: #4a3018;
+.battle-btn--locked .battle-btn-edge {
+  background: linear-gradient(to right, transparent, #5c3310, transparent);
+  opacity: 0.5;
 }
 .battle-btn--locked .battle-btn-face {
-  font-size: clamp(13px, 1.6vh, 18px);
+  font-size: clamp(14px, 1.8vh, 21px);
+  text-shadow: none;
 }
 
 .battle-btn--live {
-  background: linear-gradient(to bottom, #2e1e08, #1c1204);
+  background: linear-gradient(to bottom, #392508 0%, #241704 52%, #180f03 100%);
   border-color: #c89040;
-  color: #e8c040;
+  color: #f0cf68;
   box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.16),
     inset 0 0 0 1px #1a1004,
     0 0 24px rgba(200, 144, 64, 0.35);
   animation: battle-btn-glow-live 2.6s ease-in-out infinite;
 }
-.battle-btn--live .battle-btn-sub {
-  color: #a08448;
+.battle-btn--live .battle-btn-edge {
+  background: linear-gradient(to right, transparent, #e8c040, transparent);
 }
 .battle-btn--live .battle-btn-face {
-  font-size: clamp(13px, 1.6vh, 18px);
+  font-size: clamp(14px, 1.8vh, 21px);
+  text-shadow: 0 0 16px rgba(232, 192, 64, 0.35);
 }
 .battle-btn--live:hover:not(:disabled) {
-  background: linear-gradient(to bottom, #3e2a0c, #241806);
-  border-color: #e8c060;
-  box-shadow:
-    inset 0 0 0 1px #1a1004,
-    0 0 44px rgba(232, 192, 64, 0.5);
+  background: linear-gradient(to bottom, #4a3110 0%, #2e1e06 52%, #1e1304 100%);
+  border-color: #f0d070;
 }
 
 .battle-btn-img {
@@ -404,13 +435,15 @@ const legendGroup = computed<RankStatGroup>(() => ({
   0%,
   100% {
     box-shadow:
+      inset 0 1px 0 rgba(160, 255, 120, 0.14),
       inset 0 0 0 1px #0e1a08,
       0 0 18px rgba(74, 138, 40, 0.3);
   }
   50% {
     box-shadow:
+      inset 0 1px 0 rgba(160, 255, 120, 0.14),
       inset 0 0 0 1px #0e1a08,
-      0 0 40px rgba(82, 184, 48, 0.55);
+      0 0 44px rgba(82, 184, 48, 0.6);
   }
 }
 
@@ -418,13 +451,15 @@ const legendGroup = computed<RankStatGroup>(() => ({
   0%,
   100% {
     box-shadow:
+      inset 0 1px 0 rgba(255, 220, 140, 0.16),
       inset 0 0 0 1px #1a1004,
       0 0 18px rgba(200, 144, 64, 0.3);
   }
   50% {
     box-shadow:
+      inset 0 1px 0 rgba(255, 220, 140, 0.16),
       inset 0 0 0 1px #1a1004,
-      0 0 40px rgba(232, 192, 64, 0.5);
+      0 0 44px rgba(232, 192, 64, 0.55);
   }
 }
 
@@ -452,8 +487,12 @@ const legendGroup = computed<RankStatGroup>(() => ({
 @media (prefers-reduced-motion: reduce) {
   .battle-btn,
   .battle-btn--live,
-  .battle-btn-live-dot {
+  .battle-btn-live-dot,
+  .battle-btn:hover:not(:disabled)::after {
     animation: none;
+  }
+  .battle-btn:hover:not(:disabled) {
+    transform: none;
   }
 }
 </style>
