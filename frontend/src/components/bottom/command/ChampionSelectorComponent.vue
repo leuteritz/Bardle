@@ -160,7 +160,6 @@ function onSlotLeave() {
           <div class="champ-card-down-veil" />
           <div class="champ-card-down-hatch" />
           <div class="champ-card-down-core">
-            <span class="champ-card-down-tag">DOWN</span>
             <span class="champ-card-down-ring" :style="{ '--down-progress': downProgress(i) }">
               <Icon icon="game-icons:tombstone" width="30" height="30" />
             </span>
@@ -479,17 +478,6 @@ function onSlotLeave() {
   /* hält den Block über dem Rollen-Banner am unteren Kartenrand */
   padding-bottom: 30px;
   pointer-events: none;
-}
-
-.champ-card-down-tag {
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.22em;
-  text-indent: 0.22em;
-  color: #f0a090;
-  text-shadow:
-    0 0 8px rgba(204, 96, 80, 0.7),
-    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 /* Grabmal-Emblem mit Revive-Ring: der Ring schmilzt über die Ausfallzeit ab —

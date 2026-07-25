@@ -12,7 +12,12 @@ import type { PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import { formatNumber } from '@/config/numberFormat'
 import { playerSlotInForeground } from '@/utils/foregroundGate'
-import { PLANET_IMAGE_DIR, PLANET_IMAGE_THUMB_DIR, HUD_COUNTDOWN_TICK_MS } from '@/config/constants'
+import {
+  PLANET_IMAGE_DIR,
+  PLANET_IMAGE_THUMB_DIR,
+  HUD_COUNTDOWN_TICK_MS,
+  PLANET_RESPAWN_MS,
+} from '@/config/constants'
 import ChampionSelectorComponent from '@/components/bottom/command/ChampionSelectorComponent.vue'
 
 const planetStore = usePlanetShopStore()
@@ -68,9 +73,21 @@ function buffMsLeft(slot: PlanetSlot): number {
   return slot.jungleBuff?.active ? Math.max(0, slot.jungleBuff.activeUntil - buffNow.value) : 0
 }
 
+/** Restliche Ausfallzeit eines zerstörten Planeten in ms (0 = im Orbit). */
+function downMsLeft(slot: PlanetSlot): number {
+  return Math.max(0, slot.downUntilMs - buffNow.value)
+}
+
 /** Restliche Ausfallzeit eines zerstörten Planeten in ganzen Sekunden. */
 function downSecsLeft(slot: PlanetSlot): number {
-  return Math.max(0, Math.ceil((slot.downUntilMs - buffNow.value) / 1000))
+  return Math.ceil(downMsLeft(slot) / 1000)
+}
+
+/** Restanteil der Ausfallzeit (1 → 0) für den abschmelzenden Respawn-Ring —
+ *  gleiche Anzeige wie beim gefallenen Champion, nur über die deutlich
+ *  längere Planeten-Ausfallzeit. */
+function downProgress(slot: PlanetSlot): number {
+  return Math.min(1, downMsLeft(slot) / PLANET_RESPAWN_MS)
 }
 
 function buffProgress(slot: PlanetSlot): number {
@@ -161,11 +178,17 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
               </div>
             </template>
 
-            <!-- Zerstört: Wrack-Emblem mit Respawn-Countdown, füllt die Kachel -->
+            <!-- Zerstört: Wrack-Emblem mit abschmelzendem Respawn-Ring, füllt
+                 die Kachel. Identische Anzeige wie beim gefallenen Champion
+                 in der Rollenkarte darüber — nur das Emblem und die deutlich
+                 längere Ausfallzeit unterscheiden sich. -->
             <template v-else>
               <div class="cmd-down-veil" />
+              <div class="cmd-down-hatch" />
               <div class="cmd-down-core" :title="`Destroyed — back in ${downSecsLeft(slot)}s`">
-                <Icon icon="game-icons:fragmented-meteor" width="26" height="26" />
+                <span class="cmd-down-ring" :style="{ '--down-progress': downProgress(slot) }">
+                  <Icon icon="game-icons:fragmented-meteor" width="22" height="22" />
+                </span>
                 <span class="cmd-down-timer">{{ downSecsLeft(slot) }}s</span>
               </div>
             </template>
@@ -765,12 +788,26 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   filter: grayscale(100%) brightness(0.28) contrast(0.8);
 }
 
+/* Blutroter Schleier über dem Planetenbild */
 .cmd-down-veil {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(28, 6, 4, 0.62), rgba(3, 2, 4, 0.82));
+  background: radial-gradient(ellipse at 50% 40%, rgba(60, 10, 6, 0.5), rgba(3, 2, 4, 0.88) 85%);
   pointer-events: none;
   z-index: 2;
+}
+
+/* Warnschraffur — HUD-Sprache für "Slot außer Gefecht" */
+.cmd-down-hatch {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(204, 96, 80, 0.09) 0 6px,
+    transparent 6px 14px
+  );
+  pointer-events: none;
+  z-index: 3;
 }
 
 .cmd-down-core {
@@ -781,23 +818,60 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  color: #e08070;
+  gap: 6px;
   pointer-events: none;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
-.cmd-down-core :deep(svg) {
+/* Wrack-Emblem mit Respawn-Ring: der Ring schmilzt über die Ausfallzeit ab —
+   baugleich mit dem Revive-Ring der Champion-Karte, nur eine Stufe kleiner,
+   damit er auf der schmalen Kachel nicht an die Ränder stößt */
+.cmd-down-ring {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, rgba(44, 14, 10, 0.96), rgba(10, 4, 4, 0.96));
+  color: #e08070;
+  box-shadow:
+    0 0 10px rgba(204, 96, 80, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.7);
+}
+
+.cmd-down-ring::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #ff5040 calc(var(--down-progress, 1) * 360deg),
+    rgba(255, 80, 64, 0.14) 0
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 2.5px)
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  filter: drop-shadow(0 0 4px rgba(255, 80, 64, 0.7));
+}
+
+.cmd-down-ring :deep(svg) {
   filter: drop-shadow(0 0 6px rgba(204, 96, 80, 0.7));
   animation: cmd-down-pulse 1.4s ease-in-out infinite alternate;
 }
 
 .cmd-down-timer {
-  font-size: 0.78rem;
+  font-size: 15px;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  line-height: 1;
+  letter-spacing: 0.04em;
   color: #f0b0a0;
   font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 6px rgba(255, 80, 64, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 @keyframes cmd-down-pulse {
