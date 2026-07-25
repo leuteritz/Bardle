@@ -1037,6 +1037,26 @@ export const SUN_HORIZON_CREST_MAX_FACTOR = 1
 export const SUN_HORIZON_RIM_FACTOR = 0.09
 export const SUN_HORIZON_RIM_MIN_PX = 5
 /**
+ * Weicher Limbus. Ein geometrisch harter Schnitt ergibt auf der fast waagerechten
+ * Silhouette der breiten Phasen zwangsläufig eine sichtbare Treppe: pro Pixelspalte
+ * gibt es nur ~1 px Übergang, bei einem Helligkeitssprung von >200 Stufen fällt
+ * jede Stufe ins Auge (gemessen: 40 % der Spalten ohne jeden Zwischenwert —
+ * unabhängig davon, ob per mask, clip-path oder SVG geschnitten wird).
+ *
+ * Deshalb läuft die Maske über SUN_HORIZON_SOFT_FACTOR × Saumbreite aus, und die
+ * Box ragt um SUN_HORIZON_PAD_FACTOR × Saumbreite über den Kamm hinaus, damit
+ * dieser Auslauf auch am Scheitel Platz hat. Zusätzlich sitzt der helle Glutsaum
+ * bewusst INNEN — direkt an der Schnittkante liegt die dunkle Saumfarbe, deren
+ * Kontrast zum Arena-Hintergrund gering ist.
+ */
+export const SUN_HORIZON_SOFT_FACTOR = 0.45
+export const SUN_HORIZON_SOFT_MIN_PX = 2.5
+export const SUN_HORIZON_PAD_FACTOR = 1.4
+export const SUN_HORIZON_PAD_MIN_PX = 10
+/** Halbe Breite des Glut-Halos, der die Silhouette von außen überstrahlt. */
+export const SUN_HORIZON_LIMB_GLOW_FACTOR = 1.8
+export const SUN_HORIZON_LIMB_GLOW_MIN_PX = 8
+/**
  * Waagerechte Ausdehnung der Kernschattierung, geklemmt auf
  * SUN_HORIZON_BODY_RX_FACTOR × Kammhöhe (nie mehr als die halbe Kuppelbreite).
  * Bei den schmalen Phasen liegt der Verlauf damit konzentrisch zur Kuppel und

@@ -1,10 +1,10 @@
 <template>
-  <!-- Eigene Sonne (= der Spieler) als exakter Halbkreis am unteren Arena-Rand:
-       eine Kreisscheibe, deren Mittelpunkt auf dem Boden liegt — sichtbar ist
-       damit genau die obere Hälfte. Jede Phase (Comet eingeschlossen) nutzt
-       dieselbe Silhouette, nur der Radius wächst. Darüber die HP-Leiste, dann
-       die Champion-Row. Reine Anzeige — der Schaden ist autoritativ im
-       roleBehaviorStore verrechnet (Shock Nova + Strike).
+  <!-- Eigene Sonne (= der Spieler) als Kreiskalotte am unteren Arena-Rand. Der
+       Comet ist ein exakter Halbkreis (Scheibenmittelpunkt auf dem Boden), mit
+       jeder Phase wächst die Breite bis zur vollen Arenabreite — der Mittelpunkt
+       wandert dabei unter den Boden, die Silhouette bleibt ein echter Kreisbogen.
+       Darüber die HP-Leiste, dann die Champion-Row. Reine Anzeige — der Schaden
+       ist autoritativ im roleBehaviorStore verrechnet (Shock Nova + Strike).
 
        Wichtig: der Wurzel-Container hat KEINEN z-index und kein `contain`,
        damit seine Kinder direkt im Stacking-Context der Arena liegen. Nur so
@@ -19,6 +19,10 @@
   >
     <!-- Korona: weicher Halo, der die Kuppel umschließt -->
     <span class="sfsun-glow" />
+
+    <!-- Glut-Halo direkt auf der Silhouette: überstrahlt die Schnittkante von
+         außen, damit der Helligkeitssprung nicht in einem Pixel passiert -->
+    <span class="sfsun-limbglow" />
 
     <!-- Sonnenkuppel — obere Hälfte einer Kreisscheibe auf dem Arena-Boden -->
     <span class="sfsun-dome" />
@@ -94,6 +98,12 @@ import {
   SUN_HORIZON_CREST_MAX_FACTOR,
   SUN_HORIZON_RIM_FACTOR,
   SUN_HORIZON_RIM_MIN_PX,
+  SUN_HORIZON_SOFT_FACTOR,
+  SUN_HORIZON_SOFT_MIN_PX,
+  SUN_HORIZON_PAD_FACTOR,
+  SUN_HORIZON_PAD_MIN_PX,
+  SUN_HORIZON_LIMB_GLOW_FACTOR,
+  SUN_HORIZON_LIMB_GLOW_MIN_PX,
   SUN_HORIZON_BODY_RX_FACTOR,
   SUN_HORIZON_HOTSPOT_WIDTH_FACTOR,
   SUN_HORIZON_HOTSPOT_HEIGHT_FACTOR,
@@ -200,6 +210,10 @@ const rootVars = computed<Record<string, string>>(() => {
   const ph = phaseData.value
   const r = crestPx.value
   const d = domeWidthPx.value
+  const rim = Math.max(SUN_HORIZON_RIM_MIN_PX, Math.round(r * SUN_HORIZON_RIM_FACTOR))
+  const soft = Math.max(SUN_HORIZON_SOFT_MIN_PX, Math.round(rim * SUN_HORIZON_SOFT_FACTOR * 10) / 10)
+  const pad = Math.max(SUN_HORIZON_PAD_MIN_PX, Math.round(rim * SUN_HORIZON_PAD_FACTOR))
+  const limb = Math.max(SUN_HORIZON_LIMB_GLOW_MIN_PX, Math.round(rim * SUN_HORIZON_LIMB_GLOW_FACTOR))
   return {
     '--sfsun-core': comet ? COMET_PHASE_DATA.core : ph.core,
     '--sfsun-mid': comet ? COMET_PHASE_DATA.mid : ph.mid,
@@ -213,8 +227,14 @@ const rootVars = computed<Record<string, string>>(() => {
     '--sfsun-r': `${r}px`,
     '--sfsun-d': `${d}px`,
     '--sfsun-cr': `${sphereRadiusPx.value}px`,
-    // Saum- und Hotspot-Maße wachsen mit der Kuppel (siehe constants.ts)
-    '--sfsun-rim': `${Math.max(SUN_HORIZON_RIM_MIN_PX, Math.round(r * SUN_HORIZON_RIM_FACTOR))}px`,
+    // Saum-, Hotspot- und Limbus-Maße wachsen mit der Kuppel (siehe constants.ts)
+    '--sfsun-rim': `${rim}px`,
+    '--sfsun-soft': `${soft}px`,
+    '--sfsun-pad': `${pad}px`,
+    '--sfsun-limb': `${limb}px`,
+    // Mittelpunkt der Scheibe, gemessen von der OBERKANTE der (um pad höheren) Box
+    '--sfsun-cy': `${sphereRadiusPx.value + pad}px`,
+    '--sfsun-limb-cy': `${sphereRadiusPx.value + limb}px`,
     '--sfsun-hotspot': `${Math.round(
       Math.min(d * SUN_HORIZON_HOTSPOT_WIDTH_FACTOR, r * SUN_HORIZON_HOTSPOT_HEIGHT_FACTOR),
     )}px`,
@@ -325,14 +345,19 @@ onUnmounted(() => {
 
 /* ── Silhouette der Sonne ───────────────────────────────────────────────────
    Kuppel, Treffer-Flash und Zielscheiben-Tönung teilen EXAKT dieselbe Kalotte:
-   Box = sichtbare Breite × Kammhöhe, ausgeschnitten von einem Kreis mit Radius
-   --sfsun-cr, dessen Mittelpunkt --sfsun-cr unter der Box-Oberkante liegt (beim
-   Comet also genau auf dem Arena-Boden, bei breiteren Phasen darunter).
+   ausgeschnitten von einem Kreis mit Radius --sfsun-cr, dessen Mittelpunkt
+   --sfsun-cy unter der Box-Oberkante liegt (beim Comet auf dem Arena-Boden, bei
+   breiteren Phasen darunter).
 
    Bewusst per `mask` statt `border-radius`: eine Border-Radius-Kuppel ist immer
    ein ELLIPSENbogen und stünde bei den breiten Phasen mit senkrechten Enden am
    Boden wie eine Wand. Die Maske liefert einen echten Kreisbogen, der flach
-   ausläuft — und kostet nur das sichtbare Band statt einer arenagroßen Scheibe. */
+   ausläuft — und kostet nur das sichtbare Band statt einer arenagroßen Scheibe.
+
+   Die Box ragt um --sfsun-pad ÜBER den Kamm hinaus. Ohne diese Reserve läge der
+   Scheitel exakt auf der Box-Oberkante und der weiche Maskenauslauf hätte dort
+   keinen Platz — genau am Scheitel bliebe die Kante hart. Der Überstand ist
+   maskiert und damit unsichtbar. */
 .sfsun-dome,
 .sfsun-crest,
 .sfsun-aim-cap {
@@ -340,17 +365,44 @@ onUnmounted(() => {
   left: 50%;
   bottom: 0;
   width: var(--sfsun-d, 200px);
-  height: var(--sfsun-r, 100px);
+  height: calc(var(--sfsun-r, 100px) + var(--sfsun-pad, 10px));
   transform: translateX(-50%);
+  /* Alpha läuft über --sfsun-soft aus statt in 0.75 px umzuschlagen */
   mask-image: radial-gradient(
-    circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
-    #000 calc(var(--sfsun-cr, 100px) - 0.75px),
+    circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cy, 110px),
+    #000 calc(var(--sfsun-cr, 100px) - var(--sfsun-soft, 3px)),
     transparent var(--sfsun-cr, 100px)
   );
   -webkit-mask-image: radial-gradient(
-    circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
-    #000 calc(var(--sfsun-cr, 100px) - 0.75px),
+    circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cy, 110px),
+    #000 calc(var(--sfsun-cr, 100px) - var(--sfsun-soft, 3px)),
     transparent var(--sfsun-cr, 100px)
+  );
+}
+
+/* ── Glut-Halo direkt auf der Silhouette ────────────────────────────────────
+   Unmaskierter Ring, der die Schnittkante von AUSSEN überstrahlt: der
+   Helligkeitssprung Hintergrund → Sonne wird damit über --sfsun-limb Pixel
+   verteilt statt in einem. Liegt im DOM vor der Kuppel, ist innen also von ihr
+   verdeckt und nur außerhalb der Silhouette sichtbar. */
+.sfsun-limbglow {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: calc(var(--sfsun-d, 200px) + var(--sfsun-limb, 12px) * 4);
+  height: calc(var(--sfsun-r, 100px) + var(--sfsun-limb, 12px));
+  transform: translateX(-50%);
+  z-index: 0;
+  background: radial-gradient(
+    circle calc(var(--sfsun-cr, 100px) + var(--sfsun-limb, 12px)) at 50%
+      var(--sfsun-limb-cy, 112px),
+    transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-limb, 12px)),
+    color-mix(in srgb, var(--sfsun-glow, #ff8c00) 55%, transparent)
+      calc(var(--sfsun-cr, 100px) - var(--sfsun-limb, 12px) * 0.2),
+    color-mix(in srgb, var(--sfsun-glow, #ff8c00) 34%, transparent) var(--sfsun-cr, 100px),
+    color-mix(in srgb, var(--sfsun-glow, #ff8c00) 12%, transparent)
+      calc(var(--sfsun-cr, 100px) + var(--sfsun-limb, 12px) * 0.5),
+    transparent calc(var(--sfsun-cr, 100px) + var(--sfsun-limb, 12px))
   );
 }
 
@@ -360,23 +412,26 @@ onUnmounted(() => {
 .sfsun-dome {
   z-index: 0;
   background:
-    /* Glutsaum auf der Silhouette — Dicke wächst mit der Kuppel (--sfsun-rim)
-       und läuft über drei Stopps weich aus. Ein fester px-Saum sähe auf der
-       arenabreiten Finale-Sonne wie ein aufgelegter Draht aus. */
+    /* Glutsaum — sitzt bewusst INNEN und ist an der Schnittkante schon wieder
+       transparent. Läge der hellste Punkt auf der Kante, wäre der Kontrast dort
+       maximal und jede 1-px-Treppe der fast waagerechten Silhouette sichtbar. */
     radial-gradient(
-      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
-      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 2.6),
+      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cy, 110px),
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 3.4),
       color-mix(in srgb, white 18%, var(--sfsun-mid, #ffb347))
-        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.1),
-      color-mix(in srgb, white 55%, var(--sfsun-core, #fff0c0))
-        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.35),
-      color-mix(in srgb, white 78%, var(--sfsun-core, #fff0c0)) var(--sfsun-cr, 100px)
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 2.2),
+      color-mix(in srgb, white 62%, var(--sfsun-core, #fff0c0))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.15),
+      color-mix(in srgb, white 30%, var(--sfsun-mid, #ffb347))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.45),
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-soft, 3px) * 0.5)
     ),
-    /* Hotspot in der Kammmitte — Durchmesser folgt Breite UND Höhe der Kuppel.
+    /* Hotspot in der Kammmitte — Durchmesser folgt Breite UND Höhe der Kuppel,
+         Lage vom BODEN aus gerechnet (die Box hat oben --sfsun-pad Reserve).
          Bewusst dezent: ein kräftiger Fleck würde die Phasenfarbe der breiten
          Sonnen in der Mitte zu Weiß auswaschen. */
       radial-gradient(
-        circle var(--sfsun-hotspot, 115px) at 50% 42%,
+        circle var(--sfsun-hotspot, 115px) at 50% calc(100% - var(--sfsun-r, 100px) * 0.58),
         color-mix(in srgb, white 45%, var(--sfsun-core, #fff0c0)) 0%,
         color-mix(in srgb, white 16%, var(--sfsun-core, #fff0c0)) 42%,
         transparent 100%
@@ -451,9 +506,12 @@ onUnmounted(() => {
     /* kleine Pockennarben — nur dunkel, ohne Randlicht */
       radial-gradient(circle at 74% 68%, var(--sfsun-crater, #3a322b) 0 1.6%, transparent 2.3%),
     radial-gradient(circle at 20% 82%, var(--sfsun-crater, #3a322b) 0 1.3%, transparent 2%),
-    /* Grundfels — Lichtquelle oben links, dunkler Fels nach unten rechts */
+    /* Grundfels — Lichtquelle oben links, dunkler Fels nach unten rechts.
+         Lage vom BODEN aus gerechnet, damit die Box-Reserve (--sfsun-pad) das
+         Streiflicht nicht verschiebt. */
       radial-gradient(
-        circle calc(var(--sfsun-r, 100px) * 1.2) at 30% 40%,
+        circle calc(var(--sfsun-r, 100px) * 1.2) at 30%
+          calc(100% - var(--sfsun-r, 100px) * 0.6),
         var(--sfsun-core, #8a7a68) 0%,
         var(--sfsun-mid, #6b5d4f) 44%,
         var(--sfsun-edge, #4a4038) 78%,
@@ -486,17 +544,21 @@ onUnmounted(() => {
 .sfsun-crest {
   z-index: 1;
   background:
-    /* heißer Lichtbogen entlang der Silhouette */
+    /* heißer Lichtbogen entlang der Silhouette — wie der Glutsaum nach innen
+       versetzt, damit die Schnittkante beim Treffer nicht hart aufblitzt */
     radial-gradient(
-      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
-      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 3.5),
+      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cy, 110px),
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 4),
       color-mix(in srgb, white 40%, var(--sfsun-glow, #ff8c00))
-        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.2),
-      color-mix(in srgb, white 78%, var(--sfsun-glow, #ff8c00)) var(--sfsun-cr, 100px)
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.6),
+      color-mix(in srgb, white 78%, var(--sfsun-glow, #ff8c00))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.8),
+      color-mix(in srgb, white 30%, var(--sfsun-glow, #ff8c00))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-soft, 3px))
     ),
     /* flächiges Aufglühen der Kuppel */
       radial-gradient(
-        ellipse 50% 100% at 50% 100%,
+        ellipse 50% var(--sfsun-r, 100px) at 50% 100%,
         color-mix(in srgb, var(--sfsun-glow, #ff8c00) 55%, transparent) 0%,
         color-mix(in srgb, var(--sfsun-glow, #ff8c00) 28%, transparent) 70%,
         transparent 100%
@@ -644,12 +706,12 @@ onUnmounted(() => {
 .sfsun-aim-cap {
   z-index: 2;
   background:
-    /* Glutsaum auf der Silhouette */
+    /* roter Glutsaum auf der Silhouette — ebenfalls nach innen versetzt */
     radial-gradient(
-      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
-      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.6),
-      rgba(255, 120, 90, 0.95) calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.4),
-      rgba(255, 90, 60, 0.9) var(--sfsun-cr, 100px)
+      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cy, 110px),
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 2.4),
+      rgba(255, 120, 90, 0.95) calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1),
+      rgba(255, 90, 60, 0.5) calc(var(--sfsun-cr, 100px) - var(--sfsun-soft, 3px))
     ),
     /* rote Tönung rund um das Reticle — an die Kammhöhe gekoppelt, damit die
          arenabreite Finale-Sonne nicht flächig rot überlackiert wird, die kleine
