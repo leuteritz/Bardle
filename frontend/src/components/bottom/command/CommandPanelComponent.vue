@@ -777,9 +777,10 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
    Kachel kühlt ab (Grayscale, Rollen-Glow aus), dunkler Schleier legt sich
    über das Planetenbild, goldener ✦-Chip atmet oben rechts — gleiche
    Designsprache wie der Eclipse-Status im StarFightModal. */
+/* Rahmen kippt von warm auf kalt — die Kachel steht nicht mehr im Sonnenlicht */
 .cmd-planet-tile--eclipsed {
-  border-color: rgba(122, 78, 32, 0.4);
-  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.6);
+  border-color: rgba(46, 62, 100, 0.65);
+  box-shadow: inset 0 0 18px rgba(4, 8, 20, 0.7);
 }
 .cmd-planet-tile--eclipsed .cmd-tile-planet-img {
   filter: grayscale(65%) brightness(0.5) saturate(0.6);
@@ -790,12 +791,33 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
     filter 0.4s ease;
 }
 
+/* Finsternis-Motiv wie auf den Rollenkarten darüber, nur auf das Kachelformat
+   gezogen: kalter Kernschatten füllt die Kachel, die verdeckte Sonne glimmt
+   als Korona über den oberen Rand. Der Zustand ist damit am Kachelgrund
+   ablesbar, nicht nur am Medaillon. */
 .cmd-eclipse-veil {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(6, 8, 16, 0.4), rgba(2, 3, 8, 0.62));
+  background:
+    radial-gradient(
+      ellipse 150% 42% at 50% -8%,
+      rgba(240, 200, 80, 0.24) 0%,
+      rgba(150, 104, 34, 0.08) 46%,
+      transparent 74%
+    ),
+    radial-gradient(ellipse at 50% 58%, rgba(12, 18, 38, 0.7) 0%, rgba(3, 5, 12, 0.88) 100%);
   pointer-events: none;
   z-index: 2;
+  animation: cmd-eclipse-drift 4.5s ease-in-out infinite alternate;
+}
+
+@keyframes cmd-eclipse-drift {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ── Zerstört: Planet ist aus dem Orbit raus und wartet auf seinen Respawn ──
@@ -957,7 +979,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-chime-img,
   .cmd-planet-tile--selected,
   .cmd-planet-tile--selected.cmd-planet-tile--buy:not(.cmd-planet-tile--locked),
-  .cmd-eclipse-medal {
+  .cmd-eclipse-medal,
+  .cmd-eclipse-veil {
     animation: none;
   }
 }

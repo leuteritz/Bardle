@@ -161,16 +161,16 @@ function onSlotLeave() {
           </div>
 
           <!-- Eclipse: Champion fliegt gerade hinter der Sonne — Fähigkeiten
-               warten, kein Angriff möglich. Kompakter Chip am oberen
-               Kartenrand, damit der Ability-Kern die Kartenmitte behält.
+               warten, kein Angriff möglich. Der Schleier füllt die Karte mit
+               dem Finsternis-Motiv (kalter Kernschatten, verdeckte Sonne
+               glimmt als Korona am oberen Rand), der Chip benennt den Zustand.
                Bewusst ohne Transition: der Status soll sofort umschalten. -->
-          <div
-            v-if="!championInForeground(slot)"
-            class="champ-card-eclipse-medal"
-            title="Behind the Sun — combat paused"
-          >
-            <Icon icon="game-icons:eclipse-flare" width="24" height="24" />
-          </div>
+          <template v-if="!championInForeground(slot)">
+            <div class="champ-card-eclipse-veil" />
+            <div class="champ-card-eclipse-medal" title="Behind the Sun — combat paused">
+              <Icon icon="game-icons:eclipse-flare" width="24" height="24" />
+            </div>
+          </template>
         </template>
 
         <template v-else-if="slot !== null">
@@ -734,13 +734,49 @@ function onSlotLeave() {
 .champ-card--eclipsed .champ-card-portrait {
   filter: grayscale(70%) brightness(0.45) saturate(0.6);
 }
+/* Rahmen und Kopfleiste kippen von warm auf kalt — die Karte steht nicht mehr
+   im Sonnenlicht, also verliert sie auch ihren warmen Ton */
 .champ-card--eclipsed .champ-card-body {
-  border-color: color-mix(in srgb, var(--role-color, #c89040) 32%, #241c10);
-  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.65);
+  border-color: color-mix(in srgb, var(--role-color, #c89040) 20%, #1e2740);
+  box-shadow: inset 0 0 22px rgba(4, 8, 20, 0.75);
 }
 .champ-card--eclipsed .champ-card-bar {
-  opacity: 0.35;
+  opacity: 0.4;
+  background: color-mix(in srgb, var(--role-color, #c89040) 28%, #223052);
   box-shadow: none;
+}
+.champ-card--first.champ-card--eclipsed .champ-card-body {
+  border-top-color: color-mix(in srgb, var(--role-color, #c89040) 28%, #223052);
+}
+
+/* Finsternis-Motiv über der ganzen Karte: ein kalter Kernschatten füllt sie
+   aus, während die verdeckte Sonne als schmale Korona über den oberen Rand
+   glimmt. Deutlich mehr als ein Icon — der Zustand ist am Kartengrund
+   ablesbar, auch wenn man gar nicht auf den Chip schaut. Die langsame
+   Atmung nimmt die Bewegung des Champions hinter der Sonne auf. */
+.champ-card-eclipse-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 140% 40% at 50% -6%,
+      rgba(240, 200, 80, 0.26) 0%,
+      rgba(150, 104, 34, 0.09) 46%,
+      transparent 74%
+    ),
+    radial-gradient(ellipse at 50% 58%, rgba(12, 18, 38, 0.72) 0%, rgba(3, 5, 12, 0.9) 100%);
+  animation: champ-eclipse-drift 4.5s ease-in-out infinite alternate;
+}
+
+@keyframes champ-eclipse-drift {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .champ-card--eclipsed .champ-ability {
   opacity: 0.42;
@@ -1004,6 +1040,7 @@ function onSlotLeave() {
   .champ-ability:not(.champ-ability--cd) .champ-ability-orb,
   .champ-ability--cast .champ-ability-orb,
   .champ-card-eclipse-medal,
+  .champ-card-eclipse-veil,
   .champ-card-down-ring :deep(svg),
   .champ-card--selected .champ-card-body {
     animation: none;
