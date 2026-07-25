@@ -301,26 +301,35 @@ function onSlotLeave() {
     transform 0.25s ease,
     filter 0.3s ease;
 }
-/* ability on cooldown → portrait reads "not ready" at a glance */
+/* ability on cooldown → portrait kühlt leicht ab. Bewusst zurückhaltend: den
+   Cooldown trägt jetzt der Ability-Kern mit Ring und Countdown, das Porträt
+   muss ihn nicht mehr mitsignalisieren und darf lesbar bleiben. */
 .champ-card--cd .champ-card-portrait {
-  filter: grayscale(60%) brightness(0.65);
+  filter: grayscale(30%) brightness(0.86);
 }
 .champ-card:hover .champ-card-portrait {
   transform: scale(1.06);
 }
 
+/* Leerer Slot: das Rollenbild trägt die Karte, statt nur als dunkler Schemen
+   angedeutet zu sein. Ein radialer Mask-Verlauf lässt es zu den Kanten hin
+   auslaufen — es liegt als Relief in der Karte, statt als aufgesetztes Bild
+   auf ihr. Deutlich präsenter als zuvor (0.18), aber weich genug, dass das
+   Rollen-Banner darunter lesbar bleibt. */
 .champ-card-portrait--placeholder {
-  opacity: 0.18;
-  filter: grayscale(50%);
+  opacity: 0.5;
+  filter: grayscale(20%);
   object-fit: contain;
   object-position: center;
+  -webkit-mask: radial-gradient(ellipse at 50% 46%, #000 34%, transparent 76%);
+  mask: radial-gradient(ellipse at 50% 46%, #000 34%, transparent 76%);
   transition:
     opacity 0.2s ease,
     filter 0.2s ease;
 }
 .champ-card:hover .champ-card-portrait--placeholder {
-  opacity: 0.38;
-  filter: grayscale(25%);
+  opacity: 0.78;
+  filter: grayscale(0%);
   transform: none;
 }
 
@@ -361,19 +370,17 @@ function onSlotLeave() {
    den Zustand in einem Ring-Emblem — dieselbe Sprache wie Revive-Ring und
    Jungle-Buff-Chip, nur läuft der Ring hier VOLL statt leer: er zeigt den
    Weg zurück zur Bereitschaft, nicht die Restlaufzeit eines Effekts. */
+/* Der Container ist exakt so groß wie das Emblem und liegt punktgenau auf der
+   Kartenmitte — genau dort sitzen auch die Auswahl-Keile an den Seitenkanten,
+   ihre Spitzen zeigen damit mittig aufs Rollen-Icon. Der Zustandstext hängt
+   absolut darunter: läge er im Fluss, würde er das Emblem um seine halbe Höhe
+   nach oben schieben und die Keile zielten daneben. */
 .champ-ability {
   position: absolute;
-  left: 0;
-  right: 0;
-  /* vertikal mittig auf der Karte — die Zone gehört allein der Fähigkeit,
-     der Eclipse-Chip ist dafür an den oberen Kartenrand gerückt */
   top: 50%;
-  transform: translateY(-50%);
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 4;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
   pointer-events: none;
 }
 
@@ -422,6 +429,11 @@ function onSlotLeave() {
 }
 
 .champ-ability-state {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
   font-size: 16px;
   font-weight: 900;
   line-height: 1;
