@@ -70,10 +70,29 @@
          band width so the crests can be shown large; they stand on a rail whose
          cleared stretch is tinted in the current tier's colour. -->
     <div class="tier-ladder">
-      <span class="ladder-line" />
+      <span class="ladder-line" :style="{ left: railStartPct + '%', right: railStartPct + '%' }" />
       <span
         class="ladder-line ladder-line--done"
-        :style="{ width: ladderDonePercent + '%', background: rankColor, boxShadow: railGlow }"
+        :style="{
+          left: railStartPct + '%',
+          width: ladderDonePercent + '%',
+          background: rankColor,
+          boxShadow: railGlow,
+        }"
+      />
+
+      <!-- Division milestones inside each tier (…IV → III → II → I), so the rail
+           advances between the crests instead of jumping a whole tier at a time -->
+      <span
+        v-for="tick in divisionTicks"
+        :key="tick.key"
+        class="division-tick"
+        :class="{ 'division-tick--reached': tick.reached }"
+        :style="{
+          left: tick.left + '%',
+          ...(tick.reached ? { background: rankColor, boxShadow: tickGlow } : {}),
+        }"
+        :title="tick.title"
       />
       <div
         v-for="(tier, i) in RANK_TIERS"
@@ -176,6 +195,7 @@ const pipGlow = computed(
   () => `drop-shadow(0 0 8px ${rankColor.value}) drop-shadow(0 0 20px ${rankColor.value}66)`,
 )
 const railGlow = computed(() => `0 0 12px ${rankColor.value}80`)
+const tickGlow = computed(() => `0 0 6px ${rankColor.value}99`)
 
 const isHighTier = computed(() =>
   ['Master', 'Grandmaster', 'Challenger'].includes(currentRank.value.tier),
@@ -190,9 +210,58 @@ const currentTierIndex = computed(() =>
   RANK_TIERS.indexOf(currentRank.value.tier as (typeof RANK_TIERS)[number]),
 )
 
-/** Filled length of the ladder rail. Every step owns 1/10 of the width, so pip
- *  k sits at 5% + k·10% — the rail starts at 5% and grows 10% per cleared tier. */
-const ladderDonePercent = computed(() => Math.max(0, currentTierIndex.value) * 10)
+// Ladder geometry: every tier owns an equal slice of the ladder width and its
+// crest sits in the middle of that slice, so the rail runs from half a slice in
+// on the left to half a slice in on the right.
+const ladderStepPct = 100 / RANK_TIERS.length
+const railStartPct = ladderStepPct / 2
+
+/** How far into the current tier the player stands, 0…1. Divisions and the LP
+ *  inside them are both counted, so the rail creeps forward with every win —
+ *  the apex tiers have no divisions and go by their own LP threshold. */
+const tierFraction = computed(() => {
+  const { tier, division, lp } = currentRank.value
+  if (tier === 'Challenger') return 1
+  if (tier === 'Master') return Math.min(1, lp / LP_MASTER_PROMOTION_THRESHOLD)
+  if (tier === 'Grandmaster') return Math.min(1, lp / LP_GRANDMASTER_PROMOTION_THRESHOLD)
+  const divIdx = Math.max(0, RANK_DIVISIONS.indexOf(division as (typeof RANK_DIVISIONS)[number]))
+  const perTier = RANK_DIVISIONS.length * LP_NORMAL_PROMOTION_THRESHOLD
+  return Math.min(1, (divIdx * LP_NORMAL_PROMOTION_THRESHOLD + lp) / perTier)
+})
+
+/** Progress along the whole ladder in tier units (e.g. 5.5 = halfway Emerald). */
+const ladderProgress = computed(
+  () => Math.max(0, currentTierIndex.value) + tierFraction.value,
+)
+
+/** Filled length of the rail, as a percentage of the ladder width. */
+const ladderDonePercent = computed(() => ladderProgress.value * ladderStepPct)
+
+interface DivisionTick {
+  key: string
+  left: number
+  reached: boolean
+  title: string
+}
+
+/** One tick per division promotion inside a tier (III, II, I — IV is the tier's
+ *  own crest). Master and above have no divisions, so they get no ticks. */
+const divisionTicks = computed<DivisionTick[]>(() => {
+  const ticks: DivisionTick[] = []
+  const dividedTiers = RANK_TIERS.indexOf('Master')
+  for (let t = 0; t < dividedTiers; t++) {
+    for (let d = 1; d < RANK_DIVISIONS.length; d++) {
+      const at = t + d / RANK_DIVISIONS.length
+      ticks.push({
+        key: `${RANK_TIERS[t]}-${RANK_DIVISIONS[d]}`,
+        left: railStartPct + at * ladderStepPct,
+        reached: ladderProgress.value >= at,
+        title: `${RANK_TIERS[t]} ${RANK_DIVISIONS[d]}`,
+      })
+    }
+  }
+  return ticks
+})
 
 const lpCap = computed(() => {
   const tier = currentRank.value.tier
@@ -387,8 +456,6 @@ const promotionGoal = computed(() => {
 .ladder-line {
   position: absolute;
   top: calc(var(--pip-head) + var(--pip) + var(--rail-gap));
-  left: 5%;
-  right: 5%;
   height: 2px;
   background: #2b2312;
   border-radius: 4px;
@@ -396,6 +463,24 @@ const promotionGoal = computed(() => {
 .ladder-line--done {
   right: auto;
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Division milestones: short notches across the rail, lit once passed */
+.division-tick {
+  position: absolute;
+  top: calc(var(--pip-head) + var(--pip) + var(--rail-gap) - 4px);
+  width: 2px;
+  height: 10px;
+  margin-left: -1px;
+  background: #3a2f1c;
+  border-radius: 2px;
+  transition:
+    background 0.35s ease,
+    box-shadow 0.35s ease;
+}
+.division-tick--reached {
+  height: 12px;
+  top: calc(var(--pip-head) + var(--pip) + var(--rail-gap) - 5px);
 }
 
 .ladder-step {
