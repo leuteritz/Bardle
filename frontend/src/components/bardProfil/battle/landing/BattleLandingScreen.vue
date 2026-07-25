@@ -1,27 +1,20 @@
 <template>
   <div class="landing-screen">
-    <!-- ── Main split ── -->
-    <div class="landing-main">
-      <!-- Left: rank hero with the team roster right beneath it -->
-      <div class="rank-col">
-        <RankBandPanel />
-        <TeamRosterPanel class="roster-panel-slot" />
-      </div>
+    <!-- Shared cosmic backdrop, same as every other tab -->
+    <CosmicStageBackground />
+    <div class="stage-vignette" />
 
-      <!-- Right: performance -->
-      <div class="perf-col">
-        <MultikillCardsRow />
-        <div class="group-grid">
-          <StatGroupPanel title="COMBAT" icon="game-icons:sword-clash" color="#cc6050" :rows="combatRows" />
-          <StatGroupPanel title="FARM &amp; ECONOMY" icon="game-icons:crown-coin" color="#e8c040" :rows="economyRows" />
-          <StatGroupPanel title="OBJECTIVES" icon="game-icons:stone-tower" color="#a855f7" :rows="objectiveRows" />
-          <StatGroupPanel title="VISION &amp; TIME" icon="game-icons:semi-closed-eye" color="#5b8dd9" :rows="visionRows" />
-        </div>
-      </div>
-    </div>
+    <!-- ── Secondary: ladder record ribbon ── -->
+    <LadderRecordRibbon class="landing-layer" />
 
-    <!-- ── Central battle action bar ── -->
-    <div class="action-bar">
+    <!-- ── Focus 1: rank + LP ── -->
+    <RankBandPanel class="landing-layer" />
+
+    <!-- ── Focus 2: team roster, full stage width ── -->
+    <TeamRosterPanel class="roster-slot landing-layer" />
+
+    <!-- ── Focus 3: the start button ── -->
+    <div class="action-bar landing-layer">
       <div class="action-rule action-rule--left" />
       <button
         class="battle-btn"
@@ -33,30 +26,67 @@
         :title="!hasFullTeam && !isBattleLive ? `${5 - teamProgress} role(s) still open` : ''"
         @click="$emit('start')"
       >
-        <Icon
-          v-if="isStarting"
-          icon="game-icons:sundial"
-          width="24"
-          height="24"
-          style="color: #e8c040"
-        />
-        <img
-          v-else-if="!hasFullTeam && !isBattleLive"
-          src="/img/lock.png"
-          alt="Locked"
-          class="battle-btn-lock"
-        />
-        <span v-else-if="isBattleLive" class="battle-btn-live-dot" />
-        <img v-else src="/img/menu/BATTLE.png" alt="Battle" class="battle-btn-img" />
-        <span v-if="isStarting">STARTING…</span>
-        <span v-else-if="isBattleLive">RETURN TO LIVE BATTLE</span>
-        <span v-else-if="!hasFullTeam">
-          {{ 5 - teamProgress }} SLOT{{ 5 - teamProgress !== 1 ? 'S' : '' }} OPEN
+        <span class="battle-btn-face">
+          <Icon
+            v-if="isStarting"
+            icon="game-icons:sundial"
+            width="24"
+            height="24"
+            class="battle-btn-icon"
+            style="color: #e8c040"
+          />
+          <img
+            v-else-if="!hasFullTeam && !isBattleLive"
+            src="/img/lock.png"
+            alt="Locked"
+            class="battle-btn-lock"
+          />
+          <span v-else-if="isBattleLive" class="battle-btn-live-dot" />
+          <img v-else src="/img/menu/BATTLE.png" alt="Battle" class="battle-btn-img" />
+
+          <span v-if="isStarting">STARTING…</span>
+          <span v-else-if="isBattleLive">RETURN TO LIVE BATTLE</span>
+          <span v-else-if="!hasFullTeam">
+            {{ 5 - teamProgress }} SLOT{{ 5 - teamProgress !== 1 ? 'S' : '' }} OPEN
+          </span>
+          <span v-else>START BATTLE</span>
         </span>
-        <span v-else>START BATTLE</span>
+        <span class="battle-btn-sub">
+          {{ buttonSubline }}
+        </span>
       </button>
       <div class="action-rule action-rule--right" />
     </div>
+
+    <!-- ── Secondary: career ledger along the bottom edge ── -->
+    <div class="stats-row landing-layer">
+      <StatGroupPanel
+        title="COMBAT"
+        icon="game-icons:sword-clash"
+        color="#cc6050"
+        :rows="combatRows"
+      />
+      <StatGroupPanel
+        title="FARM &amp; ECONOMY"
+        icon="game-icons:crown-coin"
+        color="#e8c040"
+        :rows="economyRows"
+      />
+      <StatGroupPanel
+        title="OBJECTIVES"
+        icon="game-icons:stone-tower"
+        color="#a855f7"
+        :rows="objectiveRows"
+      />
+      <StatGroupPanel
+        title="VISION &amp; TIME"
+        icon="game-icons:semi-closed-eye"
+        color="#5b8dd9"
+        :rows="visionRows"
+      />
+    </div>
+
+    <MultikillCardsRow class="landing-layer" />
   </div>
 </template>
 
@@ -67,12 +97,14 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useBattleScoreboardStats } from '@/composables/useBattleScoreboardStats'
 import { formatNumber } from '@/config/numberFormat'
 import { BATTLE_STAT_GAME_ICONS, BATTLE_STAT_IMAGES } from '@/config/constants'
+import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
+import LadderRecordRibbon from './LadderRecordRibbon.vue'
 import RankBandPanel from './RankBandPanel.vue'
 import MultikillCardsRow from './MultikillCardsRow.vue'
 import StatGroupPanel, { type StatRow } from './StatGroupPanel.vue'
 import TeamRosterPanel from './TeamRosterPanel.vue'
 
-defineProps<{ isStarting: boolean }>()
+const props = defineProps<{ isStarting: boolean }>()
 defineEmits<{ start: [] }>()
 
 const battleStore = useBattleStore()
@@ -81,6 +113,14 @@ const battleStore = useBattleStore()
 const teamProgress = computed(() => battleStore.headerSlots.filter((s) => s !== null).length)
 const hasFullTeam = computed(() => teamProgress.value >= 5)
 const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
+
+/** Second line inside the button — says what the click actually does. */
+const buttonSubline = computed(() => {
+  if (props.isStarting) return 'SEARCHING FOR A PLANET'
+  if (isBattleLive.value) return 'BATTLE IN PROGRESS'
+  if (!hasFullTeam.value) return 'FILL EVERY ROLE TO QUEUE UP'
+  return `QUEUE WITH ${teamProgress.value} CHAMPIONS`
+})
 
 // Career totals merged with the running battle — shared with the bottom-bar
 // scoreboard via useBattleScoreboardStats so both always show the same numbers.
@@ -168,68 +208,60 @@ const playtimeStr = computed(() => {
 </script>
 
 <style scoped>
+/* Flat deep-space base — CosmicStageBackground paints its starfield on top of
+   it (z-index 0), every content layer sits above via .landing-layer. */
 .landing-screen {
   position: absolute;
   inset: 0;
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: clamp(7px, 1.1vh, 12px);
-  padding: clamp(10px, 1.6vh, 18px) clamp(14px, 1.4vw, 24px);
-  background: radial-gradient(circle at 50% 0%, #171208, #0b0a07 72%);
+  gap: clamp(8px, 1.2vh, 14px);
+  padding: clamp(10px, 1.6vh, 18px) clamp(14px, 1.4vw, 26px);
+  background: #0a0906;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
 
-/* ── Main split ── */
-.landing-main {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  gap: clamp(10px, 1.1vw, 18px);
+/* Soft warm pool behind the centre spine, drawn over the stars but under the
+   content — gives the rank/roster/button column its own light. */
+.stage-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 22%, rgba(200, 144, 64, 0.09), transparent 70%),
+    radial-gradient(ellipse 90% 60% at 50% 120%, rgba(10, 9, 6, 0.9), transparent 70%);
 }
 
-/* Left column: rank hero on top, roster fills the rest */
-.rank-col {
-  flex-shrink: 0;
-  width: clamp(340px, 30vw, 480px);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(7px, 1.1vh, 12px);
-  min-height: 0;
+.landing-layer {
+  position: relative;
+  z-index: 1;
 }
 
-.roster-panel-slot {
+/* ── Roster owns all the leftover height: the cards are the visual centrepiece ── */
+.roster-slot {
   flex: 1;
-  min-height: 0;
-}
-
-.perf-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(7px, 1.1vh, 12px);
-  min-height: 0;
   min-width: 0;
-}
-
-.group-grid {
-  flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: clamp(7px, 1.1vh, 12px);
 }
 
-/* ── Central battle action bar ── */
+/* ── Career ledger: four quiet panels along the bottom edge ── */
+.stats-row {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(8px, 0.9vw, 16px);
+}
+
+/* ── Focus 3: the start button ── */
 .action-bar {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 2px 0 4px;
+  gap: clamp(14px, 1.6vw, 26px);
 }
 
 .action-rule {
@@ -246,71 +278,114 @@ const playtimeStr = computed(() => {
 .battle-btn {
   flex-shrink: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  min-width: clamp(300px, 28vw, 420px);
-  padding: clamp(9px, 1.3vh, 14px) clamp(22px, 2.2vw, 34px);
+  gap: clamp(2px, 0.4vh, 5px);
+  min-width: clamp(320px, 30vw, 560px);
+  padding: clamp(10px, 1.5vh, 18px) clamp(26px, 2.6vw, 44px);
   font-family: inherit;
-  font-size: clamp(15px, 1.8vh, 18px);
-  font-weight: 700;
-  letter-spacing: 4px;
   background: linear-gradient(to bottom, #1e2e12, #131e0c);
   border: 2px solid #4a8a28;
   border-radius: 5px;
+  box-shadow:
+    inset 0 0 0 1px #0e1a08,
+    0 0 24px rgba(74, 138, 40, 0.35);
   color: #8ee060;
   cursor: pointer;
-  box-shadow: 0 0 24px rgba(74, 138, 40, 0.35);
-  transition: all 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
   animation: battle-btn-glow 2.6s ease-in-out infinite;
 }
 .battle-btn:hover:not(:disabled) {
   background: linear-gradient(to bottom, #28401a, #1a2a10);
   border-color: #6ec040;
-  box-shadow: 0 0 40px rgba(82, 184, 48, 0.6);
+  box-shadow:
+    inset 0 0 0 1px #0e1a08,
+    0 0 44px rgba(82, 184, 48, 0.6);
 }
 .battle-btn:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.985);
+}
+
+.battle-btn-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 1vw, 16px);
+  font-size: clamp(16px, 2.2vh, 26px);
+  font-weight: 700;
+  letter-spacing: 5px;
+  line-height: 1.1;
+}
+
+.battle-btn-sub {
+  font-size: clamp(8px, 1.05vh, 11px);
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: #5d8a44;
 }
 
 .battle-btn--locked {
   background: linear-gradient(to bottom, #150e06, #0e0904) !important;
   border-color: #3a2010 !important;
-  color: #4a3018 !important;
+  color: #6a4a22 !important;
   cursor: not-allowed !important;
   box-shadow: none !important;
   animation: none;
-  font-size: 15px;
+}
+.battle-btn--locked .battle-btn-sub {
+  color: #4a3018;
+}
+.battle-btn--locked .battle-btn-face {
+  font-size: clamp(14px, 1.9vh, 21px);
 }
 
 .battle-btn--live {
   background: linear-gradient(to bottom, #2e1e08, #1c1204);
   border-color: #c89040;
   color: #e8c040;
-  box-shadow: 0 0 24px rgba(200, 144, 64, 0.35);
+  box-shadow:
+    inset 0 0 0 1px #1a1004,
+    0 0 24px rgba(200, 144, 64, 0.35);
   animation: battle-btn-glow-live 2.6s ease-in-out infinite;
+}
+.battle-btn--live .battle-btn-sub {
+  color: #a08448;
+}
+.battle-btn--live .battle-btn-face {
+  font-size: clamp(14px, 1.9vh, 22px);
 }
 .battle-btn--live:hover:not(:disabled) {
   background: linear-gradient(to bottom, #3e2a0c, #241806);
   border-color: #e8c060;
-  box-shadow: 0 0 40px rgba(232, 192, 64, 0.5);
+  box-shadow:
+    inset 0 0 0 1px #1a1004,
+    0 0 44px rgba(232, 192, 64, 0.5);
 }
 
 .battle-btn-img {
-  width: 26px;
-  height: 26px;
+  width: clamp(24px, 3vh, 34px);
+  height: clamp(24px, 3vh, 34px);
   object-fit: contain;
 }
+.battle-btn-icon {
+  width: clamp(20px, 2.6vh, 28px);
+  height: clamp(20px, 2.6vh, 28px);
+}
 .battle-btn-lock {
-  width: 20px;
-  height: 20px;
+  width: clamp(18px, 2.2vh, 24px);
+  height: clamp(18px, 2.2vh, 24px);
   object-fit: contain;
   opacity: 0.7;
 }
 
 .battle-btn-live-dot {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background: #e8c040;
   box-shadow: 0 0 8px rgba(232, 192, 64, 0.9);
@@ -318,23 +393,59 @@ const playtimeStr = computed(() => {
 }
 
 @keyframes battle-btn-glow {
-  0%, 100% { box-shadow: 0 0 18px rgba(74, 138, 40, 0.3); }
-  50% { box-shadow: 0 0 36px rgba(82, 184, 48, 0.55); }
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px #0e1a08,
+      0 0 18px rgba(74, 138, 40, 0.3);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px #0e1a08,
+      0 0 40px rgba(82, 184, 48, 0.55);
+  }
 }
 
 @keyframes battle-btn-glow-live {
-  0%, 100% { box-shadow: 0 0 18px rgba(200, 144, 64, 0.3); }
-  50% { box-shadow: 0 0 36px rgba(232, 192, 64, 0.5); }
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px #1a1004,
+      0 0 18px rgba(200, 144, 64, 0.3);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px #1a1004,
+      0 0 40px rgba(232, 192, 64, 0.5);
+  }
 }
 
 @keyframes live-dot-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Full HD and flatter viewports: tighten the vertical rhythm */
+@media (max-height: 1100px) {
+  .landing-screen {
+    gap: 8px;
+    padding: 9px 16px;
+  }
+  .battle-btn {
+    padding: 9px 30px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .battle-btn,
-  .battle-btn--live { animation: none; }
-  .battle-btn-live-dot { animation: none; }
+  .battle-btn--live,
+  .battle-btn-live-dot {
+    animation: none;
+  }
 }
 </style>

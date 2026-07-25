@@ -1,73 +1,80 @@
 <template>
+  <!-- Hero #2 of the landing stage: the five champ-select style roster cards -->
   <div class="roster-panel">
     <div class="roster-head">
+      <span class="roster-rule" />
       <span class="roster-title">YOUR TEAM</span>
-      <span class="ready-badge" :class="hasFullTeam ? 'ready-badge--full' : 'ready-badge--open'">
-        {{ teamProgress }} / 5 {{ hasFullTeam ? 'READY' : 'OPEN' }}
+      <span
+        class="ready-badge"
+        :class="hasFullTeam ? 'ready-badge--full' : 'ready-badge--open'"
+      >
+        {{ teamProgress }} / 5 {{ hasFullTeam ? 'READY' : 'FILLED' }}
       </span>
+      <span class="roster-rule" />
     </div>
 
-    <div class="roster-rows">
+    <div class="roster-cards">
       <div
         v-for="(role, idx) in roleRows"
         :key="role.key"
-        class="roster-row"
+        class="champ-card"
         :class="[
-          battleStore.headerSlots[idx] ? 'roster-row--filled' : 'roster-row--empty',
-          { 'roster-row--mvp': battleStore.headerSlots[idx] === mvpHolder },
+          battleStore.headerSlots[idx] ? 'champ-card--filled' : 'champ-card--empty',
+          { 'champ-card--mvp': battleStore.headerSlots[idx] === mvpHolder },
         ]"
-        :style="rowStyle(role, !!battleStore.headerSlots[idx])"
+        :style="cardStyle(role, !!battleStore.headerSlots[idx])"
       >
         <template v-if="battleStore.headerSlots[idx]">
-          <!-- Role column: fixed width so every champion name starts at the same x -->
-          <span class="row-role" :style="{ color: role.color }">{{ role.roleLabel }}</span>
-
-          <div class="row-main">
-            <span class="row-champ-name">{{ battleStore.headerSlots[idx] }}</span>
-            <!-- Standout badges: compact icon tokens, label via tooltip -->
-            <div class="row-badges">
-              <span
-                v-for="badge in badgesFor(battleStore.headerSlots[idx]!)"
-                :key="badge.key"
-                class="row-badge"
-                :title="badge.label"
-              >
-                <Icon
-                  :icon="badge.icon"
-                  class="row-badge-icon"
-                  :style="{ color: badge.color }"
-                />
-              </span>
-            </div>
-          </div>
-
-          <div class="row-stats">
-            <div class="row-stat">
-              <span class="row-stat-value row-stat-value--kills">
-                {{ statFor(battleStore.headerSlots[idx]!).kills }}
-              </span>
-              <span class="row-stat-label">KILLS</span>
-            </div>
-            <div class="row-stat">
-              <span class="row-stat-value">{{ statFor(battleStore.headerSlots[idx]!).kda }}</span>
-              <span class="row-stat-label">KDA</span>
-            </div>
-            <div class="row-stat">
-              <span class="row-stat-value row-stat-value--mvp">
-                {{ statFor(battleStore.headerSlots[idx]!).mvps }}
-              </span>
-              <span class="row-stat-label">MVP</span>
-            </div>
-          </div>
-
           <img
             :src="battleStore.getChampionImage(battleStore.headerSlots[idx]!)"
             :alt="battleStore.headerSlots[idx]!"
-            class="row-champ-img"
+            class="card-art"
           />
+          <div class="card-scrim" />
+          <div class="card-tint" :style="{ background: tintFor(role.color) }" />
+
+          <!-- Role chip, top-left -->
+          <span class="card-role" :style="{ color: role.color, borderColor: hexToRgba(role.color, 0.5) }">
+            {{ role.roleLabel }}
+          </span>
+
+          <!-- Standout badges, top-right; label via tooltip -->
+          <div class="card-badges">
+            <span
+              v-for="badge in badgesFor(battleStore.headerSlots[idx]!)"
+              :key="badge.key"
+              class="card-badge"
+              :title="badge.label"
+            >
+              <Icon :icon="badge.icon" class="card-badge-icon" :style="{ color: badge.color }" />
+            </span>
+          </div>
+
+          <!-- Name + headline stats, bottom -->
+          <div class="card-foot">
+            <span class="card-name">{{ battleStore.headerSlots[idx] }}</span>
+            <div class="card-stats">
+              <div class="card-stat">
+                <span class="card-stat-value card-stat-value--kills">
+                  {{ statFor(battleStore.headerSlots[idx]!).kills }}
+                </span>
+                <span class="card-stat-label">KILLS</span>
+              </div>
+              <div class="card-stat">
+                <span class="card-stat-value">{{ statFor(battleStore.headerSlots[idx]!).kda }}</span>
+                <span class="card-stat-label">KDA</span>
+              </div>
+              <div class="card-stat">
+                <span class="card-stat-value card-stat-value--mvp">
+                  {{ statFor(battleStore.headerSlots[idx]!).mvps }}
+                </span>
+                <span class="card-stat-label">MVP</span>
+              </div>
+            </div>
+          </div>
 
           <!-- Hover stat sheet: full career breakdown for this champion -->
-          <div class="row-detail">
+          <div class="card-detail">
             <div class="detail-head">
               <span class="detail-name">{{ battleStore.headerSlots[idx] }}</span>
               <span class="detail-role" :style="{ color: role.color }">{{ role.roleLabel }}</span>
@@ -78,25 +85,23 @@
                 :key="entry.label"
                 class="detail-stat"
               >
-                <span
-                  class="detail-value"
-                  :style="entry.color ? { color: entry.color } : undefined"
-                >
+                <span class="detail-label">{{ entry.label }}</span>
+                <span class="detail-value" :style="entry.color ? { color: entry.color } : undefined">
                   {{ entry.value }}
                 </span>
-                <span class="detail-label">{{ entry.label }}</span>
               </div>
             </div>
           </div>
         </template>
+
         <template v-else>
-          <span class="row-role" :style="{ color: hexToRgba(role.color, 0.55) }">
+          <span class="card-role" :style="{ color: hexToRgba(role.color, 0.6), borderColor: hexToRgba(role.color, 0.3) }">
             {{ role.roleLabel }}
           </span>
-          <div class="row-main">
-            <span class="row-champ-name row-champ-name--empty">Empty slot</span>
+          <div class="empty-body">
+            <span class="empty-mark" :style="{ color: hexToRgba(role.color, 0.5) }">＋</span>
+            <span class="empty-text">EMPTY SLOT</span>
           </div>
-          <div class="row-empty-slot" :style="{ borderColor: hexToRgba(role.color, 0.45) }" />
         </template>
       </div>
     </div>
@@ -122,13 +127,15 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
 }
 
-function rowStyle(role: { color: string }, filled: boolean): CSSProperties {
-  if (!filled) return { borderLeft: `3px solid ${hexToRgba(role.color, 0.3)}` }
-  return {
-    borderLeft: `3px solid ${role.color}`,
-    // Role tint sits behind the portrait on the right edge
-    background: `linear-gradient(90deg, rgba(0, 0, 0, 0.25), ${hexToRgba(role.color, 0.12)})`,
-  }
+/** Role color drives the card's border and the wash over the splash art. */
+function cardStyle(role: { color: string }, filled: boolean): CSSProperties {
+  return filled
+    ? { borderColor: hexToRgba(role.color, 0.55) }
+    : { borderColor: hexToRgba(role.color, 0.22) }
+}
+
+function tintFor(color: string): string {
+  return `linear-gradient(to top, ${hexToRgba(color, 0.32)}, transparent 62%)`
 }
 
 const battleStore = useBattleStore()
@@ -297,330 +304,351 @@ const mvpHolder = computed<string | null>(() => {
 .roster-panel {
   display: flex;
   flex-direction: column;
-  gap: clamp(6px, 0.9vh, 10px);
+  gap: clamp(7px, 1.1vh, 13px);
   min-height: 0;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(212, 160, 32, 0.12);
-  border-radius: 5px;
-  padding: clamp(8px, 1.3vh, 13px) clamp(10px, 1vw, 16px);
 }
 
+/* ── Head: centered title between two hairlines ── */
 .roster-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: clamp(8px, 1vw, 16px);
   flex-shrink: 0;
 }
 
+.roster-rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #3a2c14);
+}
+.roster-rule:last-child {
+  background: linear-gradient(to left, transparent, #3a2c14);
+}
+
 .roster-title {
-  font-size: 13px;
+  font-size: clamp(11px, 1.4vh, 14px);
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 5px;
   color: #d4a020;
 }
 
 .ready-badge {
-  font-size: 11px;
+  font-size: clamp(9px, 1.15vh, 11px);
   font-weight: 700;
-  letter-spacing: 1px;
-  padding: 2px 9px;
+  letter-spacing: 1.5px;
+  padding: 2px 10px;
   border-radius: 4px;
 }
 .ready-badge--full {
-  color: #52b830;
-  border: 1px solid rgba(74, 138, 40, 0.5);
-  background: rgba(74, 138, 40, 0.12);
+  color: #8ee060;
+  border: 1px solid #3f6b24;
+  background: #16250e;
 }
 .ready-badge--open {
   color: #cc6050;
-  border: 1px solid rgba(204, 96, 80, 0.4);
-  background: rgba(204, 96, 80, 0.1);
+  border: 1px solid #64302a;
+  background: #24100d;
 }
 
-.roster-rows {
+/* ── Card row: five equal champ-select tiles ── */
+.roster-cards {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(5px, 0.7vh, 8px);
   min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: clamp(8px, 0.9vw, 16px);
 }
 
-.roster-row {
-  flex: 1;
+.champ-card {
   position: relative;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0;
+  min-height: clamp(150px, 22vh, 300px);
+  background: #0d0b06;
+  border: 1px solid;
   border-radius: 5px;
-  min-height: clamp(44px, 5.4vh, 68px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
   transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
 }
-.roster-row--filled:hover {
-  transform: translateY(-2px);
+.champ-card--filled:hover {
+  transform: translateY(-4px);
   box-shadow:
-    inset 0 0 20px rgba(212, 160, 32, 0.1),
-    0 4px 16px rgba(0, 0, 0, 0.55),
+    0 12px 30px rgba(0, 0, 0, 0.7),
+    0 0 20px rgba(212, 160, 32, 0.28);
+}
+.champ-card--mvp {
+  box-shadow:
+    inset 0 0 22px rgba(212, 160, 32, 0.16),
+    0 6px 20px rgba(0, 0, 0, 0.55),
     0 0 14px rgba(212, 160, 32, 0.3);
 }
-
-/* Default content fades out while the stat sheet fades in */
-.row-role,
-.row-main,
-.row-stats,
-.row-champ-img {
-  transition: opacity 0.25s ease;
+.champ-card--empty {
+  background: #0b0904;
+  border-style: dashed;
 }
-.roster-row--filled:hover .row-role,
-.roster-row--filled:hover .row-main,
-.roster-row--filled:hover .row-stats,
-.roster-row--filled:hover .row-champ-img {
-  opacity: 0.06;
+
+/* ── Splash art fills the whole card, darkened toward the bottom ── */
+.card-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+  transition:
+    transform 0.5s ease,
+    filter 0.25s ease;
+}
+.champ-card--filled:hover .card-art {
+  transform: scale(1.06);
+}
+
+.card-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(6, 5, 3, 0.96) 0%,
+    rgba(6, 5, 3, 0.7) 34%,
+    rgba(6, 5, 3, 0.12) 62%,
+    rgba(6, 5, 3, 0.42) 100%
+  );
+}
+
+.card-tint {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+/* ── Role chip ── */
+.card-role {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  z-index: 2;
+  padding: 2px 7px;
+  font-size: clamp(9px, 1.2vh, 12px);
+  font-weight: 700;
+  letter-spacing: 2px;
+  background: rgba(6, 5, 3, 0.78);
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+/* ── Standout badges ── */
+.card-badges {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
+  max-width: 58%;
+}
+
+.card-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: rgba(6, 5, 3, 0.78);
+  border: 1px solid #3a2c14;
+  border-radius: 4px;
+}
+
+.card-badge-icon {
+  width: clamp(13px, 1.7vh, 17px);
+  height: clamp(13px, 1.7vh, 17px);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+}
+
+/* ── Foot: champion name + headline career stats ── */
+.card-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 0.7vh, 8px);
+  padding: clamp(7px, 1vh, 12px) clamp(7px, 0.6vw, 12px);
+  transition: opacity 0.22s ease;
+}
+
+.card-name {
+  font-size: clamp(14px, 2vh, 22px);
+  color: #fff;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+}
+
+.card-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding-top: clamp(4px, 0.6vh, 7px);
+  border-top: 1px solid rgba(212, 160, 32, 0.18);
+}
+
+.card-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.card-stat-value {
+  font-size: clamp(12px, 1.7vh, 17px);
+  font-weight: 700;
+  color: #e8e2d0;
+  line-height: 1.1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.card-stat-value--kills {
+  color: #6ee7b7;
+}
+.card-stat-value--mvp {
+  color: #e8c040;
+}
+
+.card-stat-label {
+  font-size: clamp(7px, 0.95vh, 9px);
+  letter-spacing: 1.2px;
+  color: rgba(232, 226, 208, 0.5);
 }
 
 /* ── Hover stat sheet ── */
-.row-detail {
+.card-detail {
   position: absolute;
   inset: 0;
   z-index: 3;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  padding: 6px 14px;
+  gap: clamp(4px, 0.7vh, 8px);
+  padding: clamp(8px, 1.1vh, 13px) clamp(8px, 0.7vw, 13px);
+  background: rgba(8, 6, 4, 0.93);
   opacity: 0;
-  transform: translateY(6px);
   pointer-events: none;
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+  transition: opacity 0.22s ease;
 }
-.roster-row--filled:hover .row-detail {
+.champ-card--filled:hover .card-detail {
   opacity: 1;
-  transform: translateY(0);
+}
+.champ-card--filled:hover .card-foot {
+  opacity: 0;
 }
 
 .detail-head {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  gap: 1px;
+  padding-bottom: clamp(3px, 0.5vh, 6px);
+  border-bottom: 1px solid #3a2c14;
+  flex-shrink: 0;
 }
 .detail-name {
-  font-size: clamp(12px, 1.6vh, 15px);
+  font-size: clamp(12px, 1.6vh, 16px);
   font-weight: 700;
-  letter-spacing: 1px;
   color: #d4a020;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .detail-role {
-  font-size: clamp(9px, 1.2vh, 11px);
+  font-size: clamp(8px, 1.05vh, 10px);
   letter-spacing: 2px;
 }
 
 .detail-grid {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 3px 10px;
+  grid-template-columns: 1fr;
+  align-content: space-between;
+  gap: 1px;
 }
 
 .detail-stat {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
   min-width: 0;
-}
-.detail-value {
-  font-size: clamp(13px, 1.8vh, 17px);
-  font-weight: 700;
-  color: #e8e2d0;
-  line-height: 1.1;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  white-space: nowrap;
 }
 .detail-label {
-  font-size: clamp(7px, 1vh, 9px);
+  font-size: clamp(7px, 0.95vh, 9px);
   letter-spacing: 1px;
-  color: rgba(232, 226, 208, 0.5);
+  color: rgba(232, 226, 208, 0.45);
+  white-space: nowrap;
+}
+.detail-value {
+  font-size: clamp(10px, 1.35vh, 13px);
+  font-weight: 700;
+  color: #e8e2d0;
   white-space: nowrap;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .roster-row,
-  .row-detail {
-    transition: opacity 0.25s ease;
-    transform: none;
-  }
-  .roster-row--filled:hover {
-    transform: none;
-  }
-  .roster-row--filled:hover .row-detail {
-    transform: none;
-  }
-}
-.roster-row--filled {
-  border-top: 1px solid rgba(0, 0, 0, 0.35);
-  border-right: 1px solid rgba(0, 0, 0, 0.35);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
-}
-.roster-row--empty {
-  background: rgba(14, 10, 4, 0.6);
-  border-top: 1px dashed rgba(90, 60, 20, 0.4);
-  border-right: 1px dashed rgba(90, 60, 20, 0.4);
-  border-bottom: 1px dashed rgba(90, 60, 20, 0.4);
-  opacity: 0.75;
-}
-.roster-row--mvp {
-  border-top: 1px solid rgba(212, 160, 32, 0.55);
-  border-right: 1px solid rgba(212, 160, 32, 0.55);
-  border-bottom: 1px solid rgba(212, 160, 32, 0.55);
-  box-shadow:
-    inset 0 0 18px rgba(212, 160, 32, 0.12),
-    0 0 12px rgba(212, 160, 32, 0.25);
-}
-
-/* ── Role column: fixed width so all champion names align vertically ── */
-.row-role {
-  flex-shrink: 0;
-  width: clamp(64px, 5vw, 86px);
-  padding-left: clamp(8px, 0.8vw, 14px);
-  box-sizing: border-box;
-  font-size: clamp(11px, 1.3vh, 13px);
-  font-weight: 700;
-  letter-spacing: 2px;
-}
-
-/* ── Name block: champion name with badge icons beneath ── */
-.row-main {
-  flex: 1;
-  min-width: 0;
+/* ── Empty slot ── */
+.empty-body {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 3px;
-}
-
-/* ── Standout badges: compact icon tokens (label in tooltip) ── */
-.row-badges {
-  display: flex;
-  gap: 4px;
-}
-
-.row-badge {
-  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(212, 160, 32, 0.2);
-  border-radius: 4px;
+  gap: clamp(4px, 0.6vh, 8px);
 }
 
-.row-badge-icon {
-  width: clamp(13px, 1.7vh, 17px);
-  height: clamp(13px, 1.7vh, 17px);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+.empty-mark {
+  font-size: clamp(26px, 4vh, 44px);
+  line-height: 1;
 }
 
-/* Splash portrait: right edge, full row height, fades toward the center */
-.row-champ-img {
-  align-self: stretch;
-  width: clamp(64px, 9vh, 96px);
-  object-fit: cover;
-  flex-shrink: 0;
-  -webkit-mask-image: linear-gradient(to left, #000 55%, transparent 100%);
-  mask-image: linear-gradient(to left, #000 55%, transparent 100%);
-}
-
-.row-empty-slot {
-  align-self: stretch;
-  width: clamp(64px, 9vh, 96px);
-  margin: 6px 6px 6px 0;
-  border-radius: 4px;
-  border: 2px dashed rgba(90, 60, 20, 0.5);
-  flex-shrink: 0;
-}
-
-.row-champ-name {
-  max-width: 100%;
-  font-size: clamp(15px, 2.1vh, 21px);
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-}
-.row-champ-name--empty {
+.empty-text {
+  font-size: clamp(8px, 1.05vh, 10px);
+  letter-spacing: 2.5px;
   color: #5a4820;
 }
 
-/* ── Per-champion career mini-stats ── */
-.row-stats {
-  flex-shrink: 0;
-  display: flex;
-  gap: clamp(8px, 0.8vw, 14px);
-  padding-right: 4px;
-}
-
-.row-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 32px;
-}
-
-.row-stat-value {
-  font-size: clamp(13px, 1.9vh, 18px);
-  font-weight: 700;
-  color: #e8e2d0;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-}
-.row-stat-value--kills {
-  color: #6ee7b7;
-}
-.row-stat-value--mvp {
-  color: #e8c040;
-}
-
-.row-stat-label {
-  font-size: clamp(8px, 1.1vh, 10px);
-  letter-spacing: 1.5px;
-  color: rgba(232, 226, 208, 0.45);
-}
-
-/* short viewports: flatter rows — mini-stats move into the hover sheet,
-   badges sit inline beside the name so 5 rows always fit under the rank hero */
-@media (max-height: 820px) {
-  .roster-panel {
-    padding: 8px 10px;
+/* Full HD and flatter: shorter cards, badges shrink, detail sheet stays legible */
+@media (max-height: 1100px) {
+  .champ-card {
+    min-height: 130px;
   }
-  .roster-rows {
-    gap: 4px;
+  .detail-value {
+    font-size: 11px;
   }
-  .roster-row {
-    min-height: 34px;
+}
+
+@media (max-height: 880px) {
+  .champ-card {
+    min-height: 108px;
   }
-  .row-stats {
+  .card-stat-label {
     display: none;
   }
-  .row-main {
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .champ-card,
+  .card-art {
+    transition: opacity 0.22s ease;
   }
-  .row-champ-name {
-    max-width: none;
-    min-width: 0;
+  .champ-card--filled:hover {
+    transform: none;
   }
-  .row-badge {
-    padding: 1px;
-  }
-  .row-champ-img,
-  .row-empty-slot {
-    width: clamp(44px, 6vh, 56px);
+  .champ-card--filled:hover .card-art {
+    transform: none;
   }
 }
 </style>
