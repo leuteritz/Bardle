@@ -178,16 +178,16 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
               </div>
             </template>
 
-            <!-- Zerstört: Wrack-Emblem mit abschmelzendem Respawn-Ring, füllt
-                 die Kachel. Identische Anzeige wie beim gefallenen Champion
-                 in der Rollenkarte darüber — nur das Emblem und die deutlich
-                 längere Ausfallzeit unterscheiden sich. -->
+            <!-- Zerstört: Totenkopf-Emblem mit abschmelzendem Respawn-Ring,
+                 füllt die Kachel. Identische Anzeige wie beim gefallenen
+                 Champion in der Rollenkarte darüber — nur die deutlich längere
+                 Ausfallzeit unterscheidet sich. -->
             <template v-else>
               <div class="cmd-down-veil" />
               <div class="cmd-down-hatch" />
               <div class="cmd-down-core" :title="`Destroyed — back in ${downSecsLeft(slot)}s`">
                 <span class="cmd-down-ring" :style="{ '--down-progress': downProgress(slot) }">
-                  <Icon icon="game-icons:fragmented-meteor" width="22" height="22" />
+                  <Icon icon="game-icons:broken-skull" width="22" height="22" />
                 </span>
                 <span class="cmd-down-timer">{{ downSecsLeft(slot) }}s</span>
               </div>
@@ -822,7 +822,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   pointer-events: none;
 }
 
-/* Wrack-Emblem mit Respawn-Ring: der Ring schmilzt über die Ausfallzeit ab —
+/* Totenkopf-Emblem mit Respawn-Ring: der Ring schmilzt über die Ausfallzeit ab —
    baugleich mit dem Revive-Ring der Champion-Karte, nur eine Stufe kleiner,
    damit er auf der schmalen Kachel nicht an die Ränder stößt */
 .cmd-down-ring {

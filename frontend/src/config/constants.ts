@@ -3023,9 +3023,9 @@ export const USED_GAME_ICONS = new Set<string>([
   // Eclipse state (champion/planet behind the sun)
   'game-icons:eclipse-flare', // Eclipse medallion (ChampionSelectorComponent, CommandPanelComponent, RoleStrikerSquad, PlanetBatteryHUD, PlanetSelectTabComponent)
   // Destroyed planet, waiting out its respawn timer
-  'game-icons:fragmented-meteor', // Wreck emblem (CommandPanelComponent, PlanetSelectTabComponent)
-  // Downed champion, waiting out its revive timer
-  'game-icons:tombstone', // Down emblem on the role card (ChampionSelectorComponent)
+  'game-icons:fragmented-meteor', // Wreck emblem (PlanetSelectTabComponent)
+  // Downed champion / destroyed planet in the command panel — one shared emblem
+  'game-icons:broken-skull', // Down emblem on role card + planet tile (ChampionSelectorComponent, CommandPanelComponent)
   // Bard Stats — Journey lifetime stat rows (BardStatsTab)
   'game-icons:embrassed-energy', // Total Power stat row
   'game-icons:factory', // Lifetime Production stat row

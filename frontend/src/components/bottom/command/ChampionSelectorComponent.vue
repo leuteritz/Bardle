@@ -155,13 +155,14 @@ function onSlotLeave() {
           <!-- Champion am Boden — bis zum Revive raus aus dem Kampf.
                Deutlich härter als die Eclipse: das Porträt ist fast
                ausgelöscht, eine Warnschraffur legt sich über die Karte und
-               ein Grabmal-Emblem trägt den abschmelzenden Revive-Ring.
-               Gleiche Sprache wie die zerstörte Planeten-Kachel darunter. -->
+               ein Totenkopf-Emblem trägt den abschmelzenden Revive-Ring.
+               Identisch zur zerstörten Planeten-Kachel darunter — nur die
+               Ausfallzeit unterscheidet sich. -->
           <div class="champ-card-down-veil" />
           <div class="champ-card-down-hatch" />
           <div class="champ-card-down-core">
             <span class="champ-card-down-ring" :style="{ '--down-progress': downProgress(i) }">
-              <Icon icon="game-icons:tombstone" width="30" height="30" />
+              <Icon icon="game-icons:broken-skull" width="30" height="30" />
             </span>
             <span class="champ-card-down-timer">{{ downSecsLeft(i) }}s</span>
           </div>
@@ -480,7 +481,7 @@ function onSlotLeave() {
   pointer-events: none;
 }
 
-/* Grabmal-Emblem mit Revive-Ring: der Ring schmilzt über die Ausfallzeit ab —
+/* Totenkopf-Emblem mit Revive-Ring: der Ring schmilzt über die Ausfallzeit ab —
    dieselbe conic+mask-Technik wie der Jungle-Buff-Chip im Planet-Dock */
 .champ-card-down-ring {
   position: relative;
