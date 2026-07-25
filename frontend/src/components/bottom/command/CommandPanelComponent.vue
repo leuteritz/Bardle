@@ -491,7 +491,10 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   box-shadow:
     0 0 8px rgba(200, 144, 64, 0.1),
     inset 0 0 12px rgba(0, 0, 0, 0.5);
-  cursor: not-allowed;
+  /* Zeiger wie auf den Champion-Karten, nicht not-allowed: ein Klick auf die
+     gesperrte Kachel öffnet sehr wohl den Planet-Tab (nur der Kauf schlägt
+     fehl) — ein Sperr-Cursor würde ein totes Feld behaupten, das sie nicht ist */
+  cursor: pointer;
 }
 .cmd-planet-tile--locked:hover {
   border-color: rgba(200, 144, 64, 0.8);
