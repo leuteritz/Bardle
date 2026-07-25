@@ -1589,6 +1589,68 @@ export const RANK_TIER_COLORS: Record<string, string> = {
   Challenger: '#f0dc50',
 }
 
+/**
+ * Frame a roster card wears for the player's current ladder tier
+ * (TeamRosterPanel → ChampionRankFrame). One entry per RANK_TIERS value; every
+ * field climbs monotonically so the ten frames read as a single escalation.
+ * Modelled on the ladder borders: a thin tier-coloured line that fades toward
+ * the bottom, blade brackets in the upper corners and a crown seated on the top
+ * edge. Iron already wears a complete (if plain) border; Challenger a winged
+ * crown with a breathing aura and an arc of light circling the card.
+ * Pixel values are base sizes — the frame scales them by viewport height.
+ */
+export interface RankFrameStyle {
+  /** thickness of the frame line in px */
+  width: number
+  /** outer glow radius on the card in px */
+  glow: number
+  /** outer glow strength, 0…1 */
+  glowAlpha: number
+  /** ornament stage of the crown standing on the top edge */
+  crown: 'plain' | 'crown' | 'wings' | 'royal' | 'apex'
+  /** crown width in px */
+  crownW: number
+  /** crown height in px — how far it rises above the card. Keep it at a quarter
+   *  of crownW: the artwork's viewBox is 4:1, and the shorter side wins, so a
+   *  flatter ratio would silently cut the crown's width down. */
+  crownH: number
+  /** arm length of the upper corner blades in px */
+  blade: number
+  /** line saturation — Iron reads as cold steel, Challenger blazes */
+  saturate: number
+  /** reflection travelling along the line */
+  sweep: boolean
+  /** breathing aura inside the line */
+  pulse: boolean
+  /** rotating arc of light running around the card */
+  halo: boolean
+}
+
+/* prettier-ignore */
+export const RANK_FRAME_STYLES: Record<string, RankFrameStyle> = {
+  Iron:        { width: 2,    glow: 9,  glowAlpha: 0.18, crown: 'plain', crownW: 72,  crownH: 18, blade: 16, saturate: 0.5,  sweep: false, pulse: false, halo: false },
+  Bronze:      { width: 2,    glow: 12, glowAlpha: 0.21, crown: 'plain', crownW: 80,  crownH: 20, blade: 19, saturate: 0.95, sweep: false, pulse: false, halo: false },
+  Silver:      { width: 2,    glow: 15, glowAlpha: 0.24, crown: 'crown', crownW: 88,  crownH: 22, blade: 22, saturate: 0.7,  sweep: false, pulse: false, halo: false },
+  Gold:        { width: 2.25, glow: 19, glowAlpha: 0.28, crown: 'crown', crownW: 96,  crownH: 24, blade: 25, saturate: 1,    sweep: false, pulse: false, halo: false },
+  Platinum:    { width: 2.25, glow: 23, glowAlpha: 0.31, crown: 'wings', crownW: 104, crownH: 26, blade: 28, saturate: 1,    sweep: false, pulse: false, halo: false },
+  Emerald:     { width: 2.5,  glow: 27, glowAlpha: 0.35, crown: 'wings', crownW: 112, crownH: 28, blade: 31, saturate: 1.05, sweep: false, pulse: false, halo: false },
+  Diamond:     { width: 2.5,  glow: 31, glowAlpha: 0.39, crown: 'royal', crownW: 120, crownH: 30, blade: 34, saturate: 1.1,  sweep: true,  pulse: false, halo: false },
+  Master:      { width: 3,    glow: 37, glowAlpha: 0.45, crown: 'royal', crownW: 128, crownH: 32, blade: 37, saturate: 1.15, sweep: true,  pulse: true,  halo: false },
+  Grandmaster: { width: 3,    glow: 43, glowAlpha: 0.51, crown: 'apex',  crownW: 136, crownH: 34, blade: 40, saturate: 1.2,  sweep: true,  pulse: true,  halo: false },
+  Challenger:  { width: 3.5,  glow: 50, glowAlpha: 0.58, crown: 'apex',  crownW: 144, crownH: 36, blade: 44, saturate: 1.3,  sweep: true,  pulse: true,  halo: true  },
+}
+
+/** Empty roster slots wear the same frame, dialled down to this share (TeamRosterPanel) */
+export const RANK_FRAME_EMPTY_GLOW_FACTOR = 0.3
+/** Hovering a filled card widens its rank glow by this factor (TeamRosterPanel) */
+export const RANK_FRAME_HOVER_GLOW_FACTOR = 1.45
+/** Room the card's content keeps clear of the frame line, in px on top of its width */
+export const RANK_FRAME_CONTENT_INSET = 5
+/** How far the crown's foot reaches down into the card in px — the rest rises above it */
+export const RANK_FRAME_CROWN_FOOT = 5
+/** Largest --frame-scale any viewport applies — the role stripe clears the line at every size */
+export const RANK_FRAME_MAX_SCALE = 1.25
+
 // Minimap travel rendering (static galaxy map)
 export const MINIMAP_FLIGHTPATH_BEND = 0.18 // quadratic ctrl-point offset (fraction of leg length)
 export const MINIMAP_ROUTE_ARROW_SIZE = 5 // chevron wing length on flown-route segments (live map)

@@ -1,6 +1,6 @@
 <template>
   <!-- Hero #2 of the landing stage: the five champ-select style roster cards -->
-  <div class="roster-panel">
+  <div class="roster-panel" :style="rosterStyle">
     <div class="roster-head">
       <span class="roster-rule" />
       <span class="roster-title">YOUR TEAM</span>
@@ -23,6 +23,34 @@
         @keydown.enter="onCardClick(idx)"
         @keydown.space.prevent="onCardClick(idx)"
       >
+        <!-- Everything but the frame lives in here: the card clips its own
+             content, which leaves the frame free to let its crown rise above
+             the top edge. -->
+        <div class="card-inner">
+        <!-- Head row: role on the left, standout badges on the right. One flex
+             line, so the two can never overlap however wide the badges get. -->
+        <div class="card-head">
+          <span
+            class="card-role"
+            :class="{ 'card-role--empty': !battleStore.headerSlots[idx] }"
+          >
+            {{ role.roleLabel }}
+          </span>
+
+          <div v-if="battleStore.headerSlots[idx]" class="card-badges">
+            <span
+              v-for="badge in badgesFor(battleStore.headerSlots[idx]!)"
+              :key="badge.key"
+              class="card-badge"
+              :style="{ color: badge.color }"
+              :title="badge.label"
+            >
+              <span class="card-badge-text">{{ badge.short }}</span>
+              <Icon :icon="badge.icon" class="card-badge-icon" />
+            </span>
+          </div>
+        </div>
+
         <template v-if="battleStore.headerSlots[idx]">
           <img
             :src="battleStore.getChampionImage(battleStore.headerSlots[idx]!)"
@@ -36,23 +64,6 @@
             class="card-stripe"
             :style="{ background: `linear-gradient(to right, transparent, ${role.color}, transparent)` }"
           />
-
-          <!-- Role label, top-left — bare type in the command panel's style -->
-          <span class="card-role">{{ role.roleLabel }}</span>
-
-          <!-- Standout badges, top-right: icon plus a short word for what it is -->
-          <div class="card-badges">
-            <span
-              v-for="badge in badgesFor(battleStore.headerSlots[idx]!)"
-              :key="badge.key"
-              class="card-badge"
-              :style="{ color: badge.color }"
-              :title="badge.label"
-            >
-              <span class="card-badge-text">{{ badge.short }}</span>
-              <Icon :icon="badge.icon" class="card-badge-icon" />
-            </span>
-          </div>
 
           <!-- Name + headline stats, bottom -->
           <div class="card-foot">
@@ -99,7 +110,6 @@
         </template>
 
         <template v-else>
-          <span class="card-role card-role--empty">{{ role.roleLabel }}</span>
           <!-- Clicking an open slot jumps straight to the team tab with this
                role pre-selected, so the player can fill it right away. -->
           <button
@@ -117,6 +127,11 @@
             </span>
           </button>
         </template>
+        </div>
+
+        <!-- Rank frame on top of everything: the card's border is the player's
+             ladder tier, so the whole roster levels up with the climb. -->
+        <ChampionRankFrame :tier="rankTier" :lit="!!battleStore.headerSlots[idx]" />
       </div>
     </div>
   </div>
@@ -127,10 +142,36 @@ import { computed, type CSSProperties } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
-import { ROLES, ROSTER_CARD_MAX_BADGES } from '@/config/constants'
+import {
+  ROLES,
+  ROSTER_CARD_MAX_BADGES,
+  RANK_FRAME_STYLES,
+  RANK_FRAME_EMPTY_GLOW_FACTOR,
+  RANK_FRAME_HOVER_GLOW_FACTOR,
+  RANK_FRAME_CONTENT_INSET,
+  RANK_FRAME_CROWN_FOOT,
+  RANK_FRAME_MAX_SCALE,
+  RANK_TIER_COLORS,
+} from '@/config/constants'
 import { formatNumber } from '@/config/numberFormat'
+import ChampionRankFrame from './ChampionRankFrame.vue'
 
 const uiStore = useUiStore()
+const battleStore = useBattleStore()
+
+// ── Rank frame ──
+// Every card wears the player's current ladder tier, so the whole roster grows
+// more ornate with the climb. The tier drives the edge; the role keeps its
+// stripe, its label and the wash over the art.
+const rankTier = computed(() => battleStore.currentRank.tier)
+const rankColor = computed(() => RANK_TIER_COLORS[rankTier.value] ?? '#8a9098')
+const rankFrame = computed(() => RANK_FRAME_STYLES[rankTier.value] ?? RANK_FRAME_STYLES.Iron)
+
+/** Headroom the crowns need above the cards, so they cannot reach the title. */
+const rosterStyle = computed<CSSProperties>(() => ({
+  '--crown-space': `calc(${rankFrame.value.crownH - RANK_FRAME_CROWN_FOOT}px * var(--frame-scale, 1))`,
+  '--crown-foot': `calc(${RANK_FRAME_CROWN_FOOT}px * var(--frame-scale, 1))`,
+}))
 
 /** Open slot clicked → team tab, this role pre-selected. Same navigation the
  *  command panel's role cards use, plus a marker so the team tab can offer a
@@ -158,19 +199,36 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
 }
 
-/** Role color drives the card's border, its label and the wash over the art. */
+/** The rank owns the card's edge and its glow; the role stays in the label, the
+ *  bottom stripe and the wash over the art. Both glows ride in as custom
+ *  properties so the hover and MVP rules can compose their own shadow stacks. */
 function cardStyle(role: { color: string }, filled: boolean): CSSProperties {
+  const { glow, glowAlpha, width } = rankFrame.value
+  const alpha = filled ? glowAlpha : glowAlpha * RANK_FRAME_EMPTY_GLOW_FACTOR
+  const rank = rankColor.value
   return {
     '--role-color': role.color,
-    borderColor: hexToRgba(role.color, filled ? 0.55 : 0.22),
+    '--rank-color': rank,
+    // content stays clear of the line and of the corner blades running along
+    // it; scales with the frame, because those do too
+    '--frame-inset': `calc(${width + RANK_FRAME_CONTENT_INSET}px * var(--frame-scale, 1))`,
+    // the role stripe rides just inside the widest the edge can ever get
+    '--stripe-lift': `${Math.round(width * RANK_FRAME_MAX_SCALE) + 1}px`,
+    '--rank-glow': glow > 0 ? `0 0 ${glow}px ${hexToRgba(rank, alpha)}` : '0 0 0 transparent',
+    '--rank-glow-hover':
+      glow > 0
+        ? `0 0 ${Math.round(glow * RANK_FRAME_HOVER_GLOW_FACTOR)}px ${hexToRgba(
+            rank,
+            Math.min(1, alpha * RANK_FRAME_HOVER_GLOW_FACTOR),
+          )}`
+        : '0 0 0 transparent',
+    borderColor: hexToRgba(rank, filled ? 0.45 : 0.18),
   } as CSSProperties
 }
 
 function tintFor(color: string): string {
   return `linear-gradient(to top, ${hexToRgba(color, 0.32)}, transparent 62%)`
 }
-
-const battleStore = useBattleStore()
 
 // Career kills merged with the running battle, same display-only pattern as
 // the landing stat panels (career accumulates once the battle finalizes).
@@ -339,6 +397,9 @@ const mvpHolder = computed<string | null>(() => {
 
 <style scoped>
 .roster-panel {
+  /* one dial for line, blades and crown alike, so the whole border grows with
+     the viewport — the frame component reads it via var(--frame-scale) */
+  --frame-scale: 1;
   display: flex;
   flex-direction: column;
   gap: clamp(7px, 1.1vh, 13px);
@@ -383,21 +444,36 @@ const mvpHolder = computed<string | null>(() => {
   grid-template-columns: repeat(5, 1fr);
   grid-template-rows: minmax(0, 1fr);
   gap: clamp(8px, 0.9vw, 16px);
+  /* headroom for the crowns, which stand above their cards */
+  padding-top: var(--crown-space, 0px);
 }
 
 .champ-card {
   position: relative;
-  overflow: hidden;
+  /* visible so the frame's crown can rise past the top edge — the content
+     below does its own clipping in .card-inner */
+  overflow: visible;
   min-height: 0;
   background: #0d0b06;
   border: 1px solid;
   border-radius: 5px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  /* the second shadow is the rank's own halo — see cardStyle() */
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.55),
+    var(--rank-glow, 0 0 0 transparent);
   transition:
     transform 0.22s ease,
     box-shadow 0.22s ease,
     border-color 0.22s ease;
 }
+/* Clips the art, the scrim and the sheets to the card's rounded box */
+.card-inner {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 5px;
+}
+
 /* Filled cards navigate to their role in the team tab, so they read as buttons */
 .champ-card--filled {
   cursor: pointer;
@@ -410,13 +486,20 @@ const mvpHolder = computed<string | null>(() => {
   transform: translateY(-4px);
   box-shadow:
     0 12px 30px rgba(0, 0, 0, 0.7),
-    0 0 20px rgba(212, 160, 32, 0.28);
+    var(--rank-glow-hover, 0 0 20px rgba(212, 160, 32, 0.28));
 }
+/* The team MVP keeps a warm inner shimmer on top of the rank halo */
 .champ-card--mvp {
   box-shadow:
     inset 0 0 22px rgba(212, 160, 32, 0.16),
     0 6px 20px rgba(0, 0, 0, 0.55),
-    0 0 14px rgba(212, 160, 32, 0.3);
+    var(--rank-glow, 0 0 14px rgba(212, 160, 32, 0.3));
+}
+.champ-card--mvp.champ-card--filled:hover {
+  box-shadow:
+    inset 0 0 26px rgba(212, 160, 32, 0.2),
+    0 12px 30px rgba(0, 0, 0, 0.7),
+    var(--rank-glow-hover, 0 0 20px rgba(212, 160, 32, 0.28));
 }
 .champ-card--empty {
   background: #0b0904;
@@ -426,13 +509,18 @@ const mvpHolder = computed<string | null>(() => {
   border-style: solid;
   transform: translateY(-3px);
 }
+/* An empty slot lights its frame up to the filled cards' level on hover */
+.champ-card--empty:hover :deep(.rank-frame--dim) {
+  opacity: 0.7;
+}
 
-/* ── Role stripe: colour signature along the card's bottom edge ── */
+/* ── Role stripe: colour signature along the card's bottom edge ──
+   Lifted just inside the rank frame, so a Challenger edge cannot swallow it. */
 .card-stripe {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: var(--stripe-lift, 0px);
+  right: var(--stripe-lift, 0px);
+  bottom: var(--stripe-lift, 0px);
   z-index: 3;
   height: 2px;
   opacity: 0.75;
@@ -480,13 +568,32 @@ const mvpHolder = computed<string | null>(() => {
   opacity: 0.55;
 }
 
+/* ── Head row ──
+   Crest + role on the left, badges on the right, one flex line across the top
+   of the card. Absolute so it floats over the art, but internally laid out —
+   the two sides push each other apart instead of stacking up. */
+.card-head {
+  position: absolute;
+  /* starts below the crown's foot, which overlaps the top edge */
+  top: calc(var(--crown-foot, 0px) + clamp(4px, 0.6vh, 9px));
+  left: calc(var(--frame-inset, 2px) + clamp(6px, 0.55vw, 11px));
+  right: calc(var(--frame-inset, 2px) + clamp(6px, 0.55vw, 11px));
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: clamp(5px, 0.5vw, 10px);
+  /* click-through; the badges below re-enable it for their tooltips */
+  pointer-events: none;
+}
+
 /* ── Role label: bare type, no frame, no plate — same treatment as the command
    panel's role caption so both readouts speak one language ── */
 .card-role {
-  position: absolute;
-  top: clamp(6px, 0.9vh, 11px);
-  left: clamp(8px, 0.7vw, 13px);
-  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: clamp(3px, 0.3vw, 6px);
+  flex-shrink: 0;
   font-size: clamp(12px, 1.5vh, 17px);
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -498,6 +605,7 @@ const mvpHolder = computed<string | null>(() => {
     0 0 12px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
   pointer-events: none;
 }
+
 .card-role--empty {
   color: color-mix(in srgb, var(--role-color, #c89040) 40%, rgba(200, 180, 140, 0.55));
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
@@ -512,14 +620,12 @@ const mvpHolder = computed<string | null>(() => {
 /* ── Standout badges: stacked down the right edge, each naming its award.
    Frameless like the role label — the drop shadow carries them over the art. ── */
 .card-badges {
-  position: absolute;
-  top: clamp(5px, 0.8vh, 10px);
-  right: clamp(8px, 0.7vw, 13px);
-  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: clamp(3px, 0.5vh, 7px);
+  /* yields to the role side when the card gets narrow — the badge text ellipses */
+  min-width: 0;
   max-width: 62%;
   pointer-events: none;
 }
@@ -568,7 +674,9 @@ const mvpHolder = computed<string | null>(() => {
   display: flex;
   flex-direction: column;
   gap: clamp(4px, 0.7vh, 8px);
-  padding: clamp(7px, 1vh, 12px) clamp(7px, 0.6vw, 12px);
+  /* clears the frame on both axes: the stripe below, the corner gems aside */
+  padding: clamp(7px, 1vh, 12px) calc(var(--frame-inset, 2px) + clamp(6px, 0.5vw, 11px))
+    calc(var(--stripe-lift, 0px) + clamp(6px, 0.9vh, 11px));
   transition: opacity 0.22s ease;
 }
 
@@ -628,7 +736,9 @@ const mvpHolder = computed<string | null>(() => {
   display: flex;
   flex-direction: column;
   gap: clamp(4px, 0.7vh, 8px);
-  padding: clamp(8px, 1.1vh, 13px) clamp(8px, 0.7vw, 13px);
+  /* same top offset as the head row: the corner blades sit above the sheet */
+  padding: calc(var(--crown-foot, 0px) + clamp(5px, 0.7vh, 10px))
+    calc(var(--frame-inset, 2px) + clamp(7px, 0.55vw, 12px)) clamp(8px, 1.1vh, 13px);
   background: rgba(8, 6, 4, 0.93);
   opacity: 0;
   pointer-events: none;
@@ -818,13 +928,27 @@ const mvpHolder = computed<string | null>(() => {
   }
 }
 
+/* Tall desktops (2K/4K): frame and crest grow with the cards so neither reads
+   thin from a distance; flat viewports pull them back off the content. */
+@media (min-height: 1250px) {
+  .roster-panel {
+    --frame-scale: 1.25;
+  }
+}
+@media (max-height: 900px) {
+  .roster-panel {
+    --frame-scale: 0.85;
+  }
+}
+
 /* Full HD and flatter: six large numbers still have to fit a shorter card */
 @media (max-height: 1100px) {
   .detail-value {
     font-size: 19px;
   }
   .card-detail {
-    padding: 8px 10px;
+    /* keeps both frame insets — the corner blades sit above the sheet */
+    padding: calc(var(--crown-foot, 0px) + 6px) calc(var(--frame-inset, 2px) + 10px) 8px;
   }
 }
 

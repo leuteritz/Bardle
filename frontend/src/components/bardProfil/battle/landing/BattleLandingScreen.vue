@@ -251,7 +251,9 @@ const legendGroup = computed<RankStatGroup>(() => ({
   flex: 12 1 auto;
   min-width: 0;
   min-height: 0;
-  max-height: clamp(260px, 38vh, 470px);
+  /* the extra room is the headroom the rank crowns need above the cards, so
+     the cards themselves keep their height whatever tier the player wears */
+  max-height: calc(clamp(260px, 38vh, 470px) + var(--crown-space, 0px));
 }
 
 /* ── Focus 3: the start button ── */
