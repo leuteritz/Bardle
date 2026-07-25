@@ -447,37 +447,30 @@ function onSlotLeave() {
   transition: filter 0.25s ease;
 }
 
-/* Zustandschip unter dem Emblem. Der Text steht direkt auf dem Champion-
-   Porträt — ohne eigenen Grund wäre er auf hellen Skins kaum lesbar. Der
-   flache Chip in Rollenfarbe löst das und fasst READY / CAST / Countdown zu
-   einer festen Marke zusammen, die beim Runterzählen nicht springt. */
+/* Zustandslabel unter dem Emblem — freistehender Text ohne Grund und Rahmen.
+   "READY" ist das längste Wort und muss auf der innen 74px schmalen Karte
+   vollständig stehen: 12px bei enger Sperrung ergibt rund 41px, also reichlich
+   Luft. Kein overflow/max-width — die Breite ist konstruktiv sicher, ein Clip
+   würde den Text nur wieder anschneiden. Getragen wird die Lesbarkeit auf
+   hellen Skins von einem kräftigen Schattensaum. */
 .champ-ability-state {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 7px);
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
-  /* der Chip darf nie über die Kartenkante hinauslaufen */
-  max-width: calc(100% - 6px);
-  overflow: hidden;
-  padding: 4px 7px;
-  border-radius: 4px;
-  background: rgba(8, 6, 3, 0.82);
-  border: 1px solid color-mix(in srgb, var(--role-color, #c89040) 55%, transparent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
-  /* "READY" ist das längste Wort im Chip — kleiner und enger gesetzt als der
-     Countdown, damit es auf der 74px schmalen Karte vollständig steht */
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 0.07em;
-  text-indent: 0.07em; /* gleicht das letter-spacing des letzten Zeichens aus */
+  letter-spacing: 0.06em;
+  text-indent: 0.06em; /* gleicht das letter-spacing des letzten Zeichens aus */
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--role-color, #c89040) 30%, #f4ead2);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-  transition:
-    color 0.25s ease,
-    border-color 0.25s ease;
+  color: color-mix(in srgb, var(--role-color, #c89040) 28%, #f6eeda);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.98),
+    0 0 6px rgba(0, 0, 0, 0.9),
+    0 0 12px color-mix(in srgb, var(--role-color, #c89040) 50%, transparent);
+  transition: color 0.25s ease;
 }
 
 /* Bereit: geschlossener Ring, das Emblem atmet in der Rollenfarbe */
@@ -521,11 +514,10 @@ function onSlotLeave() {
 }
 /* Der Countdown ist kurz (max "30s") und darf deshalb deutlich größer stehen */
 .champ-ability--cd .champ-ability-state {
-  letter-spacing: 0.04em;
-  text-indent: 0.04em;
-  font-size: 17px;
-  color: #e8dcc0;
-  border-color: rgba(122, 78, 32, 0.55);
+  letter-spacing: 0.03em;
+  text-indent: 0.03em;
+  font-size: 16px;
+  color: #f0e4c8;
 }
 
 /* Gerade ausgelöst: kurzer Impuls, dann fällt der Ring auf null zurück */
