@@ -317,7 +317,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   min-width: 0;
   border-radius: 5px;
   overflow: hidden;
-  border: 2px solid rgba(122, 78, 32, 0.45);
+  border: 2px solid rgba(122, 78, 32, 0.75);
   background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
   cursor: pointer;
   transition:
@@ -327,29 +327,80 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
     transform 0.15s ease;
 }
 
-.cmd-planet-tile:hover {
-  border-color: rgba(200, 144, 64, 0.75);
+/* ── Zweistufiger Rahmen ────────────────────────────────────────────────────
+   Dunkle Innenfase direkt hinter der Außenkante — dieselbe Bauweise wie der
+   Holzrahmen der Modals (`inset 0 0 0 2px`). Sie trennt die farbige Kante
+   sauber vom Inhalt und lässt den Rahmen auf der schmalen Kachel so tragend
+   wirken wie der Kartenrahmen der Champions darüber.
+   Bewusst als eigenes Overlay statt als box-shadow der Kachel: die
+   Zustandsklassen (Buff, Eclipse, Zerstört, Auswahl) schreiben allesamt ihren
+   eigenen box-shadow und würden die Fase sonst überschreiben. z-index 4 hält
+   sie über Bild, Vignette und Schleiern, aber unter den mittigen Emblemen. */
+.cmd-planet-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: 3px;
   box-shadow:
-    0 0 12px rgba(200, 144, 64, 0.18),
+    inset 0 0 0 2px rgba(6, 4, 2, 0.8),
+    inset 0 0 10px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Akzentkante am Kachelfuß ───────────────────────────────────────────────
+   Gegenstück zur Rollen-Kopfleiste über den Champion-Karten: gleiche Sprache,
+   gleiche Farbquelle — nur gespiegelt an den unteren Rand gesetzt. Die beiden
+   Slot-Reihen lesen sich dadurch als ein System, bleiben aber klar
+   unterscheidbar (Karte trägt oben, Kachel unten). */
+.cmd-planet-tile::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  z-index: 4;
+  pointer-events: none;
+  background: rgba(122, 78, 32, 0.6);
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.cmd-planet-tile:hover {
+  border-color: rgba(200, 144, 64, 0.9);
+  box-shadow:
+    0 0 12px rgba(200, 144, 64, 0.22),
     0 2px 8px rgba(0, 0, 0, 0.5);
   transform: translateY(-1px);
+}
+.cmd-planet-tile:hover::after {
+  background: rgba(200, 144, 64, 0.85);
+  box-shadow: 0 0 8px rgba(200, 144, 64, 0.45);
 }
 .cmd-planet-tile:active {
   transform: translateY(0) scale(0.97);
 }
 
-/* filled: role-colored frame */
+/* filled: role-colored frame — voll deckend wie der Kartenrahmen der Champions,
+   damit belegter Planet und belegte Rolle dieselbe Rahmenstärke tragen */
 .cmd-planet-tile--filled {
   padding: 0;
-  border-color: color-mix(in srgb, var(--role-color, #c89040) 90%, transparent);
+  border-color: var(--role-color, #c89040);
   background: linear-gradient(170deg, #1e1208 0%, #150f04 100%);
-  box-shadow: 0 0 10px -1px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
+  box-shadow: 0 0 12px -1px color-mix(in srgb, var(--role-color, #c89040) 55%, transparent);
 }
 .cmd-planet-tile--filled:hover {
   border-color: var(--role-color, #c89040);
   box-shadow:
-    0 0 14px -1px color-mix(in srgb, var(--role-color, #c89040) 65%, transparent),
+    0 0 16px -1px color-mix(in srgb, var(--role-color, #c89040) 75%, transparent),
     0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.cmd-planet-tile--filled::after,
+.cmd-planet-tile--filled:hover::after {
+  background: var(--role-color, #c89040);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent);
 }
 
 .cmd-tile-planet-img {
@@ -387,16 +438,23 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 }
 
 .cmd-planet-tile--empty-slot {
-  border: 2px dashed var(--rpg-slot-empty-border, rgba(82, 184, 48, 0.52));
+  border: 2px dashed var(--rpg-slot-empty-border, rgba(82, 184, 48, 0.7));
   background: linear-gradient(180deg, rgba(8, 18, 6, 0.7), rgba(5, 12, 4, 0.85));
   box-shadow: inset 0 0 14px rgba(52, 160, 24, 0.06);
   animation: cmd-empty-breathe 3s ease-in-out infinite;
 }
 .cmd-planet-tile--empty-slot:hover {
-  border-color: var(--rpg-slot-empty-border-hover, rgba(110, 192, 64, 0.82));
+  border-color: var(--rpg-slot-empty-border-hover, rgba(110, 192, 64, 0.95));
   box-shadow:
     inset 0 0 14px rgba(82, 184, 48, 0.12),
     0 0 8px rgba(82, 184, 48, 0.2);
+}
+/* gestrichelter Rahmen → die Fußkante bleibt durchgezogen und hält die Kachel
+   trotzdem am Boden zusammen */
+.cmd-planet-tile--empty-slot::after,
+.cmd-planet-tile--empty-slot:hover::after {
+  background: rgba(82, 184, 48, 0.72);
+  box-shadow: 0 0 8px rgba(82, 184, 48, 0.35);
 }
 
 .cmd-tile-icon--empty {
@@ -408,25 +466,35 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
 .cmd-planet-tile--locked {
   background: linear-gradient(170deg, #1a1408 0%, #120e04 100%);
-  border: 2px solid rgba(122, 78, 32, 0.35);
+  border: 2px solid rgba(122, 78, 32, 0.55);
   box-shadow: none;
   opacity: 0.55;
   filter: grayscale(40%);
   cursor: not-allowed;
 }
 .cmd-planet-tile--locked:hover {
-  border-color: rgba(122, 78, 32, 0.45);
+  border-color: rgba(122, 78, 32, 0.6);
   box-shadow: none;
   transform: none;
+}
+.cmd-planet-tile--locked::after,
+.cmd-planet-tile--locked:hover::after {
+  background: rgba(122, 78, 32, 0.45);
+  box-shadow: none;
 }
 
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
   background: linear-gradient(180deg, rgba(18, 30, 10, 0.72), rgba(12, 20, 6, 0.82));
-  border: 2px solid rgba(110, 192, 64, 0.45);
+  border: 2px solid rgba(110, 192, 64, 0.65);
   box-shadow:
     0 0 8px rgba(110, 192, 64, 0.18),
     inset 0 0 10px rgba(110, 192, 64, 0.04);
   animation: cmd-afford-pulse 2.2s ease-in-out infinite;
+}
+.cmd-planet-tile--buy:not(.cmd-planet-tile--locked)::after,
+.cmd-planet-tile--buy:not(.cmd-planet-tile--locked):hover::after {
+  background: #6ec040;
+  box-shadow: 0 0 10px rgba(110, 192, 64, 0.6);
 }
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked):hover {
   border-color: #6ec040;
@@ -453,7 +521,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 @keyframes cmd-afford-pulse {
   0%,
   100% {
-    border-color: rgba(110, 192, 64, 0.35);
+    border-color: rgba(110, 192, 64, 0.55);
     box-shadow:
       0 0 6px rgba(110, 192, 64, 0.15),
       inset 0 0 8px rgba(110, 192, 64, 0.03);
@@ -480,10 +548,10 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 @keyframes cmd-empty-breathe {
   0%,
   100% {
-    border-color: rgba(82, 184, 48, 0.38);
+    border-color: rgba(82, 184, 48, 0.55);
   }
   50% {
-    border-color: rgba(82, 184, 48, 0.68);
+    border-color: rgba(82, 184, 48, 0.9);
   }
 }
 
@@ -566,6 +634,14 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
 .cmd-planet-tile--selected:hover {
   transform: translateY(-3px);
+}
+
+/* Fußkante zieht in die Auswahlfarbe mit — auf leeren und gesperrten Kacheln
+   ist sie die einzige farbige Kante, sie muss die Markierung also mittragen */
+.cmd-planet-tile--selected::after,
+.cmd-planet-tile--selected:hover::after {
+  background: var(--sel);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--sel) 75%, transparent);
 }
 
 /* Kaufbare Kacheln tragen ihren eigenen grünen Puls mit höherer Spezifität —
@@ -698,6 +774,11 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
     0 0 16px rgba(92, 230, 106, 0.8),
     0 0 34px rgba(92, 230, 106, 0.35),
     inset 0 1px 0 rgba(140, 255, 150, 0.18);
+}
+.cmd-planet-tile--buffed::after,
+.cmd-planet-tile--buffed:hover::after {
+  background: #5ce66a;
+  box-shadow: 0 0 12px rgba(92, 230, 106, 0.75);
 }
 
 .cmd-buff-overlay {
@@ -858,8 +939,13 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
    Designsprache wie der Eclipse-Status im StarFightModal. */
 /* Rahmen kippt von warm auf kalt — die Kachel steht nicht mehr im Sonnenlicht */
 .cmd-planet-tile--eclipsed {
-  border-color: rgba(46, 62, 100, 0.65);
+  border-color: rgba(46, 62, 100, 0.8);
   box-shadow: inset 0 0 18px rgba(4, 8, 20, 0.7);
+}
+.cmd-planet-tile--eclipsed::after,
+.cmd-planet-tile--eclipsed:hover::after {
+  background: rgba(58, 78, 124, 0.9);
+  box-shadow: none;
 }
 .cmd-planet-tile--eclipsed .cmd-tile-planet-img {
   filter: grayscale(65%) brightness(0.5) saturate(0.6);
@@ -903,8 +989,13 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
    Deutlich härter als die Eclipse — die Kachel liegt komplett brach, das
    Planetenbild ist fast ausgelöscht, ein rotes Wrack-Emblem trägt den Timer. */
 .cmd-planet-tile--down {
-  border-color: rgba(150, 62, 48, 0.55);
+  border-color: rgba(150, 62, 48, 0.8);
   box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.78);
+}
+.cmd-planet-tile--down::after,
+.cmd-planet-tile--down:hover::after {
+  background: #963e30;
+  box-shadow: 0 0 9px rgba(204, 96, 80, 0.45);
 }
 .cmd-planet-tile--down .cmd-tile-planet-img {
   filter: grayscale(100%) brightness(0.28) contrast(0.8);

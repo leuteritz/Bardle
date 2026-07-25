@@ -311,15 +311,19 @@ function onSlotLeave() {
     0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-/* Leerer Slot: der Kartengrund ist in der Rollenfarbe angewärmt statt fast
-   schwarz — die Karte liest sich als wartender Platz, nicht als totes Feld,
-   und das Rollenbild darüber steht auf einem tragenden Grund. */
+/* Leerer Slot: identischer Kartengrund wie die unbelegte Planeten-Kachel im
+   Dock darunter (#1a1408 → #120e04) — beide Leerzustände lesen sich damit als
+   dieselbe Sorte Fach, unabhängig davon, was sie später aufnehmen. Ein knapper
+   radialer Schein in der Rollenfarbe liegt exakt unter dem mittigen Rollenbild
+   und hebt es vom flachen Grund ab, ohne die Fläche einzufärben. */
 .champ-card:not(.champ-card--filled) .champ-card-body {
-  background: linear-gradient(
-    170deg,
-    color-mix(in srgb, var(--role-color, #c89040) 16%, #221b12) 0%,
-    color-mix(in srgb, var(--role-color, #c89040) 7%, #14110b) 100%
-  );
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      color-mix(in srgb, var(--role-color, #c89040) 13%, transparent) 0%,
+      transparent 56%
+    ),
+    linear-gradient(170deg, #1a1408 0%, #120e04 100%);
 }
 
 .champ-card-portrait {
@@ -341,28 +345,35 @@ function onSlotLeave() {
   transform: scale(1.06);
 }
 
-/* Leerer Slot: das Rollenbild trägt die Karte, statt nur als dunkler Schemen
-   angedeutet zu sein. Ein radialer Mask-Verlauf lässt es zu den Kanten hin
-   auslaufen — es liegt als Relief in der Karte, statt als aufgesetztes Bild
-   auf ihr. Deutlich präsenter als zuvor (0.18), aber weich genug, dass das
-   Rollen-Banner darunter lesbar bleibt. */
+/* Leerer Slot: das Rollenbild steht als eigenständiges Motiv exakt auf der
+   Kartenmitte — nicht mehr als vollflächiges, weich ausmaskiertes Relief. Der
+   Kartengrund bleibt dadurch flach und ruhig, das Motiv wird zum einzigen
+   Inhalt zwischen Rahmen und Rollen-Banner. Die Box ist prozentual bemessen
+   (die Karte skaliert mit --hud-scale) und mit `contain` gefüllt, damit
+   unterschiedlich proportionierte Rollenbilder gleich groß wirken; 32% Höhe
+   halten reichlich Abstand zum Banner unten und zum Kartenrand oben. */
 .champ-card-portrait--placeholder {
-  opacity: 0.72;
-  filter: grayscale(0%);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70%;
+  height: 32%;
   object-fit: contain;
-  /* exakt auf Kartenmitte — Mask und Bild teilen denselben Mittelpunkt,
-     sonst wandert das Motiv optisch aus der Mitte */
   object-position: center;
-  -webkit-mask: radial-gradient(ellipse at 50% 50%, #000 44%, transparent 82%);
-  mask: radial-gradient(ellipse at 50% 50%, #000 44%, transparent 82%);
+  opacity: 0.88;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8))
+    drop-shadow(0 0 10px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent));
   transition:
     opacity 0.2s ease,
-    filter 0.2s ease;
+    filter 0.2s ease,
+    transform 0.25s ease;
 }
 .champ-card:hover .champ-card-portrait--placeholder {
   opacity: 1;
-  filter: brightness(1.12);
-  transform: none;
+  transform: translate(-50%, -50%) scale(1.07);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8))
+    drop-shadow(0 0 16px color-mix(in srgb, var(--hover-role-color, #c89040) 75%, transparent));
 }
 
 /* hover glow inside the portrait */
