@@ -1,7 +1,24 @@
 import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
-import { ROLES } from '@/config/constants'
+import {
+  ROLES,
+  ROLE_TOP_SHIELD_REBUILD_MS,
+  ROLE_MID_CURSE_INTERVAL_MS,
+  ROLE_ADC_BURST_INTERVAL_MS,
+  ROLE_SUPPORT_HEAL_INTERVAL_MS,
+  JUNGLE_BUFF_COOLDOWN_MS,
+} from '@/config/constants'
+import type { ChampionRole } from '@/types'
+
+/** Volle Cooldown-Dauer je Rolle — Bezugsgröße für den Fortschrittsring. */
+const ABILITY_CD_TOTAL_MS: Record<ChampionRole, number> = {
+  top: ROLE_TOP_SHIELD_REBUILD_MS,
+  jungle: JUNGLE_BUFF_COOLDOWN_MS,
+  mid: ROLE_MID_CURSE_INTERVAL_MS,
+  adc: ROLE_ADC_BURST_INTERVAL_MS,
+  support: ROLE_SUPPORT_HEAL_INTERVAL_MS,
+}
 
 export interface RoleAbilityState {
   role: string
@@ -12,6 +29,8 @@ export interface RoleAbilityState {
   onCooldown: boolean
   timer: string
   isFlashing: boolean
+  /** Bereits abgelaufener Anteil des Cooldowns (0 → 1); 1 = einsatzbereit. */
+  progress: number
 }
 
 function fmtCd(ms: number): string {
@@ -64,6 +83,7 @@ export function useRoleAbilityStates() {
         onCooldown: cdMs > 0 && !isFlashing,
         timer: fmtCd(cdMs),
         isFlashing,
+        progress: cdMs > 0 ? Math.min(1, Math.max(0, 1 - cdMs / ABILITY_CD_TOTAL_MS[role])) : 1,
       }
     }),
   )

@@ -138,13 +138,30 @@ function onSlotLeave() {
              ein gefallener Champion verdrängt sie: seine Fähigkeiten pausieren,
              Cooldown-Pill und Ready-Dot wären dann irreführend -->
         <template v-if="slot !== null && !isChampionDown(i)">
-          <span
-            v-if="roleAbilities[i].onCooldown && roleAbilities[i].timer"
-            class="champ-card-cd-pill"
+          <!-- Ability-Kern: Rollen-Emblem mit umlaufendem Cooldown-Ring, der
+               sich bis zur Bereitschaft füllt, darunter der Zustand im
+               Klartext. Sitzt im unteren Kartendrittel über dem Rollen-Banner
+               — freigehalten von Reticle-Ecken, Seitenkeilen und dem
+               Eclipse-Medaillon in der Kartenmitte. -->
+          <div
+            class="champ-ability"
+            :class="{
+              'champ-ability--cd': roleAbilities[i].onCooldown,
+              'champ-ability--cast': roleAbilities[i].isFlashing,
+            }"
+            :style="{ '--cd-progress': roleAbilities[i].progress }"
           >
-            {{ roleAbilities[i].timer }}
-          </span>
-          <span v-else class="champ-card-ready-dot" aria-hidden="true" />
+            <span class="champ-ability-orb">
+              <img :src="roleAbilities[i].image" alt="" draggable="false" />
+            </span>
+            <span class="champ-ability-state">
+              <template v-if="roleAbilities[i].isFlashing">CAST</template>
+              <template v-else-if="roleAbilities[i].onCooldown">{{
+                roleAbilities[i].timer
+              }}</template>
+              <template v-else>READY</template>
+            </span>
+          </div>
 
           <!-- Eclipse: Champion fliegt gerade hinter der Sonne — Fähigkeiten
                warten, kein Angriff möglich. Großes Medaillon mittig im
@@ -338,41 +355,137 @@ function onSlotLeave() {
   }
 }
 
-/* ── Ability indicators ── */
-.champ-card-ready-dot {
+/* ── Ability-Kern ───────────────────────────────────────────────────────────
+   Ersetzt die alte Pille in der oberen rechten Ecke: die kollidierte mit dem
+   Auswahl-Reticle und war für die wichtigste Statusinfo der Karte zu klein.
+   Der Kern sitzt jetzt in der freien Zone über dem Rollen-Banner und trägt
+   den Zustand in einem Ring-Emblem — dieselbe Sprache wie Revive-Ring und
+   Jungle-Buff-Chip, nur läuft der Ring hier VOLL statt leer: er zeigt den
+   Weg zurück zur Bereitschaft, nicht die Restlaufzeit eines Effekts. */
+.champ-ability {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--role-color, #c89040);
-  border: 1px solid rgba(255, 235, 200, 0.7);
-  box-shadow: 0 0 7px var(--role-color, #c89040);
+  left: 0;
+  right: 0;
+  /* über dem Rollen-Banner (26px Scrim-Padding + 8px + 16px Schrift) */
+  bottom: 40px;
   z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   pointer-events: none;
 }
 
-.champ-card-cd-pill {
+.champ-ability-orb {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 28%, rgba(30, 23, 12, 0.96), rgba(8, 6, 3, 0.96));
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.65),
+    0 0 14px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
+  transition: box-shadow 0.25s ease;
+}
+
+/* Fortschrittsring — füllt sich über den Cooldown bis zum geschlossenen Kreis */
+.champ-ability-orb::before {
+  content: '';
   position: absolute;
-  top: 5px;
-  right: 5px;
-  padding: 0 10px;
-  height: 29px;
-  border-radius: 5px;
-  background: rgba(10, 7, 3, 0.85);
-  border: 2px solid var(--role-color, #c89040);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  font-size: 18px;
-  letter-spacing: 0.03em;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--role-color, #c89040) calc(var(--cd-progress, 1) * 360deg),
+    rgba(255, 240, 210, 0.1) 0
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 2.5px)
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent));
+}
+
+.champ-ability-orb img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--role-color, #c89040) 60%, transparent));
+  transition: filter 0.25s ease;
+}
+
+.champ-ability-state {
+  font-size: 15px;
+  font-weight: 900;
   line-height: 1;
-  color: #efe4c8;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em; /* gleicht das letter-spacing des letzten Zeichens aus */
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  z-index: 4;
-  pointer-events: none;
+  color: color-mix(in srgb, var(--role-color, #c89040) 35%, #f4ead2);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 10px color-mix(in srgb, var(--role-color, #c89040) 55%, transparent);
+  transition: color 0.25s ease;
+}
+
+/* Bereit: geschlossener Ring, das Emblem atmet in der Rollenfarbe */
+.champ-ability:not(.champ-ability--cd) .champ-ability-orb {
+  animation: champ-ability-ready 1.9s ease-in-out infinite;
+}
+
+@keyframes champ-ability-ready {
+  0%,
+  100% {
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.65),
+      0 0 12px color-mix(in srgb, var(--role-color, #c89040) 40%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.65),
+      0 0 24px color-mix(in srgb, var(--role-color, #c89040) 85%, transparent);
+  }
+}
+
+/* Cooldown: Emblem kühlt aus, der Countdown übernimmt die Führung */
+.champ-ability--cd .champ-ability-orb {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+}
+.champ-ability--cd .champ-ability-orb img {
+  filter: grayscale(75%) brightness(0.6);
+}
+.champ-ability--cd .champ-ability-state {
+  letter-spacing: 0.04em;
+  text-indent: 0.04em;
+  font-size: 17px;
+  color: #e8dcc0;
+}
+
+/* Gerade ausgelöst: kurzer Impuls, dann fällt der Ring auf null zurück */
+.champ-ability--cast .champ-ability-orb {
+  animation: champ-ability-cast 0.45s ease-out;
+}
+.champ-ability--cast .champ-ability-state {
+  color: color-mix(in srgb, var(--role-color, #c89040) 25%, #fff);
+}
+
+@keyframes champ-ability-cast {
+  0% {
+    transform: scale(1.3);
+    box-shadow:
+      0 0 26px var(--role-color, #c89040),
+      0 0 52px color-mix(in srgb, var(--role-color, #c89040) 55%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.65),
+      0 0 14px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
+  }
 }
 
 /* ── Ausgewählt: diese Rolle ist gerade im Team-Tab offen ───────────────────
@@ -547,9 +660,9 @@ function onSlotLeave() {
   opacity: 0.35;
   box-shadow: none;
 }
-.champ-card--eclipsed .champ-card-ready-dot {
-  opacity: 0.35;
-  box-shadow: none;
+.champ-card--eclipsed .champ-ability {
+  opacity: 0.42;
+  filter: grayscale(60%);
 }
 .champ-card--eclipsed .champ-card-label {
   color: rgba(200, 188, 160, 0.5);
@@ -735,9 +848,6 @@ function onSlotLeave() {
     0 0 16px var(--role-color, #c89040),
     0 0 30px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
 }
-.champ-card--flash .champ-card-ready-dot {
-  animation: champ-dot-flash 0.45s ease-out;
-}
 
 @keyframes champ-card-flash {
   0% {
@@ -749,15 +859,6 @@ function onSlotLeave() {
     box-shadow:
       0 0 16px var(--role-color, #c89040),
       0 0 30px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
-  }
-}
-
-@keyframes champ-dot-flash {
-  0% {
-    transform: scale(1.6);
-  }
-  100% {
-    transform: scale(1);
   }
 }
 
@@ -802,7 +903,8 @@ function onSlotLeave() {
 @media (prefers-reduced-motion: reduce) {
   .champ-card--filled:hover .champ-card-hover-glow,
   .champ-card--flash .champ-card-body,
-  .champ-card--flash .champ-card-ready-dot,
+  .champ-ability:not(.champ-ability--cd) .champ-ability-orb,
+  .champ-ability--cast .champ-ability-orb,
   .champ-card-eclipse-medal,
   .champ-card-down-ring :deep(svg),
   .champ-card--selected .champ-card-body {
