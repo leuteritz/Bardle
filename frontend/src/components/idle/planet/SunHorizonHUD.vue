@@ -40,10 +40,16 @@
       </div>
     </div>
 
-    <!-- Zielscheibe: der Boss hat die Sonne im Visier (Aim-Phase des Strikes) -->
-    <span v-if="roleBehaviorStore.autoAimSun" class="sfsun-aim">
-      <Icon icon="game-icons:targeting" class="sfsun-aim-icon" width="100%" height="100%" />
-    </span>
+    <!-- Zielmarkierung: der Boss hat die Sonne im Visier (Aim-Phase des
+         Strikes). Bewusst KEIN rundes Reticle wie bei Champions/Turrets — ein
+         Kreis über dem Kamm würde die HP-Lese verdecken, die nur wenige Pixel
+         darüber sitzt. Stattdessen eine zweite, kleinere Kuppel in derselben
+         Silhouette, die vollständig UNTER dem Kamm auf der Sonnenoberfläche
+         liegt, plus ein roter Glutsaum auf der Kammlinie. -->
+    <template v-if="roleBehaviorStore.autoAimSun">
+      <span class="sfsun-aim-dome" />
+      <span class="sfsun-aim-crest" />
+    </template>
 
     <!-- Strike-Bolt: Projektil vom Boss-Anker senkrecht hinab auf den Kamm -->
     <span
@@ -459,58 +465,51 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-/* ── Zielscheibe des Strikes auf dem Kamm — gleiches Motiv wie bei Champions
-   (rsq-aim-lock) und Turret-Planeten (tbh-aim-lock) ─────────────────────────── */
-.sfsun-aim {
+/* ── Zielmarkierung des Strikes ─────────────────────────────────────────────
+   Zweite Kuppel in derselben Silhouette wie .sfsun-dome, nur schmaler und
+   flacher: sie liegt vollständig unter dem Kamm auf der Sonnenoberfläche und
+   lässt damit die HP-Leiste (nur ~10 px über dem Kamm) frei. Gestrichelte
+   Kontur + rote Tönung übernehmen die Signatur der Champion-/Turret-Reticles. */
+.sfsun-aim-dome {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 44%;
+  height: var(--sfsun-crest-h, 84px);
+  transform: translateX(-50%);
+  border: 2px dashed rgba(255, 90, 60, 0.85);
+  border-bottom: none;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: radial-gradient(
+    ellipse 50% 100% at 50% 100%,
+    rgba(255, 50, 30, 0.5) 0%,
+    rgba(255, 60, 40, 0.26) 62%,
+    rgba(255, 60, 40, 0.12) 100%
+  );
+  box-shadow: 0 0 18px rgba(255, 60, 40, 0.45);
+  z-index: 2;
+  animation: sfsun-aim-tint 0.6s ease-in-out infinite alternate;
+  will-change: opacity;
+}
+
+/* Glutsaum auf der Kammlinie — signalisiert "hier schlägt es ein" */
+.sfsun-aim-crest {
   position: absolute;
   left: 50%;
   bottom: var(--sfsun-crest-h, 84px);
-  width: clamp(104px, 12%, 180px);
-  aspect-ratio: 1;
+  width: 46%;
+  height: 26px;
   transform: translate(-50%, 50%);
-  z-index: 5;
-  animation: sfsun-aim-in 0.2s ease-out both;
-}
-
-.sfsun-aim-icon {
-  position: absolute;
-  inset: 0;
-  color: #ff5040;
-  filter: drop-shadow(0 0 6px rgba(255, 60, 40, 0.8));
-  animation: sfsun-aim-spin 2.2s linear infinite;
-  will-change: transform;
-}
-
-.sfsun-aim::after {
-  content: '';
-  position: absolute;
-  inset: 14%;
   border-radius: 50%;
   background: radial-gradient(
-    circle,
-    rgba(255, 60, 40, 0.14) 0%,
-    rgba(255, 60, 40, 0.28) 62%,
-    rgba(255, 50, 30, 0.5) 100%
+    ellipse at 50% 50%,
+    rgba(255, 120, 90, 0.85) 0%,
+    rgba(255, 60, 40, 0.45) 45%,
+    transparent 74%
   );
-  animation: sfsun-aim-tint 0.6s ease-in-out infinite alternate;
-}
-
-@keyframes sfsun-aim-in {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes sfsun-aim-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  z-index: 2;
+  animation: sfsun-aim-tint 0.6s ease-in-out infinite alternate-reverse;
+  will-change: opacity;
 }
 
 @keyframes sfsun-aim-tint {
@@ -619,11 +618,13 @@ onUnmounted(() => {
     transform: translateX(-50%) translateY(-4px) scale(1.12) rotate(-1deg);
   }
   45% {
-    transform: translateX(-50%) translateY(-16px) scale(1) rotate(0deg);
+    transform: translateX(-50%) translateY(-12px) scale(1) rotate(0deg);
   }
+  /* Bewusst kurzer Steigflug: darüber beginnt bereits die Info-Plate des
+     Mid-Champions (gleiche x-Spalte), die der Float sonst durchquert */
   100% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-54px) scale(0.85);
+    transform: translateX(-50%) translateY(-38px) scale(0.85);
   }
 }
 
@@ -659,7 +660,37 @@ onUnmounted(() => {
 
   .sfsun-float {
     font-size: 1.3rem;
-    bottom: calc(var(--sfsun-crest-h, 84px) + 44px);
+    bottom: calc(var(--sfsun-crest-h, 84px) + 38px);
+  }
+}
+
+/* ── Große Auflösungen (2K/4K): HP-Streifen und Phasenname mitwachsen lassen —
+   bei fixen 320 px wirkt der Balken auf einer 1660-px-Arena verloren. */
+@media (min-height: 1300px) {
+  .sfsun-hp {
+    width: 420px;
+    bottom: calc(var(--sfsun-crest-h, 84px) + 16px);
+  }
+
+  .sfsun-hp-head {
+    gap: 8px;
+    margin-bottom: 7px;
+  }
+
+  .sfsun-hp-value {
+    font-size: 1.1rem;
+  }
+
+  .sfsun-hp-phase {
+    font-size: 0.78rem;
+  }
+
+  .sfsun-hp-track {
+    height: 14px;
+  }
+
+  .sfsun-float {
+    font-size: 2rem;
   }
 }
 
@@ -668,9 +699,8 @@ onUnmounted(() => {
   .sfsun-glow,
   .sfsun-crest--hit,
   .sfsun-hp-fill--low,
-  .sfsun-aim,
-  .sfsun-aim-icon,
-  .sfsun-aim::after,
+  .sfsun-aim-dome,
+  .sfsun-aim-crest,
   .sfsun-bolt,
   .sfsun-float,
   .sfsun-float::before {

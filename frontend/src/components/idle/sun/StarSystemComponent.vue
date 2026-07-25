@@ -108,9 +108,13 @@
 
       <!-- ③b Zielscheibe auf der Sonne: der Boss hat den Spieler im Visier.
            Gleicher Telegraph wie bei Champions (rsq-aim-lock) und Turret-
-           Planeten (tbh-aim-lock), nur auf Orbit-Größe skaliert -->
+           Planeten (tbh-aim-lock), aber als CSS-Reticle statt als Icon: die
+           game-icons sind gefüllte Silhouetten und würden auf Orbit-Größe
+           (~500 px) die komplette Sonnenscheibe zudecken. -->
       <span v-if="roleBehaviorStore.autoAimSun" class="sun-aim-lock" :style="sunAimStyle">
-        <Icon icon="game-icons:targeting" class="sun-aim-lock-icon" width="100%" height="100%" />
+        <span class="sun-aim-tint" />
+        <span class="sun-aim-ring" />
+        <span class="sun-aim-ring sun-aim-ring--inner" />
       </span>
 
       <!-- ⑤ Fluch-Chip am Stern (links neben dem Stern, Stil des Jungle-Buff-Chips) -->
@@ -237,7 +241,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
 import OrbitPath from './OrbitPath.vue'
 import type { StarRenderEntry } from '../../../composables/useStarSystem'
@@ -1353,9 +1356,10 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 /* ── Zielscheibe auf der Sonne: der Boss visiert den Spieler mit "Strike" an.
-   Motiv identisch zu rsq-aim-lock (Champions) und tbh-aim-lock (Turrets):
-   rotierendes Reticle + pulsierende rote Tönung über der Zielfläche. Nur
-   transform/opacity animiert — der drop-shadow rastert einmal. ─────────────── */
+   Gleiche Signatur wie rsq-aim-lock (Champions) und tbh-aim-lock (Turrets) —
+   rotierender Reticle-Ring + rote Tönung —, hier aber komplett in CSS: die
+   game-icons sind gefüllte Silhouetten und decken bei ~500 px die ganze
+   Sonnenscheibe zu. Nur transform/opacity animiert (Compositor). ──────────── */
 .sun-aim-lock {
   position: absolute;
   left: 50%;
@@ -1366,28 +1370,76 @@ function starCountStyle(star: StarRenderEntry) {
   animation: sun-aim-in 0.2s ease-out both;
 }
 
-.sun-aim-lock-icon {
+/* Peil-Ring: gestrichelt, dreht langsam — die Striche lesen sich als Skala */
+.sun-aim-ring {
   position: absolute;
   inset: 0;
-  color: #ff5040;
-  filter: drop-shadow(0 0 10px rgba(255, 60, 40, 0.85));
-  animation: sun-aim-spin 2.2s linear infinite;
+  border-radius: 50%;
+  border: 3px dashed rgba(255, 90, 60, 0.85);
+  box-shadow:
+    0 0 20px rgba(255, 60, 40, 0.4),
+    inset 0 0 20px rgba(255, 60, 40, 0.18);
+  animation: sun-aim-spin 7s linear infinite;
   will-change: transform;
 }
 
-/* Rote Tönung genau auf der Sonnenscheibe (SUN_BG_DISC_RADIUS_FACTOR) */
+/* Innerer, durchgezogener Ring auf Höhe der Sonnenscheibe — gegenläufig */
+.sun-aim-ring--inner {
+  inset: var(--sun-disc-inset, 0px);
+  border: 2px solid rgba(255, 130, 100, 0.5);
+  box-shadow: none;
+  animation-duration: 11s;
+  animation-direction: reverse;
+}
+
+/* Vier Fadenkreuz-Marken am Ring (N/O/S/W) über zwei gekreuzte Bänder */
+.sun-aim-lock::before,
 .sun-aim-lock::after {
   content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+}
+
+.sun-aim-lock::before {
+  width: 2px;
+  height: 100%;
+  margin: -50% 0 0 -1px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 100, 70, 0.85) 0 9%,
+    transparent 9% 91%,
+    rgba(255, 100, 70, 0.85) 91% 100%
+  );
+}
+
+.sun-aim-lock::after {
+  height: 2px;
+  width: 100%;
+  margin: -1px 0 0 -50%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 100, 70, 0.85) 0 9%,
+    transparent 9% 91%,
+    rgba(255, 100, 70, 0.85) 91% 100%
+  );
+}
+
+/* Rote Tönung genau auf der Sonnenscheibe (SUN_BG_DISC_RADIUS_FACTOR) —
+   nur ein Hauch, die Sonne soll ihre Phasenfarbe behalten */
+.sun-aim-tint {
   position: absolute;
   inset: var(--sun-disc-inset, 0px);
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(255, 60, 40, 0.12) 0%,
-    rgba(255, 60, 40, 0.22) 62%,
-    rgba(255, 50, 30, 0.45) 100%
+    rgba(255, 60, 40, 0.03) 0%,
+    rgba(255, 60, 40, 0.08) 62%,
+    rgba(255, 50, 30, 0.2) 100%
   );
   animation: sun-aim-tint 0.6s ease-in-out infinite alternate;
+  will-change: opacity;
 }
 
 @keyframes sun-aim-in {
@@ -1497,8 +1549,8 @@ function starCountStyle(star: StarRenderEntry) {
   }
 
   .sun-aim-lock,
-  .sun-aim-lock-icon,
-  .sun-aim-lock::after {
+  .sun-aim-ring,
+  .sun-aim-tint {
     animation: none;
   }
 }
