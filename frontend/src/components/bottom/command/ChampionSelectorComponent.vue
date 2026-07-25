@@ -164,16 +164,15 @@ function onSlotLeave() {
           </div>
 
           <!-- Eclipse: Champion fliegt gerade hinter der Sonne — Fähigkeiten
-               warten, kein Angriff möglich. Großes Medaillon mittig im
-               Porträt, klar getrennt von Ability-Pill (oben rechts) und
-               Rollen-Label (unten). Bewusst ohne Transition: der Status
-               soll sofort umschalten. -->
+               warten, kein Angriff möglich. Kompakter Chip am oberen
+               Kartenrand, damit der Ability-Kern die Kartenmitte behält.
+               Bewusst ohne Transition: der Status soll sofort umschalten. -->
           <div
             v-if="!championInForeground(slot)"
             class="champ-card-eclipse-medal"
             title="Behind the Sun — combat paused"
           >
-            <Icon icon="game-icons:eclipse-flare" width="30" height="30" />
+            <Icon icon="game-icons:eclipse-flare" width="24" height="24" />
           </div>
         </template>
 
@@ -366,8 +365,10 @@ function onSlotLeave() {
   position: absolute;
   left: 0;
   right: 0;
-  /* über dem Rollen-Banner (26px Scrim-Padding + 8px + 16px Schrift) */
-  bottom: 40px;
+  /* vertikal mittig auf der Karte — die Zone gehört allein der Fähigkeit,
+     der Eclipse-Chip ist dafür an den oberen Kartenrand gerückt */
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 4;
   display: flex;
   flex-direction: column;
@@ -378,8 +379,10 @@ function onSlotLeave() {
 
 .champ-ability-orb {
   position: relative;
-  width: 52px;
-  height: 52px;
+  /* 56px lässt links und rechts noch Luft zu den Auswahl-Keilen an den
+     Seitenkanten (die sitzen ebenfalls auf halber Kartenhöhe) */
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -410,8 +413,8 @@ function onSlotLeave() {
 }
 
 .champ-ability-orb img {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 4px color-mix(in srgb, var(--role-color, #c89040) 60%, transparent));
@@ -419,7 +422,7 @@ function onSlotLeave() {
 }
 
 .champ-ability-state {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.14em;
@@ -461,7 +464,7 @@ function onSlotLeave() {
 .champ-ability--cd .champ-ability-state {
   letter-spacing: 0.04em;
   text-indent: 0.04em;
-  font-size: 17px;
+  font-size: 18px;
   color: #e8dcc0;
 }
 
@@ -669,13 +672,19 @@ function onSlotLeave() {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
+/* Kompakter Chip am oberen Kartenrand statt des früheren großen Medaillons in
+   der Kartenmitte: die Mitte gehört jetzt dem Ability-Kern. Der Eclipse-
+   Zustand trägt sich ohnehin über die ganze Karte (kühles Portrait, matter
+   Rahmen, erloschene Kopfleiste) — der Chip muss ihn nur benennen, nicht
+   tragen. Horizontal zentriert, damit er weder die Reticle-Eckwinkel noch
+   den 40px-Bogen der ersten Karte berührt. */
 .champ-card-eclipse-medal {
   position: absolute;
-  top: 42%;
+  top: 22px;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 44px;
-  height: 44px;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: grid;
   place-items: center;
