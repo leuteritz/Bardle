@@ -351,18 +351,21 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 /* ── Card row: five equal champ-select tiles ── */
+/* minmax(0, 1fr) pins the single row to the container height — without it the
+   cards' intrinsic height wins and they spill out over the start button. */
 .roster-cards {
   flex: 1;
-  min-height: 0;
+  min-height: clamp(120px, 15vh, 200px);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: clamp(8px, 0.9vw, 16px);
 }
 
 .champ-card {
   position: relative;
   overflow: hidden;
-  min-height: clamp(150px, 22vh, 300px);
+  min-height: 0;
   background: #0d0b06;
   border: 1px solid;
   border-radius: 5px;
@@ -620,20 +623,14 @@ const mvpHolder = computed<string | null>(() => {
   color: #5a4820;
 }
 
-/* Full HD and flatter: shorter cards, badges shrink, detail sheet stays legible */
+/* Full HD and flatter: the detail sheet stays legible in shorter cards */
 @media (max-height: 1100px) {
-  .champ-card {
-    min-height: 130px;
-  }
   .detail-value {
     font-size: 11px;
   }
 }
 
 @media (max-height: 880px) {
-  .champ-card {
-    min-height: 108px;
-  }
   .card-stat-label {
     display: none;
   }

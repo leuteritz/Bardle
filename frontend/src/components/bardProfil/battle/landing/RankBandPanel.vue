@@ -59,30 +59,37 @@
         </div>
       </div>
 
-      <!-- Full tier ladder — shows at a glance how far the climb still goes -->
+      <!-- Full tier ladder — the climb from Iron to Challenger, at a glance -->
       <div class="tier-ladder">
-        <span class="ladder-end">IRON</span>
-        <div class="ladder-track">
-          <span class="ladder-line" />
+        <span class="ladder-line" />
+        <span
+          class="ladder-line ladder-line--done"
+          :style="{ width: ladderDonePercent + '%', background: rankColorDeep }"
+        />
+        <div
+          v-for="(tier, i) in RANK_TIERS"
+          :key="tier"
+          class="ladder-step"
+          :class="{
+            'ladder-step--current': i === currentTierIndex,
+            'ladder-step--cleared': i < currentTierIndex,
+          }"
+        >
           <span
-            class="ladder-line ladder-line--done"
-            :style="{ width: ladderDonePercent + '%', background: rankColorDeep }"
-          />
-          <span
-            v-for="(tier, i) in RANK_TIERS"
-            :key="tier"
             class="tier-pip"
-            :class="{
-              'tier-pip--current': i === currentTierIndex,
-              'tier-pip--cleared': i < currentTierIndex,
-            }"
-            :style="i === currentTierIndex ? { borderColor: rankColor, boxShadow: pipGlow } : undefined"
-            :title="tier"
+            :style="
+              i === currentTierIndex ? { borderColor: rankColor, boxShadow: pipGlow } : undefined
+            "
           >
             <img :src="RANK_EMBLEM_IMAGES[tier]" :alt="tier" class="tier-pip-img" />
           </span>
+          <span
+            class="tier-label"
+            :style="i === currentTierIndex ? { color: rankColor } : undefined"
+          >
+            {{ tier.toUpperCase() }}
+          </span>
         </div>
-        <span class="ladder-end">CHALLENGER</span>
       </div>
     </div>
   </div>
@@ -146,10 +153,9 @@ const currentTierIndex = computed(() =>
   RANK_TIERS.indexOf(currentRank.value.tier as (typeof RANK_TIERS)[number]),
 )
 
-/** Filled portion of the ladder track — pips sit at even fractions of its width. */
-const ladderDonePercent = computed(
-  () => (Math.max(0, currentTierIndex.value) / (RANK_TIERS.length - 1)) * 100,
-)
+/** Filled length of the ladder rail. Every step owns 1/10 of the width, so pip
+ *  k sits at 5% + k·10% — the rail starts at 5% and grows 10% per cleared tier. */
+const ladderDonePercent = computed(() => Math.max(0, currentTierIndex.value) * 10)
 
 const lpCap = computed(() => {
   const tier = currentRank.value.tier
@@ -288,6 +294,7 @@ const promotionGoal = computed(() => {
 }
 
 .rank-kicker {
+  padding-bottom: clamp(2px, 0.5vh, 6px);
   font-size: clamp(9px, 1.15vh, 12px);
   font-weight: 700;
   letter-spacing: 6px;
@@ -305,38 +312,24 @@ const promotionGoal = computed(() => {
   text-overflow: ellipsis;
 }
 
-/* ── Tier ladder: Iron → Challenger on a connected track ── */
+/* ── Tier ladder: Iron → Challenger on one connected rail. Ten equal steps, so
+   every pip centre lands on 5% + k·10% of the width and the rail lines up. ── */
 .tier-ladder {
+  --pip: clamp(30px, 4vh, 52px);
+  position: relative;
   width: 100%;
   display: flex;
-  align-items: center;
-  gap: clamp(6px, 0.7vw, 12px);
-}
-
-.ladder-end {
-  flex-shrink: 0;
-  font-size: clamp(7px, 0.9vh, 9px);
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: #6a5a38;
-}
-
-.ladder-track {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
+  /* headroom for the scaled-up current pip */
+  padding-top: clamp(4px, 0.6vh, 8px);
 }
 
 .ladder-line {
   position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
+  top: calc(clamp(4px, 0.6vh, 8px) + var(--pip) / 2 - 1px);
+  left: 5%;
+  right: 5%;
   height: 2px;
-  margin-top: -1px;
   background: #241d10;
   border-radius: 4px;
 }
@@ -345,43 +338,71 @@ const promotionGoal = computed(() => {
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.tier-pip {
+.ladder-step {
   position: relative;
   z-index: 1;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(3px, 0.5vh, 6px);
+}
+
+.tier-pip {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(19px, 2.5vh, 28px);
-  height: clamp(19px, 2.5vh, 28px);
+  width: var(--pip);
+  height: var(--pip);
   flex-shrink: 0;
   background: #0c0a06;
-  border: 1px solid #241d10;
+  border: 2px solid #241d10;
   border-radius: 50%;
   transition:
     transform 0.25s ease,
-    border-color 0.25s ease;
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
-.tier-pip--current {
-  transform: scale(1.35);
+.ladder-step--current .tier-pip {
+  transform: scale(1.22);
 }
 
 .tier-pip-img {
-  width: 78%;
-  height: 78%;
+  width: 80%;
+  height: 80%;
   object-fit: contain;
-  opacity: 0.24;
-  filter: grayscale(80%);
+  opacity: 0.3;
+  filter: grayscale(75%);
   transition:
     opacity 0.25s ease,
     filter 0.25s ease;
 }
-.tier-pip--cleared .tier-pip-img {
-  opacity: 0.55;
-  filter: grayscale(30%);
+.ladder-step--cleared .tier-pip-img {
+  opacity: 0.62;
+  filter: grayscale(25%);
 }
-.tier-pip--current .tier-pip-img {
+.ladder-step--current .tier-pip-img {
   opacity: 1;
   filter: none;
+}
+
+.tier-label {
+  max-width: 100%;
+  font-size: clamp(7px, 0.95vh, 10px);
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #5c4d30;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.25s ease;
+}
+.ladder-step--cleared .tier-label {
+  color: #8a7040;
+}
+.ladder-step--current .tier-label {
+  letter-spacing: 1.8px;
 }
 
 .lp-tower {
@@ -495,9 +516,12 @@ const promotionGoal = computed(() => {
     width: 62px;
     height: 62px;
   }
-  .rank-kicker,
-  .ladder-end {
+  .rank-kicker {
     display: none;
+  }
+  .tier-label {
+    font-size: 7px;
+    letter-spacing: 0.5px;
   }
 }
 

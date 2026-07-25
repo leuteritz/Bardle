@@ -8,7 +8,6 @@
     </div>
     <div class="group-rows">
       <div v-for="row in rows" :key="row.label" class="group-row">
-        <span class="row-label">{{ row.label }}</span>
         <span class="row-value-line">
           <img v-if="row.image" :src="row.image" :alt="row.label" class="row-icon" />
           <Icon
@@ -23,6 +22,7 @@
             {{ row.value }}
           </span>
         </span>
+        <span class="row-label">{{ row.label }}</span>
       </div>
     </div>
   </div>
@@ -90,23 +90,23 @@ defineProps<{
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-content: space-between;
-  gap: clamp(2px, 0.4vh, 5px) clamp(10px, 0.9vw, 18px);
+  gap: clamp(3px, 0.5vh, 7px) clamp(8px, 0.7vw, 14px);
 }
 
-/* Label left, value right — reads as a ledger, scannable at a glance */
+/* Value on top, label beneath — the label owns the full column width, so even
+   the long ones ("Control Wards") never truncate in a five-column ledger. */
 .group-row {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
   min-width: 0;
 }
 
 .row-label {
-  font-size: clamp(8px, 1vh, 10px);
-  letter-spacing: 1px;
+  font-size: clamp(8px, 0.95vh, 10px);
+  letter-spacing: 0.8px;
   text-transform: uppercase;
   color: #8a8070;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,7 +116,7 @@ defineProps<{
   display: flex;
   align-items: center;
   gap: 5px;
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .row-icon {
@@ -129,10 +129,43 @@ defineProps<{
 }
 
 .row-value {
-  font-size: clamp(11px, 1.45vh, 14px);
+  font-size: clamp(11px, 1.5vh, 15px);
   font-weight: 700;
   color: #e8e2d0;
   line-height: 1.15;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Full HD and flatter: the ledger tightens up so the roster cards keep their
+   height — it is the least important band on the stage. */
+@media (max-height: 1100px) {
+  .stat-group {
+    padding: 7px 9px;
+  }
+  .group-header {
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+  }
+  .group-icon {
+    width: 13px;
+    height: 13px;
+  }
+  .group-rows {
+    gap: 3px 10px;
+  }
+  .row-value {
+    font-size: 12px;
+    line-height: 1.05;
+  }
+  .row-label {
+    font-size: 8px;
+    line-height: 1.1;
+  }
+  .row-icon {
+    width: 11px;
+    height: 11px;
+  }
 }
 </style>

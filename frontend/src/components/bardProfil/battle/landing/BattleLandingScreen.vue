@@ -84,9 +84,8 @@
         color="#5b8dd9"
         :rows="visionRows"
       />
+      <MultikillCardsRow />
     </div>
-
-    <MultikillCardsRow class="landing-layer" />
   </div>
 </template>
 
@@ -248,11 +247,11 @@ const playtimeStr = computed(() => {
   min-height: 0;
 }
 
-/* ── Career ledger: four quiet panels along the bottom edge ── */
+/* ── Career ledger: five quiet panels along the bottom edge ── */
 .stats-row {
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: clamp(8px, 0.9vw, 16px);
 }
 
@@ -281,9 +280,9 @@ const playtimeStr = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(2px, 0.4vh, 5px);
-  min-width: clamp(320px, 30vw, 560px);
-  padding: clamp(10px, 1.5vh, 18px) clamp(26px, 2.6vw, 44px);
+  gap: 1px;
+  min-width: clamp(250px, 21vw, 380px);
+  padding: clamp(7px, 1vh, 11px) clamp(20px, 2vw, 32px);
   font-family: inherit;
   background: linear-gradient(to bottom, #1e2e12, #131e0c);
   border: 2px solid #4a8a28;
@@ -315,17 +314,17 @@ const playtimeStr = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(10px, 1vw, 16px);
-  font-size: clamp(16px, 2.2vh, 26px);
+  gap: clamp(8px, 0.8vw, 13px);
+  font-size: clamp(14px, 1.75vh, 20px);
   font-weight: 700;
-  letter-spacing: 5px;
+  letter-spacing: 4px;
   line-height: 1.1;
 }
 
 .battle-btn-sub {
-  font-size: clamp(8px, 1.05vh, 11px);
+  font-size: clamp(7px, 0.9vh, 9px);
   font-weight: 700;
-  letter-spacing: 2.5px;
+  letter-spacing: 2px;
   color: #5d8a44;
 }
 
@@ -341,7 +340,7 @@ const playtimeStr = computed(() => {
   color: #4a3018;
 }
 .battle-btn--locked .battle-btn-face {
-  font-size: clamp(14px, 1.9vh, 21px);
+  font-size: clamp(13px, 1.6vh, 18px);
 }
 
 .battle-btn--live {
@@ -357,7 +356,7 @@ const playtimeStr = computed(() => {
   color: #a08448;
 }
 .battle-btn--live .battle-btn-face {
-  font-size: clamp(14px, 1.9vh, 22px);
+  font-size: clamp(13px, 1.6vh, 18px);
 }
 .battle-btn--live:hover:not(:disabled) {
   background: linear-gradient(to bottom, #3e2a0c, #241806);
@@ -368,17 +367,17 @@ const playtimeStr = computed(() => {
 }
 
 .battle-btn-img {
-  width: clamp(24px, 3vh, 34px);
-  height: clamp(24px, 3vh, 34px);
+  width: clamp(20px, 2.4vh, 27px);
+  height: clamp(20px, 2.4vh, 27px);
   object-fit: contain;
 }
 .battle-btn-icon {
-  width: clamp(20px, 2.6vh, 28px);
-  height: clamp(20px, 2.6vh, 28px);
+  width: clamp(17px, 2.1vh, 23px);
+  height: clamp(17px, 2.1vh, 23px);
 }
 .battle-btn-lock {
-  width: clamp(18px, 2.2vh, 24px);
-  height: clamp(18px, 2.2vh, 24px);
+  width: clamp(16px, 1.9vh, 21px);
+  height: clamp(16px, 1.9vh, 21px);
   object-fit: contain;
   opacity: 0.7;
 }
@@ -437,7 +436,7 @@ const playtimeStr = computed(() => {
     padding: 9px 16px;
   }
   .battle-btn {
-    padding: 9px 30px;
+    padding: 7px 24px;
   }
 }
 
