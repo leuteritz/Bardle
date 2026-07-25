@@ -37,10 +37,8 @@
             :style="{ background: `linear-gradient(to right, transparent, ${role.color}, transparent)` }"
           />
 
-          <!-- Role chip, top-left -->
-          <span class="card-role" :style="{ color: role.color, borderColor: hexToRgba(role.color, 0.5) }">
-            {{ role.roleLabel }}
-          </span>
+          <!-- Role label, top-left — bare type in the command panel's style -->
+          <span class="card-role">{{ role.roleLabel }}</span>
 
           <!-- Standout badges, top-right; label via tooltip -->
           <div class="card-badges">
@@ -77,35 +75,29 @@
             </div>
           </div>
 
-          <!-- Hover stat sheet: full career breakdown for this champion -->
+          <!-- Hover stat sheet: the champion's headline career numbers -->
           <div class="card-detail">
             <div class="detail-head">
               <span class="detail-name">{{ battleStore.headerSlots[idx] }}</span>
-              <span class="detail-role" :style="{ color: role.color }">{{ role.roleLabel }}</span>
+              <span class="detail-cta">MANAGE ROLE →</span>
             </div>
-            <span class="detail-cta" :style="{ color: role.color }">MANAGE ROLE →</span>
             <div class="detail-grid">
               <div
                 v-for="entry in detailFor(battleStore.headerSlots[idx]!)"
                 :key="entry.label"
                 class="detail-stat"
               >
-                <span class="detail-label">{{ entry.label }}</span>
                 <span class="detail-value" :style="entry.color ? { color: entry.color } : undefined">
                   {{ entry.value }}
                 </span>
+                <span class="detail-label">{{ entry.label }}</span>
               </div>
             </div>
           </div>
         </template>
 
         <template v-else>
-          <span
-            class="card-role"
-            :style="{ color: hexToRgba(role.color, 0.6), borderColor: hexToRgba(role.color, 0.3) }"
-          >
-            {{ role.roleLabel }}
-          </span>
+          <span class="card-role card-role--empty">{{ role.roleLabel }}</span>
           <!-- Clicking an open slot jumps straight to the team tab with this
                role pre-selected, so the player can fill it right away. -->
           <button
@@ -164,11 +156,12 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
 }
 
-/** Role color drives the card's border and the wash over the splash art. */
+/** Role color drives the card's border, its label and the wash over the art. */
 function cardStyle(role: { color: string }, filled: boolean): CSSProperties {
-  return filled
-    ? { borderColor: hexToRgba(role.color, 0.55) }
-    : { borderColor: hexToRgba(role.color, 0.22) }
+  return {
+    '--role-color': role.color,
+    borderColor: hexToRgba(role.color, filled ? 0.55 : 0.22),
+  } as CSSProperties
 }
 
 function tintFor(color: string): string {
@@ -213,7 +206,8 @@ interface DetailEntry {
   color?: string
 }
 
-// Full career breakdown for the hover stat sheet (all tracked fields)
+/** Hover sheet: the six numbers that actually say something about a champion's
+ *  career. Kept short on purpose so each one can be shown large. */
 function detailFor(name: string): DetailEntry[] {
   const career = battleStore.championCareer[name]
   const kills = mergedKills(name)
@@ -221,17 +215,11 @@ function detailFor(name: string): DetailEntry[] {
   const fmt = (v: number | undefined) => (career || kills > 0 ? formatNumber(v ?? 0) : '—')
   return [
     { label: 'BATTLES', value: fmt(career?.battles) },
+    { label: 'KDA', value: stat.kda, color: '#e8c040' },
     { label: 'KILLS', value: career || kills > 0 ? formatNumber(kills) : '—', color: '#6ee7b7' },
     { label: 'DEATHS', value: fmt(career?.deaths), color: '#fca5a5' },
     { label: 'ASSISTS', value: fmt(career?.assists), color: '#93c5fd' },
-    { label: 'KDA', value: stat.kda, color: '#e8c040' },
-    { label: 'MVPS', value: fmt(career?.mvps), color: '#e8c040' },
     { label: 'DAMAGE', value: fmt(career?.damage), color: '#f06820' },
-    { label: 'GOLD', value: fmt(career?.gold), color: '#e8c040' },
-    { label: 'CS', value: fmt(career?.cs), color: '#52b830' },
-    { label: 'HEALING', value: fmt(career?.healing), color: '#6ee7b7' },
-    { label: 'DMG TAKEN', value: fmt(career?.damageTaken), color: '#5b8dd9' },
-    { label: 'WARDS', value: fmt(career?.wardsPlaced), color: '#93c5fd' },
   ]
 }
 
@@ -478,19 +466,33 @@ const mvpHolder = computed<string | null>(() => {
   opacity: 0.55;
 }
 
-/* ── Role chip ── */
+/* ── Role label: bare type, no frame, no plate — same treatment as the command
+   panel's role caption so both readouts speak one language ── */
 .card-role {
   position: absolute;
-  top: 7px;
-  left: 7px;
+  top: clamp(6px, 0.9vh, 11px);
+  left: clamp(8px, 0.7vw, 13px);
   z-index: 2;
-  padding: 2px 7px;
-  font-size: clamp(9px, 1.2vh, 12px);
-  font-weight: 700;
-  letter-spacing: 2px;
-  background: rgba(6, 5, 3, 0.78);
-  border: 1px solid;
-  border-radius: 4px;
+  font-size: clamp(12px, 1.5vh, 17px);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: color-mix(in srgb, var(--role-color, #c89040) 55%, #f0e6d0);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 12px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
+  pointer-events: none;
+}
+.card-role--empty {
+  color: color-mix(in srgb, var(--role-color, #c89040) 40%, rgba(200, 180, 140, 0.55));
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+.champ-card--filled:hover .card-role {
+  color: color-mix(in srgb, var(--role-color, #c89040) 40%, #fff);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 16px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent);
 }
 
 /* ── Standout badges ── */
@@ -537,21 +539,22 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .card-name {
-  font-size: clamp(14px, 2vh, 22px);
+  font-size: clamp(17px, 2.5vh, 30px);
   color: #fff;
-  line-height: 1.1;
+  line-height: 1.05;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
 }
 
+/* The three headline numbers — the card's whole resting story */
 .card-stats {
   display: flex;
   justify-content: space-between;
   gap: 4px;
-  padding-top: clamp(4px, 0.6vh, 7px);
-  border-top: 1px solid rgba(212, 160, 32, 0.18);
+  padding-top: clamp(5px, 0.8vh, 9px);
+  border-top: 1px solid color-mix(in srgb, var(--role-color, #d4a020) 30%, transparent);
 }
 
 .card-stat {
@@ -562,11 +565,11 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .card-stat-value {
-  font-size: clamp(12px, 1.7vh, 17px);
+  font-size: clamp(16px, 2.2vh, 26px);
   font-weight: 700;
   color: #e8e2d0;
-  line-height: 1.1;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  line-height: 1.05;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
 }
 .card-stat-value--kills {
   color: #6ee7b7;
@@ -576,8 +579,10 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .card-stat-label {
-  font-size: clamp(7px, 0.95vh, 9px);
-  letter-spacing: 1.2px;
+  margin-top: 1px;
+  font-size: clamp(7px, 0.95vh, 10px);
+  font-weight: 700;
+  letter-spacing: 1.5px;
   color: rgba(232, 226, 208, 0.5);
 }
 
@@ -605,59 +610,61 @@ const mvpHolder = computed<string | null>(() => {
 .detail-head {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding-bottom: clamp(3px, 0.5vh, 6px);
-  border-bottom: 1px solid #3a2c14;
+  gap: 2px;
+  padding-bottom: clamp(4px, 0.7vh, 8px);
+  border-bottom: 1px solid color-mix(in srgb, var(--role-color, #d4a020) 32%, transparent);
   flex-shrink: 0;
 }
 .detail-name {
-  font-size: clamp(12px, 1.6vh, 16px);
+  font-size: clamp(15px, 2.1vh, 24px);
   font-weight: 700;
-  color: #d4a020;
+  line-height: 1.05;
+  color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.detail-role {
-  font-size: clamp(8px, 1.05vh, 10px);
-  letter-spacing: 2px;
-}
 
 /* Tells the player the card is a door into the team tab */
 .detail-cta {
-  flex-shrink: 0;
-  font-size: clamp(7px, 0.95vh, 9px);
+  font-size: clamp(7px, 0.95vh, 10px);
   font-weight: 700;
   letter-spacing: 1.5px;
-  opacity: 0.9;
+  color: color-mix(in srgb, var(--role-color, #d4a020) 70%, #f0e6d0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Six numbers in two columns — each one large enough to read from a distance */
 .detail-grid {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr;
-  align-content: space-between;
-  gap: 1px;
+  grid-template-columns: 1fr 1fr;
+  align-content: space-evenly;
+  gap: clamp(4px, 0.8vh, 12px) clamp(6px, 0.6vw, 14px);
 }
 
 .detail-stat {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px;
+  flex-direction: column;
   min-width: 0;
 }
-.detail-label {
-  font-size: clamp(7px, 0.95vh, 9px);
-  letter-spacing: 1px;
-  color: rgba(232, 226, 208, 0.45);
-  white-space: nowrap;
-}
 .detail-value {
-  font-size: clamp(10px, 1.35vh, 13px);
+  font-size: clamp(16px, 2.2vh, 28px);
   font-weight: 700;
   color: #e8e2d0;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.detail-label {
+  font-size: clamp(7px, 0.95vh, 10px);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: rgba(232, 226, 208, 0.45);
   white-space: nowrap;
 }
 
@@ -777,10 +784,13 @@ const mvpHolder = computed<string | null>(() => {
   }
 }
 
-/* Full HD and flatter: the detail sheet stays legible in shorter cards */
+/* Full HD and flatter: six large numbers still have to fit a shorter card */
 @media (max-height: 1100px) {
   .detail-value {
-    font-size: 11px;
+    font-size: 19px;
+  }
+  .card-detail {
+    padding: 8px 10px;
   }
 }
 
