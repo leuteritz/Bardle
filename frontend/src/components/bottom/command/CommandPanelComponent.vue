@@ -224,8 +224,11 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
                 UNLOCK
               </div>
               <div class="cmd-tile-cost-row">
+                <!-- vorskalierte 128er-Quelle: das 500px-Original wird auf der
+                     ~14px-Zeile um Faktor 50 minifiziert und verliert dabei
+                     seine Kanten (gleiches Prinzip wie die Planeten-Thumbs) -->
                 <img
-                  src="/img/BardAbilities/BardChime.png"
+                  src="/img/BardAbilities/BardChime-128.png"
                   class="cmd-tile-chime-img"
                   alt="Chimes"
                 />
@@ -553,8 +556,10 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   animation: none;
 }
 
+/* Glow eine Spur enger als zuvor (4px): auf dem 14px-Icon legte er sich als
+   breiter Hof über die eigenen Kanten und ließ es weich wirken */
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-chime-img {
-  filter: drop-shadow(0 0 4px rgba(232, 192, 64, 0.8));
+  filter: drop-shadow(0 0 3px rgba(232, 192, 64, 0.75));
   animation: cmd-chime-bob 1.5s ease-in-out infinite;
 }
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-cost-value {
@@ -582,13 +587,17 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   }
 }
 
+/* scale zurückgenommen (war 1.1): eine Vergrößerung um 10 % zwingt den Browser,
+   das ohnehin winzige Icon auf krumme Zwischengrößen neu zu rechnen — es hing
+   dadurch die meiste Zeit der Animation im Unscharfen. Der Hub trägt die
+   Aufmerksamkeit auch allein. */
 @keyframes cmd-chime-bob {
   0%,
   100% {
     transform: translateY(0) scale(1);
   }
   50% {
-    transform: translateY(-2px) scale(1.1);
+    transform: translateY(-2px) scale(1.04);
   }
 }
 
@@ -682,10 +691,18 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   gap: 3px;
 }
 
+/* Kein image-rendering: pixelated — Nearest-Neighbor greift beim Verkleinern
+   nur jeden n-ten Quellpixel heraus und verwirft den Rest; bei diesem
+   Größenverhältnis (siehe unten) blieb vom Chime kaum mehr als ein Raster aus
+   Farbklecksen übrig. Glattes Downsampling der Quelle bleibt scharf — dieselbe
+   Entscheidung wie bei den Icons im Meep-Skill-Tree.
+   14px statt 15px: die Zahl daneben steht auf 12px, das Icon führte die Zeile
+   optisch zu deutlich an. Gemeinsam mit der 128er-Quelle (statt 500px) sinkt
+   der Skalierungsfaktor von rund 50 auf rund 9 — genau der Bereich, in dem
+   Browser sauber filtern. */
 .cmd-tile-chime-img {
-  width: 15px;
-  height: 15px;
-  image-rendering: pixelated;
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
 }
 
