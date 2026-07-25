@@ -149,24 +149,29 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             <img :src="roleImage(slot.role)" class="cmd-tile-planet-img" alt="" draggable="false" />
             <div class="cmd-tile-img-vignette" />
 
-            <!-- Jungle Buff: Schimmer, Einkreis-Ring + Countdown-Chip -->
-            <div v-if="slot.jungleBuff?.active" class="cmd-buff-overlay" />
-            <div v-if="slot.jungleBuff?.active" class="cmd-buff-ring" />
-            <div
-              v-if="slot.jungleBuff?.active"
-              class="cmd-buff-chip"
-              :class="{ 'cmd-buff-chip--urgent': buffMsLeft(slot) < 3000 }"
-              :style="{ '--buff-progress': buffProgress(slot) }"
-              :title="slot.jungleBuff.buffType"
-            >
-              <img src="/img/roles/jungle.png" alt="" draggable="false" />
-            </div>
+            <!-- Jungle Buff: Schimmer + Emblem mit abschmelzendem Ring, mittig
+                 auf der Kachel — gleiche Bauweise wie der Ability-Kern der
+                 Rollenkarten darüber. Ein zerstörter Planet trägt keinen Buff
+                 bei; die Kachelmitte gehört dann allein dem Wrack-Emblem. -->
+            <template v-if="slot.jungleBuff?.active && !isPlanetDown(slot)">
+              <div class="cmd-buff-overlay" />
+              <div
+                class="cmd-buff-orb"
+                :class="{ 'cmd-buff-orb--urgent': buffMsLeft(slot) < 3000 }"
+                :style="{ '--buff-progress': buffProgress(slot) }"
+                :title="slot.jungleBuff.buffType"
+              >
+                <Icon icon="game-icons:wolf-howl" width="20" height="20" />
+              </div>
+            </template>
 
-            <!-- Eclipse: Planet hinter der Sonne — kühler Schatten + Medaillon
-                 unten mittig (oben mittig sitzt der Jungle-Buff-Chip).
-                 Bewusst ohne Transition: der Status soll sofort umschalten.
-                 Ein zerstörter Planet verdrängt die Eclipse-Anzeige: er ist gar
-                 nicht mehr im Orbit, "hinter der Sonne" wäre dann irreführend. -->
+            <!-- Eclipse: Planet hinter der Sonne — Finsternis-Schleier plus
+                 Chip am OBEREN Kachelrand, damit die Mitte dem Buff- bzw.
+                 Wrack-Emblem gehört (gleiche Staffelung wie auf den
+                 Rollenkarten). Bewusst ohne Transition: der Status soll sofort
+                 umschalten. Ein zerstörter Planet verdrängt die Eclipse-
+                 Anzeige: er ist gar nicht mehr im Orbit, "hinter der Sonne"
+                 wäre dann irreführend. -->
             <template v-if="!isPlanetDown(slot)">
               <div v-if="slotBehindSun(slot)" class="cmd-eclipse-veil" />
               <div
@@ -174,7 +179,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
                 class="cmd-eclipse-medal"
                 title="Behind the Sun — combat paused"
               >
-                <Icon icon="game-icons:eclipse-flare" width="24" height="24" />
+                <Icon icon="game-icons:eclipse-flare" width="16" height="16" />
               </div>
             </template>
 
@@ -187,7 +192,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
               <div class="cmd-down-hatch" />
               <div class="cmd-down-core" :title="`Destroyed — back in ${downSecsLeft(slot)}s`">
                 <span class="cmd-down-ring" :style="{ '--down-progress': downProgress(slot) }">
-                  <Icon icon="game-icons:broken-skull" width="22" height="22" />
+                  <Icon icon="game-icons:broken-skull" width="20" height="20" />
                 </span>
                 <span class="cmd-down-timer">{{ downSecsLeft(slot) }}s</span>
               </div>
@@ -697,49 +702,37 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   z-index: 3;
 }
 
-/* Einkreis-Ring: pulsierender Kreis um den Buff-Chip oben mittig
-   (Ring-Zentrum = Chip-Zentrum: top 5px + 18px halbe Chip-Höhe = 23px) */
-.cmd-buff-ring {
+/* Buff-Emblem mittig auf der Kachel — baugleich mit dem Ability-Kern der
+   Rollenkarten: beleuchtete Fassung in der Buff-Farbe, abschmelzender
+   conic-Ring, atmender Glow. Der frühere Aufbau (Chip oben plus separater
+   46px-Ring drumherum) war ein Fremdkörper gegenüber den Karten und belegte
+   die obere Kachelzone, die jetzt der Eclipse-Chip trägt.
+   36px ist die Obergrenze: bei --hud-scale 0.66 (Full HD) bleiben davon rund
+   24 reale Pixel — darunter verliert das Emblem seine Lesbarkeit. */
+.cmd-buff-orb {
   position: absolute;
-  top: 23px;
+  top: 50%;
   left: 50%;
-  width: 46px;
-  aspect-ratio: 1;
-  margin: 0;
   transform: translate(-50%, -50%);
-  border-radius: 50%;
-  border: 2px solid rgba(92, 230, 106, 0.85);
-  box-shadow:
-    0 0 10px rgba(92, 230, 106, 0.7),
-    0 0 22px rgba(92, 230, 106, 0.35),
-    inset 0 0 10px rgba(92, 230, 106, 0.3);
-  pointer-events: none;
-  z-index: 4;
-}
-
-/* Countdown-Chip (oben mittig — unten mittig sitzt das Eclipse-Medaillon,
-   beide gleich groß, damit die Kachel symmetrisch bleibt) */
-.cmd-buff-chip {
-  position: absolute;
-  top: 5px;
-  left: 50%;
-  transform: translateX(-50%);
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(22, 42, 26, 0.96), rgba(6, 14, 8, 0.96));
   display: grid;
   place-items: center;
+  background: radial-gradient(
+    circle at 38% 30%,
+    rgba(78, 176, 92, 0.6) 0%,
+    rgba(12, 36, 16, 0.96) 100%
+  );
+  color: #ddffdd;
   z-index: 5;
   pointer-events: none;
-  box-shadow:
-    0 0 6px rgba(92, 230, 106, 0.5),
-    0 1px 4px rgba(0, 0, 0, 0.55);
   /* Taktlänge = HUD_COUNTDOWN_TICK_MS */
   transition: --buff-progress 250ms linear;
+  animation: cmd-buff-breathe 1.9s ease-in-out infinite;
 }
 
-.cmd-buff-chip::before {
+.cmd-buff-orb::before {
   content: '';
   position: absolute;
   inset: -2.5px;
@@ -757,20 +750,53 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   filter: drop-shadow(0 0 3px rgba(92, 230, 106, 0.7));
 }
 
-.cmd-buff-chip img {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  display: block;
-  filter: drop-shadow(0 0 2px rgba(92, 230, 106, 0.7));
+.cmd-buff-orb :deep(svg) {
+  filter: drop-shadow(0 0 3px rgba(92, 230, 106, 0.85));
 }
 
-.cmd-buff-chip--urgent::before {
+@keyframes cmd-buff-breathe {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(140, 255, 150, 0.5),
+      inset 0 0 10px rgba(0, 0, 0, 0.45),
+      0 2px 6px rgba(0, 0, 0, 0.6),
+      0 0 10px rgba(92, 230, 106, 0.4);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(160, 255, 170, 0.65),
+      inset 0 0 10px rgba(0, 0, 0, 0.35),
+      0 2px 6px rgba(0, 0, 0, 0.6),
+      0 0 20px rgba(92, 230, 106, 0.8);
+  }
+}
+
+/* Letzte Sekunden: Ring und Fassung kippen ins Warnrot, der Puls hört auf */
+.cmd-buff-orb--urgent {
+  background: radial-gradient(
+    circle at 38% 30%,
+    rgba(184, 74, 58, 0.6) 0%,
+    rgba(38, 12, 10, 0.96) 100%
+  );
+  animation: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 170, 150, 0.5),
+    inset 0 0 10px rgba(0, 0, 0, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.6),
+    0 0 14px rgba(255, 80, 64, 0.6);
+}
+
+.cmd-buff-orb--urgent::before {
   background: conic-gradient(
     #ff5040 calc(var(--buff-progress, 1) * 360deg),
     rgba(255, 80, 64, 0.16) 0
   );
   filter: drop-shadow(0 0 3px rgba(255, 64, 64, 0.8));
+}
+
+.cmd-buff-orb--urgent :deep(svg) {
+  filter: drop-shadow(0 0 3px rgba(255, 96, 80, 0.9));
 }
 
 /* ── Eclipse: Planet hinter der Sonne ──
@@ -853,15 +879,15 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   z-index: 3;
 }
 
+/* Wie der Down-Kern der Rollenkarten aufgebaut: der Container ist exakt so
+   groß wie das Emblem und liegt auf der Kachelmitte, der Timer hängt absolut
+   darunter. Buff-Emblem und Wrack-Emblem sitzen damit an derselben Stelle. */
 .cmd-down-core {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 6;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
   pointer-events: none;
 }
 
@@ -870,8 +896,9 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
    damit er auf der schmalen Kachel nicht an die Ränder stößt */
 .cmd-down-ring {
   position: relative;
-  width: 42px;
-  height: 42px;
+  /* gleiche Maße wie .cmd-buff-orb — beide belegen dieselbe Kachelmitte */
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -907,16 +934,26 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   animation: cmd-down-pulse 1.4s ease-in-out infinite alternate;
 }
 
+/* sitzt wie das Label der Rollenkarten unter dem Emblem. 15px sind auf der
+   schmalen Kachel die Untergrenze: bei --hud-scale 0.66 bleiben davon knapp
+   10 reale Pixel, gerade noch sicher lesbar für zwei Ziffern in tabular-nums. */
 .cmd-down-timer {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
   font-size: 15px;
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+  text-indent: 0.03em;
   color: #f0b0a0;
   font-variant-numeric: tabular-nums;
   text-shadow:
-    0 0 6px rgba(255, 80, 64, 0.5),
-    0 1px 3px rgba(0, 0, 0, 0.95);
+    0 1px 3px rgba(0, 0, 0, 0.98),
+    0 0 6px rgba(0, 0, 0, 0.9),
+    0 0 12px rgba(255, 80, 64, 0.55);
 }
 
 @keyframes cmd-down-pulse {
@@ -936,15 +973,17 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   }
 }
 
-/* Medaillon unten mittig — Gegenstück zum Jungle-Buff-Chip oben mittig,
-   beide 36px → keine Überlappung, symmetrisches Kachel-Layout */
+/* Chip am oberen Kachelrand — gleiche Staffelung wie auf den Rollenkarten:
+   Eclipse oben, Buff- bzw. Wrack-Emblem in der Mitte. 24px sind bewusst
+   kleiner als das mittige Emblem: der Chip benennt den Zustand nur, getragen
+   wird er vom Finsternis-Schleier über der ganzen Kachel. */
 .cmd-eclipse-medal {
   position: absolute;
-  bottom: 5px;
+  top: 4px;
   left: 50%;
   transform: translateX(-50%);
-  width: 36px;
-  height: 36px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: grid;
   place-items: center;
