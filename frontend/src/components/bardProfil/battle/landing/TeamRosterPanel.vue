@@ -167,9 +167,17 @@ const rankTier = computed(() => battleStore.currentRank.tier)
 const rankColor = computed(() => RANK_TIER_COLORS[rankTier.value] ?? '#8a9098')
 const rankFrame = computed(() => RANK_FRAME_STYLES[rankTier.value] ?? RANK_FRAME_STYLES.Iron)
 
-/** Headroom the crowns need above the cards, so they cannot reach the title. */
+/**
+ * Headroom above the cards, reserved once for the tallest crown in the game
+ * rather than the one currently worn. Sizing it to the current tier would make
+ * every promotion shrink the cards to pay for its bigger crown — this way the
+ * crown grows into room that was always there and the cards never move.
+ */
+const CROWN_HEADROOM =
+  Math.max(...Object.values(RANK_FRAME_STYLES).map((s) => s.crownH)) - RANK_FRAME_CROWN_FOOT
+
 const rosterStyle = computed<CSSProperties>(() => ({
-  '--crown-space': `calc(${rankFrame.value.crownH - RANK_FRAME_CROWN_FOOT}px * var(--frame-scale, 1))`,
+  '--crown-space': `calc(${CROWN_HEADROOM}px * var(--frame-scale, 1))`,
   '--crown-foot': `calc(${RANK_FRAME_CROWN_FOOT}px * var(--frame-scale, 1))`,
 }))
 
