@@ -76,11 +76,13 @@
               :class="{ 'sf-modal-planet-bg--galaxy': isGalaxyBoss }"
             />
 
-            <BossArenaSection
-              v-if="activeBoss"
-              disable-arc-attacks
-              @shake="handleShake"
-            />
+            <!-- ── Eigene Sonne als Horizont am unteren Arena-Rand: aktuelle
+                 Phase + Spieler-HP. Steht VOR BossArenaSection im DOM, damit
+                 Boss und Planet über der Kuppel liegen; HP-Leiste, Zielscheibe
+                 und Strike-Bolt heben sich intern per z-index wieder darüber ── -->
+            <SunHorizonHUD v-if="activeBoss" />
+
+            <BossArenaSection v-if="activeBoss" disable-arc-attacks @shake="handleShake" />
 
             <!-- ── Eclipse-Schleier: Boss hinter der Sonne — gleißende Korona
                  legt sich über die Arena, der Boss wird zur Silhouette ────── -->
@@ -210,14 +212,14 @@
                 </div>
 
                 <!-- Strike-Ring: Auto-Attack des Bosses — kurzer Cooldown,
-                     trifft EIN zufälliges Ziel (Champion oder Turret) -->
+                     trifft EIN zufälliges Ziel (Champion, Planet oder Sonne) -->
                 <BossTimerRing
                   :secs="autoSecsLeft"
                   label="STRIKE"
                   :pct="autoRingPct"
                   color="#d8d0c0"
                   :badge="`${autoDmgDisplay} dmg`"
-                  title="Strike — the boss jabs one random living champion or turret planet"
+                  title="Strike — the boss jabs one random living champion, planet slot or the sun itself"
                 />
 
                 <!-- Rage-Ring: Cooldown bis zur nächsten Rage bzw. Restdauer -->
@@ -247,12 +249,10 @@
                   :pct="novaRingPct"
                   color="#ff8a30"
                   :badge="`${novaDmgDisplay} dmg`"
-                  title="Shock Nova — the boss unleashes a wave that hits every champion, every turret planet and the player"
+                  title="Shock Nova — the boss unleashes a wave that hits every champion, every planet slot and the sun"
                 />
               </div>
-
             </div>
-
 
             <!-- ── Loot des aktuellen Bosses — episch unter dem Boss-Bild ── -->
             <div v-if="activeBoss" class="sf-loot">
@@ -300,6 +300,7 @@ import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
 import PlanetBatteryHUD from '@/components/idle/planet/PlanetBatteryHUD.vue'
 import BossTimerRing from '@/components/idle/planet/BossTimerRing.vue'
+import SunHorizonHUD from '@/components/idle/planet/SunHorizonHUD.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 
@@ -318,11 +319,13 @@ const ROLE_SLOT_INDEX: Record<ChampionRole, number> = {
   support: 4,
 }
 
-// Strike-Ziel-Ansage: nur während der Anvisier-Phase gesetzt — zeigt unter
-// der HP-Leiste, wen der Boss gerade im Visier hat (Champion-Name bzw. Slot)
+// Strike-Ziel-Ansage: nur während der Anvisier-Phase gesetzt — zeigt unter der
+// HP-Leiste, wen der Boss gerade im Visier hat (Champion-Name, Planeten-Slot
+// oder die eigene Sonne)
 const strikeAimTarget = computed(() => {
   const role = roleBehaviorStore.autoAimRole
   if (role) return battleStore.headerSlots[ROLE_SLOT_INDEX[role]] ?? role.toUpperCase()
+  if (roleBehaviorStore.autoAimSun) return 'Sun'
   const slotId = roleBehaviorStore.autoAimSlotId
   return slotId ? slotId.replace('slot_', 'Slot ') : null
 })
@@ -401,7 +404,6 @@ const curseSecsLeft = computed(() =>
     : 0,
 )
 const curseDef = computed(() => (activeCurse.value ? CURSE_DEFS[activeCurse.value.type] : null))
-
 
 // ── Boss-Rage: rechter Radial-Ring + epische Vignette ─────────────────────
 const rageActive = computed(() => roleBehaviorStore.rageActiveUntil > now.value)
@@ -609,9 +611,7 @@ watch(
 const adminKillFlashing = ref(false)
 
 function adminKillAllBosses() {
-  const star = starGroupStore.activeStars.find(
-    (s) => s.id === starGroupStore.activeFightStarId,
-  )
+  const star = starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId)
   if (!star) return
 
   for (const slot of star.planetSlots) {
@@ -940,8 +940,8 @@ function emberStyle(i: number): Record<string, string> {
 }
 
 /* Arena füllt den ganzen Bereich — Boss steht mittig auf dem Planeten.
-   padding-bottom hebt den Boss an, damit der Striker-Halbkreis komplett
-   unterhalb des Boss-Bilds Platz hat (auflösungsunabhängig) */
+   padding-bottom hebt den Boss an, damit Loot, Champion-Row und der
+   Sonnen-Horizont darunter Platz haben (auflösungsunabhängig) */
 .sf-arena-wrap :deep(.arena) {
   flex: 1;
   min-height: 0;
@@ -951,10 +951,12 @@ function emberStyle(i: number): Record<string, string> {
   padding-bottom: 18%;
 }
 
-/* Boss kompakter, damit Planet + Striker-Halbkreis sichtbar bleiben.
+/* Boss kompakter, damit Planet, Champion-Row UND der Sonnen-Horizont sichtbar
+   bleiben. Das Vertikal-Budget der Arena ist von oben nach unten:
+   HUD → Boss → Loot (51 %) → Champion-Row (~68–70 %) → Sonnen-Kamm (~89 %).
    Kompakte Full-HD-Größen siehe @media (max-height: 1100px) unten. */
 .sf-arena-wrap :deep(.boss-img) {
-  height: 44%;
+  height: 40%;
   max-width: 40%;
 }
 
@@ -1093,7 +1095,9 @@ function emberStyle(i: number): Record<string, string> {
   letter-spacing: 0.22em;
   color: rgba(200, 60, 255, 0.85);
   text-transform: uppercase;
-  text-shadow: 0 0 8px rgba(180, 40, 255, 0.5), 0 1px 3px rgba(0, 0, 0, 0.95);
+  text-shadow:
+    0 0 8px rgba(180, 40, 255, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 /* Bossname zwischen dünnen HUD-Klammerlinien */
@@ -1162,7 +1166,9 @@ function emberStyle(i: number): Record<string, string> {
 
 .sf-hp-pct--critical {
   color: #ffb0a8;
-  text-shadow: 0 0 10px rgba(255, 60, 40, 0.7), 0 1px 3px rgba(0, 0, 0, 0.95);
+  text-shadow:
+    0 0 10px rgba(255, 60, 40, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 /* Segment-Ticks alle 10 % — liest sich wie ein Raid-Boss-Balken */
@@ -1179,11 +1185,12 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
 }
 
-/* ── Loot-Banner — rahmenlos, zentriert unter dem Boss-Bild, im leeren
-   Raum innerhalb des Striker-Halbkreises ─────────────────────────────────── */
+/* ── Loot-Banner — rahmenlos, zentriert unter dem Boss-Bild, im leeren Raum
+   zwischen Boss und Champion-Row. Sitzt bewusst höher als früher: die Row
+   ist zum Sonnen-Horizont hinaufgewandert und braucht den Platz darunter. ── */
 .sf-loot {
   position: absolute;
-  top: 57%;
+  top: 51%;
   left: 50%;
   transform: translateX(-50%);
   width: min(820px, 54%);
@@ -1493,7 +1500,9 @@ function emberStyle(i: number): Record<string, string> {
 .sf-arena-wrap--eclipsed :deep(.boss-img) {
   opacity: 0.35;
   filter: grayscale(85%) brightness(0.5);
-  transition: opacity 0.4s ease, filter 0.4s ease;
+  transition:
+    opacity 0.4s ease,
+    filter 0.4s ease;
 }
 
 /* Schleier über der Arena: dunkler Rand-Scrim + pulsierende Sonnen-Korona.
@@ -1918,7 +1927,10 @@ function emberStyle(i: number): Record<string, string> {
   letter-spacing: 0.12em;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .sf-admin-kill-btn:hover {
@@ -1957,8 +1969,8 @@ function emberStyle(i: number): Record<string, string> {
    und dmg/s-Anzeige nicht kollidieren. */
 @media (max-height: 1100px) {
   .sf-arena-wrap :deep(.boss-img) {
-    height: 48%;
-    max-height: 400px;
+    height: 44%;
+    max-height: 360px;
     max-width: 42%;
   }
 
@@ -2022,7 +2034,7 @@ function emberStyle(i: number): Record<string, string> {
 
   /* Loot-Banner als Block skalieren — Innenmaße leben in BossRewardSection */
   .sf-loot {
-    transform: translateX(-50%) scale(0.85);
+    transform: translateX(-50%) scale(0.8);
     transform-origin: top center;
   }
 
@@ -2045,6 +2057,28 @@ function emberStyle(i: number): Record<string, string> {
   .sf-squad :deep(.rsq-cdpill) {
     min-width: 28px;
     font-size: 0.6rem;
+  }
+
+  /* Info-Plates der Champion-Row flacher: auf 1080p liegen zwischen Row und
+     Sonnen-Kamm nur ~25 px — jede eingesparte Plate-Zeilenhöhe zählt hier */
+  .sf-squad :deep(.rsq-plate-anchor) {
+    top: calc(100% + 8px);
+  }
+
+  .sf-squad :deep(.sip) {
+    padding: 3px 8px 4px;
+  }
+
+  .sf-squad :deep(.sip-hp-text) {
+    font-size: 0.88rem;
+  }
+
+  .sf-squad :deep(.sip-name) {
+    font-size: 0.66rem;
+  }
+
+  .sf-squad :deep(.sip-stats) {
+    font-size: 0.56rem;
   }
 }
 

@@ -36,7 +36,10 @@ export const usePlayerStore = defineStore('player', {
         this.currentHP + PLAYER_HP_REGEN_PER_SEC + forgeRegen + treeRegen,
       )
     },
-    takeDamage(amount: number = PLAYER_HP_LOSS_ON_ENRAGE) {
+    /** Applies damage after mitigation and returns the amount actually dealt —
+     *  callers (e.g. the sun horizon in the Star Fight Modal) display that
+     *  value, so they must not recompute the mitigation themselves. */
+    takeDamage(amount: number = PLAYER_HP_LOSS_ON_ENRAGE): number {
       // Aegis branch / Bulwark Choir (Star Forge): reduce incoming damage
       const reduced = Math.max(
         1,
@@ -50,6 +53,7 @@ export const usePlayerStore = defineStore('player', {
         value: reduced,
         expiresAt: Date.now() + DAMAGE_FLOAT_DURATION_MS,
       })
+      return reduced
     },
     pruneFloats() {
       const now = Date.now()

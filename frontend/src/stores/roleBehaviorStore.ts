@@ -30,6 +30,7 @@ import {
   BOSS_AUTO_INTERVAL_MS,
   BOSS_AUTO_ATTACK_DAMAGE,
   BOSS_AUTO_AIM_MS,
+  BOSS_STRIKE_SUN_WEIGHT,
   SUPPORT_HEAL_RANGE,
   SUPPORT_PLANET_HEAL_AMOUNT,
   SUPPORT_PLANET_HEAL_INTERVAL_MS,
@@ -204,6 +205,14 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     planetHitAt: 0,
     planetHitDmg: 0,
 
+    // Shock-Nova-Treffer auf die eigene Sonne (= der Spieler in der Orbit-
+    // Mitte): Zeitstempel + BEREITS gemitigierter Schadenswert. Gegenstück zu
+    // planetHitAt/planetHitDmg und treibt Crest-Flash + Damage-Float am
+    // Sonnen-Horizont im Star-Fight-Modal. Der Strike-Treffer läuft dagegen
+    // über autoCounter/autoTargetSun (eigener Einschlag-Delay).
+    sunHitAt: 0,
+    sunHitDmg: 0,
+
     // Boss ability "Shock Nova" — the AoE wave runs on this cooldown; the
     // idle-orbit star of the active boss mirrors it 1:1. novaCounter is a
     // monotonic firing counter the UI layers watch for wave/projectile FX.
@@ -214,18 +223,21 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     novaCounter: 0,
 
     // Boss ability "Strike" (Auto-Attack) — kurzer Cooldown, trifft EIN
-    // zufälliges lebendes Ziel. autoTargetRole ODER autoTargetSlotId ist
-    // gesetzt; autoDmg trägt den Schaden des letzten Schlags für die Labels.
+    // zufälliges lebendes Ziel. GENAU EINES von autoTargetRole /
+    // autoTargetSlotId / autoTargetSun ist gesetzt; autoDmg trägt den Schaden
+    // des letzten Schlags für die Labels.
     autoCooldownMs: BOSS_AUTO_INTERVAL_MS,
     autoReadyAt: 0,
     autoCounter: 0,
     autoTargetRole: null as ChampionRole | null,
     autoTargetSlotId: null as string | null,
+    autoTargetSun: false,
     autoDmg: 0,
     // Anvisier-Phase: bei vollem Ring wählt der Boss ein sichtbares Ziel und
     // hält BOSS_AUTO_AIM_MS lang die Zielscheibe darauf, bevor der Bolt fliegt
     autoAimRole: null as ChampionRole | null,
     autoAimSlotId: null as string | null,
+    autoAimSun: false,
     autoAimUntil: 0,
     autoAimCounter: 0,
 
@@ -463,15 +475,28 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         this.planetHitDmg = planetDmg
       }
 
-      // ... und den Spieler in der Orbit-Mitte — der Stern-Schuss im
-      // Idle-Orbit ist die Visualisierung dieses Treffers
-      usePlayerStore().takeDamage(BOSS_NOVA_PLAYER_DAMAGE)
+      // ... und die eigene Sonne in der Orbit-Mitte (= der Spieler). Skaliert
+      // wie Champions und Planeten mit Galaxy-Boss und Rage, damit die
+      // Rage-Phase auch für die Sonne bedrohlich wird. takeDamage liefert den
+      // bereits gemitigierten Wert zurück — genau der wird angezeigt.
+      const sunDmg = Math.round(
+        BOSS_NOVA_PLAYER_DAMAGE *
+          (activeBoss.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
+          (raging ? BOSS_RAGE_DMG_MULT : 1),
+      )
+      this.sunHitDmg = usePlayerStore().takeDamage(sunDmg)
+      this.sunHitAt = now
     },
 
     /** Zielpool des Strikes: lebende Orbit-Champions + Spieler-Planeten
-     *  (jede Planetenart) mit Rest-HP — nur Ziele VOR der Sonne, wer dahinter
-     *  steht, kann nicht anvisiert werden. Liefert ein Zufallsziel oder null. */
-    _rollStrikeTarget(roles: Set<string>): { role: ChampionRole } | { slotId: string } | null {
+     *  (jede Planetenart) mit Rest-HP + die eigene SONNE (der Spieler in der
+     *  Orbit-Mitte) — nur Ziele VOR der Sonne, wer dahinter steht, kann nicht
+     *  anvisiert werden. Die Sonne selbst steht immer im Vordergrund und zählt
+     *  mit BOSS_STRIKE_SUN_WEIGHT statt mit 1. Liefert ein Zufallsziel oder
+     *  null, wenn gerade gar nichts angreifbar ist. */
+    _rollStrikeTarget(
+      roles: Set<string>,
+    ): { role: ChampionRole } | { slotId: string } | { sun: true } | null {
       const planetShopStore = usePlanetShopStore()
       const champTargets = (Object.keys(this.championHp) as ChampionRole[]).filter(
         (role) =>
@@ -484,19 +509,22 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const planetTargets = planetShopStore.activeSlots.filter(
         (s) => (s.currentHp ?? 1) > 0 && playerSlotInForeground(s.id),
       )
-      const poolSize = champTargets.length + planetTargets.length
+      const sunWeight = usePlayerStore().currentHP > 0 ? BOSS_STRIKE_SUN_WEIGHT : 0
+      const poolSize = champTargets.length + planetTargets.length + sunWeight
       if (poolSize === 0) return null
 
       const pick = Math.floor(Math.random() * poolSize)
-      return pick < champTargets.length
-        ? { role: champTargets[pick] }
-        : { slotId: planetTargets[pick - champTargets.length].id }
+      if (pick < champTargets.length) return { role: champTargets[pick] }
+      const planetPick = pick - champTargets.length
+      if (planetPick < planetTargets.length) return { slotId: planetTargets[planetPick].id }
+      return { sun: true }
     },
 
     /** Anvisier-Phase abbrechen — Zielscheibe verschwindet im UI */
     _clearStrikeAim() {
       this.autoAimRole = null
       this.autoAimSlotId = null
+      this.autoAimSun = false
       this.autoAimUntil = 0
     },
 
@@ -504,9 +532,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
      *  1. Cooldown läuft herunter (Ring füllt sich).
      *  2. Ring voll: steht der Boss hinter der Sonne, wartet er bei vollem
      *     Ring, bis er wieder vorn ist.
-     *  3. Der Boss wählt zufällig EIN sichtbares Ziel (Champion oder
-     *     Spieler-Planet, nicht hinter der Sonne) und hält BOSS_AUTO_AIM_MS
-     *     lang die Zielscheibe darauf (autoAim*).
+     *  3. Der Boss wählt zufällig EIN sichtbares Ziel (Champion,
+     *     Spieler-Planet — beide nicht hinter der Sonne — oder die Sonne
+     *     selbst) und hält BOSS_AUTO_AIM_MS lang die Zielscheibe darauf
+     *     (autoAim*).
      *  4. Stirbt das Ziel oder wandert es hinter die Sonne, bricht das
      *     Anvisieren ab und ein neues Ziel wird gewählt.
      *  5. Feuern: Bolt fliegt, Schaden fällt, Cooldown startet neu.
@@ -522,6 +551,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         this.autoReadyAt = 0
         this.autoTargetRole = null
         this.autoTargetSlotId = null
+        this.autoTargetSun = false
         this._clearStrikeAim()
         return
       }
@@ -543,27 +573,31 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
       // Phase 3: noch kein Ziel im Visier → zufällig eines der sichtbaren
       // Ziele wählen und die Zielscheibe daraufsetzen
-      if (!this.autoAimRole && !this.autoAimSlotId) {
+      if (!this.autoAimRole && !this.autoAimSlotId && !this.autoAimSun) {
         const rolled = this._rollStrikeTarget(roles)
         if (!rolled) return
         this.autoAimRole = 'role' in rolled ? rolled.role : null
         this.autoAimSlotId = 'slotId' in rolled ? rolled.slotId : null
+        this.autoAimSun = 'sun' in rolled
         this.autoAimUntil = now + BOSS_AUTO_AIM_MS
         this.autoAimCounter++
         return
       }
 
       // Phase 4: Visier validieren — Ziel tot, down oder hinter der Sonne →
-      // abbrechen, nächster Tick wählt ein neues Ziel
+      // abbrechen, nächster Tick wählt ein neues Ziel. Die Sonne kann nur
+      // ungültig werden, wenn der Spieler auf 0 HP steht.
       const aimRole = this.autoAimRole
       const aimValid = aimRole
         ? roles.has(aimRole) &&
           this.championHp[aimRole].current > 0 &&
           this.championDownUntil[aimRole] <= 0 &&
           championInForeground(getChampionNameByRole(aimRole))
-        : usePlanetShopStore().activeSlots.some(
-            (s) => s.id === this.autoAimSlotId && (s.currentHp ?? 1) > 0,
-          ) && playerSlotInForeground(this.autoAimSlotId!)
+        : this.autoAimSun
+          ? usePlayerStore().currentHP > 0
+          : usePlanetShopStore().activeSlots.some(
+              (s) => s.id === this.autoAimSlotId && (s.currentHp ?? 1) > 0,
+            ) && playerSlotInForeground(this.autoAimSlotId!)
       if (!aimValid) {
         this._clearStrikeAim()
         return
@@ -583,11 +617,16 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           (raging ? BOSS_RAGE_DMG_MULT : 1),
       )
 
+      // Der Sonnen-Treffer wird gemitigiert (Aegis / Bulwark Choir) — dessen
+      // Rückgabewert überschreibt autoDmg, damit Label und HP-Verlust passen
+      let dealt = dmg
+
       if (aimRole) {
         const hp = this.championHp[aimRole]
         hp.current = Math.max(0, hp.current - dmg)
         this.autoTargetRole = aimRole
         this.autoTargetSlotId = null
+        this.autoTargetSun = false
 
         if (hp.current <= 0) {
           const { addEvent } = useEventLog()
@@ -597,13 +636,22 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
             aimRole,
           )
         }
+      } else if (this.autoAimSun) {
+        // Kein sunHitAt hier: das Signal gehört der Nova (anderer Einschlag-
+        // Delay). Der Strike-Treffer läuft wie bei Champions/Turrets über
+        // autoCounter + autoTargetSun + autoDmg.
+        dealt = usePlayerStore().takeDamage(dmg)
+        this.autoTargetRole = null
+        this.autoTargetSlotId = null
+        this.autoTargetSun = true
       } else if (this.autoAimSlotId) {
         usePlanetShopStore().takeDamage(this.autoAimSlotId, dmg)
         this.autoTargetRole = null
         this.autoTargetSlotId = this.autoAimSlotId
+        this.autoTargetSun = false
       }
 
-      this.autoDmg = dmg
+      this.autoDmg = dealt
       this.autoCounter++
       this._clearStrikeAim()
     },

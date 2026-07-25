@@ -12,6 +12,7 @@ import type { PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import { formatNumber } from '@/config/numberFormat'
 import { playerSlotInForeground } from '@/utils/foregroundGate'
+import { toRoman } from '@/utils/roman'
 import {
   PLANET_IMAGE_DIR,
   PLANET_IMAGE_THUMB_DIR,
@@ -216,6 +217,9 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
                Container: sie teilen sich den Scrim und rutschen zusammen nach
                unten, wenn das UNLOCK-Label fehlt (gesperrte Kachel). -->
           <template v-else>
+            <!-- Slot-Nummer am Kopf: benennt den Orbit, solange ihn noch kein
+                 Planet benennt. Römisch wie die Sektor-Labels der Minimap. -->
+            <div class="cmd-tile-index">{{ toRoman(index + 1) }}</div>
             <div class="cmd-tile-icon cmd-tile-icon--locked">
               <img src="/img/lock.png" alt="Locked" class="lock-icon" />
             </div>
@@ -634,7 +638,11 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   transform: translate(-50%, -50%);
   z-index: 1;
   width: 62%;
-  height: 30%;
+  /* 27 % statt 30 %: seit die Kachel oben die Slot-Nummer trägt, muss das
+     Schloss zwischen Kopf- und Fußbanner passen. Bei 114px Innenhöhe endet es
+     damit rund 8px über der obersten Zeile des Fußbanners (dem UNLOCK-Label
+     der kaufbaren Kachel) und hält 20px Abstand zur Nummer. */
+  height: 27%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -660,6 +668,47 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 }
 .cmd-planet-tile:hover .cmd-tile-icon--locked .lock-icon {
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 14px rgba(232, 192, 64, 0.8));
+}
+
+/* ── Kopfbanner: Slot-Nummer ────────────────────────────────────────────────
+   Gespiegeltes Gegenstück zum Fußbanner — Kopf und Fuß fassen die Kachel
+   symmetrisch ein, das Schloss steht allein dazwischen auf der Mitte.
+   16px sind hier die Untergrenze: bei --hud-scale 0.66 (Full HD) bleiben davon
+   rund 11 reale Pixel, ausreichend für die schmalen Versalien I/V/X. Gold wie
+   alle Zahlwerte des HUDs; auf der kaufbaren Kachel zieht sie ins Grün des
+   UNLOCK-Labels mit, damit der Kopf denselben Zustand meldet wie der Fuß. */
+.cmd-tile-index {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  padding: 5px 0 14px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em; /* gleicht das letter-spacing des letzten Zeichens aus */
+  color: #e8c040;
+  background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.5) 50%, transparent);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 10px rgba(232, 192, 64, 0.45);
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+.cmd-planet-tile--locked .cmd-tile-index {
+  color: rgba(232, 192, 64, 0.72);
+}
+.cmd-planet-tile--locked:hover .cmd-tile-index {
+  color: #e8c040;
+}
+.cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-index {
+  color: #90e050;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 10px rgba(144, 224, 80, 0.5);
 }
 
 /* ── Fußbanner: alles Beschriftende am unteren Kachelrand ───────────────────

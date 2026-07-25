@@ -925,23 +925,27 @@ export const STRIKER_FIRE_FLASH_MS = 550 // snap phase of the attack (lunge → 
 export const STRIKER_ATTACK_WINDUP_MS = 1000 // windup phase: starts the moment the pill shows 0s (one store tick before fire)
 export const STRIKER_MUZZLE_MS = 280 // muzzle flash lifetime (matches its CSS animation)
 export const STRIKER_ATTACK_LUNGE_PX = 22 // how far the portrait lunges toward the boss on attack
-// Halbkreis unterhalb des Boss-Bilds: Winkel in Grad (0° = rechts, 90° = unten)
-// je Rolle — Top ganz links, Mid unten Mitte, Support rechts. Alle Maße in %
+// Champion-Row am Sonnen-Horizont: Winkel in Grad (0° = rechts, 90° = unten)
+// je Rolle — Top ganz links, Mid oben Mitte, Support rechts. Alle Maße in %
 // der Arena, damit das Layout auf Full-HD wie auf 2K identisch sitzt.
 // Winkel so gewählt, dass die fünf Striker HORIZONTAL gleichmäßig verteilt
-// sind (x = 24 / 37 / 50 / 63 / 76 % — je 13 % Abstand), mid exakt unten
-// mittig; der schmalere Bogen hält die Außenrollen klar von den
-// Turret-Battery-Spalten (13 % / 87 %) frei
+// sind (x = 24 / 37 / 50 / 63 / 76 % — je 13 % Abstand); der schmalere Bogen
+// hält die Außenrollen klar von den Turret-Battery-Spalten (13 % / 87 %) frei.
+// Die Winkel liegen auf der OBEREN Ellipsenhälfte (sin < 0) — die Row wölbt
+// sich damit wie der Sonnen-Horizont darunter: Mid am höchsten, Top/Support
+// weiter außen und tiefer, exakt der Krümmung der Sonnenscheibe folgend.
 export const STRIKER_ARC_ANGLES: Record<ChampionRole, number> = {
-  top: 150,
-  jungle: 116,
-  mid: 90,
-  adc: 64,
-  support: 30,
+  top: 210,
+  jungle: 244,
+  mid: 270,
+  adc: 296,
+  support: 330,
 }
 export const STRIKER_ARC_RX_PCT = 30 // horizontal semi-axis of the striker arc (% arena width)
-export const STRIKER_ARC_RY_PCT = 10 // vertical semi-axis of the striker arc (% arena height)
-export const STRIKER_ARC_CENTER_Y_PCT = 67 // arc center as % of arena height (below boss + loot banner)
+// Flach: die Champions stehen als Row auf dem Sonnen-Horizont, kein tiefer
+// Halbkreis mehr — sonst tauchen die Info-Plates in die Sonnenscheibe ein
+export const STRIKER_ARC_RY_PCT = 3 // vertical semi-axis of the striker arc (% arena height)
+export const STRIKER_ARC_CENTER_Y_PCT = 71 // arc center as % of arena height (between loot banner and sun horizon)
 export const STRIKER_BOSS_ANCHOR_X_PCT = 50 // projectile target: boss center X (% arena width)
 export const STRIKER_BOSS_ANCHOR_Y_PCT = 41 // projectile target: boss center Y (% arena height)
 export const STRIKER_PROJECTILE_IMPACT_FRAC = 0.7 // projectile stops at this fraction toward boss center
@@ -962,12 +966,20 @@ export const BOSS_WAVE_HIT_DELAY_MS = 500 // moment the ring reaches champions/t
 // Schaden pro Welle = DPS × Intervall (balance-neutral zum alten Sekundentakt).
 // Der Idle-Orbit-Stern des aktiven Bosses teilt sich exakt diesen Cooldown.
 export const BOSS_NOVA_INTERVAL_MS = 5000 // cooldown between two Shock Nova waves
-export const BOSS_NOVA_PLAYER_DAMAGE = 5 // damage each nova deals to the player (Bard) in the orbit center
+export const BOSS_NOVA_PLAYER_DAMAGE = 5 // base damage each nova deals to the sun (Bard) in the orbit center
 // Boss-Fähigkeit "Strike" (Auto-Attack): kurzer Cooldown, trifft EIN zufällig
-// gewähltes lebendes Ziel (Champion oder Turret-Planet) — Rage verdoppelt
-// auch diesen Schaden, wodurch die Rage-Phase deutlich bedrohlicher wird
+// gewähltes lebendes Ziel (Champion, Spieler-Planet ODER die Sonne) — Rage
+// verdoppelt auch diesen Schaden, wodurch die Rage-Phase bedrohlicher wird
 export const BOSS_AUTO_INTERVAL_MS = 3000 // cooldown between two boss auto-attacks
 export const BOSS_AUTO_ATTACK_DAMAGE = 8 // base single-target damage per auto-attack
+/**
+ * Gewicht der Sonne im Zufalls-Zielpool des Strikes. Champions und
+ * Spieler-Planeten zählen je 1 — 5 bedeutet also: die Sonne wird so häufig
+ * anvisiert wie alle fünf Orbit-Champions zusammen. Bewusst hoch, damit der
+ * Treffer auf den Spieler im Star-Fight-Modal wie im Idle-Orbit sichtbar
+ * bleibt und nicht in 1-von-12-Fällen untergeht.
+ */
+export const BOSS_STRIKE_SUN_WEIGHT = 5
 export const BOSS_AUTO_AIM_MS = 900 // telegraph: reticle locks onto the victim before the bolt fires (< 1 game tick → shot follows on the very next tick)
 export const BOSS_AUTO_HIT_DELAY_MS = 450 // flight time of the strike bolt → impact flash + damage label
 // 6 feste Anker auf einem Ellipsenbogen um den Boss (Gegenstück zum unteren
@@ -984,6 +996,48 @@ export const ARC_GUIDE_PLANET_RADIUS_FRAC = 0.42 // planet silhouette radius as 
 export const ARC_GUIDE_MAX_EXTEND_DEG = 80 // safety cap for extending a guide past its outermost slot
 export const ARC_GUIDE_STEP_DEG = 1 // angular resolution of the planet-edge search
 
+// ── Sonnen-Horizont im Star-Fight-Modal ──────────────────────────────────────
+// Die eigene Sonne (= der Spieler) steht als Halbkreis am unteren Arena-Rand:
+// eine riesige Scheibe, von der nur die obere Kalotte in die Arena ragt. Die
+// Champion-Row sitzt direkt darüber, HP-Leiste + Phasenname dazwischen.
+/**
+ * Höhe des Sonnen-Bandes über dem unteren Arena-Rand. Bewusst als geklemmtes
+ * PX-Band statt in Prozent: die Info-Plates der Champion-Row sind px-groß, ein
+ * prozentuales Band würde auf Full-HD in sie hineinlaufen und auf 4K unnötig
+ * viel Platz verschenken. So bleibt der Kamm auf jeder Referenz-Auflösung bei
+ * ~89 % der Arena-Höhe.
+ */
+export const SUN_HORIZON_BAND_MIN_PX = 84
+export const SUN_HORIZON_BAND_PCT = 11
+export const SUN_HORIZON_BAND_MAX_PX = 260
+/**
+ * Breite der Sonnenkuppel als % der Arena-BREITE. Wächst mit der Sonnenphase:
+ * die Comet-Kuppe ist eine kleine Wölbung in der Mitte, die Finale-Sonne eine
+ * über die ganze Arena reichende Wand.
+ *
+ * Bewusst eine flache Halb-Ellipse (`border-radius: 50% / 100%`) statt einer
+ * echten Riesenscheibe: eine Kreisscheibe mit Arena-Breite × 2 wäre auf 4K ein
+ * Paint-Layer von ~100 Megapixeln, während die Kuppel nur das sichtbare Band
+ * belegt. Die Silhouette ist bei so flachen Kalotten praktisch identisch.
+ */
+export const SUN_HORIZON_DOME_MIN_WIDTH_PCT = 58
+export const SUN_HORIZON_DOME_MAX_WIDTH_PCT = 112
+/**
+ * Kammhöhe als Faktor auf SUN_HORIZON_BAND_*: die junge Sonne bleibt flacher
+ * und gibt der Champion-Row zusätzliche Luft, die Finale-Sonne füllt das
+ * ganze Band. Alle Anker (HP-Leiste, Zielscheibe, Bolt-Ziel, Floats) hängen an
+ * dieser errechneten Kammhöhe, verschieben sich also gemeinsam.
+ */
+export const SUN_HORIZON_CREST_MIN_FACTOR = 0.6
+export const SUN_HORIZON_CREST_MAX_FACTOR = 1
+/** Höhe des Korona-Scheins über dem Kamm in % der Arena-Höhe (Phase 0 → max). */
+export const SUN_HORIZON_GLOW_MIN_PCT = 24
+export const SUN_HORIZON_GLOW_MAX_PCT = 46
+/** Lebensdauer des Crest-Aufleuchtens, wenn die Sonne getroffen wird (ms). */
+export const SUN_HORIZON_HIT_FLASH_MS = 420
+/** Lebensdauer eines Schadens-Floats über dem Sonnen-Kamm (ms). */
+export const SUN_HORIZON_FLOAT_MS = 1200
+
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
 
@@ -998,6 +1052,14 @@ export const SUN_TOPDOWN_AXIAL_TILT = 0
  * so the shared phase disc stays aligned with the chime button and champion orbits.
  */
 export const SUN_BG_DISC_RADIUS_FACTOR = 4
+
+/**
+ * Zielscheiben-Durchmesser über der Idle-Orbit-Sonne, wenn der Boss den Spieler
+ * mit "Strike" anvisiert — als Vielfaches des Sonnenradius. Bewusst etwas
+ * größer als SUN_BG_DISC_RADIUS_FACTOR, damit das Reticle die Sonnenscheibe
+ * sichtbar umschließt statt auf ihr zu liegen.
+ */
+export const SUN_AIM_LOCK_RADIUS_FACTOR = 4.8
 
 /** Shop sun disc diameter band (px), mapped from the current phase radius (STAR_PHASE_DATA, 30…140).
  *  Mirrors the Planets-tab sun style but a smaller band so it stays inside the branch-icon ring

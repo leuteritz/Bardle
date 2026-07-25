@@ -1,7 +1,7 @@
 <template>
   <div ref="rootEl" class="rsq" aria-hidden="true">
-    <!-- Halbkreis-Führungslinie hinter den Strikern — beidseitig bis an die
-         Planeten-Silhouette verlängert, als schlösse sie sich dahinter -->
+    <!-- Führungslinie hinter der Champion-Row — nach oben gewölbter Bogen, der
+         die Krümmung des Sonnen-Horizonts darunter aufnimmt -->
     <svg class="rsq-arc-guide" viewBox="0 0 100 100" preserveAspectRatio="none">
       <path :d="arcGuidePath" pathLength="400" vector-effect="non-scaling-stroke" />
     </svg>
@@ -21,7 +21,6 @@
       class="rsq-strike-mark"
       :style="{ left: m.xPct + '%', top: m.yPct + '%' }"
     />
-
 
     <!-- Unbesetzte Rollen: Geister-Platzhalter auf derselben Arc-Position —
          Klick öffnet den Team-Tab mit dem passenden Rollen-Slot -->
@@ -104,10 +103,7 @@
 
         <!-- "Attack!"-Callout über die gesamte Choreografie (Windup + Schnips) -->
         <Transition name="rsq-atk">
-          <span
-            v-if="windupRoles.has(s.role) || firingRoles.has(s.role)"
-            class="rsq-atk"
-          >
+          <span v-if="windupRoles.has(s.role) || firingRoles.has(s.role)" class="rsq-atk">
             Attack!
           </span>
         </Transition>
@@ -157,11 +153,7 @@
           class="rsq-proj"
           :style="{ '--px': s.px + 'px', '--py': s.py + 'px', '--rot': s.rot + 'deg' }"
         />
-        <span
-          v-else
-          class="rsq-impact"
-          :style="{ transform: `translate(${s.px}px, ${s.py}px)` }"
-        >
+        <span v-else class="rsq-impact" :style="{ transform: `translate(${s.px}px, ${s.py}px)` }">
           <span class="rsq-impact-burst" />
           <span
             v-for="k in 6"
@@ -225,7 +217,6 @@ import {
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
-import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/arcGuide'
 import { activeChampionBehindState } from '@/utils/activeChampionBehindState'
 import { Icon } from '@iconify/vue'
 
@@ -308,8 +299,12 @@ const strikers = computed(() =>
 
     // Flugvektor zum Boss-Anker in px (Impact kurz vor dem Boss)
     const { w, h } = arenaSize.value
-    const px = Math.round(((STRIKER_BOSS_ANCHOR_X_PCT - xPct) / 100) * w * STRIKER_PROJECTILE_IMPACT_FRAC)
-    const py = Math.round(((STRIKER_BOSS_ANCHOR_Y_PCT - yPct) / 100) * h * STRIKER_PROJECTILE_IMPACT_FRAC)
+    const px = Math.round(
+      ((STRIKER_BOSS_ANCHOR_X_PCT - xPct) / 100) * w * STRIKER_PROJECTILE_IMPACT_FRAC,
+    )
+    const py = Math.round(
+      ((STRIKER_BOSS_ANCHOR_Y_PCT - yPct) / 100) * h * STRIKER_PROJECTILE_IMPACT_FRAC,
+    )
     const dist = Math.hypot(px, py) || 1
 
     return [
@@ -362,31 +357,23 @@ const vacantSlots = computed(() =>
         roleImage: ROLE_BY_KEY[role].image,
         color: ROLE_BY_KEY[role].color,
         xPct: Math.round((50 + Math.cos(rad) * STRIKER_ARC_RX_PCT) * 10) / 10,
-        yPct:
-          Math.round((STRIKER_ARC_CENTER_Y_PCT + Math.sin(rad) * STRIKER_ARC_RY_PCT) * 10) / 10,
+        yPct: Math.round((STRIKER_ARC_CENTER_Y_PCT + Math.sin(rad) * STRIKER_ARC_RY_PCT) * 10) / 10,
       },
     ]
   }),
 )
 
-// Halbkreis-Führungslinie: unterer Ellipsenbogen durch alle Striker, an
-// beiden Enden über Top/Support hinaus verlängert, bis die Linie die
-// Planeten-Silhouette erreicht — gleicher Look wie die Turret-Guide
-const STRIKER_GUIDE_ELLIPSE: ArcGuideEllipse = {
-  rxPct: STRIKER_ARC_RX_PCT,
-  ryPct: STRIKER_ARC_RY_PCT,
-  centerYPct: STRIKER_ARC_CENTER_Y_PCT,
-}
-
-const arcGuidePath = computed(() => {
-  const { w, h } = arenaSize.value
-  // links über Top (150°) hinaus aufwärts, rechts über Support (30°) hinaus
-  const endL = guideEndAngleDeg(STRIKER_ARC_ANGLES.top, 1, STRIKER_GUIDE_ELLIPSE, w, h)
-  const endR = guideEndAngleDeg(STRIKER_ARC_ANGLES.support, -1, STRIKER_GUIDE_ELLIPSE, w, h)
-  const p1 = ellipsePointPct(endL, STRIKER_GUIDE_ELLIPSE)
-  const p2 = ellipsePointPct(endR, STRIKER_GUIDE_ELLIPSE)
-  return `M ${p1.x} ${p1.y} A ${STRIKER_ARC_RX_PCT} ${STRIKER_ARC_RY_PCT} 0 1 0 ${p2.x} ${p2.y}`
-})
+// Führungslinie der Champion-Row: die OBERE Hälfte der Striker-Ellipse (180°
+// → 360°), also genau der Bogen, auf dem die fünf Striker sitzen. Sie läuft an
+// beiden Enden bis zum horizontalen Ellipsen-Scheitel und damit über Top (24 %)
+// und Support (76 %) hinaus — dieselbe Wölbung wie der Sonnen-Horizont
+// darunter. Konstante Geometrie: der Pfad hängt nur an den Arc-Konstanten,
+// nicht an der Arena-Größe (viewBox 0 0 100 100, preserveAspectRatio="none").
+// Sweep-Flag 1 = im Screen-Koordinatensystem (Y nach unten) über den Scheitel.
+const arcGuidePath =
+  `M ${50 - STRIKER_ARC_RX_PCT} ${STRIKER_ARC_CENTER_Y_PCT}` +
+  ` A ${STRIKER_ARC_RX_PCT} ${STRIKER_ARC_RY_PCT} 0 0 1` +
+  ` ${50 + STRIKER_ARC_RX_PCT} ${STRIKER_ARC_CENTER_Y_PCT}`
 
 // ── Projektile: Striker → Boss, dann Impact-Burst + Schadenszahl ─────────
 interface StrikerShot {
@@ -455,13 +442,7 @@ for (const role of SQUAD_ROLES) {
     (ms) => {
       const champion = battleStore.headerSlots[SLOT_BY_ROLE[role]]
       const isDown = roleBehaviorStore.championDownUntil[role] > Date.now()
-      if (
-        ms > 0 &&
-        ms <= STRIKER_ATTACK_WINDUP_MS &&
-        champion &&
-        !isDown &&
-        hasLiveBoss.value
-      ) {
+      if (ms > 0 && ms <= STRIKER_ATTACK_WINDUP_MS && champion && !isDown && hasLiveBoss.value) {
         windupRoles.add(role)
       } else if (ms > STRIKER_ATTACK_WINDUP_MS) {
         windupRoles.delete(role)
@@ -547,7 +528,6 @@ interface AutoMark {
 }
 const autoMarks = ref<AutoMark[]>([])
 
-
 watch(
   () => roleBehaviorStore.autoCounter,
   () => {
@@ -630,8 +610,8 @@ onUnmounted(() => {
   contain: layout style paint;
 }
 
-/* ── Halbkreis-Führungslinie — verbindet die Striker optisch, gleicher Look
-   wie die Turret-Guide (.tbh-arc-guide) ──────────────────────────────────── */
+/* ── Führungslinie der Champion-Row — verbindet die Striker optisch, gleicher
+   Look wie die Turret-Guide (.tbh-arc-guide) ─────────────────────────────── */
 .rsq-arc-guide {
   position: absolute;
   inset: 0;
@@ -710,7 +690,10 @@ onUnmounted(() => {
   stroke: var(--rc, #c8922a);
   stroke-width: 4;
   stroke-linecap: round;
-  transition: stroke-dasharray 0.9s linear, stroke 0.2s ease, stroke-width 0.2s ease;
+  transition:
+    stroke-dasharray 0.9s linear,
+    stroke 0.2s ease,
+    stroke-width 0.2s ease;
 }
 
 /* Ring voll (0s): heller + dicker als Ready-Signal — bewusst ohne Filter,
@@ -755,11 +738,7 @@ onUnmounted(() => {
   padding: 2px 8px;
   border-radius: 9px;
   text-align: center;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--rc) 32%, #16100a),
-    #0c0803
-  );
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--rc) 32%, #16100a), #0c0803);
   border: 1px solid color-mix(in srgb, var(--rc) 65%, #3a2410);
   box-shadow:
     0 0 8px color-mix(in srgb, var(--rc) 35%, transparent),
@@ -771,7 +750,9 @@ onUnmounted(() => {
   letter-spacing: 0.04em;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
   z-index: 3;
-  transition: box-shadow 0.25s, border-color 0.25s;
+  transition:
+    box-shadow 0.25s,
+    border-color 0.25s;
 }
 
 /* Kurz vor dem Abschuss aufglühen — Puls über opacity (GPU), nicht box-shadow */
@@ -884,7 +865,12 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 90, 60, 0.6) 0%, rgba(255, 40, 20, 0.3) 65%, transparent 100%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 90, 60, 0.6) 0%,
+    rgba(255, 40, 20, 0.3) 65%,
+    transparent 100%
+  );
   animation: rsq-hitflash-fade 0.45s ease-out forwards;
   pointer-events: none;
 }
@@ -1179,11 +1165,7 @@ onUnmounted(() => {
   transform: translate(-50%, -10%) rotate(var(--rot, 0deg));
   transform-origin: top center;
   border-radius: 3px;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--rc) 85%, #fff),
-    transparent
-  );
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--rc) 85%, #fff), transparent);
   filter: blur(1px);
 }
 
@@ -1320,7 +1302,9 @@ onUnmounted(() => {
 }
 
 .rsq-atk-leave-active {
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
 }
 
 .rsq-atk-leave-to {
@@ -1366,7 +1350,9 @@ onUnmounted(() => {
 .rsq-item--behind .rsq-unit {
   opacity: 0.5;
   filter: grayscale(55%);
-  transition: opacity 0.4s ease, filter 0.4s ease;
+  transition:
+    opacity 0.4s ease,
+    filter 0.4s ease;
 }
 
 /* Medaillon-Design identisch zum Command Panel (champ-card-eclipse-medal) */

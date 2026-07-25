@@ -48,7 +48,6 @@
 
   <Teleport to="body">
     <div class="star-sys-layer star-sys-back" aria-hidden="true">
-
       <template v-for="star in backStars" :key="star.id">
         <div
           class="star-body"
@@ -76,15 +75,16 @@
           :class="[
             'star-body-wrap',
             {
-              'star-hovered': hoveredSummaryStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
+              'star-hovered':
+                hoveredSummaryStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
               'star-body-wrap--hover-dimmed': isStarHoverDimmed(star.id),
             },
           ]"
           :style="starWrapStyle(star)"
           :ref="(el) => setMapEl(starWrapEls, star.id, el)"
           @click="handleStarClick(star)"
-          @mouseenter="hoveredStarId = star.id; starGroupStore.setHoveredTimerStar(star.id)"
-          @mouseleave="hoveredStarId = null; starGroupStore.setHoveredTimerStar(null)"
+          @mouseenter="setStarHover(star.id)"
+          @mouseleave="setStarHover(null)"
         >
           <div
             class="star-body"
@@ -105,6 +105,13 @@
 
       <!-- ③ Enemy Projectiles -->
       <AttackProjectileLayer :shots="enemyShots" />
+
+      <!-- ③b Zielscheibe auf der Sonne: der Boss hat den Spieler im Visier.
+           Gleicher Telegraph wie bei Champions (rsq-aim-lock) und Turret-
+           Planeten (tbh-aim-lock), nur auf Orbit-Größe skaliert -->
+      <span v-if="roleBehaviorStore.autoAimSun" class="sun-aim-lock" :style="sunAimStyle">
+        <Icon icon="game-icons:targeting" class="sun-aim-lock-icon" width="100%" height="100%" />
+      </span>
 
       <!-- ⑤ Fluch-Chip am Stern (links neben dem Stern, Stil des Jungle-Buff-Chips) -->
       <template
@@ -144,18 +151,23 @@
           :class="[
             'star-reward-summary',
             {
-              'star-reward-summary--star-hovered': hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
+              'star-reward-summary--star-hovered':
+                hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
               'star-reward-summary--hover-dimmed': isStarHoverDimmed(star.id),
             },
           ]"
           :style="rewardSummaryStyle(star)"
           :ref="(el) => setMapEl(summaryEls, star.id, el)"
           @click="handleStarClick(star)"
-          @mouseenter="hoveredSummaryStarId = star.id; starGroupStore.setHoveredTimerStar(star.id)"
-          @mouseleave="hoveredSummaryStarId = null; starGroupStore.setHoveredTimerStar(null)"
+          @mouseenter="setSummaryHover(star.id)"
+          @mouseleave="setSummaryHover(null)"
         >
           <div class="summary-inner">
-            <div v-if="getStarRewardSummary(star).champion" class="summary-champion" :style="getChampionRoleStyles(getStarRewardSummary(star).champion!.name)">
+            <div
+              v-if="getStarRewardSummary(star).champion"
+              class="summary-champion"
+              :style="getChampionRoleStyles(getStarRewardSummary(star).champion!.name)"
+            >
               <img
                 :src="getStarRewardSummary(star).champion!.image"
                 :alt="getStarRewardSummary(star).champion!.name"
@@ -225,6 +237,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
 import OrbitPath from './OrbitPath.vue'
 import type { StarRenderEntry } from '../../../composables/useStarSystem'
@@ -255,6 +268,8 @@ import {
   STAR_BURST_DELAY_BETWEEN_SHOTS,
   BOSS_NOVA_INTERVAL_MS,
   HOVER_DIM_OPACITY,
+  SUN_BG_DISC_RADIUS_FACTOR,
+  SUN_AIM_LOCK_RADIUS_FACTOR,
 } from '../../../config/constants'
 import { CHAMPION_ROLES } from '../../../config/championRoles'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
@@ -545,6 +560,21 @@ function handleStarClick(star: StarRenderEntry) {
   if (starGroupStore.starFightModalOpen) return
   starGroupStore.openStarFightModal(star.id)
 }
+
+// Stern-Hover: Orbit-Stern und Reward-Summary setzen beide den geteilten
+// Fokus-Zustand. Bewusst als Methoden statt als mehrteilige Inline-Handler im
+// Template: Prettier läuft hier mit `semi: false` und würde ein
+// `a = 1; b()` im Attribut auf zwei Zeilen OHNE Semikolon umbrechen — der
+// Vue-Template-Compiler kann das dann nicht mehr parsen.
+function setStarHover(id: string | null) {
+  hoveredStarId.value = id
+  starGroupStore.setHoveredTimerStar(id)
+}
+
+function setSummaryHover(id: string | null) {
+  hoveredSummaryStarId.value = id
+  starGroupStore.setHoveredTimerStar(id)
+}
 const combatStore = useCombatStore()
 const battleStore = useBattleStore()
 const planetShopStore = usePlanetShopStore()
@@ -557,8 +587,8 @@ const scaledStarOrbitTiers = computed(() =>
     // mehrere Sterne desselben Typs können unterschiedliche Bahnen haben.
     const hoveredId = starGroupStore.hoveredTimerStarId
     const activeStar =
-      starRenders.value.find(s => s.id === hoveredId && s.starType === type) ??
-      starRenders.value.find(s => s.starType === type)
+      starRenders.value.find((s) => s.id === hoveredId && s.starType === type) ??
+      starRenders.value.find((s) => s.starType === type)
     if (activeStar) {
       return { ...tier, rx: activeStar.orbitRx, ry: activeStar.orbitRy }
     }
@@ -569,7 +599,7 @@ const scaledStarOrbitTiers = computed(() =>
       rx: tier.rx * starSunScale * orbitScale.value,
       ry: tier.ry * starSunScale * orbitScale.value,
     }
-  })
+  }),
 )
 const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -583,10 +613,18 @@ const midRoleImage = ROLE_BY_KEY['mid'].image
 const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
 
 const MIN_RY_BY_ROLE: Record<string, number> = {
-  top: 1.35, jungle: 1.8, mid: 2.2, adc: 2.6, support: 2.6,
+  top: 1.35,
+  jungle: 1.8,
+  mid: 2.2,
+  adc: 2.6,
+  support: 2.6,
 }
 const VIEWPORT_RY_BY_ROLE: Record<string, number> = {
-  top: 0.07, jungle: 0.12, mid: 0.17, adc: 0.22, support: 0.22,
+  top: 0.07,
+  jungle: 0.12,
+  mid: 0.17,
+  adc: 0.22,
+  support: 0.22,
 }
 
 const activeRoleOrbits = computed(() => {
@@ -601,7 +639,7 @@ const activeRoleOrbits = computed(() => {
       const roleTier = ROLE_BY_KEY[role].orbit
       const minRy = Math.max(
         planetShopStore.orbitSunRadius * (MIN_RY_BY_ROLE[role] ?? 1.5),
-        vMin * (VIEWPORT_RY_BY_ROLE[role] ?? 0.10),
+        vMin * (VIEWPORT_RY_BY_ROLE[role] ?? 0.1),
       )
       const aspectRatio = roleTier.rx / roleTier.ry
       const flooredRy = Math.max(roleTier.ry * sunScale * orbitScaleVal, minRy)
@@ -693,9 +731,8 @@ const novaStarId = computed(() => {
   const boss = bossStore.activeBoss
   if (!boss || boss.defeated || boss.expired) return null
   return (
-    starGroupStore.activeStars.find((s) =>
-      s.planetSlots.some((p) => p.planetId === boss.planetId),
-    )?.id ?? null
+    starGroupStore.activeStars.find((s) => s.planetSlots.some((p) => p.planetId === boss.planetId))
+      ?.id ?? null
   )
 })
 
@@ -743,8 +780,9 @@ watch(
 )
 
 // ── Boss-Auto-Attack "Strike": der Boss-Stern feuert EINEN Schuss auf exakt
-// das Ziel, das auch im Star-Fight-Modal getroffen wurde (Champion-Orbit
-// bzw. Planeten-Slot) — Schaden ist autoritativ im Store verrechnet
+// das Ziel, das auch im Star-Fight-Modal getroffen wurde (Champion-Orbit,
+// Planeten-Slot ODER die Sonne in der Orbit-Mitte) — Schaden ist autoritativ
+// im Store verrechnet, die Schüsse hier sind nur die Visualisierung
 const STRIKE_TRAIL_COLOR = '#b0a890'
 const STRIKE_HEAD_COLOR = '#f4ecd8'
 const ROLE_SLOT_INDEX: Record<ChampionRole, number> = {
@@ -772,6 +810,18 @@ watch(
       const champ = combatStore.champions.find((c) => c.name === name)
       if (!champ || (champ.screenX === 0 && champ.screenY === 0)) return
       spawnEnemyShot(star.x, star.y, champ.screenX, champ.screenY, true, true, strikeOpts)
+    } else if (roleBehaviorStore.autoTargetSun) {
+      // Die eigene Sonne (= der Spieler) steht immer in der Orbit-Mitte und
+      // immer im Vordergrund — der Schuss fliegt direkt auf den Bildschirmkern
+      spawnEnemyShot(
+        star.x,
+        star.y,
+        window.innerWidth / 2,
+        window.innerHeight / 2,
+        true,
+        true,
+        strikeOpts,
+      )
     } else if (roleBehaviorStore.autoTargetSlotId) {
       const pos = activePlayerPlanetPositions.get(roleBehaviorStore.autoTargetSlotId)
       if (pos?.isForeground) {
@@ -780,6 +830,19 @@ watch(
     }
   },
 )
+
+// Zielscheibe auf der Sonne (Aim-Phase des Strikes): wächst mit dem
+// Sonnenradius, damit sie in jeder Phase die Scheibe sauber umschließt
+const sunAimStyle = computed(() => {
+  const d = planetShopStore.currentSunRadius * SUN_AIM_LOCK_RADIUS_FACTOR
+  return {
+    width: `${Math.round(d)}px`,
+    height: `${Math.round(d)}px`,
+    '--sun-disc-inset': `${Math.round(
+      (d - planetShopStore.currentSunRadius * SUN_BG_DISC_RADIUS_FACTOR) / 2,
+    )}px`,
+  }
+})
 
 let enemyAnimFrame = 0
 let enemyLastTs = 0
@@ -869,7 +932,12 @@ function fireEnemyShot(fromX: number, fromY: number) {
             const dx = headX - topChamp.screenX
             const dy = headY - topChamp.screenY
             const len = Math.hypot(dx, dy) || 1
-            roleBehaviorStore.triggerIntercept(dx / len, dy / len, topChamp.screenX, topChamp.screenY)
+            roleBehaviorStore.triggerIntercept(
+              dx / len,
+              dy / len,
+              topChamp.screenX,
+              topChamp.screenY,
+            )
           }
         : undefined,
     onHit() {
@@ -912,10 +980,7 @@ function drawCooldownRings() {
       ? roleBehaviorStore.novaReadyAt > 0
         ? Math.max(
             0,
-            Math.min(
-              1,
-              1 - (roleBehaviorStore.novaReadyAt - Date.now()) / BOSS_NOVA_INTERVAL_MS,
-            ),
+            Math.min(1, 1 - (roleBehaviorStore.novaReadyAt - Date.now()) / BOSS_NOVA_INTERVAL_MS),
           )
         : 0
       : bursting
@@ -927,9 +992,7 @@ function drawCooldownRings() {
     // Leise Spur, damit der Ring auch bei wenig Fortschritt lesbar ist
     c.beginPath()
     c.arc(star.x, star.y, r, 0, TWO_PI)
-    c.strokeStyle = isNovaStar
-      ? `rgba(255,80,0,${0.14 * alpha})`
-      : `rgba(255,136,0,${0.1 * alpha})`
+    c.strokeStyle = isNovaStar ? `rgba(255,80,0,${0.14 * alpha})` : `rgba(255,136,0,${0.1 * alpha})`
     c.lineWidth = lineW
     c.stroke()
 
@@ -1155,7 +1218,11 @@ function starBodyBackStyle(star: StarRenderEntry) {
 }
 
 function hexToRgb(hex: string): [number, number, number] {
-  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
+  return [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ]
 }
 
 function getChampionRoleStyles(name: string): Record<string, string> {
@@ -1163,11 +1230,11 @@ function getChampionRoleStyles(name: string): Record<string, string> {
   const hex = (role && ROLE_COLORS[role]) ?? '#e8c040'
   const [r, g, b] = hexToRgb(hex)
   return {
-    '--champ-color':       hex,
-    '--champ-glow':        `rgba(${r}, ${g}, ${b}, 0.5)`,
-    '--champ-glow-dim':    `rgba(${r}, ${g}, ${b}, 0.25)`,
+    '--champ-color': hex,
+    '--champ-glow': `rgba(${r}, ${g}, ${b}, 0.5)`,
+    '--champ-glow-dim': `rgba(${r}, ${g}, ${b}, 0.25)`,
     '--champ-glow-bright': `rgba(${r}, ${g}, ${b}, 0.8)`,
-    '--champ-glow-mid':    `rgba(${r}, ${g}, ${b}, 0.45)`,
+    '--champ-glow-mid': `rgba(${r}, ${g}, ${b}, 0.45)`,
   }
 }
 
@@ -1246,9 +1313,7 @@ function starCountStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   return {
     transform: `translate(${star.x}px, ${star.y - s / 2 - 25}px) translateX(-50%) translateY(-100%)`,
-    opacity: isFocusStar(star.id)
-      ? '1'
-      : (star.opacity * starHoverDimFactor(star.id)).toFixed(3),
+    opacity: isFocusStar(star.id) ? '1' : (star.opacity * starHoverDimFactor(star.id)).toFixed(3),
   }
 }
 </script>
@@ -1285,6 +1350,71 @@ function starCountStyle(star: StarRenderEntry) {
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+/* ── Zielscheibe auf der Sonne: der Boss visiert den Spieler mit "Strike" an.
+   Motiv identisch zu rsq-aim-lock (Champions) und tbh-aim-lock (Turrets):
+   rotierendes Reticle + pulsierende rote Tönung über der Zielfläche. Nur
+   transform/opacity animiert — der drop-shadow rastert einmal. ─────────────── */
+.sun-aim-lock {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 8;
+  animation: sun-aim-in 0.2s ease-out both;
+}
+
+.sun-aim-lock-icon {
+  position: absolute;
+  inset: 0;
+  color: #ff5040;
+  filter: drop-shadow(0 0 10px rgba(255, 60, 40, 0.85));
+  animation: sun-aim-spin 2.2s linear infinite;
+  will-change: transform;
+}
+
+/* Rote Tönung genau auf der Sonnenscheibe (SUN_BG_DISC_RADIUS_FACTOR) */
+.sun-aim-lock::after {
+  content: '';
+  position: absolute;
+  inset: var(--sun-disc-inset, 0px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 60, 40, 0.12) 0%,
+    rgba(255, 60, 40, 0.22) 62%,
+    rgba(255, 50, 30, 0.45) 100%
+  );
+  animation: sun-aim-tint 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes sun-aim-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes sun-aim-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sun-aim-tint {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .star-body-wrap {
@@ -1339,7 +1469,8 @@ function starCountStyle(star: StarRenderEntry) {
 .star-body-wrap:hover .star-body,
 .star-body-wrap.star-hovered .star-body {
   animation: star-hover-pulse 0.6s ease-in-out infinite;
-  filter: drop-shadow(0 0 10px #ffe066) drop-shadow(0 0 22px rgba(255, 224, 102, 0.45)) brightness(1.3);
+  filter: drop-shadow(0 0 10px #ffe066) drop-shadow(0 0 22px rgba(255, 224, 102, 0.45))
+    brightness(1.3);
 }
 
 .star-body-wrap:active .star-body {
@@ -1348,8 +1479,13 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 @keyframes star-hover-pulse {
-  0%, 100% { transform: scale(1.0); }
-  50%       { transform: scale(1.35); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.35);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1360,6 +1496,11 @@ function starCountStyle(star: StarRenderEntry) {
     filter: drop-shadow(0 0 14px #ffe066) brightness(1.25);
   }
 
+  .sun-aim-lock,
+  .sun-aim-lock-icon,
+  .sun-aim-lock::after {
+    animation: none;
+  }
 }
 
 /* ── Hover-Fokus (Stern gehovert oder Champion-/Planeten-Hover im Command
@@ -1522,7 +1663,10 @@ function starCountStyle(star: StarRenderEntry) {
   box-shadow:
     0 0 8px rgba(232, 192, 64, 0.12),
     inset 0 0 0 1px rgba(232, 192, 64, 0.08);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
   user-select: none;
   position: relative;
 }
@@ -1833,7 +1977,11 @@ function starCountStyle(star: StarRenderEntry) {
     #c060ff calc(var(--curse-progress, 1) * 360deg),
     rgba(192, 96, 255, 0.14) 0
   );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 2.5px)
+  );
   mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
   filter: drop-shadow(0 0 4px rgba(180, 50, 255, 0.7));
 }
@@ -1919,5 +2067,4 @@ function starCountStyle(star: StarRenderEntry) {
     animation: none;
   }
 }
-
 </style>
