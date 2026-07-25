@@ -26,6 +26,11 @@
           />
           <div class="card-scrim" />
           <div class="card-tint" :style="{ background: tintFor(role.color) }" />
+          <!-- role stripe: the card's colour signature along its bottom edge -->
+          <span
+            class="card-stripe"
+            :style="{ background: `linear-gradient(to right, transparent, ${role.color}, transparent)` }"
+          />
 
           <!-- Role chip, top-left -->
           <span class="card-role" :style="{ color: role.color, borderColor: hexToRgba(role.color, 0.5) }">
@@ -89,13 +94,27 @@
         </template>
 
         <template v-else>
-          <span class="card-role" :style="{ color: hexToRgba(role.color, 0.6), borderColor: hexToRgba(role.color, 0.3) }">
+          <span
+            class="card-role"
+            :style="{ color: hexToRgba(role.color, 0.6), borderColor: hexToRgba(role.color, 0.3) }"
+          >
             {{ role.roleLabel }}
           </span>
-          <div class="empty-body">
-            <span class="empty-mark" :style="{ color: hexToRgba(role.color, 0.5) }">＋</span>
+          <!-- Clicking an open slot jumps straight to the team tab with this
+               role pre-selected, so the player can fill it right away. -->
+          <button
+            type="button"
+            class="empty-body"
+            :style="{ '--role-accent': role.color }"
+            :title="`Assign a ${role.roleLabel} champion`"
+            @click="openRole(idx)"
+          >
+            <span class="empty-sweep" />
+            <span class="empty-ring" />
+            <span class="empty-mark">＋</span>
             <span class="empty-text">EMPTY SLOT</span>
-          </div>
+            <span class="empty-cta">ASSIGN CHAMPION →</span>
+          </button>
         </template>
       </div>
     </div>
@@ -106,8 +125,17 @@
 import { computed, type CSSProperties } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
+import { useUiStore } from '@/stores/uiStore'
 import { ROLES } from '@/config/constants'
 import { formatNumber } from '@/config/numberFormat'
+
+const uiStore = useUiStore()
+
+/** Open slot clicked → team tab, this role pre-selected. Same navigation the
+ *  command panel's role cards use, so both entry points behave alike. */
+function openRole(slotIndex: number) {
+  uiStore.requestOpenRolesTab(slotIndex)
+}
 
 // Same order as battleStore.headerSlots: top, jungle, mid, adc, support
 const roleRows = ROLES.map((r) => ({
@@ -369,6 +397,28 @@ const mvpHolder = computed<string | null>(() => {
   background: #0b0904;
   border-style: dashed;
 }
+.champ-card--empty:hover {
+  border-style: solid;
+  transform: translateY(-3px);
+}
+
+/* ── Role stripe: colour signature along the card's bottom edge ── */
+.card-stripe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  height: 2px;
+  opacity: 0.75;
+  transition:
+    height 0.22s ease,
+    opacity 0.22s ease;
+}
+.champ-card--filled:hover .card-stripe {
+  height: 3px;
+  opacity: 1;
+}
 
 /* ── Splash art fills the whole card, darkened toward the bottom ── */
 .card-art {
@@ -579,26 +629,152 @@ const mvpHolder = computed<string | null>(() => {
   white-space: nowrap;
 }
 
-/* ── Empty slot ── */
+/* ── Empty slot: a call to action, not a hole ── */
 .empty-body {
   position: absolute;
   inset: 0;
+  z-index: 2;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: clamp(4px, 0.6vh, 8px);
+  padding: 0;
+  font-family: inherit;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+.empty-body:hover,
+.empty-body:focus-visible {
+  background: radial-gradient(
+    circle at 50% 45%,
+    color-mix(in srgb, var(--role-accent) 16%, transparent),
+    transparent 70%
+  );
+  outline: none;
+}
+
+/* Idle: a slow breathing ring hints the slot wants filling.
+   Hover: it snaps to the role colour and swells. */
+.empty-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(46px, 6.6vh, 78px);
+  height: clamp(46px, 6.6vh, 78px);
+  margin: calc(clamp(46px, 6.6vh, 78px) / -2) 0 0 calc(clamp(46px, 6.6vh, 78px) / -2);
+  border: 2px dashed color-mix(in srgb, var(--role-accent) 35%, transparent);
+  border-radius: 50%;
+  animation: empty-breathe 3.4s ease-in-out infinite;
+  transition:
+    border-color 0.25s ease,
+    transform 0.25s ease;
+  pointer-events: none;
+}
+.empty-body:hover .empty-ring,
+.empty-body:focus-visible .empty-ring {
+  border-style: solid;
+  border-color: var(--role-accent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--role-accent) 45%, transparent);
+  animation: none;
+  transform: scale(1.12);
+}
+
+/* Diagonal shine that wipes across on hover */
+.empty-sweep {
+  position: absolute;
+  top: -60%;
+  bottom: -60%;
+  left: -70%;
+  width: 45%;
+  transform: skewX(-18deg) translateX(0);
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--role-accent) 22%, transparent),
+    transparent
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+.empty-body:hover .empty-sweep,
+.empty-body:focus-visible .empty-sweep {
+  opacity: 1;
+  animation: empty-sweep 0.75s ease-out;
 }
 
 .empty-mark {
+  position: relative;
   font-size: clamp(26px, 4vh, 44px);
   line-height: 1;
+  color: color-mix(in srgb, var(--role-accent) 55%, transparent);
+  transition:
+    color 0.25s ease,
+    transform 0.3s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+.empty-body:hover .empty-mark,
+.empty-body:focus-visible .empty-mark {
+  color: var(--role-accent);
+  transform: rotate(90deg) scale(1.18);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--role-accent) 60%, transparent);
 }
 
-.empty-text {
-  font-size: clamp(8px, 1.05vh, 10px);
+/* The resting caption swaps for the call to action on hover */
+.empty-text,
+.empty-cta {
+  position: relative;
+  font-size: clamp(8px, 1.05vh, 11px);
+  font-weight: 700;
   letter-spacing: 2.5px;
-  color: #5a4820;
+  white-space: nowrap;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.empty-text {
+  color: #6a5528;
+}
+.empty-cta {
+  position: absolute;
+  bottom: clamp(10px, 1.6vh, 18px);
+  color: var(--role-accent);
+  opacity: 0;
+  transform: translateY(5px);
+}
+.empty-body:hover .empty-text,
+.empty-body:focus-visible .empty-text {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.empty-body:hover .empty-cta,
+.empty-body:focus-visible .empty-cta {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes empty-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes empty-sweep {
+  from {
+    transform: skewX(-18deg) translateX(0);
+  }
+  to {
+    transform: skewX(-18deg) translateX(420%);
+  }
 }
 
 /* Full HD and flatter: the detail sheet stays legible in shorter cards */
@@ -619,10 +795,24 @@ const mvpHolder = computed<string | null>(() => {
   .card-art {
     transition: opacity 0.22s ease;
   }
-  .champ-card--filled:hover {
+  .champ-card--filled:hover,
+  .champ-card--empty:hover {
     transform: none;
   }
   .champ-card--filled:hover .card-art {
+    transform: none;
+  }
+  .empty-ring,
+  .empty-body:hover .empty-sweep,
+  .empty-body:focus-visible .empty-sweep {
+    animation: none;
+  }
+  .empty-body:hover .empty-mark,
+  .empty-body:focus-visible .empty-mark {
+    transform: none;
+  }
+  .empty-body:hover .empty-ring,
+  .empty-body:focus-visible .empty-ring {
     transform: none;
   }
 }
