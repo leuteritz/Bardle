@@ -153,4 +153,18 @@ defineProps<{
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Full HD and flatter: the flanks tighten so the rank band leaves the roster
+   cards enough height — the numbers stay large, only the air between them goes. */
+@media (max-height: 1100px) {
+  .column-rows {
+    gap: 10px;
+  }
+  .row-value {
+    font-size: 26px;
+  }
+  .column-header {
+    padding-bottom: 4px;
+  }
+}
 </style>

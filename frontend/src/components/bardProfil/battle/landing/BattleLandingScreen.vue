@@ -189,8 +189,9 @@ const conquestGroup = computed<RankStatGroup>(() => ({
 /* ── Roster: takes the leftover height, but capped so the cards keep a card-like
    shape instead of stretching into thin columns on tall screens. ── */
 .roster-slot {
-  /* grows twice as eagerly as the rank band, so spare height lands on the cards */
-  flex: 2 1 auto;
+  /* takes nearly all spare height — the rank band only sinks what is left over
+     once the cards hit their cap */
+  flex: 6 1 auto;
   min-width: 0;
   min-height: 0;
   max-height: clamp(260px, 38vh, 470px);

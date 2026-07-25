@@ -4,95 +4,105 @@
     <div class="hero-aura" :style="{ background: auraBg }" />
     <div class="hero-topline" :style="{ background: toplineBg }" />
 
-    <!-- Headline career numbers flank the rank, which stays centred. -->
-    <RankStatColumn class="hero-flank" :group="leftGroup" align="left" />
+    <div class="hero-main">
+      <!-- Headline career numbers flank the rank, which stays centred. -->
+      <RankStatColumn class="hero-flank" :group="leftGroup" align="left" />
 
-    <div class="hero-column">
-      <div class="hero-core">
-        <div class="rank-emblem">
-          <div class="emblem-glow" :style="{ background: emblemGlowBg }" />
-          <div class="emblem-ring" :style="{ borderColor: rankColorDim }" />
-          <div class="emblem-ring emblem-ring--counter" :style="{ borderColor: rankColorFaint }" />
-          <img
-            :src="rankImage"
-            :alt="currentRank.tier"
-            class="emblem-img"
-            :style="{ filter: emblemGlow }"
-          />
-        </div>
-
-        <div class="rank-name" :style="{ color: rankColor, textShadow: nameGlow }">
-          {{ rankTitle }}
-        </div>
-
-        <div class="core-divider" :style="{ background: dividerBg }" />
-
-        <div class="lp-tower">
-          <span class="lp-num" :style="{ color: rankColor, textShadow: nameGlow }">
-            {{ currentRank.lp }}
-          </span>
-          <span class="lp-unit">LEAGUE POINTS</span>
-        </div>
-      </div>
-
-      <!-- LP progress toward the next rank -->
-      <div class="lp-block">
-        <div class="lp-meta">
-          <span class="lp-meta-scale">{{ lpScaleLabel }}</span>
-          <span class="lp-meta-goal">{{ promotionGoal }}</span>
-        </div>
-        <div class="lp-track">
-          <div
-            class="lp-fill"
-            :style="{
-              width: lpPercent + '%',
-              background: `linear-gradient(to right, ${rankColorDeep}, ${rankColor})`,
-              boxShadow: `0 0 14px ${rankColor}`,
-            }"
-          >
-            <span
-              class="lp-tip"
-              :style="{ background: rankColor, boxShadow: `0 0 10px ${rankColor}` }"
+      <div class="hero-column">
+        <div class="hero-core">
+          <div class="rank-emblem">
+            <div class="emblem-glow" :style="{ background: emblemGlowBg }" />
+            <div class="emblem-ring" :style="{ borderColor: rankColorDim }" />
+            <div
+              class="emblem-ring emblem-ring--counter"
+              :style="{ borderColor: rankColorFaint }"
             />
+            <img
+              :src="rankImage"
+              :alt="currentRank.tier"
+              class="emblem-img"
+              :style="{ filter: emblemGlow }"
+            />
+          </div>
+
+          <div class="rank-name" :style="{ color: rankColor, textShadow: nameGlow }">
+            {{ rankTitle }}
+          </div>
+
+          <div class="core-divider" :style="{ background: dividerBg }" />
+
+          <div class="lp-tower">
+            <span class="lp-num" :style="{ color: rankColor, textShadow: nameGlow }">
+              {{ currentRank.lp }}
+            </span>
+            <span class="lp-unit">LEAGUE POINTS</span>
+          </div>
+        </div>
+
+        <!-- LP progress toward the next rank -->
+        <div class="lp-block">
+          <div class="lp-meta">
+            <span class="lp-meta-scale">{{ lpScaleLabel }}</span>
+            <span class="lp-meta-goal">{{ promotionGoal }}</span>
+          </div>
+          <div class="lp-track">
+            <div
+              class="lp-fill"
+              :style="{
+                width: lpPercent + '%',
+                background: `linear-gradient(to right, ${rankColorDeep}, ${rankColor})`,
+                boxShadow: `0 0 14px ${rankColor}`,
+              }"
+            >
+              <span
+                class="lp-tip"
+                :style="{ background: rankColor, boxShadow: `0 0 10px ${rankColor}` }"
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Full tier ladder — the climb from Iron to Challenger, at a glance -->
-      <div class="tier-ladder">
-        <span class="ladder-line" />
-        <span
-          class="ladder-line ladder-line--done"
-          :style="{ width: ladderDonePercent + '%', background: rankColorDeep }"
-        />
-        <div
-          v-for="(tier, i) in RANK_TIERS"
-          :key="tier"
-          class="ladder-step"
-          :class="{
-            'ladder-step--current': i === currentTierIndex,
-            'ladder-step--cleared': i < currentTierIndex,
-          }"
-        >
-          <span
-            class="tier-pip"
-            :style="
-              i === currentTierIndex ? { borderColor: rankColor, boxShadow: pipGlow } : undefined
-            "
-          >
-            <img :src="RANK_EMBLEM_IMAGES[tier]" :alt="tier" class="tier-pip-img" />
-          </span>
-          <span
-            class="tier-label"
-            :style="i === currentTierIndex ? { color: rankColor } : undefined"
-          >
-            {{ tier.toUpperCase() }}
-          </span>
-        </div>
-      </div>
+      <RankStatColumn class="hero-flank" :group="rightGroup" align="right" />
     </div>
 
-    <RankStatColumn class="hero-flank" :group="rightGroup" align="right" />
+    <!-- Tier ladder — the whole climb from Iron to Challenger. Spans the full
+         band width so the crests can be shown large; they stand on a rail whose
+         cleared stretch is tinted in the current tier's colour. -->
+    <div class="tier-ladder">
+      <span class="ladder-line" />
+      <span
+        class="ladder-line ladder-line--done"
+        :style="{ width: ladderDonePercent + '%', background: rankColor, boxShadow: railGlow }"
+      />
+      <div
+        v-for="(tier, i) in RANK_TIERS"
+        :key="tier"
+        class="ladder-step"
+        :class="{
+          'ladder-step--current': i === currentTierIndex,
+          'ladder-step--cleared': i < currentTierIndex,
+        }"
+        :title="tier"
+      >
+        <span class="tier-pip">
+          <span
+            v-if="i === currentTierIndex"
+            class="pip-halo"
+            :style="{ background: emblemGlowBg }"
+          />
+          <img
+            :src="RANK_EMBLEM_IMAGES[tier]"
+            :alt="tier"
+            class="tier-pip-img"
+            :style="i === currentTierIndex ? { filter: pipGlow } : undefined"
+          />
+        </span>
+        <span class="tier-label" :style="i === currentTierIndex ? { color: rankColor } : undefined">
+          {{ tier.toUpperCase() }}
+        </span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -145,7 +155,10 @@ const nameGlow = computed(() => `0 0 26px ${rankColor.value}59`)
 const dividerBg = computed(
   () => `linear-gradient(to bottom, transparent, ${rankColor.value}66, transparent)`,
 )
-const pipGlow = computed(() => `0 0 14px ${rankColor.value}80`)
+const pipGlow = computed(
+  () => `drop-shadow(0 0 8px ${rankColor.value}) drop-shadow(0 0 20px ${rankColor.value}66)`,
+)
+const railGlow = computed(() => `0 0 12px ${rankColor.value}80`)
 
 const isHighTier = computed(() =>
   ['Master', 'Grandmaster', 'Challenger'].includes(currentRank.value.tier),
@@ -209,8 +222,8 @@ const promotionGoal = computed(() => {
   min-height: 0;
   overflow: hidden;
   display: flex;
-  align-items: stretch;
-  gap: clamp(14px, 1.6vw, 30px);
+  flex-direction: column;
+  gap: clamp(10px, 1.5vh, 20px);
   padding: clamp(13px, 2vh, 24px) clamp(18px, 2vw, 34px) clamp(11px, 1.7vh, 20px);
   /* translucent so the cosmic starfield reads straight through the band */
   background: rgba(14, 12, 7, 0.42);
@@ -234,6 +247,17 @@ const promotionGoal = computed(() => {
   right: 0;
   height: 2px;
   pointer-events: none;
+}
+
+/* ── Upper row: flank · rank · flank ── */
+.hero-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: clamp(14px, 1.6vw, 30px);
 }
 
 /* ── Flanks: headline career numbers left and right of the rank ── */
@@ -326,25 +350,30 @@ const promotionGoal = computed(() => {
   text-overflow: ellipsis;
 }
 
-/* ── Tier ladder: Iron → Challenger on one connected rail. Ten equal steps, so
-   every pip centre lands on 5% + k·10% of the width and the rail lines up. ── */
+/* ── Tier ladder: the crests stand on a shared rail, unframed and large. Ten
+   equal steps, so every crest centre lands on 5% + k·10% of the width. ── */
 .tier-ladder {
-  --pip: clamp(30px, 4vh, 52px);
+  --pip: clamp(46px, 6.4vh, 92px);
+  --rail-gap: clamp(6px, 0.8vh, 11px);
+  --pip-head: clamp(10px, 1.5vh, 22px);
   position: relative;
+  z-index: 1;
+  flex-shrink: 0;
   width: 100%;
   display: flex;
   align-items: flex-start;
-  /* headroom for the scaled-up current pip */
-  padding-top: clamp(4px, 0.6vh, 8px);
+  /* headroom for the enlarged current crest, which grows upward off the rail */
+  padding-top: var(--pip-head);
+  border-top: 1px solid #2b2312;
 }
 
 .ladder-line {
   position: absolute;
-  top: calc(clamp(4px, 0.6vh, 8px) + var(--pip) / 2 - 1px);
+  top: calc(var(--pip-head) + var(--pip) + var(--rail-gap));
   left: 5%;
   right: 5%;
   height: 2px;
-  background: #241d10;
+  background: #2b2312;
   border-radius: 4px;
 }
 .ladder-line--done {
@@ -353,60 +382,62 @@ const promotionGoal = computed(() => {
 }
 
 .ladder-step {
-  position: relative;
-  z-index: 1;
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(3px, 0.5vh, 6px);
+  /* the rail runs through this gap, so the crest appears to stand on it */
+  gap: calc(var(--rail-gap) * 2);
 }
 
 .tier-pip {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   width: var(--pip);
   height: var(--pip);
   flex-shrink: 0;
-  background: #0c0a06;
-  border: 2px solid #241d10;
-  border-radius: 50%;
-  transition:
-    transform 0.25s ease,
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
+  /* grows up from the rail instead of sinking through it */
+  transform-origin: bottom center;
+  transition: transform 0.25s ease;
 }
 .ladder-step--current .tier-pip {
-  transform: scale(1.22);
+  transform: scale(1.24);
+}
+
+.pip-halo {
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .tier-pip-img {
-  width: 80%;
-  height: 80%;
+  position: relative;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  opacity: 0.3;
-  filter: grayscale(75%);
+  opacity: 0.26;
+  filter: grayscale(85%) brightness(0.62);
   transition:
     opacity 0.25s ease,
     filter 0.25s ease;
 }
 .ladder-step--cleared .tier-pip-img {
-  opacity: 0.62;
-  filter: grayscale(25%);
+  opacity: 0.78;
+  filter: grayscale(12%);
 }
 .ladder-step--current .tier-pip-img {
   opacity: 1;
-  filter: none;
 }
 
 .tier-label {
   max-width: 100%;
-  /* tight tracking so even "GRANDMASTER" fits its 1/10 of the rail */
-  font-size: clamp(7px, 0.9vh, 10px);
+  font-size: clamp(8px, 1.1vh, 13px);
   font-weight: 700;
-  letter-spacing: 0.6px;
+  letter-spacing: 1.2px;
   color: #5c4d30;
   white-space: nowrap;
   overflow: hidden;
@@ -417,7 +448,7 @@ const promotionGoal = computed(() => {
   color: #8a7040;
 }
 .ladder-step--current .tier-label {
-  letter-spacing: 1.8px;
+  letter-spacing: 2.2px;
 }
 
 .lp-tower {
@@ -524,10 +555,10 @@ const promotionGoal = computed(() => {
   .lp-num {
     font-size: clamp(30px, 4.4vh, 46px);
   }
-  /* narrower stage → tighter tier captions so "GRANDMASTER" still fits */
-  .tier-label {
-    font-size: 8px;
-    letter-spacing: 0.2px;
+  .tier-ladder {
+    --pip: 54px;
+    --pip-head: 10px;
+    --rail-gap: 7px;
   }
 }
 
