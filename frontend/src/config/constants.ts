@@ -997,42 +997,40 @@ export const ARC_GUIDE_MAX_EXTEND_DEG = 80 // safety cap for extending a guide p
 export const ARC_GUIDE_STEP_DEG = 1 // angular resolution of the planet-edge search
 
 // ── Sonnen-Horizont im Star-Fight-Modal ──────────────────────────────────────
-// Die eigene Sonne (= der Spieler) steht als Halbkreis am unteren Arena-Rand:
-// eine riesige Scheibe, von der nur die obere Kalotte in die Arena ragt. Die
-// Champion-Row sitzt direkt darüber, HP-Leiste + Phasenname dazwischen.
+// Die eigene Sonne (= der Spieler) steht als exakter HALBKREIS am unteren
+// Arena-Rand: eine Scheibe, deren Mittelpunkt auf dem Arena-Boden liegt und von
+// der damit genau die obere Hälfte in die Arena ragt. Jede Sonnenphase — der
+// Comet eingeschlossen — nutzt dieselbe Silhouette, nur der Radius wächst.
+// Die Champion-Row sitzt darüber, die HP-Leiste dazwischen.
 /**
- * Höhe des Sonnen-Bandes über dem unteren Arena-Rand. Bewusst als geklemmtes
- * PX-Band statt in Prozent: die Info-Plates der Champion-Row sind px-groß, ein
- * prozentuales Band würde auf Full-HD in sie hineinlaufen und auf 4K unnötig
- * viel Platz verschenken. So bleibt der Kamm auf jeder Referenz-Auflösung bei
- * ~89 % der Arena-Höhe.
+ * Radius-Band des Halbkreises über dem unteren Arena-Rand. Bewusst als
+ * geklemmtes PX-Band statt in Prozent: die Info-Plates der Champion-Row sind
+ * px-groß, ein prozentuales Band würde auf Full-HD in sie hineinlaufen und auf
+ * 4K unnötig viel Platz verschenken.
  */
 export const SUN_HORIZON_BAND_MIN_PX = 84
-export const SUN_HORIZON_BAND_PCT = 11
+export const SUN_HORIZON_BAND_PCT = 11.5
 export const SUN_HORIZON_BAND_MAX_PX = 260
 /**
- * Breite der Sonnenkuppel als % der Arena-BREITE. Wächst mit der Sonnenphase:
- * die Comet-Kuppe ist eine kleine Wölbung in der Mitte, die Finale-Sonne eine
- * über die ganze Arena reichende Wand.
- *
- * Bewusst eine flache Halb-Ellipse (`border-radius: 50% / 100%`) statt einer
- * echten Riesenscheibe: eine Kreisscheibe mit Arena-Breite × 2 wäre auf 4K ein
- * Paint-Layer von ~100 Megapixeln, während die Kuppel nur das sichtbare Band
- * belegt. Die Silhouette ist bei so flachen Kalotten praktisch identisch.
+ * Halbkreis-Geometrie: die Kuppel ist genau doppelt so breit wie hoch, damit
+ * `border-radius: 50% 50% 0 0 / 100% 100% 0 0` eine echte Kreishälfte ergibt
+ * (keine flache Halb-Ellipse). Breite = Radius × diesem Faktor.
  */
-export const SUN_HORIZON_DOME_MIN_WIDTH_PCT = 58
-export const SUN_HORIZON_DOME_MAX_WIDTH_PCT = 112
+export const SUN_HORIZON_DOME_WIDTH_FACTOR = 2
 /**
- * Kammhöhe als Faktor auf SUN_HORIZON_BAND_*: die junge Sonne bleibt flacher
- * und gibt der Champion-Row zusätzliche Luft, die Finale-Sonne füllt das
- * ganze Band. Alle Anker (HP-Leiste, Zielscheibe, Bolt-Ziel, Floats) hängen an
- * dieser errechneten Kammhöhe, verschieben sich also gemeinsam.
+ * Radius als Faktor auf SUN_HORIZON_BAND_*: der Comet ist eine kleine Kuppe,
+ * die Finale-Sonne füllt das ganze Band. Alle Anker (HP-Leiste, Zielscheibe,
+ * Bolt-Ziel, Floats) hängen an diesem Radius, wachsen also gemeinsam mit.
  */
-export const SUN_HORIZON_CREST_MIN_FACTOR = 0.6
+export const SUN_HORIZON_CREST_MIN_FACTOR = 0.55
 export const SUN_HORIZON_CREST_MAX_FACTOR = 1
-/** Höhe des Korona-Scheins über dem Kamm in % der Arena-Höhe (Phase 0 → max). */
-export const SUN_HORIZON_GLOW_MIN_PCT = 24
-export const SUN_HORIZON_GLOW_MAX_PCT = 46
+/** Korona-Halo um den Halbkreis — Vielfache von Kuppelbreite bzw. Radius. */
+export const SUN_HORIZON_GLOW_WIDTH_FACTOR = 3
+export const SUN_HORIZON_GLOW_HEIGHT_FACTOR = 2.2
+/** Mindestbreite des HP-Streifens, damit "xx / yy" auch am kleinen Comet lesbar bleibt. */
+export const SUN_HORIZON_HP_MIN_WIDTH_PX = 160
+/** Abstand zwischen Kamm und HP-Streifen (px, auflösungsunabhängig). */
+export const SUN_HORIZON_HP_GAP_PX = 10
 /** Lebensdauer des Crest-Aufleuchtens, wenn die Sonne getroffen wird (ms). */
 export const SUN_HORIZON_HIT_FLASH_MS = 420
 /** Lebensdauer eines Schadens-Floats über dem Sonnen-Kamm (ms). */
@@ -2953,7 +2951,7 @@ export const USED_GAME_ICONS = new Set<string>([
   // Admin — StarFightModal instant-kill button
   'game-icons:skull', // Admin kill button in StarFightModal
   'game-icons:planet-core', // Vacant planet slot ghost emblem (PlanetBatteryHUD)
-  'game-icons:targeting', // Boss strike aim reticle over the target (RoleStrikerSquad, PlanetBatteryHUD)
+  'game-icons:targeting', // Boss strike aim reticle over the target (RoleStrikerSquad, PlanetBatteryHUD, SunHorizonHUD)
   // Champion Shop / Select Panel — tier collapse-all header button
   'game-icons:contract', // Collapse-all tiers (ChampionShopComponent & ChampionSelectPanel)
   'game-icons:expand', // Expand-all tiers (ChampionShopComponent & ChampionSelectPanel)
