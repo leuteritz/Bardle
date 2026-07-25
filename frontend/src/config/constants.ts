@@ -1030,6 +1030,23 @@ export const SUN_HORIZON_DOME_WIDTH_FACTOR = 2
 export const SUN_HORIZON_CREST_MIN_FACTOR = 0.78
 export const SUN_HORIZON_CREST_MAX_FACTOR = 1
 /**
+ * Glutsaum auf der Silhouette und Hotspot in der Kammmitte skalieren mit der
+ * Kuppel. Feste px-Werte würden auf der arenabreiten Finale-Sonne wie ein
+ * aufgelegter Draht bzw. ein verlorener Fleck wirken.
+ */
+export const SUN_HORIZON_RIM_FACTOR = 0.09
+export const SUN_HORIZON_RIM_MIN_PX = 5
+/**
+ * Waagerechte Ausdehnung der Kernschattierung, geklemmt auf
+ * SUN_HORIZON_BODY_RX_FACTOR × Kammhöhe (nie mehr als die halbe Kuppelbreite).
+ * Bei den schmalen Phasen liegt der Verlauf damit konzentrisch zur Kuppel und
+ * die Sonne wirkt kugelig; bei den breiten Phasen bleibt der heiße Kern in der
+ * Mitte, statt die ganze untere Hälfte flächig weiß auszuwaschen.
+ */
+export const SUN_HORIZON_BODY_RX_FACTOR = 2.2
+export const SUN_HORIZON_HOTSPOT_WIDTH_FACTOR = 0.3
+export const SUN_HORIZON_HOTSPOT_HEIGHT_FACTOR = 2.6
+/**
  * Korona-Halo: der Schein reicht SUN_HORIZON_GLOW_SPREAD_FACTOR × Kammhöhe über
  * die Kuppelbreite hinaus und GLOW_HEIGHT_FACTOR × Kammhöhe in die Arena.
  * Bewusst an der Höhe statt an der Breite orientiert — sonst würde die

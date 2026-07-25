@@ -92,6 +92,11 @@ import {
   SUN_HORIZON_WIDTH_MAX_PCT,
   SUN_HORIZON_CREST_MIN_FACTOR,
   SUN_HORIZON_CREST_MAX_FACTOR,
+  SUN_HORIZON_RIM_FACTOR,
+  SUN_HORIZON_RIM_MIN_PX,
+  SUN_HORIZON_BODY_RX_FACTOR,
+  SUN_HORIZON_HOTSPOT_WIDTH_FACTOR,
+  SUN_HORIZON_HOTSPOT_HEIGHT_FACTOR,
   SUN_HORIZON_GLOW_SPREAD_FACTOR,
   SUN_HORIZON_GLOW_HEIGHT_FACTOR,
   SUN_HORIZON_HP_WIDTH_FACTOR,
@@ -208,6 +213,12 @@ const rootVars = computed<Record<string, string>>(() => {
     '--sfsun-r': `${r}px`,
     '--sfsun-d': `${d}px`,
     '--sfsun-cr': `${sphereRadiusPx.value}px`,
+    // Saum- und Hotspot-Maße wachsen mit der Kuppel (siehe constants.ts)
+    '--sfsun-rim': `${Math.max(SUN_HORIZON_RIM_MIN_PX, Math.round(r * SUN_HORIZON_RIM_FACTOR))}px`,
+    '--sfsun-hotspot': `${Math.round(
+      Math.min(d * SUN_HORIZON_HOTSPOT_WIDTH_FACTOR, r * SUN_HORIZON_HOTSPOT_HEIGHT_FACTOR),
+    )}px`,
+    '--sfsun-rx': `${Math.round(Math.min(d / 2, r * SUN_HORIZON_BODY_RX_FACTOR))}px`,
     '--sfsun-glow-w': `${Math.round(d + r * SUN_HORIZON_GLOW_SPREAD_FACTOR)}px`,
     '--sfsun-glow-h': `${Math.round(r * SUN_HORIZON_GLOW_HEIGHT_FACTOR)}px`,
     '--sfsun-hp-w': `${Math.min(
@@ -349,32 +360,57 @@ onUnmounted(() => {
 .sfsun-dome {
   z-index: 0;
   background:
-    /* Glutsaum direkt auf der Silhouette — px-breit, damit er bei der schmalen
-       Comet-Kuppe wie bei der arenabreiten Finale-Sonne gleich fein bleibt */
+    /* Glutsaum auf der Silhouette — Dicke wächst mit der Kuppel (--sfsun-rim)
+       und läuft über drei Stopps weich aus. Ein fester px-Saum sähe auf der
+       arenabreiten Finale-Sonne wie ein aufgelegter Draht aus. */
     radial-gradient(
       circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
-      transparent calc(var(--sfsun-cr, 100px) - 7px),
-      color-mix(in srgb, white 45%, var(--sfsun-mid, #ffb347)) calc(var(--sfsun-cr, 100px) - 2px),
-      color-mix(in srgb, white 72%, var(--sfsun-core, #fff0c0)) var(--sfsun-cr, 100px)
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 2.6),
+      color-mix(in srgb, white 18%, var(--sfsun-mid, #ffb347))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.1),
+      color-mix(in srgb, white 55%, var(--sfsun-core, #fff0c0))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.35),
+      color-mix(in srgb, white 78%, var(--sfsun-core, #fff0c0)) var(--sfsun-cr, 100px)
     ),
-    /* Hotspot in der Kammmitte */
+    /* Hotspot in der Kammmitte — Durchmesser folgt Breite UND Höhe der Kuppel.
+         Bewusst dezent: ein kräftiger Fleck würde die Phasenfarbe der breiten
+         Sonnen in der Mitte zu Weiß auswaschen. */
       radial-gradient(
-        circle calc(var(--sfsun-r, 100px) * 1.15) at 50% 42%,
-        color-mix(in srgb, white 70%, var(--sfsun-core, #fff0c0)) 0%,
+        circle var(--sfsun-hotspot, 115px) at 50% 42%,
+        color-mix(in srgb, white 45%, var(--sfsun-core, #fff0c0)) 0%,
+        color-mix(in srgb, white 16%, var(--sfsun-core, #fff0c0)) 42%,
         transparent 100%
       ),
-    /* Kern → Saum, konzentrisch zur eigenen Kalotte */
+    /* Enden abdunkeln — dort krümmt sich die Kalotte vom Betrachter weg */
       radial-gradient(
-        ellipse 50% 100% at 50% 100%,
-        color-mix(in srgb, white 88%, var(--sfsun-core, #fff0c0)) 0%,
-        var(--sfsun-core, #fff0c0) 26%,
-        var(--sfsun-mid, #ffb347) 60%,
-        var(--sfsun-edge, #cc5500) 88%,
-        color-mix(in srgb, var(--sfsun-edge, #cc5500) 78%, #160a04) 100%
+        ellipse 52% 155% at 50% 100%,
+        transparent 58%,
+        color-mix(in srgb, var(--sfsun-edge, #cc5500) 60%, #160a04) 88%,
+        color-mix(in srgb, var(--sfsun-edge, #cc5500) 35%, #160a04) 100%
+      ),
+    /* Kern → Saum. Waagerecht auf --sfsun-rx geklemmt (siehe
+         SUN_HORIZON_BODY_RX_FACTOR): bei schmalen Phasen liegt der Verlauf
+         konzentrisch zur Kuppel und die Sonne wirkt kugelig, bei den breiten
+         bleibt der heiße Kern in der Mitte statt die ganze untere Hälfte flächig
+         weiß auszuwaschen. Viele Zwischenstopps, weil eine 3-Stopp-Rampe über
+         diese Fläche gezogen sichtbar bandelt. */
+      radial-gradient(
+        ellipse var(--sfsun-rx, 100px) var(--sfsun-r, 100px) at 50% 100%,
+        color-mix(in srgb, white 70%, var(--sfsun-core, #fff0c0)) 0%,
+        color-mix(in srgb, white 28%, var(--sfsun-core, #fff0c0)) 8%,
+        var(--sfsun-core, #fff0c0) 16%,
+        color-mix(in srgb, var(--sfsun-core, #fff0c0) 50%, var(--sfsun-mid, #ffb347)) 26%,
+        var(--sfsun-mid, #ffb347) 38%,
+        color-mix(in srgb, var(--sfsun-mid, #ffb347) 50%, var(--sfsun-edge, #cc5500)) 52%,
+        color-mix(in srgb, var(--sfsun-mid, #ffb347) 18%, var(--sfsun-edge, #cc5500)) 62%,
+        var(--sfsun-edge, #cc5500) 74%,
+        color-mix(in srgb, var(--sfsun-edge, #cc5500) 88%, #160a04) 100%
       );
-  /* Nur opacity animiert — der Verlauf wird EINMAL gerastert */
+  /* Nur opacity animiert. Bewusst OHNE will-change: die Kuppel ist in den
+     späten Phasen mehrere Megapixel groß — ein dauerhaft promovierter Layer
+     dieser Größe wird bei GPU-Speicherdruck heruntergerechnet und sieht dann
+     verpixelt aus. Chrome kompositiert die Opacity-Animation ohnehin. */
   animation: sfsun-pulse var(--sfsun-pulse, 4s) ease-in-out infinite;
-  will-change: opacity;
 }
 
 /* ── Comet: dieselbe Halbkreis-Silhouette, aber kaltes Gestein statt Plasma —
@@ -437,11 +473,13 @@ onUnmounted(() => {
   background: radial-gradient(
     ellipse 60% 100% at 50% 100%,
     color-mix(in srgb, var(--sfsun-glow, #ff8c00) 42%, transparent) 0%,
-    color-mix(in srgb, var(--sfsun-glow, #ff8c00) 14%, transparent) 42%,
-    transparent 72%
+    color-mix(in srgb, var(--sfsun-glow, #ff8c00) 26%, transparent) 24%,
+    color-mix(in srgb, var(--sfsun-glow, #ff8c00) 14%, transparent) 44%,
+    color-mix(in srgb, var(--sfsun-glow, #ff8c00) 6%, transparent) 60%,
+    transparent 74%
   );
+  /* wie .sfsun-dome ohne will-change — der Halo ist das größte Element hier */
   animation: sfsun-breathe 5s ease-in-out infinite alternate;
-  will-change: opacity;
 }
 
 /* ── Treffer-Aufleuchten — der komplette Sonnensaum glüht auf (Nova + Strike) */
@@ -451,8 +489,10 @@ onUnmounted(() => {
     /* heißer Lichtbogen entlang der Silhouette */
     radial-gradient(
       circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
-      transparent calc(var(--sfsun-cr, 100px) - 26px),
-      color-mix(in srgb, white 72%, var(--sfsun-glow, #ff8c00)) var(--sfsun-cr, 100px)
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 3.5),
+      color-mix(in srgb, white 40%, var(--sfsun-glow, #ff8c00))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.2),
+      color-mix(in srgb, white 78%, var(--sfsun-glow, #ff8c00)) var(--sfsun-cr, 100px)
     ),
     /* flächiges Aufglühen der Kuppel */
       radial-gradient(
@@ -607,8 +647,8 @@ onUnmounted(() => {
     /* Glutsaum auf der Silhouette */
     radial-gradient(
       circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
-      transparent calc(var(--sfsun-cr, 100px) - 8px),
-      rgba(255, 120, 90, 0.95) calc(var(--sfsun-cr, 100px) - 2px),
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.6),
+      rgba(255, 120, 90, 0.95) calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.4),
       rgba(255, 90, 60, 0.9) var(--sfsun-cr, 100px)
     ),
     /* rote Tönung rund um das Reticle — an die Kammhöhe gekoppelt, damit die
@@ -620,8 +660,9 @@ onUnmounted(() => {
         rgba(255, 60, 40, 0.28) 55%,
         transparent 100%
       );
+  /* ebenfalls ohne will-change — deckungsgleich mit der Kuppel und damit in den
+     späten Phasen genauso groß */
   animation: sfsun-aim-tint-pulse 0.6s ease-in-out infinite alternate;
-  will-change: opacity;
 }
 
 .sfsun-aim-lock {
