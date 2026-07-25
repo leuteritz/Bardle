@@ -10,6 +10,7 @@ import {
 } from '@/stores/planetShopStore'
 import type { PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
+import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { formatNumber } from '@/config/numberFormat'
 import { playerSlotInForeground } from '@/utils/foregroundGate'
 import { toRoman } from '@/utils/roman'
@@ -23,7 +24,20 @@ import ChampionSelectorComponent from '@/components/bottom/command/ChampionSelec
 
 const planetStore = usePlanetShopStore()
 const uiStore = useUiStore()
+const roleBehaviorStore = useRoleBehaviorStore()
 const { slots } = storeToRefs(planetStore)
+
+// ── TEMPORÄRER ADMIN-KNOPF ─────────────────────────────────────────────────
+// Setzt alle Rollen-Ability-Cooldowns auf 0. Sitzt zum schnellen Testen direkt
+// über dem Command Panel statt im Admin-Tab — fliegt später wieder raus.
+function resetRoleCooldowns() {
+  roleBehaviorStore.supportHealCooldownMs = 0
+  roleBehaviorStore.supportPlanetHealCooldownMs = 0
+  roleBehaviorStore.tankShieldBrokenMs = 0
+  roleBehaviorStore.midCurseCooldownMs = 0
+  roleBehaviorStore.adcBurstCooldownMs = 0
+  roleBehaviorStore.jungleBuffCooldownMs = 0
+}
 
 function roleColor(role: PlanetRoleType): string {
   return PLANET_ROLES[role].color
@@ -127,6 +141,18 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 <template>
   <div class="cmd-hud">
     <div class="cmd-panel">
+      <!-- ── TEMP admin: reset every role ability cooldown ──
+           Schwebt absolut über dem Panel, damit er weder die Rollenkarten noch
+           das Planeten-Dock verschiebt. Wird später wieder entfernt. -->
+      <button
+        class="cmd-admin-cd-btn"
+        title="Admin: reset all role ability cooldowns"
+        @click="resetRoleCooldowns"
+      >
+        <Icon icon="game-icons:time-trap" width="16" height="16" />
+        <span>Reset Cooldowns</span>
+      </button>
+
       <!-- ── Champion portrait cards (with role ability tracking) ── -->
       <ChampionSelectorComponent />
 
@@ -314,6 +340,51 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* ── TEMP Admin-Knopf: Reset Cooldowns ──────────────────────────────────────
+   Liegt absolut über dem Panel (bottom: 100% + Luft) und damit außerhalb des
+   Flex-Flusses — Rollenkarten und Planeten-Dock behalten exakt ihre Maße. Er
+   steht rechtsbündig auf der Panelkante, sitzt also in einer Flucht mit den
+   Karten darunter, und skaliert über --hud-scale mit dem restlichen HUD mit.
+   Farbgebung wie zuvor im Admin-Tab (kühles Blau), damit er sich klar als
+   Debug-Element vom warmen HUD absetzt. Temporär — kommt wieder raus. */
+.cmd-admin-cd-btn {
+  position: absolute;
+  /* 34px = 22px Panel-Inset (Abstand Panelkante → Barkante) + 12px Luft. Der
+     Knopf muss über die Rahmenlinie hinaus: die SVG-Fassung der Bar liegt mit
+     z-index 5 über dem HUD und würde ihn sonst durchschneiden. */
+  bottom: calc(100% + 34px);
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 4px;
+  border: 1px solid #1a4a5a;
+  background: #0a1a20;
+  color: #60c8e8;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.cmd-admin-cd-btn:hover {
+  background: #0d2a35;
+  border-color: #60c8e8;
+  color: #a0e8f8;
+}
+.cmd-admin-cd-btn:active {
+  transform: translateY(1px);
 }
 
 /* ── Planet dock row ── */

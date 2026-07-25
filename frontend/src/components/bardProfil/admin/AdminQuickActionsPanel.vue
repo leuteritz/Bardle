@@ -10,7 +10,6 @@ import { MATERIALS } from '@/config/materials'
 import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
 import { CHAMPION_ROLES } from '@/config/championRoles'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
-import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { useItemStore } from '@/stores/itemStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useSkinStore } from '@/stores/skinStore'
@@ -33,7 +32,6 @@ const starGroupStore = useStarGroupStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
-const roleBehaviorStore = useRoleBehaviorStore()
 const itemStore = useItemStore()
 const planetBossStore = usePlanetBossStore()
 const skinStore = useSkinStore()
@@ -293,14 +291,8 @@ function rankUp() {
   battleStore.adminPromoteRank()
 }
 
-function resetAllCooldowns() {
-  roleBehaviorStore.supportHealCooldownMs = 0
-  roleBehaviorStore.supportPlanetHealCooldownMs = 0
-  roleBehaviorStore.tankShieldBrokenMs = 0
-  roleBehaviorStore.midCurseCooldownMs = 0
-  roleBehaviorStore.adcBurstCooldownMs = 0
-  roleBehaviorStore.jungleBuffCooldownMs = 0
-}
+// Reset Cooldowns lebt jetzt direkt über dem Command Panel
+// (CommandPanelComponent.vue) — temporärer Admin-Knopf für schnelles Testen.
 </script>
 
 <template>
@@ -430,12 +422,6 @@ function resetAllCooldowns() {
         @click="rankUp"
       >
         <Icon icon="game-icons:upgrade" class="admin-btn-icon" /> Rank Up
-      </button>
-      <button
-        class="admin-spawn-btn admin-spawn-btn--cooldown flex items-center gap-1.5 px-3 py-1.5"
-        @click="resetAllCooldowns"
-      >
-        <Icon icon="game-icons:time-trap" class="admin-btn-icon" /> Reset Cooldowns
       </button>
     </div>
     </div>
@@ -809,14 +795,4 @@ function resetAllCooldowns() {
   border-color: #c89040;
   color: #f4d868;
 }
-.admin-spawn-btn--cooldown {
-  color: #60c8e8;
-  border-color: #1a4a5a;
-}
-.admin-spawn-btn--cooldown:hover {
-  background: #0d2a35;
-  border-color: #60c8e8;
-  color: #a0e8f8;
-}
-
 </style>
