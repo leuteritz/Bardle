@@ -7,8 +7,6 @@
     <!-- Everything lives in one centred column so the band never reads as a
          stretched-out strip on wide screens. -->
     <div class="hero-column">
-      <span class="rank-kicker">RANKED LADDER</span>
-
       <div class="hero-core">
         <div class="rank-emblem">
           <div class="emblem-glow" :style="{ background: emblemGlowBg }" />
@@ -293,14 +291,6 @@ const promotionGoal = computed(() => {
   object-fit: contain;
 }
 
-.rank-kicker {
-  padding-bottom: clamp(2px, 0.5vh, 6px);
-  font-size: clamp(9px, 1.15vh, 12px);
-  font-weight: 700;
-  letter-spacing: 6px;
-  color: #8a7040;
-}
-
 .rank-name {
   min-width: 0;
   font-size: clamp(28px, 4.6vh, 54px);
@@ -515,9 +505,6 @@ const promotionGoal = computed(() => {
   .rank-emblem {
     width: 62px;
     height: 62px;
-  }
-  .rank-kicker {
-    display: none;
   }
   .tier-label {
     font-size: 7px;
