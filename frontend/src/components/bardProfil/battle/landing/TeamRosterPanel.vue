@@ -17,6 +17,11 @@
           { 'champ-card--mvp': battleStore.headerSlots[idx] === mvpHolder },
         ]"
         :style="cardStyle(role, !!battleStore.headerSlots[idx])"
+        :role="battleStore.headerSlots[idx] ? 'button' : undefined"
+        :tabindex="battleStore.headerSlots[idx] ? 0 : undefined"
+        @click="onCardClick(idx)"
+        @keydown.enter="onCardClick(idx)"
+        @keydown.space.prevent="onCardClick(idx)"
       >
         <template v-if="battleStore.headerSlots[idx]">
           <img
@@ -78,6 +83,7 @@
               <span class="detail-name">{{ battleStore.headerSlots[idx] }}</span>
               <span class="detail-role" :style="{ color: role.color }">{{ role.roleLabel }}</span>
             </div>
+            <span class="detail-cta" :style="{ color: role.color }">MANAGE ROLE →</span>
             <div class="detail-grid">
               <div
                 v-for="entry in detailFor(battleStore.headerSlots[idx]!)"
@@ -107,7 +113,7 @@
             class="empty-body"
             :style="{ '--role-accent': role.color }"
             :title="`Assign a ${role.roleLabel} champion`"
-            @click="openRole(idx)"
+            @click.stop="openRole(idx)"
           >
             <span class="empty-ring" />
             <span class="empty-mark">＋</span>
@@ -137,6 +143,13 @@ const uiStore = useUiStore()
  *  one-click way back to the battle tab. */
 function openRole(slotIndex: number) {
   uiStore.requestRoleFillFromBattle(slotIndex)
+}
+
+/** Filled cards navigate the same way — empty ones do it through their own
+ *  button, whose click is stopped before it reaches the card. */
+function onCardClick(slotIndex: number) {
+  if (!battleStore.headerSlots[slotIndex]) return
+  openRole(slotIndex)
 }
 
 // Same order as battleStore.headerSlots: top, jungle, mid, adc, support
@@ -383,6 +396,14 @@ const mvpHolder = computed<string | null>(() => {
     box-shadow 0.22s ease,
     border-color 0.22s ease;
 }
+/* Filled cards navigate to their role in the team tab, so they read as buttons */
+.champ-card--filled {
+  cursor: pointer;
+}
+.champ-card--filled:focus-visible {
+  outline: 2px solid #d4a020;
+  outline-offset: 2px;
+}
 .champ-card--filled:hover {
   transform: translateY(-4px);
   box-shadow:
@@ -600,6 +621,15 @@ const mvpHolder = computed<string | null>(() => {
 .detail-role {
   font-size: clamp(8px, 1.05vh, 10px);
   letter-spacing: 2px;
+}
+
+/* Tells the player the card is a door into the team tab */
+.detail-cta {
+  flex-shrink: 0;
+  font-size: clamp(7px, 0.95vh, 9px);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  opacity: 0.9;
 }
 
 .detail-grid {
