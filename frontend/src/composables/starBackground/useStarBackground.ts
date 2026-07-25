@@ -1,7 +1,6 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
-import { useUiStore } from '../../stores/uiStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import {
   STAR_COUNT,
@@ -38,6 +37,7 @@ import {
   FOCUS_POLL_INTERVAL_MS,
 } from '../../config/constants'
 import { useWindowFocus } from '../useWindowFocus'
+import { useRenderingPaused } from '../useRenderingPaused'
 
 /** FLIGHT_STREAK_ALPHA as a 2-digit hex suffix for 8-digit-hex canvas colors. */
 const STREAK_ALPHA_HEX = Math.round(FLIGHT_STREAK_ALPHA * 255)
@@ -1295,11 +1295,13 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   }
 
   // ── Modal-Pause ────────────────────────────────────────────────────────────
-  // Solange das Bard-Modal offen ist (bg-black/80-Backdrop), ist der Canvas
-  // praktisch unsichtbar → rAF-Loop komplett stoppen, beim Schließen fortsetzen.
-  const uiStoreForPause = useUiStore()
+  // Solange ein Bard-Tab oder das Star-Fight-Modal offen ist, liegt der Canvas
+  // unter einem nahezu deckenden Backdrop und ist praktisch unsichtbar → rAF-
+  // Loop komplett stoppen, beim Schließen fortsetzen. Geteiltes Signal mit dem
+  // restlichen Idle-Layer (Orbits, Champions, Planeten).
+  const { isIdleRenderingPaused: idleHidden } = useRenderingPaused()
   watch(
-    () => uiStoreForPause.bardActiveTab !== null,
+    () => idleHidden.value,
     (modalOpen) => {
       if (modalOpen) {
         stopLoop()
@@ -1329,7 +1331,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         isWindowFocused &&
         animFrame === 0 &&
         !document.hidden &&
-        uiStoreForPause.bardActiveTab === null &&
+        !idleHidden.value &&
         !prefersReducedMotion.value &&
         stars.length > 0
       ) {
@@ -1636,9 +1638,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
 
   // ── Haupt-Animationsschleife ───────────────────────────────────────────────
   function animateStars(timestamp: number): void {
-    // Kein Fokus, Tab versteckt oder Bard-Modal offen → sofort abbrechen,
-    // nächsten Frame NICHT anfordern (Restart via watch/onWindowFocus)
-    if (!isWindowFocused || document.hidden || uiStoreForPause.bardActiveTab !== null) {
+    // Kein Fokus, Tab versteckt oder ein deckendes Overlay offen (Bard-Tab /
+    // Star-Fight-Modal) → sofort abbrechen, nächsten Frame NICHT anfordern
+    // (Restart via watch/onWindowFocus)
+    if (!isWindowFocused || document.hidden || idleHidden.value) {
       animFrame = 0
       return
     }

@@ -2,7 +2,6 @@
 import { watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
-import { useUiStore } from '@/stores/uiStore'
 import { useGalaxyTheme } from '@/composables/useGalaxyTheme'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useSpaceMusic } from '@/composables/useSpaceMusic'
@@ -27,11 +26,10 @@ import HeraldOverlay from '@/components/idle/HeraldOverlay.vue'
 import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 
 const gameStore = useGameStore()
-const uiStore = useUiStore()
 useGalaxyTheme()
 useSpaceMusic()
 
-const { isRenderingPaused } = useRenderingPaused()
+const { isRenderingPaused, isIdleRenderingPaused } = useRenderingPaused()
 
 watch(
   isRenderingPaused,
@@ -70,9 +68,10 @@ watch(
 
       <div class="flex flex-col w-full gap-2">
         <div class="flex justify-center w-full">
-          <!-- While a bard tab covers the screen, the idle layer's CSS
-               animations pause — they'd only burn compositor time invisibly -->
-          <div class="w-full" :class="{ 'idle-anim-paused': uiStore.bardActiveTab !== null }">
+          <!-- While an opaque overlay covers the screen (bard tab or star-fight
+               modal), the idle layer's CSS animations pause — they'd only burn
+               compositor time invisibly -->
+          <div class="w-full" :class="{ 'idle-anim-paused': isIdleRenderingPaused }">
             <IdleGameComponent />
           </div>
         </div>
@@ -213,8 +212,8 @@ watch(
   transition: none !important;
 }
 
-/* Idle layer hidden behind an open bard tab: freeze its CSS animations only —
-   the bard overlay itself keeps animating normally */
+/* Idle layer hidden behind an opaque overlay (bard tab or star-fight modal):
+   freeze its CSS animations only — the overlay itself keeps animating normally */
 .idle-anim-paused *,
 .idle-anim-paused *::before,
 .idle-anim-paused *::after {

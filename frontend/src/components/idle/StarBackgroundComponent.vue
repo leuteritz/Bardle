@@ -22,7 +22,7 @@
       :class="{ 'star-canvas-hidden': !windowFocused }"
     ></canvas>
 
-    <BackgroundComets :pause-on-bard-tab="true" />
+    <BackgroundComets :pause-when-idle-hidden="true" />
   </div>
 </template>
 

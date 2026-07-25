@@ -2,6 +2,7 @@ import { ref, computed, readonly } from 'vue'
 import { useWindowFocus } from './useWindowFocus'
 import { useGameStore } from '@/stores/gameStore'
 import { useUiStore } from '@/stores/uiStore'
+import { useStarGroupStore } from '@/stores/starGroupStore'
 
 const _isDocHidden = ref(typeof document !== 'undefined' ? document.hidden : false)
 
@@ -26,17 +27,27 @@ function createInstance() {
 
   /**
    * Pause signal for the idle layer's OUTPUT — DOM writes, canvas paints and
-   * anything feeding Vue's render pipeline. While a bard-profile tab is open,
-   * the idle layer sits invisible under a near-opaque overlay: painting it at
-   * 60fps only steals frame budget. Das Star-Fight-Modal pausiert den Layer
-   * NICHT: die Orbits laufen sichtbar weiter, damit die Vordergrund/Hintergrund-
-   * Mechanik (hinter der Sonne = kein Kampf) live mit dem Modal synchron ist.
+   * anything feeding Vue's render pipeline. Während ein Bard-Profil-Tab ODER
+   * das Star-Fight-Modal offen ist, liegt der Idle-Layer unter einem nahezu
+   * deckenden Overlay (das Modal-Backdrop hat 94–98 % Deckkraft): ihn dort mit
+   * voller Framerate weiterzuzeichnen kostet nur Frame-Budget. Gemessen im
+   * Star-Fight-Modal: ~+17 bis +20 fps, ohne sichtbaren Unterschied.
    *
    * ACHTUNG: Das ist ausdrücklich KEIN Stopp der Simulation — siehe
-   * `isIdleSimulationPaused`.
+   * `isIdleSimulationPaused`. Die Vordergrund/Hintergrund-Mechanik (hinter der
+   * Sonne = kein Kampf) bleibt live: Bahn-Mathematik und die Positions-Maps
+   * (`activePlanetPositions`, `activePlayerPlanetPositions`,
+   * `activeChampionBehindState`) werden VOR dem Ausstieg geschrieben, der
+   * foregroundGate liest also weiter aktuelle Werte.
    */
   const isIdleRenderingPaused = computed(
-    () => isRenderingPaused.value || uiStore.bardActiveTab !== null,
+    () =>
+      isRenderingPaused.value ||
+      uiStore.bardActiveTab !== null ||
+      // Bewusst erst hier geholt, nicht im Modul-Setup: starGroupStore hängt
+      // über planetBossStore → foregroundGate wieder an diesem Modul. Im Getter
+      // ist der Import-Zyklus längst aufgelöst.
+      useStarGroupStore().starFightModalOpen,
   )
 
   /**

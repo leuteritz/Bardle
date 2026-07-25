@@ -16,18 +16,19 @@ import { useBackgroundComets } from '@/composables/starBackground/useBackgroundC
 
 const props = withDefaults(
   defineProps<{
-    /** Freeze the loop while a bard tab is open. The idle-orbit backdrop sits
-     *  behind those tabs (true); the cosmic backdrop lives inside them (false). */
-    pauseOnBardTab?: boolean
+    /** Freeze the loop while an opaque overlay covers the idle layer (bard tab
+     *  or star-fight modal). The idle-orbit backdrop sits behind those overlays
+     *  (true); the cosmic backdrop lives inside them (false). */
+    pauseWhenIdleHidden?: boolean
     /** Spawn-intensity preset. 'cosmic' fires comets more often and in bigger
      *  bursts than the default 'orbit' backdrop. */
     variant?: 'orbit' | 'cosmic'
   }>(),
-  { pauseOnBardTab: false, variant: 'orbit' },
+  { pauseWhenIdleHidden: false, variant: 'orbit' },
 )
 
 const { cometCanvas, prefersReducedMotion } = useBackgroundComets({
-  pauseOnBardTab: props.pauseOnBardTab,
+  pauseWhenIdleHidden: props.pauseWhenIdleHidden,
   variant: props.variant,
 })
 </script>

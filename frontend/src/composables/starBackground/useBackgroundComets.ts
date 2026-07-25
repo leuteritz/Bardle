@@ -1,9 +1,9 @@
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
-import { useUiStore } from '../../stores/uiStore'
 import { GALAXY_THEMES } from '../../config/galaxyThemes'
 import { useWindowFocus } from '../useWindowFocus'
+import { useRenderingPaused } from '../useRenderingPaused'
 import {
   COMET_BG_MAX_COUNT,
   COMET_BG_INTERVAL_MIN_SEC,
@@ -113,18 +113,19 @@ function cometTintForGalaxy(themeIndex: number): { r: number; g: number; b: numb
  * place. Comet spawn/update/draw behavior is identical to the original inline
  * implementation in useStarBackground.
  *
- * @param options.pauseOnBardTab — freeze the loop while a bard tab is open
- *   (idle-orbit backdrop sits behind those tabs; the cosmic backdrop lives
- *   *inside* them and must keep running, so it leaves this false).
+ * @param options.pauseWhenIdleHidden — freeze the loop while an opaque overlay
+ *   covers the idle layer (bard tab or star-fight modal). The idle-orbit
+ *   backdrop sits behind those overlays (true); the cosmic backdrop lives
+ *   *inside* them and must keep running, so it leaves this false.
  * @param options.variant — spawn-intensity preset. 'orbit' (default) uses the
  *   baseline cadence; 'cosmic' fires more often, sooner and in bigger bursts.
  *   Only frequency/count differ — the comet look and behavior variants are
  *   identical across presets.
  */
 export function useBackgroundComets(
-  options: { pauseOnBardTab?: boolean; variant?: 'orbit' | 'cosmic' } = {},
+  options: { pauseWhenIdleHidden?: boolean; variant?: 'orbit' | 'cosmic' } = {},
 ) {
-  const pauseOnBardTab = options.pauseOnBardTab ?? false
+  const pauseWhenIdleHidden = options.pauseWhenIdleHidden ?? false
   const isCosmic = options.variant === 'cosmic'
 
   // Resolve the spawn tuning for this variant. Everything else (speeds, tails,
@@ -147,7 +148,7 @@ export function useBackgroundComets(
 
   const gameStore = useGameStore()
   const galaxyStore = useGalaxyStore()
-  const uiStore = useUiStore()
+  const { isIdleRenderingPaused } = useRenderingPaused()
 
   /** Rare ambient comets crossing the canvas; spawned in-loop (auto-pauses with
    *  the RAF loop), finite — spliced when done, no timers, no extra cleanup. */
@@ -339,9 +340,14 @@ export function useBackgroundComets(
       animFrame = 0
       return
     }
-    // No focus, tab hidden or (optionally) a bard modal open → stop the loop
-    // and do NOT request the next frame (restart via focus/visibility handlers).
-    if (!isWindowFocused || document.hidden || (pauseOnBardTab && uiStore.bardActiveTab !== null)) {
+    // No focus, tab hidden or (optionally) an opaque overlay covering the idle
+    // layer → stop the loop and do NOT request the next frame (restart via
+    // focus/visibility handlers or the overlay watcher below).
+    if (
+      !isWindowFocused ||
+      document.hidden ||
+      (pauseWhenIdleHidden && isIdleRenderingPaused.value)
+    ) {
       animFrame = 0
       return
     }
@@ -494,6 +500,16 @@ export function useBackgroundComets(
       resizeCanvas()
       if (!prefersReducedMotion.value && isWindowFocused) startLoop()
     }
+  }
+
+  // Overlay-Pause: der Loop steigt in animate() ohne Folge-Frame aus, also muss
+  // das Schließen ihn wieder anwerfen. Ohne diesen Watcher blieben die Kometen
+  // nach dem ersten Star Fight stehen, bis das Fenster den Fokus wechselt.
+  if (pauseWhenIdleHidden) {
+    watch(isIdleRenderingPaused, (hidden) => {
+      if (hidden) stopLoop()
+      else if (isWindowFocused && !document.hidden && !prefersReducedMotion.value) startLoop()
+    })
   }
 
   onMounted(async () => {
