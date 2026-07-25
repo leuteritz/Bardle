@@ -105,6 +105,9 @@
         :style="stepStyle(i)"
         :title="tier"
       >
+        <!-- Major tick under the crest — thicker and brighter the higher the tier -->
+        <span class="tier-mark" />
+
         <span class="tier-pip">
           <span class="pip-halo" />
           <img :src="RANK_EMBLEM_IMAGES[tier]" :alt="tier" class="tier-pip-img" />
@@ -252,6 +255,11 @@ function stepStyle(i: number): Record<string, string> {
     '--tier-scale': (0.8 + t * 0.28).toFixed(3),
     '--tier-halo': `radial-gradient(circle, ${withAlpha(color, halo)}, transparent 70%)`,
     '--tier-glow': `drop-shadow(0 0 ${glow.toFixed(1)}px ${withAlpha(color, earned ? 0.75 : 0.3)})`,
+    // major tick on the rail: taller, thicker and hotter toward Challenger
+    '--mark-h': `${(12 + t * 11).toFixed(1)}px`,
+    '--mark-w': `${(2 + t * 2).toFixed(1)}px`,
+    '--mark-bg': earned ? color : withAlpha(color, 0.3),
+    '--mark-glow': earned ? `0 0 ${(4 + t * 9).toFixed(1)}px ${withAlpha(color, 0.8)}` : 'none',
   }
 }
 
@@ -513,13 +521,33 @@ const promotionGoal = computed(() => {
 }
 
 .ladder-step {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* the rail runs through this gap, so the crest appears to stand on it */
-  gap: calc(var(--rail-gap) * 2);
+  /* the rail runs through this gap, so the crest appears to stand on it; the
+     extra 12px keeps the tallest major tick clear of the caption */
+  gap: calc(var(--rail-gap) * 2 + 12px);
+}
+
+/* Major tick: the crest's own mark on the rail, scaling with the tier.
+   The step box already starts below the ladder's padding, so the rail sits at
+   pip + rail-gap inside it — no --pip-head in this offset. */
+.tier-mark {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--pip) + var(--rail-gap) + 1px - var(--mark-h) / 2);
+  width: var(--mark-w);
+  height: var(--mark-h);
+  margin-left: calc(var(--mark-w) / -2);
+  background: var(--mark-bg);
+  box-shadow: var(--mark-glow);
+  border-radius: 2px;
+  transition:
+    background 0.35s ease,
+    box-shadow 0.35s ease;
 }
 
 .tier-pip {
