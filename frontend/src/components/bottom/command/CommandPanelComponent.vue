@@ -90,6 +90,11 @@ function downProgress(slot: PlanetSlot): number {
   return Math.min(1, downMsLeft(slot) / PLANET_RESPAWN_MS)
 }
 
+/** Restlaufzeit des Jungle-Buffs in ganzen Sekunden — trägt das Label. */
+function buffSecsLeft(slot: PlanetSlot): number {
+  return Math.ceil(buffMsLeft(slot) / 1000)
+}
+
 function buffProgress(slot: PlanetSlot): number {
   if (!slot.role || !slot.jungleBuff?.active) return 0
   return Math.min(1, buffMsLeft(slot) / JUNGLE_BUFF_DEFS[slot.role].durationMs)
@@ -161,7 +166,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
                 :style="{ '--buff-progress': buffProgress(slot) }"
                 :title="slot.jungleBuff.buffType"
               >
-                <Icon icon="game-icons:wolf-howl" width="20" height="20" />
+                <img src="/img/roles/jungle.png" alt="" draggable="false" class="cmd-buff-img" />
+                <span class="cmd-buff-timer">{{ buffSecsLeft(slot) }}s</span>
               </div>
             </template>
 
@@ -192,7 +198,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
               <div class="cmd-down-hatch" />
               <div class="cmd-down-core" :title="`Destroyed — back in ${downSecsLeft(slot)}s`">
                 <span class="cmd-down-ring" :style="{ '--down-progress': downProgress(slot) }">
-                  <Icon icon="game-icons:broken-skull" width="20" height="20" />
+                  <Icon icon="game-icons:broken-skull" width="22" height="22" />
                 </span>
                 <span class="cmd-down-timer">{{ downSecsLeft(slot) }}s</span>
               </div>
@@ -707,15 +713,15 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
    conic-Ring, atmender Glow. Der frühere Aufbau (Chip oben plus separater
    46px-Ring drumherum) war ein Fremdkörper gegenüber den Karten und belegte
    die obere Kachelzone, die jetzt der Eclipse-Chip trägt.
-   36px ist die Obergrenze: bei --hud-scale 0.66 (Full HD) bleiben davon rund
-   24 reale Pixel — darunter verliert das Emblem seine Lesbarkeit. */
+   42px ist die Obergrenze: bei --hud-scale 0.66 (Full HD) bleiben davon rund
+   28 reale Pixel — darunter verliert das Emblem seine Lesbarkeit. */
 .cmd-buff-orb {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -730,6 +736,45 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   /* Taktlänge = HUD_COUNTDOWN_TICK_MS */
   transition: --buff-progress 250ms linear;
   animation: cmd-buff-breathe 1.9s ease-in-out infinite;
+}
+
+/* Das Rollenbild ist freigestellt (RGBA) und steht deshalb vollständig in der
+   Fassung, statt rund beschnitten zu werden: `contain` zeigt das ganze Motiv,
+   `center` setzt es exakt in die Ringmitte. Der vorherige Zuschnitt per
+   `cover` mit nach oben verschobenem Ausschnitt ließ es außermittig wirken.
+   Bei 84% bleibt das hochformatige Motiv (393x610) mit rund 35x23px
+   vollständig innerhalb des 42px-Rings — auch die Ecken des Bildrahmens
+   überschreiten den Kreisrand nicht. Für volle Schärfe bräuchte es ein
+   vorskaliertes Asset unter /img/roles/thumb/ (wie es die Planeten unter
+   /img/planets/thumb/ haben). */
+.cmd-buff-img {
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+}
+
+/* Restlaufzeit unter der Fassung — wie das Label der Rollenkarten und des
+   Wrack-Emblems platziert */
+.cmd-buff-timer {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-indent: 0.03em;
+  color: #b6f5be;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.98),
+    0 0 6px rgba(0, 0, 0, 0.9),
+    0 0 12px rgba(92, 230, 106, 0.6);
 }
 
 .cmd-buff-orb::before {
@@ -748,10 +793,6 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   );
   mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
   filter: drop-shadow(0 0 3px rgba(92, 230, 106, 0.7));
-}
-
-.cmd-buff-orb :deep(svg) {
-  filter: drop-shadow(0 0 3px rgba(92, 230, 106, 0.85));
 }
 
 @keyframes cmd-buff-breathe {
@@ -795,8 +836,12 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   filter: drop-shadow(0 0 3px rgba(255, 64, 64, 0.8));
 }
 
-.cmd-buff-orb--urgent :deep(svg) {
-  filter: drop-shadow(0 0 3px rgba(255, 96, 80, 0.9));
+.cmd-buff-orb--urgent .cmd-buff-timer {
+  color: #ffc0b0;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.98),
+    0 0 6px rgba(0, 0, 0, 0.9),
+    0 0 12px rgba(255, 80, 64, 0.6);
 }
 
 /* ── Eclipse: Planet hinter der Sonne ──
@@ -897,8 +942,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 .cmd-down-ring {
   position: relative;
   /* gleiche Maße wie .cmd-buff-orb — beide belegen dieselbe Kachelmitte */
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: grid;
   place-items: center;

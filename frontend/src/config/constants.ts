@@ -3026,9 +3026,6 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:fragmented-meteor', // Wreck emblem (PlanetSelectTabComponent)
   // Downed champion / destroyed planet in the command panel — one shared emblem
   'game-icons:broken-skull', // Down emblem on role card + planet tile (ChampionSelectorComponent, CommandPanelComponent)
-  // Active jungle buff on a planet tile — SVG instead of the 393x610 role PNG,
-  // which turned to mush when minified into the ~22px orb
-  'game-icons:wolf-howl', // Jungle buff emblem (CommandPanelComponent)
   // Bard Stats — Journey lifetime stat rows (BardStatsTab)
   'game-icons:embrassed-energy', // Total Power stat row
   'game-icons:factory', // Lifetime Production stat row
