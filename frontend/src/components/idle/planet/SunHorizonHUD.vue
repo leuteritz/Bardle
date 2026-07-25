@@ -53,9 +53,12 @@
          konzentrisch zur Sonnenscheibe — sein Mittelpunkt liegt wie der
          Scheibenmittelpunkt auf dem Arena-Boden, die untere Hälfte wird vom
          Horizont beschnitten. -->
-    <span v-if="roleBehaviorStore.autoAimSun" class="sfsun-aim-lock">
-      <Icon icon="game-icons:targeting" class="sfsun-aim-lock-icon" width="100%" height="100%" />
-    </span>
+    <template v-if="roleBehaviorStore.autoAimSun">
+      <span class="sfsun-aim-cap" />
+      <span class="sfsun-aim-lock">
+        <Icon icon="game-icons:targeting" class="sfsun-aim-lock-icon" width="100%" height="100%" />
+      </span>
+    </template>
 
     <!-- Strike-Bolt: Projektil vom Boss-Anker senkrecht hinab auf den Kamm -->
     <span
@@ -85,11 +88,15 @@ import {
   SUN_HORIZON_BAND_PCT,
   SUN_HORIZON_BAND_MAX_PX,
   SUN_HORIZON_DOME_WIDTH_FACTOR,
+  SUN_HORIZON_WIDTH_MIN_PCT,
+  SUN_HORIZON_WIDTH_MAX_PCT,
   SUN_HORIZON_CREST_MIN_FACTOR,
   SUN_HORIZON_CREST_MAX_FACTOR,
-  SUN_HORIZON_GLOW_WIDTH_FACTOR,
+  SUN_HORIZON_GLOW_SPREAD_FACTOR,
   SUN_HORIZON_GLOW_HEIGHT_FACTOR,
+  SUN_HORIZON_HP_WIDTH_FACTOR,
   SUN_HORIZON_HP_MIN_WIDTH_PX,
+  SUN_HORIZON_HP_MAX_WIDTH_PX,
   SUN_HORIZON_HP_GAP_PX,
   SUN_HORIZON_HIT_FLASH_MS,
   SUN_HORIZON_FLOAT_MS,
@@ -106,16 +113,22 @@ const hpPct = computed(() => Math.max(0, Math.min(100, playerStore.hpPercent)))
 // ── Phase: Comet ist die Vorstufe und liegt bewusst NICHT in STAR_PHASE_DATA ──
 const phaseData = computed(() => STAR_PHASE_DATA[solarStore.starPhase] ?? STAR_PHASE_DATA[0])
 
-/** 0 = Comet … 1 = Finale — treibt den Radius des Halbkreises. */
+/** 0 = Comet … 1 = Finale — treibt Breite und Kammhöhe der Kalotte. */
 const phaseT = computed(() =>
   solarStore.isCometState ? 0 : Math.min(1, (solarStore.starPhase + 1) / STAR_PHASE_DATA.length),
 )
 
-// ── Arena-Höhe: der Radius sitzt in einem geklemmten PX-Band. Nur so bleibt der
-// Abstand zur px-großen Champion-Row auf Full-HD wie auf 4K gleich
-// (siehe SUN_HORIZON_BAND_* in constants.ts).
+function lerpPhase(min: number, max: number): number {
+  return min + (max - min) * phaseT.value
+}
+
+// ── Arena-Maße: die Kammhöhe sitzt in einem geklemmten PX-Band, die Breite in
+// Prozent der Arena-Breite. Nur so bleibt der Abstand zur px-großen
+// Champion-Row auf Full-HD wie auf 4K gleich (siehe SUN_HORIZON_* in
+// constants.ts), während die Sonne pro Phase sichtbar in die Breite wächst.
 const rootEl = ref<HTMLDivElement | null>(null)
 const arenaH = ref(0)
+const arenaW = ref(0)
 
 const bandPx = computed(() =>
   Math.min(
@@ -124,17 +137,38 @@ const bandPx = computed(() =>
   ),
 )
 
-/** Radius der Sonnenscheibe = Kammhöhe über dem Arena-Boden — Anker für ALLES. */
+/** Sichtbare Kammhöhe über dem Arena-Boden — Anker für HP, Zielscheibe, Bolt. */
 const crestPx = computed(() =>
   Math.round(
-    bandPx.value *
-      (SUN_HORIZON_CREST_MIN_FACTOR +
-        (SUN_HORIZON_CREST_MAX_FACTOR - SUN_HORIZON_CREST_MIN_FACTOR) * phaseT.value),
+    bandPx.value * lerpPhase(SUN_HORIZON_CREST_MIN_FACTOR, SUN_HORIZON_CREST_MAX_FACTOR),
   ),
 )
 
-/** Kuppelbreite — beim Halbkreis exakt der doppelte Radius. */
-const domeWidthPx = computed(() => crestPx.value * SUN_HORIZON_DOME_WIDTH_FACTOR)
+/**
+ * Sichtbare Kuppelbreite. Wächst mit der Phase bis zur vollen Arenabreite,
+ * unterschreitet aber nie den exakten Halbkreis (2 × Kammhöhe).
+ */
+const domeWidthPx = computed(() =>
+  Math.max(
+    crestPx.value * SUN_HORIZON_DOME_WIDTH_FACTOR,
+    Math.round(
+      (arenaW.value * lerpPhase(SUN_HORIZON_WIDTH_MIN_PCT, SUN_HORIZON_WIDTH_MAX_PCT)) / 100,
+    ),
+  ),
+)
+
+/**
+ * Radius der zugehörigen Sonnenscheibe. Aus Sehne (= Kuppelbreite) und
+ * Segmenthöhe (= Kammhöhe): R = (w² / 4 + h²) / (2 h). Beim Halbkreis fällt
+ * R auf die Kammhöhe zurück, der Mittelpunkt liegt dann exakt auf dem Boden;
+ * bei breiteren Phasen wandert er darunter — die Silhouette bleibt in JEDEM
+ * Fall ein echter Kreisbogen (kein Ellipsenbogen mit senkrechten Enden).
+ */
+const sphereRadiusPx = computed(() => {
+  const h = Math.max(1, crestPx.value)
+  const w = domeWidthPx.value
+  return Math.round(((w * w) / 4 + h * h) / (2 * h))
+})
 
 let resizeObserver: ResizeObserver | null = null
 
@@ -145,11 +179,15 @@ watch(rootEl, (el, prev) => {
   if (!resizeObserver) {
     resizeObserver = new ResizeObserver((entries) => {
       const rect = entries[0]?.contentRect
-      if (rect) arenaH.value = rect.height
+      if (!rect) return
+      arenaH.value = rect.height
+      arenaW.value = rect.width
     })
   }
   resizeObserver.observe(el)
-  arenaH.value = el.getBoundingClientRect().height
+  const rect = el.getBoundingClientRect()
+  arenaH.value = rect.height
+  arenaW.value = rect.width
 })
 
 const rootVars = computed<Record<string, string>>(() => {
@@ -166,12 +204,16 @@ const rootVars = computed<Record<string, string>>(() => {
     // Nur der Comet braucht eine eigene Krater-/Vergoldungs-Palette
     '--sfsun-crater': COMET_PHASE_DATA.crater,
     '--sfsun-accent': COMET_PHASE_DATA.accent,
-    // r = Radius = Kammhöhe, d = Kuppelbreite (2 r) — alles hängt daran
+    // r = sichtbare Kammhöhe, d = sichtbare Kuppelbreite, R = Scheibenradius
     '--sfsun-r': `${r}px`,
     '--sfsun-d': `${d}px`,
-    '--sfsun-glow-w': `${Math.round(d * SUN_HORIZON_GLOW_WIDTH_FACTOR)}px`,
+    '--sfsun-cr': `${sphereRadiusPx.value}px`,
+    '--sfsun-glow-w': `${Math.round(d + r * SUN_HORIZON_GLOW_SPREAD_FACTOR)}px`,
     '--sfsun-glow-h': `${Math.round(r * SUN_HORIZON_GLOW_HEIGHT_FACTOR)}px`,
-    '--sfsun-hp-w': `${Math.max(SUN_HORIZON_HP_MIN_WIDTH_PX, d)}px`,
+    '--sfsun-hp-w': `${Math.min(
+      SUN_HORIZON_HP_MAX_WIDTH_PX,
+      Math.max(SUN_HORIZON_HP_MIN_WIDTH_PX, Math.round(d * SUN_HORIZON_HP_WIDTH_FACTOR)),
+    )}px`,
     '--sfsun-hp-gap': `${SUN_HORIZON_HP_GAP_PX}px`,
   }
 })
@@ -270,38 +312,66 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-/* ── Sonnenkuppel ───────────────────────────────────────────────────────────
-   Exakter Halbkreis auf dem Arena-Boden: Breite = 2 × Radius, Höhe = Radius,
-   `border-radius: 50% 50% 0 0 / 100% 100% 0 0` ergibt bei diesem Seitenverhältnis
-   eine echte Kreishälfte. Der Radialverlauf ist ein KREIS mit demselben Radius
-   und demselben Mittelpunkt (Bodenmitte) — seine Iso-Linien laufen also parallel
-   zur Silhouette, wie auf der Orbit-Sonnenscheibe (PhaseSunDisc). */
-.sfsun-dome {
+/* ── Silhouette der Sonne ───────────────────────────────────────────────────
+   Kuppel, Treffer-Flash und Zielscheiben-Tönung teilen EXAKT dieselbe Kalotte:
+   Box = sichtbare Breite × Kammhöhe, ausgeschnitten von einem Kreis mit Radius
+   --sfsun-cr, dessen Mittelpunkt --sfsun-cr unter der Box-Oberkante liegt (beim
+   Comet also genau auf dem Arena-Boden, bei breiteren Phasen darunter).
+
+   Bewusst per `mask` statt `border-radius`: eine Border-Radius-Kuppel ist immer
+   ein ELLIPSENbogen und stünde bei den breiten Phasen mit senkrechten Enden am
+   Boden wie eine Wand. Die Maske liefert einen echten Kreisbogen, der flach
+   ausläuft — und kostet nur das sichtbare Band statt einer arenagroßen Scheibe. */
+.sfsun-dome,
+.sfsun-crest,
+.sfsun-aim-cap {
   position: absolute;
   left: 50%;
   bottom: 0;
   width: var(--sfsun-d, 200px);
   height: var(--sfsun-r, 100px);
   transform: translateX(-50%);
-  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  mask-image: radial-gradient(
+    circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
+    #000 calc(var(--sfsun-cr, 100px) - 0.75px),
+    transparent var(--sfsun-cr, 100px)
+  );
+  -webkit-mask-image: radial-gradient(
+    circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
+    #000 calc(var(--sfsun-cr, 100px) - 0.75px),
+    transparent var(--sfsun-cr, 100px)
+  );
+}
+
+/* Kuppelfläche: heißer Kern am Boden, gedämpfter Saum an der Silhouette, dazu
+   ein Hotspot in der Kammmitte — dort steht bei den breiten Phasen der
+   Scheibenmittelpunkt hinter dem Horizont. */
+.sfsun-dome {
   z-index: 0;
   background:
-    /* Glanzpunkt oben links — gleiche Lichtsetzung wie PhaseSunDisc */
+    /* Glutsaum direkt auf der Silhouette — px-breit, damit er bei der schmalen
+       Comet-Kuppe wie bei der arenabreiten Finale-Sonne gleich fein bleibt */
     radial-gradient(
-      circle at 34% 60%,
-      color-mix(in srgb, white 60%, var(--sfsun-core, #fff0c0)) 0%,
-      transparent 32%
+      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
+      transparent calc(var(--sfsun-cr, 100px) - 7px),
+      color-mix(in srgb, white 45%, var(--sfsun-mid, #ffb347)) calc(var(--sfsun-cr, 100px) - 2px),
+      color-mix(in srgb, white 72%, var(--sfsun-core, #fff0c0)) var(--sfsun-cr, 100px)
     ),
-    /* Kern → Rand, konzentrisch zum Scheibenmittelpunkt auf dem Boden */
+    /* Hotspot in der Kammmitte */
       radial-gradient(
-        circle var(--sfsun-r, 100px) at 50% 100%,
+        circle calc(var(--sfsun-r, 100px) * 1.15) at 50% 42%,
+        color-mix(in srgb, white 70%, var(--sfsun-core, #fff0c0)) 0%,
+        transparent 100%
+      ),
+    /* Kern → Saum, konzentrisch zur eigenen Kalotte */
+      radial-gradient(
+        ellipse 50% 100% at 50% 100%,
         color-mix(in srgb, white 88%, var(--sfsun-core, #fff0c0)) 0%,
-        var(--sfsun-core, #fff0c0) 18%,
-        var(--sfsun-mid, #ffb347) 42%,
-        var(--sfsun-edge, #cc5500) 68%,
-        color-mix(in srgb, var(--sfsun-edge, #cc5500) 72%, #160a04) 100%
+        var(--sfsun-core, #fff0c0) 26%,
+        var(--sfsun-mid, #ffb347) 60%,
+        var(--sfsun-edge, #cc5500) 88%,
+        color-mix(in srgb, var(--sfsun-edge, #cc5500) 78%, #160a04) 100%
       );
-  box-shadow: 0 0 32px color-mix(in srgb, var(--sfsun-glow, #ff8c00) 45%, transparent);
   /* Nur opacity animiert — der Verlauf wird EINMAL gerastert */
   animation: sfsun-pulse var(--sfsun-pulse, 4s) ease-in-out infinite;
   will-change: opacity;
@@ -353,7 +423,6 @@ onUnmounted(() => {
         var(--sfsun-edge, #4a4038) 78%,
         var(--sfsun-crater, #3a322b) 100%
       );
-  box-shadow: 0 0 24px color-mix(in srgb, var(--sfsun-glow, #e8c040) 24%, transparent);
 }
 
 /* ── Korona — Halo um die Kuppel, wächst mit ihrem Radius ──────────────────── */
@@ -377,20 +446,21 @@ onUnmounted(() => {
 
 /* ── Treffer-Aufleuchten — der komplette Sonnensaum glüht auf (Nova + Strike) */
 .sfsun-crest {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: var(--sfsun-d, 200px);
-  height: var(--sfsun-r, 100px);
-  transform: translateX(-50%);
   z-index: 1;
-  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-  background: radial-gradient(
-    circle var(--sfsun-r, 100px) at 50% 100%,
-    transparent 28%,
-    color-mix(in srgb, var(--sfsun-glow, #ff8c00) 40%, transparent) 72%,
-    color-mix(in srgb, white 72%, var(--sfsun-glow, #ff8c00)) 100%
-  );
+  background:
+    /* heißer Lichtbogen entlang der Silhouette */
+    radial-gradient(
+      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
+      transparent calc(var(--sfsun-cr, 100px) - 26px),
+      color-mix(in srgb, white 72%, var(--sfsun-glow, #ff8c00)) var(--sfsun-cr, 100px)
+    ),
+    /* flächiges Aufglühen der Kuppel */
+      radial-gradient(
+        ellipse 50% 100% at 50% 100%,
+        color-mix(in srgb, var(--sfsun-glow, #ff8c00) 55%, transparent) 0%,
+        color-mix(in srgb, var(--sfsun-glow, #ff8c00) 28%, transparent) 70%,
+        transparent 100%
+      );
   opacity: 0;
 }
 
@@ -524,16 +594,42 @@ onUnmounted(() => {
 
 /* ── Zielmarkierung des Strikes ─────────────────────────────────────────────
    Identische Signatur wie bei Champions (.rsq-aim-lock) und Turret-Planeten
-   (.tbh-aim-lock): rotierendes game-icons:targeting über dem GANZEN Ziel plus
-   pulsierende rote Tönung. Das Reticle ist konzentrisch zur Sonnenscheibe —
-   Box = Durchmesser, Mittelpunkt auf dem Arena-Boden; die untere Hälfte
-   schneidet der Horizont (overflow: hidden auf .sfsun) weg. */
+   (.tbh-aim-lock): rotierendes game-icons:targeting über dem Ziel plus
+   pulsierende rote Tönung. Die Tönung liegt als eigene Kappe auf der GANZEN
+   Sonnenfläche (gleiche Maske wie .sfsun-dome), das Reticle sitzt mittig auf
+   dem Kamm — sein Kreis ist doppelt so hoch wie die Kalotte, die untere Hälfte
+   schneidet der Horizont (overflow: hidden auf .sfsun) weg. Bewusst an die
+   Kammhöhe gekoppelt und nicht an die Breite: ein Reticle in Kuppelbreite
+   würde bei den breiten Phasen weit in die Champion-Row ragen. */
+.sfsun-aim-cap {
+  z-index: 2;
+  background:
+    /* Glutsaum auf der Silhouette */
+    radial-gradient(
+      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cr, 100px),
+      transparent calc(var(--sfsun-cr, 100px) - 8px),
+      rgba(255, 120, 90, 0.95) calc(var(--sfsun-cr, 100px) - 2px),
+      rgba(255, 90, 60, 0.9) var(--sfsun-cr, 100px)
+    ),
+    /* rote Tönung rund um das Reticle — an die Kammhöhe gekoppelt, damit die
+         arenabreite Finale-Sonne nicht flächig rot überlackiert wird, die kleine
+         Comet-Kuppe aber vollständig getönt ist (wie das Champion-Portrait) */
+      radial-gradient(
+        circle calc(var(--sfsun-r, 100px) * 1.7) at 50% 100%,
+        rgba(255, 50, 30, 0.5) 0%,
+        rgba(255, 60, 40, 0.28) 55%,
+        transparent 100%
+      );
+  animation: sfsun-aim-tint-pulse 0.6s ease-in-out infinite alternate;
+  will-change: opacity;
+}
+
 .sfsun-aim-lock {
   position: absolute;
   left: 50%;
   bottom: calc(-1 * var(--sfsun-r, 100px));
-  width: var(--sfsun-d, 200px);
-  height: var(--sfsun-d, 200px);
+  width: calc(var(--sfsun-r, 100px) * 2);
+  height: calc(var(--sfsun-r, 100px) * 2);
   transform: translateX(-50%);
   z-index: 2;
   animation: sfsun-aim-in 0.2s ease-out both;
@@ -548,28 +644,6 @@ onUnmounted(() => {
   filter: drop-shadow(0 0 6px rgba(255, 60, 40, 0.8));
   animation: sfsun-aim-spin 2.2s linear infinite;
   will-change: transform;
-}
-
-/* Rote Tönung + glühender Saum auf der Kuppel — die obere Hälfte der Box
-   deckt sich exakt mit .sfsun-dome */
-.sfsun-aim-lock::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 50%;
-  border: 2px solid rgba(255, 90, 60, 0.9);
-  border-bottom: none;
-  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-  background: radial-gradient(
-    circle var(--sfsun-r, 100px) at 50% 100%,
-    rgba(255, 60, 40, 0.16) 0%,
-    rgba(255, 60, 40, 0.3) 62%,
-    rgba(255, 50, 30, 0.55) 100%
-  );
-  box-shadow: 0 0 22px rgba(255, 60, 40, 0.5);
-  animation: sfsun-aim-tint-pulse 0.6s ease-in-out infinite alternate;
 }
 
 @keyframes sfsun-aim-in {
@@ -735,6 +809,12 @@ onUnmounted(() => {
 /* ── Große Auflösungen (2K/4K): HP-Werte mitwachsen lassen — bei 0.88 rem
    wirkt der Streifen über einer 320-px-Kuppel verloren. */
 @media (min-height: 1300px) {
+  /* Untergrenze für die schmalen Phasen: der Streifen muss die größere Schrift
+     tragen, auch wenn die Comet-Kuppe kaum breiter ist */
+  .sfsun-hp {
+    min-width: 210px;
+  }
+
   .sfsun-hp-head {
     gap: 8px;
     margin-bottom: 7px;
@@ -758,9 +838,9 @@ onUnmounted(() => {
   .sfsun-glow,
   .sfsun-crest--hit,
   .sfsun-hp-fill--low,
+  .sfsun-aim-cap,
   .sfsun-aim-lock,
   .sfsun-aim-lock-icon,
-  .sfsun-aim-lock::after,
   .sfsun-bolt,
   .sfsun-float,
   .sfsun-float::before {

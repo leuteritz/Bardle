@@ -997,38 +997,53 @@ export const ARC_GUIDE_MAX_EXTEND_DEG = 80 // safety cap for extending a guide p
 export const ARC_GUIDE_STEP_DEG = 1 // angular resolution of the planet-edge search
 
 // ── Sonnen-Horizont im Star-Fight-Modal ──────────────────────────────────────
-// Die eigene Sonne (= der Spieler) steht als exakter HALBKREIS am unteren
-// Arena-Rand: eine Scheibe, deren Mittelpunkt auf dem Arena-Boden liegt und von
-// der damit genau die obere Hälfte in die Arena ragt. Jede Sonnenphase — der
-// Comet eingeschlossen — nutzt dieselbe Silhouette, nur der Radius wächst.
-// Die Champion-Row sitzt darüber, die HP-Leiste dazwischen.
+// Die eigene Sonne (= der Spieler) steht als Kreiskalotte am unteren Arena-Rand:
+// die Silhouette ist immer ein echter KREISBOGEN, der Mittelpunkt der Scheibe
+// liegt je nach Phase auf oder unter dem Arena-Boden. Der Comet ist eine kleine
+// exakte Halbkreis-Kuppe, mit jeder Sonnenphase wächst die Breite, bis die
+// Finale-Sonne die gesamte Arenabreite füllt und nur noch ihr oberster
+// Horizontbogen sichtbar ist. Die Champion-Row sitzt darüber, HP-Leiste dazwischen.
 /**
- * Radius-Band des Halbkreises über dem unteren Arena-Rand. Bewusst als
+ * Sichtbare HÖHE der Kalotte über dem unteren Arena-Rand (Kammhöhe). Bewusst als
  * geklemmtes PX-Band statt in Prozent: die Info-Plates der Champion-Row sind
  * px-groß, ein prozentuales Band würde auf Full-HD in sie hineinlaufen und auf
- * 4K unnötig viel Platz verschenken.
+ * 4K unnötig viel Platz verschenken. Die Höhe ist der knappe Wert — gewachsen
+ * wird über die BREITE (SUN_HORIZON_WIDTH_*).
  */
 export const SUN_HORIZON_BAND_MIN_PX = 84
 export const SUN_HORIZON_BAND_PCT = 11.5
 export const SUN_HORIZON_BAND_MAX_PX = 260
 /**
- * Halbkreis-Geometrie: die Kuppel ist genau doppelt so breit wie hoch, damit
- * `border-radius: 50% 50% 0 0 / 100% 100% 0 0` eine echte Kreishälfte ergibt
- * (keine flache Halb-Ellipse). Breite = Radius × diesem Faktor.
+ * Breite der Kalotte in % der Arena-BREITE: der Comet ist die schmalste Kuppe,
+ * die Finale-Sonne füllt die volle Breite. Untergrenze ist zusätzlich
+ * SUN_HORIZON_DOME_WIDTH_FACTOR × Höhe — schmaler als ein exakter Halbkreis
+ * wird die Kuppel nie (sonst stünde eine hohe, spitze Kuppe am Boden).
  */
+export const SUN_HORIZON_WIDTH_MIN_PCT = 13
+export const SUN_HORIZON_WIDTH_MAX_PCT = 100
 export const SUN_HORIZON_DOME_WIDTH_FACTOR = 2
 /**
- * Radius als Faktor auf SUN_HORIZON_BAND_*: der Comet ist eine kleine Kuppe,
- * die Finale-Sonne füllt das ganze Band. Alle Anker (HP-Leiste, Zielscheibe,
- * Bolt-Ziel, Floats) hängen an diesem Radius, wachsen also gemeinsam mit.
+ * Sichtbare Höhe als Faktor auf SUN_HORIZON_BAND_*: der Comet bleibt flacher
+ * und gibt der Champion-Row Luft, die Finale-Sonne füllt das ganze Band. Alle
+ * Anker (HP-Leiste, Zielscheibe, Bolt-Ziel, Floats) hängen an dieser Höhe.
  */
-export const SUN_HORIZON_CREST_MIN_FACTOR = 0.55
+export const SUN_HORIZON_CREST_MIN_FACTOR = 0.78
 export const SUN_HORIZON_CREST_MAX_FACTOR = 1
-/** Korona-Halo um den Halbkreis — Vielfache von Kuppelbreite bzw. Radius. */
-export const SUN_HORIZON_GLOW_WIDTH_FACTOR = 3
+/**
+ * Korona-Halo: der Schein reicht SUN_HORIZON_GLOW_SPREAD_FACTOR × Kammhöhe über
+ * die Kuppelbreite hinaus und GLOW_HEIGHT_FACTOR × Kammhöhe in die Arena.
+ * Bewusst an der Höhe statt an der Breite orientiert — sonst würde die
+ * Finale-Sonne einen arenaweiten, flächigen Schleier legen.
+ */
+export const SUN_HORIZON_GLOW_SPREAD_FACTOR = 3.2
 export const SUN_HORIZON_GLOW_HEIGHT_FACTOR = 2.2
-/** Mindestbreite des HP-Streifens, damit "xx / yy" auch am kleinen Comet lesbar bleibt. */
+/**
+ * HP-Streifen: wächst mit der Kuppel, bleibt aber ein HUD-Element — bei der
+ * arenabreiten Finale-Sonne darf er nicht mitskalieren.
+ */
+export const SUN_HORIZON_HP_WIDTH_FACTOR = 0.4
 export const SUN_HORIZON_HP_MIN_WIDTH_PX = 160
+export const SUN_HORIZON_HP_MAX_WIDTH_PX = 420
 /** Abstand zwischen Kamm und HP-Streifen (px, auflösungsunabhängig). */
 export const SUN_HORIZON_HP_GAP_PX = 10
 /** Lebensdauer des Crest-Aufleuchtens, wenn die Sonne getroffen wird (ms). */
