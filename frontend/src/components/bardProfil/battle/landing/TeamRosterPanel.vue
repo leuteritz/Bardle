@@ -179,6 +179,8 @@ const CROWN_HEADROOM =
 const rosterStyle = computed<CSSProperties>(() => ({
   '--crown-space': `calc(${CROWN_HEADROOM}px * var(--frame-scale, 1))`,
   '--crown-foot': `calc(${RANK_FRAME_CROWN_FOOT}px * var(--frame-scale, 1))`,
+  // the rail under the crowns carries the tier's colour too
+  '--rank-color': rankColor.value,
 }))
 
 /** Open slot clicked → team tab, this role pre-selected. Same navigation the
@@ -410,7 +412,8 @@ const mvpHolder = computed<string | null>(() => {
   --frame-scale: 1;
   display: flex;
   flex-direction: column;
-  gap: clamp(7px, 1.1vh, 13px);
+  /* tight: the crown rail below carries the separation, not this gap */
+  gap: clamp(2px, 0.4vh, 6px);
   min-height: 0;
 }
 
@@ -446,6 +449,7 @@ const mvpHolder = computed<string | null>(() => {
 /* minmax(0, 1fr) pins the single row to the container height — without it the
    cards' intrinsic height wins and they spill out over the start button. */
 .roster-cards {
+  position: relative;
   flex: 1;
   min-height: clamp(120px, 15vh, 200px);
   display: grid;
@@ -454,6 +458,30 @@ const mvpHolder = computed<string | null>(() => {
   gap: clamp(8px, 0.9vw, 16px);
   /* headroom for the crowns, which stand above their cards */
   padding-top: var(--crown-space, 0px);
+}
+
+/* ── Crown rail ──
+   A rank-coloured band running the full width just above the cards. The crowns
+   stand on it and rise through it, which turns the headroom above the roster
+   into a deliberate zone instead of an empty gap. Drawn before the cards, so
+   every crown passes in front of it. */
+.roster-cards::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--crown-space, 0px) - clamp(5px, 0.7vh, 9px));
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--rank-color, #5c3310) 28%, #2a2114) 9%,
+    color-mix(in srgb, var(--rank-color, #5c3310) 58%, #2a2114) 50%,
+    color-mix(in srgb, var(--rank-color, #5c3310) 28%, #2a2114) 91%,
+    transparent
+  );
+  box-shadow: 0 0 10px color-mix(in srgb, var(--rank-color, #5c3310) 22%, transparent);
+  pointer-events: none;
 }
 
 .champ-card {
