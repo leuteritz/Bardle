@@ -4,8 +4,9 @@
     <div class="hero-aura" :style="{ background: auraBg }" />
     <div class="hero-topline" :style="{ background: toplineBg }" />
 
-    <!-- Everything lives in one centred column so the band never reads as a
-         stretched-out strip on wide screens. -->
+    <!-- Headline career numbers flank the rank, which stays centred. -->
+    <RankStatColumn class="hero-flank" :group="leftGroup" align="left" />
+
     <div class="hero-column">
       <div class="hero-core">
         <div class="rank-emblem">
@@ -90,6 +91,8 @@
         </div>
       </div>
     </div>
+
+    <RankStatColumn class="hero-flank" :group="rightGroup" align="right" />
   </div>
 </template>
 
@@ -97,6 +100,7 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
+import RankStatColumn, { type RankStatGroup } from './RankStatColumn.vue'
 import {
   LP_NORMAL_PROMOTION_THRESHOLD,
   LP_MASTER_PROMOTION_THRESHOLD,
@@ -106,6 +110,11 @@ import {
   RANK_EMBLEM_IMAGES,
   RANK_TIER_COLORS,
 } from '@/config/constants'
+
+defineProps<{
+  leftGroup: RankStatGroup
+  rightGroup: RankStatGroup
+}>()
 
 const battleStore = useBattleStore()
 const { currentRank } = storeToRefs(battleStore)
@@ -194,10 +203,14 @@ const promotionGoal = computed(() => {
 <style scoped>
 .rank-hero {
   position: relative;
-  flex-shrink: 0;
+  /* grows into whatever height the capped roster leaves over, so the flanks and
+     the tier ladder get more air on tall screens instead of stretching cards */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(14px, 1.6vw, 30px);
   padding: clamp(13px, 2vh, 24px) clamp(18px, 2vw, 34px) clamp(11px, 1.7vh, 20px);
   background: #12100a;
   border: 1px solid;
@@ -222,15 +235,25 @@ const promotionGoal = computed(() => {
   pointer-events: none;
 }
 
-/* ── Centred column: the band stays a compact hero, not a wide strip ── */
+/* ── Flanks: headline career numbers left and right of the rank ── */
+.hero-flank {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 clamp(126px, 10.5vw, 200px);
+  min-width: 0;
+}
+
+/* ── Centred column: rank, LP and the tier ladder ── */
 .hero-column {
   position: relative;
-  width: 100%;
-  max-width: clamp(520px, 70vw, 1200px);
+  flex: 1;
+  min-width: 0;
+  max-width: clamp(420px, 56vw, 980px);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: clamp(9px, 1.3vh, 16px);
 }
 
@@ -379,9 +402,10 @@ const promotionGoal = computed(() => {
 
 .tier-label {
   max-width: 100%;
-  font-size: clamp(7px, 0.95vh, 10px);
+  /* tight tracking so even "GRANDMASTER" fits its 1/10 of the rail */
+  font-size: clamp(7px, 0.9vh, 10px);
   font-weight: 700;
-  letter-spacing: 1.2px;
+  letter-spacing: 0.6px;
   color: #5c4d30;
   white-space: nowrap;
   overflow: hidden;
@@ -498,6 +522,11 @@ const promotionGoal = computed(() => {
   }
   .lp-num {
     font-size: clamp(30px, 4.4vh, 46px);
+  }
+  /* narrower stage → tighter tier captions so "GRANDMASTER" still fits */
+  .tier-label {
+    font-size: 8px;
+    letter-spacing: 0.2px;
   }
 }
 

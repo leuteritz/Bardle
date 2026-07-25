@@ -7,8 +7,8 @@
     <!-- ── Secondary: ladder record ribbon ── -->
     <LadderRecordRibbon class="landing-layer" />
 
-    <!-- ── Focus 1: rank + LP ── -->
-    <RankBandPanel class="landing-layer" />
+    <!-- ── Focus 1: rank + LP, flanked by the headline career numbers ── -->
+    <RankBandPanel class="landing-layer" :left-group="combatGroup" :right-group="conquestGroup" />
 
     <!-- ── Focus 2: team roster, full stage width ── -->
     <TeamRosterPanel class="roster-slot landing-layer" />
@@ -57,35 +57,6 @@
       </button>
       <div class="action-rule action-rule--right" />
     </div>
-
-    <!-- ── Secondary: career ledger along the bottom edge ── -->
-    <div class="stats-row landing-layer">
-      <StatGroupPanel
-        title="COMBAT"
-        icon="game-icons:sword-clash"
-        color="#cc6050"
-        :rows="combatRows"
-      />
-      <StatGroupPanel
-        title="FARM &amp; ECONOMY"
-        icon="game-icons:crown-coin"
-        color="#e8c040"
-        :rows="economyRows"
-      />
-      <StatGroupPanel
-        title="OBJECTIVES"
-        icon="game-icons:stone-tower"
-        color="#a855f7"
-        :rows="objectiveRows"
-      />
-      <StatGroupPanel
-        title="VISION &amp; TIME"
-        icon="game-icons:semi-closed-eye"
-        color="#5b8dd9"
-        :rows="visionRows"
-      />
-      <MultikillCardsRow />
-    </div>
   </div>
 </template>
 
@@ -99,8 +70,7 @@ import { BATTLE_STAT_GAME_ICONS, BATTLE_STAT_IMAGES } from '@/config/constants'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import LadderRecordRibbon from './LadderRecordRibbon.vue'
 import RankBandPanel from './RankBandPanel.vue'
-import MultikillCardsRow from './MultikillCardsRow.vue'
-import StatGroupPanel, { type StatRow } from './StatGroupPanel.vue'
+import { type RankStatGroup } from './RankStatColumn.vue'
 import TeamRosterPanel from './TeamRosterPanel.vue'
 
 const props = defineProps<{ isStarting: boolean }>()
@@ -123,87 +93,63 @@ const buttonSubline = computed(() => {
 
 // Career totals merged with the running battle — shared with the bottom-bar
 // scoreboard via useBattleScoreboardStats so both always show the same numbers.
-const { live, kills, deaths, assists, playtimeGameSeconds, kdaStr, killPartPct } =
-  useBattleScoreboardStats()
+const { live, kills, kdaStr } = useBattleScoreboardStats()
 
-function perMinute(total: number): number {
-  return playtimeGameSeconds.value > 0 ? total / (playtimeGameSeconds.value / 60) : 0
-}
+// The two flanks of the rank band. Deliberately short: four headline numbers a
+// side, big enough to read at a glance — the full breakdown lives in Bard Stats.
+const combatGroup = computed<RankStatGroup>(() => ({
+  title: 'COMBAT',
+  icon: 'game-icons:sword-clash',
+  color: '#cc6050',
+  rows: [
+    {
+      label: 'Kills',
+      value: formatNumber(kills.value),
+      color: '#6ee7b7',
+      gameIcon: BATTLE_STAT_GAME_ICONS.kills,
+    },
+    { label: 'KDA', value: kdaStr.value, color: '#e8c040' },
+    {
+      label: 'Pentakills',
+      value: formatNumber(
+        battleStore.allTime.multikills.penta + battleStore.liveBattleStats.multikills.penta,
+      ),
+      color: '#ff9a40',
+    },
+    { label: 'MVP Awards', value: formatNumber(battleStore.allTime.mvpAwards), color: '#e8c040' },
+  ],
+}))
 
-const combatRows = computed<StatRow[]>(() => [
-  { label: 'Kills', value: formatNumber(kills.value), color: '#6ee7b7', gameIcon: BATTLE_STAT_GAME_ICONS.kills },
-  { label: 'Deaths', value: formatNumber(deaths.value), color: '#fca5a5', gameIcon: BATTLE_STAT_GAME_ICONS.deaths },
-  { label: 'Assists', value: formatNumber(assists.value), color: '#93c5fd', gameIcon: BATTLE_STAT_GAME_ICONS.assists },
-  { label: 'KDA', value: kdaStr.value, color: '#e8c040' },
-  { label: 'Kill Part.', value: `${killPartPct.value}%` },
-  {
-    label: 'Largest Spree',
-    value: formatNumber(Math.max(battleStore.allTime.largestSpree, live.value.largestSpree)),
-  },
-  { label: 'First Bloods', value: formatNumber(battleStore.allTime.firstBloods + live.value.firstBloods) },
-  { label: 'Solo Kills', value: formatNumber(battleStore.allTime.soloKills + live.value.soloKills) },
-])
-
-const economyRows = computed<StatRow[]>(() => [
-  { label: 'Total CS', value: formatNumber(battleStore.allTime.cs + live.value.cs), gameIcon: BATTLE_STAT_GAME_ICONS.cs },
-  { label: 'CS / min', value: perMinute(battleStore.allTime.cs + live.value.cs).toFixed(1), color: '#e8c040' },
-  { label: 'Total Gold', value: formatNumber(battleStore.allTime.gold + live.value.gold), color: '#e8c040', image: BATTLE_STAT_IMAGES.gold },
-  { label: 'Gold / min', value: formatNumber(Math.round(perMinute(battleStore.allTime.gold + live.value.gold))) },
-  { label: 'Champ Dmg', value: formatNumber(battleStore.allTime.damage + live.value.damage), gameIcon: BATTLE_STAT_GAME_ICONS.damage },
-  { label: 'Dmg / min', value: formatNumber(Math.round(perMinute(battleStore.allTime.damage + live.value.damage))) },
-  { label: 'Healing', value: formatNumber(battleStore.allTime.healing + live.value.healing) },
-  { label: 'Dmg Taken', value: formatNumber(battleStore.allTime.damageTaken + live.value.damageTaken) },
-])
-
-const objectiveRows = computed<StatRow[]>(() => [
-  { label: 'Dragons', value: formatNumber(battleStore.allTime.dragons + live.value.dragons), color: '#6ee0a0', image: BATTLE_STAT_IMAGES.dragons },
-  { label: 'Barons', value: formatNumber(battleStore.allTime.barons + live.value.barons), color: '#c9a0f5', image: BATTLE_STAT_IMAGES.barons },
-  { label: 'Turrets', value: formatNumber(battleStore.allTime.turrets + live.value.turrets), gameIcon: BATTLE_STAT_GAME_ICONS.turrets },
-  { label: 'Inhibitors', value: formatNumber(battleStore.allTime.inhibitors + live.value.inhibitors), gameIcon: BATTLE_STAT_GAME_ICONS.inhibitors },
-  { label: 'Nexus Kills', value: formatNumber(battleStore.totalWins) },
-  { label: 'Obj. / Game', value: objectivesPerGameStr.value, color: '#a855f7' },
-  { label: 'Honors Given', value: formatNumber(battleStore.allTime.honorsGiven) },
-])
-
-const visionRows = computed<StatRow[]>(() => [
-  { label: 'Vision Score', value: battleStore.avgVisionScore.toFixed(1) },
-  { label: 'Wards Placed', value: formatNumber(battleStore.allTime.wardsPlaced + live.value.wardsPlaced) },
-  { label: 'Wards Killed', value: formatNumber(battleStore.allTime.wardsKilled + live.value.wardsKilled) },
-  { label: 'Control Wards', value: formatNumber(battleStore.allTime.controlWards + live.value.controlWards) },
-  { label: 'Longest Game', value: longestGameStr.value },
-  { label: 'Avg Game', value: avgGameStr.value },
-  { label: 'Playtime', value: playtimeStr.value },
-])
-
-const objectivesPerGameStr = computed(() => {
-  if (battleStore.totalBattles === 0) return '—'
-  const total =
-    battleStore.allTime.dragons +
-    battleStore.allTime.barons +
-    battleStore.allTime.turrets +
-    battleStore.allTime.inhibitors
-  return (total / battleStore.totalBattles).toFixed(1)
-})
-
-const avgGameStr = computed(() => {
-  if (battleStore.totalBattles === 0) return '—'
-  // playtime is tracked in game-seconds, same unit formatTime expects
-  return battleStore.formatTime(Math.round(playtimeGameSeconds.value / battleStore.totalBattles))
-})
-
-const longestGameStr = computed(() => {
-  const s = Math.max(battleStore.allTime.longestGameSeconds, live.value.battleSeconds)
-  if (s <= 0) return '—'
-  return battleStore.formatTime(s)
-})
-
-const playtimeStr = computed(() => {
-  // playtime is tracked in game-seconds (60x real time)
-  const realSeconds = playtimeGameSeconds.value / 60
-  if (realSeconds < 60) return `${Math.round(realSeconds)}s`
-  if (realSeconds < 3600) return `${Math.round(realSeconds / 60)}m`
-  return `${(realSeconds / 3600).toFixed(1)}h`
-})
+const conquestGroup = computed<RankStatGroup>(() => ({
+  title: 'CONQUEST',
+  icon: 'game-icons:crown-coin',
+  color: '#e8c040',
+  rows: [
+    {
+      label: 'Total Gold',
+      value: formatNumber(battleStore.allTime.gold + live.value.gold),
+      color: '#e8c040',
+      image: BATTLE_STAT_IMAGES.gold,
+    },
+    {
+      label: 'Champ Dmg',
+      value: formatNumber(battleStore.allTime.damage + live.value.damage),
+      gameIcon: BATTLE_STAT_GAME_ICONS.damage,
+    },
+    {
+      label: 'Dragons',
+      value: formatNumber(battleStore.allTime.dragons + live.value.dragons),
+      color: '#6ee0a0',
+      image: BATTLE_STAT_IMAGES.dragons,
+    },
+    {
+      label: 'Barons',
+      value: formatNumber(battleStore.allTime.barons + live.value.barons),
+      color: '#c9a0f5',
+      image: BATTLE_STAT_IMAGES.barons,
+    },
+  ],
+}))
 </script>
 
 <style scoped>
@@ -240,19 +186,14 @@ const playtimeStr = computed(() => {
   z-index: 1;
 }
 
-/* ── Roster owns all the leftover height: the cards are the visual centrepiece ── */
+/* ── Roster: takes the leftover height, but capped so the cards keep a card-like
+   shape instead of stretching into thin columns on tall screens. ── */
 .roster-slot {
-  flex: 1;
+  /* grows twice as eagerly as the rank band, so spare height lands on the cards */
+  flex: 2 1 auto;
   min-width: 0;
   min-height: 0;
-}
-
-/* ── Career ledger: five quiet panels along the bottom edge ── */
-.stats-row {
-  flex-shrink: 0;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: clamp(8px, 0.9vw, 16px);
+  max-height: clamp(260px, 38vh, 470px);
 }
 
 /* ── Focus 3: the start button ── */
