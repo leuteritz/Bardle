@@ -56,14 +56,20 @@ function downProgress(i: number): number {
 // Details-Panel einer Rolle bearbeitet wird, trägt genau deren Karte eine
 // Ziel-Markierung — derselbe Mechanismus wie beim Planet-Tab und der
 // Planeten-Kachel darunter. Kein Panel offen → nichts zu spiegeln.
-const selectedRoleIndex = computed(() =>
-  uiStore.bardActiveTab === 'team' ? uiStore.teamActiveRoleIndex : null,
-)
-
-/** Pointing at a roster card in the battle tab lights the matching role here —
- *  the same channel this panel writes when one of its own cards is hovered, so
- *  the highlight reads identically whichever side the pointer is on. */
-const peerHoverIndex = computed(() => uiStore.hoveredChampionSlotIndex)
+/**
+ * One mark, one meaning: "this role is in focus right now". Two places can put
+ * a role in focus, and both render the identical reticle here so the player
+ * only ever learns one cue:
+ *   • team tab — the role whose details panel is open (mirrored back by the tab)
+ *   • battle tab — the roster card currently under the pointer
+ * With no profile tab open, nothing is marked and a local hover stays a plain
+ * hover, exactly as before.
+ */
+const markedRoleIndex = computed(() => {
+  if (uiStore.bardActiveTab === 'team') return uiStore.teamActiveRoleIndex
+  if (uiStore.bardActiveTab === 'battle') return uiStore.hoveredChampionSlotIndex
+  return null
+})
 
 function openPicker(slotIndex: number, subSlot: number = -1) {
   uiStore.requestOpenRolesTab(slotIndex, subSlot)
@@ -101,8 +107,7 @@ function onSlotLeave() {
         'champ-card--cd': roleAbilities[i].onCooldown && slot !== null && !isChampionDown(i),
         'champ-card--eclipsed': slot !== null && !championInForeground(slot) && !isChampionDown(i),
         'champ-card--down': isChampionDown(i),
-        'champ-card--selected': selectedRoleIndex === i,
-        'champ-card--peer': peerHoverIndex === i,
+        'champ-card--selected': markedRoleIndex === i,
       }"
       :style="{
         '--role-color': ROLES[i].color,
@@ -205,7 +210,7 @@ function onSlotLeave() {
              nur auf das hohe Kartenformat gezogen. Alles reines Overlay: kein
              Layout-Shift, Down-/Eclipse-/Cooldown-Zustände laufen darunter
              unverändert weiter. -->
-        <template v-if="selectedRoleIndex === i">
+        <template v-if="markedRoleIndex === i">
           <div class="champ-select-glow" />
           <div class="champ-select-reticle">
             <span class="champ-sel-corner champ-sel-corner--tl" />
@@ -267,8 +272,7 @@ function onSlotLeave() {
   flex-direction: column;
   transition: transform 0.15s ease;
 }
-.champ-card:hover,
-.champ-card--peer {
+.champ-card:hover {
   transform: translateY(-1px);
 }
 .champ-card:active {
@@ -318,21 +322,6 @@ function onSlotLeave() {
     0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-/* Peer highlight — driven from the battle tab's roster, where the pointer is
-   far away from this panel. It carries the same colour as a local hover plus a
-   rim, so the link between the two views is unmistakable at a glance. */
-.champ-card--peer .champ-card-body {
-  border-color: color-mix(in srgb, var(--role-color, #c89040) 70%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--role-color, #c89040) 50%, transparent),
-    0 0 18px color-mix(in srgb, var(--role-color, #c89040) 55%, transparent),
-    0 2px 8px rgba(0, 0, 0, 0.5);
-}
-.champ-card--peer .champ-card-bar {
-  box-shadow:
-    0 0 12px var(--role-color, #c89040),
-    0 0 22px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
-}
 
 /* Leerer Slot: identischer Kartengrund wie die unbelegte Planeten-Kachel im
    Dock darunter (#1a1408 → #120e04) — beide Leerzustände lesen sich damit als
@@ -364,8 +353,7 @@ function onSlotLeave() {
 .champ-card--cd .champ-card-portrait {
   filter: grayscale(30%) brightness(0.86);
 }
-.champ-card:hover .champ-card-portrait,
-.champ-card--peer .champ-card-portrait {
+.champ-card:hover .champ-card-portrait {
   transform: scale(1.06);
 }
 
@@ -393,8 +381,7 @@ function onSlotLeave() {
     filter 0.2s ease,
     transform 0.25s ease;
 }
-.champ-card:hover .champ-card-portrait--placeholder,
-.champ-card--peer .champ-card-portrait--placeholder {
+.champ-card:hover .champ-card-portrait--placeholder {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1.07);
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8))
@@ -414,12 +401,10 @@ function onSlotLeave() {
   transition: opacity 0.2s ease;
   pointer-events: none;
 }
-.champ-card:hover .champ-card-hover-glow,
-.champ-card--peer .champ-card-hover-glow {
+.champ-card:hover .champ-card-hover-glow {
   opacity: 1;
 }
-.champ-card--filled:hover .champ-card-hover-glow,
-.champ-card--filled.champ-card--peer .champ-card-hover-glow {
+.champ-card--filled:hover .champ-card-hover-glow {
   animation: champ-role-pulse 1.4s ease-in-out infinite;
 }
 
@@ -1065,8 +1050,7 @@ function onSlotLeave() {
   color: color-mix(in srgb, var(--role-color, #c89040) 40%, rgba(200, 180, 140, 0.55));
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
-.champ-card:hover .champ-card-label,
-.champ-card--peer .champ-card-label {
+.champ-card:hover .champ-card-label {
   color: color-mix(in srgb, var(--role-color, #c89040) 40%, #fff);
   text-shadow:
     0 1px 3px rgba(0, 0, 0, 0.95),
@@ -1075,7 +1059,6 @@ function onSlotLeave() {
 
 @media (prefers-reduced-motion: reduce) {
   .champ-card--filled:hover .champ-card-hover-glow,
-  .champ-card--filled.champ-card--peer .champ-card-hover-glow,
   .champ-card--flash .champ-card-body,
   .champ-ability:not(.champ-ability--cd) .champ-ability-orb,
   .champ-ability--cast .champ-ability-orb,
