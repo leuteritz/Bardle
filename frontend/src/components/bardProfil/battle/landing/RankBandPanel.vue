@@ -129,8 +129,8 @@ const rankColorDeep = computed(() => rankColor.value + '66')
 
 const auraBg = computed(
   () =>
-    `radial-gradient(ellipse at 50% 120%, ${rankColor.value}2e, transparent 68%),` +
-    ` radial-gradient(ellipse at 12% 0%, ${rankColor.value}1f, transparent 60%)`,
+    `radial-gradient(ellipse at 50% 120%, ${rankColor.value}22, transparent 68%),` +
+    ` radial-gradient(ellipse at 12% 0%, ${rankColor.value}17, transparent 60%)`,
 )
 const toplineBg = computed(
   () => `linear-gradient(to right, transparent, ${rankColor.value}, transparent)`,
@@ -212,12 +212,13 @@ const promotionGoal = computed(() => {
   align-items: stretch;
   gap: clamp(14px, 1.6vw, 30px);
   padding: clamp(13px, 2vh, 24px) clamp(18px, 2vw, 34px) clamp(11px, 1.7vh, 20px);
-  background: #12100a;
+  /* translucent so the cosmic starfield reads straight through the band */
+  background: rgba(14, 12, 7, 0.42);
   border: 1px solid;
   border-radius: 5px;
   box-shadow:
-    inset 0 0 0 1px #1d1710,
-    0 10px 32px rgba(0, 0, 0, 0.6);
+    inset 0 0 0 1px rgba(29, 23, 16, 0.7),
+    0 10px 32px rgba(0, 0, 0, 0.45);
 }
 
 .hero-aura {
@@ -475,7 +476,7 @@ const promotionGoal = computed(() => {
 .lp-track {
   position: relative;
   height: clamp(9px, 1.3vh, 14px);
-  background: #0c0a06;
+  background: rgba(12, 10, 6, 0.72);
   border: 1px solid #2b2312;
   border-radius: 5px;
   overflow: hidden;

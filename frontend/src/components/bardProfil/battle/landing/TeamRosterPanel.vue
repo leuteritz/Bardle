@@ -326,17 +326,21 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .roster-title {
-  font-size: clamp(11px, 1.4vh, 14px);
+  font-size: clamp(17px, 2.4vh, 30px);
   font-weight: 700;
-  letter-spacing: 5px;
-  color: #d4a020;
+  letter-spacing: 8px;
+  line-height: 1;
+  /* the trailing letter-spacing would push the word off-centre */
+  padding-left: 8px;
+  color: #e8c040;
+  text-shadow: 0 0 20px rgba(232, 192, 64, 0.28);
 }
 
 .ready-badge {
-  font-size: clamp(9px, 1.15vh, 11px);
+  font-size: clamp(10px, 1.25vh, 13px);
   font-weight: 700;
   letter-spacing: 1.5px;
-  padding: 2px 10px;
+  padding: 3px 12px;
   border-radius: 4px;
 }
 .ready-badge--full {
