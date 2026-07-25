@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
+import { useUiStore } from '@/stores/uiStore'
 import { getChampionTier } from '@/config/championTiers'
 import {
   ROLES,
@@ -34,6 +35,9 @@ const emit = defineEmits<{
 }>()
 
 const battleStore = useBattleStore()
+// Pointing at a role node also marks that role in the command panel — same
+// channel the battle tab's roster and the panel itself write to.
+const uiStore = useUiStore()
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 
 const roleDef = computed(() => ROLES[props.roleIndex])
@@ -115,6 +119,10 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
     :style="[nodeStyle(point, SIGIL_NODE_SIZE), { '--role-color': roleDef.color }]"
     :aria-label="main ? `${main} (${roleDef.label})` : `Assign a champion for ${roleDef.label}`"
     @click.stop="emit('select')"
+    @mouseenter="uiStore.setHoveredChampionSlotIndex(roleIndex)"
+    @mouseleave="uiStore.setHoveredChampionSlotIndex(null)"
+    @focus="uiStore.setHoveredChampionSlotIndex(roleIndex)"
+    @blur="uiStore.setHoveredChampionSlotIndex(null)"
   >
     <span v-if="full" class="sigil-node-aura" aria-hidden="true" />
     <span v-if="full" class="sigil-node-conic" aria-hidden="true" />

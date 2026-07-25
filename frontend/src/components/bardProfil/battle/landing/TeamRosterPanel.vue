@@ -142,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, watch, type CSSProperties } from 'vue'
+import { computed, onUnmounted, type CSSProperties } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -212,15 +212,8 @@ function onCardLeave() {
   uiStore.setHoveredChampionSlotIndex(null)
 }
 
-// Leaving the tab must not strand a highlight behind. The tab is only hidden
-// (v-show), never unmounted, so watching the active tab is what actually
-// catches it; the unmount hook covers the panel going away for good.
-watch(
-  () => uiStore.bardActiveTab,
-  (tab) => {
-    if (tab !== 'battle') uiStore.setHoveredChampionSlotIndex(null)
-  },
-)
+// Switching or closing the tab is cleared centrally by the ui store, since the
+// tabs are only hidden and never unmounted; this covers the panel itself going.
 onUnmounted(() => uiStore.setHoveredChampionSlotIndex(null))
 
 // Same order as battleStore.headerSlots: top, jungle, mid, adc, support

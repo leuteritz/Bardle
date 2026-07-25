@@ -57,16 +57,20 @@ function downProgress(i: number): number {
 // Ziel-Markierung — derselbe Mechanismus wie beim Planet-Tab und der
 // Planeten-Kachel darunter. Kein Panel offen → nichts zu spiegeln.
 /**
- * One mark, one meaning: "this role is in focus right now". Two places can put
- * a role in focus, and both render the identical reticle here so the player
+ * One mark, one meaning: "this role is in focus right now". Several places can
+ * put a role in focus, and all render the identical reticle here so the player
  * only ever learns one cue:
- *   • team tab — the role whose details panel is open (mirrored back by the tab)
- *   • battle tab — the roster card currently under the pointer
- * With no profile tab open, nothing is marked and a local hover stays a plain
- * hover, exactly as before.
+ *   • team tab — the role node under the pointer, else the role whose details
+ *     panel is open (the tab mirrors that selection back to the store)
+ *   • battle tab — the roster card under the pointer
+ * Pointing wins over the standing selection, because it is the more recent
+ * intent. With no profile tab open nothing is marked, and a local hover on this
+ * panel stays a plain hover, exactly as before.
  */
 const markedRoleIndex = computed(() => {
-  if (uiStore.bardActiveTab === 'team') return uiStore.teamActiveRoleIndex
+  if (uiStore.bardActiveTab === 'team') {
+    return uiStore.hoveredChampionSlotIndex ?? uiStore.teamActiveRoleIndex
+  }
   if (uiStore.bardActiveTab === 'battle') return uiStore.hoveredChampionSlotIndex
   return null
 })

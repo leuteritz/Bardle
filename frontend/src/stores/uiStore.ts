@@ -29,19 +29,33 @@ export const useUiStore = defineStore('ui', () => {
   const hoveredChampionSlotIndex = ref<number | null>(null)
   const hoveredPlanetSlotId = ref<string | null>(null)
 
+  /**
+   * Der Rollen-Hover markiert dieselbe Karte im Command Panel und wird von
+   * mehreren Ansichten gesetzt (Battle-Roster, Sigil-Board, Panel selbst). Die
+   * Tabs werden per v-show nur versteckt, nie unmountet — ohne dieses Aufräumen
+   * bliebe die Markierung nach einem Tab-Wechsel stehen, weil das mouseleave
+   * der verdeckten Karte nie kommt. Ein Ort dafür, statt in jeder Ansicht.
+   */
+  function clearRoleHover() {
+    hoveredChampionSlotIndex.value = null
+  }
+
   function openBardModal() {
     bardActiveTab.value = bardActiveTab.value !== null ? null : 'shop'
+    clearRoleHover()
   }
 
   function setBardTab(id: BardTabId) {
     bardActiveTab.value = id
     // navigating by hand ends the offer to jump back to the battle tab
     battleTabReturnPending.value = false
+    clearRoleHover()
   }
 
   function closeBardModal() {
     bardActiveTab.value = null
     battleTabReturnPending.value = false
+    clearRoleHover()
   }
 
   /** Set while the team tab was opened from the battle landing's empty role
@@ -54,6 +68,7 @@ export const useUiStore = defineStore('ui', () => {
   function returnToBattleTab() {
     battleTabReturnPending.value = false
     bardActiveTab.value = 'battle'
+    clearRoleHover()
   }
 
   function requestOpenRolesTab(slotIndex: number, subSlot: number = -1) {
@@ -62,6 +77,9 @@ export const useUiStore = defineStore('ui', () => {
     rolesOpenToken.value++
     rolesOpenPending.value = true
     bardActiveTab.value = 'team'
+    // the card that was clicked is about to be hidden, so its mouseleave never
+    // fires — the team tab's own selection takes the mark from here
+    clearRoleHover()
   }
 
   function clearRolesOpenPending() {
@@ -71,6 +89,7 @@ export const useUiStore = defineStore('ui', () => {
   function requestOpenPlanetsTab(slotId: string) {
     planetActiveSlotId.value = slotId
     bardActiveTab.value = 'planets'
+    clearRoleHover()
   }
 
   // Der Planet-Tab schreibt seine Auswahl hierher zurück, damit dieselbe Kachel
