@@ -236,6 +236,25 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 </template>
 
 <style scoped>
+/* ── Durchgehend laufende Fortschrittsringe ─────────────────────────────────
+   Beide Ringe beziehen ihren Wert aus dem 250ms-HUD-Ticker. Roh gesetzt würde
+   der conic-gradient in 250ms-Stufen springen; über @property typisiert kann
+   der Browser den Wert interpolieren und eine Transition über die Taktlänge
+   füllt die Lücke linear auf. Identisch zu den Ringen der Rollenkarten in
+   ChampionSelectorComponent — dort ist der Mechanismus ausführlich
+   beschrieben. */
+@property --down-progress {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+
+@property --buff-progress {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+
 .cmd-hud {
   /* lives inside the unified bottom-bar shell — bg comes from the shell */
   position: absolute;
@@ -716,6 +735,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   box-shadow:
     0 0 6px rgba(92, 230, 106, 0.5),
     0 1px 4px rgba(0, 0, 0, 0.55);
+  /* Taktlänge = HUD_COUNTDOWN_TICK_MS */
+  transition: --buff-progress 250ms linear;
 }
 
 .cmd-buff-chip::before {
@@ -837,6 +858,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   box-shadow:
     0 0 10px rgba(204, 96, 80, 0.35),
     0 2px 6px rgba(0, 0, 0, 0.7);
+  /* Taktlänge = HUD_COUNTDOWN_TICK_MS */
+  transition: --down-progress 250ms linear;
 }
 
 .cmd-down-ring::before {

@@ -184,7 +184,7 @@ function onSlotLeave() {
           <div class="champ-card-down-hatch" />
           <div class="champ-card-down-core">
             <span class="champ-card-down-ring" :style="{ '--down-progress': downProgress(i) }">
-              <Icon icon="game-icons:broken-skull" width="30" height="30" />
+              <Icon icon="game-icons:broken-skull" width="32" height="32" />
             </span>
             <span class="champ-card-down-timer">{{ downSecsLeft(i) }}s</span>
           </div>
@@ -216,6 +216,28 @@ function onSlotLeave() {
 </template>
 
 <style scoped>
+/* ── Durchgehend laufende Fortschrittsringe ─────────────────────────────────
+   Die Ring-Werte kommen aus diskreten Takten: der Cooldown aus dem 1s-Game-
+   Tick, die Revive-Zeit aus dem 250ms-HUD-Ticker. Als rohe Zahl gesetzt würde
+   der conic-gradient in ebenso großen Stufen springen — bei nur 8s Revive-Zeit
+   sind das gut sichtbare Sprünge.
+   Über @property werden die Custom Properties als <number> typisiert und damit
+   für den Browser interpolierbar: eine Transition über die Länge des jeweiligen
+   Takts füllt die Lücke zwischen zwei Werten linear auf, der Ring läuft
+   durchgehend. inherits: true, damit der laufende Wert auch im ::before des
+   Rings ankommt. */
+@property --cd-progress {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+
+@property --down-progress {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+
 .champ-cards {
   display: flex;
   gap: 9px;
@@ -392,6 +414,9 @@ function onSlotLeave() {
   transform: translate(-50%, -50%);
   z-index: 4;
   pointer-events: none;
+  /* Taktlänge = GAME_TICK_INTERVAL_MS (der Store zählt den Cooldown im
+     1s-Raster herunter) */
+  transition: --cd-progress 1s linear;
 }
 
 .champ-ability-orb {
@@ -828,17 +853,16 @@ function onSlotLeave() {
   z-index: 3;
 }
 
+/* Deckungsgleich mit dem Ability-Kern aufgebaut: der Container ist exakt so
+   groß wie das Emblem und liegt punktgenau auf der Kartenmitte, der Timer
+   hängt absolut darunter. Down-Emblem und Fähigkeits-Emblem sitzen damit an
+   derselben Stelle — die Karte wechselt den Zustand, nicht das Layout. */
 .champ-card-down-core {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 4;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  /* hält den Block über dem Rollen-Banner am unteren Kartenrand */
-  padding-bottom: 30px;
   pointer-events: none;
 }
 
@@ -846,8 +870,9 @@ function onSlotLeave() {
    dieselbe conic+mask-Technik wie der Jungle-Buff-Chip im Planet-Dock */
 .champ-card-down-ring {
   position: relative;
-  width: 48px;
-  height: 48px;
+  /* gleiche Maße wie .champ-ability-orb */
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -856,6 +881,8 @@ function onSlotLeave() {
   box-shadow:
     0 0 10px rgba(204, 96, 80, 0.35),
     0 2px 6px rgba(0, 0, 0, 0.7);
+  /* Taktlänge = HUD_COUNTDOWN_TICK_MS */
+  transition: --down-progress 250ms linear;
 }
 
 .champ-card-down-ring::before {
@@ -881,16 +908,24 @@ function onSlotLeave() {
   animation: champ-down-pulse 1.4s ease-in-out infinite alternate;
 }
 
+/* sitzt wie das Ability-Label unter dem Emblem */
 .champ-card-down-timer {
-  font-size: 17px;
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+  text-indent: 0.03em;
   color: #f0b0a0;
   font-variant-numeric: tabular-nums;
   text-shadow:
-    0 0 6px rgba(255, 80, 64, 0.5),
-    0 1px 3px rgba(0, 0, 0, 0.95);
+    0 1px 3px rgba(0, 0, 0, 0.98),
+    0 0 6px rgba(0, 0, 0, 0.9),
+    0 0 12px rgba(255, 80, 64, 0.55);
 }
 
 @keyframes champ-down-pulse {
