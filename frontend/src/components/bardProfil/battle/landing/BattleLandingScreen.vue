@@ -91,6 +91,12 @@ const teamProgress = computed(() => battleStore.headerSlots.filter((s) => s !== 
 const hasFullTeam = computed(() => teamProgress.value >= 5)
 const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
 
+/** Admin-only shortcut: force a single promotion so the rank-up herald and the
+ *  tier ladder can be exercised without grinding battles. */
+function adminRankUp() {
+  battleStore.adminPromoteRank()
+}
+
 /** Second line inside the button — says what the click actually does. */
 const buttonSubline = computed(() => {
   if (props.isStarting) return 'SEARCHING FOR A PLANET'
@@ -192,6 +198,47 @@ const conquestGroup = computed<RankStatGroup>(() => ({
 .landing-layer {
   position: relative;
   z-index: 1;
+}
+
+/* ── Temporary admin shortcut ──
+   Absolutely positioned in the top-right corner so it sits outside the flex
+   flow and cannot shift a single pixel of the stage. */
+.admin-rankup {
+  position: absolute;
+  /* bottom-right, level with the start button: the only spot where it covers
+     nothing but a decorative rule */
+  bottom: clamp(16px, 2.4vh, 28px);
+  right: clamp(14px, 1.4vw, 26px);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  background: linear-gradient(to bottom, #1e1808, #120e04);
+  border: 1px solid #5c4410;
+  border-radius: 4px;
+  color: #e8c040;
+  cursor: pointer;
+  opacity: 0.55;
+  transition:
+    opacity 0.15s,
+    background 0.15s,
+    border-color 0.15s;
+}
+.admin-rankup:hover {
+  opacity: 1;
+  background: linear-gradient(to bottom, #2a2010, #1a1408);
+  border-color: #c89040;
+  color: #f4d868;
+}
+
+.admin-rankup-icon {
+  width: 13px;
+  height: 13px;
 }
 
 /* ── Roster: takes the leftover height, but capped so the cards keep a card-like
