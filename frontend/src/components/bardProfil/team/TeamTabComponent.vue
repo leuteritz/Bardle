@@ -48,10 +48,18 @@ const hoveredAllySub = ref<number | null>(null)
 /** Ally satellite hovered on the board — highlighted in the details panel. */
 const boardHoveredAlly = ref<number | null>(null)
 
-watch(selectedRole, () => {
-  hoveredAllySub.value = null
-  boardHoveredAlly.value = null
-})
+watch(
+  selectedRole,
+  (index) => {
+    hoveredAllySub.value = null
+    boardHoveredAlly.value = null
+    // Auswahl ins UI-Store spiegeln, damit das Command Panel dieselbe
+    // Rollenkarte markiert (ein Watcher deckt alle Pfade ab: Board-Klick,
+    // Panel schließen, Synergien öffnen, externe Öffnungs-Anfrage).
+    uiStore.setTeamActiveRole(index)
+  },
+  { immediate: true },
+)
 const activeModal = ref<TeamModal>(null)
 const pickerSubSlot = ref(-1)
 const shopRole = ref<ChampionRole | 'all'>('all')
@@ -73,7 +81,6 @@ const pickerTitle = computed(() =>
     ? `Select ${roleDef.value.label}`
     : `Select Ally ${pickerSubSlot.value + 1}`,
 )
-
 
 // ── Selection ────────────────────────────────────────────────────────────────
 function selectRole(index: number) {
@@ -229,6 +236,9 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', onEsc)
   if (shopScrollTimer !== null) clearTimeout(shopScrollTimer)
+  // Tab zu → die gespiegelte Auswahl fällt mit, sonst bliebe im Command Panel
+  // eine Markierung stehen, zu der es kein offenes Panel mehr gibt
+  uiStore.setTeamActiveRole(null)
 })
 </script>
 

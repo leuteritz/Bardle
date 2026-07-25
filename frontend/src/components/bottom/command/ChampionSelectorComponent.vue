@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
@@ -52,6 +52,14 @@ function downProgress(i: number): number {
   return Math.min(1, downMsLeft(i) / CHAMPION_REVIVE_MS)
 }
 
+// Spiegel der Team-Tab-Auswahl: solange der Tab offen ist und dort das
+// Details-Panel einer Rolle bearbeitet wird, trägt genau deren Karte eine
+// Ziel-Markierung — derselbe Mechanismus wie beim Planet-Tab und der
+// Planeten-Kachel darunter. Kein Panel offen → nichts zu spiegeln.
+const selectedRoleIndex = computed(() =>
+  uiStore.bardActiveTab === 'team' ? uiStore.teamActiveRoleIndex : null,
+)
+
 function openPicker(slotIndex: number, subSlot: number = -1) {
   uiStore.requestOpenRolesTab(slotIndex, subSlot)
 }
@@ -88,6 +96,7 @@ function onSlotLeave() {
         'champ-card--cd': roleAbilities[i].onCooldown && slot !== null && !isChampionDown(i),
         'champ-card--eclipsed': slot !== null && !championInForeground(slot) && !isChampionDown(i),
         'champ-card--down': isChampionDown(i),
+        'champ-card--selected': selectedRoleIndex === i,
       }"
       :style="{
         '--role-color': ROLES[i].color,
@@ -170,6 +179,24 @@ function onSlotLeave() {
 
         <!-- role label -->
         <div class="champ-card-label">{{ ROLES[i].short }}</div>
+
+        <!-- ── Ziel-Markierung: diese Rolle ist im Team-Tab geöffnet ──
+             Reticle aus vier Eckwinkeln plus Keilen an beiden Seitenkanten —
+             identische HUD-Sprache wie die markierte Planeten-Kachel darunter,
+             nur auf das hohe Kartenformat gezogen. Alles reines Overlay: kein
+             Layout-Shift, Down-/Eclipse-/Cooldown-Zustände laufen darunter
+             unverändert weiter. -->
+        <template v-if="selectedRoleIndex === i">
+          <div class="champ-select-glow" />
+          <div class="champ-select-reticle">
+            <span class="champ-sel-corner champ-sel-corner--tl" />
+            <span class="champ-sel-corner champ-sel-corner--tr" />
+            <span class="champ-sel-corner champ-sel-corner--bl" />
+            <span class="champ-sel-corner champ-sel-corner--br" />
+          </div>
+          <span class="champ-select-tether champ-select-tether--l" />
+          <span class="champ-select-tether champ-select-tether--r" />
+        </template>
       </div>
     </button>
   </div>
@@ -346,6 +373,157 @@ function onSlotLeave() {
   white-space: nowrap;
   z-index: 4;
   pointer-events: none;
+}
+
+/* ── Ausgewählt: diese Rolle ist gerade im Team-Tab offen ───────────────────
+   Markiert genau die Karte, deren Details-Panel im Modal bearbeitet wird.
+   Immer in der Rollenfarbe — die trägt jede Karte ohnehin, auch die leeren.
+   Bewusst VOR den Eclipse-/Down-Blöcken definiert: deren Statusfarben am
+   Rahmen bleiben damit führend, die Auswahl liest sich weiter über Glow,
+   Reticle und Keile ab (gleiche Schichtung wie im Planet-Dock). */
+.champ-card--selected {
+  --sel: var(--role-color, #e8c040);
+  transform: translateY(-2px);
+  z-index: 2;
+}
+.champ-card--selected:hover {
+  transform: translateY(-3px);
+}
+
+.champ-card--selected .champ-card-body {
+  border-color: var(--sel);
+  /* Basis-Glow trägt die Markierung auch dann, wenn der Puls per
+     prefers-reduced-motion abgeschaltet ist */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--sel) 55%, transparent),
+    0 0 18px color-mix(in srgb, var(--sel) 45%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--sel) 12%, transparent);
+  animation: champ-select-pulse 2s ease-in-out infinite;
+}
+
+/* Kopfleiste und Rollen-Label ziehen mit — die Karte leuchtet als Ganzes,
+   statt nur einen zweiten Rahmen zu bekommen */
+.champ-card--selected .champ-card-bar {
+  box-shadow:
+    0 0 12px var(--sel),
+    0 0 22px color-mix(in srgb, var(--sel) 45%, transparent);
+}
+.champ-card--selected .champ-card-label {
+  color: color-mix(in srgb, var(--sel) 35%, #fff);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 16px color-mix(in srgb, var(--sel) 70%, transparent);
+}
+
+/* Innenschein in der Auswahlfarbe, über Vignette und Schleiern */
+.champ-select-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    color-mix(in srgb, var(--sel, #e8c040) 16%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+/* Vier Eckwinkel — HUD-Reticle statt zweitem Rahmen */
+.champ-select-reticle {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.champ-sel-corner {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--sel, #e8c040);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--sel, #e8c040) 70%, transparent));
+}
+
+.champ-sel-corner--tl {
+  top: 4px;
+  left: 4px;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 4px 0 0 0;
+}
+.champ-sel-corner--tr {
+  top: 4px;
+  right: 4px;
+  border-left: none;
+  border-bottom: none;
+  border-radius: 0 4px 0 0;
+}
+.champ-sel-corner--bl {
+  bottom: 4px;
+  left: 4px;
+  border-right: none;
+  border-top: none;
+  border-radius: 0 0 0 4px;
+}
+.champ-sel-corner--br {
+  bottom: 4px;
+  right: 4px;
+  border-left: none;
+  border-top: none;
+  border-radius: 0 0 4px 0;
+}
+
+/* Die erste Karte folgt oben links dem 40px-Bogen der Panel-Silhouette — der
+   Eckwinkel rückt mit nach innen, sonst läge er außerhalb der Rundung */
+.champ-card--first .champ-sel-corner--tl {
+  top: 15px;
+  left: 15px;
+  border-radius: 10px 0 0 0;
+}
+
+/* Keile an beiden Seitenkanten — fassen die Karte symmetrisch ein und zeigen
+   zum geöffneten Modal. Die Karte clippt sie zur Hälfte, wodurch sie als
+   eingeschobene Spitzen lesen. */
+.champ-select-tether {
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  border-radius: 2px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--sel, #e8c040) 85%, white) 0%,
+    var(--sel, #e8c040) 100%
+  );
+  box-shadow: 0 0 10px color-mix(in srgb, var(--sel, #e8c040) 70%, transparent);
+  pointer-events: none;
+}
+
+.champ-select-tether--l {
+  left: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.champ-select-tether--r {
+  right: 0;
+  transform: translate(50%, -50%) rotate(45deg);
+}
+
+@keyframes champ-select-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--sel) 45%, transparent),
+      0 0 14px color-mix(in srgb, var(--sel) 35%, transparent),
+      inset 0 0 16px color-mix(in srgb, var(--sel) 10%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--sel) 75%, transparent),
+      0 0 26px color-mix(in srgb, var(--sel) 62%, transparent),
+      inset 0 0 22px color-mix(in srgb, var(--sel) 18%, transparent);
+  }
 }
 
 /* ── Eclipse: Champion hinter der Sonne ──
@@ -619,7 +797,8 @@ function onSlotLeave() {
   .champ-card--flash .champ-card-body,
   .champ-card--flash .champ-card-ready-dot,
   .champ-card-eclipse-medal,
-  .champ-card-down-ring :deep(svg) {
+  .champ-card-down-ring :deep(svg),
+  .champ-card--selected .champ-card-body {
     animation: none;
   }
 }

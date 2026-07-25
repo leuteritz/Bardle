@@ -14,6 +14,10 @@ export const useUiStore = defineStore('ui', () => {
   // when the tab is opened by the request itself)
   const rolesOpenPending = ref(false)
   const planetActiveSlotId = ref<string | null>(null)
+  // Rolle, deren Details-Panel im Team-Tab gerade offen ist (null = Sigil füllt
+  // den Tab, keine Auswahl). Gegenstück zu planetActiveSlotId: das Command Panel
+  // markiert damit dieselbe Rollenkarte, die im Modal bearbeitet wird.
+  const teamActiveRoleIndex = ref<number | null>(null)
   const pendingChampionSearch = ref('')
   const hoveredChampionRole = ref<ChampionRole | null>(null)
   // Stern-ID des laufenden Kampfs, wenn der Team-Tab aus dem StarFight-Modal
@@ -62,6 +66,13 @@ export const useUiStore = defineStore('ui', () => {
     rolesActiveSlot.value = index
   }
 
+  // Der Team-Tab schreibt seine Rollen-Auswahl hierher zurück, damit dieselbe
+  // Karte im Command Panel mitmarkiert werden kann — eine Quelle für beide
+  // Ansichten (analog zu setPlanetActiveSlot).
+  function setTeamActiveRole(index: number | null) {
+    teamActiveRoleIndex.value = index
+  }
+
   function requestOpenTeamTabWithSearch(name: string) {
     pendingChampionSearch.value = name
     bardActiveTab.value = 'team'
@@ -98,6 +109,7 @@ export const useUiStore = defineStore('ui', () => {
     rolesOpenToken,
     rolesOpenPending,
     planetActiveSlotId,
+    teamActiveRoleIndex,
     pendingChampionSearch,
     battleReturnStarId,
     setBattleReturn,
@@ -113,6 +125,7 @@ export const useUiStore = defineStore('ui', () => {
     requestOpenPlanetsTab,
     setPlanetActiveSlot,
     setRolesActiveSlot,
+    setTeamActiveRole,
     requestOpenTeamTabWithSearch,
     clearPendingChampionSearch,
     setHoveredChampionRole,
