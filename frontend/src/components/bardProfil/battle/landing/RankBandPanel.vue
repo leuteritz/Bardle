@@ -70,13 +70,12 @@
          band width so the crests can be shown large; they stand on a rail whose
          cleared stretch is tinted in the current tier's colour. -->
     <div class="tier-ladder">
-      <span class="ladder-line" :style="{ left: railStartPct + '%', right: railStartPct + '%' }" />
+      <span class="ladder-line" />
       <span
         class="ladder-line ladder-line--done"
         :style="{
-          left: railStartPct + '%',
           width: ladderDonePercent + '%',
-          background: rankColor,
+          background: `linear-gradient(to right, ${rankColorDeep}, ${rankColor})`,
           boxShadow: railGlow,
         }"
       />
@@ -101,21 +100,14 @@
         :class="{
           'ladder-step--current': i === currentTierIndex,
           'ladder-step--cleared': i < currentTierIndex,
+          'ladder-step--apex': i >= apexFromIndex,
         }"
+        :style="stepStyle(i)"
         :title="tier"
       >
         <span class="tier-pip">
-          <span
-            v-if="i === currentTierIndex"
-            class="pip-halo"
-            :style="{ background: emblemGlowBg }"
-          />
-          <img
-            :src="RANK_EMBLEM_IMAGES[tier]"
-            :alt="tier"
-            class="tier-pip-img"
-            :style="i === currentTierIndex ? { filter: pipGlow } : undefined"
-          />
+          <span class="pip-halo" />
+          <img :src="RANK_EMBLEM_IMAGES[tier]" :alt="tier" class="tier-pip-img" />
         </span>
         <span class="step-caption">
           <span
@@ -191,9 +183,6 @@ const nameGlow = computed(() => `0 0 26px ${rankColor.value}59`)
 const dividerBg = computed(
   () => `linear-gradient(to bottom, transparent, ${rankColor.value}66, transparent)`,
 )
-const pipGlow = computed(
-  () => `drop-shadow(0 0 8px ${rankColor.value}) drop-shadow(0 0 20px ${rankColor.value}66)`,
-)
 const railGlow = computed(() => `0 0 12px ${rankColor.value}80`)
 const tickGlow = computed(() => `0 0 6px ${rankColor.value}99`)
 
@@ -234,8 +223,37 @@ const ladderProgress = computed(
   () => Math.max(0, currentTierIndex.value) + tierFraction.value,
 )
 
-/** Filled length of the rail, as a percentage of the ladder width. */
-const ladderDonePercent = computed(() => ladderProgress.value * ladderStepPct)
+/** Filled length of the rail as a percentage of the ladder width. The rail runs
+ *  edge to edge, so the fill starts left of Iron and reaches past Challenger. */
+const ladderDonePercent = computed(() =>
+  Math.min(100, railStartPct + ladderProgress.value * ladderStepPct),
+)
+
+/** Master and up — the tiers that get the loudest treatment. */
+const apexFromIndex = RANK_TIERS.indexOf('Master')
+
+function withAlpha(hex: string, alpha: number): string {
+  const a = Math.round(Math.min(1, Math.max(0, alpha)) * 255)
+  return hex + a.toString(16).padStart(2, '0')
+}
+
+/** Per-tier escalation: the further right a crest sits, the larger it stands,
+ *  the wider its aura and the harder it glows — the ladder should read as a
+ *  climb toward something grander, not ten equal icons. Tiers already earned
+ *  burn brighter than the ones still locked. */
+function stepStyle(i: number): Record<string, string> {
+  const color = RANK_TIER_COLORS[RANK_TIERS[i]] ?? '#d4a020'
+  const t = i / (RANK_TIERS.length - 1) // 0 at Iron … 1 at Challenger
+  const earned = i <= currentTierIndex.value
+  const halo = earned ? 0.09 + t * 0.3 : 0.03 + t * 0.13
+  const glow = earned ? 4 + t * 13 : 2 + t * 7
+  return {
+    '--tier-accent': color,
+    '--tier-scale': (0.8 + t * 0.28).toFixed(3),
+    '--tier-halo': `radial-gradient(circle, ${withAlpha(color, halo)}, transparent 70%)`,
+    '--tier-glow': `drop-shadow(0 0 ${glow.toFixed(1)}px ${withAlpha(color, earned ? 0.75 : 0.3)})`,
+  }
+}
 
 interface DivisionTick {
   key: string
@@ -453,16 +471,27 @@ const promotionGoal = computed(() => {
   border-top: 1px solid #2b2312;
 }
 
+/* The rail runs the full band width and softens at both ends, so it reads as a
+   beam passing through the ladder rather than a bar that starts at Iron. */
 .ladder-line {
   position: absolute;
   top: calc(var(--pip-head) + var(--pip) + var(--rail-gap));
+  left: 0;
+  right: 0;
   height: 2px;
-  background: #2b2312;
+  background: linear-gradient(to right, #221b0f, #3a2f1c);
   border-radius: 4px;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
 }
+/* Only the tail fades — the head of the fill stays a crisp, lit edge */
 .ladder-line--done {
   right: auto;
+  height: 3px;
+  margin-top: -0.5px;
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 44px, #000 100%);
+  mask-image: linear-gradient(to right, transparent, #000 44px, #000 100%);
 }
 
 /* Division milestones: short notches across the rail, lit once passed */
@@ -503,17 +532,28 @@ const promotionGoal = computed(() => {
   flex-shrink: 0;
   /* grows up from the rail instead of sinking through it */
   transform-origin: bottom center;
+  /* later tiers stand taller than earlier ones — see stepStyle() */
+  transform: scale(var(--tier-scale, 1));
   transition: transform 0.25s ease;
 }
 .ladder-step--current .tier-pip {
-  transform: scale(1.24);
+  transform: scale(calc(var(--tier-scale, 1) * 1.22));
 }
 
 .pip-halo {
   position: absolute;
-  inset: -22%;
+  inset: -26%;
   border-radius: 50%;
+  background: var(--tier-halo);
   pointer-events: none;
+}
+/* Master and up keep a slow breathing aura, so the top of the ladder never
+   looks quite as inert as the tiers below it */
+.ladder-step--apex .pip-halo {
+  animation: apex-breathe 4.5s ease-in-out infinite;
+}
+.ladder-step--current .pip-halo {
+  inset: -34%;
 }
 
 .tier-pip-img {
@@ -521,18 +561,31 @@ const promotionGoal = computed(() => {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  opacity: 0.26;
-  filter: grayscale(85%) brightness(0.62);
+  opacity: 0.3;
+  filter: grayscale(85%) brightness(0.6) var(--tier-glow);
   transition:
     opacity 0.25s ease,
     filter 0.25s ease;
 }
 .ladder-step--cleared .tier-pip-img {
-  opacity: 0.78;
-  filter: grayscale(12%);
+  opacity: 0.85;
+  filter: grayscale(8%) var(--tier-glow);
 }
 .ladder-step--current .tier-pip-img {
   opacity: 1;
+  filter: var(--tier-glow);
+}
+
+@keyframes apex-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
 }
 
 /* Name + date form one caption block, so the rail gap stays between crest and
@@ -556,11 +609,21 @@ const promotionGoal = computed(() => {
   text-overflow: ellipsis;
   transition: color 0.25s ease;
 }
+/* Earned tiers wear their own colour — the passed stretch of the ladder reads
+   as a bronze → silver → gold → … gradient at a glance */
 .ladder-step--cleared .tier-label {
-  color: #8a7040;
+  color: var(--tier-accent);
+  opacity: 0.82;
 }
 .ladder-step--current .tier-label {
   letter-spacing: 2.2px;
+}
+/* Even locked, the apex tiers carry a hint of their colour */
+.ladder-step--apex .tier-label {
+  color: color-mix(in srgb, var(--tier-accent) 45%, #5c4d30);
+}
+.ladder-step--apex.ladder-step--cleared .tier-label {
+  color: var(--tier-accent);
 }
 
 /* Date the tier was first reached — quiet, a caption under its name */
@@ -704,7 +767,8 @@ const promotionGoal = computed(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .emblem-ring {
+  .emblem-ring,
+  .ladder-step--apex .pip-halo {
     animation: none;
   }
 }
