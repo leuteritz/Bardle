@@ -13,6 +13,8 @@ export const useUiStore = defineStore('ui', () => {
   // team tab apply the request on mount (the token watcher registers too late
   // when the tab is opened by the request itself)
   const rolesOpenPending = ref(false)
+  // true while the team tab was entered from the battle landing's roster
+  const battleTabReturnPending = ref(false)
   const planetActiveSlotId = ref<string | null>(null)
   // Rolle, deren Details-Panel im Team-Tab gerade offen ist (null = Sigil füllt
   // den Tab, keine Auswahl). Gegenstück zu planetActiveSlotId: das Command Panel
@@ -33,10 +35,25 @@ export const useUiStore = defineStore('ui', () => {
 
   function setBardTab(id: BardTabId) {
     bardActiveTab.value = id
+    // navigating by hand ends the offer to jump back to the battle tab
+    battleTabReturnPending.value = false
   }
 
   function closeBardModal() {
     bardActiveTab.value = null
+    battleTabReturnPending.value = false
+  }
+
+  /** Set while the team tab was opened from the battle landing's empty role
+   *  slots — the team tab then offers a one-click way back. */
+  function requestRoleFillFromBattle(slotIndex: number) {
+    requestOpenRolesTab(slotIndex)
+    battleTabReturnPending.value = true
+  }
+
+  function returnToBattleTab() {
+    battleTabReturnPending.value = false
+    bardActiveTab.value = 'battle'
   }
 
   function requestOpenRolesTab(slotIndex: number, subSlot: number = -1) {
@@ -108,6 +125,7 @@ export const useUiStore = defineStore('ui', () => {
     rolesActiveSubSlot,
     rolesOpenToken,
     rolesOpenPending,
+    battleTabReturnPending,
     planetActiveSlotId,
     teamActiveRoleIndex,
     pendingChampionSearch,
@@ -121,6 +139,8 @@ export const useUiStore = defineStore('ui', () => {
     setBardTab,
     closeBardModal,
     requestOpenRolesTab,
+    requestRoleFillFromBattle,
+    returnToBattleTab,
     clearRolesOpenPending,
     requestOpenPlanetsTab,
     setPlanetActiveSlot,

@@ -133,9 +133,10 @@ import { formatNumber } from '@/config/numberFormat'
 const uiStore = useUiStore()
 
 /** Open slot clicked → team tab, this role pre-selected. Same navigation the
- *  command panel's role cards use, so both entry points behave alike. */
+ *  command panel's role cards use, plus a marker so the team tab can offer a
+ *  one-click way back to the battle tab. */
 function openRole(slotIndex: number) {
-  uiStore.requestOpenRolesTab(slotIndex)
+  uiStore.requestRoleFillFromBattle(slotIndex)
 }
 
 // Same order as battleStore.headerSlots: top, jungle, mid, adc, support

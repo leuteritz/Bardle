@@ -3133,6 +3133,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:three-friends', // Assists stat
   'game-icons:podium-winner', // Win/Loss stat (BottomScoreboard)
   'game-icons:sword-spin', // "Return to Battle" floating button (BattleReturnButton)
+  'game-icons:swords-emblem', // "Back to Battle" floating button (BattleTabReturnButton)
   // Eclipse state (champion/planet behind the sun)
   'game-icons:eclipse-flare', // Eclipse medallion (ChampionSelectorComponent, CommandPanelComponent, RoleStrikerSquad, PlanetBatteryHUD, PlanetSelectTabComponent)
   // Destroyed planet, waiting out its respawn timer

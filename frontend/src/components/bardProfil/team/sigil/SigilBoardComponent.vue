@@ -19,6 +19,7 @@ import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
+import BattleTabReturnButton from '@/components/bardProfil/BattleTabReturnButton.vue'
 
 const props = defineProps<{
   selectedRole: number | null
@@ -246,6 +247,9 @@ watch(
 
     <!-- Rücksprung zum laufenden StarFight — mittig zwischen Shop + Expedition -->
     <BattleReturnButton />
+    <!-- Gleicher Ankerpunkt: Rückweg in den Battle-Tab, wenn der Team-Tab von
+         einem offenen Rollen-Slot der Battle-Landing aus geöffnet wurde -->
+    <BattleTabReturnButton />
 
     <button class="sigil-action sigil-action--expedition" @click.stop="emit('open-expedition')">
       <Icon icon="game-icons:campfire" width="26" height="26" class="sigil-action-icon" />
