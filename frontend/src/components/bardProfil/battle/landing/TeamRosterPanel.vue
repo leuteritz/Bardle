@@ -529,6 +529,12 @@ const mvpHolder = computed<string | null>(() => {
   align-items: center;
   gap: 5px;
   min-width: 0;
+  padding: 2px 6px;
+  /* just enough plate to lift the word off a bright splash, no frame */
+  background: rgba(8, 6, 4, 0.5);
+  border-radius: 4px;
+  /* the container is click-through; the badges themselves keep their tooltip */
+  pointer-events: auto;
 }
 
 .card-badge-text {
