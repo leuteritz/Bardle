@@ -713,15 +713,18 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
    conic-Ring, atmender Glow. Der frühere Aufbau (Chip oben plus separater
    46px-Ring drumherum) war ein Fremdkörper gegenüber den Karten und belegte
    die obere Kachelzone, die jetzt der Eclipse-Chip trägt.
-   42px ist die Obergrenze: bei --hud-scale 0.66 (Full HD) bleiben davon rund
-   28 reale Pixel — darunter verliert das Emblem seine Lesbarkeit. */
+   46px ist die Obergrenze: die Kachel ist 60px breit (400px Dock / 6 Spalten
+   minus 8px Gaps) und hat 2px Rahmen, also 56px Innenbreite — der Ring misst
+   mit seinem 2.5px-Überstand 51px und behält damit 2.5px Luft zum Rand.
+   Nach unten bleiben bei --hud-scale 0.66 (Full HD) rund 30 reale Pixel —
+   darunter verliert das Emblem seine Lesbarkeit. */
 .cmd-buff-orb {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -740,16 +743,21 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
 /* Das Rollenbild ist freigestellt (RGBA) und steht deshalb vollständig in der
    Fassung, statt rund beschnitten zu werden: `contain` zeigt das ganze Motiv,
-   `center` setzt es exakt in die Ringmitte. Der vorherige Zuschnitt per
-   `cover` mit nach oben verschobenem Ausschnitt ließ es außermittig wirken.
-   Bei 84% bleibt das hochformatige Motiv (393x610) mit rund 35x23px
-   vollständig innerhalb des 42px-Rings — auch die Ecken des Bildrahmens
-   überschreiten den Kreisrand nicht. Für volle Schärfe bräuchte es ein
-   vorskaliertes Asset unter /img/roles/thumb/ (wie es die Planeten unter
-   /img/planets/thumb/ haben). */
+   `center` setzt es exakt in die Ringmitte.
+   Maßgeblich ist die DIAGONALE, nicht die Höhe: ein hochformatiges Rechteck
+   (jungle.png ist 393x610, Seitenverhältnis 0.644) berührt den Kreis mit
+   seinen Ecken. Halbdiagonale = Höhe · 0.5949 — bei den früheren 84% eines
+   42px-Rings ergab das exakt 21px, also genau den Kreisradius: die Ecken
+   lagen auf der Ringlinie und das Motiv ragte oben wie unten heraus.
+   74% von 46px = 34px Höhe → 21.9px Breite → 20.25px Halbdiagonale. Bei 23px
+   Innenradius bleiben so rund 2.7px Luft ringsum, das Motiv liegt vollständig
+   und mittig in der Fassung. Der Höhenanteil (34px) übertrifft dabei sogar
+   den alten Wert, das Emblem bleibt also gleich gut lesbar.
+   Für volle Schärfe bräuchte es ein vorskaliertes Asset unter
+   /img/roles/thumb/ (wie es die Planeten unter /img/planets/thumb/ haben). */
 .cmd-buff-img {
-  width: 84%;
-  height: 84%;
+  width: 48%;
+  height: 74%;
   object-fit: contain;
   object-position: center;
   display: block;
@@ -941,9 +949,10 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
    damit er auf der schmalen Kachel nicht an die Ränder stößt */
 .cmd-down-ring {
   position: relative;
-  /* gleiche Maße wie .cmd-buff-orb — beide belegen dieselbe Kachelmitte */
-  width: 42px;
-  height: 42px;
+  /* gleiche Maße wie .cmd-buff-orb — beide belegen dieselbe Kachelmitte, ein
+     Wechsel Buff → Wrack darf die Fassung nicht springen lassen */
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   display: grid;
   place-items: center;
