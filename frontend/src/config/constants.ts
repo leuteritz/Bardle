@@ -787,6 +787,10 @@ export const HP_COLOR_THRESHOLD_HIGH = 0.5 // above → green
 export const HP_COLOR_THRESHOLD_LOW = 0.25 // above → gold, below → red
 export const HP_BAR_SEGMENTS = 8
 
+/** Refresh rate of HUD countdown tickers (buff/respawn timers): the deadline
+ *  timestamps are reactive, Date.now() is not — a ref ticks the comparison. */
+export const HUD_COUNTDOWN_TICK_MS = 250
+
 // Champion Combat System
 /** Detection radius from screen center in px. Planet within this range → champions can hit it. Not sun-relative. */
 export const CHAMPION_DETECT_RADIUS = 350
@@ -3020,6 +3024,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:eclipse-flare', // Eclipse medallion (ChampionSelectorComponent, CommandPanelComponent, RoleStrikerSquad, PlanetBatteryHUD, PlanetSelectTabComponent)
   // Destroyed planet, waiting out its respawn timer
   'game-icons:fragmented-meteor', // Wreck emblem (CommandPanelComponent, PlanetSelectTabComponent)
+  // Downed champion, waiting out its revive timer
+  'game-icons:tombstone', // Down emblem on the role card (ChampionSelectorComponent)
   // Bard Stats — Journey lifetime stat rows (BardStatsTab)
   'game-icons:embrassed-energy', // Total Power stat row
   'game-icons:factory', // Lifetime Production stat row

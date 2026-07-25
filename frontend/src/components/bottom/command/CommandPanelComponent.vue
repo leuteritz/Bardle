@@ -12,7 +12,7 @@ import type { PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import { formatNumber } from '@/config/numberFormat'
 import { playerSlotInForeground } from '@/utils/foregroundGate'
-import { PLANET_IMAGE_DIR, PLANET_IMAGE_THUMB_DIR } from '@/config/constants'
+import { PLANET_IMAGE_DIR, PLANET_IMAGE_THUMB_DIR, HUD_COUNTDOWN_TICK_MS } from '@/config/constants'
 import ChampionSelectorComponent from '@/components/bottom/command/ChampionSelectorComponent.vue'
 
 const planetStore = usePlanetShopStore()
@@ -56,7 +56,7 @@ function pollEclipse() {
 onMounted(() => {
   buffTicker = window.setInterval(() => {
     buffNow.value = Date.now()
-  }, 250)
+  }, HUD_COUNTDOWN_TICK_MS)
   eclipseFrame = requestAnimationFrame(pollEclipse)
 })
 onUnmounted(() => {
@@ -115,7 +115,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
           class="cmd-planet-tile"
           :class="{
             'cmd-planet-tile--filled': slot.purchased && !!slot.role,
-            'cmd-planet-tile--buffed': !!(slot.jungleBuff?.active),
+            'cmd-planet-tile--buffed': !!slot.jungleBuff?.active,
             'cmd-planet-tile--empty-slot': slot.purchased && !slot.role,
             'cmd-planet-tile--locked': !slot.purchased && !planetStore.canUnlockPlanetSlot(index),
             'cmd-planet-tile--buy': !slot.purchased,
@@ -179,10 +179,14 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             <div class="cmd-tile-icon cmd-tile-icon--locked">
               <img src="/img/lock.png" alt="Locked" class="lock-icon" />
             </div>
-            <div v-if="planetStore.canUnlockPlanetSlot(index)" class="cmd-tile-unlock-label">UNLOCK</div>
+            <div v-if="planetStore.canUnlockPlanetSlot(index)" class="cmd-tile-unlock-label">
+              UNLOCK
+            </div>
             <div class="cmd-tile-cost-row">
               <img src="/img/BardAbilities/BardChime.png" class="cmd-tile-chime-img" alt="Chimes" />
-              <span class="cmd-tile-cost-value">{{ formatNumber(planetStore.getSlotCost(slot.id)) }}</span>
+              <span class="cmd-tile-cost-value">{{
+                formatNumber(planetStore.getSlotCost(slot.id))
+              }}</span>
             </div>
           </template>
 
@@ -700,7 +704,11 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
     #5ce66a calc(var(--buff-progress, 1) * 360deg),
     rgba(92, 230, 106, 0.14) 0
   );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2px)
+  );
   mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
   filter: drop-shadow(0 0 3px rgba(92, 230, 106, 0.7));
 }
@@ -733,7 +741,9 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   filter: grayscale(65%) brightness(0.5) saturate(0.6);
 }
 .cmd-tile-planet-img {
-  transition: transform 0.18s ease, filter 0.4s ease;
+  transition:
+    transform 0.18s ease,
+    filter 0.4s ease;
 }
 
 .cmd-eclipse-veil {
