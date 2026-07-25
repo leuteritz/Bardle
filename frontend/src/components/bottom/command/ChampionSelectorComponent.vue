@@ -473,12 +473,19 @@ function onSlotLeave() {
   border-radius: 0 0 4px 0;
 }
 
-/* Die erste Karte folgt oben links dem 40px-Bogen der Panel-Silhouette — der
-   Eckwinkel rückt mit nach innen, sonst läge er außerhalb der Rundung */
+/* Die erste Karte folgt oben links dem 40px-Bogen der Panel-Silhouette. Ein
+   rechtwinkliger Eckwinkel schneidet diesen Bogen und bricht die Silhouette —
+   stattdessen läuft hier ein konzentrischer Viertelbogen 4px innerhalb der
+   Kante mit. Die Rundung ist leicht elliptisch, weil der obere Rahmen der
+   ersten Karte 5px trägt und der linke 2px: innen bleiben 40−2=38 horizontal
+   und 40−5=35 vertikal, abzüglich der 4px Abstand also 34 × 31. */
 .champ-card--first .champ-sel-corner--tl {
-  top: 15px;
-  left: 15px;
-  border-radius: 10px 0 0 0;
+  top: 4px;
+  left: 4px;
+  width: 34px;
+  height: 31px;
+  border-radius: 0;
+  border-top-left-radius: 34px 31px;
 }
 
 /* Keile an beiden Seitenkanten — fassen die Karte symmetrisch ein und zeigen
