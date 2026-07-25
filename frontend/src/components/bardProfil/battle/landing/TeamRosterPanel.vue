@@ -22,6 +22,10 @@
         @click="onCardClick(idx)"
         @keydown.enter="onCardClick(idx)"
         @keydown.space.prevent="onCardClick(idx)"
+        @mouseenter="onCardEnter(idx)"
+        @mouseleave="onCardLeave()"
+        @focus="onCardEnter(idx)"
+        @blur="onCardLeave()"
       >
         <!-- Everything but the frame lives in here: the card clips its own
              content, which leaves the frame free to let its crown rise above
@@ -138,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, type CSSProperties } from 'vue'
+import { computed, onUnmounted, watch, type CSSProperties } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -196,6 +200,28 @@ function onCardClick(slotIndex: number) {
   if (!battleStore.headerSlots[slotIndex]) return
   openRole(slotIndex)
 }
+
+/** Pointing at a roster card also lights that role up in the command panel on
+ *  the right, so both readouts of the same team stay linked across the screen.
+ *  Same channel the command panel writes when it is hovered itself. */
+function onCardEnter(slotIndex: number) {
+  uiStore.setHoveredChampionSlotIndex(slotIndex)
+}
+
+function onCardLeave() {
+  uiStore.setHoveredChampionSlotIndex(null)
+}
+
+// Leaving the tab must not strand a highlight behind. The tab is only hidden
+// (v-show), never unmounted, so watching the active tab is what actually
+// catches it; the unmount hook covers the panel going away for good.
+watch(
+  () => uiStore.bardActiveTab,
+  (tab) => {
+    if (tab !== 'battle') uiStore.setHoveredChampionSlotIndex(null)
+  },
+)
+onUnmounted(() => uiStore.setHoveredChampionSlotIndex(null))
 
 // Same order as battleStore.headerSlots: top, jungle, mid, adc, support
 const roleRows = ROLES.map((r) => ({
