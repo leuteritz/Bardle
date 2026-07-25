@@ -464,23 +464,47 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   animation: cmd-empty-icon-pulse 3s ease-in-out infinite;
 }
 
+/* ── Gesperrt: Schloss steht, die Chimes reichen noch nicht ─────────────────
+   Der Rahmen trägt trotzdem schon die volle Gold-Fassung des Systems: die
+   Kachel ist ein vollwertiger Slot, sie ist nur noch nicht bezahlt. Gedämpft
+   wird ausschließlich der INHALT (Schloss und Kostenzeile) — früher lagen
+   opacity und grayscale auf der ganzen Kachel und haben den Rahmen gleich
+   mit entfärbt, wodurch die Reihe an ihrem Ende ausfranste.
+   Gold statt Grün: Grün ist im Dock reserviert für "jetzt kaufbar" bzw. "Rolle
+   frei" — die gesperrte Kachel bleibt dadurch auf einen Blick unterscheidbar,
+   zusätzlich zu ihrem ruhenden Rahmen (kein Puls, kein Hover-Lift). */
 .cmd-planet-tile--locked {
   background: linear-gradient(170deg, #1a1408 0%, #120e04 100%);
-  border: 2px solid rgba(122, 78, 32, 0.55);
-  box-shadow: none;
-  opacity: 0.55;
-  filter: grayscale(40%);
+  border: 2px solid rgba(200, 144, 64, 0.62);
+  box-shadow:
+    0 0 8px rgba(200, 144, 64, 0.1),
+    inset 0 0 12px rgba(0, 0, 0, 0.5);
   cursor: not-allowed;
 }
 .cmd-planet-tile--locked:hover {
-  border-color: rgba(122, 78, 32, 0.6);
-  box-shadow: none;
+  border-color: rgba(200, 144, 64, 0.8);
+  box-shadow:
+    0 0 10px rgba(200, 144, 64, 0.18),
+    inset 0 0 12px rgba(0, 0, 0, 0.5);
   transform: none;
 }
 .cmd-planet-tile--locked::after,
 .cmd-planet-tile--locked:hover::after {
-  background: rgba(122, 78, 32, 0.45);
+  background: rgba(200, 144, 64, 0.7);
   box-shadow: none;
+}
+
+/* Nur der Inhalt liegt im Halbschatten — er benennt den fehlenden Kauf, der
+   Rahmen gehört bereits zum System */
+.cmd-planet-tile--locked .cmd-tile-icon--locked,
+.cmd-planet-tile--locked .cmd-tile-cost-row {
+  opacity: 0.6;
+  filter: grayscale(45%);
+  transition: opacity 0.2s ease;
+}
+.cmd-planet-tile--locked:hover .cmd-tile-icon--locked,
+.cmd-planet-tile--locked:hover .cmd-tile-cost-row {
+  opacity: 0.8;
 }
 
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
@@ -652,11 +676,13 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   animation: cmd-select-pulse 2s ease-in-out infinite;
 }
 
-/* Gesperrte Kacheln sind stark abgedunkelt — als Auswahl müssen sie trotzdem
-   ablesbar bleiben. */
-.cmd-planet-tile--selected.cmd-planet-tile--locked {
-  opacity: 0.85;
-  filter: grayscale(15%);
+/* Bei gesperrten Kacheln liegt der Halbschatten auf Schloss und Kostenzeile —
+   als Auswahl treten beide wieder voll hervor (der Rahmen ist ohnehin schon
+   farbig und wird von der Markierung nur übernommen). */
+.cmd-planet-tile--selected.cmd-planet-tile--locked .cmd-tile-icon--locked,
+.cmd-planet-tile--selected.cmd-planet-tile--locked .cmd-tile-cost-row {
+  opacity: 0.95;
+  filter: none;
 }
 
 /* Innenschein in der Auswahlfarbe, über Vignette und Schleiern */
