@@ -209,18 +209,30 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             <div class="cmd-tile-icon cmd-tile-icon--empty">＋</div>
           </template>
 
+          <!-- Noch nicht gekauft: gleiche Aufteilung wie die leere Champion-
+               Karte darüber — das Motiv (hier das Schloss) steht allein auf der
+               Kachelmitte, alles Beschriftende sammelt sich in einem Banner am
+               Fuß. UNLOCK und Kostenzeile liegen dafür in einem gemeinsamen
+               Container: sie teilen sich den Scrim und rutschen zusammen nach
+               unten, wenn das UNLOCK-Label fehlt (gesperrte Kachel). -->
           <template v-else>
             <div class="cmd-tile-icon cmd-tile-icon--locked">
               <img src="/img/lock.png" alt="Locked" class="lock-icon" />
             </div>
-            <div v-if="planetStore.canUnlockPlanetSlot(index)" class="cmd-tile-unlock-label">
-              UNLOCK
-            </div>
-            <div class="cmd-tile-cost-row">
-              <img src="/img/BardAbilities/BardChime.png" class="cmd-tile-chime-img" alt="Chimes" />
-              <span class="cmd-tile-cost-value">{{
-                formatNumber(planetStore.getSlotCost(slot.id))
-              }}</span>
+            <div class="cmd-tile-footer">
+              <div v-if="planetStore.canUnlockPlanetSlot(index)" class="cmd-tile-unlock-label">
+                UNLOCK
+              </div>
+              <div class="cmd-tile-cost-row">
+                <img
+                  src="/img/BardAbilities/BardChime.png"
+                  class="cmd-tile-chime-img"
+                  alt="Chimes"
+                />
+                <span class="cmd-tile-cost-value">{{
+                  formatNumber(planetStore.getSlotCost(slot.id))
+                }}</span>
+              </div>
             </div>
           </template>
 
@@ -589,18 +601,58 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   }
 }
 
+/* ── Schloss: allein auf der Kachelmitte ────────────────────────────────────
+   Exakt so gesetzt wie das Rollenbild der leeren Champion-Karte: absolut auf
+   den Mittelpunkt, prozentual bemessene Box mit `contain` (die Kachel skaliert
+   mit --hud-scale, feste 24px wären auf Full HD zu klein und auf 4K verloren).
+   Vorher lag das Schloss zusammen mit der Kostenzeile im Fluss und beide
+   drängten sich in der Kachelmitte. */
 .cmd-tile-icon--locked {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  width: 62%;
+  height: 30%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+/* muss die generische Hover-Skalierung von .cmd-tile-icon überschreiben —
+   die kennt die Zentrier-Translation nicht und würde sie wegwerfen */
+.cmd-planet-tile:hover .cmd-tile-icon--locked {
+  transform: translate(-50%, -50%) scale(1.08);
+}
 .cmd-tile-icon--locked .lock-icon {
-  width: 24px;
-  height: 24px;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  opacity: 0.85;
+  object-position: center;
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.85));
 }
 
+/* ── Fußbanner: alles Beschriftende am unteren Kachelrand ───────────────────
+   Baugleich mit dem Rollen-Banner der Champion-Karte: volle Breite, Scrim von
+   transparent nach schwarz, Inhalt sitzt unten auf. Die 3px-Akzentkante (z-4)
+   läuft darüber weiter und schließt die Kachel ab. */
+.cmd-tile-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 18px 0 7px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.94));
+  pointer-events: none;
+}
+
+/* Grund und Rundung trägt jetzt das Banner — die Zeile ist nur noch Inhalt */
 .cmd-tile-cost-row {
   position: relative;
   z-index: 1;
@@ -608,9 +660,6 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  background: rgba(0, 0, 0, 0.35);
-  border-radius: 4px;
-  padding: 2px 6px;
 }
 
 .cmd-tile-chime-img {
