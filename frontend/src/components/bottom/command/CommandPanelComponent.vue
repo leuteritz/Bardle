@@ -141,18 +141,6 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 <template>
   <div class="cmd-hud">
     <div class="cmd-panel">
-      <!-- ── TEMP admin: reset every role ability cooldown ──
-           Schwebt absolut über dem Panel, damit er weder die Rollenkarten noch
-           das Planeten-Dock verschiebt. Wird später wieder entfernt. -->
-      <button
-        class="cmd-admin-cd-btn"
-        title="Admin: reset all role ability cooldowns"
-        @click="resetRoleCooldowns"
-      >
-        <Icon icon="game-icons:time-trap" width="16" height="16" />
-        <span>Reset Cooldowns</span>
-      </button>
-
       <!-- ── Champion portrait cards (with role ability tracking) ── -->
       <ChampionSelectorComponent />
 
@@ -289,6 +277,20 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
       </div>
     </div>
   </div>
+
+  <!-- ── TEMP admin: reset every role ability cooldown ──
+       Bewusst AUSSERHALB von .cmd-hud: dessen scale()-Transform wäre sonst der
+       Bezugsrahmen jeder fixed-Positionierung. So hängt der Knopf am selben
+       Viewport-Anker wie das ©-Overlay links und liegt damit exakt auf dessen
+       Höhe. Wird später wieder entfernt. -->
+  <button
+    class="cmd-admin-cd-btn"
+    title="Admin: reset all role ability cooldowns"
+    @click="resetRoleCooldowns"
+  >
+    <Icon icon="game-icons:time-trap" width="15" height="15" />
+    <span>Reset Cooldowns</span>
+  </button>
 </template>
 
 <style scoped>
@@ -343,40 +345,49 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 }
 
 /* ── TEMP Admin-Knopf: Reset Cooldowns ──────────────────────────────────────
-   Liegt absolut über dem Panel (bottom: 100% + Luft) und damit außerhalb des
-   Flex-Flusses — Rollenkarten und Planeten-Dock behalten exakt ihre Maße. Er
-   steht rechtsbündig auf der Panelkante, sitzt also in einer Flucht mit den
-   Karten darunter, und skaliert über --hud-scale mit dem restlichen HUD mit.
+   Freies Overlay über dem Command Panel — kein Teil des Panel-Flusses, also
+   behalten Rollenkarten und Planeten-Dock exakt ihre Maße.
+   HÖHE: identischer Anker wie `.copyright-overlay` in App.vue
+   (`--hud-panel-size` + 8px). Beide Unterkanten liegen damit auf einer Linie,
+   links das ©-Overlay über der Minimap, rechts dieser Knopf über dem Command
+   Panel. Der Anker liegt zugleich über der Rahmenlinie der Bottom-Bar, deren
+   SVG-Fassung (z-index 5) den Knopf sonst durchschneiden würde.
+   RECHTS: 20px ist der Innenabstand des Panels zur Barkante; über --hud-scale
+   mitskaliert steht der Knopf damit in einer Flucht mit den Karten darunter.
    Farbgebung wie zuvor im Admin-Tab (kühles Blau), damit er sich klar als
    Debug-Element vom warmen HUD absetzt. Temporär — kommt wieder raus. */
 .cmd-admin-cd-btn {
-  position: absolute;
-  /* 34px = 22px Panel-Inset (Abstand Panelkante → Barkante) + 12px Luft. Der
-     Knopf muss über die Rahmenlinie hinaus: die SVG-Fassung der Bar liegt mit
-     z-index 5 über dem HUD und würde ihn sonst durchschneiden. */
-  bottom: calc(100% + 34px);
-  right: 0;
-  z-index: 3;
+  position: fixed;
+  bottom: calc(var(--hud-panel-size, 330px) + 8px);
+  right: calc(20px * var(--hud-scale, 1));
+  z-index: 9999;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
+  padding: 5px 11px;
   border-radius: 4px;
   border: 1px solid #1a4a5a;
   background: #0a1a20;
   color: #60c8e8;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
+  pointer-events: auto;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
     color 0.15s ease;
+}
+
+@media (max-width: 600px) {
+  .cmd-admin-cd-btn {
+    display: none;
+  }
 }
 .cmd-admin-cd-btn:hover {
   background: #0d2a35;
