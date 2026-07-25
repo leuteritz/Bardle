@@ -1573,6 +1573,9 @@ export const RANK_EMBLEM_IMAGES: Record<string, string> = {
 /** Win streak from which the ladder flank paints the streak "hot" (BattleLandingScreen) */
 export const HOT_WIN_STREAK_THRESHOLD = 3
 
+/** Standout badges a roster card shows before it truncates (TeamRosterPanel) */
+export const ROSTER_CARD_MAX_BADGES = 4
+
 export const RANK_TIER_COLORS: Record<string, string> = {
   Iron: '#8a9098',
   Bronze: '#c87832',

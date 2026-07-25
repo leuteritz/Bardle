@@ -40,15 +40,17 @@
           <!-- Role label, top-left — bare type in the command panel's style -->
           <span class="card-role">{{ role.roleLabel }}</span>
 
-          <!-- Standout badges, top-right; label via tooltip -->
+          <!-- Standout badges, top-right: icon plus a short word for what it is -->
           <div class="card-badges">
             <span
               v-for="badge in badgesFor(battleStore.headerSlots[idx]!)"
               :key="badge.key"
               class="card-badge"
+              :style="{ color: badge.color }"
               :title="badge.label"
             >
-              <Icon :icon="badge.icon" class="card-badge-icon" :style="{ color: badge.color }" />
+              <span class="card-badge-text">{{ badge.short }}</span>
+              <Icon :icon="badge.icon" class="card-badge-icon" />
             </span>
           </div>
 
@@ -125,7 +127,7 @@ import { computed, type CSSProperties } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
-import { ROLES } from '@/config/constants'
+import { ROLES, ROSTER_CARD_MAX_BADGES } from '@/config/constants'
 import { formatNumber } from '@/config/numberFormat'
 
 const uiStore = useUiStore()
@@ -229,6 +231,8 @@ function detailFor(name: string): DetailEntry[] {
 interface BadgeDef {
   key: string
   label: string
+  /** one word on the card; the full label rides along as the tooltip */
+  short: string
   icon: string
   color: string
   statOf: (name: string) => number
@@ -238,6 +242,7 @@ const BADGE_DEFS: BadgeDef[] = [
   {
     key: 'mvp',
     label: 'TEAM MVP',
+    short: 'MVP',
     icon: 'game-icons:imperial-crown',
     color: '#e8c040',
     statOf: (n) => battleStore.championCareer[n]?.mvps ?? 0,
@@ -245,6 +250,7 @@ const BADGE_DEFS: BadgeDef[] = [
   {
     key: 'kills',
     label: 'TOP KILLS',
+    short: 'KILLS',
     icon: 'game-icons:bloody-sword',
     color: '#cc6050',
     statOf: (n) => mergedKills(n),
@@ -252,6 +258,7 @@ const BADGE_DEFS: BadgeDef[] = [
   {
     key: 'damage',
     label: 'TOP DAMAGE',
+    short: 'DAMAGE',
     icon: 'game-icons:fire-punch',
     color: '#f06820',
     statOf: (n) => battleStore.championCareer[n]?.damage ?? 0,
@@ -259,6 +266,7 @@ const BADGE_DEFS: BadgeDef[] = [
   {
     key: 'gold',
     label: 'GOLD LEADER',
+    short: 'GOLD',
     icon: 'game-icons:gold-stack',
     color: '#e8c040',
     statOf: (n) => battleStore.championCareer[n]?.gold ?? 0,
@@ -266,6 +274,7 @@ const BADGE_DEFS: BadgeDef[] = [
   {
     key: 'cs',
     label: 'FARM LORD',
+    short: 'FARM',
     icon: 'game-icons:sickle',
     color: '#52b830',
     statOf: (n) => battleStore.championCareer[n]?.cs ?? 0,
@@ -273,6 +282,7 @@ const BADGE_DEFS: BadgeDef[] = [
   {
     key: 'healing',
     label: 'GUARDIAN',
+    short: 'HEAL',
     icon: 'game-icons:health-normal',
     color: '#6ee7b7',
     statOf: (n) => battleStore.championCareer[n]?.healing ?? 0,
@@ -280,6 +290,7 @@ const BADGE_DEFS: BadgeDef[] = [
   {
     key: 'tank',
     label: 'FRONTLINE',
+    short: 'TANK',
     icon: 'game-icons:arrows-shield',
     color: '#5b8dd9',
     statOf: (n) => battleStore.championCareer[n]?.damageTaken ?? 0,
@@ -287,6 +298,7 @@ const BADGE_DEFS: BadgeDef[] = [
   {
     key: 'wards',
     label: 'SENTINEL',
+    short: 'VISION',
     icon: 'game-icons:surrounded-eye',
     color: '#93c5fd',
     statOf: (n) => battleStore.championCareer[n]?.wardsPlaced ?? 0,
@@ -311,8 +323,10 @@ const badgesByChampion = computed<Record<string, BadgeDef[]>>(() => {
   return result
 })
 
+/** BADGE_DEFS order doubles as priority — with a word next to every icon only
+ *  the first few fit the card, so the rest is cut here rather than wrapped. */
 function badgesFor(name: string): BadgeDef[] {
-  return badgesByChampion.value[name] ?? []
+  return (badgesByChampion.value[name] ?? []).slice(0, ROSTER_CARD_MAX_BADGES)
 }
 
 const mvpHolder = computed<string | null>(() => {
@@ -495,33 +509,47 @@ const mvpHolder = computed<string | null>(() => {
     0 0 16px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent);
 }
 
-/* ── Standout badges ── */
+/* ── Standout badges: stacked down the right edge, each naming its award.
+   Frameless like the role label — the drop shadow carries them over the art. ── */
 .card-badges {
   position: absolute;
-  top: 7px;
-  right: 7px;
+  top: clamp(5px, 0.8vh, 10px);
+  right: clamp(8px, 0.7vw, 13px);
   z-index: 2;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 3px;
-  max-width: 58%;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: clamp(3px, 0.5vh, 7px);
+  max-width: 62%;
+  pointer-events: none;
 }
 
 .card-badge {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 2px;
-  background: rgba(6, 5, 3, 0.78);
-  border: 1px solid #3a2c14;
-  border-radius: 4px;
+  gap: 5px;
+  min-width: 0;
+}
+
+.card-badge-text {
+  font-size: clamp(9px, 1.2vh, 13px);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 10px rgba(0, 0, 0, 0.9);
 }
 
 .card-badge-icon {
-  width: clamp(13px, 1.7vh, 17px);
-  height: clamp(13px, 1.7vh, 17px);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+  width: clamp(17px, 2.3vh, 26px);
+  height: clamp(17px, 2.3vh, 26px);
+  flex-shrink: 0;
+  filter:
+    drop-shadow(0 1px 3px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 8px currentColor);
 }
 
 /* ── Foot: champion name + headline career stats ── */
