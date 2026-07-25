@@ -286,11 +286,6 @@ function fillTeamWithRandomChampions() {
   itemStore.adminFillRandomEquipment()
 }
 
-// Force a single rank promotion — fires the rank-up herald for testing.
-function rankUp() {
-  battleStore.adminPromoteRank()
-}
-
 // Reset Cooldowns lebt jetzt direkt über dem Command Panel
 // (CommandPanelComponent.vue) — temporärer Admin-Knopf für schnelles Testen.
 </script>
@@ -417,12 +412,8 @@ function rankUp() {
       >
         <Icon icon="game-icons:dice-six-faces-random" class="admin-btn-icon" /> Random Team Fill
       </button>
-      <button
-        class="admin-spawn-btn admin-spawn-btn--rankup flex items-center gap-1.5 px-3 py-1.5"
-        @click="rankUp"
-      >
-        <Icon icon="game-icons:upgrade" class="admin-btn-icon" /> Rank Up
-      </button>
+      <!-- Rank Up lives on the battle landing page now (BattleLandingScreen.vue),
+           right next to the rank band it manipulates. -->
     </div>
     </div>
   </div>
@@ -784,15 +775,5 @@ function rankUp() {
 .admin-spawn-btn--travel:disabled {
   opacity: 0.35;
   cursor: not-allowed;
-}
-.admin-spawn-btn--rankup {
-  color: #e8c040;
-  border-color: #5c4410;
-  background: linear-gradient(to bottom, #1e1808, #120e04);
-}
-.admin-spawn-btn--rankup:hover {
-  background: linear-gradient(to bottom, #2a2010, #1a1408);
-  border-color: #c89040;
-  color: #f4d868;
 }
 </style>

@@ -96,6 +96,7 @@ export function usePersistence() {
       battle: {
         mmr: battleStore.mmr,
         currentRank: { ...battleStore.currentRank },
+        tierReachedAt: { ...battleStore.tierReachedAt },
         ownedChampions: [...battleStore.ownedChampions],
         teamSlotAssignments: [...battleStore.teamSlotAssignments],
         headerSlots: [...battleStore.headerSlots],
@@ -300,6 +301,11 @@ export function usePersistence() {
         const b = saved.battle
         battleStore.mmr = b.mmr ?? battleStore.mmr
         if (b.currentRank) battleStore.currentRank = { ...b.currentRank }
+        if (b.tierReachedAt) battleStore.tierReachedAt = { ...b.tierReachedAt }
+        // Saves from before tier dates existed carry no history: stamp the tier
+        // the player is standing on now so the ladder has at least one date.
+        // Lower tiers stay blank rather than getting invented dates.
+        battleStore.markTierReached(battleStore.currentRank.tier)
         if (Array.isArray(b.ownedChampions)) battleStore.ownedChampions = b.ownedChampions
         if (Array.isArray(b.teamSlotAssignments))
           battleStore.teamSlotAssignments = b.teamSlotAssignments
@@ -706,6 +712,7 @@ export function usePersistence() {
     // 5. Reset battleStore (timers already stopped)
     battleStore.mmr = 1000
     battleStore.currentRank = { tier: 'Iron', division: 'IV', lp: 0 }
+    battleStore.tierReachedAt = {}
     battleStore.ownedChampions = ['Bard']
     battleStore.teamSlotAssignments = [null, null, null, null]
     battleStore.headerSlots = [null, null, null, null, null]

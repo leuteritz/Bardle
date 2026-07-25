@@ -4,6 +4,14 @@
     <CosmicStageBackground />
     <div class="stage-vignette" />
 
+    <!-- Temporary admin tool, moved here from the admin tab so it sits next to
+         the rank band it manipulates. Absolutely positioned: it must never
+         take part in the layout. -->
+    <button class="admin-rankup" title="Admin: force one rank promotion" @click="adminRankUp">
+      <Icon icon="game-icons:upgrade" width="24" height="24" class="admin-rankup-icon" />
+      RANK UP
+    </button>
+
     <!-- ── Secondary: ladder record ribbon ── -->
     <LadderRecordRibbon class="landing-layer" />
 

@@ -236,6 +236,10 @@ export const useBattleStore = defineStore('battle', {
       division: 'IV',
       lp: 0,
     },
+    /** Tier name → epoch ms of the first time it was reached. Never overwritten,
+     *  so a demotion + re-promotion keeps the original date. Tiers the player
+     *  has not seen yet are simply absent. */
+    tierReachedAt: {} as Record<string, number>,
 
     battleHistory: [] as BattleResult[],
     rankOrder: [...RANK_DIVISIONS] as string[],
@@ -1561,6 +1565,12 @@ export const useBattleStore = defineStore('battle', {
       this.dismissResult()
     },
 
+    /** Stamp the first time a tier is reached — later visits keep the original
+     *  date, so the ladder can show "climbed here on …" per tier. */
+    markTierReached(tier: string) {
+      if (!this.tierReachedAt[tier]) this.tierReachedAt[tier] = Date.now()
+    },
+
     promoteRank() {
       const currentTier = this.currentRank.tier
       const currentTierIndex = this.tierOrder.indexOf(currentTier)
@@ -1569,6 +1579,7 @@ export const useBattleStore = defineStore('battle', {
         if (this.currentRank.lp >= LP_MASTER_PROMOTION_THRESHOLD) {
           this.currentRank.tier = 'Grandmaster'
           this.currentRank.division = 'I'
+          this.markTierReached('Grandmaster')
         }
         return
       }
@@ -1576,6 +1587,7 @@ export const useBattleStore = defineStore('battle', {
         if (this.currentRank.lp >= LP_GRANDMASTER_PROMOTION_THRESHOLD) {
           this.currentRank.tier = 'Challenger'
           this.currentRank.division = 'I'
+          this.markTierReached('Challenger')
         }
         return
       }
@@ -1588,6 +1600,7 @@ export const useBattleStore = defineStore('battle', {
       } else {
         const nextTier = this.tierOrder[currentTierIndex + 1]
         this.currentRank.tier = nextTier
+        this.markTierReached(nextTier)
         if (nextTier === 'Master') this.currentRank.division = 'I'
         else this.currentRank.division = 'IV'
         this.currentRank.lp = 0
@@ -1812,6 +1825,8 @@ export const useBattleStore = defineStore('battle', {
       if (this.isAutoBattleInitialized) return
       this.isAutoBattleInitialized = true
       this.battleEverStarted = true
+      // First battle of a fresh save: the starting tier has no date yet.
+      this.markTierReached(this.currentRank.tier)
       this.autoBattleEnabled = false
       await this.startAutoBattle()
     },

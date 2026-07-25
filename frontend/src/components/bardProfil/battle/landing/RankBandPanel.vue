@@ -98,8 +98,14 @@
             :style="i === currentTierIndex ? { filter: pipGlow } : undefined"
           />
         </span>
-        <span class="tier-label" :style="i === currentTierIndex ? { color: rankColor } : undefined">
-          {{ tier.toUpperCase() }}
+        <span class="step-caption">
+          <span
+            class="tier-label"
+            :style="i === currentTierIndex ? { color: rankColor } : undefined"
+          >
+            {{ tier.toUpperCase() }}
+          </span>
+          <span class="tier-date">{{ reachedOn(tier) }}</span>
         </span>
       </div>
     </div>
@@ -127,7 +133,18 @@ defineProps<{
 }>()
 
 const battleStore = useBattleStore()
-const { currentRank } = storeToRefs(battleStore)
+const { currentRank, tierReachedAt } = storeToRefs(battleStore)
+
+/** Date the player first climbed onto a tier — blank while it is still locked. */
+function reachedOn(tier: string): string {
+  const ts = tierReachedAt.value[tier]
+  if (!ts) return '—'
+  return new Date(ts).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: '2-digit',
+  })
+}
 
 const rankImage = computed(
   () => RANK_EMBLEM_IMAGES[currentRank.value.tier] ?? RANK_EMBLEM_IMAGES.Iron,
@@ -433,6 +450,16 @@ const promotionGoal = computed(() => {
   opacity: 1;
 }
 
+/* Name + date form one caption block, so the rail gap stays between crest and
+   caption instead of splitting the two lines apart. */
+.step-caption {
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
 .tier-label {
   max-width: 100%;
   font-size: clamp(8px, 1.1vh, 13px);
@@ -449,6 +476,24 @@ const promotionGoal = computed(() => {
 }
 .ladder-step--current .tier-label {
   letter-spacing: 2.2px;
+}
+
+/* Date the tier was first reached — quiet, a caption under its name */
+.tier-date {
+  max-width: 100%;
+  margin-top: 1px;
+  font-size: clamp(7px, 0.9vh, 11px);
+  letter-spacing: 0.8px;
+  color: #4e422a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ladder-step--cleared .tier-date {
+  color: #6f5c36;
+}
+.ladder-step--current .tier-date {
+  color: #a08448;
 }
 
 .lp-tower {
