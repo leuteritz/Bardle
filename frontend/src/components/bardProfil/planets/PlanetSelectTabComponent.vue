@@ -590,6 +590,10 @@ function chooseBuilding(buildingId: string) {
           }"
           :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
           @click="selectSlot(slot.id)"
+          @mouseenter="uiStore.setHoveredPlanetSlotId(slot.id)"
+          @mouseleave="uiStore.setHoveredPlanetSlotId(null)"
+          @focus="uiStore.setHoveredPlanetSlotId(slot.id)"
+          @blur="uiStore.setHoveredPlanetSlotId(null)"
         >
           <!-- Jungle buff aura + modern RPG buff medallion — pinned top-LEFT so it
                never collides with the notify badge (top-right). Overlay only → no

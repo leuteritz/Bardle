@@ -121,13 +121,16 @@ function slotBehindSun(slot: PlanetSlot): boolean {
   return eclipsedSlotIds.value.has(slot.id)
 }
 
-// Spiegel der Planet-Tab-Auswahl: solange der Tab offen ist, trägt genau die
-// Kachel des dort gewählten Orbits eine Ziel-Markierung — der Spieler sieht auf
-// einen Blick, welchen Planeten er im Modal gerade bearbeitet. Ist der Tab zu,
-// gibt es keine Auswahl zu spiegeln (die letzte bleibt aber im Store erhalten,
-// damit ein erneutes Öffnen wieder beim selben Orbit landet).
-const selectedSlotId = computed(() =>
-  uiStore.bardActiveTab === 'planets' ? uiStore.planetActiveSlotId : null,
+// Spiegel des Planet-Tabs: solange der Tab offen ist, trägt genau eine Kachel
+// die Ziel-Markierung — der Orbit unter dem Zeiger in der linken Leiste, sonst
+// der im Modal bearbeitete. Zeigen schlägt Auswahl, weil es die jüngere Absicht
+// ist; endet der Hover, fällt die Markierung auf die Auswahl zurück. Ist der Tab
+// zu, gibt es nichts zu spiegeln (die Auswahl bleibt im Store erhalten, damit
+// ein erneutes Öffnen wieder beim selben Orbit landet).
+const markedSlotId = computed(() =>
+  uiStore.bardActiveTab === 'planets'
+    ? (uiStore.hoveredPlanetSlotId ?? uiStore.planetActiveSlotId)
+    : null,
 )
 
 function handleSlotClick(slot: (typeof slots.value)[number]) {
@@ -158,7 +161,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             'cmd-planet-tile--buy': !slot.purchased,
             'cmd-planet-tile--eclipsed': slotBehindSun(slot) && !isPlanetDown(slot),
             'cmd-planet-tile--down': isPlanetDown(slot),
-            'cmd-planet-tile--selected': selectedSlotId === slot.id,
+            'cmd-planet-tile--selected': markedSlotId === slot.id,
           }"
           :style="slot.purchased && slot.role ? { '--role-color': roleColor(slot.role) } : {}"
           @click="handleSlotClick(slot)"
@@ -262,7 +265,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
                60px-Kachel lesbar) + Innenschein in der Rollenfarbe. Der Keil an
                der linken Kante zeigt zum Modal und liest sich als Verbindung
                zwischen beiden Ansichten — dasselbe Gem wie in der Sidebar. -->
-          <template v-if="selectedSlotId === slot.id">
+          <template v-if="markedSlotId === slot.id">
             <div class="cmd-select-glow" />
             <div class="cmd-select-reticle">
               <span class="cmd-sel-corner cmd-sel-corner--tl" />
