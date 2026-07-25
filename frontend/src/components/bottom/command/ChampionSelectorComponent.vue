@@ -146,7 +146,7 @@ function onSlotLeave() {
           <div
             class="champ-ability"
             :class="{
-              'champ-ability--cd': roleAbilities[i].onCooldown,
+              'champ-ability--cd': !!roleAbilities[i].timer,
               'champ-ability--cast': roleAbilities[i].isFlashing,
             }"
             :style="{ '--cd-progress': roleAbilities[i].progress }"
@@ -154,13 +154,10 @@ function onSlotLeave() {
             <span class="champ-ability-orb">
               <img :src="roleAbilities[i].image" alt="" draggable="false" />
             </span>
-            <span class="champ-ability-state">
-              <template v-if="roleAbilities[i].isFlashing">CAST</template>
-              <template v-else-if="roleAbilities[i].onCooldown">{{
-                roleAbilities[i].timer
-              }}</template>
-              <template v-else>READY</template>
-            </span>
+            <!-- Restzeit, solange eine läuft — sonst "READY". timer ist leer,
+                 sobald der Cooldown abgelaufen ist, also trägt genau ein
+                 Ausdruck beide Zustände. -->
+            <span class="champ-ability-state">{{ roleAbilities[i].timer || 'READY' }}</span>
           </div>
 
           <!-- Eclipse: Champion fliegt gerade hinter der Sonne — Fähigkeiten
@@ -292,6 +289,17 @@ function onSlotLeave() {
     0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
+/* Leerer Slot: der Kartengrund ist in der Rollenfarbe angewärmt statt fast
+   schwarz — die Karte liest sich als wartender Platz, nicht als totes Feld,
+   und das Rollenbild darüber steht auf einem tragenden Grund. */
+.champ-card:not(.champ-card--filled) .champ-card-body {
+  background: linear-gradient(
+    170deg,
+    color-mix(in srgb, var(--role-color, #c89040) 16%, #221b12) 0%,
+    color-mix(in srgb, var(--role-color, #c89040) 7%, #14110b) 100%
+  );
+}
+
 .champ-card-portrait {
   width: 100%;
   height: 100%;
@@ -317,19 +325,21 @@ function onSlotLeave() {
    auf ihr. Deutlich präsenter als zuvor (0.18), aber weich genug, dass das
    Rollen-Banner darunter lesbar bleibt. */
 .champ-card-portrait--placeholder {
-  opacity: 0.5;
-  filter: grayscale(20%);
+  opacity: 0.72;
+  filter: grayscale(0%);
   object-fit: contain;
+  /* exakt auf Kartenmitte — Mask und Bild teilen denselben Mittelpunkt,
+     sonst wandert das Motiv optisch aus der Mitte */
   object-position: center;
-  -webkit-mask: radial-gradient(ellipse at 50% 46%, #000 34%, transparent 76%);
-  mask: radial-gradient(ellipse at 50% 46%, #000 34%, transparent 76%);
+  -webkit-mask: radial-gradient(ellipse at 50% 50%, #000 44%, transparent 82%);
+  mask: radial-gradient(ellipse at 50% 50%, #000 44%, transparent 82%);
   transition:
     opacity 0.2s ease,
     filter 0.2s ease;
 }
 .champ-card:hover .champ-card-portrait--placeholder {
-  opacity: 0.78;
-  filter: grayscale(0%);
+  opacity: 1;
+  filter: brightness(1.12);
   transform: none;
 }
 
@@ -393,8 +403,17 @@ function onSlotLeave() {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 35% 28%, rgba(30, 23, 12, 0.96), rgba(8, 6, 3, 0.96));
+  /* Der Grund nimmt die Rollenfarbe auf, statt fast schwarz zu sein — das
+     Emblem sitzt damit in einer beleuchteten Fassung und hebt sich auch vom
+     dunklen Porträt ab. Der helle Innenrand gibt der Fassung Tiefe. */
+  background: radial-gradient(
+    circle at 38% 30%,
+    color-mix(in srgb, var(--role-color, #c89040) 48%, #46381f) 0%,
+    color-mix(in srgb, var(--role-color, #c89040) 22%, #241d12) 100%
+  );
   box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--role-color, #c89040) 60%, transparent),
+    inset 0 0 12px rgba(0, 0, 0, 0.5),
     0 2px 8px rgba(0, 0, 0, 0.65),
     0 0 14px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
   transition: box-shadow 0.25s ease;
@@ -428,23 +447,37 @@ function onSlotLeave() {
   transition: filter 0.25s ease;
 }
 
+/* Zustandschip unter dem Emblem. Der Text steht direkt auf dem Champion-
+   Porträt — ohne eigenen Grund wäre er auf hellen Skins kaum lesbar. Der
+   flache Chip in Rollenfarbe löst das und fasst READY / CAST / Countdown zu
+   einer festen Marke zusammen, die beim Runterzählen nicht springt. */
 .champ-ability-state {
   position: absolute;
-  top: calc(100% + 7px);
+  top: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
-  font-size: 16px;
+  /* der Chip darf nie über die Kartenkante hinauslaufen */
+  max-width: calc(100% - 6px);
+  overflow: hidden;
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: rgba(8, 6, 3, 0.82);
+  border: 1px solid color-mix(in srgb, var(--role-color, #c89040) 55%, transparent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  /* "READY" ist das längste Wort im Chip — kleiner und enger gesetzt als der
+     Countdown, damit es auf der 74px schmalen Karte vollständig steht */
+  font-size: 13px;
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 0.14em;
-  text-indent: 0.14em; /* gleicht das letter-spacing des letzten Zeichens aus */
+  letter-spacing: 0.07em;
+  text-indent: 0.07em; /* gleicht das letter-spacing des letzten Zeichens aus */
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--role-color, #c89040) 35%, #f4ead2);
-  text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.95),
-    0 0 10px color-mix(in srgb, var(--role-color, #c89040) 55%, transparent);
-  transition: color 0.25s ease;
+  color: color-mix(in srgb, var(--role-color, #c89040) 30%, #f4ead2);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease;
 }
 
 /* Bereit: geschlossener Ring, das Emblem atmet in der Rollenfarbe */
@@ -456,28 +489,43 @@ function onSlotLeave() {
   0%,
   100% {
     box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--role-color, #c89040) 45%, transparent),
+      inset 0 0 12px rgba(0, 0, 0, 0.5),
       0 2px 8px rgba(0, 0, 0, 0.65),
       0 0 12px color-mix(in srgb, var(--role-color, #c89040) 40%, transparent);
   }
   50% {
     box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--role-color, #c89040) 60%, transparent),
+      inset 0 0 12px rgba(0, 0, 0, 0.4),
       0 2px 8px rgba(0, 0, 0, 0.65),
       0 0 24px color-mix(in srgb, var(--role-color, #c89040) 85%, transparent);
   }
 }
 
-/* Cooldown: Emblem kühlt aus, der Countdown übernimmt die Führung */
+/* Cooldown: die Fassung kühlt aus, der Countdown übernimmt die Führung — das
+   Emblem bleibt dabei klar erkennbar, nur der Glanz nimmt ab */
 .champ-ability--cd .champ-ability-orb {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+  background: radial-gradient(
+    circle at 38% 30%,
+    color-mix(in srgb, var(--role-color, #c89040) 22%, #38301f) 0%,
+    color-mix(in srgb, var(--role-color, #c89040) 9%, #1c1810) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(210, 182, 132, 0.24),
+    inset 0 0 12px rgba(0, 0, 0, 0.55),
+    0 2px 8px rgba(0, 0, 0, 0.65);
 }
 .champ-ability--cd .champ-ability-orb img {
-  filter: grayscale(75%) brightness(0.6);
+  filter: grayscale(45%) brightness(0.82);
 }
+/* Der Countdown ist kurz (max "30s") und darf deshalb deutlich größer stehen */
 .champ-ability--cd .champ-ability-state {
   letter-spacing: 0.04em;
   text-indent: 0.04em;
-  font-size: 18px;
+  font-size: 17px;
   color: #e8dcc0;
+  border-color: rgba(122, 78, 32, 0.55);
 }
 
 /* Gerade ausgelöst: kurzer Impuls, dann fällt der Ring auf null zurück */
@@ -498,6 +546,8 @@ function onSlotLeave() {
   100% {
     transform: scale(1);
     box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--role-color, #c89040) 45%, transparent),
+      inset 0 0 12px rgba(0, 0, 0, 0.5),
       0 2px 8px rgba(0, 0, 0, 0.65),
       0 0 14px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
   }
