@@ -657,19 +657,21 @@ const promotionGoal = computed(() => {
 /* Date the tier was first reached — quiet, a caption under its name */
 .tier-date {
   max-width: 100%;
-  margin-top: 1px;
-  font-size: clamp(7px, 0.9vh, 11px);
-  letter-spacing: 0.8px;
-  color: #4e422a;
+  margin-top: 2px;
+  font-size: clamp(9px, 1.15vh, 13px);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #6a5a38;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .ladder-step--cleared .tier-date {
-  color: #6f5c36;
+  color: #b09660;
 }
 .ladder-step--current .tier-date {
-  color: #a08448;
+  color: #e8c040;
 }
 
 .lp-tower {
