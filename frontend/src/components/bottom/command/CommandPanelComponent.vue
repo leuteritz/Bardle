@@ -507,14 +507,22 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 }
 
 /* Nur der Inhalt liegt im Halbschatten — er benennt den fehlenden Kauf, der
-   Rahmen gehört bereits zum System */
-.cmd-planet-tile--locked .cmd-tile-icon--locked,
+   Rahmen gehört bereits zum System. Das Schloss wird dabei ausschließlich über
+   opacity gedämpft: ein grayscale auf dem Wrapper würde seinen goldenen Schein
+   gleich mit ausbleichen. Die Kostenzeile darf entsättigt werden — sie ist der
+   Preis, den man gerade nicht zahlen kann. */
+.cmd-planet-tile--locked .cmd-tile-icon--locked {
+  opacity: 0.75;
+  transition: opacity 0.2s ease;
+}
+.cmd-planet-tile--locked:hover .cmd-tile-icon--locked {
+  opacity: 0.95;
+}
 .cmd-planet-tile--locked .cmd-tile-cost-row {
   opacity: 0.6;
   filter: grayscale(45%);
   transition: opacity 0.2s ease;
 }
-.cmd-planet-tile--locked:hover .cmd-tile-icon--locked,
 .cmd-planet-tile--locked:hover .cmd-tile-cost-row {
   opacity: 0.8;
 }
@@ -624,13 +632,22 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 .cmd-planet-tile:hover .cmd-tile-icon--locked {
   transform: translate(-50%, -50%) scale(1.08);
 }
+/* Leuchtet wie das Rollenbild der leeren Champion-Karte: ein harter Schlagschatten
+   setzt das Motiv auf den Grund, ein weicher Farbschein darüber hebt es an. Statt
+   der Rollenfarbe trägt es das Gold des Rahmensystems — ein ungekaufter Slot hat
+   noch keine Rolle. Auf der kaufbaren Kachel zieht der sepia/hue-rotate-Filter des
+   Wrappers den Schein mit ins Grün, der Glow bleibt also zustandstreu. */
 .cmd-tile-icon--locked .lock-icon {
   width: 100%;
   height: 100%;
   object-fit: contain;
   object-position: center;
   opacity: 0.9;
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.85));
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 8px rgba(200, 144, 64, 0.45));
+  transition: filter 0.2s ease;
+}
+.cmd-planet-tile:hover .cmd-tile-icon--locked .lock-icon {
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 14px rgba(232, 192, 64, 0.8));
 }
 
 /* ── Fußbanner: alles Beschriftende am unteren Kachelrand ───────────────────
@@ -728,7 +745,9 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 /* Bei gesperrten Kacheln liegt der Halbschatten auf Schloss und Kostenzeile —
    als Auswahl treten beide wieder voll hervor (der Rahmen ist ohnehin schon
    farbig und wird von der Markierung nur übernommen). */
-.cmd-planet-tile--selected.cmd-planet-tile--locked .cmd-tile-icon--locked,
+.cmd-planet-tile--selected.cmd-planet-tile--locked .cmd-tile-icon--locked {
+  opacity: 1;
+}
 .cmd-planet-tile--selected.cmd-planet-tile--locked .cmd-tile-cost-row {
   opacity: 0.95;
   filter: none;
