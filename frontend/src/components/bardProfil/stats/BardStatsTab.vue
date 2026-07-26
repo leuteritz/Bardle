@@ -612,9 +612,12 @@ function stopResize() {
       <!-- ─ Journey stats ─ -->
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
-          <span class="sf-p-title">Journey</span>
+          <span class="sf-p-title">
+            <span class="sf-p-mark" aria-hidden="true" />
+            <span class="sf-p-label">Journey</span>
+          </span>
           <label class="sf-search-wrap">
-            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="13" height="13" />
+            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="15" height="15" />
             <input
               v-model="journeySearch"
               class="sf-search"
@@ -725,9 +728,12 @@ function stopResize() {
       <!-- ─ Augments & buffs ─ -->
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
-          <span class="sf-p-title">Augments</span>
+          <span class="sf-p-title">
+            <span class="sf-p-mark" aria-hidden="true" />
+            <span class="sf-p-label">Augments</span>
+          </span>
           <label class="sf-search-wrap">
-            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="13" height="13" />
+            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="15" height="15" />
             <input
               v-model="augmentSearch"
               class="sf-search"
@@ -790,9 +796,12 @@ function stopResize() {
       <!-- ─ Galaxy archive ─ -->
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
-          <span class="sf-p-title">Galaxy Archive</span>
+          <span class="sf-p-title">
+            <span class="sf-p-mark" aria-hidden="true" />
+            <span class="sf-p-label">Galaxy Archive</span>
+          </span>
           <label class="sf-search-wrap">
-            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="13" height="13" />
+            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="15" height="15" />
             <input
               v-model="archiveSearch"
               class="sf-search"
@@ -943,23 +952,45 @@ function stopResize() {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 6px 12px;
+  padding: 7px 12px;
   /* fixed height so all three section headers match exactly — only their
      column widths differ */
-  min-height: 40px;
+  min-height: 50px;
   border-bottom: 1px solid #2c1806;
 }
 
+/* Section titles carry the whole column, so they read as gold headlines, not
+   as dim wood labels. `min-width: 0` lets the label ellipsise when a column is
+   dragged narrow — without it the nowrap title would squeeze out the search. */
 .sf-p-title {
   display: flex;
-  align-items: baseline;
-  gap: 7px;
-  font-size: 14px;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+/* Vertical gold tick in front of the title — same palette as the modal's gold
+   rule, so the three columns are scannable at a glance */
+.sf-p-mark {
+  flex-shrink: 0;
+  width: 3px;
+  height: 20px;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, #e8c060, #c89040, #5c3310);
+}
+
+.sf-p-label {
+  min-width: 0;
+  font-size: 21px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  line-height: 1.1;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--rpg-wood);
+  color: var(--rpg-gold);
+  text-shadow: 0 0 14px rgba(232, 192, 64, 0.25);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sf-p-body {
@@ -970,26 +1001,27 @@ function stopResize() {
 }
 
 /* ─── Header context search — identical across all three panels ─── */
+/* Shrinks before the title does, but never below a usable field width */
 .sf-search-wrap {
   position: relative;
   display: flex;
   align-items: center;
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: 168px;
+  flex: 0 1 176px;
+  min-width: 104px;
+  max-width: 176px;
 }
 .sf-search-ico {
   position: absolute;
-  left: 8px;
+  left: 9px;
   color: #6a5a3a;
   pointer-events: none;
 }
 .sf-search {
   width: 100%;
-  padding: 5px 9px 5px 27px;
-  font-size: 11px;
+  padding: 6px 10px 6px 30px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   color: var(--rpg-text);
   background: #111008;
   border: 1px solid #3e200a;
@@ -1541,13 +1573,46 @@ function stopResize() {
   background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
-/* Full HD: the flattest viewport — keep the hero commanding but reclaim rows */
+/* Full HD / WUXGA: the flattest viewports — keep the hero commanding but
+   reclaim rows; the section titles stay well above the body type. */
 @media (max-height: 1100px) {
   .sf-pt-num {
     font-size: 30px;
   }
   .sf-pt-seg {
     padding: 0 9px;
+  }
+  .sf-p-head {
+    min-height: 44px;
+    padding: 6px 12px;
+  }
+  .sf-p-label {
+    font-size: 18px;
+  }
+  .sf-p-mark {
+    height: 17px;
+  }
+}
+
+/* 4K and taller: the default sizes would start to look lost on the huge canvas,
+   so the titles scale up. The ceiling is not the viewport but the archive
+   column, which stays 440px wide at every resolution — measured, the longest
+   title ("Galaxy Archive") needs 212px there at 23px and the search box the
+   rest, so anything larger would ellipsise the headline instead of growing it. */
+@media (min-height: 1600px) {
+  .sf-p-head {
+    min-height: 58px;
+  }
+  .sf-p-label {
+    font-size: 23px;
+    letter-spacing: 0.08em;
+  }
+  .sf-p-mark {
+    height: 22px;
+    width: 4px;
+  }
+  .sf-search {
+    font-size: 14px;
   }
 }
 
