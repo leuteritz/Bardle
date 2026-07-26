@@ -1,4 +1,11 @@
-import type { ChampionRole, RoleStat, RoleAbilityDetail, SigilStageDef } from '../types'
+import type {
+  BattlePhaseConfig,
+  BattlePhaseKey,
+  ChampionRole,
+  RoleStat,
+  RoleAbilityDetail,
+  SigilStageDef,
+} from '../types'
 
 // ELO rating system
 export const ELO_K_FACTOR = 32
@@ -23,17 +30,8 @@ export const BATTLE_REAL_DURATION_SECONDS = 60
 /** Total simulated game-seconds per battle (60 game-seconds per real second) */
 export const BATTLE_TOTAL_GAME_SECONDS = BATTLE_REAL_DURATION_SECONDS * 60
 
-// Game State display phases (bottom stats bar)
-export const GAME_STATE = {
-  SEARCHING: {
-    key: 'searching',
-    icon: 'game-icons:telescope',
-    label: 'Planet Search',
-    color: '#9a6830',
-  },
-  BATTLE: { key: 'battle', icon: 'game-icons:broadsword', label: 'Battle', color: '#e8c040' },
-  HONOR: { key: 'honor', icon: 'game-icons:trophy', label: 'Honor', color: '#74d448' },
-} as const
+// The phase registry (BATTLE_PHASES) lives further down, next to the phase
+// durations it is built from.
 
 export const MMR_TO_POWER_MULTIPLIER = 1.5
 
@@ -2055,6 +2053,75 @@ export const BATTLE_OPPONENT_POWER_MIN_FRACTION = 0.1
 /** Player power multiplier applied when the Big Bang augment is consumed */
 export const BATTLE_BIG_BANG_POWER_MULTIPLIER = 5
 
+// ── Champion loading screen (between planet search and the first game-second) ──
+/** How long the champion loading screen is shown (ms) */
+export const BATTLE_LOADING_PHASE_DURATION_MS = 5000
+/**
+ * Per-card fill speed of the loading bars, indexed by roster slot. Every card
+ * finishes before the phase ends (lowest factor × duration ≥ duration), they
+ * just get there at different moments — a lobby loads unevenly.
+ */
+export const LOADING_CARD_SPEED_FACTORS = {
+  blue: [1.45, 1.12, 1.62, 1.28, 1.05],
+  red: [1.2, 1.5, 1.08, 1.36, 1.55],
+} as const
+/** Poll interval of the loading-phase await loop in the battle tab (ms) */
+export const LOADING_PHASE_POLL_MS = 120
+/** Tick interval of the phase clock the loading screen reads (ms) */
+export const LOADING_PHASE_TICK_MS = 100
+/** A tile counts as summoned from this percentage on (frame lights up) */
+export const LOADING_READY_PERCENT = 100
+/** Star levels up to these bounds read as low / medium enemy threat */
+export const LOADING_THREAT_STAR_BOUNDS = { low: 4, medium: 8 } as const
+export const LOADING_THREAT_LABELS = { low: 'LOW', medium: 'MED', high: 'HIGH' } as const
+/** Rank tier every scouted enemy champion falls back to when unranked */
+export const LOADING_ENEMY_FALLBACK_TIER = 'Silver'
+
+/**
+ * ── Battle phase registry ──
+ * Single source of truth for the auto-battle cycle. The store derives the
+ * running phase from its timestamps (battleStore.currentBattlePhase), every
+ * readout renders label/color/duration from here. A new phase = one entry, one
+ * timestamp in the store and one screen — nothing else duplicates the ladder.
+ */
+export const BATTLE_PHASES: Record<BattlePhaseKey, BattlePhaseConfig> = {
+  landing: {
+    key: 'landing',
+    label: 'Idle',
+    icon: null,
+    color: '#c89040',
+    durationMs: null,
+  },
+  searching: {
+    key: 'searching',
+    label: 'Planet Search',
+    icon: 'game-icons:telescope',
+    color: '#9a6830',
+    durationMs: PLANET_SEARCH_ANIM_DURATION_MS,
+  },
+  loading: {
+    key: 'loading',
+    label: 'Loading',
+    icon: 'game-icons:spawn-node',
+    color: '#5b8dd9',
+    durationMs: BATTLE_LOADING_PHASE_DURATION_MS,
+  },
+  battle: {
+    key: 'battle',
+    label: 'Battle',
+    icon: 'game-icons:broadsword',
+    color: '#e8c040',
+    durationMs: BATTLE_REAL_DURATION_SECONDS * 1000,
+  },
+  honor: {
+    key: 'honor',
+    label: 'Honor',
+    icon: 'game-icons:trophy',
+    color: '#74d448',
+    durationMs: BATTLE_RESULT_PAUSE_MS,
+  },
+}
+
 // Inventory
 /** Default base probability for a material drop from a rescue planet */
 export const MATERIAL_DROP_BASE_CHANCE = 0.3
@@ -2850,6 +2917,9 @@ export const USED_GAME_ICONS = new Set<string>([
   // Battle Result Modal
   'game-icons:trophy-cup',
   'game-icons:skull',
+  // Battle phases (BATTLE_PHASES) + champion loading screen
+  'game-icons:spawn-node', // Loading phase badge (bottom bar + loading screen header)
+  'game-icons:helmet', // Team crest on the loading screen (blue + red side)
   // Hardcoded Icons (templates)
   'game-icons:fire-ray',
   'game-icons:broadsword',

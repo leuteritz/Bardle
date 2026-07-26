@@ -30,6 +30,7 @@ import {
   BATTLE_COUNTDOWN_INTERVAL_MS,
   PLANET_SEARCH_ANIM_DURATION_MS,
   PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS,
+  BATTLE_LOADING_PHASE_DURATION_MS,
   BATTLE_DRAIN_REFERENCE_SECONDS,
   BATTLE_OPPONENT_POWER_MIN_FRACTION,
   BATTLE_BIG_BANG_POWER_MULTIPLIER,
@@ -95,6 +96,7 @@ import { DRAKE_TYPES, type DrakeTypeId } from '../config/drakes'
 import type {
   AllTimeBattleStats,
   BattleEvent,
+  BattlePhaseKey,
   BattleResult,
   BattleRole,
   BattleTimeline,
@@ -390,6 +392,8 @@ export const useBattleStore = defineStore('battle', {
     battlePhaseStartTimestamp: 0,
     resultPhaseStartTimestamp: 0,
     searchingPhaseStartTimestamp: 0,
+    /** Start of the champion loading screen; 0 while no loading phase runs. */
+    loadingPhaseStartTimestamp: 0,
     autoBattleTimerEndTimestamp: 0,
     simulationReadyToStart: false,
     resultCountdown: 0,
@@ -400,6 +404,41 @@ export const useBattleStore = defineStore('battle', {
   }),
 
   getters: {
+    /**
+     * ── The phase machine ──
+     * Which phase of the auto-battle cycle is running, derived purely from the
+     * phase timestamps + flags. Every readout reads this instead of rebuilding
+     * the ladder from raw state, so the battle tab, the bottom bar and the
+     * background driver can never disagree — reload and hidden tabs included.
+     * Checked top-down: the latest phase whose marker is set wins.
+     */
+    currentBattlePhase: (state): BattlePhaseKey => {
+      if (state.showAutoBattleResult || state.battlePhase === 'result') return 'honor'
+      if (state.battlePhaseStartTimestamp > 0) return 'battle'
+      if (state.loadingPhaseStartTimestamp > 0) return 'loading'
+      // searchingPhaseStartTimestamp survives into the running match, so this
+      // branch is only reachable while no later marker is set.
+      if (state.searchingPhaseStartTimestamp > 0) return 'searching'
+      return 'landing'
+    },
+    /** Wall-clock start of the running phase — 0 for the open-ended landing. */
+    currentPhaseStartTimestamp(state): number {
+      switch (this.currentBattlePhase) {
+        case 'honor':
+          return state.resultPhaseStartTimestamp
+        case 'battle':
+          return state.battlePhaseStartTimestamp
+        case 'loading':
+          return state.loadingPhaseStartTimestamp
+        case 'searching':
+          return state.searchingPhaseStartTimestamp
+        default:
+          return 0
+      }
+    },
+    /** Both rosters for the upcoming match are filled (see hasReadyTeams). */
+    hasReadyTeams: (state): boolean =>
+      state.team1.some((c) => c.name) && state.team2.some((c) => c.name),
     selectedChampions: (state) => state.teamSlotAssignments.filter((s): s is string => s !== null),
     assignedChampions: (state): string[] => {
       const out: string[] = []
@@ -1150,6 +1189,7 @@ export const useBattleStore = defineStore('battle', {
       // nicht hier – so verhindert man den "sofort-fertig"-Bug.
       this.battlePhaseStartTimestamp = 0
       this.searchingPhaseStartTimestamp = 0
+      this.loadingPhaseStartTimestamp = 0
     },
 
     formatTime(seconds: number) {
@@ -1244,9 +1284,28 @@ export const useBattleStore = defineStore('battle', {
       })
     },
 
+    /**
+     * Opens the champion loading screen — the phase between "planet found" and
+     * the first game-second. Timestamp-driven like every other phase: the timer
+     * below only serves the visible tab, syncFromTimestamps() starts the match
+     * on schedule even with the battle tab closed or the browser tab throttled.
+     */
+    beginLoadingPhase() {
+      if (this.loadingPhaseStartTimestamp > 0) return
+      if (this.battlePhaseStartTimestamp > 0 || this.battleSimIntervalId) return
+      // No rosters (e.g. reloaded mid-search) — nothing to load; the rescue in
+      // syncFromTimestamps rebuilds the match instead.
+      if (!this.hasReadyTeams) return
+      this.loadingPhaseStartTimestamp = Date.now()
+      const id = setTimeout(() => this.beginSimulation(), BATTLE_LOADING_PHASE_DURATION_MS)
+      this.timerIds.push(id)
+    },
+
     beginSimulation() {
       if (this.battleSimIntervalId) return
       if (this.team1.length > 0 && this.team2.length > 0) {
+        // Loading screen is over the moment game-time starts.
+        this.loadingPhaseStartTimestamp = 0
         // Timestamp hier setzen – erst jetzt beginnt die echte Spielzeit.
         this.battlePhaseStartTimestamp = Date.now()
         this.startBattleSimulation()
@@ -1847,10 +1906,10 @@ export const useBattleStore = defineStore('battle', {
         if (this.timeUntilNextBattle <= 0) {
           clearInterval(this.countdownTimer!)
           this.countdownTimer = null
-          // Suchphase abgelaufen → Simulation starten
+          // Suchphase abgelaufen → Loading-Screen öffnen, der die Simulation startet
           if (this.simulationReadyToStart && this.autoBattleEnabled) {
             this.simulationReadyToStart = false
-            this.beginSimulation()
+            this.beginLoadingPhase()
           }
         }
       }, BATTLE_COUNTDOWN_INTERVAL_MS)
@@ -2354,8 +2413,38 @@ export const useBattleStore = defineStore('battle', {
         }
         return
       }
+      // Loading screen: owns the pre-battle window, so it is settled before any
+      // search rescue below can look at it. The phase ends on its timestamp, not
+      // on its setTimeout — a throttled background tab keeps the same schedule.
+      if (
+        this.loadingPhaseStartTimestamp > 0 &&
+        this.battlePhaseStartTimestamp === 0 &&
+        !this.showAutoBattleResult
+      ) {
+        if (Date.now() - this.loadingPhaseStartTimestamp >= BATTLE_LOADING_PHASE_DURATION_MS) {
+          this.beginSimulation()
+        }
+        return
+      }
+
+      // A reload during the pre-battle phases drops both rosters (they are only
+      // persisted for a running match), which would leave beginSimulation() with
+      // nothing to start. Rebuild the match instead of hanging. initializeBattle()
+      // clears searchingPhaseStartTimestamp synchronously, so this fires once.
+      if (
+        this.autoBattleEnabled &&
+        this.isAutoBattleInitialized &&
+        this.searchingPhaseStartTimestamp > 0 &&
+        this.battlePhaseStartTimestamp === 0 &&
+        !this.showAutoBattleResult &&
+        !this.hasReadyTeams
+      ) {
+        void this.proceedToNextBattle()
+        return
+      }
+
       // Fast rescue: search phase has been running longer than animation+margin with no
-      // simulation started. Watcher unavailable (modal closed) or animation hung.
+      // loading phase started. Watcher unavailable (modal closed) or animation hung.
       // syncFromTimestamps() polls every 1s from main.ts → fires at ~7s from search start.
       if (
         this.autoBattleEnabled &&
@@ -2367,7 +2456,7 @@ export const useBattleStore = defineStore('battle', {
           PLANET_SEARCH_ANIM_DURATION_MS + PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS + 1500
       ) {
         this.simulationReadyToStart = false
-        this.beginSimulation()
+        this.beginLoadingPhase()
         return
       }
 
@@ -2382,15 +2471,16 @@ export const useBattleStore = defineStore('battle', {
           clearTimeout(this.autoBattleTimer)
           this.autoBattleTimer = null
         }
-        // Start simulation if simulationReadyToStart is still set
-        // (e.g. after tab switch during search phase)
+        // Enter the loading screen if simulationReadyToStart is still set
+        // (e.g. after tab switch during search phase). Never skip straight to
+        // the match — the loading phase is part of the cycle, not decoration.
         if (this.simulationReadyToStart) {
           this.simulationReadyToStart = false
-          this.beginSimulation()
+          this.beginLoadingPhase()
         } else if (!this.battleSimIntervalId && this.battlePhaseStartTimestamp === 0) {
           // Rescue: the watcher consumed simulationReadyToStart but the planet-search animation
           // hung (RAF throttled in background tab). Timer expired, no simulation running.
-          this.beginSimulation()
+          this.beginLoadingPhase()
         }
       }
 
@@ -2416,10 +2506,12 @@ export const useBattleStore = defineStore('battle', {
     resumeBattleAfterLoad() {
       this.simulationReadyToStart = false
       if (!this.isAutoBattleInitialized) return
-      // Rebuild the deterministic timeline for a battle that was running when
-      // the page was closed; the cursor fast-forwards via applyTimelineUpTo.
+      // Rebuild the deterministic timeline for a battle that was running — or
+      // already loading — when the page was closed; the cursor fast-forwards via
+      // applyTimelineUpTo. A loading match has no game-time yet, so it only
+      // needs the timeline back before its first second starts.
       if (
-        this.battlePhaseStartTimestamp > 0 &&
+        (this.battlePhaseStartTimestamp > 0 || this.loadingPhaseStartTimestamp > 0) &&
         this.battleSeed > 0 &&
         !this.timeline &&
         this.team1.length > 0 &&
@@ -2427,11 +2519,22 @@ export const useBattleStore = defineStore('battle', {
       ) {
         this.rebuildTimeline()
         this.timelineCursor = 0
-        const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
-        // minutengenau wie in startBattleSimulation (siehe Kommentar dort)
-        const gameTime = Math.min(BATTLE_TOTAL_GAME_SECONDS, Math.floor(realElapsedS) * 60)
-        this.applyTimelineUpTo(gameTime)
-        this.battleTime = gameTime
+        if (this.battlePhaseStartTimestamp > 0) {
+          const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
+          // minutengenau wie in startBattleSimulation (siehe Kommentar dort)
+          const gameTime = Math.min(BATTLE_TOTAL_GAME_SECONDS, Math.floor(realElapsedS) * 60)
+          this.applyTimelineUpTo(gameTime)
+          this.battleTime = gameTime
+        }
+      }
+      // Loading phase survived the reload: re-arm its timer for the rest of the
+      // window (syncFromTimestamps would otherwise only catch it on its 1s poll).
+      if (this.loadingPhaseStartTimestamp > 0 && this.battlePhaseStartTimestamp === 0) {
+        const remaining =
+          BATTLE_LOADING_PHASE_DURATION_MS - (Date.now() - this.loadingPhaseStartTimestamp)
+        if (remaining > 0) {
+          this.timerIds.push(setTimeout(() => this.beginSimulation(), remaining))
+        }
       }
       if (!_visibilityHandler) {
         _visibilityHandler = () => {
@@ -2443,10 +2546,13 @@ export const useBattleStore = defineStore('battle', {
         this.syncFromTimestamps()
         // If we were mid-search-phase (countdown was running before reload)
         // and the timer hasn't expired yet, restart the countdown so the
-        // battle can auto-begin without requiring user interaction.
+        // battle can auto-begin without requiring user interaction. A restored
+        // loading phase is excluded: it already has its own timer, and
+        // simulationReadyToStart would replay the whole search animation on top.
         if (
           this.autoBattleTimerEndTimestamp > Date.now() &&
           this.battlePhaseStartTimestamp === 0 &&
+          this.loadingPhaseStartTimestamp === 0 &&
           !this.showAutoBattleResult
         ) {
           this.simulationReadyToStart = true
@@ -2521,6 +2627,7 @@ export const useBattleStore = defineStore('battle', {
       this.battlePhaseStartTimestamp = 0
       this.resultPhaseStartTimestamp = 0
       this.searchingPhaseStartTimestamp = 0
+      this.loadingPhaseStartTimestamp = 0
       this.autoBattleTimerEndTimestamp = 0
       this.timeUntilNextBattle = 0
     },

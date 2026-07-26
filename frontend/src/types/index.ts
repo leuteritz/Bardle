@@ -294,6 +294,50 @@ export interface RecruitableChampion {
 
 export type BattleRole = 'top' | 'jungle' | 'mid' | 'adc' | 'support'
 
+/**
+ * The auto-battle runs as a fixed cycle of phases; every readout (battle tab,
+ * bottom scoreboard) and the background driver in battleStore agree on exactly
+ * one of these at a time. Order = the order they run in.
+ */
+export type BattlePhaseKey = 'landing' | 'searching' | 'loading' | 'battle' | 'honor'
+
+/** One headline number under a champion tile on the loading screen. */
+export interface LoadingScreenStat {
+  label: string
+  value: string
+  color?: string
+}
+
+/**
+ * A single champion tile of the pre-battle loading screen. Assembled in
+ * BattleLoadingScreen from the roster plus static champion data, so the card
+ * component itself stays purely presentational.
+ */
+export interface LoadingScreenCard {
+  name: string
+  role: BattleRole
+  /** Ladder tier whose frame the card wears (own rank / scouted enemy rank) */
+  frameTier: string
+  /** Champion tier as a star level (★1…★12) */
+  starLevel: number
+  origin: string
+  originColor: string
+  traits: Array<{ id: string; name: string; icon: string; color: string }>
+  stats: LoadingScreenStat[]
+}
+
+/** One entry of the BATTLE_PHASES registry — see config/constants.ts. */
+export interface BattlePhaseConfig {
+  key: BattlePhaseKey
+  /** Player-facing name, used verbatim in the bottom bar */
+  label: string
+  /** game-icons id shown next to the label; null = the phase renders no icon */
+  icon: string | null
+  color: string
+  /** Wall-clock length of the phase; null = open-ended (no timer) */
+  durationMs: number | null
+}
+
 export interface MultikillCounts {
   double: number
   triple: number

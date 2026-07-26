@@ -133,6 +133,8 @@ export function usePersistence() {
         battlePhaseStartTimestamp: battleStore.battlePhaseStartTimestamp,
         autoBattleTimerEndTimestamp: battleStore.autoBattleTimerEndTimestamp,
         searchingPhaseStartTimestamp: battleStore.searchingPhaseStartTimestamp,
+        loadingPhaseStartTimestamp: battleStore.loadingPhaseStartTimestamp,
+        currentOpponentLabel: battleStore.currentOpponentLabel,
         // referenced directly — the whole saveData is stringified synchronously
         // below, so a JSON deep-clone here would just serialize twice
         allTime: battleStore.allTime,
@@ -382,6 +384,8 @@ export function usePersistence() {
         battleStore.battlePhaseStartTimestamp = b.battlePhaseStartTimestamp ?? 0
         battleStore.autoBattleTimerEndTimestamp = b.autoBattleTimerEndTimestamp ?? 0
         battleStore.searchingPhaseStartTimestamp = b.searchingPhaseStartTimestamp ?? 0
+        battleStore.loadingPhaseStartTimestamp = b.loadingPhaseStartTimestamp ?? 0
+        battleStore.currentOpponentLabel = b.currentOpponentLabel ?? ''
         // All-time career stats: spread-merge so fields added later default to 0
         battleStore.allTime = {
           ...defaultAllTimeStats(),
@@ -427,14 +431,15 @@ export function usePersistence() {
               (t: unknown): t is DrakeTypeId => typeof t === 'string' && t in DRAKE_TYPES,
             )
           : []
-        // Mid-battle rosters (needed for deterministic timeline resume)
+        // Mid-battle rosters (needed for deterministic timeline resume) — the
+        // loading phase needs them too: it already shows both line-ups.
         if (
           b.battleTeams &&
           Array.isArray(b.battleTeams.t1) &&
           Array.isArray(b.battleTeams.t2) &&
           b.battleTeams.t1.length === 5 &&
           b.battleTeams.t2.length === 5 &&
-          b.battlePhaseStartTimestamp > 0
+          (b.battlePhaseStartTimestamp > 0 || b.loadingPhaseStartTimestamp > 0)
         ) {
           battleStore.restoreTeams(b.battleTeams.t1, b.battleTeams.t2)
         }

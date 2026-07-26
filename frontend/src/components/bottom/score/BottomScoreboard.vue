@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useBattleScoreboardStats } from '@/composables/useBattleScoreboardStats'
+import { useBattlePhase } from '@/composables/useBattlePhase'
 import { formatNumber } from '@/config/numberFormat'
 import {
-  GAME_STATE,
-  BATTLE_RESULT_COUNTDOWN_SECONDS,
+  BATTLE_PHASES,
   OBJECTIVE_FIGHT_STATUS,
   SCOREBOARD_STAT_COLORS,
   RANK_EMBLEM_IMAGES,
@@ -113,11 +113,8 @@ const sharedValChars = computed(() =>
 const {
   isAutoBattleInitialized,
   autoBattleEnabled,
-  battlePhase,
   battleTime,
   showAutoBattleResult,
-  battlePhaseStartTimestamp,
-  resultPhaseStartTimestamp,
   searchingPhaseStartTimestamp,
   lastLpChange,
   lastAutoBattleResult,
@@ -131,27 +128,10 @@ const {
   objectiveResult,
 } = storeToRefs(battleStore)
 
-const now = ref(Date.now())
-let _nowTicker: ReturnType<typeof setInterval> | null = null
-onMounted(() => {
-  _nowTicker = setInterval(() => {
-    now.value = Date.now()
-  }, 1000)
-})
-onUnmounted(() => {
-  if (_nowTicker) clearInterval(_nowTicker)
-})
-
-type PhaseKey = 'idle' | 'searching' | 'battle' | 'honor'
-
-const phaseKey = computed<PhaseKey>(() => {
-  if (!isAutoBattleInitialized.value) return 'idle'
-  if (showAutoBattleResult.value) return 'honor'
-  if (battlePhase.value === 'playing' && battlePhaseStartTimestamp.value > 0) return 'battle'
-  if (searchingPhaseStartTimestamp.value > 0 && battlePhaseStartTimestamp.value === 0)
-    return 'searching'
-  return 'idle'
-})
+/* Phase, its clock and its remaining seconds all come from the store's phase
+   machine (battleStore.currentBattlePhase) — the bottom bar only renders it,
+   so it can never disagree with the battle tab. */
+const { phase: phaseKey, config: phaseConfig, elapsedMs, remainingSeconds } = useBattlePhase(1000)
 
 /** Kompaktes m:ss ohne führende Null bei den Minuten ("0:04", "12:00"). */
 function shortTime(totalSeconds: number): string {
@@ -160,44 +140,30 @@ function shortTime(totalSeconds: number): string {
 }
 
 const gameStateDisplay = computed(() => {
-  const _now = now.value
-  if (
-    searchingPhaseStartTimestamp.value > 0 &&
-    !showAutoBattleResult.value &&
-    battlePhaseStartTimestamp.value === 0
-  ) {
-    // max(0, …): der 1s-now-Ticker kann beim Klick noch hinter dem frisch
-    // gesetzten Timestamp liegen — ohne Clamp stünde kurz "-1:-1" im Titel.
-    const elapsed = Math.min(
-      5,
-      Math.max(0, Math.floor((_now - searchingPhaseStartTimestamp.value) / 1000)),
-    )
-    return {
-      text: `${GAME_STATE.SEARCHING.label} · ${shortTime(elapsed)}`,
-      color: GAME_STATE.SEARCHING.color,
+  const { label, color, durationMs } = phaseConfig.value
+  switch (phaseKey.value) {
+    case 'searching': {
+      // counts up to the search duration — the phase's own progress, clamped so
+      // a late clock tick can never overshoot the window
+      const elapsed = Math.min(
+        Math.floor((durationMs ?? 0) / 1000),
+        Math.floor(elapsedMs.value / 1000),
+      )
+      return { text: `${label} · ${shortTime(elapsed)}`, color }
     }
+    case 'loading':
+      // counts down to the rift opening, same clock the loading screen shows
+      return { text: `${label} · ${shortTime(remainingSeconds.value)}`, color }
+    case 'battle':
+      // Spielzeit tickt in Minutenschritten (60x-Zeitraffer) — Sekunden wären Rauschen
+      return { text: `${label} · ${Math.floor(battleTime.value / 60)}:00`, color }
+    case 'honor':
+      // Countdown wie im Honor-Screen des Battle-Tabs: bei 0 beginnt die
+      // nächste Planet-Search-Phase
+      return { text: `${label} · ${shortTime(remainingSeconds.value)}`, color }
+    default:
+      return null
   }
-  if (!isAutoBattleInitialized.value) {
-    return null
-  }
-  if (showAutoBattleResult.value) {
-    // Countdown wie im Honor-Screen des Battle-Tabs: von 8 runter auf 0,
-    // bei 0 beginnt die nächste Planet-Search-Phase
-    const elapsed = Math.max(0, Math.floor((_now - resultPhaseStartTimestamp.value) / 1000))
-    const remaining = Math.max(0, BATTLE_RESULT_COUNTDOWN_SECONDS - elapsed)
-    return {
-      text: `${GAME_STATE.HONOR.label} · ${shortTime(remaining)}`,
-      color: GAME_STATE.HONOR.color,
-    }
-  }
-  if (battlePhase.value === 'playing' && battlePhaseStartTimestamp.value > 0) {
-    // Spielzeit tickt in Minutenschritten (60x-Zeitraffer) — Sekunden wären Rauschen
-    return {
-      text: `${GAME_STATE.BATTLE.label} · ${Math.floor(battleTime.value / 60)}:00`,
-      color: GAME_STATE.BATTLE.color,
-    }
-  }
-  return null
 })
 
 const objectiveFightDisplay = computed(() => {
@@ -237,11 +203,7 @@ const RESULT_BADGE_MS = 3000
 const resultBadge = computed(() => {
   if (phaseKey.value !== 'honor' || !lastAutoBattleResult.value) return null
   // Nach ein paar Sekunden den Slot an die Honor-Anzeige übergeben
-  if (
-    resultPhaseStartTimestamp.value > 0 &&
-    now.value - resultPhaseStartTimestamp.value > RESULT_BADGE_MS
-  )
-    return null
+  if (elapsedMs.value > RESULT_BADGE_MS) return null
   const won = lastAutoBattleResult.value.won
   const lp = lastLpChange.value
   return {
@@ -272,7 +234,7 @@ const liveChars = computed(() => {
     objectiveFightDisplay.value?.text ??
     (resultBadge.value
       ? `${resultBadge.value.label} ${resultBadge.value.lp} LP`
-      : (gameStateDisplay.value?.text ?? GAME_STATE.SEARCHING.label))
+      : (gameStateDisplay.value?.text ?? BATTLE_PHASES.searching.label))
   return text.length + 2
 })
 </script>
@@ -344,7 +306,20 @@ const liveChars = computed(() => {
             </span>
           </template>
           <template v-else-if="gameStateDisplay">
-            <span v-if="phaseKey === 'searching'" class="sb-scan-dots sb-scan-dots--big" aria-hidden="true">
+            <!-- the loading phase gets its registry icon, the search its scan dots -->
+            <Icon
+              v-if="phaseKey === 'loading' && phaseConfig.icon"
+              :icon="phaseConfig.icon"
+              width="24"
+              height="24"
+              class="sb-live-glyph sb-status-icon--live"
+              :style="{ color: phaseConfig.color }"
+            />
+            <span
+              v-else-if="phaseKey === 'searching'"
+              class="sb-scan-dots sb-scan-dots--big"
+              aria-hidden="true"
+            >
               <span class="sb-scan-dot" />
               <span class="sb-scan-dot" />
               <span class="sb-scan-dot" />
@@ -360,8 +335,8 @@ const liveChars = computed(() => {
               <span class="sb-scan-dot" />
               <span class="sb-scan-dot" />
             </span>
-            <span class="sb-live-text" :style="{ color: GAME_STATE.SEARCHING.color }">
-              {{ GAME_STATE.SEARCHING.label }}
+            <span class="sb-live-text" :style="{ color: BATTLE_PHASES.searching.color }">
+              {{ BATTLE_PHASES.searching.label }}
             </span>
           </template>
         </div>
@@ -735,6 +710,14 @@ const liveChars = computed(() => {
   width: clamp(13px, 1.8cqw, 22px);
   height: clamp(13px, 1.8cqw, 22px);
   object-fit: contain;
+}
+
+/* Phase glyph (game-icons) in the same slot as .sb-live-icon */
+.sb-live-glyph {
+  width: clamp(14px, 1.9cqw, 24px);
+  height: clamp(14px, 1.9cqw, 24px);
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
 }
 
 .sb-status-icon--live {
