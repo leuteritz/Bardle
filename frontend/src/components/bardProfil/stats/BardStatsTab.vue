@@ -541,22 +541,30 @@ function stopResize() {
         </header>
         <div class="sf-p-body sf-stats-body rpg-scrollbar">
           <!-- Idle play-time — the panel's hero stat, read like a chronometer:
-               a clock emblem at digit height, then one block per unit. -->
+               all four units from the very first tick, empty ones dimmed. -->
           <div class="sf-playtime" :title="`${playTimeCompact} spent in this universe`">
             <span class="sf-pt-lbl">Play Time</span>
-            <div class="sf-pt-body">
-              <Icon icon="game-icons:player-time" class="sf-pt-ico" width="40" height="40" />
-              <!-- Readout and gold rule share a wrapper so the rule always ends
-                   exactly with the last digit block, at any magnitude -->
-              <div class="sf-pt-stack">
-                <div class="sf-pt-readout">
-                  <div v-for="seg in playTimeSegments" :key="seg.unit" class="sf-pt-seg">
-                    <span class="sf-pt-num">{{ seg.value }}</span>
-                    <span class="sf-pt-unit">{{ seg.unit }}</span>
-                  </div>
+            <!-- Readout and gold rule share a wrapper so the rule always ends
+                 exactly with the last digit block -->
+            <div class="sf-pt-stack">
+              <div class="sf-pt-readout">
+                <div
+                  v-for="seg in playTimeSegments"
+                  :key="seg.unit"
+                  class="sf-pt-seg"
+                  :class="{ 'is-empty': seg.leadingZero }"
+                >
+                  <!-- One fixed box per digit — MedievalSharp has no tabular
+                       figures, so only this keeps the readout from breathing -->
+                  <span class="sf-pt-num">
+                    <span v-for="(digit, i) in seg.value" :key="i" class="sf-pt-digit">
+                      {{ digit }}
+                    </span>
+                  </span>
+                  <span class="sf-pt-unit">{{ seg.unit }}</span>
                 </div>
-                <div class="sf-pt-rule" />
               </div>
+              <div class="sf-pt-rule" />
             </div>
           </div>
 
@@ -1310,8 +1318,8 @@ function stopResize() {
   gap: 6px;
 }
 
-/* Idle play-time hero — a chronometer readout: label, clock emblem at digit
-   height, one block per unit, closed by the modal gold rule. */
+/* Idle play-time hero — a chronometer readout: small label, four equal digit
+   blocks starting hard left, closed by the modal gold rule. */
 .sf-playtime {
   display: flex;
   flex-direction: column;
@@ -1329,22 +1337,6 @@ function stopResize() {
   color: var(--rpg-text-muted);
 }
 
-.sf-pt-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-}
-
-/* Emblem matches the leading digit's cap height and sits on its baseline row */
-.sf-pt-ico {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  margin-top: -3px;
-  color: #c89040;
-  filter: drop-shadow(0 0 10px rgba(200, 144, 64, 0.28));
-}
-
 .sf-pt-stack {
   display: inline-flex;
   flex-direction: column;
@@ -1356,13 +1348,14 @@ function stopResize() {
   gap: 0;
 }
 
-/* Each unit is its own block; a hairline separates it from the previous one */
+/* Four equal blocks — clock face, not a headline: the same weight everywhere
+   keeps "00 DAYS" from shouting on a fresh save. A hairline separates them. */
 .sf-pt-seg {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  padding: 0 13px;
+  padding: 0 11px;
 }
 .sf-pt-seg:first-child {
   padding-left: 0;
@@ -1371,24 +1364,20 @@ function stopResize() {
   border-left: 1px solid #2c2010;
 }
 
-/* Fixed two-digit box (tabular figures → 1ch = one digit): the readout keeps
-   its width while the clock counts up, so nothing beside it ever shifts. */
 .sf-pt-num {
-  min-width: 2ch;
-  text-align: center;
-  font-size: 40px;
+  display: flex;
+  font-size: 36px;
   font-weight: 900;
   line-height: 0.95;
-  letter-spacing: 0.01em;
   color: var(--rpg-gold);
-  font-variant-numeric: tabular-nums;
   text-shadow: 0 0 16px rgba(232, 192, 64, 0.3);
 }
-/* Trailing blocks read as the smaller change — the first one carries the story */
-.sf-pt-seg + .sf-pt-seg .sf-pt-num {
-  font-size: 30px;
-  color: #d8b45c;
-  text-shadow: 0 0 12px rgba(232, 192, 64, 0.18);
+
+/* Every digit gets the same box regardless of its own glyph width, so the
+   readout holds its width while the clock counts up and nothing shifts. */
+.sf-pt-digit {
+  width: 0.66em;
+  text-align: center;
 }
 
 .sf-pt-unit {
@@ -1397,6 +1386,15 @@ function stopResize() {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #8a7a58;
+}
+
+/* Units that have not started counting yet — present, but visibly still empty */
+.sf-pt-seg.is-empty .sf-pt-num {
+  color: #6b5a34;
+  text-shadow: none;
+}
+.sf-pt-seg.is-empty .sf-pt-unit {
+  color: #5a4c33;
 }
 
 /* The modal's signature gold line, cut to the readout's width */
@@ -1410,18 +1408,10 @@ function stopResize() {
 /* Full HD: the flattest viewport — keep the hero commanding but reclaim rows */
 @media (max-height: 1100px) {
   .sf-pt-num {
-    font-size: 34px;
-  }
-  .sf-pt-seg + .sf-pt-seg .sf-pt-num {
-    font-size: 26px;
+    font-size: 30px;
   }
   .sf-pt-seg {
-    padding: 0 11px;
-  }
-  .sf-pt-ico {
-    width: 34px;
-    height: 34px;
-    margin-top: -2px;
+    padding: 0 9px;
   }
 }
 

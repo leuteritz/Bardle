@@ -7,38 +7,51 @@ const H = 60 * M
 const D = 24 * H
 
 describe('durationSegments', () => {
-  it('shows days / hours / minutes once a day is reached', () => {
+  it('always returns all four units, in order', () => {
+    for (const ms of [0, 42 * S, 9 * M, 5 * H, 400 * D]) {
+      expect(durationSegments(ms).map((s) => s.unit)).toEqual(['days', 'hrs', 'min', 'sec'])
+    }
+  })
+
+  it('splits a multi-day duration correctly', () => {
     expect(durationSegments(3 * D + 4 * H + 7 * M + 9 * S)).toEqual([
-      { value: '03', unit: 'days' },
-      { value: '04', unit: 'hrs' },
-      { value: '07', unit: 'min' },
+      { value: '03', unit: 'days', leadingZero: false },
+      { value: '04', unit: 'hrs', leadingZero: false },
+      { value: '07', unit: 'min', leadingZero: false },
+      { value: '09', unit: 'sec', leadingZero: false },
     ])
   })
 
-  it('shows hours / minutes / seconds below a day', () => {
-    expect(durationSegments(5 * H + 2 * M + 40 * S)).toEqual([
-      { value: '05', unit: 'hrs' },
-      { value: '02', unit: 'min' },
-      { value: '40', unit: 'sec' },
+  it('keeps days and hours visible on a fresh save', () => {
+    expect(durationSegments(34 * M + 13 * S)).toEqual([
+      { value: '00', unit: 'days', leadingZero: true },
+      { value: '00', unit: 'hrs', leadingZero: true },
+      { value: '34', unit: 'min', leadingZero: false },
+      { value: '13', unit: 'sec', leadingZero: false },
     ])
   })
 
-  it('drops to minutes / seconds below an hour', () => {
-    expect(durationSegments(9 * M + 5 * S)).toEqual([
-      { value: '09', unit: 'min' },
-      { value: '05', unit: 'sec' },
+  it('marks only the leading zeros, never a zero after a real value', () => {
+    // 1 day, 0 hours, 0 minutes, 5 seconds — the inner zeros are real values
+    expect(durationSegments(1 * D + 5 * S).map((s) => s.leadingZero)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ])
+    expect(durationSegments(2 * H + 5 * S).map((s) => s.leadingZero)).toEqual([
+      true,
+      false,
+      false,
+      false,
     ])
   })
 
   it('handles zero and negative input without breaking', () => {
-    expect(durationSegments(0)).toEqual([
-      { value: '00', unit: 'min' },
-      { value: '00', unit: 'sec' },
-    ])
-    expect(durationSegments(-5000)).toEqual([
-      { value: '00', unit: 'min' },
-      { value: '00', unit: 'sec' },
-    ])
+    const zero = durationSegments(0)
+    expect(zero.map((s) => s.value)).toEqual(['00', '00', '00', '00'])
+    expect(zero.every((s) => s.leadingZero)).toBe(true)
+    expect(durationSegments(-5000).map((s) => s.value)).toEqual(['00', '00', '00', '00'])
   })
 
   it('pads every block to two digits so the readout never gains width', () => {
@@ -51,6 +64,6 @@ describe('durationSegments', () => {
 
   it('keeps counting past two digits instead of truncating', () => {
     const [days] = durationSegments(365 * D)
-    expect(days).toEqual({ value: '365', unit: 'days' })
+    expect(days).toEqual({ value: '365', unit: 'days', leadingZero: false })
   })
 })

@@ -60,46 +60,38 @@ export function formatCompactDuration(ms: number): string {
 
 /** Ein Ziffernblock eines Odometer-Readouts: Wert plus seine Einheit. */
 export interface DurationSegment {
-  /** Bereits formatiert — Folgeblöcke sind zweistellig aufgefüllt. */
+  /** Bereits formatiert, immer mindestens zweistellig. */
   value: string
-  /** Kurzform der Einheit, z. B. `days` / `hrs` / `min` / `sec`. */
+  /** Kurzform der Einheit: `days` / `hrs` / `min` / `sec`. */
   unit: string
+  /** Führender Null-Block vor der ersten Einheit mit Wert — darf gedimmt werden. */
+  leadingZero: boolean
 }
 
 /**
- * Zerlegt eine Dauer in drei Blöcke für eine große Odometer-Anzeige.
- * Das Fenster wandert mit der Größenordnung mit: ab einem Tag D/H/M,
- * darunter H/M/S und unter einer Stunde M/S — so bleibt der erste Block
- * immer der aussagekräftigste.
+ * Zerlegt eine Dauer in die vier festen Blöcke einer Chronometer-Anzeige.
  *
- * Jeder Block ist mindestens zweistellig (`03`), damit die Anzeige beim
- * Hochzählen keine Ziffernbreite gewinnt und nichts nachrutscht.
+ * Immer alle vier Einheiten, auch bei frischem Spielstand (`00 00 34 13`):
+ * das Readout behält seine Form vom ersten Tick an, statt bei jedem
+ * Größensprung umzuspringen. Jeder Block ist zweistellig aufgefüllt, damit
+ * die Breite beim Hochzählen konstant bleibt; `leadingZero` markiert die
+ * noch leeren Blöcke am Anfang für eine gedämpfte Darstellung.
  */
 export function durationSegments(ms: number): DurationSegment[] {
   const secs = Math.max(0, Math.floor(ms / 1000))
-  const d = Math.floor(secs / 86400)
-  const h = Math.floor((secs % 86400) / 3600)
-  const m = Math.floor((secs % 3600) / 60)
-  const s = secs % 60
   const pad = (n: number) => String(n).padStart(2, '0')
-  if (d > 0) {
-    return [
-      { value: pad(d), unit: 'days' },
-      { value: pad(h), unit: 'hrs' },
-      { value: pad(m), unit: 'min' },
-    ]
-  }
-  if (h > 0) {
-    return [
-      { value: pad(h), unit: 'hrs' },
-      { value: pad(m), unit: 'min' },
-      { value: pad(s), unit: 'sec' },
-    ]
-  }
-  return [
-    { value: pad(m), unit: 'min' },
-    { value: pad(s), unit: 'sec' },
+  const parts: Array<[number, string]> = [
+    [Math.floor(secs / 86400), 'days'],
+    [Math.floor((secs % 86400) / 3600), 'hrs'],
+    [Math.floor((secs % 3600) / 60), 'min'],
+    [secs % 60, 'sec'],
   ]
+  let seenValue = false
+  return parts.map(([value, unit]) => {
+    const leadingZero = !seenValue && value === 0
+    if (value > 0) seenValue = true
+    return { value: pad(value), unit, leadingZero }
+  })
 }
 
 /** Sekunden als kurze Restdauer: `5m 30s`, `40s`, `3m`. */
