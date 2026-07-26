@@ -2220,6 +2220,25 @@ export const STATS_TAB_DECK_RESIZE = {
   MIN_MIDDLE: 260,
 } as const
 
+/** Bard Stats "Journey" progress gauges (Level / Galaxy / Universe). The ring is
+ *  drawn as SVG in a square viewBox, so every value below is in user units and
+ *  scales automatically with whatever width the resizable column gives it. */
+export const STATS_TAB_GAUGE = {
+  /** side of the square viewBox — reference frame for all values below */
+  VIEW: 100,
+  /** ring radius; leaves room for the stroke plus its glow inside the box */
+  RADIUS: 41,
+  /** ring thickness */
+  STROKE: 7,
+  /** value font size per length bucket: 1–2 chars, 3, 4, 5+ — longer readouts
+   *  (three-digit levels, roman "VIII") shrink so they never touch the ring */
+  VALUE_FONT: [40, 32, 26, 21],
+  /** largest rendered ring diameter (px); below this the ring scales with the column */
+  MAX_PX: 96,
+  /** compact ring diameter (px) on Full-HD-height viewports */
+  MAX_PX_COMPACT: 78,
+} as const
+
 // ── Star Forge (Shop tab) ─────────────────────────────────────────────────────
 // Tree geometry — the tree lives on a square stage, nodes placed on 3 polar rings.
 export const FORGE_STAGE_SIZE = 820
