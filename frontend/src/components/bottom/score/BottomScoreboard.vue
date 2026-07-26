@@ -590,19 +590,21 @@ const liveChars = computed(() => {
   font-weight: 700;
 }
 
-/* The emblem must not travel when the label beside it changes length: with a
-   centered group, "GM" would pull it right and "BRON 3" push it left. So the
-   row claims the full cell — emblem pinned to the cell's left edge, and the
-   value centered inside whatever room is left. */
-.sb-stat--rank .sb-stat-main {
-  width: 100%;
-}
+/* The emblem must not travel when the label beside it changes length — with a
+   plain centered group, "GM" would pull it right and "BRON 3" push it left.
+   Fix: the value gets a slot of FIXED width (its char budget expressed in em,
+   so it tracks the computed font size) and sits left-aligned in it. Emblem +
+   gap + slot therefore measure the same for every tier, so the group stays
+   centered in the cell while emblem and text start at a constant x — and the
+   emblem-to-text distance is plain var(--sb-gap), same as every other cell. */
 .sb-stat--rank .sb-rank-value {
-  flex: 1 1 0;
-  justify-content: center;
-  /* min-width: 0 defeats the flex item's automatic minimum size — without it
-     a wide label ("BRON 3") props the slot open past its share and shoves the
-     emblem left again, which is exactly what must not happen. */
+  flex: 0 1 auto;
+  width: calc(var(--val-chars) * 0.62em);
+  justify-content: flex-start;
+  /* shrink + min-width: 0 for the narrowest strips, where the cell-width
+     estimate behind --sb-text-w runs a few px optimistic: the slot gives way
+     instead of pushing the group out of the cell. It shrinks by the same
+     amount for every tier, so the emblem still does not move. */
   min-width: 0;
 }
 
