@@ -52,11 +52,14 @@
                 v-for="dot in entry.planets"
                 :key="dot.id"
                 class="planet-chip"
-                :class="[`planet-chip--${dot.state}`, { 'planet-chip--cleared': dot.cleared }]"
+                :class="[
+                  `planet-chip--${dot.state}`,
+                  { 'planet-chip--cleared': dot.cleared, 'planet-chip--revealed': dot.showHp },
+                ]"
               >
                 <span class="planet-dot" :style="{ '--hp': dot.hp }" />
                 <span class="planet-hp"
-                  ><span class="planet-hp__num">{{ dot.cleared ? '✓' : dot.pct }}</span></span
+                  ><span class="planet-hp__num">{{ dot.pct }}</span></span
                 >
               </span>
             </div>
@@ -106,11 +109,14 @@
                 v-for="dot in entry.planets"
                 :key="dot.id"
                 class="planet-chip"
-                :class="[`planet-chip--${dot.state}`, { 'planet-chip--cleared': dot.cleared }]"
+                :class="[
+                  `planet-chip--${dot.state}`,
+                  { 'planet-chip--cleared': dot.cleared, 'planet-chip--revealed': dot.showHp },
+                ]"
               >
                 <span class="planet-dot" :style="{ '--hp': dot.hp }" />
                 <span class="planet-hp"
-                  ><span class="planet-hp__num">{{ dot.cleared ? '✓' : dot.pct }}</span></span
+                  ><span class="planet-hp__num">{{ dot.pct }}</span></span
                 >
               </span>
             </div>
@@ -147,6 +153,7 @@ import {
   STAR_TIMER_HP_PCT_STEPS,
   STAR_TIMER_HP_MIN_PCT,
   STAR_TIMER_HP_PCT_WIDTH_CH,
+  STAR_TIMER_HP_REVEAL_MS,
 } from '../../config/constants'
 import { CHAMPION_ROLES } from '../../config/championData'
 import type { StarGroup } from '../../stores/starGroupStore'
@@ -174,15 +181,37 @@ interface BossSnapshot {
   hp: number
   /** Ganzzahliger HP-Prozentwert für das Zahlenfeld neben der Kugel */
   hpPct: number
+  /** Rohe HP — nur zum Treffer-Vergleich zwischen zwei Snapshots, nie gebunden */
+  rawHp: number
+  /** Zeitpunkt, bis zu dem die HP-Zahl nach einem Treffer sichtbar bleibt */
+  revealUntil: number
   champion?: string
 }
 
 const bossSnapshot = shallowRef<Map<string, BossSnapshot>>(new Map())
+/** Planet, der gerade bekämpft wird — seine HP steht dauerhaft. */
+const focusedBossId = shallowRef<string | null>(null)
 
+/**
+ * Treffer werden aus dem HP-Verlauf zweier Snapshots abgeleitet, nicht an den
+ * Schadensquellen gemeldet: So erfasst die Anzeige jede Quelle automatisch
+ * (Klick, Splash, Rollen-Burst, Turret, DoT), ohne dass eine davon die
+ * Header-Bars kennen muss — und ohne ein zusätzliches Feld im Boss-Store,
+ * das bei jedem Schadensereignis mitgeschrieben werden müsste.
+ *
+ * Die Merker leben im Snapshot selbst. Da er jeden Tick nur aus den lebenden
+ * Bossen neu aufgebaut wird, räumen sich abgelaufene Einträge von allein auf —
+ * eine dauerhaft wachsende Map wäre bei vielen Sternen ein Leck.
+ */
 function refreshBossSnapshot(): void {
+  const prevSnap = bossSnapshot.value
   const next = new Map<string, BossSnapshot>()
+  const nowTs = Date.now()
+
   for (const boss of planetBossStore.activeBosses) {
     const ratio = clamp01(boss.maxHP > 0 ? boss.currentHP / boss.maxHP : 0)
+    const prev = prevSnap.get(boss.planetId)
+    const tookDamage = prev !== undefined && boss.currentHP < prev.rawHp
     next.set(boss.planetId, {
       startTime: boss.startTime,
       enrageTimerMs: boss.enrageTimerMs,
@@ -191,10 +220,16 @@ function refreshBossSnapshot(): void {
       // wenn sich der angezeigte Wert tatsächlich ändert — nicht bei jedem
       // Bruchteil eines HP-Punktes.
       hpPct: ratio > 0 ? Math.max(STAR_TIMER_HP_MIN_PCT, Math.round(ratio * STAR_TIMER_HP_PCT_STEPS)) : 0,
+      rawHp: boss.currentHP,
+      revealUntil: tookDamage ? nowTs + STAR_TIMER_HP_REVEAL_MS : (prev?.revealUntil ?? 0),
       champion: boss.homePlanetChampion,
     })
   }
+
   bossSnapshot.value = next
+  // Ebenfalls ungetrackt gelesen — ein reaktiver Zugriff auf activeBoss würde
+  // die Bars bei jeder Boss-Mutation invalidieren und den Snapshot aushebeln.
+  focusedBossId.value = planetBossStore.activeBoss?.planetId ?? null
 }
 
 let ticker: ReturnType<typeof setInterval> | null = null
@@ -224,6 +259,8 @@ interface PlanetDot {
   hp: number
   /** Exakter HP-Prozentwert (0..100) für das Zahlenfeld neben der Kugel */
   pct: number
+  /** Zahl sichtbar? Nur der bekämpfte Planet und frisch getroffene zeigen sie. */
+  showHp: boolean
   /** 'ok' | 'low' | 'critical' — steuert die Füllfarbe */
   state: 'ok' | 'low' | 'critical'
 }
@@ -314,9 +351,12 @@ function buildPlanetDots(star: StarGroup): PlanetDot[] {
   const dots: PlanetDot[] = []
   const clearedDots: PlanetDot[] = []
 
+  const focusId = focusedBossId.value
+  const nowTs = now.value
+
   for (const slot of star.planetSlots) {
     if (slot.cleared) {
-      clearedDots.push({ id: slot.planetId, cleared: true, hp: 0, pct: 0, state: 'ok' })
+      clearedDots.push({ id: slot.planetId, cleared: true, hp: 0, pct: 0, showHp: false, state: 'ok' })
       continue
     }
     // Kein Boss im Snapshot (frisch gespawnt, noch nicht getickt) → volle Kugel
@@ -328,6 +368,7 @@ function buildPlanetDots(star: StarGroup): PlanetDot[] {
       // Anzeigehöhe mit Bodensatz — der Zustand kommt weiterhin vom echten Wert
       hp: hp > 0 ? Math.max(STAR_TIMER_HP_MIN_FILL, hp) : 0,
       pct: boss?.hpPct ?? STAR_TIMER_HP_PCT_STEPS,
+      showHp: slot.planetId === focusId || nowTs < (boss?.revealUntil ?? 0),
       state: hp <= STAR_TIMER_HP_CRITICAL_RATIO ? 'critical' : hp <= STAR_TIMER_HP_LOW_RATIO ? 'low' : 'ok',
     })
   }
@@ -921,15 +962,31 @@ const sortedEntries = computed<BarEntry[]>(() => {
    konstant, egal ob 7, 42 oder 100 dort steht. */
 .planet-hp {
   display: inline-flex;
-  align-items: baseline;
+  /* `center` statt `baseline`: an der Baseline ausgerichtet hängen die Ziffern
+     an der Unterkante ihrer Zeilenbox, wodurch die Zahl in der schmalen Bar zu
+     hoch sitzt. Zusammen mit `line-height: 1` und dem Metrik-Ausgleich unten
+     steht sie exakt auf Kugelmitte. */
+  align-items: center;
   justify-content: flex-start;
   flex: none;
   width: var(--hp-num-width, 4ch);
+  /* Metrik-Ausgleich: MedievalSharp setzt Ziffern mit ascent 11 / descent 1 —
+     sie sitzen also fast vollständig über der Baseline. Zentriert man die
+     Zeilenbox, steht die sichtbare Tinte rund 0.077em zu hoch. Der Versatz
+     kommt über `top` und nicht über `transform`, weil der Puls der kritischen
+     Chips das transform belegt und den Ausgleich sonst überschreiben würde. */
+  position: relative;
+  top: 0.16em;
   /* Flüssig skaliert für 1280px (~11.3px) bis 2560px (~14.7px) Viewport-Breite */
   font-size: clamp(0.72rem, 0.26vw + 0.5rem, 0.95rem);
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.01em;
+  /* Erst bei Treffer bzw. am bekämpften Planeten sichtbar. Der Platz bleibt
+     immer reserviert — würde das Feld ein-/ausgeklappt, sprängen die
+     Nachbarkugeln bei jedem Treffer seitlich weg. */
+  opacity: 0;
+  transition: opacity 0.22s ease;
   font-variant-numeric: tabular-nums;
   color: var(--hp-crest);
   /* text-shadow statt filter: drop-shadow — wird einmal gerastert und muss
@@ -947,22 +1004,17 @@ const sortedEntries = computed<BarEntry[]>(() => {
   justify-content: flex-end;
 }
 
+.planet-chip--revealed .planet-hp {
+  opacity: 1;
+}
+
 /* Prozentzeichen statisch aus CSS: bei einem Treffer wechselt so nur der
    Zifferntext, nicht der komplette Textinhalt des Elements. */
-.planet-chip:not(.planet-chip--cleared) .planet-hp::after {
+.planet-hp::after {
   content: '%';
   font-size: 0.66em;
   opacity: 0.62;
   margin-left: 0.08em;
-  align-self: center;
-}
-
-/* Geretteter Planet: Häkchen statt Zahl, zurückgenommen — die Aufmerksamkeit
-   gehört den Planeten, die noch stehen. */
-.planet-chip--cleared .planet-hp {
-  color: rgba(232, 242, 255, 0.75);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-  opacity: 0.6;
 }
 
 /* Kritisch: die Zahl atmet. Nur opacity + transform, damit der Puls

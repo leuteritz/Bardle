@@ -1890,6 +1890,10 @@ export const STAR_TIMER_HP_MIN_PCT = 1
 // Reflow der Kugelreihe, wenn 100 → 99 → 9 wechselt; nur der Textknoten
 // selbst wird neu gezeichnet.
 export const STAR_TIMER_HP_PCT_WIDTH_CH = 4
+// Nur der aktiv bekämpfte Planet zeigt seine HP dauerhaft. Jeder andere blendet
+// sie ein, sobald er getroffen wird, und nach dieser Zeit ohne weiteren Treffer
+// wieder aus — die Bar bleibt ruhig, statt permanent Zahlen zu zeigen.
+export const STAR_TIMER_HP_REVEAL_MS = 2000
 
 // ── Galaxy-Boss Eskorten-Wellen ───────────────────────────────────────────
 // Gesamtzahl der Eskorten-Sterne pro Galaxie: BASE + (galaxy-1) * PER_GALAXY,
