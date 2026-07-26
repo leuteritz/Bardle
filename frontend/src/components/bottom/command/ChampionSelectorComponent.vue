@@ -60,19 +60,18 @@ function downProgress(i: number): number {
  * One mark, one meaning: "this role is in focus right now". Several places can
  * put a role in focus, and all render the identical reticle here so the player
  * only ever learns one cue:
- *   • team tab — the role node under the pointer, else the role whose details
- *     panel is open (the tab mirrors that selection back to the store)
+ *   • this panel — the card under the pointer, whatever else is open
+ *   • team tab — the role node under the pointer
  *   • battle tab — the roster card under the pointer
+ *   • team tab, standing selection — the role whose details panel is open
+ *     (the tab mirrors that selection back to the store)
  * Pointing wins over the standing selection, because it is the more recent
- * intent. With no profile tab open nothing is marked, and a local hover on this
- * panel stays a plain hover, exactly as before.
+ * intent — no matter which of the three places is doing the pointing, they all
+ * write the same store field.
  */
 const markedRoleIndex = computed(() => {
-  if (uiStore.bardActiveTab === 'team') {
-    return uiStore.hoveredChampionSlotIndex ?? uiStore.teamActiveRoleIndex
-  }
-  if (uiStore.bardActiveTab === 'battle') return uiStore.hoveredChampionSlotIndex
-  return null
+  if (uiStore.hoveredChampionSlotIndex !== null) return uiStore.hoveredChampionSlotIndex
+  return uiStore.bardActiveTab === 'team' ? uiStore.teamActiveRoleIndex : null
 })
 
 function openPicker(slotIndex: number, subSlot: number = -1) {

@@ -121,16 +121,16 @@ function slotBehindSun(slot: PlanetSlot): boolean {
   return eclipsedSlotIds.value.has(slot.id)
 }
 
-// Spiegel des Planet-Tabs: solange der Tab offen ist, trägt genau eine Kachel
-// die Ziel-Markierung — der Orbit unter dem Zeiger in der linken Leiste, sonst
-// der im Modal bearbeitete. Zeigen schlägt Auswahl, weil es die jüngere Absicht
-// ist; endet der Hover, fällt die Markierung auf die Auswahl zurück. Ist der Tab
-// zu, gibt es nichts zu spiegeln (die Auswahl bleibt im Store erhalten, damit
-// ein erneutes Öffnen wieder beim selben Orbit landet).
-const markedSlotId = computed(() =>
-  uiStore.bardActiveTab === 'planets'
-    ? (uiStore.hoveredPlanetSlotId ?? uiStore.planetActiveSlotId)
-    : null,
+// Genau eine Kachel trägt die Ziel-Markierung — der Orbit unter dem Zeiger,
+// egal ob der Zeiger hier im Dock oder in der Planeten-Leiste des Tabs steht
+// (beide schreiben dasselbe Store-Feld). Zeigen schlägt Auswahl, weil es die
+// jüngere Absicht ist; endet der Hover, fällt die Markierung auf den im Modal
+// bearbeiteten Orbit zurück — und ist der Tab zu, auf gar nichts (die Auswahl
+// bleibt im Store erhalten, damit ein erneutes Öffnen wieder dort landet).
+const markedSlotId = computed(
+  () =>
+    uiStore.hoveredPlanetSlotId ??
+    (uiStore.bardActiveTab === 'planets' ? uiStore.planetActiveSlotId : null),
 )
 
 function handleSlotClick(slot: (typeof slots.value)[number]) {
