@@ -93,11 +93,15 @@ export const RANK_DIVISION_DIGITS: Record<string, string> = {
 }
 
 /**
- * Length of the longest short rank label ("IRON 4"). Used as a FIXED text
- * budget for the rank cell instead of the live label length — the font size
- * must not change when the player ranks up.
+ * Text budget of the rank cell, in the scoreboard's "average glyph" units
+ * (see .sb-stat-value: budget × 0.62em). FIXED on purpose — feeding it the
+ * live label length is what used to shrink the font on every rank-up.
+ *
+ * 6.3 rather than the 6 glyphs of "IRON 4": the 0.62em unit is calibrated for
+ * tabular digits, while MedievalSharp capitals run wider (~0.64em), so the
+ * widest label ("BRON 3") needs a little more than its glyph count.
  */
-export const RANK_LABEL_MAX_CHARS = 6
+export const RANK_LABEL_WIDTH_CHARS = 6.3
 
 // Abilities
 export const MAX_ABILITY_LEVEL = 5

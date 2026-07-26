@@ -15,7 +15,7 @@ import {
   RANK_TIER_COLORS,
   RANK_TIER_SHORT,
   RANK_DIVISION_DIGITS,
-  RANK_LABEL_MAX_CHARS,
+  RANK_LABEL_WIDTH_CHARS,
   BATTLE_STAT_GAME_ICONS,
   BATTLE_STAT_IMAGES,
 } from '@/config/constants'
@@ -57,8 +57,8 @@ const isApexTier = computed(() =>
   ['Master', 'Grandmaster', 'Challenger'].includes(currentRank.value.tier),
 )
 /* Short, near-equal-width label ("IRON 4", "DIAM 1", "GM", "CHAL") — the cell
-   sizes against a fixed budget (RANK_LABEL_MAX_CHARS), so every tier renders at
-   the same big size. The full name stays available in the tooltip. */
+   sizes against a fixed budget (RANK_LABEL_WIDTH_CHARS), so every tier renders
+   at the same big size. The full name stays available in the tooltip. */
 const rankShortTier = computed(
   () => RANK_TIER_SHORT[currentRank.value.tier] ?? currentRank.value.tier.slice(0, 4).toUpperCase(),
 )
@@ -86,7 +86,7 @@ function openBattleTab() {
    one shared char count on the scoreboard root, so all numbers shrink
    together and stay the same size (see .sb-stat-value). The rank cell is
    deliberately excluded: it is wider (flex 1.6) and overrides --val-chars
-   with the CONSTANT RANK_LABEL_MAX_CHARS — never the live label length, so
+   with the CONSTANT RANK_LABEL_WIDTH_CHARS — never the live label length, so
    its size stays identical from Iron 4 up to Challenger. ── */
 const wlCombined = computed(
   () => formatNumber(totalWins.value).length + formatNumber(totalLosses.value).length + 4,
@@ -386,7 +386,7 @@ const liveChars = computed(() => {
           <img :src="rankEmblem" :alt="rankFullLabel" class="sb-stat-icon" />
           <span
             class="sb-stat-value sb-rank-value"
-            :style="{ color: rankColor, '--val-chars': RANK_LABEL_MAX_CHARS }"
+            :style="{ color: rankColor, '--val-chars': RANK_LABEL_WIDTH_CHARS }"
           >
             {{ rankLabel }}
           </span>
@@ -586,9 +586,24 @@ const liveChars = computed(() => {
 /* Rank is a short uppercase word, not a number — a touch of tracking keeps
    the capitals legible, and the div digit stays glued to its tier. */
 .sb-rank-value {
-  justify-content: center;
   letter-spacing: 0.05em;
   font-weight: 700;
+}
+
+/* The emblem must not travel when the label beside it changes length: with a
+   centered group, "GM" would pull it right and "BRON 3" push it left. So the
+   row claims the full cell — emblem pinned to the cell's left edge, and the
+   value centered inside whatever room is left. */
+.sb-stat--rank .sb-stat-main {
+  width: 100%;
+}
+.sb-stat--rank .sb-rank-value {
+  flex: 1 1 0;
+  justify-content: center;
+  /* min-width: 0 defeats the flex item's automatic minimum size — without it
+     a wide label ("BRON 3") props the slot open past its share and shoves the
+     emblem left again, which is exactly what must not happen. */
+  min-width: 0;
 }
 
 .sb-stat-label {
