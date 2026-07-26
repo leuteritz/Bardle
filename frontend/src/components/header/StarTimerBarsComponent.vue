@@ -352,13 +352,21 @@ function getBossRemainingMs(planetId: string): number | null {
 }
 
 /**
- * Planeten-Kugeln einer Bar. Aktive Planeten zuerst, gerettete danach — so
- * wandern erledigte Kugeln wie bisher zur Bildschirmmitte hin.
+ * Planeten-Kugeln einer Bar, sortiert von außen (Bildschirmrand) nach innen
+ * (Bildschirmmitte): gerettete zuerst, dann die wartenden, und ganz innen der
+ * Planet, der gerade bekämpft wird.
+ *
+ * Die Reihenfolge bildet die Angriffsfolge des Star-Fights ab
+ * (`starGroupStore.starFightPlanetQueue`, abgearbeitet über `selectedBossId`):
+ * Der bekämpfte Planet steht am inneren Ende und grenzt damit direkt an seine
+ * HP-Zahl, die hinter der Kugelreihe hängt. Die Bar arbeitet sich also von
+ * außen nach innen durch den Stern.
  */
 function buildPlanetDots(star: StarGroup): PlanetDot[] {
   const snap = bossSnapshot.value
   const dots: PlanetDot[] = []
   const clearedDots: PlanetDot[] = []
+  let focusedDot: PlanetDot | null = null
 
   const focusId = focusedBossId.value
   const nowTs = now.value
@@ -371,7 +379,7 @@ function buildPlanetDots(star: StarGroup): PlanetDot[] {
     // Kein Boss im Snapshot (frisch gespawnt, noch nicht getickt) → volle Kugel
     const boss = snap.get(slot.planetId)
     const hp = boss?.hp ?? 1
-    dots.push({
+    const dot: PlanetDot = {
       id: slot.planetId,
       cleared: false,
       // Anzeigehöhe mit Bodensatz — der Zustand kommt weiterhin vom echten Wert
@@ -379,10 +387,14 @@ function buildPlanetDots(star: StarGroup): PlanetDot[] {
       pct: boss?.hpPct ?? STAR_TIMER_HP_PCT_STEPS,
       showHp: slot.planetId === focusId || nowTs < (boss?.revealUntil ?? 0),
       state: hp <= STAR_TIMER_HP_CRITICAL_RATIO ? 'critical' : hp <= STAR_TIMER_HP_LOW_RATIO ? 'low' : 'ok',
-    })
+    }
+    if (slot.planetId === focusId) focusedDot = dot
+    else dots.push(dot)
   }
 
-  return dots.concat(clearedDots)
+  const ordered = clearedDots.concat(dots)
+  if (focusedDot) ordered.push(focusedDot)
+  return ordered
 }
 
 function getSharedStarRemainingMs(star: {
@@ -423,7 +435,9 @@ const sortedEntries = computed<BarEntry[]>(() => {
     const planets = buildPlanetDots(star)
     // Einmal vorgefiltert statt im Template — sonst entstünde bei jedem Render
     // ein neues Array und v-for müsste die Liste jedes Mal neu abgleichen.
-    const hpLabels = planets.filter((p) => p.showHp)
+    // Gespiegelt zur Kugelreihe: die Zahl des innersten (bekämpften) Planeten
+    // steht dadurch am nächsten an seiner Kugel, statt am weitesten weg.
+    const hpLabels = planets.filter((p) => p.showHp).reverse()
 
     if (star.starType === 'resource') {
       const remaining = allCleared ? 0 : getSharedStarRemainingMs(star)
