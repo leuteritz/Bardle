@@ -19,7 +19,7 @@ const glowColor = computed(() =>
   isComet.value ? COMET_PHASE_DATA.glow : STAR_PHASE_DATA[solarStore.starPhase].glow1,
 )
 
-/** Identity colour of the phase — drives name, edge line and the segment track. */
+/** Identity colour of the phase — the only colour the name carries. */
 const accentColor = computed(() =>
   isComet.value ? COMET_PHASE_DATA.accent : STAR_PHASE_DATA[solarStore.starPhase].phasePrimary,
 )
@@ -41,150 +41,77 @@ const dwellProgress = computed(() => {
 
 const dwellComplete = computed(() => solarStore.phaseDwellRemainingMs <= 0)
 
-const dwellText = computed(() => {
-  const totalSec = Math.floor(solarStore.phaseDwellElapsedMs / 1000)
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`
-})
-
-const plateStyle = computed(() => ({
-  '--ph-accent': accentColor.value,
-  '--ph-glow': glowColor.value,
-}))
+/** Everything the stripped-down badge no longer shows lives in the tooltip. */
+const tooltip = computed(
+  () =>
+    `Phase ${currentDisplayPhase.value}/${SUN_PHASE_DISPLAY_TOTAL} · ${phaseData.value.name} — ` +
+    `${phaseData.value.astroName} · open Stats`,
+)
 </script>
 
 <template>
   <button
-    class="sun-plate"
-    :class="{ 'sun-plate--ready': dwellComplete }"
-    :style="plateStyle"
-    :title="`${phaseData.name} — ${phaseData.astroName} · open Stats`"
+    class="sun-phase"
+    :class="{ 'sun-phase--ready': dwellComplete }"
+    :style="{ '--ph-accent': accentColor, '--ph-glow': glowColor }"
+    :title="tooltip"
     @click="uiStore.setBardTab('bard')"
   >
-    <span class="plate-edge" aria-hidden="true"></span>
-
-    <!-- Row 1 — orb with dwell ring + phase counter + time in phase -->
-    <div class="plate-top">
-      <div class="orb-wrap">
-        <div v-if="dwellComplete" class="orb-ripple" aria-hidden="true"></div>
-        <div class="orb" :style="sunStyle"></div>
-        <svg class="orb-ring" viewBox="0 0 50 50" aria-hidden="true">
-          <circle cx="25" cy="25" r="23" fill="none" stroke="rgba(0, 0, 0, 0.6)" stroke-width="2.4" />
-          <circle
-            cx="25"
-            cy="25"
-            r="23"
-            fill="none"
-            :stroke="dwellComplete ? '#6ec040' : glowColor"
-            stroke-width="2.4"
-            stroke-linecap="round"
-            pathLength="100"
-            stroke-dasharray="100"
-            :stroke-dashoffset="100 - dwellProgress"
-            class="orb-ring-fill"
-            :style="{ '--ring-glow': dwellComplete ? '#6ec040' : glowColor }"
-          />
-        </svg>
-      </div>
-
-      <div class="meta">
-        <span class="meta-label">Phase</span>
-        <span class="meta-count">
-          <b>{{ currentDisplayPhase }}</b><i>/{{ SUN_PHASE_DISPLAY_TOTAL }}</i>
-        </span>
-        <span class="meta-dwell">{{ dwellComplete ? 'READY' : dwellText }}</span>
-      </div>
+    <div class="orb-wrap">
+      <div v-if="dwellComplete" class="orb-ripple" aria-hidden="true"></div>
+      <div class="orb" :style="sunStyle"></div>
+      <svg class="orb-ring" viewBox="0 0 50 50" aria-hidden="true">
+        <circle cx="25" cy="25" r="23" fill="none" stroke="rgba(0, 0, 0, 0.5)" stroke-width="2.2" />
+        <circle
+          cx="25"
+          cy="25"
+          r="23"
+          fill="none"
+          :stroke="dwellComplete ? '#6ec040' : glowColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          pathLength="100"
+          stroke-dasharray="100"
+          :stroke-dashoffset="100 - dwellProgress"
+          class="orb-ring-fill"
+          :style="{ '--ring-glow': dwellComplete ? '#6ec040' : glowColor }"
+        />
+      </svg>
     </div>
 
-    <!-- Row 2 — the phase name, full plate width so it can run as large as possible -->
-    <span class="plate-name">{{ phaseData.name }}</span>
-
-    <!-- Row 3 — segmented progression across all sun phases -->
-    <div class="track" aria-hidden="true">
-      <span
-        v-for="i in SUN_PHASE_DISPLAY_TOTAL"
-        :key="i"
-        class="seg"
-        :class="{ 'seg--past': i < currentDisplayPhase, 'seg--now': i === currentDisplayPhase }"
-      ></span>
-    </div>
+    <span class="phase-name">{{ phaseData.name }}</span>
   </button>
 </template>
 
 <style scoped>
 /* ================================================================
-   PLATE — fills the full header height; width is the scarce axis
-   (the header caps at 1400px, so ~150px is all that is free next
-   to the universe-rescue block). Every size therefore derives from
-   --header-height, not from vw: the header itself is height-driven.
+   Frameless badge: sun orb over the phase name, nothing else.
+   Der Name steht in einer eigenen Zeile über die volle Breite —
+   neben dem Orb blieben ihm nur ~86px und er müsste klein bleiben.
+   Alle Maße hängen an --header-height, weil der Header selbst
+   höhengetrieben ist (Breite deckelt bei 1400px, Höhe nicht).
    ================================================================ */
-.sun-plate {
-  --pad-y: clamp(2px, calc(var(--header-height) * 0.035), 5px);
-  --pad-x: clamp(5px, 0.55vw, 9px);
-  --row-gap: calc(var(--header-height) * 0.025);
-
-  position: relative;
-  align-self: stretch;
-  flex: 0 1 auto;
-  width: clamp(118px, 7.8vw, 150px);
-  min-width: 112px;
-  margin: clamp(2px, calc(var(--header-height) * 0.025), 4px) 0;
-  padding: var(--pad-y) var(--pad-x);
-  box-sizing: border-box;
-
+.sun-phase {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: var(--row-gap);
-
-  background: linear-gradient(to bottom, #1a1610, #111008);
-  border: 1px solid #5c3310;
-  border-radius: 5px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 200, 80, 0.07),
-    inset 0 -10px 16px rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-  overflow: hidden;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-.sun-plate:hover {
-  border-color: #7a4e20;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 200, 80, 0.12),
-    inset 0 -10px 16px rgba(0, 0, 0, 0.35);
-}
-
-/* Phase-tinted signature line along the top edge of the plate */
-.plate-edge {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(to right, transparent, var(--ph-accent), transparent);
-  opacity: 0.85;
-  pointer-events: none;
-}
-
-/* ================================================================
-   ROW 1 — orb + counter
-   ================================================================ */
-.plate-top {
-  display: flex;
   align-items: center;
-  gap: clamp(4px, 0.4vw, 8px);
-  min-width: 0;
+  justify-content: center;
+  gap: calc(var(--header-height) * 0.03);
+
+  align-self: stretch;
+  flex: 0 1 auto;
+  width: clamp(112px, 7.8vw, 150px);
+  min-width: 104px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .orb-wrap {
   position: relative;
-  width: calc(var(--header-height) * 0.46);
-  height: calc(var(--header-height) * 0.46);
+  width: min(calc(var(--header-height) * 0.6), 66px);
+  height: min(calc(var(--header-height) * 0.6), 66px);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -197,8 +124,8 @@ const plateStyle = computed(() => ({
   height: 74%;
   border-radius: 50%;
   box-shadow:
-    0 0 12px 2px var(--sun-glow),
-    inset -3px -4px 9px rgba(0, 0, 0, 0.45);
+    0 0 13px 2px var(--sun-glow),
+    inset -4px -5px 10px rgba(0, 0, 0, 0.45);
   transition: transform 0.2s;
 }
 
@@ -211,15 +138,17 @@ const plateStyle = computed(() => ({
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 20px 5px var(--sun-glow);
+  box-shadow: 0 0 22px 5px var(--sun-glow);
   opacity: 0;
   animation: sun-pulse 5s ease-in-out infinite;
 }
 
-.sun-plate:hover .orb {
+.sun-phase:hover .orb {
   transform: scale(1.07);
 }
 
+/* Der Ring ist die einzige verbliebene Fortschrittsanzeige — Dwell-Zeit
+   der laufenden Phase, ohne Zahl. */
 .orb-ring {
   position: absolute;
   inset: 0;
@@ -236,67 +165,16 @@ const plateStyle = computed(() => ({
 
 .orb-ripple {
   position: absolute;
-  inset: 8%;
+  inset: 6%;
   border-radius: 50%;
   border: 2px solid rgba(110, 192, 64, 0.8);
   pointer-events: none;
   animation: ripple-out 2.4s ease-out infinite;
 }
 
-/* ── Counter column ─────────────────────────────── */
-.meta {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: calc(var(--header-height) * 0.018);
-  min-width: 0;
-}
-
-.meta-label {
-  font-size: max(9px, calc(var(--header-height) * 0.115));
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(200, 185, 140, 0.52);
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.meta-count {
-  line-height: 1;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.meta-count b {
-  font-size: max(12px, calc(var(--header-height) * 0.165));
-  font-weight: 900;
-  color: #f4e0b0;
-}
-
-.meta-count i {
-  font-style: normal;
-  font-size: max(9px, calc(var(--header-height) * 0.115));
-  font-weight: 700;
-  color: rgba(200, 185, 140, 0.45);
-}
-
-.meta-dwell {
-  font-size: max(10px, calc(var(--header-height) * 0.128));
-  font-weight: 700;
-  color: #ffd88a;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ================================================================
-   ROW 2 — the phase name, the element the whole plate is built around
-   ================================================================ */
-.plate-name {
-  font-size: min(calc(var(--header-height) * 0.21), 24px);
+.phase-name {
+  width: 100%;
+  font-size: min(calc(var(--header-height) * 0.27), 28px);
   font-weight: 700;
   line-height: 1.08;
   letter-spacing: 0.01em;
@@ -306,68 +184,15 @@ const plateStyle = computed(() => ({
   text-overflow: ellipsis;
   color: var(--ph-accent);
   text-shadow:
-    0 0 9px var(--ph-glow),
+    0 0 10px var(--ph-glow),
     0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-/* ================================================================
-   ROW 3 — one segment per sun phase (comet included)
-   ================================================================ */
-.track {
-  display: flex;
-  align-items: stretch;
-  gap: clamp(2px, 0.15vw, 4px);
-  height: calc(var(--header-height) * 0.07);
-  min-height: 5px;
-}
-
-.seg {
-  flex: 1 1 0;
-  min-width: 0;
-  border-radius: 2px;
-  background: #241c12;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
-}
-
-.seg--past {
-  background: var(--ph-accent);
-  opacity: 0.45;
-}
-
-.seg--now {
-  background: var(--ph-accent);
-  box-shadow:
-    0 0 7px var(--ph-glow),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
-}
-
-/* ================================================================
-   READY — dwell requirement met, the phase can be evolved
-   ================================================================ */
-.sun-plate--ready {
-  border-color: #4a7a28;
-}
-
-.sun-plate--ready .plate-edge {
-  background: linear-gradient(to right, transparent, #6ec040, transparent);
-}
-
-.sun-plate--ready .plate-name {
+/* ── Dwell erfüllt: die Phase kann weiterentwickelt werden ── */
+.sun-phase--ready .phase-name {
   color: #8adc50;
   text-shadow: 0 0 10px rgba(110, 192, 64, 0.6);
   animation: complete-pulse 2.4s ease-in-out infinite;
-}
-
-.sun-plate--ready .meta-dwell {
-  color: #8adc50;
-  letter-spacing: 0.12em;
-}
-
-.sun-plate--ready .seg--now {
-  background: #6ec040;
-  box-shadow:
-    0 0 7px rgba(110, 192, 64, 0.9),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 @keyframes ripple-out {
@@ -410,7 +235,7 @@ const plateStyle = computed(() => ({
 @media (prefers-reduced-motion: reduce) {
   .orb::after,
   .orb-ripple,
-  .sun-plate--ready .plate-name {
+  .sun-phase--ready .phase-name {
     animation: none;
   }
 }
