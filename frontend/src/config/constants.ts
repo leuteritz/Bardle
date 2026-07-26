@@ -1886,10 +1886,6 @@ export const STAR_TIMER_HP_PCT_STEPS = 100
 // Ein lebender Boss zeigt nie "0" — sonst liest sich die Zahl wie "besiegt",
 // während der Stern noch steht.
 export const STAR_TIMER_HP_MIN_PCT = 1
-// Breite des Zahlenfeldes in `ch` — fasst "100%". Feste Feldbreite = kein
-// Reflow der Kugelreihe, wenn 100 → 99 → 9 wechselt; nur der Textknoten
-// selbst wird neu gezeichnet.
-export const STAR_TIMER_HP_PCT_WIDTH_CH = 4
 // Nur der aktiv bekämpfte Planet zeigt seine HP dauerhaft. Jeder andere blendet
 // sie ein, sobald er getroffen wird, und nach dieser Zeit ohne weiteren Treffer
 // wieder aus — die Bar bleibt ruhig, statt permanent Zahlen zu zeigen.
