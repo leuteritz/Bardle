@@ -179,8 +179,10 @@ export { BOSS_NAMES } from './bossNames'
  * bis zum ersten 404 — 11 Requests und ~10 MB PNG-Decode bei JEDEM Öffnen des
  * Star-Fight-Modals, mitten in der Einblende-Animation.
  *
- * Neue Sprites hier eintragen. Maßstab: die Sprites werden mit ~430 px Höhe
- * dargestellt, mehr als ~1400 px Kantenlänge ist verschwendeter Decode.
+ * Neue Sprites hier eintragen. Maßstab: die Sprites werden mit 400–700 px Höhe
+ * dargestellt (Full HD bis 4K), mehr als ~1400 px Kantenlänge ist verschwendeter
+ * Decode — Boss11/12 lagen ursprünglich bei 2760×1504 (4,15 Mpx) und wurden
+ * deshalb auf 1408×767 gebracht, wie der restliche Satz.
  */
 export const BOSS_IMAGE_PATHS = [
   '/img/Boss/Boss1.png',
@@ -193,6 +195,8 @@ export const BOSS_IMAGE_PATHS = [
   '/img/Boss/Boss8.png',
   '/img/Boss/Boss9.png',
   '/img/Boss/Boss10.png',
+  '/img/Boss/Boss11.png',
+  '/img/Boss/Boss12.png',
 ] as const
 
 // Planet type display names
