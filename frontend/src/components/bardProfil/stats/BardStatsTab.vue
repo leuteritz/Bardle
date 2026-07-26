@@ -613,7 +613,6 @@ function stopResize() {
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
           <span class="sf-p-title">
-            <span class="sf-p-mark" aria-hidden="true" />
             <span class="sf-p-label">Journey</span>
           </span>
           <label class="sf-search-wrap">
@@ -729,7 +728,6 @@ function stopResize() {
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
           <span class="sf-p-title">
-            <span class="sf-p-mark" aria-hidden="true" />
             <span class="sf-p-label">Augments</span>
           </span>
           <label class="sf-search-wrap">
@@ -797,7 +795,6 @@ function stopResize() {
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
           <span class="sf-p-title">
-            <span class="sf-p-mark" aria-hidden="true" />
             <span class="sf-p-label">Galaxy Archive</span>
           </span>
           <label class="sf-search-wrap">
@@ -965,18 +962,7 @@ function stopResize() {
 .sf-p-title {
   display: flex;
   align-items: center;
-  gap: 9px;
   min-width: 0;
-}
-
-/* Vertical gold tick in front of the title — same palette as the modal's gold
-   rule, so the three columns are scannable at a glance */
-.sf-p-mark {
-  flex-shrink: 0;
-  width: 3px;
-  height: 20px;
-  border-radius: 2px;
-  background: linear-gradient(to bottom, #e8c060, #c89040, #5c3310);
 }
 
 .sf-p-label {
@@ -1589,16 +1575,14 @@ function stopResize() {
   .sf-p-label {
     font-size: 18px;
   }
-  .sf-p-mark {
-    height: 17px;
-  }
 }
 
 /* 4K and taller: the default sizes would start to look lost on the huge canvas,
    so the titles scale up. The ceiling is not the viewport but the archive
    column, which stays 440px wide at every resolution — measured, the longest
-   title ("Galaxy Archive") needs 212px there at 23px and the search box the
-   rest, so anything larger would ellipsise the headline instead of growing it. */
+   title ("Galaxy Archive") already needs 230px there at 25px, more than the
+   column leaves next to the search box, so anything larger than this would
+   ellipsise the headline instead of growing it. */
 @media (min-height: 1600px) {
   .sf-p-head {
     min-height: 58px;
@@ -1606,10 +1590,6 @@ function stopResize() {
   .sf-p-label {
     font-size: 23px;
     letter-spacing: 0.08em;
-  }
-  .sf-p-mark {
-    height: 22px;
-    width: 4px;
   }
   .sf-search {
     font-size: 14px;
