@@ -914,6 +914,3 @@ export function mvpScore(champ: ChampionState, objectiveParticipations = 0): num
     objectiveParticipations * MVP_W_OBJECTIVE
   )
 }
-
-/** Total game length guard exported for consumers that need the end-of-game constant. */
-export const TIMELINE_GAME_END = BATTLE_TOTAL_GAME_SECONDS

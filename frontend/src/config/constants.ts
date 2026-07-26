@@ -35,7 +35,6 @@ export const GAME_STATE = {
   HONOR: { key: 'honor', icon: 'game-icons:trophy', label: 'Honor', color: '#74d448' },
 } as const
 
-export type GameStateKey = (typeof GAME_STATE)[keyof typeof GAME_STATE]['key']
 export const MMR_TO_POWER_MULTIPLIER = 1.5
 
 // Star background (App.vue)
@@ -109,22 +108,6 @@ export const MAX_ABILITY_LEVEL = 5
 // Skill Tree Meep costs (Q, W, E, R)
 export const SKILL_MEEP_COSTS = [3, 8, 20, 45] as const
 
-// Planet events
-export const PLANET_MAX_COUNT = 3
-export const PLANET_SPAWN_INTERVAL_MIN = 6_000
-export const PLANET_SPAWN_INTERVAL_MAX = 14_000
-export const PLANET_EVENT_CHECK_INTERVAL = 30
-export const PLANET_RESCUE_DURATION_MIN = 5_000
-export const PLANET_RESCUE_DURATION_MAX = 10_000
-export const PLANET_RESCUE_CLICKS_MIN = 5
-export const PLANET_RESCUE_CLICKS_MAX = 15
-export const PLANET_RESCUE_BASE_REWARD = 500
-export const PLANET_EVENT_BASE_CHANCE = 0.6
-export const PLANET_EVENT_PRESTIGE_BONUS = 0.35
-
-// Planet material drop chance (probability that a rescue planet carries material)
-export const PLANET_MATERIAL_CHANCE = 0.6
-
 // Pre-scaled planet thumbnails (256px, HQ resampling) for small UI tiles —
 // browsers blur when minifying the ~700px originals down to ~60px in one step
 export const PLANET_IMAGE_DIR = '/img/planets/'
@@ -153,9 +136,6 @@ export const MATERIAL_PLACEHOLDER_LABELS: Record<string, string> = {
 }
 // Header materials grid: fixed column count (2 rows × 5 columns = 10 materials).
 export const HEADER_MATERIALS_GRID_COLUMNS = 5
-
-// Champion home planet discovery chance
-export const CHAMPION_HOME_PLANET_CHANCE = 0.5
 
 // Champion travel timing
 export const CHAMPION_TRAVEL_BASE_MS = 60_000 // 60s base travel time
@@ -189,8 +169,6 @@ export const BOSS_ENRAGE_BASE_SECONDS = 30
 export const BOSS_ENRAGE_LEVEL_STEP = 5
 export const BOSS_ENRAGE_MAX_SECONDS = 60
 export const BOSS_PASSIVE_DPS_FRACTION = 0.1
-export const BOSS_BASE_REWARD = 500
-export const BOSS_REWARD_DIFFICULTY_SCALE = 4
 export const BOSS_CPS_PENALTY_FRACTION = 0.05
 export const BOSS_CPS_PENALTY_DURATION_MS = 30_000
 export { BOSS_NAMES } from './bossNames'
@@ -216,16 +194,6 @@ export const PLANET_TYPE_NAMES: Record<string, string> = {
   obsidian: 'Obsidian Planet',
   coral: 'Coral Planet',
 }
-
-// Title rotation
-export const TITLE_MESSAGE_INTERVAL_MS = 5000
-
-// Minimap phases (game-time seconds, 60 game-sec = 1 real-sec, total = 3600)
-export const MINIMAP_PHASE_LANING_END = 930
-export const MINIMAP_PHASE_DRAKE_END = 1600
-export const MINIMAP_PHASE_MIDFIGHT_END = 2400
-export const MINIMAP_PHASE_BARON_END = 2930
-export const MINIMAP_PHASE_PUSH_END = 3600
 
 export const BLUE_NEXUS = { x: 12, y: 88 }
 export const RED_NEXUS = { x: 88, y: 12 }
@@ -476,12 +444,10 @@ export const WINPROB_MAX = 0.95
 export const BATTLE_BASE_START_WIN_CHANCE = 0.5
 /** Victory momentum meter: dominance glow thresholds + fill transition */
 export const MOMENTUM_HIGH_THRESHOLD = 0.65
-export const MOMENTUM_LOW_THRESHOLD = 0.35
 /** Dominance tiers for the meter visuals: within ±band of 50% reads as neutral,
  * at/above the crushing threshold the strongest (pulsing) presentation kicks in */
 export const MOMENTUM_NEUTRAL_BAND = 0.03
 export const MOMENTUM_CRUSHING_THRESHOLD = 0.8
-export const MOMENTUM_BAR_TRANSITION_MS = 800
 /** Victory momentum meter: delta chip fade-out duration */
 export const MOMENTUM_DELTA_CHIP_MS = 1200
 export const TIMELINE_KILL_WINPROB_DELTA = 0.02
@@ -648,8 +614,6 @@ export const WARP_DISTANCE_LY_MIN = 1.2
 export const WARP_DISTANCE_LY_MAX = 8.5
 export const WARP_VELOCITY_C_MIN = 0.82
 export const WARP_VELOCITY_C_MAX = 0.99
-export const WARP_STAR_COUNT = 460
-export const WARP_STAR_SPEED = 22
 export const WARP_HUD_UPDATE_MS = 100
 
 // ── Champion movement (minimap waypoints, game-seconds / map-units) ────────
@@ -753,14 +717,6 @@ export const OPPONENT_MMR_VARIANCE = 200
 export const BATTLE_TIME_MIN_SECONDS = 30
 export const BATTLE_TIME_RANGE_SECONDS = 471
 
-// Battle stat tick chances and max values
-export const STAT_KILL_CHANCE = 0.5
-export const STAT_DEATH_CHANCE = 0.3
-export const STAT_ASSIST_CHANCE = 0.7
-export const STAT_MAX_KILLS = 3
-export const STAT_MAX_DEATHS = 2
-export const STAT_MAX_ASSISTS = 7
-
 // MMR rank thresholds
 export const MMR_RANK_THRESHOLDS = [
   { tier: 'Iron', division: 'IV', minMMR: 0 },
@@ -811,7 +767,6 @@ export const GALAXY_TRANS_DECEL_MS = 3_600
 export const GALAXY_SPAWN_INTERVAL_MIN = 5_000
 export const GALAXY_SPAWN_INTERVAL_MAX = 12_000
 export const GALAXY_MAX_COUNT = 4
-export const IDLE_CRUISE_MULTIPLIER = 20
 export const CHAMPION_POWER_PER_LEVEL = 10
 export const MAX_ACTIVE_EXPEDITIONS = 3
 // Weighted tier roll (d100): r < epic → epic, r < rare → rare, else common
@@ -855,7 +810,6 @@ export const PLANET_LEVELS_PER_PHASE = 5 // levels unlocked per Sun Phase
 export const PLANET_LEVEL_MAX_PHASE = 5 // cap aligned to starPhase max (0–5)
 export const PLANET_MILESTONE_INTERVAL = 5 // every Nth Attunement grants a perk spike
 export const PLANET_MILESTONE_BONUS = 0.25 // +25% of base role bonus per milestone reached
-export const PLANET_BULK_LEVEL_STEP = 10 // "Attune ×10" button step
 export const PLANET_MAX_BULK_LEVELS = 1000 // safety cap for the "Max" simulation loop
 // Attunement rank tiers — ordered bands; highest min <= level wins
 export const PLANET_RANK_TIERS: { min: number; name: string; color: string }[] = [
@@ -875,8 +829,6 @@ export const BEHIND_SUN_SPEED_MULTIPLIER = 5
 // Eclipse-Phase (Boss unantastbar) möglichst kurz bleibt — gilt nur für Sterne
 export const STAR_BEHIND_SUN_SPEED_MULTIPLIER = 10
 export const HOVER_SPEED_MULTIPLIER = 0.3
-export const AVATAR_SIZE_LARGE = 40
-export const AVATAR_SIZE_SMALL = 32
 export const ORBIT_RADIUS_SCALE = 1.8
 
 // ── Geteilte Orbit-Phase der Spieler-Planeten (Idle-Orbit ↔ Planeten-Tab) ────
@@ -1130,11 +1082,6 @@ export const SUN_HORIZON_FLOAT_MS = 1200
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
 
-/** Axial tilt of the layered SunComponent. Default = angled/side view (planet tab). */
-export const SUN_AXIAL_TILT = -0.42
-/** Axial tilt for the top-down camera (shop tab) — looking straight down at the sun. */
-export const SUN_TOPDOWN_AXIAL_TILT = 0
-
 /**
  * Background idle-scene sun disc diameter as a multiple of the current sun radius.
  * Matches the visible core (~4r) and the chime click target (currentSunRadius * 4),
@@ -1166,7 +1113,6 @@ export const PAUSE_SUN_VH_FACTOR = 0.24
  *  flat viewports (Full HD) and grows (up to max scale) on 2K/4K. */
 export const PAUSE_PANEL_DESIGN_WIDTH = 560
 export const PAUSE_PANEL_MAX_SCALE = 1.3
-export const PAUSE_STAGE_MARGIN = 12
 
 export interface SunGrowthStage {
   stage: number
@@ -1554,9 +1500,6 @@ export const BOTTOM_FRAME_W_GOLD = 1.2
 export const BOTTOM_FRAME_STROKE_GOLD = '#c89040' // thin gold highlight line
 // Unified background fill: flat header brown — must stay identical across
 // all three bottom panels (minimap / scoreboard / command), no deviations
-export const BOTTOM_BAR_BG_TOP = '#1e1006'
-export const BOTTOM_BAR_BG_MID = '#1e1006'
-export const BOTTOM_BAR_BG_BOTTOM = '#1e1006'
 export const BOTTOM_BAR_SEAM_COLOR = 'rgba(122,78,32,0.35)'
 
 // Center scoreboard (5 combat | crest | 5 economy stats)
@@ -1573,7 +1516,6 @@ export const SCOREBOARD_STAT_COLORS = {
   barons: '#c9a0f5',
   turrets: '#d8b878',
 } as const
-export const SCOREBOARD_LABEL_COLOR = '#7a6a44'
 
 // ── Battle stat visuals — canonical mapping shared by BottomScoreboard,
 //    ScoreTopBar and BattleLandingScreen: the same stat always carries the
@@ -1728,12 +1670,6 @@ export const MINIMAP_TARGET_BASE_R = 6 // target star radius in the far overview
 export const MINIMAP_TARGET_MAX_R = 12 // target star radius at full zoom (arrival crossfade bridges to the arrival sun)
 export const MINIMAP_WAIT_SUN_R = 26 // centered player sun on the role-selection screen
 
-// Command panel v2 (portrait cards + planet dock row)
-export const CMD_PLANET_ROW_H = 118 // planet dock row height
-export const CMD_READY_DOT_SIZE = 15 // ability-ready indicator dot
-export const CMD_CARD_ROLE_BAR_H = 5 // role-colored top bar on champion cards
-export const CMD_CARD_OUTER_ARC_R = 44 // outer corner radius following the silhouette arc
-
 // Game Loop
 export const GAME_TICK_INTERVAL_MS = 1000
 export const MEEP_ADD_DELAY_MS = 100
@@ -1788,8 +1724,6 @@ export const SECONDS_PER_HOUR = 3600
 export const EFFICIENCY_STARS_DIVISOR = 20
 export const EFFICIENCY_STARS_MAX = 5
 export const EFFICIENCY_STARS_MIN = 0.5
-export const MODIFIER_COST_FRACTION = 0.5
-export const MODIFIER_ROLL_COUNT = 3
 
 // Augments
 export const AUGMENT_CLICK_HISTORY_SIZE = 5
@@ -1812,17 +1746,7 @@ export const COMBAT_FLOAT_OFFSET_X_SPREAD = 10
 export const GALAXY_STARS_BASE_REQUIRED = 3
 export const GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS = 4000
 export const GALAXY_STAR_FAILED_SIGNAL_MS = 2600 // "Star Lost" flash on the minimap
-export const GALAXY_BOSS_SEARCH_SEG_MIN_MS = 3500
-export const GALAXY_BOSS_SEARCH_SEG_RANGE_MS = 4500
-export const GALAXY_BOSS_SEARCH_STEP_MIN = 0.07
-export const GALAXY_BOSS_SEARCH_STEP_RANGE = 0.09
-export const GALAXY_BOSS_SEARCH_BOUNDARY_MIN = 0.15
-export const GALAXY_BOSS_SEARCH_BOUNDARY_MAX = 0.85
-export const GALAXY_BOSS_TOTAL_SEARCH_MIN_MS = 15_000
-export const GALAXY_BOSS_TOTAL_SEARCH_RANGE_MS = 45_000
 export const GALAXY_BOSS_SPAWN_ANIM_MS = 5_000
-export const GALAXY_BOSS_SEARCH_ANGLE_MIN_DEG = 60
-export const GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG = 240
 
 // ── Galaxy Tier & Champion Star Level (Tier redesign) ───────────────────────
 // Two axes both derived from galaxyStore.currentGalaxy:
@@ -1905,9 +1829,6 @@ export const EXTRA_PLANET_ORBIT_RX_RANGE = 85
 export const EXTRA_PLANET_ORBIT_RY_MIN = 24
 export const EXTRA_PLANET_ORBIT_RY_RANGE = 45
 export const EXTRA_PLANET_ORBIT_TILT_MAX = 0.35
-export const GALAXY_BOSS_STAR_ORBIT_RX = 300
-export const GALAXY_BOSS_STAR_ORBIT_RY = 129
-export const GALAXY_BOSS_STAR_ORBIT_TILT = 0.14
 export const GALAXY_BOSS_PLANET_ORBIT_RX = 38
 export const GALAXY_BOSS_PLANET_ORBIT_RY = 22
 export const GALAXY_BOSS_PLANET_ORBIT_TILT = 0.1
@@ -2255,11 +2176,6 @@ export const FORGE_STAGE_SIZE = 820
 export const FORGE_RING_ROOT_R = 165
 export const FORGE_RING_BRANCH_R = 285
 export const FORGE_RING_LEAF_R = 385
-export const FORGE_NODE_SIZE_ROOT = 56
-export const FORGE_NODE_SIZE_BRANCH = 46
-export const FORGE_NODE_SIZE_LEAF = 38
-/** Branch nodes sit at their root's angle ± this offset (degrees). */
-export const FORGE_BRANCH_ANGLE_OFFSET = 24
 
 // Ring unlock gating (starPhase index)
 export const FORGE_BRANCH_UNLOCK_PHASE = 2
@@ -2275,8 +2191,6 @@ export const FORGE_LEAF_PARENT_MIN_LEVEL = 2
 /** Each leaf level amplifies its parent branch's effect by this fraction. */
 export const FORGE_LEAF_AMPLIFY_PER_LEVEL = 0.25
 
-// Relics & constellations
-export const FORGE_RELIC_REQUIRED_BRANCH_LEVEL = 3
 export const FORGE_CONSTELLATION_REQUIRED_LEVEL = 3
 
 // Cosmic Bargain
@@ -2746,7 +2660,6 @@ export const SFX_CHIME_SUB_DECAY_S = 0.22
 // scales with the sun.
 export const CHIME_BURST_COUNT = 5 // mini chimes spawned per click
 export const CHIME_BURST_DURATION_MS = 650 // burst fly-out + fade (also cleanup timeout)
-export const CHIME_RIPPLE_DURATION_MS = 500 // ripple ring expand/fade
 export const CHIME_BURST_DIST_MIN_FACTOR = 1.1 // min travel distance (× sun radius)
 export const CHIME_BURST_DIST_MAX_FACTOR = 2.0 // max travel distance (× sun radius)
 export const CHIME_BURST_SIZE_FACTOR = 0.45 // mini-chime size (× sun radius)

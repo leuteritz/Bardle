@@ -214,84 +214,6 @@ export type PlanetType =
 
 export type StarType = 'champion' | 'resource' | 'galaxy_boss' | 'boss_escort'
 
-export interface LabelData {
-  planetId: string
-  bossName: string
-  currentHP: number
-  maxHP: number
-  reward: number | null
-  chimesImage?: string
-  materialImage?: string
-  materialName?: string
-  materialCount?: number
-  championImage?: string
-  championName?: string
-  isGalaxyBoss: boolean
-  transform: string
-}
-
-export interface PlanetItem {
-  id: string
-  type: PlanetType
-  size: number
-  x: number
-  y: number
-  scale: number
-  scaleEnd: number
-  opacity: number
-  transform: string
-  lifetime: number
-  elapsed: number
-  removeTimeout: ReturnType<typeof setTimeout> | null
-
-  // Orbit state
-  orbiting?: boolean
-  approaching?: boolean
-  orbitAngle?: number
-  orbitCx?: number
-  orbitCy?: number
-
-  orbitRadiusX?: number
-  orbitRadiusY?: number
-  tiltRad?: number
-  baseSpeed?: number
-  direction?: 1 | -1
-  currentRadiusX?: number
-  currentRadiusY?: number
-  isBehind?: boolean
-
-  orbitRadius?: number
-  orbitSpeed?: number
-  approachFromX?: number
-  approachFromY?: number
-  approachToX?: number
-  approachToY?: number
-  approachDuration?: number
-  approachElapsed?: number
-
-  name?: string
-  isRescue: boolean
-  isGalaxyBoss: boolean
-  labelData: LabelData | null
-  // ── GEÄNDERT: 'champion_arriving' ergänzt ──────────────────────────────
-  animState: 'normal' | 'exploding' | 'saved' | 'champion_arriving'
-}
-
-export interface PlanetRescueEvent {
-  planetId: string
-  planetType: PlanetType
-  startTime: number
-  durationMs: number
-  reward: number
-  clicksRequired: number
-  clicksMade: number
-  saved: boolean
-  expired: boolean
-  potentialMaterialId?: string
-  assignedDropChance?: number
-  homePlanetChampion?: string
-}
-
 export interface PlanetBossRewardSlot {
   type: 'chimes' | 'material'
   amount?: number
@@ -361,13 +283,6 @@ export interface SigilStageDef {
   spinSec: number // outer ring rotation duration
   emberCount: number
   extraRings: number // 0..2 decorative rings added around the sigil
-}
-
-// A galaxy tier groups several galaxies and gates progression behind a cost.
-export interface GalaxyTier {
-  tier: number
-  firstGalaxy: number
-  lastGalaxy: number
 }
 
 export interface RecruitableChampion {
@@ -584,12 +499,6 @@ export interface ChampionCareerStats {
   damageTaken: number
   wardsPlaced: number
   honors: number
-}
-
-export interface CurrentRank {
-  tier: string
-  division: string
-  lp: number
 }
 
 export interface Opponent {
@@ -978,23 +887,6 @@ export interface ActiveTrait {
   activeThreshold: TraitThreshold | null
   nextThreshold: TraitThreshold | null
   involvedChampions: string[]
-}
-
-export interface RoleBehaviorState {
-  // Support
-  supportHealCooldownMs: number
-  // Top Laner
-  tankShieldActive: boolean
-  tankShieldBrokenMs: number
-  // Mid Laner
-  dotCooldownMs: number
-  dotRemainingMs: number
-  midNovaActive: boolean
-  midCurseCooldownMs: number
-  midCurseFlashActive: boolean
-  activeCurse: ActiveCurse | null
-  // ADC
-  adcBurstCooldownMs: number
 }
 
 /* ── Champion Shop detail panel ── */
