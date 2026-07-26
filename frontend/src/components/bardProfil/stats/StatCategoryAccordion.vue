@@ -12,9 +12,9 @@ const props = defineProps<{
 
 const { categories, totalStatCount, matchCount } = useStatCatalog(toRef(props, 'query'))
 
-/* Collapsed by default except the first section — 16 open categories at once
-   would bury the list, and the search opens whatever it hits anyway. */
-const openIds = ref<Set<StatCategoryId>>(new Set([STAT_CATEGORIES[0].id]))
+/* Everything collapsed on open — the tab then shows all 16 categories at once
+   as a table of contents; the search opens whatever it hits anyway. */
+const openIds = ref<Set<StatCategoryId>>(new Set())
 
 const isSearching = computed(() => props.query.trim().length > 0)
 
@@ -45,9 +45,10 @@ function collapseAll(): void {
   openIds.value = new Set()
 }
 
-/* Leaving the search returns to a readable state instead of 16 open sections */
+/* Leaving the search returns to the collapsed default instead of leaving all
+   16 sections that the search had forced open standing wide */
 watch(isSearching, (searching, wasSearching) => {
-  if (wasSearching && !searching) openIds.value = new Set([STAT_CATEGORIES[0].id])
+  if (wasSearching && !searching) openIds.value = new Set()
 })
 </script>
 
