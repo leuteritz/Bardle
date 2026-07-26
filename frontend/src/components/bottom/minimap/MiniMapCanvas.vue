@@ -107,6 +107,58 @@ export default defineComponent({
     const camera = { x: 0.5, y: 0.5, zoom: 1 }
     let prevCamZoom = 1
 
+    // ── Canvas-Maße ohne Layout-Zwang ───────────────────────────────────────
+    // offsetWidth/offsetHeight im rAF-Loop zu lesen erzwingt pro Frame ein
+    // Layout der GANZEN Seite (im CPU-Profil ~9 % Self-Time). Die Maße kommen
+    // deshalb aus einem ResizeObserver und werden nur bei echter Größen-
+    // änderung aktualisiert.
+    const canvasSize = { w: 0, h: 0 }
+    let sizeObserver: ResizeObserver | null = null
+    let renderDpr = 1
+
+    /** Fallback für Aufrufe vor dem ersten Observer-Callback. */
+    function ensureCanvasSize(canvas: HTMLCanvasElement) {
+      if (canvasSize.w === 0 || canvasSize.h === 0) {
+        canvasSize.w = canvas.offsetWidth
+        canvasSize.h = canvas.offsetHeight
+      }
+      return canvasSize
+    }
+
+    // ── Offscreen-Layer für den statischen Galaxienkörper ───────────────────
+    // Wird nur neu gerastert, wenn sich Kamera, Seed, Theme, Auflösung oder
+    // die Overview-Deckkraft ändern; sonst kostet die Galaxie pro Frame ein
+    // einziges drawImage statt MINIMAP_GALAXY_PARTICLES Einzelpfade.
+    let galaxyLayer: HTMLCanvasElement | null = null
+    let galaxyLayerKey = ''
+
+    function getGalaxyLayer(
+      w: number,
+      h: number,
+      key: string,
+      render: (c: CanvasRenderingContext2D) => void,
+    ): HTMLCanvasElement {
+      const pw = Math.max(1, Math.round(w * renderDpr))
+      const ph = Math.max(1, Math.round(h * renderDpr))
+      if (!galaxyLayer) galaxyLayer = document.createElement('canvas')
+      const resized = galaxyLayer.width !== pw || galaxyLayer.height !== ph
+      if (resized) {
+        galaxyLayer.width = pw
+        galaxyLayer.height = ph
+      }
+      if (!resized && galaxyLayerKey === key) return galaxyLayer
+
+      const lctx = galaxyLayer.getContext('2d')
+      if (lctx) {
+        lctx.setTransform(renderDpr, 0, 0, renderDpr, 0, 0)
+        lctx.clearRect(0, 0, w, h)
+        lctx.globalCompositeOperation = 'lighter'
+        render(lctx)
+      }
+      galaxyLayerKey = key
+      return galaxyLayer
+    }
+
     let hyperspacePhase: HyperspacePhase = 'idle'
     let hyperspacePhaseStart = 0
     let hyperspaceTimeouts: number[] = []
@@ -220,7 +272,16 @@ export default defineComponent({
       const zoomVel = cam.zoom - prevCamZoom
       prevCamZoom = cam.zoom
       const streaking = zoomVel > 0.002 && cam.zoom > 1.6
-      function drawStarParticle(px: number, py: number, size: number, rgb: string, a: number) {
+      // Zielkontext ist Parameter, damit derselbe Partikel-Look sowohl direkt
+      // auf den Hauptcanvas als auch in den Offscreen-Layer gezeichnet wird.
+      function drawStarParticle(
+        c: CanvasRenderingContext2D,
+        px: number,
+        py: number,
+        size: number,
+        rgb: string,
+        a: number,
+      ) {
         const style = `rgba(${rgb}, ${a.toFixed(3)})`
         if (streaking) {
           const dx = px - w / 2
@@ -229,21 +290,21 @@ export default defineComponent({
           if (dist > 1) {
             const len = Math.min(16, zoomVel * dist * 0.5)
             if (len > 0.8) {
-              ctx.beginPath()
-              ctx.strokeStyle = style
-              ctx.lineWidth = size
-              ctx.lineCap = 'round'
-              ctx.moveTo(px, py)
-              ctx.lineTo(px + (dx / dist) * len, py + (dy / dist) * len)
-              ctx.stroke()
+              c.beginPath()
+              c.strokeStyle = style
+              c.lineWidth = size
+              c.lineCap = 'round'
+              c.moveTo(px, py)
+              c.lineTo(px + (dx / dist) * len, py + (dy / dist) * len)
+              c.stroke()
               return
             }
           }
         }
-        ctx.beginPath()
-        ctx.arc(px, py, size, 0, Math.PI * 2)
-        ctx.fillStyle = style
-        ctx.fill()
+        c.beginPath()
+        c.arc(px, py, size, 0, Math.PI * 2)
+        c.fillStyle = style
+        c.fill()
       }
 
       // Seeded twinkling background stars
@@ -271,30 +332,50 @@ export default defineComponent({
       // (bulge / two arms / knots / haze) drawn additively over a two-layer
       // core glow. Follows the camera and fades with the overview layer.
       // Static (no rotation) so the rescue stars stay pinned to the arms.
+      //
+      // MINIMAP_GALAXY_PARTICLES einzelne arc()+fill() pro Frame waren der
+      // teuerste Posten der ganzen HUD-Leiste. Da der Körper nur von Kamera,
+      // Seed, Theme und Canvas-Größe abhängt (keine Zeitkomponente), wird er
+      // in einen Offscreen-Layer gerastert und pro Frame nur noch als EIN
+      // drawImage komponiert — solange die Kamera steht, also fast immer.
+      // Additiv bleibt additiv: der Layer wird selbst mit 'lighter' aufgelegt.
       const geo = galaxyGeo(galaxyStore.mapSeed)
       const themeAccent = minimapAccentForTheme(galaxyStore.currentThemeIndex)
-      if (farAlpha > 0.01) {
-        ctx.save()
-        ctx.globalCompositeOperation = 'lighter'
 
+      // Gemeinsamer Zeichenkörper für Live- und Cache-Pfad — einzige Quelle
+      // der Wahrheit für das Aussehen der Galaxie.
+      function drawGalaxyBody(c: CanvasRenderingContext2D) {
         const [gcx, gcy] = wToC(0.5, 0.5)
         const coreR = MINIMAP_GALAXY_CORE_RADIUS * w * cam.zoom
-        const coreBright = ctx.createRadialGradient(gcx, gcy, 0, gcx, gcy, coreR * 0.55)
+        const coreBright = c.createRadialGradient(gcx, gcy, 0, gcx, gcy, coreR * 0.55)
         coreBright.addColorStop(0, `rgba(255, 240, 200, ${(0.35 * farAlpha).toFixed(3)})`)
         coreBright.addColorStop(1, 'rgba(255, 240, 200, 0)')
-        ctx.fillStyle = coreBright
-        ctx.fillRect(gcx - coreR, gcy - coreR, coreR * 2, coreR * 2)
-        const halo = ctx.createRadialGradient(gcx, gcy, 0, gcx, gcy, coreR * 1.9)
+        c.fillStyle = coreBright
+        c.fillRect(gcx - coreR, gcy - coreR, coreR * 2, coreR * 2)
+        const halo = c.createRadialGradient(gcx, gcy, 0, gcx, gcy, coreR * 1.9)
         halo.addColorStop(0, `rgba(240, 205, 140, ${(0.1 * farAlpha).toFixed(3)})`)
         halo.addColorStop(1, 'rgba(240, 205, 140, 0)')
-        ctx.fillStyle = halo
-        ctx.fillRect(gcx - coreR * 2, gcy - coreR * 2, coreR * 4, coreR * 4)
+        c.fillStyle = halo
+        c.fillRect(gcx - coreR * 2, gcy - coreR * 2, coreR * 4, coreR * 4)
 
         for (const p of getGalaxyParticles(galaxyStore.mapSeed)) {
           const wp = galaxyPlaneToWorld(geo, p.angle, p.r)
           const [px, py] = wToC(wp.x, wp.y)
           const rgb = p.color === 2 ? themeAccent : GALAXY_PARTICLE_COLORS[p.color]
-          drawStarParticle(px, py, p.size, rgb, p.alpha * farAlpha)
+          drawStarParticle(c, px, py, p.size, rgb, p.alpha * farAlpha)
+        }
+      }
+
+      if (farAlpha > 0.01) {
+        // Während der Zoomfahrt ziehen die Partikel Bewegungsstreifen — die
+        // hängen an der Zoom-Geschwindigkeit und lassen sich nicht cachen.
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+        if (streaking) {
+          drawGalaxyBody(ctx)
+        } else {
+          const key = `${w}|${h}|${renderDpr}|${galaxyStore.mapSeed}|${galaxyStore.currentThemeIndex}|${cam.x}|${cam.y}|${cam.zoom}|${farAlpha.toFixed(4)}`
+          ctx.drawImage(getGalaxyLayer(w, h, key, drawGalaxyBody), 0, 0, w, h)
         }
         ctx.restore()
       }
@@ -321,7 +402,7 @@ export default defineComponent({
           const tint = nfRng()
           const a = (0.25 + nfRng() * 0.5) * nearAlpha
           const [px, py] = wToC(wx, wy)
-          drawStarParticle(px, py, size, tint < 0.6 ? '255, 246, 228' : themeAccent, a)
+          drawStarParticle(ctx, px, py, size, tint < 0.6 ? '255, 246, 228' : themeAccent, a)
         }
         ctx.restore()
       }
@@ -885,12 +966,12 @@ export default defineComponent({
     function drawCanvas(timestamp = performance.now()) {
       const canvas = canvasEl.value
       if (!canvas) return
-      const w = canvas.offsetWidth
-      const h = canvas.offsetHeight
+      const { w, h } = ensureCanvasSize(canvas)
       if (w === 0 || h === 0) return
       // Render at device-pixel resolution so the map stays crisp on
       // HiDPI/Retina displays; all drawing keeps using CSS-pixel coords.
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      renderDpr = dpr
       const pw = Math.round(w * dpr)
       const ph = Math.round(h * dpr)
       if (canvas.width !== pw || canvas.height !== ph) {
@@ -1072,8 +1153,7 @@ export default defineComponent({
         if (!active) return
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
         const canvas = canvasEl.value
-        const w = canvas?.offsetWidth ?? 440
-        const h = canvas?.offsetHeight ?? 440
+        const { w, h } = canvas ? ensureCanvasSize(canvas) : { w: 440, h: 440 }
         for (const id of hyperspaceTimeouts) window.clearTimeout(id)
         hyperspaceTimeouts = []
         warp.init(w, h)
@@ -1106,8 +1186,7 @@ export default defineComponent({
         if (!active) return
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
         const canvas = canvasEl.value
-        const w = canvas?.offsetWidth ?? 440
-        const h = canvas?.offsetHeight ?? 440
+        const { w, h } = canvas ? ensureCanvasSize(canvas) : { w: 440, h: 440 }
         for (const id of hyperspaceTimeouts) window.clearTimeout(id)
         hyperspaceTimeouts = []
         warp.init(w, h)
@@ -1152,6 +1231,16 @@ export default defineComponent({
 
     onMounted(() => {
       nextTick(() => {
+        const canvas = canvasEl.value
+        if (canvas) {
+          sizeObserver = new ResizeObserver((entries) => {
+            const box = entries[0]?.contentRect
+            if (!box) return
+            canvasSize.w = box.width
+            canvasSize.h = box.height
+          })
+          sizeObserver.observe(canvas)
+        }
         drawCanvas()
       })
     })
@@ -1161,6 +1250,10 @@ export default defineComponent({
         cancelAnimationFrame(rafId)
         rafId = null
       }
+      sizeObserver?.disconnect()
+      sizeObserver = null
+      galaxyLayer = null
+      galaxyLayerKey = ''
       for (const id of hyperspaceTimeouts) window.clearTimeout(id)
       hyperspaceTimeouts = []
       arrivalTransitionStart = -1

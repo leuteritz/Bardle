@@ -13,6 +13,9 @@ import {
   SCOREBOARD_STAT_COLORS,
   RANK_EMBLEM_IMAGES,
   RANK_TIER_COLORS,
+  RANK_TIER_SHORT,
+  RANK_DIVISION_DIGITS,
+  RANK_LABEL_MAX_CHARS,
   BATTLE_STAT_GAME_ICONS,
   BATTLE_STAT_IMAGES,
 } from '@/config/constants'
@@ -53,7 +56,19 @@ const { currentRank, totalWins, totalLosses } = storeToRefs(battleStore)
 const isApexTier = computed(() =>
   ['Master', 'Grandmaster', 'Challenger'].includes(currentRank.value.tier),
 )
+/* Short, near-equal-width label ("IRON 4", "DIAM 1", "GM", "CHAL") — the cell
+   sizes against a fixed budget (RANK_LABEL_MAX_CHARS), so every tier renders at
+   the same big size. The full name stays available in the tooltip. */
+const rankShortTier = computed(
+  () => RANK_TIER_SHORT[currentRank.value.tier] ?? currentRank.value.tier.slice(0, 4).toUpperCase(),
+)
 const rankLabel = computed(() =>
+  isApexTier.value
+    ? rankShortTier.value
+    : `${rankShortTier.value} ${RANK_DIVISION_DIGITS[currentRank.value.division] ?? currentRank.value.division}`,
+)
+/** Unabbreviated rank for tooltip + emblem alt text. */
+const rankFullLabel = computed(() =>
   isApexTier.value
     ? currentRank.value.tier
     : `${currentRank.value.tier} ${currentRank.value.division}`,
@@ -70,9 +85,9 @@ function openBattleTab() {
 /* ── Overflow guard: the LONGEST numeric value across the stat cells sets
    one shared char count on the scoreboard root, so all numbers shrink
    together and stay the same size (see .sb-stat-value). The rank cell is
-   deliberately excluded: its long tier names ("Grandmaster") would drag
-   every number down — it is wider (flex 1.6) and fits its own text via a
-   local --val-chars override. ── */
+   deliberately excluded: it is wider (flex 1.6) and overrides --val-chars
+   with the CONSTANT RANK_LABEL_MAX_CHARS — never the live label length, so
+   its size stays identical from Iron 4 up to Challenger. ── */
 const wlCombined = computed(
   () => formatNumber(totalWins.value).length + formatNumber(totalLosses.value).length + 4,
 )
@@ -90,7 +105,6 @@ const sharedValChars = computed(() =>
     wlChars.value,
   ),
 )
-const rankChars = computed(() => rankLabel.value.length)
 
 /* ══════════════════════════════════════════════════════════════════════
    Live battle-status line (compact, under the BARDLE crest) — ported
@@ -366,13 +380,13 @@ const liveChars = computed(() => {
       @keydown.space.prevent="openBattleTab"
     >
       <!-- Rank cell: emblem + tier-colored value; wider + own text fit -->
-      <div class="sb-stat sb-stat--rank" title="Rank">
+      <div class="sb-stat sb-stat--rank" :title="`Rank · ${rankFullLabel}`">
         <span class="sb-stat-label">Rank</span>
         <div class="sb-stat-main">
-          <img :src="rankEmblem" :alt="rankLabel" class="sb-stat-icon" />
+          <img :src="rankEmblem" :alt="rankFullLabel" class="sb-stat-icon" />
           <span
-            class="sb-stat-value"
-            :style="{ color: rankColor, '--val-chars': rankChars }"
+            class="sb-stat-value sb-rank-value"
+            :style="{ color: rankColor, '--val-chars': RANK_LABEL_MAX_CHARS }"
           >
             {{ rankLabel }}
           </span>
@@ -496,13 +510,18 @@ const liveChars = computed(() => {
   border-left: 1px solid rgba(122, 78, 32, 0.3);
 }
 
-/* Rank holds long tier names ("Grandmaster") — wider cell so it never
-   squeezes the numeric cells; its neighbors on the right side share the
-   rest (5.6 flex units per half → cell budgets below match) */
+/* Rank holds a short word plus division ("IRON 4") — wider cell so the
+   letters get real room without squeezing the numeric cells; its neighbors
+   on the right side share the rest (5.6 flex units per half → cell budgets
+   below match) */
 .sb-stats--right .sb-stat {
   --sb-cell-w: calc(var(--sb-half-w) / 5.6);
 }
-.sb-stat--rank {
+/* Specificity matters here: the `.sb-stats--right .sb-stat` rule above is
+   (0,2,0), so a bare `.sb-stat--rank` would lose and the cell would compute
+   its font against a NORMAL cell's width — text shrunk to ~12px although
+   flex-grow had already handed it 1.6× the room. */
+.sb-stats--right .sb-stat--rank {
   flex-grow: 1.6;
   --sb-cell-w: calc(var(--sb-half-w) / 5.6 * 1.6);
 }
@@ -562,6 +581,14 @@ const liveChars = computed(() => {
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   transition: filter 0.2s ease;
+}
+
+/* Rank is a short uppercase word, not a number — a touch of tracking keeps
+   the capitals legible, and the div digit stays glued to its tier. */
+.sb-rank-value {
+  justify-content: center;
+  letter-spacing: 0.05em;
+  font-weight: 700;
 }
 
 .sb-stat-label {

@@ -1043,6 +1043,22 @@ onUnmounted(() => {
   pointer-events: auto;
   transform: translateX(-50%);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Pulsierender Schein als eigene Ebene: eine box-shadow-Keyframe-Animation
+   ist eine Paint-Animation und invalidiert jede Frame die gesamte Wurzel-
+   Ebene — mit HUD und Modal darin. Hier trägt ::after den hellen Zustand
+   statisch und nur seine opacity atmet (GPU, kein Repaint). */
+.header-notif-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    0 0 14px var(--badge-glow-b),
+    0 0 24px var(--badge-glow-c);
+  opacity: 0;
   animation: header-badge-glow 1.8s ease-in-out infinite;
 }
 
@@ -1114,12 +1130,10 @@ onUnmounted(() => {
 @keyframes header-badge-glow {
   0%,
   100% {
-    box-shadow: 0 0 6px var(--badge-glow-a);
+    opacity: 0;
   }
   50% {
-    box-shadow:
-      0 0 14px var(--badge-glow-b),
-      0 0 24px var(--badge-glow-c);
+    opacity: 1;
   }
 }
 

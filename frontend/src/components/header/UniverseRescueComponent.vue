@@ -68,6 +68,17 @@ watch(
         <div class="rpg-bar-flow" />
         <div class="rpg-bar-gloss" />
       </div>
+      <!-- Pulsierender Schein als eigene Ebene NEBEN dem Füllbalken: als Kind
+           würde ihn dessen overflow:hidden abschneiden, und als animiertes
+           box-shadow am Balken selbst wäre es eine Paint-Animation, die jede
+           Frame die ganze Seite neu zeichnen lässt. Hier atmet nur opacity.
+           Steht nach dem Balken, damit auch der innere Schimmer auf ihm liegt;
+           die Skalenstriche (z-index 2) bleiben darüber. -->
+      <div
+        class="rpg-bar-glow"
+        aria-hidden="true"
+        :style="{ width: gameStore.universeRescueProgress + '%' }"
+      />
       <div class="rpg-ticks" aria-hidden="true">
         <div class="rpg-tick" style="left: 25%" />
         <div class="rpg-tick" style="left: 50%" />
@@ -275,14 +286,41 @@ watch(
     rgba(255, 240, 130, 0.7) 100%
   );
   transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: barPulse 3.5s ease-in-out infinite;
+  box-shadow:
+    0 0 8px rgba(255, 215, 0, 0.35),
+    inset 0 0 6px rgba(255, 215, 0, 0.1);
   overflow: hidden;
   z-index: 1;
 }
 
+/* Deckungsgleich mit .rpg-bar-fill, trägt aber nur den hellen Puls-Zustand */
+.rpg-bar-glow {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  min-width: 6px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1;
+  transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 0 20px rgba(255, 215, 0, 0.6),
+    inset 0 0 10px rgba(255, 215, 0, 0.2);
+  opacity: 0;
+  animation: barPulse 3.5s ease-in-out infinite;
+}
+
+/* Der Streifenlauf wandert per transform statt per background-position:
+   background-position ist eine Paint-Property, transform läuft auf der GPU.
+   Das Element ragt um eine Musterlänge (72px) nach links über den Balken,
+   overflow:hidden am Balken schneidet den Überstand sauber ab. */
 .rpg-bar-flow {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: -72px;
+  right: 0;
   background: repeating-linear-gradient(
     90deg,
     transparent 0px,
@@ -339,23 +377,19 @@ watch(
 @keyframes barPulse {
   0%,
   100% {
-    box-shadow:
-      0 0 8px rgba(255, 215, 0, 0.35),
-      inset 0 0 6px rgba(255, 215, 0, 0.1);
+    opacity: 0;
   }
   50% {
-    box-shadow:
-      0 0 20px rgba(255, 215, 0, 0.6),
-      inset 0 0 10px rgba(255, 215, 0, 0.2);
+    opacity: 1;
   }
 }
 
 @keyframes flowMove {
   from {
-    background-position-x: 0px;
+    transform: translateX(0);
   }
   to {
-    background-position-x: 72px;
+    transform: translateX(72px);
   }
 }
 

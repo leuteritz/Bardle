@@ -107,14 +107,28 @@ const dwellText = computed(() => {
 }
 
 .sun {
+  position: relative;
   width: 68%;
   height: 68%;
   border-radius: 50%;
   box-shadow:
     0 0 11px 2px var(--sun-glow),
     inset -3px -4px 8px rgba(0, 0, 0, 0.45);
-  animation: sun-pulse 5s ease-in-out infinite;
   transition: transform 0.2s;
+}
+
+/* Der Atem der Sonne läuft über eine separate Glut-Ebene mit opacity statt
+   über animiertes box-shadow: eine Paint-Animation im dauerhaft sichtbaren
+   Header zwingt den Browser sonst jede Frame zum Repaint der ganzen Seite. */
+.sun::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 19px 5px var(--sun-glow);
+  opacity: 0;
+  animation: sun-pulse 5s ease-in-out infinite;
 }
 
 .sun-phase:hover .sun {
@@ -230,14 +244,10 @@ const dwellText = computed(() => {
 @keyframes sun-pulse {
   0%,
   100% {
-    box-shadow:
-      0 0 11px 2px var(--sun-glow),
-      inset -3px -4px 8px rgba(0, 0, 0, 0.45);
+    opacity: 0;
   }
   50% {
-    box-shadow:
-      0 0 19px 5px var(--sun-glow),
-      inset -3px -4px 8px rgba(0, 0, 0, 0.45);
+    opacity: 1;
   }
 }
 </style>

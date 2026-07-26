@@ -495,6 +495,10 @@ function onSlotLeave() {
   height: 32px;
   object-fit: contain;
   display: block;
+  /* über der Glut-Ebene (::after), damit deren Innenlinie das Emblem nicht
+     überzeichnet */
+  position: relative;
+  z-index: 1;
   filter: drop-shadow(0 0 4px color-mix(in srgb, var(--role-color, #c89040) 60%, transparent));
   transition: filter 0.25s ease;
 }
@@ -525,26 +529,37 @@ function onSlotLeave() {
   transition: color 0.25s ease;
 }
 
-/* Bereit: geschlossener Ring, das Emblem atmet in der Rollenfarbe */
-.champ-ability:not(.champ-ability--cd) .champ-ability-orb {
+/* Bereit: geschlossener Ring, das Emblem atmet in der Rollenfarbe.
+   Der Puls läuft NICHT über eine box-shadow-Keyframe-Animation — box-shadow
+   ist eine Paint-Property, ihre Animation zwingt den Browser jede Frame zu
+   einem Repaint der gesamten Wurzel-Ebene (und damit des kompletten HUDs,
+   gemessen: rund 14 % Framerate). Stattdessen liegt der helle Zustand als
+   eigene Glut-Ebene (::after) fest im Element und nur deren opacity atmet —
+   das erledigt der Compositor auf der GPU, ohne einen einzigen Repaint. */
+.champ-ability:not(.champ-ability--cd) .champ-ability-orb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  /* nur der HELLE Anteil des früheren 50 %-Keyframes — der dunkle Innen-
+     schatten sitzt konstant auf .champ-ability-orb */
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--role-color, #c89040) 60%, transparent),
+    0 0 24px color-mix(in srgb, var(--role-color, #c89040) 85%, transparent);
+  /* Ruhezustand = unsichtbar; ohne Animation (reduced motion) bleibt damit
+     genau der frühere 0-%-Keyframe stehen */
+  opacity: 0;
   animation: champ-ability-ready 1.9s ease-in-out infinite;
 }
 
 @keyframes champ-ability-ready {
   0%,
   100% {
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--role-color, #c89040) 45%, transparent),
-      inset 0 0 12px rgba(0, 0, 0, 0.5),
-      0 2px 8px rgba(0, 0, 0, 0.65),
-      0 0 12px color-mix(in srgb, var(--role-color, #c89040) 40%, transparent);
+    opacity: 0;
   }
   50% {
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--role-color, #c89040) 60%, transparent),
-      inset 0 0 12px rgba(0, 0, 0, 0.4),
-      0 2px 8px rgba(0, 0, 0, 0.65),
-      0 0 24px color-mix(in srgb, var(--role-color, #c89040) 85%, transparent);
+    opacity: 1;
   }
 }
 
@@ -1064,7 +1079,7 @@ function onSlotLeave() {
 @media (prefers-reduced-motion: reduce) {
   .champ-card--filled:hover .champ-card-hover-glow,
   .champ-card--flash .champ-card-body,
-  .champ-ability:not(.champ-ability--cd) .champ-ability-orb,
+  .champ-ability:not(.champ-ability--cd) .champ-ability-orb::after,
   .champ-ability--cast .champ-ability-orb,
   .champ-card-eclipse-medal,
   .champ-card-eclipse-veil,

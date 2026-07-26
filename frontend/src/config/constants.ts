@@ -64,6 +64,41 @@ export const RANK_TIERS = [
   'Challenger',
 ] as const
 
+/**
+ * Uniform short forms of the ladder tiers (BottomScoreboard rank cell).
+ * Rule: the first four letters of the tier — the single exception is
+ * Grandmaster, whose "GRAN" would read as a tier of its own, so it keeps the
+ * ladder-standard "GM". Every label stays within RANK_LABEL_MAX_CHARS, which
+ * is what lets the cell render Iron and Challenger at the very same size.
+ */
+export const RANK_TIER_SHORT: Record<string, string> = {
+  Iron: 'IRON',
+  Bronze: 'BRON',
+  Silver: 'SILV',
+  Gold: 'GOLD',
+  Platinum: 'PLAT',
+  Emerald: 'EMER',
+  Diamond: 'DIAM',
+  Master: 'MAST',
+  Grandmaster: 'GM',
+  Challenger: 'CHAL',
+}
+
+/** Roman division → digit, so "IRON 4" stays as narrow as "GOLD 1". */
+export const RANK_DIVISION_DIGITS: Record<string, string> = {
+  IV: '4',
+  III: '3',
+  II: '2',
+  I: '1',
+}
+
+/**
+ * Length of the longest short rank label ("IRON 4"). Used as a FIXED text
+ * budget for the rank cell instead of the live label length — the font size
+ * must not change when the player ranks up.
+ */
+export const RANK_LABEL_MAX_CHARS = 6
+
 // Abilities
 export const MAX_ABILITY_LEVEL = 5
 
