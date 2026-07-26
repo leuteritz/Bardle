@@ -525,7 +525,11 @@ onUnmounted(() => {
 }
 
 .header-portal-wrap {
-  min-width: clamp(150px, 15vw, 280px);
+  /* Cap bewusst unter 280px: der Header ist bei 1400px gedeckelt, während
+     Tree-Button und Innenabstände mit vw mitwachsen — ab 2K blieben dem
+     Sun-Phase-Plate sonst nur 130px. Die Rescue-Bar verliert dadurch rund
+     20px und bleibt mit ~250px weiterhin die breiteste Zeile im Header. */
+  min-width: clamp(150px, 15vw, 258px);
   align-self: stretch;
   overflow: hidden;
   display: flex;
