@@ -657,23 +657,36 @@ function emberStyle(i: number): Record<string, string> {
   padding-bottom: 18%;
 }
 
-/* Boss kompakter, damit Planet, Champion-Row UND der Sonnen-Horizont sichtbar
-   bleiben. Das Vertikal-Budget der Arena ist von oben nach unten:
+/* Boss-Größe. Das Vertikal-Budget der Arena ist von oben nach unten:
    HUD → Boss → Loot (51 %) → Champion-Row (~68–70 %) → Sonnen-Kamm (~89 %).
    Kompakte Full-HD-Größen siehe @media (max-height: 1100px) unten.
 
-   ACHTUNG, die 80 % sehen falsch aus, sind aber korrekt: `.boss-wrapper` hat
-   keine eigene Breite und schrumpft auf den Inhalt, also auf die INTRINSISCHE
-   Sprite-Breite. `max-width` bezieht sich damit auf das Sprite selbst statt auf
-   die Arena — die dargestellte Größe ist schlicht `naturalWidth × Faktor` und
-   hängt an der Dateiauflösung, nicht am Layout. Die Sprites liegen bei 704 px
-   (vorher 1408 px), deshalb 80 % statt 40 %: identische Darstellung, halbe
-   Decode-Kosten. Wer die Sprite-Auflösung ändert, muss diesen Wert mitziehen.
-   Der Block unten (max-height: 1100px) ist NICHT betroffen — dort begrenzt
-   `max-height` und nicht die Breite, Full HD bleibt unverändert. */
+   Die Höhe hängt am WRAPPER, nicht am Bild — und das mit Absicht:
+   `.boss-wrapper` hat keine eigene Breite und schrumpfte früher auf die
+   intrinsische Sprite-Breite. Ein `max-width` am Bild bezog sich damit auf das
+   Sprite selbst statt auf die Arena; die Darstellung war schlicht
+   `naturalWidth × Faktor` und hing an der Dateiauflösung. Folge: der Boss war
+   auf jeder Auflösung gleich groß und nahm auf 4K nur 17 % der Arenahöhe ein
+   (auf 2K dagegen 27,7 %) — genau der „auf 4K zu klein"-Fall.
+
+   Jetzt bekommt der Wrapper eine arena-relative Höhe (Prozent laufen gegen die
+   Content-Box der Arena, deren padding-bottom von 18 % ist bereits abgezogen),
+   das Bild füllt ihn per `height: 100%` und leitet seine Breite aus dem
+   Seitenverhältnis ab. Der Wrapper bleibt damit exakt so groß wie das Sprite —
+   wichtig, weil `.boss-aura` mit `inset: -20%` an ihm hängt. Gemessene Höhe in
+   % der Arena: Full HD 22,4 · WUXGA 24,0 · 2K 27,3 · 4K 26,9 (vorher 19,2 ·
+   16,8 · 27,7 · 17,0). Unterkante bleibt überall ≤ 49 %, also frei vom
+   Loot-Banner bei 51 %. Die Sprite-Auflösung spielt jetzt keine Rolle mehr. */
+.sf-arena-wrap :deep(.boss-wrapper) {
+  height: 38%;
+  /* Schutz gegen extrem breite Sprites — bindet bei den aktuellen
+     Seitenverhältnissen nicht (breitestes Sprite landet bei ~32 %) */
+  max-width: 40%;
+}
+
 .sf-arena-wrap :deep(.boss-img) {
-  height: 80%;
-  max-width: 80%;
+  height: 100%;
+  max-width: 100%;
 }
 
 /* Boden-Schatten der Arena aus — der Boss schwebt hier frei über dem
@@ -1101,10 +1114,13 @@ function emberStyle(i: number): Record<string, string> {
    Loot und Striker skalieren gemeinsam herunter, damit Boss, HP-Leiste
    und dmg/s-Anzeige nicht kollidieren. */
 @media (max-height: 1100px) {
-  .sf-arena-wrap :deep(.boss-img) {
-    height: 44%;
-    max-height: 360px;
-    max-width: 42%;
+  /* Flachere Arena → der Boss nimmt einen kleineren Anteil, damit die Unterkante
+     klar vor dem Loot-Banner (51 %) bleibt: gemessen 45,9 % auf Full HD und
+     49,0 % auf WUXGA. Das frühere `max-height: 360px` ist entfallen — es war ein
+     Pixel-Deckel gegen die alte, an der Dateiauflösung hängende Größe und würde
+     die arena-relative Skalierung jetzt nur wieder kappen. */
+  .sf-arena-wrap :deep(.boss-wrapper) {
+    height: 32%;
   }
 
   .sf-atk-emblem {
