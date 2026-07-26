@@ -15,6 +15,13 @@ export const usePlayerStore = defineStore('player', {
     maxHP: PLAYER_MAX_HP_BASE as number,
     damageFloats: [] as { id: number; value: number; expiresAt: number }[],
     _nextFloatId: 0,
+    // ── Lifetime counters (Bard Stats catalog) ──
+    /** HP the sun ever lost after mitigation. */
+    totalDamageTaken: 0,
+    /** HP ever restored by passive regeneration. */
+    totalHpRegenerated: 0,
+    /** How often the sun was driven down to 0 HP. */
+    timesDowned: 0,
   }),
 
   getters: {
@@ -31,10 +38,12 @@ export const usePlayerStore = defineStore('player', {
       // Base regen + Regeneration branch / Eternal Cadence (Star Forge)
       const forgeRegen = useStarForgeStore().hpRegenPerSec
       const treeRegen = useMeepTreeStore().fx.hpRegenPerSec
+      const before = this.currentHP
       this.currentHP = Math.min(
         this.maxHP,
         this.currentHP + PLAYER_HP_REGEN_PER_SEC + forgeRegen + treeRegen,
       )
+      this.totalHpRegenerated += this.currentHP - before
     },
     /** Applies damage after mitigation and returns the amount actually dealt —
      *  callers (e.g. the sun horizon in the Star Fight Modal) display that
@@ -47,7 +56,10 @@ export const usePlayerStore = defineStore('player', {
           amount * useStarForgeStore().damageTakenMult * useMeepTreeStore().fx.damageTakenMult,
         ),
       )
+      const wasUp = this.currentHP > 0
       this.currentHP = Math.max(0, this.currentHP - reduced)
+      this.totalDamageTaken += reduced
+      if (wasUp && this.currentHP === 0) this.timesDowned += 1
       this.damageFloats.push({
         id: this._nextFloatId++,
         value: reduced,

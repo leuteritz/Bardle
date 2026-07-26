@@ -110,6 +110,11 @@ export const useStarGroupStore = defineStore('starGroup', {
     starFightPlanetQueue: [] as string[],
     starFightCurrentIndex: 0,
     hoveredTimerStarId: null as string | null,
+    // ── Lifetime counters (Bard Stats catalog) ──
+    /** Stars ever spawned into the orbit view, of every type. */
+    totalStarsSpawned: 0,
+    /** Planet slots ever cleared inside a star fight. */
+    totalPlanetsCleared: 0,
   }),
 
   getters: {
@@ -225,6 +230,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         starColor: pickResourceStarColor(),
       }
       this.activeStars.push(star)
+      this.totalStarsSpawned++
     },
 
     // Admin-Testbutton: erzwingt einen Resource-Star unabhängig vom Limit.
@@ -249,6 +255,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         starColor: pickResourceStarColor(),
       }
       this.activeStars.push(star)
+      this.totalStarsSpawned++
     },
 
     spawnChampionStar() {
@@ -320,6 +327,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       }
 
       this.activeStars.push(star)
+      this.totalStarsSpawned++
     },
 
     spawnGalaxyBossStar() {
@@ -388,6 +396,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       }
 
       this.activeStars.push(star)
+      this.totalStarsSpawned++
     },
 
     // Nächste Eskorten-Welle des Galaxieboss-Endkampfs. Wird reaktiv ausgelöst
@@ -442,6 +451,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           starColor:
             GALAXY_BOSS_ESCORT_COLORS[Math.floor(Math.random() * GALAXY_BOSS_ESCORT_COLORS.length)],
         })
+        this.totalStarsSpawned++
       }
     },
 
@@ -449,6 +459,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       for (const star of this.activeStars) {
         const slot = star.planetSlots.find((p) => p.planetId === planetId)
         if (!slot) continue
+        if (!slot.cleared) this.totalPlanetsCleared++
         slot.cleared = true
 
         if (this.starFightModalOpen && this.activeFightStarId === star.id) {

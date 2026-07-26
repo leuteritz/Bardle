@@ -230,6 +230,11 @@ function defaultBattleTrack() {
 export const useBattleStore = defineStore('battle', {
   state: () => ({
     mmr: BATTLE_INITIAL_MMR,
+    /** Highest MMR ever reached — a demotion never lowers it (Bard Stats catalog). */
+    peakMmr: BATTLE_INITIAL_MMR,
+    /** Lifetime LP swing, split so the catalog can show both sides of the climb. */
+    totalLpGained: 0,
+    totalLpLost: 0,
     currentRank: {
       tier: 'Iron',
       division: 'IV',
@@ -1720,8 +1725,11 @@ export const useBattleStore = defineStore('battle', {
       const actualScore = won ? 1 : 0
       const mmrChange = Math.round(ELO_K_FACTOR * (actualScore - expectedScore))
       this.mmr += mmrChange
+      this.peakMmr = Math.max(this.peakMmr, this.mmr)
       const lpChange = this.calculateLPChange(mmrChange, won)
       this.updateLP(lpChange)
+      if (lpChange >= 0) this.totalLpGained += lpChange
+      else this.totalLpLost -= lpChange
       const newRank = `${this.currentRank.tier} ${this.currentRank.division}`
       if (oldRank !== newRank) {
         logger.info('Battle', `Rank change: ${oldRank} -> ${newRank}`)

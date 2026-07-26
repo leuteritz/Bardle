@@ -133,6 +133,17 @@ export const useGameStore = defineStore('game', {
     offlineChimes: 0,
     offlineSeconds: 0,
     showOfflineModal: false,
+
+    // ── Lifetime counters (Bard Stats catalog) ────
+    /** Meeps ever guided in — never decreases when meeps are spent. */
+    totalMeepsEarned: 0,
+    /** Meeps ever spent on abilities / universe expeditions. */
+    totalMeepsSpent: 0,
+    /** Completed prestige resets (universe hops). */
+    totalPrestiges: 0,
+    /** Chimes ever granted by offline progress, and the seconds behind them. */
+    totalOfflineChimes: 0,
+    totalOfflineSeconds: 0,
   }),
   actions: {
     // Adds a Meep when enough Chimes have been collected
@@ -140,6 +151,7 @@ export const useGameStore = defineStore('game', {
       if (this.chimesForMeep >= this.meepChimeRequirement) {
         setTimeout(() => {
           this.meeps += 1
+          this.totalMeepsEarned += 1
           const baseCost = Math.max(
             MEEP_BASE_COST,
             Math.ceil(MEEP_BASE_COST * Math.pow(this.meeps, MEEP_COST_EXPONENT)),
@@ -355,6 +367,7 @@ export const useGameStore = defineStore('game', {
       const cost = SKILL_MEEP_COSTS[index]
       if (this.meeps >= cost && this.abilityLevels[index] === 0) {
         this.meeps -= cost
+        this.totalMeepsSpent += cost
         this.abilityLevels[index] = maxLevel
         const shopStore = useShopStore()
         this.chimesPerSecond = shopStore.calculateTotalCPS()
@@ -412,6 +425,7 @@ export const useGameStore = defineStore('game', {
       const nextUniverse = targetUniverse ?? this.currentUniverse + 1
       logger.info('Game', `Prestige reset -> Universe ${nextUniverse}`)
       this.currentUniverse = nextUniverse
+      this.totalPrestiges += 1
       this.chimesToUniverseRescue = Math.ceil(
         this.chimesToUniverseRescue * UNIVERSE_RESCUE_COST_MULTIPLIER,
       )

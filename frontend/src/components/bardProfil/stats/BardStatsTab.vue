@@ -8,9 +8,6 @@ import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { useAugmentStore } from '@/stores/augmentStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useBattleStore } from '@/stores/battleStore'
-import { useShopStore } from '@/stores/shopStore'
-import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import type { CompletedGalaxyRecord } from '@/stores/galaxyStore'
 import {
@@ -23,8 +20,8 @@ import {
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
+import StatCategoryAccordion from './StatCategoryAccordion.vue'
 import { AUGMENTS } from '@/config/augments'
-import { formatNumber } from '@/config/numberFormat'
 import { renderGalaxySnapshot } from '@/utils/galaxySnapshot'
 import { useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
 import type { AugmentDefinition } from '@/types'
@@ -34,18 +31,10 @@ const galaxyStore = useGalaxyStore()
 const synergyStore = useSynergyStore()
 const augmentStore = useAugmentStore()
 const solarStore = useSolarUpgradeStore()
-const battleStore = useBattleStore()
-const shopStore = useShopStore()
-const planetShopStore = usePlanetShopStore()
 const uiStore = useUiStore()
 
 const {
-  totalChimesEarned,
-  chimesPerClick,
-  chimesPerSecond,
-  meeps,
   level,
-  totalClicks,
   inGameTime,
   currentUniverse,
   activeModifier,
@@ -53,44 +42,12 @@ const {
   abilityCPCMultiplier,
   abilityPowerBonus,
 } = storeToRefs(gameStore)
-const { starsRescued, currentGalaxy, completedGalaxies } = storeToRefs(galaxyStore)
+const { currentGalaxy, completedGalaxies } = storeToRefs(galaxyStore)
 const { cpsSynergyMultiplier, powerSynergyMultiplier, dpsSynergyMultiplier } =
   storeToRefs(synergyStore)
 const { temporaryCPSMultiplier } = storeToRefs(augmentStore)
 
 const dpsPct = computed(() => Math.round((dpsSynergyMultiplier.value - 1) * 100))
-
-/* ── Extra lifetime / journey stats (read-only from their stores) ─── */
-const totalPower = computed(() => gameStore.totalPower)
-const lifetimeProduction = computed(() => shopStore.totalLifetimeProduction)
-const championsRecruited = computed(() => battleStore.ownedChampions.length)
-const planetsColonized = computed(() => planetShopStore.purchasedSlots.length)
-const battleRank = computed(
-  () => `${battleStore.currentRank.tier} ${battleStore.currentRank.division}`,
-)
-const winRatePct = computed(() => Math.round(battleStore.winRate))
-const bestWinStreak = computed(() => battleStore.bestWinStreak)
-const careerKda = computed(() => battleStore.careerKda.toFixed(2))
-const pentakills = computed(() => battleStore.allTime.multikills.penta)
-
-/* ── Count-up animation on mount ─────────────────────────────── */
-const countUpProgress = ref(0)
-let rafId: number
-
-onMounted(() => {
-  const startTime = performance.now()
-  const duration = 1000
-  function animFrame(now: number) {
-    countUpProgress.value = Math.min((now - startTime) / duration, 1)
-    if (countUpProgress.value < 1) rafId = requestAnimationFrame(animFrame)
-  }
-  rafId = requestAnimationFrame(animFrame)
-})
-
-const animChimes = computed(() => Math.floor(totalChimesEarned.value * countUpProgress.value))
-const animStars = computed(() => Math.floor(starsRescued.value * countUpProgress.value))
-const animMeeps = computed(() => Math.floor(meeps.value * countUpProgress.value))
-const animClicks = computed(() => Math.floor(totalClicks.value * countUpProgress.value))
 
 /* ── Star phase (sun + timeline) ─────────────────────────────── */
 const totalPhases = STAR_PHASE_DATA.length
@@ -174,7 +131,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  cancelAnimationFrame(rafId)
   clearInterval(ticker)
   stopResize() // drop any in-flight drag listeners + restore body cursor
 })
@@ -376,112 +332,6 @@ const totalChips = computed<BuffChip[]>(() => {
 const journeySearch = ref('')
 const augmentSearch = ref('')
 const archiveSearch = ref('')
-
-interface JourneyStat {
-  key: string
-  label: string
-  value: string
-  img?: string
-  icon?: string
-  valueClass?: string
-}
-
-/* Data-driven Journey rows so the header search can filter them */
-const journeyStats = computed<JourneyStat[]>(() => [
-  {
-    key: 'cps',
-    label: 'Chimes / Sec',
-    img: '/img/BardAbilities/BardChime.png',
-    value: formatNumber(chimesPerSecond.value),
-  },
-  {
-    key: 'cpc',
-    label: 'Chimes / Click',
-    img: '/img/BardAbilities/BardChime.png',
-    value: formatNumber(chimesPerClick.value),
-  },
-  {
-    key: 'total-chimes',
-    label: 'Total Chimes',
-    img: '/img/BardAbilities/BardChime.png',
-    value: formatNumber(animChimes.value),
-  },
-  {
-    key: 'meeps',
-    label: 'Meeps Guided',
-    img: '/img/BardAbilities/BardMeep.png',
-    value: formatNumber(animMeeps.value),
-    valueClass: 'sf-srow-val--green',
-  },
-  {
-    key: 'clicks',
-    label: 'Total Clicks',
-    img: '/img/BardAbilities/BardChime.png',
-    value: formatNumber(animClicks.value),
-  },
-  {
-    key: 'stars',
-    label: 'Stars Rescued',
-    img: '/img/star.png',
-    value: formatNumber(animStars.value),
-  },
-  {
-    key: 'galaxies',
-    label: 'Galaxies Freed',
-    icon: 'game-icons:galaxy',
-    value: String(archive.value.length),
-  },
-  {
-    key: 'power',
-    label: 'Total Power',
-    icon: 'game-icons:embrassed-energy',
-    value: formatNumber(totalPower.value),
-  },
-  {
-    key: 'production',
-    label: 'Lifetime Production',
-    icon: 'game-icons:factory',
-    value: formatNumber(lifetimeProduction.value),
-  },
-  {
-    key: 'champions',
-    label: 'Champions Recruited',
-    icon: 'game-icons:backup',
-    value: String(championsRecruited.value),
-  },
-  {
-    key: 'planets',
-    label: 'Planets Colonized',
-    icon: 'game-icons:jupiter',
-    value: String(planetsColonized.value),
-  },
-  { key: 'rank', label: 'Battle Rank', icon: 'game-icons:rank-1', value: battleRank.value },
-  {
-    key: 'winrate',
-    label: 'Win Rate',
-    icon: 'game-icons:pie-chart',
-    value: `${winRatePct.value}%`,
-  },
-  {
-    key: 'streak',
-    label: 'Best Win Streak',
-    icon: 'game-icons:flame',
-    value: String(bestWinStreak.value),
-  },
-  { key: 'kda', label: 'Career KDA', icon: 'game-icons:daggers', value: careerKda.value },
-  {
-    key: 'penta',
-    label: 'Pentakills',
-    icon: 'game-icons:pentacle',
-    value: String(pentakills.value),
-  },
-])
-
-const filteredJourneyStats = computed(() => {
-  const q = journeySearch.value.trim().toLowerCase()
-  if (!q) return journeyStats.value
-  return journeyStats.value.filter((s) => s.label.toLowerCase().includes(q))
-})
 
 const filteredChips = computed(() => {
   const q = augmentSearch.value.trim().toLowerCase()
@@ -709,13 +559,7 @@ function stopResize() {
             </div>
           </div>
 
-          <div v-if="filteredJourneyStats.length === 0" class="sf-empty-line">No stats match</div>
-          <div v-for="s in filteredJourneyStats" :key="s.key" class="sf-srow">
-            <img v-if="s.img" class="sf-ico" :src="s.img" alt="" aria-hidden="true" />
-            <Icon v-else :icon="s.icon!" class="sf-ico sf-ico--tint" width="22" height="22" />
-            <span class="sf-srow-lbl">{{ s.label }}</span>
-            <span class="sf-srow-val" :class="s.valueClass">{{ s.value }}</span>
-          </div>
+          <StatCategoryAccordion :query="journeySearch" />
         </div>
       </section>
 
@@ -1545,54 +1389,6 @@ function stopResize() {
 .sf-chip--rare .sf-chip-val {
   color: var(--rpg-rarity-rare);
   text-shadow: 0 0 12px rgba(154, 111, 208, 0.3);
-}
-
-/* Unified stat row — every Journey stat (except the Level/Galaxy/Universe
-   chips) shares this one size & style: big, readable, modern. */
-.sf-srow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: #141008;
-  border: 1px solid #241a0c;
-  border-radius: 5px;
-}
-
-.sf-ico {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  object-fit: contain;
-}
-.sf-ico--tint {
-  color: #c89040;
-}
-
-.sf-srow-lbl {
-  flex: 1;
-  min-width: 0;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rpg-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sf-srow-val {
-  font-size: 18px;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--rpg-gold);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.sf-srow-val--green {
-  color: var(--rpg-green-light);
 }
 
 /* ─ Augments panel ─ */

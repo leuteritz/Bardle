@@ -60,6 +60,8 @@ export function usePersistence() {
     const solarStore = useSolarUpgradeStore()
     const starForgeStore = useStarForgeStore()
     const meepTreeStore = useMeepTreeStore()
+    const planetBossStore = usePlanetBossStore()
+    const starGroupStore = useStarGroupStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -88,6 +90,11 @@ export function usePersistence() {
         pendingAugmentOptions: [...gameStore.pendingAugmentOptions],
         totalChimesEarned: gameStore.totalChimesEarned,
         totalClicks: gameStore.totalClicks,
+        totalMeepsEarned: gameStore.totalMeepsEarned,
+        totalMeepsSpent: gameStore.totalMeepsSpent,
+        totalPrestiges: gameStore.totalPrestiges,
+        totalOfflineChimes: gameStore.totalOfflineChimes,
+        totalOfflineSeconds: gameStore.totalOfflineSeconds,
       },
       shop: {
         buyAmount: shopStore.buyAmount,
@@ -95,6 +102,9 @@ export function usePersistence() {
       },
       battle: {
         mmr: battleStore.mmr,
+        peakMmr: battleStore.peakMmr,
+        totalLpGained: battleStore.totalLpGained,
+        totalLpLost: battleStore.totalLpLost,
         currentRank: { ...battleStore.currentRank },
         tierReachedAt: { ...battleStore.tierReachedAt },
         ownedChampions: [...battleStore.ownedChampions],
@@ -148,9 +158,15 @@ export function usePersistence() {
         completedExpeditions: expeditionStore.completedExpeditions,
         availableExpeditions: expeditionStore.availableExpeditions,
         nextSpawnAt: expeditionStore.nextSpawnAt,
+        totalExpeditionsStarted: expeditionStore.totalExpeditionsStarted,
+        totalExpeditionsSucceeded: expeditionStore.totalExpeditionsSucceeded,
+        totalExpeditionsFailed: expeditionStore.totalExpeditionsFailed,
+        totalExpeditionChimes: expeditionStore.totalExpeditionChimes,
       },
       inventory: {
         collectedMaterials: { ...inventoryStore.collectedMaterials },
+        totalMaterialsCollected: inventoryStore.totalMaterialsCollected,
+        totalMaterialsSpent: inventoryStore.totalMaterialsSpent,
       },
       augment: {
         clickCounter: augmentStore.clickCounter,
@@ -189,11 +205,30 @@ export function usePersistence() {
         pendingRoleSelection: galaxyStore.pendingRoleSelection,
         nextStarRole: galaxyStore.nextStarRole,
         travelPendingAfterRotation: galaxyStore.travelPendingAfterRotation,
+        totalStarsRescued: galaxyStore.totalStarsRescued,
+        totalStarsLost: galaxyStore.totalStarsLost,
+        totalGalaxyBossesDefeated: galaxyStore.totalGalaxyBossesDefeated,
+        totalBossEscortsDefeated: galaxyStore.totalBossEscortsDefeated,
       },
       // ← NEW: Persist player HP
       player: {
         currentHP: playerStore.currentHP,
         maxHP: playerStore.maxHP,
+        totalDamageTaken: playerStore.totalDamageTaken,
+        totalHpRegenerated: playerStore.totalHpRegenerated,
+        timesDowned: playerStore.timesDowned,
+      },
+      // Lifetime-only blocks: the live boss/star state itself is never persisted,
+      // but its career counters must survive a reload.
+      planetBoss: {
+        totalBossesDefeated: planetBossStore.totalBossesDefeated,
+        totalBossesLost: planetBossStore.totalBossesLost,
+        totalBossDamage: planetBossStore.totalBossDamage,
+        turretVolleyCounter: planetBossStore.turretVolleyCounter,
+      },
+      starGroup: {
+        totalStarsSpawned: starGroupStore.totalStarsSpawned,
+        totalPlanetsCleared: starGroupStore.totalPlanetsCleared,
       },
       planetShop: {
         slots: planetShopStore.slots.map((s) => ({
@@ -281,6 +316,12 @@ export function usePersistence() {
           gameStore.pendingAugmentOptions = g.pendingAugmentOptions
         gameStore.totalChimesEarned = g.totalChimesEarned ?? 0
         gameStore.totalClicks = g.totalClicks ?? 0
+        // Lifetime counters added later — saves without them start the tally at 0
+        gameStore.totalMeepsEarned = g.totalMeepsEarned ?? gameStore.meeps
+        gameStore.totalMeepsSpent = g.totalMeepsSpent ?? 0
+        gameStore.totalPrestiges = g.totalPrestiges ?? Math.max(0, gameStore.currentUniverse - 1)
+        gameStore.totalOfflineChimes = g.totalOfflineChimes ?? 0
+        gameStore.totalOfflineSeconds = g.totalOfflineSeconds ?? 0
       }
 
       // Restore shopStore
@@ -300,6 +341,9 @@ export function usePersistence() {
       if (saved.battle) {
         const b = saved.battle
         battleStore.mmr = b.mmr ?? battleStore.mmr
+        battleStore.peakMmr = Math.max(b.peakMmr ?? 0, battleStore.mmr)
+        battleStore.totalLpGained = b.totalLpGained ?? 0
+        battleStore.totalLpLost = b.totalLpLost ?? 0
         if (b.currentRank) battleStore.currentRank = { ...b.currentRank }
         if (b.tierReachedAt) battleStore.tierReachedAt = { ...b.tierReachedAt }
         // Saves from before tier dates existed carry no history: stamp the tier
@@ -415,11 +459,30 @@ export function usePersistence() {
           expeditionStore.availableExpeditions = saved.expeditions.availableExpeditions
         if (typeof saved.expeditions.nextSpawnAt === 'number')
           expeditionStore.nextSpawnAt = saved.expeditions.nextSpawnAt
+        const completed = expeditionStore.completedExpeditions
+        expeditionStore.totalExpeditionsStarted =
+          saved.expeditions.totalExpeditionsStarted ?? completed.length
+        expeditionStore.totalExpeditionsSucceeded =
+          saved.expeditions.totalExpeditionsSucceeded ??
+          completed.filter((e) => e.status === 'success').length
+        expeditionStore.totalExpeditionsFailed =
+          saved.expeditions.totalExpeditionsFailed ??
+          completed.filter((e) => e.status === 'failure').length
+        expeditionStore.totalExpeditionChimes = saved.expeditions.totalExpeditionChimes ?? 0
       }
 
       // Restore inventoryStore
-      if (saved.inventory?.collectedMaterials) {
-        inventoryStore.collectedMaterials = { ...saved.inventory.collectedMaterials }
+      if (saved.inventory) {
+        if (saved.inventory.collectedMaterials) {
+          inventoryStore.collectedMaterials = { ...saved.inventory.collectedMaterials }
+        }
+        // Older saves only knew the current stock — seed the lifetime tally from it
+        const inStock = Object.values(inventoryStore.collectedMaterials).reduce(
+          (sum, n) => sum + (n ?? 0),
+          0,
+        )
+        inventoryStore.totalMaterialsCollected = saved.inventory.totalMaterialsCollected ?? inStock
+        inventoryStore.totalMaterialsSpent = saved.inventory.totalMaterialsSpent ?? 0
       }
 
       // Restore augmentStore
@@ -499,6 +562,19 @@ export function usePersistence() {
         galaxyStore.pendingRoleSelection = gx.pendingRoleSelection ?? false
         galaxyStore.nextStarRole = gx.nextStarRole ?? null
         galaxyStore.travelPendingAfterRotation = false
+        // Lifetime counters added later — reconstruct what the archive still knows
+        const archivedAttempts = galaxyStore.completedGalaxies.flatMap((r) => r.attemptResults)
+        galaxyStore.totalStarsRescued =
+          gx.totalStarsRescued ??
+          archivedAttempts.filter((r) => r === 'rescued').length + galaxyStore.starsRescued
+        galaxyStore.totalStarsLost =
+          gx.totalStarsLost ??
+          archivedAttempts.filter((r) => r === 'failed').length +
+            galaxyStore.attemptResults.filter((r) => r === 'failed').length
+        galaxyStore.totalGalaxyBossesDefeated =
+          gx.totalGalaxyBossesDefeated ?? galaxyStore.completedGalaxies.length
+        galaxyStore.totalBossEscortsDefeated =
+          gx.totalBossEscortsDefeated ?? galaxyStore.bossEscortsDefeated
         if (gx.championTravelState && gx.championTravelState !== 'champion_spawned') {
           galaxyStore.championTravelState = gx.championTravelState
           galaxyStore.championTravelStartTime = gx.championTravelStartTime ?? 0
@@ -540,6 +616,23 @@ export function usePersistence() {
       if (saved.player) {
         playerStore.currentHP = saved.player.currentHP ?? playerStore.maxHP
         playerStore.maxHP = saved.player.maxHP ?? playerStore.maxHP
+        playerStore.totalDamageTaken = saved.player.totalDamageTaken ?? 0
+        playerStore.totalHpRegenerated = saved.player.totalHpRegenerated ?? 0
+        playerStore.timesDowned = saved.player.timesDowned ?? 0
+      }
+
+      // Restore the lifetime-only counters of the boss / star systems
+      const planetBossStore = usePlanetBossStore()
+      if (saved.planetBoss) {
+        planetBossStore.totalBossesDefeated = saved.planetBoss.totalBossesDefeated ?? 0
+        planetBossStore.totalBossesLost = saved.planetBoss.totalBossesLost ?? 0
+        planetBossStore.totalBossDamage = saved.planetBoss.totalBossDamage ?? 0
+        planetBossStore.turretVolleyCounter = saved.planetBoss.turretVolleyCounter ?? 0
+      }
+      const starGroupStore = useStarGroupStore()
+      if (saved.starGroup) {
+        starGroupStore.totalStarsSpawned = saved.starGroup.totalStarsSpawned ?? 0
+        starGroupStore.totalPlanetsCleared = saved.starGroup.totalPlanetsCleared ?? 0
       }
 
       // Restore planetShopStore (slots)
@@ -632,6 +725,8 @@ export function usePersistence() {
           )
           gameStore.offlineChimes = earned
           gameStore.offlineSeconds = cappedSeconds
+          gameStore.totalOfflineChimes += earned
+          gameStore.totalOfflineSeconds += cappedSeconds
           gameStore.showOfflineModal = true
         }
       }
@@ -697,6 +792,11 @@ export function usePersistence() {
     gameStore.offlineChimes = 0
     gameStore.offlineSeconds = 0
     gameStore.showOfflineModal = false
+    gameStore.totalMeepsEarned = 0
+    gameStore.totalMeepsSpent = 0
+    gameStore.totalPrestiges = 0
+    gameStore.totalOfflineChimes = 0
+    gameStore.totalOfflineSeconds = 0
 
     // 3. Reset shopStore
     const shopStore = useShopStore()
@@ -711,6 +811,9 @@ export function usePersistence() {
 
     // 5. Reset battleStore (timers already stopped)
     battleStore.mmr = 1000
+    battleStore.peakMmr = 1000
+    battleStore.totalLpGained = 0
+    battleStore.totalLpLost = 0
     battleStore.currentRank = { tier: 'Iron', division: 'IV', lp: 0 }
     battleStore.tierReachedAt = {}
     battleStore.ownedChampions = ['Bard']

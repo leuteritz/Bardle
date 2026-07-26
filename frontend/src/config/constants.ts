@@ -3266,6 +3266,24 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:round-star', // Galaxy Archive card — stars rescued badge
   'game-icons:cracked-glass', // Galaxy Archive card — stars lost badge
   'game-icons:duration', // Galaxy Archive card — time-spent overlay (valid replacement for invalid sand-clock)
+  'game-icons:spiral-arrow', // Galaxy Archive — empty-state emblem (BardStatsTab)
+  // Bard Stats — stat catalog category headers (config/statCategories.ts)
+  'game-icons:growth', // Progression category
+  'game-icons:coins', // Economy category
+  'game-icons:stone-tower', // Chime Works category
+  'game-icons:arena', // Auto Battle category
+  'game-icons:sword-slice', // Combat Record category
+  'game-icons:eye-shield', // Objectives & Vision category
+  'game-icons:champions', // Champions category
+  'game-icons:star-satellites', // Galaxy category
+  'game-icons:star-skull', // Star Fights category
+  'game-icons:globe-ring', // Planets category
+  'game-icons:barbed-sun', // Sun & Solar Rays category
+  'game-icons:blacksmith', // Star Forge category
+  'game-icons:tree-roots', // Meep Tree category
+  'game-icons:trail', // Expeditions category
+  'game-icons:ore', // Materials & Gear category
+  'game-icons:aura', // Buffs & Synergies category
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

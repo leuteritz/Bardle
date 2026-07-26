@@ -9,11 +9,15 @@ import { useMeepTreeStore } from './meepTreeStore'
 export const useInventoryStore = defineStore('inventory', {
   state: () => ({
     collectedMaterials: {} as Record<string, number>,
+    /** Lifetime counters for the Bard Stats catalog — unaffected by spending. */
+    totalMaterialsCollected: 0,
+    totalMaterialsSpent: 0,
   }),
 
   actions: {
     addMaterial(materialId: string): void {
       this.collectedMaterials[materialId] = (this.collectedMaterials[materialId] ?? 0) + 1
+      this.totalMaterialsCollected += 1
       logger.debug('Inventory', `+1 ${materialId}`, { total: this.collectedMaterials[materialId] })
     },
 
@@ -33,6 +37,7 @@ export const useInventoryStore = defineStore('inventory', {
       if (!this.hasMaterials(costs)) return false
       for (const [matId, qty] of Object.entries(costs)) {
         this.collectedMaterials[matId] -= qty
+        this.totalMaterialsSpent += qty
       }
       logger.info('Inventory', 'Materials spent', costs)
       return true

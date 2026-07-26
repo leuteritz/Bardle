@@ -42,26 +42,11 @@ const ROLE_EVENT_TYPE: Record<ChampionRole, GameEventType> = {
 }
 
 const EXPEDITION_SUCCESS_MESSAGES: Record<ChampionRole, string[]> = {
-  jungle: [
-    '– The jungle answers. Chimes bloom.',
-    '– Enemy camps cleared. Bard wanders on.',
-  ],
-  top: [
-    '– Tower falls. Victory whispers.',
-    '– Side lane taken. Silence follows.',
-  ],
-  mid: [
-    '– Lane closed. Echoes of power linger.',
-    '– Roam complete. A spark in the dark.',
-  ],
-  adc: [
-    '– Precision wins. Chimes follow.',
-    '– Bot lane cleared. Objectives fall.',
-  ],
-  support: [
-    '– Vision secured. Allies find the path.',
-    '– Wards planted deep. Darkness lifts.',
-  ],
+  jungle: ['– The jungle answers. Chimes bloom.', '– Enemy camps cleared. Bard wanders on.'],
+  top: ['– Tower falls. Victory whispers.', '– Side lane taken. Silence follows.'],
+  mid: ['– Lane closed. Echoes of power linger.', '– Roam complete. A spark in the dark.'],
+  adc: ['– Precision wins. Chimes follow.', '– Bot lane cleared. Objectives fall.'],
+  support: ['– Vision secured. Allies find the path.', '– Wards planted deep. Darkness lifts.'],
 }
 
 const EXPEDITION_FAILURE_MESSAGES = [
@@ -102,6 +87,12 @@ export const useExpeditionStore = defineStore('expedition', {
     completedExpeditions: [] as ExpeditionMission[],
     availableExpeditions: [] as AvailableExpeditionSlot[],
     nextSpawnAt: 0 as number,
+    /** Lifetime counters for the Bard Stats catalog — survive the completed-run list being trimmed. */
+    totalExpeditionsStarted: 0,
+    totalExpeditionsSucceeded: 0,
+    totalExpeditionsFailed: 0,
+    /** Chimes ever paid out by resolved expeditions (successes and consolation rewards). */
+    totalExpeditionChimes: 0,
   }),
 
   getters: {
@@ -136,10 +127,15 @@ export const useExpeditionStore = defineStore('expedition', {
           return roles.includes(requiredRole)
         }),
       )
-      const roleSynergyBonus = allRolesMatched ? EXPEDITION_ROLE_SYNERGY_BONUS : EXPEDITION_ROLE_SYNERGY_PENALTY
+      const roleSynergyBonus = allRolesMatched
+        ? EXPEDITION_ROLE_SYNERGY_BONUS
+        : EXPEDITION_ROLE_SYNERGY_PENALTY
 
       const powerRatio = teamPower / minPowerThreshold
-      const powerBonus = Math.min(EXPEDITION_POWER_BONUS_CAP, (powerRatio - 1) * EXPEDITION_POWER_BONUS_SCALE)
+      const powerBonus = Math.min(
+        EXPEDITION_POWER_BONUS_CAP,
+        (powerRatio - 1) * EXPEDITION_POWER_BONUS_SCALE,
+      )
       const successChance = (EXPEDITION_BASE_SUCCESS_CHANCE + powerBonus) * roleSynergyBonus
 
       return Math.max(0.05, Math.min(0.95, successChance))
@@ -154,7 +150,8 @@ export const useExpeditionStore = defineStore('expedition', {
       const action = pickRandom(EXPEDITION_NAME_ACTIONS)
       const name = `${adj} ${target} ${action}`
 
-      const iconPool = EXPEDITION_ICON_POOL.length > 0 ? EXPEDITION_ICON_POOL : ['game-icons:scroll-unfurled']
+      const iconPool =
+        EXPEDITION_ICON_POOL.length > 0 ? EXPEDITION_ICON_POOL : ['game-icons:scroll-unfurled']
       const icon = pickRandom(iconPool)
 
       const baseReward = Math.round(randInt(tierDef.rewardMin, tierDef.rewardMax) / 10) * 10
@@ -201,7 +198,10 @@ export const useExpeditionStore = defineStore('expedition', {
       const now = Date.now()
       this.availableExpeditions = this.availableExpeditions.filter((s) => s.availableUntil > now)
 
-      while (this.availableExpeditions.length < EXPEDITION_MAX_AVAILABLE && now >= this.nextSpawnAt) {
+      while (
+        this.availableExpeditions.length < EXPEDITION_MAX_AVAILABLE &&
+        now >= this.nextSpawnAt
+      ) {
         this._spawnOneExpedition(now)
         this.nextSpawnAt = now + EXPEDITION_SPAWN_INTERVAL_MS
       }
@@ -249,6 +249,7 @@ export const useExpeditionStore = defineStore('expedition', {
 
       this.availableExpeditions.splice(slotIdx, 1)
       this.activeExpeditions.push(expedition)
+      this.totalExpeditionsStarted += 1
       logger.info('Expedition', `Started: ${slot.name} (${slot.tier})`, {
         champions: assignedChampions.map((c) => c.name),
         successChance,
@@ -274,6 +275,9 @@ export const useExpeditionStore = defineStore('expedition', {
           expedition.reward = success
             ? Math.floor(expedition.baseReward * relayMul * treeRewardMul)
             : Math.floor(expedition.baseReward * EXPEDITION_FAILURE_REWARD_FRACTION)
+          if (success) this.totalExpeditionsSucceeded += 1
+          else this.totalExpeditionsFailed += 1
+          this.totalExpeditionChimes += expedition.reward
           logger.info(
             'Expedition',
             `Resolved: ${expedition.name} - ${expedition.status.toUpperCase()}`,
@@ -304,10 +308,15 @@ export const useExpeditionStore = defineStore('expedition', {
       const rewardStr = `+${formatNumber(expedition.reward)}`
       let flavor: string
       if (expedition.status === 'success') {
-        const pool = primaryRole ? EXPEDITION_SUCCESS_MESSAGES[primaryRole] : ['– Mission complete.']
+        const pool = primaryRole
+          ? EXPEDITION_SUCCESS_MESSAGES[primaryRole]
+          : ['– Mission complete.']
         flavor = pool[Math.floor(Math.random() * pool.length)]
       } else {
-        flavor = EXPEDITION_FAILURE_MESSAGES[Math.floor(Math.random() * EXPEDITION_FAILURE_MESSAGES.length)]
+        flavor =
+          EXPEDITION_FAILURE_MESSAGES[
+            Math.floor(Math.random() * EXPEDITION_FAILURE_MESSAGES.length)
+          ]
       }
       addEvent(`${expedition.name} ${flavor} (${rewardStr})`, eventType)
 

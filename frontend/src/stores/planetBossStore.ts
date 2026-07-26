@@ -59,6 +59,11 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     // Monotoner Zähler: inkrementiert bei jeder Turret-Salve (gameStore-Tick) —
     // Idle-Orbit-Schüsse UND Star-Fight-Turret-Battery teilen diesen Takt
     turretVolleyCounter: 0,
+    /** Lifetime counters for the Bard Stats catalog. */
+    totalBossesDefeated: 0,
+    totalBossesLost: 0,
+    /** Damage ever dealt to planet bosses, across every fight. */
+    totalBossDamage: 0,
   }),
 
   getters: {
@@ -186,7 +191,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           const byTier = new Map<number, string[]>()
           for (const c of eligible) {
             const star = getChampionStarLevel(c.championName)
-            if (star < 1 || star > unlocked) continue // only unlocked tiers spawn
+            if (star < 1 || star > unlocked)
+              continue // only unlocked tiers spawn
             ;(byTier.get(star) ?? byTier.set(star, []).get(star)!).push(c.championName)
           }
           if (byTier.size === 0) return undefined
@@ -302,6 +308,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
       boss.currentHP = Math.max(0, boss.currentHP - effective)
       boss.totalDamageDealt += effective
+      this.totalBossDamage += effective
 
       if (boss.currentHP <= 0) {
         boss.currentHP = 0
@@ -350,6 +357,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         const effectiveDPS = Math.max(1, boss.passiveDPS)
         boss.currentHP -= effectiveDPS
         boss.totalDamageDealt += effectiveDPS
+        this.totalBossDamage += effectiveDPS
 
         if (boss.currentHP <= 0) {
           boss.currentHP = 0
@@ -383,6 +391,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
         if (boss.noEnrage) {
           boss.expired = true
+          this.totalBossesLost += 1
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
           const planetId = boss.planetId
           setTimeout(() => {
@@ -392,6 +401,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         }
 
         boss.expired = true
+        this.totalBossesLost += 1
         if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
         this.lastBossResult = 'defeat'
 
@@ -415,6 +425,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
     grantBossRewards(boss: PlanetBossEvent) {
       if (!boss.defeated) return
+      this.totalBossesDefeated += 1
 
       const gameStore = useGameStore()
 
@@ -491,6 +502,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
         if (boss.noEnrage) {
           boss.expired = true
+          this.totalBossesLost += 1
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
           const planetId = boss.planetId
           setTimeout(() => {
@@ -500,6 +512,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         }
 
         boss.expired = true
+        this.totalBossesLost += 1
         if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
         this.lastBossResult = 'defeat'
 

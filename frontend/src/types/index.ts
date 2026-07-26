@@ -121,6 +121,59 @@ export interface TimePeriod {
   dataPoints: number
 }
 
+// ── Bard Stats catalog (stats tab, left column) ──────────────────────────────
+/** Identifier of a stat category — the accordion sections in the Journey column. */
+export type StatCategoryId =
+  | 'progression'
+  | 'economy'
+  | 'chimeWorks'
+  | 'autoBattle'
+  | 'combatRecord'
+  | 'objectives'
+  | 'champions'
+  | 'galaxy'
+  | 'starFights'
+  | 'planets'
+  | 'solar'
+  | 'starForge'
+  | 'meepTree'
+  | 'expeditions'
+  | 'materials'
+  | 'buffs'
+
+/** Static metadata of a stat category (config/statCategories.ts). */
+export interface StatCategoryDef {
+  id: StatCategoryId
+  label: string
+  /** One-line description shown under the category header. */
+  blurb: string
+  icon: string
+  /** Accent color driving the header, the rail and the highlight values. */
+  accent: string
+}
+
+/** A single readable stat inside a category. */
+export interface StatEntry {
+  /** Unique within its category — used as the render key. */
+  key: string
+  label: string
+  /** Already formatted for display. */
+  value: string
+  /** Extra searchable words that are not part of the label (e.g. "kda", "cps"). */
+  keywords?: string
+  /** Rendered larger with the category accent — reserved for a category's headline numbers. */
+  highlight?: boolean
+  /** Optional hover explanation. */
+  hint?: string
+}
+
+/** A category plus its resolved, already filtered stats. */
+export interface StatCategoryView extends StatCategoryDef {
+  stats: StatEntry[]
+  /** Number of stats before the search filter was applied. */
+  totalCount: number
+}
+
 export interface BuildingProduction {
   [key: string]: number[]
 }
@@ -754,7 +807,6 @@ export interface ForgeActiveBuff {
   id: 'cpcX2' | 'cpsX2'
   expiresAt: number
 }
-
 
 export type MissionConditionType =
   | 'totalChimes'

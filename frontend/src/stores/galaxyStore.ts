@@ -189,6 +189,14 @@ export const useGalaxyStore = defineStore('galaxy', {
     rescueRotationDirection: 1 as 1 | -1,
     rescueBurstAngleDeg: 0,
     travelPendingAfterRotation: false,
+    // ── Lifetime counters (Bard Stats catalog) ──
+    // starsRescued/attemptResults reset with every galaxy; these never do.
+    totalStarsRescued: 0,
+    totalStarsLost: 0,
+    /** Galaxy bosses ever slain — one per freed galaxy, kept across prestige. */
+    totalGalaxyBossesDefeated: 0,
+    /** Boss escort stars ever destroyed at a galaxy core. */
+    totalBossEscortsDefeated: 0,
   }),
 
   getters: {
@@ -410,6 +418,7 @@ export const useGalaxyStore = defineStore('galaxy', {
     onChampionStarRescued() {
       if (this.starsRescued >= this.starsRequired) return
       this.starsRescued++
+      this.totalStarsRescued++
       this.attemptResults.push('rescued')
       if (this.starsRescued >= this.starsRequired && !this.galaxyBossDefeated) {
         // Last star saved → fly to the boss star waiting at the galaxy core,
@@ -430,6 +439,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         return
       }
       this.attemptResults.push('failed')
+      this.totalStarsLost++
       this.starJustFailed = true
       setTimeout(() => {
         this.starJustFailed = false
@@ -442,6 +452,7 @@ export const useGalaxyStore = defineStore('galaxy', {
     },
 
     onGalaxyBossDefeated() {
+      if (!this.galaxyBossDefeated) this.totalGalaxyBossesDefeated++
       this.galaxyBossDefeated = true
       this.pendingGalaxyBoss = false
       this.maybeRecordCompletion()
@@ -474,7 +485,10 @@ export const useGalaxyStore = defineStore('galaxy', {
     },
 
     onBossEscortDefeated() {
-      if (this.bossEscortsDefeated < this.bossEscortsTotal) this.bossEscortsDefeated++
+      if (this.bossEscortsDefeated < this.bossEscortsTotal) {
+        this.bossEscortsDefeated++
+        this.totalBossEscortsDefeated++
+      }
       this.maybeRecordCompletion()
     },
 
