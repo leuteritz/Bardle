@@ -32,6 +32,7 @@ import {
 } from '../config/championTiers'
 import { activeMidCurse } from '../utils/liveState'
 import { bossPlanetInForeground } from '../utils/foregroundGate'
+import { prewarmBossSprite } from '../utils/bossSprite'
 import { ROLE_MID_CURSE_DAMAGE_AMP } from '../config/constants'
 import { useGameStore } from './gameStore'
 import { useShopStore } from './shopStore'
@@ -270,6 +271,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
       this.activeBosses.push(newBoss)
       this.selectedBossId = planetId
+      // Sprite jetzt dekodieren, nicht erst beim Öffnen des Star-Fight-Modals —
+      // dort läge der ~1 MB PNG-Decode sonst im Einblende-Frame.
+      prewarmBossSprite(planetId)
       this.lastBossResult = null
       this.lastDroppedMaterialId = null
 

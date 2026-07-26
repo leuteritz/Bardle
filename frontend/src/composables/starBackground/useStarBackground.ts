@@ -1,4 +1,5 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { drawStarSprite, drawDotSprite } from './starSprites'
 import { useGameStore } from '../../stores/gameStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
@@ -69,7 +70,6 @@ import {
   pickGalaxyTypeConfig,
   svgEl,
 } from './galaxyRenderers'
-
 
 /** FLIGHT_STREAK_ALPHA as a 2-digit hex suffix for 8-digit-hex canvas colors. */
 const STREAK_ALPHA_HEX = Math.round(FLIGHT_STREAK_ALPHA * 255)
@@ -333,6 +333,25 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   let nextStarId = 1
   let animFrame = 0
 
+  // Container-Maße und 2D-Context gecacht: animateStars() las beides jeden Frame
+  // frisch (`clientWidth`/`clientHeight` = erzwungenes Layout, `getContext()` =
+  // unnötiger Lookup). Der Cache wird von resizeCanvas() und dem Resize-Handler
+  // gepflegt — den einzigen Stellen, an denen sich die Maße ändern können.
+  let cachedW = 0
+  let cachedH = 0
+  let cachedCtx: CanvasRenderingContext2D | null = null
+
+  /** Maße + Context neu vom DOM lesen. Nur bei Resize/Canvas-Neuaufbau nötig. */
+  function refreshCanvasCache(): void {
+    cachedW = starsContainer.value?.clientWidth || window.innerWidth
+    cachedH = starsContainer.value?.clientHeight || window.innerHeight
+    cachedCtx = starCanvas.value?.getContext('2d') ?? null
+  }
+
+  // Tauscht eine Consumer-Komponente ihr <canvas> aus (v-if), zeigt der gecachte
+  // Context auf ein abgehängtes Element → Handle neu holen.
+  watch([starCanvas, starsContainer], () => refreshCanvasCache())
+
   // ── Fokus-Zustand ──────────────────────────────────────────────────────────
   // true  → Fenster hat OS-Fokus → Canvas-Loop läuft
   // false → kein Fokus (anderes Fenster aktiv, z.B. YouTube) → Loop gestoppt
@@ -353,6 +372,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   let galaxyTransDir = 0
 
   let resizeTimeout: ReturnType<typeof setTimeout> | null = null
+  let containerObserver: ResizeObserver | null = null
   let galaxySpawnTimeout: ReturnType<typeof setTimeout> | null = null
   let emissionSpawnTimeout: ReturnType<typeof setTimeout> | null = null
   const timeouts: ReturnType<typeof setTimeout>[] = []
@@ -367,6 +387,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     if (!starCanvas.value || !starsContainer.value) return
     starCanvas.value.width = starsContainer.value.clientWidth || window.innerWidth
     starCanvas.value.height = starsContainer.value.clientHeight || window.innerHeight
+    // Neuer Backing-Store → alter Context-Handle ist wertlos, Maße neu einlesen
+    refreshCanvasCache()
   }
 
   // ── Context-Loss-Heilung ───────────────────────────────────────────────────
@@ -905,9 +927,13 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       }
     }
 
-    const w = starsContainer.value?.clientWidth ?? window.innerWidth
-    const h = starsContainer.value?.clientHeight ?? window.innerHeight
-    const ctx = starCanvas.value?.getContext('2d') ?? null
+    // Aus dem Cache statt aus dem DOM: clientWidth/clientHeight erzwangen hier
+    // jeden Frame ein Layout, getContext() einen Lookup. Gepflegt wird der Cache
+    // von resizeCanvas() (Resize, Sichtbarkeitswechsel, Context-Verlust).
+    if (cachedCtx === null || cachedW === 0) refreshCanvasCache()
+    const w = cachedW
+    const h = cachedH
+    const ctx = cachedCtx
 
     if (ctx) ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
@@ -1000,11 +1026,18 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           const a = baseAlpha * s.brightness
           if (a < 0.02) continue
           const dotSize = s.brightness * spreadScale * 1.2
-          ctx.beginPath()
-          ctx.arc(pcx + s.dx * spreadScale, pcy + s.dy * spreadScale, dotSize, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(${s.r},${s.g},${s.b},${a.toFixed(3)})`
-          ctx.fill()
+          drawDotSprite(
+            ctx,
+            s.r,
+            s.g,
+            s.b,
+            pcx + s.dx * spreadScale,
+            pcy + s.dy * spreadScale,
+            dotSize,
+            a,
+          )
         }
+        ctx.globalAlpha = 1
       }
     }
 
@@ -1066,18 +1099,14 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           ctx.lineCap = 'round'
           ctx.stroke()
         } else {
+          // Ein drawImage statt Kern- + Halo-Fill. Das sparte pro Frame 800
+          // Canvas-Pfade und 800 `rgba(…)`-Strings (siehe starSprites.ts).
           const starSize = 0.8 + norm * norm * 5.0
-          ctx.beginPath()
-          ctx.arc(x, y, starSize, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha})`
-          ctx.fill()
-          ctx.beginPath()
-          ctx.arc(x, y, starSize * 2, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha * 0.12})`
-          ctx.fill()
+          drawStarSprite(ctx, star.r, star.g, star.b, x, y, starSize, alpha)
         }
       }
     }
+    if (ctx) ctx.globalAlpha = 1
 
     // ── Flight streaks — the player flies INTO the screen in every phase;
     // shed material streams back past the viewer as radial phase-tinted
@@ -1431,6 +1460,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     dustPatches.length = 0
     starClusters.length = 0
     window.removeEventListener('resize', handleResize)
+    containerObserver?.disconnect()
+    containerObserver = null
     starCanvas.value?.removeEventListener('contextrestored', handleContextRestored)
     removeFocusListener?.()
     if (resizeTimeout) clearTimeout(resizeTimeout)
@@ -1454,6 +1485,14 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       setTimeout(createStars, 100)
       starCanvas.value?.addEventListener('contextrestored', handleContextRestored)
       window.addEventListener('resize', handleResize)
+      // Container-Maße liegen jetzt im Cache statt pro Frame aus dem DOM zu
+      // kommen. Das window-Resize-Event deckt nur den Vollbild-Fall ab — eine
+      // eingebettete Instanz (Shop) kann sich auch ohne Fenster-Resize ändern,
+      // deshalb zusätzlich der Observer auf dem Container selbst.
+      if (starsContainer.value) {
+        containerObserver = new ResizeObserver(() => handleResize())
+        containerObserver.observe(starsContainer.value)
+      }
       scheduleNextGalaxy()
       scheduleNextEmission()
     }

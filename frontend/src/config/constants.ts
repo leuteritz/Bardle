@@ -173,6 +173,28 @@ export const BOSS_CPS_PENALTY_FRACTION = 0.05
 export const BOSS_CPS_PENALTY_DURATION_MS = 30_000
 export { BOSS_NAMES } from './bossNames'
 
+/**
+ * Boss-Sprites in `public/img/Boss/`. Bewusst eine feste Liste: die frühere
+ * Laufzeit-Erkennung lud `Boss1.png`, `Boss2.png`, … sequenziell per `new Image()`
+ * bis zum ersten 404 — 11 Requests und ~10 MB PNG-Decode bei JEDEM Öffnen des
+ * Star-Fight-Modals, mitten in der Einblende-Animation.
+ *
+ * Neue Sprites hier eintragen. Maßstab: die Sprites werden mit ~430 px Höhe
+ * dargestellt, mehr als ~1400 px Kantenlänge ist verschwendeter Decode.
+ */
+export const BOSS_IMAGE_PATHS = [
+  '/img/Boss/Boss1.png',
+  '/img/Boss/Boss2.png',
+  '/img/Boss/Boss3.png',
+  '/img/Boss/Boss4.png',
+  '/img/Boss/Boss5.png',
+  '/img/Boss/Boss6.png',
+  '/img/Boss/Boss7.png',
+  '/img/Boss/Boss8.png',
+  '/img/Boss/Boss9.png',
+  '/img/Boss/Boss10.png',
+] as const
+
 // Planet type display names
 export const PLANET_TYPE_NAMES: Record<string, string> = {
   rocky: 'Rocky Planet',
@@ -759,6 +781,14 @@ export const STAR_BG_BASE_SPEED_MIN = 1.0 // base speed minimum (doubled from 0.
 export const STAR_BG_BASE_SPEED_RANGE = 2.0 // base speed random range (doubled from 1.0)
 // Probability that a background star gets blue-tinted (more realistic starfield)
 export const BACKGROUND_STAR_BLUE_BIAS = 0.9
+
+// Vorgerenderte Stern-Sprites (starBackground/starSprites.ts). Sterne werden per
+// drawImage geblittet statt pro Frame als Pfad gefüllt — die Palette hat nur
+// 10 Farben, also reichen 10 kleine Offscreen-Canvases.
+export const STAR_SPRITE_CORE_R = 8 // Kernradius im Sprite; Zielgröße kommt von drawImage
+export const STAR_SPRITE_HALO_SCALE = 2 // Halo-Radius = Kernradius × 2 (wie die alten Fills)
+export const STAR_SPRITE_HALO_ALPHA = 0.12 // Halo-Alpha relativ zum Kern (wie die alten Fills)
+export const STAR_SPRITE_SUPERSAMPLE = 2 // Sprite in 2× rendern, immer verkleinert zeichnen
 
 // Star background — warp / galaxy animation
 export const WARP_SPEED_MAX = 70

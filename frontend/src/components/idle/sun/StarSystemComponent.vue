@@ -1132,12 +1132,22 @@ watch(isIdleSimulationPaused, (paused) => {
 // Zurück aus dem verdeckten Zustand: Nach langem Hintergrund-Aufenthalt können
 // die Canvas-Buffer vom Browser verworfen worden sein → frisch allozieren;
 // hintCanvasesDirty erzwingt den vollständigen Neuaufbau der Orbit-Hints.
+//
+// Bewusst einen Frame später: der Frame, in dem das Star-Fight-Modal schließt,
+// trägt schon den Unmount des ganzen Modal-Subtrees und den ersten wieder
+// ausgegebenen Orbit-Frame. Kämen der Neuaufbau zweier viewportgroßer Canvases
+// und die Context-Prüfungen dort noch dazu, wäre das der lange Frame, den man
+// als Ruckler beim Zurückwechseln sieht.
+let hintResumeFrame = 0
 watch(isIdleRenderingPaused, (paused) => {
+  cancelAnimationFrame(hintResumeFrame)
   if (paused) return
-  resetCanvasIfContextLost(hintBackCanvas.value)
-  resetCanvasIfContextLost(hintFrontCanvas.value)
-  resetCanvasIfContextLost(cooldownCanvas.value)
-  hintCanvasesDirty = true
+  hintResumeFrame = requestAnimationFrame(() => {
+    resetCanvasIfContextLost(hintBackCanvas.value)
+    resetCanvasIfContextLost(hintFrontCanvas.value)
+    resetCanvasIfContextLost(cooldownCanvas.value)
+    hintCanvasesDirty = true
+  })
 })
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1149,6 +1159,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', onResize)
   cancelAnimationFrame(enemyAnimFrame)
+  cancelAnimationFrame(hintResumeFrame)
 })
 
 function orbitHintColor(star: StarRenderEntry): string {

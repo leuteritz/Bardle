@@ -128,9 +128,10 @@ import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
-import { ROLE_BY_KEY } from '../../../config/constants'
+import { ROLE_BY_KEY, BOSS_IMAGE_PATHS } from '../../../config/constants'
 import { formatNumber } from '../../../config/numberFormat'
 import { bossPlanetInForeground } from '../../../utils/foregroundGate'
+import { bossSpriteFor } from '../../../utils/bossSprite'
 
 const CYCLE_MS = 2600
 const IMPACT_OFFSET_MS = Math.round(0.36 * CYCLE_MS)
@@ -223,39 +224,12 @@ const effectiveEnragePercent = computed<number>(() =>
 )
 
 const arenaEl = ref<HTMLDivElement | null>(null)
-const bossImage = ref('/img/Boss/Boss1.png')
-const bossImageList = ref<string[]>([])
-let discoveryDone = false
-let discoveryPromise: Promise<void> | null = null
 
-function discoverBossImages(): Promise<void> {
-  if (discoveryDone) return Promise.resolve()
-  if (discoveryPromise) return discoveryPromise
-  discoveryPromise = (async () => {
-    const found: string[] = []
-    let i = 1
-    while (true) {
-      const path = `/img/Boss/Boss${i}.png`
-      const exists = await new Promise<boolean>((resolve) => {
-        const img = new Image()
-        img.onload = () => resolve(true)
-        img.onerror = () => resolve(false)
-        img.src = path
-      })
-      if (!exists) break
-      found.push(path)
-      i++
-    }
-    bossImageList.value = found.length > 0 ? found : ['/img/Boss/Boss1.png']
-    discoveryDone = true
-  })()
-  return discoveryPromise
-}
-
-function pickRandomBossImage(): string {
-  const list = bossImageList.value
-  return list.length > 0 ? list[Math.floor(Math.random() * list.length)] : '/img/Boss/Boss1.png'
-}
+// Sprite folgt der planetId (bossSprite.ts) — synchron verfügbar, kein Await im
+// Mount und beim Wieder-Öffnen dasselbe Bild aus dem Raster-Cache.
+const bossImage = computed(() =>
+  activeBoss.value ? bossSpriteFor(activeBoss.value.planetId) : BOSS_IMAGE_PATHS[0],
+)
 
 // Boss hinter der Sonne? (250ms-Tick liest die 60fps-aktualisierte,
 // nicht-reaktive Positions-Map) — Klicks richten dann keinen Schaden an
@@ -393,15 +367,12 @@ function stopAttackCycles() {
   _ultTimeouts.length = 0
 }
 
-onMounted(async () => {
+onMounted(() => {
   isMounted = true
   isMountedRef.value = true
   // 250 ms statt 100 ms — das Intervall re-rendert die ganze Arena-Subtree;
   // 10×/s war im Star-Fight-Modal ein spürbarer FPS-Fresser
   nowTimer = window.setInterval(() => { now.value = Date.now() }, 250)
-  await discoverBossImages()
-  if (!isMounted) return
-  bossImage.value = pickRandomBossImage()
   startAttackCycles()
 })
 
@@ -412,14 +383,6 @@ onUnmounted(() => {
   stopAttackCycles()
   damageFloats.splice(0, damageFloats.length)
 })
-
-watch(
-  () => activeBoss.value?.planetId,
-  (newId) => {
-    if (!newId || !isMounted) return
-    bossImage.value = pickRandomBossImage()
-  },
-)
 
 watch(
   () => [teamChampions.value.length, activeBoss.value?.planetId] as const,

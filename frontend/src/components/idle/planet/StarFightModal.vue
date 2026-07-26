@@ -80,9 +80,13 @@
                  Phase + Spieler-HP. Steht VOR BossArenaSection im DOM, damit
                  Boss und Planet über der Kuppel liegen; HP-Leiste, Zielscheibe
                  und Strike-Bolt heben sich intern per z-index wieder darüber ── -->
-            <SunHorizonHUD v-if="activeBoss" />
+            <SunHorizonHUD v-if="activeBoss && contentReady" />
 
-            <BossArenaSection v-if="activeBoss" disable-arc-attacks @shake="handleShake" />
+            <BossArenaSection
+              v-if="activeBoss && contentReady"
+              disable-arc-attacks
+              @shake="handleShake"
+            />
 
             <!-- ── Eclipse-Schleier: Boss hinter der Sonne — gleißende Korona
                  legt sich über die Arena, der Boss wird zur Silhouette ────── -->
@@ -100,7 +104,7 @@
 
             <!-- ── Planet Battery: alle 6 Planet-Slots auf dem Bogen — nur
                  Turrets feuern Salven (geteilter Takt mit dem Idle-Orbit) ── -->
-            <PlanetBatteryHUD v-if="activeBoss" />
+            <PlanetBatteryHUD v-if="activeBoss && contentReady" />
 
             <!-- Boss-Angriff: Abschuss-Blitz + Doppel-Schockwelle, die sichtbar
                  bis über Champions und Turret-Planeten hinausläuft -->
@@ -111,15 +115,15 @@
             </template>
 
             <!-- ── Ziel-HUD: Bossname + HP-Datenstreifen (rahmenlos, oben) ── -->
-            <StarFightBossHud :now="now" :boss-behind-sun="bossBehindSun" />
+            <StarFightBossHud v-if="contentReady" :now="now" :boss-behind-sun="bossBehindSun" />
 
             <!-- ── Loot des aktuellen Bosses — episch unter dem Boss-Bild ── -->
-            <div v-if="activeBoss" class="sf-loot">
+            <div v-if="activeBoss && contentReady" class="sf-loot">
               <BossRewardSection />
             </div>
 
             <!-- ── Attacker Squad: Rollen mit Boss-Fähigkeit + Cooldown ── -->
-            <div v-if="activeBoss" class="sf-squad">
+            <div v-if="activeBoss && contentReady" class="sf-squad">
               <RoleStrikerSquad />
             </div>
           </div>
@@ -130,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
@@ -165,15 +169,58 @@ const now = ref(Date.now())
 const modalPlanetBgRef = ref<HTMLDivElement | null>(null)
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
-onMounted(() => {
-  // 250 statt 200 ms: treibt Star-/Rage-Ring + Countdowns — 4 Hz reichen
-  // visuell, spart aber ein Fünftel der Modal-Re-Renders und Arc-Repaints
-  tickInterval = setInterval(() => {
-    now.value = Date.now()
-  }, 250)
-})
+/**
+ * Der Inhalt kommt einen Frame nach dem Öffnen.
+ *
+ * Arena, Turret-Batterie, Striker-Squad, Loot-Banner und das 600×600-Planeten-SVG
+ * mounten zusammen ~5000 Zeilen Komponenten. Lag das im selben Frame wie das
+ * Einblenden, dauerte dieser Frame gemessen 80–330 ms (bei kaltem Cache bis
+ * 444 ms) — der sichtbare Ruckler beim Öffnen. Jetzt zeigt Frame 1 nur die
+ * billige Modal-Hülle (Rahmen, Goldleiste, Hintergrund) und startet die
+ * Einblendung; Frame 2 mountet den Inhalt.
+ */
+const contentReady = ref(false)
+let contentFrame = 0
+
+watch(
+  () => starGroupStore.starFightModalOpen,
+  (open) => {
+    cancelAnimationFrame(contentFrame)
+    if (!open) {
+      contentReady.value = false
+      return
+    }
+    contentFrame = requestAnimationFrame(() => {
+      contentReady.value = true
+    })
+  },
+  { immediate: true },
+)
+
+// Das Modal ist dauerhaft gemountet (App.vue), nur sein Inhalt hängt am v-if —
+// der 4-Hz-Tick darf deshalb nur laufen, wenn es offen ist. Sonst invalidiert er
+// rund um die Uhr die HUD-Computeds, während man im Idle-Orbit spielt.
+watch(
+  () => starGroupStore.starFightModalOpen,
+  (open) => {
+    if (open) {
+      now.value = Date.now()
+      // 250 statt 200 ms: treibt Star-/Rage-Ring + Countdowns — 4 Hz reichen
+      // visuell, spart aber ein Fünftel der Modal-Re-Renders und Arc-Repaints
+      tickInterval ??= setInterval(() => {
+        now.value = Date.now()
+      }, 250)
+    } else if (tickInterval) {
+      clearInterval(tickInterval)
+      tickInterval = null
+    }
+  },
+  { immediate: true },
+)
+
 onUnmounted(() => {
   if (tickInterval) clearInterval(tickInterval)
+  cancelAnimationFrame(contentFrame)
 })
 
 // ── Computed ──────────────────────────────────────────────────────────────
@@ -289,13 +336,14 @@ function renderModalPlanet() {
   modalPlanetBgRef.value.appendChild(svg)
 }
 
+// An contentReady gekoppelt: das SVG entsteht erst, wenn der Inhalt gemountet
+// wird — nicht schon im Einblende-Frame.
 watch(
-  () => activeBoss.value?.planetId,
-  async (newId) => {
-    if (newId) {
-      await nextTick()
-      renderModalPlanet()
-    }
+  () => [activeBoss.value?.planetId, contentReady.value] as const,
+  async ([newId, ready]) => {
+    if (!newId || !ready) return
+    await nextTick()
+    renderModalPlanet()
   },
   { immediate: true },
 )
@@ -1108,23 +1156,24 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-/* ── Entrance Transition ──────────────────────────────────────────────────── */
+/* ── Entrance Transition ───────────────────────────────────────────────────
+   Bewusst NUR opacity. Vorher lief zusätzlich `transform: scale(0.96)` auf
+   .sf-backdrop — einem `position: fixed; inset: 0`-Element, das den kompletten
+   Modal-Subtree enthält (Planeten-SVG mit drop-shadow, Inset-Shadows mit bis zu
+   170 px Blur, Boss-Sprite). Chrome musste diesen Baum dadurch für 220 ms in
+   eine Layer rastern und jeden Frame neu skalieren — genau während gemountet
+   wurde. Ein reiner Opacity-Fade ist ein Compositor-Job und kostet nichts. */
 .sf-entrance-enter-active {
-  transition:
-    opacity 0.22s ease,
-    transform 0.22s ease;
+  transition: opacity 0.22s ease;
 }
 
 .sf-entrance-leave-active {
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease;
+  transition: opacity 0.16s ease;
 }
 
 .sf-entrance-enter-from,
 .sf-entrance-leave-to {
   opacity: 0;
-  transform: scale(0.96);
 }
 
 @keyframes sf-shake {
