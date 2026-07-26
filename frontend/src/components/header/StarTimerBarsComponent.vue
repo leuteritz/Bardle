@@ -1,5 +1,5 @@
 <template>
-  <div class="star-timer-bars-host">
+  <div class="star-timer-bars-host" :style="{ '--hp-num-width': `${STAR_TIMER_HP_PCT_WIDTH_CH}ch` }">
     <TransitionGroup name="bar-slide" tag="div" class="star-timer-bars">
       <div
         v-for="entry in sortedEntries"
@@ -51,10 +51,14 @@
               <span
                 v-for="dot in entry.planets"
                 :key="dot.id"
-                class="planet-dot"
-                :class="[`planet-dot--${dot.state}`, { 'planet-dot--cleared': dot.cleared }]"
-                :style="{ '--hp': dot.hp }"
-              />
+                class="planet-chip"
+                :class="[`planet-chip--${dot.state}`, { 'planet-chip--cleared': dot.cleared }]"
+              >
+                <span class="planet-dot" :style="{ '--hp': dot.hp }" />
+                <span class="planet-hp"
+                  ><span class="planet-hp__num">{{ dot.cleared ? '✓' : dot.pct }}</span></span
+                >
+              </span>
             </div>
           </div>
           <!-- Endkampf: Typ-Label mittig auf der Seitenfüllung — die
@@ -101,10 +105,14 @@
               <span
                 v-for="dot in entry.planets"
                 :key="dot.id"
-                class="planet-dot"
-                :class="[`planet-dot--${dot.state}`, { 'planet-dot--cleared': dot.cleared }]"
-                :style="{ '--hp': dot.hp }"
-              />
+                class="planet-chip"
+                :class="[`planet-chip--${dot.state}`, { 'planet-chip--cleared': dot.cleared }]"
+              >
+                <span class="planet-dot" :style="{ '--hp': dot.hp }" />
+                <span class="planet-hp"
+                  ><span class="planet-hp__num">{{ dot.cleared ? '✓' : dot.pct }}</span></span
+                >
+              </span>
             </div>
           </div>
           <span
@@ -136,6 +144,9 @@ import {
   STAR_TIMER_HP_LOW_RATIO,
   STAR_TIMER_HP_CRITICAL_RATIO,
   STAR_TIMER_HP_MIN_FILL,
+  STAR_TIMER_HP_PCT_STEPS,
+  STAR_TIMER_HP_MIN_PCT,
+  STAR_TIMER_HP_PCT_WIDTH_CH,
 } from '../../config/constants'
 import { CHAMPION_ROLES } from '../../config/championData'
 import type { StarGroup } from '../../stores/starGroupStore'
@@ -161,6 +172,8 @@ interface BossSnapshot {
   enrageTimerMs: number
   /** HP-Anteil 0..1, auf STAR_TIMER_HP_STEPS Stufen gerundet */
   hp: number
+  /** Ganzzahliger HP-Prozentwert für das Zahlenfeld neben der Kugel */
+  hpPct: number
   champion?: string
 }
 
@@ -169,11 +182,15 @@ const bossSnapshot = shallowRef<Map<string, BossSnapshot>>(new Map())
 function refreshBossSnapshot(): void {
   const next = new Map<string, BossSnapshot>()
   for (const boss of planetBossStore.activeBosses) {
-    const ratio = boss.maxHP > 0 ? boss.currentHP / boss.maxHP : 0
+    const ratio = clamp01(boss.maxHP > 0 ? boss.currentHP / boss.maxHP : 0)
     next.set(boss.planetId, {
       startTime: boss.startTime,
       enrageTimerMs: boss.enrageTimerMs,
-      hp: Math.round(clamp01(ratio) * STAR_TIMER_HP_STEPS) / STAR_TIMER_HP_STEPS,
+      hp: Math.round(ratio * STAR_TIMER_HP_STEPS) / STAR_TIMER_HP_STEPS,
+      // Ganzzahlig gerundet: der gebundene Textknoten ändert sich damit nur,
+      // wenn sich der angezeigte Wert tatsächlich ändert — nicht bei jedem
+      // Bruchteil eines HP-Punktes.
+      hpPct: ratio > 0 ? Math.max(STAR_TIMER_HP_MIN_PCT, Math.round(ratio * STAR_TIMER_HP_PCT_STEPS)) : 0,
       champion: boss.homePlanetChampion,
     })
   }
@@ -205,6 +222,8 @@ interface PlanetDot {
   cleared: boolean
   /** 0..1 — Füllhöhe der Kugel (gerettete Planeten: 0) */
   hp: number
+  /** Exakter HP-Prozentwert (0..100) für das Zahlenfeld neben der Kugel */
+  pct: number
   /** 'ok' | 'low' | 'critical' — steuert die Füllfarbe */
   state: 'ok' | 'low' | 'critical'
 }
@@ -297,16 +316,18 @@ function buildPlanetDots(star: StarGroup): PlanetDot[] {
 
   for (const slot of star.planetSlots) {
     if (slot.cleared) {
-      clearedDots.push({ id: slot.planetId, cleared: true, hp: 0, state: 'ok' })
+      clearedDots.push({ id: slot.planetId, cleared: true, hp: 0, pct: 0, state: 'ok' })
       continue
     }
     // Kein Boss im Snapshot (frisch gespawnt, noch nicht getickt) → volle Kugel
-    const hp = snap.get(slot.planetId)?.hp ?? 1
+    const boss = snap.get(slot.planetId)
+    const hp = boss?.hp ?? 1
     dots.push({
       id: slot.planetId,
       cleared: false,
       // Anzeigehöhe mit Bodensatz — der Zustand kommt weiterhin vom echten Wert
       hp: hp > 0 ? Math.max(STAR_TIMER_HP_MIN_FILL, hp) : 0,
+      pct: boss?.hpPct ?? STAR_TIMER_HP_PCT_STEPS,
       state: hp <= STAR_TIMER_HP_CRITICAL_RATIO ? 'critical' : hp <= STAR_TIMER_HP_LOW_RATIO ? 'low' : 'ok',
     })
   }
@@ -696,6 +717,10 @@ const sortedEntries = computed<BarEntry[]>(() => {
   .planet-dot::before {
     transition: none;
   }
+
+  .planet-chip--critical .planet-hp {
+    animation: none;
+  }
 }
 
 /* Track-Wrapper: so breit wie die Balkenseite, wandert per transform mit der
@@ -743,17 +768,19 @@ const sortedEntries = computed<BarEntry[]>(() => {
   transform: translateX(calc(50% + 1.3em)) translateY(-50%);
 }
 
-/* ── Planeten-Punkte: 1 Punkt pro Planet, sitzen auf der Füllung direkt
-   innen an der wandernden Balkenkante und ziehen mit ihr zur Mitte.
-   Gefüllt = Planet übrig, hohl/abgedunkelt = gerettet. Kühles Weiß mit
-   dunklem Ring, damit sie sich vom warmen/blauen Balkenverlauf abheben. ── */
+/* ── Planeten-Chips: 1 Chip pro Planet = Kugel + Prozentzahl. Sie sitzen auf
+   der Füllung direkt innen an der wandernden Balkenkante und ziehen mit ihr
+   zur Mitte. Gefüllt = Planet übrig, hohl/abgedunkelt = gerettet. Kühles Weiß
+   mit dunklem Ring, damit sie sich vom warmen/blauen Balkenverlauf abheben. ── */
 .planet-dots {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   align-items: center;
-  gap: clamp(4px, 0.2vw + 2px, 7px);
+  /* Etwas luftiger als bei reinen Kugeln — sonst klebt die Zahl des einen
+     Planeten optisch an der Kugel des nächsten. */
+  gap: clamp(6px, 0.3vw + 2px, 11px);
   z-index: 2;
   pointer-events: none;
 }
@@ -766,6 +793,22 @@ const sortedEntries = computed<BarEntry[]>(() => {
 .planet-dots--right {
   right: 0;
   padding-right: clamp(6px, 0.5vw, 12px);
+  flex-direction: row-reverse;
+}
+
+/* Kugel und Zahl sind eine Einheit: die Zahl ist der exakte Wert, die Kugel
+   die auf einen Blick lesbare Silhouette desselben Werts.
+   `contain: layout style` sperrt den Reflow einer Ziffernänderung in den Chip —
+   die Nachbarplaneten der Reihe werden nicht neu vermessen. Bewusst OHNE
+   `paint`/`size`: der Glow der Kugel muss über die Chip-Grenze hinausleuchten. */
+.planet-chip {
+  display: flex;
+  align-items: center;
+  gap: clamp(2px, 0.12vw + 1px, 5px);
+  contain: layout style;
+}
+
+.planet-dots--right .planet-chip {
   flex-direction: row-reverse;
 }
 
@@ -782,6 +825,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
   border-radius: 50%;
   position: relative;
   display: block;
+  /* Weder Kugel noch Zahlenfeld dürfen im Chip gestaucht werden */
+  flex: none;
   overflow: hidden;
   /* Leere Schale — der Teil, der bereits an Schaden verloren ging */
   background: radial-gradient(circle at 35% 30%, #232c3d, #080b12 72%);
@@ -815,8 +860,12 @@ const sortedEntries = computed<BarEntry[]>(() => {
   box-shadow: inset 0 0 0 1.5px var(--hp-rim, rgba(255, 255, 255, 0.16));
 }
 
+/* Die Zustandsfarben hängen am Chip, nicht an der Kugel — Custom Properties
+   erben nach unten, sodass Kugelfüllung und Zahl garantiert dieselbe Farbe
+   sprechen, ohne dass eine zweite Klasse gebunden werden muss. */
+
 /* Volle Fahrt: kühles Weißblau wie bisher */
-.planet-dot--ok {
+.planet-chip--ok {
   --hp-deep: #7ea8d8;
   --hp-main: #cfe4ff;
   --hp-crest: #ffffff;
@@ -824,38 +873,128 @@ const sortedEntries = computed<BarEntry[]>(() => {
 }
 
 /* Angeschlagen: Bernstein — deutlich vom Weiß unterscheidbar */
-.planet-dot--low {
+.planet-chip--low {
   --hp-deep: #a85f0e;
   --hp-main: #f0aa38;
   --hp-crest: #ffdc96;
   --hp-rim: rgba(255, 190, 90, 0.9);
+}
+
+.planet-chip--low .planet-dot {
   box-shadow:
     0 0 0 1.5px rgba(10, 14, 24, 0.8),
     0 0 7px rgba(240, 170, 56, 0.55);
 }
 
-/* Kurz vor dem Fall: Rot plus kräftigerer Schein. Bewusst statisch — eine
-   Puls-Animation pro Kugel wäre bei vielen Sternen ein Paint-Sturm. */
-.planet-dot--critical {
+/* Kurz vor dem Fall: Rot plus kräftigerer Schein. Die Kugel selbst bleibt
+   bewusst statisch — eine Puls-Animation pro Kugel wäre bei vielen Sternen ein
+   Paint-Sturm. Gepulst wird nur die Zahl, und die rein auf dem Compositor. */
+.planet-chip--critical {
   --hp-deep: #8d1b10;
   --hp-main: #ee4b34;
   --hp-crest: #ff9d84;
   --hp-rim: rgba(255, 120, 96, 0.95);
+}
+
+.planet-chip--critical .planet-dot {
   box-shadow:
     0 0 0 1.5px rgba(10, 14, 24, 0.85),
     0 0 9px rgba(238, 75, 52, 0.8);
 }
 
-.planet-dot--cleared {
+.planet-chip--cleared .planet-dot {
   background: transparent;
   border: 1.5px solid rgba(230, 240, 255, 0.85);
   box-shadow: 0 0 0 1px rgba(10, 14, 24, 0.5);
   opacity: 0.45;
 }
 
-.planet-dot--cleared::before,
-.planet-dot--cleared::after {
+.planet-chip--cleared .planet-dot::before,
+.planet-chip--cleared .planet-dot::after {
   display: none;
+}
+
+/* ── Prozentzahl: der exakte HP-Wert des Planeten-Bosses, live ─────────────
+   Feste Feldbreite (fasst "100%") — ein Ziffernwechsel verschiebt damit weder
+   die Nachbarkugeln noch die Zahl selbst. Verankert wird der Inhalt an der
+   Kugelseite, der Leerraum fällt nach außen: der Abstand Kugel↔Zahl bleibt
+   konstant, egal ob 7, 42 oder 100 dort steht. */
+.planet-hp {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  flex: none;
+  width: var(--hp-num-width, 4ch);
+  /* Flüssig skaliert für 1280px (~11.3px) bis 2560px (~14.7px) Viewport-Breite */
+  font-size: clamp(0.72rem, 0.26vw + 0.5rem, 0.95rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--hp-crest);
+  /* text-shadow statt filter: drop-shadow — wird einmal gerastert und muss
+     beim Puls der kritischen Chips nicht pro Frame neu gefiltert werden.
+     Die dunkle Kontur steht zuerst und liegt damit direkt am Glyph: sie trägt
+     den Kontrast, denn der farbige Glow allein verschwimmt auf der hellen
+     Balkenfüllung. Der Farbschein liegt außen und bleibt reine Signalfarbe. */
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 0.95),
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 0 8px var(--hp-main);
+}
+
+.planet-dots--right .planet-hp {
+  justify-content: flex-end;
+}
+
+/* Prozentzeichen statisch aus CSS: bei einem Treffer wechselt so nur der
+   Zifferntext, nicht der komplette Textinhalt des Elements. */
+.planet-chip:not(.planet-chip--cleared) .planet-hp::after {
+  content: '%';
+  font-size: 0.66em;
+  opacity: 0.62;
+  margin-left: 0.08em;
+  align-self: center;
+}
+
+/* Geretteter Planet: Häkchen statt Zahl, zurückgenommen — die Aufmerksamkeit
+   gehört den Planeten, die noch stehen. */
+.planet-chip--cleared .planet-hp {
+  color: rgba(232, 242, 255, 0.75);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  opacity: 0.6;
+}
+
+/* Kritisch: die Zahl atmet. Nur opacity + transform, damit der Puls
+   ausschließlich auf dem Compositor läuft — kein Layout, kein Repaint, auch
+   nicht wenn dutzende Sterne gleichzeitig kritische Planeten haben.
+   Ursprung an der Kugelseite, sonst läuft die Zahl beim Skalieren hinein. */
+.planet-chip--critical .planet-hp {
+  /* Heller als die Kammfarbe der Kugel (--hp-crest): Rot auf der orangefarbenen
+     Balkenfüllung braucht mehr Helligkeit als Rot auf der dunklen Kugel. */
+  color: #ffc9b8;
+  transform-origin: left center;
+  animation: hp-num-pulse 1.15s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+.planet-dots--right .planet-chip--critical .planet-hp {
+  transform-origin: right center;
+}
+
+/* Der Puls trägt bewusst über den Maßstab, nicht über das Ausblenden: ein tiefer
+   Opazitäts-Tiefpunkt würde ausgerechnet den dringendsten Wert die halbe Zeit
+   unlesbar machen. 0.78 bleibt auf der hellen Balkenfüllung klar lesbar. */
+@keyframes hp-num-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.78;
+    transform: scale(1.14);
+  }
 }
 
 /* ── Transition: leaving-Element nimmt keinen Platz mehr ein ── */

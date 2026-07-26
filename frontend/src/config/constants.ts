@@ -1880,6 +1880,16 @@ export const STAR_TIMER_HP_CRITICAL_RATIO = 0.15
 // Solange der Boss lebt, bleibt mindestens dieser Anteil der Kugel gefüllt —
 // bei 2 % HP wäre der Farbstreifen in einer ~11 px großen Kugel sonst unsichtbar.
 export const STAR_TIMER_HP_MIN_FILL = 0.2
+// Die Prozentzahl neben der Kugel läuft feiner als die Füllung (100 statt 20
+// Stufen): sie ist der exakte Wert, die Kugel nur die grobe Silhouette.
+export const STAR_TIMER_HP_PCT_STEPS = 100
+// Ein lebender Boss zeigt nie "0" — sonst liest sich die Zahl wie "besiegt",
+// während der Stern noch steht.
+export const STAR_TIMER_HP_MIN_PCT = 1
+// Breite des Zahlenfeldes in `ch` — fasst "100%". Feste Feldbreite = kein
+// Reflow der Kugelreihe, wenn 100 → 99 → 9 wechselt; nur der Textknoten
+// selbst wird neu gezeichnet.
+export const STAR_TIMER_HP_PCT_WIDTH_CH = 4
 
 // ── Galaxy-Boss Eskorten-Wellen ───────────────────────────────────────────
 // Gesamtzahl der Eskorten-Sterne pro Galaxie: BASE + (galaxy-1) * PER_GALAXY,
