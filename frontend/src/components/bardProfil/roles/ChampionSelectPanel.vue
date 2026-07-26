@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/championOrigins'
@@ -460,25 +461,14 @@ function onImgError(e: Event) {
     <!-- ── Search + Trait/Origin Filter (harmonized with Champion Shop) ── -->
     <div class="csp-filter-header">
       <div class="cs-search-row">
-        <div class="rpg-search-wrap">
-          <Icon icon="game-icons:magnifying-glass" width="18" height="18" class="rpg-search-icon" />
-          <input
-            v-model="searchQuery"
-            type="text"
-            :placeholder="`Search ${activeRole} champion or trait...`"
-            class="rpg-search w-full pl-9 pr-9 py-2.5"
-            :aria-expanded="traitFilterOpen"
-            aria-label="Search champions and traits"
-          />
-          <button
-            class="search-clear-btn"
-            :class="{ 'search-clear-btn--visible': searchQuery.length > 0 }"
-            aria-label="Clear search"
-            @click="resetSearch"
-            @keydown.enter.prevent="resetSearch"
-            @keydown.space.prevent="resetSearch"
-          >✕</button>
-        </div>
+        <RpgSearchBar
+          v-model="searchQuery"
+          class="cs-search-bar"
+          :placeholder="`Search ${activeRole} champion or trait...`"
+          aria-label="Search champions and traits"
+          :aria-expanded="traitFilterOpen"
+          @clear="resetSearch"
+        />
 
         <!-- Filter panel toggle -->
         <button

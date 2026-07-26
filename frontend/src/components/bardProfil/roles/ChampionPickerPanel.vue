@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
+import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
 
@@ -80,17 +81,19 @@ function onImgError(e: Event) {
     </div>
 
     <div class="search-row">
-      <Icon icon="game-icons:magnifying-glass" width="16" height="16" class="search-icon" style="color: #7a4e20" />
-      <input
+      <RpgSearchBar
         v-model="searchQuery"
-        type="text"
+        class="picker-search"
+        size="sm"
         :placeholder="`Search ${activeRole} Champion…`"
-        class="search-input"
-      />
-      <span class="search-count">
-        {{ filteredChampions.length }}<span class="search-count-sep">/</span
-        >{{ roleFilteredChampions.length }}
-      </span>
+      >
+        <template #trailing>
+          <span class="search-count">
+            {{ filteredChampions.length }}<span class="search-count-sep">/</span
+            >{{ roleFilteredChampions.length }}
+          </span>
+        </template>
+      </RpgSearchBar>
     </div>
 
     <div class="picker-body">
@@ -194,29 +197,9 @@ function onImgError(e: Event) {
   border-bottom: 1px solid rgba(42, 26, 6, 0.7);
   flex-shrink: 0;
 }
-.search-icon {
-  font-size: 11px;
-  opacity: 0.4;
-  flex-shrink: 0;
-}
-.search-input {
+.picker-search {
   flex: 1;
-  background: #181208;
-  border: 1px solid #3a2510;
-  border-radius: var(--bp-radius);
-  padding: 5px 10px;
-  color: var(--gold-bright);
-  font-size: 11px;
-  outline: none;
-  transition: border-color 0.15s;
   min-width: 0;
-}
-.search-input:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 2px rgba(200, 144, 64, 0.08);
-}
-.search-input::placeholder {
-  color: rgba(200, 144, 64, 0.28);
 }
 .search-count {
   font-size: 10px;

@@ -2220,6 +2220,16 @@ export const STATS_TAB_DECK_RESIZE = {
   MIN_MIDDLE: 260,
 } as const
 
+/** Magnifier size (px) of the shared search bar (`ui/RpgSearchBar.vue`), per
+ *  size variant. The icon is an Iconify component, so the value has to come
+ *  from script — it cannot live in the stylesheet with the rest of the sizing. */
+export const SEARCH_BAR_ICON_PX = {
+  /** default bar (46px tall) — Champion Shop, Champion Select, Synergies, … */
+  md: 18,
+  /** compact bar (34px tall) — Bard Stats column headers, Champion Picker */
+  sm: 15,
+} as const
+
 /** Bard Stats "Journey" progress gauges (Level / Galaxy / Universe). The ring is
  *  drawn as SVG in a square viewBox, so every value below is in user units and
  *  scales automatically with whatever width the resizable column gives it. */

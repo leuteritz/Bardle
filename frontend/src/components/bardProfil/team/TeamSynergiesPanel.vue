@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { TEAM_SIGIL_DETAILS_PANEL_WIDTH } from '@/config/constants'
+import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 
 const emit = defineEmits<{
   close: []
@@ -194,31 +195,14 @@ function championImage(name: string): string {
       <button class="tsp-close" aria-label="Close synergies" @click="emit('close')">✕</button>
     </header>
 
-    <!-- ── search (shared rpg-search pattern) ── -->
+    <!-- ── search (shared RpgSearchBar) ── -->
     <div class="tsp-search">
-      <div class="rpg-search-wrap">
-        <Icon
-          icon="game-icons:magnifying-glass"
-          width="14"
-          height="14"
-          class="rpg-search-icon"
-        />
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search synergies, effects or champions..."
-          class="rpg-search w-full pl-9 pr-9 py-2.5"
-          aria-label="Search synergies, effects or champions"
-        />
-        <button
-          class="search-clear-btn"
-          :class="{ 'search-clear-btn--visible': searchQuery.length > 0 }"
-          aria-label="Clear search"
-          @click="searchQuery = ''"
-        >
-          ✕
-        </button>
-      </div>
+      <RpgSearchBar
+        v-model="searchQuery"
+        class="tsp-search-bar"
+        placeholder="Search synergies, effects or champions..."
+        aria-label="Search synergies, effects or champions"
+      />
       <div v-if="normalizedQuery" class="tsp-search-result">
         {{ visibleCount }} {{ visibleCount === 1 ? 'synergy' : 'synergies' }} ·
         {{ highlightedChampions.length }}
@@ -438,6 +422,9 @@ function championImage(name: string): string {
   flex-shrink: 0;
   background: #1e1006;
   border-bottom: 1px solid #5c3310;
+}
+.tsp-search-bar {
+  width: 100%;
 }
 .tsp-search-result {
   margin-top: 7px;

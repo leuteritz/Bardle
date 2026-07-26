@@ -2,6 +2,7 @@
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
+import RpgSearchBar from '../ui/RpgSearchBar.vue'
 import { encyclopediaData } from '../../config/encyclopedia'
 import type { EncyclopediaEntry } from '../../config/encyclopedia'
 import {
@@ -28,7 +29,7 @@ const openFormulas = ref<Set<string>>(new Set())
 const bookmarks = ref<Set<string>>(loadBookmarks())
 const copiedId = ref<string | null>(null)
 const flashId = ref<string | null>(null)
-const searchInputRef = ref<HTMLInputElement | null>(null)
+const searchInputRef = ref<InstanceType<typeof RpgSearchBar> | null>(null)
 const scrollRef = ref<HTMLDivElement | null>(null)
 
 let copyTimer: ReturnType<typeof setTimeout> | null = null
@@ -333,25 +334,17 @@ const panelFrameStyle = computed(() => ({
 
         <!-- Search -->
         <div class="enc-search-wrap shrink-0">
-          <div class="relative flex items-center">
-            <Icon
-              icon="game-icons:magnifying-glass"
-              width="18"
-              height="18"
-              class="enc-search-icon absolute pointer-events-none"
-            />
-            <input
-              ref="searchInputRef"
-              v-model="searchQuery"
-              type="text"
-              :placeholder="`Search ${totalEntryCount} entries…`"
-              class="enc-search-input w-full"
-            />
-            <span class="enc-kbd-wrap absolute flex items-center gap-1 pointer-events-none">
+          <RpgSearchBar
+            ref="searchInputRef"
+            v-model="searchQuery"
+            class="enc-search-bar"
+            :placeholder="`Search ${totalEntryCount} entries…`"
+          >
+            <template #trailing>
               <kbd class="enc-kbd">Ctrl</kbd>
               <kbd class="enc-kbd">K</kbd>
-            </span>
-          </div>
+            </template>
+          </RpgSearchBar>
         </div>
 
         <!-- Category chips -->
@@ -598,30 +591,8 @@ const panelFrameStyle = computed(() => ({
 .enc-search-wrap {
   padding: clamp(8px, 0.7vw, 13px) var(--enc-pad) clamp(7px, 0.6vw, 11px);
 }
-.enc-search-icon {
-  left: 10px;
-  color: #c89040;
-}
-.enc-search-input {
-  padding: clamp(8px, 0.6vw, 11px) clamp(52px, 4vw, 74px) clamp(8px, 0.6vw, 11px)
-    clamp(32px, 2.2vw, 40px);
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  font-size: clamp(11.5px, 0.75vw, 14px);
-  font-weight: 500;
-  color: #efe7d6;
-  background: #1a1008;
-  border: 1px solid #5c3310;
-  border-radius: 5px;
-  outline: none;
-}
-.enc-search-input::placeholder {
-  color: #8a8172;
-}
-.enc-search-input:focus {
-  border-color: #c89040;
-}
-.enc-kbd-wrap {
-  right: 12px;
+.enc-search-bar {
+  width: 100%;
 }
 .enc-kbd {
   font-family: 'JetBrains Mono', ui-monospace, monospace;

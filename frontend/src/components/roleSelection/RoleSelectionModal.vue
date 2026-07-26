@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
+import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { ROLES } from '@/config/constants'
@@ -30,7 +31,7 @@ type AvailableChampion = {
 const displayedRoles = ref<RoleDef[]>([])
 const selectedKey = ref<ChampionRole | null>(null)
 const searchQuery = ref('')
-const searchInputRef = ref<HTMLInputElement | null>(null)
+const searchInputRef = ref<InstanceType<typeof RpgSearchBar> | null>(null)
 // Hovering any role card also reveals the header search, so players discover it.
 const rolesHovered = ref(false)
 
@@ -200,35 +201,16 @@ function choose(role: RoleDef) {
             </div>
 
             <!-- Active face: the search input (filters every roster live) -->
-            <div
-              class="rpg-search-wrap role-search-wrap role-morph-face"
+            <RpgSearchBar
+              ref="searchInputRef"
+              v-model="searchQuery"
+              class="role-search-wrap role-morph-face"
+              placeholder="Search champion… e.g. Ashe"
+              aria-label="Search champions across all role rosters"
+              @escape="onEscape"
               @click.stop
               @mousedown.stop
-            >
-              <Icon
-                icon="game-icons:magnifying-glass"
-                width="14"
-                height="14"
-                class="rpg-search-icon"
-              />
-              <input
-                ref="searchInputRef"
-                v-model="searchQuery"
-                type="text"
-                placeholder="Search champion… e.g. Ashe"
-                class="rpg-search w-full pl-9 pr-9 py-2"
-                aria-label="Search champions across all role rosters"
-                @keydown.escape.prevent="onEscape"
-              />
-              <button
-                class="search-clear-btn"
-                :class="{ 'search-clear-btn--visible': searchQuery.length > 0 }"
-                aria-label="Clear search"
-                @click="clearSearch"
-                @keydown.enter.prevent="clearSearch"
-                @keydown.space.prevent="clearSearch"
-              >✕</button>
-            </div>
+            />
           </div>
         </div>
 

@@ -4,28 +4,17 @@
     <!-- ── Header: Search + Role Filter ── -->
     <div class="rpg-header cs-header">
       <div class="cs-search-row">
-        <div class="rpg-search-wrap">
-          <Icon icon="game-icons:magnifying-glass" width="18" height="18" class="rpg-search-icon" />
-          <input
-            ref="searchInputRef"
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search champions, traits or items..."
-            class="rpg-search w-full pl-9 pr-9 py-2.5"
-            :aria-expanded="filterOpen"
-            aria-label="Search champions, traits and items"
-            @blur="onSearchBlur"
-            @focus="onSearchFocus"
-          />
-          <button
-            class="search-clear-btn"
-            :class="{ 'search-clear-btn--visible': searchQuery.length > 0 }"
-            aria-label="Clear search"
-            @click="resetSearch"
-            @keydown.enter.prevent="resetSearch"
-            @keydown.space.prevent="resetSearch"
-          >✕</button>
-        </div>
+        <RpgSearchBar
+          ref="searchInputRef"
+          v-model="searchQuery"
+          class="cs-search-bar"
+          placeholder="Search champions, traits or items..."
+          aria-label="Search champions, traits and items"
+          :aria-expanded="filterOpen"
+          @clear="resetSearch"
+          @blur="onSearchBlur"
+          @focus="onSearchFocus"
+        />
         <!-- Filter panel toggle -->
         <button
           class="filter-toggle-btn"
@@ -549,6 +538,7 @@ import ChampionShopCard from './ChampionShopCard.vue'
 import ChampionDetailPanel from './ChampionDetailPanel.vue'
 import ItemShopCard from './ItemShopCard.vue'
 import ItemDetailPanel from './ItemDetailPanel.vue'
+import RpgSearchBar from '../../../ui/RpgSearchBar.vue'
 import { useItemStore } from '../../../../stores/itemStore'
 import { SHOP_ITEMS, ITEM_CATEGORIES, ITEM_RARITIES } from '../../../../config/items'
 import { ITEM_SETS } from '../../../../config/sets'
@@ -580,7 +570,7 @@ import type {
 
 export default defineComponent({
   name: 'ChampionShopComponent',
-  components: { Icon, ChampionShopCard, ChampionDetailPanel, ItemShopCard, ItemDetailPanel },
+  components: { Icon, ChampionShopCard, ChampionDetailPanel, ItemShopCard, ItemDetailPanel, RpgSearchBar },
   props: {
     initialRole: { type: String, default: 'all' },
     showClose: { type: Boolean, default: false },
@@ -604,7 +594,7 @@ export default defineComponent({
     const activeItemCats = ref<ItemCategory[]>([])
     const activeRarities = ref<ItemRarity[]>([])
     const filterOpen = ref(false)
-    const searchInputRef = ref<HTMLInputElement | null>(null)
+    const searchInputRef = ref<InstanceType<typeof RpgSearchBar> | null>(null)
     // Tier chips / sections are the 6 Champion Tiers (weak→strong), not price tiers.
     // Galaxy-locked tiers stay visible but greyed out (same lock as the grid sections);
     // tiers with no purchasable champion left grey out like trait/origin chips.

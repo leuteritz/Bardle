@@ -23,6 +23,7 @@ import {
 } from '@/config/constants'
 import { universes } from '@/config/universes'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
+import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 import StatCategoryAccordion from './StatCategoryAccordion.vue'
 import { AUGMENTS } from '@/config/augments'
 import { renderGalaxySnapshot } from '@/utils/galaxySnapshot'
@@ -615,15 +616,12 @@ function stopResize() {
           <span class="sf-p-title">
             <span class="sf-p-label">Journey</span>
           </span>
-          <label class="sf-search-wrap">
-            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="15" height="15" />
-            <input
-              v-model="journeySearch"
-              class="sf-search"
-              type="text"
-              placeholder="Search stats…"
-            />
-          </label>
+          <RpgSearchBar
+            v-model="journeySearch"
+            class="sf-search-wrap"
+            size="sm"
+            placeholder="Search stats…"
+          />
         </header>
         <div class="sf-p-body sf-stats-body rpg-scrollbar">
           <!-- Idle play-time — the panel's hero stat, read like a chronometer:
@@ -730,15 +728,12 @@ function stopResize() {
           <span class="sf-p-title">
             <span class="sf-p-label">Augments</span>
           </span>
-          <label class="sf-search-wrap">
-            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="15" height="15" />
-            <input
-              v-model="augmentSearch"
-              class="sf-search"
-              type="text"
-              placeholder="Search augments…"
-            />
-          </label>
+          <RpgSearchBar
+            v-model="augmentSearch"
+            class="sf-search-wrap"
+            size="sm"
+            placeholder="Search augments…"
+          />
         </header>
         <div class="sf-p-body rpg-scrollbar">
           <div class="sf-buff-chips">
@@ -797,15 +792,12 @@ function stopResize() {
           <span class="sf-p-title">
             <span class="sf-p-label">Galaxy Archive</span>
           </span>
-          <label class="sf-search-wrap">
-            <Icon icon="game-icons:magnifying-glass" class="sf-search-ico" width="15" height="15" />
-            <input
-              v-model="archiveSearch"
-              class="sf-search"
-              type="text"
-              placeholder="Search galaxies…"
-            />
-          </label>
+          <RpgSearchBar
+            v-model="archiveSearch"
+            class="sf-search-wrap"
+            size="sm"
+            placeholder="Search galaxies…"
+          />
         </header>
         <div class="sf-p-body rpg-scrollbar">
           <div v-if="filteredArchive.length === 0" class="sf-empty-block">
@@ -986,47 +978,13 @@ function stopResize() {
   padding: 10px 12px;
 }
 
-/* ─── Header context search — identical across all three panels ─── */
-/* Shrinks before the title does, but never below a usable field width */
+/* ─── Header context search (shared RpgSearchBar) ───────────────
+   Only the sizing lives here — every visual is the component's. The field
+   shrinks before the title does, but never below a usable width. */
 .sf-search-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
   flex: 0 1 176px;
   min-width: 104px;
   max-width: 176px;
-}
-.sf-search-ico {
-  position: absolute;
-  left: 9px;
-  color: #6a5a3a;
-  pointer-events: none;
-}
-.sf-search {
-  width: 100%;
-  padding: 6px 10px 6px 30px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--rpg-text);
-  background: #111008;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-  outline: none;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-.sf-search::placeholder {
-  color: var(--rpg-text-dim);
-  font-weight: 400;
-}
-.sf-search:focus {
-  border-color: #7a4e20;
-  box-shadow: 0 0 0 1px rgba(122, 78, 32, 0.45);
-}
-.sf-search-wrap:focus-within .sf-search-ico {
-  color: #c89040;
 }
 
 /* ─── Solar strip (row 1) ───────────────────────────────────── */
@@ -1591,7 +1549,8 @@ function stopResize() {
     font-size: 23px;
     letter-spacing: 0.08em;
   }
-  .sf-search {
+  /* the shared bar's own type scale, nudged up for the 4K header row */
+  .sf-search-wrap :deep(.sb-input) {
     font-size: 14px;
   }
 }

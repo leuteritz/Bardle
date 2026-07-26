@@ -263,37 +263,10 @@
   color: var(--rpg-gold);
 }
 
-/* ── Search Input ── */
-.rpg-search {
-  background: var(--rpg-bg-dark);
-  border: 1px solid var(--rpg-wood-mid);
-  color: var(--rpg-text-muted);
-  border-radius: 4px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.rpg-search::placeholder {
-  color: var(--rpg-text-dim);
-}
-.rpg-search:focus {
-  border-color: var(--rpg-gold-dim);
-}
-
-/* ── Search Wrap ── */
-.rpg-search-wrap {
-  position: relative;
-  flex: 1;
-}
-
-/* ── Search Icon (inside .rpg-search-wrap) ── */
-.rpg-search-icon {
-  position: absolute;
-  left: 0.875rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--rpg-text-dim);
-  pointer-events: none;
-}
+/* ── Search Input ──
+   The field, its magnifier and its clear button all live in
+   `components/ui/RpgSearchBar.vue` now — every search bar in the game is that
+   one component, so there is nothing global left to style here. */
 
 /* ── Progress Bar ── */
 .rpg-progress-track {
@@ -407,37 +380,12 @@
   gap: 8px;
 }
 
-/* Search input inside the champion filter — sized up to match the large tier
-   headers below and restyled onto the same surface language as the chips and
-   toggle buttons (dark translucent fill, wood border, gold focus), so the
-   header and the tier sections read as one unit. */
-.cs-search-row .rpg-search {
-  height: 46px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #e8d8b0;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid #5c3310;
-  border-radius: var(--bp-radius);
-}
-.cs-search-row .rpg-search::placeholder {
-  color: #7a6040;
-  font-weight: 500;
-}
-.cs-search-row .rpg-search:hover {
-  border-color: #7a4e20;
-}
-.cs-search-row .rpg-search:focus {
-  border-color: #c89040;
-  background: rgba(0, 0, 0, 0.45);
-  box-shadow: 0 0 8px rgba(200, 144, 64, 0.3);
-}
-.cs-search-row .rpg-search-icon {
-  color: #8a6030;
-}
-.cs-search-row .rpg-search-wrap:focus-within .rpg-search-icon {
-  color: #c89040;
+/* The field itself is `ui/RpgSearchBar.vue` — this only makes it fill the row
+   next to the filter toggle. Its former look (46px, wood border, gold focus)
+   moved into the component and is now what every search bar in the game uses. */
+.cs-search-bar {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Filter panel toggle button */
@@ -632,43 +580,8 @@
   transform: scale(0.8);
 }
 
-/* Search clear button (inside .rpg-search-wrap) */
-.search-clear-btn {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%) scale(0.7);
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: rgba(122, 80, 32, 0);
-  opacity: 0;
-  pointer-events: none;
-  border-radius: var(--bp-radius);
-  font-size: 0.75rem;
-  z-index: 5;
-  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease, background 0.15s ease;
-}
-.search-clear-btn--visible {
-  opacity: 1;
-  transform: translateY(-50%) scale(1);
-  pointer-events: auto;
-  color: rgba(200, 144, 64, 0.55);
-}
-.search-clear-btn--visible:hover {
-  color: #e8c040;
-  background: rgba(122, 80, 32, 0.18);
-}
-.search-clear-btn--visible:focus-visible {
-  outline: 1px solid #c89040;
-  outline-offset: -2px;
-}
+/* The search clear button moved into `components/ui/RpgSearchBar.vue` together
+   with the rest of the field. */
 
 /* Search-match hint (trait name matches text but chip not yet activated) */
 .trait-chip--search-match {
