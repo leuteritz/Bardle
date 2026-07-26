@@ -2,7 +2,12 @@
   <div class="rift-board">
     <ScoreTopBar />
     <!-- Spectator layout: the map owns the whole middle, team HUDs float above it -->
-    <div class="board-middle">
+    <!-- While the objective fight is up, the layers BEHIND it freeze their CSS
+         animations (see .board-middle--frozen): game-time is frozen anyway and
+         the fight overlay covers the board, so map FX and starfield would only
+         burn frame budget. They stay visible — the overlay is translucent —
+         just still. -->
+    <div class="board-middle" :class="{ 'board-middle--frozen': battleStore.objectiveModalOpen }">
       <!-- shared cosmic backdrop — fills the gutters beside the square map,
            behind both team HUD columns (same starfield as the other tabs) -->
       <CosmicStageBackground />
@@ -32,6 +37,9 @@ import AutoBattleStopBar from './AutoBattleStopBar.vue'
 import DrakeBuffBadges from './DrakeBuffBadges.vue'
 import AnnouncementBanner from './AnnouncementBanner.vue'
 import ObjectiveModalComponent from '../ObjectiveModalComponent.vue'
+import { useBattleStore } from '@/stores/battleStore'
+
+const battleStore = useBattleStore()
 </script>
 
 <style scoped>
@@ -54,6 +62,24 @@ import ObjectiveModalComponent from '../ObjectiveModalComponent.vue'
   flex: 1;
   position: relative;
   min-height: 0;
+}
+
+/* Objective fight running: freeze the animations of everything BEHIND the fight
+   overlay. Listed layer by layer instead of a blanket `.board-middle--frozen *`
+   so the fight overlay itself — a sibling in the same container — keeps
+   animating at full speed. :deep() is required because the frozen layers are
+   child components with their own scope. Mirrors .idle-anim-paused in App.vue. */
+.board-middle--frozen :deep(.cosmic-stage-bg),
+.board-middle--frozen :deep(.cosmic-stage-bg *),
+.board-middle--frozen :deep(.cosmic-stage-bg *::before),
+.board-middle--frozen :deep(.cosmic-stage-bg *::after),
+.board-middle--frozen :deep(.map-layer *),
+.board-middle--frozen :deep(.map-layer *::before),
+.board-middle--frozen :deep(.map-layer *::after),
+.board-middle--frozen :deep(.hud *),
+.board-middle--frozen :deep(.hud *::before),
+.board-middle--frozen :deep(.hud *::after) {
+  animation-play-state: paused !important;
 }
 
 .map-layer {

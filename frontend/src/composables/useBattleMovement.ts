@@ -1,5 +1,7 @@
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
+import { useUiStore } from '@/stores/uiStore'
+import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import {
   buildMovementSchedules,
   positionAt,
@@ -38,9 +40,31 @@ export interface ChampionTrail {
  */
 export function useBattleMovement() {
   const battleStore = useBattleStore()
+  const uiStore = useUiStore()
+  const { isRenderingPaused } = useRenderingPaused()
   const positions = ref<LiveChampionPosition[]>([])
   const minions = ref<MinionDot[]>([])
   const trails = ref<ChampionTrail[]>([])
+
+  /**
+   * The board is only worth sampling while a human can actually see it. Three
+   * cases where it cannot, and sampling would only burn frame budget:
+   *
+   *  - another bard tab is open (or none at all) — the battle tab stays mounted
+   *    via v-show so the simulation keeps running, but nothing of it is on screen
+   *  - the objective modal covers the board, and game-time is frozen anyway
+   *  - the window lost focus / the game is paused
+   *
+   * Safe to stop outright because positions are pure functions of game-time
+   * (see the file header): the first sample after resuming is already correct,
+   * no catch-up needed.
+   */
+  const shouldSample = computed(
+    () =>
+      uiStore.bardActiveTab === 'battle' &&
+      !battleStore.objectiveModalOpen &&
+      !isRenderingPaused.value,
+  )
 
   let schedules: { t1: ChampionSchedule[]; t2: ChampionSchedule[] } | null = null
   let scheduleSeed = -1
@@ -153,15 +177,27 @@ export function useBattleMovement() {
     { immediate: true },
   )
 
-  onMounted(() => {
-    if (battleStore.timeline && scheduleSeed !== battleStore.battleSeed) rebuildSchedules()
+  function startTicking() {
+    if (tickId) return
     sample()
     tickId = setInterval(sample, MOVE_TICK_INTERVAL_MS)
+  }
+
+  function stopTicking() {
+    if (!tickId) return
+    clearInterval(tickId)
+    tickId = null
+  }
+
+  watch(shouldSample, (visible) => (visible ? startTicking() : stopTicking()))
+
+  onMounted(() => {
+    if (battleStore.timeline && scheduleSeed !== battleStore.battleSeed) rebuildSchedules()
+    if (shouldSample.value) startTicking()
+    else sample()
   })
 
-  onBeforeUnmount(() => {
-    if (tickId) clearInterval(tickId)
-  })
+  onBeforeUnmount(stopTicking)
 
   return { positions, minions, trails }
 }

@@ -45,7 +45,7 @@
         :key="dot.key"
         class="minion-dot"
         :class="dot.team === 1 ? 'minion-dot--blue' : 'minion-dot--red'"
-        :style="{ left: dot.x + '%', top: dot.y + '%' }"
+        :style="{ '--mx': dot.x, '--my': dot.y }"
       />
 
       <!-- Jungle buff camps: monster icon glows while the buff is up; slain →
@@ -212,7 +212,7 @@
           'champ-marker--focused': isFocused(pos.team, pos.idx),
           'champ-marker--dimmed': hasFocus && !isFocused(pos.team, pos.idx),
         }"
-        :style="{ left: pos.x + '%', top: pos.y + '%' }"
+        :style="{ '--mx': pos.x, '--my': pos.y }"
       >
         <div class="champ-portrait-wrap">
           <!-- Spotlight ring when this champion is focused from a team card -->
@@ -257,7 +257,7 @@
           </span>
         </div>
         <div class="champ-hp">
-          <div class="champ-hp-fill" :class="hpClass(champAt(pos.team, pos.idx))" :style="{ width: hpWidth(pos) + '%' }" />
+          <div class="champ-hp-fill" :class="hpClass(champAt(pos.team, pos.idx))" :style="{ '--hp': hpWidth(pos) / 100 }" />
         </div>
         <div
           class="champ-name"
@@ -592,6 +592,13 @@ const structureMarkers = computed(() => {
   /* opaque base: the map art is 65% opacity — without this the cosmic
      starfield behind the board would twinkle through the map itself */
   background: #111008;
+  /* Own size container: moving markers position themselves with translate()
+     instead of left/top, and translate percentages resolve against the ELEMENT,
+     not the parent. cqw/cqh here are the square's own edge length, so
+     `calc(var(--mx) * 1cqw)` reads exactly like the old `left: x%`.
+     Same value as the parent's cqmin (the square IS min(cqw, cqh) of .map-stage),
+     so the cqmin-sized children below are unaffected. */
+  container-type: size;
 }
 
 .map-bg {
@@ -713,14 +720,21 @@ const structureMarkers = computed(() => {
 }
 
 /* ── Minions ── */
+/* Position rides on transform, not left/top: the movement ticker rewrites every
+   dot every 500ms and the transition spans the full 500ms, so an animated
+   left/top meant a layout pass on EVERY frame, all match long. translate3d
+   stays on the compositor. --mx/--my are plain numbers (0–100) and
+   `1cqw` is 1% of the square map's edge, so the maths matches the old `x%`. */
 .minion-dot {
   position: absolute;
+  left: 0;
+  top: 0;
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate3d(calc(var(--mx) * 1cqw - 50%), calc(var(--my) * 1cqh - 50%), 0);
   pointer-events: none;
-  transition: left 0.5s linear, top 0.5s linear;
+  transition: transform 0.5s linear;
 }
 .minion-dot--blue {
   background: #7fb0ff;
@@ -1183,14 +1197,19 @@ const structureMarkers = computed(() => {
 }
 
 /* ── Champions ── */
+/* Same compositor-only positioning as the minion dots — see there. Each marker
+   carries ~8 child nodes, so an animated left/top was the single most expensive
+   thing on the board. */
 .champ-marker {
   position: absolute;
-  transform: translate(-50%, -50%);
+  left: 0;
+  top: 0;
+  transform: translate3d(calc(var(--mx) * 1cqw - 50%), calc(var(--my) * 1cqh - 50%), 0);
   display: flex;
   flex-direction: column;
   align-items: center;
   pointer-events: none;
-  transition: left 0.5s linear, top 0.5s linear, opacity 0.25s ease;
+  transition: transform 0.5s linear, opacity 0.25s ease;
   z-index: 4;
 }
 /* Live MVP floats above the pack so its crown/ring never hides behind others */
@@ -1415,9 +1434,14 @@ const structureMarkers = computed(() => {
   border-radius: 2px;
   overflow: hidden;
 }
+/* Drains via scaleX instead of width — 10 bars animating width triggered a
+   layout pass per frame; a scale transform is compositor-only. */
 .champ-hp-fill {
+  width: 100%;
   height: 100%;
-  transition: width 0.5s ease;
+  transform-origin: left center;
+  transform: scaleX(var(--hp, 1));
+  transition: transform 0.5s ease;
 }
 .hp--high { background: #37d14a; }
 .hp--mid { background: #c9d137; }
