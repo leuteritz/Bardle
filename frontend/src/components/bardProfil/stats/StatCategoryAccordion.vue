@@ -90,7 +90,7 @@ watch(isSearching, (searching, wasSearching) => {
       >
         <span class="sc-caret" aria-hidden="true" />
         <span class="sc-head-ico">
-          <Icon :icon="cat.icon" width="24" height="24" />
+          <Icon :icon="cat.icon" width="36" height="36" />
         </span>
         <span class="sc-head-text">
           <span class="sc-head-name">{{ cat.label }}</span>
@@ -155,9 +155,9 @@ watch(isSearching, (searching, wasSearching) => {
 }
 
 .sc-bar-count {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--rpg-text-dim);
   font-variant-numeric: tabular-nums;
@@ -171,10 +171,10 @@ watch(isSearching, (searching, wasSearching) => {
 }
 
 .sc-bar-btn {
-  padding: 3px 9px;
-  font-size: 10px;
+  padding: 4px 10px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--rpg-text-muted);
   background: #16130c;
@@ -240,17 +240,30 @@ watch(isSearching, (searching, wasSearching) => {
   transform: rotate(90deg);
 }
 
+/* Bare glyph, no box: the icon IS the category mark, so it gets the full slot
+   and carries its accent as light instead of as a frame. */
 .sc-head-ico {
+  position: relative;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
+  color: color-mix(in srgb, var(--accent) 80%, #6a5a3a);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 25%, transparent));
+  transition:
+    color 0.18s,
+    filter 0.18s;
+}
+.sc-head-ico svg {
+  width: 100%;
+  height: 100%;
+}
+.sc-cat.is-open .sc-head-ico,
+.sc-head:hover .sc-head-ico {
   color: var(--accent);
-  background: #14100a;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, #2a1a08);
-  border-radius: 4px;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 55%, transparent));
 }
 
 .sc-head-text {
@@ -262,9 +275,10 @@ watch(isSearching, (searching, wasSearching) => {
 }
 
 .sc-head-name {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
   text-transform: uppercase;
   color: #e8e0cc;
   white-space: nowrap;
@@ -276,9 +290,10 @@ watch(isSearching, (searching, wasSearching) => {
 }
 
 .sc-head-blurb {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
   color: var(--rpg-text-dim);
   white-space: nowrap;
   overflow: hidden;
@@ -287,9 +302,9 @@ watch(isSearching, (searching, wasSearching) => {
 
 .sc-head-count {
   flex-shrink: 0;
-  min-width: 34px;
-  padding: 3px 7px;
-  font-size: 11px;
+  min-width: 38px;
+  padding: 4px 8px;
+  font-size: 14px;
   font-weight: 900;
   line-height: 1;
   text-align: center;
@@ -309,7 +324,9 @@ watch(isSearching, (searching, wasSearching) => {
 /* Headline numbers of a category — oversized, in the accent color */
 .sc-highlights {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  /* wide enough that a full label like "LEVEL PROGRESS" fits next to its
+     oversized number instead of being cut — two per row in the default column */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 6px;
   margin-bottom: 9px;
 }
@@ -327,7 +344,7 @@ watch(isSearching, (searching, wasSearching) => {
 }
 
 .sc-hl-val {
-  font-size: 19px;
+  font-size: 25px;
   font-weight: 900;
   line-height: 1.05;
   color: var(--accent);
@@ -339,9 +356,9 @@ watch(isSearching, (searching, wasSearching) => {
 }
 
 .sc-hl-lbl {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--rpg-text-dim);
   white-space: nowrap;
@@ -373,9 +390,9 @@ watch(isSearching, (searching, wasSearching) => {
 .sc-row-lbl {
   flex-shrink: 0;
   max-width: 62%;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   color: var(--rpg-text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -390,12 +407,12 @@ watch(isSearching, (searching, wasSearching) => {
   background-image: linear-gradient(to right, #3a2e1c 45%, transparent 45%);
   background-size: 5px 1px;
   background-repeat: repeat-x;
-  transform: translateY(-3px);
+  transform: translateY(-4px);
 }
 
 .sc-row-val {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 900;
   color: #e8e0cc;
   font-variant-numeric: tabular-nums;
@@ -414,7 +431,7 @@ watch(isSearching, (searching, wasSearching) => {
   gap: 9px;
   padding: 28px 16px;
   text-align: center;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--rpg-text-dim);
@@ -430,8 +447,11 @@ watch(isSearching, (searching, wasSearching) => {
     padding: 6px 9px;
   }
   .sc-head-ico {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
+  }
+  .sc-head-name {
+    font-size: 15px;
   }
   .sc-body {
     padding: 7px 9px 8px;
@@ -443,7 +463,7 @@ watch(isSearching, (searching, wasSearching) => {
     padding: 6px 8px;
   }
   .sc-hl-val {
-    font-size: 17px;
+    font-size: 22px;
   }
 }
 </style>
