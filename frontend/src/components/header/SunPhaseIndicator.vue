@@ -41,11 +41,22 @@ const dwellProgress = computed(() => {
 
 const dwellComplete = computed(() => solarStore.phaseDwellRemainingMs <= 0)
 
+/** Time LEFT in the current phase before it may be evolved — the only label. */
+const remainingText = computed(() => {
+  const totalSec = Math.ceil(solarStore.phaseDwellRemainingMs / 1000)
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`
+})
+
 /** Everything the stripped-down badge no longer shows lives in the tooltip. */
 const tooltip = computed(
   () =>
     `Phase ${currentDisplayPhase.value}/${SUN_PHASE_DISPLAY_TOTAL} · ${phaseData.value.name} — ` +
-    `${phaseData.value.astroName} · open Stats`,
+    `${phaseData.value.astroName} · ` +
+    (dwellComplete.value ? 'ready to evolve' : `${remainingText.value} until evolve`) +
+    ' · open Stats',
 )
 </script>
 
@@ -79,7 +90,7 @@ const tooltip = computed(
       </svg>
     </div>
 
-    <span class="phase-name">{{ phaseData.name }}</span>
+    <span class="phase-timer">{{ dwellComplete ? 'READY' : remainingText }}</span>
   </button>
 </template>
 
@@ -172,7 +183,10 @@ const tooltip = computed(
   animation: ripple-out 2.4s ease-out infinite;
 }
 
-.phase-name {
+/* Restzeit bis zum Evolve. tabular-nums, sonst springt die Breite jede
+   Sekunde. Kein text-shadow-Glow: der las sich als heller Kasten hinter
+   der Schrift — Lesbarkeit trägt allein der harte dunkle Schlagschatten. */
+.phase-timer {
   width: 100%;
   font-size: min(calc(var(--header-height) * 0.27), 28px);
   font-weight: 700;
@@ -182,17 +196,16 @@ const tooltip = computed(
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
   color: var(--ph-accent);
-  text-shadow:
-    0 0 10px var(--ph-glow),
-    0 1px 2px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 /* ── Dwell erfüllt: die Phase kann weiterentwickelt werden ── */
-.sun-phase--ready .phase-name {
+.sun-phase--ready .phase-timer {
   color: #8adc50;
-  text-shadow: 0 0 10px rgba(110, 192, 64, 0.6);
-  animation: complete-pulse 2.4s ease-in-out infinite;
+  letter-spacing: 0.06em;
+  animation: ready-pulse 2.4s ease-in-out infinite;
 }
 
 @keyframes ripple-out {
@@ -210,15 +223,16 @@ const tooltip = computed(
   }
 }
 
-@keyframes complete-pulse {
+/* Aufmerksamkeit über opacity statt über einen wachsenden Schein — ein
+   pulsierendes text-shadow wäre wieder der helle Kasten (und eine
+   Paint-Animation im Dauer-sichtbaren Header). */
+@keyframes ready-pulse {
   0%,
   100% {
-    text-shadow: 0 0 6px rgba(110, 192, 64, 0.5);
+    opacity: 1;
   }
   50% {
-    text-shadow:
-      0 0 14px rgba(110, 192, 64, 1),
-      0 0 26px rgba(110, 192, 64, 0.5);
+    opacity: 0.5;
   }
 }
 
@@ -235,7 +249,7 @@ const tooltip = computed(
 @media (prefers-reduced-motion: reduce) {
   .orb::after,
   .orb-ripple,
-  .sun-phase--ready .phase-name {
+  .sun-phase--ready .phase-timer {
     animation: none;
   }
 }
