@@ -3267,6 +3267,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:cracked-glass', // Galaxy Archive card — stars lost badge
   'game-icons:duration', // Galaxy Archive card — time-spent overlay (valid replacement for invalid sand-clock)
   'game-icons:spiral-arrow', // Galaxy Archive — empty-state emblem (BardStatsTab)
+  'game-icons:player-time', // Play Time chronometer kicker (BardStatsTab)
   // Bard Stats — stat catalog category headers (config/statCategories.ts)
   'game-icons:growth', // Progression category
   'game-icons:coins', // Economy category

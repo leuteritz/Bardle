@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatCompactDuration } from '@/utils/format'
+import { formatCompactDuration, durationSegments } from '@/utils/format'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
@@ -167,8 +167,10 @@ const phaseAge = computed(() => {
   return `${s}s`
 })
 
-/* ── Non-battle game stats ───────────────────────────────────── */
-const playTime = computed(() => formatCompactDuration(inGameTime.value * 1000))
+/* ── Play time — split into odometer blocks for the hero readout ── */
+const playTimeSegments = computed(() => durationSegments(inGameTime.value * 1000))
+/** Same duration in one line — the readout's tooltip. */
+const playTimeCompact = computed(() => formatCompactDuration(inGameTime.value * 1000))
 
 /* ── Galaxy Archive (completed-galaxy memories) ──────────────── */
 const archive = computed(() => [...completedGalaxies.value].sort((a, b) => b.galaxy - a.galaxy))
@@ -538,10 +540,24 @@ function stopResize() {
           </label>
         </header>
         <div class="sf-p-body sf-stats-body rpg-scrollbar">
-          <!-- Idle play-time — the panel's hero stat: far left, oversized -->
-          <div class="sf-playtime">
-            <span class="sf-playtime-lbl">Play Time</span>
-            <span class="sf-playtime-val">{{ playTime }}</span>
+          <!-- Idle play-time — the panel's hero stat, read like a chronometer:
+               a clock emblem at digit height, then one block per unit. -->
+          <div class="sf-playtime" :title="`${playTimeCompact} spent in this universe`">
+            <span class="sf-pt-lbl">Play Time</span>
+            <div class="sf-pt-body">
+              <Icon icon="game-icons:player-time" class="sf-pt-ico" width="40" height="40" />
+              <!-- Readout and gold rule share a wrapper so the rule always ends
+                   exactly with the last digit block, at any magnitude -->
+              <div class="sf-pt-stack">
+                <div class="sf-pt-readout">
+                  <div v-for="seg in playTimeSegments" :key="seg.unit" class="sf-pt-seg">
+                    <span class="sf-pt-num">{{ seg.value }}</span>
+                    <span class="sf-pt-unit">{{ seg.unit }}</span>
+                  </div>
+                </div>
+                <div class="sf-pt-rule" />
+              </div>
+            </div>
           </div>
 
           <div class="sf-chips">
@@ -1294,29 +1310,119 @@ function stopResize() {
   gap: 6px;
 }
 
-/* Idle play-time hero: oversized, left-aligned, modern */
+/* Idle play-time hero — a chronometer readout: label, clock emblem at digit
+   height, one block per unit, closed by the modal gold rule. */
 .sf-playtime {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1px;
-  margin-bottom: 4px;
+  gap: 3px;
+  margin-bottom: 6px;
+  cursor: help;
 }
-.sf-playtime-lbl {
+
+.sf-pt-lbl {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--rpg-text-muted);
 }
-.sf-playtime-val {
-  font-size: 34px;
+
+.sf-pt-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+/* Emblem matches the leading digit's cap height and sits on its baseline row */
+.sf-pt-ico {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  margin-top: -3px;
+  color: #c89040;
+  filter: drop-shadow(0 0 10px rgba(200, 144, 64, 0.28));
+}
+
+.sf-pt-stack {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.sf-pt-readout {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+}
+
+/* Each unit is its own block; a hairline separates it from the previous one */
+.sf-pt-seg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 0 13px;
+}
+.sf-pt-seg:first-child {
+  padding-left: 0;
+}
+.sf-pt-seg + .sf-pt-seg {
+  border-left: 1px solid #2c2010;
+}
+
+/* Fixed two-digit box (tabular figures → 1ch = one digit): the readout keeps
+   its width while the clock counts up, so nothing beside it ever shifts. */
+.sf-pt-num {
+  min-width: 2ch;
+  text-align: center;
+  font-size: 40px;
   font-weight: 900;
-  line-height: 1;
+  line-height: 0.95;
   letter-spacing: 0.01em;
   color: var(--rpg-gold);
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 14px rgba(232, 192, 64, 0.25);
+  text-shadow: 0 0 16px rgba(232, 192, 64, 0.3);
+}
+/* Trailing blocks read as the smaller change — the first one carries the story */
+.sf-pt-seg + .sf-pt-seg .sf-pt-num {
+  font-size: 30px;
+  color: #d8b45c;
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.18);
+}
+
+.sf-pt-unit {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #8a7a58;
+}
+
+/* The modal's signature gold line, cut to the readout's width */
+.sf-pt-rule {
+  width: 100%;
+  height: 2px;
+  margin-top: 3px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
+}
+
+/* Full HD: the flattest viewport — keep the hero commanding but reclaim rows */
+@media (max-height: 1100px) {
+  .sf-pt-num {
+    font-size: 34px;
+  }
+  .sf-pt-seg + .sf-pt-seg .sf-pt-num {
+    font-size: 26px;
+  }
+  .sf-pt-seg {
+    padding: 0 11px;
+  }
+  .sf-pt-ico {
+    width: 34px;
+    height: 34px;
+    margin-top: -2px;
+  }
 }
 
 .sf-chips {

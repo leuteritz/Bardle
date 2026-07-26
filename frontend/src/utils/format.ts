@@ -58,6 +58,50 @@ export function formatCompactDuration(ms: number): string {
   return `${s}s`
 }
 
+/** Ein Ziffernblock eines Odometer-Readouts: Wert plus seine Einheit. */
+export interface DurationSegment {
+  /** Bereits formatiert — Folgeblöcke sind zweistellig aufgefüllt. */
+  value: string
+  /** Kurzform der Einheit, z. B. `days` / `hrs` / `min` / `sec`. */
+  unit: string
+}
+
+/**
+ * Zerlegt eine Dauer in drei Blöcke für eine große Odometer-Anzeige.
+ * Das Fenster wandert mit der Größenordnung mit: ab einem Tag D/H/M,
+ * darunter H/M/S und unter einer Stunde M/S — so bleibt der erste Block
+ * immer der aussagekräftigste.
+ *
+ * Jeder Block ist mindestens zweistellig (`03`), damit die Anzeige beim
+ * Hochzählen keine Ziffernbreite gewinnt und nichts nachrutscht.
+ */
+export function durationSegments(ms: number): DurationSegment[] {
+  const secs = Math.max(0, Math.floor(ms / 1000))
+  const d = Math.floor(secs / 86400)
+  const h = Math.floor((secs % 86400) / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  if (d > 0) {
+    return [
+      { value: pad(d), unit: 'days' },
+      { value: pad(h), unit: 'hrs' },
+      { value: pad(m), unit: 'min' },
+    ]
+  }
+  if (h > 0) {
+    return [
+      { value: pad(h), unit: 'hrs' },
+      { value: pad(m), unit: 'min' },
+      { value: pad(s), unit: 'sec' },
+    ]
+  }
+  return [
+    { value: pad(m), unit: 'min' },
+    { value: pad(s), unit: 'sec' },
+  ]
+}
+
 /** Sekunden als kurze Restdauer: `5m 30s`, `40s`, `3m`. */
 export function formatShortDuration(seconds: number): string {
   const min = Math.floor(seconds / 60)
