@@ -49,7 +49,7 @@
 
         <div class="card-load">
           <div class="load-track">
-            <div class="load-fill" :style="{ width: `${percent}%` }" />
+            <div class="load-fill" :style="{ '--fill': percent / 100 }" />
           </div>
           <div class="load-legend">
             <span class="load-state">{{ isReady ? 'READY' : 'SUMMONING' }}</span>
@@ -331,6 +331,7 @@ const cardStyle = computed<CSSProperties>(() => {
 }
 
 .load-fill {
+  width: 100%;
   height: 100%;
   background: linear-gradient(
     to right,
@@ -338,9 +339,13 @@ const cardStyle = computed<CSSProperties>(() => {
     var(--side-color)
   );
   box-shadow: 0 0 10px color-mix(in srgb, var(--side-strong) 55%, transparent);
-  /* the width comes from the phase clock (~10 steps/s) — the transition keeps
-     the fill gliding between those steps instead of stepping visibly */
-  transition: width 0.12s linear;
+  /* the fill fraction comes from the phase clock (~10 steps/s) — the transition
+     keeps the bar gliding between those steps instead of stepping visibly.
+     Scaled, not resized: ten of these tick at 10Hz, and an animated width made
+     every one of them a layout pass per frame. */
+  transform-origin: left center;
+  transform: scaleX(var(--fill, 0));
+  transition: transform 0.12s linear;
 }
 .load-card--ready .load-fill {
   background: linear-gradient(to right, #2e7a1a, #52b830);

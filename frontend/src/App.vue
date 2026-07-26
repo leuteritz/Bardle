@@ -41,7 +41,7 @@ watch(
 </script>
 
 <template>
-  <div class="min-h-screen cosmic-bg">
+  <div class="min-h-screen cosmic-bg" :class="{ 'cosmic-drift-paused': isIdleRenderingPaused }">
     <div class="galaxy-tint-overlay" aria-hidden="true"></div>
     <StarBackgroundComponent />
     <NebulaFlythroughComponent />
@@ -203,6 +203,13 @@ watch(
   will-change: transform;
   z-index: -1;
   pointer-events: none;
+}
+
+/* The drifting gradient is a layer twice the viewport wide, kept on the
+   compositor by will-change. Behind an opaque bard tab or the star-fight modal
+   nobody can see it drift, so park it there — it stays painted, just still. */
+.cosmic-drift-paused::before {
+  animation-play-state: paused;
 }
 
 .rendering-paused *,

@@ -6,17 +6,17 @@
 
       <!-- Per-champion movement trails: fade toward the tail, vanish when standing -->
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="trail-svg">
-        <template v-for="trail in trails" :key="`trail-${trail.team}-${trail.idx}`">
+        <template v-for="trail in trailLines" :key="trail.key">
           <line
-            v-for="(seg, i) in trailSegments(trail)"
+            v-for="(seg, i) in trail.segments"
             :key="i"
             :x1="seg.x1"
             :y1="seg.y1"
             :x2="seg.x2"
             :y2="seg.y2"
-            :stroke="trailColor(trail)"
-            :stroke-opacity="((i + 1) / trailSegments(trail).length) * 0.55"
-            :stroke-width="0.4 + ((i + 1) / trailSegments(trail).length) * 0.4"
+            :stroke="trail.color"
+            :stroke-opacity="seg.opacity"
+            :stroke-width="seg.width"
             stroke-linecap="round"
           />
         </template>
@@ -346,23 +346,44 @@ interface TrailSegment {
   y2: number
 }
 
-function trailSegments(trail: ChampionTrail): TrailSegment[] {
-  const segs: TrailSegment[] = []
-  for (let i = 1; i < trail.points.length; i++) {
-    segs.push({
-      x1: trail.points[i - 1].x,
-      y1: trail.points[i - 1].y,
-      x2: trail.points[i].x,
-      y2: trail.points[i].y,
-    })
-  }
-  return segs
-}
-
 function trailColor(trail: ChampionTrail): string {
   if (trail.isBard) return '#e8c040'
   return trail.team === 1 ? '#60a5fa' : '#f87171'
 }
+
+/**
+ * Every trail pre-flattened into ready-to-draw line segments, including the
+ * fade and thickness each one gets from its position along the tail. Built once
+ * per sample instead of in the template: the old version called a segment
+ * builder three times per line (once for v-for, twice for the `.length` in the
+ * opacity and width expressions), so one trail of 7 points allocated 13 arrays
+ * per render — times up to 10 trails, ten times a second.
+ */
+const trailLines = computed(() => {
+  const out: Array<{
+    key: string
+    color: string
+    segments: Array<TrailSegment & { opacity: number; width: number }>
+  }> = []
+  for (const trail of trails.value) {
+    const color = trailColor(trail)
+    const count = trail.points.length - 1
+    const segments = []
+    for (let i = 1; i < trail.points.length; i++) {
+      const ratio = i / count
+      segments.push({
+        x1: trail.points[i - 1].x,
+        y1: trail.points[i - 1].y,
+        x2: trail.points[i].x,
+        y2: trail.points[i].y,
+        opacity: ratio * 0.55,
+        width: 0.4 + ratio * 0.4,
+      })
+    }
+    out.push({ key: `trail-${trail.team}-${trail.idx}`, color, segments })
+  }
+  return out
+})
 
 function champAt(team: 1 | 2, idx: number): ChampionState | undefined {
   return team === 1 ? battleStore.team1[idx] : battleStore.team2[idx]
@@ -487,9 +508,26 @@ const buffCamps = computed(() => {
   return out
 })
 
-/** Cosmetic buff orbs on a champion's minimap marker — whoever slew the camp carries them. */
+/**
+ * Cosmetic buff orbs on a champion's minimap marker — whoever slew the camp
+ * carries them. Resolved for all ten markers at once: the store getter filters
+ * the whole buff feed per call, and the template asks four times per marker.
+ */
+const NO_BUFFS: Array<'blue' | 'red'> = []
+const buffsByChampion = computed<Record<string, Array<'blue' | 'red'>>>(() => {
+  const map: Record<string, Array<'blue' | 'red'>> = {}
+  for (const team of [1, 2] as const) {
+    const roster = team === 1 ? battleStore.team1 : battleStore.team2
+    for (let idx = 0; idx < roster.length; idx++) {
+      const types = battleStore.championBuffs(team, idx).map((b) => b.type)
+      if (types.length) map[`${team}-${idx}`] = types
+    }
+  }
+  return map
+})
+
 function champBuffs(team: 1 | 2, idx: number): Array<'blue' | 'red'> {
-  return battleStore.championBuffs(team, idx).map((b) => b.type)
+  return buffsByChampion.value[`${team}-${idx}`] ?? NO_BUFFS
 }
 
 const nexusMarkers = computed(() => [
@@ -552,10 +590,12 @@ const pushLabel = computed(() => {
 
 const structureMarkers = computed(() => {
   const destroyed = new Set(battleStore.destroyedStructures)
+  // indexed once instead of a linear scan of the feed per structure
+  const feedById = new Map(battleStore.structureFeed.map((f) => [f.id, f]))
   return ALL_STRUCTURE_IDS.map((id) => {
     const { ownerTeam, tier } = parseStructureId(id)
     const pos = STRUCTURE_POSITIONS[id]
-    const feed = battleStore.structureFeed.find((f) => f.id === id)
+    const feed = feedById.get(id)
     return {
       id,
       x: pos.x,

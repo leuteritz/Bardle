@@ -30,7 +30,7 @@
     </div>
 
     <div class="head-track layer">
-      <div class="head-fill" :style="{ width: `${Math.round(progress * 100)}%` }" />
+      <div class="head-fill" :style="{ '--fill': Math.round(progress * 100) / 100 }" />
     </div>
 
     <!-- ── Blue side: the player's squad ── -->
@@ -375,11 +375,15 @@ const redChips = computed(() => [
   overflow: hidden;
 }
 
+/* scaleX, not width — driven by the same 10Hz phase clock as the champion cards */
 .head-fill {
+  width: 100%;
   height: 100%;
   background: linear-gradient(to right, #2b5ea8, #93c5fd);
   box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
-  transition: width 0.12s linear;
+  transform-origin: left center;
+  transform: scaleX(var(--fill, 0));
+  transition: transform 0.12s linear;
 }
 
 /* ── Team blocks ── */

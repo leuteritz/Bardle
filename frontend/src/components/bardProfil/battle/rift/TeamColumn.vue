@@ -84,7 +84,7 @@
         <div
           class="hp-fill"
           :class="hpClass(champ.hpPercent)"
-          :style="{ width: (champ.respawnState === 'walking-back' ? 100 : champ.hpPercent) + '%', marginLeft: side === 'red' ? 'auto' : '0' }"
+          :style="{ '--fill': (champ.respawnState === 'walking-back' ? 100 : champ.hpPercent) / 100 }"
         />
       </div>
     </div>
@@ -587,9 +587,18 @@ function hpClass(hp: number): string {
   height: 4px;
   background: rgba(0, 0, 0, 0.55);
 }
+/* scaleX instead of width — the red column drains toward its right edge, which
+   the old `margin-left: auto` did. Ten bars animating width meant a layout pass
+   per frame for the 0.6s after every HP change. */
 .hp-fill {
+  width: 100%;
   height: 100%;
-  transition: width 0.6s ease;
+  transform-origin: left center;
+  transform: scaleX(var(--fill, 1));
+  transition: transform 0.6s ease;
+}
+.team-col--red .hp-fill {
+  transform-origin: right center;
 }
 .hp--high { background: #37d14a; }
 .hp--mid { background: #c9d137; }

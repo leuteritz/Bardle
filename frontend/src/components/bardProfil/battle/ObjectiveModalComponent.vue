@@ -105,7 +105,7 @@
                   <span
                     v-if="fx.remaining !== null"
                     class="fx-timer"
-                    :style="{ width: fx.remaining * 100 + '%' }"
+                    :style="{ '--fill': fx.remaining }"
                   />
                 </div>
               </TransitionGroup>
@@ -164,7 +164,7 @@
                 </div>
                 <div v-if="f.alive" class="fighter-hp-row">
                   <div class="fight-hp">
-                    <div class="fight-hp-fill" :class="hpStage(f)" :style="{ width: hpPct(f) + '%' }" />
+                    <div class="fight-hp-fill" :class="hpStage(f)" :style="{ '--fill': hpPct(f) / 100 }" />
                   </div>
                   <span class="fight-hp-num" :class="hpStage(f)">{{ Math.ceil(f.fightHp) }}/{{ f.fightMaxHp }}</span>
                 </div>
@@ -188,7 +188,7 @@
           <div class="boss-col">
           <div class="boss-hp" :class="{ 'boss-hp--shake': hpShake }">
             <div class="boss-hp-track">
-              <div class="boss-hp-fill" :style="{ width: hpFraction * 100 + '%' }" />
+              <div class="boss-hp-fill" :style="{ '--fill': hpFraction }" />
             </div>
             <span class="boss-hp-num">{{ fmt(Math.ceil(battleStore.objectiveHP)) }} / {{ fmt(battleStore.objectiveMaxHP) }}</span>
           </div>
@@ -288,7 +288,7 @@
                   <span
                     v-if="fx.remaining !== null"
                     class="fx-timer"
-                    :style="{ width: fx.remaining * 100 + '%' }"
+                    :style="{ '--fill': fx.remaining }"
                   />
                 </div>
               </TransitionGroup>
@@ -326,7 +326,7 @@
                 <div v-if="f.alive" class="fighter-hp-row fighter-hp-row--enemy">
                   <span class="fight-hp-num" :class="hpStage(f)">{{ Math.ceil(f.fightHp) }}/{{ f.fightMaxHp }}</span>
                   <div class="fight-hp">
-                    <div class="fight-hp-fill fight-hp-fill--enemy" :class="hpStage(f)" :style="{ width: hpPct(f) + '%' }" />
+                    <div class="fight-hp-fill fight-hp-fill--enemy" :class="hpStage(f)" :style="{ '--fill': hpPct(f) / 100 }" />
                   </div>
                 </div>
               </div>
@@ -375,8 +375,8 @@
             <span class="race-label race-label--enemy">ENEMY {{ fmt(enemyDamage) }} · {{ enemyDps }}/s</span>
           </div>
           <div class="race-track">
-            <div class="race-own" :style="{ width: ownShare + '%' }">
-              <div class="race-player" :style="{ width: playerShareOfOwn + '%' }" />
+            <div class="race-own" :style="{ '--fill': ownShare / 100 }">
+              <div class="race-player" :style="{ '--fill': playerShareOfOwn / 100 }" />
             </div>
             <div class="race-midmark" />
           </div>
@@ -625,13 +625,25 @@ function tauntingTopOf(side: 'own' | 'enemy'): ObjectiveFighter | null {
   return top && isAbilityActive(top) ? top : null
 }
 
-/** Mirrors the store's taunt rule: first N standing fighters (idx order) while the enemy top's window runs. */
+/**
+ * Mirrors the store's taunt rule: first N standing fighters (idx order) while
+ * the enemy top's window runs. Computed once per side rather than per fighter —
+ * the template asks this for all 10 cards several times each, and the ability
+ * clock invalidates it every 100ms.
+ */
+const tauntedIdxsBySide = computed<Record<'own' | 'enemy', number[]>>(() => {
+  const forSide = (side: 'own' | 'enemy'): number[] => {
+    if (!tauntingTopOf(side)) return []
+    return _rawSide(side)
+      .filter(isStanding)
+      .slice(0, OBJECTIVE_TOP_TAUNT_TARGETS)
+      .map((f) => f.idx)
+  }
+  return { own: forSide('own'), enemy: forSide('enemy') }
+})
+
 function tauntedIdxsOf(side: 'own' | 'enemy'): number[] {
-  if (!tauntingTopOf(side)) return []
-  return _rawSide(side)
-    .filter(isStanding)
-    .slice(0, OBJECTIVE_TOP_TAUNT_TARGETS)
-    .map((f) => f.idx)
+  return tauntedIdxsBySide.value[side]
 }
 
 function isTaunted(f: ObjectiveFighter, side: 'own' | 'enemy'): boolean {
@@ -663,7 +675,30 @@ function windowRemaining(caster: ObjectiveFighter): number {
   return Math.max(0, Math.min(1, (caster.abilityActiveUntil - nowMs.value) / dur))
 }
 
+/**
+ * Status pills for every fighter, built in one pass per render instead of once
+ * per card. buildFighterEffects walks the roster of both sides to work out who
+ * taunts whom, so calling it ten times meant redoing that walk ten times — and
+ * the ability clock reruns all of it every 100ms.
+ */
+const effectsByFighter = computed<Record<string, FighterFx[]>>(() => {
+  const map: Record<string, FighterFx[]> = {}
+  for (const side of ['own', 'enemy'] as const) {
+    for (const f of _rawSide(side)) {
+      const fx = buildFighterEffects(f, side)
+      if (fx.length) map[side + f.idx] = fx
+    }
+  }
+  return map
+})
+
+const NO_EFFECTS: FighterFx[] = []
+
 function fighterEffects(f: ObjectiveFighter, side: 'own' | 'enemy'): FighterFx[] {
+  return effectsByFighter.value[side + f.idx] ?? NO_EFFECTS
+}
+
+function buildFighterEffects(f: ObjectiveFighter, side: 'own' | 'enemy'): FighterFx[] {
   const fx: FighterFx[] = []
   const tauntingTop = tauntingTopOf(side)
   if (isTaunted(f, side) && tauntingTop) {
@@ -845,8 +880,19 @@ interface FighterFloat {
 }
 const fighterFloats = ref<FighterFloat[]>([])
 
+/** Shared empty result so a card without floats doesn't allocate a fresh array per render. */
+const NO_FIGHTER_FLOATS: FighterFloat[] = []
+
+/* Grouped once instead of filtering the whole list per card (10 cards × every
+   100ms tick). Same for the HP floats below. */
+const fighterFloatsByKey = computed<Record<string, FighterFloat[]>>(() => {
+  const grouped: Record<string, FighterFloat[]> = {}
+  for (const f of fighterFloats.value) (grouped[f.key] ??= []).push(f)
+  return grouped
+})
+
 function fighterFloatsFor(key: string): FighterFloat[] {
-  return fighterFloats.value.filter((f) => f.key === key)
+  return fighterFloatsByKey.value[key] ?? NO_FIGHTER_FLOATS
 }
 let _fighterFloatId = 0
 let _floatSchedulerId: ReturnType<typeof setInterval> | null = null
@@ -907,8 +953,16 @@ const _prevHp = new Map<string, number>()
 /** Transient card flash on HP change: 'hit' (red) or 'heal' (green). */
 const cardFlash = ref<Record<string, 'hit' | 'heal' | null>>({})
 
+const NO_HP_FLOATS: HpFloat[] = []
+
+const hpFloatsByKey = computed<Record<string, HpFloat[]>>(() => {
+  const grouped: Record<string, HpFloat[]> = {}
+  for (const h of hpFloats.value) (grouped[h.key] ??= []).push(h)
+  return grouped
+})
+
 function hpFloatsFor(key: string): HpFloat[] {
-  return hpFloats.value.filter((h) => h.key === key)
+  return hpFloatsByKey.value[key] ?? NO_HP_FLOATS
 }
 
 function _checkHpChanges(fighters: ObjectiveFighter[], side: 'own' | 'enemy') {
@@ -1353,13 +1407,18 @@ onUnmounted(_stopFloatScheduler)
 }
 
 /* draining window bar along the pill's bottom edge */
+/* Drains via scaleX, not width: the ability clock reruns every 100ms, so an
+   animated width meant a layout pass per frame for every pill on screen. */
 .fx-timer {
   position: absolute;
   left: 0;
   bottom: 0;
+  width: 100%;
   height: 2px;
   background: var(--fx-color, #e8c040);
-  transition: width 0.12s linear;
+  transform-origin: left center;
+  transform: scaleX(var(--fill, 0));
+  transition: transform 0.12s linear;
 }
 
 /* pills pop in, fade out, and shift smoothly when neighbors change */
@@ -1522,12 +1581,17 @@ onUnmounted(_stopFloatScheduler)
   border-radius: 2px;
   overflow: hidden;
 }
+/* scaleX instead of width — 10 bars redrawn on every 200ms damage tick */
 .fight-hp-fill {
+  width: 100%;
   height: 100%;
-  transition: width 0.3s ease;
+  transform-origin: left center;
+  transform: scaleX(var(--fill, 1));
+  transition: transform 0.3s ease;
 }
+/* enemy bars drain toward the right edge (used to be margin-left: auto) */
 .fight-hp-fill--enemy {
-  margin-left: auto;
+  transform-origin: right center;
 }
 .fight-hp-fill.hp--high {
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
@@ -1796,11 +1860,16 @@ onUnmounted(_stopFloatScheduler)
   border-radius: 3px;
   overflow: hidden;
 }
+/* scaleX instead of width — the boss bar moves on every 200ms tick AND on every
+   player click, so this was the single busiest bar in the fight. */
 .boss-hp-fill {
+  width: 100%;
   height: 100%;
   background: linear-gradient(to bottom, var(--obj-color), var(--obj-dark));
   box-shadow: 0 0 8px var(--obj-glow);
-  transition: width 0.15s ease-out;
+  transform-origin: left center;
+  transform: scaleX(var(--fill, 1));
+  transition: transform 0.15s ease-out;
 }
 .boss-hp-num {
   position: absolute;
@@ -2059,21 +2128,30 @@ onUnmounted(_stopFloatScheduler)
   background: linear-gradient(to bottom, #7a2818, #57201a);
   overflow: hidden;
 }
+/* Both race bars scale instead of resizing. The nesting still works out: a
+   scaled child inside a scaled parent multiplies exactly like the old nested
+   percentage widths did (player share is a share OF the own bar). */
 .race-own {
   position: relative;
+  width: 100%;
   height: 100%;
   background: linear-gradient(to right, #2e7a1a, #52b830);
   box-shadow: 0 0 8px rgba(82, 184, 48, 0.6);
-  transition: width 0.25s ease-out;
+  transform-origin: left center;
+  transform: scaleX(var(--fill, 0));
+  transition: transform 0.25s ease-out;
 }
 .race-player {
   position: absolute;
   right: 0;
   top: 0;
+  width: 100%;
   height: 100%;
   background: linear-gradient(to right, #c89040, #e8c060);
   box-shadow: 0 0 6px rgba(232, 192, 64, 0.7);
-  transition: width 0.25s ease-out;
+  transform-origin: right center;
+  transform: scaleX(var(--fill, 0));
+  transition: transform 0.25s ease-out;
 }
 .race-midmark {
   position: absolute;
