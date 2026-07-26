@@ -39,7 +39,7 @@
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { multikillLabel } from '@/utils/battleMovement'
+import { multikillLabel } from '@/utils/battle/movement'
 import {
   ANNOUNCE_DISPLAY_MS,
   ANNOUNCE_QUEUE_MAX,

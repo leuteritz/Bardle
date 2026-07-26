@@ -217,7 +217,7 @@ import {
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
-import { activeChampionBehindState } from '@/utils/activeChampionBehindState'
+import { activeChampionBehindState } from '@/utils/liveState'
 import { Icon } from '@iconify/vue'
 
 const battleStore = useBattleStore()

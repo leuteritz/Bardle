@@ -117,12 +117,11 @@ import {
   generateTimeline,
   mvpScore,
   reseedTimelineFrom,
-} from '../utils/battleTimeline'
-import { fetchChampionNames } from '../utils/champions'
-import { getChampionIconPath } from '../utils/championSkins'
+} from '../utils/battle/timeline'
+import { fetchChampionNames, getChampionIconPath } from '../utils/champions'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
-import { CHAMPION_ROLES } from '../config/championRoles'
+import { CHAMPION_ROLES } from '../config/championData'
 let _visibilityHandler: (() => void) | null = null
 
 export function zeroLiveBattleStats(): LiveBattleStats {

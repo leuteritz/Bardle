@@ -21,8 +21,9 @@ export type GalaxyItem = {
   lifetime: number
   elapsed: number
   rot: number
-  _lastOpacity?: string
-  _lastTransform?: string
+  /** Zuletzt geschriebene Attribute — spart identische DOM-Writes pro Frame. */
+  _lastOpacity: string
+  _lastTransform: string
 }
 
 export type GalaxyType =
@@ -64,7 +65,10 @@ export type DustPatch = {
   r: number
   g: number
   b: number
-  cachedGradient?: CanvasGradient
+  /** Gecachter Verlauf samt der Werte, für die er gebaut wurde. */
+  cachedGradient: CanvasGradient | null
+  _cachedRx: number
+  _cachedOpacity: number
 }
 
 export type StarCluster = {
@@ -83,8 +87,9 @@ export type NebulaMovingItem = {
   scale: number
   maxScale: number
   size: number // SVG element size in px
-  _lastOpacity?: string
-  _lastTransform?: string
+  /** Zuletzt geschriebene Attribute — spart identische DOM-Writes pro Frame. */
+  _lastOpacity: string
+  _lastTransform: string
 }
 
 // ─── Emission Nebula / Ion Cloud constants ───────────────────────────────────

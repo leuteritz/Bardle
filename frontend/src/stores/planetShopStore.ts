@@ -25,7 +25,7 @@ import {
   PLANET_RESPAWN_MS,
 } from '@/config/constants'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
-import { getOrbitSunRadius, getOrbitSunScale } from '../utils/orbitMath'
+import { getOrbitSunRadius, getOrbitSunScale } from '../utils/geometry'
 import { playerSlotInForeground } from '../utils/foregroundGate'
 import { logPlanetDestroyed, logPlanetRestored } from '@/config/gameEventLogger'
 

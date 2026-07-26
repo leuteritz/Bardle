@@ -12,6 +12,7 @@
 </template>
 
 <script lang="ts">
+import { hexToRgb } from '@/utils/format'
 import { defineComponent, ref, onUnmounted, nextTick } from 'vue'
 import WarpHudOverlay from './search/WarpHudOverlay.vue'
 import {
@@ -55,14 +56,6 @@ interface PlanetDef {
 }
 
 // ─── Colour helpers ───────────────────────────────────────────────────────────
-
-function hexToRgb(hex: string): [number, number, number] {
-  return [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
-  ]
-}
 
 function lighten(hex: string, amt: number): string {
   const [r, g, b] = hexToRgb(hex)

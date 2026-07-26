@@ -13,7 +13,7 @@ import { useUiStore } from '@/stores/uiStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { formatNumber } from '@/config/numberFormat'
 import { playerSlotInForeground } from '@/utils/foregroundGate'
-import { toRoman } from '@/utils/roman'
+import { toRoman } from '@/utils/format'
 import {
   PLANET_IMAGE_DIR,
   PLANET_IMAGE_THUMB_DIR,

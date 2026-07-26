@@ -150,6 +150,7 @@
 </template>
 
 <script lang="ts">
+import { getOrbitPos } from '@/utils/geometry'
 import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import {
@@ -162,8 +163,7 @@ import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY, GAME_TICK_INTERVAL_MS, PLANET_ORBIT_FOREGROUND_DEPTH } from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
-import { activePlanetPositions } from '../../../utils/activePlanetPositions'
-import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
+import { activePlanetPositions, activePlayerPlanetPositions } from '../../../utils/liveState'
 import { planetOrbitPhases } from '../../../utils/planetOrbitPhase'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
@@ -210,24 +210,6 @@ interface LocalPlanetState {
   orbitAngle: number
   x: number
   y: number
-}
-
-function getOrbitPos(
-  angle: number,
-  rx: number,
-  ry: number,
-  tiltRad: number,
-  cx: number,
-  cy: number,
-): { x: number; y: number } {
-  const cosT = Math.cos(tiltRad)
-  const sinT = Math.sin(tiltRad)
-  const cosA = Math.cos(angle)
-  const sinA = Math.sin(angle)
-  return {
-    x: cx + rx * cosA * cosT - ry * sinA * sinT,
-    y: cy + rx * cosA * sinT + ry * sinA * cosT,
-  }
 }
 
 export default defineComponent({

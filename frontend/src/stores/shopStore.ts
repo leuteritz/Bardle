@@ -77,7 +77,7 @@ export const useShopStore = defineStore('shop', {
       } as ShopUpgrade,
       {
         id: 'zeitEcho',
-        name: 'Zeit Echo',
+        name: 'Time Echo',
         baseCost: 10000,
         baseCPS: 25,
         level: 0,
@@ -88,6 +88,12 @@ export const useShopStore = defineStore('shop', {
   }),
 
   getters: {
+    /** Alle CPS-Gebäude — auch ungekaufte. Basis für Auswahllisten (z. B. das
+     *  Resonanz-Ziel eines Planeten), die den vollen Katalog zeigen müssen. */
+    cpsBuildings(): ShopUpgrade[] {
+      return this.shopUpgrades.filter((upgrade) => !!upgrade.baseCPS)
+    },
+
     cpsProducingUpgrades(): ShopUpgrade[] {
       return this.shopUpgrades.filter((upgrade) => upgrade.baseCPS && upgrade.level > 0)
     },

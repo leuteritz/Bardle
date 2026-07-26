@@ -1,9 +1,10 @@
+import { hexToRgb } from '@/utils/format'
 import { defineStore } from 'pinia'
 import type { PlanetType, StarType } from '../types'
 import { pickConfig } from '../utils/planetDraw'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGalaxyStore } from './galaxyStore'
-import { CHAMPION_ROLES } from '../config/championRoles'
+import { CHAMPION_ROLES } from '../config/championData'
 import {
   RESOURCE_STAR_PLANET_COUNT,
   RESOURCE_STAR_DURATION_MS,
@@ -91,11 +92,6 @@ export interface StarGroup {
   spawnedAt?: number
   durationMs?: number
   starColor: [number, number, number]
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.slice(1), 16)
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
 function pickResourceStarColor(): [number, number, number] {

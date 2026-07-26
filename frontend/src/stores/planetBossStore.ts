@@ -24,13 +24,13 @@ import {
 } from '../config/constants'
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
-import { CHAMPION_ROLES } from '../config/championRoles'
+import { CHAMPION_ROLES } from '../config/championData'
 import {
   getChampionStarLevel,
   unlockedChampionTierCount,
   tierSpawnWeights,
 } from '../config/championTiers'
-import { activeMidCurse } from '../utils/activeMidCurse'
+import { activeMidCurse } from '../utils/liveState'
 import { bossPlanetInForeground } from '../utils/foregroundGate'
 import { ROLE_MID_CURSE_DAMAGE_AMP } from '../config/constants'
 import { useGameStore } from './gameStore'

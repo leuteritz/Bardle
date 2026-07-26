@@ -46,7 +46,6 @@ import {
   JUNGLE_BUFF_FLASH_ANIM_MS,
   STRIKER_PROJECTILE_FLIGHT_MS,
 } from '../config/constants'
-import { getOrbitingRoles } from '../utils/getOrbitingRoles'
 import { getChampionStarLevel } from '../config/championTiers'
 import { usePlayerStore } from './playerStore'
 import { useBattleStore } from './battleStore'
@@ -60,17 +59,27 @@ import {
   type PlanetSlot,
 } from './planetShopStore'
 import { useStarGroupStore } from './starGroupStore'
-import { activePlanetPositions } from '../utils/activePlanetPositions'
-import { activePlayerPlanetPositions } from '../utils/activePlayerPlanetPositions'
+import { activePlanetPositions, activePlayerPlanetPositions, activeMidCurse } from '../utils/liveState'
 import {
   championInForeground,
   playerSlotInForeground,
   bossPlanetInForeground,
 } from '../utils/foregroundGate'
-import { activeMidCurse } from '../utils/activeMidCurse'
 import type { ChampionRole, MidCurseType, ActiveCurse } from '../types'
 import { useEventLog } from '@/composables/useEventLog'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
+
+/** Rollen der aktuell in headerSlots besetzten Team-Slots. */
+const ORBIT_SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
+
+function getOrbitingRoles(): Set<ChampionRole> {
+  const battleStore = useBattleStore()
+  const roles = new Set<ChampionRole>()
+  battleStore.headerSlots.forEach((slot, i) => {
+    if (slot !== null) roles.add(ORBIT_SLOT_ROLES[i])
+  })
+  return roles
+}
 
 export const CURSE_DEFS: Record<MidCurseType, { name: string; icon: string; effect: string }> = {
   corruption: {

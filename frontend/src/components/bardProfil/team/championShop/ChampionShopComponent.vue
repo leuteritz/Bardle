@@ -552,7 +552,7 @@ import ItemDetailPanel from './ItemDetailPanel.vue'
 import { useItemStore } from '../../../../stores/itemStore'
 import { SHOP_ITEMS, ITEM_CATEGORIES, ITEM_RARITIES } from '../../../../config/items'
 import { ITEM_SETS } from '../../../../config/sets'
-import { getChampionRoles, CHAMPION_ROLES } from '../../../../config/championRoles'
+import { getChampionRoles, CHAMPION_ROLES, getChampionNames } from '../../../../config/championData'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../../config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../../config/championOrigins'
 import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, isChampionTierUnlocked, championTierSpawnPercent, CHAMPION_TIERS_BY_STAR } from '../../../../config/championTiers'
@@ -568,7 +568,6 @@ import {
   SHOP_JUMP_SPY_LOCK_MS,
   SHOP_JUMP_EXPAND_SETTLE_MS,
 } from '../../../../config/constants'
-import { getChampionNames } from '../../../../config/championData'
 import { useActionToast } from '../../../../composables/useActionToast'
 import type {
   ChampionRole,

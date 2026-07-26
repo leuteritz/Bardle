@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { generateTimeline } from '@/utils/battleTimeline'
+import { generateTimeline } from '@/utils/battle/timeline'
 import {
   buildMovementSchedules,
   positionAt,
   minionsAt,
   pointAlongPath,
-} from '@/utils/battleMovement'
+} from '@/utils/battle/movement'
 import {
   BLUE_FOUNTAIN,
   RED_FOUNTAIN,
@@ -16,7 +16,7 @@ import {
   FINAL_PUSH_DEFENDER_LEAD_T,
   FINAL_PUSH_FIGHT_T,
 } from '@/config/constants'
-import { STRUCTURE_POSITIONS, parseStructureId } from '@/utils/battleStructures'
+import { STRUCTURE_POSITIONS, parseStructureId } from '@/utils/battle/structures'
 
 describe('pointAlongPath', () => {
   it('returns endpoints at 0 and 1', () => {

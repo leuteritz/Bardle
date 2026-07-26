@@ -4,7 +4,7 @@ import { useBattleStore } from './battleStore'
 import { usePlanetShopStore } from './planetShopStore'
 import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
-import { getChampionRoles } from '../config/championRoles'
+import { getChampionRoles } from '../config/championData'
 import { useEventLog, type GameEventType } from '../composables/useEventLog'
 import { formatNumber } from '../config/numberFormat'
 import {

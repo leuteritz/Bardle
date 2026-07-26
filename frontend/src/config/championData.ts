@@ -208,3 +208,13 @@ export const CHAMPION_DATA: Record<string, ChampionDef> = {
 export function getChampionNames(): string[] {
   return Object.keys(CHAMPION_DATA)
 }
+
+/** Champion-Name → Rolle. Abgeleitete Sicht auf CHAMPION_DATA. */
+export const CHAMPION_ROLES: Record<string, ChampionRole> = Object.fromEntries(
+  Object.entries(CHAMPION_DATA).map(([n, def]) => [n, def.role]),
+)
+
+export function getChampionRoles(name: string): ChampionRole[] {
+  const role = CHAMPION_ROLES[name]
+  return role ? [role] : []
+}

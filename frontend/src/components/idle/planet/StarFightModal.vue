@@ -111,148 +111,7 @@
             </template>
 
             <!-- ── Ziel-HUD: Bossname + HP-Datenstreifen (rahmenlos, oben) ── -->
-            <div v-if="activeBoss" class="sf-hud">
-              <!-- Planeten-Fortschritt des Sterns: wo stehe ich, wie viele gibt es -->
-              <div v-if="planetProgress" class="sf-pp">
-                <div class="sf-pp-bars" aria-hidden="true">
-                  <span
-                    v-for="i in planetProgress.total"
-                    :key="i"
-                    class="sf-pp-pip"
-                    :class="{
-                      'sf-pp-pip--cleared': i <= planetProgress.cleared,
-                      'sf-pp-pip--current': i === planetProgress.current,
-                    }"
-                  />
-                </div>
-                <span class="sf-pp-label">
-                  Planet
-                  <span class="sf-pp-num">{{ planetProgress.current }}</span>
-                  <span class="sf-pp-sep">/</span>
-                  {{ planetProgress.total }}
-                </span>
-              </div>
-
-              <span v-if="isGalaxyBoss" class="sf-boss-galaxy-badge">✦ GALAXY BOSS ✦</span>
-              <div class="sf-name-row">
-                <span class="sf-name-line" />
-                <span class="sf-boss-name" :class="{ 'sf-boss-name--galaxy': isGalaxyBoss }">
-                  {{ activeBoss.bossName }}
-                </span>
-                <span class="sf-name-line" />
-              </div>
-
-              <!-- Eclipse-Status: Boss steht hinter der Sonne — kein Kampf,
-                   Klicks richten keinen Schaden an, Fähigkeiten warten -->
-              <Transition name="sf-callout">
-                <div v-if="bossBehindSun" class="sf-eclipse-banner">
-                  <span class="sf-eclipse-banner-line" />
-                  <div class="sf-eclipse-banner-core">
-                    <span class="sf-eclipse-banner-title">✦ Behind the Sun ✦</span>
-                    <span class="sf-eclipse-banner-sub">
-                      Combat paused — the boss cannot be hit
-                    </span>
-                  </div>
-                  <span class="sf-eclipse-banner-line sf-eclipse-banner-line--right" />
-                </div>
-              </Transition>
-              <div class="sf-hp-row">
-                <!-- Star-Despawn-Ring: Restzeit, bis der Stern verschwindet -->
-                <BossTimerRing
-                  v-if="starSecsLeft !== null"
-                  :secs="starSecsLeft"
-                  label="SEC"
-                  :pct="starTimePct / 100"
-                  :color="starRingColor"
-                  :pulse="starRingCritical"
-                  title="Time until the star vanishes"
-                />
-
-                <div class="sf-hp-center">
-                  <div
-                    class="sf-hp-track"
-                    :class="{
-                      'sf-hp-track--critical': hpPct < 25,
-                      'sf-hp-track--galaxy': isGalaxyBoss,
-                    }"
-                  >
-                    <div class="sf-hp-ghost" :style="{ width: hpPct + '%' }" />
-                    <div
-                      class="sf-hp-fill"
-                      :class="{
-                        'sf-hp-fill--galaxy': isGalaxyBoss,
-                        'sf-hp-fill--low': hpPct < 50 && !isGalaxyBoss,
-                        'sf-hp-fill--critical': hpPct < 25,
-                      }"
-                      :style="{ width: hpPct + '%' }"
-                    />
-                    <div class="sf-hp-ticks" aria-hidden="true" />
-                    <div class="sf-hp-inline">
-                      <span class="sf-hp-numbers">
-                        {{ formatNumber(activeBoss.currentHP) }}
-                        <span class="sf-hp-sep">/</span>
-                        {{ formatNumber(activeBoss.maxHP) }}
-                      </span>
-                      <span class="sf-hp-pct" :class="{ 'sf-hp-pct--critical': hpPct < 25 }">
-                        {{ Math.round(hpPct) }}%
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Strike-Ziel-Ansage: erscheint, sobald der Ring voll ist
-                       und der Boss sein Opfer im Visier hat — verschwindet
-                       mit dem Abschuss -->
-                  <Transition name="sf-callout" mode="out-in">
-                    <div v-if="strikeAimTarget" :key="strikeAimTarget" class="sf-strike-next">
-                      <span class="sf-strike-next-label">Strike</span>
-                      <span class="sf-strike-next-arrow">→</span>
-                      <span class="sf-strike-next-name">{{ strikeAimTarget }}</span>
-                    </div>
-                  </Transition>
-                </div>
-
-                <!-- Strike-Ring: Auto-Attack des Bosses — kurzer Cooldown,
-                     trifft EIN zufälliges Ziel (Champion, Planet oder Sonne) -->
-                <BossTimerRing
-                  :secs="autoSecsLeft"
-                  label="STRIKE"
-                  :pct="autoRingPct"
-                  color="#d8d0c0"
-                  :badge="`${autoDmgDisplay} dmg`"
-                  title="Strike — the boss jabs one random living champion, planet slot or the sun itself"
-                />
-
-                <!-- Rage-Ring: Cooldown bis zur nächsten Rage bzw. Restdauer -->
-                <BossTimerRing
-                  :secs="rageSecsLeft"
-                  label="RAGE"
-                  :pct="rageRingPct"
-                  :color="rageActive ? '#ff5c85' : '#ff2e63'"
-                  :text-color="rageActive ? '#ffb0c4' : undefined"
-                  :label-color="rageActive ? 'rgba(255, 120, 150, 0.85)' : undefined"
-                  :pulse="rageActive"
-                  :intense-glow="rageActive"
-                  :badge="`×${BOSS_RAGE_DMG_MULT} dmg`"
-                  badge-color="rgba(255, 92, 133, 0.75)"
-                  :title="
-                    rageActive
-                      ? 'The boss is raging — double damage!'
-                      : 'Time until the boss enrages'
-                  "
-                />
-
-                <!-- Nova-Ring: Cooldown der Shock Nova — läuft synchron zum
-                     Ring des Boss-Sterns im Idle-Orbit -->
-                <BossTimerRing
-                  :secs="novaSecsLeft"
-                  label="NOVA"
-                  :pct="novaRingPct"
-                  color="#ff8a30"
-                  :badge="`${novaDmgDisplay} dmg`"
-                  title="Shock Nova — the boss unleashes a wave that hits every champion, every planet slot and the sun"
-                />
-              </div>
-            </div>
+            <StarFightBossHud :now="now" :boss-behind-sun="bossBehindSun" />
 
             <!-- ── Loot des aktuellen Bosses — episch unter dem Boss-Bild ── -->
             <div v-if="activeBoss" class="sf-loot">
@@ -275,60 +134,30 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useBattleStore } from '@/stores/battleStore'
-import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
-import { formatNumber } from '@/config/numberFormat'
+import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import {
   BOSS_REMOVAL_DELAY_MS,
-  STAR_FIGHT_TIMER_WARNING_S,
-  STAR_FIGHT_TIMER_CRITICAL_S,
-  BOSS_CHAMPION_ATTACK_DPS,
-  BOSS_GALAXY_CHAMPION_DPS_MULT,
   BOSS_WAVE_TRAVEL_MS,
-  BOSS_NOVA_INTERVAL_MS,
-  BOSS_AUTO_INTERVAL_MS,
-  BOSS_AUTO_ATTACK_DAMAGE,
   BOSS_HIT_REACT_MS,
   STRIKER_PROJECTILE_FLIGHT_MS,
   BOSS_RAGE_DMG_MULT,
 } from '@/config/constants'
 import { NS, drawPlanet } from '@/utils/planetDraw'
 import { bossPlanetInForeground } from '@/utils/foregroundGate'
-import type { ChampionRole } from '@/types'
+import { useBossFightHud } from '@/composables/useBossFightHud'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
 import PlanetBatteryHUD from '@/components/idle/planet/PlanetBatteryHUD.vue'
-import BossTimerRing from '@/components/idle/planet/BossTimerRing.vue'
 import SunHorizonHUD from '@/components/idle/planet/SunHorizonHUD.vue'
+import StarFightBossHud from '@/components/idle/planet/StarFightBossHud.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 
 // ── Stores ───────────────────────────────────────────────────────────────
 const starGroupStore = useStarGroupStore()
 const bossStore = usePlanetBossStore()
-const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
-
-// headerSlots-Index je Rolle (SLOT_ROLES-Reihenfolge aus getOrbitingRoles)
-const ROLE_SLOT_INDEX: Record<ChampionRole, number> = {
-  top: 0,
-  jungle: 1,
-  mid: 2,
-  adc: 3,
-  support: 4,
-}
-
-// Strike-Ziel-Ansage: nur während der Anvisier-Phase gesetzt — zeigt unter der
-// HP-Leiste, wen der Boss gerade im Visier hat (Champion-Name, Planeten-Slot
-// oder die eigene Sonne)
-const strikeAimTarget = computed(() => {
-  const role = roleBehaviorStore.autoAimRole
-  if (role) return battleStore.headerSlots[ROLE_SLOT_INDEX[role]] ?? role.toUpperCase()
-  if (roleBehaviorStore.autoAimSun) return 'Sun'
-  const slotId = roleBehaviorStore.autoAimSlotId
-  return slotId ? slotId.replace('slot_', 'Slot ') : null
-})
 
 // ── Reactive values ───────────────────────────────────────────────────────
 const isShaking = ref(false)
@@ -348,134 +177,10 @@ onUnmounted(() => {
 })
 
 // ── Computed ──────────────────────────────────────────────────────────────
-const activeBoss = computed(() => bossStore.activeBoss)
-const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
-const hpPct = computed(() => Math.max(0, Math.min(100, bossStore.bossHPPercent)))
-
-// ── Star-Despawn-Timer ────────────────────────────────────────────────────
-const fightStar = computed(
-  () => starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId) ?? null,
-)
-
-const starSecsLeft = computed<number | null>(() => {
-  const s = fightStar.value
-  if (!s || s.spawnedAt === undefined || s.durationMs === undefined) return null
-  return Math.max(0, Math.ceil((s.spawnedAt + s.durationMs - now.value) / 1000))
-})
-
-// Planeten-Fortschritt: Position des aktuellen Kampfs innerhalb des Sterns
-const planetProgress = computed(() => {
-  const s = fightStar.value
-  if (!s || s.planetSlots.length === 0) return null
-  const total = s.planetSlots.length
-  const cleared = s.planetSlots.filter((p) => p.cleared).length
-  return { total, cleared, current: Math.min(cleared + 1, total) }
-})
-
-const starTimePct = computed(() => {
-  const s = fightStar.value
-  if (!s || s.spawnedAt === undefined || s.durationMs === undefined) return 0
-  const remaining = (s.spawnedAt + s.durationMs - now.value) / s.durationMs
-  return Math.max(0, Math.min(100, remaining * 100))
-})
-
-// Ampel-Zustand des Despawn-Rings: Gold → Warn-Orange → Kritisch-Rot (+Puls)
-const starRingCritical = computed(
-  () => starSecsLeft.value !== null && starSecsLeft.value <= STAR_FIGHT_TIMER_CRITICAL_S,
-)
-
-const starRingColor = computed(() => {
-  if (starRingCritical.value) return '#ff5040'
-  if (starSecsLeft.value !== null && starSecsLeft.value <= STAR_FIGHT_TIMER_WARNING_S)
-    return '#e8a030'
-  return '#e8c040'
-})
-
-// ── Curse ─────────────────────────────────────────────────────────────────
-const activeCurse = computed(() => {
-  const c = roleBehaviorStore.activeCurse
-  if (!c || now.value >= c.activeUntil) return null
-  if (roleBehaviorStore.cursedStarId !== starGroupStore.activeFightStarId) return null
-  return c
-})
-const curseSecsLeft = computed(() =>
-  activeCurse.value
-    ? Math.max(0, Math.ceil((activeCurse.value.activeUntil - now.value) / 1000))
-    : 0,
-)
-const curseDef = computed(() => (activeCurse.value ? CURSE_DEFS[activeCurse.value.type] : null))
-
-// ── Boss-Rage: rechter Radial-Ring + epische Vignette ─────────────────────
-const rageActive = computed(() => roleBehaviorStore.rageActiveUntil > now.value)
-
-const rageSecsLeft = computed(() =>
-  rageActive.value
-    ? Math.max(0, Math.ceil((roleBehaviorStore.rageActiveUntil - now.value) / 1000))
-    : Math.max(0, Math.ceil(roleBehaviorStore.rageCooldownMs / 1000)),
-)
-
-// Cooldown-Phase: Arc füllt sich zur Rage hin; aktive Phase: Arc läuft ab.
-// Beide Phasen interpolieren aus Zeitstempeln (readyAt/activeUntil) — das
-// 250ms-now + 0.2s-Transition füllt den Ring smooth statt in 1s-Stufen
-const rageRingPct = computed(() => {
-  if (rageActive.value) {
-    const dur = roleBehaviorStore.rageDurationMs || 1
-    return Math.max(0, Math.min(1, (roleBehaviorStore.rageActiveUntil - now.value) / dur))
-  }
-  if (roleBehaviorStore.rageReadyAt <= 0) return 0
-  const interval = roleBehaviorStore.rageIntervalMs || 1
-  return Math.max(0, Math.min(1, 1 - (roleBehaviorStore.rageReadyAt - now.value) / interval))
-})
-
-// ── Shock Nova: Cooldown-Ring (synchron zum Boss-Stern im Idle-Orbit) ────
-// Zeitstempel-basiert wie der Star-Despawn-Ring — füllt smooth statt in
-// 1s-Tick-Stufen
-const novaSecsLeft = computed(() =>
-  roleBehaviorStore.novaReadyAt > 0
-    ? Math.max(0, Math.ceil((roleBehaviorStore.novaReadyAt - now.value) / 1000))
-    : Math.ceil(BOSS_NOVA_INTERVAL_MS / 1000),
-)
-
-const novaRingPct = computed(() => {
-  if (roleBehaviorStore.novaReadyAt <= 0) return 0
-  return Math.max(
-    0,
-    Math.min(1, 1 - (roleBehaviorStore.novaReadyAt - now.value) / BOSS_NOVA_INTERVAL_MS),
-  )
-})
-
-// ── Damage-Badges unter den Fähigkeits-Ringen ────────────────────────────
-const autoDmgDisplay = computed(() =>
-  Math.round(
-    BOSS_AUTO_ATTACK_DAMAGE *
-      (isGalaxyBoss.value ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
-      (rageActive.value ? BOSS_RAGE_DMG_MULT : 1),
-  ),
-)
-
-const novaDmgDisplay = computed(() =>
-  Math.round(
-    BOSS_CHAMPION_ATTACK_DPS *
-      (isGalaxyBoss.value ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
-      (rageActive.value ? BOSS_RAGE_DMG_MULT : 1) *
-      (BOSS_NOVA_INTERVAL_MS / 1000),
-  ),
-)
-
-// ── Strike (Auto-Attack): Cooldown-Ring + schneller Boss-Jab ─────────────
-const autoSecsLeft = computed(() =>
-  roleBehaviorStore.autoReadyAt > 0
-    ? Math.max(0, Math.ceil((roleBehaviorStore.autoReadyAt - now.value) / 1000))
-    : Math.ceil(BOSS_AUTO_INTERVAL_MS / 1000),
-)
-
-const autoRingPct = computed(() => {
-  if (roleBehaviorStore.autoReadyAt <= 0) return 0
-  return Math.max(
-    0,
-    Math.min(1, 1 - (roleBehaviorStore.autoReadyAt - now.value) / BOSS_AUTO_INTERVAL_MS),
-  )
-})
+// Abgeleitete Kampfwerte teilen sich Modal (Veils) und HUD — beide lesen
+// denselben 4-Hz-Zeitstempel, damit Schleier und Ringe synchron umschalten.
+const { activeBoss, isGalaxyBoss, activeCurse, curseSecsLeft, curseDef, rageActive } =
+  useBossFightHud(now)
 
 // Schneller Jab des Boss-Sprites bei jedem Auto-Attack + Info-Callout,
 // welches Random-Ziel (Champion oder Planet) getroffen wurde
@@ -662,6 +367,25 @@ function emberStyle(i: number): Record<string, string> {
 </script>
 
 <style scoped>
+/* ── prefers-reduced-motion ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .sf-ember,
+  .sf-modal-planet-bg--galaxy,
+  .sf-curse-veil-layer--edge,
+  .sf-curse-veil-layer--smoke,
+  .sf-rage-veil-layer--edge,
+  .sf-rage-veil-layer--flames,
+  .sf-arena-wrap--strike :deep(.boss-img),
+  .sf-arena-wrap--jab :deep(.boss-img),
+  .sf-arena-wrap--hit :deep(.boss-img),
+  .sf-boss-wave,
+  .sf-boss-flare,
+  .sf-eclipse-corona,
+  .sf-eclipse-medal {
+    animation: none;
+  }
+}
+
 /* ── Backdrop ─────────────────────────────────────────────────────────────── */
 .sf-backdrop {
   position: fixed;
@@ -677,26 +401,6 @@ function emberStyle(i: number): Record<string, string> {
 .sf-backdrop--shaking {
   animation: sf-shake 0.32s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
   will-change: transform;
-}
-
-@keyframes sf-shake {
-  10%,
-  90% {
-    transform: translate(-2px, 0);
-  }
-  20%,
-  80% {
-    transform: translate(3px, 1px);
-  }
-  30%,
-  50%,
-  70% {
-    transform: translate(-3px, -1px);
-  }
-  40%,
-  60% {
-    transform: translate(3px, 1px);
-  }
 }
 
 /* ── Embers ───────────────────────────────────────────────────────────────── */
@@ -717,21 +421,6 @@ function emberStyle(i: number): Record<string, string> {
 
 .sf-atmosphere--galaxy .sf-ember {
   background: radial-gradient(circle, #cc55ff 0%, #8800cc 60%, transparent 100%);
-}
-
-@keyframes sf-ember-rise {
-  0% {
-    transform: translateY(0) translateX(0) scale(1);
-    opacity: 0.9;
-  }
-  50% {
-    transform: translateY(-40vh) translateX(12px) scale(0.8);
-    opacity: 0.6;
-  }
-  100% {
-    transform: translateY(-90vh) translateX(-8px) scale(0.3);
-    opacity: 0;
-  }
 }
 
 /* ── Modal — Breite wie Bard-Profile-Menü, Höhe nutzt fast den ganzen Screen ── */
@@ -797,42 +486,11 @@ function emberStyle(i: number): Record<string, string> {
   animation: modal-planet-glow 3s ease-in-out infinite alternate;
 }
 
-@keyframes modal-planet-glow {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 0.6;
-  }
-}
-
 /* All modal children above the planet background ───────────────────────── */
 .sf-topbar,
 .sf-main {
   position: relative;
   z-index: 1;
-}
-
-/* ── prefers-reduced-motion ───────────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  .sf-ember,
-  .sf-modal-planet-bg--galaxy,
-  .sf-hp-track--critical,
-  .sf-pp-pip--current,
-  .sf-curse-veil-layer--edge,
-  .sf-curse-veil-layer--smoke,
-  .sf-rage-veil-layer--edge,
-  .sf-rage-veil-layer--flames,
-  .sf-arena-wrap--strike :deep(.boss-img),
-  .sf-arena-wrap--jab :deep(.boss-img),
-  .sf-arena-wrap--hit :deep(.boss-img),
-  .sf-boss-wave,
-  .sf-boss-flare,
-  .sf-eclipse-corona,
-  .sf-eclipse-medal,
-  .sf-eclipse-banner-title {
-    animation: none;
-  }
 }
 
 /* ── Floating Controls (ersetzen den Header) ─────────────────────────────── */
@@ -982,207 +640,9 @@ function emberStyle(i: number): Record<string, string> {
 .sf-arena-wrap :deep(.champ-arc) {
   display: none;
 }
+
 .sf-arena-wrap :deep(.arena-curse-badge) {
   display: none;
-}
-
-/* ── Ziel-HUD oben — rahmenlos, verdrängt keinen Platz ───────────────────── */
-.sf-hud {
-  position: absolute;
-  /* nicht mehr am oberen Rand — sitzt auf Höhe der Star-Ringe, näher am Boss */
-  top: 58px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(860px, 76%);
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  pointer-events: none;
-}
-
-/* Ring — HP-Bar — Ring: eine Reihe, alle drei vertikal zentriert */
-.sf-hp-row {
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 16px;
-}
-
-/* Mittelspalte der HP-Zeile: Leiste + daran hängende Threat-Anzeige */
-.sf-hp-row .sf-hp-center {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-}
-
-/* ── Planeten-Fortschritt — Segment-Pips + großes Label über der HP-Zeile ── */
-.sf-pp {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.sf-pp-bars {
-  display: flex;
-  gap: 6px;
-}
-
-.sf-pp-pip {
-  width: 28px;
-  height: 7px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(120, 60, 10, 0.55);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
-}
-
-/* Geschafft: grün gefüllt — gleiche Signatur wie "kaufbar/aktiv" */
-.sf-pp-pip--cleared {
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  border-color: #6ec040;
-  box-shadow: 0 0 8px rgba(82, 184, 48, 0.4);
-}
-
-/* Aktueller Planet: gold glühend, sanfter Puls */
-.sf-pp-pip--current {
-  background: linear-gradient(to bottom, #e8c060, #c89040);
-  border-color: #e8c040;
-  box-shadow: 0 0 10px rgba(232, 192, 64, 0.55);
-  animation: sf-pp-current-pulse 1.4s ease-in-out infinite alternate;
-}
-
-@keyframes sf-pp-current-pulse {
-  from {
-    opacity: 0.65;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.sf-pp-label {
-  font-size: 1.05rem;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(232, 192, 64, 0.85);
-  white-space: nowrap;
-  text-shadow:
-    0 0 10px rgba(232, 192, 64, 0.4),
-    0 2px 3px rgba(0, 0, 0, 0.95);
-}
-
-.sf-pp-num {
-  font-size: 1.35rem;
-  color: #ffe9b0;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 12px rgba(232, 192, 64, 0.6),
-    0 2px 3px rgba(0, 0, 0, 0.95);
-}
-
-.sf-pp-sep {
-  opacity: 0.5;
-  margin: 0 2px;
-}
-
-.sf-boss-galaxy-badge {
-  font-size: 0.55rem;
-  font-weight: 900;
-  letter-spacing: 0.22em;
-  color: rgba(200, 60, 255, 0.85);
-  text-transform: uppercase;
-  text-shadow:
-    0 0 8px rgba(180, 40, 255, 0.5),
-    0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-/* Bossname zwischen dünnen HUD-Klammerlinien */
-.sf-name-row {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  width: 100%;
-}
-
-.sf-name-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.45));
-}
-.sf-name-line:last-child {
-  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.45));
-}
-
-.sf-boss-name {
-  font-size: 1.8rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  color: #e8c040;
-  text-transform: uppercase;
-  text-shadow:
-    0 0 18px rgba(232, 192, 64, 0.6),
-    0 0 40px rgba(200, 130, 20, 0.25),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 78%;
-}
-
-.sf-boss-name--galaxy {
-  color: #dd99ff;
-  text-shadow:
-    0 0 18px rgba(200, 100, 255, 0.65),
-    0 0 40px rgba(160, 50, 255, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-}
-
-/* Werte leben jetzt IN der Leiste: Zahlen links, Prozent rechts */
-.sf-hp-inline {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 14px;
-}
-
-.sf-hp-pct {
-  font-size: 1.15rem;
-  font-weight: 900;
-  color: #ffe9b0;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-  text-shadow:
-    0 0 10px rgba(232, 192, 64, 0.5),
-    0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-.sf-hp-pct--critical {
-  color: #ffb0a8;
-  text-shadow:
-    0 0 10px rgba(255, 60, 40, 0.7),
-    0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-/* Segment-Ticks alle 10 % — liest sich wie ein Raid-Boss-Balken */
-.sf-hp-ticks {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to right,
-    transparent 0,
-    transparent calc(10% - 1px),
-    rgba(0, 0, 0, 0.4) calc(10% - 1px),
-    rgba(0, 0, 0, 0.4) 10%
-  );
-  pointer-events: none;
 }
 
 /* ── Loot-Banner — rahmenlos, zentriert unter dem Boss-Bild, im leeren Raum
@@ -1200,105 +660,6 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
 }
 
-/* ── Epische Boss-HP-Leiste — groß, segmentiert, Werte innenliegend ──────── */
-.sf-hp-numbers {
-  font-size: 1.05rem;
-  font-weight: 900;
-  color: #f4ead0;
-  letter-spacing: 0.05em;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.95),
-    0 0 8px rgba(0, 0, 0, 0.7);
-}
-
-.sf-hp-sep {
-  opacity: 0.45;
-  margin: 0 4px;
-}
-
-.sf-hp-track {
-  position: relative;
-  width: 100%;
-  height: 32px;
-  border-radius: 4px;
-  background: rgba(6, 3, 0, 0.78);
-  border: 1px solid #5c3310;
-  box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.8),
-    0 0 22px rgba(200, 130, 20, 0.18),
-    0 4px 14px rgba(0, 0, 0, 0.6);
-  overflow: hidden;
-}
-
-/* Critical-Puls über opacity eines Pseudo-Glows — animierter box-shadow
-   würde die breite HP-Leiste jede Frame neu painten */
-.sf-hp-track--critical {
-  border-color: #8a2018;
-}
-
-.sf-hp-track--critical::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 4px;
-  box-shadow: inset 0 0 18px rgba(220, 40, 40, 0.6);
-  pointer-events: none;
-  animation: sf-hp-crit-pulse 0.7s ease-in-out infinite alternate;
-  z-index: 2;
-}
-.sf-hp-track--galaxy {
-  border-color: #5a2478;
-  box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.8),
-    0 0 22px rgba(160, 40, 220, 0.22),
-    0 4px 14px rgba(0, 0, 0, 0.6);
-}
-
-@keyframes sf-hp-crit-pulse {
-  from {
-    opacity: 0.25;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Ghost-Trail: heller Balken zieht dem echten HP-Stand verzögert hinterher */
-.sf-hp-ghost {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: rgba(255, 235, 200, 0.3);
-  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.sf-hp-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: linear-gradient(to bottom, #58c030 0%, #2e7a1a 55%, #236012 100%);
-  transition: width 0.15s ease-out;
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
-}
-.sf-hp-fill--low {
-  background: linear-gradient(to bottom, #e8a030 0%, #c07018 55%, #8a5410 100%);
-}
-.sf-hp-fill--critical {
-  background: linear-gradient(to bottom, #ff4030 0%, #c01818 55%, #801010 100%);
-  box-shadow:
-    0 0 16px rgba(220, 30, 30, 0.55),
-    inset 0 2px 0 rgba(255, 140, 120, 0.3),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
-}
-.sf-hp-fill--galaxy {
-  background: linear-gradient(to bottom, #c040f0 0%, #8010c0 55%, #58087a 100%);
-  box-shadow:
-    0 0 16px rgba(180, 40, 255, 0.5),
-    inset 0 2px 0 rgba(230, 150, 255, 0.3),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
-}
-
 /* ── Boss-Angriff: Lunge des Boss-Sprites + Schockwelle ──────────────────── */
 /* Nur transform animieren — filter-Keyframes würden das große Boss-Sprite
    jede Frame neu rastern (FPS-Killer bei 1 Angriff/s) */
@@ -1306,38 +667,6 @@ function emberStyle(i: number): Record<string, string> {
   animation: sf-boss-strike 0.45s cubic-bezier(0.3, 0, 0.4, 1);
   transform-origin: 50% 85%;
   will-change: transform;
-}
-
-@keyframes sf-boss-strike {
-  0% {
-    transform: translateY(0) scale(1) rotate(0deg);
-  }
-  /* mächtig aufbäumen — hoch, groß, leicht zurückgelehnt */
-  16% {
-    transform: translateY(-20px) scale(1.14) rotate(-4deg);
-  }
-  /* Spannung halten, Gegenrotation */
-  28% {
-    transform: translateY(-24px) scale(1.18) rotate(3deg);
-  }
-  /* Slam nach unten — gestaucht */
-  40% {
-    transform: translateY(18px) scale(1.12, 0.86) rotate(0deg);
-  }
-  /* Abprall */
-  52% {
-    transform: translateY(6px) scale(0.96, 1.05);
-  }
-  /* Nachbeben */
-  66% {
-    transform: translateY(-5px) translateX(-3px) scale(1.03);
-  }
-  80% {
-    transform: translateY(2px) translateX(2px) scale(0.99);
-  }
-  100% {
-    transform: translateY(0) scale(1) rotate(0deg);
-  }
 }
 
 /* ── Auto-Attack-Jab: kurzer, schneller Stoß — deutlich leichter als der
@@ -1348,52 +677,12 @@ function emberStyle(i: number): Record<string, string> {
   will-change: transform;
 }
 
-@keyframes sf-boss-jab {
-  0% {
-    transform: translateY(0) scale(1);
-  }
-  /* kurz zurücklehnen … */
-  30% {
-    transform: translateY(-11px) scale(1.08) rotate(-2.5deg);
-  }
-  /* … und zustoßen (Kontakt ≈ 60 % = BOSS_AUTO_HIT_DELAY_MS) */
-  60% {
-    transform: translateY(10px) scale(1.06, 0.92) rotate(1deg);
-  }
-  80% {
-    transform: translateY(-3px) scale(0.99, 1.02);
-  }
-  100% {
-    transform: translateY(0) scale(1);
-  }
-}
-
 /* ── Boss-Treffer-Reaktion: seitlicher Flinch + Weißblitz — bewusst kürzer
    und knackiger als der wuchtige Angriffs-Slam ───────────────────────────── */
 .sf-arena-wrap--hit :deep(.boss-img) {
   animation: sf-boss-flinch 0.35s cubic-bezier(0.2, 0, 0.3, 1);
   transform-origin: 50% 85%;
   will-change: transform;
-}
-
-@keyframes sf-boss-flinch {
-  0% {
-    transform: translateX(0) rotate(0deg) scale(1);
-  }
-  /* Einschlag: weggedrückt */
-  18% {
-    transform: translateX(-12px) rotate(-2.5deg) scale(0.96);
-  }
-  /* Gegenruck */
-  45% {
-    transform: translateX(8px) rotate(1.5deg) scale(1.01);
-  }
-  70% {
-    transform: translateX(-3px) rotate(-0.5deg) scale(1);
-  }
-  100% {
-    transform: translateX(0) rotate(0deg) scale(1);
-  }
 }
 
 /* Schockwelle am Boss-Anker (50 % / 41 % — STRIKER_BOSS_ANCHOR_*_PCT).
@@ -1439,26 +728,6 @@ function emberStyle(i: number): Record<string, string> {
   animation-delay: 0.1s;
 }
 
-@keyframes sf-boss-wave-expand {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.011);
-  }
-  10% {
-    opacity: 1;
-  }
-  /* 62 % = BOSS_WAVE_HIT_DELAY_MS: Ring passiert die Ziele — entspricht dem
-     alten Look (scale 7.6 von 11 ≙ 0.69 der Endgröße) */
-  62% {
-    opacity: 0.85;
-    transform: translate(-50%, -50%) scale(0.69);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
 /* Abschuss-Blitz am Boss: kurzer heißer Kern im Moment des Slams */
 .sf-boss-flare {
   position: absolute;
@@ -1478,21 +747,6 @@ function emberStyle(i: number): Record<string, string> {
   z-index: 3;
   animation: sf-boss-flare 0.35s ease-out both;
   will-change: transform, opacity;
-}
-
-@keyframes sf-boss-flare {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.4);
-  }
-  25% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.5);
-  }
 }
 
 /* ── Eclipse: Boss hinter der Sonne — Silhouette + Korona-Schleier + Banner ── */
@@ -1548,15 +802,6 @@ function emberStyle(i: number): Record<string, string> {
   will-change: opacity;
 }
 
-@keyframes sf-eclipse-corona-pulse {
-  from {
-    opacity: 0.55;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 /* Großes Eclipse-Medaillon mittig auf dem Boss (Anker 50 % / 41 % wie
    Flare/Welle) — Medaillon-Design identisch zu rsq-eclipse/tbh-eclipse,
    nur hochskaliert für das Boss-Sprite */
@@ -1580,6 +825,7 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
   animation: sf-eclipse-breathe 1.6s ease-in-out infinite alternate;
 }
+
 .sf-eclipse-medal :deep(svg) {
   filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.55));
 }
@@ -1588,132 +834,10 @@ function emberStyle(i: number): Record<string, string> {
 .sf-eclipse-fade-leave-active {
   transition: opacity 0.45s ease;
 }
+
 .sf-eclipse-fade-enter-from,
 .sf-eclipse-fade-leave-to {
   opacity: 0;
-}
-
-/* Banner im HUD: großer Titel + Erklärzeile zwischen goldenen Linien */
-.sf-eclipse-banner {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: min(560px, 88%);
-}
-
-.sf-eclipse-banner-line {
-  flex: 1;
-  height: 2px;
-  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.65));
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.35);
-}
-.sf-eclipse-banner-line--right {
-  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.65));
-}
-
-.sf-eclipse-banner-core {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-}
-
-.sf-eclipse-banner-title {
-  font-size: 1.25rem;
-  font-weight: 900;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: #ffe9b0;
-  text-shadow:
-    0 0 16px rgba(255, 210, 90, 0.75),
-    0 0 36px rgba(232, 150, 30, 0.4),
-    0 2px 3px rgba(0, 0, 0, 0.95);
-  animation: sf-eclipse-breathe 1.6s ease-in-out infinite alternate;
-}
-
-.sf-eclipse-banner-sub {
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: rgba(232, 192, 64, 0.6);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-@keyframes sf-eclipse-breathe {
-  from {
-    opacity: 0.65;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* ── Strike-Ziel-Ansage unter der HP-Leiste: "STRIKE → NAME" — nur während
-   der Anvisier-Phase sichtbar, Crimson passend zur Zielscheibe ────────────── */
-.sf-strike-next {
-  position: absolute;
-  top: calc(100% + 5px);
-  left: 50%;
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: baseline;
-  gap: 9px;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.sf-strike-next-label {
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(255, 140, 120, 0.75);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-.sf-strike-next-arrow {
-  font-size: 0.95rem;
-  font-weight: 900;
-  color: rgba(255, 160, 140, 0.6);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-.sf-strike-next-name {
-  font-size: 1.2rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #ffd8cc;
-  text-shadow:
-    0 0 14px rgba(255, 90, 60, 0.7),
-    0 0 30px rgba(255, 60, 40, 0.3),
-    0 2px 3px rgba(0, 0, 0, 0.95);
-}
-
-.sf-callout-enter-active {
-  animation: sf-callout-in 0.22s ease-out;
-}
-
-.sf-callout-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.sf-callout-leave-to {
-  opacity: 0;
-}
-
-@keyframes sf-callout-in {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-6px) scale(1.25);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
-  }
 }
 
 .sf-atk-emblem--rage .sf-atk-num {
@@ -1785,24 +909,6 @@ function emberStyle(i: number): Record<string, string> {
   will-change: transform, opacity;
 }
 
-@keyframes sf-curse-veil-breathe {
-  from {
-    opacity: 0.65;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes sf-curse-veil-drift {
-  from {
-    transform: scale(1) rotate(0.3deg);
-  }
-  to {
-    transform: scale(1.05) rotate(-0.3deg);
-  }
-}
-
 /* Dezente Fluch-Info oben im Rauch — reine Typo, kein Badge */
 .sf-curse-veil-info {
   position: absolute;
@@ -1865,24 +971,6 @@ function emberStyle(i: number): Record<string, string> {
   will-change: transform, opacity;
 }
 
-@keyframes sf-rage-veil-breathe {
-  from {
-    opacity: 0.6;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes sf-rage-veil-drift {
-  from {
-    transform: scale(1) rotate(-0.3deg);
-  }
-  to {
-    transform: scale(1.06) rotate(0.3deg);
-  }
-}
-
 .sf-rage-veil-info {
   position: absolute;
   top: 13px;
@@ -1904,9 +992,11 @@ function emberStyle(i: number): Record<string, string> {
 .curse-veil-fade-enter-active {
   transition: opacity 0.5s ease;
 }
+
 .curse-veil-fade-leave-active {
   transition: opacity 0.35s ease;
 }
+
 .curse-veil-fade-enter-from,
 .curse-veil-fade-leave-to {
   opacity: 0;
@@ -1948,21 +1038,6 @@ function emberStyle(i: number): Record<string, string> {
   animation: admin-kill-flash 0.5s ease-out forwards;
 }
 
-@keyframes admin-kill-flash {
-  0% {
-    background: #cc3030;
-    color: #fff;
-    border-color: #ff5050;
-    box-shadow: 0 0 14px rgba(220, 40, 40, 0.7);
-  }
-  100% {
-    background: linear-gradient(to bottom, #2a0808, #1a0404);
-    color: #cc5040;
-    border-color: #6a1818;
-    box-shadow: none;
-  }
-}
-
 /* ── Kompakt-Layout für Full-HD-Höhen (Viewport ≤ 1100px) ─────────────────
    Auf 1080p ist die Arena deutlich flacher als auf 1440p+ — HUD, Boss,
    Loot und Striker skalieren gemeinsam herunter, damit Boss, HP-Leiste
@@ -1972,55 +1047,6 @@ function emberStyle(i: number): Record<string, string> {
     height: 44%;
     max-height: 360px;
     max-width: 42%;
-  }
-
-  .sf-hud {
-    top: 44px;
-    gap: 5px;
-    width: min(720px, 70%);
-  }
-
-  .sf-hp-row {
-    gap: 12px;
-  }
-
-  /* Ring-Kompaktgrößen: siehe BossTimerRing.vue (eigene max-height-Query) */
-
-  .sf-hp-track {
-    height: 24px;
-  }
-
-  .sf-hp-inline {
-    padding: 0 10px;
-  }
-
-  .sf-hp-numbers {
-    font-size: 0.85rem;
-  }
-
-  .sf-hp-pct {
-    font-size: 0.95rem;
-  }
-
-  .sf-boss-name {
-    font-size: 1.35rem;
-  }
-
-  .sf-pp {
-    gap: 10px;
-  }
-
-  .sf-pp-label {
-    font-size: 0.85rem;
-  }
-
-  .sf-pp-num {
-    font-size: 1.05rem;
-  }
-
-  .sf-pp-pip {
-    width: 22px;
-    height: 6px;
   }
 
   .sf-atk-emblem {
@@ -2088,14 +1114,236 @@ function emberStyle(i: number): Record<string, string> {
     opacity 0.22s ease,
     transform 0.22s ease;
 }
+
 .sf-entrance-leave-active {
   transition:
     opacity 0.16s ease,
     transform 0.16s ease;
 }
+
 .sf-entrance-enter-from,
 .sf-entrance-leave-to {
   opacity: 0;
   transform: scale(0.96);
+}
+
+@keyframes sf-shake {
+  10%,
+  90% {
+    transform: translate(-2px, 0);
+  }
+  20%,
+  80% {
+    transform: translate(3px, 1px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate(-3px, -1px);
+  }
+  40%,
+  60% {
+    transform: translate(3px, 1px);
+  }
+}
+
+@keyframes sf-ember-rise {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-40vh) translateX(12px) scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-90vh) translateX(-8px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes modal-planet-glow {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+
+@keyframes sf-boss-strike {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  /* mächtig aufbäumen — hoch, groß, leicht zurückgelehnt */
+  16% {
+    transform: translateY(-20px) scale(1.14) rotate(-4deg);
+  }
+  /* Spannung halten, Gegenrotation */
+  28% {
+    transform: translateY(-24px) scale(1.18) rotate(3deg);
+  }
+  /* Slam nach unten — gestaucht */
+  40% {
+    transform: translateY(18px) scale(1.12, 0.86) rotate(0deg);
+  }
+  /* Abprall */
+  52% {
+    transform: translateY(6px) scale(0.96, 1.05);
+  }
+  /* Nachbeben */
+  66% {
+    transform: translateY(-5px) translateX(-3px) scale(1.03);
+  }
+  80% {
+    transform: translateY(2px) translateX(2px) scale(0.99);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes sf-boss-jab {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  /* kurz zurücklehnen … */
+  30% {
+    transform: translateY(-11px) scale(1.08) rotate(-2.5deg);
+  }
+  /* … und zustoßen (Kontakt ≈ 60 % = BOSS_AUTO_HIT_DELAY_MS) */
+  60% {
+    transform: translateY(10px) scale(1.06, 0.92) rotate(1deg);
+  }
+  80% {
+    transform: translateY(-3px) scale(0.99, 1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sf-boss-flinch {
+  0% {
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+  /* Einschlag: weggedrückt */
+  18% {
+    transform: translateX(-12px) rotate(-2.5deg) scale(0.96);
+  }
+  /* Gegenruck */
+  45% {
+    transform: translateX(8px) rotate(1.5deg) scale(1.01);
+  }
+  70% {
+    transform: translateX(-3px) rotate(-0.5deg) scale(1);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes sf-boss-wave-expand {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.011);
+  }
+  10% {
+    opacity: 1;
+  }
+  /* 62 % = BOSS_WAVE_HIT_DELAY_MS: Ring passiert die Ziele — entspricht dem
+     alten Look (scale 7.6 von 11 ≙ 0.69 der Endgröße) */
+  62% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(0.69);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes sf-boss-flare {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+@keyframes sf-eclipse-corona-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sf-eclipse-breathe {
+  from {
+    opacity: 0.65;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sf-curse-veil-breathe {
+  from {
+    opacity: 0.65;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sf-curse-veil-drift {
+  from {
+    transform: scale(1) rotate(0.3deg);
+  }
+  to {
+    transform: scale(1.05) rotate(-0.3deg);
+  }
+}
+
+@keyframes sf-rage-veil-breathe {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sf-rage-veil-drift {
+  from {
+    transform: scale(1) rotate(-0.3deg);
+  }
+  to {
+    transform: scale(1.06) rotate(0.3deg);
+  }
+}
+
+@keyframes admin-kill-flash {
+  0% {
+    background: #cc3030;
+    color: #fff;
+    border-color: #ff5050;
+    box-shadow: 0 0 14px rgba(220, 40, 40, 0.7);
+  }
+  100% {
+    background: linear-gradient(to bottom, #2a0808, #1a0404);
+    color: #cc5040;
+    border-color: #6a1818;
+    box-shadow: none;
+  }
 }
 </style>

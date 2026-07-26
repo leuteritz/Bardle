@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { SKIN_ORIGINAL } from '@/config/constants'
-import { getSkinImagePath, hasChampionSkin } from '@/utils/championSkins'
+import { getSkinImagePath, hasChampionSkin } from '@/utils/champions'
 
 /**
  * Selected champion skins. Only non-default picks are stored — a champion

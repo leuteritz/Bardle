@@ -183,7 +183,7 @@
 import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { multikillLabel } from '@/utils/battleMovement'
+import { multikillLabel } from '@/utils/battle/movement'
 import type { BuffFeedEntry, KillFeedEntry, StructureFeedEntry, StructureTier } from '@/types'
 
 const battleStore = useBattleStore()

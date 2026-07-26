@@ -120,7 +120,7 @@ export const buildingsCategory: EncyclopediaCategory = {
       name: 'Chime Buildings',
       icon: 'game-icons:village',
       description:
-        'Five passive producers bought with Chimes: Bell Tower, Sound Generator, Harmony Works, Sphere Music and Zeit Echo. ' +
+        'Five passive producers bought with Chimes: Bell Tower, Sound Generator, Harmony Works, Sphere Music and Time Echo. ' +
         'Each level adds flat CPS; costs grow exponentially.',
       lore: 'Machines that turn silence into song.',
       formula:
@@ -129,7 +129,7 @@ export const buildingsCategory: EncyclopediaCategory = {
         'Sound Generator 100 ×1.2 → +3 CPS\n' +
         'Harmony Works 500 ×1.25 → +5 CPS\n' +
         'Sphere Music 2,500 ×1.3 → +10 CPS\n' +
-        'Zeit Echo 10,000 ×1.4 → +25 CPS',
+        'Time Echo 10,000 ×1.4 → +25 CPS',
       related: ['chimes', 'clicker'],
     },
     {

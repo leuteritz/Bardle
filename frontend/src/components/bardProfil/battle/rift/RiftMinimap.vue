@@ -333,7 +333,7 @@ import {
   structureId,
   killRoutePoints,
   fullKillRoutePoints,
-} from '@/utils/battleStructures'
+} from '@/utils/battle/structures'
 import type { ChampionState } from '@/types'
 
 const battleStore = useBattleStore()

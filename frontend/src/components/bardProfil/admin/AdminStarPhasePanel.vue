@@ -3,14 +3,15 @@ import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
-  SUN_PHASE_DISPLAY_OFFSET,
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
+import { displaySunPhase, useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
 
 withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
 
 const solarStore = useSolarUpgradeStore()
+const { currentDisplayPhase } = useSunPhaseDisplay()
 
 function setStarPhase(phase: number) {
   const elapsed = Math.floor((Date.now() - solarStore.phaseEnteredAt) / 1000)
@@ -47,7 +48,7 @@ function setCometState() {
       {{
         solarStore.isCometState
           ? `Phase 1/${SUN_PHASE_DISPLAY_TOTAL} — ${COMET_PHASE_DATA.name}`
-          : `Phase ${solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET}/${SUN_PHASE_DISPLAY_TOTAL} — ${STAR_PHASE_DATA[solarStore.starPhase].name}`
+          : `Phase ${currentDisplayPhase}/${SUN_PHASE_DISPLAY_TOTAL} — ${STAR_PHASE_DATA[solarStore.starPhase].name}`
       }}
     </template>
 
@@ -69,7 +70,7 @@ function setCometState() {
         :style="{ '--phase-color': phase.phasePrimary }"
         @click="setStarPhase(idx)"
       >
-        <span class="phase-btn-num">{{ idx + SUN_PHASE_DISPLAY_OFFSET }}</span>
+        <span class="phase-btn-num">{{ displaySunPhase(idx) }}</span>
         <span class="phase-btn-name">{{ phase.name }}</span>
       </button>
     </div>

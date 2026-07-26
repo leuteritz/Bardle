@@ -5,9 +5,8 @@ import { usePlanetBossStore } from '../stores/planetBossStore'
 import { useGalaxyStore } from '../stores/galaxyStore'
 import { useWindowFocus } from './useWindowFocus'
 import { useRenderingPaused } from './useRenderingPaused'
-import { activePlanetPositions } from '../utils/activePlanetPositions'
-import { activeStarCombatState } from '../utils/activeStarCombatState'
-import { getOrbitPos } from '../utils/orbitMath'
+import { activePlanetPositions, activeStarCombatState } from '../utils/liveState'
+import { getOrbitPos } from '../utils/geometry'
 import {
   STAR_SPAWN_DURATION_MS,
   STAR_SPAWN_FLY_EASING,

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatCompactDuration } from '@/utils/format'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
@@ -13,19 +14,19 @@ import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import type { CompletedGalaxyRecord } from '@/stores/galaxyStore'
 import {
+  AUGMENT_RARITY_COLOR,
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
   STATS_TAB_PHASE_DOT_SCALE,
   STATS_TAB_COMET_DOT_PX,
   STATS_TAB_DECK_RESIZE,
-  SUN_PHASE_DISPLAY_OFFSET,
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import { AUGMENTS } from '@/config/augments'
 import { formatNumber } from '@/config/numberFormat'
-import { AUGMENT_RARITY_COLOR } from '@/composables/useRarityColors'
 import { renderGalaxySnapshot } from '@/utils/galaxySnapshot'
+import { useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
 import type { AugmentDefinition } from '@/types'
 
 const gameStore = useGameStore()
@@ -126,11 +127,7 @@ const phaseVars = computed(() => {
   }
 })
 
-const phaseDisplayLabel = computed(() =>
-  solarStore.isCometState
-    ? `Phase 1 / ${SUN_PHASE_DISPLAY_TOTAL}`
-    : `Phase ${solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET} / ${SUN_PHASE_DISPLAY_TOTAL}`,
-)
+const { phaseLabel: phaseDisplayLabel } = useSunPhaseDisplay()
 
 const timelineDots = computed(() => [
   /* Step 0 — the Comet origin: a tiny rock with a gold tail, before any sun */
@@ -183,18 +180,6 @@ onUnmounted(() => {
 })
 
 /* ── Phase dwell time (evolve time gate) ─────────────────────── */
-function formatDuration(ms: number): string {
-  const secs = Math.max(0, Math.ceil(ms / 1000))
-  const d = Math.floor(secs / 86400)
-  const h = Math.floor((secs % 86400) / 3600)
-  const m = Math.floor((secs % 3600) / 60)
-  const s = secs % 60
-  if (d > 0) return `${d}d ${h}h`
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
-}
-
 const dwellRequiredMs = computed(() => solarStore.phaseDwellRequiredMs)
 const dwellElapsedMs = computed(() =>
   Math.max(0, now.value - (solarStore.phaseEnteredAt ?? now.value)),
@@ -227,7 +212,7 @@ const phaseAge = computed(() => {
 })
 
 /* ── Non-battle game stats ───────────────────────────────────── */
-const playTime = computed(() => formatDuration(inGameTime.value * 1000))
+const playTime = computed(() => formatCompactDuration(inGameTime.value * 1000))
 
 /* ── Galaxy Archive (completed-galaxy memories) ──────────────── */
 const archive = computed(() => [...completedGalaxies.value].sort((a, b) => b.galaxy - a.galaxy))
@@ -604,10 +589,10 @@ function stopResize() {
           v-if="!isMax"
           class="sf-tl-timer"
           :style="{ left: `calc(7% + 86% * ${timerLabelFrac})` }"
-          :title="`${formatDuration(dwellElapsedMs)} of ${formatDuration(dwellRequiredMs)} in this phase — time the sun must spend before it can evolve`"
+          :title="`${formatCompactDuration(dwellElapsedMs)} of ${formatCompactDuration(dwellRequiredMs)} in this phase — time the sun must spend before it can evolve`"
         >
           <span v-if="dwellMet" class="sf-tl-clock is-met">✓ Ready</span>
-          <span v-else class="sf-tl-clock">{{ formatDuration(dwellRemainingMs) }}</span>
+          <span v-else class="sf-tl-clock">{{ formatCompactDuration(dwellRemainingMs) }}</span>
         </div>
         <div class="sf-timeline-track">
           <div class="sf-timeline-fill" :style="{ width: timelineFillPct + '%' }" />
@@ -665,7 +650,7 @@ function stopResize() {
           Evolve
         </div>
         <div v-else-if="solarStore.branchesReadyForEvolve" class="sf-pill sf-pill--wait">
-          Evolving in {{ formatDuration(dwellRemainingMs) }}
+          Evolving in {{ formatCompactDuration(dwellRemainingMs) }}
         </div>
         <div v-else class="sf-pill sf-pill--hint" role="button" @click="uiStore.setBardTab('shop')">
           Evolve
@@ -866,7 +851,7 @@ function stopResize() {
                     title="Time spent in this galaxy"
                   >
                     <Icon class="sf-arch-info-ico" icon="game-icons:duration" width="15" height="15" />
-                    {{ formatDuration(rec.durationSeconds * 1000) }}
+                    {{ formatCompactDuration(rec.durationSeconds * 1000) }}
                   </span>
                   <span
                     class="sf-arch-info-item sf-arch-info-date"

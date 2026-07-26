@@ -515,7 +515,6 @@ export function drawRing(
   palette: GalaxyPalette,
 ): void {
   const defs = svgEl('defs')
-
   const ringGrad = svgEl('radialGradient')
   ringGrad.id = `${id}r`
   ringGrad.setAttribute('cx', '50%')
@@ -527,7 +526,6 @@ export function drawRing(
   addStop(ringGrad, '68%', palette.mid, 0.65)
   addStop(ringGrad, '80%', palette.outer, 0.3)
   addStop(ringGrad, '100%', palette.outer, 0)
-
   const cGrad = svgEl('radialGradient')
   cGrad.id = `${id}c`
   cGrad.setAttribute('cx', '50%')
@@ -536,15 +534,12 @@ export function drawRing(
   addStop(cGrad, '0%', '#ffffff', 0.65)
   addStop(cGrad, '60%', palette.center, 0.2)
   addStop(cGrad, '100%', palette.center, 0)
-
   defs.appendChild(ringGrad)
   defs.appendChild(cGrad)
   defs.appendChild(makeBlurFilter(`${id}f`, 1.5))
   svg.appendChild(defs)
-
   const isTilted = Math.random() < 0.5
   const tiltDeg = Math.random() * 60
-
   if (isTilted) {
     const ry = r * 0.88 * (0.3 + Math.random() * 0.5)
     const ring = svgEl('ellipse')
@@ -556,21 +551,6 @@ export function drawRing(
     ring.setAttribute('filter', `url(#${id}f)`)
     ring.setAttribute('transform', `rotate(${tiltDeg}, ${cx}, ${cy})`)
     svg.appendChild(ring)
-
-    if (Math.random() < 0.3) {
-      const outerRy = ry * 1.15
-      const outerRing = svgEl('ellipse')
-      outerRing.setAttribute('cx', String(cx))
-      outerRing.setAttribute('cy', String(cy))
-      outerRing.setAttribute('rx', String(r * 0.88 * 1.15))
-      outerRing.setAttribute('ry', String(outerRy))
-      outerRing.setAttribute('fill', 'none')
-      outerRing.setAttribute('stroke', palette.mid)
-      outerRing.setAttribute('stroke-opacity', '0.22')
-      outerRing.setAttribute('stroke-width', String(_size * 0.025))
-      outerRing.setAttribute('transform', `rotate(${tiltDeg}, ${cx}, ${cy})`)
-      svg.appendChild(outerRing)
-    }
   } else {
     const ring = svgEl('circle')
     ring.setAttribute('cx', String(cx))
@@ -579,21 +559,7 @@ export function drawRing(
     ring.setAttribute('fill', `url(#${id}r)`)
     ring.setAttribute('filter', `url(#${id}f)`)
     svg.appendChild(ring)
-
-    if (Math.random() < 0.3) {
-      const outerRing = svgEl('circle')
-      outerRing.setAttribute('cx', String(cx))
-      outerRing.setAttribute('cy', String(cy))
-      outerRing.setAttribute('r', String(r * 0.88 * 1.15))
-      outerRing.setAttribute('fill', 'none')
-      outerRing.setAttribute('stroke', palette.mid)
-      outerRing.setAttribute('stroke-opacity', '0.22')
-      outerRing.setAttribute('stroke-width', String(_size * 0.025))
-      svg.appendChild(outerRing)
-    }
   }
-
-  // Small center remnant
   const center = svgEl('circle')
   center.setAttribute('cx', String(cx))
   center.setAttribute('cy', String(cy))

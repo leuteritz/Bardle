@@ -17,7 +17,7 @@ import {
   COMBAT_FLOAT_OFFSET_Y,
   COMBAT_FLOAT_OFFSET_X_SPREAD,
 } from '../config/constants'
-import { activePlanetPositions } from '../utils/activePlanetPositions'
+import { activePlanetPositions } from '../utils/liveState'
 import { usePlanetBossStore } from './planetBossStore'
 import { useBattleStore } from './battleStore'
 import { useGameStore } from './gameStore'

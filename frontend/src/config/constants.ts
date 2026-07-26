@@ -154,7 +154,7 @@ export const BOSS_BASE_REWARD = 500
 export const BOSS_REWARD_DIFFICULTY_SCALE = 4
 export const BOSS_CPS_PENALTY_FRACTION = 0.05
 export const BOSS_CPS_PENALTY_DURATION_MS = 30_000
-export { BOSS_NAMES } from '../utils/bossNames'
+export { BOSS_NAMES } from './bossNames'
 
 // Planet type display names
 export const PLANET_TYPE_NAMES: Record<string, string> = {
@@ -1725,6 +1725,14 @@ export const MATERIAL_RARITY_COLOR: Record<string, string> = {
   uncommon: '#4dff35',
   rare: '#5aabff',
   epic: '#c37aff',
+}
+
+// Augment rarity colors — used by the augment list in BardStatsTab.
+export const AUGMENT_RARITY_COLOR: Record<string, string> = {
+  common: '#9d9d9d',
+  rare: '#4a90e2',
+  epic: '#a855f7',
+  legendary: '#e8c040',
 }
 
 export const MEEP_POWER_MULTIPLIER = 100

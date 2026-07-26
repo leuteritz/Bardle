@@ -160,6 +160,7 @@
 </template>
 
 <script lang="ts">
+import { getOrbitPos } from '@/utils/geometry'
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
@@ -172,7 +173,7 @@ import { usePlanetShopStore } from '../../../stores/planetShopStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { useUiStore } from '../../../stores/uiStore'
 import { ROLE_HOVER_COLORS } from '@/config/constants'
-import { activePlanetPositions } from '../../../utils/activePlanetPositions'
+import { activePlanetPositions, activeChampionBehindState } from '../../../utils/liveState'
 import {
   ORBIT_TIERS,
   SUPPORT_ANGLE_OFFSET,
@@ -185,7 +186,6 @@ import {
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
 import { useOrbitScale } from '@/composables/useOrbitScale'
-import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import type { ChampionRole } from '../../../types'
 
 const BEHIND_SPEED_LERP = 0.04
@@ -288,24 +288,6 @@ export default defineComponent({
 
     const backChampions = computed(() => championRenderPositions.value.filter((p) => p.isBehind))
     const frontChampions = computed(() => championRenderPositions.value.filter((p) => !p.isBehind))
-
-    function getOrbitPos(
-      angle: number,
-      orbitRadiusX: number,
-      orbitRadiusY: number,
-      tiltRad: number,
-      screenCx: number,
-      screenCy: number,
-    ): { x: number; y: number } {
-      const cosT = Math.cos(tiltRad)
-      const sinT = Math.sin(tiltRad)
-      const cosA = Math.cos(angle)
-      const sinA = Math.sin(angle)
-      return {
-        x: screenCx + orbitRadiusX * cosA * cosT - orbitRadiusY * sinA * sinT,
-        y: screenCy + orbitRadiusX * cosA * sinT + orbitRadiusY * sinA * cosT,
-      }
-    }
 
     let animFrame = 0
     let lastTs = 0

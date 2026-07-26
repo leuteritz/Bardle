@@ -94,7 +94,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { mvpScore } from '@/utils/battleTimeline'
+import { mvpScore } from '@/utils/battle/timeline'
 import { JUNGLE_BUFF_CARRY_DURATION_T } from '@/config/constants'
 
 const props = defineProps<{ side: 'blue' | 'red' }>()

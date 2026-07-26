@@ -1,4 +1,4 @@
-import type { BattleRole, BattleTimeline, MultikillCounts } from '../types'
+import type { BattleRole, BattleTimeline, MultikillCounts } from '../../types'
 import {
   BLUE_FOUNTAIN,
   RED_FOUNTAIN,
@@ -23,7 +23,7 @@ import {
   FINAL_PUSH_LAST_STAND_TRAVEL_T,
   JUNGLE_BUFF_CLEAR_DURATION_T,
   JUNGLE_ROAM_AFTER_BUFFS_T,
-} from '../config/constants'
+} from '../../config/constants'
 import {
   type MapPoint,
   pointAlongPath,
@@ -39,9 +39,9 @@ import {
   MINIONS_PER_WAVE,
   TOP_LANE_PATH,
   BOT_LANE_PATH,
-} from '../config/battleRoutes'
-import { createRng, BATTLE_ROLES } from './battleTimeline'
-import { parseStructureId, killRoutePoints, LANE_TIER_ORDER } from './battleStructures'
+} from '../../config/battleRoutes'
+import { createRng, BATTLE_ROLES } from './timeline'
+import { parseStructureId, killRoutePoints, LANE_TIER_ORDER } from './structures'
 
 export interface MovementSegment {
   tStart: number

@@ -6,7 +6,7 @@ import {
   minionsAt,
   type ChampionSchedule,
   type MinionDot,
-} from '@/utils/battleMovement'
+} from '@/utils/battle/movement'
 import {
   BATTLE_TOTAL_GAME_SECONDS,
   MOVE_JITTER_UNITS,

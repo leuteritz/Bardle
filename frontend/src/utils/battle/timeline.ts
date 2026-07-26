@@ -1,5 +1,5 @@
-import type { BattleEvent, BattleRole, BattleTimeline, ChampionState, StructureId } from '../types'
-import { BASIC_DRAKE_TYPES, type DrakeTypeId } from '../config/drakes'
+import type { BattleEvent, BattleRole, BattleTimeline, ChampionState, StructureId } from '../../types'
+import { BASIC_DRAKE_TYPES, type DrakeTypeId } from '../../config/drakes'
 import {
   STRUCTURE_POSITIONS,
   LANE_TIER_ORDER,
@@ -11,7 +11,7 @@ import {
   destroyedStructuresUpTo,
   laneProgress,
   crackedLaneOf,
-} from './battleStructures'
+} from './structures'
 import {
   BATTLE_TOTAL_GAME_SECONDS,
   TIMELINE_LANING_END,
@@ -110,8 +110,8 @@ import {
   JUNGLE_BUFF_RECLEAR_GAP_MIN_T,
   JUNGLE_BUFF_RECLEAR_GAP_MAX_T,
   JUNGLE_BUFF_LATE_MARGIN_T,
-} from '../config/constants'
-import { JUNGLE_BUFF_CAMPS } from '../config/battleRoutes'
+} from '../../config/constants'
+import { JUNGLE_BUFF_CAMPS } from '../../config/battleRoutes'
 
 /** mulberry32 — small, fast, deterministic PRNG */
 export function createRng(seed: number): () => number {

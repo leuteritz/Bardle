@@ -9,9 +9,7 @@
 // Nur bei echtem Stillstand — Tab im Hintergrund, Fenster ohne Fokus, Spiel
 // pausiert — gelten alle Objekte als im Vordergrund: dort stehen die
 // Orbit-Positionen still und dürften den Kampf nicht dauerhaft blockieren.
-import { activeChampionBehindState } from './activeChampionBehindState'
-import { activePlayerPlanetPositions } from './activePlayerPlanetPositions'
-import { activePlanetPositions } from './activePlanetPositions'
+import { activeChampionBehindState, activePlayerPlanetPositions, activePlanetPositions } from './liveState'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 
 function idleOrbitLive(): boolean {

@@ -11,7 +11,7 @@
       <div v-for="buff in activeBuffs" :key="buff.id" class="blessing-chip">
         <Icon icon="game-icons:magic-swirl" width="14" height="14" class="blessing-icon" />
         <span class="blessing-name">{{ buffLabel(buff.id) }}</span>
-        <span class="blessing-time">{{ formatDuration(buff.expiresAt - forgeStore.forgeNow) }}</span>
+        <span class="blessing-time">{{ formatClock(buff.expiresAt - forgeStore.forgeNow) }}</span>
       </div>
     </div>
 
@@ -130,7 +130,7 @@
       <Icon icon="game-icons:cash" width="18" height="18" class="section-icon section-icon--bargain" />
       <span class="section-title section-title--bargain">COSMIC BARGAIN</span>
       <span class="section-count section-count--bargain">
-        restocks in {{ formatDuration(forgeStore.bargainRestockRemainingMs) }}
+        restocks in {{ formatClock(forgeStore.bargainRestockRemainingMs) }}
       </span>
     </div>
 
@@ -197,6 +197,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatClock } from '@/utils/format'
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useInventoryStore } from '@/stores/inventoryStore'
@@ -300,14 +301,6 @@ function handleReroll(): void {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function formatDuration(ms: number): string {
-  const totalSec = Math.max(0, Math.floor(ms / 1000))
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${pad(h)}:${pad(m)}:${pad(s)}`
-}
 </script>
 
 <style scoped>

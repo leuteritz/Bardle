@@ -213,7 +213,7 @@ import {
 } from '@/stores/planetShopStore'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
 import TurretCdPill from '@/components/idle/planet/TurretCdPill.vue'
-import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/arcGuide'
+import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/geometry'
 import { playerSlotInForeground } from '@/utils/foregroundGate'
 import { Icon } from '@iconify/vue'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'

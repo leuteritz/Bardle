@@ -9,7 +9,7 @@ import { useBattleStore } from '@/stores/battleStore'
 import { usePlanetShopStore, PLANET_ROLES } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useActionToast } from '@/composables/useActionToast'
-import { CHAMPION_ROLES } from '@/config/championRoles'
+import { CHAMPION_ROLES } from '@/config/championData'
 import {
   CHAMP_TOOLTIP_MAX_VISIBLE,
   ROLE_BY_KEY,

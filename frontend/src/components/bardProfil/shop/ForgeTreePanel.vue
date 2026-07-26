@@ -20,11 +20,7 @@
             {{ solarStore.isCometState ? COMET_PHASE_DATA.name : currentStage.name }}
           </span>
           <span class="dock-phase-count">
-            {{
-              solarStore.isCometState
-                ? `Phase 1 / ${SUN_PHASE_DISPLAY_TOTAL}`
-                : `Phase ${solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET} / ${SUN_PHASE_DISPLAY_TOTAL}`
-            }}
+            {{ phaseLabel }}
           </span>
           <span class="dock-pips">
             <span
@@ -47,7 +43,7 @@
           </template>
           <template v-else-if="solarStore.isCometState">
             The comet must drift a while longer — ready in
-            <b class="dock-hint-next">{{ formatDuration(solarStore.phaseDwellRemainingMs) }}</b>
+            <b class="dock-hint-next">{{ formatClock(solarStore.phaseDwellRemainingMs) }}</b>
           </template>
           <template v-else-if="solarStore.starPhase >= STAR_PHASE_DATA.length - 1">
             The sun has reached its <b class="dock-hint-next">Finale</b> — the tree is fully grown.
@@ -61,7 +57,7 @@
           </template>
           <template v-else>
             The sun must dwell in this phase — ready in
-            <b class="dock-hint-next">{{ formatDuration(solarStore.phaseDwellRemainingMs) }}</b>
+            <b class="dock-hint-next">{{ formatClock(solarStore.phaseDwellRemainingMs) }}</b>
           </template>
         </div>
       </div>
@@ -234,9 +230,11 @@
 </template>
 
 <script setup lang="ts">
+import { formatClock } from '@/utils/format'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/solarUpgradeStore'
+import { useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
 import { useStarForgeStore } from '@/stores/starForgeStore'
 import { usePlayerStore } from '@/stores/playerStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
@@ -264,10 +262,10 @@ import {
   FORGE_TREE_ZOOM_STEP,
   FORGE_TREE_ZOOM_DEFAULT,
   SUN_PHASE_DISPLAY_OFFSET,
-  SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
+const { phaseLabel } = useSunPhaseDisplay()
 const forgeStore = useStarForgeStore()
 const playerStore = usePlayerStore()
 const inventoryStore = useInventoryStore()
@@ -562,15 +560,6 @@ function handleEvolve(): void {
   const targetName = nextStage.value.name
   solarStore.upgradeStar()
   showToast(wasComet ? `The comet ignites into ${targetName}…` : `Star evolving to ${targetName}…`)
-}
-
-function formatDuration(ms: number): string {
-  const totalSec = Math.max(0, Math.floor(ms / 1000))
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${pad(h)}:${pad(m)}:${pad(s)}`
 }
 
 function handleNodeClick(node: TreeNode): void {

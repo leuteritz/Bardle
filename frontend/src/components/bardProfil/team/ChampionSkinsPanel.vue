@@ -9,7 +9,7 @@ import {
   getSkinImagePath,
   getOriginalPreviewPath,
   formatSkinName,
-} from '@/utils/championSkins'
+} from '@/utils/champions'
 
 const props = defineProps<{
   /** Champion whose skins are browsed (the selected role's main champion). */

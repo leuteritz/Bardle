@@ -6,7 +6,7 @@ import { useUiStore } from './uiStore'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
 import { unlockedChampionTierCount } from '../config/championTiers'
 import type { ChampionRole } from '../types'
-import { clampPercent } from '../utils/math'
+import { clampPercent } from '../utils/geometry'
 import {
   CHAMPION_TRAVEL_BASE_MS,
   CHAMPION_TRAVEL_SCALE_MS,

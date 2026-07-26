@@ -121,12 +121,13 @@
 </template>
 
 <script setup lang="ts">
+import { hexToRgb } from '@/utils/format'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useStarGroupStore } from '../../stores/starGroupStore'
 import { usePlanetBossStore } from '../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../stores/roleBehaviorStore'
 import { ROLE_MID_CURSE_DURATION_MS, ROLE_COLORS } from '../../config/constants'
-import { CHAMPION_ROLES } from '../../config/championRoles'
+import { CHAMPION_ROLES } from '../../config/championData'
 import type { StarGroup } from '../../stores/starGroupStore'
 import type { StarType } from '../../types'
 
@@ -194,10 +195,6 @@ function fmtMs(ms: number): string {
 
 function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v))
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
 }
 
 function roleColorToPalette(hex: string): Palette {

@@ -2,27 +2,18 @@
 import { computed } from 'vue'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useUiStore } from '@/stores/uiStore'
-import {
-  STAR_PHASE_DATA,
-  COMET_PHASE_DATA,
-  SUN_PHASE_DISPLAY_OFFSET,
-  SUN_PHASE_DISPLAY_TOTAL,
-} from '@/config/constants'
+import { STAR_PHASE_DATA, COMET_PHASE_DATA, SUN_PHASE_DISPLAY_TOTAL } from '@/config/constants'
+import { useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
 
 const solarStore = useSolarUpgradeStore()
 const uiStore = useUiStore()
+const { currentDisplayPhase } = useSunPhaseDisplay()
 
 const phaseData = computed(() =>
   solarStore.isCometState ? COMET_PHASE_DATA : STAR_PHASE_DATA[solarStore.starPhase],
 )
 
-// Comet counts as display phase 1; sun phases render as starPhase + offset.
-const phaseLabel = computed(() => {
-  const displayPhase = solarStore.isCometState
-    ? 1
-    : solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET
-  return `Phase ${displayPhase}/${SUN_PHASE_DISPLAY_TOTAL}`
-})
+const phaseLabel = computed(() => `Phase ${currentDisplayPhase.value}/${SUN_PHASE_DISPLAY_TOTAL}`)
 
 const glowColor = computed(() =>
   solarStore.isCometState ? COMET_PHASE_DATA.glow : STAR_PHASE_DATA[solarStore.starPhase].glow1,

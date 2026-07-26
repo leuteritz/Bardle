@@ -5,8 +5,7 @@ import RpgFrame from '@/components/ui/RpgFrame.vue'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { ROLES } from '@/config/constants'
-import { CHAMPION_DATA } from '@/config/championData'
-import { getChampionRoles } from '@/config/championRoles'
+import { CHAMPION_DATA, getChampionRoles } from '@/config/championData'
 import {
   getChampionStarLevel,
   getChampionTier,

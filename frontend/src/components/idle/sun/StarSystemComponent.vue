@@ -239,6 +239,7 @@
 </template>
 
 <script setup lang="ts">
+import { hexToRgb } from '@/utils/format'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
@@ -274,10 +275,8 @@ import {
   SUN_BG_DISC_RADIUS_FACTOR,
   SUN_AIM_LOCK_RADIUS_FACTOR,
 } from '../../../config/constants'
-import { CHAMPION_ROLES } from '../../../config/championRoles'
-import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
-import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
-import { activeStarCombatState } from '../../../utils/activeStarCombatState'
+import { CHAMPION_ROLES } from '../../../config/championData'
+import { activeChampionBehindState, activePlayerPlanetPositions, activeStarCombatState } from '../../../utils/liveState'
 import type { ChampionRole } from '../../../types'
 
 const uiStore = useUiStore()
@@ -1218,14 +1217,6 @@ function starBodyBackStyle(star: StarRenderEntry) {
     // Animations-Engine pro Stern pro Frame) und nie sichtbar zu Ende laufen.
     transition: 'none',
   }
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  return [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
-  ]
 }
 
 function getChampionRoleStyles(name: string): Record<string, string> {

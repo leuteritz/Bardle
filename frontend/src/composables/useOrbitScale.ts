@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { SUN_RADIUS, SUN_GROWTH_STAGES } from '@/config/constants'
-import { getOrbitSunScale } from '@/utils/orbitMath'
+import { getOrbitSunScale } from '@/utils/geometry'
 
 // Outermost possible orbit: star tier 2 at max sun stage (stage 6),
 // using the dampened orbit scale (orbits grow slower than the sun itself).

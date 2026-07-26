@@ -14,7 +14,7 @@ import {
   ORBIT_ROLE_ABILITIES,
   OBJECTIVE_ROLE_ABILITIES,
 } from '@/config/constants'
-import { getChampionSkins, formatSkinName } from '@/utils/championSkins'
+import { getChampionSkins, formatSkinName } from '@/utils/champions'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'

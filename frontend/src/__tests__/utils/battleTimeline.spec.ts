@@ -10,7 +10,7 @@ import {
   levelFromXp,
   bountyGold,
   mvpScore,
-} from '@/utils/battleTimeline'
+} from '@/utils/battle/timeline'
 import {
   BATTLE_TOTAL_GAME_SECONDS,
   TIMELINE_NEXUS_FALL_T,
@@ -35,7 +35,7 @@ import {
   ALL_STRUCTURE_IDS,
   LANE_TIER_ORDER,
   parseStructureId,
-} from '@/utils/battleStructures'
+} from '@/utils/battle/structures'
 import { DRAKE_TYPES } from '@/config/drakes'
 import type { BattleEvent, ChampionState } from '@/types'
 

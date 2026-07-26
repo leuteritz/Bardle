@@ -269,7 +269,7 @@
                   <span class="ec-meta-sep">·</span>
                   <div class="ec-card-duration">
                     <Icon icon="game-icons:empty-hourglass" width="15" height="15" class="ec-dur-ico" />
-                    <span>{{ formatDuration(slot.durationSeconds) }}</span>
+                    <span>{{ formatShortDuration(slot.durationSeconds) }}</span>
                   </div>
                   <span class="ec-meta-sep">·</span>
                   <div class="ec-card-roles">
@@ -357,11 +357,12 @@
 </template>
 
 <script lang="ts">
+import { formatShortDuration } from '@/utils/format'
 import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useBattleStore } from '@/stores/battleStore'
-import { getChampionRoles } from '@/config/championRoles'
+import { getChampionRoles } from '@/config/championData'
 import {
   MAX_ACTIVE_EXPEDITIONS,
   EXPEDITION_MAX_AVAILABLE,
@@ -597,13 +598,6 @@ export default defineComponent({
     }
 
     // ── Format helpers ────────────────────────────────────────
-    function formatDuration(seconds: number): string {
-      const min = Math.floor(seconds / 60)
-      const sec = seconds % 60
-      if (min === 0) return `${sec}s`
-      if (sec === 0) return `${min}m`
-      return `${min}m ${sec}s`
-    }
     function formatCountdown(ms: number): string {
       const secs = Math.ceil(Math.max(0, ms) / 1000)
       const m = Math.floor(secs / 60)
@@ -641,7 +635,7 @@ export default defineComponent({
       getChampionImage,
       getRoleColor,
       collectExpedition,
-      formatDuration,
+      formatShortDuration,
       formatCountdown,
       chimePops,
       MAX_ACTIVE_EXPEDITIONS,

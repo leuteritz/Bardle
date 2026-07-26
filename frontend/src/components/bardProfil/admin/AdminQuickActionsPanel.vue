@@ -8,12 +8,12 @@ import { useInventoryStore } from '@/stores/inventoryStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { MATERIALS } from '@/config/materials'
 import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
-import { CHAMPION_ROLES } from '@/config/championRoles'
+import { CHAMPION_ROLES } from '@/config/championData'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useItemStore } from '@/stores/itemStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useSkinStore } from '@/stores/skinStore'
-import { getChampionSkins } from '@/utils/championSkins'
+import { getChampionSkins } from '@/utils/champions'
 import {
   ADMIN_QUICK_RESOURCE_AMOUNT,
   ALLIES_PER_ROLE,

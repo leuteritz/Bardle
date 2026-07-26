@@ -60,12 +60,11 @@
 import { defineComponent, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgFrame from '../../ui/RpgFrame.vue'
-import { useGalaxyStore } from '../../../stores/galaxyStore'
+import { useGalaxyStore, starLevelForGalaxy } from '../../../stores/galaxyStore'
 import { useGameStore } from '../../../stores/gameStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
 import { MATERIALS } from '../../../config/materials'
 import { CHAMPION_TIER_BY_STAR, CHAMPION_TIERS } from '../../../config/championTiers'
-import { starLevelForGalaxy } from '../../../stores/galaxyStore'
 import { formatNumber } from '../../../config/numberFormat'
 
 export default defineComponent({

@@ -2,7 +2,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useBattleStore, makeChampionState, defaultAllTimeStats } from '../../stores/battleStore'
 import { useGameStore } from '../../stores/gameStore'
-import { generateTimeline } from '../../utils/battleTimeline'
+import { generateTimeline } from '../../utils/battle/timeline'
 import {
   BATTLE_TOTAL_GAME_SECONDS,
   HONOR_MAX_SELECTIONS,

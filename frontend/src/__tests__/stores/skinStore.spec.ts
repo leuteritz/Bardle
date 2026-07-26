@@ -8,7 +8,7 @@ import {
   getChampionSkins,
   getSkinImagePath,
   formatSkinName,
-} from '../../utils/championSkins'
+} from '../../utils/champions'
 import { CHAMPION_SKINS } from '../../config/championSkins'
 import { CHAMPION_DATA } from '../../config/championData'
 
