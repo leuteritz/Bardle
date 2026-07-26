@@ -660,10 +660,20 @@ function emberStyle(i: number): Record<string, string> {
 /* Boss kompakter, damit Planet, Champion-Row UND der Sonnen-Horizont sichtbar
    bleiben. Das Vertikal-Budget der Arena ist von oben nach unten:
    HUD → Boss → Loot (51 %) → Champion-Row (~68–70 %) → Sonnen-Kamm (~89 %).
-   Kompakte Full-HD-Größen siehe @media (max-height: 1100px) unten. */
+   Kompakte Full-HD-Größen siehe @media (max-height: 1100px) unten.
+
+   ACHTUNG, die 80 % sehen falsch aus, sind aber korrekt: `.boss-wrapper` hat
+   keine eigene Breite und schrumpft auf den Inhalt, also auf die INTRINSISCHE
+   Sprite-Breite. `max-width` bezieht sich damit auf das Sprite selbst statt auf
+   die Arena — die dargestellte Größe ist schlicht `naturalWidth × Faktor` und
+   hängt an der Dateiauflösung, nicht am Layout. Die Sprites liegen bei 704 px
+   (vorher 1408 px), deshalb 80 % statt 40 %: identische Darstellung, halbe
+   Decode-Kosten. Wer die Sprite-Auflösung ändert, muss diesen Wert mitziehen.
+   Der Block unten (max-height: 1100px) ist NICHT betroffen — dort begrenzt
+   `max-height` und nicht die Breite, Full HD bleibt unverändert. */
 .sf-arena-wrap :deep(.boss-img) {
-  height: 40%;
-  max-width: 40%;
+  height: 80%;
+  max-width: 80%;
 }
 
 /* Boden-Schatten der Arena aus — der Boss schwebt hier frei über dem
