@@ -49,10 +49,11 @@
             >
             <div class="planet-dots planet-dots--left">
               <span
-                v-for="i in entry.totalPlanets"
-                :key="i"
+                v-for="dot in entry.planets"
+                :key="dot.id"
                 class="planet-dot"
-                :class="{ 'planet-dot--cleared': i > entry.totalPlanets - entry.clearedPlanets }"
+                :class="[`planet-dot--${dot.state}`, { 'planet-dot--cleared': dot.cleared }]"
+                :style="{ '--hp': dot.hp }"
               />
             </div>
           </div>
@@ -98,10 +99,11 @@
             >
             <div class="planet-dots planet-dots--right">
               <span
-                v-for="i in entry.totalPlanets"
-                :key="i"
+                v-for="dot in entry.planets"
+                :key="dot.id"
                 class="planet-dot"
-                :class="{ 'planet-dot--cleared': i > entry.totalPlanets - entry.clearedPlanets }"
+                :class="[`planet-dot--${dot.state}`, { 'planet-dot--cleared': dot.cleared }]"
+                :style="{ '--hp': dot.hp }"
               />
             </div>
           </div>
@@ -122,11 +124,19 @@
 
 <script setup lang="ts">
 import { hexToRgb } from '@/utils/format'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, shallowRef, computed, onMounted, onUnmounted } from 'vue'
 import { useStarGroupStore } from '../../stores/starGroupStore'
 import { usePlanetBossStore } from '../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../stores/roleBehaviorStore'
-import { ROLE_MID_CURSE_DURATION_MS, ROLE_COLORS } from '../../config/constants'
+import {
+  ROLE_MID_CURSE_DURATION_MS,
+  ROLE_COLORS,
+  STAR_TIMER_TICK_MS,
+  STAR_TIMER_HP_STEPS,
+  STAR_TIMER_HP_LOW_RATIO,
+  STAR_TIMER_HP_CRITICAL_RATIO,
+  STAR_TIMER_HP_MIN_FILL,
+} from '../../config/constants'
 import { CHAMPION_ROLES } from '../../config/championData'
 import type { StarGroup } from '../../stores/starGroupStore'
 import type { StarType } from '../../types'
@@ -136,11 +146,47 @@ const planetBossStore = usePlanetBossStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const now = ref(Date.now())
 
+/**
+ * Getakteter Boss-Snapshot statt reaktivem Zugriff auf `activeBosses`.
+ *
+ * Boss-HP sinkt bei jedem Klick, jedem Rollen-Angriff und jedem passiven Tick.
+ * Läse das Bar-Computed die Bosse direkt, würde jede dieser Mutationen alle
+ * Bars invalidieren und neu rendern. Der Snapshot wird stattdessen im
+ * setInterval gebaut (kein reaktives Tracking im Callback), sodass die Bars
+ * exakt im Ticker-Takt aktualisieren — unabhängig davon, wie viele Sterne
+ * gerade Schaden nehmen.
+ */
+interface BossSnapshot {
+  startTime: number
+  enrageTimerMs: number
+  /** HP-Anteil 0..1, auf STAR_TIMER_HP_STEPS Stufen gerundet */
+  hp: number
+  champion?: string
+}
+
+const bossSnapshot = shallowRef<Map<string, BossSnapshot>>(new Map())
+
+function refreshBossSnapshot(): void {
+  const next = new Map<string, BossSnapshot>()
+  for (const boss of planetBossStore.activeBosses) {
+    const ratio = boss.maxHP > 0 ? boss.currentHP / boss.maxHP : 0
+    next.set(boss.planetId, {
+      startTime: boss.startTime,
+      enrageTimerMs: boss.enrageTimerMs,
+      hp: Math.round(clamp01(ratio) * STAR_TIMER_HP_STEPS) / STAR_TIMER_HP_STEPS,
+      champion: boss.homePlanetChampion,
+    })
+  }
+  bossSnapshot.value = next
+}
+
 let ticker: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
+  refreshBossSnapshot()
   ticker = setInterval(() => {
+    refreshBossSnapshot()
     now.value = Date.now()
-  }, 200)
+  }, STAR_TIMER_TICK_MS)
 })
 onUnmounted(() => {
   if (ticker) clearInterval(ticker)
@@ -151,6 +197,16 @@ interface Palette {
   mid: string
   inner: string
   glow: string
+}
+
+/** Ein Planet der Bar: eine Kugel, deren Füllstand die Boss-HP spiegelt. */
+interface PlanetDot {
+  id: string
+  cleared: boolean
+  /** 0..1 — Füllhöhe der Kugel (gerettete Planeten: 0) */
+  hp: number
+  /** 'ok' | 'low' | 'critical' — steuert die Füllfarbe */
+  state: 'ok' | 'low' | 'critical'
 }
 
 interface BarEntry {
@@ -167,8 +223,7 @@ interface BarEntry {
   palette: Palette
   isCursed: boolean
   curseRatio: number
-  totalPlanets: number
-  clearedPlanets: number
+  planets: PlanetDot[]
 }
 
 const palettes: Palette[] = [
@@ -219,17 +274,44 @@ function rgbToPalette([r, g, b]: [number, number, number]): Palette {
 function getStarRoleColor(star: StarGroup): string | null {
   const champSlot = star.planetSlots.find(s => s.isChampionPlanet)
   if (!champSlot) return null
-  const boss = planetBossStore.activeBosses.find(b => b.planetId === champSlot.planetId)
-  const name = boss?.homePlanetChampion
+  const name = bossSnapshot.value.get(champSlot.planetId)?.champion
   if (!name) return null
   const role = CHAMPION_ROLES[name]
   return role ? ROLE_COLORS[role] : null
 }
 
 function getBossRemainingMs(planetId: string): number | null {
-  const boss = planetBossStore.activeBosses.find((b) => b.planetId === planetId)
+  const boss = bossSnapshot.value.get(planetId)
   if (!boss) return null
   return Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
+}
+
+/**
+ * Planeten-Kugeln einer Bar. Aktive Planeten zuerst, gerettete danach — so
+ * wandern erledigte Kugeln wie bisher zur Bildschirmmitte hin.
+ */
+function buildPlanetDots(star: StarGroup): PlanetDot[] {
+  const snap = bossSnapshot.value
+  const dots: PlanetDot[] = []
+  const clearedDots: PlanetDot[] = []
+
+  for (const slot of star.planetSlots) {
+    if (slot.cleared) {
+      clearedDots.push({ id: slot.planetId, cleared: true, hp: 0, state: 'ok' })
+      continue
+    }
+    // Kein Boss im Snapshot (frisch gespawnt, noch nicht getickt) → volle Kugel
+    const hp = snap.get(slot.planetId)?.hp ?? 1
+    dots.push({
+      id: slot.planetId,
+      cleared: false,
+      // Anzeigehöhe mit Bodensatz — der Zustand kommt weiterhin vom echten Wert
+      hp: hp > 0 ? Math.max(STAR_TIMER_HP_MIN_FILL, hp) : 0,
+      state: hp <= STAR_TIMER_HP_CRITICAL_RATIO ? 'critical' : hp <= STAR_TIMER_HP_LOW_RATIO ? 'low' : 'ok',
+    })
+  }
+
+  return dots.concat(clearedDots)
 }
 
 function getSharedStarRemainingMs(star: {
@@ -267,16 +349,14 @@ const sortedEntries = computed<BarEntry[]>(() => {
     const allCleared = total > 0 && cleared >= total
     const isCursed = cursedStarId === star.id && !!curse && nowTs < curse.activeUntil
     const curseRatio = isCursed ? clamp01((curse!.activeUntil - nowTs) / ROLE_MID_CURSE_DURATION_MS) : 0
+    const planets = buildPlanetDots(star)
 
     if (star.starType === 'resource') {
       const remaining = allCleared ? 0 : getSharedStarRemainingMs(star)
       const durationFromBoss =
         star.planetSlots
           .filter((p) => !p.cleared)
-          .map(
-            (p) =>
-              planetBossStore.activeBosses.find((b) => b.planetId === p.planetId)?.enrageTimerMs,
-          )
+          .map((p) => bossSnapshot.value.get(p.planetId)?.enrageTimerMs)
           .find((v): v is number => typeof v === 'number' && v > 0) ??
         star.durationMs ??
         0
@@ -295,8 +375,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
           sortKey: remaining,
           isCursed,
           curseRatio,
-          totalPlanets: total,
-          clearedPlanets: cleared,
+          planets,
         })
       }
     } else if (star.starType === 'champion') {
@@ -320,8 +399,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
           sortKey: Number.MAX_SAFE_INTEGER,
           isCursed,
           curseRatio,
-          totalPlanets: total,
-          clearedPlanets: cleared,
+          planets,
         })
       }
     } else if (star.starType === 'boss_escort' || star.starType === 'galaxy_boss') {
@@ -342,8 +420,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
               : Number.MAX_SAFE_INTEGER - 1,
           isCursed,
           curseRatio,
-          totalPlanets: total,
-          clearedPlanets: cleared,
+          planets,
         })
       }
     }
@@ -615,6 +692,10 @@ const sortedEntries = computed<BarEntry[]>(() => {
   .timer-bar-row--boss .bar-type-label {
     animation: none;
   }
+
+  .planet-dot::before {
+    transition: none;
+  }
 }
 
 /* Track-Wrapper: so breit wie die Balkenseite, wandert per transform mit der
@@ -688,17 +769,81 @@ const sortedEntries = computed<BarEntry[]>(() => {
   flex-direction: row-reverse;
 }
 
+/* Die Kugel ist zugleich HP-Anzeige des Planeten-Bosses: sie steht voll bei
+   100 % HP und leert sich von oben nach unten wie ein Gefäß. Umgesetzt als
+   ein einziges Pseudo-Element mit scaleY(var(--hp)) — reine Transform-
+   Änderung auf dem Compositor, kein Layout, kein Repaint der Zeile. Selbst
+   bei dutzenden Sternen bleibt das ein Style-Write pro Kugel und Ticker-
+   Schritt, nicht pro Schadensereignis (siehe Boss-Snapshot im Script). */
 .planet-dot {
   /* Flüssig skaliert für 1280px (~9px) bis 2560px (~13px) Viewport-Breite */
   width: clamp(9px, 0.3vw + 5px, 13px);
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ffffff, #d3e2f6 55%, #9fb8d8);
+  position: relative;
+  display: block;
+  overflow: hidden;
+  /* Leere Schale — der Teil, der bereits an Schaden verloren ging */
+  background: radial-gradient(circle at 35% 30%, #232c3d, #080b12 72%);
   /* Dunkler Ring als Kontrastkern gegen den Farbverlauf der Füllung */
   box-shadow:
-    0 0 0 1.5px rgba(10, 14, 24, 0.65),
-    0 0 6px rgba(220, 235, 255, 0.55),
-    0 0 10px rgba(190, 215, 255, 0.35);
+    0 0 0 1.5px rgba(10, 14, 24, 0.75),
+    0 0 6px rgba(220, 235, 255, 0.35);
+}
+
+/* Füllstand */
+.planet-dot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform-origin: bottom center;
+  transform: scaleY(var(--hp, 1));
+  transition: transform 0.2s linear;
+  background: linear-gradient(to top, var(--hp-deep), var(--hp-main) 76%, var(--hp-crest) 100%);
+}
+
+/* Glas-/Kugelglanz plus farbiger Innenrand. Der Rand ist das zweite, vom
+   Füllstand unabhängige Zustandssignal: eine fast leere Kugel wäre sonst nur
+   ein dunkler Punkt — mit rotem Rand liest sie sich sofort als "gleich fällt er". */
+.planet-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 40%);
+  box-shadow: inset 0 0 0 1.5px var(--hp-rim, rgba(255, 255, 255, 0.16));
+}
+
+/* Volle Fahrt: kühles Weißblau wie bisher */
+.planet-dot--ok {
+  --hp-deep: #7ea8d8;
+  --hp-main: #cfe4ff;
+  --hp-crest: #ffffff;
+  --hp-rim: rgba(255, 255, 255, 0.16);
+}
+
+/* Angeschlagen: Bernstein — deutlich vom Weiß unterscheidbar */
+.planet-dot--low {
+  --hp-deep: #a85f0e;
+  --hp-main: #f0aa38;
+  --hp-crest: #ffdc96;
+  --hp-rim: rgba(255, 190, 90, 0.9);
+  box-shadow:
+    0 0 0 1.5px rgba(10, 14, 24, 0.8),
+    0 0 7px rgba(240, 170, 56, 0.55);
+}
+
+/* Kurz vor dem Fall: Rot plus kräftigerer Schein. Bewusst statisch — eine
+   Puls-Animation pro Kugel wäre bei vielen Sternen ein Paint-Sturm. */
+.planet-dot--critical {
+  --hp-deep: #8d1b10;
+  --hp-main: #ee4b34;
+  --hp-crest: #ff9d84;
+  --hp-rim: rgba(255, 120, 96, 0.95);
+  box-shadow:
+    0 0 0 1.5px rgba(10, 14, 24, 0.85),
+    0 0 9px rgba(238, 75, 52, 0.8);
 }
 
 .planet-dot--cleared {
@@ -706,6 +851,11 @@ const sortedEntries = computed<BarEntry[]>(() => {
   border: 1.5px solid rgba(230, 240, 255, 0.85);
   box-shadow: 0 0 0 1px rgba(10, 14, 24, 0.5);
   opacity: 0.45;
+}
+
+.planet-dot--cleared::before,
+.planet-dot--cleared::after {
+  display: none;
 }
 
 /* ── Transition: leaving-Element nimmt keinen Platz mehr ein ── */

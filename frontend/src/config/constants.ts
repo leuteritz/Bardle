@@ -1867,6 +1867,22 @@ export const GALAXY_BOSS_PLANET_ORBIT_RX = 38
 export const GALAXY_BOSS_PLANET_ORBIT_RY = 22
 export const GALAXY_BOSS_PLANET_ORBIT_TILT = 0.1
 
+// ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
+// Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,
+// der im Takt von STAR_TIMER_TICK_MS neu gebaut wird. Damit invalidiert das
+// Bar-Computed höchstens 5×/s statt bei jedem einzelnen Schadensereignis —
+// entscheidend, wenn viele Sterne gleichzeitig unter dem Header hängen.
+export const STAR_TIMER_TICK_MS = 200
+// HP-Ratio wird auf Stufen gerundet, damit sich der gebundene Style-Wert
+// (und damit der DOM-Write) nur bei sichtbarer Änderung überhaupt ändert.
+export const STAR_TIMER_HP_STEPS = 20
+// Schwellen für den Farbwechsel der Kugelfüllung
+export const STAR_TIMER_HP_LOW_RATIO = 0.35
+export const STAR_TIMER_HP_CRITICAL_RATIO = 0.15
+// Solange der Boss lebt, bleibt mindestens dieser Anteil der Kugel gefüllt —
+// bei 2 % HP wäre der Farbstreifen in einer ~11 px großen Kugel sonst unsichtbar.
+export const STAR_TIMER_HP_MIN_FILL = 0.2
+
 // ── Galaxy-Boss Eskorten-Wellen ───────────────────────────────────────────
 // Gesamtzahl der Eskorten-Sterne pro Galaxie: BASE + (galaxy-1) * PER_GALAXY,
 // gedeckelt bei MAX. Sie erscheinen in Wellen à WAVE_SIZE — es sind also nie
