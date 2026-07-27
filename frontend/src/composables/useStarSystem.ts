@@ -6,7 +6,7 @@ import { useGalaxyStore } from '../stores/galaxyStore'
 import { useWindowFocus } from './useWindowFocus'
 import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions, activeStarCombatState } from '../utils/liveState'
-import { getOrbitPos } from '../utils/geometry'
+import { getOrbitPos, orbitBehindProgress } from '../utils/geometry'
 import {
   STAR_SPAWN_DURATION_MS,
   STAR_SPAWN_FLY_EASING,
@@ -50,6 +50,8 @@ export interface StarRenderEntry {
   scale: number
   opacity: number
   isBehind: boolean
+  /** Nur Transportfeld für `activeStarCombatState` — kein Renderwert. */
+  eclipseProgress: number
   filterStyle: string
   orbitRx: number
   orbitRy: number
@@ -296,6 +298,25 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
       const sIsBehind = sRelY < BEHIND_THRESHOLD
       const sDepth = Math.max(0, Math.min(1, (sRelY + 1) / 2))
 
+      // Wie weit ist der Stern durch seine Verdeckung? Verdeckt ODER nicht
+      // entscheidet weiterhin sRelY aus der gemalten Position; der Fortschritt
+      // kommt aus dem Bahnwinkel, weil das Tempo hinter der Sonne auf das
+      // Zehnfache hochgelerpt wird und eine Zeitrechnung deshalb den Austritt
+      // verfehlen würde. Beide Wege benutzen dieselbe Formel, können an der
+      // Austrittskante aber um einen Frame auseinanderliegen — ein dort noch
+      // negativer Fortschritt heißt „so gut wie draußen", also 1.
+      let sEclipseProgress = -1
+      if (sIsBehind) {
+        const raw = orbitBehindProgress(
+          sAngle,
+          star.starDirection,
+          scaledOrbitRx / Math.max(scaledOrbitRy, 1),
+          star.orbitTilt,
+          BEHIND_THRESHOLD,
+        )
+        sEclipseProgress = raw < 0 ? 1 : Math.min(1, raw)
+      }
+
       const visibleFactor = Math.max(
         0,
         Math.min(1, (sRelY - BEHIND_THRESHOLD + BEHIND_FADE_BAND) / BEHIND_FADE_BAND),
@@ -448,6 +469,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         scale: sScale,
         opacity: sOpacity,
         isBehind: sIsBehind,
+        eclipseProgress: sEclipseProgress,
         filterStyle: starFilterStyle,
         orbitRx: scaledOrbitRx,
         orbitRy: scaledOrbitRy,
@@ -499,6 +521,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         x: r.x,
         y: r.y,
         isBehind: r.isBehind,
+        eclipseProgress: r.eclipseProgress,
         firablePlanets: r.planets.filter((p) => !p.isBehind && p.animState === 'normal').length,
       })
     }
@@ -529,6 +552,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         o.y = n.y
         o.scale = n.scale
         o.opacity = n.opacity
+        o.eclipseProgress = n.eclipseProgress
         o.filterStyle = n.filterStyle
         o.hintOpacity = n.hintOpacity
         o.orbitRx = n.orbitRx

@@ -54,3 +54,14 @@ export function starInForeground(starId: string): boolean {
   const state = activeStarCombatState.get(starId)
   return state ? !state.isBehind : true
 }
+
+/**
+ * Fortschritt durch die laufende Verdeckung: 0 beim Eintauchen hinter die
+ * Sonne, 1 beim Wiederauftauchen, -1 wenn der Stern im Vordergrund steht oder
+ * die Orbit-Simulation ruht. Damit lässt sich eine Verdeckung als Balken
+ * darstellen, der exakt dann voll ist, wenn der Stern wieder angreifbar wird.
+ */
+export function starEclipseProgress(starId: string): number {
+  if (!idleOrbitLive()) return -1
+  return activeStarCombatState.get(starId)?.eclipseProgress ?? -1
+}

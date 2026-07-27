@@ -33,20 +33,15 @@
               '--glow': entry.palette.glow,
             }"
           />
-          <!-- Eclipse: der Stern steht hinter der Sonne. Die Füllung verschwindet
-               nicht, sie geht in den Kernschatten — dunkle Scheibe mit glühendem
-               Korona-Saum, über die einmal je Runde ein Lichtblitz zieht. Eigenes
-               Element statt eines Filters auf .bar-fill, weil ein Filter den
-               Korona-Saum gleich mit abdunkeln würde, und eigenes statt ::after,
-               weil dieses beim Rage-Zustand schon belegt ist: ein rasender Stern
-               kann gleichzeitig verdeckt sein. -->
+          <!-- Eclipse: der Stern steht hinter der Sonne. Die Zeile hört auf, eine
+               Restzeit zu zeigen, und wird zur Anzeige der Verdeckung selbst: ein
+               leerer Rahmen über die ganze Balkenseite, in den vom Bildschirmrand
+               her das Sonnenlicht zurückläuft. Beide Seiten treffen sich in dem
+               Moment in der Mitte, in dem der Stern wieder hervortritt. -->
           <Transition name="bar-eclipse-fade">
-            <div
-              v-if="entry.isEclipsed"
-              class="bar-eclipse"
-              :style="{ transform: `scaleX(${entry.fillRatio})` }"
-            >
-              <span class="bar-eclipse-flash" />
+            <div v-if="entry.isEclipsed" class="bar-eclipse" :style="{ '--p': entry.eclipseProgress }">
+              <span class="bar-eclipse-fill" />
+              <span class="bar-eclipse-front" />
             </div>
           </Transition>
           <!-- Track-Wrapper wandern per transform (Compositor) statt per
@@ -117,9 +112,10 @@
             <div
               v-if="entry.isEclipsed"
               class="bar-eclipse bar-eclipse--mirrored"
-              :style="{ transform: `scaleX(${entry.fillRatio})` }"
+              :style="{ '--p': entry.eclipseProgress }"
             >
-              <span class="bar-eclipse-flash" />
+              <span class="bar-eclipse-fill" />
+              <span class="bar-eclipse-front" />
             </div>
           </Transition>
           <div
@@ -192,7 +188,7 @@ import {
   STAR_TIMER_HP_REVEAL_MS,
 } from '../../config/constants'
 import { CHAMPION_ROLES } from '../../config/championData'
-import { starInForeground } from '../../utils/foregroundGate'
+import { starEclipseProgress } from '../../utils/foregroundGate'
 import type { StarGroup } from '../../stores/starGroupStore'
 import type { StarType } from '../../types'
 
@@ -226,6 +222,57 @@ interface BossSnapshot {
 }
 
 const bossSnapshot = shallowRef<Map<string, BossSnapshot>>(new Map())
+
+/**
+ * Verdeckungsstand je Stern — nur Sterne hinter der Sonne stehen darin.
+ *
+ * Wie der Boss-Snapshot im Ticker fortgeschrieben, damit das Bar-Computed
+ * unverändert höchstens 5×/s neu rechnet.
+ *
+ * Eine Verdeckung dauert je nach Bahntempo rund 4 s (Resource-Stern) bis 13 s
+ * (Galaxieboss) — der verdeckte Bogen von ~3,06 rad geteilt durch die
+ * Bahngeschwindigkeit mal `STAR_BEHIND_SUN_SPEED_MULTIPLIER`. Die Füllung
+ * wandert also pro Tick um wenige Prozent; den Rest glättet die CSS-Transition.
+ */
+interface EclipseSnapshot {
+  /** Anzeigeziel 0…1 — um einen Tick vorausgerechnet, siehe unten. */
+  target: number
+  /** Zuletzt gemessener Rohstand, Basis der Vorausrechnung im nächsten Tick. */
+  raw: number
+}
+
+const eclipseSnapshot = shallowRef<Map<string, EclipseSnapshot>>(new Map())
+
+function refreshEclipseSnapshot(): void {
+  const prev = eclipseSnapshot.value
+  const next = new Map<string, EclipseSnapshot>()
+
+  for (const star of starGroupStore.activeStars) {
+    const raw = starEclipseProgress(star.id)
+    const before = prev.get(star.id)
+
+    if (raw < 0) {
+      // Der Stern ist hervorgetreten. Einen Tick lang voll stehen lassen: die
+      // beiden Lichtfronten sollen die Mitte sichtbar erreichen, bevor die Bar
+      // abtritt — dieser Moment IST die Aussage der Anzeige.
+      if (before && before.target < 1) next.set(star.id, { target: 1, raw: 1 })
+      continue
+    }
+
+    // Die CSS-Transition läuft genau einen Tick lang. Bekäme sie den JETZT
+    // gemessenen Stand, liefe die Füllung dem Stern dauerhaft einen Tick
+    // hinterher und stünde beim Austritt spürbar vor der Mitte. Sie bekommt
+    // deshalb den Stand, den der Stern am ENDE des Ticks haben wird: Dann
+    // interpoliert sie die tatsächliche Bewegung, statt ihr nachzulaufen.
+    // Der Schritt wird aus dem letzten Tick gemessen statt aus der Bahn
+    // gerechnet — so trägt er das Hochlerpen des Tempos hinter der Sonne
+    // automatisch mit.
+    const step = before ? Math.max(0, raw - before.raw) : 0
+    next.set(star.id, { target: Math.min(1, raw + step), raw })
+  }
+
+  eclipseSnapshot.value = next
+}
 /** Planet, der gerade bekämpft wird — seine HP steht dauerhaft. */
 const focusedBossId = shallowRef<string | null>(null)
 
@@ -272,8 +319,10 @@ function refreshBossSnapshot(): void {
 let ticker: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
   refreshBossSnapshot()
+  refreshEclipseSnapshot()
   ticker = setInterval(() => {
     refreshBossSnapshot()
+    refreshEclipseSnapshot()
     now.value = Date.now()
   }, STAR_TIMER_TICK_MS)
 })
@@ -320,6 +369,8 @@ interface BarEntry {
   isRaging: boolean
   /** Stern fliegt hinter der Sonne — kein Schaden fließt, Bar geht in Umbra */
   isEclipsed: boolean
+  /** 0…1 durch die Verdeckung — treibt die Füllung des Eclipse-Balkens */
+  eclipseProgress: number
   planets: PlanetDot[]
   /** Teilmenge von `planets`, die gerade eine HP-Zahl zeigt — hinten in der Bar */
   hpLabels: PlanetDot[]
@@ -455,7 +506,7 @@ function getSharedStarRemainingMs(star: {
 }
 
 const sortedEntries = computed<BarEntry[]>(() => {
-  const raw: Omit<BarEntry, 'palette' | 'isRaging' | 'isEclipsed'>[] = []
+  const raw: Omit<BarEntry, 'palette' | 'isRaging' | 'isEclipsed' | 'eclipseProgress'>[] = []
   const curse = roleBehaviorStore.activeCurse
   const cursedStarId = roleBehaviorStore.cursedStarId
   const nowTs = now.value
@@ -558,23 +609,27 @@ const sortedEntries = computed<BarEntry[]>(() => {
   }
 
   raw.sort((a, b) => a.sortKey - b.sortKey)
-  return raw.map((entry, index) => ({
-    ...entry,
-    isRaging: entry.starId === ragingStarId,
-    // Eclipse kommt aus derselben Quelle wie das Kampf-Gate (`starInForeground`)
-    // und nicht aus einer eigenen Rechnung — die Bar geht damit exakt in dem
-    // Moment in den Schatten, in dem der Stern aufhört, Schaden zu nehmen.
-    // Der Abgriff im 200-ms-Ticker reicht: eine Verdeckung dauert mehrere
-    // Sekunden, ein RAF-Poll wie im Command Panel wäre hier verschwendet.
-    isEclipsed: !starInForeground(entry.starId),
-    palette: (() => {
-      const star = starGroupStore.activeStars.find(s => s.id === entry.starId)
-      if (entry.timeless && star) return rgbToPalette(star.starColor)
-      if (!entry.isChampion) return palettes[index % palettes.length]
-      const roleColor = star ? getStarRoleColor(star) : null
-      return roleColor ? roleColorToPalette(roleColor) : championPalette
-    })(),
-  }))
+  return raw.map((entry, index) => {
+    // Zustand und Fortschritt der Verdeckung kommen aus EINEM Snapshot, damit
+    // „verdeckt" und „wie weit" nie auseinanderlaufen können. Er stammt aus
+    // derselben Quelle wie das Kampf-Gate: Die Bar geht exakt in dem Moment in
+    // den Schatten, in dem der Stern aufhört, Schaden zu nehmen, und ist exakt
+    // dann voll, wenn er wieder hervortritt.
+    const eclipse = eclipseSnapshot.value.get(entry.starId)
+    return {
+      ...entry,
+      isRaging: entry.starId === ragingStarId,
+      isEclipsed: eclipse !== undefined,
+      eclipseProgress: eclipse?.target ?? 0,
+      palette: (() => {
+        const star = starGroupStore.activeStars.find((s) => s.id === entry.starId)
+        if (entry.timeless && star) return rgbToPalette(star.starColor)
+        if (!entry.isChampion) return palettes[index % palettes.length]
+        const roleColor = star ? getStarRoleColor(star) : null
+        return roleColor ? roleColorToPalette(roleColor) : championPalette
+      })(),
+    }
+  })
 })
 </script>
 
@@ -741,7 +796,9 @@ const sortedEntries = computed<BarEntry[]>(() => {
     0 0 14px var(--glow),
     inset 0 1px 0 rgba(255, 236, 190, 0.18),
     inset 0 -1px 0 rgba(0, 0, 0, 0.22);
-  transition: transform 0.2s linear;
+  transition:
+    transform 0.2s linear,
+    opacity 0.3s ease;
   will-change: transform;
 }
 
@@ -876,12 +933,17 @@ const sortedEntries = computed<BarEntry[]>(() => {
 
 /* ── Eclipse: der Stern fliegt hinter der Sonne ─────────────────────────────
    Derselbe Zustand, den Star-Fight-Modal, Command Panel und Striker Squad als
-   Medaillon zeigen — hier ohne Icon und ohne Text, denn die Zeile ist auf
-   Full HD nur ~14 px hoch und trägt schon Sekunden, Kugeln und HP-Zahlen (siehe
-   die Begründung beim Rage-Zustand oben). Die Bar sagt es stattdessen mit dem
-   Bild der Finsternis selbst: die farbige Füllung verschwindet unter einer
-   dunklen Scheibe, an deren Rand die Korona stehen bleibt — auf einen Blick
-   erkennbar, ohne einen Pixel zusätzlichen Platz zu verlangen.
+   Medaillon zeigen. Hier bekommt er kein Abzeichen, sondern die ganze Zeile:
+   Solange der Stern verdeckt ist, hat eine Restzeit ohnehin keine Bedeutung —
+   es passiert nichts, bis er wieder hervortritt. Also hört die Bar auf, eine
+   Restzeit zu zeigen, und zeigt stattdessen genau das eine, was jetzt zählt:
+   wie lange die Verdeckung noch dauert.
+
+   Das Bild dafür ist die Finsternis selbst. Übrig bleibt ein leerer, von der
+   Korona umrissener Rahmen; von beiden Bildschirmrändern läuft das Sonnenlicht
+   zurück nach innen. Wenn die beiden Fronten die Mitte erreichen, tritt der
+   Stern hervor — die Anzeige ist damit nicht bloß Fortschritt, sondern ein Bild
+   der Bewegung, die sie misst.
 
    Der Zustand steht bewusst ÜBER Fluch und Rage: Beide beschreiben, wie viel
    Schaden fließt — die Eclipse, dass gerade gar keiner fließt. */
@@ -889,6 +951,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
   border-radius: 3px;
 }
 
+/* Der Rahmen: volle Balkenseite, nicht die Restzeit-Breite. Er ist der
+   Behälter, den die Verdeckung füllt, und muss deshalb immer gleich groß sein. */
 .bar-eclipse {
   position: absolute;
   top: 0;
@@ -897,117 +961,122 @@ const sortedEntries = computed<BarEntry[]>(() => {
   width: 100%;
   /* Bewusst 0 und nicht 1: `.bar-edge-track` trägt ein transform und bildet
      damit einen eigenen Stacking-Kontext, der trotz seiner inneren z-index-2-
-     Kugeln als Ganzes auf Ebene 0 gemalt wird. Jeder Wert > 0 legte die Scheibe
-     über Kugeln und HP-Zahlen und machte sie unlesbar. Auf Ebene 0 entscheidet
-     die DOM-Reihenfolge: nach der Füllung, vor dem Track — genau richtig. */
+     Kugeln als Ganzes auf Ebene 0 gemalt wird. Jeder Wert > 0 legte den Rahmen
+     über Kugeln und HP-Zahlen. Auf Ebene 0 entscheidet die DOM-Reihenfolge:
+     nach der Füllung, vor dem Track — genau richtig. */
   z-index: 0;
   pointer-events: none;
-  overflow: hidden;
-  transform-origin: right center;
+  /* Kein eigenes overflow: `.bar-side` clippt bereits, und so darf die
+     Lichtfront am Ende über die Innenkante hinausleuchten — genau dort, wo
+     beide Seiten sich treffen. */
   border-radius: 0 3px 3px 0;
   /* Kühles Fast-Schwarz statt eines halbtransparenten Braun: ließe man die
-     orange Füllung durchscheinen, sähe die Zeile nur „abgedunkelt" aus. Der
-     Kernschatten muss die Farbe wirklich schlucken, damit der Goldsaum als
-     Korona liest und nicht als Rahmen. */
+     Farbe darunter durchscheinen, sähe die Zeile nur „abgedunkelt" aus. Der
+     Kernschatten muss sie wirklich schlucken, damit das Gold als Korona liest. */
   background: linear-gradient(
     to bottom,
     rgba(8, 7, 14, 0.955) 0%,
     rgba(14, 11, 20, 0.965) 52%,
     rgba(5, 4, 10, 0.96) 100%
   );
-  /* Korona-Saum. Nur vertikale Offsets — sie überstehen das scaleX der Scheibe
-     unverzerrt, ein seitlicher Saum würde mit dem Balken mitschrumpfen. */
+  /* Korona als Rahmen: oben und unten kräftig (der Sonnenrand hinter der
+     Scheibe), seitlich nur eine Haarlinie, damit die 14 px hohe Zeile auf
+     Full HD nicht zum Kasten wird. Reihenfolge zählt — die Saumfarben liegen
+     vor der umlaufenden Linie und überdecken sie oben und unten. */
   box-shadow:
     inset 0 2px 0 rgba(255, 242, 200, 0.95),
-    inset 0 5px 7px -4px rgba(255, 200, 90, 0.75),
+    inset 0 5px 7px -4px rgba(255, 200, 90, 0.7),
     inset 0 -2px 0 rgba(240, 156, 40, 0.8),
-    inset 0 -5px 7px -4px rgba(232, 140, 30, 0.5),
-    0 0 8px rgba(255, 200, 80, 0.45),
-    0 0 18px rgba(232, 140, 30, 0.25);
-  transition: transform 0.2s linear;
-  will-change: transform;
+    inset 0 -5px 7px -4px rgba(232, 140, 30, 0.45),
+    inset 0 0 0 1px rgba(214, 156, 70, 0.5),
+    0 0 8px rgba(255, 200, 80, 0.4),
+    0 0 18px rgba(232, 140, 30, 0.22);
 }
 
 .bar-eclipse--mirrored {
   right: 0;
   left: auto;
-  transform-origin: left center;
   border-radius: 3px 0 0 3px;
 }
 
-/* Diamond Ring: ein Lichtblitz zieht einmal je Runde über den Kernschatten und
-   hält die Zeile lebendig, ohne zu blinken. Reine transform-/opacity-Keyframes
-   auf einem einmal gerasterten Verlauf — Compositor-Arbeit, selbst wenn jede
-   Bar gleichzeitig verdeckt wäre. Beide Seiten laufen gespiegelt nach innen
-   (rechts per `reverse`), sodass die Zeile symmetrisch bleibt. */
-.bar-eclipse-flash {
+/* Das zurückkehrende Sonnenlicht. Wächst vom Bildschirmrand nach innen, also
+   entgegen der normalen Füllung — beide Seiten laufen damit aufeinander zu.
+   Der Verlauf wird von scaleX mitgestaucht, wodurch sein helles Ende immer an
+   der Front sitzt, egal wie weit sie schon gelaufen ist. */
+.bar-eclipse-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(var(--p, 0));
+  border-radius: inherit;
+  background: linear-gradient(to right, rgba(96, 50, 8, 0.92), #c07a1c 58%, #f2c664 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 200, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  /* Gleiche Dauer wie der 200-ms-Ticker, der --p neu setzt: die Füllung wandert
+     dadurch stetig weiter, statt fünfmal je Sekunde zu springen. */
+  transition: transform 0.2s linear;
+  will-change: transform;
+}
+
+.bar-eclipse--mirrored .bar-eclipse-fill {
+  transform-origin: right center;
+  background: linear-gradient(to left, rgba(96, 50, 8, 0.92), #c07a1c 58%, #f2c664 100%);
+}
+
+/* Die Lichtfront. Eigenes Element statt eines Saums auf der Füllung: Die
+   Füllung skaliert, ein Saum darauf würde mit ihr gestaucht und wäre bei
+   niedrigem Fortschritt kaum noch da. Als reine Verschiebung bleibt die Front
+   auf jeder Position exakt gleich scharf. */
+.bar-eclipse-front {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  width: 26%;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 236, 170, 0) 0%,
-    rgba(255, 236, 170, 0.32) 38%,
-    rgba(255, 250, 224, 0.8) 50%,
-    rgba(255, 200, 80, 0.32) 62%,
-    rgba(232, 140, 30, 0) 100%
-  );
-  animation: bar-eclipse-flash 3.4s ease-in-out infinite;
-  will-change: transform, opacity;
+  width: 100%;
+  transform: translateX(calc(var(--p, 0) * 100%));
+  transition: transform 0.2s linear;
+  will-change: transform;
 }
 
-.bar-eclipse--mirrored .bar-eclipse-flash {
-  animation-direction: reverse;
+.bar-eclipse--mirrored .bar-eclipse-front {
+  transform: translateX(calc(var(--p, 0) * -100%));
 }
 
-@keyframes bar-eclipse-flash {
-  0% {
-    transform: translateX(-120%);
-    opacity: 0;
-  }
-  14% {
-    opacity: 0.9;
-  }
-  66% {
-    opacity: 0.9;
-  }
-  80%,
-  100% {
-    transform: translateX(400%);
-    opacity: 0;
-  }
+.bar-eclipse-front::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: 0;
+  width: 3px;
+  transform: translateX(-50%);
+  background: linear-gradient(to bottom, #fff8e2, #ffd07a 52%, #e8a038);
+  box-shadow:
+    0 0 8px 1px rgba(255, 205, 110, 0.9),
+    0 0 18px 4px rgba(255, 170, 60, 0.4);
 }
 
-/* Kugeln treten zurück, verschwinden aber nicht: der Stand des Sterns bleibt
-   ablesbar, während er verdeckt ist. Auf dem fast schwarzen Kernschatten reicht
-   dafür ein leichtes Dimmen — alles darunter macht die hellen Kugeln zu Löchern.
-   Die HP-Zahlen bleiben bewusst ungedimmt: sie sind die einzige exakte Angabe
-   in der Zeile und dürfen in keinem Zustand schlechter lesbar werden. */
-.timer-bar-row--eclipsed .planet-dot {
-  opacity: 0.86;
+.bar-eclipse--mirrored .bar-eclipse-front::after {
+  left: auto;
+  right: 0;
+  transform: translateX(50%);
 }
 
-/* Der Puls der kritischen Zahl ruht mit — er meldet „gleich fällt er", und
-   genau das kann in der Verdeckung nicht passieren. */
+/* Restzeit-Füllung und alles, was an ihrer Kante hängt (Sekunden, Kugeln,
+   HP-Zahlen, Typ-Label), treten für die Dauer der Verdeckung ab. Sie messen
+   Dinge, die währenddessen stillstehen, und würden dem einen Balken, der jetzt
+   etwas aussagt, nur die Aufmerksamkeit nehmen. */
+.timer-bar-row--eclipsed .bar-fill,
+.timer-bar-row--eclipsed .bar-edge-track,
+.timer-bar-row--eclipsed .bar-type-label {
+  opacity: 0;
+}
+
+/* Was unsichtbar ist, muss auch nicht mehr animiert werden. */
+.timer-bar-row--eclipsed .bar-fill::after,
 .timer-bar-row--eclipsed .planet-hp--critical {
   animation: none;
-  transform: none;
-}
-
-/* Unter der Scheibe pulst nichts weiter: der Rage-Überzug ist dort nicht mehr
-   zu sehen und würde nur Frames kosten. */
-.timer-bar-row--eclipsed .bar-fill::after {
-  animation-play-state: paused;
-}
-
-/* Labels in Koronafarbe. Steht nach der Rage-Regel, weil ein Stern rasen UND
-   verdeckt sein kann — dann zählt, dass gerade nichts passiert. */
-.timer-bar-row--eclipsed .bar-seconds-label,
-.timer-bar-row--eclipsed .bar-type-label {
-  color: #ffe6b0;
-  filter: drop-shadow(0 0 7px rgba(255, 190, 70, 0.85)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.95));
 }
 
 /* Nach den Typ-Hovern (Champion/Boss), damit die Korona-Outline auch auf einer
@@ -1016,11 +1085,6 @@ const sortedEntries = computed<BarEntry[]>(() => {
 .timer-bar-row--eclipsed.star-hover-active {
   outline: 1px solid rgba(255, 210, 120, 0.5);
   outline-offset: 1px;
-}
-
-.timer-bar-row--eclipsed:hover .bar-fill,
-.timer-bar-row--eclipsed.star-hover-active .bar-fill {
-  filter: none;
 }
 
 .bar-eclipse-fade-enter-active,
@@ -1034,13 +1098,9 @@ const sortedEntries = computed<BarEntry[]>(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Scheibe und Saum bleiben — nur der Blitz zieht nicht mehr. Er steht dabei
-     außerhalb der Bar, statt mitten auf ihr einzufrieren. */
-  .bar-eclipse-flash {
-    animation: none;
-    opacity: 0;
-  }
-
+  /* Der Eclipse-Balken behält seine Transition: Sie glättet nur die 200-ms-
+     Sprünge des Tickers zu der Bewegung, die der Stern tatsächlich macht — sie
+     ist die Information, keine Dekoration. */
   .timer-bar-row--escort .bar-fill,
   .timer-bar-row--boss .bar-fill,
   .timer-bar-row--boss .bar-type-label {
@@ -1072,7 +1132,11 @@ const sortedEntries = computed<BarEntry[]>(() => {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  transition: transform 0.2s linear;
+  /* opacity mit im Bunde, damit der Wechsel in den Eclipse-Zustand überblendet
+     statt zu springen — die Bar tauscht dort ihre gesamte Aussage aus. */
+  transition:
+    transform 0.2s linear,
+    opacity 0.3s ease;
   will-change: transform;
 }
 

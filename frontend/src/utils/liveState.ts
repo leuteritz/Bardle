@@ -40,6 +40,12 @@ export interface StarCombatState {
   y: number
   /** Stern steht hinter der Sonne → feuert nicht. */
   isBehind: boolean
+  /**
+   * Fortschritt durch die laufende Verdeckung: 0 beim Eintauchen, 1 beim
+   * Wiederauftauchen, -1 im Vordergrund. Aus dem Bahnwinkel abgeleitet und
+   * damit unabhängig vom Tempo, das hinter der Sonne hochgelerpt wird.
+   */
+  eclipseProgress: number
   /** Noch nicht befreite, sichtbare Planeten — bestimmt die Schusszahl der Salve. */
   firablePlanets: number
 }
