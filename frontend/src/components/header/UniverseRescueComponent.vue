@@ -70,6 +70,8 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <div class="header-divider uni-divider" aria-hidden="true"></div>
+
       <div
         class="uni-tile uni-tile--meep"
         :class="{ 'uni-tile--rising': isIncreasing, 'uni-tile--lit': isUniverseBarHovered }"
@@ -171,11 +173,20 @@ onUnmounted(() => {
   transition: filter 0.3s;
 }
 
-/* Galaxie links, Meeps rechtsbündig an der Balkenkante — der Abstand
-   dazwischen trennt die beiden Werte, statt eines Rahmens. */
+/* Galaxie links, Meeps rechtsbündig an der Balkenkante — dazwischen der
+   Header-Divider, der durch space-between zu beiden Seiten gleich weit
+   entfernt steht. */
 .uni-tile--galaxy,
 .uni-tile--meep {
   flex: 0 1 auto;
+}
+
+/* Übernimmt Verlauf und Schimmer von .header-divider (global), nur die
+   feste Höhe dort passt nicht: sie ist an die volle Header-Höhe gerechnet
+   und würde aus der Kachelzeile in den Balken ragen. */
+.uni-divider {
+  height: 72%;
+  margin-inline: 0;
 }
 
 .uni-tile--rising {
