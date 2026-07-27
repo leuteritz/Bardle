@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { formatNumber } from '@/config/numberFormat'
@@ -8,10 +8,16 @@ import {
   MEEP_COUNTUP_INTERVAL_MS,
   MEEP_RISING_HOLD_MS,
   UNIVERSE_BAR_TICK_PERCENTS,
+  UNIVERSE_BAR_DARK_TEXT_FROM_PERCENT,
 } from '@/config/constants'
 
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
+
+/** Ab diesem Füllstand liegt die rechtsbündige Zahl auf dem hellen Gold. */
+const pctOnFill = computed(
+  () => gameStore.universeRescueProgress >= UNIVERSE_BAR_DARK_TEXT_FROM_PERCENT,
+)
 
 const isMeepHovered = ref(false)
 const isUniverseBarHovered = ref(false)
@@ -94,32 +100,25 @@ onUnmounted(() => {
       @mouseleave="isUniverseBarHovered = false"
     >
       <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
-        <div class="rpg-bar-flow" />
         <div class="rpg-bar-gloss" />
+        <!-- Ein einzelner Schräg-Schimmer, der per transform über den Balken
+             wandert (GPU) — statt eines dauerhaft laufenden Streifenmusters,
+             das als Paint-Animation jede Frame den Header neu zeichnen ließe. -->
+        <div class="rpg-bar-sweep" />
       </div>
-      <!-- Pulsierender Schein als eigene Ebene NEBEN dem Füllbalken: als Kind
-           würde ihn dessen overflow:hidden abschneiden, und als animiertes
-           box-shadow am Balken selbst wäre es eine Paint-Animation, die jede
-           Frame die ganze Seite neu zeichnen lässt. Hier atmet nur opacity.
-           Steht nach dem Balken, damit auch der innere Schimmer auf ihm liegt;
-           die Skalenstriche (z-index 2) bleiben darüber. -->
-      <div
-        class="rpg-bar-glow"
-        aria-hidden="true"
-        :style="{ width: gameStore.universeRescueProgress + '%' }"
-      />
-      <div class="rpg-ticks" aria-hidden="true">
+      <div class="rpg-segments" aria-hidden="true">
         <div
           v-for="tick in UNIVERSE_BAR_TICK_PERCENTS"
           :key="tick"
-          class="rpg-tick"
+          class="rpg-segment-line"
           :style="{ left: tick + '%' }"
         />
       </div>
       <div class="rpg-bar-border" />
       <div class="rpg-bar-text">
-        <span class="rpg-bar-name">Universe Rescue</span>
-        <span class="rpg-bar-pct">{{ gameStore.universeRescueProgress.toFixed(1) }}%</span>
+        <span class="rpg-bar-pct" :class="{ 'rpg-bar-pct--on-fill': pctOnFill }">
+          {{ gameStore.universeRescueProgress.toFixed(1) }}%
+        </span>
       </div>
     </div>
     <button v-else class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">
@@ -289,7 +288,8 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   ROW 2 — RPG progress bar, Beschriftung links / Prozent rechts
+   ROW 2 — Fortschrittsbalken ohne Beschriftung: nur der Prozentwert.
+   Was der Balken misst, sagt der Tooltip — im Header zählt die Zahl.
    ================================================================ */
 .rpg-bar-wrap {
   position: relative;
@@ -303,89 +303,54 @@ onUnmounted(() => {
   border-radius: 4px;
   overflow: hidden;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 0 0 2px rgba(255, 200, 60, 0.22),
-    inset 0 2px 8px rgba(0, 0, 0, 0.65);
-  background: rgba(8, 4, 0, 0.7);
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    inset 0 1px 5px rgba(0, 0, 0, 0.8);
+  background: #0d0904;
   transition: box-shadow 0.25s ease;
 }
 
 .rpg-bar-wrap--glow {
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 0 0 2px rgba(255, 200, 60, 0.55),
-    0 0 14px rgba(255, 200, 60, 0.55),
-    inset 0 2px 8px rgba(0, 0, 0, 0.65);
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    0 0 14px rgba(255, 200, 60, 0.5),
+    inset 0 1px 5px rgba(0, 0, 0, 0.8);
 }
 
 .rpg-bar-border {
   position: absolute;
   inset: 0;
   border-radius: 4px;
-  border: 1px solid rgba(255, 200, 60, 0.28);
+  border: 1px solid rgba(200, 144, 64, 0.42);
   pointer-events: none;
   z-index: 3;
 }
 
+/* Verlauf jetzt waagerecht in Laufrichtung statt als gewölbte Röhre —
+   flacher, ruhiger, und der Balken liest sich als eine Bewegung. */
 .rpg-bar-fill {
   position: absolute;
   top: 2px;
   bottom: 2px;
   left: 2px;
-  min-width: 6px;
-  border-radius: 4px;
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 240, 130, 0.75) 0%,
-    rgba(255, 200, 20, 1) 25%,
-    rgba(215, 145, 0, 1) 55%,
-    rgba(255, 200, 20, 1) 78%,
-    rgba(255, 240, 130, 0.7) 100%
-  );
+  min-width: 5px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #b8791c 0%, #e0a828 55%, #f5d666 100%);
   transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    0 0 8px rgba(255, 215, 0, 0.35),
-    inset 0 0 6px rgba(255, 215, 0, 0.1);
   overflow: hidden;
   z-index: 1;
 }
 
-/* Deckungsgleich mit .rpg-bar-fill, trägt aber nur den hellen Puls-Zustand */
-.rpg-bar-glow {
-  position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: 2px;
-  min-width: 6px;
-  border-radius: 4px;
-  pointer-events: none;
-  z-index: 1;
-  transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    0 0 20px rgba(255, 215, 0, 0.6),
-    inset 0 0 10px rgba(255, 215, 0, 0.2);
-  opacity: 0;
-  animation: barPulse 3.5s ease-in-out infinite;
-}
-
-/* Der Streifenlauf wandert per transform statt per background-position:
-   background-position ist eine Paint-Property, transform läuft auf der GPU.
-   Das Element ragt um eine Musterlänge (72px) nach links über den Balken,
-   overflow:hidden am Balken schneidet den Überstand sauber ab. */
-.rpg-bar-flow {
+/* Helle Fortschrittskante: markiert den Stand punktgenau, auch wenn der
+   Balken selbst durch die Segmente läuft. */
+.rpg-bar-fill::after {
+  content: '';
   position: absolute;
   top: 0;
   bottom: 0;
-  left: -72px;
   right: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0px,
-    rgba(255, 255, 255, 0.09) 14px,
-    rgba(255, 255, 255, 0.03) 22px,
-    transparent 36px
-  );
-  animation: flowMove 2.2s linear infinite;
+  width: 2px;
+  background: #fff4c8;
+  box-shadow: 0 0 8px rgba(255, 230, 140, 0.9);
 }
 
 .rpg-bar-gloss {
@@ -393,25 +358,42 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   right: 0;
-  height: 45%;
-  background: linear-gradient(to bottom, rgba(255, 245, 160, 0.18) 0%, transparent 100%);
-  border-radius: 4px 4px 0 0;
+  height: 42%;
+  background: linear-gradient(to bottom, rgba(255, 250, 210, 0.22) 0%, transparent 100%);
   pointer-events: none;
 }
 
-.rpg-ticks {
+.rpg-bar-sweep {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 32%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 100%
+  );
+  animation: barSweep 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Zehn gleiche Segmente statt vier Skalenstriche: die Trennlinien liegen
+   über dem Füller und geben ihm eine ablesbare Rasterung. */
+.rpg-segments {
+  position: absolute;
+  inset: 2px;
   pointer-events: none;
   z-index: 2;
 }
 
-.rpg-tick {
+.rpg-segment-line {
   position: absolute;
-  top: 22%;
-  bottom: 22%;
+  top: 0;
+  bottom: 0;
   width: 1px;
-  background: rgba(255, 215, 0, 0.2);
+  background: rgba(0, 0, 0, 0.45);
 }
 
 /* Beschriftung als eigene Zeile IM Balken: Name links, Prozent rechts.
@@ -422,54 +404,46 @@ onUnmounted(() => {
   inset: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 0 clamp(5px, 0.5vw, 9px);
+  justify-content: flex-end;
+  padding: 0 clamp(6px, 0.55vw, 10px);
   z-index: 5;
   pointer-events: none;
 }
 
-.rpg-bar-name {
-  font-size: clamp(9px, calc(var(--header-height) * 0.13), 14px);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
+/* Einziger Text im Balken. Ohne Namen daneben darf die Zahl größer stehen —
+   sie ist jetzt die Beschriftung. */
 .rpg-bar-pct {
-  font-size: clamp(10px, calc(var(--header-height) * 0.155), 17px);
+  font-size: clamp(11px, calc(var(--header-height) * 0.17), 19px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
   line-height: 1;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
   white-space: nowrap;
   flex-shrink: 0;
+  transition:
+    color 0.3s ease,
+    text-shadow 0.3s ease;
 }
 
-@keyframes barPulse {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
+/* Auf dem hellen Goldfüller kippt die Schrift ins Dunkle — dieselbe Lösung
+   wie beim Forge-Badge im Header, statt Weiß mit Schlagschatten. */
+.rpg-bar-pct--on-fill {
+  color: #2a1608;
+  text-shadow: 0 1px 0 rgba(255, 240, 180, 0.55);
 }
 
-@keyframes flowMove {
-  from {
+/* Weg in Prozent der EIGENEN Breite (32% des Füllers): von left:-40% bis
+   hinter die rechte Kante sind das 140/32 ≈ 437% — so bleibt der Lauf bei
+   jedem Füllstand und jeder Auflösung derselbe, ohne px-Annahme. */
+@keyframes barSweep {
+  0% {
     transform: translateX(0);
   }
-  to {
-    transform: translateX(72px);
+  55%,
+  100% {
+    transform: translateX(437%);
   }
 }
 
@@ -528,8 +502,7 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .meep-icon,
-  .rpg-bar-glow,
-  .rpg-bar-flow,
+  .rpg-bar-sweep,
   .prestige-btn {
     animation: none;
   }

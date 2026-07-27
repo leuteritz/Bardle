@@ -2834,8 +2834,11 @@ export const MEEP_COUNTUP_STEPS = 20
 export const MEEP_COUNTUP_INTERVAL_MS = 16
 // How long the meep counter keeps its "rising" highlight after the tween ends.
 export const MEEP_RISING_HOLD_MS = 300
-// Scale marks on the universe rescue bar (percent positions).
-export const UNIVERSE_BAR_TICK_PERCENTS = [20, 40, 60, 80] as const
+// Segment marks on the universe rescue bar (percent positions, every 10%).
+export const UNIVERSE_BAR_TICK_PERCENTS = [10, 20, 30, 40, 50, 60, 70, 80, 90] as const
+// From this fill level on, the right-aligned percentage sits ON the bright
+// gold fill and flips to dark text.
+export const UNIVERSE_BAR_DARK_TEXT_FROM_PERCENT = 84
 
 // Champion Shop — Chimes cost badge icon
 export const CHIMES_COST_ICON = 'game-icons:windchimes'
