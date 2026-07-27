@@ -136,6 +136,12 @@
         </div>
       </div>
     </TransitionGroup>
+
+    <!-- Die Achse als durchgehende Zierleiste — gezeigt nur, wenn sich Zeilen
+         auf ihr treffen. -->
+    <Transition name="seam-fade">
+      <StarTimerCenterSeam v-if="hasJoinedRows" />
+    </Transition>
   </div>
 </template>
 
@@ -163,6 +169,7 @@ import { CHAMPION_ROLES } from '../../config/championData'
 import { starEclipseState } from '../../utils/foregroundGate'
 import { useHeaderCenterArc } from '../../composables/useHeaderCenterArc'
 import { centerArcSideWidth } from '../../utils/geometry'
+import StarTimerCenterSeam from './StarTimerCenterSeam.vue'
 import type { StarGroup } from '../../stores/starGroupStore'
 import type { StarType } from '../../types'
 
@@ -800,6 +807,12 @@ const sortedEntries = computed<BarEntry[]>(() => {
   })
 })
 
+/**
+ * Trifft sich überhaupt eine Zeile auf der Achse? Nur dann wird die Zierlinie
+ * gezeigt — ohne Treffpunkt hätte sie nichts zu markieren.
+ */
+const hasJoinedRows = computed(() => sortedEntries.value.some((e) => e.joined))
+
 // Kommt eine Zeile hinzu, fällt eine weg oder tauschen zwei die Reihenfolge,
 // liegen die Tiefen sofort neu — ohne bis zum nächsten Ticker zu warten, denn
 // bis dahin trüge eine nachgerückte Zeile noch die Breite ihrer alten Position.
@@ -852,6 +865,19 @@ watch(
      Bewusst ohne `paint`: der Schein der Balken darf über die Zeile
      hinausleuchten. */
   contain: layout style;
+}
+
+/* Die Mittelachse als senkrechte Zierleiste liegt in `StarTimerCenterSeam` —
+   ein einziges Element für den ganzen Stapel statt einer Markierung je Zeile.
+   Hier bleibt nur ihr Ein- und Ausblenden. */
+.seam-fade-enter-active,
+.seam-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.seam-fade-enter-from,
+.seam-fade-leave-to {
+  opacity: 0;
 }
 
 .timer-bar-row:hover,
@@ -1010,14 +1036,8 @@ watch(
 /* Der Platzhalter zwischen den beiden Balkenseiten — er hält die Grid-Spalte,
    die das Mittel-Oval einnimmt. Ohne Innenabstand, denn unterhalb des Ovals
    geht diese Spalte auf 0: Ein Padding würde die Zeile dort überlaufen lassen,
-   statt die Seiten sauber in der Mitte zusammentreffen zu lassen.
-   `position: relative` trägt die Naht darunter — die Spalte IST die Achse,
-   damit sitzt sie ohne eigene Rechnung genau im Treffpunkt. */
+   statt die Seiten sauber in der Mitte zusammentreffen zu lassen. */
 .bar-center {
-  position: relative;
-  /* Über beide Seiten: Die rechte Hälfte steht im DOM NACH der Mitte und
-     überdeckte die Spange sonst zur Hälfte. */
-  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1044,66 +1064,19 @@ watch(
    Innenradien schnüren ihn zusätzlich zu einer Taille ein. Der Stoß liest sich
    damit als Versehen.
 
-   Statt ihn zu kaschieren, bekommt er einen Knoten: ein leuchtendes Rautenglied
-   auf der Achse, unterlegt von einem weichen Lichthof, der über beide Kanten
-   greift. Die Raute liegt quer zur Naht und bindet die Hälften damit zusammen,
-   statt sie zu trennen — eine senkrechte Spange an derselben Stelle las sich
-   prompt als Schnitt durch den Balken.
+   Beantwortet wird das nicht je Zeile, sondern einmal für den ganzen Stapel:
+   von einer senkrechten Zierlinie auf der Achse (`.center-seam`). Sie setzt
+   dort an, wo das Level-Badge endet, und läuft nach unten durch alle Zeilen,
+   die sich in der Mitte treffen. Damit steht die Achse als durchgehende Linie
+   im Bild, statt in jeder Zeile neu behauptet zu werden — und der Stoß liest
+   sich als Punkt AUF dieser Linie statt als Zufall.
 
-   Rein statisch gezeichnet: Bei 30 Zeilen ist jede Animation hier ein
-   Dauer-Repaint quer über den ganzen Header. */
-.timer-bar-row--joined .bar-center::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 28px;
-  transform: translateX(-50%);
-  pointer-events: none;
-  /* Der Hof reicht bewusst weiter als die Raute: Er lässt beide Enden
-     ineinander übergehen, damit der Knoten nicht aufgesetzt wirkt. */
-  background: radial-gradient(
-    ellipse 50% 58% at 50% 50%,
-    rgba(255, 236, 190, 0.45) 0%,
-    rgba(255, 214, 130, 0.16) 46%,
-    rgba(255, 214, 130, 0) 74%
-  );
-}
-
-.timer-bar-row--joined .bar-center::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  /* Anteil der Zeilenhöhe statt fester Größe: Die höhere Galaxieboss-Zeile
-     bekommt ihren Knoten damit im selben Verhältnis. */
-  height: 46%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%) rotate(45deg);
-  border-radius: 1px;
-  pointer-events: none;
-  background: linear-gradient(135deg, #fff6dc 0%, #f0c070 54%, #d08820 100%);
-  box-shadow:
-    0 0 0 1px rgba(28, 15, 5, 0.8),
-    0 0 6px 1px rgba(255, 200, 90, 0.5);
-}
-
-/* Die Spange hat einen Grund: Ohne die Radien greifen die beiden Füllungen
-   glatt ineinander, und sie schließt die Fuge — mit ihnen bliebe die Taille
-   auch hinter der Spange als Kerbe an Ober- und Unterkante stehen. */
+   Die Radien der Innenkanten fallen weg: Sonst schnürten die beiden 3px-Ecken
+   den Treffpunkt zu einer Taille ein, die auch unter der Linie als Kerbe an
+   Ober- und Unterkante stehenbliebe. */
 .timer-bar-row--joined .bar-side--left .bar-fill,
 .timer-bar-row--joined .bar-fill--mirrored {
   border-radius: 0;
-}
-
-/* Verdeckt trägt der Knoten die Korona statt des Goldes — dieselbe Sprache, in
-   der die Zeile ihren Zustand ohnehin spricht. Der dunkle Rand entfällt: Auf
-   dem fast schwarzen Rahmen gäbe er keinen Kontrast, sondern fräße nur den
-   Rand des Knotens weg. */
-.timer-bar-row--joined.timer-bar-row--eclipsed .bar-center::after {
-  background: linear-gradient(135deg, #fff4d2 0%, #f0a030 58%, #dd8418 100%);
-  box-shadow: 0 0 8px 2px rgba(255, 190, 80, 0.6);
 }
 
 /* ── Endkampf-Bars (zeitlos): Typ-Label mittig auf jeder Seitenfüllung ── */
@@ -1308,13 +1281,48 @@ watch(
   opacity: 0;
 }
 
-/* Der Countdown der Verdeckung in Koronafarbe — dieselbe Sprache wie der Saum
-   des Rahmens, damit erkennbar bleibt, worauf die Zahl jetzt zählt. Steht nach
-   den Fluch- und Rage-Regeln: Ein Stern kann verflucht sein und rasen, aber
-   solange er verdeckt ist, passiert nichts davon. */
+/* ── Der Countdown der Verdeckung: dieselbe Stelle, andere Rolle ────────────
+   An der Balkenkante stehen zwei ganz verschiedene Zeiten: wie lange der Stern
+   noch DA ist, und wie lange er noch hinter der Sonne steckt. Über die Farbe
+   allein waren sie kaum zu trennen — zwei gleich große, gleich fette Zahlen
+   nebeneinander in verschiedenen Zeilen lesen sich als dieselbe Größe.
+
+   Sie bekommen deshalb verschiedene Formen. Die Restzeit des Sterns steht frei
+   und hell (oben): Sie zählt herunter, bis er weg ist, und ist damit die Zahl,
+   nach der man handelt. Der Verdeckungs-Countdown sitzt gefasst in einer
+   dunklen Kapsel mit Koronarand — kleiner, ruhiger, und durch die Fassung
+   sofort als eigene Art von Zeit erkennbar. Das Bild passt zur Sache: Während
+   der Verdeckung ist der Stern eingeschlossen, es passiert nichts, man wartet.
+
+   Der Schein weicht der Kapsel: Zwei Signale übereinander — leuchtender Text
+   IN einem leuchtenden Rahmen — heben sich gegenseitig auf. Den Kontrast
+   trägt jetzt die Fassung.
+
+   Steht nach den Fluch- und Rage-Regeln: Ein Stern kann verflucht sein und
+   rasen, aber solange er verdeckt ist, passiert nichts davon. */
 .timer-bar-row--eclipsed .bar-seconds-label {
-  color: #ffe6b0;
-  filter: drop-shadow(0 0 7px rgba(255, 190, 70, 0.85)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.95));
+  /* Rund 82 % der freien Zahl — messbar kleiner, ohne in der nur ~14 px hohen
+     Zeile auf Full HD unleserlich zu werden. */
+  font-size: clamp(0.64rem, 0.25vw + 0.41rem, 0.85rem);
+  font-weight: 700;
+  color: #ffdca0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(9, 6, 3, 0.86);
+  box-shadow:
+    inset 0 0 0 1px rgba(238, 162, 52, 0.8),
+    0 0 8px rgba(232, 140, 30, 0.28);
+  filter: none;
+}
+
+/* Die Kapsel ist breiter als die nackte Ziffer — ohne größeren Abstand
+   schöbe sie sich über die Balkenkante, an der sie hängt. */
+.timer-bar-row--eclipsed .bar-seconds-label--left {
+  transform: translateX(calc(-50% - 1.55em)) translateY(-50%);
+}
+
+.timer-bar-row--eclipsed .bar-seconds-label--right {
+  transform: translateX(calc(50% + 1.55em)) translateY(-50%);
 }
 
 /* Der Rage-Überzug liegt auf der Füllung, die jetzt der Rahmen ist — er muss
@@ -1396,6 +1404,11 @@ watch(
    siehe `tf` dort. Hier stehen nur noch die Eigenschaften, die sich nie
    ändern. */
 
+/* Die Restzeit des Sterns — die Hauptzahl der Zeile. Sie steht frei auf dem
+   dunklen Grund neben der Füllung und trägt den hellsten Ton der Palette:
+   Gegen den gefassten Verdeckungs-Countdown (weiter unten) muss sie sich als
+   das Dringlichere behaupten, und dafür ist Helligkeit in der schmalen Zeile
+   das einzige Mittel, das keine zusätzliche Höhe kostet. */
 .bar-seconds-label {
   position: absolute;
   top: 50%;
@@ -1406,8 +1419,11 @@ watch(
   letter-spacing: 0.06em;
   pointer-events: none;
   white-space: nowrap;
-  color: var(--c2);
-  filter: drop-shadow(0 0 6px var(--glow)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+  /* Tabellenziffern: Ohne sie wechselt die Zahl bei jedem Sekundenschritt ihre
+     Breite und zappelt seitlich — bei 30 Zeilen ein unruhiges Bild. */
+  font-variant-numeric: tabular-nums;
+  color: var(--c3);
+  filter: drop-shadow(0 0 7px var(--glow)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.95));
   z-index: 1;
 }
 
