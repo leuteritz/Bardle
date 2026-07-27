@@ -2829,6 +2829,14 @@ export const HEADER_NOTIF_BADGE_MAX_PX = 36
 // Edge gap between neighbouring badges as a fraction of the badge diameter.
 export const HEADER_BADGE_EDGE_GAP_FRAC = 0.5
 
+// Header universe block — meep counter count-up tween (steps × interval ≈ 320ms)
+export const MEEP_COUNTUP_STEPS = 20
+export const MEEP_COUNTUP_INTERVAL_MS = 16
+// How long the meep counter keeps its "rising" highlight after the tween ends.
+export const MEEP_RISING_HOLD_MS = 300
+// Scale marks on the universe rescue bar (percent positions).
+export const UNIVERSE_BAR_TICK_PERCENTS = [20, 40, 60, 80] as const
+
 // Champion Shop — Chimes cost badge icon
 export const CHIMES_COST_ICON = 'game-icons:windchimes'
 
