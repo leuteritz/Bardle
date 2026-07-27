@@ -7,17 +7,17 @@
     <!-- Blue side -->
     <div class="side side--blue">
       <div class="side-stats">
-        <span class="stat stat--obj" title="Turrets destroyed"><Icon :icon="BATTLE_STAT_GAME_ICONS.turrets" width="17" height="17" class="stat-icon" /> {{ battleStore.team1Turrets }}</span>
-        <span class="stat stat--obj" title="Inhibitors destroyed"><Icon :icon="BATTLE_STAT_GAME_ICONS.inhibitors" width="17" height="17" class="stat-icon stat-icon--inhib" /> {{ battleStore.team1Inhibs }}</span>
-        <span class="stat stat--obj" title="Drakes secured"><img :src="BATTLE_STAT_IMAGES.dragons" alt="Drakes" class="stat-img" /> {{ battleStore.team1Drakes }}</span>
-        <span class="stat stat--obj" title="Barons secured"><img :src="BATTLE_STAT_IMAGES.barons" alt="Barons" class="stat-img" /> {{ battleStore.team1Barons }}</span>
+        <span class="stat stat--obj" title="Turrets destroyed"><Icon :icon="BATTLE_STAT_GAME_ICONS.turrets" width="17" height="17" class="stat-icon" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Turrets }}</span></span>
+        <span class="stat stat--obj" title="Inhibitors destroyed"><Icon :icon="BATTLE_STAT_GAME_ICONS.inhibitors" width="17" height="17" class="stat-icon stat-icon--inhib" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Inhibs }}</span></span>
+        <span class="stat stat--obj" title="Drakes secured"><img :src="BATTLE_STAT_IMAGES.dragons" alt="Drakes" class="stat-img" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Drakes }}</span></span>
+        <span class="stat stat--obj" title="Barons secured"><img :src="BATTLE_STAT_IMAGES.barons" alt="Barons" class="stat-img" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Barons }}</span></span>
         <span class="stat-divider" />
-        <span class="stat stat--cs" title="Team creep score"><Icon :icon="BATTLE_STAT_GAME_ICONS.cs" width="17" height="17" class="stat-icon stat-icon--cs" /> {{ formatNumber(team1CS) }}</span>
-        <span class="stat stat--dmg" title="Total damage dealt"><Icon :icon="BATTLE_STAT_GAME_ICONS.damage" width="17" height="17" class="stat-icon stat-icon--dmg" /> {{ formatNumber(team1Damage) }}</span>
+        <span class="stat stat--cs" title="Team creep score"><Icon :icon="BATTLE_STAT_GAME_ICONS.cs" width="17" height="17" class="stat-icon stat-icon--cs" /> <span v-ink-center.y class="stat-value">{{ formatNumber(team1CS) }}</span></span>
+        <span class="stat stat--dmg" title="Total damage dealt"><Icon :icon="BATTLE_STAT_GAME_ICONS.damage" width="17" height="17" class="stat-icon stat-icon--dmg" /> <span v-ink-center.y class="stat-value">{{ formatNumber(team1Damage) }}</span></span>
         <span class="stat-divider" />
-        <span class="stat stat--gold"><img :src="BATTLE_STAT_IMAGES.gold" alt="Gold" class="stat-img stat-img--gold" /> {{ formatNumber(battleStore.team1Gold) }}</span>
+        <span class="stat stat--gold"><img :src="BATTLE_STAT_IMAGES.gold" alt="Gold" class="stat-img stat-img--gold" /> <span v-ink-center.y class="stat-value">{{ formatNumber(battleStore.team1Gold) }}</span></span>
         <span class="stat-divider" />
-        <span class="stat stat--level">Lv {{ battleStore.team1AvgLevel }}</span>
+        <span class="stat stat--level"><span v-ink-center.y class="stat-value">Lv {{ battleStore.team1AvgLevel }}</span></span>
         <span class="alive-pips" title="Champions alive">
           <span
             v-for="(alive, i) in team1Alive"
@@ -31,11 +31,11 @@
 
     <!-- Center: kills + timer -->
     <div class="center">
-      <span class="kills kills--blue">{{ battleStore.team1Kills }}</span>
+      <span v-ink-center.y class="kills kills--blue">{{ battleStore.team1Kills }}</span>
       <div class="timer-block" title="Game time">
-        <div class="timer-value">{{ battleStore.formatTime(battleStore.battleTime) }}</div>
+        <div v-ink-center.y class="timer-value">{{ battleStore.formatTime(battleStore.battleTime) }}</div>
       </div>
-      <span class="kills kills--red">{{ battleStore.team2Kills }}</span>
+      <span v-ink-center.y class="kills kills--red">{{ battleStore.team2Kills }}</span>
     </div>
 
     <!-- Red side -->
@@ -49,17 +49,17 @@
             :class="{ 'pip--dead': !alive }"
           />
         </span>
-        <span class="stat stat--level">Lv {{ battleStore.team2AvgLevel }}</span>
+        <span class="stat stat--level"><span v-ink-center.y class="stat-value">Lv {{ battleStore.team2AvgLevel }}</span></span>
         <span class="stat-divider" />
-        <span class="stat stat--gold">{{ formatNumber(battleStore.team2Gold) }} <img :src="BATTLE_STAT_IMAGES.gold" alt="Gold" class="stat-img stat-img--gold" /></span>
+        <span class="stat stat--gold"><span v-ink-center.y class="stat-value">{{ formatNumber(battleStore.team2Gold) }}</span> <img :src="BATTLE_STAT_IMAGES.gold" alt="Gold" class="stat-img stat-img--gold" /></span>
         <span class="stat-divider" />
-        <span class="stat stat--dmg" title="Total damage dealt">{{ formatNumber(team2Damage) }} <Icon :icon="BATTLE_STAT_GAME_ICONS.damage" width="17" height="17" class="stat-icon stat-icon--dmg" /></span>
-        <span class="stat stat--cs" title="Team creep score">{{ formatNumber(team2CS) }} <Icon :icon="BATTLE_STAT_GAME_ICONS.cs" width="17" height="17" class="stat-icon stat-icon--cs" /></span>
+        <span class="stat stat--dmg" title="Total damage dealt"><span v-ink-center.y class="stat-value">{{ formatNumber(team2Damage) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.damage" width="17" height="17" class="stat-icon stat-icon--dmg" /></span>
+        <span class="stat stat--cs" title="Team creep score"><span v-ink-center.y class="stat-value">{{ formatNumber(team2CS) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.cs" width="17" height="17" class="stat-icon stat-icon--cs" /></span>
         <span class="stat-divider" />
-        <span class="stat stat--obj" title="Barons secured">{{ battleStore.team2Barons }} <img :src="BATTLE_STAT_IMAGES.barons" alt="Barons" class="stat-img" /></span>
-        <span class="stat stat--obj" title="Drakes secured">{{ battleStore.team2Drakes }} <img :src="BATTLE_STAT_IMAGES.dragons" alt="Drakes" class="stat-img" /></span>
-        <span class="stat stat--obj" title="Inhibitors destroyed">{{ battleStore.team2Inhibs }} <Icon :icon="BATTLE_STAT_GAME_ICONS.inhibitors" width="17" height="17" class="stat-icon stat-icon--inhib" /></span>
-        <span class="stat stat--obj" title="Turrets destroyed">{{ battleStore.team2Turrets }} <Icon :icon="BATTLE_STAT_GAME_ICONS.turrets" width="17" height="17" class="stat-icon" /></span>
+        <span class="stat stat--obj" title="Barons secured"><span v-ink-center.y class="stat-value">{{ battleStore.team2Barons }}</span> <img :src="BATTLE_STAT_IMAGES.barons" alt="Barons" class="stat-img" /></span>
+        <span class="stat stat--obj" title="Drakes secured"><span v-ink-center.y class="stat-value">{{ battleStore.team2Drakes }}</span> <img :src="BATTLE_STAT_IMAGES.dragons" alt="Drakes" class="stat-img" /></span>
+        <span class="stat stat--obj" title="Inhibitors destroyed"><span v-ink-center.y class="stat-value">{{ battleStore.team2Inhibs }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.inhibitors" width="17" height="17" class="stat-icon stat-icon--inhib" /></span>
+        <span class="stat stat--obj" title="Turrets destroyed"><span v-ink-center.y class="stat-value">{{ battleStore.team2Turrets }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.turrets" width="17" height="17" class="stat-icon" /></span>
       </div>
     </div>
   </div>
@@ -69,7 +69,7 @@
   <div class="momentum-meter" :class="meterClasses">
     <div class="momentum-row">
       <div class="momentum-pct momentum-pct--blue">
-        <span class="momentum-pct-value">{{ bluePercent }}%</span>
+        <span v-ink-center.y class="momentum-pct-value">{{ bluePercent }}%</span>
       </div>
       <div class="momentum-track">
         <div class="momentum-fill momentum-fill--blue" :style="{ width: bluePercent + '%' }" />
@@ -88,7 +88,7 @@
         >▲ +{{ -lastDelta }}%</span>
       </div>
       <div class="momentum-pct momentum-pct--red">
-        <span class="momentum-pct-value">{{ 100 - bluePercent }}%</span>
+        <span v-ink-center.y class="momentum-pct-value">{{ 100 - bluePercent }}%</span>
       </div>
     </div>
   </div>
@@ -213,8 +213,14 @@ watch(bluePercent, (next, prev) => {
   line-height: 1;
   font-variant-numeric: tabular-nums;
   color: #a8c4e8;
-  /* MedievalSharp metric fix — digits sit high in their em box */
-  transform: translateY(0.08em);
+}
+
+/* The MedievalSharp metric fix rides on the values themselves (v-ink-center.y),
+   measured per font size instead of guessed as one em constant. That also
+   retires the counter-nudges icons, dividers and pips used to need: the row is
+   no longer shifted as a whole, so nothing has to be shifted back. */
+.stat-value {
+  display: inline-block;
 }
 .side-stats--red {
   color: #e8b0b0;
@@ -257,9 +263,6 @@ watch(bluePercent, (next, prev) => {
   background: linear-gradient(to bottom, transparent, #8a5c22 25%, #c89040 50%, #8a5c22 75%, transparent);
   flex-shrink: 0;
   align-self: center;
-  /* cancel the parent's baseline nudge — without this the bar sits lower than
-     its siblings and reads as a "different" divider next to tall content */
-  transform: translateY(-0.08em);
 }
 
 /* Icons & images share one identical, immutable box — big and readable,
@@ -271,9 +274,6 @@ watch(bluePercent, (next, prev) => {
   width: clamp(19px, 3.8cqh, 26px);
   height: clamp(19px, 3.8cqh, 26px);
   flex-shrink: 0;
-  /* Cancel the digit-baseline nudge of .side-stats (same trick as .alive-pips)
-     so icons sit on the same optical centerline as the text next to them */
-  transform: translateY(-0.08em);
 }
 .stat-icon { opacity: 0.85; }
 .stat-icon--inhib { color: #e884d8; }
@@ -286,8 +286,6 @@ watch(bluePercent, (next, prev) => {
   display: flex;
   align-items: center;
   gap: 3px;
-  /* Cancel the digit-baseline nudge of .side-stats for the bars */
-  transform: translateY(-0.08em);
 }
 .pip {
   width: clamp(8px, 1cqw, 12px);
@@ -332,9 +330,6 @@ watch(bluePercent, (next, prev) => {
   line-height: 1;
   min-width: clamp(30px, 5.4cqh, 40px);
   text-align: center;
-  /* Same MedievalSharp metric fix as the momentum values: digits render high
-     in their em box, nudge down for equal space above and below */
-  transform: translateY(0.1em);
 }
 .kills--blue { color: #93c5fd; }
 .kills--red { color: #fca5a5; }
@@ -354,8 +349,6 @@ watch(bluePercent, (next, prev) => {
   font-variant-numeric: tabular-nums;
   line-height: 1;
   text-shadow: 0 0 12px rgba(232, 192, 64, 0.5);
-  /* MedievalSharp digits sit high in their em box — same nudge as .kills */
-  transform: translateY(0.08em);
 }
 
 /* ── Compact modes: on narrow boards every stat stays visible — fonts,
@@ -462,10 +455,10 @@ watch(bluePercent, (next, prev) => {
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  /* MedievalSharp digits sit high in their em box — nudge down so the number
-     is visually centered on the momentum track at every size.
-     Scale factor grows with the leading team's dominance tier. */
-  transform: translateY(0.1em) scale(var(--pct-scale, 1));
+  /* Only the dominance scaling lives on transform — the metric fix comes from
+     v-ink-center.y via the standalone translate property and therefore survives
+     both this scale and its transition. */
+  transform: scale(var(--pct-scale, 1));
   transition:
     transform 0.5s ease,
     opacity 0.5s ease,

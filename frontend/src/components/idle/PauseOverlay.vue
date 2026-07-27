@@ -64,7 +64,7 @@
 
           <div class="chime-readout">
             <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
-            <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
+            <span v-ink-center.y class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
           </div>
 
           <!-- Stat tiles -->
@@ -644,7 +644,9 @@ function particleStyle(i: number): Record<string, string> {
   font-size: clamp(2.4rem, 4.2vw, 3.6rem);
   font-weight: 800;
   line-height: 1;
-  transform: translateY(0.06em);
+  /* Der Höhenausgleich gegen die Chime-Grafik daneben kommt gemessen von
+     v-ink-center.y — die Schriftgröße hängt hier an vw, ein fester em-Wert
+     träfe nur eine Fensterbreite (siehe utils/textInkOffset.ts). */
   color: #f0d060;
   font-variant-numeric: tabular-nums;
   text-shadow:

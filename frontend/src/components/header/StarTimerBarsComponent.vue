@@ -61,6 +61,7 @@
                 <span
                   v-for="label in entry.hpLabels"
                   :key="label.id"
+                  v-ink-center.y
                   class="planet-hp"
                   :class="`planet-hp--${label.state}`"
                   ><span v-ink-center class="planet-hp__num">{{ label.pct }}</span></span
@@ -122,6 +123,7 @@
                 <span
                   v-for="label in entry.hpLabels"
                   :key="label.id"
+                  v-ink-center.y
                   class="planet-hp"
                   :class="`planet-hp--${label.state}`"
                   ><span v-ink-center class="planet-hp__num">{{ label.pct }}</span></span
@@ -999,13 +1001,12 @@ const sortedEntries = computed<BarEntry[]>(() => {
      steht sie exakt auf Kugelmitte. */
   align-items: center;
   flex: none;
-  /* Metrik-Ausgleich: MedievalSharp setzt Ziffern mit ascent 11 / descent 1 —
-     sie sitzen also fast vollständig über der Baseline. Zentriert man die
-     Zeilenbox, steht die sichtbare Tinte rund 0.077em zu hoch. Der Versatz
-     kommt über `top` und nicht über `transform`, weil der Puls der kritischen
-     Zahlen das transform belegt und den Ausgleich sonst überschreiben würde. */
-  position: relative;
-  top: 0.16em;
+  /* Der Metrik-Ausgleich nach unten kommt nicht mehr aus einer em-Konstante,
+     sondern gemessen von `v-ink-center.y` im Template: der nötige Versatz ist
+     kein fester Bruchteil der Schriftgröße, sondern wächst zwischen Full HD
+     und 2K von 0.079em auf 0.117em (siehe utils/textInkOffset.ts). Die alten
+     0.16em standen deshalb nur auf 2K richtig und ließen die Zahl auf Full HD
+     gut einen Pixel zu tief stehen. */
   /* Flüssig skaliert für 1280px (~11.3px) bis 2560px (~14.7px) Viewport-Breite */
   font-size: clamp(0.72rem, 0.26vw + 0.5rem, 0.95rem);
   font-weight: 800;
