@@ -994,6 +994,8 @@ export interface ScoreboardFitCell {
   em: number
   /** Width of the cell's label at font-size 1px; 0 → the cell has no label. */
   labelEm: number
+  /** Same for the cell's short caption; falls back to labelEm when absent. */
+  labelShortEm?: number
   /** true → the value renders on two stacked lines (win / loss). */
   stacked?: boolean
 }
@@ -1008,6 +1010,8 @@ export interface ScoreboardFitInput {
   rightCells: ScoreboardFitCell[]
   /** Internal: the second pass sets this to false once labels have been dropped. */
   showLabels?: boolean
+  /** Internal: set once the fit falls back to the short captions. */
+  useShortLabels?: boolean
 }
 
 /** Every size the scoreboard renders with — all in px, all derived. */
@@ -1016,6 +1020,8 @@ export interface ScoreboardFit {
   stackedValueSize: number
   /** 0 → labels do not fit and are not rendered. */
   labelSize: number
+  /** true → the strip renders the short caption of every cell. */
+  shortLabels: boolean
   rowGap: number
   /** 0 → icons would be specks and are not rendered. */
   iconSize: number
