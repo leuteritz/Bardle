@@ -156,8 +156,7 @@ onUnmounted(() => {
 .uni-stats {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: clamp(8px, 0.8vw, 16px);
+  gap: clamp(6px, 0.55vw, 10px);
   width: 100%;
   min-width: 0;
   flex-shrink: 0;
@@ -173,12 +172,16 @@ onUnmounted(() => {
   transition: filter 0.3s;
 }
 
-/* Galaxie links, Meeps rechtsbündig an der Balkenkante — dazwischen der
-   Header-Divider, der durch space-between zu beiden Seiten gleich weit
-   entfernt steht. */
+/* Beide Hälften gleich breit (flex-basis 0 + grow 1), Inhalt darin zentriert:
+   der Divider steht damit exakt in der Mitte und Galaxie wie Meeps sitzen
+   mittig in ihrem Feld. min-width: min-content ist die Reißleine — reicht der
+   Platz für eine sehr lange Meep-Zahl nicht, rückt lieber der Divider aus der
+   Mitte, als dass die Zahl abgeschnitten wird. */
 .uni-tile--galaxy,
 .uni-tile--meep {
-  flex: 0 1 auto;
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: min-content;
 }
 
 /* Übernimmt Verlauf und Schimmer von .header-divider (global), nur die
@@ -211,7 +214,9 @@ onUnmounted(() => {
 .tile-text {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  /* Label über der Zahl zentriert: sonst zieht das breitere Wort die Zahl
+     aus der Mitte ihrer Hälfte. */
+  align-items: center;
   justify-content: center;
   gap: 1px;
   min-width: 0;
@@ -228,9 +233,9 @@ onUnmounted(() => {
 }
 
 .tile-value {
-  /* Ohne Kachelrahmen ist Breite frei — die Zahlen dürfen entsprechend
-     größer stehen, ohne dass die Meep-Zahl auf 4K anstößt. */
-  font-size: min(calc(var(--header-height) * 0.28), 28px);
+  /* Cap bei 26px: bei zwei exakt gleich breiten Hälften ist die Meep-Zahl
+     der Engpass — auf 4K bleiben ihr rund 120px, mit 28px liefe sie an. */
+  font-size: min(calc(var(--header-height) * 0.28), 26px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
