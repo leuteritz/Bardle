@@ -117,33 +117,6 @@
         <span class="sun-aim-ring sun-aim-ring--inner" />
       </span>
 
-      <!-- ⑤ Fluch-Chip am Stern (links neben dem Stern, Stil des Jungle-Buff-Chips) -->
-      <template
-        v-for="star in frontStars.filter((s) => s.id === cursedStarId)"
-        :key="'curse-badge-anchor-' + star.id"
-      >
-        <div
-          class="star-status-badge-anchor"
-          :class="{ 'star-status-badge-anchor--dimmed': isStarHoverDimmed(star.id) }"
-          :ref="(el) => setMapEl(curseBadgeEls, star.id, el)"
-          :style="{
-            transform: `translate(${star.x - starSize(star.starType) / 2 - 48}px, ${star.y - 14}px)`,
-            zIndex: 16,
-          }"
-        >
-          <Transition name="curse-badge">
-            <div
-              v-if="curseSecsLeft > 0"
-              class="star-curse-chip"
-              :class="{ 'star-curse-chip--urgent': curseSecsLeft <= 3 }"
-            >
-              <img :src="midRoleImage" alt="" draggable="false" />
-              <span class="star-curse-secs">{{ curseSecsLeft }}s</span>
-            </div>
-          </Transition>
-        </div>
-      </template>
-
       <!-- ④ Stern-Gesamt-Belohnung -->
       <template v-for="star in frontStars" :key="'summary-' + star.id">
         <div
@@ -159,6 +132,7 @@
                 hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
               'star-reward-summary--hover-dimmed': isStarHoverDimmed(star.id),
               'star-reward-summary--raging': ragingStarId === star.id,
+              'star-reward-summary--cursed': isCursedStar(star.id),
             },
           ]"
           :style="rewardSummaryStyle(star)"
@@ -168,15 +142,37 @@
           @mouseleave="setSummaryHover(null)"
         >
           <div class="summary-inner">
-            <!-- Rage-Banner: der einzige Zusatz am Stern selbst. Er sitzt über
-                 der Beute, weil er sie qualifiziert — solange er steht, kostet
-                 dieser Stern doppelten Schaden. -->
-            <Transition name="summary-rage">
-              <div v-if="ragingStarId === star.id" class="summary-rage">
-                <span class="summary-rage__label">Rage</span>
-                <span class="summary-rage__secs">{{ rageSecsLeft }}s</span>
-              </div>
-            </Transition>
+            <!-- Statusmarken: die einzigen Zusätze am Stern selbst. Sie sitzen
+                 über der Beute, weil sie sie qualifizieren — Fluch (unser
+                 Debuff AUF dem Stern) oben, Rage (sein Buff) unten direkt an
+                 der Leine. Liegt nur einer an, sitzt er allein unten; der
+                 andere klappt darüber auf, ohne den Block zu verschieben. -->
+            <div class="summary-states">
+              <Transition name="summary-state">
+                <div
+                  v-if="isCursedStar(star.id) && curseSecsLeft > 0 && curseDef"
+                  class="summary-state summary-state--curse"
+                  :class="{ 'summary-state--urgent': curseSecsLeft <= 3 }"
+                >
+                  <Icon
+                    :icon="curseDef.icon"
+                    class="summary-state__icon"
+                    width="16"
+                    height="16"
+                    aria-hidden="true"
+                  />
+                  <span class="summary-state__label">{{ curseDef.name }}</span>
+                  <span class="summary-state__secs">{{ curseSecsLeft }}s</span>
+                </div>
+              </Transition>
+
+              <Transition name="summary-state">
+                <div v-if="ragingStarId === star.id" class="summary-state summary-state--rage">
+                  <span class="summary-state__label">Rage</span>
+                  <span class="summary-state__secs">{{ rageSecsLeft }}s</span>
+                </div>
+              </Transition>
+            </div>
 
             <div
               v-if="getStarRewardSummary(star).champion"
@@ -236,7 +232,10 @@
             v-if="star.remainingCount > 0"
             :key="star.remainingCount"
             class="star-planet-count"
-            :class="{ 'star-planet-count--raging': ragingStarId === star.id }"
+            :class="{
+              'star-planet-count--cursed': isCursedStar(star.id),
+              'star-planet-count--raging': ragingStarId === star.id,
+            }"
             :style="starCountStyle(star)"
             :ref="(el) => setMapEl(countEls, star.id, el)"
           >
@@ -252,6 +251,7 @@
 
 <script setup lang="ts">
 import { hexToRgb } from '@/utils/format'
+import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
@@ -264,7 +264,7 @@ import { useCombatStore } from '../../../stores/combatStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetShopStore } from '../../../stores/planetShopStore'
 import { usePlayerStore } from '../../../stores/playerStore'
-import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
+import { useRoleBehaviorStore, CURSE_DEFS } from '../../../stores/roleBehaviorStore'
 import { useUiStore } from '../../../stores/uiStore'
 import { useRenderingPaused } from '../../../composables/useRenderingPaused'
 import { resetCanvasIfContextLost } from '../../../utils/canvasContext'
@@ -279,7 +279,6 @@ import {
   ENEMY_PROJECTILE_DAMAGE,
   ROLE_MID_CURSE_ATTACK_DEBUFF,
   ROLE_MID_CURSE_ATTACK_SLOW,
-  ROLE_MID_CURSE_DURATION_MS,
   STAR_BURST_COOLDOWN,
   STAR_BURST_DELAY_BETWEEN_SHOTS,
   BOSS_NOVA_INTERVAL_MS,
@@ -349,7 +348,6 @@ const starBackEls = new Map<string, HTMLElement>()
 const starWrapEls = new Map<string, HTMLElement>()
 const summaryEls = new Map<string, HTMLElement>()
 const countEls = new Map<string, HTMLElement>()
-const curseBadgeEls = new Map<string, HTMLElement>()
 
 type TemplateRef = Element | ComponentPublicInstance | null | undefined
 
@@ -371,7 +369,6 @@ const ALL_EL_MAPS: Map<string, Element>[] = [
   starWrapEls,
   summaryEls,
   countEls,
-  curseBadgeEls,
 ]
 let sweepCounter = 0
 
@@ -509,7 +506,6 @@ function applyFrames() {
     }
   }
 
-  const cursedId = cursedStarId.value
   for (const star of starRenders.value) {
     const s = starSize(star.starType)
     const half = s / 2
@@ -544,21 +540,6 @@ function applyFrames() {
     if (count) {
       count.style.transform = `translate(${star.x}px, ${star.y - half - 25}px) translateX(-50%) translateY(-100%)`
       count.style.opacity = focus ? '1' : (star.opacity * dimFactor).toFixed(3)
-    }
-
-    if (star.id === cursedId) {
-      const badge = curseBadgeEls.get(star.id)
-      if (badge) {
-        badge.style.transform = `translate(${star.x - half - 48}px, ${star.y - 14}px)`
-        const curse = roleBehaviorStore.activeCurse
-        if (curse) {
-          const frac = Math.min(
-            1,
-            Math.max(0, (curse.activeUntil - Date.now()) / ROLE_MID_CURSE_DURATION_MS),
-          )
-          badge.style.setProperty('--curse-progress', frac.toFixed(3))
-        }
-      }
     }
   }
 
@@ -619,9 +600,20 @@ const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const { isIdleRenderingPaused, isIdleSimulationPaused } = useRenderingPaused()
 
-// ── Midlaner Fluch-Timer ──────────────────────────────────────────────────────
+// ── Midlaner Fluch am Stern ───────────────────────────────────────────────────
+// Der Fluch wird exakt wie die Boss-Rage getragen: Marke auf der Leine über der
+// Beute plus Umfärben von Beute-Block und Planetenzähler. Gegenrichtung, gleiche
+// Grammatik — Rage ist der Buff DES Sterns (Crimson), der Fluch unser Debuff AUF
+// ihm (Violett, wie im Boss-HUD des Rescue-Overlays).
 const curseSecsLeft = ref(0)
-const midRoleImage = ROLE_BY_KEY['mid'].image
+const curseDef = computed(() => {
+  const curse = roleBehaviorStore.activeCurse
+  return curse ? CURSE_DEFS[curse.type] : null
+})
+
+function isCursedStar(starId: string): boolean {
+  return cursedStarId.value === starId
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Boss-Rage am Stern ────────────────────────────────────────────────────────
@@ -1802,13 +1794,20 @@ function starCountStyle(star: StarRenderEntry) {
     inset 0 0 0 1px rgba(232, 192, 64, 0.2);
 }
 
-/* ── Boss-Rage am Stern ──────────────────────────────────────────────────────
+/* ── Statuszustände am Stern: Boss-Rage & Fluch ──────────────────────────────
    Der Sternkörper bleibt bewusst unberührt: er trägt bereits Eigenfarbe, Glow
    und Typ-Puls — ein zweites Signal darauf macht beide unlesbar. Getragen wird
    der Zustand von den zwei Elementen, die ohnehin schon Text zeigen: Beute-
-   Block und Planetenzähler. Beide wechseln auf dieselbe Crimson-Sprache wie
-   der Rage-Ring im Star-Fight (#ff2e63 / #ff5c85 / #ffb0c4) — es liest sich
-   damit sofort als dieselbe Mechanik, nicht als neuer Zustand.
+   Block und Planetenzähler.
+
+   Zwei Zustände, eine Grammatik, zwei Farben — das Vorzeichen steckt allein in
+   der Farbe:
+     Rage  = Buff DES Sterns  → Crimson (#ff2e63 / #ff5c85 / #ffb0c4), wie der
+             Rage-Ring im Star-Fight
+     Fluch = unser Debuff AUF dem Stern → Violett (#c060ff / #d9a0ff), wie das
+             Curse-Panel im Rescue-Overlay
+   Beide sprechen damit die Sprache, die der Spieler an anderer Stelle für
+   dieselbe Mechanik schon kennt.
 
    Bewegt wird ausschließlich die Opazität eines Overlays. Weder border-color
    noch box-shadow werden je animiert: beide zwingen den Browser, die Box samt
@@ -1824,6 +1823,13 @@ function starCountStyle(star: StarRenderEntry) {
     inset 0 0 0 1px rgba(255, 46, 99, 0.14);
 }
 
+.star-reward-summary--cursed .summary-inner {
+  border-color: rgba(160, 40, 255, 0.72);
+  box-shadow:
+    0 0 14px rgba(160, 40, 255, 0.3),
+    inset 0 0 0 1px rgba(160, 40, 255, 0.14);
+}
+
 /* Auch das Verbindungsstrichlein zum Stern zieht mit — sonst hinge ein roter
    Block an einer goldenen Leine. */
 .star-reward-summary--raging .summary-inner::before {
@@ -1835,7 +1841,17 @@ function starCountStyle(star: StarRenderEntry) {
   );
 }
 
-.star-reward-summary--raging .summary-inner::after {
+.star-reward-summary--cursed .summary-inner::before {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(160, 40, 255, 0.3) 40%,
+    rgba(192, 96, 255, 0.7) 100%
+  );
+}
+
+.star-reward-summary--raging .summary-inner::after,
+.star-reward-summary--cursed .summary-inner::after {
   content: '';
   position: absolute;
   inset: -1px;
@@ -1843,10 +1859,55 @@ function starCountStyle(star: StarRenderEntry) {
   border-radius: 4px;
   opacity: 0;
   pointer-events: none;
-  animation: summary-rage-pulse 1.1s ease-in-out infinite;
+  animation: summary-state-pulse 1.1s ease-in-out infinite;
 }
 
-@keyframes summary-rage-pulse {
+/* Der Fluch pulst langsamer als die Rage: er ist unser Zeitfenster, keine
+   Warnung — und zwei gleich schnelle Pulse nebeneinander flackerten. */
+.star-reward-summary--cursed .summary-inner::after {
+  border-color: rgba(200, 120, 255, 0.95);
+  animation-duration: 1.6s;
+}
+
+/* ── Beides gleichzeitig ──────────────────────────────────────────────────────
+   Die statische Kontur gehört der Rage: sie ist die Gefahr, und Gefahr gewinnt
+   die ruhige Fläche. Der Puls darüber wird zum Verlauf Violett → Crimson und
+   zeigt damit beide Kräfte an einem Rahmen, statt zwei Ringe übereinander zu
+   stapeln. Technisch ein 1px-Gradient-Rahmen per Masken-Trick (border kann
+   keinen Verlauf) — animiert wird weiterhin nur opacity. */
+.star-reward-summary--cursed.star-reward-summary--raging .summary-inner {
+  border-color: rgba(255, 46, 99, 0.72);
+  box-shadow:
+    0 0 14px rgba(255, 46, 99, 0.26),
+    0 0 22px rgba(160, 40, 255, 0.22),
+    inset 0 0 0 1px rgba(200, 120, 255, 0.12);
+}
+
+.star-reward-summary--cursed.star-reward-summary--raging .summary-inner::before {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(192, 96, 255, 0.55) 45%,
+    rgba(255, 92, 133, 0.75) 100%
+  );
+}
+
+.star-reward-summary--cursed.star-reward-summary--raging .summary-inner::after {
+  border: none;
+  padding: 1px;
+  background: linear-gradient(150deg, #c060ff 0%, #e0509f 50%, #ff2e63 100%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation-duration: 1.1s;
+}
+
+@keyframes summary-state-pulse {
   0%,
   100% {
     opacity: 0;
@@ -1856,66 +1917,145 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
-/* Rage-Marke über der Beute: sie qualifiziert den Loot darunter — solange sie
-   steht, kostet dieser Stern doppelten Schaden.
+/* Statusmarken über der Beute: sie qualifizieren den Loot darunter — solange
+   Rage steht, kostet dieser Stern doppelten Schaden; solange der Fluch steht,
+   ist er angeschlagen.
 
    Bewusst absolut aus dem Fluss genommen und in den leeren Verbindungsstrich
    zum Stern gehängt, statt als zusätzliche Zeile im Block: der Block hängt
    unter dem Stern und wächst nach unten: eine Zeile mehr schiebt ihn bei tief
    stehenden Sternen in die Bottom-Bar. So bleibt seine Höhe unverändert, und
-   der Platz auf der Leine war ohnehin ungenutzt. */
-.summary-rage {
+   der Platz auf der Leine war ohnehin ungenutzt.
+
+   Der Stapel ist unten verankert (bottom) und wächst nach oben in die Leine
+   hinein: liegt nur ein Zustand an, sitzt seine Marke exakt dort, wo die
+   Rage-Marke bisher saß — der zweite klappt darüber auf, ohne die erste zu
+   verschieben. Zwei Marken belegen zusammen ~46px der 52px langen Leine, der
+   Stern darüber bleibt also frei. */
+.summary-states {
   position: absolute;
-  bottom: calc(100% + 7px);
+  bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.summary-state {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 0.4em;
+  gap: 0.38em;
   white-space: nowrap;
-  padding: 0.15em 0.5em;
+  padding: 0.14em 0.5em;
   border-radius: 4px;
+}
+
+.summary-state--rage {
   background: rgba(26, 5, 14, 0.88);
   border: 1px solid rgba(255, 46, 99, 0.75);
 }
 
-.summary-rage__label {
+.summary-state--curse {
+  background: rgba(16, 4, 30, 0.88);
+  border: 1px solid rgba(160, 40, 255, 0.75);
+}
+
+.summary-state__label {
   font-size: 0.72em;
   font-weight: 900;
-  letter-spacing: 0.24em;
+  line-height: 1;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.summary-state__secs {
+  font-size: 1.05em;
+  font-weight: 800;
+  line-height: 1;
+  /* Tabellenziffern: die Zeile darf beim Herunterzählen nicht zappeln */
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.summary-state__icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+}
+
+.summary-state--rage .summary-state__label {
   color: #ffb0c4;
   text-shadow:
     0 0 8px rgba(255, 46, 99, 0.8),
     0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-.summary-rage__secs {
-  font-size: 1.1em;
-  font-weight: 800;
-  line-height: 1;
+.summary-state--rage .summary-state__secs {
   color: #ff5c85;
-  /* Tabellenziffern: die Zeile darf beim Herunterzählen nicht zappeln */
-  font-variant-numeric: tabular-nums;
   text-shadow:
     0 0 8px rgba(255, 46, 99, 0.7),
     0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-/* Da die Marke aus dem Fluss genommen ist, kann sie ohne Höhen-Interpolation
-   ein- und ausblenden — der Block darunter bewegt sich dabei nie. */
-.summary-rage-enter-active,
-.summary-rage-leave-active {
+.summary-state--curse .summary-state__label {
+  /* Fluchnamen sind länger als "Rage" (CORRUPTION) — etwas engere Sperrung,
+     damit die Marke nicht breiter wird als der Beute-Block darunter. */
+  letter-spacing: 0.14em;
+  color: #d9a0ff;
+  text-shadow:
+    0 0 8px rgba(160, 40, 255, 0.8),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.summary-state--curse .summary-state__secs {
+  color: #c060ff;
+  text-shadow:
+    0 0 8px rgba(160, 40, 255, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.summary-state--curse .summary-state__icon {
+  color: #cc44ff;
+  filter: drop-shadow(0 0 4px rgba(180, 50, 255, 0.85));
+}
+
+/* Letzte 3 Sekunden: der Fluch blinkt, bleibt aber violett. Ein Umschlag auf
+   Rot (wie beim alten Chip) wäre hier fatal — direkt über der Crimson-Rage
+   läse sich der auslaufende Fluch als zweiter Rage-Zustand. */
+.summary-state--urgent {
+  animation: summary-state-urgent 0.55s ease-in-out infinite;
+}
+
+@keyframes summary-state-urgent {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Da die Marken aus dem Fluss genommen sind, können sie ohne Höhen-
+   Interpolation ein- und ausblenden — der Block darunter bewegt sich dabei
+   nie. Der Stapel selbst ist unten verankert, deshalb rutscht die Rage-Marke
+   auch nicht, wenn der Fluch darüber kommt oder geht. */
+.summary-state-enter-active,
+.summary-state-leave-active {
   transition:
     opacity 0.2s ease,
     transform 0.2s ease;
 }
 
-.summary-rage-enter-from,
-.summary-rage-leave-to {
+.summary-state-enter-from,
+.summary-state-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(4px);
+  transform: translateY(4px);
 }
 
 .summary-loot-row {
@@ -2034,15 +2174,21 @@ function starCountStyle(star: StarRenderEntry) {
   }
 
   /* Puls aus, Ring an: ohne die Animation stünde das Overlay auf opacity 0 und
-     der Rage-Zustand verlöre ausgerechnet sein auffälligstes Signal. */
+     Rage bzw. Fluch verlören ausgerechnet ihr auffälligstes Signal. */
   .star-reward-summary--raging .summary-inner::after,
-  .star-planet-count--raging::after {
+  .star-reward-summary--cursed .summary-inner::after,
+  .star-planet-count--raging::after,
+  .star-planet-count--cursed::after {
     animation: none;
     opacity: 1;
   }
 
-  .summary-rage-enter-active,
-  .summary-rage-leave-active {
+  .summary-state--urgent {
+    animation: none;
+  }
+
+  .summary-state-enter-active,
+  .summary-state-leave-active {
     transition: none;
   }
 }
@@ -2138,6 +2284,35 @@ function starCountStyle(star: StarRenderEntry) {
   line-height: 1;
 }
 
+/* Fluch: derselbe Zähler in Violett, Puls etwas schneller als im Ruhezustand.
+   Steht gleichzeitig Rage an, gewinnen deren Regeln (sie stehen danach) — auf
+   dieser Fläche ist für zwei Farben kein Platz, und die Warnung wiegt schwerer
+   als die Chance. Der Fluch bleibt über Marke und Block-Rahmen präsent. */
+.star-planet-count--cursed {
+  background: rgba(16, 4, 30, 0.86);
+  border-color: rgba(160, 40, 255, 0.75);
+}
+
+.star-planet-count--cursed::after {
+  border-color: rgba(200, 120, 255, 0.95);
+  animation-duration: 1.6s;
+}
+
+.star-planet-count--cursed .star-planet-count__current {
+  color: #c060ff;
+  text-shadow:
+    0 0 5px rgba(160, 40, 255, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.star-planet-count--cursed .star-planet-count__sep,
+.star-planet-count--cursed .star-planet-count__total {
+  color: #d9a0ff;
+  text-shadow:
+    0 0 4px rgba(160, 40, 255, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
 /* Rage: derselbe Zähler, nur in Crimson und mit doppelt so schnellem Puls.
    Bewusst kein zusätzliches Element und keine zweite Animation — der
    vorhandene Opazitäts-Puls bekommt nur andere Werte, die laufenden Kosten
@@ -2189,139 +2364,4 @@ function starCountStyle(star: StarRenderEntry) {
   scale: 0.7;
 }
 
-/* ── Fluch — Countdown-Chip ───────────────────────────────────────────────
-   Runder Chip im Stil des Jungle-Buff-Chips am Planeten: dunkler Grund,
-   Mid-Rollen-Icon innen, konischer Ring außen, der mit der Restdauer
-   abschmilzt. Feste px-Größe, damit er auf allen Desktop-Auflösungen
-   lesbar bleibt — sitzt LINKS neben dem verfluchten Stern, vertikal
-   mittig, damit er die zentrierte Planeten-Anzeige darüber nicht
-   überlappt. */
-.star-status-badge-anchor {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  transition: opacity 150ms ease;
-}
-
-/* Hover-Fokus (Champion/Planet im Command Panel oder anderer Stern):
-   Fluch-Chip blendet mit seinem Stern aus */
-.star-status-badge-anchor--dimmed {
-  opacity: var(--hover-dim-opacity, 0.08);
-}
-
-.star-curse-chip {
-  position: relative;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(38, 18, 52, 0.96), rgba(12, 4, 20, 0.96));
-  display: grid;
-  place-items: center;
-  box-shadow:
-    0 0 8px rgba(180, 50, 255, 0.55),
-    0 0 18px rgba(180, 50, 255, 0.25),
-    0 2px 5px rgba(0, 0, 0, 0.55);
-}
-
-/* Countdown-Ring: conic-gradient, per Maske auf einen Ring reduziert */
-.star-curse-chip::before {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: conic-gradient(
-    #c060ff calc(var(--curse-progress, 1) * 360deg),
-    rgba(192, 96, 255, 0.14) 0
-  );
-  -webkit-mask: radial-gradient(
-    farthest-side,
-    transparent calc(100% - 3px),
-    #000 calc(100% - 2.5px)
-  );
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
-  filter: drop-shadow(0 0 4px rgba(180, 50, 255, 0.7));
-}
-
-.star-curse-chip img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  display: block;
-  filter: drop-shadow(0 0 3px rgba(180, 50, 255, 0.8));
-}
-
-.star-curse-secs {
-  position: absolute;
-  top: calc(100% + 3px);
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  font-weight: 800;
-  color: #c060ff;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  text-shadow:
-    0 0 6px rgba(180, 50, 255, 0.8),
-    0 1px 2px rgba(0, 0, 0, 0.9);
-}
-
-/* Endet gleich: Ring + Text kippen auf Rot und blinken */
-.star-curse-chip--urgent::before {
-  background: conic-gradient(
-    #ff5040 calc(var(--curse-progress, 1) * 360deg),
-    rgba(255, 80, 64, 0.16) 0
-  );
-  filter: drop-shadow(0 0 5px rgba(255, 64, 64, 0.8));
-  animation: timer-urgent-blink 0.5s ease-in-out infinite;
-}
-
-.star-curse-chip--urgent .star-curse-secs {
-  color: #ff5040;
-  text-shadow:
-    0 0 6px rgba(255, 40, 40, 0.95),
-    0 1px 2px rgba(0, 0, 0, 0.9);
-  animation: timer-urgent-blink 0.5s ease-in-out infinite;
-}
-
-@keyframes timer-urgent-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-.curse-badge-enter-active {
-  animation: curse-badge-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.curse-badge-leave-active {
-  animation: curse-badge-in 0.18s ease-in reverse both;
-}
-
-@keyframes curse-badge-in {
-  from {
-    opacity: 0;
-    transform: scale(0.6) translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .star-curse-chip--urgent::before {
-    animation: none;
-  }
-  .star-curse-chip--urgent .star-curse-secs {
-    animation: none;
-  }
-  .curse-badge-enter-active,
-  .curse-badge-leave-active {
-    animation: none;
-  }
-}
 </style>
