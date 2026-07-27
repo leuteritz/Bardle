@@ -9,7 +9,12 @@
 // Nur bei echtem Stillstand — Tab im Hintergrund, Fenster ohne Fokus, Spiel
 // pausiert — gelten alle Objekte als im Vordergrund: dort stehen die
 // Orbit-Positionen still und dürften den Kampf nicht dauerhaft blockieren.
-import { activeChampionBehindState, activePlayerPlanetPositions, activePlanetPositions } from './liveState'
+import {
+  activeChampionBehindState,
+  activePlayerPlanetPositions,
+  activePlanetPositions,
+  activeStarCombatState,
+} from './liveState'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 
 function idleOrbitLive(): boolean {
@@ -35,4 +40,17 @@ export function bossPlanetInForeground(planetId: string): boolean {
   if (!idleOrbitLive()) return true
   const pos = activePlanetPositions.get(planetId)
   return pos ? pos.isForeground : true
+}
+
+/**
+ * Stern sichtbar? Der Stern ist die Gate-Ebene ÜBER seinen Planeten: fliegt er
+ * hinter der Sonne, gelten alle seine Planeten als verdeckt (siehe
+ * `useStarSystem`, wo `isForeground` der Planeten aus `sIsBehind` des Sterns
+ * abgeleitet wird). Für Anzeigen, die einen ganzen Stern als Einheit zeigen —
+ * etwa eine Timer-Bar — ist das der richtige Abgriff statt eines Planeten.
+ */
+export function starInForeground(starId: string): boolean {
+  if (!idleOrbitLive()) return true
+  const state = activeStarCombatState.get(starId)
+  return state ? !state.isBehind : true
 }

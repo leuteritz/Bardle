@@ -11,6 +11,7 @@
           'timer-bar-row--escort': entry.starType === 'boss_escort',
           'timer-bar-row--boss': entry.starType === 'galaxy_boss',
           'timer-bar-row--raging': entry.isRaging,
+          'timer-bar-row--eclipsed': entry.isEclipsed,
           'star-hover-active': starGroupStore.hoveredTimerStarId === entry.starId,
         }"
         :style="{
@@ -32,6 +33,22 @@
               '--glow': entry.palette.glow,
             }"
           />
+          <!-- Eclipse: der Stern steht hinter der Sonne. Die Füllung verschwindet
+               nicht, sie geht in den Kernschatten — dunkle Scheibe mit glühendem
+               Korona-Saum, über die einmal je Runde ein Lichtblitz zieht. Eigenes
+               Element statt eines Filters auf .bar-fill, weil ein Filter den
+               Korona-Saum gleich mit abdunkeln würde, und eigenes statt ::after,
+               weil dieses beim Rage-Zustand schon belegt ist: ein rasender Stern
+               kann gleichzeitig verdeckt sein. -->
+          <Transition name="bar-eclipse-fade">
+            <div
+              v-if="entry.isEclipsed"
+              class="bar-eclipse"
+              :style="{ transform: `scaleX(${entry.fillRatio})` }"
+            >
+              <span class="bar-eclipse-flash" />
+            </div>
+          </Transition>
           <!-- Track-Wrapper wandern per transform (Compositor) statt per
                left/right (Layout + Paint pro Frame und Balken) -->
           <div
@@ -96,6 +113,15 @@
               '--glow': entry.palette.glow,
             }"
           />
+          <Transition name="bar-eclipse-fade">
+            <div
+              v-if="entry.isEclipsed"
+              class="bar-eclipse bar-eclipse--mirrored"
+              :style="{ transform: `scaleX(${entry.fillRatio})` }"
+            >
+              <span class="bar-eclipse-flash" />
+            </div>
+          </Transition>
           <div
             v-if="entry.fillRatio > 0"
             class="bar-edge-track bar-edge-track--right"
@@ -166,6 +192,7 @@ import {
   STAR_TIMER_HP_REVEAL_MS,
 } from '../../config/constants'
 import { CHAMPION_ROLES } from '../../config/championData'
+import { starInForeground } from '../../utils/foregroundGate'
 import type { StarGroup } from '../../stores/starGroupStore'
 import type { StarType } from '../../types'
 
@@ -291,6 +318,8 @@ interface BarEntry {
   curseRatio: number
   /** Boss dieses Sterns rast gerade — doppelter Schaden, Bar schlägt in Crimson um */
   isRaging: boolean
+  /** Stern fliegt hinter der Sonne — kein Schaden fließt, Bar geht in Umbra */
+  isEclipsed: boolean
   planets: PlanetDot[]
   /** Teilmenge von `planets`, die gerade eine HP-Zahl zeigt — hinten in der Bar */
   hpLabels: PlanetDot[]
@@ -426,7 +455,7 @@ function getSharedStarRemainingMs(star: {
 }
 
 const sortedEntries = computed<BarEntry[]>(() => {
-  const raw: Omit<BarEntry, 'palette' | 'isRaging'>[] = []
+  const raw: Omit<BarEntry, 'palette' | 'isRaging' | 'isEclipsed'>[] = []
   const curse = roleBehaviorStore.activeCurse
   const cursedStarId = roleBehaviorStore.cursedStarId
   const nowTs = now.value
@@ -532,6 +561,12 @@ const sortedEntries = computed<BarEntry[]>(() => {
   return raw.map((entry, index) => ({
     ...entry,
     isRaging: entry.starId === ragingStarId,
+    // Eclipse kommt aus derselben Quelle wie das Kampf-Gate (`starInForeground`)
+    // und nicht aus einer eigenen Rechnung — die Bar geht damit exakt in dem
+    // Moment in den Schatten, in dem der Stern aufhört, Schaden zu nehmen.
+    // Der Abgriff im 200-ms-Ticker reicht: eine Verdeckung dauert mehrere
+    // Sekunden, ein RAF-Poll wie im Command Panel wäre hier verschwendet.
+    isEclipsed: !starInForeground(entry.starId),
     palette: (() => {
       const star = starGroupStore.activeStars.find(s => s.id === entry.starId)
       if (entry.timeless && star) return rgbToPalette(star.starColor)
@@ -839,7 +874,173 @@ const sortedEntries = computed<BarEntry[]>(() => {
   outline-offset: 1px;
 }
 
+/* ── Eclipse: der Stern fliegt hinter der Sonne ─────────────────────────────
+   Derselbe Zustand, den Star-Fight-Modal, Command Panel und Striker Squad als
+   Medaillon zeigen — hier ohne Icon und ohne Text, denn die Zeile ist auf
+   Full HD nur ~14 px hoch und trägt schon Sekunden, Kugeln und HP-Zahlen (siehe
+   die Begründung beim Rage-Zustand oben). Die Bar sagt es stattdessen mit dem
+   Bild der Finsternis selbst: die farbige Füllung verschwindet unter einer
+   dunklen Scheibe, an deren Rand die Korona stehen bleibt — auf einen Blick
+   erkennbar, ohne einen Pixel zusätzlichen Platz zu verlangen.
+
+   Der Zustand steht bewusst ÜBER Fluch und Rage: Beide beschreiben, wie viel
+   Schaden fließt — die Eclipse, dass gerade gar keiner fließt. */
+.timer-bar-row--eclipsed {
+  border-radius: 3px;
+}
+
+.bar-eclipse {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  /* Bewusst 0 und nicht 1: `.bar-edge-track` trägt ein transform und bildet
+     damit einen eigenen Stacking-Kontext, der trotz seiner inneren z-index-2-
+     Kugeln als Ganzes auf Ebene 0 gemalt wird. Jeder Wert > 0 legte die Scheibe
+     über Kugeln und HP-Zahlen und machte sie unlesbar. Auf Ebene 0 entscheidet
+     die DOM-Reihenfolge: nach der Füllung, vor dem Track — genau richtig. */
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transform-origin: right center;
+  border-radius: 0 3px 3px 0;
+  /* Kühles Fast-Schwarz statt eines halbtransparenten Braun: ließe man die
+     orange Füllung durchscheinen, sähe die Zeile nur „abgedunkelt" aus. Der
+     Kernschatten muss die Farbe wirklich schlucken, damit der Goldsaum als
+     Korona liest und nicht als Rahmen. */
+  background: linear-gradient(
+    to bottom,
+    rgba(8, 7, 14, 0.955) 0%,
+    rgba(14, 11, 20, 0.965) 52%,
+    rgba(5, 4, 10, 0.96) 100%
+  );
+  /* Korona-Saum. Nur vertikale Offsets — sie überstehen das scaleX der Scheibe
+     unverzerrt, ein seitlicher Saum würde mit dem Balken mitschrumpfen. */
+  box-shadow:
+    inset 0 2px 0 rgba(255, 242, 200, 0.95),
+    inset 0 5px 7px -4px rgba(255, 200, 90, 0.75),
+    inset 0 -2px 0 rgba(240, 156, 40, 0.8),
+    inset 0 -5px 7px -4px rgba(232, 140, 30, 0.5),
+    0 0 8px rgba(255, 200, 80, 0.45),
+    0 0 18px rgba(232, 140, 30, 0.25);
+  transition: transform 0.2s linear;
+  will-change: transform;
+}
+
+.bar-eclipse--mirrored {
+  right: 0;
+  left: auto;
+  transform-origin: left center;
+  border-radius: 3px 0 0 3px;
+}
+
+/* Diamond Ring: ein Lichtblitz zieht einmal je Runde über den Kernschatten und
+   hält die Zeile lebendig, ohne zu blinken. Reine transform-/opacity-Keyframes
+   auf einem einmal gerasterten Verlauf — Compositor-Arbeit, selbst wenn jede
+   Bar gleichzeitig verdeckt wäre. Beide Seiten laufen gespiegelt nach innen
+   (rechts per `reverse`), sodass die Zeile symmetrisch bleibt. */
+.bar-eclipse-flash {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 26%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 236, 170, 0) 0%,
+    rgba(255, 236, 170, 0.32) 38%,
+    rgba(255, 250, 224, 0.8) 50%,
+    rgba(255, 200, 80, 0.32) 62%,
+    rgba(232, 140, 30, 0) 100%
+  );
+  animation: bar-eclipse-flash 3.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.bar-eclipse--mirrored .bar-eclipse-flash {
+  animation-direction: reverse;
+}
+
+@keyframes bar-eclipse-flash {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.9;
+  }
+  66% {
+    opacity: 0.9;
+  }
+  80%,
+  100% {
+    transform: translateX(400%);
+    opacity: 0;
+  }
+}
+
+/* Kugeln treten zurück, verschwinden aber nicht: der Stand des Sterns bleibt
+   ablesbar, während er verdeckt ist. Auf dem fast schwarzen Kernschatten reicht
+   dafür ein leichtes Dimmen — alles darunter macht die hellen Kugeln zu Löchern.
+   Die HP-Zahlen bleiben bewusst ungedimmt: sie sind die einzige exakte Angabe
+   in der Zeile und dürfen in keinem Zustand schlechter lesbar werden. */
+.timer-bar-row--eclipsed .planet-dot {
+  opacity: 0.86;
+}
+
+/* Der Puls der kritischen Zahl ruht mit — er meldet „gleich fällt er", und
+   genau das kann in der Verdeckung nicht passieren. */
+.timer-bar-row--eclipsed .planet-hp--critical {
+  animation: none;
+  transform: none;
+}
+
+/* Unter der Scheibe pulst nichts weiter: der Rage-Überzug ist dort nicht mehr
+   zu sehen und würde nur Frames kosten. */
+.timer-bar-row--eclipsed .bar-fill::after {
+  animation-play-state: paused;
+}
+
+/* Labels in Koronafarbe. Steht nach der Rage-Regel, weil ein Stern rasen UND
+   verdeckt sein kann — dann zählt, dass gerade nichts passiert. */
+.timer-bar-row--eclipsed .bar-seconds-label,
+.timer-bar-row--eclipsed .bar-type-label {
+  color: #ffe6b0;
+  filter: drop-shadow(0 0 7px rgba(255, 190, 70, 0.85)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.95));
+}
+
+/* Nach den Typ-Hovern (Champion/Boss), damit die Korona-Outline auch auf einer
+   Galaxieboss-Zeile den verdeckten Zustand spricht. */
+.timer-bar-row--eclipsed:hover,
+.timer-bar-row--eclipsed.star-hover-active {
+  outline: 1px solid rgba(255, 210, 120, 0.5);
+  outline-offset: 1px;
+}
+
+.timer-bar-row--eclipsed:hover .bar-fill,
+.timer-bar-row--eclipsed.star-hover-active .bar-fill {
+  filter: none;
+}
+
+.bar-eclipse-fade-enter-active,
+.bar-eclipse-fade-leave-active {
+  transition: opacity 0.35s ease;
+}
+
+.bar-eclipse-fade-enter-from,
+.bar-eclipse-fade-leave-to {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* Scheibe und Saum bleiben — nur der Blitz zieht nicht mehr. Er steht dabei
+     außerhalb der Bar, statt mitten auf ihr einzufrieren. */
+  .bar-eclipse-flash {
+    animation: none;
+    opacity: 0;
+  }
+
   .timer-bar-row--escort .bar-fill,
   .timer-bar-row--boss .bar-fill,
   .timer-bar-row--boss .bar-type-label {
