@@ -134,6 +134,8 @@ export const MATERIAL_PLACEHOLDER_LABELS: Record<string, string> = {
 }
 // Header materials grid: fixed column count (2 rows × 5 columns = 10 materials).
 export const HEADER_MATERIALS_GRID_COLUMNS = 5
+// Shown instead of a bare "0" for materials the player has none of.
+export const MATERIAL_EMPTY_GLYPH = '–'
 
 // Champion travel timing
 export const CHAMPION_TRAVEL_BASE_MS = 60_000 // 60s base travel time
