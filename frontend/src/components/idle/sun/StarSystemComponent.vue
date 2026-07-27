@@ -158,6 +158,7 @@
               'star-reward-summary--star-hovered':
                 hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
               'star-reward-summary--hover-dimmed': isStarHoverDimmed(star.id),
+              'star-reward-summary--raging': ragingStarId === star.id,
             },
           ]"
           :style="rewardSummaryStyle(star)"
@@ -167,6 +168,16 @@
           @mouseleave="setSummaryHover(null)"
         >
           <div class="summary-inner">
+            <!-- Rage-Banner: der einzige Zusatz am Stern selbst. Er sitzt über
+                 der Beute, weil er sie qualifiziert — solange er steht, kostet
+                 dieser Stern doppelten Schaden. -->
+            <Transition name="summary-rage">
+              <div v-if="ragingStarId === star.id" class="summary-rage">
+                <span class="summary-rage__label">Rage</span>
+                <span class="summary-rage__secs">{{ rageSecsLeft }}s</span>
+              </div>
+            </Transition>
+
             <div
               v-if="getStarRewardSummary(star).champion"
               class="summary-champion"
@@ -225,6 +236,7 @@
             v-if="star.remainingCount > 0"
             :key="star.remainingCount"
             class="star-planet-count"
+            :class="{ 'star-planet-count--raging': ragingStarId === star.id }"
             :style="starCountStyle(star)"
             :ref="(el) => setMapEl(countEls, star.id, el)"
           >
@@ -610,6 +622,22 @@ const { isIdleRenderingPaused, isIdleSimulationPaused } = useRenderingPaused()
 // ── Midlaner Fluch-Timer ──────────────────────────────────────────────────────
 const curseSecsLeft = ref(0)
 const midRoleImage = ROLE_BY_KEY['mid'].image
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Boss-Rage am Stern ────────────────────────────────────────────────────────
+// Rage gehört immer genau EINEM Stern: `roleBehaviorStore.rageStarId` ist ein
+// Einzelwert und folgt dem aktiv bekämpften Boss — nie eine Map über alle
+// Sterne. Praktisch kann also höchstens eine Rage-Anzeige gleichzeitig laufen.
+//
+// Trotzdem ist die Darstellung so gebaut, dass sie das auch bei jedem Stern
+// gleichzeitig aushielte: Der Zustand hängt an zwei Refs statt an einer
+// Berechnung pro Stern, die Klassen sind reine String-Vergleiche, und die
+// Bewegung steckt ausschließlich in opacity-animierten Pseudo-Elementen —
+// Compositor-Arbeit ohne Layout und ohne Repaint. Der Sekundenwert wird nur
+// beim Sekundenwechsel geschrieben, also höchstens ein Re-Render pro Sekunde
+// statt einem pro Frame.
+const ragingStarId = ref<string | null>(null)
+const rageSecsLeft = ref(0)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
@@ -1109,6 +1137,18 @@ function enemyAttackLoop(ts: number) {
         ? Math.max(0, Math.ceil((curse.activeUntil - Date.now()) / 1000))
         : 0
     if (secsLeft !== curseSecsLeft.value) curseSecsLeft.value = secsLeft
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── Rage-Timer aktualisieren (gleiches Muster: nur bei Sekundenwechsel) ──
+    // Kein eigener Interval: der Zustand hängt an zwei Refs, die hier im ohnehin
+    // laufenden Frame nachgezogen werden. Zwischen zwei Sekunden schreibt die
+    // Schleife nichts, also rendert Vue auch nichts neu.
+    const rageUntil = roleBehaviorStore.rageActiveUntil
+    const rageSecs =
+      rageUntil > Date.now() ? Math.max(0, Math.ceil((rageUntil - Date.now()) / 1000)) : 0
+    const ragingId = rageSecs > 0 ? roleBehaviorStore.rageStarId : null
+    if (rageSecs !== rageSecsLeft.value) rageSecsLeft.value = rageSecs
+    if (ragingId !== ragingStarId.value) ragingStarId.value = ragingId
     // ─────────────────────────────────────────────────────────────────────────
 
     drawCooldownRings()
@@ -1762,6 +1802,122 @@ function starCountStyle(star: StarRenderEntry) {
     inset 0 0 0 1px rgba(232, 192, 64, 0.2);
 }
 
+/* ── Boss-Rage am Stern ──────────────────────────────────────────────────────
+   Der Sternkörper bleibt bewusst unberührt: er trägt bereits Eigenfarbe, Glow
+   und Typ-Puls — ein zweites Signal darauf macht beide unlesbar. Getragen wird
+   der Zustand von den zwei Elementen, die ohnehin schon Text zeigen: Beute-
+   Block und Planetenzähler. Beide wechseln auf dieselbe Crimson-Sprache wie
+   der Rage-Ring im Star-Fight (#ff2e63 / #ff5c85 / #ffb0c4) — es liest sich
+   damit sofort als dieselbe Mechanik, nicht als neuer Zustand.
+
+   Bewegt wird ausschließlich die Opazität eines Overlays. Weder border-color
+   noch box-shadow werden je animiert: beide zwingen den Browser, die Box samt
+   Schatten in jedem Frame neu zu rastern — genau der Paint-Sturm, der bei
+   vielen gleichzeitig markierten Sternen die Framerate bricht. Über Opazität
+   bleibt es eine reine Compositor-Aufgabe, unabhängig von der Sternzahl. Der
+   einmalige Farbwechsel darf dagegen weich sein: eine Transition läuft nur
+   beim Umschalten, nicht dauerhaft. */
+.star-reward-summary--raging .summary-inner {
+  border-color: rgba(255, 46, 99, 0.72);
+  box-shadow:
+    0 0 14px rgba(255, 46, 99, 0.3),
+    inset 0 0 0 1px rgba(255, 46, 99, 0.14);
+}
+
+/* Auch das Verbindungsstrichlein zum Stern zieht mit — sonst hinge ein roter
+   Block an einer goldenen Leine. */
+.star-reward-summary--raging .summary-inner::before {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(255, 46, 99, 0.3) 40%,
+    rgba(255, 92, 133, 0.7) 100%
+  );
+}
+
+.star-reward-summary--raging .summary-inner::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid rgba(255, 92, 133, 0.95);
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  animation: summary-rage-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes summary-rage-pulse {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Rage-Marke über der Beute: sie qualifiziert den Loot darunter — solange sie
+   steht, kostet dieser Stern doppelten Schaden.
+
+   Bewusst absolut aus dem Fluss genommen und in den leeren Verbindungsstrich
+   zum Stern gehängt, statt als zusätzliche Zeile im Block: der Block hängt
+   unter dem Stern und wächst nach unten: eine Zeile mehr schiebt ihn bei tief
+   stehenden Sternen in die Bottom-Bar. So bleibt seine Höhe unverändert, und
+   der Platz auf der Leine war ohnehin ungenutzt. */
+.summary-rage {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4em;
+  white-space: nowrap;
+  padding: 0.15em 0.5em;
+  border-radius: 4px;
+  background: rgba(26, 5, 14, 0.88);
+  border: 1px solid rgba(255, 46, 99, 0.75);
+}
+
+.summary-rage__label {
+  font-size: 0.72em;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #ffb0c4;
+  text-shadow:
+    0 0 8px rgba(255, 46, 99, 0.8),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.summary-rage__secs {
+  font-size: 1.1em;
+  font-weight: 800;
+  line-height: 1;
+  color: #ff5c85;
+  /* Tabellenziffern: die Zeile darf beim Herunterzählen nicht zappeln */
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 8px rgba(255, 46, 99, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* Da die Marke aus dem Fluss genommen ist, kann sie ohne Höhen-Interpolation
+   ein- und ausblenden — der Block darunter bewegt sich dabei nie. */
+.summary-rage-enter-active,
+.summary-rage-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.summary-rage-enter-from,
+.summary-rage-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px);
+}
+
 .summary-loot-row {
   display: flex;
   flex-direction: column;
@@ -1876,6 +2032,19 @@ function starCountStyle(star: StarRenderEntry) {
   .summary-champion__name {
     animation: none;
   }
+
+  /* Puls aus, Ring an: ohne die Animation stünde das Overlay auf opacity 0 und
+     der Rage-Zustand verlöre ausgerechnet sein auffälligstes Signal. */
+  .star-reward-summary--raging .summary-inner::after,
+  .star-planet-count--raging::after {
+    animation: none;
+    opacity: 1;
+  }
+
+  .summary-rage-enter-active,
+  .summary-rage-leave-active {
+    transition: none;
+  }
 }
 
 /* ── Planet-Zähler über Sternen ─────────────────────────────────────────────── */
@@ -1904,6 +2073,11 @@ function starCountStyle(star: StarRenderEntry) {
   border: 1px solid rgba(232, 192, 64, 0.55);
   border-radius: 4px;
   padding: 0.15em 0.55em;
+  /* Nur für den einmaligen Umschlag in den Rage-Zustand — nichts läuft
+     dauerhaft, der Zähler bleibt zwischen zwei Rages völlig ruhig. */
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease;
 }
 
 /* Border-Puls über Opacity eines Overlays statt border-color-Animation —
@@ -1962,6 +2136,35 @@ function starCountStyle(star: StarRenderEntry) {
     0 0 4px rgba(232, 160, 20, 0.5),
     0 1px 3px rgba(0, 0, 0, 0.95);
   line-height: 1;
+}
+
+/* Rage: derselbe Zähler, nur in Crimson und mit doppelt so schnellem Puls.
+   Bewusst kein zusätzliches Element und keine zweite Animation — der
+   vorhandene Opazitäts-Puls bekommt nur andere Werte, die laufenden Kosten
+   pro Stern bleiben damit exakt dieselben wie im Normalzustand. */
+.star-planet-count--raging {
+  background: rgba(26, 5, 14, 0.86);
+  border-color: rgba(255, 46, 99, 0.75);
+}
+
+.star-planet-count--raging::after {
+  border-color: rgba(255, 92, 133, 0.95);
+  animation-duration: 1.1s;
+}
+
+.star-planet-count--raging .star-planet-count__current {
+  color: #ff5c85;
+  text-shadow:
+    0 0 5px rgba(255, 46, 99, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.star-planet-count--raging .star-planet-count__sep,
+.star-planet-count--raging .star-planet-count__total {
+  color: #ffb0c4;
+  text-shadow:
+    0 0 4px rgba(255, 46, 99, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 .star-cnt-enter-active {

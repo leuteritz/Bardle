@@ -10,6 +10,7 @@
           'timer-bar-row--champion': entry.isChampion,
           'timer-bar-row--escort': entry.starType === 'boss_escort',
           'timer-bar-row--boss': entry.starType === 'galaxy_boss',
+          'timer-bar-row--raging': entry.isRaging,
           'star-hover-active': starGroupStore.hoveredTimerStarId === entry.starId,
         }"
         :style="{
@@ -288,6 +289,8 @@ interface BarEntry {
   palette: Palette
   isCursed: boolean
   curseRatio: number
+  /** Boss dieses Sterns rast gerade — doppelter Schaden, Bar schlägt in Crimson um */
+  isRaging: boolean
   planets: PlanetDot[]
   /** Teilmenge von `planets`, die gerade eine HP-Zahl zeigt — hinten in der Bar */
   hpLabels: PlanetDot[]
@@ -423,10 +426,16 @@ function getSharedStarRemainingMs(star: {
 }
 
 const sortedEntries = computed<BarEntry[]>(() => {
-  const raw: Omit<BarEntry, 'palette'>[] = []
+  const raw: Omit<BarEntry, 'palette' | 'isRaging'>[] = []
   const curse = roleBehaviorStore.activeCurse
   const cursedStarId = roleBehaviorStore.cursedStarId
   const nowTs = now.value
+  // Rage hängt an genau einem Stern (dem aktiv bekämpften), nicht an einer Map
+  // über alle — der Abgleich unten ist deshalb ein String-Vergleich pro Zeile.
+  // `rageActiveUntil` wird nur beim Zünden und Verlöschen geschrieben, die Bars
+  // invalidieren dadurch nicht öfter als ohnehin im Ticker-Takt.
+  const ragingStarId =
+    roleBehaviorStore.rageActiveUntil > nowTs ? roleBehaviorStore.rageStarId : null
 
   for (const star of starGroupStore.activeStars) {
     const total = star.planetSlots.length
@@ -522,6 +531,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
   raw.sort((a, b) => a.sortKey - b.sortKey)
   return raw.map((entry, index) => ({
     ...entry,
+    isRaging: entry.starId === ragingStarId,
     palette: (() => {
       const star = starGroupStore.activeStars.find(s => s.id === entry.starId)
       if (entry.timeless && star) return rgbToPalette(star.starColor)
@@ -626,6 +636,56 @@ const sortedEntries = computed<BarEntry[]>(() => {
 .timer-bar-row--cursed .bar-seconds-label {
   color: #c77dff;
   filter: drop-shadow(0 0 6px rgba(160, 40, 220, 0.8)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+}
+
+/* ── Boss-Rage: die Bar dieses Sterns schlägt in Crimson um ─────────────────
+   Bewusst ohne Text und ohne Höhenänderung: die Zeile ist auf Full HD nur
+   ~14 px hoch und trägt bereits Sekunden, Planetenkugeln und HP-Zahlen — ein
+   weiteres Label würde je nach Planetenzahl und Restzeit mit einem davon
+   kollidieren. Die Restdauer steht am Stern selbst; hier zählt allein, dass
+   man die betroffene Zeile sofort findet.
+
+   Umgesetzt als Überzug auf der Füllung, dessen Opazität pulst. Das ist der
+   entscheidende Unterschied zum älteren Fluch-Puls darüber, der box-shadow
+   animiert: ein Schatten-Keyframe zwingt zum Neumalen der Zeile in jedem
+   Frame, Opazität nicht. Selbst wenn jede Bar gleichzeitig rot stünde, bliebe
+   es damit reine Compositor-Arbeit.
+
+   Die vorhandenen Animationen von Fluch, Eskorte und Boss bleiben absichtlich
+   unberührt: sie sitzen auf dem Außenschein, der Überzug auf der Innenfläche.
+   Beide Zustände bleiben so gleichzeitig ablesbar. */
+.timer-bar-row--raging .bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, #ff5c85 0%, #ff2e63 55%, #b8003a 100%);
+  animation: bar-rage-pulse 1.1s ease-in-out infinite;
+  will-change: opacity;
+  pointer-events: none;
+}
+
+@keyframes bar-rage-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.92;
+  }
+}
+
+/* Rage schlägt Fluch beim Label: doppelter Schaden ist der akutere Zustand,
+   und die Fluch-Restdauer steht ohnehin als eigener Chip am Stern. */
+.timer-bar-row--raging .bar-seconds-label {
+  color: #ffb0c4;
+  filter: drop-shadow(0 0 6px rgba(255, 46, 99, 0.85)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+}
+
+.timer-bar-row--raging:hover,
+.timer-bar-row--raging.star-hover-active {
+  outline: 1px solid rgba(255, 92, 133, 0.55);
+  outline-offset: 1px;
 }
 
 .bar-side {
@@ -784,6 +844,13 @@ const sortedEntries = computed<BarEntry[]>(() => {
   .timer-bar-row--boss .bar-fill,
   .timer-bar-row--boss .bar-type-label {
     animation: none;
+  }
+
+  /* Überzug bleibt stehen — ohne Puls wäre die Zeile sonst je nach
+     Keyframe-Position mal kräftig rot und mal fast unmarkiert. */
+  .timer-bar-row--raging .bar-fill::after {
+    animation: none;
+    opacity: 0.78;
   }
 
   .planet-dot::before {
