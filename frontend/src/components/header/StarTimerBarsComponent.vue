@@ -1,9 +1,10 @@
 <template>
-  <div class="star-timer-bars-host">
+  <div ref="hostRef" class="star-timer-bars-host">
     <TransitionGroup name="bar-slide" tag="div" class="star-timer-bars">
       <div
         v-for="entry in sortedEntries"
         :key="entry.starId"
+        :data-star-id="entry.starId"
         class="timer-bar-row"
         :class="{
           'timer-bar-row--cursed': entry.isCursed,
@@ -139,7 +140,7 @@
 
 <script setup lang="ts">
 import { hexToRgb } from '@/utils/format'
-import { ref, shallowRef, computed, onMounted, onUnmounted } from 'vue'
+import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useStarGroupStore } from '../../stores/starGroupStore'
 import { usePlanetBossStore } from '../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../stores/roleBehaviorStore'
@@ -154,9 +155,13 @@ import {
   STAR_TIMER_HP_PCT_STEPS,
   STAR_TIMER_HP_MIN_PCT,
   STAR_TIMER_HP_REVEAL_MS,
+  STAR_TIMER_CENTER_OVERLAP_PX,
+  STAR_TIMER_WIDTH_SNAP_PX,
 } from '../../config/constants'
 import { CHAMPION_ROLES } from '../../config/championData'
 import { starEclipseState } from '../../utils/foregroundGate'
+import { useHeaderCenterArc } from '../../composables/useHeaderCenterArc'
+import { centerArcSideWidth } from '../../utils/geometry'
 import type { StarGroup } from '../../stores/starGroupStore'
 import type { StarType } from '../../types'
 
@@ -254,6 +259,73 @@ function refreshEclipseSnapshot(): void {
 
   eclipseSnapshot.value = next
 }
+// ── Wie weit reicht eine Bar nach innen? ───────────────────────────────────
+// Bis an die Bogenkante des Header-Ovals — aber jede Zeile hängt tiefer und
+// trifft den Bogen dort, wo er schmaler ist. Die unterste Zeile innerhalb des
+// Ovals reicht also am weitesten, und Zeilen unterhalb davon laufen bis zur
+// Mitte des Headers durch, wo sie sich berühren.
+//
+// Der Ausschlag ist die UNTERkante der Zeile: Auf ihrer Höhe ist das Oval für
+// diese Zeile am schmalsten, sodass die senkrechte Balkenkante über die ganze
+// restliche Zeilenhöhe hinter dem Oval liegt. Bei ablaufender Restzeit
+// schrumpft die Bar damit gegen genau diesen Punkt und verschwindet dort im
+// Oval, statt neben ihm als Strich stehenzubleiben.
+const hostRef = ref<HTMLElement | null>(null)
+const { headerCenterArc } = useHeaderCenterArc()
+
+/**
+ * Stern-ID → Tiefe der Zeilenunterkante unter der Header-Kante.
+ *
+ * Gemessen statt gerechnet: Die Zeilenhöhen skalieren flüssig mit dem Viewport,
+ * die Galaxieboss-Zeile ist höher als die übrigen, und beim Nachrücken eines
+ * geretteten Sterns wandert jede Zeile darunter eine Position hoch. Aus dem DOM
+ * gelesen stimmt die Zuordnung in all diesen Fällen von selbst — nachgebildet
+ * müsste sie jede dieser Regeln doppelt führen.
+ */
+const rowBottoms = shallowRef<Map<string, number>>(new Map())
+
+/**
+ * Auf das nächste Raster AUFgerundet, nie ab: Die Rasterung soll die Breite nur
+ * nach innen verschieben, also unter das Oval. Abrunden würde die Balkenkante
+ * nach außen schieben und genau den Spalt öffnen, den die Überlappung schließen
+ * soll — nahe dem unteren Scheitel verläuft der Bogen so steil, dass schon ein
+ * Bruchteil eines Pixels sichtbar würde.
+ */
+function snapPx(v: number): number {
+  return Math.ceil(v / STAR_TIMER_WIDTH_SNAP_PX) * STAR_TIMER_WIDTH_SNAP_PX
+}
+
+function measureRowBottoms(): void {
+  const host = hostRef.value
+  if (!host) return
+
+  const hostTop = host.getBoundingClientRect().top
+  const next = new Map<string, number>()
+  for (const el of host.querySelectorAll<HTMLElement>('.timer-bar-row[data-star-id]')) {
+    const rect = el.getBoundingClientRect()
+    // Eine gerade eintretende Zeile steht noch auf max-height 0. Sie ist in
+    // diesem Frame unsichtbar; ihre echte Tiefe kommt mit der nächsten Messung.
+    if (rect.height <= 0) continue
+    // Ungerastert: Der Bogen ist an dieser Stelle so steil, dass ein halber
+    // Pixel Tiefe die Breite um fast einen ganzen verschöbe. Stabil bleibt die
+    // Ausgabe durch die Rasterung der Breite, nicht die der Tiefe.
+    next.set(el.dataset.starId!, rect.bottom - hostTop)
+  }
+
+  const prev = rowBottoms.value
+  if (prev.size === next.size) {
+    let unchanged = true
+    for (const [id, y] of next) {
+      if (prev.get(id) !== y) {
+        unchanged = false
+        break
+      }
+    }
+    if (unchanged) return
+  }
+  rowBottoms.value = next
+}
+
 /** Planet, der gerade bekämpft wird — seine HP steht dauerhaft. */
 const focusedBossId = shallowRef<string | null>(null)
 
@@ -298,9 +370,19 @@ function refreshBossSnapshot(): void {
 }
 
 let ticker: ReturnType<typeof setInterval> | null = null
+let hostObserver: ResizeObserver | null = null
 onMounted(() => {
   refreshBossSnapshot()
   refreshEclipseSnapshot()
+  measureRowBottoms()
+  // Die Zeilentiefen hängen an der Höhe des Stapels: Sie ändern sich, wenn eine
+  // Zeile ein- oder ausblendet — und dann über die ganze Dauer der Animation,
+  // Frame für Frame. Genau das meldet der Observer, und in Ruhe meldet er
+  // nichts. Im Ticker mitzumessen hätte dieselben 30 Zeilen fünfmal je Sekunde
+  // abgefragt, um fast immer denselben Wert zu bestätigen.
+  hostObserver = new ResizeObserver(() => measureRowBottoms())
+  if (hostRef.value) hostObserver.observe(hostRef.value)
+
   ticker = setInterval(() => {
     refreshBossSnapshot()
     refreshEclipseSnapshot()
@@ -309,6 +391,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   if (ticker) clearInterval(ticker)
+  hostObserver?.disconnect()
 })
 
 interface Palette {
@@ -665,6 +748,25 @@ const sortedEntries = computed<BarEntry[]>(() => {
     if (entry.isCursed) style['--curse-ratio'] = entry.curseRatio
     if (entry.isChampion) style['--champ-outline'] = palette.mid + '44'
 
+    // Die Zeile endet dort, wo das Header-Oval auf ihrer Höhe endet. Solange
+    // noch keine Tiefe gemessen ist (allererster Frame einer neuen Zeile), bleibt
+    // die Angabe weg und die CSS-Regel greift — sichtbar wird das nie, weil die
+    // Zeile in diesem Frame noch eingeblendet wird.
+    const arc = headerCenterArc.value
+    const rowBottom = rowBottoms.value.get(entry.starId)
+    if (arc && rowBottom !== undefined) {
+      // Gerastert wird VOR dem Deckeln: Sonst schöbe das Aufrunden die Seiten
+      // über die Achse hinaus und beide Hälften überlappten sich in der Mitte.
+      const sideWidth = Math.min(
+        arc.cx,
+        snapPx(centerArcSideWidth(arc, rowBottom) + STAR_TIMER_CENTER_OVERLAP_PX),
+      )
+      // `minmax(0, 1fr)` statt `1fr`: Unterhalb des Ovals gehen die Seiten bis
+      // zur Achse, die Mittelspalte also auf 0. Ein blankes `1fr` hätte dort
+      // seine Inhaltsmindestbreite behauptet und beide Seiten zurückgedrängt.
+      style.gridTemplateColumns = `${sideWidth}px minmax(0, 1fr) ${sideWidth}px`
+    }
+
     const trackPct = (1 - entry.fillRatio) * 100
     const tf = {
       trackL: `translateX(${trackPct}%)`,
@@ -684,6 +786,16 @@ const sortedEntries = computed<BarEntry[]>(() => {
     }
   })
 })
+
+// Kommt eine Zeile hinzu, fällt eine weg oder tauschen zwei die Reihenfolge,
+// liegen die Tiefen sofort neu — ohne bis zum nächsten Ticker zu warten, denn
+// bis dahin trüge eine nachgerückte Zeile noch die Breite ihrer alten Position.
+// `flush: 'post'` läuft nach dem DOM-Patch, misst also den neuen Stand.
+watch(
+  () => sortedEntries.value.map((e) => e.starId).join('|'),
+  () => measureRowBottoms(),
+  { flush: 'post' },
+)
 </script>
 
 <style scoped>
@@ -709,7 +821,10 @@ const sortedEntries = computed<BarEntry[]>(() => {
 
 .timer-bar-row {
   display: grid;
-  grid-template-columns: var(--bar-side-width, 1fr) 1fr var(--bar-side-width, 1fr);
+  /* Die tatsächlichen Spalten setzt das Script je Zeile — sie hängen davon ab,
+     wie tief die Zeile unter der Header-Kante liegt und wo das Mittel-Oval
+     dort endet. Dieser Wert gilt nur, bis der Header einmal vermessen ist. */
+  grid-template-columns: 1fr 0px 1fr;
   align-items: center;
   /* Flüssig skaliert für 1280px (~14px) bis 2560px (~21px) Viewport-Breite */
   height: clamp(14px, 0.5vw + 7.6px, 22px);
@@ -879,13 +994,16 @@ const sortedEntries = computed<BarEntry[]>(() => {
   border-radius: 3px 0 0 3px;
 }
 
+/* Der Platzhalter zwischen den beiden Balkenseiten — er hält die Grid-Spalte,
+   die das Mittel-Oval einnimmt. Ohne Innenabstand, denn unterhalb des Ovals
+   geht diese Spalte auf 0: Ein Padding würde die Zeile dort überlaufen lassen,
+   statt die Seiten sauber in der Mitte zusammentreffen zu lassen. */
 .bar-center {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  min-width: 0;
   height: 100%;
-  padding-inline: 8px;
   background: transparent;
   font-size: 0.64rem;
   font-weight: 800;

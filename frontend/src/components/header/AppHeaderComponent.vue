@@ -9,6 +9,7 @@ import { useMeepTreeStore } from '../../stores/meepTreeStore'
 import { usePlanetShopStore } from '../../stores/planetShopStore'
 import { formatNumber, formatNumberCompact } from '../../config/numberFormat'
 import { usePersistence } from '../../composables/usePersistence'
+import { useHeaderCenterArc } from '../../composables/useHeaderCenterArc'
 import {
   BOTTOM_FRAME_STROKE_SHADOW,
   BOTTOM_FRAME_STROKE_WOOD,
@@ -134,6 +135,7 @@ function handleReset() {
 
 const headerRef = ref<HTMLElement | null>(null)
 const chimesRef = ref<HTMLElement | null>(null)
+const { setHeaderCenterArc } = useHeaderCenterArc()
 
 /* Die Chimes-Zahl steht über zwei exakt mittigen Achsen (Chime-Icon der
    Unterzeile, Level-Badge) — sichtbarer Versatz fällt dort sofort auf. Die
@@ -189,19 +191,18 @@ async function measure() {
   svgH.value = r.height
   document.documentElement.style.setProperty('--xp-arc-outer-width', `${r.width}px`)
 
-  // Compute where the center-chimes' VISIBLE curved border is at the timer-bar y-level.
+  // Publish the center-chimes' elliptical side arc, not a single sampled point:
   // border-radius: 0 0 50% 50% / 0 0 100% 100% → entire left/right sides are elliptical arcs
   // with h-radius = 50%w, v-radius = 100%h, arc center at (w/2, 0) relative to element top.
+  // Every star-timer row sits at a different depth and meets that arc at a
+  // different width, so the bars need the curve rather than one measurement.
   const headerRect = headerRef.value!.getBoundingClientRect()
-  const timerBarY = Math.max(0, headerRect.bottom - r.top) // y from element top to timer-bar row
-  const hR = r.width * 0.5
-  const vR = r.height
-  const t = Math.min(1, timerBarY / vR)
-  const xInset = hR * (1 - Math.sqrt(1 - t * t)) // inset of visible border from box edge
-  document.documentElement.style.setProperty(
-    '--bar-side-width',
-    `${Math.max(0, r.left + xInset - headerRect.left)}px`,
-  )
+  setHeaderCenterArc({
+    cx: r.left + r.width * 0.5 - headerRect.left,
+    rx: r.width * 0.5,
+    ry: r.height,
+    topOffset: Math.max(0, headerRect.bottom - r.top),
+  })
   // Read actual rendered badge height so --level-badge-bottom stays correct at all fluid sizes
   const badgeEl = headerRef.value?.querySelector('.arc-level-badge') as HTMLElement | null
   const badgeH = badgeEl ? badgeEl.getBoundingClientRect().height : 50

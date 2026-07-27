@@ -141,6 +141,43 @@ export function orbitBehindProgress(
   return (normalize(psi - psiExit) - foregroundArc) / behindArc
 }
 
+// ── Mittel-Oval des Headers ────────────────────────────────────────────────
+/**
+ * Das Chimes-Panel hängt als Tropfen unter der Header-Kante hervor. Seine
+ * Seiten sind elliptische Bögen (`border-radius: 0 0 50% 50% / 0 0 100% 100%`):
+ * horizontale Halbachse = halbe Breite, vertikale = volle Höhe, Mittelpunkt
+ * damit auf der Oberkante des Panels.
+ *
+ * Alle Maße relativ zur Header-Box, weil die Star-Timer-Bars genau deren
+ * Breite einnehmen.
+ */
+export interface HeaderCenterArc {
+  /** Header-Linkskante → Achse des Ovals. */
+  cx: number
+  /** Horizontale Halbachse. */
+  rx: number
+  /** Vertikale Halbachse. */
+  ry: number
+  /** Ovaloberkante → Header-Unterkante, also bis zum Beginn der Timer-Bars. */
+  topOffset: number
+}
+
+/**
+ * Breite einer Balkenseite, die auf Tiefe `y` (unter der Header-Unterkante)
+ * exakt an der sichtbaren Ovalkante endet.
+ *
+ * Unterhalb des Ovals gibt es keine Kante mehr — dort läuft die Seite bis zur
+ * Ovalachse, also bis zur Mitte des Headers. Der Übergang ist stetig: Am
+ * unteren Scheitel fällt die Bogenkante mit der Achse zusammen.
+ */
+export function centerArcSideWidth(arc: HeaderCenterArc, y: number): number {
+  if (arc.rx <= 0 || arc.ry <= 0) return arc.cx
+  const t = (arc.topOffset + y) / arc.ry
+  if (t >= 1) return arc.cx
+  if (t <= 0) return arc.cx - arc.rx
+  return arc.cx - arc.rx * Math.sqrt(1 - t * t)
+}
+
 // ── Guide-Ellipsen (Striker-Arena) ─────────────────────────────────────────
 /** Ellipse einer Guide-Linie in Arena-Prozent (Zentrum X ist immer 50 %). */
 export interface ArcGuideEllipse {

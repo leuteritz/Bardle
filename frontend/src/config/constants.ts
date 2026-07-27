@@ -1892,6 +1892,15 @@ export const STAR_TIMER_HP_MIN_PCT = 1
 // sie ein, sobald er getroffen wird, und nach dieser Zeit ohne weiteren Treffer
 // wieder aus — die Bar bleibt ruhig, statt permanent Zahlen zu zeigen.
 export const STAR_TIMER_HP_REVEAL_MS = 2000
+// Jede Bar endet an der Bogenkante des Header-Ovals auf Höhe ihrer eigenen
+// UNTERkante — dort ist das Oval am schmalsten, sodass die senkrechte
+// Balkenkante über die restliche Zeilenhöhe hinter dem Oval verschwindet. Diese
+// Überlappung schließt zusätzlich den Subpixel-Spalt, den das Antialiasing der
+// Rundung genau an der Berührungslinie sonst aufblitzen lässt.
+export const STAR_TIMER_CENTER_OVERLAP_PX = 1
+// Balkenbreiten werden auf halbe Pixel gerundet: Ohne das schriebe schon das
+// Subpixel-Rauschen einer Messung bei jedem Tick neue Grid-Spalten in 30 Zeilen.
+export const STAR_TIMER_WIDTH_SNAP_PX = 0.5
 
 // ── Galaxy-Boss Eskorten-Wellen ───────────────────────────────────────────
 // Gesamtzahl der Eskorten-Sterne pro Galaxie: BASE + (galaxy-1) * PER_GALAXY,
