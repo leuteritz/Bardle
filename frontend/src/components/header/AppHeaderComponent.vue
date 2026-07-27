@@ -643,13 +643,22 @@ onUnmounted(() => {
 }
 
 /* ── Unterzeile ── */
+/* Grid statt zentriertem Flex: gleich breite Außenspalten halten das Chime-Icon
+   exakt auf der horizontalen Mitte (= Achse des Level-Badges bei left: 50%),
+   egal wie unterschiedlich breit /sec und /click gerade sind. */
 .chimes-sub-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: center;
   gap: clamp(4px, 0.7vw, 8px);
   margin-top: 2px;
   opacity: 0.72;
+}
+.chimes-sub-row > .chimes-sub-stat:first-child {
+  justify-self: end;
+}
+.chimes-sub-row > .chimes-sub-stat:last-child {
+  justify-self: start;
 }
 .chimes-sub-stat {
   display: flex;
