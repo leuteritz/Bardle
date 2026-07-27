@@ -1,21 +1,28 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useBattleScoreboardStats } from '@/composables/useBattleScoreboardStats'
 import { useBattlePhase } from '@/composables/useBattlePhase'
+import {
+  useScoreboardFit,
+  MEASURE_FONT_PX,
+  type ScoreboardFitSource,
+} from '@/composables/useScoreboardFit'
 import { formatNumber } from '@/config/numberFormat'
 import {
   BATTLE_PHASES,
   OBJECTIVE_FIGHT_STATUS,
   SCOREBOARD_STAT_COLORS,
+  SCOREBOARD_FIT,
   RANK_EMBLEM_IMAGES,
   RANK_TIER_COLORS,
+  RANK_TIERS,
   RANK_TIER_SHORT,
   RANK_DIVISION_DIGITS,
-  RANK_LABEL_WIDTH_CHARS,
+  APEX_RANK_TIERS,
   BATTLE_STAT_GAME_ICONS,
   BATTLE_STAT_IMAGES,
 } from '@/config/constants'
@@ -53,23 +60,32 @@ const rightStats = computed<ScoreStat[]>(() => [
 /* ── Rank + win/loss cells (right side, next to the crest) ── */
 const { currentRank, totalWins, totalLosses } = storeToRefs(battleStore)
 
-const isApexTier = computed(() =>
-  ['Master', 'Grandmaster', 'Challenger'].includes(currentRank.value.tier),
+function isApexTier(tier: string): boolean {
+  return (APEX_RANK_TIERS as readonly string[]).includes(tier)
+}
+/* Short, near-equal-width label ("IRON 4", "DIAM 1", "GM", "CHAL"). The full
+   name stays available in the tooltip. */
+function shortTier(tier: string): string {
+  return RANK_TIER_SHORT[tier] ?? tier.slice(0, 4).toUpperCase()
+}
+/**
+ * Every label the rank cell can ever show. The fit budgets for the WIDEST of
+ * them instead of the current one, so climbing the ladder repaints the cell —
+ * it never resizes it. One digit stands in for all four divisions: the value
+ * row renders tabular numerals, where every digit is the same width.
+ */
+const RANK_LABEL_CANDIDATES = RANK_TIERS.map((tier) =>
+  isApexTier(tier) ? shortTier(tier) : `${shortTier(tier)} 4`,
 )
-/* Short, near-equal-width label ("IRON 4", "DIAM 1", "GM", "CHAL") — the cell
-   sizes against a fixed budget (RANK_LABEL_WIDTH_CHARS), so every tier renders
-   at the same big size. The full name stays available in the tooltip. */
-const rankShortTier = computed(
-  () => RANK_TIER_SHORT[currentRank.value.tier] ?? currentRank.value.tier.slice(0, 4).toUpperCase(),
-)
+
 const rankLabel = computed(() =>
-  isApexTier.value
-    ? rankShortTier.value
-    : `${rankShortTier.value} ${RANK_DIVISION_DIGITS[currentRank.value.division] ?? currentRank.value.division}`,
+  isApexTier(currentRank.value.tier)
+    ? shortTier(currentRank.value.tier)
+    : `${shortTier(currentRank.value.tier)} ${RANK_DIVISION_DIGITS[currentRank.value.division] ?? currentRank.value.division}`,
 )
 /** Unabbreviated rank for tooltip + emblem alt text. */
 const rankFullLabel = computed(() =>
-  isApexTier.value
+  isApexTier(currentRank.value.tier)
     ? currentRank.value.tier
     : `${currentRank.value.tier} ${currentRank.value.division}`,
 )
@@ -82,29 +98,108 @@ function openBattleTab() {
   uiStore.setBardTab('battle')
 }
 
-/* ── Overflow guard: the LONGEST numeric value across the stat cells sets
-   one shared char count on the scoreboard root, so all numbers shrink
-   together and stay the same size (see .sb-stat-value). The rank cell is
-   deliberately excluded: it is wider (flex 1.6) and overrides --val-chars
-   with the CONSTANT RANK_LABEL_WIDTH_CHARS — never the live label length, so
-   its size stays identical from Iron 4 up to Challenger. ── */
-const wlCombined = computed(
-  () => formatNumber(totalWins.value).length + formatNumber(totalLosses.value).length + 4,
+/* ── Win / loss cell ── */
+const winText = computed(() => `${formatNumber(totalWins.value)}W`)
+const lossText = computed(() => `${formatNumber(totalLosses.value)}L`)
+/** Non-breaking so the separator measures exactly as it renders. */
+const WL_SEPARATOR = '\u00A0\u00B7\u00A0'
+/* A long record stacks W over L — half the line, still readable, and it keeps
+   the other nine cells from having to shrink to a single cell's worst case. */
+const wlStacked = computed(
+  () =>
+    winText.value.length + lossText.value.length + WL_SEPARATOR.length >
+    SCOREBOARD_FIT.WIN_LOSS_STACK_CHARS,
 )
-/* long records stack W over L — half the line, still readable */
-const wlStacked = computed(() => wlCombined.value > 12)
-const wlChars = computed(() =>
-  wlStacked.value
-    ? Math.max(formatNumber(totalWins.value).length, formatNumber(totalLosses.value).length) + 1
-    : wlCombined.value,
-)
-const sharedValChars = computed(() =>
-  Math.max(
-    ...leftStats.value.map((s) => s.value.length),
-    ...rightStats.value.map((s) => s.value.length),
-    wlChars.value,
-  ),
-)
+
+/* ══════════════════════════════════════════════════════════════════════
+   Auto-fit — every number as large as its cell allows, all of them equal.
+
+   The strip measures its own halves and every string it is about to render,
+   then derives ONE shared value size plus the per-cell width weights (see
+   utils/scoreboardFit.ts). Nothing here is a guessed glyph width, so the
+   numbers grow to fill Full HD, 2K and 4K instead of stopping at a hardcoded
+   ceiling — and nothing is ever clipped, because the fit is what decides.
+   ══════════════════════════════════════════════════════════════════════ */
+const RANK_CELL_LABEL = 'Rank'
+const WIN_LOSS_CELL_LABEL = 'Win / Loss'
+
+const rootRef = ref<HTMLElement | null>(null)
+const leftRef = ref<HTMLElement | null>(null)
+const rightRef = ref<HTMLElement | null>(null)
+const probeValueRef = ref<HTMLElement | null>(null)
+const probeRankRef = ref<HTMLElement | null>(null)
+const probeLabelRef = ref<HTMLElement | null>(null)
+
+const fitCells = computed<{ left: ScoreboardFitSource[]; right: ScoreboardFitSource[] }>(() => ({
+  left: leftStats.value.map((stat) => ({
+    key: stat.key,
+    text: stat.value,
+    label: stat.label,
+    probe: 'value' as const,
+  })),
+  right: [
+    {
+      key: 'rank',
+      text: RANK_LABEL_CANDIDATES,
+      label: RANK_CELL_LABEL,
+      probe: 'rank' as const,
+    },
+    {
+      key: 'winLoss',
+      text: wlStacked.value
+        ? [winText.value, lossText.value]
+        : `${winText.value}${WL_SEPARATOR}${lossText.value}`,
+      label: WIN_LOSS_CELL_LABEL,
+      probe: 'value' as const,
+      stacked: wlStacked.value,
+    },
+    ...rightStats.value.map((stat) => ({
+      key: stat.key,
+      text: stat.value,
+      label: stat.label,
+      probe: 'value' as const,
+    })),
+  ],
+}))
+
+const { fit } = useScoreboardFit({
+  root: rootRef,
+  left: leftRef,
+  right: rightRef,
+  probes: { value: probeValueRef, rank: probeRankRef, label: probeLabelRef },
+  cells: fitCells,
+})
+
+/** Probes render at the reference size the em math divides by. */
+const probeStyle = { fontSize: `${MEASURE_FONT_PX}px`, display: 'inline-block' }
+
+function px(value: number): string {
+  return `${Math.round(value * 100) / 100}px`
+}
+
+const fitVars = computed(() => ({
+  '--sb-value-size': px(fit.value.valueSize),
+  '--sb-stacked-size': px(fit.value.stackedValueSize),
+  '--sb-label-size': px(fit.value.labelSize),
+  '--sb-row-gap': px(fit.value.rowGap),
+  '--sb-icon-size': px(fit.value.iconSize),
+  '--sb-icon-gap': px(fit.value.iconGap),
+  '--sb-cell-pad': px(fit.value.cellPad),
+  /* Fixed slot for the rank text: emblem and label start at a constant x for
+     every tier, so a promotion never nudges the emblem sideways. */
+  '--sb-rank-slot': px((fit.value.em.rank ?? 0) * fit.value.valueSize),
+}))
+
+/** flex-grow weight of one cell — its share of the half's width. */
+function cellStyle(key: string) {
+  return { flexGrow: fit.value.grow[key] ?? 1 }
+}
+
+/* Below their legibility floor the fit drops icons / labels rather than
+   rendering a speck (every cell keeps its tooltip). */
+const showIcons = computed(() => fit.value.iconSize > 0)
+const showLabels = computed(() => fit.value.labelSize > 0)
+const iconPx = computed(() => Math.round(fit.value.iconSize))
 
 /* ══════════════════════════════════════════════════════════════════════
    Live battle-status line (compact, under the BARDLE crest) — ported
@@ -239,9 +334,18 @@ const liveChars = computed(() => {
 </script>
 
 <template>
-  <div class="scoreboard" :style="{ '--val-chars': sharedValChars }">
+  <div ref="rootRef" class="scoreboard" :style="fitVars">
+    <!-- Hidden probes: the fit renders each string here once, at a known size,
+         to learn its true width (see useScoreboardFit). -->
+    <div class="sb-probes" aria-hidden="true">
+      <span ref="probeValueRef" class="sb-stat-value sb-probe" :style="probeStyle" />
+      <span ref="probeRankRef" class="sb-stat-value sb-rank-value sb-probe" :style="probeStyle" />
+      <span ref="probeLabelRef" class="sb-stat-label sb-probe" :style="probeStyle" />
+    </div>
+
     <!-- LEFT · combat stats -->
     <div
+      ref="leftRef"
       class="sb-stats sb-stats--left"
       role="button"
       tabindex="0"
@@ -250,15 +354,26 @@ const liveChars = computed(() => {
       @keydown.enter="openBattleTab"
       @keydown.space.prevent="openBattleTab"
     >
-      <div v-for="stat in leftStats" :key="stat.key" class="sb-stat" :title="stat.label">
-        <span class="sb-stat-label">{{ stat.label }}</span>
+      <div
+        v-for="stat in leftStats"
+        :key="stat.key"
+        class="sb-stat"
+        :style="cellStyle(stat.key)"
+        :title="stat.label"
+      >
+        <span v-if="showLabels" class="sb-stat-label">{{ stat.label }}</span>
         <div class="sb-stat-main">
-          <img v-if="stat.icon" :src="stat.icon" :alt="stat.label" class="sb-stat-icon" />
+          <img
+            v-if="showIcons && stat.icon"
+            :src="stat.icon"
+            :alt="stat.label"
+            class="sb-stat-icon"
+          />
           <Icon
-            v-else-if="stat.gameIcon"
+            v-else-if="showIcons && stat.gameIcon"
             :icon="stat.gameIcon"
-            width="32"
-            height="32"
+            :width="iconPx"
+            :height="iconPx"
             class="sb-stat-icon"
             :style="{ color: stat.color }"
           />
@@ -345,6 +460,7 @@ const liveChars = computed(() => {
 
     <!-- RIGHT · economy / objective stats -->
     <div
+      ref="rightRef"
       class="sb-stats sb-stats--right"
       role="button"
       tabindex="0"
@@ -353,51 +469,61 @@ const liveChars = computed(() => {
       @keydown.enter="openBattleTab"
       @keydown.space.prevent="openBattleTab"
     >
-      <!-- Rank cell: emblem + tier-colored value; wider + own text fit -->
-      <div class="sb-stat sb-stat--rank" :title="`Rank · ${rankFullLabel}`">
-        <span class="sb-stat-label">Rank</span>
+      <!-- Rank cell: emblem + tier-colored value, budgeted for the widest tier -->
+      <div
+        class="sb-stat sb-stat--rank"
+        :style="cellStyle('rank')"
+        :title="`${RANK_CELL_LABEL} · ${rankFullLabel}`"
+      >
+        <span v-if="showLabels" class="sb-stat-label">{{ RANK_CELL_LABEL }}</span>
         <div class="sb-stat-main">
-          <img :src="rankEmblem" :alt="rankFullLabel" class="sb-stat-icon" />
-          <span
-            class="sb-stat-value sb-rank-value"
-            :style="{ color: rankColor, '--val-chars': RANK_LABEL_WIDTH_CHARS }"
-          >
+          <img v-if="showIcons" :src="rankEmblem" :alt="rankFullLabel" class="sb-stat-icon" />
+          <span class="sb-stat-value sb-rank-value" :style="{ color: rankColor }">
             {{ rankLabel }}
           </span>
         </div>
       </div>
 
       <!-- Win / loss cell: two-tone value -->
-      <div class="sb-stat" title="Win / Loss">
-        <span class="sb-stat-label">Win / Loss</span>
+      <div class="sb-stat" :style="cellStyle('winLoss')" :title="WIN_LOSS_CELL_LABEL">
+        <span v-if="showLabels" class="sb-stat-label">{{ WIN_LOSS_CELL_LABEL }}</span>
         <div class="sb-stat-main">
           <Icon
+            v-if="showIcons"
             :icon="BATTLE_STAT_GAME_ICONS.winLoss"
-            width="32"
-            height="32"
+            :width="iconPx"
+            :height="iconPx"
             class="sb-stat-icon"
             style="color: #e8c040"
           />
-          <span
-            class="sb-stat-value sb-wl-value"
-            :class="{ 'sb-wl-value--stacked': wlStacked }"
-          >
-            <span class="sb-wl-win">{{ formatNumber(totalWins) }}W</span>
-            <span v-if="!wlStacked" class="sb-wl-sep">·</span>
-            <span class="sb-wl-loss">{{ formatNumber(totalLosses) }}L</span>
+          <span class="sb-stat-value sb-wl-value" :class="{ 'sb-wl-value--stacked': wlStacked }">
+            <span class="sb-wl-win">{{ winText }}</span>
+            <span v-if="!wlStacked" class="sb-wl-sep">&nbsp;·&nbsp;</span>
+            <span class="sb-wl-loss">{{ lossText }}</span>
           </span>
         </div>
       </div>
 
-      <div v-for="stat in rightStats" :key="stat.key" class="sb-stat" :title="stat.label">
-        <span class="sb-stat-label">{{ stat.label }}</span>
+      <div
+        v-for="stat in rightStats"
+        :key="stat.key"
+        class="sb-stat"
+        :style="cellStyle(stat.key)"
+        :title="stat.label"
+      >
+        <span v-if="showLabels" class="sb-stat-label">{{ stat.label }}</span>
         <div class="sb-stat-main">
-          <img v-if="stat.icon" :src="stat.icon" :alt="stat.label" class="sb-stat-icon" />
+          <img
+            v-if="showIcons && stat.icon"
+            :src="stat.icon"
+            :alt="stat.label"
+            class="sb-stat-icon"
+          />
           <Icon
-            v-else-if="stat.gameIcon"
+            v-else-if="showIcons && stat.gameIcon"
             :icon="stat.gameIcon"
-            width="32"
-            height="32"
+            :width="iconPx"
+            :height="iconPx"
             class="sb-stat-icon"
             :style="{ color: stat.color }"
           />
@@ -410,20 +536,12 @@ const liveChars = computed(() => {
 
 <style scoped>
 .scoreboard {
-  /* typography tracks the strip's own width (container queries), so cells
-     can never overlap the crest and wide viewports are used fully */
-  --sb-val-size: clamp(13px, 2.1cqw, 26px);
-  --sb-label-size: clamp(9px, 1.1cqw, 13px);
+  /* The stat halves are sized by measurement, not by CSS math: --sb-value-size,
+     --sb-icon-size, --sb-label-size, --sb-cell-pad, --sb-icon-gap, --sb-row-gap
+     and --sb-rank-slot all arrive from the fit (see useScoreboardFit). Only the
+     crest still scales off the container's width — it holds prose, not numbers. */
   --sb-title-size: clamp(16px, 2.5cqw, 30px);
-  /* width-fluid, but also capped by the strip's real height (79px ×
-     hud-scale) minus the label row — short strips (ultrawide FHD) get
-     smaller icons instead of clipping */
-  --sb-icon-size: min(clamp(22px, 3cqw, 46px), calc(var(--bottom-center-strip-h, 79px) - 32px));
-  --sb-gap: clamp(6px, 0.7cqw, 12px);
   --sb-crest-w: clamp(160px, 24cqw, 300px);
-  /* width of one stat half (left/right group), used to derive the real
-     per-cell text budget for the value font-size fit */
-  --sb-half-w: calc((100cqw - var(--sb-crest-w) - 24px) / 2);
 
   position: absolute;
   left: calc(440px * var(--hud-scale, 1));
@@ -463,41 +581,25 @@ const liveChars = computed(() => {
     drop-shadow(0 0 6px currentcolor);
 }
 
-/* Unified cell: big leading icon + [label above value] column, everything
-   on one vertical center line. Flex bases are static per breakpoint, so
-   value/mode changes can never shift the group widths. */
+/* Unified cell: big leading icon + [label above value] column, everything on
+   one vertical center line. flex-basis stays 0 and the GROW weight carries the
+   whole width decision — it is handed in per cell, proportional to what that
+   cell's own text needs, so no cell hoards room a longer neighbour is missing. */
 .sb-stat {
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(3px, 0.4cqw, 6px);
+  gap: var(--sb-row-gap, 3px);
   min-width: 0;
-  padding-inline: clamp(2px, 0.5cqw, 10px);
-  /* text budget: cell width minus leading icon, gap and paddings — the
-     value font-size fit below is computed against this real room */
-  --sb-cell-w: calc(var(--sb-half-w) / 5);
-  --sb-text-w: calc(var(--sb-cell-w) - var(--sb-icon-size) - var(--sb-gap) - clamp(4px, 1cqw, 20px));
+  padding-inline: var(--sb-cell-pad, 4px);
+  /* a value crossing a digit boundary (999 → 1.0K) re-weights its cell; the
+     ease keeps that a glide instead of a jump */
+  transition: flex-grow 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .sb-stat + .sb-stat {
   border-left: 1px solid rgba(122, 78, 32, 0.3);
-}
-
-/* Rank holds a short word plus division ("IRON 4") — wider cell so the
-   letters get real room without squeezing the numeric cells; its neighbors
-   on the right side share the rest (5.6 flex units per half → cell budgets
-   below match) */
-.sb-stats--right .sb-stat {
-  --sb-cell-w: calc(var(--sb-half-w) / 5.6);
-}
-/* Specificity matters here: the `.sb-stats--right .sb-stat` rule above is
-   (0,2,0), so a bare `.sb-stat--rank` would lose and the cell would compute
-   its font against a NORMAL cell's width — text shrunk to ~12px although
-   flex-grow had already handed it 1.6× the room. */
-.sb-stats--right .sb-stat--rank {
-  flex-grow: 1.6;
-  --sb-cell-w: calc(var(--sb-half-w) / 5.6 * 1.6);
 }
 
 /* label sits ABOVE this row, so icon + value share the full cell width
@@ -506,20 +608,23 @@ const liveChars = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--sb-gap);
+  gap: var(--sb-icon-gap, 6px);
   min-width: 0;
   max-width: 100%;
 }
 
 .sb-stat-icon {
-  /* fills the strip height on every desktop width: scales with the
-     scoreboard's own width (container query units), FHD → 2K → 4K */
+  /* as tall as the value row, capped by its share of the cell — the fit
+     resolves both against the real strip, FHD → 2K → 4K */
   width: var(--sb-icon-size);
   height: var(--sb-icon-size);
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
-  transition: filter 0.2s ease;
+  transition:
+    filter 0.2s ease,
+    width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Win / loss cell ── */
@@ -527,6 +632,8 @@ const liveChars = computed(() => {
   flex-direction: column;
   gap: 1px;
   line-height: 1.05;
+  /* two lines share the row the others fill with one */
+  font-size: var(--sb-stacked-size);
 }
 .sb-wl-win {
   color: #74d448;
@@ -542,19 +649,18 @@ const liveChars = computed(() => {
 .sb-stat-value {
   display: flex;
   align-items: center;
-  gap: 4px;
-  /* never wider than the cell: the shared char count (--val-chars, bound
-     from the template; rank overrides it locally) divides the cell's real
-     text budget. 0.62em ≈ average glyph width of the tabular digits. */
-  font-size: min(
-    var(--sb-val-size),
-    max(10px, calc(var(--sb-text-w) / (var(--val-chars, 4) * 0.62)))
-  );
+  /* ONE size for every cell, measured — never estimated — against the real
+     strip, so the numbers run as large as the tightest cell can hold and stay
+     identical across all ten of them. No gap: the fit measures the rendered
+     string, and a flex gap would be width the probe never saw. */
+  font-size: var(--sb-value-size);
   line-height: 1;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  transition: filter 0.2s ease;
+  transition:
+    filter 0.2s ease,
+    font-size 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Rank is a short uppercase word, not a number — a touch of tracking keeps
@@ -566,27 +672,24 @@ const liveChars = computed(() => {
 
 /* The emblem must not travel when the label beside it changes length — with a
    plain centered group, "GM" would pull it right and "BRON 3" push it left.
-   Fix: the value gets a slot of FIXED width (its char budget expressed in em,
-   so it tracks the computed font size) and sits left-aligned in it. Emblem +
-   gap + slot therefore measure the same for every tier, so the group stays
-   centered in the cell while emblem and text start at a constant x — and the
-   emblem-to-text distance is plain var(--sb-gap), same as every other cell. */
+   Fix: the value sits left-aligned in a slot as wide as the WIDEST tier label
+   (measured, then scaled to the shared value size). Emblem + gap + slot
+   therefore measure the same for every tier, so the group stays centered in the
+   cell while emblem and text start at a constant x — and the emblem-to-text
+   distance is plain var(--sb-icon-gap), same as every other cell. */
 .sb-stat--rank .sb-rank-value {
   flex: 0 1 auto;
-  width: calc(var(--val-chars) * 0.62em);
+  /* measured width of the widest tier label, at the shared value size */
+  width: var(--sb-rank-slot);
   justify-content: flex-start;
-  /* shrink + min-width: 0 for the narrowest strips, where the cell-width
-     estimate behind --sb-text-w runs a few px optimistic: the slot gives way
-     instead of pushing the group out of the cell. It shrinks by the same
-     amount for every tier, so the emblem still does not move. */
   min-width: 0;
 }
 
 .sb-stat-label {
-  /* auto-fit instead of ellipsis: sized so the longest label ("WIN / LOSS",
-     10 glyphs ≈ 9em incl. letter-spacing) always fits the cell — labels are
-     never truncated, on any resolution */
-  font-size: min(var(--sb-label-size), calc((var(--sb-cell-w) - 8px) / 9));
+  /* auto-fit instead of ellipsis: the fit shrinks this until the longest label
+     ("WIN / LOSS") fits its cell, and drops the row entirely rather than
+     rendering it unreadably small — labels are never truncated */
+  font-size: var(--sb-label-size);
   letter-spacing: 0.16em;
   font-weight: 700;
   color: #c9a95c;
@@ -799,32 +902,33 @@ const liveChars = computed(() => {
   }
 }
 
-/* Full-HD-wide strips: the icon becomes the label — drop the small-caps
-   text row (each cell keeps its title tooltip), center icon + value on
-   one line. Uncramped and the icons stay visible. */
+/* Narrow strips get tighter title tracking — the stat cells need no breakpoint
+   any more, the fit resolves them from the measured geometry. */
 @container (max-width: 1300px) {
-  .sb-stat-label {
-    display: none;
-  }
-  .sb-stat {
-    /* no label row above — the icon may use almost the full strip height */
-    --sb-icon-size: min(clamp(22px, 3cqw, 46px), calc(var(--bottom-center-strip-h, 79px) - 16px));
-  }
   .sb-title {
     letter-spacing: 0.18em;
     padding-left: 0.18em;
   }
 }
 
-/* very narrow strips (small laptops): icons go too, numbers stay */
-@container (max-width: 900px) {
-  .sb-stat-icon {
-    display: none;
-  }
-  .sb-stat {
-    /* no icon anymore — give its room back to the text budget */
-    --sb-text-w: calc(var(--sb-cell-w) - clamp(4px, 1cqw, 20px));
-  }
+/* ── Measuring probes ──
+   Off-layout copies of the value / rank / label typography. The fit writes a
+   string in, reads the width back and divides by the probe's font size to get
+   an em width — true glyph widths instead of an assumed average. Hidden via
+   visibility (not display:none) so they still lay out and can be measured. */
+.sb-probes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.sb-probes .sb-probe {
+  position: absolute;
+  white-space: pre;
+  line-height: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -835,6 +939,12 @@ const liveChars = computed(() => {
   }
   .crest-swap-enter-active,
   .crest-swap-leave-active {
+    transition: none;
+  }
+  /* resizing cells snap instead of gliding */
+  .sb-stat,
+  .sb-stat-icon,
+  .sb-stat-value {
     transition: none;
   }
 }

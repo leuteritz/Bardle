@@ -984,3 +984,45 @@ export interface ShopItemDetail {
   chimes: { need: number; have: number; ok: boolean }
   canBuy: boolean
 }
+
+/* ── Bottom scoreboard auto-fit (utils/scoreboardFit.ts) ─────────────────── */
+
+/** One stat cell as the fit sees it: measured glyph widths, no DOM. */
+export interface ScoreboardFitCell {
+  key: string
+  /** Width of the rendered value at font-size 1px (its em width), in px. */
+  em: number
+  /** Width of the cell's label at font-size 1px; 0 → the cell has no label. */
+  labelEm: number
+  /** true → the value renders on two stacked lines (win / loss). */
+  stacked?: boolean
+}
+
+export interface ScoreboardFitInput {
+  /** Usable width of the left / right stat group, in px. */
+  leftWidth: number
+  rightWidth: number
+  /** Usable height of the whole strip, in px. */
+  stripHeight: number
+  leftCells: ScoreboardFitCell[]
+  rightCells: ScoreboardFitCell[]
+  /** Internal: the second pass sets this to false once labels have been dropped. */
+  showLabels?: boolean
+}
+
+/** Every size the scoreboard renders with — all in px, all derived. */
+export interface ScoreboardFit {
+  valueSize: number
+  stackedValueSize: number
+  /** 0 → labels do not fit and are not rendered. */
+  labelSize: number
+  rowGap: number
+  /** 0 → icons would be specks and are not rendered. */
+  iconSize: number
+  iconGap: number
+  cellPad: number
+  /** flex-grow weight per cell key — proportional to the cell's real demand. */
+  grow: Record<string, number>
+  /** Measured em width per cell key — lets a cell reserve a fixed text slot. */
+  em: Record<string, number>
+}

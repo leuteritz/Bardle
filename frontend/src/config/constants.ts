@@ -81,6 +81,9 @@ export const RANK_TIER_SHORT: Record<string, string> = {
   Challenger: 'CHAL',
 }
 
+/** Apex tiers — one ladder rung each, so they carry no division. */
+export const APEX_RANK_TIERS = ['Master', 'Grandmaster', 'Challenger'] as const
+
 /** Roman division → digit, so "IRON 4" stays as narrow as "GOLD 1". */
 export const RANK_DIVISION_DIGITS: Record<string, string> = {
   IV: '4',
@@ -88,17 +91,6 @@ export const RANK_DIVISION_DIGITS: Record<string, string> = {
   II: '2',
   I: '1',
 }
-
-/**
- * Text budget of the rank cell, in the scoreboard's "average glyph" units
- * (see .sb-stat-value: budget × 0.62em). FIXED on purpose — feeding it the
- * live label length is what used to shrink the font on every rank-up.
- *
- * 6.3 rather than the 6 glyphs of "IRON 4": the 0.62em unit is calibrated for
- * tabular digits, while MedievalSharp capitals run wider (~0.64em), so the
- * widest label ("BRON 3") needs a little more than its glyph count.
- */
-export const RANK_LABEL_WIDTH_CHARS = 6.3
 
 // Abilities
 export const MAX_ABILITY_LEVEL = 5
@@ -1549,6 +1541,51 @@ export const SCOREBOARD_STAT_COLORS = {
   dragons: '#6ee0a0',
   barons: '#c9a0f5',
   turrets: '#d8b878',
+} as const
+
+/**
+ * Auto-fit budget of the bottom scoreboard (see utils/scoreboardFit.ts).
+ *
+ * The strip measures its real cells and its real glyph widths, then derives ONE
+ * shared value size that is as large as the tightest cell allows — instead of
+ * guessing an average glyph width. These are the only tuning knobs of that fit;
+ * everything else follows from the measurement.
+ */
+export const SCOREBOARD_FIT = {
+  /** Vertical breathing room kept free inside the strip (top + bottom, px). */
+  STRIP_PAD_Y: 6,
+  /** Label row: share of the strip height, clamped to the min/max below. */
+  LABEL_HEIGHT_FRACTION: 0.2,
+  LABEL_MIN_PX: 8.5,
+  LABEL_MAX_PX: 17,
+  /**
+   * Icon height as a multiple of the value size. Icon and number compete for
+   * the same cell width, so they are solved together instead of the icon
+   * taking the whole row height and starving the number: at 1.6 the icon still
+   * reads as the cell's emblem while the number keeps the room it needs.
+   */
+  ICON_TO_VALUE_RATIO: 1.6,
+  /** Below this the icon reads as a speck — the cell drops it and keeps the number. */
+  ICON_MIN_PX: 17,
+  ICON_MAX_PX: 72,
+  /** Gap between icon and value, as a share of the icon size. */
+  ICON_GAP_FRACTION: 0.2,
+  ICON_GAP_MIN_PX: 3,
+  ICON_GAP_MAX_PX: 14,
+  /** Horizontal padding per cell side, as a share of the average cell width. */
+  CELL_PAD_FRACTION: 0.04,
+  CELL_PAD_MIN_PX: 2,
+  CELL_PAD_MAX_PX: 14,
+  /** 1px hairline divider between two neighbouring cells. */
+  CELL_DIVIDER_PX: 1,
+  /** Cap-height safety: MedievalSharp overshoots its em box slightly. */
+  VALUE_HEIGHT_FRACTION: 0.94,
+  VALUE_MIN_PX: 11,
+  VALUE_MAX_PX: 52,
+  /** Two stacked lines (win/loss) plus their 1px gap fit into the main row. */
+  STACKED_LINE_DIVISOR: 2.2,
+  /** A one-line win/loss record longer than this folds into two lines. */
+  WIN_LOSS_STACK_CHARS: 15,
 } as const
 
 // ── Battle stat visuals — canonical mapping shared by BottomScoreboard,
