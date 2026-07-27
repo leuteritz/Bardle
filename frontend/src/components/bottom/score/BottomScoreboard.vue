@@ -102,7 +102,7 @@ function openBattleTab() {
 const winText = computed(() => `${formatNumber(totalWins.value)}W`)
 const lossText = computed(() => `${formatNumber(totalLosses.value)}L`)
 /** Non-breaking so the separator measures exactly as it renders. */
-const WL_SEPARATOR = '\u00A0\u00B7\u00A0'
+const WL_SEPARATOR = '\u00A0/\u00A0'
 /* A long record stacks W over L — half the line, still readable, and it keeps
    the other nine cells from having to shrink to a single cell's worst case. */
 const wlStacked = computed(
@@ -498,7 +498,7 @@ const liveChars = computed(() => {
           />
           <span class="sb-stat-value sb-wl-value" :class="{ 'sb-wl-value--stacked': wlStacked }">
             <span class="sb-wl-win">{{ winText }}</span>
-            <span v-if="!wlStacked" class="sb-wl-sep">&nbsp;·&nbsp;</span>
+            <span v-if="!wlStacked" class="sb-wl-sep">&nbsp;/&nbsp;</span>
             <span class="sb-wl-loss">{{ lossText }}</span>
           </span>
         </div>
@@ -641,9 +641,11 @@ const liveChars = computed(() => {
 .sb-wl-loss {
   color: #cc6050;
 }
+/* Slash, matching the cell's own "WIN / LOSS" label. Slightly smaller than the
+   numbers so it separates them without competing with them. */
 .sb-wl-sep {
   color: #7a6a44;
-  font-size: 0.7em;
+  font-size: 0.82em;
 }
 
 .sb-stat-value {
