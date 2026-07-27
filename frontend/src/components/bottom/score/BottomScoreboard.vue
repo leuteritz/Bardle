@@ -114,7 +114,6 @@ const {
   isAutoBattleInitialized,
   autoBattleEnabled,
   battleTime,
-  showAutoBattleResult,
   searchingPhaseStartTimestamp,
   lastLpChange,
   lastAutoBattleResult,

@@ -1,4 +1,10 @@
-import type { BattleEvent, BattleRole, BattleTimeline, ChampionState, StructureId } from '../../types'
+import type {
+  BattleEvent,
+  BattleRole,
+  BattleTimeline,
+  ChampionState,
+  StructureId,
+} from '../../types'
 import { BASIC_DRAKE_TYPES, type DrakeTypeId } from '../../config/drakes'
 import {
   STRUCTURE_POSITIONS,
@@ -13,7 +19,6 @@ import {
   crackedLaneOf,
 } from './structures'
 import {
-  BATTLE_TOTAL_GAME_SECONDS,
   TIMELINE_LANING_END,
   TIMELINE_DRAKE_WINDOW_END,
   TIMELINE_MIDFIGHT_END,
@@ -173,7 +178,11 @@ function pushEvent(ctx: GenContext, ev: BattleEvent) {
  * each event's delta in time order with per-step clamping, up to (exclusive)
  * `untilT`. This is the exact value the UI momentum bar shows at that time.
  */
-export function replayWinProbability(events: BattleEvent[], startProb: number, untilT: number): number {
+export function replayWinProbability(
+  events: BattleEvent[],
+  startProb: number,
+  untilT: number,
+): number {
   let prob = startProb
   for (const e of [...events].sort((a, b) => a.t - b.t)) {
     if (e.t >= untilT) break
@@ -207,11 +216,23 @@ function emitFight(
     t1: opts.attackerPool ?? [0, 1, 2, 3, 4],
     t2: opts.attackerPool ?? [0, 1, 2, 3, 4],
   }
-  pushEvent(ctx, { t: tStart, type: 'fightStart', location, lane: opts.lane, participants, winProbDelta: 0 })
+  pushEvent(ctx, {
+    t: tStart,
+    type: 'fightStart',
+    location,
+    lane: opts.lane,
+    participants,
+    winProbDelta: 0,
+  })
 
   let t = tStart + randInt(ctx.rng, 2, 6)
   let lastKiller: { team: 1 | 2; idx: number; tier: number } | null = null
-  const tierChances = [TIMELINE_DOUBLE_CHANCE, TIMELINE_TRIPLE_CHANCE, TIMELINE_QUADRA_CHANCE, TIMELINE_PENTA_CHANCE]
+  const tierChances = [
+    TIMELINE_DOUBLE_CHANCE,
+    TIMELINE_TRIPLE_CHANCE,
+    TIMELINE_QUADRA_CHANCE,
+    TIMELINE_PENTA_CHANCE,
+  ]
 
   for (let i = 0; i < killCount; i++) {
     let team = opts.biasTeam && ctx.rng() < 0.65 ? opts.biasTeam : pickTeam(ctx)
@@ -234,7 +255,9 @@ function emitFight(
     const victimIdx = pick(ctx.rng, victimPool)
     const others = participants[team === 1 ? 't1' : 't2'].filter((c) => c !== killerIdx)
     const isSolo = ctx.rng() < TIMELINE_SOLO_KILL_CHANCE
-    const assistIdxs = isSolo ? [] : others.slice(0, randInt(ctx.rng, 1, Math.min(2, others.length)))
+    const assistIdxs = isSolo
+      ? []
+      : others.slice(0, randInt(ctx.rng, 1, Math.min(2, others.length)))
     const firstBlood = opts.allowFirstBlood === true && !ctx.firstBloodDone
     if (firstBlood) ctx.firstBloodDone = true
 
@@ -245,7 +268,8 @@ function emitFight(
       killerIdx,
       victimIdx,
       assistIdxs,
-      multikillTier: lastKiller.tier >= 2 ? (Math.min(lastKiller.tier, 5) as 2 | 3 | 4 | 5) : undefined,
+      multikillTier:
+        lastKiller.tier >= 2 ? (Math.min(lastKiller.tier, 5) as 2 | 3 | 4 | 5) : undefined,
       firstBlood: firstBlood || undefined,
       soloKill: isSolo || undefined,
       location,
@@ -294,8 +318,13 @@ function emitStructureFall(
   const alivePool = basePool.filter((idx) => !walkingBack.has(idx))
   // when the whole lane pool is dead, any living teammate takes the structure
   const aliveTeam = [0, 1, 2, 3, 4].filter((idx) => !walkingBack.has(idx))
-  const pool = alivePool.length > 0 ? [...alivePool] : aliveTeam.length > 0 ? aliveTeam : [...basePool]
-  const count = randInt(ctx.rng, STRUCTURE_ATTACKERS_MIN, Math.min(STRUCTURE_ATTACKERS_MAX, pool.length))
+  const pool =
+    alivePool.length > 0 ? [...alivePool] : aliveTeam.length > 0 ? aliveTeam : [...basePool]
+  const count = randInt(
+    ctx.rng,
+    STRUCTURE_ATTACKERS_MIN,
+    Math.min(STRUCTURE_ATTACKERS_MAX, pool.length),
+  )
   const attackers: number[] = []
   while (attackers.length < count && pool.length > 0) {
     attackers.push(pool.splice(Math.floor(ctx.rng() * pool.length), 1)[0])
@@ -322,7 +351,11 @@ function emitStructureFall(
 
 function pickParticipants(ctx: GenContext): { t1: number[]; t2: number[] } {
   const pickSide = () => {
-    const count = randInt(ctx.rng, TIMELINE_OBJECTIVE_PARTICIPANTS_MIN, TIMELINE_OBJECTIVE_PARTICIPANTS_MAX)
+    const count = randInt(
+      ctx.rng,
+      TIMELINE_OBJECTIVE_PARTICIPANTS_MIN,
+      TIMELINE_OBJECTIVE_PARTICIPANTS_MAX,
+    )
     const all = [0, 1, 2, 3, 4]
     const out: number[] = []
     while (out.length < count && all.length > 0) {
@@ -344,7 +377,15 @@ function emitObjective(
 ) {
   const location = objective === 'drake' ? DRAKE_POS : BARON_POS
   const participants = forcedParticipants ?? pickParticipants(ctx)
-  pushEvent(ctx, { t: tSpawn, type: 'objectiveSpawn', objective, drakeType, location, participants, winProbDelta: 0 })
+  pushEvent(ctx, {
+    t: tSpawn,
+    type: 'objectiveSpawn',
+    objective,
+    drakeType,
+    location,
+    participants,
+    winProbDelta: 0,
+  })
 
   // small scrap around the pit
   if (ctx.rng() < 0.6) {
@@ -357,7 +398,11 @@ function emitObjective(
     t:
       tSpawn +
       (resultDelayT ??
-        randInt(ctx.rng, TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T, TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T)),
+        randInt(
+          ctx.rng,
+          TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T,
+          TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T,
+        )),
     type: 'objectiveResult',
     objective,
     drakeType,
@@ -413,7 +458,10 @@ export function generateTimeline(
   // already include the junglers), then clears the other buff. The first two
   // buffs of each team ALWAYS go to the jungler; re-clears after the respawn
   // are generated later (after the fights) so any living champion can take them ──
-  const buffPlan: Record<1 | 2, { lastClear: Record<'blue' | 'red', number>; nextBuff: 'blue' | 'red' }> = {
+  const buffPlan: Record<
+    1 | 2,
+    { lastClear: Record<'blue' | 'red', number>; nextBuff: 'blue' | 'red' }
+  > = {
     1: { lastClear: { blue: 0, red: 0 }, nextBuff: 'blue' },
     2: { lastClear: { blue: 0, red: 0 }, nextBuff: 'blue' },
   }
@@ -599,7 +647,10 @@ export function generateTimeline(
     }
     return seq
   }
-  const fallQueues: Record<1 | 2, PlannedFall[]> = { 1: buildFallSequence(1), 2: buildFallSequence(2) }
+  const fallQueues: Record<1 | 2, PlannedFall[]> = {
+    1: buildFallSequence(1),
+    2: buildFallSequence(2),
+  }
   const totalFalls = fallQueues[1].length + fallQueues[2].length
   const crackStart = Math.max(TIMELINE_CRACK_WINDOW_START_T, fromT + TIMELINE_STRUCTURE_MIN_GAP_T)
   const crackEnd = OBJECTIVE_BARON_SPAWN - TIMELINE_CRACK_WINDOW_END_MARGIN_T
@@ -655,10 +706,16 @@ export function generateTimeline(
   // crack unfinished (falls before the cut window are gone); degrade to random
   const pushLane = crackedLaneOf(ctx.destroyed, loser) ?? pick(rng, LANES)
   const defensePoint = STRUCTURE_POSITIONS[structureId(loser, pushLane, 'inhibitor')]
-  emitFight(ctx, randInt(rng, FINAL_PUSH_FIGHT_T, FINAL_PUSH_FIGHT_T + 40), defensePoint, pushKills, {
-    lane: pushLane,
-    biasTeam: winner,
-  })
+  emitFight(
+    ctx,
+    randInt(rng, FINAL_PUSH_FIGHT_T, FINAL_PUSH_FIGHT_T + 40),
+    defensePoint,
+    pushKills,
+    {
+      lane: pushLane,
+      biasTeam: winner,
+    },
+  )
 
   // ── Nexus turrets — fall after the defense fight breaks, gated on the inhibitor ──
   let tNex = FINAL_PUSH_FIGHT_T + FINAL_PUSH_FIGHT_HOLD_T
@@ -792,7 +849,15 @@ export function reseedTimelineFrom(
   const displayed = 0.5 + (mergedProb - baselineProb)
   const desired: 1 | 2 | null = displayed > 0.5 ? 1 : displayed < 0.5 ? 2 : null
   if (desired !== null && desired !== winner) {
-    const forced = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed, baselineProb, desired, drakeOpts)
+    const forced = generateTimeline(
+      newSeed,
+      boostedWinProb,
+      t + 1,
+      preDestroyed,
+      baselineProb,
+      desired,
+      drakeOpts,
+    )
     futureEvents = filterRegeneratedTail(current.events, t, forced.events, preDestroyed)
     winner = desired
   }
@@ -857,10 +922,7 @@ export function championXpAt(
   combat: CombatTally,
 ): number {
   const xpNoise = 1 + (noise - 1) * XP_NOISE_DAMPING
-  const aliveMinutes = Math.max(
-    0,
-    gameTime / 60 - combat.deaths * XP_DEATH_DOWNTIME_MINUTES,
-  )
+  const aliveMinutes = Math.max(0, gameTime / 60 - combat.deaths * XP_DEATH_DOWNTIME_MINUTES)
   return Math.floor(
     XP_PASSIVE_PER_MIN * aliveMinutes +
       XP_RATE_BY_ROLE[role] * aliveMinutes * xpNoise +
