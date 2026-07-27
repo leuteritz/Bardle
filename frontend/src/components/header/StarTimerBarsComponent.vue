@@ -49,8 +49,19 @@
             class="bar-edge-track bar-edge-track--left"
             :style="{ transform: entry.tf.trackL }"
           >
+            <!-- `v-ink-center.y` rückt die Zahl auf ihre optische Mitte: In
+                 MedievalSharp stehen Ziffern fast vollständig über der
+                 Baseline, mittig gesetzt sitzen sie dadurch sichtbar zu hoch.
+                 Der nötige Versatz ist kein fester em-Wert, sondern wächst mit
+                 dem Schriftgrad — genau deshalb stand der kleinere
+                 Verdeckungs-Countdown neben der großen Restzeit schief.
+                 `:key` erzwingt beim Wechsel des Zustands ein Neuaufsetzen:
+                 Die Direktive misst die Schriftmerkmale beim Mounten, und mit
+                 dem Zustand ändert sich der Schriftgrad. -->
             <span
               v-if="entry.secondsLabel !== null"
+              :key="entry.isEclipsed ? 'eclipsed' : 'plain'"
+              v-ink-center.y
               class="bar-seconds-label bar-seconds-label--left"
               >{{ entry.secondsLabel }}</span
             >
@@ -105,6 +116,8 @@
           >
             <span
               v-if="entry.secondsLabel !== null"
+              :key="entry.isEclipsed ? 'eclipsed' : 'plain'"
+              v-ink-center.y
               class="bar-seconds-label bar-seconds-label--right"
               >{{ entry.secondsLabel }}</span
             >
@@ -1285,44 +1298,23 @@ watch(
    An der Balkenkante stehen zwei ganz verschiedene Zeiten: wie lange der Stern
    noch DA ist, und wie lange er noch hinter der Sonne steckt. Über die Farbe
    allein waren sie kaum zu trennen — zwei gleich große, gleich fette Zahlen
-   nebeneinander in verschiedenen Zeilen lesen sich als dieselbe Größe.
+   in benachbarten Zeilen lesen sich als dieselbe Größe.
 
-   Sie bekommen deshalb verschiedene Formen. Die Restzeit des Sterns steht frei
-   und hell (oben): Sie zählt herunter, bis er weg ist, und ist damit die Zahl,
-   nach der man handelt. Der Verdeckungs-Countdown sitzt gefasst in einer
-   dunklen Kapsel mit Koronarand — kleiner, ruhiger, und durch die Fassung
-   sofort als eigene Art von Zeit erkennbar. Das Bild passt zur Sache: Während
-   der Verdeckung ist der Stern eingeschlossen, es passiert nichts, man wartet.
-
-   Der Schein weicht der Kapsel: Zwei Signale übereinander — leuchtender Text
-   IN einem leuchtenden Rahmen — heben sich gegenseitig auf. Den Kontrast
-   trägt jetzt die Fassung.
+   Der Unterschied liegt jetzt im Schriftgrad: Die Restzeit des Sterns steht
+   groß, fett und im hellsten Ton der Palette, der Verdeckungs-Countdown
+   deutlich kleiner, leichter und in Koronafarbe. Beide bleiben freistehend —
+   ohne Fläche, ohne Rahmen, wie jede andere Zahl in der Bar.
 
    Steht nach den Fluch- und Rage-Regeln: Ein Stern kann verflucht sein und
    rasen, aber solange er verdeckt ist, passiert nichts davon. */
 .timer-bar-row--eclipsed .bar-seconds-label {
-  /* Rund 82 % der freien Zahl — messbar kleiner, ohne in der nur ~14 px hohen
+  /* Rund 78 % der freien Zahl — der Größenunterschied trägt die Unterscheidung
+     jetzt allein, muss also deutlicher ausfallen, ohne in der nur ~14 px hohen
      Zeile auf Full HD unleserlich zu werden. */
-  font-size: clamp(0.64rem, 0.25vw + 0.41rem, 0.85rem);
+  font-size: clamp(0.61rem, 0.23vw + 0.4rem, 0.8rem);
   font-weight: 700;
-  color: #ffdca0;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: rgba(9, 6, 3, 0.86);
-  box-shadow:
-    inset 0 0 0 1px rgba(238, 162, 52, 0.8),
-    0 0 8px rgba(232, 140, 30, 0.28);
-  filter: none;
-}
-
-/* Die Kapsel ist breiter als die nackte Ziffer — ohne größeren Abstand
-   schöbe sie sich über die Balkenkante, an der sie hängt. */
-.timer-bar-row--eclipsed .bar-seconds-label--left {
-  transform: translateX(calc(-50% - 1.55em)) translateY(-50%);
-}
-
-.timer-bar-row--eclipsed .bar-seconds-label--right {
-  transform: translateX(calc(50% + 1.55em)) translateY(-50%);
+  color: #ffe6b0;
+  filter: drop-shadow(0 0 6px rgba(255, 190, 70, 0.8)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.95));
 }
 
 /* Der Rage-Überzug liegt auf der Füllung, die jetzt der Rahmen ist — er muss
