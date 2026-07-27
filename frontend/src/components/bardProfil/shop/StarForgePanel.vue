@@ -128,7 +128,7 @@
     <!-- ── COSMIC BARGAIN ─────────────────────────────────────────────────── -->
     <div class="section-head">
       <Icon icon="game-icons:cash" width="18" height="18" class="section-icon section-icon--bargain" />
-      <span class="section-title section-title--bargain">COSMIC BARGAIN</span>
+      <span v-ink-center class="section-title section-title--bargain">COSMIC BARGAIN</span>
       <span class="section-count section-count--bargain">
         restocks in {{ formatClock(forgeStore.bargainRestockRemainingMs) }}
       </span>

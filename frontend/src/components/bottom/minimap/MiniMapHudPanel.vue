@@ -3,8 +3,8 @@
     <!-- top left: arrival countdown (travel only) -->
     <div v-if="isTraveling" class="hud-arrival">
       <div class="hud-arrival-row">
-        <span class="hud-arrival-label">Arrival</span>
-        <span class="hud-arrival-value">{{ countdown }}</span>
+        <span v-ink-center class="hud-arrival-label">Arrival</span>
+        <span v-ink-center class="hud-arrival-value">{{ countdown }}</span>
       </div>
       <div class="hud-metrics">
         <span class="hud-metric">{{ speedDisplay }} <span class="hud-metric-unit">LY/s</span></span>

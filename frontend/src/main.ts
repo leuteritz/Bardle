@@ -6,12 +6,16 @@ import { formatNumber } from './config/numberFormat'
 import { BARD_PROFILE_RADIUS, BOTTOM_BAR_NOTCH_R } from './config/constants'
 import { usePersistence } from './composables/usePersistence'
 import { useBattleStore } from './stores/battleStore'
+import { vInkCenter } from './utils/textInkOffset'
 
 const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
 app.config.globalProperties.$formatNumber = formatNumber
+// v-ink-center: rückt zentrierten Text auf seine optische Achse — MedievalSharp
+// setzt die Glyphen asymmetrisch in ihre Boxen (siehe utils/textInkOffset.ts).
+app.directive('ink-center', vInkCenter)
 
 app.mount('#app')
 document.documentElement.style.setProperty('--bp-radius', `${BARD_PROFILE_RADIUS}px`)

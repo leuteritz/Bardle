@@ -205,7 +205,7 @@ function onSlotLeave() {
         </template>
 
         <!-- role label -->
-        <div class="champ-card-label">{{ ROLES[i].short }}</div>
+        <div v-ink-center class="champ-card-label">{{ ROLES[i].short }}</div>
 
         <!-- ── Ziel-Markierung: diese Rolle ist im Team-Tab geöffnet ──
              Reticle aus vier Eckwinkeln plus Keilen an beiden Seitenkanten —

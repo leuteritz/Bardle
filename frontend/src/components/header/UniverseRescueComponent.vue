@@ -65,8 +65,8 @@ onUnmounted(() => {
       <div class="uni-tile uni-tile--galaxy" title="Current galaxy">
         <img src="/img/galaxy-far.png" class="tile-icon gx-icon" alt="" aria-hidden="true" />
         <div class="tile-text">
-          <span class="tile-label">Galaxy</span>
-          <span class="tile-value gx-value">{{ galaxyStore.currentGalaxy }}</span>
+          <span v-ink-center class="tile-label">Galaxy</span>
+          <span v-ink-center class="tile-value gx-value">{{ galaxyStore.currentGalaxy }}</span>
         </div>
       </div>
 
@@ -86,8 +86,8 @@ onUnmounted(() => {
           aria-hidden="true"
         />
         <div class="tile-text">
-          <span class="tile-label">Meeps</span>
-          <span class="tile-value meep-value">{{ formatNumber(displayMeeps) }}</span>
+          <span v-ink-center class="tile-label">Meeps</span>
+          <span v-ink-center class="tile-value meep-value">{{ formatNumber(displayMeeps) }}</span>
         </div>
       </div>
     </div>

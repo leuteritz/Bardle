@@ -35,7 +35,7 @@
             <span class="lp-num" :style="{ color: rankColor, textShadow: nameGlow }">
               {{ currentRank.lp }}
             </span>
-            <span class="lp-unit">LEAGUE POINTS</span>
+            <span v-ink-center class="lp-unit">LEAGUE POINTS</span>
           </div>
         </div>
 
@@ -114,6 +114,7 @@
         </span>
         <span class="step-caption">
           <span
+            v-ink-center
             class="tier-label"
             :style="i === currentTierIndex ? { color: rankColor } : undefined"
           >

@@ -3,7 +3,7 @@
   <div class="roster-panel" :style="rosterStyle">
     <div class="roster-head">
       <span class="roster-rule" />
-      <span class="roster-title">YOUR TEAM</span>
+      <span v-ink-center class="roster-title">YOUR TEAM</span>
       <span class="roster-rule" />
     </div>
 

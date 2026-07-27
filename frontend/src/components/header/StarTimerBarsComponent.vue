@@ -63,7 +63,7 @@
                   :key="label.id"
                   class="planet-hp"
                   :class="`planet-hp--${label.state}`"
-                  ><span class="planet-hp__num">{{ label.pct }}</span></span
+                  ><span v-ink-center class="planet-hp__num">{{ label.pct }}</span></span
                 >
               </span>
             </div>
@@ -124,7 +124,7 @@
                   :key="label.id"
                   class="planet-hp"
                   :class="`planet-hp--${label.state}`"
-                  ><span class="planet-hp__num">{{ label.pct }}</span></span
+                  ><span v-ink-center class="planet-hp__num">{{ label.pct }}</span></span
                 >
               </span>
             </div>

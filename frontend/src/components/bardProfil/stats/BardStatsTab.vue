@@ -589,7 +589,13 @@ function stopResize() {
         <div v-else-if="solarStore.branchesReadyForEvolve" class="sf-pill sf-pill--wait">
           Evolving in {{ formatCompactDuration(dwellRemainingMs) }}
         </div>
-        <div v-else class="sf-pill sf-pill--hint" role="button" @click="uiStore.setBardTab('shop')">
+        <div
+          v-else
+          v-ink-center
+          class="sf-pill sf-pill--hint"
+          role="button"
+          @click="uiStore.setBardTab('shop')"
+        >
           Evolve
         </div>
       </div>
@@ -614,7 +620,7 @@ function stopResize() {
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
           <span class="sf-p-title">
-            <span class="sf-p-label">Journey</span>
+            <span v-ink-center class="sf-p-label">Journey</span>
           </span>
           <RpgSearchBar
             v-model="journeySearch"
@@ -641,11 +647,12 @@ function stopResize() {
                   <!-- One fixed box per digit — MedievalSharp has no tabular
                        figures, so only this keeps the readout from breathing -->
                   <span class="sf-pt-num">
-                    <span v-for="(digit, i) in seg.value" :key="i" class="sf-pt-digit">
+                    <span v-for="(digit, i) in seg.value" :key="i" v-ink-center
+                    class="sf-pt-digit">
                       {{ digit }}
                     </span>
                   </span>
-                  <span class="sf-pt-unit">{{ seg.unit }}</span>
+                  <span v-ink-center class="sf-pt-unit">{{ seg.unit }}</span>
                 </div>
               </div>
               <div class="sf-pt-rule" />
@@ -667,7 +674,7 @@ function stopResize() {
               }"
               :title="g.tip"
             >
-              <span class="sf-gauge-lbl">{{ g.label }}</span>
+              <span v-ink-center class="sf-gauge-lbl">{{ g.label }}</span>
               <div class="sf-gauge-ring">
                 <svg
                   class="sf-gauge-svg"
@@ -705,7 +712,7 @@ function stopResize() {
                   </text>
                 </svg>
               </div>
-              <span class="sf-gauge-sub">
+              <span v-ink-center class="sf-gauge-sub">
                 <Icon
                   v-if="g.starIcon"
                   class="sf-gauge-sub-ico"
@@ -726,7 +733,7 @@ function stopResize() {
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
           <span class="sf-p-title">
-            <span class="sf-p-label">Augments</span>
+            <span v-ink-center class="sf-p-label">Augments</span>
           </span>
           <RpgSearchBar
             v-model="augmentSearch"
@@ -790,7 +797,7 @@ function stopResize() {
       <section class="sf-panel sf-col">
         <header class="sf-p-head">
           <span class="sf-p-title">
-            <span class="sf-p-label">Galaxy Archive</span>
+            <span v-ink-center class="sf-p-label">Galaxy Archive</span>
           </span>
           <RpgSearchBar
             v-model="archiveSearch"

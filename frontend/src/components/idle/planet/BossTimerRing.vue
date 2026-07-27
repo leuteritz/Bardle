@@ -18,10 +18,10 @@
       <circle cx="50" cy="50" r="44" class="btr-arc" :style="{ strokeDasharray: dashArray }" />
     </svg>
     <div class="btr-inner">
-      <span class="btr-secs">{{ secs }}</span>
-      <span class="btr-label">{{ label }}</span>
+      <span v-ink-center class="btr-secs">{{ secs }}</span>
+      <span v-ink-center class="btr-label">{{ label }}</span>
     </div>
-    <span v-if="badge" class="btr-badge">{{ badge }}</span>
+    <span v-if="badge" v-ink-center class="btr-badge">{{ badge }}</span>
   </div>
 </template>
 

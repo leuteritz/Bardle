@@ -45,8 +45,8 @@
       </svg>
       <span class="rsq-cdpill rsq-vacant-pill">＋</span>
       <div class="rsq-vacant-plate">
-        <span class="rsq-vacant-name">{{ v.label }}</span>
-        <span class="rsq-vacant-hint">Assign a champion</span>
+        <span v-ink-center class="rsq-vacant-name">{{ v.label }}</span>
+        <span v-ink-center class="rsq-vacant-hint">Assign a champion</span>
       </div>
     </button>
 

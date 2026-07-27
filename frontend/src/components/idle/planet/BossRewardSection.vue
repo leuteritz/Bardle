@@ -3,7 +3,7 @@
     <!-- Eyebrow zwischen HUD-Klammerlinien — spiegelt den Bossnamen oben -->
     <div class="loot-head">
       <span class="loot-line" />
-      <span class="loot-eyebrow">✦ Loot ✦</span>
+      <span v-ink-center class="loot-eyebrow">✦ Loot ✦</span>
       <span class="loot-line loot-line--right" />
     </div>
 

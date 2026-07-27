@@ -50,12 +50,12 @@
           <span v-else-if="isBattleLive" class="battle-btn-live-dot" />
           <img v-else src="/img/menu/BATTLE.png" alt="Battle" class="battle-btn-img" />
 
-          <span v-if="isStarting">STARTING…</span>
-          <span v-else-if="isBattleLive">RETURN TO LIVE BATTLE</span>
-          <span v-else-if="!hasFullTeam">
+          <span v-if="isStarting" v-ink-center>STARTING…</span>
+          <span v-else-if="isBattleLive" v-ink-center>RETURN TO LIVE BATTLE</span>
+          <span v-else-if="!hasFullTeam" v-ink-center>
             {{ 5 - teamProgress }} SLOT{{ 5 - teamProgress !== 1 ? 'S' : '' }} OPEN
           </span>
-          <span v-else>START BATTLE</span>
+          <span v-else v-ink-center>START BATTLE</span>
         </span>
       </button>
       <div class="action-rule action-rule--right" />

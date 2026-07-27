@@ -60,7 +60,7 @@ const {
       <span v-if="isGalaxyBoss" class="sf-boss-galaxy-badge">✦ GALAXY BOSS ✦</span>
       <div class="sf-name-row">
         <span class="sf-name-line" />
-        <span class="sf-boss-name" :class="{ 'sf-boss-name--galaxy': isGalaxyBoss }">
+        <span v-ink-center class="sf-boss-name" :class="{ 'sf-boss-name--galaxy': isGalaxyBoss }">
           {{ activeBoss.bossName }}
         </span>
         <span class="sf-name-line" />
@@ -117,7 +117,7 @@ const {
                 <span class="sf-hp-sep">/</span>
                 {{ formatNumber(activeBoss.maxHP) }}
               </span>
-              <span class="sf-hp-pct" :class="{ 'sf-hp-pct--critical': hpPct < 25 }">
+              <span v-ink-center class="sf-hp-pct" :class="{ 'sf-hp-pct--critical': hpPct < 25 }">
                 {{ Math.round(hpPct) }}%
               </span>
             </div>

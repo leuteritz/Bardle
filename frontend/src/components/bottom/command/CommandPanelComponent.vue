@@ -236,7 +236,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
           <template v-else>
             <!-- Slot-Nummer am Kopf: benennt den Orbit, solange ihn noch kein
                  Planet benennt. Römisch wie die Sektor-Labels der Minimap. -->
-            <div class="cmd-tile-index">{{ toRoman(index + 1) }}</div>
+            <div v-ink-center class="cmd-tile-index">{{ toRoman(index + 1) }}</div>
             <div class="cmd-tile-icon cmd-tile-icon--locked">
               <img src="/img/lock.png" alt="Locked" class="lock-icon" />
             </div>
@@ -253,7 +253,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
                   class="cmd-tile-chime-img"
                   alt="Chimes"
                 />
-                <span class="cmd-tile-cost-value">{{
+                <span v-ink-center class="cmd-tile-cost-value">{{
                   formatNumber(planetStore.getSlotCost(slot.id))
                 }}</span>
               </div>

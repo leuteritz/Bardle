@@ -72,7 +72,7 @@ function handleBuy() {
       <span v-if="state === 'bought'" class="msn-badge msn-badge--bought">✓</span>
       <span v-else class="msn-badge" :class="`msn-badge--${state}`">
         <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="msn-badge__icon" />
-        <span class="msn-badge__num">{{ data.node.cost }}</span>
+        <span v-ink-center class="msn-badge__num">{{ data.node.cost }}</span>
       </span>
     </button>
 

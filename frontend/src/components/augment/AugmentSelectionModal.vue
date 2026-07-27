@@ -86,7 +86,7 @@ const rarityLabel: Record<string, string> = {
             </div>
 
             <!-- Name -->
-            <h3 class="mb-1 text-base font-bold leading-tight text-center text-white">
+            <h3 v-ink-center class="mb-1 text-base font-bold leading-tight text-center text-white">
               {{ aug.name }}
             </h3>
 

@@ -134,6 +134,11 @@ function handleReset() {
 
 const headerRef = ref<HTMLElement | null>(null)
 const chimesRef = ref<HTMLElement | null>(null)
+
+/* Die Chimes-Zahl steht über zwei exakt mittigen Achsen (Chime-Icon der
+   Unterzeile, Level-Badge) — sichtbarer Versatz fällt dort sofort auf. Die
+   Korrektur übernimmt v-ink-center im Template (utils/textInkOffset.ts). */
+const chimesText = computed(() => formatNumber(gameStore.chimes))
 let resizeObserver: ResizeObserver | null = null
 
 const xpProgress = computed(() => Math.max(0, Math.min(1, (gameStore.levelProgress ?? 0) / 100)))
@@ -335,9 +340,7 @@ onUnmounted(() => {
         class="center-chimes"
         @click="uiStore.setBardTab('bard')"
       >
-        <span class="chimes-value chimes-text-glow">
-          {{ formatNumber(gameStore.chimes) }}
-        </span>
+        <span v-ink-center class="chimes-value chimes-text-glow">{{ chimesText }}</span>
         <div class="chimes-sub-row">
           <div class="chimes-sub-stat">
             <span
@@ -379,7 +382,7 @@ onUnmounted(() => {
 
       <RpgBadgeTooltip>
         <div class="arc-level-badge" :style="{ top: svgH - badgeOverlapPx + 'px' }">
-          <span class="arc-level-text">{{ gameStore.level }}</span>
+          <span v-ink-center class="arc-level-text">{{ gameStore.level }}</span>
         </div>
         <template #tip>
           <RpgBadgeTooltipBody kind="level" />
@@ -392,6 +395,7 @@ onUnmounted(() => {
         <Transition name="header-badge">
           <button
             v-if="expeditionBadgeCount > 0"
+            v-ink-center
             class="header-notif-badge header-notif-badge--expedition"
             :style="expedBadgeStyle"
             :aria-label="`${expeditionBadgeCount} expedition(s) ready`"
@@ -409,6 +413,7 @@ onUnmounted(() => {
         <Transition name="header-badge">
           <button
             v-if="forgeBadgeReady"
+            v-ink-center
             class="header-notif-badge header-notif-badge--forge"
             :style="forgeBadgeStyle"
             aria-label="Sun evolution ready"
@@ -426,6 +431,7 @@ onUnmounted(() => {
         <Transition name="header-badge">
           <button
             v-if="championBadgeCount > 0"
+            v-ink-center
             class="header-notif-badge header-notif-badge--champion"
             :style="champBadgeStyle"
             :aria-label="`${championBadgeCount} new champion(s)`"
@@ -443,6 +449,7 @@ onUnmounted(() => {
         <Transition name="header-badge">
           <button
             v-if="skillBadgeCount > 0"
+            v-ink-center
             class="header-notif-badge header-notif-badge--skill"
             :style="skillBadgeStyle"
             :aria-label="`${skillBadgeCount} skill(s) ready to learn`"
@@ -460,6 +467,7 @@ onUnmounted(() => {
         <Transition name="header-badge">
           <button
             v-if="planetBadgeCount > 0"
+            v-ink-center
             class="header-notif-badge header-notif-badge--planet"
             :style="planetBadgeStyle"
             :aria-label="`${planetBadgeCount} planet level-up(s) affordable`"

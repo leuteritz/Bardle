@@ -340,7 +340,7 @@ const liveChars = computed(() => {
             </span>
           </template>
         </div>
-        <div v-else key="title" class="sb-title">BARDLE</div>
+        <div v-else key="title" v-ink-center class="sb-title">BARDLE</div>
       </Transition>
     </div>
 

@@ -42,8 +42,8 @@ const canUnlock = computed(() => store.canUnlockPlanetSlot(props.slotIndex))
        the player sees WHAT is missing, not just "locked". -->
   <div class="ps-lock">
     <div class="ps-lock-head">
-      <span class="ps-lock-kicker">✦ Sealed Orbit ✦</span>
-      <h2 class="ps-lock-title">Orbit {{ toRoman(orbitNumber) }}</h2>
+      <span v-ink-center class="ps-lock-kicker">✦ Sealed Orbit ✦</span>
+      <h2 v-ink-center class="ps-lock-title">Orbit {{ toRoman(orbitNumber) }}</h2>
       <span class="ps-lock-sub">
         An empty lane around your star — claim it to settle a planet here.
       </span>

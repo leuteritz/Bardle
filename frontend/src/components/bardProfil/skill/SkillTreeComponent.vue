@@ -128,7 +128,7 @@ const nodeTypes = {
 
     <!-- Admin toolbar: unlock / reset the whole tree at once -->
     <div class="st-admin">
-      <span class="st-admin-tag">Admin</span>
+      <span v-ink-center class="st-admin-tag">Admin</span>
       <button
         class="st-admin-btn st-admin-btn--unlock"
         title="Learn every skill for free"

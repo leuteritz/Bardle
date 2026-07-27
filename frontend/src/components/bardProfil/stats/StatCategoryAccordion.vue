@@ -97,7 +97,7 @@ watch(isSearching, (searching, wasSearching) => {
           <span class="sc-head-name">{{ cat.label }}</span>
           <span class="sc-head-blurb">{{ cat.blurb }}</span>
         </span>
-        <span class="sc-head-count">
+        <span v-ink-center class="sc-head-count">
           {{ isSearching ? `${cat.stats.length}/${cat.totalCount}` : cat.totalCount }}
         </span>
       </button>

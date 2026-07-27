@@ -4,7 +4,7 @@
   <div class="stat-column" :class="`stat-column--${align}`">
     <div class="column-header">
       <Icon :icon="group.icon" width="24" height="24" class="column-icon" :style="{ color: group.color }" />
-      <span class="column-title" :style="{ color: group.color }">{{ group.title }}</span>
+      <span v-ink-center class="column-title" :style="{ color: group.color }">{{ group.title }}</span>
     </div>
 
     <div class="column-rows">
@@ -19,7 +19,7 @@
             class="row-icon"
             :style="row.color ? { color: row.color } : undefined"
           />
-          <span class="row-value" :style="row.color ? { color: row.color } : undefined">
+          <span v-ink-center class="row-value" :style="row.color ? { color: row.color } : undefined">
             {{ row.value }}
           </span>
         </span>
