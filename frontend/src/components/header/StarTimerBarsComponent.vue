@@ -13,6 +13,7 @@
           'timer-bar-row--boss': entry.starType === 'galaxy_boss',
           'timer-bar-row--raging': entry.isRaging,
           'timer-bar-row--eclipsed': entry.isEclipsed,
+          'timer-bar-row--joined': entry.joined,
           'star-hover-active': starGroupStore.hoveredTimerStarId === entry.starId,
         }"
         :style="entry.style"
@@ -431,6 +432,12 @@ interface BarEntry {
   curseRatio: number
   /** Boss dieses Sterns rast gerade — doppelter Schaden, Bar schlägt in Crimson um */
   isRaging: boolean
+  /**
+   * Beide Hälften treffen sich auf der Mittelachse — die Zeile hängt unterhalb
+   * des Header-Ovals, wo keine Rundung mehr dazwischen liegt. Nur dann bekommt
+   * der Stoß eine Fassung; darüber verschwindet er ohnehin hinter dem Oval.
+   */
+  joined: boolean
   /** Stern fliegt hinter der Sonne — kein Schaden fließt, Bar geht in Umbra */
   isEclipsed: boolean
   /** 0…1 durch die Verdeckung — treibt die Füllung des Eclipse-Balkens */
@@ -610,6 +617,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
     BarEntry,
     | 'palette'
     | 'isRaging'
+    | 'joined'
     | 'isEclipsed'
     | 'eclipseProgress'
     | 'secondsLabel'
@@ -754,6 +762,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
     // Zeile in diesem Frame noch eingeblendet wird.
     const arc = headerCenterArc.value
     const rowBottom = rowBottoms.value.get(entry.starId)
+    let joined = false
     if (arc && rowBottom !== undefined) {
       // Gerastert wird VOR dem Deckeln: Sonst schöbe das Aufrunden die Seiten
       // über die Achse hinaus und beide Hälften überlappten sich in der Mitte.
@@ -765,6 +774,9 @@ const sortedEntries = computed<BarEntry[]>(() => {
       // zur Achse, die Mittelspalte also auf 0. Ein blankes `1fr` hätte dort
       // seine Inhaltsmindestbreite behauptet und beide Seiten zurückgedrängt.
       style.gridTemplateColumns = `${sideWidth}px minmax(0, 1fr) ${sideWidth}px`
+      // Unter dem Oval stoßen die beiden Hälften auf der Achse aufeinander.
+      // Ohne Füllung gibt es nichts zu verbinden — dann bleibt die Naht weg.
+      joined = sideWidth >= arc.cx && entry.fillRatio > 0
     }
 
     const trackPct = (1 - entry.fillRatio) * 100
@@ -778,6 +790,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
       tf,
       ...entry,
       isRaging: entry.starId === ragingStarId,
+      joined,
       isEclipsed: eclipse !== undefined,
       eclipseProgress: eclipse?.target ?? 0,
       secondsLabel: eclipse ? eclipse.secondsLeft : entry.timeless ? null : entry.secondsInt,
@@ -997,8 +1010,14 @@ watch(
 /* Der Platzhalter zwischen den beiden Balkenseiten — er hält die Grid-Spalte,
    die das Mittel-Oval einnimmt. Ohne Innenabstand, denn unterhalb des Ovals
    geht diese Spalte auf 0: Ein Padding würde die Zeile dort überlaufen lassen,
-   statt die Seiten sauber in der Mitte zusammentreffen zu lassen. */
+   statt die Seiten sauber in der Mitte zusammentreffen zu lassen.
+   `position: relative` trägt die Naht darunter — die Spalte IST die Achse,
+   damit sitzt sie ohne eigene Rechnung genau im Treffpunkt. */
 .bar-center {
+  position: relative;
+  /* Über beide Seiten: Die rechte Hälfte steht im DOM NACH der Mitte und
+     überdeckte die Spange sonst zur Hälfte. */
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1016,6 +1035,75 @@ watch(
 .bar-value {
   color: var(--text-color);
   filter: drop-shadow(0 0 3px var(--icon-color));
+}
+
+/* ── Der Treffpunkt: wo beide Hälften auf der Achse zusammenkommen ──────────
+   Unterhalb des Ovals liegt keine Rundung mehr zwischen den Seiten, sie stoßen
+   direkt aneinander. Beide Verläufe enden dort mit ihrem HELLSTEN Ton, sodass
+   in der Mitte ein breiter, strukturloser Lichtfleck entsteht — und die beiden
+   Innenradien schnüren ihn zusätzlich zu einer Taille ein. Der Stoß liest sich
+   damit als Versehen.
+
+   Statt ihn zu kaschieren, bekommt er einen Knoten: ein leuchtendes Rautenglied
+   auf der Achse, unterlegt von einem weichen Lichthof, der über beide Kanten
+   greift. Die Raute liegt quer zur Naht und bindet die Hälften damit zusammen,
+   statt sie zu trennen — eine senkrechte Spange an derselben Stelle las sich
+   prompt als Schnitt durch den Balken.
+
+   Rein statisch gezeichnet: Bei 30 Zeilen ist jede Animation hier ein
+   Dauer-Repaint quer über den ganzen Header. */
+.timer-bar-row--joined .bar-center::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 28px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  /* Der Hof reicht bewusst weiter als die Raute: Er lässt beide Enden
+     ineinander übergehen, damit der Knoten nicht aufgesetzt wirkt. */
+  background: radial-gradient(
+    ellipse 50% 58% at 50% 50%,
+    rgba(255, 236, 190, 0.45) 0%,
+    rgba(255, 214, 130, 0.16) 46%,
+    rgba(255, 214, 130, 0) 74%
+  );
+}
+
+.timer-bar-row--joined .bar-center::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Anteil der Zeilenhöhe statt fester Größe: Die höhere Galaxieboss-Zeile
+     bekommt ihren Knoten damit im selben Verhältnis. */
+  height: 46%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 1px;
+  pointer-events: none;
+  background: linear-gradient(135deg, #fff6dc 0%, #f0c070 54%, #d08820 100%);
+  box-shadow:
+    0 0 0 1px rgba(28, 15, 5, 0.8),
+    0 0 6px 1px rgba(255, 200, 90, 0.5);
+}
+
+/* Die Spange hat einen Grund: Ohne die Radien greifen die beiden Füllungen
+   glatt ineinander, und sie schließt die Fuge — mit ihnen bliebe die Taille
+   auch hinter der Spange als Kerbe an Ober- und Unterkante stehen. */
+.timer-bar-row--joined .bar-side--left .bar-fill,
+.timer-bar-row--joined .bar-fill--mirrored {
+  border-radius: 0;
+}
+
+/* Verdeckt trägt der Knoten die Korona statt des Goldes — dieselbe Sprache, in
+   der die Zeile ihren Zustand ohnehin spricht. Der dunkle Rand entfällt: Auf
+   dem fast schwarzen Rahmen gäbe er keinen Kontrast, sondern fräße nur den
+   Rand des Knotens weg. */
+.timer-bar-row--joined.timer-bar-row--eclipsed .bar-center::after {
+  background: linear-gradient(135deg, #fff4d2 0%, #f0a030 58%, #dd8418 100%);
+  box-shadow: 0 0 8px 2px rgba(255, 190, 80, 0.6);
 }
 
 /* ── Endkampf-Bars (zeitlos): Typ-Label mittig auf jeder Seitenfüllung ── */
