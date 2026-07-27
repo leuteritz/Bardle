@@ -47,9 +47,11 @@
             class="bar-edge-track bar-edge-track--left"
             :style="{ transform: entry.tf.trackL }"
           >
-            <span v-if="!entry.timeless" class="bar-seconds-label bar-seconds-label--left">{{
-              entry.secondsInt
-            }}</span>
+            <span
+              v-if="entry.secondsLabel !== null"
+              class="bar-seconds-label bar-seconds-label--left"
+              >{{ entry.secondsLabel }}</span
+            >
             <div class="planet-dots planet-dots--left">
               <span
                 v-for="dot in entry.planets"
@@ -99,9 +101,11 @@
             class="bar-edge-track bar-edge-track--right"
             :style="{ transform: entry.tf.trackR }"
           >
-            <span v-if="!entry.timeless" class="bar-seconds-label bar-seconds-label--right">{{
-              entry.secondsInt
-            }}</span>
+            <span
+              v-if="entry.secondsLabel !== null"
+              class="bar-seconds-label bar-seconds-label--right"
+              >{{ entry.secondsLabel }}</span
+            >
             <div class="planet-dots planet-dots--right">
               <span
                 v-for="dot in entry.planets"
@@ -152,7 +156,7 @@ import {
   STAR_TIMER_HP_REVEAL_MS,
 } from '../../config/constants'
 import { CHAMPION_ROLES } from '../../config/championData'
-import { starEclipseProgress } from '../../utils/foregroundGate'
+import { starEclipseState } from '../../utils/foregroundGate'
 import type { StarGroup } from '../../stores/starGroupStore'
 import type { StarType } from '../../types'
 
@@ -203,6 +207,8 @@ interface EclipseSnapshot {
   target: number
   /** Zuletzt gemessener Rohstand, Basis der Vorausrechnung im nächsten Tick. */
   raw: number
+  /** Ganze Sekunden bis zum Wiederauftauchen — der Countdown neben dem Balken. */
+  secondsLeft: number
 }
 
 const eclipseSnapshot = shallowRef<Map<string, EclipseSnapshot>>(new Map())
@@ -212,16 +218,18 @@ function refreshEclipseSnapshot(): void {
   const next = new Map<string, EclipseSnapshot>()
 
   for (const star of starGroupStore.activeStars) {
-    const raw = starEclipseProgress(star.id)
+    const state = starEclipseState(star.id)
     const before = prev.get(star.id)
 
-    if (raw < 0) {
+    if (state === null) {
       // Der Stern ist hervorgetreten. Einen Tick lang voll stehen lassen: die
       // beiden Lichtfronten sollen die Mitte sichtbar erreichen, bevor die Bar
-      // abtritt — dieser Moment IST die Aussage der Anzeige.
-      if (before && before.target < 1) next.set(star.id, { target: 1, raw: 1 })
+      // abtritt — dieser Moment IST die Aussage der Anzeige. Der Countdown
+      // steht dabei auf 0, dem Wert, auf den er die ganze Zeit zugelaufen ist.
+      if (before && before.target < 1) next.set(star.id, { target: 1, raw: 1, secondsLeft: 0 })
       continue
     }
+    const raw = state.progress
 
     // Die CSS-Transition läuft genau einen Tick lang. Bekäme sie den JETZT
     // gemessenen Stand, liefe die Füllung dem Stern dauerhaft einen Tick
@@ -232,7 +240,16 @@ function refreshEclipseSnapshot(): void {
     // gerechnet — so trägt er das Hochlerpen des Tempos hinter der Sonne
     // automatisch mit.
     const step = before ? Math.max(0, raw - before.raw) : 0
-    next.set(star.id, { target: Math.min(1, raw + step), raw })
+    next.set(star.id, {
+      target: Math.min(1, raw + step),
+      raw,
+      // Aufgerundet wie jeder Countdown im Spiel (`fmtMs`): Die angezeigte Zahl
+      // ist die Sekunde, die gerade läuft, nicht die schon vergangene. Um einen
+      // Tick vorausgerechnet wie die Füllung darüber — sonst stünde die Zahl
+      // noch auf 1, während der Balken schon voll ist, und beide Anzeigen
+      // desselben Moments widersprächen sich.
+      secondsLeft: Math.max(0, Math.ceil((state.remainingMs - STAR_TIMER_TICK_MS) / 1000)),
+    })
   }
 
   eclipseSnapshot.value = next
@@ -335,6 +352,15 @@ interface BarEntry {
   isEclipsed: boolean
   /** 0…1 durch die Verdeckung — treibt die Füllung des Eclipse-Balkens */
   eclipseProgress: number
+  /**
+   * Die Zahl an der Balkenkante — während der Verdeckung der Countdown bis zum
+   * Wiederauftauchen, sonst die Restzeit des Sterns. `null`, wenn keine Zahl
+   * gezeigt wird (Endkampf-Bars laufen nicht ab).
+   *
+   * Beide Zeiten teilen sich denselben Platz, weil sie dasselbe beantworten:
+   * wie lange dauert der Zustand noch, in dem die Zeile gerade steht.
+   */
+  secondsLabel: number | null
   planets: PlanetDot[]
   /** Teilmenge von `planets`, die gerade eine HP-Zahl zeigt — hinten in der Bar */
   hpLabels: PlanetDot[]
@@ -499,7 +525,13 @@ function getSharedStarRemainingMs(star: {
 const sortedEntries = computed<BarEntry[]>(() => {
   const raw: Omit<
     BarEntry,
-    'palette' | 'isRaging' | 'isEclipsed' | 'eclipseProgress' | 'style' | 'tf'
+    | 'palette'
+    | 'isRaging'
+    | 'isEclipsed'
+    | 'eclipseProgress'
+    | 'secondsLabel'
+    | 'style'
+    | 'tf'
   >[] = []
   // Nachschlagen statt Suchen: die Palette-Zuweisung unten braucht den Stern zu
   // jeder Zeile. Mit `find` wäre das O(n²) — bei 30 Sternen 900 Vergleiche in
@@ -646,6 +678,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
       isRaging: entry.starId === ragingStarId,
       isEclipsed: eclipse !== undefined,
       eclipseProgress: eclipse?.target ?? 0,
+      secondsLabel: eclipse ? eclipse.secondsLeft : entry.timeless ? null : entry.secondsInt,
       palette,
       style,
     }
@@ -1061,13 +1094,21 @@ const sortedEntries = computed<BarEntry[]>(() => {
   );
 }
 
-/* Alles, was an der Füllkante hängt (Sekunden, Kugeln, HP-Zahlen, Typ-Label),
-   tritt für die Dauer der Verdeckung ab. Es misst Dinge, die währenddessen
-   stillstehen, und würde dem einen Balken, der jetzt etwas aussagt, nur die
-   Aufmerksamkeit nehmen. */
-.timer-bar-row--eclipsed .bar-edge-track,
+/* Kugeln, HP-Zahlen und Typ-Label treten für die Dauer der Verdeckung ab: Sie
+   messen Dinge, die währenddessen stillstehen. Die Zahl an der Kante bleibt —
+   sie wechselt nur, worauf sie zählt (siehe `secondsLabel`). */
+.timer-bar-row--eclipsed .planet-dots,
 .timer-bar-row--eclipsed .bar-type-label {
   opacity: 0;
+}
+
+/* Der Countdown der Verdeckung in Koronafarbe — dieselbe Sprache wie der Saum
+   des Rahmens, damit erkennbar bleibt, worauf die Zahl jetzt zählt. Steht nach
+   den Fluch- und Rage-Regeln: Ein Stern kann verflucht sein und rasen, aber
+   solange er verdeckt ist, passiert nichts davon. */
+.timer-bar-row--eclipsed .bar-seconds-label {
+  color: #ffe6b0;
+  filter: drop-shadow(0 0 7px rgba(255, 190, 70, 0.85)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.95));
 }
 
 /* Der Rage-Überzug liegt auf der Füllung, die jetzt der Rahmen ist — er muss
@@ -1187,6 +1228,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
   gap: clamp(4px, 0.2vw + 2px, 7px);
   z-index: 2;
   pointer-events: none;
+  /* Überblenden statt springen, wenn der Stern in die Verdeckung eintaucht */
+  transition: opacity 0.3s ease;
 }
 
 .planet-dots--left {

@@ -46,6 +46,8 @@ export interface StarCombatState {
    * damit unabhängig vom Tempo, das hinter der Sonne hochgelerpt wird.
    */
   eclipseProgress: number
+  /** Verbleibende Dauer der Verdeckung in ms — 0, wenn der Stern sichtbar ist. */
+  eclipseRemainingMs: number
   /** Noch nicht befreite, sichtbare Planeten — bestimmt die Schusszahl der Salve. */
   firablePlanets: number
 }

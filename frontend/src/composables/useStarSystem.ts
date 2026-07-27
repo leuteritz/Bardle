@@ -6,7 +6,7 @@ import { useGalaxyStore } from '../stores/galaxyStore'
 import { useWindowFocus } from './useWindowFocus'
 import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions, activeStarCombatState } from '../utils/liveState'
-import { getOrbitPos, orbitBehindProgress } from '../utils/geometry'
+import { getOrbitPos, orbitBehindArc, orbitBehindProgress } from '../utils/geometry'
 import {
   STAR_SPAWN_DURATION_MS,
   STAR_SPAWN_FLY_EASING,
@@ -50,8 +50,9 @@ export interface StarRenderEntry {
   scale: number
   opacity: number
   isBehind: boolean
-  /** Nur Transportfeld für `activeStarCombatState` — kein Renderwert. */
+  /** Nur Transportfelder für `activeStarCombatState` — keine Renderwerte. */
   eclipseProgress: number
+  eclipseRemainingMs: number
   filterStyle: string
   orbitRx: number
   orbitRy: number
@@ -306,15 +307,31 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
       // Austrittskante aber um einen Frame auseinanderliegen — ein dort noch
       // negativer Fortschritt heißt „so gut wie draußen", also 1.
       let sEclipseProgress = -1
+      let sEclipseRemainingMs = 0
       if (sIsBehind) {
+        const ratio = scaledOrbitRx / Math.max(scaledOrbitRy, 1)
         const raw = orbitBehindProgress(
           sAngle,
           star.starDirection,
-          scaledOrbitRx / Math.max(scaledOrbitRy, 1),
+          ratio,
           star.orbitTilt,
           BEHIND_THRESHOLD,
         )
         sEclipseProgress = raw < 0 ? 1 : Math.min(1, raw)
+
+        // Restdauer aus dem verbleibenden Bogen und dem VOLLEN Tempo hinter der
+        // Sonne — nicht aus dem Tempo, das der Stern in diesem Frame gerade hat.
+        // Beim Eintauchen ist der Speedup noch am Hochlerpen; mit dem Ist-Wert
+        // gerechnet stünde im ersten Tick eine absurde Zahl (gemessen: 22 s für
+        // eine Verdeckung von 3,8 s), die dann in einem Sprung zusammenfiele.
+        // Der Anlauf dauert nur Sekundenbruchteile, deshalb liegt die Rechnung
+        // mit dem Zielwert über die ganze Verdeckung nur ~4 % zu niedrig
+        // (3,64 s gerechnet gegen 3,81 s gemessen) — und sie ist von der ersten
+        // Sekunde an stabil.
+        const arc = orbitBehindArc(ratio, star.orbitTilt, BEHIND_THRESHOLD)
+        const angularSpeed = star.orbitSpeed * STAR_BEHIND_SUN_SPEED_MULTIPLIER
+        sEclipseRemainingMs =
+          arc > 0 && angularSpeed > 0 ? ((1 - sEclipseProgress) * arc) / angularSpeed : 0
       }
 
       const visibleFactor = Math.max(
@@ -470,6 +487,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         opacity: sOpacity,
         isBehind: sIsBehind,
         eclipseProgress: sEclipseProgress,
+        eclipseRemainingMs: sEclipseRemainingMs,
         filterStyle: starFilterStyle,
         orbitRx: scaledOrbitRx,
         orbitRy: scaledOrbitRy,
@@ -522,6 +540,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         y: r.y,
         isBehind: r.isBehind,
         eclipseProgress: r.eclipseProgress,
+        eclipseRemainingMs: r.eclipseRemainingMs,
         firablePlanets: r.planets.filter((p) => !p.isBehind && p.animState === 'normal').length,
       })
     }
@@ -553,6 +572,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         o.scale = n.scale
         o.opacity = n.opacity
         o.eclipseProgress = n.eclipseProgress
+        o.eclipseRemainingMs = n.eclipseRemainingMs
         o.filterStyle = n.filterStyle
         o.hintOpacity = n.hintOpacity
         o.orbitRx = n.orbitRx

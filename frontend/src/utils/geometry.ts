@@ -56,6 +56,23 @@ export function getOrbitPos(
 }
 
 /**
+ * Länge des verdeckten Bahnabschnitts in Radiant — `0`, wenn die Bahn nie oder
+ * immer verdeckt ist.
+ *
+ * Zusammen mit der Winkelgeschwindigkeit ergibt sich daraus die Restdauer einer
+ * Verdeckung: `(1 − progress) · arc / speed`. Herleitung siehe
+ * `orbitBehindProgress` — beide zerlegen dieselbe Schwingung.
+ */
+export function orbitBehindArc(ratio: number, tilt: number, thresholdRelY: number): number {
+  const amplitude = Math.hypot(ratio * Math.sin(tilt), Math.cos(tilt))
+  if (amplitude < 1e-6) return 0
+
+  const skew = Math.asin(Math.max(-1, Math.min(1, thresholdRelY / amplitude)))
+  const arc = Math.PI + 2 * skew
+  return arc > 0 && arc < Math.PI * 2 ? arc : 0
+}
+
+/**
  * Fortschritt durch den verdeckten Abschnitt einer `getOrbitPos`-Bahn.
  *
  * `0` beim Eintauchen hinter die Sonne, `1` beim Wiederauftauchen. Negative
