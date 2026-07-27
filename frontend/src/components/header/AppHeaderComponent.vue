@@ -7,7 +7,7 @@ import { useExpeditionStore } from '../../stores/expeditionStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import { useMeepTreeStore } from '../../stores/meepTreeStore'
 import { usePlanetShopStore } from '../../stores/planetShopStore'
-import { formatNumber } from '../../config/numberFormat'
+import { formatNumber, formatNumberCompact } from '../../config/numberFormat'
 import { usePersistence } from '../../composables/usePersistence'
 import {
   BOTTOM_FRAME_STROKE_SHADOW,
@@ -343,7 +343,7 @@ onUnmounted(() => {
             <span
               class="sub-stat-value cps-text-glow"
               :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
-              >{{ formatNumber(gameStore.chimesPerSecond * gameStore.mvpBuffMultiplier) }}</span
+              >{{ formatNumberCompact(gameStore.chimesPerSecond * gameStore.mvpBuffMultiplier) }}</span
             >
             <span
               class="sub-stat-label cps-text-glow"
@@ -362,7 +362,7 @@ onUnmounted(() => {
             <span
               class="sub-stat-value click-text-glow"
               :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
-              >{{ formatNumber(gameStore.chimesPerClick * gameStore.mvpBuffMultiplier) }}</span
+              >{{ formatNumberCompact(gameStore.chimesPerClick * gameStore.mvpBuffMultiplier) }}</span
             >
             <span
               class="sub-stat-label click-text-glow"
@@ -646,13 +646,18 @@ onUnmounted(() => {
 /* Grid statt zentriertem Flex: gleich breite Außenspalten halten das Chime-Icon
    exakt auf der horizontalen Mitte (= Achse des Level-Badges bei left: 50%),
    egal wie unterschiedlich breit /sec und /click gerade sind. */
+/* Die Zeile steht dort, wo die Tropfenkontur schon einwärts läuft — auf Full HD
+   gibt sie nur rund 204px her. Deshalb tragen beide Raten die Kurzform
+   (formatNumberCompact): der gewonnene Platz geht in die Schriftgröße statt in
+   Nachkommastellen. Die pauschale Dämpfung per opacity ist weg, sonst blieben
+   auch die Zahlen milchig — gedämpft wird jetzt über die Farben selbst. */
 .chimes-sub-row {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: clamp(4px, 0.7vw, 8px);
-  margin-top: 2px;
-  opacity: 0.72;
+  gap: clamp(4px, 0.5vw, 7px);
+  margin-top: 1px;
+  max-width: 100%;
 }
 .chimes-sub-row > .chimes-sub-stat:first-child {
   justify-self: end;
@@ -662,29 +667,32 @@ onUnmounted(() => {
 }
 .chimes-sub-stat {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   /* Small breathing room between the number and its "/unit" label */
   gap: 2px;
 }
 /* …and the same small gap between the slash and the unit text */
 .sub-stat-slash {
-  margin-right: 2px;
+  margin-right: 1px;
+  opacity: 0.75;
 }
 .sub-chime-icon {
-  width: clamp(10px, 1.1vw, 14px);
-  height: clamp(10px, 1.1vw, 14px);
+  width: min(calc(var(--header-height) * 0.15), 17px);
+  height: min(calc(var(--header-height) * 0.15), 17px);
   object-fit: contain;
   flex-shrink: 0;
-  opacity: 0.9;
+  opacity: 0.95;
   /* Rendered larger via scale so the layout box (and both stats
      around it) stays exactly where it is */
-  transform: scale(1.75);
+  transform: scale(1.6);
   transform-origin: center;
 }
 .sub-stat-value {
-  font-size: clamp(0.55rem, 0.75vw, 0.85rem);
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  /* Caps aus der Messung: bei zwei vierstelligen Raten ("1.2M/sec 8.8M/click")
+     ist die Zeile am breitesten und muss auf 2K/4K unter der Kontur bleiben. */
+  font-size: min(calc(var(--header-height) * 0.19), 19px);
+  font-weight: 800;
+  letter-spacing: 0.01em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   /* Smooth hand-back when the MVP buff highlight ends */
@@ -725,10 +733,10 @@ onUnmounted(() => {
   }
 }
 .sub-stat-label {
-  font-size: clamp(0.45rem, 0.6vw, 0.72rem);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  opacity: 0.7;
+  font-size: min(calc(var(--header-height) * 0.145), 14px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.82;
   line-height: 1;
   /* Smooth hand-back when the MVP buff highlight ends */
   transition:
@@ -774,15 +782,19 @@ onUnmounted(() => {
   margin-bottom: 1px;
 }
 .chimes-value {
-  font-size: clamp(1.4rem, 2.2vw, 3.4rem);
+  /* Die Leitzahl des Headers — alles andere im Panel ordnet sich ihr unter.
+     Kein min-width mehr: 8ch waren bei 54px Schrift 288px und damit breiter
+     als das 270px-Panel, das Element ragte links und rechts heraus. */
+  font-size: clamp(1.5rem, 2.4vw, 3.3rem);
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: var(--color-chimes);
-  line-height: 1.1;
+  line-height: 1.08;
   font-variant-numeric: tabular-nums;
   text-align: center;
-  min-width: 8ch;
+  max-width: 100%;
   white-space: nowrap;
+  overflow: hidden;
 }
 .cps-value {
   font-size: clamp(0.9rem, 1.3vw, 1.15rem);
@@ -819,9 +831,12 @@ onUnmounted(() => {
   color: #74d448;
   filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.4));
 }
+/* Amber statt Grün: die beiden Raten waren farbgleich und damit nur über ihre
+   Position unterscheidbar. /sec bleibt grün (Produktion), /click übernimmt das
+   Gold der Chimes — der Wert, den ein Klick einbringt. */
 .click-text-glow {
-  color: #74d448;
-  filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.4));
+  color: #f0c050;
+  filter: drop-shadow(0 0 7px rgba(240, 192, 80, 0.4));
 }
 .dmg-text-glow {
   color: #ff7a50;
