@@ -245,8 +245,8 @@ onUnmounted(() => {
 }
 
 .gx-value {
-  color: #c9b6ff;
-  text-shadow: 0 0 10px rgba(138, 100, 220, 0.45);
+  color: var(--rpg-green-border, #6ec040);
+  text-shadow: 0 0 10px rgba(110, 192, 64, 0.35);
 }
 
 /* ── Meeps ─────────────────────────────────────────── */
