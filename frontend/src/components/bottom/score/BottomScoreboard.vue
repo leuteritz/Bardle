@@ -851,6 +851,7 @@ const phaseProgressStyle = computed(() => ({
    title hands the slot over to the live status. */
 .sb-crest-ornament {
   flex: 0 0 auto;
+  width: 100%;
   height: var(--sb-crest-orn, 11px);
   display: flex;
   align-items: center;
@@ -858,15 +859,26 @@ const phaseProgressStyle = computed(() => ({
   gap: calc(var(--sb-crest-orn, 11px) * 0.55);
 }
 
+/* The two rules run out from the star until they hit their length cap — long
+   enough to read as a bracket over the line, and a hairline that actually
+   carries: it holds full gold over most of its run and only fades at the far
+   end, where a symmetric gradient would have left it invisible. */
 .sb-crest-rule {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: calc(var(--sb-crest-orn, 11px) * var(--sb-crest-rule-w, 8));
+  /* Whole pixels, always: a 1.31px hairline lands on two rows, and the browser
+     pays for it with half the opacity on both — which is what made the rules
+     disappear on laptop scales. */
   height: 1px;
-  width: calc(var(--sb-crest-orn, 11px) * var(--sb-crest-rule-w, 2.8));
+  height: max(1px, round(calc(2px * var(--hud-scale, 1)), 1px));
+  box-shadow: 0 0 4px rgba(232, 192, 64, 0.45);
 }
 .sb-crest-rule--left {
-  background: linear-gradient(90deg, transparent, #c89040);
+  background: linear-gradient(90deg, rgba(200, 144, 64, 0), #c89040 30%, #e8c060);
 }
 .sb-crest-rule--right {
-  background: linear-gradient(90deg, #c89040, transparent);
+  background: linear-gradient(90deg, #e8c060, #c89040 70%, rgba(200, 144, 64, 0));
 }
 
 .sb-crest-star {

@@ -1699,8 +1699,12 @@ export const SCOREBOARD_CREST = {
   ORNAMENT_FRACTION: 0.22,
   ORNAMENT_MIN_PX: 9,
   ORNAMENT_MAX_PX: 20,
-  /** Length of one flanking rule, as a multiple of the star's size. */
-  RULE_TO_STAR: 2.8,
+  /**
+   * Longest a flanking rule may run, as a multiple of the star's size. It fills
+   * whatever the ornament row gives it up to here, so the bracket over the line
+   * stays proportional to the star instead of stretching the whole crest.
+   */
+  RULE_TO_STAR: 8,
   /**
    * Band kept free at the bottom edge for the phase-progress hairline. Unscaled
    * px, like the strip's own padding: the line is a hairline at every
