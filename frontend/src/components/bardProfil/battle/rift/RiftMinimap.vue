@@ -639,6 +639,17 @@ const structureMarkers = computed(() => {
      Same value as the parent's cqmin (the square IS min(cqw, cqh) of .map-stage),
      so the cqmin-sized children below are unaffected. */
   container-type: size;
+
+  /* ── Map-furniture scale unit ──
+     Everything drawn ON the map (champion dots, level badges, HP bars, name
+     plates, turrets, minions, nexus, fight FX, kill marks) is authored in
+     "design px" against a Full-HD map and multiplied by this unit — so the
+     furniture grows with the square instead of staying frozen at 36px on a 4K
+     board. `cqmin` here measures the PARENT container (.map-stage), because a
+     container never queries itself; min(width, height) of that stage IS this
+     square's edge, so the unit tracks the map exactly. The upper clamp keeps
+     4K a map and not a diorama. */
+  --u: clamp(0.9px, 0.175cqmin, 1.75px);
 }
 
 .map-bg {
@@ -738,12 +749,12 @@ const structureMarkers = computed(() => {
 .lane-push-label {
   position: absolute;
   transform: translate(-50%, -50%);
-  font-size: 8px;
+  font-size: calc(9 * var(--u));
   font-weight: bold;
   letter-spacing: 1.5px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  border: 1px solid;
+  padding: calc(1 * var(--u)) calc(4 * var(--u));
+  border-radius: calc(4 * var(--u));
+  border: calc(1 * var(--u)) solid;
   background: rgba(10, 10, 8, 0.75);
   pointer-events: none;
   animation: lane-glow-pulse 1.4s ease-in-out infinite;
@@ -769,8 +780,8 @@ const structureMarkers = computed(() => {
   position: absolute;
   left: 0;
   top: 0;
-  width: 5px;
-  height: 5px;
+  width: calc(5 * var(--u));
+  height: calc(5 * var(--u));
   border-radius: 50%;
   transform: translate3d(calc(var(--mx) * 1cqw - 50%), calc(var(--my) * 1cqh - 50%), 0);
   pointer-events: none;
@@ -778,11 +789,11 @@ const structureMarkers = computed(() => {
 }
 .minion-dot--blue {
   background: #7fb0ff;
-  box-shadow: 0 0 4px #3b82f6;
+  box-shadow: 0 0 calc(4 * var(--u)) #3b82f6;
 }
 .minion-dot--red {
   background: #ff8a8a;
-  box-shadow: 0 0 4px #ef4444;
+  box-shadow: 0 0 calc(4 * var(--u)) #ef4444;
 }
 
 /* ── Structures ── */
@@ -790,34 +801,34 @@ const structureMarkers = computed(() => {
    minimap PNG itself. Destroyed: dark disc covering the icon + red ✕. */
 .structure {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: calc(12 * var(--u));
+  height: calc(12 * var(--u));
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 2;
 }
 .structure--turret {
-  border-radius: 2px;
+  border-radius: calc(2 * var(--u));
 }
 .structure--inhib {
-  width: 14px;
-  height: 14px;
+  width: calc(14 * var(--u));
+  height: calc(14 * var(--u));
   transform: translate(-50%, -50%) rotate(45deg);
-  border-radius: 3px;
+  border-radius: calc(3 * var(--u));
 }
 .structure--blue {
-  border: 2px solid rgba(96, 165, 250, 0.8);
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+  border: calc(2 * var(--u)) solid rgba(96, 165, 250, 0.8);
+  box-shadow: 0 0 calc(6 * var(--u)) rgba(59, 130, 246, 0.6);
 }
 .structure--red {
-  border: 2px solid rgba(248, 113, 113, 0.8);
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.55);
+  border: calc(2 * var(--u)) solid rgba(248, 113, 113, 0.8);
+  box-shadow: 0 0 calc(6 * var(--u)) rgba(239, 68, 68, 0.55);
 }
 .structure--dead {
-  width: 17px;
-  height: 17px;
+  width: calc(17 * var(--u));
+  height: calc(17 * var(--u));
   border-radius: 50%;
-  border: 1px solid #4a4436;
+  border: calc(1 * var(--u)) solid #4a4436;
   background: rgba(10, 8, 6, 0.88);
   box-shadow: none;
 }
@@ -829,7 +840,7 @@ const structureMarkers = computed(() => {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -54%) rotate(-12deg);
-  font-size: 14px;
+  font-size: calc(14 * var(--u));
   font-weight: 700;
   color: #ff4a3a;
   text-shadow: 0 0 4px #000, 0 0 9px rgba(255, 74, 58, 0.55);
@@ -840,9 +851,9 @@ const structureMarkers = computed(() => {
 }
 .structure-burst {
   position: absolute;
-  inset: -16px;
+  inset: calc(-16 * var(--u));
   border-radius: 50%;
-  border: 2px solid;
+  border: calc(2 * var(--u)) solid;
   animation: clash-ring 0.9s ease-out 3;
   opacity: 0;
 }
@@ -855,7 +866,7 @@ const structureMarkers = computed(() => {
 }
 .structure-ember {
   position: absolute;
-  inset: -12px;
+  inset: calc(-12 * var(--u));
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 120, 40, 0.55), transparent 65%);
   animation: structure-ember-fade 1.6s ease-out forwards;
@@ -864,19 +875,19 @@ const structureMarkers = computed(() => {
 /* Broken inhibitor gate: persistent ring in the attacker's color marks the push entry */
 .structure-breach {
   position: absolute;
-  inset: -6px;
+  inset: calc(-6 * var(--u));
   border-radius: 50%;
-  border: 1.5px solid;
+  border: calc(1.5 * var(--u)) solid;
   pointer-events: none;
   animation: breach-pulse 1.8s ease-in-out infinite;
 }
 .structure-breach--blue {
   border-color: #60a5fa;
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.7);
+  box-shadow: 0 0 calc(8 * var(--u)) rgba(59, 130, 246, 0.7);
 }
 .structure-breach--red {
   border-color: #f87171;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 calc(8 * var(--u)) rgba(239, 68, 68, 0.7);
 }
 
 @keyframes breach-pulse {
@@ -901,7 +912,7 @@ const structureMarkers = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: calc(2 * var(--u));
   pointer-events: none;
   z-index: 1;
 }
@@ -909,8 +920,8 @@ const structureMarkers = computed(() => {
   position: relative;
   /* scales with the square minimap (cqmin) — clearly bigger than champ dots,
      still below the drake/baron sprites in the hierarchy */
-  width: clamp(24px, 6.5cqmin, 40px);
-  height: clamp(24px, 6.5cqmin, 40px);
+  width: clamp(24px, 6.5cqmin, 63px);
+  height: clamp(24px, 6.5cqmin, 63px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -965,7 +976,7 @@ const structureMarkers = computed(() => {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -54%) rotate(-12deg);
-  font-size: clamp(16px, 4.2cqmin, 26px);
+  font-size: clamp(16px, 4.2cqmin, 41px);
   font-weight: 700;
   color: #ff4a3a;
   text-shadow: 0 0 3px #000, 0 0 7px rgba(255, 74, 58, 0.55);
@@ -975,7 +986,7 @@ const structureMarkers = computed(() => {
 /* Kill moment: short expanding ring burst in the buff's color */
 .buff-camp-burst {
   position: absolute;
-  inset: -10px;
+  inset: calc(-10 * var(--u));
   border-radius: 50%;
   border: 2px solid;
   animation: clash-ring 0.9s ease-out 3;
@@ -987,12 +998,12 @@ const structureMarkers = computed(() => {
 /* Respawn countdown under the slain camp — drake/baron countdown language,
    one step smaller than their 13px timers so the hierarchy stays intact */
 .buff-cd {
-  font-size: 11px;
+  font-size: calc(11 * var(--u));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.25;
-  padding: 0 5px;
-  border-radius: 3px;
+  padding: 0 calc(5 * var(--u));
+  border-radius: calc(3 * var(--u));
   background: rgba(0, 0, 0, 0.7);
   white-space: nowrap;
 }
@@ -1008,24 +1019,24 @@ const structureMarkers = computed(() => {
    breathing halo ring at the portrait edge, readable at map scale */
 .champ-buffs {
   position: absolute;
-  bottom: -4px;
-  right: -7px;
+  bottom: calc(-4 * var(--u));
+  right: calc(-7 * var(--u));
   display: flex;
-  gap: 3px;
+  gap: calc(3 * var(--u));
 }
 .champ-buff-orb {
   position: relative;
-  width: 12px;
-  height: 12px;
+  width: calc(12 * var(--u));
+  height: calc(12 * var(--u));
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.75);
+  border: calc(1 * var(--u)) solid rgba(0, 0, 0, 0.75);
 }
 .champ-buff-orb::after {
   content: '';
   position: absolute;
-  inset: -3px;
+  inset: calc(-3 * var(--u));
   border-radius: 50%;
-  border: 1.5px solid;
+  border: calc(1.5 * var(--u)) solid;
   animation: champ-buff-halo 1.8s ease-out infinite;
 }
 .champ-buff-orb--blue {
@@ -1050,26 +1061,26 @@ const structureMarkers = computed(() => {
 /* ── Nexus markers ── */
 .nexus-marker {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: calc(20 * var(--u));
+  height: calc(20 * var(--u));
   transform: translate(-50%, -50%) rotate(45deg);
-  border-radius: 4px;
-  border: 2px solid;
+  border-radius: calc(4 * var(--u));
+  border: calc(2 * var(--u)) solid;
   pointer-events: none;
   z-index: 3;
 }
 .nexus-marker--blue {
   border-color: #60a5fa;
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.75);
+  box-shadow: 0 0 calc(12 * var(--u)) rgba(59, 130, 246, 0.75);
 }
 .nexus-marker--red {
   border-color: #f87171;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 calc(12 * var(--u)) rgba(239, 68, 68, 0.7);
 }
 .nexus-core {
   position: absolute;
-  inset: 4px;
-  border-radius: 2px;
+  inset: calc(4 * var(--u));
+  border-radius: calc(2 * var(--u));
   animation: aoe-pulse 2.6s ease-in-out infinite;
 }
 .nexus-marker--blue .nexus-core {
@@ -1088,7 +1099,7 @@ const structureMarkers = computed(() => {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -52%) rotate(-45deg);
-  font-size: 16px;
+  font-size: calc(16 * var(--u));
   font-weight: 700;
   color: #ff4a3a;
   text-shadow: 0 0 5px #000, 0 0 10px rgba(255, 74, 58, 0.6);
@@ -1098,8 +1109,8 @@ const structureMarkers = computed(() => {
 /* ── Fight FX ── */
 .fight-fx {
   position: absolute;
-  width: 14px;
-  height: 14px;
+  width: calc(14 * var(--u));
+  height: calc(14 * var(--u));
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -1108,8 +1119,8 @@ const structureMarkers = computed(() => {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 64px;
-  height: 64px;
+  width: calc(64 * var(--u));
+  height: calc(64 * var(--u));
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(232, 192, 64, 0.16), transparent 70%);
@@ -1118,9 +1129,9 @@ const structureMarkers = computed(() => {
 
 .clash-ring {
   position: absolute;
-  inset: -30px;
+  inset: calc(-30 * var(--u));
   border-radius: 50%;
-  border: 2px solid;
+  border: calc(2 * var(--u)) solid;
   animation: clash-ring 1.4s ease-out infinite;
 }
 .clash-ring--gold { border-color: rgba(232, 192, 64, 0.7); }
@@ -1132,8 +1143,8 @@ const structureMarkers = computed(() => {
 .dmg-float {
   position: absolute;
   left: 50%;
-  top: -6px;
-  font-size: 13px;
+  top: calc(-6 * var(--u));
+  font-size: calc(13 * var(--u));
   font-weight: 700;
   color: #ff5a4a;
   text-shadow: 0 0 6px #000;
@@ -1141,7 +1152,7 @@ const structureMarkers = computed(() => {
 }
 .dmg-float--second {
   color: #ffd24a;
-  font-size: 11px;
+  font-size: calc(11 * var(--u));
   left: 70%;
 }
 
@@ -1152,14 +1163,14 @@ const structureMarkers = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: calc(2 * var(--u));
   pointer-events: none;
 }
 
 .obj-img-wrap {
   position: relative;
   /* scales with the square minimap (100cqmin) so the sprite stays pit-sized on all resolutions */
-  width: clamp(44px, 12cqmin, 78px);
+  width: clamp(44px, 12cqmin, 115px);
 }
 
 /* Unframed sprite at natural aspect ratio — crisp downscale, glow follows the PNG alpha contour */
@@ -1176,22 +1187,22 @@ const structureMarkers = computed(() => {
 }
 
 .obj-label {
-  font-size: 10px;
+  font-size: calc(10 * var(--u));
   font-weight: 700;
   background: rgba(0, 0, 0, 0.6);
-  border-radius: 3px;
-  padding: 0 5px;
+  border-radius: calc(3 * var(--u));
+  padding: 0 calc(5 * var(--u));
   white-space: nowrap;
 }
 .obj-label--baron { color: #c9a0f5; }
 
 /* Pre-spawn countdown — timer digits only, larger and steady */
 .obj-label--countdown {
-  font-size: 13px;
+  font-size: calc(13 * var(--u));
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.5px;
   line-height: 1.3;
-  padding: 0 6px;
+  padding: 0 calc(6 * var(--u));
 }
 /* Last displayed minute before spawn — soft "get ready" pulse in objective color */
 .obj-label--soon {
@@ -1216,22 +1227,22 @@ const structureMarkers = computed(() => {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 20px;
-  height: 20px;
+  width: calc(20 * var(--u));
+  height: calc(20 * var(--u));
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 3px solid rgba(232, 192, 64, 0.9);
+  border: calc(3 * var(--u)) solid rgba(232, 192, 64, 0.9);
   animation: clash-ring 1.2s ease-out infinite;
 }
 .nexus-label {
-  margin-top: 16px;
-  font-size: 9px;
+  margin-top: calc(16 * var(--u));
+  font-size: calc(10 * var(--u));
   font-weight: 700;
   letter-spacing: 1px;
   color: #e8c040;
   background: rgba(0, 0, 0, 0.7);
-  border-radius: 3px;
-  padding: 1px 6px;
+  border-radius: calc(3 * var(--u));
+  padding: calc(1 * var(--u)) calc(6 * var(--u));
   text-shadow: 0 0 8px rgba(232, 192, 64, 0.7);
   white-space: nowrap;
 }
@@ -1279,14 +1290,14 @@ const structureMarkers = computed(() => {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 48px;
-  height: 48px;
+  width: calc(48 * var(--u));
+  height: calc(48 * var(--u));
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.95);
+  border: calc(2 * var(--u)) solid rgba(255, 255, 255, 0.95);
   box-shadow:
-    0 0 12px rgba(255, 255, 255, 0.6),
-    inset 0 0 8px rgba(255, 255, 255, 0.4);
+    0 0 calc(12 * var(--u)) rgba(255, 255, 255, 0.6),
+    inset 0 0 calc(8 * var(--u)) rgba(255, 255, 255, 0.4);
   z-index: -1;
   pointer-events: none;
 }
@@ -1298,8 +1309,8 @@ const structureMarkers = computed(() => {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 54px;
-  height: 54px;
+  width: calc(54 * var(--u));
+  height: calc(54 * var(--u));
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: conic-gradient(
@@ -1313,7 +1324,7 @@ const structureMarkers = computed(() => {
   );
   -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%);
   mask: radial-gradient(circle, transparent 62%, #000 64%);
-  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.85));
+  filter: drop-shadow(0 0 calc(5 * var(--u)) rgba(232, 192, 64, 0.85));
   animation: mvp-ring-spin 3.2s linear infinite;
   z-index: -1;
   pointer-events: none;
@@ -1327,7 +1338,9 @@ const structureMarkers = computed(() => {
 /* Floating crown above the MVP portrait */
 .mvp-crown {
   position: absolute;
-  top: -17px;
+  width: calc(18 * var(--u));
+  height: calc(18 * var(--u));
+  top: calc(-17 * var(--u));
   left: 50%;
   transform: translateX(-50%);
   color: #ffe07a;
@@ -1341,7 +1354,7 @@ const structureMarkers = computed(() => {
     transform: translateX(-50%) translateY(0);
   }
   50% {
-    transform: translateX(-50%) translateY(-2.5px);
+    transform: translateX(-50%) translateY(calc(-2.5 * var(--u)));
   }
 }
 
@@ -1361,50 +1374,50 @@ const structureMarkers = computed(() => {
 }
 
 .champ-img {
-  width: 36px;
-  height: 36px;
+  width: calc(36 * var(--u));
+  height: calc(36 * var(--u));
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid;
+  border: calc(2 * var(--u)) solid;
   transition: filter 0.3s;
 }
 .champ-img--blue {
   border-color: #60a5fa;
   color: #60a5fa;
-  box-shadow: 0 0 9px rgba(59, 130, 246, 0.8);
+  box-shadow: 0 0 calc(9 * var(--u)) rgba(59, 130, 246, 0.8);
 }
 .champ-img--red {
   border-color: #f87171;
   color: #f87171;
-  box-shadow: 0 0 9px rgba(239, 68, 68, 0.65);
+  box-shadow: 0 0 calc(9 * var(--u)) rgba(239, 68, 68, 0.65);
 }
 /* Buff carrier: bold outer ring in the buff's color, separated from the
    team border by a dark gap so it reads instantly on both team colors */
 .champ-img--buff-blue {
   box-shadow:
-    0 0 0 2px #0d0c08,
-    0 0 0 4px #60a5fa,
-    0 0 16px rgba(59, 130, 246, 1);
+    0 0 0 calc(2 * var(--u)) #0d0c08,
+    0 0 0 calc(4 * var(--u)) #60a5fa,
+    0 0 calc(16 * var(--u)) rgba(59, 130, 246, 1);
 }
 .champ-img--buff-red {
   box-shadow:
-    0 0 0 2px #0d0c08,
-    0 0 0 4px #f87171,
-    0 0 16px rgba(239, 68, 68, 1);
+    0 0 0 calc(2 * var(--u)) #0d0c08,
+    0 0 0 calc(4 * var(--u)) #f87171,
+    0 0 calc(16 * var(--u)) rgba(239, 68, 68, 1);
 }
 /* both buffs: concentric blue + red double ring */
 .champ-img--buff-blue.champ-img--buff-red {
   box-shadow:
-    0 0 0 2px #0d0c08,
-    0 0 0 4px #60a5fa,
-    0 0 0 5.5px #0d0c08,
-    0 0 0 7.5px #f87171,
-    0 0 18px rgba(239, 68, 68, 0.9);
+    0 0 0 calc(2 * var(--u)) #0d0c08,
+    0 0 0 calc(4 * var(--u)) #60a5fa,
+    0 0 0 calc(5.5 * var(--u)) #0d0c08,
+    0 0 0 calc(7.5 * var(--u)) #f87171,
+    0 0 calc(18 * var(--u)) rgba(239, 68, 68, 0.9);
 }
 
 .champ-img--bard {
   border-color: #e8c040 !important;
-  box-shadow: 0 0 12px rgba(232, 192, 64, 0.9) !important;
+  box-shadow: 0 0 calc(12 * var(--u)) rgba(232, 192, 64, 0.9) !important;
 }
 /* Winning team once the baron has revealed the outcome — breathing team glow */
 .champ-img--victor {
@@ -1425,12 +1438,12 @@ const structureMarkers = computed(() => {
 
 .champ-level {
   position: absolute;
-  top: -4px;
-  left: -4px;
-  width: 15px;
-  height: 15px;
+  top: calc(-4 * var(--u));
+  left: calc(-4 * var(--u));
+  width: calc(15 * var(--u));
+  height: calc(15 * var(--u));
   border-radius: 50%;
-  font-size: 8px;
+  font-size: calc(8.5 * var(--u));
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -1438,40 +1451,40 @@ const structureMarkers = computed(() => {
 }
 .champ-level--blue {
   background: #0d1830;
-  border: 1px solid #60a5fa;
+  border: calc(1 * var(--u)) solid #60a5fa;
   color: #cfe0ff;
 }
 .champ-level--red {
   background: #300d0d;
-  border: 1px solid #f87171;
+  border: calc(1 * var(--u)) solid #f87171;
   color: #ffd0d0;
 }
 
 /* Death timer on a respawning dot: compact gold seconds badge */
 .respawn-count {
   position: absolute;
-  top: -7px;
-  right: -7px;
-  min-width: 14px;
-  padding: 0 3px;
-  font-size: 10px;
+  top: calc(-7 * var(--u));
+  right: calc(-7 * var(--u));
+  min-width: calc(14 * var(--u));
+  padding: 0 calc(3 * var(--u));
+  font-size: calc(10 * var(--u));
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1.4;
   text-align: center;
   color: #1e1006;
   background: linear-gradient(to bottom, #ffe9a0, #e8c060 55%, #c89040);
-  border: 1px solid #8a5c18;
-  border-radius: 7px;
-  box-shadow: 0 0 6px rgba(232, 192, 64, 0.7), 0 1px 2px rgba(0, 0, 0, 0.7);
+  border: calc(1 * var(--u)) solid #8a5c18;
+  border-radius: calc(7 * var(--u));
+  box-shadow: 0 0 calc(6 * var(--u)) rgba(232, 192, 64, 0.7), 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 .champ-hp {
-  width: 36px;
-  height: 4px;
-  margin-top: 2px;
+  width: calc(36 * var(--u));
+  height: calc(4 * var(--u));
+  margin-top: calc(2 * var(--u));
   background: #3a1010;
-  border-radius: 2px;
+  border-radius: calc(2 * var(--u));
   overflow: hidden;
 }
 /* Drains via scaleX instead of width — 10 bars animating width triggered a
@@ -1494,16 +1507,16 @@ const structureMarkers = computed(() => {
    makes it readable over the bright lane art and over a neighbouring dot's
    label when champions cluster in a fight. */
 .champ-name {
-  margin-top: 2px;
-  padding: 0 4px 1px;
-  font-size: clamp(11px, 2cqw, 15px);
+  margin-top: calc(2 * var(--u));
+  padding: 0 calc(4 * var(--u)) calc(1 * var(--u));
+  font-size: clamp(11px, calc(11.5 * var(--u)), 19px);
   font-weight: 600;
   letter-spacing: 0.02em;
   /* Dark plate + hard outline. The plate matters when champions pile up in a
      fight: two labels then OCCLUDE each other and the top one stays readable,
      instead of the letters interleaving into mush. */
   background: rgba(8, 7, 4, 0.62);
-  border-radius: 3px;
+  border-radius: calc(3 * var(--u));
   text-shadow:
     0 1px 2px #000,
     1px 0 1px #000,
@@ -1541,30 +1554,30 @@ const structureMarkers = computed(() => {
   position: absolute;
   left: 0;
   top: 0;
-  width: 68px;
-  height: 68px;
+  width: calc(68 * var(--u));
+  height: calc(68 * var(--u));
   border-radius: 50%;
   background: radial-gradient(circle, rgba(var(--kc), 0.32), rgba(var(--kc), 0.12) 55%, transparent 72%);
-  box-shadow: inset 0 0 12px rgba(var(--kc), 0.35);
+  box-shadow: inset 0 0 calc(12 * var(--u)) rgba(var(--kc), 0.35);
   animation: kill-aoe 2.6s ease-out forwards;
 }
 .kill-mark-ring {
   position: absolute;
   left: 0;
   top: 0;
-  width: 46px;
-  height: 46px;
+  width: calc(46 * var(--u));
+  height: calc(46 * var(--u));
   border-radius: 50%;
-  border: 2.5px solid rgba(var(--kc), 0.95);
-  box-shadow: 0 0 14px rgba(var(--kc), 0.7);
+  border: calc(2.5 * var(--u)) solid rgba(var(--kc), 0.95);
+  box-shadow: 0 0 calc(14 * var(--u)) rgba(var(--kc), 0.7);
   animation: kill-ring 2.4s ease-out forwards;
 }
 .kill-mark-flash {
   position: absolute;
   left: 0;
   top: 0;
-  width: 34px;
-  height: 34px;
+  width: calc(34 * var(--u));
+  height: calc(34 * var(--u));
   border-radius: 50%;
   background: radial-gradient(
     circle,
@@ -1578,6 +1591,8 @@ const structureMarkers = computed(() => {
   position: absolute;
   left: 0;
   top: 0;
+  width: calc(26 * var(--u));
+  height: calc(26 * var(--u));
   color: #fff;
   filter: drop-shadow(0 0 5px rgba(var(--kc), 1)) drop-shadow(0 1px 1px #000);
   animation: kill-icon 2.4s ease-out forwards;
@@ -1586,15 +1601,15 @@ const structureMarkers = computed(() => {
   position: absolute;
   left: 0;
   top: 0;
-  padding: 0 5px;
-  font-size: 11px;
+  padding: 0 calc(5 * var(--u));
+  font-size: calc(11 * var(--u));
   font-weight: 800;
   line-height: 1.35;
   color: #1e1006;
   background: linear-gradient(to bottom, #ffe9a0, #e8c060 55%, #c89040);
-  border: 1px solid #8a5c18;
-  border-radius: 4px;
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.7), 0 1px 2px rgba(0, 0, 0, 0.6);
+  border: calc(1 * var(--u)) solid #8a5c18;
+  border-radius: calc(4 * var(--u));
+  box-shadow: 0 0 calc(8 * var(--u)) rgba(232, 192, 64, 0.7), 0 1px 2px rgba(0, 0, 0, 0.6);
   animation: kill-tier 2.4s ease-out forwards;
 }
 
@@ -1620,20 +1635,20 @@ const structureMarkers = computed(() => {
   100% { transform: translate(-50%, -50%) scale(1.05); opacity: 0; }
 }
 @keyframes kill-tier {
-  0% { transform: translate(9px, -20px) scale(0.6); opacity: 0; }
-  16% { transform: translate(9px, -20px) scale(1); opacity: 1; }
-  80% { transform: translate(9px, -20px) scale(1); opacity: 1; }
-  100% { transform: translate(9px, -20px) scale(1); opacity: 0; }
+  0% { transform: translate(calc(9 * var(--u)), calc(-20 * var(--u))) scale(0.6); opacity: 0; }
+  16% { transform: translate(calc(9 * var(--u)), calc(-20 * var(--u))) scale(1); opacity: 1; }
+  80% { transform: translate(calc(9 * var(--u)), calc(-20 * var(--u))) scale(1); opacity: 1; }
+  100% { transform: translate(calc(9 * var(--u)), calc(-20 * var(--u))) scale(1); opacity: 0; }
 }
 
 /* ── Controls ── */
 .map-controls {
   position: absolute;
-  right: 6px;
+  right: calc(6 * var(--u));
   /* clears the kill-feed bar, which overlays the bottom 10px of the map stage */
-  bottom: 16px;
+  bottom: calc(16 * var(--u));
   display: flex;
-  gap: 6px;
+  gap: calc(6 * var(--u));
   z-index: 10;
 }
 
@@ -1641,16 +1656,16 @@ const structureMarkers = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
+  gap: calc(4 * var(--u));
+  min-width: calc(28 * var(--u));
+  height: calc(28 * var(--u));
+  padding: 0 calc(8 * var(--u));
   background: rgba(13, 12, 8, 0.85);
-  border: 1px solid #5c3310;
-  border-radius: 4px;
+  border: calc(1 * var(--u)) solid #5c3310;
+  border-radius: calc(4 * var(--u));
   color: #e8c040;
   font-family: inherit;
-  font-size: 11px;
+  font-size: calc(11 * var(--u));
   letter-spacing: 1px;
   cursor: pointer;
 }
@@ -1676,9 +1691,9 @@ const structureMarkers = computed(() => {
 }
 .mvp-switch {
   position: relative;
-  width: 22px;
-  height: 12px;
-  border-radius: 6px;
+  width: calc(22 * var(--u));
+  height: calc(12 * var(--u));
+  border-radius: calc(6 * var(--u));
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid #5c3310;
   transition: background 0.2s, border-color 0.2s;
@@ -1690,22 +1705,22 @@ const structureMarkers = computed(() => {
 }
 .mvp-switch-knob {
   position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 8px;
-  height: 8px;
+  top: calc(1 * var(--u));
+  left: calc(1 * var(--u));
+  width: calc(8 * var(--u));
+  height: calc(8 * var(--u));
   border-radius: 50%;
   background: #8a7238;
   transition: transform 0.2s, background 0.2s;
 }
 .mvp-switch--on .mvp-switch-knob {
-  transform: translateX(10px);
+  transform: translateX(calc(10 * var(--u)));
   background: #ffe28a;
   box-shadow: 0 0 6px rgba(232, 192, 64, 0.9);
 }
 .ctrl-img {
-  width: 16px;
-  height: 16px;
+  width: calc(16 * var(--u));
+  height: calc(16 * var(--u));
   object-fit: contain;
 }
 
