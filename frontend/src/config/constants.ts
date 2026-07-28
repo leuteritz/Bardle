@@ -3208,6 +3208,11 @@ export const UNIVERSE_BAR_TICK_PERCENTS = [10, 20, 30, 40, 50, 60, 70, 80, 90] a
 // From this fill level on, the right-aligned percentage sits ON the bright
 // gold fill and flips to dark text.
 export const UNIVERSE_BAR_DARK_TEXT_FROM_PERCENT = 84
+// Milestone rail below the universe rescue bar: one pip per 10% chunk.
+export const UNIVERSE_MILESTONE_COUNT = 10
+export const UNIVERSE_MILESTONE_STEP_PERCENT = 100 / UNIVERSE_MILESTONE_COUNT
+// How long a freshly reached pip keeps its burst highlight.
+export const UNIVERSE_MILESTONE_FLASH_MS = 1600
 
 // Champion Shop — Chimes cost badge icon
 export const CHIMES_COST_ICON = 'game-icons:windchimes'

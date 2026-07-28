@@ -9,6 +9,9 @@ import {
   MEEP_RISING_HOLD_MS,
   UNIVERSE_BAR_TICK_PERCENTS,
   UNIVERSE_BAR_DARK_TEXT_FROM_PERCENT,
+  UNIVERSE_MILESTONE_COUNT,
+  UNIVERSE_MILESTONE_STEP_PERCENT,
+  UNIVERSE_MILESTONE_FLASH_MS,
 } from '@/config/constants'
 
 const gameStore = useGameStore()
@@ -18,6 +21,32 @@ const galaxyStore = useGalaxyStore()
 const pctOnFill = computed(
   () => gameStore.universeRescueProgress >= UNIVERSE_BAR_DARK_TEXT_FROM_PERCENT,
 )
+
+/** Wie viele 10%-Abschnitte komplett sind — 0 bis 10. */
+const reachedMilestones = computed(() =>
+  Math.floor(gameStore.universeRescueProgress / UNIVERSE_MILESTONE_STEP_PERCENT),
+)
+
+/* Die Pips sitzen mittig über ihrem Abschnitt, Pip n also bei (n − 0.5) × 10%.
+   Die leuchtende Verbindungslinie startet bei der Mitte des ersten Pips und
+   endet auf der Mitte des zuletzt erreichten. */
+const railTrackStart = UNIVERSE_MILESTONE_STEP_PERCENT / 2
+const litTrackWidth = computed(() =>
+  reachedMilestones.value > 0
+    ? `${(reachedMilestones.value - 0.5) * UNIVERSE_MILESTONE_STEP_PERCENT - railTrackStart}%`
+    : '0%',
+)
+
+/** Frisch überschrittener Meilenstein — trägt kurz die Burst-Animation. */
+const flashMilestone = ref(0)
+let flashTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(reachedMilestones, (newVal, oldVal) => {
+  if (newVal <= oldVal) return
+  if (flashTimer) clearTimeout(flashTimer)
+  flashMilestone.value = newVal
+  flashTimer = setTimeout(() => (flashMilestone.value = 0), UNIVERSE_MILESTONE_FLASH_MS)
+})
 
 const isMeepHovered = ref(false)
 const isUniverseBarHovered = ref(false)
@@ -55,6 +84,7 @@ watch(
 onUnmounted(() => {
   if (countUpTimer) clearInterval(countUpTimer)
   if (risingTimer) clearTimeout(risingTimer)
+  if (flashTimer) clearTimeout(flashTimer)
 })
 </script>
 
@@ -92,35 +122,56 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Row 2: Universe rescue bar (or prestige button) -->
+    <!-- Row 2: Universe rescue bar + milestone rail (or prestige button) -->
     <div
       v-if="!gameStore.prestigeAvailable"
-      class="rpg-bar-wrap"
-      :class="{ 'rpg-bar-wrap--glow': isMeepHovered || isUniverseBarHovered }"
-      :title="`Universe rescue progress: ${gameStore.universeRescueProgress.toFixed(1)}%`"
+      class="rescue-row"
+      :class="{ 'rescue-row--glow': isMeepHovered || isUniverseBarHovered }"
+      :title="`Universe rescue: ${gameStore.universeRescueProgress.toFixed(1)}% — ${reachedMilestones}/${UNIVERSE_MILESTONE_COUNT} milestones`"
       @mouseenter="isUniverseBarHovered = true"
       @mouseleave="isUniverseBarHovered = false"
     >
-      <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
-        <div class="rpg-bar-gloss" />
-        <!-- Ein einzelner Schräg-Schimmer, der per transform über den Balken
-             wandert (GPU) — statt eines dauerhaft laufenden Streifenmusters,
-             das als Paint-Animation jede Frame den Header neu zeichnen ließe. -->
-        <div class="rpg-bar-sweep" />
+      <div class="rpg-bar-wrap">
+        <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
+          <div class="rpg-bar-gloss" />
+          <!-- Ein einzelner Schräg-Schimmer, der per transform über den Balken
+               wandert (GPU) — statt eines dauerhaft laufenden Streifenmusters,
+               das als Paint-Animation jede Frame den Header neu zeichnen ließe. -->
+          <div class="rpg-bar-sweep" />
+        </div>
+        <div class="rpg-segments" aria-hidden="true">
+          <div
+            v-for="tick in UNIVERSE_BAR_TICK_PERCENTS"
+            :key="tick"
+            class="rpg-segment-line"
+            :class="{ 'rpg-segment-line--passed': gameStore.universeRescueProgress >= tick }"
+            :style="{ left: tick + '%' }"
+          />
+        </div>
+        <div class="rpg-bar-border" />
+        <div class="rpg-bar-text">
+          <span class="rpg-bar-pct" :class="{ 'rpg-bar-pct--on-fill': pctOnFill }">
+            {{ gameStore.universeRescueProgress.toFixed(1) }}%
+          </span>
+        </div>
       </div>
-      <div class="rpg-segments" aria-hidden="true">
-        <div
-          v-for="tick in UNIVERSE_BAR_TICK_PERCENTS"
-          :key="tick"
-          class="rpg-segment-line"
-          :style="{ left: tick + '%' }"
-        />
-      </div>
-      <div class="rpg-bar-border" />
-      <div class="rpg-bar-text">
-        <span class="rpg-bar-pct" :class="{ 'rpg-bar-pct--on-fill': pctOnFill }">
-          {{ gameStore.universeRescueProgress.toFixed(1) }}%
-        </span>
+
+      <!-- Meilenstein-Schiene: ein Pip je 10%-Abschnitt, unter dem Balken statt
+           darin — so kollidiert kein Marker mit der Prozentzahl im Balken. -->
+      <div class="ms-rail" aria-hidden="true">
+        <div class="ms-track" />
+        <div class="ms-track ms-track--lit" :style="{ width: litTrackWidth }" />
+        <div v-for="m in UNIVERSE_MILESTONE_COUNT" :key="m" class="ms-cell">
+          <span
+            class="ms-pip"
+            :class="{
+              'ms-pip--reached': m <= reachedMilestones,
+              'ms-pip--next': m === reachedMilestones + 1,
+              'ms-pip--final': m === UNIVERSE_MILESTONE_COUNT,
+              'ms-pip--flash': m === flashMilestone,
+            }"
+          />
+        </div>
       </div>
     </div>
     <button v-else class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">
@@ -139,6 +190,13 @@ onUnmounted(() => {
    wachsen Zahlen und Balken von Full HD bis 4K sichtbar mit.
    ================================================================ */
 .uni-block {
+  /* Ein Maßsatz für Zeile 2 — Balken, Spalt und Meilenstein-Schiene. Der
+     Prestige-Button rechnet daraus dieselbe Gesamthöhe, damit das Layout
+     beim Umschalten nicht springt. */
+  --rescue-track-h: max(16px, min(calc(var(--header-height) * 0.26), 30px));
+  --rescue-rail-h: max(8px, min(calc(var(--header-height) * 0.115), 13px));
+  --rescue-rail-gap: clamp(2px, 0.2vw, 4px);
+  --ms-pip-size: max(6px, min(calc(var(--header-height) * 0.075), 9px));
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -307,14 +365,22 @@ onUnmounted(() => {
    ROW 2 — Fortschrittsbalken ohne Beschriftung: nur der Prozentwert.
    Was der Balken misst, sagt der Tooltip — im Header zählt die Zahl.
    ================================================================ */
+.rescue-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rescue-rail-gap);
+  width: 100%;
+  min-width: 0;
+  /* Ohne das Shrink-Verbot staucht der Flex-Container den Balken auf Full HD
+     um die letzten Pixel zusammen, statt die Kachelzeile atmen zu lassen. */
+  flex-shrink: 0;
+}
+
 .rpg-bar-wrap {
   position: relative;
   width: 100%;
   min-width: 0;
-  height: min(calc(var(--header-height) * 0.26), 30px);
-  min-height: 16px;
-  /* Ohne das Shrink-Verbot staucht der Flex-Container den Balken auf Full HD
-     um die letzten Pixel zusammen, statt die Kachelzeile atmen zu lassen. */
+  height: var(--rescue-track-h);
   flex-shrink: 0;
   border-radius: 4px;
   overflow: hidden;
@@ -325,7 +391,7 @@ onUnmounted(() => {
   transition: box-shadow 0.25s ease;
 }
 
-.rpg-bar-wrap--glow {
+.rescue-row--glow .rpg-bar-wrap {
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.65),
     0 0 14px rgba(255, 200, 60, 0.5),
@@ -410,6 +476,17 @@ onUnmounted(() => {
   bottom: 0;
   width: 1px;
   background: rgba(0, 0, 0, 0.45);
+  transition:
+    background 0.4s ease,
+    box-shadow 0.4s ease;
+}
+
+/* Überschrittene Trennlinie: bleibt dunkel (sonst verschwindet sie im hellen
+   Gold), bekommt aber einen warmen Schein — der Balken zeigt damit selbst,
+   welche Abschnitte versiegelt sind. */
+.rpg-segment-line--passed {
+  background: rgba(58, 26, 0, 0.8);
+  box-shadow: 0 0 6px rgba(255, 216, 120, 0.55);
 }
 
 /* Beschriftung als eigene Zeile IM Balken: Name links, Prozent rechts.
@@ -450,6 +527,155 @@ onUnmounted(() => {
   text-shadow: 0 1px 0 rgba(255, 240, 180, 0.55);
 }
 
+/* ================================================================
+   MILESTONE RAIL — zehn Rauten unter dem Balken, je eine pro 10%-
+   Abschnitt. Jeder Pip sitzt mittig über seinem Abschnitt, die Linie
+   dahinter verbindet sie zum Stepper: bis zum letzten erreichten Pip
+   leuchtet sie golden, danach bleibt sie erloschen.
+   ================================================================ */
+.ms-rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  align-items: center;
+  width: 100%;
+  height: var(--rescue-rail-h);
+  flex-shrink: 0;
+}
+
+.ms-track {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: #1b1208;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.ms-track--lit {
+  right: auto;
+  background: linear-gradient(to right, #8a5a12 0%, #d9a72a 60%, #f5d666 100%);
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
+  transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ms-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* Raute statt Punkt: greift die Rahmen-Nieten des Headers auf und bleibt
+   auch bei 6px noch als Form erkennbar. */
+.ms-pip {
+  width: var(--ms-pip-size);
+  height: var(--ms-pip-size);
+  border-radius: 1px;
+  transform: rotate(45deg);
+  background: #14100a;
+  border: 1px solid rgba(200, 144, 64, 0.42);
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.9);
+  transition:
+    background 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.35s ease;
+}
+
+.ms-pip--reached {
+  background: linear-gradient(135deg, #f7dd82 0%, #e0a828 45%, #a86c14 100%);
+  border-color: #ffedb0;
+  box-shadow:
+    0 0 7px rgba(245, 214, 102, 0.65),
+    inset 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Der Pip, auf den gerade hingearbeitet wird, atmet leise — er zeigt das
+   nächste Ziel, ohne mit den erreichten zu konkurrieren. */
+.ms-pip--next {
+  border-color: rgba(232, 192, 64, 0.75);
+  animation: msNextBreathe 2.6s ease-in-out infinite;
+}
+
+/* Letzter Meilenstein = Prestige in Sicht: eine Spur größer und heller. */
+.ms-pip--final {
+  transform: rotate(45deg) scale(1.22);
+}
+
+.ms-pip--final.ms-pip--reached {
+  background: linear-gradient(135deg, #fff6d0 0%, #f5d666 45%, #c8901f 100%);
+  box-shadow:
+    0 0 11px rgba(255, 226, 130, 0.9),
+    inset 0 0 3px rgba(255, 255, 255, 0.9);
+}
+
+.rescue-row--glow .ms-pip--reached {
+  box-shadow:
+    0 0 11px rgba(255, 226, 130, 0.9),
+    inset 0 0 2px rgba(255, 255, 255, 0.85);
+}
+
+/* Frisch erreicht: ein einmaliger Puls plus aufgehender Ring — der Moment
+   soll im Augenwinkel auffallen, ohne den Header dauerhaft zu animieren. */
+.ms-pip--flash {
+  animation: msPop 1.6s ease-out 1;
+}
+
+.ms-pip--flash::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 232, 150, 0.9);
+  animation: msRing 1.6s ease-out 1 forwards;
+  pointer-events: none;
+}
+
+@keyframes msNextBreathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 3px rgba(232, 192, 64, 0.25),
+      inset 0 0 3px rgba(0, 0, 0, 0.9);
+  }
+  50% {
+    box-shadow:
+      0 0 8px rgba(232, 192, 64, 0.6),
+      inset 0 0 3px rgba(0, 0, 0, 0.9);
+  }
+}
+
+@keyframes msPop {
+  0% {
+    transform: rotate(45deg) scale(1);
+  }
+  25% {
+    transform: rotate(45deg) scale(1.55);
+  }
+  60% {
+    transform: rotate(45deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(45deg) scale(1);
+  }
+}
+
+@keyframes msRing {
+  0% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
 /* Weg in Prozent der EIGENEN Breite (32% des Füllers): von left:-40% bis
    hinter die rechte Kante sind das 140/32 ≈ 437% — so bleibt der Lauf bei
    jedem Füllstand und jeder Auflösung derselbe, ohne px-Annahme. */
@@ -473,8 +699,9 @@ onUnmounted(() => {
   justify-content: center;
   gap: clamp(5px, 0.5vw, 10px);
   width: 100%;
-  height: min(calc(var(--header-height) * 0.26), 30px);
-  min-height: 16px;
+  /* Exakt Balken + Spalt + Schiene, damit Zeile 2 beim Umschalten
+     dieselbe Höhe behält. */
+  height: calc(var(--rescue-track-h) + var(--rescue-rail-gap) + var(--rescue-rail-h));
   flex-shrink: 0;
   padding: 0 8px;
   font-size: clamp(10px, calc(var(--header-height) * 0.145), 16px);
@@ -519,7 +746,10 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .meep-icon,
   .rpg-bar-sweep,
-  .prestige-btn {
+  .prestige-btn,
+  .ms-pip--next,
+  .ms-pip--flash,
+  .ms-pip--flash::after {
     animation: none;
   }
 }
