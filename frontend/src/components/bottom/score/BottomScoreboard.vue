@@ -12,11 +12,12 @@ import {
   type ScoreboardFitSource,
   type ScoreboardCrestSource,
 } from '@/composables/useScoreboardFit'
-import { formatNumber } from '@/config/numberFormat'
+import { formatNumberCompact } from '@/config/numberFormat'
 import {
   BATTLE_PHASES,
   OBJECTIVE_FIGHT_STATUS,
   SCOREBOARD_STAT_COLORS,
+  SCOREBOARD_VALUE_BUDGET,
   SCOREBOARD_FIT,
   SCOREBOARD_CREST,
   SCOREBOARD_CELL_LABELS,
@@ -41,8 +42,11 @@ const uiStore = useUiStore()
 const { kills, deaths, assists, gold, cs, dragons, barons, turrets } =
   useBattleScoreboardStats()
 
+/** Cells that render a plain number — everything but rank and win/loss. */
+type StatKey = Exclude<keyof typeof SCOREBOARD_CELL_LABELS, 'rank' | 'winLoss'>
+
 interface ScoreStat {
-  key: keyof typeof SCOREBOARD_CELL_LABELS
+  key: StatKey
   value: string
   color: string
   label: string
@@ -56,19 +60,56 @@ function captionOf(key: keyof typeof SCOREBOARD_CELL_LABELS) {
   return { label: SCOREBOARD_CELL_LABELS[key].full, labelShort: SCOREBOARD_CELL_LABELS[key].short }
 }
 
-const leftStats = computed<ScoreStat[]>(() => [
-  { key: 'kills', value: formatNumber(kills.value), color: SCOREBOARD_STAT_COLORS.kills, ...captionOf('kills'), gameIcon: BATTLE_STAT_GAME_ICONS.kills },
-  { key: 'deaths', value: formatNumber(deaths.value), color: SCOREBOARD_STAT_COLORS.deaths, ...captionOf('deaths'), gameIcon: BATTLE_STAT_GAME_ICONS.deaths },
-  { key: 'assists', value: formatNumber(assists.value), color: SCOREBOARD_STAT_COLORS.assists, ...captionOf('assists'), gameIcon: BATTLE_STAT_GAME_ICONS.assists },
-  { key: 'gold', value: formatNumber(gold.value), color: SCOREBOARD_STAT_COLORS.gold, ...captionOf('gold'), icon: BATTLE_STAT_IMAGES.gold },
-  { key: 'cs', value: formatNumber(cs.value), color: SCOREBOARD_STAT_COLORS.cs, ...captionOf('cs'), gameIcon: BATTLE_STAT_GAME_ICONS.cs },
-])
+/**
+ * Which cell carries which colour and emblem. Static on purpose: the fit is
+ * built from these defs alone, so it never sees a live number and therefore
+ * never re-runs because one changed.
+ */
+interface StatDef {
+  key: StatKey
+  color: string
+  icon?: string
+  gameIcon?: string
+}
 
-const rightStats = computed<ScoreStat[]>(() => [
-  { key: 'turrets', value: formatNumber(turrets.value), color: SCOREBOARD_STAT_COLORS.turrets, ...captionOf('turrets'), gameIcon: BATTLE_STAT_GAME_ICONS.turrets },
-  { key: 'dragons', value: formatNumber(dragons.value), color: SCOREBOARD_STAT_COLORS.dragons, ...captionOf('dragons'), icon: BATTLE_STAT_IMAGES.dragons },
-  { key: 'barons', value: formatNumber(barons.value), color: SCOREBOARD_STAT_COLORS.barons, ...captionOf('barons'), icon: BATTLE_STAT_IMAGES.barons },
-])
+const LEFT_STAT_DEFS: readonly StatDef[] = [
+  { key: 'kills', color: SCOREBOARD_STAT_COLORS.kills, gameIcon: BATTLE_STAT_GAME_ICONS.kills },
+  { key: 'deaths', color: SCOREBOARD_STAT_COLORS.deaths, gameIcon: BATTLE_STAT_GAME_ICONS.deaths },
+  { key: 'assists', color: SCOREBOARD_STAT_COLORS.assists, gameIcon: BATTLE_STAT_GAME_ICONS.assists },
+  { key: 'gold', color: SCOREBOARD_STAT_COLORS.gold, icon: BATTLE_STAT_IMAGES.gold },
+  { key: 'cs', color: SCOREBOARD_STAT_COLORS.cs, gameIcon: BATTLE_STAT_GAME_ICONS.cs },
+]
+
+const RIGHT_STAT_DEFS: readonly StatDef[] = [
+  { key: 'turrets', color: SCOREBOARD_STAT_COLORS.turrets, gameIcon: BATTLE_STAT_GAME_ICONS.turrets },
+  { key: 'dragons', color: SCOREBOARD_STAT_COLORS.dragons, icon: BATTLE_STAT_IMAGES.dragons },
+  { key: 'barons', color: SCOREBOARD_STAT_COLORS.barons, icon: BATTLE_STAT_IMAGES.barons },
+]
+
+const statValues = computed<Record<StatKey, number>>(() => ({
+  kills: kills.value,
+  deaths: deaths.value,
+  assists: assists.value,
+  gold: gold.value,
+  cs: cs.value,
+  turrets: turrets.value,
+  dragons: dragons.value,
+  barons: barons.value,
+}))
+
+/* Compact form on purpose ("12K", not "12.48K"): every cell is budgeted for the
+   WIDEST string its format can produce, so each character the format saves is
+   width the fit hands straight back to the numbers as size. */
+function toStat(def: StatDef): ScoreStat {
+  return {
+    ...def,
+    ...captionOf(def.key),
+    value: formatNumberCompact(statValues.value[def.key]),
+  }
+}
+
+const leftStats = computed<ScoreStat[]>(() => LEFT_STAT_DEFS.map(toStat))
+const rightStats = computed<ScoreStat[]>(() => RIGHT_STAT_DEFS.map(toStat))
 
 /** The caption a cell renders right now — the fit decides full vs. compact. */
 function captionText(stat: { label: string; labelShort: string }): string {
@@ -116,18 +157,24 @@ function openBattleTab() {
   uiStore.setBardTab('battle')
 }
 
-/* ── Win / loss cell ── */
-const winText = computed(() => `${formatNumber(totalWins.value)}W`)
-const lossText = computed(() => `${formatNumber(totalLosses.value)}L`)
-/** Non-breaking so the separator measures exactly as it renders. */
-const WL_SEPARATOR = '\u00A0/\u00A0'
-/* A long record stacks W over L — half the line, still readable, and it keeps
-   the other nine cells from having to shrink to a single cell's worst case. */
-const wlStacked = computed(
-  () =>
-    winText.value.length + lossText.value.length + WL_SEPARATOR.length >
-    SCOREBOARD_FIT.WIN_LOSS_STACK_CHARS,
-)
+/**
+ * The crest opens the same tab the two stat halves do — while a battle runs it
+ * carries that battle's state, so it is a readout like every other cell. Idle
+ * the slot holds the game title, which is decoration, not a control: the guard
+ * (plus pointer-events / tabindex below) keeps it inert then.
+ */
+function openBattleFromCrest() {
+  if (hasLiveStatus.value) openBattleTab()
+}
+
+/* ── Win / loss cell ──
+   Always two lines, never one: W over L is half the width of "128W / 94L", so
+   the cell takes far less room from the other nine — and a record that folded
+   itself the day it grew a digit would be one more thing moving the strip. */
+const winText = computed(() => `${formatNumberCompact(totalWins.value)}W`)
+const lossText = computed(() => `${formatNumberCompact(totalLosses.value)}L`)
+/** Both lines budgeted at the widest number the format can ever print. */
+const WIN_LOSS_BUDGET = SCOREBOARD_VALUE_BUDGET.flatMap((value) => [`${value}W`, `${value}L`])
 
 /* ══════════════════════════════════════════════════════════════════════
    Live battle-status line — it owns the crest's title slot for the whole
@@ -294,14 +341,27 @@ const probeLabelRef = ref<HTMLElement | null>(null)
 const probeTitleRef = ref<HTMLElement | null>(null)
 const probeStatusRef = ref<HTMLElement | null>(null)
 
-const fitCells = computed<{ left: ScoreboardFitSource[]; right: ScoreboardFitSource[] }>(() => ({
-  left: leftStats.value.map((stat) => ({
-    key: stat.key,
-    text: stat.value,
-    label: stat.label,
-    labelShort: stat.labelShort,
+/**
+ * What the fit measures: the widest string a cell can EVER hold, never the one
+ * it holds this second. That single distinction is what makes the strip stand
+ * still — a growing number repaints its cell, it no longer resizes it, and the
+ * nine neighbours plus the crest keep the width they were given on mount.
+ * (The rank cell has worked this way all along; now every cell does.)
+ *
+ * Constant by construction, so the fit runs on mount and on resize — a battle
+ * tick has nothing in here to invalidate.
+ */
+function budgetCell(def: StatDef): ScoreboardFitSource {
+  return {
+    key: def.key,
+    text: SCOREBOARD_VALUE_BUDGET,
+    ...captionOf(def.key),
     probe: 'value' as const,
-  })),
+  }
+}
+
+const fitCells = computed<{ left: ScoreboardFitSource[]; right: ScoreboardFitSource[] }>(() => ({
+  left: LEFT_STAT_DEFS.map(budgetCell),
   right: [
     {
       ...RANK_CELL,
@@ -310,19 +370,11 @@ const fitCells = computed<{ left: ScoreboardFitSource[]; right: ScoreboardFitSou
     },
     {
       ...WIN_LOSS_CELL,
-      text: wlStacked.value
-        ? [winText.value, lossText.value]
-        : `${winText.value}${WL_SEPARATOR}${lossText.value}`,
+      text: WIN_LOSS_BUDGET,
       probe: 'value' as const,
-      stacked: wlStacked.value,
+      stacked: true,
     },
-    ...rightStats.value.map((stat) => ({
-      key: stat.key,
-      text: stat.value,
-      label: stat.label,
-      labelShort: stat.labelShort,
-      probe: 'value' as const,
-    })),
+    ...RIGHT_STAT_DEFS.map(budgetCell),
   ],
 }))
 
@@ -507,8 +559,19 @@ const phaseProgressStyle = computed(() => ({
 
     <!-- CENTER · title crest — ornament row, then one line as large as its box
          and the strip height allow (see SCOREBOARD_CREST / utils/scoreboardFit),
-         then the running phase's progress hairline along the bottom edge. -->
-    <div class="sb-crest">
+         then the running phase's progress hairline along the bottom edge.
+         While a battle runs the line is that battle's state, so it opens the
+         battle tab exactly like the stat halves flanking it. -->
+    <div
+      class="sb-crest"
+      :class="{ 'sb-crest--live': hasLiveStatus }"
+      :role="hasLiveStatus ? 'button' : undefined"
+      :tabindex="hasLiveStatus ? 0 : undefined"
+      :title="hasLiveStatus ? 'Open Battle Stats' : undefined"
+      @click="openBattleFromCrest"
+      @keydown.enter="openBattleFromCrest"
+      @keydown.space.prevent="openBattleFromCrest"
+    >
       <div class="sb-crest-ornament" aria-hidden="true">
         <span class="sb-crest-rule sb-crest-rule--left" />
         <img :src="CREST_STAR_IMAGE" alt="" class="sb-crest-star" />
@@ -617,9 +680,8 @@ const phaseProgressStyle = computed(() => ({
             class="sb-stat-icon"
             style="color: #e8c040"
           />
-          <span class="sb-stat-value sb-wl-value" :class="{ 'sb-wl-value--stacked': wlStacked }">
+          <span class="sb-stat-value sb-wl-value">
             <span class="sb-wl-win">{{ winText }}</span>
-            <span v-if="!wlStacked" class="sb-wl-sep">&nbsp;/&nbsp;</span>
             <span class="sb-wl-loss">{{ lossText }}</span>
           </span>
         </div>
@@ -702,8 +764,11 @@ const phaseProgressStyle = computed(() => ({
 
 /* Unified cell: big leading icon + [label above value] column, everything on
    one vertical center line. flex-basis stays 0 and the GROW weight carries the
-   whole width decision — it is handed in per cell, proportional to what that
-   cell's own text needs, so no cell hoards room a longer neighbour is missing. */
+   whole width decision — it is handed in per cell, proportional to the widest
+   string that cell can ever hold, so no cell hoards room a longer neighbour is
+   missing AND no cell changes width when its own number grows. Deliberately
+   untransitioned: the weight only ever moves on a viewport resize, and there a
+   cut is what the reader expects. */
 .sb-stat {
   flex: 1 1 0;
   display: flex;
@@ -713,9 +778,6 @@ const phaseProgressStyle = computed(() => ({
   gap: var(--sb-row-gap, 3px);
   min-width: 0;
   padding-inline: var(--sb-cell-pad, 4px);
-  /* a value crossing a digit boundary (999 → 1.0K) re-weights its cell; the
-     ease keeps that a glide instead of a jump */
-  transition: flex-grow 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .sb-stat + .sb-stat {
   border-left: 1px solid rgba(122, 78, 32, 0.3);
@@ -740,14 +802,13 @@ const phaseProgressStyle = computed(() => ({
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
-  transition:
-    filter 0.2s ease,
-    width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: filter 0.2s ease;
 }
 
-/* ── Win / loss cell ── */
-.sb-stat-value.sb-wl-value.sb-wl-value--stacked {
+/* ── Win / loss cell ──
+   Always stacked: W over L keeps the cell narrow whatever the record grows to,
+   so it never has to claim width back from the other nine. */
+.sb-stat-value.sb-wl-value {
   flex-direction: column;
   gap: 1px;
   line-height: 1.05;
@@ -760,12 +821,6 @@ const phaseProgressStyle = computed(() => ({
 .sb-wl-loss {
   color: #cc6050;
 }
-/* Slash, matching the cell's own "WIN / LOSS" label. Slightly smaller than the
-   numbers so it separates them without competing with them. */
-.sb-wl-sep {
-  color: #7a6a44;
-  font-size: 0.82em;
-}
 
 .sb-stat-value {
   display: flex;
@@ -773,15 +828,14 @@ const phaseProgressStyle = computed(() => ({
   /* ONE size for every cell, measured — never estimated — against the real
      strip, so the numbers run as large as the tightest cell can hold and stay
      identical across all ten of them. No gap: the fit measures the rendered
-     string, and a flex gap would be width the probe never saw. */
+     string, and a flex gap would be width the probe never saw. Fixed for the
+     whole session: the size follows the cells' budgets, not their values. */
   font-size: var(--sb-value-size);
   line-height: 1;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  transition:
-    filter 0.2s ease,
-    font-size 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: filter 0.2s ease;
 }
 
 /* Rank is a short uppercase word, not a number — a touch of tracking keeps
@@ -842,9 +896,20 @@ const phaseProgressStyle = computed(() => ({
   gap: var(--sb-crest-row-gap, 3px);
   pointer-events: none;
   user-select: none;
-  /* a value crossing a digit boundary re-weights the cells and hands the crest
-     a little more or less room — same glide the cells themselves use */
-  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Live, the crest is a control: same target, same tab, same hover language as
+   the ten cells. Idle it keeps pointer-events: none, so the title stays the
+   decoration it is and clicks pass through to the bar beneath it. */
+.sb-crest--live {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.sb-crest--live:focus-visible {
+  outline: none;
+}
+.sb-crest--live:hover .sb-live-text {
+  filter: brightness(1.15) drop-shadow(0 0 6px currentcolor);
 }
 
 /* ── Ornament row ──
@@ -986,7 +1051,9 @@ const phaseProgressStyle = computed(() => ({
   white-space: nowrap;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  transition: color 0.4s ease;
+  transition:
+    color 0.4s ease,
+    filter 0.2s ease;
   text-shadow:
     0 1px 3px rgba(0, 0, 0, 0.9),
     0 0 14px currentcolor;
@@ -1121,11 +1188,7 @@ const phaseProgressStyle = computed(() => ({
   .crest-swap-leave-active {
     transition: none;
   }
-  /* resizing cells snap instead of gliding */
-  .sb-stat,
-  .sb-stat-icon,
-  .sb-stat-value,
-  .sb-crest,
+  /* the phase hairline steps instead of gliding */
   .sb-crest-progress-fill {
     transition: none;
   }

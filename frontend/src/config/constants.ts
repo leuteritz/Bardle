@@ -1567,6 +1567,32 @@ export const SCOREBOARD_CELL_LABELS = {
 } as const
 
 /**
+ * Breitenbudget einer Zahlenzelle im Bottom-Scoreboard.
+ *
+ * Der Fit misst NICHT den Wert, der gerade dasteht, sondern die breiteste Form,
+ * die formatNumberCompact überhaupt ausgeben kann. Sonst wiegt jeder Tick die
+ * Zelle neu ("1.2K" → "12K" → "123K"), schiebt ihre neun Nachbarn zur Seite und
+ * zieht die gemeinsame Zifferngröße mit — genau das Wandern, das die Leiste
+ * unruhig gemacht hat. Mit dem konstanten Budget steht jede Zellbreite für die
+ * ganze Session fest; nur ein Viewport-Resize rechnet noch einmal neu.
+ *
+ * Alle Kandidaten sind fünf Zeichen lang (drei Ziffern + zweibuchstabige
+ * Einheit) — die längste Form, die formatNumberCompact kennt. Mehrere davon,
+ * weil die Suffixe in MedievalSharp unterschiedlich breit bauen und der Fit den
+ * breitesten nimmt; die Ziffern sind tabular, also deckt "999" jede Ziffernfolge
+ * ab. Erst jenseits von 1e33 wechselt das Format in die Exponentialform
+ * ("1.0e+33") — ein Bereich, den kein Battle-Stat je erreicht.
+ */
+export const SCOREBOARD_VALUE_BUDGET = [
+  '999Qa',
+  '999Qi',
+  '999Sx',
+  '999Sp',
+  '999Oc',
+  '999No',
+] as const
+
+/**
  * Auto-fit budget of the bottom scoreboard (see utils/scoreboardFit.ts).
  *
  * The strip measures its real cells and its real glyph widths, then derives ONE
@@ -1643,10 +1669,12 @@ export const SCOREBOARD_FIT = {
   VALUE_HEIGHT_FRACTION: 0.94,
   VALUE_MIN_PX: 11,
   VALUE_MAX_PX: 52,
-  /** Two stacked lines (win/loss) plus their 1px gap fit into the main row. */
+  /**
+   * Two stacked lines (win/loss) plus their 1px gap fit into the main row. The
+   * cell stacks ALWAYS, not just past a length threshold: a record that folds
+   * itself the day it grows a digit is one more thing that moves the strip.
+   */
   STACKED_LINE_DIVISOR: 2.1,
-  /** A one-line win/loss record longer than this folds into two lines. */
-  WIN_LOSS_STACK_CHARS: 15,
   /** Horizontal air at both ends of the strip (must match the CSS padding). */
   STRIP_PAD_X_PX: 12,
 } as const

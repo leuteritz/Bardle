@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { computeScoreboardFit } from '@/utils/scoreboardFit'
-import { SCOREBOARD_FIT, SCOREBOARD_CREST, BOTTOM_BAR_SIDE_W } from '@/config/constants'
+import {
+  SCOREBOARD_FIT,
+  SCOREBOARD_CREST,
+  SCOREBOARD_VALUE_BUDGET,
+  BOTTOM_BAR_SIDE_W,
+} from '@/config/constants'
+import { formatNumberCompact } from '@/config/numberFormat'
 import type { ScoreboardFitCell, ScoreboardFitInput } from '@/types'
 
 /* Gemessene em-Breiten der echten Schrift (MedievalSharp) in der Größenordnung,
@@ -454,5 +460,45 @@ describe('computeScoreboardFit', () => {
     expect(Number.isFinite(fit.valueSize)).toBe(true)
     expect(Number.isFinite(fit.iconSize)).toBe(true)
     expect(fit.grow).toEqual({})
+  })
+})
+
+/**
+ * Die festen Zellbreiten stehen und fallen mit dieser Annahme: keine Zahl, die
+ * das Scoreboard je rendert, ist breiter als das Budget, für das der Fit die
+ * Zelle bemessen hat. Wäre sie es, liefe sie über ihre Zellkante — genau der
+ * Überlauf, den die feste Breite ausschließen soll.
+ */
+describe('SCOREBOARD_VALUE_BUDGET', () => {
+  const longest = Math.max(...SCOREBOARD_VALUE_BUDGET.map((text) => text.length))
+
+  it('ist so lang wie die längste Ausgabe von formatNumberCompact', () => {
+    for (let exponent = 0; exponent < 33; exponent++) {
+      // Werte kurz unter, auf und über jeder Einheitengrenze — dort wechselt
+      // das Format Suffix und Nachkommastelle und wird am längsten.
+      for (const factor of [1, 1.5, 4.44, 9.99]) {
+        const value = factor * 10 ** exponent
+        expect(formatNumberCompact(value).length).toBeLessThanOrEqual(longest)
+      }
+    }
+  })
+
+  it('endet an der Exponentialform — der eine Bereich, den es nicht deckt', () => {
+    // Ab ~1e33 hat formatNumberCompact keine Einheit mehr und schreibt
+    // "1.0e+33" — sieben Zeichen. Das Budget deckt das bewusst NICHT ab: kein
+    // Battle-Stat wächst über eine Nonillion, und dafür jede Zelle dauerhaft um
+    // 40 % zu verbreitern hieße, die Zahlen für einen unerreichbaren Fall zu
+    // verkleinern. Der Test hält fest, wo die Annahme endet.
+    expect(formatNumberCompact(1e33).length).toBeGreaterThan(longest)
+    expect(formatNumberCompact(9.99e32).length).toBeLessThanOrEqual(longest)
+  })
+
+  it('deckt jedes Suffix ab, das der Fit messen muss', () => {
+    // Der Fit nimmt den breitesten Kandidaten — fehlt ein Suffix in der Liste,
+    // könnte genau dessen Buchstabenpaar breiter bauen als alle gemessenen.
+    for (let exponent = 15; exponent <= 30; exponent += 3) {
+      const suffix = formatNumberCompact(999 * 10 ** exponent).replace(/[\d.]/g, '')
+      expect(SCOREBOARD_VALUE_BUDGET.some((text) => text.endsWith(suffix))).toBe(true)
+    }
   })
 })
