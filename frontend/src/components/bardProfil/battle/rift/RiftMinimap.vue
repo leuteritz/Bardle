@@ -214,15 +214,12 @@
         }"
         :style="{ '--mx': pos.x, '--my': pos.y }"
       >
-        <div
-          class="champ-portrait-wrap"
-          :class="{ 'champ-portrait-wrap--baron': hasBaronBuff(pos.team) }"
-        >
+        <div class="champ-portrait-wrap">
           <!-- Spotlight ring when this champion is focused from a team card -->
           <span v-if="isFocused(pos.team, pos.idx)" class="focus-ring" aria-hidden="true" />
           <!-- Hand of Baron: every champion of the slaying team carries the
-               empowered corona until the match ends -->
-          <span v-if="hasBaronBuff(pos.team)" class="baron-corona" aria-hidden="true" />
+               arcane sigil rings until the match ends -->
+          <span v-if="hasBaronBuff(pos.team)" class="baron-aura" aria-hidden="true" />
           <!-- Live MVP: rotating gold ring + floating crown -->
           <template v-if="isMvp(pos.team, pos.idx)">
             <span class="mvp-ring" aria-hidden="true" />
@@ -261,14 +258,6 @@
               :class="`champ-buff-orb--${b}`"
             />
           </span>
-          <!-- Baron sigil in the one free portrait corner — same masked-emblem
-               language as the trophy rail, so both read as "Hand of Baron" -->
-          <span
-            v-if="hasBaronBuff(pos.team)"
-            class="baron-sigil"
-            :style="{ '--art': `url('${BARON_MAP_SIGIL_IMAGE}')` }"
-            aria-hidden="true"
-          />
         </div>
         <div class="champ-hp">
           <div class="champ-hp-fill" :class="hpClass(champAt(pos.team, pos.idx))" :style="{ '--hp': hpWidth(pos) / 100 }" />
@@ -336,7 +325,6 @@ import {
   FINAL_PUSH_START_T,
   JUNGLE_BUFF_RESPAWN_T,
   KILL_MARK_WINDOW_T,
-  BARON_MAP_SIGIL_IMAGE,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
 import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION, JUNGLE_BUFF_CAMPS } from '@/config/battleRoutes'
@@ -1326,88 +1314,122 @@ const structureMarkers = computed(() => {
 
 /* ── Hand of Baron ───────────────────────────────────────────────────────
    Team-wide and permanent once the baron falls, so it has to read at a glance
-   without competing with the MVP crown or a jungle-buff carrier's rings. It
+   without competing with the MVP crown or a jungle-buff carrier's rings — it
    therefore sits OUTSIDE both (larger radius than .mvp-ring's 54u) and uses
-   the baron's own violet — the same palette as the objective label and the
-   trophy rail, so the player connects the three instantly.
+   the baron's own violet, the same palette as the objective label and the
+   trophy rail. Drawn entirely in CSS: no artwork, no extra image request.
 
-   Two layers: a soft breathing corona behind the portrait, and a hard sigil
-   coin in the one free corner. Colors mirror BARON_BUFF in config/drakes.ts. */
-.baron-corona {
+   A SHROUD, not a ring: nothing rotates and there is no hard rim. Three soft
+   veils breathe over each other on periods that share no short multiple
+   (5.2s / 7.4s / 3.8s), so the haze keeps drifting instead of visibly looping.
+   Each layer stretches unevenly (scale x != y), which is what reads as cloth
+   billowing rather than a light pulsing.
+
+   PERFORMANCE — up to 5 champions carry this at once, on markers that are
+   already re-positioned every 500ms:
+     · one DOM node per champion, the two extra veils are ::before and ::after
+       on it (3 painted layers, no extra elements)
+     · every animation touches ONLY transform and opacity, so each layer is
+       rasterized once and then lives on the compositor — no per-frame paint,
+       no layout
+     · plain radial gradients, no masks: a masked layer costs an extra
+       compositing pass per frame, and with 15 layers that is the one thing
+       worth avoiding here
+     · no will-change: the running animations promote these layers anyway, and
+       forcing it would just pin 15 extra layers in memory for nothing
+   Colors mirror BARON_BUFF in config/drakes.ts. */
+.baron-aura {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: calc(66 * var(--u));
-  height: calc(66 * var(--u));
+  width: calc(52 * var(--u));
+  height: calc(52 * var(--u));
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    transparent 46%,
-    rgba(168, 85, 247, 0.5) 62%,
-    rgba(120, 40, 200, 0.22) 78%,
-    transparent 88%
+    rgba(147, 51, 234, 0.92) 28%,
+    rgba(107, 33, 168, 0.74) 50%,
+    rgba(59, 18, 105, 0.42) 70%,
+    transparent 87%
   );
-  animation: baron-corona-breathe 2.4s ease-in-out infinite;
+  animation: baron-veil 5.2s ease-in-out infinite;
   z-index: -2;
   pointer-events: none;
 }
-/* Sharp inner rim right at the portrait edge — the corona alone reads as a
-   glow, the rim is what makes it read as an applied buff. */
-.baron-corona::after {
+
+/* Outer shroud — the widest, faintest layer, drifting against the core */
+.baron-aura::before {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: calc(46 * var(--u));
-  height: calc(46 * var(--u));
-  transform: translate(-50%, -50%);
+  inset: calc(-7 * var(--u));
   border-radius: 50%;
-  border: calc(1.5 * var(--u)) solid rgba(201, 160, 245, 0.85);
-  box-shadow:
-    0 0 calc(10 * var(--u)) rgba(168, 85, 247, 0.9),
-    inset 0 0 calc(6 * var(--u)) rgba(168, 85, 247, 0.6);
+  background: radial-gradient(
+    circle,
+    transparent 42%,
+    rgba(126, 34, 206, 0.52) 60%,
+    rgba(76, 22, 130, 0.3) 75%,
+    transparent 90%
+  );
+  animation: baron-shroud 7.4s ease-in-out infinite;
 }
-@keyframes baron-corona-breathe {
+
+/* Inner sheath clinging to the portrait edge — the layer that keeps the
+   champion readable as "wrapped" rather than merely lit from behind */
+.baron-aura::after {
+  content: '';
+  position: absolute;
+  inset: calc(4 * var(--u));
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    transparent 54%,
+    rgba(203, 132, 252, 0.7) 76%,
+    rgba(126, 34, 206, 0.55) 88%,
+    transparent 97%
+  );
+  animation: baron-sheath 3.8s ease-in-out infinite;
+}
+
+@keyframes baron-veil {
   0%,
   100% {
-    opacity: 0.7;
-    transform: translate(-50%, -50%) scale(0.96);
+    opacity: 0.87;
+    transform: translate(-50%, -50%) scale(0.96, 1.03);
+  }
+  50% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(1.06, 0.97);
+  }
+}
+@keyframes baron-shroud {
+  0%,
+  100% {
+    opacity: 0.74;
+    transform: scale(1.03, 0.95);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(0.95, 1.06);
+  }
+}
+@keyframes baron-sheath {
+  0%,
+  100% {
+    opacity: 0.88;
   }
   50% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.06);
   }
 }
 
-/* Violet cast on the portrait itself so even a dot at the map's edge reads as
-   empowered — kept subtle so champion faces stay recognizable. */
-.champ-portrait-wrap--baron .champ-img {
-  filter: saturate(1.15) drop-shadow(0 0 calc(4 * var(--u)) rgba(168, 85, 247, 0.85));
-}
-
-/* Sigil coin: the baron artwork as a mask filled violet, in the portrait's
-   bottom-left — the only corner not already used by level, respawn timer or
-   jungle-buff orbs, so it can never overlap them. */
-.baron-sigil {
-  position: absolute;
-  bottom: calc(-1 * var(--u));
-  left: calc(-5 * var(--u));
-  width: calc(15 * var(--u));
-  height: calc(15 * var(--u));
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 38%, #3b1560, #14061f 78%);
-  border: calc(1 * var(--u)) solid #a855f7;
-  box-shadow: 0 0 calc(7 * var(--u)) rgba(168, 85, 247, 0.85);
-  z-index: 2;
-}
-.baron-sigil::after {
-  content: '';
-  position: absolute;
-  inset: calc(2 * var(--u));
-  background: linear-gradient(to bottom, #f3e2ff, #c9a0f5 45%, #7a3fb8);
-  -webkit-mask: var(--art) center / contain no-repeat;
-  mask: var(--art) center / contain no-repeat;
+/* Motion off: keep the shroud, drop the drift — a still veil still reads. */
+@media (prefers-reduced-motion: reduce) {
+  .baron-aura,
+  .baron-aura::before,
+  .baron-aura::after {
+    animation: none !important;
+  }
 }
 
 /* ── Live MVP highlight ── */
