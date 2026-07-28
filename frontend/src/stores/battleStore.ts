@@ -35,6 +35,7 @@ import {
   BATTLE_OPPONENT_POWER_MIN_FRACTION,
   BATTLE_BIG_BANG_POWER_MULTIPLIER,
   BATTLE_INITIAL_MMR,
+  OPPONENT_LP_ROLL_MAX,
   BATTLE_DEFAULT_RANK_TIER,
   DRAKE_OBJECTIVE_HP,
   BARON_OBJECTIVE_HP,
@@ -401,6 +402,13 @@ export const useBattleStore = defineStore('battle', {
     predeterminedWin: null as boolean | null,
     currentWinProbability: 0 as number,
     currentOpponentLabel: '',
+    /** MMR of the opponent drawn for the current battle. Kept next to the label
+     *  so the board's meta panels can show both sides' rating from real data. */
+    currentOpponentMmr: 0,
+    /** Flavour LP for the drawn opponent. The ranking model gives LP to the
+     *  player only, so this is a one-off roll per battle — kept in state (not
+     *  re-rolled per render) so the number stays put for the whole match. */
+    currentOpponentLp: 0,
   }),
 
   getters: {
@@ -1240,6 +1248,8 @@ export const useBattleStore = defineStore('battle', {
       this.initialWinProbability = winProbability
       this.battleStartBonus = this.startWinChanceBonus
       this.currentOpponentLabel = `${opponent.rank.tier} ${opponent.rank.division}`
+      this.currentOpponentMmr = Math.round(opponent.mmr)
+      this.currentOpponentLp = Math.floor(Math.random() * OPPONENT_LP_ROLL_MAX)
     },
 
     /** (Re)build the timeline from seed + persisted overrides — pure, reload-safe. */

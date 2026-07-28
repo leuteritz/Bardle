@@ -14,6 +14,9 @@
       <RiftMinimap class="map-layer" />
       <TeamColumn side="blue" class="hud hud--left" />
       <TeamColumn side="red" class="hud hud--right" />
+      <!-- Meta readout in the free space under each team column -->
+      <BattleMetaPanel side="blue" class="meta meta--left" />
+      <BattleMetaPanel side="red" class="meta meta--right" />
       <!-- Secured drake/baron trophies as a buff bar in the killer team's own
            top corner, growing inward -->
       <DrakeBuffBadges />
@@ -32,6 +35,7 @@
 import ScoreTopBar from './ScoreTopBar.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import TeamColumn from './TeamColumn.vue'
+import BattleMetaPanel from './BattleMetaPanel.vue'
 import RiftMinimap from './RiftMinimap.vue'
 import KillFeedTicker from './KillFeedTicker.vue'
 import AutoBattleStopBar from './AutoBattleStopBar.vue'
@@ -102,4 +106,20 @@ const battleStore = useBattleStore()
 }
 .hud--left { left: 8px; }
 .hud--right { right: 8px; }
+
+/* Meta plates fill the gutter's bottom corner: same column width and 8px inset
+   as the team HUD above, so the three stack as one column. The bottom offset
+   clears the kill-feed bar, which grows upward as an overlay over the board's
+   last ~8px, and the height stays well inside the free space under the
+   (vertically centred) team column — measured 54px of plate in 81px of gap on
+   the flattest desktop viewport. */
+.meta {
+  position: absolute;
+  bottom: clamp(12px, 2cqh, 20px);
+  width: var(--hud-w, 192px);
+  height: clamp(56px, 8.7cqh, 150px);
+  z-index: 6;
+}
+.meta--left { left: 8px; }
+.meta--right { right: 8px; }
 </style>

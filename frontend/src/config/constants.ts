@@ -427,7 +427,28 @@ export const BUFF_RAIL_IMAGES = {
   baron: '/img/baron-256.png',
 } as const
 
-/** Team captions on the buff rail's hover card — which side owns the trophy */
+/** Eyebrow captions for the rift board's bottom-corner meta panels. Each side
+ *  shows two numbers that appear NOWHERE else on the board — the score bar and
+ *  the app's bottom bar already own kills, gold, CS, objectives and the live
+ *  win momentum, so these stay strictly meta: where you stand, and who you drew. */
+export const BATTLE_META_LABELS = {
+  rank: 'RANK',
+  lp: 'LP',
+  mmr: 'MMR',
+  odds: 'ODDS',
+} as const
+
+/** Generated opponents carry no LP in the ranking model — the board rolls a
+ *  flavour value in [0, this) once per battle and keeps it for the match. */
+export const OPPONENT_LP_ROLL_MAX = 100
+
+/** Placeholder when a meta value has no meaningful reading yet */
+export const BATTLE_META_EMPTY = '—'
+
+/** Rank labels up to this many characters ("GOLD II", "MASTER I") still fit
+ *  the meta panel's rank cell at full size; longer ones ("GRANDMASTER I") step
+ *  down a size so they render whole instead of being clipped. */
+export const BATTLE_META_RANK_COMPACT_LENGTH = 9
 export const BUFF_RAIL_TEAM_LABELS = {
   own: 'Blue Team',
   enemy: 'Red Team',

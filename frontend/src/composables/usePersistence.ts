@@ -135,6 +135,8 @@ export function usePersistence() {
         searchingPhaseStartTimestamp: battleStore.searchingPhaseStartTimestamp,
         loadingPhaseStartTimestamp: battleStore.loadingPhaseStartTimestamp,
         currentOpponentLabel: battleStore.currentOpponentLabel,
+        currentOpponentMmr: battleStore.currentOpponentMmr,
+        currentOpponentLp: battleStore.currentOpponentLp,
         // referenced directly — the whole saveData is stringified synchronously
         // below, so a JSON deep-clone here would just serialize twice
         allTime: battleStore.allTime,
@@ -386,6 +388,8 @@ export function usePersistence() {
         battleStore.searchingPhaseStartTimestamp = b.searchingPhaseStartTimestamp ?? 0
         battleStore.loadingPhaseStartTimestamp = b.loadingPhaseStartTimestamp ?? 0
         battleStore.currentOpponentLabel = b.currentOpponentLabel ?? ''
+        battleStore.currentOpponentMmr = b.currentOpponentMmr ?? 0
+        battleStore.currentOpponentLp = b.currentOpponentLp ?? 0
         // All-time career stats: spread-merge so fields added later default to 0
         battleStore.allTime = {
           ...defaultAllTimeStats(),
