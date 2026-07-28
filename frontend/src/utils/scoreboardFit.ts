@@ -10,6 +10,11 @@ function cellNeed(cell: ScoreboardFitCell, fixed: number, valueSize: number): nu
   return fixed + cell.em * valueSize
 }
 
+/** Width the cell's caption alone needs: the label plus its paddings. */
+function labelNeed(cell: ScoreboardFitCell, labelSize: number, cellPad: number): number {
+  return cell.labelEm * labelSize + cellPad * 2
+}
+
 /** Text width of one half at font-size 1px. */
 function emSumOf(cells: ScoreboardFitCell[]): number {
   return cells.reduce((sum, cell) => sum + cell.em, 0)
@@ -39,12 +44,68 @@ function fitHalf(cells: ScoreboardFitCell[], width: number, fixed: number): numb
  *   Σ(ratio·f·(1 + gapShare) + 2·pad + em·f) + dividers = width
  *   f = (width − 2·n·pad − dividers) / (Σem + n·ratio·(1 + gapShare))
  */
-function fitHalfCoupled(cells: ScoreboardFitCell[], width: number, cellPad: number): number {
+function fitHalfCoupled(
+  cells: ScoreboardFitCell[],
+  width: number,
+  cellPad: number,
+  ratio: number,
+): number {
   const emSum = emSumOf(cells)
   if (cells.length === 0 || emSum <= 0) return Infinity
-  const { ICON_TO_VALUE_RATIO, ICON_GAP_FRACTION } = SCOREBOARD_FIT
-  const iconWeight = cells.length * ICON_TO_VALUE_RATIO * (1 + ICON_GAP_FRACTION)
+  const iconWeight = cells.length * ratio * (1 + SCOREBOARD_FIT.ICON_GAP_FRACTION)
   return (width - 2 * cells.length * cellPad - dividersOf(cells)) / (emSum + iconWeight)
+}
+
+/** What one half's cells demand, and what their resulting widths can hold. */
+interface HalfWeights {
+  /** flex-grow weight per cell — its share of the half's width. */
+  needs: number[]
+  /** Largest caption size every cell of this half still fits without ellipsis. */
+  labelCap: number
+  /** Largest value size every cell of this half still fits. */
+  valueCap: number
+}
+
+/**
+ * Weighs one half at a candidate (valueSize, labelSize) and reports back what
+ * the resulting cell widths can actually hold.
+ *
+ * The decisive detail: a cell's demand is the MAX of what its number needs and
+ * what its caption needs. Without that, a cell with a short number but a long
+ * caption ("0" / "DRAGONS") is weighted narrow and then drags the shared
+ * caption size — for the whole strip — down with it. That is what used to make
+ * the caption row collapse on laptop-sized viewports.
+ */
+function weighHalf(
+  cells: ScoreboardFitCell[],
+  width: number,
+  fixed: number,
+  valueSize: number,
+  stackedValueSize: number,
+  labelSize: number,
+  cellPad: number,
+): HalfWeights {
+  const needs = cells.map((cell) =>
+    Math.max(
+      cellNeed(cell, fixed, cell.stacked ? stackedValueSize : valueSize),
+      labelSize > 0 ? labelNeed(cell, labelSize, cellPad) : 0,
+    ),
+  )
+  const needSum = needs.reduce((sum, need) => sum + need, 0)
+  let labelCap = Infinity
+  let valueCap = Infinity
+  if (needSum > 0) {
+    cells.forEach((cell, i) => {
+      const cellWidth = (needs[i] / needSum) * width
+      if (labelSize > 0 && cell.labelEm > 0) {
+        labelCap = Math.min(labelCap, (cellWidth - cellPad * 2) / cell.labelEm)
+      }
+      if (cell.em > 0) {
+        valueCap = Math.min(valueCap, (cellWidth - fixed) / cell.em)
+      }
+    })
+  }
+  return { needs, labelCap, valueCap }
 }
 
 /**
@@ -58,40 +119,86 @@ function fitHalfCoupled(cells: ScoreboardFitCell[], width: number, cellPad: numb
  * hoards room a long one ("128.4K") is starving for, which is what lets the
  * shared size land far above a fixed five-equal-columns split.
  *
+ * Vertical order of business:
+ *   1. the caption band is reserved FIRST and kept (it is the only thing that
+ *      says what a number means),
+ *   2. what is left is the value row — icon and number solved together in it,
+ *   3. on a cramped strip the icon yields part of its width ratio so the number
+ *      stays as large as the geometry allows.
+ *
  * Pure: same input → same output, no DOM. See useScoreboardFit for the measuring
  * side.
  */
 export function computeScoreboardFit(input: ScoreboardFitInput): ScoreboardFit {
-  const { leftWidth, rightWidth, stripHeight, leftCells, rightCells } = input
+  const { leftWidth, rightWidth, stripHeight } = input
   const C = SCOREBOARD_FIT
 
-  const usableH = Math.max(0, stripHeight - C.STRIP_PAD_Y)
+  /* Caption variant in play. The short set is not a truncation — it is the
+     cell's own compact name, and the strip switches to it as a whole (see the
+     retry at the end) so the row never mixes words with abbreviations. */
+  const shortLabels = input.useShortLabels === true
+  const withVariant = (cells: ScoreboardFitCell[]): ScoreboardFitCell[] =>
+    shortLabels
+      ? cells.map((cell) => ({ ...cell, labelEm: cell.labelShortEm ?? cell.labelEm }))
+      : cells
+  const leftCells = withVariant(input.leftCells)
+  const rightCells = withVariant(input.rightCells)
+  /** true → at least one cell has a shorter caption still to fall back on. */
+  const hasShorterLabels =
+    !shortLabels &&
+    [...input.leftCells, ...input.rightCells].some(
+      (cell) => (cell.labelShortEm ?? cell.labelEm) < cell.labelEm,
+    )
+
+  const usableH = Math.max(0, stripHeight - (C.STRIP_PAD_TOP_PX + C.STRIP_PAD_BOTTOM_PX))
   const cellCount = Math.max(leftCells.length, rightCells.length, 1)
   const avgCell = Math.min(leftWidth, rightWidth) / cellCount
-
-  // ── Label row first: it is the only thing that eats into the main row's
-  //    height, and its size depends on nothing else. ──
-  const wantsLabels = input.showLabels !== false
-  const labelFromHeight = clamp(usableH * C.LABEL_HEIGHT_FRACTION, C.LABEL_MIN_PX, C.LABEL_MAX_PX)
-  const labelFits = wantsLabels && usableH * C.LABEL_HEIGHT_FRACTION >= C.LABEL_MIN_PX
-  const rowGap = labelFits ? clamp(usableH * 0.05, 2, 7) : 0
-  const mainH = usableH - (labelFits ? labelFromHeight * 1.05 + rowGap : 0)
-
   const cellPad = clamp(avgCell * C.CELL_PAD_FRACTION, C.CELL_PAD_MIN_PX, C.CELL_PAD_MAX_PX)
 
-  /* ── Icon and value, solved together ──
+  /* ── 1 · Caption band ──
+     Reserved before the numbers are sized, and capped so the value row keeps
+     its majority share of the strip. Only the width solve below may still take
+     it away, and only when a cell is genuinely too narrow for its own word. */
+  const wantsLabels = input.showLabels !== false
+  const rowGap = wantsLabels
+    ? clamp(usableH * C.ROW_GAP_FRACTION, C.ROW_GAP_MIN_PX, C.ROW_GAP_MAX_PX)
+    : 0
+  const labelBudget = usableH * (1 - C.MAIN_ROW_MIN_FRACTION) - rowGap
+  const labelStart = wantsLabels
+    ? Math.min(
+        clamp(usableH * C.LABEL_HEIGHT_FRACTION, C.LABEL_MIN_PX, C.LABEL_MAX_PX),
+        labelBudget / C.LABEL_LINE_FACTOR,
+      )
+    : 0
+  if (wantsLabels && labelStart < C.LABEL_HARD_MIN_PX) {
+    return computeScoreboardFit({ ...input, showLabels: false })
+  }
+  const mainH = usableH - (labelStart > 0 ? labelStart * C.LABEL_LINE_FACTOR + rowGap : 0)
+
+  /* ── 2 · Icon and value, solved together ──
      Pass 1 couples the icon to the value size, so the half's width is split
      between them at a fixed visual ratio rather than the icon claiming the
      whole row height first. */
-  const coupled = Math.min(
-    fitHalfCoupled(leftCells, leftWidth, cellPad),
-    fitHalfCoupled(rightCells, rightWidth, cellPad),
-    mainH * C.VALUE_HEIGHT_FRACTION,
-    C.VALUE_MAX_PX,
-  )
+  function coupledAt(ratio: number): number {
+    return Math.min(
+      fitHalfCoupled(leftCells, leftWidth, cellPad, ratio),
+      fitHalfCoupled(rightCells, rightWidth, cellPad, ratio),
+      mainH * C.VALUE_HEIGHT_FRACTION,
+      C.VALUE_MAX_PX,
+    )
+  }
+  /* How roomy the strip turns out to be decides how much of its width the icon
+     may keep: at VALUE_COMFORT_PX and above it holds the full ratio, on a
+     laptop strip it steps back toward ICON_TO_VALUE_RATIO_MIN so the number —
+     the actual information — grows instead. */
+  const roominess = clamp(coupledAt(C.ICON_TO_VALUE_RATIO) / C.VALUE_COMFORT_PX, 0, 1)
+  const iconRatio =
+    C.ICON_TO_VALUE_RATIO_MIN + (C.ICON_TO_VALUE_RATIO - C.ICON_TO_VALUE_RATIO_MIN) * roominess
+  const coupled = coupledAt(iconRatio)
+
   /* The icon may never outgrow its row, and below the legibility floor it is
-     dropped altogether — the cell keeps its label and its tooltip. */
-  const iconRaw = Math.min(coupled * C.ICON_TO_VALUE_RATIO, mainH, C.ICON_MAX_PX)
+     dropped altogether — the cell keeps its caption and its tooltip. */
+  const iconRaw = Math.min(coupled * iconRatio, mainH, C.ICON_MAX_PX)
   const iconSize = iconRaw >= C.ICON_MIN_PX ? iconRaw : 0
   const iconGap =
     iconSize > 0 ? clamp(iconSize * C.ICON_GAP_FRACTION, C.ICON_GAP_MIN_PX, C.ICON_GAP_MAX_PX) : 0
@@ -100,7 +207,7 @@ export function computeScoreboardFit(input: ScoreboardFitInput): ScoreboardFit {
   /* Pass 2 re-fits the text against the icon that actually resulted. Wherever
      the icon was capped (short strips, dropped icons) this hands the freed
      width back to the numbers — it can only ever raise the value size. */
-  const valueSize = clamp(
+  let valueSize = clamp(
     Math.min(
       fitHalf(leftCells, leftWidth, fixed),
       fitHalf(rightCells, rightWidth, fixed),
@@ -109,46 +216,72 @@ export function computeScoreboardFit(input: ScoreboardFitInput): ScoreboardFit {
     C.VALUE_MIN_PX,
     C.VALUE_MAX_PX,
   )
+  let labelSize = labelStart
+
+  /* ── 3 · Joint width solve ──
+     Caption size and value size share the same ten cell widths, and each one's
+     demand shifts those widths. Two or three passes settle it: whatever a cell
+     cannot hold is given back, never rendered over the edge. */
+  const stackedOf = (value: number) => Math.min(value, mainH / C.STACKED_LINE_DIVISOR)
+  let leftWeights = weighHalf(
+    leftCells, leftWidth, fixed, valueSize, stackedOf(valueSize), labelSize, cellPad,
+  )
+  let rightWeights = weighHalf(
+    rightCells, rightWidth, fixed, valueSize, stackedOf(valueSize), labelSize, cellPad,
+  )
+  for (let pass = 1; pass < C.FIT_PASSES; pass++) {
+    const labelCap = Math.min(leftWeights.labelCap, rightWeights.labelCap)
+    const valueCap = Math.min(leftWeights.valueCap, rightWeights.valueCap)
+    const nextLabel = labelSize > 0 ? Math.min(labelSize, labelCap) : 0
+    const nextValue = clamp(Math.min(valueSize, valueCap), C.VALUE_MIN_PX, C.VALUE_MAX_PX)
+    if (nextLabel >= labelSize - 0.01 && nextValue >= valueSize - 0.01) break
+    labelSize = nextLabel
+    valueSize = nextValue
+    leftWeights = weighHalf(
+      leftCells, leftWidth, fixed, valueSize, stackedOf(valueSize), labelSize, cellPad,
+    )
+    rightWeights = weighHalf(
+      rightCells, rightWidth, fixed, valueSize, stackedOf(valueSize), labelSize, cellPad,
+    )
+  }
+  /* Words or short names? The strip trades the words for the cells' own short
+     names when carrying them costs the captions their readable size — or when
+     it costs the NUMBERS more than SHORT_LABEL_VALUE_GAIN. A few letters are
+     the cheapest thing on this strip; the numbers are what it exists for. */
+  if (labelSize > 0 && hasShorterLabels) {
+    const short = computeScoreboardFit({ ...input, useShortLabels: true })
+    if (labelSize < C.LABEL_MIN_PX || short.valueSize >= valueSize * C.SHORT_LABEL_VALUE_GAIN) {
+      return short
+    }
+  }
+  /* Even the short caption cannot be read — the row is dropped and the whole
+     fit redone, because the freed band belongs to the icons and numbers. */
+  if (labelSize > 0 && labelSize < C.LABEL_HARD_MIN_PX) {
+    return computeScoreboardFit({ ...input, showLabels: false })
+  }
+
   /* Two lines in one row: the win/loss cell is the one deliberate exception to
      "every number the same size" — stacking is what keeps a 6-digit record from
      dragging all nine other cells down with it. */
-  const stackedValueSize = Math.min(valueSize, mainH / C.STACKED_LINE_DIVISOR)
+  const stackedValueSize = stackedOf(valueSize)
 
-  // ── Per-cell width weights, and the label size that survives them ──
   const grow: Record<string, number> = {}
   const em: Record<string, number> = {}
-  let labelSize = labelFits ? labelFromHeight : 0
-
-  for (const [cells, width] of [
-    [leftCells, leftWidth],
-    [rightCells, rightWidth],
+  for (const [cells, weights] of [
+    [leftCells, leftWeights],
+    [rightCells, rightWeights],
   ] as const) {
-    const needs = cells.map((cell) =>
-      cellNeed(cell, fixed, cell.stacked ? stackedValueSize : valueSize),
-    )
-    const needSum = needs.reduce((sum, n) => sum + n, 0)
     cells.forEach((cell, i) => {
-      grow[cell.key] = needs[i]
+      grow[cell.key] = weights.needs[i]
       em[cell.key] = cell.em
-      if (labelSize > 0 && cell.labelEm > 0 && needSum > 0) {
-        // the cell's real width once the weights are applied — the label must
-        // fit it without ellipsis on every resolution
-        const cellWidth = (needs[i] / needSum) * width
-        labelSize = Math.min(labelSize, (cellWidth - cellPad * 2) / cell.labelEm)
-      }
     })
-  }
-  /* Labels that no longer fit are dropped entirely — and the whole fit is redone,
-     because the freed label row belongs to the icons and numbers. The icon keeps
-     its tooltip, so nothing is lost but the small-caps line. */
-  if (labelFits && labelSize < C.LABEL_MIN_PX) {
-    return computeScoreboardFit({ ...input, showLabels: false })
   }
 
   return {
     valueSize,
     stackedValueSize,
     labelSize,
+    shortLabels,
     rowGap: labelSize > 0 ? rowGap : 0,
     iconSize,
     iconGap,

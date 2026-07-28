@@ -1544,6 +1544,27 @@ export const SCOREBOARD_STAT_COLORS = {
 } as const
 
 /**
+ * Caption of every scoreboard cell: the full word, plus the compact form the
+ * fit falls back to when the strip is too narrow to carry the full set.
+ *
+ * The fallback is all-or-nothing — either every cell shows its word or every
+ * cell shows its short form — so the row always reads as one row. Both forms
+ * render uppercase; the full name stays in the cell's tooltip either way.
+ */
+export const SCOREBOARD_CELL_LABELS = {
+  kills: { full: 'Kills', short: 'K' },
+  deaths: { full: 'Deaths', short: 'D' },
+  assists: { full: 'Assists', short: 'A' },
+  gold: { full: 'Gold', short: 'Gold' },
+  cs: { full: 'CS', short: 'CS' },
+  rank: { full: 'Rank', short: 'Rank' },
+  winLoss: { full: 'Win / Loss', short: 'W / L' },
+  turrets: { full: 'Turrets', short: 'Twr' },
+  dragons: { full: 'Dragons', short: 'Drg' },
+  barons: { full: 'Barons', short: 'Bar' },
+} as const
+
+/**
  * Auto-fit budget of the bottom scoreboard (see utils/scoreboardFit.ts).
  *
  * The strip measures its real cells and its real glyph widths, then derives ONE
@@ -1552,12 +1573,42 @@ export const SCOREBOARD_STAT_COLORS = {
  * everything else follows from the measurement.
  */
 export const SCOREBOARD_FIT = {
-  /** Vertical breathing room kept free inside the strip (top + bottom, px). */
-  STRIP_PAD_Y: 6,
+  /**
+   * Breathing room inside the strip, in UNSCALED px — the bar's frame stroke is
+   * drawn at a fixed width too (BOTTOM_FRAME_W_SHADOW = 7, half of it below the
+   * path), so the clearance the caption needs at the top does not shrink with
+   * --hud-scale. Scaling it was what let the frame bite into the label row on
+   * laptop-sized viewports.
+   */
+  STRIP_PAD_TOP_PX: 7,
+  STRIP_PAD_BOTTOM_PX: 3,
   /** Label row: share of the strip height, clamped to the min/max below. */
   LABEL_HEIGHT_FRACTION: 0.2,
-  LABEL_MIN_PX: 8.5,
-  LABEL_MAX_PX: 17,
+  /** The caption row is reserved before anything else and never falls below this. */
+  LABEL_MIN_PX: 9.5,
+  LABEL_MAX_PX: 16,
+  /**
+   * Only a cell too narrow for its own caption may push below LABEL_MIN_PX —
+   * and only down to here. Under it the row is dropped (the tooltips remain).
+   * With label-aware cell weights this no longer happens on desktop widths.
+   */
+  LABEL_HARD_MIN_PX: 7,
+  /** MedievalSharp paints above its em box — the caption band reserves for that. */
+  LABEL_LINE_FACTOR: 1.15,
+  /**
+   * How much bigger the numbers must get before the strip gives up the full
+   * words for the short captions. Below it the words stay: a 2 % gain is not
+   * worth reading "TWR" instead of "TURRETS".
+   */
+  SHORT_LABEL_VALUE_GAIN: 1.08,
+  /** The value row never drops below this share of the strip, whatever the caption wants. */
+  MAIN_ROW_MIN_FRACTION: 0.55,
+  /** Passes of the joint caption-width / value-width solve (converges in 2–3). */
+  FIT_PASSES: 4,
+  /** Gap between caption and value row, as a share of the strip height. */
+  ROW_GAP_FRACTION: 0.05,
+  ROW_GAP_MIN_PX: 2,
+  ROW_GAP_MAX_PX: 7,
   /**
    * Icon height as a multiple of the value size. Icon and number compete for
    * the same cell width, so they are solved together instead of the icon
@@ -1565,8 +1616,16 @@ export const SCOREBOARD_FIT = {
    * reads as the cell's emblem while the number keeps the room it needs.
    */
   ICON_TO_VALUE_RATIO: 1.6,
+  /**
+   * On a cramped strip (laptop viewports) the icon yields width to the number
+   * instead of holding its full 1.6 — the number is the information, the icon
+   * is its marker. Interpolated between the two ratios by how far the value
+   * size lands below VALUE_COMFORT_PX.
+   */
+  ICON_TO_VALUE_RATIO_MIN: 1.15,
+  VALUE_COMFORT_PX: 30,
   /** Below this the icon reads as a speck — the cell drops it and keeps the number. */
-  ICON_MIN_PX: 17,
+  ICON_MIN_PX: 15,
   ICON_MAX_PX: 72,
   /** Gap between icon and value, as a share of the icon size. */
   ICON_GAP_FRACTION: 0.2,
@@ -1583,7 +1642,7 @@ export const SCOREBOARD_FIT = {
   VALUE_MIN_PX: 11,
   VALUE_MAX_PX: 52,
   /** Two stacked lines (win/loss) plus their 1px gap fit into the main row. */
-  STACKED_LINE_DIVISOR: 2.2,
+  STACKED_LINE_DIVISOR: 2.1,
   /** A one-line win/loss record longer than this folds into two lines. */
   WIN_LOSS_STACK_CHARS: 15,
 } as const

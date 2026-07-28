@@ -17,20 +17,30 @@ function label(text: string): number {
   return text.length * (CAP_EM + 0.16) // + letter-spacing: 0.16em
 }
 
-function cell(key: string, valueChars: number, labelText: string): ScoreboardFitCell {
-  return { key, em: digits(valueChars), labelEm: label(labelText) }
+function cell(
+  key: string,
+  valueChars: number,
+  labelText: string,
+  shortText?: string,
+): ScoreboardFitCell {
+  return {
+    key,
+    em: digits(valueChars),
+    labelEm: label(labelText),
+    labelShortEm: label(shortText ?? labelText),
+  }
 }
 
 /**
  * Geometrie des Scoreboards für eine Desktop-Auflösung — dieselbe Rechnung, die
  * App.vue (--hud-scale) und das Layout im Browser ergeben:
- * Streifenhöhe (443 − 367) × hud-scale, Hälften = Restbreite neben dem Crest.
+ * Streifenhöhe (443 − 364) × hud-scale, Hälften = Restbreite neben dem Crest.
  */
 function geometryFor(vw: number, vh: number) {
   const hudScale = Math.min(1, Math.max(0.52, Math.min(vw / 2560, vh / 1440)))
   const boardW = vw - 2 * BOTTOM_BAR_SIDE_W * hudScale - 24
   const crestW = Math.min(300, Math.max(160, boardW * 0.24))
-  return { halfWidth: (boardW - crestW) / 2, stripHeight: 76 * hudScale }
+  return { halfWidth: (boardW - crestW) / 2, stripHeight: 79 * hudScale }
 }
 
 /** Typische Career-Stände: fünf Kampfwerte links, Rang/Bilanz/Objectives rechts. */
@@ -41,18 +51,23 @@ function inputFor(vw: number, vh: number, valueChars = 4): ScoreboardFitInput {
     rightWidth: halfWidth,
     stripHeight,
     leftCells: [
-      cell('kills', valueChars, 'Kills'),
-      cell('deaths', valueChars, 'Deaths'),
-      cell('assists', valueChars, 'Assists'),
+      cell('kills', valueChars, 'Kills', 'K'),
+      cell('deaths', valueChars, 'Deaths', 'D'),
+      cell('assists', valueChars, 'Assists', 'A'),
       cell('gold', valueChars + 1, 'Gold'),
       cell('cs', valueChars, 'CS'),
     ],
     rightCells: [
-      { key: 'rank', em: 6 * CAP_EM, labelEm: label('Rank') },
-      { key: 'winLoss', em: digits(9), labelEm: label('Win / Loss') },
-      cell('turrets', valueChars, 'Turrets'),
-      cell('dragons', valueChars, 'Dragons'),
-      cell('barons', valueChars, 'Barons'),
+      { key: 'rank', em: 6 * CAP_EM, labelEm: label('Rank'), labelShortEm: label('Rank') },
+      {
+        key: 'winLoss',
+        em: digits(9),
+        labelEm: label('Win / Loss'),
+        labelShortEm: label('W / L'),
+      },
+      cell('turrets', valueChars, 'Turrets', 'Twr'),
+      cell('dragons', valueChars, 'Dragons', 'Drg'),
+      cell('barons', valueChars, 'Barons', 'Bar'),
     ],
   }
 }
@@ -80,6 +95,27 @@ const RESOLUTIONS: Array<[string, number, number]> = [
   ['4K 3840×2160', 3840, 2030],
 ]
 
+/** Laptop-Viewports: der flachste Streifen, den --hud-scale zulässt. */
+const LAPTOPS: Array<[string, number, number]> = [
+  ['hud-scale-Boden 1280×720', 1280, 700],
+  ['MacBook Air 13" 1440×900', 1440, 810],
+  ['MacBook Pro 16" 1728×1117', 1728, 1030],
+]
+
+/** Höhe der Zellspalte: Label-Band + Abstand + höhere von Icon/Zahl. */
+function columnHeight(fit: ReturnType<typeof computeScoreboardFit>): number {
+  return (
+    fit.labelSize * SCOREBOARD_FIT.LABEL_LINE_FACTOR +
+    fit.rowGap +
+    Math.max(fit.valueSize, fit.iconSize)
+  )
+}
+
+/** Streifenhöhe abzüglich der Polster, die das Layout tatsächlich freihält. */
+function usableHeight(stripHeight: number): number {
+  return stripHeight - (SCOREBOARD_FIT.STRIP_PAD_TOP_PX + SCOREBOARD_FIT.STRIP_PAD_BOTTOM_PX)
+}
+
 describe('computeScoreboardFit', () => {
   describe.each(RESOLUTIONS)('%s', (_name, vw, vh) => {
     it('lässt beide Hälften nicht überlaufen — nichts wird abgeschnitten', () => {
@@ -89,11 +125,10 @@ describe('computeScoreboardFit', () => {
       expect(neededWidth(input.rightCells, fit)).toBeLessThanOrEqual(input.rightWidth + 0.01)
     })
 
-    it('hält die Wertzeile innerhalb der Streifenhöhe', () => {
+    it('hält Label- und Wertzeile innerhalb der nutzbaren Streifenhöhe', () => {
       const input = inputFor(vw, vh)
       const fit = computeScoreboardFit(input)
-      const rows = fit.labelSize * 1.05 + fit.rowGap + Math.max(fit.valueSize, fit.iconSize)
-      expect(rows).toBeLessThanOrEqual(input.stripHeight)
+      expect(columnHeight(fit)).toBeLessThanOrEqual(usableHeight(input.stripHeight) + 0.01)
     })
 
     it('bleibt auch mit sehr langen Zahlen im Rahmen', () => {
@@ -142,35 +177,117 @@ describe('computeScoreboardFit', () => {
     expect(uhd.iconSize).toBeGreaterThanOrEqual(fhd.iconSize)
   })
 
-  it('lässt die Werte monoton mit der Breite wachsen', () => {
+  it('lässt die Werte monoton mit der Breite wachsen — je Caption-Variante', () => {
+    // Innerhalb einer Variante muss mehr Breite immer ≥ Größe bedeuten. Über den
+    // Variantenwechsel hinweg darf die Zahl einmalig zurückspringen, aber nie
+    // weiter als der Gewinn, für den die Kurzform überhaupt gewählt wird.
+    for (const useShortLabels of [false, true]) {
+      let previous = 0
+      for (let width = 300; width <= 1600; width += 25) {
+        const fit = computeScoreboardFit({
+          ...inputFor(2560, 1310),
+          leftWidth: width,
+          rightWidth: width,
+          useShortLabels,
+        })
+        expect(fit.valueSize).toBeGreaterThanOrEqual(previous - 0.01)
+        previous = fit.valueSize
+      }
+    }
     let previous = 0
     for (let width = 300; width <= 1600; width += 25) {
-      const fit = computeScoreboardFit({ ...inputFor(2560, 1310), leftWidth: width, rightWidth: width })
-      expect(fit.valueSize).toBeGreaterThanOrEqual(previous - 0.01)
+      const fit = computeScoreboardFit({
+        ...inputFor(2560, 1310),
+        leftWidth: width,
+        rightWidth: width,
+      })
+      expect(fit.valueSize).toBeGreaterThanOrEqual(
+        previous / SCOREBOARD_FIT.SHORT_LABEL_VALUE_GAIN - 0.01,
+      )
       previous = fit.valueSize
     }
   })
 
-  it('wirft die Label-Zeile ab, statt sie unlesbar klein zu setzen — und vergrößert dann die Zahlen', () => {
+  describe.each(LAPTOPS)('%s', (_name, vw, vh) => {
+    it('zeigt die Label-Zeile — auf dem flachsten Streifen genauso', () => {
+      const fit = computeScoreboardFit(inputFor(vw, vh))
+      expect(fit.labelSize).toBeGreaterThanOrEqual(SCOREBOARD_FIT.LABEL_HARD_MIN_PX)
+      expect(fit.rowGap).toBeGreaterThan(0)
+    })
+
+    it('bleibt in Breite und Höhe im Rahmen', () => {
+      const input = inputFor(vw, vh)
+      const fit = computeScoreboardFit(input)
+      expect(neededWidth(input.leftCells, fit)).toBeLessThanOrEqual(input.leftWidth + 0.01)
+      expect(neededWidth(input.rightCells, fit)).toBeLessThanOrEqual(input.rightWidth + 0.01)
+      expect(columnHeight(fit)).toBeLessThanOrEqual(usableHeight(input.stripHeight) + 0.01)
+    })
+
+    it('lässt Icon und Zahl lesbar — nichts fällt auf die Notgröße zurück', () => {
+      const fit = computeScoreboardFit(inputFor(vw, vh))
+      expect(fit.iconSize).toBeGreaterThanOrEqual(SCOREBOARD_FIT.ICON_MIN_PX)
+      expect(fit.valueSize).toBeGreaterThan(SCOREBOARD_FIT.VALUE_MIN_PX)
+    })
+  })
+
+  it('gibt jeder Zelle mindestens die Breite ihres eigenen Labels', () => {
+    // "0 Drachen" braucht kaum Zahlenbreite, aber das Wort DRAGONS muss passen:
+    // ohne label-bewusste Gewichte lief genau diese Zelle in ihre Nachbarn.
+    const input = inputFor(1920, 950)
+    const fit = computeScoreboardFit(input)
+    const half = [...input.rightCells]
+    const needSum = half.reduce((sum, c) => sum + fit.grow[c.key], 0)
+    for (const c of half) {
+      const cellWidth = (fit.grow[c.key] / needSum) * input.rightWidth
+      const labelEm = fit.shortLabels ? (c.labelShortEm ?? c.labelEm) : c.labelEm
+      expect(cellWidth - fit.cellPad * 2).toBeGreaterThanOrEqual(labelEm * fit.labelSize - 0.01)
+    }
+  })
+
+  it('wechselt auf die Kurzform, statt das Label unter seine Lesbarkeit zu drücken', () => {
     const roomy = computeScoreboardFit(inputFor(2560, 1310))
     const cramped = computeScoreboardFit({
       ...inputFor(2560, 1310),
-      leftWidth: 260,
-      rightWidth: 260,
+      leftWidth: 340,
+      rightWidth: 340,
     })
+    expect(roomy.shortLabels).toBe(false)
     expect(roomy.labelSize).toBeGreaterThanOrEqual(SCOREBOARD_FIT.LABEL_MIN_PX)
-    expect(cramped.labelSize).toBe(0)
-    expect(cramped.rowGap).toBe(0)
+    expect(cramped.shortLabels).toBe(true)
+    expect(cramped.labelSize).toBeGreaterThanOrEqual(SCOREBOARD_FIT.LABEL_HARD_MIN_PX)
+    // und die Kurzform bezahlt sich: die Zahlen bleiben größer als mit den Wörtern
+    const forcedFull = computeScoreboardFit({
+      ...inputFor(2560, 1310),
+      leftWidth: 300,
+      rightWidth: 300,
+      leftCells: inputFor(2560, 1310).leftCells.map((c) => ({ ...c, labelShortEm: c.labelEm })),
+      rightCells: inputFor(2560, 1310).rightCells.map((c) => ({ ...c, labelShortEm: c.labelEm })),
+    })
+    expect(cramped.valueSize).toBeGreaterThan(forcedFull.valueSize)
+  })
+
+  it('wirft die Label-Zeile erst ab, wenn auch die Kurzform nicht mehr lesbar ist', () => {
+    const fit = computeScoreboardFit({
+      ...inputFor(2560, 1310),
+      leftWidth: 90,
+      rightWidth: 90,
+    })
+    expect(fit.labelSize).toBe(0)
+    expect(fit.rowGap).toBe(0)
     // ohne Label-Zeile gehört die ganze Streifenhöhe der Wertzeile
     const withLabels = computeScoreboardFit({
       ...inputFor(2560, 1310),
-      leftWidth: 260,
-      rightWidth: 260,
+      leftWidth: 90,
+      rightWidth: 90,
       showLabels: true,
-      leftCells: inputFor(2560, 1310).leftCells.map((c) => ({ ...c, labelEm: 0 })),
-      rightCells: inputFor(2560, 1310).rightCells.map((c) => ({ ...c, labelEm: 0 })),
+      leftCells: inputFor(2560, 1310).leftCells.map((c) => ({ ...c, labelEm: 0, labelShortEm: 0 })),
+      rightCells: inputFor(2560, 1310).rightCells.map((c) => ({
+        ...c,
+        labelEm: 0,
+        labelShortEm: 0,
+      })),
     })
-    expect(cramped.valueSize).toBeGreaterThanOrEqual(withLabels.valueSize)
+    expect(fit.valueSize).toBeGreaterThanOrEqual(withLabels.valueSize)
   })
 
   it('lässt das Icon lieber weg, als es zum Fleck schrumpfen zu lassen', () => {

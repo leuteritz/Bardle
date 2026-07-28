@@ -17,6 +17,8 @@ import {
   OBJECTIVE_FIGHT_STATUS,
   SCOREBOARD_STAT_COLORS,
   SCOREBOARD_FIT,
+  SCOREBOARD_CELL_LABELS,
+  BOTTOM_BAR_CENTER_TOP_Y,
   RANK_EMBLEM_IMAGES,
   RANK_TIER_COLORS,
   RANK_TIERS,
@@ -35,27 +37,38 @@ const { kills, deaths, assists, gold, cs, dragons, barons, turrets } =
   useBattleScoreboardStats()
 
 interface ScoreStat {
-  key: string
+  key: keyof typeof SCOREBOARD_CELL_LABELS
   value: string
   color: string
   label: string
+  labelShort: string
   icon?: string
   gameIcon?: string
 }
 
+/** Caption pair of a cell — full word plus the compact form the fit may pick. */
+function captionOf(key: keyof typeof SCOREBOARD_CELL_LABELS) {
+  return { label: SCOREBOARD_CELL_LABELS[key].full, labelShort: SCOREBOARD_CELL_LABELS[key].short }
+}
+
 const leftStats = computed<ScoreStat[]>(() => [
-  { key: 'kills', value: formatNumber(kills.value), color: SCOREBOARD_STAT_COLORS.kills, label: 'Kills', gameIcon: BATTLE_STAT_GAME_ICONS.kills },
-  { key: 'deaths', value: formatNumber(deaths.value), color: SCOREBOARD_STAT_COLORS.deaths, label: 'Deaths', gameIcon: BATTLE_STAT_GAME_ICONS.deaths },
-  { key: 'assists', value: formatNumber(assists.value), color: SCOREBOARD_STAT_COLORS.assists, label: 'Assists', gameIcon: BATTLE_STAT_GAME_ICONS.assists },
-  { key: 'gold', value: formatNumber(gold.value), color: SCOREBOARD_STAT_COLORS.gold, label: 'Gold', icon: BATTLE_STAT_IMAGES.gold },
-  { key: 'cs', value: formatNumber(cs.value), color: SCOREBOARD_STAT_COLORS.cs, label: 'CS', gameIcon: BATTLE_STAT_GAME_ICONS.cs },
+  { key: 'kills', value: formatNumber(kills.value), color: SCOREBOARD_STAT_COLORS.kills, ...captionOf('kills'), gameIcon: BATTLE_STAT_GAME_ICONS.kills },
+  { key: 'deaths', value: formatNumber(deaths.value), color: SCOREBOARD_STAT_COLORS.deaths, ...captionOf('deaths'), gameIcon: BATTLE_STAT_GAME_ICONS.deaths },
+  { key: 'assists', value: formatNumber(assists.value), color: SCOREBOARD_STAT_COLORS.assists, ...captionOf('assists'), gameIcon: BATTLE_STAT_GAME_ICONS.assists },
+  { key: 'gold', value: formatNumber(gold.value), color: SCOREBOARD_STAT_COLORS.gold, ...captionOf('gold'), icon: BATTLE_STAT_IMAGES.gold },
+  { key: 'cs', value: formatNumber(cs.value), color: SCOREBOARD_STAT_COLORS.cs, ...captionOf('cs'), gameIcon: BATTLE_STAT_GAME_ICONS.cs },
 ])
 
 const rightStats = computed<ScoreStat[]>(() => [
-  { key: 'turrets', value: formatNumber(turrets.value), color: SCOREBOARD_STAT_COLORS.turrets, label: 'Turrets', gameIcon: BATTLE_STAT_GAME_ICONS.turrets },
-  { key: 'dragons', value: formatNumber(dragons.value), color: SCOREBOARD_STAT_COLORS.dragons, label: 'Dragons', icon: BATTLE_STAT_IMAGES.dragons },
-  { key: 'barons', value: formatNumber(barons.value), color: SCOREBOARD_STAT_COLORS.barons, label: 'Barons', icon: BATTLE_STAT_IMAGES.barons },
+  { key: 'turrets', value: formatNumber(turrets.value), color: SCOREBOARD_STAT_COLORS.turrets, ...captionOf('turrets'), gameIcon: BATTLE_STAT_GAME_ICONS.turrets },
+  { key: 'dragons', value: formatNumber(dragons.value), color: SCOREBOARD_STAT_COLORS.dragons, ...captionOf('dragons'), icon: BATTLE_STAT_IMAGES.dragons },
+  { key: 'barons', value: formatNumber(barons.value), color: SCOREBOARD_STAT_COLORS.barons, ...captionOf('barons'), icon: BATTLE_STAT_IMAGES.barons },
 ])
+
+/** The caption a cell renders right now — the fit decides full vs. compact. */
+function captionText(stat: { label: string; labelShort: string }): string {
+  return fit.value.shortLabels ? stat.labelShort : stat.label
+}
 
 /* ── Rank + win/loss cells (right side, next to the crest) ── */
 const { currentRank, totalWins, totalLosses } = storeToRefs(battleStore)
@@ -120,8 +133,8 @@ const wlStacked = computed(
    numbers grow to fill Full HD, 2K and 4K instead of stopping at a hardcoded
    ceiling — and nothing is ever clipped, because the fit is what decides.
    ══════════════════════════════════════════════════════════════════════ */
-const RANK_CELL_LABEL = 'Rank'
-const WIN_LOSS_CELL_LABEL = 'Win / Loss'
+const RANK_CELL = { key: 'rank' as const, ...captionOf('rank') }
+const WIN_LOSS_CELL = { key: 'winLoss' as const, ...captionOf('winLoss') }
 
 const rootRef = ref<HTMLElement | null>(null)
 const leftRef = ref<HTMLElement | null>(null)
@@ -135,21 +148,20 @@ const fitCells = computed<{ left: ScoreboardFitSource[]; right: ScoreboardFitSou
     key: stat.key,
     text: stat.value,
     label: stat.label,
+    labelShort: stat.labelShort,
     probe: 'value' as const,
   })),
   right: [
     {
-      key: 'rank',
+      ...RANK_CELL,
       text: RANK_LABEL_CANDIDATES,
-      label: RANK_CELL_LABEL,
       probe: 'rank' as const,
     },
     {
-      key: 'winLoss',
+      ...WIN_LOSS_CELL,
       text: wlStacked.value
         ? [winText.value, lossText.value]
         : `${winText.value}${WL_SEPARATOR}${lossText.value}`,
-      label: WIN_LOSS_CELL_LABEL,
       probe: 'value' as const,
       stacked: wlStacked.value,
     },
@@ -157,6 +169,7 @@ const fitCells = computed<{ left: ScoreboardFitSource[]; right: ScoreboardFitSou
       key: stat.key,
       text: stat.value,
       label: stat.label,
+      labelShort: stat.labelShort,
       probe: 'value' as const,
     })),
   ],
@@ -177,7 +190,21 @@ function px(value: number): string {
   return `${Math.round(value * 100) / 100}px`
 }
 
+/* Strip geometry that does not depend on the fit: where the strip starts and
+   how much air it keeps to the bar's frame stroke. The stroke is drawn at a
+   fixed width (BOTTOM_FRAME_W_SHADOW), so its clearance must NOT scale with
+   --hud-scale — a scaled 3px let the frame cover the caption row on laptops. */
+const stripVars = {
+  '--sb-strip-top': px(BOTTOM_BAR_CENTER_TOP_Y),
+  '--sb-pad-top': px(SCOREBOARD_FIT.STRIP_PAD_TOP_PX),
+  '--sb-pad-bottom': px(SCOREBOARD_FIT.STRIP_PAD_BOTTOM_PX),
+  /* the caption's line box is exactly the band the fit reserved for it, so the
+     letters sit inside it instead of painting over its edges */
+  '--sb-label-line': String(SCOREBOARD_FIT.LABEL_LINE_FACTOR),
+}
+
 const fitVars = computed(() => ({
+  ...stripVars,
   '--sb-value-size': px(fit.value.valueSize),
   '--sb-stacked-size': px(fit.value.stackedValueSize),
   '--sb-label-size': px(fit.value.labelSize),
@@ -361,7 +388,7 @@ const liveChars = computed(() => {
         :style="cellStyle(stat.key)"
         :title="stat.label"
       >
-        <span v-if="showLabels" class="sb-stat-label">{{ stat.label }}</span>
+        <span v-if="showLabels" class="sb-stat-label">{{ captionText(stat) }}</span>
         <div class="sb-stat-main">
           <img
             v-if="showIcons && stat.icon"
@@ -473,9 +500,9 @@ const liveChars = computed(() => {
       <div
         class="sb-stat sb-stat--rank"
         :style="cellStyle('rank')"
-        :title="`${RANK_CELL_LABEL} · ${rankFullLabel}`"
+        :title="`${RANK_CELL.label} · ${rankFullLabel}`"
       >
-        <span v-if="showLabels" class="sb-stat-label">{{ RANK_CELL_LABEL }}</span>
+        <span v-if="showLabels" class="sb-stat-label">{{ captionText(RANK_CELL) }}</span>
         <div class="sb-stat-main">
           <img v-if="showIcons" :src="rankEmblem" :alt="rankFullLabel" class="sb-stat-icon" />
           <span class="sb-stat-value sb-rank-value" :style="{ color: rankColor }">
@@ -485,8 +512,8 @@ const liveChars = computed(() => {
       </div>
 
       <!-- Win / loss cell: two-tone value -->
-      <div class="sb-stat" :style="cellStyle('winLoss')" :title="WIN_LOSS_CELL_LABEL">
-        <span v-if="showLabels" class="sb-stat-label">{{ WIN_LOSS_CELL_LABEL }}</span>
+      <div class="sb-stat" :style="cellStyle('winLoss')" :title="WIN_LOSS_CELL.label">
+        <span v-if="showLabels" class="sb-stat-label">{{ captionText(WIN_LOSS_CELL) }}</span>
         <div class="sb-stat-main">
           <Icon
             v-if="showIcons"
@@ -511,7 +538,7 @@ const liveChars = computed(() => {
         :style="cellStyle(stat.key)"
         :title="stat.label"
       >
-        <span v-if="showLabels" class="sb-stat-label">{{ stat.label }}</span>
+        <span v-if="showLabels" class="sb-stat-label">{{ captionText(stat) }}</span>
         <div class="sb-stat-main">
           <img
             v-if="showIcons && stat.icon"
@@ -546,16 +573,18 @@ const liveChars = computed(() => {
   position: absolute;
   left: calc(440px * var(--hud-scale, 1));
   right: calc(440px * var(--hud-scale, 1));
-  /* strip edge (364) + 3px for the gold frame stroke that bites into the
-     top — keeps label-to-top and value-to-bottom optically equal */
-  top: calc(367px * var(--hud-scale, 1));
+  /* Starts exactly on the strip edge; the clearance to the frame stroke above
+     it is the UNSCALED --sb-pad-top below — the stroke is unscaled too, so a
+     scaled offset shrank the caption's air away on laptop viewports. */
+  top: calc(var(--sb-strip-top, 364px) * var(--hud-scale, 1));
   bottom: 0;
   z-index: 2;
   container-type: inline-size;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 12px;
+  /* the fit budgets against exactly these paddings (STRIP_PAD_TOP/BOTTOM_PX) */
+  padding: var(--sb-pad-top, 7px) 12px var(--sb-pad-bottom, 4px);
   min-width: 0;
   pointer-events: none;
 }
@@ -688,15 +717,15 @@ const liveChars = computed(() => {
 }
 
 .sb-stat-label {
-  /* auto-fit instead of ellipsis: the fit shrinks this until the longest label
-     ("WIN / LOSS") fits its cell, and drops the row entirely rather than
-     rendering it unreadably small — labels are never truncated */
+  /* The caption row is reserved before the numbers are sized and every cell is
+     weighted wide enough for its own word — so it is never truncated and, on
+     desktop widths, never dropped either. */
   font-size: var(--sb-label-size);
   letter-spacing: 0.16em;
   font-weight: 700;
   color: #c9a95c;
   text-transform: uppercase;
-  line-height: 1;
+  line-height: var(--sb-label-line, 1.15);
   white-space: nowrap;
   max-width: 100%;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
@@ -931,6 +960,11 @@ const liveChars = computed(() => {
   position: absolute;
   white-space: pre;
   line-height: 1;
+  /* The probes must measure the string, not the box: .sb-stat-label carries
+     max-width: 100% and the probe host is a zero-width absolute box, which
+     clamped every label measurement to 0 — the fit then believed the captions
+     cost nothing in width and let them run into each other. */
+  max-width: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
