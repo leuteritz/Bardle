@@ -335,12 +335,15 @@ const statusBudget = computed(() => {
   const objective = objectiveFightDisplay.value
   if (objective) return `${objective.name}${CREST_SEPARATOR}${SCOREBOARD_CREST.OBJECTIVE_BUDGET}`
   if (resultBadge.value) return resultBadge.value.text
-  if (!gameStateDisplay.value) return BATTLE_PHASES.searching.label
+  /* The landing fallback announces the search and hands over to it a frame
+     later — it is budgeted AS the search, clock included, so that handover
+     does not resize the line for one frame. */
+  const label = gameStateDisplay.value ? phaseConfig.value.label : BATTLE_PHASES.searching.label
   const clock =
     phaseKey.value === 'battle'
       ? SCOREBOARD_CREST.CLOCK_BUDGET_BATTLE
       : SCOREBOARD_CREST.CLOCK_BUDGET
-  return `${phaseConfig.value.label}${CREST_SEPARATOR}${clock}`
+  return `${label}${CREST_SEPARATOR}${clock}`
 })
 
 /* What the crest has to hold: one line at a time, each with the ornament that
@@ -912,9 +915,11 @@ const phaseProgressStyle = computed(() => ({
      empty part would push the ornament row out of the strip. */
   margin-top: var(--sb-crest-ink-top, -0.03em);
   margin-bottom: var(--sb-crest-ink-bottom, -0.15em);
-  /* a phase whose text needs more room resizes the line — as a glide, like a
-     stat cell crossing a digit boundary */
-  transition: font-size 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Deliberately NOT transitioned. Every phase gets the size its own text can
+     have, so a phase change swaps text and size at once. Gliding between them
+     animates the NEW text from the OLD text's size: "Loading" was measured
+     growing for 350ms out of the size "Planet Search" had left behind. A cut is
+     what a changed line wants — the glide belongs to a value that stays. */
 }
 .sb-crest-line--title {
   font-size: var(--sb-title-size, 30px);
@@ -1121,7 +1126,6 @@ const phaseProgressStyle = computed(() => ({
   .sb-stat-icon,
   .sb-stat-value,
   .sb-crest,
-  .sb-crest-line,
   .sb-crest-progress-fill {
     transition: none;
   }
