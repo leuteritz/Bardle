@@ -357,7 +357,7 @@ onUnmounted(() => {
           </div>
           <!-- One shared chime between the two stats instead of one each -->
           <img
-            src="/img/BardAbilities/BardChime.png"
+            src="/img/BardAbilities/BardChime-128.png"
             class="sub-chime-icon chime-glow-green"
             alt=""
             aria-hidden="true"

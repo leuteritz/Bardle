@@ -121,7 +121,7 @@
 
               <div class="ec-active-foot">
                 <div class="ec-active-reward">
-                  <img src="/img/BardAbilities/BardChime.png" class="ec-chime-img" alt="" aria-hidden="true" />
+                  <img src="/img/BardAbilities/BardChime-128.png" class="ec-chime-img" alt="" aria-hidden="true" />
                   <span
                     class="ec-active-reward-amount"
                     :class="{ 'ec-active-reward-amount--fail': exp.status !== 'success' }"
@@ -262,7 +262,7 @@
 
                 <div class="ec-card-meta">
                   <div class="ec-card-reward">
-                    <img src="/img/BardAbilities/BardChime.png" class="ec-chime-img" alt="" aria-hidden="true" />
+                    <img src="/img/BardAbilities/BardChime-128.png" class="ec-chime-img" alt="" aria-hidden="true" />
                     <span class="ec-reward-amount">{{ $formatNumber(slot.baseReward) }}</span>
                     <span class="ec-reward-label">Chimes</span>
                   </div>

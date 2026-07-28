@@ -142,7 +142,7 @@
             </span>
             <span v-if="t.purchased" class="tbh-vacant-hint">Assign a planet</span>
             <span v-else class="tbh-vacant-hint tbh-vacant-hint--cost">
-              <img src="/img/BardAbilities/BardChime.png" class="tbh-vacant-chime" alt="" />
+              <img src="/img/BardAbilities/BardChime-128.png" class="tbh-vacant-chime" alt="" />
               {{ formatNumber(t.cost) }}
             </span>
           </div>

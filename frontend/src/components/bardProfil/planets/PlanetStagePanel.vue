@@ -444,7 +444,7 @@ const configTarget = computed(() => {
               Requires Phase {{ levelUpReqPhase }}
             </template>
             <template v-else>
-              <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
+              <img src="/img/BardAbilities/BardChime-128.png" class="ps-level-chime" alt="" />
               {{ $formatNumber(maxAffordableCount > 0 ? maxCost : levelUpCost) }}
             </template>
           </span>

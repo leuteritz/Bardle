@@ -130,7 +130,11 @@
                 :class="pauseBattleLp > 0 ? 'lp--pos' : pauseBattleLp < 0 ? 'lp--neg' : 'lp--zero'"
               >{{ pauseBattleLp > 0 ? '+' : '' }}{{ pauseBattleLp }} LP</span>
               <span v-if="pauseBattleChimes > 0" class="battle-strip__chimes">
-                <img src="/img/BardAbilities/BardChime.png" alt="" class="battle-strip__chime-img" />
+                <img
+                  src="/img/BardAbilities/BardChime-128.png"
+                  alt=""
+                  class="battle-strip__chime-img"
+                />
                 +{{ formatNumber(pauseBattleChimes) }}
               </span>
             </template>

@@ -75,7 +75,7 @@ const canUnlock = computed(() => store.canUnlockPlanetSlot(props.slotIndex))
 
       <div class="ps-lock-gate" :class="{ 'ps-lock-gate--met': chimesMet }">
         <span class="ps-lock-gate-medal ps-lock-gate-medal--chime">
-          <img src="/img/BardAbilities/BardChime.png" alt="" />
+          <img src="/img/BardAbilities/BardChime-128.png" alt="" />
         </span>
         <span class="ps-lock-gate-body">
           <span class="ps-lock-gate-label">Chimes</span>
@@ -96,7 +96,7 @@ const canUnlock = computed(() => store.canUnlockPlanetSlot(props.slotIndex))
     <button v-if="canUnlock" class="ps-lock-cta" @click="emit('buy', planet.id)">
       <span class="ps-lock-cta-main">✦ Claim Orbit {{ toRoman(orbitNumber) }}</span>
       <span class="ps-lock-cta-cost">
-        <img src="/img/BardAbilities/BardChime.png" alt="" />
+        <img src="/img/BardAbilities/BardChime-128.png" alt="" />
         {{ $formatNumber(cost) }}
       </span>
     </button>

@@ -104,7 +104,11 @@
             class="cs-mat-row"
             :class="detail.chimes.ok ? 'cs-mat-row--ok' : 'cs-mat-row--missing'"
           >
-            <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="rpg-img cs-mat-img" />
+            <img
+              src="/img/BardAbilities/BardChime-128.png"
+              alt="Chimes"
+              class="rpg-img cs-mat-img"
+            />
             <span class="cs-mat-name">Chimes</span>
             <span class="cs-mat-amount">
               {{ formatNumber(detail.chimes.have) }} / {{ formatNumber(detail.chimes.need) }}

@@ -8,7 +8,7 @@ export const resourcesCategory: EncyclopediaCategory = {
     {
       id: 'chimes',
       name: 'Chimes',
-      icon: '/img/BardAbilities/BardChime.png',
+      icon: '/img/BardAbilities/BardChime-128.png',
       description:
         'The primary currency. Earned per click (CPC) and passively every second (CPS). ' +
         'Almost everything — buildings, planet slots, the Star Forge, items and champion recruitment — is paid in Chimes.',
@@ -80,8 +80,7 @@ export const levelingCategory: EncyclopediaCategory = {
         'Your level rises automatically as Chimes accumulate. ' +
         'Every level-up offers a choice of 3 augments; overflow Chimes carry into the next level.',
       lore: 'Growth through experience.',
-      formula:
-        'Threshold(N) = ceil(2500 × N^2.2)\n' + 'Above level 30: threshold × 1.1^(N − 30)',
+      formula: 'Threshold(N) = ceil(2500 × N^2.2)\n' + 'Above level 30: threshold × 1.1^(N − 30)',
       related: ['augment-system'],
     },
     {

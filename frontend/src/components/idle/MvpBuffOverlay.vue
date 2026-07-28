@@ -20,7 +20,7 @@
       <div v-if="visible && uiStore.bardActiveTab === null" class="buff-badge" role="status">
         <div class="badge-row">
           <span class="badge-mult">{{ HONOR_MVP_BUFF_MULT }}×</span>
-          <img src="/img/BardAbilities/BardChime.png" alt="" class="badge-chime" />
+          <img src="/img/BardAbilities/BardChime-128.png" alt="" class="badge-chime" />
           <span class="badge-label">CHIMES</span>
           <span class="badge-divider" />
           <span class="badge-seconds">{{ secondsLeft }}s</span>

@@ -41,7 +41,7 @@
         <span class="mvp-name">{{ mvpName }}</span>
         <span v-if="mvpBuffGranted" class="mvp-bonus">
           {{ HONOR_MVP_BUFF_MULT }}×
-          <img src="/img/BardAbilities/BardChime.png" alt="" class="mvp-bonus-chime" />
+          <img src="/img/BardAbilities/BardChime-128.png" alt="" class="mvp-bonus-chime" />
           <span class="mvp-bonus-label">CHIME BUFF · {{ HONOR_MVP_BUFF_DURATION_S }}s</span>
         </span>
       </div>

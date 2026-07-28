@@ -28,7 +28,7 @@
         :class="hasChimes ? 'tier-cost-badge--ok' : 'tier-cost-badge--missing'"
         :title="hasChimes ? 'Enough Chimes' : `Need ${formatNumber(chimesShort)} more Chimes`"
       >
-        <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="tier-cost-img" />
+        <img src="/img/BardAbilities/BardChime-128.png" alt="Chimes" class="tier-cost-img" />
         {{ formatNumber(gameStore.chimes) }}/{{ formatNumber(cost.chimes) }}
       </span>
 

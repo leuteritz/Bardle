@@ -203,7 +203,7 @@
 
             <div class="summary-loot-row">
               <div v-if="getStarRewardSummary(star).totalChimes > 0" class="summary-item">
-                <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="summary-icon" />
+                <img src="/img/BardAbilities/BardChime-128.png" alt="Chimes" class="summary-icon" />
                 <span class="summary-count"
                   >×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span
                 >

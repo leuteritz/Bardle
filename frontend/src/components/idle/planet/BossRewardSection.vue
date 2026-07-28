@@ -25,7 +25,7 @@
       </span>
 
       <span v-if="totalChimes > 0" class="loot-chip loot-chip--chimes">
-        <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="loot-chip-icon" />
+        <img src="/img/BardAbilities/BardChime-128.png" alt="Chimes" class="loot-chip-icon" />
         {{ totalChimes }}
       </span>
 

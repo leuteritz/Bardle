@@ -77,7 +77,7 @@
                 class="tribute-chip"
               >
                 +{{ formatTribute(battleStore.honorTributeFor(champ.name)) }}
-                <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
+                <img src="/img/BardAbilities/BardChime-128.png" alt="" class="chime-img" />
               </span>
               <span class="medal-stamp" :class="{ 'medal-stamp--on': isHonored(champ.name) }">
                 <Icon icon="game-icons:medal" width="20" height="20" />
