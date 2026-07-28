@@ -157,7 +157,7 @@ function hpClass(hp: number): string {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: clamp(4px, 0.9cqh, 7px);
+  gap: clamp(5px, 1.1cqh, 9px);
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -172,10 +172,10 @@ function hpClass(hp: number): string {
 }
 
 .col-title {
-  font-size: clamp(10px, 1.6cqh, 11px);
+  font-size: clamp(10px, 2cqh, 18px);
   font-weight: 700;
-  letter-spacing: 2px;
-  padding: 3px 8px;
+  letter-spacing: 0.18em;
+  padding: clamp(3px, 0.6cqh, 6px) clamp(8px, 1.3cqh, 14px);
   flex-shrink: 0;
   color: rgba(var(--team-rgb), 0.9);
   background: linear-gradient(
@@ -190,14 +190,19 @@ function hpClass(hp: number): string {
   text-align: right;
 }
 
+/* Card height scales with the board, width with the column — and the card is
+   its own size container, so every badge, timer and label inside it is sized
+   as a share of the CARD (cqh below), not of the board. One number changes the
+   whole card, and nothing inside can outgrow its plate on a large desktop. */
 .champ-card {
   position: relative;
-  height: clamp(46px, 8.8cqh, 66px);
+  height: clamp(52px, 10.4cqh, 104px);
   flex-shrink: 0;
   border-radius: 8px;
   overflow: hidden;
   background: rgba(var(--team-scrim), 0.85);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  container-type: size;
 }
 /* team edge marks the side without framing the portrait */
 .champ-card--blue::after,
@@ -207,7 +212,7 @@ function hpClass(hp: number): string {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 2px;
+  width: clamp(2px, 3.5cqh, 4px);
   background: rgba(var(--team-rgb), 0.9);
   pointer-events: none;
 }
@@ -297,13 +302,13 @@ function hpClass(hp: number): string {
 /* Level medallion: opposite end of the bottom row from the champ name */
 .level-badge {
   flex-shrink: 0;
-  width: clamp(20px, 3.8cqh, 27px);
-  height: clamp(20px, 3.8cqh, 27px);
+  width: clamp(20px, 41cqh, 43px);
+  height: clamp(20px, 41cqh, 43px);
   border-radius: 50%;
   background: rgba(var(--team-scrim), 0.9);
   border: 1.5px solid rgba(var(--team-rgb), 0.95);
   box-shadow: 0 0 6px rgba(var(--team-rgb), 0.45), 0 1px 3px rgba(0, 0, 0, 0.7);
-  font-size: clamp(11px, 2cqh, 14px);
+  font-size: clamp(11px, 21cqh, 22px);
   font-weight: 800;
   color: #f4f6fb;
   display: flex;
@@ -319,8 +324,8 @@ function hpClass(hp: number): string {
   top: 42%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: clamp(26px, 5cqh, 36px);
-  height: clamp(26px, 5cqh, 36px);
+  width: clamp(26px, 54cqh, 56px);
+  height: clamp(26px, 54cqh, 56px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -336,7 +341,7 @@ function hpClass(hp: number): string {
   filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.6));
 }
 .death-timer-num {
-  font-size: clamp(12px, 2.4cqh, 16px);
+  font-size: clamp(12px, 24cqh, 25px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #ffe9a0;
@@ -345,13 +350,13 @@ function hpClass(hp: number): string {
 
 .info {
   position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 7px;
+  left: clamp(7px, 11cqh, 15px);
+  right: clamp(7px, 11cqh, 15px);
+  bottom: clamp(6px, 10cqh, 12px);
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 6px;
+  gap: clamp(6px, 9cqh, 10px);
 }
 .info--right {
   flex-direction: row-reverse;
@@ -363,7 +368,7 @@ function hpClass(hp: number): string {
 }
 
 .champ-name {
-  font-size: clamp(11px, 1.8cqh, 13px);
+  font-size: clamp(11px, 19.5cqh, 20px);
   font-weight: 700;
   color: #f4f6fb;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
@@ -374,7 +379,7 @@ function hpClass(hp: number): string {
 .champ-card--bard .champ-name { color: #ffe9a0; }
 
 .you-tag {
-  font-size: 9px;
+  font-size: clamp(8px, 13.5cqh, 13px);
   font-weight: 700;
   color: #e8c040;
   letter-spacing: 1px;
@@ -449,14 +454,14 @@ function hpClass(hp: number): string {
 
 .mvp-chip {
   position: absolute;
-  top: 4px;
-  left: 6px;
+  top: clamp(3px, 5cqh, 6px);
+  left: clamp(5px, 8cqh, 10px);
   z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 7px 1px;
-  font-size: clamp(9px, 1.5cqh, 11px);
+  padding: clamp(2px, 2.5cqh, 3px) clamp(6px, 10cqh, 10px) clamp(1px, 2cqh, 2px);
+  font-size: clamp(9px, 16.5cqh, 17px);
   font-weight: 800;
   letter-spacing: 1.5px;
   line-height: 1.2;
@@ -472,7 +477,7 @@ function hpClass(hp: number): string {
 }
 .team-col--red .mvp-chip {
   left: auto;
-  right: 6px;
+  right: clamp(5px, 8cqh, 10px);
 }
 
 @keyframes mvp-ring-pulse {
@@ -531,8 +536,8 @@ function hpClass(hp: number): string {
 
 /* cooldown ring: buff color for the remaining fraction, dark track for the rest */
 .card-buff-ring {
-  width: clamp(13px, 2.4cqh, 16px);
-  height: clamp(13px, 2.4cqh, 16px);
+  width: clamp(13px, 24cqh, 25px);
+  height: clamp(13px, 24cqh, 25px);
   border-radius: 50%;
   padding: 2px;
   background: conic-gradient(var(--ring-c) var(--p, 100%), rgba(255, 255, 255, 0.14) 0);
@@ -551,7 +556,7 @@ function hpClass(hp: number): string {
 }
 
 .card-buff-time {
-  font-size: clamp(9px, 1.6cqh, 11px);
+  font-size: clamp(9px, 16.5cqh, 16px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.5px;
@@ -561,7 +566,7 @@ function hpClass(hp: number): string {
 .card-buff-badge--red .card-buff-time { color: #ffa294; }
 
 .kda {
-  font-size: clamp(10px, 1.6cqh, 12px);
+  font-size: clamp(10px, 18cqh, 18px);
   display: flex;
   align-items: baseline;
   gap: 1px;
@@ -574,8 +579,8 @@ function hpClass(hp: number): string {
 .kda-sep { color: #8890a0; }
 
 .cs-tag {
-  margin-left: 6px;
-  font-size: clamp(9px, 1.4cqh, 11px);
+  margin-left: clamp(6px, 9cqh, 10px);
+  font-size: clamp(9px, 16.5cqh, 16px);
   color: #c8bda4;
 }
 
@@ -584,7 +589,7 @@ function hpClass(hp: number): string {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 4px;
+  height: clamp(4px, 6cqh, 8px);
   background: rgba(0, 0, 0, 0.55);
 }
 /* scaleX instead of width — the red column drains toward its right edge, which

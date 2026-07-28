@@ -55,8 +55,13 @@ const battleStore = useBattleStore()
      so every desktop resolution fits without vertical scrolling. */
   container-type: size;
   container-name: board;
-  /* Shared team-HUD width — TeamColumn and DrakeBuffBadges both key off it */
-  --hud-w: clamp(148px, 15cqw, 200px);
+  /* Shared team-HUD width — TeamColumn and DrakeBuffBadges both key off it.
+     The rift map is a centered square of min(board-middle w, h): a flat board
+     makes the map smaller and the side gutters WIDER, a tall one the reverse.
+     Keying the column off both axes therefore keeps a gap to the map at every
+     desktop viewport (measured: 40px on WUXGA, the tightest of the four) while
+     still growing from ~250px on Full HD to the 340px cap on 4K. */
+  --hud-w: clamp(180px, min(20cqw, 40cqh), 420px);
 }
 
 .board-middle {
