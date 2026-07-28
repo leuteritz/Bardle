@@ -212,9 +212,15 @@ watch(
   animation-play-state: paused;
 }
 
-.rendering-paused *,
-.rendering-paused *::before,
-.rendering-paused *::after {
+/* Spiel pausiert (Fenster ohne Fokus / Tab im Hintergrund): CSS-Animationen und
+   Transitions einfrieren — sie kosten Compositor-Zeit, ohne dass jemand hinsieht.
+   AUSGENOMMEN ist die Bottom-Bar: sie liegt mit z-index 10000 über dem
+   Pause-Overlay (9998), bleibt also sichtbar. Minimap, Scoreboard und Command
+   Panel laufen dort weiter (siehe useRenderingPaused → isHudPaused), und ihre
+   Cooldown-Ringe, Scan-Punkte und Balken müssen das mitmachen. */
+.rendering-paused *:not(.bottom-bar-shell, .bottom-bar-shell *),
+.rendering-paused *:not(.bottom-bar-shell, .bottom-bar-shell *)::before,
+.rendering-paused *:not(.bottom-bar-shell, .bottom-bar-shell *)::after {
   animation-play-state: paused !important;
   transition: none !important;
 }

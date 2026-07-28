@@ -59,7 +59,11 @@ import {
   type PlanetSlot,
 } from './planetShopStore'
 import { useStarGroupStore } from './starGroupStore'
-import { activePlanetPositions, activePlayerPlanetPositions, activeMidCurse } from '../utils/liveState'
+import {
+  activePlanetPositions,
+  activePlayerPlanetPositions,
+  activeMidCurse,
+} from '../utils/liveState'
 import {
   championInForeground,
   playerSlotInForeground,
@@ -263,8 +267,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
   actions: {
     tick() {
-      const { isRenderingPaused } = useRenderingPaused()
-      if (isRenderingPaused.value) return
+      // Läuft bewusst auch bei pausiertem Spiel weiter: das Command Panel liegt
+      // über dem Pause-Overlay und zeigt Cooldown-Ringe, Champion-HP und
+      // Jungle-Buffs live — der Rest der Simulation (combatStore, Boss-Passiv-
+      // schaden) tickt in der Pause ohnehin durch. Angehalten wird nur im
+      // echten Hintergrund-Tab, wo niemand hinsieht.
+      const { isHudPaused } = useRenderingPaused()
+      if (isHudPaused.value) return
 
       const TICK_MS = GAME_TICK_INTERVAL_MS
       const roles = getOrbitingRoles()

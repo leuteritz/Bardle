@@ -1130,12 +1130,13 @@ export default defineComponent({
       { immediate: true },
     )
 
-    // Deliberately the BASE pause signal (not the idle variant): the minimap
-    // keeps flying to the next star while a bard tab is open — the "universe
-    // keeps moving in the background" feel must survive the idle-layer pause.
-    const { isRenderingPaused } = useRenderingPaused()
+    // Deliberately the HUD pause signal: the minimap keeps flying to the next
+    // star while a bard tab is open ODER das Spiel pausiert ist — die Leiste
+    // liegt über dem Pause-Overlay und bleibt sichtbar, der Flug muss dort
+    // weiterlaufen. Angehalten wird nur im echten Hintergrund-Tab.
+    const { isHudPaused } = useRenderingPaused()
 
-    watch(isRenderingPaused, (paused) => {
+    watch(isHudPaused, (paused) => {
       if (paused) {
         if (rafId !== null) {
           cancelAnimationFrame(rafId)

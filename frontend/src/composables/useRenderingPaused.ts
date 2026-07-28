@@ -63,10 +63,24 @@ function createInstance() {
    */
   const isIdleSimulationPaused = computed(() => isRenderingPaused.value)
 
+  /**
+   * Pause signal for the BOTTOM BAR — Minimap, Command Panel und Scoreboard.
+   * Die Leiste liegt mit z-index 10000 ÜBER dem Pause-Overlay (9998) und bleibt
+   * im pausierten Spiel voll sichtbar. Sie darf deshalb NICHT an
+   * `isRenderingPaused` hängen: die Simulation (gameStore.tick, battleStore per
+   * syncFromTimestamps) läuft während der Pause weiter, ein eingefrorenes HUD
+   * würde also schlicht falsche Werte zeigen.
+   *
+   * Gestoppt wird nur beim echten Hintergrund-Tab: dort schaut niemand hin und
+   * der Browser drosselt rAF ohnehin — die Frames wären reine Verschwendung.
+   */
+  const isHudPaused = computed(() => _isDocHidden.value)
+
   return {
     isRenderingPaused: readonly(isRenderingPaused),
     isIdleRenderingPaused: readonly(isIdleRenderingPaused),
     isIdleSimulationPaused: readonly(isIdleSimulationPaused),
+    isHudPaused: readonly(isHudPaused),
   }
 }
 
