@@ -43,12 +43,12 @@
           />
           <img
             v-else-if="!hasFullTeam && !isBattleLive"
-            src="/img/lock.png"
+            src="/img/lock-128.png"
             alt="Locked"
             class="battle-btn-lock"
           />
           <span v-else-if="isBattleLive" class="battle-btn-live-dot" />
-          <img v-else src="/img/menu/BATTLE.png" alt="Battle" class="battle-btn-img" />
+          <img v-else src="/img/menu/BATTLE-128.png" alt="Battle" class="battle-btn-img" />
 
           <span v-if="isStarting" v-ink-center>STARTING…</span>
           <span v-else-if="isBattleLive" v-ink-center>RETURN TO LIVE BATTLE</span>

@@ -14,7 +14,7 @@
 
     <!-- Bottom status -->
     <div class="hud-bottom">
-      <img src="/img/planet.png" alt="Planet" class="hud-planet" />
+      <img src="/img/planet-256.png" alt="Planet" class="hud-planet" />
       <div class="hud-status">SEARCHING THE VOID<span class="hud-dots">…</span></div>
       <div class="hud-sub">LOCATING NEXT ARENA · SUMMONER'S RIFT INBOUND</div>
     </div>

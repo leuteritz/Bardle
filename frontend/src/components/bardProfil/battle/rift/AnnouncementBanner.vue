@@ -195,8 +195,8 @@ const kindClass = computed(() => `banner--${current.value?.kind ?? 'multikill'}`
 const portraitSrc = computed(() => {
   const a = current.value
   if (!a) return ''
-  if (a.kind === 'drake') return '/img/dragon.png'
-  if (a.kind === 'baron') return '/img/baron.png'
+  if (a.kind === 'drake') return '/img/dragon-256.png'
+  if (a.kind === 'baron') return '/img/baron-256.png'
   return battleStore.getChampionImage(a.name)
 })
 

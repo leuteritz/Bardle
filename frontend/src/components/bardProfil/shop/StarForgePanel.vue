@@ -61,7 +61,7 @@
         </template>
         <template v-else>
           <span class="cost-pair">
-            <img src="/img/BardGold.png" class="cost-img" alt="Chimes" />
+            <img src="/img/BardGold-128.png" class="cost-img" alt="Chimes" />
             <span class="cost-gold">{{ formatNumber(forgeStore.relicGoldCost(relic.id)) }}</span>
           </span>
           <span
@@ -157,7 +157,7 @@
             {{ formatNumber(deal.basePrice) }} G
           </span>
           <span v-if="dealPrice > 0" class="cost-pair">
-            <img src="/img/BardGold.png" class="cost-img cost-img--big" alt="Chimes" />
+            <img src="/img/BardGold-128.png" class="cost-img cost-img--big" alt="Chimes" />
             <span class="cost-gold cost-gold--big">{{ formatNumber(dealPrice) }}</span>
           </span>
           <span

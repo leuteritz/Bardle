@@ -33,7 +33,7 @@
           :class="locked ? 'grayscale' : ''"
         />
 
-        <img v-if="locked" src="/img/lock.png" alt="Locked" class="lock-overlay" />
+        <img v-if="locked" src="/img/lock-128.png" alt="Locked" class="lock-overlay" />
 
         <div
           class="absolute inset-0 card-overlay"

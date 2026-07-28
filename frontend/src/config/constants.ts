@@ -407,8 +407,8 @@ export const OBJECTIVE_MAX_DURATION_MS = 20000
 export const OBJECTIVE_RESULT_DELAY_MS = 6000
 /** Bottom-bar game-state stat display during a frozen-time objective fight */
 export const OBJECTIVE_FIGHT_STATUS = {
-  drake: { label: 'Drake Fight', image: '/img/dragon.png' },
-  baron: { label: 'Baron Fight', image: '/img/baron.png' },
+  drake: { label: 'Drake Fight', image: '/img/dragon-128.png' },
+  baron: { label: 'Baron Fight', image: '/img/baron-128.png' },
   // Team-Farben aus dem Autobattle-Board (side names/kills in ScoreTopBar):
   // Blau = eigenes Team vorn, Rot = Gegner-Team vorn
   leadColor: '#93c5fd',
@@ -1662,7 +1662,7 @@ export const BATTLE_STAT_GAME_ICONS = {
 } as const
 
 export const BATTLE_STAT_IMAGES = {
-  gold: '/img/BardGold.png',
+  gold: '/img/BardGold-128.png',
   dragons: '/img/dragon_icon.png',
   barons: '/img/baron_icon.png',
 } as const

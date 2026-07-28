@@ -413,7 +413,7 @@ const liveChars = computed(() => {
     <div class="sb-crest">
       <div class="sb-crest-rule-row">
         <span class="sb-crest-rule sb-crest-rule--left" />
-        <img src="/img/star.png" alt="" class="sb-crest-star" />
+        <img src="/img/star-128.png" alt="" class="sb-crest-star" />
         <span class="sb-crest-rule sb-crest-rule--right" />
       </div>
       <!-- title slot: game title when idle, promoted live status when active -->

@@ -125,7 +125,7 @@
             width="30"
             height="30"
           />
-          <img v-else src="/img/lock.png" alt="" class="tbh-vacant-lock" draggable="false" />
+          <img v-else src="/img/lock-128.png" alt="" class="tbh-vacant-lock" draggable="false" />
           <span v-if="t.purchased || t.unlockable" class="tbh-vacant-pill">＋</span>
         </div>
 

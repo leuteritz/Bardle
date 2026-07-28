@@ -63,7 +63,7 @@ onUnmounted(() => {
     <!-- Row 1: two stat tiles — galaxy (fixed) and meeps (fills the rest) -->
     <div class="uni-stats">
       <div class="uni-tile uni-tile--galaxy" title="Current galaxy">
-        <img src="/img/galaxy-far.png" class="tile-icon gx-icon" alt="" aria-hidden="true" />
+        <img src="/img/galaxy-far-128.png" class="tile-icon gx-icon" alt="" aria-hidden="true" />
         <div class="tile-text">
           <span v-ink-center class="tile-label">Galaxy</span>
           <span v-ink-center class="tile-value gx-value">{{ galaxyStore.currentGalaxy }}</span>

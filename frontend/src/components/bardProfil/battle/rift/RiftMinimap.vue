@@ -148,7 +148,7 @@
         }"
       >
         <div class="obj-img-wrap">
-          <img src="/img/dragon.png" alt="Drake" class="obj-img" :class="{ 'obj-img--dormant': !drakeUp }" />
+          <img src="/img/dragon-256.png" alt="Drake" class="obj-img" :class="{ 'obj-img--dormant': !drakeUp }" />
         </div>
         <span
           class="obj-label"
@@ -164,7 +164,7 @@
         :style="{ left: BARON_POS.x + '%', top: BARON_POS.y + '%', '--obj-glow': 'rgba(168, 85, 247, 0.6)' }"
       >
         <div class="obj-img-wrap">
-          <img src="/img/baron.png" alt="Baron" class="obj-img" :class="{ 'obj-img--dormant': !baronUp }" />
+          <img src="/img/baron-256.png" alt="Baron" class="obj-img" :class="{ 'obj-img--dormant': !baronUp }" />
         </div>
         <span
           class="obj-label obj-label--baron"

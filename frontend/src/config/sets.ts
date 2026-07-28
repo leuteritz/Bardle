@@ -18,7 +18,7 @@ export const ITEM_SETS: ItemSetBonus[] = [
   {
     setId: 'stellar',
     setName: 'Stellar Origin',
-    icon: '/img/star.png',
+    icon: '/img/star-128.png',
     description: '+30% CPS & +25% Combat Power',
     bonusEffect: { cpsMultiplier: 1.3, powerMultiplier: 1.25 },
   },

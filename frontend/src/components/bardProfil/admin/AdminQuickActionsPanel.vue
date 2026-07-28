@@ -368,7 +368,7 @@ function fillTeamWithRandomChampions() {
         class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
         @click="spawnStar"
       >
-        <img src="/img/star.png" alt="★" class="star-icon" /> Spawn Star
+        <img src="/img/star-128.png" alt="★" class="star-icon" /> Spawn Star
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
@@ -392,7 +392,7 @@ function fillTeamWithRandomChampions() {
         class="admin-spawn-btn admin-spawn-btn--prestige flex items-center gap-1.5 px-3 py-1.5"
         @click="forcePrestige"
       >
-        <img src="/img/star.png" alt="★" class="star-icon" /> Force Prestige
+        <img src="/img/star-128.png" alt="★" class="star-icon" /> Force Prestige
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5"

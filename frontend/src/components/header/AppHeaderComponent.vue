@@ -496,7 +496,7 @@ onUnmounted(() => {
           title="Open Skill Tree"
           @click="uiStore.setBardTab('tree')"
         >
-          <img src="/img/menu/TREE.png" class="btn-gem-img" alt="Open Skill Tree" />
+          <img src="/img/menu/TREE-128.png" class="btn-gem-img" alt="Open Skill Tree" />
         </button>
       </div>
     </div>

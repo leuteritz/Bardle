@@ -169,7 +169,7 @@ const sunPhaseStyle = computed(() => {
             <span class="ps-buff-veil-edge" />
             <div class="ps-buff-banner">
               <span class="ps-buff-banner-emblem">
-                <img class="ps-buff-banner-leaf" src="/img/roles/jungle.png" alt="" />
+                <img class="ps-buff-banner-leaf" src="/img/roles/jungle-128.png" alt="" />
               </span>
               <div class="ps-buff-banner-text">
                 <span class="ps-buff-banner-kicker">Jungle Buff</span>

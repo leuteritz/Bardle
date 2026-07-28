@@ -490,7 +490,9 @@ export default defineComponent({
         const color = slot.role ? PLANET_ROLES[slot.role].color : '#888888'
         const isTurret = slot.role === 'turret_planet'
 
-        const planetImage = slot.role ? PLANET_ROLES[slot.role].image : '/img/planets/planet.png'
+        // Fallback für Slots ohne Rolle: /img/planets/planet.png existiert nicht
+        // (der Ordner hat nur planet1–6), das Bild blieb also leer.
+        const planetImage = slot.role ? PLANET_ROLES[slot.role].image : '/img/planet-256.png'
 
         const currentHp = slot.currentHp ?? PLANET_SLOT_MAX_HP
         const maxHp = slot.maxHp ?? PLANET_SLOT_MAX_HP

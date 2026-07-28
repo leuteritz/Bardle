@@ -184,7 +184,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
                 :style="{ '--buff-progress': buffProgress(slot) }"
                 :title="slot.jungleBuff.buffType"
               >
-                <img src="/img/roles/jungle.png" alt="" draggable="false" class="cmd-buff-img" />
+                <img src="/img/roles/jungle-128.png" alt="" draggable="false" class="cmd-buff-img" />
                 <span class="cmd-buff-timer">{{ buffSecsLeft(slot) }}s</span>
               </div>
             </template>
@@ -238,7 +238,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
                  Planet benennt. Römisch wie die Sektor-Labels der Minimap. -->
             <div v-ink-center class="cmd-tile-index">{{ toRoman(index + 1) }}</div>
             <div class="cmd-tile-icon cmd-tile-icon--locked">
-              <img src="/img/lock.png" alt="Locked" class="lock-icon" />
+              <img src="/img/lock-256.png" alt="Locked" class="lock-icon" />
             </div>
             <div class="cmd-tile-footer">
               <div v-if="planetStore.canUnlockPlanetSlot(index)" class="cmd-tile-unlock-label">

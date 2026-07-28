@@ -59,7 +59,7 @@ function effectSummary(item: (typeof SHOP_ITEMS)[number]): string {
         @click="activeTab = cat.id"
       >
         <img
-          :src="`/img/itemShop/${cat.id}.png`"
+          :src="`/img/itemShop/${cat.id}-128.png`"
           :alt="cat.label"
           width="18"
           height="18"

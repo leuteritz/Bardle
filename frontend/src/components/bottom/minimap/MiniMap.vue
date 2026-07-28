@@ -25,7 +25,7 @@
             class="star-progress"
           >
             <div class="star-progress-row">
-              <img src="/img/star.png" alt="" class="star-progress-star" />
+              <img src="/img/star-128.png" alt="" class="star-progress-star" />
               <span class="star-progress-value"
                 >{{ galaxyStore.starsRescued
                 }}<span class="star-progress-sep">/</span>{{ galaxyStore.starsRequired }}</span

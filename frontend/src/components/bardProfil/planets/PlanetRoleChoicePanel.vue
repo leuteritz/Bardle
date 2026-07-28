@@ -53,7 +53,7 @@ function confirmRole() {
       <!-- lock.png statt eines neuen game-icons-Eintrags: dieselbe Sperr-
            Grafik trägt schon Sidebar und Lock-Hero in diesem Tab. -->
       <span class="ps-choose-warn">
-        <img src="/img/lock.png" alt="" class="ps-choose-warn-lock" />
+        <img src="/img/lock-128.png" alt="" class="ps-choose-warn-lock" />
         Permanent — a calling cannot be changed later
       </span>
     </div>

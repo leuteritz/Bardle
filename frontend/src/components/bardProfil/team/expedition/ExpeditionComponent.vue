@@ -376,11 +376,11 @@ import type { ChampionRole, AvailableExpeditionSlot, ExpeditionMission } from '@
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 
 const ROLE_IMG: Record<string, string> = {
-  top:     '/img/roles/top.png',
-  jungle:  '/img/roles/jungle.png',
-  mid:     '/img/roles/mid.png',
-  adc:     '/img/roles/adc.png',
-  support: '/img/roles/supp.png',
+  top:     '/img/roles/top-128.png',
+  jungle:  '/img/roles/jungle-128.png',
+  mid:     '/img/roles/mid-128.png',
+  adc:     '/img/roles/adc-128.png',
+  support: '/img/roles/supp-128.png',
 }
 
 export default defineComponent({

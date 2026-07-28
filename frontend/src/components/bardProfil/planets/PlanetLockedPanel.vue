@@ -55,7 +55,7 @@ const canUnlock = computed(() => store.canUnlockPlanetSlot(props.slotIndex))
     <div class="ps-lock-hero" :class="{ 'ps-lock-hero--ready': canUnlock }">
       <span class="ps-lock-halo" aria-hidden="true" />
       <span class="ps-lock-core">
-        <img src="/img/lock.png" alt="Locked" class="ps-lock-core-img" />
+        <img src="/img/lock-256.png" alt="Locked" class="ps-lock-core-img" />
       </span>
     </div>
 

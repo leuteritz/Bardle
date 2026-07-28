@@ -47,12 +47,12 @@ const menuItems: {
   icon: string
   src: string
 }[] = [
-  { id: 'bard', label: '', icon: '', src: '/img/BardAbilities/Bard.png' },
-  { id: 'shop', label: '', icon: '', src: '/img/menu/SHOP.png' },
-  { id: 'tree', label: '', icon: '', src: '/img/menu/TREE.png' },
-  { id: 'team', label: '', icon: '', src: '/img/menu/TEAM.png' },
-  { id: 'battle', label: '', icon: '', src: '/img/menu/BATTLE.png' },
-  { id: 'planets', label: '', icon: '', src: '/img/planet.png' },
+  { id: 'bard', label: '', icon: '', src: '/img/BardAbilities/Bard-128.png' },
+  { id: 'shop', label: '', icon: '', src: '/img/menu/SHOP-128.png' },
+  { id: 'tree', label: '', icon: '', src: '/img/menu/TREE-128.png' },
+  { id: 'team', label: '', icon: '', src: '/img/menu/TEAM-128.png' },
+  { id: 'battle', label: '', icon: '', src: '/img/menu/BATTLE-128.png' },
+  { id: 'planets', label: '', icon: '', src: '/img/planet-256.png' },
   { id: 'admin', label: 'Admin', icon: 'game-icons:settings-knobs', src: '' },
 ]
 
@@ -78,7 +78,7 @@ watch(
 
 <template>
   <button class="btn-gem btn-gem--corner-left" title="Open Shop" @click="uiStore.setBardTab('shop')">
-    <img src="/img/menu/SHOP.png" class="btn-gem-img" alt="Open Shop" />
+    <img src="/img/menu/SHOP-128.png" class="btn-gem-img" alt="Open Shop" />
   </button>
 
   <!-- ══ Backdrop + Modal ══ -->

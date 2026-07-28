@@ -4,7 +4,7 @@
     <WarpHudOverlay v-if="!showPlanetFound" />
     <Transition name="planet-found-fade">
       <div v-if="showPlanetFound" class="planet-found-overlay">
-        <img src="/img/planet.png" alt="planet" width="52" height="52" class="planet-found-icon" />
+        <img src="/img/planet-256.png" alt="planet" width="52" height="52" class="planet-found-icon" />
         <span class="planet-found-text">PLANET FOUND!</span>
       </div>
     </Transition>

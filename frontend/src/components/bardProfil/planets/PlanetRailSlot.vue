@@ -88,7 +88,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
     <span v-if="planet.jungleBuff?.active" class="ps-slot-buff-ring" aria-hidden="true" />
     <span v-if="planet.jungleBuff?.active" class="ps-slot-buff-badge">
       <span class="ps-slot-buff-emblem">
-        <img class="ps-slot-buff-leaf" src="/img/roles/jungle.png" alt="Jungle buff" />
+        <img class="ps-slot-buff-leaf" src="/img/roles/jungle-128.png" alt="Jungle buff" />
       </span>
       <span class="ps-slot-buff-mult">×{{ planet.jungleBuff.multiplier }}</span>
       <span class="ps-slot-buff-timer">{{ buffSecsLeft }}s</span>
@@ -113,7 +113,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
     <div class="ps-slot-icon">
       <template v-if="!planet.purchased">
         <span class="ps-slot-btn-lock">
-          <img src="/img/lock.png" alt="Locked" class="lock-icon" />
+          <img src="/img/lock-256.png" alt="Locked" class="lock-icon" />
         </span>
       </template>
       <template v-else>

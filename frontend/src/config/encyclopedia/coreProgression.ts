@@ -37,7 +37,7 @@ export const resourcesCategory: EncyclopediaCategory = {
     {
       id: 'materials',
       name: 'Materials',
-      icon: '/img/Sternenstaub.png',
+      icon: '/img/Sternenstaub-128.png',
       description:
         'Ten cosmic materials collected from boss rewards, Harvester planets and Cosmic Bargains. ' +
         'Spent on items, Star Forge crafting and champion recruitment.',

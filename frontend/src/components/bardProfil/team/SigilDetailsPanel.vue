@@ -284,7 +284,7 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
             </template>
             <img
               v-else
-              :src="`/img/itemShop/${cat}.png`"
+              :src="`/img/itemShop/${cat}-128.png`"
               :alt="CAT_LABELS[cat]"
               class="sdp-equip-img sdp-equip-img--ghost"
             />
