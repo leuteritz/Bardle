@@ -214,9 +214,15 @@
         }"
         :style="{ '--mx': pos.x, '--my': pos.y }"
       >
-        <div class="champ-portrait-wrap">
+        <div
+          class="champ-portrait-wrap"
+          :class="{ 'champ-portrait-wrap--baron': hasBaronBuff(pos.team) }"
+        >
           <!-- Spotlight ring when this champion is focused from a team card -->
           <span v-if="isFocused(pos.team, pos.idx)" class="focus-ring" aria-hidden="true" />
+          <!-- Hand of Baron: every champion of the slaying team carries the
+               empowered corona until the match ends -->
+          <span v-if="hasBaronBuff(pos.team)" class="baron-corona" aria-hidden="true" />
           <!-- Live MVP: rotating gold ring + floating crown -->
           <template v-if="isMvp(pos.team, pos.idx)">
             <span class="mvp-ring" aria-hidden="true" />
@@ -255,6 +261,14 @@
               :class="`champ-buff-orb--${b}`"
             />
           </span>
+          <!-- Baron sigil in the one free portrait corner — same masked-emblem
+               language as the trophy rail, so both read as "Hand of Baron" -->
+          <span
+            v-if="hasBaronBuff(pos.team)"
+            class="baron-sigil"
+            :style="{ '--art': `url('${BARON_MAP_SIGIL_IMAGE}')` }"
+            aria-hidden="true"
+          />
         </div>
         <div class="champ-hp">
           <div class="champ-hp-fill" :class="hpClass(champAt(pos.team, pos.idx))" :style="{ '--hp': hpWidth(pos) / 100 }" />
@@ -322,6 +336,7 @@ import {
   FINAL_PUSH_START_T,
   JUNGLE_BUFF_RESPAWN_T,
   KILL_MARK_WINDOW_T,
+  BARON_MAP_SIGIL_IMAGE,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
 import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION, JUNGLE_BUFF_CAMPS } from '@/config/battleRoutes'
@@ -528,6 +543,13 @@ const buffsByChampion = computed<Record<string, Array<'blue' | 'red'>>>(() => {
 
 function champBuffs(team: 1 | 2, idx: number): Array<'blue' | 'red'> {
   return buffsByChampion.value[`${team}-${idx}`] ?? NO_BUFFS
+}
+
+/** Hand of Baron is a team-wide buff: once a side slays the baron every one of
+ *  its champions carries it for the rest of the match (the flag only resets on
+ *  the next baron spawn, and the baron spawns once per battle). */
+function hasBaronBuff(team: 1 | 2): boolean {
+  return battleStore.baronKilledByTeam === team
 }
 
 const nexusMarkers = computed(() => [
@@ -1300,6 +1322,92 @@ const structureMarkers = computed(() => {
     inset 0 0 calc(8 * var(--u)) rgba(255, 255, 255, 0.4);
   z-index: -1;
   pointer-events: none;
+}
+
+/* ── Hand of Baron ───────────────────────────────────────────────────────
+   Team-wide and permanent once the baron falls, so it has to read at a glance
+   without competing with the MVP crown or a jungle-buff carrier's rings. It
+   therefore sits OUTSIDE both (larger radius than .mvp-ring's 54u) and uses
+   the baron's own violet — the same palette as the objective label and the
+   trophy rail, so the player connects the three instantly.
+
+   Two layers: a soft breathing corona behind the portrait, and a hard sigil
+   coin in the one free corner. Colors mirror BARON_BUFF in config/drakes.ts. */
+.baron-corona {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(66 * var(--u));
+  height: calc(66 * var(--u));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    transparent 46%,
+    rgba(168, 85, 247, 0.5) 62%,
+    rgba(120, 40, 200, 0.22) 78%,
+    transparent 88%
+  );
+  animation: baron-corona-breathe 2.4s ease-in-out infinite;
+  z-index: -2;
+  pointer-events: none;
+}
+/* Sharp inner rim right at the portrait edge — the corona alone reads as a
+   glow, the rim is what makes it read as an applied buff. */
+.baron-corona::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(46 * var(--u));
+  height: calc(46 * var(--u));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: calc(1.5 * var(--u)) solid rgba(201, 160, 245, 0.85);
+  box-shadow:
+    0 0 calc(10 * var(--u)) rgba(168, 85, 247, 0.9),
+    inset 0 0 calc(6 * var(--u)) rgba(168, 85, 247, 0.6);
+}
+@keyframes baron-corona-breathe {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+}
+
+/* Violet cast on the portrait itself so even a dot at the map's edge reads as
+   empowered — kept subtle so champion faces stay recognizable. */
+.champ-portrait-wrap--baron .champ-img {
+  filter: saturate(1.15) drop-shadow(0 0 calc(4 * var(--u)) rgba(168, 85, 247, 0.85));
+}
+
+/* Sigil coin: the baron artwork as a mask filled violet, in the portrait's
+   bottom-left — the only corner not already used by level, respawn timer or
+   jungle-buff orbs, so it can never overlap them. */
+.baron-sigil {
+  position: absolute;
+  bottom: calc(-1 * var(--u));
+  left: calc(-5 * var(--u));
+  width: calc(15 * var(--u));
+  height: calc(15 * var(--u));
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #3b1560, #14061f 78%);
+  border: calc(1 * var(--u)) solid #a855f7;
+  box-shadow: 0 0 calc(7 * var(--u)) rgba(168, 85, 247, 0.85);
+  z-index: 2;
+}
+.baron-sigil::after {
+  content: '';
+  position: absolute;
+  inset: calc(2 * var(--u));
+  background: linear-gradient(to bottom, #f3e2ff, #c9a0f5 45%, #7a3fb8);
+  -webkit-mask: var(--art) center / contain no-repeat;
+  mask: var(--art) center / contain no-repeat;
 }
 
 /* ── Live MVP highlight ── */

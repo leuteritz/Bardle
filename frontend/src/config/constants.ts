@@ -427,6 +427,11 @@ export const BUFF_RAIL_IMAGES = {
   baron: '/img/baron-256.png',
 } as const
 
+/** Baron sigil on the rift-map champion markers. Rendered at ~15–26px, laut
+ *  Auflösungsvarianten-Regel (≤34px) also die -128er Variante — nicht die -256er
+ *  aus BUFF_RAIL_IMAGES, die für die deutlich größeren Trophäen gedacht ist. */
+export const BARON_MAP_SIGIL_IMAGE = '/img/baron-128.png'
+
 /** Team captions on the buff rail's hover card — which side owns the trophy */
 export const BUFF_RAIL_TEAM_LABELS = {
   own: 'Blue Team',
