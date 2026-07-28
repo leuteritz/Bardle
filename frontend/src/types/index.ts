@@ -1056,4 +1056,13 @@ export interface ScoreboardFit {
   crestTitleSize: number
   /** Font size of the live status line, px. */
   crestStatusSize: number
+  /** Height of the ornament row above the line (rule · star · rule), px. */
+  crestOrnamentSize: number
+  /** Gap between that row and the line, px. */
+  crestRowGap: number
+  /**
+   * Height reserved for the line's ink, px — the same for the title and the
+   * status, so the ornament row above them does not move when they swap.
+   */
+  crestBand: number
 }

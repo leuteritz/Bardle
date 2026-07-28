@@ -57,7 +57,7 @@ function geometryFor(vw: number, vh: number) {
 
 /* Gemessene em-Breiten der beiden Crest-Zeilen — "BARDLE" in Versalien mit
    0.22em Sperrung, der längste Status ("Planet Search · 8:88") mit 0.1em. */
-const CREST_TITLE = { em: 6 * (CAP_EM + 0.22), ornamentEm: 2 * (0.58 + 0.32) }
+const CREST_TITLE = { em: 6 * (CAP_EM + 0.22), ornamentEm: 0 }
 const CREST_STATUS = { em: 20 * (CAP_EM + 0.1), ornamentEm: 1 + 0.32 }
 
 /** Typische Career-Stände: fünf Kampfwerte links, Rang/Bilanz/Objectives rechts. */
@@ -344,13 +344,35 @@ describe('computeScoreboardFit', () => {
       )
     })
 
+    /** Was die drei Bänder des Crests zusammen an Höhe belegen. */
+    function crestHeight(fit: ReturnType<typeof computeScoreboardFit>): number {
+      return (
+        fit.crestOrnamentSize +
+        fit.crestRowGap +
+        fit.crestBand +
+        SCOREBOARD_CREST.PROGRESS_RESERVE_PX
+      )
+    }
+
     it.each([...RESOLUTIONS, ...LAPTOPS])('%s: keine Zeile ragt aus dem Streifen', (_n, vw, vh) => {
       const input = inputFor(vw, vh)
       const fit = computeScoreboardFit(input)
-      const band = usableHeight(input.stripHeight)
-      expect(fit.crestTitleSize).toBeLessThanOrEqual(band)
-      expect(fit.crestStatusSize).toBeLessThanOrEqual(band)
+      // Ornamentreihe + Zeile + Fortschrittsband passen in die Streifenhöhe …
+      expect(crestHeight(fit)).toBeLessThanOrEqual(usableHeight(input.stripHeight) + 0.01)
+      // … und die Tinte beider Zeilen in das Band, das für sie reserviert ist.
+      const ink = (size: number) => size * SCOREBOARD_CREST.INK_HEIGHT_EM
+      expect(ink(fit.crestTitleSize)).toBeLessThanOrEqual(fit.crestBand + 0.01)
+      expect(ink(fit.crestStatusSize)).toBeLessThanOrEqual(fit.crestBand + 0.01)
       expect(fit.crestTitleSize).toBeGreaterThan(SCOREBOARD_FIT.LABEL_MIN_PX)
+    })
+
+    it('hält die Ornamentreihe über beiden Zeilen gleich hoch', () => {
+      // Titel und Status teilen sich EIN reserviertes Band — sonst wanderte die
+      // Reihe darüber bei jedem Wechsel zwischen den beiden auf und ab.
+      const fit = computeScoreboardFit(inputFor(1920, 950))
+      expect(fit.crestOrnamentSize).toBeGreaterThanOrEqual(SCOREBOARD_CREST.ORNAMENT_MIN_PX)
+      expect(fit.crestOrnamentSize).toBeLessThanOrEqual(SCOREBOARD_CREST.ORNAMENT_MAX_PX)
+      expect(fit.crestBand).toBeGreaterThan(0)
     })
 
     it('nimmt den Hälften nur, was sie übrig lassen', () => {

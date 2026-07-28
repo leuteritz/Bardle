@@ -348,12 +348,9 @@ const statusBudget = computed(() => {
    anything the other one owns. */
 const crestSources = computed<{ title: ScoreboardCrestSource; status: ScoreboardCrestSource }>(
   () => ({
-    title: {
-      text: GAME_TITLE,
-      // a star on either side of the title
-      ornamentEm: 2 * (SCOREBOARD_CREST.STAR_EM + SCOREBOARD_CREST.GAP_EM),
-      probe: 'title',
-    },
+    // the title's ornament stands ABOVE it (rule · star · rule), so its own
+    // line is nothing but the word — the full crest width is its to use
+    title: { text: GAME_TITLE, ornamentEm: 0, probe: 'title' },
     status: {
       // reserved whether the line leads with a glyph, the scan dots or (the
       // result badge) nothing at all — so the badge never resizes the line
@@ -400,9 +397,13 @@ const stripVars = {
      with, handed to the CSS so the two can never drift apart. */
   '--sb-crest-pad': `${SCOREBOARD_CREST.PAD_EM}em`,
   '--sb-crest-gap': `${SCOREBOARD_CREST.GAP_EM}em`,
-  '--sb-crest-star': `${SCOREBOARD_CREST.STAR_EM}em`,
   '--sb-crest-glyph': `${SCOREBOARD_CREST.GLYPH_EM}em`,
-  '--sb-crest-rail': `${SCOREBOARD_CREST.RAIL_EM}em`,
+  /* Negative margins that trim a line box down to the ink it actually paints
+     (see SCOREBOARD_CREST.INK_*) — what the fit reserved is what it occupies. */
+  '--sb-crest-ink-top': `${-SCOREBOARD_CREST.INK_TOP_EM}em`,
+  '--sb-crest-ink-bottom': `${SCOREBOARD_CREST.INK_TOP_EM + SCOREBOARD_CREST.INK_HEIGHT_EM - 1}em`,
+  '--sb-crest-rule-w': String(SCOREBOARD_CREST.RULE_TO_STAR),
+  '--sb-crest-progress-h': px(SCOREBOARD_CREST.PROGRESS_RESERVE_PX),
 }
 
 const fitVars = computed(() => ({
@@ -420,10 +421,9 @@ const fitVars = computed(() => ({
   '--sb-crest-w': px(fit.value.crestWidth),
   '--sb-title-size': px(fit.value.crestTitleSize),
   '--sb-status-size': px(fit.value.crestStatusSize),
-  /* em base of the crest's own ornaments — the size of the line it is showing */
-  '--sb-crest-size': px(
-    hasLiveStatus.value ? fit.value.crestStatusSize : fit.value.crestTitleSize,
-  ),
+  '--sb-crest-orn': px(fit.value.crestOrnamentSize),
+  '--sb-crest-row-gap': px(fit.value.crestRowGap),
+  '--sb-crest-band': px(fit.value.crestBand),
 }))
 
 /** flex-grow weight of one cell — its share of the half's width. */
@@ -502,12 +502,15 @@ const phaseProgressStyle = computed(() => ({
       </div>
     </div>
 
-    <!-- CENTER · title crest — one line, as large as its box and the strip
-         height allow (see SCOREBOARD_CREST / utils/scoreboardFit). The rails at
-         both ends live off the width the line did NOT need and double as the
-         running phase's progress track. -->
+    <!-- CENTER · title crest — ornament row, then one line as large as its box
+         and the strip height allow (see SCOREBOARD_CREST / utils/scoreboardFit),
+         then the running phase's progress hairline along the bottom edge. -->
     <div class="sb-crest">
-      <span class="sb-crest-rail sb-crest-rail--left" aria-hidden="true" />
+      <div class="sb-crest-ornament" aria-hidden="true">
+        <span class="sb-crest-rule sb-crest-rule--left" />
+        <img :src="CREST_STAR_IMAGE" alt="" class="sb-crest-star" />
+        <span class="sb-crest-rule sb-crest-rule--right" />
+      </div>
 
       <div class="sb-crest-slot">
         <!-- title slot: game title when idle, promoted live status when active -->
@@ -557,15 +560,16 @@ const phaseProgressStyle = computed(() => ({
             </template>
           </div>
 
-          <div v-else key="title" class="sb-crest-line sb-crest-line--title">
-            <img :src="CREST_STAR_IMAGE" alt="" class="sb-crest-star" />
-            <span v-ink-center="fit.crestTitleSize" class="sb-title">{{ GAME_TITLE }}</span>
-            <img :src="CREST_STAR_IMAGE" alt="" class="sb-crest-star" />
+          <div
+            v-else
+            key="title"
+            v-ink-center="fit.crestTitleSize"
+            class="sb-crest-line sb-crest-line--title sb-title"
+          >
+            {{ GAME_TITLE }}
           </div>
         </Transition>
       </div>
-
-      <span class="sb-crest-rail sb-crest-rail--right" aria-hidden="true" />
 
       <!-- progress of the running phase, along the crest's bottom edge -->
       <span v-if="hasLiveStatus" class="sb-crest-progress" aria-hidden="true">
@@ -824,13 +828,15 @@ const phaseProgressStyle = computed(() => ({
   flex: 0 0 auto;
   width: var(--sb-crest-w, 340px);
   height: 100%;
-  /* em base for everything ornamental in here: the size of the line on show */
-  font-size: var(--sb-crest-size, 24px);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  /* exactly the air the fit budgeted at both ends (SCOREBOARD_CREST.PAD_EM) */
-  gap: var(--sb-crest-pad, 0.3em);
+  /* flex-start, not center: the progress hairline is out of flow, so centering
+     would spread its reserved band over both ends and push the line down into
+     it. As padding it is exactly the band the fit subtracted. */
+  justify-content: flex-start;
+  padding-bottom: var(--sb-crest-progress-h, 3px);
+  gap: var(--sb-crest-row-gap, 3px);
   pointer-events: none;
   user-select: none;
   /* a value crossing a digit boundary re-weights the cells and hands the crest
@@ -838,14 +844,49 @@ const phaseProgressStyle = computed(() => ({
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* The line itself: natural width, centered, never wrapped. */
-.sb-crest-slot {
-  flex: 0 1 auto;
-  min-width: 0;
+/* ── Ornament row ──
+   Rule · star · rule above the line, exactly as before — only now its height is
+   a measured share of the strip instead of a hardcoded 15px, and it belongs to
+   the crest rather than to one of the two lines, so it never moves when the
+   title hands the slot over to the live status. */
+.sb-crest-ornament {
+  flex: 0 0 auto;
+  height: var(--sb-crest-orn, 11px);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  gap: calc(var(--sb-crest-orn, 11px) * 0.55);
+}
+
+.sb-crest-rule {
+  height: 1px;
+  width: calc(var(--sb-crest-orn, 11px) * var(--sb-crest-rule-w, 2.8));
+}
+.sb-crest-rule--left {
+  background: linear-gradient(90deg, transparent, #c89040);
+}
+.sb-crest-rule--right {
+  background: linear-gradient(90deg, #c89040, transparent);
+}
+
+.sb-crest-star {
+  width: var(--sb-crest-orn, 11px);
+  height: var(--sb-crest-orn, 11px);
+  flex-shrink: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.8));
+}
+
+/* The line itself: natural width, centered, never wrapped. Its height is the
+   band the fit reserved — fixed, so neither the title/status swap nor the empty
+   frame in the middle of that swap can nudge the ornament row above it. */
+.sb-crest-slot {
+  flex: 0 0 auto;
+  height: var(--sb-crest-band, 26px);
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sb-crest-line {
@@ -854,6 +895,11 @@ const phaseProgressStyle = computed(() => ({
   gap: var(--sb-crest-gap, 0.32em);
   line-height: 1;
   white-space: nowrap;
+  /* Trim the box down to the ink: MedievalSharp leaves the lower 17 % of a
+     line box empty, and the fit reserved the INK, not the box. Without this the
+     empty part would push the ornament row out of the strip. */
+  margin-top: var(--sb-crest-ink-top, -0.03em);
+  margin-bottom: var(--sb-crest-ink-bottom, -0.15em);
   /* a phase whose text needs more room resizes the line — as a glide, like a
      stat cell crossing a digit boundary */
   transition: font-size 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -865,26 +911,10 @@ const phaseProgressStyle = computed(() => ({
   font-size: var(--sb-status-size, 18px);
 }
 
-/* ── Rails ──
-   Pure leftover: flex:1 with min-width 0, so they take the width the line did
-   not need and vanish rather than push it. A short line gets its flanking gold
-   dashes, a long one gets the pixels instead. */
-.sb-crest-rail {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: var(--sb-crest-rail, 1.4em);
-  height: max(2px, calc(3px * var(--hud-scale, 1)));
-}
-.sb-crest-rail--left {
-  background: linear-gradient(90deg, transparent, #c89040);
-}
-.sb-crest-rail--right {
-  background: linear-gradient(90deg, #c89040, transparent);
-}
-
 /* ── Phase progress ──
-   Along the bottom edge, inside the slack the fit keeps below the line — it
-   takes nothing from the text and shows how far the running phase has come. */
+   A bare hairline along the bottom edge — no track behind it, so it shows only
+   what the running phase has actually done. It sits in the band the fit keeps
+   free for it (PROGRESS_RESERVE_PX) and takes nothing from the text. */
 .sb-crest-progress {
   position: absolute;
   left: 0;
@@ -892,7 +922,6 @@ const phaseProgressStyle = computed(() => ({
   bottom: 0;
   height: max(2px, calc(3px * var(--hud-scale, 1)));
   overflow: hidden;
-  background: #2a1a0a;
 }
 .sb-crest-progress-fill {
   display: block;
@@ -905,19 +934,9 @@ const phaseProgressStyle = computed(() => ({
     background 0.4s ease;
 }
 
-.sb-crest-star {
-  width: var(--sb-crest-star, 0.58em);
-  height: var(--sb-crest-star, 0.58em);
-  flex-shrink: 0;
-  object-fit: contain;
-  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.8));
-}
-
 .sb-title {
   letter-spacing: 0.22em;
   color: #e8c040;
-  line-height: 1;
-  white-space: nowrap;
   text-shadow:
     0 0 6px #ffe060,
     0 0 18px rgba(232, 192, 64, 0.7),

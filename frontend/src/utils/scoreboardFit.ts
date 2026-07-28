@@ -74,16 +74,17 @@ function spareOf(cells: ScoreboardFitCell[], width: number, needs: number[]): nu
 
 /**
  * Largest size one crest line can take: its box divided by everything the line
- * puts in it (text + ornament + air, all in em), never taller than the band.
+ * puts in it (text + ornament + air, all in em), never taller than the ink band
+ * the strip has left for it.
  */
-function fitCrestLine(line: ScoreboardCrestLine | undefined, width: number, heightCap: number) {
+function fitCrestLine(line: ScoreboardCrestLine | undefined, width: number, inkBand: number) {
   const C = SCOREBOARD_CREST
   if (!line || line.em <= 0 || width <= 0) return 0
   const emTotal = line.em + line.ornamentEm + 2 * C.PAD_EM
   if (emTotal <= 0) return 0
   /* No lower bound: a floor would be a size the box does NOT have, and the line
      is one nowrap string — it would not shrink, it would be cut off. */
-  return Math.max(0, Math.min(width / emTotal, heightCap, C.TEXT_MAX_PX))
+  return Math.max(0, Math.min(width / emTotal, inkBand / C.INK_HEIGHT_EM, C.TEXT_MAX_PX))
 }
 
 /** What one half's cells demand, and what their resulting widths can hold. */
@@ -339,11 +340,20 @@ export function computeScoreboardFit(input: ScoreboardFitInput): ScoreboardFit {
       spareOf(rightCells, rightWidth, rightWeights.needs),
     )
   const crestWidth = Math.min(crestMax, crestMin + spare * SCOREBOARD_CREST.SLACK_TAKE)
-  /* One line, no caption row above it: the whole strip height is the crest's
-     text band — that is where most of its extra size comes from. */
-  const crestHeightCap = usableH * SCOREBOARD_CREST.TEXT_HEIGHT_FRACTION
-  const crestTitleSize = fitCrestLine(input.crestTitle, crestWidth, crestHeightCap)
-  const crestStatusSize = fitCrestLine(input.crestStatus, crestWidth, crestHeightCap)
+  /* Vertically the crest is three bands: the ornament row (rule · star · rule),
+     the line itself, and the hairline that shows the running phase's progress.
+     Only the middle one scales with the text — the other two are shares of the
+     strip, so they stay put when the title hands the slot to the live status. */
+  const CR = SCOREBOARD_CREST
+  const crestOrnamentSize = clamp(
+    usableH * CR.ORNAMENT_FRACTION,
+    Math.min(CR.ORNAMENT_MIN_PX, usableH),
+    CR.ORNAMENT_MAX_PX,
+  )
+  const crestRowGap = clamp(usableH * C.ROW_GAP_FRACTION, C.ROW_GAP_MIN_PX, C.ROW_GAP_MAX_PX)
+  const crestBand = Math.max(0, usableH - crestOrnamentSize - crestRowGap - CR.PROGRESS_RESERVE_PX)
+  const crestTitleSize = fitCrestLine(input.crestTitle, crestWidth, crestBand)
+  const crestStatusSize = fitCrestLine(input.crestStatus, crestWidth, crestBand)
 
   const grow: Record<string, number> = {}
   const em: Record<string, number> = {}
@@ -371,5 +381,8 @@ export function computeScoreboardFit(input: ScoreboardFitInput): ScoreboardFit {
     crestWidth,
     crestTitleSize,
     crestStatusSize,
+    crestOrnamentSize,
+    crestRowGap,
+    crestBand,
   }
 }

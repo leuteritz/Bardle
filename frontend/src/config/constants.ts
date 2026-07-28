@@ -1667,28 +1667,46 @@ export const SCOREBOARD_FIT = {
  *     desktop resolution, so on most of them that costs them nothing at all.
  */
 export const SCOREBOARD_CREST = {
-  /** Share of the usable strip height the crest text may fill (ink overshoot). */
-  TEXT_HEIGHT_FRACTION: 0.86,
-  TEXT_MAX_PX: 60,
+  /**
+   * ── Wie hoch eine Zeile WIRKLICH baut ──
+   * Gemessen an MedievalSharp bei line-height 1: die Tinte einer Versalzeile
+   * (mit Ziffern und Mittelpunkt) reicht von 0.04em bis 0.83em der Zeilenbox —
+   * die unteren 17 % sind leer, weil der Font seinen Descent kaum nutzt.
+   * Deshalb rechnet der Fit NICHT mit der Box, sondern mit der Tinte: die Zeile
+   * bekommt genau INK_HEIGHT_EM als Außenhöhe (negative Ränder ziehen den Rest
+   * aus dem Layout), und dieselbe Streifenhöhe trägt eine spürbar größere
+   * Schrift — hier kommt der Platz für die Ornamentreihe über dem Titel her.
+   */
+  INK_HEIGHT_EM: 0.82,
+  INK_TOP_EM: 0.03,
+  TEXT_MAX_PX: 64,
   /**
    * Placeholder size until the first measurement lands — NOT a floor of the
    * fit: a line that does not fit its box has to get smaller, not be cut off.
    */
   TEXT_FALLBACK_PX: 16,
   /** Air inside the crest box, per side, in em of the text size. */
-  PAD_EM: 0.3,
-  /** Star flanking the idle title, in em of the title size. */
-  STAR_EM: 0.58,
+  PAD_EM: 0.45,
   /** Phase glyph / objective icon leading the live status, in em. */
   GLYPH_EM: 1,
   /** Gap between an ornament and the text, in em. */
   GAP_EM: 0.32,
   /**
-   * Decorative rail at either end of the crest. It is NOT part of the budget
-   * above — the rails take only what the text left over, so they can never cost
-   * a line a single pixel of size. This is just how far they may stretch.
+   * Ornament row above the line (rule · star · rule). Its height is a share of
+   * the strip, NOT of the text — so it stays put when the title hands the slot
+   * over to the live status.
    */
-  RAIL_EM: 1.4,
+  ORNAMENT_FRACTION: 0.22,
+  ORNAMENT_MIN_PX: 9,
+  ORNAMENT_MAX_PX: 20,
+  /** Length of one flanking rule, as a multiple of the star's size. */
+  RULE_TO_STAR: 2.8,
+  /**
+   * Band kept free at the bottom edge for the phase-progress hairline. Unscaled
+   * px, like the strip's own padding: the line is a hairline at every
+   * resolution, so its clearance must not shrink with --hud-scale either.
+   */
+  PROGRESS_RESERVE_PX: 3,
   /**
    * Widest clock the status line has to hold, per phase. The fit budgets for
    * this instead of for the current tick, so a running countdown never resizes
