@@ -154,7 +154,7 @@ export const useShopStore = defineStore('shop', {
 
     topProducer() {
       const top = this.buildingStats[0]
-      return top || { name: 'Keine', icon: '/img/BardAbilities/BardChime.png' }
+      return top || { name: 'None', icon: '/img/BardAbilities/BardChime.png' }
     },
   },
 
@@ -304,7 +304,12 @@ export const useShopStore = defineStore('shop', {
       const forgeMul = useStarForgeStore().cpsMult
       const treeMul = useMeepTreeStore().fx.cpsMult
       return Math.floor(
-        (baseCPS + solarCPS) * gameStore.abilityCPSMultiplier * cpsMul * flightMul * forgeMul * treeMul,
+        (baseCPS + solarCPS) *
+          gameStore.abilityCPSMultiplier *
+          cpsMul *
+          flightMul *
+          forgeMul *
+          treeMul,
       )
     },
 
@@ -313,9 +318,10 @@ export const useShopStore = defineStore('shop', {
       const mod = gameStore.activeModifier
 
       const solar = useSolarUpgradeStore()
-      const upgradeBonus = this.shopUpgrades.reduce((total, upgrade) => {
-        return total + (upgrade.baseCPC || 0) * upgrade.level
-      }, 0) + solar.cpcBonus
+      const upgradeBonus =
+        this.shopUpgrades.reduce((total, upgrade) => {
+          return total + (upgrade.baseCPC || 0) * upgrade.level
+        }, 0) + solar.cpcBonus
 
       const baseCPC = mod.baseChimesPerClick ?? gameStore.baseChimesPerClick
       const cpcMul = mod.cpcMultiplier ?? 1
@@ -325,7 +331,11 @@ export const useShopStore = defineStore('shop', {
       const fromCpsPct = forge.cpcFromCpsPct + tree.cpcFromCpsPct
       const cpsPortion = fromCpsPct > 0 ? this.calculateTotalCPS() * fromCpsPct : 0
       return Math.floor(
-        (baseCPC + upgradeBonus) * gameStore.abilityCPCMultiplier * cpcMul * forge.cpcMult * tree.cpcMult +
+        (baseCPC + upgradeBonus) *
+          gameStore.abilityCPCMultiplier *
+          cpcMul *
+          forge.cpcMult *
+          tree.cpcMult +
           cpsPortion,
       )
     },
