@@ -1767,6 +1767,9 @@ export const SCOREBOARD_CREST = {
   SLACK_TAKE: 0.8,
 } as const
 
+/** What clicking any part of the bottom scoreboard does — shown in its tooltip. */
+export const SCOREBOARD_OPEN_HINT = 'Open Battle Stats'
+
 /** The game's name, as the crest of the bottom bar renders it. */
 export const GAME_TITLE = 'BARDLE'
 /** Star ornament flanking the title in the crest. */

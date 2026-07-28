@@ -21,6 +21,7 @@ import {
   SCOREBOARD_FIT,
   SCOREBOARD_CREST,
   SCOREBOARD_CELL_LABELS,
+  SCOREBOARD_OPEN_HINT,
   GAME_TITLE,
   CREST_STAR_IMAGE,
   CREST_SEPARATOR,
@@ -155,6 +156,11 @@ const rankColor = computed(() => RANK_TIER_COLORS[currentRank.value.tier] ?? '#d
 
 function openBattleTab() {
   uiStore.setBardTab('battle')
+}
+
+/** Tooltip of a clickable cell: what it shows, and what clicking it does. */
+function cellTitle(label: string): string {
+  return `${label}${CREST_SEPARATOR}${SCOREBOARD_OPEN_HINT}`
 }
 
 /**
@@ -519,22 +525,20 @@ const phaseProgressStyle = computed(() => ({
       <span ref="probeStatusRef" class="sb-live-text sb-probe" :style="probeStyle" />
     </div>
 
-    <!-- LEFT · combat stats -->
-    <div
-      class="sb-stats sb-stats--left"
-      role="button"
-      tabindex="0"
-      title="Open Battle Stats"
-      @click="openBattleTab"
-      @keydown.enter="openBattleTab"
-      @keydown.space.prevent="openBattleTab"
-    >
+    <!-- LEFT · combat stats — every cell is its own button, so hovering GOLD
+         lights up gold and nothing else. -->
+    <div class="sb-stats sb-stats--left">
       <div
         v-for="stat in leftStats"
         :key="stat.key"
         class="sb-stat"
+        role="button"
+        tabindex="0"
         :style="cellStyle(stat.key)"
-        :title="stat.label"
+        :title="cellTitle(stat.label)"
+        @click="openBattleTab"
+        @keydown.enter="openBattleTab"
+        @keydown.space.prevent="openBattleTab"
       >
         <span v-if="showLabels" class="sb-stat-label">{{ captionText(stat) }}</span>
         <div class="sb-stat-main">
@@ -644,20 +648,17 @@ const phaseProgressStyle = computed(() => ({
     </div>
 
     <!-- RIGHT · economy / objective stats -->
-    <div
-      class="sb-stats sb-stats--right"
-      role="button"
-      tabindex="0"
-      title="Open Battle Stats"
-      @click="openBattleTab"
-      @keydown.enter="openBattleTab"
-      @keydown.space.prevent="openBattleTab"
-    >
+    <div class="sb-stats sb-stats--right">
       <!-- Rank cell: emblem + tier-colored value, budgeted for the widest tier -->
       <div
         class="sb-stat sb-stat--rank"
+        role="button"
+        tabindex="0"
         :style="cellStyle('rank')"
-        :title="`${RANK_CELL.label} · ${rankFullLabel}`"
+        :title="cellTitle(`${RANK_CELL.label} · ${rankFullLabel}`)"
+        @click="openBattleTab"
+        @keydown.enter="openBattleTab"
+        @keydown.space.prevent="openBattleTab"
       >
         <span v-if="showLabels" class="sb-stat-label">{{ captionText(RANK_CELL) }}</span>
         <div class="sb-stat-main">
@@ -669,7 +670,16 @@ const phaseProgressStyle = computed(() => ({
       </div>
 
       <!-- Win / loss cell: two-tone value -->
-      <div class="sb-stat" :style="cellStyle('winLoss')" :title="WIN_LOSS_CELL.label">
+      <div
+        class="sb-stat"
+        role="button"
+        tabindex="0"
+        :style="cellStyle('winLoss')"
+        :title="cellTitle(WIN_LOSS_CELL.label)"
+        @click="openBattleTab"
+        @keydown.enter="openBattleTab"
+        @keydown.space.prevent="openBattleTab"
+      >
         <span v-if="showLabels" class="sb-stat-label">{{ captionText(WIN_LOSS_CELL) }}</span>
         <div class="sb-stat-main">
           <Icon
@@ -691,8 +701,13 @@ const phaseProgressStyle = computed(() => ({
         v-for="stat in rightStats"
         :key="stat.key"
         class="sb-stat"
+        role="button"
+        tabindex="0"
         :style="cellStyle(stat.key)"
-        :title="stat.label"
+        :title="cellTitle(stat.label)"
+        @click="openBattleTab"
+        @keydown.enter="openBattleTab"
+        @keydown.space.prevent="openBattleTab"
       >
         <span v-if="showLabels" class="sb-stat-label">{{ captionText(stat) }}</span>
         <div class="sb-stat-main">
@@ -742,22 +757,25 @@ const phaseProgressStyle = computed(() => ({
 }
 
 /* ── Stat groups ── */
+/* The half is only the row — the CELLS are the buttons. Hovering one used to
+   light up all five, which read as "this whole block is one thing"; now the
+   highlight follows the pointer to the single stat under it. The cells tile the
+   half without a gap, so nothing loses its click target by moving down here. */
 .sb-stats {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: stretch;
-  cursor: pointer;
   pointer-events: auto;
   border-radius: 4px;
 }
-.sb-stats:focus-visible {
+.sb-stat:focus-visible {
   outline: none;
 }
-.sb-stats:hover .sb-stat-value {
+.sb-stat:hover .sb-stat-value {
   filter: brightness(1.15) drop-shadow(0 0 6px currentcolor);
 }
-.sb-stats:hover .sb-stat-icon {
+.sb-stat:hover .sb-stat-icon {
   filter: brightness(1.15) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8))
     drop-shadow(0 0 6px currentcolor);
 }
@@ -778,6 +796,7 @@ const phaseProgressStyle = computed(() => ({
   gap: var(--sb-row-gap, 3px);
   min-width: 0;
   padding-inline: var(--sb-cell-pad, 4px);
+  cursor: pointer;
 }
 .sb-stat + .sb-stat {
   border-left: 1px solid rgba(122, 78, 32, 0.3);
