@@ -1,6 +1,10 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useBattleStore } from '../../stores/battleStore'
+import {
+  BATTLE_POWER_RATING_SWING,
+  BATTLE_ENEMY_WEAKEN_RATING_SWING,
+} from '../../config/constants'
 
 describe('battleStore', () => {
   beforeEach(() => {
@@ -154,6 +158,62 @@ describe('battleStore', () => {
     it('dominated player → capped at 0.1', () => {
       const store = useBattleStore()
       expect(store.calculateWinProbability(100, 100000)).toBe(0.1)
+    })
+  })
+
+  // ─── battleRating ────────────────────────────────────────────────────────────
+
+  describe('battleRating', () => {
+    it('power exactly at par for the MMR → rating equals MMR', () => {
+      const store = useBattleStore()
+      store.mmr = 1000
+      const par = store.mmrToPower(1000) // 1500
+      expect(store.battleRating(par, 1500, 1500)).toBe(1000)
+    })
+
+    it('an empty roster is an underdog, not hopeless', () => {
+      const store = useBattleStore()
+      store.mmr = 1000
+      const rating = store.battleRating(0, 1500, 1500)
+      // damped by the softening term: a real deficit, but far from the old
+      // power-vs-power blowout that pinned every early battle to the clamp
+      expect(rating).toBeLessThan(1000)
+      expect(rating).toBeGreaterThan(1000 - BATTLE_POWER_RATING_SWING)
+    })
+
+    it('runaway power is bounded by the swing', () => {
+      const store = useBattleStore()
+      store.mmr = 1000
+      const huge = store.battleRating(1e9, 1500, 1500)
+      expect(huge).toBeLessThanOrEqual(1000 + BATTLE_POWER_RATING_SWING)
+      expect(huge).toBeGreaterThan(1000 + BATTLE_POWER_RATING_SWING * 0.9)
+    })
+
+    it('par power scales with MMR, so climbing does not inflate the tilt', () => {
+      const store = useBattleStore()
+      store.mmr = 1000
+      const low = store.battleRating(store.mmrToPower(1000), 1500, 1500) - 1000
+      store.mmr = 2000
+      const high = store.battleRating(store.mmrToPower(2000), 3000, 3000) - 2000
+      expect(low).toBeCloseTo(high, 6)
+    })
+
+    it('augments that weaken the enemy add rating', () => {
+      const store = useBattleStore()
+      store.mmr = 1000
+      const plain = store.battleRating(1500, 1500, 1500)
+      const weakened = store.battleRating(1500, 750, 1500)
+      expect(weakened - plain).toBeCloseTo(BATTLE_ENEMY_WEAKEN_RATING_SWING * 0.5, 6)
+    })
+
+    it('an even matchup lands near 50%, not at the clamp', () => {
+      const store = useBattleStore()
+      vi.spyOn(Math, 'random').mockReturnValue(0.5) // luckModifier = 0
+      store.mmr = 1000
+      // fresh account: no meeps at all, opponent drawn at the same MMR
+      const odds = store.calculateWinProbability(store.battleRating(0, 1500, 1500), 1000)
+      expect(odds).toBeGreaterThan(0.35)
+      expect(odds).toBeLessThan(0.5)
     })
   })
 

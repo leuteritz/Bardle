@@ -10,6 +10,17 @@ import type {
 // ELO rating system
 export const ELO_K_FACTOR = 32
 export const ELO_RATING_SCALE = 400
+/**
+ * Matchup tuning — how far team power may tilt a battle, expressed in MMR
+ * points so it can be added straight onto the player's rating.
+ *
+ * SWING caps the tilt in both directions, SOFTENING damps the ratio at the low
+ * end (an empty roster becomes an underdog, not a hopeless case), and
+ * ENEMY_WEAKEN_SWING is what fully neutralizing the enemy via augments is worth.
+ */
+export const BATTLE_POWER_RATING_SWING = 150
+export const BATTLE_POWER_RATING_SOFTENING = 1500
+export const BATTLE_ENEMY_WEAKEN_RATING_SWING = 150
 export const ELO_LUCK_FACTOR = 0.15
 
 // Leveling formula: 2500 * level^2.2

@@ -7,6 +7,9 @@ import {
   createEmptyAllyRows,
   ELO_K_FACTOR,
   ELO_RATING_SCALE,
+  BATTLE_POWER_RATING_SWING,
+  BATTLE_POWER_RATING_SOFTENING,
+  BATTLE_ENEMY_WEAKEN_RATING_SWING,
   ELO_LUCK_FACTOR,
   AUTO_BATTLE_INTERVAL_MS,
   MMR_TO_POWER_MULTIPLIER,
@@ -1241,7 +1244,10 @@ export const useBattleStore = defineStore('battle', {
         WINPROB_MIN,
         Math.min(
           WINPROB_MAX,
-          this.calculateWinProbability(playerPower, finalOpponentPower) + this.startWinChanceBonus,
+          this.calculateWinProbability(
+            this.battleRating(playerPower, finalOpponentPower, opponent.power),
+            opponent.mmr,
+          ) + this.startWinChanceBonus,
         ),
       )
       this.currentWinProbability = winProbability
@@ -1348,7 +1354,10 @@ export const useBattleStore = defineStore('battle', {
         augmentStore.consumeBigBang()
       }
 
-      const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
+      const winProbability = this.calculateWinProbability(
+        this.battleRating(playerPower, finalOpponentPower, opponent.power),
+        opponent.mmr,
+      )
       const battleResult = this.timeline
         ? this.timeline.winner === 1
         : (this.predeterminedWin ?? Math.random() < winProbability)
@@ -1762,6 +1771,37 @@ export const useBattleStore = defineStore('battle', {
 
     mmrToPower(mmr: number) {
       return Math.max(100, Math.floor(mmr * MMR_TO_POWER_MULTIPLIER))
+    },
+
+    /**
+     * Effective rating the player brings into a matchup: their own MMR, tilted
+     * by how the roster's power compares to what that MMR implies, plus
+     * whatever the augments took off the enemy.
+     *
+     * Why a rating and not raw power (which is what this fed into ELO before):
+     * playerPower is an idle-game number that starts at 0 and grows without
+     * bound, while the opponent's power is derived from MMR (~1.5x it). Putting
+     * those two into an ELO curve pushed every early battle straight past the
+     * clamp — a flat 10% win chance regardless of the matchup. Rating against
+     * rating keeps both sides on one scale, so the odds move with MMR (and with
+     * it rank and LP), and power stays a bounded tilt on top of that.
+     */
+    battleRating(playerPower: number, opponentPower: number, nominalOpponentPower: number) {
+      const parPower = this.mmrToPower(this.mmr)
+      const ratio =
+        (playerPower + BATTLE_POWER_RATING_SOFTENING) /
+        (parPower + BATTLE_POWER_RATING_SOFTENING)
+      // maps 0 → -1, par → 0, ∞ → +1: power always counts, never runs away
+      const powerTilt = (ratio - 1) / (ratio + 1)
+      const weakened =
+        nominalOpponentPower > 0
+          ? Math.min(1, Math.max(0, 1 - opponentPower / nominalOpponentPower))
+          : 0
+      return (
+        this.mmr +
+        powerTilt * BATTLE_POWER_RATING_SWING +
+        weakened * BATTLE_ENEMY_WEAKEN_RATING_SWING
+      )
     },
 
     calculateWinProbability(playerPower: number, opponentPower: number) {
