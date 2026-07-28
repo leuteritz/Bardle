@@ -263,7 +263,7 @@ export const DRAKE_ELDER_LP_BONUS = 15
 /** Infernal: flat burn DPS the pit itself takes for the holder's team in later objective fights */
 export const DRAKE_INFERNAL_BURN_DPS = 25
 
-// ── Hand of Baron (battle-scoped buff for the team that slays the baron) ───
+// ── Baron Nashor (battle-scoped buff for the team that slays the baron) ───
 /** Baron's Aegis: a lost battle only costs this fraction of the usual LP */
 export const BARON_LP_LOSS_SHIELD_MULT = 0.5
 /** Baron's Bounty: chimes worth this many seconds of production, paid at battle end */
@@ -417,6 +417,20 @@ export const OBJECTIVE_FIGHT_STATUS = {
   behindColor: '#fca5a5',
   securedText: 'SECURED',
   lostText: 'LOST',
+} as const
+
+/** Trophy artwork for the secured drake/baron buff rails in the rift board's
+ *  top corners. Tiles render up to ~44px, the hover card up to ~46px — laut
+ *  Auflösungsvarianten-Regel (35–110px) also die -256er Variante. */
+export const BUFF_RAIL_IMAGES = {
+  drake: '/img/dragon-256.png',
+  baron: '/img/baron-256.png',
+} as const
+
+/** Team captions on the buff rail's hover card — which side owns the trophy */
+export const BUFF_RAIL_TEAM_LABELS = {
+  own: 'Blue Team',
+  enemy: 'Red Team',
 } as const
 
 // ── Battle Event Timeline ──────────────────────────────────────────────────

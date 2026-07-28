@@ -56,9 +56,7 @@ export const battleCategory: EncyclopediaCategory = {
         '100 LP promotes, dropping below 0 demotes — you re-enter the lower division at 75 LP.',
       lore: 'Glory, measured in small numbers.',
       formula:
-        'LP = ±20 × |ΔMMR| / 32\n' +
-        'Elder drake win: +15 LP\n' +
-        'Hand of Baron halves an LP loss',
+        'LP = ±20 × |ΔMMR| / 32\n' + 'Elder drake win: +15 LP\n' + 'Baron Nashor halves an LP loss',
       related: ['mmr-ranks', 'battle-objectives'],
     },
     {
@@ -101,7 +99,8 @@ export const championsCategory: EncyclopediaCategory = {
         'Champions appear as star bosses on their home planets. ' +
         'Defeat the boss, then recruit the champion with Chimes and materials.',
       lore: 'Heroes answer only after the fight.',
-      formula: 'Recruit price by star: 500 · 1,400 · 2,800 · 4,500 · 6,500 · 9,500 Chimes + materials',
+      formula:
+        'Recruit price by star: 500 · 1,400 · 2,800 · 4,500 · 6,500 · 9,500 Chimes + materials',
       related: ['champion-tiers', 'star-types'],
     },
     {

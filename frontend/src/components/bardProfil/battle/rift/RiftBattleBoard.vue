@@ -14,7 +14,8 @@
       <RiftMinimap class="map-layer" />
       <TeamColumn side="blue" class="hud hud--left" />
       <TeamColumn side="red" class="hud hud--right" />
-      <!-- Secured drake effects, stacked under the header on the killer team's side -->
+      <!-- Secured drake/baron trophies, docked to the killer team's own board
+           corner in the same column as its team HUD -->
       <DrakeBuffBadges />
       <!-- Objective fight (drake/baron) centers within the board middle, on scoreboard height -->
       <ObjectiveModalComponent />

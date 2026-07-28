@@ -62,7 +62,7 @@
 
     <div v-if="baronBounty > 0" class="baron-bounty">
       <img src="/img/baron.png" alt="Baron" class="bounty-img" />
-      <span class="bounty-text">HAND OF BARON · +{{ baronBounty.toLocaleString('en-US') }} CHIMES</span>
+      <span class="bounty-text">BARON NASHOR · +{{ baronBounty.toLocaleString('en-US') }} CHIMES</span>
     </div>
 
     <div class="meta-row">
@@ -458,7 +458,7 @@ const promoHint = computed(() => {
   100% { opacity: 1; transform: scale(1); }
 }
 
-/* ── Hand of Baron bounty ── */
+/* ── Baron Nashor bounty ── */
 .baron-bounty {
   display: flex;
   align-items: center;

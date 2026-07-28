@@ -560,7 +560,7 @@ export interface BattleResult {
   teamKills?: number
   enemyKills?: number
   mvpName?: string
-  /** Hand of Baron: chimes paid out at battle end for slaying the baron */
+  /** Baron Nashor: chimes paid out at battle end for slaying the baron */
   baronBounty?: number
   /** Chimes paid out by the honor ceremony (3 honors, MVP pays double) */
   honorTribute?: number

@@ -487,8 +487,8 @@ export const useBattleStore = defineStore('battle', {
     /** Infernal buff: flat burn DPS credited to the own side in later objective fights. */
     objectiveBurnDps: (state): number =>
       state.drakeBuffs.includes('infernal') ? DRAKE_INFERNAL_BURN_DPS : 0,
-    /** Hand of Baron: the own team slew the baron this battle. */
-    hasHandOfBaron: (state): boolean => state.baronKilledByTeam === 1,
+    /** Baron Nashor: the own team slew the baron this battle. */
+    hasBaronBuff: (state): boolean => state.baronKilledByTeam === 1,
     /** Spawn time of the next drake in the chain still ahead of the clock, -1 when none remains. */
     nextDrakeSpawnT: (state): number => {
       const next = state.timeline?.events.find(
@@ -1370,11 +1370,11 @@ export const useBattleStore = defineStore('battle', {
 
       const mvpName = this.accumulateBattleStats()
 
-      // Baron's Bounty (Hand of Baron): the slain worm pays out chimes at battle
+      // Baron's Bounty (Baron Nashor): the slain worm pays out chimes at battle
       // end — win or lose. Granted here (once per battle) instead of at the kill
       // so a save/reload timeline replay can never pay it twice.
       let baronBounty = 0
-      if (this.hasHandOfBaron) {
+      if (this.hasBaronBuff) {
         baronBounty = Math.max(
           Math.floor(gameStore.chimesPerSecond * BARON_BOUNTY_PRODUCTION_SECONDS),
           Math.floor(gameStore.chimesPerClick * BARON_BOUNTY_MIN_CLICKS),
@@ -1745,8 +1745,8 @@ export const useBattleStore = defineStore('battle', {
       // Elder Dragon buff: flat bonus LP on a won battle
       const elderBonus = won && this.drakeBuffs.includes('elder') ? DRAKE_ELDER_LP_BONUS : 0
       let lp = Math.round(lpChange * mmrFactor) + elderBonus
-      // Baron's Aegis (Hand of Baron): a defeat despite the baron costs only a fraction of the LP
-      if (!won && this.hasHandOfBaron) lp = Math.round(lp * BARON_LP_LOSS_SHIELD_MULT)
+      // Baron's Aegis (Baron Nashor): a defeat despite the baron costs only a fraction of the LP
+      if (!won && this.hasBaronBuff) lp = Math.round(lp * BARON_LP_LOSS_SHIELD_MULT)
       return lp
     },
 

@@ -105,13 +105,13 @@ export const DRAKE_TYPES: Record<DrakeTypeId, DrakeTypeDef> = {
 }
 
 /**
- * Hand of Baron — battle-scoped buff for the team that slays the baron.
+ * Baron Nashor — battle-scoped buff for the team that slays the baron.
  * Styled like a DrakeTypeDef so the badge/modal UI can render it the same way;
  * the win-chance swing itself stays OBJECTIVE_BARON_WIN_BONUS.
  */
 export const BARON_BUFF = {
   id: 'baron' as const,
-  label: 'Hand of Baron',
+  label: 'Baron Nashor',
   color: '#a855f7',
   colorDark: '#5c2a90',
   glow: 'rgba(168, 85, 247, 0.6)',
