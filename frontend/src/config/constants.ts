@@ -406,9 +406,11 @@ export const OBJECTIVE_MAX_DURATION_MS = 20000
 /** Post-fight summary display time — dismissible early via the X button */
 export const OBJECTIVE_RESULT_DELAY_MS = 6000
 /** Bottom-bar game-state stat display during a frozen-time objective fight */
+// Die Bilder stehen nur im Crest der Bottom-Bar, dort mit der Statuszeile
+// mitwachsend bis ~40px (4K) — laut Auflösungsvarianten-Regel also -256.
 export const OBJECTIVE_FIGHT_STATUS = {
-  drake: { label: 'Drake Fight', image: '/img/dragon-128.png' },
-  baron: { label: 'Baron Fight', image: '/img/baron-128.png' },
+  drake: { label: 'Drake Fight', image: '/img/dragon-256.png' },
+  baron: { label: 'Baron Fight', image: '/img/baron-256.png' },
   // Team-Farben aus dem Autobattle-Board (side names/kills in ScoreTopBar):
   // Blau = eigenes Team vorn, Rot = Gegner-Team vorn
   leadColor: '#93c5fd',
@@ -1645,7 +1647,82 @@ export const SCOREBOARD_FIT = {
   STACKED_LINE_DIVISOR: 2.1,
   /** A one-line win/loss record longer than this folds into two lines. */
   WIN_LOSS_STACK_CHARS: 15,
+  /** Horizontal air at both ends of the strip (must match the CSS padding). */
+  STRIP_PAD_X_PX: 12,
 } as const
+
+/**
+ * Auto-fit budget of the crest in the middle of the scoreboard — the game title
+ * and, while the auto-battle runs, the live phase status.
+ *
+ * Same principle as the stat cells: the strip measures the string it is about to
+ * render and the crest text grows until either its box or the strip height stops
+ * it — no clamp() guessing an average glyph width. Two things make the middle a
+ * different problem from the cells:
+ *
+ *   · It carries ONE line, not caption + value, so the whole strip height is its
+ *     text band (the ornament sits beside the text, never above it).
+ *   · Its box competes with the stat halves for the same width. The crest takes
+ *     the width the halves have SPARE — the numbers are height-bound on every
+ *     desktop resolution, so on most of them that costs them nothing at all.
+ */
+export const SCOREBOARD_CREST = {
+  /** Share of the usable strip height the crest text may fill (ink overshoot). */
+  TEXT_HEIGHT_FRACTION: 0.86,
+  TEXT_MAX_PX: 60,
+  /**
+   * Placeholder size until the first measurement lands — NOT a floor of the
+   * fit: a line that does not fit its box has to get smaller, not be cut off.
+   */
+  TEXT_FALLBACK_PX: 16,
+  /** Air inside the crest box, per side, in em of the text size. */
+  PAD_EM: 0.3,
+  /** Star flanking the idle title, in em of the title size. */
+  STAR_EM: 0.58,
+  /** Phase glyph / objective icon leading the live status, in em. */
+  GLYPH_EM: 1,
+  /** Gap between an ornament and the text, in em. */
+  GAP_EM: 0.32,
+  /**
+   * Decorative rail at either end of the crest. It is NOT part of the budget
+   * above — the rails take only what the text left over, so they can never cost
+   * a line a single pixel of size. This is just how far they may stretch.
+   */
+  RAIL_EM: 1.4,
+  /**
+   * Widest clock the status line has to hold, per phase. The fit budgets for
+   * this instead of for the current tick, so a running countdown never resizes
+   * the line (tabular numerals — the digits themselves are all the same width).
+   */
+  CLOCK_BUDGET: '8:88',
+  CLOCK_BUDGET_BATTLE: '88:88',
+  /** Worst case of the objective readout ("Infernal · 100%"). */
+  OBJECTIVE_BUDGET: '100%',
+  /**
+   * The crest box never falls below this — MIN_PX on a desktop strip, the share
+   * on anything narrower, where a fixed 340px would starve the ten stat cells.
+   * At 2K the halves have no spare width at all and the crest lands exactly
+   * here: the numbers give up ~2px so the middle gains a quarter of its size.
+   */
+  MIN_PX: 340,
+  MIN_SHARE: 0.22,
+  /** …and never grows past this, however much width the halves leave over. */
+  MAX_PX: 660,
+  MAX_SHARE: 0.34,
+  /**
+   * How much of the halves' spare width the crest may claim. The rest stays with
+   * the cells as breathing room — at 1.0 every number would sit exactly on its
+   * cell edge.
+   */
+  SLACK_TAKE: 0.8,
+} as const
+
+/** The game's name, as the crest of the bottom bar renders it. */
+export const GAME_TITLE = 'BARDLE'
+/** Star ornament flanking the title in the crest. */
+export const CREST_STAR_IMAGE = '/img/star-128.png'
+/** Separator between a status and its clock / percentage in the crest. */
+export const CREST_SEPARATOR = ' · '
 
 // ── Battle stat visuals — canonical mapping shared by BottomScoreboard,
 //    ScoreTopBar and BattleLandingScreen: the same stat always carries the

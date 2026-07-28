@@ -1000,14 +1000,33 @@ export interface ScoreboardFitCell {
   stacked?: boolean
 }
 
+/** The one line the crest renders — its string plus the ornament beside it. */
+export interface ScoreboardCrestLine {
+  /** Width of the line's text at font-size 1px (its em width), in px. */
+  em: number
+  /** Ornament width beside the text, in em — icons, stars and their gaps. */
+  ornamentEm: number
+}
+
 export interface ScoreboardFitInput {
-  /** Usable width of the left / right stat group, in px. */
+  /**
+   * Usable width of the left / right stat group at the SMALLEST crest box, in
+   * px — the widest the half can ever be. Whatever the cells leave unused of it
+   * goes to the crest (see ScoreboardFit.crestWidth), so the halves the browser
+   * finally lays out are this width minus that share.
+   */
   leftWidth: number
   rightWidth: number
   /** Usable height of the whole strip, in px. */
   stripHeight: number
   leftCells: ScoreboardFitCell[]
   rightCells: ScoreboardFitCell[]
+  /** Smallest / largest crest box the strip allows, in px. */
+  crestMin?: number
+  crestMax?: number
+  /** The crest's two lines — the idle game title and the live status. */
+  crestTitle?: ScoreboardCrestLine
+  crestStatus?: ScoreboardCrestLine
   /** Internal: the second pass sets this to false once labels have been dropped. */
   showLabels?: boolean
   /** Internal: set once the fit falls back to the short captions. */
@@ -1031,4 +1050,10 @@ export interface ScoreboardFit {
   grow: Record<string, number>
   /** Measured em width per cell key — lets a cell reserve a fixed text slot. */
   em: Record<string, number>
+  /** Width of the crest box in the middle: its minimum plus the halves' spare. */
+  crestWidth: number
+  /** Font size of the idle game title, px. */
+  crestTitleSize: number
+  /** Font size of the live status line, px. */
+  crestStatusSize: number
 }

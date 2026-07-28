@@ -1,5 +1,10 @@
-import { SCOREBOARD_FIT } from '@/config/constants'
-import type { ScoreboardFit, ScoreboardFitInput, ScoreboardFitCell } from '@/types'
+import { SCOREBOARD_FIT, SCOREBOARD_CREST } from '@/config/constants'
+import type {
+  ScoreboardCrestLine,
+  ScoreboardFit,
+  ScoreboardFitInput,
+  ScoreboardFitCell,
+} from '@/types'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -54,6 +59,31 @@ function fitHalfCoupled(
   if (cells.length === 0 || emSum <= 0) return Infinity
   const iconWeight = cells.length * ratio * (1 + SCOREBOARD_FIT.ICON_GAP_FRACTION)
   return (width - 2 * cells.length * cellPad - dividersOf(cells)) / (emSum + iconWeight)
+}
+
+/**
+ * Width of one half that its cells do NOT need at the sizes the fit settled on.
+ * It exists because the numbers are height-bound on most desktop strips: they
+ * stop growing at the strip's ceiling long before they have eaten the width.
+ * That leftover is what the crest in the middle claims.
+ */
+function spareOf(cells: ScoreboardFitCell[], width: number, needs: number[]): number {
+  const demanded = needs.reduce((sum, need) => sum + need, 0) + dividersOf(cells)
+  return Math.max(0, width - demanded)
+}
+
+/**
+ * Largest size one crest line can take: its box divided by everything the line
+ * puts in it (text + ornament + air, all in em), never taller than the band.
+ */
+function fitCrestLine(line: ScoreboardCrestLine | undefined, width: number, heightCap: number) {
+  const C = SCOREBOARD_CREST
+  if (!line || line.em <= 0 || width <= 0) return 0
+  const emTotal = line.em + line.ornamentEm + 2 * C.PAD_EM
+  if (emTotal <= 0) return 0
+  /* No lower bound: a floor would be a size the box does NOT have, and the line
+     is one nowrap string — it would not shrink, it would be cut off. */
+  return Math.max(0, Math.min(width / emTotal, heightCap, C.TEXT_MAX_PX))
 }
 
 /** What one half's cells demand, and what their resulting widths can hold. */
@@ -124,7 +154,9 @@ function weighHalf(
  *      says what a number means),
  *   2. what is left is the value row — icon and number solved together in it,
  *   3. on a cramped strip the icon yields part of its width ratio so the number
- *      stays as large as the geometry allows.
+ *      stays as large as the geometry allows,
+ *   4. the crest in the middle takes the width the cells did NOT need and fits
+ *      its one line into the full strip height.
  *
  * Pure: same input → same output, no DOM. See useScoreboardFit for the measuring
  * side.
@@ -224,10 +256,22 @@ export function computeScoreboardFit(input: ScoreboardFitInput): ScoreboardFit {
      cannot hold is given back, never rendered over the edge. */
   const stackedOf = (value: number) => Math.min(value, mainH / C.STACKED_LINE_DIVISOR)
   let leftWeights = weighHalf(
-    leftCells, leftWidth, fixed, valueSize, stackedOf(valueSize), labelSize, cellPad,
+    leftCells,
+    leftWidth,
+    fixed,
+    valueSize,
+    stackedOf(valueSize),
+    labelSize,
+    cellPad,
   )
   let rightWeights = weighHalf(
-    rightCells, rightWidth, fixed, valueSize, stackedOf(valueSize), labelSize, cellPad,
+    rightCells,
+    rightWidth,
+    fixed,
+    valueSize,
+    stackedOf(valueSize),
+    labelSize,
+    cellPad,
   )
   for (let pass = 1; pass < C.FIT_PASSES; pass++) {
     const labelCap = Math.min(leftWeights.labelCap, rightWeights.labelCap)
@@ -238,10 +282,22 @@ export function computeScoreboardFit(input: ScoreboardFitInput): ScoreboardFit {
     labelSize = nextLabel
     valueSize = nextValue
     leftWeights = weighHalf(
-      leftCells, leftWidth, fixed, valueSize, stackedOf(valueSize), labelSize, cellPad,
+      leftCells,
+      leftWidth,
+      fixed,
+      valueSize,
+      stackedOf(valueSize),
+      labelSize,
+      cellPad,
     )
     rightWeights = weighHalf(
-      rightCells, rightWidth, fixed, valueSize, stackedOf(valueSize), labelSize, cellPad,
+      rightCells,
+      rightWidth,
+      fixed,
+      valueSize,
+      stackedOf(valueSize),
+      labelSize,
+      cellPad,
     )
   }
   /* Words or short names? The strip trades the words for the cells' own short
@@ -264,6 +320,30 @@ export function computeScoreboardFit(input: ScoreboardFitInput): ScoreboardFit {
      "every number the same size" — stacking is what keeps a 6-digit record from
      dragging all nine other cells down with it. */
   const stackedValueSize = stackedOf(valueSize)
+
+  /* ── 4 · The crest in the middle ──
+     Its box starts at the minimum the strip guarantees it and grows by whatever
+     the two halves left unused — so the middle gets bigger without ever taking
+     a pixel the numbers were actually standing on. Inside that box the title
+     and the status line are fitted exactly like a cell value: measured string,
+     one solve, no clamp() guessing at glyph widths. */
+  const crestMin = Math.max(0, input.crestMin ?? 0)
+  const crestMax = Math.max(crestMin, input.crestMax ?? crestMin)
+  /* The crest sits in the middle, so it takes the SAME width from both halves —
+     the spare of the tighter half is what it may have, twice. Summing the two
+     would let a roomy left half pay for a right half that has nothing to give. */
+  const spare =
+    2 *
+    Math.min(
+      spareOf(leftCells, leftWidth, leftWeights.needs),
+      spareOf(rightCells, rightWidth, rightWeights.needs),
+    )
+  const crestWidth = Math.min(crestMax, crestMin + spare * SCOREBOARD_CREST.SLACK_TAKE)
+  /* One line, no caption row above it: the whole strip height is the crest's
+     text band — that is where most of its extra size comes from. */
+  const crestHeightCap = usableH * SCOREBOARD_CREST.TEXT_HEIGHT_FRACTION
+  const crestTitleSize = fitCrestLine(input.crestTitle, crestWidth, crestHeightCap)
+  const crestStatusSize = fitCrestLine(input.crestStatus, crestWidth, crestHeightCap)
 
   const grow: Record<string, number> = {}
   const em: Record<string, number> = {}
@@ -288,5 +368,8 @@ export function computeScoreboardFit(input: ScoreboardFitInput): ScoreboardFit {
     cellPad,
     grow,
     em,
+    crestWidth,
+    crestTitleSize,
+    crestStatusSize,
   }
 }

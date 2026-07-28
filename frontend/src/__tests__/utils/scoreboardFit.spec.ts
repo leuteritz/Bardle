@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { computeScoreboardFit } from '@/utils/scoreboardFit'
-import { SCOREBOARD_FIT, BOTTOM_BAR_SIDE_W } from '@/config/constants'
+import { SCOREBOARD_FIT, SCOREBOARD_CREST, BOTTOM_BAR_SIDE_W } from '@/config/constants'
 import type { ScoreboardFitCell, ScoreboardFitInput } from '@/types'
 
 /* Gemessene em-Breiten der echten Schrift (MedievalSharp) in der Größenordnung,
@@ -33,23 +33,44 @@ function cell(
 
 /**
  * Geometrie des Scoreboards für eine Desktop-Auflösung — dieselbe Rechnung, die
- * App.vue (--hud-scale) und das Layout im Browser ergeben:
- * Streifenhöhe (443 − 364) × hud-scale, Hälften = Restbreite neben dem Crest.
+ * App.vue (--hud-scale) und useScoreboardFit im Browser ergeben:
+ * Streifenhöhe (443 − 364) × hud-scale, Hälften = Restbreite neben dem
+ * KLEINSTMÖGLICHEN Crest (breiter wird der nur von dem, was die Zellen übrig
+ * lassen — genau der Rechenweg des Composables).
  */
 function geometryFor(vw: number, vh: number) {
   const hudScale = Math.min(1, Math.max(0.52, Math.min(vw / 2560, vh / 1440)))
-  const boardW = vw - 2 * BOTTOM_BAR_SIDE_W * hudScale - 24
-  const crestW = Math.min(300, Math.max(160, boardW * 0.24))
-  return { halfWidth: (boardW - crestW) / 2, stripHeight: 79 * hudScale }
+  const stripWidth = vw - 2 * BOTTOM_BAR_SIDE_W * hudScale - 2 * SCOREBOARD_FIT.STRIP_PAD_X_PX
+  const crestMin = Math.min(SCOREBOARD_CREST.MIN_PX, stripWidth * SCOREBOARD_CREST.MIN_SHARE)
+  const crestMax = Math.max(
+    crestMin,
+    Math.min(SCOREBOARD_CREST.MAX_PX, stripWidth * SCOREBOARD_CREST.MAX_SHARE),
+  )
+  return {
+    stripWidth,
+    crestMin,
+    crestMax,
+    halfWidth: (stripWidth - crestMin) / 2,
+    stripHeight: 79 * hudScale,
+  }
 }
+
+/* Gemessene em-Breiten der beiden Crest-Zeilen — "BARDLE" in Versalien mit
+   0.22em Sperrung, der längste Status ("Planet Search · 8:88") mit 0.1em. */
+const CREST_TITLE = { em: 6 * (CAP_EM + 0.22), ornamentEm: 2 * (0.58 + 0.32) }
+const CREST_STATUS = { em: 20 * (CAP_EM + 0.1), ornamentEm: 1 + 0.32 }
 
 /** Typische Career-Stände: fünf Kampfwerte links, Rang/Bilanz/Objectives rechts. */
 function inputFor(vw: number, vh: number, valueChars = 4): ScoreboardFitInput {
-  const { halfWidth, stripHeight } = geometryFor(vw, vh)
+  const { halfWidth, stripHeight, crestMin, crestMax } = geometryFor(vw, vh)
   return {
     leftWidth: halfWidth,
     rightWidth: halfWidth,
     stripHeight,
+    crestMin,
+    crestMax,
+    crestTitle: CREST_TITLE,
+    crestStatus: CREST_STATUS,
     leftCells: [
       cell('kills', valueChars, 'Kills', 'K'),
       cell('deaths', valueChars, 'Deaths', 'D'),
@@ -307,6 +328,97 @@ describe('computeScoreboardFit', () => {
       expect(fit.iconSize).toBeGreaterThanOrEqual(SCOREBOARD_FIT.ICON_MIN_PX)
       expect(fit.iconSize).toBeLessThanOrEqual(SCOREBOARD_FIT.ICON_MAX_PX)
     }
+  })
+
+  describe('Crest in der Mitte', () => {
+    /** Breite, die eine Crest-Zeile mit ihrem Ornament und ihrer Luft belegt. */
+    function lineWidth(line: { em: number; ornamentEm: number }, size: number): number {
+      return (line.em + line.ornamentEm + 2 * SCOREBOARD_CREST.PAD_EM) * size
+    }
+
+    it.each(RESOLUTIONS)('%s: beide Zeilen passen in die Crest-Box', (_name, vw, vh) => {
+      const fit = computeScoreboardFit(inputFor(vw, vh))
+      expect(lineWidth(CREST_TITLE, fit.crestTitleSize)).toBeLessThanOrEqual(fit.crestWidth + 0.01)
+      expect(lineWidth(CREST_STATUS, fit.crestStatusSize)).toBeLessThanOrEqual(
+        fit.crestWidth + 0.01,
+      )
+    })
+
+    it.each([...RESOLUTIONS, ...LAPTOPS])('%s: keine Zeile ragt aus dem Streifen', (_n, vw, vh) => {
+      const input = inputFor(vw, vh)
+      const fit = computeScoreboardFit(input)
+      const band = usableHeight(input.stripHeight)
+      expect(fit.crestTitleSize).toBeLessThanOrEqual(band)
+      expect(fit.crestStatusSize).toBeLessThanOrEqual(band)
+      expect(fit.crestTitleSize).toBeGreaterThan(SCOREBOARD_FIT.LABEL_MIN_PX)
+    })
+
+    it('nimmt den Hälften nur, was sie übrig lassen', () => {
+      for (const [, vw, vh] of RESOLUTIONS) {
+        const input = inputFor(vw, vh)
+        const fit = computeScoreboardFit(input)
+        // Was der Crest über sein Minimum hinaus bekommt, stand in keiner Zelle:
+        // die Hälften müssen ihre Inhalte auch danach noch tragen.
+        const taken = fit.crestWidth - (input.crestMin ?? 0)
+        expect(neededWidth(input.leftCells, fit)).toBeLessThanOrEqual(
+          input.leftWidth - taken / 2 + 0.01,
+        )
+        expect(neededWidth(input.rightCells, fit)).toBeLessThanOrEqual(
+          input.rightWidth - taken / 2 + 0.01,
+        )
+      }
+    })
+
+    it('bleibt zwischen Mindest- und Höchstbreite', () => {
+      for (const [, vw, vh] of [...RESOLUTIONS, ...LAPTOPS]) {
+        const input = inputFor(vw, vh)
+        const fit = computeScoreboardFit(input)
+        expect(fit.crestWidth).toBeGreaterThanOrEqual((input.crestMin ?? 0) - 0.01)
+        expect(fit.crestWidth).toBeLessThanOrEqual((input.crestMax ?? 0) + 0.01)
+      }
+    })
+
+    it('wächst mit der Auflösung — 4K nie kleiner als Full HD', () => {
+      const fhd = computeScoreboardFit(inputFor(1920, 950))
+      const qhd = computeScoreboardFit(inputFor(2560, 1310))
+      const uhd = computeScoreboardFit(inputFor(3840, 2030))
+      expect(qhd.crestTitleSize).toBeGreaterThanOrEqual(fhd.crestTitleSize)
+      expect(uhd.crestTitleSize).toBeGreaterThanOrEqual(qhd.crestTitleSize)
+      expect(uhd.crestStatusSize).toBeGreaterThanOrEqual(fhd.crestStatusSize)
+    })
+
+    it('nutzt den Platz aus — deutlich größer als die alte 30px-Deckelung', () => {
+      // Die feste clamp(16px, 2.5cqw, 30px) war der Grund, dass die Mitte auf
+      // jeder Desktop-Auflösung kleiner blieb als die Zahlen daneben.
+      for (const [, vw, vh] of RESOLUTIONS) {
+        expect(computeScoreboardFit(inputFor(vw, vh)).crestTitleSize).toBeGreaterThan(30)
+      }
+    })
+
+    it('lässt eine längere Zeile kleiner ausfallen, nie überlaufen', () => {
+      const input = inputFor(1920, 950)
+      const long = computeScoreboardFit({
+        ...input,
+        crestStatus: { em: CREST_STATUS.em * 2, ornamentEm: CREST_STATUS.ornamentEm },
+      })
+      expect(long.crestStatusSize).toBeLessThan(computeScoreboardFit(input).crestStatusSize)
+      expect(
+        lineWidth(
+          { em: CREST_STATUS.em * 2, ornamentEm: CREST_STATUS.ornamentEm },
+          long.crestStatusSize,
+        ),
+      ).toBeLessThanOrEqual(long.crestWidth + 0.01)
+    })
+
+    it('kommt ohne Crest-Angaben aus', () => {
+      const withoutCrest = { ...inputFor(2560, 1310) }
+      delete withoutCrest.crestTitle
+      delete withoutCrest.crestStatus
+      const fit = computeScoreboardFit(withoutCrest)
+      expect(fit.crestTitleSize).toBe(0)
+      expect(fit.crestStatusSize).toBe(0)
+      expect(Number.isFinite(fit.crestWidth)).toBe(true)
+    })
   })
 
   it('überlebt entartete Geometrie ohne NaN', () => {

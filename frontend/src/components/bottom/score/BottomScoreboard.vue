@@ -10,6 +10,7 @@ import {
   useScoreboardFit,
   MEASURE_FONT_PX,
   type ScoreboardFitSource,
+  type ScoreboardCrestSource,
 } from '@/composables/useScoreboardFit'
 import { formatNumber } from '@/config/numberFormat'
 import {
@@ -17,7 +18,11 @@ import {
   OBJECTIVE_FIGHT_STATUS,
   SCOREBOARD_STAT_COLORS,
   SCOREBOARD_FIT,
+  SCOREBOARD_CREST,
   SCOREBOARD_CELL_LABELS,
+  GAME_TITLE,
+  CREST_STAR_IMAGE,
+  CREST_SEPARATOR,
   BOTTOM_BAR_CENTER_TOP_Y,
   RANK_EMBLEM_IMAGES,
   RANK_TIER_COLORS,
@@ -125,6 +130,152 @@ const wlStacked = computed(
 )
 
 /* ══════════════════════════════════════════════════════════════════════
+   Live battle-status line — it owns the crest's title slot for the whole
+   auto-battle lifecycle, so no live info is lost when the game is running.
+   ══════════════════════════════════════════════════════════════════════ */
+const {
+  isAutoBattleInitialized,
+  autoBattleEnabled,
+  battleTime,
+  searchingPhaseStartTimestamp,
+  lastLpChange,
+  lastAutoBattleResult,
+  activeObjective,
+  activeDrakeType,
+  objectiveModalOpen,
+  objectiveHP,
+  objectiveMaxHP,
+  objectiveOwnDamage,
+  objectiveEnemyDamage,
+  objectiveResult,
+} = storeToRefs(battleStore)
+
+/* Phase, its clock and its remaining seconds all come from the store's phase
+   machine (battleStore.currentBattlePhase) — the bottom bar only renders it,
+   so it can never disagree with the battle tab. */
+const {
+  phase: phaseKey,
+  config: phaseConfig,
+  elapsedMs,
+  remainingSeconds,
+  progress: phaseProgress,
+} = useBattlePhase(1000)
+
+/** Kompaktes m:ss ohne führende Null bei den Minuten ("0:04", "12:00"). */
+function shortTime(totalSeconds: number): string {
+  const s = Math.max(0, totalSeconds)
+  return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
+}
+
+const gameStateDisplay = computed(() => {
+  const { label, color, durationMs } = phaseConfig.value
+  switch (phaseKey.value) {
+    case 'searching': {
+      // counts up to the search duration — the phase's own progress, clamped so
+      // a late clock tick can never overshoot the window
+      const elapsed = Math.min(
+        Math.floor((durationMs ?? 0) / 1000),
+        Math.floor(elapsedMs.value / 1000),
+      )
+      return { text: `${label}${CREST_SEPARATOR}${shortTime(elapsed)}`, color }
+    }
+    case 'loading':
+      // counts down to the rift opening, same clock the loading screen shows
+      return { text: `${label}${CREST_SEPARATOR}${shortTime(remainingSeconds.value)}`, color }
+    case 'battle':
+      // Spielzeit tickt in Minutenschritten (60x-Zeitraffer) — Sekunden wären Rauschen
+      return { text: `${label}${CREST_SEPARATOR}${Math.floor(battleTime.value / 60)}:00`, color }
+    case 'honor':
+      // Countdown wie im Honor-Screen des Battle-Tabs: bei 0 beginnt die
+      // nächste Planet-Search-Phase
+      return { text: `${label}${CREST_SEPARATOR}${shortTime(remainingSeconds.value)}`, color }
+    default:
+      return null
+  }
+})
+
+const objectiveFightDisplay = computed(() => {
+  const objective = activeObjective.value
+  if (!objective || (!objectiveModalOpen.value && objectiveResult.value === null)) return null
+  const { image } = OBJECTIVE_FIGHT_STATUS[objective]
+  // Kürzester eindeutiger Name: beim Drake der Typ ("Infernal", "Elder"), sonst "Baron"
+  const name =
+    objective === 'drake'
+      ? DRAKE_TYPES[activeDrakeType.value ?? 'infernal'].label.split(' ')[0]
+      : OBJECTIVE_FIGHT_STATUS.baron.label.split(' ')[0]
+  if (objectiveResult.value !== null) {
+    const won = objectiveResult.value !== 'enemy'
+    return {
+      name,
+      icon: image,
+      text: `${name} ${won ? '✓' : '✗'}`,
+      color: won ? OBJECTIVE_FIGHT_STATUS.leadColor : OBJECTIVE_FIGHT_STATUS.behindColor,
+      resolved: true,
+    }
+  }
+  const hpPct =
+    objectiveMaxHP.value > 0 ? Math.round((objectiveHP.value / objectiveMaxHP.value) * 100) : 0
+  const leading = objectiveOwnDamage.value >= objectiveEnemyDamage.value
+  return {
+    name,
+    icon: image,
+    text: `${name}${CREST_SEPARATOR}${hpPct}%`,
+    color: leading ? OBJECTIVE_FIGHT_STATUS.leadColor : OBJECTIVE_FIGHT_STATUS.behindColor,
+    resolved: false,
+  }
+})
+
+/** Wie lange das Win/Lose-Badge den Titel-Slot hält, bevor die
+ *  Honor-Phase mit Sekundenzähler übernimmt (Result-Pause insgesamt:
+ *  BATTLE_RESULT_PAUSE_MS = 8s). */
+const RESULT_BADGE_MS = 3000
+
+const resultBadge = computed(() => {
+  if (phaseKey.value !== 'honor' || !lastAutoBattleResult.value) return null
+  // Nach ein paar Sekunden den Slot an die Honor-Anzeige übergeben
+  if (elapsedMs.value > RESULT_BADGE_MS) return null
+  const won = lastAutoBattleResult.value.won
+  const lp = lastLpChange.value
+  return {
+    // schmale Leerzeichen: das Badge bleibt eine Einheit, ohne zu zerfallen
+    text: `${won ? 'Win' : 'Lose'} ${lp >= 0 ? `+${lp}` : lp} LP`,
+    color: won ? '#74d448' : '#cc6050',
+    glow: won ? 'rgba(116, 212, 72, 0.6)' : 'rgba(204, 96, 80, 0.6)',
+  }
+})
+
+/**
+ * State-based, not display-based: the status owns the title slot for the
+ * whole auto-battle lifecycle. searchingPhaseStartTimestamp is set
+ * synchronously on the Battle Start click, so the swap happens instantly —
+ * before the intro animation and any phase displays exist.
+ */
+const hasLiveStatus = computed(
+  () =>
+    isAutoBattleInitialized.value ||
+    autoBattleEnabled.value ||
+    searchingPhaseStartTimestamp.value > 0,
+)
+
+/**
+ * What the status line says right now, and what leads it. A phase without its
+ * own display (the landing screen) still announces the search — the crest never
+ * shows an empty slot once the battle loop is live.
+ */
+const liveStatus = computed(() => {
+  const display = gameStateDisplay.value
+  if (!display) {
+    return { text: BATTLE_PHASES.searching.label, color: BATTLE_PHASES.searching.color, glyph: null }
+  }
+  // the search keeps its scan dots, every other phase leads with its own glyph
+  return {
+    text: display.text,
+    color: display.color,
+    glyph: phaseKey.value === 'searching' ? null : phaseConfig.value.icon,
+  }
+})
+
+/* ══════════════════════════════════════════════════════════════════════
    Auto-fit — every number as large as its cell allows, all of them equal.
 
    The strip measures its own halves and every string it is about to render,
@@ -137,11 +288,11 @@ const RANK_CELL = { key: 'rank' as const, ...captionOf('rank') }
 const WIN_LOSS_CELL = { key: 'winLoss' as const, ...captionOf('winLoss') }
 
 const rootRef = ref<HTMLElement | null>(null)
-const leftRef = ref<HTMLElement | null>(null)
-const rightRef = ref<HTMLElement | null>(null)
 const probeValueRef = ref<HTMLElement | null>(null)
 const probeRankRef = ref<HTMLElement | null>(null)
 const probeLabelRef = ref<HTMLElement | null>(null)
+const probeTitleRef = ref<HTMLElement | null>(null)
+const probeStatusRef = ref<HTMLElement | null>(null)
 
 const fitCells = computed<{ left: ScoreboardFitSource[]; right: ScoreboardFitSource[] }>(() => ({
   left: leftStats.value.map((stat) => ({
@@ -175,12 +326,55 @@ const fitCells = computed<{ left: ScoreboardFitSource[]; right: ScoreboardFitSou
   ],
 }))
 
+/**
+ * The widest the status line can still grow to in the running phase — NOT the
+ * string of this second. The clock counts down inside the budget, so the line
+ * is sized once per phase instead of resizing under the reader every tick.
+ */
+const statusBudget = computed(() => {
+  const objective = objectiveFightDisplay.value
+  if (objective) return `${objective.name}${CREST_SEPARATOR}${SCOREBOARD_CREST.OBJECTIVE_BUDGET}`
+  if (resultBadge.value) return resultBadge.value.text
+  if (!gameStateDisplay.value) return BATTLE_PHASES.searching.label
+  const clock =
+    phaseKey.value === 'battle'
+      ? SCOREBOARD_CREST.CLOCK_BUDGET_BATTLE
+      : SCOREBOARD_CREST.CLOCK_BUDGET
+  return `${phaseConfig.value.label}${CREST_SEPARATOR}${clock}`
+})
+
+/* What the crest has to hold: one line at a time, each with the ornament that
+   stands beside it. Both are budgeted, so the swap between them never resizes
+   anything the other one owns. */
+const crestSources = computed<{ title: ScoreboardCrestSource; status: ScoreboardCrestSource }>(
+  () => ({
+    title: {
+      text: GAME_TITLE,
+      // a star on either side of the title
+      ornamentEm: 2 * (SCOREBOARD_CREST.STAR_EM + SCOREBOARD_CREST.GAP_EM),
+      probe: 'title',
+    },
+    status: {
+      // reserved whether the line leads with a glyph, the scan dots or (the
+      // result badge) nothing at all — so the badge never resizes the line
+      text: statusBudget.value,
+      ornamentEm: SCOREBOARD_CREST.GLYPH_EM + SCOREBOARD_CREST.GAP_EM,
+      probe: 'status',
+    },
+  }),
+)
+
 const { fit } = useScoreboardFit({
   root: rootRef,
-  left: leftRef,
-  right: rightRef,
-  probes: { value: probeValueRef, rank: probeRankRef, label: probeLabelRef },
+  probes: {
+    value: probeValueRef,
+    rank: probeRankRef,
+    label: probeLabelRef,
+    title: probeTitleRef,
+    status: probeStatusRef,
+  },
   cells: fitCells,
+  crest: crestSources,
 })
 
 /** Probes render at the reference size the em math divides by. */
@@ -198,9 +392,17 @@ const stripVars = {
   '--sb-strip-top': px(BOTTOM_BAR_CENTER_TOP_Y),
   '--sb-pad-top': px(SCOREBOARD_FIT.STRIP_PAD_TOP_PX),
   '--sb-pad-bottom': px(SCOREBOARD_FIT.STRIP_PAD_BOTTOM_PX),
+  '--sb-pad-x': px(SCOREBOARD_FIT.STRIP_PAD_X_PX),
   /* the caption's line box is exactly the band the fit reserved for it, so the
      letters sit inside it instead of painting over its edges */
   '--sb-label-line': String(SCOREBOARD_FIT.LABEL_LINE_FACTOR),
+  /* Crest geometry in em of its own line — the very numbers the fit budgeted
+     with, handed to the CSS so the two can never drift apart. */
+  '--sb-crest-pad': `${SCOREBOARD_CREST.PAD_EM}em`,
+  '--sb-crest-gap': `${SCOREBOARD_CREST.GAP_EM}em`,
+  '--sb-crest-star': `${SCOREBOARD_CREST.STAR_EM}em`,
+  '--sb-crest-glyph': `${SCOREBOARD_CREST.GLYPH_EM}em`,
+  '--sb-crest-rail': `${SCOREBOARD_CREST.RAIL_EM}em`,
 }
 
 const fitVars = computed(() => ({
@@ -215,6 +417,13 @@ const fitVars = computed(() => ({
   /* Fixed slot for the rank text: emblem and label start at a constant x for
      every tier, so a promotion never nudges the emblem sideways. */
   '--sb-rank-slot': px((fit.value.em.rank ?? 0) * fit.value.valueSize),
+  '--sb-crest-w': px(fit.value.crestWidth),
+  '--sb-title-size': px(fit.value.crestTitleSize),
+  '--sb-status-size': px(fit.value.crestStatusSize),
+  /* em base of the crest's own ornaments — the size of the line it is showing */
+  '--sb-crest-size': px(
+    hasLiveStatus.value ? fit.value.crestStatusSize : fit.value.crestTitleSize,
+  ),
 }))
 
 /** flex-grow weight of one cell — its share of the half's width. */
@@ -227,137 +436,20 @@ function cellStyle(key: string) {
 const showIcons = computed(() => fit.value.iconSize > 0)
 const showLabels = computed(() => fit.value.labelSize > 0)
 const iconPx = computed(() => Math.round(fit.value.iconSize))
-
-/* ══════════════════════════════════════════════════════════════════════
-   Live battle-status line (compact, under the BARDLE crest) — ported
-   from the previous bottom stats bar so no live info is lost.
-   ══════════════════════════════════════════════════════════════════════ */
-const {
-  isAutoBattleInitialized,
-  autoBattleEnabled,
-  battleTime,
-  searchingPhaseStartTimestamp,
-  lastLpChange,
-  lastAutoBattleResult,
-  activeObjective,
-  activeDrakeType,
-  objectiveModalOpen,
-  objectiveHP,
-  objectiveMaxHP,
-  objectiveOwnDamage,
-  objectiveEnemyDamage,
-  objectiveResult,
-} = storeToRefs(battleStore)
-
-/* Phase, its clock and its remaining seconds all come from the store's phase
-   machine (battleStore.currentBattlePhase) — the bottom bar only renders it,
-   so it can never disagree with the battle tab. */
-const { phase: phaseKey, config: phaseConfig, elapsedMs, remainingSeconds } = useBattlePhase(1000)
-
-/** Kompaktes m:ss ohne führende Null bei den Minuten ("0:04", "12:00"). */
-function shortTime(totalSeconds: number): string {
-  const s = Math.max(0, totalSeconds)
-  return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
-}
-
-const gameStateDisplay = computed(() => {
-  const { label, color, durationMs } = phaseConfig.value
-  switch (phaseKey.value) {
-    case 'searching': {
-      // counts up to the search duration — the phase's own progress, clamped so
-      // a late clock tick can never overshoot the window
-      const elapsed = Math.min(
-        Math.floor((durationMs ?? 0) / 1000),
-        Math.floor(elapsedMs.value / 1000),
-      )
-      return { text: `${label} · ${shortTime(elapsed)}`, color }
-    }
-    case 'loading':
-      // counts down to the rift opening, same clock the loading screen shows
-      return { text: `${label} · ${shortTime(remainingSeconds.value)}`, color }
-    case 'battle':
-      // Spielzeit tickt in Minutenschritten (60x-Zeitraffer) — Sekunden wären Rauschen
-      return { text: `${label} · ${Math.floor(battleTime.value / 60)}:00`, color }
-    case 'honor':
-      // Countdown wie im Honor-Screen des Battle-Tabs: bei 0 beginnt die
-      // nächste Planet-Search-Phase
-      return { text: `${label} · ${shortTime(remainingSeconds.value)}`, color }
-    default:
-      return null
-  }
-})
-
-const objectiveFightDisplay = computed(() => {
-  const objective = activeObjective.value
-  if (!objective || (!objectiveModalOpen.value && objectiveResult.value === null)) return null
-  const { image } = OBJECTIVE_FIGHT_STATUS[objective]
-  // Kürzester eindeutiger Name: beim Drake der Typ ("Infernal", "Elder"), sonst "Baron"
-  const name =
-    objective === 'drake'
-      ? DRAKE_TYPES[activeDrakeType.value ?? 'infernal'].label.split(' ')[0]
-      : 'Baron'
-  if (objectiveResult.value !== null) {
-    const won = objectiveResult.value !== 'enemy'
-    return {
-      icon: image,
-      text: `${name} ${won ? '✓' : '✗'}`,
-      color: won ? OBJECTIVE_FIGHT_STATUS.leadColor : OBJECTIVE_FIGHT_STATUS.behindColor,
-      resolved: true,
-    }
-  }
-  const hpPct =
-    objectiveMaxHP.value > 0 ? Math.round((objectiveHP.value / objectiveMaxHP.value) * 100) : 0
-  const leading = objectiveOwnDamage.value >= objectiveEnemyDamage.value
-  return {
-    icon: image,
-    text: `${name} · ${hpPct}%`,
-    color: leading ? OBJECTIVE_FIGHT_STATUS.leadColor : OBJECTIVE_FIGHT_STATUS.behindColor,
-    resolved: false,
-  }
-})
-
-/** Wie lange das Win/Lose-Badge den Titel-Slot hält, bevor die
- *  Honor-Phase mit Sekundenzähler übernimmt (Result-Pause insgesamt:
- *  BATTLE_RESULT_PAUSE_MS = 8s). */
-const RESULT_BADGE_MS = 3000
-
-const resultBadge = computed(() => {
-  if (phaseKey.value !== 'honor' || !lastAutoBattleResult.value) return null
-  // Nach ein paar Sekunden den Slot an die Honor-Anzeige übergeben
-  if (elapsedMs.value > RESULT_BADGE_MS) return null
-  const won = lastAutoBattleResult.value.won
-  const lp = lastLpChange.value
-  return {
-    label: won ? 'Win' : 'Lose',
-    lp: lp >= 0 ? `+${lp}` : `${lp}`,
-    color: won ? '#74d448' : '#cc6050',
-    glow: won ? 'rgba(116, 212, 72, 0.6)' : 'rgba(204, 96, 80, 0.6)',
-  }
-})
-
-/**
- * State-based, not display-based: the status owns the title slot for the
- * whole auto-battle lifecycle. searchingPhaseStartTimestamp is set
- * synchronously on the Battle Start click, so the swap happens instantly —
- * before the intro animation and any phase displays exist.
- */
-const hasLiveStatus = computed(
-  () =>
-    isAutoBattleInitialized.value ||
-    autoBattleEnabled.value ||
-    searchingPhaseStartTimestamp.value > 0,
+/** Render size of the crest glyph — the em box the fit budgeted for it. */
+const crestGlyphPx = computed(() =>
+  Math.round(fit.value.crestStatusSize * SCOREBOARD_CREST.GLYPH_EM),
 )
 
-/** Zeichenzahl des aktiven Status (+2 für Icon/Scan-Dots) — bindet die
- *  Schriftgröße an die Textlänge, damit jeder Status in den Crest passt. */
-const liveChars = computed(() => {
-  const text =
-    objectiveFightDisplay.value?.text ??
-    (resultBadge.value
-      ? `${resultBadge.value.label} ${resultBadge.value.lp} LP`
-      : (gameStateDisplay.value?.text ?? BATTLE_PHASES.searching.label))
-  return text.length + 2
-})
+/* Progress of the running phase, drawn as a hairline along the crest's bottom
+   edge: it grows from the middle outward in the phase's own colour. It sits in
+   the slack the fit already keeps below the line (TEXT_HEIGHT_FRACTION), so it
+   costs the text neither width nor size. */
+const phaseProgressStyle = computed(() => ({
+  transform: `scaleX(${phaseProgress.value})`,
+  background: phaseConfig.value.color,
+}))
+
 </script>
 
 <template>
@@ -368,11 +460,12 @@ const liveChars = computed(() => {
       <span ref="probeValueRef" class="sb-stat-value sb-probe" :style="probeStyle" />
       <span ref="probeRankRef" class="sb-stat-value sb-rank-value sb-probe" :style="probeStyle" />
       <span ref="probeLabelRef" class="sb-stat-label sb-probe" :style="probeStyle" />
+      <span ref="probeTitleRef" class="sb-title sb-probe" :style="probeStyle" />
+      <span ref="probeStatusRef" class="sb-live-text sb-probe" :style="probeStyle" />
     </div>
 
     <!-- LEFT · combat stats -->
     <div
-      ref="leftRef"
       class="sb-stats sb-stats--left"
       role="button"
       tabindex="0"
@@ -409,85 +502,79 @@ const liveChars = computed(() => {
       </div>
     </div>
 
-    <!-- CENTER · title crest -->
+    <!-- CENTER · title crest — one line, as large as its box and the strip
+         height allow (see SCOREBOARD_CREST / utils/scoreboardFit). The rails at
+         both ends live off the width the line did NOT need and double as the
+         running phase's progress track. -->
     <div class="sb-crest">
-      <div class="sb-crest-rule-row">
-        <span class="sb-crest-rule sb-crest-rule--left" />
-        <img src="/img/star-128.png" alt="" class="sb-crest-star" />
-        <span class="sb-crest-rule sb-crest-rule--right" />
+      <span class="sb-crest-rail sb-crest-rail--left" aria-hidden="true" />
+
+      <div class="sb-crest-slot">
+        <!-- title slot: game title when idle, promoted live status when active -->
+        <!-- type="transition": .sb-title trägt eine infinite Flicker-Animation (6s);
+             ohne explizites type wartet Vue auf deren animationend, das nie feuert,
+             und der Swap hängt bis zum 6s-Fallback-Timeout. -->
+        <Transition name="crest-swap" mode="out-in" type="transition">
+          <div v-if="hasLiveStatus" key="live" class="sb-crest-line sb-crest-line--live">
+            <template v-if="objectiveFightDisplay">
+              <img
+                :src="objectiveFightDisplay.icon"
+                alt=""
+                class="sb-crest-glyph"
+                :class="{ 'sb-status-icon--live': !objectiveFightDisplay.resolved }"
+              />
+              <span class="sb-live-text" :style="{ color: objectiveFightDisplay.color }">
+                {{ objectiveFightDisplay.text }}
+              </span>
+            </template>
+            <template v-else-if="resultBadge">
+              <span
+                class="sb-live-text sb-live-text--badge"
+                :style="{ color: resultBadge.color, '--live-glow': resultBadge.glow }"
+              >
+                {{ resultBadge.text }}
+              </span>
+            </template>
+            <template v-else>
+              <!-- every phase leads with its own registry glyph; the search,
+                   which is a phase of waiting, keeps its scan dots -->
+              <Icon
+                v-if="liveStatus.glyph"
+                :icon="liveStatus.glyph"
+                :width="crestGlyphPx"
+                :height="crestGlyphPx"
+                class="sb-crest-glyph sb-status-icon--live"
+                :style="{ color: liveStatus.color }"
+              />
+              <span v-else class="sb-scan-dots" aria-hidden="true">
+                <span class="sb-scan-dot" />
+                <span class="sb-scan-dot" />
+                <span class="sb-scan-dot" />
+              </span>
+              <span class="sb-live-text" :style="{ color: liveStatus.color }">
+                {{ liveStatus.text }}
+              </span>
+            </template>
+          </div>
+
+          <div v-else key="title" class="sb-crest-line sb-crest-line--title">
+            <img :src="CREST_STAR_IMAGE" alt="" class="sb-crest-star" />
+            <span v-ink-center="fit.crestTitleSize" class="sb-title">{{ GAME_TITLE }}</span>
+            <img :src="CREST_STAR_IMAGE" alt="" class="sb-crest-star" />
+          </div>
+        </Transition>
       </div>
-      <!-- title slot: game title when idle, promoted live status when active -->
-      <!-- type="transition": .sb-title trägt eine infinite Flicker-Animation (6s);
-           ohne explizites type wartet Vue auf deren animationend, das nie feuert,
-           und der Swap hängt bis zum 6s-Fallback-Timeout. -->
-      <Transition name="crest-swap" mode="out-in" type="transition">
-        <div
-          v-if="hasLiveStatus"
-          key="live"
-          class="sb-live-title"
-          :style="{ '--live-chars': liveChars }"
-        >
-          <template v-if="objectiveFightDisplay">
-            <img
-              :src="objectiveFightDisplay.icon"
-              alt=""
-              class="sb-live-icon"
-              :class="{ 'sb-status-icon--live': !objectiveFightDisplay.resolved }"
-            />
-            <span class="sb-live-text" :style="{ color: objectiveFightDisplay.color }">
-              {{ objectiveFightDisplay.text }}
-            </span>
-          </template>
-          <template v-else-if="resultBadge">
-            <span
-              class="sb-live-text sb-live-text--badge"
-              :style="{ color: resultBadge.color, '--live-glow': resultBadge.glow }"
-            >
-              {{ resultBadge.label }}&thinsp;{{ resultBadge.lp }}&thinsp;LP
-            </span>
-          </template>
-          <template v-else-if="gameStateDisplay">
-            <!-- the loading phase gets its registry icon, the search its scan dots -->
-            <Icon
-              v-if="phaseKey === 'loading' && phaseConfig.icon"
-              :icon="phaseConfig.icon"
-              width="24"
-              height="24"
-              class="sb-live-glyph sb-status-icon--live"
-              :style="{ color: phaseConfig.color }"
-            />
-            <span
-              v-else-if="phaseKey === 'searching'"
-              class="sb-scan-dots sb-scan-dots--big"
-              aria-hidden="true"
-            >
-              <span class="sb-scan-dot" />
-              <span class="sb-scan-dot" />
-              <span class="sb-scan-dot" />
-            </span>
-            <span class="sb-live-text" :style="{ color: gameStateDisplay.color }">
-              {{ gameStateDisplay.text }}
-            </span>
-          </template>
-          <!-- fallback: battle loop is live but no phase display yet -->
-          <template v-else>
-            <span class="sb-scan-dots sb-scan-dots--big" aria-hidden="true">
-              <span class="sb-scan-dot" />
-              <span class="sb-scan-dot" />
-              <span class="sb-scan-dot" />
-            </span>
-            <span class="sb-live-text" :style="{ color: BATTLE_PHASES.searching.color }">
-              {{ BATTLE_PHASES.searching.label }}
-            </span>
-          </template>
-        </div>
-        <div v-else key="title" v-ink-center class="sb-title">BARDLE</div>
-      </Transition>
+
+      <span class="sb-crest-rail sb-crest-rail--right" aria-hidden="true" />
+
+      <!-- progress of the running phase, along the crest's bottom edge -->
+      <span v-if="hasLiveStatus" class="sb-crest-progress" aria-hidden="true">
+        <i class="sb-crest-progress-fill" :style="phaseProgressStyle" />
+      </span>
     </div>
 
     <!-- RIGHT · economy / objective stats -->
     <div
-      ref="rightRef"
       class="sb-stats sb-stats--right"
       role="button"
       tabindex="0"
@@ -563,13 +650,10 @@ const liveChars = computed(() => {
 
 <style scoped>
 .scoreboard {
-  /* The stat halves are sized by measurement, not by CSS math: --sb-value-size,
-     --sb-icon-size, --sb-label-size, --sb-cell-pad, --sb-icon-gap, --sb-row-gap
-     and --sb-rank-slot all arrive from the fit (see useScoreboardFit). Only the
-     crest still scales off the container's width — it holds prose, not numbers. */
-  --sb-title-size: clamp(16px, 2.5cqw, 30px);
-  --sb-crest-w: clamp(160px, 24cqw, 300px);
-
+  /* Nothing here is sized by CSS math: --sb-value-size, --sb-icon-size,
+     --sb-label-size, --sb-cell-pad, --sb-icon-gap, --sb-row-gap, --sb-rank-slot
+     and the crest's --sb-crest-w / --sb-title-size / --sb-status-size all arrive
+     from the fit, measured against this very strip (see useScoreboardFit). */
   position: absolute;
   left: calc(440px * var(--hud-scale, 1));
   right: calc(440px * var(--hud-scale, 1));
@@ -579,12 +663,11 @@ const liveChars = computed(() => {
   top: calc(var(--sb-strip-top, 364px) * var(--hud-scale, 1));
   bottom: 0;
   z-index: 2;
-  container-type: inline-size;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* the fit budgets against exactly these paddings (STRIP_PAD_TOP/BOTTOM_PX) */
-  padding: var(--sb-pad-top, 7px) 12px var(--sb-pad-bottom, 4px);
+  /* the fit budgets against exactly these paddings (STRIP_PAD_*_PX) */
+  padding: var(--sb-pad-top, 7px) var(--sb-pad-x, 12px) var(--sb-pad-bottom, 4px);
   min-width: 0;
   pointer-events: none;
 }
@@ -731,50 +814,109 @@ const liveChars = computed(() => {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-/* ── Title crest ── */
+/* ── Title crest ──
+   Width and both line sizes come from the fit. The box is exactly as wide as
+   the halves left over, and the line inside it is exactly as large as that box
+   and the strip height allow — same measured logic as the cells, one line
+   instead of caption + value, which is why the middle can run so much larger. */
 .sb-crest {
-  /* fluid width, fixed per viewport size: sized for the longest live status
-     so nothing around it ever shifts when the text or mode changes */
+  position: relative;
   flex: 0 0 auto;
-  width: var(--sb-crest-w);
+  width: var(--sb-crest-w, 340px);
+  height: 100%;
+  /* em base for everything ornamental in here: the size of the line on show */
+  font-size: var(--sb-crest-size, 24px);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  /* exactly the air the fit budgeted at both ends (SCOREBOARD_CREST.PAD_EM) */
+  gap: var(--sb-crest-pad, 0.3em);
   pointer-events: none;
   user-select: none;
+  /* a value crossing a digit boundary re-weights the cells and hands the crest
+     a little more or less room — same glide the cells themselves use */
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.sb-crest-rule-row {
+/* The line itself: natural width, centered, never wrapped. */
+.sb-crest-slot {
+  flex: 0 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.sb-crest-rule {
-  height: 1px;
-  width: max(20px, calc(34px * var(--hud-scale, 1)));
+.sb-crest-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sb-crest-gap, 0.32em);
+  line-height: 1;
+  white-space: nowrap;
+  /* a phase whose text needs more room resizes the line — as a glide, like a
+     stat cell crossing a digit boundary */
+  transition: font-size 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.sb-crest-rule--left {
+.sb-crest-line--title {
+  font-size: var(--sb-title-size, 30px);
+}
+.sb-crest-line--live {
+  font-size: var(--sb-status-size, 18px);
+}
+
+/* ── Rails ──
+   Pure leftover: flex:1 with min-width 0, so they take the width the line did
+   not need and vanish rather than push it. A short line gets its flanking gold
+   dashes, a long one gets the pixels instead. */
+.sb-crest-rail {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: var(--sb-crest-rail, 1.4em);
+  height: max(2px, calc(3px * var(--hud-scale, 1)));
+}
+.sb-crest-rail--left {
   background: linear-gradient(90deg, transparent, #c89040);
 }
-.sb-crest-rule--right {
+.sb-crest-rail--right {
   background: linear-gradient(90deg, #c89040, transparent);
 }
 
+/* ── Phase progress ──
+   Along the bottom edge, inside the slack the fit keeps below the line — it
+   takes nothing from the text and shows how far the running phase has come. */
+.sb-crest-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: max(2px, calc(3px * var(--hud-scale, 1)));
+  overflow: hidden;
+  background: #2a1a0a;
+}
+.sb-crest-progress-fill {
+  display: block;
+  height: 100%;
+  /* grows from the middle outward, like the crest itself */
+  transform-origin: center;
+  /* 1s = the status clock's own tick, so it glides instead of stepping */
+  transition:
+    transform 1s linear,
+    background 0.4s ease;
+}
+
 .sb-crest-star {
-  width: max(11px, calc(15px * var(--hud-scale, 1)));
-  height: max(11px, calc(15px * var(--hud-scale, 1)));
+  width: var(--sb-crest-star, 0.58em);
+  height: var(--sb-crest-star, 0.58em);
+  flex-shrink: 0;
   object-fit: contain;
   filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.8));
 }
 
 .sb-title {
-  font-size: var(--sb-title-size);
-  letter-spacing: 0.3em;
-  padding-left: 0.3em; /* optically recenters the letter-spaced text */
+  letter-spacing: 0.22em;
   color: #e8c040;
-  line-height: 1.1;
+  line-height: 1;
   white-space: nowrap;
   text-shadow:
     0 0 6px #ffe060,
@@ -801,30 +943,12 @@ const liveChars = computed(() => {
 }
 
 /* ── Live status in the title slot ── */
-.sb-live-title {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: max(5px, calc(8px * var(--hud-scale, 1)));
-  /* match the BARDLE title box so the crest never shifts */
-  min-height: calc(var(--sb-title-size) * 1.1);
-  max-width: 100%;
-  overflow: hidden;
-}
-
 .sb-live-text {
-  /* Längenabhängig: lange Status (z. B. "Planet Search · 0:04") schrumpfen so
-     weit, dass sie immer in die Crest-Breite (clamp unten = .sb-crest width)
-     passen; kurze ("Battle · 12:00") behalten die volle Größe. 0.75em ≈
-     mittlere Zeichenbreite der Uppercase-Schrift inkl. letter-spacing. */
-  font-size: min(
-    clamp(12px, 1.7cqw, 21px),
-    max(10px, calc((var(--sb-crest-w) - 24px) / (var(--live-chars, 16) * 0.75)))
-  );
+  /* size comes from .sb-crest-line--live — the fit measured this very string */
   letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
-  line-height: 1.1;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   transition: color 0.4s ease;
   text-shadow:
@@ -839,17 +963,13 @@ const liveChars = computed(() => {
     0 0 12px var(--live-glow, rgba(116, 212, 72, 0.6));
 }
 
-.sb-live-icon {
-  width: clamp(13px, 1.8cqw, 22px);
-  height: clamp(13px, 1.8cqw, 22px);
-  object-fit: contain;
-}
-
-/* Phase glyph (game-icons) in the same slot as .sb-live-icon */
-.sb-live-glyph {
-  width: clamp(14px, 1.9cqw, 24px);
-  height: clamp(14px, 1.9cqw, 24px);
+/* Ornament leading the status — objective artwork or the phase's game-icon.
+   Both stand in the same em box the fit budgeted for them. */
+.sb-crest-glyph {
+  width: var(--sb-crest-glyph, 1em);
+  height: var(--sb-crest-glyph, 1em);
   flex-shrink: 0;
+  object-fit: contain;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
 }
 
@@ -891,23 +1011,20 @@ const liveChars = computed(() => {
   transform: translateY(-5px);
 }
 
+/* Stand-in for the phase glyph while the search runs — same em box, so the
+   line measures identically whether it leads with dots or with an icon. */
 .sb-scan-dots {
+  width: var(--sb-crest-glyph, 1em);
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-}
-
-.sb-scan-dots--big {
-  gap: 4px;
-}
-.sb-scan-dots--big .sb-scan-dot {
-  width: 5px;
-  height: 5px;
+  justify-content: center;
+  gap: 0.13em;
 }
 
 .sb-scan-dot {
-  width: 3px;
-  height: 3px;
+  width: 0.2em;
+  height: 0.2em;
   border-radius: 50%;
   background: #9a6830;
   animation: sb-scan-pulse 1.2s ease-in-out infinite;
@@ -930,15 +1047,6 @@ const liveChars = computed(() => {
     background: #c89040;
     transform: scale(1.15);
     box-shadow: 0 0 4px rgba(200, 140, 40, 0.7);
-  }
-}
-
-/* Narrow strips get tighter title tracking — the stat cells need no breakpoint
-   any more, the fit resolves them from the measured geometry. */
-@container (max-width: 1300px) {
-  .sb-title {
-    letter-spacing: 0.18em;
-    padding-left: 0.18em;
   }
 }
 
@@ -980,7 +1088,10 @@ const liveChars = computed(() => {
   /* resizing cells snap instead of gliding */
   .sb-stat,
   .sb-stat-icon,
-  .sb-stat-value {
+  .sb-stat-value,
+  .sb-crest,
+  .sb-crest-line,
+  .sb-crest-progress-fill {
     transition: none;
   }
 }

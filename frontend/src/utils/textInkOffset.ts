@@ -282,6 +282,13 @@ interface ElementState {
   x: boolean
   y: boolean
   generation: number
+  /**
+   * Optionaler Bindungswert als Cache-Schlüssel: Elemente, deren Schriftgröße
+   * nicht am Viewport hängt, sondern an einer gemessenen Größe (Bottom-Crest),
+   * ändern sie ohne Resize — dann ist der gecachte Deskriptor der einer anderen
+   * Schriftgröße, und die Korrektur säße daneben.
+   */
+  key?: unknown
 }
 
 const states = new WeakMap<HTMLElement, ElementState>()
@@ -328,6 +335,7 @@ function stateFor(el: HTMLElement): ElementState {
     x: hit?.x ?? true,
     y: hit?.y ?? false,
     generation,
+    key: hit?.key,
   }
   states.set(el, next)
   return next
@@ -357,10 +365,19 @@ export const vInkCenter: ObjectDirective<HTMLElement> = {
       x: mods.x === true || mods.y !== true,
       y: mods.y === true,
       generation: -1,
+      key: binding?.value,
     })
     applyInkCentering(el)
   },
-  updated(el) {
+  updated(el, binding) {
+    // Ein geänderter Bindungswert (z. B. `v-ink-center="fontSize"`) verwirft den
+    // Deskriptor — sonst korrigierte die neue Größe mit den alten Tintenmaßen.
+    const state = states.get(el)
+    if (state && state.key !== binding?.value) {
+      state.key = binding?.value
+      state.descriptor = null
+      state.generation = -1
+    }
     applyInkCentering(el)
   },
   unmounted(el) {
