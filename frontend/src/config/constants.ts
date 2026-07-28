@@ -3198,6 +3198,9 @@ export const HEADER_NOTIF_BADGE_MAX_PX = 36
 // Edge gap between neighbouring badges as a fraction of the badge diameter.
 export const HEADER_BADGE_EDGE_GAP_FRAC = 0.5
 
+// Header universe block — icon of the "Universe" stat tile (left of Galaxy).
+export const HEADER_UNIVERSE_ICON = 'game-icons:over-infinity'
+
 // Header universe block — meep counter count-up tween (steps × interval ≈ 320ms)
 export const MEEP_COUNTUP_STEPS = 20
 export const MEEP_COUNTUP_INTERVAL_MS = 16
@@ -3741,6 +3744,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:trail', // Expeditions category
   'game-icons:ore', // Materials & Gear category
   'game-icons:aura', // Buffs & Synergies category
+  // Header universe block — stat tiles (UniverseRescueComponent)
+  'game-icons:over-infinity', // Universe tile icon (HEADER_UNIVERSE_ICON)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

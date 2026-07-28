@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { formatNumber } from '@/config/numberFormat'
+import { universes } from '@/config/universes'
+import { toRoman } from '@/utils/format'
 import {
+  HEADER_UNIVERSE_ICON,
   MEEP_COUNTUP_STEPS,
   MEEP_COUNTUP_INTERVAL_MS,
   MEEP_RISING_HOLD_MS,
@@ -16,6 +20,15 @@ import {
 
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
+
+/** Römisch statt arabisch: die Universe-Ebene steht damit sichtbar über der
+    Galaxie-Zählung und bleibt selbst bei XII kurz genug für die Kachel. */
+const universeRoman = computed(() => toRoman(gameStore.currentUniverse))
+
+const universeTitle = computed(() => {
+  const name = universes[gameStore.currentUniverse - 1]?.name ?? 'Unknown'
+  return `Universe ${universeRoman.value} — ${name} (${gameStore.currentUniverse}/${gameStore.totalUniverses})`
+})
 
 /** Ab diesem Füllstand liegt die rechtsbündige Zahl auf dem hellen Gold. */
 const pctOnFill = computed(
@@ -90,8 +103,24 @@ onUnmounted(() => {
 
 <template>
   <div class="uni-block">
-    <!-- Row 1: two stat tiles — galaxy (fixed) and meeps (fills the rest) -->
+    <!-- Row 1: three stat tiles — universe, galaxy, meeps (coarse → fine) -->
     <div class="uni-stats">
+      <div class="uni-tile uni-tile--universe" :title="universeTitle">
+        <Icon
+          :icon="HEADER_UNIVERSE_ICON"
+          width="24"
+          height="24"
+          class="tile-icon uv-icon"
+          aria-hidden="true"
+        />
+        <div class="tile-text">
+          <span v-ink-center class="tile-label">Universe</span>
+          <span v-ink-center class="tile-value uv-value">{{ universeRoman }}</span>
+        </div>
+      </div>
+
+      <div class="header-divider uni-divider" aria-hidden="true"></div>
+
       <div class="uni-tile uni-tile--galaxy" title="Current galaxy">
         <img src="/img/galaxy-far-128.png" class="tile-icon gx-icon" alt="" aria-hidden="true" />
         <div class="tile-text">
@@ -211,10 +240,17 @@ onUnmounted(() => {
 /* ================================================================
    ROW 1 — stat tiles
    ================================================================ */
+/* Container-Query statt Viewport: der Header deckelt bei 1400px, dieser Block
+   bleibt daher ab 2K rund 275px breit, während --header-height mit vw weiter
+   wächst. Drei Kacheln vertragen das nicht — Icon, Label und Zahl hängen
+   deshalb an der EIGENEN Breite (cqw) und nicht mehr an der Header-Höhe. */
 .uni-stats {
+  container-type: inline-size;
   display: flex;
   align-items: center;
-  gap: clamp(6px, 0.55vw, 10px);
+  /* Bewusst kein cqw: auf dem Container selbst würde sich die Einheit auf
+     dessen eigenen Vorfahren beziehen, nicht auf ihn. */
+  gap: clamp(4px, 0.35vw, 6px);
   width: 100%;
   min-width: 0;
   flex-shrink: 0;
@@ -225,19 +261,26 @@ onUnmounted(() => {
 .uni-tile {
   display: flex;
   align-items: center;
-  gap: clamp(4px, 0.4vw, 7px);
+  gap: clamp(3px, 0.3vw, 6px);
   min-width: 0;
   transition: filter 0.3s;
 }
 
-/* Beide Hälften gleich breit (flex-basis 0 + grow 1), Inhalt darin zentriert:
-   der Divider steht damit exakt in der Mitte und Galaxie wie Meeps sitzen
-   mittig in ihrem Feld. min-width: min-content ist die Reißleine — reicht der
-   Platz für eine sehr lange Meep-Zahl nicht, rückt lieber der Divider aus der
-   Mitte, als dass die Zahl abgeschnitten wird. */
-.uni-tile--galaxy,
-.uni-tile--meep {
+/* Drei Felder mit flex-basis 0, Inhalt jeweils mittig: die Divider sitzen
+   damit auf festen Dritteln. Meeps bekommt etwas mehr Grow, weil dort als
+   einziges eine mehrstellige Zahl steht — Universe (I–XII) und Galaxy
+   bleiben kurz. min-width: min-content ist die Reißleine: reicht der Platz
+   für eine sehr lange Meep-Zahl nicht, rücken lieber die Divider, als dass
+   die Zahl abgeschnitten wird. */
+.uni-tile--universe,
+.uni-tile--galaxy {
   flex: 1 1 0;
+  justify-content: center;
+  min-width: min-content;
+}
+
+.uni-tile--meep {
+  flex: 1.3 1 0;
   justify-content: center;
   min-width: min-content;
 }
@@ -254,11 +297,11 @@ onUnmounted(() => {
   filter: drop-shadow(0 0 7px rgba(251, 146, 60, 0.5));
 }
 
+/* Drei Kacheln statt zwei: Icon und Zahl eine Stufe kleiner, sonst läuft die
+   Zeile an. Maße relativ zur Blockbreite (cqw), siehe .uni-stats. */
 .tile-icon {
-  width: min(calc(var(--header-height) * 0.36), 40px);
-  height: min(calc(var(--header-height) * 0.36), 40px);
-  min-width: 22px;
-  min-height: 22px;
+  width: clamp(19px, 8cqw, 25px);
+  height: clamp(19px, 8cqw, 25px);
   object-fit: contain;
   flex-shrink: 0;
   user-select: none;
@@ -281,9 +324,11 @@ onUnmounted(() => {
 }
 
 .tile-label {
-  font-size: clamp(9px, calc(var(--header-height) * 0.125), 12px);
+  /* Das längste Label ("Universe") bestimmt die min-content-Breite seiner
+     Kachel — bei drei Kacheln muss es eine Stufe kleiner laufen. */
+  font-size: clamp(8px, 3.3cqw, 10.5px);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   line-height: 1;
   white-space: nowrap;
@@ -291,9 +336,9 @@ onUnmounted(() => {
 }
 
 .tile-value {
-  /* Cap bei 26px: bei zwei exakt gleich breiten Hälften ist die Meep-Zahl
-     der Engpass — auf 4K bleiben ihr rund 120px, mit 28px liefe sie an. */
-  font-size: min(calc(var(--header-height) * 0.28), 26px);
+  /* Die Meep-Zahl ist der Engpass — sie teilt sich die Zeile jetzt mit
+     Universe und Galaxy und muss auch als "999.9M" hineinpassen. */
+  font-size: clamp(14px, 6.5cqw, 19px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
@@ -305,6 +350,26 @@ onUnmounted(() => {
   transition:
     color 0.3s,
     text-shadow 0.3s;
+}
+
+/* ── Universe ──────────────────────────────────────── */
+/* Amethyst statt Gold: greift die Prestige-Palette des Buttons darunter auf,
+   damit die drei Kacheln je eine eigene Farbe tragen (violett / grün / orange). */
+.uv-icon {
+  color: #b98cf5;
+  filter: drop-shadow(0 0 5px rgba(150, 96, 235, 0.5));
+}
+
+.uni-tile--universe:hover .uv-icon {
+  transform: scale(1.08) translateZ(0);
+  filter: drop-shadow(0 0 10px rgba(150, 96, 235, 0.95));
+}
+
+.uv-value {
+  color: #d7bcff;
+  text-shadow: 0 0 10px rgba(150, 96, 235, 0.4);
+  /* Römische Ziffern: etwas mehr Laufweite, sonst kleben I und I aneinander. */
+  letter-spacing: 0.06em;
 }
 
 /* ── Galaxy ────────────────────────────────────────── */
