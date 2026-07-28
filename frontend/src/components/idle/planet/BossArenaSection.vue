@@ -634,7 +634,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   width: auto;
   max-width: 55%;
   object-fit: contain;
-  image-rendering: pixelated;
   /* Nur EIN drop-shadow: gestapelte Filter rastern das Sprite bei jeder
      Hit-Animation mehrfach neu (FPS-Killer bei Klick-Spam) */
   filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
@@ -797,7 +796,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   display: block;
   object-fit: cover;
   object-position: center top;
-  image-rendering: pixelated;
 }
 .champ-dmg {
   position: absolute;
@@ -1013,7 +1011,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   width: 22px;
   height: 22px;
   object-fit: contain;
-  image-rendering: crisp-edges;
   filter: drop-shadow(0 0 10px rgba(54, 148, 255, 0.95));
 }
 .arena-curse-timer {

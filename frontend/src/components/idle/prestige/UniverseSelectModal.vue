@@ -211,7 +211,6 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
   width: 30px;
   height: 30px;
   object-fit: contain;
-  image-rendering: pixelated;
 }
 
 .uni-title {

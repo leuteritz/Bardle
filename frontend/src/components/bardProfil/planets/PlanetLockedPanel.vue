@@ -305,7 +305,6 @@ const canUnlock = computed(() => store.canUnlockPlanetSlot(props.slotIndex))
   width: 66%;
   height: 66%;
   object-fit: contain;
-  image-rendering: pixelated;
   filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.6));
 }
 
@@ -443,7 +442,6 @@ const canUnlock = computed(() => store.canUnlockPlanetSlot(props.slotIndex))
 .ps-lock-cta-cost img {
   width: clamp(16px, 2vh, 22px);
   height: clamp(16px, 2vh, 22px);
-  image-rendering: pixelated;
 }
 
 .ps-lock-blocked {

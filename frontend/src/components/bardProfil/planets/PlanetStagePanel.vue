@@ -1130,7 +1130,6 @@ const configTarget = computed(() => {
 .ps-level-chime {
   width: clamp(17px, 2.2vh, 22px);
   height: clamp(17px, 2.2vh, 22px);
-  image-rendering: pixelated;
 }
 
 /* Phase-lock requirement shown inline on the button's second line (keeps the
@@ -1471,7 +1470,6 @@ const configTarget = computed(() => {
   width: 80%;
   height: 80%;
   object-fit: contain;
-  image-rendering: pixelated;
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--tc) 55%, transparent));
 }
 

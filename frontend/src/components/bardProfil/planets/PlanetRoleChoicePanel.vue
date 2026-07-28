@@ -378,7 +378,6 @@ img.ps-role-icon {
   width: 64%;
   height: 64%;
   object-fit: contain;
-  image-rendering: pixelated;
 }
 
 .ps-role-icon--gi {

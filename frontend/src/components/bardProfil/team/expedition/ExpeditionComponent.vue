@@ -1175,7 +1175,6 @@ export default defineComponent({
   width: 20px;
   height: 20px;
   object-fit: contain;
-  image-rendering: pixelated;
   flex-shrink: 0;
 }
 .ec-reward-amount { font-size: 16px; font-weight: 800; color: #ffd060; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }

@@ -252,7 +252,6 @@ export default defineComponent({
   width: 14px;
   height: 14px;
   display: inline-block;
-  image-rendering: pixelated;
 }
 
 .tier-cost-badge--ok {

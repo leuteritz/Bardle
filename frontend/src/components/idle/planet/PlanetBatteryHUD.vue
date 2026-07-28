@@ -1083,7 +1083,6 @@ onUnmounted(() => {
 .tbh-vacant-chime {
   width: 15px;
   height: 15px;
-  image-rendering: pixelated;
   flex-shrink: 0;
 }
 

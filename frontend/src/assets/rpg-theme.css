@@ -247,8 +247,6 @@
   width: 1em;
   height: 1em;
   object-fit: contain;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
 }
 
 /* ── Champion Filter (shared search + trait/origin filter) ──────────────────

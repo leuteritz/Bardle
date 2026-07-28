@@ -351,7 +351,6 @@ function chooseBuilding(buildingId: string) {
   width: 78%;
   height: 78%;
   object-fit: contain;
-  image-rendering: pixelated;
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tc) 50%, transparent));
   transition: transform 0.15s ease;
 }

@@ -793,7 +793,6 @@ function particleStyle(i: number): Record<string, string> {
   width: 14px;
   height: 14px;
   object-fit: contain;
-  image-rendering: pixelated;
 }
 
 /* ── Auto-battle strip ────────────────────────────────── */
