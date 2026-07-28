@@ -1487,10 +1487,28 @@ const structureMarkers = computed(() => {
 .hp--mid { background: #c9d137; }
 .hp--low { background: #d15a37; }
 
+/* Name plate under the dot. Sized in cqw against the square map (see
+   .map-square) instead of a fixed 8px, so it grows with the resolution —
+   ~11px on Full HD up to the 15px cap on 2K/4K. The cap keeps it subordinate
+   to the 36px portrait above it. The hard outline (four 1px shadows) is what
+   makes it readable over the bright lane art and over a neighbouring dot's
+   label when champions cluster in a fight. */
 .champ-name {
-  margin-top: 1px;
-  font-size: 8px;
-  text-shadow: 0 1px 2px #000;
+  margin-top: 2px;
+  padding: 0 4px 1px;
+  font-size: clamp(11px, 2cqw, 15px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  /* Dark plate + hard outline. The plate matters when champions pile up in a
+     fight: two labels then OCCLUDE each other and the top one stays readable,
+     instead of the letters interleaving into mush. */
+  background: rgba(8, 7, 4, 0.62);
+  border-radius: 3px;
+  text-shadow:
+    0 1px 2px #000,
+    1px 0 1px #000,
+    -1px 0 1px #000,
+    0 -1px 1px #000;
   white-space: nowrap;
 }
 .champ-name--blue { color: #cfe0ff; }
