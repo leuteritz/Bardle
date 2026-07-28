@@ -1,5 +1,7 @@
 <template>
-  <div class="landing-screen">
+  <!-- The root is the stage's size container: everything below measures itself
+       against the modal's content box (cqh), never against the window. -->
+  <div class="landing-root">
     <!-- Shared cosmic backdrop, same as every other tab -->
     <CosmicStageBackground />
     <div class="stage-vignette" />
@@ -12,53 +14,55 @@
       RANK UP
     </button>
 
-    <!-- ── Focus 1: rank + LP, flanked by the headline career numbers ── -->
-    <RankBandPanel class="landing-layer" :left-group="ladderGroup" :right-group="legendGroup" />
+    <div class="landing-screen">
+      <!-- ── Focus 1: rank + LP, flanked by the headline career numbers ── -->
+      <RankBandPanel class="landing-layer" :left-group="ladderGroup" :right-group="legendGroup" />
 
-    <!-- ── Focus 2: team roster, full stage width ── -->
-    <TeamRosterPanel class="roster-slot landing-layer" />
+      <!-- ── Focus 2: team roster, full stage width ── -->
+      <TeamRosterPanel class="roster-slot landing-layer" />
 
-    <!-- ── Focus 3: the start button ── -->
-    <div class="action-bar landing-layer">
-      <div class="action-rule action-rule--left" />
-      <button
-        class="battle-btn"
-        :class="{
-          'battle-btn--locked': !hasFullTeam && !isBattleLive,
-          'battle-btn--live': isBattleLive && !isStarting,
-        }"
-        :disabled="isStarting || (!hasFullTeam && !isBattleLive)"
-        :title="!hasFullTeam && !isBattleLive ? `${5 - teamProgress} role(s) still open` : ''"
-        @click="$emit('start')"
-      >
-        <span class="battle-btn-edge" />
-        <span class="battle-btn-face">
-          <Icon
-            v-if="isStarting"
-            icon="game-icons:sundial"
-            width="24"
-            height="24"
-            class="battle-btn-icon"
-            style="color: #e8c040"
-          />
-          <img
-            v-else-if="!hasFullTeam && !isBattleLive"
-            src="/img/lock-128.png"
-            alt="Locked"
-            class="battle-btn-lock"
-          />
-          <span v-else-if="isBattleLive" class="battle-btn-live-dot" />
-          <img v-else src="/img/menu/BATTLE-128.png" alt="Battle" class="battle-btn-img" />
+      <!-- ── Focus 3: the start button ── -->
+      <div class="action-bar landing-layer">
+        <div class="action-rule action-rule--left" />
+        <button
+          class="battle-btn"
+          :class="{
+            'battle-btn--locked': !hasFullTeam && !isBattleLive,
+            'battle-btn--live': isBattleLive && !isStarting,
+          }"
+          :disabled="isStarting || (!hasFullTeam && !isBattleLive)"
+          :title="!hasFullTeam && !isBattleLive ? `${5 - teamProgress} role(s) still open` : ''"
+          @click="$emit('start')"
+        >
+          <span class="battle-btn-edge" />
+          <span class="battle-btn-face">
+            <Icon
+              v-if="isStarting"
+              icon="game-icons:sundial"
+              width="24"
+              height="24"
+              class="battle-btn-icon"
+              style="color: #e8c040"
+            />
+            <img
+              v-else-if="!hasFullTeam && !isBattleLive"
+              src="/img/lock-128.png"
+              alt="Locked"
+              class="battle-btn-lock"
+            />
+            <span v-else-if="isBattleLive" class="battle-btn-live-dot" />
+            <img v-else src="/img/menu/BATTLE-128.png" alt="Battle" class="battle-btn-img" />
 
-          <span v-if="isStarting" v-ink-center>STARTING…</span>
-          <span v-else-if="isBattleLive" v-ink-center>RETURN TO LIVE BATTLE</span>
-          <span v-else-if="!hasFullTeam" v-ink-center>
-            {{ 5 - teamProgress }} SLOT{{ 5 - teamProgress !== 1 ? 'S' : '' }} OPEN
+            <span v-if="isStarting" v-ink-center>STARTING…</span>
+            <span v-else-if="isBattleLive" v-ink-center>RETURN TO LIVE BATTLE</span>
+            <span v-else-if="!hasFullTeam" v-ink-center>
+              {{ 5 - teamProgress }} SLOT{{ 5 - teamProgress !== 1 ? 'S' : '' }} OPEN
+            </span>
+            <span v-else v-ink-center>START BATTLE</span>
           </span>
-          <span v-else v-ink-center>START BATTLE</span>
-        </span>
-      </button>
-      <div class="action-rule action-rule--right" />
+        </button>
+        <div class="action-rule action-rule--right" />
+      </div>
     </div>
   </div>
 </template>
@@ -170,16 +174,34 @@ const legendGroup = computed<RankStatGroup>(() => ({
 
 <style scoped>
 /* Flat deep-space base — CosmicStageBackground paints its starfield on top of
-   it (z-index 0), every content layer sits above via .landing-layer. */
-.landing-screen {
+   it (z-index 0), every content layer sits above via .landing-layer.
+
+   ── Why a size container ──
+   The battle tab lives inside the bard modal, which is only about 70% of the
+   window tall. Sizing this stage in vh therefore handed the rank band a height
+   budget it never actually gets, and the roster cards paid for it. Everything
+   below (rank band, roster, stat flanks) measures itself in cqh against THIS
+   box, so the same layout rules hold on a 13" MacBook and on 4K. */
+.landing-root {
   position: absolute;
   inset: 0;
   z-index: 20;
+  container-type: size;
+  container-name: landing;
+  overflow: hidden;
+  background: #0a0906;
+}
+
+.landing-screen {
+  position: relative;
+  z-index: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: clamp(8px, 1.2vh, 14px);
-  padding: clamp(10px, 1.6vh, 18px) clamp(14px, 1.4vw, 26px);
-  background: #0a0906;
+  gap: clamp(6px, 1.1cqh, 14px);
+  padding: clamp(8px, 1.5cqh, 18px) clamp(14px, 1.4vw, 26px);
+  /* the budget below is dimensioned to fit; this is the safety net for
+     viewports flatter than anything we target */
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
@@ -209,7 +231,7 @@ const legendGroup = computed<RankStatGroup>(() => ({
   position: absolute;
   /* bottom-right, level with the start button: the only spot where it covers
      nothing but a decorative rule */
-  bottom: clamp(16px, 2.4vh, 28px);
+  bottom: clamp(14px, 2.4cqh, 28px);
   right: clamp(14px, 1.4vw, 26px);
   z-index: 3;
   display: flex;
@@ -243,17 +265,16 @@ const legendGroup = computed<RankStatGroup>(() => ({
   height: 13px;
 }
 
-/* ── Roster: takes the leftover height, but capped so the cards keep a card-like
-   shape instead of stretching into thin columns on tall screens. ── */
+/* ── Roster: a fixed share of the stage, claimed before the rank band ──
+   The cards used to be whatever the rank band left over, which on a flat
+   viewport was almost nothing. Now the roster takes its cut of the container
+   height first and the band lives on the remainder — the band's own contents
+   compress for it (see RankBandPanel's container queries). The crown headroom
+   rides on top, so the cards keep their height whatever tier is worn. */
 .roster-slot {
-  /* takes nearly all spare height — the rank band only sinks what is left over
-     once the cards hit their cap */
-  flex: 12 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
-  min-height: 0;
-  /* the extra room is the headroom the rank crowns need above the cards, so
-     the cards themselves keep their height whatever tier the player wears */
-  max-height: calc(clamp(260px, 38vh, 470px) + var(--crown-space, 0px));
+  height: calc(clamp(160px, 38cqh, 330px) + var(--crown-space, 0px));
 }
 
 /* ── Focus 3: the start button ── */
@@ -283,7 +304,7 @@ const legendGroup = computed<RankStatGroup>(() => ({
   align-items: center;
   justify-content: center;
   min-width: clamp(270px, 23vw, 420px);
-  padding: clamp(10px, 1.5vh, 17px) clamp(30px, 3.2vw, 56px);
+  padding: clamp(8px, 1.5cqh, 17px) clamp(30px, 3.2vw, 56px);
   font-family: inherit;
   background: linear-gradient(to bottom, #24380f 0%, #172708 52%, #0f1c06 100%);
   border: 2px solid #4a8a28;
@@ -360,7 +381,7 @@ const legendGroup = computed<RankStatGroup>(() => ({
   align-items: center;
   justify-content: center;
   gap: clamp(10px, 1vw, 16px);
-  font-size: clamp(16px, 2.1vh, 25px);
+  font-size: clamp(15px, 2.1cqh, 25px);
   font-weight: 700;
   letter-spacing: 6px;
   line-height: 1.1;
@@ -382,7 +403,7 @@ const legendGroup = computed<RankStatGroup>(() => ({
   opacity: 0.5;
 }
 .battle-btn--locked .battle-btn-face {
-  font-size: clamp(14px, 1.8vh, 21px);
+  font-size: clamp(13px, 1.8cqh, 21px);
   text-shadow: none;
 }
 
@@ -400,7 +421,7 @@ const legendGroup = computed<RankStatGroup>(() => ({
   background: linear-gradient(to right, transparent, #e8c040, transparent);
 }
 .battle-btn--live .battle-btn-face {
-  font-size: clamp(14px, 1.8vh, 21px);
+  font-size: clamp(13px, 1.8cqh, 21px);
   text-shadow: 0 0 16px rgba(232, 192, 64, 0.35);
 }
 .battle-btn--live:hover:not(:disabled) {
@@ -409,17 +430,17 @@ const legendGroup = computed<RankStatGroup>(() => ({
 }
 
 .battle-btn-img {
-  width: clamp(20px, 2.4vh, 27px);
-  height: clamp(20px, 2.4vh, 27px);
+  width: clamp(19px, 2.4cqh, 27px);
+  height: clamp(19px, 2.4cqh, 27px);
   object-fit: contain;
 }
 .battle-btn-icon {
-  width: clamp(17px, 2.1vh, 23px);
-  height: clamp(17px, 2.1vh, 23px);
+  width: clamp(16px, 2.1cqh, 23px);
+  height: clamp(16px, 2.1cqh, 23px);
 }
 .battle-btn-lock {
-  width: clamp(16px, 1.9vh, 21px);
-  height: clamp(16px, 1.9vh, 21px);
+  width: clamp(15px, 1.9cqh, 21px);
+  height: clamp(15px, 1.9cqh, 21px);
   object-fit: contain;
   opacity: 0.7;
 }
@@ -475,14 +496,26 @@ const legendGroup = computed<RankStatGroup>(() => ({
   }
 }
 
-/* Full HD and flatter viewports: tighten the vertical rhythm */
-@media (max-height: 1100px) {
+/* Flat stages (Full HD and below — the modal is only ~70% of the window tall,
+   so ~780px of container is roughly a 1100px viewport): tighten the rhythm. */
+@container landing (max-height: 780px) {
   .landing-screen {
-    gap: 8px;
-    padding: 9px 16px;
+    gap: 7px;
+    padding: 8px 16px;
   }
   .battle-btn {
     padding: 7px 24px;
+  }
+}
+
+/* MacBook-class stages: the button gives up its last bit of air to the cards */
+@container landing (max-height: 620px) {
+  .landing-screen {
+    gap: 6px;
+    padding: 7px 14px;
+  }
+  .battle-btn {
+    padding: 6px 22px;
   }
 }
 

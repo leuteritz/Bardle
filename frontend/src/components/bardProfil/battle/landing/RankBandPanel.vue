@@ -329,15 +329,15 @@ const promotionGoal = computed(() => {
 <style scoped>
 .rank-hero {
   position: relative;
-  /* grows into whatever height the capped roster leaves over, so the flanks and
-     the tier ladder get more air on tall screens instead of stretching cards */
+  /* lives on whatever the roster leaves over — every block inside is sized in
+     cqh so the band genuinely compresses instead of clipping its own content */
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: clamp(10px, 1.5vh, 20px);
-  padding: clamp(13px, 2vh, 24px) clamp(18px, 2vw, 34px) clamp(11px, 1.7vh, 20px);
+  gap: clamp(6px, 1.5cqh, 20px);
+  padding: clamp(8px, 2cqh, 24px) clamp(18px, 2vw, 34px) clamp(8px, 1.7cqh, 20px);
   /* translucent so the cosmic starfield reads straight through the band */
   background: rgba(14, 12, 7, 0.42);
   border: 1px solid;
@@ -379,6 +379,7 @@ const promotionGoal = computed(() => {
   z-index: 1;
   flex: 0 0 clamp(126px, 10.5vw, 200px);
   min-width: 0;
+  min-height: 0;
 }
 
 /* ── Centred column: rank, LP and the tier ladder ── */
@@ -392,7 +393,7 @@ const promotionGoal = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(9px, 1.3vh, 16px);
+  gap: clamp(5px, 1.3cqh, 16px);
 }
 
 /* ── Emblem · rank name · LP tower, as one centred cluster ── */
@@ -409,13 +410,13 @@ const promotionGoal = computed(() => {
   align-self: stretch;
   width: 1px;
   flex-shrink: 0;
-  margin: clamp(4px, 0.6vh, 8px) 0;
+  margin: clamp(4px, 0.6cqh, 8px) 0;
 }
 
 .rank-emblem {
   position: relative;
-  width: clamp(84px, 12vh, 132px);
-  height: clamp(84px, 12vh, 132px);
+  width: clamp(52px, 11cqh, 132px);
+  height: clamp(52px, 11cqh, 132px);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -454,7 +455,7 @@ const promotionGoal = computed(() => {
 
 .rank-name {
   min-width: 0;
-  font-size: clamp(28px, 4.6vh, 54px);
+  font-size: clamp(22px, 4.6cqh, 54px);
   font-weight: 700;
   letter-spacing: 3px;
   line-height: 1;
@@ -466,9 +467,9 @@ const promotionGoal = computed(() => {
 /* ── Tier ladder: the crests stand on a shared rail, unframed and large. Ten
    equal steps, so every crest centre lands on 5% + k·10% of the width. ── */
 .tier-ladder {
-  --pip: clamp(46px, 6.4vh, 92px);
-  --rail-gap: clamp(6px, 0.8vh, 11px);
-  --pip-head: clamp(10px, 1.5vh, 22px);
+  --pip: clamp(30px, 6.8cqh, 92px);
+  --rail-gap: clamp(4px, 0.8cqh, 11px);
+  --pip-head: clamp(6px, 1.4cqh, 22px);
   position: relative;
   z-index: 1;
   flex-shrink: 0;
@@ -629,7 +630,7 @@ const promotionGoal = computed(() => {
 
 .tier-label {
   max-width: 100%;
-  font-size: clamp(8px, 1.1vh, 13px);
+  font-size: clamp(8px, 1.1cqh, 13px);
   font-weight: 700;
   letter-spacing: 1.2px;
   color: #5c4d30;
@@ -659,7 +660,7 @@ const promotionGoal = computed(() => {
 .tier-date {
   max-width: 100%;
   margin-top: 2px;
-  font-size: clamp(9px, 1.15vh, 13px);
+  font-size: clamp(9px, 1.15cqh, 13px);
   font-weight: 700;
   letter-spacing: 0.4px;
   color: #6a5a38;
@@ -684,14 +685,14 @@ const promotionGoal = computed(() => {
 }
 
 .lp-num {
-  font-size: clamp(34px, 5.6vh, 66px);
+  font-size: clamp(26px, 5.6cqh, 66px);
   font-weight: 700;
   line-height: 0.95;
   letter-spacing: 1px;
 }
 
 .lp-unit {
-  font-size: clamp(8px, 1.05vh, 11px);
+  font-size: clamp(8px, 1.05cqh, 11px);
   font-weight: 700;
   letter-spacing: 3px;
   color: #a08448;
@@ -703,7 +704,7 @@ const promotionGoal = computed(() => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: clamp(4px, 0.7vh, 8px);
+  gap: clamp(3px, 0.7cqh, 8px);
 }
 
 .lp-meta {
@@ -714,14 +715,14 @@ const promotionGoal = computed(() => {
 }
 
 .lp-meta-scale {
-  font-size: clamp(9px, 1.2vh, 12px);
+  font-size: clamp(9px, 1.2cqh, 12px);
   font-weight: 700;
   letter-spacing: 2px;
   color: #b8ad92;
 }
 
 .lp-meta-goal {
-  font-size: clamp(9px, 1.2vh, 12px);
+  font-size: clamp(9px, 1.2cqh, 12px);
   font-weight: 700;
   letter-spacing: 2px;
   color: #c8a058;
@@ -730,7 +731,7 @@ const promotionGoal = computed(() => {
 
 .lp-track {
   position: relative;
-  height: clamp(9px, 1.3vh, 14px);
+  height: clamp(8px, 1.3cqh, 14px);
   background: rgba(12, 10, 6, 0.72);
   border: 1px solid #2b2312;
   border-radius: 5px;
@@ -761,39 +762,74 @@ const promotionGoal = computed(() => {
   }
 }
 
-/* Full HD and flatter viewports: tighten the hero so roster and button keep room */
-@media (max-height: 1100px) {
+/* Flat stages (Full HD and below): tighten the hero so roster and button keep
+   room. Measured against the modal's content box, not the window — see
+   .landing-root in BattleLandingScreen.vue. */
+@container landing (max-height: 780px) {
   .rank-hero {
-    padding: 11px 20px 10px;
-  }
-  .hero-column {
+    padding: 10px 20px 9px;
     gap: 8px;
   }
+  .hero-column {
+    gap: 7px;
+  }
   .rank-emblem {
-    width: 76px;
-    height: 76px;
+    width: 72px;
+    height: 72px;
   }
   .rank-name {
-    font-size: clamp(26px, 3.8vh, 40px);
+    font-size: clamp(24px, 3.8cqh, 40px);
   }
   .lp-num {
-    font-size: clamp(30px, 4.4vh, 46px);
+    font-size: clamp(28px, 4.4cqh, 46px);
   }
   .tier-ladder {
-    --pip: 54px;
-    --pip-head: 10px;
-    --rail-gap: 7px;
+    --pip: 44px;
+    --pip-head: 8px;
+    --rail-gap: 5px;
+  }
+  /* the tallest major tick shrinks with the rail, so the caption may move up */
+  .ladder-step {
+    gap: calc(var(--rail-gap) * 2 + 9px);
   }
 }
 
-@media (max-height: 880px) {
+/* MacBook-class stages (13"/14" laptops): the band gives up the last of its
+   ornament — crest row and emblem shrink, the "first reached" dates step back —
+   so the five champion cards still get a card-shaped tile. */
+@container landing (max-height: 620px) {
+  .rank-hero {
+    padding: 8px 16px 7px;
+    gap: 6px;
+  }
+  .hero-column {
+    gap: 5px;
+  }
   .rank-emblem {
-    width: 62px;
-    height: 62px;
+    width: 58px;
+    height: 58px;
+  }
+  .rank-name {
+    font-size: 24px;
+    letter-spacing: 2px;
+  }
+  .lp-num {
+    font-size: 28px;
+  }
+  .tier-ladder {
+    --pip: 32px;
+    --pip-head: 6px;
+    --rail-gap: 4px;
+  }
+  .ladder-step {
+    gap: calc(var(--rail-gap) * 2 + 7px);
   }
   .tier-label {
-    font-size: 7px;
+    font-size: 8px;
     letter-spacing: 0.5px;
+  }
+  .tier-date {
+    display: none;
   }
 }
 

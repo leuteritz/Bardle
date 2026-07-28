@@ -65,8 +65,9 @@ defineProps<{
 .stat-column {
   display: flex;
   flex-direction: column;
-  gap: clamp(6px, 0.9vh, 11px);
+  gap: clamp(5px, 0.9cqh, 11px);
   min-width: 0;
+  min-height: 0;
 }
 .stat-column--left {
   align-items: flex-start;
@@ -81,22 +82,23 @@ defineProps<{
   display: flex;
   align-items: center;
   gap: 7px;
-  padding-bottom: clamp(4px, 0.6vh, 7px);
+  padding-bottom: clamp(3px, 0.6cqh, 7px);
   border-bottom: 1px solid #2b2312;
   align-self: stretch;
+  flex-shrink: 0;
 }
 .stat-column--right .column-header {
   flex-direction: row-reverse;
 }
 
 .column-icon {
-  width: clamp(15px, 2vh, 20px);
-  height: clamp(15px, 2vh, 20px);
+  width: clamp(14px, 2cqh, 20px);
+  height: clamp(14px, 2cqh, 20px);
   flex-shrink: 0;
 }
 
 .column-title {
-  font-size: clamp(10px, 1.25vh, 13px);
+  font-size: clamp(10px, 1.25cqh, 13px);
   font-weight: 700;
   letter-spacing: 3px;
   white-space: nowrap;
@@ -111,7 +113,7 @@ defineProps<{
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(8px, 1.2vh, 18px);
+  gap: clamp(3px, 1.1cqh, 16px);
 }
 
 .column-row {
@@ -152,8 +154,8 @@ defineProps<{
 }
 
 .row-icon {
-  width: clamp(15px, 1.9vh, 20px);
-  height: clamp(15px, 1.9vh, 20px);
+  width: clamp(14px, 1.9cqh, 20px);
+  height: clamp(14px, 1.9cqh, 20px);
   flex-shrink: 0;
   object-fit: contain;
   color: #b0a890;
@@ -161,7 +163,7 @@ defineProps<{
 }
 
 .row-value {
-  font-size: clamp(20px, 2.9vh, 34px);
+  font-size: clamp(18px, 2.7cqh, 32px);
   font-weight: 700;
   color: #e8e2d0;
   line-height: 1.05;
@@ -171,7 +173,8 @@ defineProps<{
 }
 
 .row-label {
-  font-size: clamp(9px, 1.1vh, 12px);
+  min-width: 0;
+  font-size: clamp(9px, 1.1cqh, 12px);
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: #8a8070;
@@ -181,21 +184,41 @@ defineProps<{
   text-overflow: ellipsis;
 }
 
-/* Full HD and flatter: the flanks tighten so the rank band leaves the roster
-   cards enough height — the numbers stay large, only the air between them goes. */
-@media (max-height: 1100px) {
+/* ── Flat stages: label and number share one line ──
+   Stacked, five career numbers cost the band roughly 200px of height — more
+   than a Full-HD-or-flatter stage can spare without starving the roster. Side
+   by side they cost half that and the numbers keep their full size, which is
+   the trade the other direction (shrinking the type) would have lost. */
+@container landing (max-height: 780px) {
   .column-rows {
-    gap: 6px;
+    gap: clamp(3px, 0.9cqh, 10px);
+  }
+  .column-row {
+    flex-direction: row;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 7px;
+  }
+  /* overrides the stacked column's flex-end alignment, which would otherwise
+     win on specificity and drop the label to the bottom of the line box */
+  .stat-column--right .column-row {
+    flex-direction: row-reverse;
+    align-items: baseline;
+  }
+  .row-value-line {
+    flex-shrink: 0;
   }
   .row-value {
-    font-size: 24px;
+    font-size: clamp(18px, 2.6cqh, 24px);
+  }
+  /* the split bar keeps its own line under the pair it belongs to */
+  .row-bar {
+    flex-basis: 100%;
+    margin-top: 2px;
+    height: 4px;
   }
   .column-header {
     padding-bottom: 4px;
-  }
-  .row-bar {
-    margin-top: 3px;
-    height: 4px;
   }
 }
 </style>

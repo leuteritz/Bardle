@@ -432,7 +432,7 @@ const mvpHolder = computed<string | null>(() => {
   display: flex;
   flex-direction: column;
   /* tight: the crown rail below carries the separation, not this gap */
-  gap: clamp(2px, 0.4vh, 6px);
+  gap: clamp(2px, 0.4cqh, 6px);
   min-height: 0;
 }
 
@@ -454,7 +454,7 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .roster-title {
-  font-size: clamp(17px, 2.4vh, 30px);
+  font-size: clamp(17px, 2.4cqh, 30px);
   font-weight: 700;
   letter-spacing: 8px;
   line-height: 1;
@@ -466,11 +466,13 @@ const mvpHolder = computed<string | null>(() => {
 
 /* ── Card row: five equal champ-select tiles ── */
 /* minmax(0, 1fr) pins the single row to the container height — without it the
-   cards' intrinsic height wins and they spill out over the start button. */
+   cards' intrinsic height wins and they spill out over the start button.
+   min-height 0 for the same reason: the roster's own height is the budget, and
+   a floor here would push the cards straight back over the start button. */
 .roster-cards {
   position: relative;
   flex: 1;
-  min-height: clamp(120px, 15vh, 200px);
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   grid-template-rows: minmax(0, 1fr);
@@ -489,7 +491,7 @@ const mvpHolder = computed<string | null>(() => {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(var(--crown-space, 0px) - clamp(5px, 0.7vh, 9px));
+  top: calc(var(--crown-space, 0px) - clamp(5px, 0.7cqh, 9px));
   height: 2px;
   background: linear-gradient(
     to right,
@@ -630,7 +632,7 @@ const mvpHolder = computed<string | null>(() => {
 .card-head {
   position: absolute;
   /* starts below the crown's foot, which overlaps the top edge */
-  top: calc(var(--crown-foot, 0px) + clamp(4px, 0.6vh, 9px));
+  top: calc(var(--crown-foot, 0px) + clamp(4px, 0.6cqh, 9px));
   left: calc(var(--frame-inset, 2px) + clamp(6px, 0.55vw, 11px));
   right: calc(var(--frame-inset, 2px) + clamp(6px, 0.55vw, 11px));
   z-index: 2;
@@ -649,7 +651,7 @@ const mvpHolder = computed<string | null>(() => {
   align-items: center;
   gap: clamp(3px, 0.3vw, 6px);
   flex-shrink: 0;
-  font-size: clamp(12px, 1.5vh, 17px);
+  font-size: clamp(12px, 1.5cqh, 17px);
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -678,7 +680,7 @@ const mvpHolder = computed<string | null>(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: clamp(3px, 0.5vh, 7px);
+  gap: clamp(3px, 0.5cqh, 7px);
   /* yields to the role side when the card gets narrow — the badge text ellipses */
   min-width: 0;
   max-width: 62%;
@@ -699,7 +701,7 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .card-badge-text {
-  font-size: clamp(9px, 1.2vh, 13px);
+  font-size: clamp(9px, 1.2cqh, 13px);
   font-weight: 800;
   letter-spacing: 0.12em;
   line-height: 1;
@@ -712,8 +714,8 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .card-badge-icon {
-  width: clamp(17px, 2.3vh, 26px);
-  height: clamp(17px, 2.3vh, 26px);
+  width: clamp(17px, 2.3cqh, 26px);
+  height: clamp(17px, 2.3cqh, 26px);
   flex-shrink: 0;
   filter:
     drop-shadow(0 1px 3px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 8px currentColor);
@@ -728,15 +730,15 @@ const mvpHolder = computed<string | null>(() => {
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: clamp(4px, 0.7vh, 8px);
+  gap: clamp(4px, 0.7cqh, 8px);
   /* clears the frame on both axes: the stripe below, the corner gems aside */
-  padding: clamp(7px, 1vh, 12px) calc(var(--frame-inset, 2px) + clamp(6px, 0.5vw, 11px))
-    calc(var(--stripe-lift, 0px) + clamp(6px, 0.9vh, 11px));
+  padding: clamp(7px, 1cqh, 12px) calc(var(--frame-inset, 2px) + clamp(6px, 0.5vw, 11px))
+    calc(var(--stripe-lift, 0px) + clamp(6px, 0.9cqh, 11px));
   transition: opacity 0.22s ease;
 }
 
 .card-name {
-  font-size: clamp(17px, 2.5vh, 30px);
+  font-size: clamp(17px, 2.5cqh, 30px);
   color: #fff;
   line-height: 1.05;
   white-space: nowrap;
@@ -750,7 +752,7 @@ const mvpHolder = computed<string | null>(() => {
   display: flex;
   justify-content: space-between;
   gap: 4px;
-  padding-top: clamp(5px, 0.8vh, 9px);
+  padding-top: clamp(5px, 0.8cqh, 9px);
   border-top: 1px solid color-mix(in srgb, var(--role-color, #d4a020) 30%, transparent);
 }
 
@@ -762,7 +764,7 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .card-stat-value {
-  font-size: clamp(16px, 2.2vh, 26px);
+  font-size: clamp(16px, 2.2cqh, 26px);
   font-weight: 700;
   color: #e8e2d0;
   line-height: 1.05;
@@ -777,7 +779,7 @@ const mvpHolder = computed<string | null>(() => {
 
 .card-stat-label {
   margin-top: 1px;
-  font-size: clamp(7px, 0.95vh, 10px);
+  font-size: clamp(7px, 0.95cqh, 10px);
   font-weight: 700;
   letter-spacing: 1.5px;
   color: rgba(232, 226, 208, 0.5);
@@ -790,10 +792,10 @@ const mvpHolder = computed<string | null>(() => {
   z-index: 3;
   display: flex;
   flex-direction: column;
-  gap: clamp(4px, 0.7vh, 8px);
+  gap: clamp(4px, 0.7cqh, 8px);
   /* same top offset as the head row: the corner blades sit above the sheet */
-  padding: calc(var(--crown-foot, 0px) + clamp(5px, 0.7vh, 10px))
-    calc(var(--frame-inset, 2px) + clamp(7px, 0.55vw, 12px)) clamp(8px, 1.1vh, 13px);
+  padding: calc(var(--crown-foot, 0px) + clamp(5px, 0.7cqh, 10px))
+    calc(var(--frame-inset, 2px) + clamp(7px, 0.55vw, 12px)) clamp(8px, 1.1cqh, 13px);
   background: rgba(8, 6, 4, 0.93);
   opacity: 0;
   pointer-events: none;
@@ -810,12 +812,12 @@ const mvpHolder = computed<string | null>(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-bottom: clamp(4px, 0.7vh, 8px);
+  padding-bottom: clamp(4px, 0.7cqh, 8px);
   border-bottom: 1px solid color-mix(in srgb, var(--role-color, #d4a020) 32%, transparent);
   flex-shrink: 0;
 }
 .detail-name {
-  font-size: clamp(15px, 2.1vh, 24px);
+  font-size: clamp(15px, 2.1cqh, 24px);
   font-weight: 700;
   line-height: 1.05;
   color: #fff;
@@ -826,7 +828,7 @@ const mvpHolder = computed<string | null>(() => {
 
 /* Tells the player the card is a door into the team tab */
 .detail-cta {
-  font-size: clamp(7px, 0.95vh, 10px);
+  font-size: clamp(7px, 0.95cqh, 10px);
   font-weight: 700;
   letter-spacing: 1.5px;
   color: color-mix(in srgb, var(--role-color, #d4a020) 70%, #f0e6d0);
@@ -842,7 +844,7 @@ const mvpHolder = computed<string | null>(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-content: space-evenly;
-  gap: clamp(4px, 0.8vh, 12px) clamp(6px, 0.6vw, 14px);
+  gap: clamp(4px, 0.8cqh, 12px) clamp(6px, 0.6vw, 14px);
 }
 
 .detail-stat {
@@ -851,7 +853,7 @@ const mvpHolder = computed<string | null>(() => {
   min-width: 0;
 }
 .detail-value {
-  font-size: clamp(16px, 2.2vh, 28px);
+  font-size: clamp(16px, 2.2cqh, 28px);
   font-weight: 700;
   color: #e8e2d0;
   line-height: 1.05;
@@ -860,7 +862,7 @@ const mvpHolder = computed<string | null>(() => {
   text-overflow: ellipsis;
 }
 .detail-label {
-  font-size: clamp(7px, 0.95vh, 10px);
+  font-size: clamp(7px, 0.95cqh, 10px);
   font-weight: 700;
   letter-spacing: 1.5px;
   color: rgba(232, 226, 208, 0.45);
@@ -872,7 +874,7 @@ const mvpHolder = computed<string | null>(() => {
    in the circle no matter what the caption below it does. */
 .empty-body {
   --empty-anchor: 44%;
-  --empty-ring: clamp(46px, 6.6vh, 78px);
+  --empty-ring: clamp(46px, 6.6cqh, 78px);
   position: absolute;
   inset: 0;
   z-index: 2;
@@ -925,7 +927,7 @@ const mvpHolder = computed<string | null>(() => {
   top: var(--empty-anchor);
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: clamp(26px, 4vh, 44px);
+  font-size: clamp(26px, 4cqh, 44px);
   line-height: 1;
   color: color-mix(in srgb, var(--role-accent) 55%, transparent);
   transition: color 0.25s ease;
@@ -942,7 +944,7 @@ const mvpHolder = computed<string | null>(() => {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: clamp(12px, 2vh, 22px);
+  bottom: clamp(12px, 2cqh, 22px);
   display: grid;
   place-items: center;
   pointer-events: none;
@@ -951,7 +953,7 @@ const mvpHolder = computed<string | null>(() => {
 .empty-text,
 .empty-cta {
   grid-area: 1 / 1;
-  font-size: clamp(8px, 1.05vh, 11px);
+  font-size: clamp(8px, 1.05cqh, 11px);
   font-weight: 700;
   letter-spacing: 2.5px;
   white-space: nowrap;
@@ -983,21 +985,26 @@ const mvpHolder = computed<string | null>(() => {
   }
 }
 
+/* All height breakpoints below query the stage container (see .landing-root in
+   BattleLandingScreen.vue), not the window: the battle tab only ever gets about
+   70% of the window's height, so window-based thresholds fired at the wrong
+   moment on every laptop. */
+
 /* Tall desktops (2K/4K): frame and crest grow with the cards so neither reads
-   thin from a distance; flat viewports pull them back off the content. */
-@media (min-height: 1250px) {
+   thin from a distance; flat stages pull them back off the content. */
+@container landing (min-height: 890px) {
   .roster-panel {
     --frame-scale: 1.25;
   }
 }
-@media (max-height: 900px) {
+@container landing (max-height: 630px) {
   .roster-panel {
     --frame-scale: 0.85;
   }
 }
 
-/* Full HD and flatter: six large numbers still have to fit a shorter card */
-@media (max-height: 1100px) {
+/* Flat stages: six large numbers still have to fit a shorter card */
+@container landing (max-height: 780px) {
   .detail-value {
     font-size: 19px;
   }
@@ -1007,7 +1014,9 @@ const mvpHolder = computed<string | null>(() => {
   }
 }
 
-@media (max-height: 880px) {
+/* Last resort, flatter than any desktop we target: the three headline numbers
+   drop their captions rather than the card losing its splash art. */
+@container landing (max-height: 480px) {
   .card-stat-label {
     display: none;
   }
