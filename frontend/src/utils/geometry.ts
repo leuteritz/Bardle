@@ -8,8 +8,14 @@ import {
   ARC_GUIDE_STEP_DEG,
   ORBIT_SUN_GROWTH_FACTOR,
   ORBIT_SUN_SCALE_ANCHOR_RADIUS,
+  ORBIT_TIERS,
+  STAR_BODY_SIZE_BOSS_ESCORT,
+  STAR_BODY_SIZE_BOSS_ESCORT_MIN,
+  STAR_BODY_SIZE_GALAXY_BOSS,
+  STAR_BODY_SIZE_GALAXY_BOSS_MIN,
   SUN_RADIUS,
 } from '@/config/constants'
+import type { StarType } from '@/types'
 
 // ── Allgemein ──────────────────────────────────────────────────────────────
 /** Clamps a percentage value to the 0–100 range. */
@@ -31,6 +37,22 @@ export function getOrbitSunRadius(sunRadius: number): number {
 /** Orbit scale factor relative to the reference SUN_RADIUS, using the dampened radius. */
 export function getOrbitSunScale(sunRadius: number): number {
   return getOrbitSunRadius(sunRadius) / SUN_RADIUS
+}
+
+/**
+ * Durchmesser der Sternkugel im Idle-Orbit (px). Endkampf-Sterne skalieren zwar
+ * mit der Sonne, haben aber eine Mindestgröße — der Galaxieboss soll auch bei
+ * kleiner Sonne episch wirken. Geteilt von der Darstellung (StarSystemComponent)
+ * und den Abgangs-Effekten (useStarSystem → starVanishFx), damit der Effekt
+ * exakt so groß startet wie der Stern, den er ersetzt.
+ */
+export function starBodySize(type: StarType, sunScale: number): number {
+  if (type === 'champion') return ORBIT_TIERS.star[0].size * sunScale
+  if (type === 'resource') return ORBIT_TIERS.star[1].size * sunScale
+  if (type === 'boss_escort') {
+    return Math.max(STAR_BODY_SIZE_BOSS_ESCORT * sunScale, STAR_BODY_SIZE_BOSS_ESCORT_MIN)
+  }
+  return Math.max(STAR_BODY_SIZE_GALAXY_BOSS * sunScale, STAR_BODY_SIZE_GALAXY_BOSS_MIN)
 }
 
 /**

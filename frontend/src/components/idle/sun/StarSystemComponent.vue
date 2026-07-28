@@ -288,7 +288,9 @@ import {
 } from '../../../config/constants'
 import { CHAMPION_ROLES } from '../../../config/championData'
 import { activeChampionBehindState, activePlayerPlanetPositions, activeStarCombatState } from '../../../utils/liveState'
-import type { ChampionRole } from '../../../types'
+import type { ChampionRole, StarType } from '../../../types'
+import { starBodySize } from '../../../utils/geometry'
+import { clearStarVanishFx } from '../../../utils/starVanishFx'
 
 const uiStore = useUiStore()
 const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
@@ -1192,6 +1194,9 @@ onUnmounted(() => {
   window.removeEventListener('resize', onResize)
   cancelAnimationFrame(enemyAnimFrame)
   cancelAnimationFrame(hintResumeFrame)
+  // Das FX-Canvas hängt direkt am body — ohne die Sternebene hat es nichts mehr
+  // zu zeigen (Prestige, Universe-Wechsel).
+  clearStarVanishFx()
 })
 
 function orbitHintColor(star: StarRenderEntry): string {
@@ -1199,14 +1204,8 @@ function orbitHintColor(star: StarRenderEntry): string {
   return `rgb(${r},${g},${b})`
 }
 
-function starSize(type: string): number {
-  const sunScale = planetShopStore.orbitSunScale
-  if (type === 'champion') return ORBIT_TIERS.star[0].size * sunScale
-  if (type === 'resource') return ORBIT_TIERS.star[1].size * sunScale
-  // Endkampf-Sterne skalieren zwar mit der Sonne, haben aber eine Mindestgröße —
-  // der Galaxieboss soll auch bei kleiner Sonne episch wirken.
-  if (type === 'boss_escort') return Math.max(30 * sunScale, 20)
-  return Math.max(58 * sunScale, 46)
+function starSize(type: StarType): number {
+  return starBodySize(type, planetShopStore.orbitSunScale)
 }
 
 function starBoxShadow(starColor: [number, number, number], s: number): string {

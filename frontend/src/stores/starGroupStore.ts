@@ -92,6 +92,14 @@ export interface StarGroup {
   spawnedAt?: number
   durationMs?: number
   starColor: [number, number, number]
+  /**
+   * Warum der Stern das Bild verlässt — steuert die Abgangs-Animation im
+   * Idle-Orbit (`utils/starVanishFx.ts`). `'rescued'` heisst: alle Planeten
+   * wurden im Zeitlimit befreit. `'expired'` deckt Timer-Ablauf UND gescheiterte
+   * Boss-Kämpfe ab; einmal gesetzt bleibt es stehen, ein einzelner Fehlschlag
+   * macht aus dem Stern also keine Rettung mehr.
+   */
+  despawnReason?: 'rescued' | 'expired'
 }
 
 function pickResourceStarColor(): [number, number, number] {
@@ -455,18 +463,25 @@ export const useStarGroupStore = defineStore('starGroup', {
       }
     },
 
-    onBossResult(planetId: string) {
+    /**
+     * @param success `false`, wenn der Boss dieses Planeten abgelaufen ist statt
+     *   besiegt zu werden — der Stern gilt dann nicht mehr als gerettet.
+     */
+    onBossResult(planetId: string, success = true) {
       for (const star of this.activeStars) {
         const slot = star.planetSlots.find((p) => p.planetId === planetId)
         if (!slot) continue
         if (!slot.cleared) this.totalPlanetsCleared++
         slot.cleared = true
+        if (!success) star.despawnReason = 'expired'
 
         if (this.starFightModalOpen && this.activeFightStarId === star.id) {
           this.advanceStarFight()
         }
 
         if (star.planetSlots.every((p) => p.cleared)) {
+          // Kein Fehlschlag unterwegs → der Stern geht als Rettung ab.
+          if (!star.despawnReason) star.despawnReason = 'rescued'
           // Im Timeout per ID suchen — ein eingefrorener Index zeigt auf den
           // falschen Stern, sobald zwischenzeitlich gespawnt/entfernt wurde
           // (z. B. mehrere Eskorten gleichzeitig durch Splash-Damage besiegt).
@@ -516,6 +531,9 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star = this.activeStars.find((s) => s.id === starId)
       if (!star) return
       resourceDespawnScheduled.add(starId)
+      // Nur der Timer-Ablauf landet hier ungeklärt: sind alle Planeten befreit,
+      // hat onBossResult den Grund längst auf 'rescued' gesetzt.
+      if (!star.despawnReason) star.despawnReason = 'expired'
       if (this.activeFightStarId === starId) this.closeStarFightModal()
       // Slots sofort räumen → Kampf endet, und der Render-Loop sieht
       // allSlotsCleared und zündet den Vanish-Effekt.
@@ -552,6 +570,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         if (this.activeFightStarId === star.id) this.closeStarFightModal()
         const starRef = star
         setTimeout(() => {
+          if (!starRef.despawnReason) starRef.despawnReason = 'expired'
           for (const slot of starRef.planetSlots) {
             if (!slot.cleared) {
               slot.cleared = true

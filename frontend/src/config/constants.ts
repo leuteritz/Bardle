@@ -1963,6 +1963,92 @@ export const GALAXY_BOSS_PLANET_ORBIT_RX = 38
 export const GALAXY_BOSS_PLANET_ORBIT_RY = 22
 export const GALAXY_BOSS_PLANET_ORBIT_TILT = 0.1
 
+// ── Sternkugel-Größen im Idle-Orbit (geometry.ts → starBodySize) ─────────────
+// Champion- und Resource-Sterne kommen aus ORBIT_TIERS.star; die Endkampf-Sterne
+// haben eigene Werte samt Mindestgröße.
+export const STAR_BODY_SIZE_BOSS_ESCORT = 30
+export const STAR_BODY_SIZE_BOSS_ESCORT_MIN = 20
+export const STAR_BODY_SIZE_GALAXY_BOSS = 58
+export const STAR_BODY_SIZE_GALAXY_BOSS_MIN = 46
+
+/** Winkel-Schrittweite, mit der die Bahntangente eines Sterns abgetastet wird. */
+export const STAR_FX_TANGENT_PROBE_RAD = 0.05
+
+// ── Star despawn FX (utils/starVanishFx.ts) ──────────────────────────────────
+// Ein einziges additiv gezeichnetes Canvas für ALLE Sternabgänge. Gezeichnet
+// wird ausschliesslich ein pro Farbe gecachtes Glow-Sprite (drawImage) plus
+// wenige arc()-Strokes — deshalb bleiben auch 30 gleichzeitige Effekte im
+// Frame-Budget. Der RAF-Loop läuft nur, solange Effekte leben.
+export const STAR_FX_Z_INDEX = 50
+export const STAR_FX_DPR_MAX = 2
+/** Ab so vielen gleichzeitigen Effekten wird die Partikeldichte gesenkt (LOD). */
+export const STAR_FX_LOD_THRESHOLD = 8
+/** Untergrenze der Partikeldichte bei sehr vielen gleichzeitigen Effekten. */
+export const STAR_FX_LOD_MIN_DENSITY = 0.3
+/** Hard-Cap gleichzeitiger Effekte — ältester Effekt weicht dem neuen. */
+export const STAR_FX_MAX_CONCURRENT = 40
+/** Kantenlänge des gecachten Glow-Sprites in px. */
+export const STAR_FX_SPRITE_SIZE = 96
+/**
+ * Untergrenze der Effektgröße (px). Die Sternkugel schrumpft mit kleiner Sonne
+ * bis unter 25 px — ein Abgang in dieser Größe geht im Sternenfeld unter, ohne
+ * dass der Spieler erkennt, welcher der beiden Fälle eingetreten ist.
+ */
+export const STAR_FX_MIN_SIZE = 64
+/** Zusätzlicher weicher Bloom über dem Kern: Größenfaktor und Deckkraftanteil. */
+export const STAR_FX_BLOOM_SCALE = 2.2
+export const STAR_FX_BLOOM_ALPHA = 0.4
+/** Ringstärke als Anteil der Effektgröße. */
+export const STAR_FX_RING_WIDTH_FRACTION = 0.055
+/** Maximal gecachte Glow-Sprites (eines pro Sternfarbe). */
+export const STAR_FX_SPRITE_CACHE_MAX = 24
+/** Ersatzdauer bei `prefers-reduced-motion`: nur ein kurzer Ausblendpuls. */
+export const STAR_FX_REDUCED_MOTION_MS = 320
+
+// Rescue — „Nova Bloom": Stern implodiert zu einem Blitz, sein Licht strömt
+// als Funkenschweif in die eigene Sonne und lässt sie kurz aufglühen.
+export const STAR_RESCUE_FX_DURATION_MS = 1500
+export const STAR_RESCUE_FX_FLASH_FRACTION = 0.24 // Anteil der Dauer für Implosion + Blitz
+export const STAR_RESCUE_FX_IMPLODE_SCALE = 0.42
+export const STAR_RESCUE_FX_FLASH_SCALE = 3.1
+export const STAR_RESCUE_FX_RING_COUNT = 2
+export const STAR_RESCUE_FX_RING_STAGGER = 0.09 // Anteil der Dauer zwischen den Ringen
+export const STAR_RESCUE_FX_RING_LIFE = 0.55 // Anteil der Dauer, den ein Ring lebt
+export const STAR_RESCUE_FX_RING_MAX_SCALE = 6.5
+export const STAR_RESCUE_FX_MOTE_COUNT = 16
+export const STAR_RESCUE_FX_MOTE_DELAY_MS = 130
+export const STAR_RESCUE_FX_MOTE_STAGGER_MS = 300
+export const STAR_RESCUE_FX_MOTE_TRAVEL_MS = 950
+export const STAR_RESCUE_FX_MOTE_SWING = 0.34 // seitlicher Schwung der Flugbahn
+export const STAR_RESCUE_FX_MOTE_BLOOM = 0.5 // Ausbeulung nach aussen vor dem Einflug
+export const STAR_RESCUE_FX_MOTE_EASE = 1.6 // >1 = zuerst treiben, dann beschleunigen
+export const STAR_RESCUE_FX_MOTE_STRETCH = 2.6 // Streckung des Funkens bei Vollgas
+export const STAR_RESCUE_FX_MOTE_SIZE = 0.3 // Funkengröße als Anteil der Effektgröße
+export const STAR_RESCUE_FX_SUN_GLOW_SCALE = 3.4
+/** Warmer Ton, in den die Sternfarbe bei der Rettung gemischt wird. */
+export const STAR_RESCUE_FX_WARM_TINT: [number, number, number] = [255, 216, 128]
+export const STAR_RESCUE_FX_WARM_MIX = 0.55
+
+// Expire — „Warp-out": der Stern lädt kurz auf und reisst aus der Bahn aus.
+export const STAR_EXPIRE_FX_DURATION_MS = 1250
+export const STAR_EXPIRE_FX_CHARGE_MS = 300
+export const STAR_EXPIRE_FX_SHIVER_PX = 1.6
+// Beschleunigung des Ausbruchs. Deutlich >2 wirkt nicht schneller, sondern
+// lässt den Stern erst regungslos stehen und dann in wenigen Frames aus dem
+// Bild springen — die Bewegung ist dann nicht mehr lesbar.
+export const STAR_EXPIRE_FX_LAUNCH_EASE = 1.8
+export const STAR_EXPIRE_FX_TRAVEL_FACTOR = 0.85 // Anteil der Bildschirmdiagonale
+export const STAR_EXPIRE_FX_STRETCH_MAX = 8
+export const STAR_EXPIRE_FX_GHOST_COUNT = 6
+export const STAR_EXPIRE_FX_GHOST_SPACING = 0.035 // Zeitabstand der Nachzieher
+export const STAR_EXPIRE_FX_TANGENT_MIX = 0.55 // Tangente vs. radial nach aussen
+export const STAR_EXPIRE_FX_DUST_COUNT = 12
+export const STAR_EXPIRE_FX_DUST_SPEED = 42 // px/s
+export const STAR_EXPIRE_FX_DUST_LIFE = 0.8 // Anteil der Dauer
+/** Kalter Ton, in den die Sternfarbe beim Ausbruch gemischt wird. */
+export const STAR_EXPIRE_FX_COOL_TINT: [number, number, number] = [138, 170, 226]
+export const STAR_EXPIRE_FX_COOL_MIX = 0.55
+
 // ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
 // Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,
 // der im Takt von STAR_TIMER_TICK_MS neu gebaut wird. Damit invalidiert das

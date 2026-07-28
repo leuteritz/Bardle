@@ -6,12 +6,14 @@ import { useGalaxyStore } from '../stores/galaxyStore'
 import { useWindowFocus } from './useWindowFocus'
 import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions, activeStarCombatState } from '../utils/liveState'
-import { getOrbitPos, orbitBehindArc, orbitBehindProgress } from '../utils/geometry'
+import { getOrbitPos, orbitBehindArc, orbitBehindProgress, starBodySize } from '../utils/geometry'
+import { playStarVanishFx } from '../utils/starVanishFx'
 import {
   STAR_SPAWN_DURATION_MS,
   STAR_SPAWN_FLY_EASING,
   SUN_RADIUS,
   STAR_BEHIND_SUN_SPEED_MULTIPLIER,
+  STAR_FX_TANGENT_PROBE_RAD,
   HOVER_SPEED_MULTIPLIER,
 } from '../config/constants'
 import { usePlanetShopStore } from '../stores/planetShopStore'
@@ -23,7 +25,6 @@ const PLANET_SIZE_GALAXY_BOSS = 14
 const PLANET_SIZE_NORMAL = 10
 
 export const livePlanetAngles = new Map<string, number>()
-const VANISH_DURATION_MS = 800
 const BEHIND_FADE_BAND = 0.12
 const BEHIND_THRESHOLD = -0.05
 const STAR_BEHIND_OPACITY = 0.2
@@ -61,78 +62,6 @@ export interface StarRenderEntry {
   totalPlanets: number
   remainingCount: number
   planets: PlanetRenderEntry[]
-}
-
-function spawnVanishEffect(
-  x: number,
-  y: number,
-  starColor: [number, number, number],
-  size: number,
-) {
-  const [r, g, b] = starColor
-  const r2 = Math.round(r * 0.55),
-    g2 = Math.round(g * 0.55),
-    b2 = Math.round(b * 0.55)
-  const gradient = `radial-gradient(circle, rgb(${r},${g},${b}) 0%, rgb(${r2},${g2},${b2}) 45%, rgb(0,0,0) 100%)`
-  const shadow = [
-    `0 0 14px rgba(${r},${g},${b},0.9)`,
-    `0 0 32px rgba(${r},${g},${b},0.6)`,
-    `0 0 56px rgba(${r},${g},${b},0.3)`,
-  ].join(', ')
-
-  const container = document.createElement('div')
-  container.style.cssText = `
-    position: fixed;
-    left: ${x - size / 2}px;
-    top:  ${y - size / 2}px;
-    width: ${size}px;
-    height: ${size}px;
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 9999;
-    overflow: visible;
-    background: ${gradient};
-    box-shadow: ${shadow};
-  `
-
-  const shockwave = document.createElement('div')
-  shockwave.style.cssText = `
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.85);
-    pointer-events: none;
-  `
-  container.appendChild(shockwave)
-  document.body.appendChild(container)
-
-  const easing = 'cubic-bezier(0.4, 0, 0.6, 1)'
-
-  container.animate(
-    [
-      { transform: 'scale(1)', opacity: '1', filter: 'brightness(1)' },
-      { transform: 'scale(0.7)', opacity: '1', filter: 'brightness(1.3)', offset: 0.15 },
-      { transform: 'scale(1.6)', opacity: '1', filter: 'brightness(6) saturate(0)', offset: 0.4 },
-      { transform: 'scale(0.4)', opacity: '0.8', filter: 'brightness(3)', offset: 0.55 },
-      { transform: 'scale(0.1)', opacity: '0.3', filter: 'brightness(1)', offset: 0.8 },
-      { transform: 'scale(0)', opacity: '0', filter: 'brightness(1)' },
-    ],
-    { duration: VANISH_DURATION_MS, easing, fill: 'forwards' },
-  )
-
-  shockwave.animate(
-    [
-      { transform: 'scale(1)', opacity: '0.9' },
-      { transform: 'scale(1.5)', opacity: '0.6', offset: 0.3 },
-      { transform: 'scale(3.2)', opacity: '0.25', offset: 0.65 },
-      { transform: 'scale(5)', opacity: '0' },
-    ],
-    { duration: VANISH_DURATION_MS, easing: 'ease-out', fill: 'forwards' },
-  )
-
-  setTimeout(() => {
-    container.remove()
-  }, VANISH_DURATION_MS + 50)
 }
 
 /**
@@ -231,7 +160,9 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         const was = prev.find((p) => p.id === curr.id)
         if (!was) continue
         if ((curr.defeated && !was.defeated) || (curr.expired && !was.expired)) {
-          starGroupStore.onBossResult(curr.id)
+          // Ein abgelaufener Boss ist kein Sieg — der Stern verliert damit den
+          // Rettungs-Status und bricht am Ende aus der Bahn aus.
+          starGroupStore.onBossResult(curr.id, curr.defeated)
         }
       }
     },
@@ -380,15 +311,29 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
       if (allSlotsCleared) {
         if (!vanishFired.has(star.id)) {
           vanishFired.add(star.id)
-          const size =
-            star.starType === 'galaxy_boss'
-              ? 96
-              : star.starType === 'champion'
-                ? 72
-                : star.starType === 'boss_escort'
-                  ? 54
-                  : 62
-          spawnVanishEffect(sx, sy, star.starColor, size)
+          // Unter dem Bard-Profil oder im Star-Fight-Modal liegt der Orbit unter
+          // einem deckenden Overlay — der Effekt würde nur Frame-Budget kosten.
+          if (!isIdleRenderingPaused.value) {
+            // Ausbruchsrichtung = Bahntangente an dieser Stelle. Ein zweiter
+            // Punkt ein Stück weiter auf der Bahn ist billiger und robuster als
+            // eine analytische Ableitung über die gekippte Ellipse.
+            const ahead = getOrbitPos(
+              sAngle + star.starDirection * STAR_FX_TANGENT_PROBE_RAD,
+              scaledOrbitRx,
+              scaledOrbitRy,
+              star.orbitTilt,
+              screenCx,
+              screenCy,
+            )
+            playStarVanishFx(star.despawnReason ?? 'expired', {
+              x: sx,
+              y: sy,
+              size: starBodySize(star.starType, sunScale),
+              starColor: star.starColor,
+              dirX: ahead.x - sx,
+              dirY: ahead.y - sy,
+            })
+          }
         }
         continue
       }
