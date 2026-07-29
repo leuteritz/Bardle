@@ -667,11 +667,15 @@ function onImgError(e: Event) {
           :data-role="CHAMPION_ROLES[champion]"
           @click="emit('select', champion)"
         >
-          <!-- Image + gradient overlay -->
+          <!-- Image + gradient overlay. The grid scrolls far past the viewport
+               and every card carries a full-size splash, so the art is deferred
+               until the card comes into view. -->
           <img
             :src="battleStore.getChampionImage(champion)"
             :alt="champion"
             class="csp-champ-img"
+            loading="lazy"
+            decoding="async"
             @error="onImgError"
           />
           <div class="csp-champ-gradient card-overlay card-overlay--default" />
