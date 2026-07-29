@@ -13,8 +13,9 @@
  * Die Meilenstein-Rauten bleiben bewusst außerhalb: sie stehen auch dann
  * noch, wenn der Button den Balken abgelöst hat.
  */
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
+import { formatNumber } from '@/config/numberFormat'
 import { UNIVERSE_BAR_TICK_PERCENTS, UNIVERSE_BAR_FILL_INSET_PX } from '@/config/constants'
 
 const props = defineProps<{
@@ -25,7 +26,20 @@ const props = defineProps<{
 const gameStore = useGameStore()
 
 const progress = computed(() => gameStore.universeRescueProgress)
-const pctText = computed(() => `${progress.value.toFixed(1)}%`)
+
+/* Eigener Hover-Zustand statt des Zeilen-Hovers aus der Elternkomponente:
+   der deckt auch die Meilenstein-Rauten mit ab, "über dem Balken" ist
+   genau dieses Element. */
+const isBarHovered = ref(false)
+
+/* Im Ruhezustand der Prozentwert, beim Hovern die Zahlen dahinter:
+   gesammelte und benötigte Chimes. Der Balken beantwortet damit beide
+   Fragen — wie weit noch, und wie viel genau. */
+const barText = computed(() =>
+  isBarHovered.value
+    ? `${formatNumber(gameStore.chimesForNextUniverse)}/${formatNumber(gameStore.chimesToUniverseRescue)}`
+    : `${progress.value.toFixed(1)}%`,
+)
 
 /* Die Zahl steht mittig im Balken und wird beim Füllen von der Goldkante
    überlaufen — eine einzelne Textfarbe ist dann zwangsläufig irgendwann
@@ -44,7 +58,14 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
 <template>
   <div class="rescue-slot">
     <Transition name="prestige-reveal">
-      <div v-if="!gameStore.prestigeAvailable" key="bar" class="rpg-bar-wrap" :class="glowClass">
+      <div
+        v-if="!gameStore.prestigeAvailable"
+        key="bar"
+        class="rpg-bar-wrap"
+        :class="glowClass"
+        @mouseenter="isBarHovered = true"
+        @mouseleave="isBarHovered = false"
+      >
         <div class="rpg-bar-fill" :style="{ width: progress + '%' }">
           <div class="rpg-bar-gloss" />
           <!-- Ein einzelner Schräg-Schimmer, der per transform über den Balken
@@ -63,12 +84,12 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
         </div>
         <div class="rpg-bar-border" />
         <div class="rpg-bar-text">
-          <span v-ink-center.x.y class="rpg-bar-pct">{{ pctText }}</span>
+          <span v-ink-center.x.y class="rpg-bar-pct">{{ barText }}</span>
         </div>
         <!-- Deckungsgleiche zweite Ebene in Dunkel, an der Füllkante
              abgeschnitten — siehe fillClipStyle. -->
         <div class="rpg-bar-text rpg-bar-text--on-fill" :style="fillClipStyle" aria-hidden="true">
-          <span v-ink-center.x.y class="rpg-bar-pct rpg-bar-pct--dark">{{ pctText }}</span>
+          <span v-ink-center.x.y class="rpg-bar-pct rpg-bar-pct--dark">{{ barText }}</span>
         </div>
       </div>
 
