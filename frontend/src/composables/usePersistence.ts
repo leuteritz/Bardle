@@ -16,6 +16,8 @@ import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/starForgeStore'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { useSkinStore } from '@/stores/skinStore'
+import { useChampionLevelStore } from '@/stores/championLevelStore'
+import type { ChampionProgress, PendingPerkChoice } from '@/types'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -62,6 +64,7 @@ export function usePersistence() {
     const meepTreeStore = useMeepTreeStore()
     const planetBossStore = usePlanetBossStore()
     const starGroupStore = useStarGroupStore()
+    const championLevelStore = useChampionLevelStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -171,6 +174,14 @@ export function usePersistence() {
         collectedMaterials: { ...inventoryStore.collectedMaterials },
         totalMaterialsCollected: inventoryStore.totalMaterialsCollected,
         totalMaterialsSpent: inventoryStore.totalMaterialsSpent,
+      },
+      // Champion progression survives prestige by design — a new universe
+      // resets the economy, not what the champions have learned.
+      championLevel: {
+        progress: JSON.parse(JSON.stringify(championLevelStore.progress)),
+        pendingPerks: championLevelStore.pendingPerks.map((p) => ({ ...p })),
+        totalXpEarned: championLevelStore.totalXpEarned,
+        totalLevelsBought: championLevelStore.totalLevelsBought,
       },
       augment: {
         clickCounter: augmentStore.clickCounter,
@@ -504,6 +515,34 @@ export function usePersistence() {
         augmentStore.bigBangUsed = a.bigBangUsed ?? false
         if (a.keyboardSmashModifiers) augmentStore.keyboardSmashModifiers = a.keyboardSmashModifiers
         augmentStore.onTick()
+      }
+
+      // Restore championLevelStore — saves made before champion levels existed
+      // simply have no block here, so every champion starts at level 1.
+      const championLevelStore = useChampionLevelStore()
+      if (saved.championLevel) {
+        const cl = saved.championLevel
+        if (cl.progress && typeof cl.progress === 'object') {
+          championLevelStore.progress = {}
+          for (const [name, raw] of Object.entries(
+            cl.progress as Record<string, Partial<ChampionProgress>>,
+          )) {
+            championLevelStore.progress[name] = {
+              level: raw?.level ?? 1,
+              xp: raw?.xp ?? 0,
+              totalXp: raw?.totalXp ?? 0,
+              perks: raw?.perks ? { ...raw.perks } : {},
+            }
+          }
+        }
+        if (Array.isArray(cl.pendingPerks)) {
+          championLevelStore.pendingPerks = cl.pendingPerks.filter(
+            (p: PendingPerkChoice) => !!p?.champion,
+          )
+        }
+        championLevelStore.totalXpEarned = cl.totalXpEarned ?? 0
+        championLevelStore.totalLevelsBought = cl.totalLevelsBought ?? 0
+        championLevelStore.prune()
       }
 
       // Restore itemStore
@@ -900,6 +939,10 @@ export function usePersistence() {
 
     // 7e. Reset meepTreeStore
     useMeepTreeStore().$reset()
+
+    // 7f. Reset championLevelStore — a full wipe drops champion levels too;
+    // prestige alone never touches them.
+    useChampionLevelStore().resetAll()
 
     // 7b. Reset planetShopStore – alle Slots zurücksetzen
     const planetShopStoreR = usePlanetShopStore()

@@ -1491,6 +1491,12 @@ export const ROLE_BY_KEY = Object.fromEntries(ROLES.map((r) => [r.key, r])) as R
   (typeof ROLES)[number]
 >
 
+/** Role key → its slot index in ROLES / headerSlots / secondarySlots. */
+export const ROLE_INDEX_BY_KEY = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Record<
+  ChampionRole,
+  number
+>
+
 /** Empty ally grid: one row per role, ALLIES_PER_ROLE null slots each. */
 export const createEmptyAllyRows = (): (string | null)[][] =>
   ROLES.map(() => Array<string | null>(ALLIES_PER_ROLE).fill(null))
@@ -3348,6 +3354,87 @@ export const UNIVERSE_MILESTONE_FLASH_MS = 1600
 // Champion Shop — Chimes cost badge icon
 export const CHIMES_COST_ICON = 'game-icons:windchimes'
 
+// ── Champion Levels ───────────────────────────────────────────────────────────
+// Every champion earns XP from kills and can be levelled with chimes + materials.
+// Levels grant four stats (config/championLevels.ts), an ascension star every 5
+// levels and a perk choice every 10. Store: stores/championLevelStore.ts.
+
+/** XP required to leave level N: BASE * N^EXPONENT. */
+export const CHAMPION_XP_BASE = 120
+export const CHAMPION_XP_EXPONENT = 1.55
+
+/** Level cap at galaxy 1; every further galaxy adds CHAMPION_LEVEL_CAP_PER_GALAXY. */
+export const CHAMPION_LEVEL_START_CAP = 20
+export const CHAMPION_LEVEL_CAP_PER_GALAXY = 5
+export const CHAMPION_LEVEL_MAX_CAP = 50
+
+/** Allies of a role earn this share of the XP their main champion receives. */
+export const CHAMPION_ALLY_XP_SHARE = 0.5
+
+/** Planet boss kill — flat base plus a per-galaxy ramp so late bosses stay relevant. */
+export const CHAMPION_XP_BOSS_BASE = 25
+export const CHAMPION_XP_BOSS_PER_GALAXY = 8
+/** Multipliers on the boss XP base, by boss kind. */
+export const CHAMPION_XP_GALAXY_BOSS_MULT = 6
+export const CHAMPION_XP_CHAMPION_PLANET_MULT = 3
+export const CHAMPION_XP_BOSS_ESCORT_MULT = 2
+
+/** Auto battle payouts — resolved once per match in accumulateBattleStats(). */
+export const CHAMPION_XP_PER_BATTLE_KILL = 12
+export const CHAMPION_XP_PER_BATTLE_ASSIST = 4
+export const CHAMPION_XP_BATTLE_MVP = 60
+export const CHAMPION_XP_BATTLE_WIN = 40
+
+/** Expeditions pay per minute of mission duration; failures pay a consolation share. */
+export const CHAMPION_XP_EXPEDITION_PER_MINUTE = 5
+export const CHAMPION_XP_EXPEDITION_FAIL_SHARE = 0.35
+
+/** Level-up chime price: BASE * level^EXPONENT, scaled by the champion's tier. */
+export const CHAMPION_LEVEL_CHIME_BASE = 500
+export const CHAMPION_LEVEL_CHIME_EXPONENT = 2.1
+/** Extra chime cost per champion tier star (★1 = 1.0, ★6 = 1.0 + 5 * this). */
+export const CHAMPION_LEVEL_TIER_COST_STEP = 0.18
+
+/** An ascension star every N levels — these are also the levels that cost materials. */
+export const CHAMPION_ASCENSION_INTERVAL = 5
+/** Each ascension star lifts every stat by this fraction (multiplicative on the total). */
+export const CHAMPION_ASCENSION_STAT_BONUS = 0.05
+/** Material cost at an ascension level = recipe cost * ceil(level / interval). */
+export const CHAMPION_ASCENSION_MATERIAL_STEP = 1
+
+/** A perk milestone every N levels (10, 20, 30, …). */
+export const CHAMPION_PERK_INTERVAL = 10
+
+/** Base value of every stat at level 1 before tier and growth are applied. */
+export const CHAMPION_STAT_BASE = 10
+/** Stat multiplier added per champion tier star above ★1. */
+export const CHAMPION_STAT_TIER_STEP = 0.1
+
+// Stat → effect conversion. Each divisor answers "how many points for +100%?".
+/** POWER: orbit DPS multiplier = 1 + power / this. */
+export const CHAMPION_POWER_DPS_DIVISOR = 100
+/** VITALITY: HP / battle-power multiplier = 1 + vitality / this. */
+export const CHAMPION_VITALITY_DIVISOR = 120
+/** FOCUS: cooldown multiplier = 1 / (1 + focus / this) — diminishing by construction. */
+export const CHAMPION_FOCUS_CD_DIVISOR = 200
+/** Cooldowns never drop below this share of their base duration. */
+export const CHAMPION_FOCUS_CD_FLOOR = 0.45
+/** FORTUNE: chime / drop multiplier = 1 + fortune / this. */
+export const CHAMPION_FORTUNE_DIVISOR = 250
+
+/** Execute perk: bonus damage applies below this share of boss max HP. */
+export const CHAMPION_EXECUTE_HP_THRESHOLD = 0.3
+/** Last Stand perk: bonus applies below this share of player max HP. */
+export const CHAMPION_LAST_STAND_HP_THRESHOLD = 0.35
+/** Crit perk: a critical orbit hit deals this multiple of normal damage. */
+export const CHAMPION_CRIT_DAMAGE_MULT = 2
+
+// Champion level UI
+/** Height of the champion splash in the level panel, px. */
+export const CHAMPION_LEVEL_SPLASH_HEIGHT = 236
+/** Height of the XP bar in the role panel, px. */
+export const CHAMPION_XP_BAR_HEIGHT = 7
+
 // ── Icon Registry ─────────────────────────────────────────────────────────────
 // All game-icons used in the project. Add new icons here before using them
 // to ensure uniqueness across the codebase.
@@ -3874,6 +3961,26 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:aura', // Buffs & Synergies category
   // Header universe block — stat tiles (UniverseRescueComponent)
   'game-icons:over-infinity', // Universe tile icon (HEADER_UNIVERSE_ICON)
+  // Champion Levels — stats (config/championLevels.ts, CHAMPION_STATS)
+  'game-icons:mighty-force', // POWER stat — orbit damage
+  'game-icons:heart-armor', // VITALITY stat — HP / battle power
+  'game-icons:meditation', // FOCUS stat — role ability cooldowns
+  'game-icons:coinflip', // FORTUNE stat — chime / material gains
+  // Champion Levels — system chrome (SigilDetailsPanel, ChampionLevelPanel)
+  'game-icons:ribbon-medal', // Level badge on the champion card
+  'game-icons:circle-sparks', // XP bar / XP gain readout
+  'game-icons:beveled-star', // Ascension star
+  // Champion Levels — milestone perks (CHAMPION_PERKS)
+  'game-icons:energy-sword', // Overload perk — flat POWER
+  'game-icons:crenulated-shield', // Bulwark perk — flat VITALITY
+  'game-icons:concentration-orb', // Attunement perk — flat FOCUS
+  'game-icons:executioner-hood', // Executioner perk — bonus damage to low-HP bosses
+  'game-icons:energy-shield', // Aegis Echo perk — stronger role ability
+  'game-icons:tarot-10-wheel-of-fortune', // Prospector perk — FORTUNE surge
+  'game-icons:shining-sword', // Starfall perk — orbit crit chance
+  'game-icons:chained-heart', // Last Stand perk — surge while the player is low
+  'game-icons:triorb', // Warp Cadence perk — extra cooldown reduction
+  'game-icons:spiked-halo', // Ascendant Aura perk — allies contribute more
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

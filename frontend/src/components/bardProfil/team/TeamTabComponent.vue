@@ -16,10 +16,11 @@ import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
 import ChampionSkinsPanel from './ChampionSkinsPanel.vue'
+import ChampionLevelPanel from './ChampionLevelPanel.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
 
-type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | 'skins' | null
+type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | 'skins' | 'levels' | null
 
 const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partial<
   Record<ChampionRole, number>
@@ -128,9 +129,18 @@ function openSkins() {
   activeModal.value = 'skins'
 }
 
+/** Champion whose progression the level modal is showing (main or ally). */
+const levelChampion = ref<string | null>(null)
+
+function openLevels(champion: string) {
+  levelChampion.value = champion
+  activeModal.value = 'levels'
+}
+
 function closeModal() {
   activeModal.value = null
   pickerSubSlot.value = -1
+  levelChampion.value = null
 }
 
 function onSelectorTabChange(subSlot: number) {
@@ -276,6 +286,7 @@ onUnmounted(() => {
         @clear-ally="clearAlly"
         @pick-equipment="openEquipment"
         @pick-skins="openSkins"
+        @pick-levels="openLevels"
         @hover-ally="hoveredAllySub = $event"
       />
       <TeamSynergiesPanel
@@ -343,6 +354,17 @@ onUnmounted(() => {
       @close="closeModal"
     >
       <ChampionSkinsPanel class="team-modal-fill" :champion="mainChampion" />
+    </TeamModalShell>
+
+    <TeamModalShell
+      v-if="activeModal === 'levels' && levelChampion"
+      :title="`${levelChampion} — Progression`"
+      icon="game-icons:ribbon-medal"
+      size="md"
+      hide-header
+      @close="closeModal"
+    >
+      <ChampionLevelPanel class="team-modal-fill" :champion="levelChampion" />
     </TeamModalShell>
 
     <TeamModalShell

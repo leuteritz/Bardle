@@ -843,6 +843,8 @@ export interface DamageFloat {
   healFloat?: boolean
   shieldFloat?: boolean
   curseFloat?: boolean
+  /** Starfall perk landed a critical orbit hit — the float is highlighted. */
+  crit?: boolean
 }
 
 export type SynergyEffectType = 'cps' | 'power' | 'dps'
@@ -1081,4 +1083,91 @@ export interface ScoreboardFit {
    * status, so the ornament row above them does not move when they swap.
    */
   crestBand: number
+}
+
+// ── Champion Levels ───────────────────────────────────────────────────────────
+// Per-champion progression: XP earned from kills, levels bought with chimes +
+// materials, four stats that scale by role, ascension stars every 5 levels and
+// a milestone perk choice every 10. Data lives in config/championLevels.ts,
+// runtime state in stores/championLevelStore.ts.
+
+/** The four champion stats. Each maps to exactly one gameplay multiplier. */
+export type ChampionStatKey = 'power' | 'vitality' | 'focus' | 'fortune'
+
+/** Resolved stat block of a single champion at its current level. */
+export type ChampionStats = Record<ChampionStatKey, number>
+
+export interface ChampionStatDef {
+  key: ChampionStatKey
+  label: string
+  /** Short all-caps tag shown on the stat tile. */
+  short: string
+  icon: string
+  color: string
+  /** What the stat does, one line — shown in the stat tooltip. */
+  desc: string
+  /** Suffix appended to the derived multiplier readout (e.g. "DPS"). */
+  effectLabel: string
+}
+
+/** Per-role stat growth per level — the reason roles feel different to level. */
+export type ChampionRoleGrowth = Record<ChampionStatKey, number>
+
+/** One rank band of the ascension ladder (driven by ascension stars). */
+export interface AscensionRank {
+  /** Lowest star count that still belongs to this band. */
+  minStars: number
+  name: string
+  color: string
+}
+
+/** Which milestone pool a perk belongs to. */
+export type ChampionPerkTier = 'adept' | 'master' | 'elite'
+
+export interface ChampionPerkDef {
+  id: string
+  tier: ChampionPerkTier
+  name: string
+  icon: string
+  color: string
+  desc: string
+  /** Flat stat bonuses granted while the perk is active. */
+  stats?: Partial<ChampionStats>
+  /** Special effect key read by the consuming store (see championLevelStore). */
+  effect?: ChampionPerkEffect
+  /** Magnitude of `effect` — meaning depends on the effect key. */
+  value?: number
+}
+
+export type ChampionPerkEffect =
+  | 'execute' // bonus orbit damage against low-HP bosses
+  | 'abilityPower' // role ability effects scale up
+  | 'fortuneSurge' // chime + material gains scale up
+  | 'critChance' // orbit hits can crit
+  | 'lastStand' // stat surge while the player is low on HP
+  | 'cooldownRush' // extra cooldown reduction on top of FOCUS
+  | 'allyEcho' // allies of this role contribute more
+
+/** Persisted progression of one champion. */
+export interface ChampionProgress {
+  level: number
+  /** XP accumulated toward the next level. */
+  xp: number
+  /** Lifetime XP — never reset, drives the Bard Stats catalog. */
+  totalXp: number
+  /** Chosen perk id per milestone level (e.g. { 10: 'overload' }). */
+  perks: Record<number, string>
+}
+
+/** A milestone that is unlocked but still waiting for the player to pick. */
+export interface PendingPerkChoice {
+  champion: string
+  level: number
+  tier: ChampionPerkTier
+}
+
+/** Full level-up cost of one step. */
+export interface ChampionLevelCost {
+  chimes: number
+  materials: Record<string, number>
 }

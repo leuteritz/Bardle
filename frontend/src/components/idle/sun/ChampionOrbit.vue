@@ -146,12 +146,13 @@
               'champion-dmg-float--heal': f.healFloat,
               'champion-dmg-float--shield': f.shieldFloat,
               'champion-dmg-float--curse': f.curseFloat,
+              'champion-dmg-float--crit': f.crit,
             }"
             :style="{ left: f.x + 'px', top: f.y + 'px' }"
           >
             <template v-if="f.shieldFloat"><Icon icon="game-icons:shield-reflect" width="16" height="16" style="color: #5090e8" /></template>
             <template v-else-if="f.healFloat">+{{ f.value }}</template>
-            <template v-else>-{{ f.value }}</template>
+            <template v-else>-{{ f.value }}<span v-if="f.crit" class="champion-dmg-crit-tag">CRIT</span></template>
           </span>
         </TransitionGroup>
       </div>
@@ -1102,6 +1103,44 @@ export default defineComponent({
   text-shadow:
     0 0 16px rgba(255, 200, 0, 1),
     0 0 32px rgba(255, 160, 0, 0.7);
+}
+
+/* Starfall (champion perk) — a critical orbit hit reads brighter and larger
+   than the regular planet float, with the CRIT tag riding along above it. */
+.champion-dmg-float--crit {
+  color: #fff4c0;
+  text-shadow:
+    0 0 18px rgba(255, 220, 90, 1),
+    0 0 38px rgba(255, 160, 40, 0.85);
+  animation: champion-dmg-crit-pop 0.34s ease-out;
+}
+.champion-dmg-float--planet.champion-dmg-float--crit {
+  font-size: 2.7rem;
+}
+.champion-dmg-crit-tag {
+  margin-left: 6px;
+  font-size: 0.42em;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #e8c040;
+  vertical-align: super;
+  -webkit-text-stroke: 0;
+}
+@keyframes champion-dmg-crit-pop {
+  0% {
+    transform: translateX(-50%) scale(0.7);
+  }
+  55% {
+    transform: translateX(-50%) scale(1.18);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .champion-dmg-float--crit {
+    animation: none;
+  }
 }
 
 .champion-dmg-float--adc {

@@ -16,6 +16,7 @@ import { useSynergyStore } from '@/stores/synergyStore'
 import { useAugmentStore } from '@/stores/augmentStore'
 import { usePlayerStore } from '@/stores/playerStore'
 import { useSectionStore } from '@/stores/sectionStore'
+import { useChampionLevelStore } from '@/stores/championLevelStore'
 import { STAT_CATEGORIES } from '@/config/statCategories'
 import { formatNumber } from '@/config/numberFormat'
 import { formatCompactDuration } from '@/utils/format'
@@ -85,6 +86,7 @@ export function useStatCatalog(query: Ref<string>): {
   const augmentStore = useAugmentStore()
   const playerStore = usePlayerStore()
   const sectionStore = useSectionStore()
+  const championLevelStore = useChampionLevelStore()
 
   /* ── Progression ──────────────────────────────────────────────────────── */
   const progression = computed<StatEntry[]>(() => {
@@ -519,6 +521,31 @@ export function useStatCatalog(query: Ref<string>): {
         label: 'Champions with a Career',
         value: int(career.length),
         hint: 'Champions that have played at least one match for you',
+      },
+      {
+        key: 'champions-trained',
+        label: 'Champions Trained',
+        value: int(championLevelStore.trainedChampionCount),
+        hint: 'Champions above level 1',
+        keywords: 'level progression',
+      },
+      {
+        key: 'champion-levels-bought',
+        label: 'Champion Levels Bought',
+        value: int(championLevelStore.totalLevelsBought),
+        keywords: 'level up',
+      },
+      {
+        key: 'champion-xp',
+        label: 'Champion XP Earned',
+        value: num(championLevelStore.totalXpEarned),
+        keywords: 'experience',
+      },
+      {
+        key: 'champion-level-cap',
+        label: 'Champion Level Cap',
+        value: int(championLevelStore.levelCap),
+        hint: 'Rises with every galaxy reached',
       },
       { key: 'top-kills', label: 'Most Kills', value: byMetric((c) => c.kills) },
       { key: 'top-damage', label: 'Most Damage', value: byMetric((c) => c.damage) },

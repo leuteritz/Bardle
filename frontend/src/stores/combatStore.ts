@@ -16,6 +16,8 @@ import {
   COMBAT_FLOAT_DURATION_MS,
   COMBAT_FLOAT_OFFSET_Y,
   COMBAT_FLOAT_OFFSET_X_SPREAD,
+  CHAMPION_EXECUTE_HP_THRESHOLD,
+  CHAMPION_CRIT_DAMAGE_MULT,
 } from '../config/constants'
 import { activePlanetPositions } from '../utils/liveState'
 import { usePlanetBossStore } from './planetBossStore'
@@ -24,12 +26,14 @@ import { useGameStore } from './gameStore'
 import { useSynergyStore } from './synergyStore'
 import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
+import { useChampionLevelStore } from './championLevelStore'
 
 let _damageFloatId = 0
 
 function buildChampionState(name: string, index: number, total: number): ChampionCombatState {
   let orbitRadiusX = COMBAT_ORBIT_RADIUS_X_MIN + Math.random() * COMBAT_ORBIT_RADIUS_X_RANGE
-  let orbitRadiusY = orbitRadiusX * (COMBAT_ORBIT_Y_SCALE_MIN + Math.random() * COMBAT_ORBIT_Y_SCALE_RANGE)
+  let orbitRadiusY =
+    orbitRadiusX * (COMBAT_ORBIT_Y_SCALE_MIN + Math.random() * COMBAT_ORBIT_Y_SCALE_RANGE)
   const tiltDeg = Math.random() * COMBAT_ORBIT_TILT_MAX_DEG
   const tiltRad = (tiltDeg * Math.PI) / 180
   const baseSpeed = COMBAT_ORBIT_SPEED_MIN + Math.random() * COMBAT_ORBIT_SPEED_RANGE
@@ -137,14 +141,31 @@ export const useCombatStore = defineStore('combat', {
         if (gameStore.isGamePaused && activeBoss.isChampionPlanet) return
         // Each attacking main hits harder per assigned ally of its role (allies no longer orbit)
         const battleStore = useBattleStore()
+        const levelStore = useChampionLevelStore()
+        const bossHpFraction = activeBoss.maxHP > 0 ? activeBoss.currentHP / activeBoss.maxHP : 1
         let baseDPS = 0
+        let anyCrit = false
         for (const a of attackers) {
           const roleIdx = battleStore.headerSlots.indexOf(a.name)
           const filledAllies =
-            roleIdx >= 0
-              ? (battleStore.secondarySlots[roleIdx]?.filter(Boolean).length ?? 0)
-              : 0
-          baseDPS += CHAMPION_DPS_BASE * (1 + filledAllies * ALLY_DPS_CONTRIBUTION)
+            roleIdx >= 0 ? (battleStore.secondarySlots[roleIdx]?.filter(Boolean).length ?? 0) : 0
+          // Ascendant Aura (perk) makes each assigned ally worth more
+          const allyShare = ALLY_DPS_CONTRIBUTION * levelStore.allyContributionMultOf(a.name)
+          // POWER (champion level) is what separates a fresh recruit from a
+          // levelled one — everything below stacks on top of it.
+          let dps = CHAMPION_DPS_BASE * (1 + filledAllies * allyShare)
+          dps *= levelStore.orbitDpsMultOf(a.name)
+
+          const execute = levelStore.perkEffectOf(a.name, 'execute')
+          if (execute > 0 && bossHpFraction <= CHAMPION_EXECUTE_HP_THRESHOLD) {
+            dps *= 1 + execute
+          }
+          const crit = levelStore.perkEffectOf(a.name, 'critChance')
+          if (crit > 0 && Math.random() < crit) {
+            dps *= CHAMPION_CRIT_DAMAGE_MULT
+            anyCrit = true
+          }
+          baseDPS += dps
         }
         const totalDPS =
           baseDPS *
@@ -161,6 +182,7 @@ export const useCombatStore = defineStore('combat', {
             y: pos.cy - COMBAT_FLOAT_OFFSET_Y,
             expiresAt: now + COMBAT_FLOAT_DURATION_MS,
             planetFloat: true,
+            crit: anyCrit,
           })
         }
       }

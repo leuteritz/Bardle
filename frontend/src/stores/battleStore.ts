@@ -3,6 +3,7 @@ import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
 import { useAugmentStore } from './augmentStore'
 import { useSkinStore } from './skinStore'
+import { useChampionLevelStore } from './championLevelStore'
 import {
   createEmptyAllyRows,
   ELO_K_FACTOR,
@@ -95,6 +96,10 @@ import {
   WINPROB_MIN,
   WINPROB_MAX,
   BATTLE_BASE_START_WIN_CHANCE,
+  CHAMPION_XP_PER_BATTLE_KILL,
+  CHAMPION_XP_PER_BATTLE_ASSIST,
+  CHAMPION_XP_BATTLE_MVP,
+  CHAMPION_XP_BATTLE_WIN,
 } from '../config/constants'
 import { DRAKE_TYPES, type DrakeTypeId } from '../config/drakes'
 import type {
@@ -1423,6 +1428,7 @@ export const useBattleStore = defineStore('battle', {
       this.lastLpChange = actualLpChange
 
       const mvpName = this.accumulateBattleStats()
+      this.grantBattleChampionXp(battleResult, mvpName)
 
       // Baron's Bounty (Baron Nashor): the slain worm pays out chimes at battle
       // end — win or lose. Granted here (once per battle) instead of at the kill
@@ -1556,6 +1562,24 @@ export const useBattleStore = defineStore('battle', {
         if (career) career.mvps += 1
       }
       return mvpName
+    },
+
+    /**
+     * Champion XP from a finished auto battle. Unlike a boss kill this payout is
+     * individual — each champion is paid for its own kills and assists, plus a
+     * flat win and MVP bonus — and every assigned ally of that role banks its
+     * share (see championLevelStore.grantXpWithAllies).
+     */
+    grantBattleChampionXp(won: boolean, mvpName: string): void {
+      const levelStore = useChampionLevelStore()
+      for (const champ of this.team1) {
+        if (!champ.name) continue
+        let xp =
+          champ.kills * CHAMPION_XP_PER_BATTLE_KILL + champ.assists * CHAMPION_XP_PER_BATTLE_ASSIST
+        if (won) xp += CHAMPION_XP_BATTLE_WIN
+        if (champ.name === mvpName) xp += CHAMPION_XP_BATTLE_MVP
+        levelStore.grantXpWithAllies(champ.name, xp)
+      }
     },
 
     /** Base chime value of a single honor (production-scaled with a click floor). */

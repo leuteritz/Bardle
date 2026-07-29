@@ -21,6 +21,11 @@ import {
   BOSS_REMOVAL_DELAY_MS,
   BOSS_REMOVAL_LONG_DELAY_MS,
   BOSS_UNIVERSE_PROGRESS_FRACTION,
+  CHAMPION_XP_BOSS_BASE,
+  CHAMPION_XP_BOSS_PER_GALAXY,
+  CHAMPION_XP_GALAXY_BOSS_MULT,
+  CHAMPION_XP_CHAMPION_PLANET_MULT,
+  CHAMPION_XP_BOSS_ESCORT_MULT,
 } from '../config/constants'
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -45,6 +50,7 @@ import { useStarGroupStore } from './starGroupStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
+import { useChampionLevelStore } from './championLevelStore'
 import { SECTIONS } from '../config/sections'
 import { logger } from '../utils/logger'
 
@@ -434,15 +440,24 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const gameStore = useGameStore()
 
       const inventoryStore = useInventoryStore()
+      const levelStore = useChampionLevelStore()
+      // FORTUNE (champion levels) lifts the chime payout and gives every material
+      // slot a chance at a second unit — the fractional part of the multiplier.
+      const fortune = levelStore.teamFortuneMult
+      const extraMaterialChance = fortune - 1
       let totalChimes = 0
       for (const slot of boss.rewardSlots) {
         if (slot.type === 'chimes') {
           totalChimes += slot.amount ?? 0
         } else if (slot.type === 'material' && slot.materialId) {
           inventoryStore.addMaterial(slot.materialId)
+          if (extraMaterialChance > 0 && Math.random() < extraMaterialChance) {
+            inventoryStore.addMaterial(slot.materialId)
+          }
           this.lastDroppedMaterialId = slot.materialId
         }
       }
+      totalChimes = Math.round(totalChimes * fortune)
       gameStore.chimes += totalChimes
       gameStore.chimesForNextUniverse += Math.floor(totalChimes * BOSS_UNIVERSE_PROGRESS_FRACTION)
       gameStore.calculateLevel()
@@ -469,8 +484,18 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         }
       }
 
+      // Champion XP — the whole orbiting roster shares the kill. Galaxy bosses,
+      // champion planets and escorts are worth a multiple of a regular boss, so
+      // star fights and boss chains are the real level-up moments.
+      const galaxy = useGalaxyStore().currentGalaxy
+      let xp = CHAMPION_XP_BOSS_BASE + Math.max(0, galaxy - 1) * CHAMPION_XP_BOSS_PER_GALAXY
+      if (boss.isGalaxyBoss) xp *= CHAMPION_XP_GALAXY_BOSS_MULT
+      else if (boss.isChampionPlanet) xp *= CHAMPION_XP_CHAMPION_PLANET_MULT
+      else if (boss.isBossEscort) xp *= CHAMPION_XP_BOSS_ESCORT_MULT
+      levelStore.grantTeamXp(xp)
+
       this.lastBossResult = 'victory'
-      logger.info('Planet', `Rewards granted: +${totalChimes} chimes`)
+      logger.info('Planet', `Rewards granted: +${totalChimes} chimes, +${xp} champion XP`)
 
       const sectionStore = useSectionStore()
       sectionStore.onBossDefeated()

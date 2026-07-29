@@ -4,6 +4,7 @@ import { useBattleStore } from './battleStore'
 import { usePlanetShopStore } from './planetShopStore'
 import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
+import { useChampionLevelStore } from './championLevelStore'
 import { getChampionRoles } from '../config/championData'
 import { useEventLog, type GameEventType } from '../composables/useEventLog'
 import { formatNumber } from '../config/numberFormat'
@@ -28,6 +29,8 @@ import {
   EXPEDITION_ICON_POOL,
   EXPEDITION_TIER_THRESHOLDS,
   EXPEDITION_ID_RANDOM_MAX,
+  CHAMPION_XP_EXPEDITION_PER_MINUTE,
+  CHAMPION_XP_EXPEDITION_FAIL_SHARE,
   type ExpeditionTier,
 } from '../config/constants'
 import type { ExpeditionMission, AvailableExpeditionSlot, ChampionRole } from '../types'
@@ -319,6 +322,17 @@ export const useExpeditionStore = defineStore('expedition', {
           ]
       }
       addEvent(`${expedition.name} ${flavor} (${rewardStr})`, eventType)
+
+      // Champion XP — paid per minute in the field, so long missions are worth
+      // sending a champion away for. A failed run still teaches something, just
+      // less. This is the only XP source that reaches benched champions.
+      const levelStore = useChampionLevelStore()
+      const minutes = expedition.durationSeconds / 60
+      let xp = minutes * CHAMPION_XP_EXPEDITION_PER_MINUTE
+      if (expedition.status !== 'success') xp *= CHAMPION_XP_EXPEDITION_FAIL_SHARE
+      for (const name of expedition.champions) {
+        levelStore.grantXpWithAllies(name, xp)
+      }
 
       this.activeExpeditions.splice(idx, 1)
       this.completedExpeditions.unshift(expedition)

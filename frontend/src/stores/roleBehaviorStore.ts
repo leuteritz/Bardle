@@ -45,12 +45,14 @@ import {
   INTERCEPT_SHIELD_ANIM_MS,
   JUNGLE_BUFF_FLASH_ANIM_MS,
   STRIKER_PROJECTILE_FLIGHT_MS,
+  ROLE_INDEX_BY_KEY,
 } from '../config/constants'
 import { getChampionStarLevel } from '../config/championTiers'
 import { usePlayerStore } from './playerStore'
 import { useBattleStore } from './battleStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useCombatStore } from './combatStore'
+import { useChampionLevelStore } from './championLevelStore'
 import {
   usePlanetShopStore,
   PLANET_ROLES,
@@ -83,6 +85,19 @@ function getOrbitingRoles(): Set<ChampionRole> {
     if (slot !== null) roles.add(ORBIT_SLOT_ROLES[i])
   })
   return roles
+}
+
+/**
+ * Champion FOCUS shortens the role ability cooldown; the Warp Cadence perk cuts
+ * a further slice. Empty slots return the base duration unchanged.
+ */
+function roleCooldown(role: ChampionRole, baseMs: number): number {
+  return Math.round(baseMs * useChampionLevelStore().roleCooldownMult(ROLE_INDEX_BY_KEY[role]))
+}
+
+/** Aegis Echo (perk) scales what the ability actually does — heal, burst, DoT. */
+function roleAbility(role: ChampionRole, baseValue: number): number {
+  return Math.round(baseValue * useChampionLevelStore().roleAbilityMult(ROLE_INDEX_BY_KEY[role]))
 }
 
 export const CURSE_DEFS: Record<MidCurseType, { name: string; icon: string; effect: string }> = {
@@ -292,24 +307,42 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     },
 
     /** Keep the per-role HP pool in sync with the slotted champion — max HP
-     *  scales with the champion's star level; a swap resets the pool. */
+     *  scales with the champion's star level and its VITALITY. A swap resets the
+     *  pool; a level-up widens it without healing the damage already taken. */
     _syncChampionHp() {
       const battleStore = useBattleStore()
+      const levelStore = useChampionLevelStore()
       for (let i = 0; i < ROLES.length; i++) {
         const role = ROLES[i].key
         const name = battleStore.headerSlots[i]
-        if (name === this.championHpOwner[role]) continue
-        this.championHpOwner[role] = name
-        this.championDownUntil[role] = 0
+        const swapped = name !== this.championHpOwner[role]
+
         if (!name) {
+          if (!swapped) continue
+          this.championHpOwner[role] = name
+          this.championDownUntil[role] = 0
           this.championHp[role] = { current: 0, max: 0 }
           continue
         }
+
         const star = getChampionStarLevel(name)
         const max = Math.round(
-          CHAMPION_BASE_HP_BY_ROLE[role] * (1 + (star - 1) * CHAMPION_HP_PER_STAR),
+          CHAMPION_BASE_HP_BY_ROLE[role] *
+            (1 + (star - 1) * CHAMPION_HP_PER_STAR) *
+            levelStore.vitalityMultOf(name),
         )
-        this.championHp[role] = { current: max, max }
+        if (!swapped && max === this.championHp[role].max) continue
+
+        if (swapped) {
+          this.championHpOwner[role] = name
+          this.championDownUntil[role] = 0
+          this.championHp[role] = { current: max, max }
+        } else {
+          // Levelled mid-flight: keep the wound, widen the pool around it.
+          const pool = this.championHp[role]
+          const ratio = pool.max > 0 ? pool.current / pool.max : 1
+          this.championHp[role] = { current: Math.round(max * ratio), max }
+        }
       }
     },
 
@@ -769,7 +802,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       if (!championInForeground(supportName)) return
 
       if (this.supportHealCooldownMs <= 0) {
-        this.supportHealCooldownMs = ROLE_SUPPORT_HEAL_INTERVAL_MS
+        this.supportHealCooldownMs = roleCooldown('support', ROLE_SUPPORT_HEAL_INTERVAL_MS)
       }
 
       if (this.supportPlanetHealCooldownMs > 0) return
@@ -833,7 +866,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
       const playerStore = usePlayerStore()
       if (playerStore.currentHP < playerStore.maxHP) {
-        const healed = Math.min(ROLE_SUPPORT_HEAL_AMOUNT, playerStore.maxHP - playerStore.currentHP)
+        const healed = Math.min(
+          roleAbility('support', ROLE_SUPPORT_HEAL_AMOUNT),
+          playerStore.maxHP - playerStore.currentHP,
+        )
         playerStore.currentHP += healed
 
         spawnFloat(
@@ -915,22 +951,17 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         !activeBoss.expired &&
         bossPlanetInForeground(activeBoss.planetId)
       ) {
-        const defeated = bossStore.dealDamage(ROLE_MID_CURSE_DOT_DPS)
+        const dotDamage = roleAbility('mid', ROLE_MID_CURSE_DOT_DPS)
+        const defeated = bossStore.dealDamage(dotDamage)
         throttledEvent(`mid-curse-dot-${activeBoss.planetId}`, 10000, () => {
-          addEvent(`${championName} Corruption: ${ROLE_MID_CURSE_DOT_DPS} dmg.`, 'mid')
+          addEvent(`${championName} Corruption: ${dotDamage} dmg.`, 'mid')
         })
         if (!defeated) {
           const pos = activePlanetPositions.get(activeBoss.planetId)
           if (pos) {
-            spawnFloat(
-              ROLE_MID_CURSE_DOT_DPS,
-              pos.cx + (Math.random() - 0.5) * 40,
-              pos.cy - 50,
-              1000,
-              {
-                curseFloat: true,
-              },
-            )
+            spawnFloat(dotDamage, pos.cx + (Math.random() - 0.5) * 40, pos.cy - 50, 1000, {
+              curseFloat: true,
+            })
           }
         }
       }
@@ -976,7 +1007,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       window.setTimeout(() => {
         this.midCurseFlashActive = false
       }, ROLE_MID_CURSE_CAST_MS)
-      this.midCurseCooldownMs = ROLE_MID_CURSE_INTERVAL_MS
+      this.midCurseCooldownMs = roleCooldown('mid', ROLE_MID_CURSE_INTERVAL_MS)
 
       if (type === 'damnation') {
         const dmg = Math.floor(activeBoss.maxHP * ROLE_MID_CURSE_DAMNATION_FRAC)
@@ -1013,32 +1044,29 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           return
         }
 
-        this.adcBurstCooldownMs = ROLE_ADC_BURST_INTERVAL_MS
+        this.adcBurstCooldownMs = roleCooldown('adc', ROLE_ADC_BURST_INTERVAL_MS)
         this.adcBurstActive = true
         window.setTimeout(() => {
           this.adcBurstActive = false
         }, 350)
 
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
+          const burstDamage = roleAbility('adc', ROLE_ADC_BURST_DAMAGE)
           throttledEvent(`adc-burst-${activeBoss.planetId}`, 10000, () => {
-            addEvent(`${championName} burst: ${ROLE_ADC_BURST_DAMAGE} dmg.`, 'adc')
+            addEvent(`${championName} burst: ${burstDamage} dmg.`, 'adc')
           })
 
           // Auch der Burst fliegt als Projektil — Schaden erst beim Einschlag
           const target = activeBoss
           window.setTimeout(() => {
             if (target.defeated || target.expired) return
-            const defeated = bossStore.dealDamageToBoss(target, ROLE_ADC_BURST_DAMAGE)
+            const defeated = bossStore.dealDamageToBoss(target, burstDamage)
             if (!defeated) {
               const pos = activePlanetPositions.get(target.planetId)
               if (pos) {
-                spawnFloat(
-                  ROLE_ADC_BURST_DAMAGE,
-                  pos.cx + (Math.random() - 0.5) * 30,
-                  pos.cy - 45,
-                  1200,
-                  { adcFloat: true },
-                )
+                spawnFloat(burstDamage, pos.cx + (Math.random() - 0.5) * 30, pos.cy - 45, 1200, {
+                  adcFloat: true,
+                })
               }
             } else {
               addEvent(`${championName} slays boss (${formatSlotId(target.planetId)}).`, 'adc')
@@ -1055,14 +1083,15 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       this.tankInterceptDirY = dirY
 
       this.tankShieldActive = false
-      this.tankShieldBrokenMs = ROLE_TOP_SHIELD_REBUILD_MS
+      const rebuildMs = roleCooldown('top', ROLE_TOP_SHIELD_REBUILD_MS)
+      this.tankShieldBrokenMs = rebuildMs
 
       spawnFloat(0, topX, topY - 45, 1000, { shieldFloat: true })
 
       const { addEvent } = useEventLog()
       const championName = getChampionNameByRole('top')
       addEvent(
-        `${championName}'s shield absorbs a shot! (${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s rebuild)`,
+        `${championName}'s shield absorbs a shot! (${(rebuildMs / 1000).toFixed(1)}s rebuild)`,
         'top',
       )
 

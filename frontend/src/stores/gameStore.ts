@@ -10,6 +10,7 @@ import { useExpeditionStore } from './expeditionStore'
 import { useCombatStore } from './combatStore'
 import { usePlayerStore } from './playerStore'
 import { useRoleBehaviorStore } from './roleBehaviorStore'
+import { useChampionLevelStore } from './championLevelStore'
 import { usePlanetShopStore } from './planetShopStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useStarForgeStore } from './starForgeStore'
@@ -722,6 +723,9 @@ export const useGameStore = defineStore('game', {
       const eloPowerMod = this.activeModifier.eloPowerMultiplier ?? 1
       const itemPowerMul = useItemStore().totalPowerMultiplier
       const synergyPowerMul = useSynergyStore().powerSynergyMultiplier
+      // VITALITY across the slotted main champions — champion levels tilt the
+      // auto battle, not just planet boss damage.
+      const championVitalityMul = useChampionLevelStore().teamVitalityMult
       const tree = useMeepTreeStore().fx
       return Math.floor(
         (this.meeps * MEEP_POWER_MULTIPLIER * meepPowerMod * tree.meepPowerMult +
@@ -729,7 +733,8 @@ export const useGameStore = defineStore('game', {
           tree.powerBonus) *
           eloPowerMod *
           itemPowerMul *
-          synergyPowerMul,
+          synergyPowerMul *
+          championVitalityMul,
       )
     },
 

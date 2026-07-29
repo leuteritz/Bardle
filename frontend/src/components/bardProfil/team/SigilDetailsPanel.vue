@@ -5,6 +5,8 @@ import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useSkinStore } from '@/stores/skinStore'
+import { useChampionLevelStore } from '@/stores/championLevelStore'
+import { ascensionRank } from '@/config/championLevels'
 import {
   ROLES,
   ALLIES_PER_ROLE,
@@ -34,6 +36,8 @@ const emit = defineEmits<{
   'clear-ally': [subSlot: number]
   'pick-equipment': [category: ItemCategory]
   'pick-skins': []
+  /** Opens the champion level panel for this champion (main or ally). */
+  'pick-levels': [champion: string]
   /** Hovered ally row — mirrored as a spotlight on the sigil board (null = none). */
   'hover-ally': [subSlot: number | null]
 }>()
@@ -44,6 +48,7 @@ const splashHeightPx = `${TEAM_SIGIL_SPLASH_HEIGHT}px`
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
 const skinStore = useSkinStore()
+const levelStore = useChampionLevelStore()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 
@@ -116,6 +121,27 @@ const equippedSkinName = computed(() =>
   main.value ? formatSkinName(skinStore.getSelectedSkin(main.value)) : '',
 )
 const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== null).length)
+
+// ── Champion levels ──────────────────────────────────────────────────────────
+// Every champion on this card carries its level, its rank color and — when a
+// level is affordable or a perk is unspent — a call to action.
+function levelOf(name: string): number {
+  return levelStore.levelOf(name)
+}
+function rankColorOf(name: string): string {
+  return ascensionRank(levelStore.levelOf(name)).color
+}
+function rankNameOf(name: string): string {
+  return ascensionRank(levelStore.levelOf(name)).name
+}
+function xpPctOf(name: string): number {
+  return levelStore.xpBarOf(name).pct * 100
+}
+/** True when this champion has something waiting: a buyable level or a perk. */
+function needsAttentionOf(name: string): boolean {
+  return levelStore.canLevelUp(name) || levelStore.hasPendingPerk(name)
+}
+const mainLevelCap = computed(() => levelStore.levelCap)
 </script>
 
 <template>
@@ -205,6 +231,34 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
         </button>
       </div>
     </div>
+
+    <!-- ── level strip — the champion's progression at a glance; the whole
+         strip opens the level panel where levels are actually bought ── -->
+    <button
+      v-if="main"
+      class="sdp-level-strip"
+      :class="{ 'sdp-level-strip--attention': needsAttentionOf(main) }"
+      :style="{ '--rank': rankColorOf(main) }"
+      type="button"
+      @click="emit('pick-levels', main)"
+    >
+      <Icon icon="game-icons:ribbon-medal" width="22" height="22" class="sdp-level-strip-icon" />
+      <div class="sdp-level-strip-main">
+        <div class="sdp-level-strip-top">
+          <span class="sdp-level-strip-lv">Level {{ levelOf(main) }}</span>
+          <span class="sdp-level-strip-cap">/ {{ mainLevelCap }}</span>
+          <span class="sdp-level-strip-rank">{{ rankNameOf(main) }}</span>
+          <span class="sdp-level-strip-cta">
+            <template v-if="levelStore.hasPendingPerk(main)">Perk ready</template>
+            <template v-else-if="levelStore.canLevelUp(main)">Level up ready</template>
+            <template v-else>Details</template>
+          </span>
+        </div>
+        <div class="sdp-level-strip-track">
+          <div class="sdp-level-strip-fill" :style="{ width: `${xpPctOf(main)}%` }" />
+        </div>
+      </div>
+    </button>
 
     <!-- ── scrollable body ── -->
     <div class="sdp-body">
@@ -320,7 +374,22 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
               <img :src="allyImage(ally)" :alt="ally" class="sdp-ally-row-img" />
               <div class="sdp-ally-row-fade" />
               <span class="sdp-ally-row-main">
-                <span class="sdp-ally-row-name">{{ ally }}</span>
+                <span class="sdp-ally-row-name">
+                  <span class="sdp-ally-row-name-text">{{ ally }}</span>
+                  <!-- ally level — clicking the chip opens that ally's level
+                       panel instead of the champion picker -->
+                  <span
+                    class="sdp-ally-level"
+                    :class="{ 'sdp-ally-level--attention': needsAttentionOf(ally) }"
+                    :style="{ '--rank': rankColorOf(ally) }"
+                    role="button"
+                    :title="`Level ${levelOf(ally)} — open progression`"
+                    @click.stop="emit('pick-levels', ally)"
+                  >
+                    <Icon icon="game-icons:ribbon-medal" width="12" height="12" />
+                    {{ levelOf(ally) }}
+                  </span>
+                </span>
                 <span class="sdp-ally-row-chips">
                   <span
                     v-if="allyOrigin(ally)"
@@ -644,6 +713,95 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
   flex-shrink: 0;
 }
+/* ── level strip — sits between splash and body, full width ── */
+.sdp-level-strip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 14px 10px;
+  cursor: pointer;
+  text-align: left;
+  background: #1a1008;
+  border: none;
+  border-bottom: 2px solid #5c3310;
+  border-left: 3px solid var(--rank);
+  transition: background 0.15s;
+}
+.sdp-level-strip:hover {
+  background: #241608;
+}
+.sdp-level-strip-icon {
+  flex-shrink: 0;
+  color: var(--rank);
+}
+.sdp-level-strip-main {
+  flex: 1;
+  min-width: 0;
+}
+.sdp-level-strip-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.sdp-level-strip-lv {
+  font-size: 15px;
+  color: #f0e2ba;
+}
+.sdp-level-strip-cap {
+  font-size: 11.5px;
+  color: rgba(230, 220, 196, 0.4);
+}
+.sdp-level-strip-rank {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rank);
+}
+.sdp-level-strip-cta {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(200, 164, 90, 0.55);
+}
+.sdp-level-strip--attention .sdp-level-strip-cta {
+  color: #6ec040;
+}
+.sdp-level-strip-track {
+  height: 5px;
+  border-radius: 4px;
+  background: #0a0805;
+  border: 1px solid #3e200a;
+  overflow: hidden;
+}
+.sdp-level-strip-fill {
+  height: 100%;
+  background: linear-gradient(to right, #2e6a8a, #4e96e0);
+  transition: width 0.3s ease-out;
+}
+.sdp-level-strip--attention .sdp-level-strip-fill {
+  background: linear-gradient(to right, #2e7a1a, #52b830);
+}
+@keyframes sdp-level-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(110, 192, 64, 0);
+  }
+  50% {
+    box-shadow: 0 0 11px rgba(110, 192, 64, 0.55);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sdp-ally-level--attention {
+    animation: none;
+  }
+}
+
 /* ── body ── */
 .sdp-body {
   flex: 1;
@@ -825,13 +983,50 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   gap: 5px;
 }
 .sdp-ally-row-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
   font-size: 16px;
   font-weight: 700;
   color: #e8dcc0;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+}
+.sdp-ally-row-name-text {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* ally level chip — rank-colored, opens that ally's own level panel */
+.sdp-ally-level {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--rank);
+  color: var(--rank);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+  text-shadow: none;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+.sdp-ally-level:hover {
+  background: rgba(30, 16, 6, 0.95);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--rank) 50%, transparent);
+}
+/* a level is buyable or a perk is unspent — pulse until the player looks */
+.sdp-ally-level--attention {
+  border-color: #6ec040;
+  color: #6ec040;
+  animation: sdp-level-pulse 1.8s ease-in-out infinite;
 }
 .sdp-ally-row-chips {
   display: flex;
