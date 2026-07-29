@@ -98,7 +98,7 @@
                   <img
                     v-for="t in fx.targets ?? []"
                     :key="t.name"
-                    :src="battleStore.getChampionImage(t.name)"
+                    :src="battleStore.getChampionImage(t.name, fx.targetTeam)"
                     class="fx-target"
                     :alt="t.name"
                   />
@@ -115,7 +115,7 @@
                 :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'own') }"
               >
                 <img
-                  :src="battleStore.getChampionImage(f.name)"
+                  :src="battleStore.getChampionImage(f.name, 1)"
                   class="fighter-portrait"
                   :class="{ 'fighter-portrait--dead': !f.alive || f.down }"
                   :alt="f.name"
@@ -281,7 +281,7 @@
                   <img
                     v-for="t in fx.targets ?? []"
                     :key="t.name"
-                    :src="battleStore.getChampionImage(t.name)"
+                    :src="battleStore.getChampionImage(t.name, fx.targetTeam)"
                     class="fx-target"
                     :alt="t.name"
                   />
@@ -336,7 +336,7 @@
                 :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'enemy') }"
               >
                 <img
-                  :src="battleStore.getChampionImage(f.name)"
+                  :src="battleStore.getChampionImage(f.name, 2)"
                   class="fighter-portrait"
                   :class="{ 'fighter-portrait--dead': !f.alive || f.down }"
                   :alt="f.name"
@@ -665,6 +665,8 @@ interface FighterFx {
   color: string
   img?: string
   targets?: ObjectiveFighter[]
+  /** Battle team the targets belong to — decides which skin they wear. */
+  targetTeam?: 1 | 2
   /** Remaining window fraction (1 → 0) driving the pill's drain bar; null = no bar. */
   remaining: number | null
 }
@@ -706,7 +708,8 @@ function buildFighterEffects(f: ObjectiveFighter, side: 'own' | 'enemy'): Fighte
       key: 'taunted',
       label: 'TAUNTED',
       color: ROLE_BY_KEY.top.color,
-      img: battleStore.getChampionImage(tauntingTop.name),
+      // The taunting top always stands on the opposite side of this fighter.
+      img: battleStore.getChampionImage(tauntingTop.name, side === 'own' ? 2 : 1),
       remaining: windowRemaining(tauntingTop),
     })
   }
@@ -727,6 +730,7 @@ function buildFighterEffects(f: ObjectiveFighter, side: 'own' | 'enemy'): Fighte
         label: 'CHALLENGE',
         color: ROLE_BY_KEY.top.color,
         targets: tauntedEnemiesOf(side),
+        targetTeam: side === 'own' ? 2 : 1,
         remaining: windowRemaining(f),
       })
     }

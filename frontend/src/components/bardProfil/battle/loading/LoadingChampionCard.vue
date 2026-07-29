@@ -89,7 +89,9 @@ const props = defineProps<{
 
 const battleStore = useBattleStore()
 
-const artSrc = computed(() => battleStore.getChampionImage(props.card.name))
+const artSrc = computed(() =>
+  battleStore.getChampionImage(props.card.name, props.side === 'red' ? 2 : 1),
+)
 const roleShort = computed(() => ROLE_BY_KEY[props.card.role]?.short ?? props.card.role.toUpperCase())
 const isReady = computed(() => props.percent >= LOADING_READY_PERCENT)
 

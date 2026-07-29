@@ -124,7 +124,12 @@ import {
   mvpScore,
   reseedTimelineFrom,
 } from '../utils/battle/timeline'
-import { fetchChampionNames, getChampionIconPath } from '../utils/champions'
+import {
+  fetchChampionNames,
+  getChampionIconPath,
+  getSkinArtPath,
+  pickRandomSkin,
+} from '../utils/champions'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
 import { CHAMPION_ROLES } from '../config/championData'
@@ -660,12 +665,22 @@ export const useBattleStore = defineStore('battle', {
   },
 
   actions: {
-    getChampionImage(name: string) {
+    /**
+     * Portrait of a champion. Pass team 2 wherever the enemy roster is drawn —
+     * those champions wear the skin rolled for them in refreshTeams(), while
+     * team 1 (and every non-battle caller) follows the player's own pick.
+     */
+    getChampionImage(name: string, team?: 1 | 2) {
       switch (name) {
         case 'Bard':
           return '/img/BardAbilities/Bard.png'
-        default:
+        default: {
+          if (team === 2) {
+            const skin = this.team2.find((c) => c.name === name)?.skin
+            if (skin) return getSkinArtPath(name, skin)
+          }
           return useSkinStore().getSkinImage(name) ?? getChampionIconPath(name)
+        }
       }
     },
 
@@ -1095,22 +1110,35 @@ export const useBattleStore = defineStore('battle', {
       this.team1 = this.headerSlots.map((slot, i) =>
         makeChampionState(slot ?? '', slot ? this.currentRank.tier : 'Silver', i),
       )
-      this.team2 = selected.map((name, i) => makeChampionState(name, 'Silver', i))
+      // Every enemy shows up in a random bundled skin — the classic look is
+      // just one of the draws, so a lobby never looks the same twice.
+      this.team2 = selected.map((name, i) => {
+        const champ = makeChampionState(name, 'Silver', i)
+        champ.skin = pickRandomSkin(name)
+        return champ
+      })
     },
 
-    /** Restore persisted team rosters (names + roles) without re-randomizing. */
+    /** Restore persisted team rosters (names + roles + enemy skins) without
+     *  re-randomizing. */
     restoreTeams(
       t1: Array<{ name: string; role: BattleRole }>,
-      t2: Array<{ name: string; role: BattleRole }>,
+      t2: Array<{ name: string; role: BattleRole; skin?: string }>,
     ) {
-      const build = (list: Array<{ name: string; role: BattleRole }>) =>
+      const build = (
+        list: Array<{ name: string; role: BattleRole; skin?: string }>,
+        withSkins: boolean,
+      ) =>
         list.map((c, i) => {
           const champ = makeChampionState(c.name, 'Silver', i)
           champ.role = c.role
+          // Saves written before enemy skins existed carry none — roll one so a
+          // resumed battle looks like a freshly drawn one.
+          if (withSkins && c.name) champ.skin = c.skin || pickRandomSkin(c.name)
           return champ
         })
-      this.team1 = build(t1)
-      this.team2 = build(t2)
+      this.team1 = build(t1, false)
+      this.team2 = build(t2, true)
     },
 
     /**
@@ -1134,6 +1162,7 @@ export const useBattleStore = defineStore('battle', {
       team.forEach((champ, i) => {
         const fresh = makeChampionState(champ.name, champ.rank, i)
         fresh.role = champ.role
+        fresh.skin = champ.skin
         Object.assign(champ, fresh)
       })
     },
@@ -1789,8 +1818,7 @@ export const useBattleStore = defineStore('battle', {
     battleRating(playerPower: number, opponentPower: number, nominalOpponentPower: number) {
       const parPower = this.mmrToPower(this.mmr)
       const ratio =
-        (playerPower + BATTLE_POWER_RATING_SOFTENING) /
-        (parPower + BATTLE_POWER_RATING_SOFTENING)
+        (playerPower + BATTLE_POWER_RATING_SOFTENING) / (parPower + BATTLE_POWER_RATING_SOFTENING)
       // maps 0 → -1, par → 0, ∞ → +1: power always counts, never runs away
       const powerTilt = (ratio - 1) / (ratio + 1)
       const weakened =

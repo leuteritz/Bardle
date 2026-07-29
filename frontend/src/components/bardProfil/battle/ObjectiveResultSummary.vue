@@ -19,7 +19,7 @@
           >
             <div class="award-portrait-wrap">
               <img
-                :src="battleStore.getChampionImage(a.fighter.name)"
+                :src="battleStore.getChampionImage(a.fighter.name, fighterTeam(a.fighter) === 'own' ? 1 : 2)"
                 class="award-portrait"
                 :class="fighterTeam(a.fighter) === 'own' ? 'award-portrait--own' : 'award-portrait--enemy'"
                 :alt="a.fighter.name"

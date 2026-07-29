@@ -197,7 +197,7 @@ const portraitSrc = computed(() => {
   if (!a) return ''
   if (a.kind === 'drake') return '/img/dragon-256.png'
   if (a.kind === 'baron') return '/img/baron-256.png'
-  return battleStore.getChampionImage(a.name)
+  return battleStore.getChampionImage(a.name, a.team === 2 ? 2 : 1)
 })
 
 const portraitClass = computed(() => {

@@ -226,7 +226,7 @@
             <Icon icon="game-icons:imperial-crown" class="mvp-crown" width="18" height="18" />
           </template>
           <img
-            :src="battleStore.getChampionImage(champAt(pos.team, pos.idx)?.name ?? '')"
+            :src="battleStore.getChampionImage(champAt(pos.team, pos.idx)?.name ?? '', pos.team)"
             :alt="champAt(pos.team, pos.idx)?.name"
             class="champ-img"
             :class="[

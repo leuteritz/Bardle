@@ -18,19 +18,19 @@
             <template v-if="row.type === 'kill'">
               <div class="feed-item">
                 <span class="feed-name" :class="row.kill.killerTeam === 1 ? 'feed-name--blue' : 'feed-name--red'">{{ row.kill.killerName }}</span>
-                <img :src="battleStore.getChampionImage(row.kill.killerName)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
+                <img :src="feedImg(row.kill.killerName, row.kill.killerTeam)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
                 <Icon icon="game-icons:saber-slash" width="16" height="16" class="feed-star" />
                 <template v-if="row.kill.multikillTier">
                   <img
                     v-for="k in multikillChain(row.kill)"
                     :key="`${k.t}-${k.victimName}`"
-                    :src="battleStore.getChampionImage(k.victimName)"
+                    :src="feedImg(k.victimName, foe(row.kill.killerTeam))"
                     :alt="k.victimName"
                     class="feed-img feed-img--dead feed-img--chain"
                     :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'"
                   />
                 </template>
-                <img v-else :src="battleStore.getChampionImage(row.kill.victimName)" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
+                <img v-else :src="feedImg(row.kill.victimName, foe(row.kill.killerTeam))" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
                 <span class="feed-name feed-name--dead">{{ row.kill.victimName }}</span>
                 <span v-if="row.kill.firstBlood" class="feed-fb">FIRST BLOOD</span>
                 <span v-if="row.kill.multikillTier" class="feed-mk">{{ multikillLabel(row.kill.multikillTier) }}</span>
@@ -51,7 +51,7 @@
             <template v-else>
               <div class="feed-item">
                 <span class="feed-name" :class="row.buff.team === 1 ? 'feed-name--blue' : 'feed-name--red'">{{ row.buff.championName }}</span>
-                <img :src="battleStore.getChampionImage(row.buff.championName)" :alt="row.buff.championName" class="feed-img" :class="row.buff.team === 1 ? 'feed-img--blue' : 'feed-img--red'" />
+                <img :src="feedImg(row.buff.championName, row.buff.team)" :alt="row.buff.championName" class="feed-img" :class="row.buff.team === 1 ? 'feed-img--blue' : 'feed-img--red'" />
                 <span class="buff-orb" :class="`buff-orb--${row.buff.buffType}`" />
                 <span class="feed-buff-label" :class="`feed-buff-label--${row.buff.buffType}`">{{ buffLabel(row.buff) }}</span>
               </div>
@@ -74,19 +74,19 @@
         >
           <span class="bar-time">{{ formatFeedTime(row.t) }}</span>
           <div v-if="row.type === 'kill'" class="feed-item">
-            <img :src="battleStore.getChampionImage(row.kill.killerName)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
+            <img :src="feedImg(row.kill.killerName, row.kill.killerTeam)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
             <Icon icon="game-icons:saber-slash" width="20" height="20" class="feed-star" />
             <template v-if="row.kill.multikillTier">
               <img
                 v-for="k in multikillChain(row.kill)"
                 :key="`${k.t}-${k.victimName}`"
-                :src="battleStore.getChampionImage(k.victimName)"
+                :src="feedImg(k.victimName, foe(row.kill.killerTeam))"
                 :alt="k.victimName"
                 class="feed-img feed-img--dead feed-img--chain"
                 :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'"
               />
             </template>
-            <img v-else :src="battleStore.getChampionImage(row.kill.victimName)" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
+            <img v-else :src="feedImg(row.kill.victimName, foe(row.kill.killerTeam))" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
             <span v-if="row.kill.multikillTier" class="feed-mk">{{ multikillLabel(row.kill.multikillTier) }}</span>
           </div>
           <div v-else-if="row.type === 'structure'" class="feed-item feed-item--structure">
@@ -100,7 +100,7 @@
             <span class="feed-structure-label">{{ structureLabel(row.structure) }}</span>
           </div>
           <div v-else class="feed-item">
-            <img :src="battleStore.getChampionImage(row.buff.championName)" :alt="row.buff.championName" class="feed-img" :class="row.buff.team === 1 ? 'feed-img--blue' : 'feed-img--red'" />
+            <img :src="feedImg(row.buff.championName, row.buff.team)" :alt="row.buff.championName" class="feed-img" :class="row.buff.team === 1 ? 'feed-img--blue' : 'feed-img--red'" />
             <span class="buff-orb" :class="`buff-orb--${row.buff.buffType}`" />
             <span class="feed-buff-label" :class="`feed-buff-label--${row.buff.buffType}`">{{ buffLabel(row.buff) }}</span>
           </div>
@@ -141,7 +141,7 @@
             </div>
             <div v-for="(k, i) in multikillChain(hoveredRow.kill)" :key="`${k.t}-${k.victimName}`" class="tip-victim">
               <span class="tip-victim-idx">{{ i + 1 }}</span>
-              <img :src="battleStore.getChampionImage(k.victimName)" :alt="k.victimName" class="tip-victim-img" />
+              <img :src="feedImg(k.victimName, foe(hoveredRow.kill.killerTeam))" :alt="k.victimName" class="tip-victim-img" />
               <span :class="hoveredRow.kill.killerTeam === 1 ? 'tip-name--red' : 'tip-name--blue'">{{ k.victimName }}</span>
             </div>
           </template>
@@ -210,6 +210,16 @@ const feedEntries = computed<FeedRow[]>(() => {
 
 function buffLabel(buff: BuffFeedEntry): string {
   return buff.buffType === 'blue' ? 'Blue Buff' : 'Red Buff'
+}
+
+/** Feed portrait — the team decides which skin the champion wears. */
+function feedImg(name: string, team: 1 | 2): string {
+  return battleStore.getChampionImage(name, team)
+}
+
+/** The side opposite a kill's killer — i.e. the victim's team. */
+function foe(team: 1 | 2): 1 | 2 {
+  return team === 1 ? 2 : 1
 }
 
 const barEntries = computed<FeedRow[]>(() => feedEntries.value)

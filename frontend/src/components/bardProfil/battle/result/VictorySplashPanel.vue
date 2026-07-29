@@ -31,7 +31,7 @@
 
     <div v-if="mvpName" class="mvp-showcase">
       <div class="mvp-portrait-wrap">
-        <img :src="battleStore.getChampionImage(mvpName)" :alt="mvpName" class="mvp-portrait" />
+        <img :src="mvpImage" :alt="mvpName" class="mvp-portrait" />
         <div class="mvp-laurel">
           <Icon icon="game-icons:laurels-trophy" />
         </div>
@@ -98,6 +98,13 @@ const lpChange = computed(() => battleStore.lastAutoBattleResult?.lpChange ?? ba
 const teamKills = computed(() => battleStore.lastAutoBattleResult?.teamKills ?? battleStore.team1Kills)
 const enemyKills = computed(() => battleStore.lastAutoBattleResult?.enemyKills ?? battleStore.team2Kills)
 const mvpName = computed(() => battleStore.lastAutoBattleResult?.mvpName ?? '')
+/** The MVP can come from either side — an enemy one wears its battle skin. */
+const mvpImage = computed(() =>
+  battleStore.getChampionImage(
+    mvpName.value,
+    battleStore.team1.some((c) => c.name === mvpName.value) ? 1 : 2,
+  ),
+)
 const baronBounty = computed(() => battleStore.lastAutoBattleResult?.baronBounty ?? 0)
 const honorTribute = computed(() => battleStore.lastAutoBattleResult?.honorTribute ?? 0)
 const mvpBuffGranted = computed(() => battleStore.lastAutoBattleResult?.mvpBuffGranted ?? false)

@@ -50,6 +50,23 @@ export function getOriginalPreviewPath(championName: string): string {
     : getChampionIconPath(championName)
 }
 
+/** Random bundled skin for a champion — the default look is one of the draws,
+ *  it is simply the 'OriginalSkin' entry of the pool. Returns SKIN_ORIGINAL
+ *  when no skins are bundled at all. */
+export function pickRandomSkin(championName: string): string {
+  const skins = getChampionSkins(championName)
+  if (skins.length === 0) return SKIN_ORIGINAL
+  return skins[Math.floor(Math.random() * skins.length)] ?? SKIN_ORIGINAL
+}
+
+/** Splash art of a champion wearing a specific skin, falling back to the
+ *  classic square icon when that skin file is not bundled. */
+export function getSkinArtPath(championName: string, skin: string): string {
+  return hasChampionSkin(championName, skin)
+    ? getSkinImagePath(championName, skin)
+    : getChampionIconPath(championName)
+}
+
 /** File basename → human-readable skin name.
  *  "OriginalSkin" → "Original", "StarGuardianSkin" → "Star Guardian",
  *  "KDASkin" → "KDA", "PrestigeTrueDamageSkin" → "Prestige True Damage". */

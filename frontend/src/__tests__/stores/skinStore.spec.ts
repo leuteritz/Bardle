@@ -7,6 +7,8 @@ import {
   toSkinFolder,
   getChampionSkins,
   getSkinImagePath,
+  getSkinArtPath,
+  pickRandomSkin,
   formatSkinName,
 } from '../../utils/champions'
 import { CHAMPION_SKINS } from '../../config/championSkins'
@@ -42,6 +44,41 @@ describe('championSkins utils', () => {
   describe('getSkinImagePath', () => {
     it('builds the /img/skins path with the normalized folder', () => {
       expect(getSkinImagePath("Kai'sa", 'KDASkin')).toBe('/img/skins/Kaisa/KDASkin.jpg')
+    })
+  })
+
+  describe('getSkinArtPath', () => {
+    it('returns the splash art of a bundled skin', () => {
+      expect(getSkinArtPath('Ahri', 'KDASkin')).toBe('/img/skins/Ahri/KDASkin.jpg')
+    })
+
+    it('renders the default look as the OriginalSkin splash when bundled', () => {
+      expect(getSkinArtPath('Ahri', SKIN_ORIGINAL)).toBe('/img/skins/Ahri/OriginalSkin.jpg')
+    })
+
+    it('falls back to the square icon when the skin file is missing', () => {
+      // Aphelios only ships LunarBeastSkin — no OriginalSkin splash exists
+      expect(getSkinArtPath('Aphelios', SKIN_ORIGINAL)).toBe('/img/champion/Aphelios.jpg')
+      expect(getSkinArtPath('NotAChampion', SKIN_ORIGINAL)).toBe('/img/champion/NotAChampion.jpg')
+    })
+  })
+
+  describe('pickRandomSkin', () => {
+    it('only ever draws skins bundled for that champion', () => {
+      const pool = getChampionSkins('Ahri')
+      for (let i = 0; i < 50; i++) {
+        expect(pool).toContain(pickRandomSkin('Ahri'))
+      }
+    })
+
+    it('can draw the default look — it is part of the pool', () => {
+      const draws = new Set(Array.from({ length: 200 }, () => pickRandomSkin('Ahri')))
+      expect(draws.has(SKIN_ORIGINAL)).toBe(true)
+      expect(draws.size).toBeGreaterThan(1)
+    })
+
+    it('falls back to the original skin for champions without a skin folder', () => {
+      expect(pickRandomSkin('NotAChampion')).toBe(SKIN_ORIGINAL)
     })
   })
 
@@ -105,5 +142,33 @@ describe('skinStore', () => {
     skinStore.setSkin('Ahri', 'KDASkin')
     expect(battleStore.getChampionImage('Ahri')).toBe('/img/skins/Ahri/KDASkin.jpg')
     expect(battleStore.getChampionImage('Bard')).toBe('/img/BardAbilities/Bard.png')
+  })
+
+  it('getChampionImage with team 2 uses the enemy roster skin, not the player pick', () => {
+    const skinStore = useSkinStore()
+    const battleStore = useBattleStore()
+    skinStore.setSkin('Ahri', 'KDASkin')
+    battleStore.restoreTeams(
+      [{ name: 'Ahri', role: 'mid' }],
+      [{ name: 'Ahri', role: 'mid', skin: 'CovenSkin' }],
+    )
+    expect(battleStore.getChampionImage('Ahri', 1)).toBe('/img/skins/Ahri/KDASkin.jpg')
+    expect(battleStore.getChampionImage('Ahri', 2)).toBe('/img/skins/Ahri/CovenSkin.jpg')
+    // Bard is always the player — a team hint never changes that
+    expect(battleStore.getChampionImage('Bard', 2)).toBe('/img/BardAbilities/Bard.png')
+  })
+
+  it('restoreTeams rolls a skin for enemies saved before skins existed', () => {
+    const battleStore = useBattleStore()
+    battleStore.restoreTeams([{ name: 'Ahri', role: 'mid' }], [{ name: 'Ahri', role: 'mid' }])
+    expect(battleStore.team1[0].skin).toBeUndefined()
+    expect(getChampionSkins('Ahri')).toContain(battleStore.team2[0].skin)
+  })
+
+  it('resetTeamStats keeps the enemy skins of the running battle', () => {
+    const battleStore = useBattleStore()
+    battleStore.restoreTeams([], [{ name: 'Ahri', role: 'mid', skin: 'CovenSkin' }])
+    battleStore.resetTeamStats(battleStore.team2)
+    expect(battleStore.team2[0].skin).toBe('CovenSkin')
   })
 })

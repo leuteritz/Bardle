@@ -349,6 +349,10 @@ export interface ChampionState {
   name: string
   rank: string
   role: BattleRole
+  /** Skin file basename this champion wears in the current battle. Only the
+   *  enemy roster carries one (rolled per battle); own champions leave it
+   *  undefined and follow the player's pick in skinStore. */
+  skin?: string
   kills: number
   deaths: number
   assists: number

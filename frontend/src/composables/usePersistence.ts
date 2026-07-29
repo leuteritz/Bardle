@@ -151,7 +151,7 @@ export function usePersistence() {
         drakeBuffsT2: [...battleStore.drakeBuffsT2],
         battleTeams: {
           t1: battleStore.team1.map((c) => ({ name: c.name, role: c.role })),
-          t2: battleStore.team2.map((c) => ({ name: c.name, role: c.role })),
+          t2: battleStore.team2.map((c) => ({ name: c.name, role: c.role, skin: c.skin })),
         },
       },
       skins: {
