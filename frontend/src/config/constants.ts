@@ -3222,13 +3222,9 @@ export const MEEP_COUNTUP_INTERVAL_MS = 16
 export const MEEP_RISING_HOLD_MS = 300
 // Segment marks on the universe rescue bar (percent positions, every 10%).
 export const UNIVERSE_BAR_TICK_PERCENTS = [10, 20, 30, 40, 50, 60, 70, 80, 90] as const
-// From this fill level on, the right-aligned percentage sits ENTIRELY on the
-// bright gold fill and flips to dark text. Measured, not guessed: the text is
-// right-aligned, so its right edge stays at bar width minus the text padding
-// — 96.5% of the bar on every desktop resolution. Below that the fill ends
-// mid-word and dark text would run onto the dark track (the old value of 84
-// left roughly half the number unreadable between 84% and 96%).
-export const UNIVERSE_BAR_DARK_TEXT_FROM_PERCENT = 97
+// Inset the dark text layer of the universe bar is clipped by, so it ends
+// exactly on the fill edge: the fill itself starts 2px inside the track.
+export const UNIVERSE_BAR_FILL_INSET_PX = 2
 // Milestone rail below the universe rescue bar: one pip per 10% chunk.
 export const UNIVERSE_MILESTONE_COUNT = 10
 export const UNIVERSE_MILESTONE_STEP_PERCENT = 100 / UNIVERSE_MILESTONE_COUNT

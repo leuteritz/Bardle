@@ -12,7 +12,7 @@ import {
   MEEP_COUNTUP_INTERVAL_MS,
   MEEP_RISING_HOLD_MS,
   UNIVERSE_BAR_TICK_PERCENTS,
-  UNIVERSE_BAR_DARK_TEXT_FROM_PERCENT,
+  UNIVERSE_BAR_FILL_INSET_PX,
   UNIVERSE_MILESTONE_COUNT,
   UNIVERSE_MILESTONE_STEP_PERCENT,
   UNIVERSE_MILESTONE_FLASH_MS,
@@ -30,10 +30,18 @@ const universeTitle = computed(() => {
   return `Universe ${universeRoman.value} — ${name} (${gameStore.currentUniverse}/${gameStore.totalUniverses})`
 })
 
-/** Ab diesem Füllstand liegt die rechtsbündige Zahl auf dem hellen Gold. */
-const pctOnFill = computed(
-  () => gameStore.universeRescueProgress >= UNIVERSE_BAR_DARK_TEXT_FROM_PERCENT,
-)
+const pctText = computed(() => `${gameStore.universeRescueProgress.toFixed(1)}%`)
+
+/* Die Zahl steht mittig im Balken und wird beim Füllen von der Goldkante
+   überlaufen — eine einzelne Textfarbe ist dann zwangsläufig irgendwann
+   falsch. Statt einer Umschaltschwelle liegen zwei identisch positionierte
+   Ebenen übereinander: hell für den dunklen Track, dunkel für den Füller.
+   Die dunkle wird exakt an der Füllkante abgeschnitten, sodass jedes Zeichen
+   — und bei halb überlaufener Zahl jede Zeichenhälfte — die Farbe trägt, die
+   auf ihrem Untergrund lesbar ist. */
+const fillClipStyle = computed(() => ({
+  clipPath: `inset(0 max(0px, calc(100% - ${gameStore.universeRescueProgress}% - ${UNIVERSE_BAR_FILL_INSET_PX}px)) 0 0)`,
+}))
 
 /** Wie viele 10%-Abschnitte komplett sind — 0 bis 10. */
 const reachedMilestones = computed(() =>
@@ -174,9 +182,12 @@ onUnmounted(() => {
         </div>
         <div class="rpg-bar-border" />
         <div class="rpg-bar-text">
-          <span class="rpg-bar-pct" :class="{ 'rpg-bar-pct--on-fill': pctOnFill }">
-            {{ gameStore.universeRescueProgress.toFixed(1) }}%
-          </span>
+          <span v-ink-center.x.y class="rpg-bar-pct">{{ pctText }}</span>
+        </div>
+        <!-- Deckungsgleiche zweite Ebene in Dunkel, an der Füllkante
+             abgeschnitten — siehe fillClipStyle. -->
+        <div class="rpg-bar-text rpg-bar-text--on-fill" :style="fillClipStyle" aria-hidden="true">
+          <span v-ink-center.x.y class="rpg-bar-pct rpg-bar-pct--dark">{{ pctText }}</span>
         </div>
       </div>
 
@@ -218,7 +229,9 @@ onUnmounted(() => {
      halbe Diagonale höher als der Balken. Der Prestige-Button rechnet
      daraus dieselbe Gesamthöhe, damit beim Umschalten nichts springt. */
   --rescue-track-h: max(16px, min(calc(var(--header-height) * 0.26), 30px));
-  --ms-pip-size: max(7px, min(calc(var(--header-height) * 0.09), 11px));
+  /* Eine Stufe kleiner, seit die Rauten ganz unter dem Balken sitzen: sie
+     kosten jetzt ihre VOLLE Diagonale an Höhe statt der halben. */
+  --ms-pip-size: max(6px, min(calc(var(--header-height) * 0.07), 9px));
   /* Halbe Diagonale der um 45° gedrehten Raute: size × √2 / 2. */
   --ms-pip-half: calc(var(--ms-pip-size) * 0.71);
   display: flex;
@@ -436,10 +449,9 @@ onUnmounted(() => {
   flex-direction: column;
   width: 100%;
   min-width: 0;
-  /* Platz für die untere Hälfte der Meilenstein-Rauten, die auf der
-     Balkenkante sitzen — die einzige Höhe, die Zeile 2 über den Balken
-     hinaus noch braucht. */
-  padding-bottom: var(--ms-pip-half);
+  /* Platz für die Meilenstein-Rauten unter dem Balken — die einzige Höhe,
+     die Zeile 2 über den Balken hinaus noch braucht. */
+  padding-bottom: calc(var(--ms-pip-half) * 2);
   /* Ohne das Shrink-Verbot staucht der Flex-Container den Balken auf Full HD
      um die letzten Pixel zusammen, statt die Kachelzeile atmen zu lassen. */
   flex-shrink: 0;
@@ -558,21 +570,24 @@ onUnmounted(() => {
   box-shadow: 0 0 6px rgba(255, 216, 120, 0.55);
 }
 
-/* Beschriftung als eigene Zeile IM Balken: Name links, Prozent rechts.
-   Kein Glow hinter der Schrift — auf dem hellen Goldfüller trägt allein
-   der harte dunkle Schlagschatten die Lesbarkeit. */
+/* Die Prozentzahl steht auf beiden Achsen mittig im Balken. Kein Glow
+   hinter der Schrift — auf dem hellen Goldfüller trägt allein der harte
+   dunkle Schlagschatten die Lesbarkeit. */
 .rpg-bar-text {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  /* Der Text sitzt um die halbe Rautendiagonale höher als die Balkenmitte:
-     sonst überschneidet er den Marker bei 90%, der von unten in den Balken
-     ragt. */
-  padding: 0 clamp(6px, 0.55vw, 10px) var(--ms-pip-half);
+  justify-content: center;
   z-index: 5;
   pointer-events: none;
+}
+
+/* Nur bis zur Füllkante sichtbar. Dieselbe Dauer und Kurve wie die Breite
+   des Füllers, sonst läuft der Farbwechsel dem Gold hinterher. */
+.rpg-bar-text--on-fill {
+  z-index: 6;
+  transition: clip-path 1.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Einziger Text im Balken. Ohne Namen daneben darf die Zahl größer stehen —
@@ -587,14 +602,11 @@ onUnmounted(() => {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
   white-space: nowrap;
   flex-shrink: 0;
-  transition:
-    color 0.3s ease,
-    text-shadow 0.3s ease;
 }
 
-/* Auf dem hellen Goldfüller kippt die Schrift ins Dunkle — dieselbe Lösung
-   wie beim Forge-Badge im Header, statt Weiß mit Schlagschatten. */
-.rpg-bar-pct--on-fill {
+/* Die Ebene auf dem hellen Goldfüller — dieselbe Lösung wie beim
+   Forge-Badge im Header, statt Weiß mit Schlagschatten. */
+.rpg-bar-pct--dark {
   color: #2a1608;
   text-shadow: 0 1px 0 rgba(255, 240, 180, 0.55);
 }
@@ -611,7 +623,10 @@ onUnmounted(() => {
      Trennlinie auf derselben Achse sitzen. */
   left: 2px;
   right: 2px;
-  top: var(--rescue-track-h);
+  /* Um die halbe Diagonale unter die Balkenkante: die Rauten sitzen damit
+     vollständig UNTER dem Balken und lassen seine Innenfläche frei für die
+     mittige Prozentzahl, statt ihr von unten in die Zeile zu ragen. */
+  top: calc(var(--rescue-track-h) + var(--ms-pip-half));
   height: 0;
   z-index: 6;
   pointer-events: none;
@@ -736,9 +751,9 @@ onUnmounted(() => {
   justify-content: center;
   gap: clamp(5px, 0.5vw, 10px);
   width: 100%;
-  /* Exakt Balken + überstehende Rautenhälfte, damit Zeile 2 beim
-     Umschalten dieselbe Höhe behält. */
-  height: calc(var(--rescue-track-h) + var(--ms-pip-half));
+  /* Exakt Balken + Rautenzeile, damit Zeile 2 beim Umschalten dieselbe
+     Höhe behält. */
+  height: calc(var(--rescue-track-h) + var(--ms-pip-half) * 2);
   flex-shrink: 0;
   padding: 0 8px;
   font-size: clamp(10px, calc(var(--header-height) * 0.145), 16px);
