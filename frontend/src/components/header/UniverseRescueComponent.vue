@@ -1,33 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { formatNumber } from '@/config/numberFormat'
-import { universes } from '@/config/universes'
-import { toRoman } from '@/utils/format'
 import {
-  HEADER_UNIVERSE_ICON,
-  MEEP_COUNTUP_STEPS,
-  MEEP_COUNTUP_INTERVAL_MS,
-  MEEP_RISING_HOLD_MS,
   UNIVERSE_MILESTONE_COUNT,
   UNIVERSE_MILESTONE_STEP_PERCENT,
   UNIVERSE_MILESTONE_FLASH_MS,
 } from '@/config/constants'
+import UniverseStatsRow from './UniverseStatsRow.vue'
 import UniverseRescueTrack from './UniverseRescueTrack.vue'
 
 const gameStore = useGameStore()
-const galaxyStore = useGalaxyStore()
-
-/** Römisch statt arabisch: die Universe-Ebene steht damit sichtbar über der
-    Galaxie-Zählung und bleibt selbst bei XII kurz genug für die Kachel. */
-const universeRoman = computed(() => toRoman(gameStore.currentUniverse))
-
-const universeTitle = computed(() => {
-  const name = universes[gameStore.currentUniverse - 1]?.name ?? 'Unknown'
-  return `Universe ${universeRoman.value} — ${name} (${gameStore.currentUniverse}/${gameStore.totalUniverses})`
-})
 
 /** Wie viele 10%-Abschnitte komplett sind — 0 bis 10. */
 const reachedMilestones = computed(() =>
@@ -67,39 +49,7 @@ const isUniverseBarHovered = ref(false)
     zahlt auf die Meeps ein, also zeigt das Hovern der einen die andere mit. */
 const isRowGlowing = computed(() => isMeepHovered.value || isUniverseBarHovered.value)
 
-const displayMeeps = ref(gameStore.meeps)
-const isIncreasing = ref(false)
-
-// Ein einziger laufender Tween: ohne das Aufräumen stapeln sich bei mehreren
-// Meep-Gewinnen kurz hintereinander die Intervalle und zählen gegeneinander.
-let countUpTimer: ReturnType<typeof setInterval> | null = null
-let risingTimer: ReturnType<typeof setTimeout> | null = null
-
-watch(
-  () => gameStore.meeps,
-  (newVal, oldVal) => {
-    if (countUpTimer) clearInterval(countUpTimer)
-    if (risingTimer) clearTimeout(risingTimer)
-    isIncreasing.value = newVal > oldVal
-    const stepSize = (newVal - oldVal) / MEEP_COUNTUP_STEPS
-    let current = oldVal
-    let i = 0
-    countUpTimer = setInterval(() => {
-      i++
-      current += stepSize
-      displayMeeps.value = Math.round(i < MEEP_COUNTUP_STEPS ? current : newVal)
-      if (i >= MEEP_COUNTUP_STEPS) {
-        if (countUpTimer) clearInterval(countUpTimer)
-        countUpTimer = null
-        risingTimer = setTimeout(() => (isIncreasing.value = false), MEEP_RISING_HOLD_MS)
-      }
-    }, MEEP_COUNTUP_INTERVAL_MS)
-  },
-)
-
 onUnmounted(() => {
-  if (countUpTimer) clearInterval(countUpTimer)
-  if (risingTimer) clearTimeout(risingTimer)
   if (flashTimer) clearTimeout(flashTimer)
 })
 </script>
@@ -107,48 +57,7 @@ onUnmounted(() => {
 <template>
   <div class="uni-block">
     <!-- Row 1: three stat tiles — universe, galaxy, meeps (coarse → fine) -->
-    <div class="uni-stats">
-      <div class="uni-tile uni-tile--universe" :title="universeTitle">
-        <Icon
-          :icon="HEADER_UNIVERSE_ICON"
-          width="24"
-          height="24"
-          class="tile-icon uv-icon"
-          aria-hidden="true"
-        />
-        <div class="tile-text">
-          <span v-ink-center class="tile-label">Uni</span>
-          <span v-ink-center class="tile-value uv-value">{{ universeRoman }}</span>
-        </div>
-      </div>
-
-      <div class="uni-tile uni-tile--galaxy" title="Current galaxy">
-        <img src="/img/galaxy-far-128.png" class="tile-icon gx-icon" alt="" aria-hidden="true" />
-        <div class="tile-text">
-          <span v-ink-center class="tile-label">Gal</span>
-          <span v-ink-center class="tile-value gx-value">{{ galaxyStore.currentGalaxy }}</span>
-        </div>
-      </div>
-
-      <div
-        class="uni-tile uni-tile--meep"
-        :class="{ 'uni-tile--rising': isIncreasing, 'uni-tile--lit': isUniverseBarHovered }"
-        title="Meeps — spend them in the Skill Tree"
-        @mouseenter="isMeepHovered = true"
-        @mouseleave="isMeepHovered = false"
-      >
-        <img
-          src="/img/BardAbilities/BardMeep.png"
-          class="tile-icon meep-icon"
-          alt=""
-          aria-hidden="true"
-        />
-        <div class="tile-text">
-          <span v-ink-center class="tile-label">Meep</span>
-          <span v-ink-center class="tile-value meep-value">{{ formatNumber(displayMeeps) }}</span>
-        </div>
-      </div>
-    </div>
+    <UniverseStatsRow :lit="isUniverseBarHovered" @meep-hover="isMeepHovered = $event" />
 
     <!-- Row 2: Universe rescue bar (or prestige button) + milestone marks -->
     <div
@@ -210,198 +119,6 @@ onUnmounted(() => {
   padding: clamp(3px, 0.28vw, 6px) var(--ms-pip-half) clamp(3px, 0.3vw, 6px);
   box-sizing: border-box;
   min-width: 0;
-}
-
-/* ================================================================
-   ROW 1 — stat tiles
-   ================================================================ */
-/* Maße wieder an --header-height statt an cqw: mit den Breiten-Caps auf
-   Tree-Button (72px) und Sun-Phase (118px) und ohne die beiden Divider
-   bleibt dieser Block über alle Desktop-Auflösungen bei ~290px, statt von
-   Full HD zu 4K um 25px zu schrumpfen. cqw hätte die Kacheln damit mit
-   steigender Auflösung KLEINER gemacht — die Header-Höhe wächst dagegen
-   mit, und genau ihr folgen Icon, Label und Zahl jetzt. */
-.uni-stats {
-  display: flex;
-  align-items: center;
-  /* Die drei Gruppen sind inhaltsbreit (flex-grow 0), der Restraum wird
-     zwischen ihnen gleich verteilt: die Lücke Universe↔Galaxy ist damit
-     exakt so groß wie Galaxy↔Meeps, egal wie unterschiedlich lang die
-     Werte gerade sind. Mit grow würde die breiteste Kachel ihren Inhalt
-     zentrieren und die Lücke daneben optisch aufblähen. */
-  justify-content: space-between;
-  /* Untergrenze für den Fall, dass die Werte die Zeile ganz ausfüllen. */
-  gap: clamp(6px, 0.5vw, 10px);
-  width: 100%;
-  min-width: 0;
-  flex-shrink: 0;
-}
-
-/* Rahmenlos: die Gruppen tragen sich über Icon, Label und Abstand — keine
-   Platte, kein eigener Hintergrund. Der Header-Grund bleibt durchgehend. */
-/* Innenabstand knapper als der Abstand ZWISCHEN den Kacheln (.uni-stats
-   gap): seit die Divider weg sind, trägt allein dieses Verhältnis die
-   Gruppierung — und die gesparten Pixel gehen an die Meep-Zahl, die als
-   einzige nach oben offen ist. */
-.uni-tile {
-  display: flex;
-  align-items: center;
-  gap: clamp(2px, 0.2vw, 4px);
-  min-width: 0;
-  transition: filter 0.3s;
-}
-
-/* Kein grow: jede Gruppe ist genau so breit wie ihr Inhalt, den Rest
-   verteilt space-between gleichmäßig dazwischen. Universe und Galaxy sind
-   per min-content gegen Kürzung geschützt — "VIII" und dreistellige
-   Galaxien sind die längsten Fälle und beide endlich. */
-.uni-tile--universe,
-.uni-tile--galaxy {
-  flex: 0 1 auto;
-  min-width: min-content;
-}
-
-/* Meeps bewusst OHNE min-content: die Zahl ist nach oben offen und würde
-   die Zeile sonst über den Block hinausschieben, wo der Portal-Wrap sie
-   hart clippt. Ellipsis am eigenen Wert ist der bessere Ausfall. */
-.uni-tile--meep {
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-.uni-tile--rising {
-  filter: drop-shadow(0 0 7px rgba(251, 146, 60, 0.5));
-}
-
-/* Cap bei 26px: darüber frisst das Icon genau die Breite, die "VIII" bzw.
-   die Meep-Zahl daneben zum Wachsen braucht — siehe .tile-value. */
-.tile-icon {
-  width: min(calc(var(--header-height) * 0.3), 26px);
-  height: min(calc(var(--header-height) * 0.3), 26px);
-  object-fit: contain;
-  flex-shrink: 0;
-  user-select: none;
-  transform: translateZ(0);
-  will-change: transform;
-  transition:
-    transform 0.2s,
-    filter 0.3s;
-}
-
-.tile-text {
-  display: flex;
-  flex-direction: column;
-  /* Label über der Zahl zentriert: sonst zieht das breitere Wort die Zahl
-     aus der Mitte ihrer Hälfte. */
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  min-width: 0;
-}
-
-.tile-label {
-  /* Dreibuchstabig ("Uni"/"Gal"/"Meep"): ausgeschrieben bestimmte "Universe"
-     mit 45px die min-content-Breite seiner Kachel und deckelte damit die
-     Zahl darunter — jetzt gibt die Zahl das Maß vor, nicht das Label. */
-  font-size: min(calc(var(--header-height) * 0.13), 12px);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  line-height: 1;
-  white-space: nowrap;
-  color: #9b8461;
-}
-
-.tile-value {
-  /* Cap 24px aus der Messung: bei ~290px Blockbreite passt "999.9M" in die
-     Meep-Kachel und "XII" in die Universe-Kachel gerade noch ungekürzt —
-     eine Stufe größer und beide ellipsieren. */
-  font-size: min(calc(var(--header-height) * 0.28), 24px);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-  line-height: 1.05;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  transition:
-    color 0.3s,
-    text-shadow 0.3s;
-}
-
-/* ── Universe ──────────────────────────────────────── */
-/* Amethyst statt Gold: greift die Prestige-Palette des Buttons darunter auf,
-   damit die drei Kacheln je eine eigene Farbe tragen (violett / grün / orange). */
-.uv-icon {
-  color: #b98cf5;
-  filter: drop-shadow(0 0 5px rgba(150, 96, 235, 0.5));
-}
-
-.uni-tile--universe:hover .uv-icon {
-  transform: scale(1.08) translateZ(0);
-  filter: drop-shadow(0 0 10px rgba(150, 96, 235, 0.95));
-}
-
-.uv-value {
-  color: #d7bcff;
-  text-shadow: 0 0 10px rgba(150, 96, 235, 0.4);
-  /* Römische Ziffern: etwas mehr Laufweite, sonst kleben I und I aneinander. */
-  letter-spacing: 0.06em;
-}
-
-/* ── Galaxy ────────────────────────────────────────── */
-.gx-icon {
-  filter: drop-shadow(0 0 5px rgba(138, 100, 220, 0.45));
-}
-
-.uni-tile--galaxy:hover .gx-icon {
-  transform: scale(1.08) translateZ(0);
-  filter: drop-shadow(0 0 10px rgba(138, 100, 220, 0.9));
-}
-
-.gx-value {
-  color: var(--rpg-green-border, #6ec040);
-  text-shadow: 0 0 10px rgba(110, 192, 64, 0.35);
-}
-
-/* ── Meeps ─────────────────────────────────────────── */
-.meep-icon {
-  filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.7));
-  animation: meep-pulse 3s ease-in-out infinite;
-}
-
-.uni-tile--meep:hover .meep-icon {
-  transform: scale(1.08) translateZ(0);
-  filter: drop-shadow(0 0 12px rgba(251, 146, 60, 1));
-}
-
-.meep-value {
-  color: #fed7aa;
-  text-shadow: 0 0 8px rgba(251, 146, 60, 0.35);
-}
-
-.uni-tile--rising .meep-value,
-.uni-tile--lit .meep-value {
-  color: #fdba74;
-  text-shadow:
-    0 0 12px rgba(251, 146, 60, 0.85),
-    0 0 24px rgba(251, 146, 60, 0.4);
-}
-
-.uni-tile--lit .meep-icon {
-  filter: drop-shadow(0 0 10px rgba(251, 146, 60, 0.9));
-  transform: scale(1.04) translateZ(0);
-}
-
-@keyframes meep-pulse {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.55));
-  }
-  50% {
-    filter: drop-shadow(0 0 12px rgba(251, 146, 60, 0.9));
-  }
 }
 
 /* ================================================================
@@ -540,10 +257,9 @@ onUnmounted(() => {
   }
 }
 
-/* Balken, Button und ihr Übergang bringen ihre eigene Reduced-Motion-
-   Behandlung in UniverseRescueTrack mit. */
+/* Kachelzeile, Balken und Button bringen ihre eigene Reduced-Motion-
+   Behandlung in UniverseStatsRow bzw. UniverseRescueTrack mit. */
 @media (prefers-reduced-motion: reduce) {
-  .meep-icon,
   .ms-pip--next,
   .ms-pip--flash,
   .ms-pip--flash::after {
