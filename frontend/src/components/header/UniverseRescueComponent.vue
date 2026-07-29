@@ -57,6 +57,12 @@ const milestoneLeft = (m: number) => `${m * UNIVERSE_MILESTONE_STEP_PERCENT}%`
     steht auch bei 100% keine — das Balkenende ist der zehnte Meilenstein. */
 const milestoneMarkCount = UNIVERSE_MILESTONE_COUNT - 1
 
+const rescueTitle = computed(() =>
+  gameStore.prestigeAvailable
+    ? 'Universe rescued — prestige into the next universe'
+    : `Universe rescue: ${gameStore.universeRescueProgress.toFixed(1)}% — ${reachedMilestones.value}/${UNIVERSE_MILESTONE_COUNT} milestones`,
+)
+
 /** Frisch überschrittener Meilenstein — trägt kurz die Burst-Animation. */
 const flashMilestone = ref(0)
 let flashTimer: ReturnType<typeof setTimeout> | null = null
@@ -154,46 +160,69 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Row 2: Universe rescue bar + milestone rail (or prestige button) -->
+    <!-- Row 2: Universe rescue bar (or prestige button) + milestone marks -->
     <div
-      v-if="!gameStore.prestigeAvailable"
       class="rescue-row"
       :class="{ 'rescue-row--glow': isMeepHovered || isUniverseBarHovered }"
-      :title="`Universe rescue: ${gameStore.universeRescueProgress.toFixed(1)}% — ${reachedMilestones}/${UNIVERSE_MILESTONE_COUNT} milestones`"
+      :title="rescueTitle"
       @mouseenter="isUniverseBarHovered = true"
       @mouseleave="isUniverseBarHovered = false"
     >
-      <div class="rpg-bar-wrap">
-        <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
-          <div class="rpg-bar-gloss" />
-          <!-- Ein einzelner Schräg-Schimmer, der per transform über den Balken
-               wandert (GPU) — statt eines dauerhaft laufenden Streifenmusters,
-               das als Paint-Animation jede Frame den Header neu zeichnen ließe. -->
-          <div class="rpg-bar-sweep" />
-        </div>
-        <div class="rpg-segments" aria-hidden="true">
-          <div
-            v-for="tick in UNIVERSE_BAR_TICK_PERCENTS"
-            :key="tick"
-            class="rpg-segment-line"
-            :class="{ 'rpg-segment-line--passed': gameStore.universeRescueProgress >= tick }"
-            :style="{ left: tick + '%' }"
-          />
-        </div>
-        <div class="rpg-bar-border" />
-        <div class="rpg-bar-text">
-          <span v-ink-center.x.y class="rpg-bar-pct">{{ pctText }}</span>
-        </div>
-        <!-- Deckungsgleiche zweite Ebene in Dunkel, an der Füllkante
-             abgeschnitten — siehe fillClipStyle. -->
-        <div class="rpg-bar-text rpg-bar-text--on-fill" :style="fillClipStyle" aria-hidden="true">
-          <span v-ink-center.x.y class="rpg-bar-pct rpg-bar-pct--dark">{{ pctText }}</span>
-        </div>
+      <!-- Balken und Prestige-Button teilen sich EIN Feld: gleiche Maße und
+           Position ergeben sich damit aus der Struktur, statt am Button
+           nachgerechnet zu werden. -->
+      <div class="rescue-slot">
+        <Transition name="prestige-reveal">
+          <div v-if="!gameStore.prestigeAvailable" key="bar" class="rpg-bar-wrap">
+            <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
+              <div class="rpg-bar-gloss" />
+              <!-- Ein einzelner Schräg-Schimmer, der per transform über den
+                   Balken wandert (GPU) — statt eines dauerhaft laufenden
+                   Streifenmusters, das als Paint-Animation jede Frame den
+                   Header neu zeichnen ließe. -->
+              <div class="rpg-bar-sweep" />
+            </div>
+            <div class="rpg-segments" aria-hidden="true">
+              <div
+                v-for="tick in UNIVERSE_BAR_TICK_PERCENTS"
+                :key="tick"
+                class="rpg-segment-line"
+                :class="{ 'rpg-segment-line--passed': gameStore.universeRescueProgress >= tick }"
+                :style="{ left: tick + '%' }"
+              />
+            </div>
+            <div class="rpg-bar-border" />
+            <div class="rpg-bar-text">
+              <span v-ink-center.x.y class="rpg-bar-pct">{{ pctText }}</span>
+            </div>
+            <!-- Deckungsgleiche zweite Ebene in Dunkel, an der Füllkante
+                 abgeschnitten — siehe fillClipStyle. -->
+            <div
+              class="rpg-bar-text rpg-bar-text--on-fill"
+              :style="fillClipStyle"
+              aria-hidden="true"
+            >
+              <span v-ink-center.x.y class="rpg-bar-pct rpg-bar-pct--dark">{{ pctText }}</span>
+            </div>
+          </div>
+
+          <button
+            v-else
+            key="prestige"
+            class="prestige-btn"
+            title="Universe rescued — prestige into the next universe"
+            @click.stop="gameStore.openPrestigeModal()"
+          >
+            <span class="prestige-shine" aria-hidden="true" />
+            <span class="prestige-star" aria-hidden="true">✦</span>
+            <span v-ink-center.x.y class="prestige-label">Prestige</span>
+            <span class="prestige-star" aria-hidden="true">✦</span>
+          </button>
+        </Transition>
       </div>
 
-      <!-- Meilenstein-Marker: eine Raute auf jeder inneren 10%-Grenze, mittig
-           auf der unteren Balkenkante statt in einer eigenen Zeile darunter.
-           Die Prozentzahl im Balken weicht ihnen per padding-bottom aus. -->
+      <!-- Meilenstein-Marker: eine Raute auf jeder inneren 10%-Grenze, in
+           einer eigenen Zeile unter dem Balken. -->
       <div class="ms-marks" aria-hidden="true">
         <span
           v-for="m in milestoneMarkCount"
@@ -208,11 +237,6 @@ onUnmounted(() => {
         />
       </div>
     </div>
-    <button v-else class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">
-      <span class="prestige-star">✦</span>
-      Prestige
-      <span class="prestige-star">✦</span>
-    </button>
   </div>
 </template>
 
@@ -457,12 +481,20 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.rpg-bar-wrap {
+/* Das gemeinsame Feld von Balken und Prestige-Button. Beide liegen darin
+   absolut auf inset: 0 — identische Maße und Position ohne eine einzige
+   nachgerechnete Höhe, und beim Umschalten kann nichts springen. */
+.rescue-slot {
   position: relative;
   width: 100%;
   min-width: 0;
   height: var(--rescue-track-h);
   flex-shrink: 0;
+}
+
+.rpg-bar-wrap {
+  position: absolute;
+  inset: 0;
   border-radius: 4px;
   overflow: hidden;
   box-shadow:
@@ -742,67 +774,194 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   PRESTIGE BUTTON — belegt exakt die Balkenzeile, damit das Layout
-   beim Umschalten nicht springt.
+   PRESTIGE BUTTON — liegt auf demselben Feld wie der Balken und trägt
+   dessen Formensprache weiter: gleiche Rundung, gleiche Goldkontur,
+   gleicher Gloss oben. Nur die Farbe wechselt vom Gold des Fortschritts
+   ins Amethyst der Universe-Kachel — der Balken ist voll, jetzt zählt
+   die Ebene darüber.
    ================================================================ */
 .prestige-btn {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(5px, 0.5vw, 10px);
-  width: 100%;
-  /* Exakt Balken + Rautenzeile, damit Zeile 2 beim Umschalten dieselbe
-     Höhe behält. */
-  height: calc(var(--rescue-track-h) + var(--ms-pip-half) * 2);
-  flex-shrink: 0;
+  gap: clamp(6px, 0.6vw, 12px);
   padding: 0 8px;
-  font-size: clamp(10px, calc(var(--header-height) * 0.145), 16px);
+  font-size: clamp(11px, calc(var(--header-height) * 0.17), 19px);
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, #3a1870 0%, #5e2fa0 45%, #c08030 100%);
-  color: #fff;
-  border: 1px solid rgba(200, 150, 60, 0.6);
+  /* Zwei Ebenen in einem Wert: der Gloss der oberen Hälfte liegt über dem
+     Grundverlauf, wie beim Balken darunter — nur ohne Extra-Element. */
+  background:
+    linear-gradient(to bottom, rgba(255, 250, 210, 0.18) 0%, transparent 42%),
+    linear-gradient(to bottom, #5a2ea8 0%, #3d1b78 55%, #2b1256 100%);
+  color: #ffe9b0;
+  border: 1px solid rgba(232, 192, 64, 0.55);
   border-radius: 4px;
   cursor: pointer;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.35);
   transition:
-    transform 0.18s,
-    box-shadow 0.18s;
-  animation: prestigeGlow 2.5s ease-in-out infinite;
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.25s ease,
+    filter 0.18s ease;
+}
+
+/* Der atmende Schein liegt auf einer eigenen Ebene und variiert nur seine
+   opacity: eine box-shadow-Keyframe-Animation wäre eine Paint-Animation
+   und ließe den halben Header jede Frame neu zeichnen (dasselbe Muster
+   wie bei den Notification-Badges im Header). */
+.prestige-btn::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow:
+    0 0 12px rgba(168, 108, 246, 0.75),
+    0 0 26px rgba(232, 192, 64, 0.35);
+  opacity: 0;
+  animation: prestigePulse 2.6s ease-in-out infinite;
+}
+
+/* Eigene Ebene nur fürs Clipping des Schimmers — läge overflow: hidden auf
+   dem Button selbst, würde es seinen Glow gleich mit abschneiden. */
+.prestige-shine {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Derselbe wandernde Schräg-Schimmer wie im Balken (transform, GPU) — er
+   nimmt die Laufrichtung auf, in der sich der Balken gefüllt hat. */
+.prestige-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 30%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 245, 205, 0.42) 50%,
+    transparent 100%
+  );
+  animation: prestigeSweep 3.4s ease-in-out infinite;
+}
+
+.prestige-label {
+  position: relative;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .prestige-star {
-  color: #ffd980;
+  position: relative;
+  color: #f5d666;
   line-height: 1;
+  text-shadow: 0 0 8px rgba(245, 214, 102, 0.7);
 }
 
 .prestige-btn:hover {
-  transform: scale(1.03);
+  transform: scale(1.02);
+  border-color: rgba(255, 224, 128, 0.9);
+  filter: brightness(1.12);
 }
 
 .prestige-btn:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
-@keyframes prestigeGlow {
+.rescue-row--glow .prestige-btn {
+  border-color: rgba(255, 224, 128, 0.9);
+}
+
+@keyframes prestigePulse {
   0%,
   100% {
-    box-shadow: 0 0 10px rgba(200, 144, 64, 0.35);
+    opacity: 0.15;
   }
   50% {
-    box-shadow: 0 0 22px rgba(200, 144, 64, 0.7);
+    opacity: 1;
   }
+}
+
+/* Weg in Prozent der EIGENEN Breite, gleiche Rechnung wie bei barSweep:
+   von left: -40% bis hinter die rechte Kante sind das 140/30 ≈ 467%. */
+@keyframes prestigeSweep {
+  0% {
+    transform: translateX(0);
+  }
+  60%,
+  100% {
+    transform: translateX(467%);
+  }
+}
+
+/* ================================================================
+   ÜBERGANG BALKEN → BUTTON
+   Der Button wischt in derselben Richtung herein, in der sich der
+   Balken gefüllt hat — links nach rechts. Der volle Goldbalken bleibt
+   darunter stehen und blendet erst aus, wenn der Wisch über ihm ist;
+   damit liest sich der Wechsel als Fortsetzung des Füllens, nicht als
+   Austausch zweier Elemente.
+   ================================================================ */
+.prestige-reveal-enter-active {
+  transition:
+    clip-path 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease;
+  z-index: 2;
+}
+
+.prestige-reveal-enter-from {
+  clip-path: inset(0 100% 0 0);
+  opacity: 0.35;
+}
+
+.prestige-reveal-enter-to {
+  clip-path: inset(0 0 0 0);
+}
+
+/* Rückweg (Prestige ausgeführt): der Balken darf einfach aufblenden. */
+.prestige-reveal-leave-active {
+  transition: opacity 0.4s ease 0.12s;
+}
+
+.prestige-reveal-leave-to {
+  opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .meep-icon,
   .rpg-bar-sweep,
-  .prestige-btn,
+  .prestige-btn::after,
+  .prestige-shine::after,
   .ms-pip--next,
   .ms-pip--flash,
   .ms-pip--flash::after {
     animation: none;
+  }
+
+  /* Ohne Puls bleibt der Schein sichtbar, statt ganz zu verschwinden. */
+  .prestige-btn::after {
+    opacity: 0.6;
+  }
+
+  .prestige-reveal-enter-active {
+    transition: opacity 0.22s ease;
+  }
+
+  .prestige-reveal-enter-from {
+    clip-path: none;
+    opacity: 0;
   }
 }
 </style>
