@@ -1215,7 +1215,12 @@ function stopResize() {
 }
 
 /* Dwell clock, parked in the arc's open bottom — the one place on the ring
-   that carries no phase marker */
+   that carries no phase marker.
+   It sizes itself off the DIAL (cqmin of the stage container), not off the
+   viewport: the dial is 379px on Full HD but 710px on 2K, so a fixed px size
+   that reads right on one is a speck on the other. Being absolutely placed,
+   growing it moves nothing — the arc's gap is 44% of the stage wide and the
+   arc ends sit at 76% height, so the box has room to spare below that. */
 .sf-orbit-clock {
   position: absolute;
   left: 50%;
@@ -1224,17 +1229,20 @@ function stopResize() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
   /* fixed box: ticking digits never nudge the label */
   width: 116px;
+  width: min(34cqmin, 100%);
   text-align: center;
   cursor: help;
 }
 
 .sf-orbit-clock-val {
   font-size: 15px;
+  font-size: clamp(16px, 4.8cqmin, 44px);
   font-weight: 900;
   letter-spacing: 0.03em;
+  line-height: 1.1;
   color: #e8e4d8;
   text-shadow: 0 0 8px rgba(232, 228, 216, 0.35);
   font-variant-numeric: tabular-nums;
@@ -1247,6 +1255,7 @@ function stopResize() {
 
 .sf-orbit-clock-lbl {
   font-size: 8px;
+  font-size: clamp(8px, 1.5cqmin, 14px);
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -1576,9 +1585,7 @@ function stopResize() {
     font-size: 17px;
     width: 124px;
   }
-  .sf-orbit-clock-val {
-    font-size: 14px;
-  }
+  /* the dwell clock is NOT stepped down here — it scales off the dial itself */
   .sf-pill {
     padding: 9px 16px;
     font-size: 13px;
@@ -1600,9 +1607,6 @@ function stopResize() {
   .sf-solar-age {
     font-size: 22px;
     width: 152px;
-  }
-  .sf-orbit-clock-val {
-    font-size: 18px;
   }
 }
 
