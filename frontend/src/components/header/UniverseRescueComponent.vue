@@ -214,9 +214,7 @@ onUnmounted(() => {
             @click.stop="gameStore.openPrestigeModal()"
           >
             <span class="prestige-shine" aria-hidden="true" />
-            <span class="prestige-star" aria-hidden="true">✦</span>
             <span v-ink-center.x.y class="prestige-label">Prestige</span>
-            <span class="prestige-star" aria-hidden="true">✦</span>
           </button>
         </Transition>
       </div>
@@ -774,11 +772,12 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   PRESTIGE BUTTON — liegt auf demselben Feld wie der Balken und trägt
-   dessen Formensprache weiter: gleiche Rundung, gleiche Goldkontur,
-   gleicher Gloss oben. Nur die Farbe wechselt vom Gold des Fortschritts
-   ins Amethyst der Universe-Kachel — der Balken ist voll, jetzt zählt
-   die Ebene darüber.
+   PRESTIGE BUTTON — liegt auf demselben Feld wie der Balken, tritt aber
+   bewusst nicht als weitere gefüllte Fläche auf: der Balken WAR die
+   Fläche, und sie ist voll. Stattdessen eine dunkle Fassung in Amethyst
+   mit kräftiger Goldkontur und der Goldlinie, die im Projekt jedes Modal
+   eröffnet — der Header öffnet hier eine Tür, statt einen Riegel zu
+   zeigen. Die Wortmarke steht allein und weit gesperrt in der Mitte.
    ================================================================ */
 .prestige-btn {
   position: absolute;
@@ -786,30 +785,57 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(6px, 0.6vw, 12px);
   padding: 0 8px;
   font-size: clamp(11px, calc(var(--header-height) * 0.17), 19px);
   font-weight: 800;
-  letter-spacing: 0.16em;
+  /* Ohne flankierende Zeichen trägt die Sperrung allein die Breite des
+     Balkens — eng gesetzt schwämme das Wort in der Fläche. */
+  /* Den Überhang, den CSS hinter das letzte Zeichen setzt, rechnet
+     v-ink-center am Label wieder heraus. */
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  /* Zwei Ebenen in einem Wert: der Gloss der oberen Hälfte liegt über dem
-     Grundverlauf, wie beim Balken darunter — nur ohne Extra-Element. */
-  background:
-    linear-gradient(to bottom, rgba(255, 250, 210, 0.18) 0%, transparent 42%),
-    linear-gradient(to bottom, #5a2ea8 0%, #3d1b78 55%, #2b1256 100%);
-  color: #ffe9b0;
-  border: 1px solid rgba(232, 192, 64, 0.55);
+  background: linear-gradient(
+    to bottom,
+    rgba(168, 108, 246, 0.26) 0%,
+    rgba(74, 36, 140, 0.2) 45%,
+    rgba(14, 8, 30, 0.92) 100%
+  );
+  background-color: #180d2c;
+  color: #f5d666;
+  border: 1px solid rgba(232, 192, 64, 0.72);
   border-radius: 4px;
   cursor: pointer;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.65),
-    inset 0 -6px 12px rgba(0, 0, 0, 0.35);
+    inset 0 -7px 14px rgba(0, 0, 0, 0.45);
   transition:
     transform 0.18s ease,
     border-color 0.18s ease,
-    box-shadow 0.25s ease,
+    color 0.18s ease,
     filter 0.18s ease;
+}
+
+/* Die Goldlinie des Projekts als Kopfleiste — dasselbe Verlaufsmuster wie
+   über jedem Modal, nur auf Buttonhöhe heruntergebrochen. */
+.prestige-btn::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  right: 1px;
+  height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(
+    to right,
+    #5c3310,
+    #c89040,
+    #e8c060,
+    #d4a020,
+    #c89040,
+    #5c3310
+  );
+  pointer-events: none;
 }
 
 /* Der atmende Schein liegt auf einer eigenen Ebene und variiert nur seine
@@ -863,17 +889,11 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.prestige-star {
-  position: relative;
-  color: #f5d666;
-  line-height: 1;
-  text-shadow: 0 0 8px rgba(245, 214, 102, 0.7);
-}
-
 .prestige-btn:hover {
   transform: scale(1.02);
-  border-color: rgba(255, 224, 128, 0.9);
-  filter: brightness(1.12);
+  border-color: #ffe080;
+  color: #fff3c4;
+  filter: brightness(1.1);
 }
 
 .prestige-btn:active {
