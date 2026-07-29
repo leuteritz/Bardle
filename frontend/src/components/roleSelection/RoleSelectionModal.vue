@@ -110,7 +110,7 @@ const availableByRole = computed(() => {
       star,
       tierColor: tier.color,
       tierIcon: tier.icon,
-      image: battleStore.getChampionImage(name),
+      image: battleStore.getChampionImage(name, { size: 'md' }),
       spawnPercent: null, // filled below once the role's full pool is known
     }
     for (const role of getChampionRoles(name)) {

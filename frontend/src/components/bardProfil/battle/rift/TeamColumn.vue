@@ -25,7 +25,7 @@
       <!-- Full-bleed portrait: the image IS the card background, no inner frame -->
       <img
         v-if="champ.name"
-        :src="battleStore.getChampionImage(champ.name, side === 'blue' ? 1 : 2)"
+        :src="battleStore.getChampionImage(champ.name, { team: side === 'blue' ? 1 : 2 })"
         :alt="champ.name"
         class="portrait"
         :class="{ 'portrait--dead': champ.respawnState === 'walking-back' }"

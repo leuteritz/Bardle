@@ -311,7 +311,7 @@ const strikers = computed(() =>
       {
         role,
         champion,
-        img: battleStore.getChampionImage(champion),
+        img: battleStore.getChampionImage(champion, { size: 'md' }),
         color: ROLE_BY_KEY[role].color,
         attackDamage: def.damage,
         // Der Store tickt sekündlich und setzt beim Feuern sofort auf das

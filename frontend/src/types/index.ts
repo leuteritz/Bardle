@@ -345,6 +345,18 @@ export interface MultikillCounts {
   penta: number
 }
 
+/** Which generated downscale of a champion splash/icon to load — see
+ *  CHAMPION_ART_VARIANT_PX for the size thresholds. */
+export type ChampionArtSize = 'sm' | 'md' | 'full'
+
+/** How a champion portrait should be resolved: whose skin, and at what size. */
+export interface ChampionArtOptions {
+  /** Battle side — team 2 wears the skin rolled for the enemy roster. */
+  team?: 1 | 2
+  /** Downscale variant; defaults to the full-size source. */
+  size?: ChampionArtSize
+}
+
 export interface ChampionState {
   name: string
   rank: string

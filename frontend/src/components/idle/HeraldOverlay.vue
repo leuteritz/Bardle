@@ -156,7 +156,7 @@ watch(
         eyebrow: 'NEW CHAMPION',
         headline: name,
         subline: 'Now available in the Shop',
-        imageSrc: battleStore.getChampionImage(name),
+        imageSrc: battleStore.getChampionImage(name, { size: 'md' }),
         accent: HERALD_ACCENT_CHAMPION,
         round: true,
       })

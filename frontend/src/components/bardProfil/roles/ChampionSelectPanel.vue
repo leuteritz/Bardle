@@ -394,7 +394,7 @@ function onImgError(e: Event) {
         <span class="csp-slot-portrait">
           <img
             v-if="mainChampion"
-            :src="battleStore.getChampionImage(mainChampion)"
+            :src="battleStore.getChampionImage(mainChampion, { size: 'md' })"
             :alt="mainChampion"
             class="csp-slot-img"
             @error="onImgError"
@@ -421,7 +421,7 @@ function onImgError(e: Event) {
         <span class="csp-slot-portrait csp-slot-portrait--round">
           <img
             v-if="ally"
-            :src="battleStore.getChampionImage(ally)"
+            :src="battleStore.getChampionImage(ally, { size: 'md' })"
             :alt="ally"
             class="csp-slot-img"
             @error="onImgError"

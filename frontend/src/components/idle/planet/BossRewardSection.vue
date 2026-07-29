@@ -59,7 +59,7 @@ const homePlanetChampion = computed(() => activeBoss.value?.homePlanetChampion ?
 const homePlanetChampionImage = computed(() => {
   const name = homePlanetChampion.value
   if (!name) return null
-  return battleStore.getChampionImage(name)
+  return battleStore.getChampionImage(name, { size: 'md' })
 })
 
 const totalChimes = computed(() =>

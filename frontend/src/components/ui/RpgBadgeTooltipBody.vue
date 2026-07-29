@@ -219,7 +219,7 @@ function buyAllUpgrades() {
           class="nc-tt__item"
           @click.stop="pickChampion(name)"
         >
-          <img :src="battleStore.getChampionImage(name)" class="nc-tt__img" :alt="name" />
+          <img :src="battleStore.getChampionImage(name, { size: 'md' })" class="nc-tt__img" :alt="name" />
           <span class="nc-tt__name" :style="{ color: roleOf(name).color }">{{ name }}</span>
           <span
             class="nc-tt__role"

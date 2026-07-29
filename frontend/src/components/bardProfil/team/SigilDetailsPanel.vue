@@ -86,7 +86,7 @@ function equippedItem(cat: ItemCategory): ShopItem | null {
 }
 
 function allyImage(ally: string | null): string {
-  return ally ? battleStore.getChampionImage(ally) : ''
+  return ally ? battleStore.getChampionImage(ally, { size: 'md' }) : ''
 }
 
 function allyOrigin(name: string) {

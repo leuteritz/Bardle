@@ -1,7 +1,8 @@
 // Champion-bezogene Helfer: Stammdaten-Ladung und alles rund um gebündelte
 // Skins (Pfade, Namen, Verfügbarkeit).
 import { CHAMPION_SKINS } from '@/config/championSkins'
-import { SKIN_ORIGINAL } from '@/config/constants'
+import { CHAMPION_ART_VARIANT_PX, SKIN_ORIGINAL } from '@/config/constants'
+import type { ChampionArtSize } from '@/types'
 
 // ── Stammdaten ─────────────────────────────────────────────────────────────
 export async function fetchChampionNames(): Promise<string[]> {
@@ -32,22 +33,37 @@ export function hasChampionSkin(championName: string, skin: string): boolean {
   return getChampionSkins(championName).includes(skin)
 }
 
+/** Rewrites an art path to its generated downscale — `KDASkin.jpg` at size
+ *  'sm' becomes `KDASkin-128.jpg`. 'full' keeps the untouched source. Every
+ *  splash and icon under /img/skins and /img/champion has both variants. */
+export function withArtVariant(imagePath: string, size: ChampionArtSize = 'full'): string {
+  const px = CHAMPION_ART_VARIANT_PX[size]
+  return px ? imagePath.replace(/\.jpg$/, `-${px}.jpg`) : imagePath
+}
+
 /** Splash-art URL for a bundled skin file. */
-export function getSkinImagePath(championName: string, skin: string): string {
-  return `/img/skins/${toSkinFolder(championName)}/${skin}.jpg`
+export function getSkinImagePath(
+  championName: string,
+  skin: string,
+  size: ChampionArtSize = 'full',
+): string {
+  return withArtVariant(`/img/skins/${toSkinFolder(championName)}/${skin}.jpg`, size)
 }
 
 /** Classic square champion icon — the default look when no skin is equipped. */
-export function getChampionIconPath(championName: string): string {
-  return `/img/champion/${championName}.jpg`
+export function getChampionIconPath(championName: string, size: ChampionArtSize = 'full'): string {
+  return withArtVariant(`/img/champion/${championName}.jpg`, size)
 }
 
 /** Preview image for the default "Original" gallery card: the base splash art
  *  when it is bundled, otherwise the classic champion icon. */
-export function getOriginalPreviewPath(championName: string): string {
+export function getOriginalPreviewPath(
+  championName: string,
+  size: ChampionArtSize = 'full',
+): string {
   return hasChampionSkin(championName, SKIN_ORIGINAL)
-    ? getSkinImagePath(championName, SKIN_ORIGINAL)
-    : getChampionIconPath(championName)
+    ? getSkinImagePath(championName, SKIN_ORIGINAL, size)
+    : getChampionIconPath(championName, size)
 }
 
 /** Random bundled skin for a champion — the default look is one of the draws,
@@ -61,10 +77,14 @@ export function pickRandomSkin(championName: string): string {
 
 /** Splash art of a champion wearing a specific skin, falling back to the
  *  classic square icon when that skin file is not bundled. */
-export function getSkinArtPath(championName: string, skin: string): string {
+export function getSkinArtPath(
+  championName: string,
+  skin: string,
+  size: ChampionArtSize = 'full',
+): string {
   return hasChampionSkin(championName, skin)
-    ? getSkinImagePath(championName, skin)
-    : getChampionIconPath(championName)
+    ? getSkinImagePath(championName, skin, size)
+    : getChampionIconPath(championName, size)
 }
 
 /** File basename → human-readable skin name.

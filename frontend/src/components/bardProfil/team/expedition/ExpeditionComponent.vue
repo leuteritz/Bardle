@@ -566,7 +566,7 @@ export default defineComponent({
       return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`
     }
     function getChampionImage(name: string): string {
-      return battleStore.getChampionImage(name)
+      return battleStore.getChampionImage(name, { size: 'sm' })
     }
     /** Role accent color (same palette as everywhere else in the app). */
     function getRoleColor(role: ChampionRole): string {

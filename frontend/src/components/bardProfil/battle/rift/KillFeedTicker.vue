@@ -214,7 +214,7 @@ function buffLabel(buff: BuffFeedEntry): string {
 
 /** Feed portrait — the team decides which skin the champion wears. */
 function feedImg(name: string, team: 1 | 2): string {
-  return battleStore.getChampionImage(name, team)
+  return battleStore.getChampionImage(name, { team, size: 'sm' })
 }
 
 /** The side opposite a kill's killer — i.e. the victim's team. */

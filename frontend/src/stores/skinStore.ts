@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { SKIN_ORIGINAL } from '@/config/constants'
 import { getSkinImagePath, hasChampionSkin } from '@/utils/champions'
+import type { ChampionArtSize } from '@/types'
 
 /**
  * Selected champion skins. Only non-default picks are stored — a champion
@@ -25,11 +26,11 @@ export const useSkinStore = defineStore('skin', () => {
   }
 
   /** Splash-art URL of the selected skin, or null for the default look. */
-  function getSkinImage(championName: string): string | null {
+  function getSkinImage(championName: string, size: ChampionArtSize = 'full'): string | null {
     const skin = selectedSkins.value[championName]
     if (!skin || skin === SKIN_ORIGINAL) return null
     if (!hasChampionSkin(championName, skin)) return null
-    return getSkinImagePath(championName, skin)
+    return getSkinImagePath(championName, skin, size)
   }
 
   function resetSkins() {

@@ -182,7 +182,7 @@ function scrollToSection(key: string) {
 const hasAnySynergy = computed(() => traitCards.value.length + originCards.value.length > 0)
 
 function championImage(name: string): string {
-  return battleStore.getChampionImage(name)
+  return battleStore.getChampionImage(name, { size: 'sm' })
 }
 </script>
 

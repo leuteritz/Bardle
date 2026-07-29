@@ -41,7 +41,7 @@
             <span class="cell-champ">
               <span class="portrait-wrap">
                 <img
-                  :src="battleStore.getChampionImage(champ.name, side.key === 'enemy' ? 2 : 1)"
+                  :src="battleStore.getChampionImage(champ.name, { team: side.key === 'enemy' ? 2 : 1, size: 'md' })"
                   :alt="champ.name"
                   class="portrait"
                 />

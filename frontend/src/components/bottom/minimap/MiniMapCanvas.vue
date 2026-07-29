@@ -87,7 +87,7 @@ export default defineComponent({
     const championImageCache = new Map<string, HTMLImageElement>()
 
     function getOrLoadChampionImage(name: string): HTMLImageElement | null {
-      const src = battleStore.getChampionImage(name)
+      const src = battleStore.getChampionImage(name, { size: 'sm' })
       if (championImageCache.has(src)) return championImageCache.get(src)!
       const img = new Image()
       img.src = src

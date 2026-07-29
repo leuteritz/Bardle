@@ -105,6 +105,7 @@ import type {
   BattleRole,
   BattleTimeline,
   BuffFeedEntry,
+  ChampionArtOptions,
   ChampionCareerStats,
   ChampionState,
   KillFeedEntry,
@@ -666,20 +667,25 @@ export const useBattleStore = defineStore('battle', {
 
   actions: {
     /**
-     * Portrait of a champion. Pass team 2 wherever the enemy roster is drawn —
-     * those champions wear the skin rolled for them in refreshTeams(), while
-     * team 1 (and every non-battle caller) follows the player's own pick.
+     * Portrait of a champion.
+     * `team: 2` draws from the enemy roster, whose champions wear the skin
+     * rolled for them in refreshTeams(); team 1 and every non-battle caller
+     * follow the player's own pick.
+     * `size` picks the generated downscale — set it to match how large the
+     * element actually renders (see CHAMPION_ART_VARIANT_PX), so a 24px feed
+     * slot no longer downloads a 1280px splash.
      */
-    getChampionImage(name: string, team?: 1 | 2) {
+    getChampionImage(name: string, opts: ChampionArtOptions = {}) {
+      const { team, size = 'full' } = opts
       switch (name) {
         case 'Bard':
           return '/img/BardAbilities/Bard.png'
         default: {
           if (team === 2) {
             const skin = this.team2.find((c) => c.name === name)?.skin
-            if (skin) return getSkinArtPath(name, skin)
+            if (skin) return getSkinArtPath(name, skin, size)
           }
-          return useSkinStore().getSkinImage(name) ?? getChampionIconPath(name)
+          return useSkinStore().getSkinImage(name, size) ?? getChampionIconPath(name, size)
         }
       }
     },

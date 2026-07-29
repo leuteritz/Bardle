@@ -8,6 +8,9 @@ import {
   getChampionSkins,
   getSkinImagePath,
   getSkinArtPath,
+  getChampionIconPath,
+  getOriginalPreviewPath,
+  withArtVariant,
   pickRandomSkin,
   formatSkinName,
 } from '../../utils/champions'
@@ -44,6 +47,46 @@ describe('championSkins utils', () => {
   describe('getSkinImagePath', () => {
     it('builds the /img/skins path with the normalized folder', () => {
       expect(getSkinImagePath("Kai'sa", 'KDASkin')).toBe('/img/skins/Kaisa/KDASkin.jpg')
+    })
+  })
+
+  describe('withArtVariant', () => {
+    it('appends the pixel suffix of the requested downscale', () => {
+      expect(withArtVariant('/img/skins/Ahri/KDASkin.jpg', 'sm')).toBe(
+        '/img/skins/Ahri/KDASkin-128.jpg',
+      )
+      expect(withArtVariant('/img/skins/Ahri/KDASkin.jpg', 'md')).toBe(
+        '/img/skins/Ahri/KDASkin-256.jpg',
+      )
+    })
+
+    it('leaves the source untouched at full size (and by default)', () => {
+      expect(withArtVariant('/img/skins/Ahri/KDASkin.jpg', 'full')).toBe(
+        '/img/skins/Ahri/KDASkin.jpg',
+      )
+      expect(withArtVariant('/img/champion/Ahri.jpg')).toBe('/img/champion/Ahri.jpg')
+    })
+
+    it('only rewrites the extension, never a dot inside the name', () => {
+      expect(withArtVariant('/img/skins/Gragas/Gragas,Esq.Skin.jpg', 'sm')).toBe(
+        '/img/skins/Gragas/Gragas,Esq.Skin-128.jpg',
+      )
+    })
+  })
+
+  describe('art variants across the path helpers', () => {
+    it('threads the size through skin, icon and preview paths', () => {
+      expect(getSkinImagePath('Ahri', 'KDASkin', 'sm')).toBe('/img/skins/Ahri/KDASkin-128.jpg')
+      expect(getChampionIconPath('Ahri', 'md')).toBe('/img/champion/Ahri-256.jpg')
+      expect(getOriginalPreviewPath('Ahri', 'sm')).toBe('/img/skins/Ahri/OriginalSkin-128.jpg')
+      // Aphelios has no OriginalSkin file — the icon variant stands in
+      expect(getOriginalPreviewPath('Aphelios', 'sm')).toBe('/img/champion/Aphelios-128.jpg')
+    })
+
+    it('defaults to the full-size source everywhere', () => {
+      expect(getSkinImagePath('Ahri', 'KDASkin')).toBe('/img/skins/Ahri/KDASkin.jpg')
+      expect(getChampionIconPath('Ahri')).toBe('/img/champion/Ahri.jpg')
+      expect(getSkinArtPath('Ahri', 'KDASkin')).toBe('/img/skins/Ahri/KDASkin.jpg')
     })
   })
 
@@ -152,10 +195,10 @@ describe('skinStore', () => {
       [{ name: 'Ahri', role: 'mid' }],
       [{ name: 'Ahri', role: 'mid', skin: 'CovenSkin' }],
     )
-    expect(battleStore.getChampionImage('Ahri', 1)).toBe('/img/skins/Ahri/KDASkin.jpg')
-    expect(battleStore.getChampionImage('Ahri', 2)).toBe('/img/skins/Ahri/CovenSkin.jpg')
+    expect(battleStore.getChampionImage('Ahri', { team: 1 })).toBe('/img/skins/Ahri/KDASkin.jpg')
+    expect(battleStore.getChampionImage('Ahri', { team: 2 })).toBe('/img/skins/Ahri/CovenSkin.jpg')
     // Bard is always the player — a team hint never changes that
-    expect(battleStore.getChampionImage('Bard', 2)).toBe('/img/BardAbilities/Bard.png')
+    expect(battleStore.getChampionImage('Bard', { team: 2 })).toBe('/img/BardAbilities/Bard.png')
   })
 
   it('restoreTeams rolls a skin for enemies saved before skins existed', () => {
@@ -170,5 +213,28 @@ describe('skinStore', () => {
     battleStore.restoreTeams([], [{ name: 'Ahri', role: 'mid', skin: 'CovenSkin' }])
     battleStore.resetTeamStats(battleStore.team2)
     expect(battleStore.team2[0].skin).toBe('CovenSkin')
+  })
+
+  it('getChampionImage loads the downscale a small slot asks for', () => {
+    const skinStore = useSkinStore()
+    const battleStore = useBattleStore()
+    // no skin equipped → the classic icon, in the requested variant
+    expect(battleStore.getChampionImage('Ahri', { size: 'sm' })).toBe('/img/champion/Ahri-128.jpg')
+    skinStore.setSkin('Ahri', 'KDASkin')
+    expect(battleStore.getChampionImage('Ahri', { size: 'sm' })).toBe(
+      '/img/skins/Ahri/KDASkin-128.jpg',
+    )
+    expect(battleStore.getChampionImage('Ahri', { size: 'md' })).toBe(
+      '/img/skins/Ahri/KDASkin-256.jpg',
+    )
+  })
+
+  it('enemy portraits honour team and size together', () => {
+    const battleStore = useBattleStore()
+    battleStore.restoreTeams([], [{ name: 'Ahri', role: 'mid', skin: 'CovenSkin' }])
+    expect(battleStore.getChampionImage('Ahri', { team: 2, size: 'sm' })).toBe(
+      '/img/skins/Ahri/CovenSkin-128.jpg',
+    )
+    expect(battleStore.getChampionImage('Ahri', { team: 2 })).toBe('/img/skins/Ahri/CovenSkin.jpg')
   })
 })

@@ -175,7 +175,7 @@ const enragePercent = computed(() => {
 })
 
 function getChampionImage(name: string): string {
-  return battleStore.getChampionImage(name)
+  return battleStore.getChampionImage(name, { size: 'md' })
 }
 
 const isMountedRef = ref(false)

@@ -2747,6 +2747,20 @@ export const SKIN_CARD_ASPECT_RATIO = '16 / 9'
 /** Skin gallery grid — min card width (px); the grid auto-fills columns. */
 export const SKIN_CARD_MIN_WIDTH = 300
 
+/**
+ * Downscaled art variants generated next to every splash and icon
+ * (`KDASkin.jpg` → `KDASkin-128.jpg` / `KDASkin-256.jpg`, longest edge in px).
+ * Squeezing a 1280px splash into a 24px feed slot throws away 99% of the
+ * pixels and shimmers — pick the variant by the LARGEST rendered edge of the
+ * element, so the numbers still hold at DPR 2:
+ *   ≤ 34px → 'sm' · 35–110px → 'md' · above → 'full' (the untouched source).
+ * A path with no matching variant on disk simply keeps its source.
+ */
+export const CHAMPION_ART_VARIANT_PX = { sm: 128, md: 256, full: 0 } as const
+/** Largest rendered edge each variant is still safe for (px, at DPR 2). */
+export const CHAMPION_ART_SM_MAX_EDGE = 34
+export const CHAMPION_ART_MD_MAX_EDGE = 110
+
 // Sigil escalation — the sigil grows more epic with every filled slot:
 // each main lights its pentagon vertex + spoke, each ally lights a rune tick,
 // each full role (main + all allies) gains a spinning aura; global stages below

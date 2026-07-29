@@ -43,6 +43,7 @@ const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 const roleDef = computed(() => ROLES[props.roleIndex])
 const main = computed(() => headerSlots.value[props.roleIndex])
 const mainImage = computed(() =>
+  // the sigil node grows with the escalation stage (up to ~200px) — full source
   main.value ? battleStore.getChampionImage(main.value) : '',
 )
 const tier = computed(() => (main.value ? getChampionTier(main.value) : null))
@@ -51,7 +52,7 @@ const allies = computed(
 )
 
 function allyImage(ally: string | null): string {
-  return ally ? battleStore.getChampionImage(ally) : ''
+  return ally ? battleStore.getChampionImage(ally, { size: 'md' }) : ''
 }
 
 // ── Search spotlight ─────────────────────────────────────────────────────────

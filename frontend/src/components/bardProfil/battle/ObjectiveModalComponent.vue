@@ -98,7 +98,7 @@
                   <img
                     v-for="t in fx.targets ?? []"
                     :key="t.name"
-                    :src="battleStore.getChampionImage(t.name, fx.targetTeam)"
+                    :src="battleStore.getChampionImage(t.name, { team: fx.targetTeam, size: 'sm' })"
                     class="fx-target"
                     :alt="t.name"
                   />
@@ -115,7 +115,7 @@
                 :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'own') }"
               >
                 <img
-                  :src="battleStore.getChampionImage(f.name, 1)"
+                  :src="battleStore.getChampionImage(f.name, { team: 1, size: 'md' })"
                   class="fighter-portrait"
                   :class="{ 'fighter-portrait--dead': !f.alive || f.down }"
                   :alt="f.name"
@@ -281,7 +281,7 @@
                   <img
                     v-for="t in fx.targets ?? []"
                     :key="t.name"
-                    :src="battleStore.getChampionImage(t.name, fx.targetTeam)"
+                    :src="battleStore.getChampionImage(t.name, { team: fx.targetTeam, size: 'sm' })"
                     class="fx-target"
                     :alt="t.name"
                   />
@@ -336,7 +336,7 @@
                 :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'enemy') }"
               >
                 <img
-                  :src="battleStore.getChampionImage(f.name, 2)"
+                  :src="battleStore.getChampionImage(f.name, { team: 2, size: 'md' })"
                   class="fighter-portrait"
                   :class="{ 'fighter-portrait--dead': !f.alive || f.down }"
                   :alt="f.name"
@@ -709,7 +709,10 @@ function buildFighterEffects(f: ObjectiveFighter, side: 'own' | 'enemy'): Fighte
       label: 'TAUNTED',
       color: ROLE_BY_KEY.top.color,
       // The taunting top always stands on the opposite side of this fighter.
-      img: battleStore.getChampionImage(tauntingTop.name, side === 'own' ? 2 : 1),
+      img: battleStore.getChampionImage(tauntingTop.name, {
+        team: side === 'own' ? 2 : 1,
+        size: 'sm',
+      }),
       remaining: windowRemaining(tauntingTop),
     })
   }

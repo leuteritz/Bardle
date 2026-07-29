@@ -102,7 +102,7 @@ const mvpName = computed(() => battleStore.lastAutoBattleResult?.mvpName ?? '')
 const mvpImage = computed(() =>
   battleStore.getChampionImage(
     mvpName.value,
-    battleStore.team1.some((c) => c.name === mvpName.value) ? 1 : 2,
+    { team: battleStore.team1.some((c) => c.name === mvpName.value) ? 1 : 2, size: 'md' },
   ),
 )
 const baronBounty = computed(() => battleStore.lastAutoBattleResult?.baronBounty ?? 0)

@@ -430,7 +430,7 @@ export default defineComponent({
 
         newPositions.push({
           name: c.name,
-          img: battleStore.getChampionImage(c.name),
+          img: battleStore.getChampionImage(c.name, { size: 'sm' }),
           x: renderX,
           y: renderY,
           size,
