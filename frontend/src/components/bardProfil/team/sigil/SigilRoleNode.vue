@@ -3,7 +3,9 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
+import { useChampionLevelStore } from '@/stores/championLevelStore'
 import { getChampionTier } from '@/config/championTiers'
+import { ascensionRank } from '@/config/championLevels'
 import {
   ROLES,
   SIGIL_NODE_SIZE,
@@ -12,6 +14,9 @@ import {
   SIGIL_ALLY_HOVER_SCALE,
   SIGIL_ALLY_HOVER_DIM_OPACITY,
   SIGIL_ALLY_HOVER_PING_MS,
+  SIGIL_XP_RING_RADIUS,
+  SIGIL_XP_RING_CIRCUMFERENCE,
+  SIGIL_XP_RING_INSET,
 } from '@/config/constants'
 import type { SigilPoint } from '@/composables/useTeamSigil'
 
@@ -38,6 +43,7 @@ const battleStore = useBattleStore()
 // Pointing at a role node also marks that role in the command panel — same
 // channel the battle tab's roster and the panel itself write to.
 const uiStore = useUiStore()
+const levelStore = useChampionLevelStore()
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 
 const roleDef = computed(() => ROLES[props.roleIndex])
@@ -70,6 +76,10 @@ const hoverScale = String(SIGIL_ALLY_HOVER_SCALE)
 const hoverDimOpacity = String(SIGIL_ALLY_HOVER_DIM_OPACITY)
 const hoverPingMs = `${SIGIL_ALLY_HOVER_PING_MS}ms`
 
+// The XP ring is inset negatively so it clears the portrait's own 3px halo.
+const xpRingInsetPct = `${SIGIL_XP_RING_INSET}%`
+const xpRingSizePct = `${100 - SIGIL_XP_RING_INSET * 2}%`
+
 function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   return {
     left: `${point.x}px`,
@@ -77,6 +87,23 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
     width: `${size}px`,
     height: `${size}px`,
   }
+}
+
+// ── Champion levels ──────────────────────────────────────────────────────────
+// Every node wears its level: the main gets an XP arc tracing its rim plus a
+// large rank-colored numeral, allies get a compact numeral badge.
+function levelOf(name: string): number {
+  return levelStore.levelOf(name)
+}
+function rankColorOf(name: string): string {
+  return ascensionRank(levelStore.levelOf(name)).color
+}
+/** Length of the drawn XP arc along the ring, in SVG user units. */
+function xpDashOf(name: string): number {
+  return levelStore.xpBarOf(name).pct * SIGIL_XP_RING_CIRCUMFERENCE
+}
+function needsAttentionOf(name: string): boolean {
+  return levelStore.needsAttention(name)
 }
 </script>
 
@@ -106,6 +133,15 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   >
     <img v-if="ally" :src="allyImage(ally)" :alt="ally" class="sigil-ally-img" />
     <span v-else class="sigil-ally-plus">＋</span>
+    <!-- ally level — a small rank-colored numeral riding the satellite's rim -->
+    <span
+      v-if="ally"
+      class="sigil-ally-level"
+      :class="{ 'sigil-ally-level--attention': needsAttentionOf(ally) }"
+      :style="{ '--rank': rankColorOf(ally) }"
+    >
+      {{ levelOf(ally) }}
+    </span>
   </button>
 
   <!-- role node -->
@@ -127,6 +163,27 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   >
     <span v-if="full" class="sigil-node-aura" aria-hidden="true" />
     <span v-if="full" class="sigil-node-conic" aria-hidden="true" />
+
+    <!-- XP arc — traces the node's rim in the champion's ascension rank color,
+         so progress toward the next level reads at a glance across the board -->
+    <svg
+      v-if="main"
+      class="sigil-node-xp"
+      :class="{ 'sigil-node-xp--attention': needsAttentionOf(main) }"
+      viewBox="0 0 100 100"
+      aria-hidden="true"
+    >
+      <circle class="sigil-node-xp-track" cx="50" cy="50" :r="SIGIL_XP_RING_RADIUS" />
+      <circle
+        class="sigil-node-xp-fill"
+        cx="50"
+        cy="50"
+        :r="SIGIL_XP_RING_RADIUS"
+        :stroke="rankColorOf(main)"
+        :stroke-dasharray="`${xpDashOf(main)} ${SIGIL_XP_RING_CIRCUMFERENCE}`"
+      />
+    </svg>
+
     <span class="sigil-node-circle">
       <img v-if="main" :src="mainImage" :alt="main" class="sigil-node-img" />
       <span v-else class="sigil-node-empty">
@@ -136,6 +193,18 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
         ★{{ tier.starLevel }}
       </span>
     </span>
+
+    <!-- level medallion — the headline number, sitting on the node's shoulder -->
+    <span
+      v-if="main"
+      class="sigil-node-level"
+      :class="{ 'sigil-node-level--attention': needsAttentionOf(main) }"
+      :style="{ '--rank': rankColorOf(main) }"
+      :title="`Level ${levelOf(main)}`"
+    >
+      {{ levelOf(main) }}
+    </span>
+
     <span class="sigil-node-name">{{ main ?? roleDef.label }}</span>
   </button>
 </template>
@@ -148,7 +217,8 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   padding: 0;
   border: none;
   border-radius: 50%;
-  overflow: hidden;
+  /* NOT overflow:hidden — the level badge overhangs the rim by design. The
+     portrait does its own round cropping instead. */
   cursor: pointer;
   background: rgba(10, 7, 4, 0.75);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--role-color) 40%, transparent);
@@ -188,6 +258,7 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   object-fit: cover;
   object-position: top;
   display: block;
+  border-radius: 50%;
 }
 .sigil-ally-plus {
   width: 100%;
@@ -199,6 +270,32 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   line-height: 1;
   color: var(--role-color);
   opacity: 0.85;
+}
+
+/* ally level numeral — bottom-right of the satellite, overlapping its rim */
+.sigil-ally-level {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  /* fixed square for the same reason as the role medallion */
+  width: 21px;
+  height: 21px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #0a0704;
+  border: 1.5px solid var(--rank);
+  color: var(--rank);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+}
+.sigil-ally-level--attention {
+  border-color: #6ec040;
+  color: #6ec040;
+  animation: sigil-level-pulse 1.9s ease-in-out infinite;
 }
 
 /* ── role node ── */
@@ -262,6 +359,67 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
 }
 .sigil-node--selected .sigil-node-conic {
   animation-duration: 6s;
+}
+
+/* XP arc — a ring just outside the portrait, drawn clockwise from 12 o'clock */
+.sigil-node-xp {
+  position: absolute;
+  left: v-bind(xpRingInsetPct);
+  top: v-bind(xpRingInsetPct);
+  width: v-bind(xpRingSizePct);
+  height: v-bind(xpRingSizePct);
+  transform: rotate(-90deg);
+  pointer-events: none;
+  overflow: visible;
+}
+.sigil-node-xp-track {
+  fill: none;
+  stroke: rgba(10, 7, 4, 0.85);
+  stroke-width: 3.5;
+}
+.sigil-node-xp-fill {
+  fill: none;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.35s ease-out;
+  filter: drop-shadow(0 0 3px currentColor);
+}
+/* enough XP banked — the arc goes green and breathes until it is spent */
+.sigil-node-xp--attention .sigil-node-xp-fill {
+  stroke: #6ec040 !important;
+  animation: sigil-xp-breathe 1.9s ease-in-out infinite;
+}
+
+/* level medallion — deliberately large; this is the number the board is for */
+.sigil-node-level {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  /* fixed square so the medallion stays a circle at two digits, not an ellipse
+     (levels cap at 50, so the widest label is two characters) */
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #1e1610, #0a0704);
+  border: 2px solid var(--rank);
+  color: var(--rank);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  z-index: 4;
+  pointer-events: none;
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--rank) 45%, transparent),
+    0 2px 6px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.sigil-node-level--attention {
+  border-color: #6ec040;
+  color: #6ec040;
+  animation: sigil-level-pulse 1.9s ease-in-out infinite;
 }
 
 .sigil-node-circle {
@@ -401,6 +559,29 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   }
 }
 
+@keyframes sigil-level-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px rgba(110, 192, 64, 0.35),
+      0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+  50% {
+    box-shadow:
+      0 0 17px rgba(110, 192, 64, 0.8),
+      0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+}
+@keyframes sigil-xp-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @keyframes sigil-aura {
   0%,
   100% {
@@ -432,7 +613,10 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
       0 0 0 3px #e8c040,
       0 0 14px rgba(232, 192, 64, 0.55);
   }
-  .sigil-ally--spotlight {
+  .sigil-ally--spotlight,
+  .sigil-node-level--attention,
+  .sigil-ally-level--attention,
+  .sigil-node-xp--attention .sigil-node-xp-fill {
     animation: none !important;
   }
 }

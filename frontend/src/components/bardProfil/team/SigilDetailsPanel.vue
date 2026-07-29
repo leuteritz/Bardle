@@ -139,9 +139,9 @@ function rankNameOf(name: string): string {
 function xpPctOf(name: string): number {
   return levelStore.xpBarOf(name).pct * 100
 }
-/** True when this champion has something waiting: a buyable level or a perk. */
+/** True when this champion has something waiting: banked XP or an unspent perk. */
 function needsAttentionOf(name: string): boolean {
-  return levelStore.canLevelUp(name) || levelStore.hasPendingPerk(name)
+  return levelStore.needsAttention(name)
 }
 const mainLevelCap = computed(() => levelStore.levelCap)
 

@@ -160,6 +160,19 @@ export const useChampionLevelStore = defineStore('championLevel', {
       return (name: string) => this.pendingPerks.some((p) => p.champion === name)
     },
 
+    /**
+     * Whether a champion is worth a look: it banked enough XP for the next
+     * level, or a milestone perk is still unspent.
+     *
+     * Deliberately ignores chimes and materials. The sigil board marks all 30
+     * slots at once, and a chime-aware check would invalidate every marker on
+     * every tick. Affordability is the level panel's job — this only says
+     * "something happened here".
+     */
+    needsAttention(): (name: string) => boolean {
+      return (name: string) => this.hasXpForNextLevel(name) || this.hasPendingPerk(name)
+    },
+
     // ── Effect getters — the only surface the rest of the game reads ──────────
 
     /** Value of a perk effect if this champion owns it, else 0. */

@@ -2754,6 +2754,15 @@ export const SIGIL_ALLY_ARC_DEG = 44
 export const SIGIL_NODE_SIZE = 94
 export const SIGIL_ALLY_SIZE = 44
 export const SIGIL_CREST_SIZE = 170
+/**
+ * XP arc traced around a role node, in a 0–100 viewBox so it scales with the
+ * node. The circumference is precomputed because stroke-dasharray needs it to
+ * turn an XP ratio into an arc length.
+ */
+export const SIGIL_XP_RING_RADIUS = 46
+export const SIGIL_XP_RING_CIRCUMFERENCE = 2 * Math.PI * SIGIL_XP_RING_RADIUS
+/** How far the XP ring sits outside the portrait circle, in % of node size. */
+export const SIGIL_XP_RING_INSET = -9
 /** SVG ring radii (stage coordinates, center = SIGIL_STAGE_SIZE / 2). */
 export const SIGIL_RING_OUTER_R = 430
 export const SIGIL_RING_RUNE_R = 360
