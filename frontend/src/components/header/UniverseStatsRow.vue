@@ -12,7 +12,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
-import { formatNumber } from '@/config/numberFormat'
+import { formatNumberCompact } from '@/config/numberFormat'
 import { universes } from '@/config/universes'
 import { toRoman } from '@/utils/format'
 import {
@@ -184,8 +184,11 @@ onUnmounted(() => {
           alt=""
           aria-hidden="true"
         />
+        <!-- Kurzform (max. 4 Zeichen) wie in der Materialleiste: die drei
+             Kacheln sind gleich breit, und "999.9M" allein bräuchte davon so
+             viel, dass die Galaxy-Kachel nicht mehr mittig stehen könnte. -->
         <span v-ink-center.x.y class="tile-value meep-value">{{
-          formatNumber(displayMeeps)
+          formatNumberCompact(displayMeeps)
         }}</span>
       </div>
     </div>
@@ -207,8 +210,13 @@ onUnmounted(() => {
   --stat-value-size: min(calc(var(--header-height) * 0.28), 24px);
   display: flex;
   align-items: center;
-  /* Trennt die drei Felder; ihre Breiten stehen fest (siehe .uni-tile--*). */
-  gap: clamp(6px, 0.5vw, 10px);
+  /* Trennt die drei Felder; ihre Breiten stehen fest (siehe .uni-tile--*).
+     Enger als früher (war bis 10px): seit alle drei Felder gleich breit sind,
+     zahlt jeder Pixel Abstand dreifach auf die Feldbreite ein, und der längste
+     Wert der Meep-Kachel ("999K") lag damit exakt 1px über seinem Feld. Das
+     Feld selbst federt den Abstand optisch ohnehin ab — zwischen zwei
+     Inhalten stehen weiterhin über 15px. */
+  gap: clamp(5px, 0.3vw, 6px);
   width: 100%;
   min-width: 0;
   flex-shrink: 0;
@@ -238,33 +246,28 @@ onUnmounted(() => {
 .tile-row {
   display: flex;
   align-items: center;
-  gap: clamp(2px, 0.2vw, 5px);
+  gap: clamp(2px, 0.16vw, 4px);
   min-width: 0;
   max-width: 100%;
 }
 
-/* Feste Anteile statt inhaltsbreiter Kacheln: flex-basis 0 macht die
-   Aufteilung unabhängig davon, wie lang die Werte gerade sind. Wächst die
-   Meep-Zahl von "1.24K" auf "12.5K", bleiben Universe und Galaxy stehen —
-   vorher rückte die ganze Zeile.
+/* Drei GLEICHE feste Anteile statt inhaltsbreiter Kacheln. flex-basis 0
+   macht die Aufteilung unabhängig davon, wie lang die Werte gerade sind:
+   wächst die Meep-Zahl von "1.2K" auf "12K", bleiben Universe und Galaxy
+   stehen — vorher rückte die ganze Zeile.
 
-   Die Anteile stammen aus dem gemessenen Bedarf im längsten Fall
-   ("VIII" / "999" / "999.9M" brauchen 71 / 76,9 / 119,4px bei rund 279px
-   verteilbarer Breite). Die verbleibenden ~11px Reserve sind gleichmäßig
-   auf die drei verteilt, nicht proportional — sonst bekäme die breiteste
-   Kachel Luft, während die knappste ellipsiert. */
-.uni-tile--universe {
-  flex: 27 1 0;
-  min-width: 0;
-}
+   Gleiche Anteile sind hier keine Kosmetik, sondern die Bedingung für die
+   mittige Galaxy-Kachel: bei drei gleich breiten Feldern W und zwei gleichen
+   Abständen g liegt die Mitte des mittleren bei 1,5W + g — und das ist per
+   Konstruktion exakt die halbe Blockbreite, also die Mitte des Balkens
+   darunter. Mit den früheren Anteilen 27/29/44 saß Galaxy bei 42,1 %.
 
-.uni-tile--galaxy {
-  flex: 29 1 0;
-  min-width: 0;
-}
-
+   Möglich wurde das erst durch die Kurzform der Meep-Zahl: ungekürzt brauchte
+   sie 119px und damit mehr als ein Drittel des Blocks. */
+.uni-tile--universe,
+.uni-tile--galaxy,
 .uni-tile--meep {
-  flex: 44 1 0;
+  flex: 1 1 0;
   min-width: 0;
 }
 
