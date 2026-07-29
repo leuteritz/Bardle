@@ -897,8 +897,17 @@ onUnmounted(() => {
 }
 .btn-gem {
   position: relative;
-  width: calc(var(--header-height) - 2 * var(--header-corner-gap));
-  height: calc(var(--header-height) - 2 * var(--header-corner-gap));
+  /* Cap bei 72px: der Header deckelt bei 1400px Breite, die Höhe läuft aber
+     bis 115px weiter — ungedeckelt wächst die Ecktaste auf 89px und nimmt
+     diese Breite dem Universe-Block bzw. den Materialien daneben weg. Ab
+     72px trägt das Icon ohnehin nicht mehr an Erkennbarkeit dazu. */
+  width: min(calc(var(--header-height) - 2 * var(--header-corner-gap)), 72px);
+  height: min(calc(var(--header-height) - 2 * var(--header-corner-gap)), 72px);
+  /* Sobald der Cap greift, ist der Button kleiner als seine Zeile. Er bleibt
+     dann unten und außen bündig statt mittig zu schweben — nur so laufen
+     seine Rundung und die des Header-Rahmens weiter parallel. */
+  align-self: flex-end;
+  margin-bottom: var(--header-corner-gap);
   border-radius: 6px;
   cursor: pointer;
   display: flex;

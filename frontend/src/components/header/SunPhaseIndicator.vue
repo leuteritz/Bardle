@@ -111,10 +111,11 @@ const tooltip = computed(
 
   align-self: stretch;
   flex: 0 1 auto;
-  /* Cap bei 134px statt 150px: die Restzeit braucht selbst im längsten Fall
+  /* Cap bei 118px statt 134px: die Restzeit braucht selbst im längsten Fall
      ("12h 34m") nur ~110px, und die frei werdende Breite geht an den
-     Universe-Block nebenan, dessen Meep-Zahl sonst auf 2K/4K ellipsiert. */
-  width: clamp(112px, 7.8vw, 134px);
+     Universe-Block nebenan, dessen drei Kacheln sich sonst auf 2K/4K
+     eine schrumpfende Zeile teilen. */
+  width: clamp(112px, 7.8vw, 118px);
   min-width: 104px;
   background: transparent;
   border: none;

@@ -40,15 +40,14 @@ const reachedMilestones = computed(() =>
   Math.floor(gameStore.universeRescueProgress / UNIVERSE_MILESTONE_STEP_PERCENT),
 )
 
-/* Die Pips sitzen mittig über ihrem Abschnitt, Pip n also bei (n − 0.5) × 10%.
-   Die leuchtende Verbindungslinie startet bei der Mitte des ersten Pips und
-   endet auf der Mitte des zuletzt erreichten. */
-const railTrackStart = UNIVERSE_MILESTONE_STEP_PERCENT / 2
-const litTrackWidth = computed(() =>
-  reachedMilestones.value > 0
-    ? `${(reachedMilestones.value - 0.5) * UNIVERSE_MILESTONE_STEP_PERCENT - railTrackStart}%`
-    : '0%',
-)
+/* Pip n sitzt auf der Segmentgrenze bei n × 10% — dort, wo auch die
+   Trennlinie im Balken steht. Meilenstein und Segmentende sind damit
+   dasselbe Ereignis, und der Balken selbst ist die Verbindungslinie. */
+const milestoneLeft = (m: number) => `${m * UNIVERSE_MILESTONE_STEP_PERCENT}%`
+
+/** Nur die INNEREN Grenzen tragen eine Raute: bei 0% steht keine, also
+    steht auch bei 100% keine — das Balkenende ist der zehnte Meilenstein. */
+const milestoneMarkCount = UNIVERSE_MILESTONE_COUNT - 1
 
 /** Frisch überschrittener Meilenstein — trägt kurz die Burst-Animation. */
 const flashMilestone = ref(0)
@@ -114,22 +113,18 @@ onUnmounted(() => {
           aria-hidden="true"
         />
         <div class="tile-text">
-          <span v-ink-center class="tile-label">Universe</span>
+          <span v-ink-center class="tile-label">Uni</span>
           <span v-ink-center class="tile-value uv-value">{{ universeRoman }}</span>
         </div>
       </div>
 
-      <div class="header-divider uni-divider" aria-hidden="true"></div>
-
       <div class="uni-tile uni-tile--galaxy" title="Current galaxy">
         <img src="/img/galaxy-far-128.png" class="tile-icon gx-icon" alt="" aria-hidden="true" />
         <div class="tile-text">
-          <span v-ink-center class="tile-label">Galaxy</span>
+          <span v-ink-center class="tile-label">Gal</span>
           <span v-ink-center class="tile-value gx-value">{{ galaxyStore.currentGalaxy }}</span>
         </div>
       </div>
-
-      <div class="header-divider uni-divider" aria-hidden="true"></div>
 
       <div
         class="uni-tile uni-tile--meep"
@@ -145,7 +140,7 @@ onUnmounted(() => {
           aria-hidden="true"
         />
         <div class="tile-text">
-          <span v-ink-center class="tile-label">Meeps</span>
+          <span v-ink-center class="tile-label">Meep</span>
           <span v-ink-center class="tile-value meep-value">{{ formatNumber(displayMeeps) }}</span>
         </div>
       </div>
@@ -185,22 +180,21 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Meilenstein-Schiene: ein Pip je 10%-Abschnitt, unter dem Balken statt
-           darin — so kollidiert kein Marker mit der Prozentzahl im Balken. -->
-      <div class="ms-rail" aria-hidden="true">
-        <div class="ms-track" />
-        <div class="ms-track ms-track--lit" :style="{ width: litTrackWidth }" />
-        <div v-for="m in UNIVERSE_MILESTONE_COUNT" :key="m" class="ms-cell">
-          <span
-            class="ms-pip"
-            :class="{
-              'ms-pip--reached': m <= reachedMilestones,
-              'ms-pip--next': m === reachedMilestones + 1,
-              'ms-pip--final': m === UNIVERSE_MILESTONE_COUNT,
-              'ms-pip--flash': m === flashMilestone,
-            }"
-          />
-        </div>
+      <!-- Meilenstein-Marker: eine Raute auf jeder inneren 10%-Grenze, mittig
+           auf der unteren Balkenkante statt in einer eigenen Zeile darunter.
+           Die Prozentzahl im Balken weicht ihnen per padding-bottom aus. -->
+      <div class="ms-marks" aria-hidden="true">
+        <span
+          v-for="m in milestoneMarkCount"
+          :key="m"
+          class="ms-pip"
+          :class="{
+            'ms-pip--reached': m <= reachedMilestones,
+            'ms-pip--next': m === reachedMilestones + 1,
+            'ms-pip--flash': m === flashMilestone,
+          }"
+          :style="{ left: milestoneLeft(m) }"
+        />
       </div>
     </div>
     <button v-else class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">
@@ -219,20 +213,23 @@ onUnmounted(() => {
    wachsen Zahlen und Balken von Full HD bis 4K sichtbar mit.
    ================================================================ */
 .uni-block {
-  /* Ein Maßsatz für Zeile 2 — Balken, Spalt und Meilenstein-Schiene. Der
-     Prestige-Button rechnet daraus dieselbe Gesamthöhe, damit das Layout
-     beim Umschalten nicht springt. */
+  /* Ein Maßsatz für Zeile 2 — Balken und Meilenstein-Rauten. Die Rauten
+     sitzen mittig auf der Balken-Unterkante, Zeile 2 ist also nur um ihre
+     halbe Diagonale höher als der Balken. Der Prestige-Button rechnet
+     daraus dieselbe Gesamthöhe, damit beim Umschalten nichts springt. */
   --rescue-track-h: max(16px, min(calc(var(--header-height) * 0.26), 30px));
-  --rescue-rail-h: max(8px, min(calc(var(--header-height) * 0.115), 13px));
-  --rescue-rail-gap: clamp(2px, 0.2vw, 4px);
-  --ms-pip-size: max(6px, min(calc(var(--header-height) * 0.075), 9px));
+  --ms-pip-size: max(7px, min(calc(var(--header-height) * 0.09), 11px));
+  /* Halbe Diagonale der um 45° gedrehten Raute: size × √2 / 2. */
+  --ms-pip-half: calc(var(--ms-pip-size) * 0.71);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(3px, 0.35vw, 7px);
+  gap: clamp(2px, 0.25vw, 6px);
   width: 100%;
   height: var(--header-height);
-  padding: clamp(3px, 0.3vw, 6px) 2px clamp(4px, 0.4vw, 7px);
+  /* Seitlich die halbe Rautendiagonale: der Marker bei 100% sitzt auf der
+     rechten Balkenkante und ragt sonst in den (clippenden) Portal-Wrap. */
+  padding: clamp(3px, 0.28vw, 6px) var(--ms-pip-half) clamp(3px, 0.3vw, 6px);
   box-sizing: border-box;
   min-width: 0;
 }
@@ -240,17 +237,23 @@ onUnmounted(() => {
 /* ================================================================
    ROW 1 — stat tiles
    ================================================================ */
-/* Container-Query statt Viewport: der Header deckelt bei 1400px, dieser Block
-   bleibt daher ab 2K rund 275px breit, während --header-height mit vw weiter
-   wächst. Drei Kacheln vertragen das nicht — Icon, Label und Zahl hängen
-   deshalb an der EIGENEN Breite (cqw) und nicht mehr an der Header-Höhe. */
+/* Maße wieder an --header-height statt an cqw: mit den Breiten-Caps auf
+   Tree-Button (72px) und Sun-Phase (118px) und ohne die beiden Divider
+   bleibt dieser Block über alle Desktop-Auflösungen bei ~290px, statt von
+   Full HD zu 4K um 25px zu schrumpfen. cqw hätte die Kacheln damit mit
+   steigender Auflösung KLEINER gemacht — die Header-Höhe wächst dagegen
+   mit, und genau ihr folgen Icon, Label und Zahl jetzt. */
 .uni-stats {
-  container-type: inline-size;
   display: flex;
   align-items: center;
-  /* Bewusst kein cqw: auf dem Container selbst würde sich die Einheit auf
-     dessen eigenen Vorfahren beziehen, nicht auf ihn. */
-  gap: clamp(4px, 0.35vw, 6px);
+  /* Die drei Gruppen sind inhaltsbreit (flex-grow 0), der Restraum wird
+     zwischen ihnen gleich verteilt: die Lücke Universe↔Galaxy ist damit
+     exakt so groß wie Galaxy↔Meeps, egal wie unterschiedlich lang die
+     Werte gerade sind. Mit grow würde die breiteste Kachel ihren Inhalt
+     zentrieren und die Lücke daneben optisch aufblähen. */
+  justify-content: space-between;
+  /* Untergrenze für den Fall, dass die Werte die Zeile ganz ausfüllen. */
+  gap: clamp(6px, 0.5vw, 10px);
   width: 100%;
   min-width: 0;
   flex-shrink: 0;
@@ -258,50 +261,45 @@ onUnmounted(() => {
 
 /* Rahmenlos: die Gruppen tragen sich über Icon, Label und Abstand — keine
    Platte, kein eigener Hintergrund. Der Header-Grund bleibt durchgehend. */
+/* Innenabstand knapper als der Abstand ZWISCHEN den Kacheln (.uni-stats
+   gap): seit die Divider weg sind, trägt allein dieses Verhältnis die
+   Gruppierung — und die gesparten Pixel gehen an die Meep-Zahl, die als
+   einzige nach oben offen ist. */
 .uni-tile {
   display: flex;
   align-items: center;
-  gap: clamp(3px, 0.3vw, 6px);
+  gap: clamp(2px, 0.2vw, 4px);
   min-width: 0;
   transition: filter 0.3s;
 }
 
-/* Drei Felder mit flex-basis 0, Inhalt jeweils mittig: die Divider sitzen
-   damit auf festen Dritteln. Meeps bekommt etwas mehr Grow, weil dort als
-   einziges eine mehrstellige Zahl steht — Universe (I–XII) und Galaxy
-   bleiben kurz. min-width: min-content ist die Reißleine: reicht der Platz
-   für eine sehr lange Meep-Zahl nicht, rücken lieber die Divider, als dass
-   die Zahl abgeschnitten wird. */
+/* Kein grow: jede Gruppe ist genau so breit wie ihr Inhalt, den Rest
+   verteilt space-between gleichmäßig dazwischen. Universe und Galaxy sind
+   per min-content gegen Kürzung geschützt — "VIII" und dreistellige
+   Galaxien sind die längsten Fälle und beide endlich. */
 .uni-tile--universe,
 .uni-tile--galaxy {
-  flex: 1 1 0;
-  justify-content: center;
+  flex: 0 1 auto;
   min-width: min-content;
 }
 
+/* Meeps bewusst OHNE min-content: die Zahl ist nach oben offen und würde
+   die Zeile sonst über den Block hinausschieben, wo der Portal-Wrap sie
+   hart clippt. Ellipsis am eigenen Wert ist der bessere Ausfall. */
 .uni-tile--meep {
-  flex: 1.3 1 0;
-  justify-content: center;
-  min-width: min-content;
-}
-
-/* Übernimmt Verlauf und Schimmer von .header-divider (global), nur die
-   feste Höhe dort passt nicht: sie ist an die volle Header-Höhe gerechnet
-   und würde aus der Kachelzeile in den Balken ragen. */
-.uni-divider {
-  height: 72%;
-  margin-inline: 0;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .uni-tile--rising {
   filter: drop-shadow(0 0 7px rgba(251, 146, 60, 0.5));
 }
 
-/* Drei Kacheln statt zwei: Icon und Zahl eine Stufe kleiner, sonst läuft die
-   Zeile an. Maße relativ zur Blockbreite (cqw), siehe .uni-stats. */
+/* Cap bei 26px: darüber frisst das Icon genau die Breite, die "VIII" bzw.
+   die Meep-Zahl daneben zum Wachsen braucht — siehe .tile-value. */
 .tile-icon {
-  width: clamp(19px, 8cqw, 25px);
-  height: clamp(19px, 8cqw, 25px);
+  width: min(calc(var(--header-height) * 0.3), 26px);
+  height: min(calc(var(--header-height) * 0.3), 26px);
   object-fit: contain;
   flex-shrink: 0;
   user-select: none;
@@ -319,14 +317,15 @@ onUnmounted(() => {
      aus der Mitte ihrer Hälfte. */
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 2px;
   min-width: 0;
 }
 
 .tile-label {
-  /* Das längste Label ("Universe") bestimmt die min-content-Breite seiner
-     Kachel — bei drei Kacheln muss es eine Stufe kleiner laufen. */
-  font-size: clamp(8px, 3.3cqw, 10.5px);
+  /* Dreibuchstabig ("Uni"/"Gal"/"Meep"): ausgeschrieben bestimmte "Universe"
+     mit 45px die min-content-Breite seiner Kachel und deckelte damit die
+     Zahl darunter — jetzt gibt die Zahl das Maß vor, nicht das Label. */
+  font-size: min(calc(var(--header-height) * 0.13), 12px);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -336,9 +335,10 @@ onUnmounted(() => {
 }
 
 .tile-value {
-  /* Die Meep-Zahl ist der Engpass — sie teilt sich die Zeile jetzt mit
-     Universe und Galaxy und muss auch als "999.9M" hineinpassen. */
-  font-size: clamp(14px, 6.5cqw, 19px);
+  /* Cap 24px aus der Messung: bei ~290px Blockbreite passt "999.9M" in die
+     Meep-Kachel und "XII" in die Universe-Kachel gerade noch ungekürzt —
+     eine Stufe größer und beide ellipsieren. */
+  font-size: min(calc(var(--header-height) * 0.28), 24px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
@@ -431,11 +431,15 @@ onUnmounted(() => {
    Was der Balken misst, sagt der Tooltip — im Header zählt die Zahl.
    ================================================================ */
 .rescue-row {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--rescue-rail-gap);
   width: 100%;
   min-width: 0;
+  /* Platz für die untere Hälfte der Meilenstein-Rauten, die auf der
+     Balkenkante sitzen — die einzige Höhe, die Zeile 2 über den Balken
+     hinaus noch braucht. */
+  padding-bottom: var(--ms-pip-half);
   /* Ohne das Shrink-Verbot staucht der Flex-Container den Balken auf Full HD
      um die letzten Pixel zusammen, statt die Kachelzeile atmen zu lassen. */
   flex-shrink: 0;
@@ -563,7 +567,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0 clamp(6px, 0.55vw, 10px);
+  /* Der Text sitzt um die halbe Rautendiagonale höher als die Balkenmitte:
+     sonst überschneidet er den Marker bei 90%, der von unten in den Balken
+     ragt. */
+  padding: 0 clamp(6px, 0.55vw, 10px) var(--ms-pip-half);
   z-index: 5;
   pointer-events: none;
 }
@@ -593,55 +600,32 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   MILESTONE RAIL — zehn Rauten unter dem Balken, je eine pro 10%-
-   Abschnitt. Jeder Pip sitzt mittig über seinem Abschnitt, die Linie
-   dahinter verbindet sie zum Stepper: bis zum letzten erreichten Pip
-   leuchtet sie golden, danach bleibt sie erloschen.
+   MILESTONE MARKS — zehn Rauten auf der unteren Balkenkante, je eine
+   pro 10%-Abschnitt und exakt dort, wo im Balken die Segmenttrennlinie
+   steht: Meilenstein n = Segment n versiegelt. Die Verbindungslinie
+   ist der Balken selbst, eine eigene Schiene darunter entfällt.
    ================================================================ */
-.ms-rail {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  align-items: center;
-  width: 100%;
-  height: var(--rescue-rail-h);
-  flex-shrink: 0;
-}
-
-.ms-track {
+.ms-marks {
   position: absolute;
-  left: 5%;
-  right: 5%;
-  top: 50%;
-  height: 2px;
-  transform: translateY(-50%);
-  border-radius: 2px;
-  background: #1b1208;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
-}
-
-.ms-track--lit {
-  right: auto;
-  background: linear-gradient(to right, #8a5a12 0%, #d9a72a 60%, #f5d666 100%);
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
-  transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.ms-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
+  /* Deckungsgleich mit .rpg-segments (inset 2px), damit Raute und
+     Trennlinie auf derselben Achse sitzen. */
+  left: 2px;
+  right: 2px;
+  top: var(--rescue-track-h);
+  height: 0;
+  z-index: 6;
+  pointer-events: none;
 }
 
 /* Raute statt Punkt: greift die Rahmen-Nieten des Headers auf und bleibt
-   auch bei 6px noch als Form erkennbar. */
+   auch bei 7px noch als Form erkennbar. */
 .ms-pip {
+  position: absolute;
+  top: 0;
   width: var(--ms-pip-size);
   height: var(--ms-pip-size);
   border-radius: 1px;
-  transform: rotate(45deg);
+  transform: translate(-50%, -50%) rotate(45deg);
   background: #14100a;
   border: 1px solid rgba(200, 144, 64, 0.42);
   box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.9);
@@ -665,18 +649,6 @@ onUnmounted(() => {
 .ms-pip--next {
   border-color: rgba(232, 192, 64, 0.75);
   animation: msNextBreathe 2.6s ease-in-out infinite;
-}
-
-/* Letzter Meilenstein = Prestige in Sicht: eine Spur größer und heller. */
-.ms-pip--final {
-  transform: rotate(45deg) scale(1.22);
-}
-
-.ms-pip--final.ms-pip--reached {
-  background: linear-gradient(135deg, #fff6d0 0%, #f5d666 45%, #c8901f 100%);
-  box-shadow:
-    0 0 11px rgba(255, 226, 130, 0.9),
-    inset 0 0 3px rgba(255, 255, 255, 0.9);
 }
 
 .rescue-row--glow .ms-pip--reached {
@@ -717,16 +689,16 @@ onUnmounted(() => {
 
 @keyframes msPop {
   0% {
-    transform: rotate(45deg) scale(1);
+    transform: translate(-50%, -50%) rotate(45deg) scale(1);
   }
   25% {
-    transform: rotate(45deg) scale(1.55);
+    transform: translate(-50%, -50%) rotate(45deg) scale(1.55);
   }
   60% {
-    transform: rotate(45deg) scale(1.1);
+    transform: translate(-50%, -50%) rotate(45deg) scale(1.1);
   }
   100% {
-    transform: rotate(45deg) scale(1);
+    transform: translate(-50%, -50%) rotate(45deg) scale(1);
   }
 }
 
@@ -764,9 +736,9 @@ onUnmounted(() => {
   justify-content: center;
   gap: clamp(5px, 0.5vw, 10px);
   width: 100%;
-  /* Exakt Balken + Spalt + Schiene, damit Zeile 2 beim Umschalten
-     dieselbe Höhe behält. */
-  height: calc(var(--rescue-track-h) + var(--rescue-rail-gap) + var(--rescue-rail-h));
+  /* Exakt Balken + überstehende Rautenhälfte, damit Zeile 2 beim
+     Umschalten dieselbe Höhe behält. */
+  height: calc(var(--rescue-track-h) + var(--ms-pip-half));
   flex-shrink: 0;
   padding: 0 8px;
   font-size: clamp(10px, calc(var(--header-height) * 0.145), 16px);
