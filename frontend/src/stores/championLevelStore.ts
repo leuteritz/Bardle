@@ -329,6 +329,21 @@ export const useChampionLevelStore = defineStore('championLevel', {
     },
 
     /**
+     * Opens a perk choice if the level just reached is a milestone and the
+     * champion has not already taken every perk of that pool. Shared by the
+     * normal purchase and the admin shortcut so both follow the same rule.
+     */
+    _queuePerkIfMilestone(name: string, p: ChampionProgress): void {
+      if (!isPerkLevel(p.level)) return
+      if (perkChoicesFor(p.level, Object.values(p.perks)).length === 0) return
+      this.pendingPerks.push({
+        champion: name,
+        level: p.level,
+        tier: perkTierForLevel(p.level),
+      })
+    },
+
+    /**
      * Buys one level: spends the banked XP, the chimes and — on ascension
      * levels — the materials. Returns false and changes nothing if anything
      * is missing.
@@ -353,17 +368,50 @@ export const useChampionLevelStore = defineStore('championLevel', {
       p.xp -= xpForLevel(p.level)
       p.level += 1
       this.totalLevelsBought += 1
-
-      if (isPerkLevel(p.level) && perkChoicesFor(p.level, Object.values(p.perks)).length > 0) {
-        this.pendingPerks.push({
-          champion: name,
-          level: p.level,
-          tier: perkTierForLevel(p.level),
-        })
-      }
+      this._queuePerkIfMilestone(name, p)
 
       logger.info('ChampionLevel', `${name} reached level ${p.level}`, { cost: cost.chimes })
       return true
+    },
+
+    /**
+     * Admin/testing shortcut: raises every champion assigned to the team —
+     * mains and allies alike — by `steps` levels, free of charge and without
+     * requiring banked XP. Champions already at the level cap are skipped, so
+     * the button is safe to spam. Milestone perks still open normally.
+     *
+     * Returns how many levels were actually granted.
+     */
+    adminLevelUpTeam(steps: number): number {
+      if (steps <= 0) return 0
+      const battleStore = useBattleStore()
+      const cap = this.levelCap
+
+      // A champion could in principle sit in more than one place; a set keeps
+      // it from being levelled twice in a single press.
+      const roster = new Set<string>()
+      for (const main of battleStore.headerSlots) if (main) roster.add(main)
+      for (const row of battleStore.secondarySlots) {
+        for (const ally of row) if (ally) roster.add(ally)
+      }
+
+      let granted = 0
+      for (const name of roster) {
+        const p = this.ensure(name)
+        if (!p) continue
+        for (let i = 0; i < steps && p.level < cap; i++) {
+          p.level += 1
+          p.xp = 0
+          granted += 1
+          this._queuePerkIfMilestone(name, p)
+        }
+      }
+      this.totalLevelsBought += granted
+      logger.info('ChampionLevel', `Admin granted ${granted} level(s)`, {
+        steps,
+        champions: roster.size,
+      })
+      return granted
     },
 
     /** Locks in a perk for an open milestone. */

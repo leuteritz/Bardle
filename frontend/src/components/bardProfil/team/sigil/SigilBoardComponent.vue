@@ -5,7 +5,9 @@ import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useSynergyStore } from '@/stores/synergyStore'
+import { useChampionLevelStore } from '@/stores/championLevelStore'
 import { useTeamSigil } from '@/composables/useTeamSigil'
+import { useActionToast } from '@/composables/useActionToast'
 import {
   ROLES,
   SIGIL_STAGE_SIZE,
@@ -14,6 +16,7 @@ import {
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_PAN_MAX_FRACTION,
   TEAM_SIGIL_DRAG_THRESHOLD_PX,
+  ADMIN_TEAM_LEVEL_STEPS,
 } from '@/config/constants'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
@@ -46,7 +49,33 @@ const emit = defineEmits<{
 const battleStore = useBattleStore()
 const expeditionStore = useExpeditionStore()
 const synergyStore = useSynergyStore()
+const levelStore = useChampionLevelStore()
+const { showToast } = useActionToast()
 const { newlyUnlockedChampions, secondarySlots } = storeToRefs(battleStore)
+
+// ── Admin: level the whole team ──────────────────────────────────────────────
+// Testing shortcut — grants levels for free, stops at the cap. Lives on the
+// board rather than the admin tab because that is where the levels are read.
+const adminLevelSteps = ADMIN_TEAM_LEVEL_STEPS
+/** Team members that could still gain a level — 0 disables the buttons. */
+const adminLevelableCount = computed(() => {
+  const cap = levelStore.levelCap
+  const roster = new Set<string>()
+  for (const main of battleStore.headerSlots) if (main) roster.add(main)
+  for (const row of secondarySlots.value) for (const ally of row) if (ally) roster.add(ally)
+  let n = 0
+  for (const name of roster) if (levelStore.levelOf(name) < cap) n++
+  return n
+})
+
+function adminLevelTeam(steps: number) {
+  const granted = levelStore.adminLevelUpTeam(steps)
+  if (granted === 0) {
+    showToast('Whole team is already at the level cap.')
+    return
+  }
+  showToast(`+${granted} champion level${granted === 1 ? '' : 's'} granted.`)
+}
 
 /** Per role: which ally sub-slots hold a champion — drives the aligned rune ticks. */
 const allyFilled = computed(() =>
@@ -234,6 +263,28 @@ watch(
     @click.capture="onClickCapture"
     @dragstart.prevent
   >
+    <!-- admin: raise every team champion's level, capped. Deliberately styled
+         apart from the gold game actions so it never reads as a normal button. -->
+    <div class="sigil-admin" @click.stop>
+      <Icon icon="game-icons:lightning-trio" width="18" height="18" class="sigil-admin-icon" />
+      <span class="sigil-admin-label">Admin · Team Level</span>
+      <button
+        v-for="step in adminLevelSteps"
+        :key="step"
+        class="sigil-admin-btn"
+        type="button"
+        :disabled="adminLevelableCount === 0"
+        :title="
+          adminLevelableCount === 0
+            ? 'Every team champion is at the level cap'
+            : `Raise ${adminLevelableCount} champion(s) by ${step} level(s), up to the cap`
+        "
+        @click="adminLevelTeam(step)"
+      >
+        +{{ step }}
+      </button>
+    </div>
+
     <!-- board actions: shop + expedition (always reachable) -->
     <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
       <Icon icon="game-icons:shopping-bag" width="26" height="26" class="sigil-action-icon" />
@@ -382,6 +433,61 @@ watch(
    animations so they stop compositing behind it; they resume on close */
 .sigil-board--paused :deep(*) {
   animation-play-state: paused !important;
+}
+
+/* ── admin strip — muted red-brown so it never competes with the gold game
+   actions. Parked directly above the Shop button rather than at the top of the
+   board: the action toast drops in as a full-width bar up there and would bury
+   the very button the player just pressed. ── */
+.sigil-admin {
+  position: absolute;
+  bottom: 82px;
+  left: 26px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border-radius: 4px;
+  background: rgba(14, 10, 5, 0.9);
+  border: 1px solid #6a3020;
+}
+.sigil-admin-icon {
+  color: #cc6050;
+  flex-shrink: 0;
+}
+.sigil-admin-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(204, 96, 80, 0.75);
+}
+.sigil-admin-btn {
+  min-width: 34px;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  background: #1c1410;
+  border: 1px solid #6a3020;
+  color: #e0a090;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.sigil-admin-btn:hover:not(:disabled) {
+  background: #2e1a12;
+  border-color: #cc6050;
+  color: #f0c0b0;
+}
+.sigil-admin-btn:disabled {
+  opacity: 0.5;
+  filter: grayscale(55%);
+  cursor: not-allowed;
 }
 
 /* ── board actions (shop / expedition) ── */

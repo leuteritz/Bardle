@@ -392,3 +392,76 @@ describe('champion levels — save/load roundtrip', () => {
     expect(levelStore.perkChoicesOf(MID_LOW).length).toBeGreaterThan(0)
   })
 })
+
+describe('champion levels — admin team level-up', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('raises every assigned champion, mains and allies alike, for free', () => {
+    const levelStore = useChampionLevelStore()
+    const battleStore = useBattleStore()
+    const gameStore = useGameStore()
+    battleStore.setHeaderSlot(2, MID_LOW)
+    battleStore.setSecondarySlot(2, 0, MID_HIGH)
+    gameStore.chimes = 0
+
+    const granted = levelStore.adminLevelUpTeam(3)
+
+    expect(granted).toBe(6)
+    expect(levelStore.levelOf(MID_LOW)).toBe(4)
+    expect(levelStore.levelOf(MID_HIGH)).toBe(4)
+    // free of charge and without needing banked XP
+    expect(gameStore.chimes).toBe(0)
+  })
+
+  it('leaves benched champions untouched', () => {
+    const levelStore = useChampionLevelStore()
+    const battleStore = useBattleStore()
+    battleStore.setHeaderSlot(2, MID_LOW)
+
+    levelStore.adminLevelUpTeam(2)
+
+    expect(levelStore.levelOf(MID_LOW)).toBe(3)
+    expect(levelStore.levelOf(TOP_LOW)).toBe(1)
+  })
+
+  it('stops at the level cap and reports the reduced count', () => {
+    const levelStore = useChampionLevelStore()
+    const battleStore = useBattleStore()
+    const galaxyStore = useGalaxyStore()
+    galaxyStore.currentGalaxy = 1
+    battleStore.setHeaderSlot(2, MID_LOW)
+
+    levelStore.adminLevelUpTeam(CHAMPION_LEVEL_START_CAP - 2)
+    expect(levelStore.levelOf(MID_LOW)).toBe(CHAMPION_LEVEL_START_CAP - 1)
+
+    // asking for 10 more only grants the single level left below the cap
+    expect(levelStore.adminLevelUpTeam(10)).toBe(1)
+    expect(levelStore.levelOf(MID_LOW)).toBe(CHAMPION_LEVEL_START_CAP)
+    // and pressing again is a no-op rather than an error
+    expect(levelStore.adminLevelUpTeam(5)).toBe(0)
+  })
+
+  it('opens the milestone perks it passes through', () => {
+    const levelStore = useChampionLevelStore()
+    const battleStore = useBattleStore()
+    battleStore.setHeaderSlot(2, MID_LOW)
+
+    levelStore.adminLevelUpTeam(CHAMPION_PERK_INTERVAL - 1)
+
+    expect(levelStore.levelOf(MID_LOW)).toBe(CHAMPION_PERK_INTERVAL)
+    expect(levelStore.hasPendingPerk(MID_LOW)).toBe(true)
+    expect(levelStore.perkChoicesOf(MID_LOW).length).toBeGreaterThan(0)
+  })
+
+  it('counts a champion once even if steps is zero or negative', () => {
+    const levelStore = useChampionLevelStore()
+    const battleStore = useBattleStore()
+    battleStore.setHeaderSlot(2, MID_LOW)
+
+    expect(levelStore.adminLevelUpTeam(0)).toBe(0)
+    expect(levelStore.adminLevelUpTeam(-3)).toBe(0)
+    expect(levelStore.levelOf(MID_LOW)).toBe(1)
+  })
+})

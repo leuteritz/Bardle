@@ -3449,6 +3449,8 @@ export const CHAMPION_LEVEL_SPLASH_HEIGHT = 236
 export const TEAM_SIGIL_SPLASH_HEIGHT_COMPACT = 226
 /** Height of the XP bar in the role panel, px. */
 export const CHAMPION_XP_BAR_HEIGHT = 7
+/** Step sizes offered by the team-tab admin level button. */
+export const ADMIN_TEAM_LEVEL_STEPS = [1, 5] as const
 
 // ── Icon Registry ─────────────────────────────────────────────────────────────
 // All game-icons used in the project. Add new icons here before using them
@@ -3996,6 +3998,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:chained-heart', // Last Stand perk — surge while the player is low
   'game-icons:triorb', // Warp Cadence perk — extra cooldown reduction
   'game-icons:spiked-halo', // Ascendant Aura perk — allies contribute more
+  'game-icons:lightning-trio', // Admin: level the whole team (SigilBoardComponent)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
