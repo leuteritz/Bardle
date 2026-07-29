@@ -77,36 +77,44 @@ const statsEl = ref<HTMLElement | null>(null)
 const showFullLabels = ref(true)
 
 /**
- * Misst, ob die Zeile die ausgeschriebenen Bezeichnungen trägt.
+ * Prüft, ob JEDE Kachel die ausgeschriebene Bezeichnung trägt — reicht der
+ * Platz auch nur in einer nicht, gehen alle drei auf die Kurzform, damit
+ * die Zeile einheitlich bleibt.
  *
- * Gerechnet wird immer mit dem VOLLEN Bedarf — die unsichtbaren Sonden
- * (.label-probe) tragen die langen Wörter unabhängig davon, was gerade
- * angezeigt wird. Ohne diese Unabhängigkeit würde die Messung mit ihrem
- * eigenen Ergebnis schwingen: kurze Labels schaffen Platz, der Platz
- * erlaubt lange Labels, die langen Labels nehmen ihn wieder weg.
+ * Gemessen wird gegen die Kachelbreite, und die steht seit den festen
+ * flex-Anteilen unabhängig vom Inhalt fest. Genau das macht die Prüfung
+ * schwingungsfrei: sonst schafften kurze Bezeichnungen Platz, der Platz
+ * erlaubte lange, und die nähmen ihn wieder weg. Die unsichtbaren Sonden
+ * (.label-probe) tragen die langen Wörter unabhängig vom Anzeigezustand.
  *
- * Je Kachel die breitere ihrer beiden Zeilen: die Bezeichnung, oder Icon +
- * Innenabstand + Wert. Der Wert zählt über scrollWidth, also ungekürzt,
- * auch wenn er im Layout gerade ellipsiert.
+ * Je Kachel zählt die breitere ihrer beiden Zeilen: die Bezeichnung, oder
+ * Icon + Innenabstand + Wert. Der Wert zählt über scrollWidth, also
+ * ungekürzt, auch wenn er im Layout gerade ellipsiert.
  */
 function measureFit(): void {
   const root = statsEl.value
   if (!root || !root.clientWidth) return
-  const outerGap = parseFloat(getComputedStyle(root).columnGap) || 0
-  let need = outerGap * 2
   for (const tile of Array.from(root.querySelectorAll<HTMLElement>('.uni-tile'))) {
     const row = tile.querySelector<HTMLElement>('.tile-row')
     const icon = tile.querySelector<HTMLElement>('.tile-icon')
     const probe = tile.querySelector<HTMLElement>('.label-probe')
     const value = tile.querySelector<HTMLElement>('.tile-value')
     if (!row || !icon || !probe || !value) return
-    const valueRow =
-      icon.getBoundingClientRect().width +
-      (parseFloat(getComputedStyle(row).columnGap) || 0) +
-      value.scrollWidth
-    need += Math.max(probe.getBoundingClientRect().width, valueRow)
+    // getComputedStyle statt getBoundingClientRect: das Meep-Icon ist per
+    // scale vergrößert, und die Rect-Breite würde diese Skalierung
+    // mitzählen — fürs Layout gilt die unskalierte Box.
+    const need = Math.max(
+      probe.getBoundingClientRect().width,
+      (parseFloat(getComputedStyle(icon).width) || 0) +
+        (parseFloat(getComputedStyle(row).columnGap) || 0) +
+        value.scrollWidth,
+    )
+    if (need > tile.clientWidth) {
+      showFullLabels.value = false
+      return
+    }
   }
-  showFullLabels.value = need <= root.clientWidth
+  showFullLabels.value = true
 }
 
 let resizeObserver: ResizeObserver | null = null
@@ -120,8 +128,12 @@ onMounted(() => {
 })
 
 // Ein längerer Wert kann die Zeile kippen — Galaxie- und Meep-Zahl wachsen
-// im Spielverlauf, die römische Ziffer beim Prestige.
-watch([universeRoman, () => galaxyStore.currentGalaxy, displayMeeps], measureFit)
+// im Spielverlauf, die römische Ziffer beim Prestige. flush: 'post' ist
+// zwingend: ein Watcher läuft sonst VOR dem DOM-Update und misst noch den
+// vorigen Wert, wodurch die Umschaltung eine Änderung hinterherhinkt.
+watch([universeRoman, () => galaxyStore.currentGalaxy, displayMeeps], measureFit, {
+  flush: 'post',
+})
 
 onUnmounted(() => {
   resizeObserver?.disconnect()
@@ -195,12 +207,7 @@ onUnmounted(() => {
   --stat-value-size: min(calc(var(--header-height) * 0.28), 24px);
   display: flex;
   align-items: center;
-  /* Die drei Gruppen sind inhaltsbreit (flex-grow 0), der Restraum wird
-     zwischen ihnen gleich verteilt: die Lücke Universe↔Galaxy ist damit
-     exakt so groß wie Galaxy↔Meeps, egal wie unterschiedlich lang die
-     Werte gerade sind. */
-  justify-content: space-between;
-  /* Untergrenze für den Fall, dass die Werte die Zeile ganz ausfüllen. */
+  /* Trennt die drei Felder; ihre Breiten stehen fest (siehe .uni-tile--*). */
   gap: clamp(6px, 0.5vw, 10px);
   width: 100%;
   min-width: 0;
@@ -236,21 +243,28 @@ onUnmounted(() => {
   max-width: 100%;
 }
 
-/* Kein grow: jede Gruppe ist genau so breit wie ihr Inhalt, den Rest
-   verteilt space-between gleichmäßig dazwischen. Universe und Galaxy sind
-   per min-content gegen Kürzung geschützt — "VIII" und dreistellige
-   Galaxien sind die längsten Fälle und beide endlich. */
-.uni-tile--universe,
-.uni-tile--galaxy {
-  flex: 0 1 auto;
-  min-width: min-content;
+/* Feste Anteile statt inhaltsbreiter Kacheln: flex-basis 0 macht die
+   Aufteilung unabhängig davon, wie lang die Werte gerade sind. Wächst die
+   Meep-Zahl von "1.24K" auf "12.5K", bleiben Universe und Galaxy stehen —
+   vorher rückte die ganze Zeile.
+
+   Die Anteile stammen aus dem gemessenen Bedarf im längsten Fall
+   ("VIII" / "999" / "999.9M" brauchen 71 / 76,9 / 119,4px bei rund 279px
+   verteilbarer Breite). Die verbleibenden ~11px Reserve sind gleichmäßig
+   auf die drei verteilt, nicht proportional — sonst bekäme die breiteste
+   Kachel Luft, während die knappste ellipsiert. */
+.uni-tile--universe {
+  flex: 27 1 0;
+  min-width: 0;
 }
 
-/* Meeps bewusst OHNE min-content: die Zahl ist nach oben offen und würde
-   die Zeile sonst über den Block hinausschieben, wo der Portal-Wrap sie
-   hart clippt. Ellipsis am eigenen Wert ist der bessere Ausfall. */
+.uni-tile--galaxy {
+  flex: 29 1 0;
+  min-width: 0;
+}
+
 .uni-tile--meep {
-  flex: 0 1 auto;
+  flex: 44 1 0;
   min-width: 0;
 }
 
@@ -347,13 +361,21 @@ onUnmounted(() => {
 }
 
 /* ── Meeps ─────────────────────────────────────────── */
+/* Das Meep-Sprite ist hochformatig und trägt oben wie unten einen breiten
+   Alpha-Rand — in derselben Box wie Galaxie und Universe-Icon füllt es nur
+   rund drei Viertel der Höhe und wirkt daneben klein. Vergrößert wird per
+   scale statt über die Box: die Zeile 1 ist auf Full HD bereits ausgereizt
+   (38,8 von 38,9px), eine größere Box würde sie über den Block schieben.
+   So wächst nur das Bild, das Layout bleibt unberührt. */
 .meep-icon {
+  --meep-scale: 1.35;
+  transform: scale(var(--meep-scale)) translateZ(0);
   filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.7));
   animation: meep-pulse 3s ease-in-out infinite;
 }
 
 .uni-tile--meep:hover .meep-icon {
-  transform: scale(1.08) translateZ(0);
+  transform: scale(calc(var(--meep-scale) * 1.08)) translateZ(0);
   filter: drop-shadow(0 0 12px rgba(251, 146, 60, 1));
 }
 
@@ -372,7 +394,7 @@ onUnmounted(() => {
 
 .uni-tile--lit .meep-icon {
   filter: drop-shadow(0 0 10px rgba(251, 146, 60, 0.9));
-  transform: scale(1.04) translateZ(0);
+  transform: scale(calc(var(--meep-scale) * 1.04)) translateZ(0);
 }
 
 @keyframes meep-pulse {
