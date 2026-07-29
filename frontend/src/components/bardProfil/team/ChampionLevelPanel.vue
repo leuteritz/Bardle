@@ -12,10 +12,7 @@ import {
   ascensionRank,
   isAscensionLevel,
   isPerkLevel,
-  powerDpsMult,
-  vitalityMult,
-  focusCooldownMult,
-  fortuneMult,
+  statEffectLabel,
   PERK_BY_ID,
 } from '@/config/championLevels'
 import { getChampionTier } from '@/config/championTiers'
@@ -76,14 +73,11 @@ const nextMilestone = computed(() => {
 // Each stat prints the multiplier it actually produces, so the number on the
 // tile is never decorative.
 function effectFor(key: ChampionStatKey): string {
-  const v = stats.value[key]
-  if (key === 'power') return `+${Math.round((powerDpsMult(v) - 1) * 100)}%`
-  if (key === 'vitality') return `+${Math.round((vitalityMult(v) - 1) * 100)}%`
-  if (key === 'focus') {
-    const extra = levelStore.perkEffectOf(props.champion, 'cooldownRush')
-    return `−${Math.round((1 - focusCooldownMult(v, extra)) * 100)}%`
-  }
-  return `+${Math.round((fortuneMult(v) - 1) * 100)}%`
+  return statEffectLabel(
+    key,
+    stats.value[key],
+    levelStore.perkEffectOf(props.champion, 'cooldownRush'),
+  )
 }
 
 // ── Perks ────────────────────────────────────────────────────────────────────

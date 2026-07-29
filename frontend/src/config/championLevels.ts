@@ -343,6 +343,25 @@ export function fortuneMult(fortune: number): number {
   return 1 + above(fortune) / CHAMPION_FORTUNE_DIVISOR
 }
 
+/**
+ * The percentage a stat currently produces, formatted for display — read by
+ * both the role details panel and the level panel so the number on a tile is
+ * identical wherever it appears. `cooldownRush` is the Warp Cadence perk value.
+ */
+export function statEffectLabel(key: ChampionStatKey, value: number, cooldownRush = 0): string {
+  switch (key) {
+    case 'power':
+      return `+${Math.round((powerDpsMult(value) - 1) * 100)}%`
+    case 'vitality':
+      return `+${Math.round((vitalityMult(value) - 1) * 100)}%`
+    case 'focus':
+      // Cooldowns go down, so this one reads as a reduction.
+      return `−${Math.round((1 - focusCooldownMult(value, cooldownRush)) * 100)}%`
+    default:
+      return `+${Math.round((fortuneMult(value) - 1) * 100)}%`
+  }
+}
+
 // ── Level-up cost ─────────────────────────────────────────────────────────────
 
 /**

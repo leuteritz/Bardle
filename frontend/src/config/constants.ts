@@ -3432,6 +3432,12 @@ export const CHAMPION_CRIT_DAMAGE_MULT = 2
 // Champion level UI
 /** Height of the champion splash in the level panel, px. */
 export const CHAMPION_LEVEL_SPLASH_HEIGHT = 236
+/**
+ * Splash height in the role details panel on flat desktops (Full HD class).
+ * The stat headline claims fixed space above the scrolling body, so the splash
+ * gives some back rather than squeezing abilities, equipment and allies.
+ */
+export const TEAM_SIGIL_SPLASH_HEIGHT_COMPACT = 226
 /** Height of the XP bar in the role panel, px. */
 export const CHAMPION_XP_BAR_HEIGHT = 7
 

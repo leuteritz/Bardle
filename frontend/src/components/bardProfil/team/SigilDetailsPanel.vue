@@ -6,13 +6,14 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useSkinStore } from '@/stores/skinStore'
 import { useChampionLevelStore } from '@/stores/championLevelStore'
-import { ascensionRank } from '@/config/championLevels'
+import { ascensionRank, statEffectLabel, CHAMPION_STATS } from '@/config/championLevels'
 import {
   ROLES,
   ALLIES_PER_ROLE,
   SKIN_ORIGINAL,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_SPLASH_HEIGHT,
+  TEAM_SIGIL_SPLASH_HEIGHT_COMPACT,
   ORBIT_ROLE_ABILITIES,
   OBJECTIVE_ROLE_ABILITIES,
 } from '@/config/constants'
@@ -21,7 +22,7 @@ import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
 import { SHOP_ITEMS } from '@/config/items'
-import type { ItemCategory, ShopItem } from '@/types'
+import type { ItemCategory, ShopItem, ChampionStatKey } from '@/types'
 
 const props = defineProps<{
   roleIndex: number
@@ -44,6 +45,7 @@ const emit = defineEmits<{
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
 const splashHeightPx = `${TEAM_SIGIL_SPLASH_HEIGHT}px`
+const splashHeightCompactPx = `${TEAM_SIGIL_SPLASH_HEIGHT_COMPACT}px`
 
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
@@ -142,6 +144,16 @@ function needsAttentionOf(name: string): boolean {
   return levelStore.canLevelUp(name) || levelStore.hasPendingPerk(name)
 }
 const mainLevelCap = computed(() => levelStore.levelCap)
+
+/** The main champion's four stats, resolved for the headline tiles. */
+const mainStats = computed(() => (main.value ? levelStore.statsOf(main.value) : null))
+const mainCooldownRush = computed(() =>
+  main.value ? levelStore.perkEffectOf(main.value, 'cooldownRush') : 0,
+)
+function statEffectOf(key: ChampionStatKey): string {
+  if (!mainStats.value) return ''
+  return statEffectLabel(key, mainStats.value[key], mainCooldownRush.value)
+}
 </script>
 
 <template>
@@ -259,6 +271,24 @@ const mainLevelCap = computed(() => levelStore.levelCap)
         </div>
       </div>
     </button>
+
+    <!-- ── champion stats — the headline numbers, above everything else ── -->
+    <div v-if="main && mainStats" class="sdp-stats">
+      <button
+        v-for="stat in CHAMPION_STATS"
+        :key="stat.key"
+        class="sdp-stat"
+        :style="{ '--sc': stat.color }"
+        type="button"
+        :title="stat.desc"
+        @click="emit('pick-levels', main)"
+      >
+        <Icon :icon="stat.icon" width="24" height="24" class="sdp-stat-icon" />
+        <span class="sdp-stat-value">{{ mainStats[stat.key].toFixed(1) }}</span>
+        <span class="sdp-stat-short">{{ stat.short }}</span>
+        <span class="sdp-stat-effect">{{ statEffectOf(stat.key) }}</span>
+      </button>
+    </div>
 
     <!-- ── scrollable body ── -->
     <div class="sdp-body">
@@ -799,6 +829,83 @@ const mainLevelCap = computed(() => levelStore.levelCap)
 @media (prefers-reduced-motion: reduce) {
   .sdp-ally-level--attention {
     animation: none;
+  }
+}
+
+/* ── stat headline — four tiles, one row, sits directly under the level strip.
+   Each tile is a shortcut into the level panel, since that is where the number
+   is actually raised. ── */
+.sdp-stats {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 11px 14px 12px;
+  background: #16120a;
+  border-bottom: 2px solid #5c3310;
+}
+.sdp-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 9px 4px 8px;
+  min-width: 0;
+  cursor: pointer;
+  border-radius: 4px;
+  background: #1c1c18;
+  border: 1px solid rgba(200, 164, 90, 0.14);
+  border-top: 3px solid var(--sc);
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.sdp-stat:hover {
+  transform: translateY(-2px);
+  border-color: var(--sc);
+  box-shadow: 0 0 13px color-mix(in srgb, var(--sc) 32%, transparent);
+}
+.sdp-stat-icon {
+  color: var(--sc);
+  flex-shrink: 0;
+}
+.sdp-stat-value {
+  margin-top: 3px;
+  font-size: 23px;
+  line-height: 1;
+  color: #f4e6bc;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+.sdp-stat-short {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: rgba(200, 164, 90, 0.6);
+}
+.sdp-stat-effect {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sc);
+  white-space: nowrap;
+}
+
+/* Full HD class viewports — the flattest desktops we target. The splash and the
+   stat tiles each shed a little height so the scrolling body below keeps room
+   for abilities, equipment and the five ally rows. */
+@media (max-height: 1100px) {
+  .sdp-splash {
+    height: v-bind(splashHeightCompactPx);
+  }
+  .sdp-stats {
+    padding: 8px 14px 9px;
+  }
+  .sdp-stat {
+    padding: 7px 4px 6px;
+  }
+  .sdp-stat-value {
+    font-size: 20px;
   }
 }
 
