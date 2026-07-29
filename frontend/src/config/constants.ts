@@ -2612,26 +2612,61 @@ export interface StarPhaseData {
  *  solarUpgradeStore.dwellTimeMultiplier. */
 export const STAR_PHASE_MIN_DWELL_SECONDS = [600, 1_800, 5_400, 14_400, 86_400]
 
-/** Stellar-Evolution timeline (BardStatsTab): dot diameter = phase radius × this scale,
- *  so the timeline circles stay true to the in-game sun proportions (7.5px…35px). */
-export const STATS_TAB_PHASE_DOT_SCALE = 0.25
-/** Comet dot diameter (px) on the Stellar-Evolution timeline (BardStatsTab) —
- *  fixed tiny size below every sun dot, true to the comet being a small rock. */
-export const STATS_TAB_COMET_DOT_PX = 8
+/** Bard Stats "Solar Evolution" — the live sun sits at the centre of the middle
+ *  column and the seven phases ride an open orbit around it. Every value is in
+ *  the SVG's 100×100 user units, which are also % of the square stage, so the
+ *  whole dial scales with the resizable column instead of needing pixel sizes
+ *  per resolution. Angles are measured from 12 o'clock, clockwise. */
+export const STATS_TAB_ORBIT = {
+  /** side of the square viewBox — reference frame for every value below */
+  VIEW: 100,
+  /** radius of the phase orbit */
+  RADIUS: 34,
+  /** orbit line thickness */
+  STROKE: 1.6,
+  /** angle of the first step (the comet), i.e. the lower-left end of the arc */
+  START_DEG: -140,
+  /** angular length of the open ring — the 80° gap at the bottom carries the
+   *  dwell clock, and an open arc reads as a progression instead of a cycle */
+  SPAN_DEG: 280,
+  /** dot diameter (% of the stage) = phase radius × this — keeps the orbit dots
+   *  true to the in-game sun proportions (1.9%…7%) */
+  DOT_PCT_PER_RADIUS: 0.05,
+  /** comet dot diameter (% of the stage) — a fixed speck, smaller than any sun */
+  COMET_DOT_PCT: 1.5,
+  /** sun disc diameter (% of the stage) at the smallest / largest phase radius */
+  SUN_PCT_MIN: 26,
+  SUN_PCT_MAX: 42,
+  /** comet disc diameter (% of the stage) — the origin body, below every sun */
+  COMET_SUN_PCT: 17,
+  /** Largest rendered stage width (px). Deliberately generous: on 4K the column
+   *  offers ~1400px of height, and a dial capped much lower leaves a band of
+   *  dead space between the ring and the readouts below it. In practice the
+   *  column's own width and height bind first — this is only a ceiling. */
+  MAX_PX: 1200,
+  /** Compact cap (px) on Full-HD-height viewports. Set above what those
+   *  viewports can actually give the dial, so there the HEIGHT decides — the
+   *  cap only guards very wide, very flat windows. */
+  MAX_PX_COMPACT: 460,
+} as const
 
 /** Bard Stats panel deck — user-resizable column widths (px). The two side
- *  columns (Journey / Galaxy Archive) are drag-resized; the middle (Augments)
- *  flexes to fill the rest and is protected by MIN_MIDDLE. */
+ *  columns (Journey / Galaxy Archive) are drag-resized; the middle (Solar
+ *  Evolution) flexes to fill the rest and is protected by MIN_MIDDLE. It also
+ *  carries the sun dial, so the sides are kept just wide enough for their own
+ *  content — on Full HD every pixel they give back widens the dial. */
 export const STATS_TAB_DECK_RESIZE = {
   /** initial width of the left (Journey) column — starts fully expanded (= MAX_LEFT) */
-  DEFAULT_LEFT: 400,
+  DEFAULT_LEFT: 360,
   /** initial width of the right (Galaxy Archive) column — starts fully expanded (= MAX_RIGHT) */
   DEFAULT_RIGHT: 440,
   /** smallest either side column may shrink to */
   MIN_SIDE: 200,
-  /** largest the left column may grow to */
-  MAX_LEFT: 400,
-  /** largest the right column may grow to */
+  /** largest the left column may grow to — measured: the Play-Time odometer
+   *  needs ~344px, so this is the tightest the column can be without cutting it */
+  MAX_LEFT: 360,
+  /** largest the right column may grow to — the archive title needs the width
+   *  at the 4K type scale, so this one does NOT give ground to the dial */
   MAX_RIGHT: 440,
   /** the middle (Augments) column never shrinks below this */
   MIN_MIDDLE: 260,
