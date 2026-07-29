@@ -79,6 +79,7 @@ watch(
 <template>
   <button class="btn-gem btn-gem--corner-left" title="Open Shop" @click="uiStore.setBardTab('shop')">
     <img src="/img/menu/SHOP-128.png" class="btn-gem-img" alt="Open Shop" />
+    <span class="btn-gem-label">Shop</span>
   </button>
 
   <!-- ══ Backdrop + Modal ══ -->

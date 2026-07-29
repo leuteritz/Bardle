@@ -497,6 +497,7 @@ onUnmounted(() => {
           @click="uiStore.setBardTab('tree')"
         >
           <img src="/img/menu/TREE-128.png" class="btn-gem-img" alt="Open Skill Tree" />
+          <span class="btn-gem-label">Tree</span>
         </button>
       </div>
     </div>
@@ -897,22 +898,29 @@ onUnmounted(() => {
 }
 .btn-gem {
   position: relative;
-  /* Cap bei 72px: der Header deckelt bei 1400px Breite, die Höhe läuft aber
-     bis 115px weiter — ungedeckelt wächst die Ecktaste auf 89px und nimmt
-     diese Breite dem Universe-Block bzw. den Materialien daneben weg. Ab
-     72px trägt das Icon ohnehin nicht mehr an Erkennbarkeit dazu. */
-  width: min(calc(var(--header-height) - 2 * var(--header-corner-gap)), 72px);
-  height: min(calc(var(--header-height) - 2 * var(--header-corner-gap)), 72px);
-  /* Sobald der Cap greift, ist der Button kleiner als seine Zeile. Er bleibt
-     dann unten und außen bündig statt mittig zu schweben — nur so laufen
-     seine Rundung und die des Header-Rahmens weiter parallel. */
-  align-self: flex-end;
-  margin-bottom: var(--header-corner-gap);
+  /* Höhe füllt die Zeile, Breite bleibt gedeckelt.
+     Der Cap gilt nur für die BREITE: der Header deckelt bei 1400px, die Höhe
+     läuft aber bis 115px weiter — eine ungedeckelt quadratische Ecktaste
+     wüchse auf 89px und nähme diese Breite dem Universe-Block bzw. den
+     Materialien daneben weg. Die HÖHE kostet dagegen nichts, also läuft das
+     Plate über die ganze Zeile: oben, unten und außen exakt --header-corner-gap.
+     Vorher war es quadratisch und unten bündig, wodurch ab ~2345px Breite
+     oben ein wachsender Rest stehenblieb (2K: 19px statt 13px, 4K: 30px). */
+  --gem-plate-h: calc(var(--header-height) - 2 * var(--header-corner-gap));
+  --gem-plate-w: min(var(--gem-plate-h), 72px);
+  --gem-label-fs: clamp(9px, calc(var(--header-height) * 0.125), 13px);
+  width: var(--gem-plate-w);
+  height: var(--gem-plate-h);
+  /* Zentriert in der 2px-Innenzeile → Abstand oben = unten = Corner-Gap, und
+     damit läuft die Nested-Rundung wieder parallel zum Header-Rahmen. */
+  align-self: center;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   flex-shrink: 0;
   padding: 0;
   /* Tonal statt Medaillon: gleiche warme rgba-Sprache wie center-chimes
@@ -961,11 +969,33 @@ onUnmounted(() => {
   transform: scale(0.94);
 }
 .btn-gem-img {
-  width: 72%;
-  height: 72%;
+  /* Zwei Grenzen statt eines Prozentwerts: die Breite (88 % des Plates) hält
+     das Icon von den Seitenrändern weg, die Höhe zieht das Label-Band und den
+     Innenabstand ab. Damit wächst das Icon mit der gewonnenen Zeilenhöhe mit,
+     statt in einem zentrierten Loch zu schweben — Full HD 40px, 2K 55px,
+     4K 63px (vorher überall 44/52/52px). */
+  --gem-icon-max: calc(var(--gem-plate-h) - var(--gem-label-fs) * 1.15 - 8px);
+  width: min(calc(var(--gem-plate-w) * 0.88), var(--gem-icon-max));
+  height: min(calc(var(--gem-plate-w) * 0.88), var(--gem-icon-max));
   object-fit: contain;
   filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
   transition: transform 0.18s ease;
+}
+/* Mikro-Label unter dem Icon: füllt den Höhenüberschuss mit Information statt
+   Leerraum und macht die beiden Eckplatten ohne Hover eindeutig. */
+.btn-gem-label {
+  font-size: var(--gem-label-fs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: #c89040;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  transition: color 0.2s;
+}
+.btn-gem:hover .btn-gem-label {
+  color: #e8c040;
 }
 /* ================================================================
    LEGACY
