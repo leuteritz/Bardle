@@ -125,13 +125,11 @@ const equippedSkinName = computed(() =>
 const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== null).length)
 
 // ── Champion levels ──────────────────────────────────────────────────────────
-// Every champion on this card carries its level, its rank color and — when a
-// level is affordable or a perk is unspent — a call to action.
+// Level, rank name and XP all render in the role's colour — one champion, one
+// colour. The ascension rank still reads by name, it just no longer brings a
+// hue of its own to the card.
 function levelOf(name: string): number {
   return levelStore.levelOf(name)
-}
-function rankColorOf(name: string): string {
-  return ascensionRank(levelStore.levelOf(name)).color
 }
 function rankNameOf(name: string): string {
   return ascensionRank(levelStore.levelOf(name)).name
@@ -250,7 +248,6 @@ function statEffectOf(key: ChampionStatKey): string {
       v-if="main"
       class="sdp-level-strip"
       :class="{ 'sdp-level-strip--attention': needsAttentionOf(main) }"
-      :style="{ '--rank': rankColorOf(main) }"
       type="button"
       @click="emit('pick-levels', main)"
     >
@@ -411,7 +408,6 @@ function statEffectOf(key: ChampionStatKey): string {
                   <span
                     class="sdp-ally-level"
                     :class="{ 'sdp-ally-level--attention': needsAttentionOf(ally) }"
-                    :style="{ '--rank': rankColorOf(ally) }"
                     role="button"
                     :title="`Level ${levelOf(ally)} — open progression`"
                     @click.stop="emit('pick-levels', ally)"
@@ -756,7 +752,7 @@ function statEffectOf(key: ChampionStatKey): string {
   background: #1a1008;
   border: none;
   border-bottom: 2px solid #5c3310;
-  border-left: 3px solid var(--rank);
+  border-left: 3px solid var(--rc);
   transition: background 0.15s;
 }
 .sdp-level-strip:hover {
@@ -764,7 +760,7 @@ function statEffectOf(key: ChampionStatKey): string {
 }
 .sdp-level-strip-icon {
   flex-shrink: 0;
-  color: var(--rank);
+  color: var(--rc);
 }
 .sdp-level-strip-main {
   flex: 1;
@@ -789,7 +785,7 @@ function statEffectOf(key: ChampionStatKey): string {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--rank);
+  color: var(--rc);
 }
 .sdp-level-strip-cta {
   margin-left: auto;
@@ -799,8 +795,10 @@ function statEffectOf(key: ChampionStatKey): string {
   text-transform: uppercase;
   color: rgba(200, 164, 90, 0.55);
 }
+/* Something is waiting here — signalled by the role colour and motion, never by
+   a second hue, so a champion never wears more than its own colour. */
 .sdp-level-strip--attention .sdp-level-strip-cta {
-  color: #6ec040;
+  color: var(--rc);
 }
 .sdp-level-strip-track {
   height: 5px;
@@ -811,19 +809,25 @@ function statEffectOf(key: ChampionStatKey): string {
 }
 .sdp-level-strip-fill {
   height: 100%;
-  background: linear-gradient(to right, #2e6a8a, #4e96e0);
+  /* the XP band is the role colour, darkened at its tail so it still reads as
+     a bar rather than a flat block */
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--rc) 45%, #0a0805),
+    var(--rc)
+  );
   transition: width 0.3s ease-out;
 }
 .sdp-level-strip--attention .sdp-level-strip-fill {
-  background: linear-gradient(to right, #2e7a1a, #52b830);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--rc) 55%, transparent);
 }
 @keyframes sdp-level-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 rgba(110, 192, 64, 0);
+    box-shadow: 0 0 0 transparent;
   }
   50% {
-    box-shadow: 0 0 11px rgba(110, 192, 64, 0.55);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--rc) 60%, transparent);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1114,8 +1118,8 @@ function statEffectOf(key: ChampionStatKey): string {
   padding: 2px 7px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.8);
-  border: 1px solid var(--rank);
-  color: var(--rank);
+  border: 1px solid var(--rc);
+  color: var(--rc);
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1.3;
@@ -1127,12 +1131,11 @@ function statEffectOf(key: ChampionStatKey): string {
 }
 .sdp-ally-level:hover {
   background: rgba(30, 16, 6, 0.95);
-  box-shadow: 0 0 9px color-mix(in srgb, var(--rank) 50%, transparent);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--rc) 50%, transparent);
 }
-/* a level is buyable or a perk is unspent — pulse until the player looks */
+/* banked XP or an unspent perk — brighten and pulse, same colour throughout */
 .sdp-ally-level--attention {
-  border-color: #6ec040;
-  color: #6ec040;
+  background: color-mix(in srgb, var(--rc) 22%, #0a0704);
   animation: sdp-level-pulse 1.8s ease-in-out infinite;
 }
 .sdp-ally-row-chips {

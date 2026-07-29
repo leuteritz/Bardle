@@ -5,7 +5,6 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useChampionLevelStore } from '@/stores/championLevelStore'
 import { getChampionTier } from '@/config/championTiers'
-import { ascensionRank } from '@/config/championLevels'
 import {
   ROLES,
   SIGIL_NODE_SIZE,
@@ -91,12 +90,11 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
 
 // ── Champion levels ──────────────────────────────────────────────────────────
 // Every node wears its level: the main gets an XP arc tracing its rim plus a
-// large rank-colored numeral, allies get a compact numeral badge.
+// large numeral, allies get a compact one. Everything on a node carries that
+// champion's single colour — its role colour — so a slot reads as one identity
+// instead of a patchwork of role, rank and tier hues.
 function levelOf(name: string): number {
   return levelStore.levelOf(name)
-}
-function rankColorOf(name: string): string {
-  return ascensionRank(levelStore.levelOf(name)).color
 }
 /** Length of the drawn XP arc along the ring, in SVG user units. */
 function xpDashOf(name: string): number {
@@ -138,7 +136,6 @@ function needsAttentionOf(name: string): boolean {
       v-if="ally"
       class="sigil-ally-level"
       :class="{ 'sigil-ally-level--attention': needsAttentionOf(ally) }"
-      :style="{ '--rank': rankColorOf(ally) }"
     >
       {{ levelOf(ally) }}
     </span>
@@ -179,7 +176,7 @@ function needsAttentionOf(name: string): boolean {
         cx="50"
         cy="50"
         :r="SIGIL_XP_RING_RADIUS"
-        :stroke="rankColorOf(main)"
+        :stroke="roleDef.color"
         :stroke-dasharray="`${xpDashOf(main)} ${SIGIL_XP_RING_CIRCUMFERENCE}`"
       />
     </svg>
@@ -189,9 +186,7 @@ function needsAttentionOf(name: string): boolean {
       <span v-else class="sigil-node-empty">
         <img :src="roleDef.image" :alt="roleDef.label" class="sigil-node-role-ghost" />
       </span>
-      <span v-if="main && tier" class="sigil-node-star" :style="{ color: tier.color }">
-        ★{{ tier.starLevel }}
-      </span>
+      <span v-if="main && tier" class="sigil-node-star">★{{ tier.starLevel }}</span>
     </span>
 
     <!-- level medallion — the headline number, sitting on the node's shoulder -->
@@ -199,7 +194,6 @@ function needsAttentionOf(name: string): boolean {
       v-if="main"
       class="sigil-node-level"
       :class="{ 'sigil-node-level--attention': needsAttentionOf(main) }"
-      :style="{ '--rank': rankColorOf(main) }"
       :title="`Level ${levelOf(main)}`"
     >
       {{ levelOf(main) }}
@@ -285,16 +279,17 @@ function needsAttentionOf(name: string): boolean {
   justify-content: center;
   border-radius: 50%;
   background: #0a0704;
-  border: 1.5px solid var(--rank);
-  color: var(--rank);
+  border: 1.5px solid var(--role-color);
+  color: var(--role-color);
   font-size: 11px;
   font-weight: 800;
   line-height: 1;
   pointer-events: none;
 }
+/* Something is waiting here. Signalled by brightness and motion, never by a
+   second colour — the node keeps its one identity hue. */
 .sigil-ally-level--attention {
-  border-color: #6ec040;
-  color: #6ec040;
+  background: color-mix(in srgb, var(--role-color) 22%, #0a0704);
   animation: sigil-level-pulse 1.9s ease-in-out infinite;
 }
 
@@ -384,9 +379,9 @@ function needsAttentionOf(name: string): boolean {
   transition: stroke-dasharray 0.35s ease-out;
   filter: drop-shadow(0 0 3px currentColor);
 }
-/* enough XP banked — the arc goes green and breathes until it is spent */
+/* enough XP banked — the arc breathes until it is spent (same colour, more life) */
 .sigil-node-xp--attention .sigil-node-xp-fill {
-  stroke: #6ec040 !important;
+  stroke-width: 4.5;
   animation: sigil-xp-breathe 1.9s ease-in-out infinite;
 }
 
@@ -404,21 +399,24 @@ function needsAttentionOf(name: string): boolean {
   justify-content: center;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 35%, #1e1610, #0a0704);
-  border: 2px solid var(--rank);
-  color: var(--rank);
+  border: 2px solid var(--role-color);
+  color: var(--role-color);
   font-size: 16px;
   font-weight: 800;
   line-height: 1;
   z-index: 4;
   pointer-events: none;
   box-shadow:
-    0 0 10px color-mix(in srgb, var(--rank) 45%, transparent),
+    0 0 10px color-mix(in srgb, var(--role-color) 45%, transparent),
     0 2px 6px rgba(0, 0, 0, 0.7);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 .sigil-node-level--attention {
-  border-color: #6ec040;
-  color: #6ec040;
+  background: radial-gradient(
+    circle at 50% 35%,
+    color-mix(in srgb, var(--role-color) 30%, #1e1610),
+    #0a0704
+  );
   animation: sigil-level-pulse 1.9s ease-in-out infinite;
 }
 
@@ -470,6 +468,7 @@ function needsAttentionOf(name: string): boolean {
   padding: 2px 0;
   text-align: center;
   background: rgba(0, 0, 0, 0.72);
+  color: var(--role-color);
   font-size: 10px;
   font-weight: 800;
   line-height: 1.1;
@@ -563,12 +562,12 @@ function needsAttentionOf(name: string): boolean {
   0%,
   100% {
     box-shadow:
-      0 0 8px rgba(110, 192, 64, 0.35),
+      0 0 8px color-mix(in srgb, var(--role-color) 35%, transparent),
       0 2px 6px rgba(0, 0, 0, 0.7);
   }
   50% {
     box-shadow:
-      0 0 17px rgba(110, 192, 64, 0.8),
+      0 0 19px color-mix(in srgb, var(--role-color) 90%, transparent),
       0 2px 6px rgba(0, 0, 0, 0.7);
   }
 }
