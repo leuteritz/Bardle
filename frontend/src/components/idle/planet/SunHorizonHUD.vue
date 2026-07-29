@@ -13,7 +13,7 @@
   <div
     ref="rootEl"
     class="sfsun"
-    :class="{ 'sfsun--comet': solarStore.isCometState }"
+    :class="{ 'sfsun--comet': solarStore.isCometState, 'sfsun--collapse': isCollapsed }"
     :style="rootVars"
     aria-hidden="true"
   >
@@ -86,6 +86,7 @@ import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { formatNumber } from '@/config/numberFormat'
 import {
   STAR_PHASE_DATA,
+  STAR_PHASE_FINAL_INDEX,
   COMET_PHASE_DATA,
   STRIKER_BOSS_ANCHOR_Y_PCT,
   SUN_HORIZON_BAND_MIN_PX,
@@ -128,7 +129,13 @@ const hpPct = computed(() => Math.max(0, Math.min(100, playerStore.hpPercent)))
 // ── Phase: Comet ist die Vorstufe und liegt bewusst NICHT in STAR_PHASE_DATA ──
 const phaseData = computed(() => STAR_PHASE_DATA[solarStore.starPhase] ?? STAR_PHASE_DATA[0])
 
-/** 0 = Comet … 1 = Finale — treibt Breite und Kammhöhe der Kalotte. */
+/** Endphase: die Kalotte am Horizont ist kein Plasma mehr, sondern der
+ *  Ereignishorizont — schwarz, mit Photonensaum und Akkretionsband. */
+const isCollapsed = computed(
+  () => !solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
+)
+
+/** 0 = Comet … 1 = Collapse — treibt Breite und Kammhöhe der Kalotte. */
 const phaseT = computed(() =>
   solarStore.isCometState ? 0 : Math.min(1, (solarStore.starPhase + 1) / STAR_PHASE_DATA.length),
 )
@@ -466,6 +473,45 @@ onUnmounted(() => {
      dieser Größe wird bei GPU-Speicherdruck heruntergerechnet und sieht dann
      verpixelt aus. Chrome kompositiert die Opacity-Animation ohnehin. */
   animation: sfsun-pulse var(--sfsun-pulse, 4s) ease-in-out infinite;
+}
+
+/* ── Collapse: dieselbe Silhouette, aber sie leuchtet nicht mehr — sie
+   verschluckt. Die Fläche ist echtes Schwarz; getragen wird die Form allein vom
+   Photonensaum knapp innerhalb der Schnittkante und vom flachen Akkretionsband
+   darüber. Der Limbus-Halo davor (unmaskiert, liegt außen) bleibt unverändert
+   und trennt die schwarze Kalotte sauber vom dunklen Arena-Hintergrund. */
+.sfsun--collapse .sfsun-dome {
+  background:
+    /* Photonenring — der hellste Punkt sitzt wie bei den Plasmaphasen bewusst
+       INNEN, sonst läge der maximale Kontrast auf der Kante und jede 1-px-Treppe
+       der fast waagerechten Silhouette wäre sichtbar. */
+    radial-gradient(
+      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cy, 110px),
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 2.4),
+      color-mix(in srgb, white 55%, var(--sfsun-mid, #c8a2ff))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.5),
+      color-mix(in srgb, white 80%, var(--sfsun-core, #ffffff))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.9),
+      color-mix(in srgb, var(--sfsun-mid, #c8a2ff) 55%, transparent)
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.3),
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-soft, 3px) * 0.5)
+    ),
+    /* Akkretionsband — die Scheibe, fast von der Kante gesehen. Liegt tief in
+         der Kalotte, damit es als Ring um den Horizont liest und nicht als
+         zweiter Kamm. */
+      radial-gradient(
+        ellipse 92% 13% at 50% calc(100% - var(--sfsun-r, 100px) * 0.3),
+        color-mix(in srgb, white 60%, var(--sfsun-core, #ffffff)) 0%,
+        var(--sfsun-mid, #c8a2ff) 32%,
+        var(--sfsun-edge, #6a12b8) 64%,
+        transparent 92%
+      ),
+    /* Ereignishorizont — alles dazwischen ist echtes Schwarz, kein dunkler Ton */
+      radial-gradient(
+        circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cy, 110px),
+        #000 0%,
+        #000 100%
+      );
 }
 
 /* ── Comet: dieselbe Halbkreis-Silhouette, aber kaltes Gestein statt Plasma —

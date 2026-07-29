@@ -14,7 +14,7 @@
            full gold (style from auraStageStyle). -->
       <div
         class="chime-aura"
-        :class="{ punched: isPunching }"
+        :class="{ punched: isPunching, 'chime-aura--collapse': isCollapsed }"
         :style="auraStageStyle"
         aria-hidden="true"
       ></div>
@@ -93,6 +93,8 @@ import {
   CHIME_BURST_DIST_MAX_FACTOR,
   CHIME_BURST_SIZE_FACTOR,
   COMET_STAGE_GOLD,
+  STAR_PHASE_DATA,
+  STAR_PHASE_FINAL_INDEX,
 } from '../../config/constants'
 
 interface ChimeBurstParticle {
@@ -125,8 +127,17 @@ export default defineComponent({
     const planetShopStore = usePlanetShopStore()
     const solarStore = useSolarUpgradeStore()
 
+    /** Endphase: der Stern ist kollabiert — der Klickschein wird zum Ring. */
+    const isCollapsed = computed(
+      () => !solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
+    )
+
     /** Comet state: desaturate the gold aura by the un-gilded remainder. */
     const auraStageStyle = computed(() => {
+      if (isCollapsed.value) {
+        const p = STAR_PHASE_DATA[STAR_PHASE_FINAL_INDEX]
+        return { '--aura-inner': p.phasePrimary, '--aura-outer': p.phaseGlow }
+      }
       if (!solarStore.isCometState) return {}
       const gold = COMET_STAGE_GOLD[solarStore.cometStage]
       return { filter: `grayscale(${(1 - gold).toFixed(2)})` }
@@ -261,6 +272,7 @@ export default defineComponent({
       chimeGainAngle,
       chimeButtonStyle,
       auraStageStyle,
+      isCollapsed,
       chimePopupFontSize,
       rippleKey,
       rippleStyle,
@@ -481,6 +493,23 @@ export default defineComponent({
   box-shadow: 0 0 40px rgba(251, 191, 36, 0.35);
   transition: filter 0.25s ease;
   animation: aura-pulse 2.4s ease-in-out infinite;
+}
+
+/* Collapse-Phase: dieselbe Affordance, aber als Ring statt als Scheibe. Der
+   gefüllte Goldschein läge sonst über dem Ereignishorizont und färbte das
+   einzige echte Schwarz des Spiels olivgrün — genau das, was die Silhouette
+   trägt. Das Loch reicht bis 52 % des closest-side-Radius und lässt damit den
+   Horizont (40 % der Button-Box) samt Photonenring frei; ab da glimmt der Ring
+   in den Farben der Akkretionsscheibe. */
+.chime-aura--collapse {
+  background: radial-gradient(
+    circle closest-side,
+    rgba(0, 0, 0, 0) 0 52%,
+    color-mix(in srgb, var(--aura-inner, #d9b6ff) 42%, transparent) 64%,
+    color-mix(in srgb, var(--aura-outer, #b45cff) 30%, transparent) 78%,
+    transparent 100%
+  );
+  box-shadow: 0 0 40px color-mix(in srgb, var(--aura-outer, #b45cff) 26%, transparent);
 }
 
 .chime-aura.punched {

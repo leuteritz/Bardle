@@ -23,6 +23,7 @@ import NebulaFlythroughComponent from '@/components/idle/NebulaFlythroughCompone
 import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
 import PauseOverlay from '@/components/idle/PauseOverlay.vue'
 import HeraldOverlay from '@/components/idle/HeraldOverlay.vue'
+import SupernovaTransition from '@/components/idle/sun/SupernovaTransition.vue'
 import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 
 const gameStore = useGameStore()
@@ -55,6 +56,7 @@ watch(
     <OfflineProgressModal />
     <PauseOverlay />
     <HeraldOverlay />
+    <SupernovaTransition />
     <StarTimerBarsComponent />
 
     <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">

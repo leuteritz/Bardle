@@ -2,7 +2,12 @@
 import { computed } from 'vue'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useUiStore } from '@/stores/uiStore'
-import { STAR_PHASE_DATA, COMET_PHASE_DATA, SUN_PHASE_DISPLAY_TOTAL } from '@/config/constants'
+import {
+  STAR_PHASE_DATA,
+  COMET_PHASE_DATA,
+  SUN_PHASE_DISPLAY_TOTAL,
+  STAR_PHASE_FINAL_INDEX,
+} from '@/config/constants'
 import { useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
 
 const solarStore = useSolarUpgradeStore()
@@ -10,6 +15,11 @@ const uiStore = useUiStore()
 const { currentDisplayPhase } = useSunPhaseDisplay()
 
 const isComet = computed(() => solarStore.isCometState)
+
+/** Endphase: der Orb zeigt kein Plasma mehr, sondern das Schwarze Loch. */
+const isCollapsed = computed(
+  () => !isComet.value && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
+)
 
 const phaseData = computed(() =>
   isComet.value ? COMET_PHASE_DATA : STAR_PHASE_DATA[solarStore.starPhase],
@@ -26,6 +36,19 @@ const accentColor = computed(() =>
 
 const sunStyle = computed(() => {
   const p = phaseData.value
+  if (isCollapsed.value) {
+    // Ein 30-px-Orb trägt keine gelinste Scheibe. Die Silhouette muss allein aus
+    // drei Lagen lesbar bleiben: Photonenring, schwarzer Horizont darunter, und
+    // ganz unten die fast von der Kante gesehene Akkretionsscheibe, die links und
+    // rechts über den Horizont hinausragt. Reihenfolge = Malreihenfolge.
+    return {
+      background:
+        `radial-gradient(circle at 50% 50%, transparent 0 43%, ${p.core} 45% 49%, transparent 53%),` +
+        `radial-gradient(circle at 50% 50%, #000 0 44%, transparent 46%),` +
+        `radial-gradient(ellipse 100% 22% at 50% 50%, ${p.core} 0%, ${p.mid} 30%, ${p.edge} 62%, transparent 82%)`,
+      '--sun-glow': glowColor.value,
+    }
+  }
   return {
     background: `radial-gradient(circle at 38% 34%, ${p.core}, ${p.mid} 42%, ${p.edge} 100%)`,
     '--sun-glow': glowColor.value,
@@ -70,7 +93,7 @@ const tooltip = computed(
   >
     <div class="orb-wrap">
       <div v-if="dwellComplete" class="orb-ripple" aria-hidden="true"></div>
-      <div class="orb" :style="sunStyle"></div>
+      <div class="orb" :class="{ 'orb--collapse': isCollapsed }" :style="sunStyle"></div>
       <svg class="orb-ring" viewBox="0 0 50 50" aria-hidden="true">
         <circle cx="25" cy="25" r="23" fill="none" stroke="rgba(0, 0, 0, 0.5)" stroke-width="2.2" />
         <circle
@@ -156,6 +179,12 @@ const tooltip = computed(
   box-shadow: 0 0 22px 5px var(--sun-glow);
   opacity: 0;
   animation: sun-pulse 5s ease-in-out infinite;
+}
+
+/* Das Schwarze Loch ist keine Kugel: der Inset-Schatten würde die eine Hälfte
+   des Horizonts aufhellen und den Ring an dieser Seite auffressen. */
+.orb--collapse {
+  box-shadow: 0 0 13px 2px var(--sun-glow);
 }
 
 .sun-phase:hover .orb {

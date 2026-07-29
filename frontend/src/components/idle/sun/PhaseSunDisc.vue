@@ -1,19 +1,28 @@
 <template>
-  <div class="phase-sun-disc" :class="{ 'phase-sun-disc--pulse': pulse }" :style="discVars" />
+  <!-- Final phase: the star has collapsed — a black hole replaces the plasma disc. -->
+  <BlackHoleDisc v-if="isCollapsed" :diameter="diameter" />
+  <div v-else class="phase-sun-disc" :class="{ 'phase-sun-disc--pulse': pulse }" :style="discVars" />
 </template>
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
-import { STAR_PHASE_DATA } from '@/config/constants'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { STAR_PHASE_DATA, STAR_PHASE_FINAL_INDEX } from '@/config/constants'
+import BlackHoleDisc from './BlackHoleDisc.vue'
 
 /**
  * Clean, phase-colored glowing sun disc — the single source of truth for the sun's
  * visual. A 1:1 port of the Planets/Shop tab sun (.ps-stage-sun / .shop-stage-sun),
  * driven entirely by the current solar phase so every phase change recolors it.
+ *
+ * The last phase is not a plasma body at all, so it is delegated to BlackHoleDisc
+ * instead of being coloured differently. Doing the switch HERE means every
+ * consumer of PhaseSunDisc gets the black hole for free.
  */
 export default defineComponent({
   name: 'PhaseSunDisc',
+  components: { BlackHoleDisc },
   props: {
     /** Disc diameter in px. */
     diameter: { type: Number, required: true },
@@ -22,6 +31,12 @@ export default defineComponent({
   },
   setup(props) {
     const planetShopStore = usePlanetShopStore()
+    const solarStore = useSolarUpgradeStore()
+
+    /** Comet state is handled by the caller (CometDisc) — only phases land here. */
+    const isCollapsed = computed(
+      () => !solarStore.isCometState && planetShopStore.currentSunStage >= STAR_PHASE_FINAL_INDEX,
+    )
 
     const discVars = computed((): Record<string, string> => {
       const phase = STAR_PHASE_DATA[planetShopStore.currentSunStage] ?? STAR_PHASE_DATA[0]
@@ -35,7 +50,7 @@ export default defineComponent({
       }
     })
 
-    return { discVars }
+    return { discVars, isCollapsed }
   },
 })
 </script>

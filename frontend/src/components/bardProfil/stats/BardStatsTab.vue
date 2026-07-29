@@ -14,6 +14,7 @@ import type { CompletedGalaxyRecord } from '@/stores/galaxyStore'
 import {
   AUGMENT_RARITY_COLOR,
   STAR_PHASE_DATA,
+  STAR_PHASE_FINAL_INDEX,
   COMET_PHASE_DATA,
   STATS_TAB_PHASE_DOT_SCALE,
   STATS_TAB_COMET_DOT_PX,
@@ -98,6 +99,7 @@ const timelineDots = computed(() => [
     label: COMET_PHASE_DATA.name,
     astro: COMET_PHASE_DATA.astroName,
     comet: true,
+    collapse: false,
     color: COMET_PHASE_DATA.accent,
     glow: COMET_PHASE_DATA.glow,
     core: COMET_PHASE_DATA.core,
@@ -111,6 +113,8 @@ const timelineDots = computed(() => [
     label: p.name,
     astro: p.astroName,
     comet: false,
+    /* Letzter Schritt: kein Stern mehr, sondern das Schwarze Loch */
+    collapse: i === STAR_PHASE_FINAL_INDEX,
     color: p.phasePrimary,
     glow: p.phaseGlow,
     core: p.core,
@@ -509,7 +513,8 @@ function stopResize() {
       >
         <div class="sf-mini-sun-wrap">
           <div class="sf-mini-ring" />
-          <div class="sf-mini-sun" />
+          <!-- isMax = Endphase erreicht: der Stern ist kollabiert -->
+          <div class="sf-mini-sun" :class="{ 'sf-mini-sun--collapse': isMax }" />
         </div>
         <div class="sf-solar-meta">
           <span class="sf-kicker">{{ phaseDisplayLabel }}</span>
@@ -554,6 +559,7 @@ function stopResize() {
                 'is-done': dot.done,
                 'is-current': dot.current,
                 'sf-tl-dot--comet': dot.comet,
+                'sf-tl-dot--collapse': dot.collapse,
               }"
               :style="{
                 width: dot.size + 'px',
@@ -1052,6 +1058,27 @@ function stopResize() {
   animation: sf-sun-pulse var(--pulse-speed) ease-in-out infinite;
 }
 
+/* Endphase: dasselbe Emblem, aber der Stern brennt nicht mehr. Auf 40 px trägt
+   nur die Dreilagen-Silhouette — Photonenring, schwarzer Horizont, Scheibe fast
+   von der Kante. Reihenfolge = Malreihenfolge. */
+.sf-mini-sun--collapse {
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 42%,
+      var(--sun-core) 44% 49%,
+      transparent 53%
+    ),
+    radial-gradient(circle at 50% 50%, #000 0 43%, transparent 45%),
+    radial-gradient(
+      ellipse 100% 22% at 50% 50%,
+      var(--sun-core) 0%,
+      var(--sun-mid) 32%,
+      var(--sun-edge) 64%,
+      transparent 84%
+    );
+}
+
 @keyframes sf-sun-pulse {
   0%,
   100% {
@@ -1292,7 +1319,7 @@ function stopResize() {
   z-index: 1;
 }
 
-/* Fixed-height slot keeps every sun — small Protostar to huge Supernova —
+/* Fixed-height slot keeps every sun — small Protostar to the wide Collapse disc —
    vertically centered on the track line. */
 .sf-tl-dot-slot {
   height: 36px;
@@ -1345,6 +1372,28 @@ function stopResize() {
 }
 .sf-tl-dot--comet.is-done {
   opacity: 0.75;
+}
+
+/* Collapse dot — das Ende der Linie ist kein Stern. Auf 28 px trägt nur die
+   Dreilagen-Silhouette: Photonenring, schwarzer Horizont darunter, ganz unten
+   die fast von der Kante gesehene Scheibe. Reihenfolge = Malreihenfolge. */
+.sf-tl-dot--collapse.is-done,
+.sf-tl-dot--collapse.is-current {
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 42%,
+      var(--dot-core) 44% 49%,
+      transparent 53%
+    ),
+    radial-gradient(circle at 50% 50%, #000 0 43%, transparent 45%),
+    radial-gradient(
+      ellipse 100% 22% at 50% 50%,
+      var(--dot-core) 0%,
+      var(--dot-mid) 32%,
+      var(--dot-edge) 64%,
+      transparent 84%
+    );
 }
 
 @keyframes sf-dot-pulse {

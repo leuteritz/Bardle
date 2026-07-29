@@ -20,11 +20,13 @@ export const sunForgeCategory: EncyclopediaCategory = {
       name: 'Sun Phases',
       icon: 'game-icons:sunset',
       description:
-        'The sun evolves through 7 stages, from Comet to the supernova Finale. ' +
-        'Each evolution needs all Solar Rays levelled evenly plus a minimum dwell time in the current phase.',
-      lore: 'A symphony in seven movements.',
+        'The sun evolves through 7 stages, from Comet to the Collapse. ' +
+        'Each evolution needs all Solar Rays levelled evenly plus a minimum dwell time in the current phase. ' +
+        'Requiem is the largest the star ever burns — the last evolution detonates it in a supernova ' +
+        'and leaves a black hole behind.',
+      lore: 'A symphony in seven movements. The last one is silence.',
       formula:
-        'Comet → Spark → Prelude → Crescendo → Swell → Requiem → Finale\n' +
+        'Comet → Spark → Prelude → Crescendo → Swell → Requiem → Collapse\n' +
         'Dwell: 3 min → 10 min → 30 min → 90 min → 4 h → 24 h → —\n' +
         'Evolve needs every ray ≥ phase + 1',
       related: ['solar-rays', 'comet-origin', 'planet-slots'],

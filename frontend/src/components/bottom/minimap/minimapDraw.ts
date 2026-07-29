@@ -3,7 +3,15 @@
 // hier stehen nur die Pinselstriche. Die Geometrie (Galaxie-Partikel, Punkte,
 // Planeten) liegt daneben in minimapGalaxyGeometry.ts.
 import type { PlanetType } from '@/types'
-import { STAR_PHASE_DATA } from '@/config/constants'
+import {
+  STAR_PHASE_DATA,
+  STAR_PHASE_FINAL_INDEX,
+  BLACK_HOLE_SHADOW_FRACTION,
+  BLACK_HOLE_DISC_INNER_FRACTION,
+  BLACK_HOLE_DISC_TILT,
+  BLACK_HOLE_PHOTON_RING_FRACTION,
+  BLACK_HOLE_BODY_TO_BOX_FACTOR,
+} from '@/config/constants'
 import { STAR_PALETTE } from './minimapGalaxyGeometry'
 import { hexToRgba } from '@/utils/format'
 
@@ -50,11 +58,11 @@ export type HyperspacePhase = 'idle' | 'streaks' | 'flash' | 'fadeout'
 export function rolePaletteFromRgb(r: number, g: number, b: number): typeof STAR_PALETTE {
   const h = (v: number) => v.toString(16).padStart(2, '0')
   return {
-    base:      `#${h(r)}${h(g)}${h(b)}`,
-    shadow:    `#${h(Math.round(r * 0.25))}${h(Math.round(g * 0.25))}${h(Math.round(b * 0.25))}`,
+    base: `#${h(r)}${h(g)}${h(b)}`,
+    shadow: `#${h(Math.round(r * 0.25))}${h(Math.round(g * 0.25))}${h(Math.round(b * 0.25))}`,
     highlight: `#${h(Math.min(255, Math.round(r * 0.6 + 102)))}${h(Math.min(255, Math.round(g * 0.6 + 102)))}${h(Math.min(255, Math.round(b * 0.6 + 102)))}`,
-    atmo:      `rgba(${r}, ${g}, ${b}, 0.55)`,
-    ring:      false,
+    atmo: `rgba(${r}, ${g}, ${b}, 0.55)`,
+    ring: false,
   }
 }
 
@@ -64,24 +72,132 @@ export function rolePaletteFromHex(hex: string): typeof STAR_PALETTE {
 }
 
 export const PLANET_TYPE_PALETTES: Record<PlanetType, typeof STAR_PALETTE> = {
-  'rocky':     { base: '#8a7060', shadow: '#2a1808', highlight: '#b8a090', atmo: 'rgba(130,100,80,0.4)',   ring: false },
-  'ice':       { base: '#90c8f0', shadow: '#104060', highlight: '#d0f0ff', atmo: 'rgba(80,160,240,0.4)',  ring: false },
-  'gas-giant': { base: '#c87941', shadow: '#4a2010', highlight: '#e8aa70', atmo: 'rgba(200,120,60,0.45)', ring: false },
-  'lava':      { base: '#e05020', shadow: '#600800', highlight: '#ff8050', atmo: 'rgba(240,80,30,0.5)',   ring: false },
-  'ocean':     { base: '#3080c0', shadow: '#082040', highlight: '#60c0f0', atmo: 'rgba(40,120,200,0.4)',  ring: false },
-  'desert':    { base: '#c8a048', shadow: '#604010', highlight: '#f0d080', atmo: 'rgba(200,160,60,0.4)',  ring: false },
-  'jungle':    { base: '#50a840', shadow: '#102808', highlight: '#90e870', atmo: 'rgba(60,180,50,0.4)',   ring: false },
-  'ringed':    { base: '#9060c0', shadow: '#200840', highlight: '#c090f0', atmo: 'rgba(140,80,220,0.45)', ring: true  },
-  'crystal':   { base: '#40d0c0', shadow: '#083838', highlight: '#b0fff0', atmo: 'rgba(70,220,200,0.45)', ring: false },
-  'toxic':     { base: '#94c428', shadow: '#243008', highlight: '#d8f070', atmo: 'rgba(160,220,50,0.45)', ring: false },
-  'void':      { base: '#402060', shadow: '#0a0418', highlight: '#a860e8', atmo: 'rgba(150,60,240,0.5)',  ring: false },
-  'aurora':    { base: '#4878a0', shadow: '#0a1830', highlight: '#80ffd0', atmo: 'rgba(90,255,190,0.4)',  ring: false },
-  'shattered': { base: '#786450', shadow: '#1c1006', highlight: '#ffb060', atmo: 'rgba(255,140,50,0.4)',  ring: false },
-  'storm':     { base: '#4a5a9a', shadow: '#0a0e28', highlight: '#aabcf0', atmo: 'rgba(110,150,255,0.45)', ring: false },
-  'bloom':     { base: '#f0a8c4', shadow: '#4a1c38', highlight: '#ffe0ec', atmo: 'rgba(255,170,200,0.45)', ring: false },
-  'neon':      { base: '#1e2630', shadow: '#04060a', highlight: '#8cf0ff', atmo: 'rgba(80,200,255,0.4)',  ring: false },
-  'obsidian':  { base: '#2a2a32', shadow: '#040406', highlight: '#c8d0e8', atmo: 'rgba(180,190,220,0.3)', ring: false },
-  'coral':     { base: '#40c8c0', shadow: '#043045', highlight: '#a0f0e8', atmo: 'rgba(90,230,220,0.45)', ring: false },
+  rocky: {
+    base: '#8a7060',
+    shadow: '#2a1808',
+    highlight: '#b8a090',
+    atmo: 'rgba(130,100,80,0.4)',
+    ring: false,
+  },
+  ice: {
+    base: '#90c8f0',
+    shadow: '#104060',
+    highlight: '#d0f0ff',
+    atmo: 'rgba(80,160,240,0.4)',
+    ring: false,
+  },
+  'gas-giant': {
+    base: '#c87941',
+    shadow: '#4a2010',
+    highlight: '#e8aa70',
+    atmo: 'rgba(200,120,60,0.45)',
+    ring: false,
+  },
+  lava: {
+    base: '#e05020',
+    shadow: '#600800',
+    highlight: '#ff8050',
+    atmo: 'rgba(240,80,30,0.5)',
+    ring: false,
+  },
+  ocean: {
+    base: '#3080c0',
+    shadow: '#082040',
+    highlight: '#60c0f0',
+    atmo: 'rgba(40,120,200,0.4)',
+    ring: false,
+  },
+  desert: {
+    base: '#c8a048',
+    shadow: '#604010',
+    highlight: '#f0d080',
+    atmo: 'rgba(200,160,60,0.4)',
+    ring: false,
+  },
+  jungle: {
+    base: '#50a840',
+    shadow: '#102808',
+    highlight: '#90e870',
+    atmo: 'rgba(60,180,50,0.4)',
+    ring: false,
+  },
+  ringed: {
+    base: '#9060c0',
+    shadow: '#200840',
+    highlight: '#c090f0',
+    atmo: 'rgba(140,80,220,0.45)',
+    ring: true,
+  },
+  crystal: {
+    base: '#40d0c0',
+    shadow: '#083838',
+    highlight: '#b0fff0',
+    atmo: 'rgba(70,220,200,0.45)',
+    ring: false,
+  },
+  toxic: {
+    base: '#94c428',
+    shadow: '#243008',
+    highlight: '#d8f070',
+    atmo: 'rgba(160,220,50,0.45)',
+    ring: false,
+  },
+  void: {
+    base: '#402060',
+    shadow: '#0a0418',
+    highlight: '#a860e8',
+    atmo: 'rgba(150,60,240,0.5)',
+    ring: false,
+  },
+  aurora: {
+    base: '#4878a0',
+    shadow: '#0a1830',
+    highlight: '#80ffd0',
+    atmo: 'rgba(90,255,190,0.4)',
+    ring: false,
+  },
+  shattered: {
+    base: '#786450',
+    shadow: '#1c1006',
+    highlight: '#ffb060',
+    atmo: 'rgba(255,140,50,0.4)',
+    ring: false,
+  },
+  storm: {
+    base: '#4a5a9a',
+    shadow: '#0a0e28',
+    highlight: '#aabcf0',
+    atmo: 'rgba(110,150,255,0.45)',
+    ring: false,
+  },
+  bloom: {
+    base: '#f0a8c4',
+    shadow: '#4a1c38',
+    highlight: '#ffe0ec',
+    atmo: 'rgba(255,170,200,0.45)',
+    ring: false,
+  },
+  neon: {
+    base: '#1e2630',
+    shadow: '#04060a',
+    highlight: '#8cf0ff',
+    atmo: 'rgba(80,200,255,0.4)',
+    ring: false,
+  },
+  obsidian: {
+    base: '#2a2a32',
+    shadow: '#040406',
+    highlight: '#c8d0e8',
+    atmo: 'rgba(180,190,220,0.3)',
+    ring: false,
+  },
+  coral: {
+    base: '#40c8c0',
+    shadow: '#043045',
+    highlight: '#a0f0e8',
+    atmo: 'rgba(90,230,220,0.45)',
+    ring: false,
+  },
 }
 
 /** Small pulsing sun marker (player origin / idle position) in the mock's gold palette. */
@@ -112,6 +228,74 @@ export function drawMiniSun(
   ctx.fill()
 }
 
+/**
+ * Der kollabierte Endzustand auf Minimap-Maßstab. Bewusst dieselben Fraktionen
+ * wie BlackHoleDisc.vue (BLACK_HOLE_*), damit die Silhouette bei 9 px dieselbe
+ * ist wie bei 560 px im Idle-Orbit — nur ohne Jets und Inspiral, die auf dieser
+ * Größe zu Matsch würden. Übrig bleibt, was die Form trägt: Scheibe, schwarzer
+ * Horizont, Photonenring.
+ */
+function drawBlackHole(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  phase: (typeof STAR_PHASE_DATA)[number],
+  nowMs: number,
+) {
+  const pulseMs = (parseFloat(phase.pulseSpeed) * 1000) / (Math.PI * 2)
+  const pulse = 0.5 + 0.5 * Math.sin(nowMs / pulseMs)
+  // r ist der Radius, den die Plasmasonne hier hätte. Die BLACK_HOLE_*-Werte
+  // sind Bruchteile der Box-BREITE der CSS-Variante — einmal umrechnen, danach
+  // gelten dieselben Zahlen. Radien sind halbe Durchmesser, daher × 0.5.
+  const boxW = r * BLACK_HOLE_BODY_TO_BOX_FACTOR
+  const shadowR = boxW * BLACK_HOLE_SHADOW_FRACTION * 0.5
+  const discInnerR = boxW * BLACK_HOLE_DISC_INNER_FRACTION * 0.5
+  const discOuterR = boxW * 0.5
+
+  // Halo — das gelinste Licht um den Horizont
+  const haloR = discOuterR * 1.8
+  const halo = ctx.createRadialGradient(x, y, shadowR, x, y, haloR)
+  halo.addColorStop(0, hexToRgba(phase.glow1, 0.34))
+  halo.addColorStop(0.45, hexToRgba(phase.glow2, 0.12))
+  halo.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.beginPath()
+  ctx.arc(x, y, haloR, 0, Math.PI * 2)
+  ctx.fillStyle = halo
+  ctx.fill()
+
+  // Akkretionsscheibe: Ellipse in derselben Neigung wie die CSS-Variante.
+  // Der Doppler-Boost sitzt links, deshalb ein waagerechter Verlauf statt eines
+  // radialen — auf dieser Größe ist die Asymmetrie das, was "rotiert" verkauft.
+  const disc = ctx.createLinearGradient(x - discOuterR, y, x + discOuterR, y)
+  disc.addColorStop(0, hexToRgba(phase.core, 0.95))
+  disc.addColorStop(0.35, hexToRgba(phase.mid, 0.8))
+  disc.addColorStop(0.7, hexToRgba(phase.edge, 0.65))
+  disc.addColorStop(1, hexToRgba(phase.edge, 0.4))
+  ctx.beginPath()
+  ctx.ellipse(x, y, discOuterR, discOuterR * BLACK_HOLE_DISC_TILT, 0, 0, Math.PI * 2)
+  ctx.fillStyle = disc
+  ctx.fill()
+
+  // Horizont — deckt die Scheibenmitte ab, danach ist die Scheibe ein Ring
+  ctx.beginPath()
+  ctx.arc(x, y, Math.max(1, shadowR), 0, Math.PI * 2)
+  ctx.fillStyle = '#000'
+  ctx.fill()
+
+  // Photonenring direkt am Horizont, plus ein zweiter am inneren Scheibenrand
+  ctx.beginPath()
+  ctx.arc(x, y, Math.max(1, shadowR), 0, Math.PI * 2)
+  ctx.strokeStyle = `rgba(255,255,255,${(0.7 + 0.3 * pulse).toFixed(3)})`
+  ctx.lineWidth = Math.max(0.8, boxW * BLACK_HOLE_PHOTON_RING_FRACTION * 2)
+  ctx.stroke()
+
+  ctx.beginPath()
+  ctx.ellipse(x, y, discInnerR, discInnerR * BLACK_HOLE_DISC_TILT, 0, 0, Math.PI * 2)
+  ctx.strokeStyle = hexToRgba(phase.core, 0.45 + 0.2 * pulse)
+  ctx.lineWidth = Math.max(0.6, boxW * 0.02)
+  ctx.stroke()
+}
 
 /** Player sun rendered in its current phase palette (STAR_PHASE_DATA). */
 export function drawPhaseSun(
@@ -122,6 +306,14 @@ export function drawPhaseSun(
   phase: (typeof STAR_PHASE_DATA)[number],
   nowMs: number,
 ) {
+  // Die Endphase ist kein Plasmakörper mehr. Der Vergleich läuft über die
+  // Objektidentität, weil jeder Aufrufer direkt in STAR_PHASE_DATA indiziert —
+  // so bekommt jede bestehende Aufrufstelle das Schwarze Loch ohne Änderung.
+  if (phase === STAR_PHASE_DATA[STAR_PHASE_FINAL_INDEX]) {
+    drawBlackHole(ctx, x, y, r, phase, nowMs)
+    return
+  }
+
   const pulseMs = (parseFloat(phase.pulseSpeed) * 1000) / (Math.PI * 2)
   const pulse = 0.5 + 0.5 * Math.sin(nowMs / pulseMs)
 

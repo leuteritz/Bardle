@@ -1203,12 +1203,12 @@ export const SUN_GROWTH_STAGES: SunGrowthStage[] = [
   { stage: 3, chimesThreshold: 8000, radius: 72, label: 'Blazing' },
   { stage: 4, chimesThreshold: 35000, radius: 92, label: 'Scorching' },
   { stage: 5, chimesThreshold: 150000, radius: 116, label: 'Stellar' },
-  { stage: 6, chimesThreshold: 600000, radius: 144, label: 'Supernova' },
+  { stage: 6, chimesThreshold: 600000, radius: 144, label: 'Collapse' },
 ]
 
 /** Required sun phase (starPhase) to unlock each planet slot. Every sun phase after
  *  the comet unlocks one slot: slot index 0 → Spark (phase 0), …,
- *  slot index 5 → Finale (phase 5). */
+ *  slot index 5 → Collapse (phase 5). */
 export const PLANET_SLOT_SUN_PHASE_REQUIREMENTS: number[] = [0, 1, 2, 3, 4, 5]
 
 /** Central role registry — single source of truth for key, label, icon, color and orbit parameters. */
@@ -2907,25 +2907,104 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '3s',
   },
   {
-    name: 'Finale',
-    astroName: 'Supernova',
+    // The star does not keep burning — it collapses. Reached through a one-shot
+    // supernova (see SUPERNOVA_* below), the sun spends this final phase as a
+    // black hole: an opaque event-horizon shadow inside a tilted accretion disc.
+    // core/mid/edge describe the DISC, not a plasma body — every renderer that
+    // draws the final phase reads BLACK_HOLE_* for the geometry on top of them.
+    name: 'Collapse',
+    astroName: 'Black Hole',
     radius: 140,
     core: '#ffffff',
-    mid: '#e8b0ff',
-    edge: '#8000cc',
-    glow1: '#c060ff',
-    glow2: '#8000cc',
-    glow3: '#400066',
-    phasePrimary: '#e8b0ff',
-    phaseGlow: '#c060ff',
+    mid: '#c8a2ff',
+    edge: '#6a12b8',
+    glow1: '#b45cff',
+    glow2: '#7412c8',
+    glow3: '#2c0655',
+    phasePrimary: '#d9b6ff',
+    phaseGlow: '#b45cff',
     factor: 1.6,
     pulseSpeed: '1.5s',
   },
 ]
 
+/** Index of the final star phase — the collapsed one (Black Hole). Everything
+ *  that needs to ask "is the sun a black hole?" compares against this instead of
+ *  hard-coding 5, so adding a phase later cannot silently split the check. */
+export const STAR_PHASE_FINAL_INDEX = STAR_PHASE_DATA.length - 1
+
+// ── Collapse phase geometry (Black Hole) ─────────────────────────────────────
+/**
+ * The final phase is drawn by BlackHoleDisc.vue (CSS) and by drawBlackHole()
+ * (minimap canvas). Both read the SAME fractions from here so the silhouette is
+ * identical at 560 px in the idle orbit and at 9 px on the minimap.
+ *
+ * Every *_FRACTION is a fraction of the rendered box WIDTH (= the diameter the
+ * old plasma disc would have had), so the black hole slots into the existing
+ * `diameter` contract of PhaseSunDisc / CometDisc without touching any layout.
+ *
+ * Layer order, outside → in:
+ *   jets · lensed halo arc · disc far half · shadow + photon ring · disc near half
+ */
+/** Opaque event-horizon shadow. Pure black — it is the only fully opaque part,
+ *  and the reason a planet passing behind the sun still gets occluded. */
+export const BLACK_HOLE_SHADOW_FRACTION = 0.36
+/** Photon ring thickness — the light orbiting right at the horizon. Thin on
+ *  purpose: it is the brightest thing on screen, a fat ring reads as a donut. */
+export const BLACK_HOLE_PHOTON_RING_FRACTION = 0.014
+/** Inner edge of the accretion disc. Sits just outside the photon ring so a
+ *  sliver of black stays visible between horizon and disc. */
+export const BLACK_HOLE_DISC_INNER_FRACTION = 0.46
+/** Vertical squash of the disc plane (scaleY). 1 = face-on, 0 = edge-on.
+ *  The near half's inner edge crosses the shadow at
+ *  `DISC_INNER * TILT / SHADOW` of the shadow's radius — at these values ~74 %,
+ *  so the disc sweeps across the lower quarter of the hole. Flatter than this
+ *  and it slices the shadow in half instead of orbiting it. */
+export const BLACK_HOLE_DISC_TILT = 0.58
+/** Seconds for one revolution of the disc's plasma texture. */
+export const BLACK_HOLE_DISC_SPIN_SEC = 16
+/** Diameter of the lensed halo arc — the far side of the disc, bent up over the
+ *  top of the hole (and under the bottom) by gravity. */
+export const BLACK_HOLE_HALO_FRACTION = 0.72
+/** Relativistic beaming: the disc side rotating TOWARDS the viewer is boosted,
+ *  the receding side dimmed. 0 = symmetric, 1 = one side blacked out. */
+export const BLACK_HOLE_DOPPLER_STRENGTH = 0.62
+/** Polar jets — length measured from the centre, width at their base. */
+export const BLACK_HOLE_JET_LENGTH_FRACTION = 0.92
+export const BLACK_HOLE_JET_WIDTH_FRACTION = 0.16
+export const BLACK_HOLE_JET_PULSE_SEC = 3.4
+/** Debris spiralling in. Kept low — this runs in the always-visible idle orbit. */
+export const BLACK_HOLE_INSPIRAL_COUNT = 4
+export const BLACK_HOLE_INSPIRAL_SEC = 5.5
+/**
+ * Bridge for renderers that think in BODY RADIUS instead of box width — the
+ * minimap draws the plasma sun as `arc(x, y, r)`, while every fraction above is
+ * relative to the box the CSS disc lives in. In that CSS disc the opaque plasma
+ * body reaches roughly 37 % of the box width, so a body of radius r corresponds
+ * to a box of `r * this`. Multiply by it once, then the same fractions apply.
+ */
+export const BLACK_HOLE_BODY_TO_BOX_FACTOR = 2.7
+
+// ── Supernova — the one-shot collapse of Requiem into the black hole ─────────
+/** Total length of the transition overlay. Long enough to read as an event,
+ *  short enough that nobody waits for it twice. */
+export const SUPERNOVA_DURATION_MS = 3400
+/** Blinding white flash at the very start, as a fraction of the total. */
+export const SUPERNOVA_FLASH_FRACTION = 0.13
+/** Expanding shock rings and the ejected shell. */
+export const SUPERNOVA_RING_COUNT = 3
+export const SUPERNOVA_SHARD_COUNT = 88
+/** After the ejecta, everything falls back in — this fraction of the timeline is
+ *  the implosion that hands over to the black hole. */
+export const SUPERNOVA_COLLAPSE_START = 0.6
+/** Ejecta palette: hot core → shocked shell → the violet of the Collapse phase. */
+export const SUPERNOVA_CORE_COLOR = '#ffffff'
+export const SUPERNOVA_SHELL_COLOR = '#8fd8ff'
+export const SUPERNOVA_EJECTA_COLOR = '#b45cff'
+
 // ── Sun phase display numbering ──────────────────────────────────────────────
 // The Comet counts as display phase 1, so sun phases render as
-// starPhase + SUN_PHASE_DISPLAY_OFFSET (Spark = 2 … Finale = 7).
+// starPhase + SUN_PHASE_DISPLAY_OFFSET (Spark = 2 … Collapse = 7).
 export const SUN_PHASE_DISPLAY_OFFSET = 2
 export const SUN_PHASE_DISPLAY_TOTAL = STAR_PHASE_DATA.length + 1 // comet + sun phases
 

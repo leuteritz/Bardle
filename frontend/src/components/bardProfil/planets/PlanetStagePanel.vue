@@ -11,10 +11,16 @@ import type { PlanetSlot } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useShopStore } from '@/stores/shopStore'
 import { MATERIALS } from '@/config/materials'
-import { MATERIAL_RARITY_COLOR, PLANET_RESPAWN_MS } from '@/config/constants'
+import {
+  MATERIAL_RARITY_COLOR,
+  PLANET_RESPAWN_MS,
+  PLANET_TAB_SUN_MAX_DIAMETER,
+  STAR_PHASE_FINAL_INDEX,
+} from '@/config/constants'
 import { hpTier, hpPercentOf, planetBonusTextFor } from '@/utils/planetStatus'
 import { useActionToast } from '@/composables/useActionToast'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
+import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import PlanetTargetPickerModal from './PlanetTargetPickerModal.vue'
 
 const props = defineProps<{
@@ -37,6 +43,13 @@ const { showToast } = useActionToast()
 /** Orbit-Wrapper — der Tab-Loop setzt hier pro Frame `--orbit-delay`. */
 const orbitEl = ref<HTMLElement | null>(null)
 defineExpose({ orbitEl })
+
+/** Endphase: der Stern ist kollabiert, statt der Plasmascheibe steht hier das
+ *  Schwarze Loch — mit demselben Footprint, damit der Planet weiter dahinter
+ *  vorbeizieht. */
+const isCollapsed = computed(
+  () => !solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
+)
 
 const role = computed(() => props.planet.role!)
 const roleName = computed(() => PLANET_ROLES[role.value].name)
@@ -217,8 +230,12 @@ const configTarget = computed(() => {
     <!-- Central body (comet rock or phase sun) + orbiting planet — the exact
          vertical center: crown band above and readout band below carry equal
          flex weight, so the sun is always dead-centered. -->
-    <div class="ps-system" :class="{ 'ps-system--comet': solarStore.isCometState }">
+    <div
+      class="ps-system"
+      :class="{ 'ps-system--comet': solarStore.isCometState, 'ps-system--collapse': isCollapsed }"
+    >
       <CometDisc v-if="solarStore.isCometState" :diameter="200" />
+      <BlackHoleDisc v-else-if="isCollapsed" :diameter="PLANET_TAB_SUN_MAX_DIAMETER" />
       <div v-else class="ps-stage-sun" />
       <!-- The whole orbit wrapper is keyed per planet: the old planet fades
            out at ITS orbit position, the new one fades in at its own — no
@@ -688,6 +705,15 @@ const configTarget = computed(() => {
   /* z above the planet's "far" half so the planet can pass behind the sun */
   z-index: 1;
   animation: ps-sun-pulse var(--pulse-speed, 5s) ease-in-out infinite;
+}
+
+/* ── Collapse mode: the black hole takes the sun's exact footprint ─────────── */
+/* Same responsive cap as .ps-stage-sun (the component's diameter prop is static
+   px), and the same z-index, so the planet's far arc still passes behind it. */
+.ps-system--collapse :deep(.bh-root) {
+  width: min(var(--ps-sun-d, 560px), 96cqmin);
+  height: min(var(--ps-sun-d, 560px), 96cqmin);
+  z-index: 1;
 }
 
 /* ── Comet mode: the origin rock replaces the sun as the central body ──────── */

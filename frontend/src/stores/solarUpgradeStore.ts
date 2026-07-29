@@ -24,6 +24,7 @@ import {
   STAR_PHASE_MIN_DWELL_SECONDS,
   COMET_MIN_DWELL_SECONDS,
   STAR_PHASE_DATA,
+  STAR_PHASE_FINAL_INDEX,
 } from '../config/constants'
 
 export type SolarBranchId =
@@ -63,6 +64,11 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     /** Reactive clock for dwell-time getters — advanced by gameStore.tick() once
      *  per second (a raw Date.now() inside a getter would never re-evaluate). */
     dwellNow: Date.now() as number,
+    /** Bumped exactly once, when the star evolves INTO the final phase — the red
+     *  giant detonates and collapses. SupernovaTransition watches this counter.
+     *  Deliberately not persisted (see usePersistence's explicit solar field
+     *  list): reloading into the black hole must not replay the explosion. */
+    supernovaTrigger: 0 as number,
   }),
 
   getters: {
@@ -133,8 +139,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
      *  WHY evolving is blocked. */
     branchesReadyForEvolve(state): boolean {
       return (
-        state.starPhase < STAR_PHASE_DATA.length - 1 &&
-        this.minBranchLevel >= state.starPhase + 1
+        state.starPhase < STAR_PHASE_DATA.length - 1 && this.minBranchLevel >= state.starPhase + 1
       )
     },
 
@@ -288,10 +293,14 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
           return
         }
         this.totalPhaseSeconds += elapsed
-        this.phaseTimeHistory[this.starPhase] = (this.phaseTimeHistory[this.starPhase] ?? 0) + elapsed
+        this.phaseTimeHistory[this.starPhase] =
+          (this.phaseTimeHistory[this.starPhase] ?? 0) + elapsed
         this.starPhase++
         this.phaseEnteredAt = Date.now()
         this.isUpgrading = false
+        // The last evolution is not a growth step: the red giant blows itself
+        // apart and what is left collapses. Fire the one-shot transition.
+        if (this.starPhase === STAR_PHASE_FINAL_INDEX) this.supernovaTrigger++
         console.log('[Bardle] Star evolved to phase', this.starPhase)
       }, 2500)
     },

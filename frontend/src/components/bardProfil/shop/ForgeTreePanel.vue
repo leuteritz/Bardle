@@ -45,8 +45,9 @@
             The comet must drift a while longer — ready in
             <b class="dock-hint-next">{{ formatClock(solarStore.phaseDwellRemainingMs) }}</b>
           </template>
-          <template v-else-if="solarStore.starPhase >= STAR_PHASE_DATA.length - 1">
-            The sun has reached its <b class="dock-hint-next">Finale</b> — the tree is fully grown.
+          <template v-else-if="isCollapsed">
+            The star has burned out and
+            <b class="dock-hint-next">collapsed</b> — the tree is fully grown.
           </template>
           <template v-else-if="solarStore.canUpgradeStar">
             Evolve to <b class="dock-hint-next">{{ nextStage.name }}</b> —
@@ -73,10 +74,7 @@
             : solarStore.isCometState ? '✦ Ignite' : '✦ Evolve'
         }}
       </button>
-      <span
-        v-else-if="!solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_DATA.length - 1"
-        class="dock-complete"
-      >✦ COMPLETE</span>
+      <span v-else-if="isCollapsed" class="dock-complete">✦ COMPLETE</span>
     </div>
 
     <!-- Zoom control -->
@@ -151,6 +149,7 @@
       <!-- Sun -->
       <div class="sun-wrapper" :class="{ 'sun-flash': purchaseFlash }">
         <CometDisc v-if="solarStore.isCometState" :diameter="SHOP_SUN_MIN_DIAMETER" />
+        <BlackHoleDisc v-else-if="isCollapsed" :diameter="SHOP_SUN_MAX_DIAMETER" />
         <div v-else class="tree-stage-sun" />
         <div
           v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
@@ -244,10 +243,12 @@ import { formatNumber } from '@/config/numberFormat'
 import { useActionToast } from '@/composables/useActionToast'
 import type { ForgeNodeDef } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
+import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import {
   SOLAR_MAX_LEVELS,
   STAR_PHASE_DATA,
+  STAR_PHASE_FINAL_INDEX,
   COMET_PHASE_DATA,
   SHOP_SUN_MIN_DIAMETER,
   SHOP_SUN_MAX_DIAMETER,
@@ -272,6 +273,12 @@ const inventoryStore = useInventoryStore()
 const { showToast } = useActionToast()
 
 const C = FORGE_STAGE_SIZE / 2
+
+/** Endphase: der Stern ist kollabiert — der Baum ist ausgewachsen, im Zentrum
+ *  steht statt der Plasmascheibe das Schwarze Loch. */
+const isCollapsed = computed(
+  () => !solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
+)
 
 // ── Node model — roots (solar) + branches/leaves (forge) in one render list ──
 interface TreeNode {
@@ -660,7 +667,11 @@ const stageStyle = computed(() => {
     '--phase-glow': s.phaseGlow,
     '--pulse-speed': s.pulseSpeed,
     '--shop-sun-d': `${Math.round(sunD)}px`,
-    '--sun-edge': s.edge,
+    // --sun-edge färbt ausschließlich die HP-Zahl auf der Sonne. Bei den
+    // Plasmaphasen ist der dunkle Saum darauf gut lesbar — auf dem schwarzen
+    // Ereignishorizont der Endphase verschwände er, dort trägt der helle
+    // Scheibenton.
+    '--sun-edge': isCollapsed.value ? s.phasePrimary : s.edge,
   }
 })
 

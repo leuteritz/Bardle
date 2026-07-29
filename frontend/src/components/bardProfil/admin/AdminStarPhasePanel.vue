@@ -2,6 +2,7 @@
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import {
   STAR_PHASE_DATA,
+  STAR_PHASE_FINAL_INDEX,
   COMET_PHASE_DATA,
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
@@ -23,6 +24,9 @@ function setStarPhase(phase: number) {
   solarStore.isCometState = false
   solarStore.starPhase = Math.max(0, Math.min(STAR_PHASE_DATA.length - 1, phase))
   solarStore.phaseEnteredAt = Date.now()
+  // Jumping straight to the final phase should look like the real thing —
+  // and it doubles as the only way to replay the transition while testing.
+  if (solarStore.starPhase === STAR_PHASE_FINAL_INDEX) solarStore.supernovaTrigger++
 }
 
 function setCometState() {
