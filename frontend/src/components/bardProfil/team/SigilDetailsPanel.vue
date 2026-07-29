@@ -16,7 +16,10 @@ import {
   TEAM_SIGIL_SPLASH_HEIGHT_COMPACT,
   ORBIT_ROLE_ABILITIES,
   OBJECTIVE_ROLE_ABILITIES,
+  CHAMPION_REGALIA_SIZE_ALLY,
+  CHAMPION_REGALIA_SIZE_STRIP,
 } from '@/config/constants'
+import ChampionLevelBadge from './ChampionLevelBadge.vue'
 import { getChampionSkins, formatSkinName } from '@/utils/champions'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
@@ -251,7 +254,14 @@ function statEffectOf(key: ChampionStatKey): string {
       type="button"
       @click="emit('pick-levels', main)"
     >
-      <Icon icon="game-icons:ribbon-medal" width="22" height="22" class="sdp-level-strip-icon" />
+      <!-- the champion's regalia medallion — the same one it wears on the board -->
+      <ChampionLevelBadge
+        :level="levelOf(main)"
+        :color="roleDef.color"
+        :size="CHAMPION_REGALIA_SIZE_STRIP"
+        :attention="needsAttentionOf(main)"
+        class="sdp-level-strip-badge"
+      />
       <div class="sdp-level-strip-main">
         <div class="sdp-level-strip-top">
           <span class="sdp-level-strip-lv">Level {{ levelOf(main) }}</span>
@@ -407,13 +417,16 @@ function statEffectOf(key: ChampionStatKey): string {
                        panel instead of the champion picker -->
                   <span
                     class="sdp-ally-level"
-                    :class="{ 'sdp-ally-level--attention': needsAttentionOf(ally) }"
                     role="button"
                     :title="`Level ${levelOf(ally)} — open progression`"
                     @click.stop="emit('pick-levels', ally)"
                   >
-                    <Icon icon="game-icons:ribbon-medal" width="12" height="12" />
-                    {{ levelOf(ally) }}
+                    <ChampionLevelBadge
+                      :level="levelOf(ally)"
+                      :color="roleDef.color"
+                      :size="CHAMPION_REGALIA_SIZE_ALLY"
+                      :attention="needsAttentionOf(ally)"
+                    />
                   </span>
                 </span>
                 <span class="sdp-ally-row-chips">
@@ -758,9 +771,8 @@ function statEffectOf(key: ChampionStatKey): string {
 .sdp-level-strip:hover {
   background: #241608;
 }
-.sdp-level-strip-icon {
+.sdp-level-strip-badge {
   flex-shrink: 0;
-  color: var(--rc);
 }
 .sdp-level-strip-main {
   flex: 1;
@@ -821,21 +833,6 @@ function statEffectOf(key: ChampionStatKey): string {
 .sdp-level-strip--attention .sdp-level-strip-fill {
   box-shadow: 0 0 10px color-mix(in srgb, var(--rc) 55%, transparent);
 }
-@keyframes sdp-level-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 transparent;
-  }
-  50% {
-    box-shadow: 0 0 12px color-mix(in srgb, var(--rc) 60%, transparent);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .sdp-ally-level--attention {
-    animation: none;
-  }
-}
-
 /* ── stat headline — four tiles, one row, sits directly under the level strip.
    Each tile is a shortcut into the level panel, since that is where the number
    is actually raised. ── */
@@ -1109,34 +1106,16 @@ function statEffectOf(key: ChampionStatKey): string {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* ally level chip — rank-colored, opens that ally's own level panel */
+/* ally medallion — a bare hit target; the badge carries the whole look */
 .sdp-ally-level {
   flex-shrink: 0;
   display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.8);
-  border: 1px solid var(--rc);
-  color: var(--rc);
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: 1.3;
   cursor: pointer;
   text-shadow: none;
-  transition:
-    background 0.15s,
-    box-shadow 0.15s;
+  transition: transform 0.15s;
 }
 .sdp-ally-level:hover {
-  background: rgba(30, 16, 6, 0.95);
-  box-shadow: 0 0 9px color-mix(in srgb, var(--rc) 50%, transparent);
-}
-/* banked XP or an unspent perk — brighten and pulse, same colour throughout */
-.sdp-ally-level--attention {
-  background: color-mix(in srgb, var(--rc) 22%, #0a0704);
-  animation: sdp-level-pulse 1.8s ease-in-out infinite;
+  transform: scale(1.12);
 }
 .sdp-ally-row-chips {
   display: flex;

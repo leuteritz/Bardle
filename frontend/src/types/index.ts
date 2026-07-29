@@ -1121,6 +1121,43 @@ export interface AscensionRank {
   color: string
 }
 
+/**
+ * One visual stage of the champion level regalia — the medallion a champion
+ * wears and the frame around its portrait. Every field climbs monotonically, so
+ * the stages read as a single escalation from recruit to level cap. The apex
+ * stage sits on CHAMPION_LEVEL_MAX_CAP and is therefore the rarest thing on the
+ * board. Table: CHAMPION_REGALIA_STAGES; lookup: regaliaStageFor().
+ *
+ * Nothing here introduces a second hue: a champion keeps its single identity
+ * colour, and rank is told through metal, geometry, brightness and motion.
+ */
+export interface ChampionRegaliaStage {
+  /** Lowest champion level that wears this stage. */
+  minLevel: number
+  /** Stage name — shown in the badge tooltip. */
+  name: string
+  /** Rim thickness of the medallion, px at CHAMPION_REGALIA_BASE_SIZE. */
+  rim: number
+  /** Outer glow radius, px at the base size. */
+  glow: number
+  /** Outer glow strength, 0…1. */
+  glowAlpha: number
+  /** White mixed into rim and numeral — the metal heats up with level, 0…1. */
+  heat: number
+  /** Corners of the faceted plate seated behind the disc; 0 leaves it round. */
+  facets: number
+  /** Conic reflection rotating around the rim. */
+  sheen: boolean
+  /** Second reflection, running the other way. */
+  sheenDual: boolean
+  /** Spark orbiting the medallion. */
+  orbit: boolean
+  /** Rays radiating out behind the medallion. */
+  rays: boolean
+  /** Crown seated on the medallion's top edge. */
+  crown: boolean
+}
+
 /** Which milestone pool a perk belongs to. */
 export type ChampionPerkTier = 'adept' | 'master' | 'elite'
 

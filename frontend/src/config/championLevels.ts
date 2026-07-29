@@ -8,8 +8,10 @@ import type {
   ChampionPerkDef,
   ChampionPerkTier,
   ChampionLevelCost,
+  ChampionRegaliaStage,
 } from '../types'
 import {
+  CHAMPION_REGALIA_STAGES,
   CHAMPION_XP_BASE,
   CHAMPION_XP_EXPONENT,
   CHAMPION_STAT_BASE,
@@ -115,6 +117,30 @@ export function ascensionRank(level: number): AscensionRank {
     if (stars >= r.minStars) rank = r
   }
   return rank
+}
+
+// ── Regalia ───────────────────────────────────────────────────────────────────
+// The badge and portrait frame escalation. Kept next to the ascension ladder
+// because both answer the same question — "how far has this champion come?" —
+// but regalia is purely visual and reads the raw level, not the star count.
+
+/** Index of the regalia stage worn at `level` (0 = Initiate). */
+export function regaliaStageIndexFor(level: number): number {
+  let index = 0
+  for (let i = 0; i < CHAMPION_REGALIA_STAGES.length; i++) {
+    if (level >= CHAMPION_REGALIA_STAGES[i].minLevel) index = i
+  }
+  return index
+}
+
+/** Regalia stage worn at `level` — never null, level 1 already wears Initiate. */
+export function regaliaStageFor(level: number): ChampionRegaliaStage {
+  return CHAMPION_REGALIA_STAGES[regaliaStageIndexFor(level)]
+}
+
+/** True when `level` is the apex stage — the loudest badge in the game. */
+export function isApexRegalia(level: number): boolean {
+  return regaliaStageIndexFor(level) === CHAMPION_REGALIA_STAGES.length - 1
 }
 
 /** True when reaching `level` grants an ascension star (and charges materials). */

@@ -22,6 +22,9 @@ import {
   fortuneMult,
   ROLE_GROWTH,
   CHAMPION_STATS,
+  regaliaStageFor,
+  regaliaStageIndexFor,
+  isApexRegalia,
 } from '../../config/championLevels'
 import {
   CHAMPION_ALLY_XP_SHARE,
@@ -31,6 +34,7 @@ import {
   CHAMPION_STAT_BASE,
   CHAMPION_ASCENSION_INTERVAL,
   CHAMPION_PERK_INTERVAL,
+  CHAMPION_REGALIA_STAGES,
   SAVE_KEY,
 } from '../../config/constants'
 import { CHAMPION_DATA } from '../../config/championData'
@@ -154,6 +158,37 @@ describe('champion levels — curves and stats', () => {
     expect(first.length).toBeGreaterThan(0)
     const second = perkChoicesFor(40, [first[0].id])
     expect(second.map((p) => p.id)).not.toContain(first[0].id)
+  })
+
+  it('escalates the regalia stage monotonically, apex only at the level cap', () => {
+    // level 1 already wears a stage — the badge is never unstyled
+    expect(regaliaStageIndexFor(1)).toBe(0)
+    expect(regaliaStageFor(1).name).toBe(CHAMPION_REGALIA_STAGES[0].name)
+
+    // never drops back, and every threshold in the table is actually reachable
+    let previous = -1
+    for (let level = 1; level <= CHAMPION_LEVEL_MAX_CAP; level++) {
+      const index = regaliaStageIndexFor(level)
+      expect(index).toBeGreaterThanOrEqual(previous)
+      previous = index
+    }
+    expect(previous).toBe(CHAMPION_REGALIA_STAGES.length - 1)
+
+    // the apex is the level cap and nothing below it
+    expect(isApexRegalia(CHAMPION_LEVEL_MAX_CAP)).toBe(true)
+    expect(isApexRegalia(CHAMPION_LEVEL_MAX_CAP - 1)).toBe(false)
+
+    // every field climbs, so no stage ever looks tamer than the one before it
+    for (let i = 1; i < CHAMPION_REGALIA_STAGES.length; i++) {
+      const prev = CHAMPION_REGALIA_STAGES[i - 1]
+      const cur = CHAMPION_REGALIA_STAGES[i]
+      expect(cur.minLevel).toBeGreaterThan(prev.minLevel)
+      expect(cur.rim).toBeGreaterThanOrEqual(prev.rim)
+      expect(cur.glow).toBeGreaterThan(prev.glow)
+      expect(cur.glowAlpha).toBeGreaterThan(prev.glowAlpha)
+      expect(cur.heat).toBeGreaterThan(prev.heat)
+      expect(cur.facets).toBeGreaterThanOrEqual(prev.facets)
+    }
   })
 })
 

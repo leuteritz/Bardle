@@ -5,6 +5,9 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useChampionLevelStore } from '@/stores/championLevelStore'
 import { getChampionTier } from '@/config/championTiers'
+import { regaliaStageFor, regaliaStageIndexFor, isApexRegalia } from '@/config/championLevels'
+import { facetClipPath } from '@/utils/geometry'
+import ChampionLevelBadge from '../ChampionLevelBadge.vue'
 import {
   ROLES,
   SIGIL_NODE_SIZE,
@@ -16,6 +19,14 @@ import {
   SIGIL_XP_RING_RADIUS,
   SIGIL_XP_RING_CIRCUMFERENCE,
   SIGIL_XP_RING_INSET,
+  CHAMPION_REGALIA_SIZE_NODE,
+  CHAMPION_REGALIA_SIZE_ALLY,
+  SIGIL_FRAME_RIM_BASE,
+  SIGIL_FRAME_RIM_STEP,
+  SIGIL_FRAME_GLOW_FACTOR,
+  SIGIL_FRAME_PLATE_MS,
+  SIGIL_XP_STROKE_BASE,
+  SIGIL_XP_STROKE_STEP,
 } from '@/config/constants'
 import type { SigilPoint } from '@/composables/useTeamSigil'
 
@@ -103,6 +114,31 @@ function xpDashOf(name: string): number {
 function needsAttentionOf(name: string): boolean {
   return levelStore.needsAttention(name)
 }
+
+// ── Portrait frame ───────────────────────────────────────────────────────────
+// The frame climbs the same regalia ladder as the medallion, so a maxed
+// champion is recognisable from the shape of its slot alone: thicker ring, more
+// glow, a cut metal plate behind the portrait and — at the apex — a plate that
+// turns. An empty slot wears the first stage, exactly the frame it had before.
+const mainLevel = computed(() => (main.value ? levelStore.levelOf(main.value) : 1))
+const mainStage = computed(() => regaliaStageFor(mainLevel.value))
+const mainStageIndex = computed(() => (main.value ? regaliaStageIndexFor(mainLevel.value) : 0))
+const mainApex = computed(() => !!main.value && isApexRegalia(mainLevel.value))
+
+const frameVars = computed<Record<string, string>>(() => {
+  const stage = mainStage.value
+  return {
+    '--node-rim': `${SIGIL_FRAME_RIM_BASE + stage.rim * SIGIL_FRAME_RIM_STEP}px`,
+    // an empty slot keeps the old faint ring; every stage above it firms up
+    '--node-rim-a': `${52 + mainStageIndex.value * 8}%`,
+    '--node-heat': `${Math.round(stage.heat * 100)}%`,
+    '--node-glow': `${Math.round(stage.glow * SIGIL_FRAME_GLOW_FACTOR)}px`,
+    '--node-glow-a': `${Math.round(stage.glowAlpha * 100)}%`,
+    '--node-facets': facetClipPath(stage.facets),
+    '--node-plate-ms': `${SIGIL_FRAME_PLATE_MS}ms`,
+    '--xp-w': String(SIGIL_XP_STROKE_BASE + mainStageIndex.value * SIGIL_XP_STROKE_STEP),
+  }
+})
 </script>
 
 <template>
@@ -131,13 +167,15 @@ function needsAttentionOf(name: string): boolean {
   >
     <img v-if="ally" :src="allyImage(ally)" :alt="ally" class="sigil-ally-img" />
     <span v-else class="sigil-ally-plus">＋</span>
-    <!-- ally level — a small rank-colored numeral riding the satellite's rim -->
-    <span
-      v-if="ally"
-      class="sigil-ally-level"
-      :class="{ 'sigil-ally-level--attention': needsAttentionOf(ally) }"
-    >
-      {{ levelOf(ally) }}
+    <!-- ally level — the same medallion as the role node, minus the ornaments
+         it has no room for (see CHAMPION_REGALIA_ORNAMENT_MIN_SIZE) -->
+    <span v-if="ally" class="sigil-ally-level">
+      <ChampionLevelBadge
+        :level="levelOf(ally)"
+        :color="roleDef.color"
+        :size="CHAMPION_REGALIA_SIZE_ALLY"
+        :attention="needsAttentionOf(ally)"
+      />
     </span>
   </button>
 
@@ -149,8 +187,9 @@ function needsAttentionOf(name: string): boolean {
       'sigil-node--full': full,
       'sigil-node--search-hit': mainHit,
       'sigil-node--search-miss': searchActive && !mainHit,
+      'sigil-node--apex': mainApex,
     }"
-    :style="[nodeStyle(point, SIGIL_NODE_SIZE), { '--role-color': roleDef.color }]"
+    :style="[nodeStyle(point, SIGIL_NODE_SIZE), { '--role-color': roleDef.color }, frameVars]"
     :aria-label="main ? `${main} (${roleDef.label})` : `Assign a champion for ${roleDef.label}`"
     @click.stop="emit('select')"
     @mouseenter="uiStore.setHoveredChampionSlotIndex(roleIndex)"
@@ -158,6 +197,10 @@ function needsAttentionOf(name: string): boolean {
     @focus="uiStore.setHoveredChampionSlotIndex(roleIndex)"
     @blur="uiStore.setHoveredChampionSlotIndex(null)"
   >
+    <!-- cut metal plate — the frame's regalia stage; first child so the XP arc,
+         the aura and the portrait all stay in front of it -->
+    <span v-if="main && mainStage.facets > 0" class="sigil-node-plate" aria-hidden="true" />
+
     <span v-if="full" class="sigil-node-aura" aria-hidden="true" />
     <span v-if="full" class="sigil-node-conic" aria-hidden="true" />
 
@@ -190,13 +233,13 @@ function needsAttentionOf(name: string): boolean {
     </span>
 
     <!-- level medallion — the headline number, sitting on the node's shoulder -->
-    <span
-      v-if="main"
-      class="sigil-node-level"
-      :class="{ 'sigil-node-level--attention': needsAttentionOf(main) }"
-      :title="`Level ${levelOf(main)}`"
-    >
-      {{ levelOf(main) }}
+    <span v-if="main" class="sigil-node-level">
+      <ChampionLevelBadge
+        :level="levelOf(main)"
+        :color="roleDef.color"
+        :size="CHAMPION_REGALIA_SIZE_NODE"
+        :attention="needsAttentionOf(main)"
+      />
     </span>
 
     <span class="sigil-node-name">{{ main ?? roleDef.label }}</span>
@@ -266,31 +309,15 @@ function needsAttentionOf(name: string): boolean {
   opacity: 0.85;
 }
 
-/* ally level numeral — bottom-right of the satellite, overlapping its rim */
+/* ally medallion — bottom-right of the satellite, overlapping its rim. The
+   wrapper only places it; size, metal and motion belong to the badge. */
 .sigil-ally-level {
   position: absolute;
   right: -3px;
   bottom: -3px;
-  /* fixed square for the same reason as the role medallion */
-  width: 21px;
-  height: 21px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #0a0704;
-  border: 1.5px solid var(--role-color);
-  color: var(--role-color);
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
   pointer-events: none;
-}
-/* Something is waiting here. Signalled by brightness and motion, never by a
-   second colour — the node keeps its one identity hue. */
-.sigil-ally-level--attention {
-  background: color-mix(in srgb, var(--role-color) 22%, #0a0704);
-  animation: sigil-level-pulse 1.9s ease-in-out infinite;
+  z-index: 3;
 }
 
 /* ── role node ── */
@@ -370,54 +397,61 @@ function needsAttentionOf(name: string): boolean {
 .sigil-node-xp-track {
   fill: none;
   stroke: rgba(10, 7, 4, 0.85);
-  stroke-width: 3.5;
+  stroke-width: var(--xp-w, 3.2);
 }
 .sigil-node-xp-fill {
   fill: none;
-  stroke-width: 3.5;
+  /* the arc thickens by one regalia stage at a time, in step with the frame */
+  stroke-width: var(--xp-w, 3.2);
   stroke-linecap: round;
   transition: stroke-dasharray 0.35s ease-out;
   filter: drop-shadow(0 0 3px currentColor);
 }
 /* enough XP banked — the arc breathes until it is spent (same colour, more life) */
 .sigil-node-xp--attention .sigil-node-xp-fill {
-  stroke-width: 4.5;
+  stroke-width: calc(var(--xp-w, 3.2) + 1);
   animation: sigil-xp-breathe 1.9s ease-in-out infinite;
 }
 
-/* level medallion — deliberately large; this is the number the board is for */
+/* level medallion — the wrapper only places it on the node's shoulder;
+   everything the badge looks like lives in ChampionLevelBadge */
 .sigil-node-level {
   position: absolute;
   left: -6px;
   top: -6px;
-  /* fixed square so the medallion stays a circle at two digits, not an ellipse
-     (levels cap at 50, so the widest label is two characters) */
-  width: 34px;
-  height: 34px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 35%, #1e1610, #0a0704);
-  border: 2px solid var(--role-color);
-  color: var(--role-color);
-  font-size: 16px;
-  font-weight: 800;
-  line-height: 1;
   z-index: 4;
   pointer-events: none;
-  box-shadow:
-    0 0 10px color-mix(in srgb, var(--role-color) 45%, transparent),
-    0 2px 6px rgba(0, 0, 0, 0.7);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
-.sigil-node-level--attention {
-  background: radial-gradient(
-    circle at 50% 35%,
-    color-mix(in srgb, var(--role-color) 30%, #1e1610),
-    #0a0704
+
+/* cut metal plate behind the portrait — the frame's own regalia stage */
+.sigil-node-plate {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* wide enough that its edges clear the XP arc rather than crossing it */
+  width: 134%;
+  height: 134%;
+  transform: translate(-50%, -50%);
+  clip-path: var(--node-facets, none);
+  background: color-mix(in srgb, var(--role-color) 52%, #0a0704);
+  pointer-events: none;
+}
+.sigil-node-plate::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  clip-path: var(--node-facets, none);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--role-color) 20%, #0a0704),
+    #0a0704 62%,
+    color-mix(in srgb, var(--role-color) 12%, #0a0704)
   );
-  animation: sigil-level-pulse 1.9s ease-in-out infinite;
+}
+/* apex only — the plate turns, slowly enough to read as a mounted medal */
+.sigil-node--apex .sigil-node-plate {
+  animation: sigil-plate-turn var(--node-plate-ms, 34000ms) linear infinite;
 }
 
 .sigil-node-circle {
@@ -428,16 +462,24 @@ function needsAttentionOf(name: string): boolean {
   border-radius: 50%;
   overflow: hidden;
   background: #0a0704;
+  /* ring width, colour heat and glow all climb with the champion's level */
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--role-color) 60%, transparent),
-    0 0 12px color-mix(in srgb, var(--role-color) 30%, transparent),
+    0 0 0 var(--node-rim, 3px)
+      color-mix(
+        in srgb,
+        color-mix(in srgb, #fff var(--node-heat, 0%), var(--role-color)) var(--node-rim-a, 60%),
+        transparent
+      ),
+    0 0 var(--node-glow, 12px) color-mix(in srgb, var(--role-color) var(--node-glow-a, 30%), transparent),
     0 4px 10px rgba(0, 0, 0, 0.55);
-  transition: box-shadow 0.2s;
+  transition:
+    box-shadow 0.25s,
+    filter 0.25s;
 }
 .sigil-node--selected .sigil-node-circle {
   box-shadow:
-    0 0 0 4px var(--role-color),
-    0 0 28px color-mix(in srgb, var(--role-color) 80%, transparent),
+    0 0 0 calc(var(--node-rim, 3px) + 1px) color-mix(in srgb, #fff var(--node-heat, 0%), var(--role-color)),
+    0 0 calc(var(--node-glow, 12px) * 2) color-mix(in srgb, var(--role-color) 80%, transparent),
     0 4px 12px rgba(0, 0, 0, 0.6);
 }
 .sigil-node-img {
@@ -558,17 +600,9 @@ function needsAttentionOf(name: string): boolean {
   }
 }
 
-@keyframes sigil-level-pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 8px color-mix(in srgb, var(--role-color) 35%, transparent),
-      0 2px 6px rgba(0, 0, 0, 0.7);
-  }
-  50% {
-    box-shadow:
-      0 0 19px color-mix(in srgb, var(--role-color) 90%, transparent),
-      0 2px 6px rgba(0, 0, 0, 0.7);
+@keyframes sigil-plate-turn {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 @keyframes sigil-xp-breathe {
@@ -613,8 +647,7 @@ function needsAttentionOf(name: string): boolean {
       0 0 14px rgba(232, 192, 64, 0.55);
   }
   .sigil-ally--spotlight,
-  .sigil-node-level--attention,
-  .sigil-ally-level--attention,
+  .sigil-node--apex .sigil-node-plate,
   .sigil-node-xp--attention .sigil-node-xp-fill {
     animation: none !important;
   }

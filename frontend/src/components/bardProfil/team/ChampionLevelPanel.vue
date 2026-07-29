@@ -23,8 +23,10 @@ import {
   CHAMPION_ASCENSION_INTERVAL,
   CHAMPION_XP_BAR_HEIGHT,
   CHAMPION_LEVEL_SPLASH_HEIGHT,
+  CHAMPION_REGALIA_SIZE_PANEL,
   CHIMES_COST_ICON,
 } from '@/config/constants'
+import ChampionLevelBadge from './ChampionLevelBadge.vue'
 import type { ChampionStatKey } from '@/types'
 
 const props = defineProps<{ champion: string }>()
@@ -50,6 +52,8 @@ const xpBar = computed(() => levelStore.xpBarOf(props.champion))
 const cost = computed(() => levelStore.costOf(props.champion))
 const blockReason = computed(() => levelStore.blockReasonOf(props.champion))
 const canLevel = computed(() => levelStore.canLevelUp(props.champion))
+/** Banked XP or an unspent perk — the medallion pings, exactly as on the board. */
+const needsAttention = computed(() => levelStore.needsAttention(props.champion))
 
 const stars = computed(() => ascensionStars(level.value))
 const rank = computed(() => ascensionRank(level.value))
@@ -162,32 +166,41 @@ function pickPerk(perkId: string) {
             </span>
           </div>
         </div>
-        <div class="clp-level-badge">
-          <Icon icon="game-icons:ribbon-medal" width="20" height="20" class="clp-level-icon" />
-          <span class="clp-level-num">{{ level }}</span>
-          <span class="clp-level-cap">/ {{ cap }}</span>
-        </div>
       </div>
     </div>
 
-    <!-- ── XP bar ── -->
+    <!-- ── XP bar — the regalia medallion rides its left edge, so the badge and
+         the bar that fills it are read as one thing ── -->
     <div class="clp-xp">
-      <div class="clp-xp-head">
-        <Icon icon="game-icons:circle-sparks" width="15" height="15" class="clp-xp-icon" />
-        <span class="clp-xp-label">Experience</span>
-        <span class="clp-xp-value">
-          <template v-if="xpBar.capped">Banked {{ $formatNumber(xpBar.current) }} — cap reached</template>
-          <template v-else>
-            {{ $formatNumber(xpBar.current) }} / {{ $formatNumber(xpBar.needed) }}
-          </template>
-        </span>
-      </div>
-      <div class="clp-xp-track">
-        <div
-          class="clp-xp-fill"
-          :class="{ 'clp-xp-fill--ready': xpBar.pct >= 1 }"
-          :style="{ width: `${Math.min(100, xpBar.pct * 100)}%` }"
+      <div class="clp-xp-badge">
+        <ChampionLevelBadge
+          :level="level"
+          :color="roleDef.color"
+          :size="CHAMPION_REGALIA_SIZE_PANEL"
+          :attention="needsAttention"
         />
+        <span class="clp-level-cap">/ {{ cap }}</span>
+      </div>
+      <div class="clp-xp-main">
+        <div class="clp-xp-head">
+          <Icon icon="game-icons:circle-sparks" width="15" height="15" class="clp-xp-icon" />
+          <span class="clp-xp-label">Experience</span>
+          <span class="clp-xp-value">
+            <template v-if="xpBar.capped">
+              Banked {{ $formatNumber(xpBar.current) }} — cap reached
+            </template>
+            <template v-else>
+              {{ $formatNumber(xpBar.current) }} / {{ $formatNumber(xpBar.needed) }}
+            </template>
+          </span>
+        </div>
+        <div class="clp-xp-track">
+          <div
+            class="clp-xp-fill"
+            :class="{ 'clp-xp-fill--ready': xpBar.pct >= 1 }"
+            :style="{ width: `${Math.min(100, xpBar.pct * 100)}%` }"
+          />
+        </div>
       </div>
     </div>
 
@@ -447,36 +460,34 @@ function pickPerk(perkId: string) {
   color: var(--rank);
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--rank) 60%, transparent));
 }
-.clp-level-badge {
-  flex-shrink: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 6px 12px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.72);
-  border: 1px solid #c89040;
-}
-.clp-level-icon {
-  color: #e8c040;
-  align-self: center;
-}
-.clp-level-num {
-  font-size: 22px;
-  line-height: 1;
-  color: #e8c040;
-}
 .clp-level-cap {
   font-size: 12px;
-  color: rgba(230, 220, 196, 0.45);
+  font-weight: 600;
+  color: rgba(230, 220, 196, 0.5);
 }
 
 /* ── xp bar ── */
 .clp-xp {
   flex-shrink: 0;
-  padding: 9px 14px 11px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 12px 14px;
   background: #1a1008;
   border-bottom: 2px solid #5c3310;
+}
+/* the medallion column — its ornaments are allowed to bleed past this strip,
+   they read as a halo rather than as a clipped shape */
+.clp-xp-badge {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.clp-xp-main {
+  flex: 1;
+  min-width: 0;
 }
 .clp-xp-head {
   display: flex;

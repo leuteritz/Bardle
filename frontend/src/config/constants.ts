@@ -1,6 +1,7 @@
 import type {
   BattlePhaseConfig,
   BattlePhaseKey,
+  ChampionRegaliaStage,
   ChampionRole,
   RoleStat,
   RoleAbilityDetail,
@@ -3451,6 +3452,62 @@ export const TEAM_SIGIL_SPLASH_HEIGHT_COMPACT = 226
 export const CHAMPION_XP_BAR_HEIGHT = 7
 /** Step sizes offered by the team-tab admin level button. */
 export const ADMIN_TEAM_LEVEL_STEPS = [1, 5] as const
+
+// ── Level regalia ─────────────────────────────────────────────────────────────
+/**
+ * The medallion and portrait frame a champion wears, escalating with its level.
+ * Stage thresholds sit on the ascension (5) and perk (10) intervals, so the
+ * badge changes exactly where progression already feels like a milestone, and
+ * the apex stage sits on CHAMPION_LEVEL_MAX_CAP — a level-50 champion is the
+ * loudest thing on the sigil board and nothing else comes close.
+ *
+ * Escalation is carried by metal, geometry, brightness and motion only. The
+ * champion's identity colour is never joined by a second hue; `heat` mixes in
+ * white, which is the colour's own highlight rather than a new one.
+ *
+ * Cost note: the animated layers (sheen/orbit/rays) are transform-only and are
+ * dropped below CHAMPION_REGALIA_ORNAMENT_MIN_SIZE, so the 15 ally satellites
+ * on the board never animate more than their rim reflection.
+ */
+/* prettier-ignore */
+export const CHAMPION_REGALIA_STAGES: ChampionRegaliaStage[] = [
+  { minLevel: 1,                      name: 'Initiate',  rim: 1.5,  glow: 6,  glowAlpha: 0.18, heat: 0,    facets: 0,  sheen: false, sheenDual: false, orbit: false, rays: false, crown: false },
+  { minLevel: 5,                      name: 'Tempered',  rim: 2,    glow: 9,  glowAlpha: 0.24, heat: 0.06, facets: 0,  sheen: false, sheenDual: false, orbit: false, rays: false, crown: false },
+  { minLevel: 10,                     name: 'Sigil',     rim: 2.25, glow: 12, glowAlpha: 0.30, heat: 0.12, facets: 6,  sheen: false, sheenDual: false, orbit: false, rays: false, crown: false },
+  { minLevel: 20,                     name: 'Radiant',   rim: 2.5,  glow: 16, glowAlpha: 0.36, heat: 0.20, facets: 6,  sheen: true,  sheenDual: false, orbit: false, rays: false, crown: false },
+  { minLevel: 30,                     name: 'Ascendant', rim: 2.75, glow: 21, glowAlpha: 0.44, heat: 0.30, facets: 8,  sheen: true,  sheenDual: false, orbit: true,  rays: false, crown: false },
+  { minLevel: 40,                     name: 'Sovereign', rim: 3,    glow: 27, glowAlpha: 0.52, heat: 0.42, facets: 8,  sheen: true,  sheenDual: true,  orbit: true,  rays: false, crown: true  },
+  { minLevel: CHAMPION_LEVEL_MAX_CAP, name: 'Eternal',   rim: 3.5,  glow: 34, glowAlpha: 0.62, heat: 0.55, facets: 12, sheen: true,  sheenDual: true,  orbit: true,  rays: true,  crown: true  },
+]
+
+/** Badge diameter (px) the regalia px values above are authored against. */
+export const CHAMPION_REGALIA_BASE_SIZE = 34
+/**
+ * Below this badge diameter the ornaments (crown, rays, orbit spark, second
+ * sheen) are dropped — on an ally satellite they read as noise, not as rank.
+ */
+export const CHAMPION_REGALIA_ORNAMENT_MIN_SIZE = 28
+/** Badge diameters used across the team tab. */
+export const CHAMPION_REGALIA_SIZE_NODE = 34
+export const CHAMPION_REGALIA_SIZE_ALLY = 21
+export const CHAMPION_REGALIA_SIZE_STRIP = 30
+export const CHAMPION_REGALIA_SIZE_PANEL = 54
+/** Rotation periods (ms) of the animated regalia layers. */
+export const CHAMPION_REGALIA_SHEEN_MS = 7000
+export const CHAMPION_REGALIA_ORBIT_MS = 4200
+export const CHAMPION_REGALIA_RAYS_MS = 16000
+/** Numeral size as a share of the badge diameter. */
+export const CHAMPION_REGALIA_FONT_RATIO = 0.46
+/** Portrait frame on the sigil board — ring width = stage rim * this + base. */
+export const SIGIL_FRAME_RIM_BASE = 1.4
+export const SIGIL_FRAME_RIM_STEP = 0.62
+/** Portrait frame glow radius = stage glow * this. */
+export const SIGIL_FRAME_GLOW_FACTOR = 0.85
+/** Rotation period (ms) of the faceted crest plate behind an apex portrait. */
+export const SIGIL_FRAME_PLATE_MS = 34000
+/** XP arc stroke width = this base plus SIGIL_XP_STROKE_STEP per regalia stage. */
+export const SIGIL_XP_STROKE_BASE = 3.2
+export const SIGIL_XP_STROKE_STEP = 0.22
 
 // ── Icon Registry ─────────────────────────────────────────────────────────────
 // All game-icons used in the project. Add new icons here before using them

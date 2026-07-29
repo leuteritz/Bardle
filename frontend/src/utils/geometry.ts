@@ -23,6 +23,25 @@ export function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, value))
 }
 
+/**
+ * `clip-path` eines regelmäßigen n-Ecks mit einer Ecke auf 12 Uhr, in Prozent
+ * der eigenen Box. Trägt die geschliffene Metallplatte hinter den Level-Medaillen
+ * und hinter dem Champion-Portrait auf dem Sigil-Board — beide lesen dieselbe
+ * Eckenzahl aus `CHAMPION_REGALIA_STAGES`, also muss die Form aus einer Quelle
+ * kommen. `corners < 3` liefert `none`, also wieder die runde Grundform.
+ */
+export function facetClipPath(corners: number): string {
+  if (corners < 3) return 'none'
+  const points: string[] = []
+  for (let i = 0; i < corners; i++) {
+    const angle = (i / corners) * Math.PI * 2 - Math.PI / 2
+    const x = (50 + 50 * Math.cos(angle)).toFixed(2)
+    const y = (50 + 50 * Math.sin(angle)).toFixed(2)
+    points.push(`${x}% ${y}%`)
+  }
+  return `polygon(${points.join(', ')})`
+}
+
 // ── Sonnen-Orbit ───────────────────────────────────────────────────────────
 /** Dampened sun radius driving all orbit visuals: identical to the real sun
  *  radius up to the comet anchor, compressed growth above it. */
