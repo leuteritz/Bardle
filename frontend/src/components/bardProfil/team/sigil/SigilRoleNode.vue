@@ -767,15 +767,15 @@ const frameVars = computed<Record<string, string>>(() => {
     transform: translate(-50%, -50%) rotate(360deg);
   }
 }
+/* opacity only — a scaling gradient of this size makes the compositor re-raster
+   the layer every frame, and the breath reads just as well without it */
 @keyframes sigil-frame-halo {
   0%,
   100% {
-    transform: translate(-50%, -50%) scale(0.94);
-    opacity: 0.45;
+    opacity: 0.4;
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.06);
-    opacity: 0.9;
+    opacity: 0.95;
   }
 }
 @keyframes sigil-xp-breathe {
