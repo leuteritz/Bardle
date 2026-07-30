@@ -74,7 +74,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  close: []
   swap: []
   'pick-ally': [subSlot: number]
   'clear-ally': [subSlot: number]
@@ -360,7 +359,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 
 <template>
   <div class="sdp-panel" :style="{ '--rc': roleDef.color, '--rank': rank.color }">
-    <!-- ══ roster strip — captain card + bench, no role badge of its own ══ -->
+    <!-- ══ roster strip — captain card + bench. No close button: the panel is
+         dismissed by clicking the empty sigil board (or Escape), so the whole
+         width belongs to the champions. ══ -->
     <div class="sdp-roster">
       <!-- the slot's captain: one large card, the only one that carries the role
            mark, so the hierarchy reads without a separate role badge -->
@@ -509,8 +510,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           </button>
         </div>
       </div>
-
-      <button class="sdp-close" aria-label="Close details" @click="emit('close')">✕</button>
     </div>
 
     <!-- ══ two columns ══ -->
@@ -1206,30 +1205,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   background: rgba(120, 30, 20, 0.9);
   color: #fff;
 }
-.sdp-close {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  line-height: 1;
-  background: rgba(30, 16, 16, 0.7);
-  border: 1px solid rgba(180, 70, 50, 0.4);
-  color: #d8a090;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 0;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-.sdp-close:hover {
-  background: rgba(120, 30, 20, 0.6);
-  color: #fff;
-}
-
 /* ══ columns ══ */
 .sdp-cols {
   flex: 1;

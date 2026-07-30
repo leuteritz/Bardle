@@ -96,6 +96,14 @@ function closePanel() {
   selectedRole.value = null
 }
 
+/** Empty board clicked — the only way to dismiss a side panel now that neither
+ *  carries a close button of its own (Escape still works). */
+function dismissPanels() {
+  if (activeModal.value !== null) return
+  selectedRole.value = null
+  synergiesOpen.value = false
+}
+
 // ── Modals ───────────────────────────────────────────────────────────────────
 function openPicker(subSlot: number = -1) {
   pickerSubSlot.value = subSlot
@@ -265,6 +273,7 @@ onUnmounted(() => {
       @open-shop="openShop('all')"
       @open-expedition="openExpedition"
       @open-synergies="openSynergies"
+      @deselect="dismissPanels"
     />
 
     <!-- ══ RIGHT — side panel: role details OR team synergies ══ -->
@@ -273,7 +282,6 @@ onUnmounted(() => {
         v-if="selectedRole !== null"
         :role-index="selectedRole"
         :highlighted-ally="boardHoveredAlly"
-        @close="closePanel"
         @swap="openPicker(-1)"
         @pick-ally="openPicker"
         @clear-ally="clearAlly"

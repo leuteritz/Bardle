@@ -46,6 +46,8 @@ const emit = defineEmits<{
   'open-shop': []
   'open-expedition': []
   'open-synergies': []
+  /** Empty board clicked — the tab closes whatever side panel is open. */
+  deselect: []
 }>()
 
 const battleStore = useBattleStore()
@@ -247,6 +249,18 @@ function onClickCapture(event: MouseEvent): void {
   event.preventDefault()
 }
 
+/**
+ * A click that reaches the board itself — not a role node, an ally satellite or
+ * one of the board's own buttons, all of which stop propagation — lands on empty
+ * space and dismisses the open side panel. That is the only way to close it now,
+ * so it must survive a drag: `didDrag` is still set when this fires after the
+ * capture handler above swallowed the click.
+ */
+function onBackgroundClick(): void {
+  if (didDrag || isDragging.value) return
+  emit('deselect')
+}
+
 // the focus camera owns the framing — a selection/panel change eases the pan back home
 watch(
   [() => props.selectedRole, () => props.panelOpen],
@@ -267,6 +281,7 @@ watch(
     @pointerup="onPointerEnd"
     @pointercancel="onPointerEnd"
     @click.capture="onClickCapture"
+    @click="onBackgroundClick"
     @dragstart.prevent
   >
     <!-- admin: raise every team champion's level, capped. Deliberately styled
@@ -318,10 +333,10 @@ watch(
     </button>
 
     <!-- Rücksprung zum laufenden StarFight — mittig zwischen Shop + Expedition -->
-    <BattleReturnButton />
+    <BattleReturnButton @click.stop />
     <!-- Gleicher Ankerpunkt: Rückweg in den Battle-Tab, wenn der Team-Tab von
          einem offenen Rollen-Slot der Battle-Landing aus geöffnet wurde -->
-    <BattleTabReturnButton />
+    <BattleTabReturnButton @click.stop />
 
     <button class="sigil-action sigil-action--expedition" @click.stop="emit('open-expedition')">
       <Icon icon="game-icons:campfire" width="26" height="26" class="sigil-action-icon" />
