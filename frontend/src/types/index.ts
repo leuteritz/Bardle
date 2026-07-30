@@ -347,7 +347,7 @@ export interface MultikillCounts {
 
 /** Which generated downscale of a champion splash/icon to load — see
  *  CHAMPION_ART_VARIANT_PX for the size thresholds. */
-export type ChampionArtSize = 'sm' | 'md' | 'full'
+export type ChampionArtSize = 'sm' | 'md' | 'lg' | 'full'
 
 /** How a champion portrait should be resolved: whose skin, and at what size. */
 export interface ChampionArtOptions {

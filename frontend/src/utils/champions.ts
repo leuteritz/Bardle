@@ -1,7 +1,13 @@
 // Champion-bezogene Helfer: Stammdaten-Ladung und alles rund um gebündelte
 // Skins (Pfade, Namen, Verfügbarkeit).
 import { CHAMPION_SKINS } from '@/config/championSkins'
-import { CHAMPION_ART_VARIANT_PX, SKIN_ORIGINAL } from '@/config/constants'
+import {
+  CHAMPION_ART_VARIANT_PX,
+  CHAMPION_ART_SM_MAX_EDGE,
+  CHAMPION_ART_MD_MAX_EDGE,
+  CHAMPION_ART_LG_MAX_EDGE,
+  SKIN_ORIGINAL,
+} from '@/config/constants'
 import type { ChampionArtSize } from '@/types'
 
 // ── Stammdaten ─────────────────────────────────────────────────────────────
@@ -50,9 +56,30 @@ export function getSkinImagePath(
   return withArtVariant(`/img/skins/${toSkinFolder(championName)}/${skin}.jpg`, size)
 }
 
+/**
+ * Wählt die Kunststufe aus der TATSÄCHLICHEN Anzeigegröße eines Elements.
+ *
+ * Nötig, weil dieselbe Grafik an derselben Stelle je nach Auflösung sehr
+ * unterschiedlich groß erscheint: ein Sigil-Knoten misst auf Full HD rund 60 px
+ * und auf 4K über 200 px, weil das Profil-Modal mit dem Viewport wächst. Fest
+ * verdrahtet man da eine Stufe, ist sie auf der einen Auflösung verschwendet und
+ * auf der anderen zu klein. Also: messen statt raten.
+ *
+ * @param edgePx längste gerenderte Kante in CSS-Pixeln
+ */
+export function championArtSizeFor(edgePx: number): ChampionArtSize {
+  if (edgePx <= CHAMPION_ART_SM_MAX_EDGE) return 'sm'
+  if (edgePx <= CHAMPION_ART_MD_MAX_EDGE) return 'md'
+  if (edgePx <= CHAMPION_ART_LG_MAX_EDGE) return 'lg'
+  return 'full'
+}
+
 /** Classic square champion icon — the default look when no skin is equipped. */
 export function getChampionIconPath(championName: string, size: ChampionArtSize = 'full'): string {
-  return withArtVariant(`/img/champion/${championName}.jpg`, size)
+  // Die Icons sind 380×380 — kleiner als die 512er-Stufe. Eine `-512`-Datei
+  // gäbe es dort weder, noch wäre sie sinnvoll: sie wäre hochskaliert und damit
+  // schlechter als die Vorlage. 'lg' fällt hier also aufs Original zurück.
+  return withArtVariant(`/img/champion/${championName}.jpg`, size === 'lg' ? 'full' : size)
 }
 
 /** Preview image for the default "Original" gallery card: the base splash art

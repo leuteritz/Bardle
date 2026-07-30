@@ -45,6 +45,7 @@ import {
   SIGIL_XP_STROKE_STEP,
 } from '@/config/constants'
 import type { SigilPoint } from '@/composables/useTeamSigil'
+import type { ChampionArtSize } from '@/types'
 
 const props = defineProps<{
   roleIndex: number
@@ -59,6 +60,10 @@ const props = defineProps<{
   /** Regalia-Ornamente (Platten, Sweep, Nieten, Halo, Corona) — sie kommen als
    *  letzte Aufbaustufe, siehe TEAM_TAB_MOUNT_STAGE_ORNAMENTS. */
   showOrnaments: boolean
+  /** Kunststufe für Knoten und Satelliten, vom Board aus dessen tatsächlichem
+   *  Kameramaßstab bestimmt (championArtSizeFor). */
+  nodeArtSize: ChampionArtSize
+  allyArtSize: ChampionArtSize
   /** Champions spotlighted by the synergies search — hits pulse gold, the rest dims. */
   searchHighlights?: string[]
   /** Sub-slot hovered in the details panel — that satellite gets a spotlight, siblings dim. */
@@ -82,8 +87,9 @@ const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 const roleDef = computed(() => ROLES[props.roleIndex])
 const main = computed(() => headerSlots.value[props.roleIndex])
 const mainImage = computed(() =>
-  // the sigil node grows with the escalation stage (up to ~200px) — full source
-  main.value ? battleStore.getChampionImage(main.value) : '',
+  // Die Stufe kommt vom Board, das als Einziges den Kameramaßstab kennt: auf
+  // Full HD ist der Knoten ~60 px groß, auf 4K über 200 px.
+  main.value ? battleStore.getChampionImage(main.value, { size: props.nodeArtSize }) : '',
 )
 const tier = computed(() => (main.value ? getChampionTier(main.value) : null))
 const allies = computed(
@@ -91,7 +97,7 @@ const allies = computed(
 )
 
 function allyImage(ally: string | null): string {
-  return ally ? battleStore.getChampionImage(ally, { size: 'md' }) : ''
+  return ally ? battleStore.getChampionImage(ally, { size: props.allyArtSize }) : ''
 }
 
 // ── Sworn allies ─────────────────────────────────────────────────────────────

@@ -8,10 +8,14 @@ import { useSynergyStore } from '@/stores/synergyStore'
 import { useChampionLevelStore } from '@/stores/championLevelStore'
 import { useTeamSigil } from '@/composables/useTeamSigil'
 import { useActionToast } from '@/composables/useActionToast'
+import { championArtSizeFor } from '@/utils/champions'
+import type { ChampionArtSize } from '@/types'
 import {
   ROLES,
   SIGIL_STAGE_SIZE,
   SIGIL_CREST_SIZE,
+  SIGIL_NODE_SIZE,
+  SIGIL_SWORN_SIZE,
   TEAM_SIGIL_FOCUS_ZOOM,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_SYNERGIES_PANEL_WIDTH,
@@ -21,6 +25,7 @@ import {
   CHAMPION_LEVEL_MAX_CAP,
   TEAM_TAB_MOUNT_STAGE_SATELLITES,
   TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
+  COMMAND_PANEL_ART_SIZE,
 } from '@/config/constants'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
@@ -175,6 +180,44 @@ const focusPoint = computed(() => {
 const totalScale = computed(
   () => fitScale.value * (focusPoint.value ? TEAM_SIGIL_FOCUS_ZOOM : 1),
 )
+
+/**
+ * Größte Kamerastufe, die dieses Layout erreichen kann — der Maßstab, nach dem
+ * die Knoten ihre Bildvariante wählen. Bewusst NICHT `totalScale`: der ändert
+ * sich beim Öffnen und Schließen der Detailseite, und jede Änderung würde die
+ * Portraits eine andere Datei nachladen lassen. Diese Obergrenze hängt nur an
+ * der Fenstergröße und steht damit still, solange niemand das Fenster zieht.
+ */
+const maxScale = computed(() => {
+  const { width, height } = tabRect.value
+  if (width <= 0 || height <= 0) return 1
+  // Ohne Detailseite füllt das Board den Tab — dafür gibt es keinen Fokus-Zoom:
+  // gezoomt wird nur auf eine ausgewählte Rolle, und die öffnet immer die Seite.
+  const wide = Math.min(width, height) / SIGIL_STAGE_SIZE
+  // Mit Detailseite ist das Board um deren Breite schmaler, dafür zoomt die
+  // Kamera. Beide Fälle schließen sich aus, also zählt der größere von beiden.
+  const focused =
+    (Math.min(Math.max(width - TEAM_SIGIL_DETAILS_PANEL_WIDTH, 0), height) / SIGIL_STAGE_SIZE) *
+    TEAM_SIGIL_FOCUS_ZOOM
+  return Math.max(wide, focused)
+})
+/**
+ * Die Rollenknoten zeigen dieselben fünf Champions wie das Command Panel in der
+ * Bottom Bar — und das ist immer sichtbar, hat seine Bilder also längst geladen.
+ * Deshalb greift der Knoten mindestens zu DESSEN Stufe, auch wenn er rechnerisch
+ * mit einer kleineren auskäme: eine geteilte Datei ist ein Cache-Treffer, eine
+ * eigene wäre ein zusätzlicher Download und ein zweiter Decode desselben Motivs,
+ * ausgerechnet in dem Moment, in dem der Tab aufgeht. Braucht der Knoten mehr
+ * (große Auflösungen), gewinnt selbstverständlich seine eigene Rechnung.
+ */
+const ART_SIZE_ORDER: ChampionArtSize[] = ['sm', 'md', 'lg', 'full']
+function atLeast(a: ChampionArtSize, b: ChampionArtSize): ChampionArtSize {
+  return ART_SIZE_ORDER.indexOf(a) >= ART_SIZE_ORDER.indexOf(b) ? a : b
+}
+const nodeArtSize = computed(() =>
+  atLeast(championArtSizeFor(SIGIL_NODE_SIZE * maxScale.value), COMMAND_PANEL_ART_SIZE),
+)
+const allyArtSize = computed(() => championArtSizeFor(SIGIL_SWORN_SIZE * maxScale.value))
 
 /** Board center in tab px — computed (not CSS 50%) so the close animation targets
  *  the FINAL board width immediately instead of jumping when the panel unmounts. */
@@ -444,6 +487,8 @@ watch(
         :full="roleFull[i]"
         :show-allies="satellitesReady"
         :show-ornaments="ornamentsReady"
+        :node-art-size="nodeArtSize"
+        :ally-art-size="allyArtSize"
         :search-highlights="searchHighlights"
         :hovered-ally="selectedRole === i ? (hoveredAlly ?? null) : null"
         @select="emit('select-role', i)"

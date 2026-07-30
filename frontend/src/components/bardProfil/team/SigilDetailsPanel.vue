@@ -179,6 +179,17 @@ function allyImage(ally: string): string {
   return battleStore.getChampionImage(ally, { size: 'md' })
 }
 
+/**
+ * Der Kapitäns-Chip ist der einzige, dessen Portrait über die volle Höhe der
+ * Roster-Leiste läuft: TEAM_SIGIL_MAIN_PORTRAIT_WIDTH breit, aber gemessene
+ * ~120 px hoch. Maßgeblich ist die längste Kante, und die liegt knapp über
+ * CHAMPION_ART_MD_MAX_EDGE — mit 'md' wäre ausgerechnet der Main der unschärfste
+ * Kopf der Seite.
+ */
+function mainChipImage(name: string): string {
+  return battleStore.getChampionImage(name, { size: 'lg' })
+}
+
 // ── Identity ─────────────────────────────────────────────────────────────────
 const tier = computed(() => (champion.value ? getChampionTier(champion.value) : null))
 const origin = computed(() => (champion.value ? getChampionOrigin(champion.value) : null))
@@ -386,7 +397,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           <span class="sdp-chip-art-fade" aria-hidden="true" />
         </template>
         <span class="sdp-chip-portrait">
-          <img v-if="main" :src="allyImage(main)" :alt="main" class="sdp-chip-img" decoding="async" />
+          <img v-if="main" :src="mainChipImage(main)" :alt="main" class="sdp-chip-img" decoding="async" />
           <span v-else class="sdp-chip-plus">＋</span>
         </span>
         <span class="sdp-chip-text">

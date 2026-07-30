@@ -712,7 +712,7 @@ function onImgError(e: Event) {
                and every card carries a full-size splash, so the art is deferred
                until the card comes into view. -->
           <img
-            :src="battleStore.getChampionImage(champion)"
+            :src="battleStore.getChampionImage(champion, { size: 'lg' })"
             :alt="champion"
             class="csp-champ-img"
             loading="lazy"

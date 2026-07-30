@@ -41,11 +41,12 @@ import BackgroundComets from './BackgroundComets.vue'
   /* slight overscan so the gentle drift never reveals hard edges */
   inset: -12px;
   background-repeat: repeat;
-  /* Beide Animationen laufen auf dem Compositor — aber nur, solange die Ebene
-     ihre eigene bekommt. `will-change` erzwingt das, statt es Chrome pro Layer
-     neu entscheiden zu lassen: sonst rastert der Main Thread bei jedem Twinkle
-     die volle Fläche neu, und das sind vier bildschirmgroße Ebenen. */
-  will-change: transform, opacity;
+  /* Kein `will-change`: Chrome legt für eine laufende transform/opacity-Animation
+     von selbst eine Compositor-Ebene an. Der Hinweis würde nur erzwingen, dass
+     alle vier bildschirmgroßen Ebenen schon beim Mounten entstehen — gemessen
+     verdoppelt das den längsten Frame beim Öffnen des Team-Tabs, weil die
+     Texturen ausgerechnet dann alloziert werden, wenn der Renderer ohnehin am
+     Anschlag ist. */
   animation:
     csb-stars-twinkle 6s ease-in-out infinite,
     csb-stars-drift 80s ease-in-out infinite alternate;

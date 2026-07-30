@@ -391,7 +391,7 @@
                   v-for="champion in group.champions"
                   :key="champion.name"
                   :name="champion.name"
-                  :image="battleStore.getChampionImage(champion.name)"
+                  :image="battleStore.getChampionImage(champion.name, { size: 'lg' })"
                   :role="CHAMPION_ROLES[champion.name]"
                   :role-badge="ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]"
                   :tier-color="getTierColor(champion.name)"
@@ -483,7 +483,7 @@
               :key="'cross-' + champion.name"
               class="cross-role-card"
               :name="champion.name"
-              :image="battleStore.getChampionImage(champion.name)"
+              :image="battleStore.getChampionImage(champion.name, { size: 'lg' })"
               :role="CHAMPION_ROLES[champion.name]"
               :role-badge="ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]"
               :tier-color="getTierColor(champion.name)"
@@ -1697,7 +1697,7 @@ const shopChampionNames = computed(() =>
       }))
       return {
         name,
-        image: battleStore.getChampionImage(name),
+        image: battleStore.getChampionImage(name, { size: 'lg' }),
         roleLabel: badge?.label ?? '',
         roleColor: badge?.color ?? '#c89040',
         traits: d.traits,

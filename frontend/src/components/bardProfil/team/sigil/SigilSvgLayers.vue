@@ -404,19 +404,19 @@ const allyLinks = computed<SigilLink[]>(() => {
   overflow: visible;
   pointer-events: none;
 }
-/* Die Drehung sitzt auf dem <svg> selbst, nicht auf einer Gruppe darin —
-   `will-change` hält die Ebene auf dem Compositor, damit die Rotation den Main
-   Thread nie wieder anfasst. */
+/* Die Drehung sitzt auf dem <svg> selbst, nicht auf einer Gruppe darin: eine
+   laufende Transform-Animation auf einem replaced element bekommt ihre eigene
+   Compositor-Ebene, eine auf einem SVG-Kindelement nicht. Bewusst OHNE
+   `will-change` — das würde die Ebene schon beim Mounten anlegen, also genau in
+   dem Frame, der beim Öffnen des Tabs ohnehin der teuerste ist. */
 .sigil-svg--spin {
   transform-origin: 50% 50%;
-  will-change: transform;
   animation: sigil-rotate var(--spin-dur, 60s) linear infinite;
 }
 .sigil-svg--reverse {
   animation-direction: reverse;
 }
 .sigil-svg--pentagram {
-  will-change: opacity;
   animation: pentagram-glow 3s ease-in-out infinite;
 }
 @keyframes sigil-rotate {

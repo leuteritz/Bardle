@@ -1,6 +1,7 @@
 import type {
   BattlePhaseConfig,
   BattlePhaseKey,
+  ChampionArtSize,
   ChampionRegaliaStage,
   ChampionRole,
   RoleStat,
@@ -2903,18 +2904,29 @@ export const SKIN_CARD_ASPECT_RATIO = '16 / 9'
 export const SKIN_CARD_MIN_WIDTH = 300
 
 /**
- * Downscaled art variants generated next to every splash and icon
- * (`KDASkin.jpg` → `KDASkin-128.jpg` / `KDASkin-256.jpg`, longest edge in px).
- * Squeezing a 1280px splash into a 24px feed slot throws away 99% of the
+ * Downscaled art variants generated next to every splash
+ * (`KDASkin.jpg` → `KDASkin-128.jpg` / `-256.jpg` / `-512.jpg`, longest edge in
+ * px). Squeezing a 1280px splash into a 24px feed slot throws away 99% of the
  * pixels and shimmers — pick the variant by the LARGEST rendered edge of the
  * element, so the numbers still hold at DPR 2:
- *   ≤ 34px → 'sm' · 35–110px → 'md' · above → 'full' (the untouched source).
- * A path with no matching variant on disk simply keeps its source.
+ *   ≤ 34px → 'sm' · 35–110px → 'md' · 111–220px → 'lg' · above → 'full'.
+ * Jede Schwelle ist die Variantenkante geteilt durch vier: doppelte Pixeldichte
+ * mal zwei Reserve, damit Skalierung nie sichtbar wird.
+ * A path with no matching variant on disk simply keeps its source — die
+ * Champion-Icons unter /img/champion sind mit 380px von Haus aus kleiner als
+ * die 512er-Stufe und behalten dort ihr Original (siehe getChampionIconPath).
  */
-export const CHAMPION_ART_VARIANT_PX = { sm: 128, md: 256, full: 0 } as const
+export const CHAMPION_ART_VARIANT_PX = { sm: 128, md: 256, lg: 512, full: 0 } as const
 /** Largest rendered edge each variant is still safe for (px, at DPR 2). */
 export const CHAMPION_ART_SM_MAX_EDGE = 34
 export const CHAMPION_ART_MD_MAX_EDGE = 110
+export const CHAMPION_ART_LG_MAX_EDGE = 220
+/**
+ * Stufe der Rollenkarten im Command Panel (Bottom Bar, ~200 px hoch). Steht
+ * hier, weil das Sigil-Board dieselben fünf Champions zeigt und sich an diese
+ * Stufe anlehnt, statt eine zweite Datei desselben Motivs zu holen.
+ */
+export const COMMAND_PANEL_ART_SIZE: ChampionArtSize = 'lg'
 
 // Sigil escalation — the sigil grows more epic with every filled slot:
 // each main lights its pentagon vertex + spoke, each ally lights a rune tick,

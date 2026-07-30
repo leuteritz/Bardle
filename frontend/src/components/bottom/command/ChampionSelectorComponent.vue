@@ -9,6 +9,7 @@ import { useRoleAbilityStates } from '@/composables/useRoleAbilityStates'
 import { championInForeground } from '@/utils/foregroundGate'
 import {
   ROLES,
+  COMMAND_PANEL_ART_SIZE,
   ROLE_HOVER_COLORS,
   CHAMPION_REVIVE_MS,
   HUD_COUNTDOWN_TICK_MS,
@@ -134,7 +135,7 @@ function onSlotLeave() {
       <div class="champ-card-body">
         <img
           v-if="slot"
-          :src="battleStore.getChampionImage(slot)"
+          :src="battleStore.getChampionImage(slot, { size: COMMAND_PANEL_ART_SIZE })"
           :alt="slot"
           class="champ-card-portrait"
           @error="onImgError"
