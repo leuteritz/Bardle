@@ -57,7 +57,7 @@ import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/ch
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
 import { SHOP_ITEMS } from '@/config/items'
 import { MATERIALS } from '@/config/materials'
-import type { ItemCategory, ShopItem, ChampionStatKey } from '@/types'
+import type { ItemCategory, ShopItem, ChampionStatKey, ChampionPerkDef } from '@/types'
 
 const props = defineProps<{
   roleIndex: number
@@ -215,13 +215,6 @@ const nextMilestone = computed(() => {
   return null
 })
 
-/** Next level that opens a perk choice — null once the cap holds no more. */
-const nextPerkLevel = computed(() => {
-  const next =
-    (Math.floor(level.value / CHAMPION_PERK_INTERVAL) + 1) * CHAMPION_PERK_INTERVAL
-  return next <= cap.value ? next : null
-})
-
 const blockLabel = computed(() => {
   switch (blockReason.value) {
     case 'cap':
@@ -265,19 +258,42 @@ function statEffectOf(key: ChampionStatKey): string {
 }
 
 // ── Perks ────────────────────────────────────────────────────────────────────
-const ownedPerks = computed(() => {
-  if (!champion.value) return []
-  return Object.entries(levelStore.progressOf(champion.value).perks)
-    .map(([lvl, id]) => ({ level: Number(lvl), perk: PERK_BY_ID[id] }))
-    .filter((e) => !!e.perk)
-    .sort((a, b) => a.level - b.level)
-})
 const perkChoices = computed(() =>
   champion.value ? levelStore.perkChoicesOf(champion.value) : [],
 )
 const hasPendingPerk = computed(
   () => !!champion.value && levelStore.hasPendingPerk(champion.value),
 )
+/** Milestone level of the unspent choice, if there is one. */
+const pendingPerkLevel = computed(
+  () => levelStore.pendingPerks.find((p) => p.champion === champion.value)?.level ?? null,
+)
+
+/**
+ * The champion's whole perk path, not just what it owns: one slot per milestone
+ * the cap allows, so a level-12 champion can already see what the ladder holds.
+ * A slot is taken, open (an unspent choice waiting) or still locked.
+ */
+interface PerkSlot {
+  level: number
+  perk: ChampionPerkDef | null
+  state: 'taken' | 'open' | 'locked'
+}
+const perkPath = computed<PerkSlot[]>(() => {
+  if (!champion.value) return []
+  const taken = levelStore.progressOf(champion.value).perks
+  const slots: PerkSlot[] = []
+  for (let l = CHAMPION_PERK_INTERVAL; l <= cap.value; l += CHAMPION_PERK_INTERVAL) {
+    const perk = taken[l] ? (PERK_BY_ID[taken[l]] ?? null) : null
+    slots.push({
+      level: l,
+      perk,
+      state: perk ? 'taken' : pendingPerkLevel.value === l ? 'open' : 'locked',
+    })
+  }
+  return slots
+})
+const takenPerkCount = computed(() => perkPath.value.filter((s) => s.state === 'taken').length)
 
 function pickPerk(perkId: string) {
   const name = champion.value
@@ -438,8 +454,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           </div>
         </div>
 
+        <!-- scrolling middle of the left column: progression, then the perk path.
+             The splash above and the Level Up button below stay put. -->
+        <div v-if="champion" class="sdp-mid">
         <!-- progression — medallion, rank ladder and the XP bar that feeds it -->
-        <div v-if="champion" class="sdp-progress">
+        <div class="sdp-progress">
           <div class="sdp-progress-head">
             <ChampionLevelBadge
               :level="level"
@@ -489,6 +508,91 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               />
             </div>
           </div>
+        </div>
+
+        <!-- ── perk path — every milestone the cap allows, taken or not, strung
+             on one spine so the whole ladder reads at a glance ── -->
+        <div class="sdp-path">
+          <div class="sdp-section-head sdp-section-head--path">
+            <span class="sdp-section-accent">✦</span>
+            <span class="sdp-section-title">Perk Path</span>
+            <div class="sdp-section-rule" />
+            <span class="sdp-section-count">{{ takenPerkCount }}/{{ perkPath.length }}</span>
+          </div>
+
+          <div class="sdp-path-track">
+            <div
+              v-for="slot in perkPath"
+              :key="slot.level"
+              class="sdp-node"
+              :class="[`sdp-node--${slot.state}`]"
+              :style="slot.perk ? { '--pc': slot.perk.color } : undefined"
+            >
+              <!-- the spine bead: perk sigil once taken, milestone level until then -->
+              <div class="sdp-node-bead">
+                <Icon
+                  v-if="slot.perk"
+                  :icon="slot.perk.icon"
+                  width="30"
+                  height="30"
+                  class="sdp-node-icon"
+                />
+                <Icon
+                  v-else-if="slot.state === 'open'"
+                  icon="game-icons:ribbon-medal"
+                  width="28"
+                  height="28"
+                  class="sdp-node-icon"
+                />
+                <span v-else class="sdp-node-lv">{{ slot.level }}</span>
+              </div>
+
+              <div class="sdp-node-body">
+                <template v-if="slot.perk">
+                  <div class="sdp-node-name">
+                    {{ slot.perk.name }}
+                    <span class="sdp-node-tag">Lv {{ slot.level }}</span>
+                  </div>
+                  <div class="sdp-node-desc">{{ slot.perk.desc }}</div>
+                </template>
+
+                <template v-else-if="slot.state === 'open'">
+                  <div class="sdp-node-name sdp-node-name--open">
+                    Milestone reached
+                    <span class="sdp-node-tag">Lv {{ slot.level }}</span>
+                  </div>
+                  <div class="sdp-node-desc">Pick one — the others stay in the pool.</div>
+                  <div class="sdp-choice">
+                    <button
+                      v-for="perk in perkChoices"
+                      :key="perk.id"
+                      class="sdp-choice-card"
+                      :style="{ '--pc': perk.color }"
+                      @click="pickPerk(perk.id)"
+                    >
+                      <Icon :icon="perk.icon" width="30" height="30" class="sdp-choice-icon" />
+                      <span class="sdp-choice-text">
+                        <span class="sdp-choice-name">{{ perk.name }}</span>
+                        <span class="sdp-choice-desc">{{ perk.desc }}</span>
+                      </span>
+                    </button>
+                  </div>
+                </template>
+
+                <template v-else>
+                  <div class="sdp-node-name sdp-node-name--locked">Level {{ slot.level }}</div>
+                  <div class="sdp-node-desc sdp-node-desc--locked">
+                    {{
+                      level >= slot.level
+                        ? 'No perk left in this pool'
+                        : `${slot.level - level} level${slot.level - level === 1 ? '' : 's'} to go`
+                    }}
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
 
         <!-- advance — the primary action, pinned so it never scrolls away -->
@@ -547,30 +651,8 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         </div>
       </div>
 
-      <!-- ── RIGHT — stats, perks and the slot's own gear ── -->
+      <!-- ── RIGHT — stats and the slot's own gear (perks live on the left) ── -->
       <div class="sdp-right">
-        <!-- perk choice first: it is the only thing here that expires -->
-        <div v-if="champion && hasPendingPerk && perkChoices.length > 0" class="sdp-perk-choice">
-          <div class="sdp-section-head">
-            <span class="sdp-section-accent sdp-section-accent--hot">✦</span>
-            <span class="sdp-section-title sdp-section-title--hot">Milestone — choose a perk</span>
-            <div class="sdp-section-rule sdp-section-rule--hot" />
-          </div>
-          <div class="sdp-perk-cards">
-            <button
-              v-for="perk in perkChoices"
-              :key="perk.id"
-              class="sdp-perk-card"
-              :style="{ '--pc': perk.color }"
-              @click="pickPerk(perk.id)"
-            >
-              <Icon :icon="perk.icon" width="34" height="34" class="sdp-perk-card-icon" />
-              <div class="sdp-perk-card-name">{{ perk.name }}</div>
-              <div class="sdp-perk-card-desc">{{ perk.desc }}</div>
-            </button>
-          </div>
-        </div>
-
         <!-- stats -->
         <div v-if="champion && stats">
           <div class="sdp-section-head">
@@ -599,39 +681,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- perks taken -->
-        <div v-if="champion">
-          <div class="sdp-section-head">
-            <span class="sdp-section-accent">✦</span>
-            <span class="sdp-section-title">Perks</span>
-            <div class="sdp-section-rule" />
-            <span class="sdp-section-count">{{ ownedPerks.length }}</span>
-          </div>
-          <div v-if="ownedPerks.length > 0" class="sdp-perk-rows">
-            <div
-              v-for="entry in ownedPerks"
-              :key="entry.level"
-              class="sdp-perk-row"
-              :style="{ '--pc': entry.perk.color }"
-            >
-              <Icon :icon="entry.perk.icon" width="26" height="26" class="sdp-perk-row-icon" />
-              <div class="sdp-perk-row-text">
-                <div class="sdp-perk-row-name">
-                  {{ entry.perk.name }}
-                  <span class="sdp-perk-row-level">Lv {{ entry.level }}</span>
-                </div>
-                <div class="sdp-perk-row-desc">{{ entry.perk.desc }}</div>
-              </div>
-            </div>
-          </div>
-          <div v-else class="sdp-empty-note">
-            <template v-if="nextPerkLevel">
-              No perks yet — the next choice opens at level {{ nextPerkLevel }}.
-            </template>
-            <template v-else>No perks — this champion has no milestone left.</template>
           </div>
         </div>
 
@@ -1146,6 +1195,26 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   color: #f0d870;
 }
 
+/* ── scrolling middle of the left column ── */
+.sdp-mid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+.sdp-mid::-webkit-scrollbar {
+  width: 4px;
+}
+.sdp-mid::-webkit-scrollbar-track {
+  background: #111;
+}
+.sdp-mid::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 2px;
+}
+
 /* ── progression block ── */
 .sdp-progress {
   flex-shrink: 0;
@@ -1241,6 +1310,186 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-xp-fill--ready {
   background: linear-gradient(to right, #2e7a1a, #52b830);
   box-shadow: 0 0 10px rgba(82, 184, 48, 0.5);
+}
+
+/* ══ perk path ══════════════════════════════════════════════════════════════
+   One node per milestone the cap allows, strung on a single spine. A node is
+   taken (perk sigil, full colour), open (gold, carries the choice cards) or
+   locked (dim, counts down the levels). Reading top to bottom answers both
+   "what did I pick?" and "what is still ahead?" without a second view. */
+.sdp-path {
+  padding: 13px 14px 16px;
+}
+.sdp-section-head--path {
+  margin-bottom: 11px;
+}
+.sdp-path-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* the spine — one line behind every bead, drawn from the first to the last */
+.sdp-path-track::before {
+  content: '';
+  position: absolute;
+  left: 23px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--rc) 55%, transparent),
+    rgba(200, 164, 90, 0.14)
+  );
+}
+.sdp-node {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.sdp-node-bead {
+  position: relative;
+  z-index: 1;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: #141410;
+  border: 2px solid rgba(200, 164, 90, 0.18);
+}
+.sdp-node-icon {
+  color: var(--pc, #c8a860);
+}
+.sdp-node-lv {
+  font-size: 17px;
+  line-height: 1;
+  color: rgba(200, 164, 90, 0.45);
+}
+.sdp-node-body {
+  flex: 1;
+  min-width: 0;
+  padding-top: 3px;
+}
+.sdp-node-name {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 17px;
+  line-height: 1.15;
+  color: var(--pc, #c8a860);
+}
+.sdp-node-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(230, 220, 196, 0.4);
+}
+.sdp-node-desc {
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #bcae8c;
+  line-height: 1.4;
+}
+
+/* taken — the bead carries the perk's own colour */
+.sdp-node--taken .sdp-node-bead {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--pc) 26%, #141410), #0d0b07);
+  border-color: color-mix(in srgb, var(--pc) 70%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--pc) 30%, transparent);
+}
+
+/* open — the only thing on this page that expires, so it is the loudest */
+.sdp-node--open .sdp-node-bead {
+  background: linear-gradient(160deg, #2a1c08, #0d0b07);
+  border-color: #e8c040;
+  box-shadow: 0 0 16px rgba(232, 192, 64, 0.4);
+  animation: sdp-node-wait 2s ease-in-out infinite;
+}
+.sdp-node--open .sdp-node-icon {
+  color: #e8c040;
+}
+.sdp-node-name--open {
+  color: #e8c040;
+}
+@keyframes sdp-node-wait {
+  0%,
+  100% {
+    box-shadow: 0 0 12px rgba(232, 192, 64, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(232, 192, 64, 0.6);
+  }
+}
+
+/* locked — present but quiet; it is a promise, not an action */
+.sdp-node--locked {
+  opacity: 0.62;
+}
+.sdp-node-name--locked {
+  font-size: 15px;
+  color: rgba(200, 164, 90, 0.6);
+}
+.sdp-node-desc--locked {
+  color: rgba(230, 220, 196, 0.32);
+}
+
+/* the choice itself — full-width cards inside the open node */
+.sdp-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 9px;
+}
+.sdp-choice-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 11px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  background: #141410;
+  border: 1px solid rgba(200, 164, 90, 0.2);
+  border-left: 3px solid var(--pc);
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.sdp-choice-card:hover {
+  transform: translateX(3px);
+  border-color: var(--pc);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--pc) 38%, transparent);
+}
+.sdp-choice-icon {
+  flex-shrink: 0;
+  color: var(--pc);
+}
+.sdp-choice-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sdp-choice-name {
+  font-size: 16px;
+  line-height: 1.1;
+  color: var(--pc);
+}
+.sdp-choice-desc {
+  font-size: 12px;
+  font-weight: 500;
+  color: #dcc99a;
+  line-height: 1.35;
 }
 
 /* ── advance block ── */
@@ -1368,15 +1617,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   letter-spacing: 0.06em;
   color: rgba(230, 220, 196, 0.4);
 }
-.sdp-empty-note {
-  padding: 11px 12px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px dashed rgba(200, 164, 90, 0.2);
-  font-size: 12.5px;
-  color: rgba(230, 220, 196, 0.45);
-}
-
 /* ── stats — four large tiles, two per row ── */
 .sdp-stats {
   display: grid;
@@ -1431,103 +1671,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-stat-effect-label {
   font-weight: 500;
   color: rgba(230, 220, 196, 0.45);
-}
-
-/* ── perk choice ── */
-.sdp-perk-choice {
-  padding: 12px;
-  border-radius: 4px;
-  background: #1a1008;
-  border: 1px solid #c89040;
-  box-shadow: inset 0 0 22px rgba(200, 144, 64, 0.12);
-}
-.sdp-perk-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 9px;
-}
-.sdp-perk-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 12px;
-  text-align: left;
-  cursor: pointer;
-  border-radius: 4px;
-  background: #141410;
-  border: 1px solid rgba(200, 164, 90, 0.2);
-  border-top: 3px solid var(--pc);
-  transition:
-    transform 0.15s,
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-.sdp-perk-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--pc);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--pc) 38%, transparent);
-}
-.sdp-perk-card-icon {
-  color: var(--pc);
-}
-.sdp-perk-card-name {
-  font-size: 17px;
-  color: var(--pc);
-  line-height: 1.15;
-}
-.sdp-perk-card-desc {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: #dcc99a;
-  line-height: 1.4;
-}
-
-/* ── perks taken ── */
-.sdp-perk-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.sdp-perk-row {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 10px 12px;
-  border-radius: 4px;
-  background: #1c1c18;
-  border: 1px solid rgba(200, 164, 90, 0.12);
-  border-left: 3px solid var(--pc);
-}
-.sdp-perk-row-icon {
-  flex-shrink: 0;
-  color: var(--pc);
-}
-.sdp-perk-row-text {
-  flex: 1;
-  min-width: 0;
-}
-.sdp-perk-row-name {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 15.5px;
-  color: var(--pc);
-  line-height: 1.15;
-}
-.sdp-perk-row-level {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(230, 220, 196, 0.4);
-}
-.sdp-perk-row-desc {
-  margin-top: 3px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: #bcae8c;
-  line-height: 1.4;
 }
 
 /* ── role abilities ── */
@@ -1678,7 +1821,8 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sdp-splash-select-cta {
+  .sdp-splash-select-cta,
+  .sdp-node--open .sdp-node-bead {
     animation: none;
     opacity: 1;
   }

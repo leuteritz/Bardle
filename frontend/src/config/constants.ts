@@ -2795,11 +2795,12 @@ export const TEAM_SIGIL_SYNERGIES_PANEL_WIDTH = 460
 export const TEAM_SIGIL_SPLASH_HEIGHT = 292
 /**
  * Ceiling the splash may grow to, as a share (%) of the left column's height.
- * The portrait absorbs the column's slack instead of leaving a dead gap above
- * the pinned Level Up button — as a share rather than a pixel cap, so a 2K/4K
- * column fills out just as tightly as a Full HD one.
+ * The portrait absorbs the column's slack instead of leaving a dead gap, but
+ * stops well short of half so the perk path below it stays readable without
+ * scrolling. A share rather than a pixel cap, so a 2K/4K column fills out just
+ * as tightly as a Full HD one.
  */
-export const TEAM_SIGIL_SPLASH_MAX_SHARE = 60
+export const TEAM_SIGIL_SPLASH_MAX_SHARE = 44
 /** Max camera drag-pan as a fraction of the scaled stage size (rubber-band bound). */
 export const TEAM_SIGIL_PAN_MAX_FRACTION = 0.15
 /** Pointer travel (px) below which a pointer-down still counts as a click, not a drag. */
