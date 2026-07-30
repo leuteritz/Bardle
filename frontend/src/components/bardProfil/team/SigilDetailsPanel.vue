@@ -4,7 +4,8 @@
  * surface. It used to hand progression (levels, perks, costs) off to a modal;
  * that modal is gone, so this panel is now two-column and twice as wide:
  *
- *   roster strip   main + the three allies, one chip each — switches the subject
+ *   roster strip   a large captain card for the main plus the bench beside it —
+ *                  a click switches which champion the page describes
  *   left column    the subject's portrait, XP, ascension and the Level Up button
  *   right column   stats, perks, role abilities and the role's equipment
  *
@@ -38,7 +39,8 @@ import {
   SKIN_ORIGINAL,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_DETAILS_LEFT_WIDTH,
-  TEAM_SIGIL_ROSTER_COLUMNS,
+  TEAM_SIGIL_BENCH_COLUMNS,
+  TEAM_SIGIL_MAIN_CHIP_WIDTH,
   TEAM_SIGIL_SPLASH_HEIGHT,
   TEAM_SIGIL_SPLASH_HEIGHT_COMPACT,
   TEAM_SIGIL_SPLASH_MAX_SHARE,
@@ -48,6 +50,7 @@ import {
   CHAMPION_PERK_INTERVAL,
   CHAMPION_XP_BAR_HEIGHT,
   CHAMPION_REGALIA_SIZE_ALLY,
+  CHAMPION_REGALIA_SIZE_CHIP_MAIN,
   CHAMPION_REGALIA_SIZE_PANEL,
   CHIMES_COST_ICON,
 } from '@/config/constants'
@@ -84,7 +87,8 @@ const splashHeightPx = `${TEAM_SIGIL_SPLASH_HEIGHT}px`
 const splashHeightCompactPx = `${TEAM_SIGIL_SPLASH_HEIGHT_COMPACT}px`
 const splashMaxShare = `${TEAM_SIGIL_SPLASH_MAX_SHARE}%`
 const xpBarHeightPx = `${CHAMPION_XP_BAR_HEIGHT}px`
-const rosterColumns = String(TEAM_SIGIL_ROSTER_COLUMNS)
+const benchColumns = String(TEAM_SIGIL_BENCH_COLUMNS)
+const mainChipWidthPx = `${TEAM_SIGIL_MAIN_CHIP_WIDTH}px`
 
 const battleStore = useBattleStore()
 const gameStore = useGameStore()
@@ -142,17 +146,7 @@ function swapSubject() {
   else emit('pick-ally', subject.value)
 }
 
-// ── Roster chips ─────────────────────────────────────────────────────────────
-interface RosterEntry {
-  index: number
-  name: string | null
-  label: string
-}
-const roster = computed<RosterEntry[]>(() => [
-  { index: MAIN_SUBJECT, name: main.value, label: roleDef.value.label },
-  ...allies.value.map((name, sub) => ({ index: sub, name, label: `Ally ${sub + 1}` })),
-])
-
+// ── Roster ──────────────────────────────────────────────────────────
 function allyImage(ally: string): string {
   return battleStore.getChampionImage(ally, { size: 'md' })
 }
@@ -326,49 +320,86 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 
 <template>
   <div class="sdp-panel" :style="{ '--rc': roleDef.color, '--rank': rank.color }">
-    <!-- ══ roster strip — the slot's four champions, one chip each ══ -->
+    <!-- ══ roster strip — captain card + bench, no role badge of its own ══ -->
     <div class="sdp-roster">
-      <div class="sdp-roster-role">
-        <img :src="roleDef.image" alt="" class="sdp-roster-role-img" />
-        <span>{{ roleDef.label }}</span>
-      </div>
+      <!-- the slot's captain: one large card, the only one that carries the role
+           mark, so the hierarchy reads without a separate role badge -->
+      <button
+        class="sdp-chip sdp-chip--main"
+        :class="{ 'sdp-chip--active': subject === MAIN_SUBJECT, 'sdp-chip--empty': !main }"
+        type="button"
+        :title="main ? `${main} — ${roleDef.label}` : `Assign ${roleDef.label}`"
+        @click="selectSubject(MAIN_SUBJECT)"
+        @mouseenter="emit('hover-ally', null)"
+      >
+        <!-- the captain's own splash, dimmed to a backdrop: the card reads as a
+             card rather than as one more row -->
+        <template v-if="main">
+          <img
+            :src="battleStore.getChampionImage(main)"
+            alt=""
+            aria-hidden="true"
+            class="sdp-chip-art"
+          />
+          <span class="sdp-chip-art-fade" aria-hidden="true" />
+        </template>
+        <span class="sdp-chip-portrait">
+          <img v-if="main" :src="allyImage(main)" :alt="main" class="sdp-chip-img" />
+          <span v-else class="sdp-chip-plus">＋</span>
+          <img :src="roleDef.image" alt="" class="sdp-chip-role-mark" />
+        </span>
+        <span class="sdp-chip-text">
+          <span class="sdp-chip-role">{{ roleDef.label }}</span>
+          <span class="sdp-chip-name">{{ main ?? 'Empty' }}</span>
+        </span>
+        <ChampionLevelBadge
+          v-if="main"
+          :level="levelOf(main)"
+          :color="roleDef.color"
+          :size="CHAMPION_REGALIA_SIZE_CHIP_MAIN"
+          :attention="needsAttentionOf(main)"
+          class="sdp-chip-badge"
+        />
+      </button>
 
-      <div class="sdp-roster-chips" @mouseleave="emit('hover-ally', null)">
+      <!-- the bench: same card, one size down -->
+      <div class="sdp-bench" @mouseleave="emit('hover-ally', null)">
         <button
-          v-for="entry in roster"
-          :key="entry.index"
-          class="sdp-chip"
+          v-for="(ally, sub) in allies"
+          :key="sub"
+          class="sdp-chip sdp-chip--ally"
           :class="{
-            'sdp-chip--active': subject === entry.index,
-            'sdp-chip--empty': !entry.name,
-            'sdp-chip--main': entry.index === MAIN_SUBJECT,
-            'sdp-chip--highlight': entry.index >= 0 && highlightedAlly === entry.index,
+            'sdp-chip--active': subject === sub,
+            'sdp-chip--empty': !ally,
+            'sdp-chip--highlight': highlightedAlly === sub,
           }"
           type="button"
-          :title="entry.name ? `${entry.name} — ${entry.label}` : `Assign ${entry.label}`"
-          @click="selectSubject(entry.index)"
-          @mouseenter="emit('hover-ally', entry.index >= 0 ? entry.index : null)"
+          :title="ally ? `${ally} — Ally ${sub + 1}` : `Assign Ally ${sub + 1}`"
+          @click="selectSubject(sub)"
+          @mouseenter="emit('hover-ally', sub)"
         >
-          <img v-if="entry.name" :src="allyImage(entry.name)" :alt="entry.name" class="sdp-chip-img" />
-          <span v-else class="sdp-chip-plus">＋</span>
+          <span class="sdp-chip-portrait">
+            <img v-if="ally" :src="allyImage(ally)" :alt="ally" class="sdp-chip-img" />
+            <span v-else class="sdp-chip-plus">＋</span>
+          </span>
           <span class="sdp-chip-text">
-            <span class="sdp-chip-role">{{ entry.label }}</span>
-            <span class="sdp-chip-name">{{ entry.name ?? 'Empty' }}</span>
+            <span class="sdp-chip-role">Ally {{ sub + 1 }}</span>
+            <span class="sdp-chip-name">{{ ally ?? 'Empty' }}</span>
           </span>
           <ChampionLevelBadge
-            v-if="entry.name"
-            :level="levelOf(entry.name)"
+            v-if="ally"
+            :level="levelOf(ally)"
             :color="roleDef.color"
             :size="CHAMPION_REGALIA_SIZE_ALLY"
-            :attention="needsAttentionOf(entry.name)"
+            :attention="needsAttentionOf(ally)"
             class="sdp-chip-badge"
           />
           <span
-            v-if="entry.name && entry.index >= 0"
+            v-if="ally"
             class="sdp-chip-clear"
             role="button"
             title="Remove ally"
-            @click.stop="emit('clear-ally', entry.index)"
+            @click.stop="emit('clear-ally', sub)"
           >
             ✕
           </span>
@@ -794,34 +825,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
 }
-.sdp-roster-role {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  border-radius: 4px;
-  background: #0f0b06;
-  border: 1px solid var(--rc);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--rc);
-}
-.sdp-roster-role-img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-.sdp-roster-chips {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(v-bind(rosterColumns), 1fr);
-  gap: 7px;
-}
-/* one chip per champion of the slot — the whole roster is always visible, so
+/* one card per champion of the slot — the whole roster is always visible, so
    switching subject never costs a navigation step */
 .sdp-chip {
   position: relative;
@@ -861,24 +865,103 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-chip--empty {
   border-style: dashed;
 }
-.sdp-chip-img {
+/* square portrait well — the size step between captain and bench lives here */
+.sdp-chip-portrait {
+  position: relative;
   width: 38px;
   height: 38px;
   flex-shrink: 0;
+}
+
+/* The captain card — the only chip that wears the role mark and the only one at
+   full size, so "who plays this slot" reads before any label does. */
+.sdp-chip--main {
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  width: v-bind(mainChipWidthPx);
+  padding: 8px 10px 8px 8px;
+  gap: 11px;
+}
+.sdp-chip-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  opacity: 0.34;
+}
+.sdp-chip-art-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(12, 9, 5, 0.94) 0%,
+    rgba(12, 9, 5, 0.7) 52%,
+    rgba(12, 9, 5, 0.25) 100%
+  );
+}
+/* the art is decoration — everything readable sits above it */
+.sdp-chip--main > .sdp-chip-portrait,
+.sdp-chip--main > .sdp-chip-text,
+.sdp-chip--main > .sdp-chip-badge {
+  position: relative;
+  z-index: 1;
+}
+.sdp-chip--main .sdp-chip-name {
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+.sdp-chip--main .sdp-chip-portrait {
+  width: 62px;
+  height: 62px;
+}
+.sdp-chip--main .sdp-chip-role {
+  font-size: 10.5px;
+  color: var(--rc);
+}
+.sdp-chip--main .sdp-chip-name {
+  font-size: 19px;
+}
+.sdp-chip--main .sdp-chip-plus {
+  font-size: 28px;
+}
+/* role mark rides the captain's portrait instead of standing on its own */
+.sdp-chip-role-mark {
+  position: absolute;
+  left: -5px;
+  bottom: -5px;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.9));
+}
+
+/* the bench — same card language, one size down, two rows of three */
+.sdp-bench {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(v-bind(benchColumns), 1fr);
+  gap: 7px;
+}
+.sdp-chip-img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   object-position: top;
   border-radius: 4px;
   border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent);
 }
 .sdp-chip-plus {
-  width: 38px;
-  height: 38px;
-  flex-shrink: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
   background: #0f0b06;
+  border: 1px dashed color-mix(in srgb, var(--rc) 45%, transparent);
   font-size: 20px;
   line-height: 1;
   color: var(--rc);

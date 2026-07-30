@@ -2784,11 +2784,14 @@ export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 900
 /** Width (px) of the left (identity + progression) column inside that panel. */
 export const TEAM_SIGIL_DETAILS_LEFT_WIDTH = 434
 /**
- * Columns of the details-page roster strip (main + ALLIES_PER_ROLE allies).
- * Three columns divide the six chips into two even rows — a wider grid would
- * squeeze the champion names, a narrower one would cost another row of height.
+ * The details-page roster strip: one large captain card for the role's main
+ * champion, then the bench in a grid beside it. Three bench columns divide
+ * ALLIES_PER_ROLE into two rows that match the captain card's height — a wider
+ * grid would squeeze the champion names, a narrower one would add a third row.
  */
-export const TEAM_SIGIL_ROSTER_COLUMNS = 3
+export const TEAM_SIGIL_BENCH_COLUMNS = 3
+/** Width (px) of the captain card; the bench takes whatever is left. */
+export const TEAM_SIGIL_MAIN_CHIP_WIDTH = 250
 /** Width (px) of the team synergies panel — the other, narrower side panel. */
 export const TEAM_SIGIL_SYNERGIES_PANEL_WIDTH = 460
 /** Height (px) of the details-panel splash header (hero card: name + tier/origin/trait chips). */
@@ -3533,6 +3536,8 @@ export const CHAMPION_REGALIA_ORNAMENT_MIN_SIZE = 28
 /** Badge diameters used across the team tab. */
 export const CHAMPION_REGALIA_SIZE_NODE = 34
 export const CHAMPION_REGALIA_SIZE_ALLY = 21
+/** Medallion on the details-page captain card — a step above the bench chips. */
+export const CHAMPION_REGALIA_SIZE_CHIP_MAIN = 28
 export const CHAMPION_REGALIA_SIZE_PANEL = 54
 /** Rotation periods (ms) of the animated regalia layers. */
 export const CHAMPION_REGALIA_SHEEN_MS = 7000
