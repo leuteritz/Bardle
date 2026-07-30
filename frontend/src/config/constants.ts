@@ -2782,7 +2782,7 @@ export const TEAM_SIGIL_CAMERA_MS = 450
  */
 export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 900
 /** Width (px) of the left (identity + progression) column inside that panel. */
-export const TEAM_SIGIL_DETAILS_LEFT_WIDTH = 396
+export const TEAM_SIGIL_DETAILS_LEFT_WIDTH = 434
 /**
  * Columns of the details-page roster strip (main + ALLIES_PER_ROLE allies).
  * Three columns divide the six chips into two even rows — a wider grid would
@@ -2795,12 +2795,12 @@ export const TEAM_SIGIL_SYNERGIES_PANEL_WIDTH = 460
 export const TEAM_SIGIL_SPLASH_HEIGHT = 292
 /**
  * Ceiling the splash may grow to, as a share (%) of the left column's height.
- * The portrait absorbs the column's slack instead of leaving a dead gap, but
- * stops well short of half so the perk path below it stays readable without
- * scrolling. A share rather than a pixel cap, so a 2K/4K column fills out just
- * as tightly as a Full HD one.
+ * Deliberately under a third: below the portrait sit the progression block and
+ * the perk path, and the path is the reason the column is tall. A share rather
+ * than a pixel cap, so a 2K/4K column fills out just as tightly as a Full HD one
+ * — on a taller screen the extra height goes to the path, not to the splash.
  */
-export const TEAM_SIGIL_SPLASH_MAX_SHARE = 44
+export const TEAM_SIGIL_SPLASH_MAX_SHARE = 46
 /** Max camera drag-pan as a fraction of the scaled stage size (rubber-band bound). */
 export const TEAM_SIGIL_PAN_MAX_FRACTION = 0.15
 /** Pointer travel (px) below which a pointer-down still counts as a click, not a drag. */

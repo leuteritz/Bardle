@@ -27,6 +27,7 @@ import {
   ascensionStars,
   isAscensionLevel,
   isPerkLevel,
+  perkChoicesFor,
   statEffectLabel,
   CHAMPION_STATS,
   PERK_BY_ID,
@@ -261,9 +262,6 @@ function statEffectOf(key: ChampionStatKey): string {
 const perkChoices = computed(() =>
   champion.value ? levelStore.perkChoicesOf(champion.value) : [],
 )
-const hasPendingPerk = computed(
-  () => !!champion.value && levelStore.hasPendingPerk(champion.value),
-)
 /** Milestone level of the unspent choice, if there is one. */
 const pendingPerkLevel = computed(
   () => levelStore.pendingPerks.find((p) => p.champion === champion.value)?.level ?? null,
@@ -278,10 +276,13 @@ interface PerkSlot {
   level: number
   perk: ChampionPerkDef | null
   state: 'taken' | 'open' | 'locked'
+  /** Milestone already passed with nothing taken — its pool ran dry. */
+  exhausted: boolean
 }
 const perkPath = computed<PerkSlot[]>(() => {
   if (!champion.value) return []
   const taken = levelStore.progressOf(champion.value).perks
+  const ownedIds = Object.values(taken)
   const slots: PerkSlot[] = []
   for (let l = CHAMPION_PERK_INTERVAL; l <= cap.value; l += CHAMPION_PERK_INTERVAL) {
     const perk = taken[l] ? (PERK_BY_ID[taken[l]] ?? null) : null
@@ -289,6 +290,7 @@ const perkPath = computed<PerkSlot[]>(() => {
       level: l,
       perk,
       state: perk ? 'taken' : pendingPerkLevel.value === l ? 'open' : 'locked',
+      exhausted: !perk && level.value >= l && perkChoicesFor(l, ownedIds).length === 0,
     })
   }
   return slots
@@ -438,78 +440,78 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </span>
           </div>
 
+          <!-- hero footer — the progression readout rides the portrait itself:
+               medallion, rank ladder, name and the XP bar as the card's base.
+               Folding it in here is what frees the column below for the path. -->
           <div class="sdp-splash-bottom">
-            <div class="sdp-name">{{ champion ?? 'No Champion' }}</div>
-            <button
-              v-if="champion && skinCount > 0"
-              class="sdp-skins-btn"
-              type="button"
-              :title="`Equipped: ${equippedSkinName}`"
-              @click.stop="openSkins"
-            >
-              <Icon icon="game-icons:cape" width="17" height="17" />
-              <span>Skins</span>
-              <span class="sdp-skins-btn-count">{{ skinCount }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- scrolling middle of the left column: progression, then the perk path.
-             The splash above and the Level Up button below stay put. -->
-        <div v-if="champion" class="sdp-mid">
-        <!-- progression — medallion, rank ladder and the XP bar that feeds it -->
-        <div class="sdp-progress">
-          <div class="sdp-progress-head">
-            <ChampionLevelBadge
-              :level="level"
-              :color="roleDef.color"
-              :size="CHAMPION_REGALIA_SIZE_PANEL"
-              :attention="needsAttentionOf(champion)"
-            />
-            <div class="sdp-progress-title">
-              <div class="sdp-progress-level">
-                Level <b>{{ level }}</b>
-                <span class="sdp-progress-cap">/ {{ cap }}</span>
-              </div>
-              <div class="sdp-progress-rank">{{ rank.name }}</div>
-            </div>
-          </div>
-
-          <div class="sdp-stars" :title="`${stars} of ${maxStars} ascension stars`">
-            <Icon
-              v-for="i in maxStars"
-              :key="i"
-              icon="game-icons:beveled-star"
-              width="15"
-              height="15"
-              class="sdp-star"
-              :class="{ 'sdp-star--on': i <= stars }"
-            />
-          </div>
-
-          <div class="sdp-xp">
-            <div class="sdp-xp-head">
-              <Icon icon="game-icons:circle-sparks" width="15" height="15" class="sdp-xp-icon" />
-              <span class="sdp-xp-label">Experience</span>
-              <span class="sdp-xp-value">
-                <template v-if="xpBar.capped">
-                  Banked {{ $formatNumber(xpBar.current) }}
-                </template>
-                <template v-else>
-                  {{ $formatNumber(xpBar.current) }} / {{ $formatNumber(xpBar.needed) }}
-                </template>
-              </span>
-            </div>
-            <div class="sdp-xp-track">
-              <div
-                class="sdp-xp-fill"
-                :class="{ 'sdp-xp-fill--ready': xpBar.pct >= 1 }"
-                :style="{ width: `${Math.min(100, xpBar.pct * 100)}%` }"
+            <div v-if="champion" class="sdp-hero-row">
+              <ChampionLevelBadge
+                :level="level"
+                :color="roleDef.color"
+                :size="CHAMPION_REGALIA_SIZE_PANEL"
+                :attention="needsAttentionOf(champion)"
               />
+              <div class="sdp-hero-meta">
+                <div class="sdp-hero-level">
+                  Level <b>{{ level }}</b>
+                  <span class="sdp-hero-cap">/ {{ cap }}</span>
+                  <span class="sdp-hero-rank">{{ rank.name }}</span>
+                </div>
+                <div class="sdp-stars" :title="`${stars} of ${maxStars} ascension stars`">
+                  <Icon
+                    v-for="i in maxStars"
+                    :key="i"
+                    icon="game-icons:beveled-star"
+                    width="14"
+                    height="14"
+                    class="sdp-star"
+                    :class="{ 'sdp-star--on': i <= stars }"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="sdp-name-row">
+              <div class="sdp-name">{{ champion ?? 'No Champion' }}</div>
+              <button
+                v-if="champion && skinCount > 0"
+                class="sdp-skins-btn"
+                type="button"
+                :title="`Equipped: ${equippedSkinName}`"
+                @click.stop="openSkins"
+              >
+                <Icon icon="game-icons:cape" width="17" height="17" />
+                <span>Skins</span>
+                <span class="sdp-skins-btn-count">{{ skinCount }}</span>
+              </button>
+            </div>
+
+            <div v-if="champion" class="sdp-xp">
+              <div class="sdp-xp-head">
+                <Icon icon="game-icons:circle-sparks" width="14" height="14" class="sdp-xp-icon" />
+                <span class="sdp-xp-label">Experience</span>
+                <span class="sdp-xp-value">
+                  <template v-if="xpBar.capped">
+                    Banked {{ $formatNumber(xpBar.current) }}
+                  </template>
+                  <template v-else>
+                    {{ $formatNumber(xpBar.current) }} / {{ $formatNumber(xpBar.needed) }}
+                  </template>
+                </span>
+              </div>
+              <div class="sdp-xp-track">
+                <div
+                  class="sdp-xp-fill"
+                  :class="{ 'sdp-xp-fill--ready': xpBar.pct >= 1 }"
+                  :style="{ width: `${Math.min(100, xpBar.pct * 100)}%` }"
+                />
+              </div>
             </div>
           </div>
         </div>
 
+        <!-- the perk path owns the rest of the column and scrolls on its own -->
+        <div v-if="champion" class="sdp-mid">
         <!-- ── perk path — every milestone the cap allows, taken or not, strung
              on one spine so the whole ladder reads at a glance ── -->
         <div class="sdp-path">
@@ -582,11 +584,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 <template v-else>
                   <div class="sdp-node-name sdp-node-name--locked">Level {{ slot.level }}</div>
                   <div class="sdp-node-desc sdp-node-desc--locked">
-                    {{
-                      level >= slot.level
-                        ? 'No perk left in this pool'
-                        : `${slot.level - level} level${slot.level - level === 1 ? '' : 's'} to go`
-                    }}
+                    <template v-if="slot.exhausted">No perk left in this pool</template>
+                    <template v-else-if="level >= slot.level">Choice still open</template>
+                    <template v-else>
+                      {{ slot.level - level }} level{{ slot.level - level === 1 ? '' : 's' }} to go
+                    </template>
                   </div>
                 </template>
               </div>
@@ -1140,11 +1142,50 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
   flex-shrink: 0;
 }
+/* hero footer — stacked over the base of the portrait, so the card reads as one
+   object: rank line, name, then the XP bar as its bottom edge */
 .sdp-splash-bottom {
   position: absolute;
   left: 14px;
   right: 14px;
   bottom: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sdp-hero-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.sdp-hero-meta {
+  min-width: 0;
+}
+.sdp-hero-level {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 15px;
+  color: #dcc99a;
+  line-height: 1.1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+}
+.sdp-hero-level b {
+  font-size: 23px;
+  color: #f4e6bc;
+}
+.sdp-hero-cap {
+  font-size: 12px;
+  color: rgba(230, 220, 196, 0.45);
+}
+.sdp-hero-rank {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rank);
+}
+.sdp-name-row {
   display: flex;
   align-items: flex-end;
   gap: 10px;
@@ -1195,9 +1236,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   color: #f0d870;
 }
 
-/* ── scrolling middle of the left column ── */
+/* ── the perk path owns the middle of the left column ──
+   Content-sized, not a second greedy flex child: a short path (all milestones
+   still locked) hands its slack to the portrait above instead of padding itself
+   out, and a long one (an open choice) shrinks and scrolls on its own. */
 .sdp-mid {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1215,49 +1259,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   border-radius: 2px;
 }
 
-/* ── progression block ── */
-.sdp-progress {
-  flex-shrink: 0;
-  padding: 13px 14px;
-  background: #16120a;
-  border-bottom: 2px solid #5c3310;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
-}
-.sdp-progress-head {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-}
-.sdp-progress-title {
-  min-width: 0;
-}
-.sdp-progress-level {
-  font-size: 17px;
-  color: #dcc99a;
-  line-height: 1.1;
-}
-.sdp-progress-level b {
-  font-size: 26px;
-  color: #f4e6bc;
-}
-.sdp-progress-cap {
-  font-size: 13px;
-  color: rgba(230, 220, 196, 0.4);
-}
-.sdp-progress-rank {
-  margin-top: 3px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--rank);
-}
+/* ── hero footer readouts ── */
 .sdp-stars {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  margin-top: 11px;
+  margin-top: 5px;
 }
 .sdp-star {
   color: #3a3428;
@@ -1266,8 +1273,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   color: var(--rank);
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--rank) 60%, transparent));
 }
-.sdp-xp {
-  margin-top: 12px;
+.sdp-xp-label,
+.sdp-xp-value {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
 }
 .sdp-xp-head {
   display: flex;
@@ -1429,16 +1437,36 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   }
 }
 
-/* locked — present but quiet; it is a promise, not an action */
+/* Locked — present but quiet; it is a promise, not an action. Compact too: a
+   locked slot has nothing to read, and every row it saves is a row the taken
+   perks above it get to keep on screen. */
 .sdp-node--locked {
   opacity: 0.62;
+  align-items: center;
+}
+.sdp-node--locked .sdp-node-bead {
+  width: 36px;
+  height: 36px;
+  margin-left: 6px;
+}
+.sdp-node--locked .sdp-node-body {
+  padding-top: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
 }
 .sdp-node-name--locked {
-  font-size: 15px;
+  font-size: 14.5px;
   color: rgba(200, 164, 90, 0.6);
 }
 .sdp-node-desc--locked {
+  margin-top: 0;
+  font-size: 12px;
   color: rgba(230, 220, 196, 0.32);
+  white-space: nowrap;
+}
+.sdp-node--locked .sdp-node-lv {
+  font-size: 14px;
 }
 
 /* the choice itself — full-width cards inside the open node */
@@ -1805,9 +1833,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   }
   .sdp-name {
     font-size: 28px;
-  }
-  .sdp-progress {
-    padding: 11px 14px;
   }
   .sdp-stat {
     padding: 10px 12px;
