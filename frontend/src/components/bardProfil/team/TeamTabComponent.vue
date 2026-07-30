@@ -16,11 +16,10 @@ import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
 import ChampionSkinsPanel from './ChampionSkinsPanel.vue'
-import ChampionLevelPanel from './ChampionLevelPanel.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
 
-type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | 'skins' | 'levels' | null
+type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | 'skins' | null
 
 const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partial<
   Record<ChampionRole, number>
@@ -71,8 +70,6 @@ const roleDef = computed(() => ROLES[roleIndex.value])
 const currentEquipment = computed(() => itemStore.slotEquipment[roleIndex.value])
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
-/** Main champion of the selected role — the skin gallery browses this one. */
-const mainChampion = computed(() => headerSlots.value[roleIndex.value])
 const roleFilteredChampions = computed(() =>
   availableChampions.value.filter((c) => getChampionRoles(c).includes(roleDef.value.key)),
 )
@@ -124,23 +121,19 @@ function openEquipment(category: ItemCategory) {
   activeModal.value = 'equipment'
 }
 
-function openSkins() {
-  if (!mainChampion.value) return
+/** Champion whose skin gallery is open — the details page picks main or ally. */
+const skinChampion = ref<string | null>(null)
+
+function openSkins(champion: string) {
+  if (!champion) return
+  skinChampion.value = champion
   activeModal.value = 'skins'
-}
-
-/** Champion whose progression the level modal is showing (main or ally). */
-const levelChampion = ref<string | null>(null)
-
-function openLevels(champion: string) {
-  levelChampion.value = champion
-  activeModal.value = 'levels'
 }
 
 function closeModal() {
   activeModal.value = null
   pickerSubSlot.value = -1
-  levelChampion.value = null
+  skinChampion.value = null
 }
 
 function onSelectorTabChange(subSlot: number) {
@@ -286,7 +279,6 @@ onUnmounted(() => {
         @clear-ally="clearAlly"
         @pick-equipment="openEquipment"
         @pick-skins="openSkins"
-        @pick-levels="openLevels"
         @hover-ally="hoveredAllySub = $event"
       />
       <TeamSynergiesPanel
@@ -346,25 +338,14 @@ onUnmounted(() => {
     </TeamModalShell>
 
     <TeamModalShell
-      v-if="activeModal === 'skins' && mainChampion"
-      :title="`${mainChampion} — Skins`"
+      v-if="activeModal === 'skins' && skinChampion"
+      :title="`${skinChampion} — Skins`"
       icon="game-icons:cape"
       size="xl"
       hide-header
       @close="closeModal"
     >
-      <ChampionSkinsPanel class="team-modal-fill" :champion="mainChampion" />
-    </TeamModalShell>
-
-    <TeamModalShell
-      v-if="activeModal === 'levels' && levelChampion"
-      :title="`${levelChampion} — Progression`"
-      icon="game-icons:ribbon-medal"
-      size="md"
-      hide-header
-      @close="closeModal"
-    >
-      <ChampionLevelPanel class="team-modal-fill" :champion="levelChampion" />
+      <ChampionSkinsPanel class="team-modal-fill" :champion="skinChampion" />
     </TeamModalShell>
 
     <TeamModalShell

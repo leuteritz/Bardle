@@ -4,7 +4,7 @@ import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useSynergyStore } from '@/stores/synergyStore'
-import { TEAM_SIGIL_DETAILS_PANEL_WIDTH } from '@/config/constants'
+import { TEAM_SIGIL_SYNERGIES_PANEL_WIDTH } from '@/config/constants'
 import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 
 const emit = defineEmits<{
@@ -13,7 +13,7 @@ const emit = defineEmits<{
   highlight: [champions: string[]]
 }>()
 
-const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
+const panelWidthPx = `${TEAM_SIGIL_SYNERGIES_PANEL_WIDTH}px`
 
 const battleStore = useBattleStore()
 const synergyStore = useSynergyStore()

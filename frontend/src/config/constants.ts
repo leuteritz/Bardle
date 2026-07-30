@@ -2774,11 +2774,32 @@ export const SIGIL_RING_CORE_R = 120
 export const TEAM_SIGIL_FOCUS_ZOOM = 1.6
 /** Camera pan/zoom transition duration (ms) — mirrored in SigilBoardComponent CSS. */
 export const TEAM_SIGIL_CAMERA_MS = 450
-/** Width (px) of the role details panel — the board's fit-scale subtracts it while
- *  a role is selected so open/close resolves in a single camera move. */
-export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 460
+/**
+ * Width (px) of the role details panel — the board's fit-scale subtracts it while
+ * a role is selected so open/close resolves in a single camera move. The panel is
+ * two-column and carries the whole champion progression (levels, perks, costs)
+ * that used to live in a modal, so it is roughly twice the synergies panel.
+ */
+export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 900
+/** Width (px) of the left (identity + progression) column inside that panel. */
+export const TEAM_SIGIL_DETAILS_LEFT_WIDTH = 396
+/**
+ * Columns of the details-page roster strip (main + ALLIES_PER_ROLE allies).
+ * Three columns divide the six chips into two even rows — a wider grid would
+ * squeeze the champion names, a narrower one would cost another row of height.
+ */
+export const TEAM_SIGIL_ROSTER_COLUMNS = 3
+/** Width (px) of the team synergies panel — the other, narrower side panel. */
+export const TEAM_SIGIL_SYNERGIES_PANEL_WIDTH = 460
 /** Height (px) of the details-panel splash header (hero card: name + tier/origin/trait chips). */
 export const TEAM_SIGIL_SPLASH_HEIGHT = 292
+/**
+ * Ceiling the splash may grow to, as a share (%) of the left column's height.
+ * The portrait absorbs the column's slack instead of leaving a dead gap above
+ * the pinned Level Up button — as a share rather than a pixel cap, so a 2K/4K
+ * column fills out just as tightly as a Full HD one.
+ */
+export const TEAM_SIGIL_SPLASH_MAX_SHARE = 60
 /** Max camera drag-pan as a fraction of the scaled stage size (rubber-band bound). */
 export const TEAM_SIGIL_PAN_MAX_FRACTION = 0.15
 /** Pointer travel (px) below which a pointer-down still counts as a click, not a drag. */
@@ -3449,8 +3470,6 @@ export const CHAMPION_LAST_STAND_HP_THRESHOLD = 0.35
 export const CHAMPION_CRIT_DAMAGE_MULT = 2
 
 // Champion level UI
-/** Height of the champion splash in the level panel, px. */
-export const CHAMPION_LEVEL_SPLASH_HEIGHT = 236
 /**
  * Splash height in the role details panel on flat desktops (Full HD class).
  * The stat headline claims fixed space above the scrolling body, so the splash
@@ -3513,7 +3532,6 @@ export const CHAMPION_REGALIA_ORNAMENT_MIN_SIZE = 28
 /** Badge diameters used across the team tab. */
 export const CHAMPION_REGALIA_SIZE_NODE = 34
 export const CHAMPION_REGALIA_SIZE_ALLY = 21
-export const CHAMPION_REGALIA_SIZE_STRIP = 30
 export const CHAMPION_REGALIA_SIZE_PANEL = 54
 /** Rotation periods (ms) of the animated regalia layers. */
 export const CHAMPION_REGALIA_SHEEN_MS = 7000
@@ -4077,7 +4095,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:heart-armor', // VITALITY stat — HP / battle power
   'game-icons:meditation', // FOCUS stat — role ability cooldowns
   'game-icons:coinflip', // FORTUNE stat — chime / material gains
-  // Champion Levels — system chrome (SigilDetailsPanel, ChampionLevelPanel)
+  // Champion Levels — system chrome (SigilDetailsPanel)
   'game-icons:ribbon-medal', // Level badge on the champion card
   'game-icons:circle-sparks', // XP bar / XP gain readout
   'game-icons:beveled-star', // Ascension star

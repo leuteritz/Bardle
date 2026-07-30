@@ -14,6 +14,7 @@ import {
   SIGIL_CREST_SIZE,
   TEAM_SIGIL_FOCUS_ZOOM,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
+  TEAM_SIGIL_SYNERGIES_PANEL_WIDTH,
   TEAM_SIGIL_PAN_MAX_FRACTION,
   TEAM_SIGIL_DRAG_THRESHOLD_PX,
   ADMIN_TEAM_LEVEL_STEPS,
@@ -130,11 +131,15 @@ onMounted(() => {
   resizeObserver.observe(tabEl)
 })
 
-/** A right-side panel (role details OR synergies) narrows the visible board. */
-const sidePanelOpen = computed(() => props.selectedRole !== null || !!props.panelOpen)
+/** A right-side panel narrows the visible board — the two are not equally wide,
+ *  so the board has to subtract the one that is actually open. */
+const sidePanelWidth = computed(() => {
+  if (props.selectedRole !== null) return TEAM_SIGIL_DETAILS_PANEL_WIDTH
+  return props.panelOpen ? TEAM_SIGIL_SYNERGIES_PANEL_WIDTH : 0
+})
 
 const fitScale = computed(() => {
-  const boardWidth = tabRect.value.width - (sidePanelOpen.value ? TEAM_SIGIL_DETAILS_PANEL_WIDTH : 0)
+  const boardWidth = tabRect.value.width - sidePanelWidth.value
   if (boardWidth <= 0 || tabRect.value.height <= 0) return 1
   return Math.min(boardWidth, tabRect.value.height) / SIGIL_STAGE_SIZE
 })
@@ -162,7 +167,7 @@ const totalScale = computed(
 /** Board center in tab px — computed (not CSS 50%) so the close animation targets
  *  the FINAL board width immediately instead of jumping when the panel unmounts. */
 const boardCenter = computed(() => ({
-  x: (tabRect.value.width - (sidePanelOpen.value ? TEAM_SIGIL_DETAILS_PANEL_WIDTH : 0)) / 2,
+  x: (tabRect.value.width - sidePanelWidth.value) / 2,
   y: tabRect.value.height / 2,
 }))
 
