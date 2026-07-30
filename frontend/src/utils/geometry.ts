@@ -29,17 +29,39 @@ export function clampPercent(value: number): number {
  * und hinter dem Champion-Portrait auf dem Sigil-Board — beide lesen dieselbe
  * Eckenzahl aus `CHAMPION_REGALIA_STAGES`, also muss die Form aus einer Quelle
  * kommen. `corners < 3` liefert `none`, also wieder die runde Grundform.
+ *
+ * `turn` dreht das Polygon um Bruchteile eines Eckenschritts (0.5 = halber
+ * Schritt). Zwei um einen halben Schritt versetzte Platten ergeben übereinander
+ * eine Sternsilhouette — genau das macht die zweite Platte ab „Radiant".
  */
-export function facetClipPath(corners: number): string {
+export function facetClipPath(corners: number, turn = 0): string {
   if (corners < 3) return 'none'
   const points: string[] = []
   for (let i = 0; i < corners; i++) {
-    const angle = (i / corners) * Math.PI * 2 - Math.PI / 2
+    const angle = ((i + turn) / corners) * Math.PI * 2 - Math.PI / 2
     const x = (50 + 50 * Math.cos(angle)).toFixed(2)
     const y = (50 + 50 * Math.sin(angle)).toFixed(2)
     points.push(`${x}% ${y}%`)
   }
   return `polygon(${points.join(', ')})`
+}
+
+/**
+ * `repeating-conic-gradient` für den Nietenkranz des Portraitrahmens: `count`
+ * Segmente von je `arcDeg` Grad, der Rest transparent. Der Kranz startet um ein
+ * halbes Segment zurückgedreht, damit die Nieten auf 12 Uhr beginnen — also
+ * genau auf den Ecken von `facetClipPath(count)`, wenn beide dieselbe Zahl
+ * lesen. Die Farbe kommt aus der CSS-Variable `--stud-c`, damit der Kranz die
+ * Rollenfarbe des Knotens erbt, ohne dass der Helfer sie kennen muss. Zum Ring
+ * wird das Ganze erst durch die radiale Maske in `SigilRoleNode.vue` — hier
+ * entsteht nur die Winkelteilung. `count < 3` liefert `none`, also keinen Kranz.
+ */
+export function studRingGradient(count: number, arcDeg: number): string {
+  if (count < 3) return 'none'
+  const step = (360 / count).toFixed(3)
+  const arc = arcDeg.toFixed(2)
+  const start = (-arcDeg / 2).toFixed(2)
+  return `repeating-conic-gradient(from ${start}deg, var(--stud-c) 0deg ${arc}deg, transparent ${arc}deg ${step}deg)`
 }
 
 // ── Sonnen-Orbit ───────────────────────────────────────────────────────────

@@ -188,6 +188,57 @@ describe('champion levels — curves and stats', () => {
       expect(cur.glowAlpha).toBeGreaterThan(prev.glowAlpha)
       expect(cur.heat).toBeGreaterThan(prev.heat)
       expect(cur.facets).toBeGreaterThanOrEqual(prev.facets)
+      expect(cur.studs).toBeGreaterThanOrEqual(prev.studs)
+      // ornaments only ever switch on — a stage never takes one back
+      for (const flag of [
+        'sweep',
+        'plate2',
+        'bevel',
+        'halo',
+        'sheen',
+        'sheenDual',
+        'orbit',
+        'rays',
+        'crown',
+        'spin',
+      ] as const) {
+        expect(Number(cur[flag])).toBeGreaterThanOrEqual(Number(prev[flag]))
+      }
+    }
+  })
+
+  it('steps the regalia stage exactly once per ascension interval', () => {
+    // one stage per ascension star, so the frame changes on the same levels the
+    // player already gets a star for — nothing in between, nothing skipped
+    const thresholds = CHAMPION_REGALIA_STAGES.map((s) => s.minLevel)
+    expect(thresholds[0]).toBe(1)
+    for (let i = 1; i < thresholds.length; i++) {
+      expect(thresholds[i]).toBe(i * CHAMPION_ASCENSION_INTERVAL)
+    }
+    expect(thresholds.at(-1)).toBe(CHAMPION_LEVEL_MAX_CAP)
+
+    // and every stage adds at least one element the previous one did not have
+    for (let i = 1; i < CHAMPION_REGALIA_STAGES.length; i++) {
+      const prev = CHAMPION_REGALIA_STAGES[i - 1]
+      const cur = CHAMPION_REGALIA_STAGES[i]
+      const gained =
+        cur.studs > prev.studs ||
+        cur.facets > prev.facets ||
+        (
+          [
+            'sweep',
+            'plate2',
+            'bevel',
+            'halo',
+            'sheen',
+            'sheenDual',
+            'orbit',
+            'rays',
+            'crown',
+            'spin',
+          ] as const
+        ).some((flag) => cur[flag] && !prev[flag])
+      expect(gained).toBe(true)
     }
   })
 })
@@ -202,10 +253,38 @@ describe('champion levels — store behaviour', () => {
     const galaxyStore = useGalaxyStore()
     galaxyStore.currentGalaxy = 1
     expect(levelStore.levelCap).toBe(CHAMPION_LEVEL_START_CAP)
+    // the ramp is written in terms of the constants, so it keeps holding if the
+    // start cap is ever lowered back below the maximum
     galaxyStore.currentGalaxy = 3
-    expect(levelStore.levelCap).toBe(CHAMPION_LEVEL_START_CAP + 2 * CHAMPION_LEVEL_CAP_PER_GALAXY)
+    expect(levelStore.levelCap).toBe(
+      Math.min(
+        CHAMPION_LEVEL_MAX_CAP,
+        CHAMPION_LEVEL_START_CAP + 2 * CHAMPION_LEVEL_CAP_PER_GALAXY,
+      ),
+    )
     galaxyStore.currentGalaxy = 999
     expect(levelStore.levelCap).toBe(CHAMPION_LEVEL_MAX_CAP)
+    // and the cap never drops as galaxies go up
+    let previous = 0
+    for (const galaxy of [1, 2, 5, 12, 999]) {
+      galaxyStore.currentGalaxy = galaxy
+      expect(levelStore.levelCap).toBeGreaterThanOrEqual(previous)
+      previous = levelStore.levelCap
+    }
+  })
+
+  it('reaches the level cap with a single admin MAX press', () => {
+    // the MAX button asks for CHAMPION_LEVEL_MAX_CAP steps — that has to land on
+    // the cap from level 1, whatever the cap currently is
+    const levelStore = useChampionLevelStore()
+    const battleStore = useBattleStore()
+    const galaxyStore = useGalaxyStore()
+    galaxyStore.currentGalaxy = 1
+    battleStore.setHeaderSlot(2, MID_LOW)
+
+    levelStore.adminLevelUpTeam(CHAMPION_LEVEL_MAX_CAP)
+    expect(levelStore.levelOf(MID_LOW)).toBe(levelStore.levelCap)
+    expect(levelStore.adminLevelUpTeam(CHAMPION_LEVEL_MAX_CAP)).toBe(0)
   })
 
   it('pays the main in full and its allies a share, benched champions nothing', () => {

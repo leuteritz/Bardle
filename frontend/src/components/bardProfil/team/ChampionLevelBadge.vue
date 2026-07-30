@@ -150,7 +150,7 @@ const vars = computed(() => {
   );
 }
 
-/* ── faceted plate (stage ≥ Sigil) — the medallion sits on cut metal ── */
+/* ── faceted plate (stage ≥ Tempered) — the medallion sits on cut metal ── */
 .rg-plate {
   position: absolute;
   inset: calc(var(--rg-rim) * -2.1);
@@ -174,7 +174,7 @@ const vars = computed(() => {
   animation: rg-spin var(--rg-rays-ms) linear infinite reverse;
 }
 
-/* ── rim reflection (stage ≥ Radiant) ── */
+/* ── rim reflection (stage ≥ Sigil) ── */
 .rg-sheen {
   position: absolute;
   inset: calc(var(--rg-rim) * -1.15);
@@ -199,7 +199,7 @@ const vars = computed(() => {
   animation-direction: reverse;
 }
 
-/* ── orbiting spark (stage ≥ Ascendant) ── */
+/* ── orbiting spark (stage ≥ Paragon) ── */
 .rg-orbit {
   position: absolute;
   inset: calc(var(--rg-size) * -0.15);

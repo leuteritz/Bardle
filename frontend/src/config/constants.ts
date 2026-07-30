@@ -3373,8 +3373,17 @@ export const CHIMES_COST_ICON = 'game-icons:windchimes'
 export const CHAMPION_XP_BASE = 120
 export const CHAMPION_XP_EXPONENT = 1.55
 
-/** Level cap at galaxy 1; every further galaxy adds CHAMPION_LEVEL_CAP_PER_GALAXY. */
-export const CHAMPION_LEVEL_START_CAP = 20
+/**
+ * Level cap at galaxy 1; every further galaxy adds CHAMPION_LEVEL_CAP_PER_GALAXY,
+ * clamped to CHAMPION_LEVEL_MAX_CAP.
+ *
+ * The start cap currently sits ON the maximum: champions can reach level 50 from
+ * the first galaxy, so the whole regalia ladder — all eleven stages — is
+ * reachable straight away instead of unlocking one stage per galaxy. That makes
+ * the per-galaxy ramp inert; it is kept so the gate can be reintroduced by
+ * lowering the start cap alone, without touching the store.
+ */
+export const CHAMPION_LEVEL_START_CAP = 50
 export const CHAMPION_LEVEL_CAP_PER_GALAXY = 5
 export const CHAMPION_LEVEL_MAX_CAP = 50
 
@@ -3450,34 +3459,48 @@ export const CHAMPION_LEVEL_SPLASH_HEIGHT = 236
 export const TEAM_SIGIL_SPLASH_HEIGHT_COMPACT = 226
 /** Height of the XP bar in the role panel, px. */
 export const CHAMPION_XP_BAR_HEIGHT = 7
-/** Step sizes offered by the team-tab admin level button. */
-export const ADMIN_TEAM_LEVEL_STEPS = [1, 5] as const
+/** Step sizes offered by the team-tab admin level button — plus a MAX press
+ *  that asks for CHAMPION_LEVEL_MAX_CAP steps and lands on the cap from any level. */
+export const ADMIN_TEAM_LEVEL_STEPS = [1, 5, 10] as const
 
 // ── Level regalia ─────────────────────────────────────────────────────────────
 /**
  * The medallion and portrait frame a champion wears, escalating with its level.
- * Stage thresholds sit on the ascension (5) and perk (10) intervals, so the
- * badge changes exactly where progression already feels like a milestone, and
- * the apex stage sits on CHAMPION_LEVEL_MAX_CAP — a level-50 champion is the
- * loudest thing on the sigil board and nothing else comes close.
+ * One stage per CHAMPION_ASCENSION_INTERVAL levels — the same rhythm that grants
+ * an ascension star — so every star a champion earns is also visible on its slot
+ * from across the board. The apex stage sits on CHAMPION_LEVEL_MAX_CAP: a
+ * level-50 champion is the loudest thing on the sigil board.
+ *
+ * Every stage adds exactly one new element on top of the numbers that keep
+ * climbing, alternating between the frame and the medallion so no step feels
+ * like a repeat of the one before it:
+ *
+ *   5 plate · 10 studs + sheen · 15 sweep · 20 star plate · 25 orbit ·
+ *   30 polished bevel + dual sheen · 35 halo · 40 crown · 45 rays · 50 apex spin
  *
  * Escalation is carried by metal, geometry, brightness and motion only. The
  * champion's identity colour is never joined by a second hue; `heat` mixes in
  * white, which is the colour's own highlight rather than a new one.
  *
- * Cost note: the animated layers (sheen/orbit/rays) are transform-only and are
- * dropped below CHAMPION_REGALIA_ORNAMENT_MIN_SIZE, so the 15 ally satellites
- * on the board never animate more than their rim reflection.
+ * Cost note: every animated layer is transform/opacity only, and the medallion
+ * ornaments are dropped below CHAMPION_REGALIA_ORNAMENT_MIN_SIZE. Up to the
+ * starting cap (20) a role node animates a single extra layer — the sweep;
+ * halo and apex spin only join in at 35 and 50, and there are never more than
+ * five role nodes on the board.
  */
 /* prettier-ignore */
 export const CHAMPION_REGALIA_STAGES: ChampionRegaliaStage[] = [
-  { minLevel: 1,                      name: 'Initiate',  rim: 1.5,  glow: 6,  glowAlpha: 0.18, heat: 0,    facets: 0,  sheen: false, sheenDual: false, orbit: false, rays: false, crown: false },
-  { minLevel: 5,                      name: 'Tempered',  rim: 2,    glow: 9,  glowAlpha: 0.24, heat: 0.06, facets: 0,  sheen: false, sheenDual: false, orbit: false, rays: false, crown: false },
-  { minLevel: 10,                     name: 'Sigil',     rim: 2.25, glow: 12, glowAlpha: 0.30, heat: 0.12, facets: 6,  sheen: false, sheenDual: false, orbit: false, rays: false, crown: false },
-  { minLevel: 20,                     name: 'Radiant',   rim: 2.5,  glow: 16, glowAlpha: 0.36, heat: 0.20, facets: 6,  sheen: true,  sheenDual: false, orbit: false, rays: false, crown: false },
-  { minLevel: 30,                     name: 'Ascendant', rim: 2.75, glow: 21, glowAlpha: 0.44, heat: 0.30, facets: 8,  sheen: true,  sheenDual: false, orbit: true,  rays: false, crown: false },
-  { minLevel: 40,                     name: 'Sovereign', rim: 3,    glow: 27, glowAlpha: 0.52, heat: 0.42, facets: 8,  sheen: true,  sheenDual: true,  orbit: true,  rays: false, crown: true  },
-  { minLevel: CHAMPION_LEVEL_MAX_CAP, name: 'Eternal',   rim: 3.5,  glow: 34, glowAlpha: 0.62, heat: 0.55, facets: 12, sheen: true,  sheenDual: true,  orbit: true,  rays: true,  crown: true  },
+  { minLevel: 1,                      name: 'Initiate',  rim: 1.5,  glow: 6,  glowAlpha: 0.16, heat: 0,    facets: 0,  studs: 0,  sweep: false, plate2: false, bevel: false, halo: false, sheen: false, sheenDual: false, orbit: false, rays: false, crown: false, spin: false },
+  { minLevel: 5,                      name: 'Tempered',  rim: 1.9,  glow: 9,  glowAlpha: 0.21, heat: 0.06, facets: 6,  studs: 0,  sweep: false, plate2: false, bevel: false, halo: false, sheen: false, sheenDual: false, orbit: false, rays: false, crown: false, spin: false },
+  { minLevel: 10,                     name: 'Sigil',     rim: 2.15, glow: 12, glowAlpha: 0.26, heat: 0.12, facets: 6,  studs: 6,  sweep: false, plate2: false, bevel: false, halo: false, sheen: true,  sheenDual: false, orbit: false, rays: false, crown: false, spin: false },
+  { minLevel: 15,                     name: 'Warden',    rim: 2.4,  glow: 15, glowAlpha: 0.31, heat: 0.17, facets: 8,  studs: 8,  sweep: true,  plate2: false, bevel: false, halo: false, sheen: true,  sheenDual: false, orbit: false, rays: false, crown: false, spin: false },
+  { minLevel: 20,                     name: 'Radiant',   rim: 2.6,  glow: 18, glowAlpha: 0.36, heat: 0.22, facets: 8,  studs: 8,  sweep: true,  plate2: true,  bevel: false, halo: false, sheen: true,  sheenDual: false, orbit: false, rays: false, crown: false, spin: false },
+  { minLevel: 25,                     name: 'Paragon',   rim: 2.8,  glow: 21, glowAlpha: 0.41, heat: 0.28, facets: 10, studs: 10, sweep: true,  plate2: true,  bevel: false, halo: false, sheen: true,  sheenDual: false, orbit: true,  rays: false, crown: false, spin: false },
+  { minLevel: 30,                     name: 'Ascendant', rim: 2.95, glow: 24, glowAlpha: 0.45, heat: 0.34, facets: 10, studs: 10, sweep: true,  plate2: true,  bevel: true,  halo: false, sheen: true,  sheenDual: true,  orbit: true,  rays: false, crown: false, spin: false },
+  { minLevel: 35,                     name: 'Exalted',   rim: 3.1,  glow: 27, glowAlpha: 0.49, heat: 0.40, facets: 10, studs: 10, sweep: true,  plate2: true,  bevel: true,  halo: true,  sheen: true,  sheenDual: true,  orbit: true,  rays: false, crown: false, spin: false },
+  { minLevel: 40,                     name: 'Sovereign', rim: 3.25, glow: 29, glowAlpha: 0.53, heat: 0.45, facets: 10, studs: 10, sweep: true,  plate2: true,  bevel: true,  halo: true,  sheen: true,  sheenDual: true,  orbit: true,  rays: false, crown: true,  spin: false },
+  { minLevel: 45,                     name: 'Empyrean',  rim: 3.4,  glow: 31, glowAlpha: 0.58, heat: 0.50, facets: 12, studs: 12, sweep: true,  plate2: true,  bevel: true,  halo: true,  sheen: true,  sheenDual: true,  orbit: true,  rays: true,  crown: true,  spin: false },
+  { minLevel: CHAMPION_LEVEL_MAX_CAP, name: 'Eternal',   rim: 3.6,  glow: 34, glowAlpha: 0.63, heat: 0.56, facets: 12, studs: 12, sweep: true,  plate2: true,  bevel: true,  halo: true,  sheen: true,  sheenDual: true,  orbit: true,  rays: true,  crown: true,  spin: true  },
 ]
 
 /** Badge diameter (px) the regalia px values above are authored against. */
@@ -3501,13 +3524,27 @@ export const CHAMPION_REGALIA_FONT_RATIO = 0.46
 /** Portrait frame on the sigil board — ring width = stage rim * this + base. */
 export const SIGIL_FRAME_RIM_BASE = 1.4
 export const SIGIL_FRAME_RIM_STEP = 0.62
+/** Rim opacity (%) = this base plus SIGIL_FRAME_RIM_ALPHA_STEP per stage, capped at 100. */
+export const SIGIL_FRAME_RIM_ALPHA_BASE = 50
+export const SIGIL_FRAME_RIM_ALPHA_STEP = 4.5
 /** Portrait frame glow radius = stage glow * this. */
 export const SIGIL_FRAME_GLOW_FACTOR = 0.85
 /** Rotation period (ms) of the faceted crest plate behind an apex portrait. */
 export const SIGIL_FRAME_PLATE_MS = 34000
+/**
+ * Half-turn of the second plate (deg per facet step) — offsetting it by half a
+ * corner is what turns two overlapping polygons into a star silhouette.
+ */
+export const SIGIL_FRAME_PLATE2_OFFSET = 0.5
+/** Angular width (deg) of a single stud on the frame's stud ring. */
+export const SIGIL_FRAME_STUD_ARC_DEG = 3.6
+/** Travel period (ms) of the highlight sweeping around the frame ring. */
+export const SIGIL_FRAME_SWEEP_MS = 5600
+/** Breathing period (ms) of the corona behind an Exalted-or-higher frame. */
+export const SIGIL_FRAME_HALO_MS = 3800
 /** XP arc stroke width = this base plus SIGIL_XP_STROKE_STEP per regalia stage. */
 export const SIGIL_XP_STROKE_BASE = 3.2
-export const SIGIL_XP_STROKE_STEP = 0.22
+export const SIGIL_XP_STROKE_STEP = 0.14
 
 // ── Icon Registry ─────────────────────────────────────────────────────────────
 // All game-icons used in the project. Add new icons here before using them

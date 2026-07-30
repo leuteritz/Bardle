@@ -1146,6 +1146,19 @@ export interface ChampionRegaliaStage {
   heat: number
   /** Corners of the faceted plate seated behind the disc; 0 leaves it round. */
   facets: number
+  // ── Portrait frame only (sigil board node) ──
+  // The medallion has no room for these; they are what makes a role node's
+  // frame read as a rank from across the board.
+  /** Metal studs seated around the frame ring; 0 leaves the ring bare. */
+  studs: number
+  /** Highlight sweeping around the frame ring — the first motion a frame gets. */
+  sweep: boolean
+  /** Second, counter-rotated plate — turns the hexagon into a star silhouette. */
+  plate2: boolean
+  /** Polished bevel on the plates — matte cast metal becomes lit, faceted metal. */
+  bevel: boolean
+  /** Breathing corona behind the whole frame. */
+  halo: boolean
   /** Conic reflection rotating around the rim. */
   sheen: boolean
   /** Second reflection, running the other way. */
@@ -1156,6 +1169,8 @@ export interface ChampionRegaliaStage {
   rays: boolean
   /** Crown seated on the medallion's top edge. */
   crown: boolean
+  /** The plates turn against each other — the apex stage's own increment. */
+  spin: boolean
 }
 
 /** Which milestone pool a perk belongs to. */

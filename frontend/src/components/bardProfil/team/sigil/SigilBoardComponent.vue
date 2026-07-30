@@ -17,6 +17,7 @@ import {
   TEAM_SIGIL_PAN_MAX_FRACTION,
   TEAM_SIGIL_DRAG_THRESHOLD_PX,
   ADMIN_TEAM_LEVEL_STEPS,
+  CHAMPION_LEVEL_MAX_CAP,
 } from '@/config/constants'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
@@ -283,6 +284,21 @@ watch(
       >
         +{{ step }}
       </button>
+      <!-- asks for a full cap's worth of steps, so it lands on the cap from any
+           level; the store stops there on its own -->
+      <button
+        class="sigil-admin-btn sigil-admin-btn--max"
+        type="button"
+        :disabled="adminLevelableCount === 0"
+        :title="
+          adminLevelableCount === 0
+            ? 'Every team champion is at the level cap'
+            : `Raise ${adminLevelableCount} champion(s) straight to level ${levelStore.levelCap}`
+        "
+        @click="adminLevelTeam(CHAMPION_LEVEL_MAX_CAP)"
+      >
+        MAX
+      </button>
     </div>
 
     <!-- board actions: shop + expedition (always reachable) -->
@@ -488,6 +504,17 @@ watch(
   opacity: 0.5;
   filter: grayscale(55%);
   cursor: not-allowed;
+}
+/* the jump-to-cap press reads as the loudest of the row */
+.sigil-admin-btn--max {
+  min-width: 44px;
+  background: #2a1610;
+  border-color: #cc6050;
+  color: #f0c0b0;
+  letter-spacing: 0.08em;
+}
+.sigil-admin-btn--max:hover:not(:disabled) {
+  background: #3c1e14;
 }
 
 /* ── board actions (shop / expedition) ── */
