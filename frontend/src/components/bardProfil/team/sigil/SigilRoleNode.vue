@@ -97,29 +97,6 @@ function allyLabel(sub: number): string {
   return isSworn(sub) ? (SWORN_ALLY_LABELS[sub] ?? `Sworn ${sub + 1}`) : `Ally ${sub + 1}`
 }
 
-/**
- * Bond lines from the role node to each filled sworn satellite. Length and angle
- * come from the point difference, so a line follows whatever the geometry solver
- * in constants.ts puts its satellite at. Built as a list rather than filtered in
- * the template — v-if and v-for must not share an element.
- */
-const swornBonds = computed(() =>
-  allies.value
-    .map((ally, sub) => ({ ally, sub }))
-    .filter((e) => e.ally && isSworn(e.sub))
-    .map(({ sub }) => {
-      const from = props.point
-      const to = props.allyPoints[sub]
-      const dx = to.x - from.x
-      const dy = to.y - from.y
-      return {
-        sub,
-        width: `${Math.hypot(dx, dy)}px`,
-        transform: `rotate(${(Math.atan2(dy, dx) * 180) / Math.PI}deg)`,
-      }
-    }),
-)
-
 // ── Search spotlight ─────────────────────────────────────────────────────────
 const searchActive = computed(() => (props.searchHighlights?.length ?? 0) > 0)
 const searchSet = computed(() => new Set(props.searchHighlights ?? []))
@@ -203,22 +180,6 @@ const frameVars = computed<Record<string, string>>(() => {
 
 <template>
   <!-- ally satellites (behind the role node) -->
-  <!-- bond lines — drawn before the satellites so they pass behind them -->
-  <span
-    v-for="bond in swornBonds"
-    :key="`bond-${roleIndex}-${bond.sub}`"
-    class="sigil-bond"
-    :class="{ 'sigil-bond--active': selected || hoveredAlly === bond.sub }"
-    :style="{
-      left: `${point.x}px`,
-      top: `${point.y}px`,
-      width: bond.width,
-      transform: bond.transform,
-      '--role-color': roleDef.color,
-    }"
-    aria-hidden="true"
-  />
-
   <button
     v-for="(ally, sub) in allies"
     :key="`ally-${roleIndex}-${sub}`"
@@ -340,28 +301,6 @@ const frameVars = computed<Record<string, string>>(() => {
 </template>
 
 <style scoped>
-/* Bond line — node to sworn satellite. Anchored at the node centre and rotated
-   into place, so it needs no SVG layer and no per-frame work; it just sits there
-   under the satellites and brightens with the cluster. */
-.sigil-bond {
-  position: absolute;
-  height: 2px;
-  transform-origin: 0 50%;
-  pointer-events: none;
-  z-index: 0;
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--role-color) 70%, transparent),
-    color-mix(in srgb, var(--role-color) 25%, transparent)
-  );
-  opacity: 0.5;
-  transition: opacity 0.2s;
-}
-.sigil-bond--active {
-  opacity: 1;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--role-color) 55%, transparent);
-}
-
 /* ── ally satellites ── */
 .sigil-ally {
   position: absolute;

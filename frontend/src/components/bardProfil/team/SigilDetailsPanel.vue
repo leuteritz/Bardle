@@ -44,6 +44,7 @@ import {
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_DETAILS_LEFT_WIDTH,
   TEAM_SIGIL_MAIN_CHIP_WIDTH,
+  TEAM_SIGIL_MAIN_PORTRAIT_WIDTH,
   TEAM_SIGIL_SPLASH_HEIGHT,
   TEAM_SIGIL_SPLASH_HEIGHT_COMPACT,
   TEAM_SIGIL_SPLASH_MAX_SHARE,
@@ -91,6 +92,7 @@ const splashHeightCompactPx = `${TEAM_SIGIL_SPLASH_HEIGHT_COMPACT}px`
 const splashMaxShare = `${TEAM_SIGIL_SPLASH_MAX_SHARE}%`
 const xpBarHeightPx = `${CHAMPION_XP_BAR_HEIGHT}px`
 const mainChipWidthPx = `${TEAM_SIGIL_MAIN_CHIP_WIDTH}px`
+const mainPortraitWidthPx = `${TEAM_SIGIL_MAIN_PORTRAIT_WIDTH}px`
 
 const battleStore = useBattleStore()
 const gameStore = useGameStore()
@@ -927,24 +929,29 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 
 /* ══ roster strip ══ */
+/* stretch, not center: the captain card runs the full height of both rows */
 .sdp-roster {
   flex-shrink: 0;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
   padding: 10px 12px;
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
 }
-/* one card per champion of the slot — the whole roster is always visible, so
-   switching subject never costs a navigation step */
+/* One card per champion of the slot — the whole roster is always visible, so
+   switching subject never costs a navigation step. No card frames its portrait:
+   the image runs the card's full height, edge to edge, and only the card itself
+   has a border. Variants differ in the width of that portrait column, nothing
+   else, so captain / sworn / bench read as one family at three sizes. */
 .sdp-chip {
   position: relative;
   min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 8px 5px 5px;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
   cursor: pointer;
   text-align: left;
   border-radius: 4px;
@@ -976,23 +983,27 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-chip--empty {
   border-style: dashed;
 }
-/* square portrait well — the size step between captain and bench lives here */
+/* the portrait column — the size step between captain, sworn and bench lives
+   here and nowhere else */
 .sdp-chip-portrait {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 50px;
   flex-shrink: 0;
+  align-self: stretch;
 }
 
-/* The captain card — the only chip at full size, with the champion's own splash
-   behind it, so "who plays this slot" reads before any label does. */
+/* The captain card — full height of the strip and the only card whose portrait
+   runs edge to edge: no well, no border, no inset. The champion's own splash
+   continues behind the text, so the card reads as one image, not an image in a
+   box. Everything the card gave up in padding, the text column takes back. */
 .sdp-chip--main {
   position: relative;
   flex-shrink: 0;
   overflow: hidden;
+  align-items: stretch;
   width: v-bind(mainChipWidthPx);
-  padding: 8px 10px 8px 8px;
-  gap: 11px;
+  padding: 0;
+  gap: 0;
 }
 .sdp-chip-art {
   position: absolute;
@@ -1024,8 +1035,27 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
 }
 .sdp-chip--main .sdp-chip-portrait {
-  width: 62px;
-  height: 62px;
+  width: v-bind(mainPortraitWidthPx);
+  height: auto;
+  align-self: stretch;
+}
+.sdp-chip--main .sdp-chip-img {
+  border: none;
+  border-radius: 3px 0 0 3px;
+  object-position: center 14%;
+}
+.sdp-chip--main .sdp-chip-plus {
+  border-radius: 3px 0 0 3px;
+  border-width: 0 1px 0 0;
+}
+.sdp-chip--main > .sdp-chip-text {
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px 8px 11px;
+}
+.sdp-chip--main > .sdp-chip-badge {
+  align-self: center;
+  margin-right: 10px;
 }
 .sdp-chip--main .sdp-chip-role {
   font-size: 10.5px;
@@ -1049,6 +1079,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 .sdp-sworn,
 .sdp-bench {
+  flex: 1;
   display: flex;
   gap: 7px;
 }
@@ -1061,14 +1092,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 /* The sworn pair — fewer of them, so each is wider; a bigger portrait and the
    bond mark carry the rank, and the note says what the slot actually does. */
 .sdp-chip--sworn {
-  padding: 6px 9px 6px 6px;
-  gap: 10px;
   border-color: color-mix(in srgb, var(--rc) 40%, transparent);
   background: linear-gradient(100deg, #1a1409, #141410 62%);
 }
 .sdp-chip--sworn .sdp-chip-portrait {
-  width: 46px;
-  height: 46px;
+  width: 64px;
 }
 .sdp-chip--sworn .sdp-chip-name {
   font-size: 15.5px;
@@ -1097,9 +1125,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: top;
-  border-radius: 4px;
-  border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent);
+  object-position: center 14%;
+  border: none;
+  border-radius: 3px 0 0 3px;
 }
 .sdp-chip-plus {
   width: 100%;
@@ -1107,9 +1135,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 3px 0 0 3px;
   background: #0f0b06;
-  border: 1px dashed color-mix(in srgb, var(--rc) 45%, transparent);
+  border-right: 1px dashed color-mix(in srgb, var(--rc) 45%, transparent);
   font-size: 20px;
   line-height: 1;
   color: var(--rc);
@@ -1119,7 +1147,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  justify-content: center;
+  gap: 2px;
+  /* the padding the card gave up when its portrait went edge to edge */
+  padding: 6px 4px 6px 10px;
 }
 .sdp-chip-role {
   font-size: 9.5px;
@@ -1144,12 +1175,16 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 .sdp-chip-badge {
   flex-shrink: 0;
+  align-self: center;
+  margin-right: 9px;
 }
-/* remove-ally affordance — only surfaces on hover so the chip stays calm */
+/* Remove-ally affordance — only surfaces on hover so the chip stays calm. Sits
+   over the portrait's top-left corner: the card clips now, and the right edge
+   belongs to the level medallion. */
 .sdp-chip-clear {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: 4px;
+  left: 4px;
   width: 19px;
   height: 19px;
   display: flex;

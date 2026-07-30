@@ -7,6 +7,7 @@ import {
   SIGIL_RING_INNER_R,
   SIGIL_RING_CORE_R,
   SIGIL_DIM_COLOR,
+  SWORN_ALLY_COUNT,
 } from '@/config/constants'
 import type { SigilStageDef } from '@/types'
 import type { SigilPoint } from '@/composables/useTeamSigil'
@@ -69,32 +70,80 @@ function spokeColor(i: number): string {
   return props.mainFilled[i] ? props.roleColors[i] : SIGIL_DIM_COLOR
 }
 
-/** Gap around the main node so the link starts at its edge, not under the image. */
-const ALLY_LINK_MAIN_GAP = 54
-/** Gap around the ally satellite so the link ends just before the image. */
-const ALLY_LINK_ALLY_GAP = 27
+/** Gaps that keep a link off the champion images it connects, per endpoint kind. */
+const LINK_GAP_MAIN = 54
+const LINK_GAP_SWORN = 25
+const LINK_GAP_BENCH = 22
 
-/** Connectors: role main node → each FILLED ally satellite, trimmed on both
- *  ends so the champion images stay untouched. */
-const allyLinks = computed(() => {
-  const links: Array<{ x1: number; y1: number; x2: number; y2: number; color: string }> = []
+type LinkKind = 'sworn' | 'yoke' | 'bench'
+interface SigilLink {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  color: string
+  kind: LinkKind
+}
+
+/**
+ * The role's chain of command, drawn as one connector layer:
+ *
+ *   node ──── sworn        thick, bright — the two that lend their stats
+ *   sworn ─── sworn        the yoke across the node, so the pair reads as a pair
+ *   sworn ─── bench        thin, dim — each bench ally hangs off its nearest sworn
+ *
+ * A bench ally with no sworn ally to hang from falls back to the node, so a
+ * half-filled role never leaves a satellite floating unconnected. Every segment
+ * is trimmed on both ends by the radius of what it touches.
+ */
+const allyLinks = computed<SigilLink[]>(() => {
+  const links: SigilLink[] = []
   props.allyPoints.forEach((points, roleIdx) => {
     const main = props.rolePoints[roleIdx]
-    points.forEach((p, sub) => {
-      if (!props.allyFilled[roleIdx]?.[sub]) return
-      const dx = p.x - main.x
-      const dy = p.y - main.y
+    const color = props.roleColors[roleIdx] ?? props.stage.crestColor
+    const filled = (sub: number) => !!props.allyFilled[roleIdx]?.[sub]
+
+    const connect = (a: SigilPoint, b: SigilPoint, gapA: number, gapB: number, kind: LinkKind) => {
+      const dx = b.x - a.x
+      const dy = b.y - a.y
       const dist = Math.hypot(dx, dy)
-      if (dist <= ALLY_LINK_MAIN_GAP + ALLY_LINK_ALLY_GAP) return
+      if (dist <= gapA + gapB) return
       const ux = dx / dist
       const uy = dy / dist
       links.push({
-        x1: main.x + ux * ALLY_LINK_MAIN_GAP,
-        y1: main.y + uy * ALLY_LINK_MAIN_GAP,
-        x2: p.x - ux * ALLY_LINK_ALLY_GAP,
-        y2: p.y - uy * ALLY_LINK_ALLY_GAP,
-        color: props.roleColors[roleIdx] ?? props.stage.crestColor,
+        x1: a.x + ux * gapA,
+        y1: a.y + uy * gapA,
+        x2: b.x - ux * gapB,
+        y2: b.y - uy * gapB,
+        color,
+        kind,
       })
+    }
+
+    const swornSubs = points.map((_, sub) => sub).filter((sub) => sub < SWORN_ALLY_COUNT && filled(sub))
+    // node → each sworn, and the yoke between them
+    for (const sub of swornSubs) {
+      connect(main, points[sub], LINK_GAP_MAIN, LINK_GAP_SWORN, 'sworn')
+    }
+    for (let i = 1; i < swornSubs.length; i++) {
+      connect(points[swornSubs[i - 1]], points[swornSubs[i]], LINK_GAP_SWORN, LINK_GAP_SWORN, 'yoke')
+    }
+
+    // every bench ally hangs off the sworn ally nearest to it
+    points.forEach((p, sub) => {
+      if (sub < SWORN_ALLY_COUNT || !filled(sub)) return
+      let from = main
+      let gap = LINK_GAP_MAIN
+      let nearest = Infinity
+      for (const s of swornSubs) {
+        const d = Math.hypot(points[s].x - p.x, points[s].y - p.y)
+        if (d < nearest) {
+          nearest = d
+          from = points[s]
+          gap = LINK_GAP_SWORN
+        }
+      }
+      connect(from, p, gap, LINK_GAP_BENCH, 'bench')
     })
   })
   return links
@@ -233,7 +282,8 @@ const allyLinks = computed(() => {
     </g>
 
     <!-- ally links: role main → each filled ally satellite -->
-    <g stroke-width="1.5" stroke-linecap="round">
+    <!-- chain of command: the stroke weight IS the hierarchy -->
+    <g stroke-linecap="round">
       <line
         v-for="(l, k) in allyLinks"
         :key="`ally-link-${k}`"
@@ -242,7 +292,9 @@ const allyLinks = computed(() => {
         :x2="l.x2"
         :y2="l.y2"
         :stroke="l.color"
-        opacity="0.65"
+        :stroke-width="l.kind === 'sworn' ? 2.6 : l.kind === 'yoke' ? 1.8 : 1"
+        :stroke-dasharray="l.kind === 'bench' ? '5 5' : undefined"
+        :opacity="l.kind === 'sworn' ? 0.9 : l.kind === 'yoke' ? 0.7 : 0.4"
       />
     </g>
 

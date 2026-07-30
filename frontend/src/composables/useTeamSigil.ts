@@ -8,8 +8,8 @@ import {
   SIGIL_PENTAGON_RADIUS,
   SIGIL_ALLY_RADIUS,
   SIGIL_ALLY_ARC_DEG,
-  SIGIL_SWORN_RADIUS,
-  SIGIL_SWORN_ARC_DEG,
+  SIGIL_SWORN_GAP,
+  SIGIL_SWORN_SPREAD_DEG,
   SWORN_ALLY_COUNT,
   ALLIES_PER_ROLE,
   SIGIL_STAGES,
@@ -121,12 +121,19 @@ export function useTeamSigil() {
   const allyPoints = computed<SigilPoint[][]>(() =>
     ROLES.map((_, i) => {
       const angle = roleAngle(i)
+      const node = polarPoint(angle, SIGIL_PENTAGON_RADIUS)
       const benchCount = Math.max(ALLIES_PER_ROLE - SWORN_ALLY_COUNT, 0)
       return Array.from({ length: ALLIES_PER_ROLE }, (_, k) => {
         if (k < SWORN_ALLY_COUNT) {
-          const step = SIGIL_SWORN_ARC_DEG / Math.max(SWORN_ALLY_COUNT - 1, 1)
-          const offset = (k - (SWORN_ALLY_COUNT - 1) / 2) * step
-          return polarPoint(angle + offset, SIGIL_SWORN_RADIUS)
+          // measured from the NODE, so the pair hugs its main wherever the
+          // pentagon puts it — the bench alone rides the global arc
+          const step = (SIGIL_SWORN_SPREAD_DEG * 2) / Math.max(SWORN_ALLY_COUNT - 1, 1)
+          const offset = -SIGIL_SWORN_SPREAD_DEG + k * step
+          const rad = ((angle + offset) * Math.PI) / 180
+          return {
+            x: node.x + SIGIL_SWORN_GAP * Math.cos(rad),
+            y: node.y + SIGIL_SWORN_GAP * Math.sin(rad),
+          }
         }
         const b = k - SWORN_ALLY_COUNT
         const step = SIGIL_ALLY_ARC_DEG / Math.max(benchCount - 1, 1)

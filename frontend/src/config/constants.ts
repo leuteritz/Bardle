@@ -2765,31 +2765,32 @@ export const FORGE_TREE_ZOOM_DEFAULT = 1.7
 // pentagon (Top at 12 o'clock, ROLES order clockwise), each with a constellation
 // arc of ALLIES_PER_ROLE ally satellites placed outward around the role node.
 export const SIGIL_STAGE_SIZE = 900
-export const SIGIL_PENTAGON_RADIUS = 300
+export const SIGIL_PENTAGON_RADIUS = 255
 /**
- * The bench arc, pushed outward to make room for the sworn ring between it and
- * the role node. Every radius here is solved against four constraints at once:
- * the role node's regalia frame (reaches 63px from its centre), the two rings
- * against each other, the neighbouring role cluster 72° away, and the stage box
- * the board's fit-scale clips at (SIGIL_STAGE_SIZE / 2). The chosen set keeps at
- * least 10px of air on every one of them, level medallions included — do not
- * nudge one value without re-checking the other three.
+ * The role cluster is a fan, not a ring: the two sworn allies hug their role node
+ * while the bench sits far out on the pentagon's own arc. The whole set below was
+ * solved together against seven constraints — the node's regalia frame (63px), the
+ * satellites against each other, the sworn pair, the inner rune ring, the
+ * neighbouring cluster 72° away, and the stage box the board's fit-scale clips at
+ * (SIGIL_STAGE_SIZE / 2). It keeps ≥ 8px of air on every one of them, level
+ * medallions included, and puts the bench 1.7× further from the node than the
+ * sworn pair — that ratio IS the hierarchy. Do not nudge one value alone.
  */
-export const SIGIL_ALLY_RADIUS = 414
-/** Total angular span (degrees) of the ally constellation arc, centered on the role's pentagon angle. */
-export const SIGIL_ALLY_ARC_DEG = 44
+export const SIGIL_ALLY_RADIUS = 416
+/** Total angular span (degrees) of the bench arc, centered on the role's pentagon angle. */
+export const SIGIL_ALLY_ARC_DEG = 36
 /**
- * Sworn allies ride their own, closer orbit between the role node and the bench
- * arc, tied to the node by a bond line. Two rings instead of one arc is what
- * makes the hierarchy readable from across the board without a second colour.
+ * Sworn allies are placed in the ROLE NODE's own frame, not on a global ring:
+ * SIGIL_SWORN_GAP away from it, SIGIL_SWORN_SPREAD_DEG to either side of the
+ * outward radial. That is what lets them sit right against the main while the
+ * bench stays out on the arc.
  */
-export const SIGIL_SWORN_RADIUS = 400
-/** Angular span (degrees) the sworn pair is spread over. */
-export const SIGIL_SWORN_ARC_DEG = 20
-/** Sworn satellites are drawn a touch larger than the bench ones. */
-export const SIGIL_SWORN_SIZE = 46
+export const SIGIL_SWORN_GAP = 101
+export const SIGIL_SWORN_SPREAD_DEG = 58
+/** Sworn satellites are drawn larger than the bench ones. */
+export const SIGIL_SWORN_SIZE = 42
 export const SIGIL_NODE_SIZE = 94
-export const SIGIL_ALLY_SIZE = 44
+export const SIGIL_ALLY_SIZE = 36
 export const SIGIL_CREST_SIZE = 170
 /**
  * XP arc traced around a role node, in a 0–100 viewBox so it scales with the
@@ -2825,6 +2826,8 @@ export const TEAM_SIGIL_DETAILS_LEFT_WIDTH = 434
  * so neither row depends on a column count that has to divide ALLIES_PER_ROLE.
  */
 export const TEAM_SIGIL_MAIN_CHIP_WIDTH = 250
+/** Width (px) of the captain card's edge-to-edge portrait column. */
+export const TEAM_SIGIL_MAIN_PORTRAIT_WIDTH = 92
 /** Width (px) of the team synergies panel — the other, narrower side panel. */
 export const TEAM_SIGIL_SYNERGIES_PANEL_WIDTH = 460
 /** Height (px) of the details-panel splash header (hero card: name + tier/origin/trait chips). */
