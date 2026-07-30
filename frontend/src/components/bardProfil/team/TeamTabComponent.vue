@@ -139,6 +139,7 @@ function openSkins(champion: string) {
 }
 
 function closeModal() {
+  cancelDeferredPicker()
   activeModal.value = null
   pickerSubSlot.value = -1
   skinChampion.value = null
@@ -188,15 +189,42 @@ function handleShopRoleChange(role: ChampionRole | 'all') {
 }
 
 // ── External navigation hooks ────────────────────────────────────────────────
+/**
+ * Consumes a "open the team tab on this slot" request from elsewhere (command
+ * panel, battle roster, striker squad).
+ *
+ * The champion picker is deferred by two frames on purpose. A request that
+ * names an ally sub-slot asks for the tab AND the picker, and the picker renders
+ * every owned champion — 160+ cards. Mounting both in the same frame meant the
+ * player clicked and then watched nothing happen until the whole lot was laid
+ * out. Letting the tab paint first turns one long freeze into "tab appears, list
+ * follows", at no cost to the total work.
+ */
 function applyRolesOpenRequest() {
   synergiesOpen.value = false
   selectedRole.value = uiStore.rolesActiveSlot
-  if (uiStore.rolesActiveSubSlot >= 0) {
-    openPicker(uiStore.rolesActiveSubSlot)
-  } else {
-    activeModal.value = null
-  }
+  const subSlot = uiStore.rolesActiveSubSlot
   uiStore.clearRolesOpenPending()
+  if (subSlot < 0) {
+    activeModal.value = null
+    return
+  }
+  cancelDeferredPicker()
+  deferredPicker = requestAnimationFrame(() => {
+    deferredPicker = requestAnimationFrame(() => {
+      deferredPicker = null
+      openPicker(subSlot)
+    })
+  })
+}
+
+/** Pending deferred-picker frame, cancelled if the tab closes before it fires. */
+let deferredPicker: number | null = null
+function cancelDeferredPicker() {
+  if (deferredPicker !== null) {
+    cancelAnimationFrame(deferredPicker)
+    deferredPicker = null
+  }
 }
 
 watch(() => uiStore.rolesOpenToken, applyRolesOpenRequest)
@@ -245,6 +273,7 @@ onMounted(() => {
   if (uiStore.rolesOpenPending) applyRolesOpenRequest()
 })
 onUnmounted(() => {
+  cancelDeferredPicker()
   window.removeEventListener('keydown', onEsc)
   if (shopScrollTimer !== null) clearTimeout(shopScrollTimer)
   // Tab zu → die gespiegelte Auswahl fällt mit, sonst bliebe im Command Panel

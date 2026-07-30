@@ -63,7 +63,6 @@ const treeTabMounted = ref(false)
 watch(
   () => uiStore.bardActiveTab,
   (val) => {
-    document.body.classList.toggle('bard-modal-open', val !== null)
     if (val === 'tree') treeTabMounted.value = true
     // Modal geschlossen → Wrapper (v-if) zerstört alle Tabs mit; ein noch
     // offener Battle-Return-Kontext ist dann obsolet (Return-Button hat beim
