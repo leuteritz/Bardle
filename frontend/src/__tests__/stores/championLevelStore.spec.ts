@@ -351,7 +351,7 @@ describe('champion levels — store behaviour', () => {
     expect(levelStore.totalLevelsBought).toBe(4)
   })
 
-  it('stops at the level cap and keeps banking XP for the next galaxy', () => {
+  it('stops at the level cap and keeps banking XP against a future cap', () => {
     const levelStore = useChampionLevelStore()
     const galaxyStore = useGalaxyStore()
     galaxyStore.currentGalaxy = 1
@@ -366,12 +366,23 @@ describe('champion levels — store behaviour', () => {
     expect(levelStore.blockReasonOf(MID_LOW)).toBe('cap')
     expect(levelStore.levelUp(MID_LOW)).toBe(false)
 
-    // XP keeps accruing, so raising the cap immediately pays off
+    // XP keeps accruing at the cap rather than being thrown away
     const banked = levelStore.progressOf(MID_LOW).xp
     levelStore.grantXp(MID_LOW, 5000)
     expect(levelStore.progressOf(MID_LOW).xp).toBe(banked + 5000)
+
+    // and the banked XP pays off the moment the cap moves. The start cap
+    // currently sits on the maximum, so no galaxy lifts it — raise the cap by
+    // hand to prove the block is the cap and nothing else.
     galaxyStore.currentGalaxy = 2
-    expect(levelStore.canLevelUp(MID_LOW)).toBe(true)
+    if (levelStore.levelCap > CHAMPION_LEVEL_START_CAP) {
+      expect(levelStore.canLevelUp(MID_LOW)).toBe(true)
+    } else {
+      expect(levelStore.blockReasonOf(MID_LOW)).toBe('cap')
+      vi.spyOn(levelStore, 'levelCap', 'get').mockReturnValue(CHAMPION_LEVEL_START_CAP + 1)
+      expect(levelStore.canLevelUp(MID_LOW)).toBe(true)
+      vi.restoreAllMocks()
+    }
   })
 
   it('queues a perk choice at the milestone and applies the pick', () => {
