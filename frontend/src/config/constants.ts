@@ -3544,6 +3544,18 @@ export const CHAMPION_XP_BAR_HEIGHT = 7
  *  that asks for CHAMPION_LEVEL_MAX_CAP steps and lands on the cap from any level. */
 export const ADMIN_TEAM_LEVEL_STEPS = [1, 5, 10] as const
 
+/**
+ * Champion picker grid — the numbers useVirtualGrid needs to turn a scroll
+ * position into a row range. They MUST match the CSS in ChampionSelectPanel.vue
+ * (.csp-grid columns/gap and .csp-champ height); the windowing is only correct
+ * while the grid really is uniform.
+ */
+export const CHAMPION_PICKER_CARD_MIN_WIDTH = 170
+export const CHAMPION_PICKER_CARD_HEIGHT = 210
+export const CHAMPION_PICKER_GRID_GAP = 10
+/** Rows kept rendered beyond each edge so fast scrolling never shows a gap. */
+export const CHAMPION_PICKER_OVERSCAN_ROWS = 2
+
 // ── Level regalia ─────────────────────────────────────────────────────────────
 /**
  * The medallion and portrait frame a champion wears, escalating with its level.

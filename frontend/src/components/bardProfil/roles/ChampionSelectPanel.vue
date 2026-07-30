@@ -7,7 +7,15 @@ import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/championOrigins'
 import { getChampionTier, getChampionStarLevel, CHAMPION_TIERS_BY_STAR } from '@/config/championTiers'
 import { CHAMPION_DATA, CHAMPION_ROLES } from '@/config/championData'
-import { createEmptyAllyRows, ROLE_BY_KEY } from '@/config/constants'
+import {
+  createEmptyAllyRows,
+  ROLE_BY_KEY,
+  CHAMPION_PICKER_CARD_MIN_WIDTH,
+  CHAMPION_PICKER_CARD_HEIGHT,
+  CHAMPION_PICKER_GRID_GAP,
+  CHAMPION_PICKER_OVERSCAN_ROWS,
+} from '@/config/constants'
+import { useVirtualGrid } from '@/composables/useVirtualGrid'
 import type { ChampionRole } from '@/types'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -310,6 +318,34 @@ function toggleTier(tier: number) {
   else next.add(tier)
   collapsedTiers.value = next
 }
+
+// ── Grid virtualisation ──────────────────────────────────────────────────────
+// The grid holds every owned champion — 160+ cards once the roster is complete.
+// Laying all of them out on open is what made the picker freeze, so only the
+// rows near the viewport are rendered; the rest is padding of the exact height
+// the missing rows would have had. See composables/useVirtualGrid.ts.
+const bodyEl = ref<HTMLElement | null>(null)
+const virtualSections = computed(() =>
+  tierGroups.value.map((g) => ({
+    key: g.tier,
+    items: g.champions,
+    collapsed: isTierCollapsed(g.tier),
+  })),
+)
+const { setGridEl, windowOf } = useVirtualGrid({
+  scrollEl: bodyEl,
+  sections: virtualSections,
+  minColumnWidth: CHAMPION_PICKER_CARD_MIN_WIDTH,
+  rowHeight: CHAMPION_PICKER_CARD_HEIGHT,
+  gap: CHAMPION_PICKER_GRID_GAP,
+  overscanRows: CHAMPION_PICKER_OVERSCAN_ROWS,
+})
+
+/** Tier groups paired with the slice to render — resolved once per update
+ *  instead of once per template expression. */
+const renderGroups = computed(() =>
+  tierGroups.value.map((group, i) => ({ ...group, slice: windowOf(virtualSections.value[i]) })),
+)
 const allTiersCollapsed = computed(
   () =>
     !searchOrFilterActive.value &&
@@ -621,7 +657,7 @@ function onImgError(e: Event) {
     </div>
 
     <!-- ── Grid ── -->
-    <div class="csp-body">
+    <div ref="bodyEl" class="csp-body">
       <div v-if="filteredChampions.length === 0" class="csp-empty">
         <Icon icon="game-icons:lyre" class="csp-empty-icon" />
         <span>{{
@@ -632,7 +668,7 @@ function onImgError(e: Event) {
       </div>
 
       <div v-else class="csp-tier-groups">
-        <div v-for="group in tierGroups" :key="group.tier" class="csp-tier-group">
+        <div v-for="group in renderGroups" :key="group.tier" class="csp-tier-group">
           <!-- Tier header: cosmic identity + owned/total progress counter (click to collapse) -->
           <div
             class="tier-header"
@@ -655,9 +691,14 @@ function onImgError(e: Event) {
             </span>
           </div>
 
-          <div v-show="!isTierCollapsed(group.tier)" class="csp-grid">
+          <div
+            v-show="!isTierCollapsed(group.tier)"
+            :ref="(el) => setGridEl(group.tier, el)"
+            class="csp-grid"
+            :style="{ paddingTop: `${group.slice.padTop}px`, paddingBottom: `${group.slice.padBottom}px` }"
+          >
             <button
-              v-for="champion in group.champions"
+              v-for="champion in group.slice.items"
               :key="champion"
               class="csp-champ"
           :class="{
