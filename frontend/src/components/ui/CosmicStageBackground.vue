@@ -23,6 +23,11 @@ import BackgroundComets from './BackgroundComets.vue'
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
+  /* Der Sternenhimmel ist rein dekorativ und ändert nie die Größe seiner
+     Nachbarn. Ohne Containment zieht jeder Twinkle-Schritt den Renderer durch
+     Layout und Paint des gesamten überlagerten Inhalts (Sigil-Board, Panels);
+     mit Containment endet die Invalidierung an dieser Box. */
+  contain: layout paint style;
 }
 
 /* Layered parallax starfield: three depth layers, each twinkling at its own
@@ -36,6 +41,11 @@ import BackgroundComets from './BackgroundComets.vue'
   /* slight overscan so the gentle drift never reveals hard edges */
   inset: -12px;
   background-repeat: repeat;
+  /* Beide Animationen laufen auf dem Compositor — aber nur, solange die Ebene
+     ihre eigene bekommt. `will-change` erzwingt das, statt es Chrome pro Layer
+     neu entscheiden zu lassen: sonst rastert der Main Thread bei jedem Twinkle
+     die volle Fläche neu, und das sind vier bildschirmgroße Ebenen. */
+  will-change: transform, opacity;
   animation:
     csb-stars-twinkle 6s ease-in-out infinite,
     csb-stars-drift 80s ease-in-out infinite alternate;
@@ -126,7 +136,14 @@ import BackgroundComets from './BackgroundComets.vue'
 
 /* Bright accent layer: a sparse scatter of large, glowing stars that give the
    field depth and a modern "hero" pop. Own slow twinkle so they don't pulse in
-   sync with the rest. Two are phase-tinted for warmth. */
+   sync with the rest. Two are phase-tinted for warmth.
+
+   Der Schein kommt aus einem zweiten, weiten Farbverlauf je Stern — NICHT aus
+   `filter: drop-shadow`. Ein Filter auf einer bildschirmgroßen Ebene nimmt ihre
+   Animation vom Compositor: der Main Thread muss die Fläche dann in jedem
+   einzelnen Frame neu rastern, nur damit fünf Punkte leuchten. Die Halo-Stops
+   kosten dagegen einmal Paint und danach nichts mehr. Reihenfolge zählt: Kerne
+   zuerst (liegen oben), Halos danach. */
 .csb-stars--bright {
   background-image:
     radial-gradient(2.5px 2.5px at 20% 26%, rgba(255, 255, 255, 0.95), transparent 60%),
@@ -141,9 +158,22 @@ import BackgroundComets from './BackgroundComets.vue'
       color-mix(in srgb, white 82%, var(--phase-glow, #ff8c42)) 0%,
       transparent 62%
     ),
-    radial-gradient(2.5px 2.5px at 12% 60%, rgba(255, 255, 255, 0.88), transparent 60%);
+    radial-gradient(2.5px 2.5px at 12% 60%, rgba(255, 255, 255, 0.88), transparent 60%),
+    /* Halos */
+    radial-gradient(7px 7px at 20% 26%, rgba(255, 255, 255, 0.34), transparent 70%),
+    radial-gradient(
+      7px 7px at 64% 34%,
+      color-mix(in srgb, transparent 66%, var(--phase-primary, #ffb347)) 0%,
+      transparent 70%
+    ),
+    radial-gradient(7px 7px at 42% 82%, rgba(255, 255, 255, 0.3), transparent 70%),
+    radial-gradient(
+      7px 7px at 86% 68%,
+      color-mix(in srgb, transparent 66%, var(--phase-glow, #ff8c42)) 0%,
+      transparent 70%
+    ),
+    radial-gradient(7px 7px at 12% 60%, rgba(255, 255, 255, 0.3), transparent 70%);
   background-size: 900px 900px;
-  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.55));
   animation-duration: 3.4s, 64s;
   animation-delay: -0.6s, -30s;
   animation-direction: alternate, alternate;

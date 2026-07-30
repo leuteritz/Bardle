@@ -19,6 +19,8 @@ import {
   TEAM_SIGIL_DRAG_THRESHOLD_PX,
   ADMIN_TEAM_LEVEL_STEPS,
   CHAMPION_LEVEL_MAX_CAP,
+  TEAM_TAB_MOUNT_STAGE_SATELLITES,
+  TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
 } from '@/config/constants'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
@@ -28,6 +30,9 @@ import BattleTabReturnButton from '@/components/bardProfil/BattleTabReturnButton
 
 const props = defineProps<{
   selectedRole: number | null
+  /** Aufbaustufe des Tabs (TEAM_TAB_MOUNT_STAGE_*) — Satelliten und Deko warten
+   *  einen Frame, damit das Öffnen nicht in einem Stück gerechnet wird. */
+  mountStage: number
   /** True while a modal covers the board — pauses all decorative animations. */
   paused?: boolean
   /** True while a non-role side panel (e.g. synergies) occupies the right edge. */
@@ -80,6 +85,11 @@ function adminLevelTeam(steps: number) {
   }
   showToast(`+${granted} champion level${granted === 1 ? '' : 's'} granted.`)
 }
+
+/** Satelliten und Deko erscheinen erst, wenn das Board selbst steht. */
+const satellitesReady = computed(() => props.mountStage >= TEAM_TAB_MOUNT_STAGE_SATELLITES)
+/** Die Regalia-Ornamente der Knoten kommen ganz zuletzt. */
+const ornamentsReady = computed(() => props.mountStage >= TEAM_TAB_MOUNT_STAGE_ORNAMENTS)
 
 /** Per role: which ally sub-slots hold a champion — drives the aligned rune ticks. */
 const allyFilled = computed(() =>
@@ -408,7 +418,7 @@ watch(
 
       <!-- escalation embers -->
       <div
-        v-for="(ember, k) in embers"
+        v-for="(ember, k) in satellitesReady ? embers : []"
         :key="`ember-${k}`"
         class="sigil-ember"
         :style="{
@@ -432,6 +442,8 @@ watch(
         :ally-points="allyPoints[i]"
         :selected="selectedRole === i"
         :full="roleFull[i]"
+        :show-allies="satellitesReady"
+        :show-ornaments="ornamentsReady"
         :search-highlights="searchHighlights"
         :hovered-ally="selectedRole === i ? (hoveredAlly ?? null) : null"
         @select="emit('select-role', i)"

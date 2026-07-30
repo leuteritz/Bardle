@@ -2866,6 +2866,27 @@ export const TEAM_SIGIL_SPLASH_MAX_SHARE = 46
 export const TEAM_SIGIL_PAN_MAX_FRACTION = 0.15
 /** Pointer travel (px) below which a pointer-down still counts as a click, not a drag. */
 export const TEAM_SIGIL_DRAG_THRESHOLD_PX = 5
+
+/**
+ * Aufbaustufen des Team-Tabs. Der Tab bringt auf einen Schlag ein Sigil-Board,
+ * fünf Rollenknoten, 25 Ally-Satelliten und eine zweispaltige Detailseite mit —
+ * in einem einzigen Frame gerechnet, gelayoutet und gerastert ergibt das genau
+ * den Ruckler, den man beim Öffnen sieht. Stattdessen wächst der Tab über drei
+ * Frames: erst das Board mit den Rollen, dann die Satelliten, dann die
+ * Detailseite (die ohnehin hereingleitet und einen Frame Verzug nicht verrät),
+ * zuletzt die Regalia-Ornamente der Knoten. Dieselbe Gesamtarbeit, verteilt
+ * statt am Stück.
+ *
+ * Die Ornamente kommen bewusst zum Schluss: Platten, Sweep, Nieten, Halo und
+ * Corona sind je Knoten ein halbes Dutzend Ebenen aus clip-path, Kegelverläufen
+ * und Masken — die teuersten Rasteroperationen, die es hier gibt, mal fünf
+ * Knoten. Sie tragen keine Information, die man in den ersten drei Frames
+ * braucht.
+ */
+export const TEAM_TAB_MOUNT_STAGE_BOARD = 0
+export const TEAM_TAB_MOUNT_STAGE_SATELLITES = 1
+export const TEAM_TAB_MOUNT_STAGE_PANEL = 2
+export const TEAM_TAB_MOUNT_STAGE_ORNAMENTS = 3
 /** Ally-hover spotlight — hovering an ally row in the details panel mirrors onto
  *  the board: the matching satellite scales up + pings once, its siblings dim. */
 export const SIGIL_ALLY_HOVER_SCALE = 1.4

@@ -149,53 +149,71 @@ const allyLinks = computed<SigilLink[]>(() => {
 </script>
 
 <template>
+  <!-- ── Rotierende Ringe: je ein EIGENES <svg> ──────────────────────────────
+       Sie steckten früher als <g class="sigil-spin"> im Haupt-SVG. Eine
+       Transform-Animation auf einem SVG-Kindelement kann Blink nicht auf den
+       Compositor auslagern — die Folge war ein Repaint des kompletten
+       900×900-Sigils in jedem einzelnen Frame, dauerhaft, solange der Team-Tab
+       offen ist. Ein <svg> ist dagegen ein replaced element: rotiert man es als
+       Ganzes, läuft die Drehung auf der GPU und der Main Thread bleibt außen
+       vor. Gleicher viewBox, gleiche Koordinaten — die Ringe sitzen exakt wie
+       zuvor, sie kosten nur nichts mehr. -->
+  <svg
+    class="sigil-svg sigil-svg--spin"
+    :viewBox="`0 0 ${SIGIL_STAGE_SIZE} ${SIGIL_STAGE_SIZE}`"
+    :style="{ '--spin-dur': `${stage.spinSec}s` }"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <circle
+      :cx="C"
+      :cy="C"
+      :r="SIGIL_RING_OUTER_R"
+      fill="none"
+      :stroke="stage.ringColor"
+      stroke-width="1.5"
+      stroke-dasharray="3 14"
+      opacity="0.75"
+    />
+    <circle
+      v-if="stage.extraRings >= 1"
+      :cx="C"
+      :cy="C"
+      :r="SIGIL_RING_OUTER_R - 22"
+      fill="none"
+      :stroke="stage.ringColor"
+      stroke-width="1"
+      opacity="0.45"
+    />
+  </svg>
+
+  <!-- counter-rotating extra ring (stage 2+) -->
+  <svg
+    v-if="stage.extraRings >= 2"
+    class="sigil-svg sigil-svg--spin sigil-svg--reverse"
+    :viewBox="`0 0 ${SIGIL_STAGE_SIZE} ${SIGIL_STAGE_SIZE}`"
+    :style="{ '--spin-dur': `${stage.spinSec * 1.6}s` }"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <circle
+      :cx="C"
+      :cy="C"
+      :r="SIGIL_RING_OUTER_R + 18"
+      fill="none"
+      :stroke="stage.ringColor"
+      stroke-width="1"
+      stroke-dasharray="1 8"
+      opacity="0.55"
+    />
+  </svg>
+
   <svg
     class="sigil-svg"
     :viewBox="`0 0 ${SIGIL_STAGE_SIZE} ${SIGIL_STAGE_SIZE}`"
     xmlns="http://www.w3.org/2000/svg"
     aria-hidden="true"
   >
-    <!-- rotating dashed outer ring -->
-    <g class="sigil-spin" :style="{ '--spin-dur': `${stage.spinSec}s` }">
-      <circle
-        :cx="C"
-        :cy="C"
-        :r="SIGIL_RING_OUTER_R"
-        fill="none"
-        :stroke="stage.ringColor"
-        stroke-width="1.5"
-        stroke-dasharray="3 14"
-        opacity="0.75"
-      />
-      <circle
-        v-if="stage.extraRings >= 1"
-        :cx="C"
-        :cy="C"
-        :r="SIGIL_RING_OUTER_R - 22"
-        fill="none"
-        :stroke="stage.ringColor"
-        stroke-width="1"
-        opacity="0.45"
-      />
-    </g>
-    <!-- counter-rotating extra ring (stage 2+) -->
-    <g
-      v-if="stage.extraRings >= 2"
-      class="sigil-spin sigil-spin--reverse"
-      :style="{ '--spin-dur': `${stage.spinSec * 1.6}s` }"
-    >
-      <circle
-        :cx="C"
-        :cy="C"
-        :r="SIGIL_RING_OUTER_R + 18"
-        fill="none"
-        :stroke="stage.ringColor"
-        stroke-width="1"
-        stroke-dasharray="1 8"
-        opacity="0.55"
-      />
-    </g>
-
     <!-- rune ring (decorative) -->
     <circle
       :cx="C"
@@ -266,8 +284,25 @@ const allyLinks = computed<SigilLink[]>(() => {
         :opacity="e.lit ? 0.9 : 0.4"
       />
     </g>
-    <!-- pentagram overlay — appears once all 5 mains are set -->
-    <g v-if="showPentagram" class="pentagram" stroke-width="1.2" stroke-linecap="round">
+  </svg>
+
+  <!-- ── Pentagramm — erscheint, sobald alle 5 Mains stehen ──────────────────
+       Auch dieses Overlay hat sein eigenes <svg>: sein Glühen animiert Opacity,
+       und Opacity auf einer SVG-Gruppe ist genauso wenig compositierbar wie
+       eine Transform darauf. Im Haupt-SVG hieß das: sobald das Team vollzählig
+       ist, wird das gesamte Sigil dauerhaft in jedem Frame neu gezeichnet —
+       ausgerechnet im vollen Team, wo ohnehin am meisten zu zeichnen ist. Als
+       eigenes Element ist es eine Compositor-Ebene, die nur ihre eigene
+       Deckkraft ändert. Der Farbverlauf per url(#…) löst dokumentweit auf, die
+       Linien behalten also ihre Zwei-Farben-Verläufe aus dem Haupt-SVG. -->
+  <svg
+    v-if="showPentagram"
+    class="sigil-svg sigil-svg--pentagram"
+    :viewBox="`0 0 ${SIGIL_STAGE_SIZE} ${SIGIL_STAGE_SIZE}`"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <g stroke-width="1.2" stroke-linecap="round">
       <line
         v-for="e in pentagramEdges"
         :key="e.id"
@@ -278,7 +313,14 @@ const allyLinks = computed<SigilLink[]>(() => {
         :stroke="`url(#sigil-edge-${e.id})`"
       />
     </g>
+  </svg>
 
+  <svg
+    class="sigil-svg"
+    :viewBox="`0 0 ${SIGIL_STAGE_SIZE} ${SIGIL_STAGE_SIZE}`"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
     <!-- ally links: role main → each filled ally satellite -->
     <!-- chain of command: the stroke weight IS the hierarchy -->
     <g stroke-linecap="round">
@@ -325,21 +367,31 @@ const allyLinks = computed<SigilLink[]>(() => {
       />
     </g>
 
-    <!-- mandala petals at a complete 15/15 team -->
-    <g v-if="showMandala" class="sigil-spin" :style="{ '--spin-dur': `${stage.spinSec * 2}s` }">
-      <circle
-        v-for="(p, i) in rolePoints"
-        :key="`petal-${i}`"
-        :cx="(p.x + C) / 2"
-        :cy="(p.y + C) / 2"
-        :r="52"
-        fill="none"
-        :stroke="stage.crestColor"
-        stroke-width="1"
-        stroke-dasharray="2 5"
-        opacity="0.5"
-      />
-    </g>
+  </svg>
+
+  <!-- mandala petals at a complete 15/15 team — eigenes <svg> aus demselben
+       Grund wie die Ringe oben; es liegt nach dem Haupt-SVG, zeichnet also
+       weiterhin darüber -->
+  <svg
+    v-if="showMandala"
+    class="sigil-svg sigil-svg--spin"
+    :viewBox="`0 0 ${SIGIL_STAGE_SIZE} ${SIGIL_STAGE_SIZE}`"
+    :style="{ '--spin-dur': `${stage.spinSec * 2}s` }"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <circle
+      v-for="(p, i) in rolePoints"
+      :key="`petal-${i}`"
+      :cx="(p.x + C) / 2"
+      :cy="(p.y + C) / 2"
+      :r="52"
+      fill="none"
+      :stroke="stage.crestColor"
+      stroke-width="1"
+      stroke-dasharray="2 5"
+      opacity="0.5"
+    />
   </svg>
 </template>
 
@@ -352,14 +404,19 @@ const allyLinks = computed<SigilLink[]>(() => {
   overflow: visible;
   pointer-events: none;
 }
-.sigil-spin {
+/* Die Drehung sitzt auf dem <svg> selbst, nicht auf einer Gruppe darin —
+   `will-change` hält die Ebene auf dem Compositor, damit die Rotation den Main
+   Thread nie wieder anfasst. */
+.sigil-svg--spin {
   transform-origin: 50% 50%;
+  will-change: transform;
   animation: sigil-rotate var(--spin-dur, 60s) linear infinite;
 }
-.sigil-spin--reverse {
+.sigil-svg--reverse {
   animation-direction: reverse;
 }
-.pentagram {
+.sigil-svg--pentagram {
+  will-change: opacity;
   animation: pentagram-glow 3s ease-in-out infinite;
 }
 @keyframes sigil-rotate {
@@ -377,8 +434,8 @@ const allyLinks = computed<SigilLink[]>(() => {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sigil-spin,
-  .pentagram {
+  .sigil-svg--spin,
+  .sigil-svg--pentagram {
     animation: none !important;
   }
 }

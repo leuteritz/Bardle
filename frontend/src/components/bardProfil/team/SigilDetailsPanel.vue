@@ -381,11 +381,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             alt=""
             aria-hidden="true"
             class="sdp-chip-art"
+            decoding="async"
           />
           <span class="sdp-chip-art-fade" aria-hidden="true" />
         </template>
         <span class="sdp-chip-portrait">
-          <img v-if="main" :src="allyImage(main)" :alt="main" class="sdp-chip-img" />
+          <img v-if="main" :src="allyImage(main)" :alt="main" class="sdp-chip-img" decoding="async" />
           <span v-else class="sdp-chip-plus">＋</span>
         </span>
         <span class="sdp-chip-text">
@@ -430,6 +431,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 :src="allyImage(slot.name)"
                 :alt="slot.name"
                 class="sdp-chip-img"
+                decoding="async"
               />
               <span v-else class="sdp-chip-plus">＋</span>
             </span>
@@ -483,6 +485,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 :src="allyImage(slot.name)"
                 :alt="slot.name"
                 class="sdp-chip-img"
+                decoding="async"
               />
               <span v-else class="sdp-chip-plus">＋</span>
             </span>
@@ -526,7 +529,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           @keydown.space.prevent="swapSubject"
         >
           <template v-if="champion">
-            <img :src="championImage" :alt="champion" class="sdp-splash-img" />
+            <img :src="championImage" :alt="champion" class="sdp-splash-img" decoding="async" />
             <div class="sdp-splash-fade" />
             <div class="sdp-splash-swap-hint">
               <Icon icon="game-icons:cycle" width="18" height="18" />

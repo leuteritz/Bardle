@@ -5,7 +5,13 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useActionToast } from '@/composables/useActionToast'
-import { ROLES } from '@/config/constants'
+import {
+  ROLES,
+  TEAM_TAB_MOUNT_STAGE_BOARD,
+  TEAM_TAB_MOUNT_STAGE_SATELLITES,
+  TEAM_TAB_MOUNT_STAGE_PANEL,
+  TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
+} from '@/config/constants'
 import { getChampionRoles } from '@/config/championData'
 import type { ChampionRole, ItemCategory } from '@/types'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
@@ -31,6 +37,34 @@ const uiStore = useUiStore()
 const { showToast } = useActionToast()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
+
+// ── Gestaffelter Aufbau ──────────────────────────────────────────────────────
+// Siehe TEAM_TAB_MOUNT_STAGE_*: der Tab baut sich über drei Frames auf, damit
+// das Öffnen nicht in einem einzigen langen Frame stattfindet.
+const mountStage = ref(TEAM_TAB_MOUNT_STAGE_BOARD)
+let mountFrame: number | null = null
+
+function advanceMountStages() {
+  const steps = [
+    TEAM_TAB_MOUNT_STAGE_SATELLITES,
+    TEAM_TAB_MOUNT_STAGE_PANEL,
+    TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
+  ]
+  const step = (i: number) => {
+    if (i >= steps.length) {
+      mountFrame = null
+      return
+    }
+    mountFrame = requestAnimationFrame(() => {
+      mountStage.value = steps[i]
+      step(i + 1)
+    })
+  }
+  step(0)
+}
+
+/** Die Detailseite darf erst mounten, wenn das Board steht. */
+const panelReady = computed(() => mountStage.value >= TEAM_TAB_MOUNT_STAGE_PANEL)
 
 // ── Tab UI state ─────────────────────────────────────────────────────────────
 /** null = details panel closed (sigil fills the tab). */
@@ -267,6 +301,7 @@ function onEsc(e: KeyboardEvent) {
 }
 
 onMounted(() => {
+  advanceMountStages()
   window.addEventListener('keydown', onEsc)
   // the tab may have just been opened BY a requestOpenRolesTab call — the token
   // watcher above wasn't registered yet, so consume the pending request here
@@ -274,6 +309,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   cancelDeferredPicker()
+  if (mountFrame !== null) cancelAnimationFrame(mountFrame)
   window.removeEventListener('keydown', onEsc)
   if (shopScrollTimer !== null) clearTimeout(shopScrollTimer)
   // Tab zu → die gespiegelte Auswahl fällt mit, sonst bliebe im Command Panel
@@ -292,6 +328,7 @@ onUnmounted(() => {
     <!-- ══ LEFT — Battle Sigil ══ -->
     <SigilBoardComponent
       :selected-role="selectedRole"
+      :mount-stage="mountStage"
       :panel-open="synergiesOpen"
       :search-highlights="searchHighlights"
       :hovered-ally="hoveredAllySub"
@@ -308,7 +345,7 @@ onUnmounted(() => {
     <!-- ══ RIGHT — side panel: role details OR team synergies ══ -->
     <Transition name="sdp-slide" mode="out-in">
       <SigilDetailsPanel
-        v-if="selectedRole !== null"
+        v-if="selectedRole !== null && panelReady"
         :role-index="selectedRole"
         :highlighted-ally="boardHoveredAlly"
         @swap="openPicker(-1)"
@@ -319,7 +356,7 @@ onUnmounted(() => {
         @hover-ally="hoveredAllySub = $event"
       />
       <TeamSynergiesPanel
-        v-else-if="synergiesOpen"
+        v-else-if="synergiesOpen && panelReady"
         @close="synergiesOpen = false"
         @highlight="searchHighlights = $event"
       />

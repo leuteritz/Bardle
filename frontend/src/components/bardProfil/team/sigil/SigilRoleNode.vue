@@ -52,6 +52,13 @@ const props = defineProps<{
   allyPoints: SigilPoint[]
   selected: boolean
   full: boolean
+  /** Die Satelliten kommen einen Frame nach dem Knoten — siehe
+   *  TEAM_TAB_MOUNT_STAGE_*. Fünf Rollen × fünf Satelliten in einem Frame zu
+   *  mounten ist der teuerste Einzelposten beim Öffnen des Tabs. */
+  showAllies: boolean
+  /** Regalia-Ornamente (Platten, Sweep, Nieten, Halo, Corona) — sie kommen als
+   *  letzte Aufbaustufe, siehe TEAM_TAB_MOUNT_STAGE_ORNAMENTS. */
+  showOrnaments: boolean
   /** Champions spotlighted by the synergies search — hits pulse gold, the rest dims. */
   searchHighlights?: string[]
   /** Sub-slot hovered in the details panel — that satellite gets a spotlight, siblings dim. */
@@ -206,7 +213,7 @@ const frameVars = computed<Record<string, string>>(() => {
 <template>
   <!-- ally satellites (behind the role node) -->
   <button
-    v-for="(ally, sub) in allies"
+    v-for="(ally, sub) in showAllies ? allies : []"
     :key="`ally-${roleIndex}-${sub}`"
     class="sigil-ally"
     :class="{
@@ -230,7 +237,16 @@ const frameVars = computed<Record<string, string>>(() => {
     @mouseenter="emit('hover-ally', sub)"
     @mouseleave="emit('hover-ally', null)"
   >
-    <img v-if="ally" :src="allyImage(ally)" :alt="ally" class="sigil-ally-img" />
+    <!-- decoding="async": ein Portrait darf das Zeichnen des Frames nie
+         aufhalten — es erscheint lieber einen Frame später als dass der ganze
+         Tab darauf wartet -->
+    <img
+      v-if="ally"
+      :src="allyImage(ally)"
+      :alt="ally"
+      class="sigil-ally-img"
+      decoding="async"
+    />
     <span v-else class="sigil-ally-plus">＋</span>
     <!-- the bond mark: what tells a sworn satellite apart at a glance -->
     <span v-if="isSworn(sub)" class="sigil-ally-mark" aria-hidden="true">
@@ -275,18 +291,20 @@ const frameVars = computed<Record<string, string>>(() => {
     <!-- ── regalia frame ── back to front: corona, the cut metal plates, the
          sweeping highlight, then the studs riding on top of it. Everything here
          sits behind the XP arc, the aura and the portrait. -->
-    <span v-if="main && mainStage.halo" class="sigil-node-halo" aria-hidden="true" />
-    <span
-      v-if="main && mainStage.plate2"
-      class="sigil-node-plate sigil-node-plate--star"
-      aria-hidden="true"
-    />
-    <span v-if="main && mainStage.facets > 0" class="sigil-node-plate" aria-hidden="true" />
-    <span v-if="main && mainStage.sweep" class="sigil-node-sweep" aria-hidden="true" />
-    <span v-if="main && mainStage.studs > 0" class="sigil-node-studs" aria-hidden="true" />
+    <template v-if="showOrnaments">
+      <span v-if="main && mainStage.halo" class="sigil-node-halo" aria-hidden="true" />
+      <span
+        v-if="main && mainStage.plate2"
+        class="sigil-node-plate sigil-node-plate--star"
+        aria-hidden="true"
+      />
+      <span v-if="main && mainStage.facets > 0" class="sigil-node-plate" aria-hidden="true" />
+      <span v-if="main && mainStage.sweep" class="sigil-node-sweep" aria-hidden="true" />
+      <span v-if="main && mainStage.studs > 0" class="sigil-node-studs" aria-hidden="true" />
 
-    <span v-if="full" class="sigil-node-aura" aria-hidden="true" />
-    <span v-if="full" class="sigil-node-conic" aria-hidden="true" />
+      <span v-if="full" class="sigil-node-aura" aria-hidden="true" />
+      <span v-if="full" class="sigil-node-conic" aria-hidden="true" />
+    </template>
 
     <!-- XP arc — traces the node's rim in the champion's ascension rank color,
          so progress toward the next level reads at a glance across the board -->
@@ -309,7 +327,7 @@ const frameVars = computed<Record<string, string>>(() => {
     </svg>
 
     <span class="sigil-node-circle">
-      <img v-if="main" :src="mainImage" :alt="main" class="sigil-node-img" />
+      <img v-if="main" :src="mainImage" :alt="main" class="sigil-node-img" decoding="async" />
       <span v-else class="sigil-node-empty">
         <img :src="roleDef.image" :alt="roleDef.label" class="sigil-node-role-ghost" />
       </span>
@@ -482,13 +500,16 @@ const frameVars = computed<Record<string, string>>(() => {
   width: 132%;
   height: 132%;
   border-radius: 50%;
+  /* Der Verlauf blendet an beiden Enden ohnehin nach transparent aus — ein
+     zusätzlicher blur(1px) hätte hier nichts weich gemacht, was nicht schon
+     weich war, aber jede Umdrehung einen Filterdurchlauf gekostet, fünfmal
+     gleichzeitig und ohne Unterlass. */
   background: conic-gradient(
     from 0deg,
     transparent,
     color-mix(in srgb, var(--role-color) 80%, transparent),
     transparent 62%
   );
-  filter: blur(1px);
   opacity: 0.7;
   pointer-events: none;
   animation: sigil-conic 9s linear infinite;
