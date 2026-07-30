@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -12,6 +13,10 @@ import {
   ROLES,
   SIGIL_NODE_SIZE,
   SIGIL_ALLY_SIZE,
+  SIGIL_SWORN_SIZE,
+  SWORN_ALLY_COUNT,
+  SWORN_ALLY_LABELS,
+  SWORN_ICON,
   ALLIES_PER_ROLE,
   SIGIL_ALLY_HOVER_SCALE,
   SIGIL_ALLY_HOVER_DIM_OPACITY,
@@ -76,6 +81,44 @@ const allies = computed(
 function allyImage(ally: string | null): string {
   return ally ? battleStore.getChampionImage(ally, { size: 'md' }) : ''
 }
+
+// ── Sworn allies ─────────────────────────────────────────────────────────────
+// The first SWORN_ALLY_COUNT sub-slots lend the main a share of their own stats,
+// so they ride an inner orbit, are drawn larger and are tied to the node by a
+// bond line. Everything below is derived from the sub-slot index, so the split
+// moves with the constant instead of being spelled out twice.
+function isSworn(sub: number): boolean {
+  return sub < SWORN_ALLY_COUNT
+}
+function allySize(sub: number): number {
+  return isSworn(sub) ? SIGIL_SWORN_SIZE : SIGIL_ALLY_SIZE
+}
+function allyLabel(sub: number): string {
+  return isSworn(sub) ? (SWORN_ALLY_LABELS[sub] ?? `Sworn ${sub + 1}`) : `Ally ${sub + 1}`
+}
+
+/**
+ * Bond lines from the role node to each filled sworn satellite. Length and angle
+ * come from the point difference, so a line follows whatever the geometry solver
+ * in constants.ts puts its satellite at. Built as a list rather than filtered in
+ * the template — v-if and v-for must not share an element.
+ */
+const swornBonds = computed(() =>
+  allies.value
+    .map((ally, sub) => ({ ally, sub }))
+    .filter((e) => e.ally && isSworn(e.sub))
+    .map(({ sub }) => {
+      const from = props.point
+      const to = props.allyPoints[sub]
+      const dx = to.x - from.x
+      const dy = to.y - from.y
+      return {
+        sub,
+        width: `${Math.hypot(dx, dy)}px`,
+        transform: `rotate(${(Math.atan2(dy, dx) * 180) / Math.PI}deg)`,
+      }
+    }),
+)
 
 // ── Search spotlight ─────────────────────────────────────────────────────────
 const searchActive = computed(() => (props.searchHighlights?.length ?? 0) > 0)
@@ -160,11 +203,28 @@ const frameVars = computed<Record<string, string>>(() => {
 
 <template>
   <!-- ally satellites (behind the role node) -->
+  <!-- bond lines — drawn before the satellites so they pass behind them -->
+  <span
+    v-for="bond in swornBonds"
+    :key="`bond-${roleIndex}-${bond.sub}`"
+    class="sigil-bond"
+    :class="{ 'sigil-bond--active': selected || hoveredAlly === bond.sub }"
+    :style="{
+      left: `${point.x}px`,
+      top: `${point.y}px`,
+      width: bond.width,
+      transform: bond.transform,
+      '--role-color': roleDef.color,
+    }"
+    aria-hidden="true"
+  />
+
   <button
     v-for="(ally, sub) in allies"
     :key="`ally-${roleIndex}-${sub}`"
     class="sigil-ally"
     :class="{
+      'sigil-ally--sworn': isSworn(sub),
       'sigil-ally--filled': !!ally,
       'sigil-ally--highlight': selected,
       'sigil-ally--search-hit': allyHit(ally),
@@ -173,17 +233,23 @@ const frameVars = computed<Record<string, string>>(() => {
       'sigil-ally--dimmed': hoverActive && hoveredAlly !== sub,
     }"
     :style="[
-      nodeStyle(allyPoints[sub], SIGIL_ALLY_SIZE),
+      nodeStyle(allyPoints[sub], allySize(sub)),
       { '--role-color': roleDef.color, '--sub': String(sub) },
     ]"
-    :title="ally ?? `${roleDef.label} — Ally ${sub + 1}`"
-    :aria-label="ally ? `${ally} (Ally ${sub + 1})` : `Assign Ally ${sub + 1} for ${roleDef.label}`"
+    :title="ally ?? `${roleDef.label} — ${allyLabel(sub)}`"
+    :aria-label="
+      ally ? `${ally} (${allyLabel(sub)})` : `Assign ${allyLabel(sub)} for ${roleDef.label}`
+    "
     @click.stop="emit('select-ally', sub)"
     @mouseenter="emit('hover-ally', sub)"
     @mouseleave="emit('hover-ally', null)"
   >
     <img v-if="ally" :src="allyImage(ally)" :alt="ally" class="sigil-ally-img" />
     <span v-else class="sigil-ally-plus">＋</span>
+    <!-- the bond mark: what tells a sworn satellite apart at a glance -->
+    <span v-if="isSworn(sub)" class="sigil-ally-mark" aria-hidden="true">
+      <Icon :icon="SWORN_ICON" width="13" height="13" />
+    </span>
     <!-- ally level — the same medallion as the role node, minus the ornaments
          it has no room for (see CHAMPION_REGALIA_ORNAMENT_MIN_SIZE) -->
     <span v-if="ally" class="sigil-ally-level">
@@ -274,6 +340,28 @@ const frameVars = computed<Record<string, string>>(() => {
 </template>
 
 <style scoped>
+/* Bond line — node to sworn satellite. Anchored at the node centre and rotated
+   into place, so it needs no SVG layer and no per-frame work; it just sits there
+   under the satellites and brightens with the cluster. */
+.sigil-bond {
+  position: absolute;
+  height: 2px;
+  transform-origin: 0 50%;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--role-color) 70%, transparent),
+    color-mix(in srgb, var(--role-color) 25%, transparent)
+  );
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.sigil-bond--active {
+  opacity: 1;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--role-color) 55%, transparent);
+}
+
 /* ── ally satellites ── */
 .sigil-ally {
   position: absolute;
@@ -301,6 +389,36 @@ const frameVars = computed<Record<string, string>>(() => {
     0 0 0 2px var(--role-color),
     0 0 12px color-mix(in srgb, var(--role-color) 50%, transparent);
 }
+/* Sworn satellites — the two that lend the main their stats. They already ride a
+   closer orbit and are drawn larger; the firmer rim and the bond mark finish the
+   distinction without introducing a second colour. */
+.sigil-ally--sworn {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--role-color) 55%, transparent);
+  z-index: 2;
+}
+.sigil-ally--sworn.sigil-ally--filled {
+  box-shadow:
+    0 0 0 3px var(--role-color),
+    0 0 16px color-mix(in srgb, var(--role-color) 60%, transparent);
+}
+/* the bond mark sits on the rim facing the role node */
+.sigil-ally-mark {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 19px;
+  height: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #0a0704;
+  border: 1px solid color-mix(in srgb, var(--role-color) 70%, transparent);
+  color: var(--role-color);
+  pointer-events: none;
+  z-index: 3;
+}
+
 /* selected role: its ally constellation lights up with it (cascade via --sub delay) */
 .sigil-ally--highlight {
   transform: translate(-50%, -50%) scale(1.12);

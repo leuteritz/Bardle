@@ -867,6 +867,23 @@ export const CHAMPION_ORBIT_HIT_RANGE = 220 // px: champion orbit position must 
 export const CHAMPION_DPS_BASE = 40 // damage per champion per second
 /** Ally slots per role (team = 5 mains + 5 × ALLIES_PER_ROLE allies). Single source of truth. */
 export const ALLIES_PER_ROLE = 5
+
+/**
+ * Sworn allies — the first SWORN_ALLY_COUNT sub-slots of every role are not just
+ * more bodies: each lends the role's main champion SWORN_STAT_SHARE of its OWN
+ * four stats. That is what makes it matter WHO sits there and at what level,
+ * where the remaining sub-slots stay a flat headcount bonus (ALLY_DPS_CONTRIBUTION).
+ *
+ * The share feeds championLevelStore.effectiveStatsOf, so it reaches everything
+ * a main's stats already drive — orbit DPS, auto-battle power, role-ability
+ * cooldowns and reward rolls — without a second code path per system.
+ */
+export const SWORN_ALLY_COUNT = 2
+export const SWORN_STAT_SHARE = 0.25
+/** Sub-slot labels; index 0/1 are sworn, the rest fall back to "Ally n". */
+export const SWORN_ALLY_LABELS = ['Sworn I', 'Sworn II'] as const
+/** The mark a sworn slot wears wherever it appears — registered in USED_GAME_ICONS. */
+export const SWORN_ICON = 'game-icons:bowen-knot'
 /** Passive DPS bonus per assigned ally of the attacking main's role.
  *  Full row (5 allies) → ×3.0 = the old ceiling where main + 2 orbiting allies attacked as 3 units. */
 export const ALLY_DPS_CONTRIBUTION = 0.4
@@ -2749,9 +2766,28 @@ export const FORGE_TREE_ZOOM_DEFAULT = 1.7
 // arc of ALLIES_PER_ROLE ally satellites placed outward around the role node.
 export const SIGIL_STAGE_SIZE = 900
 export const SIGIL_PENTAGON_RADIUS = 300
-export const SIGIL_ALLY_RADIUS = 395
+/**
+ * The bench arc, pushed outward to make room for the sworn ring between it and
+ * the role node. Every radius here is solved against four constraints at once:
+ * the role node's regalia frame (reaches 63px from its centre), the two rings
+ * against each other, the neighbouring role cluster 72° away, and the stage box
+ * the board's fit-scale clips at (SIGIL_STAGE_SIZE / 2). The chosen set keeps at
+ * least 10px of air on every one of them, level medallions included — do not
+ * nudge one value without re-checking the other three.
+ */
+export const SIGIL_ALLY_RADIUS = 414
 /** Total angular span (degrees) of the ally constellation arc, centered on the role's pentagon angle. */
 export const SIGIL_ALLY_ARC_DEG = 44
+/**
+ * Sworn allies ride their own, closer orbit between the role node and the bench
+ * arc, tied to the node by a bond line. Two rings instead of one arc is what
+ * makes the hierarchy readable from across the board without a second colour.
+ */
+export const SIGIL_SWORN_RADIUS = 400
+/** Angular span (degrees) the sworn pair is spread over. */
+export const SIGIL_SWORN_ARC_DEG = 20
+/** Sworn satellites are drawn a touch larger than the bench ones. */
+export const SIGIL_SWORN_SIZE = 46
 export const SIGIL_NODE_SIZE = 94
 export const SIGIL_ALLY_SIZE = 44
 export const SIGIL_CREST_SIZE = 170
@@ -2784,13 +2820,10 @@ export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 900
 /** Width (px) of the left (identity + progression) column inside that panel. */
 export const TEAM_SIGIL_DETAILS_LEFT_WIDTH = 434
 /**
- * The details-page roster strip: one large captain card for the role's main
- * champion, then the bench in a grid beside it. Three bench columns divide
- * ALLIES_PER_ROLE into two rows that match the captain card's height — a wider
- * grid would squeeze the champion names, a narrower one would add a third row.
+ * Width (px) of the captain card in the details-page roster strip. To its right
+ * sit two grow-flex rows — the sworn pair on top, the rest of the bench below —
+ * so neither row depends on a column count that has to divide ALLIES_PER_ROLE.
  */
-export const TEAM_SIGIL_BENCH_COLUMNS = 3
-/** Width (px) of the captain card; the bench takes whatever is left. */
 export const TEAM_SIGIL_MAIN_CHIP_WIDTH = 250
 /** Width (px) of the team synergies panel — the other, narrower side panel. */
 export const TEAM_SIGIL_SYNERGIES_PANEL_WIDTH = 460
@@ -4016,6 +4049,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:crested-helmet', // Unified shop — Champions quick-jump button (ChampionShopComponent)
   'game-icons:light-backpack', // Unified shop — Items quick-jump button (ChampionShopComponent)
   'game-icons:cape', // Skins button (SigilDetailsPanel) + skin gallery modal (ChampionSkinsPanel)
+  'game-icons:bowen-knot', // Sworn ally marker — roster chips, stat tiles (SigilDetailsPanel) + sigil board bond (SigilRoleNode)
   // Battle tab redesign (landing / rift / honor)
   'game-icons:power-button', // STOP AUTO-BATTLE bar → return to landing (AutoBattleStopBar)
   'game-icons:sword-clash', // LEGEND flank header on the rank band (BattleLandingScreen)

@@ -36,10 +36,13 @@ import {
 import {
   ROLES,
   ALLIES_PER_ROLE,
+  SWORN_ALLY_COUNT,
+  SWORN_STAT_SHARE,
+  SWORN_ALLY_LABELS,
+  SWORN_ICON,
   SKIN_ORIGINAL,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_DETAILS_LEFT_WIDTH,
-  TEAM_SIGIL_BENCH_COLUMNS,
   TEAM_SIGIL_MAIN_CHIP_WIDTH,
   TEAM_SIGIL_SPLASH_HEIGHT,
   TEAM_SIGIL_SPLASH_HEIGHT_COMPACT,
@@ -87,7 +90,6 @@ const splashHeightPx = `${TEAM_SIGIL_SPLASH_HEIGHT}px`
 const splashHeightCompactPx = `${TEAM_SIGIL_SPLASH_HEIGHT_COMPACT}px`
 const splashMaxShare = `${TEAM_SIGIL_SPLASH_MAX_SHARE}%`
 const xpBarHeightPx = `${CHAMPION_XP_BAR_HEIGHT}px`
-const benchColumns = String(TEAM_SIGIL_BENCH_COLUMNS)
 const mainChipWidthPx = `${TEAM_SIGIL_MAIN_CHIP_WIDTH}px`
 
 const battleStore = useBattleStore()
@@ -146,7 +148,32 @@ function swapSubject() {
   else emit('pick-ally', subject.value)
 }
 
-// ── Roster ──────────────────────────────────────────────────────────
+// ── Roster ───────────────────────────────────────────────────────────────────
+// The bench is not flat: the first SWORN_ALLY_COUNT sub-slots are sworn and lend
+// the main a share of their own stats, so they get their own row, their own size
+// and their own mark. The rest stay the headcount bench below them.
+interface AllySlot {
+  sub: number
+  name: string | null
+  label: string
+}
+const swornSlots = computed<AllySlot[]>(() =>
+  allies.value.slice(0, SWORN_ALLY_COUNT).map((name, sub) => ({
+    sub,
+    name,
+    label: SWORN_ALLY_LABELS[sub] ?? `Sworn ${sub + 1}`,
+  })),
+)
+const benchSlots = computed<AllySlot[]>(() =>
+  allies.value.slice(SWORN_ALLY_COUNT).map((name, i) => ({
+    sub: SWORN_ALLY_COUNT + i,
+    name,
+    label: `Ally ${SWORN_ALLY_COUNT + i + 1}`,
+  })),
+)
+/** Percentage the sworn share is worth — printed, never hard-coded in a string. */
+const swornSharePct = computed(() => Math.round(SWORN_STAT_SHARE * 100))
+
 function allyImage(ally: string): string {
   return battleStore.getChampionImage(ally, { size: 'md' })
 }
@@ -243,7 +270,18 @@ function doLevelUp() {
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
-const stats = computed(() => (champion.value ? levelStore.statsOf(champion.value) : null))
+// The tiles print what the champion actually fights with — for a main that
+// includes what its sworn allies lend it, shown on its own line so the two are
+// never confused. An ally lends rather than receives, so its tiles stay plain.
+const stats = computed(() =>
+  champion.value ? levelStore.effectiveStatsOf(champion.value) : null,
+)
+const swornBonus = computed(() =>
+  champion.value ? levelStore.swornBonusOf(champion.value) : null,
+)
+const hasSwornBonus = computed(
+  () => !!swornBonus.value && Object.values(swornBonus.value).some((v) => v > 0),
+)
 const cooldownRush = computed(() =>
   champion.value ? levelStore.perkEffectOf(champion.value, 'cooldownRush') : 0,
 )
@@ -346,7 +384,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         <span class="sdp-chip-portrait">
           <img v-if="main" :src="allyImage(main)" :alt="main" class="sdp-chip-img" />
           <span v-else class="sdp-chip-plus">＋</span>
-          <img :src="roleDef.image" alt="" class="sdp-chip-role-mark" />
         </span>
         <span class="sdp-chip-text">
           <span class="sdp-chip-role">{{ roleDef.label }}</span>
@@ -362,48 +399,113 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         />
       </button>
 
-      <!-- the bench: same card, one size down -->
-      <div class="sdp-bench" @mouseleave="emit('hover-ally', null)">
-        <button
-          v-for="(ally, sub) in allies"
-          :key="sub"
-          class="sdp-chip sdp-chip--ally"
-          :class="{
-            'sdp-chip--active': subject === sub,
-            'sdp-chip--empty': !ally,
-            'sdp-chip--highlight': highlightedAlly === sub,
-          }"
-          type="button"
-          :title="ally ? `${ally} — Ally ${sub + 1}` : `Assign Ally ${sub + 1}`"
-          @click="selectSubject(sub)"
-          @mouseenter="emit('hover-ally', sub)"
-        >
-          <span class="sdp-chip-portrait">
-            <img v-if="ally" :src="allyImage(ally)" :alt="ally" class="sdp-chip-img" />
-            <span v-else class="sdp-chip-plus">＋</span>
-          </span>
-          <span class="sdp-chip-text">
-            <span class="sdp-chip-role">Ally {{ sub + 1 }}</span>
-            <span class="sdp-chip-name">{{ ally ?? 'Empty' }}</span>
-          </span>
-          <ChampionLevelBadge
-            v-if="ally"
-            :level="levelOf(ally)"
-            :color="roleDef.color"
-            :size="CHAMPION_REGALIA_SIZE_ALLY"
-            :attention="needsAttentionOf(ally)"
-            class="sdp-chip-badge"
-          />
-          <span
-            v-if="ally"
-            class="sdp-chip-clear"
-            role="button"
-            title="Remove ally"
-            @click.stop="emit('clear-ally', sub)"
+      <div class="sdp-roster-right">
+        <!-- the sworn pair: half the bench's count, so twice its width, plus the
+             bond mark and a bigger portrait — these two are read first -->
+        <div class="sdp-sworn" @mouseleave="emit('hover-ally', null)">
+          <button
+            v-for="slot in swornSlots"
+            :key="slot.sub"
+            class="sdp-chip sdp-chip--sworn"
+            :class="{
+              'sdp-chip--active': subject === slot.sub,
+              'sdp-chip--empty': !slot.name,
+              'sdp-chip--highlight': highlightedAlly === slot.sub,
+            }"
+            type="button"
+            :title="
+              slot.name
+                ? `${slot.name} — ${slot.label}, lends ${swornSharePct}% of its stats`
+                : `Assign ${slot.label} — lends ${swornSharePct}% of its stats to the main`
+            "
+            @click="selectSubject(slot.sub)"
+            @mouseenter="emit('hover-ally', slot.sub)"
           >
-            ✕
-          </span>
-        </button>
+            <span class="sdp-chip-portrait">
+              <img
+                v-if="slot.name"
+                :src="allyImage(slot.name)"
+                :alt="slot.name"
+                class="sdp-chip-img"
+              />
+              <span v-else class="sdp-chip-plus">＋</span>
+            </span>
+            <span class="sdp-chip-text">
+              <span class="sdp-chip-role sdp-chip-role--sworn">
+                <Icon :icon="SWORN_ICON" width="12" height="12" />
+                {{ slot.label }}
+              </span>
+              <span class="sdp-chip-name">{{ slot.name ?? 'Empty' }}</span>
+              <span class="sdp-chip-note">+{{ swornSharePct }}% stats</span>
+            </span>
+            <ChampionLevelBadge
+              v-if="slot.name"
+              :level="levelOf(slot.name)"
+              :color="roleDef.color"
+              :size="CHAMPION_REGALIA_SIZE_ALLY"
+              :attention="needsAttentionOf(slot.name)"
+              class="sdp-chip-badge"
+            />
+            <span
+              v-if="slot.name"
+              class="sdp-chip-clear"
+              role="button"
+              title="Remove ally"
+              @click.stop="emit('clear-ally', slot.sub)"
+            >
+              ✕
+            </span>
+          </button>
+        </div>
+
+        <!-- the bench: headcount only, one size down again -->
+        <div class="sdp-bench" @mouseleave="emit('hover-ally', null)">
+          <button
+            v-for="slot in benchSlots"
+            :key="slot.sub"
+            class="sdp-chip sdp-chip--ally"
+            :class="{
+              'sdp-chip--active': subject === slot.sub,
+              'sdp-chip--empty': !slot.name,
+              'sdp-chip--highlight': highlightedAlly === slot.sub,
+            }"
+            type="button"
+            :title="slot.name ? `${slot.name} — ${slot.label}` : `Assign ${slot.label}`"
+            @click="selectSubject(slot.sub)"
+            @mouseenter="emit('hover-ally', slot.sub)"
+          >
+            <span class="sdp-chip-portrait">
+              <img
+                v-if="slot.name"
+                :src="allyImage(slot.name)"
+                :alt="slot.name"
+                class="sdp-chip-img"
+              />
+              <span v-else class="sdp-chip-plus">＋</span>
+            </span>
+            <span class="sdp-chip-text">
+              <span class="sdp-chip-role">{{ slot.label }}</span>
+              <span class="sdp-chip-name">{{ slot.name ?? 'Empty' }}</span>
+            </span>
+            <ChampionLevelBadge
+              v-if="slot.name"
+              :level="levelOf(slot.name)"
+              :color="roleDef.color"
+              :size="CHAMPION_REGALIA_SIZE_ALLY"
+              :attention="needsAttentionOf(slot.name)"
+              class="sdp-chip-badge"
+            />
+            <span
+              v-if="slot.name"
+              class="sdp-chip-clear"
+              role="button"
+              title="Remove ally"
+              @click.stop="emit('clear-ally', slot.sub)"
+            >
+              ✕
+            </span>
+          </button>
+        </div>
       </div>
 
       <button class="sdp-close" aria-label="Close details" @click="emit('close')">✕</button>
@@ -692,7 +794,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             <span class="sdp-section-accent">✦</span>
             <span class="sdp-section-title">Stats</span>
             <div class="sdp-section-rule" />
-            <span class="sdp-section-count">{{ champion }}</span>
+            <span v-if="hasSwornBonus" class="sdp-section-count sdp-section-count--sworn">
+              <Icon :icon="SWORN_ICON" width="12" height="12" />
+              sworn included
+            </span>
+            <span v-else class="sdp-section-count">{{ champion }}</span>
           </div>
           <div class="sdp-stats">
             <div
@@ -711,6 +817,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 <div class="sdp-stat-effect">
                   {{ statEffectOf(stat.key) }}
                   <span class="sdp-stat-effect-label">{{ stat.effectLabel }}</span>
+                </div>
+                <!-- what the sworn pair adds, kept apart from the champion's own -->
+                <div v-if="swornBonus && swornBonus[stat.key] > 0" class="sdp-stat-sworn">
+                  <Icon :icon="SWORN_ICON" width="11" height="11" />
+                  +{{ swornBonus[stat.key].toFixed(1) }} sworn
                 </div>
               </div>
             </div>
@@ -873,8 +984,8 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   flex-shrink: 0;
 }
 
-/* The captain card — the only chip that wears the role mark and the only one at
-   full size, so "who plays this slot" reads before any label does. */
+/* The captain card — the only chip at full size, with the champion's own splash
+   behind it, so "who plays this slot" reads before any label does. */
 .sdp-chip--main {
   position: relative;
   flex-shrink: 0;
@@ -926,24 +1037,61 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-chip--main .sdp-chip-plus {
   font-size: 28px;
 }
-/* role mark rides the captain's portrait instead of standing on its own */
-.sdp-chip-role-mark {
-  position: absolute;
-  left: -5px;
-  bottom: -5px;
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.9));
-}
-
-/* the bench — same card language, one size down, two rows of three */
-.sdp-bench {
+/* Two rows to the captain's right: the sworn pair on top, the bench below.
+   Both are grow-flex rows rather than one grid — each row fills its own width
+   whatever its count is, so neither ever leaves a dead cell. */
+.sdp-roster-right {
   flex: 1;
   min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(v-bind(benchColumns), 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 7px;
+}
+.sdp-sworn,
+.sdp-bench {
+  display: flex;
+  gap: 7px;
+}
+.sdp-chip--sworn,
+.sdp-chip--ally {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* The sworn pair — fewer of them, so each is wider; a bigger portrait and the
+   bond mark carry the rank, and the note says what the slot actually does. */
+.sdp-chip--sworn {
+  padding: 6px 9px 6px 6px;
+  gap: 10px;
+  border-color: color-mix(in srgb, var(--rc) 40%, transparent);
+  background: linear-gradient(100deg, #1a1409, #141410 62%);
+}
+.sdp-chip--sworn .sdp-chip-portrait {
+  width: 46px;
+  height: 46px;
+}
+.sdp-chip--sworn .sdp-chip-name {
+  font-size: 15.5px;
+}
+.sdp-chip-role--sworn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--rc);
+}
+.sdp-chip-note {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(232, 192, 64, 0.7);
+  white-space: nowrap;
+}
+.sdp-chip--sworn.sdp-chip--empty {
+  background: #141410;
+}
+.sdp-chip--empty .sdp-chip-note {
+  color: rgba(200, 164, 90, 0.4);
 }
 .sdp-chip-img {
   width: 100%;
@@ -1782,6 +1930,24 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-stat-effect-label {
   font-weight: 500;
   color: rgba(230, 220, 196, 0.45);
+}
+/* the sworn share, never mixed into the champion's own number */
+.sdp-stat-sworn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(232, 192, 64, 0.8);
+}
+.sdp-section-count--sworn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(232, 192, 64, 0.75);
 }
 
 /* ── role abilities ── */

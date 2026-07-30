@@ -12,6 +12,8 @@ import {
   CHAMPION_LEVEL_MAX_CAP,
   CHAMPION_ALLY_XP_SHARE,
   CHAMPION_LAST_STAND_HP_THRESHOLD,
+  SWORN_ALLY_COUNT,
+  SWORN_STAT_SHARE,
   ROLES,
 } from '../config/constants'
 import {
@@ -90,6 +92,53 @@ export const useChampionLevelStore = defineStore('championLevel', {
       return (name: string) => {
         const p = this.progressOf(name)
         return resolveChampionStats(name, p.level, roleOf(name), Object.values(p.perks))
+      }
+    },
+
+    /**
+     * Sworn contribution a main receives, per stat. The first SWORN_ALLY_COUNT
+     * sub-slots of the role lend SWORN_STAT_SHARE of their own resolved stats;
+     * the rest of the bench stays a flat headcount bonus in combatStore.
+     *
+     * Zero for anyone who does not hold a main slot — an ally never sworn-boosts
+     * an ally, so this never recurses past one level.
+     */
+    swornBonusOf(): (name: string) => ChampionStats {
+      return (name: string) => {
+        const empty: ChampionStats = { power: 0, vitality: 0, focus: 0, fortune: 0 }
+        const battleStore = useBattleStore()
+        const roleIndex = battleStore.headerSlots.indexOf(name)
+        if (roleIndex === -1) return empty
+        const row = battleStore.secondarySlots[roleIndex] ?? []
+        for (let sub = 0; sub < SWORN_ALLY_COUNT; sub++) {
+          const ally = row[sub]
+          if (!ally || !isLevelable(ally)) continue
+          const allyStats = this.statsOf(ally)
+          for (const key of Object.keys(empty) as (keyof ChampionStats)[]) {
+            empty[key] += allyStats[key] * SWORN_STAT_SHARE
+          }
+        }
+        return empty
+      }
+    },
+
+    /**
+     * What the champion actually fights with: its own stats plus whatever its
+     * sworn allies lend it. Every multiplier below reads THIS, so the sworn bonus
+     * reaches orbit DPS, battle power, cooldowns and rewards through one path.
+     * `statsOf` stays the champion's own block, which is what the UI prints when
+     * it wants to show base and bonus apart.
+     */
+    effectiveStatsOf(): (name: string) => ChampionStats {
+      return (name: string) => {
+        const own = this.statsOf(name)
+        const sworn = this.swornBonusOf(name)
+        return {
+          power: own.power + sworn.power,
+          vitality: own.vitality + sworn.vitality,
+          focus: own.focus + sworn.focus,
+          fortune: own.fortune + sworn.fortune,
+        }
       }
     },
 
@@ -193,7 +242,7 @@ export const useChampionLevelStore = defineStore('championLevel', {
      */
     orbitDpsMultOf(): (name: string) => number {
       return (name: string) => {
-        let power = this.statsOf(name).power
+        let power = this.effectiveStatsOf(name).power
         const lastStand = this.perkEffectOf(name, 'lastStand')
         if (lastStand > 0) {
           const player = usePlayerStore()
@@ -215,7 +264,7 @@ export const useChampionLevelStore = defineStore('championLevel', {
 
     /** VITALITY multiplier — star fight HP and auto-battle power. */
     vitalityMultOf(): (name: string) => number {
-      return (name: string) => vitalityMult(this.statsOf(name).vitality)
+      return (name: string) => vitalityMult(this.effectiveStatsOf(name).vitality)
     },
 
     /**
@@ -226,7 +275,10 @@ export const useChampionLevelStore = defineStore('championLevel', {
       return (roleIndex: number) => {
         const name = useBattleStore().headerSlots[roleIndex]
         if (!name || !isLevelable(name)) return 1
-        return focusCooldownMult(this.statsOf(name).focus, this.perkEffectOf(name, 'cooldownRush'))
+        return focusCooldownMult(
+          this.effectiveStatsOf(name).focus,
+          this.perkEffectOf(name, 'cooldownRush'),
+        )
       }
     },
 
@@ -248,7 +300,7 @@ export const useChampionLevelStore = defineStore('championLevel', {
       const mains = useBattleStore().headerSlots.filter((n): n is string => !!n && isLevelable(n))
       if (mains.length === 0) return 1
       let sum = 0
-      for (const name of mains) sum += vitalityMult(this.statsOf(name).vitality)
+      for (const name of mains) sum += vitalityMult(this.effectiveStatsOf(name).vitality)
       return sum / mains.length
     },
 
@@ -262,7 +314,9 @@ export const useChampionLevelStore = defineStore('championLevel', {
       if (mains.length === 0) return 1
       let sum = 0
       for (const name of mains) {
-        sum += fortuneMult(this.statsOf(name).fortune) + this.perkEffectOf(name, 'fortuneSurge')
+        sum +=
+          fortuneMult(this.effectiveStatsOf(name).fortune) +
+          this.perkEffectOf(name, 'fortuneSurge')
       }
       return sum / mains.length
     },

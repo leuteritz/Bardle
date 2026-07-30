@@ -35,6 +35,9 @@ import {
   CHAMPION_ASCENSION_INTERVAL,
   CHAMPION_PERK_INTERVAL,
   CHAMPION_REGALIA_STAGES,
+  SWORN_ALLY_COUNT,
+  SWORN_STAT_SHARE,
+  ALLIES_PER_ROLE,
   SAVE_KEY,
 } from '../../config/constants'
 import { CHAMPION_DATA } from '../../config/championData'
@@ -240,6 +243,88 @@ describe('champion levels — curves and stats', () => {
         ).some((flag) => cur[flag] && !prev[flag])
       expect(gained).toBe(true)
     }
+  })
+})
+
+describe('sworn allies', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  /** Puts MID_LOW in a role slot and fills `count` of its sub-slots. */
+  function seatRole(count: number): string[] {
+    const battleStore = useBattleStore()
+    const bench = [MID_HIGH, TOP_LOW, 'Ahri', 'Zoe', 'Malphite'].filter((n) => n !== MID_LOW)
+    battleStore.setHeaderSlot(2, MID_LOW)
+    const seated: string[] = []
+    for (let sub = 0; sub < count; sub++) {
+      battleStore.setSecondarySlot(2, sub, bench[sub])
+      seated.push(bench[sub])
+    }
+    return seated
+  }
+
+  it('lends the main a share of the own stats of each sworn ally', () => {
+    const levelStore = useChampionLevelStore()
+    const seated = seatRole(SWORN_ALLY_COUNT)
+
+    let expectedPower = 0
+    for (const ally of seated) expectedPower += levelStore.statsOf(ally).power * SWORN_STAT_SHARE
+
+    expect(levelStore.swornBonusOf(MID_LOW).power).toBeCloseTo(expectedPower, 5)
+    expect(levelStore.effectiveStatsOf(MID_LOW).power).toBeCloseTo(
+      levelStore.statsOf(MID_LOW).power + expectedPower,
+      5,
+    )
+  })
+
+  it('scales with the sworn ally level, not just with the slot being filled', () => {
+    const levelStore = useChampionLevelStore()
+    const [ally] = seatRole(1)
+    const before = levelStore.swornBonusOf(MID_LOW).power
+
+    levelStore.progress[ally] = { level: 20, xp: 0, totalXp: 0, perks: {} }
+    expect(levelStore.swornBonusOf(MID_LOW).power).toBeGreaterThan(before)
+  })
+
+  it('ignores sub-slots past the sworn pair', () => {
+    const levelStore = useChampionLevelStore()
+    seatRole(SWORN_ALLY_COUNT)
+    const sworn = levelStore.swornBonusOf(MID_LOW)
+
+    // filling a plain bench slot must not move the sworn bonus at all
+    const battleStore = useBattleStore()
+    expect(ALLIES_PER_ROLE).toBeGreaterThan(SWORN_ALLY_COUNT)
+    battleStore.setSecondarySlot(2, SWORN_ALLY_COUNT, 'Garen')
+    expect(levelStore.swornBonusOf(MID_LOW)).toEqual(sworn)
+  })
+
+  it('gives nothing to a champion that holds no main slot', () => {
+    const levelStore = useChampionLevelStore()
+    const [ally] = seatRole(1)
+    // the ally itself is sworn to someone — it must not receive a bonus of its own
+    expect(levelStore.swornBonusOf(ally)).toEqual({
+      power: 0,
+      vitality: 0,
+      focus: 0,
+      fortune: 0,
+    })
+    expect(levelStore.effectiveStatsOf(ally)).toEqual(levelStore.statsOf(ally))
+  })
+
+  it('carries into the multipliers the rest of the game reads', () => {
+    const levelStore = useChampionLevelStore()
+    const battleStore = useBattleStore()
+    battleStore.setHeaderSlot(2, MID_LOW)
+    const bareDps = levelStore.orbitDpsMultOf(MID_LOW)
+    const bareVit = levelStore.vitalityMultOf(MID_LOW)
+    const bareCd = levelStore.roleCooldownMult(2)
+
+    seatRole(SWORN_ALLY_COUNT)
+    expect(levelStore.orbitDpsMultOf(MID_LOW)).toBeGreaterThan(bareDps)
+    expect(levelStore.vitalityMultOf(MID_LOW)).toBeGreaterThan(bareVit)
+    // FOCUS lowers the cooldown factor, so more of it means a smaller number
+    expect(levelStore.roleCooldownMult(2)).toBeLessThan(bareCd)
   })
 })
 

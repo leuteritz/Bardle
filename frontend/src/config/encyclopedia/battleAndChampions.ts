@@ -125,7 +125,19 @@ export const championsCategory: EncyclopediaCategory = {
         'Mains and allies feed combat power through the Battle Sigil.',
       lore: 'A constellation of chosen fighters.',
       formula: '+100 power per main star · +25 per ally star',
-      related: ['synergies', 'orbit-combat'],
+      related: ['sworn-allies', 'synergies', 'orbit-combat'],
+    },
+    {
+      id: 'sworn-allies',
+      name: 'Sworn Allies',
+      icon: 'game-icons:bowen-knot',
+      description:
+        'The first two ally slots of every role are sworn: each lends its main champion 25% of its ' +
+        'OWN four stats, so who sits there and at what level actually matters. The remaining three ' +
+        'slots stay a flat headcount bonus to orbit damage.',
+      lore: 'Two blades pledged to one banner outlast three hired ones.',
+      formula: 'main stats + 25% of each sworn ally stats → orbit DPS, battle power, cooldowns, rewards',
+      related: ['team-roster', 'champion-tiers', 'orbit-combat'],
     },
     {
       id: 'synergies',
