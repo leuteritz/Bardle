@@ -2766,15 +2766,20 @@ export const FORGE_TREE_ZOOM_DEFAULT = 1.7
 // arc of ALLIES_PER_ROLE ally satellites placed outward around the role node.
 export const SIGIL_STAGE_SIZE = 900
 export const SIGIL_PENTAGON_RADIUS = 255
+/** Pentagon angles: Top at 12 o'clock, the ROLES order running clockwise. */
+export const SIGIL_PENTAGON_START_ANGLE = -90
+export const SIGIL_PENTAGON_ANGLE_STEP = 360 / ROLES.length
 /**
  * The role cluster is a fan, not a ring: the two sworn allies hug their role node
  * while the bench sits far out on the pentagon's own arc. The whole set below was
  * solved together against seven constraints — the node's regalia frame (63px), the
  * satellites against each other, the sworn pair, the inner rune ring, the
  * neighbouring cluster 72° away, and the stage box the board's fit-scale clips at
- * (SIGIL_STAGE_SIZE / 2). It keeps ≥ 8px of air on every one of them, level
- * medallions included, and puts the bench 1.7× further from the node than the
- * sworn pair — that ratio IS the hierarchy. Do not nudge one value alone.
+ * (SIGIL_STAGE_SIZE / 2). Verified in the browser at all four desktop reference
+ * resolutions, with the five longest champion names seated and a role selected
+ * (that node scales 1.12): zero overlaps, tightest pair 15.6px at Full HD and
+ * 4.2px in the selected state. The bench ends up 1.46× further from the node than
+ * the sworn pair — that ratio IS the hierarchy. Do not nudge one value alone.
  */
 export const SIGIL_ALLY_RADIUS = 416
 /** Total angular span (degrees) of the bench arc, centered on the role's pentagon angle. */
@@ -2785,10 +2790,27 @@ export const SIGIL_ALLY_ARC_DEG = 36
  * outward radial. That is what lets them sit right against the main while the
  * bench stays out on the arc.
  */
-export const SIGIL_SWORN_GAP = 101
+export const SIGIL_SWORN_GAP = 110
 export const SIGIL_SWORN_SPREAD_DEG = 58
 /** Sworn satellites are drawn larger than the bench ones. */
 export const SIGIL_SWORN_SIZE = 42
+/**
+ * A role node's own decorations, placed relative to the node's INWARD radial
+ * (the direction pointing at the sigil's core). Every satellite of the role lies
+ * outward or lateral — sworn sit ±SIGIL_SWORN_SPREAD_DEG off the OUTWARD radial —
+ * so the inward half is the one region that can never collide with them,
+ * whatever the role's angle or the champion's name length.
+ *
+ * The two decorations do not share an axis: the name plate rides the inward
+ * radial, the level medallion rides its perpendicular. A plate is wide and a
+ * medallion is round, so on one shared axis they would collide for the roles
+ * whose inward direction runs along the plate's own width. Distances are from
+ * the node's centre.
+ */
+export const SIGIL_NODE_BADGE_INSET = 40
+export const SIGIL_NODE_NAME_OFFSET = 72
+/** Name plates truncate rather than sprawl — a long name must not reach a satellite. */
+export const SIGIL_NODE_NAME_MAX_WIDTH = 132
 export const SIGIL_NODE_SIZE = 94
 export const SIGIL_ALLY_SIZE = 36
 export const SIGIL_CREST_SIZE = 170

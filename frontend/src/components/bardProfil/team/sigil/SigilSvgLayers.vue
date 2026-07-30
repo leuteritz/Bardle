@@ -90,11 +90,12 @@ interface SigilLink {
  *
  *   node ──── sworn        thick, bright — the two that lend their stats
  *   sworn ─── sworn        the yoke across the node, so the pair reads as a pair
- *   sworn ─── bench        thin, dim — each bench ally hangs off its nearest sworn
+ *   sworn ─── bench        thin, dim — two feeders per bench ally, one to each
+ *                              sworn, so the bench hangs off the PAIR
  *
- * A bench ally with no sworn ally to hang from falls back to the node, so a
- * half-filled role never leaves a satellite floating unconnected. Every segment
- * is trimmed on both ends by the radius of what it touches.
+ * A bench ally with no sworn ally seated falls back to the node, so a half-filled
+ * role never leaves a satellite floating unconnected. Every segment is trimmed on
+ * both ends by the radius of whatever it touches.
  */
 const allyLinks = computed<SigilLink[]>(() => {
   const links: SigilLink[] = []
@@ -129,21 +130,18 @@ const allyLinks = computed<SigilLink[]>(() => {
       connect(points[swornSubs[i - 1]], points[swornSubs[i]], LINK_GAP_SWORN, LINK_GAP_SWORN, 'yoke')
     }
 
-    // every bench ally hangs off the sworn ally nearest to it
+    // every bench ally hangs off BOTH sworn allies — two feeders each, so the
+    // bench reads as carried by the pair rather than assigned to one of them
     points.forEach((p, sub) => {
       if (sub < SWORN_ALLY_COUNT || !filled(sub)) return
-      let from = main
-      let gap = LINK_GAP_MAIN
-      let nearest = Infinity
-      for (const s of swornSubs) {
-        const d = Math.hypot(points[s].x - p.x, points[s].y - p.y)
-        if (d < nearest) {
-          nearest = d
-          from = points[s]
-          gap = LINK_GAP_SWORN
-        }
+      if (swornSubs.length === 0) {
+        // no sworn ally seated yet — fall back to the node so nothing floats free
+        connect(main, p, LINK_GAP_MAIN, LINK_GAP_BENCH, 'bench')
+        return
       }
-      connect(from, p, gap, LINK_GAP_BENCH, 'bench')
+      for (const s of swornSubs) {
+        connect(points[s], p, LINK_GAP_SWORN, LINK_GAP_BENCH, 'bench')
+      }
     })
   })
   return links

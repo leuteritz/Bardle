@@ -14,6 +14,11 @@ import {
   SIGIL_NODE_SIZE,
   SIGIL_ALLY_SIZE,
   SIGIL_SWORN_SIZE,
+  SIGIL_NODE_BADGE_INSET,
+  SIGIL_NODE_NAME_OFFSET,
+  SIGIL_NODE_NAME_MAX_WIDTH,
+  SIGIL_PENTAGON_ANGLE_STEP,
+  SIGIL_PENTAGON_START_ANGLE,
   SWORN_ALLY_COUNT,
   SWORN_ALLY_LABELS,
   SWORN_ICON,
@@ -96,6 +101,26 @@ function allySize(sub: number): number {
 function allyLabel(sub: number): string {
   return isSworn(sub) ? (SWORN_ALLY_LABELS[sub] ?? `Sworn ${sub + 1}`) : `Ally ${sub + 1}`
 }
+
+/**
+ * Unit vector pointing from this role node at the sigil's core. The medallion and
+ * the name plate ride it, which is what keeps them clear of the role's own
+ * satellites — those all live on the opposite half.
+ */
+const inward = computed(() => {
+  const deg = SIGIL_PENTAGON_START_ANGLE + props.roleIndex * SIGIL_PENTAGON_ANGLE_STEP + 180
+  const rad = (deg * Math.PI) / 180
+  return { x: Math.cos(rad), y: Math.sin(rad) }
+})
+const decorVars = computed<Record<string, string>>(() => ({
+  // medallion on the inward perpendicular (inward rotated 90°), name plate on the
+  // inward radial itself — two axes, so the round badge never lands on the plate
+  '--badge-x': `${(-inward.value.y * SIGIL_NODE_BADGE_INSET).toFixed(1)}px`,
+  '--badge-y': `${(inward.value.x * SIGIL_NODE_BADGE_INSET).toFixed(1)}px`,
+  '--name-x': `${(inward.value.x * SIGIL_NODE_NAME_OFFSET).toFixed(1)}px`,
+  '--name-y': `${(inward.value.y * SIGIL_NODE_NAME_OFFSET).toFixed(1)}px`,
+  '--name-max': `${SIGIL_NODE_NAME_MAX_WIDTH}px`,
+}))
 
 // ── Search spotlight ─────────────────────────────────────────────────────────
 const searchActive = computed(() => (props.searchHighlights?.length ?? 0) > 0)
@@ -234,7 +259,12 @@ const frameVars = computed<Record<string, string>>(() => {
       'sigil-node--bevel': !!main && mainStage.bevel,
       'sigil-node--spin': !!main && mainStage.spin,
     }"
-    :style="[nodeStyle(point, SIGIL_NODE_SIZE), { '--role-color': roleDef.color }, frameVars]"
+    :style="[
+      nodeStyle(point, SIGIL_NODE_SIZE),
+      { '--role-color': roleDef.color },
+      frameVars,
+      decorVars,
+    ]"
     :aria-label="main ? `${main} (${roleDef.label})` : `Assign a champion for ${roleDef.label}`"
     @click.stop="emit('select')"
     @mouseenter="uiStore.setHoveredChampionSlotIndex(roleIndex)"
@@ -499,10 +529,12 @@ const frameVars = computed<Record<string, string>>(() => {
 
 /* level medallion — the wrapper only places it on the node's shoulder;
    everything the badge looks like lives in ChampionLevelBadge */
+/* medallion and name plate both ride the inward radial — see SIGIL_NODE_BADGE_INSET */
 .sigil-node-level {
   position: absolute;
-  left: -6px;
-  top: -6px;
+  left: calc(50% + var(--badge-x, 0px));
+  top: calc(50% + var(--badge-y, 0px));
+  transform: translate(-50%, -50%);
   display: flex;
   z-index: 4;
   pointer-events: none;
@@ -729,9 +761,10 @@ const frameVars = computed<Record<string, string>>(() => {
 }
 .sigil-node-name {
   position: absolute;
-  left: 50%;
-  top: calc(100% + 6px);
-  transform: translateX(-50%);
+  left: calc(50% + var(--name-x, 0px));
+  top: calc(50% + var(--name-y, 71px));
+  transform: translate(-50%, -50%);
+  max-width: var(--name-max, 158px);
   padding: 2px 10px;
   border-radius: 4px;
   background: rgba(10, 7, 4, 0.88);
@@ -740,6 +773,8 @@ const frameVars = computed<Record<string, string>>(() => {
   letter-spacing: 0.04em;
   color: var(--role-color);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sigil-node--selected .sigil-node-name {
   background: var(--role-color);

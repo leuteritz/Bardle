@@ -6,6 +6,8 @@ import {
   ROLES,
   SIGIL_STAGE_SIZE,
   SIGIL_PENTAGON_RADIUS,
+  SIGIL_PENTAGON_START_ANGLE,
+  SIGIL_PENTAGON_ANGLE_STEP,
   SIGIL_ALLY_RADIUS,
   SIGIL_ALLY_ARC_DEG,
   SIGIL_SWORN_GAP,
@@ -46,7 +48,7 @@ function polarPoint(angleDeg: number, radius: number): SigilPoint {
 
 /** Pentagon angle of role i — Top at 12 o'clock, ROLES order clockwise. */
 function roleAngle(roleIndex: number): number {
-  return -90 + roleIndex * 72
+  return SIGIL_PENTAGON_START_ANGLE + roleIndex * SIGIL_PENTAGON_ANGLE_STEP
 }
 
 /**
