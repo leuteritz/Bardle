@@ -95,21 +95,42 @@
                 <Icon icon="game-icons:ore" width="13" height="13" class="stat-tile__icon" aria-hidden="true" />
                 Materials
               </span>
-              <span v-if="pauseMaterialEntries.length === 0" class="stat-tile__value stat-tile__value--dim">—</span>
-              <div v-else class="material-row">
-                <span
-                  v-for="mat in pauseMaterialEntries.slice(0, 3)"
-                  :key="mat.id"
-                  class="material-chip"
-                  :title="mat.name"
-                >
-                  <img v-if="mat.image" :src="mat.image" :alt="mat.name" class="material-chip__img" />
-                  <span class="material-chip__amount">{{ formatNumber(mat.amount) }}</span>
-                </span>
-                <span v-if="pauseMaterialEntries.length > 3" class="material-chip material-chip--more">
-                  +{{ pauseMaterialEntries.length - 3 }}
-                </span>
+              <span class="stat-tile__value" :class="{ 'stat-tile__value--dim': totalMaterials === 0 }">
+                {{ formatNumber(totalMaterials) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Ernte der Pause. Vorher steckte sie als dritte Stat-Kachel im
+               Raster oben: drei 14px-Icons und ein „+N" für alles Weitere — auf
+               Full HD durch den Fit-Scale effektiv 10px. Jetzt eine eigene
+               Sektion mit Karten in Seltenheitsfarbe, groß genug, um das
+               Material am Bild zu erkennen. Die Kachel oben bleibt und trägt
+               nur noch die Gesamtzahl. -->
+          <div
+            class="harvest"
+            :style="{ '--mat-cols': PAUSE_MATERIAL_COLUMNS, '--mat-rows': PAUSE_MATERIAL_ROWS }"
+          >
+            <span class="harvest__heading">Materials gathered</span>
+            <TransitionGroup v-if="pauseMaterialEntries.length > 0" tag="div" name="mat-pop" class="harvest__grid">
+              <div
+                v-for="mat in pauseMaterialEntries"
+                :key="mat.id"
+                class="mat-card"
+                :style="{ '--mat-color': mat.color }"
+                :title="`${mat.name} — ${mat.rarity}`"
+              >
+                <span class="mat-card__aura" aria-hidden="true" />
+                <img v-if="mat.image" :src="mat.image" :alt="mat.name" class="mat-card__img" />
+                <!-- Vier der zehn Materialien haben in den Stammdaten kein Bild;
+                     sie bekommen dasselbe Monogramm wie im Loot-Band des
+                     Star-Fight-Modals, statt eine leere Karte zu zeigen. -->
+                <span v-else class="mat-card__mono">{{ mat.monogram }}</span>
+                <span class="mat-card__amount">×{{ formatNumber(mat.amount) }}</span>
               </div>
+            </TransitionGroup>
+            <div v-else class="harvest__grid harvest__grid--empty">
+              <span class="harvest__empty">Nothing harvested yet — the drills keep turning</span>
             </div>
           </div>
 
@@ -193,7 +214,7 @@ import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { formatNumber } from '@/config/numberFormat'
-import { MATERIALS } from '@/config/materials'
+import { MATERIALS, materialIconMd } from '@/config/materials'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
@@ -201,6 +222,11 @@ import {
   PAUSE_SUN_MAX_DIAMETER,
   PAUSE_SUN_VH_FACTOR,
   PAUSE_PANEL_MAX_SCALE,
+  PAUSE_MATERIAL_COLUMNS,
+  PAUSE_MATERIAL_ROWS,
+  MATERIAL_RARITY_COLOR,
+  MATERIAL_RARITY_ORDER,
+  LOOT_MONOGRAM_MAX_CHARS,
 } from '@/config/constants'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
@@ -335,11 +361,41 @@ const pauseBattleLosses = computed(() => gameStore.pauseStats.battleLosses)
 const pauseBattleChimes = computed(() => gameStore.pauseStats.battleChimes)
 const pauseBattleLp = computed(() => gameStore.pauseStats.battleLp)
 const pauseBattleTotal = computed(() => pauseBattleWins.value + pauseBattleLosses.value)
-const pauseMaterialEntries = computed(() =>
-  Object.entries(gameStore.pauseStats.materialsEarned).map(([id, amount]) => {
+// Ernte der laufenden Pause. Sortiert nach Seltenheit und dann nach Menge —
+// das Wertvollste steht vorn, statt in der Reihenfolge, in der es zufällig
+// gefallen ist. Icons kommen in der 256er-Stufe: die Karten zeigen sie mit
+// 40–48 px, die 128er-Quelle wäre dort bereits hochskaliert.
+const pauseMaterialEntries = computed(() => {
+  const entries = Object.entries(gameStore.pauseStats.materialsEarned).map(([id, amount]) => {
     const mat = MATERIALS.find((m) => m.id === id)
-    return { id, amount, name: mat?.name ?? id, image: mat?.image ?? null }
-  }),
+    const rarity = mat?.rarity ?? 'common'
+    const name = mat?.name ?? id
+    return {
+      id,
+      amount,
+      name,
+      rarity,
+      color: MATERIAL_RARITY_COLOR[rarity] ?? MATERIAL_RARITY_COLOR.common,
+      image: mat?.image ? materialIconMd(mat.image) : null,
+      monogram: name
+        .split(/\s+/)
+        .map((word) => word[0] ?? '')
+        .join('')
+        .slice(0, LOOT_MONOGRAM_MAX_CHARS)
+        .toUpperCase(),
+    }
+  })
+  return entries.sort((a, b) => {
+    const ra = MATERIAL_RARITY_ORDER.indexOf(a.rarity)
+    const rb = MATERIAL_RARITY_ORDER.indexOf(b.rarity)
+    if (ra !== rb) return ra - rb
+    if (a.amount !== b.amount) return b.amount - a.amount
+    return a.name.localeCompare(b.name)
+  })
+})
+
+const totalMaterials = computed(() =>
+  pauseMaterialEntries.value.reduce((sum, m) => sum + m.amount, 0),
 )
 
 const isPlanetDiscovered = computed(
@@ -766,37 +822,148 @@ function particleStyle(i: number): Record<string, string> {
   box-shadow: 0 0 6px rgba(204, 96, 80, 0.6);
 }
 
-/* Materials */
-.material-row {
+/* ── Ernte-Raster ─────────────────────────────────────────
+   Die Karten tragen ihre Seltenheitsfarbe (--mat-color, aus
+   MATERIAL_RARITY_COLOR) — Rahmen, Aura hinter dem Icon und Mengenzahl teilen
+   sie sich, sodass Wert und Menge in einem Blick zusammenfallen. */
+.harvest {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.harvest__heading {
+  font-size: clamp(0.6rem, 0.85vw, 0.68rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.42);
+}
+/* Feste Höhe für beide Reihen, Inhalt vertikal zentriert: eine Reihe steht
+   mittig, zwei füllen den Block — die Panelhöhe bleibt in beiden Fällen
+   gleich, auch wenn mitten in der Pause das sechste Material fällt. */
+/* Feste Maße statt vh-Clamps: das Panel hat eine feste Design-Breite, die
+   Größenanpassung an den Viewport macht ausschließlich useFitScale. Ein
+   zweiter, davon unabhängiger vh-Bezug würde nur gegen den Fit-Scale rechnen. */
+.harvest__grid {
+  --mat-row-h: 104px;
+  --mat-gap: 9px;
+  display: grid;
+  grid-template-columns: repeat(var(--mat-cols, 5), 1fr);
+  grid-auto-rows: var(--mat-row-h);
+  align-content: center;
+  justify-items: stretch;
+  gap: var(--mat-gap);
+  width: 100%;
+  height: calc(
+    var(--mat-rows, 2) * var(--mat-row-h) + (var(--mat-rows, 2) - 1) * var(--mat-gap)
+  );
+}
+.harvest__grid--empty {
+  display: flex;
   align-items: center;
   justify-content: center;
 }
-.material-chip {
-  display: inline-flex;
+.harvest__empty {
+  font-size: clamp(0.68rem, 0.95vw, 0.78rem);
+  font-style: italic;
+  letter-spacing: 0.06em;
+  color: rgba(216, 200, 160, 0.32);
+}
+
+.mat-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 2px 6px 2px 3px;
-  background: rgba(64, 192, 180, 0.08);
-  border: 1px solid rgba(64, 192, 180, 0.22);
-  border-radius: 8px;
-  font-size: clamp(0.62rem, 0.85vw, 0.72rem);
-  font-weight: 700;
-  color: #7fd8d0;
-  font-variant-numeric: tabular-nums;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 4px;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--mat-color) 42%, transparent);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--mat-color) 13%, transparent),
+    rgba(255, 200, 80, 0.03) 65%
+  );
 }
-.material-chip--more {
-  padding: 2px 6px;
-  color: rgba(216, 200, 160, 0.5);
-  background: rgba(255, 200, 80, 0.06);
-  border-color: rgba(122, 78, 32, 0.5);
+/* Aura hinter dem Icon — gibt der Karte Tiefe, ohne das Bild einzufärben */
+.mat-card__aura {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: 108%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--mat-color) 26%, transparent) 0%,
+    transparent 62%
+  );
+  pointer-events: none;
 }
-.material-chip__img {
-  width: 14px;
-  height: 14px;
+.mat-card__img {
+  position: relative;
+  width: 54px;
+  height: 54px;
   object-fit: contain;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+}
+/* Bildloses Material: Initialen im Stil des Icons, gleiche Kartengeometrie */
+.mat-card__mono {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--mat-color) 35%, transparent);
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--mat-color);
+}
+.mat-card__amount {
+  position: relative;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--mat-color);
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 10px color-mix(in srgb, var(--mat-color) 45%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* Neue Materialkarte federt ins Raster ein — derselbe Pop wie bei den
+   Callout-Badges, damit ein Fund während der Pause auffällt. */
+.mat-pop-enter-active {
+  transition:
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.25s ease;
+}
+.mat-pop-enter-from {
+  opacity: 0;
+  transform: scale(0.5);
+}
+.mat-pop-leave-active {
+  position: absolute;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+.mat-pop-leave-to {
+  opacity: 0;
+  transform: scale(0.7);
+}
+.mat-pop-move {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ── Auto-battle strip ────────────────────────────────── */
@@ -1112,7 +1279,10 @@ function particleStyle(i: number): Record<string, string> {
   }
   .callout-pop-enter-active,
   .callout-pop-leave-active,
-  .callout-pop-move {
+  .callout-pop-move,
+  .mat-pop-enter-active,
+  .mat-pop-leave-active,
+  .mat-pop-move {
     transition: opacity 0.15s;
   }
   .continue-btn,
