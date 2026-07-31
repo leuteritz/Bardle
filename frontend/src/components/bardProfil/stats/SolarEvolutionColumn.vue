@@ -300,7 +300,7 @@ const totalChips = computed<BuffChip[]>(() => {
     if (buffPowerFlat.value > 0) parts.push(`+${buffPowerFlat.value}`)
     chips.push({
       key: 'power',
-      icon: 'game-icons:magic-swirl',
+      icon: 'game-icons:mighty-force',
       label: 'Power',
       value: parts.join(' & '),
       positive: true,
@@ -309,7 +309,7 @@ const totalChips = computed<BuffChip[]>(() => {
   if (buffMeepPct.value > 0)
     chips.push({
       key: 'meep',
-      icon: 'game-icons:crystal-ball',
+      icon: 'game-icons:meeple-king',
       label: 'Meep Power',
       value: `+${buffMeepPct.value}%`,
       positive: true,
@@ -317,7 +317,7 @@ const totalChips = computed<BuffChip[]>(() => {
   if (dpsPct.value > 0)
     chips.push({
       key: 'dps',
-      icon: 'game-icons:crossed-swords',
+      icon: 'game-icons:sword-clash',
       label: 'Combat DPS',
       value: `+${dpsPct.value}%`,
       positive: true,
@@ -325,7 +325,7 @@ const totalChips = computed<BuffChip[]>(() => {
   if (buffCDRPct.value > 0)
     chips.push({
       key: 'cdr',
-      icon: 'game-icons:sand-clock',
+      icon: 'game-icons:sands-of-time',
       label: 'Cooldowns',
       value: `-${buffCDRPct.value}%`,
       positive: false,

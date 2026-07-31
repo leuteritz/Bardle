@@ -1354,7 +1354,7 @@ export const ROLES = [
       },
       {
         key: 'amp',
-        icon: 'game-icons:lightning-bolt',
+        icon: 'game-icons:lightning-arc',
         label: 'Dmg Amplify',
         value: `×${ROLE_MID_CURSE_DAMAGE_AMP}`,
       },
@@ -1478,7 +1478,7 @@ export const ROLES = [
       },
       {
         key: 'pheal',
-        icon: 'game-icons:earth-spit',
+        icon: 'game-icons:medical-drip',
         label: 'Planet Heal',
         value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP`,
       },

@@ -11,7 +11,7 @@ export const ITEM_SETS: ItemSetBonus[] = [
   {
     setId: 'cosmic',
     setName: 'Cosmic Power',
-    icon: 'game-icons:nebula',
+    icon: 'game-icons:galaxy',
     description: '+15% CPS & +20% Combat Power',
     bonusEffect: { cpsMultiplier: 1.15, powerMultiplier: 1.2 },
   },

@@ -141,7 +141,8 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
                 :alt="universe.modifier.name"
               />
               <Icon v-else-if="universe.modifier?.icon?.includes(':')" :icon="universe.modifier.icon" class="mb-2 uni-modifier-gi" />
-              <span v-else class="mb-2 text-3xl">{{ universe.modifier?.icon ?? 'game-icons:earth-spit' }}</span>
+              <!-- Fallback: ohne Modifier-Icon steht hier die Bahn-Ikone, nie der rohe Icon-Name -->
+              <Icon v-else icon="game-icons:orbital" class="mb-2 uni-modifier-gi" />
 
               <!-- Name -->
               <h3 class="mb-1 text-base font-bold text-center uni-name">

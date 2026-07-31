@@ -182,7 +182,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'reso_5',
         name: 'Worldbell',
-        icon: 'game-icons:windchimes', // clicks carrying the whole song
+        icon: 'game-icons:tarot-21-the-world', // clicks carrying the whole song
         effect: 'Clicks gain +2% of CpS · +50% Chimes/Click',
         desc: 'Every strike carries the weight of the whole song.',
         cost: 95,

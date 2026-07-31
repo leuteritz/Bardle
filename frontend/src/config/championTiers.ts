@@ -58,7 +58,7 @@ export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
     id: 'void_sovereign',
     starLevel: 5,
     name: 'Sovereign',
-    icon: 'game-icons:portal',
+    icon: 'game-icons:throne-king',
     color: '#d45e7e',
     description: 'Sovereign of the void-gates between dying galaxies.',
   },

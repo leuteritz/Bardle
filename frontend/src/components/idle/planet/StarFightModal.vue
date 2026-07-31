@@ -49,7 +49,7 @@
             title="Admin: instantly defeat all bosses in this star"
             @click="adminKillAllBosses"
           >
-            <Icon icon="game-icons:skull" width="12" height="12" />
+            <Icon icon="game-icons:death-skull" width="12" height="12" />
             ADMIN
           </button>
           <button class="sf-close-btn" aria-label="Close" title="Close" @click="handleClose">

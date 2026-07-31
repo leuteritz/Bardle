@@ -33,7 +33,7 @@
         @click.stop="expeditionStore.forceSpawn()"
         aria-label="Force spawn expedition (dev)"
       >
-        <Icon icon="game-icons:lightning-bolt" width="12" height="12" />
+        <Icon icon="game-icons:lightning-arc" width="12" height="12" />
         Spawn
       </button>
     </div>

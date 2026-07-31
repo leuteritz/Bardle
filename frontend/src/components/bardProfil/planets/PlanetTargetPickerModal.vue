@@ -36,7 +36,7 @@ function chooseBuilding(buildingId: string) {
       <div class="ps-modal-head">
         <span class="ps-modal-head-icon">
           <Icon
-            :icon="planet.role === 'harvest_node' ? 'game-icons:wheat' : 'game-icons:tower'"
+            :icon="planet.role === 'harvest_node' ? 'game-icons:wheat' : 'game-icons:radio-tower'"
             width="28"
             height="28"
           />

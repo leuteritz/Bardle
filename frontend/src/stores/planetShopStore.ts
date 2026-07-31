@@ -147,7 +147,7 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
     name: 'Resonator',
     bonusType: 'building_cps_multiplier',
     bonusPerSlot: 0.25,
-    icon: 'game-icons:tower',
+    icon: 'game-icons:radio-tower',
     color: '#c09040',
     image: '/img/planets/planet6.png',
   },

@@ -44,7 +44,7 @@ const quickFields = [
   {
     key: 'chimes',
     label: 'Chimes',
-    icon: 'game-icons:bells',
+    icon: 'game-icons:windchimes',
     defaultStep: 100,
     min: 0,
     float: true,
@@ -404,13 +404,13 @@ function fillTeamWithRandomChampions() {
         class="admin-spawn-btn admin-spawn-btn--nebula flex items-center gap-1.5 px-3 py-1.5"
         @click="triggerNebula()"
       >
-        <Icon icon="game-icons:nebula" class="admin-btn-icon" /> Trigger Nebula
+        <Icon icon="game-icons:orbital-rays" class="admin-btn-icon" /> Trigger Nebula
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--team-fill flex items-center gap-1.5 px-3 py-1.5"
         @click="fillTeamWithRandomChampions"
       >
-        <Icon icon="game-icons:dice-six-faces-random" class="admin-btn-icon" /> Random Team Fill
+        <Icon icon="game-icons:perspective-dice-six-faces-random" class="admin-btn-icon" /> Random Team Fill
       </button>
       <!-- Rank Up lives on the battle landing page now (BattleLandingScreen.vue),
            right next to the rank band it manipulates. -->

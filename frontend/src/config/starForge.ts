@@ -134,7 +134,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     parentId: 'chimesPerSecond',
     tier: 'branch',
     phase: FORGE_BRANCH_UNLOCK_PHASE,
-    icon: 'game-icons:extra-time',
+    icon: 'game-icons:metronome',
     color: '#ffb860',
     angleDeg: 150,
     baseCost: 2_400,
@@ -405,7 +405,7 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
   {
     id: 'huntersVigil',
     name: "Hunter's Vigil",
-    icon: 'game-icons:crossed-swords',
+    icon: 'game-icons:night-vision',
     color: '#e08cc8',
     nodeA: 'warcry',
     nodeB: 'shatter',
@@ -487,7 +487,7 @@ export const FORGE_BARGAINS: ForgeBargainDef[] = [
   {
     id: 'voidHarvest',
     name: 'Void Harvest',
-    icon: 'game-icons:cosmic-egg',
+    icon: 'game-icons:crystal-cluster',
     desc: 'A rare haul of shards from the dark between stars.',
     basePrice: 22_000,
     discountPct: 0.35,
