@@ -63,6 +63,26 @@
   --rpg-slot-empty-border-hover: rgba(110, 192, 64, 0.82);
   --rpg-slot-empty-icon:         rgba(116, 212, 72, 0.80);
   --rpg-slot-empty-icon-glow:    rgba(82, 184, 48, 0.38);
+
+  /* ── Striker-Info-Plate: EINE Skalen-Einheit für das ganze Kartendesign ──
+     Die Plates im Star-Fight-Modal (StrikerInfoPlate.vue, plus die
+     Vacant-Karte in RoleStrikerSquad.vue) bemessen ALLES in `em` gegen diese
+     Variable — Schriftgrade, Innenabstände, Mindestbreite, HP-Balkenhöhe.
+     Ein Regler statt zwei Dutzend Einzelwerte, und die Karte wächst als
+     Ganzes mit dem Monitor statt in Teilen.
+
+     Ableitung der Zahlen (Baseline = die frühere feste Größe, 0.74rem):
+       Full HD  1920×950  → 11.8px  (unverändert, flachster Viewport)
+       WUXGA    1920×1070 → 11.8px  (gleiche Breite = gleicher Platz je Slot)
+       2K/QHD   2560×1310 → 15.5px  (+31 %)
+       4K       3840×2030 → 20.0px  (+69 %, Obergrenze ab ~3330px Breite)
+
+     `min()` beider Achsen: die Karten stehen zu fünft nebeneinander (13 %
+     Arenabreite Abstand) und hängen unter den Portraits — es limitiert, was
+     zuerst knapp wird. Die Karte wächst dabei bewusst LANGSAMER als die
+     Arena (4K: Karte ×1.69, Slot-Abstand ×2.0), sonst rücken die Plates auf
+     hohen Auflösungen zusammen statt auseinander. */
+  --sip-u: clamp(11.8px, min(0.7px + 0.578vw, 2px + 1.03vh), 20px);
 }
 
 /* ── Modal shell (containers, modals) ── */

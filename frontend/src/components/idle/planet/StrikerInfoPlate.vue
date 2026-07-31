@@ -13,11 +13,19 @@
       <div class="sip-hp-ticks" />
     </div>
     <span class="sip-hp-text" :class="{ 'sip-hp-text--down': hpDown }">{{ hpText }}</span>
-    <span class="sip-name-row">
-      <span class="sip-name">{{ name }}</span>
-      <span v-if="level" class="sip-level" :title="`Champion level ${level}`">{{ level }}</span>
+    <span class="sip-name">{{ name }}</span>
+    <!-- Kennwert-Zeile: Level-Chip + Schadenswert. Das Level steht bewusst
+         NICHT mehr neben dem Namen — dort verbrauchte es genau die Breite, die
+         der Name für sich braucht, und schob die Karte in ihre Nachbarin.
+         Hier unten ist die Zeile ohnehin nur halb gefüllt. Turret-Plates
+         liefern kein Level und behalten damit ihre reine Schadenszeile. -->
+    <span class="sip-meta">
+      <span v-if="level" class="sip-level" :title="`Champion level ${level}`">
+        <span class="sip-level-tag">LVL</span>
+        <span class="sip-level-num">{{ level }}</span>
+      </span>
+      <span class="sip-stats">{{ stats }}</span>
     </span>
-    <span class="sip-stats">{{ stats }}</span>
     <!-- Stat-Rail: nur Champions liefern sie — Turret-Plates lassen sie weg und
          sehen damit exakt aus wie zuvor. Vier fertige Strings, keine Store-Zugriffe
          hier drin: die Plate steckt in einer Einheit, die bei jedem Angriff
@@ -62,25 +70,40 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
 </script>
 
 <style scoped>
-/* ── Karte — dunkle Plate mit Farb-Signaturlinie oben ────────────────────── */
+/* ── Karte — dunkle Plate mit Farb-Signaturlinie oben ─────────────────────────
+   Jede Größe hier ist `em` gegen `--sip-u` (rpg-theme.css) — die Karte hat
+   genau EINEN Maßstab und wächst als Ganzes mit der Auflösung mit, statt in
+   Einzelteilen. Fix in px bleiben nur die Dinge, die NICHT mitwachsen dürfen:
+   Radien (Projektregel: max. 4–5px), Hairline-Borders und Schlagschatten —
+   skaliert würden daraus weiche, unscharfe Kanten. */
 .sip {
   position: relative;
+  font-size: var(--sip-u);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  min-width: var(--sip-min-w, 96px);
-  /* Die Rail braucht mehr Grundbreite als der bloße Name — ohne sie bliebe eine
-     Platte mit kurzem Namen bei 96px stehen und würde die Zahlen kappen. */
-  padding: 4px 10px 5px;
+  gap: 0.08em;
+  min-width: calc(var(--sip-min-w-u, 8.1) * 1em);
+  /* Deckel gegen lange Champion-Namen ("Nunu & Willump"): fünf Plates stehen
+     mit 13 % Arenabreite Abstand nebeneinander — ohne Grenze schiebt ein
+     langer Name die Karte in die Nachbarin. Darüber greift die Ellipse.
+     `cqw` misst gegen den Striker-Container (.rsq): 11.5 % gegen 13 % Abstand
+     lässt auf jeder Auflösung dieselbe relative Lücke. Die Turret-Plates
+     stehen außerhalb dieses Containers — für sie fällt `cqw` auf den Viewport
+     zurück und ist damit weit jenseits ihrer Textbreite, dort gewinnt `em`. */
+  max-width: min(14.5em, 11.5cqw);
+  padding: 0.34em 0.85em 0.42em;
   border-radius: 4px;
   background: rgba(8, 5, 2, 0.92);
   border: 1px solid color-mix(in srgb, var(--rc) 40%, #3a2410);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
 }
 
+/* Die Rail braucht mehr Grundbreite als der bloße Name — ohne sie bliebe eine
+   Platte mit kurzem Namen auf der Basisbreite stehen und würde die vier
+   Stat-Kacheln zusammenquetschen. */
 .sip--rail {
-  --sip-min-w: 112px;
+  --sip-min-w-u: 10;
 }
 
 .sip::before {
@@ -102,9 +125,9 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
 /* ── HP-Bar — schräge Esports-Energiezelle in Akzentfarbe ────────────────── */
 .sip-hp-track {
   position: relative;
-  width: calc(100% - 8px);
-  height: 7px;
-  margin: 3px 4px 0;
+  width: calc(100% - 0.68em);
+  height: 0.6em;
+  margin: 0.25em 0.34em 0;
   transform: skewX(-16deg);
   background: linear-gradient(
     to bottom,
@@ -211,7 +234,7 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
 
 /* HP-Zahl als Held der Plate — groß, konturiert, Akzentfarben-Glow */
 .sip-hp-text {
-  font-size: 1.05rem;
+  font-size: 1.42em;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   color: color-mix(in srgb, var(--rc, #c8922a) 38%, #fff);
@@ -224,7 +247,7 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
     0 0 24px color-mix(in srgb, var(--rc, #c8922a) 30%, transparent),
     0 2px 3px rgba(0, 0, 0, 0.95);
   line-height: 1.15;
-  margin-top: 1px;
+  margin-top: 0.08em;
 }
 
 .sip-hp-text--down {
@@ -237,15 +260,9 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
 
 /* Name und Level teilen sich eine Zeile — mit nur einem Kind sieht sie exakt
    aus wie die frühere reine Namenszeile (Turret-Plates) */
-.sip-name-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-}
-
 .sip-name {
-  font-size: 0.74rem;
+  max-width: 100%;
+  font-size: 1em;
   font-weight: 900;
   letter-spacing: 0.08em;
   color: rgba(240, 230, 204, 0.85);
@@ -256,23 +273,64 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-/* Level als gefüllter Chip in Rollenfarbe — dieselbe Umkehrung (dunkle Schrift
-   auf Akzentfarbe), die auch der Captain-Tag der Detailseite benutzt */
+/* Kennwert-Zeile: Chip links, Schadenswert rechts */
+.sip-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.42em;
+  max-width: 100%;
+  margin-top: 0.06em;
+}
+
+/* ── Level-Chip — zweigeteilt wie ein Nameplate-Rang ──────────────────────────
+   Links der "LVL"-Reiter in Rollenfarbe (dunkle Schrift, dieselbe Umkehrung
+   wie der Captain-Tag der Detailseite), rechts die Zahl auf dunklem Feld in
+   Rollenfarbe. Beide Hälften teilen sich einen Rahmen; `stretch` hält sie auf
+   gleicher Höhe, obwohl der Reiter kleiner gesetzt ist als die Zahl. */
 .sip-level {
   flex-shrink: 0;
-  padding: 0 5px;
+  display: inline-flex;
+  align-items: stretch;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--rc) 82%, #f0e6cc);
-  color: #0c0803;
-  font-size: 0.6rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--rc) 55%, #3a2410);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+  line-height: 1;
+}
+
+.sip-level-tag,
+.sip-level-num {
+  display: grid;
+  place-items: center;
   font-weight: 900;
-  line-height: 1.5;
+  line-height: 1;
+}
+
+.sip-level-tag {
+  padding: 0.22em 0.34em;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--rc) 68%, #f4ecd6),
+    color-mix(in srgb, var(--rc) 92%, #6a4410)
+  );
+  color: #0c0803;
+  font-size: 0.62em;
+  letter-spacing: 0.12em;
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--rc) 45%, #fff);
+}
+
+.sip-level-num {
+  padding: 0.12em 0.36em;
+  background: rgba(6, 3, 0, 0.92);
+  color: color-mix(in srgb, var(--rc) 42%, #fff);
+  font-size: 0.9em;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 7px color-mix(in srgb, var(--rc) 55%, transparent);
 }
 
 .sip-stats {
-  font-size: 0.62rem;
+  font-size: 0.84em;
   font-weight: 800;
   letter-spacing: 0.14em;
   color: color-mix(in srgb, var(--rc) 70%, #f0e6cc);
@@ -297,24 +355,40 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
    Rein statisch: kein Filter, keine Animation, nichts pro Frame. */
 .sip-rail {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 3px 8px;
+  /* minmax(0, 1fr) statt 1fr: die Werte sind `nowrap`, und eine `1fr`-Spalte
+     kann nicht unter ihre min-content-Breite — die Rail hätte damit das
+     max-width der Karte von innen wieder aufgedrückt. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.24em;
   width: 100%;
-  margin-top: 4px;
-  padding-top: 4px;
+  margin-top: 0.36em;
+  padding-top: 0.36em;
   border-top: 1px solid color-mix(in srgb, var(--rc) 28%, transparent);
 }
 
+/* Jede Zelle eine eigene Kachel mit Farbkante oben: die vier Stats sind sonst
+   acht gleich aussehende Textfetzen in einem 2×2-Raster — welcher Wert zu
+   welchem Kürzel gehört, muss man da abzählen. Rein statisch (Farbfläche +
+   Kante), kein Filter, keine Animation: die Plate steckt in einer Einheit,
+   die bei jedem Angriff durchs Bild schnipst. */
 .sip-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 0.04em;
   min-width: 0;
+  padding: 0.18em 0.14em 0.22em;
+  border-radius: 3px;
+  border-top: 2px solid color-mix(in srgb, var(--sc) 60%, transparent);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--sc) 14%, rgba(6, 3, 0, 0.55)),
+    rgba(6, 3, 0, 0.55)
+  );
 }
 
 .sip-cell-key {
-  font-size: 0.48rem;
+  font-size: 0.65em;
   font-weight: 900;
   letter-spacing: 0.1em;
   line-height: 1.2;
@@ -322,7 +396,7 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
 }
 
 .sip-cell-val {
-  font-size: 0.64rem;
+  font-size: 0.87em;
   font-weight: 900;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;

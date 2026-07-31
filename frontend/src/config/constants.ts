@@ -1030,7 +1030,15 @@ export const STRIKER_ARC_RX_PCT = 30 // horizontal semi-axis of the striker arc 
 // Flach: die Champions stehen als Row auf dem Sonnen-Horizont, kein tiefer
 // Halbkreis mehr — sonst tauchen die Info-Plates in die Sonnenscheibe ein
 export const STRIKER_ARC_RY_PCT = 3 // vertical semi-axis of the striker arc (% arena height)
-export const STRIKER_ARC_CENTER_Y_PCT = 71 // arc center as % of arena height (between loot banner and sun horizon)
+// 68 statt 71: die Info-Plates hängen unter den Portraits und sind mit der
+// auflösungsabhängigen Skalierung (--sip-u) gewachsen — die MITTLERE Plate lief
+// dadurch in den Kopf der Sonnen-HP-Anzeige (.sfsun-hp-head), die exakt darunter
+// mittig sitzt. Gemessene Überlappung vorher: 13 px auf Full HD, 18 px auf
+// WUXGA, 26 px auf 2K. Die 3 % Hebung sind das obere Ende dessen, was das
+// Vertikal-Budget hergibt: über der Row liegt das Loot-Banner (Unterkante
+// 55–59 %), danach bleiben 11 px Luft auf WUXGA — dem flachsten Fall mit dem
+// größten Banner. Nicht weiter anheben, ohne das Banner mitzumessen.
+export const STRIKER_ARC_CENTER_Y_PCT = 68 // arc center as % of arena height (between loot banner and sun horizon)
 export const STRIKER_BOSS_ANCHOR_X_PCT = 50 // projectile target: boss center X (% arena width)
 export const STRIKER_BOSS_ANCHOR_Y_PCT = 41 // projectile target: boss center Y (% arena height)
 export const STRIKER_PROJECTILE_IMPACT_FRAC = 0.7 // projectile stops at this fraction toward boss center

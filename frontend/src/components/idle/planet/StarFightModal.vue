@@ -1165,20 +1165,13 @@ function emberStyle(i: number): Record<string, string> {
     top: calc(100% + 8px);
   }
 
-  .sf-squad :deep(.sip) {
-    padding: 3px 8px 4px;
-  }
-
-  .sf-squad :deep(.sip-hp-text) {
-    font-size: 0.88rem;
-  }
-
-  .sf-squad :deep(.sip-name) {
-    font-size: 0.66rem;
-  }
-
-  .sf-squad :deep(.sip-stats) {
-    font-size: 0.56rem;
+  /* Ein Regler statt vier Einzel-Overrides: die Plate bemisst seit dem
+     Skalen-Umbau alles in `em` gegen --sip-u (rpg-theme.css). 10.56px ist
+     exakt die frühere Full-HD-Namensgröße (0.66rem) — Schriften, Paddings,
+     HP-Balken und die Stat-Rail schrumpfen jetzt GEMEINSAM mit. Vorher blieb
+     die Rail auf ihren vollen Größen stehen, während der Rest kompakt wurde. */
+  .sf-squad {
+    --sip-u: 10.56px;
   }
 }
 

@@ -657,6 +657,12 @@ onUnmounted(() => {
   pointer-events: none;
   /* Style/Layout/Paint-Invalidierungen bleiben im Squad-Subtree */
   contain: layout style paint;
+  /* Größen-Container für die Info-Plates: der Abstand zweier Striker ist
+     konstant 13 % der ARENA-Breite (STRIKER_ARC_*), nicht der Viewport-Breite
+     — das Modal ist nur ~65 % davon. Die Plates deckeln ihre Breite deshalb in
+     `cqw` gegen diesen Container, womit eine Überlappung geometrisch
+     ausgeschlossen ist statt auf jeder Auflösung neu nachgerechnet. */
+  container-type: inline-size;
 }
 
 /* ── Führungslinie der Champion-Row — verbindet die Striker optisch, gleicher
@@ -1093,18 +1099,21 @@ onUnmounted(() => {
 }
 
 /* Eigenständige Vacant-Karte (gestrichelt, gedimmt) — bewusst ohne die
-   geteilte StrikerInfoPlate, da es hier keine HP gibt */
+   geteilte StrikerInfoPlate, da es hier keine HP gibt. Maße trotzdem in `em`
+   gegen --sip-u (rpg-theme.css), sonst stünde neben einer mitgewachsenen
+   Champion-Plate eine Vacant-Karte in Full-HD-Größe. */
 .rsq-vacant-plate {
   position: absolute;
   top: calc(100% + 12px);
   left: 50%;
   transform: translateX(-50%);
+  font-size: var(--sip-u);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  min-width: 96px;
-  padding: 4px 10px 5px;
+  gap: 0.08em;
+  min-width: 8.1em;
+  padding: 0.34em 0.85em 0.42em;
   border-radius: 4px;
   background: rgba(8, 5, 2, 0.82);
   border: 1px dashed color-mix(in srgb, var(--rc) 40%, #3a2410);
@@ -1129,7 +1138,7 @@ onUnmounted(() => {
 }
 
 .rsq-vacant-name {
-  font-size: 0.74rem;
+  font-size: 1em;
   font-weight: 900;
   letter-spacing: 0.08em;
   color: color-mix(in srgb, var(--rc, #c8922a) 75%, #f0e6cc);
@@ -1144,7 +1153,7 @@ onUnmounted(() => {
 }
 
 .rsq-vacant-hint {
-  font-size: 0.62rem;
+  font-size: 0.84em;
   font-weight: 800;
   letter-spacing: 0.14em;
   color: color-mix(in srgb, var(--rc, #c8922a) 55%, #f0e6cc);

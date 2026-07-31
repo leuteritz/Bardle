@@ -1156,7 +1156,9 @@ onUnmounted(() => {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  --sip-min-w: 82px;
+  /* Faktor, nicht px: die Plate bemisst ihre Mindestbreite in `em` gegen
+     --sip-u und skaliert damit mit der Auflösung (82px auf Full HD). */
+  --sip-min-w-u: 6.9;
 }
 
 .tbh-turret--left .tbh-plate-anchor {
