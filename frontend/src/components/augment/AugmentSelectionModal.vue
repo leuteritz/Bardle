@@ -5,7 +5,7 @@ import RpgFrame from '@/components/ui/RpgFrame.vue'
 import { useGameStore } from '@/stores/gameStore'
 import { usePersistence } from '@/composables/usePersistence'
 import { AUGMENTS } from '@/config/augments'
-import { AUGMENT_RARITY_COLOR, AUGMENT_RARITY_LABEL } from '@/config/constants'
+import { AUGMENT_RARITY_COLOR, AUGMENT_RARITY_LABEL, AUTO_PICK_ICON } from '@/config/constants'
 import type { AugmentDefinition } from '@/types'
 
 const gameStore = useGameStore()
@@ -92,8 +92,24 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         </div>
 
         <!-- Footer -->
-        <div class="flex items-center justify-center gap-3 pb-4 aug-footer">
-          <button class="aug-skip" @click="gameStore.skipAllAugments()">Skip</button>
+        <div class="aug-footer">
+          <div class="aug-footer__row">
+            <button
+              class="aug-auto"
+              title="Keeps picking one of the three at random on every level-up — no more interruptions"
+              @click="gameStore.setAutoPickAugments(true)"
+            >
+              <Icon :icon="AUTO_PICK_ICON" width="16" height="16" />
+              Auto-Pick
+            </button>
+            <button class="aug-skip" @click="gameStore.skipAllAugments()">Skip</button>
+          </div>
+          <!-- Der Rückweg gehört neben den Schalter: sonst schaltet der Spieler
+               das Fenster ab, in dem der einzige Aus-Knopf stand. -->
+          <span class="aug-footer__note">
+            Auto-Pick chooses at random from now on — stop it in
+            <b>Bard Stats → Augments</b>
+          </span>
           <span class="aug-hint">
             <span class="aug-hint__key">1</span>
             <span class="aug-hint__key">2</span>
@@ -324,6 +340,65 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 
 /* ── Footer ──────────────────────────────────────────────────────── */
+.aug-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 14px;
+}
+
+.aug-footer__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.aug-footer__note {
+  font-size: 10.5px;
+  line-height: 1.3;
+  text-align: center;
+  color: #6b6047;
+}
+.aug-footer__note b {
+  font-weight: 700;
+  color: #8a7a52;
+}
+
+/* Der Auto-Pick ist eine Umschaltung, kein Zug im Spiel → gerahmt und ruhig,
+   damit er neben den drei Karten nicht um die Aufmerksamkeit kämpft. */
+.aug-auto {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 13px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a7a52;
+  background: #16140e;
+  border: 1px solid #3a2c14;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.16s ease;
+}
+
+.aug-auto:hover {
+  color: #e8c040;
+  background: #1e1a10;
+  border-color: #7a5a20;
+  transform: translateY(-1px);
+}
+
+.aug-auto:active {
+  transform: translateY(0) scale(0.97);
+}
+
 .aug-skip {
   font-size: 12px;
   color: #7a6f52;

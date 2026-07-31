@@ -13,3 +13,9 @@ export function logPlanetRestored(planetName: string) {
   const { addEvent } = useEventLog()
   addEvent(`${planetName} is back online at full HP.`, 'planet')
 }
+
+/** Auto-Pick hat gewählt — die Meldung blendet aus, das Log behält die Historie. */
+export function logAugmentAutoPicked(name: string, effectLine: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`Auto-picked ${name} — ${effectLine}`, 'augment')
+}

@@ -19,6 +19,7 @@ import { universes } from '../config/universes'
 import { clampPercent } from '../utils/geometry'
 import { bossPlanetInForeground } from '../utils/foregroundGate'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
+import { logAugmentAutoPicked } from '../config/gameEventLogger'
 import { useAugmentStore } from './augmentStore'
 import {
   LEVEL_BASE,
@@ -99,6 +100,11 @@ export const useGameStore = defineStore('game', {
     pendingAugmentChoice: false,
     pendingAugmentOptions: [] as string[],
     pendingAugmentSelections: [] as Array<{ options: string[] }>,
+    /** Solange aktiv, wählt jedes Level-Up selbst eines der drei Augments. */
+    autoPickAugments: false,
+    /** Letzte automatische Wahl — `seq` zählt hoch, damit die Anzeige auch dann
+     *  wieder auslöst, wenn zweimal hintereinander dasselbe Augment fällt. */
+    lastAutoPick: { id: '', at: 0, seq: 0 },
     isGamePaused: false,
 
     pauseStats: {
@@ -250,6 +256,13 @@ export const useGameStore = defineStore('game', {
         remaining.splice(remaining.indexOf(chosen), 1)
       }
 
+      // Auto-Pick greift vor allem anderen: kein Modal, keine Warteschlange —
+      // eines der drei wird sofort gezogen und übernommen.
+      if (this.autoPickAugments) {
+        this._autoPick(picked.map((a) => a.id))
+        return
+      }
+
       if (this.isGamePaused || this.pendingAugmentChoice) {
         this.pendingAugmentSelections.push({ options: picked.map((a) => a.id) })
       } else {
@@ -276,6 +289,10 @@ export const useGameStore = defineStore('game', {
     },
 
     _activateNextPendingSelection() {
+      if (this.autoPickAugments) {
+        this._drainAugmentQueue()
+        return
+      }
       const next = this.pendingAugmentSelections.shift()
       if (next) {
         this.pendingAugmentOptions = next.options
@@ -306,6 +323,12 @@ export const useGameStore = defineStore('game', {
 
     chooseAugment(id: string) {
       if (!this.pendingAugmentOptions.includes(id)) return
+      this._commitAugment(id)
+      this._activateNextPendingSelection()
+    },
+
+    /** Gemeinsamer Kern von Hand- und Auto-Wahl: übernehmen, registrieren, CPS/CPC neu. */
+    _commitAugment(id: string) {
       this.activeAugments.push(id)
       this.pendingAugmentChoice = false
       this.pendingAugmentOptions = []
@@ -315,7 +338,42 @@ export const useGameStore = defineStore('game', {
       const shopStore = useShopStore()
       this.chimesPerSecond = shopStore.calculateTotalCPS()
       this.chimesPerClick = shopStore.calculateTotalCPC()
-      this._activateNextPendingSelection()
+    },
+
+    /**
+     * Auto-Pick an/aus. Beim Einschalten wird eine bereits offene Auswahl sofort
+     * mit aufgelöst — sonst bliebe genau das Modal stehen, das der Spieler
+     * gerade loswerden wollte.
+     */
+    setAutoPickAugments(on: boolean) {
+      this.autoPickAugments = on
+      logger.info('Game', `Auto-pick augments: ${on ? 'on' : 'off'}`)
+      if (!on) return
+      if (this.pendingAugmentChoice && this.pendingAugmentOptions.length > 0) {
+        this._autoPick(this.pendingAugmentOptions)
+      }
+      this._drainAugmentQueue()
+    },
+
+    /**
+     * Zieht zufällig eines der angebotenen Augments, übernimmt es und meldet es
+     * über `lastAutoPick` nach außen (Toast + Eventlog lesen das).
+     */
+    _autoPick(options: string[]) {
+      if (options.length === 0) return
+      const id = options[Math.floor(Math.random() * options.length)]
+      this._commitAugment(id)
+      this.lastAutoPick = { id, at: Date.now(), seq: this.lastAutoPick.seq + 1 }
+      const aug = AUGMENTS.find((a) => a.id === id)
+      if (aug) logAugmentAutoPicked(aug.name, aug.effectLine)
+    },
+
+    /** Arbeitet aufgestaute Auswahlen ab, solange Auto-Pick läuft. */
+    _drainAugmentQueue() {
+      while (this.autoPickAugments && this.pendingAugmentSelections.length > 0) {
+        const next = this.pendingAugmentSelections.shift()
+        if (next) this._autoPick(next.options)
+      }
     },
 
     skipAllAugments() {

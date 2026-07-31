@@ -91,6 +91,7 @@ export function usePersistence() {
         activeAugments: [...gameStore.activeAugments],
         pendingAugmentChoice: gameStore.pendingAugmentChoice,
         pendingAugmentOptions: [...gameStore.pendingAugmentOptions],
+        autoPickAugments: gameStore.autoPickAugments,
         totalChimesEarned: gameStore.totalChimesEarned,
         totalClicks: gameStore.totalClicks,
         totalMeepsEarned: gameStore.totalMeepsEarned,
@@ -329,6 +330,8 @@ export function usePersistence() {
         gameStore.pendingAugmentChoice = g.pendingAugmentChoice ?? false
         if (Array.isArray(g.pendingAugmentOptions))
           gameStore.pendingAugmentOptions = g.pendingAugmentOptions
+        // Ältere Speicherstände kennen den Auto-Pick nicht → aus
+        gameStore.autoPickAugments = g.autoPickAugments ?? false
         gameStore.totalChimesEarned = g.totalChimesEarned ?? 0
         gameStore.totalClicks = g.totalClicks ?? 0
         // Lifetime counters added later — saves without them start the tally at 0
@@ -825,6 +828,8 @@ export function usePersistence() {
     gameStore.activeAugments = []
     gameStore.pendingAugmentChoice = false
     gameStore.pendingAugmentOptions = []
+    gameStore.autoPickAugments = false
+    gameStore.lastAutoPick = { id: '', at: 0, seq: 0 }
     gameStore.currentUniverse = 1
     gameStore.prestigeAvailable = false
     gameStore.buildingProductionHistory = {}
