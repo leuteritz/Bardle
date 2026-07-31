@@ -645,17 +645,23 @@ onUnmounted(() => {
 }
 
 /* ── HP direkt über dem Kamm ─────────────────────────────────────────────────
-   z-index 3 = Ebene des Ziel-HUDs: liegt über den Turret-Planeten (z2) und
-   bleibt damit auch vor der hellen Kuppel lesbar. Breite folgt der Kuppel
-   (mindestens SUN_HORIZON_HP_MIN_WIDTH_PX), damit der Streifen die Sonne
-   abschließt statt über sie hinauszuragen. */
+   Breite folgt der Kuppel (mindestens SUN_HORIZON_HP_MIN_WIDTH_PX), damit der
+   Streifen die Sonne abschließt statt über sie hinauszuragen.
+
+   z-index 5 = über der Champion-Row (.sf-squad, z4). Das ist die eigene
+   Lebensanzeige des Spielers — sie darf unter keinen Umständen verdeckt sein,
+   auch nicht kurzzeitig. Der Mid-Striker steht exakt in ihrer Spalte und zieht
+   sich beim Ausholen nach unten zurück; auf z3 schob sich seine Info-Plate
+   dabei über die Zahlen (gemessen: 23 px auf Full HD, 27 px auf WUXGA).
+   Die Ebene gehört damit zu Bolt und Schadenszahl der Sonne (beide z5) —
+   alles, was den Spielerzustand meldet, liegt über der Choreografie. */
 .sfsun-hp {
   position: absolute;
   left: 50%;
   bottom: calc(var(--sfsun-r, 100px) + var(--sfsun-hp-gap, 10px));
   transform: translateX(-50%);
   width: var(--sfsun-hp-w, 200px);
-  z-index: 3;
+  z-index: 5;
 }
 
 .sfsun-hp-head {

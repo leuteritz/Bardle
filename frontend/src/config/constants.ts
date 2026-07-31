@@ -1010,6 +1010,13 @@ export const STRIKER_FIRE_FLASH_MS = 550 // snap phase of the attack (lunge → 
 export const STRIKER_ATTACK_WINDUP_MS = 1000 // windup phase: starts the moment the pill shows 0s (one store tick before fire)
 export const STRIKER_MUZZLE_MS = 280 // muzzle flash lifetime (matches its CSS animation)
 export const STRIKER_ATTACK_LUNGE_PX = 22 // how far the portrait lunges toward the boss on attack
+// Der Windup zieht die Einheit "weg vom Boss" — der steht ÜBER der Row, der
+// Rückzug geht also nach unten. Für den Mid-Striker ist das exakt senkrecht
+// (er steht in der Boss-Spalte): er zöge sich mitsamt seiner Info-Plate 21 px
+// in die Sonne zurück, auf der er steht, und über deren HP-Leiste. Nach unten
+// ist der Rückzug deshalb gedeckelt — seitwärts bleibt er unbeschnitten, dort
+// steht nichts im Weg.
+export const STRIKER_WINDUP_MAX_DOWN_PX = 8
 // Champion-Row am Sonnen-Horizont: Winkel in Grad (0° = rechts, 90° = unten)
 // je Rolle — Top ganz links, Mid oben Mitte, Support rechts. Alle Maße in %
 // der Arena, damit das Layout auf Full-HD wie auf 2K identisch sitzt.

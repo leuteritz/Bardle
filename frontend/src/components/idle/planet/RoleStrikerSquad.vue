@@ -66,6 +66,8 @@
         '--rc': s.color,
         '--ax': s.ax + 'px',
         '--ay': s.ay + 'px',
+        '--wx': s.wx + 'px',
+        '--wy': s.wy + 'px',
         left: `${s.xPct}%`,
         top: `${s.yPct}%`,
       }"
@@ -209,6 +211,7 @@ import {
   STRIKER_BOSS_ANCHOR_Y_PCT,
   STRIKER_PROJECTILE_IMPACT_FRAC,
   STRIKER_ATTACK_LUNGE_PX,
+  STRIKER_WINDUP_MAX_DOWN_PX,
   STRIKER_ATTACK_WINDUP_MS,
   STRIKER_MUZZLE_MS,
   BOSS_CHAMPION_ATTACK_DPS,
@@ -343,6 +346,15 @@ const strikers = computed(() =>
         // Angriffs-Lunge: Portrait stößt Richtung Boss vor
         ax: Math.round((px / dist) * STRIKER_ATTACK_LUNGE_PX),
         ay: Math.round((py / dist) * STRIKER_ATTACK_LUNGE_PX),
+        // Windup-Rückzug = Gegenrichtung der Lunge, nach unten aber gedeckelt
+        // (STRIKER_WINDUP_MAX_DOWN_PX): dort liegt die HP-Leiste der Sonne,
+        // und der Mid-Striker zieht exakt senkrecht auf sie zu. Seitwärts
+        // bleibt der Rückzug voll erhalten.
+        wx: -Math.round((px / dist) * STRIKER_ATTACK_LUNGE_PX),
+        wy: Math.min(
+          -Math.round((py / dist) * STRIKER_ATTACK_LUNGE_PX),
+          STRIKER_WINDUP_MAX_DOWN_PX,
+        ),
       },
     ]
   }),
@@ -847,18 +859,21 @@ onUnmounted(() => {
   will-change: transform;
 }
 
+/* --wx/--wy statt -1 × --ax/--ay: derselbe Rückzugsvektor, nach unten aber
+   gedeckelt (siehe STRIKER_WINDUP_MAX_DOWN_PX) — sonst zieht der Mid-Striker
+   senkrecht in die HP-Leiste der Sonne. */
 @keyframes rsq-windup {
   0% {
     transform: translate(0, 0) scale(1);
   }
   /* zügig weit zurückziehen … */
   62% {
-    transform: translate(calc(var(--ax, 0px) * -0.88), calc(var(--ay, 0px) * -0.88)) scale(1.06);
+    transform: translate(calc(var(--wx, 0px) * 0.88), calc(var(--wy, 0px) * 0.88)) scale(1.06);
   }
   /* … und die letzten Pixel ganz langsam in den Umkehrpunkt kriechen —
      wirkt wie angespanntes Zittern vor dem Schuss */
   100% {
-    transform: translate(calc(var(--ax, 0px) * -0.95), calc(var(--ay, 0px) * -0.95)) scale(1.09);
+    transform: translate(calc(var(--wx, 0px) * 0.95), calc(var(--wy, 0px) * 0.95)) scale(1.09);
   }
 }
 
@@ -868,9 +883,9 @@ onUnmounted(() => {
 }
 
 @keyframes rsq-attack {
-  /* Start = gehaltene Windup-Pose → kein Sprung beim Phasenwechsel */
+  /* Start = gehaltene Windup-Pose (--wx/--wy) → kein Sprung beim Phasenwechsel */
   0% {
-    transform: translate(calc(var(--ax, 0px) * -0.95), calc(var(--ay, 0px) * -0.95)) scale(1.09);
+    transform: translate(calc(var(--wx, 0px) * 0.95), calc(var(--wy, 0px) * 0.95)) scale(1.09);
     animation-timing-function: cubic-bezier(0.7, 0, 0.3, 1);
   }
   /* Schnips: hart beschleunigt Richtung Boss vorschnellen */
