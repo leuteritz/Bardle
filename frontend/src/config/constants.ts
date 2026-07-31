@@ -883,7 +883,8 @@ export const SWORN_ALLY_COUNT = 2
 export const SWORN_STAT_SHARE = 0.25
 /** Sub-slot labels; index 0/1 are sworn, the rest fall back to "Ally n". */
 export const SWORN_ALLY_LABELS = ['Sworn I', 'Sworn II'] as const
-/** The mark a sworn slot wears wherever it appears — registered in USED_GAME_ICONS. */
+/** The mark a sworn slot wears in the LISTS — details panel rows, roster entries.
+ *  The sigil board marks them by silhouette instead, see SIGIL_SWORN_FACETS. */
 export const SWORN_ICON = 'game-icons:bowen-knot'
 /** Passive DPS bonus per assigned ally of the attacking main's role.
  *  Full row (5 allies) → ×3.0 = the old ceiling where main + 2 orbiting allies attacked as 3 units. */
@@ -2795,6 +2796,29 @@ export const SIGIL_SWORN_GAP = 110
 export const SIGIL_SWORN_SPREAD_DEG = 58
 /** Sworn satellites are drawn larger than the bench ones. */
 export const SIGIL_SWORN_SIZE = 42
+/**
+ * A sworn satellite is a CUT PLATE, the bench a disc — the silhouette alone is
+ * what tells the two ranks apart on the board, at any camera scale and without a
+ * badge, a second colour or a per-frame cost. It puts the sworn pair in the same
+ * family of cut metal as the role node's own regalia plates, with the bench
+ * orbiting round around them.
+ *
+ * `turn = 0.5` seats the hexagon flat-topped (vertices left and right). The
+ * portraits are cropped `object-position: top`, so a flat top edge keeps the
+ * champion's head intact where a pointed one would shear its corners off.
+ *
+ * The plate reaches SIGIL_SWORN_RIM_PX past the portrait box on every side, so
+ * its widest radius is SIGIL_SWORN_SIZE / 2 + SIGIL_SWORN_RIM_PX = 24px.
+ * LINK_GAP_SWORN in SigilSvgLayers.vue trims the connector lines against exactly
+ * that radius — raising one without the other makes the lines touch the metal.
+ */
+export const SIGIL_SWORN_FACETS = 6
+export const SIGIL_SWORN_FACET_TURN = 0.5
+export const SIGIL_SWORN_RIM_PX = 3
+/** Aura behind the plate: a radial fade clipped to a WIDER copy of the same
+ *  polygon. Clipped rather than blurred, so it glows without a filter pass — and
+ *  shaped rather than box-shadowed, so no circular halo betrays the hexagon. */
+export const SIGIL_SWORN_GLOW_PX = 11
 /**
  * A role node's own decorations, placed relative to the node's INWARD radial
  * (the direction pointing at the sigil's core). Every satellite of the role lies

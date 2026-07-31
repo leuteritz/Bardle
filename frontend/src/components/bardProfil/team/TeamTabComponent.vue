@@ -13,6 +13,7 @@ import {
   TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
 } from '@/config/constants'
 import { getChampionRoles } from '@/config/championData'
+import { allySlotLabel } from '@/utils/format'
 import type { ChampionRole, ItemCategory } from '@/types'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import SigilBoardComponent from './sigil/SigilBoardComponent.vue'
@@ -111,7 +112,7 @@ const roleFilteredChampions = computed(() =>
 const pickerTitle = computed(() =>
   pickerSubSlot.value === -1
     ? `Select ${roleDef.value.label}`
-    : `Select Ally ${pickerSubSlot.value + 1}`,
+    : `Select ${allySlotLabel(pickerSubSlot.value)}`,
 )
 
 // ── Selection ────────────────────────────────────────────────────────────────
@@ -192,7 +193,7 @@ function handleSelect(champion: string) {
     showToast(`${champion} set as ${roleDef.value.label}!`)
   } else {
     battleStore.setSecondarySlot(roleIndex.value, subSlot, champion)
-    showToast(`${champion} assigned as Ally ${subSlot + 1}!`)
+    showToast(`${champion} assigned as ${allySlotLabel(subSlot)}!`)
   }
   // Rapid-fire flow: advance to the next empty ally slot; stay put once full
   const row = battleStore.secondarySlots[roleIndex.value] ?? []

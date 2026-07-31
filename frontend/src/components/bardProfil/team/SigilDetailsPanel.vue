@@ -38,7 +38,6 @@ import {
   ALLIES_PER_ROLE,
   SWORN_ALLY_COUNT,
   SWORN_STAT_SHARE,
-  SWORN_ALLY_LABELS,
   SWORN_ICON,
   SKIN_ORIGINAL,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
@@ -59,6 +58,7 @@ import {
   CHIMES_COST_ICON,
 } from '@/config/constants'
 import ChampionLevelBadge from './ChampionLevelBadge.vue'
+import { allySlotLabel } from '@/utils/format'
 import { getChampionSkins, formatSkinName } from '@/utils/champions'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
@@ -162,14 +162,14 @@ const swornSlots = computed<AllySlot[]>(() =>
   allies.value.slice(0, SWORN_ALLY_COUNT).map((name, sub) => ({
     sub,
     name,
-    label: SWORN_ALLY_LABELS[sub] ?? `Sworn ${sub + 1}`,
+    label: allySlotLabel(sub),
   })),
 )
 const benchSlots = computed<AllySlot[]>(() =>
   allies.value.slice(SWORN_ALLY_COUNT).map((name, i) => ({
     sub: SWORN_ALLY_COUNT + i,
     name,
-    label: `Ally ${SWORN_ALLY_COUNT + i + 1}`,
+    label: allySlotLabel(SWORN_ALLY_COUNT + i),
   })),
 )
 /** Percentage the sworn share is worth — printed, never hard-coded in a string. */
@@ -969,7 +969,15 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   text-align: left;
   border-radius: 4px;
   background: #141410;
-  border: 1px solid rgba(200, 164, 90, 0.16);
+  /* Rank ladder — the WEIGHT of the frame is the hierarchy, and it is the same
+     frame at three strengths rather than three different looks: the captain
+     carries the heaviest rim, the sworn pair one step down and identical to each
+     other, the bench the faintest. Both values ride on custom properties, so a
+     tier is one declaration and the three can never drift apart. box-sizing is
+     border-box, so the extra width costs the row no layout. */
+  --chip-rim: 1px;
+  --chip-rim-a: 20%;
+  border: var(--chip-rim) solid color-mix(in srgb, var(--rc) var(--chip-rim-a), transparent);
   transition:
     transform 0.15s,
     border-color 0.15s,
@@ -1017,6 +1025,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   width: v-bind(mainChipWidthPx);
   padding: 0;
   gap: 0;
+  /* top of the ladder — the heaviest rim on the strip */
+  --chip-rim: 3px;
+  --chip-rim-a: 80%;
 }
 .sdp-chip-art {
   position: absolute;
@@ -1103,10 +1114,19 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 
 /* The sworn pair — fewer of them, so each is wider; a bigger portrait and the
-   bond mark carry the rank, and the note says what the slot actually does. */
+   bond mark carry the rank, and the note says what the slot actually does.
+   Both wear the SAME rim, one step below the captain: they are one rank, not a
+   first and a second. */
 .sdp-chip--sworn {
-  border-color: color-mix(in srgb, var(--rc) 40%, transparent);
+  --chip-rim: 2px;
+  --chip-rim-a: 48%;
   background: linear-gradient(100deg, #1a1409, #141410 62%);
+}
+/* the bench closes the ladder — faintest rim, the base values, spelled out so
+   the third tier is visible here rather than implied by omission */
+.sdp-chip--ally {
+  --chip-rim: 1px;
+  --chip-rim-a: 20%;
 }
 .sdp-chip--sworn .sdp-chip-portrait {
   width: 64px;

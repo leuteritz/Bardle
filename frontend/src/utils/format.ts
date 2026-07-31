@@ -6,6 +6,8 @@
 // Zahlen (Chimes, Schaden …) laufen weiterhin über `formatNumber` aus
 // `config/numberFormat.ts` bzw. die globale `$formatNumber`-Property.
 
+import { SWORN_ALLY_COUNT, SWORN_ALLY_LABELS } from '@/config/constants'
+
 /** Ganzzahl in römischer Schreibweise — Sektor-/Orbit-Nummern. */
 const ROMAN_PAIRS: Array<[number, string]> = [
   [1000, 'M'],
@@ -101,6 +103,21 @@ export function formatShortDuration(seconds: number): string {
   if (min === 0) return `${sec}s`
   if (sec === 0) return `${min}m`
   return `${min}m ${sec}s`
+}
+
+/**
+ * Name of an ally sub-slot as the player reads it. The first SWORN_ALLY_COUNT
+ * seats are the sworn pair and carry their own names; the bench BELOW them
+ * counts from 1 again rather than continuing the raw index — a player sees three
+ * bench seats, so they are Ally 1 to Ally 3, not Ally 3 to Ally 5.
+ *
+ * The board tooltip, the details header, the picker title and the assign toast
+ * all name the same seat, so they all have to say the same thing — hence one
+ * function instead of the four copies of `Ally ${sub + 1}` this replaced.
+ */
+export function allySlotLabel(sub: number): string {
+  if (sub < SWORN_ALLY_COUNT) return SWORN_ALLY_LABELS[sub] ?? `Sworn ${sub + 1}`
+  return `Ally ${sub - SWORN_ALLY_COUNT + 1}`
 }
 
 /** `#rrggbb` → `[r, g, b]`. */

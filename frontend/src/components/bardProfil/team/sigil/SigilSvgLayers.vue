@@ -70,9 +70,12 @@ function spokeColor(i: number): string {
   return props.mainFilled[i] ? props.roleColors[i] : SIGIL_DIM_COLOR
 }
 
-/** Gaps that keep a link off the champion images it connects, per endpoint kind. */
+/** Gaps that keep a link off the champion images it connects, per endpoint kind.
+ *  A sworn endpoint is a cut plate, not a disc: it reaches SIGIL_SWORN_SIZE / 2 +
+ *  SIGIL_SWORN_RIM_PX = 24px at its corners, so the line has to stop further out
+ *  than the portrait box alone would suggest. */
 const LINK_GAP_MAIN = 54
-const LINK_GAP_SWORN = 25
+const LINK_GAP_SWORN = 28
 const LINK_GAP_BENCH = 22
 
 type LinkKind = 'sworn' | 'yoke' | 'bench'

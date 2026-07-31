@@ -16,6 +16,7 @@ import {
   CHAMPION_PICKER_OVERSCAN_ROWS,
 } from '@/config/constants'
 import { useVirtualGrid } from '@/composables/useVirtualGrid'
+import { allySlotLabel } from '@/utils/format'
 import type { ChampionRole } from '@/types'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -449,7 +450,7 @@ function onImgError(e: Event) {
         :key="`slot-${k}`"
         class="csp-slot csp-slot--ally"
         :class="{ 'csp-slot--active': activeSubSlot === k }"
-        :title="ally ?? `Assign Ally ${k + 1}`"
+        :title="ally ?? `Assign ${allySlotLabel(k)}`"
         @click="emit('tab-change', k)"
         @mouseenter="hoveredRailChampion = ally"
         @mouseleave="hoveredRailChampion = null"

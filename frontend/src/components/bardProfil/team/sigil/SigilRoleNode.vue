@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -8,6 +7,7 @@ import { useChampionLevelStore } from '@/stores/championLevelStore'
 import { getChampionTier } from '@/config/championTiers'
 import { regaliaStageFor, regaliaStageIndexFor } from '@/config/championLevels'
 import { facetClipPath, studRingGradient } from '@/utils/geometry'
+import { allySlotLabel } from '@/utils/format'
 import ChampionLevelBadge from '../ChampionLevelBadge.vue'
 import {
   ROLES,
@@ -20,8 +20,10 @@ import {
   SIGIL_PENTAGON_ANGLE_STEP,
   SIGIL_PENTAGON_START_ANGLE,
   SWORN_ALLY_COUNT,
-  SWORN_ALLY_LABELS,
-  SWORN_ICON,
+  SIGIL_SWORN_FACETS,
+  SIGIL_SWORN_FACET_TURN,
+  SIGIL_SWORN_RIM_PX,
+  SIGIL_SWORN_GLOW_PX,
   ALLIES_PER_ROLE,
   SIGIL_ALLY_HOVER_SCALE,
   SIGIL_ALLY_HOVER_DIM_OPACITY,
@@ -111,9 +113,21 @@ function isSworn(sub: number): boolean {
 function allySize(sub: number): number {
   return isSworn(sub) ? SIGIL_SWORN_SIZE : SIGIL_ALLY_SIZE
 }
+/** Seat name — shared with the details header and the picker, see allySlotLabel. */
 function allyLabel(sub: number): string {
-  return isSworn(sub) ? (SWORN_ALLY_LABELS[sub] ?? `Sworn ${sub + 1}`) : `Ally ${sub + 1}`
+  return allySlotLabel(sub)
 }
+
+/**
+ * The sworn silhouette. Constant for every sworn slot on the board, so the
+ * polygon is built once when the module loads rather than per node — and it goes
+ * into the CSS as a value, not into the template as an element: the distinction
+ * costs zero DOM, and the clip is applied at paint time on layers that never
+ * animate.
+ */
+const swornFacets = facetClipPath(SIGIL_SWORN_FACETS, SIGIL_SWORN_FACET_TURN)
+const swornRim = `${SIGIL_SWORN_RIM_PX}px`
+const swornGlow = `${SIGIL_SWORN_GLOW_PX}px`
 
 /**
  * Unit vector pointing from this role node at the sigil's core. The medallion and
@@ -254,10 +268,8 @@ const frameVars = computed<Record<string, string>>(() => {
       decoding="async"
     />
     <span v-else class="sigil-ally-plus">＋</span>
-    <!-- the bond mark: what tells a sworn satellite apart at a glance -->
-    <span v-if="isSworn(sub)" class="sigil-ally-mark" aria-hidden="true">
-      <Icon :icon="SWORN_ICON" width="13" height="13" />
-    </span>
+    <!-- No bond mark: a sworn satellite is told apart by its SHAPE (see the
+         cut-plate block in the styles), which needs no element of its own. -->
     <!-- ally level — the same medallion as the role node, minus the ornaments
          it has no room for (see CHAMPION_REGALIA_ORNAMENT_MIN_SIZE) -->
     <span v-if="ally" class="sigil-ally-level">
@@ -382,35 +394,9 @@ const frameVars = computed<Record<string, string>>(() => {
     0 0 0 2px var(--role-color),
     0 0 12px color-mix(in srgb, var(--role-color) 50%, transparent);
 }
-/* Sworn satellites — the two that lend the main their stats. They already ride a
-   closer orbit and are drawn larger; the firmer rim and the bond mark finish the
-   distinction without introducing a second colour. */
-.sigil-ally--sworn {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--role-color) 55%, transparent);
-  z-index: 2;
-}
-.sigil-ally--sworn.sigil-ally--filled {
-  box-shadow:
-    0 0 0 3px var(--role-color),
-    0 0 16px color-mix(in srgb, var(--role-color) 60%, transparent);
-}
-/* the bond mark sits on the rim facing the role node */
-.sigil-ally-mark {
-  position: absolute;
-  left: -4px;
-  top: -4px;
-  width: 19px;
-  height: 19px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #0a0704;
-  border: 1px solid color-mix(in srgb, var(--role-color) 70%, transparent);
-  color: var(--role-color);
-  pointer-events: none;
-  z-index: 3;
-}
+/* Sworn satellites keep the closer orbit and the larger size; everything that
+   makes them read as cut plates rather than discs lives in its own block below
+   ("sworn: cut plate"), placed after the state rules it has to override. */
 
 /* selected role: its ally constellation lights up with it (cascade via --sub delay) */
 .sigil-ally--highlight {
@@ -874,6 +860,118 @@ const frameVars = computed<Record<string, string>>(() => {
   }
 }
 
+/* ── sworn: cut plate ─────────────────────────────────────────────────────────
+   The two allies that lend the main their stats are not marked, they are SHAPED:
+   their portrait is a cut hexagonal plate where every bench satellite stays a
+   disc. Silhouette survives what a badge does not — it still reads when the
+   camera pulls all the way out, it cannot collide with the level medallion, and
+   it needs no second colour to say "this one is different".
+
+   Cost: two pseudo-elements on a button that already exists, so the whole
+   distinction is DOM-free — it replaced a badge element AND an Iconify component
+   per sworn slot, ten of each on a full board, all built in the same frame the
+   team tab opens in. Neither layer animates: the plate is painted once, the aura
+   only ever changes its own opacity, and clip-path on a static layer costs
+   nothing per frame.
+
+   Layer order back to front: aura (::after, z 0) → plate (::before, z 1) →
+   portrait (z 2) → level medallion (z 3, unchanged and deliberately overhanging). */
+.sigil-ally--sworn,
+.sigil-ally--sworn.sigil-ally--filled,
+.sigil-ally--sworn.sigil-ally--highlight,
+.sigil-ally--sworn.sigil-ally--spotlight,
+.sigil-ally--sworn.sigil-ally--search-hit {
+  /* the disc's own rim and glow would ring a hexagon in a circle — the plate
+     and the aura below take over both jobs, in the right shape */
+  background: transparent;
+  box-shadow: none;
+  animation: none;
+}
+.sigil-ally--sworn {
+  --sworn-c: var(--role-color);
+  /* an empty sworn slot wears the plate in cold metal — the shape is the rank,
+     it does not wait for a champion to sit down */
+  --sworn-metal: color-mix(in srgb, var(--sworn-c) 45%, #14100a);
+  --sworn-glow-o: 0;
+  z-index: 2;
+}
+.sigil-ally--sworn.sigil-ally--filled {
+  --sworn-metal: var(--sworn-c);
+  --sworn-glow-o: 0.5;
+}
+/* every state that used to swell the ring now swells the aura instead */
+.sigil-ally--sworn.sigil-ally--highlight {
+  --sworn-glow-o: 0.78;
+}
+.sigil-ally--sworn:hover,
+.sigil-ally--sworn.sigil-ally--spotlight {
+  --sworn-glow-o: 1;
+}
+.sigil-ally--sworn.sigil-ally--search-hit {
+  --sworn-c: #e8c040;
+  --sworn-metal: #e8c040;
+}
+
+/* the plate: cast metal, lit from the upper left, sitting one rim behind the
+   portrait so exactly SIGIL_SWORN_RIM_PX of it shows all the way around */
+.sigil-ally--sworn::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * v-bind(swornRim));
+  clip-path: v-bind(swornFacets);
+  background: linear-gradient(
+    152deg,
+    color-mix(in srgb, #fff 30%, var(--sworn-metal)),
+    var(--sworn-metal) 46%,
+    color-mix(in srgb, var(--sworn-metal) 52%, #0a0704)
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+/* the aura: a radial fade clipped to a wider copy of the same polygon. It fades
+   out before the clip edge, so nothing betrays the cut — and being a plain
+   gradient it needs neither a blur filter nor a box-shadow. */
+.sigil-ally--sworn::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * v-bind(swornGlow));
+  clip-path: v-bind(swornFacets);
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--sworn-c) 60%, transparent) 46%,
+    transparent 76%
+  );
+  opacity: var(--sworn-glow-o, 0);
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.2s;
+}
+/* portrait and empty-slot face take the same cut, one rim inside the plate */
+.sigil-ally--sworn .sigil-ally-img,
+.sigil-ally--sworn .sigil-ally-plus {
+  position: relative;
+  z-index: 2;
+  border-radius: 0;
+  clip-path: v-bind(swornFacets);
+}
+.sigil-ally--sworn .sigil-ally-plus {
+  background: #0a0704;
+  color: var(--sworn-c);
+}
+/* search hit: the aura breathes where the disc's ring used to pulse */
+.sigil-ally--sworn.sigil-ally--search-hit::after {
+  animation: sigil-sworn-pulse 1.6s ease-in-out infinite;
+}
+@keyframes sigil-sworn-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @keyframes sigil-plate-turn {
   to {
     transform: translate(-50%, -50%) rotate(360deg);
@@ -932,11 +1030,16 @@ const frameVars = computed<Record<string, string>>(() => {
     animation: none !important;
   }
   .sigil-node--search-hit .sigil-node-circle,
-  .sigil-ally--search-hit {
+  .sigil-ally--search-hit:not(.sigil-ally--sworn) {
     animation: none !important;
     box-shadow:
       0 0 0 3px #e8c040,
       0 0 14px rgba(232, 192, 64, 0.55);
+  }
+  /* a sworn hit keeps its gold plate; only the breathing stops */
+  .sigil-ally--sworn.sigil-ally--search-hit::after {
+    animation: none !important;
+    opacity: 1;
   }
   .sigil-ally--spotlight,
   .sigil-node--spin .sigil-node-plate,
