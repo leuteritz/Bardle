@@ -2064,13 +2064,12 @@ export const MATERIAL_RARITY_COLOR: Record<string, string> = {
  */
 export const MATERIAL_RARITY_ORDER: string[] = ['epic', 'rare', 'uncommon', 'common']
 
-// ── Pause-Overlay: Ernte-Raster ────────────────────────────────────────────
-// Es gibt genau 10 Materialien (config/materials.ts), also passt die komplette
-// Ausbeute immer in 2 Reihen à 5 Karten. Die Rasterhöhe ist deshalb fest
-// reserviert: kämen Karten in einer zweiten Reihe erst dazu, sobald das sechste
-// Material fällt, änderte sich die Panelhöhe mitten in der Pause — und mit ihr
-// der Fit-Scale des gesamten Overlays.
-export const PAUSE_MATERIAL_COLUMNS = 5
+// ── Pause-Overlay: Material-Raster in der Stat-Kachel ──────────────────────
+// Die Kachel fasst 4 × 2 Karten; fällt ein neuntes Material, gibt die letzte
+// Zelle den Rest als „+N" aus. Die Rasterhöhe ist fest reserviert: klappte die
+// zweite Reihe erst beim fünften Material auf, änderte sich die Panelhöhe
+// mitten in der Pause — und mit ihr der Fit-Scale des gesamten Overlays.
+export const PAUSE_MATERIAL_COLUMNS = 4
 export const PAUSE_MATERIAL_ROWS = 2
 
 // Augment rarity colors — used by the augment list in BardStatsTab.

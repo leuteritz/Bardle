@@ -90,47 +90,44 @@
               <span class="stat-tile__value">{{ formatNumber(pauseKills) }}</span>
             </div>
 
-            <div class="stat-tile">
+            <!-- Materialien bleiben die dritte Kachel, bekommen aber die
+                 doppelte Spaltenbreite: Health und Kills tragen je eine Zahl,
+                 hier steht eine Liste. Die Karten darin sind so groß, dass das
+                 Material am Bild erkennbar ist — vorher waren es 14px-Icons,
+                 durch den Fit-Scale des Overlays effektiv 10px. -->
+            <div class="stat-tile stat-tile--materials">
               <span class="stat-tile__label">
                 <Icon icon="game-icons:ore" width="13" height="13" class="stat-tile__icon" aria-hidden="true" />
                 Materials
+                <span v-if="totalMaterials > 0" class="stat-tile__total">{{ formatNumber(totalMaterials) }}</span>
               </span>
-              <span class="stat-tile__value" :class="{ 'stat-tile__value--dim': totalMaterials === 0 }">
-                {{ formatNumber(totalMaterials) }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Ernte der Pause. Vorher steckte sie als dritte Stat-Kachel im
-               Raster oben: drei 14px-Icons und ein „+N" für alles Weitere — auf
-               Full HD durch den Fit-Scale effektiv 10px. Jetzt eine eigene
-               Sektion mit Karten in Seltenheitsfarbe, groß genug, um das
-               Material am Bild zu erkennen. Die Kachel oben bleibt und trägt
-               nur noch die Gesamtzahl. -->
-          <div
-            class="harvest"
-            :style="{ '--mat-cols': PAUSE_MATERIAL_COLUMNS, '--mat-rows': PAUSE_MATERIAL_ROWS }"
-          >
-            <span class="harvest__heading">Materials gathered</span>
-            <TransitionGroup v-if="pauseMaterialEntries.length > 0" tag="div" name="mat-pop" class="harvest__grid">
-              <div
-                v-for="mat in pauseMaterialEntries"
-                :key="mat.id"
-                class="mat-card"
-                :style="{ '--mat-color': mat.color }"
-                :title="`${mat.name} — ${mat.rarity}`"
+              <span v-if="visibleMaterials.length === 0" class="mat-empty">Nothing yet</span>
+              <TransitionGroup
+                v-else
+                tag="div"
+                name="mat-pop"
+                class="mat-grid"
+                :style="{ '--mat-cols': PAUSE_MATERIAL_COLUMNS, '--mat-rows': PAUSE_MATERIAL_ROWS }"
               >
-                <span class="mat-card__aura" aria-hidden="true" />
-                <img v-if="mat.image" :src="mat.image" :alt="mat.name" class="mat-card__img" />
-                <!-- Vier der zehn Materialien haben in den Stammdaten kein Bild;
-                     sie bekommen dasselbe Monogramm wie im Loot-Band des
-                     Star-Fight-Modals, statt eine leere Karte zu zeigen. -->
-                <span v-else class="mat-card__mono">{{ mat.monogram }}</span>
-                <span class="mat-card__amount">×{{ formatNumber(mat.amount) }}</span>
-              </div>
-            </TransitionGroup>
-            <div v-else class="harvest__grid harvest__grid--empty">
-              <span class="harvest__empty">Nothing harvested yet — the drills keep turning</span>
+                <div
+                  v-for="mat in visibleMaterials"
+                  :key="mat.id"
+                  class="mat-card"
+                  :style="{ '--mat-color': mat.color }"
+                  :title="`${mat.name} — ${mat.rarity}`"
+                >
+                  <span class="mat-card__aura" aria-hidden="true" />
+                  <img v-if="mat.image" :src="mat.image" :alt="mat.name" class="mat-card__img" />
+                  <!-- Vier der zehn Materialien haben in den Stammdaten kein
+                       Bild; sie bekommen dasselbe Monogramm wie im Loot-Band
+                       des Star-Fight-Modals, statt leer zu bleiben. -->
+                  <span v-else class="mat-card__mono">{{ mat.monogram }}</span>
+                  <span class="mat-card__amount">×{{ formatNumber(mat.amount) }}</span>
+                </div>
+                <div v-if="hiddenMaterialCount > 0" key="more" class="mat-card mat-card--more">
+                  +{{ hiddenMaterialCount }}
+                </div>
+              </TransitionGroup>
             </div>
           </div>
 
@@ -396,6 +393,20 @@ const pauseMaterialEntries = computed(() => {
 
 const totalMaterials = computed(() =>
   pauseMaterialEntries.value.reduce((sum, m) => sum + m.amount, 0),
+)
+
+// Die Kachel fasst PAUSE_MATERIAL_COLUMNS × PAUSE_MATERIAL_ROWS Karten. Passt
+// nicht alles hinein, gibt die letzte Zelle den Rest als „+N" aus — sonst
+// müsste das Raster wachsen und die Panelhöhe mitten in der Pause springen.
+const MATERIAL_SLOTS = PAUSE_MATERIAL_COLUMNS * PAUSE_MATERIAL_ROWS
+
+const visibleMaterials = computed(() => {
+  const all = pauseMaterialEntries.value
+  return all.length <= MATERIAL_SLOTS ? all : all.slice(0, MATERIAL_SLOTS - 1)
+})
+
+const hiddenMaterialCount = computed(
+  () => pauseMaterialEntries.value.length - visibleMaterials.value.length,
 )
 
 const isPlanetDiscovered = computed(
@@ -715,12 +726,21 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Stat tiles ───────────────────────────────────────── */
+/* Health und Kills tragen je eine Zahl, Materials eine Liste — die dritte
+   Spalte bekommt deshalb gut die doppelte Breite. Vorher teilten sich alle
+   drei gleichmäßig, und die Materialien mussten sich auf ein Drittel der
+   Panelbreite quetschen. */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr 2.3fr;
   /* Feste Zeilenhöhe: alle drei Tiles exakt gleich groß, egal wie viel
-     Inhalt (HP-Leiste, Material-Chips) eine einzelne Kachel hat. */
-  grid-auto-rows: clamp(84px, 11vh, 104px);
+     Inhalt (HP-Leiste, Material-Karten) eine einzelne Kachel hat. Bemessen
+     am größten Inhalt — zwei Reihen Material-Karten. */
+  grid-auto-rows: 164px;
+  /* Explizit, nicht dem geerbten `baseline` überlassen: die Material-Kachel
+     hat ihre erste Baseline im Kartenraster statt in einer Wertzeile und
+     rutschte dadurch gegenüber Health und Kills nach unten. */
+  align-items: stretch;
   gap: clamp(8px, 1.2vw, 12px);
   width: 100%;
 }
@@ -773,6 +793,20 @@ function particleStyle(i: number): Record<string, string> {
 .stat-tile__icon--hp {
   color: #cc6050;
 }
+/* Die Kachel füllt sich mit Karten statt mit einer Zahl — der reservierte
+   Bar-Slot der anderen beiden entfällt hier, sonst stünde das Raster
+   außermittig. */
+.stat-tile--materials {
+  grid-template-rows: auto auto;
+}
+/* Gesamtmenge direkt im Label — die Einzelzahlen stehen an den Karten */
+.stat-tile__total {
+  font-size: 1.05em;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #ece0c0;
+  font-variant-numeric: tabular-nums;
+}
 .stat-tile__value {
   max-width: 100%;
   font-size: clamp(1.05rem, 1.6vw, 1.4rem);
@@ -822,73 +856,61 @@ function particleStyle(i: number): Record<string, string> {
   box-shadow: 0 0 6px rgba(204, 96, 80, 0.6);
 }
 
-/* ── Ernte-Raster ─────────────────────────────────────────
+/* ── Materialien in der Stat-Kachel ───────────────────────
    Die Karten tragen ihre Seltenheitsfarbe (--mat-color, aus
    MATERIAL_RARITY_COLOR) — Rahmen, Aura hinter dem Icon und Mengenzahl teilen
-   sie sich, sodass Wert und Menge in einem Blick zusammenfallen. */
-.harvest {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-.harvest__heading {
-  font-size: clamp(0.6rem, 0.85vw, 0.68rem);
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.42);
-}
-/* Feste Höhe für beide Reihen, Inhalt vertikal zentriert: eine Reihe steht
-   mittig, zwei füllen den Block — die Panelhöhe bleibt in beiden Fällen
-   gleich, auch wenn mitten in der Pause das sechste Material fällt. */
-/* Feste Maße statt vh-Clamps: das Panel hat eine feste Design-Breite, die
+   sie sich, sodass Wert und Menge in einem Blick zusammenfallen.
+
+   Feste Maße statt vh-Clamps: das Panel hat eine feste Design-Breite, die
    Größenanpassung an den Viewport macht ausschließlich useFitScale. Ein
    zweiter, davon unabhängiger vh-Bezug würde nur gegen den Fit-Scale rechnen. */
-.harvest__grid {
-  --mat-row-h: 104px;
-  --mat-gap: 9px;
+/* Beide Reihen stehen als explizite Grid-Zeilen fest — auch wenn erst zwei
+   Materialien gefallen sind. Klappte die zweite Reihe erst beim fünften Fund
+   auf, wüchse mitten in der Pause die Panelhöhe und mit ihr sprünge der
+   Fit-Scale des gesamten Overlays. */
+.mat-grid {
+  --mat-row-h: 52px;
+  --mat-gap: 5px;
   display: grid;
-  grid-template-columns: repeat(var(--mat-cols, 5), 1fr);
-  grid-auto-rows: var(--mat-row-h);
-  align-content: center;
-  justify-items: stretch;
+  grid-template-columns: repeat(var(--mat-cols, 4), 1fr);
+  grid-template-rows: repeat(var(--mat-rows, 2), var(--mat-row-h));
+  justify-self: stretch;
   gap: var(--mat-gap);
   width: 100%;
-  height: calc(
-    var(--mat-rows, 2) * var(--mat-row-h) + (var(--mat-rows, 2) - 1) * var(--mat-gap)
-  );
 }
-.harvest__grid--empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.harvest__empty {
-  font-size: clamp(0.68rem, 0.95vw, 0.78rem);
+.mat-empty {
+  font-size: 0.8rem;
   font-style: italic;
   letter-spacing: 0.06em;
-  color: rgba(216, 200, 160, 0.32);
+  color: rgba(216, 200, 160, 0.3);
 }
 
+/* Icon füllt die Karte, die Menge liegt als Badge auf der unteren Kante — in
+   einer 52px-Zelle wäre für Bild UND Zeile untereinander kein Platz, ohne
+   beides zu verkleinern. */
 .mat-card {
   position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   min-width: 0;
-  padding: 6px 4px;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--mat-color) 42%, transparent);
   background: linear-gradient(
     160deg,
     color-mix(in srgb, var(--mat-color) 13%, transparent),
     rgba(255, 200, 80, 0.03) 65%
   );
+}
+/* Überzähliges: gleiche Fassung, aber neutral — es ist kein Material */
+.mat-card--more {
+  border-color: rgba(122, 78, 32, 0.5);
+  background: rgba(255, 200, 80, 0.05);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: rgba(216, 200, 160, 0.55);
+  font-variant-numeric: tabular-nums;
 }
 /* Aura hinter dem Icon — gibt der Karte Tiefe, ohne das Bild einzufärben */
 .mat-card__aura {
@@ -906,10 +928,13 @@ function particleStyle(i: number): Record<string, string> {
   );
   pointer-events: none;
 }
+/* Das Icon füllt die Karte — die Menge sitzt als Badge in der Ecke darüber,
+   wie in einem Inventarslot. Untereinander gestellt müssten beide schrumpfen,
+   damit sie in die 52px-Zelle passen. */
 .mat-card__img {
   position: relative;
-  width: 54px;
-  height: 54px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
 }
@@ -919,26 +944,29 @@ function particleStyle(i: number): Record<string, string> {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  height: 54px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: 1px solid color-mix(in srgb, var(--mat-color) 35%, transparent);
   background: rgba(0, 0, 0, 0.35);
-  font-size: 1.1rem;
+  font-size: 0.82rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: var(--mat-color);
 }
 .mat-card__amount {
-  position: relative;
-  font-size: 1.15rem;
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: rgba(6, 4, 0, 0.78);
+  font-size: 0.72rem;
   font-weight: 800;
   line-height: 1;
   color: var(--mat-color);
   font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 10px color-mix(in srgb, var(--mat-color) 45%, transparent),
-    0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
 /* Neue Materialkarte federt ins Raster ein — derselbe Pop wie bei den
