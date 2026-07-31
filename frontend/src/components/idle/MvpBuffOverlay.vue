@@ -106,6 +106,9 @@ onUnmounted(() => {
   pointer-events: none;
   background: linear-gradient(to bottom, rgba(232, 192, 64, 0.3), rgba(232, 192, 64, 0.08) 55%, transparent);
   border-radius: 0 0 18px 18px;
+  /* Kept: this band is hard-cut on its left and right edge, the blur is what
+     softens them. It is small (~header width × 76px), static, and rastered
+     once — the animation only touches opacity. */
   filter: blur(6px);
   animation: vignette-breathe 2.6s ease-in-out infinite;
 }
@@ -122,10 +125,15 @@ onUnmounted(() => {
   pointer-events: none;
   background: linear-gradient(to top, rgba(232, 192, 64, 0.3), rgba(232, 192, 64, 0.08) 55%, transparent);
   border-radius: 18px 18px 0 0;
+  /* Same reason as .buff-under-header: softens the hard side edges. */
   filter: blur(6px);
   animation: vignette-breathe 2.6s ease-in-out infinite;
 }
-/* Drifting haze along top and bottom edges */
+/* Drifting haze along top and bottom edges.
+   No blur filter: the source is radial gradients that already fade to
+   `transparent 70%`, so a fullscreen blur pass (up to 3888×2078 px on 4K,
+   multi-pass, re-taken whenever the surface is invalidated) bought almost
+   no visible softness. The gradients carry the softness on their own. */
 .buff-vignette::before {
   content: '';
   position: absolute;
@@ -136,7 +144,6 @@ onUnmounted(() => {
     radial-gradient(55% 25% at 92% 100%, rgba(232, 192, 64, 0.28), transparent 70%),
     radial-gradient(58% 22% at 25% 0%, rgba(232, 192, 64, 0.24), transparent 70%),
     radial-gradient(48% 20% at 78% 0%, rgba(232, 192, 64, 0.26), transparent 70%);
-  filter: blur(24px);
   animation: smoke-drift-x 7s ease-in-out infinite alternate;
 }
 /* Drifting haze along the left and right edges */
@@ -149,7 +156,6 @@ onUnmounted(() => {
     radial-gradient(20% 40% at 0% 74%, rgba(232, 192, 64, 0.2), transparent 70%),
     radial-gradient(22% 45% at 100% 24%, rgba(232, 192, 64, 0.24), transparent 70%),
     radial-gradient(20% 42% at 100% 72%, rgba(232, 192, 64, 0.22), transparent 70%);
-  filter: blur(26px);
   animation: smoke-drift-y 9s ease-in-out infinite alternate;
 }
 @keyframes vignette-breathe {
