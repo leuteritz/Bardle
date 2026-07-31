@@ -1086,21 +1086,23 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   border-radius: 3px 0 0 3px;
   border-width: 0 1px 0 0;
 }
-/* Anchored low rather than centred: the seal owns the card's upper corner, the
-   caption its lower edge — the two never meet, and the splash art keeps the
-   space between them. */
+/* Anchored high: the tag heads the card and the champion's name follows
+   directly under it, the way the card is read. The seal takes the opposite
+   corner (see the badge rule above) so the two never share a line, and the
+   splash art keeps the diagonal between them. */
 .sdp-chip--main > .sdp-chip-text {
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 6px;
-  padding: 8px 12px 10px 11px;
+  padding: 10px 12px 8px 11px;
 }
-/* The captain's medallion leaves the flex row and pins to the card's corner
-   like a seal. As a row item it charged the text column 38px of its 137 — the
-   headline had no room to be a headline and the longest champion name in the
-   game ran into an ellipsis. Out of the flow it costs the text nothing. */
+/* The captain's medallion leaves the flex row and pins to the card's LOWER
+   corner like a seal. As a row item it charged the text column 38px of its 137,
+   so the champion's name ran into an ellipsis; out of the flow it costs the text
+   nothing. Bottom rather than top because the caption sits high — the seal takes
+   the corner the text does not, and the two never meet on a line. */
 .sdp-chip--main > .sdp-chip-badge {
   position: absolute;
-  top: 9px;
+  bottom: 9px;
   right: 10px;
   align-self: auto;
   margin-right: 0;
