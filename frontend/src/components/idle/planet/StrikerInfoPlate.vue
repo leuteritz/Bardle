@@ -22,14 +22,20 @@
     <span class="sip-meta">
       <!-- Kennwert-Band: LVL und HIT sind dasselbe Bauteil, nur anders
            beschriftet — gemeinsamer Rahmen, ein Trennstrich dazwischen. -->
+      <!-- v-ink-center.x.y auf jedem Segment: MedievalSharp setzt Ziffern fast
+           komplett über die Baseline und gibt vielen Glyphen ein asymmetrisches
+           Seitenlager — zentriert steht die Tinte sichtbar zu hoch und zu weit
+           links. Reiter und Wert stehen zudem in verschiedenen Schriftgraden,
+           deren Versatz sich NICHT proportional verhält; die Direktive misst
+           jeden Grad einzeln nach (utils/textInkOffset.ts). -->
       <span v-if="level || hit" class="sip-chips">
         <span v-if="level" class="sip-chip" :title="`Champion level ${level}`">
-          <span class="sip-chip-tag">LVL</span>
-          <span class="sip-chip-val">{{ level }}</span>
+          <span v-ink-center.x.y class="sip-chip-tag">LVL</span>
+          <span v-ink-center.x.y class="sip-chip-val">{{ level }}</span>
         </span>
         <span v-if="hit" class="sip-chip" :title="hitTitle">
-          <span class="sip-chip-tag">HIT</span>
-          <span class="sip-chip-val">{{ hit }}</span>
+          <span v-ink-center.x.y class="sip-chip-tag">HIT</span>
+          <span v-ink-center.x.y class="sip-chip-val">{{ hit }}</span>
         </span>
       </span>
       <span v-if="stats" class="sip-stats">{{ stats }}</span>
@@ -333,9 +339,18 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
   line-height: 1;
 }
 
+/* Innenabstände in Vielfachen von --sip-u statt in `em`: `em` misst gegen die
+   EIGENE Schriftgröße, und Reiter (0.62em) und Wert (0.9em) haben zwei
+   verschiedene. Dasselbe `0.34em` ergab links der Trennlinie 0.21 Einheiten
+   und rechts davon 0.31 — die Leiste stand damit sichtbar schief. Jetzt ist
+   der Abstand auf beiden Seiten derselbe und großzügiger als zuvor. */
+.sip-chip-tag,
+.sip-chip-val {
+  padding: calc(var(--sip-u) * 0.2) calc(var(--sip-u) * 0.4);
+}
+
 /* Reiter — die gefüllte Hälfte */
 .sip-chip-tag {
-  padding: 0.22em 0.34em;
   font-size: 0.62em;
   letter-spacing: 0.12em;
   background: linear-gradient(
@@ -349,10 +364,10 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
 
 /* Wert — dunkles Feld, leuchtende Zahl. `min-width` hält beide Segmente auf
    gleicher Breite, solange die Zahlen zweistellig bleiben: ein "LVL 1" neben
-   einem "HIT 35" ließe die Leiste sonst schief wirken. */
+   einem "HIT 35" ließe die Leiste sonst schief wirken. Auch sie misst gegen
+   --sip-u, sonst zöge die größere Wertschrift das Feld mit sich. */
 .sip-chip-val {
-  min-width: 1.6em;
-  padding: 0.12em 0.34em;
+  min-width: calc(var(--sip-u) * 1.7);
   font-size: 0.9em;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
