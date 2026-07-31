@@ -83,6 +83,22 @@
      Arena (4K: Karte ×1.69, Slot-Abstand ×2.0), sonst rücken die Plates auf
      hohen Auflösungen zusammen statt auseinander. */
   --sip-u: clamp(11.8px, min(0.7px + 0.578vw, 2px + 1.03vh), 20px);
+
+  /* ── Loot-Banner im Star-Fight-Modal (BossRewardSection.vue) ──────────────
+     Dieselbe Idee wie --sip-u: EINE Einheit, gegen die das ganze Banner in
+     `em` bzw. `calc()` bemisst. Vorher hing es an festen rem/px-Werten und
+     wurde auf Full HD per `transform: scale(0.8)` zusammengestaucht — was
+     jede Schrift und jedes Icon weichzeichnet, statt sie kleiner zu setzen.
+
+       Full HD  1920×950  → 13px    (Icons 41px statt bisher 27px)
+       WUXGA    1920×1070 → 13px
+       2K/QHD   2560×1310 → 17px    (Icons 54px)
+       4K       3840×2030 → 22px    (Icons 70px)
+
+     Obergrenze 22px ist kein Geschmack: zwischen Loot-Unterkante und der
+     Champion-Row liegen je nach Auflösung nur 11–138 px, und das Banner
+     wächst mit dieser Einheit in beide Richtungen. */
+  --loot-u: clamp(13px, min(1px + 0.625vw, 2.44px + 1.111vh), 22px);
 }
 
 /* ── Modal shell (containers, modals) ── */

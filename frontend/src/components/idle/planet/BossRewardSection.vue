@@ -7,37 +7,52 @@
       <span class="loot-line loot-line--right" />
     </div>
 
-    <!-- Rewards als frei stehende, glühende Elemente — keine Karte -->
+    <!-- Alles in der Reihe steht auf derselben Grundhöhe — der Champion-Preis
+         ist nur breiter, nicht höher. Das hält die Zeile ruhig, egal wie
+         viele Materialien der Boss fallen lässt. -->
     <div class="loot-row">
       <!-- Champion zuerst — die Hauptbelohnung -->
-      <span v-if="homePlanetChampion" class="loot-champion">
+      <span v-if="homePlanetChampion" class="loot-prize" :title="`Champion: ${homePlanetChampion}`">
         <img
           v-if="homePlanetChampionImage"
           :src="homePlanetChampionImage"
           :alt="homePlanetChampion"
-          class="loot-champion-portrait"
+          class="loot-prize-portrait"
           @error="($event.target as HTMLImageElement).style.display = 'none'"
         />
-        <span class="loot-champion-text">
-          <span class="loot-champion-eyebrow">Champion</span>
-          <span class="loot-champion-name">{{ homePlanetChampion }}</span>
+        <span class="loot-prize-text">
+          <span class="loot-prize-eyebrow">Champion</span>
+          <span class="loot-prize-name">{{ homePlanetChampion }}</span>
         </span>
       </span>
 
-      <span v-if="totalChimes > 0" class="loot-chip loot-chip--chimes">
-        <img src="/img/BardAbilities/BardChime-128.png" alt="Chimes" class="loot-chip-icon" />
-        {{ totalChimes }}
+      <span v-if="totalChimes > 0" class="loot-slot loot-slot--chimes" title="Chimes">
+        <img src="/img/BardAbilities/BardChime-256.png" alt="Chimes" class="loot-slot-icon" />
+        <!-- Formatiert, anders als die Materialmengen: Chime-Beträge gehen in
+             die Tausender und sprengen als rohe Ziffernfolge das Badge. -->
+        <span v-ink-center.x.y class="loot-slot-count">{{ $formatNumber(totalChimes) }}</span>
       </span>
 
       <span
         v-for="entry in stackedMaterials"
         :key="entry.material.id"
-        class="loot-chip"
+        class="loot-slot"
         :class="`rarity--${entry.material.rarity}`"
-        :title="entry.material.name"
+        :title="`${entry.material.name} — ${entry.material.rarity}`"
       >
-        <img :src="entry.material.image" :alt="entry.material.name" class="loot-chip-icon" />
-        {{ entry.count }}
+        <!-- Vier Materialien (Comet Ice, Star Iron, Plasma Core, Aether Dust)
+             haben in den Stammdaten gar kein Bild — bisher stand hier ein
+             leeres <img>. Sie bekommen stattdessen ein Monogramm aus ihren
+             Initialen, das in der Fassung genauso sitzt wie ein Icon. -->
+        <img
+          v-if="entry.icon"
+          :src="entry.icon"
+          :alt="entry.material.name"
+          class="loot-slot-icon"
+          @error="($event.target as HTMLImageElement).style.display = 'none'"
+        />
+        <span v-else v-ink-center.x.y class="loot-slot-mono">{{ entry.monogram }}</span>
+        <span v-ink-center.x.y class="loot-slot-count">{{ entry.count }}</span>
       </span>
     </div>
   </div>
@@ -45,7 +60,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { MATERIALS } from '@/config/materials'
+import { MATERIALS, materialIconMd } from '@/config/materials'
+import { LOOT_MONOGRAM_MAX_CHARS } from '@/config/constants'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useBattleStore } from '@/stores/battleStore'
 
@@ -81,7 +97,20 @@ const stackedMaterials = computed(() => {
     }
   }
 
-  return Array.from(map.values())
+  // Icon-Pfad einmal hier auflösen statt im Template: die 256er-Stufe ist
+  // nötig, weil die Slots mit der Auflösung auf über 50 px wachsen.
+  // `image` ist im Material-Typ optional — ohne Bild trägt der Slot ein
+  // Monogramm aus den Initialen.
+  return Array.from(map.values()).map((e) => ({
+    ...e,
+    icon: e.material.image ? materialIconMd(e.material.image) : null,
+    monogram: e.material.name
+      .split(/\s+/)
+      .map((word) => word[0] ?? '')
+      .join('')
+      .slice(0, LOOT_MONOGRAM_MAX_CHARS)
+      .toUpperCase(),
+  }))
 })
 </script>
 
@@ -92,18 +121,31 @@ const stackedMaterials = computed(() => {
    gleiche Design-Sprache wie die Threat-Anzeige unter der HP-Leiste */
 .loot {
   position: relative;
+  /* Ein Maßstab für das ganze Banner (--loot-u, rpg-theme.css): Schriften,
+     Fassungen, Icons und Abstände sind `em` dagegen und wachsen gemeinsam mit
+     der Auflösung. Ersetzt das frühere `transform: scale(0.8)` auf Full HD,
+     das alles weichgezeichnet hat, statt es kleiner zu setzen. */
+  font-size: var(--loot-u);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 0.45em;
   width: auto;
+  /* Untergrenze, damit ein Boss mit nur einer Belohnung keinen einsamen
+     Kasten ergibt — der Kopf spannt dann trotzdem über eine ruhige Breite. */
+  min-width: 15em;
   max-width: 100%;
-  padding: 12px 38px 14px;
+  padding: 0.5em 2.6em 0.6em;
+  /* Radien BEWUSST unter 50 %: der Schleier läuft damit innerhalb der Box aus.
+     Vorher stand hier `ellipse 100% 130%` mit Stopp bei 74 % — das heißt, der
+     Verlauf war an der Boxkante erst bei 74 % seines Radius angekommen und
+     wurde dort hart abgeschnitten. Sichtbar war ein dunkles Rechteck mit
+     scharfen Kanten statt eines weichen Übergangs in den Planetenhintergrund. */
   background: radial-gradient(
-    ellipse 100% 130% at 50% 50%,
+    ellipse 58% 62% at 50% 50%,
     rgba(34, 22, 6, 0.62) 0%,
-    rgba(22, 14, 4, 0.35) 45%,
-    transparent 74%
+    rgba(22, 14, 4, 0.34) 52%,
+    transparent 92%
   );
   animation: loot-reveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
 }
@@ -121,10 +163,10 @@ const stackedMaterials = computed(() => {
 
 .loot--galaxy {
   background: radial-gradient(
-    ellipse 100% 130% at 50% 50%,
+    ellipse 58% 62% at 50% 50%,
     rgba(30, 12, 44, 0.62) 0%,
-    rgba(18, 8, 28, 0.35) 45%,
-    transparent 74%
+    rgba(18, 8, 28, 0.34) 52%,
+    transparent 92%
   );
 }
 
@@ -147,22 +189,25 @@ const stackedMaterials = computed(() => {
 .loot-head {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  width: min(420px, 80%);
+  gap: 0.7em;
+  /* Klammerlinien laufen über die volle Bandbreite statt über eine feste
+     Pixelbreite — der Kopf rahmt damit genau die Reihe, die darunter steht,
+     egal ob ein Champion dabei ist oder nur zwei Materialien. */
+  align-self: stretch;
 }
 
 .loot-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.45));
+  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.62));
 }
 
 .loot-line--right {
-  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.45));
+  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.62));
 }
 
 .loot-eyebrow {
-  font-size: 0.72rem;
+  font-size: 0.85em;
   font-weight: 900;
   letter-spacing: 0.3em;
   text-transform: uppercase;
@@ -194,101 +239,157 @@ const stackedMaterials = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 8px 22px;
+  gap: 0.4em 0.55em;
   min-width: 0;
 }
 
-/* Rewards frei stehend auf der Plate — kein eigener Rahmen, Rarity färbt Text */
-.loot-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.1rem;
-  font-weight: 900;
-  color: #e6e0d0;
-  white-space: nowrap;
-  line-height: 1.3;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
-}
-
-.loot-chip--chimes {
-  color: #ffd970;
-  text-shadow:
-    0 0 14px rgba(232, 192, 64, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-}
-
-.loot-chip-icon {
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
+/* ── Belohnungs-Slot — gefasstes Icon mit Mengen-Badge ────────────────────────
+   Vorher standen Icon und Zahl frei nebeneinander auf dem Hintergrund; welche
+   Zahl zu welchem Bild gehörte, ergab sich nur aus der Nähe, und die Seltenheit
+   steckte allein in der Textfarbe der Ziffer. Jetzt trägt jede Belohnung eine
+   eigene Fassung: Farbkante oben und Rahmen in der Rarity-Farbe, die Menge als
+   Badge in der Ecke. Rein statisch — kein Filter, keine Animation. */
+.loot-slot {
+  --rar: #c8c8c8;
+  position: relative;
   flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 3.4em;
+  height: 3.4em;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--rar) 55%, #2a1c08);
+  border-top: 2px solid color-mix(in srgb, var(--rar) 80%, transparent);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--rar) 16%, rgba(10, 6, 2, 0.88)),
+    rgba(8, 5, 2, 0.92)
+  );
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--rar) 22%, transparent),
+    0 3px 8px rgba(0, 0, 0, 0.7);
+}
+
+.loot-slot-icon {
+  width: 2.4em;
+  height: 2.4em;
+  object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
 }
 
-/* ── Champion — die Hauptbelohnung, episch hervorgehoben ─────────────────── */
-.loot-champion {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
+/* Ersatz für fehlende Material-Bilder — Initialen in der Rarity-Farbe */
+.loot-slot-mono {
+  font-size: 1.15em;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--rar) 60%, #f0e6cc);
+  text-shadow:
+    0 0 10px color-mix(in srgb, var(--rar) 45%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
-.loot-champion-portrait {
-  width: 62px;
-  height: 62px;
+/* Menge als Badge in der unteren rechten Ecke — die etablierte Inventar-Sprache
+   ist auf einen Blick als "Anzahl" lesbar, anders als eine Ziffer neben dem Bild */
+.loot-slot-count {
+  position: absolute;
+  right: -0.28em;
+  bottom: -0.28em;
+  min-width: 1.35em;
+  padding: 0.06em 0.24em;
+  border-radius: 4px;
+  background: rgba(6, 3, 0, 0.95);
+  border: 1px solid color-mix(in srgb, var(--rar) 62%, #2a1c08);
+  color: color-mix(in srgb, var(--rar) 42%, #fff);
+  font-size: 0.86em;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 6px color-mix(in srgb, var(--rar) 50%, transparent);
+}
+
+.loot-slot--chimes {
+  --rar: #e8c040;
+}
+
+/* ── Champion — die Hauptbelohnung ────────────────────────────────────────────
+   Steht in derselben Grundhöhe wie die Slots, ist nur breiter: die Reihe bleibt
+   damit eine Zeile und kippt nicht, sobald ein Champion dabei ist. */
+.loot-prize {
+  --rar: #82b9ff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  height: 3.4em;
+  padding: 0 0.75em 0 0;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--rar) 45%, #14203a);
+  border-top: 2px solid color-mix(in srgb, var(--rar) 75%, transparent);
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--rar) 18%, rgba(6, 10, 20, 0.9)),
+    rgba(6, 9, 16, 0.85)
+  );
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--rar) 26%, transparent),
+    0 3px 8px rgba(0, 0, 0, 0.7);
+}
+
+.loot-prize-portrait {
+  width: 3.4em;
+  height: 100%;
   flex-shrink: 0;
   object-fit: cover;
   object-position: center top;
-  border-radius: 4px;
-  border: 1px solid #82b9ff;
-  box-shadow:
-    0 0 20px rgba(74, 144, 217, 0.55),
-    0 3px 10px rgba(0, 0, 0, 0.85);
+  border-radius: 3px 0 0 3px;
+  border-right: 1px solid color-mix(in srgb, var(--rar) 45%, #14203a);
 }
 
-.loot-champion-text {
+.loot-prize-text {
   display: inline-flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0.1em;
+  min-width: 0;
 }
 
-.loot-champion-eyebrow {
-  font-size: 0.62rem;
+.loot-prize-eyebrow {
+  font-size: 0.6em;
   font-weight: 900;
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: rgba(130, 185, 255, 0.8);
-  text-shadow: 0 0 8px rgba(74, 144, 217, 0.5), 0 1px 2px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    0 0 8px rgba(74, 144, 217, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-.loot-champion-name {
-  font-size: 1.55rem;
+.loot-prize-name {
+  font-size: 1.3em;
   font-weight: 900;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1.05;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: #9cc8ff;
   text-shadow:
     0 0 16px rgba(74, 144, 217, 0.6),
     0 2px 3px rgba(0, 0, 0, 0.95);
 }
 
-/* ── Rarities — färben den Reward-Text ───────────────────────────────────── */
+/* ── Rarities — färben Fassung, Rahmen und Badge eines Slots ─────────────── */
 .rarity--common {
-  color: #c8c8c8;
+  --rar: #c8c8c8;
 }
 .rarity--uncommon {
-  color: #4dff35;
-  text-shadow: 0 0 12px rgba(30, 255, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.95);
+  --rar: #4dff35;
 }
 .rarity--rare {
-  color: #5aabff;
-  text-shadow: 0 0 12px rgba(58, 154, 255, 0.45), 0 2px 4px rgba(0, 0, 0, 0.95);
+  --rar: #5aabff;
 }
 .rarity--epic {
-  color: #c37aff;
-  text-shadow: 0 0 12px rgba(180, 90, 255, 0.5), 0 2px 4px rgba(0, 0, 0, 0.95);
+  --rar: #c37aff;
 }
 
 @media (prefers-reduced-motion: reduce) {

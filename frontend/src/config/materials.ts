@@ -1,4 +1,18 @@
 import type { Material } from '../types'
+import { MATERIAL_ICON_SM_SUFFIX, MATERIAL_ICON_MD_SUFFIX } from './constants'
+
+/**
+ * Größere Auflösungsvariante eines Material-Icons.
+ *
+ * `Material.image` zeigt auf die 128er-Stufe — richtig für die Inventar- und
+ * Listenansichten, die das Icon unter 34 px zeigen. Das Loot-Banner des
+ * Star-Fight-Modals skaliert dagegen mit der Auflösung mit und kommt auf 4K
+ * über 70 px; dort wäre die 128er-Quelle hochskaliert und matschig.
+ * Die Originale liegen bei 500 px, die 256er-Stufen daneben.
+ */
+export function materialIconMd(image: string): string {
+  return image.replace(MATERIAL_ICON_SM_SUFFIX, MATERIAL_ICON_MD_SUFFIX)
+}
 
 export const MATERIALS: Material[] = [
   {

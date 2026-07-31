@@ -724,7 +724,12 @@ function emberStyle(i: number): Record<string, string> {
   top: 51%;
   left: 50%;
   transform: translateX(-50%);
-  width: min(820px, 54%);
+  /* Breite wächst mit --loot-u statt auf 820px festzustehen: das Banner selbst
+     skaliert mit der Auflösung, und auf 4K füllte eine volle Belohnungsreihe
+     (Champion + Chimes + 4 Materialien) die alte Grenze bis auf 4 px aus — ein
+     Zeichen länger und die Reihe wäre umgebrochen. 54 % bleibt die Obergrenze
+     gegen zu schmale Fenster. */
+  width: min(calc(var(--loot-u) * 46), 54%);
   z-index: 2;
   display: flex;
   justify-content: center;
@@ -1132,10 +1137,14 @@ function emberStyle(i: number): Record<string, string> {
     font-size: 1.35rem;
   }
 
-  /* Loot-Banner als Block skalieren — Innenmaße leben in BossRewardSection */
+  /* Kein `scale()` mehr auf dem Loot-Banner: es hat Schrift und Icons
+     weichgezeichnet, statt sie kleiner zu setzen — und auf Full HD landeten
+     die Reward-Icons dadurch bei 27 px. Das Banner bemisst sich jetzt in `em`
+     gegen --loot-u (rpg-theme.css), hier eine Stufe kompakter als die
+     stufenlose Kurve, weil die Champion-Row bei dieser Höhe dicht darunter
+     folgt. */
   .sf-loot {
-    transform: translateX(-50%) scale(0.8);
-    transform-origin: top center;
+    --loot-u: 12.5px;
   }
 
   /* Striker-Portraits kompakter — Positionen auf dem Bogen bleiben (%) */

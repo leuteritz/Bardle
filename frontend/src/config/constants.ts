@@ -2956,6 +2956,15 @@ export const SKIN_CARD_MIN_WIDTH = 300
  * die 512er-Stufe und behalten dort ihr Original (siehe getChampionIconPath).
  */
 export const CHAMPION_ART_VARIANT_PX = { sm: 128, md: 256, lg: 512, full: 0 } as const
+/**
+ * Dateisuffixe der Material-Icons (public/img). `Material.image` zeigt auf die
+ * 128er-Stufe; das Loot-Banner des Star-Fight-Modals wächst mit der Auflösung
+ * über deren Grenze hinaus und greift über `materialIconMd()` zur 256er.
+ */
+export const MATERIAL_ICON_SM_SUFFIX = '-128.png'
+export const MATERIAL_ICON_MD_SUFFIX = '-256.png'
+/** Bildlose Materialien tragen im Loot-Banner ein Monogramm ihrer Initialen. */
+export const LOOT_MONOGRAM_MAX_CHARS = 2
 /** Largest rendered edge each variant is still safe for (px, at DPR 2). */
 export const CHAMPION_ART_SM_MAX_EDGE = 34
 export const CHAMPION_ART_MD_MAX_EDGE = 110
