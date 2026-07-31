@@ -4,6 +4,7 @@ import type { PlanetType, StarType } from '../types'
 import { pickConfig } from '../utils/planetDraw'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGalaxyStore } from './galaxyStore'
+import { useGameStore } from './gameStore'
 import { CHAMPION_ROLES } from '../config/championData'
 import {
   RESOURCE_STAR_PLANET_COUNT,
@@ -482,6 +483,12 @@ export const useStarGroupStore = defineStore('starGroup', {
         if (star.planetSlots.every((p) => p.cleared)) {
           // Kein Fehlschlag unterwegs → der Stern geht als Rettung ab.
           if (!star.despawnReason) star.despawnReason = 'rescued'
+          // Nur eine echte Rettung zählt für die Pausen-Bilanz: lief unterwegs
+          // ein Boss ab, steht despawnReason bereits auf 'expired'.
+          if (star.despawnReason === 'rescued') {
+            const gameStore = useGameStore()
+            if (gameStore.isGamePaused) gameStore.pauseStats.starsRescued++
+          }
           // Im Timeout per ID suchen — ein eingefrorener Index zeigt auf den
           // falschen Stern, sobald zwischenzeitlich gespawnt/entfernt wurde
           // (z. B. mehrere Eskorten gleichzeitig durch Splash-Damage besiegt).

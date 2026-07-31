@@ -4039,6 +4039,10 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:wizard-staff', // Mid role icon (was magic-wand)
   'game-icons:hearts', // HP-Bars — Sonne (PlayerHPBar, PauseOverlay) + Bosse (PlanetRescueOverlay, StarFightModal)
   'game-icons:battle-gear', // Auto-Battle-Pausenstatistik (PauseOverlay)
+  // Kill-Aufschlüsselung der Pausenstatistik (PauseOverlay)
+  'game-icons:exploding-planet', // Gefallene Planeten
+  'game-icons:allied-star', // Vollständig befreite Sterne
+  'game-icons:alien-skull', // Erlegte Galaxiebosse
   'game-icons:healing', // Support Heal/Tick stat (roleData)
   'game-icons:cuckoo-clock', // Support planet CD stat (was timer)
   'game-icons:click', // Champion Shop detail panel — empty state (ChampionDetailPanel)

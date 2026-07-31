@@ -102,7 +102,14 @@ export const useGameStore = defineStore('game', {
     isGamePaused: false,
 
     pauseStats: {
+      /** Besiegte Bosse insgesamt — Summe der drei Kategorien darunter. */
       kills: 0,
+      /** Reguläre Planeten, die während der Pause gefallen sind. */
+      planetsCleared: 0,
+      /** Sterne, deren Planeten während der Pause vollständig befreit wurden. */
+      starsRescued: 0,
+      /** Galaxieboss-Planeten — die seltenen, dicken Brocken. */
+      galaxyBossesFelled: 0,
       materialsEarned: {} as Record<string, number>,
       battleWins: 0,
       battleLosses: 0,
@@ -278,6 +285,9 @@ export const useGameStore = defineStore('game', {
 
     resetPauseStats() {
       this.pauseStats.kills = 0
+      this.pauseStats.planetsCleared = 0
+      this.pauseStats.starsRescued = 0
+      this.pauseStats.galaxyBossesFelled = 0
       this.pauseStats.materialsEarned = {}
       this.pauseStats.battleWins = 0
       this.pauseStats.battleLosses = 0

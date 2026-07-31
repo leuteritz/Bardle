@@ -82,12 +82,43 @@
               </div>
             </div>
 
-            <div class="stat-tile">
+            <!-- Kills aufgeschlüsselt: die Gesamtzahl steht im Label, darunter
+                 steht, was tatsächlich gefallen ist. Zeilen ohne Treffer
+                 bleiben stehen und dimmen nur ab — sonst spränge das Layout,
+                 sobald während der Pause die erste Kategorie dazukommt. -->
+            <div class="stat-tile stat-tile--kills">
               <span class="stat-tile__label">
                 <Icon icon="game-icons:crossed-swords" width="13" height="13" class="stat-tile__icon" aria-hidden="true" />
                 Kills
+                <span v-if="pauseKills > 0" class="stat-tile__total">{{ formatNumber(pauseKills) }}</span>
               </span>
-              <span class="stat-tile__value">{{ formatNumber(pauseKills) }}</span>
+              <!-- Drei Zellen je Zeile direkt im Raster, damit die Zahlen
+                   spaltenweise fluchten statt hinter unterschiedlich langen
+                   Wörtern zu hängen. -->
+              <div class="kill-list">
+                <template v-for="row in killBreakdown" :key="row.key">
+                  <Icon
+                    :icon="row.icon"
+                    width="14"
+                    height="14"
+                    class="kill-cell kill-cell__icon"
+                    :class="{ 'kill-cell--zero': row.count === 0 }"
+                    :style="{ color: row.color }"
+                    aria-hidden="true"
+                  />
+                  <span
+                    class="kill-cell kill-cell__label"
+                    :class="{ 'kill-cell--zero': row.count === 0 }"
+                    :title="row.title"
+                    >{{ row.label }}</span
+                  >
+                  <span
+                    class="kill-cell kill-cell__count"
+                    :class="{ 'kill-cell--zero': row.count === 0 }"
+                    >{{ formatNumber(row.count) }}</span
+                  >
+                </template>
+              </div>
             </div>
 
             <!-- Materialien bleiben die dritte Kachel, bekommen aber die
@@ -170,10 +201,38 @@
               class="callout-row"
             >
               <div v-for="c in callouts" :key="c.key" class="callout" :class="c.cls">
-                <span class="callout-orb" aria-hidden="true">
-                  <Icon :icon="c.icon" width="16" height="16" class="callout-orb__icon" />
-                </span>
-                <span class="callout__text">
+                <!-- Icon steht frei: der Kreis drumherum war eine zweite
+                     Fassung innerhalb einer Pille, die selbst schon eine ist. -->
+                <Icon :icon="c.icon" width="17" height="17" class="callout__icon" aria-hidden="true" />
+
+                <!-- Stern: Planeten als Punktreihe, Restzeit rechts. Die Punkte
+                     bleiben stehen und leeren sich nur — dadurch ändert der
+                     Callout seine Breite über die gesamte Lebensdauer des
+                     Sterns nicht, weder beim Herunterzählen noch beim
+                     Befreien eines Planeten. -->
+                <template v-if="c.kind === 'star'">
+                  <span
+                    class="callout__pips"
+                    :aria-label="`${c.remaining} of ${c.total} planets left`"
+                  >
+                    <span
+                      v-for="i in c.total"
+                      :key="i"
+                      class="pip"
+                      :class="{ 'pip--cleared': i > c.remaining! }"
+                    />
+                  </span>
+                  <span class="callout__secs">{{ c.secs }}s</span>
+                  <!-- Restlaufzeit als abbrennende Linie am Fuß — inline
+                       gesetzter Transform statt CSS-Variable am Container. -->
+                  <span
+                    class="callout__fuse"
+                    :style="{ transform: `scaleX(${c.progress})` }"
+                    aria-hidden="true"
+                  />
+                </template>
+
+                <span v-else class="callout__text">
                   {{ c.text }}
                   <span v-if="c.count > 0" class="callout__count">×{{ c.count }}</span>
                 </span>
@@ -322,6 +381,8 @@ interface PauseResourceStar {
   secs: number
   remainingPlanets: number
   total: number
+  /** Restanteil der Despawn-Zeit (1 = frisch gespawnt) für die Fuse-Linie. */
+  progress: number
 }
 
 const activeResourceStars = computed<PauseResourceStar[]>(() => {
@@ -332,11 +393,18 @@ const activeResourceStars = computed<PauseResourceStar[]>(() => {
     .map((s) => {
       const total = s.planetSlots.length
       const remainingPlanets = s.planetSlots.filter((p) => !p.cleared).length
+      const durationMs = s.durationMs ?? 0
       const remainingMs =
-        s.spawnedAt !== undefined && s.durationMs !== undefined
-          ? Math.max(0, s.spawnedAt + s.durationMs - now)
+        s.spawnedAt !== undefined && durationMs > 0
+          ? Math.max(0, s.spawnedAt + durationMs - now)
           : 0
-      return { id: s.id, secs: Math.ceil(remainingMs / 1000), remainingPlanets, total }
+      return {
+        id: s.id,
+        secs: Math.ceil(remainingMs / 1000),
+        remainingPlanets,
+        total,
+        progress: durationMs > 0 ? Math.min(1, remainingMs / durationMs) : 0,
+      }
     })
     .filter((s) => s.remainingPlanets > 0 && s.secs > 0)
     .sort((a, b) => a.secs - b.secs)
@@ -353,6 +421,39 @@ const timerChars = computed(() => {
 })
 
 const pauseKills = computed(() => gameStore.pauseStats.kills)
+
+// Aufschlüsselung der Kills. Die drei Zeilen stehen immer — Kategorien ohne
+// Treffer dimmen ab, statt zu verschwinden: die Kachelhöhe ist fest, und ein
+// Layoutsprung mitten in der Pause zöge den Fit-Scale des Overlays mit.
+const killBreakdown = computed(() => {
+  const s = gameStore.pauseStats
+  return [
+    {
+      key: 'planets',
+      icon: 'game-icons:exploding-planet',
+      label: 'Planets',
+      count: s.planetsCleared,
+      color: '#e0a850',
+      title: 'Planets cleared during the pause',
+    },
+    {
+      key: 'stars',
+      icon: 'game-icons:allied-star',
+      label: 'Stars',
+      count: s.starsRescued,
+      color: '#7fd8d0',
+      title: 'Stars fully freed — every planet cleared',
+    },
+    {
+      key: 'bosses',
+      icon: 'game-icons:alien-skull',
+      label: 'Bosses',
+      count: s.galaxyBossesFelled,
+      color: '#cc6050',
+      title: 'Galaxy bosses felled',
+    },
+  ]
+})
 const pauseBattleWins = computed(() => gameStore.pauseStats.battleWins)
 const pauseBattleLosses = computed(() => gameStore.pauseStats.battleLosses)
 const pauseBattleChimes = computed(() => gameStore.pauseStats.battleChimes)
@@ -415,10 +516,16 @@ const isPlanetDiscovered = computed(
 
 interface PauseCallout {
   key: string
+  /** `star` rendert Punktreihe + Timer, `text` eine Beschriftung mit Zähler. */
+  kind: 'text' | 'star'
   icon: string
-  text: string
-  count: number
   cls: string
+  text?: string
+  count?: number
+  secs?: number
+  remaining?: number
+  total?: number
+  progress?: number
 }
 
 const callouts = computed<PauseCallout[]>(() => {
@@ -426,6 +533,7 @@ const callouts = computed<PauseCallout[]>(() => {
   if (isPlanetDiscovered.value) {
     list.push({
       key: 'champion',
+      kind: 'text',
       icon: 'game-icons:barbute',
       text: 'Champion found',
       count: 0,
@@ -435,6 +543,7 @@ const callouts = computed<PauseCallout[]>(() => {
   if (gameStore.pendingAugmentSelections.length > 0) {
     list.push({
       key: 'level',
+      kind: 'text',
       icon: 'game-icons:upgrade',
       text: 'Level-Up',
       count: gameStore.pendingAugmentSelections.length,
@@ -444,10 +553,13 @@ const callouts = computed<PauseCallout[]>(() => {
   for (const s of activeResourceStars.value) {
     list.push({
       key: `star-${s.id}`,
+      kind: 'star',
       icon: 'game-icons:star-formation',
-      text: `${s.secs}s · ${s.remainingPlanets}/${s.total}`,
-      count: 0,
       cls: 'callout--star',
+      secs: s.secs,
+      remaining: s.remainingPlanets,
+      total: s.total,
+      progress: s.progress,
     })
   }
   return list
@@ -732,7 +844,7 @@ function particleStyle(i: number): Record<string, string> {
    Panelbreite quetschen. */
 .stat-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 2.3fr;
+  grid-template-columns: 1fr 1.35fr 2.4fr;
   /* Feste Zeilenhöhe: alle drei Tiles exakt gleich groß, egal wie viel
      Inhalt (HP-Leiste, Material-Karten) eine einzelne Kachel hat. Bemessen
      am größten Inhalt — zwei Reihen Material-Karten. */
@@ -796,8 +908,49 @@ function particleStyle(i: number): Record<string, string> {
 /* Die Kachel füllt sich mit Karten statt mit einer Zahl — der reservierte
    Bar-Slot der anderen beiden entfällt hier, sonst stünde das Raster
    außermittig. */
-.stat-tile--materials {
+.stat-tile--materials,
+.stat-tile--kills {
   grid-template-rows: auto auto;
+}
+
+/* ── Kill-Aufschlüsselung ─────────────────────────────────
+   Drei feste Zeilen, linksbündig ausgerichtet: Icon, Kategorie, Zahl. Die
+   Zahlen stehen in einer eigenen, rechtsbündigen Spalte, damit sie
+   untereinander fluchten statt hinter unterschiedlich langen Wörtern zu
+   hängen. */
+.kill-list {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  justify-self: stretch;
+  column-gap: 6px;
+  row-gap: 6px;
+}
+/* Die Kategoriefarbe kommt inline aus killBreakdown — Planeten bernstein,
+   Sterne im Türkis der Stern-Callouts, Galaxiebosse im Warnrot der
+   Bosskämpfe. */
+.kill-cell__icon {
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.6));
+}
+.kill-cell__label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.6);
+  white-space: nowrap;
+}
+.kill-cell__count {
+  font-size: 0.94rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #ece0c0;
+  font-variant-numeric: tabular-nums;
+}
+/* Noch nichts gefallen: die Zeile bleibt stehen, tritt aber zurück — sie ist
+   dann eine Ankündigung, keine Meldung. */
+.kill-cell--zero {
+  opacity: 0.32;
 }
 /* Gesamtmenge direkt im Label — die Einzelzahlen stehen an den Karten */
 .stat-tile__total {
@@ -1102,14 +1255,19 @@ function particleStyle(i: number): Record<string, string> {
   text-transform: uppercase;
   color: rgba(216, 200, 160, 0.42);
 }
-/* Feste Höhe: reservierter Platz, egal ob 0 oder 3 Badges — das Panel bleibt stabil */
+/* Feste Höhe: reservierter Platz, egal ob 0 oder 5 Badges — das Panel bleibt
+   stabil. Zwei Zeilen sind reserviert, weil der Vollausbau (3 Resource-Sterne
+   nach RESOURCE_STAR_MAX_CONCURRENT plus Champion- und Level-Marke) nicht in
+   eine Zeile passt. Vorher stand hier nowrap mit overflow: hidden — die Badges
+   wurden dann gequetscht, bis die Sekundenzahl am Rand abriss. */
 .callout-row {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
+  align-content: center;
   justify-content: center;
   gap: 8px;
-  height: 42px;
+  height: 72px;
   width: 100%;
   overflow: hidden;
 }
@@ -1125,9 +1283,11 @@ function particleStyle(i: number): Record<string, string> {
   display: inline-flex;
   align-items: center;
   min-width: 0;
-  flex-shrink: 1;
-  gap: 9px;
-  padding: 7px 16px 7px 8px;
+  /* Nicht schrumpfen: lieber bricht die Zeile um, als dass die Restzeit am
+     Rand abgeschnitten wird. */
+  flex-shrink: 0;
+  gap: 8px;
+  padding: 7px 14px;
   border-radius: 999px;
   font-size: clamp(0.72rem, 1vw, 0.82rem);
   font-weight: 700;
@@ -1139,7 +1299,19 @@ function particleStyle(i: number): Record<string, string> {
     color-mix(in srgb, var(--co-color) 5%, transparent)
   );
   color: color-mix(in srgb, var(--co-color) 55%, #f2ead0);
-  overflow: visible;
+  overflow: hidden;
+}
+/* Der Puls sitzt auf einem Overlay und bewegt nur dessen Opazität. Vorher
+   animierte der Callout selbst seinen box-shadow — das rastert die Box in
+   jedem Frame neu, und zwar pro Badge. */
+.callout::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--co-color) 32%, transparent);
+  opacity: 0;
+  pointer-events: none;
   animation: callout-glow 2.6s ease-in-out infinite;
 }
 .callout--champion {
@@ -1154,42 +1326,66 @@ function particleStyle(i: number): Record<string, string> {
 @keyframes callout-glow {
   0%,
   100% {
-    box-shadow: 0 0 0 color-mix(in srgb, var(--co-color) 0%, transparent);
+    opacity: 0;
   }
   50% {
-    box-shadow: 0 0 16px color-mix(in srgb, var(--co-color) 32%, transparent);
-  }
-}
-.callout-orb {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 40% 35%,
-    color-mix(in srgb, var(--co-color) 35%, transparent),
-    color-mix(in srgb, var(--co-color) 8%, transparent) 70%
-  );
-  border: 1px solid color-mix(in srgb, var(--co-color) 50%, transparent);
-  flex-shrink: 0;
-}
-.callout-orb__icon {
-  color: var(--co-color);
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--co-color) 80%, transparent));
-  animation: orb-twinkle 2.6s ease-in-out infinite;
-}
-@keyframes orb-twinkle {
-  0%,
-  100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 0.85;
-  }
-  50% {
-    transform: scale(1.18) rotate(12deg);
     opacity: 1;
   }
+}
+.callout__icon {
+  flex-shrink: 0;
+  color: var(--co-color);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--co-color) 80%, transparent));
+}
+
+/* ── Stern-Callout ────────────────────────────────────────
+   Ein Punkt je Planet: gefüllt = steht noch, hohl = befreit. Die Punkte
+   verschwinden nie, sie leeren sich nur — die Breite des Badges steht damit
+   ab dem Spawn fest, und der Fortschritt ist ohne Bruchzahl ablesbar. */
+.callout__pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--co-color);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--co-color) 60%, transparent);
+}
+.pip--cleared {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--co-color) 40%, transparent);
+  box-shadow: none;
+}
+/* Feste Zellbreite für die längste vorkommende Angabe (RESOURCE_STAR_DURATION_MS
+   = 45s, also drei Zeichen): der Wechsel auf zweistellig und später einstellig
+   macht das Badge dadurch nicht schmaler. */
+.callout__secs {
+  min-width: 3.2ch;
+  flex-shrink: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  color: var(--co-color);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--co-color) 45%, transparent);
+}
+/* Restlaufzeit als Linie am Fuß der Pille — brennt von rechts ab */
+.callout__fuse {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 1px;
+  transform-origin: left center;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--co-color) 55%, transparent),
+    var(--co-color)
+  );
 }
 .callout__text {
   display: inline-flex;
