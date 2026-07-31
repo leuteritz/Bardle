@@ -986,7 +986,9 @@ function particleStyle(i: number): Record<string, string> {
   /* Feste Zeilenhöhe: alle drei Tiles exakt gleich groß, egal wie viel
      Inhalt (HP-Leiste, Material-Karten) eine einzelne Kachel hat. Bemessen
      am größten Inhalt — zwei Reihen Material-Karten. */
-  grid-auto-rows: 176px;
+  /* Bemessen am höheren Inhalt: Kopfzeile (32) + Abstand (7) + zwei Reihen
+     Material-Karten (109) + Innenabstand (28). */
+  grid-auto-rows: 180px;
   /* Explizit, nicht dem geerbten `baseline` überlassen: die Material-Kachel
      hat ihre erste Baseline im Kartenraster statt in einer Wertzeile und
      rutschte dadurch gegenüber Health und Kills nach unten. */
@@ -996,10 +998,11 @@ function particleStyle(i: number): Record<string, string> {
 }
 .stat-tile {
   display: grid;
-  /* Überschrift oben, Inhalt darunter — beide Kacheln teilen sich diese
-     Aufteilung, damit ihre Köpfe auf exakt gleicher Höhe sitzen. */
-  grid-template-rows: auto auto;
-  align-content: center;
+  /* Überschrift oben am Kachelrand, Inhalt füllt den Rest darunter. Die zweite
+     Zeile ist 1fr statt auto — würde der ganze Block zentriert, hinge der Kopf
+     je nach Inhaltshöhe unterschiedlich tief, und die Köpfe der beiden Kacheln
+     stünden nicht mehr auf einer Linie. */
+  grid-template-rows: auto 1fr;
   justify-items: center;
   row-gap: 7px;
   text-align: center;
@@ -1037,10 +1040,6 @@ function particleStyle(i: number): Record<string, string> {
 /* Die Kachel füllt sich mit Karten statt mit einer Zahl — der reservierte
    Bar-Slot der anderen beiden entfällt hier, sonst stünde das Raster
    außermittig. */
-.stat-tile--materials,
-.stat-tile--kills {
-  grid-template-rows: auto auto;
-}
 
 /* ── Kill-Aufschlüsselung ─────────────────────────────────
    Drei feste Zeilen, linksbündig ausgerichtet: Icon, Kategorie, Zahl. Die
@@ -1051,7 +1050,11 @@ function particleStyle(i: number): Record<string, string> {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
+  /* Füllt den Bereich unter der Überschrift und verteilt die drei Zeilen
+     gleichmäßig darin, statt sie oben zusammenzudrängen. */
+  align-content: space-evenly;
   justify-self: stretch;
+  height: 100%;
   column-gap: 6px;
   row-gap: 6px;
 }
@@ -1112,6 +1115,9 @@ function particleStyle(i: number): Record<string, string> {
   grid-template-columns: repeat(var(--mat-cols, 4), 1fr);
   grid-template-rows: repeat(var(--mat-rows, 2), var(--mat-row-h));
   justify-self: stretch;
+  /* Feste Rasterhöhe, deshalb im Restbereich zentriert statt gestreckt —
+     sonst zöge 1fr die Zeilen auseinander. */
+  align-self: center;
   gap: var(--mat-gap);
   width: 100%;
 }
