@@ -1111,17 +1111,19 @@ const filteredAugCards = computed(() => {
   border-color: #5c3310;
 }
 
-/* ─ Augment deck — the lower half of the middle column ─
-   Capped to a share of the column so the dial above always keeps the larger
-   half; the deck scrolls internally once the collection outgrows it. Der Anteil
-   liegt bewusst bei 46 %: bei 34 % blieben auf Full HD von acht Augments nur
-   zwei sichtbar, der Rest lag im Scroll — der Dial darüber hat die Luft übrig. */
+/* ─ Augment deck — die untere Hälfte der Mittelspalte ─
+   FESTE Höhe, bewusst nicht inhaltsabhängig. Vorher wuchs die Zone mit der
+   Sammlung (0 → 20 Augments = 165 → 317px auf Full HD) und nahm dem Dial
+   darüber genau so viel weg: die Sonne schrumpfte von 391 auf 246px, nur weil
+   der Spieler weitergespielt hatte. Ein Layout-Anker darf nicht davon abhängen,
+   wie voll ein Inventar ist — deshalb steht der Rahmen still und der INHALT
+   scrollt, wenn die Sammlung ihn überholt.
+
+   Die Höhe je Stufe ist so gewählt, dass ohne Scrollen hineinpasst:
+   Rubrik + alle Total-Bonus-Kacheln + zwei Reihen Augment-Karten. */
 .sf-aug-zone {
-  flex: 0 1 auto;
+  flex: 0 0 345px;
   min-height: 0;
-  /* the absolute cap matters on 4K: 46% of a 1700px column would be an
-     800px "compact" deck and the dial would stop being the centrepiece */
-  max-height: min(46%, 470px);
   display: flex;
   flex-direction: column;
 }
@@ -1164,6 +1166,12 @@ const filteredAugCards = computed(() => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Weil der Rahmen jetzt fest steht, schneidet er bei voller Sammlung mitten
+     durch eine Kartenreihe. Die letzten Pixel laufen deshalb weich aus — das
+     liest sich als „hier geht es weiter" statt als abgeschnittenes Layout.
+     Reicht der Inhalt nicht bis zum Rand, liegt dort ohnehin nichts, und die
+     Maske bleibt unsichtbar. */
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent 100%);
 }
 
 /* ─ Auto-Pick-Streifen: der dauerhafte Aus-Knopf ─
@@ -1456,11 +1464,11 @@ const filteredAugCards = computed(() => {
   .sf-orbit-foot {
     padding-bottom: 7px;
   }
-  /* Full HD ist der Viewport, auf dem das Deck am meisten litt: mit 220px lagen
-     von acht Augments sechs im Scroll. Der Dial gibt die Höhe her — er läuft
-     hier ohnehin auf --orbit-max-compact und hatte Rand übrig. */
+  /* Full HD ist der flachste Viewport: hier teilen sich Dial und Deck 709px.
+     278px lassen dem Deck Kacheln + zwei Kartenreihen und dem Dial rund 290px –
+     mehr, als er bei voller Sammlung vorher je hatte. */
   .sf-aug-zone {
-    max-height: min(46%, 362px);
+    flex-basis: 278px;
   }
   .sf-tile__val {
     font-size: 18px;
@@ -1501,9 +1509,10 @@ const filteredAugCards = computed(() => {
     font-size: 22px;
     width: 152px;
   }
-  /* 4K leaves the dial more room than it can use, so the deck takes the slack */
+  /* 4K deckelt den Dial bei --orbit-max, dadurch bleibt Spaltenhöhe übrig, die
+     sonst niemand nutzt — das Deck nimmt sie und zeigt drei Kartenreihen. */
   .sf-aug-zone {
-    max-height: min(44%, 620px);
+    flex-basis: 470px;
   }
   /* Auf 4K wächst die Zeile mit — sonst schrumpfen 19px Zahl und 12px Name
      auf der großen Fläche optisch zu Fußnoten zusammen. */
