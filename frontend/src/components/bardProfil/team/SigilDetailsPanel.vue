@@ -71,6 +71,13 @@ const props = defineProps<{
   roleIndex: number
   /** Ally sub-slot hovered on the sigil board — its roster chip lights up here. */
   highlightedAlly?: number | null
+  /** Seat the page should open on, set by a click on a board satellite.
+   *  null = the role's main champion. */
+  focusAlly?: number | null
+  /** Bumped with every focus request. Without it, clicking the same satellite a
+   *  second time would not re-focus it once the page had moved on to another
+   *  chip — the sub-slot alone would not have changed. */
+  focusToken?: number
 }>()
 
 const emit = defineEmits<{
@@ -113,12 +120,17 @@ const allies = computed(
 // -1 = the role's main champion, 0…n = that ally sub-slot. An empty ally is
 // never the subject — clicking its chip opens the picker instead.
 const MAIN_SUBJECT = -1
-const subject = ref(MAIN_SUBJECT)
+// Opens on whatever seat the caller asked for — the board hands one over when a
+// satellite was clicked, and nothing when a role node was.
+const subject = ref(props.focusAlly ?? MAIN_SUBJECT)
 
+// One watcher owns every reset of the subject: a role change on its own falls
+// back to the main, a focus request names the seat to open on. Watching the
+// token as well is what makes a repeated click on the same satellite land.
 watch(
-  () => props.roleIndex,
+  () => [props.roleIndex, props.focusToken] as const,
   () => {
-    subject.value = MAIN_SUBJECT
+    subject.value = props.focusAlly ?? MAIN_SUBJECT
   },
 )
 // an ally that gets cleared (or a role that loses its bench) falls back to main

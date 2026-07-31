@@ -116,15 +116,42 @@ const pickerTitle = computed(() =>
 )
 
 // ── Selection ────────────────────────────────────────────────────────────────
+/** Seat the details page should open on — only a board satellite names one. */
+const focusAlly = ref<number | null>(null)
+/** Bumped with every focus request, see the panel's `focusToken` prop. */
+const focusToken = ref(0)
+
+function focusSeat(subSlot: number | null) {
+  focusAlly.value = subSlot
+  focusToken.value++
+}
+
 function selectRole(index: number) {
   synergiesOpen.value = false
   selectedRole.value = index
+  focusSeat(null)
   uiStore.setRolesActiveSlot(index)
 }
 
+/**
+ * A satellite on the sigil board opens the DETAILS PAGE on that champion — it
+ * used to jump straight into the swap modal, which threw the player out of the
+ * page they were on to answer a question they had not asked.
+ *
+ * An empty seat is the one exception: it has no champion to describe, so it goes
+ * to the picker. That is exactly what the details page already does when one of
+ * its own empty chips is clicked (see selectSubject there), so board and page
+ * now answer a click the same way. Swapping a seated champion stays one click
+ * away — its portrait on the page is the swap button.
+ */
 function selectAlly(index: number, subSlot: number) {
+  const seated = (battleStore.secondarySlots[index] ?? [])[subSlot] ?? null
   selectRole(index)
-  openPicker(subSlot)
+  if (!seated) {
+    openPicker(subSlot)
+    return
+  }
+  focusSeat(subSlot)
 }
 
 function closePanel() {
@@ -349,6 +376,8 @@ onUnmounted(() => {
         v-if="selectedRole !== null && panelReady"
         :role-index="selectedRole"
         :highlighted-ally="boardHoveredAlly"
+        :focus-ally="focusAlly"
+        :focus-token="focusToken"
         @swap="openPicker(-1)"
         @pick-ally="openPicker"
         @clear-ally="clearAlly"
