@@ -1095,14 +1095,15 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   gap: 6px;
   padding: 10px 12px 8px 11px;
 }
-/* The captain's medallion leaves the flex row and pins to the card's LOWER
-   corner like a seal. As a row item it charged the text column 38px of its 137,
-   so the champion's name ran into an ellipsis; out of the flow it costs the text
-   nothing. Bottom rather than top because the caption sits high — the seal takes
-   the corner the text does not, and the two never meet on a line. */
+/* The captain's medallion leaves the flex row and pins to the card's upper right
+   corner. As a row item it charged the text column 38px of its 137, so the
+   champion's name ran into an ellipsis; out of the flow it costs the text
+   nothing. It shares the top of the card with the MAIN tag rather than colliding
+   with it: the tag is short and left-aligned, so the two sit on one line with a
+   wide gap between them, and the name below clears the medallion's lower edge. */
 .sdp-chip--main > .sdp-chip-badge {
   position: absolute;
-  bottom: 9px;
+  top: 9px;
   right: 10px;
   align-self: auto;
   margin-right: 0;
