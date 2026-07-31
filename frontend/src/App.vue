@@ -53,7 +53,6 @@ watch(
     <RoleSelectionModal />
     <HyperspaceOverlay />
     <UniverseSelectModal />
-    <FpsOverlay />
     <EventLogOverlay />
     <OfflineProgressModal />
     <PauseOverlay />
@@ -95,7 +94,12 @@ watch(
     <EncyclopediaPanel />
     <BottomBarComponent />
 
-    <span class="copyright-overlay text-amber-600/60">© Leuteritz</span>
+    <!-- Signatur und FPS-Zähler sitzen als ein Paar unten links über der
+         Minimap — die obere linke Ecke gehört der Auto-Pick-Meldung. -->
+    <div class="credit-row">
+      <span class="copyright-overlay text-amber-600/60">© Leuteritz</span>
+      <FpsOverlay />
+    </div>
   </div>
 </template>
 
@@ -156,25 +160,35 @@ watch(
   initial-value: 0.85;
 }
 
-.copyright-overlay {
+/* Die Zeile trägt Position und Schriftgrad für beide Kinder — Signatur und
+   FPS stehen dadurch garantiert auf einer Grundlinie und in einer Größe,
+   ganz gleich wie der clamp() bei welcher Auflösung ausfällt. */
+.credit-row {
   position: fixed;
   /* unten links, direkt über dem oberen Rahmen des Minimap-Panels */
   bottom: calc(var(--hud-panel-size, 330px) + 8px);
   left: 0.75rem;
   z-index: 9999;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
   pointer-events: none;
   font-size: clamp(0.72rem, 0.9vw, 1rem);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #f8e7a6;
-  white-space: nowrap;
   user-select: none;
 }
 
+.copyright-overlay {
+  font-size: inherit;
+  color: #f8e7a6;
+  white-space: nowrap;
+}
+
 @media (max-width: 1200px) {
-  .copyright-overlay {
+  .credit-row {
     font-size: 1.5rem;
   }
 }

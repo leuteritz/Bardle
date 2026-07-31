@@ -2022,8 +2022,15 @@ export const GAME_TICK_INTERVAL_MS = 1000
 export const MEEP_ADD_DELAY_MS = 100
 export const AUGMENT_CHOICE_COUNT = 3
 export const RARITY_WEIGHT_FALLBACK = 60
+// ── FPS-Zähler (neben der Signatur unten links) ─────────────────────────────
+/** Ab hier läuft es rund — der Zähler steht grün. */
+export const FPS_GOOD_THRESHOLD = 55
+/** Darunter wird es zäh: unter diesem Wert schlägt der Zähler auf Rot um. */
+export const FPS_POOR_THRESHOLD = 30
 /** Wie lange die Auto-Pick-Meldung stehen bleibt, bevor sie ausblendet. */
 export const AUTO_PICK_TOAST_MS = 6500
+/** Taktung der Restsekunden-Anzeige in dieser Meldung. */
+export const AUTO_PICK_TICK_MS = 200
 /** Icon des Auto-Picks — Modal-Button, Panel-Zeile und Meldung teilen es sich. */
 export const AUTO_PICK_ICON = 'game-icons:cycle'
 /** Display names of the four augment rarities (level-up selection cards). */

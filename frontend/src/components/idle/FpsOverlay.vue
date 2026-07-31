@@ -1,6 +1,7 @@
 <!-- frontend/src/components/idle/FpsOverlay.vue -->
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { FPS_GOOD_THRESHOLD, FPS_POOR_THRESHOLD } from '@/config/constants'
 
 const fps = ref(0)
 let count = 0
@@ -19,6 +20,15 @@ const tick = (now: number) => {
   rafId = requestAnimationFrame(tick)
 }
 
+/* Die Farbe ist die eigentliche Aussage: Bardle misst sich an der Framerate,
+   also soll man einen Einbruch sehen, ohne die Zahl zu lesen. Grün = rund,
+   Bernstein = spürbar, Rot = zäh. */
+const state = computed(() => {
+  if (fps.value >= FPS_GOOD_THRESHOLD) return 'good'
+  if (fps.value >= FPS_POOR_THRESHOLD) return 'fair'
+  return 'poor'
+})
+
 onMounted(() => {
   rafId = requestAnimationFrame(tick)
 })
@@ -28,39 +38,38 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="fps-overlay" aria-label="FPS Anzeige">{{ fps }} FPS</div>
+  <span class="fps-overlay" :class="`fps-overlay--${state}`" aria-label="FPS Anzeige">
+    {{ fps }} FPS
+  </span>
 </template>
 
 <style scoped>
-/* Das FPS-Overlay sitzt ganz oben links in der Ecke.
-   Die rechte Gutter-Spalte gehört komplett dem EventLogOverlay. */
+/* Größe, Laufweite und Grundlinie kommen von `.credit-row` in App.vue — der
+   Zähler steht damit exakt so groß neben der Signatur wie diese selbst. */
 .fps-overlay {
-  position: fixed;
-  top: 0.5rem;
-  left: 0.75rem;
-  z-index: 9999;
-  pointer-events: none;
-
-  background: transparent;
-  border: none;
-  box-shadow: none;
-
-  font-size: clamp(0.72rem, 0.9vw, 1rem);
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-
-  color: #f8e7a6;
-  text-shadow:
-    0 0 4px rgba(255, 214, 102, 0.7),
-    0 0 10px rgba(255, 184, 77, 0.45),
-    0 0 18px rgba(255, 140, 0, 0.25);
+  font-size: inherit;
+  white-space: nowrap;
+  transition: color 0.4s ease;
 }
 
-@media (max-width: 1200px) {
-  .fps-overlay {
-    font-size: 1rem;
-  }
+.fps-overlay--good {
+  color: #6ee06a;
+  text-shadow:
+    0 0 4px rgba(110, 224, 106, 0.55),
+    0 0 12px rgba(60, 180, 80, 0.3);
+}
+
+.fps-overlay--fair {
+  color: #e8c040;
+  text-shadow:
+    0 0 4px rgba(232, 192, 64, 0.55),
+    0 0 12px rgba(200, 144, 64, 0.3);
+}
+
+.fps-overlay--poor {
+  color: #ff7a62;
+  text-shadow:
+    0 0 4px rgba(255, 122, 98, 0.6),
+    0 0 12px rgba(204, 96, 80, 0.35);
 }
 </style>
