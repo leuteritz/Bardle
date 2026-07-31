@@ -2031,6 +2031,8 @@ export const FPS_POOR_THRESHOLD = 30
 export const AUTO_PICK_TOAST_MS = 6500
 /** Taktung der Restsekunden-Anzeige in dieser Meldung. */
 export const AUTO_PICK_TICK_MS = 200
+/** Ab dieser Restzeit färbt sich die Uhr warnend — „gleich ist sie weg". */
+export const AUTO_PICK_URGENT_MS = 2000
 /** Icon des Auto-Picks — Modal-Button, Panel-Zeile und Meldung teilen es sich. */
 export const AUTO_PICK_ICON = 'game-icons:cycle'
 /** Display names of the four augment rarities (level-up selection cards). */

@@ -8,6 +8,7 @@ import {
   AUTO_PICK_ICON,
   AUTO_PICK_TOAST_MS,
   AUTO_PICK_TICK_MS,
+  AUTO_PICK_URGENT_MS,
 } from '@/config/constants'
 
 /**
@@ -31,7 +32,9 @@ const augment = computed(() => AUGMENTS.find((a) => a.id === shownId.value) ?? n
 const rarityColor = computed(() =>
   augment.value ? AUGMENT_RARITY_COLOR[augment.value.rarity] : '#9d9d9d',
 )
-const remainingLabel = computed(() => `${Math.max(1, Math.ceil(remainingMs.value / 1000))}s`)
+const remainingSeconds = computed(() => Math.max(1, Math.ceil(remainingMs.value / 1000)))
+/** Letzte Sekunden: die Uhr schlägt auf Warnrot um, statt still auszulaufen. */
+const urgent = computed(() => remainingMs.value > 0 && remainingMs.value <= AUTO_PICK_URGENT_MS)
 
 function clearTimers() {
   if (hideTimer) clearTimeout(hideTimer)
@@ -82,8 +85,15 @@ onUnmounted(clearTimers)
       <div class="apt-head">
         <Icon :icon="AUTO_PICK_ICON" width="13" height="13" class="apt-head__icon" />
         <span class="apt-head__lbl">Auto-picked</span>
-        <span class="apt-head__time" :title="`This message closes in ${remainingLabel}`">
-          {{ remainingLabel }}
+        <!-- Große Ziffer, kleines Suffix: die Restzeit ist die zweite Aussage
+             der Kopfzeile und soll aus dem Augenwinkel lesbar sein. -->
+        <span
+          class="apt-clock"
+          :class="{ 'apt-clock--urgent': urgent }"
+          :title="`This message closes in ${remainingSeconds}s`"
+        >
+          <span class="apt-clock__num">{{ remainingSeconds }}</span>
+          <span class="apt-clock__unit">s</span>
         </span>
       </div>
 
@@ -153,18 +163,43 @@ onUnmounted(clearTimers)
   color: #8a7a52;
 }
 
-/* Restzeit als Zahl — der Balken zeigt den Verlauf, die Ziffer den Rest */
-.apt-head__time {
+/* Restzeit — der Balken zeigt den Verlauf, diese Uhr den harten Rest.
+   Tabellarische Ziffern, damit die Zahl beim Herunterzählen nicht springt. */
+.apt-clock {
   margin-left: auto;
-  padding: 1px 7px;
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1.35;
-  color: #6b6047;
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  padding: 2px 9px 3px;
+  color: #b8a878;
   background: #100e08;
   border: 1px solid #3a2c14;
-  border-radius: 3px;
+  border-radius: 4px;
   font-variant-numeric: tabular-nums;
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease,
+    background 0.25s ease;
+}
+
+.apt-clock__num {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.apt-clock__unit {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+/* Letzte Sekunden — die Uhr wird rot, bevor die Leiste verschwindet. */
+.apt-clock--urgent {
+  color: #ff8a72;
+  background: #2a0e0c;
+  border-color: #8a3020;
 }
 
 /* ── Augment ─────────────────────────────────────────────────────── */
@@ -320,7 +355,10 @@ onUnmounted(clearTimers)
   .apt-head__lbl {
     font-size: 12px;
   }
-  .apt-head__time {
+  .apt-clock__num {
+    font-size: 23px;
+  }
+  .apt-clock__unit {
     font-size: 13px;
   }
   .apt-stage {
@@ -353,7 +391,10 @@ onUnmounted(clearTimers)
   .apt-head__lbl {
     font-size: 13.5px;
   }
-  .apt-head__time {
+  .apt-clock__num {
+    font-size: 27px;
+  }
+  .apt-clock__unit {
     font-size: 15px;
   }
   .apt-stage {
