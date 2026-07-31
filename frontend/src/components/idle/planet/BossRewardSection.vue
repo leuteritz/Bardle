@@ -7,7 +7,6 @@
        werden. Gleiche Bauform wie das LVL/HIT-Band der Champion-Karten. -->
   <div class="loot" :class="{ 'loot--galaxy': isGalaxyBoss }">
     <span class="loot-tag">
-      <span class="loot-tag-mark">✦</span>
       <span v-ink-center class="loot-tag-text">Loot</span>
     </span>
 
@@ -201,24 +200,15 @@ const stackedMaterials = computed(() => {
 }
 
 /* ── Label-Segment — das "LOOT" ist die erste Zelle der Leiste ────────────────
-   Zweizeilig, damit es die Segmenthöhe füllt statt als schmaler Streifen
-   danebenzustehen. Gefüllt wie der Reiter eines Kennwert-Chips. */
+   Bewusst die stillste Zelle: kein eigener Hintergrund, kein Glow, kein
+   Zierzeichen. Es benennt das Fenster, es ist keine Belohnung — mit gefülltem
+   Reiter stand es als Blickfang vor den Dingen, um die es geht. Der
+   Trennstrich rechts genügt, um es abzusetzen. */
 .loot-tag {
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.08em;
-  padding: 0 0.85em;
-  background: linear-gradient(to bottom, #3a2409, #241605);
-}
-
-.loot-tag-mark {
-  font-size: 0.8em;
-  line-height: 1;
-  color: #e8c060;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.6);
+  display: grid;
+  place-items: center;
+  padding: 0 0.95em;
 }
 
 .loot-tag-text {
@@ -230,27 +220,13 @@ const stackedMaterials = computed(() => {
   text-indent: 0.22em;
   text-transform: uppercase;
   line-height: 1;
-  color: #e8c040;
+  color: rgba(200, 144, 64, 0.78);
   white-space: nowrap;
-  text-shadow:
-    0 0 10px rgba(232, 192, 64, 0.5),
-    0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-.loot--galaxy .loot-tag {
-  background: linear-gradient(to bottom, #2a1040, #180826);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 .loot--galaxy .loot-tag-text {
-  color: #dd99ff;
-  text-shadow:
-    0 0 10px rgba(200, 100, 255, 0.55),
-    0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-.loot--galaxy .loot-tag-mark {
-  color: #dd99ff;
-  text-shadow: 0 0 8px rgba(200, 100, 255, 0.6);
+  color: rgba(190, 130, 230, 0.8);
 }
 
 /* ── Belohnungs-Segment ───────────────────────────────────────────────────────
