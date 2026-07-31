@@ -56,8 +56,36 @@
 
   <div
     class="planet-orbit-layer planet-orbit-front"
-    :style="{ '--hover-dim-opacity': HOVER_DIM_OPACITY }"
+    :style="{
+      '--hover-dim-opacity': HOVER_DIM_OPACITY,
+      '--buff-mark-gap': PLANET_BUFF_MARK_GAP_PX + 'px',
+    }"
   >
+    <!-- Jungle Buff — Aura hinter dem Planeten.
+         Eigenes Element statt eines Effekts am Item: .planet-orbit-item ist
+         kreisrund geclippt (overflow: hidden), alles Ausgreifende würde dort
+         abgeschnitten. Liegt eine Ebene unter dem Planeten, damit die Wellen
+         hinter ihm hervorlaufen statt über sein Portrait. -->
+    <template v-for="pos in frontPlanets" :key="'aura-' + pos.id">
+      <div
+        v-if="pos.isJungleBuffed && !pos.isDown"
+        class="planet-buff-aura"
+        :class="{ 'planet-buff-aura--dimmed': pos.isDimmed }"
+        :style="{
+          width: pos.size + 'px',
+          height: pos.size + 'px',
+          transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
+          opacity: pos.opacity,
+          zIndex: pos.zIndex - 1,
+        }"
+        aria-hidden="true"
+      >
+        <span class="planet-buff-aura__halo" />
+        <span class="planet-buff-aura__wave" />
+        <span class="planet-buff-aura__wave planet-buff-aura__wave--late" />
+      </div>
+    </template>
+
     <div
       v-for="pos in frontPlanets"
       :key="pos.id"
@@ -121,26 +149,52 @@
       <span v-else class="planet-hp-text">{{ pos.currentHp }} / {{ pos.maxHp }}</span>
     </div>
 
-    <!-- Jungle Buff — Countdown-Chip (schräg oben rechts am Planeten) -->
+    <!-- Jungle Buff — Statusmarke an der Leine über dem Planeten.
+         Dieselbe Grammatik wie Fluch und Rage am Stern (StarSystemComponent):
+         eine Marke, die an einer kurzen Leine über dem Objekt hängt, den Namen
+         des Zustands trägt und die Restzeit zeigt. Oben statt seitlich, weil
+         unter dem Planeten schon die HP-Leiste liegt. -->
     <template v-for="pos in frontPlanets" :key="'jbuff-' + pos.id">
       <div
-        class="planet-status-badge-anchor"
-        :class="{ 'planet-status-badge-anchor--dimmed': pos.isDimmed }"
+        class="planet-buff-anchor"
+        :class="{ 'planet-buff-anchor--dimmed': pos.isDimmed }"
         :style="{
-          transform: `translate(${pos.x + pos.size * 0.354 - 2}px, ${pos.y - pos.size * 0.354 - 24}px)`,
+          transform: `translate(${pos.x}px, ${pos.y - pos.size / 2}px)`,
           zIndex: pos.zIndex + 2,
         }"
       >
-        <Transition name="status-badge">
-          <div
-            v-if="pos.isJungleBuffed"
-            class="planet-buff-chip"
-            :class="{ 'planet-buff-chip--urgent': pos.jungleBuffSecsLeft < 3 }"
-            :style="{ '--buff-progress': pos.jungleBuffProgress }"
-            :title="pos.jungleBuffType"
-          >
-            <img src="/img/roles/jungle.png" alt="" draggable="false" />
-            <span class="planet-buff-secs">{{ Math.ceil(pos.jungleBuffSecsLeft) }}s</span>
+        <Transition name="planet-buff">
+          <div v-if="pos.isJungleBuffed && !pos.isDown" class="planet-buff-stack">
+            <div
+              class="planet-buff-mark"
+              :class="{
+                'planet-buff-mark--urgent': pos.jungleBuffSecsLeft < PLANET_BUFF_URGENT_SECS,
+              }"
+            >
+              <!-- Iconify statt des Rollen-PNGs: das Portrait bringt eigenes
+                   Orange mit und bräche die grüne Marke. Dasselbe Vorgehen wie
+                   bei der Fluchmarke am Stern, die ihr Icon einfärbt. -->
+              <Icon
+                icon="game-icons:thorny-vine"
+                class="planet-buff-mark__icon"
+                width="15"
+                height="15"
+                aria-hidden="true"
+              />
+              <span class="planet-buff-mark__label">{{ pos.jungleBuffType }}</span>
+              <span class="planet-buff-mark__mult">×{{ pos.jungleBuffMult }}</span>
+              <span class="planet-buff-mark__secs">{{ Math.ceil(pos.jungleBuffSecsLeft) }}s</span>
+              <!-- Restdauer als abschmelzende Zündschnur am Fuß der Marke.
+                   Bewusst ein inline gesetzter scaleX-Transform am Balken selbst
+                   statt einer CSS-Variable am Container: eine Variable würde bei
+                   jedem Frame den kompletten Subtree neu berechnen lassen, der
+                   Transform bleibt reine Compositor-Arbeit. -->
+              <span
+                class="planet-buff-mark__fuse"
+                :style="{ transform: `scaleX(${pos.jungleBuffProgress})` }"
+              />
+            </div>
+            <span class="planet-buff-leash" />
           </div>
         </Transition>
       </div>
@@ -151,6 +205,7 @@
 
 <script lang="ts">
 import { getOrbitPos } from '@/utils/geometry'
+import { Icon } from '@iconify/vue'
 import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import {
@@ -160,7 +215,16 @@ import {
   isPlanetDown,
 } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
-import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY, GAME_TICK_INTERVAL_MS, PLANET_ORBIT_FOREGROUND_DEPTH } from '@/config/constants'
+import {
+  ORBIT_TIERS,
+  PLANET_SLOT_MAX_HP,
+  BEHIND_SUN_SPEED_MULTIPLIER,
+  HOVER_DIM_OPACITY,
+  GAME_TICK_INTERVAL_MS,
+  PLANET_ORBIT_FOREGROUND_DEPTH,
+  PLANET_BUFF_MARK_GAP_PX,
+  PLANET_BUFF_URGENT_SECS,
+} from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { activePlanetPositions, activePlayerPlanetPositions } from '../../../utils/liveState'
@@ -201,6 +265,7 @@ interface PlanetRenderPos {
   jungleBuffSecsLeft: number
   jungleBuffProgress: number
   jungleBuffType: string
+  jungleBuffMult: string
   slotNum: number
   isDimmed: boolean
 }
@@ -214,7 +279,7 @@ interface LocalPlanetState {
 
 export default defineComponent({
   name: 'PlanetOrbit',
-  components: { AttackProjectileLayer, OrbitPath },
+  components: { AttackProjectileLayer, OrbitPath, Icon },
   setup() {
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
@@ -517,6 +582,10 @@ export default defineComponent({
         const jungleBuffProgress = jungleBuffDurationMs > 0
           ? Math.min(1, (jungleBuffSecsLeft * 1000) / jungleBuffDurationMs)
           : 0
+        // Der Multiplikator ist die eigentliche Aussage des Buffs — glatte Werte
+        // ohne Nachkommastelle (×3 statt ×3.0), damit die Marke schmal bleibt.
+        const rawMult = jb?.multiplier ?? 0
+        const jungleBuffMult = Number.isInteger(rawMult) ? String(rawMult) : rawMult.toFixed(1)
 
         const slotNum = parseInt(slot.id.replace('slot_', ''), 10) - 1
 
@@ -556,6 +625,7 @@ export default defineComponent({
           jungleBuffSecsLeft,
           jungleBuffProgress,
           jungleBuffType,
+          jungleBuffMult,
           slotNum,
           isDimmed,
         })
@@ -658,6 +728,8 @@ export default defineComponent({
       hoveredPlanetTier,
       starFocusActive,
       HOVER_DIM_OPACITY,
+      PLANET_BUFF_MARK_GAP_PX,
+      PLANET_BUFF_URGENT_SECS,
       allSlots,
       slotsWithRole,
       backPlanets,
@@ -894,26 +966,93 @@ export default defineComponent({
     0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
-/* ── Jungle Buff — Planet Glow (applied to the item itself, not clipped) ─── */
+/* ══ Jungle Buff ═══════════════════════════════════════════════════════════
+   Übernimmt die Zustands-Grammatik der Sterne (StarSystemComponent, Abschnitt
+   „Statuszustände am Stern"): eine Marke an kurzer Leine benennt den Zustand
+   und zählt ihn herunter, der Körper selbst trägt nur eine ruhige Färbung.
+   Farbe ist das Vorzeichen — Jungle-Grün (#3ecf5a, die Rollenfarbe aus ROLES)
+   gegen das Crimson der Rage und das Violett des Fluchs.
+
+   Drei Träger, jeder mit eigener Aufgabe und ohne Überschneidung:
+     Aura   → „hier wirkt etwas" (peripher sichtbar, auch ohne Hinsehen)
+     Marke  → was genau wirkt und wie stark
+     Fuse   → wie lange noch (grob, ohne die Sekundenzahl lesen zu müssen)
+   Die HP-Leiste bleibt bewusst unangetastet: sie ist bereits farbcodiert
+   (grün/gelb/rot), ein grüner Buff-Rahmen dort läse sich als „volle HP".
+
+   Bewegt werden ausschließlich transform und opacity. Der frühere Zustand
+   animierte drop-shadow am Planeten und ein conic-gradient am Chip — beides
+   zwingt den Browser, in jedem Frame neu zu rastern, und zwar pro gebufftem
+   Planeten. Hier bleibt alles Compositor-Arbeit. */
+
+/* Körper: ruhige, statische Färbung — kein zweiter Puls neben der Aura.
+   brightness/saturate sind mitgeführt, weil diese Regel den Filter von
+   .planet-orbit-item--foreground vollständig ersetzt. */
 .planet-orbit-item--jungle-buffed {
-  animation: jungle-planet-glow 1.8s ease-in-out infinite;
+  filter: brightness(1.14) saturate(1.2) drop-shadow(0 0 7px rgba(92, 230, 106, 0.6));
 }
 
-@keyframes jungle-planet-glow {
-  0%,
+/* ── Aura: stehender Halo + zwei nach außen laufende Wellen ──────────────── */
+.planet-buff-aura {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.planet-buff-aura--dimmed {
+  opacity: var(--hover-dim-opacity, 0.08) !important;
+}
+
+/* Der stehende Anteil: sitzt direkt am Planetenrand und macht den Zustand
+   auch in dem Moment lesbar, in dem gerade keine Welle unterwegs ist. */
+.planet-buff-aura__halo {
+  position: absolute;
+  inset: -8%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    transparent 52%,
+    rgba(62, 207, 90, 0.28) 70%,
+    rgba(62, 207, 90, 0.05) 84%,
+    transparent 92%
+  );
+}
+
+.planet-buff-aura__wave {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(126, 240, 140, 0.85);
+  box-shadow: 0 0 10px rgba(62, 207, 90, 0.45);
+  animation: planet-buff-wave 2.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+  will-change: transform, opacity;
+}
+
+/* Zweite Welle über einen negativen Delay: sie startet nicht erst nach der
+   ersten, sondern läuft von Beginn an um die halbe Periode versetzt mit. */
+.planet-buff-aura__wave--late {
+  animation-delay: -1.3s;
+}
+
+@keyframes planet-buff-wave {
+  0% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
   100% {
-    filter: drop-shadow(0 0 5px #5ce66a99);
-  }
-  50% {
-    filter: drop-shadow(0 0 14px #5ce66acc) drop-shadow(0 0 28px #5ce66a55);
+    transform: scale(1.75);
+    opacity: 0;
   }
 }
 
-/* ── Jungle Buff — Countdown-Chip ─────────────────────────────────────────
-   Runder Chip im Stil des Champion-Ability-Badges: dunkler Grund, Jungle-
-   Icon innen, konischer Ring außen, der mit der Restdauer abschmilzt.
-   Feste px-Größe, damit er auf allen Desktop-Auflösungen lesbar bleibt. */
-.planet-status-badge-anchor {
+/* ── Marke: hängt an kurzer Leine über dem Planeten ─────────────────────── */
+.planet-buff-anchor {
   position: absolute;
   top: 0;
   left: 0;
@@ -921,115 +1060,157 @@ export default defineComponent({
   transition: opacity 150ms ease;
 }
 
-.planet-status-badge-anchor--dimmed {
+.planet-buff-anchor--dimmed {
   opacity: var(--hover-dim-opacity, 0.08);
 }
 
-.planet-buff-chip {
-  position: relative;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(22, 42, 26, 0.96), rgba(6, 14, 8, 0.96));
-  display: grid;
-  place-items: center;
-  box-shadow:
-    0 0 8px rgba(92, 230, 106, 0.55),
-    0 0 18px rgba(92, 230, 106, 0.25),
-    0 2px 5px rgba(0, 0, 0, 0.55);
-}
-
-/* Countdown-Ring: conic-gradient, per Maske auf einen Ring reduziert */
-.planet-buff-chip::before {
-  content: '';
+/* Am Ankerpunkt (obere Planetenkante) unten verankert und nach oben wachsend —
+   so bleibt der Abstand zum Planeten konstant, egal wie hoch die Marke baut. */
+.planet-buff-stack {
   position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: conic-gradient(
-    #5ce66a calc(var(--buff-progress, 1) * 360deg),
-    rgba(92, 230, 106, 0.14) 0
-  );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
-  filter: drop-shadow(0 0 4px rgba(92, 230, 106, 0.7));
-}
-
-.planet-buff-chip img {
-  width: 17px;
-  height: 17px;
-  object-fit: contain;
-  display: block;
-  filter: drop-shadow(0 0 3px rgba(92, 230, 106, 0.7));
-}
-
-.planet-buff-secs {
-  position: absolute;
-  top: calc(100% + 3px);
-  left: 50%;
+  left: 0;
+  bottom: 0;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.planet-buff-mark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 5px;
+  white-space: nowrap;
+  background: linear-gradient(to bottom, rgba(12, 32, 16, 0.94), rgba(5, 16, 8, 0.94));
+  border: 1px solid rgba(62, 207, 90, 0.75);
+  border-radius: 4px;
+  box-shadow:
+    0 0 12px rgba(62, 207, 90, 0.28),
+    inset 0 0 0 1px rgba(62, 207, 90, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.planet-buff-mark__icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: #7ef08c;
+  filter: drop-shadow(0 0 4px rgba(92, 230, 106, 0.75));
+}
+
+.planet-buff-mark__label {
   font-size: 10px;
-  font-weight: 800;
-  color: #5ce66a;
+  font-weight: 900;
   line-height: 1;
-  letter-spacing: 0.04em;
+  /* Buffnamen sind lang ("Scavenger's Blessing") — engere Sperrung als bei den
+     Sternmarken, damit die Marke nicht deutlich breiter wird als der Planet. */
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b6f5c2;
   text-shadow:
-    0 0 5px rgba(92, 230, 106, 0.8),
-    0 1px 2px rgba(0, 0, 0, 0.9);
+    0 0 8px rgba(62, 207, 90, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-/* Endet gleich: Ring + Text kippen auf Rot und blinken */
-.planet-buff-chip--urgent::before {
-  background: conic-gradient(
-    #ff5040 calc(var(--buff-progress, 1) * 360deg),
-    rgba(255, 80, 64, 0.16) 0
+/* Der Multiplikator ist die Aussage des Buffs und bekommt deshalb die
+   stärkste Farbe — abgesetzt durch einen eigenen dunklen Grund. */
+.planet-buff-mark__mult {
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: #0a1a0c;
+  background: linear-gradient(to bottom, #7ef08c, #3ecf5a);
+  box-shadow: 0 0 8px rgba(62, 207, 90, 0.5);
+}
+
+.planet-buff-mark__secs {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  /* Tabellenziffern: die Marke darf beim Herunterzählen nicht zappeln */
+  font-variant-numeric: tabular-nums;
+  color: #5ce66a;
+  text-shadow:
+    0 0 8px rgba(62, 207, 90, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* Zündschnur am Fuß der Marke: läuft von voll nach leer, transform-origin
+   links, damit sie von rechts abbrennt. scaleX kommt pro Frame inline. */
+.planet-buff-mark__fuse {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  transform-origin: left center;
+  background: linear-gradient(to right, #3ecf5a, #7ef08c);
+  box-shadow: 0 0 6px rgba(126, 240, 140, 0.8);
+}
+
+/* Leine zum Planeten — verjüngt sich nach unten wie die Leine am Stern */
+.planet-buff-leash {
+  width: 1px;
+  height: var(--buff-mark-gap, 18px);
+  background: linear-gradient(
+    to bottom,
+    rgba(62, 207, 90, 0.75) 0%,
+    rgba(62, 207, 90, 0.3) 60%,
+    transparent 100%
   );
-  filter: drop-shadow(0 0 4px rgba(255, 64, 64, 0.8));
-  animation: timer-urgent-blink 0.5s ease-in-out infinite;
 }
 
-.planet-buff-chip--urgent .planet-buff-secs {
-  color: #ff5040;
-  text-shadow:
-    0 0 6px rgba(255, 40, 40, 0.95),
-    0 1px 2px rgba(0, 0, 0, 0.9);
-  animation: timer-urgent-blink 0.5s ease-in-out infinite;
+/* Letzte Sekunden: die Marke blinkt, bleibt aber grün. Ein Umschlag auf Rot
+   wäre hier falsch — direkt über der HP-Leiste läse sich der auslaufende Buff
+   als Schadensmeldung, obwohl gar nichts zu tun ist. */
+.planet-buff-mark--urgent {
+  animation: planet-buff-urgent 0.6s ease-in-out infinite;
 }
 
-@keyframes timer-urgent-blink {
+@keyframes planet-buff-urgent {
   0%,
   100% {
     opacity: 1;
   }
   50% {
-    opacity: 0.35;
+    opacity: 0.45;
   }
 }
 
-.status-badge-enter-active {
-  animation: status-badge-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+.planet-buff-enter-active {
+  animation: planet-buff-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.status-badge-leave-active {
-  animation: status-badge-in 0.18s ease-in reverse both;
+.planet-buff-leave-active {
+  animation: planet-buff-in 0.18s ease-in reverse both;
 }
 
-@keyframes status-badge-in {
+@keyframes planet-buff-in {
   from {
     opacity: 0;
-    transform: scale(0.6) translateY(-6px);
+    transform: translateX(-50%) translateY(7px) scale(0.86);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateX(-50%) translateY(0) scale(1);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .planet-buff-chip--urgent::before,
-  .planet-buff-chip--urgent .planet-buff-secs {
+  .planet-buff-aura__wave,
+  .planet-buff-mark--urgent {
     animation: none;
   }
-  .status-badge-enter-active,
-  .status-badge-leave-active {
+  /* Ohne Wellen trägt der stehende Halo den Zustand allein */
+  .planet-buff-aura__wave {
+    opacity: 0.55;
+  }
+  .planet-buff-enter-active,
+  .planet-buff-leave-active {
     animation: none;
   }
 }

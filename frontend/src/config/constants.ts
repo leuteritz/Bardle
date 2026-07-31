@@ -2040,6 +2040,15 @@ export const JUNGLE_BUFF_COOLDOWN_MS = 30_000 // 30s cooldown between jungle buf
  */
 export const PLANET_RESPAWN_MS = 30_000
 
+// ── Jungle-Buff-Marke im Idle-Orbit ────────────────────────────────────────
+// Der gebuffte Planet trägt seinen Zustand in derselben Grammatik wie ein
+// verfluchter oder rasender Stern (siehe StarSystemComponent): Marke an einer
+// Leine, Restdauer als abschmelzender Balken, farbige Aura am Körper.
+/** Abstand zwischen oberem Planetenrand und Unterkante der Buff-Marke (px) */
+export const PLANET_BUFF_MARK_GAP_PX = 18
+/** Restsekunden, ab denen die Buff-Marke blinkt (bleibt grün — kein Alarm) */
+export const PLANET_BUFF_URGENT_SECS = 3
+
 // Material rarity colors (WoW-style tiers) — used by the harvest target picker in
 // PlanetSelectTabComponent to color material medallions, names and rarity badges.
 export const MATERIAL_RARITY_COLOR: Record<string, string> = {
