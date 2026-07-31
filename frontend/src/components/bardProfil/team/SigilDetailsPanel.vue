@@ -1011,22 +1011,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   transform: translateY(-1px);
   border-color: var(--rc);
 }
-.sdp-chip--active {
-  background: #241608;
-  border-color: var(--rc);
-  box-shadow:
-    var(--chip-lift),
-    inset 0 0 0 1px color-mix(in srgb, var(--rc) 40%, transparent),
-    0 0 14px color-mix(in srgb, var(--rc) 35%, transparent);
-}
-/* board hover mirrored onto the chip — same language as its own hover */
-.sdp-chip--highlight {
-  transform: translateY(-1px);
-  border-color: var(--rc);
-  box-shadow:
-    var(--chip-lift),
-    0 0 14px color-mix(in srgb, var(--rc) 45%, transparent);
-}
+/* selection and board-hover are styled at the very bottom of this stylesheet —
+   they have to win over the tier blocks, which set `background` at the same
+   specificity and would otherwise take an active card's surface back */
 .sdp-chip--empty {
   border-style: dashed;
 }
@@ -1321,8 +1308,68 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-chip--empty .sdp-chip-name {
   color: rgba(230, 220, 196, 0.35);
 }
+/* ── the selected card ────────────────────────────────────────────────────────
+   Which champion the page below is describing has to be unmistakable, because
+   every other card in the strip looks like a perfectly good thing to be reading.
+   Four signals carry it, and deliberately none of them is one the rank ladder
+   already uses — so "selected" can never be mistaken for "higher tier":
+
+     ring     a detached outline around the whole card
+     surface  lit from the role colour instead of the flat card black
+     glow     a warm halo the unselected cards never carry
+
+   The ring is the one that lands: set off from the card by a gap in the strip's
+   own colour, it cannot be misread as a heavier tier rim the way a thicker
+   border or a bar along the foot could — both of those sit exactly where the
+   rank ladder already draws.
+
+   The card is deliberately NOT lifted with it. The rows are 7px apart and the
+   ring already spends 5 of those; a 2px rise on top left the bench cards' rings
+   touching the sworn cards above them. Measured, not guessed — every card now
+   keeps 2px of air on its tightest side. */
+
+/* board hover mirrored onto the chip — same language as the card's own hover,
+   one step short of selection. It is written BEFORE the selected block on
+   purpose: a card can be both at once, and selection has to win. */
+.sdp-chip--highlight {
+  transform: translateY(-1px);
+  border-color: var(--rc);
+  box-shadow:
+    var(--chip-lift),
+    0 0 14px color-mix(in srgb, var(--rc) 45%, transparent);
+}
+
+.sdp-chip--active {
+  border-color: var(--rc);
+  background: linear-gradient(168deg, color-mix(in srgb, var(--rc) 24%, #17110a), #1a1309 74%);
+  box-shadow:
+    var(--chip-lift),
+    inset 0 0 0 1px color-mix(in srgb, var(--rc) 45%, transparent),
+    /* the detached ring: a gap in the strip's own colour, then the ring itself.
+       Set off from the card rather than drawn on it, so it cannot be read as a
+       heavier tier rim — and box-shadow is not clipped by the card's own
+       overflow, which an element outside its bounds would have been. */
+      0 0 0 3px #1e1006,
+    0 0 0 5px color-mix(in srgb, var(--rc) 85%, transparent),
+    0 6px 16px rgba(0, 0, 0, 0.55),
+    0 0 24px color-mix(in srgb, var(--rc) 40%, transparent);
+}
+/* the selected card does not answer a hover: clicking it is a no-op, and the
+   plain hover rise would push its ring into the row above */
+.sdp-chip--active:hover,
+.sdp-chip--active.sdp-chip--highlight {
+  transform: none;
+}
 .sdp-chip--active .sdp-chip-name {
   color: #f4e6bc;
+}
+/* the outlined tags fill in a little when their card is the subject; the
+   captain's tag is solid already and keeps its dark ink */
+.sdp-chip--sworn.sdp-chip--active .sdp-chip-role,
+.sdp-chip--ally.sdp-chip--active .sdp-chip-role {
+  border-color: var(--rc);
+  background: color-mix(in srgb, var(--rc) 22%, transparent);
+  color: color-mix(in srgb, var(--rc) 45%, #f4e6bc);
 }
 .sdp-chip-badge {
   flex-shrink: 0;
