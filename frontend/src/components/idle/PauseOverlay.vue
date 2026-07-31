@@ -53,10 +53,46 @@
             </div>
           </header>
 
-          <!-- Hero: the live sun in its current phase (no planets, no champions) -->
-          <div class="sun-hero" aria-hidden="true">
-            <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
-            <PhaseSunDisc v-else :diameter="sunDiameter" />
+          <!-- Hero: the live sun in its current phase (no planets, no champions).
+               Die Spieler-HP liegen als Ring auf dem Scheibenrand und als
+               Plakette darüber — beides absolut im Hero, damit die Anzeige
+               keinen Platz im Fluss belegt und nichts darunter verschiebt. -->
+          <div class="sun-hero">
+            <div class="sun-hero__disc" aria-hidden="true">
+              <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
+              <PhaseSunDisc v-else :diameter="sunDiameter" />
+            </div>
+
+            <svg class="sun-hp-ring" viewBox="0 0 100 100" aria-hidden="true">
+              <circle class="sun-hp-ring__track" cx="50" cy="50" :r="HP_RING_R" />
+              <circle
+                class="sun-hp-ring__fill"
+                :class="hpColor"
+                cx="50"
+                cy="50"
+                :r="HP_RING_R"
+                :stroke-dasharray="`${(hpPercent / 100) * HP_RING_CIRC} ${HP_RING_CIRC}`"
+              />
+            </svg>
+
+            <div
+              class="sun-hp-badge"
+              :class="[hpColor, { 'sun-hp-badge--crit': hpPercent <= HP_CRIT_PERCENT }]"
+              role="img"
+              :aria-label="`Health ${Math.round(playerStore.currentHP)} of ${playerStore.maxHP}`"
+            >
+              <Icon
+                icon="game-icons:hearts"
+                width="19"
+                height="19"
+                class="sun-hp-badge__icon"
+                aria-hidden="true"
+              />
+              <span class="sun-hp-badge__value">
+                {{ Math.round(playerStore.currentHP)
+                }}<span class="sun-hp-badge__max">/{{ playerStore.maxHP }}</span>
+              </span>
+            </div>
           </div>
           <span class="sun-phase-label" :style="{ color: sunPhaseLabelColor }">
             {{ sunPhase.name }}
@@ -67,28 +103,16 @@
             <span v-ink-center.y class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
           </div>
 
-          <!-- Stat tiles -->
+          <!-- Stat tiles — Health sitzt am Sonnenhero, hier bleiben die beiden
+               Kacheln, die eine Aufschlüsselung tragen. -->
           <div class="stat-grid">
-            <div class="stat-tile" :class="{ 'stat-tile--crit': hpPercent <= 25 }">
-              <span class="stat-tile__label">
-                <Icon icon="game-icons:hearts" width="13" height="13" class="stat-tile__icon stat-tile__icon--hp" aria-hidden="true" />
-                Health
-              </span>
-              <span class="stat-tile__value">
-                {{ Math.round(playerStore.currentHP) }}<span class="stat-tile__sub">/{{ playerStore.maxHP }}</span>
-              </span>
-              <div class="hp-bar-track">
-                <div class="hp-bar-fill" :class="hpColor" :style="{ width: hpPercent + '%' }" />
-              </div>
-            </div>
-
             <!-- Kills aufgeschlüsselt: die Gesamtzahl steht im Label, darunter
                  steht, was tatsächlich gefallen ist. Zeilen ohne Treffer
                  bleiben stehen und dimmen nur ab — sonst spränge das Layout,
                  sobald während der Pause die erste Kategorie dazukommt. -->
             <div class="stat-tile stat-tile--kills">
               <span class="stat-tile__label">
-                <Icon icon="game-icons:crossed-swords" width="13" height="13" class="stat-tile__icon" aria-hidden="true" />
+                <Icon icon="game-icons:crossed-swords" width="17" height="17" class="stat-tile__icon" aria-hidden="true" />
                 Kills
                 <span v-if="pauseKills > 0" class="stat-tile__total">{{ formatNumber(pauseKills) }}</span>
               </span>
@@ -121,14 +145,14 @@
               </div>
             </div>
 
-            <!-- Materialien bleiben die dritte Kachel, bekommen aber die
-                 doppelte Spaltenbreite: Health und Kills tragen je eine Zahl,
-                 hier steht eine Liste. Die Karten darin sind so groß, dass das
-                 Material am Bild erkennbar ist — vorher waren es 14px-Icons,
-                 durch den Fit-Scale des Overlays effektiv 10px. -->
+            <!-- Materialien bekommen die breitere der beiden Spalten: fünf
+                 Karten je Reihe, zwei Reihen — damit passen alle zehn
+                 Materialien hinein. Die Karten sind so groß, dass das Material
+                 am Bild erkennbar ist; vorher waren es 14px-Icons, durch den
+                 Fit-Scale des Overlays effektiv 10px. -->
             <div class="stat-tile stat-tile--materials">
               <span class="stat-tile__label">
-                <Icon icon="game-icons:ore" width="13" height="13" class="stat-tile__icon" aria-hidden="true" />
+                <Icon icon="game-icons:ore" width="17" height="17" class="stat-tile__icon" aria-hidden="true" />
                 Materials
                 <span v-if="totalMaterials > 0" class="stat-tile__total">{{ formatNumber(totalMaterials) }}</span>
               </span>
@@ -280,6 +304,9 @@ import {
   PAUSE_PANEL_MAX_SCALE,
   PAUSE_MATERIAL_COLUMNS,
   PAUSE_MATERIAL_ROWS,
+  PAUSE_HP_RING_RADIUS,
+  PAUSE_HP_HEALTHY_PERCENT,
+  PAUSE_HP_CRIT_PERCENT,
   MATERIAL_RARITY_COLOR,
   MATERIAL_RARITY_ORDER,
   LOOT_MONOGRAM_MAX_CHARS,
@@ -333,10 +360,16 @@ const sunPhaseLabelColor = computed(() => {
 const hpPercent = computed(() => playerStore.hpPercent)
 
 const hpColor = computed(() => {
-  if (hpPercent.value > 50) return 'hp--green'
-  if (hpPercent.value > 25) return 'hp--yellow'
+  if (hpPercent.value > PAUSE_HP_HEALTHY_PERCENT) return 'hp--green'
+  if (hpPercent.value > PAUSE_HP_CRIT_PERCENT) return 'hp--yellow'
   return 'hp--red'
 })
+
+// HP-Ring um die Sonnenscheibe. Der Radius ist in viewBox-Einheiten (0–100)
+// angegeben; der Umfang daraus speist stroke-dasharray.
+const HP_RING_R = PAUSE_HP_RING_RADIUS
+const HP_RING_CIRC = 2 * Math.PI * PAUSE_HP_RING_RADIUS
+const HP_CRIT_PERCENT = PAUSE_HP_CRIT_PERCENT
 
 const pauseStartChimes = ref(0)
 const pauseTick = ref(0)
@@ -789,6 +822,112 @@ function particleStyle(i: number): Record<string, string> {
   flex-shrink: 0;
   pointer-events: none;
 }
+.sun-hero__disc {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── HP am Sonnenhero ─────────────────────────────────────
+   Die Sonne IST der Spieler — ihre Gesundheit gehört an sie und nicht in eine
+   Kachel daneben. Ring und Plakette liegen absolut im Hero: sie belegen keinen
+   Platz im Fluss, das Phasen-Label darunter rückt also nicht.
+
+   Der Ring sitzt eine Spur außerhalb der Scheibe (negatives inset), damit er
+   sich gegen deren Eigenglut absetzt statt darin unterzugehen. */
+.sun-hp-ring {
+  position: absolute;
+  inset: -9px;
+  width: calc(100% + 18px);
+  height: calc(100% + 18px);
+  /* Start oben statt rechts */
+  transform: rotate(-90deg);
+  overflow: visible;
+  pointer-events: none;
+}
+.sun-hp-ring__track,
+.sun-hp-ring__fill {
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+.sun-hp-ring__track {
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 3.4;
+}
+.sun-hp-ring__fill {
+  transition: stroke-dasharray 600ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+.sun-hp-ring__fill.hp--green {
+  stroke: #5de84a;
+  filter: drop-shadow(0 0 3px rgba(82, 184, 48, 0.9));
+}
+.sun-hp-ring__fill.hp--yellow {
+  stroke: #f5d84a;
+  filter: drop-shadow(0 0 3px rgba(212, 160, 32, 0.9));
+}
+.sun-hp-ring__fill.hp--red {
+  stroke: #ff5f5f;
+  filter: drop-shadow(0 0 3px rgba(204, 96, 80, 0.95));
+}
+
+/* Plakette auf dem unteren Scheibenrand — dunkler Grund, weil Text auf der
+   leuchtenden Scheibe sonst nicht lesbar wäre. Sie sitzt hoch genug, dass das
+   Phasen-Label darunter (negativer margin-top) frei bleibt. */
+.sun-hp-badge {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  background: rgba(6, 4, 0, 0.82);
+  border: 1px solid var(--hp-accent, rgba(122, 78, 32, 0.7));
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+}
+.sun-hp-badge.hp--green {
+  --hp-accent: rgba(93, 232, 74, 0.62);
+}
+.sun-hp-badge.hp--yellow {
+  --hp-accent: rgba(245, 216, 74, 0.62);
+}
+.sun-hp-badge.hp--red {
+  --hp-accent: rgba(255, 95, 95, 0.7);
+}
+.sun-hp-badge__icon {
+  color: #cc6050;
+  flex-shrink: 0;
+}
+.sun-hp-badge__value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #ece0c0;
+  font-variant-numeric: tabular-nums;
+}
+.sun-hp-badge__max {
+  font-size: 0.7em;
+  font-weight: 600;
+  color: rgba(216, 200, 160, 0.5);
+}
+/* Kritisch: die Plakette pulst — bewegt wird nur die Opazität */
+.sun-hp-badge--crit {
+  animation: hp-badge-crit 1.1s ease-in-out infinite;
+}
+@keyframes hp-badge-crit {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
 .sun-phase-label {
   display: flex;
   flex-direction: column;
@@ -838,17 +977,16 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Stat tiles ───────────────────────────────────────── */
-/* Health und Kills tragen je eine Zahl, Materials eine Liste — die dritte
-   Spalte bekommt deshalb gut die doppelte Breite. Vorher teilten sich alle
-   drei gleichmäßig, und die Materialien mussten sich auf ein Drittel der
-   Panelbreite quetschen. */
+/* Zwei Kacheln, beide mit Aufschlüsselung: Kills braucht Platz für drei
+   Zeilen, Materials für zwei Reihen à fünf Karten — damit passen alle zehn
+   Materialien hinein, ohne dass ein „+N" nötig wird. */
 .stat-grid {
   display: grid;
-  grid-template-columns: 1fr 1.35fr 2.4fr;
+  grid-template-columns: 1fr 1.85fr;
   /* Feste Zeilenhöhe: alle drei Tiles exakt gleich groß, egal wie viel
      Inhalt (HP-Leiste, Material-Karten) eine einzelne Kachel hat. Bemessen
      am größten Inhalt — zwei Reihen Material-Karten. */
-  grid-auto-rows: 164px;
+  grid-auto-rows: 176px;
   /* Explizit, nicht dem geerbten `baseline` überlassen: die Material-Kachel
      hat ihre erste Baseline im Kartenraster statt in einer Wertzeile und
      rutschte dadurch gegenüber Health und Kills nach unten. */
@@ -858,10 +996,9 @@ function particleStyle(i: number): Record<string, string> {
 }
 .stat-tile {
   display: grid;
-  /* Feste Zeilen: Label · Value · Bar-Slot. Der Bar-Slot (6px = HP-Bar-Höhe)
-     ist in JEDER Kachel reserviert, auch bei Kills/Materials ohne Bar — so
-     sitzen Label und Value in allen drei Tiles auf exakt gleicher Höhe. */
-  grid-template-rows: auto auto 6px;
+  /* Überschrift oben, Inhalt darunter — beide Kacheln teilen sich diese
+     Aufteilung, damit ihre Köpfe auf exakt gleicher Höhe sitzen. */
+  grid-template-rows: auto auto;
   align-content: center;
   justify-items: center;
   row-gap: 7px;
@@ -875,35 +1012,27 @@ function particleStyle(i: number): Record<string, string> {
   border-radius: 12px;
   min-width: 0;
 }
-.stat-tile--crit {
-  border-color: rgba(204, 96, 80, 0.4);
-  animation: crit-pulse 1s ease-in-out infinite alternate;
-}
-@keyframes crit-pulse {
-  from {
-    background: rgba(204, 96, 80, 0.04);
-  }
-  to {
-    background: rgba(204, 96, 80, 0.12);
-  }
-}
+/* Überschrift der Kachel: deutlich größer als die Zeilen darunter und über die
+   volle Breite gezogen, mit der Gesamtzahl am rechten Rand. Vorher war sie ein
+   11px-Flüstern über dem eigentlichen Inhalt. Eine Haarlinie darunter trennt
+   Kopf und Inhalt, ohne einen zweiten Kasten aufzumachen. */
 .stat-tile__label {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: clamp(0.6rem, 0.85vw, 0.7rem);
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  gap: 7px;
+  justify-self: stretch;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(122, 78, 32, 0.45);
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.5);
+  color: rgba(232, 216, 176, 0.82);
   white-space: nowrap;
 }
 .stat-tile__icon {
-  color: rgba(216, 200, 160, 0.55);
+  color: #c89040;
   flex-shrink: 0;
-}
-.stat-tile__icon--hp {
-  color: #cc6050;
 }
 /* Die Kachel füllt sich mit Karten statt mit einer Zahl — der reservierte
    Bar-Slot der anderen beiden entfällt hier, sonst stünde das Raster
@@ -952,61 +1081,16 @@ function particleStyle(i: number): Record<string, string> {
 .kill-cell--zero {
   opacity: 0.32;
 }
-/* Gesamtmenge direkt im Label — die Einzelzahlen stehen an den Karten */
+/* Gesamtzahl am rechten Rand der Überschrift — die Aufschlüsselung steht
+   darunter, hier zählt nur die Summe. */
 .stat-tile__total {
-  font-size: 1.05em;
+  margin-left: auto;
+  font-size: 1.15em;
   font-weight: 800;
   letter-spacing: 0;
-  color: #ece0c0;
+  color: #f0d060;
   font-variant-numeric: tabular-nums;
-}
-.stat-tile__value {
-  max-width: 100%;
-  font-size: clamp(1.05rem, 1.6vw, 1.4rem);
-  font-weight: 800;
-  line-height: 1.1;
-  color: #ece0c0;
-  font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.stat-tile__value--dim {
-  color: rgba(216, 200, 160, 0.3);
-}
-.stat-tile__sub {
-  font-size: 0.68em;
-  font-weight: 600;
-  color: rgba(216, 200, 160, 0.45);
-}
-/* HP bar */
-.hp-bar-track {
-  position: relative;
-  width: 100%;
-  justify-self: stretch; /* volle Zellbreite trotz justify-items: center */
-  height: 6px;
-  background: rgba(0, 0, 0, 0.55);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.hp-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition:
-    width 600ms cubic-bezier(0.25, 1, 0.5, 1),
-    background 600ms ease;
-}
-.hp--green {
-  background: linear-gradient(to right, #2e7a1a, #52b830);
-  box-shadow: 0 0 6px rgba(82, 184, 48, 0.5);
-}
-.hp--yellow {
-  background: linear-gradient(to right, #7a5010, #d4a020);
-  box-shadow: 0 0 6px rgba(212, 160, 32, 0.5);
-}
-.hp--red {
-  background: linear-gradient(to right, #6a1a10, #cc6050);
-  box-shadow: 0 0 6px rgba(204, 96, 80, 0.6);
+  text-shadow: 0 0 12px rgba(240, 208, 96, 0.35);
 }
 
 /* ── Materialien in der Stat-Kachel ───────────────────────
@@ -1166,19 +1250,21 @@ function particleStyle(i: number): Record<string, string> {
   letter-spacing: 0.06em;
   color: rgba(216, 200, 160, 0.32);
 }
+/* Gleiche Kopfzeilen-Sprache wie die Kacheln darüber — sonst läse sich die
+   Leiste als Fußnote statt als gleichrangiger Block. */
 .battle-strip__label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: clamp(0.6rem, 0.85vw, 0.7rem);
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  gap: 7px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.5);
+  color: rgba(232, 216, 176, 0.82);
   white-space: nowrap;
 }
 .battle-strip__icon {
-  color: rgba(216, 200, 160, 0.55);
+  color: #c89040;
   flex-shrink: 0;
 }
 .battle-strip__record {
@@ -1249,11 +1335,11 @@ function particleStyle(i: number): Record<string, string> {
   width: 100%;
 }
 .callout-heading {
-  font-size: clamp(0.6rem, 0.85vw, 0.68rem);
-  font-weight: 700;
+  font-size: 0.76rem;
+  font-weight: 800;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.42);
+  color: rgba(216, 200, 160, 0.55);
 }
 /* Feste Höhe: reservierter Platz, egal ob 0 oder 5 Badges — das Panel bleibt
    stabil. Zwei Zeilen sind reserviert, weil der Vollausbau (3 Resource-Sterne
@@ -1495,11 +1581,13 @@ function particleStyle(i: number): Record<string, string> {
 @media (prefers-reduced-motion: reduce) {
   .particle,
   .chime-img,
-  .stat-tile--crit,
-  .callout,
-  .callout-orb__icon,
+  .callout::after,
+  .sun-hp-badge--crit,
   .pause-timer__value {
     animation: none;
+  }
+  .sun-hp-ring__fill {
+    transition: none;
   }
   .callout-pop-enter-active,
   .callout-pop-leave-active,
