@@ -20,13 +20,17 @@
          Hier unten ist die Zeile ohnehin nur halb gefüllt. Turret-Plates
          liefern kein Level und behalten damit ihre reine Schadenszeile. -->
     <span class="sip-meta">
-      <span v-if="level" class="sip-chip sip-chip--lvl" :title="`Champion level ${level}`">
-        <span class="sip-chip-tag">LVL</span>
-        <span class="sip-chip-val">{{ level }}</span>
-      </span>
-      <span v-if="hit" class="sip-chip sip-chip--hit" :title="hitTitle">
-        <span class="sip-chip-tag">HIT</span>
-        <span class="sip-chip-val">{{ hit }}</span>
+      <!-- Kennwert-Band: LVL und HIT sind dasselbe Bauteil, nur anders
+           beschriftet — gemeinsamer Rahmen, ein Trennstrich dazwischen. -->
+      <span v-if="level || hit" class="sip-chips">
+        <span v-if="level" class="sip-chip" :title="`Champion level ${level}`">
+          <span class="sip-chip-tag">LVL</span>
+          <span class="sip-chip-val">{{ level }}</span>
+        </span>
+        <span v-if="hit" class="sip-chip" :title="hitTitle">
+          <span class="sip-chip-tag">HIT</span>
+          <span class="sip-chip-val">{{ hit }}</span>
+        </span>
       </span>
       <span v-if="stats" class="sip-stats">{{ stats }}</span>
     </span>
@@ -291,20 +295,34 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
   margin-top: 0.06em;
 }
 
-/* ── Kennwert-Chips — zweigeteilt wie ein Nameplate-Rang ──────────────────────
-   Kürzel-Reiter und Wert teilen sich einen Rahmen; `stretch` hält beide Hälften
-   auf gleicher Höhe, obwohl der Reiter kleiner gesetzt ist als der Wert.
-   Gemeinsame Bauform für LVL und HIT — sie unterscheiden sich nur darin,
-   WELCHE Hälfte die Füllung trägt (siehe unten). */
-.sip-chip {
+/* ── Kennwert-Band — LVL und HIT als ein zusammenhängendes Modul ──────────────
+   Beide Kennwerte sind exakt dasselbe Bauteil: Kürzel-Reiter in Rollenfarbe
+   (dunkle Schrift, dieselbe Umkehrung wie der Captain-Tag der Rollen-
+   Detailseite), daneben der Wert auf dunklem Feld. Unterschieden werden sie
+   allein durch ihre Beschriftung — kein Segment ist hervorgehoben, keins
+   tritt zurück. Statt zwei freistehender Chips fasst ein gemeinsamer Rahmen
+   sie zu einer Leiste; der Trennstrich in der Mitte hält sie auseinander,
+   ohne sie zu zerreißen. */
+.sip-chips {
   flex-shrink: 0;
   display: inline-flex;
   align-items: stretch;
+  max-width: 100%;
   border-radius: 3px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--rc) 55%, #3a2410);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
   line-height: 1;
+}
+
+.sip-chip {
+  display: inline-flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.sip-chip + .sip-chip {
+  border-left: 1px solid color-mix(in srgb, var(--rc) 45%, #3a2410);
 }
 
 .sip-chip-tag,
@@ -315,23 +333,11 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
   line-height: 1;
 }
 
+/* Reiter — die gefüllte Hälfte */
 .sip-chip-tag {
   padding: 0.22em 0.34em;
   font-size: 0.62em;
   letter-spacing: 0.12em;
-}
-
-.sip-chip-val {
-  padding: 0.12em 0.36em;
-  font-size: 0.9em;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-
-/* Gefüllte Hälfte: Rollenfarbe mit dunkler Schrift — dieselbe Umkehrung, die
-   auch der Captain-Tag der Rollen-Detailseite benutzt. */
-.sip-chip--lvl .sip-chip-tag,
-.sip-chip--hit .sip-chip-val {
   background: linear-gradient(
     to bottom,
     color-mix(in srgb, var(--rc) 68%, #f4ecd6),
@@ -341,28 +347,18 @@ const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
   text-shadow: 0 1px 0 color-mix(in srgb, var(--rc) 45%, #fff);
 }
 
-/* Dunkle Hälfte */
-.sip-chip--lvl .sip-chip-val {
+/* Wert — dunkles Feld, leuchtende Zahl. `min-width` hält beide Segmente auf
+   gleicher Breite, solange die Zahlen zweistellig bleiben: ein "LVL 1" neben
+   einem "HIT 35" ließe die Leiste sonst schief wirken. */
+.sip-chip-val {
+  min-width: 1.6em;
+  padding: 0.12em 0.34em;
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
   background: rgba(6, 3, 0, 0.92);
   color: color-mix(in srgb, var(--rc) 42%, #fff);
   text-shadow: 0 0 7px color-mix(in srgb, var(--rc) 55%, transparent);
-}
-
-.sip-chip--hit .sip-chip-tag {
-  background: rgba(6, 3, 0, 0.92);
-  color: color-mix(in srgb, var(--rc) 50%, rgba(240, 230, 204, 0.8));
-}
-
-/* Der HIT-Chip ist gegenüber dem LVL-Chip gespiegelt: dort trägt der Reiter
-   die Füllung, hier der WERT. Zwei gleich aussehende Chips nebeneinander wären
-   auf 10 px Schriftgröße nicht auseinanderzuhalten — und der Schaden pro
-   Angriff ist die Kampfzahl, die zuerst gelesen werden soll. Das Level ist
-   Meta-Information und tritt zurück. */
-.sip-chip--hit {
-  border-color: color-mix(in srgb, var(--rc) 72%, #3a2410);
-  box-shadow:
-    0 0 8px color-mix(in srgb, var(--rc) 28%, transparent),
-    0 1px 3px rgba(0, 0, 0, 0.75);
 }
 
 .sip-stats {
