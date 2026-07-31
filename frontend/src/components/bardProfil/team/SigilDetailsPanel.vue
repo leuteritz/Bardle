@@ -374,8 +374,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
          dismissed by clicking the empty sigil board (or Escape), so the whole
          width belongs to the champions. ══ -->
     <div class="sdp-roster">
-      <!-- the slot's captain: one large card, the only one that carries the role
-           mark, so the hierarchy reads without a separate role badge -->
+      <!-- the slot's captain: one large card heading the seat ladder — MAIN,
+           then SWORN I / II, then the bench, so all four cards name a SEAT.
+           The role itself reads from the card's colour and its tooltip; it does
+           not need a word of its own on a panel that is already about one role. -->
       <button
         class="sdp-chip sdp-chip--main"
         :class="{ 'sdp-chip--active': subject === MAIN_SUBJECT, 'sdp-chip--empty': !main }"
@@ -401,7 +403,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           <span v-else class="sdp-chip-plus">＋</span>
         </span>
         <span class="sdp-chip-text">
-          <span class="sdp-chip-role">{{ roleDef.label }}</span>
+          <span class="sdp-chip-role">Main</span>
           <span class="sdp-chip-name">{{ main ?? 'Empty' }}</span>
         </span>
         <ChampionLevelBadge
@@ -447,10 +449,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               <span v-else class="sdp-chip-plus">＋</span>
             </span>
             <span class="sdp-chip-text">
-              <span class="sdp-chip-role sdp-chip-role--sworn">
-                <Icon :icon="SWORN_ICON" width="12" height="12" />
-                {{ slot.label }}
-              </span>
+              <!-- no mark: the card's own relief carries the rank, see the
+                   "sworn: raised" block in the styles -->
+              <span class="sdp-chip-role sdp-chip-role--sworn">{{ slot.label }}</span>
               <span class="sdp-chip-name">{{ slot.name ?? 'Empty' }}</span>
               <span class="sdp-chip-note">+{{ swornSharePct }}% stats</span>
             </span>
@@ -978,6 +979,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   --chip-rim: 1px;
   --chip-rim-a: 20%;
   border: var(--chip-rim) solid color-mix(in srgb, var(--rc) var(--chip-rim-a), transparent);
+  /* The tier's own relief — raised for the sworn pair, sunken for the bench.
+     It rides a variable and every state below stacks its glow ON it rather than
+     replacing it, so selecting or hovering a card never flattens its rank. The
+     default is a no-op shadow, not `none`: `none` cannot be a term in a list. */
+  --chip-lift: 0 0 0 0 transparent;
+  box-shadow: var(--chip-lift);
   transition:
     transform 0.15s,
     border-color 0.15s,
@@ -992,6 +999,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   background: #241608;
   border-color: var(--rc);
   box-shadow:
+    var(--chip-lift),
     inset 0 0 0 1px color-mix(in srgb, var(--rc) 40%, transparent),
     0 0 14px color-mix(in srgb, var(--rc) 35%, transparent);
 }
@@ -999,7 +1007,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-chip--highlight {
   transform: translateY(-1px);
   border-color: var(--rc);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 45%, transparent);
+  box-shadow:
+    var(--chip-lift),
+    0 0 14px color-mix(in srgb, var(--rc) 45%, transparent);
 }
 .sdp-chip--empty {
   border-style: dashed;
@@ -1072,18 +1082,55 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   border-radius: 3px 0 0 3px;
   border-width: 0 1px 0 0;
 }
+/* Anchored low rather than centred: the seal owns the card's upper corner, the
+   caption its lower edge — the two never meet, and the splash art keeps the
+   space between them. */
 .sdp-chip--main > .sdp-chip-text {
-  justify-content: center;
+  justify-content: flex-end;
   gap: 3px;
-  padding: 8px 4px 8px 11px;
+  padding: 8px 12px 10px 11px;
 }
+/* The captain's medallion leaves the flex row and pins to the card's corner
+   like a seal. As a row item it charged the text column 38px of its 137 — the
+   headline had no room to be a headline and the longest champion name in the
+   game ran into an ellipsis. Out of the flow it costs the text nothing. */
 .sdp-chip--main > .sdp-chip-badge {
-  align-self: center;
-  margin-right: 10px;
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  align-self: auto;
+  margin-right: 0;
 }
+/* MAIN is a display word, not an eyebrow: it heads the seat ladder, so it is
+   set at twice the size of the SWORN / ALLY labels below it, tracked wide and
+   closed by a rule that fades out to the right. Weight stays regular — at this
+   size the synthetic bold the small labels use turns clumsy, and the role colour
+   carries the emphasis on its own. The negative right margin gives back the
+   trailing letter-space so the word sits flush over the name instead of a step
+   to the left of it. */
 .sdp-chip--main .sdp-chip-role {
-  font-size: 10.5px;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  margin-right: -0.2em;
   color: var(--rc);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+}
+.sdp-chip--main .sdp-chip-role::after {
+  content: '';
+  display: block;
+  margin-top: 5px;
+  height: 2px;
+  border-radius: 1px;
+  /* the fade keeps the role hue through the mid stop — running straight to
+     `transparent` would grey the tail out on the way */
+  background: linear-gradient(
+    90deg,
+    var(--rc),
+    color-mix(in srgb, var(--rc) 35%, transparent) 58%,
+    color-mix(in srgb, var(--rc) 0%, transparent)
+  );
 }
 .sdp-chip--main .sdp-chip-name {
   font-size: 19px;
@@ -1103,9 +1150,18 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 .sdp-sworn,
 .sdp-bench {
-  flex: 1;
   display: flex;
   gap: 7px;
+}
+/* The rows do not split the strip evenly: the sworn pair gets the taller share.
+   A height step is the difference that lands before any detail does — it reads
+   from across the panel, where a rim width or a note does not. The two shares
+   still add up to the same strip, so nothing below moves. */
+.sdp-sworn {
+  flex: 1.34;
+}
+.sdp-bench {
+  flex: 1;
 }
 .sdp-chip--sworn,
 .sdp-chip--ally {
@@ -1113,31 +1169,50 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   min-width: 0;
 }
 
-/* The sworn pair — fewer of them, so each is wider; a bigger portrait and the
-   bond mark carry the rank, and the note says what the slot actually does.
-   Both wear the SAME rim, one step below the captain: they are one rank, not a
-   first and a second. */
+/* ── sworn: raised ────────────────────────────────────────────────────────────
+   The pair is not a slightly different bench card, it is a card on a different
+   PLANE. It sits on the strip — lit surface, a lip of role colour along its top
+   edge, a shadow cast underneath — where the bench sits in it, sunken and flat.
+   Relief separates the two even when both are unselected, which a rim weight
+   alone did not do at a glance.
+
+   Both wear the SAME everything: they are one rank, not a first and a second. */
 .sdp-chip--sworn {
   --chip-rim: 2px;
   --chip-rim-a: 48%;
-  background: linear-gradient(100deg, #1a1409, #141410 62%);
+  --chip-lift:
+    inset 0 1px 0 color-mix(in srgb, var(--rc) 55%, transparent),
+    0 4px 10px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(168deg, #241a0c, #16130d 70%);
 }
-/* the bench closes the ladder — faintest rim, the base values, spelled out so
-   the third tier is visible here rather than implied by omission */
+/* the bench closes the ladder — faintest rim, and recessed rather than raised:
+   flat, a shade below the strip's own surface, with the light falling in */
 .sdp-chip--ally {
   --chip-rim: 1px;
   --chip-rim-a: 20%;
+  --chip-lift: inset 0 2px 4px rgba(0, 0, 0, 0.55);
+  background: #100e0a;
 }
 .sdp-chip--sworn .sdp-chip-portrait {
   width: 64px;
 }
+/* the portrait is cut on its inner edge like the sworn plate on the sigil board
+   — same rank, same silhouette, on both surfaces */
+.sdp-chip--sworn .sdp-chip-img,
+.sdp-chip--sworn .sdp-chip-plus {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+}
+/* the cut IS the edge — a border alongside it would only be sliced at an angle */
+.sdp-chip--sworn .sdp-chip-plus {
+  border-right: none;
+}
 .sdp-chip--sworn .sdp-chip-name {
   font-size: 15.5px;
 }
+/* the seat name in role colour and a shade larger — the loudest label on the
+   strip after the captain's, now that no mark competes with it */
 .sdp-chip-role--sworn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  font-size: 10.5px;
   color: var(--rc);
 }
 .sdp-chip-note {
@@ -1148,8 +1223,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   color: rgba(232, 192, 64, 0.7);
   white-space: nowrap;
 }
+/* an empty sworn seat loses the lit surface but KEEPS the relief — the rank
+   belongs to the seat, not to whoever is sitting in it */
 .sdp-chip--sworn.sdp-chip--empty {
-  background: #141410;
+  background: #17140e;
 }
 .sdp-chip--empty .sdp-chip-note {
   color: rgba(200, 164, 90, 0.4);
