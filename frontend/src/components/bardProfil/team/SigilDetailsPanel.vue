@@ -450,10 +450,14 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </span>
             <span class="sdp-chip-text">
               <!-- no mark: the card's own relief carries the rank, see the
-                   "sworn: raised" block in the styles -->
-              <span class="sdp-chip-role sdp-chip-role--sworn">{{ slot.label }}</span>
+                   "sworn: raised" block in the styles. Tag and share sit on ONE
+                   line so the card spends two lines, not three, and the champion
+                   name gets the height that buys. -->
+              <span class="sdp-chip-tagrow">
+                <span class="sdp-chip-role sdp-chip-role--sworn">{{ slot.label }}</span>
+                <span class="sdp-chip-note">+{{ swornSharePct }}% stats</span>
+              </span>
               <span class="sdp-chip-name">{{ slot.name ?? 'Empty' }}</span>
-              <span class="sdp-chip-note">+{{ swornSharePct }}% stats</span>
             </span>
             <ChampionLevelBadge
               v-if="slot.name"
@@ -1087,7 +1091,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    space between them. */
 .sdp-chip--main > .sdp-chip-text {
   justify-content: flex-end;
-  gap: 3px;
+  gap: 6px;
   padding: 8px 12px 10px 11px;
 }
 /* The captain's medallion leaves the flex row and pins to the card's corner
@@ -1101,39 +1105,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   align-self: auto;
   margin-right: 0;
 }
-/* MAIN is a display word, not an eyebrow: it heads the seat ladder, so it is
-   set at twice the size of the SWORN / ALLY labels below it, tracked wide and
-   closed by a rule that fades out to the right. Weight stays regular — at this
-   size the synthetic bold the small labels use turns clumsy, and the role colour
-   carries the emphasis on its own. The negative right margin gives back the
-   trailing letter-space so the word sits flush over the name instead of a step
-   to the left of it. */
-.sdp-chip--main .sdp-chip-role {
-  font-size: 32px;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0.2em;
-  margin-right: -0.2em;
-  color: var(--rc);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
-}
-.sdp-chip--main .sdp-chip-role::after {
-  content: '';
-  display: block;
-  margin-top: 5px;
-  height: 2px;
-  border-radius: 1px;
-  /* the fade keeps the role hue through the mid stop — running straight to
-     `transparent` would grey the tail out on the way */
-  background: linear-gradient(
-    90deg,
-    var(--rc),
-    color-mix(in srgb, var(--rc) 35%, transparent) 58%,
-    color-mix(in srgb, var(--rc) 0%, transparent)
-  );
-}
+/* the captain's tag is styled with the other two — see "seat tag" below */
+/* The champion is the headline of its own card. 22px is the ceiling the 129px
+   text column allows: 2 of 165 names truncate there, 9 do at 24px. */
 .sdp-chip--main .sdp-chip-name {
-  font-size: 19px;
+  font-size: 22px;
 }
 .sdp-chip--main .sdp-chip-plus {
   font-size: 28px;
@@ -1206,15 +1182,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-chip--sworn .sdp-chip-plus {
   border-right: none;
 }
+/* 18px clears every one of the 165 champion names inside the sworn card's
+   190px text column — nothing here has to truncate */
 .sdp-chip--sworn .sdp-chip-name {
-  font-size: 15.5px;
+  font-size: 18px;
 }
-/* the seat name in role colour and a shade larger — the loudest label on the
-   strip after the captain's, now that no mark competes with it */
-.sdp-chip-role--sworn {
-  font-size: 10.5px;
-  color: var(--rc);
-}
+/* the sworn tag is styled with the other two — see "seat tag" below */
 .sdp-chip-note {
   font-size: 10px;
   font-weight: 700;
@@ -1258,16 +1231,69 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  /* a tag needs air under it that a bare line of text did not */
+  gap: 4px;
   /* the padding the card gave up when its portrait went edge to edge */
   padding: 6px 4px 6px 10px;
 }
+/* ── seat tag ─────────────────────────────────────────────────────────────────
+   Every card names its seat in the SAME object — a small uppercase tag — filled
+   at the top of the ladder and outlined below it, the ordinary primary /
+   secondary pair. That is what makes MAIN, SWORN and ALLY read as one system at
+   three weights rather than as three differently sized pieces of text.
+
+   The tag is deliberately small on every card: it labels the seat, it is not the
+   content. The CHAMPION carries the size — 22 / 18 / 14 px down the ladder — so
+   a name reads first and its seat second, which is the order a player wants.
+
+   `align-self` keeps the tag hugging its own text; as a stretched flex item it
+   would run the whole column and stop being a tag. */
 .sdp-chip-role {
-  font-size: 9.5px;
+  align-self: flex-start;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--rc) 30%, transparent);
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(200, 164, 90, 0.55);
+  white-space: nowrap;
+  color: rgba(210, 186, 140, 0.7);
+}
+/* the sworn tag: the same outline drawn in the role's own colour — one step
+   above the bench's muted one, one below the captain's filled one */
+.sdp-chip-role--sworn {
+  padding: 2px 8px;
+  border-color: color-mix(in srgb, var(--rc) 60%, transparent);
+  background: color-mix(in srgb, var(--rc) 14%, transparent);
+  font-size: 9.5px;
+  line-height: 1.25;
+  color: var(--rc);
+}
+/* the captain's is the one FILLED tag on the strip — dark ink on solid role
+   colour, the same inversion the sigil board gives a selected role node. Solid
+   beats large: it tops the ladder without taking a pixel from the champion's own
+   name, which is what the card is actually about. */
+.sdp-chip--main .sdp-chip-role {
+  padding: 3px 10px;
+  border-color: var(--rc);
+  background: var(--rc);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: #14100a;
+}
+
+/* the sworn pair shares its tag line with the share it lends */
+.sdp-chip-tagrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sdp-chip-tagrow .sdp-chip-role {
+  align-self: center;
 }
 .sdp-chip-name {
   font-size: 14px;
