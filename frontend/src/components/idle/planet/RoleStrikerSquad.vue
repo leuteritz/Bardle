@@ -137,7 +137,8 @@
             :hp-down="s.isDown"
             :name="s.champion"
             :level="championReadout[s.role].level"
-            :stats="`${s.attackDamage} dmg`"
+            :hit="String(s.attackDamage)"
+            :hit-title="`${s.attackDamage} damage per attack — every ${s.attackEvery}s`"
             :stat-cells="championReadout[s.role].cells"
           />
         </div>
@@ -322,6 +323,9 @@ const strikers = computed(() =>
         img: battleStore.getChampionImage(champion, { size: 'md' }),
         color: ROLE_BY_KEY[role].color,
         attackDamage: def.damage,
+        // Angriffstakt in Sekunden — nur für den Tooltip des HIT-Chips: die
+        // Zahl allein sagt nicht, wie oft sie anfällt
+        attackEvery: Math.round(def.intervalMs / 1000),
         // Der Store tickt sekündlich und setzt beim Feuern sofort auf das
         // volle Intervall zurück — der Rohwert erreicht sichtbar nie 0.
         // Um einen Tick verschoben zählt die Pill … 2, 1, 0 → Angriff.
