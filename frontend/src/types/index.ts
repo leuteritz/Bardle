@@ -1110,6 +1110,22 @@ export interface ChampionStatDef {
   effectLabel: string
 }
 
+/**
+ * One cell of the stat rail a champion wears on its star-fight info plate.
+ * Pre-formatted on purpose: the plate is redrawn inside a running fight, so it
+ * only ever prints strings it is handed and never reaches into a store itself.
+ */
+export interface StrikerStatCell {
+  /** All-caps tag, the stat's own `short` (PWR / VIT / FOC / FOR). */
+  short: string
+  /** Ready-made readout, e.g. "+24%" — from statEffectLabel, so the number is
+   *  identical to the one the role details panel prints for the same stat. */
+  value: string
+  color: string
+  /** Tooltip: what the stat does here. */
+  title: string
+}
+
 /** Per-role stat growth per level — the reason roles feel different to level. */
 export type ChampionRoleGrowth = Record<ChampionStatKey, number>
 

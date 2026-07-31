@@ -126,7 +126,7 @@
           {{ s.secs }}s
         </span>
 
-        <!-- Info-Plate: HP-Bar + Champion-Name + Schaden (geteilte Komponente) -->
+        <!-- Info-Plate: HP-Bar + Name + Level + Trefferwert + Stat-Rail -->
         <div class="rsq-plate-anchor">
           <StrikerInfoPlate
             :color="s.color"
@@ -134,7 +134,9 @@
             :hp-text="s.isDown ? `DOWN ${s.downSecs}s` : `${s.hpCur} / ${s.hpMax}`"
             :hp-down="s.isDown"
             :name="s.champion"
+            :level="championReadout[s.role].level"
             :stats="`${s.attackDamage} dmg`"
+            :stat-cells="championReadout[s.role].cells"
           />
         </div>
 
@@ -183,6 +185,7 @@
 <script setup lang="ts">
 import { computed, ref, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
+import { useChampionLevelStore } from '@/stores/championLevelStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
@@ -215,12 +218,14 @@ import {
   BOSS_WAVE_HIT_DELAY_MS,
   BOSS_AUTO_HIT_DELAY_MS,
 } from '@/config/constants'
-import type { ChampionRole } from '@/types'
+import { CHAMPION_STATS, statEffectLabel } from '@/config/championLevels'
+import type { ChampionRole, StrikerStatCell } from '@/types'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
 import { activeChampionBehindState } from '@/utils/liveState'
 import { Icon } from '@iconify/vue'
 
 const battleStore = useBattleStore()
+const levelStore = useChampionLevelStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
@@ -342,6 +347,50 @@ const strikers = computed(() =>
     ]
   }),
 )
+
+/**
+ * Level und Stat-Rail der fünf Champions.
+ *
+ * BEWUSST ein eigenes Computed und NICHT Teil von `strikers`: das dort hängt am
+ * Sekundentakt (Cooldown-Restzeit, Down-Countdown, `nowTick`) und würde die
+ * Stat-Getter — die über Sworn-Anteile, Perks und Ascension laufen — jede
+ * Sekunde für fünf Champions neu durchrechnen, während der Kampf ohnehin
+ * animiert. Hier hängen die Werte nur an Team, Leveln und Perks; im laufenden
+ * Kampf ändert sich davon nichts, das Computed steht also still.
+ *
+ * Die Prozentwerte kommen aus `statEffectLabel`, derselben Funktion, die auch
+ * die Rollen-Detailseite benutzt — dieselbe Zahl an beiden Orten.
+ */
+interface ChampionReadout {
+  level: number
+  cells: StrikerStatCell[]
+}
+
+const EMPTY_READOUT: ChampionReadout = { level: 0, cells: [] }
+
+const championReadout = computed<Record<ChampionRole, ChampionReadout>>(() => {
+  const out = {} as Record<ChampionRole, ChampionReadout>
+  for (const role of SQUAD_ROLES) {
+    const name = battleStore.headerSlots[SLOT_BY_ROLE[role]]
+    if (!name) {
+      out[role] = EMPTY_READOUT
+      continue
+    }
+    const stats = levelStore.effectiveStatsOf(name)
+    // nur FOCUS liest den Cooldown-Perk mit — bei den anderen wäre er wirkungslos
+    const rush = levelStore.perkEffectOf(name, 'cooldownRush')
+    out[role] = {
+      level: levelStore.levelOf(name),
+      cells: CHAMPION_STATS.map((def) => ({
+        short: def.short,
+        value: statEffectLabel(def.key, stats[def.key], def.key === 'focus' ? rush : 0),
+        color: def.color,
+        title: `${def.label} · ${def.effectLabel} — ${def.desc}`,
+      })),
+    }
+  }
+  return out
+})
 
 // Unbesetzte Rollen — gleiche Arc-Position wie befüllte Striker, aber als
 // Geister-Platzhalter ("Vacant"), damit sichtbar bleibt, dass hier ein

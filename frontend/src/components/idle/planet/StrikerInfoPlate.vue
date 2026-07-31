@@ -2,7 +2,7 @@
   <!-- Geteilte Info-Plate im Star-Fight-Modal: HP-Bar → HP-Text → Name →
        Schadenswert. Genutzt von RoleStrikerSquad (Champions) und
        TurretBatteryHUD (Turret-Planeten) — Akzentfarbe kommt per Prop. -->
-  <div class="sip" :style="{ '--rc': color }">
+  <div class="sip" :class="{ 'sip--rail': hasRail }" :style="{ '--rc': color }">
     <div class="sip-hp-track" :class="{ 'sip-hp-track--low': hpLow }">
       <div class="sip-hp-ghost" :style="{ width: hpPct + '%' }" />
       <div
@@ -13,13 +13,33 @@
       <div class="sip-hp-ticks" />
     </div>
     <span class="sip-hp-text" :class="{ 'sip-hp-text--down': hpDown }">{{ hpText }}</span>
-    <span class="sip-name">{{ name }}</span>
+    <span class="sip-name-row">
+      <span class="sip-name">{{ name }}</span>
+      <span v-if="level" class="sip-level" :title="`Champion level ${level}`">{{ level }}</span>
+    </span>
     <span class="sip-stats">{{ stats }}</span>
+    <!-- Stat-Rail: nur Champions liefern sie — Turret-Plates lassen sie weg und
+         sehen damit exakt aus wie zuvor. Vier fertige Strings, keine Store-Zugriffe
+         hier drin: die Plate steckt in einer Einheit, die bei jedem Angriff
+         animiert wird, und darf nichts rechnen. -->
+    <div v-if="hasRail" class="sip-rail">
+      <span
+        v-for="c in statCells"
+        :key="c.short"
+        class="sip-cell"
+        :style="{ '--sc': c.color }"
+        :title="c.title"
+      >
+        <span class="sip-cell-key">{{ c.short }}</span>
+        <span class="sip-cell-val">{{ c.value }}</span>
+      </span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { StrikerStatCell } from '@/types'
 
 const props = defineProps<{
   /** Akzentfarbe (Rollen- bzw. Turret-Farbe) — färbt Bar, Linie und Stats. */
@@ -31,9 +51,14 @@ const props = defineProps<{
   hpDown?: boolean
   name: string
   stats: string
+  /** Champion-Level als Chip neben dem Namen — Turret-Plates lassen es weg. */
+  level?: number
+  /** Vier Champion-Stats als fertige Zellen; leer/undefined = keine Rail. */
+  statCells?: StrikerStatCell[]
 }>()
 
 const hpLow = computed(() => props.hpPct < 25)
+const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
 </script>
 
 <style scoped>
@@ -45,11 +70,17 @@ const hpLow = computed(() => props.hpPct < 25)
   align-items: center;
   gap: 1px;
   min-width: var(--sip-min-w, 96px);
+  /* Die Rail braucht mehr Grundbreite als der bloße Name — ohne sie bliebe eine
+     Platte mit kurzem Namen bei 96px stehen und würde die Zahlen kappen. */
   padding: 4px 10px 5px;
   border-radius: 4px;
   background: rgba(8, 5, 2, 0.92);
   border: 1px solid color-mix(in srgb, var(--rc) 40%, #3a2410);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+}
+
+.sip--rail {
+  --sip-min-w: 112px;
 }
 
 .sip::before {
@@ -204,6 +235,15 @@ const hpLow = computed(() => props.hpPct < 25)
     0 2px 3px rgba(0, 0, 0, 0.95);
 }
 
+/* Name und Level teilen sich eine Zeile — mit nur einem Kind sieht sie exakt
+   aus wie die frühere reine Namenszeile (Turret-Plates) */
+.sip-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
 .sip-name {
   font-size: 0.74rem;
   font-weight: 900;
@@ -211,7 +251,24 @@ const hpLow = computed(() => props.hpPct < 25)
   color: rgba(240, 230, 204, 0.85);
   text-transform: uppercase;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* Level als gefüllter Chip in Rollenfarbe — dieselbe Umkehrung (dunkle Schrift
+   auf Akzentfarbe), die auch der Captain-Tag der Detailseite benutzt */
+.sip-level {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--rc) 82%, #f0e6cc);
+  color: #0c0803;
+  font-size: 0.6rem;
+  font-weight: 900;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
 }
 
 .sip-stats {
@@ -224,6 +281,55 @@ const hpLow = computed(() => props.hpPct < 25)
   font-variant-numeric: tabular-nums;
   text-shadow:
     0 0 8px color-mix(in srgb, var(--rc) 40%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* ── Stat-Rail — vier Zellen, jede in der Farbe ihres Stats ──────────────────
+   Was ein Champion im Kampf leistet, steht jetzt an ihm dran statt nur im
+   Profil: PWR treibt den Orbit-Schaden am Boss, VIT die HP-Leiste direkt
+   darüber, FOC die Cooldowns der Rollenfähigkeit, FOR die Beute am Ende.
+   Zwei Spalten, Kürzel ÜBER dem Wert. Beides ist erzwungen, nicht Geschmack:
+   auf Stufe 50 stehen die Werte bei "+393%", vier nebeneinander werden auf den
+   schmalen Plates abgeschnitten — und breitere Plates gehen nicht, die stünden
+   dann 2px auseinander (gemessen). Gestapelt braucht eine Zelle nur die Breite
+   ihrer Zahl, und die Rail passt in die Platte, die ohnehin da ist. Die Höhe
+   dafür ist vorhanden: unter der tiefsten Platte liegen über 100px frei.
+   Rein statisch: kein Filter, keine Animation, nichts pro Frame. */
+.sip-rail {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px 8px;
+  width: 100%;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--rc) 28%, transparent);
+}
+
+.sip-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sip-cell-key {
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--sc) 55%, rgba(240, 230, 204, 0.5));
+}
+
+.sip-cell-val {
+  font-size: 0.64rem;
+  font-weight: 900;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--sc);
+  text-shadow:
+    0 0 7px color-mix(in srgb, var(--sc) 45%, transparent),
     0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
