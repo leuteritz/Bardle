@@ -587,14 +587,7 @@ const filteredAugCards = computed(() => {
               :title="`${card.aug.name} — ${card.aug.effectLine}`"
             >
               <div class="sf-aug-icon">
-                <img v-if="card.aug.image" :src="card.aug.image" :alt="card.aug.name" />
-                <Icon
-                  v-else-if="card.aug.icon.includes(':')"
-                  :icon="card.aug.icon"
-                  width="20"
-                  height="20"
-                />
-                <span v-else class="sf-aug-emoji">{{ card.aug.icon }}</span>
+                <Icon :icon="card.aug.icon" width="20" height="20" />
               </div>
               <div class="sf-aug-body">
                 <span class="sf-aug-name">{{ card.aug.name }}</span>
@@ -1235,16 +1228,6 @@ const filteredAugCards = computed(() => {
   border-radius: 5px;
   overflow: hidden;
   color: var(--rarity);
-}
-.sf-aug-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-}
-.sf-aug-emoji {
-  font-size: 18px;
-  line-height: 1;
 }
 
 .sf-aug-body {

@@ -621,8 +621,8 @@ export interface AugmentDefinition {
   name: string
   description: string
   effectLine: string
+  /** `game-icons:*` — unique across AUGMENTS, so three offered cards never repeat a symbol */
   icon: string
-  image?: string
   rarity: AugmentRarity
   effects: AugmentEffects
   specialEffect?: AugmentSpecialEffect

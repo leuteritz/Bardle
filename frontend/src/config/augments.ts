@@ -15,7 +15,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'Your Chimes production flows stronger.',
     effectLine: '+30% CPS',
     icon: 'game-icons:harp',
-    image: '/img/augments/augment1.png',
     rarity: 'common',
     effects: { cpsMultiplier: 1.3 },
   },
@@ -25,7 +24,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'Every click echoes far and wide.',
     effectLine: '+50% CPC',
     icon: 'game-icons:ringing-bell',
-    image: '/img/augments/augment2.png',
     rarity: 'common',
     effects: { cpcMultiplier: 1.5 },
   },
@@ -44,7 +42,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'Buildings cost fewer Chimes.',
     effectLine: '-15% Building Costs',
     icon: 'game-icons:ancient-columns',
-    image: '/img/augments/augment3.png',
     rarity: 'common',
     effects: { buildingCostMultiplier: 0.85 },
   },
@@ -119,7 +116,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'A mighty torrent of Chimes pours forth every second.',
     effectLine: '+70% CPS',
     icon: 'game-icons:wave-crest',
-    image: '/img/augments/augment4.png',
     rarity: 'rare',
     effects: { cpsMultiplier: 1.7 },
   },
@@ -129,7 +125,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'Your clicks strike like lightning.',
     effectLine: '+100% CPC',
     icon: 'game-icons:lightning-arc',
-    image: '/img/augments/augment5.png',
     rarity: 'rare',
     effects: { cpcMultiplier: 2.0 },
   },
@@ -139,7 +134,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'Each ability level grants noticeably more combat power.',
     effectLine: '+500 Power per Ability Level',
     icon: 'game-icons:roman-shield',
-    image: '/img/roles/top.png',
     rarity: 'rare',
     effects: { abilityPowerPerLevel: 500 },
   },
@@ -176,7 +170,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'Every 10th click counts twice.',
     effectLine: 'Every 10th Click Counts Twice',
     icon: 'game-icons:fingers-crossed',
-    image: '/img/augments/augment6.png',
     rarity: 'rare',
     effects: {},
     specialEffect: { type: 'doubleTap', params: { interval: 10, multiplier: 2 } },
@@ -208,7 +201,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'Chimes flow endlessly — an eternal composition.',
     effectLine: '+150% CPS',
     icon: 'game-icons:musical-notes',
-    image: '/img/augments/augment7.png',
     rarity: 'epic',
     effects: { cpsMultiplier: 2.5 },
   },
@@ -254,7 +246,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'Clicks have a chance to trigger a chain click.',
     effectLine: '20% Chance for Bonus Click',
     icon: 'game-icons:explosion-rays',
-    image: '/img/augments/augment8.png',
     rarity: 'epic',
     effects: {},
     specialEffect: { type: 'chainReaction', params: { chance: 0.2 } },
@@ -276,7 +267,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'One-time cosmic strike against all enemies.',
     effectLine: 'One-time 5x Power Boost in combat',
     icon: 'game-icons:bright-explosion',
-    image: '/img/augments/augment9.png',
     rarity: 'legendary',
     effects: {},
     specialEffect: { type: 'bigBang', params: { multiplier: 5 } },
@@ -296,7 +286,6 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'Every 50th click replays the last 5 clicks.',
     effectLine: 'Every 50th Click Replays 5 Clicks',
     icon: 'game-icons:infinity',
-    image: '/img/augments/augment10.png',
     rarity: 'legendary',
     effects: {},
     specialEffect: { type: 'infiniteLoop', params: { interval: 50, replayCount: 5 } },
@@ -354,5 +343,11 @@ export const AUGMENTS: AugmentDefinition[] = [
   },
 ]
 
-// The 10 image augments form the pool for the level-up selection
-export const AUGMENT_POOL: AugmentDefinition[] = AUGMENTS.filter((a) => !!a.image)
+/**
+ * Every augment can be rolled on level-up. The pool used to be the handful that
+ * happened to have artwork; since each entry carries its own game-icons glyph,
+ * that gate is gone — the draw itself (gameStore.triggerAugmentSelection) keeps
+ * the three offered cards distinct, and every icon here is unique, so no two
+ * cards can ever show the same symbol.
+ */
+export const AUGMENT_POOL: AugmentDefinition[] = AUGMENTS
