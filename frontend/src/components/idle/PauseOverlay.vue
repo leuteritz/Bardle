@@ -219,11 +219,39 @@
           <div class="callout-section">
             <span class="callout-heading">Awaiting your return</span>
             <TransitionGroup
-              v-if="callouts.length > 0"
+              v-if="callouts.length > 0 || isPlanetDiscovered"
               tag="div"
               name="callout-pop"
               class="callout-row"
             >
+              <!-- Champion-Herald: nimmt die erste Zeile für sich. Der Fund ist
+                   der Höhepunkt einer Galaxierunde und stand vorher als
+                   gleichrangiges Badge zwischen den Stern-Countdowns. Farbe und
+                   Motiv kommen aus der Rolle, die der Spieler für diesen Stern
+                   gewählt hat — nie wieder dieselbe Kachel für jede Rolle. -->
+              <div
+                v-if="isPlanetDiscovered"
+                key="champion-herald"
+                class="champion-herald"
+                :style="{ '--role-color': championColor }"
+              >
+                <span class="champion-herald__sheen" aria-hidden="true" />
+                <img
+                  v-if="championArt"
+                  :src="championArt"
+                  alt=""
+                  draggable="false"
+                  class="champion-herald__art"
+                />
+                <span class="champion-herald__text">
+                  <span class="champion-herald__eyebrow">Champion found</span>
+                  <span class="champion-herald__role">{{ championRoleDef?.label ?? 'Unknown' }}</span>
+                </span>
+                <span class="champion-herald__status">
+                  {{ championStarPending ? 'Arrives when you return' : 'Waiting in orbit' }}
+                </span>
+              </div>
+
               <div v-for="c in callouts" :key="c.key" class="callout" :class="c.cls">
                 <!-- Icon steht frei: der Kreis drumherum war eine zweite
                      Fassung innerhalb einer Pille, die selbst schon eine ist. -->
@@ -310,6 +338,8 @@ import {
   MATERIAL_RARITY_COLOR,
   MATERIAL_RARITY_ORDER,
   LOOT_MONOGRAM_MAX_CHARS,
+  ROLE_BY_KEY,
+  ROLE_ART_MD_SUFFIX,
 } from '@/config/constants'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
@@ -547,6 +577,28 @@ const isPlanetDiscovered = computed(
   () => galaxyStore.championTravelState === 'champion_available',
 )
 
+// Welcher Champion konkret kommt, steht erst beim Spawn des Sterns fest
+// (planetBossStore würfelt ihn dann aus der gewählten Rolle aus). Bekannt ist
+// hier also die ROLLE — und die hat der Spieler selbst gewählt, weshalb sie
+// als Farbe und Motiv des Heralds trägt.
+const championRoleDef = computed(() =>
+  galaxyStore.nextStarRole ? ROLE_BY_KEY[galaxyStore.nextStarRole] : null,
+)
+const championColor = computed(() => championRoleDef.value?.color ?? '#f0d060')
+// Das Rollenbild wird hier mit ~44 px gezeigt — dafür ist die 256er-Stufe die
+// richtige Quelle; ROLES[].image zeigt bewusst aufs Original, weil dieselbe
+// Konstante anderswo groß gerendert wird (siehe „Auflösungsvarianten").
+const championArt = computed(() =>
+  championRoleDef.value ? championRoleDef.value.image.replace(/\.png$/, ROLE_ART_MD_SUFFIX) : null,
+)
+/**
+ * Der Champion-Stern wird nicht gespawnt, solange der Idle-Layer ruht — der
+ * Watcher in `useStarSystem` merkt ihn stattdessen in `pendingChampionStar` vor
+ * und lässt ihn erst beim Zurückkehren erscheinen. Genau das sagt der Herald
+ * an, statt einen Stern zu versprechen, der noch gar nicht am Himmel steht.
+ */
+const championStarPending = computed(() => galaxyStore.pendingChampionStar)
+
 interface PauseCallout {
   key: string
   /** `star` rendert Punktreihe + Timer, `text` eine Beschriftung mit Zähler. */
@@ -563,16 +615,8 @@ interface PauseCallout {
 
 const callouts = computed<PauseCallout[]>(() => {
   const list: PauseCallout[] = []
-  if (isPlanetDiscovered.value) {
-    list.push({
-      key: 'champion',
-      kind: 'text',
-      icon: 'game-icons:barbute',
-      text: 'Champion found',
-      count: 0,
-      cls: 'callout--champion',
-    })
-  }
+  // Der Champion steckt nicht mehr in dieser Liste — er bekommt den Herald
+  // über den Badges, siehe Template.
   if (gameStore.pendingAugmentSelections.length > 0) {
     list.push({
       key: 'level',
@@ -1359,9 +1403,114 @@ function particleStyle(i: number): Record<string, string> {
   align-content: center;
   justify-content: center;
   gap: 8px;
-  height: 72px;
+  /* Erste Zeile gehört dem Champion-Herald (52), darunter die Badge-Zeile
+     (37) — beides fest reserviert, damit der Fund das Panel nicht springen
+     lässt, wenn er mitten in der Pause eintrifft. */
+  height: 97px;
   width: 100%;
   overflow: hidden;
+}
+
+/* ── Champion-Herald ──────────────────────────────────────
+   Eine eigene Zeile, breit wie das Panel: der Fund ist das Ereignis, auf das
+   die ganze Galaxierunde zuläuft. Die Rollenfarbe (--role-color) trägt Rahmen,
+   Verlauf, Artwork-Kontur und Rollenname, sodass ein Top-Fund anders aussieht
+   als ein Support-Fund. */
+.champion-herald {
+  position: relative;
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 14px 0 8px;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--role-color) 60%, transparent);
+  background:
+    radial-gradient(
+      circle at 12% 50%,
+      color-mix(in srgb, var(--role-color) 26%, transparent),
+      transparent 62%
+    ),
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--role-color) 16%, transparent),
+      rgba(255, 200, 80, 0.03) 70%
+    );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--role-color) 14%, transparent),
+    0 0 18px color-mix(in srgb, var(--role-color) 22%, transparent);
+}
+/* Lichtstreifen, der einmal je Runde durchläuft — bewegt wird nur ein
+   transform, unabhängig davon wie oft der Herald steht. */
+.champion-herald__sheen {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 35%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    color-mix(in srgb, var(--role-color) 30%, transparent),
+    transparent
+  );
+  animation: herald-sheen 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes herald-sheen {
+  0%,
+  62% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+.champion-herald__art {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--role-color) 70%, transparent));
+}
+.champion-herald__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+.champion-herald__eyebrow {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.6);
+}
+.champion-herald__role {
+  font-family: 'MedievalSharp', cursive;
+  font-size: 1.35rem;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--role-color);
+  text-shadow:
+    0 0 14px color-mix(in srgb, var(--role-color) 55%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.9);
+}
+/* Rechts der Hinweis, dass der Stern erst mit der Rückkehr erscheint */
+.champion-herald__status {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(6, 4, 0, 0.55);
+  border: 1px solid color-mix(in srgb, var(--role-color) 35%, transparent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--role-color) 45%, #f2ead0);
+  white-space: nowrap;
 }
 .callout-empty {
   font-size: clamp(0.68rem, 0.95vw, 0.78rem);
@@ -1405,9 +1554,6 @@ function particleStyle(i: number): Record<string, string> {
   opacity: 0;
   pointer-events: none;
   animation: callout-glow 2.6s ease-in-out infinite;
-}
-.callout--champion {
-  --co-color: #f0d060;
 }
 .callout--level {
   --co-color: #74d448;
@@ -1588,6 +1734,7 @@ function particleStyle(i: number): Record<string, string> {
   .particle,
   .chime-img,
   .callout::after,
+  .champion-herald__sheen,
   .sun-hp-badge--crit,
   .pause-timer__value {
     animation: none;

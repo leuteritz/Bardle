@@ -2996,6 +2996,12 @@ export const MATERIAL_ICON_SM_SUFFIX = '-128.png'
 export const MATERIAL_ICON_MD_SUFFIX = '-256.png'
 /** Bildlose Materialien tragen im Loot-Banner ein Monogramm ihrer Initialen. */
 export const LOOT_MONOGRAM_MAX_CHARS = 2
+/**
+ * Mittlere Stufe der Rollen-Artworks (public/img/roles). `ROLES[].image` zeigt
+ * bewusst aufs Original, weil dieselbe Konstante an anderer Stelle groß
+ * gerendert wird; wer sie klein zeigt, leitet daraus diese Stufe ab.
+ */
+export const ROLE_ART_MD_SUFFIX = '-256.png'
 /** Largest rendered edge each variant is still safe for (px, at DPR 2). */
 export const CHAMPION_ART_SM_MAX_EDGE = 34
 export const CHAMPION_ART_MD_MAX_EDGE = 110
