@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
+import { Icon } from '@iconify/vue'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { useActionToast } from '@/composables/useActionToast'
-import {
-  MEEP_TREE_BADGE_ICON,
-  MEEP_TREE_PLACEHOLDER_ICON,
-  type MeepTreeNodeDef,
-} from '@/config/meepTree'
+import { MEEP_TREE_BADGE_ICON, type MeepTreeNodeDef } from '@/config/meepTree'
 
 const props = defineProps<{
   data: {
@@ -61,7 +58,7 @@ function handleBuy() {
       :disabled="state !== 'buyable'"
       @click.stop="handleBuy"
     >
-      <img :src="MEEP_TREE_PLACEHOLDER_ICON" :alt="data.node.name" class="msn-icon" />
+      <Icon :icon="data.node.icon" width="44" height="44" class="msn-icon" />
 
       <!-- Notify-Badge: dieser Skill ist gerade lernbar und noch nicht angesehen -->
       <Transition name="msn-notify">
@@ -94,22 +91,15 @@ function handleBuy() {
   transition: opacity 0.2s;
 }
 
-/* Grayscale nur aufs kleine Icon statt auf den ganzen Node-Subtree —
-   Filter auf großen Flächen machen Pan/Zoom im Vue-Flow-Canvas teuer. */
+/* Gesperrte Stufen werden über die Icon-FARBE zurückgenommen, nicht über einen
+   Filter — ein SVG-Glyph erbt currentColor, und Filter auf jedem der 25 Nodes
+   machen Pan/Zoom im Vue-Flow-Canvas teuer. */
 .msn-root--locked {
   opacity: 0.5;
 }
 
-.msn-root--locked .msn-icon {
-  filter: grayscale(55%);
-}
-
 .msn-root--reachable {
   opacity: 0.82;
-}
-
-.msn-root--reachable .msn-icon {
-  filter: grayscale(15%);
 }
 
 /* Handles unsichtbar im Kreiszentrum stapeln */
@@ -214,12 +204,24 @@ function handleBuy() {
   }
 }
 
-/* Kein image-rendering: crisp-edges — Nearest-Neighbor-Downscaling macht die
-   Icons matschig; glattes Bicubic-Scaling der 128px-Quelle bleibt scharf. */
+/* Jedes Node trägt sein eigenes game-icons-Glyph; die Zweigfarbe kommt über
+   currentColor, sodass Vektor bleibt Vektor — scharf auf jeder Zoomstufe. */
 .msn-icon {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--branch-color) 38%, var(--rpg-text-dim));
+  transition: color 0.2s;
+}
+
+.msn-root--reachable .msn-icon {
+  color: color-mix(in srgb, var(--branch-color) 62%, var(--rpg-text-dim));
+}
+
+.msn-root--buyable .msn-icon {
+  color: color-mix(in srgb, var(--branch-color) 80%, #fff);
+}
+
+.msn-root--bought .msn-icon {
+  color: var(--branch-color);
 }
 
 /* ── Notify-Badge über dem Kreis ──────────────────────────── */

@@ -265,7 +265,7 @@ export interface ChampionTierDef {
   id: ChampionTierId
   starLevel: number // 1..MAX_STAR_LEVEL — which galaxy star level this trait spawns at
   name: string
-  icon: string // game-icons:* (registered in USED_GAME_ICONS)
+  icon: string // game-icons:* (must exist in config/gameicons.txt)
   color: string
   description: string
 }

@@ -3,9 +3,8 @@ import type { StatCategoryDef } from '../types'
 /**
  * Static metadata of the Bard-Stats catalog categories (Journey column).
  *
- * Order here IS the render order of the accordion. Every icon is registered in
- * USED_GAME_ICONS (constants.ts); the accent drives the header rail, the count
- * badge and the highlight values of that section.
+ * Order here IS the render order of the accordion. The accent drives the header
+ * rail, the count badge and the highlight values of that section.
  */
 export const STAT_CATEGORIES: StatCategoryDef[] = [
   {

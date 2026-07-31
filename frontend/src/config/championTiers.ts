@@ -16,7 +16,6 @@ import { CHAMPION_DATA } from './championData'
 // spawn together by weighted probability (TIER_SPAWN_WEIGHTS). Completely separate
 // from the 15 synergy traits in championTraits.ts (which drive CPS/power/DPS bonuses).
 //
-// Icons are registered in USED_GAME_ICONS (constants.ts) before use.
 export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
   // ★1 — the newest recruits, drifting alone through the first galaxies.
   lone_wanderer: {
@@ -106,7 +105,10 @@ export function getChampionChimesPrice(name: string): number {
 
 /** Galaxy at which the Shop reveals/expands a given Champion Tier (1..MAX_STAR_LEVEL). */
 export function requiredGalaxyForTier(tier: number): number {
-  return CHAMPION_TIER_REQUIRED_GALAXY[tier - 1] ?? CHAMPION_TIER_REQUIRED_GALAXY[CHAMPION_TIER_REQUIRED_GALAXY.length - 1]
+  return (
+    CHAMPION_TIER_REQUIRED_GALAXY[tier - 1] ??
+    CHAMPION_TIER_REQUIRED_GALAXY[CHAMPION_TIER_REQUIRED_GALAXY.length - 1]
+  )
 }
 
 /** True when a Champion Tier (1..MAX_STAR_LEVEL) is currently unlocked for the

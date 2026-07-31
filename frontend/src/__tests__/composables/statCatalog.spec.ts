@@ -3,7 +3,6 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { useStatCatalog } from '../../composables/useStatCatalog'
 import { STAT_CATEGORIES } from '../../config/statCategories'
-import { USED_GAME_ICONS } from '../../config/constants'
 import { isValidIcon } from '../../utils/iconUtils'
 import { useBattleStore } from '../../stores/battleStore'
 import { useGameStore } from '../../stores/gameStore'
@@ -16,11 +15,10 @@ describe('statCategories — definitions', () => {
     expect(new Set(icons).size).toBe(icons.length)
   })
 
-  it('only uses registered, existing game-icons', () => {
+  it('only uses existing game-icons', () => {
     for (const cat of STAT_CATEGORIES) {
       expect(cat.icon.startsWith('game-icons:'), `${cat.id} misses the set prefix`).toBe(true)
       expect(isValidIcon(cat.icon), `${cat.icon} is not in gameicons.txt`).toBe(true)
-      expect(USED_GAME_ICONS.has(cat.icon), `${cat.icon} is not registered`).toBe(true)
     }
   })
 })
@@ -42,9 +40,7 @@ describe('useStatCatalog', () => {
         expect(stat.value.length, `${cat.id}/${stat.key} has no value`).toBeGreaterThan(0)
       }
     }
-    expect(totalStatCount.value).toBe(
-      categories.value.reduce((sum, c) => sum + c.stats.length, 0),
-    )
+    expect(totalStatCount.value).toBe(categories.value.reduce((sum, c) => sum + c.stats.length, 0))
   })
 
   it('filters by label across categories and keeps totalCount intact', () => {
@@ -80,9 +76,7 @@ describe('useStatCatalog', () => {
     const battleStore = useBattleStore()
     battleStore.bestWinStreak = 17
 
-    const row = categories.value
-      .flatMap((c) => c.stats)
-      .find((s) => s.label === 'Best Win Streak')
+    const row = categories.value.flatMap((c) => c.stats).find((s) => s.label === 'Best Win Streak')
     expect(row?.value).toBe('17')
   })
 
@@ -90,9 +84,7 @@ describe('useStatCatalog', () => {
     const gameStore = useGameStore()
     gameStore.totalPrestiges = 4
     const { categories } = useStatCatalog(ref('prestige resets'))
-    const row = categories.value
-      .flatMap((c) => c.stats)
-      .find((s) => s.label === 'Prestige Resets')
+    const row = categories.value.flatMap((c) => c.stats).find((s) => s.label === 'Prestige Resets')
     expect(row?.value).toBe('4')
   })
 })

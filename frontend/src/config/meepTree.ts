@@ -1,13 +1,8 @@
 /**
  * Meep Skill Tree — five themed branches of one-time upgrades bought with Meeps.
  * Every node requires the previous node of its branch (linear chains).
- * All icons share one placeholder image until per-node artwork exists.
+ * Each node carries its own game-icons glyph, tinted in its branch color.
  */
-
-/** Placeholder artwork for every node — swap per-node `icon` fields later.
- *  Pre-scaled 128px variant: the full-size originals (1–2 MB PNGs) made the
- *  tree blurry when downscaled and slow to decode on tab mount. */
-export const MEEP_TREE_PLACEHOLDER_ICON = '/img/BardAbilities/Bard-128.png'
 
 /** Meep cost badge icon (pre-scaled, shown at ~14px in every node badge). */
 export const MEEP_TREE_BADGE_ICON = '/img/BardAbilities/BardMeep-64.png'
@@ -69,6 +64,8 @@ export const MEEP_TREE_MULTIPLICATIVE_KEYS: ReadonlyArray<keyof MeepTreeEffects>
 export interface MeepTreeNodeDef {
   id: string
   name: string
+  /** `game-icons:*` glyph shown in the node circle — unique across the whole tree */
+  icon: string
   /** Short effect label shown on the node card */
   effect: string
   /** One-line flavor/detail line */
@@ -96,6 +93,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'melody_1',
         name: 'Gentle Tune',
+        icon: 'game-icons:double-quaver', // a single soft phrase
         effect: '+25% Chimes/s',
         desc: 'A soft melody keeps the chimes ringing on their own.',
         cost: 3,
@@ -104,6 +102,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'melody_2',
         name: 'Rising Chorus',
+        icon: 'game-icons:sing', // voices joining the chorus
         effect: '+50% Chimes/s',
         desc: 'More voices join the song of the spheres.',
         cost: 8,
@@ -112,6 +111,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'melody_3',
         name: 'Lingering Echo',
+        icon: 'game-icons:night-sleep', // earnings while you are away
         effect: '+50% Offline Earnings',
         desc: 'The song keeps playing while you are away.',
         cost: 20,
@@ -120,6 +120,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'melody_4',
         name: 'Grand Symphony',
+        icon: 'game-icons:harp', // the full ensemble
         effect: '+100% Chimes/s',
         desc: 'Every building plays in perfect harmony.',
         cost: 45,
@@ -128,6 +129,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'melody_5',
         name: 'Eternal Song',
+        icon: 'game-icons:infinity', // a song without end
         effect: '+4h Offline Cap · +50% Chimes/s',
         desc: 'A song that never truly ends.',
         cost: 95,
@@ -144,6 +146,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'reso_1',
         name: 'Firm Strike',
+        icon: 'game-icons:fist', // a firm strike
         effect: '+25% Chimes/Click',
         desc: 'Each touch of the chime rings a little louder.',
         cost: 3,
@@ -152,6 +155,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'reso_2',
         name: 'Ringing Blow',
+        icon: 'game-icons:ringing-bell', // the chime answers the blow
         effect: '+50% Chimes/Click',
         desc: 'The chime answers your hand with force.',
         cost: 8,
@@ -160,6 +164,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'reso_3',
         name: 'Twin Echo',
+        icon: 'game-icons:echo-ripples', // one strike ringing twice
         effect: '10% Double-Click Chance',
         desc: 'Sometimes a single strike rings twice.',
         cost: 20,
@@ -168,6 +173,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'reso_4',
         name: 'Thunder Chime',
+        icon: 'game-icons:thunder-struck', // strikes that shake the sky
         effect: '+100% Chimes/Click',
         desc: 'Your strikes shake the firmament.',
         cost: 45,
@@ -176,6 +182,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'reso_5',
         name: 'Worldbell',
+        icon: 'game-icons:windchimes', // clicks carrying the whole song
         effect: 'Clicks gain +2% of CpS · +50% Chimes/Click',
         desc: 'Every strike carries the weight of the whole song.',
         cost: 95,
@@ -192,6 +199,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'cosmos_1',
         name: 'Meep Whisper',
+        icon: 'game-icons:meeple', // a single meep, cheaper
         effect: '−10% Meep Cost',
         desc: 'Meeps gather at the sound of fewer chimes.',
         cost: 4,
@@ -200,6 +208,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'cosmos_2',
         name: 'Star Charts',
+        icon: 'game-icons:interstellar-path', // charted expedition routes
         effect: '+25% Expedition Rewards',
         desc: 'Well-planned journeys return with richer spoils.',
         cost: 10,
@@ -208,6 +217,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'cosmos_3',
         name: 'Meep Choir',
+        icon: 'game-icons:meeple-group', // a whole choir of meeps
         effect: '−15% Meep Cost',
         desc: 'The choir sings new meeps into being.',
         cost: 22,
@@ -216,6 +226,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'cosmos_4',
         name: 'Portal Winds',
+        icon: 'game-icons:magic-portal', // faster portal travel
         effect: 'Expeditions 20% Faster',
         desc: 'Favorable winds carry your champions home sooner.',
         cost: 48,
@@ -224,6 +235,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'cosmos_5',
         name: 'Caretaker’s Bond',
+        icon: 'game-icons:relationship-bounds', // the keeper-meep bond
         effect: '+30% Meep Power · −10% Meep Cost',
         desc: 'Your meeps fight — and multiply — for their keeper.',
         cost: 100,
@@ -240,6 +252,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'battle_1',
         name: 'War Drums',
+        icon: 'game-icons:drum', // the marching beat
         effect: '+500 Power',
         desc: 'A steady beat drives your team forward.',
         cost: 4,
@@ -248,6 +261,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'battle_2',
         name: 'Battle Hymn',
+        icon: 'game-icons:trumpet-flag', // the battle fanfare
         effect: '+10% Champion DPS',
         desc: 'Champions strike harder to the rhythm of your song.',
         cost: 10,
@@ -256,6 +270,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'battle_3',
         name: 'Standard Bearer',
+        icon: 'game-icons:knight-banner', // the raised standard
         effect: '+1500 Power',
         desc: 'Your banner alone tips the scales of ranked battles.',
         cost: 22,
@@ -264,6 +279,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'battle_4',
         name: 'Crescendo of Blades',
+        icon: 'game-icons:sword-array', // blades swelling with the song
         effect: '+15% Champion DPS',
         desc: 'The song swells — and so does every strike.',
         cost: 48,
@@ -272,6 +288,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'battle_5',
         name: 'Legend of the Rift',
+        icon: 'game-icons:relic-blade', // a legend of the rift
         effect: '+5000 Power',
         desc: 'Tales of your team echo through every universe.',
         cost: 100,
@@ -288,6 +305,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'warden_1',
         name: 'Piercing Note',
+        icon: 'game-icons:stabbed-note', // a note that pierces armor
         effect: '+10% Boss Damage',
         desc: 'A sharp note that cuts through boss armor.',
         cost: 4,
@@ -296,6 +314,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'warden_2',
         name: 'Prospector’s Ear',
+        icon: 'game-icons:minerals', // richer material finds
         effect: '+20% Material Drop Chance',
         desc: 'You hear where the rarest materials hide.',
         cost: 10,
@@ -304,6 +323,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'warden_3',
         name: 'Soothing Refrain',
+        icon: 'game-icons:heart-beats', // a mending pulse
         effect: '+1 HP Regen/s',
         desc: 'A calm refrain mends the sun’s wounds.',
         cost: 22,
@@ -312,6 +332,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'warden_4',
         name: 'Chime Ward',
+        icon: 'game-icons:vibrating-shield', // a shield made of sound
         effect: '−15% Damage Taken',
         desc: 'A shield of sound blunts every enemy blow.',
         cost: 48,
@@ -320,6 +341,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'warden_5',
         name: 'Bossbreaker',
+        icon: 'game-icons:sonic-boom', // the boss-breaking final chord
         effect: '+30% Boss Damage',
         desc: 'No planetary tyrant withstands the final chord.',
         cost: 100,
@@ -339,7 +361,4 @@ export const MEEP_TREE_NODE_INDEX: Record<
   ),
 )
 
-export const MEEP_TREE_TOTAL_NODES = MEEP_TREE_BRANCHES.reduce(
-  (sum, b) => sum + b.nodes.length,
-  0,
-)
+export const MEEP_TREE_TOTAL_NODES = MEEP_TREE_BRANCHES.reduce((sum, b) => sum + b.nodes.length, 0)

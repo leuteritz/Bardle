@@ -33,8 +33,7 @@ import { CHAMPION_DATA } from './championData'
 import { CHAMPION_TIERS } from './championTiers'
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
-// Four stats, one gameplay effect each — no stat is decorative. Their icons are
-// registered in USED_GAME_ICONS.
+// Four stats, one gameplay effect each — no stat is decorative.
 
 export const CHAMPION_STATS: ChampionStatDef[] = [
   {
@@ -164,7 +163,7 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     id: 'overload',
     tier: 'adept',
     name: 'Overload',
-    icon: 'game-icons:energy-sword',
+    icon: 'game-icons:overdrive',
     color: '#e05050',
     desc: 'Channels raw force into every orbit strike.',
     stats: { power: 20 },
@@ -182,7 +181,7 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     id: 'attunement',
     tier: 'adept',
     name: 'Attunement',
-    icon: 'game-icons:concentration-orb',
+    icon: 'game-icons:tune-pitch',
     color: '#4e96e0',
     desc: 'Tunes the role ability to a faster rhythm.',
     stats: { focus: 20 },
@@ -203,7 +202,7 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     id: 'aegis-echo',
     tier: 'master',
     name: 'Aegis Echo',
-    icon: 'game-icons:energy-shield',
+    icon: 'game-icons:shield-echoes',
     color: '#4e96e0',
     desc: 'The role ability hits 35% harder — shields, heals, bursts and curses alike.',
     stats: { focus: 12 },
@@ -214,7 +213,7 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     id: 'prospector',
     tier: 'master',
     name: 'Prospector',
-    icon: 'game-icons:tarot-10-wheel-of-fortune',
+    icon: 'game-icons:gold-nuggets',
     color: '#e8c040',
     desc: 'Boss payouts and material drops rise by a further 25%.',
     stats: { fortune: 25 },
@@ -226,7 +225,7 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     id: 'starfall',
     tier: 'elite',
     name: 'Starfall',
-    icon: 'game-icons:shining-sword',
+    icon: 'game-icons:falling-star',
     color: '#e8c040',
     desc: '18% of orbit hits land as critical strikes for double damage.',
     stats: { power: 25 },
@@ -237,7 +236,7 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     id: 'last-stand',
     tier: 'elite',
     name: 'Last Stand',
-    icon: 'game-icons:chained-heart',
+    icon: 'game-icons:enrage',
     color: '#cc6050',
     desc: 'Below 35% player HP every stat of this champion surges by 30%.',
     stats: { vitality: 30 },
@@ -248,7 +247,7 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     id: 'warp-cadence',
     tier: 'elite',
     name: 'Warp Cadence',
-    icon: 'game-icons:triorb',
+    icon: 'game-icons:backward-time',
     color: '#b070e0',
     desc: 'Shaves a further 15% off the role ability cooldown.',
     stats: { focus: 25 },
@@ -259,7 +258,7 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     id: 'ascendant-aura',
     tier: 'elite',
     name: 'Ascendant Aura',
-    icon: 'game-icons:spiked-halo',
+    icon: 'game-icons:aura',
     color: '#d45e7e',
     desc: 'Allies assigned to this role contribute 40% more orbit damage.',
     stats: { vitality: 15, fortune: 15 },
