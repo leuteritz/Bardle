@@ -1137,15 +1137,12 @@ function emberStyle(i: number): Record<string, string> {
     font-size: 1.35rem;
   }
 
-  /* Kein `scale()` mehr auf dem Loot-Banner: es hat Schrift und Icons
-     weichgezeichnet, statt sie kleiner zu setzen — und auf Full HD landeten
-     die Reward-Icons dadurch bei 27 px. Das Banner bemisst sich jetzt in `em`
-     gegen --loot-u (rpg-theme.css), hier eine Stufe kompakter als die
-     stufenlose Kurve, weil die Champion-Row bei dieser Höhe dicht darunter
-     folgt. */
-  .sf-loot {
-    --loot-u: 12.5px;
-  }
+  /* Für das Loot-Banner steht hier bewusst nichts mehr. Früher stauchte es ein
+     `transform: scale(0.8)` — das zeichnet Schrift und Icons weich, statt sie
+     kleiner zu setzen, und die Reward-Icons landeten auf Full HD bei 27 px.
+     Seit dem Umbau zur einzeiligen Leiste deckt die --loot-u-Kurve
+     (rpg-theme.css) auch diese Höhe ab: 53 px Bandhöhe lassen der
+     Champion-Row 37 px Luft, ganz ohne Sonderfall. */
 
   /* Striker-Portraits kompakter — Positionen auf dem Bogen bleiben (%) */
   .sf-squad :deep(.rsq-item) {

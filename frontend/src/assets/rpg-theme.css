@@ -90,15 +90,17 @@
      wurde auf Full HD per `transform: scale(0.8)` zusammengestaucht — was
      jede Schrift und jedes Icon weichzeichnet, statt sie kleiner zu setzen.
 
-       Full HD  1920×950  → 13px    (Icons 41px statt bisher 27px)
-       WUXGA    1920×1070 → 13px
-       2K/QHD   2560×1310 → 17px    (Icons 54px)
-       4K       3840×2030 → 22px    (Icons 70px)
+       Full HD  1920×950  → 15px    (Icons 36px statt bisher 27px)
+       WUXGA    1920×1070 → 15px
+       2K/QHD   2560×1310 → 20px    (Icons 48px)
+       4K       3840×2030 → 26px    (Icons 62px)
 
-     Obergrenze 22px ist kein Geschmack: zwischen Loot-Unterkante und der
-     Champion-Row liegen je nach Auflösung nur 11–138 px, und das Banner
-     wächst mit dieser Einheit in beide Richtungen. */
-  --loot-u: clamp(13px, min(1px + 0.625vw, 2.44px + 1.111vh), 22px);
+     Höher als zuerst angesetzt, weil das Fenster seither eine einzeilige
+     Leiste ist: die separate "LOOT"-Überschrift ist ein Segment darin
+     geworden, und die eingesparte Zeile geht in die Icon-Größe. Die Leiste
+     misst damit 53–90 px statt 78–137 px und lässt der Champion-Row darunter
+     37–134 px Luft. */
+  --loot-u: clamp(15px, min(0.78vw, 1.8px + 1.39vh), 26px);
 }
 
 /* ── Modal shell (containers, modals) ── */

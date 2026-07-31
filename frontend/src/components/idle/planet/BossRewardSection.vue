@@ -1,60 +1,59 @@
 <template>
+  <!-- EIN Fenster für die gesamte Belohnung: Goldlinie oben, ein Rahmen außen,
+       innen nur Trennstriche. Vorher trug jede Belohnung ihre eigene Fassung —
+       fünf freistehende Kästchen unter einer separaten Überschrift. Jetzt ist
+       es eine geschlossene Leiste, in der das Label das erste Segment ist;
+       das spart die ganze Kopfzeile und lässt die Icons entsprechend größer
+       werden. Gleiche Bauform wie das LVL/HIT-Band der Champion-Karten. -->
   <div class="loot" :class="{ 'loot--galaxy': isGalaxyBoss }">
-    <!-- Eyebrow zwischen HUD-Klammerlinien — spiegelt den Bossnamen oben -->
-    <div class="loot-head">
-      <span class="loot-line" />
-      <span v-ink-center class="loot-eyebrow">✦ Loot ✦</span>
-      <span class="loot-line loot-line--right" />
-    </div>
+    <span class="loot-tag">
+      <span class="loot-tag-mark">✦</span>
+      <span v-ink-center class="loot-tag-text">Loot</span>
+    </span>
 
-    <!-- Alles in der Reihe steht auf derselben Grundhöhe — der Champion-Preis
-         ist nur breiter, nicht höher. Das hält die Zeile ruhig, egal wie
-         viele Materialien der Boss fallen lässt. -->
-    <div class="loot-row">
-      <!-- Champion zuerst — die Hauptbelohnung -->
-      <span v-if="homePlanetChampion" class="loot-prize" :title="`Champion: ${homePlanetChampion}`">
-        <img
-          v-if="homePlanetChampionImage"
-          :src="homePlanetChampionImage"
-          :alt="homePlanetChampion"
-          class="loot-prize-portrait"
-          @error="($event.target as HTMLImageElement).style.display = 'none'"
-        />
-        <span class="loot-prize-text">
-          <span class="loot-prize-eyebrow">Champion</span>
-          <span class="loot-prize-name">{{ homePlanetChampion }}</span>
-        </span>
+    <!-- Champion zuerst — die Hauptbelohnung -->
+    <span v-if="homePlanetChampion" class="loot-prize" :title="`Champion: ${homePlanetChampion}`">
+      <img
+        v-if="homePlanetChampionImage"
+        :src="homePlanetChampionImage"
+        :alt="homePlanetChampion"
+        class="loot-prize-portrait"
+        @error="($event.target as HTMLImageElement).style.display = 'none'"
+      />
+      <span class="loot-prize-text">
+        <span class="loot-prize-eyebrow">Champion</span>
+        <span class="loot-prize-name">{{ homePlanetChampion }}</span>
       </span>
+    </span>
 
-      <span v-if="totalChimes > 0" class="loot-slot loot-slot--chimes" title="Chimes">
-        <img src="/img/BardAbilities/BardChime-256.png" alt="Chimes" class="loot-slot-icon" />
-        <!-- Formatiert, anders als die Materialmengen: Chime-Beträge gehen in
-             die Tausender und sprengen als rohe Ziffernfolge das Badge. -->
-        <span v-ink-center.x.y class="loot-slot-count">{{ $formatNumber(totalChimes) }}</span>
-      </span>
+    <span v-if="totalChimes > 0" class="loot-slot loot-slot--chimes" title="Chimes">
+      <img src="/img/BardAbilities/BardChime-256.png" alt="Chimes" class="loot-slot-icon" />
+      <!-- Formatiert, anders als die Materialmengen: Chime-Beträge gehen in
+           die Tausender und sprengen als rohe Ziffernfolge das Badge. -->
+      <span v-ink-center.x.y class="loot-slot-count">{{ $formatNumber(totalChimes) }}</span>
+    </span>
 
-      <span
-        v-for="entry in stackedMaterials"
-        :key="entry.material.id"
-        class="loot-slot"
-        :class="`rarity--${entry.material.rarity}`"
-        :title="`${entry.material.name} — ${entry.material.rarity}`"
-      >
-        <!-- Vier Materialien (Comet Ice, Star Iron, Plasma Core, Aether Dust)
-             haben in den Stammdaten gar kein Bild — bisher stand hier ein
-             leeres <img>. Sie bekommen stattdessen ein Monogramm aus ihren
-             Initialen, das in der Fassung genauso sitzt wie ein Icon. -->
-        <img
-          v-if="entry.icon"
-          :src="entry.icon"
-          :alt="entry.material.name"
-          class="loot-slot-icon"
-          @error="($event.target as HTMLImageElement).style.display = 'none'"
-        />
-        <span v-else v-ink-center.x.y class="loot-slot-mono">{{ entry.monogram }}</span>
-        <span v-ink-center.x.y class="loot-slot-count">{{ entry.count }}</span>
-      </span>
-    </div>
+    <span
+      v-for="entry in stackedMaterials"
+      :key="entry.material.id"
+      class="loot-slot"
+      :class="`rarity--${entry.material.rarity}`"
+      :title="`${entry.material.name} — ${entry.material.rarity}`"
+    >
+      <!-- Vier Materialien (Comet Ice, Star Iron, Plasma Core, Aether Dust)
+           haben in den Stammdaten gar kein Bild — bisher stand hier ein
+           leeres <img>. Sie bekommen stattdessen ein Monogramm aus ihren
+           Initialen, das im Segment genauso sitzt wie ein Icon. -->
+      <img
+        v-if="entry.icon"
+        :src="entry.icon"
+        :alt="entry.material.name"
+        class="loot-slot-icon"
+        @error="($event.target as HTMLImageElement).style.display = 'none'"
+      />
+      <span v-else v-ink-center.x.y class="loot-slot-mono">{{ entry.monogram }}</span>
+      <span v-ink-center.x.y class="loot-slot-count">{{ entry.count }}</span>
+    </span>
   </div>
 </template>
 
@@ -115,63 +114,79 @@ const stackedMaterials = computed(() => {
 </script>
 
 <style scoped>
-/* ── Loot unter dem Boss: rahmenlos, weich verschmolzen ──────────────────
-   Kein hartes Panel: ein warmer Gold-Schleier läuft zu allen Seiten in den
-   Planeten-Hintergrund aus und hebt die Rewards trotzdem klar hervor —
-   gleiche Design-Sprache wie die Threat-Anzeige unter der HP-Leiste */
+/* ── Das Belohnungsfenster ────────────────────────────────────────────────────
+   Ein Rahmen, eine Goldlinie oben, innen nur Trennstriche — die Projektsprache
+   der Modale, auf eine Leiste eingedampft. Alle Segmente teilen sich Höhe,
+   Rahmen und Ecken; was ein Segment auszeichnet (Seltenheit, Champion), zeigt
+   sich innerhalb davon, nicht als eigener Kasten drumherum.
+
+   `--loot-u` (rpg-theme.css) ist der einzige Maßstab: Schriften, Segmentgrößen
+   und Icons sind `em` dagegen und wachsen gemeinsam mit der Auflösung. */
 .loot {
   position: relative;
-  /* Ein Maßstab für das ganze Banner (--loot-u, rpg-theme.css): Schriften,
-     Fassungen, Icons und Abstände sind `em` dagegen und wachsen gemeinsam mit
-     der Auflösung. Ersetzt das frühere `transform: scale(0.8)` auf Full HD,
-     das alles weichgezeichnet hat, statt es kleiner zu setzen. */
   font-size: var(--loot-u);
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.45em;
+  align-items: stretch;
   width: auto;
-  /* Untergrenze, damit ein Boss mit nur einer Belohnung keinen einsamen
-     Kasten ergibt — der Kopf spannt dann trotzdem über eine ruhige Breite. */
-  min-width: 15em;
   max-width: 100%;
-  padding: 0.5em 2.6em 0.6em;
-  /* Radien BEWUSST unter 50 %: der Schleier läuft damit innerhalb der Box aus.
-     Vorher stand hier `ellipse 100% 130%` mit Stopp bei 74 % — das heißt, der
-     Verlauf war an der Boxkante erst bei 74 % seines Radius angekommen und
-     wurde dort hart abgeschnitten. Sichtbar war ein dunkles Rechteck mit
-     scharfen Kanten statt eines weichen Übergangs in den Planetenhintergrund. */
-  background: radial-gradient(
-    ellipse 58% 62% at 50% 50%,
-    rgba(34, 22, 6, 0.62) 0%,
-    rgba(22, 14, 4, 0.34) 52%,
-    transparent 92%
-  );
+  border-radius: 4px;
+  border: 1px solid #5c3310;
+  /* Beschneidet die Segment-Hintergründe auf die Rundung des Fensters —
+     ohne das ragen sie in den Ecken über den Rahmen hinaus. */
+  overflow: hidden;
+  background: #14100a;
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 192, 64, 0.12),
+    0 6px 18px rgba(0, 0, 0, 0.7);
   animation: loot-reveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
 }
 
-/* Feine Goldlinie darunter, die zu den Rändern hin ausläuft */
-.loot::after {
+/* Goldlinie oben — dieselbe Verlaufsfolge wie an jedem Modal des Projekts */
+.loot::before {
   content: '';
   position: absolute;
-  bottom: 3px;
-  left: 16%;
-  right: 16%;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.5), transparent);
-}
-
-.loot--galaxy {
-  background: radial-gradient(
-    ellipse 58% 62% at 50% 50%,
-    rgba(30, 12, 44, 0.62) 0%,
-    rgba(18, 8, 28, 0.34) 52%,
-    transparent 92%
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 1;
+  background: linear-gradient(
+    to right,
+    #5c3310,
+    #c89040,
+    #e8c060,
+    #d4a020,
+    #c89040,
+    #5c3310
   );
 }
 
-.loot--galaxy::after {
-  background: linear-gradient(to right, transparent, rgba(200, 100, 255, 0.5), transparent);
+/* Trennstriche statt Einzelrahmen — die Segmente bleiben eine Einheit */
+.loot > * + * {
+  border-left: 1px solid #3f2810;
+}
+
+.loot--galaxy {
+  border-color: #4a2168;
+  box-shadow:
+    inset 0 0 0 1px rgba(200, 100, 255, 0.14),
+    0 6px 18px rgba(0, 0, 0, 0.7);
+}
+
+.loot--galaxy::before {
+  background: linear-gradient(
+    to right,
+    #3a1a54,
+    #8a44c8,
+    #dd99ff,
+    #a052e0,
+    #8a44c8,
+    #3a1a54
+  );
+}
+
+.loot--galaxy > * + * {
+  border-left-color: #34184a;
 }
 
 @keyframes loot-reveal {
@@ -185,32 +200,36 @@ const stackedMaterials = computed(() => {
   }
 }
 
-/* ── Eyebrow zwischen dünnen Klammerlinien ────────────────────────────────── */
-.loot-head {
+/* ── Label-Segment — das "LOOT" ist die erste Zelle der Leiste ────────────────
+   Zweizeilig, damit es die Segmenthöhe füllt statt als schmaler Streifen
+   danebenzustehen. Gefüllt wie der Reiter eines Kennwert-Chips. */
+.loot-tag {
+  flex-shrink: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.7em;
-  /* Klammerlinien laufen über die volle Bandbreite statt über eine feste
-     Pixelbreite — der Kopf rahmt damit genau die Reihe, die darunter steht,
-     egal ob ein Champion dabei ist oder nur zwei Materialien. */
-  align-self: stretch;
+  justify-content: center;
+  gap: 0.08em;
+  padding: 0 0.85em;
+  background: linear-gradient(to bottom, #3a2409, #241605);
 }
 
-.loot-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.62));
+.loot-tag-mark {
+  font-size: 0.8em;
+  line-height: 1;
+  color: #e8c060;
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.6);
 }
 
-.loot-line--right {
-  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.62));
-}
-
-.loot-eyebrow {
-  font-size: 0.85em;
+.loot-tag-text {
+  font-size: 0.82em;
   font-weight: 900;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.22em;
+  /* letter-spacing setzt CSS auch hinter das letzte Zeichen — ohne den
+     Ausgleich stünde das Wort sichtbar links seiner Zelle */
+  text-indent: 0.22em;
   text-transform: uppercase;
+  line-height: 1;
   color: #e8c040;
   white-space: nowrap;
   text-shadow:
@@ -218,37 +237,27 @@ const stackedMaterials = computed(() => {
     0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-.loot--galaxy .loot-eyebrow {
+.loot--galaxy .loot-tag {
+  background: linear-gradient(to bottom, #2a1040, #180826);
+}
+
+.loot--galaxy .loot-tag-text {
   color: #dd99ff;
   text-shadow:
     0 0 10px rgba(200, 100, 255, 0.55),
     0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-.loot--galaxy .loot-line {
-  background: linear-gradient(to right, transparent, rgba(200, 100, 255, 0.45));
+.loot--galaxy .loot-tag-mark {
+  color: #dd99ff;
+  text-shadow: 0 0 8px rgba(200, 100, 255, 0.6);
 }
 
-.loot--galaxy .loot-line--right {
-  background: linear-gradient(to left, transparent, rgba(200, 100, 255, 0.45));
-}
-
-/* ── Reward-Reihe ─────────────────────────────────────────────────────────── */
-.loot-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4em 0.55em;
-  min-width: 0;
-}
-
-/* ── Belohnungs-Slot — gefasstes Icon mit Mengen-Badge ────────────────────────
-   Vorher standen Icon und Zahl frei nebeneinander auf dem Hintergrund; welche
-   Zahl zu welchem Bild gehörte, ergab sich nur aus der Nähe, und die Seltenheit
-   steckte allein in der Textfarbe der Ziffer. Jetzt trägt jede Belohnung eine
-   eigene Fassung: Farbkante oben und Rahmen in der Rarity-Farbe, die Menge als
-   Badge in der Ecke. Rein statisch — kein Filter, keine Animation. */
+/* ── Belohnungs-Segment ───────────────────────────────────────────────────────
+   Kein eigener Kasten mehr: die Zelle sitzt im Fenster, ihre Seltenheit zeigt
+   sich als Farbschimmer im Hintergrund und als Farbkante an der UNTERKANTE.
+   Unten deshalb, weil die Oberkante des Fensters der Goldlinie gehört — so
+   stehen sich beide nie im Weg. Rein statisch, kein Filter, keine Animation. */
 .loot-slot {
   --rar: #c8c8c8;
   position: relative;
@@ -257,17 +266,17 @@ const stackedMaterials = computed(() => {
   place-items: center;
   width: 3.4em;
   height: 3.4em;
-  border-radius: 4px;
-  border: 1px solid color-mix(in srgb, var(--rar) 55%, #2a1c08);
-  border-top: 2px solid color-mix(in srgb, var(--rar) 80%, transparent);
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--rar) 16%, rgba(10, 6, 2, 0.88)),
-    rgba(8, 5, 2, 0.92)
-  );
-  box-shadow:
-    0 0 10px color-mix(in srgb, var(--rar) 22%, transparent),
-    0 3px 8px rgba(0, 0, 0, 0.7);
+  background:
+    linear-gradient(
+      to top,
+      color-mix(in srgb, var(--rar) 34%, transparent) 0 2px,
+      transparent 2px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--rar) 13%, transparent),
+      transparent 72%
+    );
 }
 
 .loot-slot-icon {
@@ -277,8 +286,12 @@ const stackedMaterials = computed(() => {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
 }
 
-/* Ersatz für fehlende Material-Bilder — Initialen in der Rarity-Farbe */
+/* Ersatz für fehlende Material-Bilder — Initialen in der Rarity-Farbe.
+   Das Padding unten hebt die Buchstaben aus der Badge-Ecke: anders als ein
+   Icon, das dort ohnehin transparent ausläuft, säße das Monogramm mitten
+   unter der Mengenangabe. */
 .loot-slot-mono {
+  padding-bottom: 0.5em;
   font-size: 1.15em;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -292,8 +305,10 @@ const stackedMaterials = computed(() => {
    ist auf einen Blick als "Anzahl" lesbar, anders als eine Ziffer neben dem Bild */
 .loot-slot-count {
   position: absolute;
-  right: -0.28em;
-  bottom: -0.28em;
+  /* Innerhalb des Segments statt über dessen Kante hinaus — das Fenster
+     beschneidet jetzt, ein überstehendes Badge würde abgeschnitten. */
+  right: 0.16em;
+  bottom: 0.2em;
   min-width: 1.35em;
   padding: 0.06em 0.24em;
   border-radius: 4px;
@@ -313,26 +328,22 @@ const stackedMaterials = computed(() => {
 }
 
 /* ── Champion — die Hauptbelohnung ────────────────────────────────────────────
-   Steht in derselben Grundhöhe wie die Slots, ist nur breiter: die Reihe bleibt
-   damit eine Zeile und kippt nicht, sobald ein Champion dabei ist. */
+   Dasselbe Segment wie ein Material, nur breiter: gleiche Höhe, gleiche
+   Unterkante, kein eigener Rahmen. Die blaue Signatur trägt es innen. */
 .loot-prize {
   --rar: #82b9ff;
   display: inline-flex;
   align-items: center;
   gap: 0.6em;
   height: 3.4em;
-  padding: 0 0.75em 0 0;
-  border-radius: 4px;
-  border: 1px solid color-mix(in srgb, var(--rar) 45%, #14203a);
-  border-top: 2px solid color-mix(in srgb, var(--rar) 75%, transparent);
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--rar) 18%, rgba(6, 10, 20, 0.9)),
-    rgba(6, 9, 16, 0.85)
-  );
-  box-shadow:
-    0 0 14px color-mix(in srgb, var(--rar) 26%, transparent),
-    0 3px 8px rgba(0, 0, 0, 0.7);
+  padding: 0 0.85em 0 0;
+  background:
+    linear-gradient(
+      to top,
+      color-mix(in srgb, var(--rar) 42%, transparent) 0 2px,
+      transparent 2px
+    ),
+    linear-gradient(to right, rgba(28, 52, 92, 0.55), rgba(10, 16, 30, 0.3));
 }
 
 .loot-prize-portrait {
@@ -341,8 +352,7 @@ const stackedMaterials = computed(() => {
   flex-shrink: 0;
   object-fit: cover;
   object-position: center top;
-  border-radius: 3px 0 0 3px;
-  border-right: 1px solid color-mix(in srgb, var(--rar) 45%, #14203a);
+  border-right: 1px solid color-mix(in srgb, var(--rar) 38%, #14203a);
 }
 
 .loot-prize-text {
