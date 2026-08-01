@@ -3869,13 +3869,47 @@ export const RESOURCE_STAR_COLORS: [number, number, number][] = [
 // eingesammelt und zahlt sofort und/oder als zeitlich begrenzter Buff aus.
 // Spawn/Flug leben im drifterStore; die Bahn kommt aus DRIFTER_ROUTES.
 
-/** Wartezeit bis zum nächsten Spawn-Versuch (Sekunden, gleichverteilt). */
-export const DRIFTER_SPAWN_INTERVAL_MIN_SEC = 55
-export const DRIFTER_SPAWN_INTERVAL_MAX_SEC = 130
+/** Jede Seltenheitsstufe hat ihre EIGENE Uhr — [min, max] Sekunden bis zum
+ *  nächsten Erscheinen. Ein einzelner gewichteter Wurf würde den Leviathan mit
+ *  2 % Chance auf ~75 Minuten Erwartungswert schieben; mit eigener Uhr ist er
+ *  selten, aber planbar, und die häufigen Typen halten den Himmel lebendig. */
+export const DRIFTER_SPAWN_INTERVAL_SEC: Record<string, [number, number]> = {
+  common: [20, 30],
+  uncommon: [70, 110],
+  rare: [150, 240],
+  legendary: [600, 900],
+}
 
-/** Vorlauf nach Spielstart bzw. nach dem Laden, bevor der erste Drifter kommt. */
-export const DRIFTER_FIRST_DELAY_MIN_SEC = 25
-export const DRIFTER_FIRST_DELAY_MAX_SEC = 70
+/** Vorlauf nach Spielstart bzw. nach dem Laden, je Stufe. Bewusst gestaffelt:
+ *  sonst starten alle vier Uhren gemeinsam und die erste Minute ist ein Schwarm. */
+export const DRIFTER_FIRST_DELAY_SEC: Record<string, [number, number]> = {
+  common: [12, 25],
+  uncommon: [50, 80],
+  rare: [110, 170],
+  legendary: [300, 520],
+}
+
+/** Ist das Feld belegt, wenn eine Uhr abläuft, wartet diese Stufe nur so lange
+ *  und versucht es erneut — der fällige Drifter geht nicht verloren. */
+export const DRIFTER_SPAWN_RETRY_SEC = 6
+
+/** Reihenfolge bei gleichzeitig fälligen Stufen: das Seltenste zuerst. Sonst
+ *  verdrängt ein Errant Chime regelmäßig den Leviathan, auf den man wartet. */
+export const DRIFTER_RARITY_ORDER: Record<string, number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  legendary: 3,
+}
+
+/** Farbe der Seltenheitsstufe — nur für Text-Label und Rahmen der Infokarte.
+ *  Der Akzent der Karte bleibt die Eigenfarbe des Drifters. */
+export const DRIFTER_RARITY_COLOR: Record<string, string> = {
+  common: '#9d9d9d',
+  uncommon: '#52b830',
+  rare: '#4a90e2',
+  legendary: '#e8c040',
+}
 
 /** Höchstens so viele Drifter fliegen gleichzeitig — bewusst knapp: jedes
  *  Objekt ist ein eigener DOM-Knoten mit eigener Frame-Schleife, und zwei
@@ -3991,3 +4025,17 @@ export const DRIFTER_TRAIL_WIDTH_MIN_PX = 3
 /** Sicherheitsabstand zur Oberkante der erhobenen HUD-Panels (Minimap links,
  *  Command rechts). Ein Drifter dahinter wäre unsichtbar UND unklickbar. */
 export const DRIFTER_HUD_PANEL_MARGIN_PX = 24
+
+/** Infokarte oben links: wie lange die Meldung nach dem Einsammeln bzw. nach
+ *  einem verpassten Drifter noch stehen bleibt, bevor sie ausblendet. */
+export const DRIFTER_CARD_RESULT_MS = 3200
+
+/** Taktrate des Countdowns auf der Infokarte. Bewusst gröber als ein Frame —
+ *  die Karte zeigt Sekunden, ein 60-Hz-Update wäre reine Verschwendung. */
+export const DRIFTER_CARD_TICK_MS = 100
+
+/** Ab dieser Restflugzeit schlägt die Uhr der Infokarte auf Warnrot um. */
+export const DRIFTER_CARD_URGENT_MS = 4000
+
+/** Kopfzeilen-Icon der Infokarte (Peilung eines Signals). */
+export const DRIFTER_CARD_ICON = 'game-icons:radar-sweep'

@@ -12,6 +12,9 @@ import {
   DRIFTER_MAX_CONCURRENT,
   DRIFTER_CHIME_REWARD_MIN_CLICKS,
   DRIFTER_CHIME_REWARD_CAP_SEC,
+  DRIFTER_SPAWN_INTERVAL_SEC,
+  DRIFTER_FIRST_DELAY_SEC,
+  DRIFTER_SPAWN_RETRY_SEC,
   GAME_TICK_INTERVAL_MS,
 } from '../../config/constants'
 
@@ -51,20 +54,109 @@ describe('drifterStore', () => {
     it('does not spawn from the tick while an overlay hides the idle view', () => {
       const store = useDrifterStore()
       store.setSpawningBlocked(true)
-      store.spawnCooldownSec = 0
+      store.spawnCooldowns.common = 0
       store.tick()
       expect(store.active).toHaveLength(0)
-      // The cooldown must not drain either — otherwise closing the overlay
-      // would dump a backlog of drifters onto the screen at once.
-      expect(store.spawnCooldownSec).toBe(0)
+      // The clock must not drain either — otherwise closing the overlay would
+      // dump a backlog of drifters onto the screen at once.
+      expect(store.spawnCooldowns.common).toBe(0)
     })
 
-    it('spawns from the tick once the cooldown runs out', () => {
+    it('spawns from the tick once a rarity clock runs out', () => {
       const store = useDrifterStore()
-      store.spawnCooldownSec = GAME_TICK_INTERVAL_MS / 1000
+      store.spawnCooldowns.common = GAME_TICK_INTERVAL_MS / 1000
       store.tick()
       expect(store.active).toHaveLength(1)
-      expect(store.spawnCooldownSec).toBeGreaterThan(0)
+      expect(getDrifter(store.active[0].defId)?.rarity).toBe('common')
+      // Rearmed within that rarity's own band, not with a global interval.
+      const [min, max] = DRIFTER_SPAWN_INTERVAL_SEC.common
+      expect(store.spawnCooldowns.common).toBeGreaterThanOrEqual(min)
+      expect(store.spawnCooldowns.common).toBeLessThanOrEqual(max)
+    })
+
+    it('gives every rarity its own clock, staggered at the start', () => {
+      const store = useDrifterStore()
+      for (const rarity of ['common', 'uncommon', 'rare', 'legendary'] as const) {
+        const [min, max] = DRIFTER_FIRST_DELAY_SEC[rarity]
+        expect(store.spawnCooldowns[rarity]).toBeGreaterThanOrEqual(min)
+        expect(store.spawnCooldowns[rarity]).toBeLessThanOrEqual(max)
+      }
+      // Common must come around fastest, legendary slowest — that ordering is
+      // the whole point of separate clocks.
+      expect(DRIFTER_SPAWN_INTERVAL_SEC.common[1]).toBeLessThan(
+        DRIFTER_SPAWN_INTERVAL_SEC.uncommon[0],
+      )
+      expect(DRIFTER_SPAWN_INTERVAL_SEC.uncommon[1]).toBeLessThan(
+        DRIFTER_SPAWN_INTERVAL_SEC.rare[0],
+      )
+      expect(DRIFTER_SPAWN_INTERVAL_SEC.rare[1]).toBeLessThan(
+        DRIFTER_SPAWN_INTERVAL_SEC.legendary[0],
+      )
+    })
+
+    it('serves the rarest tier first when several clocks come due together', () => {
+      const store = useDrifterStore()
+      for (const rarity of ['common', 'uncommon', 'rare', 'legendary'] as const) {
+        store.spawnCooldowns[rarity] = GAME_TICK_INTERVAL_MS / 1000
+      }
+      store.tick()
+      // The sky holds one drifter — it has to be the legendary one, or waiting
+      // for a leviathan would mean waiting for a gap between common spawns.
+      expect(store.active).toHaveLength(DRIFTER_MAX_CONCURRENT)
+      expect(getDrifter(store.active[0].defId)?.rarity).toBe('legendary')
+    })
+
+    it('retries a tier that found the sky full instead of forfeiting its turn', () => {
+      const store = useDrifterStore()
+      store.spawnDrifter('starLeviathan')
+      store.spawnCooldowns.common = GAME_TICK_INTERVAL_MS / 1000
+      store.tick()
+      // No second body, but the common clock is back on a short retry rather
+      // than on its full interval — the due spawn is deferred, not lost.
+      expect(store.active).toHaveLength(DRIFTER_MAX_CONCURRENT)
+      expect(store.spawnCooldowns.common).toBe(DRIFTER_SPAWN_RETRY_SEC)
+    })
+
+    it('keeps a lively but not crowded rate over a long session', () => {
+      // The clocks are authored per rarity, but only DRIFTER_MAX_CONCURRENT
+      // bodies may fly at once — the interesting number is what actually
+      // reaches the player after that cap and the retries have had their say.
+      // Time is advanced for real so drifters occupy the sky for their full
+      // flight; ending them early would flatter the rate.
+      vi.useFakeTimers()
+      const store = useDrifterStore()
+      const minutes = 60
+      const ticks = minutes * 60
+      const seen: Record<string, number> = {}
+      let spawns = 0
+
+      for (let i = 0; i < ticks; i++) {
+        vi.setSystemTime(Date.now() + GAME_TICK_INTERVAL_MS)
+        const before = store.totalDriftersSpawned
+        store.tick()
+        if (store.totalDriftersSpawned > before) {
+          spawns++
+          const def = getDrifter(store.active[store.active.length - 1].defId)!
+          seen[def.rarity] = (seen[def.rarity] ?? 0) + 1
+        }
+      }
+
+      const perMinute = spawns / minutes
+      // Measured at authoring time: 180/hour = one every 20.0s, split
+      // 122 common / 35 uncommon / 18 rare / 5 legendary.
+      // Lively: on average one roughly every 20-30s, and never a swarm.
+      expect(perMinute).toBeGreaterThan(2)
+      expect(perMinute).toBeLessThan(4)
+      // Every tier has to actually show up over an hour — a legendary that
+      // never appears is a promise the config does not keep.
+      expect(seen.common ?? 0).toBeGreaterThan(0)
+      expect(seen.uncommon ?? 0).toBeGreaterThan(0)
+      expect(seen.rare ?? 0).toBeGreaterThan(0)
+      expect(seen.legendary ?? 0).toBeGreaterThan(0)
+      // …and the ordering must hold: common most often, legendary least.
+      expect(seen.common).toBeGreaterThan(seen.uncommon)
+      expect(seen.uncommon).toBeGreaterThan(seen.rare)
+      expect(seen.rare).toBeGreaterThanOrEqual(seen.legendary)
     })
 
     it('drops drifters whose flight has finished and counts them as missed', () => {
@@ -75,6 +167,9 @@ describe('drifterStore', () => {
       expect(store.active).toHaveLength(0)
       expect(store.totalDriftersMissed).toBe(1)
       expect(store.totalDriftersCollected).toBe(0)
+      // The info card turns this counter into its "got away" state.
+      expect(store.lastExpired.defId).toBe('errantChime')
+      expect(store.lastExpired.seq).toBe(1)
     })
   })
 
@@ -377,12 +472,15 @@ describe('drifterStore', () => {
       const store = useDrifterStore()
       store.spawnDrifter('errantChime')
       store.applyBuff(getDrifter('emberShard')!)
+      store.spawnCooldowns.common = 0
 
       store.clearAll()
 
       expect(store.active).toHaveLength(0)
       expect(store.buffs).toHaveLength(0)
       expect(store.cpcMult).toBe(1)
+      // Clocks rearmed, so a fresh universe does not open with a burst.
+      expect(store.spawnCooldowns.common).toBeGreaterThan(0)
     })
   })
 })

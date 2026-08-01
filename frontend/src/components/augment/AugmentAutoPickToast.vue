@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from 'vue'
+import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { AUGMENTS } from '@/config/augments'
@@ -72,13 +72,46 @@ function stop() {
   clearTimers()
 }
 
-onUnmounted(clearTimers)
+/* Die Ecke oben links teilen sich zwei Meldungen: diese hier und die
+   Drifter-Infokarte. Damit die zweite weiß, wo sie anfangen darf, wird die
+   eigene Unterkante als CSS-Variable veröffentlicht — dasselbe Muster wie
+   `--header-total-height` im AppHeader. Ohne Meldung ist sie 0, dann rutscht
+   die Karte von selbst nach ganz oben. */
+const root = ref<HTMLElement>()
+let resizeObserver: ResizeObserver | null = null
+
+function publishBottom() {
+  const px = root.value ? root.value.getBoundingClientRect().bottom : 0
+  document.documentElement.style.setProperty('--autopick-bottom', `${px}px`)
+}
+
+watch(visible, async (shown) => {
+  await nextTick()
+  resizeObserver?.disconnect()
+  resizeObserver = null
+  if (!shown || !root.value) {
+    publishBottom()
+    return
+  }
+  // Die Höhe hängt an Textlängen und Auflösungsstufen — beobachten statt
+  // einmalig messen, sonst steht die Karte nach einem Resize falsch.
+  resizeObserver = new ResizeObserver(publishBottom)
+  resizeObserver.observe(root.value)
+  publishBottom()
+})
+
+onUnmounted(() => {
+  clearTimers()
+  resizeObserver?.disconnect()
+  document.documentElement.style.setProperty('--autopick-bottom', '0px')
+})
 </script>
 
 <template>
   <Transition name="apt">
     <div
       v-if="visible && augment"
+      ref="root"
       class="apt-root"
       :style="{ '--rarity': rarityColor, '--apt-duration': `${AUTO_PICK_TOAST_MS}ms` }"
     >

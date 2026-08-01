@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import type { ActiveDrifter, DrifterActiveBuff, DrifterDef } from '../types'
-import { DRIFTERS, DRIFTER_TOTAL_WEIGHT, getDrifter } from '../config/drifters'
+import type { ActiveDrifter, DrifterActiveBuff, DrifterDef, DrifterRarity } from '../types'
+import { DRIFTERS, getDrifter } from '../config/drifters'
 import { logger } from '../utils/logger'
 import {
-  DRIFTER_SPAWN_INTERVAL_MIN_SEC,
-  DRIFTER_SPAWN_INTERVAL_MAX_SEC,
-  DRIFTER_FIRST_DELAY_MIN_SEC,
-  DRIFTER_FIRST_DELAY_MAX_SEC,
+  DRIFTER_SPAWN_INTERVAL_SEC,
+  DRIFTER_FIRST_DELAY_SEC,
+  DRIFTER_SPAWN_RETRY_SEC,
+  DRIFTER_RARITY_ORDER,
   DRIFTER_MAX_CONCURRENT,
   DRIFTER_CHIME_REWARD_CAP_SEC,
   DRIFTER_CHIME_REWARD_MIN_CLICKS,
@@ -22,23 +22,49 @@ import { useCpsStore } from './cpsStore'
 
 let uidCounter = 0
 
-function rollSpawnDelaySec(): number {
-  return (
-    DRIFTER_SPAWN_INTERVAL_MIN_SEC +
-    Math.random() * (DRIFTER_SPAWN_INTERVAL_MAX_SEC - DRIFTER_SPAWN_INTERVAL_MIN_SEC)
-  )
+/** Every rarity that actually has drifters, rarest first — that is the order
+ *  simultaneously due clocks are served in. */
+const RARITIES = [...new Set(DRIFTERS.map((d) => d.rarity))].sort(
+  (a, b) => DRIFTER_RARITY_ORDER[b] - DRIFTER_RARITY_ORDER[a],
+)
+
+function rollRange(range: [number, number] | undefined, fallback: number): number {
+  if (!range) return fallback
+  return range[0] + Math.random() * (range[1] - range[0])
 }
 
-function rollFirstDelaySec(): number {
-  return (
-    DRIFTER_FIRST_DELAY_MIN_SEC +
-    Math.random() * (DRIFTER_FIRST_DELAY_MAX_SEC - DRIFTER_FIRST_DELAY_MIN_SEC)
-  )
+function rollIntervalSec(rarity: DrifterRarity): number {
+  return rollRange(DRIFTER_SPAWN_INTERVAL_SEC[rarity], DRIFTER_SPAWN_RETRY_SEC)
 }
 
-/** Weighted pick across the whole pool — rarity lives in `weight`, nowhere else. */
-function rollDrifterDef(): DrifterDef {
-  let roll = Math.random() * DRIFTER_TOTAL_WEIGHT
+/** Staggered opening delays, one clock per rarity. */
+function rollInitialCooldowns(): Record<DrifterRarity, number> {
+  const out = {} as Record<DrifterRarity, number>
+  for (const rarity of RARITIES) {
+    out[rarity] = rollRange(DRIFTER_FIRST_DELAY_SEC[rarity], DRIFTER_SPAWN_RETRY_SEC)
+  }
+  return out
+}
+
+/** Weighted pick WITHIN one rarity — `weight` now only decides which of the
+ *  types on a given tier shows up, no longer how often that tier appears. */
+function rollDrifterOfRarity(rarity: DrifterRarity): DrifterDef | null {
+  const pool = DRIFTERS.filter((d) => d.rarity === rarity)
+  if (pool.length === 0) return null
+  const total = pool.reduce((sum, d) => sum + d.weight, 0)
+  let roll = Math.random() * total
+  for (const def of pool) {
+    roll -= def.weight
+    if (roll <= 0) return def
+  }
+  return pool[pool.length - 1]
+}
+
+/** Any drifter at all, weighted across the whole pool. Only used by the admin
+ *  "spawn a random one" button — the game itself goes through the clocks. */
+function rollAnyDrifter(): DrifterDef {
+  const total = DRIFTERS.reduce((sum, d) => sum + d.weight, 0)
+  let roll = Math.random() * total
   for (const def of DRIFTERS) {
     roll -= def.weight
     if (roll <= 0) return def
@@ -58,8 +84,8 @@ export const useDrifterStore = defineStore('drifter', {
   state: () => ({
     active: [] as ActiveDrifter[],
     buffs: [] as DrifterActiveBuff[],
-    /** Seconds until the next spawn attempt. Counted down by the game tick. */
-    spawnCooldownSec: rollFirstDelaySec(),
+    /** Seconds until each rarity's next appearance. Counted down by the tick. */
+    spawnCooldowns: rollInitialCooldowns(),
     /** Reactive clock for the buff getters — a raw Date.now() inside a getter
      *  would never re-evaluate. Advanced once per second by the game tick. */
     drifterNow: Date.now(),
@@ -69,6 +95,9 @@ export const useDrifterStore = defineStore('drifter', {
     /** Bumped on every collect so the UI can replay its burst — the same type
      *  collected twice in a row must still trigger the effect. */
     lastCollect: { defId: '', at: 0, x: 0, y: 0, seq: 0 },
+    /** Bumped whenever a drifter left uncollected — the info card turns this
+     *  into a "got away" state instead of just vanishing mid-countdown. */
+    lastExpired: { defId: '', at: 0, seq: 0 },
     // ── Lifetime counters (Bard Stats catalog) ──
     totalDriftersSpawned: 0,
     totalDriftersCollected: 0,
@@ -123,26 +152,53 @@ export const useDrifterStore = defineStore('drifter', {
       this.expireFlownDrifters()
 
       if (this.spawningBlocked) return
-      this.spawnCooldownSec -= GAME_TICK_INTERVAL_MS / 1000
-      if (this.spawnCooldownSec > 0) return
-      this.spawnCooldownSec = rollSpawnDelaySec()
-      this.spawnDrifter()
+      this.tickSpawnClocks()
+    },
+
+    /**
+     * One clock per rarity. Clocks that come due in the same tick are served
+     * rarest first, and a tier that finds the sky full waits out a short retry
+     * instead of forfeiting its turn — otherwise the common types, which tick
+     * several times as often, would keep crowding the rare ones out.
+     */
+    tickSpawnClocks(): void {
+      const delta = GAME_TICK_INTERVAL_MS / 1000
+      const due: DrifterRarity[] = []
+      for (const rarity of RARITIES) {
+        this.spawnCooldowns[rarity] = (this.spawnCooldowns[rarity] ?? 0) - delta
+        if (this.spawnCooldowns[rarity] <= 0) due.push(rarity)
+      }
+      // RARITIES is already ordered rarest first, so `due` inherits that order.
+      for (const rarity of due) {
+        if (this.active.length >= DRIFTER_MAX_CONCURRENT) {
+          this.spawnCooldowns[rarity] = DRIFTER_SPAWN_RETRY_SEC
+          continue
+        }
+        const def = rollDrifterOfRarity(rarity)
+        const spawned = def ? this.spawnDrifter(def.id) : null
+        this.spawnCooldowns[rarity] = spawned ? rollIntervalSec(rarity) : DRIFTER_SPAWN_RETRY_SEC
+      }
     },
 
     /** Drop drifters whose flight has finished without being collected. */
     expireFlownDrifters(): void {
       const now = this.drifterNow
-      const remaining = this.active.filter((d) => now < d.spawnedAt + d.flightMs)
-      if (remaining.length !== this.active.length) {
-        this.totalDriftersMissed += this.active.length - remaining.length
-        this.active = remaining
+      const gone = this.active.filter((d) => now >= d.spawnedAt + d.flightMs)
+      if (gone.length === 0) return
+      this.totalDriftersMissed += gone.length
+      this.active = this.active.filter((d) => now < d.spawnedAt + d.flightMs)
+      const last = gone[gone.length - 1]
+      this.lastExpired = {
+        defId: last.defId,
+        at: Date.now(),
+        seq: this.lastExpired.seq + 1,
       }
     },
 
     /** Roll a type and send it on its way. Respects the concurrency cap. */
     spawnDrifter(defId?: string): ActiveDrifter | null {
       if (this.active.length >= DRIFTER_MAX_CONCURRENT) return null
-      const def = defId ? getDrifter(defId) : rollDrifterDef()
+      const def = defId ? getDrifter(defId) : rollAnyDrifter()
       if (!def) return null
 
       const drifter: ActiveDrifter = {
@@ -198,10 +254,7 @@ export const useDrifterStore = defineStore('drifter', {
         // Two floors so the reward is never a dead click: a fixed number of
         // clicks worth of chimes early on, the production window later.
         const fromCps = gameStore.chimesPerSecond * def.reward.chimesFromCpsSeconds
-        const capped = Math.min(
-          fromCps,
-          gameStore.chimesPerSecond * DRIFTER_CHIME_REWARD_CAP_SEC,
-        )
+        const capped = Math.min(fromCps, gameStore.chimesPerSecond * DRIFTER_CHIME_REWARD_CAP_SEC)
         const floor = gameStore.chimesPerClick * DRIFTER_CHIME_REWARD_MIN_CLICKS
         const gain = Math.max(capped, floor)
         gameStore.chimes += gain
@@ -286,14 +339,19 @@ export const useDrifterStore = defineStore('drifter', {
       // Clear the field first so the forced type is guaranteed to appear even
       // when a drifter is already mid-flight.
       this.active = []
-      this.spawnDrifter(defId)
-      this.spawnCooldownSec = rollSpawnDelaySec()
+      const spawned = this.spawnDrifter(defId)
+      // Push that rarity's clock back so the forced one is not immediately
+      // followed by the scheduled one of the same tier.
+      if (spawned) {
+        const def = getDrifter(spawned.defId)
+        if (def) this.spawnCooldowns[def.rarity] = rollIntervalSec(def.rarity)
+      }
     },
 
     clearAll(): void {
       this.active = []
       this.buffs = []
-      this.spawnCooldownSec = rollFirstDelaySec()
+      this.spawnCooldowns = rollInitialCooldowns()
     },
   },
 })

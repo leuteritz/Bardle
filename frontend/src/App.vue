@@ -26,6 +26,7 @@ import PauseOverlay from '@/components/idle/PauseOverlay.vue'
 import HeraldOverlay from '@/components/idle/HeraldOverlay.vue'
 import SupernovaTransition from '@/components/idle/sun/SupernovaTransition.vue'
 import DrifterLayer from '@/components/idle/drifter/DrifterLayer.vue'
+import DrifterInfoCard from '@/components/idle/drifter/DrifterInfoCard.vue'
 import ActiveBuffBar from '@/components/idle/drifter/ActiveBuffBar.vue'
 import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 
@@ -83,9 +84,11 @@ watch(
       </div>
     </div>
 
-    <!-- Drifters fly over the idle orbit, below every modal; the buff bar sits
-         above the bottom scoreboard strip and collects every timed effect. -->
+    <!-- Drifters fly over the idle orbit, below every modal. The info card sits
+         top-left under the auto-pick message and says what is out there and how
+         long; the buff bar above the scoreboard collects every timed effect. -->
     <DrifterLayer />
+    <DrifterInfoCard />
     <ActiveBuffBar />
 
     <MusicControlWidget />
