@@ -13,7 +13,10 @@ import {
   AUTO_PICK_ICON,
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
+  STAR_PHASE_MIN_DWELL_SECONDS,
   COMET_PHASE_DATA,
+  COMET_MIN_DWELL_SECONDS,
+  COMET_STAGE_RADII,
   STATS_TAB_ORBIT,
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
@@ -95,7 +98,33 @@ function stepAngle(i: number): number {
 }
 
 
+/* ── Marker meta ──────────────────────────────────────────────────
+   Every step on the arc carries its own record: how long the sun actually
+   spent there, how long it has to before it may leave, and how big it is
+   compared with the first star. Live seconds only ever apply to the step the
+   sun is standing on — everything else is history or still unwritten. */
+const DASH = '—'
+/** The first star's radius is the yardstick every other body is measured in. */
+const BASE_RADIUS = STAR_PHASE_DATA[0].radius
+
+/** Seconds the sun has been on the current step, ticking. */
+const liveSeconds = computed(() =>
+  Math.floor((now.value - (solarStore.phaseEnteredAt || now.value)) / 1000),
+)
+
+function spentLabel(banked: number, isCurrent: boolean): string {
+  const secs = banked + (isCurrent ? liveSeconds.value : 0)
+  return secs > 0 ? formatCompactDuration(secs * 1000) : DASH
+}
+
+/** Minimum dwell of a step, with every dwell-shortening upgrade applied. */
+function dwellLabel(secs: number | undefined): string {
+  if (secs === undefined) return DASH
+  return formatCompactDuration(secs * 1000 * solarStore.dwellTimeMultiplier)
+}
+
 const orbitDots = computed(() => {
+  const cometDone = !solarStore.isCometState
   const steps = [
     /* Step 0 — the Comet origin: a tiny rock, before any sun ever burned */
     {
@@ -109,8 +138,11 @@ const orbitDots = computed(() => {
       mid: COMET_PHASE_DATA.mid,
       edge: COMET_PHASE_DATA.edge,
       size: O.COMET_DOT_PCT,
-      done: !solarStore.isCometState,
+      done: cometDone,
       current: solarStore.isCometState,
+      spent: spentLabel(solarStore.cometSeconds, solarStore.isCometState),
+      dwell: dwellLabel(COMET_MIN_DWELL_SECONDS),
+      scale: (COMET_STAGE_RADII[solarStore.cometStage] ?? COMET_STAGE_RADII[0]) / BASE_RADIUS,
     },
     ...STAR_PHASE_DATA.map((p, i) => ({
       label: p.name,
@@ -125,19 +157,32 @@ const orbitDots = computed(() => {
       edge: p.edge,
       /* diameter true to the in-game sun proportions */
       size: p.radius * O.DOT_PCT_PER_RADIUS,
-      done: !solarStore.isCometState && i < solarStore.starPhase,
-      current: !solarStore.isCometState && i === solarStore.starPhase,
+      done: cometDone && i < solarStore.starPhase,
+      current: cometDone && i === solarStore.starPhase,
+      spent: spentLabel(
+        solarStore.phaseTimeHistory[i] ?? 0,
+        cometDone && i === solarStore.starPhase,
+      ),
+      dwell: dwellLabel(STAR_PHASE_MIN_DWELL_SECONDS[i]),
+      scale: p.radius / BASE_RADIUS,
     })),
   ]
   return steps.map((s, i) => {
     const rad = (stepAngle(i) * Math.PI) / 180
+    const x = 50 + O.RADIUS * Math.sin(rad)
+    const y = O.CENTER_Y - O.RADIUS * Math.cos(rad)
     return {
       ...s,
-      x: 50 + O.RADIUS * Math.sin(rad),
-      y: O.CENTER_Y - O.RADIUS * Math.cos(rad),
-      /* tooltips flip below the dot on the arc's lower third, so they never
-         leave the stage at the two ends of the ring */
-      below: Math.cos(rad) < -0.4,
+      x,
+      y,
+      step: `Phase ${i + 1} / ${totalSteps}`,
+      state: s.current ? 'Current' : s.done ? 'Passed' : 'Locked',
+      /* The card always grows toward the middle of the stage — downward for
+         markers on the upper half, and anchored by the near edge out on the
+         flanks. That is what keeps a card this wide fully on screen at every
+         point of the ring. */
+      below: y < O.CENTER_Y,
+      side: x < O.TIP_EDGE_PCT ? 'start' : x > 100 - O.TIP_EDGE_PCT ? 'end' : 'mid',
     }
   })
 })
@@ -434,6 +479,7 @@ const filteredAugCards = computed(() => {
         :style="{
           '--orbit-max': STATS_TAB_ORBIT.MAX_PX + 'px',
           '--orbit-max-compact': STATS_TAB_ORBIT.MAX_PX_COMPACT + 'px',
+          '--tip-w': STATS_TAB_ORBIT.TIP_WIDTH_PCT + 'cqmin',
         }"
       >
         <div ref="stageEl" class="sf-orbit">
@@ -533,7 +579,7 @@ const filteredAugCards = computed(() => {
             v-for="(dot, i) in orbitDots"
             :key="i"
             class="sf-orbit-node"
-            :class="{ 'is-below': dot.below }"
+            :class="[{ 'is-below': dot.below }, `is-side-${dot.side}`]"
             :style="{
               left: dot.x + '%',
               top: dot.y + '%',
@@ -558,8 +604,28 @@ const filteredAugCards = computed(() => {
               }"
             />
             <span class="sf-orbit-tip" :style="{ '--dot-color': dot.color }">
+              <span class="sf-tip-head">
+                <span class="sf-tip-step">{{ dot.step }}</span>
+                <span class="sf-tip-state" :class="`is-${dot.state.toLowerCase()}`">
+                  {{ dot.state }}
+                </span>
+              </span>
               <span class="sf-orbit-tip-name">{{ dot.label }}</span>
               <span class="sf-orbit-tip-astro">{{ dot.astro }}</span>
+              <span class="sf-tip-meta">
+                <span class="sf-tip-cell">
+                  <span class="sf-tip-key">Time here</span>
+                  <span class="sf-tip-num">{{ dot.spent }}</span>
+                </span>
+                <span class="sf-tip-cell">
+                  <span class="sf-tip-key">Min. dwell</span>
+                  <span class="sf-tip-num">{{ dot.dwell }}</span>
+                </span>
+                <span class="sf-tip-cell">
+                  <span class="sf-tip-key">Size</span>
+                  <span class="sf-tip-num">×{{ dot.scale.toFixed(1) }}</span>
+                </span>
+              </span>
             </span>
           </div>
         </div>
@@ -1057,9 +1123,14 @@ const filteredAugCards = computed(() => {
   }
 }
 
-/* Marker label on hover. Names on a ring either collide or leave the stage at
-   the flanks, so they only appear for the marker under the cursor — floating
-   above it, and below it on the arc's lower ends where there is no headroom. */
+/* ─ Marker card on hover ─
+   Seven records on one ring cannot all be visible at once — they would collide
+   and fall off the stage at the flanks — so the arc shows only the one under
+   the cursor, and shows it properly: step, state, both names and the three
+   numbers that describe the phase.
+   Placement is geometric, not guessed: the card always grows toward the middle
+   of the stage (see `below` / `side` in orbitDots), which is what keeps a card
+   this wide fully on screen at every point of the ring. */
 .sf-orbit-tip {
   position: absolute;
   left: 50%;
@@ -1068,14 +1139,21 @@ const filteredAugCards = computed(() => {
   z-index: 5;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 1px;
-  padding: 5px 11px;
+  width: 250px;
+  width: var(--tip-w);
+  padding: clamp(7px, 1.8cqmin, 18px) clamp(9px, 2.4cqmin, 24px)
+    clamp(8px, 2cqmin, 20px);
   background: #16140e;
   border: 2px solid #5c3310;
   border-radius: 4px;
+  /* the phase's own colour bleeds in from the top edge, so the card belongs to
+     the marker it describes instead of looking like a generic tooltip */
+  border-top: 3px solid var(--dot-color);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
   white-space: nowrap;
+  text-align: left;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.14s ease;
@@ -1084,23 +1162,114 @@ const filteredAugCards = computed(() => {
   bottom: auto;
   top: calc(100% + 11px);
 }
+/* Out on the flanks the card hangs off its near edge and grows inward */
+.sf-orbit-node.is-side-start .sf-orbit-tip {
+  left: 0;
+  transform: none;
+}
+.sf-orbit-node.is-side-end .sf-orbit-tip {
+  left: auto;
+  right: 0;
+  transform: none;
+}
 .sf-orbit-node:hover .sf-orbit-tip {
   opacity: 1;
 }
 
-.sf-orbit-tip-name {
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+.sf-tip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sf-tip-step {
+  font-size: 9px;
+  font-size: clamp(9px, 1.7cqmin, 16px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
+  color: #8a7a58;
+}
+
+/* State plaque — the three colours the whole game uses for done / live / shut */
+.sf-tip-state {
+  padding: 2px 7px;
+  font-size: 9px;
+  font-size: clamp(9px, 1.6cqmin, 15px);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 3px;
+}
+.sf-tip-state.is-passed {
+  color: #7ac060;
+  background: #16200f;
+  border: 1px solid #3a5a28;
+}
+.sf-tip-state.is-current {
+  color: #1a1408;
+  background: var(--dot-color);
+}
+.sf-tip-state.is-locked {
+  color: #6a5a3a;
+  background: #14120c;
+  border: 1px solid #2c1806;
+}
+
+.sf-orbit-tip-name {
+  font-size: 17px;
+  font-size: clamp(17px, 4cqmin, 38px);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
   color: var(--dot-color);
 }
 
 .sf-orbit-tip-astro {
   font-size: 10px;
+  font-size: clamp(10px, 1.8cqmin, 17px);
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #8a7a58;
+}
+
+/* Three readouts in a row under a hairline — the phase in numbers.
+   Equal columns, not space-between: on a 2K card the latter pushed the three
+   apart until they read as three unrelated things. */
+.sf-tip-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: start;
+  gap: clamp(8px, 2.2cqmin, 22px);
+  margin-top: clamp(6px, 1.5cqmin, 15px);
+  padding-top: clamp(5px, 1.3cqmin, 13px);
+  border-top: 1px solid #2c1806;
+}
+
+.sf-tip-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sf-tip-key {
+  font-size: 8.5px;
+  font-size: clamp(8.5px, 1.5cqmin, 14px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6a5a3a;
+}
+
+.sf-tip-num {
+  font-size: 13px;
+  font-size: clamp(13px, 2.8cqmin, 27px);
+  font-weight: 900;
+  line-height: 1.1;
+  color: #e8e4d8;
+  font-variant-numeric: tabular-nums;
 }
 
 /* TEMP: admin dwell-skip chip — floated into the dial's top-right corner so

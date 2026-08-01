@@ -2734,6 +2734,13 @@ export const STATS_TAB_ORBIT = {
    *  disc (whose top edge is at 29%) — the one band inside the ring that no
    *  body ever occupies, at any phase. */
   IDENT_TOP_PCT: 11.5,
+  /** Width (% of the stage) of a marker's hover card. It carries four readouts
+   *  in a row, so it is wide — which is why the card anchors to whichever edge
+   *  keeps it on the stage instead of always centring on its marker. */
+  TIP_WIDTH_PCT: 64,
+  /** Markers further out than this (or than 100 − this) anchor their card by
+   *  the near edge and let it grow toward the middle of the stage. */
+  TIP_EDGE_PCT: 34,
   /** dot diameter (% of the stage) = phase radius × this — keeps the orbit dots
    *  true to the in-game sun proportions (1.9%…7%) */
   DOT_PCT_PER_RADIUS: 0.05,
