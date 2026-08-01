@@ -66,7 +66,6 @@
     <div
       class="star-sys-layer star-sys-front"
       aria-hidden="true"
-      :style="{ '--hover-dim-opacity': HOVER_DIM_OPACITY }"
     >
       <canvas ref="hintFrontCanvas" class="orbit-hints-canvas" />
 
@@ -283,6 +282,7 @@ import {
   STAR_BURST_DELAY_BETWEEN_SHOTS,
   BOSS_NOVA_INTERVAL_MS,
   HOVER_DIM_OPACITY,
+  HOVER_DIM_FADE_MS,
   SUN_BG_DISC_RADIUS_FACTOR,
   SUN_AIM_LOCK_RADIUS_FACTOR,
 } from '../../../config/constants'
@@ -321,8 +321,27 @@ function isStarHoverDimmed(starId: string): boolean {
   return starFocusActive.value && starId !== starGroupStore.hoveredTimerStarId
 }
 
+// Weiche Blende OHNE CSS-Transition — gleiches Muster wie in ChampionOrbit und
+// PlanetOrbit: der Wert wird pro Stern gehalten, in applyFrames() Richtung Ziel
+// gezogen und in die ohnehin pro Frame gesetzte Inline-Opacity gerechnet. Eine
+// CSS-Transition auf opacity würde hier jeden Frame neu anlaufen, weil dieselben
+// Elemente pro Frame ein neues transform bekommen — siehe HOVER_DIM_FADE_MS.
+const starDimFactors = new Map<string, number>()
+const STAR_DIM_SPAN = Math.max(0.001, 1 - HOVER_DIM_OPACITY)
+
+/** Aktueller Blendenwert ohne Fortschreiten — für den initialen Vue-Render. */
 function starHoverDimFactor(starId: string): number {
-  return isStarHoverDimmed(starId) ? HOVER_DIM_OPACITY : 1
+  return starDimFactors.get(starId) ?? (isStarHoverDimmed(starId) ? HOVER_DIM_OPACITY : 1)
+}
+
+function stepStarDimFactor(starId: string, dt: number): number {
+  const target = isStarHoverDimmed(starId) ? HOVER_DIM_OPACITY : 1
+  const current = starDimFactors.get(starId) ?? target
+  const maxStep = (dt / HOVER_DIM_FADE_MS) * STAR_DIM_SPAN
+  const diff = target - current
+  const next = Math.abs(diff) <= maxStep ? target : current + Math.sign(diff) * maxStep
+  starDimFactors.set(starId, next)
+  return next
 }
 
 // Stern-Orbit-Tracks: beim Stern-Fokus bleibt nur die Bahn des gehoverten
@@ -498,6 +517,8 @@ function sizeHintCanvases() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+let lastDimTs = 0
+
 function applyFrames() {
   if (++sweepCounter >= 300) {
     sweepCounter = 0
@@ -506,7 +527,17 @@ function applyFrames() {
         if (!el.isConnected) map.delete(id)
       }
     }
+    // Blendenwerte despawnter Sterne mitnehmen, sonst wächst die Map mit
+    // jedem Stern, der je im Orbit war.
+    const alive = new Set(starRenders.value.map((s) => s.id))
+    for (const id of starDimFactors.keys()) {
+      if (!alive.has(id)) starDimFactors.delete(id)
+    }
   }
+
+  const nowTs = performance.now()
+  const dt = lastDimTs === 0 ? 16 : Math.min(nowTs - lastDimTs, 50)
+  lastDimTs = nowTs
 
   for (const star of starRenders.value) {
     const s = starSize(star.starType)
@@ -516,8 +547,8 @@ function applyFrames() {
     // (inkl. der teuren box-shadows) auslösen.
     const starTransform = `translate(${star.x - half}px, ${star.y - half}px) scale(${star.scale.toFixed(2)})`
     const focus = isFocusStar(star.id)
-    const starOpacity = focus ? '1' : star.opacity.toFixed(3)
-    const dimFactor = starHoverDimFactor(star.id)
+    const dimFactor = stepStarDimFactor(star.id, dt)
+    const baseOpacity = focus ? 1 : star.opacity
 
     if (star.isBehind && !focus) {
       const body = starBackEls.get(star.id)
@@ -530,18 +561,21 @@ function applyFrames() {
       const wrap = starWrapEls.get(star.id)
       if (wrap) {
         wrap.style.transform = starTransform
-        wrap.style.opacity = starOpacity
+        // Die Blende sitzt hier am Wrap statt als CSS-Opacity am .star-body:
+        // ein Wert, ein Element, kein zweiter Transparenz-Layer im Subtree.
+        wrap.style.opacity = (baseOpacity * dimFactor).toFixed(3)
       }
       const summary = summaryEls.get(star.id)
       if (summary) {
         summary.style.transform = `translate(${star.x}px, ${star.y + half + 58}px) translateX(-50%)`
+        summary.style.opacity = dimFactor.toFixed(3)
       }
     }
 
     const count = countEls.get(star.id)
     if (count) {
       count.style.transform = `translate(${star.x}px, ${star.y - half - 25}px) translateX(-50%) translateY(-100%)`
-      count.style.opacity = focus ? '1' : (star.opacity * dimFactor).toFixed(3)
+      count.style.opacity = (baseOpacity * dimFactor).toFixed(3)
     }
   }
 
@@ -1222,7 +1256,7 @@ function starWrapStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   return {
     transform: `translate(${star.x - s / 2}px, ${star.y - s / 2}px) scale(${star.scale.toFixed(2)})`,
-    opacity: isFocusStar(star.id) ? '1' : String(star.opacity.toFixed(3)),
+    opacity: ((isFocusStar(star.id) ? 1 : star.opacity) * starHoverDimFactor(star.id)).toFixed(3),
     width: `${s}px`,
     height: `${s}px`,
   }
@@ -1245,7 +1279,9 @@ function starBodyVisualStyle(star: StarRenderEntry) {
     '--ring-inset': `-${ringInset}px`,
     // Fokussierter Stern: kein Behind-Blur — er soll vor der Sonne klar lesbar sein
     filter: (isFocusStar(star.id) ? '' : star.filterStyle) || undefined,
-    transition: 'filter 0.3s ease, opacity 0.15s ease',
+    // Nur der Filter-Umschlag darf weich sein — die Opacity wird pro Frame
+    // inline geschrieben, eine Transition darauf liefe jeden Frame neu an.
+    transition: 'filter 0.3s ease',
   }
 }
 
@@ -1590,16 +1626,11 @@ function starCountStyle(star: StarRenderEntry) {
 
 /* ── Hover-Fokus (Stern gehovert oder Champion-/Planeten-Hover im Command
    Panel): nicht fokussierte Sterne ausblenden — gleiches Muster wie bei
-   Champions und Planeten (--hover-dim-opacity kommt vom Layer-Div). ── */
+   Champions und Planeten. ── */
+/* Die Blende selbst läuft über die pro Frame gesetzte Inline-Opacity am Wrap
+   (applyFrames → stepStarDimFactor); hier bleibt nur, was kein Malen kostet. */
 .star-body-wrap--hover-dimmed {
   pointer-events: none;
-}
-
-/* Nur Opacity: ein zusätzlicher Filter auf dem pro Frame bewegten Sternkörper
-   verteuert jedes Neurastern, während er bei --hover-dim-opacity = 0 ohnehin
-   unsichtbar ist. */
-.star-body-wrap--hover-dimmed .star-body {
-  opacity: var(--hover-dim-opacity, 0.08);
 }
 
 .star-body--champion::after,
@@ -1725,13 +1756,14 @@ function starCountStyle(star: StarRenderEntry) {
   cursor: pointer;
   z-index: 8;
   /* Eigener Compositor-Layer: bewegt sich pro Frame per transform,
-     ohne will-change malt der Browser die Box samt Schatten jedes Mal neu */
+     ohne will-change malt der Browser die Box samt Schatten jedes Mal neu.
+     Bewusst OHNE transition auf opacity: dieselbe Box bekommt pro Frame ein
+     neues transform, eine laufende Opacity-Transition liefe damit jeden Frame
+     neu an. Die Blende kommt aus applyFrames als Inline-Opacity. */
   will-change: transform;
-  transition: opacity 150ms ease;
 }
 
 .star-reward-summary--hover-dimmed {
-  opacity: var(--hover-dim-opacity, 0.08);
   pointer-events: none;
 }
 

@@ -1261,21 +1261,33 @@ export default defineComponent({
 /* ── Role-Hover Lift Effect (Command Panel slot hover) ──────────────────── */
 /* `translate` (CSS Transforms Level 2) composes independently with the
    JS-set inline `transform: translate(X, Y)` — no conflict. */
-/* Animiert wird ausschließlich `translate` — reine Compositor-Arbeit. Der
-   drop-shadow bleibt als Aussehen erhalten, schaltet aber einmalig um statt
-   0.35s lang zu interpolieren: jeder Zwischenschritt hätte den Avatar samt
-   Schatten neu gerastert, während er sich ohnehin pro Frame bewegt. */
+/* Animiert wird ausschließlich `translate` — reine Compositor-Arbeit.
+   Der Lift-Schatten liegt bewusst als `box-shadow` statt als
+   `filter: drop-shadow()` an: ein Filter zwingt den Browser, für JEDEN
+   hervorgehobenen Avatar eine eigene Rendering-Surface anzulegen, und das
+   gleichzeitig für alle Champions der Rolle im selben Frame — genau der
+   Aufschlag, der beim Command-Panel-Hover als Einbruch sichtbar wird. Der
+   Avatar ist ein Kreis (border-radius: 50%), deshalb ist der box-shadow
+   optisch derselbe Schatten. Die Rollenfarben-Glows aus --role-colored
+   werden mitgeführt, weil box-shadow nicht kaskadiert, sondern ersetzt. */
 .champion-orbit-avatar--role-hover {
   translate: 0 -5px;
-  filter: drop-shadow(0 6px 12px color-mix(in srgb, var(--hover-role-color, #c89040) 55%, transparent));
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent),
+    0 0 20px color-mix(in srgb, var(--role-color, #c89040) 30%, transparent),
+    0 6px 12px color-mix(in srgb, var(--hover-role-color, #c89040) 55%, transparent);
   transition: translate 0.35s ease;
 }
 
+/* Nur der Main der gehoverten Rolle — ein einzelnes Element, dessen
+   brightness() vertretbar ist; der Schatten bleibt trotzdem box-shadow. */
 .champion-orbit-avatar--role-hover-primary {
   translate: 0 -10px;
-  filter:
-    brightness(1.2)
-    drop-shadow(0 8px 20px color-mix(in srgb, var(--hover-role-color, #c89040) 85%, transparent));
+  filter: brightness(1.2);
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent),
+    0 0 20px color-mix(in srgb, var(--role-color, #c89040) 30%, transparent),
+    0 8px 20px color-mix(in srgb, var(--hover-role-color, #c89040) 85%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
