@@ -2712,19 +2712,15 @@ export const STAR_PHASE_MIN_DWELL_SECONDS = [600, 1_800, 5_400, 14_400, 86_400]
 export const STATS_TAB_ORBIT = {
   /** side of the square viewBox — reference frame for every value below */
   VIEW: 100,
-  /** Vertical centre of the dial (% of the stage). Deliberately ABOVE the
-   *  geometric middle: the ring's open bottom carries the phase caption (name,
-   *  step count, both clocks), and a centred ring left that block barely 16% of
-   *  the stage. Lifting the whole dial hands the caption ~27% — room for type
-   *  that is actually readable — without taking a pixel off the ring's radius.
-   *  The ceiling is the topmost marker: its hover label rides above it and may
-   *  only overhang the column by what CAPTION overflow-clip-margin allows. */
-  CENTER_Y: 41,
-  /** Radius of the phase orbit. Sized against the two things that bind it: the
-   *  outermost markers must keep their hover labels inside the column (the body
-   *  clips), and the caption below the arc ends needs its ~26% of stage height.
-   *  37 is the last value where both still hold. */
-  RADIUS: 37,
+  /** Vertical centre of the dial (% of the stage). Everything the dial says now
+   *  lives INSIDE the ring — identity above the sun, the evolve gate on it — so
+   *  the ring no longer has to leave a band free at the bottom and sits dead
+   *  centre again. */
+  CENTER_Y: 50,
+  /** Radius of the phase orbit. With no caption block below the arc, the ring
+   *  claims the stage: the binding constraint is the outermost markers, whose
+   *  hover labels must stay inside what the body's overflow-clip-margin allows. */
+  RADIUS: 42,
   /** orbit line thickness */
   STROKE: 1.6,
   /** angle of the first step (the comet), i.e. the lower-left end of the arc */
@@ -2733,11 +2729,11 @@ export const STATS_TAB_ORBIT = {
    *  phase caption and dwell clock, and an open arc reads as a progression
    *  instead of a cycle */
   SPAN_DEG: 280,
-  /** Clear air (% of the stage) between the two arc ends and the caption block
-   *  that starts underneath them. Measured, not guessed: the arc's last marker
-   *  is the widest body on the ring (7% across), so its disc reaches ~3.5%
-   *  past the end point — the caption's top corners have to clear that. */
-  CAPTION_GAP_PCT: 4,
+  /** Top edge (% of the stage) of the identity block above the sun. Sits below
+   *  the ring's topmost marker (which reaches ~9.6%) and above the largest sun
+   *  disc (whose top edge is at 29%) — the one band inside the ring that no
+   *  body ever occupies, at any phase. */
+  IDENT_TOP_PCT: 11.5,
   /** dot diameter (% of the stage) = phase radius × this — keeps the orbit dots
    *  true to the in-game sun proportions (1.9%…7%) */
   DOT_PCT_PER_RADIUS: 0.05,

@@ -94,11 +94,6 @@ function stepAngle(i: number): number {
   return O.START_DEG + (i * O.SPAN_DEG) / (totalSteps - 1)
 }
 
-/** Height of the two arc ends — below them the ring is open all the way to the
- *  stage's edge, which is exactly the room the caption block claims. */
-const ORBIT_ARC_END_Y =
-  O.CENTER_Y - O.RADIUS * Math.cos((stepAngle(totalSteps - 1) * Math.PI) / 180)
-const CAPTION_TOP_PCT = ORBIT_ARC_END_Y + O.CAPTION_GAP_PCT
 
 const orbitDots = computed(() => {
   const steps = [
@@ -221,16 +216,16 @@ const phaseAge = computed(() => {
   return `${s}s`
 })
 
-/* ── The evolve gate ─────────────────────────────────────────────
-   The dial reads as two clocks side by side: how long this phase has lasted,
-   and how much longer it has to. Whether the solar branches are high enough is
-   the Solar Shop's business — the dial only ever counts TIME, and the sun
-   itself lights up the moment nothing at all is in the way. */
+/* ── The evolve gate, worn by the sun ────────────────────────────
+   Everything about evolving now sits on the body it happens to: the chip rides
+   the disc's lower edge and reads as a countdown, then as the call to act.
+   Whether the solar branches are high enough is the Solar Shop's business —
+   the dial only ever counts TIME. */
 const canEvolveNow = computed(() => solarStore.canUpgradeStar)
 
 interface EvolveGate {
   value: string
-  label: string
+  icon: string
   tone: 'wait' | 'met' | 'max'
   title: string
 }
@@ -239,22 +234,22 @@ const gate = computed<EvolveGate>(() => {
   if (isMax.value)
     return {
       value: 'Fully Evolved',
-      label: 'final phase',
+      icon: 'game-icons:laurel-crown',
       tone: 'max',
       title: 'This sun has reached the final phase of its life',
     }
   if (dwellMet.value)
     return {
-      value: '✓ Ready',
-      label: 'until evolve',
+      value: 'Evolve',
+      icon: 'game-icons:upgrade',
       tone: 'met',
       title: canEvolveNow.value
-        ? 'Every requirement is met — click the sun to evolve'
+        ? 'Every requirement is met — click to open the Solar Shop and evolve'
         : 'The time in this phase is served — open the Solar Shop to see what else this evolve needs',
     }
   return {
     value: formatCompactDuration(dwellRemainingMs.value),
-    label: 'until evolve',
+    icon: 'game-icons:sands-of-time',
     tone: 'wait',
     title: `${formatCompactDuration(dwellElapsedMs.value)} of ${formatCompactDuration(dwellRequiredMs.value)} in this phase — time the sun must spend before it can evolve`,
   }
@@ -482,10 +477,17 @@ const filteredAugCards = computed(() => {
             />
           </svg>
 
+          <!-- Who the sun is, in the one band inside the ring that no body ever
+               reaches: below the topmost marker, above the largest disc. -->
+          <div class="sf-orbit-ident" :style="{ top: STATS_TAB_ORBIT.IDENT_TOP_PCT + '%' }">
+            <span class="sf-ident-step">{{ phaseDisplayLabel }}</span>
+            <span class="sf-ident-name" :title="phaseAstroName">{{ phaseName }}</span>
+          </div>
+
           <!-- The player's actual celestial body, same renderer as the orbit view.
-               It is also the evolve button: once every requirement is met the core
-               rings out and wears the call-to-action, so the eye lands on the sun
-               instead of on a control parked somewhere below the dial. -->
+               It is also the evolve control: the chip on its lower edge counts the
+               phase down and turns into the call to act, so everything about
+               evolving happens on the body it happens to. -->
           <div
             class="sf-orbit-sun"
             :class="{ 'is-ready': canEvolveNow }"
@@ -504,35 +506,26 @@ const filteredAugCards = computed(() => {
             <template v-if="canEvolveNow">
               <span class="sf-sun-ring" aria-hidden="true"></span>
               <span class="sf-sun-ring sf-sun-ring--late" aria-hidden="true"></span>
-              <span class="sf-sun-cta">
-                <Icon icon="game-icons:upgrade" width="15" height="15" />
-                Evolve
-              </span>
             </template>
+
+            <button
+              class="sf-sun-cta"
+              type="button"
+              :class="[`is-${gate.tone}`, { 'is-live': canEvolveNow }]"
+              :title="gate.title"
+              @click.stop="uiStore.setBardTab('shop')"
+            >
+              <Icon :icon="gate.icon" width="15" height="15" />
+              {{ gate.value }}
+            </button>
           </div>
 
-          <!-- Phase identity + the one thing left before evolving, filling the
-               arc's open bottom — the only place on the ring with no marker. -->
-          <div class="sf-orbit-caption" :style="{ top: CAPTION_TOP_PCT + '%' }">
-            <span class="sf-cap-name" :title="phaseAstroName">{{ phaseName }}</span>
-            <span class="sf-cap-step">{{ phaseDisplayLabel }}</span>
-            <div class="sf-cap-clocks">
-              <div class="sf-cap-cell" :title="`Time spent in the ${phaseName} phase`">
-                <span class="sf-cap-lbl">In Phase</span>
-                <span class="sf-cap-val">{{ phaseAge ?? '—' }}</span>
-              </div>
-              <span class="sf-cap-split" aria-hidden="true"></span>
-              <button
-                class="sf-cap-cell sf-cap-cell--act"
-                type="button"
-                :class="`is-${gate.tone}`"
-                :title="gate.title"
-                @click.stop="uiStore.setBardTab('shop')"
-              >
-                <span class="sf-cap-lbl">{{ gate.label }}</span>
-                <span class="sf-cap-val">{{ gate.value }}</span>
-              </button>
-            </div>
+          <!-- How long this phase has already lasted — the dial's log book, parked
+               on the floor of the arc's open bottom so it sits right above the
+               augment deck's rule. -->
+          <div class="sf-orbit-age" :title="`Time spent in the ${phaseName} phase`">
+            <span class="sf-age-lbl">In Phase</span>
+            <span class="sf-age-val">{{ phaseAge ?? '—' }}</span>
           </div>
 
           <!-- Phase markers riding the arc -->
@@ -799,10 +792,9 @@ const filteredAugCards = computed(() => {
 }
 
 /* ─ Evolve, announced by the sun itself ─
-   Two rings expand out of the core, half a cycle apart, and a chip rides the
-   disc's lower edge. Both animate transform + opacity ONLY, so the whole
-   announcement stays compositor work — and it exists at most once on screen,
-   for the seconds between "ready" and the player's click. */
+   Two rings expand out of the core, half a cycle apart. Both animate transform
+   + opacity ONLY, so the announcement stays compositor work — and it exists at
+   most once on screen, for the seconds between "ready" and the player's click. */
 .sf-sun-ring {
   position: absolute;
   inset: 0;
@@ -819,14 +811,16 @@ const filteredAugCards = computed(() => {
     transform: scale(1);
     opacity: 0.9;
   }
+  /* stops short of the identity block above the disc */
   100% {
-    transform: scale(1.5);
+    transform: scale(1.35);
     opacity: 0;
   }
 }
 
-/* Chip straddling the sun's lower edge — the evolve action, where the eye
-   already is. Sized off the dial so it never becomes a speck on 4K. */
+/* Chip straddling the sun's lower edge — the evolve gate, on the body it acts
+   on. It counts the phase down, then becomes the call to act. Sized off the
+   dial so it never becomes a speck on 4K. */
 .sf-sun-cta {
   position: absolute;
   left: 50%;
@@ -844,15 +838,29 @@ const filteredAugCards = computed(() => {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  border-radius: 4px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.14s;
+}
+/* Waiting: a dark plate, readable against any phase colour behind it */
+.sf-sun-cta.is-wait {
+  color: #e8e4d8;
+  background: #16130c;
+  border: 1px solid #5c3310;
+}
+.sf-sun-cta.is-met {
   color: #f0ffe0;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #6ec040;
-  border-radius: 4px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-  transition: transform 0.14s;
 }
-.sf-orbit-sun.is-ready:hover .sf-sun-cta {
+.sf-sun-cta.is-max {
+  color: #f0e0a0;
+  background: #1e1a06;
+  border: 1px solid #e8c040;
+}
+.sf-sun-cta:hover {
   transform: translate(-50%, -50%) scale(1.06);
 }
 /* the icon rides the chip's font size instead of its own fixed box */
@@ -862,15 +870,13 @@ const filteredAugCards = computed(() => {
   flex-shrink: 0;
 }
 
-/* ─ Caption in the arc's open bottom ─
-   Who the sun is, which step of seven it stands on, and the one thing left
-   before it evolves — the three readouts that used to sit in a row BELOW the
-   dial and cost it a third of its height.
-   Everything sizes itself off the DIAL (cqmin of the stage container), not off
-   the viewport: the dial is ~420px on Full HD but over 700px on 2K, so a fixed
-   px size that reads right on one is a speck on the other. Being absolutely
-   placed, growing it moves nothing — below the arc ends the stage is empty. */
-.sf-orbit-caption {
+/* ─ Identity, above the sun ─
+   Which step of seven, and who the sun is on it. Everything sizes itself off
+   the DIAL (cqmin of the stage container), not off the viewport: the dial is
+   ~390px on Full HD but over 600px on 2K, so a fixed px size that reads right
+   on one is a speck on the other. Being absolutely placed, growing it moves
+   nothing — the band it sits in is empty at every phase. */
+.sf-orbit-ident {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
@@ -879,30 +885,14 @@ const filteredAugCards = computed(() => {
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  /* Below the arc ends the ring is gone, so the block owns the full stage
-     width — which is what lets the two clocks stand side by side instead of
-     stacking and eating the height the type needs. */
-  width: 96%;
+  width: 70%;
   text-align: center;
-  /* The block's top corners reach under the two arc ends, whose markers carry
-     generous invisible hitboxes for their labels. Only the readouts themselves
-     take the pointer, so hovering the last phase still shows ITS name. */
+  /* the ring's markers reach into this band's corners and carry generous hover
+     hitboxes — only the name itself takes the pointer, for its tooltip */
   pointer-events: none;
 }
 
-.sf-cap-name {
-  pointer-events: auto;
-  font-size: 24px;
-  font-size: clamp(23px, 6.6cqmin, 58px);
-  line-height: 1.05;
-  letter-spacing: 0.04em;
-  color: var(--phase-primary);
-  text-shadow: 0 0 10px var(--phase-glow);
-  white-space: nowrap;
-  cursor: help;
-}
-
-.sf-cap-step {
+.sf-ident-step {
   font-size: 11px;
   font-size: clamp(11px, 2.1cqmin, 20px);
   font-weight: 700;
@@ -912,41 +902,48 @@ const filteredAugCards = computed(() => {
   white-space: nowrap;
 }
 
-/* ─ The two clocks ─
-   How long this phase has lasted, and how much longer it has to. Side by side
-   under a hairline, so the block reads as "who" over "how long". */
-.sf-cap-clocks {
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: clamp(12px, 3.4cqmin, 34px);
-  margin-top: clamp(5px, 1.4cqmin, 14px);
-  padding-top: clamp(5px, 1.3cqmin, 13px);
-  border-top: 1px solid #2c1806;
+.sf-ident-name {
+  pointer-events: auto;
+  font-size: 26px;
+  font-size: clamp(25px, 7cqmin, 62px);
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  color: var(--phase-primary);
+  text-shadow: 0 0 10px var(--phase-glow);
+  white-space: nowrap;
+  cursor: help;
 }
 
-.sf-cap-cell {
+/* ─ Time in phase, on the floor of the arc ─
+   The dial's log book: no gate, no countdown, just how long this sun has been
+   what it is. Anchored to the stage's bottom edge so it sits directly above
+   the augment deck's rule instead of floating in the ring. */
+.sf-orbit-age {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  min-width: 0;
-  padding: 0;
-  background: transparent;
-  pointer-events: auto;
+  width: 96%;
+  text-align: center;
   cursor: help;
 }
-.sf-cap-cell--act {
-  cursor: pointer;
+
+.sf-age-lbl {
+  font-size: 10px;
+  font-size: clamp(10px, 1.9cqmin, 18px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #6a5a3a;
+  white-space: nowrap;
 }
 
-/* Hairline between the two — the dial's own divider, not a border on a cell */
-.sf-cap-split {
-  width: 1px;
-  background: #2c1806;
-}
-
-.sf-cap-val {
+.sf-age-val {
   font-size: 20px;
   font-size: clamp(19px, 5.4cqmin, 48px);
   font-weight: 900;
@@ -956,27 +953,6 @@ const filteredAugCards = computed(() => {
   text-shadow: 0 0 8px rgba(232, 228, 216, 0.35);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-.is-met .sf-cap-val {
-  color: #7ac060;
-  text-shadow: 0 0 8px rgba(82, 184, 48, 0.55);
-}
-.is-max .sf-cap-val {
-  color: #e8c040;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
-}
-
-.sf-cap-lbl {
-  font-size: 10px;
-  font-size: clamp(10px, 1.9cqmin, 18px);
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #6a5a3a;
-  white-space: nowrap;
-}
-.sf-cap-cell--act:hover .sf-cap-lbl {
-  color: #8a7a52;
 }
 
 /* ─ Phase markers riding the arc ─
