@@ -3863,3 +3863,131 @@ export const RESOURCE_STAR_COLORS: [number, number, number][] = [
   [204, 196, 255], // B-type  — pale violet-white (hot, Rigel-class)
   [255, 214, 162], // K-type  — warm buff        (subdued, not orange)
 ]
+
+// ── Drifters (klickbare Objekte im Idle-Orbit) ──────────────────────────────
+// Ein Drifter zieht in ~10-18 s über den Bildschirm, wird beim Klick
+// eingesammelt und zahlt sofort und/oder als zeitlich begrenzter Buff aus.
+// Spawn/Flug leben im drifterStore; die Bahn kommt aus DRIFTER_ROUTES.
+
+/** Wartezeit bis zum nächsten Spawn-Versuch (Sekunden, gleichverteilt). */
+export const DRIFTER_SPAWN_INTERVAL_MIN_SEC = 55
+export const DRIFTER_SPAWN_INTERVAL_MAX_SEC = 130
+
+/** Vorlauf nach Spielstart bzw. nach dem Laden, bevor der erste Drifter kommt. */
+export const DRIFTER_FIRST_DELAY_MIN_SEC = 25
+export const DRIFTER_FIRST_DELAY_MAX_SEC = 70
+
+/** Höchstens so viele Drifter fliegen gleichzeitig — bewusst knapp: jedes
+ *  Objekt ist ein eigener DOM-Knoten mit eigener Frame-Schleife, und zwei
+ *  gleichzeitige Klickziele im vollen Orbit-Bild lesen sich als Unruhe. */
+export const DRIFTER_MAX_CONCURRENT = 1
+
+/** Deckel auf der Sofort-Auszahlung: so viele Sekunden Produktion maximal,
+ *  unabhängig davon, was der Drifter-Typ verspricht. Verhindert, dass ein
+ *  einzelner Klick bei extremer CPS die gesamte Progression überspringt. */
+export const DRIFTER_CHIME_REWARD_CAP_SEC = 300
+
+/** Mindest-Auszahlung eines Chime-Drifters, damit er in der Frühphase (CPS≈0)
+ *  nicht als leerer Klick endet — Vielfaches des aktuellen Klickwerts. */
+export const DRIFTER_CHIME_REWARD_MIN_CLICKS = 25
+
+/** Randmarkierung: so viele ms vor dem Erscheinen pingt der Bildschirmrand in
+ *  Flugrichtung, damit ein Drifter nicht unbemerkt durchrutscht. */
+export const DRIFTER_EDGE_PING_LEAD_MS = 1400
+
+/** Anteil der Flugzeit, über den der Drifter ein- bzw. ausblendet. */
+export const DRIFTER_FADE_IN_FRAC = 0.08
+export const DRIFTER_FADE_OUT_FRAC = 0.14
+
+/** Nachlaufzeit der Einsammel-Animation, bevor der Knoten entfernt wird. */
+export const DRIFTER_COLLECT_FX_MS = 620
+
+/** Anzahl der Funken beim Einsammeln (Stern-Explosion am Klickpunkt). */
+export const DRIFTER_BURST_PARTICLES = 10
+
+/** Flugbahnen in normierten Feldkoordinaten (0..1 der Spielfläche zwischen
+ *  Header und Bottom-Bar). Start- und Endpunkt liegen absichtlich außerhalb
+ *  [0,1], damit der Drifter herein- und herausfliegt statt aufzupoppen.
+ *  ALLE Bahnen halten Abstand zur Bildmitte — dort sitzt die Sonne samt
+ *  Klickfläche, und ein Drifter darüber würde zwei Klickziele stapeln. */
+export const DRIFTER_ROUTES: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>> = [
+  // Oberer Bogen, links → rechts
+  [
+    { x: -0.12, y: 0.3 },
+    { x: 0.28, y: 0.11 },
+    { x: 0.7, y: 0.15 },
+    { x: 1.12, y: 0.34 },
+  ],
+  // Unterer Bogen, rechts → links
+  [
+    { x: 1.12, y: 0.68 },
+    { x: 0.7, y: 0.88 },
+    { x: 0.3, y: 0.84 },
+    { x: -0.12, y: 0.66 },
+  ],
+  // Linker Flankenbogen: herein und hinaus jeweils über die linke Kante.
+  // Die Flanken treten NIE oben oder unten aus — unten stehen die erhobenen
+  // HUD-Panels (Minimap links, Command rechts), oben der Header. Ein senkrechter
+  // Ein- oder Austritt schöbe den größten Körper (Leviathan, 128px) zwangsläufig
+  // dahinter, wo er weder sichtbar noch klickbar ist.
+  [
+    { x: -0.14, y: 0.2 },
+    { x: 0.1, y: 0.36 },
+    { x: 0.12, y: 0.6 },
+    { x: -0.14, y: 0.74 },
+  ],
+  // Rechter Flankenbogen — Spiegelbild des linken
+  [
+    { x: 1.14, y: 0.74 },
+    { x: 0.9, y: 0.6 },
+    { x: 0.88, y: 0.34 },
+    { x: 1.14, y: 0.18 },
+  ],
+  // Weiter Bogen links herum, oben → unten
+  [
+    { x: -0.12, y: 0.14 },
+    { x: 0.2, y: 0.32 },
+    { x: 0.26, y: 0.74 },
+    { x: 0.58, y: 1.12 },
+  ],
+  // Flacher Durchzug ganz oben
+  [
+    { x: -0.12, y: 0.18 },
+    { x: 0.34, y: 0.06 },
+    { x: 0.66, y: 0.06 },
+    { x: 1.12, y: 0.18 },
+  ],
+]
+
+/** Sicherheitsradius um die Bildmitte in Anteilen der kleineren Feldkante.
+ *  Wird nach dem Auswerten der Bahn angewandt: liegt ein Punkt trotz Routen-
+ *  Wahl zu nah an der Sonne, wird er radial nach außen geschoben. Fängt
+ *  extreme Seitenverhältnisse ab, bei denen 1 % Feldbreite ≠ 1 % Feldhöhe. */
+export const DRIFTER_CENTER_CLEARANCE = 0.3
+
+/** Feld-Ränder in px: oben unter dem Header, unten über der Bottom-Bar.
+ *  Der Drifter fliegt nur dazwischen, sonst verschwände er unter dem HUD. */
+export const DRIFTER_FIELD_TOP_PX = 120
+export const DRIFTER_FIELD_BOTTOM_PX = 150
+
+/** Klickfläche um den Drifter herum (px, allseitig) — der sichtbare Körper ist
+ *  klein und fliegt, ohne Puffer wäre das Treffen reine Präzisionsarbeit. */
+export const DRIFTER_HIT_PADDING_PX = 14
+
+/** Buff-Chips: ab so vielen verbleibenden Sekunden blinkt der Chip warnend. */
+export const DRIFTER_BUFF_EXPIRY_WARN_SEC = 5
+
+/** Formfaktoren des Drifter-Körpers, alle relativ zu `DrifterDef.sizePx` —
+ *  so bleibt ein 44px-Splitter proportional zum 128px-Leviathan. */
+export const DRIFTER_ICON_SCALE = 0.82
+export const DRIFTER_AURA_SCALE = 2.1
+export const DRIFTER_TRAIL_LENGTH_SCALE = 2.8
+export const DRIFTER_TRAIL_WIDTH_SCALE = 0.14
+/** Obergrenze der Schweifbreite: ohne sie zieht der Leviathan einen Balken
+ *  statt einer Spur hinter sich her. */
+export const DRIFTER_TRAIL_WIDTH_MAX_PX = 13
+export const DRIFTER_TRAIL_WIDTH_MIN_PX = 3
+
+/** Sicherheitsabstand zur Oberkante der erhobenen HUD-Panels (Minimap links,
+ *  Command rechts). Ein Drifter dahinter wäre unsichtbar UND unklickbar. */
+export const DRIFTER_HUD_PANEL_MARGIN_PX = 24

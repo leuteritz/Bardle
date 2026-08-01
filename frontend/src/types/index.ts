@@ -777,6 +777,93 @@ export interface ForgeActiveBuff {
   expiresAt: number
 }
 
+// ── Drifters — clickable objects passing through the orbit view ──────────────
+
+/** Rarity band of a drifter — drives spawn weight and chip styling. */
+export type DrifterRarity = 'common' | 'uncommon' | 'rare' | 'legendary'
+
+/** Every multiplier a drifter buff can put on the game. Each key has exactly
+ *  one integration point; see `drifterStore`'s effect getters. */
+export interface DrifterBuffEffects {
+  /** Multiplier on total chimes per second. */
+  cpsMult?: number
+  /** Multiplier on total chimes per click. */
+  cpcMult?: number
+  /** Multiplier on orbiting champion DPS and turret volleys. */
+  combatDpsMult?: number
+  /** Multiplier on the material drop chance. */
+  materialDropMult?: number
+  /** Multiplier on champion XP gains. */
+  xpMult?: number
+}
+
+/** Instant, one-shot payouts a drifter grants the moment it is clicked. */
+export interface DrifterInstantReward {
+  /** Chimes worth this many seconds of current production. */
+  chimesFromCpsSeconds?: number
+  /** Fill the meep progress bar and hand over this many meeps outright. */
+  meeps?: number
+  /** Roll this many random materials into the inventory. */
+  materials?: number
+  /** Backdate the star-phase dwell clock by this many seconds. */
+  dwellSkipSeconds?: number
+  /** Extend every active star's despawn timer by this many seconds. */
+  starTimeSeconds?: number
+}
+
+/** Static definition of a drifter type — pure data, no runtime state. */
+export interface DrifterDef {
+  id: string
+  /** Player-facing name, shown in the toast and on the buff chip. */
+  name: string
+  rarity: DrifterRarity
+  /** Relative spawn weight inside the whole pool. */
+  weight: number
+  /** Iconify `game-icons:*` name — the drifter's silhouette and chip icon. */
+  icon: string
+  /** Optional image shown instead of the icon (chime / meep artwork). */
+  image?: string
+  /** Signature color: aura, trail, edge ping and buff chip. */
+  color: string
+  /** Flight duration across the screen in ms — rare types linger longer. */
+  flightMs: number
+  /** Rendered size of the clickable body in px. */
+  sizePx: number
+  /** Clicks needed to collect it. >1 spreads the payout across the flight. */
+  hits: number
+  /** One-line effect summary for the collect toast. */
+  effectLine: string
+  reward?: DrifterInstantReward
+  buff?: {
+    durationMs: number
+    effects: DrifterBuffEffects
+  }
+}
+
+/** A drifter currently in flight. Position is derived from `spawnedAt`, so a
+ *  paused/stuttering frame loop can never desync it from the game clock. */
+export interface ActiveDrifter {
+  /** Unique instance id — also the Vue render key. */
+  uid: number
+  defId: string
+  /** Index into `DRIFTER_ROUTES`. */
+  routeIndex: number
+  /** Mirror the route horizontally — doubles the path variety. */
+  mirrored: boolean
+  spawnedAt: number
+  flightMs: number
+  /** Hits landed so far; the drifter is collected at `def.hits`. */
+  hitsLanded: number
+}
+
+/** A drifter buff ticking down. `sourceId` is the defining `DrifterDef.id`. */
+export interface DrifterActiveBuff {
+  sourceId: string
+  expiresAt: number
+  durationMs: number
+  effects: DrifterBuffEffects
+}
+
 export type MissionConditionType =
   | 'totalChimes'
   | 'totalClicks'

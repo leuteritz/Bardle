@@ -25,6 +25,7 @@ import {
   PLANET_RESPAWN_MS,
 } from '@/config/constants'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
+import { useDrifterStore } from './drifterStore'
 import { getOrbitSunRadius, getOrbitSunScale } from '../utils/geometry'
 import { playerSlotInForeground } from '../utils/foregroundGate'
 import { logPlanetDestroyed, logPlanetRestored } from '@/config/gameEventLogger'
@@ -276,9 +277,10 @@ export const usePlanetShopStore = defineStore('planetShop', {
     },
 
     /** DPS nur der Turrets im Sonnen-Vordergrund — Turrets hinter der Sonne
-     *  feuern nicht (Kampf passiert nur im Vordergrund). */
+     *  feuern nicht (Kampf passiert nur im Vordergrund). Ein eingesammeltes
+     *  Rift Echo (Drifter) hebt die ganze Salve für seine Laufzeit an. */
     foregroundAutoAttackDPS(state): number {
-      return state.slots
+      const base = state.slots
         .filter(
           (s) =>
             s.purchased &&
@@ -293,6 +295,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
             PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
           )
         }, 0)
+      return base * useDrifterStore().combatDpsMult
     },
 
     activeHarvestSlots(state): { materialId: string }[] {

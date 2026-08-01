@@ -19,3 +19,9 @@ export function logAugmentAutoPicked(name: string, effectLine: string) {
   const { addEvent } = useEventLog()
   addEvent(`Auto-picked ${name} — ${effectLine}`, 'augment')
 }
+
+/** Ein Drifter wurde eingesammelt — Name plus die Wirkung in einer Zeile. */
+export function logDrifterCollected(name: string, effectLine: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`${name} collected — ${effectLine}`, 'chime')
+}

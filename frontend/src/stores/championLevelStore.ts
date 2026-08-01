@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useDrifterStore } from './drifterStore'
 import type {
   ChampionProgress,
   ChampionStats,
@@ -315,8 +316,7 @@ export const useChampionLevelStore = defineStore('championLevel', {
       let sum = 0
       for (const name of mains) {
         sum +=
-          fortuneMult(this.effectiveStatsOf(name).fortune) +
-          this.perkEffectOf(name, 'fortuneSurge')
+          fortuneMult(this.effectiveStatsOf(name).fortune) + this.perkEffectOf(name, 'fortuneSurge')
       }
       return sum / mains.length
     },
@@ -334,12 +334,14 @@ export const useChampionLevelStore = defineStore('championLevel', {
       return (this.progress[name] ??= defaultChampionProgress())
     },
 
-    /** Grants XP to a single champion. Returns the amount actually banked. */
+    /** Grants XP to a single champion. Returns the amount actually banked.
+     *  The drifter multiplier is applied here rather than at the call sites so
+     *  every XP source — battles, bosses, expeditions — is covered at once. */
     grantXp(name: string, amount: number): number {
       if (amount <= 0) return 0
       const p = this.ensure(name)
       if (!p) return 0
-      const gain = Math.round(amount)
+      const gain = Math.round(amount * useDrifterStore().xpMult)
       p.xp += gain
       p.totalXp += gain
       this.totalXpEarned += gain

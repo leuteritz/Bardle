@@ -13,6 +13,7 @@ import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useItemStore } from '@/stores/itemStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useSkinStore } from '@/stores/skinStore'
+import { useDrifterStore } from '@/stores/drifterStore'
 import { getChampionSkins } from '@/utils/champions'
 import {
   ADMIN_QUICK_RESOURCE_AMOUNT,
@@ -35,6 +36,7 @@ const { triggerNow: triggerNebula } = useNebulaTrigger()
 const itemStore = useItemStore()
 const planetBossStore = usePlanetBossStore()
 const skinStore = useSkinStore()
+const drifterStore = useDrifterStore()
 
 const editingKey = ref<string | null>(null)
 const editingValue = ref<string>('')
@@ -157,6 +159,16 @@ function triggerFlash(key: string) {
 
 function spawnStar() {
   starGroupStore.forceSpawnResourceStar()
+}
+
+// ── Drifter Spawn ─────────────────────────────────────────────────────────────
+
+function spawnRandomDrifter() {
+  drifterStore.forceSpawn()
+}
+
+function spawnLegendaryDrifter() {
+  drifterStore.forceSpawn('starLeviathan')
 }
 
 // Springt ans Ende der aktuellen Galaxie: alle Rettungssterne gelten als
@@ -375,6 +387,20 @@ function fillTeamWithRandomChampions() {
         @click="fillAllResources"
       >
         <Icon icon="game-icons:diamond-hard" class="admin-btn-icon" /> +9999 Materials & Resources
+      </button>
+      <!-- Drifters: a random type, or the legendary one directly — its natural
+           spawn rate makes it impractical to wait for while testing. -->
+      <button
+        class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
+        @click="spawnRandomDrifter"
+      >
+        <Icon icon="game-icons:falling-star" class="admin-btn-icon" /> Spawn Drifter
+      </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5"
+        @click="spawnLegendaryDrifter"
+      >
+        <Icon icon="game-icons:whale-tail" class="admin-btn-icon" /> Spawn Leviathan
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5"

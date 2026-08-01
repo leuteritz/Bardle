@@ -27,6 +27,7 @@ import { useSynergyStore } from './synergyStore'
 import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
 import { useChampionLevelStore } from './championLevelStore'
+import { useDrifterStore } from './drifterStore'
 
 let _damageFloatId = 0
 
@@ -171,7 +172,8 @@ export const useCombatStore = defineStore('combat', {
           baseDPS *
           useSynergyStore().dpsSynergyMultiplier *
           useStarForgeStore().championDpsMult *
-          useMeepTreeStore().fx.championDpsMult
+          useMeepTreeStore().fx.championDpsMult *
+          useDrifterStore().combatDpsMult
         const defeated = bossStore.dealDamage(totalDPS)
         if (!defeated) {
           // Spawn one combined float at the planet position showing total damage

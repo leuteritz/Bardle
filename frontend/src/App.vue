@@ -25,6 +25,8 @@ import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
 import PauseOverlay from '@/components/idle/PauseOverlay.vue'
 import HeraldOverlay from '@/components/idle/HeraldOverlay.vue'
 import SupernovaTransition from '@/components/idle/sun/SupernovaTransition.vue'
+import DrifterLayer from '@/components/idle/drifter/DrifterLayer.vue'
+import ActiveBuffBar from '@/components/idle/drifter/ActiveBuffBar.vue'
 import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 
 const gameStore = useGameStore()
@@ -80,6 +82,11 @@ watch(
         </div>
       </div>
     </div>
+
+    <!-- Drifters fly over the idle orbit, below every modal; the buff bar sits
+         above the bottom scoreboard strip and collects every timed effect. -->
+    <DrifterLayer />
+    <ActiveBuffBar />
 
     <MusicControlWidget />
 

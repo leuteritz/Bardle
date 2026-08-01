@@ -15,6 +15,7 @@ import { usePlanetShopStore } from './planetShopStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
+import { useDrifterStore } from './drifterStore'
 import { universes } from '../config/universes'
 import { clampPercent } from '../utils/geometry'
 import { bossPlanetInForeground } from '../utils/foregroundGate'
@@ -569,6 +570,10 @@ export const useGameStore = defineStore('game', {
       this.inGameTime++
       useSolarUpgradeStore().tickDwell()
       useStarForgeStore().tick()
+      // Drifters: expire finished buffs, drop objects that flew past uncollected
+      // and roll for the next spawn. Runs before production so a buff that ends
+      // this second is already gone when the chimes below are credited.
+      useDrifterStore().tick()
       const cps = this.chimesPerSecond * this.mvpBuffMultiplier
       if (this.mvpBuffSecondsLeft > 0) this.mvpBuffSecondsLeft--
       if (cps > 0) {

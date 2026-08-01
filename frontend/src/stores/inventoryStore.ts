@@ -5,6 +5,7 @@ import { logger } from '../utils/logger'
 import { MATERIAL_DROP_BASE_CHANCE } from '../config/constants'
 import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
+import { useDrifterStore } from './drifterStore'
 
 export const useInventoryStore = defineStore('inventory', {
   state: () => ({
@@ -47,7 +48,14 @@ export const useInventoryStore = defineStore('inventory', {
       // Comet Miner (Star Forge): boosts the drop chance
       const forge = useStarForgeStore()
       const treeDropMult = useMeepTreeStore().fx.materialDropMult
-      if (Math.random() > baseDropChance * forge.materialDropMult * treeDropMult) return null
+      // Salvage Probe (drifter): timed boost on top of the permanent ones
+      const drifterDropMult = useDrifterStore().materialDropMult
+      if (
+        Math.random() >
+        baseDropChance * forge.materialDropMult * treeDropMult * drifterDropMult
+      ) {
+        return null
+      }
 
       const total = MATERIALS.reduce((sum, m) => sum + m.dropChance, 0)
       let roll = Math.random() * total

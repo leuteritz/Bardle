@@ -11,6 +11,7 @@ import { useSynergyStore } from './synergyStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
+import { useDrifterStore } from './drifterStore'
 import {
   SECONDS_PER_HOUR,
   EFFICIENCY_STARS_DIVISOR,
@@ -303,13 +304,16 @@ export const useShopStore = defineStore('shop', {
       const flightMul = solar.flightSpeedMultiplier
       const forgeMul = useStarForgeStore().cpsMult
       const treeMul = useMeepTreeStore().fx.cpsMult
+      // Collected drifters (Errant Chime & co.) — timed, expires on its own
+      const drifterMul = useDrifterStore().cpsMult
       return Math.floor(
         (baseCPS + solarCPS) *
           gameStore.abilityCPSMultiplier *
           cpsMul *
           flightMul *
           forgeMul *
-          treeMul,
+          treeMul *
+          drifterMul,
       )
     },
 
@@ -330,12 +334,16 @@ export const useShopStore = defineStore('shop', {
       // Resonance / Midas Bell (Star Forge) + Worldbell (Meep Tree): clicks gain a fraction of total CpS
       const fromCpsPct = forge.cpcFromCpsPct + tree.cpcFromCpsPct
       const cpsPortion = fromCpsPct > 0 ? this.calculateTotalCPS() * fromCpsPct : 0
+      // Ember Shard (drifter): multiplies the click value, not the CpS portion —
+      // that share already carries the drifter CpS multiplier of its own.
+      const drifterMul = useDrifterStore().cpcMult
       return Math.floor(
         (baseCPC + upgradeBonus) *
           gameStore.abilityCPCMultiplier *
           cpcMul *
           forge.cpcMult *
-          tree.cpcMult +
+          tree.cpcMult *
+          drifterMul +
           cpsPortion,
       )
     },

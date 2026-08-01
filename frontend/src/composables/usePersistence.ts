@@ -15,9 +15,10 @@ import { usePlanetShopStore, computePlanetMaxHp } from '@/stores/planetShopStore
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/starForgeStore'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
+import { useDrifterStore } from '@/stores/drifterStore'
 import { useSkinStore } from '@/stores/skinStore'
 import { useChampionLevelStore } from '@/stores/championLevelStore'
-import type { ChampionProgress, PendingPerkChoice } from '@/types'
+import type { ChampionProgress, PendingPerkChoice, DrifterActiveBuff } from '@/types'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -65,6 +66,7 @@ export function usePersistence() {
     const planetBossStore = usePlanetBossStore()
     const starGroupStore = useStarGroupStore()
     const championLevelStore = useChampionLevelStore()
+    const drifterStore = useDrifterStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -281,6 +283,15 @@ export function usePersistence() {
       meepTree: {
         bought: [...meepTreeStore.bought],
         acknowledged: [...meepTreeStore.acknowledged],
+      },
+      // Drifters in flight are deliberately NOT saved — one that resumed
+      // mid-passage after a reload would already be halfway off the screen.
+      // Their buffs are, because expiresAt is absolute wall-clock time.
+      drifter: {
+        buffs: drifterStore.buffs.map((b) => ({ ...b, effects: { ...b.effects } })),
+        totalDriftersSpawned: drifterStore.totalDriftersSpawned,
+        totalDriftersCollected: drifterStore.totalDriftersCollected,
+        totalDriftersMissed: drifterStore.totalDriftersMissed,
       },
     }
 
@@ -752,6 +763,17 @@ export function usePersistence() {
       meepTreeStore.bought = [...(saved.meepTree?.bought ?? [])]
       meepTreeStore.acknowledged = [...(saved.meepTree?.acknowledged ?? [])]
 
+      // Restore drifter buffs — expiresAt is absolute, so anything that ran out
+      // while the tab was closed is dropped here instead of ticking down again.
+      const drifterStore = useDrifterStore()
+      drifterStore.drifterNow = Date.now()
+      drifterStore.buffs = ((saved.drifter?.buffs ?? []) as DrifterActiveBuff[])
+        .filter((b) => b.expiresAt > drifterStore.drifterNow)
+        .map((b) => ({ ...b, effects: { ...b.effects } }))
+      drifterStore.totalDriftersSpawned = saved.drifter?.totalDriftersSpawned ?? 0
+      drifterStore.totalDriftersCollected = saved.drifter?.totalDriftersCollected ?? 0
+      drifterStore.totalDriftersMissed = saved.drifter?.totalDriftersMissed ?? 0
+
       // Recalculate derived CPS/CPC after all levels (buildings + solar + forge) are restored
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
@@ -948,6 +970,9 @@ export function usePersistence() {
     // 7f. Reset championLevelStore — a full wipe drops champion levels too;
     // prestige alone never touches them.
     useChampionLevelStore().resetAll()
+
+    // 7g. Reset drifterStore — clears the sky and every running buff
+    useDrifterStore().$reset()
 
     // 7b. Reset planetShopStore – alle Slots zurücksetzen
     const planetShopStoreR = usePlanetShopStore()

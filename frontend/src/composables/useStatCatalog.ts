@@ -14,6 +14,7 @@ import { useInventoryStore } from '@/stores/inventoryStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { useAugmentStore } from '@/stores/augmentStore'
+import { useDrifterStore } from '@/stores/drifterStore'
 import { usePlayerStore } from '@/stores/playerStore'
 import { useSectionStore } from '@/stores/sectionStore'
 import { useChampionLevelStore } from '@/stores/championLevelStore'
@@ -84,6 +85,7 @@ export function useStatCatalog(query: Ref<string>): {
   const itemStore = useItemStore()
   const synergyStore = useSynergyStore()
   const augmentStore = useAugmentStore()
+  const drifterStore = useDrifterStore()
   const playerStore = usePlayerStore()
   const sectionStore = useSectionStore()
   const championLevelStore = useChampionLevelStore()
@@ -1320,6 +1322,58 @@ export function useStatCatalog(query: Ref<string>): {
         label: 'MVP Buff Remaining',
         value: gameStore.mvpBuffSecondsLeft > 0 ? dur(gameStore.mvpBuffSecondsLeft * 1000) : '—',
         keywords: 'honor',
+      },
+      {
+        key: 'drifters-collected',
+        label: 'Drifters Collected',
+        value: num(drifterStore.totalDriftersCollected),
+        highlight: true,
+        keywords: 'chime meep probe surge rift beacon leviathan',
+      },
+      {
+        key: 'drifters-catch-rate',
+        label: 'Drifter Catch Rate',
+        value:
+          drifterStore.totalDriftersSpawned > 0
+            ? pct(drifterStore.totalDriftersCollected / drifterStore.totalDriftersSpawned)
+            : '—',
+        keywords: 'drifter accuracy',
+      },
+      {
+        key: 'drifters-missed',
+        label: 'Drifters Missed',
+        value: num(drifterStore.totalDriftersMissed),
+        keywords: 'drifter lost',
+      },
+      {
+        key: 'drifter-buffs',
+        label: 'Drifter Buffs Running',
+        value: int(drifterStore.liveBuffs.length),
+      },
+      {
+        key: 'drifter-cps',
+        label: 'Drifter Production Buff',
+        value: bonus(drifterStore.cpsMult),
+      },
+      {
+        key: 'drifter-cpc',
+        label: 'Drifter Click Buff',
+        value: bonus(drifterStore.cpcMult),
+      },
+      {
+        key: 'drifter-dps',
+        label: 'Drifter Damage Buff',
+        value: bonus(drifterStore.combatDpsMult),
+      },
+      {
+        key: 'drifter-drops',
+        label: 'Drifter Drop Buff',
+        value: bonus(drifterStore.materialDropMult),
+      },
+      {
+        key: 'drifter-xp',
+        label: 'Drifter XP Buff',
+        value: bonus(drifterStore.xpMult),
       },
     )
     return rows
