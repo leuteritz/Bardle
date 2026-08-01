@@ -2712,15 +2712,30 @@ export const STAR_PHASE_MIN_DWELL_SECONDS = [600, 1_800, 5_400, 14_400, 86_400]
 export const STATS_TAB_ORBIT = {
   /** side of the square viewBox — reference frame for every value below */
   VIEW: 100,
-  /** radius of the phase orbit */
-  RADIUS: 34,
+  /** Vertical centre of the dial (% of the stage). Deliberately ABOVE the
+   *  geometric middle: the ring's open bottom carries the phase caption (name,
+   *  step count) and the dwell clock, and a centred ring left that block barely
+   *  16% of the stage. Lifting the whole dial hands the caption ~30% without
+   *  taking a single pixel off the ring's radius. */
+  CENTER_Y: 44,
+  /** Radius of the phase orbit. Sized against the two things that bind it: the
+   *  outermost markers must keep their hover labels inside the column (the body
+   *  clips), and the caption below the arc ends needs its ~20% of stage height.
+   *  36 is the last value where both still hold. */
+  RADIUS: 36,
   /** orbit line thickness */
   STROKE: 1.6,
   /** angle of the first step (the comet), i.e. the lower-left end of the arc */
   START_DEG: -140,
   /** angular length of the open ring — the 80° gap at the bottom carries the
-   *  dwell clock, and an open arc reads as a progression instead of a cycle */
+   *  phase caption and dwell clock, and an open arc reads as a progression
+   *  instead of a cycle */
   SPAN_DEG: 280,
+  /** Clear air (% of the stage) between the two arc ends and the caption block
+   *  that starts underneath them. Measured, not guessed: the arc's last marker
+   *  is the widest body on the ring (7% across), so its disc reaches ~3.5%
+   *  past the end point — the caption's top corners have to clear that. */
+  CAPTION_GAP_PCT: 4,
   /** dot diameter (% of the stage) = phase radius × this — keeps the orbit dots
    *  true to the in-game sun proportions (1.9%…7%) */
   DOT_PCT_PER_RADIUS: 0.05,
@@ -2739,7 +2754,7 @@ export const STATS_TAB_ORBIT = {
   /** Compact cap (px) on Full-HD-height viewports. Set above what those
    *  viewports can actually give the dial, so there the HEIGHT decides — the
    *  cap only guards very wide, very flat windows. */
-  MAX_PX_COMPACT: 460,
+  MAX_PX_COMPACT: 520,
 } as const
 
 /** Bard Stats panel deck — user-resizable column widths (px). The two side

@@ -27,9 +27,9 @@ import type { AugmentDefinition } from '@/types'
 /**
  * Middle column of the Bard-Stats deck — the stage.
  * The player's live celestial body sits at the centre of an open arc carrying
- * the seven phases it evolves through; identity, dwell time and the evolve
- * action sit right beneath it, and the augment deck folds into a short strip
- * at the bottom.
+ * the seven phases it evolves through. Everything the sun has to say lives ON
+ * the dial: identity and the evolve gate fill the arc's open bottom, and the
+ * evolve call-to-action rides the sun itself. Below that, only the augment deck.
  */
 const gameStore = useGameStore()
 const synergyStore = useSynergyStore()
@@ -88,13 +88,17 @@ const ORBIT_ARC_LEN = (ORBIT_CIRCUMFERENCE * O.SPAN_DEG) / 360
 const ORBIT_SEG_LEN = ORBIT_ARC_LEN / (totalSteps - 1)
 /** an SVG circle starts at 3 o'clock; rotate it so the path starts at START_DEG */
 const ORBIT_ROTATION = O.START_DEG - 90
-/** the arc's open bottom, where the dwell clock lives */
-const ORBIT_GAP_TOP_PCT = 50 + O.RADIUS
 
 /** Angle of step i, measured from 12 o'clock, clockwise. */
 function stepAngle(i: number): number {
   return O.START_DEG + (i * O.SPAN_DEG) / (totalSteps - 1)
 }
+
+/** Height of the two arc ends — below them the ring is open all the way to the
+ *  stage's edge, which is exactly the room the caption block claims. */
+const ORBIT_ARC_END_Y =
+  O.CENTER_Y - O.RADIUS * Math.cos((stepAngle(totalSteps - 1) * Math.PI) / 180)
+const CAPTION_TOP_PCT = ORBIT_ARC_END_Y + O.CAPTION_GAP_PCT
 
 const orbitDots = computed(() => {
   const steps = [
@@ -135,7 +139,7 @@ const orbitDots = computed(() => {
     return {
       ...s,
       x: 50 + O.RADIUS * Math.sin(rad),
-      y: 50 - O.RADIUS * Math.cos(rad),
+      y: O.CENTER_Y - O.RADIUS * Math.cos(rad),
       /* tooltips flip below the dot on the arc's lower third, so they never
          leave the stage at the two ends of the ring */
       below: Math.cos(rad) < -0.4,
@@ -202,17 +206,49 @@ const dwellPct = computed(() =>
 /* Active arc segment (current phase → next) creeping forward with dwell progress */
 const orbitActiveLen = computed(() => (ORBIT_SEG_LEN * dwellPct.value) / 100)
 
-const phaseAge = computed(() => {
-  if (!solarStore.phaseEnteredAt) return null
-  const secs = Math.floor((now.value - solarStore.phaseEnteredAt) / 1000)
-  const d = Math.floor(secs / 86400)
-  const h = Math.floor((secs % 86400) / 3600)
-  const m = Math.floor((secs % 3600) / 60)
-  const s = secs % 60
-  if (d > 0) return `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`
-  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
-  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`
-  return `${s}s`
+/* ── The evolve gate, as one readout ─────────────────────────────
+   The dial used to carry a clock and a separate evolve button that could each
+   say something different. There is only ever ONE thing standing between the
+   sun and its next phase, so there is only one readout: the value is whatever
+   is still missing, and the sun itself lights up once nothing is. */
+const canEvolveNow = computed(() => solarStore.canUpgradeStar)
+
+interface EvolveGate {
+  value: string
+  label: string
+  tone: 'wait' | 'met' | 'lock' | 'max'
+  title: string
+}
+
+const gate = computed<EvolveGate>(() => {
+  if (isMax.value)
+    return {
+      value: 'Fully Evolved',
+      label: 'the journey ends here',
+      tone: 'max',
+      title: 'This sun has reached the final phase of its life',
+    }
+  if (canEvolveNow.value)
+    return {
+      value: '✓ Ready',
+      label: 'evolve at the core',
+      tone: 'met',
+      title: 'Every requirement is met — click the sun to open the Solar Shop and evolve',
+    }
+  if (!dwellMet.value)
+    return {
+      value: formatCompactDuration(dwellRemainingMs.value),
+      label: 'until evolve',
+      tone: 'wait',
+      title: `${formatCompactDuration(dwellElapsedMs.value)} of ${formatCompactDuration(dwellRequiredMs.value)} in this phase — time the sun must spend before it can evolve`,
+    }
+  /* Time is served, so the four solar branches are what is left */
+  return {
+    value: `${solarStore.minBranchLevel} / ${solarStore.starPhase + 1}`,
+    label: 'branch levels',
+    tone: 'lock',
+    title: `Every solar branch must reach level ${solarStore.starPhase + 1} before this phase can evolve — click to open the Solar Shop`,
+  }
 })
 
 /* ── Augment shelf ───────────────────────────────────────────── */
@@ -406,21 +442,21 @@ const filteredAugCards = computed(() => {
             <circle
               class="sf-orbit-track"
               :cx="STATS_TAB_ORBIT.VIEW / 2"
-              :cy="STATS_TAB_ORBIT.VIEW / 2"
+              :cy="STATS_TAB_ORBIT.CENTER_Y"
               :r="STATS_TAB_ORBIT.RADIUS"
               :stroke-width="STATS_TAB_ORBIT.STROKE"
               :stroke-dasharray="`${ORBIT_ARC_LEN} ${ORBIT_CIRCUMFERENCE}`"
-              :transform="`rotate(${ORBIT_ROTATION} ${STATS_TAB_ORBIT.VIEW / 2} ${STATS_TAB_ORBIT.VIEW / 2})`"
+              :transform="`rotate(${ORBIT_ROTATION} ${STATS_TAB_ORBIT.VIEW / 2} ${STATS_TAB_ORBIT.CENTER_Y})`"
             />
             <!-- Arc already travelled -->
             <circle
               class="sf-orbit-fill"
               :cx="STATS_TAB_ORBIT.VIEW / 2"
-              :cy="STATS_TAB_ORBIT.VIEW / 2"
+              :cy="STATS_TAB_ORBIT.CENTER_Y"
               :r="STATS_TAB_ORBIT.RADIUS"
               :stroke-width="STATS_TAB_ORBIT.STROKE"
               :stroke-dasharray="`${orbitFillLen} ${ORBIT_CIRCUMFERENCE}`"
-              :transform="`rotate(${ORBIT_ROTATION} ${STATS_TAB_ORBIT.VIEW / 2} ${STATS_TAB_ORBIT.VIEW / 2})`"
+              :transform="`rotate(${ORBIT_ROTATION} ${STATS_TAB_ORBIT.VIEW / 2} ${STATS_TAB_ORBIT.CENTER_Y})`"
             />
             <!-- Segment current → next phase, creeping with dwell progress -->
             <circle
@@ -428,39 +464,59 @@ const filteredAugCards = computed(() => {
               class="sf-orbit-active"
               :class="{ 'is-met': dwellMet }"
               :cx="STATS_TAB_ORBIT.VIEW / 2"
-              :cy="STATS_TAB_ORBIT.VIEW / 2"
+              :cy="STATS_TAB_ORBIT.CENTER_Y"
               :r="STATS_TAB_ORBIT.RADIUS"
               :stroke-width="STATS_TAB_ORBIT.STROKE"
               :stroke-dasharray="`${orbitActiveLen} ${ORBIT_CIRCUMFERENCE}`"
               :stroke-dashoffset="-orbitFillLen"
-              :transform="`rotate(${ORBIT_ROTATION} ${STATS_TAB_ORBIT.VIEW / 2} ${STATS_TAB_ORBIT.VIEW / 2})`"
+              :transform="`rotate(${ORBIT_ROTATION} ${STATS_TAB_ORBIT.VIEW / 2} ${STATS_TAB_ORBIT.CENTER_Y})`"
             />
           </svg>
 
-          <!-- The player's actual celestial body, same renderer as the orbit view -->
+          <!-- The player's actual celestial body, same renderer as the orbit view.
+               It is also the evolve button: once every requirement is met the core
+               rings out and wears the call-to-action, so the eye lands on the sun
+               instead of on a control parked somewhere below the dial. -->
           <div
             class="sf-orbit-sun"
+            :class="{ 'is-ready': canEvolveNow }"
             role="button"
-            title="Open the Solar Shop"
-            :style="{ width: sunPct + '%', height: sunPct + '%' }"
+            :title="
+              canEvolveNow
+                ? 'Ready to evolve — open the Solar Shop'
+                : 'Open the Solar Shop'
+            "
+            :style="{ width: sunPct + '%', height: sunPct + '%', top: STATS_TAB_ORBIT.CENTER_Y + '%' }"
             @click="uiStore.setBardTab('shop')"
           >
             <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
             <PhaseSunDisc v-else :diameter="sunDiameter" :pulse="true" />
+
+            <template v-if="canEvolveNow">
+              <span class="sf-sun-ring" aria-hidden="true"></span>
+              <span class="sf-sun-ring sf-sun-ring--late" aria-hidden="true"></span>
+              <span class="sf-sun-cta">
+                <Icon icon="game-icons:upgrade" width="15" height="15" />
+                Evolve
+              </span>
+            </template>
           </div>
 
-          <!-- Dwell clock, parked in the arc's open bottom -->
-          <div
-            v-if="!isMax"
-            class="sf-orbit-clock"
-            :style="{ top: ORBIT_GAP_TOP_PCT + '%' }"
-            :title="`${formatCompactDuration(dwellElapsedMs)} of ${formatCompactDuration(dwellRequiredMs)} in this phase — time the sun must spend before it can evolve`"
-          >
-            <span v-if="dwellMet" class="sf-orbit-clock-val is-met">✓ Ready</span>
-            <span v-else class="sf-orbit-clock-val">{{
-              formatCompactDuration(dwellRemainingMs)
-            }}</span>
-            <span class="sf-orbit-clock-lbl">until evolve</span>
+          <!-- Phase identity + the one thing left before evolving, filling the
+               arc's open bottom — the only place on the ring with no marker. -->
+          <div class="sf-orbit-caption" :style="{ top: CAPTION_TOP_PCT + '%' }">
+            <span class="sf-cap-name" :title="phaseAstroName">{{ phaseName }}</span>
+            <span class="sf-cap-step">{{ phaseDisplayLabel }}</span>
+            <button
+              class="sf-cap-gate"
+              type="button"
+              :class="`is-${gate.tone}`"
+              :title="gate.title"
+              @click.stop="uiStore.setBardTab('shop')"
+            >
+              <span class="sf-cap-val">{{ gate.value }}</span>
+              <span class="sf-cap-lbl">{{ gate.label }}</span>
+            </button>
           </div>
 
           <!-- Phase markers riding the arc -->
@@ -511,42 +567,6 @@ const filteredAugCards = computed(() => {
           DEV · Skip
         </button>
         <!-- /TEMP -->
-      </div>
-
-      <!-- ─ Phase identity + evolve action, right under the dial ─ -->
-      <div class="sf-orbit-foot">
-        <div class="sf-foot-id">
-          <span class="sf-kicker">{{ phaseDisplayLabel }}</span>
-          <span class="sf-phase-name">{{ phaseName }}</span>
-          <span class="sf-phase-astro">{{ phaseAstroName }}</span>
-        </div>
-        <div class="sf-foot-age" :title="`Time spent in the ${phaseName} phase`">
-          <span class="sf-kicker">In Phase</span>
-          <span class="sf-solar-age">{{ phaseAge ?? '—' }}</span>
-        </div>
-        <div class="sf-solar-status">
-          <div v-if="isMax" class="sf-pill sf-pill--max">Fully Evolved</div>
-          <div
-            v-else-if="solarStore.canUpgradeStar"
-            class="sf-pill sf-pill--ready"
-            role="button"
-            @click="uiStore.setBardTab('shop')"
-          >
-            Evolve
-          </div>
-          <div v-else-if="solarStore.branchesReadyForEvolve" class="sf-pill sf-pill--wait">
-            Evolving in {{ formatCompactDuration(dwellRemainingMs) }}
-          </div>
-          <div
-            v-else
-            v-ink-center
-            class="sf-pill sf-pill--hint"
-            role="button"
-            @click="uiStore.setBardTab('shop')"
-          >
-            Evolve
-          </div>
-        </div>
       </div>
 
       <!-- ─ Augments: the compact deck under the dial ─ -->
@@ -660,8 +680,13 @@ const filteredAugCards = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  /* the augment deck scrolls on its own — the column itself never does */
-  overflow: hidden;
+  /* The augment deck scrolls on its own — the column itself never does, hence
+     `clip` rather than `hidden` (no scroll container at all). The margin is the
+     headroom the phase markers' hover labels need: the outermost markers sit
+     close to the stage's edges, and a label clipped in half is worse than one
+     overhanging a column border by a few pixels. */
+  overflow: clip;
+  overflow-clip-margin: 30px;
   /* The middle column absorbs every pixel the two fixed side columns do not
      use, so on 4K it is over 2000px wide. Capping the CONTENT keeps the dial,
      its readouts and the augment cards reading as one centred block instead of
@@ -743,11 +768,11 @@ const filteredAugCards = computed(() => {
 }
 
 /* Click target around the disc — PhaseSunDisc / CometDisc centre themselves
-   absolutely inside it, so this box IS the sun's footprint on the stage. */
+   absolutely inside it, so this box IS the sun's footprint on the stage.
+   `top` comes from the template (the dial's CENTER_Y). */
 .sf-orbit-sun {
   position: absolute;
   left: 50%;
-  top: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
   cursor: pointer;
@@ -757,32 +782,141 @@ const filteredAugCards = computed(() => {
   filter: brightness(1.12);
 }
 
-/* Dwell clock, parked in the arc's open bottom — the one place on the ring
-   that carries no phase marker.
-   It sizes itself off the DIAL (cqmin of the stage container), not off the
-   viewport: the dial is 379px on Full HD but 710px on 2K, so a fixed px size
-   that reads right on one is a speck on the other. Being absolutely placed,
-   growing it moves nothing — the arc's gap is 44% of the stage wide and the
-   arc ends sit at 76% height, so the box has room to spare below that. */
-.sf-orbit-clock {
+/* ─ Evolve, announced by the sun itself ─
+   Two rings expand out of the core, half a cycle apart, and a chip rides the
+   disc's lower edge. Both animate transform + opacity ONLY, so the whole
+   announcement stays compositor work — and it exists at most once on screen,
+   for the seconds between "ready" and the player's click. */
+.sf-sun-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid #6ec040;
+  pointer-events: none;
+  animation: sf-sun-ring 2.8s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+.sf-sun-ring--late {
+  animation-delay: 1.4s;
+}
+@keyframes sf-sun-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Chip straddling the sun's lower edge — the evolve action, where the eye
+   already is. Sized off the dial so it never becomes a speck on 4K. */
+.sf-sun-cta {
   position: absolute;
   left: 50%;
+  top: 100%;
   transform: translate(-50%, -50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px;
+  padding: clamp(4px, 1.1cqmin, 10px) clamp(9px, 2.6cqmin, 22px);
+  font-size: 12px;
+  font-size: clamp(12.5px, 2.9cqmin, 26px);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #f0ffe0;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  transition: transform 0.14s;
+}
+.sf-orbit-sun.is-ready:hover .sf-sun-cta {
+  transform: translate(-50%, -50%) scale(1.06);
+}
+/* the icon rides the chip's font size instead of its own fixed box */
+.sf-sun-cta :deep(svg) {
+  width: 1.25em;
+  height: 1.25em;
+  flex-shrink: 0;
+}
+
+/* ─ Caption in the arc's open bottom ─
+   Who the sun is, which step of seven it stands on, and the one thing left
+   before it evolves — the three readouts that used to sit in a row BELOW the
+   dial and cost it a third of its height.
+   Everything sizes itself off the DIAL (cqmin of the stage container), not off
+   the viewport: the dial is ~420px on Full HD but over 700px on 2K, so a fixed
+   px size that reads right on one is a speck on the other. Being absolutely
+   placed, growing it moves nothing — below the arc ends the stage is empty. */
+.sf-orbit-caption {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  /* fixed box: ticking digits never nudge the label */
-  width: 116px;
-  width: min(34cqmin, 100%);
+  gap: 1px;
+  /* the gap between the arc ends is 44% of the stage wide — staying inside it
+     keeps the block clear of the ring at every stage size */
+  width: 44%;
   text-align: center;
+  /* The block's empty corners reach under the two arc ends, whose markers carry
+     generous invisible hitboxes for their labels. Only the readouts themselves
+     take the pointer, so hovering the last phase still shows ITS name. */
+  pointer-events: none;
+}
+
+.sf-cap-name {
+  pointer-events: auto;
+  font-size: 20px;
+  font-size: clamp(19px, 5.2cqmin, 46px);
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  color: var(--phase-primary);
+  text-shadow: 0 0 10px var(--phase-glow);
+  white-space: nowrap;
   cursor: help;
 }
 
-.sf-orbit-clock-val {
-  font-size: 15px;
-  font-size: clamp(16px, 4.8cqmin, 44px);
+.sf-cap-step {
+  font-size: 10px;
+  font-size: clamp(10px, 1.8cqmin, 17px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #b0a080;
+  white-space: nowrap;
+}
+
+/* The gate: one number, one word for what it counts. A hairline separates it
+   from the identity above, so the block reads as "who" over "what's next". */
+.sf-cap-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin-top: clamp(5px, 1.4cqmin, 14px);
+  padding: clamp(4px, 1cqmin, 11px) clamp(10px, 2.6cqmin, 26px) 0;
+  border-top: 1px solid #2c1806;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: border-color 0.16s;
+}
+.sf-cap-gate:hover {
+  border-color: #5c3310;
+}
+
+.sf-cap-val {
+  font-size: 16px;
+  font-size: clamp(16px, 4.4cqmin, 42px);
   font-weight: 900;
   letter-spacing: 0.03em;
   line-height: 1.1;
@@ -791,19 +925,31 @@ const filteredAugCards = computed(() => {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.sf-orbit-clock-val.is-met {
+.is-met .sf-cap-val {
   color: #7ac060;
   text-shadow: 0 0 8px rgba(82, 184, 48, 0.55);
 }
+.is-max .sf-cap-val {
+  color: #e8c040;
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
+}
+/* Time is served, the branches are not — amber, the colour of "your move" */
+.is-lock .sf-cap-val {
+  color: #c89040;
+  text-shadow: 0 0 8px rgba(200, 144, 64, 0.4);
+}
 
-.sf-orbit-clock-lbl {
-  font-size: 8px;
-  font-size: clamp(8px, 1.5cqmin, 14px);
+.sf-cap-lbl {
+  font-size: 9px;
+  font-size: clamp(9px, 1.6cqmin, 15px);
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #6a5a3a;
   white-space: nowrap;
+}
+.sf-cap-gate:hover .sf-cap-lbl {
+  color: #8a7a52;
 }
 
 /* ─ Phase markers riding the arc ─
@@ -979,136 +1125,6 @@ const filteredAugCards = computed(() => {
 .sf-dev-skip:hover {
   opacity: 1;
   box-shadow: 0 0 8px rgba(204, 96, 80, 0.4);
-}
-
-/* ─ Phase identity + evolve action, in one line under the dial ─
-   Three blocks on a wrapping row: who the sun is, how long it has been that,
-   and what it can do next. On a narrow column the row breaks instead of
-   squeezing — nothing ever overlaps the dial above it. */
-.sf-orbit-foot {
-  flex-shrink: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px clamp(14px, 3%, 28px);
-  padding-bottom: 9px;
-  border-bottom: 1px solid #2c1806;
-}
-
-.sf-foot-id,
-.sf-foot-age {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  min-width: 0;
-}
-.sf-foot-age {
-  cursor: help;
-}
-
-.sf-kicker {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: #b0a080;
-  white-space: nowrap;
-}
-
-.sf-phase-name {
-  font-size: 25px;
-  line-height: 1.05;
-  letter-spacing: 0.04em;
-  color: var(--phase-primary);
-  text-shadow: 0 0 10px var(--phase-glow);
-  white-space: nowrap;
-}
-
-.sf-phase-astro {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #8a7a58;
-  white-space: nowrap;
-}
-
-.sf-solar-age {
-  /* Fixed width so the ticking phase time never reflows the row */
-  width: 136px;
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: 0.04em;
-  text-align: center;
-  color: var(--rpg-text-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.sf-solar-status {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 5px;
-  min-width: 132px;
-}
-
-.sf-pill {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 11px 20px;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  text-align: center;
-  border-radius: 6px;
-  white-space: nowrap;
-  transition:
-    box-shadow 0.15s,
-    color 0.15s,
-    border-color 0.15s,
-    transform 0.12s;
-}
-.sf-pill--ready {
-  background: rgba(26, 42, 16, 0.9);
-  border: 1px solid #52b830;
-  color: #8adc50;
-  box-shadow: 0 0 16px rgba(82, 184, 48, 0.35);
-  cursor: pointer;
-}
-.sf-pill--ready:hover {
-  box-shadow: 0 0 24px rgba(82, 184, 48, 0.55);
-  transform: translateY(-1px);
-}
-.sf-pill--hint:hover {
-  transform: translateY(-1px);
-}
-.sf-pill--max {
-  background: #1e1a06;
-  border: 1px solid #e8c040;
-  color: #e8c040;
-}
-.sf-pill--wait {
-  background: #16130c;
-  border: 1px solid color-mix(in srgb, var(--phase-glow) 40%, #3e200a);
-  color: var(--phase-primary);
-  font-variant-numeric: tabular-nums;
-}
-.sf-pill--hint {
-  background: #16130c;
-  border: 1px solid #3e200a;
-  color: var(--rpg-text-dim);
-  cursor: pointer;
-}
-.sf-pill--hint:hover {
-  color: var(--phase-primary);
-  border-color: #5c3310;
 }
 
 /* ─ Augment deck — die untere Hälfte der Mittelspalte ─
@@ -1449,21 +1465,7 @@ const filteredAugCards = computed(() => {
   .sf-solar-body {
     gap: 8px;
   }
-  .sf-phase-name {
-    font-size: 21px;
-  }
-  .sf-solar-age {
-    font-size: 17px;
-    width: 124px;
-  }
-  /* the dwell clock is NOT stepped down here — it scales off the dial itself */
-  .sf-pill {
-    padding: 9px 16px;
-    font-size: 13px;
-  }
-  .sf-orbit-foot {
-    padding-bottom: 7px;
-  }
+  /* the caption is NOT stepped down here — it scales off the dial itself */
   /* Full HD ist der flachste Viewport: hier teilen sich Dial und Deck 709px.
      278px lassen dem Deck Kacheln + zwei Kartenreihen und dem Dial rund 290px –
      mehr, als er bei voller Sammlung vorher je hatte. */
@@ -1499,16 +1501,6 @@ const filteredAugCards = computed(() => {
 /* 4K and taller: the dial has the room to become the room's centrepiece, so
    the readouts around it grow with it instead of floating in empty space. */
 @media (min-height: 1600px) {
-  .sf-phase-name {
-    font-size: 30px;
-  }
-  .sf-phase-astro {
-    font-size: 13px;
-  }
-  .sf-solar-age {
-    font-size: 22px;
-    width: 152px;
-  }
   /* 4K deckelt den Dial bei --orbit-max, dadurch bleibt Spaltenhöhe übrig, die
      sonst niemand nutzt — das Deck nimmt sie und zeigt drei Kartenreihen. */
   .sf-aug-zone {
@@ -1562,8 +1554,13 @@ const filteredAugCards = computed(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .sf-orbit-active,
-  .sf-orbit-dot.is-current {
+  .sf-orbit-dot.is-current,
+  .sf-sun-ring {
     animation: none;
+  }
+  /* without the pulse the ring must still be visible, or "ready" says nothing */
+  .sf-sun-ring--late {
+    display: none;
   }
 }
 </style>
