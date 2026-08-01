@@ -2718,9 +2718,23 @@ export const STATS_TAB_ORBIT = {
    *  centre again. */
   CENTER_Y: 50,
   /** Radius of the phase orbit. With no caption block below the arc, the ring
-   *  claims the stage: the binding constraint is the outermost markers, whose
-   *  hover labels must stay inside what the body's overflow-clip-margin allows. */
-  RADIUS: 42,
+   *  claims the stage — but every marker now carries a permanent tag, and the
+   *  one at 12 o'clock puts its tag OUTSIDE the ring, so the ring has to leave
+   *  a 10% band at the top for it. */
+  RADIUS: 40,
+  /** Clear air (% of the stage) between a marker's DISC and its permanent tag —
+   *  measured from the disc's edge, not the orbit line, because the markers are
+   *  sized to their phase and the collapse disc is nearly five times the width
+   *  of the comet speck. Outward where the stage has room, inward on the
+   *  flanks, where the stage's edge is right there. */
+  TAG_OUT_PCT: 4.5,
+  TAG_IN_PCT: 6,
+  /** |sin(angle)| above this means the marker sits too far out to the side for
+   *  an outward tag — it gets an inward one instead. */
+  TAG_FLANK_SIN: 0.75,
+  /** Width (% of the stage) of a tag. Fixed, so a long phase name never shifts
+   *  the tag off its marker — and so the clearances above can be computed. */
+  TAG_WIDTH_PCT: 19,
   /** orbit line thickness */
   STROKE: 1.6,
   /** angle of the first step (the comet), i.e. the lower-left end of the arc */

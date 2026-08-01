@@ -171,10 +171,21 @@ const orbitDots = computed(() => {
     const rad = (stepAngle(i) * Math.PI) / 180
     const x = 50 + O.RADIUS * Math.sin(rad)
     const y = O.CENTER_Y - O.RADIUS * Math.cos(rad)
+    /* The tag sits on the same radial as its marker — outward where the stage
+       has room beyond the ring, inward for the two markers on the flanks,
+       where it would otherwise hang off the edge. The offset starts at the
+       DISC's edge, so the collapse marker pushes its tag further than the
+       comet speck does instead of swallowing it. */
+    const flank = Math.abs(Math.sin(rad)) > O.TAG_FLANK_SIN
+    const tagR = flank
+      ? O.RADIUS - s.size / 2 - O.TAG_IN_PCT
+      : O.RADIUS + s.size / 2 + O.TAG_OUT_PCT
     return {
       ...s,
       x,
       y,
+      tagX: 50 + tagR * Math.sin(rad),
+      tagY: O.CENTER_Y - tagR * Math.cos(rad),
       step: `Phase ${i + 1} / ${totalSteps}`,
       state: s.current ? 'Current' : s.done ? 'Passed' : 'Locked',
       /* The card always grows toward the middle of the stage — downward for
@@ -480,6 +491,7 @@ const filteredAugCards = computed(() => {
           '--orbit-max': STATS_TAB_ORBIT.MAX_PX + 'px',
           '--orbit-max-compact': STATS_TAB_ORBIT.MAX_PX_COMPACT + 'px',
           '--tip-w': STATS_TAB_ORBIT.TIP_WIDTH_PCT + 'cqmin',
+          '--tag-w': STATS_TAB_ORBIT.TAG_WIDTH_PCT + 'cqmin',
         }"
       >
         <div ref="stageEl" class="sf-orbit">
@@ -572,6 +584,26 @@ const filteredAugCards = computed(() => {
           <div class="sf-orbit-age" :title="`Time spent in the ${phaseName} phase`">
             <span class="sf-age-lbl">In Phase</span>
             <span class="sf-age-val">{{ phaseAge ?? '—' }}</span>
+          </div>
+
+          <!-- Standing tags: every step names itself and says how long the sun
+               stayed there, without waiting to be hovered. They sit on their
+               marker's radial (outward, or inward on the flanks) and never take
+               the pointer, so the markers keep their own hitboxes. -->
+          <div
+            v-for="(dot, i) in orbitDots"
+            :key="`tag-${i}`"
+            class="sf-orbit-tag"
+            :class="{ 'is-done': dot.done, 'is-current': dot.current }"
+            :style="{
+              left: dot.tagX + '%',
+              top: dot.tagY + '%',
+              '--dot-color': dot.color,
+              '--dot-glow': dot.glow,
+            }"
+          >
+            <span class="sf-tag-name">{{ dot.label }}</span>
+            <span class="sf-tag-time">{{ dot.spent }}</span>
           </div>
 
           <!-- Phase markers riding the arc -->
@@ -951,7 +983,10 @@ const filteredAugCards = computed(() => {
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  width: 70%;
+  /* Narrow on purpose: the tags of the two markers at 10 and 2 o'clock reach in
+     to 27% and 73% of the stage, and this block sits at the same height. Its
+     text is centred and never wider than "Crescendo", so it stays clear. */
+  width: 46%;
   text-align: center;
   /* the ring's markers reach into this band's corners and carry generous hover
      hitboxes — only the name itself takes the pointer, for its tooltip */
@@ -1121,6 +1156,57 @@ const filteredAugCards = computed(() => {
       0 0 16px var(--dot-glow),
       0 0 28px color-mix(in srgb, var(--dot-glow) 60%, transparent);
   }
+}
+
+/* ─ Standing tag beside every marker ─
+   The ring's own legend: which step this is and how long the sun stayed there,
+   readable without touching anything. Fixed width so a long name never drags
+   the tag off its radial, and no pointer events so the marker underneath keeps
+   its hover card. Three weights carry the state — lit for the step the sun is
+   on, plain for the ones behind it, dim for what is still ahead. */
+.sf-orbit-tag {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 74px;
+  width: var(--tag-w);
+  text-align: center;
+  pointer-events: none;
+}
+
+.sf-tag-name {
+  font-size: 11px;
+  font-size: clamp(11px, 2.2cqmin, 21px);
+  line-height: 1.15;
+  letter-spacing: 0.04em;
+  color: #6a5a3a;
+  white-space: nowrap;
+}
+.sf-orbit-tag.is-done .sf-tag-name {
+  color: color-mix(in srgb, var(--dot-color) 78%, #6a5a3a);
+}
+.sf-orbit-tag.is-current .sf-tag-name {
+  color: var(--dot-color);
+  text-shadow: 0 0 8px var(--dot-glow);
+}
+
+.sf-tag-time {
+  font-size: 9px;
+  font-size: clamp(9px, 1.7cqmin, 16px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  color: #4e422c;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sf-orbit-tag.is-done .sf-tag-time,
+.sf-orbit-tag.is-current .sf-tag-time {
+  color: #8a7a58;
 }
 
 /* ─ Marker card on hover ─
