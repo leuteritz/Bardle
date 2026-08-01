@@ -20,14 +20,22 @@
            text can stay down to what the buff DOES and how long it lasts.
            The full name is announced by the collect burst and the toast. -->
       <span class="chip-icon" :title="chip.name">
-        <Icon :icon="chip.icon" width="24" height="24" :style="{ color: chip.color }" />
+        <Icon :icon="chip.icon" class="chip-icon__glyph" :style="{ color: chip.color }" />
       </span>
 
       <span class="chip-text">
         <span class="chip-head">
           <span class="chip-mult">{{ chip.multiplier }}×</span>
-          <span class="chip-seconds">{{ chip.secondsLeft }}s</span>
+          <!-- Reserved width: the seconds drop from two digits to one, and
+               without the reservation every chip in the row would twitch
+               sideways once per second. -->
+          <span class="chip-clock">
+            <span class="chip-seconds">{{ chip.secondsLeft }}</span>
+            <span class="chip-unit">s</span>
+          </span>
         </span>
+        <!-- Own line across the full text column, so "DAMAGE" is not competing
+             with the clock for the same few pixels. -->
         <span class="chip-label">{{ chip.label }}</span>
       </span>
 
@@ -126,6 +134,13 @@ const chips = computed<BuffChip[]>(() => {
    1260px on Full HD, 1680px on QHD). Beyond that the row wraps upward instead
    of sliding over the travel and command panels. */
 .buff-bar {
+  /* Every chip is exactly this wide, whatever it says. A row where each plate
+     sizes itself would re-flow once a second as "12s" becomes "9s" — six chips
+     twitching sideways in the corner of the eye, right above the scoreboard.
+     Six of these plus the gaps fit the narrowest gap (Full HD, 1260px) with
+     room to spare; wider screens get bigger plates further down. */
+  --chip-w: 176px;
+  --chip-h: 84px;
   position: fixed;
   bottom: calc(79px * var(--hud-scale, 1) + 16px);
   left: 50%;
@@ -135,17 +150,26 @@ const chips = computed<BuffChip[]>(() => {
   flex-wrap: wrap;
   justify-content: center;
   align-items: stretch;
-  gap: 8px;
+  gap: 10px;
+  /* Ohne max-content bekäme ein fixed-Element mit left:50% als Shrink-to-fit-
+     Breite nur den Raum RECHTS davon, also die halbe Viewportbreite (Full HD:
+     960px). Die Reihe wäre dann umgebrochen, lange bevor die max-width unten
+     überhaupt greift — gemessen an sechs Chips, die in zwei Zeilen fielen,
+     obwohl 1106px Inhalt in 1236px erlaubte Breite gepasst hätten. */
+  width: max-content;
   max-width: calc(100vw - 2 * var(--hud-panel-size, 440px) - 24px);
   pointer-events: none;
 }
 
 .buff-chip {
   position: relative;
+  width: var(--chip-w);
+  height: var(--chip-h);
+  flex: 0 0 var(--chip-w);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 11px 8px 8px;
+  gap: 10px;
+  padding: 0 12px 0 10px;
   background: #16140e;
   border: 2px solid #5c3310;
   border-radius: 4px;
@@ -161,27 +185,40 @@ const chips = computed<BuffChip[]>(() => {
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 3px;
   background: var(--chip-color, #e8c040);
 }
 
+/* Round stage in the buff's colour — the same treatment the drifter info card
+   uses for the same object, so the two read as one system. */
 .chip-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
-  background: #141410;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--chip-color, #e8c040) 55%, #14120c);
+  background: radial-gradient(
+    circle at 50% 38%,
+    color-mix(in srgb, var(--chip-color, #e8c040) 22%, #14120c),
+    #100e08 74%
+  );
+}
+
+.chip-icon__glyph {
+  width: 30px;
+  height: 30px;
 }
 
 .chip-text {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 2px;
-  line-height: 1.1;
+  gap: 4px;
+  min-width: 0;
+  line-height: 1;
 }
 
 .chip-head {
@@ -192,22 +229,46 @@ const chips = computed<BuffChip[]>(() => {
 }
 
 .chip-mult {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
   color: var(--chip-color, #e8c040);
 }
 
 .chip-label {
-  font-size: 10px;
-  letter-spacing: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
   color: #b89b5a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Right-aligned with a reserved width: the number may lose a digit without
+   moving anything else. Tabular figures keep the digits from dancing. */
+.chip-clock {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 1px;
+  min-width: 3.2ch;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .chip-seconds {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
   color: #f2ead2;
-  font-variant-numeric: tabular-nums;
+}
+
+.chip-unit {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  color: #8a7a52;
 }
 
 .chip-track {
@@ -215,7 +276,7 @@ const chips = computed<BuffChip[]>(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 4px;
   background: rgba(255, 255, 255, 0.07);
 }
 
@@ -269,6 +330,73 @@ const chips = computed<BuffChip[]>(() => {
 }
 .buff-chip-move {
   transition: transform 0.3s ease;
+}
+
+/* ── Auflösungsstufen ────────────────────────────────────────────────
+   Die Plakette wächst mit dem Bildschirm; die Obergrenze ist stets, dass
+   sechs davon zwischen die HUD-Panels passen (2K: 1680px frei, 4K: 2960px). */
+@media (min-width: 2400px) {
+  .buff-bar {
+    --chip-w: 212px;
+    --chip-h: 98px;
+    gap: 12px;
+  }
+  .chip-icon {
+    width: 62px;
+    height: 62px;
+  }
+  .chip-icon__glyph {
+    width: 36px;
+    height: 36px;
+  }
+  .chip-mult {
+    font-size: 35px;
+  }
+  .chip-label {
+    font-size: 13px;
+    letter-spacing: 1.9px;
+  }
+  .chip-seconds {
+    font-size: 28px;
+  }
+  .chip-unit {
+    font-size: 14px;
+  }
+  .chip-track {
+    height: 5px;
+  }
+}
+
+@media (min-width: 3400px) {
+  .buff-bar {
+    --chip-w: 258px;
+    --chip-h: 118px;
+    gap: 14px;
+  }
+  .chip-icon {
+    width: 74px;
+    height: 74px;
+  }
+  .chip-icon__glyph {
+    width: 44px;
+    height: 44px;
+  }
+  .chip-mult {
+    font-size: 42px;
+  }
+  .chip-label {
+    font-size: 15px;
+    letter-spacing: 2.2px;
+  }
+  .chip-seconds {
+    font-size: 34px;
+  }
+  .chip-unit {
+    font-size: 17px;
+  }
+  .chip-track {
+    height: 6px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

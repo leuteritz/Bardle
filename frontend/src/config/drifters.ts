@@ -157,11 +157,11 @@ export const DRIFTER_TOTAL_WEIGHT = DRIFTERS.reduce((sum, d) => sum + d.weight, 
 
 /** Chip captions per effect key. A buff touching more than one key shows
  *  DRIFTER_BUFF_LABEL_ALL instead of listing them.
- *  Kept to one short word: the buff bar has to fit six chips between the two
- *  raised HUD panels, which leaves ~1260px on Full HD. */
+ *  Kept short: the label line of a buff chip is 88px wide on Full HD, and six
+ *  chips have to fit between the two raised HUD panels. */
 export const DRIFTER_BUFF_EFFECT_LABELS: Record<keyof DrifterBuffEffects, string> = {
   cpsMult: 'CHIMES',
-  cpcMult: 'CLICK',
+  cpcMult: 'PER CLICK',
   combatDpsMult: 'DAMAGE',
   materialDropMult: 'DROPS',
   xpMult: 'XP',
