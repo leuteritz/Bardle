@@ -3830,6 +3830,19 @@ export const ROLE_HOVER_COLORS: Record<string, string> = {
 // and the --hover-dim-opacity CSS variable in the orbit components.
 export const HOVER_DIM_OPACITY = 0
 
+/** Dauer der Ein-/Ausblende der Hover-Fokus-Dimmung in ms.
+ *  Die Blende läuft NICHT als CSS-Transition, sondern wird in der jeweiligen
+ *  Frame-Schleife in die ohnehin pro Frame gesetzte Inline-Opacity gerechnet:
+ *  Orbit-Objekte bewegen und skalieren sich jeden Frame, eine gleichzeitig
+ *  laufende CSS-Transition zwingt den Browser dann für jedes Objekt zu einem
+ *  eigenen Transparenz-Layer samt Neurasterung pro Frame. */
+export const HOVER_DIM_FADE_MS = 150
+
+/** Ab diesem Blenden-Wert gilt ein Orbit-Objekt als ausgeblendet: erst dann
+ *  werden Rahmen, Badges und laufende Effekt-Animationen abgeschaltet, damit
+ *  während der Blende nichts wegspringt. */
+export const HOVER_DIM_HIDDEN_THRESHOLD = 0.02
+
 // ── Encyclopedia (EncyclopediaPanel.vue) ────────────────────────────────────
 /** localStorage key for bookmarked codex entries (UI preference, not game state). */
 export const ENCYCLOPEDIA_BOOKMARKS_STORAGE_KEY = 'bardle-codex-bookmarks'

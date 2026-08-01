@@ -7,7 +7,6 @@
   <div
     class="champion-orbit-layer champion-orbit-back"
     aria-hidden="true"
-    :style="{ '--hover-dim-opacity': HOVER_DIM_OPACITY }"
   >
     <div
       v-for="pos in backChampions"
@@ -15,25 +14,20 @@
       class="champion-orbit-avatar champion-orbit-avatar--behind"
       :class="{
         'champion-orbit-avatar--role-colored': !!pos.primaryRole,
-        'champion-orbit-avatar--role-hover': hoveredChampionRole !== null,
+        'champion-orbit-avatar--role-hover': hoveredChampionRole !== null && !isChampionDimmed(pos),
         'champion-orbit-avatar--role-hover-primary': pos.primaryRole === hoveredChampionRole && pos.isMain,
-        'champion-orbit-avatar--dim': isChampionDimmed(pos),
+        'champion-orbit-avatar--dim': pos.dimFactor <= HOVER_DIM_HIDDEN_THRESHOLD,
       }"
       :style="{
         width: pos.size + 'px',
         height: pos.size + 'px',
         transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
-        opacity: pos.opacity,
+        opacity: pos.opacity * pos.dimFactor,
         '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
         '--hover-role-color': hoverColor || undefined,
       }"
     >
-      <img
-        :src="pos.img"
-        :alt="pos.name"
-        class="champion-orbit-portrait"
-        :class="{ 'champion-orbit-portrait--dimmed': isChampionDimmed(pos) }"
-      />
+      <img :src="pos.img" :alt="pos.name" class="champion-orbit-portrait" />
     </div>
   </div>
 
@@ -41,7 +35,6 @@
   <div
     class="champion-orbit-layer champion-orbit-front"
     aria-hidden="true"
-    :style="{ '--hover-dim-opacity': HOVER_DIM_OPACITY }"
   >
     <div
       v-for="pos in frontChampions"
@@ -68,9 +61,9 @@
         'champion-orbit-avatar--ability-adc':
           pos.isMain && pos.primaryRole === 'adc' && roleBehaviorStore.adcBurstActive,
         'champion-orbit-avatar--synergy': pos.synergyActive,
-        'champion-orbit-avatar--role-hover': hoveredChampionRole !== null,
+        'champion-orbit-avatar--role-hover': hoveredChampionRole !== null && !isChampionDimmed(pos),
         'champion-orbit-avatar--role-hover-primary': pos.primaryRole === hoveredChampionRole && pos.isMain,
-        'champion-orbit-avatar--dim': isChampionDimmed(pos),
+        'champion-orbit-avatar--dim': pos.dimFactor <= HOVER_DIM_HIDDEN_THRESHOLD,
         'champion-orbit-avatar--hit': pos.isHit,
         'champion-orbit-avatar--down': pos.isDown,
       }"
@@ -78,18 +71,13 @@
         width: pos.size + 'px',
         height: pos.size + 'px',
         transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
-        opacity: pos.opacity,
+        opacity: pos.opacity * pos.dimFactor,
         zIndex: pos.zIndex,
         '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
         '--hover-role-color': hoverColor || undefined,
       }"
     >
-      <img
-        :src="pos.img"
-        :alt="pos.name"
-        class="champion-orbit-portrait"
-        :class="{ 'champion-orbit-portrait--dimmed': isChampionDimmed(pos) }"
-      />
+      <img :src="pos.img" :alt="pos.name" class="champion-orbit-portrait" />
       <Transition name="ability-icon">
         <span
           v-if="pos.isMain && pos.primaryRole && isAbilityActive(pos.primaryRole)"
@@ -106,10 +94,10 @@
       <div
         v-if="pos.isMain && pos.maxHp > 0"
         class="champ-hp-wrap"
-        :class="{ 'champ-hp-wrap--dimmed': isChampionDimmed(pos) }"
         :style="{
           transform: `translate(${pos.x - Math.max(pos.size, 52) / 2}px, ${pos.y + pos.size / 2 + 6}px)`,
           width: Math.max(pos.size, 52) + 'px',
+          opacity: pos.dimFactor,
           zIndex: pos.zIndex,
           '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
         }"
@@ -182,6 +170,8 @@ import {
   ROLE_BY_KEY,
   BEHIND_SUN_SPEED_MULTIPLIER,
   HOVER_DIM_OPACITY,
+  HOVER_DIM_FADE_MS,
+  HOVER_DIM_HIDDEN_THRESHOLD,
   CHAMPION_HIT_FLASH_MS,
 } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
@@ -219,6 +209,8 @@ interface ChampionRenderPos {
   isDown: boolean
   downSecs: number
   isHit: boolean
+  /** Hover-Fokus-Blende, 1 = voll sichtbar, HOVER_DIM_OPACITY = ausgeblendet */
+  dimFactor: number
 }
 
 interface Assignment {
@@ -256,10 +248,31 @@ export default defineComponent({
 
     // Dim a champion when focusing a planet or a star (all champions recede)
     // or a champion of a different role (same-role champions stay full).
-    function isChampionDimmed(pos: ChampionRenderPos): boolean {
+    function isRoleDimmed(primaryRole: ChampionRole | null): boolean {
       if (starGroupStore.hoveredTimerStarId !== null) return true
       if (hoveredPlanetSlotId.value !== null) return true
-      return hoveredChampionRole.value !== null && pos.primaryRole !== hoveredChampionRole.value
+      return hoveredChampionRole.value !== null && primaryRole !== hoveredChampionRole.value
+    }
+
+    function isChampionDimmed(pos: ChampionRenderPos): boolean {
+      return isRoleDimmed(pos.primaryRole)
+    }
+
+    // Weiche Blende OHNE CSS-Transition: der Wert wird pro Champion gehalten,
+    // im Frame Richtung Ziel gezogen und unten in die Inline-Opacity gerechnet
+    // — siehe HOVER_DIM_FADE_MS.
+    const dimFactors = new Map<string, number>()
+
+    const DIM_SPAN = Math.max(0.001, 1 - HOVER_DIM_OPACITY)
+
+    function stepDimFactor(name: string, primaryRole: ChampionRole | null, dt: number): number {
+      const target = isRoleDimmed(primaryRole) ? HOVER_DIM_OPACITY : 1
+      const current = dimFactors.get(name) ?? target
+      const maxStep = (dt / HOVER_DIM_FADE_MS) * DIM_SPAN
+      const diff = target - current
+      const next = Math.abs(diff) <= maxStep ? target : current + Math.sign(diff) * maxStep
+      dimFactors.set(name, next)
+      return next
     }
 
     const { shots, spawnShot, tickShots } = useProjectileSystem()
@@ -454,6 +467,7 @@ export default defineComponent({
           isDown,
           downSecs: isDown ? Math.ceil((downUntil - nowMs) / 1000) : 0,
           isHit: !isDown && nowMs - hitAt < CHAMPION_HIT_FLASH_MS,
+          dimFactor: stepDimFactor(c.name, primaryRole, dt),
         })
       }
 
@@ -462,6 +476,7 @@ export default defineComponent({
           localStates.delete(key)
           champSpeedMuls.delete(key)
           lastFiredAt.delete(key)
+          dimFactors.delete(key)
         }
       }
 
@@ -570,7 +585,7 @@ export default defineComponent({
       hoveredChampionRole,
       hoverColor,
       isChampionDimmed,
-      HOVER_DIM_OPACITY,
+      HOVER_DIM_HIDDEN_THRESHOLD,
     }
   },
 })
@@ -602,10 +617,11 @@ export default defineComponent({
     0 0 10px rgba(232, 192, 64, 0.55),
     0 0 20px rgba(232, 192, 64, 0.2);
   will-change: transform;
-  transition:
-    box-shadow 0.3s ease,
-    border-color 0.3s ease,
-    filter 0.25s ease;
+  /* Bewusst OHNE transition auf box-shadow / border-color / filter: der Avatar
+     bewegt sich pro Frame, jeder Zwischenschritt einer solchen Transition
+     erzwingt ein Neurastern der kompletten Box samt Schatten — beim
+     Command-Panel-Hover gleichzeitig für JEDEN Champion im Orbit. Der Umschlag
+     ist ein einmaliger Repaint, das Ausblenden fährt die Inline-Opacity. */
 }
 
 .champion-orbit-avatar img:first-child {
@@ -618,17 +634,11 @@ export default defineComponent({
 }
 
 /* ── Hover-Focus dim (Command-Panel-Hover) ─────────────────────────────────
-   Opacity sitzt auf dem Portrait-<img>, nicht am äußeren Avatar, dessen
-   Tiefen-Opacity pro Frame per JS gesetzt wird. So multiplizieren sich beide
-   Werte und die Dimm-Transition läuft weich (Klasse toggelt nur als Boolean). */
-.champion-orbit-portrait {
-  transition: opacity 150ms ease, filter 150ms ease;
-}
-
-.champion-orbit-portrait--dimmed {
-  opacity: var(--hover-dim-opacity, 0.08);
-  filter: grayscale(1) brightness(0.65) blur(1.5px);
-}
+   Bewusst KEINE CSS-Regel mehr: die Blende wird in animate() in die ohnehin
+   pro Frame gesetzte Inline-Opacity gerechnet (pos.dimFactor). Eine
+   CSS-Transition auf diesen Elementen bedeutete pro Frame einen eigenen
+   Transparenz-Layer samt Neurasterung, während sie gleichzeitig ihre Position
+   und Größe ändern — gemessen der teuerste Posten am Hover-Umschalten. */
 
 
 /* ── Rollen-Farben (via CSS-Variable aus ROLES[].color) ─────────────────── */
@@ -964,11 +974,7 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  transition: opacity 150ms ease;
-}
-
-.champ-hp-wrap--dimmed {
-  opacity: var(--hover-dim-opacity, 0.08);
+  /* Blende läuft über die Inline-Opacity (pos.dimFactor), nicht per Transition */
 }
 
 /* Energie-Leiste in Rollenfarbe — bewusst anders als die grünen Planeten-
@@ -1255,13 +1261,14 @@ export default defineComponent({
 /* ── Role-Hover Lift Effect (Command Panel slot hover) ──────────────────── */
 /* `translate` (CSS Transforms Level 2) composes independently with the
    JS-set inline `transform: translate(X, Y)` — no conflict. */
+/* Animiert wird ausschließlich `translate` — reine Compositor-Arbeit. Der
+   drop-shadow bleibt als Aussehen erhalten, schaltet aber einmalig um statt
+   0.35s lang zu interpolieren: jeder Zwischenschritt hätte den Avatar samt
+   Schatten neu gerastert, während er sich ohnehin pro Frame bewegt. */
 .champion-orbit-avatar--role-hover {
   translate: 0 -5px;
   filter: drop-shadow(0 6px 12px color-mix(in srgb, var(--hover-role-color, #c89040) 55%, transparent));
-  transition:
-    translate 0.35s ease,
-    filter 0.35s ease,
-    box-shadow 0.3s ease;
+  transition: translate 0.35s ease;
 }
 
 .champion-orbit-avatar--role-hover-primary {

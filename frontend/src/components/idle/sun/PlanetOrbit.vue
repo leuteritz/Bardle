@@ -25,7 +25,6 @@
   <div
     class="planet-orbit-layer planet-orbit-back"
     aria-hidden="true"
-    :style="{ '--hover-dim-opacity': HOVER_DIM_OPACITY }"
   >
     <div
       v-for="pos in backPlanets"
@@ -40,7 +39,7 @@
         width: pos.size + 'px',
         height: pos.size + 'px',
         transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
-        opacity: pos.opacity,
+        opacity: pos.opacity * pos.dimFactor,
         '--planet-color': pos.color,
       }"
     >
@@ -49,17 +48,13 @@
         :alt="pos.name"
         draggable="false"
         class="planet-orbit-portrait"
-        :class="{ 'planet-orbit-portrait--dimmed': pos.isDimmed }"
       />
     </div>
   </div>
 
   <div
     class="planet-orbit-layer planet-orbit-front"
-    :style="{
-      '--hover-dim-opacity': HOVER_DIM_OPACITY,
-      '--buff-mark-gap': PLANET_BUFF_MARK_GAP_PX + 'px',
-    }"
+    :style="{ '--buff-mark-gap': PLANET_BUFF_MARK_GAP_PX + 'px' }"
   >
     <!-- Jungle Buff — Aura hinter dem Planeten.
          Eigenes Element statt eines Effekts am Item: .planet-orbit-item ist
@@ -70,12 +65,11 @@
       <div
         v-if="pos.isJungleBuffed && !pos.isDown"
         class="planet-buff-aura"
-        :class="{ 'planet-buff-aura--dimmed': pos.isDimmed }"
         :style="{
           width: pos.size + 'px',
           height: pos.size + 'px',
           transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
-          opacity: pos.opacity,
+          opacity: pos.opacity * pos.dimFactor,
           zIndex: pos.zIndex - 1,
         }"
         aria-hidden="true"
@@ -102,7 +96,7 @@
         width: pos.size + 'px',
         height: pos.size + 'px',
         transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
-        opacity: pos.opacity,
+        opacity: pos.opacity * pos.dimFactor,
         zIndex: pos.zIndex,
         '--planet-color': pos.color,
       }"
@@ -112,7 +106,6 @@
         :alt="pos.name"
         draggable="false"
         class="planet-orbit-portrait"
-        :class="{ 'planet-orbit-portrait--dimmed': pos.isDimmed }"
       />
 
     </div>
@@ -127,10 +120,10 @@
       v-for="pos in frontPlanets"
       :key="'hp-' + pos.id"
       class="planet-hp-wrap"
-      :class="{ 'planet-hp-wrap--dimmed': pos.isDimmed }"
       :style="{
         transform: `translate(${pos.x - Math.max(pos.size, 48) / 2}px, ${pos.y + pos.size / 2 + 5}px)`,
         width: Math.max(pos.size, 48) + 'px',
+        opacity: pos.dimFactor,
         zIndex: pos.zIndex,
       }"
     >
@@ -157,9 +150,9 @@
     <template v-for="pos in frontPlanets" :key="'jbuff-' + pos.id">
       <div
         class="planet-buff-anchor"
-        :class="{ 'planet-buff-anchor--dimmed': pos.isDimmed }"
         :style="{
           transform: `translate(${pos.x}px, ${pos.y - pos.size / 2}px)`,
+          opacity: pos.dimFactor,
           zIndex: pos.zIndex + 2,
         }"
       >
@@ -220,6 +213,7 @@ import {
   PLANET_SLOT_MAX_HP,
   BEHIND_SUN_SPEED_MULTIPLIER,
   HOVER_DIM_OPACITY,
+  HOVER_DIM_FADE_MS,
   GAME_TICK_INTERVAL_MS,
   PLANET_ORBIT_FOREGROUND_DEPTH,
   PLANET_BUFF_MARK_GAP_PX,
@@ -267,7 +261,8 @@ interface PlanetRenderPos {
   jungleBuffType: string
   jungleBuffMult: string
   slotNum: number
-  isDimmed: boolean
+  /** Hover-Fokus-Blende, 1 = voll sichtbar, HOVER_DIM_OPACITY = ausgeblendet */
+  dimFactor: number
 }
 
 interface LocalPlanetState {
@@ -292,6 +287,23 @@ export default defineComponent({
     const localStates = new Map<string, LocalPlanetState>()
     const planetSpeedMuls = new Map<string, number>()
     const renderPositions = ref<PlanetRenderPos[]>([])
+
+    // Weiche Hover-Blende OHNE CSS-Transition: der Wert wird pro Slot gehalten,
+    // im Frame Richtung Ziel gezogen und in die ohnehin pro Frame gesetzte
+    // Inline-Opacity gerechnet — siehe HOVER_DIM_FADE_MS.
+    const dimFactors = new Map<string, number>()
+    const DIM_SPAN = Math.max(0.001, 1 - HOVER_DIM_OPACITY)
+
+    function stepDimFactor(id: string, dimmed: boolean, dt: number): number {
+      const target = dimmed ? HOVER_DIM_OPACITY : 1
+      const current = dimFactors.get(id) ?? target
+      const maxStep = (dt / HOVER_DIM_FADE_MS) * DIM_SPAN
+      const diff = target - current
+      const next = Math.abs(diff) <= maxStep ? target : current + Math.sign(diff) * maxStep
+      dimFactors.set(id, next)
+      return next
+    }
+
     const tierIsBehind = ref<boolean[]>(ORBIT_TIERS.planet.map(() => false))
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -596,6 +608,7 @@ export default defineComponent({
           starGroupStore.hoveredTimerStarId !== null ||
           uiStore.hoveredChampionRole !== null ||
           (hPlanetId !== null && slot.id !== hPlanetId)
+        const dimFactor = stepDimFactor(slot.id, isDimmed, dt)
 
         newPositions.push({
           id: slot.id,
@@ -627,7 +640,7 @@ export default defineComponent({
           jungleBuffType,
           jungleBuffMult,
           slotNum,
-          isDimmed,
+          dimFactor,
         })
       }
 
@@ -636,6 +649,7 @@ export default defineComponent({
           localStates.delete(key)
           planetSpeedMuls.delete(key)
           planetOrbitPhases.delete(key)
+          dimFactors.delete(key)
         }
       }
 
@@ -727,7 +741,6 @@ export default defineComponent({
       hoveredPlanetSlotId,
       hoveredPlanetTier,
       starFocusActive,
-      HOVER_DIM_OPACITY,
       PLANET_BUFF_MARK_GAP_PX,
       PLANET_BUFF_URGENT_SECS,
       allSlots,
@@ -798,17 +811,10 @@ export default defineComponent({
 }
 
 /* ── Hover-Focus dim (Command-Panel-Hover) ─────────────────────────────────
-   Opacity sitzt auf dem Planet-<img>, nicht am äußeren Item, dessen
-   Tiefen-Opacity pro Frame per JS gesetzt wird → beide multiplizieren sich,
-   Dimm-Transition läuft weich (Klasse toggelt nur als Boolean). */
-.planet-orbit-portrait {
-  transition: opacity 150ms ease, filter 150ms ease;
-}
-
-.planet-orbit-portrait--dimmed {
-  opacity: var(--hover-dim-opacity, 0.08);
-  filter: grayscale(1) brightness(0.65) blur(1.5px);
-}
+   Bewusst KEINE CSS-Regel: die Blende rechnet animate() in die ohnehin pro
+   Frame gesetzte Inline-Opacity (pos.dimFactor). Eine CSS-Transition auf einem
+   Element, das gleichzeitig Position und Größe pro Frame ändert, kostet einen
+   eigenen Transparenz-Layer samt Neurasterung je Frame. */
 
 /* ── Turret-Cooldown-Ring-Canvas — ein Layer über allen Planeten ─────────── */
 .planet-turret-ring-canvas {
@@ -874,12 +880,7 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  transition: opacity 150ms ease;
-}
-
-/* Hover-Fokus: blendet mit dem Planeten-Portrait aus */
-.planet-hp-wrap--dimmed {
-  opacity: var(--hover-dim-opacity, 0.08);
+  /* Hover-Blende läuft über die Inline-Opacity (pos.dimFactor) */
 }
 
 /* Äußerer Rahmen – graviertes Metall */
@@ -999,11 +1000,7 @@ export default defineComponent({
   left: 0;
   border-radius: 50%;
   pointer-events: none;
-  transition: opacity 150ms ease;
-}
-
-.planet-buff-aura--dimmed {
-  opacity: var(--hover-dim-opacity, 0.08) !important;
+  /* Hover-Blende läuft über die Inline-Opacity (pos.dimFactor) */
 }
 
 /* Der stehende Anteil: sitzt direkt am Planetenrand und macht den Zustand
@@ -1057,11 +1054,7 @@ export default defineComponent({
   top: 0;
   left: 0;
   pointer-events: none;
-  transition: opacity 150ms ease;
-}
-
-.planet-buff-anchor--dimmed {
-  opacity: var(--hover-dim-opacity, 0.08);
+  /* Hover-Blende läuft über die Inline-Opacity (pos.dimFactor) */
 }
 
 /* Am Ankerpunkt (obere Planetenkante) unten verankert und nach oben wachsend —

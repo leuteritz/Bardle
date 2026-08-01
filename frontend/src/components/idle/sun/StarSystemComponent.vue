@@ -1595,9 +1595,11 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
+/* Nur Opacity: ein zusätzlicher Filter auf dem pro Frame bewegten Sternkörper
+   verteuert jedes Neurastern, während er bei --hover-dim-opacity = 0 ohnehin
+   unsichtbar ist. */
 .star-body-wrap--hover-dimmed .star-body {
   opacity: var(--hover-dim-opacity, 0.08);
-  filter: grayscale(1) brightness(0.65);
 }
 
 .star-body--champion::after,
