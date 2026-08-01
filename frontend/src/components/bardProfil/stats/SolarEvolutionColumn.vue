@@ -206,17 +206,32 @@ const dwellPct = computed(() =>
 /* Active arc segment (current phase → next) creeping forward with dwell progress */
 const orbitActiveLen = computed(() => (ORBIT_SEG_LEN * dwellPct.value) / 100)
 
-/* ── The evolve gate, as one readout ─────────────────────────────
-   The dial used to carry a clock and a separate evolve button that could each
-   say something different. There is only ever ONE thing standing between the
-   sun and its next phase, so there is only one readout: the value is whatever
-   is still missing, and the sun itself lights up once nothing is. */
+/** How long the sun has already been what it is — the reading that turns the
+ *  dial into a log book instead of a countdown. */
+const phaseAge = computed(() => {
+  if (!solarStore.phaseEnteredAt) return null
+  const secs = Math.floor((now.value - solarStore.phaseEnteredAt) / 1000)
+  const d = Math.floor(secs / 86400)
+  const h = Math.floor((secs % 86400) / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  if (d > 0) return `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
+  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`
+  return `${s}s`
+})
+
+/* ── The evolve gate ─────────────────────────────────────────────
+   The dial reads as two clocks side by side: how long this phase has lasted,
+   and how much longer it has to. Whether the solar branches are high enough is
+   the Solar Shop's business — the dial only ever counts TIME, and the sun
+   itself lights up the moment nothing at all is in the way. */
 const canEvolveNow = computed(() => solarStore.canUpgradeStar)
 
 interface EvolveGate {
   value: string
   label: string
-  tone: 'wait' | 'met' | 'lock' | 'max'
+  tone: 'wait' | 'met' | 'max'
   title: string
 }
 
@@ -224,30 +239,24 @@ const gate = computed<EvolveGate>(() => {
   if (isMax.value)
     return {
       value: 'Fully Evolved',
-      label: 'the journey ends here',
+      label: 'final phase',
       tone: 'max',
       title: 'This sun has reached the final phase of its life',
     }
-  if (canEvolveNow.value)
+  if (dwellMet.value)
     return {
       value: '✓ Ready',
-      label: 'evolve at the core',
-      tone: 'met',
-      title: 'Every requirement is met — click the sun to open the Solar Shop and evolve',
-    }
-  if (!dwellMet.value)
-    return {
-      value: formatCompactDuration(dwellRemainingMs.value),
       label: 'until evolve',
-      tone: 'wait',
-      title: `${formatCompactDuration(dwellElapsedMs.value)} of ${formatCompactDuration(dwellRequiredMs.value)} in this phase — time the sun must spend before it can evolve`,
+      tone: 'met',
+      title: canEvolveNow.value
+        ? 'Every requirement is met — click the sun to evolve'
+        : 'The time in this phase is served — open the Solar Shop to see what else this evolve needs',
     }
-  /* Time is served, so the four solar branches are what is left */
   return {
-    value: `${solarStore.minBranchLevel} / ${solarStore.starPhase + 1}`,
-    label: 'branch levels',
-    tone: 'lock',
-    title: `Every solar branch must reach level ${solarStore.starPhase + 1} before this phase can evolve — click to open the Solar Shop`,
+    value: formatCompactDuration(dwellRemainingMs.value),
+    label: 'until evolve',
+    tone: 'wait',
+    title: `${formatCompactDuration(dwellElapsedMs.value)} of ${formatCompactDuration(dwellRequiredMs.value)} in this phase — time the sun must spend before it can evolve`,
   }
 })
 
@@ -507,16 +516,23 @@ const filteredAugCards = computed(() => {
           <div class="sf-orbit-caption" :style="{ top: CAPTION_TOP_PCT + '%' }">
             <span class="sf-cap-name" :title="phaseAstroName">{{ phaseName }}</span>
             <span class="sf-cap-step">{{ phaseDisplayLabel }}</span>
-            <button
-              class="sf-cap-gate"
-              type="button"
-              :class="`is-${gate.tone}`"
-              :title="gate.title"
-              @click.stop="uiStore.setBardTab('shop')"
-            >
-              <span class="sf-cap-val">{{ gate.value }}</span>
-              <span class="sf-cap-lbl">{{ gate.label }}</span>
-            </button>
+            <div class="sf-cap-clocks">
+              <div class="sf-cap-cell" :title="`Time spent in the ${phaseName} phase`">
+                <span class="sf-cap-lbl">In Phase</span>
+                <span class="sf-cap-val">{{ phaseAge ?? '—' }}</span>
+              </div>
+              <span class="sf-cap-split" aria-hidden="true"></span>
+              <button
+                class="sf-cap-cell sf-cap-cell--act"
+                type="button"
+                :class="`is-${gate.tone}`"
+                :title="gate.title"
+                @click.stop="uiStore.setBardTab('shop')"
+              >
+                <span class="sf-cap-lbl">{{ gate.label }}</span>
+                <span class="sf-cap-val">{{ gate.value }}</span>
+              </button>
+            </div>
           </div>
 
           <!-- Phase markers riding the arc -->
@@ -686,7 +702,7 @@ const filteredAugCards = computed(() => {
      close to the stage's edges, and a label clipped in half is worse than one
      overhanging a column border by a few pixels. */
   overflow: clip;
-  overflow-clip-margin: 30px;
+  overflow-clip-margin: 40px;
   /* The middle column absorbs every pixel the two fixed side columns do not
      use, so on 4K it is over 2000px wide. Capping the CONTENT keeps the dial,
      its readouts and the augment cards reading as one centred block instead of
@@ -863,11 +879,12 @@ const filteredAugCards = computed(() => {
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  /* the gap between the arc ends is 44% of the stage wide — staying inside it
-     keeps the block clear of the ring at every stage size */
-  width: 44%;
+  /* Below the arc ends the ring is gone, so the block owns the full stage
+     width — which is what lets the two clocks stand side by side instead of
+     stacking and eating the height the type needs. */
+  width: 96%;
   text-align: center;
-  /* The block's empty corners reach under the two arc ends, whose markers carry
+  /* The block's top corners reach under the two arc ends, whose markers carry
      generous invisible hitboxes for their labels. Only the readouts themselves
      take the pointer, so hovering the last phase still shows ITS name. */
   pointer-events: none;
@@ -875,8 +892,8 @@ const filteredAugCards = computed(() => {
 
 .sf-cap-name {
   pointer-events: auto;
-  font-size: 20px;
-  font-size: clamp(19px, 5.2cqmin, 46px);
+  font-size: 24px;
+  font-size: clamp(23px, 6.6cqmin, 58px);
   line-height: 1.05;
   letter-spacing: 0.04em;
   color: var(--phase-primary);
@@ -886,8 +903,8 @@ const filteredAugCards = computed(() => {
 }
 
 .sf-cap-step {
-  font-size: 10px;
-  font-size: clamp(10px, 1.8cqmin, 17px);
+  font-size: 11px;
+  font-size: clamp(11px, 2.1cqmin, 20px);
   font-weight: 700;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -895,28 +912,43 @@ const filteredAugCards = computed(() => {
   white-space: nowrap;
 }
 
-/* The gate: one number, one word for what it counts. A hairline separates it
-   from the identity above, so the block reads as "who" over "what's next". */
-.sf-cap-gate {
+/* ─ The two clocks ─
+   How long this phase has lasted, and how much longer it has to. Side by side
+   under a hairline, so the block reads as "who" over "how long". */
+.sf-cap-clocks {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: clamp(12px, 3.4cqmin, 34px);
+  margin-top: clamp(5px, 1.4cqmin, 14px);
+  padding-top: clamp(5px, 1.3cqmin, 13px);
+  border-top: 1px solid #2c1806;
+}
+
+.sf-cap-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  margin-top: clamp(5px, 1.4cqmin, 14px);
-  padding: clamp(4px, 1cqmin, 11px) clamp(10px, 2.6cqmin, 26px) 0;
-  border-top: 1px solid #2c1806;
+  min-width: 0;
+  padding: 0;
   background: transparent;
-  cursor: pointer;
   pointer-events: auto;
-  transition: border-color 0.16s;
+  cursor: help;
 }
-.sf-cap-gate:hover {
-  border-color: #5c3310;
+.sf-cap-cell--act {
+  cursor: pointer;
+}
+
+/* Hairline between the two — the dial's own divider, not a border on a cell */
+.sf-cap-split {
+  width: 1px;
+  background: #2c1806;
 }
 
 .sf-cap-val {
-  font-size: 16px;
-  font-size: clamp(16px, 4.4cqmin, 42px);
+  font-size: 20px;
+  font-size: clamp(19px, 5.4cqmin, 48px);
   font-weight: 900;
   letter-spacing: 0.03em;
   line-height: 1.1;
@@ -933,22 +965,17 @@ const filteredAugCards = computed(() => {
   color: #e8c040;
   text-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
 }
-/* Time is served, the branches are not — amber, the colour of "your move" */
-.is-lock .sf-cap-val {
-  color: #c89040;
-  text-shadow: 0 0 8px rgba(200, 144, 64, 0.4);
-}
 
 .sf-cap-lbl {
-  font-size: 9px;
-  font-size: clamp(9px, 1.6cqmin, 15px);
+  font-size: 10px;
+  font-size: clamp(10px, 1.9cqmin, 18px);
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #6a5a3a;
   white-space: nowrap;
 }
-.sf-cap-gate:hover .sf-cap-lbl {
+.sf-cap-cell--act:hover .sf-cap-lbl {
   color: #8a7a52;
 }
 

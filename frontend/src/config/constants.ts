@@ -2714,15 +2714,17 @@ export const STATS_TAB_ORBIT = {
   VIEW: 100,
   /** Vertical centre of the dial (% of the stage). Deliberately ABOVE the
    *  geometric middle: the ring's open bottom carries the phase caption (name,
-   *  step count) and the dwell clock, and a centred ring left that block barely
-   *  16% of the stage. Lifting the whole dial hands the caption ~30% without
-   *  taking a single pixel off the ring's radius. */
-  CENTER_Y: 44,
+   *  step count, both clocks), and a centred ring left that block barely 16% of
+   *  the stage. Lifting the whole dial hands the caption ~27% — room for type
+   *  that is actually readable — without taking a pixel off the ring's radius.
+   *  The ceiling is the topmost marker: its hover label rides above it and may
+   *  only overhang the column by what CAPTION overflow-clip-margin allows. */
+  CENTER_Y: 41,
   /** Radius of the phase orbit. Sized against the two things that bind it: the
    *  outermost markers must keep their hover labels inside the column (the body
-   *  clips), and the caption below the arc ends needs its ~20% of stage height.
-   *  36 is the last value where both still hold. */
-  RADIUS: 36,
+   *  clips), and the caption below the arc ends needs its ~26% of stage height.
+   *  37 is the last value where both still hold. */
+  RADIUS: 37,
   /** orbit line thickness */
   STROKE: 1.6,
   /** angle of the first step (the comet), i.e. the lower-left end of the arc */
