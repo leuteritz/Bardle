@@ -800,11 +800,18 @@ const frameVars = computed<Record<string, string>>(() => {
 }
 /* ── name plate ───────────────────────────────────────────────────────────────
    Two rows on one plate: the name, and beneath it the number the XP arc draws.
-   The second row is deliberately the quieter one — the arc around the portrait
-   is the headline, this only spells out how far along it is. Both rows stay
-   inside the node's single identity colour: the earned value runs hottest, the
-   target and the unit fade back, and the "ready" state brightens rather than
-   introducing a second hue. */
+   The second row is the quieter one — the arc around the portrait is the
+   headline, this only spells out how far along it is — but "quieter" is told
+   through SIZE and WEIGHT, never through alpha. A 9px glyph faded to 50% on a
+   near-black ground is not subtle, it is gone; every part of both rows therefore
+   keeps a solid, fully opaque colour and only differs in lightness.
+
+   The plate never inverts to a solid role-colour fill. Selecting a role opens
+   the details panel, which squeezes the board into a narrow column — the caption
+   renders around 7px there, and dark ink on a mid-saturation fill at that size
+   is unreadable. Selection is told instead by a lit rail along the top edge, a
+   brighter border and a role-coloured glow: still entirely the role's colour,
+   but the type keeps the dark ground it needs. */
 .sigil-node-name {
   position: absolute;
   left: calc(50% + var(--name-x, 0px));
@@ -816,32 +823,31 @@ const frameVars = computed<Record<string, string>>(() => {
   max-width: var(--name-max, 158px);
   padding: 2px 10px 3px;
   border-radius: 4px;
-  background: rgba(10, 7, 4, 0.88);
-  border: 1px solid var(--role-color);
+  /* near-opaque: the rune ring and the connector lines run right underneath */
+  background: #0c0805;
+  border: 1px solid color-mix(in srgb, var(--role-color) 72%, #0c0805);
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .sigil-node-name-text {
   max-width: 100%;
   font-size: 12px;
   line-height: 1.2;
   letter-spacing: 0.04em;
-  color: var(--role-color);
+  color: color-mix(in srgb, #fff 16%, var(--role-color));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sigil-node--selected .sigil-node-name {
-  background: var(--role-color);
-}
-.sigil-node--selected .sigil-node-name-text {
-  color: #0a0806;
-}
 
-/* XP row */
+/* XP row — hierarchy by size and weight, contrast held for all of it */
 .sigil-node-xp-num {
   display: flex;
   align-items: baseline;
   gap: 2px;
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 1.05;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
@@ -849,38 +855,58 @@ const frameVars = computed<Record<string, string>>(() => {
 }
 .sigil-node-xp-cur {
   font-weight: 800;
-  color: color-mix(in srgb, #fff 26%, var(--role-color));
+  color: color-mix(in srgb, #fff 42%, var(--role-color));
 }
 .sigil-node-xp-sep {
-  color: color-mix(in srgb, var(--role-color) 42%, transparent);
+  color: color-mix(in srgb, var(--role-color) 60%, #8b8172);
 }
 .sigil-node-xp-max {
-  color: color-mix(in srgb, var(--role-color) 66%, transparent);
+  color: var(--role-color);
 }
 .sigil-node-xp-unit {
   font-size: 8.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--role-color) 50%, transparent);
+  color: color-mix(in srgb, var(--role-color) 62%, #8b8172);
 }
 /* enough banked for the next level — the row goes to full brightness, the same
    moment the arc starts breathing and the medallion pings. No second colour. */
 .sigil-node-xp-num.is-ready .sigil-node-xp-cur {
-  color: color-mix(in srgb, #fff 55%, var(--role-color));
+  color: color-mix(in srgb, #fff 62%, var(--role-color));
 }
+.sigil-node-xp-num.is-ready .sigil-node-xp-sep,
 .sigil-node-xp-num.is-ready .sigil-node-xp-max,
-.sigil-node-xp-num.is-ready .sigil-node-xp-unit,
-.sigil-node-xp-num.is-ready .sigil-node-xp-sep {
-  color: var(--role-color);
+.sigil-node-xp-num.is-ready .sigil-node-xp-unit {
+  color: color-mix(in srgb, #fff 20%, var(--role-color));
 }
-/* selected: the plate inverts, so the row is read as ink on metal */
+
+/* selected: rail, brighter frame, role-coloured glow — the ground stays dark.
+   All three are a one-off state swap with a transition, nothing per frame. */
+.sigil-node--selected .sigil-node-name {
+  background: color-mix(in srgb, var(--role-color) 13%, #0c0805);
+  border-color: color-mix(in srgb, #fff 28%, var(--role-color));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--role-color) 42%, transparent);
+}
+.sigil-node--selected .sigil-node-name::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  top: -1px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: color-mix(in srgb, #fff 38%, var(--role-color));
+}
+.sigil-node--selected .sigil-node-name-text {
+  color: color-mix(in srgb, #fff 40%, var(--role-color));
+}
 .sigil-node--selected .sigil-node-xp-cur {
-  color: #0a0806;
+  color: color-mix(in srgb, #fff 60%, var(--role-color));
 }
 .sigil-node--selected .sigil-node-xp-sep,
 .sigil-node--selected .sigil-node-xp-max,
 .sigil-node--selected .sigil-node-xp-unit {
-  color: rgba(10, 8, 6, 0.68);
+  color: color-mix(in srgb, #fff 18%, var(--role-color));
 }
 
 /* ── search spotlight: hits pulse gold, the rest recedes ── */
