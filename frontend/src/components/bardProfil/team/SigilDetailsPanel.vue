@@ -315,6 +315,22 @@ function statEffectOf(key: ChampionStatKey): string {
   if (!stats.value) return ''
   return statEffectLabel(key, stats.value[key], cooldownRush.value)
 }
+/**
+ * The champion's own best stat. The four share one scale, so a bar drawn against
+ * this peak answers "what is this champion FOR?" without a second number — the
+ * tallest bar is the lean. Against the subject rather than a global ceiling on
+ * purpose: levels have no cap worth drawing a bar to, and a bar that never fills
+ * teaches nothing.
+ */
+const statPeak = computed(() => {
+  const s = stats.value
+  if (!s) return 0
+  return Math.max(...CHAMPION_STATS.map((d) => s[d.key]))
+})
+function statShare(key: ChampionStatKey): number {
+  if (!stats.value || statPeak.value <= 0) return 0
+  return stats.value[key] / statPeak.value
+}
 
 // ── Perks ────────────────────────────────────────────────────────────────────
 const perkChoices = computed(() =>
@@ -845,8 +861,58 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         </div>
       </div>
 
-      <!-- ── RIGHT — stats and the slot's own gear (perks live on the left) ── -->
+      <!-- ── RIGHT — the slot's gear, then the champion's power, then its kit.
+           Read top to bottom that is one sentence: what you can change, what it
+           makes them, what they do with it. Equipment leads because it is the
+           only block on this side you can act on — the two below it report. ── -->
       <div class="sdp-right">
+        <!-- equipment — slot-scoped: the loadout stays when champions swap -->
+        <div class="sdp-block sdp-block--equipment">
+          <div class="sdp-section-head">
+            <span class="sdp-section-accent">✦</span>
+            <span class="sdp-section-title">Role Equipment</span>
+            <div class="sdp-section-rule" />
+            <span class="sdp-section-count">{{ equippedCount }}/{{ CATEGORIES.length }}</span>
+          </div>
+          <div class="sdp-equips">
+            <button
+              v-for="cat in CATEGORIES"
+              :key="cat"
+              class="sdp-equip"
+              :class="{
+                'sdp-equip--filled': !!equippedItem(cat),
+                'sdp-equip--empty': !equippedItem(cat),
+              }"
+              :title="equippedItem(cat)?.name ?? `Equip ${CAT_LABELS[cat]}`"
+              @click="emit('pick-equipment', cat)"
+            >
+              <template v-if="equippedItem(cat)">
+                <img
+                  v-if="equippedItem(cat)!.icon.startsWith('/')"
+                  :src="equippedItem(cat)!.icon"
+                  :alt="equippedItem(cat)!.name"
+                  class="sdp-equip-img"
+                />
+                <span v-else class="sdp-equip-emoji">{{ equippedItem(cat)!.icon }}</span>
+                <span class="sdp-equip-name">{{ equippedItem(cat)!.name }}</span>
+              </template>
+              <!-- An empty slot says so twice over: a dashed rim, the same mark
+                   an empty roster seat wears, and a ＋ on the ghost. One glance
+                   answers both "is there anything here" and "can I do something
+                   about it". -->
+              <span v-else class="sdp-equip-ghost">
+                <img
+                  :src="`/img/itemShop/${cat}-128.png`"
+                  :alt="CAT_LABELS[cat]"
+                  class="sdp-equip-img sdp-equip-img--ghost"
+                />
+                <span class="sdp-equip-plus" aria-hidden="true">＋</span>
+              </span>
+              <span class="sdp-equip-cat">{{ CAT_LABELS[cat] }}</span>
+            </button>
+          </div>
+        </div>
+
         <!-- stats -->
         <div v-if="champion && stats" class="sdp-block sdp-block--stats">
           <div class="sdp-section-head">
@@ -883,6 +949,16 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                   +{{ swornBonus[stat.key].toFixed(1) }} sworn
                 </div>
               </div>
+              <!-- the lean, drawn against the champion's own best stat: four
+                   bars, and the long one is what this champion is for. Scaled
+                   inline on the fill itself, never through a variable on the
+                   tile — a variable would recalculate the whole subtree. -->
+              <span class="sdp-stat-meter" aria-hidden="true">
+                <span
+                  class="sdp-stat-meter-fill"
+                  :style="{ transform: `scaleX(${statShare(stat.key)})` }"
+                />
+              </span>
             </div>
           </div>
         </div>
@@ -930,43 +1006,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           </div>
         </div>
 
-        <!-- equipment — also slot-scoped: the loadout stays when champions swap -->
-        <div class="sdp-block sdp-block--equipment">
-          <div class="sdp-section-head">
-            <span class="sdp-section-accent">✦</span>
-            <span class="sdp-section-title">Role Equipment</span>
-            <div class="sdp-section-rule" />
-            <span class="sdp-section-count">{{ equippedCount }}/{{ CATEGORIES.length }}</span>
-          </div>
-          <div class="sdp-equips">
-            <button
-              v-for="cat in CATEGORIES"
-              :key="cat"
-              class="sdp-equip"
-              :class="{ 'sdp-equip--filled': !!equippedItem(cat) }"
-              :title="equippedItem(cat)?.name ?? CAT_LABELS[cat]"
-              @click="emit('pick-equipment', cat)"
-            >
-              <template v-if="equippedItem(cat)">
-                <img
-                  v-if="equippedItem(cat)!.icon.startsWith('/')"
-                  :src="equippedItem(cat)!.icon"
-                  :alt="equippedItem(cat)!.name"
-                  class="sdp-equip-img"
-                />
-                <span v-else class="sdp-equip-emoji">{{ equippedItem(cat)!.icon }}</span>
-                <span class="sdp-equip-name">{{ equippedItem(cat)!.name }}</span>
-              </template>
-              <img
-                v-else
-                :src="`/img/itemShop/${cat}-128.png`"
-                :alt="CAT_LABELS[cat]"
-                class="sdp-equip-img sdp-equip-img--ghost"
-              />
-              <span class="sdp-equip-cat">{{ CAT_LABELS[cat] }}</span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -1561,34 +1600,38 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
  * would trade the scrollbar for clipped cards; growing only ever engages on the
  * taller desktops, where the column would otherwise end above a black band.
  *
- * The grow factors are the blocks' own designed heights (205 / 213 / 104), so
- * the extra space lands in the proportion the page was drawn in and the rhythm
- * between the three survives.
+ * The grow factors are NOT the blocks' own heights — they are how much each one
+ * can DO with a taller box, which is a different question and was worth
+ * measuring. A stat tile is an icon beside a number over two short lines: give
+ * it height and the whole tile grows into a plate you can read across the room,
+ * so stats take the lion's share. An ability card is a paragraph pinned to the
+ * top of its box; every pixel past the last line of text is air, so it takes
+ * little. Equipment is three buttons and leads the column as the one thing here
+ * you can act on — it stays a compact action row rather than three tall wells.
  *
- * Each cap is twice the block's Full HD height, which is what a 4K column would
- * be entitled to if the whole page scaled with the screen. Without them a 4K
- * column has enough spare height to blow the ability cards up to nine hundred
- * pixels; with them the blocks stop at twice their designed size and the last of
- * the room becomes spacing between them (space-between on the column), which on
- * a 2160px screen reads as air rather than as a gap. Nothing here engages at
- * Full HD (the column overflows, so there is no free space to hand out) and no
- * cap is reached at 2K. */
+ * Each cap is roughly twice the block's Full HD height, which is what a 4K
+ * column would be entitled to if the whole page scaled with the screen. Without
+ * them a 4K column has spare height enough to blow one block up to nine hundred
+ * pixels; with them the blocks stop and the last of the room becomes spacing
+ * (space-between on the column), which on a 2160px screen reads as air rather
+ * than as a gap. Nothing here engages at Full HD — the column overflows there,
+ * so there is no free space to hand out. */
 .sdp-block {
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 .sdp-block--stats {
-  flex: 205 0 auto;
+  flex: 6 0 auto;
   max-height: 444px;
 }
 .sdp-block--abilities {
-  flex: 213 0 auto;
-  max-height: 486px;
+  flex: 2 0 auto;
+  max-height: 420px;
 }
 .sdp-block--equipment {
-  flex: 104 0 auto;
-  max-height: 268px;
+  flex: 1 0 auto;
+  max-height: 230px;
 }
 /* the section body takes the block's growth; the head above it stays put */
 .sdp-block > .sdp-stats,
@@ -2270,14 +2313,33 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   gap: 9px;
 }
 .sdp-stat {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 13px;
   border-radius: 4px;
+  overflow: hidden;
   background: #1c1c18;
   border: 1px solid rgba(200, 164, 90, 0.14);
   border-left: 3px solid var(--sc);
+}
+/* the lean meter — a rail along the tile's bottom edge, filled to the stat's
+   share of the champion's best. Costs one element and one composited scale. */
+.sdp-stat-meter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.55);
+}
+.sdp-stat-meter-fill {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--sc) 40%, #0a0805), var(--sc));
+  transition: transform 0.3s ease-out;
 }
 .sdp-stat-icon {
   flex-shrink: 0;
@@ -2424,9 +2486,48 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   border-color: rgba(220, 180, 90, 0.55);
   box-shadow: inset 0 0 14px rgba(200, 144, 64, 0.12);
 }
+/* an open slot wears the dashed rim an open roster seat wears — one mark for
+   "nothing here yet" across the whole page */
+.sdp-equip--empty {
+  border-style: dashed;
+  border-color: rgba(200, 164, 90, 0.3);
+}
 .sdp-equip:hover {
   transform: translateY(-2px);
   border-color: #c89040;
+}
+.sdp-equip-ghost {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* the ＋ rides the ghost's lower right, the same corner the roster puts its
+   affordances in — small, so it reads as an invitation and not as a warning */
+.sdp-equip-plus {
+  position: absolute;
+  right: -7px;
+  bottom: -3px;
+  width: 17px;
+  height: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: #141410;
+  border: 1px solid rgba(200, 164, 90, 0.4);
+  font-size: 11px;
+  line-height: 1;
+  color: #c8a860;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.sdp-equip:hover .sdp-equip-plus {
+  background: #2a1c08;
+  border-color: #c89040;
+  color: #e8c040;
 }
 .sdp-equip-img {
   width: 48px;
