@@ -3562,6 +3562,11 @@ export const CHIME_BURST_SIZE_FACTOR = 0.45 // mini-chime size (× sun radius)
 // ── Admin / Debug ─────────────────────────────────────────────────────────────
 export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000
 
+/** Kantenlänge der Drifter-Silhouette auf den Spawn-Kacheln des Admin-Panels.
+ *  Groß genug, dass Splitter, Sonde und Leviathan auseinanderzuhalten sind,
+ *  klein genug für zwei Reihen à vier Kacheln neben den anderen Panels. */
+export const ADMIN_DRIFTER_PREVIEW_PX = 34
+
 // Admin Galaxy Jump — warp-flash duration (ms) after teleporting to a galaxy
 export const GALAXY_JUMP_WARP_MS = 420
 
