@@ -1154,9 +1154,27 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    name, heavy along the left under the tag, and open across the upper right,
    which is where a splash keeps its subject. Two gradients on the layer that
    was already there, so the poster costs no element and nothing per frame. */
+/* Head and shoulders, not the whole splash. The tile is 250×167 against a ~1.7
+   splash, so `cover` alone shows nearly the source's full width — the same wide
+   view the hero card below already gives, at a third of the size, which made the
+   two read as one picture printed twice. Magnifying the crop turns the tile into
+   a close-up: the roster names WHO sits here, the hero card shows them.
+
+   Scale rather than a tighter object-position, because object-position can only
+   slide the window, not close it.
+
+   1.25 around 40% is where a contact sheet of twelve champions settled. Tighter
+   (1.4 around 26%, the first try) reads as a macro rather than a portrait: it
+   takes the top off Braum's head and cuts Ahri at the chin, because an origin
+   that high pushes everything above it out of frame. Looser than 1.15 and the
+   tile is the hero card again. 250 × 1.25 = 313px stays well inside the source,
+   so the tile is still downsampling. Static transform: the card already clips
+   it, and nothing here animates. */
 .sdp-chip--main .sdp-chip-art {
   opacity: 1;
   object-position: center 14%;
+  transform: scale(1.25);
+  transform-origin: 50% 40%;
 }
 .sdp-chip--main .sdp-chip-art-fade {
   background:
