@@ -821,7 +821,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
       <!-- ── RIGHT — stats and the slot's own gear (perks live on the left) ── -->
       <div class="sdp-right">
         <!-- stats -->
-        <div v-if="champion && stats">
+        <div v-if="champion && stats" class="sdp-block sdp-block--stats">
           <div class="sdp-section-head">
             <span class="sdp-section-accent">✦</span>
             <span class="sdp-section-title">Stats</span>
@@ -861,7 +861,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         </div>
 
         <!-- role abilities — belong to the slot, not to the champion in it -->
-        <div>
+        <div class="sdp-block sdp-block--abilities">
           <div class="sdp-section-head">
             <span class="sdp-section-accent">✦</span>
             <span class="sdp-section-title">Role Abilities</span>
@@ -904,7 +904,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         </div>
 
         <!-- equipment — also slot-scoped: the loadout stays when champions swap -->
-        <div>
+        <div class="sdp-block sdp-block--equipment">
           <div class="sdp-section-head">
             <span class="sdp-section-accent">✦</span>
             <span class="sdp-section-title">Role Equipment</span>
@@ -959,9 +959,21 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 
 /* ══ roster strip ══ */
-/* stretch, not center: the captain card runs the full height of both rows */
+/* stretch, not center: the captain card runs the full height of both rows.
+ *
+ * Height is a SHARE of the panel, not the content's own height. The page was
+ * laid out at 1920×1080, where the content height is all there is; on a taller
+ * desktop the same fixed strip leaves the page short of its own bottom edge.
+ * A share fixes that continuously — no breakpoint to fall between — and the two
+ * px bounds keep both ends honest: 150px is the height the strip was designed
+ * at (Full HD lands on it and nothing moves), 240px is where the captain's
+ * splash stops gaining anything from more room.
+ *
+ * Percentages resolve against the panel, which is stretched to a definite
+ * height by the tab's flex row — see .sdp-panel. */
 .sdp-roster {
   flex-shrink: 0;
+  height: clamp(150px, 18%, 240px);
   display: flex;
   align-items: stretch;
   gap: 12px;
@@ -1427,6 +1439,8 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   padding: 14px;
   display: flex;
   flex-direction: column;
+  /* gap is the floor; whatever the block caps decline (4K only) spreads here */
+  justify-content: space-between;
   gap: 16px;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
@@ -1442,12 +1456,64 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   border-radius: 2px;
 }
 
+/* ── the right column's three sections share whatever height is left over ──
+ * At Full HD there is none — the column already overflows and scrolls, which is
+ * why every block grows but NONE of them shrink (`flex: n 0 auto`). Shrinking
+ * would trade the scrollbar for clipped cards; growing only ever engages on the
+ * taller desktops, where the column would otherwise end above a black band.
+ *
+ * The grow factors are the blocks' own designed heights (205 / 213 / 104), so
+ * the extra space lands in the proportion the page was drawn in and the rhythm
+ * between the three survives.
+ *
+ * Each cap is twice the block's Full HD height, which is what a 4K column would
+ * be entitled to if the whole page scaled with the screen. Without them a 4K
+ * column has enough spare height to blow the ability cards up to nine hundred
+ * pixels; with them the blocks stop at twice their designed size and the last of
+ * the room becomes spacing between them (space-between on the column), which on
+ * a 2160px screen reads as air rather than as a gap. Nothing here engages at
+ * Full HD (the column overflows, so there is no free space to hand out) and no
+ * cap is reached at 2K. */
+.sdp-block {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.sdp-block--stats {
+  flex: 205 0 auto;
+  max-height: 444px;
+}
+.sdp-block--abilities {
+  flex: 213 0 auto;
+  max-height: 486px;
+}
+.sdp-block--equipment {
+  flex: 104 0 auto;
+  max-height: 268px;
+}
+/* the section body takes the block's growth; the head above it stays put */
+.sdp-block > .sdp-stats,
+.sdp-block > .sdp-ability-cards,
+.sdp-block > .sdp-equips {
+  flex: 1 0 auto;
+  min-height: 0;
+}
+/* grid rows and flex tiles then stretch into it rather than sitting on top */
+.sdp-block > .sdp-stats,
+.sdp-block > .sdp-ability-cards {
+  align-content: stretch;
+}
+
 /* ── splash ── */
 /* Grows into whatever height the left column has left over — the portrait is
    the thing worth making bigger, not the gap above the Level Up button. */
 .sdp-splash {
   position: relative;
-  flex: 1 1 v-bind(splashHeightPx);
+  /* Grow factor 4 against the perk path's 1: on a tall desktop four fifths of
+     the spare height go to the portrait, which is the part of this column that
+     is actually worth more pixels, and the path still stops the column ending
+     short once the portrait hits its share cap. */
+  flex: 4 1 v-bind(splashHeightPx);
   min-height: v-bind(splashHeightCompactPx);
   max-height: v-bind(splashMaxShare);
   overflow: hidden;
@@ -1677,12 +1743,15 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 
 /* ── the perk path owns the middle of the left column ──
-   Content-sized, not a second greedy flex child: a short path (all milestones
-   still locked) hands its slack to the portrait above instead of padding itself
-   out, and a long one (an open choice) shrinks and scrolls on its own. */
+   A long path (an open choice) shrinks and scrolls on its own. A short one used
+   to be purely content-sized so its slack went to the portrait — it still does,
+   four fifths of it, but the path now takes the last fifth instead of leaving
+   the column ending above its own bottom edge once the portrait caps out. */
 .sdp-mid {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -1766,15 +1835,25 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    locked (dim, counts down the levels). Reading top to bottom answers both
    "what did I pick?" and "what is still ahead?" without a second view. */
 .sdp-path {
+  flex: 1 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 13px 14px 16px;
 }
 .sdp-section-head--path {
   margin-bottom: 11px;
 }
+/* The beads spread over whatever height the path was given rather than bunching
+   at the top of it — the spine is drawn between the first and the last, so a
+   ladder that fills its box is exactly what the drawing wants. `gap` stays the
+   floor: where there is nothing spare, space-between reads as flex-start. */
 .sdp-path-track {
   position: relative;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 10px;
 }
 /* the spine — one line behind every bead, drawn from the first to the last */
@@ -2225,7 +2304,8 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-equip {
   position: relative;
   flex: 1;
-  height: 104px;
+  /* a floor, not a height — the row stretches with its block on tall desktops */
+  min-height: 104px;
   padding: 0;
   cursor: pointer;
   overflow: hidden;

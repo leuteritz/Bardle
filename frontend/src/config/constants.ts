@@ -2994,13 +2994,16 @@ export const TEAM_SIGIL_SYNERGIES_PANEL_WIDTH = 460
 /** Height (px) of the details-panel splash header (hero card: name + tier/origin/trait chips). */
 export const TEAM_SIGIL_SPLASH_HEIGHT = 292
 /**
- * Ceiling the splash may grow to, as a share (%) of the left column's height.
- * Deliberately under a third: below the portrait sit the progression block and
- * the perk path, and the path is the reason the column is tall. A share rather
- * than a pixel cap, so a 2K/4K column fills out just as tightly as a Full HD one
- * — on a taller screen the extra height goes to the path, not to the splash.
+ * Ceiling the splash may grow to, as a share (%) of the left column's height —
+ * a share rather than a pixel cap, so the column fills out just as tightly at 4K
+ * as at Full HD. Below the portrait sit the progression block and the perk path,
+ * and the path is the reason the column is tall; the cap is what stops a very
+ * tall column from turning into one giant portrait over a squeezed ladder.
+ *
+ * Never binding at Full HD — there the splash sits on its own
+ * TEAM_SIGIL_SPLASH_HEIGHT_COMPACT floor and the column already overflows.
  */
-export const TEAM_SIGIL_SPLASH_MAX_SHARE = 46
+export const TEAM_SIGIL_SPLASH_MAX_SHARE = 52
 /** Max camera drag-pan as a fraction of the scaled stage size (rubber-band bound). */
 export const TEAM_SIGIL_PAN_MAX_FRACTION = 0.15
 /** Pointer travel (px) below which a pointer-down still counts as a click, not a drag. */
