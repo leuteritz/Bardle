@@ -724,56 +724,71 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
              afford it; you read "5K / 120 XP" and then had to travel past five
              milestones to find the button. -->
         <div v-if="champion" class="sdp-advance">
-          <div v-if="!atCap" class="sdp-cost-row">
-            <div class="sdp-cost" :class="{ 'sdp-cost--short': !affordsChimes }">
-              <Icon :icon="CHIMES_COST_ICON" width="18" height="18" />
-              <span>{{ $formatNumber(cost.chimes) }}</span>
-            </div>
-            <div
-              v-for="mat in materialCosts"
-              :key="mat.id"
-              class="sdp-cost"
-              :class="{ 'sdp-cost--short': mat.owned < mat.qty }"
-              :title="mat.def?.name ?? mat.id"
-            >
-              <img v-if="mat.def" :src="mat.def.image" :alt="mat.def.name" class="sdp-cost-img" />
-              <span>{{ mat.qty }}</span>
-              <span class="sdp-cost-owned">({{ mat.owned }})</span>
-            </div>
-          </div>
-
+          <!-- The price rides INSIDE the action it belongs to. As a row of its
+               own above the button it was a bare number in a chip — a coin and
+               "2.92K" with nothing saying what it was the price OF, and turning
+               red when unaffordable without saying red about what. On the button
+               it needs no label at all: a price on a button is the price of
+               pressing it. It also gives the column back the row's own height
+               plus the gap under it, which the portrait above now keeps. -->
           <button
             class="sdp-level-btn"
-            :class="{ 'sdp-level-btn--locked': !canLevel }"
+            :class="{ 'sdp-level-btn--locked': !canLevel, 'sdp-level-btn--bare': atCap }"
             :disabled="!canLevel"
+            :title="atCap ? 'This champion is at the level cap' : `Cost of level ${nextLevel}`"
             @click="doLevelUp"
           >
-            <Icon icon="game-icons:circle-sparks" width="20" height="20" />
-            <span v-if="atCap">Level Cap Reached</span>
-            <span v-else>Level Up to {{ nextLevel }}</span>
+            <span class="sdp-level-btn-main">
+              <Icon icon="game-icons:circle-sparks" width="20" height="20" />
+              <span v-if="atCap">Level Cap Reached</span>
+              <span v-else>Level Up to {{ nextLevel }}</span>
+            </span>
+            <span v-if="!atCap" class="sdp-level-btn-cost">
+              <span class="sdp-cost" :class="{ 'sdp-cost--short': !affordsChimes }">
+                <Icon :icon="CHIMES_COST_ICON" width="15" height="15" />
+                <span>{{ $formatNumber(cost.chimes) }}</span>
+              </span>
+              <span
+                v-for="mat in materialCosts"
+                :key="mat.id"
+                class="sdp-cost"
+                :class="{ 'sdp-cost--short': mat.owned < mat.qty }"
+                :title="`${mat.def?.name ?? mat.id} — ${mat.owned} in stock`"
+              >
+                <img v-if="mat.def" :src="mat.def.image" :alt="mat.def.name" class="sdp-cost-img" />
+                <span>{{ mat.qty }}</span>
+                <span class="sdp-cost-owned">({{ mat.owned }})</span>
+              </span>
+            </span>
           </button>
 
-          <div v-if="blockLabel" class="sdp-block-hint">{{ blockLabel }}</div>
-          <div v-if="!atCap && isAscensionLevel(nextLevel)" class="sdp-next-hint">
-            <Icon icon="game-icons:beveled-star" width="14" height="14" />
-            Ascension level — grants a star and lifts every stat
-          </div>
-          <div v-else-if="!atCap && isPerkLevel(nextLevel)" class="sdp-next-hint">
-            <Icon icon="game-icons:ribbon-medal" width="14" height="14" />
-            Milestone level — opens a perk choice
-          </div>
-          <div v-else-if="nextMilestone" class="sdp-next-hint sdp-next-hint--muted">
-            <Icon
-              :icon="
-                nextMilestone.kind === 'perk'
-                  ? 'game-icons:ribbon-medal'
-                  : 'game-icons:beveled-star'
-              "
-              width="14"
-              height="14"
-            />
-            Next {{ nextMilestone.kind === 'perk' ? 'perk' : 'star' }} at level
-            {{ nextMilestone.level }}
+          <!-- One line under the button, not two stacked ones: what is in the
+               way, and what the next level is worth. Both are short, both answer
+               a question about the same button, and side by side they cost a
+               single row instead of two. -->
+          <div class="sdp-hints">
+            <span v-if="blockLabel" class="sdp-hint sdp-hint--block">{{ blockLabel }}</span>
+            <span v-if="!atCap && isAscensionLevel(nextLevel)" class="sdp-hint sdp-hint--hot">
+              <Icon icon="game-icons:beveled-star" width="13" height="13" />
+              Ascension — a star and a lift to every stat
+            </span>
+            <span v-else-if="!atCap && isPerkLevel(nextLevel)" class="sdp-hint sdp-hint--hot">
+              <Icon icon="game-icons:ribbon-medal" width="13" height="13" />
+              Milestone — opens a perk choice
+            </span>
+            <span v-else-if="nextMilestone" class="sdp-hint">
+              <Icon
+                :icon="
+                  nextMilestone.kind === 'perk'
+                    ? 'game-icons:ribbon-medal'
+                    : 'game-icons:beveled-star'
+                "
+                width="13"
+                height="13"
+              />
+              Next {{ nextMilestone.kind === 'perk' ? 'perk' : 'star' }} at
+              {{ nextMilestone.level }}
+            </span>
           </div>
         </div>
 
@@ -2182,45 +2197,18 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   padding: 12px 14px 14px;
   background: #1a1008;
 }
-.sdp-cost-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-bottom: 10px;
-}
-.sdp-cost {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 4px;
-  background: #141410;
-  border: 1px solid rgba(200, 164, 90, 0.22);
-  font-size: 13px;
-  font-weight: 600;
-  color: #e8c040;
-}
-/* can't pay this line — flip it to the error red */
-.sdp-cost--short {
-  border-color: rgba(204, 96, 80, 0.55);
-  color: #cc6050;
-}
-.sdp-cost-img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-}
-.sdp-cost-owned {
-  font-size: 11px;
-  color: rgba(230, 220, 196, 0.4);
-}
+/* ── the advance button, price included ──────────────────────────────────────
+   Label on one end, price on the other. Everything the block used to spend on a
+   separate cost row and a second hint line is gone, and the button reads as the
+   shop pattern every player already knows: this is what it does, this is what it
+   costs, and the pill that has gone red is the one you cannot pay. */
 .sdp-level-btn {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
   cursor: pointer;
   border-radius: 4px;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
@@ -2234,35 +2222,97 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     filter 0.15s,
     transform 0.15s;
 }
+/* at the cap there is no price, so the label takes the middle again */
+.sdp-level-btn--bare {
+  justify-content: center;
+}
+.sdp-level-btn-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sdp-level-btn-cost {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
 .sdp-level-btn:hover:not(:disabled) {
   filter: brightness(1.12);
   transform: translateY(-1px);
 }
+/* Locked keeps the house treatment, minus the grayscale: the price now lives on
+   this button, and while it is locked the price is exactly what the player needs
+   to read. Desaturating it would grey out the one pill that says which resource
+   is missing. The flat dark surface and the dimmed label carry the state on
+   their own, and the red hint below spells it out at full contrast. */
 .sdp-level-btn--locked {
   background: linear-gradient(to bottom, #2c2c26, #1a1a16);
   border-color: #3e3a30;
-  color: rgba(230, 220, 196, 0.4);
+  color: rgba(230, 220, 196, 0.45);
   cursor: not-allowed;
+}
+/* the price pills — dark ink on the live button, light on the locked one */
+.sdp-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(8, 20, 4, 0.28);
+  border: 1px solid rgba(13, 26, 6, 0.4);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #0d1a06;
+}
+.sdp-cost--short {
+  background: rgba(74, 14, 8, 0.3);
+  border-color: rgba(120, 30, 20, 0.55);
+}
+.sdp-level-btn--locked .sdp-cost {
+  background: rgba(0, 0, 0, 0.42);
+  border-color: rgba(200, 164, 90, 0.28);
+  color: #e8dcc0;
+}
+/* can't pay this line — the pill flips to the error red */
+.sdp-level-btn--locked .sdp-cost--short {
+  border-color: rgba(204, 96, 80, 0.7);
+  color: #e08878;
+}
+.sdp-cost-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+.sdp-cost-owned {
+  font-size: 11px;
+  font-weight: 600;
   opacity: 0.6;
-  filter: grayscale(55%);
 }
-.sdp-block-hint {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #cc6050;
-  text-align: center;
-}
-.sdp-next-hint {
+/* one wrapping row of hints, centred under the button */
+.sdp-hints {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  margin-top: 7px;
+  gap: 5px 12px;
+  margin-top: 8px;
   font-size: 12px;
-  color: #e8c040;
-}
-.sdp-next-hint--muted {
   color: rgba(200, 164, 90, 0.55);
+}
+.sdp-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.sdp-hint--block {
+  color: #cc6050;
+}
+.sdp-hint--hot {
+  color: #e8c040;
 }
 
 /* ── section headings (right column) ── */
