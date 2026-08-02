@@ -5,6 +5,9 @@ import type { DrifterBuffEffects, DrifterDef, DrifterRarity } from '../types'
  * clicked. Everything about a type lives here: silhouette, flight behavior,
  * instant reward and timed buff. The store only rolls, flies and settles them.
  *
+ * `body` picks the CSS silhouette DrifterBody.vue draws in flight — the icon
+ * below it is the HUD glyph (info card, buff chip, herald), never the object.
+ *
  * Balance intent, cheapest to richest:
  *  - common    → keeps the screen alive, small but always welcome
  *  - uncommon  → touches a currency the player cannot simply wait for
@@ -18,6 +21,7 @@ export const DRIFTERS: DrifterDef[] = [
     rarity: 'common',
     weight: 30,
     icon: 'game-icons:musical-notes',
+    body: 'chime',
     image: '/img/BardAbilities/BardChime-128.png',
     color: '#e8c040',
     flightMs: 12_000,
@@ -32,6 +36,7 @@ export const DRIFTERS: DrifterDef[] = [
     rarity: 'common',
     weight: 22,
     icon: 'game-icons:burning-embers',
+    body: 'shard',
     color: '#ff8a3c',
     flightMs: 11_000,
     sizePx: 44,
@@ -45,6 +50,7 @@ export const DRIFTERS: DrifterDef[] = [
     rarity: 'uncommon',
     weight: 14,
     icon: 'game-icons:meeple',
+    body: 'meep',
     image: '/img/BardAbilities/BardMeep-64.png',
     color: '#9fd4ff',
     // Tumbles along slowly — it is lost, after all, and the extra seconds make
@@ -61,6 +67,7 @@ export const DRIFTERS: DrifterDef[] = [
     rarity: 'uncommon',
     weight: 12,
     icon: 'game-icons:delivery-drone',
+    body: 'probe',
     color: '#52b830',
     flightMs: 13_000,
     sizePx: 48,
@@ -75,6 +82,7 @@ export const DRIFTERS: DrifterDef[] = [
     rarity: 'rare',
     weight: 8,
     icon: 'game-icons:sun-radiations',
+    body: 'surge',
     color: '#ffe28a',
     // A pressure wave running ahead of the sun — fast, and gone if missed.
     flightMs: 9_500,
@@ -90,6 +98,7 @@ export const DRIFTERS: DrifterDef[] = [
     rarity: 'rare',
     weight: 8,
     icon: 'game-icons:vortex',
+    body: 'vortex',
     color: '#b45cff',
     flightMs: 12_000,
     sizePx: 52,
@@ -103,6 +112,7 @@ export const DRIFTERS: DrifterDef[] = [
     rarity: 'rare',
     weight: 5,
     icon: 'game-icons:lighthouse',
+    body: 'beacon',
     color: '#e04a4a',
     flightMs: 14_000,
     sizePx: 50,
@@ -116,6 +126,7 @@ export const DRIFTERS: DrifterDef[] = [
     rarity: 'legendary',
     weight: 2,
     icon: 'game-icons:whale-tail',
+    body: 'leviathan',
     color: '#46d6c0',
     // Vast and unhurried: four strikes along a long, slow passage. Missing one
     // is not fatal — the passage lasts long enough to come back to it.

@@ -4013,7 +4013,6 @@ export const DRIFTER_BUFF_EXPIRY_WARN_SEC = 5
 
 /** Formfaktoren des Drifter-Körpers, alle relativ zu `DrifterDef.sizePx` —
  *  so bleibt ein 44px-Splitter proportional zum 128px-Leviathan. */
-export const DRIFTER_ICON_SCALE = 0.82
 export const DRIFTER_AURA_SCALE = 2.1
 export const DRIFTER_TRAIL_LENGTH_SCALE = 2.8
 export const DRIFTER_TRAIL_WIDTH_SCALE = 0.14

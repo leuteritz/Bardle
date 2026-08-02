@@ -18,16 +18,11 @@
            the breathing is a transform on its own layer. -->
       <span class="drifter-aura" :style="auraStyle" aria-hidden="true"></span>
 
+      <!-- The silhouette is pure CSS, one shape per drifter type — see
+           DrifterBody.vue. Nothing in here paints per frame; the body only
+           carries its own idle animation while the shell does the travelling. -->
       <span class="drifter-body" :style="bodyStyle">
-        <img
-          v-if="def.image"
-          :src="def.image"
-          class="drifter-img"
-          alt=""
-          draggable="false"
-          @dragstart.prevent
-        />
-        <Icon v-else :icon="def.icon" :width="iconPx" :height="iconPx" :style="{ color: def.color }" />
+        <DrifterBody :kind="def.body" :color="def.color" />
       </span>
 
       <!-- Multi-hit types show how far along they are, right on the body. -->
@@ -46,15 +41,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Icon } from '@iconify/vue'
 import type { ActiveDrifter, DrifterDef } from '@/types'
 import { drifterField, drifterPointAt, measuredFieldInsets } from '@/utils/drifterPath'
+import { hexToRgba } from '@/utils/format'
 import { DRIFTER_RARITY_GLOW } from '@/config/drifters'
+import DrifterBody from './DrifterBody.vue'
 import {
   DRIFTER_FADE_IN_FRAC,
   DRIFTER_FADE_OUT_FRAC,
   DRIFTER_HIT_PADDING_PX,
-  DRIFTER_ICON_SCALE,
   DRIFTER_AURA_SCALE,
   DRIFTER_TRAIL_LENGTH_SCALE,
   DRIFTER_TRAIL_WIDTH_SCALE,
@@ -74,7 +69,6 @@ const emit = defineEmits<{ hit: [x: number, y: number] }>()
 const shell = ref<HTMLElement>()
 const trail = ref<HTMLElement>()
 
-const iconPx = computed(() => Math.round(props.def.sizePx * DRIFTER_ICON_SCALE))
 const glow = computed(() => DRIFTER_RARITY_GLOW[props.def.rarity])
 
 const shellStyle = computed(() => ({
@@ -90,10 +84,10 @@ const bodyStyle = computed(() => ({
 const auraStyle = computed(() => ({
   width: `${props.def.sizePx * DRIFTER_AURA_SCALE}px`,
   height: `${props.def.sizePx * DRIFTER_AURA_SCALE}px`,
-  background: `radial-gradient(circle, ${hexA(props.def.color, glow.value)} 0%, ${hexA(
+  background: `radial-gradient(circle, ${hexToRgba(props.def.color, glow.value)} 0%, ${hexToRgba(
     props.def.color,
     glow.value * 0.45,
-  )} 38%, ${hexA(props.def.color, 0)} 70%)`,
+  )} 38%, ${hexToRgba(props.def.color, 0)} 70%)`,
 }))
 
 const trailStyle = computed(() => {
@@ -106,21 +100,12 @@ const trailStyle = computed(() => {
   return {
     width: `${props.def.sizePx * DRIFTER_TRAIL_LENGTH_SCALE}px`,
     height: `${width}px`,
-    background: `linear-gradient(to left, ${hexA(props.def.color, 0.5)}, ${hexA(
+    background: `linear-gradient(to left, ${hexToRgba(props.def.color, 0.5)}, ${hexToRgba(
       props.def.color,
       0,
     )})`,
   }
 })
-
-/** `#rrggbb` + alpha → `rgba(...)`. Keeps the palette in one place (the def). */
-function hexA(hex: string, alpha: number): string {
-  const h = hex.replace('#', '')
-  const r = parseInt(h.slice(0, 2), 16)
-  const g = parseInt(h.slice(2, 4), 16)
-  const b = parseInt(h.slice(4, 6), 16)
-  return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`
-}
 
 // ── Flight loop ─────────────────────────────────────────────────────────────
 // Position comes from the wall clock, never from an accumulated delta: a
@@ -260,13 +245,6 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   animation: drifter-bob 4.2s ease-in-out infinite;
-}
-
-.drifter-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  user-select: none;
 }
 
 /* Larger types read as a creature, not a pickup: slower, wider sway. */

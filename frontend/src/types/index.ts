@@ -811,6 +811,19 @@ export interface DrifterInstantReward {
   starTimeSeconds?: number
 }
 
+/** Which CSS body `DrifterBody.vue` builds for a drifter in flight. Every type
+ *  has its own silhouette — the flying object is drawn entirely in CSS, the
+ *  icon/artwork only ever shows up in the HUD (info card, buff chip, herald). */
+export type DrifterBodyKind =
+  | 'chime'
+  | 'shard'
+  | 'meep'
+  | 'probe'
+  | 'surge'
+  | 'vortex'
+  | 'beacon'
+  | 'leviathan'
+
 /** Static definition of a drifter type — pure data, no runtime state. */
 export interface DrifterDef {
   id: string
@@ -819,9 +832,11 @@ export interface DrifterDef {
   rarity: DrifterRarity
   /** Relative spawn weight inside the whole pool. */
   weight: number
-  /** Iconify `game-icons:*` name — the drifter's silhouette and chip icon. */
+  /** Iconify `game-icons:*` name — the chip/card icon. NOT the flying body. */
   icon: string
-  /** Optional image shown instead of the icon (chime / meep artwork). */
+  /** CSS silhouette drawn while the drifter crosses the orbit view. */
+  body: DrifterBodyKind
+  /** Optional image shown instead of the icon in the HUD (chime / meep art). */
   image?: string
   /** Signature color: aura, trail, edge ping and buff chip. */
   color: string
