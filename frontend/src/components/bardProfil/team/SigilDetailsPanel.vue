@@ -192,17 +192,6 @@ function allyImage(ally: string): string {
 }
 
 /**
- * Der Kapitäns-Chip ist der einzige, dessen Portrait über die volle Höhe der
- * Roster-Leiste läuft: TEAM_SIGIL_MAIN_PORTRAIT_WIDTH breit, aber gemessene
- * ~120 px hoch. Maßgeblich ist die längste Kante, und die liegt knapp über
- * CHAMPION_ART_MD_MAX_EDGE — mit 'md' wäre ausgerechnet der Main der unschärfste
- * Kopf der Seite.
- */
-function mainChipImage(name: string): string {
-  return battleStore.getChampionImage(name, { size: 'lg' })
-}
-
-/**
  * Backdrop splash of a roster card. Every seat wears one, so a card is a card at
  * all three sizes instead of the captain being a card and the rest being rows.
  *
@@ -411,21 +400,24 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         @click="selectSubject(MAIN_SUBJECT)"
         @mouseenter="emit('hover-ally', null)"
       >
-        <!-- the captain's own splash, dimmed to a backdrop: the card reads as a
-             card rather than as one more row -->
+        <!-- The captain is a poster, not a row: its splash is the whole tile and
+             the seat tag and the name take its two ends. It used to crop the
+             same splash a second time into a portrait column and then dim the
+             copy behind the text, which left the card's lower right corner as a
+             black quarter — a third of the biggest card on the strip, spent on
+             nothing. An empty seat still gets the portrait well, because there
+             is no art to be the card. -->
         <template v-if="main">
           <img
             :src="battleStore.getChampionImage(main)"
-            alt=""
-            aria-hidden="true"
+            :alt="main"
             class="sdp-chip-art"
             decoding="async"
           />
           <span class="sdp-chip-art-fade" aria-hidden="true" />
         </template>
-        <span class="sdp-chip-portrait">
-          <img v-if="main" :src="mainChipImage(main)" :alt="main" class="sdp-chip-img" decoding="async" />
-          <span v-else class="sdp-chip-plus">＋</span>
+        <span v-else class="sdp-chip-portrait">
+          <span class="sdp-chip-plus">＋</span>
         </span>
         <span class="sdp-chip-text">
           <span class="sdp-chip-role">Main</span>
@@ -1147,28 +1139,51 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-chip-name {
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
 }
+/* only an EMPTY captain has a portrait column — a well for the ＋ */
 .sdp-chip--main .sdp-chip-portrait {
   width: v-bind(mainPortraitWidthPx);
   height: auto;
   align-self: stretch;
 }
-.sdp-chip--main .sdp-chip-img {
-  border: none;
-  border-radius: 3px 0 0 3px;
-  object-position: center 14%;
-}
 .sdp-chip--main .sdp-chip-plus {
   border-radius: 3px 0 0 3px;
   border-width: 0 1px 0 0;
 }
-/* Anchored high: the tag heads the card and the champion's name follows
-   directly under it, the way the card is read. The seal takes the opposite
-   corner (see the badge rule above) so the two never share a line, and the
-   splash art keeps the diagonal between them. */
+/* The art carries the card, so it is not dimmed — the veil does the darkening,
+   and only where type has to sit on it: heavy along the bottom edge under the
+   name, heavy along the left under the tag, and open across the upper right,
+   which is where a splash keeps its subject. Two gradients on the layer that
+   was already there, so the poster costs no element and nothing per frame. */
+.sdp-chip--main .sdp-chip-art {
+  opacity: 1;
+  object-position: center 14%;
+}
+.sdp-chip--main .sdp-chip-art-fade {
+  background:
+    linear-gradient(
+      0deg,
+      rgba(10, 7, 4, 0.94) 0%,
+      rgba(10, 7, 4, 0.62) 26%,
+      rgba(10, 7, 4, 0.12) 58%,
+      transparent 78%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(10, 7, 4, 0.82) 0%,
+      rgba(10, 7, 4, 0.34) 44%,
+      transparent 76%
+    );
+}
+/* The two ends of the card, not the top of it: the seat tag heads the tile and
+   the champion's name sits on its bottom edge, with the splash between them.
+   That is what turns the leftover space into the subject of the card instead of
+   into a black corner under the text. The seal takes the opposite top corner
+   (see the badge rule above), so tag and seal share the top line and the name
+   below clears both. */
 .sdp-chip--main > .sdp-chip-text {
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 6px;
-  padding: 10px 12px 8px 11px;
+  padding: 10px 12px 10px 12px;
 }
 /* The captain's medallion leaves the flex row and pins to the card's upper right
    corner. As a row item it charged the text column 38px of its 137, so the
@@ -1184,10 +1199,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   margin-right: 0;
 }
 /* the captain's tag is styled with the other two — see "seat tag" below */
-/* The champion is the headline of its own card. 22px is the ceiling the 129px
-   text column allows: 2 of 165 names truncate there, 9 do at 24px. */
+/* The champion is the headline of its own card, and the headline grew with the
+   card: dropping the portrait column handed the text the tile's whole width
+   (226px against the 129px it used to share), so the ceiling that pinned it to
+   22px is gone. 26px still seats the longest bundled name without an ellipsis. */
 .sdp-chip--main .sdp-chip-name {
-  font-size: 22px;
+  font-size: 26px;
 }
 .sdp-chip--main .sdp-chip-plus {
   font-size: 28px;
