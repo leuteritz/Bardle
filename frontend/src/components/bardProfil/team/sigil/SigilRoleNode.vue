@@ -192,6 +192,15 @@ function xpDashOf(name: string): number {
 function needsAttentionOf(name: string): boolean {
   return levelStore.needsAttention(name)
 }
+/**
+ * The arc's number, spelled out. Read once per node instead of per template
+ * expression — every one of these getters is a function getter, so Pinia hands
+ * back an uncached closure and each call walks the champion's progress again.
+ */
+const mainXp = computed(() => (main.value ? levelStore.xpBarOf(main.value) : null))
+const mainAttention = computed(() => (main.value ? needsAttentionOf(main.value) : false))
+/** Enough banked for the next level — the chip switches to the buyable green. */
+const mainXpReady = computed(() => !!mainXp.value && !mainXp.value.capped && mainXp.value.pct >= 1)
 
 // ── Portrait frame ───────────────────────────────────────────────────────────
 // The frame climbs the same regalia ladder as the medallion — one stage every
@@ -329,7 +338,7 @@ const frameVars = computed<Record<string, string>>(() => {
     <svg
       v-if="main"
       class="sigil-node-xp"
-      :class="{ 'sigil-node-xp--attention': needsAttentionOf(main) }"
+      :class="{ 'sigil-node-xp--attention': mainAttention }"
       viewBox="0 0 100 100"
       aria-hidden="true"
     >
@@ -358,11 +367,28 @@ const frameVars = computed<Record<string, string>>(() => {
         :level="levelOf(main)"
         :color="roleDef.color"
         :size="CHAMPION_REGALIA_SIZE_NODE"
-        :attention="needsAttentionOf(main)"
+        :attention="mainAttention"
       />
     </span>
 
-    <span class="sigil-node-name">{{ main ?? roleDef.label }}</span>
+    <!-- name plate — two lines on one plate: who sits here, and what the XP arc
+         around the portrait is currently drawing. One plate rather than two
+         anchors, see SIGIL_NODE_NAME_OFFSET. Static markup, no per-frame work. -->
+    <span class="sigil-node-name">
+      <span class="sigil-node-name-text">{{ main ?? roleDef.label }}</span>
+      <span v-if="mainXp" class="sigil-node-xp-num" :class="{ 'is-ready': mainXpReady }">
+        <template v-if="mainXp.capped">
+          <span class="sigil-node-xp-cur">{{ $formatNumber(mainXp.current) }}</span>
+          <span class="sigil-node-xp-unit">banked</span>
+        </template>
+        <template v-else>
+          <span class="sigil-node-xp-cur">{{ $formatNumber(mainXp.current) }}</span>
+          <span class="sigil-node-xp-sep">/</span>
+          <span class="sigil-node-xp-max">{{ $formatNumber(mainXp.needed) }}</span>
+          <span class="sigil-node-xp-unit">XP</span>
+        </template>
+      </span>
+    </span>
   </button>
 </template>
 
@@ -772,17 +798,31 @@ const frameVars = computed<Record<string, string>>(() => {
   font-weight: 800;
   line-height: 1.1;
 }
+/* ── name plate ───────────────────────────────────────────────────────────────
+   Two rows on one plate: the name, and beneath it the number the XP arc draws.
+   The second row is deliberately the quieter one — the arc around the portrait
+   is the headline, this only spells out how far along it is. Both rows stay
+   inside the node's single identity colour: the earned value runs hottest, the
+   target and the unit fade back, and the "ready" state brightens rather than
+   introducing a second hue. */
 .sigil-node-name {
   position: absolute;
   left: calc(50% + var(--name-x, 0px));
-  top: calc(50% + var(--name-y, 71px));
+  top: calc(50% + var(--name-y, 80px));
   transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   max-width: var(--name-max, 158px);
-  padding: 2px 10px;
+  padding: 2px 10px 3px;
   border-radius: 4px;
   background: rgba(10, 7, 4, 0.88);
   border: 1px solid var(--role-color);
+}
+.sigil-node-name-text {
+  max-width: 100%;
   font-size: 12px;
+  line-height: 1.2;
   letter-spacing: 0.04em;
   color: var(--role-color);
   white-space: nowrap;
@@ -791,7 +831,56 @@ const frameVars = computed<Record<string, string>>(() => {
 }
 .sigil-node--selected .sigil-node-name {
   background: var(--role-color);
+}
+.sigil-node--selected .sigil-node-name-text {
   color: #0a0806;
+}
+
+/* XP row */
+.sigil-node-xp-num {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 10.5px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sigil-node-xp-cur {
+  font-weight: 800;
+  color: color-mix(in srgb, #fff 26%, var(--role-color));
+}
+.sigil-node-xp-sep {
+  color: color-mix(in srgb, var(--role-color) 42%, transparent);
+}
+.sigil-node-xp-max {
+  color: color-mix(in srgb, var(--role-color) 66%, transparent);
+}
+.sigil-node-xp-unit {
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--role-color) 50%, transparent);
+}
+/* enough banked for the next level — the row goes to full brightness, the same
+   moment the arc starts breathing and the medallion pings. No second colour. */
+.sigil-node-xp-num.is-ready .sigil-node-xp-cur {
+  color: color-mix(in srgb, #fff 55%, var(--role-color));
+}
+.sigil-node-xp-num.is-ready .sigil-node-xp-max,
+.sigil-node-xp-num.is-ready .sigil-node-xp-unit,
+.sigil-node-xp-num.is-ready .sigil-node-xp-sep {
+  color: var(--role-color);
+}
+/* selected: the plate inverts, so the row is read as ink on metal */
+.sigil-node--selected .sigil-node-xp-cur {
+  color: #0a0806;
+}
+.sigil-node--selected .sigil-node-xp-sep,
+.sigil-node--selected .sigil-node-xp-max,
+.sigil-node--selected .sigil-node-xp-unit {
+  color: rgba(10, 8, 6, 0.68);
 }
 
 /* ── search spotlight: hits pulse gold, the rest recedes ── */

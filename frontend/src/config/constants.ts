@@ -2933,7 +2933,21 @@ export const SIGIL_SWORN_GLOW_PX = 11
  * the node's centre.
  */
 export const SIGIL_NODE_BADGE_INSET = 40
-export const SIGIL_NODE_NAME_OFFSET = 72
+/**
+ * The name plate carries TWO lines — the champion's name and, under it, the XP
+ * the arc around the portrait draws. They share one plate rather than sitting on
+ * two anchors: for the four roles whose inward radial runs diagonally, a second
+ * chip further down the same radial can never clear a 132px-wide plate (the step
+ * along a diagonal buys far too little vertical separation), so the plate would
+ * be overlapped for every role but Top.
+ *
+ * 80 is where the two-line plate (~31px tall) clears the node's regalia frame:
+ * the frame reaches 63px from the node centre, the plate starts at 80 − 16 = 64.
+ * Inward its far edge lands at pentagon radius 255 − 96 = 159, clear of the
+ * centre crest (radius 85). Verified in the browser, idle and with a role
+ * selected (that node scales 1.12), at Full HD and 2K.
+ */
+export const SIGIL_NODE_NAME_OFFSET = 80
 /** Name plates truncate rather than sprawl — a long name must not reach a satellite. */
 export const SIGIL_NODE_NAME_MAX_WIDTH = 132
 export const SIGIL_NODE_SIZE = 94
