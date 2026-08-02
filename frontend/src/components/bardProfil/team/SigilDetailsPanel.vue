@@ -202,6 +202,19 @@ function mainChipImage(name: string): string {
   return battleStore.getChampionImage(name, { size: 'lg' })
 }
 
+/**
+ * Backdrop splash of a roster card. Every seat wears one, so a card is a card at
+ * all three sizes instead of the captain being a card and the rest being rows.
+ *
+ * The variant follows the card's WIDTH, which is what `object-fit: cover` scales
+ * a wide splash by inside a short box: the sworn pair measures ~303px and takes
+ * the original, the bench ~199px and takes 'lg'. The captain keeps the original
+ * it already used.
+ */
+function chipArtImage(name: string, wide: boolean): string {
+  return battleStore.getChampionImage(name, { size: wide ? 'full' : 'lg' })
+}
+
 // ── Identity ─────────────────────────────────────────────────────────────────
 const tier = computed(() => (champion.value ? getChampionTier(champion.value) : null))
 const origin = computed(() => (champion.value ? getChampionOrigin(champion.value) : null))
@@ -450,6 +463,17 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             @click="selectSubject(slot.sub)"
             @mouseenter="emit('hover-ally', slot.sub)"
           >
+            <!-- same backdrop the captain wears, one size down -->
+            <template v-if="slot.name">
+              <img
+                :src="chipArtImage(slot.name, true)"
+                alt=""
+                aria-hidden="true"
+                class="sdp-chip-art"
+                decoding="async"
+              />
+              <span class="sdp-chip-art-fade" aria-hidden="true" />
+            </template>
             <span class="sdp-chip-portrait">
               <img
                 v-if="slot.name"
@@ -507,6 +531,17 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             @click="selectSubject(slot.sub)"
             @mouseenter="emit('hover-ally', slot.sub)"
           >
+            <!-- same backdrop again, at the bench's own width -->
+            <template v-if="slot.name">
+              <img
+                :src="chipArtImage(slot.name, false)"
+                alt=""
+                aria-hidden="true"
+                class="sdp-chip-art"
+                decoding="async"
+              />
+              <span class="sdp-chip-art-fade" aria-hidden="true" />
+            </template>
             <span class="sdp-chip-portrait">
               <img
                 v-if="slot.name"
@@ -1054,6 +1089,14 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   --chip-rim: 3px;
   --chip-rim-a: 80%;
 }
+/* ── the backdrop splash ──────────────────────────────────────────────────────
+   Every seated card wears one, captain to bench: it is what makes a roster entry
+   a CARD, and a strip where only the first one has a backdrop reads as one card
+   followed by three list rows. The seat ladder is already told by width, rim and
+   relief — the backdrop is the family resemblance underneath all three.
+
+   The art is decoration only. It is clipped by the card's own overflow, sits
+   under everything readable, and never animates. */
 .sdp-chip-art {
   position: absolute;
   inset: 0;
@@ -1073,14 +1116,35 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     rgba(12, 9, 5, 0.25) 100%
   );
 }
-/* the art is decoration — everything readable sits above it */
-.sdp-chip--main > .sdp-chip-portrait,
-.sdp-chip--main > .sdp-chip-text,
-.sdp-chip--main > .sdp-chip-badge {
+/* A sworn or bench card is a sliver of the same splash — a fifth of the
+   captain's height under text that spans nearly its whole width. So the crop
+   sits lower (the band that is head and shoulders rather than helmet), the art
+   is dimmer, and the veil stays heavy all the way to the right edge instead of
+   opening up: on this card there is no clear right half for it to open into. */
+.sdp-chip--sworn .sdp-chip-art,
+.sdp-chip--ally .sdp-chip-art {
+  object-position: center 26%;
+  opacity: 0.36;
+}
+.sdp-chip--sworn .sdp-chip-art-fade,
+.sdp-chip--ally .sdp-chip-art-fade {
+  background: linear-gradient(
+    90deg,
+    rgba(12, 9, 5, 0.94) 0%,
+    rgba(12, 9, 5, 0.8) 46%,
+    rgba(12, 9, 5, 0.42) 100%
+  );
+}
+/* Everything readable sits above the art. Only the in-flow children need it —
+   the remove-✕ is already positioned and paints later in source order anyway,
+   and giving it `position: relative` here would take its corner away from it. */
+.sdp-chip > .sdp-chip-portrait,
+.sdp-chip > .sdp-chip-text,
+.sdp-chip > .sdp-chip-badge {
   position: relative;
   z-index: 1;
 }
-.sdp-chip--main .sdp-chip-name {
+.sdp-chip-name {
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
 }
 .sdp-chip--main .sdp-chip-portrait {
