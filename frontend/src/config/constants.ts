@@ -2996,14 +2996,19 @@ export const TEAM_SIGIL_SPLASH_HEIGHT = 292
 /**
  * Ceiling the splash may grow to, as a share (%) of the left column's height —
  * a share rather than a pixel cap, so the column fills out just as tightly at 4K
- * as at Full HD. Below the portrait sit the progression block and the perk path,
- * and the path is the reason the column is tall; the cap is what stops a very
- * tall column from turning into one giant portrait over a squeezed ladder.
+ * as at Full HD.
+ *
+ * Raised from 52 when the perk path moved to the right column. The old value
+ * existed to stop a tall column from becoming one giant portrait over a squeezed
+ * ladder; there is no ladder under the portrait any more, only the Level Up block
+ * (fixed height) and the equipment row (its own per-tile floor). What the cap
+ * still does is keep the crop from going absurdly tall and narrow in a 434px
+ * column, and hold something back for the gear below.
  *
  * Never binding at Full HD — there the splash sits on its own
  * TEAM_SIGIL_SPLASH_HEIGHT_COMPACT floor and the column already overflows.
  */
-export const TEAM_SIGIL_SPLASH_MAX_SHARE = 52
+export const TEAM_SIGIL_SPLASH_MAX_SHARE = 62
 /** Max camera drag-pan as a fraction of the scaled stage size (rubber-band bound). */
 export const TEAM_SIGIL_PAN_MAX_FRACTION = 0.15
 /** Pointer travel (px) below which a pointer-down still counts as a click, not a drag. */

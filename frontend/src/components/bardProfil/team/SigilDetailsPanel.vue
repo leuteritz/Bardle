@@ -718,12 +718,179 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           </div>
         </div>
 
-        <!-- the perk path owns the rest of the column and scrolls on its own -->
-        <div v-if="champion" class="sdp-mid">
+        <!-- advance — the primary action, and now the first thing under the XP
+             bar it belongs to. It used to sit at the foot of the column with the
+             whole perk ladder between it and the bar that says whether you can
+             afford it; you read "5K / 120 XP" and then had to travel past five
+             milestones to find the button. -->
+        <div v-if="champion" class="sdp-advance">
+          <div v-if="!atCap" class="sdp-cost-row">
+            <div class="sdp-cost" :class="{ 'sdp-cost--short': !affordsChimes }">
+              <Icon :icon="CHIMES_COST_ICON" width="18" height="18" />
+              <span>{{ $formatNumber(cost.chimes) }}</span>
+            </div>
+            <div
+              v-for="mat in materialCosts"
+              :key="mat.id"
+              class="sdp-cost"
+              :class="{ 'sdp-cost--short': mat.owned < mat.qty }"
+              :title="mat.def?.name ?? mat.id"
+            >
+              <img v-if="mat.def" :src="mat.def.image" :alt="mat.def.name" class="sdp-cost-img" />
+              <span>{{ mat.qty }}</span>
+              <span class="sdp-cost-owned">({{ mat.owned }})</span>
+            </div>
+          </div>
+
+          <button
+            class="sdp-level-btn"
+            :class="{ 'sdp-level-btn--locked': !canLevel }"
+            :disabled="!canLevel"
+            @click="doLevelUp"
+          >
+            <Icon icon="game-icons:circle-sparks" width="20" height="20" />
+            <span v-if="atCap">Level Cap Reached</span>
+            <span v-else>Level Up to {{ nextLevel }}</span>
+          </button>
+
+          <div v-if="blockLabel" class="sdp-block-hint">{{ blockLabel }}</div>
+          <div v-if="!atCap && isAscensionLevel(nextLevel)" class="sdp-next-hint">
+            <Icon icon="game-icons:beveled-star" width="14" height="14" />
+            Ascension level — grants a star and lifts every stat
+          </div>
+          <div v-else-if="!atCap && isPerkLevel(nextLevel)" class="sdp-next-hint">
+            <Icon icon="game-icons:ribbon-medal" width="14" height="14" />
+            Milestone level — opens a perk choice
+          </div>
+          <div v-else-if="nextMilestone" class="sdp-next-hint sdp-next-hint--muted">
+            <Icon
+              :icon="
+                nextMilestone.kind === 'perk'
+                  ? 'game-icons:ribbon-medal'
+                  : 'game-icons:beveled-star'
+              "
+              width="14"
+              height="14"
+            />
+            Next {{ nextMilestone.kind === 'perk' ? 'perk' : 'star' }} at level
+            {{ nextMilestone.level }}
+          </div>
+        </div>
+
+        <!-- equipment — the column's second action. Slot-scoped, so it is the one
+             thing here that does NOT change when the roster switches subject. -->
+        <div class="sdp-gear">
+          <div class="sdp-block sdp-block--equipment">
+            <div class="sdp-section-head">
+              <span class="sdp-section-accent">✦</span>
+              <span class="sdp-section-title">Role Equipment</span>
+              <div class="sdp-section-rule" />
+              <span class="sdp-section-count">{{ equippedCount }}/{{ CATEGORIES.length }}</span>
+            </div>
+            <div class="sdp-equips">
+              <button
+                v-for="cat in CATEGORIES"
+                :key="cat"
+                class="sdp-equip"
+                :class="{
+                  'sdp-equip--filled': !!equippedItem(cat),
+                  'sdp-equip--empty': !equippedItem(cat),
+                }"
+                :title="equippedItem(cat)?.name ?? `Equip ${CAT_LABELS[cat]}`"
+                @click="emit('pick-equipment', cat)"
+              >
+                <template v-if="equippedItem(cat)">
+                  <img
+                    v-if="equippedItem(cat)!.icon.startsWith('/')"
+                    :src="equippedItem(cat)!.icon"
+                    :alt="equippedItem(cat)!.name"
+                    class="sdp-equip-img"
+                  />
+                  <span v-else class="sdp-equip-emoji">{{ equippedItem(cat)!.icon }}</span>
+                  <span class="sdp-equip-name">{{ equippedItem(cat)!.name }}</span>
+                </template>
+                <!-- An empty slot says so twice over: a dashed rim, the same mark
+                     an empty roster seat wears, and a ＋ on the ghost. One glance
+                     answers both "is there anything here" and "can I do something
+                     about it". -->
+                <span v-else class="sdp-equip-ghost">
+                  <img
+                    :src="`/img/itemShop/${cat}-128.png`"
+                    :alt="CAT_LABELS[cat]"
+                    class="sdp-equip-img sdp-equip-img--ghost"
+                  />
+                  <span class="sdp-equip-plus" aria-hidden="true">＋</span>
+                </span>
+                <span class="sdp-equip-cat">{{ CAT_LABELS[cat] }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── RIGHT — what the champion IS. Stats, then the perks that shaped
+           them, then the kit the seat brings. Nothing here is an action: both
+           buttons of this page live in the left column now, so the two sides
+           split cleanly into "what you do" and "what you get". ── -->
+      <div class="sdp-right">
+        <!-- stats -->
+        <div v-if="champion && stats" class="sdp-block sdp-block--stats">
+          <div class="sdp-section-head">
+            <span class="sdp-section-accent">✦</span>
+            <span class="sdp-section-title">Stats</span>
+            <div class="sdp-section-rule" />
+            <span v-if="hasSwornBonus" class="sdp-section-count sdp-section-count--sworn">
+              <Icon :icon="SWORN_ICON" width="12" height="12" />
+              sworn included
+            </span>
+            <span v-else class="sdp-section-count">{{ champion }}</span>
+          </div>
+          <div class="sdp-stats">
+            <div
+              v-for="stat in CHAMPION_STATS"
+              :key="stat.key"
+              class="sdp-stat"
+              :style="{ '--sc': stat.color }"
+              :title="stat.desc"
+            >
+              <Icon :icon="stat.icon" width="30" height="30" class="sdp-stat-icon" />
+              <div class="sdp-stat-body">
+                <div class="sdp-stat-top">
+                  <span class="sdp-stat-short">{{ stat.short }}</span>
+                  <span class="sdp-stat-value">{{ stats[stat.key].toFixed(1) }}</span>
+                </div>
+                <div class="sdp-stat-effect">
+                  {{ statEffectOf(stat.key) }}
+                  <span class="sdp-stat-effect-label">{{ stat.effectLabel }}</span>
+                </div>
+                <!-- what the sworn pair adds, kept apart from the champion's own -->
+                <div v-if="swornBonus && swornBonus[stat.key] > 0" class="sdp-stat-sworn">
+                  <Icon :icon="SWORN_ICON" width="11" height="11" />
+                  +{{ swornBonus[stat.key].toFixed(1) }} sworn
+                </div>
+              </div>
+              <!-- the lean, drawn against the champion's own best stat: four
+                   bars, and the long one is what this champion is for. Scaled
+                   inline on the fill itself, never through a variable on the
+                   tile — a variable would recalculate the whole subtree. -->
+              <span class="sdp-stat-meter" aria-hidden="true">
+                <span
+                  class="sdp-stat-meter-fill"
+                  :style="{ transform: `scaleX(${statShare(stat.key)})` }"
+                />
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- ── perk path — every milestone the cap allows, taken or not, strung
-             on one spine so the whole ladder reads at a glance ── -->
-        <div class="sdp-path">
-          <div class="sdp-section-head sdp-section-head--path">
+             on one spine so the whole ladder reads at a glance. It sits with the
+             stats because both answer the same question: what has this champion
+             become? The column scrolls as a whole, so the path no longer needs a
+             scroller of its own. ── -->
+        <div v-if="champion" class="sdp-block sdp-block--perks">
+          <div class="sdp-section-head">
             <span class="sdp-section-accent">✦</span>
             <span class="sdp-section-title">Perk Path</span>
             <div class="sdp-section-rule" />
@@ -800,165 +967,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                   </div>
                 </template>
               </div>
-            </div>
-          </div>
-        </div>
-        </div>
-
-        <!-- advance — the primary action, pinned so it never scrolls away -->
-        <div v-if="champion" class="sdp-advance">
-          <div v-if="!atCap" class="sdp-cost-row">
-            <div class="sdp-cost" :class="{ 'sdp-cost--short': !affordsChimes }">
-              <Icon :icon="CHIMES_COST_ICON" width="18" height="18" />
-              <span>{{ $formatNumber(cost.chimes) }}</span>
-            </div>
-            <div
-              v-for="mat in materialCosts"
-              :key="mat.id"
-              class="sdp-cost"
-              :class="{ 'sdp-cost--short': mat.owned < mat.qty }"
-              :title="mat.def?.name ?? mat.id"
-            >
-              <img v-if="mat.def" :src="mat.def.image" :alt="mat.def.name" class="sdp-cost-img" />
-              <span>{{ mat.qty }}</span>
-              <span class="sdp-cost-owned">({{ mat.owned }})</span>
-            </div>
-          </div>
-
-          <button
-            class="sdp-level-btn"
-            :class="{ 'sdp-level-btn--locked': !canLevel }"
-            :disabled="!canLevel"
-            @click="doLevelUp"
-          >
-            <Icon icon="game-icons:circle-sparks" width="20" height="20" />
-            <span v-if="atCap">Level Cap Reached</span>
-            <span v-else>Level Up to {{ nextLevel }}</span>
-          </button>
-
-          <div v-if="blockLabel" class="sdp-block-hint">{{ blockLabel }}</div>
-          <div v-if="!atCap && isAscensionLevel(nextLevel)" class="sdp-next-hint">
-            <Icon icon="game-icons:beveled-star" width="14" height="14" />
-            Ascension level — grants a star and lifts every stat
-          </div>
-          <div v-else-if="!atCap && isPerkLevel(nextLevel)" class="sdp-next-hint">
-            <Icon icon="game-icons:ribbon-medal" width="14" height="14" />
-            Milestone level — opens a perk choice
-          </div>
-          <div v-else-if="nextMilestone" class="sdp-next-hint sdp-next-hint--muted">
-            <Icon
-              :icon="
-                nextMilestone.kind === 'perk'
-                  ? 'game-icons:ribbon-medal'
-                  : 'game-icons:beveled-star'
-              "
-              width="14"
-              height="14"
-            />
-            Next {{ nextMilestone.kind === 'perk' ? 'perk' : 'star' }} at level
-            {{ nextMilestone.level }}
-          </div>
-        </div>
-      </div>
-
-      <!-- ── RIGHT — the slot's gear, then the champion's power, then its kit.
-           Read top to bottom that is one sentence: what you can change, what it
-           makes them, what they do with it. Equipment leads because it is the
-           only block on this side you can act on — the two below it report. ── -->
-      <div class="sdp-right">
-        <!-- equipment — slot-scoped: the loadout stays when champions swap -->
-        <div class="sdp-block sdp-block--equipment">
-          <div class="sdp-section-head">
-            <span class="sdp-section-accent">✦</span>
-            <span class="sdp-section-title">Role Equipment</span>
-            <div class="sdp-section-rule" />
-            <span class="sdp-section-count">{{ equippedCount }}/{{ CATEGORIES.length }}</span>
-          </div>
-          <div class="sdp-equips">
-            <button
-              v-for="cat in CATEGORIES"
-              :key="cat"
-              class="sdp-equip"
-              :class="{
-                'sdp-equip--filled': !!equippedItem(cat),
-                'sdp-equip--empty': !equippedItem(cat),
-              }"
-              :title="equippedItem(cat)?.name ?? `Equip ${CAT_LABELS[cat]}`"
-              @click="emit('pick-equipment', cat)"
-            >
-              <template v-if="equippedItem(cat)">
-                <img
-                  v-if="equippedItem(cat)!.icon.startsWith('/')"
-                  :src="equippedItem(cat)!.icon"
-                  :alt="equippedItem(cat)!.name"
-                  class="sdp-equip-img"
-                />
-                <span v-else class="sdp-equip-emoji">{{ equippedItem(cat)!.icon }}</span>
-                <span class="sdp-equip-name">{{ equippedItem(cat)!.name }}</span>
-              </template>
-              <!-- An empty slot says so twice over: a dashed rim, the same mark
-                   an empty roster seat wears, and a ＋ on the ghost. One glance
-                   answers both "is there anything here" and "can I do something
-                   about it". -->
-              <span v-else class="sdp-equip-ghost">
-                <img
-                  :src="`/img/itemShop/${cat}-128.png`"
-                  :alt="CAT_LABELS[cat]"
-                  class="sdp-equip-img sdp-equip-img--ghost"
-                />
-                <span class="sdp-equip-plus" aria-hidden="true">＋</span>
-              </span>
-              <span class="sdp-equip-cat">{{ CAT_LABELS[cat] }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- stats -->
-        <div v-if="champion && stats" class="sdp-block sdp-block--stats">
-          <div class="sdp-section-head">
-            <span class="sdp-section-accent">✦</span>
-            <span class="sdp-section-title">Stats</span>
-            <div class="sdp-section-rule" />
-            <span v-if="hasSwornBonus" class="sdp-section-count sdp-section-count--sworn">
-              <Icon :icon="SWORN_ICON" width="12" height="12" />
-              sworn included
-            </span>
-            <span v-else class="sdp-section-count">{{ champion }}</span>
-          </div>
-          <div class="sdp-stats">
-            <div
-              v-for="stat in CHAMPION_STATS"
-              :key="stat.key"
-              class="sdp-stat"
-              :style="{ '--sc': stat.color }"
-              :title="stat.desc"
-            >
-              <Icon :icon="stat.icon" width="30" height="30" class="sdp-stat-icon" />
-              <div class="sdp-stat-body">
-                <div class="sdp-stat-top">
-                  <span class="sdp-stat-short">{{ stat.short }}</span>
-                  <span class="sdp-stat-value">{{ stats[stat.key].toFixed(1) }}</span>
-                </div>
-                <div class="sdp-stat-effect">
-                  {{ statEffectOf(stat.key) }}
-                  <span class="sdp-stat-effect-label">{{ stat.effectLabel }}</span>
-                </div>
-                <!-- what the sworn pair adds, kept apart from the champion's own -->
-                <div v-if="swornBonus && swornBonus[stat.key] > 0" class="sdp-stat-sworn">
-                  <Icon :icon="SWORN_ICON" width="11" height="11" />
-                  +{{ swornBonus[stat.key].toFixed(1) }} sworn
-                </div>
-              </div>
-              <!-- the lean, drawn against the champion's own best stat: four
-                   bars, and the long one is what this champion is for. Scaled
-                   inline on the fill itself, never through a variable on the
-                   tile — a variable would recalculate the whole subtree. -->
-              <span class="sdp-stat-meter" aria-hidden="true">
-                <span
-                  class="sdp-stat-meter-fill"
-                  :style="{ transform: `scaleX(${statShare(stat.key)})` }"
-                />
-              </span>
             </div>
           </div>
         </div>
@@ -1625,13 +1633,23 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   flex: 6 0 auto;
   max-height: 444px;
 }
+/* The ladder spreads its beads over whatever it is given, so height is never
+   wasted on it — but it is also the tallest block by content, so it takes a
+   middling factor rather than the biggest one. */
+.sdp-block--perks {
+  flex: 3 0 auto;
+  max-height: 620px;
+}
 .sdp-block--abilities {
   flex: 2 0 auto;
   max-height: 420px;
 }
+/* Equipment lives in the LEFT column now (see .sdp-gear) — it keeps the same
+   grow-never-shrink contract there, and the cap is what stops three buttons
+   from becoming three tall wells on a 4K screen. */
 .sdp-block--equipment {
   flex: 1 0 auto;
-  max-height: 230px;
+  max-height: 300px;
 }
 /* the section body takes the block's growth; the head above it stays put */
 .sdp-block > .sdp-stats,
@@ -1884,30 +1902,17 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   color: #f0d870;
 }
 
-/* ── the perk path owns the middle of the left column ──
-   A long path (an open choice) shrinks and scrolls on its own. A short one used
-   to be purely content-sized so its slack went to the portrait — it still does,
-   four fifths of it, but the path now takes the last fifth instead of leaving
-   the column ending above its own bottom edge once the portrait caps out. */
-.sdp-mid {
+/* The gear block is the left column's only padded child — the splash runs edge
+   to edge and the advance block brings its own padding. It also carries the
+   column's growth now that the perk path has left: the splash takes four fifths
+   of any spare height and the gear the rest, so bigger item art is where the
+   leftover lands instead of a black band above the column's bottom edge. */
+.sdp-gear {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
-}
-.sdp-mid::-webkit-scrollbar {
-  width: 4px;
-}
-.sdp-mid::-webkit-scrollbar-track {
-  background: #111;
-}
-.sdp-mid::-webkit-scrollbar-thumb {
-  background: #5c3310;
-  border-radius: 2px;
+  padding: 0 14px 14px;
 }
 
 /* ── hero footer readouts ── */
@@ -1976,16 +1981,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    taken (perk sigil, full colour), open (gold, carries the choice cards) or
    locked (dim, counts down the levels). Reading top to bottom answers both
    "what did I pick?" and "what is still ahead?" without a second view. */
-.sdp-path {
-  flex: 1 0 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 13px 14px 16px;
-}
-.sdp-section-head--path {
-  margin-bottom: 11px;
-}
 /* The beads spread over whatever height the path was given rather than bunching
    at the top of it — the spine is drawn between the first and the last, so a
    ladder that fills its box is exactly what the drawing wants. `gap` stays the
