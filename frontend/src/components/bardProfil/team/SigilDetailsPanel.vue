@@ -250,24 +250,6 @@ const skinEntries = computed(() => {
   return [original, ...alternates]
 })
 
-/**
- * Skin filter. Champions with a dozen skins turn the grid into a scroll hunt,
- * so the head carries a search box — typing narrows the grid live. Cleared
- * whenever the page changes subject: a query typed for one champion means
- * nothing for the next, and leaving it set would show an empty grid for no
- * visible reason.
- */
-const skinQuery = ref('')
-watch(champion, () => {
-  skinQuery.value = ''
-})
-
-const visibleSkins = computed(() => {
-  const q = skinQuery.value.trim().toLowerCase()
-  if (!q) return skinEntries.value
-  return skinEntries.value.filter((e) => e.label.toLowerCase().includes(q))
-})
-
 function equipSkin(id: string, label: string) {
   const name = champion.value
   if (!name || id === equippedSkin.value) return
@@ -847,36 +829,18 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
            split cleanly into "what you do" and "what you get". ── -->
       <div class="sdp-right">
         <!-- skins — the appearance block sits first, level with the portrait it
-             changes in the left column, so the two read as one thing. The strip
-             scrolls sideways rather than wrapping: a champion with twelve skins
+             changes in the left column, so the two read as one thing. Two rows
+             show at a time and the rest scrolls: a champion with twelve skins
              must not push the stats off the page. -->
         <div v-if="champion && skinEntries.length > 1" class="sdp-block sdp-block--skins">
           <div class="sdp-section-head">
             <span class="sdp-section-accent">✦</span>
             <span class="sdp-section-title">Skin</span>
-            <label class="sdp-skin-search">
-              <Icon icon="lucide:search" width="13" height="13" />
-              <input
-                v-model="skinQuery"
-                class="sdp-skin-search-input"
-                type="text"
-                placeholder="Search skins…"
-                :aria-label="`Search ${champion} skins`"
-              />
-              <button
-                v-if="skinQuery"
-                class="sdp-skin-search-clear"
-                type="button"
-                aria-label="Clear search"
-                @click="skinQuery = ''"
-              >
-                ✕
-              </button>
-            </label>
+            <div class="sdp-section-rule" />
           </div>
           <div class="sdp-skins">
             <button
-              v-for="entry in visibleSkins"
+              v-for="entry in skinEntries"
               :key="entry.id"
               class="sdp-skin"
               :class="{ 'sdp-skin--on': entry.id === equippedSkin }"
@@ -890,9 +854,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               <span class="sdp-skin-name">{{ entry.label }}</span>
               <span v-if="entry.id === equippedSkin" class="sdp-skin-tick">✓</span>
             </button>
-            <div v-if="visibleSkins.length === 0" class="sdp-skin-empty">
-              No skin matches “{{ skinQuery }}”
-            </div>
           </div>
         </div>
 
@@ -2064,62 +2025,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   line-height: 1;
   pointer-events: none;
 }
-.sdp-skin-empty {
-  grid-column: 1 / -1;
-  padding: 14px 4px;
-  font-size: 12px;
-  color: #6b6455;
-}
-
-/* ── skin search ──
-   Sits in the section head where the rule would otherwise run, so it costs the
-   block no extra row. It replaces the rule rather than joining it: a search box
-   IS a horizontal element of the right length, and two of them side by side
-   just made the head noisy. */
-.sdp-skin-search {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  background: #141410;
-  border: 1px solid #3e3a30;
-  color: #6b6455;
-  transition: border-color 0.15s;
-}
-.sdp-skin-search:focus-within {
-  border-color: #5c3310;
-  color: #c8bc9c;
-}
-.sdp-skin-search-input {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #e8dcc0;
-  font-size: 12px;
-  line-height: 1.4;
-}
-.sdp-skin-search-input::placeholder {
-  color: #6b6455;
-}
-.sdp-skin-search-clear {
-  flex-shrink: 0;
-  padding: 0 2px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #9c927c;
-  font-size: 12px;
-  line-height: 1;
-}
-.sdp-skin-search-clear:hover {
-  color: #e08878;
-}
-
 /* The gear block is the left column's only padded child — the splash runs edge
    to edge and the advance block brings its own padding. It also carries the
    column's growth now that the perk path has left: the splash takes four fifths
