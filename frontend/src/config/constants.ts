@@ -2920,31 +2920,18 @@ export const SIGIL_SWORN_RIM_PX = 3
  *  shaped rather than box-shadowed, so no circular halo betrays the hexagon. */
 export const SIGIL_SWORN_GLOW_PX = 11
 /**
- * A role node's own decorations, placed relative to the node's INWARD radial
- * (the direction pointing at the sigil's core). Every satellite of the role lies
- * outward or lateral — sworn sit ±SIGIL_SWORN_SPREAD_DEG off the OUTWARD radial —
- * so the inward half is the one region that can never collide with them,
- * whatever the role's angle or the champion's name length.
+ * The name plate is the role node's one decoration seated OUTSIDE the portrait,
+ * placed along the node's INWARD radial (the direction pointing at the sigil's
+ * core). Every satellite of the role lies outward or lateral — sworn sit
+ * ±SIGIL_SWORN_SPREAD_DEG off the OUTWARD radial — so the inward half is the one
+ * region that can never collide with them, whatever the role's angle or the
+ * champion's name length.
  *
- * The two decorations share ONE axis and sit at its two ends: the name plate at
- * SIGIL_NODE_NAME_OFFSET inward, the level medallion at SIGIL_NODE_BADGE_INSET
- * outward. Whatever angle the pentagon hands a role, the number always stands
- * directly across the portrait from the name and XP it belongs to.
+ * It stands alone on that axis: the level medallion that used to answer it on the
+ * outward end is gone, and the number now sits INSIDE the portrait, across its
+ * foot, where the circle crops it and no radial geometry can be disturbed.
  *
- * Outward is not the satellites' half in the one direction that matters here: the
- * sworn pair straddles the outward radial at ±SIGIL_SWORN_SPREAD_DEG, leaving the
- * radial itself open. 66 is where the 34px medallion clears the portrait: it starts
- * at 66 − 17 = 49, two pixels past the portrait's own 47px edge. That clearance is
- * what keeps it off the ★ tier bar — that bar sits along the portrait's bottom rim,
- * so for the two roles whose outward radial points downward a medallion seated ON
- * the rim would cut straight through it. Outward it reaches 83px, past the regalia
- * frame's 63 but still 52px clear of either sworn plate (they sit 110px out) and
- * 60px clear of the middle bench satellite on the same radial.
- * Distances are from the node's centre.
- */
-export const SIGIL_NODE_BADGE_INSET = 66
-/**
- * The name plate carries TWO lines — the champion's name and, under it, the XP
+ * The plate carries TWO lines — the champion's name and, under it, the XP
  * the arc around the portrait draws. They share one plate rather than sitting on
  * two anchors: for the four roles whose inward radial runs diagonally, a second
  * chip further down the same radial can never clear a 132px-wide plate (the step
@@ -3873,8 +3860,8 @@ export const CHAMPION_REGALIA_BASE_SIZE = 34
  * sheen) are dropped — on an ally satellite they read as noise, not as rank.
  */
 export const CHAMPION_REGALIA_ORNAMENT_MIN_SIZE = 28
-/** Badge diameters used across the team tab. */
-export const CHAMPION_REGALIA_SIZE_NODE = 34
+/** Badge diameter on an ally satellite — the role node wears no medallion; its
+ *  level is the numeral across the portrait's foot (see SigilRoleNode). */
 export const CHAMPION_REGALIA_SIZE_ALLY = 21
 /** Medallion on the details-page captain card — a step above the bench chips. */
 export const CHAMPION_REGALIA_SIZE_CHIP_MAIN = 28

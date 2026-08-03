@@ -11,10 +11,10 @@ import { allySlotLabel } from '@/utils/format'
 import ChampionLevelBadge from '../ChampionLevelBadge.vue'
 import {
   ROLES,
+  MAX_STAR_LEVEL,
   SIGIL_NODE_SIZE,
   SIGIL_ALLY_SIZE,
   SIGIL_SWORN_SIZE,
-  SIGIL_NODE_BADGE_INSET,
   SIGIL_NODE_NAME_OFFSET,
   SIGIL_NODE_NAME_MAX_WIDTH,
   SIGIL_PENTAGON_ANGLE_STEP,
@@ -31,7 +31,6 @@ import {
   SIGIL_XP_RING_RADIUS,
   SIGIL_XP_RING_CIRCUMFERENCE,
   SIGIL_XP_RING_INSET,
-  CHAMPION_REGALIA_SIZE_NODE,
   CHAMPION_REGALIA_SIZE_ALLY,
   SIGIL_FRAME_RIM_BASE,
   SIGIL_FRAME_RIM_STEP,
@@ -94,6 +93,10 @@ const mainImage = computed(() =>
   main.value ? battleStore.getChampionImage(main.value, { size: props.nodeArtSize }) : '',
 )
 const tier = computed(() => (main.value ? getChampionTier(main.value) : null))
+/** The ladder carries no text — the tier's name lives in its tooltip. */
+const tierLabel = computed(() =>
+  tier.value ? `Tier ${tier.value.starLevel}/${MAX_STAR_LEVEL} — ${tier.value.name}` : '',
+)
 const allies = computed(
   () => secondarySlots.value[props.roleIndex] ?? Array<string | null>(ALLIES_PER_ROLE).fill(null),
 )
@@ -131,8 +134,8 @@ const swornGlow = `${SIGIL_SWORN_GLOW_PX}px`
 
 /**
  * Unit vector pointing from this role node at the sigil's core. The name plate
- * rides it inward — the half that can never hold a satellite — and the medallion
- * rides it outward, into the gap the sworn pair leaves open on the radial itself.
+ * rides it inward — the one half that can never hold a satellite, whatever angle
+ * the pentagon hands this role.
  */
 const inward = computed(() => {
   const deg = SIGIL_PENTAGON_START_ANGLE + props.roleIndex * SIGIL_PENTAGON_ANGLE_STEP + 180
@@ -140,11 +143,6 @@ const inward = computed(() => {
   return { x: Math.cos(rad), y: Math.sin(rad) }
 })
 const decorVars = computed<Record<string, string>>(() => ({
-  // One axis, two ends: the name plate rides the inward radial, the medallion the
-  // outward one. Whatever angle the pentagon gives a role, plate and badge stay
-  // exactly opposite each other across the portrait — see SIGIL_NODE_BADGE_INSET.
-  '--badge-x': `${(-inward.value.x * SIGIL_NODE_BADGE_INSET).toFixed(1)}px`,
-  '--badge-y': `${(-inward.value.y * SIGIL_NODE_BADGE_INSET).toFixed(1)}px`,
   '--name-x': `${(inward.value.x * SIGIL_NODE_NAME_OFFSET).toFixed(1)}px`,
   '--name-y': `${(inward.value.y * SIGIL_NODE_NAME_OFFSET).toFixed(1)}px`,
   '--name-max': `${SIGIL_NODE_NAME_MAX_WIDTH}px`,
@@ -179,10 +177,11 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
 }
 
 // ── Champion levels ──────────────────────────────────────────────────────────
-// Every node wears its level: the main gets an XP arc tracing its rim plus a
-// large numeral, allies get a compact one. Everything on a node carries that
-// champion's single colour — its role colour — so a slot reads as one identity
-// instead of a patchwork of role, rank and tier hues.
+// Every node wears its level: the main gets an XP arc tracing its rim plus the
+// big numeral seated across the portrait's foot, allies get a compact medallion.
+// Everything on a node carries that champion's single colour — its role colour —
+// so a slot reads as one identity instead of a patchwork of role, rank and tier
+// hues.
 function levelOf(name: string): number {
   return levelStore.levelOf(name)
 }
@@ -226,6 +225,10 @@ const frameVars = computed<Record<string, string>>(() => {
     // an empty slot keeps the old faint ring; every stage above it firms up
     '--node-rim-a': `${Math.min(100, SIGIL_FRAME_RIM_ALPHA_BASE + mainStageIndex.value * SIGIL_FRAME_RIM_ALPHA_STEP)}%`,
     '--node-heat': `${Math.round(stage.heat * 100)}%`,
+    // The level numeral runs cooler than the rim: it is type, not metal, and it
+    // still has to read as a number at every stage. Resolved here rather than as
+    // a calc() inside color-mix — see the same split in ChampionLevelBadge.
+    '--node-heat-ink': `${Math.round(26 + stage.heat * 52)}%`,
     '--node-glow': `${Math.round(stage.glow * SIGIL_FRAME_GLOW_FACTOR)}px`,
     '--node-glow-a': `${Math.round(stage.glowAlpha * 100)}%`,
     '--node-facets': facetClipPath(stage.facets),
@@ -359,18 +362,24 @@ const frameVars = computed<Record<string, string>>(() => {
       <span v-else class="sigil-node-empty">
         <img :src="roleDef.image" :alt="roleDef.label" class="sigil-node-role-ghost" />
       </span>
-      <span v-if="main && tier" class="sigil-node-star">★{{ tier.starLevel }}</span>
-    </span>
 
-    <!-- level medallion — the headline number, seated on the node's outward rim,
-         directly across the portrait from the name plate -->
-    <span v-if="main" class="sigil-node-level">
-      <ChampionLevelBadge
-        :level="levelOf(main)"
-        :color="roleDef.color"
-        :size="CHAMPION_REGALIA_SIZE_NODE"
-        :attention="mainAttention"
-      />
+      <!-- champion tier — a rising ladder of MAX_STAR_LEVEL bars across the
+           portrait's brow: lit bars are the tier, the dark ones the headroom -->
+      <span v-if="main && tier" class="sigil-node-tier" :title="tierLabel" :aria-label="tierLabel">
+        <i
+          v-for="s in MAX_STAR_LEVEL"
+          :key="s"
+          class="sigil-node-tier-bar"
+          :class="{ 'is-lit': s <= tier.starLevel }"
+          :style="{ '--i': String(s - 1) }"
+        />
+      </span>
+
+      <!-- level — the headline number, seated across the portrait's foot -->
+      <span v-if="main" class="sigil-node-lvl" :class="{ 'is-attention': mainAttention }">
+        <span class="sigil-node-lvl-tag">LV</span>
+        <span v-ink-center class="sigil-node-lvl-num">{{ mainLevel }}</span>
+      </span>
     </span>
 
     <!-- name plate — two lines on one plate: who sits here, and what the XP arc
@@ -566,19 +575,6 @@ const frameVars = computed<Record<string, string>>(() => {
 .sigil-node-xp--attention .sigil-node-xp-fill {
   stroke-width: calc(var(--xp-w, 3.2) + 1);
   animation: sigil-xp-breathe 1.9s ease-in-out infinite;
-}
-
-/* level medallion — the wrapper only places it; everything the badge looks like
-   lives in ChampionLevelBadge. Medallion and name plate share ONE axis and sit at
-   its two ends — see SIGIL_NODE_BADGE_INSET */
-.sigil-node-level {
-  position: absolute;
-  left: calc(50% + var(--badge-x, 0px));
-  top: calc(50% + var(--badge-y, 0px));
-  transform: translate(-50%, -50%);
-  display: flex;
-  z-index: 4;
-  pointer-events: none;
 }
 
 /* ── regalia frame ────────────────────────────────────────────────────────────
@@ -787,18 +783,123 @@ const frameVars = computed<Record<string, string>>(() => {
   object-fit: contain;
   opacity: 0.55;
 }
-.sigil-node-star {
+/* ── tier ladder ──────────────────────────────────────────────────────────────
+   The champion tier used to be a "★4" caption along the portrait's bottom rim —
+   the very seat the level number now owns, and a caption that read as one more
+   number next to it. It is a rising ladder instead: MAX_STAR_LEVEL angled bars
+   climbing left to right across the portrait's brow, the first `starLevel` of
+   them cast in the role's metal, the rest left as dark headroom. Rank is told by
+   how far the ladder has climbed, so it reads without being read — and it needs
+   no tier hue of its own, which is what keeps a slot one identity colour.
+
+   Both marks sit INSIDE the portrait circle, which crops them: whatever angle
+   the pentagon hands a role, neither can ever reach a satellite, the name plate
+   or the XP arc. Cost: six static elements per node, painted once, nothing
+   animated — thirty on a full board and not one of them per frame.
+
+   The row is 40px wide and bottom-aligned 7px into a 30px band, so even its
+   tallest bar stands where the circle is still ~60px across. */
+.sigil-node-tier {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
-  padding: 2px 0;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.72);
-  color: var(--role-color);
-  font-size: 10px;
+  top: 0;
+  height: 32%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  padding-bottom: 7px;
+  /* the portrait's brow is the busiest part of the crop (object-position: top) —
+     a scrim buys the bars their contrast without hiding the champion */
+  background: linear-gradient(to bottom, rgba(6, 4, 2, 0.9), rgba(6, 4, 2, 0.38) 62%, transparent);
+  pointer-events: none;
+}
+.sigil-node-tier-bar {
+  width: 5px;
+  height: calc(5px + var(--i, 0) * 1.4px);
+  border-radius: 1px;
+  /* the shear is what makes six bars read as a ladder rather than a bar chart */
+  transform: skewX(-15deg);
+  /* an unclimbed rung: dark metal with a role-tinted hairline, so it reads as
+     headroom rather than as a smudge on whatever the portrait shows behind it */
+  background: rgba(8, 6, 3, 0.72);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--role-color) 30%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.sigil-node-tier-bar.is-lit {
+  /* Lit rungs are near-flat, not top-lit: the shortest bar is 5px tall, and a
+     gradient dark enough to model the tall ones would leave that one reading as
+     unlit. The metal is stated at the top edge only. */
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, #fff 20%, var(--role-color)),
+    color-mix(in srgb, #fff 62%, var(--role-color))
+  );
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.85),
+    0 0 5px color-mix(in srgb, var(--role-color) 55%, transparent);
+}
+
+/* ── level ────────────────────────────────────────────────────────────────────
+   The number the whole node is about, seated across the portrait's foot where
+   the tier caption used to be. It replaced the 34px medallion that hung off the
+   node's outward rim: that badge repeated a rank the regalia frame around the
+   portrait already tells in plates, studs, sweep and halo, and it said it in a
+   second geometry hanging off the silhouette. The frame keeps the rank; the foot
+   keeps the number, and it can be twice the size for it.
+
+   Its brightness still climbs with the regalia stage (--node-heat-ink), so the
+   numeral warms as the frame does — one ladder, told twice, never two colours. */
+.sigil-node-lvl {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  /* the numeral's own box reaches the circle's chord at this depth — 8px is what
+     keeps a two-digit level clear of the crop on every role */
+  padding-bottom: 8px;
+  background: linear-gradient(to top, rgba(6, 4, 2, 0.95) 30%, rgba(6, 4, 2, 0.7) 62%, transparent);
+  pointer-events: none;
+}
+.sigil-node-lvl-tag {
+  margin-bottom: 5px;
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--role-color) 75%, #8b8172);
+}
+.sigil-node-lvl-num {
+  font-size: 26px;
+  line-height: 0.8;
   font-weight: 800;
-  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, #fff var(--node-heat-ink, 26%), var(--role-color));
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.92);
+}
+/* banked XP or an unspent perk — the numeral goes to full brightness and a rail
+   breathes under it, in step with the XP arc. Opacity only, one layer. */
+.sigil-node-lvl.is-attention .sigil-node-lvl-num {
+  color: color-mix(in srgb, #fff 70%, var(--role-color));
+}
+.sigil-node-lvl.is-attention::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 26px;
+  height: 2px;
+  margin-left: -13px;
+  border-radius: 1px;
+  background: color-mix(in srgb, #fff 42%, var(--role-color));
+  animation: sigil-xp-breathe 1.9s ease-in-out infinite;
 }
 /* ── name plate ───────────────────────────────────────────────────────────────
    Two rows on one plate: the name, and beneath it the number the XP arc draws.
@@ -1167,7 +1268,8 @@ const frameVars = computed<Record<string, string>>(() => {
   .sigil-node--spin .sigil-node-plate,
   .sigil-node-sweep,
   .sigil-node-halo,
-  .sigil-node-xp--attention .sigil-node-xp-fill {
+  .sigil-node-xp--attention .sigil-node-xp-fill,
+  .sigil-node-lvl.is-attention::before {
     animation: none !important;
   }
 }
