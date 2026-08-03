@@ -10,6 +10,11 @@ import {
   TEAM_TAB_MOUNT_STAGE_SATELLITES,
   TEAM_TAB_MOUNT_STAGE_PANEL,
   TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
+  TEAM_SIGIL_DETAILS_PANEL_WIDTH,
+  TEAM_SIGIL_SYNERGIES_PANEL_WIDTH,
+  TEAM_SHOP_PANEL_WIDTH,
+  TEAM_EXPEDITION_PANEL_WIDTH,
+  TEAM_EQUIPMENT_PANEL_WIDTH,
 } from '@/config/constants'
 import { getChampionRoles } from '@/config/championData'
 import { allySlotLabel } from '@/utils/format'
@@ -17,16 +22,23 @@ import type { ChampionRole, ItemCategory } from '@/types'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import SigilBoardComponent from './sigil/SigilBoardComponent.vue'
 import SigilDetailsPanel from './SigilDetailsPanel.vue'
-import TeamModalShell from './TeamModalShell.vue'
+import TeamSidePanelShell from './TeamSidePanelShell.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
 
-// The champion picker is NOT among these any more: it lives inside the details
-// page (see SigilDetailsPanel → swapOpen), so choosing a champion no longer
-// covers the board it is being chosen for.
-type TeamModal = 'shop' | 'expedition' | 'equipment' | null
+/**
+ * The tab has exactly ONE right rail and everything opens into it — the role
+ * details page, team synergies, and the three board destinations that used to be
+ * modals over the whole tab. A modal answered a question by hiding the thing the
+ * question was about: the shop covered the very sigil the player recruits for.
+ *
+ * The champion picker is not on this list: it lives inside the details page (see
+ * SigilDetailsPanel → swapOpen), so choosing a champion no longer covers the
+ * board it is being chosen for.
+ */
+type TeamDestination = 'shop' | 'expedition' | 'equipment' | null
 
 const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partial<
   Record<ChampionRole, number>
@@ -109,9 +121,32 @@ watch(
   },
   { immediate: true },
 )
-const activeModal = ref<TeamModal>(null)
+/**
+ * Which board destination owns the rail, if any.
+ *
+ * Shop and expeditions are destinations of their own and push the details page
+ * out of the rail. Equipment is different: it is opened FROM the details page
+ * for the role that page is on, so it takes the rail WITHOUT clearing
+ * `selectedRole` — closing it drops straight back onto the page it came from,
+ * and the board keeps its camera on that role the whole time.
+ */
+const activeDestination = ref<TeamDestination>(null)
 const shopRole = ref<ChampionRole | 'all'>('all')
 const equipCategory = ref<ItemCategory>('weapon')
+
+/** Width the board has to subtract to fit itself beside the open rail. */
+const sidePanelWidth = computed(() => {
+  switch (activeDestination.value) {
+    case 'shop':
+      return TEAM_SHOP_PANEL_WIDTH
+    case 'expedition':
+      return TEAM_EXPEDITION_PANEL_WIDTH
+    case 'equipment':
+      return TEAM_EQUIPMENT_PANEL_WIDTH
+  }
+  if (selectedRole.value !== null) return TEAM_SIGIL_DETAILS_PANEL_WIDTH
+  return synergiesOpen.value ? TEAM_SIGIL_SYNERGIES_PANEL_WIDTH : 0
+})
 
 const roleIndex = computed(() => selectedRole.value ?? uiStore.rolesActiveSlot)
 const roleDef = computed(() => ROLES[roleIndex.value])
@@ -137,6 +172,7 @@ function focusSeat(subSlot: number | null, swap = false) {
 
 function selectRole(index: number) {
   synergiesOpen.value = false
+  activeDestination.value = null
   selectedRole.value = index
   focusSeat(null)
   uiStore.setRolesActiveSlot(index)
@@ -163,36 +199,50 @@ function closePanel() {
   selectedRole.value = null
 }
 
-/** Empty board clicked — the only way to dismiss a side panel now that neither
- *  carries a close button of its own (Escape still works). */
+/** Empty board clicked — dismisses whatever the rail is showing, one layer at a
+ *  time: equipment falls back to the page that opened it, everything else
+ *  closes the rail outright. */
 function dismissPanels() {
-  if (activeModal.value !== null) return
+  if (activeDestination.value === 'equipment') {
+    activeDestination.value = null
+    return
+  }
+  activeDestination.value = null
   selectedRole.value = null
   synergiesOpen.value = false
 }
 
-// ── Modals ───────────────────────────────────────────────────────────────────
+// ── Rail destinations ────────────────────────────────────────────────────────
+/** Shop and expeditions replace whatever the rail holds — see activeDestination. */
+function openDestination(destination: Exclude<TeamDestination, null | 'equipment'>) {
+  selectedRole.value = null
+  synergiesOpen.value = false
+  activeDestination.value = destination
+}
+
 function openShop(role: ChampionRole | 'all' = 'all') {
   shopRole.value = role
-  activeModal.value = 'shop'
+  openDestination('shop')
 }
 
 function openExpedition() {
-  activeModal.value = 'expedition'
+  openDestination('expedition')
 }
 
 function openSynergies() {
+  activeDestination.value = null
   selectedRole.value = null
   synergiesOpen.value = true
 }
 
+/** Opened from the details page — keeps `selectedRole`, so closing returns there. */
 function openEquipment(category: ItemCategory) {
   equipCategory.value = category
-  activeModal.value = 'equipment'
+  activeDestination.value = 'equipment'
 }
 
-function closeModal() {
-  activeModal.value = null
+function closeDestination() {
+  activeDestination.value = null
 }
 
 /** A champion picked in the details page's inline picker. */
@@ -241,7 +291,7 @@ function applyRolesOpenRequest() {
   selectedRole.value = uiStore.rolesActiveSlot
   const subSlot = uiStore.rolesActiveSubSlot
   uiStore.clearRolesOpenPending()
-  activeModal.value = null
+  activeDestination.value = null
   if (subSlot < 0) {
     focusSeat(null)
     return
@@ -256,34 +306,26 @@ watch(
   (name) => {
     if (!name) return
     const roles = getChampionRoles(name)
-    shopRole.value = roles.length > 0 ? roles[0] : 'all'
-    activeModal.value = 'shop'
+    openShop(roles.length > 0 ? roles[0] : 'all')
   },
   { immediate: true },
 )
 
-// While the shop list scrolls, card pulse animations pause and card hover is
-// suppressed (via .is-scrolling) — dozens of animated glows plus hover-expand
-// transitions firing under the cursor otherwise tank the frame rate.
-const shopScrolling = ref(false)
-let shopScrollTimer: ReturnType<typeof setTimeout> | null = null
-function onShopScroll() {
-  shopScrolling.value = true
-  if (shopScrollTimer !== null) clearTimeout(shopScrollTimer)
-  shopScrollTimer = setTimeout(() => {
-    shopScrolling.value = false
-    shopScrollTimer = null
-  }, 150)
-}
+/** True while the shop rail shows a card's detail over its grid. */
+const shopDetailOpen = ref(false)
+/** Bumped to ask the shop to leave that detail (Escape), see `closeDetailToken`. */
+const closeShopDetailToken = ref(0)
 
-// Escape unwinds one layer at a time: the modal, then the details page's own
-// picker, then whichever side panel is open. Only this handler listens for the
-// key — the picker lives in a child, so the request travels down as a token
+// Escape unwinds one layer at a time: the shop's detail, the details page's own
+// picker, then whatever the rail is showing. Only this handler listens for the
+// key — both of those live in children, so the request travels down as a token
 // rather than as a second window listener racing this one.
 function onEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
-  if (activeModal.value) {
-    closeModal()
+  if (activeDestination.value === 'shop' && shopDetailOpen.value) {
+    closeShopDetailToken.value++
+  } else if (activeDestination.value !== null) {
+    closeDestination()
   } else if (swapOpen.value) {
     closeSwapToken.value++
   } else if (synergiesOpen.value) {
@@ -303,7 +345,6 @@ onMounted(() => {
 onUnmounted(() => {
   if (mountFrame !== null) cancelAnimationFrame(mountFrame)
   window.removeEventListener('keydown', onEsc)
-  if (shopScrollTimer !== null) clearTimeout(shopScrollTimer)
   // Tab zu → die gespiegelte Auswahl fällt mit, sonst bliebe im Command Panel
   // eine Markierung stehen, zu der es kein offenes Panel mehr gibt
   uiStore.setTeamActiveRole(null)
@@ -313,18 +354,16 @@ onUnmounted(() => {
 <template>
   <div class="team-tab">
     <!-- shared cosmic backdrop — spans the ENTIRE tab content, edge to edge,
-         beneath the sigil board and both slide-in side panels. Star animations
-         pause while a modal covers the tab (same as the board's own effects). -->
-    <CosmicStageBackground :class="{ 'cosmic-paused': activeModal !== null }" />
+         beneath the sigil board and every slide-in rail. -->
+    <CosmicStageBackground />
 
     <!-- ══ LEFT — Battle Sigil ══ -->
     <SigilBoardComponent
       :selected-role="selectedRole"
       :mount-stage="mountStage"
-      :panel-open="synergiesOpen"
+      :side-panel-width="sidePanelWidth"
       :search-highlights="searchHighlights"
       :hovered-ally="spotlightAlly"
-      :paused="activeModal !== null"
       @select-role="selectRole"
       @select-ally="selectAlly"
       @hover-ally="boardHoveredAlly = $event"
@@ -334,10 +373,60 @@ onUnmounted(() => {
       @deselect="dismissPanels"
     />
 
-    <!-- ══ RIGHT — side panel: role details OR team synergies ══ -->
+    <!-- ══ RIGHT — the one rail: board destination, role details or synergies ══
+         One Transition for all of them, so opening the shop while the details
+         page is up is a single slide, not a close followed by an open. -->
     <Transition name="sdp-slide" mode="out-in">
+      <TeamSidePanelShell
+        v-if="activeDestination === 'shop'"
+        key="shop"
+        title="Shop"
+        icon="game-icons:shopping-bag"
+        subtitle="Recruit champions and buy items"
+        :width="TEAM_SHOP_PANEL_WIDTH"
+        @close="closeDestination"
+      >
+        <!-- Unified shop: champions + items in one grid, the card detail slides
+             in over it (the rail has no room for a permanent detail column). -->
+        <ChampionShopComponent
+          :initial-role="shopRole"
+          :close-detail-token="closeShopDetailToken"
+          @role-change="handleShopRoleChange"
+          @detail-state="shopDetailOpen = $event"
+        />
+      </TeamSidePanelShell>
+
+      <TeamSidePanelShell
+        v-else-if="activeDestination === 'expedition'"
+        key="expedition"
+        title="Expeditions"
+        icon="game-icons:campfire"
+        subtitle="Send champions out for materials"
+        :width="TEAM_EXPEDITION_PANEL_WIDTH"
+        @close="closeDestination"
+      >
+        <ExpeditionComponent />
+      </TeamSidePanelShell>
+
+      <TeamSidePanelShell
+        v-else-if="activeDestination === 'equipment'"
+        key="equipment"
+        title="Equipment"
+        icon="game-icons:open-treasure-chest"
+        :subtitle="`Equip the ${roleDef.label} champion`"
+        :width="TEAM_EQUIPMENT_PANEL_WIDTH"
+        @close="closeDestination"
+      >
+        <EquipmentPickerPanel
+          :initial-category="equipCategory"
+          :current-equipment="currentEquipment"
+          @equip="handleEquipFromPicker"
+        />
+      </TeamSidePanelShell>
+
       <SigilDetailsPanel
-        v-if="selectedRole !== null && panelReady"
+        v-else-if="selectedRole !== null && panelReady"
+        key="details"
         :role-index="selectedRole"
         :highlighted-ally="boardHoveredAlly"
         :focus-ally="focusAlly"
@@ -352,63 +441,11 @@ onUnmounted(() => {
       />
       <TeamSynergiesPanel
         v-else-if="synergiesOpen && panelReady"
+        key="synergies"
         @close="synergiesOpen = false"
         @highlight="searchHighlights = $event"
       />
     </Transition>
-
-    <!-- ══ MODAL OVERLAYS ══ -->
-    <TeamModalShell
-      v-if="activeModal === 'shop'"
-      title="Shop"
-      icon="game-icons:barbute"
-      size="xl"
-      hide-header
-      hide-close
-      @close="closeModal"
-    >
-      <!-- Unified shop: champions + items in one grid; the close button lives
-           in the shop's own search row (the modal has no header of its own). -->
-      <div
-        class="team-shop-content"
-        :class="{ 'is-scrolling': shopScrolling }"
-        @scroll.passive="onShopScroll"
-      >
-        <ChampionShopComponent
-          :initial-role="shopRole"
-          show-close
-          @role-change="handleShopRoleChange"
-          @close="closeModal"
-        />
-      </div>
-    </TeamModalShell>
-
-
-    <TeamModalShell
-      v-if="activeModal === 'expedition'"
-      title="Expeditions"
-      icon="game-icons:campfire"
-      @close="closeModal"
-    >
-      <div class="team-modal-fill">
-        <ExpeditionComponent />
-      </div>
-    </TeamModalShell>
-
-    <TeamModalShell
-      v-if="activeModal === 'equipment'"
-      title="Equipment"
-      icon="game-icons:open-treasure-chest"
-      :subtitle="`Equip the ${roleDef.label} champion`"
-      @close="closeModal"
-    >
-      <EquipmentPickerPanel
-        :initial-category="equipCategory"
-        :current-equipment="currentEquipment"
-        @equip="handleEquipFromPicker"
-        @close="closeModal"
-      />
-    </TeamModalShell>
   </div>
 </template>
 
@@ -421,39 +458,8 @@ onUnmounted(() => {
   overflow: hidden;
   background: #111008; /* same deep-space base as Shop / Planets / Skill Tree */
 }
-.cosmic-paused :deep(*) {
-  animation-play-state: paused !important;
-}
-.team-modal-fill {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* unified shop modal content (the shop owns its own header row + close) */
-.team-shop-content {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 12px;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
-}
-.team-shop-content::-webkit-scrollbar {
-  width: 4px;
-}
-.team-shop-content::-webkit-scrollbar-track {
-  background: #111;
-}
-.team-shop-content::-webkit-scrollbar-thumb {
-  background: #5c3310;
-  border-radius: 2px;
-}
-
-/* details panel slide-in */
+/* rail slide-in — shared by the details page, the synergies panel and every
+   board destination, so they all enter and leave on the same motion */
 .sdp-slide-enter-active {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }

@@ -1,21 +1,27 @@
 <template>
-  <aside class="cs-detail">
+  <aside class="cs-detail" :class="{ 'cs-detail--wide': wide }">
     <template v-if="detail">
-      <!-- Prev / Next navigation -->
+      <!-- Back (wide only) + prev / next navigation -->
       <div class="cs-detail-nav">
-        <button
-          class="cs-nav-btn"
-          :disabled="total < 2"
-          aria-label="Previous champion"
-          @click="$emit('prev')"
-        >←</button>
-        <span class="cs-nav-pos">{{ index + 1 }} / {{ total }}</span>
-        <button
-          class="cs-nav-btn"
-          :disabled="total < 2"
-          aria-label="Next champion"
-          @click="$emit('next')"
-        >→</button>
+        <button v-if="wide" class="cs-back-btn" @click="$emit('back')">
+          <span class="cs-back-arrow">←</span>
+          Back to shop
+        </button>
+        <div class="cs-detail-steps">
+          <button
+            class="cs-nav-btn"
+            :disabled="total < 2"
+            aria-label="Previous champion"
+            @click="$emit('prev')"
+          >←</button>
+          <span class="cs-nav-pos">{{ index + 1 }} / {{ total }}</span>
+          <button
+            class="cs-nav-btn"
+            :disabled="total < 2"
+            aria-label="Next champion"
+            @click="$emit('next')"
+          >→</button>
+        </div>
       </div>
 
       <!-- Hero image -->
@@ -82,13 +88,14 @@
         </div>
 
         <!-- Locked hint -->
-        <div v-if="detail.locked" class="cs-detail-locked">
+        <div v-if="detail.locked" class="cs-detail-locked cs-detail-section--full">
           <Icon icon="lucide:lock" width="18" height="18" style="color: #cc6050; flex-shrink: 0" />
           <span>{{ detail.lockedHint }}</span>
         </div>
 
-        <!-- Cost breakdown -->
-        <div v-else class="cs-detail-section">
+        <!-- Cost breakdown — the widest block, so it takes the whole row in the
+             two-column wide layout -->
+        <div v-else class="cs-detail-section cs-detail-section--full">
           <div class="cs-detail-section-title">Recruit Cost</div>
           <div class="cs-detail-rows">
             <div
@@ -175,8 +182,14 @@ export default defineComponent({
     },
     index: { type: Number, default: -1 },
     total: { type: Number, default: 0 },
+    /**
+     * The panel fills the whole shop rail instead of standing as a column beside
+     * the grid: hero across the full width, info in two columns, a back button
+     * in the nav row. See the shop's detail layer.
+     */
+    wide: { type: Boolean, default: false },
   },
-  emits: ['prev', 'next', 'buy'],
+  emits: ['prev', 'next', 'buy', 'back'],
   setup() {
     return { formatNumber }
   },
@@ -195,7 +208,16 @@ export default defineComponent({
   border-left: 3px solid #5c3310;
 }
 
-/* ── Prev / Next navigation ── */
+/* ══ Wide variant — the panel IS the rail ══
+   Everything below is the same panel at a different width; only the four rules
+   here change, so the two variants can never drift into two designs. */
+.cs-detail--wide {
+  width: 100%;
+  flex: 1;
+  border-left: none;
+}
+
+/* ── Back + prev / next navigation ── */
 .cs-detail-nav {
   display: flex;
   align-items: center;
@@ -205,6 +227,48 @@ export default defineComponent({
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
   flex-shrink: 0;
+}
+/* narrow: the three step controls fill the row; wide: they group to the right
+   and leave the left end to the back button */
+.cs-detail-steps {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cs-detail--wide .cs-detail-steps {
+  flex: 0 0 auto;
+  gap: 10px;
+}
+.cs-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 11px;
+  background: #141410;
+  border: 1px solid #7a4e20;
+  border-radius: 4px;
+  color: #e8c040;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.cs-back-btn:hover {
+  background: #241a0c;
+  border-color: #c89040;
+  color: #f0d870;
+}
+.cs-back-arrow {
+  font-size: 16px;
+  line-height: 1;
 }
 .cs-nav-btn {
   width: 38px;
@@ -326,6 +390,36 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+/* Two columns at rail width — a single 900px-wide column of short sections
+   would leave most of the row empty and push the cost list below the fold.
+   The cost block (or the locked hint that replaces it) keeps the full row: its
+   rows are horizontal and read badly at half width. */
+.cs-detail--wide .cs-detail-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-content: start;
+  gap: 16px 20px;
+  padding: 18px 20px;
+}
+.cs-detail--wide .cs-detail-section--full {
+  grid-column: 1 / -1;
+}
+/* the hero is the one thing that gains from the extra width — landscape splash
+   art, shown landscape */
+.cs-detail--wide .cs-detail-hero {
+  height: clamp(210px, 27vh, 330px);
+}
+.cs-detail--wide .cs-detail-name {
+  left: 18px;
+  right: 18px;
+  bottom: 12px;
+  font-size: 30px;
+}
+/* a 900px-wide button reads as a banner, not as a press */
+.cs-detail--wide .cs-buy-btn {
+  max-width: 420px;
+  margin: 0 auto;
 }
 .cs-detail-section-title {
   font-size: 10.5px;

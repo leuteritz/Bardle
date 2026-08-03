@@ -3007,6 +3007,24 @@ export const TEAM_SIGIL_MAIN_CHIP_WIDTH = 250
 export const TEAM_SIGIL_MAIN_PORTRAIT_WIDTH = 92
 /** Width (px) of the team synergies panel — the other, narrower side panel. */
 export const TEAM_SIGIL_SYNERGIES_PANEL_WIDTH = 460
+/**
+ * Width (px) of the shop rail. Deliberately the SAME number as the details page:
+ * the two open on the same edge from the same board, and a rail that changed
+ * width per destination would make the camera travel a different distance every
+ * time. At this width the card grid keeps the four columns it had in the old
+ * modal — there the grid shared its width with a permanent detail column, here
+ * it owns all of it and the detail slides in over it instead.
+ */
+export const TEAM_SHOP_PANEL_WIDTH = TEAM_SIGIL_DETAILS_PANEL_WIDTH
+/** Width (px) of the expeditions rail — same rail, same reason. */
+export const TEAM_EXPEDITION_PANEL_WIDTH = TEAM_SIGIL_DETAILS_PANEL_WIDTH
+/**
+ * Width (px) of the equipment rail. The odd one out on purpose: it is opened
+ * FROM the details page and returns to it on close, so it reads as a step inside
+ * that page rather than a destination of its own. Its grid is auto-fill at 148px,
+ * which lands on four columns here.
+ */
+export const TEAM_EQUIPMENT_PANEL_WIDTH = 660
 /** Height (px) of the details-panel splash header (hero card: name + tier/origin/trait chips). */
 export const TEAM_SIGIL_SPLASH_HEIGHT = 292
 /**
@@ -3597,6 +3615,8 @@ export const SHOP_JUMP_SPY_THRESHOLD = 0.4
 export const SHOP_JUMP_SPY_LOCK_MS = 700
 /** Corrective scroll runs after the section expand animation (0.28s) settles. */
 export const SHOP_JUMP_EXPAND_SETTLE_MS = 350
+/** Idle time after the last scroll event before card animations resume. */
+export const SHOP_SCROLL_SETTLE_MS = 150
 
 // ── Music ─────────────────────────────────────────────────────────────────────
 export const MUSIC_DEFAULT_VOLUME = 0.1

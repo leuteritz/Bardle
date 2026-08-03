@@ -21,7 +21,6 @@ import {
   SIGIL_SWORN_SIZE,
   TEAM_SIGIL_FOCUS_ZOOM,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
-  TEAM_SIGIL_SYNERGIES_PANEL_WIDTH,
   TEAM_SIGIL_PAN_MAX_FRACTION,
   TEAM_SIGIL_DRAG_THRESHOLD_PX,
   ADMIN_TEAM_LEVEL_STEPS,
@@ -41,10 +40,15 @@ const props = defineProps<{
   /** Aufbaustufe des Tabs (TEAM_TAB_MOUNT_STAGE_*) — Satelliten und Deko warten
    *  einen Frame, damit das Öffnen nicht in einem Stück gerechnet wird. */
   mountStage: number
-  /** True while a modal covers the board — pauses all decorative animations. */
-  paused?: boolean
-  /** True while a non-role side panel (e.g. synergies) occupies the right edge. */
-  panelOpen?: boolean
+  /**
+   * Width (px) the open right rail takes from the tab — 0 when none is open.
+   * The tab owns it: it is the only place that knows WHICH of the rails (role
+   * details, synergies, shop, expeditions, equipment) is up, and they are not
+   * equally wide. The board only needs the number, and it needs it while the
+   * closing rail is still in the flex row, so open/close resolves in a single
+   * camera move instead of a second, delayed one after the slide-out.
+   */
+  sidePanelWidth: number
   /** Champions spotlighted by the synergies search — hits pulse, the rest dims. */
   searchHighlights?: string[]
   /** Ally sub-slot hovered in the details panel — spotlights that satellite of the selected role. */
@@ -172,15 +176,8 @@ onMounted(() => {
   resizeObserver.observe(tabEl)
 })
 
-/** A right-side panel narrows the visible board — the two are not equally wide,
- *  so the board has to subtract the one that is actually open. */
-const sidePanelWidth = computed(() => {
-  if (props.selectedRole !== null) return TEAM_SIGIL_DETAILS_PANEL_WIDTH
-  return props.panelOpen ? TEAM_SIGIL_SYNERGIES_PANEL_WIDTH : 0
-})
-
 const fitScale = computed(() => {
-  const boardWidth = tabRect.value.width - sidePanelWidth.value
+  const boardWidth = tabRect.value.width - props.sidePanelWidth
   if (boardWidth <= 0 || tabRect.value.height <= 0) return 1
   return Math.min(boardWidth, tabRect.value.height) / SIGIL_STAGE_SIZE
 })
@@ -246,7 +243,7 @@ const allyArtSize = computed(() => championArtSizeFor(SIGIL_SWORN_SIZE * maxScal
 /** Board center in tab px — computed (not CSS 50%) so the close animation targets
  *  the FINAL board width immediately instead of jumping when the panel unmounts. */
 const boardCenter = computed(() => ({
-  x: (tabRect.value.width - sidePanelWidth.value) / 2,
+  x: (tabRect.value.width - props.sidePanelWidth) / 2,
   y: tabRect.value.height / 2,
 }))
 
@@ -340,7 +337,7 @@ function onBackgroundClick(): void {
 
 // the focus camera owns the framing — a selection/panel change eases the pan back home
 watch(
-  [() => props.selectedRole, () => props.panelOpen],
+  [() => props.selectedRole, () => props.sidePanelWidth],
   () => {
     panOffset.value = { x: 0, y: 0 }
   },
@@ -352,7 +349,7 @@ watch(
   <div
     ref="panelEl"
     class="sigil-board"
-    :class="{ 'sigil-board--paused': paused, 'sigil-board--dragging': isDragging }"
+    :class="{ 'sigil-board--dragging': isDragging }"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerEnd"
@@ -576,11 +573,6 @@ watch(
    resumes on release and eases the pan back inside the bound / to center */
 .sigil-board--dragging .sigil-stage {
   transition: none;
-}
-/* a modal covers the board (semi-transparent backdrop) — freeze all decorative
-   animations so they stop compositing behind it; they resume on close */
-.sigil-board--paused :deep(*) {
-  animation-play-state: paused !important;
 }
 
 /* ── admin strip — muted red-brown so it never competes with the gold game

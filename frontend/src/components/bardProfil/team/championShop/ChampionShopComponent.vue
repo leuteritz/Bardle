@@ -46,7 +46,6 @@
           <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="18" height="18" />
         </button>
 
-        <button v-if="showClose" class="modal-close-btn" @click="$emit('close')">✕</button>
       </div>
 
       <!-- ── Quick jump: scroll straight to the champion or item sections ── -->
@@ -307,6 +306,7 @@
     <div
       ref="gridRef"
       class="flex-1 min-h-0 overflow-y-auto rpg-scrollbar cs-grid"
+      :class="{ 'is-scrolling': gridScrolling }"
       @scroll.passive="onGridScroll"
     >
       <!-- Empty: current role has no matches but cross-role does -->
@@ -404,7 +404,7 @@
                   :selected="selectedChampion === champion.name"
                   :is-new="isNew(champion.name)"
                   :locked-tooltip="getLockedTooltip(champion.name)"
-                  @select="selectChampion"
+                  @select="openChampion"
                   @hover="dismissNewOnHover"
                 />
               </div>
@@ -462,7 +462,7 @@
                     :is-set="!!item.setId"
                     :buyable="item.buyable"
                     :selected="selectedItem === item.id"
-                    @select="selectItem"
+                    @select="openItem"
                   />
                 </div>
               </div>
@@ -496,7 +496,7 @@
               :selected="selectedChampion === champion.name"
               :is-new="isNew(champion.name)"
               :locked-tooltip="getLockedTooltip(champion.name)"
-              @select="selectChampion"
+              @select="openChampion"
               @hover="dismissNewOnHover"
             />
           </div>
@@ -505,30 +505,45 @@
     </div>
     </div>
 
-    <!-- ══ Detail panel (right side): item or champion / empty state ══ -->
-    <ItemDetailPanel
-      v-if="itemDetail"
-      :detail="itemDetail"
-      :index="selectedIndex"
-      :total="visibleEntries.length"
-      @prev="selectPrev"
-      @next="selectNext"
-      @buy="handleBuyItem"
-    />
-    <ChampionDetailPanel
-      v-else
-      :detail="detail"
-      :index="selectedIndex"
-      :total="visibleEntries.length"
-      @prev="selectPrev"
-      @next="selectNext"
-      @buy="handleBuy"
-    />
+    <!-- ══ Detail layer ══
+         The shop lives in a rail now, not in a modal, so the detail is no longer
+         a column standing next to the grid and waiting to be filled: it slides
+         over the grid when a card is picked and leaves again on ←. Browsing gets
+         the rail's full width, inspecting gets it too, and neither view spends
+         half its space on the other. Typing in the search still SELECTS the best
+         hit (the card highlights in the grid) but never opens this layer —
+         opening it while the player is narrowing a list would bury the list. -->
+    <Transition name="cs-detail-layer">
+      <div v-if="detailOpen && (itemDetail || detail)" class="cs-detail-layer">
+        <ItemDetailPanel
+          v-if="itemDetail"
+          wide
+          :detail="itemDetail"
+          :index="selectedIndex"
+          :total="visibleEntries.length"
+          @prev="selectPrev"
+          @next="selectNext"
+          @back="closeDetail"
+          @buy="handleBuyItem"
+        />
+        <ChampionDetailPanel
+          v-else
+          wide
+          :detail="detail"
+          :index="selectedIndex"
+          :total="visibleEntries.length"
+          @prev="selectPrev"
+          @next="selectNext"
+          @back="closeDetail"
+          @buy="handleBuy"
+        />
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script lang="ts">
-import { ref, defineComponent, computed, watch, nextTick } from 'vue'
+import { ref, defineComponent, computed, watch, nextTick, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '../../../../stores/battleStore'
 import { useInventoryStore } from '../../../../stores/inventoryStore'
@@ -557,6 +572,7 @@ import {
   SHOP_JUMP_SPY_THRESHOLD,
   SHOP_JUMP_SPY_LOCK_MS,
   SHOP_JUMP_EXPAND_SETTLE_MS,
+  SHOP_SCROLL_SETTLE_MS,
 } from '../../../../config/constants'
 import { useActionToast } from '../../../../composables/useActionToast'
 import type {
@@ -573,9 +589,14 @@ export default defineComponent({
   components: { Icon, ChampionShopCard, ChampionDetailPanel, ItemShopCard, ItemDetailPanel, RpgSearchBar },
   props: {
     initialRole: { type: String, default: 'all' },
-    showClose: { type: Boolean, default: false },
+    /**
+     * Bumped by the team tab when Escape should leave the detail layer rather
+     * than close the whole rail. Only the tab listens for keys — see the same
+     * token on the details page's inline picker.
+     */
+    closeDetailToken: { type: Number, default: 0 },
   },
-  emits: ['roleChange', 'close'],
+  emits: ['roleChange', 'detailState'],
   setup(props, { emit }) {
     const championNames = ref<string[]>(getChampionNames())
     const battleStore = useBattleStore()
@@ -1427,7 +1448,22 @@ const shopChampionNames = computed(() =>
       }, SHOP_JUMP_EXPAND_SETTLE_MS)
     }
 
+    // While the list scrolls, card pulse animations pause and card hover is
+    // suppressed (via .is-scrolling) — dozens of animated glows plus hover-expand
+    // transitions firing under the cursor otherwise tank the frame rate.
+    const gridScrolling = ref(false)
+    let gridScrollTimer: ReturnType<typeof setTimeout> | null = null
+    onUnmounted(() => {
+      if (gridScrollTimer !== null) clearTimeout(gridScrollTimer)
+    })
+
     function onGridScroll() {
+      gridScrolling.value = true
+      if (gridScrollTimer !== null) clearTimeout(gridScrollTimer)
+      gridScrollTimer = setTimeout(() => {
+        gridScrolling.value = false
+        gridScrollTimer = null
+      }, SHOP_SCROLL_SETTLE_MS)
       if (spyLocked) return
       const grid = gridRef.value
       const el = itemsSectionRef.value
@@ -1583,6 +1619,36 @@ const shopChampionNames = computed(() =>
       selectedItem.value = id
       selectedChampion.value = null
     }
+
+    // ── Detail layer ──
+    // Selection and visibility are two different things here: the search selects
+    // (to highlight the matching card) without opening, a card click does both.
+    const detailOpen = ref(false)
+
+    function openChampion(name: string) {
+      selectChampion(name)
+      detailOpen.value = true
+    }
+
+    function openItem(id: string) {
+      selectItem(id)
+      detailOpen.value = true
+    }
+
+    function closeDetail() {
+      detailOpen.value = false
+    }
+
+    // A selection can go stale on its own (recruited, filtered out) — the layer
+    // must not stay up over an empty subject.
+    watch([selectedChampion, selectedItem], ([champion, item]) => {
+      if (!champion && !item) detailOpen.value = false
+    })
+    watch(detailOpen, (open) => emit('detailState', open))
+    watch(
+      () => props.closeDetailToken,
+      () => closeDetail(),
+    )
 
     // Deep-link from a notify-badge tooltip: fill the search with the champion
     // name — the search watcher below then auto-selects it (exact match) in the
@@ -1842,6 +1908,11 @@ const shopChampionNames = computed(() =>
       crossRoleChampions,
       selectedChampion,
       selectChampion,
+      openChampion,
+      openItem,
+      detailOpen,
+      closeDetail,
+      gridScrolling,
       selectPrev,
       selectNext,
       selectedIndex,
@@ -1881,14 +1952,15 @@ const shopChampionNames = computed(() =>
 </script>
 
 <style scoped>
-/* modal-panel already frames — suppress rpg-frame double border */
+/* the rail already frames — suppress rpg-frame double border */
 .rpg-frame {
   border: none;
   box-shadow: none;
   --text-transition-dur: 0.22s;
 }
-/* ── Two-column layout: grid (left) + champion detail panel (right) ── */
+/* ── Master/detail: the grid owns the rail, the detail slides over it ── */
 .cs-layout {
+  position: relative;
   display: flex;
   flex-direction: row;
   min-height: 0;
@@ -1938,9 +2010,9 @@ const shopChampionNames = computed(() =>
 }
 
 /* Card visuals live in ChampionShopCard.vue. While the shop list scrolls
-   (.is-scrolling set by the modal's scroll container), freeze the card pulse
-   glows and skip card hit-testing — otherwise the animated shadows firing
-   under the cursor cause per-frame repaints that tank the scroll frame rate. */
+   (.is-scrolling on the grid itself), freeze the card pulse glows and skip card
+   hit-testing — otherwise the animated shadows firing under the cursor cause
+   per-frame repaints that tank the scroll frame rate. */
 .is-scrolling .champion-card-slot,
 .is-scrolling .item-card-slot {
   pointer-events: none;
@@ -2097,18 +2169,51 @@ const shopChampionNames = computed(() =>
 }
 /* Shared search row + filter toggle + collapsible filter panel + chips live in
    rpg-theme.css (── Champion Filter ──), reused by ChampionSelectPanel. Only the
-   shop-specific close-button override and grid padding remain scoped here. */
-.cs-search-row .modal-close-btn {
-  position: static;
-  flex-shrink: 0;
-  transform: none;
-  width: 46px;
-  height: 46px;
-}
+   grid padding and the detail layer remain scoped here — the rail's own header
+   carries the close button now. */
 
 /* ── Grid area — same horizontal inset as the header so search bar and tier
    headers align on one left edge ── */
 .cs-grid { padding: 12px 14px; }
+
+/* ── Detail layer ──
+   Covers the grid rather than sitting beside it. Opaque on purpose: the grid
+   below keeps its scroll position and its expanded sections, so ← lands exactly
+   where the player left. Only transform and opacity animate, so opening it costs
+   the compositor nothing even with a full grid of pulsing cards behind it. */
+.cs-detail-layer {
+  position: absolute;
+  inset: 0;
+  /* above the hover lift a card gives itself (.champion-card-slot:hover, z 20) —
+     the pointer is still ON the card that opened this layer, so a lower value
+     lets that one card punch through the hero */
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #14100a;
+}
+.cs-detail-layer-enter-active {
+  transition:
+    transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.26s ease;
+}
+.cs-detail-layer-leave-active {
+  transition:
+    transform 0.14s cubic-bezier(0.55, 0, 1, 0.45),
+    opacity 0.14s ease;
+}
+.cs-detail-layer-enter-from,
+.cs-detail-layer-leave-to {
+  transform: translateX(5%);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-detail-layer-enter-from,
+  .cs-detail-layer-leave-to {
+    transform: none;
+  }
+}
 
 /* ── Cross-role search results ── */
 .cross-role-section {

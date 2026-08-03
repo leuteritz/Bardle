@@ -18,7 +18,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   equip: [itemId: string, category: ItemCategory]
-  close: []
 }>()
 
 const itemStore = useItemStore()
@@ -46,8 +45,8 @@ function effectSummary(item: (typeof SHOP_ITEMS)[number]): string {
 
 <template>
   <div class="ep-root">
-    <!-- Gold accent bar -->
-    <div class="ep-gold-bar" />
+    <!-- No gold accent bar of its own: the picker lives in the team tab's side
+         rail (TeamSidePanelShell), and that already draws the goldline. -->
 
     <!-- Tab bar -->
     <div class="ep-tabs">
@@ -122,21 +121,6 @@ function effectSummary(item: (typeof SHOP_ITEMS)[number]): string {
   height: 100%;
   overflow: hidden;
   background: #111008;
-}
-
-/* ── Gold bar ── */
-.ep-gold-bar {
-  height: 3px;
-  flex-shrink: 0;
-  background: linear-gradient(
-    to right,
-    #5c3310,
-    #c89040,
-    #e8c060,
-    #d4a020,
-    #c89040,
-    #5c3310
-  );
 }
 
 /* ── Tabs ── */

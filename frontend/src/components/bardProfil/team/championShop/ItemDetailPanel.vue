@@ -1,20 +1,26 @@
 <template>
-  <aside class="cs-detail">
-    <!-- Prev / Next navigation (shared list with the champion cards) -->
+  <aside class="cs-detail" :class="{ 'cs-detail--wide': wide }">
+    <!-- Back (wide only) + prev / next navigation (shared list with the cards) -->
     <div class="cs-detail-nav">
-      <button
-        class="cs-nav-btn"
-        :disabled="total < 2"
-        aria-label="Previous entry"
-        @click="$emit('prev')"
-      >←</button>
-      <span class="cs-nav-pos">{{ index + 1 }} / {{ total }}</span>
-      <button
-        class="cs-nav-btn"
-        :disabled="total < 2"
-        aria-label="Next entry"
-        @click="$emit('next')"
-      >→</button>
+      <button v-if="wide" class="cs-back-btn" @click="$emit('back')">
+        <span class="cs-back-arrow">←</span>
+        Back to shop
+      </button>
+      <div class="cs-detail-steps">
+        <button
+          class="cs-nav-btn"
+          :disabled="total < 2"
+          aria-label="Previous entry"
+          @click="$emit('prev')"
+        >←</button>
+        <span class="cs-nav-pos">{{ index + 1 }} / {{ total }}</span>
+        <button
+          class="cs-nav-btn"
+          :disabled="total < 2"
+          aria-label="Next entry"
+          @click="$emit('next')"
+        >→</button>
+      </div>
     </div>
 
     <!-- Hero: item icon on a rarity-tinted stage -->
@@ -82,8 +88,9 @@
         </div>
       </div>
 
-      <!-- Cost breakdown — same rows as the champion recruit cost -->
-      <div class="cs-detail-section">
+      <!-- Cost breakdown — same rows as the champion recruit cost; the widest
+           block, so it takes the whole row in the two-column wide layout -->
+      <div class="cs-detail-section cs-detail-section--full">
         <div class="cs-detail-section-title">Purchase Cost</div>
         <div class="cs-detail-rows">
           <div
@@ -155,8 +162,10 @@ export default defineComponent({
     },
     index: { type: Number, default: -1 },
     total: { type: Number, default: 0 },
+    /** Fills the whole shop rail — see ChampionDetailPanel's `wide`. */
+    wide: { type: Boolean, default: false },
   },
-  emits: ['prev', 'next', 'buy'],
+  emits: ['prev', 'next', 'buy', 'back'],
   setup() {
     return { formatNumber }
   },
@@ -175,7 +184,14 @@ export default defineComponent({
   border-left: 3px solid #5c3310;
 }
 
-/* ── Prev / Next navigation ── */
+/* ══ Wide variant — the panel IS the rail (mirrors ChampionDetailPanel) ══ */
+.cs-detail--wide {
+  width: 100%;
+  flex: 1;
+  border-left: none;
+}
+
+/* ── Back + prev / next navigation ── */
 .cs-detail-nav {
   display: flex;
   align-items: center;
@@ -185,6 +201,46 @@ export default defineComponent({
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
   flex-shrink: 0;
+}
+.cs-detail-steps {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cs-detail--wide .cs-detail-steps {
+  flex: 0 0 auto;
+  gap: 10px;
+}
+.cs-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 11px;
+  background: #141410;
+  border: 1px solid #7a4e20;
+  border-radius: 4px;
+  color: #e8c040;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.cs-back-btn:hover {
+  background: #241a0c;
+  border-color: #c89040;
+  color: #f0d870;
+}
+.cs-back-arrow {
+  font-size: 16px;
+  line-height: 1;
 }
 .cs-nav-btn {
   width: 38px;
@@ -333,6 +389,30 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+/* Two columns at rail width — see ChampionDetailPanel for the reasoning. */
+.cs-detail--wide .cs-detail-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-content: start;
+  gap: 16px 20px;
+  padding: 18px 20px;
+}
+.cs-detail--wide .cs-detail-section--full {
+  grid-column: 1 / -1;
+}
+.cs-detail--wide .cs-detail-hero {
+  height: clamp(210px, 27vh, 330px);
+}
+.cs-detail--wide .cs-detail-name {
+  left: 18px;
+  right: 18px;
+  bottom: 12px;
+  font-size: 30px;
+}
+.cs-detail--wide .cs-buy-btn {
+  max-width: 420px;
+  margin: 0 auto;
 }
 .cs-detail-section-title {
   font-size: 10.5px;
