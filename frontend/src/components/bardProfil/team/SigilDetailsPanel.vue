@@ -109,7 +109,6 @@ const levelStore = useChampionLevelStore()
 const { showToast } = useActionToast()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
-const { autoLevelEnabled } = storeToRefs(levelStore)
 
 const roleDef = computed(() => ROLES[props.roleIndex])
 const main = computed(() => headerSlots.value[props.roleIndex])
@@ -294,15 +293,6 @@ function doLevelUp() {
   if (!name) return
   if (!levelStore.levelUp(name)) return
   showToast(`${name} reached level ${levelStore.levelOf(name)}!`)
-}
-
-/**
- * The switch is roster-wide, not per champion — it sits on this panel because
- * this is where levels are bought, but the label has to say so, or a player
- * flips it on one slot and wonders why the whole team started spending.
- */
-function toggleAutoLevel() {
-  levelStore.setAutoLevel(!autoLevelEnabled.value)
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
@@ -800,26 +790,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               {{ nextMilestone.level }}
             </span>
           </div>
-
-          <!-- Auto level-up. Roster-wide, so the label says "every champion" —
-               it sits under the button whose job it takes over, but a player who
-               flips it here is spending chimes on all thirty slots, not on the
-               one this page happens to describe. -->
-          <button
-            class="sdp-auto"
-            :class="{ 'sdp-auto--on': autoLevelEnabled }"
-            type="button"
-            role="switch"
-            :aria-checked="autoLevelEnabled"
-            title="Buys every level for every champion as soon as its XP, chimes and materials are in stock"
-            @click="toggleAutoLevel"
-          >
-            <span class="sdp-auto-track"><span class="sdp-auto-knob" /></span>
-            <span class="sdp-auto-label">
-              Auto Level Up
-              <span class="sdp-auto-sub">every champion, when affordable</span>
-            </span>
-          </button>
         </div>
 
         <!-- equipment — the column's second action. Slot-scoped, so it is the one
@@ -2321,86 +2291,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   font-size: 11px;
   font-weight: 600;
   opacity: 0.6;
-}
-/* ── auto level-up switch ────────────────────────────────────────────────────
-   Deliberately quieter than the button above it: that one is the action, this
-   one only decides who presses it. The knob is the single moving part and it
-   moves on transform alone, so the row costs nothing while the orbit runs. */
-.sdp-auto {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-  padding: 7px 10px;
-  cursor: pointer;
-  text-align: left;
-  border-radius: 4px;
-  background: #16140e;
-  border: 1px solid #3e3a30;
-  color: #9c927c;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    color 0.15s;
-}
-.sdp-auto:hover {
-  border-color: #5c3310;
-  color: #c8bc9c;
-}
-.sdp-auto--on {
-  background: #14200c;
-  border-color: #52b830;
-  color: #a8d890;
-}
-.sdp-auto-track {
-  flex-shrink: 0;
-  position: relative;
-  width: 32px;
-  height: 16px;
-  border-radius: 4px;
-  background: #0d0c08;
-  border: 1px solid #3e3a30;
-  transition: border-color 0.15s;
-}
-.sdp-auto--on .sdp-auto-track {
-  border-color: #6ec040;
-}
-.sdp-auto-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  background: #6b6455;
-  transition:
-    transform 0.15s,
-    background 0.15s;
-}
-.sdp-auto--on .sdp-auto-knob {
-  background: #52b830;
-  transform: translateX(16px);
-}
-.sdp-auto-label {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.sdp-auto-sub {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-  color: #6b6455;
-}
-.sdp-auto--on .sdp-auto-sub {
-  color: #7a9668;
 }
 /* one wrapping row of hints, centred under the button */
 .sdp-hints {
