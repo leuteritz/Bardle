@@ -6,8 +6,6 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { useChampionLevelStore } from '@/stores/championLevelStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useTeamSigil } from '@/composables/useTeamSigil'
 import { useActionToast } from '@/composables/useActionToast'
 import { championArtSizeFor } from '@/utils/champions'
@@ -73,28 +71,14 @@ const { autoLevelEnabled } = storeToRefs(levelStore)
 // ── Auto level-up ────────────────────────────────────────────────────────────
 // Roster-wide, so it belongs to the board rather than to any one champion page:
 // this is the surface that shows all thirty slots at once, which is exactly the
-// scope the switch acts on. It stands in the bottom row as a third action of the
-// same weight as Shop and Expedition.
+// scope the switch acts on. It sits centred above the sigil rather than in the
+// bottom row: that row's centre belongs to the battle return buttons, which come
+// and go with a live star fight, and a control that has to dodge them is a
+// control the player has to look for twice.
 //
 // It deliberately shows no "X ready to level" counter. That would have to weigh
 // chimes and materials, and a chime-aware check re-runs on every tick while the
 // board is open — the same reason needsAttention() stays affordability-blind.
-
-/**
- * Both return buttons anchor to the centre of that same bottom row, so the
- * switch has to step up a row whenever one of them can appear. Deliberately a
- * shade broader than their own `visible` conditions — the star-fight button also
- * needs its despawn timer to be running, and re-deriving that here would tie the
- * board to a value that changes every second. Yielding one row too eagerly costs
- * nothing; overlapping the way back into a live fight would not.
- */
-const returnButtonVisible = computed(() => {
-  const uiStore = useUiStore()
-  if (uiStore.battleTabReturnPending) return true
-  const starId = uiStore.battleReturnStarId
-  return starId !== null && useStarGroupStore().activeStars.some((s) => s.id === starId)
-})
-
 function toggleAutoLevel() {
   levelStore.setAutoLevel(!autoLevelEnabled.value)
   showToast(
@@ -434,16 +418,13 @@ watch(
       <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
     </button>
 
-    <!-- auto level-up: the bottom row's third action, centred between the other
-         two. A setting rather than a destination, so it carries a switch instead
-         of just a label — but it keeps the gold action shell, because it is a
-         game action and must not read as the red admin strip. -->
+    <!-- auto level-up: centred above the sigil, opposite the bottom action row.
+         A setting rather than a destination, so it carries a switch instead of
+         just a label — but it keeps the gold action shell, because it is a game
+         action and must not read as the red admin strip. -->
     <button
       class="sigil-action sigil-action--auto"
-      :class="{
-        'sigil-action--auto-on': autoLevelEnabled,
-        'sigil-action--auto-raised': returnButtonVisible,
-      }"
+      :class="{ 'sigil-action--auto-on': autoLevelEnabled }"
       type="button"
       role="switch"
       :aria-checked="autoLevelEnabled"
@@ -696,12 +677,18 @@ watch(
   flex-shrink: 0;
 }
 
-/* ── auto level-up: the bottom row's centre action ──
-   Same shell as Shop and Expedition, so the three read as one row. Centring
-   costs it the shared hover/active transforms — those set translateY alone and
-   would drop the translateX that holds it in the middle — so both are restated
-   here with the centring baked in. Placed after them to win on order. */
+/* ── auto level-up: centred above the sigil ──
+   Same gold shell as Shop and Expedition, but anchored to the TOP edge: the
+   bottom row's centre is where the battle return buttons appear, and a control
+   that steps aside whenever a star fight is live is one the player has to hunt
+   for. Up here nothing else is ever placed, so it never moves.
+
+   Centring costs it the shared hover/active transforms — those set translateY
+   alone and would drop the translateX that holds it in the middle — so both are
+   restated with the centring baked in. Placed after them to win on order. */
 .sigil-action--auto {
+  top: 22px;
+  bottom: auto;
   left: 50%;
   transform: translateX(-50%);
 }
@@ -710,11 +697,6 @@ watch(
 }
 .sigil-action--auto:active {
   transform: translateX(-50%);
-}
-/* a return button has taken the centre of the row — step up beside the admin
-   strip until it is gone */
-.sigil-action--auto-raised {
-  bottom: 82px;
 }
 .sigil-action--auto-on {
   border-color: #6ec040;
