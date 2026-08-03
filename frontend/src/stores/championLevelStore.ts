@@ -12,6 +12,7 @@ import {
   CHAMPION_LEVEL_CAP_PER_GALAXY,
   CHAMPION_LEVEL_MAX_CAP,
   CHAMPION_ALLY_XP_SHARE,
+  CHAMPION_AUTO_LEVEL_MAX_PER_TICK,
   CHAMPION_LAST_STAND_HP_THRESHOLD,
   SWORN_ALLY_COUNT,
   SWORN_STAT_SHARE,
@@ -59,6 +60,13 @@ export const useChampionLevelStore = defineStore('championLevel', {
     progress: {} as Record<string, ChampionProgress>,
     /** Milestones reached but not yet spent — the UI nags until they are picked. */
     pendingPerks: [] as PendingPerkChoice[],
+    /**
+     * One switch for the whole roster: buy every level the moment it is
+     * affordable, instead of waiting for a press on the level panel. Off by
+     * default — it spends chimes and ascension materials on its own, and that
+     * has to be the player's decision, not the state a new save starts in.
+     */
+    autoLevelEnabled: false,
     /** Lifetime counters for the Bard Stats catalog. */
     totalXpEarned: 0,
     totalLevelsBought: 0,
@@ -431,6 +439,56 @@ export const useChampionLevelStore = defineStore('championLevel', {
     },
 
     /**
+     * Flips the auto switch. Turning it ON settles the backlog straight away
+     * rather than at the next tick — a player who enables it while champions are
+     * already sitting on full XP bars expects the levels now, not in a second.
+     */
+    setAutoLevel(enabled: boolean): void {
+      this.autoLevelEnabled = enabled
+      if (enabled) this.autoLevelTick()
+    },
+
+    /**
+     * Auto level-up, driven from gameStore.tick(). Buys every level the roster
+     * can currently pay for — same purchase as the panel button, so XP, chimes
+     * and ascension materials are all still spent and a level nobody can afford
+     * simply waits until the missing part is in stock.
+     *
+     * Cheapest champion first, re-picked after every single level. A champion
+     * gets more expensive the moment it levels, so the next-cheapest one takes
+     * over on its own and a tight chime budget spreads across the roster instead
+     * of pouring into whichever name happens to sit first in the save. Perk
+     * milestones do NOT stop the climb — they queue up in pendingPerks exactly
+     * as a manual purchase would and keep nagging until they are picked.
+     *
+     * Returns how many levels were bought, which is 0 on almost every tick: the
+     * search below leaves after one pass over `progress` unless someone actually
+     * has a full XP bank.
+     */
+    autoLevelTick(): number {
+      if (!this.autoLevelEnabled) return 0
+
+      let granted = 0
+      while (granted < CHAMPION_AUTO_LEVEL_MAX_PER_TICK) {
+        let next: string | null = null
+        let bestCost = Infinity
+        for (const name of Object.keys(this.progress)) {
+          if (!this.canLevelUp(name)) continue
+          const chimes = this.costOf(name).chimes
+          if (chimes < bestCost) {
+            bestCost = chimes
+            next = name
+          }
+        }
+        if (!next || !this.levelUp(next)) break
+        granted++
+      }
+
+      if (granted > 0) logger.info('ChampionLevel', `Auto level-up bought ${granted} level(s)`)
+      return granted
+    },
+
+    /**
      * Admin/testing shortcut: raises every champion assigned to the team —
      * mains and allies alike — by `steps` levels, free of charge and without
      * requiring banked XP. Champions already at the level cap are skipped, so
@@ -506,6 +564,7 @@ export const useChampionLevelStore = defineStore('championLevel', {
       this.pendingPerks = []
       this.totalXpEarned = 0
       this.totalLevelsBought = 0
+      this.autoLevelEnabled = false
     },
   },
 })

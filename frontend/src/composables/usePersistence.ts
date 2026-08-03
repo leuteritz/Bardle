@@ -185,6 +185,7 @@ export function usePersistence() {
         pendingPerks: championLevelStore.pendingPerks.map((p) => ({ ...p })),
         totalXpEarned: championLevelStore.totalXpEarned,
         totalLevelsBought: championLevelStore.totalLevelsBought,
+        autoLevelEnabled: championLevelStore.autoLevelEnabled,
       },
       augment: {
         clickCounter: augmentStore.clickCounter,
@@ -556,6 +557,8 @@ export function usePersistence() {
         }
         championLevelStore.totalXpEarned = cl.totalXpEarned ?? 0
         championLevelStore.totalLevelsBought = cl.totalLevelsBought ?? 0
+        // Saves made before the auto switch existed stay manual.
+        championLevelStore.autoLevelEnabled = cl.autoLevelEnabled === true
         championLevelStore.prune()
       }
 

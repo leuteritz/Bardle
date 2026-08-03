@@ -28,6 +28,7 @@ import {
 } from '../../config/championLevels'
 import {
   CHAMPION_ALLY_XP_SHARE,
+  CHAMPION_AUTO_LEVEL_MAX_PER_TICK,
   CHAMPION_LEVEL_START_CAP,
   CHAMPION_LEVEL_CAP_PER_GALAXY,
   CHAMPION_LEVEL_MAX_CAP,
@@ -59,13 +60,22 @@ const MID_LOW = 'Ahri'
 const MID_HIGH = 'Zoe'
 const TOP_LOW = 'Malphite'
 
-/** Gives a champion enough XP, chimes and materials to buy `count` levels. */
+/**
+ * Gives a champion enough XP, chimes and materials to buy `count` levels.
+ *
+ * The price of every step is read off the level that step STARTS from, counted
+ * forward from where the champion stands now — not off its current level `count`
+ * times over. Both curves climb, so funding three steps at the level-1 price
+ * pays for barely one; that matters for auto level-up, which spends the whole
+ * bank in one go instead of being handed one level at a time.
+ */
 function fund(champion: string, count = 1) {
   const levelStore = useChampionLevelStore()
   const gameStore = useGameStore()
   const inventoryStore = useInventoryStore()
+  const start = levelStore.levelOf(champion)
   for (let i = 0; i < count; i++) {
-    const level = levelStore.levelOf(champion)
+    const level = start + i
     levelStore.grantXp(champion, xpForLevel(level))
     const cost = levelUpCost(champion, level)
     gameStore.chimes += cost.chimes
@@ -673,5 +683,151 @@ describe('champion levels — admin team level-up', () => {
     expect(levelStore.adminLevelUpTeam(0)).toBe(0)
     expect(levelStore.adminLevelUpTeam(-3)).toBe(0)
     expect(levelStore.levelOf(MID_LOW)).toBe(1)
+  })
+})
+
+describe('champion levels — auto level-up', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.stubGlobal('localStorage', makeLocalStorageStub())
+  })
+
+  it('stays off by default and leaves a fully funded champion alone', () => {
+    const levelStore = useChampionLevelStore()
+    fund(MID_LOW)
+
+    expect(levelStore.autoLevelEnabled).toBe(false)
+    expect(levelStore.autoLevelTick()).toBe(0)
+    expect(levelStore.levelOf(MID_LOW)).toBe(1)
+    // and the manual purchase is still available afterwards
+    expect(levelStore.canLevelUp(MID_LOW)).toBe(true)
+  })
+
+  it('buys the level on the next tick once the switch is on', () => {
+    const levelStore = useChampionLevelStore()
+    const gameStore = useGameStore()
+    levelStore.autoLevelEnabled = true
+
+    expect(levelStore.autoLevelTick()).toBe(0) // nothing banked yet
+
+    fund(MID_LOW)
+    expect(levelStore.autoLevelTick()).toBe(1)
+    expect(levelStore.levelOf(MID_LOW)).toBe(2)
+    // it pays the same price the button does
+    expect(gameStore.chimes).toBe(0)
+    expect(levelStore.progressOf(MID_LOW).xp).toBe(0)
+    expect(levelStore.totalLevelsBought).toBe(1)
+  })
+
+  it('settles the backlog the moment the switch is flipped on', () => {
+    const levelStore = useChampionLevelStore()
+    fund(MID_LOW, 3)
+
+    levelStore.setAutoLevel(true)
+
+    expect(levelStore.levelOf(MID_LOW)).toBe(4)
+  })
+
+  it('waits at an ascension level until the materials are in stock', () => {
+    const levelStore = useChampionLevelStore()
+    const gameStore = useGameStore()
+    const inventoryStore = useInventoryStore()
+    levelStore.autoLevelEnabled = true
+
+    // The step ONTO an ascension level is the one that charges materials, so the
+    // climb has to stall on the level just below it.
+    const blockedAt = CHAMPION_ASCENSION_INTERVAL - 1
+    expect(isAscensionLevel(blockedAt + 1)).toBe(true)
+
+    // XP and chimes for exactly that run, but no materials at all
+    for (let level = 1; level <= blockedAt; level++) {
+      levelStore.grantXp(MID_LOW, xpForLevel(level))
+      gameStore.chimes += levelUpCost(MID_LOW, level).chimes
+    }
+
+    levelStore.autoLevelTick()
+
+    expect(levelStore.levelOf(MID_LOW)).toBe(blockedAt)
+    expect(levelStore.blockReasonOf(MID_LOW)).toBe('materials')
+
+    // hand over what is missing and the next tick continues on its own
+    for (const [id, qty] of Object.entries(levelUpCost(MID_LOW, blockedAt).materials)) {
+      for (let m = 0; m < qty; m++) inventoryStore.addMaterial(id)
+    }
+    expect(levelStore.autoLevelTick()).toBe(1)
+    expect(levelStore.levelOf(MID_LOW)).toBe(blockedAt + 1)
+  })
+
+  it('climbs past a perk milestone and leaves the choice pending', () => {
+    const levelStore = useChampionLevelStore()
+    levelStore.autoLevelEnabled = true
+    fund(MID_LOW, CHAMPION_PERK_INTERVAL)
+
+    levelStore.autoLevelTick()
+
+    expect(levelStore.levelOf(MID_LOW)).toBe(CHAMPION_PERK_INTERVAL + 1)
+    expect(levelStore.hasPendingPerk(MID_LOW)).toBe(true)
+    expect(levelStore.perkChoicesOf(MID_LOW).length).toBeGreaterThan(0)
+  })
+
+  it('spreads a tight chime budget instead of feeding the first champion only', () => {
+    const levelStore = useChampionLevelStore()
+    const gameStore = useGameStore()
+    levelStore.autoLevelEnabled = true
+
+    // both banked enough XP, and the purse holds exactly two level-1 purchases
+    levelStore.grantXp(MID_LOW, xpForLevel(1) * 4)
+    levelStore.grantXp(TOP_LOW, xpForLevel(1) * 4)
+    gameStore.chimes = levelUpCost(MID_LOW, 1).chimes + levelUpCost(TOP_LOW, 1).chimes
+
+    expect(levelStore.autoLevelTick()).toBe(2)
+    // one level each — level 2 costs more than level 1, so neither runs away
+    expect(levelStore.levelOf(MID_LOW)).toBe(2)
+    expect(levelStore.levelOf(TOP_LOW)).toBe(2)
+  })
+
+  it('never grants more than the per-tick backstop', () => {
+    const levelStore = useChampionLevelStore()
+    levelStore.autoLevelEnabled = true
+    fund(MID_LOW, CHAMPION_AUTO_LEVEL_MAX_PER_TICK + 5)
+
+    expect(levelStore.autoLevelTick()).toBe(CHAMPION_AUTO_LEVEL_MAX_PER_TICK)
+    // the rest is not lost, just deferred to the following tick
+    expect(levelStore.autoLevelTick()).toBe(5)
+  })
+
+  it('stops at the level cap without spinning', () => {
+    const levelStore = useChampionLevelStore()
+    const galaxyStore = useGalaxyStore()
+    galaxyStore.currentGalaxy = 1
+    levelStore.autoLevelEnabled = true
+    fund(MID_LOW, CHAMPION_LEVEL_START_CAP + 10)
+
+    while (levelStore.autoLevelTick() > 0) {
+      /* drain */
+    }
+
+    expect(levelStore.levelOf(MID_LOW)).toBe(levelStore.levelCap)
+    expect(levelStore.autoLevelTick()).toBe(0)
+  })
+
+  it('survives a save/load roundtrip and stays off for older saves', () => {
+    const { saveGame, loadGame } = usePersistence()
+    const levelStore = useChampionLevelStore()
+
+    levelStore.autoLevelEnabled = true
+    saveGame()
+    levelStore.resetAll()
+    expect(levelStore.autoLevelEnabled).toBe(false)
+
+    loadGame()
+    expect(levelStore.autoLevelEnabled).toBe(true)
+
+    // a save written before the switch existed must not turn it on
+    const saved = JSON.parse(localStorage.getItem(SAVE_KEY)!)
+    delete saved.championLevel.autoLevelEnabled
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saved))
+    loadGame()
+    expect(levelStore.autoLevelEnabled).toBe(false)
   })
 })

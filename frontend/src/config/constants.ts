@@ -3700,6 +3700,15 @@ export const CHAMPION_XP_BATTLE_WIN = 40
 export const CHAMPION_XP_EXPEDITION_PER_MINUTE = 5
 export const CHAMPION_XP_EXPEDITION_FAIL_SHARE = 0.35
 
+/**
+ * Auto level-up backstop: how many levels the whole roster may gain in one game
+ * tick. Never reached in normal play — a level costs chimes that take far longer
+ * than a second to earn. It only bounds the one case that can produce a burst:
+ * returning to a save with a full XP bank and a huge chime pile, where the loop
+ * would otherwise walk every champion to the cap inside a single tick.
+ */
+export const CHAMPION_AUTO_LEVEL_MAX_PER_TICK = 25
+
 /** Level-up chime price: BASE * level^EXPONENT, scaled by the champion's tier. */
 export const CHAMPION_LEVEL_CHIME_BASE = 500
 export const CHAMPION_LEVEL_CHIME_EXPONENT = 2.1

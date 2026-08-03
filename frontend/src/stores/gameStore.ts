@@ -587,6 +587,10 @@ export const useGameStore = defineStore('game', {
         this.trackBuildingProduction()
       }
       this.checkPrestigeAvailability()
+      // Auto level-up runs AFTER production so the chimes earned this second are
+      // already on the balance it pays from. Returns immediately while the
+      // switch is off, which is the default.
+      useChampionLevelStore().autoLevelTick()
       const planetEventStore = usePlanetEventStore()
       planetEventStore.checkAndMaybeSpawnEvent()
       const galaxyStore = useGalaxyStore()
