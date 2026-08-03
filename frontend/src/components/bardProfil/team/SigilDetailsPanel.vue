@@ -54,6 +54,7 @@ import {
   CHAMPION_REGALIA_SIZE_ALLY,
   CHAMPION_REGALIA_SIZE_CHIP_MAIN,
   CHAMPION_REGALIA_SIZE_SPLASH,
+  CHAMPION_REGALIA_SPLASH_INSET_RATIO,
 } from '@/config/constants'
 import ChampionLevelBadge from './ChampionLevelBadge.vue'
 import { allySlotLabel } from '@/utils/format'
@@ -93,8 +94,10 @@ const emit = defineEmits<{
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
-/** Width the chip row keeps clear on the right for the level medallion. */
-const splashBadgeReservePx = `${CHAMPION_REGALIA_SIZE_SPLASH + 10}px`
+/** Corner inset that keeps every opaque regalia layer clear of the clip edge. */
+const splashBadgeInsetPx = `${Math.round(
+  CHAMPION_REGALIA_SIZE_SPLASH * CHAMPION_REGALIA_SPLASH_INSET_RATIO,
+)}px`
 const skinThumbMinWidthPx = `${SKIN_THUMB_MIN_WIDTH}px`
 const skinThumbHeightPx = `${SKIN_THUMB_HEIGHT}px`
 const skinGridMaxHeightPx = `${SKIN_GRID_MAX_HEIGHT}px`
@@ -615,43 +618,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </div>
           </div>
 
-          <div v-if="champion" class="sdp-splash-top">
-            <span
-              v-if="tier"
-              class="sdp-hero-chip"
-              :style="{ borderColor: tier.color, color: tier.color }"
-            >
-              ★{{ tier.starLevel }} {{ tier.name }}
-            </span>
-            <span
-              v-if="origin"
-              class="sdp-hero-chip"
-              :style="{ borderColor: originColor, color: originColor }"
-            >
-              <Icon
-                v-if="originIcon.includes(':')"
-                :icon="originIcon"
-                width="15"
-                height="15"
-                class="sdp-hero-chip-icon"
-              />
-              {{ origin }}
-            </span>
-            <span
-              v-for="trait in traits"
-              :key="trait.id"
-              class="sdp-hero-chip"
-              :style="{ borderColor: trait.color, color: trait.color }"
-            >
-              <Icon :icon="trait.icon" width="15" height="15" class="sdp-hero-chip-icon" />
-              {{ trait.name }}
-            </span>
-          </div>
-
-          <!-- Level medallion, on its own in the corner opposite the chips. It
-               carries the level number, the rank colour and the regalia stage,
-               which is everything the "Level x / y RANK" line used to say beside
-               it — so that line is gone and this is bigger instead. -->
+          <!-- Level medallion, alone in the top-left corner. It carries the
+               level number, the rank colour and the regalia stage, which is
+               everything the "Level x / y RANK" line used to say beside it — so
+               that line is gone and this is bigger instead. -->
           <div v-if="champion" class="sdp-splash-badge">
             <ChampionLevelBadge
               :level="level"
@@ -661,16 +631,49 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             />
           </div>
 
-          <!-- hero footer — name and the XP bar as the card's base. The
-               medallion left this row for the opposite corner (see
-               .sdp-splash-badge): standing alone up there it can be half again
-               as large, and the foot keeps its height for the art. -->
+          <!-- hero footer — who this is, then what they are, then how far along:
+               name, the tier/origin/trait chips, and the XP bar as the card's
+               base. The chips used to float in the top corner on their own; down
+               here they read as a subtitle to the name they describe. -->
           <div class="sdp-splash-bottom">
             <!-- Just the name. Everything about skins — picking one and seeing
                  which one is worn — lives in the gallery at the top of the right
                  column, where the lit card is the answer. -->
             <div class="sdp-name-row">
               <div class="sdp-name">{{ champion ?? 'No Champion' }}</div>
+            </div>
+
+            <div v-if="champion" class="sdp-chips">
+              <span
+                v-if="tier"
+                class="sdp-hero-chip"
+                :style="{ borderColor: tier.color, color: tier.color }"
+              >
+                ★{{ tier.starLevel }} {{ tier.name }}
+              </span>
+              <span
+                v-if="origin"
+                class="sdp-hero-chip"
+                :style="{ borderColor: originColor, color: originColor }"
+              >
+                <Icon
+                  v-if="originIcon.includes(':')"
+                  :icon="originIcon"
+                  width="15"
+                  height="15"
+                  class="sdp-hero-chip-icon"
+                />
+                {{ origin }}
+              </span>
+              <span
+                v-for="trait in traits"
+                :key="trait.id"
+                class="sdp-hero-chip"
+                :style="{ borderColor: trait.color, color: trait.color }"
+              >
+                <Icon :icon="trait.icon" width="15" height="15" class="sdp-hero-chip-icon" />
+                {{ trait.name }}
+              </span>
             </div>
 
             <div v-if="champion" class="sdp-xp">
@@ -1789,15 +1792,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     opacity: 1;
   }
 }
-/* The chip row shares this edge with the level medallion on the right, so it
-   stops short of it: badge width plus its inset plus a gap. Without the reserve
-   a champion carrying enough traits would wrap a chip straight under the
-   medallion — the row is free to wrap, the corner is not free to move. */
-.sdp-splash-top {
-  position: absolute;
-  top: 11px;
-  left: 12px;
-  right: calc(12px + v-bind(splashBadgeReservePx));
+/* Chips ride in the footer's flow now, between the name and the XP bar, so they
+   need no corner reserve and no absolute placement — they simply wrap under the
+   name as a subtitle would. */
+.sdp-chips {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1834,12 +1832,17 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   flex-direction: column;
   gap: 8px;
 }
-/* Medallion in the corner opposite the chip stack. Above the fade, so it keeps
-   its contrast wherever the splash happens to be bright. */
+/* Medallion in the top-left corner, alone up there now that the chips have
+   moved down to the name. Above the fade, so it keeps its contrast wherever the
+   splash happens to be bright.
+
+   The inset is derived from the badge's own diameter rather than typed as a
+   corner margin: the regalia grows ornaments with level, and the splash clips.
+   See CHAMPION_REGALIA_SPLASH_INSET_RATIO for the measured overhangs. */
 .sdp-splash-badge {
   position: absolute;
-  top: 11px;
-  right: 12px;
+  top: v-bind(splashBadgeInsetPx);
+  left: v-bind(splashBadgeInsetPx);
   z-index: 3;
   pointer-events: none;
 }

@@ -3877,6 +3877,22 @@ export const CHAMPION_REGALIA_SIZE_PANEL = 54
  * from across the panel.
  */
 export const CHAMPION_REGALIA_SIZE_SPLASH = 76
+/**
+ * Corner inset for that medallion, as a share of its diameter.
+ *
+ * The regalia layers reach well past the badge's own box, and the splash clips
+ * with overflow:hidden — at the level cap a 12px inset sliced the outer plate
+ * and the crown clean off. Measured overhang at 76px, per layer:
+ *
+ *   rays 59.2 · sheen 42.8 · orbit spark 31.4 · plate 22.1 · crown 21.3 (top)
+ *
+ * This covers every OPAQUE layer (the spark, at 0.41 of the diameter, is the
+ * furthest of them). Rays and sheen are radial gradients that fade to nothing
+ * well before their box ends, so letting them run off the edge costs nothing
+ * visible — reserving for them instead would push the badge 59px inward and it
+ * would no longer read as sitting in the corner.
+ */
+export const CHAMPION_REGALIA_SPLASH_INSET_RATIO = 0.42
 /** Rotation periods (ms) of the animated regalia layers. */
 export const CHAMPION_REGALIA_SHEEN_MS = 7000
 export const CHAMPION_REGALIA_ORBIT_MS = 4200
