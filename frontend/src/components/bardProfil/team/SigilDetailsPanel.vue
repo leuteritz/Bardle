@@ -772,13 +772,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
              afford it; you read "5K / 120 XP" and then had to travel past five
              milestones to find the button. -->
         <div v-if="champion" class="sdp-advance">
-          <!-- The price rides INSIDE the action it belongs to. As a row of its
-               own above the button it was a bare number in a chip — a coin and
-               "2.92K" with nothing saying what it was the price OF, and turning
-               red when unaffordable without saying red about what. On the button
-               it needs no label at all: a price on a button is the price of
-               pressing it. It also gives the column back the row's own height
-               plus the gap under it, which the portrait above now keeps. -->
+          <!-- Price and label share the button: a price ON a button needs no
+               label, because it is self-evidently the price of pressing it. What
+               stays outside is only what does NOT fit that sentence — why the
+               press is blocked, and what the next level is worth. -->
           <button
             class="sdp-level-btn"
             :class="{ 'sdp-level-btn--locked': !canLevel, 'sdp-level-btn--bare': atCap }"
@@ -787,13 +784,13 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             @click="doLevelUp"
           >
             <span class="sdp-level-btn-main">
-              <Icon icon="game-icons:circle-sparks" width="20" height="20" />
+              <Icon icon="game-icons:circle-sparks" width="22" height="22" />
               <span v-if="atCap">Level Cap Reached</span>
               <span v-else>Level Up to {{ nextLevel }}</span>
             </span>
             <span v-if="!atCap" class="sdp-level-btn-cost">
               <span class="sdp-cost" :class="{ 'sdp-cost--short': !affordsChimes }">
-                <Icon :icon="CHIMES_COST_ICON" width="15" height="15" />
+                <Icon :icon="CHIMES_COST_ICON" width="17" height="17" />
                 <span>{{ $formatNumber(cost.chimes) }}</span>
               </span>
               <span
@@ -810,18 +807,18 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </span>
           </button>
 
-          <!-- One line under the button, not two stacked ones: what is in the
-               way, and what the next level is worth. Both are short, both answer
-               a question about the same button, and side by side they cost a
-               single row instead of two. -->
+          <!-- One line under the button: what is in the way, and what the next
+               level is worth. Both are short, both answer a question about the
+               same button, and side by side they cost a single row instead of
+               two. -->
           <div class="sdp-hints">
             <span v-if="blockLabel" class="sdp-hint sdp-hint--block">{{ blockLabel }}</span>
             <span v-if="!atCap && isAscensionLevel(nextLevel)" class="sdp-hint sdp-hint--hot">
-              <Icon icon="game-icons:beveled-star" width="13" height="13" />
+              <Icon icon="game-icons:beveled-star" width="15" height="15" />
               Ascension — a star and a lift to every stat
             </span>
             <span v-else-if="!atCap && isPerkLevel(nextLevel)" class="sdp-hint sdp-hint--hot">
-              <Icon icon="game-icons:ribbon-medal" width="13" height="13" />
+              <Icon icon="game-icons:ribbon-medal" width="15" height="15" />
               Milestone — opens a perk choice
             </span>
             <span v-else-if="nextMilestone" class="sdp-hint">
@@ -831,8 +828,8 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                     ? 'game-icons:ribbon-medal'
                     : 'game-icons:beveled-star'
                 "
-                width="13"
-                height="13"
+                width="15"
+                height="15"
               />
               Next {{ nextMilestone.kind === 'perk' ? 'perk' : 'star' }} at
               {{ nextMilestone.level }}
@@ -2456,19 +2453,26 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    separate cost row and a second hint line is gone, and the button reads as the
    shop pattern every player already knows: this is what it does, this is what it
    costs, and the pill that has gone red is the one you cannot pay. */
+/* Label at one end, price at the other — but wrapping, because an ascension step
+   carries three pills and those plus the label are wider than the column. When
+   they no longer fit side by side the price drops to its own line INSIDE the
+   button rather than squeezing the label into two lines, which is what an
+   unwrapped row did (measured: a 69px button with "Level Up to 5" broken across
+   two rows). */
 .sdp-level-btn {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 9px 11px;
+  flex-wrap: wrap;
+  gap: 7px 10px;
+  padding: 8px 10px;
   cursor: pointer;
   border-radius: 4px;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #6ec040;
   color: #0d1a06;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2476,27 +2480,34 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     filter 0.15s,
     transform 0.15s;
 }
-/* at the cap there is no price, so the label takes the middle again */
-.sdp-level-btn--bare {
-  justify-content: center;
-}
+/* The label never breaks — it is three short words and reads as one line or not
+   at all. `flex: 1` lets it claim the row's slack so the price still sits hard
+   right when both fit. */
 .sdp-level-btn-main {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+  white-space: nowrap;
 }
+/* at the cap there is no price, so the label takes the middle again */
+.sdp-level-btn--bare {
+  justify-content: center;
+}
+/* On its own line the price centres; beside the label it stays hard right. */
 .sdp-level-btn-cost {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  flex-shrink: 0;
+  flex: 0 1 auto;
 }
 .sdp-level-btn:hover:not(:disabled) {
   filter: brightness(1.12);
   transform: translateY(-1px);
 }
-/* Locked keeps the house treatment, minus the grayscale: the price now lives on
+/* Locked keeps the house treatment, minus the grayscale: the price lives on
    this button, and while it is locked the price is exactly what the player needs
    to read. Desaturating it would grey out the one pill that says which resource
    is missing. The flat dark surface and the dimmed label carry the state on
@@ -2507,16 +2518,18 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   color: rgba(230, 220, 196, 0.45);
   cursor: not-allowed;
 }
-/* the price pills — dark ink on the live button, light on the locked one */
+/* The price pills — dark ink on the live button, light on the locked one. Kept
+   at the larger size they were given outside the button; the label gives up the
+   width, since "LEVEL UP TO 25" is short and the number is what gets read. */
 .sdp-cost {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
+  gap: 6px;
+  padding: 4px 9px;
   border-radius: 4px;
   background: rgba(8, 20, 4, 0.28);
   border: 1px solid rgba(13, 26, 6, 0.4);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
@@ -2537,12 +2550,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   color: #e08878;
 }
 .sdp-cost-img {
-  width: 16px;
-  height: 16px;
+  width: 19px;
+  height: 19px;
   object-fit: contain;
 }
 .sdp-cost-owned {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   opacity: 0.6;
 }
@@ -2554,13 +2567,13 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   justify-content: center;
   gap: 5px 12px;
   margin-top: 8px;
-  font-size: 12px;
-  color: rgba(200, 164, 90, 0.55);
+  font-size: 13.5px;
+  color: rgba(200, 164, 90, 0.7);
 }
 .sdp-hint {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 .sdp-hint--block {
   color: #cc6050;
