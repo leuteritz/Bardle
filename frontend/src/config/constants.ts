@@ -3881,17 +3881,20 @@ export const CHAMPION_REGALIA_SIZE_PANEL = 54
  * rather than fixed.
  *
  * The panel itself does not grow past 1920×1080 (--team-ui-scale caps at 1), but
- * the splash does: it takes the left column's spare height, so it measures ~369px
+ * the splash does: it takes the left column's spare height, so it measures ~375px
  * at Full HD and ~538px at 2K. A fixed badge therefore shrank in relation to the
- * art it sits on as the screen got bigger. RATIO reproduces the authored 76px at
- * the Full HD splash height and scales from there; MIN and MAX keep it sane on a
- * squeezed desktop and on 4K, where the splash hits its share cap anyway.
+ * art it sits on as the screen got bigger.
+ *
+ * RATIO puts it at ~60px on a Full HD splash — a marker on the portrait rather
+ * than a second subject competing with it — and scales from there. MIN and MAX
+ * keep it sane on a squeezed desktop and on 4K, where the splash hits its share
+ * cap anyway.
  */
-export const CHAMPION_REGALIA_SPLASH_HEIGHT_RATIO = 0.206
-export const CHAMPION_REGALIA_SIZE_SPLASH_MIN = 62
-export const CHAMPION_REGALIA_SIZE_SPLASH_MAX = 124
+export const CHAMPION_REGALIA_SPLASH_HEIGHT_RATIO = 0.16
+export const CHAMPION_REGALIA_SIZE_SPLASH_MIN = 48
+export const CHAMPION_REGALIA_SIZE_SPLASH_MAX = 96
 /** Fallback until the splash has been measured once (Full HD reference). */
-export const CHAMPION_REGALIA_SIZE_SPLASH = 76
+export const CHAMPION_REGALIA_SIZE_SPLASH = 60
 /**
  * Corner inset for that medallion, as a share of its diameter.
  *
