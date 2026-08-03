@@ -3077,6 +3077,13 @@ export const SKIN_ORIGINAL = 'OriginalSkin'
 export const SKIN_CARD_ASPECT_RATIO = '16 / 9'
 /** Skin gallery grid — min card width (px); the grid auto-fills columns. */
 export const SKIN_CARD_MIN_WIDTH = 300
+/**
+ * Inline skin strip in the details page — card width (px). Four cards plus
+ * their gaps fill the right column, and the rest scroll sideways. Kept inside
+ * the 35–110px band of the art table on purpose, so the strip can load the
+ * 256px variant ('md') rather than a full splash per card.
+ */
+export const SKIN_THUMB_WIDTH = 104
 
 /**
  * Downscaled art variants generated next to every splash

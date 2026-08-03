@@ -40,6 +40,8 @@ import {
   SWORN_STAT_SHARE,
   SWORN_ICON,
   SKIN_ORIGINAL,
+  SKIN_THUMB_WIDTH,
+  SKIN_CARD_ASPECT_RATIO,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_DETAILS_LEFT_WIDTH,
   TEAM_SIGIL_MAIN_CHIP_WIDTH,
@@ -59,7 +61,12 @@ import {
 } from '@/config/constants'
 import ChampionLevelBadge from './ChampionLevelBadge.vue'
 import { allySlotLabel } from '@/utils/format'
-import { getChampionSkins, formatSkinName } from '@/utils/champions'
+import {
+  getChampionSkins,
+  formatSkinName,
+  getSkinImagePath,
+  getOriginalPreviewPath,
+} from '@/utils/champions'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
@@ -85,13 +92,13 @@ const emit = defineEmits<{
   'pick-ally': [subSlot: number]
   'clear-ally': [subSlot: number]
   'pick-equipment': [category: ItemCategory]
-  /** Opens the skin gallery for a champion — allies have skins too. */
-  'pick-skins': [champion: string]
   /** Hovered ally chip — mirrored as a spotlight on the sigil board (null = none). */
   'hover-ally': [subSlot: number | null]
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
+const skinThumbWidthPx = `${SKIN_THUMB_WIDTH}px`
+const skinCardAspect = SKIN_CARD_ASPECT_RATIO
 const leftWidthPx = `${TEAM_SIGIL_DETAILS_LEFT_WIDTH}px`
 const splashHeightPx = `${TEAM_SIGIL_SPLASH_HEIGHT}px`
 const splashHeightCompactPx = `${TEAM_SIGIL_SPLASH_HEIGHT_COMPACT}px`
@@ -215,16 +222,41 @@ const originIcon = computed(() =>
 )
 const traits = computed(() => (CHAMPION_TRAITS[champion.value ?? ''] ?? []).map((id) => TRAIT_BY_ID[id]))
 
-/** Alternate skins bundled for the subject (excluding the default look). */
-const skinCount = computed(() =>
-  champion.value ? getChampionSkins(champion.value).filter((s) => s !== SKIN_ORIGINAL).length : 0,
+const equippedSkin = computed(() =>
+  champion.value ? skinStore.getSelectedSkin(champion.value) : SKIN_ORIGINAL,
 )
-const equippedSkinName = computed(() =>
-  champion.value ? formatSkinName(skinStore.getSelectedSkin(champion.value)) : '',
-)
+const equippedSkinName = computed(() => formatSkinName(equippedSkin.value))
 
-function openSkins() {
-  if (champion.value) emit('pick-skins', champion.value)
+/**
+ * The gallery itself, right in the column — the default look first, then every
+ * bundled alternate. Equipping used to mean opening a modal over the page you
+ * were already reading; here the choice sits next to the portrait it changes,
+ * and a pick is one click.
+ *
+ * Art size is fixed at 'md' (the 256px variant): the cards render at
+ * SKIN_THUMB_WIDTH, which the resolution table puts in the 35–110px band, and
+ * every card in the strip shows the same champion, so one variant means one
+ * decode for the whole row.
+ */
+const skinEntries = computed(() => {
+  const name = champion.value
+  if (!name) return []
+  const original = {
+    id: SKIN_ORIGINAL,
+    label: formatSkinName(SKIN_ORIGINAL),
+    image: getOriginalPreviewPath(name, 'md'),
+  }
+  const alternates = getChampionSkins(name)
+    .filter((s) => s !== SKIN_ORIGINAL)
+    .map((s) => ({ id: s, label: formatSkinName(s), image: getSkinImagePath(name, s, 'md') }))
+  return [original, ...alternates]
+})
+
+function equipSkin(id: string, label: string) {
+  const name = champion.value
+  if (!name || id === equippedSkin.value) return
+  skinStore.setSkin(name, id)
+  showToast(`${name}: ${label} equipped!`)
 }
 
 // ── Progression ──────────────────────────────────────────────────────────────
@@ -679,19 +711,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               </div>
             </div>
 
+            <!-- The skin picker used to hang off this row, on the portrait it
+                 changes. It now has its own block at the top of the right
+                 column, so this row is just the name again. -->
             <div class="sdp-name-row">
               <div class="sdp-name">{{ champion ?? 'No Champion' }}</div>
-              <button
-                v-if="champion && skinCount > 0"
-                class="sdp-skins-btn"
-                type="button"
-                :title="`Equipped: ${equippedSkinName}`"
-                @click.stop="openSkins"
-              >
-                <Icon icon="game-icons:cape" width="17" height="17" />
-                <span>Skins</span>
-                <span class="sdp-skins-btn-count">{{ skinCount }}</span>
-              </button>
             </div>
 
             <div v-if="champion" class="sdp-xp">
@@ -849,6 +873,36 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
            buttons of this page live in the left column now, so the two sides
            split cleanly into "what you do" and "what you get". ── -->
       <div class="sdp-right">
+        <!-- skins — the appearance block sits first, level with the portrait it
+             changes in the left column, so the two read as one thing. The strip
+             scrolls sideways rather than wrapping: a champion with twelve skins
+             must not push the stats off the page. -->
+        <div v-if="champion && skinEntries.length > 1" class="sdp-block sdp-block--skins">
+          <div class="sdp-section-head">
+            <span class="sdp-section-accent">✦</span>
+            <span class="sdp-section-title">Skin</span>
+            <div class="sdp-section-rule" />
+            <span class="sdp-section-count">{{ equippedSkinName }}</span>
+          </div>
+          <div class="sdp-skins">
+            <button
+              v-for="entry in skinEntries"
+              :key="entry.id"
+              class="sdp-skin"
+              :class="{ 'sdp-skin--on': entry.id === equippedSkin }"
+              type="button"
+              :title="entry.label"
+              :aria-pressed="entry.id === equippedSkin"
+              @click="equipSkin(entry.id, entry.label)"
+            >
+              <img :src="entry.image" :alt="entry.label" class="sdp-skin-img" loading="lazy" />
+              <span class="sdp-skin-fade" />
+              <span class="sdp-skin-name">{{ entry.label }}</span>
+              <span v-if="entry.id === equippedSkin" class="sdp-skin-tick">✓</span>
+            </button>
+          </div>
+        </div>
+
         <!-- stats -->
         <div v-if="champion && stats" class="sdp-block sdp-block--stats">
           <div class="sdp-section-head">
@@ -1644,6 +1698,13 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   flex-direction: column;
   min-height: 0;
 }
+/* The skin strip is the one block with a height of its own: its cards are a
+   fixed width at a fixed aspect, so there is nothing for spare room to grow
+   into. It neither grows nor shrinks and leaves the whole surplus to the blocks
+   below, which do have something to do with it. */
+.sdp-block--skins {
+  flex: 0 0 auto;
+}
 .sdp-block--stats {
   flex: 6 0 auto;
   max-height: 444px;
@@ -1882,39 +1943,102 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sdp-skins-btn {
+/* ── skin strip ──────────────────────────────────────────────────────────────
+   A row of splashes that scrolls sideways. Cards are fixed-width so twelve
+   skins cannot reflow the column, and only the equipped one is lit: the rest
+   sit at reduced opacity so the current look is findable at a glance instead of
+   needing a badge on every card.
+
+   Hover and selection move opacity and transform only — the strip sits over a
+   board that keeps orbiting, and a border-colour transition on a dozen cards is
+   exactly the kind of per-frame raster work the project bans. */
+.sdp-skins {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+.sdp-skins::-webkit-scrollbar {
+  height: 7px;
+}
+.sdp-skins::-webkit-scrollbar-track {
+  background: #111;
+}
+.sdp-skins::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 4px;
+}
+.sdp-skin {
+  position: relative;
   flex-shrink: 0;
+  width: v-bind(skinThumbWidthPx);
+  aspect-ratio: v-bind(skinCardAspect);
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid #3e3a30;
+  background: #141410;
+  opacity: 0.62;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.sdp-skin:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+.sdp-skin--on {
+  opacity: 1;
+  border-color: #c89040;
+}
+.sdp-skin-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sdp-skin-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 62%;
+  background: linear-gradient(to top, rgba(8, 6, 3, 0.95), transparent);
+  pointer-events: none;
+}
+.sdp-skin-name {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 4px;
+  font-size: 10px;
+  line-height: 1.15;
+  color: #e8dcc0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+.sdp-skin-tick {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 11px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(200, 144, 64, 0.55);
-  color: #e8c040;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    background 0.15s;
-}
-.sdp-skins-btn:hover {
-  border-color: #c89040;
-  background: rgba(30, 16, 6, 0.85);
-  box-shadow: 0 0 10px rgba(232, 192, 64, 0.25);
-}
-.sdp-skins-btn-count {
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(200, 144, 64, 0.18);
-  border: 1px solid rgba(200, 144, 64, 0.35);
+  justify-content: center;
+  border-radius: 3px;
+  background: #2e7a1a;
+  border: 1px solid #6ec040;
+  color: #dff5d0;
   font-size: 11px;
-  line-height: 1.3;
-  color: #f0d870;
+  line-height: 1;
+  pointer-events: none;
 }
 
 /* The gear block is the left column's only padded child — the splash runs edge

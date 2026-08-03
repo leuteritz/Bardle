@@ -22,11 +22,10 @@ import TeamModalShell from './TeamModalShell.vue'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
-import ChampionSkinsPanel from './ChampionSkinsPanel.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
 
-type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | 'skins' | null
+type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | null
 
 const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partial<
   Record<ChampionRole, number>
@@ -191,20 +190,10 @@ function openEquipment(category: ItemCategory) {
   activeModal.value = 'equipment'
 }
 
-/** Champion whose skin gallery is open — the details page picks main or ally. */
-const skinChampion = ref<string | null>(null)
-
-function openSkins(champion: string) {
-  if (!champion) return
-  skinChampion.value = champion
-  activeModal.value = 'skins'
-}
-
 function closeModal() {
   cancelDeferredPicker()
   activeModal.value = null
   pickerSubSlot.value = -1
-  skinChampion.value = null
 }
 
 function onSelectorTabChange(subSlot: number) {
@@ -382,7 +371,6 @@ onUnmounted(() => {
         @pick-ally="openPicker"
         @clear-ally="clearAlly"
         @pick-equipment="openEquipment"
-        @pick-skins="openSkins"
         @hover-ally="hoveredAllySub = $event"
       />
       <TeamSynergiesPanel
@@ -441,16 +429,6 @@ onUnmounted(() => {
       </div>
     </TeamModalShell>
 
-    <TeamModalShell
-      v-if="activeModal === 'skins' && skinChampion"
-      :title="`${skinChampion} — Skins`"
-      icon="game-icons:cape"
-      size="xl"
-      hide-header
-      @close="closeModal"
-    >
-      <ChampionSkinsPanel class="team-modal-fill" :champion="skinChampion" />
-    </TeamModalShell>
 
     <TeamModalShell
       v-if="activeModal === 'expedition'"
