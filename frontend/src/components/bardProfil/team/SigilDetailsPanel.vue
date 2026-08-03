@@ -58,7 +58,6 @@ import {
   CHAMPION_REGALIA_SIZE_ALLY,
   CHAMPION_REGALIA_SIZE_CHIP_MAIN,
   CHAMPION_REGALIA_SIZE_PANEL,
-  CHIMES_COST_ICON,
 } from '@/config/constants'
 import ChampionLevelBadge from './ChampionLevelBadge.vue'
 import { allySlotLabel } from '@/utils/format'
@@ -293,9 +292,6 @@ const cost = computed(() =>
   champion.value ? levelStore.costOf(champion.value) : { chimes: 0, materials: {} },
 )
 const canLevel = computed(() => !!champion.value && levelStore.canLevelUp(champion.value))
-const blockReason = computed(() =>
-  champion.value ? levelStore.blockReasonOf(champion.value) : null,
-)
 
 /** Banked XP or an unspent perk — the medallion pings, exactly as on the board. */
 function needsAttentionOf(name: string): boolean {
@@ -314,20 +310,6 @@ const nextMilestone = computed(() => {
   return null
 })
 
-const blockLabel = computed(() => {
-  switch (blockReason.value) {
-    case 'cap':
-      return 'Level cap reached'
-    case 'xp':
-      return 'Not enough XP — send this champion into battle'
-    case 'chimes':
-      return 'Not enough chimes'
-    case 'materials':
-      return 'Missing materials'
-    default:
-      return ''
-  }
-})
 
 const materialCosts = computed(() =>
   Object.entries(cost.value.materials).map(([id, qty]) => ({
@@ -790,7 +772,13 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </span>
             <span v-if="!atCap" class="sdp-level-btn-cost">
               <span class="sdp-cost" :class="{ 'sdp-cost--short': !affordsChimes }">
-                <Icon :icon="CHIMES_COST_ICON" width="17" height="17" />
+                <!-- the chime itself, same art the header and command panel use;
+                     at 19px the 128 variant is the right step -->
+                <img
+                  src="/img/BardAbilities/BardChime-128.png"
+                  alt="Chimes"
+                  class="sdp-cost-img"
+                />
                 <span>{{ $formatNumber(cost.chimes) }}</span>
               </span>
               <span
@@ -807,12 +795,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </span>
           </button>
 
-          <!-- One line under the button: what is in the way, and what the next
-               level is worth. Both are short, both answer a question about the
-               same button, and side by side they cost a single row instead of
-               two. -->
+          <!-- One line under the button: what the next level is worth. What
+               BLOCKS the press is no longer spelled out here — the price pills on
+               the button already turn red on exactly the line you cannot pay, and
+               a sentence repeating that below was saying the same thing twice. -->
           <div class="sdp-hints">
-            <span v-if="blockLabel" class="sdp-hint sdp-hint--block">{{ blockLabel }}</span>
             <span v-if="!atCap && isAscensionLevel(nextLevel)" class="sdp-hint sdp-hint--hot">
               <Icon icon="game-icons:beveled-star" width="15" height="15" />
               Ascension — a star and a lift to every stat
@@ -2574,9 +2561,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-.sdp-hint--block {
-  color: #cc6050;
 }
 .sdp-hint--hot {
   color: #e8c040;
