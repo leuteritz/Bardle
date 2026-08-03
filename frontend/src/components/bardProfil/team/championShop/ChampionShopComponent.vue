@@ -550,7 +550,7 @@
 </template>
 
 <script lang="ts">
-import { ref, defineComponent, computed, watch, nextTick, onUnmounted } from 'vue'
+import { ref, defineComponent, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '../../../../stores/battleStore'
 import { useInventoryStore } from '../../../../stores/inventoryStore'
@@ -1432,10 +1432,14 @@ const shopChampionNames = computed(() =>
       activeJump.value = target
       lockSpy()
       if (target === 'champions') {
-        // The jump lands on the highest unlocked tier, expanded, header at the
-        // top edge of the grid.
+        // The jump lands on the highest unlocked tier that still has someone to
+        // recruit, expanded, header at the top edge of the grid. A tier whose
+        // champions are all recruited is skipped — landing on "All recruited ✓"
+        // answers nothing; only if every tier is cleared does the last one stand.
         const unlocked = tierGroups.value.filter((g) => !g.isGalaxyLocked)
-        const highest = unlocked[unlocked.length - 1]
+        const stocked = unlocked.filter((g) => g.champions.length > 0)
+        const pool = stocked.length > 0 ? stocked : unlocked
+        const highest = pool[pool.length - 1]
         if (jumpSettleTimer !== null) {
           clearTimeout(jumpSettleTimer)
           jumpSettleTimer = null
@@ -1719,6 +1723,38 @@ const shopChampionNames = computed(() =>
       },
       { immediate: true },
     )
+
+    /**
+     * Opening state: the shop lands ON the highest tier the player can actually
+     * recruit from — expanded, its header at the top of the grid, its first
+     * champion selected — instead of on six collapsed rows that all have to be
+     * opened by hand. That tier is where the next purchase is; everything under
+     * it is already owned or already passed.
+     *
+     * The pick inside the tier prefers a champion that is affordable right now,
+     * so the selection is a decision the player can act on rather than the
+     * alphabetically first name.
+     *
+     * The detail layer stays closed on purpose. It covers the grid, and covering
+     * the shop in the moment it opens would answer a question nobody asked — the
+     * selection shows as the lit card, one click away from its page.
+     */
+    function openAtHighestTier() {
+      // a deep link (notify badge → pendingChampionSearch) has already aimed the
+      // shop somewhere; it wins
+      if (searchQuery.value.trim() || selectedChampion.value || selectedItem.value) return
+      const open = tierGroups.value.filter((g) => !g.isGalaxyLocked && g.champions.length > 0)
+      const highest = open[open.length - 1]
+      if (!highest) return
+      const pick = highest.champions.find((c) => canClickBuy(c.name)) ?? highest.champions[0]
+      if (pick) selectChampion(pick.name)
+      // expands the tier and puts its header at the top edge (settle included)
+      jumpTo('champions')
+    }
+
+    onMounted(() => {
+      nextTick(openAtHighestTier)
+    })
 
     function selectPrev() {
       const list = visibleEntries.value
