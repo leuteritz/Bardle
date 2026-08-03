@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -19,13 +18,15 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import SigilBoardComponent from './sigil/SigilBoardComponent.vue'
 import SigilDetailsPanel from './SigilDetailsPanel.vue'
 import TeamModalShell from './TeamModalShell.vue'
-import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
 
-type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | null
+// The champion picker is NOT among these any more: it lives inside the details
+// page (see SigilDetailsPanel → swapOpen), so choosing a champion no longer
+// covers the board it is being chosen for.
+type TeamModal = 'shop' | 'expedition' | 'equipment' | null
 
 const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partial<
   Record<ChampionRole, number>
@@ -35,8 +36,6 @@ const battleStore = useBattleStore()
 const itemStore = useItemStore()
 const uiStore = useUiStore()
 const { showToast } = useActionToast()
-
-const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 
 // ── Gestaffelter Aufbau ──────────────────────────────────────────────────────
 // Siehe TEAM_TAB_MOUNT_STAGE_*: der Tab baut sich über drei Frames auf, damit
@@ -111,7 +110,6 @@ watch(
   { immediate: true },
 )
 const activeModal = ref<TeamModal>(null)
-const pickerSubSlot = ref(-1)
 const shopRole = ref<ChampionRole | 'all'>('all')
 const equipCategory = ref<ItemCategory>('weapon')
 
@@ -119,25 +117,21 @@ const roleIndex = computed(() => selectedRole.value ?? uiStore.rolesActiveSlot)
 const roleDef = computed(() => ROLES[roleIndex.value])
 const currentEquipment = computed(() => itemStore.slotEquipment[roleIndex.value])
 
-const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
-const roleFilteredChampions = computed(() =>
-  availableChampions.value.filter((c) => getChampionRoles(c).includes(roleDef.value.key)),
-)
-
-const pickerTitle = computed(() =>
-  pickerSubSlot.value === -1
-    ? `Select ${roleDef.value.label}`
-    : `Select ${allySlotLabel(pickerSubSlot.value)}`,
-)
-
 // ── Selection ────────────────────────────────────────────────────────────────
 /** Seat the details page should open on — only a board satellite names one. */
 const focusAlly = ref<number | null>(null)
 /** Bumped with every focus request, see the panel's `focusToken` prop. */
 const focusToken = ref(0)
+/** Whether that request should land straight in the inline picker. */
+const focusSwap = ref(false)
+/** True while the details page has the picker open — Escape routes by it. */
+const swapOpen = ref(false)
+/** Bumped to ask the page to leave the picker (Escape), see `closeSwapToken`. */
+const closeSwapToken = ref(0)
 
-function focusSeat(subSlot: number | null) {
+function focusSeat(subSlot: number | null, swap = false) {
   focusAlly.value = subSlot
+  focusSwap.value = swap
   focusToken.value++
 }
 
@@ -153,20 +147,16 @@ function selectRole(index: number) {
  * used to jump straight into the swap modal, which threw the player out of the
  * page they were on to answer a question they had not asked.
  *
- * An empty seat is the one exception: it has no champion to describe, so it goes
- * to the picker. That is exactly what the details page already does when one of
- * its own empty chips is clicked (see selectSubject there), so board and page
- * now answer a click the same way. Swapping a seated champion stays one click
- * away — its portrait on the page is the swap button.
+ * An empty seat is the one exception: it has no champion to describe, so the
+ * page opens with its picker already up. That is exactly what the page does
+ * when one of its own empty chips is clicked (see selectSubject there), so
+ * board and page answer a click the same way. Swapping a seated champion stays
+ * one click away — its portrait on the page is the swap button.
  */
 function selectAlly(index: number, subSlot: number) {
   const seated = (battleStore.secondarySlots[index] ?? [])[subSlot] ?? null
   selectRole(index)
-  if (!seated) {
-    openPicker(subSlot)
-    return
-  }
-  focusSeat(subSlot)
+  focusSeat(subSlot, !seated)
 }
 
 function closePanel() {
@@ -182,11 +172,6 @@ function dismissPanels() {
 }
 
 // ── Modals ───────────────────────────────────────────────────────────────────
-function openPicker(subSlot: number = -1) {
-  pickerSubSlot.value = subSlot
-  activeModal.value = 'picker'
-}
-
 function openShop(role: ChampionRole | 'all' = 'all') {
   shopRole.value = role
   activeModal.value = 'shop'
@@ -207,31 +192,17 @@ function openEquipment(category: ItemCategory) {
 }
 
 function closeModal() {
-  cancelDeferredPicker()
   activeModal.value = null
-  pickerSubSlot.value = -1
 }
 
-function onSelectorTabChange(subSlot: number) {
-  pickerSubSlot.value = subSlot
-}
-
-// The picker never closes itself — the player fills main + allies back to back
-// and dismisses the modal manually (✕ / Escape / backdrop).
-function handleSelect(champion: string) {
-  const subSlot = pickerSubSlot.value
+/** A champion picked in the details page's inline picker. */
+function assignChampion(subSlot: number, champion: string) {
   if (subSlot === -1) {
     battleStore.setHeaderSlot(roleIndex.value, champion)
     showToast(`${champion} set as ${roleDef.value.label}!`)
   } else {
     battleStore.setSecondarySlot(roleIndex.value, subSlot, champion)
     showToast(`${champion} assigned as ${allySlotLabel(subSlot)}!`)
-  }
-  // Rapid-fire flow: advance to the next empty ally slot; stay put once full
-  const row = battleStore.secondarySlots[roleIndex.value] ?? []
-  const nextEmpty = row.findIndex((s) => s === null)
-  if (nextEmpty !== -1) {
-    pickerSubSlot.value = nextEmpty
   }
 }
 
@@ -260,38 +231,22 @@ function handleShopRoleChange(role: ChampionRole | 'all') {
  * Consumes a "open the team tab on this slot" request from elsewhere (command
  * panel, battle roster, striker squad).
  *
- * The champion picker is deferred by two frames on purpose. A request that
- * names an ally sub-slot asks for the tab AND the picker, and the picker renders
- * every owned champion — 160+ cards. Mounting both in the same frame meant the
- * player clicked and then watched nothing happen until the whole lot was laid
- * out. Letting the tab paint first turns one long freeze into "tab appears, list
- * follows", at no cost to the total work.
+ * A request that names an ally sub-slot asks for that seat's picker, which is
+ * now the details page's own — one page opens, not a page and a modal over it.
+ * The two-frame defer that used to sit here went with the modal: the inline
+ * grid is windowed (useVirtualGrid), so it lays out a dozen cards, not 160.
  */
 function applyRolesOpenRequest() {
   synergiesOpen.value = false
   selectedRole.value = uiStore.rolesActiveSlot
   const subSlot = uiStore.rolesActiveSubSlot
   uiStore.clearRolesOpenPending()
+  activeModal.value = null
   if (subSlot < 0) {
-    activeModal.value = null
+    focusSeat(null)
     return
   }
-  cancelDeferredPicker()
-  deferredPicker = requestAnimationFrame(() => {
-    deferredPicker = requestAnimationFrame(() => {
-      deferredPicker = null
-      openPicker(subSlot)
-    })
-  })
-}
-
-/** Pending deferred-picker frame, cancelled if the tab closes before it fires. */
-let deferredPicker: number | null = null
-function cancelDeferredPicker() {
-  if (deferredPicker !== null) {
-    cancelAnimationFrame(deferredPicker)
-    deferredPicker = null
-  }
+  focusSeat(subSlot, true)
 }
 
 watch(() => uiStore.rolesOpenToken, applyRolesOpenRequest)
@@ -321,11 +276,16 @@ function onShopScroll() {
   }, 150)
 }
 
-// Escape closes the modal first, then whichever side panel is open.
+// Escape unwinds one layer at a time: the modal, then the details page's own
+// picker, then whichever side panel is open. Only this handler listens for the
+// key — the picker lives in a child, so the request travels down as a token
+// rather than as a second window listener racing this one.
 function onEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
   if (activeModal.value) {
     closeModal()
+  } else if (swapOpen.value) {
+    closeSwapToken.value++
   } else if (synergiesOpen.value) {
     synergiesOpen.value = false
   } else if (selectedRole.value !== null) {
@@ -341,7 +301,6 @@ onMounted(() => {
   if (uiStore.rolesOpenPending) applyRolesOpenRequest()
 })
 onUnmounted(() => {
-  cancelDeferredPicker()
   if (mountFrame !== null) cancelAnimationFrame(mountFrame)
   window.removeEventListener('keydown', onEsc)
   if (shopScrollTimer !== null) clearTimeout(shopScrollTimer)
@@ -383,11 +342,13 @@ onUnmounted(() => {
         :highlighted-ally="boardHoveredAlly"
         :focus-ally="focusAlly"
         :focus-token="focusToken"
-        @swap="openPicker(-1)"
-        @pick-ally="openPicker"
+        :focus-swap="focusSwap"
+        :close-swap-token="closeSwapToken"
+        @assign="assignChampion"
         @clear-ally="clearAlly"
         @pick-equipment="openEquipment"
         @hover-ally="hoveredAllySub = $event"
+        @swap-state="swapOpen = $event"
       />
       <TeamSynergiesPanel
         v-else-if="synergiesOpen && panelReady"
@@ -397,29 +358,6 @@ onUnmounted(() => {
     </Transition>
 
     <!-- ══ MODAL OVERLAYS ══ -->
-    <TeamModalShell
-      v-if="activeModal === 'picker'"
-      :title="pickerTitle"
-      icon="game-icons:switch-weapon"
-      hide-header
-      @close="closeModal"
-    >
-      <ChampionSelectPanel
-        class="team-modal-fill"
-        :active-role="roleDef.label"
-        :role-key="roleDef.key"
-        :role-filtered-champions="roleFilteredChampions"
-        :header-slots="headerSlots"
-        :secondary-slots="secondarySlots"
-        :active-slot-index="roleIndex"
-        :active-sub-slot="pickerSubSlot"
-        :show-close="false"
-        @select="handleSelect"
-        @tab-change="onSelectorTabChange"
-        @close="closeModal"
-      />
-    </TeamModalShell>
-
     <TeamModalShell
       v-if="activeModal === 'shop'"
       title="Shop"

@@ -12,8 +12,13 @@
  * Subject vs role: the roster switches which CHAMPION the left column and the
  * stats/perks describe, while role abilities and equipment belong to the SLOT
  * and never change with it. Two scopes, so both are labelled.
+ *
+ * Swapping happens HERE too, not in a modal over the page: clicking the
+ * portrait turns both columns into the picker — the compare column on the left,
+ * the champion grid on the right — while the roster strip stays put and keeps
+ * naming the seat being filled. See swapOpen.
  */
-import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
@@ -62,6 +67,8 @@ import {
   CHAMPION_REGALIA_SPLASH_INSET_RATIO,
 } from '@/config/constants'
 import ChampionLevelBadge from './ChampionLevelBadge.vue'
+import ChampionSwapCompare from './swap/ChampionSwapCompare.vue'
+import ChampionSwapGrid from './swap/ChampionSwapGrid.vue'
 import { allySlotLabel } from '@/utils/format'
 import {
   getChampionSkins,
@@ -87,15 +94,24 @@ const props = defineProps<{
    *  second time would not re-focus it once the page had moved on to another
    *  chip — the sub-slot alone would not have changed. */
   focusToken?: number
+  /** Open the picker straight away on that seat — an empty satellite on the
+   *  board, or a command-panel request, has already asked the question. */
+  focusSwap?: boolean
+  /** Bumped by the tab when Escape should leave the picker rather than close
+   *  the page. Only the tab listens for keys, so the request travels as a token
+   *  instead of a second window listener racing the first. */
+  closeSwapToken?: number
 }>()
 
 const emit = defineEmits<{
-  swap: []
-  'pick-ally': [subSlot: number]
+  /** Champion picked in the inline picker for `subSlot` (-1 = the main seat). */
+  assign: [subSlot: number, champion: string]
   'clear-ally': [subSlot: number]
   'pick-equipment': [category: ItemCategory]
   /** Hovered ally chip — mirrored as a spotlight on the sigil board (null = none). */
   'hover-ally': [subSlot: number | null]
+  /** The picker opened or closed — the tab routes Escape by it. */
+  'swap-state': [open: boolean]
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
@@ -113,13 +129,18 @@ const splashEl = ref<HTMLElement | null>(null)
 const splashHeight = ref(0)
 let splashObserver: ResizeObserver | null = null
 
-onMounted(() => {
-  if (!splashEl.value || typeof ResizeObserver === 'undefined') return
+// Bound to the element rather than to the mount: the splash is unmounted while
+// the inline picker is open, and the page can even OPEN in that state — an
+// observer wired once at mount would attach to nothing and never measure again.
+watch(splashEl, (el) => {
+  splashObserver?.disconnect()
+  splashObserver = null
+  if (!el || typeof ResizeObserver === 'undefined') return
   splashObserver = new ResizeObserver((entries) => {
     const h = entries[0]?.contentRect.height
     if (h) splashHeight.value = h
   })
-  splashObserver.observe(splashEl.value)
+  splashObserver.observe(el)
 })
 onBeforeUnmount(() => {
   splashObserver?.disconnect()
@@ -181,6 +202,32 @@ const MAIN_SUBJECT = -1
 // satellite was clicked, and nothing when a role node was.
 const subject = ref(props.focusAlly ?? MAIN_SUBJECT)
 
+// ── Swap: the picker, inline ─────────────────────────────────────────────────
+// Both columns switch — compare on the left, grid on the right — while the
+// roster strip above them stays exactly where it is, so the seat being filled
+// never leaves the screen and switching seats mid-pick is one click.
+const swapOpen = ref(!!props.focusSwap)
+/** Card under the cursor in the grid. Sticky: it survives the pointer leaving
+ *  the grid, so the comparison can be read and the Assign button reached. */
+const candidate = ref<string | null>(null)
+
+watch(swapOpen, (open) => emit('swap-state', open), { immediate: true })
+
+function openSwap(seat: number) {
+  subject.value = seat
+  candidate.value = null
+  swapOpen.value = true
+}
+function closeSwap() {
+  swapOpen.value = false
+  candidate.value = null
+}
+// Escape reaches the page through the tab's key handler — see closeSwapToken.
+watch(
+  () => props.closeSwapToken,
+  () => closeSwap(),
+)
+
 // One watcher owns every reset of the subject: a role change on its own falls
 // back to the main, a focus request names the seat to open on. Watching the
 // token as well is what makes a repeated click on the same satellite land.
@@ -188,10 +235,15 @@ watch(
   () => [props.roleIndex, props.focusToken] as const,
   () => {
     subject.value = props.focusAlly ?? MAIN_SUBJECT
+    candidate.value = null
+    swapOpen.value = !!props.focusSwap
   },
 )
-// an ally that gets cleared (or a role that loses its bench) falls back to main
+// An ally that gets cleared (or a role that loses its bench) falls back to main
+// — unless the picker is open ON that seat, which is the one case where an
+// empty sub-slot is exactly where the page belongs.
 watch(allies, (rows) => {
+  if (swapOpen.value) return
   if (subject.value !== MAIN_SUBJECT && !rows[subject.value]) subject.value = MAIN_SUBJECT
 })
 
@@ -204,9 +256,17 @@ const championImage = computed(() =>
 )
 
 function selectSubject(index: number) {
+  // While the picker is open the strip retargets it rather than leaving it —
+  // it is the seat rail of this picker, so filling a whole role is one click
+  // per seat with the grid and the comparison staying put.
+  if (swapOpen.value) {
+    subject.value = index
+    candidate.value = null
+    return
+  }
   // an empty ally chip has nothing to show — go straight to the picker
   if (index !== MAIN_SUBJECT && !allies.value[index]) {
-    emit('pick-ally', index)
+    openSwap(index)
     return
   }
   subject.value = index
@@ -214,8 +274,17 @@ function selectSubject(index: number) {
 
 /** The splash doubles as the swap button for whichever slot is in focus. */
 function swapSubject() {
-  if (subject.value === MAIN_SUBJECT) emit('swap')
-  else emit('pick-ally', subject.value)
+  openSwap(subject.value)
+}
+
+/** Seat name as the roster strip writes it — the picker's header repeats it. */
+const subjectSeatLabel = computed(() =>
+  subject.value === MAIN_SUBJECT ? 'Main' : allySlotLabel(subject.value),
+)
+
+function assignChampion(name: string) {
+  emit('assign', subject.value, name)
+  closeSwap()
 }
 
 // ── Roster ───────────────────────────────────────────────────────────────────
@@ -672,8 +741,21 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 
     <!-- ══ two columns ══ -->
     <div class="sdp-cols">
-      <!-- ── LEFT — identity and progression of the subject ── -->
+      <!-- ── LEFT — identity and progression of the subject, or, while the
+           picker is open, the seated champion against the hovered one ── -->
       <div class="sdp-left">
+        <ChampionSwapCompare
+          v-if="swapOpen"
+          :role-index="roleIndex"
+          :sub-slot="subject"
+          :seat-label="subjectSeatLabel"
+          :current="champion"
+          :candidate="candidate"
+          @cancel="closeSwap"
+          @assign="assignChampion"
+        />
+
+        <template v-else>
         <div
           ref="splashEl"
           class="sdp-splash"
@@ -883,14 +965,26 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </div>
           </div>
         </div>
-
+        </template>
       </div>
 
       <!-- ── RIGHT — what the champion IS. Stats, then the perks that shaped
            them, then the kit the seat brings. Nothing here is an action: both
            buttons of this page live in the left column now, so the two sides
            split cleanly into "what you do" and "what you get". ── -->
-      <div class="sdp-right">
+      <div class="sdp-right" :class="{ 'sdp-right--swap': swapOpen }">
+        <!-- the picker's grid — the whole column, so the cards get the width the
+             modal used to take from the board -->
+        <ChampionSwapGrid
+          v-if="swapOpen"
+          :role-key="roleDef.key"
+          :role-index="roleIndex"
+          :sub-slot="subject"
+          @select="assignChampion"
+          @preview="candidate = $event"
+        />
+
+        <template v-else>
         <!-- skins — the appearance block sits first, level with the portrait it
              changes in the left column, so the two read as one thing. Two rows
              show at a time and the rest scrolls: a champion with twelve skins
@@ -1099,7 +1193,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </div>
           </div>
         </div>
-
+        </template>
       </div>
     </div>
   </div>
@@ -1768,6 +1862,16 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   gap: 16px;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
+}
+/* While the picker holds the column it owns its own scrolling: the grid keeps
+   its header pinned and scrolls the cards under it, so the column outside must
+   not scroll as well — two scrollbars over one list is one too many. The
+   details layout's space-between and gap go with it; the grid is one child that
+   fills the column outright. */
+.sdp-right--swap {
+  overflow: hidden;
+  justify-content: flex-start;
+  gap: 0;
 }
 .sdp-right::-webkit-scrollbar {
   width: 4px;

@@ -3803,15 +3803,34 @@ export const ADMIN_TEAM_LEVEL_STEPS = [1, 5, 10] as const
 
 /**
  * Champion picker grid — the numbers useVirtualGrid needs to turn a scroll
- * position into a row range. They MUST match the CSS in ChampionSelectPanel.vue
- * (.csp-grid columns/gap and .csp-champ height); the windowing is only correct
- * while the grid really is uniform.
+ * position into a row range. They MUST match the CSS in ChampionSwapGrid.vue
+ * (.csg-grid columns/gap and .csg-card height); the windowing is only correct
+ * while the grid really is uniform. The grid binds all three straight out of
+ * here via v-bind, so the two cannot drift apart.
+ *
+ * Smaller than the modal they replaced: the picker now lives in the right
+ * column of the role details page (~440px of usable width), where 138px minimum
+ * columns lay out as three cards per row with room to spare.
  */
-export const CHAMPION_PICKER_CARD_MIN_WIDTH = 170
-export const CHAMPION_PICKER_CARD_HEIGHT = 210
-export const CHAMPION_PICKER_GRID_GAP = 10
+export const CHAMPION_PICKER_CARD_MIN_WIDTH = 138
+export const CHAMPION_PICKER_CARD_HEIGHT = 176
+export const CHAMPION_PICKER_GRID_GAP = 8
 /** Rows kept rendered beyond each edge so fast scrolling never shows a gap. */
 export const CHAMPION_PICKER_OVERSCAN_ROWS = 2
+
+/**
+ * Inline champion swap — the compare column that fills the LEFT half of the
+ * details page while the picker is open. Two portrait wells stacked over the
+ * stat comparison; the wells share whatever height the column has spare, and
+ * these are the floor and ceiling of that share.
+ */
+export const CHAMPION_SWAP_PORTRAIT_MIN_HEIGHT = 118
+export const CHAMPION_SWAP_PORTRAIT_MAX_HEIGHT = 260
+/**
+ * The origin that never forms a synergy — too many champions carry it for a
+ * threshold to mean anything, so it is skipped when counting lineups.
+ */
+export const SYNERGY_NEUTRAL_ORIGIN = 'Runeterra'
 
 // ── Level regalia ─────────────────────────────────────────────────────────────
 /**
