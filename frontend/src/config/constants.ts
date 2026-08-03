@@ -3959,6 +3959,32 @@ export const SIGIL_FRAME_HALO_MS = 3800
 export const SIGIL_XP_STROKE_BASE = 3.2
 export const SIGIL_XP_STROKE_STEP = 0.14
 
+/**
+ * Champion tier on a role node — a rank tab on the LEFT EDGE of the name plate,
+ * not a mark on the portrait.
+ *
+ * Two attempts lived on the portrait before this one: a six-rung ladder and a
+ * crown of forged points. Both failed for the same reason, and it was never
+ * their styling — anything that states a rank on a 94px portrait competes with
+ * the champion's face for the only surface that carries the champion's identity,
+ * and it has to bring its own scrim to stay legible on top of it.
+ *
+ * The name plate already sits below the node with room to spare and already
+ * carries the two other numbers about this slot (name, XP). A tab on its edge
+ * costs the portrait nothing, states the tier as a DIGIT (exact, comparable —
+ * which matters because ★2 #4e96e0 and ★3 #5e86d4 are near-identical blues, so
+ * colour alone could never carry it), and hands the plate a second escalation
+ * axis: the tier's own colour on its metal, and from CROWN_MIN_STAR upward a
+ * tinted plate, an outline and a glow.
+ */
+export const SIGIL_TIER_RANK_WIDTH = 17
+/** From this star level the plate itself takes the tier's tint and outline. */
+export const SIGIL_TIER_CROWN_MIN_STAR = 4
+/** From this star level the plate carries a glow in the tier's own colour. */
+export const SIGIL_TIER_AUREOLE_MIN_STAR = 5
+/** Travel period (ms) of the sheen crossing the apex tier's rank tab. */
+export const SIGIL_TIER_AUREOLE_MS = 4200
+
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
 // Distinct from ROLES[].color — these drive the champion lift-glow and slot
 // pulse on hover, giving each role a thematic creative accent.

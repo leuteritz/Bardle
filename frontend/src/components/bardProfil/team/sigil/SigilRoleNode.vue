@@ -44,6 +44,10 @@ import {
   SIGIL_FRAME_HALO_MS,
   SIGIL_XP_STROKE_BASE,
   SIGIL_XP_STROKE_STEP,
+  SIGIL_TIER_RANK_WIDTH,
+  SIGIL_TIER_CROWN_MIN_STAR,
+  SIGIL_TIER_AUREOLE_MIN_STAR,
+  SIGIL_TIER_AUREOLE_MS,
 } from '@/config/constants'
 import type { SigilPoint } from '@/composables/useTeamSigil'
 import type { ChampionArtSize } from '@/types'
@@ -93,10 +97,28 @@ const mainImage = computed(() =>
   main.value ? battleStore.getChampionImage(main.value, { size: props.nodeArtSize }) : '',
 )
 const tier = computed(() => (main.value ? getChampionTier(main.value) : null))
-/** The ladder carries no text — the tier's name lives in its tooltip. */
+/** The crest carries no text — the tier's name and headroom live in its tooltip. */
 const tierLabel = computed(() =>
   tier.value ? `Tier ${tier.value.starLevel}/${MAX_STAR_LEVEL} — ${tier.value.name}` : '',
 )
+
+// ── Champion tier ────────────────────────────────────────────────────────────
+// The tier lives on the NAME PLATE, as a rank tab struck into its left edge —
+// the portrait carries none of it. Three things climb with the star level and
+// they climb on the plate, never on the champion's face: the tab's metal is
+// always the tier's own colour, from ★4 the plate takes that colour as a tint
+// and an outline, from ★5 it glows, and the apex tab carries a slow sheen.
+const tierStars = computed(() => tier.value?.starLevel ?? 0)
+const tierCrown = computed(() => tierStars.value >= SIGIL_TIER_CROWN_MIN_STAR)
+const tierAureole = computed(() => tierStars.value >= SIGIL_TIER_AUREOLE_MIN_STAR)
+const tierApex = computed(() => tierStars.value >= MAX_STAR_LEVEL)
+/** Plate colours mix against the tier where one exists, the role otherwise. */
+const tierVars = computed<Record<string, string>>(() => ({
+  '--tier-color': tier.value?.color ?? roleDef.value.color,
+}))
+
+const tierRankWidth = `${SIGIL_TIER_RANK_WIDTH}px`
+const tierSheenMs = `${SIGIL_TIER_AUREOLE_MS}ms`
 const allies = computed(
   () => secondarySlots.value[props.roleIndex] ?? Array<string | null>(ALLIES_PER_ROLE).fill(null),
 )
@@ -363,17 +385,8 @@ const frameVars = computed<Record<string, string>>(() => {
         <img :src="roleDef.image" :alt="roleDef.label" class="sigil-node-role-ghost" />
       </span>
 
-      <!-- champion tier — a rising ladder of MAX_STAR_LEVEL bars across the
-           portrait's brow: lit bars are the tier, the dark ones the headroom -->
-      <span v-if="main && tier" class="sigil-node-tier" :title="tierLabel" :aria-label="tierLabel">
-        <i
-          v-for="s in MAX_STAR_LEVEL"
-          :key="s"
-          class="sigil-node-tier-bar"
-          :class="{ 'is-lit': s <= tier.starLevel }"
-          :style="{ '--i': String(s - 1) }"
-        />
-      </span>
+      <!-- the portrait carries nothing but the champion and its level: the tier
+           is struck into the name plate's edge instead, see .sigil-node-rank -->
 
       <!-- level — the headline number, seated across the portrait's foot -->
       <span v-if="main" class="sigil-node-lvl" :class="{ 'is-attention': mainAttention }">
@@ -385,19 +398,37 @@ const frameVars = computed<Record<string, string>>(() => {
     <!-- name plate — two lines on one plate: who sits here, and what the XP arc
          around the portrait is currently drawing. One plate rather than two
          anchors, see SIGIL_NODE_NAME_OFFSET. Static markup, no per-frame work. -->
-    <span class="sigil-node-name">
-      <span class="sigil-node-name-text">{{ main ?? roleDef.label }}</span>
-      <span v-if="mainXp" class="sigil-node-xp-num" :class="{ 'is-ready': mainXpReady }">
-        <template v-if="mainXp.capped">
-          <span class="sigil-node-xp-cur">{{ $formatNumber(mainXp.current) }}</span>
-          <span class="sigil-node-xp-unit">banked</span>
-        </template>
-        <template v-else>
-          <span class="sigil-node-xp-cur">{{ $formatNumber(mainXp.current) }}</span>
-          <span class="sigil-node-xp-sep">/</span>
-          <span class="sigil-node-xp-max">{{ $formatNumber(mainXp.needed) }}</span>
-          <span class="sigil-node-xp-unit">XP</span>
-        </template>
+    <span
+      class="sigil-node-name"
+      :class="{
+        'sigil-node-name--tiered': !!main && !!tier,
+        'sigil-node-name--crown': tierCrown,
+        'sigil-node-name--aureole': tierAureole,
+        'sigil-node-name--apex': tierApex,
+      }"
+      :style="tierVars"
+    >
+      <!-- rank tab — the champion tier, struck into the plate's left edge in
+           that tier's own metal. Digit, because ★2 and ★3 are near-identical
+           blues and a colour alone could not tell them apart. -->
+      <span v-if="main && tier" class="sigil-node-rank" :title="tierLabel" :aria-label="tierLabel">
+        <span v-ink-center class="sigil-node-rank-num">{{ tier.starLevel }}</span>
+        <i v-if="tierApex" class="sigil-node-rank-sheen" aria-hidden="true" />
+      </span>
+      <span class="sigil-node-name-body">
+        <span class="sigil-node-name-text">{{ main ?? roleDef.label }}</span>
+        <span v-if="mainXp" class="sigil-node-xp-num" :class="{ 'is-ready': mainXpReady }">
+          <template v-if="mainXp.capped">
+            <span class="sigil-node-xp-cur">{{ $formatNumber(mainXp.current) }}</span>
+            <span class="sigil-node-xp-unit">banked</span>
+          </template>
+          <template v-else>
+            <span class="sigil-node-xp-cur">{{ $formatNumber(mainXp.current) }}</span>
+            <span class="sigil-node-xp-sep">/</span>
+            <span class="sigil-node-xp-max">{{ $formatNumber(mainXp.needed) }}</span>
+            <span class="sigil-node-xp-unit">XP</span>
+          </template>
+        </span>
       </span>
     </span>
   </button>
@@ -783,64 +814,6 @@ const frameVars = computed<Record<string, string>>(() => {
   object-fit: contain;
   opacity: 0.55;
 }
-/* ── tier ladder ──────────────────────────────────────────────────────────────
-   The champion tier used to be a "★4" caption along the portrait's bottom rim —
-   the very seat the level number now owns, and a caption that read as one more
-   number next to it. It is a rising ladder instead: MAX_STAR_LEVEL angled bars
-   climbing left to right across the portrait's brow, the first `starLevel` of
-   them cast in the role's metal, the rest left as dark headroom. Rank is told by
-   how far the ladder has climbed, so it reads without being read — and it needs
-   no tier hue of its own, which is what keeps a slot one identity colour.
-
-   Both marks sit INSIDE the portrait circle, which crops them: whatever angle
-   the pentagon hands a role, neither can ever reach a satellite, the name plate
-   or the XP arc. Cost: six static elements per node, painted once, nothing
-   animated — thirty on a full board and not one of them per frame.
-
-   The row is 40px wide and bottom-aligned 7px into a 30px band, so even its
-   tallest bar stands where the circle is still ~60px across. */
-.sigil-node-tier {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 32%;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 2px;
-  padding-bottom: 7px;
-  /* the portrait's brow is the busiest part of the crop (object-position: top) —
-     a scrim buys the bars their contrast without hiding the champion */
-  background: linear-gradient(to bottom, rgba(6, 4, 2, 0.9), rgba(6, 4, 2, 0.38) 62%, transparent);
-  pointer-events: none;
-}
-.sigil-node-tier-bar {
-  width: 5px;
-  height: calc(5px + var(--i, 0) * 1.4px);
-  border-radius: 1px;
-  /* the shear is what makes six bars read as a ladder rather than a bar chart */
-  transform: skewX(-15deg);
-  /* an unclimbed rung: dark metal with a role-tinted hairline, so it reads as
-     headroom rather than as a smudge on whatever the portrait shows behind it */
-  background: rgba(8, 6, 3, 0.72);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--role-color) 30%, transparent),
-    0 1px 2px rgba(0, 0, 0, 0.8);
-}
-.sigil-node-tier-bar.is-lit {
-  /* Lit rungs are near-flat, not top-lit: the shortest bar is 5px tall, and a
-     gradient dark enough to model the tall ones would leave that one reading as
-     unlit. The metal is stated at the top edge only. */
-  background: linear-gradient(
-    to top,
-    color-mix(in srgb, #fff 20%, var(--role-color)),
-    color-mix(in srgb, #fff 62%, var(--role-color))
-  );
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.85),
-    0 0 5px color-mix(in srgb, var(--role-color) 55%, transparent);
-}
 
 /* ── level ────────────────────────────────────────────────────────────────────
    The number the whole node is about, seated across the portrait's foot where
@@ -914,18 +887,24 @@ const frameVars = computed<Record<string, string>>(() => {
    renders around 7px there, and dark ink on a mid-saturation fill at that size
    is unreadable. Selection is told instead by a lit rail along the top edge, a
    brighter border and a role-coloured glow: still entirely the role's colour,
-   but the type keeps the dark ground it needs. */
+   but the type keeps the dark ground it needs.
+
+   Since the tier moved off the portrait the plate carries THREE things about the
+   slot — who sits here, how far the XP arc has come, and what tier the champion
+   is. The third one rides the plate's left edge as a struck tab (.sigil-node-rank)
+   rather than as a third row: the plate keeps its two-line height, and the tab is
+   the one part that may take a colour of its own. */
 .sigil-node-name {
   position: absolute;
   left: calc(50% + var(--name-x, 0px));
   top: calc(50% + var(--name-y, 80px));
   transform: translate(-50%, -50%);
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   max-width: var(--name-max, 158px);
-  padding: 2px 10px 3px;
   border-radius: 4px;
+  /* the rank tab is flush with the plate's rounded corners */
+  overflow: hidden;
   /* near-opaque: the rune ring and the connector lines run right underneath */
   background: #0c0805;
   border: 1px solid color-mix(in srgb, var(--role-color) 72%, #0c0805);
@@ -933,6 +912,103 @@ const frameVars = computed<Record<string, string>>(() => {
     background 0.2s,
     border-color 0.2s,
     box-shadow 0.2s;
+}
+.sigil-node-name-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 2px 9px 3px;
+}
+
+/* ── rank tab ─────────────────────────────────────────────────────────────────
+   The champion tier, struck into the plate's left edge in that tier's own metal:
+   a small ★ over the star level itself. A DIGIT, not a count of marks — ★2
+   (#4e96e0) and ★3 (#5e86d4) are near-identical blues, so the colour can carry
+   the mood of a rank but never the rank itself, and six marks in a row is what
+   made the two earlier portrait versions too wide to sit anywhere quiet.
+
+   Dark ink on lit metal, the inverse of everything else on the plate. The
+   argument that keeps the CAPTION on a dark ground (it renders ~7px when the
+   details panel squeezes the board) does not reach the tab: its numeral is 15px
+   and a single glyph, which survives the same squeeze at any contrast.
+
+   Escalation lives here and on the plate around it — never on the portrait:
+     ★1-3  tab in tier metal, plate untouched
+     ★4+   plate tinted from the tab outward, tier hairline around it
+     ★5+   plate glows in the tier's colour
+     ★6    a sheen crosses the tab (transform only, one layer, apex slots only) */
+.sigil-node-rank {
+  position: relative;
+  flex: 0 0 auto;
+  width: v-bind(tierRankWidth);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(
+    158deg,
+    color-mix(in srgb, #fff 46%, var(--tier-color)),
+    var(--tier-color) 52%,
+    color-mix(in srgb, var(--tier-color) 68%, #0a0704)
+  );
+  box-shadow: inset -1px 0 0 rgba(6, 4, 2, 0.65);
+}
+/* The digit stands alone — a ★ over it drew as a smudge at the size this tab
+   actually renders (~6px on an unfocused board) and cost the numeral the height
+   it needed. What tells the digit apart from the LV numeral on the portrait is
+   the inversion: dark ink on lit metal here, lit type on a dark ground there. */
+.sigil-node-rank-num {
+  font-size: 16px;
+  line-height: 0.8;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #0b0704;
+}
+/* apex — a hairline of white inside the tab's own edge, static */
+.sigil-node-name--apex .sigil-node-rank {
+  box-shadow:
+    inset -1px 0 0 rgba(6, 4, 2, 0.65),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.5);
+}
+/* apex only — a highlight travels down the tab, clipped by its own overflow */
+.sigil-node-rank-sheen {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 55%;
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: sigil-rank-sheen v-bind(tierSheenMs) linear infinite;
+}
+@keyframes sigil-rank-sheen {
+  0% {
+    transform: translateY(-120%);
+  }
+  55%,
+  100% {
+    transform: translateY(240%);
+  }
+}
+
+/* ★4+ — the plate itself takes the tier: a tint bleeding out of the tab and a
+   hairline of the same metal around the whole thing. Static, one repaint. */
+.sigil-node-name--crown {
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--tier-color) 22%, #0c0805),
+    #0c0805 62%
+  );
+  border-color: color-mix(in srgb, var(--tier-color) 60%, #0c0805);
+}
+/* ★5+ — and it glows. A static box-shadow, never animated. */
+.sigil-node-name--aureole {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tier-color) 42%, transparent);
+}
+.sigil-node-name--apex {
+  border-color: color-mix(in srgb, #fff 26%, var(--tier-color));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--tier-color) 58%, transparent);
 }
 .sigil-node-name-text {
   max-width: 100%;
@@ -990,15 +1066,33 @@ const frameVars = computed<Record<string, string>>(() => {
   border-color: color-mix(in srgb, #fff 28%, var(--role-color));
   box-shadow: 0 0 14px color-mix(in srgb, var(--role-color) 42%, transparent);
 }
-.sigil-node--selected .sigil-node-name::before {
+/* The rail rides the BODY, not the plate: the plate now clips to its rounded
+   corners (the rank tab sits flush in them), and a rail across the tab would
+   read as a lid on the tier's metal rather than as a lit edge on the caption. */
+.sigil-node--selected .sigil-node-name-body::before {
   content: '';
   position: absolute;
   left: 7px;
   right: 7px;
-  top: -1px;
+  top: 0;
   height: 2px;
   border-radius: 0 0 2px 2px;
   background: color-mix(in srgb, #fff 38%, var(--role-color));
+}
+/* Selection and tier are two different things about the same slot, so selecting
+   a high-tier plate must not cost it its tier — the tinted ground and the glow
+   survive, brightened, alongside the role-coloured selection glow. */
+.sigil-node--selected .sigil-node-name--crown {
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--tier-color) 32%, #0c0805),
+    color-mix(in srgb, var(--role-color) 13%, #0c0805) 62%
+  );
+}
+.sigil-node--selected .sigil-node-name--aureole {
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--role-color) 42%, transparent),
+    0 0 18px color-mix(in srgb, var(--tier-color) 48%, transparent);
 }
 .sigil-node--selected .sigil-node-name-text {
   color: color-mix(in srgb, #fff 40%, var(--role-color));
@@ -1265,6 +1359,7 @@ const frameVars = computed<Record<string, string>>(() => {
     opacity: 1;
   }
   .sigil-ally--spotlight,
+  .sigil-node-rank-sheen,
   .sigil-node--spin .sigil-node-plate,
   .sigil-node-sweep,
   .sigil-node-halo,
