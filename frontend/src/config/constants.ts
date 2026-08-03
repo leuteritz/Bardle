@@ -3876,6 +3876,21 @@ export const CHAMPION_REGALIA_SIZE_PANEL = 54
  * readout — it IS the readout now, so the number on it has to carry at a glance
  * from across the panel.
  */
+/**
+ * Medallion on the details-page splash, sized from the splash's own height
+ * rather than fixed.
+ *
+ * The panel itself does not grow past 1920×1080 (--team-ui-scale caps at 1), but
+ * the splash does: it takes the left column's spare height, so it measures ~369px
+ * at Full HD and ~538px at 2K. A fixed badge therefore shrank in relation to the
+ * art it sits on as the screen got bigger. RATIO reproduces the authored 76px at
+ * the Full HD splash height and scales from there; MIN and MAX keep it sane on a
+ * squeezed desktop and on 4K, where the splash hits its share cap anyway.
+ */
+export const CHAMPION_REGALIA_SPLASH_HEIGHT_RATIO = 0.206
+export const CHAMPION_REGALIA_SIZE_SPLASH_MIN = 62
+export const CHAMPION_REGALIA_SIZE_SPLASH_MAX = 124
+/** Fallback until the splash has been measured once (Full HD reference). */
 export const CHAMPION_REGALIA_SIZE_SPLASH = 76
 /**
  * Corner inset for that medallion, as a share of its diameter.
@@ -3886,13 +3901,15 @@ export const CHAMPION_REGALIA_SIZE_SPLASH = 76
  *
  *   rays 59.2 · sheen 42.8 · orbit spark 31.4 · plate 22.1 · crown 21.3 (top)
  *
- * This covers every OPAQUE layer (the spark, at 0.41 of the diameter, is the
- * furthest of them). Rays and sheen are radial gradients that fade to nothing
- * well before their box ends, so letting them run off the edge costs nothing
- * visible — reserving for them instead would push the badge 59px inward and it
- * would no longer read as sitting in the corner.
+ * This covers every OPAQUE layer with room to spare: the furthest is the orbit
+ * ring, whose rotating box reaches 0.41 of the diameter, and rounding at some
+ * sizes put that within a tenth of a pixel of the edge — hence 0.44 rather than
+ * a tight 0.42. Rays and sheen are radial gradients that fade to nothing well
+ * before their box ends, so letting them run off the edge costs nothing visible;
+ * reserving for them instead would push the badge 59px inward and it would no
+ * longer read as sitting in the corner.
  */
-export const CHAMPION_REGALIA_SPLASH_INSET_RATIO = 0.42
+export const CHAMPION_REGALIA_SPLASH_INSET_RATIO = 0.44
 /** Rotation periods (ms) of the animated regalia layers. */
 export const CHAMPION_REGALIA_SHEEN_MS = 7000
 export const CHAMPION_REGALIA_ORBIT_MS = 4200

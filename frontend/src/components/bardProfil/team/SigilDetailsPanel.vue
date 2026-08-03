@@ -13,7 +13,7 @@
  * stats/perks describe, while role abilities and equipment belong to the SLOT
  * and never change with it. Two scopes, so both are labelled.
  */
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
@@ -54,6 +54,9 @@ import {
   CHAMPION_REGALIA_SIZE_ALLY,
   CHAMPION_REGALIA_SIZE_CHIP_MAIN,
   CHAMPION_REGALIA_SIZE_SPLASH,
+  CHAMPION_REGALIA_SIZE_SPLASH_MIN,
+  CHAMPION_REGALIA_SIZE_SPLASH_MAX,
+  CHAMPION_REGALIA_SPLASH_HEIGHT_RATIO,
   CHAMPION_REGALIA_SPLASH_INSET_RATIO,
 } from '@/config/constants'
 import ChampionLevelBadge from './ChampionLevelBadge.vue'
@@ -94,10 +97,51 @@ const emit = defineEmits<{
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
+/**
+ * Level medallion, sized off the splash it sits on.
+ *
+ * Measured rather than derived from the viewport: the splash takes whatever
+ * height the left column has spare, which depends on the window AND on what
+ * else the column is showing. A vh formula would have to guess at that; the
+ * observer knows. The inset follows the same number, so the corner clearance
+ * that keeps the regalia out of the clip edge holds at every size.
+ */
+const splashEl = ref<HTMLElement | null>(null)
+/** 0 until the observer has reported once — see splashBadgeSize. */
+const splashHeight = ref(0)
+let splashObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  if (!splashEl.value || typeof ResizeObserver === 'undefined') return
+  splashObserver = new ResizeObserver((entries) => {
+    const h = entries[0]?.contentRect.height
+    if (h) splashHeight.value = h
+  })
+  splashObserver.observe(splashEl.value)
+})
+onBeforeUnmount(() => {
+  splashObserver?.disconnect()
+  splashObserver = null
+})
+
+const splashBadgeSize = computed(() => {
+  // Before the first measurement the authored Full HD size stands in, so the
+  // badge never renders at a placeholder size and then jumps.
+  if (!splashHeight.value) return CHAMPION_REGALIA_SIZE_SPLASH
+  return Math.round(
+    Math.min(
+      CHAMPION_REGALIA_SIZE_SPLASH_MAX,
+      Math.max(
+        CHAMPION_REGALIA_SIZE_SPLASH_MIN,
+        splashHeight.value * CHAMPION_REGALIA_SPLASH_HEIGHT_RATIO,
+      ),
+    ),
+  )
+})
 /** Corner inset that keeps every opaque regalia layer clear of the clip edge. */
-const splashBadgeInsetPx = `${Math.round(
-  CHAMPION_REGALIA_SIZE_SPLASH * CHAMPION_REGALIA_SPLASH_INSET_RATIO,
-)}px`
+const splashBadgeInsetPx = computed(
+  () => `${Math.round(splashBadgeSize.value * CHAMPION_REGALIA_SPLASH_INSET_RATIO)}px`,
+)
 const skinThumbMinWidthPx = `${SKIN_THUMB_MIN_WIDTH}px`
 const skinThumbHeightPx = `${SKIN_THUMB_HEIGHT}px`
 const skinGridMaxHeightPx = `${SKIN_GRID_MAX_HEIGHT}px`
@@ -594,6 +638,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
       <!-- ── LEFT — identity and progression of the subject ── -->
       <div class="sdp-left">
         <div
+          ref="splashEl"
           class="sdp-splash"
           role="button"
           tabindex="0"
@@ -626,7 +671,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             <ChampionLevelBadge
               :level="level"
               :color="roleDef.color"
-              :size="CHAMPION_REGALIA_SIZE_SPLASH"
+              :size="splashBadgeSize"
               :attention="needsAttentionOf(champion)"
             />
           </div>
