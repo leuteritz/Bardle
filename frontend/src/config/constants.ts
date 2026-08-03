@@ -3078,12 +3078,29 @@ export const SKIN_CARD_ASPECT_RATIO = '16 / 9'
 /** Skin gallery grid — min card width (px); the grid auto-fills columns. */
 export const SKIN_CARD_MIN_WIDTH = 300
 /**
- * Inline skin strip in the details page — card width (px). Four cards plus
- * their gaps fill the right column, and the rest scroll sideways. Kept inside
- * the 35–110px band of the art table on purpose, so the strip can load the
- * 256px variant ('md') rather than a full splash per card.
+ * Inline skin gallery in the details page.
+ *
+ * MIN_WIDTH is the smallest a card may get before the grid drops a column — the
+ * right column fits three, and the splash is legible at that size rather than
+ * being a thumbnail you have to squint at. It sits in the 111–220px band of the
+ * art table, so the cards load the 512px variant ('lg').
+ *
+ * MAX_HEIGHT holds two full rows plus the gap; anything beyond that scrolls, so
+ * a champion with a dozen skins cannot push Stats off the page.
  */
-export const SKIN_THUMB_WIDTH = 104
+export const SKIN_THUMB_MIN_WIDTH = 132
+/**
+ * Card height, explicit rather than an `aspect-ratio`. A ratio on a grid item
+ * whose width comes from `1fr` is circular — the row needs the item's height,
+ * the item's height needs its width, and the width is only known once the row
+ * is laid out. Chrome resolves that by collapsing the row (measured: 37px rows
+ * under 78px cards, every card overlapping the one below). A fixed height
+ * breaks the cycle. 78 is 16:9 at the ~139px the right column actually gives a
+ * card, and `object-fit: cover` absorbs any drift if that width ever changes.
+ */
+export const SKIN_THUMB_HEIGHT = 78
+/** Exactly two rows plus the gap between them — beyond that the grid scrolls. */
+export const SKIN_GRID_MAX_HEIGHT = 164
 
 /**
  * Downscaled art variants generated next to every splash

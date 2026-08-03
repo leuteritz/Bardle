@@ -40,8 +40,9 @@ import {
   SWORN_STAT_SHARE,
   SWORN_ICON,
   SKIN_ORIGINAL,
-  SKIN_THUMB_WIDTH,
-  SKIN_CARD_ASPECT_RATIO,
+  SKIN_THUMB_MIN_WIDTH,
+  SKIN_THUMB_HEIGHT,
+  SKIN_GRID_MAX_HEIGHT,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_DETAILS_LEFT_WIDTH,
   TEAM_SIGIL_MAIN_CHIP_WIDTH,
@@ -97,8 +98,9 @@ const emit = defineEmits<{
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
-const skinThumbWidthPx = `${SKIN_THUMB_WIDTH}px`
-const skinCardAspect = SKIN_CARD_ASPECT_RATIO
+const skinThumbMinWidthPx = `${SKIN_THUMB_MIN_WIDTH}px`
+const skinThumbHeightPx = `${SKIN_THUMB_HEIGHT}px`
+const skinGridMaxHeightPx = `${SKIN_GRID_MAX_HEIGHT}px`
 const leftWidthPx = `${TEAM_SIGIL_DETAILS_LEFT_WIDTH}px`
 const splashHeightPx = `${TEAM_SIGIL_SPLASH_HEIGHT}px`
 const splashHeightCompactPx = `${TEAM_SIGIL_SPLASH_HEIGHT_COMPACT}px`
@@ -233,10 +235,9 @@ const equippedSkinName = computed(() => formatSkinName(equippedSkin.value))
  * were already reading; here the choice sits next to the portrait it changes,
  * and a pick is one click.
  *
- * Art size is fixed at 'md' (the 256px variant): the cards render at
- * SKIN_THUMB_WIDTH, which the resolution table puts in the 35–110px band, and
- * every card in the strip shows the same champion, so one variant means one
- * decode for the whole row.
+ * Art size is 'lg' (the 512px variant): the cards render at SKIN_THUMB_MIN_WIDTH
+ * or a little above, which the resolution table puts in the 111–220px band, and
+ * every card shows the same champion, so one variant serves the whole grid.
  */
 const skinEntries = computed(() => {
   const name = champion.value
@@ -244,12 +245,30 @@ const skinEntries = computed(() => {
   const original = {
     id: SKIN_ORIGINAL,
     label: formatSkinName(SKIN_ORIGINAL),
-    image: getOriginalPreviewPath(name, 'md'),
+    image: getOriginalPreviewPath(name, 'lg'),
   }
   const alternates = getChampionSkins(name)
     .filter((s) => s !== SKIN_ORIGINAL)
-    .map((s) => ({ id: s, label: formatSkinName(s), image: getSkinImagePath(name, s, 'md') }))
+    .map((s) => ({ id: s, label: formatSkinName(s), image: getSkinImagePath(name, s, 'lg') }))
   return [original, ...alternates]
+})
+
+/**
+ * Skin filter. Champions with a dozen skins turn the grid into a scroll hunt,
+ * so the head carries a search box — typing narrows the grid live. Cleared
+ * whenever the page changes subject: a query typed for one champion means
+ * nothing for the next, and leaving it set would show an empty grid for no
+ * visible reason.
+ */
+const skinQuery = ref('')
+watch(champion, () => {
+  skinQuery.value = ''
+})
+
+const visibleSkins = computed(() => {
+  const q = skinQuery.value.trim().toLowerCase()
+  if (!q) return skinEntries.value
+  return skinEntries.value.filter((e) => e.label.toLowerCase().includes(q))
 })
 
 function equipSkin(id: string, label: string) {
@@ -881,12 +900,30 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           <div class="sdp-section-head">
             <span class="sdp-section-accent">✦</span>
             <span class="sdp-section-title">Skin</span>
-            <div class="sdp-section-rule" />
+            <label class="sdp-skin-search">
+              <Icon icon="lucide:search" width="13" height="13" />
+              <input
+                v-model="skinQuery"
+                class="sdp-skin-search-input"
+                type="text"
+                placeholder="Search skins…"
+                :aria-label="`Search ${champion} skins`"
+              />
+              <button
+                v-if="skinQuery"
+                class="sdp-skin-search-clear"
+                type="button"
+                aria-label="Clear search"
+                @click="skinQuery = ''"
+              >
+                ✕
+              </button>
+            </label>
             <span class="sdp-section-count">{{ equippedSkinName }}</span>
           </div>
           <div class="sdp-skins">
             <button
-              v-for="entry in skinEntries"
+              v-for="entry in visibleSkins"
               :key="entry.id"
               class="sdp-skin"
               :class="{ 'sdp-skin--on': entry.id === equippedSkin }"
@@ -900,6 +937,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               <span class="sdp-skin-name">{{ entry.label }}</span>
               <span v-if="entry.id === equippedSkin" class="sdp-skin-tick">✓</span>
             </button>
+            <div v-if="visibleSkins.length === 0" class="sdp-skin-empty">
+              No skin matches “{{ skinQuery }}”
+            </div>
           </div>
         </div>
 
@@ -1716,9 +1756,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   flex: 3 0 auto;
   max-height: 620px;
 }
+/* The abilities pair is the block that gave the skin gallery its room. It used
+   to take a share of the column's growth AND cap at 420px; now it neither grows
+   nor stretches — two cards need the height of two cards. Everything it used to
+   claim goes to the blocks that can actually use it. */
 .sdp-block--abilities {
-  flex: 2 0 auto;
-  max-height: 420px;
+  flex: 0 0 auto;
 }
 /* Equipment lives in the LEFT column now (see .sdp-gear) — it keeps the same
    grow-never-shrink contract there, and the cap is what stops three buttons
@@ -1953,16 +1996,19 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    board that keeps orbiting, and a border-colour transition on a dozen cards is
    exactly the kind of per-frame raster work the project bans. */
 .sdp-skins {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(v-bind(skinThumbMinWidthPx), 1fr));
   gap: 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 6px;
+  max-height: v-bind(skinGridMaxHeightPx);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  align-content: start;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
 .sdp-skins::-webkit-scrollbar {
-  height: 7px;
+  width: 7px;
 }
 .sdp-skins::-webkit-scrollbar-track {
   background: #111;
@@ -1973,9 +2019,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 .sdp-skin {
   position: relative;
-  flex-shrink: 0;
-  width: v-bind(skinThumbWidthPx);
-  aspect-ratio: v-bind(skinCardAspect);
+  width: 100%;
+  /* height, not aspect-ratio — see SKIN_THUMB_HEIGHT for why a ratio collapses
+     the grid rows here */
+  height: v-bind(skinThumbHeightPx);
   overflow: hidden;
   cursor: pointer;
   border-radius: 4px;
@@ -2011,10 +2058,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 .sdp-skin-name {
   position: absolute;
-  left: 5px;
-  right: 5px;
-  bottom: 4px;
-  font-size: 10px;
+  left: 6px;
+  right: 6px;
+  bottom: 5px;
+  font-size: 11px;
   line-height: 1.15;
   color: #e8dcc0;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
@@ -2025,10 +2072,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 .sdp-skin-tick {
   position: absolute;
-  top: 3px;
-  right: 4px;
-  width: 16px;
-  height: 16px;
+  top: 4px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2036,9 +2083,64 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   background: #2e7a1a;
   border: 1px solid #6ec040;
   color: #dff5d0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
   pointer-events: none;
+}
+.sdp-skin-empty {
+  grid-column: 1 / -1;
+  padding: 14px 4px;
+  font-size: 12px;
+  color: #6b6455;
+}
+
+/* ── skin search ──
+   Sits in the section head where the rule would otherwise run, so it costs the
+   block no extra row. It replaces the rule rather than joining it: a search box
+   IS a horizontal element of the right length, and two of them side by side
+   just made the head noisy. */
+.sdp-skin-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #141410;
+  border: 1px solid #3e3a30;
+  color: #6b6455;
+  transition: border-color 0.15s;
+}
+.sdp-skin-search:focus-within {
+  border-color: #5c3310;
+  color: #c8bc9c;
+}
+.sdp-skin-search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e8dcc0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.sdp-skin-search-input::placeholder {
+  color: #6b6455;
+}
+.sdp-skin-search-clear {
+  flex-shrink: 0;
+  padding: 0 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9c927c;
+  font-size: 12px;
+  line-height: 1;
+}
+.sdp-skin-search-clear:hover {
+  color: #e08878;
 }
 
 /* The gear block is the left column's only padded child — the splash runs edge
@@ -2574,11 +2676,14 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   grid-template-columns: 1fr 1fr;
   gap: 9px;
 }
+/* Tightened along with the block above: less padding, a smaller icon well and a
+   closer line height. The two cards keep every word they had — only the air
+   around them went to the skin gallery. */
 .sdp-ability-card {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 9px 10px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(200, 164, 90, 0.12);
@@ -2588,8 +2693,8 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   border-left-color: #c89040;
 }
 .sdp-ability-card-icon {
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -2619,11 +2724,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 .sdp-ability-card-desc {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #dcc99a;
-  line-height: 1.45;
-  margin-top: 4px;
+  line-height: 1.35;
+  margin-top: 3px;
 }
 
 /* ── equipment ── */
