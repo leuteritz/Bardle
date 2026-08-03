@@ -6,6 +6,8 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { useChampionLevelStore } from '@/stores/championLevelStore'
+import { useUiStore } from '@/stores/uiStore'
+import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useTeamSigil } from '@/composables/useTeamSigil'
 import { useActionToast } from '@/composables/useActionToast'
 import { championArtSizeFor } from '@/utils/champions'
@@ -71,11 +73,28 @@ const { autoLevelEnabled } = storeToRefs(levelStore)
 // ── Auto level-up ────────────────────────────────────────────────────────────
 // Roster-wide, so it belongs to the board rather than to any one champion page:
 // this is the surface that shows all thirty slots at once, which is exactly the
-// scope the switch acts on.
+// scope the switch acts on. It stands in the bottom row as a third action of the
+// same weight as Shop and Expedition.
 //
 // It deliberately shows no "X ready to level" counter. That would have to weigh
 // chimes and materials, and a chime-aware check re-runs on every tick while the
 // board is open — the same reason needsAttention() stays affordability-blind.
+
+/**
+ * Both return buttons anchor to the centre of that same bottom row, so the
+ * switch has to step up a row whenever one of them can appear. Deliberately a
+ * shade broader than their own `visible` conditions — the star-fight button also
+ * needs its despawn timer to be running, and re-deriving that here would tie the
+ * board to a value that changes every second. Yielding one row too eagerly costs
+ * nothing; overlapping the way back into a live fight would not.
+ */
+const returnButtonVisible = computed(() => {
+  const uiStore = useUiStore()
+  if (uiStore.battleTabReturnPending) return true
+  const starId = uiStore.battleReturnStarId
+  return starId !== null && useStarGroupStore().activeStars.some((s) => s.id === starId)
+})
+
 function toggleAutoLevel() {
   levelStore.setAutoLevel(!autoLevelEnabled.value)
   showToast(
@@ -392,26 +411,6 @@ watch(
       </button>
     </div>
 
-    <!-- auto level-up: mirrors the admin strip on the opposite side, but in the
-         gold house colours — this one is a game setting, not a debug tool. -->
-    <button
-      class="sigil-auto"
-      :class="{ 'sigil-auto--on': autoLevelEnabled }"
-      type="button"
-      role="switch"
-      :aria-checked="autoLevelEnabled"
-      :title="
-        autoLevelEnabled
-          ? 'On — every champion buys its next level as soon as the XP, chimes and materials are there'
-          : 'Off — levels are bought by hand on the champion page'
-      "
-      @click.stop="toggleAutoLevel"
-    >
-      <Icon icon="game-icons:circle-sparks" width="18" height="18" class="sigil-auto-icon" />
-      <span class="sigil-auto-label">Auto Level</span>
-      <span class="sigil-auto-track"><span class="sigil-auto-knob" /></span>
-    </button>
-
     <!-- board actions: shop + expedition (always reachable) -->
     <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
       <Icon icon="game-icons:shopping-bag" width="26" height="26" class="sigil-action-icon" />
@@ -433,6 +432,31 @@ watch(
       <Icon icon="game-icons:campfire" width="26" height="26" class="sigil-action-icon" />
       Expedition
       <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
+    </button>
+
+    <!-- auto level-up: the bottom row's third action, centred between the other
+         two. A setting rather than a destination, so it carries a switch instead
+         of just a label — but it keeps the gold action shell, because it is a
+         game action and must not read as the red admin strip. -->
+    <button
+      class="sigil-action sigil-action--auto"
+      :class="{
+        'sigil-action--auto-on': autoLevelEnabled,
+        'sigil-action--auto-raised': returnButtonVisible,
+      }"
+      type="button"
+      role="switch"
+      :aria-checked="autoLevelEnabled"
+      :title="
+        autoLevelEnabled
+          ? 'On — every champion buys its next level as soon as its XP, chimes and materials are in stock'
+          : 'Off — levels are bought by hand on the champion page'
+      "
+      @click.stop="toggleAutoLevel"
+    >
+      <Icon icon="game-icons:circle-sparks" width="26" height="26" class="sigil-action-icon" />
+      Auto Level
+      <span class="sigil-auto-track"><span class="sigil-auto-knob" /></span>
     </button>
 
     <!-- scaled sigil stage -->
@@ -633,81 +657,6 @@ watch(
 }
 
 /* ── board actions (shop / expedition) ── */
-/* ── auto level-up switch ──
-   Sits at the admin strip's height on the other side, so the two configuration
-   rows read as one band above the gold actions. The knob is the only thing that
-   moves and it moves on transform alone — the board keeps compositing the orbit
-   behind it at full rate. */
-.sigil-auto {
-  position: absolute;
-  bottom: 82px;
-  right: 26px;
-  z-index: 6;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 10px;
-  cursor: pointer;
-  border-radius: 4px;
-  background: rgba(14, 10, 5, 0.9);
-  border: 1px solid #5c3310;
-  color: #9c927c;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-.sigil-auto:hover {
-  border-color: #c89040;
-  color: #e8dcc0;
-}
-.sigil-auto--on {
-  border-color: #6ec040;
-  color: #a8d890;
-}
-.sigil-auto-icon {
-  flex-shrink: 0;
-  color: #6b6455;
-  transition: color 0.15s ease;
-}
-.sigil-auto--on .sigil-auto-icon {
-  color: #52b830;
-}
-.sigil-auto-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.sigil-auto-track {
-  flex-shrink: 0;
-  position: relative;
-  width: 32px;
-  height: 16px;
-  border-radius: 4px;
-  background: #0d0c08;
-  border: 1px solid #3e3a30;
-  transition: border-color 0.15s ease;
-}
-.sigil-auto--on .sigil-auto-track {
-  border-color: #6ec040;
-}
-.sigil-auto-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  background: #6b6455;
-  transition:
-    transform 0.15s ease,
-    background 0.15s ease;
-}
-.sigil-auto--on .sigil-auto-knob {
-  background: #52b830;
-  transform: translateX(16px);
-}
-
 .sigil-action {
   position: absolute;
   bottom: 22px;
@@ -745,6 +694,71 @@ watch(
 .sigil-action-icon {
   color: #e8c040;
   flex-shrink: 0;
+}
+
+/* ── auto level-up: the bottom row's centre action ──
+   Same shell as Shop and Expedition, so the three read as one row. Centring
+   costs it the shared hover/active transforms — those set translateY alone and
+   would drop the translateX that holds it in the middle — so both are restated
+   here with the centring baked in. Placed after them to win on order. */
+.sigil-action--auto {
+  left: 50%;
+  transform: translateX(-50%);
+}
+.sigil-action--auto:hover {
+  transform: translateX(-50%) translateY(-1px);
+}
+.sigil-action--auto:active {
+  transform: translateX(-50%);
+}
+/* a return button has taken the centre of the row — step up beside the admin
+   strip until it is gone */
+.sigil-action--auto-raised {
+  bottom: 82px;
+}
+.sigil-action--auto-on {
+  border-color: #6ec040;
+}
+/* the shared :hover rule outranks a plain class, so the "on" border would turn
+   gold under the cursor and the state would read as off — restate it brighter
+   at hover specificity instead */
+.sigil-action--auto-on:hover {
+  border-color: #8ee060;
+  box-shadow: 0 0 14px rgba(82, 184, 48, 0.35);
+}
+.sigil-action--auto-on .sigil-action-icon {
+  color: #52b830;
+}
+/* the switch itself — the knob is the only moving part and it moves on
+   transform alone, so the board keeps compositing the orbit at full rate */
+.sigil-auto-track {
+  flex-shrink: 0;
+  position: relative;
+  width: 34px;
+  height: 17px;
+  border-radius: 4px;
+  background: #0d0c08;
+  border: 1px solid #5c3310;
+  transition: border-color 0.15s ease;
+}
+.sigil-action--auto-on .sigil-auto-track {
+  border-color: #6ec040;
+}
+.sigil-auto-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: #6b6455;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+.sigil-action--auto-on .sigil-auto-knob {
+  background: #52b830;
+  transform: translateX(17px);
 }
 
 /* ── stage ── */
