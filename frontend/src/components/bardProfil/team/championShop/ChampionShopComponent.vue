@@ -1,6 +1,36 @@
 <template>
   <div class="rpg-frame cs-layout h-full">
     <div class="cs-left">
+    <!-- ── Domain bar: the shop's two halves ──
+         Top row of the rail now that it carries no title stripe, so it doubles
+         as the shop's own header: it names what is in here and, through the
+         scroll spy, which half is under the eye. Above the search on purpose —
+         picking a domain comes before narrowing it down. -->
+    <div class="cs-jump-row" aria-label="Jump to section">
+      <button
+        class="cs-jump-btn"
+        :class="{ 'cs-jump-btn--active': activeJump === 'champions' }"
+        :disabled="!showChampions"
+        :title="showChampions ? 'Jump to champions' : 'Hidden by item filters'"
+        @click="jumpTo('champions')"
+      >
+        <Icon icon="game-icons:crested-helmet" width="22" height="22" class="cs-jump-icon" />
+        Champions
+        <span class="cs-jump-count">{{ filteredChampions.length }}</span>
+      </button>
+      <button
+        class="cs-jump-btn"
+        :class="{ 'cs-jump-btn--active': activeJump === 'items' }"
+        :disabled="!showItems"
+        :title="showItems ? 'Jump to items' : 'Hidden by champion filters'"
+        @click="jumpTo('items')"
+      >
+        <Icon icon="game-icons:light-backpack" width="22" height="22" class="cs-jump-icon" />
+        Items
+        <span class="cs-jump-count">{{ visibleItemsCount }}</span>
+      </button>
+    </div>
+
     <!-- ── Header: Search + Role Filter ── -->
     <div class="rpg-header cs-header">
       <div class="cs-search-row">
@@ -49,32 +79,6 @@
         <!-- No close button: the rail is dismissed by clicking the sigil board
              it is open in front of (or Escape), the same gesture that closes the
              role details page. -->
-      </div>
-
-      <!-- ── Quick jump: scroll straight to the champion or item sections ── -->
-      <div class="cs-jump-row" aria-label="Jump to section">
-        <button
-          class="cs-jump-btn"
-          :class="{ 'cs-jump-btn--active': activeJump === 'champions' }"
-          :disabled="!showChampions"
-          :title="showChampions ? 'Jump to champions' : 'Hidden by item filters'"
-          @click="jumpTo('champions')"
-        >
-          <Icon icon="game-icons:crested-helmet" width="17" height="17" class="cs-jump-icon" />
-          Champions
-          <span class="cs-jump-count">{{ filteredChampions.length }}</span>
-        </button>
-        <button
-          class="cs-jump-btn"
-          :class="{ 'cs-jump-btn--active': activeJump === 'items' }"
-          :disabled="!showItems"
-          :title="showItems ? 'Jump to items' : 'Hidden by champion filters'"
-          @click="jumpTo('items')"
-        >
-          <Icon icon="game-icons:light-backpack" width="17" height="17" class="cs-jump-icon" />
-          Items
-          <span class="cs-jump-count">{{ visibleItemsCount }}</span>
-        </button>
       </div>
 
       <!-- ── Active filter summary: always visible while filters are set ── -->
@@ -2044,45 +2048,50 @@ const shopChampionNames = computed(() =>
   --pulse-play: paused;
 }
 
-/* ── Quick-jump row: two flat segments under the search bar ── */
+/* ── Domain bar: Champions | Items ──
+   Two halves of one bar rather than two chips in a row: it is the rail's top
+   edge, so it has to look like structure, not like a control someone dropped on
+   top. Same tab language as the equipment picker (EquipmentPickerPanel .ep-tabs)
+   — flat segments, a wood divider between them, the active one lifted out of the
+   header colour with a gold underline — so the two rails read as one family. */
 .cs-jump-row {
   display: flex;
-  gap: 6px;
-  padding-top: 2px;
+  flex-shrink: 0;
+  background: #1e1006;
+  border-bottom: 3px solid #5c3310;
 }
 .cs-jump-btn {
   flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  padding: 7px 10px;
-  font-size: 12px;
+  gap: 11px;
+  padding: 14px 12px;
+  font-size: 14px;
   font-weight: 900;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.55);
-  background: rgba(14, 10, 4, 0.85);
-  border: 1px solid rgba(92, 51, 16, 0.5);
-  border-radius: 4px;
+  color: rgba(200, 144, 64, 0.5);
+  background: transparent;
+  border: none;
+  border-right: 1px solid rgba(92, 51, 16, 0.4);
+  border-radius: 0;
   cursor: pointer;
   transition:
     color 0.15s,
-    border-color 0.15s,
-    background 0.15s,
-    box-shadow 0.15s;
+    background 0.15s;
+}
+.cs-jump-btn:last-child {
+  border-right: none;
 }
 .cs-jump-btn:hover:not(:disabled) {
-  color: #e8c040;
-  border-color: rgba(200, 144, 64, 0.7);
+  color: #c89040;
+  background: rgba(92, 51, 16, 0.18);
 }
 .cs-jump-btn--active {
-  color: #f0d870;
-  background: rgba(30, 16, 6, 0.97);
-  border-color: #c89040;
-  box-shadow:
-    inset 0 0 0 1px rgba(92, 51, 16, 0.5),
-    0 0 10px rgba(232, 192, 64, 0.18);
+  color: #e8c060;
+  background: #111008;
+  box-shadow: inset 0 -3px 0 #c89040;
 }
 .cs-jump-btn:disabled {
   opacity: 0.35;
@@ -2092,12 +2101,16 @@ const shopChampionNames = computed(() =>
 .cs-jump-icon {
   flex-shrink: 0;
   color: currentColor;
+  opacity: 0.75;
+}
+.cs-jump-btn--active .cs-jump-icon {
+  opacity: 1;
 }
 .cs-jump-count {
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0.04em;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 3px;
   line-height: 1.5;
   color: #b89a5a;
