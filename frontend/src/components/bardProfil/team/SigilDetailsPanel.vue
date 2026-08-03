@@ -53,7 +53,7 @@ import {
   CHAMPION_XP_BAR_HEIGHT,
   CHAMPION_REGALIA_SIZE_ALLY,
   CHAMPION_REGALIA_SIZE_CHIP_MAIN,
-  CHAMPION_REGALIA_SIZE_PANEL,
+  CHAMPION_REGALIA_SIZE_SPLASH,
 } from '@/config/constants'
 import ChampionLevelBadge from './ChampionLevelBadge.vue'
 import { allySlotLabel } from '@/utils/format'
@@ -93,6 +93,8 @@ const emit = defineEmits<{
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
+/** Width the chip row keeps clear on the right for the level medallion. */
+const splashBadgeReservePx = `${CHAMPION_REGALIA_SIZE_SPLASH + 10}px`
 const skinThumbMinWidthPx = `${SKIN_THUMB_MIN_WIDTH}px`
 const skinThumbHeightPx = `${SKIN_THUMB_HEIGHT}px`
 const skinGridMaxHeightPx = `${SKIN_GRID_MAX_HEIGHT}px`
@@ -646,30 +648,24 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </span>
           </div>
 
-          <!-- hero footer — the progression readout rides the portrait itself:
-               medallion, rank ladder, name and the XP bar as the card's base.
-               Folding it in here is what frees the column below for the path. -->
-          <div class="sdp-splash-bottom">
-            <div v-if="champion" class="sdp-hero-row">
-              <ChampionLevelBadge
-                :level="level"
-                :color="roleDef.color"
-                :size="CHAMPION_REGALIA_SIZE_PANEL"
-                :attention="needsAttentionOf(champion)"
-              />
-              <!-- Level, cap and rank. The ascension stars used to run as a row
-                   beneath them; the medallion beside this already escalates a
-                   stage per star earned, so the row was counting the same thing
-                   twice on the same art. -->
-              <div class="sdp-hero-meta">
-                <div class="sdp-hero-level">
-                  Level <b>{{ level }}</b>
-                  <span class="sdp-hero-cap">/ {{ cap }}</span>
-                  <span class="sdp-hero-rank">{{ rank.name }}</span>
-                </div>
-              </div>
-            </div>
+          <!-- Level medallion, on its own in the corner opposite the chips. It
+               carries the level number, the rank colour and the regalia stage,
+               which is everything the "Level x / y RANK" line used to say beside
+               it — so that line is gone and this is bigger instead. -->
+          <div v-if="champion" class="sdp-splash-badge">
+            <ChampionLevelBadge
+              :level="level"
+              :color="roleDef.color"
+              :size="CHAMPION_REGALIA_SIZE_SPLASH"
+              :attention="needsAttentionOf(champion)"
+            />
+          </div>
 
+          <!-- hero footer — name and the XP bar as the card's base. The
+               medallion left this row for the opposite corner (see
+               .sdp-splash-badge): standing alone up there it can be half again
+               as large, and the foot keeps its height for the art. -->
+          <div class="sdp-splash-bottom">
             <!-- Just the name. Everything about skins — picking one and seeing
                  which one is worn — lives in the gallery at the top of the right
                  column, where the lit card is the answer. -->
@@ -679,7 +675,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 
             <div v-if="champion" class="sdp-xp">
               <div class="sdp-xp-head">
-                <Icon icon="game-icons:circle-sparks" width="14" height="14" class="sdp-xp-icon" />
                 <span class="sdp-xp-label">Experience</span>
                 <span class="sdp-xp-value">
                   <template v-if="xpBar.capped">
@@ -1794,11 +1789,15 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     opacity: 1;
   }
 }
+/* The chip row shares this edge with the level medallion on the right, so it
+   stops short of it: badge width plus its inset plus a gap. Without the reserve
+   a champion carrying enough traits would wrap a chip straight under the
+   medallion — the row is free to wrap, the corner is not free to move. */
 .sdp-splash-top {
   position: absolute;
   top: 11px;
   left: 12px;
-  right: 12px;
+  right: calc(12px + v-bind(splashBadgeReservePx));
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1835,37 +1834,14 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   flex-direction: column;
   gap: 8px;
 }
-.sdp-hero-row {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-}
-.sdp-hero-meta {
-  min-width: 0;
-}
-.sdp-hero-level {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  font-size: 15px;
-  color: #dcc99a;
-  line-height: 1.1;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
-}
-.sdp-hero-level b {
-  font-size: 23px;
-  color: #f4e6bc;
-}
-.sdp-hero-cap {
-  font-size: 12px;
-  color: rgba(230, 220, 196, 0.45);
-}
-.sdp-hero-rank {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--rank);
+/* Medallion in the corner opposite the chip stack. Above the fade, so it keeps
+   its contrast wherever the splash happens to be bright. */
+.sdp-splash-badge {
+  position: absolute;
+  top: 11px;
+  right: 12px;
+  z-index: 3;
+  pointer-events: none;
 }
 .sdp-name-row {
   display: flex;
@@ -2007,9 +1983,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   align-items: center;
   gap: 7px;
   margin-bottom: 6px;
-}
-.sdp-xp-icon {
-  color: #6ec0e0;
 }
 .sdp-xp-label {
   font-size: 11.5px;

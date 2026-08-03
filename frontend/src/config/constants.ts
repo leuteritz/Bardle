@@ -3870,6 +3870,13 @@ export const CHAMPION_REGALIA_SIZE_ALLY = 21
 /** Medallion on the details-page captain card — a step above the bench chips. */
 export const CHAMPION_REGALIA_SIZE_CHIP_MAIN = 28
 export const CHAMPION_REGALIA_SIZE_PANEL = 54
+/**
+ * Medallion standing alone in the top-right corner of the details-page splash.
+ * Larger than SIZE_PANEL because it no longer shares a line with a "Level x/y"
+ * readout — it IS the readout now, so the number on it has to carry at a glance
+ * from across the panel.
+ */
+export const CHAMPION_REGALIA_SIZE_SPLASH = 76
 /** Rotation periods (ms) of the animated regalia layers. */
 export const CHAMPION_REGALIA_SHEEN_MS = 7000
 export const CHAMPION_REGALIA_ORBIT_MS = 4200
