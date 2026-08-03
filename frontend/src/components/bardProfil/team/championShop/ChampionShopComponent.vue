@@ -11,12 +11,16 @@
         class="cs-jump-btn"
         :class="{ 'cs-jump-btn--active': activeJump === 'champions' }"
         :disabled="!showChampions"
-        :title="showChampions ? 'Jump to champions' : 'Hidden by item filters'"
+        :title="
+          showChampions
+            ? `${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`
+            : 'Hidden by item filters'
+        "
         @click="jumpTo('champions')"
       >
         <Icon icon="game-icons:crested-helmet" width="22" height="22" class="cs-jump-icon" />
         Champions
-        <span class="cs-jump-count">{{ filteredChampions.length }}</span>
+        <span class="cs-jump-count">{{ reachableChampionCount }}</span>
       </button>
       <button
         class="cs-jump-btn"
@@ -1349,6 +1353,22 @@ const shopChampionNames = computed(() =>
       showItems.value ? itemGroups.value.reduce((sum, g) => sum + g.items.length, 0) : 0,
     )
 
+    /**
+     * Champions the player can actually get their hands on right now: the ones
+     * whose tier already spawns in this galaxy, so they can be found on a planet
+     * and bought here once they are. The tab used to count every champion in the
+     * game that is not owned yet — a number that says nothing about what is
+     * reachable and never moves except by recruiting.
+     *
+     * Galaxy-locked tiers are excluded (their champions cannot be found yet);
+     * owned champions are already out, tierGroups drops them. Search and filter
+     * chips narrow it like they narrow the grid, so the number always counts the
+     * cards actually on screen.
+     */
+    const reachableChampionCount = computed(() =>
+      tierGroups.value.reduce((sum, g) => (g.isGalaxyLocked ? sum : sum + g.champions.length), 0),
+    )
+
     // ── Grid empty states across both domains ──
     const crossRoleOnly = computed(
       () =>
@@ -1999,6 +2019,7 @@ const shopChampionNames = computed(() =>
       itemGroups,
       crossRoleOnly,
       nothingFound,
+      reachableChampionCount,
       isItemCatCollapsed,
       toggleItemCatSection,
       selectedItem,
