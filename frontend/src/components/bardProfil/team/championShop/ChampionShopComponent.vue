@@ -46,9 +46,9 @@
           <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="18" height="18" />
         </button>
 
-        <!-- The rail carries no title stripe over the shop — this row is the top
-             of the panel, so the close button belongs here. -->
-        <button class="modal-close-btn" aria-label="Close shop" @click="$emit('close')">✕</button>
+        <!-- No close button: the rail is dismissed by clicking the sigil board
+             it is open in front of (or Escape), the same gesture that closes the
+             role details page. -->
       </div>
 
       <!-- ── Quick jump: scroll straight to the champion or item sections ── -->
@@ -600,7 +600,7 @@ export default defineComponent({
      */
     closeDetailToken: { type: Number, default: 0 },
   },
-  emits: ['roleChange', 'detailState', 'close'],
+  emits: ['roleChange', 'detailState'],
   setup(props, { emit }) {
     const championNames = ref<string[]>(getChampionNames())
     const battleStore = useBattleStore()
@@ -2194,16 +2194,7 @@ const shopChampionNames = computed(() =>
 }
 /* Shared search row + filter toggle + collapsible filter panel + chips live in
    rpg-theme.css (── Champion Filter ──), reused by ChampionSelectPanel. Only the
-   close-button override, the grid padding and the detail layer are scoped here.
-   The button squares off to the search bar's height so the row reads as one
-   control strip rather than as a bar with something stuck to it. */
-.cs-search-row .modal-close-btn {
-  position: static;
-  flex-shrink: 0;
-  transform: none;
-  width: 46px;
-  height: 46px;
-}
+   grid padding and the detail layer are scoped here. */
 
 /* ── Grid area — same horizontal inset as the header so search bar and tier
    headers align on one left edge ── */

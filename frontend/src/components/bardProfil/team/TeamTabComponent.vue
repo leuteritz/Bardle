@@ -388,14 +388,14 @@ onUnmounted(() => {
       >
         <!-- Unified shop: champions + items in one grid, the card detail slides
              in over it (the rail has no room for a permanent detail column).
-             No title stripe above it — the search row is the shop's own header
-             and carries the close button. -->
+             Neither a title stripe nor a close button — the search row is the
+             top of the rail, and the rail closes the way the details page does:
+             a click on the board it stands in front of, or Escape. -->
         <ChampionShopComponent
           :initial-role="shopRole"
           :close-detail-token="closeShopDetailToken"
           @role-change="handleShopRoleChange"
           @detail-state="shopDetailOpen = $event"
-          @close="closeDestination"
         />
       </TeamSidePanelShell>
 
