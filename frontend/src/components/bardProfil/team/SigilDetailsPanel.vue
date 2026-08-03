@@ -730,11 +730,16 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               </div>
             </div>
 
-            <!-- The skin picker used to hang off this row, on the portrait it
-                 changes. It now has its own block at the top of the right
-                 column, so this row is just the name again. -->
+            <!-- The picker itself lives at the top of the right column; what
+                 stays here is the answer to "which skin am I looking at", and it
+                 belongs on the art it names rather than in the gallery's header,
+                 where it sat next to the search box competing with it. -->
             <div class="sdp-name-row">
               <div class="sdp-name">{{ champion ?? 'No Champion' }}</div>
+            </div>
+            <div v-if="champion && skinEntries.length > 1" class="sdp-worn">
+              <Icon icon="game-icons:cape" width="18" height="18" class="sdp-worn-icon" />
+              <span class="sdp-worn-name">{{ equippedSkinName }}</span>
             </div>
 
             <div v-if="champion" class="sdp-xp">
@@ -919,7 +924,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 ✕
               </button>
             </label>
-            <span class="sdp-section-count">{{ equippedSkinName }}</span>
           </div>
           <div class="sdp-skins">
             <button
@@ -1982,6 +1986,30 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   color: #f4e6bc;
   line-height: 1;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Worn skin, directly under the champion name — the two read as one title, the
+   name in ivory and the skin in gold beneath it. Sized to sit clearly below the
+   32px name without becoming fine print on the art. */
+.sdp-worn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+  min-width: 0;
+  color: #e8c040;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+}
+.sdp-worn-icon {
+  flex-shrink: 0;
+}
+.sdp-worn-name {
+  min-width: 0;
+  font-size: 18px;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
