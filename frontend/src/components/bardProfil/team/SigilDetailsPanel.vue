@@ -224,7 +224,6 @@ const traits = computed(() => (CHAMPION_TRAITS[champion.value ?? ''] ?? []).map(
 const equippedSkin = computed(() =>
   champion.value ? skinStore.getSelectedSkin(champion.value) : SKIN_ORIGINAL,
 )
-const equippedSkinName = computed(() => formatSkinName(equippedSkin.value))
 
 /**
  * The gallery itself, right in the column — the default look first, then every
@@ -682,16 +681,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               </div>
             </div>
 
-            <!-- The picker itself lives at the top of the right column; what
-                 stays here is the answer to "which skin am I looking at", and it
-                 belongs on the art it names rather than in the gallery's header,
-                 where it sat next to the search box competing with it. -->
+            <!-- Just the name. Everything about skins — picking one and seeing
+                 which one is worn — lives in the gallery at the top of the right
+                 column, where the lit card is the answer. -->
             <div class="sdp-name-row">
               <div class="sdp-name">{{ champion ?? 'No Champion' }}</div>
-            </div>
-            <div v-if="champion && skinEntries.length > 1" class="sdp-worn">
-              <Icon icon="game-icons:cape" width="18" height="18" class="sdp-worn-icon" />
-              <span class="sdp-worn-name">{{ equippedSkinName }}</span>
             </div>
 
             <div v-if="champion" class="sdp-xp">
@@ -1900,35 +1894,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Worn skin, directly under the champion name — the two read as one title, the
-   name in ivory and the skin in gold beneath it. Sized to sit clearly below the
-   32px name without becoming fine print on the art. */
-.sdp-worn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 5px;
-  min-width: 0;
-  color: #e8c040;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
-}
-.sdp-worn-icon {
-  flex-shrink: 0;
-}
-.sdp-worn-name {
-  min-width: 0;
-  font-size: 18px;
-  line-height: 1.1;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* ── skin strip ──────────────────────────────────────────────────────────────
-   A row of splashes that scrolls sideways. Cards are fixed-width so twelve
-   skins cannot reflow the column, and only the equipped one is lit: the rest
-   sit at reduced opacity so the current look is findable at a glance instead of
-   needing a badge on every card.
+/* ── skin grid ───────────────────────────────────────────────────────────────
+   Splash cards in three columns. Cards are fixed-size so twelve skins cannot
+   reflow the column, and only the equipped one is lit: the rest sit at reduced
+   opacity so the current look is findable at a glance instead of needing a badge
+   on every card.
 
    Hover and selection move opacity and transform only — the strip sits over a
    board that keeps orbiting, and a border-colour transition on a dozen cards is
