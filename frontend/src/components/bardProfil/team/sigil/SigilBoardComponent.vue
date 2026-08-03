@@ -14,6 +14,9 @@ import {
   ROLES,
   SIGIL_STAGE_SIZE,
   SIGIL_CREST_SIZE,
+  SIGIL_POWER_AUTO_GAP,
+  SIGIL_POWER_AUTO_WIDTH,
+  SIGIL_POWER_AUTO_HEIGHT,
   SIGIL_NODE_SIZE,
   SIGIL_SWORN_SIZE,
   TEAM_SIGIL_FOCUS_ZOOM,
@@ -71,10 +74,10 @@ const { autoLevelEnabled } = storeToRefs(levelStore)
 // ── Auto level-up ────────────────────────────────────────────────────────────
 // Roster-wide, so it belongs to the board rather than to any one champion page:
 // this is the surface that shows all thirty slots at once, which is exactly the
-// scope the switch acts on. It sits centred above the sigil rather than in the
-// bottom row: that row's centre belongs to the battle return buttons, which come
-// and go with a live star fight, and a control that has to dodge them is a
-// control the player has to look for twice.
+// scope the switch acts on. It rides on the stage under the power crest, so it
+// belongs to the sigil itself and travels with it. The board's own edges were
+// all taken: the bottom row's centre by the battle return buttons and the top
+// centre by the Top role's ally satellites.
 //
 // It deliberately shows no "X ready to level" counter. That would have to weigh
 // chimes and materials, and a chime-aware check re-runs on every tick while the
@@ -418,27 +421,6 @@ watch(
       <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
     </button>
 
-    <!-- auto level-up: centred above the sigil, opposite the bottom action row.
-         A setting rather than a destination, so it carries a switch instead of
-         just a label — but it keeps the gold action shell, because it is a game
-         action and must not read as the red admin strip. -->
-    <button
-      class="sigil-action sigil-action--auto"
-      :class="{ 'sigil-action--auto-on': autoLevelEnabled }"
-      type="button"
-      role="switch"
-      :aria-checked="autoLevelEnabled"
-      :title="
-        autoLevelEnabled
-          ? 'On — every champion buys its next level as soon as its XP, chimes and materials are in stock'
-          : 'Off — levels are bought by hand on the champion page'
-      "
-      @click.stop="toggleAutoLevel"
-    >
-      <Icon icon="game-icons:circle-sparks" width="26" height="26" class="sigil-action-icon" />
-      Auto Level
-      <span class="sigil-auto-track"><span class="sigil-auto-knob" /></span>
-    </button>
 
     <!-- scaled sigil stage -->
     <div
@@ -500,6 +482,36 @@ watch(
           <Icon icon="game-icons:linked-rings" width="14" height="14" />
           {{ activeSynergyCount }}
         </span>
+      </button>
+
+      <!-- auto level-up, seated under the power crest. On the STAGE rather than
+           on the board, so it stays under the crest through every pan and zoom
+           instead of drifting off it. Sibling of the crest, not a child: the
+           crest already owns a click (team synergies) and the two must not
+           swallow each other. Flat and small on purpose — the gap between the
+           synergy badge and the bottom name plates is 29 stage-px, and that is
+           the whole budget (see SIGIL_POWER_AUTO_*). -->
+      <button
+        class="sigil-power-auto"
+        :class="{ 'sigil-power-auto--on': autoLevelEnabled }"
+        :style="{
+          top: `calc(50% + ${SIGIL_CREST_SIZE / 2 + SIGIL_POWER_AUTO_GAP}px)`,
+          width: `${SIGIL_POWER_AUTO_WIDTH}px`,
+          height: `${SIGIL_POWER_AUTO_HEIGHT}px`,
+        }"
+        type="button"
+        role="switch"
+        :aria-checked="autoLevelEnabled"
+        :title="
+          autoLevelEnabled
+            ? 'On — every champion buys its next level as soon as its XP, chimes and materials are in stock'
+            : 'Off — levels are bought by hand on the champion page'
+        "
+        @click.stop="toggleAutoLevel"
+      >
+        <Icon icon="game-icons:circle-sparks" width="13" height="13" />
+        <span class="sigil-power-auto-label">Auto Level</span>
+        <span class="sigil-power-auto-track"><span class="sigil-power-auto-knob" /></span>
       </button>
 
       <!-- escalation embers -->
@@ -677,70 +689,80 @@ watch(
   flex-shrink: 0;
 }
 
-/* ── auto level-up: centred above the sigil ──
-   Same gold shell as Shop and Expedition, but anchored to the TOP edge: the
-   bottom row's centre is where the battle return buttons appear, and a control
-   that steps aside whenever a star fight is live is one the player has to hunt
-   for. Up here nothing else is ever placed, so it never moves.
+/* ── auto level-up, under the power crest ──
+   Width, height and vertical offset come from the SIGIL_POWER_AUTO_* constants
+   and are set inline, because the gap they fit into is stage geometry rather
+   than a styling choice. Everything below is only the look.
 
-   Centring costs it the shared hover/active transforms — those set translateY
-   alone and would drop the translateX that holds it in the middle — so both are
-   restated with the centring baked in. Placed after them to win on order. */
-.sigil-action--auto {
-  top: 22px;
-  bottom: auto;
+   Flat and quiet: it sits inside the sigil, where the crest is the thing meant
+   to carry weight. The knob is the single moving part and it moves on transform
+   alone, so a full board keeps compositing at rate. */
+.sigil-power-auto {
+  position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  background: rgba(14, 10, 5, 0.92);
+  border: 1px solid #5c3310;
+  color: #9c927c;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
-.sigil-action--auto:hover {
-  transform: translateX(-50%) translateY(-1px);
+.sigil-power-auto:hover {
+  border-color: #c89040;
+  color: #e8dcc0;
 }
-.sigil-action--auto:active {
-  transform: translateX(-50%);
-}
-.sigil-action--auto-on {
+.sigil-power-auto--on {
   border-color: #6ec040;
+  color: #a8d890;
 }
-/* the shared :hover rule outranks a plain class, so the "on" border would turn
-   gold under the cursor and the state would read as off — restate it brighter
-   at hover specificity instead */
-.sigil-action--auto-on:hover {
+.sigil-power-auto--on:hover {
   border-color: #8ee060;
-  box-shadow: 0 0 14px rgba(82, 184, 48, 0.35);
 }
-.sigil-action--auto-on .sigil-action-icon {
-  color: #52b830;
+.sigil-power-auto-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
 }
-/* the switch itself — the knob is the only moving part and it moves on
-   transform alone, so the board keeps compositing the orbit at full rate */
-.sigil-auto-track {
+.sigil-power-auto-track {
   flex-shrink: 0;
   position: relative;
-  width: 34px;
-  height: 17px;
-  border-radius: 4px;
+  width: 26px;
+  height: 13px;
+  border-radius: 3px;
   background: #0d0c08;
   border: 1px solid #5c3310;
   transition: border-color 0.15s ease;
 }
-.sigil-action--auto-on .sigil-auto-track {
+.sigil-power-auto--on .sigil-power-auto-track {
   border-color: #6ec040;
 }
-.sigil-auto-knob {
+.sigil-power-auto-knob {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
+  top: 1px;
+  left: 1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
   background: #6b6455;
   transition:
     transform 0.15s ease,
     background 0.15s ease;
 }
-.sigil-action--auto-on .sigil-auto-knob {
+.sigil-power-auto--on .sigil-power-auto-knob {
   background: #52b830;
-  transform: translateX(17px);
+  transform: translateX(13px);
 }
 
 /* ── stage ── */
