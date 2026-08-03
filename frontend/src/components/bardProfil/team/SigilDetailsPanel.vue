@@ -25,7 +25,6 @@ import { useChampionLevelStore } from '@/stores/championLevelStore'
 import { useActionToast } from '@/composables/useActionToast'
 import {
   ascensionRank,
-  ascensionStars,
   perkChoicesFor,
   statEffectLabel,
   CHAMPION_STATS,
@@ -50,7 +49,6 @@ import {
   TEAM_SIGIL_SPLASH_MAX_SHARE,
   ORBIT_ROLE_ABILITIES,
   OBJECTIVE_ROLE_ABILITIES,
-  CHAMPION_ASCENSION_INTERVAL,
   CHAMPION_PERK_INTERVAL,
   CHAMPION_XP_BAR_HEIGHT,
   CHAMPION_REGALIA_SIZE_ALLY,
@@ -262,8 +260,6 @@ const cap = computed(() => levelStore.levelCap)
 const atCap = computed(() => level.value >= cap.value)
 const nextLevel = computed(() => level.value + 1)
 const rank = computed(() => ascensionRank(level.value))
-const stars = computed(() => ascensionStars(level.value))
-const maxStars = computed(() => Math.floor(cap.value / CHAMPION_ASCENSION_INTERVAL))
 const xpBar = computed(() =>
   champion.value ? levelStore.xpBarOf(champion.value) : { current: 0, needed: 1, pct: 0, capped: false },
 )
@@ -661,22 +657,15 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 :size="CHAMPION_REGALIA_SIZE_PANEL"
                 :attention="needsAttentionOf(champion)"
               />
+              <!-- Level, cap and rank. The ascension stars used to run as a row
+                   beneath them; the medallion beside this already escalates a
+                   stage per star earned, so the row was counting the same thing
+                   twice on the same art. -->
               <div class="sdp-hero-meta">
                 <div class="sdp-hero-level">
                   Level <b>{{ level }}</b>
                   <span class="sdp-hero-cap">/ {{ cap }}</span>
                   <span class="sdp-hero-rank">{{ rank.name }}</span>
-                </div>
-                <div class="sdp-stars" :title="`${stars} of ${maxStars} ascension stars`">
-                  <Icon
-                    v-for="i in maxStars"
-                    :key="i"
-                    icon="game-icons:beveled-star"
-                    width="14"
-                    height="14"
-                    class="sdp-star"
-                    :class="{ 'sdp-star--on': i <= stars }"
-                  />
                 </div>
               </div>
             </div>
@@ -2009,19 +1998,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 
 /* ── hero footer readouts ── */
-.sdp-stars {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  margin-top: 5px;
-}
-.sdp-star {
-  color: #3a3428;
-}
-.sdp-star--on {
-  color: var(--rank);
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--rank) 60%, transparent));
-}
 .sdp-xp-label,
 .sdp-xp-value {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
