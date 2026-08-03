@@ -2160,12 +2160,10 @@ export const MATERIAL_RARITY_ORDER: string[] = ['epic', 'rare', 'uncommon', 'com
 export const PAUSE_MATERIAL_COLUMNS = 5
 export const PAUSE_MATERIAL_ROWS = 2
 
-// ── Pause-Overlay: HP am Sonnenhero ────────────────────────────────────────
-/** Radius des HP-Rings in viewBox-Einheiten (0–100) — knapp am Scheibenrand. */
-export const PAUSE_HP_RING_RADIUS = 47
+// ── Pause-Overlay: Vitality-Leiste ─────────────────────────────────────────
 /** Ab diesem Anteil gilt die Sonne als unversehrt (grün). */
 export const PAUSE_HP_HEALTHY_PERCENT = 50
-/** Darunter wird der Ring rot und die Plakette pulst. */
+/** Darunter wird die Leiste rot und pulst. */
 export const PAUSE_HP_CRIT_PERCENT = 25
 
 // Augment rarity colors — used by the augment list in BardStatsTab.

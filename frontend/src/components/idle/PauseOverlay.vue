@@ -54,49 +54,71 @@
           </header>
 
           <!-- Hero: the live sun in its current phase (no planets, no champions).
-               Die Spieler-HP liegen als Ring auf dem Scheibenrand und als
-               Plakette darüber — beides absolut im Hero, damit die Anzeige
-               keinen Platz im Fluss belegt und nichts darunter verschiebt. -->
+               Die Scheibe bleibt frei: Ring und Plakette lagen vorher genau auf
+               der Fläche, an der die Phase erkennbar ist — Korona, Farbe,
+               Oberfläche. Die HP stehen deshalb als eigene Leiste darunter. -->
           <div class="sun-hero">
             <div class="sun-hero__disc" aria-hidden="true">
               <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
               <PhaseSunDisc v-else :diameter="sunDiameter" />
             </div>
-
-            <svg class="sun-hp-ring" viewBox="0 0 100 100" aria-hidden="true">
-              <circle class="sun-hp-ring__track" cx="50" cy="50" :r="HP_RING_R" />
-              <circle
-                class="sun-hp-ring__fill"
-                :class="hpColor"
-                cx="50"
-                cy="50"
-                :r="HP_RING_R"
-                :stroke-dasharray="`${(hpPercent / 100) * HP_RING_CIRC} ${HP_RING_CIRC}`"
-              />
-            </svg>
-
-            <div
-              class="sun-hp-badge"
-              :class="[hpColor, { 'sun-hp-badge--crit': hpPercent <= HP_CRIT_PERCENT }]"
-              role="img"
-              :aria-label="`Health ${Math.round(playerStore.currentHP)} of ${playerStore.maxHP}`"
-            >
-              <Icon
-                icon="game-icons:hearts"
-                width="19"
-                height="19"
-                class="sun-hp-badge__icon"
-                aria-hidden="true"
-              />
-              <span class="sun-hp-badge__value">
-                {{ Math.round(playerStore.currentHP)
-                }}<span class="sun-hp-badge__max">/{{ playerStore.maxHP }}</span>
-              </span>
-            </div>
           </div>
           <span class="sun-phase-label" :style="{ color: sunPhaseLabelColor }">
             {{ sunPhase.name }}
           </span>
+
+          <!-- Vitality — Leiste in Panelbreite, gleiche Fassung wie die
+               Auto-Battle-Leiste weiter unten. Vier Ebenen im Balken, alle
+               compositor-freundlich (nur transform/opacity bewegen sich):
+               Nachlaufspur, Füllung, wandernde Kante, statische Segmentstriche. -->
+          <div
+            class="vital-strip"
+            :class="hpColor"
+            role="img"
+            :aria-label="`Health ${Math.round(playerStore.currentHP)} of ${playerStore.maxHP}`"
+          >
+            <span class="vital-strip__label">
+              <Icon
+                icon="game-icons:hearts"
+                width="17"
+                height="17"
+                class="vital-strip__icon"
+                aria-hidden="true"
+              />
+              Vitality
+            </span>
+
+            <div class="vital-bar" :class="{ 'vital-bar--crit': hpPercent <= HP_CRIT_PERCENT }">
+              <!-- Pro-Wert gesetzte Transforms stehen inline am jeweiligen
+                   Element, nicht als Variable am Balken — sonst rechnet der
+                   ganze Subtree bei jeder HP-Änderung neu. -->
+              <span
+                class="vital-bar__ghost"
+                :style="{ transform: `scaleX(${hpRatio})` }"
+                aria-hidden="true"
+              />
+              <span
+                class="vital-bar__fill"
+                :style="{ transform: `scaleX(${hpRatio})` }"
+                aria-hidden="true"
+              />
+              <!-- Vollbreite Ebene, nach links geschoben: ihr rechter Rand ist
+                   die Kante. Als border-right am Fill wüchse der Strich mit
+                   1/scaleX auf, je leerer der Balken wird. -->
+              <span
+                class="vital-bar__edge"
+                :style="{ transform: `translateX(${(hpRatio - 1) * 100}%)` }"
+                aria-hidden="true"
+              />
+              <span class="vital-bar__ticks" aria-hidden="true" />
+              <span class="vital-bar__pulse" aria-hidden="true" />
+            </div>
+
+            <span class="vital-strip__value">
+              {{ formatNumber(Math.round(playerStore.currentHP))
+              }}<span class="vital-strip__max">/{{ formatNumber(playerStore.maxHP) }}</span>
+            </span>
+          </div>
 
           <div class="chime-readout">
             <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
@@ -332,7 +354,6 @@ import {
   PAUSE_PANEL_MAX_SCALE,
   PAUSE_MATERIAL_COLUMNS,
   PAUSE_MATERIAL_ROWS,
-  PAUSE_HP_RING_RADIUS,
   PAUSE_HP_HEALTHY_PERCENT,
   PAUSE_HP_CRIT_PERCENT,
   MATERIAL_RARITY_COLOR,
@@ -389,16 +410,15 @@ const sunPhaseLabelColor = computed(() => {
 
 const hpPercent = computed(() => playerStore.hpPercent)
 
+/** Füllanteil der Vitality-Leiste als scaleX-Faktor (0–1). */
+const hpRatio = computed(() => Math.min(1, Math.max(0, hpPercent.value / 100)))
+
 const hpColor = computed(() => {
   if (hpPercent.value > PAUSE_HP_HEALTHY_PERCENT) return 'hp--green'
   if (hpPercent.value > PAUSE_HP_CRIT_PERCENT) return 'hp--yellow'
   return 'hp--red'
 })
 
-// HP-Ring um die Sonnenscheibe. Der Radius ist in viewBox-Einheiten (0–100)
-// angegeben; der Umfang daraus speist stroke-dasharray.
-const HP_RING_R = PAUSE_HP_RING_RADIUS
-const HP_RING_CIRC = 2 * Math.PI * PAUSE_HP_RING_RADIUS
 const HP_CRIT_PERCENT = PAUSE_HP_CRIT_PERCENT
 
 const pauseStartChimes = ref(0)
@@ -873,105 +893,6 @@ function particleStyle(i: number): Record<string, string> {
   height: 100%;
 }
 
-/* ── HP am Sonnenhero ─────────────────────────────────────
-   Die Sonne IST der Spieler — ihre Gesundheit gehört an sie und nicht in eine
-   Kachel daneben. Ring und Plakette liegen absolut im Hero: sie belegen keinen
-   Platz im Fluss, das Phasen-Label darunter rückt also nicht.
-
-   Der Ring sitzt eine Spur außerhalb der Scheibe (negatives inset), damit er
-   sich gegen deren Eigenglut absetzt statt darin unterzugehen. */
-.sun-hp-ring {
-  position: absolute;
-  inset: -9px;
-  width: calc(100% + 18px);
-  height: calc(100% + 18px);
-  /* Start oben statt rechts */
-  transform: rotate(-90deg);
-  overflow: visible;
-  pointer-events: none;
-}
-.sun-hp-ring__track,
-.sun-hp-ring__fill {
-  fill: none;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-}
-.sun-hp-ring__track {
-  stroke: rgba(0, 0, 0, 0.55);
-  stroke-width: 3.4;
-}
-.sun-hp-ring__fill {
-  transition: stroke-dasharray 600ms cubic-bezier(0.25, 1, 0.5, 1);
-}
-.sun-hp-ring__fill.hp--green {
-  stroke: #5de84a;
-  filter: drop-shadow(0 0 3px rgba(82, 184, 48, 0.9));
-}
-.sun-hp-ring__fill.hp--yellow {
-  stroke: #f5d84a;
-  filter: drop-shadow(0 0 3px rgba(212, 160, 32, 0.9));
-}
-.sun-hp-ring__fill.hp--red {
-  stroke: #ff5f5f;
-  filter: drop-shadow(0 0 3px rgba(204, 96, 80, 0.95));
-}
-
-/* Plakette auf dem unteren Scheibenrand — dunkler Grund, weil Text auf der
-   leuchtenden Scheibe sonst nicht lesbar wäre. Sie sitzt hoch genug, dass das
-   Phasen-Label darunter (negativer margin-top) frei bleibt. */
-.sun-hp-badge {
-  position: absolute;
-  left: 50%;
-  bottom: 4%;
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 13px;
-  border-radius: 999px;
-  background: rgba(6, 4, 0, 0.82);
-  border: 1px solid var(--hp-accent, rgba(122, 78, 32, 0.7));
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7);
-  white-space: nowrap;
-}
-.sun-hp-badge.hp--green {
-  --hp-accent: rgba(93, 232, 74, 0.62);
-}
-.sun-hp-badge.hp--yellow {
-  --hp-accent: rgba(245, 216, 74, 0.62);
-}
-.sun-hp-badge.hp--red {
-  --hp-accent: rgba(255, 95, 95, 0.7);
-}
-.sun-hp-badge__icon {
-  color: #cc6050;
-  flex-shrink: 0;
-}
-.sun-hp-badge__value {
-  font-size: 1.3rem;
-  font-weight: 800;
-  line-height: 1;
-  color: #ece0c0;
-  font-variant-numeric: tabular-nums;
-}
-.sun-hp-badge__max {
-  font-size: 0.7em;
-  font-weight: 600;
-  color: rgba(216, 200, 160, 0.5);
-}
-/* Kritisch: die Plakette pulst — bewegt wird nur die Opazität */
-.sun-hp-badge--crit {
-  animation: hp-badge-crit 1.1s ease-in-out infinite;
-}
-@keyframes hp-badge-crit {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
-}
 .sun-phase-label {
   display: flex;
   flex-direction: column;
@@ -984,6 +905,154 @@ function particleStyle(i: number): Record<string, string> {
   text-transform: uppercase;
   text-shadow: 0 0 18px currentColor;
 }
+/* ── Vitality-Leiste ──────────────────────────────────────
+   Bewusst ohne eigene Fassung: das Panel trägt darunter bereits drei umrandete
+   Blöcke, ein vierter Kasten direkt unter der Sonne hätte die Leiste von ihr
+   getrennt. So bleibt sie die Lebensanzeige DER Sonne — die Struktur trägt der
+   Balken selbst über seinen eingelassenen Rand. Der schlanke Zuschnitt hält
+   außerdem die Panelhöhe klein, an der der Fit-Scale des Overlays hängt.
+
+   Der Balken besteht aus vier gestapelten Ebenen, damit nichts außer transform
+   und opacity animiert wird: Nachlaufspur, Füllung, Kante, Segmentstriche. */
+.vital-strip {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.4vw, 16px);
+  width: 100%;
+  height: 26px;
+  /* Die Leiste gehört optisch zur Sonne darüber, nicht zur Kachelreihe
+     darunter — der halbe Panel-Gap rückt sie näher an das Phasen-Label. */
+  margin-top: calc(-1 * clamp(6px, 1vh, 10px));
+  padding: 0 2px;
+}
+.vital-strip__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.55);
+  white-space: nowrap;
+}
+.vital-strip__icon {
+  color: var(--hp-txt, #cc6050);
+  flex-shrink: 0;
+}
+
+/* Zustandsfarben liegen am Streifen, nicht am Balken: Füllung, Kante und
+   Zahlenwert ziehen dieselben drei Werte. */
+.vital-strip.hp--green {
+  --hp-hi: #74d448;
+  --hp-lo: #2e7a1a;
+  --hp-txt: #9ae86a;
+}
+.vital-strip.hp--yellow {
+  --hp-hi: #f5d84a;
+  --hp-lo: #a8760e;
+  --hp-txt: #f0d060;
+}
+.vital-strip.hp--red {
+  --hp-hi: #ff7a6a;
+  --hp-lo: #8e2a20;
+  --hp-txt: #ff8a7a;
+}
+
+.vital-bar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 16px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #0b0906;
+  box-shadow:
+    inset 0 0 0 1px rgba(122, 78, 32, 0.7),
+    inset 0 2px 6px rgba(0, 0, 0, 0.85);
+}
+.vital-bar__fill,
+.vital-bar__ghost {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+}
+/* Der Verlauf läuft SENKRECHT — waagerecht würde ihn scaleX mitstauchen und
+   die Farbe hinge am Füllstand statt am Zustand. */
+.vital-bar__fill {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent 46%),
+    linear-gradient(to bottom, var(--hp-hi), var(--hp-lo));
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Nachlaufspur unter der Füllung: sie bleibt beim Treffer kurz stehen und zieht
+   dann nach — der Verlust ist einen Moment lang als heller Streifen sichtbar,
+   statt einfach zu fehlen. */
+.vital-bar__ghost {
+  background: rgba(255, 186, 160, 0.32);
+  transition: transform 900ms cubic-bezier(0.4, 0, 0.2, 1) 380ms;
+}
+/* Helle Kante am Füllstand — sitzt am rechten Rand einer vollbreiten, nach
+   links geschobenen Ebene und bleibt dadurch bei jedem Füllstand 2px breit. */
+.vital-bar__edge {
+  position: absolute;
+  inset: 0;
+  border-right: 2px solid rgba(255, 255, 255, 0.7);
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+/* Zehn Segmente: der Füllstand wird ablesbar, ohne eine zweite Zahl daneben
+   zu setzen. Statisch — nichts daran bewegt sich. */
+.vital-bar__ticks {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0 calc(10% - 1px),
+    rgba(0, 0, 0, 0.5) calc(10% - 1px) 10%
+  );
+  pointer-events: none;
+}
+/* Kritisch: eine rote Ebene pulst über dem Balken — animiert wird allein die
+   Opazität, nicht Farbe oder Schatten. */
+.vital-bar__pulse {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 95, 95, 0.32);
+  opacity: 0;
+  pointer-events: none;
+}
+.vital-bar--crit .vital-bar__pulse {
+  animation: vital-pulse 1.1s ease-in-out infinite;
+}
+@keyframes vital-pulse {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Feste Mindestbreite: der Balken darf nicht springen, wenn die Zahl beim
+   Heilen oder Schaden eine Stelle kürzer wird. */
+.vital-strip__value {
+  min-width: 6em;
+  text-align: right;
+  font-size: clamp(0.9rem, 1.3vw, 1.1rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--hp-txt, #ece0c0);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.vital-strip__max {
+  font-size: 0.72em;
+  font-weight: 600;
+  color: rgba(216, 200, 160, 0.5);
+}
+
 /* ── Chime readout ────────────────────────────────────── */
 .chime-readout {
   display: flex;
@@ -1735,11 +1804,13 @@ function particleStyle(i: number): Record<string, string> {
   .chime-img,
   .callout::after,
   .champion-herald__sheen,
-  .sun-hp-badge--crit,
+  .vital-bar--crit .vital-bar__pulse,
   .pause-timer__value {
     animation: none;
   }
-  .sun-hp-ring__fill {
+  .vital-bar__fill,
+  .vital-bar__ghost,
+  .vital-bar__edge {
     transition: none;
   }
   .callout-pop-enter-active,
