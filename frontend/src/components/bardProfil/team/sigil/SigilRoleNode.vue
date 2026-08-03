@@ -130,9 +130,9 @@ const swornRim = `${SIGIL_SWORN_RIM_PX}px`
 const swornGlow = `${SIGIL_SWORN_GLOW_PX}px`
 
 /**
- * Unit vector pointing from this role node at the sigil's core. The medallion and
- * the name plate ride it, which is what keeps them clear of the role's own
- * satellites — those all live on the opposite half.
+ * Unit vector pointing from this role node at the sigil's core. The name plate
+ * rides it inward — the half that can never hold a satellite — and the medallion
+ * rides it outward, into the gap the sworn pair leaves open on the radial itself.
  */
 const inward = computed(() => {
   const deg = SIGIL_PENTAGON_START_ANGLE + props.roleIndex * SIGIL_PENTAGON_ANGLE_STEP + 180
@@ -140,10 +140,11 @@ const inward = computed(() => {
   return { x: Math.cos(rad), y: Math.sin(rad) }
 })
 const decorVars = computed<Record<string, string>>(() => ({
-  // medallion on the inward perpendicular (inward rotated 90°), name plate on the
-  // inward radial itself — two axes, so the round badge never lands on the plate
-  '--badge-x': `${(-inward.value.y * SIGIL_NODE_BADGE_INSET).toFixed(1)}px`,
-  '--badge-y': `${(inward.value.x * SIGIL_NODE_BADGE_INSET).toFixed(1)}px`,
+  // One axis, two ends: the name plate rides the inward radial, the medallion the
+  // outward one. Whatever angle the pentagon gives a role, plate and badge stay
+  // exactly opposite each other across the portrait — see SIGIL_NODE_BADGE_INSET.
+  '--badge-x': `${(-inward.value.x * SIGIL_NODE_BADGE_INSET).toFixed(1)}px`,
+  '--badge-y': `${(-inward.value.y * SIGIL_NODE_BADGE_INSET).toFixed(1)}px`,
   '--name-x': `${(inward.value.x * SIGIL_NODE_NAME_OFFSET).toFixed(1)}px`,
   '--name-y': `${(inward.value.y * SIGIL_NODE_NAME_OFFSET).toFixed(1)}px`,
   '--name-max': `${SIGIL_NODE_NAME_MAX_WIDTH}px`,
@@ -361,7 +362,8 @@ const frameVars = computed<Record<string, string>>(() => {
       <span v-if="main && tier" class="sigil-node-star">★{{ tier.starLevel }}</span>
     </span>
 
-    <!-- level medallion — the headline number, sitting on the node's shoulder -->
+    <!-- level medallion — the headline number, seated on the node's outward rim,
+         directly across the portrait from the name plate -->
     <span v-if="main" class="sigil-node-level">
       <ChampionLevelBadge
         :level="levelOf(main)"
@@ -566,9 +568,9 @@ const frameVars = computed<Record<string, string>>(() => {
   animation: sigil-xp-breathe 1.9s ease-in-out infinite;
 }
 
-/* level medallion — the wrapper only places it on the node's shoulder;
-   everything the badge looks like lives in ChampionLevelBadge */
-/* medallion and name plate both ride the inward radial — see SIGIL_NODE_BADGE_INSET */
+/* level medallion — the wrapper only places it; everything the badge looks like
+   lives in ChampionLevelBadge. Medallion and name plate share ONE axis and sit at
+   its two ends — see SIGIL_NODE_BADGE_INSET */
 .sigil-node-level {
   position: absolute;
   left: calc(50% + var(--badge-x, 0px));

@@ -2926,13 +2926,23 @@ export const SIGIL_SWORN_GLOW_PX = 11
  * so the inward half is the one region that can never collide with them,
  * whatever the role's angle or the champion's name length.
  *
- * The two decorations do not share an axis: the name plate rides the inward
- * radial, the level medallion rides its perpendicular. A plate is wide and a
- * medallion is round, so on one shared axis they would collide for the roles
- * whose inward direction runs along the plate's own width. Distances are from
- * the node's centre.
+ * The two decorations share ONE axis and sit at its two ends: the name plate at
+ * SIGIL_NODE_NAME_OFFSET inward, the level medallion at SIGIL_NODE_BADGE_INSET
+ * outward. Whatever angle the pentagon hands a role, the number always stands
+ * directly across the portrait from the name and XP it belongs to.
+ *
+ * Outward is not the satellites' half in the one direction that matters here: the
+ * sworn pair straddles the outward radial at ±SIGIL_SWORN_SPREAD_DEG, leaving the
+ * radial itself open. 66 is where the 34px medallion clears the portrait: it starts
+ * at 66 − 17 = 49, two pixels past the portrait's own 47px edge. That clearance is
+ * what keeps it off the ★ tier bar — that bar sits along the portrait's bottom rim,
+ * so for the two roles whose outward radial points downward a medallion seated ON
+ * the rim would cut straight through it. Outward it reaches 83px, past the regalia
+ * frame's 63 but still 52px clear of either sworn plate (they sit 110px out) and
+ * 60px clear of the middle bench satellite on the same radial.
+ * Distances are from the node's centre.
  */
-export const SIGIL_NODE_BADGE_INSET = 40
+export const SIGIL_NODE_BADGE_INSET = 66
 /**
  * The name plate carries TWO lines — the champion's name and, under it, the XP
  * the arc around the portrait draws. They share one plate rather than sitting on
