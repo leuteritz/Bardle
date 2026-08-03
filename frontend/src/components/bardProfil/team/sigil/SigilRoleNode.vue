@@ -942,7 +942,12 @@ const frameVars = computed<Record<string, string>>(() => {
 }
 
 /* ── ally-hover spotlight: hovering a panel row lights its board satellite ── */
-.sigil-ally--spotlight {
+/* Doubled up on purpose: `.sigil-ally:hover` carries the same weight and would
+   otherwise hold this satellite at its plain hover scale (1.15). The spotlight
+   now looks the same whichever surface the cursor is on — pointing straight at
+   the satellite and pointing at its card in the details roster are one gesture,
+   so they cannot be allowed to produce two different sizes. */
+.sigil-ally.sigil-ally--spotlight {
   transform: translate(-50%, -50%) scale(v-bind(hoverScale));
   background: #0a0704;
   box-shadow:

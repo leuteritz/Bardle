@@ -3068,6 +3068,15 @@ export const TEAM_TAB_MOUNT_STAGE_ORNAMENTS = 3
 export const SIGIL_ALLY_HOVER_SCALE = 1.4
 export const SIGIL_ALLY_HOVER_DIM_OPACITY = 0.45
 export const SIGIL_ALLY_HOVER_PING_MS = 450
+/** The same spotlight in the other direction — hovering a satellite on the board
+ *  lights its card in the details roster and dims every other card of the strip.
+ *  The dim goes deeper than the board's (0.45): a roster card carries a splash,
+ *  a name and a medallion, so it stays legible at an opacity that would make a
+ *  bare satellite disappear. The sweep is the one-shot glint across the lit card,
+ *  the same gesture the regalia frame gives a role node.
+ *  See SigilDetailsPanel.vue → .sdp-chip--dimmed / --highlight. */
+export const SIGIL_CHIP_HOVER_DIM_OPACITY = 0.32
+export const SIGIL_CHIP_HOVER_SWEEP_MS = 700
 
 // ── Champion skins (Team tab) ─────────────────────────────────────────────────
 /** Skin file basename of the default look. Selecting it (or having no entry in

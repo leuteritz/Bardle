@@ -44,6 +44,8 @@ import {
   TEAM_SIGIL_DETAILS_LEFT_WIDTH,
   TEAM_SIGIL_MAIN_CHIP_WIDTH,
   TEAM_SIGIL_MAIN_PORTRAIT_WIDTH,
+  SIGIL_CHIP_HOVER_DIM_OPACITY,
+  SIGIL_CHIP_HOVER_SWEEP_MS,
   TEAM_SIGIL_SPLASH_HEIGHT,
   TEAM_SIGIL_SPLASH_HEIGHT_COMPACT,
   TEAM_SIGIL_SPLASH_MAX_SHARE,
@@ -152,6 +154,8 @@ const splashMaxShare = `${TEAM_SIGIL_SPLASH_MAX_SHARE}%`
 const xpBarHeightPx = `${CHAMPION_XP_BAR_HEIGHT}px`
 const mainChipWidthPx = `${TEAM_SIGIL_MAIN_CHIP_WIDTH}px`
 const mainPortraitWidthPx = `${TEAM_SIGIL_MAIN_PORTRAIT_WIDTH}px`
+const chipDimOpacity = String(SIGIL_CHIP_HOVER_DIM_OPACITY)
+const chipSweepMs = `${SIGIL_CHIP_HOVER_SWEEP_MS}ms`
 
 const battleStore = useBattleStore()
 const gameStore = useGameStore()
@@ -239,6 +243,20 @@ const benchSlots = computed<AllySlot[]>(() =>
 )
 /** Percentage the sworn share is worth — printed, never hard-coded in a string. */
 const swornSharePct = computed(() => Math.round(SWORN_STAT_SHARE * 100))
+
+/**
+ * A satellite on the sigil board is under the cursor — the strip answers with a
+ * spotlight: that seat's card lights up and every OTHER card of the strip pulls
+ * back, the captain included. Pointing at a champion out on the board and having
+ * to hunt for its card in a row of four equally lit ones was the whole problem;
+ * dimming the rest is what turns the mirror into an answer.
+ *
+ * The board does the same in reverse (SIGIL_ALLY_HOVER_* → sigil-ally--spotlight
+ * / --dimmed), so both surfaces speak one language: one lit, the rest quiet.
+ */
+const boardSpotlight = computed(
+  () => props.highlightedAlly !== null && props.highlightedAlly !== undefined,
+)
 
 function allyImage(ally: string): string {
   return battleStore.getChampionImage(ally, { size: 'md' })
@@ -457,7 +475,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
            not need a word of its own on a panel that is already about one role. -->
       <button
         class="sdp-chip sdp-chip--main"
-        :class="{ 'sdp-chip--active': subject === MAIN_SUBJECT, 'sdp-chip--empty': !main }"
+        :class="{
+          'sdp-chip--active': subject === MAIN_SUBJECT,
+          'sdp-chip--empty': !main,
+          'sdp-chip--dimmed': boardSpotlight,
+        }"
         type="button"
         :title="main ? `${main} — ${roleDef.label}` : `Assign ${roleDef.label}`"
         @click="selectSubject(MAIN_SUBJECT)"
@@ -508,6 +530,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               'sdp-chip--active': subject === slot.sub,
               'sdp-chip--empty': !slot.name,
               'sdp-chip--highlight': highlightedAlly === slot.sub,
+              'sdp-chip--dimmed': boardSpotlight && highlightedAlly !== slot.sub,
             }"
             type="button"
             :title="
@@ -567,6 +590,14 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             >
               ✕
             </span>
+            <!-- The glint that arrives WITH the board's cursor — mounted by the
+                 highlight itself, so moving from one satellite to the next
+                 restarts it on the card that just took over. See .sdp-chip-sweep. -->
+            <span
+              v-if="highlightedAlly === slot.sub"
+              class="sdp-chip-sweep"
+              aria-hidden="true"
+            />
           </button>
         </div>
 
@@ -580,6 +611,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               'sdp-chip--active': subject === slot.sub,
               'sdp-chip--empty': !slot.name,
               'sdp-chip--highlight': highlightedAlly === slot.sub,
+              'sdp-chip--dimmed': boardSpotlight && highlightedAlly !== slot.sub,
             }"
             type="button"
             :title="slot.name ? `${slot.name} — ${slot.label}` : `Assign ${slot.label}`"
@@ -628,6 +660,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             >
               ✕
             </span>
+            <span
+              v-if="highlightedAlly === slot.sub"
+              class="sdp-chip-sweep"
+              aria-hidden="true"
+            />
           </button>
         </div>
       </div>
@@ -1140,7 +1177,8 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     transform 0.15s,
     border-color 0.15s,
     background 0.15s,
-    box-shadow 0.15s;
+    box-shadow 0.15s,
+    /* the spotlight's own channel — see .sdp-chip--dimmed */ opacity 0.16s;
 }
 .sdp-chip:hover {
   transform: translateY(-1px);
@@ -1535,15 +1573,106 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    touching the sworn cards above them. Measured, not guessed — every card now
    keeps 2px of air on its tightest side. */
 
-/* board hover mirrored onto the chip — same language as the card's own hover,
-   one step short of selection. It is written BEFORE the selected block on
-   purpose: a card can be both at once, and selection has to win. */
+/* ── board spotlight ──────────────────────────────────────────────────────────
+   Pointing at a satellite out on the sigil board asks one question — "which of
+   these cards is that?" — and the strip answers it the way a stage does: one
+   card takes the light, the others step back. The lit card alone was not the
+   answer, because four cards side by side are all lit enough to look like the
+   subject; the DIM is what makes the eye land.
+
+   Everything here is transform and opacity, the two channels that stay on the
+   compositor. Nothing per-frame touches a shadow or a filter: the rim, the halo
+   and the surface switch ONCE on the class change and then hold, which is what
+   the performance rules allow a state to do. Six cards can flip at once and it
+   costs the same as one.
+
+   Written BEFORE the selected block on purpose: a card can be spotlit and be the
+   page's subject at the same time, and selection has to win. */
+
+/* the quiet ones — pulled back, not hidden. A roster card carries a splash, a
+   name and a medallion, so it survives an opacity that would erase a bare board
+   satellite; the backdrop art gives up more than the card does, so the name
+   stays the last thing readable on a dimmed card. */
+.sdp-chip--dimmed {
+  opacity: v-bind(chipDimOpacity);
+  transform: scale(0.985);
+}
+.sdp-chip--dimmed .sdp-chip-art {
+  opacity: 0.14;
+}
+/* the ✕ never surfaces on a card the cursor is not actually over */
+.sdp-chip--dimmed .sdp-chip-clear {
+  opacity: 0;
+}
+
+/* the lit one — the card's own hover language, one step further: it rises a
+   little more, its splash comes up out of the veil, and a rim of role colour
+   rings it. Not the selected card's DETACHED ring: that gap belongs to "this is
+   what the page is showing", and the two states have to stay tellable apart. */
 .sdp-chip--highlight {
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.012);
+  z-index: 2;
   border-color: var(--rc);
   box-shadow:
     var(--chip-lift),
-    0 0 14px color-mix(in srgb, var(--rc) 45%, transparent);
+    inset 0 0 0 1px color-mix(in srgb, var(--rc) 34%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--rc) 60%, transparent),
+    0 6px 18px rgba(0, 0, 0, 0.5),
+    0 0 20px color-mix(in srgb, var(--rc) 45%, transparent);
+}
+/* only a satellite is ever spotlit, so this is the sworn/bench veil coming up —
+   the captain's art is at full strength already and never carries this class */
+.sdp-chip--highlight .sdp-chip-art {
+  opacity: 0.55;
+}
+.sdp-chip--highlight .sdp-chip-name {
+  color: #f4e6bc;
+}
+/* the bench card is the sunken tier — while it holds the light it comes up to
+   the sworn pair's plane, so the spotlight is never read as a rank change but
+   the flat card still visibly reacts */
+.sdp-chip--ally.sdp-chip--highlight {
+  background: linear-gradient(168deg, #221a0e, #16130d 72%);
+}
+
+/* ── the glint ────────────────────────────────────────────────────────────────
+   One diagonal band of role colour crossing the card, once, the moment the light
+   arrives — the same gesture the regalia frame gives a role node out on the
+   board, so the two surfaces answer a cursor with the same motion. It is mounted
+   by v-if, so sliding from one satellite to the next replays it on whichever
+   card just took over instead of animating nothing.
+
+   A single element, translated: no shadow, no filter, no repaint of the card
+   under it. The card's own overflow does the clipping, so the band can be wider
+   than the tile and still cost nothing. */
+.sdp-chip-sweep {
+  position: absolute;
+  inset: -30% -70%;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 40%,
+    color-mix(in srgb, var(--rc) 30%, transparent) 47%,
+    rgba(255, 246, 220, 0.28) 50%,
+    color-mix(in srgb, var(--rc) 30%, transparent) 53%,
+    transparent 60%
+  );
+  transform: translate3d(-60%, 0, 0);
+  animation: sdp-chip-sweep v-bind(chipSweepMs) cubic-bezier(0.24, 0.6, 0.32, 1) 1 both;
+}
+@keyframes sdp-chip-sweep {
+  0% {
+    transform: translate3d(-60%, 0, 0);
+    opacity: 0;
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(60%, 0, 0);
+    opacity: 0;
+  }
 }
 
 .sdp-chip--active {
@@ -2704,6 +2833,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   .sdp-node--open .sdp-node-bead {
     animation: none;
     opacity: 1;
+  }
+  /* the spotlight keeps its light and its dim — only the travelling glint goes */
+  .sdp-chip-sweep {
+    animation: none;
+    opacity: 0;
   }
 }
 </style>

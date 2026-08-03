@@ -82,6 +82,22 @@ const hoveredAllySub = ref<number | null>(null)
 /** Ally satellite hovered on the board — highlighted in the details panel. */
 const boardHoveredAlly = ref<number | null>(null)
 
+/**
+ * The seat under the cursor, wherever the cursor happens to be — and it drives
+ * BOTH surfaces, which is what makes the two read as one thing: the board
+ * spotlights that satellite and pulls its four siblings back, the roster strip
+ * lights that card and pulls the rest back, in the same moment.
+ *
+ * Feeding the board's own hover back to the board is the point. Without it,
+ * pointing straight at a satellite dimmed the panel but left the board itself
+ * unchanged, so the same gesture looked like two different effects depending on
+ * which half of the tab your hand was over.
+ *
+ * The panel's hover wins a tie: it is the more deliberate of the two, and it is
+ * the one still standing when the pointer travels from the board onto a card.
+ */
+const spotlightAlly = computed(() => hoveredAllySub.value ?? boardHoveredAlly.value)
+
 watch(
   selectedRole,
   (index) => {
@@ -348,7 +364,7 @@ onUnmounted(() => {
       :mount-stage="mountStage"
       :panel-open="synergiesOpen"
       :search-highlights="searchHighlights"
-      :hovered-ally="hoveredAllySub"
+      :hovered-ally="spotlightAlly"
       :paused="activeModal !== null"
       @select-role="selectRole"
       @select-ally="selectAlly"
