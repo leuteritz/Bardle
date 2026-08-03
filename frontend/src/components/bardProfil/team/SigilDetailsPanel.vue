@@ -26,8 +26,6 @@ import { useActionToast } from '@/composables/useActionToast'
 import {
   ascensionRank,
   ascensionStars,
-  isAscensionLevel,
-  isPerkLevel,
   perkChoicesFor,
   statEffectLabel,
   CHAMPION_STATS,
@@ -300,16 +298,6 @@ function needsAttentionOf(name: string): boolean {
 function levelOf(name: string): number {
   return levelStore.levelOf(name)
 }
-
-/** The next level that grants a star or a perk — whichever comes first. */
-const nextMilestone = computed(() => {
-  for (let l = nextLevel.value; l <= cap.value; l++) {
-    if (isPerkLevel(l)) return { level: l, kind: 'perk' as const }
-    if (isAscensionLevel(l)) return { level: l, kind: 'star' as const }
-  }
-  return null
-})
-
 
 const materialCosts = computed(() =>
   Object.entries(cost.value.materials).map(([id, qty]) => ({
@@ -795,33 +783,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </span>
           </button>
 
-          <!-- One line under the button: what the next level is worth. What
-               BLOCKS the press is no longer spelled out here — the price pills on
-               the button already turn red on exactly the line you cannot pay, and
-               a sentence repeating that below was saying the same thing twice. -->
-          <div class="sdp-hints">
-            <span v-if="!atCap && isAscensionLevel(nextLevel)" class="sdp-hint sdp-hint--hot">
-              <Icon icon="game-icons:beveled-star" width="15" height="15" />
-              Ascension — a star and a lift to every stat
-            </span>
-            <span v-else-if="!atCap && isPerkLevel(nextLevel)" class="sdp-hint sdp-hint--hot">
-              <Icon icon="game-icons:ribbon-medal" width="15" height="15" />
-              Milestone — opens a perk choice
-            </span>
-            <span v-else-if="nextMilestone" class="sdp-hint">
-              <Icon
-                :icon="
-                  nextMilestone.kind === 'perk'
-                    ? 'game-icons:ribbon-medal'
-                    : 'game-icons:beveled-star'
-                "
-                width="15"
-                height="15"
-              />
-              Next {{ nextMilestone.kind === 'perk' ? 'perk' : 'star' }} at
-              {{ nextMilestone.level }}
-            </span>
-          </div>
+          <!-- Nothing under the button any more. What blocks the press is on the
+               pills, which turn red on exactly the line you cannot pay; what the
+               coming levels are worth is what the perk path in the right column
+               lays out bead by bead. Both were being said twice. -->
         </div>
 
         <!-- equipment — the column's second action. Slot-scoped, so it is the one
@@ -2546,26 +2511,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   font-weight: 600;
   opacity: 0.6;
 }
-/* one wrapping row of hints, centred under the button */
-.sdp-hints {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 5px 12px;
-  margin-top: 8px;
-  font-size: 13.5px;
-  color: rgba(200, 164, 90, 0.7);
-}
-.sdp-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.sdp-hint--hot {
-  color: #e8c040;
-}
-
 /* ── section headings (right column) ── */
 .sdp-section-head {
   display: flex;
