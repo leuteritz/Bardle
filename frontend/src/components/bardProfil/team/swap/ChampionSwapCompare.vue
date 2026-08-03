@@ -336,7 +336,10 @@ function assign() {
       </div>
     </div>
 
-    <!-- ── the trade, stat by stat ── -->
+    <!-- ── the trade, stat by stat ──
+         Every part of this block is present at all times, empty or not: the
+         portraits above take whatever height is left, so a row that appears
+         with the first hover would shove both of them upward. -->
     <div class="swc-stats">
       <div
         v-for="row in statRows"
@@ -354,34 +357,39 @@ function assign() {
               :style="{ transform: `scaleX(${row.fromShare})` }"
             />
           </span>
-          <span v-if="row.to !== null" class="swc-stat-rail">
+          <!-- the candidate's rail stays in the layout while empty, scaled to
+               nothing — one rail today and two tomorrow is a moving row -->
+          <span class="swc-stat-rail">
             <span
               class="swc-stat-fill swc-stat-fill--to"
-              :style="{ transform: `scaleX(${row.toShare})` }"
+              :style="{ transform: `scaleX(${row.to === null ? 0 : row.toShare})` }"
             />
           </span>
         </span>
         <span class="swc-stat-nums">
           <span class="swc-stat-from">{{ row.from.toFixed(1) }}</span>
-          <template v-if="row.to !== null">
-            <span class="swc-stat-to">{{ row.to.toFixed(1) }}</span>
-            <span
-              class="swc-stat-delta"
-              :class="{
-                'swc-stat-delta--up': row.delta > 0,
-                'swc-stat-delta--down': row.delta < 0,
-              }"
-            >
-              {{ row.delta > 0 ? '+' : '' }}{{ row.delta.toFixed(1) }}
-            </span>
-          </template>
+          <span class="swc-stat-to" :class="{ 'swc-stat-num--void': row.to === null }">
+            {{ row.to === null ? '—' : row.to.toFixed(1) }}
+          </span>
+          <span
+            class="swc-stat-delta"
+            :class="{
+              'swc-stat-delta--up': row.to !== null && row.delta > 0,
+              'swc-stat-delta--down': row.to !== null && row.delta < 0,
+              'swc-stat-num--void': row.to === null,
+            }"
+          >
+            {{ row.to === null ? '—' : `${row.delta > 0 ? '+' : ''}${row.delta.toFixed(1)}` }}
+          </span>
         </span>
       </div>
     </div>
 
-    <!-- ── what the team's thresholds would do ── -->
-    <div v-if="hasCandidate" class="swc-synergy">
-      <template v-if="shifts.length">
+    <!-- ── what the team's thresholds would do ──
+         Fixed height, scrolled rather than grown: a champion whose swap moves
+         four thresholds must not cost the portraits a row of their own. -->
+    <div class="swc-synergy">
+      <template v-if="hasCandidate && shifts.length">
         <span
           v-for="shift in shifts"
           :key="shift.key"
@@ -400,7 +408,9 @@ function assign() {
           </span>
         </span>
       </template>
-      <span v-else class="swc-synergy-none">No synergy thresholds change</span>
+      <span v-else class="swc-synergy-none">
+        {{ hasCandidate ? 'No synergy thresholds change' : 'Team synergies' }}
+      </span>
     </div>
 
     <!-- ── commit ── -->
@@ -478,12 +488,17 @@ function assign() {
 }
 
 /* ── portrait wells ──
-   Both share the column's spare height in equal parts and never shrink below
-   the floor: the comparison is worthless if one of the two portraits collapses
-   on a flat viewport. */
+   Both split the column's spare height in equal parts — `flex-basis: 0`, not
+   the floor, so the split depends on the COLUMN and never on what either well
+   happens to contain. Everything below them is fixed in height for the same
+   reason: the two portraits are the biggest things on the page, and a picker
+   whose portraits resize as you move along the grid is unreadable.
+
+   The floor and the ceiling only ever bind against the viewport — 118px on the
+   flattest desktop, 260px before a 4K column turns them into posters. */
 .swc-well {
   position: relative;
-  flex: 1 1 v-bind(portraitMinPx);
+  flex: 1 1 0;
   min-height: v-bind(portraitMinPx);
   max-height: v-bind(portraitMaxPx);
   overflow: hidden;
@@ -501,13 +516,15 @@ function assign() {
   border-style: dashed;
   border-color: rgba(200, 164, 90, 0.35);
 }
+/* The well is a wide, short window on a tall splash — anchored near the top of
+   the art, which is where champion portraits keep their faces. */
 .swc-well-img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 18%;
+  object-position: center 14%;
 }
 .swc-well-fade {
   position: absolute;
@@ -699,6 +716,8 @@ function assign() {
   color: rgba(230, 220, 196, 0.55);
 }
 .swc-stat-to {
+  min-width: 40px;
+  text-align: right;
   font-size: 16px;
   color: #f4e6bc;
 }
@@ -709,6 +728,11 @@ function assign() {
   font-weight: 700;
   color: rgba(230, 220, 196, 0.4);
 }
+/* Placeholder for a column that has no candidate yet — it holds the width so
+   the numbers never shift sideways once one arrives. */
+.swc-stat-num--void {
+  color: rgba(230, 220, 196, 0.22);
+}
 .swc-stat-delta--up {
   color: #6ec040;
 }
@@ -716,14 +740,32 @@ function assign() {
   color: #cc6050;
 }
 
-/* ── synergy shifts ── */
+/* ── synergy shifts ──
+   Two chip rows of reserved height, scrolled beyond that. A swap that moves
+   four thresholds is rare and must not be paid for by every other swap: a
+   block that grows with its content would take the room out of the portraits
+   above it, which is exactly the movement this column is built to avoid. */
 .swc-synergy {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   align-items: center;
   gap: 5px;
   flex-shrink: 0;
-  min-height: 24px;
+  /* two chip rows and the gap between them, measured off the chip's own box —
+     a couple of pixels short and every second swap gets a scrollbar it does
+     not need */
+  height: 57px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 transparent;
+}
+/* On the flattest desktops one row is all the column can spare — the portraits
+   are already on their floor there. */
+@media (max-height: 1100px) {
+  .swc-synergy {
+    height: 26px;
+  }
 }
 .swc-shift {
   display: inline-flex;
@@ -780,6 +822,14 @@ function assign() {
 }
 .swc-assign:hover:not(:disabled) {
   transform: translateY(-1px);
+}
+/* One line, always — a long champion name wrapping to two would move the
+   button's top edge and with it every portrait above it. */
+.swc-assign span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .swc-assign--locked {
   background: #1c1c18;

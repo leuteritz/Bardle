@@ -15,6 +15,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 import { useBattleStore } from '@/stores/battleStore'
+import { useChampionLevelStore } from '@/stores/championLevelStore'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/championOrigins'
 import {
@@ -58,6 +59,7 @@ const cardHeightPx = `${CHAMPION_PICKER_CARD_HEIGHT}px`
 const gridGapPx = `${CHAMPION_PICKER_GRID_GAP}px`
 
 const battleStore = useBattleStore()
+const levelStore = useChampionLevelStore()
 
 const searchQuery = ref('')
 /** Multi-select trait/origin filter — AND semantics, mirrors the Champion Shop. */
@@ -332,6 +334,16 @@ function takenLabel(champion: string): string | null {
   return null
 }
 
+/**
+ * The champion's level, shown from 2 upward. It belongs on the card because it
+ * is half the answer to "which of mine should sit here": a tier-3 champion at
+ * level 20 out-stats a tier-5 at level 1, and the compare column can only say
+ * so about the one card under the cursor.
+ */
+function levelOf(name: string): number {
+  return levelStore.levelOf(name)
+}
+
 function championTraits(name: string) {
   const traitIds = CHAMPION_TRAITS[name] ?? []
   return TRAIT_DEFINITIONS.filter((t) => (traitIds as string[]).includes(t.id))
@@ -602,6 +614,9 @@ function onImgError(e: Event) {
                   >
                     <Icon :icon="championOriginDef(champion)!.icon" width="14" height="14" />
                   </span>
+                  <span v-if="levelOf(champion) > 1" class="csg-card-level">
+                    Lv {{ levelOf(champion) }}
+                  </span>
                 </span>
               </span>
 
@@ -787,6 +802,24 @@ function onImgError(e: Event) {
   pointer-events: none;
 }
 
+/* Last in the icon row, pushed to its right edge — sharing the row rather than
+   floating over it is what keeps it off the trait icons on a card this narrow.
+   It never shrinks; a fourth trait icon is clipped before the level is. */
+.csg-card-level {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(200, 144, 64, 0.55);
+  color: #e8c040;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .csg-card-body {
   position: absolute;
   left: 7px;
@@ -813,6 +846,7 @@ function onImgError(e: Event) {
   display: flex;
   align-items: center;
   gap: 4px;
+  overflow: hidden;
 }
 .csg-card-icon {
   display: inline-flex;
