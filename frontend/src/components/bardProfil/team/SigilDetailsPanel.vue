@@ -603,14 +603,14 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             <img :src="championImage" :alt="champion" class="sdp-splash-img" decoding="async" />
             <div class="sdp-splash-fade" />
             <div class="sdp-splash-swap-hint">
-              <Icon icon="game-icons:cycle" width="18" height="18" />
+              <Icon icon="lucide:arrow-left-right" width="18" height="18" />
               Swap Champion
             </div>
           </template>
           <div v-else class="sdp-splash-empty">
             <img :src="roleDef.image" :alt="roleDef.label" class="sdp-splash-empty-img" />
             <div class="sdp-splash-select-cta">
-              <Icon icon="game-icons:cycle" width="18" height="18" />
+              <Icon icon="lucide:user-plus" width="18" height="18" />
               Select Champion
             </div>
           </div>

@@ -4,7 +4,7 @@
     <!-- ── Status strip ─────────────────────────────────────── -->
     <div class="ec-status-strip">
       <div class="ec-stat" :class="{ 'ec-stat--full': slotsFull }">
-        <Icon icon="game-icons:empty-hourglass" width="22" height="22" class="ec-stat-ico" />
+        <Icon icon="lucide:timer" width="22" height="22" class="ec-stat-ico" />
         <div class="ec-stat-text">
           <span class="ec-stat-value">{{ slotsFull ? 'FULL' : formatCountdown(timeUntilNextSpawn) }}</span>
           <span class="ec-stat-label">Next Offer</span>
@@ -160,7 +160,7 @@
                   <span class="ec-active-name">{{ exp.name }}</span>
                 </div>
                 <span class="ec-active-time">
-                  <Icon icon="game-icons:empty-hourglass" width="14" height="14" class="ec-active-time-ico" />
+                  <Icon icon="lucide:timer" width="14" height="14" class="ec-active-time-ico" />
                   {{ getTimeRemaining(exp) }}
                 </span>
               </div>
@@ -268,7 +268,7 @@
                   </div>
                   <span class="ec-meta-sep">·</span>
                   <div class="ec-card-duration">
-                    <Icon icon="game-icons:empty-hourglass" width="15" height="15" class="ec-dur-ico" />
+                    <Icon icon="lucide:hourglass" width="15" height="15" class="ec-dur-ico" />
                     <span>{{ formatShortDuration(slot.durationSeconds) }}</span>
                   </div>
                   <span class="ec-meta-sep">·</span>

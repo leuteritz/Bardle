@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <body style="background: #111008; color: #e8c040; font: 14px monospace">
+    <div id="out">loading…</div>
+    <script type="module">
+      import { loadIcons, iconLoaded } from '@iconify/vue'
+
+      const names = JSON.parse(
+        new URLSearchParams(location.search).get('icons') ?? '[]',
+      )
+
+      loadIcons(names, () => {
+        const missing = names.filter((n) => !iconLoaded(n))
+        window.__result = { total: names.length, missing }
+        document.getElementById('out').textContent = JSON.stringify(window.__result)
+      })
+      // Fallback, falls der Callback nie feuert (kein Netz o. Ä.)
+      setTimeout(() => {
+        if (!window.__result) {
+          const missing = names.filter((n) => !iconLoaded(n))
+          window.__result = { total: names.length, missing, timedOut: true }
+          document.getElementById('out').textContent = JSON.stringify(window.__result)
+        }
+      }, 15000)
+    </script>
+  </body>
+</html>

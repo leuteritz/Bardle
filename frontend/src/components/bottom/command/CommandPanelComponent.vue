@@ -291,7 +291,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
     title="Admin: reset all role ability cooldowns"
     @click="resetRoleCooldowns"
   >
-    <Icon icon="game-icons:time-trap" width="15" height="15" />
+    <Icon icon="lucide:timer-reset" width="15" height="15" />
     <span>Reset Cooldowns</span>
   </button>
 </template>

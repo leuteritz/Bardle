@@ -53,7 +53,7 @@ const menuItems: {
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM-128.png' },
   { id: 'battle', label: '', icon: '', src: '/img/menu/BATTLE-128.png' },
   { id: 'planets', label: '', icon: '', src: '/img/planet-256.png' },
-  { id: 'admin', label: 'Admin', icon: 'game-icons:settings-knobs', src: '' },
+  { id: 'admin', label: 'Admin', icon: 'lucide:settings-2', src: '' },
 ]
 
 /* Tree-Tab lazy mounten und danach behalten (v-show): der Vue-Flow-Remount

@@ -134,7 +134,7 @@ const nodeTypes = {
         title="Learn every skill for free"
         @click="meepTree.adminUnlockAll()"
       >
-        <Icon icon="game-icons:padlock-open" width="18" height="18" />
+        <Icon icon="lucide:unlock" width="18" height="18" />
         Unlock All
       </button>
       <button
@@ -142,7 +142,7 @@ const nodeTypes = {
         title="Unlearn every skill"
         @click="meepTree.adminResetAll()"
       >
-        <Icon icon="game-icons:broom" width="18" height="18" />
+        <Icon icon="lucide:rotate-ccw" width="18" height="18" />
         Reset All
       </button>
     </div>

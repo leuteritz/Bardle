@@ -83,7 +83,7 @@
 
         <!-- Locked hint -->
         <div v-if="detail.locked" class="cs-detail-locked">
-          <Icon icon="game-icons:padlock" width="18" height="18" style="color: #cc6050; flex-shrink: 0" />
+          <Icon icon="lucide:lock" width="18" height="18" style="color: #cc6050; flex-shrink: 0" />
           <span>{{ detail.lockedHint }}</span>
         </div>
 
@@ -142,7 +142,7 @@
       <CosmicStageBackground />
       <div class="cs-detail-empty-content">
         <div class="cs-detail-empty-box">
-          <Icon icon="game-icons:click" width="38" height="38" class="cs-detail-empty-icon" />
+          <Icon icon="lucide:mouse-pointer-click" width="38" height="38" class="cs-detail-empty-icon" />
         </div>
         <span class="cs-detail-empty-title">Select a Card</span>
         <span class="cs-detail-empty-text">

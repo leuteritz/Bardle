@@ -26,7 +26,7 @@
           aria-label="Toggle filters"
           @click="filterOpen = !filterOpen"
         >
-          <Icon icon="game-icons:toggles" width="18" height="18" />
+          <Icon icon="lucide:sliders-horizontal" width="18" height="18" />
           <span class="filter-toggle-label">Filter</span>
           <span class="filter-toggle-chevron">{{ filterOpen ? '▾' : '▴' }}</span>
           <span v-if="hasActiveFilter && !filterOpen" class="filter-active-dot"></span>
@@ -43,7 +43,7 @@
           @keydown.enter.prevent="toggleAllTiers"
           @keydown.space.prevent="toggleAllTiers"
         >
-          <Icon :icon="allTiersCollapsed ? 'game-icons:expand' : 'game-icons:contract'" width="18" height="18" />
+          <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="18" height="18" />
         </button>
 
         <button v-if="showClose" class="modal-close-btn" @click="$emit('close')">✕</button>
@@ -319,7 +319,7 @@
         class="flex flex-col items-center justify-center gap-4 py-12"
       >
         <div class="flex items-center justify-center empty-icon-box w-14 h-14">
-          <Icon icon="game-icons:magnifying-glass" width="32" height="32" style="color: #7a4e20; opacity: 0.4" />
+          <Icon icon="lucide:search-x" width="32" height="32" style="color: #7a4e20; opacity: 0.4" />
         </div>
         <p class="empty-label">No results found.</p>
       </div>
@@ -355,7 +355,7 @@
           >
             <Icon
               v-if="group.isGalaxyLocked"
-              icon="game-icons:padlock"
+              icon="lucide:lock"
               class="tier-header-lock"
               width="14"
               height="14"
@@ -377,7 +377,7 @@
             </span>
             <span class="tier-header-line"></span>
             <span v-if="group.isGalaxyLocked" class="tier-header-req">
-              <Icon icon="game-icons:padlock" class="tier-req-icon" width="16" height="16" />
+              <Icon icon="lucide:lock" class="tier-req-icon" width="16" height="16" />
               Galaxy {{ group.requiredGalaxy }}
             </span>
             <span v-else class="tier-header-counter">

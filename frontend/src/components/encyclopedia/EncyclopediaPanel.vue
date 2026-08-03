@@ -69,7 +69,7 @@ const chips = computed(() => {
     total++
   }
   const list = [
-    { id: null as string | null, label: 'All', icon: 'game-icons:stack', count: total },
+    { id: null as string | null, label: 'All', icon: 'lucide:layers', count: total },
   ]
   if (bookmarks.value.size > 0) {
     const savedCount = allEntries.value.filter(
@@ -78,7 +78,7 @@ const chips = computed(() => {
     list.push({
       id: SAVED_FILTER_ID,
       label: 'Saved',
-      icon: 'game-icons:bookmarklet',
+      icon: 'lucide:bookmark',
       count: savedCount,
     })
   }
@@ -327,7 +327,7 @@ const panelFrameStyle = computed(() => ({
 
         <!-- Header — Icon + Codex zentriert, Close-Button absolut rechts -->
         <div class="enc-header relative flex items-center justify-center gap-2.5 shrink-0">
-          <Icon icon="game-icons:wax-tablet" width="28" height="28" class="enc-header-icon" />
+          <Icon icon="lucide:book-open" width="28" height="28" class="enc-header-icon" />
           <h2 class="enc-title">Codex</h2>
           <button class="enc-close" aria-label="Close encyclopedia" @click="closePanel">✕</button>
         </div>
@@ -415,8 +415,8 @@ const panelFrameStyle = computed(() => ({
                         <Icon
                           :icon="
                             bookmarks.has(entry.id)
-                              ? 'game-icons:bookmarklet'
-                              : 'game-icons:bookmark'
+                              ? 'lucide:bookmark-check'
+                              : 'lucide:bookmark'
                           "
                           width="17"
                           height="17"
@@ -446,7 +446,7 @@ const panelFrameStyle = computed(() => ({
                         :class="{ 'enc-formula-btn--open': openFormulas.has(entry.id) }"
                         @click="toggleFormula(entry.id)"
                       >
-                        <Icon icon="game-icons:abacus" width="13" height="13" />
+                        <Icon icon="lucide:sigma" width="13" height="13" />
                         {{ openFormulas.has(entry.id) ? 'Hide formula' : 'Show formula' }}
                       </button>
                       <button
@@ -484,7 +484,7 @@ const panelFrameStyle = computed(() => ({
             v-if="visibleGroups.length === 0"
             class="enc-empty flex flex-col items-center justify-center text-center"
           >
-            <Icon icon="game-icons:tied-scroll" width="46" height="46" class="enc-empty-icon" />
+            <Icon icon="lucide:search-x" width="46" height="46" class="enc-empty-icon" />
             <p class="enc-empty-title">Nothing found for “{{ searchQuery }}”</p>
             <p class="enc-empty-hint">Try a shorter term or another category.</p>
           </div>

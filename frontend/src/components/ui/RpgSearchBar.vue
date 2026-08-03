@@ -70,7 +70,7 @@ defineExpose({
 <template>
   <div class="sb" :class="[`sb--${size}`, { 'sb--filled': hasValue }]">
     <Icon
-      icon="game-icons:magnifying-glass"
+      icon="lucide:search"
       class="sb-icon"
       :width="iconPx"
       :height="iconPx"
@@ -100,7 +100,7 @@ defineExpose({
       @keydown.enter.prevent="clear"
       @keydown.space.prevent="clear"
     >
-      ✕
+      <Icon icon="lucide:x" width="1.15em" height="1.15em" aria-hidden="true" />
     </button>
     <span v-if="slots.trailing" class="sb-trailing">
       <slot name="trailing" />

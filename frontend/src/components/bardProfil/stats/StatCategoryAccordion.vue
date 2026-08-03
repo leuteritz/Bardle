@@ -71,7 +71,7 @@ watch(isSearching, (searching, wasSearching) => {
     </div>
 
     <div v-if="visibleCategories.length === 0" class="sc-empty">
-      <Icon icon="game-icons:magnifying-glass" width="28" height="28" class="sc-empty-icon" />
+      <Icon icon="lucide:search-x" width="28" height="28" class="sc-empty-icon" />
       <span>No stat matches “{{ query }}”</span>
     </div>
 

@@ -49,7 +49,7 @@ function archiveDate(rec: CompletedGalaxyRecord): string {
 
     <div class="sf-p-body rpg-scrollbar">
       <div v-if="filteredArchive.length === 0" class="sf-empty-block">
-        <Icon icon="game-icons:spiral-arrow" width="28" height="28" class="sf-empty-icon" />
+        <Icon icon="lucide:archive" width="28" height="28" class="sf-empty-icon" />
         <span v-if="archive.length === 0"
           >No galaxies freed yet — rescue every star and defeat the core to preserve your first map
           here.</span
@@ -91,11 +91,11 @@ function archiveDate(rec: CompletedGalaxyRecord): string {
             <!-- Time spent + date freed, over the map's lower edge -->
             <div class="sf-arch-info">
               <span class="sf-arch-info-item sf-arch-info-time" title="Time spent in this galaxy">
-                <Icon class="sf-arch-info-ico" icon="game-icons:duration" width="15" height="15" />
+                <Icon class="sf-arch-info-ico" icon="lucide:timer" width="15" height="15" />
                 {{ formatCompactDuration(rec.durationSeconds * 1000) }}
               </span>
               <span class="sf-arch-info-item sf-arch-info-date" title="Date this galaxy was freed">
-                <Icon class="sf-arch-info-ico" icon="game-icons:calendar" width="15" height="15" />
+                <Icon class="sf-arch-info-ico" icon="lucide:calendar-days" width="15" height="15" />
                 {{ archiveDate(rec) }}
               </span>
             </div>

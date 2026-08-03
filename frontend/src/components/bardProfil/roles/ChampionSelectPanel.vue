@@ -518,7 +518,7 @@ function onImgError(e: Event) {
           aria-label="Toggle filters"
           @click="traitFilterOpen = !traitFilterOpen"
         >
-          <Icon icon="game-icons:toggles" width="18" height="18" />
+          <Icon icon="lucide:sliders-horizontal" width="18" height="18" />
           <span class="filter-toggle-label">Filter</span>
           <span class="filter-toggle-chevron">{{ traitFilterOpen ? '▾' : '▴' }}</span>
           <span v-if="hasActiveFilter && !traitFilterOpen" class="filter-active-dot"></span>
@@ -535,7 +535,7 @@ function onImgError(e: Event) {
           @keydown.enter.prevent="toggleAllTiers"
           @keydown.space.prevent="toggleAllTiers"
         >
-          <Icon :icon="allTiersCollapsed ? 'game-icons:expand' : 'game-icons:contract'" width="18" height="18" />
+          <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="18" height="18" />
         </button>
 
         <button v-if="showClose" class="modal-close-btn" @click="emit('close')">✕</button>

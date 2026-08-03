@@ -6,7 +6,7 @@
     @click="battleStore.requestStopAutoBattle()"
   >
     <span class="stop-fab-icon">
-      <Icon icon="game-icons:power-button" width="30" height="30" />
+      <Icon icon="lucide:power" width="30" height="30" />
     </span>
     <span class="stop-fab-text">
       <span class="stop-fab-title">

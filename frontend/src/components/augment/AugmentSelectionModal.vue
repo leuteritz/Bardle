@@ -59,7 +59,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           </div>
 
           <button class="aug-reset-btn" title="Delete save" @click.stop="handleReset">
-            <Icon icon="game-icons:trash-can" width="13" height="13" />
+            <Icon icon="lucide:trash-2" width="14" height="14" />
           </button>
         </div>
 

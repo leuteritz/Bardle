@@ -412,7 +412,7 @@ function fillTeamWithRandomChampions() {
         class="admin-spawn-btn admin-spawn-btn--team-fill flex items-center gap-1.5 px-3 py-1.5"
         @click="fillTeamWithRandomChampions"
       >
-        <Icon icon="game-icons:perspective-dice-six-faces-random" class="admin-btn-icon" /> Random Team Fill
+        <Icon icon="lucide:dices" class="admin-btn-icon" /> Random Team Fill
       </button>
       <!-- Rank Up lives on the battle landing page now (BattleLandingScreen.vue),
            right next to the rank band it manipulates. -->

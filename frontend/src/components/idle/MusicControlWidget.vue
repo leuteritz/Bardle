@@ -18,7 +18,7 @@ function onSliderInput(e: Event) {
       @click="toggleMute"
     >
       <Icon
-        icon="game-icons:trumpet"
+        :icon="isMuted ? 'lucide:volume-x' : 'lucide:volume-2'"
         width="22"
         height="22"
         :style="{ color: isMuted ? '#5c3310' : '#e8c040' }"

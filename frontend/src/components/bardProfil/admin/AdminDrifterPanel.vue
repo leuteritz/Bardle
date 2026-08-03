@@ -75,11 +75,11 @@ function clearField(): void {
 
     <div class="dr-footer">
       <button class="dr-action dr-action--random" @click="spawn()">
-        <Icon icon="game-icons:perspective-dice-six-faces-random" width="16" height="16" />
+        <Icon icon="lucide:dices" width="16" height="16" />
         Random Type
       </button>
       <button class="dr-action dr-action--clear" @click="clearField">
-        <Icon icon="game-icons:broom" width="16" height="16" />
+        <Icon icon="lucide:eraser" width="16" height="16" />
         Clear Sky &amp; Buffs
       </button>
     </div>
