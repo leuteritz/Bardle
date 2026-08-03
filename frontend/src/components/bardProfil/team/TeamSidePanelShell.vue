@@ -22,8 +22,14 @@ const props = withDefaults(
     subtitle?: string
     /** Rail width in px — see TEAM_*_PANEL_WIDTH. */
     width: number
+    /**
+     * Drops the title stripe — for a destination whose own first row already
+     * names it and can carry the close button (the shop's search row). The
+     * goldline stays: it is what makes the rail read as a rail.
+     */
+    hideHeader?: boolean
   }>(),
-  { subtitle: '' },
+  { subtitle: '', hideHeader: false },
 )
 
 const emit = defineEmits<{ close: [] }>()
@@ -34,7 +40,7 @@ const widthPx = computed(() => `${props.width}px`)
 <template>
   <section class="tsps-panel">
     <div class="tsps-goldline" />
-    <header class="tsps-head">
+    <header v-if="!hideHeader" class="tsps-head">
       <Icon :icon="icon" width="20" height="20" class="tsps-head-icon" />
       <div class="tsps-head-text">
         <span class="tsps-head-title">{{ title }}</span>

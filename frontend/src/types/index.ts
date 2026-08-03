@@ -1080,6 +1080,17 @@ export interface ShopChampionDetail {
   spawnPercent: number | null
   locked: boolean
   lockedHint: string
+  /**
+   * The champion's home planet — the one that has to be rescued before it can be
+   * recruited at all. Carried for every champion (not just locked ones) because
+   * it is where the champion is FROM, but only the locked panel spells it out.
+   */
+  homePlanet: { type: PlanetType; name: string } | null
+  /**
+   * Recruit cost. A locked champion has no recruit entry yet, so its rows come
+   * from the home-planet config instead — the price is fixed data, and showing it
+   * early lets the player farm towards a champion they cannot buy yet.
+   */
   materials: ShopDetailMaterial[]
   chimes: { need: number; have: number; ok: boolean }
   canBuy: boolean

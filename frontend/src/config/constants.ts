@@ -3606,6 +3606,24 @@ export const ADMIN_LEVEL_AUGMENT_QUEUE_MAX = 10
 // ── UI Timing ─────────────────────────────────────────────────────────────────
 export const TOAST_DURATION_MS = 800
 
+// ── Planet glyph (PlanetGlyph.vue) ───────────────────────────────────────────
+/**
+ * Drawing box of the icon-sized planet renderer. Wider than tall because a
+ * ringed planet's rings reach 1.9× its radius sideways — at this aspect and
+ * radius they just fit (60 = 31 × 1.9 rounded up), so no type has to be drawn
+ * small enough to keep the widest one inside a square.
+ */
+export const PLANET_GLYPH_VIEW_W = 120
+export const PLANET_GLYPH_VIEW_H = 100
+export const PLANET_GLYPH_RADIUS = 31
+/**
+ * Height (px) of the home-planet glyph on the shop's locked champion panel.
+ * Sized against the text beside it (name + hint + the one instruction chip):
+ * bigger and the card grows past its own content and pushes the cost preview
+ * below the fold at Full HD.
+ */
+export const SHOP_HOME_PLANET_GLYPH_SIZE = 84
+
 // ── Unified shop quick-jump (ChampionShopComponent) ──────────────────────────
 /** Gap kept above the items section after a jump scroll (px). */
 export const SHOP_JUMP_SCROLL_OFFSET_PX = 8

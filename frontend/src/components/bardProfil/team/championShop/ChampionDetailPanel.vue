@@ -87,16 +87,62 @@
           </div>
         </div>
 
-        <!-- Locked hint -->
-        <div v-if="detail.locked" class="cs-detail-locked cs-detail-section--full">
-          <Icon icon="lucide:lock" width="18" height="18" style="color: #cc6050; flex-shrink: 0" />
-          <span>{{ detail.lockedHint }}</span>
+        <!-- Home planet — where the champion is FROM, and for a locked one its
+             single actionable fact: that planet has to fall first. Drawn with
+             the game's own planet renderer, so the player is looking at the
+             thing they have to find in orbit rather than at a word for it. The
+             block stays in both states and only its chip flips, so the panel
+             keeps one shape whether the champion is locked or recruitable. -->
+        <div v-if="detail.homePlanet" class="cs-detail-section cs-detail-section--full">
+          <div class="cs-detail-section-title">Home Planet</div>
+          <div class="cs-home">
+            <PlanetGlyph
+              :type="detail.homePlanet.type"
+              :size="SHOP_HOME_PLANET_GLYPH_SIZE"
+              class="cs-home-glyph"
+            />
+            <div class="cs-home-text">
+              <span class="cs-home-name">{{ detail.homePlanet.name }}</span>
+              <span class="cs-home-hint">
+                {{
+                  detail.locked
+                    ? detail.lockedHint
+                    : `${detail.name} hails from a ${detail.homePlanet.name}.`
+                }}
+              </span>
+              <span v-if="detail.locked" class="cs-home-step cs-home-step--locked">
+                <Icon
+                  icon="game-icons:planet-conquest"
+                  width="14"
+                  height="14"
+                  class="cs-home-step-icon"
+                />
+                Clear its boss in the orbit to bring {{ detail.name }} into the shop.
+              </span>
+              <span v-else class="cs-home-step cs-home-step--done">
+                <Icon
+                  icon="game-icons:planet-conquest"
+                  width="14"
+                  height="14"
+                  class="cs-home-step-icon"
+                />
+                Planet rescued — {{ detail.name }} can be recruited.
+              </span>
+            </div>
+          </div>
         </div>
 
         <!-- Cost breakdown — the widest block, so it takes the whole row in the
-             two-column wide layout -->
-        <div v-else class="cs-detail-section cs-detail-section--full">
-          <div class="cs-detail-section-title">Recruit Cost</div>
+             two-column wide layout. A locked champion shows it too: the price is
+             fixed, so the stock counters double as a farming target long before
+             the champion becomes buyable. -->
+        <div
+          class="cs-detail-section cs-detail-section--full"
+          :class="{ 'cs-detail-section--preview': detail.locked }"
+        >
+          <div class="cs-detail-section-title">
+            {{ detail.locked ? 'Recruit Cost · once unlocked' : 'Recruit Cost' }}
+          </div>
           <div class="cs-detail-rows">
             <div
               v-for="mat in detail.materials"
@@ -139,7 +185,11 @@
           :disabled="!detail.canBuy"
           @click="$emit('buy', detail.name)"
         >
-          <span v-if="detail.locked">Locked</span>
+          <!-- the locked button names the ONE thing that changes it -->
+          <span v-if="detail.locked">
+            <Icon icon="lucide:lock" width="14" height="14" class="cs-buy-lock" />
+            Locked · Rescue {{ detail.homePlanet ? `a ${detail.homePlanet.name}` : 'its planet' }}
+          </span>
           <span v-else-if="detail.canBuy">Recruit {{ detail.name }}</span>
           <span v-else>Missing Resources</span>
         </button>
@@ -164,7 +214,9 @@
 import { defineComponent } from 'vue'
 import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '../../../ui/CosmicStageBackground.vue'
+import PlanetGlyph from '../../../ui/PlanetGlyph.vue'
 import { formatNumber } from '../../../../config/numberFormat'
+import { SHOP_HOME_PLANET_GLYPH_SIZE } from '../../../../config/constants'
 import type { ShopChampionDetail } from '../../../../types'
 
 /**
@@ -174,7 +226,7 @@ import type { ShopChampionDetail } from '../../../../types'
  */
 export default defineComponent({
   name: 'ChampionDetailPanel',
-  components: { Icon, CosmicStageBackground },
+  components: { Icon, CosmicStageBackground, PlanetGlyph },
   props: {
     detail: {
       type: Object as () => ShopChampionDetail | null,
@@ -191,7 +243,7 @@ export default defineComponent({
   },
   emits: ['prev', 'next', 'buy', 'back'],
   setup() {
-    return { formatNumber }
+    return { formatNumber, SHOP_HOME_PLANET_GLYPH_SIZE }
   },
 })
 </script>
@@ -399,16 +451,28 @@ export default defineComponent({
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   align-content: start;
-  gap: 16px 20px;
-  padding: 18px 20px;
+  gap: 14px 20px;
+  padding: 16px 20px;
 }
 .cs-detail--wide .cs-detail-section--full {
   grid-column: 1 / -1;
 }
-/* the hero is the one thing that gains from the extra width — landscape splash
-   art, shown landscape */
+/* The hero is the one thing that gains from extra room — landscape splash art,
+   shown landscape — so it is what absorbs it. The body below is a fixed stack
+   (two info cards, the home planet, the cost list); on a 1440p or 4K desktop it
+   ends well above the footer, and every pixel the poster does NOT take is a gap
+   between the last cost row and the button. A vh-driven height hands that space
+   to the splash instead. */
 .cs-detail--wide .cs-detail-hero {
-  height: clamp(210px, 27vh, 330px);
+  height: clamp(210px, 30vh, 460px);
+}
+/* Full HD is the flattest desktop viewport, and a locked champion carries the
+   most below the splash (home planet + cost preview) — the poster gives room
+   back there rather than pushing the cost list out of sight. */
+@media (max-height: 1100px) {
+  .cs-detail--wide .cs-detail-hero {
+    height: 208px;
+  }
 }
 .cs-detail--wide .cs-detail-name {
   left: 18px;
@@ -568,18 +632,80 @@ export default defineComponent({
   color: #cc6050;
 }
 
-/* Locked hint */
-.cs-detail-locked {
+/* ── Home planet (locked champions) ──
+   The planet is the subject here, so it gets the room a portrait would get and
+   the text sits beside it. Nothing animates: the glyph is the same renderer the
+   orbit uses, and a shop panel full of spinning planets is exactly the kind of
+   per-element repaint the orbit cannot afford. */
+.cs-home {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(204, 96, 80, 0.08);
-  border: 1px solid rgba(204, 96, 80, 0.4);
+  gap: 12px;
+  padding: 10px 12px;
   border-radius: 4px;
-  padding: 9px 10px;
+  background: #1c1c18;
+  border: 1px solid rgba(200, 164, 90, 0.18);
+}
+.cs-home-glyph {
+  /* the planet renderer paints its own light — a plain dark well behind it
+     keeps the rings readable on the card */
+  border-radius: 4px;
+  background: radial-gradient(ellipse at 50% 45%, #16130c, #0c0a06 72%);
+}
+.cs-home-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cs-home-name {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #e8c040;
+}
+.cs-home-hint {
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.45;
+  color: #a89878;
+}
+/* the one line that says what to DO about this planet — red while it still has
+   to be taken, green once it has been */
+.cs-home-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.cs-home-step--locked {
+  background: rgba(204, 96, 80, 0.08);
+  border: 1px solid rgba(204, 96, 80, 0.35);
   color: #d8a49a;
+}
+.cs-home-step--locked .cs-home-step-icon {
+  color: #cc6050;
+}
+.cs-home-step--done {
+  background: rgba(82, 184, 48, 0.08);
+  border: 1px solid rgba(110, 192, 64, 0.35);
+  color: #a8d890;
+}
+.cs-home-step--done .cs-home-step-icon {
+  color: #6ec040;
+}
+.cs-home-step-icon {
+  flex-shrink: 0;
+}
+
+/* Cost the player cannot pay yet — same rows, one step quieter, so it reads as
+   a target rather than as a transaction. */
+.cs-detail-section--preview .cs-detail-rows {
+  opacity: 0.72;
 }
 
 /* Buy footer */
@@ -617,6 +743,15 @@ export default defineComponent({
 }
 .cs-buy-btn--ready:hover {
   filter: brightness(1.12);
+}
+.cs-buy-btn span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cs-buy-lock {
+  flex-shrink: 0;
+  color: #cc6050;
 }
 
 /* Empty state — no champion selected yet. Sits on the shared cosmic starfield

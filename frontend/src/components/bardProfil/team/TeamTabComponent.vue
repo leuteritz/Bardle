@@ -382,17 +382,20 @@ onUnmounted(() => {
         key="shop"
         title="Shop"
         icon="game-icons:shopping-bag"
-        subtitle="Recruit champions and buy items"
         :width="TEAM_SHOP_PANEL_WIDTH"
+        hide-header
         @close="closeDestination"
       >
         <!-- Unified shop: champions + items in one grid, the card detail slides
-             in over it (the rail has no room for a permanent detail column). -->
+             in over it (the rail has no room for a permanent detail column).
+             No title stripe above it — the search row is the shop's own header
+             and carries the close button. -->
         <ChampionShopComponent
           :initial-role="shopRole"
           :close-detail-token="closeShopDetailToken"
           @role-change="handleShopRoleChange"
           @detail-state="shopDetailOpen = $event"
+          @close="closeDestination"
         />
       </TeamSidePanelShell>
 

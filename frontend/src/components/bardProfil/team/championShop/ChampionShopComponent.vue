@@ -46,6 +46,9 @@
           <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="18" height="18" />
         </button>
 
+        <!-- The rail carries no title stripe over the shop — this row is the top
+             of the panel, so the close button belongs here. -->
+        <button class="modal-close-btn" aria-label="Close shop" @click="$emit('close')">✕</button>
       </div>
 
       <!-- ── Quick jump: scroll straight to the champion or item sections ── -->
@@ -581,6 +584,7 @@ import type {
   ShopItemDetail,
   ItemCategory,
   ItemRarity,
+  PlanetType,
 } from '../../../../types'
 
 
@@ -596,7 +600,7 @@ export default defineComponent({
      */
     closeDetailToken: { type: Number, default: 0 },
   },
-  emits: ['roleChange', 'detailState'],
+  emits: ['roleChange', 'detailState', 'close'],
   setup(props, { emit }) {
     const championNames = ref<string[]>(getChampionNames())
     const battleStore = useBattleStore()
@@ -754,8 +758,18 @@ export default defineComponent({
       () => new Map(battleStore.recruitableChampions.map((r) => [r.name, r])),
     )
 
+    /**
+     * A champion only gets a recruit entry once its home planet is rescued, so
+     * for a locked one the entry is missing — the price is not. It is fixed data
+     * on the home-planet config, and the locked panel shows it so the player can
+     * farm towards a champion long before it becomes buyable.
+     */
     function getMaterialCost(name: string): Record<string, number> {
-      return recruitableByName.value.get(name)?.materialCost ?? {}
+      return (
+        recruitableByName.value.get(name)?.materialCost ??
+        getHomePlanetConfig(name)?.materialCost ??
+        {}
+      )
     }
 
     function getChimesPrice(name: string): number {
@@ -821,6 +835,16 @@ export default defineComponent({
       if (!config) return 'Rescue a planet to unlock.'
       const planetName = PLANET_TYPE_NAMES[config.planetType] ?? config.planetType
       return `Rescue a ${planetName} to unlock this champion.`
+    }
+
+    /** Where the champion is from — the planet that has to fall for it. */
+    function getHomePlanet(name: string): { type: PlanetType; name: string } | null {
+      const config = getHomePlanetConfig(name)
+      if (!config) return null
+      return {
+        type: config.planetType,
+        name: PLANET_TYPE_NAMES[config.planetType] ?? config.planetType,
+      }
     }
 
     function getCardClass(name: string): string {
@@ -1776,6 +1800,7 @@ const shopChampionNames = computed(() =>
         spawnPercent: championTierSpawnPercent(d.starLevel, galaxyStore.currentGalaxy),
         locked: isLocked(name),
         lockedHint: getLockedTooltip(name),
+        homePlanet: getHomePlanet(name),
         materials,
         chimes: {
           need: getChimesPrice(name),
@@ -2169,8 +2194,16 @@ const shopChampionNames = computed(() =>
 }
 /* Shared search row + filter toggle + collapsible filter panel + chips live in
    rpg-theme.css (── Champion Filter ──), reused by ChampionSelectPanel. Only the
-   grid padding and the detail layer remain scoped here — the rail's own header
-   carries the close button now. */
+   close-button override, the grid padding and the detail layer are scoped here.
+   The button squares off to the search bar's height so the row reads as one
+   control strip rather than as a bar with something stuck to it. */
+.cs-search-row .modal-close-btn {
+  position: static;
+  flex-shrink: 0;
+  transform: none;
+  width: 46px;
+  height: 46px;
+}
 
 /* ── Grid area — same horizontal inset as the header so search bar and tier
    headers align on one left edge ── */
