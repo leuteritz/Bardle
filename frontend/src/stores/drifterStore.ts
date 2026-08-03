@@ -277,7 +277,7 @@ export const useDrifterStore = defineStore('drifter', {
       if (def.reward?.materials) {
         const inventory = useInventoryStore()
         for (let i = 0; i < def.reward.materials; i++) {
-          inventory.tryDropMaterial(1)
+          inventory.tryDropMaterial(1, 'drifter')
         }
       }
 

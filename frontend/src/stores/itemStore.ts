@@ -93,7 +93,7 @@ export const useItemStore = defineStore('item', {
       if (item.materialCost && !inventoryStore.hasMaterials(item.materialCost)) return false
 
       gameStore.chimes -= item.price
-      if (item.materialCost) inventoryStore.removeMaterials(item.materialCost)
+      if (item.materialCost) inventoryStore.removeMaterials(item.materialCost, 'equipment')
       this.ownedItems[itemId] = (this.ownedItems[itemId] ?? 0) + 1
       return true
     },

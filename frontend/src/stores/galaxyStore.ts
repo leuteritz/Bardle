@@ -533,7 +533,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       if (!inventoryStore.hasMaterials(cost.material)) return false
 
       gameStore.chimes -= cost.chimes
-      inventoryStore.removeMaterials(cost.material)
+      inventoryStore.removeMaterials(cost.material, 'tier')
       this.unlockedTier = this.nextTier
       this.tierJustUnlocked = true
       return true

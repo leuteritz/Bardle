@@ -142,6 +142,74 @@ export const HEADER_MATERIALS_GRID_COLUMNS = 5
 // Shown instead of a bare "0" for materials the player has none of.
 export const MATERIAL_EMPTY_GLYPH = '–'
 
+// ── Material ledger: where a material came from, where it went ──────────────
+// Every inflow and outflow is tallied per material so the header tooltip can
+// answer "where does this stuff actually come from" and "what am I burning it
+// on". The ids are stored in the save — renaming one silently orphans the old
+// tally, so add new ids instead of repurposing existing ones.
+export const MATERIAL_SOURCE_LABELS: Record<string, string> = {
+  drop: 'Orbit Drops',
+  harvest: 'Planet Harvest',
+  boss: 'Boss Loot',
+  drifter: 'Drifters',
+  bargain: 'Forge Deals',
+}
+export const MATERIAL_SOURCE_ICONS: Record<string, string> = {
+  drop: 'game-icons:falling-rocks',
+  harvest: 'game-icons:ringed-planet',
+  boss: 'game-icons:crowned-skull',
+  drifter: 'game-icons:ufo',
+  bargain: 'game-icons:gems',
+}
+export const MATERIAL_SINK_LABELS: Record<string, string> = {
+  recruit: 'Champion Recruits',
+  level: 'Champion Levels',
+  equipment: 'Equipment',
+  tier: 'Tier Unlocks',
+  forge: 'Star Forge',
+  relic: 'Relics',
+  constellation: 'Constellations',
+  bargain: 'Forge Deals',
+  other: 'Other',
+}
+export const MATERIAL_SINK_ICONS: Record<string, string> = {
+  recruit: 'game-icons:swordman',
+  level: 'game-icons:upgrade',
+  equipment: 'game-icons:chest-armor',
+  tier: 'game-icons:star-gate',
+  forge: 'game-icons:anvil',
+  relic: 'game-icons:relic-blade',
+  constellation: 'game-icons:star-formation',
+  bargain: 'game-icons:card-exchange',
+  other: 'game-icons:stone-pile',
+}
+
+// ── Material intake rate (header tooltip sparkline) ─────────────────────────
+// One bucket per minute over a rolling hour. The window is session-only: after
+// an offline break every bucket would read 0 and the tooltip would claim the
+// player earns nothing, so loading a save restarts the measurement instead of
+// restoring it.
+export const MATERIAL_RATE_BUCKET_MS = 60_000
+export const MATERIAL_RATE_BUCKET_COUNT = 60
+// Below this much measured time the extrapolation to an hour is noise (a single
+// drop after 4s would read as 900/h) — the tooltip shows "measuring…" instead.
+export const MATERIAL_RATE_MIN_SAMPLE_MS = 30_000
+
+// ── Header material tooltip ────────────────────────────────────────────────
+// Scales with the viewport like the rest of the header: ~350px on Full HD,
+// ~460px on 4K, so the panel never reads as a postage stamp on a big screen.
+export const MATERIAL_TOOLTIP_WIDTH = 'clamp(340px, 19vw, 470px)'
+// The grid stacks two rows of cells, so a panel hugging its own cell would
+// cover the other row — it clears the whole header bar instead.
+export const MATERIAL_TOOLTIP_CLEAR_SELECTOR = '.header-bar'
+export const MATERIAL_TOOLTIP_GAP_PX = 12
+// Live readout cadence for "3m ago" and the per-hour figure while open.
+export const MATERIAL_TOOLTIP_TICK_MS = 1_000
+// At most this many source/sink rows — the long tail collapses into "Other".
+export const MATERIAL_TOOLTIP_BREAKDOWN_ROWS = 4
+// Sparkline viewBox (unitless; the SVG stretches to the row via preserveAspectRatio).
+export const MATERIAL_SPARK_VIEW_H = 24
+
 // Champion travel timing
 export const CHAMPION_TRAVEL_BASE_MS = 60_000 // 60s base travel time
 export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy

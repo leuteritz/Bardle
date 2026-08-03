@@ -1,8 +1,12 @@
 import { defineStore } from 'pinia'
 import { MATERIALS } from '../config/materials'
-import type { Material } from '../types'
+import type { Material, MaterialSinkId, MaterialSourceId } from '../types'
 import { logger } from '../utils/logger'
-import { MATERIAL_DROP_BASE_CHANCE } from '../config/constants'
+import {
+  MATERIAL_DROP_BASE_CHANCE,
+  MATERIAL_RATE_BUCKET_COUNT,
+  MATERIAL_RATE_BUCKET_MS,
+} from '../config/constants'
 import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
 import { useDrifterStore } from './drifterStore'
@@ -13,18 +17,124 @@ export const useInventoryStore = defineStore('inventory', {
     /** Lifetime counters for the Bard Stats catalog — unaffected by spending. */
     totalMaterialsCollected: 0,
     totalMaterialsSpent: 0,
+
+    /* ── Per-material ledger (header tooltip) ────────────────────────────────
+       `collectedMaterials` only ever shows the current pile. Everything the
+       tooltip claims about a material's HISTORY lives here, because a stock of
+       0 says nothing about whether the player never found one or burned four
+       thousand. All of it is persisted except the rate window below. */
+
+    /** Units ever picked up, per material — never decreases. */
+    lifetimeCollected: {} as Record<string, number>,
+    /** Units ever spent, per material. */
+    lifetimeSpent: {} as Record<string, number>,
+    /** Highest pile ever held, per material. */
+    peakStock: {} as Record<string, number>,
+    /** Timestamp of the first unit ever found, per material. */
+    firstFoundAt: {} as Record<string, number>,
+    /** Timestamp of the most recent unit found, per material. */
+    lastFoundAt: {} as Record<string, number>,
+    /** Longest gap between two finds, per material — the "dry spell" stat. */
+    longestDroughtMs: {} as Record<string, number>,
+    /** materialId → sourceId → units gained from that source. */
+    sourceTally: {} as Record<string, Record<string, number>>,
+    /** materialId → sinkId → units spent on that sink. */
+    sinkTally: {} as Record<string, Record<string, number>>,
+
+    /* ── Rolling intake window — session only, never saved ───────────────────
+       One bucket per minute, oldest first, newest last. Buckets advance from
+       `gameStore.tick()` rather than lazily on read, so the getters stay pure
+       and every consumer sees the same window in the same frame. */
+
+    /** materialId → MATERIAL_RATE_BUCKET_COUNT minute buckets. */
+    rateBuckets: {} as Record<string, number[]>,
+    /** Minute index (Date.now() / bucket size) the last bucket represents. */
+    rateEpochMinute: Math.floor(Date.now() / MATERIAL_RATE_BUCKET_MS),
+    /** When measuring started — the per-hour figure divides by this, capped
+        to the window, so a two-minute-old session is not extrapolated wildly. */
+    rateStartedAt: Date.now(),
   }),
 
+  getters: {
+    /** Milliseconds of intake actually measured, capped to the window length. */
+    rateWindowMs(): number {
+      const windowMs = MATERIAL_RATE_BUCKET_COUNT * MATERIAL_RATE_BUCKET_MS
+      return Math.min(Date.now() - this.rateStartedAt, windowMs)
+    },
+  },
+
   actions: {
-    addMaterial(materialId: string): void {
-      this.collectedMaterials[materialId] = (this.collectedMaterials[materialId] ?? 0) + 1
-      this.totalMaterialsCollected += 1
-      logger.debug('Inventory', `+1 ${materialId}`, { total: this.collectedMaterials[materialId] })
+    addMaterial(materialId: string, source: MaterialSourceId = 'drop', qty = 1): void {
+      if (qty <= 0) return
+      const now = Date.now()
+
+      this.collectedMaterials[materialId] = (this.collectedMaterials[materialId] ?? 0) + qty
+      this.totalMaterialsCollected += qty
+      this.lifetimeCollected[materialId] = (this.lifetimeCollected[materialId] ?? 0) + qty
+
+      const stock = this.collectedMaterials[materialId]
+      if (stock > (this.peakStock[materialId] ?? 0)) this.peakStock[materialId] = stock
+
+      if (!this.firstFoundAt[materialId]) this.firstFoundAt[materialId] = now
+      const previous = this.lastFoundAt[materialId]
+      if (previous) {
+        const gap = now - previous
+        if (gap > (this.longestDroughtMs[materialId] ?? 0)) {
+          this.longestDroughtMs[materialId] = gap
+        }
+      }
+      this.lastFoundAt[materialId] = now
+
+      const tally = (this.sourceTally[materialId] ??= {})
+      tally[source] = (tally[source] ?? 0) + qty
+
+      this.advanceRateWindow(now)
+      const buckets = (this.rateBuckets[materialId] ??= new Array(MATERIAL_RATE_BUCKET_COUNT).fill(
+        0,
+      ))
+      buckets[buckets.length - 1] += qty
+
+      logger.debug('Inventory', `+${qty} ${materialId}`, {
+        total: stock,
+        source,
+      })
     },
 
-    tryDropSpecificMaterial(materialId: string, dropChance: number): boolean {
+    /**
+     * Slides the minute buckets forward to `now`. Idempotent within a minute,
+     * so calling it from the game tick AND from `addMaterial` is free.
+     */
+    advanceRateWindow(now = Date.now()): void {
+      const minute = Math.floor(now / MATERIAL_RATE_BUCKET_MS)
+      const steps = minute - this.rateEpochMinute
+      if (steps <= 0) return
+      this.rateEpochMinute = minute
+
+      for (const buckets of Object.values(this.rateBuckets) as number[][]) {
+        if (steps >= MATERIAL_RATE_BUCKET_COUNT) {
+          buckets.fill(0)
+          continue
+        }
+        buckets.splice(0, steps)
+        for (let i = 0; i < steps; i++) buckets.push(0)
+      }
+    },
+
+    /** Drops the measured window — used after loading a save, where an offline
+        gap would otherwise read as an hour of zero intake. */
+    resetRateWindow(): void {
+      this.rateBuckets = {}
+      this.rateEpochMinute = Math.floor(Date.now() / MATERIAL_RATE_BUCKET_MS)
+      this.rateStartedAt = Date.now()
+    },
+
+    tryDropSpecificMaterial(
+      materialId: string,
+      dropChance: number,
+      source: MaterialSourceId = 'drop',
+    ): boolean {
       if (Math.random() > dropChance) return false
-      this.addMaterial(materialId)
+      this.addMaterial(materialId, source)
       return true
     },
 
@@ -34,17 +144,23 @@ export const useInventoryStore = defineStore('inventory', {
       )
     },
 
-    removeMaterials(costs: Record<string, number>): boolean {
+    removeMaterials(costs: Record<string, number>, sink: MaterialSinkId = 'other'): boolean {
       if (!this.hasMaterials(costs)) return false
       for (const [matId, qty] of Object.entries(costs)) {
         this.collectedMaterials[matId] -= qty
         this.totalMaterialsSpent += qty
+        this.lifetimeSpent[matId] = (this.lifetimeSpent[matId] ?? 0) + qty
+        const tally = (this.sinkTally[matId] ??= {})
+        tally[sink] = (tally[sink] ?? 0) + qty
       }
-      logger.info('Inventory', 'Materials spent', costs)
+      logger.info('Inventory', 'Materials spent', { costs, sink })
       return true
     },
 
-    tryDropMaterial(baseDropChance = MATERIAL_DROP_BASE_CHANCE): Material | null {
+    tryDropMaterial(
+      baseDropChance = MATERIAL_DROP_BASE_CHANCE,
+      source: MaterialSourceId = 'drop',
+    ): Material | null {
       // Comet Miner (Star Forge): boosts the drop chance
       const forge = useStarForgeStore()
       const treeDropMult = useMeepTreeStore().fx.materialDropMult
@@ -70,9 +186,7 @@ export const useInventoryStore = defineStore('inventory', {
       // Fallback: last material
       if (!dropped) dropped = MATERIALS[MATERIALS.length - 1]
       // Prospector's Song (Star Forge): every drop grants extra materials
-      for (let i = 0; i < 1 + forge.extraDropCount; i++) {
-        this.addMaterial(dropped.id)
-      }
+      this.addMaterial(dropped.id, source, 1 + forge.extraDropCount)
       return dropped
     },
   },

@@ -7,7 +7,7 @@ let closeActiveTooltip: (() => void) | null = null
 </script>
 
 <script setup lang="ts">
-import { ref, nextTick, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onUnmounted } from 'vue'
 import {
   BADGE_TOOLTIP_GAP_PX,
   BADGE_TOOLTIP_VIEWPORT_MARGIN_PX,
@@ -26,6 +26,16 @@ const props = defineProps<{
   /** anchor→panel gap in px — override when another element overlaps the
       default position (defaults to BADGE_TOOLTIP_GAP_PX) */
   gap?: number
+  /** widen the panel past its 320px default — any CSS length, so callers can
+      pass a clamp() that scales with the viewport. For tip content that is a
+      small dashboard rather than a sentence (header material stats). */
+  width?: string
+  /** Selector of an ancestor whose edge the panel clears instead of the
+      anchor's own. Needed where the anchor sits inside a dense block: the
+      header material grid stacks two rows, so a panel that only cleared its
+      own cell would land on top of the row below it. The caret still points
+      at the anchor — only the vertical edge changes. */
+  clearAncestor?: string
 }>()
 
 const wrapRef = ref<HTMLElement | null>(null)
@@ -34,6 +44,18 @@ const show = ref(false)
 const placement = ref<'bottom' | 'top'>('bottom')
 const tipStyle = ref<Record<string, string>>({ left: '-9999px', top: '0px' })
 let hideTimer: ReturnType<typeof setTimeout> | null = null
+
+/* Bound separately from tipStyle so the width is already applied when open()
+   measures the panel — a width arriving with the final position would be
+   measured one frame too late and the panel would sit off-centre. */
+const widthStyle = computed<Record<string, string>>(() =>
+  props.width
+    ? {
+        width: props.width,
+        maxWidth: `calc(100vw - ${BADGE_TOOLTIP_VIEWPORT_MARGIN_PX * 2}px)`,
+      }
+    : {},
+)
 
 function clearHide() {
   if (hideTimer) {
@@ -61,12 +83,18 @@ function open() {
     const th = tip.offsetHeight
     const m = BADGE_TOOLTIP_VIEWPORT_MARGIN_PX
     const gap = props.gap ?? BADGE_TOOLTIP_GAP_PX
+    // Horizontal placement always follows the anchor; only the edge the panel
+    // has to clear may come from an ancestor.
+    const host = props.clearAncestor
+      ? (anchor.closest(props.clearAncestor) as HTMLElement | null)
+      : null
+    const clear = host ? host.getBoundingClientRect() : r
     let left = r.left + r.width / 2 - tw / 2
     left = Math.min(Math.max(left, m), window.innerWidth - tw - m)
-    let top = r.bottom + gap
+    let top = clear.bottom + gap
     placement.value = 'bottom'
-    if (top + th + m > window.innerHeight && r.top - gap - th > m) {
-      top = r.top - gap - th
+    if (top + th + m > window.innerHeight && clear.top - gap - th > m) {
+      top = clear.top - gap - th
       placement.value = 'top'
     }
     const inset = BADGE_TOOLTIP_CARET_INSET_PX
@@ -111,7 +139,7 @@ onUnmounted(() => {
         ref="tipRef"
         class="rpg-btt"
         :class="placement === 'top' ? 'rpg-btt--top' : ''"
-        :style="tipStyle"
+        :style="[tipStyle, widthStyle]"
         role="tooltip"
         @mouseenter="clearHide"
         @mouseleave="scheduleHide"

@@ -616,7 +616,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
       const inventoryStore = useInventoryStore()
       for (const { materialId } of harvestSlots) {
-        inventoryStore.addMaterial(materialId)
+        inventoryStore.addMaterial(materialId, 'harvest')
       }
       logger.info('Planet', `Harvest-Tick: ${harvestSlots.length} Materialien geerntet`)
     },

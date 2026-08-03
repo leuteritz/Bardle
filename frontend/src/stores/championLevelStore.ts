@@ -424,7 +424,7 @@ export const useChampionLevelStore = defineStore('championLevel', {
       // Materials first — removeMaterials is the only step that can still fail.
       if (
         Object.keys(cost.materials).length > 0 &&
-        !inventoryStore.removeMaterials(cost.materials)
+        !inventoryStore.removeMaterials(cost.materials, 'level')
       ) {
         return false
       }

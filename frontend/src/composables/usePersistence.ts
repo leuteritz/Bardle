@@ -177,6 +177,16 @@ export function usePersistence() {
         collectedMaterials: { ...inventoryStore.collectedMaterials },
         totalMaterialsCollected: inventoryStore.totalMaterialsCollected,
         totalMaterialsSpent: inventoryStore.totalMaterialsSpent,
+        // Per-material ledger behind the header tooltip. The rolling intake
+        // window is deliberately NOT saved — see resetRateWindow().
+        lifetimeCollected: { ...inventoryStore.lifetimeCollected },
+        lifetimeSpent: { ...inventoryStore.lifetimeSpent },
+        peakStock: { ...inventoryStore.peakStock },
+        firstFoundAt: { ...inventoryStore.firstFoundAt },
+        lastFoundAt: { ...inventoryStore.lastFoundAt },
+        longestDroughtMs: { ...inventoryStore.longestDroughtMs },
+        sourceTally: JSON.parse(JSON.stringify(inventoryStore.sourceTally)),
+        sinkTally: JSON.parse(JSON.stringify(inventoryStore.sinkTally)),
       },
       // Champion progression survives prestige by design — a new universe
       // resets the economy, not what the champions have learned.
@@ -518,7 +528,29 @@ export function usePersistence() {
         )
         inventoryStore.totalMaterialsCollected = saved.inventory.totalMaterialsCollected ?? inStock
         inventoryStore.totalMaterialsSpent = saved.inventory.totalMaterialsSpent ?? 0
+
+        // Per-material ledger. Saves from before the header tooltip carry none
+        // of it — the current stock is then the only defensible lower bound for
+        // "ever collected" and "peak", and the rest stays empty rather than
+        // inventing history.
+        const stock = inventoryStore.collectedMaterials
+        inventoryStore.lifetimeCollected = { ...(saved.inventory.lifetimeCollected ?? stock) }
+        inventoryStore.lifetimeSpent = { ...(saved.inventory.lifetimeSpent ?? {}) }
+        inventoryStore.peakStock = { ...(saved.inventory.peakStock ?? stock) }
+        inventoryStore.firstFoundAt = { ...(saved.inventory.firstFoundAt ?? {}) }
+        inventoryStore.lastFoundAt = { ...(saved.inventory.lastFoundAt ?? {}) }
+        inventoryStore.longestDroughtMs = { ...(saved.inventory.longestDroughtMs ?? {}) }
+        inventoryStore.sourceTally = saved.inventory.sourceTally
+          ? JSON.parse(JSON.stringify(saved.inventory.sourceTally))
+          : {}
+        inventoryStore.sinkTally = saved.inventory.sinkTally
+          ? JSON.parse(JSON.stringify(saved.inventory.sinkTally))
+          : {}
       }
+      // Start measuring intake from now: the hour before a load was spent
+      // offline, and carrying those empty buckets over would report 0/h to a
+      // player who is in fact farming.
+      inventoryStore.resetRateWindow()
 
       // Restore augmentStore
       const augmentStore = useAugmentStore()

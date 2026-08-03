@@ -450,9 +450,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         if (slot.type === 'chimes') {
           totalChimes += slot.amount ?? 0
         } else if (slot.type === 'material' && slot.materialId) {
-          inventoryStore.addMaterial(slot.materialId)
+          inventoryStore.addMaterial(slot.materialId, 'boss')
           if (extraMaterialChance > 0 && Math.random() < extraMaterialChance) {
-            inventoryStore.addMaterial(slot.materialId)
+            inventoryStore.addMaterial(slot.materialId, 'boss')
           }
           this.lastDroppedMaterialId = slot.materialId
         }

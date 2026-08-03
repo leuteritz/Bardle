@@ -689,6 +689,33 @@ export interface Material {
   dropCount?: number
 }
 
+/** Where a unit of material entered the inventory. Labels: MATERIAL_SOURCE_LABELS. */
+export type MaterialSourceId = 'drop' | 'harvest' | 'boss' | 'drifter' | 'bargain'
+
+/** What a unit of material was spent on. Labels: MATERIAL_SINK_LABELS. */
+export type MaterialSinkId =
+  | 'recruit'
+  | 'level'
+  | 'equipment'
+  | 'tier'
+  | 'forge'
+  | 'relic'
+  | 'constellation'
+  | 'bargain'
+  | 'other'
+
+/** One row of the source/sink breakdown in the header material tooltip. */
+export interface MaterialFlowShare {
+  id: string
+  label: string
+  icon: string
+  amount: number
+  /** 0–1, relative to the largest row — drives the bar width, not the label. */
+  fraction: number
+  /** 0–1, share of the whole tally — the percentage the player reads. */
+  share: number
+}
+
 // ── Star Forge (Shop tab) ────────────────────────────────────────────────────
 
 export type ForgeNodeTier = 'branch' | 'leaf'

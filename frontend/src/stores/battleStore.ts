@@ -742,7 +742,7 @@ export const useBattleStore = defineStore('battle', {
       if (!inventoryStore.hasMaterials(recruit.materialCost)) return false
       const gameStore = useGameStore()
       if (gameStore.chimes < recruit.chimesPrice) return false
-      inventoryStore.removeMaterials(recruit.materialCost)
+      inventoryStore.removeMaterials(recruit.materialCost, 'recruit')
       gameStore.chimes -= recruit.chimesPrice
       this.ownedChampions.push(name)
       this.recruitedChampions.push(name)

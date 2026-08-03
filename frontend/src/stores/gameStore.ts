@@ -16,6 +16,7 @@ import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
 import { useDrifterStore } from './drifterStore'
+import { useInventoryStore } from './inventoryStore'
 import { universes } from '../config/universes'
 import { clampPercent } from '../utils/geometry'
 import { bossPlanetInForeground } from '../utils/foregroundGate'
@@ -574,6 +575,10 @@ export const useGameStore = defineStore('game', {
       // and roll for the next spawn. Runs before production so a buff that ends
       // this second is already gone when the chimes below are credited.
       useDrifterStore().tick()
+      // Material intake window: slide the minute buckets forward even in a
+      // minute where nothing dropped, so the header sparkline shows the gap
+      // instead of an hour-old spike frozen at the right edge.
+      useInventoryStore().advanceRateWindow()
       const cps = this.chimesPerSecond * this.mvpBuffMultiplier
       if (this.mvpBuffSecondsLeft > 0) this.mvpBuffSecondsLeft--
       if (cps > 0) {

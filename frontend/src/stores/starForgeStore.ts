@@ -255,7 +255,8 @@ export const useStarForgeStore = defineStore('starForge', {
     },
 
     buffActive(state): (buffId: 'cpcX2' | 'cpsX2') => boolean {
-      return (buffId) => state.activeBuffs.some((b) => b.id === buffId && b.expiresAt > state.forgeNow)
+      return (buffId) =>
+        state.activeBuffs.some((b) => b.id === buffId && b.expiresAt > state.forgeNow)
     },
 
     // ── Effect getters (one per integration point) ────────────────────────────
@@ -270,7 +271,9 @@ export const useStarForgeStore = defineStore('starForge', {
     /** Multiplier on offline earnings. */
     offlineEarningsMult(): number {
       const eternal = this.constellationForged('eternalCadence') ? 15 : 0
-      return 1 + (this.branchEffect('moonOrbit') + this.relicEffect('echoOfTheVoid') + eternal) / 100
+      return (
+        1 + (this.branchEffect('moonOrbit') + this.relicEffect('echoOfTheVoid') + eternal) / 100
+      )
     },
 
     /** Extra hours added to the offline-progress cap (Echo of the Void). */
@@ -375,7 +378,7 @@ export const useStarForgeStore = defineStore('starForge', {
       const gameStore = useGameStore()
       const inventory = useInventoryStore()
       const materials = this.nodeMaterialCost(id)
-      if (!inventory.removeMaterials(materials)) return false
+      if (!inventory.removeMaterials(materials, 'forge')) return false
       gameStore.chimes -= this.nodeGoldCost(id)
       if (def.tier === 'branch') {
         this.branchLevels[id] = (this.branchLevels[id] ?? 0) + 1
@@ -392,7 +395,7 @@ export const useStarForgeStore = defineStore('starForge', {
       if (!def) return false
       const gameStore = useGameStore()
       const inventory = useInventoryStore()
-      if (!inventory.removeMaterials(this.relicMaterialCost(id))) return false
+      if (!inventory.removeMaterials(this.relicMaterialCost(id), 'relic')) return false
       gameStore.chimes -= this.relicGoldCost(id)
       this.relicLevels[id] = this.relicLevel(id) + 1
       if (id === 'heartOfTheStar') {
@@ -408,7 +411,7 @@ export const useStarForgeStore = defineStore('starForge', {
       if (!def) return false
       const gameStore = useGameStore()
       const inventory = useInventoryStore()
-      if (!inventory.removeMaterials(def.materialCost)) return false
+      if (!inventory.removeMaterials(def.materialCost, 'constellation')) return false
       gameStore.chimes -= def.goldCost
       this.forgedConstellations.push(id)
       this.recalcRates()
@@ -422,7 +425,11 @@ export const useStarForgeStore = defineStore('starForge', {
       const gameStore = useGameStore()
       const inventory = useInventoryStore()
       const price = this.bargainPrice(def)
-      if (def.kind === 'gold' && def.materials && !inventory.removeMaterials(def.materials)) {
+      if (
+        def.kind === 'gold' &&
+        def.materials &&
+        !inventory.removeMaterials(def.materials, 'bargain')
+      ) {
         return false
       }
       gameStore.chimes -= price
@@ -437,7 +444,7 @@ export const useStarForgeStore = defineStore('starForge', {
         case 'materials': {
           const bundle: Record<string, number> = def.materials ?? {}
           for (const [matId, qty] of Object.entries(bundle)) {
-            for (let i = 0; i < qty; i++) inventory.addMaterial(matId)
+            inventory.addMaterial(matId, 'bargain', qty)
           }
           break
         }
@@ -466,7 +473,12 @@ export const useStarForgeStore = defineStore('starForge', {
     rerollBargain(): boolean {
       if (!this.canRerollBargain) return false
       const inventory = useInventoryStore()
-      if (!inventory.removeMaterials({ [FORGE_BARGAIN_REROLL_MATERIAL]: FORGE_BARGAIN_REROLL_COST })) {
+      if (
+        !inventory.removeMaterials(
+          { [FORGE_BARGAIN_REROLL_MATERIAL]: FORGE_BARGAIN_REROLL_COST },
+          'bargain',
+        )
+      ) {
         return false
       }
       this.restockBargain()

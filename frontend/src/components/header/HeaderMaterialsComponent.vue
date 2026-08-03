@@ -2,12 +2,17 @@
 import { computed } from 'vue'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { MATERIALS } from '@/config/materials'
-import { formatNumber, formatNumberCompact } from '@/config/numberFormat'
+import { formatNumberCompact } from '@/config/numberFormat'
+import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
+import MaterialStatsTooltip from './MaterialStatsTooltip.vue'
 import {
   MATERIAL_COLOR,
   MATERIAL_PLACEHOLDER_LABELS,
   HEADER_MATERIALS_GRID_COLUMNS,
   MATERIAL_EMPTY_GLYPH,
+  MATERIAL_TOOLTIP_WIDTH,
+  MATERIAL_TOOLTIP_GAP_PX,
+  MATERIAL_TOOLTIP_CLEAR_SELECTOR,
 } from '@/config/constants'
 
 const inventoryStore = useInventoryStore()
@@ -18,9 +23,9 @@ const materials = computed(() =>
     return {
       ...m,
       count,
-      // Kurzform in der Spalte, exakter Wert im Tooltip.
+      // Kurzform in der Spalte — der exakte Wert samt Historie steht im
+      // Hover-Panel (MaterialStatsTooltip), nicht mehr im title-Attribut.
       label: count === 0 ? MATERIAL_EMPTY_GLYPH : formatNumberCompact(count),
-      title: `${m.name} — ${formatNumber(count)}`,
     }
   }),
 )
@@ -30,21 +35,26 @@ const gridStyle = { gridTemplateColumns: `repeat(${HEADER_MATERIALS_GRID_COLUMNS
 
 <template>
   <div class="mat-grid" :style="gridStyle">
-    <div
+    <RpgBadgeTooltip
       v-for="m in materials"
       :key="m.id"
-      class="mat-cell"
-      :class="{ 'mat-cell--empty': m.count === 0 }"
-      :title="m.title"
+      :width="MATERIAL_TOOLTIP_WIDTH"
+      :gap="MATERIAL_TOOLTIP_GAP_PX"
+      :clear-ancestor="MATERIAL_TOOLTIP_CLEAR_SELECTOR"
     >
-      <img v-if="m.image" :src="m.image" class="mat-icon rpg-img" :alt="m.name" />
-      <span v-else class="mat-ph" :style="{ color: MATERIAL_COLOR[m.id] }">
-        {{ MATERIAL_PLACEHOLDER_LABELS[m.id] ?? m.name.slice(0, 2).toUpperCase() }}
-      </span>
-      <span class="mat-count" :style="{ color: MATERIAL_COLOR[m.id] }">
-        {{ m.label }}
-      </span>
-    </div>
+      <div class="mat-cell" :class="{ 'mat-cell--empty': m.count === 0 }">
+        <img v-if="m.image" :src="m.image" class="mat-icon rpg-img" :alt="m.name" />
+        <span v-else class="mat-ph" :style="{ color: MATERIAL_COLOR[m.id] }">
+          {{ MATERIAL_PLACEHOLDER_LABELS[m.id] ?? m.name.slice(0, 2).toUpperCase() }}
+        </span>
+        <span class="mat-count" :style="{ color: MATERIAL_COLOR[m.id] }">
+          {{ m.label }}
+        </span>
+      </div>
+      <template #tip>
+        <MaterialStatsTooltip :material-id="m.id" />
+      </template>
+    </RpgBadgeTooltip>
   </div>
 </template>
 
