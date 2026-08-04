@@ -37,6 +37,17 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     inHud: true,
   },
   {
+    id: 'tree',
+    keys: ['k'],
+    cap: 'K',
+    label: 'Skills',
+    description:
+      'Opens the Bard profile on the Meep skill tree. Same behaviour as the shop key: it jumps there from any other tab and closes the profile when the tree is already up.',
+    icon: 'lucide:network',
+    category: 'interface',
+    inHud: true,
+  },
+  {
     id: 'controls',
     keys: ['?'],
     cap: '?',

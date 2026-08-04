@@ -12,6 +12,7 @@ import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import type { BardTabId } from '@/stores/uiStore'
+import type { KeybindId } from '@/types'
 import { formatBadgeCount } from '@/utils/format'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
@@ -81,13 +82,23 @@ watch(
 // ── Tastenkürzel ────────────────────────────────────────────────────────────
 // Diese Komponente ist immer montiert (der v-if steckt im Teleport), sie kann
 // den Handler also halten, auch wenn gerade kein Tab offen ist.
-onKeybinding('shop', () => {
-  // Rollenwahl und Pause liegen über allem — ein Tab, der sich dahinter
-  // öffnet, wäre unsichtbar und stünde beim Zurückkehren im Weg.
-  if (galaxyStore.pendingRoleSelection || isPaused.value) return
-  if (uiStore.bardActiveTab === 'shop') uiStore.closeBardModal()
-  else uiStore.setBardTab('shop')
-})
+/**
+ * Ein Kürzel, das einen Tab ansteuert: hin — oder zu, wenn er schon offen ist.
+ * Aus einem ANDEREN Tab heraus wird gewechselt statt geschlossen; so führt die
+ * Taste immer an ihr Ziel, statt je nach Zustand irgendwohin.
+ */
+function bindTabShortcut(id: KeybindId, tab: BardTabId) {
+  onKeybinding(id, () => {
+    // Rollenwahl und Pause liegen über allem — ein Tab, der sich dahinter
+    // öffnet, wäre unsichtbar und stünde beim Zurückkehren im Weg.
+    if (galaxyStore.pendingRoleSelection || isPaused.value) return
+    if (uiStore.bardActiveTab === tab) uiStore.closeBardModal()
+    else uiStore.setBardTab(tab)
+  })
+}
+
+bindTabShortcut('shop', 'shop')
+bindTabShortcut('tree', 'tree')
 
 /**
  * Escape schließt das Profil — aber erst, wenn niemand INNERHALB des Modals die
