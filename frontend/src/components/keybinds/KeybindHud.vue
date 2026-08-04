@@ -9,7 +9,7 @@
       :aria-label="`Show all shortcuts (${controlsCap})`"
       @click="openControls"
     >
-      <Icon icon="lucide:keyboard" width="18" height="18" aria-hidden="true" />
+      <Icon icon="lucide:keyboard" width="16" height="16" aria-hidden="true" />
       <span class="kb-hud__handle-cap">{{ controlsCap }}</span>
     </button>
 
@@ -24,7 +24,7 @@
       :aria-label="`${labelFor(bind)} (${bind.cap})`"
       @click="triggerKeybind(bind.id)"
     >
-      <KeyCap :cap="bind.cap" size="md" :pressed="flashing === bind.id" :lit="isActive(bind.id)" />
+      <KeyCap :cap="bind.cap" size="sm" :pressed="flashing === bind.id" :lit="isActive(bind.id)" />
       <span class="kb-chip__label">{{ labelFor(bind) }}</span>
     </button>
   </div>
@@ -130,8 +130,13 @@ function openControls() {
 <style scoped>
 /* Spiegelbild der Signatur-Zeile unten links: gleiche Höhe über dem
    Bottom-Bar-Panel, gleicher Randabstand — die beiden Ecken tragen damit
-   dasselbe Gewicht. z-index 45 wie Musik-Widget und Enzyklopädie-Reiter:
-   jedes Modal legt sich darüber, ohne dass die Leiste sie einzeln kennen muss. */
+   dasselbe Gewicht. Und dieselbe Zurückhaltung: kein Kasten, kein Rahmen,
+   keine Goldlinie. Die Leiste steht frei über dem Command Panel und tritt erst
+   beim Darüberfahren nach vorn; ein zweiter gerahmter Block direkt über der
+   Bar-Silhouette hätte wie ein weiteres Panel gelesen.
+
+   z-index 45 wie Musik-Widget und Enzyklopädie-Reiter: jedes Modal legt sich
+   darüber, ohne dass die Leiste sie einzeln kennen muss. */
 .kb-hud {
   position: fixed;
   bottom: calc(var(--hud-panel-size, 330px) + 8px);
@@ -139,75 +144,57 @@ function openControls() {
   z-index: 45;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px 8px 10px;
-  background: #16140e;
-  border: 2px solid #5c3310;
-  border-radius: 5px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  gap: 10px;
   user-select: none;
-  /* Einfahren: nur transform/opacity, kein Layout */
+  /* Einfahren und Zurücktreten laufen über dieselbe Eigenschaft — die
+     Ruhe-Deckkraft steht deshalb am eingefahrenen Zustand, nicht hier. */
   opacity: 0;
   transform: translateY(10px);
   transition:
-    opacity 420ms ease,
+    opacity 300ms ease,
     transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .kb-hud--in {
-  opacity: 1;
+  opacity: 0.62;
   transform: translateY(0);
 }
-
-/* Goldlinie an der Oberkante — dasselbe Zeichen wie an jedem Modal, nur
-   schmaler, damit die Leiste als Teil derselben Oberfläche liest. */
-.kb-hud::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 6px;
-  right: 6px;
-  height: 2px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #c89040, #5c3310);
-  pointer-events: none;
+.kb-hud--in:hover {
+  opacity: 1;
 }
 
 /* ── Griff: öffnet die Übersicht ──────────────────────── */
 .kb-hud__handle {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 6px;
+  gap: 4px;
+  padding: 2px;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  color: #9a8656;
+  border: none;
+  color: #8a7a52;
   cursor: pointer;
-  transition:
-    color 140ms ease,
-    border-color 140ms ease;
+  transition: color 140ms ease;
 }
 .kb-hud__handle:hover {
   color: #e8c040;
-  border-color: #5c3310;
 }
 .kb-hud__handle-cap {
-  font-size: 1.02rem;
+  font-size: 0.9rem;
   font-weight: 800;
   line-height: 1;
 }
 
 .kb-hud__rule {
   width: 1px;
-  align-self: stretch;
-  background: #3e200a;
+  height: 14px;
+  background: rgba(122, 78, 32, 0.6);
 }
 
 /* ── Kürzel-Chip ──────────────────────────────────────── */
 .kb-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 2px 4px;
+  gap: 7px;
+  padding: 2px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -216,14 +203,17 @@ function openControls() {
 .kb-chip:hover {
   transform: translateY(-1px);
 }
+/* Ohne Kasten dahinter trägt der Text seinen Kontrast selbst — ein statischer
+   Schatten, damit die Zeile auch über einem hellen Nebel lesbar bleibt. */
 .kb-chip__label {
-  font-size: 1.06rem;
+  font-size: 0.86rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   line-height: 1;
-  color: #cbb98a;
+  color: #b8a878;
   white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   transition: color 160ms ease;
 }
 .kb-chip:hover .kb-chip__label,
@@ -232,14 +222,13 @@ function openControls() {
 }
 
 /* Full HD ist der flachste Viewport — dort rückt die Leiste enger zusammen,
-   bleibt aber lesbar (nur Innenabstände und Schriftgrad geben nach). */
+   bleibt aber lesbar (nur Abstände und Schriftgrad geben nach). */
 @media (max-height: 1100px) {
   .kb-hud {
-    gap: 7px;
-    padding: 6px 10px 6px 8px;
+    gap: 8px;
   }
   .kb-chip__label {
-    font-size: 0.96rem;
+    font-size: 0.8rem;
   }
 }
 </style>
