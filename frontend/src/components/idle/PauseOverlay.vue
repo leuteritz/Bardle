@@ -332,21 +332,26 @@
           </div>
 
           <!-- Continue -->
-          <button class="continue-btn" @click="unpause">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <polygon points="6 3 21 12 6 21 6 3" />
-            </svg>
-            Resume journey
+          <!-- Die Tasten stehen IM Knopf, nicht als Hinweiszeile darunter: sie
+               gehören zu derselben Handlung, und die eigene Zeile kostete den
+               Panelfuß eine ganze Reihe Höhe. Beschriftung bleibt optisch
+               mittig (Dreispalter), die Tasten sitzen an der rechten Kante. -->
+          <button
+            class="continue-btn"
+            :aria-label="`Resume journey — press ${pauseCap} or ${PAUSE_ESCAPE_CAP}`"
+            @click="unpause"
+          >
+            <span class="continue-btn__main">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <polygon points="6 3 21 12 6 21 6 3" />
+              </svg>
+              Resume journey
+            </span>
+            <span class="continue-btn__keys" aria-hidden="true">
+              <KeyCap :cap="pauseCap" size="sm" />
+              <KeyCap :cap="PAUSE_ESCAPE_CAP" size="sm" />
+            </span>
           </button>
-          <!-- Die HUD-Leiste mit demselben Kürzel liegt unter diesem Overlay —
-               deshalb steht die Taste hier noch einmal, in derselben Optik. -->
-          <span class="pause-hint">
-            press
-            <KeyCap :cap="pauseCap" size="sm" class="pause-hint__cap" />
-            <span class="pause-hint__or">or</span>
-            <KeyCap :cap="PAUSE_ESCAPE_CAP" size="sm" class="pause-hint__cap" />
-            or click anywhere to continue
-          </span>
           </div>
         </div>
       </div>
@@ -1911,13 +1916,15 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Continue button ──────────────────────────────────── */
+/* Dreispalter: die leere erste Spalte spiegelt die Tastengruppe rechts, damit
+   die Beschriftung in der Mitte steht — und nicht um deren Breite verschoben,
+   wie es ein einfaches space-between täte. */
 .continue-btn {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: center;
-  gap: 9px;
   width: 100%;
-  padding: clamp(11px, 1.6vh, 15px) 0;
+  padding: clamp(9px, 1.3vh, 13px) clamp(10px, 1.2vw, 14px);
   background: linear-gradient(to bottom, rgba(240, 208, 96, 0.16), rgba(200, 144, 64, 0.1));
   border: 1px solid rgba(240, 208, 96, 0.45);
   border-radius: 12px;
@@ -1947,25 +1954,25 @@ function particleStyle(i: number): Record<string, string> {
   outline: 2px solid #f0d060;
   outline-offset: 3px;
 }
-/* Die Zeile trägt jetzt eine gezeichnete Taste — sie steht deshalb als Reihe
-   auf einer Mittelachse statt als reiner Fließtext, und der Schriftgrad ist
-   knapp größer, damit die Keycap nicht wie ein Fremdkörper wirkt. */
-.pause-hint {
+.continue-btn__main {
+  grid-column: 2;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: clamp(0.74rem, 0.95vw, 0.88rem);
-  color: rgba(216, 200, 160, 0.4);
-  letter-spacing: 0.08em;
-  font-style: italic;
+  gap: 9px;
 }
-.pause-hint__cap {
-  font-style: normal;
+/* Die Tasten treten hinter der Beschriftung zurück — sie sagen, WIE es auch
+   geht, nicht was der Knopf tut. Beim Überfahren kommen sie mit nach vorn. */
+.continue-btn__keys {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  opacity: 0.55;
+  transition: opacity 0.18s ease;
 }
-/* Das trennende „or" steht enger an den beiden Tasten als der Rest der Zeile —
-   sonst zerfiele die Alternative in drei gleich weit entfernte Teile. */
-.pause-hint__or {
-  margin: 0 -2px;
+.continue-btn:hover .continue-btn__keys {
+  opacity: 1;
 }
 
 /* ── Transitions ──────────────────────────────────────── */
