@@ -1487,7 +1487,7 @@ export interface JungleBuffDef {
 // Ein Eintrag dort erscheint automatisch im Controls-Panel; `inHud` entscheidet
 // zusätzlich über die Keycap in der schwebenden Leiste.
 
-export type KeybindId = 'pause' | 'controls'
+export type KeybindId = 'pause' | 'shop' | 'controls'
 
 export type KeybindCategoryId = 'game' | 'interface'
 

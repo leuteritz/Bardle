@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { watch, computed, ref } from 'vue'
+import { watch, computed, ref, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
+import { useGalaxyStore } from '@/stores/galaxyStore'
+import { useGamePause } from '@/composables/useGamePause'
+import { onKeybinding } from '@/composables/useKeybindings'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
@@ -21,6 +24,8 @@ import ActionToast from '@/components/bardProfil/ActionToast.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 
 const uiStore = useUiStore()
+const galaxyStore = useGalaxyStore()
+const { isPaused } = useGamePause()
 const expeditionStore = useExpeditionStore()
 const battleStore = useBattleStore()
 const solarStore = useSolarUpgradeStore()
@@ -72,6 +77,70 @@ watch(
     }
   },
 )
+
+// ── Tastenkürzel ────────────────────────────────────────────────────────────
+// Diese Komponente ist immer montiert (der v-if steckt im Teleport), sie kann
+// den Handler also halten, auch wenn gerade kein Tab offen ist.
+onKeybinding('shop', () => {
+  // Rollenwahl und Pause liegen über allem — ein Tab, der sich dahinter
+  // öffnet, wäre unsichtbar und stünde beim Zurückkehren im Weg.
+  if (galaxyStore.pendingRoleSelection || isPaused.value) return
+  if (uiStore.bardActiveTab === 'shop') uiStore.closeBardModal()
+  else uiStore.setBardTab('shop')
+})
+
+/**
+ * Escape schließt das Profil — aber erst, wenn niemand INNERHALB des Modals die
+ * Taste für sich beansprucht hat. Der Team-Tab wickelt damit seine eigenen
+ * Ebenen ab (Detailkarte, Picker, Rollenspalte), der Champion-Shop sein
+ * Filterfeld; alle melden das mit `preventDefault`.
+ *
+ * Die Entscheidung fällt deshalb erst NACH dem Ereignisdurchlauf, wenn
+ * `defaultPrevented` endgültig feststeht — unabhängig davon, in welcher
+ * Reihenfolge sich die Listener registriert haben; bei ineinander liegenden
+ * Komponenten wäre die kaum vorhersagbar.
+ *
+ * Ein Microtask reicht dafür NICHT: zwischen zwei Listenern desselben
+ * Ereignisses leert sich der JS-Stack, und genau dort läuft die Microtask-
+ * Warteschlange bereits leer. Gemessen: der Team-Tab kam danach dran, das Modal
+ * schloss sich also samt seiner inneren Ebene. Ein Timeout liegt hinter dem
+ * gesamten Durchlauf.
+ */
+let escapeTimer: ReturnType<typeof setTimeout> | null = null
+
+function onEscape(event: KeyboardEvent) {
+  if (event.key !== 'Escape') return
+  // Controls-Panel und Pause-Overlay liegen darüber und antworten zuerst.
+  if (uiStore.isControlsOpen || isPaused.value) return
+  if (escapeTimer !== null) clearTimeout(escapeTimer)
+  escapeTimer = setTimeout(() => {
+    escapeTimer = null
+    if (!event.defaultPrevented) uiStore.closeBardModal()
+  }, 0)
+}
+
+watch(
+  () => uiStore.bardActiveTab !== null,
+  (open) => {
+    if (open) {
+      window.addEventListener('keydown', onEscape)
+    } else {
+      window.removeEventListener('keydown', onEscape)
+      // Ein noch schwebender Escape-Timer gehört zu einem Modal, das inzwischen
+      // ohnehin zu ist — er dürfte das nächste nicht gleich wieder schließen.
+      if (escapeTimer !== null) {
+        clearTimeout(escapeTimer)
+        escapeTimer = null
+      }
+    }
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onEscape)
+  if (escapeTimer !== null) clearTimeout(escapeTimer)
+})
 </script>
 
 <template>

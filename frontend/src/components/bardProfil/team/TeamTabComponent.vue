@@ -332,7 +332,14 @@ function onEsc(e: KeyboardEvent) {
     synergiesOpen.value = false
   } else if (selectedRole.value !== null) {
     closePanel()
+  } else {
+    // Nichts mehr abzuwickeln — dieses Escape gehört dem Profil-Modal, das sich
+    // damit ganz schließt.
+    return
   }
+  // Verbraucht: das Modal darüber prüft `defaultPrevented` und bleibt stehen.
+  // Ohne diese Meldung fiele mit der innersten Ebene gleich das ganze Profil zu.
+  e.preventDefault()
 }
 
 onMounted(() => {

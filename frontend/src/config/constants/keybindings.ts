@@ -26,6 +26,17 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     inHud: true,
   },
   {
+    id: 'shop',
+    keys: ['b'],
+    cap: 'B',
+    label: 'Shop',
+    description:
+      'Opens the Bard profile on the shop tab. From another tab it jumps to the shop; on the shop tab it closes the profile again — as does Escape.',
+    icon: 'lucide:store',
+    category: 'interface',
+    inHud: true,
+  },
+  {
     id: 'controls',
     keys: ['?'],
     cap: '?',
