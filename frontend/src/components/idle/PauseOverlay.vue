@@ -67,22 +67,18 @@
             {{ sunPhase.name }}
           </span>
 
-          <!-- Vitalität der Sonne — ohne Beschriftung: das Herz-Siegel links und
-               die Zahl unmittelbar an der Balkenkante sagen dasselbe, und der
-               freigewordene Platz gehört dem Balken. Sechs Ebenen, alle
+          <!-- Vitalität der Sonne — ohne Beschriftung und ohne Emblem: der
+               Balken läuft über die volle Panelbreite, die Zahl steht
+               unmittelbar an seiner Kante. Fünf Ebenen, alle
                compositor-freundlich (nur transform/opacity bewegen sich):
                Nachlaufspur, Füllung mit durchlaufendem Energiepuls, wandernde
-               Kante mit Flare, statische Gravur, Krit-Puls. -->
+               Kante mit Flare, statische Skala, Krit-Puls. -->
           <div
             class="vital-strip"
             :class="hpColor"
             role="img"
             :aria-label="`Health ${Math.round(playerStore.currentHP)} of ${playerStore.maxHP}`"
           >
-            <span class="vital-sigil" :class="{ 'vital-sigil--crit': isCrit }" aria-hidden="true">
-              <Icon icon="game-icons:hearts" width="24" height="24" class="vital-sigil__icon" />
-            </span>
-
             <div class="vital-bar" :class="{ 'vital-bar--crit': isCrit }">
               <!-- Pro-Wert gesetzte Transforms stehen inline am jeweiligen
                    Element, nicht als Variable am Balken — sonst rechnet der
@@ -908,9 +904,9 @@ function particleStyle(i: number): Record<string, string> {
    getrennt. So bleibt sie die Lebensanzeige DER Sonne — die Struktur trägt der
    Balken selbst über seinen eingelassenen Rand.
 
-   Die Beschriftung ist weg: „Vitality" stand als Wort neben einem Herz und
-   einer Zahl, die beide dasselbe sagen. Der Platz gehört jetzt dem Balken, der
-   dafür fast doppelt so hoch ist wie zuvor.
+   Beschriftung und Herz-Emblem sind weg: beide sagten dasselbe wie die Zahl
+   daneben. Der Platz gehört jetzt dem Balken, der dafür fast doppelt so hoch
+   ist wie zuvor und über die volle Panelbreite läuft.
 
    Der Balken besteht aus gestapelten Ebenen, damit nichts außer transform und
    opacity animiert wird: Nachlaufspur, Füllung (mit Puls darin), Kante,
@@ -929,55 +925,6 @@ function particleStyle(i: number): Record<string, string> {
   padding: 0 2px;
 }
 
-/* Herz-Siegel statt Beschriftung — eine Plakette in der Fassung des Panels,
-   deren Innenglut die Zustandsfarbe trägt. Statischer Schein, kein Filter in
-   einer laufenden Animation. */
-.vital-sigil {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  border-radius: 5px;
-  border: 1px solid rgba(122, 78, 32, 0.85);
-  background:
-    radial-gradient(
-      circle at 50% 34%,
-      color-mix(in srgb, var(--hp-hi) 24%, transparent) 0%,
-      transparent 72%
-    ),
-    linear-gradient(to bottom, #1e1006, #0b0906);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 220, 150, 0.12),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
-    0 0 16px color-mix(in srgb, var(--hp-hi) 16%, transparent);
-}
-.vital-sigil__icon {
-  color: var(--hp-txt, #cc6050);
-  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--hp-txt) 55%, transparent));
-}
-/* Kritisch: das Siegel schlägt. Animiert wird ausschließlich transform — der
-   Schein darunter bleibt statisch stehen. */
-.vital-sigil--crit {
-  animation: sigil-beat 1.1s ease-in-out infinite;
-}
-@keyframes sigil-beat {
-  0%,
-  62%,
-  100% {
-    transform: scale(1);
-  }
-  16% {
-    transform: scale(1.16);
-  }
-  32% {
-    transform: scale(1.03);
-  }
-  46% {
-    transform: scale(1.1);
-  }
-}
 
 /* Zustandsfarben liegen am Streifen, nicht am Balken: Füllung, Kante und
    Zahlenwert ziehen dieselben drei Werte. */
@@ -1114,31 +1061,46 @@ function particleStyle(i: number): Record<string, string> {
   );
   pointer-events: none;
 }
-/* Zehn Segmente als Gravur: dunkle Kerbe mit hellem Grat daneben — der
-   Füllstand wird ablesbar, ohne eine zweite Zahl daneben zu setzen. Statisch,
-   nichts daran bewegt sich. */
+/* Skala statt Segmentraster. Zehn gleichrangige Striche über die Breite
+   ergaben im transform-skalierten Panel (useFitScale, ~0.64 auf Full HD)
+   gebrochene Pixelpositionen: jeder Strich landete anders im Rastergitter und
+   die Reihe las sich unregelmäßig — obwohl sie exakt gleich verteilt war.
+
+   Drei Marken mit klarer Hierarchie lösen das: Viertel als kurze Kerben von
+   Ober- und Unterkante, die Hälfte zusätzlich mit durchgehender Linie. Wenige,
+   erkennbar gesetzte Marken lesen als Skala; das Ablesen auf den Prozentpunkt
+   übernimmt die Zahl daneben. Jede Marke ist eine eigene Hintergrundebene mit
+   fester Pixelbreite und prozentualer Position — nichts wiederholt sich, also
+   kann sich auch nichts aufschaukeln. Statisch, nichts bewegt sich. */
 .vital-bar__ticks {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    to right,
-    transparent 0 calc(10% - 2px),
-    rgba(0, 0, 0, 0.55) calc(10% - 2px) calc(10% - 1px),
-    rgba(255, 228, 176, 0.16) calc(10% - 1px) 10%
-  );
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.55) 0 8px,
+      transparent 8px calc(100% - 8px),
+      rgba(0, 0, 0, 0.55) calc(100% - 8px) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.62) 0 10px,
+      rgba(255, 228, 176, 0.1) 10px calc(100% - 10px),
+      rgba(0, 0, 0, 0.62) calc(100% - 10px) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.55) 0 8px,
+      transparent 8px calc(100% - 8px),
+      rgba(0, 0, 0, 0.55) calc(100% - 8px) 100%
+    );
+  background-size: 2px 100%;
+  background-position:
+    25% 0,
+    50% 0,
+    75% 0;
+  background-repeat: no-repeat;
   pointer-events: none;
-}
-/* Halbmarke: die 50-%-Linie geht durch, die übrigen Kerben bleiben kurz —
-   ein Ankerpunkt für den Blick, ohne den Balken zu zerhacken. */
-.vital-bar__ticks::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  background: rgba(0, 0, 0, 0.7);
-  box-shadow: 1px 0 0 rgba(255, 228, 176, 0.2);
 }
 /* Kritisch: eine rote Ebene pulst über dem Balken — animiert wird allein die
    Opazität, nicht Farbe oder Schatten. */
