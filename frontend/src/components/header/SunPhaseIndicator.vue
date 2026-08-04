@@ -5,16 +5,18 @@ import { useUiStore } from '@/stores/uiStore'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
-  SUN_PHASE_DISPLAY_TOTAL,
   STAR_PHASE_FINAL_INDEX,
   MS_PER_SECOND,
+  STAR_EVOLUTION_TOOLTIP_WIDTH,
+  HEADER_STAT_TOOLTIP_GAP_PX,
+  HEADER_TOOLTIP_CLEAR_SELECTOR,
 } from '@/config/constants'
 import { splitDuration } from '@/utils/format'
-import { useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
+import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
+import StarEvolutionTooltip from './StarEvolutionTooltip.vue'
 
 const solarStore = useSolarUpgradeStore()
 const uiStore = useUiStore()
-const { currentDisplayPhase } = useSunPhaseDisplay()
 
 const isComet = computed(() => solarStore.isCometState)
 
@@ -73,48 +75,59 @@ const remainingText = computed(() => {
   return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`
 })
 
-/** Everything the stripped-down badge no longer shows lives in the tooltip. */
-const tooltip = computed(
-  () =>
-    `Phase ${currentDisplayPhase.value}/${SUN_PHASE_DISPLAY_TOTAL} · ${phaseData.value.name} — ` +
-    `${phaseData.value.astroName} · ` +
-    (dwellComplete.value ? 'ready to evolve' : `${remainingText.value} until evolve`) +
-    ' · open Stats',
-)
+/* Kein `title` mehr am Abzeichen: was der Orb verschweigt, sagt jetzt das
+   Hover-Panel (StarEvolutionTooltip) — inklusive des zweiten Tors, das der
+   Ring gar nicht zeigen kann. Ein nativer Tooltip legte sich sonst darüber. */
 </script>
 
 <template>
-  <button
-    class="sun-phase"
-    :class="{ 'sun-phase--ready': dwellComplete }"
-    :style="{ '--ph-accent': accentColor, '--ph-glow': glowColor }"
-    :title="tooltip"
-    @click="uiStore.setBardTab('bard')"
+  <RpgBadgeTooltip
+    :width="STAR_EVOLUTION_TOOLTIP_WIDTH"
+    :gap="HEADER_STAT_TOOLTIP_GAP_PX"
+    :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
   >
-    <div class="orb-wrap">
-      <div v-if="dwellComplete" class="orb-ripple" aria-hidden="true"></div>
-      <div class="orb" :class="{ 'orb--collapse': isCollapsed }" :style="sunStyle"></div>
-      <svg class="orb-ring" viewBox="0 0 50 50" aria-hidden="true">
-        <circle cx="25" cy="25" r="23" fill="none" stroke="rgba(0, 0, 0, 0.5)" stroke-width="2.2" />
-        <circle
-          cx="25"
-          cy="25"
-          r="23"
-          fill="none"
-          :stroke="dwellComplete ? '#6ec040' : glowColor"
-          stroke-width="2.2"
-          stroke-linecap="round"
-          pathLength="100"
-          stroke-dasharray="100"
-          :stroke-dashoffset="100 - dwellProgress"
-          class="orb-ring-fill"
-          :style="{ '--ring-glow': dwellComplete ? '#6ec040' : glowColor }"
-        />
-      </svg>
-    </div>
+    <button
+      class="sun-phase"
+      :class="{ 'sun-phase--ready': dwellComplete }"
+      :style="{ '--ph-accent': accentColor, '--ph-glow': glowColor }"
+      @click="uiStore.setBardTab('bard')"
+    >
+      <div class="orb-wrap">
+        <div v-if="dwellComplete" class="orb-ripple" aria-hidden="true"></div>
+        <div class="orb" :class="{ 'orb--collapse': isCollapsed }" :style="sunStyle"></div>
+        <svg class="orb-ring" viewBox="0 0 50 50" aria-hidden="true">
+          <circle
+            cx="25"
+            cy="25"
+            r="23"
+            fill="none"
+            stroke="rgba(0, 0, 0, 0.5)"
+            stroke-width="2.2"
+          />
+          <circle
+            cx="25"
+            cy="25"
+            r="23"
+            fill="none"
+            :stroke="dwellComplete ? '#6ec040' : glowColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            pathLength="100"
+            stroke-dasharray="100"
+            :stroke-dashoffset="100 - dwellProgress"
+            class="orb-ring-fill"
+            :style="{ '--ring-glow': dwellComplete ? '#6ec040' : glowColor }"
+          />
+        </svg>
+      </div>
 
-    <span class="phase-timer">{{ dwellComplete ? 'READY' : remainingText }}</span>
-  </button>
+      <span class="phase-timer">{{ dwellComplete ? 'READY' : remainingText }}</span>
+    </button>
+
+    <template #tip>
+      <StarEvolutionTooltip />
+    </template>
+  </RpgBadgeTooltip>
 </template>
 
 <style scoped>

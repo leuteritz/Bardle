@@ -157,6 +157,58 @@ export const SOLAR_CPC_PER_LEVEL = 2
 export const SOLAR_CPS_FLIGHT_BONUS = 0.1
 export const SOLAR_DMG_BONUS = 0.25
 
+/**
+ * Die fünf Kernstrahlen der Sonne — Name, Glyph und Farbe.
+ *
+ * Sie sind das zweite Tor jeder Sternentwicklung (`branchesReadyForEvolve`
+ * verlangt JEDEN Strahl auf mindestens `starPhase + 1`), und genau deshalb
+ * stehen sie an zwei Stellen: als Wurzeln im Star-Forge-Baum und als
+ * Bedingungsliste im Sternen-Tooltip des Headers. Eine zweite Kopie der Namen
+ * würde beim nächsten Umbenennen unweigerlich auseinanderlaufen.
+ *
+ * Die Winkel der Wurzeln stehen NICHT hier, sondern als
+ * `FORGE_ROOT_ANGLES_DEG` in `forge.ts` — sie sind Layout des Baums, keine
+ * Eigenschaft des Strahls. Die Reihenfolge hier ist die Lesereihenfolge der
+ * Liste, nicht die des Rings.
+ */
+export const SOLAR_BRANCHES = [
+  {
+    id: 'flightSpeed',
+    name: 'Flight Speed',
+    icon: 'game-icons:feathered-wing',
+    color: '#e8c040',
+    statLabel: 'CpS Mult.',
+  },
+  {
+    id: 'maxHp',
+    name: 'Max HP',
+    icon: 'game-icons:health-increase',
+    color: '#e05050',
+    statLabel: 'HP Bonus',
+  },
+  {
+    id: 'chimesPerClick',
+    name: 'Chimes / Click',
+    icon: 'game-icons:gold-nuggets',
+    color: '#52b830',
+    statLabel: 'CpC Bonus',
+  },
+  {
+    id: 'chimesPerSecond',
+    name: 'Chimes / Sec',
+    icon: 'game-icons:metronome',
+    color: '#e89840',
+    statLabel: 'CpS Bonus',
+  },
+  {
+    id: 'dmgPerClick',
+    name: 'DMG / Click',
+    icon: 'game-icons:fist',
+    color: '#c060a0',
+    statLabel: 'Dmg Mult.',
+  },
+] as const
+
 // Star Evolution Phases (replaces chimes-threshold radius system)
 export interface StarPhaseData {
   /** Unique Bardle name — one word, so it always fits the header without truncation */
@@ -379,6 +431,36 @@ export const ORBIT_SUN_SCALE_ANCHOR_RADIUS = COMET_STAGE_RADII[COMET_STAGE_RADII
 export const COMET_STAGE_GOLD = [0, 0.2, 0.4, 0.6, 0.8, 1]
 
 export const COMET_MIN_DWELL_SECONDS = 180
+
+// ── Header star-evolution tooltip ──────────────────────────────────────────
+/**
+ * Etwas breiter als das Galaxie- und das Meep-Panel: die Lebenslauf-Schiene
+ * trägt sieben Kugeln nebeneinander, und unter ~380px rücken deren Nummern so
+ * eng zusammen, dass die Kette als Strich statt als Stufenfolge gelesen wird.
+ */
+export const STAR_EVOLUTION_TOOLTIP_WIDTH = 'clamp(380px, 22vw, 520px)'
+/**
+ * Marken des Sternen-Panels — jede genau einmal. Die fünf Kernstrahlen bringen
+ * ihre eigenen Glyphen mit (`SOLAR_BRANCHES`); hier stehen nur die Dinge, für
+ * die es keins gibt. Das Schloss ist ein Bedienzustand und kommt deshalb als
+ * einziges aus `lucide` (siehe „Icons" in CLAUDE.md).
+ *
+ * Bewusst KEIN zweites Sanduhr-Motiv neben `gateTime`: die vier Zeitangaben
+ * unterscheiden sich in Zahnrad, Stoppuhr und Uhr-mit-Plus, damit sie in der
+ * zweispaltigen Zeilenliste nebeneinander unterscheidbar bleiben.
+ */
+export const STAR_EVOLUTION_TOOLTIP_ICONS = {
+  gateTime: 'game-icons:hourglass',
+  gateRays: 'game-icons:sun-radiations',
+  ready: 'game-icons:star-swirl',
+  blocked: 'lucide:lock',
+  timeInPhase: 'game-icons:clockwork',
+  totalAsStar: 'game-icons:star-altar',
+  cometDrift: 'game-icons:comet-spark',
+  longestPhase: 'game-icons:stopwatch',
+  dwellPace: 'game-icons:extra-time',
+  phasesBehind: 'game-icons:spiral-shell',
+} as const
 /** Background star drift is boosted by this factor while in comet state, selling
  *  the impression that the comet races through space. */
 export const COMET_DRIFT_SPEED_MULT = 2.5

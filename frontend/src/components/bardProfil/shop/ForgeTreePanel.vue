@@ -264,6 +264,7 @@ import {
   FORGE_TREE_ZOOM_DEFAULT,
   SUN_PHASE_DISPLAY_OFFSET,
   FORGE_ROOT_ANGLES_DEG,
+  SOLAR_BRANCHES,
   FORGE_ICON_SIZE_ROOT,
   FORGE_ICON_SIZE_BRANCH,
   FORGE_ICON_SIZE_LEAF,
@@ -311,14 +312,18 @@ interface RootDef {
   statLabel: string
 }
 
-const A = FORGE_ROOT_ANGLES_DEG
-const ROOTS: RootDef[] = [
-  { id: 'flightSpeed',     name: 'Flight Speed',   icon: 'game-icons:feathered-wing',  angleDeg: A.flightSpeed,     color: '#e8c040', statLabel: 'CpS Mult.' },
-  { id: 'maxHp',           name: 'Max HP',         icon: 'game-icons:health-increase', angleDeg: A.maxHp,           color: '#e05050', statLabel: 'HP Bonus'  },
-  { id: 'chimesPerClick',  name: 'Chimes / Click', icon: 'game-icons:gold-nuggets',    angleDeg: A.chimesPerClick,  color: '#52b830', statLabel: 'CpC Bonus' },
-  { id: 'chimesPerSecond', name: 'Chimes / Sec',   icon: 'game-icons:metronome',       angleDeg: A.chimesPerSecond, color: '#e89840', statLabel: 'CpS Bonus' },
-  { id: 'dmgPerClick',     name: 'DMG / Click',    icon: 'game-icons:fist',            angleDeg: A.dmgPerClick,     color: '#c060a0', statLabel: 'Dmg Mult.' },
-]
+/* Name, Glyph und Farbe der fünf Strahlen stehen als SOLAR_BRANCHES in
+   constants/sun.ts — der Sternen-Tooltip im Header listet dieselben fünf als
+   Bedingung fürs nächste Evolve. Nur der Winkel ist Layout DIESES Baums und
+   kommt deshalb weiterhin aus FORGE_ROOT_ANGLES_DEG. */
+const ROOTS: RootDef[] = SOLAR_BRANCHES.map((b) => ({
+  id: b.id,
+  name: b.name,
+  icon: b.icon,
+  color: b.color,
+  statLabel: b.statLabel,
+  angleDeg: FORGE_ROOT_ANGLES_DEG[b.id],
+}))
 
 const allNodes = computed<TreeNode[]>(() => {
   const roots: TreeNode[] = ROOTS.map((r) => ({
