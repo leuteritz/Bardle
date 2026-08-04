@@ -152,6 +152,25 @@ export const MINIMAP_TARGET_BASE_R = 6 // target star radius in the far overview
 export const MINIMAP_TARGET_MAX_R = 12 // target star radius at full zoom (arrival crossfade bridges to the arrival sun)
 export const MINIMAP_WAIT_SUN_R = 26 // centered player sun on the role-selection screen
 
+// ── Minimap arrival view (camera docked at the reached star system) ─────────
+// Geometry of the little star system drawn once the champion star is reached.
+// The outermost orbit plus its planet must stay inside half the 440px panel —
+// GAP + (slots-1) * STEP + PLANET_R * glow must not exceed ~215px.
+export const MINIMAP_ARRIVAL_STAR_R = 46 // central star radius
+// GAP × SQUASH must exceed STAR_R + a bit: the innermost lane belongs to the
+// champion planet, and at the top/bottom of a squashed ellipse it would
+// otherwise sit permanently behind the star body.
+export const MINIMAP_ARRIVAL_ORBIT_GAP = 60 // star surface → first orbit
+export const MINIMAP_ARRIVAL_ORBIT_STEP = 26 // radial distance between two orbits
+export const MINIMAP_ARRIVAL_ORBIT_SQUASH = 0.62 // orbit ellipse ry / rx
+export const MINIMAP_ARRIVAL_PLANET_R = 12 // radius of an active planet on the innermost extra orbit
+export const MINIMAP_ARRIVAL_PLANET_STEP = 1.6 // radius growth per orbit further out
+export const MINIMAP_ARRIVAL_CHAMP_PLANET_R = 22 // champion planet (always the innermost slot)
+export const MINIMAP_ARRIVAL_CLEARED_SCALE = 0.58 // a freed planet shrinks to this fraction …
+export const MINIMAP_ARRIVAL_CLEARED_ALPHA = 0.42 // … and dims to this alpha (slot keeps its orbit)
+export const MINIMAP_ARRIVAL_PREVIEW_MIN = 3 // preview slot count before the star exists
+export const MINIMAP_ARRIVAL_PREVIEW_RANGE = 2 // … plus 0..RANGE-1 extra preview slots
+
 // ── FPS-Zähler (neben der Signatur unten links) ─────────────────────────────
 /** Ab hier läuft es rund — der Zähler steht grün. */
 export const FPS_GOOD_THRESHOLD = 55

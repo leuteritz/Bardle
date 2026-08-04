@@ -42,6 +42,17 @@ import {
   MINIMAP_GALAXY_CORE_RADIUS,
   MINIMAP_ROUTE_ARROW_SIZE,
   MINIMAP_ROUTE_ARROW_GAP,
+  MINIMAP_ARRIVAL_STAR_R,
+  MINIMAP_ARRIVAL_ORBIT_GAP,
+  MINIMAP_ARRIVAL_ORBIT_STEP,
+  MINIMAP_ARRIVAL_ORBIT_SQUASH,
+  MINIMAP_ARRIVAL_PLANET_R,
+  MINIMAP_ARRIVAL_PLANET_STEP,
+  MINIMAP_ARRIVAL_CHAMP_PLANET_R,
+  MINIMAP_ARRIVAL_CLEARED_SCALE,
+  MINIMAP_ARRIVAL_CLEARED_ALPHA,
+  MINIMAP_ARRIVAL_PREVIEW_MIN,
+  MINIMAP_ARRIVAL_PREVIEW_RANGE,
   HYPERSPACE_FLASH_AT_MS,
   HYPERSPACE_FADEOUT_AT_MS,
   HYPERSPACE_END_AT_MS,
@@ -738,7 +749,7 @@ export default defineComponent({
 
       // Pulse animation
       const pulse = 0.5 + 0.5 * Math.sin(nowMs / 900)
-      const ARRIVAL_STAR_R = 46
+      const ARRIVAL_STAR_R = MINIMAP_ARRIVAL_STAR_R
 
       // Outer corona (large diffuse glow)
       const coroR = ARRIVAL_STAR_R * (3.6 + 0.4 * pulse) * hoverGlowMult
@@ -768,15 +779,20 @@ export default defineComponent({
       ctx.fillStyle = innerHalo
       ctx.fill()
 
-      // Build planet slot list
+      // Build planet slot list — every slot of the star keeps its orbit, also
+      // once it is freed. A cleared slot is drawn small and dim instead of
+      // vanishing: the remaining planets would otherwise shift one orbit
+      // inward on every kill, and the x/y counter in the HUD would have
+      // nothing to point at.
       const galaxySeed = galaxyStore.currentGalaxy * 10007
-      const rawSlots = championStar?.planetSlots.filter((s) => !s.cleared) ?? []
+      const rawSlots = championStar?.planetSlots ?? []
 
       type ArrivalSlot = {
         orbitDirection: 1 | -1
         planetId?: string
         type?: PlanetType
         isChampionPlanet?: boolean
+        cleared?: boolean
       }
       let slots: ArrivalSlot[]
       if (rawSlots.length > 0) {
@@ -785,12 +801,14 @@ export default defineComponent({
           planetId: s.planetId,
           type: s.type,
           isChampionPlanet: s.isChampionPlanet,
+          cleared: s.cleared,
         }))
       } else {
         const previewRng = seededRng(
           galaxyStore.currentGalaxy * 997 + galaxyStore.starsRescued * 31,
         )
-        const previewCount = 3 + Math.floor(previewRng() * 2)
+        const previewCount =
+          MINIMAP_ARRIVAL_PREVIEW_MIN + Math.floor(previewRng() * MINIMAP_ARRIVAL_PREVIEW_RANGE)
         slots = Array.from({ length: previewCount }, () => ({
           orbitDirection: (previewRng() < 0.5 ? 1 : -1) as 1 | -1,
         }))
@@ -799,10 +817,14 @@ export default defineComponent({
       // Compute planet positions for this frame (speed boosted when hovered)
       const planetData = slots.map((slot, idx) => {
         const isChamp = slot.isChampionPlanet ?? false
-        const planetR = isChamp ? 18 : 6 + idx * 2.5
+        const cleared = slot.cleared ?? false
+        const fullR = isChamp
+          ? MINIMAP_ARRIVAL_CHAMP_PLANET_R
+          : MINIMAP_ARRIVAL_PLANET_R + idx * MINIMAP_ARRIVAL_PLANET_STEP
+        const planetR = cleared ? fullR * MINIMAP_ARRIVAL_CLEARED_SCALE : fullR
 
-        const orbitRx = ARRIVAL_STAR_R + 28 + idx * 26
-        const orbitRy = orbitRx * 0.48
+        const orbitRx = ARRIVAL_STAR_R + MINIMAP_ARRIVAL_ORBIT_GAP + idx * MINIMAP_ARRIVAL_ORBIT_STEP
+        const orbitRy = orbitRx * MINIMAP_ARRIVAL_ORBIT_SQUASH
 
         // Sync with main UI: read live angle from useStarSystem; fallback to time-based
         const liveAngle = slot.planetId ? livePlanetAngles.get(slot.planetId) : undefined
@@ -820,18 +842,22 @@ export default defineComponent({
           orbitRx,
           orbitRy,
           planetR,
+          cleared,
+          isChamp,
           idx,
         }
       })
 
-      // Orbit ellipses (dashed, subtle — slightly more visible when hovered)
-      planetData.forEach(({ orbitRx, orbitRy }) => {
+      // Orbit ellipses (dashed, subtle — slightly more visible when hovered).
+      // The champion's orbit carries the gold of its portrait ring so the lane
+      // that matters is readable even while the planet is behind the star.
+      planetData.forEach(({ orbitRx, orbitRy, isChamp, cleared }) => {
         ctx.save()
-        ctx.globalAlpha = isHovered ? 0.18 : 0.1
+        ctx.globalAlpha = cleared ? 0.05 : isChamp ? (isHovered ? 0.32 : 0.2) : isHovered ? 0.18 : 0.1
         ctx.beginPath()
         ctx.ellipse(cx, cy, orbitRx, orbitRy, 0, 0, Math.PI * 2)
-        ctx.strokeStyle = 'rgba(140, 160, 220, 1)'
-        ctx.lineWidth = 0.7
+        ctx.strokeStyle = isChamp ? 'rgba(232, 192, 64, 1)' : 'rgba(140, 160, 220, 1)'
+        ctx.lineWidth = isChamp ? 1 : 0.7
         ctx.setLineDash([3, 5])
         ctx.stroke()
         ctx.setLineDash([])
@@ -839,15 +865,25 @@ export default defineComponent({
       })
 
       // Behind-planets (py < cy) drawn first at reduced opacity (brighter when hovered)
-      planetData.forEach(({ px, py, planetR, idx }) => {
+      planetData.forEach(({ px, py, planetR, idx, cleared }) => {
         if (py >= cy) return
         const slot = slots[idx]
         const typePal = slot.type ? PLANET_TYPE_PALETTES[slot.type] : undefined
+        const alpha = cleared ? MINIMAP_ARRIVAL_CLEARED_ALPHA : hoverPlanetAlpha
         ctx.save()
-        ctx.globalAlpha = hoverPlanetAlpha
-        drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued', false, typePal)
+        ctx.globalAlpha = alpha
+        drawPlanet(
+          ctx,
+          px,
+          py,
+          planetR,
+          galaxySeed + idx * 17,
+          cleared ? 'rescued' : 'unrescued',
+          false,
+          cleared ? undefined : typePal,
+        )
         ctx.restore()
-        drawChampionPortrait(ctx, px, py, planetR, slot, hoverPlanetAlpha)
+        if (!cleared) drawChampionPortrait(ctx, px, py, planetR, slot, alpha)
       })
 
       // Star body (on top of behind-planets, below foreground-planets)
@@ -876,10 +912,17 @@ export default defineComponent({
       ctx.shadowBlur = 0
 
       // Foreground planets (py >= cy) at full opacity
-      planetData.forEach(({ px, py, planetR, idx }) => {
+      planetData.forEach(({ px, py, planetR, idx, cleared }) => {
         if (py < cy) return
         const slot = slots[idx]
         const typePal = slot.type ? PLANET_TYPE_PALETTES[slot.type] : undefined
+        if (cleared) {
+          ctx.save()
+          ctx.globalAlpha = MINIMAP_ARRIVAL_CLEARED_ALPHA
+          drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'rescued')
+          ctx.restore()
+          return
+        }
         drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued', false, typePal)
         drawChampionPortrait(ctx, px, py, planetR, slot, 1)
       })

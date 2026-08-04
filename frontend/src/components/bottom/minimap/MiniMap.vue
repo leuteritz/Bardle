@@ -13,6 +13,9 @@
           <!-- ── HUD-Panel: Ankunft · Entfernung · Tempo ── -->
           <MiniMapHudPanel />
 
+          <!-- ── Angedockt am Stern: Despawn-Timer + aktive Planeten ── -->
+          <MiniMapArrivalHud v-if="isArrived" />
+
           <!-- ── Rescue progress: saved / required champion stars ──
                Driven by the exact same trigger as the arrival countdown HUD
                (championTravelState === 'traveling') so both instrument rows
@@ -129,6 +132,7 @@ import {
 } from '../../../config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
 import MiniMapHudPanel from './MiniMapHudPanel.vue'
+import MiniMapArrivalHud from './MiniMapArrivalHud.vue'
 import TierUnlockPanel from './TierUnlockPanel.vue'
 
 const CORNER_R = 20
@@ -136,7 +140,7 @@ const TIER_FLASH_MS = MINIMAP_TIER_FLASH_MS
 
 export default defineComponent({
   name: 'MiniMap',
-  components: { MiniMapCanvas, MiniMapHudPanel, TierUnlockPanel },
+  components: { MiniMapCanvas, MiniMapHudPanel, MiniMapArrivalHud, TierUnlockPanel },
   setup() {
     const galaxyStore = useGalaxyStore()
     const starGroupStore = useStarGroupStore()
