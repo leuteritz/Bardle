@@ -20,7 +20,7 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     cap: 'P',
     label: 'Pause',
     description:
-      'Freezes the cosmos exactly as clicking outside the window does — orbit, battles and every timer hold still until you return.',
+      'Freezes the cosmos exactly as clicking outside the window does — orbit, battles and every timer hold still. Press it again, hit Escape or click anywhere to return.',
     icon: 'lucide:pause',
     category: 'game',
     inHud: true,
@@ -39,6 +39,14 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
 
 /** Beschriftung der Pause-Keycap, solange das Spiel steht. */
 export const KEYBIND_RESUME_LABEL = 'Resume'
+
+/**
+ * Beschriftung der Escape-Keycap im Pause-Hinweis. Escape steht bewusst NICHT
+ * in KEYBINDINGS: sie schließt im ganzen Spiel das jeweils oberste Overlay und
+ * gehört damit keinem einzelnen Befehl — in der Kürzel-Leiste hätte sie eine
+ * feste Bedeutung vorgetäuscht, die sie nicht hat.
+ */
+export const PAUSE_ESCAPE_CAP = 'Esc'
 
 /** Wie lange eine Keycap nach dem Auslösen gedrückt gezeichnet bleibt. */
 export const KEYBIND_FLASH_MS = 220

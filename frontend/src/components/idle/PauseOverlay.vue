@@ -343,6 +343,8 @@
           <span class="pause-hint">
             press
             <KeyCap :cap="pauseCap" size="sm" class="pause-hint__cap" />
+            <span class="pause-hint__or">or</span>
+            <KeyCap :cap="PAUSE_ESCAPE_CAP" size="sm" class="pause-hint__cap" />
             or click anywhere to continue
           </span>
           </div>
@@ -364,6 +366,7 @@ import { usePlayerStore } from '@/stores/playerStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
+import { useUiStore } from '@/stores/uiStore'
 import { formatNumber } from '@/config/numberFormat'
 import { MATERIALS, materialIconMd } from '@/config/materials'
 import {
@@ -384,6 +387,7 @@ import {
   ROLE_BY_KEY,
   ROLE_ART_MD_SUFFIX,
   KEYBINDINGS,
+  PAUSE_ESCAPE_CAP,
 } from '@/config/constants'
 import { splitDuration } from '@/utils/format'
 import { pauseDustStyle } from '@/utils/particleField'
@@ -420,6 +424,7 @@ onKeybinding('pause', () => {
   togglePause()
 })
 const starGroupStore = useStarGroupStore()
+const uiStore = useUiStore()
 
 function computeSunDiameter(): number {
   return Math.round(
@@ -477,6 +482,21 @@ const pauseStartChimes = ref(0)
 const pauseTick = ref(0)
 let pauseInterval: ReturnType<typeof setInterval> | null = null
 
+/**
+ * Escape beendet die Pause — dieselbe Taste, die im ganzen Spiel jedes Overlay
+ * schließt, und deshalb bewusst KEIN Eintrag in der Kürzel-Registry: sie ist
+ * kontextabhängig und gehört keinem einzelnen Befehl.
+ *
+ * Liegt das Controls-Panel darüber, schließt der erste Druck erst dieses —
+ * Escape arbeitet sich von oben nach unten durch die Ebenen, statt zwei davon
+ * gleichzeitig zu schließen.
+ */
+function onEscape(event: KeyboardEvent) {
+  if (event.key !== 'Escape') return
+  if (uiStore.isControlsOpen) return
+  resumeGame()
+}
+
 watch(
   isPaused,
   (paused) => {
@@ -487,12 +507,14 @@ watch(
       pauseInterval = setInterval(() => {
         pauseTick.value++
       }, 1000)
+      window.addEventListener('keydown', onEscape)
     } else {
       gameStore.setPauseState(false)
       if (pauseInterval !== null) {
         clearInterval(pauseInterval)
         pauseInterval = null
       }
+      window.removeEventListener('keydown', onEscape)
     }
   },
   { immediate: true },
@@ -501,6 +523,7 @@ watch(
 onUnmounted(() => {
   if (pauseInterval !== null) clearInterval(pauseInterval)
   window.removeEventListener('resize', onResize)
+  window.removeEventListener('keydown', onEscape)
 })
 
 const accumulatedChimes = computed(() => {
@@ -1938,6 +1961,11 @@ function particleStyle(i: number): Record<string, string> {
 }
 .pause-hint__cap {
   font-style: normal;
+}
+/* Das trennende „or" steht enger an den beiden Tasten als der Rest der Zeile —
+   sonst zerfiele die Alternative in drei gleich weit entfernte Teile. */
+.pause-hint__or {
+  margin: 0 -2px;
 }
 
 /* ── Transitions ──────────────────────────────────────── */
