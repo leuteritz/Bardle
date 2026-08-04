@@ -849,15 +849,17 @@ export default defineComponent({
       })
 
       // Orbit ellipses (dashed, subtle — slightly more visible when hovered).
-      // The champion's orbit carries the gold of its portrait ring so the lane
-      // that matters is readable even while the planet is behind the star.
+      // Die Bahn des Champion-Planeten bleibt bewusst ungezeichnet: sie läuft
+      // dicht am Sternkörper entlang, und der Ring würde sich dort mit Korona
+      // und Portraitrahmen überlagern.
       planetData.forEach(({ orbitRx, orbitRy, isChamp, cleared }) => {
+        if (isChamp) return
         ctx.save()
-        ctx.globalAlpha = cleared ? 0.05 : isChamp ? (isHovered ? 0.32 : 0.2) : isHovered ? 0.18 : 0.1
+        ctx.globalAlpha = cleared ? 0.05 : isHovered ? 0.18 : 0.1
         ctx.beginPath()
         ctx.ellipse(cx, cy, orbitRx, orbitRy, 0, 0, Math.PI * 2)
-        ctx.strokeStyle = isChamp ? 'rgba(232, 192, 64, 1)' : 'rgba(140, 160, 220, 1)'
-        ctx.lineWidth = isChamp ? 1 : 0.7
+        ctx.strokeStyle = 'rgba(140, 160, 220, 1)'
+        ctx.lineWidth = 0.7
         ctx.setLineDash([3, 5])
         ctx.stroke()
         ctx.setLineDash([])
