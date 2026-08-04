@@ -7,20 +7,34 @@
  * Die Bezeichnungen stehen ausgeschrieben, solange die Zeile sie trägt, und
  * fallen sonst auf die Kurzform zurück — gemessen, nicht geraten, siehe
  * measureFit().
+ *
+ * Jede Kachel trägt ihr eigenes Hover-Panel — dieselbe Bauform wie am
+ * Fortschrittsbalken darunter, aber je ein eigener Inhalt: die Universe-Kachel
+ * zeigt das Panel des Balkens (sie benennt dieselbe Sache), Galaxy und Meeps
+ * je ihr eigenes. Die früheren `title`-Attribute sind damit verschwunden: ein
+ * nativer Tooltip legte sich sonst über das Panel.
  */
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { formatNumberCompact } from '@/config/numberFormat'
-import { universes } from '@/config/universes'
 import { toRoman } from '@/utils/format'
 import {
   HEADER_UNIVERSE_ICON,
+  HEADER_TOOLTIP_CLEAR_SELECTOR,
+  HEADER_STAT_TOOLTIP_GAP_PX,
+  UNIVERSE_TOOLTIP_WIDTH,
+  GALAXY_TOOLTIP_WIDTH,
+  MEEP_TOOLTIP_WIDTH,
   MEEP_COUNTUP_STEPS,
   MEEP_COUNTUP_INTERVAL_MS,
   MEEP_RISING_HOLD_MS,
 } from '@/config/constants'
+import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
+import UniverseProgressTooltip from './UniverseProgressTooltip.vue'
+import GalaxyProgressTooltip from './GalaxyProgressTooltip.vue'
+import MeepProgressTooltip from './MeepProgressTooltip.vue'
 
 defineProps<{
   /** Die Fortschrittszeile wird gehovert — die Meep-Kachel leuchtet mit. */
@@ -35,13 +49,6 @@ const galaxyStore = useGalaxyStore()
 /** Römisch statt arabisch: die Universe-Ebene steht damit sichtbar über der
     Galaxie-Zählung und bleibt selbst bei XII kurz genug für die Kachel. */
 const universeRoman = computed(() => toRoman(gameStore.currentUniverse))
-
-/* Ohne Zählung „x von y": die Reise hat kein angekündigtes Ende, und eine
-   Nennerzahl im Header läse sich als Fortschrittsbalken über alle Universen. */
-const universeTitle = computed(() => {
-  const name = universes[gameStore.currentUniverse - 1]?.name ?? 'Unknown'
-  return `Universe ${universeRoman.value} — ${name}`
-})
 
 /* ── Meep-Zähler ─────────────────────────────────────────────────────── */
 const displayMeeps = ref(gameStore.meeps)
@@ -146,54 +153,82 @@ onUnmounted(() => {
 
 <template>
   <div ref="statsEl" class="uni-stats">
-    <div class="uni-tile uni-tile--universe" :title="universeTitle">
-      <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Universe' : 'Uni' }}</span>
-      <span class="tile-label label-probe" aria-hidden="true">Universe</span>
-      <div class="tile-row">
-        <Icon
-          :icon="HEADER_UNIVERSE_ICON"
-          width="24"
-          height="24"
-          class="tile-icon uv-icon"
-          aria-hidden="true"
-        />
-        <span v-ink-center.x.y class="tile-value uv-value">{{ universeRoman }}</span>
-      </div>
-    </div>
-
-    <div class="uni-tile uni-tile--galaxy" title="Current galaxy">
-      <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Galaxy' : 'Gal' }}</span>
-      <span class="tile-label label-probe" aria-hidden="true">Galaxy</span>
-      <div class="tile-row">
-        <img src="/img/galaxy-far-128.png" class="tile-icon gx-icon" alt="" aria-hidden="true" />
-        <span v-ink-center.x.y class="tile-value gx-value">{{ galaxyStore.currentGalaxy }}</span>
-      </div>
-    </div>
-
-    <div
-      class="uni-tile uni-tile--meep"
-      :class="{ 'uni-tile--rising': isIncreasing, 'uni-tile--lit': lit }"
-      title="Meeps — spend them in the Skill Tree"
-      @mouseenter="emit('meep-hover', true)"
-      @mouseleave="emit('meep-hover', false)"
+    <!-- Die Kachel benennt dieselbe Sache wie der Balken darunter — also
+         dasselbe Panel, statt eines zweiten mit denselben Zahlen. -->
+    <RpgBadgeTooltip
+      :width="UNIVERSE_TOOLTIP_WIDTH"
+      :gap="HEADER_STAT_TOOLTIP_GAP_PX"
+      :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
     >
-      <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Meeps' : 'Meep' }}</span>
-      <span class="tile-label label-probe" aria-hidden="true">Meeps</span>
-      <div class="tile-row">
-        <img
-          src="/img/BardAbilities/BardMeep.png"
-          class="tile-icon meep-icon"
-          alt=""
-          aria-hidden="true"
-        />
-        <!-- Kurzform (max. 4 Zeichen) wie in der Materialleiste: die drei
-             Kacheln sind gleich breit, und "999.9M" allein bräuchte davon so
-             viel, dass die Galaxy-Kachel nicht mehr mittig stehen könnte. -->
-        <span v-ink-center.x.y class="tile-value meep-value">{{
-          formatNumberCompact(displayMeeps)
-        }}</span>
+      <div class="uni-tile uni-tile--universe">
+        <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Universe' : 'Uni' }}</span>
+        <span class="tile-label label-probe" aria-hidden="true">Universe</span>
+        <div class="tile-row">
+          <Icon
+            :icon="HEADER_UNIVERSE_ICON"
+            width="24"
+            height="24"
+            class="tile-icon uv-icon"
+            aria-hidden="true"
+          />
+          <span v-ink-center.x.y class="tile-value uv-value">{{ universeRoman }}</span>
+        </div>
       </div>
-    </div>
+      <template #tip>
+        <UniverseProgressTooltip />
+      </template>
+    </RpgBadgeTooltip>
+
+    <RpgBadgeTooltip
+      :width="GALAXY_TOOLTIP_WIDTH"
+      :gap="HEADER_STAT_TOOLTIP_GAP_PX"
+      :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
+    >
+      <div class="uni-tile uni-tile--galaxy">
+        <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Galaxy' : 'Gal' }}</span>
+        <span class="tile-label label-probe" aria-hidden="true">Galaxy</span>
+        <div class="tile-row">
+          <img src="/img/galaxy-far-128.png" class="tile-icon gx-icon" alt="" aria-hidden="true" />
+          <span v-ink-center.x.y class="tile-value gx-value">{{ galaxyStore.currentGalaxy }}</span>
+        </div>
+      </div>
+      <template #tip>
+        <GalaxyProgressTooltip />
+      </template>
+    </RpgBadgeTooltip>
+
+    <RpgBadgeTooltip
+      :width="MEEP_TOOLTIP_WIDTH"
+      :gap="HEADER_STAT_TOOLTIP_GAP_PX"
+      :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
+    >
+      <div
+        class="uni-tile uni-tile--meep"
+        :class="{ 'uni-tile--rising': isIncreasing, 'uni-tile--lit': lit }"
+        @mouseenter="emit('meep-hover', true)"
+        @mouseleave="emit('meep-hover', false)"
+      >
+        <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Meeps' : 'Meep' }}</span>
+        <span class="tile-label label-probe" aria-hidden="true">Meeps</span>
+        <div class="tile-row">
+          <img
+            src="/img/BardAbilities/BardMeep.png"
+            class="tile-icon meep-icon"
+            alt=""
+            aria-hidden="true"
+          />
+          <!-- Kurzform (max. 4 Zeichen) wie in der Materialleiste: die drei
+               Kacheln sind gleich breit, und "999.9M" allein bräuchte davon so
+               viel, dass die Galaxy-Kachel nicht mehr mittig stehen könnte. -->
+          <span v-ink-center.x.y class="tile-value meep-value">{{
+            formatNumberCompact(displayMeeps)
+          }}</span>
+        </div>
+      </div>
+      <template #tip>
+        <MeepProgressTooltip />
+      </template>
+    </RpgBadgeTooltip>
   </div>
 </template>
 

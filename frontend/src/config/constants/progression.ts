@@ -123,7 +123,6 @@ export const UNIVERSE_MILESTONE_FLASH_MS = 1600
 // Wider than the material panel: this one carries two stat blocks side by side,
 // and a narrower panel would break them back into one very tall column.
 export const UNIVERSE_TOOLTIP_WIDTH = 'clamp(380px, 23vw, 540px)'
-export const UNIVERSE_TOOLTIP_GAP_PX = 12
 /**
  * Zeilen-Icons des Universums-Tooltips. Jedes Glyph steht im Panel genau
  * einmal — die beiden Blöcke liegen nebeneinander, ein zweimal verwendetes
@@ -171,3 +170,64 @@ export const UNIVERSE_TOOLTIP_MEEP_SCALE = 1.3
 // Archived universe runs kept in the save. Only the fastest and the latest are
 // read back, so the list exists as history, not as a growing ledger.
 export const UNIVERSE_RUN_HISTORY_LIMIT = 12
+
+// ── Header galaxy tooltip ──────────────────────────────────────────────────
+/**
+ * Schmaler als das Universums-Panel: die Galaxie zeigt eine Lage statt einer
+ * Bilanz — ein Ziel, ein Balken, ein paar Kennzahlen. Auf 540px liefen die
+ * Zeilenpaare auseinander, statt als Block gelesen zu werden.
+ */
+export const GALAXY_TOOLTIP_WIDTH = 'clamp(360px, 21vw, 500px)'
+/** Dasselbe Artwork wie die Galaxy-Kachel darüber — der Kopf zitiert den Anker. */
+export const GALAXY_TOOLTIP_IMAGE = '/img/galaxy-far-128.png'
+/**
+ * Zeilen- und Statusmarken des Galaxie-Panels. Wie im Universums-Panel steht
+ * jedes Glyph im Panel genau einmal: Statuszeile und Zeilenblöcke sind
+ * gleichzeitig sichtbar, ein zweimal verwendetes Motiv wäre dort nicht mehr
+ * zuzuordnen. Das Schloss ist ein Bedienzustand und kommt deshalb als einziges
+ * aus `lucide` (siehe „Icons" in CLAUDE.md).
+ */
+export const GALAXY_TOOLTIP_ICONS = {
+  starsRescued: 'game-icons:star-satellites',
+  starsLost: 'game-icons:falling-star',
+  successRate: 'game-icons:archery-target',
+  tier: 'game-icons:stairs-goal',
+  starLevel: 'game-icons:star-formation',
+  travel: 'game-icons:space-shuttle',
+  roleChoice: 'game-icons:choice',
+  championReady: 'game-icons:star-pupil',
+  boss: 'game-icons:star-skull',
+  escorts: 'game-icons:starfighter',
+  cores: 'game-icons:black-hole-bolas',
+  timeHere: 'game-icons:sands-of-time',
+  bestGalaxy: 'game-icons:stopwatch',
+  lastGalaxy: 'game-icons:backward-time',
+  galaxiesCharted: 'game-icons:galaxy',
+  warpReady: 'game-icons:portal',
+  locked: 'lucide:lock',
+} as const
+/**
+ * Wie viele Versuchsmarken die Kette unter dem Sternenbalken höchstens zeigt.
+ * Darüber wird von links gekürzt (die jüngsten Versuche bleiben stehen): bei
+ * einem Wert pro Versuch reißt die Kette sonst auf Full HD in eine zweite
+ * Zeile, sobald eine Galaxie mit vielen Fehlschlägen läuft.
+ */
+export const GALAXY_ATTEMPT_STRIP_MAX = 24
+
+// ── Header meep tooltip ────────────────────────────────────────────────────
+/** Wie das Galaxie-Panel: eine Spalte Zweige, keine zwei Bilanzblöcke. */
+export const MEEP_TOOLTIP_WIDTH = 'clamp(360px, 21vw, 500px)'
+/**
+ * Marken des Meep-Panels — jede genau einmal. Die Meeps und Chimes selbst
+ * bringen ihr Artwork mit (`UNIVERSE_TOOLTIP_IMAGES`), hier stehen nur die
+ * Dinge, für die es keins gibt.
+ */
+export const MEEP_TOOLTIP_ICONS = {
+  power: 'game-icons:muscle-up',
+  tree: 'game-icons:tree-growth',
+  learnable: 'game-icons:light-bulb',
+  spent: 'game-icons:pay-money',
+  costPerMeep: 'game-icons:price-tag',
+  eta: 'game-icons:hourglass',
+  locked: 'lucide:lock',
+} as const

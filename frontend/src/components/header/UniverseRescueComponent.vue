@@ -6,7 +6,7 @@ import {
   UNIVERSE_MILESTONE_STEP_PERCENT,
   UNIVERSE_MILESTONE_FLASH_MS,
   UNIVERSE_TOOLTIP_WIDTH,
-  UNIVERSE_TOOLTIP_GAP_PX,
+  HEADER_STAT_TOOLTIP_GAP_PX,
   HEADER_TOOLTIP_CLEAR_SELECTOR,
 } from '@/config/constants'
 import UniverseStatsRow from './UniverseStatsRow.vue'
@@ -63,7 +63,7 @@ onUnmounted(() => {
          das Hover-Panel — und ein nativer Tooltip legte sich sonst darüber. -->
     <RpgBadgeTooltip
       :width="UNIVERSE_TOOLTIP_WIDTH"
-      :gap="UNIVERSE_TOOLTIP_GAP_PX"
+      :gap="HEADER_STAT_TOOLTIP_GAP_PX"
       :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
     >
       <div

@@ -158,7 +158,12 @@ onUnmounted(() => {
 
 .rpg-btt {
   position: fixed;
-  z-index: 200;
+  /* Über der Bottom-Bar (z-index 10000, dem obersten dauerhaften Layer): die
+     Header-Panels sind hoch genug, um bis in die Kommandozeile hinunterzu-
+     reichen, und wurden dort vom Champion-Rail überdeckt. Ein Tooltip ist ein
+     flüchtiger Zeigerzustand — er gehört immer nach ganz oben, sonst hängt
+     seine Lesbarkeit davon ab, wie lang sein Inhalt gerade ist. */
+  z-index: 10001;
   min-width: 200px;
   max-width: min(320px, calc(100vw - 16px));
   background: #111008;

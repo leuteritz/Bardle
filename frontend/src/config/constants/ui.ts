@@ -419,6 +419,11 @@ export const BADGE_TOOLTIP_CARET_INSET_PX = 12
 // the header packs its blocks tightly (the material grid alone stacks two rows),
 // so a panel hugging its anchor would land on top of a neighbouring block.
 export const HEADER_TOOLTIP_CLEAR_SELECTOR = '.header-bar'
+// Anchor→panel gap of the four header stat panels (universe bar, universe tile,
+// galaxy tile, meep tile). One value for all of them: they clear the SAME edge
+// (the header bar), so a differing gap would let neighbouring panels open at
+// different heights while the pointer travels along the tile row.
+export const HEADER_STAT_TOOLTIP_GAP_PX = 12
 // Larger gap for the center-chimes level tooltip: the arc-level badge hangs
 // below the chimes box and would otherwise be covered by the panel.
 export const CENTER_CHIMES_TOOLTIP_GAP_PX = 40

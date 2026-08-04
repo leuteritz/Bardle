@@ -52,6 +52,48 @@ export const MEEP_ADD_DELAY_MS = 100
 
 export const MEEP_POWER_MULTIPLIER = 100
 
+/**
+ * Wie die gefalteten Baum-Effekte im Meep-Panel des Headers gelesen werden.
+ * Der Store liefert einen Beutel roher Zahlen (`meepTreeStore.fx`) — welcher
+ * Schlüssel welche Beschriftung trägt und in welcher Einheit er steht, weiß
+ * nur diese Tabelle. Sie gibt zugleich die Reihenfolge vor: erst was der
+ * Spieler dauernd sieht (Produktion, Klick), dann Kampf, Überleben, und zuletzt
+ * das, was nur zwischendurch greift (Offline, Expeditionen).
+ *
+ * `kind` entscheidet die Schreibweise:
+ *   mult  — Faktor über 1, als „×1,25" gezeigt
+ *   lower — Faktor unter 1, wo klein gut ist (Kosten, Dauer, Schaden) → „−20 %"
+ *   pct   — Bruchteil, als Prozent gezeigt
+ *   flat / rate / hours — additiv, mit der jeweiligen Einheit
+ * Neutral (1 bzw. 0) bleibt ungezeigt — das Panel listet nur, was wirkt.
+ */
+export type MeepTreeEffectKind = 'mult' | 'lower' | 'pct' | 'flat' | 'rate' | 'hours'
+
+export interface MeepTreeEffectRowDef {
+  key: string
+  label: string
+  kind: MeepTreeEffectKind
+}
+
+export const MEEP_TREE_EFFECT_ROWS: readonly MeepTreeEffectRowDef[] = [
+  { key: 'cpsMult', label: 'Chimes per second', kind: 'mult' },
+  { key: 'cpcMult', label: 'Chimes per click', kind: 'mult' },
+  { key: 'doubleClickChance', label: 'Double-strike chance', kind: 'pct' },
+  { key: 'cpcFromCpsPct', label: 'Click gains of CpS', kind: 'pct' },
+  { key: 'meepCostMult', label: 'Chimes per meep', kind: 'lower' },
+  { key: 'meepPowerMult', label: 'Power per meep', kind: 'mult' },
+  { key: 'powerBonus', label: 'Flat battle power', kind: 'flat' },
+  { key: 'championDpsMult', label: 'Champion orbit DPS', kind: 'mult' },
+  { key: 'bossDamageMult', label: 'Damage to planet bosses', kind: 'mult' },
+  { key: 'materialDropMult', label: 'Material drop chance', kind: 'mult' },
+  { key: 'hpRegenPerSec', label: 'Health regeneration', kind: 'rate' },
+  { key: 'damageTakenMult', label: 'Damage taken', kind: 'lower' },
+  { key: 'offlineEarningsMult', label: 'Offline earnings', kind: 'mult' },
+  { key: 'offlineMaxHoursBonus', label: 'Offline cap', kind: 'hours' },
+  { key: 'expeditionRewardMult', label: 'Expedition rewards', kind: 'mult' },
+  { key: 'expeditionSpeedMult', label: 'Expedition duration', kind: 'lower' },
+] as const
+
 // ── Star Forge (Shop tab) ─────────────────────────────────────────────────────
 // Tree geometry — the tree lives on a square stage, nodes placed on 3 polar rings.
 export const FORGE_STAGE_SIZE = 820
