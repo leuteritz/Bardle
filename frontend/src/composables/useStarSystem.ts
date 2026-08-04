@@ -3,7 +3,6 @@ import type { Ref } from 'vue'
 import { useStarGroupStore } from '../stores/starGroupStore'
 import { usePlanetBossStore } from '../stores/planetBossStore'
 import { useGalaxyStore } from '../stores/galaxyStore'
-import { useWindowFocus } from './useWindowFocus'
 import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions, activeStarCombatState } from '../utils/liveState'
 import { getOrbitPos, orbitBehindArc, orbitBehindProgress, starBodySize } from '../utils/geometry'
@@ -93,7 +92,6 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
   const bossStore = usePlanetBossStore()
   const galaxyStore = useGalaxyStore()
   const planetShopStore = usePlanetShopStore()
-  const { windowFocused } = useWindowFocus()
   const { isRenderingPaused, isIdleRenderingPaused, isIdleSimulationPaused } = useRenderingPaused()
 
   const starRenders = shallowRef<StarRenderEntry[]>([])
@@ -155,12 +153,14 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
   // Resource-Stars werden komplett im gameStore.tick gespawnt/despawnt (läuft
   // auch während Pause) — hier kein Watcher mehr nötig.
 
-  watch(windowFocused, (focused) => {
-    if (focused) {
-      if (galaxyStore.pendingChampionStar) {
-        starGroupStore.spawnChampionStar()
-        galaxyStore.pendingChampionStar = false
-      }
+  // Vorgemerkter Champion-Stern: die Gegenprobe zum Watcher oben, der ihn bei
+  // stehendem Idle-Layer zurückstellt. Beide lesen dasselbe Signal — der Stern
+  // erscheint also erst, wenn das Spiel wirklich wieder läuft, egal ob es am
+  // Fensterfokus, am Hintergrund-Tab oder an der Pause-Taste lag.
+  watch(isRenderingPaused, (paused) => {
+    if (!paused && galaxyStore.pendingChampionStar) {
+      starGroupStore.spawnChampionStar()
+      galaxyStore.pendingChampionStar = false
     }
   })
 

@@ -19,6 +19,7 @@
 //   fx            193 Konstanten
 //   ui            149 Konstanten
 //   sigil          92 Konstanten
+//   keybindings     5 Konstanten
 
 export * from './core'
 export * from './progression'
@@ -34,3 +35,4 @@ export * from './forge'
 export * from './fx'
 export * from './ui'
 export * from './sigil'
+export * from './keybindings'

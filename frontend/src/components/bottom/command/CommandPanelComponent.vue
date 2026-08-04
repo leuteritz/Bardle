@@ -361,7 +361,11 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
    Debug-Element vom warmen HUD absetzt. Temporär — kommt wieder raus. */
 .cmd-admin-cd-btn {
   position: fixed;
-  bottom: calc(var(--hud-panel-size, 330px) + 8px);
+  /* Auf der Ankerlinie steht seit den Tastenkürzeln die Keycap-Leiste
+     (KeybindHud) — die gehört dem Spieler, dieser Debug-Knopf stapelt sich
+     darüber. `--kb-hud-h` veröffentlicht die Leiste selbst; fehlt sie, greift
+     0px und der Knopf sitzt wieder exakt auf der Höhe des ©-Overlays. */
+  bottom: calc(var(--hud-panel-size, 330px) + 8px + var(--kb-hud-h, 0px) + 8px);
   right: calc(20px * var(--hud-scale, 1));
   z-index: 9999;
   display: flex;

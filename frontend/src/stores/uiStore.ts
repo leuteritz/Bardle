@@ -28,6 +28,10 @@ export const useUiStore = defineStore('ui', () => {
   const battleReturnStarId = ref<string | null>(null)
   const hoveredChampionSlotIndex = ref<number | null>(null)
   const hoveredPlanetSlotId = ref<string | null>(null)
+  // Controls-Panel (Übersicht aller Tastenkürzel). Liegt hier statt in der
+  // Komponente, weil es aus zwei Richtungen geöffnet wird: über das Kürzel
+  // selbst und über die Keycap-Leiste am unteren Bildrand.
+  const isControlsOpen = ref(false)
 
   /**
    * Rollen- und Planeten-Hover markieren dieselbe Karte bzw. Kachel im Command
@@ -140,6 +144,14 @@ export const useUiStore = defineStore('ui', () => {
     hoveredPlanetSlotId.value = id
   }
 
+  function toggleControls() {
+    isControlsOpen.value = !isControlsOpen.value
+  }
+
+  function closeControls() {
+    isControlsOpen.value = false
+  }
+
   return {
     bardActiveTab,
     rolesActiveSlot,
@@ -172,5 +184,8 @@ export const useUiStore = defineStore('ui', () => {
     setHoveredChampionRole,
     setHoveredChampionSlotIndex,
     setHoveredPlanetSlotId,
+    isControlsOpen,
+    toggleControls,
+    closeControls,
   }
 })

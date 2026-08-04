@@ -1481,3 +1481,38 @@ export interface JungleBuffDef {
   multiplier: number
   durationMs: number
 }
+
+// ── Tastenkürzel ─────────────────────────────────────────────────────────────
+// Die Registry selbst liegt als KEYBINDINGS in config/constants/keybindings.ts.
+// Ein Eintrag dort erscheint automatisch im Controls-Panel; `inHud` entscheidet
+// zusätzlich über die Keycap in der schwebenden Leiste.
+
+export type KeybindId = 'pause' | 'controls'
+
+export type KeybindCategoryId = 'game' | 'interface'
+
+export interface KeybindCategory {
+  id: KeybindCategoryId
+  label: string
+  icon: string
+}
+
+export interface KeybindDef {
+  id: KeybindId
+  /**
+   * Akzeptierte `KeyboardEvent.key`-Werte, klein geschrieben verglichen.
+   * Bewusst `key` und nicht `code`: Zeichen wie `?` liegen je nach Layout auf
+   * einer anderen physischen Taste, und genau das Zeichen steht auf der Keycap.
+   */
+  keys: string[]
+  /** Beschriftung der Keycap in HUD und Panel. */
+  cap: string
+  /** Kurzform neben der Keycap. */
+  label: string
+  /** Ein Satz im Controls-Panel — was die Taste bewirkt. */
+  description: string
+  icon: string
+  category: KeybindCategoryId
+  /** true = Keycap steht dauerhaft in der HUD-Leiste. */
+  inHud: boolean
+}

@@ -29,6 +29,8 @@ import DrifterLayer from '@/components/idle/drifter/DrifterLayer.vue'
 import DrifterInfoCard from '@/components/idle/drifter/DrifterInfoCard.vue'
 import ActiveBuffBar from '@/components/idle/drifter/ActiveBuffBar.vue'
 import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
+import KeybindHud from '@/components/keybinds/KeybindHud.vue'
+import KeybindPanel from '@/components/keybinds/KeybindPanel.vue'
 
 const gameStore = useGameStore()
 useGalaxyTheme()
@@ -103,6 +105,12 @@ watch(
 
     <EncyclopediaPanel />
     <BottomBarComponent />
+
+    <!-- Tastenkürzel: die Keycap-Leiste sitzt unten rechts als Gegenstück zur
+         Signatur-Zeile links, das Panel listet alle Kürzel auf. Das Panel ist
+         immer montiert — es hält den Handler für sein eigenes Kürzel. -->
+    <KeybindHud />
+    <KeybindPanel />
 
     <!-- Signatur und FPS-Zähler sitzen als ein Paar unten links über der
          Minimap — die obere linke Ecke gehört der Auto-Pick-Meldung. -->

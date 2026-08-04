@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="pause-fade">
       <div
-        v-if="!windowFocused"
+        v-if="isPaused"
         class="pause-overlay"
         role="dialog"
         aria-modal="true"
@@ -338,7 +338,13 @@
             </svg>
             Resume journey
           </button>
-          <span class="pause-hint">or click anywhere to continue</span>
+          <!-- Die HUD-Leiste mit demselben Kürzel liegt unter diesem Overlay —
+               deshalb steht die Taste hier noch einmal, in derselben Optik. -->
+          <span class="pause-hint">
+            press
+            <KeyCap :cap="pauseCap" size="sm" class="pause-hint__cap" />
+            or click anywhere to continue
+          </span>
           </div>
         </div>
       </div>
@@ -349,7 +355,8 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useWindowFocus } from '@/composables/useWindowFocus'
+import { useGamePause } from '@/composables/useGamePause'
+import { onKeybinding } from '@/composables/useKeybindings'
 import { useFitScale } from '@/composables/useFitScale'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'
@@ -376,6 +383,7 @@ import {
   LOOT_MONOGRAM_MAX_CHARS,
   ROLE_BY_KEY,
   ROLE_ART_MD_SUFFIX,
+  KEYBINDINGS,
 } from '@/config/constants'
 import { splitDuration } from '@/utils/format'
 import { pauseDustStyle } from '@/utils/particleField'
@@ -383,8 +391,15 @@ import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
+import KeyCap from '@/components/keybinds/KeyCap.vue'
 
-const { windowFocused } = useWindowFocus()
+// Die Pause hat zwei Quellen — Fenster ohne Fokus und das Kürzel des Spielers.
+// Beide laufen in useGamePause zusammen; dieses Overlay kennt nur noch das
+// Ergebnis. Die Komponente bleibt immer montiert (v-if steckt im Teleport),
+// deshalb ist sie auch der richtige Ort für den Kürzel-Handler.
+const { isPaused, resumeGame, togglePause } = useGamePause()
+
+const pauseCap = computed(() => KEYBINDINGS.find((b) => b.id === 'pause')?.cap ?? 'P')
 
 const stageEl = ref<HTMLElement | null>(null)
 const panelEl = ref<HTMLElement | null>(null)
@@ -397,6 +412,13 @@ const gameStore = useGameStore()
 const playerStore = usePlayerStore()
 const planetShopStore = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
+
+// Die Rollenwahl hält das Spiel bereits an und liegt über allem — eine zweite
+// Pause darüber wäre nur ein Overlay über einem Overlay.
+onKeybinding('pause', () => {
+  if (galaxyStore.pendingRoleSelection) return
+  togglePause()
+})
 const starGroupStore = useStarGroupStore()
 
 function computeSunDiameter(): number {
@@ -456,9 +478,9 @@ const pauseTick = ref(0)
 let pauseInterval: ReturnType<typeof setInterval> | null = null
 
 watch(
-  windowFocused,
-  (focused) => {
-    if (!focused) {
+  isPaused,
+  (paused) => {
+    if (paused) {
       gameStore.setPauseState(true)
       pauseStartChimes.value = gameStore.chimes
       pauseTick.value = 0
@@ -690,7 +712,7 @@ const callouts = computed<PauseCallout[]>(() => {
 })
 
 function unpause() {
-  window.focus()
+  resumeGame()
 }
 
 function particleStyle(i: number): Record<string, string> {
@@ -1902,11 +1924,20 @@ function particleStyle(i: number): Record<string, string> {
   outline: 2px solid #f0d060;
   outline-offset: 3px;
 }
+/* Die Zeile trägt jetzt eine gezeichnete Taste — sie steht deshalb als Reihe
+   auf einer Mittelachse statt als reiner Fließtext, und der Schriftgrad ist
+   knapp größer, damit die Keycap nicht wie ein Fremdkörper wirkt. */
 .pause-hint {
-  font-size: clamp(0.62rem, 0.85vw, 0.7rem);
-  color: rgba(216, 200, 160, 0.35);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(0.74rem, 0.95vw, 0.88rem);
+  color: rgba(216, 200, 160, 0.4);
   letter-spacing: 0.08em;
   font-style: italic;
+}
+.pause-hint__cap {
+  font-style: normal;
 }
 
 /* ── Transitions ──────────────────────────────────────── */

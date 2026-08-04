@@ -7,7 +7,7 @@
     v-show="!prefersReducedMotion"
     aria-hidden="true"
   >
-    <div :class="{ 'nebulas-paused': !windowFocused || nebulasPaused || frozen }">
+    <div :class="{ 'nebulas-paused': isPaused || nebulasPaused || frozen }">
       <div class="nebula nebula-1"></div>
       <div class="nebula nebula-2"></div>
       <div class="nebula nebula-3"></div>
@@ -19,7 +19,7 @@
     <canvas
       ref="starCanvas"
       class="star-canvas"
-      :class="{ 'star-canvas-hidden': !windowFocused }"
+      :class="{ 'star-canvas-hidden': isPaused }"
     ></canvas>
 
     <BackgroundComets :pause-when-idle-hidden="true" />
@@ -27,9 +27,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useStarBackground } from '../../composables/starBackground'
-import { useWindowFocus } from '../../composables/useWindowFocus'
+import { useGamePause } from '../../composables/useGamePause'
 import BackgroundComets from '../ui/BackgroundComets.vue'
 
 const props = withDefaults(
@@ -43,7 +43,9 @@ const props = withDefaults(
 )
 
 const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground({ frozen: props.frozen })
-const { windowFocused, onFocusChange } = useWindowFocus()
+// Der Hintergrund ruht, sobald das Spiel steht — gleich ob das Fenster den
+// Fokus verloren hat oder der Spieler das Kürzel gedrückt hat.
+const { isPaused } = useGamePause()
 
 const NEBULA_IDLE_TIMEOUT = 30_000
 const nebulasPaused = ref(false)
@@ -64,27 +66,25 @@ function startIdleTimer() {
 }
 
 function resetIdleTimer() {
-  if (!windowFocused.value) return
+  if (isPaused.value) return
   nebulasPaused.value = false
   startIdleTimer()
 }
 
-let removeFocusListener: (() => void) | null = null
-
-onMounted(() => {
-  if (windowFocused.value) {
+watch(isPaused, (paused) => {
+  if (paused) {
+    clearIdleTimer()
+    nebulasPaused.value = true
+  } else {
+    nebulasPaused.value = false
     startIdleTimer()
   }
+})
 
-  removeFocusListener = onFocusChange((focused) => {
-    if (focused) {
-      nebulasPaused.value = false
-      startIdleTimer()
-    } else {
-      clearIdleTimer()
-      nebulasPaused.value = true
-    }
-  })
+onMounted(() => {
+  if (!isPaused.value) {
+    startIdleTimer()
+  }
 
   window.addEventListener('pointermove', resetIdleTimer, { passive: true })
   window.addEventListener('keydown', resetIdleTimer)
@@ -92,7 +92,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  removeFocusListener?.()
   window.removeEventListener('pointermove', resetIdleTimer)
   window.removeEventListener('keydown', resetIdleTimer)
   window.removeEventListener('pointerdown', resetIdleTimer)
