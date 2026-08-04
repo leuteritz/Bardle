@@ -348,8 +348,8 @@
               Resume journey
             </span>
             <span class="continue-btn__keys" aria-hidden="true">
-              <KeyCap :cap="pauseCap" size="sm" />
-              <KeyCap :cap="PAUSE_ESCAPE_CAP" size="sm" />
+              <KeyCap :cap="pauseCap" size="sm" tone="inherit" />
+              <KeyCap :cap="PAUSE_ESCAPE_CAP" size="sm" tone="inherit" />
             </span>
           </button>
           </div>

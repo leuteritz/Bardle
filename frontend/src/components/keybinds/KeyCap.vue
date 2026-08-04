@@ -1,5 +1,12 @@
 <template>
-  <span class="keycap" :class="[`keycap--${size}`, { 'keycap--pressed': pressed, 'keycap--lit': lit }]">
+  <span
+    class="keycap"
+    :class="[
+      `keycap--${size}`,
+      `keycap--${tone}`,
+      { 'keycap--pressed': pressed, 'keycap--lit': lit },
+    ]"
+  >
     <span class="keycap__face">{{ cap }}</span>
   </span>
 </template>
@@ -20,8 +27,17 @@ withDefaults(
     pressed?: boolean
     /** true hebt die Taste dauerhaft hervor (aktiver Zustand, z. B. Pause an). */
     lit?: boolean
+    /**
+     * `solid` = eigenständige Taste mit dunklem Körper (freistehend im HUD,
+     * im Controls-Panel).
+     * `inherit` = die Taste zieht Rahmen und Schrift aus dem `color` ihres
+     * Umfelds und bleibt sonst durchscheinend — für Tasten INNERHALB eines
+     * gefärbten Elements, etwa im Resume-Knopf des Pause-Overlays. Ein dunkler
+     * Körper säße dort als Fremdkörper auf goldenem Grund.
+     */
+    tone?: 'solid' | 'inherit'
   }>(),
-  { size: 'md', pressed: false, lit: false },
+  { size: 'md', pressed: false, lit: false, tone: 'solid' },
 )
 </script>
 
@@ -75,6 +91,30 @@ withDefaults(
 .keycap--lit .keycap__face {
   background: linear-gradient(to bottom, #6a4a12, #3a2606);
   color: #ffe9a8;
+}
+
+/* ── Ton „inherit": Taste im gefärbten Umfeld ─────────────
+   Alles kommt aus dem geerbten `color` des Elternteils — Rahmen, Füllung und
+   Schrift sind dieselbe Farbe in drei Stärken. Dadurch trägt die Taste die
+   Farbgebung ihres Knopfes mit, auch wenn dieser sie beim Überfahren ändert,
+   und braucht keine eigene Palette. Der plastische Aufbau bleibt, fällt aber
+   flacher aus: auf gefärbtem Grund liest schon eine Andeutung als Taste. */
+.keycap--inherit {
+  background: transparent;
+  border-color: color-mix(in srgb, currentColor 40%, transparent);
+  box-shadow: none;
+}
+.keycap--inherit .keycap__face {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, currentColor 25%, transparent);
+  color: currentColor;
+  text-shadow: none;
+  transform: translateY(-1px);
+}
+/* Muss NACH der Ton-Regel stehen und höher gewichtet sein, sonst gewänne dort
+   der Ruhe-Transform und die Taste ließe sich nicht mehr eindrücken. */
+.keycap--inherit.keycap--pressed .keycap__face {
+  transform: translateY(0);
 }
 
 /* ── Größen ───────────────────────────────────────────── */
