@@ -193,11 +193,17 @@ export const FPS_POOR_THRESHOLD = 30
 export const PAUSE_MATERIAL_COLUMNS = 5
 export const PAUSE_MATERIAL_ROWS = 2
 
-// ── Pause-Overlay: Vitality-Leiste ─────────────────────────────────────────
+// ── Pause-Overlay: Vitalitäts-Leiste ───────────────────────────────────────
 /** Ab diesem Anteil gilt die Sonne als unversehrt (grün). */
 export const PAUSE_HP_HEALTHY_PERCENT = 50
 /** Darunter wird die Leiste rot und pulst. */
 export const PAUSE_HP_CRIT_PERCENT = 25
+// Breitenreserve der HP-Zahl: Anteile des Maximums, die als unsichtbare
+// Messmuster mitgerendert werden. Aus dem Maximum allein lässt sich die Breite
+// nicht ableiten — formatNumber wechselt innerhalb einer Einheitenstufe die
+// Länge („2.6K" gegen „2.34K") und unterhalb davon nochmals („999"). Die
+// Stützstellen decken beide Fälle ab; die Spalte nimmt die breiteste.
+export const PAUSE_HP_WIDTH_PROBES = [1, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1]
 
 // ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
 // Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,

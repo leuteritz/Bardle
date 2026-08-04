@@ -111,9 +111,26 @@
               <span class="vital-bar__pulse" aria-hidden="true" />
             </div>
 
-            <span class="vital-strip__value" :style="{ '--hp-chars': hpValueChars }">
-              {{ formatNumber(Math.round(playerStore.currentHP))
-              }}<span class="vital-strip__max">/{{ formatNumber(playerStore.maxHP) }}</span>
+            <!-- Schrägstrich und Maximum stehen fest: der aktuelle Wert sitzt
+                 rechtsbündig in einer Spalte, deren Breite die Messmuster
+                 vorgeben — nicht der Wert selbst. Alle Muster und der Wert
+                 liegen in DERSELBEN Rasterzelle, die Spalte nimmt also die
+                 breiteste Darstellung, die hier je auftreten kann. Damit
+                 wandert nichts mehr, wenn HP eine Stelle gewinnt oder
+                 verliert. -->
+            <span class="vital-strip__value">
+              <span class="vital-strip__cur">
+                <span
+                  v-for="(probe, i) in hpWidthProbes"
+                  :key="i"
+                  class="vital-strip__probe"
+                  aria-hidden="true"
+                  >{{ probe }}</span
+                >
+                <span class="vital-strip__now">{{
+                  formatNumber(Math.round(playerStore.currentHP))
+                }}</span> </span
+              ><span class="vital-strip__max">/{{ formatNumber(playerStore.maxHP) }}</span>
             </span>
           </div>
 
@@ -353,6 +370,7 @@ import {
   PAUSE_MATERIAL_ROWS,
   PAUSE_HP_HEALTHY_PERCENT,
   PAUSE_HP_CRIT_PERCENT,
+  PAUSE_HP_WIDTH_PROBES,
   MATERIAL_RARITY_COLOR,
   MATERIAL_RARITY_ORDER,
   LOOT_MONOGRAM_MAX_CHARS,
@@ -422,12 +440,16 @@ const hpColor = computed(() => {
 const isCrit = computed(() => hpPercent.value <= PAUSE_HP_CRIT_PERCENT)
 
 /**
- * Stellenzahl des Maximalwerts — daraus reserviert die Wertspalte ihre Breite.
- * Fest verdrahtet müsste die Reserve den größten je erreichbaren HP-Pool
- * abdecken und würde dem Balken bei „64/100" ein Drittel seiner Länge stehlen;
- * der aktuelle Wert wird nie länger als sein eigenes Maximum.
+ * Unsichtbare Messmuster, die die Breite der Wertspalte festlegen: derselbe
+ * Zahlenformatierer über den ganzen Wertebereich. Sie liegen im Raster auf
+ * derselben Zelle wie der Live-Wert, die Spalte nimmt also die breiteste
+ * Darstellung — gemessen in echten Pixeln statt in geschätzten Zeichenbreiten.
+ * Dadurch stehen Schrägstrich und Maximum fest, egal wie viele Stellen der
+ * aktuelle Wert gerade hat.
  */
-const hpValueChars = computed(() => formatNumber(playerStore.maxHP).length)
+const hpWidthProbes = computed(() =>
+  PAUSE_HP_WIDTH_PROBES.map((f) => formatNumber(Math.round(playerStore.maxHP * f))),
+)
 
 const pauseStartChimes = ref(0)
 const pauseTick = ref(0)
@@ -1124,15 +1146,12 @@ function particleStyle(i: number): Record<string, string> {
   }
 }
 
-/* Linksbündig: die Zahl beginnt unmittelbar an der Balkenkante, statt am
-   rechten Panelrand zu kleben. Die Mindestbreite bleibt trotzdem reserviert —
-   sonst wanderte die Balkenkante mit, sobald die Zahl beim Heilen oder
-   Schaden eine Stelle kürzer wird. Bemessen wird sie an der Stellenzahl des
-   Maximums (--hp-chars): der aktuelle Wert kann nie länger werden, und der
-   Rest der Zeile gehört dem Balken. */
+/* Die Zahl beginnt unmittelbar an der Balkenkante — der gesamte Block hat eine
+   feste Breite, damit weder er noch die Balkenkante wandert. */
 .vital-strip__value {
-  min-width: calc(var(--hp-chars, 3) * 1em + 0.45em);
-  text-align: left;
+  display: inline-flex;
+  align-items: baseline;
+  flex-shrink: 0;
   font-size: clamp(1.05rem, 1.65vw, 1.4rem);
   font-weight: 800;
   line-height: 1;
@@ -1140,6 +1159,24 @@ function particleStyle(i: number): Record<string, string> {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-shadow: 0 0 16px color-mix(in srgb, var(--hp-txt) 45%, transparent);
+}
+/* Ein-Zellen-Raster: Messmuster und Live-Wert liegen übereinander, die Spalte
+   nimmt die breiteste Darstellung. Damit steht der Schrägstrich fest, ohne
+   dass irgendwo eine Zeichenbreite geschätzt werden müsste — der Browser misst
+   die echten Glyphen der Schrift. Rechtsbündig, damit der Wert am
+   Schrägstrich klebt statt von ihm wegzurücken. */
+.vital-strip__cur {
+  display: grid;
+  grid-template-areas: 'hp';
+  justify-items: end;
+}
+.vital-strip__cur > * {
+  grid-area: hp;
+}
+/* Nur zur Breitenmessung da: nimmt Platz ein, wird aber nicht gezeichnet. */
+.vital-strip__probe {
+  visibility: hidden;
+  pointer-events: none;
 }
 .vital-strip__max {
   font-size: 0.66em;
