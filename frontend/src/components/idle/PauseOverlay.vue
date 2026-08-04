@@ -67,28 +67,23 @@
             {{ sunPhase.name }}
           </span>
 
-          <!-- Vitality — Leiste in Panelbreite, gleiche Fassung wie die
-               Auto-Battle-Leiste weiter unten. Vier Ebenen im Balken, alle
+          <!-- Vitalität der Sonne — ohne Beschriftung: das Herz-Siegel links und
+               die Zahl unmittelbar an der Balkenkante sagen dasselbe, und der
+               freigewordene Platz gehört dem Balken. Sechs Ebenen, alle
                compositor-freundlich (nur transform/opacity bewegen sich):
-               Nachlaufspur, Füllung, wandernde Kante, statische Segmentstriche. -->
+               Nachlaufspur, Füllung mit durchlaufendem Energiepuls, wandernde
+               Kante mit Flare, statische Gravur, Krit-Puls. -->
           <div
             class="vital-strip"
             :class="hpColor"
             role="img"
             :aria-label="`Health ${Math.round(playerStore.currentHP)} of ${playerStore.maxHP}`"
           >
-            <span class="vital-strip__label">
-              <Icon
-                icon="game-icons:hearts"
-                width="17"
-                height="17"
-                class="vital-strip__icon"
-                aria-hidden="true"
-              />
-              Vitality
+            <span class="vital-sigil" :class="{ 'vital-sigil--crit': isCrit }" aria-hidden="true">
+              <Icon icon="game-icons:hearts" width="24" height="24" class="vital-sigil__icon" />
             </span>
 
-            <div class="vital-bar" :class="{ 'vital-bar--crit': hpPercent <= HP_CRIT_PERCENT }">
+            <div class="vital-bar" :class="{ 'vital-bar--crit': isCrit }">
               <!-- Pro-Wert gesetzte Transforms stehen inline am jeweiligen
                    Element, nicht als Variable am Balken — sonst rechnet der
                    ganze Subtree bei jeder HP-Änderung neu. -->
@@ -101,7 +96,13 @@
                 class="vital-bar__fill"
                 :style="{ transform: `scaleX(${hpRatio})` }"
                 aria-hidden="true"
-              />
+              >
+                <!-- Der Puls läuft INNERHALB der Füllung: sie ist der einzige
+                     Container, der ohne zweite Maske exakt am Füllstand endet.
+                     Er wird mit scaleX der Füllung schmaler — bei wenig HP
+                     bleibt ein hektisches Zucken statt einer breiten Welle. -->
+                <span class="vital-bar__spark" />
+              </span>
               <!-- Vollbreite Ebene, nach links geschoben: ihr rechter Rand ist
                    die Kante. Als border-right am Fill wüchse der Strich mit
                    1/scaleX auf, je leerer der Balken wird. -->
@@ -114,7 +115,7 @@
               <span class="vital-bar__pulse" aria-hidden="true" />
             </div>
 
-            <span class="vital-strip__value">
+            <span class="vital-strip__value" :style="{ '--hp-chars': hpValueChars }">
               {{ formatNumber(Math.round(playerStore.currentHP))
               }}<span class="vital-strip__max">/{{ formatNumber(playerStore.maxHP) }}</span>
             </span>
@@ -421,7 +422,16 @@ const hpColor = computed(() => {
   return 'hp--red'
 })
 
-const HP_CRIT_PERCENT = PAUSE_HP_CRIT_PERCENT
+/** Kritisch: Balken pulst, das Herz-Siegel schlägt. */
+const isCrit = computed(() => hpPercent.value <= PAUSE_HP_CRIT_PERCENT)
+
+/**
+ * Stellenzahl des Maximalwerts — daraus reserviert die Wertspalte ihre Breite.
+ * Fest verdrahtet müsste die Reserve den größten je erreichbaren HP-Pool
+ * abdecken und würde dem Balken bei „64/100" ein Drittel seiner Länge stehlen;
+ * der aktuelle Wert wird nie länger als sein eigenes Maximum.
+ */
+const hpValueChars = computed(() => formatNumber(playerStore.maxHP).length)
 
 const pauseStartChimes = ref(0)
 const pauseTick = ref(0)
@@ -892,40 +902,81 @@ function particleStyle(i: number): Record<string, string> {
   text-transform: uppercase;
   text-shadow: 0 0 18px currentColor;
 }
-/* ── Vitality-Leiste ──────────────────────────────────────
+/* ── Vitalitäts-Leiste ────────────────────────────────────
    Bewusst ohne eigene Fassung: das Panel trägt darunter bereits drei umrandete
    Blöcke, ein vierter Kasten direkt unter der Sonne hätte die Leiste von ihr
    getrennt. So bleibt sie die Lebensanzeige DER Sonne — die Struktur trägt der
-   Balken selbst über seinen eingelassenen Rand. Der schlanke Zuschnitt hält
-   außerdem die Panelhöhe klein, an der der Fit-Scale des Overlays hängt.
+   Balken selbst über seinen eingelassenen Rand.
 
-   Der Balken besteht aus vier gestapelten Ebenen, damit nichts außer transform
-   und opacity animiert wird: Nachlaufspur, Füllung, Kante, Segmentstriche. */
+   Die Beschriftung ist weg: „Vitality" stand als Wort neben einem Herz und
+   einer Zahl, die beide dasselbe sagen. Der Platz gehört jetzt dem Balken, der
+   dafür fast doppelt so hoch ist wie zuvor.
+
+   Der Balken besteht aus gestapelten Ebenen, damit nichts außer transform und
+   opacity animiert wird: Nachlaufspur, Füllung (mit Puls darin), Kante,
+   Gravur, Krit-Puls. */
 .vital-strip {
   display: flex;
   align-items: center;
-  gap: clamp(10px, 1.4vw, 16px);
+  /* Eng: die Zahl soll unmittelbar an der Balkenkante beginnen, nicht am
+     rechten Panelrand kleben. */
+  gap: clamp(8px, 1.1vw, 12px);
   width: 100%;
-  height: 26px;
+  height: 38px;
   /* Die Leiste gehört optisch zur Sonne darüber, nicht zur Kachelreihe
      darunter — der halbe Panel-Gap rückt sie näher an das Phasen-Label. */
   margin-top: calc(-1 * clamp(6px, 1vh, 10px));
   padding: 0 2px;
 }
-.vital-strip__label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.55);
-  white-space: nowrap;
-}
-.vital-strip__icon {
-  color: var(--hp-txt, #cc6050);
+
+/* Herz-Siegel statt Beschriftung — eine Plakette in der Fassung des Panels,
+   deren Innenglut die Zustandsfarbe trägt. Statischer Schein, kein Filter in
+   einer laufenden Animation. */
+.vital-sigil {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
+  border-radius: 5px;
+  border: 1px solid rgba(122, 78, 32, 0.85);
+  background:
+    radial-gradient(
+      circle at 50% 34%,
+      color-mix(in srgb, var(--hp-hi) 24%, transparent) 0%,
+      transparent 72%
+    ),
+    linear-gradient(to bottom, #1e1006, #0b0906);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 150, 0.12),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
+    0 0 16px color-mix(in srgb, var(--hp-hi) 16%, transparent);
+}
+.vital-sigil__icon {
+  color: var(--hp-txt, #cc6050);
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--hp-txt) 55%, transparent));
+}
+/* Kritisch: das Siegel schlägt. Animiert wird ausschließlich transform — der
+   Schein darunter bleibt statisch stehen. */
+.vital-sigil--crit {
+  animation: sigil-beat 1.1s ease-in-out infinite;
+}
+@keyframes sigil-beat {
+  0%,
+  62%,
+  100% {
+    transform: scale(1);
+  }
+  16% {
+    transform: scale(1.16);
+  }
+  32% {
+    transform: scale(1.03);
+  }
+  46% {
+    transform: scale(1.1);
+  }
 }
 
 /* Zustandsfarben liegen am Streifen, nicht am Balken: Füllung, Kante und
@@ -946,17 +997,40 @@ function particleStyle(i: number): Record<string, string> {
   --hp-txt: #ff8a7a;
 }
 
+/* Leerer Teil des Balkens ist nicht einfach schwarz: eine feine Schraffur
+   liegt darin, damit die Fehlmenge als beschädigter Rumpf liest statt als
+   Loch. Rein statisch. */
 .vital-bar {
   position: relative;
   flex: 1;
   min-width: 0;
-  height: 16px;
+  height: 28px;
   overflow: hidden;
-  border-radius: 4px;
-  background: #0b0906;
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 224, 170, 0.028) 0 5px,
+      transparent 5px 11px
+    ),
+    #0b0906;
   box-shadow:
-    inset 0 0 0 1px rgba(122, 78, 32, 0.7),
-    inset 0 2px 6px rgba(0, 0, 0, 0.85);
+    inset 0 0 0 1px rgba(122, 78, 32, 0.8),
+    inset 0 2px 8px rgba(0, 0, 0, 0.9),
+    0 0 18px color-mix(in srgb, var(--hp-hi) 13%, transparent);
+}
+/* Fassung über allen Ebenen: der eingelassene Rand bleibt sichtbar, auch wenn
+   die Füllung bis an die Kante läuft. */
+.vital-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 224, 170, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.65),
+    inset 0 0 0 1px rgba(122, 78, 32, 0.55);
+  pointer-events: none;
 }
 .vital-bar__fill,
 .vital-bar__ghost {
@@ -967,10 +1041,45 @@ function particleStyle(i: number): Record<string, string> {
 /* Der Verlauf läuft SENKRECHT — waagerecht würde ihn scaleX mitstauchen und
    die Farbe hinge am Füllstand statt am Zustand. */
 .vital-bar__fill {
+  overflow: hidden;
   background:
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent 46%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.05) 44%, transparent 54%),
     linear-gradient(to bottom, var(--hp-hi), var(--hp-lo));
   transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Energiepuls, der durch die verbliebene Vitalität läuft — der einzige
+   Dauerlauf im Balken und reines transform/opacity. */
+.vital-bar__spark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 18%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent
+  );
+  animation: vital-spark 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  pointer-events: none;
+}
+@keyframes vital-spark {
+  0% {
+    transform: translateX(-110%);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  62% {
+    opacity: 1;
+  }
+  74%,
+  100% {
+    transform: translateX(560%);
+    opacity: 0;
+  }
 }
 /* Nachlaufspur unter der Füllung: sie bleibt beim Treffer kurz stehen und zieht
    dann nach — der Verlust ist einen Moment lang als heller Streifen sichtbar,
@@ -984,21 +1093,52 @@ function particleStyle(i: number): Record<string, string> {
 .vital-bar__edge {
   position: absolute;
   inset: 0;
-  border-right: 2px solid rgba(255, 255, 255, 0.7);
+  border-right: 2px solid rgba(255, 255, 255, 0.85);
   transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
-/* Zehn Segmente: der Füllstand wird ablesbar, ohne eine zweite Zahl daneben
-   zu setzen. Statisch — nichts daran bewegt sich. */
+/* Flare hinter der Kante: der Übergang von Füllung zu Leere ist damit kein
+   harter Schnitt mehr, sondern eine glühende Bruchstelle. Liegt innerhalb der
+   Kanten-Ebene und wandert mit ihr — kein zweiter gebundener Wert. */
+.vital-bar__edge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 30px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--hp-hi) 60%, transparent)
+  );
+  pointer-events: none;
+}
+/* Zehn Segmente als Gravur: dunkle Kerbe mit hellem Grat daneben — der
+   Füllstand wird ablesbar, ohne eine zweite Zahl daneben zu setzen. Statisch,
+   nichts daran bewegt sich. */
 .vital-bar__ticks {
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
     to right,
-    transparent 0 calc(10% - 1px),
-    rgba(0, 0, 0, 0.5) calc(10% - 1px) 10%
+    transparent 0 calc(10% - 2px),
+    rgba(0, 0, 0, 0.55) calc(10% - 2px) calc(10% - 1px),
+    rgba(255, 228, 176, 0.16) calc(10% - 1px) 10%
   );
   pointer-events: none;
+}
+/* Halbmarke: die 50-%-Linie geht durch, die übrigen Kerben bleiben kurz —
+   ein Ankerpunkt für den Blick, ohne den Balken zu zerhacken. */
+.vital-bar__ticks::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.7);
+  box-shadow: 1px 0 0 rgba(255, 228, 176, 0.2);
 }
 /* Kritisch: eine rote Ebene pulst über dem Balken — animiert wird allein die
    Opazität, nicht Farbe oder Schatten. */
@@ -1022,22 +1162,28 @@ function particleStyle(i: number): Record<string, string> {
   }
 }
 
-/* Feste Mindestbreite: der Balken darf nicht springen, wenn die Zahl beim
-   Heilen oder Schaden eine Stelle kürzer wird. */
+/* Linksbündig: die Zahl beginnt unmittelbar an der Balkenkante, statt am
+   rechten Panelrand zu kleben. Die Mindestbreite bleibt trotzdem reserviert —
+   sonst wanderte die Balkenkante mit, sobald die Zahl beim Heilen oder
+   Schaden eine Stelle kürzer wird. Bemessen wird sie an der Stellenzahl des
+   Maximums (--hp-chars): der aktuelle Wert kann nie länger werden, und der
+   Rest der Zeile gehört dem Balken. */
 .vital-strip__value {
-  min-width: 6em;
-  text-align: right;
-  font-size: clamp(0.9rem, 1.3vw, 1.1rem);
+  min-width: calc(var(--hp-chars, 3) * 1em + 0.45em);
+  text-align: left;
+  font-size: clamp(1.05rem, 1.65vw, 1.4rem);
   font-weight: 800;
   line-height: 1;
   color: var(--hp-txt, #ece0c0);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  text-shadow: 0 0 16px color-mix(in srgb, var(--hp-txt) 45%, transparent);
 }
 .vital-strip__max {
-  font-size: 0.72em;
+  font-size: 0.66em;
   font-weight: 600;
   color: rgba(216, 200, 160, 0.5);
+  text-shadow: none;
 }
 
 /* ── Chime readout ────────────────────────────────────── */
