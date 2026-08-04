@@ -36,9 +36,11 @@ const galaxyStore = useGalaxyStore()
     Galaxie-Zählung und bleibt selbst bei XII kurz genug für die Kachel. */
 const universeRoman = computed(() => toRoman(gameStore.currentUniverse))
 
+/* Ohne Zählung „x von y": die Reise hat kein angekündigtes Ende, und eine
+   Nennerzahl im Header läse sich als Fortschrittsbalken über alle Universen. */
 const universeTitle = computed(() => {
   const name = universes[gameStore.currentUniverse - 1]?.name ?? 'Unknown'
-  return `Universe ${universeRoman.value} — ${name} (${gameStore.currentUniverse}/${gameStore.totalUniverses})`
+  return `Universe ${universeRoman.value} — ${name}`
 })
 
 /* ── Meep-Zähler ─────────────────────────────────────────────────────── */

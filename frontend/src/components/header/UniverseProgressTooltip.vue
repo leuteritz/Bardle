@@ -26,6 +26,8 @@ import {
   UNIVERSE_MILESTONE_COUNT,
   UNIVERSE_MILESTONE_STEP_PERCENT,
   UNIVERSE_TOOLTIP_ICONS,
+  UNIVERSE_TOOLTIP_IMAGES,
+  UNIVERSE_TOOLTIP_MEEP_SCALE,
 } from '@/config/constants'
 
 const gameStore = useGameStore()
@@ -53,7 +55,15 @@ const etaSeconds = computed(() => gameStore.universeRescueEtaSeconds)
  * Eine Zeile, drei Lagen: gerettet, rechnerisch absehbar, oder es fehlt die
  * Produktion, aus der sich überhaupt etwas hochrechnen ließe.
  */
-const rescueStatus = computed(() => {
+interface RescueStatus {
+  tone: 'ready' | 'idle' | 'eta'
+  /** Entweder ein Iconify-Glyph — oder ein Artwork, wo das Spiel eines hat. */
+  icon?: string
+  image?: string
+  text: string
+}
+
+const rescueStatus = computed<RescueStatus>(() => {
   if (gameStore.prestigeAvailable) {
     return {
       tone: 'ready',
@@ -64,7 +74,7 @@ const rescueStatus = computed(() => {
   if (!Number.isFinite(etaSeconds.value)) {
     return {
       tone: 'idle',
-      icon: UNIVERSE_TOOLTIP_ICONS.chimesEarned,
+      image: UNIVERSE_TOOLTIP_IMAGES.chimes,
       text: 'No passive chimes yet — build a chime works to set a pace',
     }
   }
@@ -79,7 +89,11 @@ const rescueStatus = computed(() => {
 
 interface StatRow {
   key: string
-  icon: string
+  /** Wie in der Statuszeile: Glyph, oder das Artwork des Spielinhalts. */
+  icon?: string
+  image?: string
+  /** Ausgleich für Artworks, die ihre Box nicht ausfüllen (siehe Meep). */
+  imageScale?: number
   label: string
   value: string
   /** Ungekürzter Wert für das native title-Attribut, wo einer existiert. */
@@ -115,7 +129,8 @@ const runRows = computed<StatRow[]>(() => [
   },
   {
     key: 'meeps',
-    icon: UNIVERSE_TOOLTIP_ICONS.meeps,
+    image: UNIVERSE_TOOLTIP_IMAGES.meeps,
+    imageScale: UNIVERSE_TOOLTIP_MEEP_SCALE,
     label: 'Meeps guided',
     ...count(run.value.meepsEarned),
   },
@@ -128,7 +143,7 @@ const runRows = computed<StatRow[]>(() => [
   {
     key: 'clicks',
     icon: UNIVERSE_TOOLTIP_ICONS.clicks,
-    label: 'Chimes struck',
+    label: 'Bell strikes',
     ...count(run.value.clicks),
   },
 ])
@@ -164,7 +179,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
   },
   {
     key: 'chimes',
-    icon: UNIVERSE_TOOLTIP_ICONS.chimesEarned,
+    image: UNIVERSE_TOOLTIP_IMAGES.chimes,
     label: 'Chimes earned',
     ...count(Math.floor(gameStore.totalChimesEarned)),
   },
@@ -194,7 +209,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
         <div class="upt-name">Universe {{ universeRoman }}</div>
         <div class="upt-subname">{{ universe?.name ?? 'Uncharted' }}</div>
       </div>
-      <span class="upt-index">{{ gameStore.currentUniverse }} / {{ gameStore.totalUniverses }}</span>
     </header>
 
     <p v-if="universe?.description" class="upt-desc">{{ universe.description }}</p>
@@ -251,7 +265,21 @@ const lifetimeRows = computed<StatRow[]>(() => [
       </div>
 
       <div class="upt-status" :class="`upt-status--${rescueStatus.tone}`">
-        <Icon :icon="rescueStatus.icon" width="16" height="16" aria-hidden="true" />
+        <img
+          v-if="rescueStatus.image"
+          :src="rescueStatus.image"
+          class="upt-status-img"
+          alt=""
+          aria-hidden="true"
+        />
+        <Icon
+          v-else-if="rescueStatus.icon"
+          :icon="rescueStatus.icon"
+          class="upt-status-icon"
+          width="16"
+          height="16"
+          aria-hidden="true"
+        />
         <span>{{ rescueStatus.text }}</span>
         <span v-if="rescueStatus.tone === 'eta'" class="upt-status-rate">
           at {{ formatNumberCompact(rescueRate) }}/s
@@ -306,7 +334,22 @@ const lifetimeRows = computed<StatRow[]>(() => [
 
       <div class="upt-rows">
         <div v-for="row in runRows" :key="row.key" class="upt-row">
-          <Icon :icon="row.icon" class="upt-row-icon" width="15" height="15" aria-hidden="true" />
+          <img
+            v-if="row.image"
+            :src="row.image"
+            class="upt-row-icon"
+            :style="row.imageScale ? { transform: `scale(${row.imageScale})` } : undefined"
+            alt=""
+            aria-hidden="true"
+          />
+          <Icon
+            v-else-if="row.icon"
+            :icon="row.icon"
+            class="upt-row-icon"
+            width="15"
+            height="15"
+            aria-hidden="true"
+          />
           <span class="upt-row-k">{{ row.label }}</span>
           <span class="upt-row-v" :title="row.full">{{ row.value }}</span>
         </div>
@@ -318,7 +361,22 @@ const lifetimeRows = computed<StatRow[]>(() => [
       <div class="upt-block-title upt-block-title--solo">Across all universes</div>
       <div class="upt-rows">
         <div v-for="row in lifetimeRows" :key="row.key" class="upt-row">
-          <Icon :icon="row.icon" class="upt-row-icon" width="15" height="15" aria-hidden="true" />
+          <img
+            v-if="row.image"
+            :src="row.image"
+            class="upt-row-icon"
+            :style="row.imageScale ? { transform: `scale(${row.imageScale})` } : undefined"
+            alt=""
+            aria-hidden="true"
+          />
+          <Icon
+            v-else-if="row.icon"
+            :icon="row.icon"
+            class="upt-row-icon"
+            width="15"
+            height="15"
+            aria-hidden="true"
+          />
           <span class="upt-row-k">{{ row.label }}</span>
           <span class="upt-row-v" :title="row.full">{{ row.value }}</span>
         </div>
@@ -396,18 +454,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
   color: #9b8461;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-
-.upt-index {
-  flex-shrink: 0;
-  padding: 0.2em 0.55em;
-  border-radius: 4px;
-  background: #141410;
-  border: 1px solid #4a3418;
-  font-size: 0.95em;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: #e8c040;
 }
 
 .upt-desc {
@@ -580,6 +626,16 @@ const lifetimeRows = computed<StatRow[]>(() => [
   border: 1px solid #33220e;
 }
 
+/* Dieselbe Kante wie die Zeilenmarken, damit die Statuszeile keine zweite
+   Größenordnung ins Panel bringt. */
+.upt-status-icon,
+.upt-status-img {
+  width: 1.25em;
+  height: 1.25em;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .upt-status--eta {
   color: #d8cfc0;
 }
@@ -675,11 +731,14 @@ const lifetimeRows = computed<StatRow[]>(() => [
 }
 
 /* Überschreibt die Attributgröße, damit das Glyph der Panel-Schriftgröße
-   folgt — feste 15px wären auf 2K/4K neben dem größeren Text ein Fleck. */
+   folgt — feste 15px wären auf 2K/4K neben dem größeren Text ein Fleck.
+   Gilt für beide Sorten Zeilenmarke: Iconify-Glyph und Artwork. Die `color`
+   greift nur beim SVG, das `object-fit` nur beim Bild. */
 .upt-row-icon {
   width: 1.3em;
   height: 1.3em;
   color: #a08a5e;
+  object-fit: contain;
   flex-shrink: 0;
 }
 

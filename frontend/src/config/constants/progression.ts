@@ -137,16 +137,37 @@ export const UNIVERSE_TOOLTIP_ICONS = {
   planetsCleared: 'game-icons:globe-ring',
   bossesFelled: 'game-icons:star-skull',
   starsLost: 'game-icons:falling-star',
-  meeps: 'game-icons:fairy',
   materials: 'game-icons:ore',
   clicks: 'game-icons:click',
   universesRescued: 'game-icons:portal',
   fastestRun: 'game-icons:stopwatch',
   lastRun: 'game-icons:backward-time',
   galaxyCores: 'game-icons:black-hole-bolas',
-  chimesEarned: 'game-icons:coins',
   playTime: 'game-icons:hourglass',
 } as const
+
+/**
+ * Meeps und Chimes haben im Spiel ein eigenes Artwork — im Tooltip dasselbe
+ * wie in der Kachelzeile darüber und in jeder Kostenangabe, statt eines
+ * Iconify-Ersatzes, der dieselbe Sache anders aussehen ließe.
+ *
+ * Die 128er-Stufe, weil die Zeilen-Glyphen bei 1,3em auch auf 4K unter 34px
+ * bleiben (siehe „Auflösungsvarianten" in CLAUDE.md).
+ */
+export const UNIVERSE_TOOLTIP_IMAGES = {
+  meeps: '/img/BardAbilities/BardMeep-128.png',
+  chimes: '/img/BardAbilities/BardChime-128.png',
+} as const
+
+/**
+ * Das Meep-Sprite ist hochformatig und trägt oben wie unten einen breiten
+ * Alpha-Rand — in derselben Box wie Chime und Glyph füllt es nur rund drei
+ * Viertel der Höhe und wirkt daneben klein. Vergrößert wird per `scale`, nicht
+ * über die Box: die Zeilenspalte ist Teil eines Rasters, das für alle Zeilen
+ * gleich breit bleiben muss. Dieselbe Korrektur trägt die Meep-Kachel im
+ * Header (`.meep-icon` in UniverseStatsRow.vue).
+ */
+export const UNIVERSE_TOOLTIP_MEEP_SCALE = 1.3
 // Archived universe runs kept in the save. Only the fastest and the latest are
 // read back, so the list exists as history, not as a growing ledger.
 export const UNIVERSE_RUN_HISTORY_LIMIT = 12
