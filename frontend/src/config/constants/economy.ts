@@ -91,9 +91,6 @@ export const MATERIAL_RATE_MIN_SAMPLE_MS = 30_000
 // Scales with the viewport like the rest of the header: ~350px on Full HD,
 // ~460px on 4K, so the panel never reads as a postage stamp on a big screen.
 export const MATERIAL_TOOLTIP_WIDTH = 'clamp(340px, 19vw, 470px)'
-// The grid stacks two rows of cells, so a panel hugging its own cell would
-// cover the other row — it clears the whole header bar instead.
-export const MATERIAL_TOOLTIP_CLEAR_SELECTOR = '.header-bar'
 export const MATERIAL_TOOLTIP_GAP_PX = 12
 // Live readout cadence for "3m ago" and the per-hour figure while open.
 export const MATERIAL_TOOLTIP_TICK_MS = 1_000

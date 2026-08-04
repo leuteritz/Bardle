@@ -98,7 +98,7 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
         key="prestige"
         class="prestige-btn"
         :class="glowClass"
-        title="Universe rescued — prestige into the next universe"
+        aria-label="Universe rescued — prestige into the next universe"
         @click.stop="gameStore.openPrestigeModal()"
       >
         <span class="prestige-shine" aria-hidden="true" />

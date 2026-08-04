@@ -5,9 +5,14 @@ import {
   UNIVERSE_MILESTONE_COUNT,
   UNIVERSE_MILESTONE_STEP_PERCENT,
   UNIVERSE_MILESTONE_FLASH_MS,
+  UNIVERSE_TOOLTIP_WIDTH,
+  UNIVERSE_TOOLTIP_GAP_PX,
+  HEADER_TOOLTIP_CLEAR_SELECTOR,
 } from '@/config/constants'
 import UniverseStatsRow from './UniverseStatsRow.vue'
 import UniverseRescueTrack from './UniverseRescueTrack.vue'
+import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
+import UniverseProgressTooltip from './UniverseProgressTooltip.vue'
 
 const gameStore = useGameStore()
 
@@ -24,12 +29,6 @@ const milestoneLeft = (m: number) => `${m * UNIVERSE_MILESTONE_STEP_PERCENT}%`
 /** Nur die INNEREN Grenzen tragen eine Raute: bei 0% steht keine, also
     steht auch bei 100% keine — das Balkenende ist der zehnte Meilenstein. */
 const milestoneMarkCount = UNIVERSE_MILESTONE_COUNT - 1
-
-const rescueTitle = computed(() =>
-  gameStore.prestigeAvailable
-    ? 'Universe rescued — prestige into the next universe'
-    : `Universe rescue: ${gameStore.universeRescueProgress.toFixed(1)}% — ${reachedMilestones.value}/${UNIVERSE_MILESTONE_COUNT} milestones`,
-)
 
 /** Frisch überschrittener Meilenstein — trägt kurz die Burst-Animation. */
 const flashMilestone = ref(0)
@@ -59,34 +58,44 @@ onUnmounted(() => {
     <!-- Row 1: three stat tiles — universe, galaxy, meeps (coarse → fine) -->
     <UniverseStatsRow :lit="isUniverseBarHovered" @meep-hover="isMeepHovered = $event" />
 
-    <!-- Row 2: Universe rescue bar (or prestige button) + milestone marks -->
-    <div
-      class="rescue-row"
-      :class="{ 'rescue-row--glow': isRowGlowing }"
-      :title="rescueTitle"
-      @mouseenter="isUniverseBarHovered = true"
-      @mouseleave="isUniverseBarHovered = false"
+    <!-- Row 2: Universe rescue bar (or prestige button) + milestone marks.
+         Die Zeile trägt kein title-Attribut mehr: was der Balken misst, sagt
+         das Hover-Panel — und ein nativer Tooltip legte sich sonst darüber. -->
+    <RpgBadgeTooltip
+      :width="UNIVERSE_TOOLTIP_WIDTH"
+      :gap="UNIVERSE_TOOLTIP_GAP_PX"
+      :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
     >
-      <UniverseRescueTrack :glow="isRowGlowing" />
+      <div
+        class="rescue-row"
+        :class="{ 'rescue-row--glow': isRowGlowing }"
+        @mouseenter="isUniverseBarHovered = true"
+        @mouseleave="isUniverseBarHovered = false"
+      >
+        <UniverseRescueTrack :glow="isRowGlowing" />
 
-      <!-- Meilenstein-Marker: eine Raute auf jeder inneren 10%-Grenze, in
-           einer eigenen Zeile unter dem Balken. Sie bleiben stehen, wenn der
-           Prestige-Button den Balken ablöst — deshalb liegen sie außerhalb
-           von UniverseRescueTrack. -->
-      <div class="ms-marks" aria-hidden="true">
-        <span
-          v-for="m in milestoneMarkCount"
-          :key="m"
-          class="ms-pip"
-          :class="{
-            'ms-pip--reached': m <= reachedMilestones,
-            'ms-pip--next': m === reachedMilestones + 1,
-            'ms-pip--flash': m === flashMilestone,
-          }"
-          :style="{ left: milestoneLeft(m) }"
-        />
+        <!-- Meilenstein-Marker: eine Raute auf jeder inneren 10%-Grenze, in
+             einer eigenen Zeile unter dem Balken. Sie bleiben stehen, wenn der
+             Prestige-Button den Balken ablöst — deshalb liegen sie außerhalb
+             von UniverseRescueTrack. -->
+        <div class="ms-marks" aria-hidden="true">
+          <span
+            v-for="m in milestoneMarkCount"
+            :key="m"
+            class="ms-pip"
+            :class="{
+              'ms-pip--reached': m <= reachedMilestones,
+              'ms-pip--next': m === reachedMilestones + 1,
+              'ms-pip--flash': m === flashMilestone,
+            }"
+            :style="{ left: milestoneLeft(m) }"
+          />
+        </div>
       </div>
-    </div>
+      <template #tip>
+        <UniverseProgressTooltip />
+      </template>
+    </RpgBadgeTooltip>
   </div>
 </template>
 

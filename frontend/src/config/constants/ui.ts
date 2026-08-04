@@ -388,6 +388,10 @@ export const BADGE_TOOLTIP_VIEWPORT_MARGIN_PX = 8
 export const BADGE_TOOLTIP_HIDE_DELAY_MS = 80
 // Caret is kept at least this far away from the panel's rounded corners.
 export const BADGE_TOOLTIP_CARET_INSET_PX = 12
+// Ancestor whose lower edge a header tooltip clears instead of its own anchor:
+// the header packs its blocks tightly (the material grid alone stacks two rows),
+// so a panel hugging its anchor would land on top of a neighbouring block.
+export const HEADER_TOOLTIP_CLEAR_SELECTOR = '.header-bar'
 // Larger gap for the center-chimes level tooltip: the arc-level badge hangs
 // below the chimes box and would otherwise be covered by the panel.
 export const CENTER_CHIMES_TOOLTIP_GAP_PX = 40

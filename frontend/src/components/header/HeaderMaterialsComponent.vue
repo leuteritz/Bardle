@@ -12,7 +12,7 @@ import {
   MATERIAL_EMPTY_GLYPH,
   MATERIAL_TOOLTIP_WIDTH,
   MATERIAL_TOOLTIP_GAP_PX,
-  MATERIAL_TOOLTIP_CLEAR_SELECTOR,
+  HEADER_TOOLTIP_CLEAR_SELECTOR,
 } from '@/config/constants'
 
 const inventoryStore = useInventoryStore()
@@ -40,7 +40,7 @@ const gridStyle = { gridTemplateColumns: `repeat(${HEADER_MATERIALS_GRID_COLUMNS
       :key="m.id"
       :width="MATERIAL_TOOLTIP_WIDTH"
       :gap="MATERIAL_TOOLTIP_GAP_PX"
-      :clear-ancestor="MATERIAL_TOOLTIP_CLEAR_SELECTOR"
+      :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
     >
       <div class="mat-cell" :class="{ 'mat-cell--empty': m.count === 0 }">
         <img v-if="m.image" :src="m.image" class="mat-icon rpg-img" :alt="m.name" />

@@ -53,8 +53,12 @@ import {
   CHIMES_PER_CLICK_BASE,
   HONOR_MVP_BUFF_DURATION_S,
   HONOR_MVP_BUFF_MULT,
+  UNIVERSE_RUN_HISTORY_LIMIT,
 } from '../config/constants'
 import type {
+  UniverseRunBaseline,
+  UniverseRunRecord,
+  UniverseRunStats,
   BuildingProduction,
   TotalBuildingProduction,
   ShopUpgrade,
@@ -160,6 +164,23 @@ export const useGameStore = defineStore('game', {
     /** Chimes ever granted by offline progress, and the seconds behind them. */
     totalOfflineChimes: 0,
     totalOfflineSeconds: 0,
+
+    // ── Universe run (header universe tooltip) ────
+    /** Zählerstände beim Betreten des aktuellen Universums — siehe
+     *  `beginUniverseRun()`. Alle Nullen sind für ein frisches Spiel korrekt. */
+    universeRun: {
+      startedAtInGameTime: 0,
+      starsRescued: 0,
+      starsLost: 0,
+      galaxiesFreed: 0,
+      planetsCleared: 0,
+      bossesFelled: 0,
+      meepsEarned: 0,
+      materialsGathered: 0,
+      clicks: 0,
+    } as UniverseRunBaseline,
+    /** Abgeschlossene Durchläufe, jüngster zuletzt (gekappt). */
+    universeRuns: [] as UniverseRunRecord[],
   }),
   actions: {
     // Adds a Meep when enough Chimes have been collected
@@ -491,10 +512,56 @@ export const useGameStore = defineStore('game', {
       }
     },
 
+    /**
+     * Hält die Lebenszeit-Zähler fest, mit denen das aktuelle Universum
+     * betreten wurde.
+     *
+     * Jeder „in diesem Universum"-Wert im Header-Tooltip ist eine Differenz
+     * gegen diesen Stand. Das ist der Grund, warum kein einziger Store einen
+     * zweiten, parallel gepflegten Zähler braucht, der beim Prestige mit
+     * zurückgesetzt werden müsste — und warum ein neuer Wert im Tooltip nur
+     * hier eine Zeile kostet, nicht im halben Projekt.
+     */
+    beginUniverseRun() {
+      const galaxyStore = useGalaxyStore()
+      const starGroupStore = useStarGroupStore()
+      const planetBossStore = usePlanetBossStore()
+      this.universeRun = {
+        startedAtInGameTime: this.inGameTime,
+        starsRescued: galaxyStore.totalStarsRescued,
+        starsLost: galaxyStore.totalStarsLost,
+        galaxiesFreed: galaxyStore.totalGalaxyBossesDefeated,
+        planetsCleared: starGroupStore.totalPlanetsCleared,
+        bossesFelled: planetBossStore.totalBossesDefeated,
+        meepsEarned: this.totalMeepsEarned,
+        materialsGathered: useInventoryStore().totalMaterialsCollected,
+        clicks: this.totalClicks,
+      }
+    },
+
+    /** Legt den laufenden Durchlauf ins Archiv — direkt vor dem Prestige-Reset,
+     *  solange die Zähler des alten Universums noch stehen. */
+    finishUniverseRun() {
+      const stats = this.universeRunStats
+      this.universeRuns.push({
+        universe: this.currentUniverse,
+        durationSeconds: stats.playedSeconds,
+        starsRescued: stats.starsRescued,
+        galaxiesFreed: stats.galaxiesFreed,
+        chimes: this.chimesForNextUniverse,
+        completedAt: Date.now(),
+      })
+      const overflow = this.universeRuns.length - UNIVERSE_RUN_HISTORY_LIMIT
+      if (overflow > 0) this.universeRuns.splice(0, overflow)
+    },
+
     // Executes the actual Prestige reset
     executePrestigeReset(targetUniverse?: number) {
       const nextUniverse = targetUniverse ?? this.currentUniverse + 1
       logger.info('Game', `Prestige reset -> Universe ${nextUniverse}`)
+      // Vor jeder Mutation: der Datensatz beschreibt das Universum, das gerade
+      // verlassen wird, und liest dafür dessen noch unveränderte Zähler.
+      this.finishUniverseRun()
       this.currentUniverse = nextUniverse
       this.totalPrestiges += 1
       this.chimesToUniverseRescue = Math.ceil(
@@ -528,6 +595,8 @@ export const useGameStore = defineStore('game', {
       })
       this.chimesPerSecond = shopStore.calculateTotalCPS()
       this.chimesPerClick = shopStore.calculateTotalCPC()
+      // Neue Basislinie: ab hier zählt der Tooltip wieder bei null.
+      this.beginUniverseRun()
     },
 
     // Opens the Universe selection modal
@@ -849,6 +918,68 @@ export const useGameStore = defineStore('game', {
 
     totalUniverses(): number {
       return universes.length
+    },
+
+    /** Was in diesem Universum passiert ist — Differenz gegen `universeRun`. */
+    universeRunStats(): UniverseRunStats {
+      const base = this.universeRun
+      const galaxyStore = useGalaxyStore()
+      const starGroupStore = useStarGroupStore()
+      const planetBossStore = usePlanetBossStore()
+      // Nie negativ: ein Speicherstand, dessen Basislinie beim Laden aus den
+      // aktuellen Ständen gesetzt wurde, darf höchstens bei null anfangen.
+      const since = (current: number, start: number) => Math.max(0, current - start)
+      return {
+        playedSeconds: since(this.inGameTime, base.startedAtInGameTime),
+        starsRescued: since(galaxyStore.totalStarsRescued, base.starsRescued),
+        starsLost: since(galaxyStore.totalStarsLost, base.starsLost),
+        galaxiesFreed: since(galaxyStore.totalGalaxyBossesDefeated, base.galaxiesFreed),
+        planetsCleared: since(starGroupStore.totalPlanetsCleared, base.planetsCleared),
+        bossesFelled: since(planetBossStore.totalBossesDefeated, base.bossesFelled),
+        meepsEarned: since(this.totalMeepsEarned, base.meepsEarned),
+        materialsGathered: since(
+          useInventoryStore().totalMaterialsCollected,
+          base.materialsGathered,
+        ),
+        clicks: since(this.totalClicks, base.clicks),
+      }
+    },
+
+    /** Chimes, die der Rettung dieses Universums noch fehlen. */
+    universeRescueRemaining(): number {
+      return Math.max(0, this.chimesToUniverseRescue - this.chimesForNextUniverse)
+    },
+
+    /**
+     * Sekunden bis zur Rettung beim aktuellen Sekundenertrag — 0 wenn erreicht,
+     * `Infinity` wenn nichts produziert wird.
+     *
+     * Bewusst nur die passive Produktion: Klicks, Bossbeute und Battle-Chimes
+     * zahlen ebenfalls ein, lassen sich aber nicht vorhersagen. Die Schätzung
+     * ist damit die Obergrenze, nicht der Erwartungswert.
+     */
+    universeRescueEtaSeconds(): number {
+      if (this.universeRescueRemaining <= 0) return 0
+      const rate = this.chimesPerSecond * this.mvpBuffMultiplier
+      return rate > 0 ? this.universeRescueRemaining / rate : Infinity
+    },
+
+    /** Was das nächste Universum kosten wird — die Kurve hinter dem Balken. */
+    nextUniverseRescueCost(): number {
+      return Math.ceil(this.chimesToUniverseRescue * UNIVERSE_RESCUE_COST_MULTIPLIER)
+    },
+
+    /** Schnellster archivierter Durchlauf in Sekunden; 0 solange keiner steht. */
+    fastestUniverseRunSeconds(): number {
+      if (this.universeRuns.length === 0) return 0
+      // Die Liste ist auf UNIVERSE_RUN_HISTORY_LIMIT gekappt — spread ist hier
+      // eine Handvoll Werte, keine offene Liste.
+      return Math.min(...this.universeRuns.map((run) => run.durationSeconds))
+    },
+
+    /** Dauer des zuletzt geretteten Universums in Sekunden; 0 solange keines. */
+    lastUniverseRunSeconds(): number {
+      return this.universeRuns[this.universeRuns.length - 1]?.durationSeconds ?? 0
     },
 
     dmgPerClick(): number {

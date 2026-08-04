@@ -118,3 +118,35 @@ export const UNIVERSE_MILESTONE_COUNT = 10
 export const UNIVERSE_MILESTONE_STEP_PERCENT = 100 / UNIVERSE_MILESTONE_COUNT
 // How long a freshly reached pip keeps its burst highlight.
 export const UNIVERSE_MILESTONE_FLASH_MS = 1600
+
+// ── Header universe tooltip ────────────────────────────────────────────────
+// Wider than the material panel: this one carries two stat blocks side by side,
+// and a narrower panel would break them back into one very tall column.
+export const UNIVERSE_TOOLTIP_WIDTH = 'clamp(380px, 23vw, 540px)'
+export const UNIVERSE_TOOLTIP_GAP_PX = 12
+/**
+ * Zeilen-Icons des Universums-Tooltips. Jedes Glyph steht im Panel genau
+ * einmal — die beiden Blöcke liegen nebeneinander, ein zweimal verwendetes
+ * Motiv wäre dort nicht mehr unterscheidbar. Bewusst dieselben Icons wie im
+ * Bard-Stats-Katalog, wo die Kategorie dieselbe Sache zählt.
+ */
+export const UNIVERSE_TOOLTIP_ICONS = {
+  timeHere: 'game-icons:sands-of-time',
+  starsRescued: 'game-icons:star-satellites',
+  galaxiesFreed: 'game-icons:galaxy',
+  planetsCleared: 'game-icons:globe-ring',
+  bossesFelled: 'game-icons:star-skull',
+  starsLost: 'game-icons:falling-star',
+  meeps: 'game-icons:fairy',
+  materials: 'game-icons:ore',
+  clicks: 'game-icons:click',
+  universesRescued: 'game-icons:portal',
+  fastestRun: 'game-icons:stopwatch',
+  lastRun: 'game-icons:backward-time',
+  galaxyCores: 'game-icons:black-hole-bolas',
+  chimesEarned: 'game-icons:coins',
+  playTime: 'game-icons:hourglass',
+} as const
+// Archived universe runs kept in the save. Only the fastest and the latest are
+// read back, so the list exists as history, not as a growing ledger.
+export const UNIVERSE_RUN_HISTORY_LIMIT = 12

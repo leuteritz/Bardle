@@ -18,7 +18,12 @@ import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { useDrifterStore } from '@/stores/drifterStore'
 import { useSkinStore } from '@/stores/skinStore'
 import { useChampionLevelStore } from '@/stores/championLevelStore'
-import type { ChampionProgress, PendingPerkChoice, DrifterActiveBuff } from '@/types'
+import type {
+  ChampionProgress,
+  PendingPerkChoice,
+  DrifterActiveBuff,
+  UniverseRunRecord,
+} from '@/types'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -105,6 +110,8 @@ export function usePersistence() {
         totalPrestiges: gameStore.totalPrestiges,
         totalOfflineChimes: gameStore.totalOfflineChimes,
         totalOfflineSeconds: gameStore.totalOfflineSeconds,
+        universeRun: { ...gameStore.universeRun },
+        universeRuns: gameStore.universeRuns.map((run) => ({ ...run })),
       },
       shop: {
         buyAmount: shopStore.buyAmount,
@@ -328,6 +335,7 @@ export function usePersistence() {
       const inventoryStore = useInventoryStore()
 
       // Restore gameStore
+      let universeRunRestored = false
       if (saved.game) {
         const g = saved.game
         gameStore.inGameTime = g.inGameTime ?? gameStore.inGameTime
@@ -366,6 +374,15 @@ export function usePersistence() {
         gameStore.totalPrestiges = g.totalPrestiges ?? Math.max(0, gameStore.currentUniverse - 1)
         gameStore.totalOfflineChimes = g.totalOfflineChimes ?? 0
         gameStore.totalOfflineSeconds = g.totalOfflineSeconds ?? 0
+        if (Array.isArray(g.universeRuns)) {
+          gameStore.universeRuns = g.universeRuns.map((run: UniverseRunRecord) => ({ ...run }))
+        }
+        // Die Basislinie wird hier nur übernommen, wenn sie im Spielstand steht.
+        // Fehlt sie (Spielstand von vor dem Tooltip), setzt loadGame sie unten
+        // aus den gerade wiederhergestellten Zählern — dann beginnt die
+        // „in diesem Universum"-Zählung ab jetzt, statt falsche Werte zu zeigen.
+        if (g.universeRun) gameStore.universeRun = { ...gameStore.universeRun, ...g.universeRun }
+        universeRunRestored = Boolean(g.universeRun)
       }
 
       // Restore shopStore
@@ -817,6 +834,12 @@ export function usePersistence() {
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
 
+      // Spielstand ohne Basislinie: sie wird jetzt gesetzt — also erst, nachdem
+      // Galaxie-, Stern- und Boss-Zähler wiederhergestellt sind, sonst stünde
+      // sie auf den Nullen der frischen Stores und der Tooltip zeigte die
+      // Lebenszeitwerte als „in diesem Universum".
+      if (!universeRunRestored) gameStore.beginUniverseRun()
+
       // ── Offline Progress ─────────────────────────────────────────────────────
       const now = Date.now()
       const savedAt = saved.savedAt as number | undefined
@@ -911,6 +934,9 @@ export function usePersistence() {
     gameStore.totalPrestiges = 0
     gameStore.totalOfflineChimes = 0
     gameStore.totalOfflineSeconds = 0
+    gameStore.universeRuns = []
+    // Basislinie erst am Ende von resetGame setzen — hier stehen die Zähler der
+    // anderen Stores noch auf ihren alten Werten (siehe unten).
 
     // 3. Reset shopStore
     const shopStore = useShopStore()
@@ -1030,6 +1056,9 @@ export function usePersistence() {
     // 8. Recalculate CPS/CPC from clean state
     gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
     gameStore.chimesPerClick = shopStore.calculateTotalCPC()
+
+    // 8b. Neue Basislinie auf den frisch genullten Zählern
+    gameStore.beginUniverseRun()
 
     // 9. Re-start CPS tracking
     cpsStore.startProductionTracking()
