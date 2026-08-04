@@ -21,6 +21,15 @@ import {
   SIGIL_MANDALA_AT_FILLED,
   SIGIL_EMBER_MIN_R,
   SIGIL_EMBER_R_SPREAD,
+  GOLDEN_ANGLE_DEG,
+  SIGIL_EMBER_RADIUS_STEP,
+  SIGIL_EMBER_SIZE_BASE,
+  SIGIL_EMBER_SIZE_VARIANTS,
+  SIGIL_EMBER_DELAY_STEP_S,
+  SIGIL_EMBER_DELAY_CYCLE_S,
+  SIGIL_EMBER_DURATION_BASE_S,
+  SIGIL_EMBER_DURATION_STEP_S,
+  SIGIL_EMBER_DURATION_SPREAD_S,
 } from '@/config/constants'
 import type { SigilStageDef } from '@/types'
 
@@ -39,7 +48,7 @@ export interface SigilEmber {
 
 const CENTER = SIGIL_STAGE_SIZE / 2
 /** Golden angle (deg) — spreads embers evenly without Math.random. */
-const EMBER_GOLDEN_ANGLE = 137.508
+const EMBER_GOLDEN_ANGLE = GOLDEN_ANGLE_DEG
 
 function polarPoint(angleDeg: number, radius: number): SigilPoint {
   const rad = (angleDeg * Math.PI) / 180
@@ -149,14 +158,16 @@ export function useTeamSigil() {
   const embers = computed<SigilEmber[]>(() => {
     const list: SigilEmber[] = []
     for (let k = 0; k < sigilStage.value.emberCount; k++) {
-      const radius = SIGIL_EMBER_MIN_R + ((k * 47) % SIGIL_EMBER_R_SPREAD)
+      const radius = SIGIL_EMBER_MIN_R + ((k * SIGIL_EMBER_RADIUS_STEP) % SIGIL_EMBER_R_SPREAD)
       const point = polarPoint(k * EMBER_GOLDEN_ANGLE, radius)
       list.push({
         x: point.x,
         y: point.y,
-        size: 3 + (k % 3),
-        delaySec: (k * 0.37) % 2.4,
-        durationSec: 2.2 + ((k * 0.29) % 1.8),
+        size: SIGIL_EMBER_SIZE_BASE + (k % SIGIL_EMBER_SIZE_VARIANTS),
+        delaySec: (k * SIGIL_EMBER_DELAY_STEP_S) % SIGIL_EMBER_DELAY_CYCLE_S,
+        durationSec:
+          SIGIL_EMBER_DURATION_BASE_S +
+          ((k * SIGIL_EMBER_DURATION_STEP_S) % SIGIL_EMBER_DURATION_SPREAD_S),
       })
     }
     return list

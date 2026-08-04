@@ -1,4 +1,16 @@
 <script setup lang="ts">
+import {
+  UNIVERSE_NEUTRAL_MULTIPLIER,
+  UNIVERSE_NEUTRAL_LEVEL_EXPONENT,
+  UNIVERSE_NEUTRAL_MAX_ABILITY_LEVEL,
+  UNIVERSE_NEUTRAL_SKILL_POINT_INTERVAL,
+  UNIVERSE_NEUTRAL_HP_DRAIN,
+  ABILITY_CPS_PER_LEVEL_DEFAULT,
+  ABILITY_CPC_PER_LEVEL_DEFAULT,
+  ABILITY_POWER_PER_LEVEL_DEFAULT,
+  ABILITY_MEEP_COST_PER_LEVEL_DEFAULT,
+  CHIMES_PER_CLICK_BASE,
+} from '@/config/constants'
 import { computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgFrame from '../../ui/RpgFrame.vue'
@@ -10,26 +22,30 @@ const gameStore = useGameStore()
 
 const visible = computed(() => gameStore.showUniverseSelectModal)
 
+const N = UNIVERSE_NEUTRAL_MULTIPLIER
 const effectLabels: Record<keyof ModifierEffects, { label: string; neutral: number }> = {
-  cpsMultiplier: { label: 'CPS', neutral: 1 },
-  cpcMultiplier: { label: 'CPC', neutral: 1 },
-  buildingCostMultiplier: { label: 'Cost', neutral: 1 },
-  meepCostMultiplier: { label: 'Meep Cost', neutral: 1 },
-  meepPowerMultiplier: { label: 'Meep Power', neutral: 1 },
-  levelExponent: { label: 'Level Exponent', neutral: 1.2 },
-  maxAbilityLevel: { label: 'Max Ability Lvl', neutral: 5 },
-  skillPointInterval: { label: 'SP Interval', neutral: 2 },
-  eloPowerMultiplier: { label: 'Battle-Power', neutral: 1 },
-  expeditionRewardMultiplier: { label: 'Expedition-Rewards', neutral: 1 },
-  abilityCPSPerLevel: { label: 'Ability CPS/Lvl', neutral: 0.15 },
-  abilityCPCPerLevel: { label: 'Ability CPC/Lvl', neutral: 0.25 },
-  abilityPowerPerLevel: { label: 'Ability Power/Lvl', neutral: 300 },
-  abilityMeepCostPerLevel: { label: 'Ability Meep Cost/Lvl', neutral: 0.1 },
-  baseChimesPerClick: { label: 'Base CPC', neutral: 20 },
-  buildingMultipliers: { label: 'Multipliers', neutral: 1 },
-  cooldownMultiplier: { label: 'Cooldown', neutral: 1 },
-  enemySpeedMultiplier: { label: 'Enemy Speed', neutral: 1 },
-  enemyMaxHPDrainPerSecond: { label: 'HP Drain/sec', neutral: 0 },
+  cpsMultiplier: { label: 'CPS', neutral: N },
+  cpcMultiplier: { label: 'CPC', neutral: N },
+  buildingCostMultiplier: { label: 'Cost', neutral: N },
+  meepCostMultiplier: { label: 'Meep Cost', neutral: N },
+  meepPowerMultiplier: { label: 'Meep Power', neutral: N },
+  levelExponent: { label: 'Level Exponent', neutral: UNIVERSE_NEUTRAL_LEVEL_EXPONENT },
+  maxAbilityLevel: { label: 'Max Ability Lvl', neutral: UNIVERSE_NEUTRAL_MAX_ABILITY_LEVEL },
+  skillPointInterval: { label: 'SP Interval', neutral: UNIVERSE_NEUTRAL_SKILL_POINT_INTERVAL },
+  eloPowerMultiplier: { label: 'Battle-Power', neutral: N },
+  expeditionRewardMultiplier: { label: 'Expedition-Rewards', neutral: N },
+  abilityCPSPerLevel: { label: 'Ability CPS/Lvl', neutral: ABILITY_CPS_PER_LEVEL_DEFAULT },
+  abilityCPCPerLevel: { label: 'Ability CPC/Lvl', neutral: ABILITY_CPC_PER_LEVEL_DEFAULT },
+  abilityPowerPerLevel: { label: 'Ability Power/Lvl', neutral: ABILITY_POWER_PER_LEVEL_DEFAULT },
+  abilityMeepCostPerLevel: {
+    label: 'Ability Meep Cost/Lvl',
+    neutral: ABILITY_MEEP_COST_PER_LEVEL_DEFAULT,
+  },
+  baseChimesPerClick: { label: 'Base CPC', neutral: CHIMES_PER_CLICK_BASE },
+  buildingMultipliers: { label: 'Multipliers', neutral: N },
+  cooldownMultiplier: { label: 'Cooldown', neutral: N },
+  enemySpeedMultiplier: { label: 'Enemy Speed', neutral: N },
+  enemyMaxHPDrainPerSecond: { label: 'HP Drain/sec', neutral: UNIVERSE_NEUTRAL_HP_DRAIN },
 }
 
 const higherIsBetter = new Set([

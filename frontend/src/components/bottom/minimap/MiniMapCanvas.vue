@@ -42,6 +42,9 @@ import {
   MINIMAP_GALAXY_CORE_RADIUS,
   MINIMAP_ROUTE_ARROW_SIZE,
   MINIMAP_ROUTE_ARROW_GAP,
+  HYPERSPACE_FLASH_AT_MS,
+  HYPERSPACE_FADEOUT_AT_MS,
+  HYPERSPACE_END_AT_MS,
 } from '@/config/constants'
 import {
   seededRng,
@@ -1197,18 +1200,18 @@ export default defineComponent({
           window.setTimeout(() => {
             hyperspacePhase = 'flash'
             hyperspacePhaseStart = Date.now()
-          }, 2000),
+          }, HYPERSPACE_FLASH_AT_MS),
           window.setTimeout(() => {
             hyperspacePhase = 'fadeout'
             hyperspacePhaseStart = Date.now()
-          }, 2500),
+          }, HYPERSPACE_FADEOUT_AT_MS),
           window.setTimeout(() => {
             hyperspacePhase = 'idle'
             warp.reset()
             camera.x = 0.5
             camera.y = 0.5
             camera.zoom = 1
-          }, 3500),
+          }, HYPERSPACE_END_AT_MS),
         )
       },
     )

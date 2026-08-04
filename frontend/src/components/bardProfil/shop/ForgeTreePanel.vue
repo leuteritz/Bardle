@@ -263,6 +263,13 @@ import {
   FORGE_TREE_ZOOM_STEP,
   FORGE_TREE_ZOOM_DEFAULT,
   SUN_PHASE_DISPLAY_OFFSET,
+  FORGE_ROOT_ANGLES_DEG,
+  FORGE_ICON_SIZE_ROOT,
+  FORGE_ICON_SIZE_BRANCH,
+  FORGE_ICON_SIZE_LEAF,
+  FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT,
+  FORGE_PHASE_DOCK_HEADROOM_PX,
+  FORGE_SUN_EDGE_R,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -304,12 +311,13 @@ interface RootDef {
   statLabel: string
 }
 
+const A = FORGE_ROOT_ANGLES_DEG
 const ROOTS: RootDef[] = [
-  { id: 'flightSpeed',     name: 'Flight Speed',   icon: 'game-icons:feathered-wing',  angleDeg: 270, color: '#e8c040', statLabel: 'CpS Mult.' },
-  { id: 'maxHp',           name: 'Max HP',         icon: 'game-icons:health-increase', angleDeg: 342, color: '#e05050', statLabel: 'HP Bonus'  },
-  { id: 'chimesPerClick',  name: 'Chimes / Click', icon: 'game-icons:gold-nuggets',    angleDeg: 54,  color: '#52b830', statLabel: 'CpC Bonus' },
-  { id: 'chimesPerSecond', name: 'Chimes / Sec',   icon: 'game-icons:metronome',       angleDeg: 126, color: '#e89840', statLabel: 'CpS Bonus' },
-  { id: 'dmgPerClick',     name: 'DMG / Click',    icon: 'game-icons:fist',            angleDeg: 198, color: '#c060a0', statLabel: 'Dmg Mult.' },
+  { id: 'flightSpeed',     name: 'Flight Speed',   icon: 'game-icons:feathered-wing',  angleDeg: A.flightSpeed,     color: '#e8c040', statLabel: 'CpS Mult.' },
+  { id: 'maxHp',           name: 'Max HP',         icon: 'game-icons:health-increase', angleDeg: A.maxHp,           color: '#e05050', statLabel: 'HP Bonus'  },
+  { id: 'chimesPerClick',  name: 'Chimes / Click', icon: 'game-icons:gold-nuggets',    angleDeg: A.chimesPerClick,  color: '#52b830', statLabel: 'CpC Bonus' },
+  { id: 'chimesPerSecond', name: 'Chimes / Sec',   icon: 'game-icons:metronome',       angleDeg: A.chimesPerSecond, color: '#e89840', statLabel: 'CpS Bonus' },
+  { id: 'dmgPerClick',     name: 'DMG / Click',    icon: 'game-icons:fist',            angleDeg: A.dmgPerClick,     color: '#c060a0', statLabel: 'Dmg Mult.' },
 ]
 
 const allNodes = computed<TreeNode[]>(() => {
@@ -322,7 +330,7 @@ const allNodes = computed<TreeNode[]>(() => {
     dist: FORGE_RING_ROOT_R,
     tier: 'root',
     sizeClass: 'root',
-    iconSize: 28,
+    iconSize: FORGE_ICON_SIZE_ROOT,
     parentId: null,
   }))
   const forge: TreeNode[] = FORGE_NODES.map((def) => ({
@@ -334,7 +342,7 @@ const allNodes = computed<TreeNode[]>(() => {
     dist: def.tier === 'branch' ? FORGE_RING_BRANCH_R : FORGE_RING_LEAF_R,
     tier: def.tier,
     sizeClass: def.tier,
-    iconSize: def.tier === 'branch' ? 22 : 18,
+    iconSize: def.tier === 'branch' ? FORGE_ICON_SIZE_BRANCH : FORGE_ICON_SIZE_LEAF,
     parentId: def.parentId,
     def,
   }))
@@ -375,7 +383,7 @@ const limbs = computed<Limb[]>(() => {
   for (const node of allNodes.value) {
     let from: { x: number; y: number }
     if (node.tier === 'root') {
-      from = pt(node.angleDeg, 110) // sun edge
+      from = pt(node.angleDeg, FORGE_SUN_EDGE_R)
     } else {
       const parent = nodeById.get(node.parentId ?? '')
       if (!parent) continue
@@ -485,7 +493,7 @@ function nodeDesc(node: TreeNode): string {
   if (!def) return ''
   if (def.tier === 'leaf') {
     const parent = FORGE_NODES.find((n) => n.id === def.parentId)
-    const pct = nodeLevelOf(node) * 25
+    const pct = nodeLevelOf(node) * FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT
     return def.desc.replace('{p}', parent?.name ?? 'its branch').replace('{v}', String(pct))
   }
   const value = forgeStore.branchEffect(node.id)
@@ -499,7 +507,7 @@ function nodeNextLine(node: TreeNode): string {
   const def = node.def
   if (!def) return ''
   if (def.tier === 'leaf') {
-    const pct = (nodeLevelOf(node) + 1) * 25
+    const pct = (nodeLevelOf(node) + 1) * FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT
     return `Amplify +${pct}%`
   }
   // Next-level branch effect keeps the current leaf amplifier
@@ -587,7 +595,7 @@ function handleNodeClick(node: TreeNode): void {
 
 // ── Zoom (buttons + wheel) with container fit ─────────────────────────────────
 /** Vertical space (px) reserved for the floating phase dock at the top. */
-const PHASE_DOCK_HEADROOM = 96
+const PHASE_DOCK_HEADROOM = FORGE_PHASE_DOCK_HEADROOM_PX
 
 const panelEl = ref<HTMLElement | null>(null)
 const zoom = ref(FORGE_TREE_ZOOM_DEFAULT)

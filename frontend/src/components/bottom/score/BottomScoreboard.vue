@@ -34,6 +34,7 @@ import {
   APEX_RANK_TIERS,
   BATTLE_STAT_GAME_ICONS,
   BATTLE_STAT_IMAGES,
+  SCOREBOARD_RESULT_BADGE_MS,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
 
@@ -281,7 +282,7 @@ const objectiveFightDisplay = computed(() => {
 /** Wie lange das Win/Lose-Badge den Titel-Slot hält, bevor die
  *  Honor-Phase mit Sekundenzähler übernimmt (Result-Pause insgesamt:
  *  BATTLE_RESULT_PAUSE_MS = 8s). */
-const RESULT_BADGE_MS = 3000
+const RESULT_BADGE_MS = SCOREBOARD_RESULT_BADGE_MS
 
 const resultBadge = computed(() => {
   if (phaseKey.value !== 'honor' || !lastAutoBattleResult.value) return null

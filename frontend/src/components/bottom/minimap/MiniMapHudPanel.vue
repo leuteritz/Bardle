@@ -18,7 +18,12 @@
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
-import { CHAMPION_TRAVEL_BASE_LY, CHAMPION_TRAVEL_LY_PER_GALAXY } from '../../../config/constants'
+import {
+  CHAMPION_TRAVEL_BASE_LY,
+  CHAMPION_TRAVEL_LY_PER_GALAXY,
+  MS_PER_SECOND,
+} from '../../../config/constants'
+import { splitDuration } from '../../../utils/format'
 
 export default defineComponent({
   name: 'MiniMapHudPanel',
@@ -36,11 +41,8 @@ export default defineComponent({
     const isRotating = computed(() => galaxyStore.isRescueRotating)
 
     const countdown = computed(() => {
-      const ms = galaxyStore.travelRemainingMs
-      const s = Math.ceil(ms / 1000)
-      const h = Math.floor(s / 3600)
-      const m = Math.floor((s % 3600) / 60)
-      const sec = s % 60
+      const s = Math.ceil(galaxyStore.travelRemainingMs / MS_PER_SECOND)
+      const { hours: h, minutes: m, seconds: sec } = splitDuration(s)
       if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
       return `${m}:${String(sec).padStart(2, '0')}`
     })
@@ -57,7 +59,7 @@ export default defineComponent({
     )
 
     const speedLJperS = computed(() => {
-      const remainingSec = galaxyStore.travelRemainingMs / 1000
+      const remainingSec = galaxyStore.travelRemainingMs / MS_PER_SECOND
       if (remainingSec < 0.5) return 0
       return remainingDistanceLY.value / remainingSec
     })

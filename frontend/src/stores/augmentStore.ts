@@ -6,6 +6,11 @@ import {
   AUGMENT_CLICK_HISTORY_SIZE,
   AUGMENT_GRAVITY_FLIP_DURATION_MS,
   QUANTUM_LUCK_THRESHOLD,
+  AUGMENT_OVERCLOCK_DEFAULT_MS,
+  AUGMENT_OVERCLOCK_DEFAULT_MULT,
+  AUGMENT_ECHO_CHAMBER_DEFAULT_MS,
+  AUGMENT_KEYBOARD_SMASH_DEFAULT_MIN,
+  AUGMENT_KEYBOARD_SMASH_DEFAULT_MAX,
 } from '../config/constants'
 
 export const useAugmentStore = defineStore('augment', {
@@ -100,8 +105,8 @@ export const useAugmentStore = defineStore('augment', {
       // Overclock: temporary CPS boost after level-up
       if (activeAugments.includes('rare_overclock')) {
         const aug = AUGMENTS.find((a) => a.id === 'rare_overclock')
-        const duration = aug?.specialEffect?.params.duration ?? 30000
-        const multiplier = aug?.specialEffect?.params.multiplier ?? 2
+        const duration = aug?.specialEffect?.params.duration ?? AUGMENT_OVERCLOCK_DEFAULT_MS
+        const multiplier = aug?.specialEffect?.params.multiplier ?? AUGMENT_OVERCLOCK_DEFAULT_MULT
         this.activeTimedBuffs.push({
           augmentId: 'rare_overclock',
           effectKey: 'cpsMultiplier',
@@ -123,8 +128,8 @@ export const useAugmentStore = defineStore('augment', {
 
       // Keyboard Smash: roll random modifiers on registration
       if (aug.specialEffect.type === 'keyboardSmash') {
-        const min = aug.specialEffect.params.min ?? -0.05
-        const max = aug.specialEffect.params.max ?? 0.5
+        const min = aug.specialEffect.params.min ?? AUGMENT_KEYBOARD_SMASH_DEFAULT_MIN
+        const max = aug.specialEffect.params.max ?? AUGMENT_KEYBOARD_SMASH_DEFAULT_MAX
         const keys = ['cpsMultiplier', 'cpcMultiplier', 'meepPowerMultiplier']
         const mods: Record<string, number> = {}
         for (const key of keys) {
@@ -143,7 +148,10 @@ export const useAugmentStore = defineStore('augment', {
 
       // Echo Chamber: re-activate last augment's effects as timed buff
       if (aug.specialEffect.type === 'echoChamber' && activeAugments) {
-        this.activateEchoChamber(aug.specialEffect.params.duration ?? 60000, activeAugments)
+        this.activateEchoChamber(
+          aug.specialEffect.params.duration ?? AUGMENT_ECHO_CHAMBER_DEFAULT_MS,
+          activeAugments,
+        )
       }
     },
 

@@ -9,7 +9,11 @@ import {
   CPS_PERIOD_1HOUR_S,
   CPS_INTERVAL_10MIN_MS,
   CPS_INTERVAL_1HOUR_MS,
+  MS_PER_SECOND,
+  SECONDS_PER_MINUTE,
+  SECONDS_PER_HOUR,
 } from '../config/constants'
+import { splitDuration } from '../utils/format'
 
 export const useCpsStore = defineStore('cps', {
   state: () => ({
@@ -177,9 +181,9 @@ export const useCpsStore = defineStore('cps', {
     },
 
     _formatTimeSpan(seconds: number): string {
-      if (seconds < 60) return `${Math.floor(seconds + 1)}s`
-      if (seconds < 3600) return `${Math.floor(seconds / 60 + 1)}min`
-      return `${Math.floor(seconds / 3600 + 1)}h`
+      if (seconds < SECONDS_PER_MINUTE) return `${Math.floor(seconds + 1)}s`
+      if (seconds < SECONDS_PER_HOUR) return `${Math.floor(seconds / SECONDS_PER_MINUTE + 1)}min`
+      return `${Math.floor(seconds / SECONDS_PER_HOUR + 1)}h`
     },
 
     // Creates start-point label for the CPS graph time axis
@@ -187,7 +191,7 @@ export const useCpsStore = defineStore('cps', {
       const history = this.currentProductionHistory
       if (history.length <= 1) return 'Start'
       const config = this.currentPeriodConfig
-      const dataTimeSpan = (history.length - 1) * (config.interval / 1000)
+      const dataTimeSpan = (history.length - 1) * (config.interval / MS_PER_SECOND)
       return this._formatTimeSpan(dataTimeSpan)
     },
 
@@ -196,7 +200,7 @@ export const useCpsStore = defineStore('cps', {
       const history = this.currentProductionHistory
       if (history.length <= 1) return ''
       const config = this.currentPeriodConfig
-      const dataTimeSpan = (history.length - 1) * (config.interval / 1000)
+      const dataTimeSpan = (history.length - 1) * (config.interval / MS_PER_SECOND)
       return this._formatTimeSpan(dataTimeSpan / 2)
     },
 
@@ -204,16 +208,17 @@ export const useCpsStore = defineStore('cps', {
     getTooltipText(value: number, index: number): string {
       const config = this.currentPeriodConfig
       const history = this.currentProductionHistory
-      const timeAgo = (history.length - 1 - index) * (config.interval / 1000)
+      const timeAgo = (history.length - 1 - index) * (config.interval / MS_PER_SECOND)
 
       if (timeAgo === 0) {
         return `${value} CPS (jetzt)`
-      } else if (timeAgo < 60) {
+      } else if (timeAgo < SECONDS_PER_MINUTE) {
         return `${value} CPS vor ${Math.floor(timeAgo)} Sekunden`
-      } else if (timeAgo < 3600) {
-        return `${value} CPS vor ${Math.floor(timeAgo / 60)} Minuten`
+      } else if (timeAgo < SECONDS_PER_HOUR) {
+        return `${value} CPS vor ${Math.floor(timeAgo / SECONDS_PER_MINUTE)} Minuten`
       } else {
-        return `${value} CPS vor ${Math.floor(timeAgo / 3600)}h ${Math.floor((timeAgo % 3600) / 60)}min`
+        const { hours, minutes } = splitDuration(timeAgo)
+        return `${value} CPS vor ${hours}h ${minutes}min`
       }
     },
   },

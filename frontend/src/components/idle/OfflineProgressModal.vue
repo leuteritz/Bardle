@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { splitDuration } from '@/utils/format'
+import {
+  OFFLINE_COUNTER_ANIM_MS,
+  OFFLINE_MINIGAME_START_DELAY_MS,
+} from '@/config/constants'
 import { ref, watch, computed } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { formatNumber } from '@/config/numberFormat'
@@ -24,9 +29,7 @@ const minigamePhase = ref<MinigamePhase>('waiting')
 const rewardMultiplier = ref<1 | 2>(1)
 
 function formatDuration(totalSeconds: number): string {
-  const h = Math.floor(totalSeconds / 3600)
-  const m = Math.floor((totalSeconds % 3600) / 60)
-  const s = totalSeconds % 60
+  const { hours: h, minutes: m, seconds: s } = splitDuration(totalSeconds)
   const parts: string[] = []
   if (h > 0) parts.push(`${h}h`)
   if (m > 0) parts.push(`${m}m`)
@@ -43,7 +46,7 @@ function easeOutCubic(t: number): number {
 function startCounterAnimation(target: number) {
   cancelAnimationFrame(animationId)
   displayCount.value = 0
-  const duration = 2000
+  const duration = OFFLINE_COUNTER_ANIM_MS
   const start = performance.now()
   function step(now: number) {
     const elapsed = now - start
@@ -69,7 +72,7 @@ watch(
       if (gameStore.offlineChimes > 0) {
         minigameTimer = window.setTimeout(() => {
           minigamePhase.value = 'playing'
-        }, 2100)
+        }, OFFLINE_MINIGAME_START_DELAY_MS)
       }
     } else {
       cancelAnimationFrame(animationId)

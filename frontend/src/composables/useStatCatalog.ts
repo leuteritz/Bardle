@@ -39,6 +39,7 @@ import {
   MAX_ACTIVE_EXPEDITIONS,
   ITEM_SLOT_COUNT,
   BATTLE_TOTAL_GAME_SECONDS,
+  SECONDS_PER_HOUR,
 } from '@/config/constants'
 import type { StatCategoryId, StatCategoryView, StatEntry } from '@/types'
 
@@ -238,7 +239,7 @@ export function useStatCatalog(query: Ref<string>): {
       {
         key: 'hourly',
         label: 'Projected per Hour',
-        value: num(gameStore.chimesPerSecond * 3600),
+        value: num(gameStore.chimesPerSecond * SECONDS_PER_HOUR),
         hint: 'Current chimes per second extrapolated to one full hour',
       },
     ]
@@ -366,7 +367,7 @@ export function useStatCatalog(query: Ref<string>): {
         label: 'Matches per Rift Hour',
         value:
           battleStore.totalBattleTime > 0
-            ? dec((battles / battleStore.totalBattleTime) * 3600, 1)
+            ? dec((battles / battleStore.totalBattleTime) * SECONDS_PER_HOUR, 1)
             : '—',
         hint: `A full simulated match runs ${BATTLE_TOTAL_GAME_SECONDS} game-seconds`,
       },

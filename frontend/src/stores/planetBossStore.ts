@@ -26,6 +26,7 @@ import {
   CHAMPION_XP_GALAXY_BOSS_MULT,
   CHAMPION_XP_CHAMPION_PLANET_MULT,
   CHAMPION_XP_BOSS_ESCORT_MULT,
+  BOSS_REMOVE_DELAY_MS,
 } from '../config/constants'
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -429,7 +430,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         const planetId = boss.planetId
         setTimeout(() => {
           this.removeBoss(planetId)
-        }, 900)
+        }, BOSS_REMOVE_DELAY_MS)
       }
     },
 
@@ -558,7 +559,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         const planetId = boss.planetId
         setTimeout(() => {
           this.removeBoss(planetId)
-        }, 900)
+        }, BOSS_REMOVE_DELAY_MS)
       }
     },
 

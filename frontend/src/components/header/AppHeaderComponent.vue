@@ -21,6 +21,16 @@ import {
   HEADER_BADGE_EDGE_GAP_FRAC,
   CENTER_CHIMES_TOOLTIP_GAP_PX,
 } from '../../config/constants'
+import {
+  HEADER_BADGE_OVERLAP_FRAC,
+  HEADER_LEVEL_BADGE_DIAMETER_FACTOR,
+  HEADER_LEVEL_BADGE_FALLBACK_H_PX,
+  HEADER_NOTIF_BADGE_START_PX,
+  HEADER_BADGE_ARC_STEP_RAD,
+  HEADER_BADGE_ARC_MIN_RAD,
+  HEADER_BADGE_MAX_COUNT,
+} from '../../config/constants'
+import { formatBadgeCount } from '../../utils/format'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '../ui/RpgBadgeTooltipBody.vue'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
@@ -45,10 +55,8 @@ const expeditionBadgeCount = computed(
 const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
 // Planet tab: TOTAL affordable level-ups across all six orbit slots right now.
 const planetBadgeCount = computed(() => planetShopStore.affordableLevelCount)
-// Compact badge label — the total can climb high, so cap the glyph at 99+.
-const planetBadgeLabel = computed(() =>
-  planetBadgeCount.value > 99 ? '99+' : String(planetBadgeCount.value),
-)
+// Compact badge label — the total can climb high, so cap the glyph.
+const planetBadgeLabel = computed(() => formatBadgeCount(planetBadgeCount.value))
 
 /* Badge anchors on the arc ellipse (θ = π/2 at the apex where the level badge
    sits). Slots are solved numerically so the edge-to-edge pixel gap is the
@@ -60,7 +68,8 @@ const badgeSlotStyles = computed(() => {
   const W = svgW.value
   const H = svgH.value
   const overlap = badgeOverlapPx.value
-  const levelR = (overlap * 2.5) / 2 // overlap = 0.4 × level-badge height
+  // overlap = HEADER_BADGE_OVERLAP_FRAC × Badge-Höhe → Durchmesser zurückrechnen
+  const levelR = (overlap * HEADER_LEVEL_BADGE_DIAMETER_FACTOR) / 2
   const nD = notifBadgePx.value
   const nR = nD / 2
   const gap = nD * HEADER_BADGE_EDGE_GAP_FRAC
@@ -77,7 +86,11 @@ const badgeSlotStyles = computed(() => {
   const thetas: number[] = []
   let last = levelCenter
   let need = levelR + nR + gap // level ↔ first badge
-  for (let th = Math.PI / 2; th > 0.02 && thetas.length < 3; th -= 0.003) {
+  for (
+    let th = Math.PI / 2;
+    th > HEADER_BADGE_ARC_MIN_RAD && thetas.length < HEADER_BADGE_MAX_COUNT;
+    th -= HEADER_BADGE_ARC_STEP_RAD
+  ) {
     const p = notifCenter(th)
     if (Math.hypot(p.x - last.x, p.y - last.y) >= need) {
       thetas.push(th)
@@ -149,7 +162,7 @@ const svgW = ref(360)
 const svgH = ref(100)
 const badgeOverlapPx = ref(20)
 // rendered notify-badge diameter — JS mirror of the CSS clamp, kept fresh on resize
-const notifBadgePx = ref(28)
+const notifBadgePx = ref(HEADER_NOTIF_BADGE_START_PX)
 
 const headerW = ref(0)
 const headerH = ref(0)
@@ -205,8 +218,10 @@ async function measure() {
   })
   // Read actual rendered badge height so --level-badge-bottom stays correct at all fluid sizes
   const badgeEl = headerRef.value?.querySelector('.arc-level-badge') as HTMLElement | null
-  const badgeH = badgeEl ? badgeEl.getBoundingClientRect().height : 50
-  badgeOverlapPx.value = badgeH * 0.4
+  const badgeH = badgeEl
+    ? badgeEl.getBoundingClientRect().height
+    : HEADER_LEVEL_BADGE_FALLBACK_H_PX
+  badgeOverlapPx.value = badgeH * HEADER_BADGE_OVERLAP_FRAC
   notifBadgePx.value = Math.min(
     HEADER_NOTIF_BADGE_MAX_PX,
     Math.max(HEADER_NOTIF_BADGE_MIN_PX, window.innerWidth * HEADER_NOTIF_BADGE_VW),

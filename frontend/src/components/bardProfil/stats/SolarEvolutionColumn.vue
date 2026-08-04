@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
-import { formatCompactDuration } from '@/utils/format'
+import { formatCompactDuration, splitDuration } from '@/utils/format'
 import { useGameStore } from '@/stores/gameStore'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { useAugmentStore } from '@/stores/augmentStore'
@@ -19,6 +19,7 @@ import {
   COMET_STAGE_RADII,
   STATS_TAB_ORBIT,
   SUN_PHASE_DISPLAY_TOTAL,
+  MS_PER_SECOND,
 } from '@/config/constants'
 import { AUGMENTS } from '@/config/augments'
 import { useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
@@ -261,11 +262,12 @@ const orbitActiveLen = computed(() => (ORBIT_SEG_LEN * dwellPct.value) / 100)
  *  dial into a log book instead of a countdown. */
 const phaseAge = computed(() => {
   if (!solarStore.phaseEnteredAt) return null
-  const secs = Math.floor((now.value - solarStore.phaseEnteredAt) / 1000)
-  const d = Math.floor(secs / 86400)
-  const h = Math.floor((secs % 86400) / 3600)
-  const m = Math.floor((secs % 3600) / 60)
-  const s = secs % 60
+  const {
+    days: d,
+    hours: h,
+    minutes: m,
+    seconds: s,
+  } = splitDuration((now.value - solarStore.phaseEnteredAt) / MS_PER_SECOND)
   if (d > 0) return `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`
   if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
   if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`

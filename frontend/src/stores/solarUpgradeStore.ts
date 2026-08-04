@@ -25,6 +25,7 @@ import {
   COMET_MIN_DWELL_SECONDS,
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
+  SUN_EVOLVE_TRANSITION_MS,
 } from '../config/constants'
 
 export type SolarBranchId =
@@ -302,7 +303,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
         // apart and what is left collapses. Fire the one-shot transition.
         if (this.starPhase === STAR_PHASE_FINAL_INDEX) this.supernovaTrigger++
         console.log('[Bardle] Star evolved to phase', this.starPhase)
-      }, 2500)
+      }, SUN_EVOLVE_TRANSITION_MS)
     },
   },
 })

@@ -218,6 +218,26 @@ import {
   PLANET_ORBIT_FOREGROUND_DEPTH,
   PLANET_BUFF_MARK_GAP_PX,
   PLANET_BUFF_URGENT_SECS,
+  ORBIT_MAX_RX_VIEWPORT_FRACTION,
+  ORBIT_SIZE_SUN_SCALE_EXPONENT,
+  ORBIT_BEHIND_REL_Y,
+  ORBIT_BEHIND_FADE_BAND,
+  ORBIT_BEHIND_SPEED_LERP,
+  ORBIT_RING_MIN_OPACITY,
+  PLANET_ORBIT_POSITION_LERP,
+  PLANET_ORBIT_KEPLER_BOOST,
+  PLANET_ORBIT_PARALLAX_SCALE_BASE,
+  PLANET_ORBIT_PARALLAX_SCALE_SPAN,
+  PLANET_ORBIT_MIN_RY_SUN_FACTORS,
+  PLANET_ORBIT_MIN_RY_VIEWPORT_FACTORS,
+  PLANET_ORBIT_OPACITY_BEHIND_BASE,
+  PLANET_ORBIT_OPACITY_BEHIND_SPAN,
+  PLANET_ORBIT_OPACITY_FRONT_BASE,
+  PLANET_ORBIT_OPACITY_FRONT_SPAN,
+  COOLDOWN_RING_MIN_PROGRESS,
+  COOLDOWN_RING_HOT_PROGRESS,
+  COOLDOWN_RING_TIP_RADIUS,
+  COOLDOWN_RING_TIP_RADIUS_HOT,
 } from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
@@ -228,7 +248,6 @@ import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
 import { useOrbitScale } from '@/composables/useOrbitScale'
 
-const BEHIND_SPEED_LERP = 0.04
 const MIN_SHOT_DISTANCE = 32
 
 interface PlanetRenderPos {
@@ -380,7 +399,8 @@ export default defineComponent({
 
       for (const pos of positions) {
         if (!hasLiveBoss) break
-        if (!pos.isTurret || pos.isBehind || pos.isDown || pos.opacity <= 0.02) continue
+        if (!pos.isTurret || pos.isBehind || pos.isDown || pos.opacity <= ORBIT_RING_MIN_OPACITY)
+          continue
         const r = pos.size / 2 + 8
         const alpha = pos.opacity
         drewAny = true
@@ -392,10 +412,10 @@ export default defineComponent({
         c.lineWidth = 2
         c.stroke()
 
-        if (progress <= 0.004) continue
+        if (progress <= COOLDOWN_RING_MIN_PROGRESS) continue
         const start = -Math.PI / 2
         const end = start + progress * TWO_PI
-        const hot = progress > 0.92
+        const hot = progress > COOLDOWN_RING_HOT_PROGRESS
         c.beginPath()
         c.arc(pos.x, pos.y, r, start, end)
         c.strokeStyle = hot ? `rgba(255,150,140,${0.9 * alpha})` : `rgba(220,90,80,${0.55 * alpha})`
@@ -406,7 +426,13 @@ export default defineComponent({
         // Glüh-Spitze am Ende des Bogens
         if (progress < 1) {
           c.beginPath()
-          c.arc(pos.x + Math.cos(end) * r, pos.y + Math.sin(end) * r, hot ? 3 : 2.2, 0, TWO_PI)
+          c.arc(
+            pos.x + Math.cos(end) * r,
+            pos.y + Math.sin(end) * r,
+            hot ? COOLDOWN_RING_TIP_RADIUS_HOT : COOLDOWN_RING_TIP_RADIUS,
+            0,
+            TWO_PI,
+          )
           c.fillStyle = `rgba(255,180,170,${0.85 * alpha})`
           c.fill()
         }
@@ -486,20 +512,22 @@ export default defineComponent({
         const slotIdx = purchased.indexOf(slot)
         const tier = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length]
         const orbitColor = tier.color
-        const baseSize = tier.size * Math.pow(sunScale, 0.65)
+        const baseSize = tier.size * Math.pow(sunScale, ORBIT_SIZE_SUN_SCALE_EXPONENT)
 
         const tiltRad = tier.tiltRad
         const rawRy = tier.ry * sunScale * orbitScaleVal
         const vMin = Math.min(window.innerWidth, window.innerHeight)
-        const MIN_RY_FACTORS = [1.5, 2.0]
-        const VIEWPORT_RY_FACTORS = [0.10, 0.15]
         const minRy = Math.max(
-          planetShopStore.orbitSunRadius * MIN_RY_FACTORS[slotIdx % MIN_RY_FACTORS.length],
-          vMin * VIEWPORT_RY_FACTORS[slotIdx % VIEWPORT_RY_FACTORS.length],
+          planetShopStore.orbitSunRadius *
+            PLANET_ORBIT_MIN_RY_SUN_FACTORS[slotIdx % PLANET_ORBIT_MIN_RY_SUN_FACTORS.length],
+          vMin *
+            PLANET_ORBIT_MIN_RY_VIEWPORT_FACTORS[
+              slotIdx % PLANET_ORBIT_MIN_RY_VIEWPORT_FACTORS.length
+            ],
         )
         const flooredRy = Math.max(rawRy, minRy)
         const flooredRx = flooredRy * (tier.rx / tier.ry)
-        const maxRx = (window.innerWidth / 2) * 0.85
+        const maxRx = (window.innerWidth / 2) * ORBIT_MAX_RX_VIEWPORT_FRACTION
         const capFactor = Math.min(1.0, maxRx / flooredRx)
         const rx = flooredRx * capFactor
         const ry = flooredRy * capFactor
@@ -513,18 +541,19 @@ export default defineComponent({
         }
 
         const prevRelY = (ls.y - cy) / Math.max(ry, 1)
-        const prevIsBehind = prevRelY < -0.05
+        const prevIsBehind = prevRelY < ORBIT_BEHIND_REL_Y
         const targetMul = prevIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
         const curMul = planetSpeedMuls.get(slot.id) ?? 1.0
-        const newMul = curMul + (targetMul - curMul) * BEHIND_SPEED_LERP
+        const newMul = curMul + (targetMul - curMul) * ORBIT_BEHIND_SPEED_LERP
         planetSpeedMuls.set(slot.id, newMul)
 
         if (!reducedMotion) {
-          const keplerBoost = 1.0 + 0.5 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
+          const keplerBoost =
+            1.0 + PLANET_ORBIT_KEPLER_BOOST * (1 - Math.abs(Math.cos(ls.orbitAngle)))
           ls.orbitAngle += slot.direction * slot.baseSpeed * keplerBoost * newMul * dt
           const target = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, cx, cy)
-          ls.x += (target.x - ls.x) * 0.12
-          ls.y += (target.y - ls.y) * 0.12
+          ls.x += (target.x - ls.x) * PLANET_ORBIT_POSITION_LERP
+          ls.y += (target.y - ls.y) * PLANET_ORBIT_POSITION_LERP
         } else {
           const pos = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, cx, cy)
           ls.x = pos.x
@@ -550,18 +579,24 @@ export default defineComponent({
 
 
         const relY = (ls.y - cy) / Math.max(ry, 1)
-        const isBehind = relY < -0.05
+        const isBehind = relY < ORBIT_BEHIND_REL_Y
         const depth = (relY + 1) / 2
 
-        const parallaxScale = 0.75 + depth * 0.5
+        const parallaxScale =
+          PLANET_ORBIT_PARALLAX_SCALE_BASE + depth * PLANET_ORBIT_PARALLAX_SCALE_SPAN
         const size = Math.round(baseSize * parallaxScale)
-        const opacity = isBehind ? 0.15 + depth * 0.28 : 0.82 + depth * 0.18
+        const opacity = isBehind
+          ? PLANET_ORBIT_OPACITY_BEHIND_BASE + depth * PLANET_ORBIT_OPACITY_BEHIND_SPAN
+          : PLANET_ORBIT_OPACITY_FRONT_BASE + depth * PLANET_ORBIT_OPACITY_FRONT_SPAN
         const zIndex = Math.floor(9 + depth * 6)
         // Geteilte Schwelle: Command Panel und Planeten-Tab richten ihr
         // Eclipse-Medaillon exakt an diesem Wert aus.
         const isForeground = !isBehind && depth > PLANET_ORBIT_FOREGROUND_DEPTH
 
-        const visibleFactor = Math.max(0, Math.min(1, (relY + 0.05 + 0.12) / 0.12))
+        const visibleFactor = Math.max(
+          0,
+          Math.min(1, (relY - ORBIT_BEHIND_REL_Y + ORBIT_BEHIND_FADE_BAND) / ORBIT_BEHIND_FADE_BAND),
+        )
         const hintOpacity = Math.max(0, 1 - visibleFactor)
 
         const color = slot.role ? PLANET_ROLES[slot.role].color : '#888888'

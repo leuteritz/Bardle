@@ -7,6 +7,9 @@ import type {
   RoleStat,
   RoleAbilityDetail,
   SigilStageDef,
+  PlanetRole,
+  PlanetRoleType,
+  JungleBuffDef,
 } from '../types'
 
 // ELO rating system
@@ -20,6 +23,8 @@ export const ELO_RATING_SCALE = 400
  * end (an empty roster becomes an underdog, not a hopeless case), and
  * ENEMY_WEAKEN_SWING is what fully neutralizing the enemy via augments is worth.
  */
+/** Wie viele vergangene Kämpfe der Spielstand aufhebt. */
+export const BATTLE_HISTORY_SAVE_LIMIT = 20
 export const BATTLE_POWER_RATING_SWING = 150
 export const BATTLE_POWER_RATING_SOFTENING = 1500
 export const BATTLE_ENEMY_WEAKEN_RATING_SWING = 150
@@ -47,6 +52,222 @@ export const BATTLE_TOTAL_GAME_SECONDS = BATTLE_REAL_DURATION_SECONDS * 60
 // durations it is built from.
 
 export const MMR_TO_POWER_MULTIPLIER = 1.5
+
+// ── Zeit-Umrechnung ────────────────────────────────────────────────────────
+// Jede Dauer-Anzeige im Spiel zerlegt Sekunden in Tage/Stunden/Minuten. Die
+// Zerlegung selbst steht als `splitDuration` in utils/format.ts — hier liegen
+// nur die Faktoren, damit auch Stores und Composables sie benennen können.
+export const MS_PER_SECOND = 1000
+export const SECONDS_PER_MINUTE = 60
+export const MINUTES_PER_HOUR = 60
+export const SECONDS_PER_HOUR = SECONDS_PER_MINUTE * MINUTES_PER_HOUR
+export const HOURS_PER_DAY = 24
+export const SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY
+
+/**
+ * Obergrenze für Zähler-Badges. Darüber steht `99+` — die Badges sitzen auf
+ * dem Header-Bogen und im Profilmenü, wo eine dreistellige Zahl den Kreis
+ * sprengen würde. Format über `formatBadgeCount` in utils/format.ts.
+ */
+export const BADGE_COUNT_CAP = 99
+
+/**
+ * Farbstufen einer HP-Leiste in Prozent. Objective-Modal, Rift-Minimap und
+ * Team-Spalte zeigen dieselben Kämpfer nebeneinander — laufen die Schwellen
+ * auseinander, ist derselbe Champion links gelb und rechts grün.
+ * Klasse über `hpStageClass` in utils/format.ts.
+ */
+export const HP_STAGE_HIGH_PCT = 60
+export const HP_STAGE_MID_PCT = 35
+/** Eigene, tiefere Warnschwelle der Striker-Plakette im Star-Fight. */
+export const STRIKER_HP_LOW_PCT = 25
+
+/**
+ * Fortschrittsring im 0–100er viewBox: Striker-Squad und Boss-Timer zeichnen
+ * denselben Kreis. Der Umfang ist vorberechnet, weil `stroke-dasharray` ihn
+ * braucht, um aus einem Anteil eine Bogenlänge zu machen. Der Radius steht
+ * zusätzlich als `r="44"` im SVG — beide Werte müssen zusammenpassen.
+ */
+export const PROGRESS_RING_RADIUS = 44
+export const PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS
+
+// ── Deko-Partikelfelder (utils/particleField.ts) ───────────────────────────
+// Aufsteigende Glut hinter Star-Fight- und Rescue-Overlay sowie die treibenden
+// Staubkörner im Pause-Overlay. Alle Werte werden aus dem Partikel-Index
+// abgeleitet, nicht gewürfelt: die Felder müssen über einen Re-Render hinweg
+// stehenbleiben, sonst springt jedes Korn bei jeder Änderung an eine neue Stelle.
+
+/** Glut: Aufstiegsdauer, gestaffelt über EMBER_DURATION_VARIANTS Stufen. */
+export const EMBER_DURATION_BASE_S = 1.8
+export const EMBER_DURATION_STEP_S = 0.7
+export const EMBER_DURATION_VARIANTS = 6
+/** Negativer Startversatz, damit das Feld bereits in Bewegung erscheint. */
+export const EMBER_DELAY_STEP_S = -0.35
+export const EMBER_DELAY_VARIANTS = 11
+/** Korngröße und Deckkraft, ebenfalls aus dem Index gestaffelt. */
+export const EMBER_SIZE_BASE_PX = 1.5
+export const EMBER_SIZE_VARIANTS = 3
+export const EMBER_OPACITY_BASE = 0.4
+export const EMBER_OPACITY_STEP = 0.15
+export const EMBER_OPACITY_VARIANTS = 4
+/**
+ * Waagerechter Schritt zwischen zwei Körnern in Prozent. Beide Overlays nutzen
+ * eine irrationale Schrittweite, damit sich das Muster nicht wiederholt — und
+ * bewusst verschiedene, damit die zwei Felder nicht deckungsgleich aussehen.
+ */
+export const EMBER_LEFT_STEP_STAR_FIGHT_PCT = 4.55
+export const EMBER_LEFT_STEP_RESCUE_PCT = 4.17
+
+/**
+ * Pause-Staub: der goldene Winkel (137.5) und der Kehrwert des goldenen
+ * Schnitts (61.8) streuen die Körner ohne sichtbare Reihen über die Fläche.
+ */
+export const PAUSE_DUST_LEFT_STEP_PCT = 137.5
+export const PAUSE_DUST_TOP_STEP_PCT = 61.8
+export const PAUSE_DUST_TOP_OFFSET_PCT = 13
+export const PAUSE_DUST_SIZE_BASE_PX = 1.5
+export const PAUSE_DUST_SIZE_VARIANTS = 4
+export const PAUSE_DUST_DELAY_STEP_S = 0.45
+export const PAUSE_DUST_DELAY_CYCLE_S = 4
+export const PAUSE_DUST_DURATION_BASE_S = 4
+export const PAUSE_DUST_DURATION_VARIANTS = 6
+
+// ── Meep Skill Tree: radiales Netz-Layout (SkillTreeComponent) ─────────────
+// Ein Startknoten in der Mitte, fünf Pfade strahlen aus; leichter Zickzack pro
+// Stufe für den organischen Netz-Look. Die Radien sind so gewählt, dass sich
+// Kreise und Labels nie überlappen — einzeln geändert kleben sie aneinander.
+/** Grundwinkel der fünf Zweige, gleichmäßig über 360°. */
+export const SKILL_TREE_BASE_ANGLES_DEG = [-90, -18, 54, 126, 198]
+/** Zickzack-Zuschlag je Stufe, damit die Zweige nicht schnurgerade laufen. */
+export const SKILL_TREE_TIER_JITTER_DEG = [0, 10, -9, 10, -8]
+/** Abstand der fünf Stufen vom Zentrum. */
+export const SKILL_TREE_TIER_RADIUS = [200, 355, 510, 665, 820]
+/** Stauchung der y-Achse — das Netz sitzt in einem Breitbild-Rahmen. */
+export const SKILL_TREE_Y_SQUASH = 0.85
+/** Kreis-Mittelpunkt innerhalb des Node-Wrappers (muss zum CSS passen). */
+export const SKILL_TREE_NODE_CENTER = { x: 78, y: 40 }
+export const SKILL_TREE_START_CENTER = { x: 80, y: 48 }
+/** Einpassung beim Öffnen: Zoom-Clamp, damit das Netz lesbar startet. */
+export const SKILL_TREE_FIT_PADDING = 0.06
+export const SKILL_TREE_FIT_MIN_ZOOM = 0.62
+export const SKILL_TREE_FIT_MAX_ZOOM = 0.9
+/**
+ * Verzögerung vor `fitView`. Ohne sie kollidiert die Zoom-Animation mit den
+ * Mount-Kosten des Netzes und drückt die Framerate sichtbar.
+ */
+export const SKILL_TREE_FIT_DELAY_MS = 100
+/** Strichstärke der Verbindungen, je nach Zustand des Zielknotens. */
+export const SKILL_TREE_EDGE_WIDTH_BOUGHT = 3.5
+export const SKILL_TREE_EDGE_WIDTH_BUYABLE = 2.75
+export const SKILL_TREE_EDGE_WIDTH_LOCKED = 2.25
+
+// ── Sigil-Board: Abstand der Verbindungslinien ────────────────────────────
+/**
+ * Abstand, den eine Linie von den Bildern hält, die sie verbindet. Ein Sworn-
+ * Endpunkt ist keine Scheibe, sondern eine geschnittene Platte: er reicht an
+ * den Ecken bis SIGIL_SWORN_SIZE / 2 + SIGIL_SWORN_RIM_PX, die Linie muss also
+ * weiter draußen enden, als die Portraitbox allein vermuten ließe.
+ */
+export const SIGIL_LINK_GAP_MAIN = 54
+export const SIGIL_LINK_GAP_SWORN = 28
+export const SIGIL_LINK_GAP_BENCH = 22
+/** Goldener Winkel — streut die Glutpunkte gleichmäßig ohne Math.random. */
+/** Streuung der Sigil-Glut: alles aus dem Index abgeleitet, kein Math.random. */
+export const SIGIL_EMBER_RADIUS_STEP = 47
+export const SIGIL_EMBER_SIZE_BASE = 3
+export const SIGIL_EMBER_SIZE_VARIANTS = 3
+export const SIGIL_EMBER_DELAY_STEP_S = 0.37
+export const SIGIL_EMBER_DELAY_CYCLE_S = 2.4
+export const SIGIL_EMBER_DURATION_BASE_S = 2.2
+export const SIGIL_EMBER_DURATION_STEP_S = 0.29
+export const SIGIL_EMBER_DURATION_SPREAD_S = 1.8
+
+// ── Stern-Rettung: Lichtblitz beim Einsammeln ─────────────────────────────
+export const STAR_RESCUE_BURST_DURATION_MS = 400
+export const STAR_RESCUE_BURST_RAY_COUNT = 18
+export const STAR_RESCUE_BURST_MAX_ALPHA = 0.65
+/** Strahllänge als Anteil der halben Bildschirmdiagonale. */
+export const STAR_RESCUE_BURST_RAY_MIN_LEN = 0.18
+export const STAR_RESCUE_BURST_RAY_MAX_LEN = 0.42
+
+// ── Offline-Minispiel: Ring treffen ───────────────────────────────────────
+/** SVG-Einheiten im viewBox `0 0 280 280`. */
+export const OFFLINE_MINIGAME_CENTER = 140
+export const OFFLINE_MINIGAME_MAX_RADIUS = 126
+/** Trefferband als Anteil des Maximalradius — hier zählt der Klick. */
+export const OFFLINE_MINIGAME_BAND_MIN = 0.66
+export const OFFLINE_MINIGAME_BAND_MAX = 0.86
+/** Dauer eines Wellendurchlaufs und wie viele Versuche der Spieler hat. */
+export const OFFLINE_MINIGAME_PULSE_MS = 1700
+export const OFFLINE_MINIGAME_MAX_PULSES = 6
+/** Aufblenden der Welle am Anfang und ihr Verlöschen zum Rand hin. */
+export const OFFLINE_MINIGAME_FADE_IN_FRACTION = 0.08
+export const OFFLINE_MINIGAME_FADE_OUT_STRENGTH = 0.55
+/** Nachlauf, bevor das Ergebnis gemeldet wird — je nach Ausgang verschieden lang. */
+export const OFFLINE_MINIGAME_WIN_DELAY_MS = 800
+export const OFFLINE_MINIGAME_LOSE_DELAY_MS = 600
+export const OFFLINE_MINIGAME_TIMEOUT_DELAY_MS = 400
+export const OFFLINE_MINIGAME_SKIP_DELAY_MS = 300
+
+// ── Hyperspace-Sprung: Phasenwechsel ──────────────────────────────────────
+// Das Vollbild-Overlay und die Minimap zeigen denselben Sprung gleichzeitig.
+// Liefen die Marken auseinander, blitzte die eine Ebene, während die andere
+// noch beschleunigt — deshalb eine Quelle für beide.
+/** Ende der Beschleunigung, Übergang in den weißen Blitz. */
+export const HYPERSPACE_FLASH_AT_MS = 2000
+/** Beginn des Ausblendens. */
+export const HYPERSPACE_FADEOUT_AT_MS = 2500
+/** Alles zurück auf Ruhezustand. */
+export const HYPERSPACE_END_AT_MS = 3500
+
+// ── Weitere UI-Timings ────────────────────────────────────────────────────
+/** Auffrisch-Takt des Star-Fight-Modals: 4 Hz reichen für Ringe und Countdowns. */
+export const STAR_FIGHT_MODAL_TICK_MS = 250
+/** Radius des Planeten-Hintergrunds im Star-Fight-Modal (600er viewBox). */
+export const STAR_FIGHT_MODAL_PLANET_R = 260
+export const STAR_FIGHT_MODAL_PLANET_R_GALAXY_BOSS = 290
+/** Wie lange der Tier-Unlock in der Minimap aufblitzt. */
+export const MINIMAP_TIER_FLASH_MS = 2400
+/**
+ * Wie lange das Win/Lose-Badge den Titel-Slot der Bottom-Bar hält, bevor die
+ * Honor-Anzeige mit Sekundenzähler übernimmt (Result-Pause insgesamt:
+ * BATTLE_RESULT_PAUSE_MS).
+ */
+export const SCOREBOARD_RESULT_BADGE_MS = 3000
+/** Aufsammel-Blitz und Lebensdauer eines Chime-Pops im Expeditions-Panel. */
+export const EXPEDITION_COLLECT_FLASH_MS = 600
+export const EXPEDITION_CHIME_POP_LIFETIME_MS = 850
+export const EXPEDITION_CHIME_POP_SPREAD_PX = 80
+/** Farbschwellen der Erfolgsaussicht einer Expedition. */
+export const EXPEDITION_CHANCE_GOOD = 0.7
+export const EXPEDITION_CHANCE_MID = 0.45
+/** Dauer der Stauch-Rückmeldung beim Klick auf die Sonne. */
+export const SUN_CLICK_PUNCH_MS = 260
+/** Streuung der Chime-Funken um ihren Sollwinkel, als Anteil des Winkelschritts. */
+export const CHIME_BURST_ANGLE_JITTER = 0.6
+/** Untergrenze der Chime-Popup-Schrift, damit sie bei kleiner Sonne lesbar bleibt. */
+export const CHIME_POPUP_FONT_MIN_PX = 22
+export const CHIME_POPUP_FONT_SUN_FACTOR = 0.5
+/** Durchmesser des Klick-Ripples als Vielfaches des Sonnenradius. */
+export const SUN_CLICK_RIPPLE_SUN_FACTOR = 2.4
+
+// ── Star Forge: Baum-Darstellung (ForgeTreePanel) ─────────────────────────
+/** Winkel der fünf Wurzeln auf dem Ring, im Uhrzeigersinn ab oben. */
+export const FORGE_ROOT_ANGLES_DEG = {
+  flightSpeed: 270,
+  maxHp: 342,
+  chimesPerClick: 54,
+  chimesPerSecond: 126,
+  dmgPerClick: 198,
+} as const
+/** Icon-Kantenlänge je Knotenstufe. */
+export const FORGE_ICON_SIZE_ROOT = 28
+export const FORGE_ICON_SIZE_BRANCH = 22
+export const FORGE_ICON_SIZE_LEAF = 18
+/** Freiraum am oberen Rand für das schwebende Phasen-Dock. */
+export const FORGE_PHASE_DOCK_HEADROOM_PX = 96
+/** Radius, an dem eine Wurzel-Verbindung am Sonnenrand ansetzt. */
+export const FORGE_SUN_EDGE_R = 110
 
 // Star background (App.vue)
 /**
@@ -244,7 +465,52 @@ export const BOSS_ENRAGE_MAX_SECONDS = 60
 export const BOSS_PASSIVE_DPS_FRACTION = 0.1
 export const BOSS_CPS_PENALTY_FRACTION = 0.05
 export const BOSS_CPS_PENALTY_DURATION_MS = 30_000
+/** Nachlauf, bevor ein besiegter oder abgelaufener Boss vom Planeten verschwindet. */
+export const BOSS_REMOVE_DELAY_MS = 900
 export { BOSS_NAMES } from './bossNames'
+
+// ── Boss-Arena: Darstellung des Kampfes (BossArenaSection) ─────────────────
+/** Takt eines Champion-Angriffszyklus und der Punkt darin, an dem der Schlag landet. */
+export const BOSS_ARENA_ATTACK_CYCLE_MS = 2600
+export const BOSS_ARENA_IMPACT_OFFSET_FRACTION = 0.36
+/** Versatz zwischen zwei Champions, damit nicht alle gleichzeitig zuschlagen. */
+export const BOSS_ARENA_ATTACK_STAGGER_MS = 650
+/** Jeder ULT_EVERY-te Angriff ist ein Ult; so lange läuft dessen Animation. */
+export const BOSS_ARENA_ULT_EVERY = 5
+export const BOSS_ARENA_ULT_ANIM_MS = 3400
+/**
+ * Auffrisch-Takt der Arena. Bewusst 250 ms statt 100 ms: das Intervall
+ * re-rendert den kompletten Arena-Subtree, 10×/s war im Star-Fight-Modal ein
+ * messbarer FPS-Fresser.
+ */
+export const BOSS_ARENA_TICK_INTERVAL_MS = 250
+/** Standzeit einer Schadenszahl — größere Treffer bleiben etwas länger stehen. */
+export const BOSS_ARENA_FLOAT_LIFETIME_MS = 900
+export const BOSS_ARENA_FLOAT_LIFETIME_BIG_MS = 1100
+/** Streuung der Schadenszahl in der Arena, als Anteil ihrer Fläche. */
+export const BOSS_ARENA_FLOAT_X_BASE = 0.4
+export const BOSS_ARENA_FLOAT_X_SPREAD = 0.2
+export const BOSS_ARENA_FLOAT_Y_BASE = 0.2
+export const BOSS_ARENA_FLOAT_Y_SPREAD = 0.3
+/** Aufleuchten des Bosses und Wackeln der Arena, je Trefferart. */
+export const BOSS_ARENA_HIT_CLICK_MS = 160
+export const BOSS_ARENA_SHAKE_CLICK_MS = 320
+export const BOSS_ARENA_HIT_CHAMPION_MS = 140
+export const BOSS_ARENA_SHAKE_CHAMPION_MS = 280
+export const BOSS_ARENA_HIT_ULT_MS = 280
+export const BOSS_ARENA_SHAKE_ULT_MS = 520
+/** Schaden je Champion-Angriff bzw. -Ult. */
+export const BOSS_ARENA_CHAMPION_HIT_DAMAGE = 1
+export const BOSS_ARENA_CHAMPION_ULT_DAMAGE = 5
+/** Bogen, auf dem die Champions um den Boss stehen. */
+export const BOSS_ARENA_ARC_SPAN_BASE_DEG = 70
+export const BOSS_ARENA_ARC_SPAN_PER_CHAMPION_DEG = 45
+export const BOSS_ARENA_ARC_SPAN_MAX_DEG = 160
+export const BOSS_ARENA_ARC_RADIUS_PX = 115
+/** Strecke, die ein Champion beim Zuschlagen Richtung Boss ausschlägt. */
+export const BOSS_ARENA_STRIKE_REACH_PX = 62
+/** Versatz der CSS-Schlaganimation zwischen den Champions, in Sekunden. */
+export const BOSS_ARENA_STRIKE_STAGGER_S = 0.65
 
 /**
  * Boss-Sprites in `public/img/Boss/`. Bewusst eine feste Liste: die frühere
@@ -368,6 +634,23 @@ export const OBJECTIVE_LUNGE_STRIKE_FRACTION = 0.7
 export const OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS = 900
 /** Scheduler resolution for spawning fighter strike floats */
 export const OBJECTIVE_FIGHTER_FLOAT_TICK_MS = 100
+/** Lifetime of a click-damage float over the objective. */
+export const OBJECTIVE_CLICK_FLOAT_LIFETIME_MS = 750
+/**
+ * Fan-out of successive click floats so a fast clicker sees a spray instead of
+ * one stack. The float id is taken modulo the count, then scaled by the step.
+ */
+export const OBJECTIVE_CLICK_FLOAT_ROT_BASE_DEG = -14
+export const OBJECTIVE_CLICK_FLOAT_ROT_STEP_DEG = 7
+export const OBJECTIVE_CLICK_FLOAT_ROT_VARIANTS = 5
+export const OBJECTIVE_CLICK_FLOAT_LEFT_BASE_PCT = 34
+export const OBJECTIVE_CLICK_FLOAT_LEFT_STEP_PCT = 11
+export const OBJECTIVE_CLICK_FLOAT_LEFT_VARIANTS = 4
+/** Hit feedback on the objective's HP bar. */
+export const OBJECTIVE_HIT_FLASH_MS = 160
+export const OBJECTIVE_HP_SHAKE_MS = 220
+/** How long a fighter card stays tinted after taking damage or being healed. */
+export const OBJECTIVE_CARD_FLASH_MS = 350
 // ── Objective Fight 2.1: role HP pools, boss AoE, cooldown abilities ───────
 /** Fight-local max HP per role — the tank soaks taunted damage, the ADC is fragile */
 export const OBJECTIVE_ROLE_MAX_HP: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
@@ -560,6 +843,28 @@ export const TIMELINE_DRAKE_RESPAWN_MIN_GAP_T = 120
 /** Game-seconds between a drake spawn and its scripted result — short enough that every drake in the chain resolves before the next one spawns */
 export const TIMELINE_DRAKE_RESULT_DELAY_MIN_T = 150
 export const TIMELINE_DRAKE_RESULT_DELAY_MAX_T = 210
+/**
+ * Wahrscheinlichkeit, dass ein Kill dem begünstigten Team zufällt. Nicht 1 —
+ * auch das unterlegene Team muss gelegentlich punkten, sonst liest sich die
+ * Timeline wie ein Skript statt wie ein Spiel.
+ */
+export const TIMELINE_KILL_BIAS_CHANCE = 0.65
+/** Chance auf ein kleines Scharmützel rund um ein frisch gespawntes Objective. */
+export const TIMELINE_PIT_SCRAP_CHANCE = 0.6
+/** Verzögerung und Größe dieses Scharmützels. */
+export const TIMELINE_PIT_SCRAP_DELAY_MIN_T = 8
+export const TIMELINE_PIT_SCRAP_DELAY_MAX_T = 25
+export const TIMELINE_PIT_SCRAP_KILLS_MIN = 1
+export const TIMELINE_PIT_SCRAP_KILLS_MAX = 2
+/** Streuung des Drake-Spawns innerhalb seines Zeitfensters. */
+export const TIMELINE_DRAKE_SPAWN_JITTER_FRACTION = 0.15
+/**
+ * Das Ergebnis muss im eigenen Fenster landen UND davor Ruhe lassen, damit
+ * selbst eine Viererkette nicht Schlag auf Schlag wirkt.
+ */
+export const TIMELINE_DRAKE_RESULT_SLOT_FRACTION = 0.85
+export const TIMELINE_DRAKE_RESULT_QUIET_T = 90
+export const TIMELINE_DRAKE_RESULT_DELAY_FLOOR_T = 60
 export const TIMELINE_MID_FIGHTS_MIN = 2
 export const TIMELINE_MID_FIGHTS_MAX = 3
 export const TIMELINE_FIGHT_KILLS_MIN = 2
@@ -790,8 +1095,155 @@ export const FINAL_PUSH_NEXUS_TRAVEL_T = 250
 export const FINAL_PUSH_LAST_STAND_TRAVEL_T = 120
 /** Cosmetic position jitter in map-units applied by the UI ticker */
 export const MOVE_JITTER_UNITS = 1.5
+
+// ── Bewegungs-Choreografie: Streuung, Halte- und Wiederholzeiten ──────────
+// Alle Zeiten in Spielsekunden, alle Positionen in Map-Einheiten (0–100).
+/**
+ * Karten-Ränder. Ein gestreuter Zielpunkt darf nie ganz an den Rand rutschen —
+ * dort läge das Champion-Symbol halb außerhalb der Minimap.
+ */
+export const MOVE_MAP_CLAMP_MIN = 3
+export const MOVE_MAP_CLAMP_MAX = 97
+/** Streuung um einen Zielpunkt, je Anlass. Ein Kill trifft enger als ein Roam. */
+export const MOVE_JITTER_DEFAULT = 4
+export const MOVE_JITTER_FIGHT = 3
+export const MOVE_JITTER_OBJECTIVE = 4
+export const MOVE_JITTER_KILLER = 2.5
+export const MOVE_JITTER_VICTIM = 1.5
+export const MOVE_JITTER_ROAM = 2
+export const MOVE_JITTER_PUSH_DEFENSE = 2.5
+export const MOVE_JITTER_PUSH_NEXUS = 3
+export const MOVE_JITTER_DEFENDER_LINE = 3.5
+/** Wie lange nach Kampfbeginn noch am Ort verweilt wird. */
+export const MOVE_FIGHT_HOLD_T = 140
+/** Verweildauer an einem Objective — Drakes ketten sich, der Baron nicht. */
+export const MOVE_OBJECTIVE_HOLD_BARON_T = 600
+export const MOVE_OBJECTIVE_HOLD_DRAKE_T = 300
+/** Jungle-Roam: Startversatz, Sicherheitsabstand zum Spielende und Taktung. */
+export const MOVE_ROAM_START_OFFSET_T = 60
+export const MOVE_ROAM_END_MARGIN_T = 400
+export const MOVE_ROAM_STEP_BASE_T = 260
+export const MOVE_ROAM_STEP_RANGE_T = 200
+export const MOVE_ROAM_HOLD_T = 200
+/** Laner-Drift: dieselbe Mechanik, träger getaktet. */
+export const MOVE_LANE_DRIFT_START_OFFSET_T = 120
+export const MOVE_LANE_DRIFT_END_MARGIN_T = 500
+export const MOVE_LANE_DRIFT_STEP_BASE_T = 320
+export const MOVE_LANE_DRIFT_STEP_RANGE_T = 260
+export const MOVE_LANE_DRIFT_HOLD_T = 260
+/** Auslaufpfad des Junglers: Abschnitt der Lane, den er anschneidet. */
+export const MOVE_JUNGLE_WALKOUT_PATH_START = 0.06
+export const MOVE_JUNGLE_WALKOUT_PATH_END = 0.2
+export const MOVE_JUNGLE_WALKOUT_PATH_SAMPLES = 3
+/** Sichtbarkeitsfenster einer Minion-Welle als Anteil ihres Lane-Pfades. */
+export const MINION_PROGRESS_MIN = 0.02
+export const MINION_PROGRESS_MAX = 0.48
+/** Abstand zweier Minions derselben Welle auf dem Pfad. */
+export const MINION_SPACING = 0.012
 /** UI position sampling interval (ms) */
 export const MOVE_TICK_INTERVAL_MS = 500
+/**
+ * Kosmetisches Zittern der Symbole auf der Rift-Minimap, damit ein wartender
+ * Champion nicht eingefroren wirkt. Die Faktoren sind teilerfremd gewählt, so
+ * dass die fünf Symbole eines Teams nie im Gleichtakt schwingen.
+ */
+export const MOVE_JITTER_PHASE_X = 0.7
+export const MOVE_JITTER_PHASE_Y = 0.9
+export const MOVE_JITTER_INDEX_X = 2.1
+export const MOVE_JITTER_INDEX_Y = 1.7
+export const MOVE_JITTER_TEAM_Y = 2
+export const MOVE_JITTER_AMPLITUDE = 0.5
+/** Rand, den ein zitterndes Symbol auf der Minimap einhält. */
+export const MOVE_DISPLAY_CLAMP_MIN = 2
+export const MOVE_DISPLAY_CLAMP_MAX = 98
+
+/**
+ * Referenz-Auflösung, an der die HUD-Maße (Bottom-Bar, Seitenpanels) mit 1.0
+ * skalieren. Kleinere Fenster schrumpfen das HUD proportional, größere lassen
+ * es stehen — sonst wüchse die Leiste auf 4K ins Absurde.
+ */
+/** Abstand der beiden Naht-Linien von ihren Bezugskanten in der Bottom-Bar. */
+/**
+ * Goldener Winkel. Verteilt eine beliebige Anzahl Elemente gleichmäßig auf
+ * einem Kreis, ohne dass sich Richtungen wiederholen — deshalb überall dort,
+ * wo Deko-Elemente ohne Math.random gestreut werden sollen.
+ */
+export const GOLDEN_ANGLE_DEG = 137.508
+/** Takt des automatischen Speicherns. Bei verstecktem Tab pausiert er. */
+export const AUTO_SAVE_INTERVAL_MS = 5000
+/** Standardhöhe eines Planeten-Glyphs; die Breite folgt dem viewBox-Verhältnis. */
+export const PLANET_GLYPH_DEFAULT_SIZE_PX = 96
+/** Dauer, über die die Offline-Bilanz ihre Chime-Summe hochzählt. */
+export const OFFLINE_COUNTER_ANIM_MS = 2000
+/** Wartezeit, bis das Minispiel nach dem Öffnen der Bilanz erscheint. */
+export const OFFLINE_MINIGAME_START_DELAY_MS = 2100
+/** Nachlauf der Sonnen-Evolution, bis die neue Phase im Store steht. */
+export const SUN_EVOLVE_TRANSITION_MS = 2500
+/** Einpassung des Objective-Modals in sein Overlay. */
+export const OBJECTIVE_MODAL_MAX_SCALE = 1.35
+export const OBJECTIVE_MODAL_FIT_PADDING_PX = 10
+/**
+ * Radiale Staffelung der Flug-Linien um die Sonne: jede Linie bekommt über den
+ * Index eine eigene Reichweite, damit kein gleichmäßiger Kranz entsteht.
+ */
+export const FLIGHT_LINE_REACH_BASE = 0.75
+export const FLIGHT_LINE_REACH_INDEX_STEP = 29
+export const FLIGHT_LINE_REACH_VARIANTS = 5
+export const FLIGHT_LINE_REACH_STEP = 0.1
+// ── Header-Bogen: Sitzplätze der Badges ───────────────────────────────────
+/** Wie weit ein Badge über die Bogenlinie ragt, als Anteil seiner Höhe. */
+export const HEADER_BADGE_OVERLAP_FRAC = 0.4
+/**
+ * Level-Badge-Durchmesser als Vielfaches seiner Überlappung — Umkehrung von
+ * HEADER_BADGE_OVERLAP_FRAC, damit aus der gemessenen Überlappung wieder der
+ * Radius wird.
+ */
+export const HEADER_LEVEL_BADGE_DIAMETER_FACTOR = 2.5
+/** Rückfallhöhe, solange das Badge noch nicht gemessen werden konnte. */
+export const HEADER_LEVEL_BADGE_FALLBACK_H_PX = 50
+/** Startgröße des Benachrichtigungs-Badges, bis die Messung greift. */
+export const HEADER_NOTIF_BADGE_START_PX = 28
+/**
+ * Numerische Suche der Badge-Plätze auf der Ellipse: Schrittweite und
+ * Endwinkel. Analytisch ist der gleiche Kantenabstand auf einer Ellipse nicht
+ * geschlossen lösbar — deshalb wird der Bogen in feinen Schritten abgetastet.
+ */
+export const HEADER_BADGE_ARC_STEP_RAD = 0.003
+export const HEADER_BADGE_ARC_MIN_RAD = 0.02
+export const HEADER_BADGE_MAX_COUNT = 3
+/**
+ * Takt, in dem der Battle-Store seine Phasen aus den Zeitstempeln nachzieht.
+ * Läuft getrennt vom Speichern weiter, damit ein gedrosselter Tab den Kampf
+ * nicht anhält.
+ */
+export const BATTLE_SYNC_INTERVAL_MS = 1000
+/** Aufblitzen der Spieler-HP-Leiste nach einem Treffer. */
+export const PLAYER_HP_HIT_FLASH_MS = 350
+/** Nachlauf nach der Rollenwahl, damit die Auswahl-Animation sichtbar bleibt. */
+export const ROLE_SELECTION_CONFIRM_DELAY_MS = 260
+/** Verweilzeit, bevor die „Neu"-Markierung eines Champions verschwindet. */
+export const CHAMPION_NEW_BADGE_DISMISS_MS = 75
+/** Obergrenze des Hinweisring-Sprite-Caches, bevor er geleert wird. */
+export const HINT_SPRITE_CACHE_LIMIT = 64
+export const BOTTOM_BAR_SEAM_TOP_OFFSET_PX = 10
+export const BOTTOM_BAR_SEAM_BOTTOM_OFFSET_PX = 28
+export const HUD_SCALE_REF_WIDTH_PX = 2560
+export const HUD_SCALE_REF_HEIGHT_PX = 1440
+/** Schrittweite, mit der die Drifter-Bahn abgetastet wird, um ihre Tangente zu bestimmen. */
+export const DRIFTER_TANGENT_PROBE_STEP = 0.01
+/** Einsammel-Burst: Streuung um den Sollwinkel, als Anteil des Winkelschritts. */
+/** Aufblitz-Dauer einer geänderten Admin-Zahl. */
+export const ADMIN_FIELD_FLASH_MS = 280
+/** Wackeln des Galaxie-Sprung-Panels bei ungültiger Eingabe. */
+export const ADMIN_JUMP_SHAKE_MS = 450
+/** Schrittweite des Chimes-Reglers im Admin-Panel. */
+export const ADMIN_CHIMES_STEP = 100_000
+/** Menge je Material, die „alles auffüllen" setzt. */
+export const ADMIN_FILL_MATERIAL_AMOUNT = 9999
+export const DRIFTER_BURST_ANGLE_JITTER = 0.7
+/** Flugweite der Burst-Funken, als Vielfaches der Drifter-Größe. */
+export const DRIFTER_BURST_DIST_MIN_FACTOR = 1.1
+export const DRIFTER_BURST_DIST_RANGE_FACTOR = 1.1
 /** Movement-trail history length per champion (samples × tick interval ≈ trail duration) */
 export const TRAIL_MAX_POINTS = 7
 /** Minimum total walked distance (map-units) in the history before a trail is drawn */
@@ -1012,6 +1464,141 @@ export const PLANET_TAB_ORBIT_FOREGROUND_PROGRESS = 0.7
 /** Dauer der `ps-planet-orbit`-Keyframes in Sekunden — Basis fürs Phasen-Scrubbing. */
 export const PLANET_TAB_ORBIT_PERIOD_SEC = 26
 
+// ── Orbit-Rendering: geteilte Bahn-Geometrie ────────────────────────────────
+// ChampionOrbit, PlanetOrbit, StarSystemComponent und useStarSystem zeichnen
+// dieselben Bahnen aus verschiedenen Blickwinkeln. Weichen die Werte
+// auseinander, sitzen Champion, Bahnlinie und Hinweisring nicht mehr
+// übereinander — deshalb liegen sie hier und nicht in den Komponenten.
+
+/** Untergrenze der Bahnhöhe als Vielfaches des Sonnenradius, je Rolle. */
+export const ORBIT_MIN_RY_SUN_FACTOR_BY_ROLE: Record<ChampionRole, number> = {
+  top: 1.35,
+  jungle: 1.8,
+  mid: 2.2,
+  adc: 2.6,
+  support: 2.6,
+}
+/** Untergrenze der Bahnhöhe als Anteil der kürzeren Viewport-Kante, je Rolle. */
+export const ORBIT_MIN_RY_VIEWPORT_FACTOR_BY_ROLE: Record<ChampionRole, number> = {
+  top: 0.07,
+  jungle: 0.12,
+  mid: 0.17,
+  adc: 0.22,
+  support: 0.22,
+}
+/** Dieselben Untergrenzen für Bahnen ohne Rollenzuordnung (Extra-Planeten). */
+export const ORBIT_MIN_RY_SUN_FACTOR_ROLELESS = 1.6
+export const ORBIT_MIN_RY_VIEWPORT_FACTOR_ROLELESS = 0.12
+/** Anteil der halben Fensterbreite, den eine Bahn waagerecht höchstens einnimmt. */
+export const ORBIT_MAX_RX_VIEWPORT_FRACTION = 0.85
+/**
+ * Anteil der halben kürzeren Viewport-Kante, den das GESAMTE Bahnsystem füllen
+ * darf. Daraus leitet useOrbitScale den globalen Dämpfungsfaktor ab, damit auch
+ * auf der letzten Sonnenstufe noch alle Bahnen ins Bild passen.
+ */
+export const ORBIT_MAX_RX_VIEWPORT_FILL = 0.9
+/** Exponent, mit dem Sprite-Größen der Sonnenskalierung folgen (<1 = gedämpft). */
+export const ORBIT_SIZE_SUN_SCALE_EXPONENT = 0.65
+/** relY-Schwelle, unterhalb derer ein Objekt hinter der Sonne steht. */
+export const ORBIT_BEHIND_REL_Y = -0.05
+/** relY-Band unterhalb der Schwelle, über das der Hinweisring aufblendet. */
+export const ORBIT_BEHIND_FADE_BAND = 0.12
+/** Lerp, mit dem der Tempo-Multiplikator hinter der Sonne nachzieht (kein Sprung). */
+export const ORBIT_BEHIND_SPEED_LERP = 0.04
+/** Lerp, mit dem die gezeichnete Position der Sollbahn folgt. */
+export const CHAMPION_ORBIT_POSITION_LERP = 0.15
+export const PLANET_ORBIT_POSITION_LERP = 0.12
+/** Kepler-Effekt: Zuschlag auf die Winkelgeschwindigkeit an den Bahnscheiteln. */
+export const CHAMPION_ORBIT_KEPLER_BOOST = 0.55
+export const PLANET_ORBIT_KEPLER_BOOST = 0.5
+/**
+ * Parallax-Skalierung der Sprites: hinterste Bahnhälfte = BASE, vorderste
+ * = BASE + SPAN. Champions und Sterne teilen sich eine Kurve, damit ein
+ * Champion beim Wechsel auf einen Stern nicht in der Größe springt.
+ */
+export const ORBIT_PARALLAX_SCALE_BASE = 0.72
+export const ORBIT_PARALLAX_SCALE_SPAN = 0.56
+export const PLANET_ORBIT_PARALLAX_SCALE_BASE = 0.75
+export const PLANET_ORBIT_PARALLAX_SCALE_SPAN = 0.5
+/** Untergrenzen der Planeten-Bahnhöhe, abwechselnd je Slot-Index. */
+export const PLANET_ORBIT_MIN_RY_SUN_FACTORS = [1.5, 2.0]
+export const PLANET_ORBIT_MIN_RY_VIEWPORT_FACTORS = [0.1, 0.15]
+/**
+ * Untergrenze der Sonnenskalierung für Stern-Bahnen. Eine geschrumpfte Sonne
+ * zieht sonst auch die Sternbahnen mit ein, bis die Sterne im Kern kleben.
+ */
+export const STAR_ORBIT_MIN_SUN_SCALE = 0.9
+
+// ── Stern-Rendering im Idle-Orbit (useStarSystem) ──────────────────────────
+/** Restdeckkraft eines Sterns hinter der Sonne. */
+export const STAR_BEHIND_OPACITY = 0.2
+/** Deckkraft über die Bahntiefe: hinten = BASE, vorn = BASE + SPAN. */
+export const STAR_OPACITY_BASE = 0.78
+export const STAR_OPACITY_DEPTH_SPAN = 0.22
+/**
+ * Weichzeichnung hinter der Sonne. Auf STEP-Stufen quantisiert, damit nicht
+ * jeder Frame einen neuen Filterwert und damit eine Neurasterung auslöst.
+ */
+export const STAR_BEHIND_BLUR_MAX_PX = 2.5
+export const STAR_BEHIND_BLUR_STEP_PX = 0.5
+/** Abstand, den eine Sternbahn mindestens hinter der äußersten Champion-Bahn hält. */
+export const STAR_TIER_GAP_RESOURCE_PX = 140
+export const STAR_TIER_GAP_CHAMPION_PX = 60
+/** Sicherheitsabstand der äußersten Sternbahn zum Fensterrand. */
+export const STAR_VIEWPORT_MARGIN_PX = 20
+/** Untergrenze der Einflug-Skalierung, damit ein Stern nie auf 0 kollabiert. */
+export const STAR_SPAWN_MIN_SCALE = 0.05
+/** Größe der Planeten-Marker auf einer Sternbahn. */
+export const STAR_PLANET_SIZE_CHAMPION = 12
+export const STAR_PLANET_SIZE_GALAXY_BOSS = 14
+export const STAR_PLANET_SIZE_NORMAL = 10
+/** Einflug: Startradius als Vielfaches des Zielradius, plus Nachzieh-Lerp. */
+export const STAR_PLANET_FLY_IN_FACTOR = 2.5
+export const STAR_PLANET_RADIUS_LERP = 0.018
+/** Wie lange ein geretteter Planet noch stehen bleibt, bevor er ausgeblendet wird. */
+export const STAR_PLANET_SAVED_LINGER_MS = 600
+/** Undurchsichtigkeit hinter bzw. vor der Sonne, ebenfalls über die Tiefe interpoliert. */
+export const CHAMPION_ORBIT_OPACITY_BEHIND_BASE = 0.82
+export const CHAMPION_ORBIT_OPACITY_BEHIND_SPAN = 0.18
+export const CHAMPION_ORBIT_OPACITY_FRONT_BASE = 0.9
+export const CHAMPION_ORBIT_OPACITY_FRONT_SPAN = 0.1
+export const PLANET_ORBIT_OPACITY_BEHIND_BASE = 0.15
+export const PLANET_ORBIT_OPACITY_BEHIND_SPAN = 0.28
+export const PLANET_ORBIT_OPACITY_FRONT_BASE = 0.82
+export const PLANET_ORBIT_OPACITY_FRONT_SPAN = 0.18
+/** Unterhalb dieser Deckkraft lohnt sich kein Ring mehr — Zeichnung wird übersprungen. */
+export const ORBIT_RING_MIN_OPACITY = 0.02
+
+/** Mindestabstand zwischen zwei Geschossen desselben Champions. */
+export const CHAMPION_ORBIT_PROJECTILE_COOLDOWN_MS = 700
+/** Tank-Intercept (Top-Main): Ausschlag aus der Bahn und Dauer des Ausfallschritts. */
+export const CHAMPION_ORBIT_INTERCEPT_MAX_OFFSET_PX = 25
+export const CHAMPION_ORBIT_INTERCEPT_DURATION_MS = 500
+/** Anteil der Dauer für den Hinweg; der Rest ist der Rückweg auf die Bahn. */
+export const CHAMPION_ORBIT_INTERCEPT_OUT_FRACTION = 0.3
+
+// ── Cooldown-Ringe ─────────────────────────────────────────────────────────
+// Ein Muster, drei Zeichenstellen: Turret-Salve (PlanetOrbit), Stern-Angriff
+// (StarSystemComponent) und Planeten-Batterie (PlanetBatteryHUD).
+/** Unterhalb dieses Fortschritts bleibt nur die leise Spur stehen. */
+export const COOLDOWN_RING_MIN_PROGRESS = 0.004
+/** Ab hier gilt der Ring als „heiß" und wechselt auf die helle Farbe. */
+export const COOLDOWN_RING_HOT_PROGRESS = 0.92
+/** Radius der Glüh-Spitze am Bogenende, kalt und heiß. */
+export const COOLDOWN_RING_TIP_RADIUS = 2.2
+export const COOLDOWN_RING_TIP_RADIUS_HOT = 3
+
+/**
+ * Planeten-Batterie im Star-Fight-HUD. Die drei Maße spiegeln das CSS
+ * `clamp(54px, 7vh, 76px)` der Planetenkachel — der Cooldown-Ring wird im
+ * Canvas gezeichnet und muss dieselbe Größe treffen, sonst sitzt er daneben.
+ */
+export const BATTERY_PLANET_MIN_PX = 54
+export const BATTERY_PLANET_MAX_PX = 76
+export const BATTERY_PLANET_VIEWPORT_H_FRACTION = 0.07
+/** Saum zwischen Planetenrand und Ring. */
+export const BATTERY_RING_SEAM_PX = 7
+
 // Role Behavior — orbit abilities per role
 export const ROLE_SUPPORT_HEAL_INTERVAL_MS = 8000 // heal player every 8s
 export const ROLE_SUPPORT_HEAL_AMOUNT = 5 // +5 HP per heal
@@ -1073,6 +1660,21 @@ export const BOSS_RAGE_DURATION_MAX_MS = 12000 // max rage duration
 export const STRIKER_FLOAT_DURATION_MS = 1400 // floating dmg number lifetime above a striker
 export const STRIKER_FLOAT_MAX = 8 // cap on simultaneous striker damage floats
 export const STRIKER_PROJECTILE_FLIGHT_MS = 550 // projectile travel time
+/**
+ * Funken-Richtungen beim Einschlag. Fest verdrahtet statt gewürfelt: ein
+ * Math.random pro Frame würde die Streuung jedes Bild neu ziehen und den
+ * Einschlag flackern lassen.
+ */
+export const STRIKER_SPARK_DIRS = [
+  { x: 24, y: -8 },
+  { x: 14, y: -22 },
+  { x: -10, y: -24 },
+  { x: -24, y: -6 },
+  { x: -16, y: 18 },
+  { x: 18, y: 16 },
+] as const
+/** Abstand des Mündungsblitzes vom Portraitmittelpunkt, Richtung Boss. */
+export const STRIKER_MUZZLE_OFFSET_PX = 52
 export const STRIKER_IMPACT_MS = 900 // impact burst + damage number lifetime
 export const STRIKER_FIRE_FLASH_MS = 550 // snap phase of the attack (lunge → impact hold → settle)
 export const STRIKER_ATTACK_WINDUP_MS = 1000 // windup phase: starts the moment the pill shows 0s (one store tick before fire)
@@ -1255,6 +1857,43 @@ export const SUN_HORIZON_HP_GAP_PX = 10
 export const SUN_HORIZON_HIT_FLASH_MS = 420
 /** Lebensdauer eines Schadens-Floats über dem Sonnen-Kamm (ms). */
 export const SUN_HORIZON_FLOAT_MS = 1200
+
+// ── Chime-Partikel um die Sonne (SunComponent) ────────────────────────────
+// Aufsteigende Chimes, deren Dichte an der Produktion hängt: viel CpS = viele
+// Symbole. Die Wurzel dämpft das, sonst wäre der Bildschirm ab dem mittleren
+// Spiel dauerhaft zugedeckt.
+export const CHIME_PARTICLE_POOL_SIZE = 20
+export const CHIME_PARTICLE_MIN_VISIBLE = 2
+export const CHIME_PARTICLE_CPS_SCALE = 1.8
+/** Spawn-Takt: dieses Fenster wird auf die sichtbaren Partikel aufgeteilt. */
+export const CHIME_PARTICLE_SPAWN_WINDOW_MS = 1200
+/** Zufällige Streckung des Takts, damit kein Metronom entsteht. */
+export const CHIME_PARTICLE_INTERVAL_JITTER_MIN = 0.7
+export const CHIME_PARTICLE_INTERVAL_JITTER_RANGE = 0.6
+/** Wartezeit bei vollem Feld, als Anteil des normalen Takts. */
+export const CHIME_PARTICLE_FULL_RETRY_FRACTION = 0.5
+/** Flugstrecke nach außen, als Vielfaches des Sonnenradius. */
+export const CHIME_PARTICLE_TRAVEL_MIN_FACTOR = 0.5
+export const CHIME_PARTICLE_TRAVEL_RANGE_FACTOR = 0.5
+/** Winkelabweichung von der Radialen (rad). */
+export const CHIME_PARTICLE_ANGLE_JITTER = 0.6
+/** Lebensdauer eines Partikels. */
+export const CHIME_PARTICLE_LIFETIME_MIN_MS = 1000
+export const CHIME_PARTICLE_LIFETIME_RANGE_MS = 1500
+export const CHIME_PARTICLE_DEFAULT_LIFETIME_MS = 1500
+/** Größe: folgt dem Sonnenradius, bleibt aber lesbar. */
+export const CHIME_PARTICLE_SIZE_SUN_FACTOR = 0.35
+export const CHIME_PARTICLE_SIZE_MIN_PX = 14
+export const CHIME_PARTICLE_SIZE_DEFAULT_PX = 12
+/** Ein- und Ausblenden über die Lebensdauer, plus Deckkraft dazwischen. */
+export const CHIME_PARTICLE_FADE_IN_FRACTION = 0.15
+export const CHIME_PARTICLE_FADE_OUT_START = 0.8
+export const CHIME_PARTICLE_MAX_OPACITY = 0.9
+/** Wachstum des Symbols über den Flug. */
+export const CHIME_PARTICLE_DRAW_SCALE_BASE = 0.6
+export const CHIME_PARTICLE_DRAW_SCALE_SPAN = 0.3
+/** Kantenlänge des Partikel-Canvas als Vielfaches des Sonnenradius. */
+export const CHIME_PARTICLE_CANVAS_SUN_FACTOR = 6
 
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
@@ -1649,6 +2288,88 @@ export const SUPPORT_ANGLE_OFFSET = Math.PI / 5
 
 /** Pre-scale planet-slot orbit radii (× ORBIT_RADIUS_SCALE = effective radius in px).
  *  These orbit planets around *stars*, not the sun — not scaled via SUN_RADIUS. */
+// ── Planeten-Slots: Rollen, Jungle-Buffs und Slot-Grunddaten ────────────
+// Balance-Tabellen des Planeten-Shops. Standen bis zuletzt im Store selbst;
+// laut Architektur gehören statische Spieldaten nach config/ — der Store
+// re-exportiert sie nur noch für seine bisherigen Verbraucher.
+export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
+  turret_planet: {
+    id: 'turret_planet',
+    name: 'Turret',
+    bonusType: 'auto_attack_dps',
+    bonusPerSlot: 2,
+    icon: 'game-icons:archery-target',
+    color: '#cc4444',
+    image: '/img/planets/planet1.png',
+  },
+  harvest_node: {
+    id: 'harvest_node',
+    name: 'Harvester',
+    bonusType: 'material_harvest_rate',
+    bonusPerSlot: 1,
+    icon: 'game-icons:wheat',
+    color: '#80c840',
+    image: '/img/planets/planet2.png',
+  },
+  expedition_relay: {
+    id: 'expedition_relay',
+    name: 'Relay',
+    bonusType: 'expedition_reward_multiplier',
+    bonusPerSlot: 0.3,
+    icon: 'game-icons:rocket-thruster',
+    color: '#40a0e0',
+    image: '/img/planets/planet3.png',
+  },
+  shield_barrier: {
+    id: 'shield_barrier',
+    name: 'Aegis',
+    bonusType: 'boss_damage_reduction',
+    bonusPerSlot: 0.15,
+    icon: '/img/roles/top.png',
+    color: '#60a0ff',
+    image: '/img/planets/planet4.png',
+  },
+  time_capsule: {
+    id: 'time_capsule',
+    name: 'Timewarp',
+    bonusType: 'offline_boost',
+    bonusPerSlot: 0.25,
+    icon: 'game-icons:hourglass',
+    color: '#40c080',
+    image: '/img/planets/planet5.png',
+  },
+  resonance_tower: {
+    id: 'resonance_tower',
+    name: 'Resonator',
+    bonusType: 'building_cps_multiplier',
+    bonusPerSlot: 0.25,
+    icon: 'game-icons:radio-tower',
+    color: '#c09040',
+    image: '/img/planets/planet6.png',
+  },
+}
+
+export const PLANET_ROLES_LIST: PlanetRole[] = Object.values(PLANET_ROLES)
+
+export const JUNGLE_BUFF_DEFS: Record<PlanetRoleType, JungleBuffDef> = {
+  turret_planet: { name: 'Mark of the Hunter', multiplier: 2.5, durationMs: 15_000 },
+  harvest_node: { name: "Scavenger's Blessing", multiplier: 3.0, durationMs: 12_000 },
+  expedition_relay: { name: 'Warp Trail', multiplier: 2.0, durationMs: 20_000 },
+  shield_barrier: { name: 'Aegis Pulse', multiplier: 1.5, durationMs: 15_000 },
+  time_capsule: { name: 'Temporal Rift', multiplier: 2.0, durationMs: 30_000 },
+  resonance_tower: { name: 'Resonant Smite', multiplier: 2.0, durationMs: 18_000 },
+}
+
+/** Laufrichtung, Bahngeschwindigkeit und Grundpreis je Slot. */
+export const PLANET_SLOT_CONFIG = [
+  { id: 'slot_1', direction: 1 as const, baseSpeed: 0.00018, baseCost: 500 },
+  { id: 'slot_2', direction: -1 as const, baseSpeed: 0.00014, baseCost: 2000 },
+  { id: 'slot_3', direction: 1 as const, baseSpeed: 0.0001, baseCost: 8000 },
+  { id: 'slot_4', direction: -1 as const, baseSpeed: 0.00007, baseCost: 35000 },
+  { id: 'slot_5', direction: 1 as const, baseSpeed: 0.00005, baseCost: 150000 },
+  { id: 'slot_6', direction: -1 as const, baseSpeed: 0.000035, baseCost: 600000 },
+] as const
+
 export const PLANET_SLOT_ORBITS = [
   { rx: 180, ry: 50, tiltDeg: 18 },
   { rx: 236, ry: 57, tiltDeg: -12 },
@@ -2177,14 +2898,79 @@ export const AUGMENT_RARITY_COLOR: Record<string, string> = {
 export const MEEP_POWER_MULTIPLIER = 100
 
 // Ability defaults (??-operator fallbacks)
+/**
+ * Neutrale Universums-Effekte — der Zustand ohne jeden Modifikator. Das
+ * Auswahl-Modal vergleicht die Effekte eines Universums gegen diese Werte, um
+ * Verbesserung von Verschlechterung zu unterscheiden.
+ */
+export const UNIVERSE_NEUTRAL_MULTIPLIER = 1
+export const UNIVERSE_NEUTRAL_LEVEL_EXPONENT = 1.2
+export const UNIVERSE_NEUTRAL_MAX_ABILITY_LEVEL = 5
+export const UNIVERSE_NEUTRAL_SKILL_POINT_INTERVAL = 2
+export const UNIVERSE_NEUTRAL_HP_DRAIN = 0
+
 export const ABILITY_CPS_PER_LEVEL_DEFAULT = 0.15
 export const ABILITY_POWER_PER_LEVEL_DEFAULT = 300
 export const ABILITY_MEEP_COST_PER_LEVEL_DEFAULT = 0.1
 export const ABILITY_MEEP_COST_MIN_MULTIPLIER = 0.5
 export const ABILITY_CPC_PER_LEVEL_DEFAULT = 0.25
 
+// ── Shop-Katalog: Klick- und Produktionsgebäude ───────────────────────────
+// Grunddaten der sechs Gebäude. Der Store baut daraus seinen Zustand auf und
+// hängt `level` an — die Balance-Werte selbst gehören nach config/.
+// Kostenkurve: cost = baseCost * costMultiplier ^ level.
+export const SHOP_UPGRADE_CATALOG = [
+  {
+    id: 'chimeClicker',
+    name: 'Clicker',
+    baseCost: 50,
+    baseCPC: 1,
+    costMultiplier: 1.2,
+    icon: '/img/ChimesPerClick.png',
+  },
+  {
+    id: 'glockenturm',
+    name: 'Bell Tower',
+    baseCost: 25,
+    baseCPS: 1,
+    costMultiplier: 1.15,
+    icon: '/img/Glockenturm.png',
+  },
+  {
+    id: 'klanggenerator',
+    name: 'Sound Generator',
+    baseCost: 100,
+    baseCPS: 3,
+    costMultiplier: 1.2,
+    icon: '/img/KlangGenerator.png',
+  },
+  {
+    id: 'harmoniewerk',
+    name: 'Harmony Works',
+    baseCost: 500,
+    baseCPS: 5,
+    costMultiplier: 1.25,
+    icon: '/img/HarmonieWerk.png',
+  },
+  {
+    id: 'sphaerenMusik',
+    name: 'Sphere Music',
+    baseCost: 2500,
+    baseCPS: 10,
+    costMultiplier: 1.3,
+    icon: '/img/SphaerenMusik.png',
+  },
+  {
+    id: 'zeitEcho',
+    name: 'Time Echo',
+    baseCost: 10000,
+    baseCPS: 25,
+    costMultiplier: 1.4,
+    icon: '/img/ZeitEcho.png',
+  },
+] as const
+
 // Shop / Production efficiency
-export const SECONDS_PER_HOUR = 3600
 export const EFFICIENCY_STARS_DIVISOR = 20
 export const EFFICIENCY_STARS_MAX = 5
 export const EFFICIENCY_STARS_MIN = 0.5
@@ -2192,6 +2978,17 @@ export const EFFICIENCY_STARS_MIN = 0.5
 // Augments
 export const AUGMENT_CLICK_HISTORY_SIZE = 5
 export const AUGMENT_GRAVITY_FLIP_DURATION_MS = 3000
+/**
+ * Rückfallwerte für Augment-Spezialeffekte. Die echten Werte stehen als
+ * `specialEffect.params` in config/augments.ts — greifen die hier, fehlt dort
+ * ein Parameter, und der Effekt läuft trotzdem mit sinnvoller Wirkung.
+ */
+export const AUGMENT_OVERCLOCK_DEFAULT_MS = 30_000
+export const AUGMENT_OVERCLOCK_DEFAULT_MULT = 2
+export const AUGMENT_ECHO_CHAMBER_DEFAULT_MS = 60_000
+/** Keyboard Smash würfelt je Stat einen Modifikator in diesem Bereich. */
+export const AUGMENT_KEYBOARD_SMASH_DEFAULT_MIN = -0.05
+export const AUGMENT_KEYBOARD_SMASH_DEFAULT_MAX = 0.5
 
 // Combat / Damage floats — orbit radii for visual damage effects, not sun-relative
 export const COMBAT_ORBIT_RADIUS_X_MIN = 130
@@ -2426,6 +3223,8 @@ export const GALAXY_BOSS_ESCORT_BASE = 2
 export const GALAXY_BOSS_ESCORT_PER_GALAXY = 1
 export const GALAXY_BOSS_ESCORT_MAX = 12
 export const GALAXY_BOSS_WAVE_SIZE = 3
+/** Fächerung der Eskorten-Planetenbahnen: der äußerste liegt um diesen Anteil weiter außen. */
+export const GALAXY_BOSS_ESCORT_ORBIT_SPREAD = 0.6
 export const GALAXY_BOSS_ESCORT_PLANET_ORBIT_RX = 30
 export const GALAXY_BOSS_ESCORT_PLANET_ORBIT_RY = 17
 export const GALAXY_BOSS_ESCORT_PLANET_ORBIT_TILT = 0.12
@@ -2551,6 +3350,13 @@ export const EXPEDITION_POWER_BONUS_CAP = 0.4
 export const EXPEDITION_POWER_BONUS_SCALE = 0.2
 /** Base success probability before role/power modifiers */
 export const EXPEDITION_BASE_SUCCESS_CHANCE = 0.5
+/**
+ * Harte Grenzen der Erfolgsaussicht. Weder ein übermächtiges Team noch ein
+ * hoffnungsloses darf die Würfel ganz ausschalten — sonst ist die Expedition
+ * keine Entscheidung mehr.
+ */
+export const EXPEDITION_SUCCESS_CHANCE_MIN = 0.05
+export const EXPEDITION_SUCCESS_CHANCE_MAX = 0.95
 /** Fraction of base reward granted on expedition failure */
 export const EXPEDITION_FAILURE_REWARD_FRACTION = 0.1
 
@@ -2583,6 +3389,38 @@ export const BATTLE_COUNTDOWN_INTERVAL_MS = 500
 export const PLANET_SEARCH_ANIM_DURATION_MS = 5000
 /** Extra margin after the planet-search animation duration before the RAF-fallback setTimeout fires (ms) */
 export const PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS = 200
+/**
+ * Restzeit, unterhalb derer die Universums-Animation gar nicht mehr anläuft —
+ * ein Aufblitzen von einem Sekundenbruchteil wirkt wie ein Darstellungsfehler.
+ */
+export const UNIVERSE_ANIM_MIN_REMAINING_MS = 150
+/**
+ * Zusätzlicher Sicherheitsabstand, bevor die Simulation notfalls von selbst
+ * startet. Greift nur, wenn die Suchanimation ihr Ende nicht gemeldet hat.
+ */
+export const BATTLE_SIM_START_SAFETY_MARGIN_MS = 1500
+/** Wie lange eine Kampfmarkierung auf der Minimap steht, in Spielsekunden. */
+export const BATTLE_FIGHT_MARKER_DURATION_T = 120
+/**
+ * Grenzen der Siegwahrscheinlichkeit. Kein Kampf ist je entschieden, bevor er
+ * beginnt — auch das stärkste Team kann verlieren und umgekehrt.
+ */
+export const BATTLE_WIN_PROBABILITY_MIN = 0.1
+export const BATTLE_WIN_PROBABILITY_MAX = 0.9
+/**
+ * Kosmetische HP der Champions im Broadcast. Kein Kampfwert — nur eine
+ * deterministische Zahl, die je Champion und Zeitscheibe gleich bleibt, damit
+ * die Leisten nicht bei jedem Frame zappeln. Die Faktoren sind teilerfremde
+ * Mischwerte; sie tragen keine eigene Bedeutung.
+ */
+export const BATTLE_COSMETIC_HP_MIN = 35
+export const BATTLE_COSMETIC_HP_RANGE = 66
+/** Länge einer Zeitscheibe in Spielsekunden (~1,5 s Echtzeit). */
+export const BATTLE_COSMETIC_HP_TIME_SLICE_T = 90
+export const BATTLE_COSMETIC_HP_MIX_CHAMPION = 53
+export const BATTLE_COSMETIC_HP_MIX_TIME = 31
+export const BATTLE_COSMETIC_HP_MIX_TEAM = 17
+export const BATTLE_COSMETIC_HP_MIX_SEED = 97
 /** Reference duration multiplied by drain rate to reduce opponent power (seconds) */
 export const BATTLE_DRAIN_REFERENCE_SECONDS = 30
 /** Minimum effective opponent power as a fraction of its original value */
@@ -2672,6 +3510,39 @@ export const HEAL_FLOAT_Y_OFFSET = 35
 export const HEAL_FLOAT_X_SPREAD = 60
 /** Y-offset from the player planet center for player heal floats (px) */
 export const HEAL_FLOAT_PLAYER_Y_OFFSET = 80
+
+// ── Schadenszahlen der Rollen-Fähigkeiten ─────────────────────────────────
+// Jede Fähigkeit wirft ihre Zahl mit eigener Streuung, Höhe und Standzeit aus,
+// damit sich gleichzeitige Treffer nicht zu einem Klumpen stapeln.
+/** Champion trifft ein Gegner-Geschoss ab. */
+export const CHAMPION_DAMAGE_FLOAT_X_SPREAD = 24
+export const CHAMPION_DAMAGE_FLOAT_Y_OFFSET = 34
+export const CHAMPION_DAMAGE_FLOAT_MS = 900
+/** Striker-Geschoss schlägt auf dem Bossplaneten ein. */
+export const STRIKER_DAMAGE_FLOAT_X_SPREAD = 36
+export const STRIKER_DAMAGE_FLOAT_Y_OFFSET = 48
+export const STRIKER_DAMAGE_FLOAT_MS = 1100
+/** Damnation — der große Fluchtreffer steht länger und höher. */
+export const CURSE_DAMAGE_FLOAT_Y_OFFSET = 65
+export const CURSE_DAMAGE_FLOAT_MS = 1500
+/** ADC-Burst. */
+export const ADC_BURST_FLOAT_X_SPREAD = 30
+export const ADC_BURST_FLOAT_Y_OFFSET = 45
+export const ADC_BURST_FLOAT_MS = 1200
+/** Sichtbares Aufblitzen des Burst-Zustands im Orbit. */
+export const ADC_BURST_ACTIVE_MS = 350
+/** Schild-Symbol über dem Top-Champion beim Abfangen. */
+export const SHIELD_FLOAT_Y_OFFSET = 45
+export const SHIELD_FLOAT_MS = 1000
+
+/**
+ * Sperrzeit der Ereignis-Meldungen im Log. Ohne sie überflutet eine
+ * Dauerfähigkeit wie der Fluch-DoT das Log im Tick-Takt.
+ */
+export const ROLE_EVENT_THROTTLE_SUPPORT_PLANET_MS = 4000
+export const ROLE_EVENT_THROTTLE_SUPPORT_PLAYER_MS = 5000
+export const ROLE_EVENT_THROTTLE_MID_CURSE_MS = 10000
+export const ROLE_EVENT_THROTTLE_ADC_BURST_MS = 10000
 
 // Role behavior — animation durations
 /** Duration of the Top champion intercept/shield-broken flash animation (ms) */
@@ -2915,6 +3786,23 @@ export const FORGE_LEAF_PARENT_MIN_LEVEL = 2
 export const FORGE_LEAF_AMPLIFY_PER_LEVEL = 0.25
 
 export const FORGE_CONSTELLATION_REQUIRED_LEVEL = 3
+/** Dieselbe Verstärkung in Prozent — für die Beschreibungstexte im Baum. */
+export const FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT = FORGE_LEAF_AMPLIFY_PER_LEVEL * 100
+
+/**
+ * Wirkung der geschmiedeten Konstellationen. Die Zahlen stehen zusätzlich als
+ * Prozentangabe im `desc`-Text der jeweiligen Definition in config/starForge.ts
+ * — ändert sich eine, muss der Text mitgeführt werden.
+ */
+export const FORGE_CONSTELLATION_BULWARK_DAMAGE_MULT = 0.9
+export const FORGE_CONSTELLATION_STELLAR_WIND_CPS_MULT = 1.18
+export const FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT = 1.12
+
+/** Obergrenzen, damit gestapelte Forge-Effekte den Spielablauf nicht brechen. */
+export const FORGE_MIN_DAMAGE_TAKEN_MULT = 0.25
+export const FORGE_MIN_DWELL_MULT = 0.5
+export const FORGE_MIN_EXPEDITION_MULT = 0.4
+export const FORGE_MAX_DOUBLE_CLICK_CHANCE = 0.8
 
 // Cosmic Bargain
 export const FORGE_BARGAIN_RESTOCK_MS = 8 * 3_600_000

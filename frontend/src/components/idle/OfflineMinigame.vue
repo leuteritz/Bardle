@@ -1,4 +1,18 @@
 <script setup lang="ts">
+import {
+  OFFLINE_MINIGAME_CENTER,
+  OFFLINE_MINIGAME_MAX_RADIUS,
+  OFFLINE_MINIGAME_BAND_MIN,
+  OFFLINE_MINIGAME_BAND_MAX,
+  OFFLINE_MINIGAME_PULSE_MS,
+  OFFLINE_MINIGAME_MAX_PULSES,
+  OFFLINE_MINIGAME_FADE_IN_FRACTION,
+  OFFLINE_MINIGAME_FADE_OUT_STRENGTH,
+  OFFLINE_MINIGAME_WIN_DELAY_MS,
+  OFFLINE_MINIGAME_LOSE_DELAY_MS,
+  OFFLINE_MINIGAME_TIMEOUT_DELAY_MS,
+  OFFLINE_MINIGAME_SKIP_DELAY_MS,
+} from '@/config/constants'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 const emit = defineEmits<{
@@ -9,12 +23,12 @@ const emit = defineEmits<{
 type Phase = 'playing' | 'result-win' | 'result-lose'
 
 /* Geometry (SVG units, viewBox 0 0 280 280, center 140) */
-const CENTER = 140
-const MAX_R = 126
-const BAND_MIN = 0.66
-const BAND_MAX = 0.86
-const PULSE_MS = 1700
-const MAX_PULSES = 6
+const CENTER = OFFLINE_MINIGAME_CENTER
+const MAX_R = OFFLINE_MINIGAME_MAX_RADIUS
+const BAND_MIN = OFFLINE_MINIGAME_BAND_MIN
+const BAND_MAX = OFFLINE_MINIGAME_BAND_MAX
+const PULSE_MS = OFFLINE_MINIGAME_PULSE_MS
+const MAX_PULSES = OFFLINE_MINIGAME_MAX_PULSES
 
 const phase = ref<Phase>('playing')
 const t = ref(0)
@@ -29,8 +43,9 @@ const reducedMotion =
 
 const waveRadius = computed(() => t.value * MAX_R)
 const waveOpacity = computed(() => {
-  if (t.value < 0.08) return t.value / 0.08
-  return Math.max(0, 1 - Math.pow(t.value, 3) * 0.55)
+  if (t.value < OFFLINE_MINIGAME_FADE_IN_FRACTION)
+    return t.value / OFFLINE_MINIGAME_FADE_IN_FRACTION
+  return Math.max(0, 1 - Math.pow(t.value, 3) * OFFLINE_MINIGAME_FADE_OUT_STRENGTH)
 })
 const inBand = computed(() => t.value >= BAND_MIN && t.value <= BAND_MAX)
 
@@ -45,7 +60,7 @@ function loop(now: number) {
   if (elapsed >= PULSE_MS) {
     pulsesLeft.value -= 1
     if (pulsesLeft.value <= 0) {
-      finish(false, 400)
+      finish(false, OFFLINE_MINIGAME_TIMEOUT_DELAY_MS)
       return
     }
     pulseStart = now
@@ -64,12 +79,15 @@ function finish(won: boolean, delay: number) {
 
 function strike() {
   if (phase.value !== 'playing') return
-  finish(inBand.value, inBand.value ? 800 : 600)
+  finish(
+    inBand.value,
+    inBand.value ? OFFLINE_MINIGAME_WIN_DELAY_MS : OFFLINE_MINIGAME_LOSE_DELAY_MS,
+  )
 }
 
 function skip() {
   if (phase.value !== 'playing') return
-  finish(false, 300)
+  finish(false, OFFLINE_MINIGAME_SKIP_DELAY_MS)
 }
 
 function handleKeydown(e: KeyboardEvent) {

@@ -221,6 +221,9 @@ import {
   CHAMPION_HIT_FLASH_MS,
   BOSS_WAVE_HIT_DELAY_MS,
   BOSS_AUTO_HIT_DELAY_MS,
+  PROGRESS_RING_CIRCUMFERENCE,
+  STRIKER_SPARK_DIRS,
+  STRIKER_MUZZLE_OFFSET_PX,
 } from '@/config/constants'
 import { CHAMPION_STATS, statEffectLabel } from '@/config/championLevels'
 import type { ChampionRole, StrikerStatCell } from '@/types'
@@ -251,8 +254,8 @@ function roleLabel(role: ChampionRole): string {
   return ROLE_BY_KEY[role].label
 }
 
-// r=44 im 100er-viewBox → Umfang 2πr (wie sf-star-ring im Modal)
-const RING_CIRCUMFERENCE = 2 * Math.PI * 44
+// Umfang des Ringes aus dem 100er-viewBox (r=44 im SVG oben)
+const RING_CIRCUMFERENCE = PROGRESS_RING_CIRCUMFERENCE
 
 // headerSlots-Index je Rolle (SLOT_ROLES-Reihenfolge aus getOrbitingRoles)
 const SLOT_BY_ROLE: Record<ChampionRole, number> = {
@@ -266,14 +269,7 @@ const SLOT_BY_ROLE: Record<ChampionRole, number> = {
 const SQUAD_ROLES = Object.keys(ROLE_STAR_ATTACKS) as ChampionRole[]
 
 // Funken-Richtungen für den Impact (fixe Streuung, kein Math.random pro Frame)
-const SPARK_DIRS = [
-  { x: 24, y: -8 },
-  { x: 14, y: -22 },
-  { x: -10, y: -24 },
-  { x: -24, y: -6 },
-  { x: -16, y: 18 },
-  { x: 18, y: 16 },
-]
+const SPARK_DIRS = STRIKER_SPARK_DIRS
 
 // Arena-Größe in px — nötig für die Projektil-Flugvektoren (transform braucht px)
 const rootEl = ref<HTMLDivElement | null>(null)
@@ -345,8 +341,8 @@ const strikers = computed(() =>
         // Schweif zeigt der Flugrichtung entgegen
         rot: Math.round((Math.atan2(py, px) * 180) / Math.PI) + 90,
         // Mündungsblitz am Portraitrand Richtung Boss
-        mx: Math.round((px / dist) * 52),
-        my: Math.round((py / dist) * 52),
+        mx: Math.round((px / dist) * STRIKER_MUZZLE_OFFSET_PX),
+        my: Math.round((py / dist) * STRIKER_MUZZLE_OFFSET_PX),
         // Angriffs-Lunge: Portrait stößt Richtung Boss vor
         ax: Math.round((px / dist) * STRIKER_ATTACK_LUNGE_PX),
         ay: Math.round((py / dist) * STRIKER_ATTACK_LUNGE_PX),

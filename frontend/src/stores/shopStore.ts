@@ -17,75 +17,16 @@ import {
   EFFICIENCY_STARS_DIVISOR,
   EFFICIENCY_STARS_MAX,
   EFFICIENCY_STARS_MIN,
+  SHOP_UPGRADE_CATALOG,
 } from '../config/constants'
 
-const chimeClickerIcon = '/img/ChimesPerClick.png'
-const glockenturmIcon = '/img/Glockenturm.png'
-const klanggeneratorIcon = '/img/KlangGenerator.png'
-const harmoniewerkIcon = '/img/HarmonieWerk.png'
-const sphaerenMusikIcon = '/img/SphaerenMusik.png'
-const zeitEchoIcon = '/img/ZeitEcho.png'
 
 export const useShopStore = defineStore('shop', {
   state: () => ({
     buyAmount: 1 as number | 'max',
 
-    shopUpgrades: [
-      {
-        id: 'chimeClicker',
-        name: 'Clicker',
-        baseCost: 50,
-        baseCPC: 1,
-        level: 0,
-        costMultiplier: 1.2,
-        icon: chimeClickerIcon,
-      } as ShopUpgrade,
-      {
-        id: 'glockenturm',
-        name: 'Bell Tower',
-        baseCost: 25,
-        baseCPS: 1,
-        level: 0,
-        costMultiplier: 1.15,
-        icon: glockenturmIcon,
-      } as ShopUpgrade,
-      {
-        id: 'klanggenerator',
-        name: 'Sound Generator',
-        baseCost: 100,
-        baseCPS: 3,
-        level: 0,
-        costMultiplier: 1.2,
-        icon: klanggeneratorIcon,
-      } as ShopUpgrade,
-      {
-        id: 'harmoniewerk',
-        name: 'Harmony Works',
-        baseCost: 500,
-        baseCPS: 5,
-        level: 0,
-        costMultiplier: 1.25,
-        icon: harmoniewerkIcon,
-      } as ShopUpgrade,
-      {
-        id: 'sphaerenMusik',
-        name: 'Sphere Music',
-        baseCost: 2500,
-        baseCPS: 10,
-        level: 0,
-        costMultiplier: 1.3,
-        icon: sphaerenMusikIcon,
-      } as ShopUpgrade,
-      {
-        id: 'zeitEcho',
-        name: 'Time Echo',
-        baseCost: 10000,
-        baseCPS: 25,
-        level: 0,
-        costMultiplier: 1.4,
-        icon: zeitEchoIcon,
-      } as ShopUpgrade,
-    ],
+    // Katalog aus config/constants.ts, hier nur um den Laufzeitstand ergänzt.
+    shopUpgrades: SHOP_UPGRADE_CATALOG.map((def) => ({ ...def, level: 0 }) as ShopUpgrade),
   }),
 
   getters: {

@@ -27,6 +27,11 @@ import {
   FLIGHT_LINE_BASE_LEN_FACTOR,
   FLIGHT_LINE_THICKNESS,
   FLIGHT_LINE_GROW_SCALE,
+  GOLDEN_ANGLE_DEG,
+  FLIGHT_LINE_REACH_BASE,
+  FLIGHT_LINE_REACH_INDEX_STEP,
+  FLIGHT_LINE_REACH_VARIANTS,
+  FLIGHT_LINE_REACH_STEP,
 } from '@/config/constants'
 
 /**
@@ -78,11 +83,15 @@ export default defineComponent({
     const lines = computed((): Record<string, string>[] =>
       Array.from({ length: FLIGHT_LINE_COUNT }, (_, i) => {
         const reach =
-          props.diameter * FLIGHT_LINE_REACH_FACTOR * (0.75 + (((i * 29) % 5) * 0.1))
+          props.diameter *
+          FLIGHT_LINE_REACH_FACTOR *
+          (FLIGHT_LINE_REACH_BASE +
+            ((i * FLIGHT_LINE_REACH_INDEX_STEP) % FLIGHT_LINE_REACH_VARIANTS) *
+              FLIGHT_LINE_REACH_STEP)
         return {
           width: `${props.diameter * FLIGHT_LINE_BASE_LEN_FACTOR}px`,
           height: `${FLIGHT_LINE_THICKNESS}px`,
-          '--a': `${i * 137.5}deg`,
+          '--a': `${i * GOLDEN_ANGLE_DEG}deg`,
           '--reach': `${reach}px`,
           animationDuration: `${1.4 + (i % 4) * 0.35}s`,
           animationDelay: `${-((i * 0.9) % 3)}s`,

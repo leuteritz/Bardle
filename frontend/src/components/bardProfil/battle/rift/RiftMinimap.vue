@@ -326,6 +326,7 @@ import {
   JUNGLE_BUFF_RESPAWN_T,
   KILL_MARK_WINDOW_T,
 } from '@/config/constants'
+import { hpStageClass } from '@/utils/format'
 import { DRAKE_TYPES } from '@/config/drakes'
 import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION, JUNGLE_BUFF_CAMPS } from '@/config/battleRoutes'
 import {
@@ -431,10 +432,7 @@ const killMarkers = computed(() => {
 })
 
 function hpClass(champ: ChampionState | undefined): string {
-  const hp = champ?.hpPercent ?? 100
-  if (hp > 60) return 'hp--high'
-  if (hp > 35) return 'hp--mid'
-  return 'hp--low'
+  return hpStageClass(champ?.hpPercent ?? 100)
 }
 
 function hpWidth(pos: { team: 1 | 2; idx: number; walking: boolean }): number {

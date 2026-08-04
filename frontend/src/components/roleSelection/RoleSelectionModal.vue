@@ -5,7 +5,7 @@ import RpgFrame from '@/components/ui/RpgFrame.vue'
 import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useBattleStore } from '@/stores/battleStore'
-import { ROLES } from '@/config/constants'
+import { ROLES, ROLE_SELECTION_CONFIRM_DELAY_MS } from '@/config/constants'
 import { CHAMPION_DATA, getChampionRoles } from '@/config/championData'
 import {
   getChampionStarLevel,
@@ -168,7 +168,7 @@ function choose(role: RoleDef) {
   selectedKey.value = role.key
   setTimeout(() => {
     galaxyStore.confirmRoleSelection(role.key)
-  }, 260)
+  }, ROLE_SELECTION_CONFIRM_DELAY_MS)
 }
 </script>
 

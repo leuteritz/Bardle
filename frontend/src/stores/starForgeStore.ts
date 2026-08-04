@@ -28,14 +28,21 @@ import {
   FORGE_BARGAIN_RESTOCK_MS,
   FORGE_BARGAIN_REROLL_MATERIAL,
   FORGE_BARGAIN_REROLL_COST,
+  FORGE_MIN_DAMAGE_TAKEN_MULT,
+  FORGE_MIN_DWELL_MULT,
+  FORGE_MIN_EXPEDITION_MULT,
+  FORGE_MAX_DOUBLE_CLICK_CHANCE,
+  FORGE_CONSTELLATION_BULWARK_DAMAGE_MULT,
+  FORGE_CONSTELLATION_STELLAR_WIND_CPS_MULT,
+  FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT,
 } from '../config/constants'
 import type { SolarBranchId } from './solarUpgradeStore'
 
 /** Caps so stacked effects can never break the game loop. */
-const MIN_DAMAGE_TAKEN_MULT = 0.25
-const MIN_DWELL_MULT = 0.5
-const MIN_EXPEDITION_MULT = 0.4
-const MAX_DOUBLE_CLICK_CHANCE = 0.8
+const MIN_DAMAGE_TAKEN_MULT = FORGE_MIN_DAMAGE_TAKEN_MULT
+const MIN_DWELL_MULT = FORGE_MIN_DWELL_MULT
+const MIN_EXPEDITION_MULT = FORGE_MIN_EXPEDITION_MULT
+const MAX_DOUBLE_CLICK_CHANCE = FORGE_MAX_DOUBLE_CLICK_CHANCE
 
 export const useStarForgeStore = defineStore('starForge', {
   state: () => ({
@@ -289,7 +296,9 @@ export const useStarForgeStore = defineStore('starForge', {
 
     /** Multiplier on incoming damage (< 1 = less damage). */
     damageTakenMult(): number {
-      const bulwark = this.constellationForged('bulwarkChoir') ? 0.9 : 1
+      const bulwark = this.constellationForged('bulwarkChoir')
+        ? FORGE_CONSTELLATION_BULWARK_DAMAGE_MULT
+        : 1
       return Math.max(MIN_DAMAGE_TAKEN_MULT, (1 - this.branchEffect('aegis') / 100) * bulwark)
     },
 
@@ -336,14 +345,18 @@ export const useStarForgeStore = defineStore('starForge', {
 
     /** Multiplier on total CpS (Stellar Wind + Tempo Surge buff). */
     cpsMult(): number {
-      const stellar = this.constellationForged('stellarWind') ? 1.18 : 1
+      const stellar = this.constellationForged('stellarWind')
+        ? FORGE_CONSTELLATION_STELLAR_WIND_CPS_MULT
+        : 1
       const buff = this.buffActive('cpsX2') ? 2 : 1
       return stellar * buff
     },
 
     /** Multiplier on total CpC (Golden Tempest + Midas Cadence buff). */
     cpcMult(): number {
-      const tempest = this.constellationForged('goldenTempest') ? 1.12 : 1
+      const tempest = this.constellationForged('goldenTempest')
+        ? FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT
+        : 1
       return tempest * (this.buffActive('cpcX2') ? 2 : 1)
     },
   },

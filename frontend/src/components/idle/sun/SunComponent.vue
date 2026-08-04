@@ -38,7 +38,31 @@ import { useCombatStore } from '@/stores/combatStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useGameStore } from '@/stores/gameStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { SUN_BG_DISC_RADIUS_FACTOR } from '@/config/constants'
+import {
+  SUN_BG_DISC_RADIUS_FACTOR,
+  CHIME_PARTICLE_POOL_SIZE,
+  CHIME_PARTICLE_MIN_VISIBLE,
+  CHIME_PARTICLE_CPS_SCALE,
+  CHIME_PARTICLE_SPAWN_WINDOW_MS,
+  CHIME_PARTICLE_INTERVAL_JITTER_MIN,
+  CHIME_PARTICLE_INTERVAL_JITTER_RANGE,
+  CHIME_PARTICLE_FULL_RETRY_FRACTION,
+  CHIME_PARTICLE_TRAVEL_MIN_FACTOR,
+  CHIME_PARTICLE_TRAVEL_RANGE_FACTOR,
+  CHIME_PARTICLE_ANGLE_JITTER,
+  CHIME_PARTICLE_LIFETIME_MIN_MS,
+  CHIME_PARTICLE_LIFETIME_RANGE_MS,
+  CHIME_PARTICLE_DEFAULT_LIFETIME_MS,
+  CHIME_PARTICLE_SIZE_SUN_FACTOR,
+  CHIME_PARTICLE_SIZE_MIN_PX,
+  CHIME_PARTICLE_SIZE_DEFAULT_PX,
+  CHIME_PARTICLE_FADE_IN_FRACTION,
+  CHIME_PARTICLE_FADE_OUT_START,
+  CHIME_PARTICLE_MAX_OPACITY,
+  CHIME_PARTICLE_DRAW_SCALE_BASE,
+  CHIME_PARTICLE_DRAW_SCALE_SPAN,
+  CHIME_PARTICLE_CANVAS_SUN_FACTOR,
+} from '@/config/constants'
 import PhaseSunDisc from './PhaseSunDisc.vue'
 import CometDisc from './CometDisc.vue'
 import FlightMotes from './FlightMotes.vue'
@@ -75,7 +99,7 @@ export default defineComponent({
     const effectiveRadius = computed(() => props.radius ?? planetShopStore.currentSunRadius)
     const discDiameter = computed(() => effectiveRadius.value * SUN_BG_DISC_RADIUS_FACTOR)
 
-    const POOL_SIZE = 20
+    const POOL_SIZE = CHIME_PARTICLE_POOL_SIZE
     const chimeParticles: ChimeParticle[] = Array.from({ length: POOL_SIZE }, (_, i) => ({
       id: i,
       active: false,
@@ -83,8 +107,8 @@ export default defineComponent({
       cy: 0,
       tx: 0,
       ty: 0,
-      duration: 1500,
-      size: 12,
+      duration: CHIME_PARTICLE_DEFAULT_LIFETIME_MS,
+      size: CHIME_PARTICLE_SIZE_DEFAULT_PX,
       startTime: 0,
     }))
 
@@ -96,8 +120,8 @@ export default defineComponent({
       const cvs = canvasEl.value
       if (!cvs) return
       const r = effectiveRadius.value
-      cvs.width = Math.round(r * 6)
-      cvs.height = Math.round(r * 6)
+      cvs.width = Math.round(r * CHIME_PARTICLE_CANVAS_SUN_FACTOR)
+      cvs.height = Math.round(r * CHIME_PARTICLE_CANVAS_SUN_FACTOR)
     }
 
     watch(effectiveRadius, resizeCanvas)
@@ -108,13 +132,22 @@ export default defineComponent({
       const cps = gameStore.chimesPerSecond
       if (cps <= 0 || timestamp < nextSpawnAt) return
 
-      const maxVisible = Math.min(20, Math.max(2, Math.round(Math.sqrt(cps) * 1.8)))
+      const maxVisible = Math.min(
+        CHIME_PARTICLE_POOL_SIZE,
+        Math.max(
+          CHIME_PARTICLE_MIN_VISIBLE,
+          Math.round(Math.sqrt(cps) * CHIME_PARTICLE_CPS_SCALE),
+        ),
+      )
       const activeCount = chimeParticles.filter((p) => p.active).length
-      const baseInterval = 1200 / maxVisible
-      const interval = baseInterval * (0.7 + Math.random() * 0.6)
+      const baseInterval = CHIME_PARTICLE_SPAWN_WINDOW_MS / maxVisible
+      const interval =
+        baseInterval *
+        (CHIME_PARTICLE_INTERVAL_JITTER_MIN +
+          Math.random() * CHIME_PARTICLE_INTERVAL_JITTER_RANGE)
 
       if (activeCount >= maxVisible) {
-        nextSpawnAt = timestamp + interval * 0.5
+        nextSpawnAt = timestamp + interval * CHIME_PARTICLE_FULL_RETRY_FRACTION
         return
       }
 
@@ -127,12 +160,15 @@ export default defineComponent({
       slot.cx = r * Math.cos(angle)
       slot.cy = r * Math.sin(angle)
 
-      const outwardDist = r * 0.5 + Math.random() * r * 0.5
-      const jitter = (Math.random() - 0.5) * 0.6
+      const outwardDist =
+        r * CHIME_PARTICLE_TRAVEL_MIN_FACTOR +
+        Math.random() * r * CHIME_PARTICLE_TRAVEL_RANGE_FACTOR
+      const jitter = (Math.random() - 0.5) * CHIME_PARTICLE_ANGLE_JITTER
       slot.tx = Math.cos(angle + jitter) * outwardDist
       slot.ty = Math.sin(angle + jitter) * outwardDist
-      slot.duration = 1000 + Math.random() * 1500
-      slot.size = Math.max(14, r * 0.35)
+      slot.duration =
+        CHIME_PARTICLE_LIFETIME_MIN_MS + Math.random() * CHIME_PARTICLE_LIFETIME_RANGE_MS
+      slot.size = Math.max(CHIME_PARTICLE_SIZE_MIN_PX, r * CHIME_PARTICLE_SIZE_SUN_FACTOR)
       slot.startTime = timestamp
       slot.active = true
       nextSpawnAt = timestamp + interval
@@ -161,8 +197,13 @@ export default defineComponent({
         const y = halfH + p.cy + p.ty * eased
 
         const opacity =
-          t < 0.15 ? (t / 0.15) * 0.9 : t > 0.8 ? ((1 - t) / 0.2) * 0.9 : 0.9
-        const drawSize = p.size * (0.6 + eased * 0.3)
+          t < CHIME_PARTICLE_FADE_IN_FRACTION
+            ? (t / CHIME_PARTICLE_FADE_IN_FRACTION) * CHIME_PARTICLE_MAX_OPACITY
+            : t > CHIME_PARTICLE_FADE_OUT_START
+              ? ((1 - t) / (1 - CHIME_PARTICLE_FADE_OUT_START)) * CHIME_PARTICLE_MAX_OPACITY
+              : CHIME_PARTICLE_MAX_OPACITY
+        const drawSize =
+          p.size * (CHIME_PARTICLE_DRAW_SCALE_BASE + eased * CHIME_PARTICLE_DRAW_SCALE_SPAN)
 
         ctx.globalAlpha = opacity
         ctx.drawImage(chimeImg, x - drawSize / 2, y - drawSize / 2, drawSize, drawSize)

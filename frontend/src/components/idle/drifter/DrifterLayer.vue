@@ -65,6 +65,9 @@ import {
   DRIFTER_EDGE_PING_LEAD_MS,
   DRIFTER_COLLECT_FX_MS,
   DRIFTER_BURST_PARTICLES,
+  DRIFTER_BURST_ANGLE_JITTER,
+  DRIFTER_BURST_DIST_MIN_FACTOR,
+  DRIFTER_BURST_DIST_RANGE_FACTOR,
 } from '@/config/constants'
 
 const drifterStore = useDrifterStore()
@@ -179,8 +182,10 @@ watch(
       name: def.name,
       effect: def.effectLine,
       particles: Array.from({ length: DRIFTER_BURST_PARTICLES }, (_, i) => {
-        const angle = base + step * i + (Math.random() - 0.5) * step * 0.7
-        const dist = def.sizePx * (1.1 + Math.random() * 1.1)
+        const angle = base + step * i + (Math.random() - 0.5) * step * DRIFTER_BURST_ANGLE_JITTER
+        const dist =
+          def.sizePx *
+          (DRIFTER_BURST_DIST_MIN_FACTOR + Math.random() * DRIFTER_BURST_DIST_RANGE_FACTOR)
         return { i, dx: Math.cos(angle) * dist, dy: Math.sin(angle) * dist }
       }),
     }

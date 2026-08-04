@@ -236,6 +236,14 @@ import {
   STRIKER_BOSS_ANCHOR_X_PCT,
   STRIKER_BOSS_ANCHOR_Y_PCT,
   STRIKER_PROJECTILE_IMPACT_FRAC,
+  COOLDOWN_RING_MIN_PROGRESS,
+  COOLDOWN_RING_HOT_PROGRESS,
+  COOLDOWN_RING_TIP_RADIUS,
+  COOLDOWN_RING_TIP_RADIUS_HOT,
+  BATTERY_PLANET_MIN_PX,
+  BATTERY_PLANET_MAX_PX,
+  BATTERY_PLANET_VIEWPORT_H_FRACTION,
+  BATTERY_RING_SEAM_PX,
 } from '@/config/constants'
 
 const bossStore = usePlanetBossStore()
@@ -497,8 +505,11 @@ function stopRingLoop() {
 
 function drawRings() {
   // Radius folgt der CSS-Planetengröße: clamp(54px, 7vh, 76px) / 2 + Saum
-  const planetPx = Math.max(54, Math.min(76, window.innerHeight * 0.07))
-  const r = planetPx / 2 + 7
+  const planetPx = Math.max(
+    BATTERY_PLANET_MIN_PX,
+    Math.min(BATTERY_PLANET_MAX_PX, window.innerHeight * BATTERY_PLANET_VIEWPORT_H_FRACTION),
+  )
+  const r = planetPx / 2 + BATTERY_RING_SEAM_PX
   const side = Math.round(r + RING_CANVAS_PAD) * 2
   const progress = reducedMotion
     ? 1
@@ -526,10 +537,10 @@ function drawRings() {
     c.lineWidth = 3
     c.stroke()
 
-    if (progress <= 0.004) continue
+    if (progress <= COOLDOWN_RING_MIN_PROGRESS) continue
     const start = -Math.PI / 2
     const end = start + progress * TWO_PI
-    const hot = progress > 0.92
+    const hot = progress > COOLDOWN_RING_HOT_PROGRESS
     c.beginPath()
     c.arc(cx, cy, r, start, end)
     c.strokeStyle = hot ? 'rgba(255,150,140,0.9)' : 'rgba(220,90,80,0.6)'
@@ -540,7 +551,13 @@ function drawRings() {
     // Glüh-Spitze am Ende des Bogens
     if (progress < 1) {
       c.beginPath()
-      c.arc(cx + Math.cos(end) * r, cy + Math.sin(end) * r, hot ? 3 : 2.2, 0, TWO_PI)
+      c.arc(
+        cx + Math.cos(end) * r,
+        cy + Math.sin(end) * r,
+        hot ? COOLDOWN_RING_TIP_RADIUS_HOT : COOLDOWN_RING_TIP_RADIUS,
+        0,
+        TWO_PI,
+      )
       c.fillStyle = 'rgba(255,180,170,0.85)'
       c.fill()
     }

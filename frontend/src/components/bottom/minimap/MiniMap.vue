@@ -122,13 +122,17 @@ import { defineComponent, computed, watch } from 'vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { useActionToast } from '../../../composables/useActionToast'
-import { HUD_PANEL_ARC_R, SKIP_DURATION_SECONDS } from '../../../config/constants'
+import {
+  HUD_PANEL_ARC_R,
+  SKIP_DURATION_SECONDS,
+  MINIMAP_TIER_FLASH_MS,
+} from '../../../config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
 import MiniMapHudPanel from './MiniMapHudPanel.vue'
 import TierUnlockPanel from './TierUnlockPanel.vue'
 
 const CORNER_R = 20
-const TIER_FLASH_MS = 2400
+const TIER_FLASH_MS = MINIMAP_TIER_FLASH_MS
 
 export default defineComponent({
   name: 'MiniMap',

@@ -3,7 +3,7 @@ import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { CHAMPION_TIERS_BY_STAR, requiredGalaxyForTier } from '@/config/championTiers'
-import { GALAXY_JUMP_WARP_MS } from '@/config/constants'
+import { GALAXY_JUMP_WARP_MS, ADMIN_JUMP_SHAKE_MS } from '@/config/constants'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
 
 withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
@@ -38,7 +38,7 @@ function triggerShake() {
     if (shakeTimer) clearTimeout(shakeTimer)
     shakeTimer = setTimeout(() => {
       shake.value = false
-    }, 450)
+    }, ADMIN_JUMP_SHAKE_MS)
   })
 }
 

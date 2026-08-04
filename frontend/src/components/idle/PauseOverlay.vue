@@ -362,6 +362,8 @@ import {
   ROLE_BY_KEY,
   ROLE_ART_MD_SUFFIX,
 } from '@/config/constants'
+import { splitDuration } from '@/utils/format'
+import { pauseDustStyle } from '@/utils/particleField'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
@@ -494,13 +496,10 @@ const activeResourceStars = computed<PauseResourceStar[]>(() => {
 })
 
 const timerChars = computed(() => {
-  const total = pauseTick.value
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  const mm = String(m).padStart(2, '0')
-  const ss = String(s).padStart(2, '0')
-  return `${h > 0 ? h + ':' : ''}${mm}:${ss}`.split('')
+  const { hours, minutes, seconds } = splitDuration(pauseTick.value)
+  const mm = String(minutes).padStart(2, '0')
+  const ss = String(seconds).padStart(2, '0')
+  return `${hours > 0 ? hours + ':' : ''}${mm}:${ss}`.split('')
 })
 
 const pauseKills = computed(() => gameStore.pauseStats.kills)
@@ -667,19 +666,7 @@ function unpause() {
 }
 
 function particleStyle(i: number): Record<string, string> {
-  const left = (i * 137.5) % 100
-  const top = (i * 61.8 + 13) % 100
-  const size = 1.5 + (i % 4)
-  const delay = ((i * 0.45) % 4).toFixed(1)
-  const duration = (4 + (i % 6)).toFixed(1)
-  return {
-    left: `${left}%`,
-    top: `${top}%`,
-    width: `${size}px`,
-    height: `${size}px`,
-    animationDelay: `${delay}s`,
-    animationDuration: `${duration}s`,
-  }
+  return pauseDustStyle(i)
 }
 </script>
 

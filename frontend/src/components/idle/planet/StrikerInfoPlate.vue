@@ -60,6 +60,7 @@
 </template>
 
 <script setup lang="ts">
+import { STRIKER_HP_LOW_PCT } from '@/config/constants'
 import { computed } from 'vue'
 import type { StrikerStatCell } from '@/types'
 
@@ -84,7 +85,7 @@ const props = defineProps<{
   statCells?: StrikerStatCell[]
 }>()
 
-const hpLow = computed(() => props.hpPct < 25)
+const hpLow = computed(() => props.hpPct < STRIKER_HP_LOW_PCT)
 const hasRail = computed(() => (props.statCells?.length ?? 0) > 0)
 </script>
 

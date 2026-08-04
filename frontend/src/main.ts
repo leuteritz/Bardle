@@ -3,7 +3,12 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import './assets/main.css'
 import { formatNumber } from './config/numberFormat'
-import { BARD_PROFILE_RADIUS, BOTTOM_BAR_NOTCH_R } from './config/constants'
+import {
+  BARD_PROFILE_RADIUS,
+  BOTTOM_BAR_NOTCH_R,
+  AUTO_SAVE_INTERVAL_MS,
+  BATTLE_SYNC_INTERVAL_MS,
+} from './config/constants'
 import { usePersistence } from './composables/usePersistence'
 import { useBattleStore } from './stores/battleStore'
 import { vInkCenter } from './utils/textInkOffset'
@@ -24,7 +29,10 @@ document.documentElement.style.setProperty('--bottom-notch-r', `${BOTTOM_BAR_NOT
 const { loadGame, saveGame } = usePersistence()
 loadGame()
 
-let saveTimer: ReturnType<typeof setInterval> | null = setInterval(saveGame, 5000)
+let saveTimer: ReturnType<typeof setInterval> | null = setInterval(
+  saveGame,
+  AUTO_SAVE_INTERVAL_MS,
+)
 
 // Keep the battle loop alive even when the browser throttles setInterval on hidden tabs.
 // syncFromTimestamps() is idempotent and safe to call frequently.
@@ -33,7 +41,7 @@ setInterval(() => {
   if (bs.isAutoBattleInitialized && bs.autoBattleEnabled) {
     bs.syncFromTimestamps()
   }
-}, 1000)
+}, BATTLE_SYNC_INTERVAL_MS)
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
@@ -44,7 +52,7 @@ document.addEventListener('visibilitychange', () => {
     saveGame()
   } else {
     if (!saveTimer) {
-      saveTimer = setInterval(saveGame, 5000)
+      saveTimer = setInterval(saveGame, AUTO_SAVE_INTERVAL_MS)
     }
   }
 })

@@ -11,24 +11,41 @@ import { playStarVanishFx } from '../utils/starVanishFx'
 import {
   STAR_SPAWN_DURATION_MS,
   STAR_SPAWN_FLY_EASING,
-  SUN_RADIUS,
   STAR_BEHIND_SUN_SPEED_MULTIPLIER,
   STAR_FX_TANGENT_PROBE_RAD,
   HOVER_SPEED_MULTIPLIER,
+  ROLE_BY_KEY,
+  ORBIT_MIN_RY_SUN_FACTOR_BY_ROLE,
+  ORBIT_MIN_RY_VIEWPORT_FACTOR_BY_ROLE,
+  ORBIT_MAX_RX_VIEWPORT_FRACTION,
+  ORBIT_SIZE_SUN_SCALE_EXPONENT,
+  ORBIT_BEHIND_REL_Y,
+  ORBIT_BEHIND_FADE_BAND,
+  ORBIT_BEHIND_SPEED_LERP,
+  ORBIT_PARALLAX_SCALE_BASE,
+  ORBIT_PARALLAX_SCALE_SPAN,
+  STAR_ORBIT_MIN_SUN_SCALE,
+  STAR_BEHIND_OPACITY,
+  STAR_OPACITY_BASE,
+  STAR_OPACITY_DEPTH_SPAN,
+  STAR_BEHIND_BLUR_MAX_PX,
+  STAR_BEHIND_BLUR_STEP_PX,
+  STAR_TIER_GAP_RESOURCE_PX,
+  STAR_TIER_GAP_CHAMPION_PX,
+  STAR_VIEWPORT_MARGIN_PX,
+  STAR_SPAWN_MIN_SCALE,
+  STAR_PLANET_SIZE_CHAMPION,
+  STAR_PLANET_SIZE_GALAXY_BOSS,
+  STAR_PLANET_SIZE_NORMAL,
+  STAR_PLANET_FLY_IN_FACTOR,
+  STAR_PLANET_RADIUS_LERP,
+  STAR_PLANET_SAVED_LINGER_MS,
 } from '../config/constants'
 import { usePlanetShopStore } from '../stores/planetShopStore'
 import { useOrbitScale } from './useOrbitScale'
 import type { PlanetType, StarType } from '../types'
 
-const PLANET_SIZE_CHAMPION = 12
-const PLANET_SIZE_GALAXY_BOSS = 14
-const PLANET_SIZE_NORMAL = 10
-
 export const livePlanetAngles = new Map<string, number>()
-const BEHIND_FADE_BAND = 0.12
-const BEHIND_THRESHOLD = -0.05
-const STAR_BEHIND_OPACITY = 0.2
-const SPEED_LERP = 0.04
 
 // Planeten werden nicht mehr um die Sterne gerendert — die Einträge dienen
 // nur noch der Logik (Zähler, Gegner-Salven, Fluch-Zuordnung, Ziel-Positionen).
@@ -178,13 +195,18 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
     const orbitScaleVal = orbitScale.value
 
     const vMin = Math.min(window.innerWidth, window.innerHeight)
-    const adcBaseRy = SUN_RADIUS * 5.43
-    const adcBaseRx = SUN_RADIUS * 12.67
-    const adcRawRy = adcBaseRy * sunScale * orbitScaleVal
-    const adcMinRy = Math.max(planetShopStore.orbitSunRadius * 2.6, vMin * 0.22)
+    // Sternbahnen liegen außerhalb der äußersten Champion-Bahn — das ist der
+    // ADC. Seine Maße kommen aus derselben Quelle wie in ChampionOrbit, sonst
+    // wandern Sterne mit der Zeit in die Champion-Bahn hinein.
+    const adcOrbit = ROLE_BY_KEY.adc.orbit
+    const adcRawRy = adcOrbit.ry * sunScale * orbitScaleVal
+    const adcMinRy = Math.max(
+      planetShopStore.orbitSunRadius * ORBIT_MIN_RY_SUN_FACTOR_BY_ROLE.adc,
+      vMin * ORBIT_MIN_RY_VIEWPORT_FACTOR_BY_ROLE.adc,
+    )
     const adcFlooredRy = Math.max(adcRawRy, adcMinRy)
-    const adcFlooredRx = adcFlooredRy * (adcBaseRx / adcBaseRy)
-    const adcActualRx = Math.min(adcFlooredRx, screenCx * 0.85)
+    const adcFlooredRx = adcFlooredRy * (adcOrbit.rx / adcOrbit.ry)
+    const adcActualRx = Math.min(adcFlooredRx, screenCx * ORBIT_MAX_RX_VIEWPORT_FRACTION)
 
     const newRenders: StarRenderEntry[] = []
     let sig = ''
@@ -197,19 +219,20 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
       sAngle += star.starDirection * star.orbitSpeed * speedMul * dt
       starAngles.set(star.id, sAngle)
 
-      const starSunScale = Math.max(0.9, sunScale)
+      const starSunScale = Math.max(STAR_ORBIT_MIN_SUN_SCALE, sunScale)
       let scaledOrbitRx = star.orbitRx * starSunScale * orbitScaleVal
       let scaledOrbitRy = star.orbitRy * starSunScale * orbitScaleVal
 
       if (star.starType !== 'galaxy_boss') {
         const starAspect = star.orbitRx / star.orbitRy
-        const tierGap = star.starType === 'resource' ? 140 : 60
+        const tierGap =
+          star.starType === 'resource' ? STAR_TIER_GAP_RESOURCE_PX : STAR_TIER_GAP_CHAMPION_PX
         const minRx = adcActualRx + tierGap
         if (scaledOrbitRx < minRx) {
           scaledOrbitRx = minRx
           scaledOrbitRy = minRx / starAspect
         }
-        const viewportMaxRx = screenCx - 20
+        const viewportMaxRx = screenCx - STAR_VIEWPORT_MARGIN_PX
         if (scaledOrbitRx > viewportMaxRx) {
           const capFactor = viewportMaxRx / scaledOrbitRx
           scaledOrbitRx *= capFactor
@@ -227,7 +250,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
       )
 
       const sRelY = (sy - screenCy) / Math.max(scaledOrbitRy, 1)
-      const sIsBehind = sRelY < BEHIND_THRESHOLD
+      const sIsBehind = sRelY < ORBIT_BEHIND_REL_Y
       const sDepth = Math.max(0, Math.min(1, (sRelY + 1) / 2))
 
       // Wie weit ist der Stern durch seine Verdeckung? Verdeckt ODER nicht
@@ -246,7 +269,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
           star.starDirection,
           ratio,
           star.orbitTilt,
-          BEHIND_THRESHOLD,
+          ORBIT_BEHIND_REL_Y,
         )
         sEclipseProgress = raw < 0 ? 1 : Math.min(1, raw)
 
@@ -259,7 +282,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         // mit dem Zielwert über die ganze Verdeckung nur ~4 % zu niedrig
         // (3,64 s gerechnet gegen 3,81 s gemessen) — und sie ist von der ersten
         // Sekunde an stabil.
-        const arc = orbitBehindArc(ratio, star.orbitTilt, BEHIND_THRESHOLD)
+        const arc = orbitBehindArc(ratio, star.orbitTilt, ORBIT_BEHIND_REL_Y)
         const angularSpeed = star.orbitSpeed * STAR_BEHIND_SUN_SPEED_MULTIPLIER
         sEclipseRemainingMs =
           arc > 0 && angularSpeed > 0 ? ((1 - sEclipseProgress) * arc) / angularSpeed : 0
@@ -267,7 +290,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
 
       const visibleFactor = Math.max(
         0,
-        Math.min(1, (sRelY - BEHIND_THRESHOLD + BEHIND_FADE_BAND) / BEHIND_FADE_BAND),
+        Math.min(1, (sRelY - ORBIT_BEHIND_REL_Y + ORBIT_BEHIND_FADE_BAND) / ORBIT_BEHIND_FADE_BAND),
       )
       const starFactor = Math.max(STAR_BEHIND_OPACITY, visibleFactor)
 
@@ -297,13 +320,17 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         : isHovered
           ? HOVER_SPEED_MULTIPLIER
           : 1.0
-      starSpeedMul.set(star.id, speedMul + (targetMul - speedMul) * SPEED_LERP)
+      starSpeedMul.set(star.id, speedMul + (targetMul - speedMul) * ORBIT_BEHIND_SPEED_LERP)
 
-      const baseScale = 0.72 + sDepth * 0.56
-      const sScale = baseScale * (reducedMotion ? 1 : Math.max(0.05, spawnFactor))
-      const sOpacity = starFactor * (0.78 + sDepth * 0.22) * spawnFactor
-      // Blur auf 0.5px-Stufen quantisieren: weniger Filter-Neuberechnungen pro Frame
-      const blurPx = sIsBehind ? Math.round((1 - sDepth) * 2.5 * 2) / 2 : 0
+      const baseScale = ORBIT_PARALLAX_SCALE_BASE + sDepth * ORBIT_PARALLAX_SCALE_SPAN
+      const sScale = baseScale * (reducedMotion ? 1 : Math.max(STAR_SPAWN_MIN_SCALE, spawnFactor))
+      const sOpacity =
+        starFactor * (STAR_OPACITY_BASE + sDepth * STAR_OPACITY_DEPTH_SPAN) * spawnFactor
+      // Blur auf feste Stufen quantisieren: weniger Filter-Neuberechnungen pro Frame
+      const blurPx = sIsBehind
+        ? Math.round(((1 - sDepth) * STAR_BEHIND_BLUR_MAX_PX) / STAR_BEHIND_BLUR_STEP_PX) *
+          STAR_BEHIND_BLUR_STEP_PX
+        : 0
       const starFilterStyle = blurPx > 0.1 ? `blur(${blurPx}px)` : ''
 
       const allSlotsCleared = star.planetSlots.every((s) => s.cleared)
@@ -346,13 +373,12 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         planetAngles.set(slot.planetId, pAngle)
         livePlanetAngles.set(slot.planetId, pAngle)
 
-        const FLY = 2.5
         const targetSlotRx = slot.orbitRx * sunScale * orbitScaleVal
         const targetSlotRy = slot.orbitRy * sunScale * orbitScaleVal
-        let curRx = planetCurRx.get(slot.planetId) ?? targetSlotRx * FLY
-        let curRy = planetCurRy.get(slot.planetId) ?? targetSlotRy * FLY
-        curRx += (targetSlotRx - curRx) * 0.018
-        curRy += (targetSlotRy - curRy) * 0.018
+        let curRx = planetCurRx.get(slot.planetId) ?? targetSlotRx * STAR_PLANET_FLY_IN_FACTOR
+        let curRy = planetCurRy.get(slot.planetId) ?? targetSlotRy * STAR_PLANET_FLY_IN_FACTOR
+        curRx += (targetSlotRx - curRx) * STAR_PLANET_RADIUS_LERP
+        curRy += (targetSlotRy - curRy) * STAR_PLANET_RADIUS_LERP
         planetCurRx.set(slot.planetId, curRx)
         planetCurRy.set(slot.planetId, curRy)
 
@@ -369,13 +395,13 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         const isGalaxyBoss = boss?.isGalaxyBoss ?? false
         const pSize =
           (isGalaxyBoss
-            ? PLANET_SIZE_GALAXY_BOSS
+            ? STAR_PLANET_SIZE_GALAXY_BOSS
             : slot.isChampionPlanet
-              ? PLANET_SIZE_CHAMPION
-              : PLANET_SIZE_NORMAL) * Math.pow(sunScale, 0.65)
+              ? STAR_PLANET_SIZE_CHAMPION
+              : STAR_PLANET_SIZE_NORMAL) * Math.pow(sunScale, ORBIT_SIZE_SUN_SCALE_EXPONENT)
 
         const pRelY = (py - sy) / Math.max(targetSlotRy, 1)
-        const pIsBehind = pRelY < -0.05
+        const pIsBehind = pRelY < ORBIT_BEHIND_REL_Y
 
         if (!slot.cleared) {
           // Kampf-Gate folgt dem Stern, nicht dem lokalen Mini-Orbit: der Planet
@@ -392,7 +418,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
 
         if (animState === 'saved') {
           if (!planetSavedAt.has(slot.planetId)) planetSavedAt.set(slot.planetId, ts)
-          if (ts - planetSavedAt.get(slot.planetId)! > 600) continue
+          if (ts - planetSavedAt.get(slot.planetId)! > STAR_PLANET_SAVED_LINGER_MS) continue
         }
 
         planetEntries.push({

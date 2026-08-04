@@ -31,6 +31,7 @@ import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'v
 import { Icon } from '@iconify/vue'
 import { usePlayerStore } from '../../../stores/playerStore'
 import { usePlanetShopStore } from '../../../stores/planetShopStore'
+import { PLAYER_HP_HIT_FLASH_MS } from '../../../config/constants'
 
 export default defineComponent({
   name: 'PlayerHPBar',
@@ -51,7 +52,7 @@ export default defineComponent({
           if (hitTimer) clearTimeout(hitTimer)
           hitTimer = setTimeout(() => {
             wasHit.value = false
-          }, 350)
+          }, PLAYER_HP_HIT_FLASH_MS)
         }
       },
     )

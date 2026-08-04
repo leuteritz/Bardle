@@ -26,6 +26,7 @@
 </template>
 
 <script setup lang="ts">
+import { PROGRESS_RING_CIRCUMFERENCE } from '@/config/constants'
 import { computed } from 'vue'
 
 const props = withDefaults(
@@ -54,8 +55,8 @@ const props = withDefaults(
   { textColor: undefined, labelColor: undefined, badge: '', badgeColor: undefined },
 )
 
-// Arc-Geometrie: Radius 44 im 100er-viewBox (siehe SVG oben)
-const CIRCUMFERENCE = 2 * Math.PI * 44
+// Arc-Geometrie: Radius aus dem 100er-viewBox (siehe SVG oben)
+const CIRCUMFERENCE = PROGRESS_RING_CIRCUMFERENCE
 
 const dashArray = computed(() => {
   const clamped = Math.max(0, Math.min(1, props.pct))

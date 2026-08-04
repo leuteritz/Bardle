@@ -426,7 +426,20 @@ import {
   OBJECTIVE_AOE_DPS_DRAKE,
   OBJECTIVE_AOE_DPS_BARON,
   ROLE_BY_KEY,
+  OBJECTIVE_CLICK_FLOAT_LIFETIME_MS,
+  OBJECTIVE_CLICK_FLOAT_ROT_BASE_DEG,
+  OBJECTIVE_CLICK_FLOAT_ROT_STEP_DEG,
+  OBJECTIVE_CLICK_FLOAT_ROT_VARIANTS,
+  OBJECTIVE_CLICK_FLOAT_LEFT_BASE_PCT,
+  OBJECTIVE_CLICK_FLOAT_LEFT_STEP_PCT,
+  OBJECTIVE_CLICK_FLOAT_LEFT_VARIANTS,
+  OBJECTIVE_HIT_FLASH_MS,
+  OBJECTIVE_HP_SHAKE_MS,
+  OBJECTIVE_CARD_FLASH_MS,
+  OBJECTIVE_MODAL_MAX_SCALE,
+  OBJECTIVE_MODAL_FIT_PADDING_PX,
 } from '@/config/constants'
+import { hpStageClass } from '@/utils/format'
 import { DRAKE_TYPES, BARON_BUFF } from '@/config/drakes'
 
 const BARON_THEME = BARON_BUFF
@@ -448,7 +461,10 @@ const themeVars = computed(() => {
 // whole fight is visible on every desktop resolution — no inner scrolling.
 const overlayEl = ref<HTMLElement | null>(null)
 const modalEl = ref<HTMLElement | null>(null)
-const { scale: modalScale } = useFitScale(overlayEl, modalEl, { maxScale: 1.35, padding: 10 })
+const { scale: modalScale } = useFitScale(overlayEl, modalEl, {
+  maxScale: OBJECTIVE_MODAL_MAX_SCALE,
+  padding: OBJECTIVE_MODAL_FIT_PADDING_PX,
+})
 
 const modalStyle = computed(() => ({
   ...themeVars.value,
@@ -533,10 +549,7 @@ function hpPct(f: ObjectiveFighter): number {
 }
 
 function hpStage(f: ObjectiveFighter): string {
-  const p = hpPct(f)
-  if (p > 60) return 'hp--high'
-  if (p > 35) return 'hp--mid'
-  return 'hp--low'
+  return hpStageClass(hpPct(f))
 }
 
 /** Lunge delay of the fighter at `i` in its sorted column — single source for CSS and the float scheduler. */
@@ -850,12 +863,16 @@ function handleClick() {
   damageFloats.value.push({
     id,
     value: battleStore.objectiveClickDamage,
-    rot: -14 + (id % 5) * 7,
-    left: 34 + (id % 4) * 11,
+    rot:
+      OBJECTIVE_CLICK_FLOAT_ROT_BASE_DEG +
+      (id % OBJECTIVE_CLICK_FLOAT_ROT_VARIANTS) * OBJECTIVE_CLICK_FLOAT_ROT_STEP_DEG,
+    left:
+      OBJECTIVE_CLICK_FLOAT_LEFT_BASE_PCT +
+      (id % OBJECTIVE_CLICK_FLOAT_LEFT_VARIANTS) * OBJECTIVE_CLICK_FLOAT_LEFT_STEP_PCT,
   })
   setTimeout(() => {
     damageFloats.value = damageFloats.value.filter((f) => f.id !== id)
-  }, 750)
+  }, OBJECTIVE_CLICK_FLOAT_LIFETIME_MS)
 
   hitFlash.value = false
   hpShake.value = false
@@ -865,8 +882,8 @@ function handleClick() {
   })
   if (flashTimer) clearTimeout(flashTimer)
   if (shakeTimer) clearTimeout(shakeTimer)
-  flashTimer = setTimeout(() => (hitFlash.value = false), 160)
-  shakeTimer = setTimeout(() => (hpShake.value = false), 220)
+  flashTimer = setTimeout(() => (hitFlash.value = false), OBJECTIVE_HIT_FLASH_MS)
+  shakeTimer = setTimeout(() => (hpShake.value = false), OBJECTIVE_HP_SHAKE_MS)
 }
 
 watch(show, (v) => {
@@ -989,7 +1006,7 @@ function _checkHpChanges(fighters: ObjectiveFighter[], side: 'own' | 'enemy') {
     cardFlash.value[key] = delta < 0 ? 'hit' : 'heal'
     setTimeout(() => {
       if (cardFlash.value[key]) cardFlash.value[key] = null
-    }, 350)
+    }, OBJECTIVE_CARD_FLASH_MS)
   }
 }
 

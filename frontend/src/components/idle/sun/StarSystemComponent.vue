@@ -285,6 +285,16 @@ import {
   HOVER_DIM_FADE_MS,
   SUN_BG_DISC_RADIUS_FACTOR,
   SUN_AIM_LOCK_RADIUS_FACTOR,
+  ORBIT_MIN_RY_SUN_FACTOR_BY_ROLE,
+  ORBIT_MIN_RY_VIEWPORT_FACTOR_BY_ROLE,
+  ORBIT_MAX_RX_VIEWPORT_FRACTION,
+  ORBIT_RING_MIN_OPACITY,
+  COOLDOWN_RING_MIN_PROGRESS,
+  COOLDOWN_RING_HOT_PROGRESS,
+  COOLDOWN_RING_TIP_RADIUS,
+  COOLDOWN_RING_TIP_RADIUS_HOT,
+  STAR_ORBIT_MIN_SUN_SCALE,
+  HINT_SPRITE_CACHE_LIMIT,
 } from '../../../config/constants'
 import { CHAMPION_ROLES } from '../../../config/championData'
 import { activeChampionBehindState, activePlayerPlanetPositions, activeStarCombatState } from '../../../utils/liveState'
@@ -450,7 +460,7 @@ function getHintSprite(
     }
   }
 
-  if (hintSpriteCache.size > 64) hintSpriteCache.clear()
+  if (hintSpriteCache.size > HINT_SPRITE_CACHE_LIMIT) hintSpriteCache.clear()
   hintSpriteCache.set(key, cv)
   return cv
 }
@@ -624,7 +634,7 @@ const scaledStarOrbitTiers = computed(() =>
       return { ...tier, rx: activeStar.orbitRx, ry: activeStar.orbitRy }
     }
     const sunScale = planetShopStore.orbitSunScale
-    const starSunScale = Math.max(0.9, sunScale)
+    const starSunScale = Math.max(STAR_ORBIT_MIN_SUN_SCALE, sunScale)
     return {
       ...tier,
       rx: tier.rx * starSunScale * orbitScale.value,
@@ -670,21 +680,6 @@ const rageSecsLeft = ref(0)
 
 const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
 
-const MIN_RY_BY_ROLE: Record<string, number> = {
-  top: 1.35,
-  jungle: 1.8,
-  mid: 2.2,
-  adc: 2.6,
-  support: 2.6,
-}
-const VIEWPORT_RY_BY_ROLE: Record<string, number> = {
-  top: 0.07,
-  jungle: 0.12,
-  mid: 0.17,
-  adc: 0.22,
-  support: 0.22,
-}
-
 const activeRoleOrbits = computed(() => {
   const sunScale = planetShopStore.orbitSunScale
   const orbitScaleVal = orbitScale.value
@@ -696,13 +691,16 @@ const activeRoleOrbits = computed(() => {
     .map((role) => {
       const roleTier = ROLE_BY_KEY[role].orbit
       const minRy = Math.max(
-        planetShopStore.orbitSunRadius * (MIN_RY_BY_ROLE[role] ?? 1.5),
-        vMin * (VIEWPORT_RY_BY_ROLE[role] ?? 0.1),
+        planetShopStore.orbitSunRadius * ORBIT_MIN_RY_SUN_FACTOR_BY_ROLE[role],
+        vMin * ORBIT_MIN_RY_VIEWPORT_FACTOR_BY_ROLE[role],
       )
       const aspectRatio = roleTier.rx / roleTier.ry
       const flooredRy = Math.max(roleTier.ry * sunScale * orbitScaleVal, minRy)
       const flooredRx = flooredRy * aspectRatio
-      const capFactor = Math.min(1.0, ((screenW.value / 2) * 0.85) / flooredRx)
+      const capFactor = Math.min(
+        1.0,
+        ((screenW.value / 2) * ORBIT_MAX_RX_VIEWPORT_FRACTION) / flooredRx,
+      )
       return {
         role,
         rx: flooredRx * capFactor,
@@ -808,7 +806,7 @@ watch(
     const starId = novaStarId.value
     if (!starId) return
     const star = starRenders.value.find((s) => s.id === starId)
-    if (!star || star.isBehind || star.opacity <= 0.02) return
+    if (!star || star.isBehind || star.opacity <= ORBIT_RING_MIN_OPACITY) return
 
     const novaOpts = { trailColor: NOVA_TRAIL_COLOR, headColor: NOVA_HEAD_COLOR }
 
@@ -858,7 +856,7 @@ watch(
     const starId = novaStarId.value
     if (!starId) return
     const star = starRenders.value.find((s) => s.id === starId)
-    if (!star || star.isBehind || star.opacity <= 0.02) return
+    if (!star || star.isBehind || star.opacity <= ORBIT_RING_MIN_OPACITY) return
 
     const strikeOpts = { trailColor: STRIKE_TRAIL_COLOR, headColor: STRIKE_HEAD_COLOR }
     const role = roleBehaviorStore.autoTargetRole
@@ -1020,7 +1018,7 @@ function drawCooldownRings() {
   c.clearRect(0, 0, cv.width, cv.height)
 
   for (const star of stars) {
-    if (star.isBehind || star.opacity <= 0.02) continue
+    if (star.isBehind || star.opacity <= ORBIT_RING_MIN_OPACITY) continue
 
     // Boss-Stern: Ring spiegelt den Shock-Nova-Cooldown aus dem Store —
     // exakt synchron zum Nova-Ring im Star-Fight-Modal
@@ -1030,7 +1028,7 @@ function drawCooldownRings() {
 
     const r = (starSize(star.starType) / 2 + 9) * star.scale
     const alpha = star.opacity * starHoverDimFactor(star.id)
-    if (alpha <= 0.02) continue
+    if (alpha <= ORBIT_RING_MIN_OPACITY) continue
     const bursting = !isNovaStar && state!.shotsLeft > 0
     // Nova: Zeitstempel-Interpolation pro Frame — smooth wie die Burst-Ringe,
     // statt im 1s-Raster des Store-Ticks zu springen
@@ -1054,10 +1052,10 @@ function drawCooldownRings() {
     c.lineWidth = lineW
     c.stroke()
 
-    if (progress <= 0.004) continue
+    if (progress <= COOLDOWN_RING_MIN_PROGRESS) continue
     const start = -Math.PI / 2
     const end = start + progress * TWO_PI
-    const hot = bursting || progress > 0.92
+    const hot = bursting || progress > COOLDOWN_RING_HOT_PROGRESS
     c.beginPath()
     c.arc(star.x, star.y, r, start, end)
     c.strokeStyle = isNovaStar
@@ -1074,7 +1072,7 @@ function drawCooldownRings() {
     // Glüh-Spitze am Ende des Bogens
     if (!bursting) {
       c.beginPath()
-      c.arc(star.x + Math.cos(end) * r, star.y + Math.sin(end) * r, hot ? 3 : 2.2, 0, TWO_PI)
+      c.arc(star.x + Math.cos(end) * r, star.y + Math.sin(end) * r, hot ? COOLDOWN_RING_TIP_RADIUS_HOT : COOLDOWN_RING_TIP_RADIUS, 0, TWO_PI)
       c.fillStyle = `rgba(255,215,130,${0.85 * alpha})`
       c.fill()
     }

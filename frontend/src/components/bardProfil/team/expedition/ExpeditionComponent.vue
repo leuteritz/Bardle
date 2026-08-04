@@ -370,6 +370,11 @@ import {
   EXPEDITION_COLORS,
   ROLE_BY_KEY,
   type ExpeditionColorDef,
+  EXPEDITION_CHANCE_GOOD,
+  EXPEDITION_CHANCE_MID,
+  EXPEDITION_COLLECT_FLASH_MS,
+  EXPEDITION_CHIME_POP_LIFETIME_MS,
+  EXPEDITION_CHIME_POP_SPREAD_PX,
 } from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
 import type { ChampionRole, AvailableExpeditionSlot, ExpeditionMission } from '@/types'
@@ -507,8 +512,8 @@ export default defineComponent({
       )
     }
     function chanceTone(chance: number): string {
-      if (chance >= 0.7) return 'ec-qs-chance--good'
-      if (chance >= 0.45) return 'ec-qs-chance--mid'
+      if (chance >= EXPEDITION_CHANCE_GOOD) return 'ec-qs-chance--good'
+      if (chance >= EXPEDITION_CHANCE_MID) return 'ec-qs-chance--mid'
       return 'ec-qs-chance--bad'
     }
 
@@ -537,7 +542,9 @@ export default defineComponent({
         collectExpedition(exp.id, false)
       }
       collectFlashing.value = true
-      setTimeout(() => { collectFlashing.value = false }, 600)
+      setTimeout(() => {
+        collectFlashing.value = false
+      }, EXPEDITION_COLLECT_FLASH_MS)
     }
 
     function sendAll() {
@@ -579,11 +586,11 @@ export default defineComponent({
     function spawnChimePop(amount: number) {
       if (amount <= 0) return
       const id = ++popSeq
-      const dx = Math.round((Math.random() - 0.5) * 80)
+      const dx = Math.round((Math.random() - 0.5) * EXPEDITION_CHIME_POP_SPREAD_PX)
       chimePops.value.push({ id, amount, dx })
       setTimeout(() => {
         chimePops.value = chimePops.value.filter((p) => p.id !== id)
-      }, 850)
+      }, EXPEDITION_CHIME_POP_LIFETIME_MS)
     }
 
     function collectExpedition(id: string, toast = true) {

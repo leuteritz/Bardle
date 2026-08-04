@@ -128,14 +128,43 @@ import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
-import { ROLE_BY_KEY, BOSS_IMAGE_PATHS } from '../../../config/constants'
+import {
+  ROLE_BY_KEY,
+  BOSS_IMAGE_PATHS,
+  BOSS_ARENA_ATTACK_CYCLE_MS,
+  BOSS_ARENA_IMPACT_OFFSET_FRACTION,
+  BOSS_ARENA_ATTACK_STAGGER_MS,
+  BOSS_ARENA_ULT_EVERY,
+  BOSS_ARENA_ULT_ANIM_MS,
+  BOSS_ARENA_TICK_INTERVAL_MS,
+  BOSS_ARENA_FLOAT_LIFETIME_MS,
+  BOSS_ARENA_FLOAT_LIFETIME_BIG_MS,
+  BOSS_ARENA_FLOAT_X_BASE,
+  BOSS_ARENA_FLOAT_X_SPREAD,
+  BOSS_ARENA_FLOAT_Y_BASE,
+  BOSS_ARENA_FLOAT_Y_SPREAD,
+  BOSS_ARENA_HIT_CLICK_MS,
+  BOSS_ARENA_SHAKE_CLICK_MS,
+  BOSS_ARENA_HIT_CHAMPION_MS,
+  BOSS_ARENA_SHAKE_CHAMPION_MS,
+  BOSS_ARENA_HIT_ULT_MS,
+  BOSS_ARENA_SHAKE_ULT_MS,
+  BOSS_ARENA_CHAMPION_HIT_DAMAGE,
+  BOSS_ARENA_CHAMPION_ULT_DAMAGE,
+  BOSS_ARENA_ARC_SPAN_BASE_DEG,
+  BOSS_ARENA_ARC_SPAN_PER_CHAMPION_DEG,
+  BOSS_ARENA_ARC_SPAN_MAX_DEG,
+  BOSS_ARENA_ARC_RADIUS_PX,
+  BOSS_ARENA_STRIKE_REACH_PX,
+  BOSS_ARENA_STRIKE_STAGGER_S,
+} from '../../../config/constants'
 import { formatNumber } from '../../../config/numberFormat'
 import { bossPlanetInForeground } from '../../../utils/foregroundGate'
 import { bossSpriteFor } from '../../../utils/bossSprite'
 
-const CYCLE_MS = 2600
-const IMPACT_OFFSET_MS = Math.round(0.36 * CYCLE_MS)
-const STAGGER_MS = 650
+const CYCLE_MS = BOSS_ARENA_ATTACK_CYCLE_MS
+const IMPACT_OFFSET_MS = Math.round(BOSS_ARENA_IMPACT_OFFSET_FRACTION * CYCLE_MS)
+const STAGGER_MS = BOSS_ARENA_ATTACK_STAGGER_MS
 
 const props = defineProps<{
   championDamage?: number
@@ -257,8 +286,8 @@ function spawnFloat(value: number, x?: number, y?: number, blocked?: boolean) {
   let fy = y ?? window.innerHeight / 2
   if (!x && arenaEl.value) {
     const r = arenaEl.value.getBoundingClientRect()
-    fx = r.left + r.width * (0.4 + Math.random() * 0.2)
-    fy = r.top + r.height * (0.2 + Math.random() * 0.3)
+    fx = r.left + r.width * (BOSS_ARENA_FLOAT_X_BASE + Math.random() * BOSS_ARENA_FLOAT_X_SPREAD)
+    fy = r.top + r.height * (BOSS_ARENA_FLOAT_Y_BASE + Math.random() * BOSS_ARENA_FLOAT_Y_SPREAD)
   }
   damageFloats.push({ id, value, x: fx, y: fy, blocked })
   setTimeout(
@@ -267,7 +296,7 @@ function spawnFloat(value: number, x?: number, y?: number, blocked?: boolean) {
       const idx = damageFloats.findIndex((d) => d.id === id)
       if (idx !== -1) damageFloats.splice(idx, 1)
     },
-    value > 1 ? 1100 : 900,
+    value > 1 ? BOSS_ARENA_FLOAT_LIFETIME_BIG_MS : BOSS_ARENA_FLOAT_LIFETIME_MS,
   )
 }
 
@@ -291,23 +320,23 @@ function handleClick(event: MouseEvent) {
   }
   bossStore.dealClickDamage()
   spawnFloat(activeBoss.value.clickDamagePerHit ?? 1, event.clientX, event.clientY)
-  triggerHit(160, 320)
+  triggerHit(BOSS_ARENA_HIT_CLICK_MS, BOSS_ARENA_SHAKE_CLICK_MS)
 }
 
 function handleChampionHit() {
   if (!isMounted || !activeBoss.value || activeBoss.value.defeated || activeBoss.value.expired)
     return
-  bossStore.dealDamage(1)
-  triggerHit(140, 280)
-  spawnFloat(1)
+  bossStore.dealDamage(BOSS_ARENA_CHAMPION_HIT_DAMAGE)
+  triggerHit(BOSS_ARENA_HIT_CHAMPION_MS, BOSS_ARENA_SHAKE_CHAMPION_MS)
+  spawnFloat(BOSS_ARENA_CHAMPION_HIT_DAMAGE)
 }
 
 function handleChampionUlt() {
   if (!isMounted || !activeBoss.value || activeBoss.value.defeated || activeBoss.value.expired)
     return
-  bossStore.dealDamage(5)
-  triggerHit(280, 520)
-  spawnFloat(5)
+  bossStore.dealDamage(BOSS_ARENA_CHAMPION_ULT_DAMAGE)
+  triggerHit(BOSS_ARENA_HIT_ULT_MS, BOSS_ARENA_SHAKE_ULT_MS)
+  spawnFloat(BOSS_ARENA_CHAMPION_ULT_DAMAGE)
 }
 
 const attackCounts = reactive<number[]>([])
@@ -316,8 +345,8 @@ const _hitTimeouts: number[] = []
 const _hitIntervals: number[] = []
 const _ultTimeouts: number[] = []
 
-const ULT_EVERY = 5
-const ULT_ANIM_MS = 3400
+const ULT_EVERY = BOSS_ARENA_ULT_EVERY
+const ULT_ANIM_MS = BOSS_ARENA_ULT_ANIM_MS
 
 function fireAttack(i: number) {
   if (!isMounted || !activeBoss.value || activeBoss.value.defeated || activeBoss.value.expired)
@@ -372,7 +401,9 @@ onMounted(() => {
   isMountedRef.value = true
   // 250 ms statt 100 ms — das Intervall re-rendert die ganze Arena-Subtree;
   // 10×/s war im Star-Fight-Modal ein spürbarer FPS-Fresser
-  nowTimer = window.setInterval(() => { now.value = Date.now() }, 250)
+  nowTimer = window.setInterval(() => {
+    now.value = Date.now()
+  }, BOSS_ARENA_TICK_INTERVAL_MS)
   startAttackCycles()
 })
 
@@ -393,18 +424,24 @@ watch(
 )
 
 function champArcStyle(i: number, total: number): Record<string, string> {
-  const span = total > 1 ? Math.min(160, 70 + (total - 1) * 45) : 0
+  const span =
+    total > 1
+      ? Math.min(
+          BOSS_ARENA_ARC_SPAN_MAX_DEG,
+          BOSS_ARENA_ARC_SPAN_BASE_DEG + (total - 1) * BOSS_ARENA_ARC_SPAN_PER_CHAMPION_DEG,
+        )
+      : 0
   const startAngle = -span / 2
   const step = total > 1 ? span / (total - 1) : 0
   const angleDeg = startAngle + i * step
   const angleRad = (angleDeg * Math.PI) / 180
-  const radius = 115
+  const radius = BOSS_ARENA_ARC_RADIUS_PX
   const tx = Math.sin(angleRad) * radius
   const ty = Math.cos(angleRad) * radius
   const mag = Math.sqrt(tx * tx + ty * ty) || 1
-  const strikeX = ((-tx / mag) * 62).toFixed(1)
-  const strikeY = ((-ty / mag) * 62).toFixed(1)
-  const stagger = (i * 0.65).toFixed(2)
+  const strikeX = ((-tx / mag) * BOSS_ARENA_STRIKE_REACH_PX).toFixed(1)
+  const strikeY = ((-ty / mag) * BOSS_ARENA_STRIKE_REACH_PX).toFixed(1)
+  const stagger = (i * BOSS_ARENA_STRIKE_STAGGER_S).toFixed(2)
   return {
     transform: `translate(calc(${tx.toFixed(1)}px - 50%), calc(${ty.toFixed(1)}px - 50%))`,
     '--strike-x': `${strikeX}px`,

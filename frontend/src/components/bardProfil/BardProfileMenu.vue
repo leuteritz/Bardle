@@ -9,6 +9,7 @@ import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import type { BardTabId } from '@/stores/uiStore'
+import { formatBadgeCount } from '@/utils/format'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
@@ -36,10 +37,8 @@ const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
 // Planet tab: TOTAL affordable level-ups across all six orbit slots right now
 // (matches the middle-header planet badge).
 const planetBadgeCount = computed(() => planetShopStore.affordableLevelCount)
-// Compact label — the total can climb high, so cap the glyph at 99+.
-const planetBadgeLabel = computed(() =>
-  planetBadgeCount.value > 99 ? '99+' : String(planetBadgeCount.value),
-)
+// Compact label — the total can climb high, so cap the glyph.
+const planetBadgeLabel = computed(() => formatBadgeCount(planetBadgeCount.value))
 
 const menuItems: {
   id: BardTabId

@@ -20,6 +20,9 @@ import {
   GALAXY_BOSS_SPAWN_ANIM_MS,
   SKIN_ORIGINAL,
   createEmptyAllyRows,
+  ADMIN_FIELD_FLASH_MS,
+  ADMIN_CHIMES_STEP,
+  ADMIN_FILL_MATERIAL_AMOUNT,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
@@ -79,7 +82,7 @@ type QuickKey = (typeof quickFields)[number]['key']
 
 // Konfigurierbare Schrittweiten – pro Feld individuell
 const steps = reactive<Record<QuickKey, number>>({
-  chimes: 100000,
+  chimes: ADMIN_CHIMES_STEP,
   meeps: 1,
   level: 1,
   skillPoints: 1,
@@ -150,7 +153,7 @@ function triggerFlash(key: string) {
   flashKey.value = key
   setTimeout(() => {
     flashKey.value = null
-  }, 280)
+  }, ADMIN_FIELD_FLASH_MS)
 }
 
 // ── Star Spawn ────────────────────────────────────────────────────────────────
@@ -231,7 +234,7 @@ function forcePrestige() {
 
 function fillAllResources() {
   MATERIALS.forEach((m) => {
-    inventoryStore.collectedMaterials[m.id] = 9999
+    inventoryStore.collectedMaterials[m.id] = ADMIN_FILL_MATERIAL_AMOUNT
   })
   gameStore.chimes += ADMIN_QUICK_RESOURCE_AMOUNT
   gameStore.meeps += ADMIN_QUICK_RESOURCE_AMOUNT

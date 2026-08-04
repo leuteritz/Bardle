@@ -100,6 +100,17 @@ import {
   CHAMPION_XP_PER_BATTLE_ASSIST,
   CHAMPION_XP_BATTLE_MVP,
   CHAMPION_XP_BATTLE_WIN,
+  BATTLE_SIM_START_SAFETY_MARGIN_MS,
+  BATTLE_FIGHT_MARKER_DURATION_T,
+  BATTLE_WIN_PROBABILITY_MIN,
+  BATTLE_WIN_PROBABILITY_MAX,
+  BATTLE_COSMETIC_HP_MIN,
+  BATTLE_COSMETIC_HP_RANGE,
+  BATTLE_COSMETIC_HP_TIME_SLICE_T,
+  BATTLE_COSMETIC_HP_MIX_CHAMPION,
+  BATTLE_COSMETIC_HP_MIX_TIME,
+  BATTLE_COSMETIC_HP_MIX_TEAM,
+  BATTLE_COSMETIC_HP_MIX_SEED,
 } from '../config/constants'
 import { DRAKE_TYPES, type DrakeTypeId } from '../config/drakes'
 import type {
@@ -930,7 +941,7 @@ export const useBattleStore = defineStore('battle', {
         }
         case 'fightStart': {
           if (e.location) {
-            this.activeFights.push({ x: e.location.x, y: e.location.y, until: e.t + 120 })
+            this.activeFights.push({ x: e.location.x, y: e.location.y, until: e.t + BATTLE_FIGHT_MARKER_DURATION_T })
           }
           break
         }
@@ -1102,9 +1113,13 @@ export const useBattleStore = defineStore('battle', {
           // cosmetic pseudo-HP, deterministic per champion and ~1.5s time slice
           team[i].hpPercent = walking
             ? 100
-            : 35 +
-              ((i * 53 + Math.floor(gameTime / 90) * 31 + teamNo * 17 + (this.battleSeed % 97)) %
-                66)
+            : BATTLE_COSMETIC_HP_MIN +
+              ((i * BATTLE_COSMETIC_HP_MIX_CHAMPION +
+                Math.floor(gameTime / BATTLE_COSMETIC_HP_TIME_SLICE_T) *
+                  BATTLE_COSMETIC_HP_MIX_TIME +
+                teamNo * BATTLE_COSMETIC_HP_MIX_TEAM +
+                (this.battleSeed % BATTLE_COSMETIC_HP_MIX_SEED)) %
+                BATTLE_COSMETIC_HP_RANGE)
         }
       }
       apply(this.team1, this.respawnUntil.t1, 1)
@@ -1866,7 +1881,10 @@ export const useBattleStore = defineStore('battle', {
       const powerDifference = playerPower - opponentPower
       const expectedScore = 1 / (1 + Math.pow(10, -powerDifference / ELO_RATING_SCALE))
       const luckModifier = (Math.random() - 0.5) * this.battleFormula.luckFactor
-      return Math.max(0.1, Math.min(0.9, expectedScore + luckModifier))
+      return Math.max(
+        BATTLE_WIN_PROBABILITY_MIN,
+        Math.min(BATTLE_WIN_PROBABILITY_MAX, expectedScore + luckModifier),
+      )
     },
 
     generateOpponent(targetMMR: number) {
@@ -2561,7 +2579,9 @@ export const useBattleStore = defineStore('battle', {
         this.battlePhaseStartTimestamp === 0 &&
         !this.showAutoBattleResult &&
         Date.now() - this.searchingPhaseStartTimestamp >
-          PLANET_SEARCH_ANIM_DURATION_MS + PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS + 1500
+          PLANET_SEARCH_ANIM_DURATION_MS +
+            PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS +
+            BATTLE_SIM_START_SAFETY_MARGIN_MS
       ) {
         this.simulationReadyToStart = false
         this.beginLoadingPhase()

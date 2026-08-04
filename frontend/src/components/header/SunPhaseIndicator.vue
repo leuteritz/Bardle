@@ -7,7 +7,9 @@ import {
   COMET_PHASE_DATA,
   SUN_PHASE_DISPLAY_TOTAL,
   STAR_PHASE_FINAL_INDEX,
+  MS_PER_SECOND,
 } from '@/config/constants'
+import { splitDuration } from '@/utils/format'
 import { useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
 
 const solarStore = useSolarUpgradeStore()
@@ -66,10 +68,8 @@ const dwellComplete = computed(() => solarStore.phaseDwellRemainingMs <= 0)
 
 /** Time LEFT in the current phase before it may be evolved — the only label. */
 const remainingText = computed(() => {
-  const totalSec = Math.ceil(solarStore.phaseDwellRemainingMs / 1000)
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
+  const totalSec = Math.ceil(solarStore.phaseDwellRemainingMs / MS_PER_SECOND)
+  const { hours: h, minutes: m, seconds: s } = splitDuration(totalSec)
   return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`
 })
 

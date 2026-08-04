@@ -96,6 +96,7 @@ import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { mvpScore } from '@/utils/battle/timeline'
 import { JUNGLE_BUFF_CARRY_DURATION_T } from '@/config/constants'
+import { hpStageClass } from '@/utils/format'
 
 const props = defineProps<{ side: 'blue' | 'red' }>()
 
@@ -142,11 +143,7 @@ const mvpLiveName = computed(() => {
   return name
 })
 
-function hpClass(hp: number): string {
-  if (hp > 60) return 'hp--high'
-  if (hp > 35) return 'hp--mid'
-  return 'hp--low'
-}
+const hpClass = hpStageClass
 </script>
 
 <style scoped>

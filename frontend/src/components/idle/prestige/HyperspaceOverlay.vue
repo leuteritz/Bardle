@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
+import {
+  HYPERSPACE_FLASH_AT_MS,
+  HYPERSPACE_FADEOUT_AT_MS,
+  HYPERSPACE_END_AT_MS,
+} from '@/config/constants'
 
 type HyperStar = {
   angle: number
@@ -138,13 +143,13 @@ watch(
       setTimeout(() => {
         phase.value = 'flash'
         stopAnimation(true)
-      }, 2000)
+      }, HYPERSPACE_FLASH_AT_MS)
       setTimeout(() => {
         phase.value = 'fadeout'
-      }, 2500)
+      }, HYPERSPACE_FADEOUT_AT_MS)
       setTimeout(() => {
         phase.value = 'idle'
-      }, 3500)
+      }, HYPERSPACE_END_AT_MS)
     } else {
       phase.value = 'idle'
       stopAnimation(true)

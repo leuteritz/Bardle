@@ -95,6 +95,11 @@ import {
   COMET_STAGE_GOLD,
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
+  SUN_CLICK_PUNCH_MS,
+  SUN_CLICK_RIPPLE_SUN_FACTOR,
+  CHIME_BURST_ANGLE_JITTER,
+  CHIME_POPUP_FONT_MIN_PX,
+  CHIME_POPUP_FONT_SUN_FACTOR,
 } from '../../config/constants'
 
 interface ChimeBurstParticle {
@@ -150,7 +155,10 @@ export default defineComponent({
     }))
 
     const chimePopupFontSize = computed(() =>
-      Math.max(planetShopStore.currentSunRadius * 0.5, 22),
+      Math.max(
+        planetShopStore.currentSunRadius * CHIME_POPUP_FONT_SUN_FACTOR,
+        CHIME_POPUP_FONT_MIN_PX,
+      ),
     )
 
     const chimeGainPos = ref({ x: 0, y: 0 })
@@ -166,7 +174,7 @@ export default defineComponent({
     let punchTimer: ReturnType<typeof setTimeout> | null = null
 
     const rippleStyle = computed(() => {
-      const size = planetShopStore.currentSunRadius * 2.4
+      const size = planetShopStore.currentSunRadius * SUN_CLICK_RIPPLE_SUN_FACTOR
       return { width: `${size}px`, height: `${size}px` }
     })
 
@@ -203,7 +211,7 @@ export default defineComponent({
       })
       punchTimer = setTimeout(() => {
         isPunching.value = false
-      }, 260)
+      }, SUN_CLICK_PUNCH_MS)
 
       // Ripple ring — bump the key to replay the CSS animation
       rippleKey.value++
@@ -216,7 +224,8 @@ export default defineComponent({
       const particles: ChimeBurstParticle[] = Array.from(
         { length: CHIME_BURST_COUNT },
         (_, i) => {
-          const angle = baseAngle + step * i + (Math.random() - 0.5) * step * 0.6
+          const angle =
+            baseAngle + step * i + (Math.random() - 0.5) * step * CHIME_BURST_ANGLE_JITTER
           const dist =
             r *
             (CHIME_BURST_DIST_MIN_FACTOR +

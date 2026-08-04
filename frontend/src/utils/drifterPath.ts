@@ -6,6 +6,9 @@ import {
   DRIFTER_HUD_PANEL_MARGIN_PX,
   BOTTOM_BAR_HEIGHT,
   BOTTOM_BAR_SIDE_W,
+  HUD_SCALE_REF_WIDTH_PX,
+  HUD_SCALE_REF_HEIGHT_PX,
+  DRIFTER_TANGENT_PROBE_STEP,
 } from '../config/constants'
 
 export interface DrifterFieldRect {
@@ -56,7 +59,7 @@ export function drifterField(
   const height = Math.max(1, viewportH - top - DRIFTER_FIELD_BOTTOM_PX)
   // The bottom bar is low in the middle and raised at both ends. Only the
   // raised ends matter here — they are opaque and sit above the drifter layer.
-  const hudScale = Math.min(1, w / 2560, viewportH / 1440)
+  const hudScale = Math.min(1, w / HUD_SCALE_REF_WIDTH_PX, viewportH / HUD_SCALE_REF_HEIGHT_PX)
   const sidePanelWidth = insets.sidePanelWidthPx ?? BOTTOM_BAR_SIDE_W * hudScale
   const barHeight = insets.bottomBarHeightPx ?? BOTTOM_BAR_HEIGHT * hudScale
   return {
@@ -217,7 +220,7 @@ export function drifterPointAt(
   }
 
   const here = sample(clamped)
-  const step = 0.01
+  const step = DRIFTER_TANGENT_PROBE_STEP
   const ahead = sample(clamped + step)
   const behind = sample(clamped - step)
   const dx = ahead.x - behind.x

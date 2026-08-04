@@ -12,6 +12,21 @@ import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { MEEP_TREE_BRANCHES } from '@/config/meepTree'
+import {
+  SKILL_TREE_BASE_ANGLES_DEG,
+  SKILL_TREE_TIER_JITTER_DEG,
+  SKILL_TREE_TIER_RADIUS,
+  SKILL_TREE_Y_SQUASH,
+  SKILL_TREE_NODE_CENTER,
+  SKILL_TREE_START_CENTER,
+  SKILL_TREE_FIT_PADDING,
+  SKILL_TREE_FIT_MIN_ZOOM,
+  SKILL_TREE_FIT_MAX_ZOOM,
+  SKILL_TREE_FIT_DELAY_MS,
+  SKILL_TREE_EDGE_WIDTH_BOUGHT,
+  SKILL_TREE_EDGE_WIDTH_BUYABLE,
+  SKILL_TREE_EDGE_WIDTH_LOCKED,
+} from '@/config/constants'
 import MeepSkillNode from './MeepSkillNode.vue'
 import MeepStartNode from './MeepStartNode.vue'
 
@@ -27,7 +42,15 @@ onMounted(async () => {
   // Wie in klassischen Skill-Webs: lesbar starten (Zoom-Clamp), Rest per Pan/Zoom.
   // Ohne duration → sofortiger Snap; die Zoomanimation direkt beim Mount
   // kollidierte mit den Mount-Kosten und drückte die FPS.
-  setTimeout(() => fitView({ padding: 0.06, minZoom: 0.62, maxZoom: 0.9 }), 100)
+  setTimeout(
+    () =>
+      fitView({
+        padding: SKILL_TREE_FIT_PADDING,
+        minZoom: SKILL_TREE_FIT_MIN_ZOOM,
+        maxZoom: SKILL_TREE_FIT_MAX_ZOOM,
+      }),
+    SKILL_TREE_FIT_DELAY_MS,
+  )
 })
 
 // ── Radiales Netz-Layout ───────────────────────────────────
@@ -35,14 +58,14 @@ onMounted(async () => {
 // Richtungen aus; leichter Zickzack pro Stufe für den organischen
 // "Netz"-Look. Die y-Achse ist leicht gestaucht (Breitbild), die
 // Radien sind so gewählt, dass sich Kreise und Labels nie überlappen.
-const BASE_ANGLES = [-90, -18, 54, 126, 198] // Grad, gleichmäßig über 360°
-const TIER_JITTER = [0, 10, -9, 10, -8] // Zickzack pro Stufe
-const TIER_RADIUS = [200, 355, 510, 665, 820]
-const Y_SQUASH = 0.85
+const BASE_ANGLES = SKILL_TREE_BASE_ANGLES_DEG
+const TIER_JITTER = SKILL_TREE_TIER_JITTER_DEG
+const TIER_RADIUS = SKILL_TREE_TIER_RADIUS
+const Y_SQUASH = SKILL_TREE_Y_SQUASH
 
 // Kreis-Mittelpunkt-Offsets innerhalb der Node-Wrapper (müssen zum CSS passen)
-const SKILL_CENTER = { x: 78, y: 40 }
-const START_CENTER = { x: 80, y: 48 }
+const SKILL_CENTER = SKILL_TREE_NODE_CENTER
+const START_CENTER = SKILL_TREE_START_CENTER
 
 function nodeCenter(branchIdx: number, tierIdx: number): { x: number; y: number } {
   const angleDeg = BASE_ANGLES[branchIdx] + TIER_JITTER[tierIdx]
@@ -103,7 +126,11 @@ const edges = computed<Edge[]>(() => {
         type: 'straight',
         style: {
           stroke,
-          strokeWidth: bought ? 3.5 : buyable ? 2.75 : 2.25,
+          strokeWidth: bought
+          ? SKILL_TREE_EDGE_WIDTH_BOUGHT
+          : buyable
+            ? SKILL_TREE_EDGE_WIDTH_BUYABLE
+            : SKILL_TREE_EDGE_WIDTH_LOCKED,
           // Ketten-Optik wie im klassischen Skill-Web: offene Pfade gestrichelt
           strokeDasharray: bought ? undefined : '7 5',
         },

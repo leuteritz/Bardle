@@ -62,6 +62,7 @@ import {
   GALAXY_BOSS_ESCORT_COLORS,
   RESOURCE_STAR_COLORS,
   ROLE_COLORS,
+  GALAXY_BOSS_ESCORT_ORBIT_SPREAD,
 } from '../config/constants'
 
 let starIdCounter = 0
@@ -436,8 +437,8 @@ export const useStarGroupStore = defineStore('starGroup', {
             orbitAngle: Math.random() * Math.PI * 2,
             orbitSpeed: PLANET_ORBIT_SPEED_BOSS,
             orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
-            orbitRx: GALAXY_BOSS_ESCORT_PLANET_ORBIT_RX * (1 + p * 0.6),
-            orbitRy: GALAXY_BOSS_ESCORT_PLANET_ORBIT_RY * (1 + p * 0.6),
+            orbitRx: GALAXY_BOSS_ESCORT_PLANET_ORBIT_RX * (1 + p * GALAXY_BOSS_ESCORT_ORBIT_SPREAD),
+            orbitRy: GALAXY_BOSS_ESCORT_PLANET_ORBIT_RY * (1 + p * GALAXY_BOSS_ESCORT_ORBIT_SPREAD),
             orbitTilt: GALAXY_BOSS_ESCORT_PLANET_ORBIT_TILT,
             cleared: false,
           })

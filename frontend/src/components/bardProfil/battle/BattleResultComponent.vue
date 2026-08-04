@@ -51,7 +51,11 @@ import BattleLoadingScreen from './loading/BattleLoadingScreen.vue'
 import RiftBattleBoard from './rift/RiftBattleBoard.vue'
 import HonorResultScreen from './result/HonorResultScreen.vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { LOADING_PHASE_POLL_MS, PLANET_SEARCH_ANIM_DURATION_MS } from '@/config/constants'
+import {
+  LOADING_PHASE_POLL_MS,
+  PLANET_SEARCH_ANIM_DURATION_MS,
+  UNIVERSE_ANIM_MIN_REMAINING_MS,
+} from '@/config/constants'
 
 export default defineComponent({
   name: 'BattleResultComponent',
@@ -134,7 +138,7 @@ export default defineComponent({
       const remaining =
         PLANET_SEARCH_ANIM_DURATION_MS -
         (Date.now() - battleStore.searchingPhaseStartTimestamp)
-      if (remaining < 150) return
+      if (remaining < UNIVERSE_ANIM_MIN_REMAINING_MS) return
       isUniverseAnimating.value = true
       void universeAnim.value?.trigger()
       const deadline = Date.now() + remaining

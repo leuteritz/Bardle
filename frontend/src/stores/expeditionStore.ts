@@ -32,6 +32,8 @@ import {
   CHAMPION_XP_EXPEDITION_PER_MINUTE,
   CHAMPION_XP_EXPEDITION_FAIL_SHARE,
   type ExpeditionTier,
+  EXPEDITION_SUCCESS_CHANCE_MIN,
+  EXPEDITION_SUCCESS_CHANCE_MAX,
 } from '../config/constants'
 import type { ExpeditionMission, AvailableExpeditionSlot, ChampionRole } from '../types'
 import { logger } from '../utils/logger'
@@ -141,7 +143,10 @@ export const useExpeditionStore = defineStore('expedition', {
       )
       const successChance = (EXPEDITION_BASE_SUCCESS_CHANCE + powerBonus) * roleSynergyBonus
 
-      return Math.max(0.05, Math.min(0.95, successChance))
+      return Math.max(
+        EXPEDITION_SUCCESS_CHANCE_MIN,
+        Math.min(EXPEDITION_SUCCESS_CHANCE_MAX, successChance),
+      )
     },
 
     _spawnOneExpedition(now: number) {

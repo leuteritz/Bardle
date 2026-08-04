@@ -174,6 +174,8 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
 import { formatNumber } from '@/config/numberFormat'
 import { MATERIALS } from '@/config/materials'
+import { EMBER_LEFT_STEP_RESCUE_PCT } from '@/config/constants'
+import { emberStyle as emberField } from '@/utils/particleField'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import type { PlanetBossRewardSlot } from '@/types'
 
@@ -267,18 +269,7 @@ const homePlanetChampionImage = computed(() => {
 })
 
 function emberStyle(i: number): Record<string, string> {
-  const duration = 1.8 + (i % 6) * 0.7
-  const delay = (i % 11) * -0.35
-  const left = (i * 4.17) % 100
-  const size = 1.5 + (i % 3)
-  return {
-    left: `${left}%`,
-    width: `${size}px`,
-    height: `${size}px`,
-    animationDuration: `${duration}s`,
-    animationDelay: `${delay}s`,
-    opacity: `${0.4 + (i % 4) * 0.15}`,
-  }
+  return emberField(i, EMBER_LEFT_STEP_RESCUE_PCT)
 }
 
 watch(

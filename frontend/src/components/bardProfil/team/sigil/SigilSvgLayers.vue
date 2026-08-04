@@ -8,6 +8,9 @@ import {
   SIGIL_RING_CORE_R,
   SIGIL_DIM_COLOR,
   SWORN_ALLY_COUNT,
+  SIGIL_LINK_GAP_MAIN,
+  SIGIL_LINK_GAP_SWORN,
+  SIGIL_LINK_GAP_BENCH,
 } from '@/config/constants'
 import type { SigilStageDef } from '@/types'
 import type { SigilPoint } from '@/composables/useTeamSigil'
@@ -74,9 +77,9 @@ function spokeColor(i: number): string {
  *  A sworn endpoint is a cut plate, not a disc: it reaches SIGIL_SWORN_SIZE / 2 +
  *  SIGIL_SWORN_RIM_PX = 24px at its corners, so the line has to stop further out
  *  than the portrait box alone would suggest. */
-const LINK_GAP_MAIN = 54
-const LINK_GAP_SWORN = 28
-const LINK_GAP_BENCH = 22
+const LINK_GAP_MAIN = SIGIL_LINK_GAP_MAIN
+const LINK_GAP_SWORN = SIGIL_LINK_GAP_SWORN
+const LINK_GAP_BENCH = SIGIL_LINK_GAP_BENCH
 
 type LinkKind = 'sworn' | 'yoke' | 'bench'
 interface SigilLink {

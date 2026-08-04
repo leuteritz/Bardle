@@ -46,6 +46,24 @@ import {
   JUNGLE_BUFF_FLASH_ANIM_MS,
   STRIKER_PROJECTILE_FLIGHT_MS,
   ROLE_INDEX_BY_KEY,
+  CHAMPION_DAMAGE_FLOAT_X_SPREAD,
+  CHAMPION_DAMAGE_FLOAT_Y_OFFSET,
+  CHAMPION_DAMAGE_FLOAT_MS,
+  STRIKER_DAMAGE_FLOAT_X_SPREAD,
+  STRIKER_DAMAGE_FLOAT_Y_OFFSET,
+  STRIKER_DAMAGE_FLOAT_MS,
+  CURSE_DAMAGE_FLOAT_Y_OFFSET,
+  CURSE_DAMAGE_FLOAT_MS,
+  ADC_BURST_FLOAT_X_SPREAD,
+  ADC_BURST_FLOAT_Y_OFFSET,
+  ADC_BURST_FLOAT_MS,
+  ADC_BURST_ACTIVE_MS,
+  SHIELD_FLOAT_Y_OFFSET,
+  SHIELD_FLOAT_MS,
+  ROLE_EVENT_THROTTLE_SUPPORT_PLANET_MS,
+  ROLE_EVENT_THROTTLE_SUPPORT_PLAYER_MS,
+  ROLE_EVENT_THROTTLE_MID_CURSE_MS,
+  ROLE_EVENT_THROTTLE_ADC_BURST_MS,
 } from '../config/constants'
 import { getChampionStarLevel } from '../config/championTiers'
 import { usePlayerStore } from './playerStore'
@@ -496,7 +514,12 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         const champName = getChampionNameByRole(role)
         const champ = combatStore.champions.find((c) => c.name === champName)
         if (champ && (champ.screenX !== 0 || champ.screenY !== 0)) {
-          spawnFloat(dmg, champ.screenX + (Math.random() - 0.5) * 24, champ.screenY - 34, 900)
+          spawnFloat(
+            dmg,
+            champ.screenX + (Math.random() - 0.5) * CHAMPION_DAMAGE_FLOAT_X_SPREAD,
+            champ.screenY - CHAMPION_DAMAGE_FLOAT_Y_OFFSET,
+            CHAMPION_DAMAGE_FLOAT_MS,
+          )
         }
 
         if (hp.current <= 0) {
@@ -757,7 +780,12 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           if (!defeated) {
             const pos = activePlanetPositions.get(target.planetId)
             if (pos) {
-              spawnFloat(def.damage, pos.cx + (Math.random() - 0.5) * 36, pos.cy - 48, 1100)
+              spawnFloat(
+                def.damage,
+                pos.cx + (Math.random() - 0.5) * STRIKER_DAMAGE_FLOAT_X_SPREAD,
+                pos.cy - STRIKER_DAMAGE_FLOAT_Y_OFFSET,
+                STRIKER_DAMAGE_FLOAT_MS,
+              )
             }
           }
         }, STRIKER_PROJECTILE_FLIGHT_MS)
@@ -852,7 +880,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
             healFloat: true,
           })
 
-          throttledEvent(`support-heal-${slot.id}`, 4000, () => {
+          throttledEvent(`support-heal-${slot.id}`, ROLE_EVENT_THROTTLE_SUPPORT_PLANET_MS, () => {
             addEvent(
               `${supportChampion.name} heals ${getPlanetLabel(slot)} +${Math.round(healAmount)} HP.`,
               'support',
@@ -880,7 +908,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           { healFloat: true },
         )
 
-        throttledEvent('support-heal-player', 5000, () => {
+        throttledEvent('support-heal-player', ROLE_EVENT_THROTTLE_SUPPORT_PLAYER_MS, () => {
           addEvent(`${supportChampion.name} heals Bard +${Math.round(healed)} HP.`, 'support')
         })
       }
@@ -953,7 +981,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       ) {
         const dotDamage = roleAbility('mid', ROLE_MID_CURSE_DOT_DPS)
         const defeated = bossStore.dealDamage(dotDamage)
-        throttledEvent(`mid-curse-dot-${activeBoss.planetId}`, 10000, () => {
+        throttledEvent(`mid-curse-dot-${activeBoss.planetId}`, ROLE_EVENT_THROTTLE_MID_CURSE_MS, () => {
           addEvent(`${championName} Corruption: ${dotDamage} dmg.`, 'mid')
         })
         if (!defeated) {
@@ -1014,7 +1042,9 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         bossStore.dealDamage(dmg)
         const pos2 = activePlanetPositions.get(activeBoss.planetId)
         if (pos2) {
-          spawnFloat(dmg, pos2.cx, pos2.cy - 65, 1500, { curseFloat: true })
+          spawnFloat(dmg, pos2.cx, pos2.cy - CURSE_DAMAGE_FLOAT_Y_OFFSET, CURSE_DAMAGE_FLOAT_MS, {
+            curseFloat: true,
+          })
         }
         addEvent(`${championName} casts Damnation: −${dmg} HP (20%)!`, 'mid')
       } else {
@@ -1048,11 +1078,11 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         this.adcBurstActive = true
         window.setTimeout(() => {
           this.adcBurstActive = false
-        }, 350)
+        }, ADC_BURST_ACTIVE_MS)
 
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
           const burstDamage = roleAbility('adc', ROLE_ADC_BURST_DAMAGE)
-          throttledEvent(`adc-burst-${activeBoss.planetId}`, 10000, () => {
+          throttledEvent(`adc-burst-${activeBoss.planetId}`, ROLE_EVENT_THROTTLE_ADC_BURST_MS, () => {
             addEvent(`${championName} burst: ${burstDamage} dmg.`, 'adc')
           })
 
@@ -1064,9 +1094,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
             if (!defeated) {
               const pos = activePlanetPositions.get(target.planetId)
               if (pos) {
-                spawnFloat(burstDamage, pos.cx + (Math.random() - 0.5) * 30, pos.cy - 45, 1200, {
-                  adcFloat: true,
-                })
+                spawnFloat(
+                  burstDamage,
+                  pos.cx + (Math.random() - 0.5) * ADC_BURST_FLOAT_X_SPREAD,
+                  pos.cy - ADC_BURST_FLOAT_Y_OFFSET,
+                  ADC_BURST_FLOAT_MS,
+                  { adcFloat: true },
+                )
               }
             } else {
               addEvent(`${championName} slays boss (${formatSlotId(target.planetId)}).`, 'adc')
@@ -1086,7 +1120,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const rebuildMs = roleCooldown('top', ROLE_TOP_SHIELD_REBUILD_MS)
       this.tankShieldBrokenMs = rebuildMs
 
-      spawnFloat(0, topX, topY - 45, 1000, { shieldFloat: true })
+      spawnFloat(0, topX, topY - SHIELD_FLOAT_Y_OFFSET, SHIELD_FLOAT_MS, { shieldFloat: true })
 
       const { addEvent } = useEventLog()
       const championName = getChampionNameByRole('top')

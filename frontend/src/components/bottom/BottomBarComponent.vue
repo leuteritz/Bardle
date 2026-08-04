@@ -73,6 +73,8 @@ import {
   BOTTOM_BAR_EDGE_INSET,
   BOTTOM_BAR_SEAM_COLOR,
   HUD_PANEL_ARC_R,
+  BOTTOM_BAR_SEAM_TOP_OFFSET_PX,
+  BOTTOM_BAR_SEAM_BOTTOM_OFFSET_PX,
 } from '@/config/constants'
 
 const shellRef = ref<HTMLDivElement | null>(null)
@@ -139,8 +141,12 @@ const closedPath = computed(
 
 const seamLeftX = computed(() => BOTTOM_BAR_SIDE_W * hudScale.value)
 const seamRightX = computed(() => vw.value - BOTTOM_BAR_SIDE_W * hudScale.value)
-const seamY1 = computed(() => (HUD_PANEL_ARC_R + 10) * hudScale.value)
-const seamY2 = computed(() => (BOTTOM_BAR_CENTER_TOP_Y - 28) * hudScale.value)
+const seamY1 = computed(
+  () => (HUD_PANEL_ARC_R + BOTTOM_BAR_SEAM_TOP_OFFSET_PX) * hudScale.value,
+)
+const seamY2 = computed(
+  () => (BOTTOM_BAR_CENTER_TOP_Y - BOTTOM_BAR_SEAM_BOTTOM_OFFSET_PX) * hudScale.value,
+)
 </script>
 
 <style scoped>

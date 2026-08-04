@@ -115,6 +115,16 @@ import {
   JUNGLE_BUFF_RECLEAR_GAP_MIN_T,
   JUNGLE_BUFF_RECLEAR_GAP_MAX_T,
   JUNGLE_BUFF_LATE_MARGIN_T,
+  TIMELINE_KILL_BIAS_CHANCE,
+  TIMELINE_PIT_SCRAP_CHANCE,
+  TIMELINE_PIT_SCRAP_DELAY_MIN_T,
+  TIMELINE_PIT_SCRAP_DELAY_MAX_T,
+  TIMELINE_PIT_SCRAP_KILLS_MIN,
+  TIMELINE_PIT_SCRAP_KILLS_MAX,
+  TIMELINE_DRAKE_SPAWN_JITTER_FRACTION,
+  TIMELINE_DRAKE_RESULT_SLOT_FRACTION,
+  TIMELINE_DRAKE_RESULT_QUIET_T,
+  TIMELINE_DRAKE_RESULT_DELAY_FLOOR_T,
 } from '../../config/constants'
 import { JUNGLE_BUFF_CAMPS } from '../../config/battleRoutes'
 
@@ -235,7 +245,7 @@ function emitFight(
   ]
 
   for (let i = 0; i < killCount; i++) {
-    let team = opts.biasTeam && ctx.rng() < 0.65 ? opts.biasTeam : pickTeam(ctx)
+    let team = opts.biasTeam && ctx.rng() < TIMELINE_KILL_BIAS_CHANCE ? opts.biasTeam : pickTeam(ctx)
     let killerIdx = pick(ctx.rng, participants[team === 1 ? 't1' : 't2'])
 
     // multikill escalation: same killer strikes again shortly after
@@ -388,8 +398,13 @@ function emitObjective(
   })
 
   // small scrap around the pit
-  if (ctx.rng() < 0.6) {
-    emitFight(ctx, tSpawn + randInt(ctx.rng, 8, 25), location, randInt(ctx.rng, 1, 2))
+  if (ctx.rng() < TIMELINE_PIT_SCRAP_CHANCE) {
+    emitFight(
+      ctx,
+      tSpawn + randInt(ctx.rng, TIMELINE_PIT_SCRAP_DELAY_MIN_T, TIMELINE_PIT_SCRAP_DELAY_MAX_T),
+      location,
+      randInt(ctx.rng, TIMELINE_PIT_SCRAP_KILLS_MIN, TIMELINE_PIT_SCRAP_KILLS_MAX),
+    )
   }
 
   const winnerTeam = forcedTeam ?? pickTeam(ctx)
@@ -535,7 +550,7 @@ export function generateTimeline(
     const slot = (TIMELINE_DRAKE_WINDOW_END - chainStart) / drakeCount
     for (let i = 0; i < drakeCount; i++) {
       const base = chainStart + slot * i
-      const tSpawn = Math.floor(base + rng() * Math.max(1, slot * 0.15))
+      const tSpawn = Math.floor(base + rng() * Math.max(1, slot * TIMELINE_DRAKE_SPAWN_JITTER_FRACTION))
       const isElder = allowElder && i === drakeCount - 1
       const drakeType: DrakeTypeId =
         isElder || drakeTypePool.length === 0
@@ -545,7 +560,10 @@ export function generateTimeline(
       // quiet before the next spawn, so even a 4-drake chain never feels back-to-back
       const resultDelay = Math.min(
         randInt(rng, TIMELINE_DRAKE_RESULT_DELAY_MIN_T, TIMELINE_DRAKE_RESULT_DELAY_MAX_T),
-        Math.max(60, Math.floor(slot * 0.85) - 90),
+        Math.max(
+          TIMELINE_DRAKE_RESULT_DELAY_FLOOR_T,
+          Math.floor(slot * TIMELINE_DRAKE_RESULT_SLOT_FRACTION) - TIMELINE_DRAKE_RESULT_QUIET_T,
+        ),
       )
       emitObjective(ctx, tSpawn, 'drake', undefined, undefined, drakeType, resultDelay)
     }

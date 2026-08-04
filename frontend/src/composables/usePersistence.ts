@@ -32,6 +32,10 @@ import {
   ALLIES_PER_ROLE,
   createEmptyAllyRows,
   STAR_PHASE_DATA,
+  SECONDS_PER_HOUR,
+  CHIMES_PER_CLICK_BASE,
+  UNIVERSE_RESCUE_INITIAL_COST,
+  BATTLE_HISTORY_SAVE_LIMIT,
 } from '@/config/constants'
 import { DRAKE_TYPES, type DrakeTypeId } from '@/config/drakes'
 import { logger } from '@/utils/logger'
@@ -128,7 +132,7 @@ export function usePersistence() {
         bestWinStreak: battleStore.bestWinStreak,
         currentWinStreak: battleStore.currentWinStreak,
         autoBattleEnabled: battleStore.autoBattleEnabled,
-        battleHistory: battleStore.battleHistory.slice(-20),
+        battleHistory: battleStore.battleHistory.slice(-BATTLE_HISTORY_SAVE_LIMIT),
         recruitableChampions: battleStore.recruitableChampions,
         recruitedChampions: [...battleStore.recruitedChampions],
         newlyUnlockedChampions: [...battleStore.newlyUnlockedChampions],
@@ -822,7 +826,7 @@ export function usePersistence() {
           OFFLINE_MAX_HOURS +
           starForgeStore.offlineMaxHoursBonus +
           meepTreeStore.fx.offlineMaxHoursBonus
-        const cappedSeconds = Math.min(rawSeconds, maxOfflineHours * 3600)
+        const cappedSeconds = Math.min(rawSeconds, maxOfflineHours * SECONDS_PER_HOUR)
         if (cappedSeconds >= OFFLINE_MIN_SECONDS) {
           const offlineMul =
             planetShopStore.planetOfflineBoostMultiplier *
@@ -870,12 +874,12 @@ export function usePersistence() {
     gameStore.inGameTime = 0
     gameStore.chimes = 0
     gameStore.chimesPerSecond = 0
-    gameStore.chimesPerClick = 20
-    gameStore.baseChimesPerClick = 20
+    gameStore.chimesPerClick = CHIMES_PER_CLICK_BASE
+    gameStore.baseChimesPerClick = CHIMES_PER_CLICK_BASE
     gameStore.chimesForNextLevel = LEVEL_BASE
     gameStore.chimesForMeep = 0
     gameStore.chimesForNextUniverse = 0
-    gameStore.chimesToUniverseRescue = 100000
+    gameStore.chimesToUniverseRescue = UNIVERSE_RESCUE_INITIAL_COST
     gameStore.meeps = 0
     gameStore.meepChimeRequirement = MEEP_BASE_COST
     gameStore.chimesEarnedForLevel = 0

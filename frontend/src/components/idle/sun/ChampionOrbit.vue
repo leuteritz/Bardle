@@ -173,16 +173,33 @@ import {
   HOVER_DIM_FADE_MS,
   HOVER_DIM_HIDDEN_THRESHOLD,
   CHAMPION_HIT_FLASH_MS,
+  ORBIT_MIN_RY_SUN_FACTOR_BY_ROLE,
+  ORBIT_MIN_RY_VIEWPORT_FACTOR_BY_ROLE,
+  ORBIT_MIN_RY_SUN_FACTOR_ROLELESS,
+  ORBIT_MIN_RY_VIEWPORT_FACTOR_ROLELESS,
+  ORBIT_MAX_RX_VIEWPORT_FRACTION,
+  ORBIT_SIZE_SUN_SCALE_EXPONENT,
+  ORBIT_BEHIND_REL_Y,
+  ORBIT_BEHIND_FADE_BAND,
+  ORBIT_BEHIND_SPEED_LERP,
+  CHAMPION_ORBIT_KEPLER_BOOST,
+  ORBIT_PARALLAX_SCALE_BASE,
+  ORBIT_PARALLAX_SCALE_SPAN,
+  CHAMPION_ORBIT_POSITION_LERP,
+  CHAMPION_ORBIT_OPACITY_BEHIND_BASE,
+  CHAMPION_ORBIT_OPACITY_BEHIND_SPAN,
+  CHAMPION_ORBIT_OPACITY_FRONT_BASE,
+  CHAMPION_ORBIT_OPACITY_FRONT_SPAN,
+  CHAMPION_ORBIT_PROJECTILE_COOLDOWN_MS,
+  CHAMPION_ORBIT_INTERCEPT_MAX_OFFSET_PX,
+  CHAMPION_ORBIT_INTERCEPT_DURATION_MS,
+  CHAMPION_ORBIT_INTERCEPT_OUT_FRACTION,
+  PLANET_ORBIT_FOREGROUND_DEPTH,
 } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
 import { useOrbitScale } from '@/composables/useOrbitScale'
 import type { ChampionRole } from '../../../types'
-
-const BEHIND_SPEED_LERP = 0.04
-const PROJECTILE_COOLDOWN_MS = 700
-const INTERCEPT_MAX_OFFSET = 25
-const INTERCEPT_DURATION_MS = 500
 
 interface ChampionRenderPos {
   name: string
@@ -340,14 +357,12 @@ export default defineComponent({
         const rawRy = (roleTier ? roleTier.ry : planetTier.ry) * sunScale * orbitScaleVal
 
         const vMin = Math.min(window.innerWidth, window.innerHeight)
-        const MIN_RY_BY_ROLE: Record<string, number> = {
-          top: 1.35, jungle: 1.8, mid: 2.2, adc: 2.6, support: 2.6,
-        }
-        const VIEWPORT_RY_BY_ROLE: Record<string, number> = {
-          top: 0.07, jungle: 0.12, mid: 0.17, adc: 0.22, support: 0.22,
-        }
-        const minRyFactor = primaryRole ? (MIN_RY_BY_ROLE[primaryRole] ?? 1.5) : 1.6
-        const viewportFactor = primaryRole ? (VIEWPORT_RY_BY_ROLE[primaryRole] ?? 0.10) : 0.12
+        const minRyFactor = primaryRole
+          ? ORBIT_MIN_RY_SUN_FACTOR_BY_ROLE[primaryRole]
+          : ORBIT_MIN_RY_SUN_FACTOR_ROLELESS
+        const viewportFactor = primaryRole
+          ? ORBIT_MIN_RY_VIEWPORT_FACTOR_BY_ROLE[primaryRole]
+          : ORBIT_MIN_RY_VIEWPORT_FACTOR_ROLELESS
         const minRy = Math.max(
           planetShopStore.orbitSunRadius * minRyFactor,
           vMin * viewportFactor,
@@ -355,7 +370,7 @@ export default defineComponent({
         const aspectRatio = roleTier ? roleTier.rx / roleTier.ry : planetTier.rx / planetTier.ry
         const flooredRy = Math.max(rawRy, minRy)
         const flooredRx = flooredRy * aspectRatio
-        const maxRx = (window.innerWidth / 2) * 0.85
+        const maxRx = (window.innerWidth / 2) * ORBIT_MAX_RX_VIEWPORT_FRACTION
         const capFactor = Math.min(1.0, maxRx / flooredRx)
         const rx = flooredRx * capFactor
         const ry = flooredRy * capFactor
@@ -363,7 +378,9 @@ export default defineComponent({
         const tiltRad = roleTier ? roleTier.tiltRad : planetTier.tiltRad
         const tiltDeg = roleTier ? roleTier.tiltDeg : planetTier.tiltDeg
         const orbitColor = roleTier ? roleTier.color : planetTier.color
-        const baseSize = (roleTier ? roleTier.championSize : planetTier.size) * Math.pow(sunScale, 0.65)
+        const baseSize =
+          (roleTier ? roleTier.championSize : planetTier.size) *
+          Math.pow(sunScale, ORBIT_SIZE_SUN_SCALE_EXPONENT)
         const orbitSpeed = roleTier ? roleTier.speed : c.baseSpeed
 
         let ls = localStates.get(c.name)
@@ -384,22 +401,23 @@ export default defineComponent({
         }
 
         const prevRelY = (ls.y - screenCy) / Math.max(ry, 1)
-        const prevIsBehind = prevRelY < -0.05
+        const prevIsBehind = prevRelY < ORBIT_BEHIND_REL_Y
         const targetMul = prevIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
         const curMul = champSpeedMuls.get(c.name) ?? 1.0
-        const newMul = curMul + (targetMul - curMul) * BEHIND_SPEED_LERP
+        const newMul = curMul + (targetMul - curMul) * ORBIT_BEHIND_SPEED_LERP
         champSpeedMuls.set(c.name, newMul)
 
         const followsAngle = primaryRole === 'support' && isMain && adcState
 
         if (!reducedMotion) {
           if (!followsAngle) {
-            const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
+            const keplerBoost =
+              1.0 + CHAMPION_ORBIT_KEPLER_BOOST * (1 - Math.abs(Math.cos(ls.orbitAngle)))
             ls.orbitAngle += c.direction * orbitSpeed * keplerBoost * newMul * dt
           }
           const targetOrbit = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, screenCx, screenCy)
-          ls.x += (targetOrbit.x - ls.x) * 0.15
-          ls.y += (targetOrbit.y - ls.y) * 0.15
+          ls.x += (targetOrbit.x - ls.x) * CHAMPION_ORBIT_POSITION_LERP
+          ls.y += (targetOrbit.y - ls.y) * CHAMPION_ORBIT_POSITION_LERP
         } else {
           const orbitPos = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, screenCx, screenCy)
           ls.x = orbitPos.x
@@ -409,29 +427,39 @@ export default defineComponent({
         combatStore.setChampionScreenPos(c.name, ls.x, ls.y)
 
         const relY = (ls.y - screenCy) / Math.max(ry, 1)
-        const isBehind = relY < -0.05
+        const isBehind = relY < ORBIT_BEHIND_REL_Y
         const depth = (relY + 1) / 2
 
-        const parallaxScale = 0.72 + depth * 0.56
+        const parallaxScale = ORBIT_PARALLAX_SCALE_BASE + depth * ORBIT_PARALLAX_SCALE_SPAN
         const size = c.isAttacking ? baseSize : Math.round(baseSize * parallaxScale)
-        const opacity = c.isAttacking ? 1 : isBehind ? 0.82 + depth * 0.18 : 0.9 + depth * 0.1
+        const opacity = c.isAttacking
+          ? 1
+          : isBehind
+            ? CHAMPION_ORBIT_OPACITY_BEHIND_BASE + depth * CHAMPION_ORBIT_OPACITY_BEHIND_SPAN
+            : CHAMPION_ORBIT_OPACITY_FRONT_BASE + depth * CHAMPION_ORBIT_OPACITY_FRONT_SPAN
         const zIndex = c.isAttacking ? 20 : Math.floor(8 + depth * 7)
 
         activeChampionBehindState[c.name] = isBehind
 
-        const isForeground = !isBehind && depth > 0.65
+        const isForeground = !isBehind && depth > PLANET_ORBIT_FOREGROUND_DEPTH
 
-        const visibleFactor = Math.max(0, Math.min(1, (relY + 0.05 + 0.12) / 0.12))
+        const visibleFactor = Math.max(
+          0,
+          Math.min(1, (relY - ORBIT_BEHIND_REL_Y + ORBIT_BEHIND_FADE_BAND) / ORBIT_BEHIND_FADE_BAND),
+        )
         const hintOpacity = Math.max(0, 1 - visibleFactor)
 
         let renderX = ls.x
         let renderY = ls.y
         if (isMain && primaryRole === 'top' && roleBehaviorStore.tankInterceptActive) {
           const elapsed = Date.now() - roleBehaviorStore.tankInterceptStartMs
-          const t = Math.min(1, elapsed / INTERCEPT_DURATION_MS)
-          const progress = t < 0.3 ? t / 0.3 : 1 - (t - 0.3) / 0.7
-          renderX += roleBehaviorStore.tankInterceptDirX * INTERCEPT_MAX_OFFSET * progress
-          renderY += roleBehaviorStore.tankInterceptDirY * INTERCEPT_MAX_OFFSET * progress
+          const t = Math.min(1, elapsed / CHAMPION_ORBIT_INTERCEPT_DURATION_MS)
+          const out = CHAMPION_ORBIT_INTERCEPT_OUT_FRACTION
+          const progress = t < out ? t / out : 1 - (t - out) / (1 - out)
+          renderX +=
+            roleBehaviorStore.tankInterceptDirX * CHAMPION_ORBIT_INTERCEPT_MAX_OFFSET_PX * progress
+          renderY +=
+            roleBehaviorStore.tankInterceptDirY * CHAMPION_ORBIT_INTERCEPT_MAX_OFFSET_PX * progress
         }
 
         // ── Champion-HP (nur Mains haben einen HP-Pool) ────────────────────
@@ -503,7 +531,7 @@ export default defineComponent({
             if (!pos.isForeground) continue
 
             const last = lastFiredAt.get(pos.name) ?? 0
-            if (ts - last < PROJECTILE_COOLDOWN_MS) continue
+            if (ts - last < CHAMPION_ORBIT_PROJECTILE_COOLDOWN_MS) continue
 
             lastFiredAt.set(pos.name, ts)
             spawnShot(pos.x, pos.y, pPos.cx, pPos.cy, true, true)

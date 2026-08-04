@@ -145,7 +145,12 @@ import {
   BOSS_HIT_REACT_MS,
   STRIKER_PROJECTILE_FLIGHT_MS,
   BOSS_RAGE_DMG_MULT,
+  EMBER_LEFT_STEP_STAR_FIGHT_PCT,
+  STAR_FIGHT_MODAL_TICK_MS,
+  STAR_FIGHT_MODAL_PLANET_R,
+  STAR_FIGHT_MODAL_PLANET_R_GALAXY_BOSS,
 } from '@/config/constants'
+import { emberStyle as emberField } from '@/utils/particleField'
 import { NS, drawPlanet } from '@/utils/planetDraw'
 import { bossPlanetInForeground } from '@/utils/foregroundGate'
 import { useBossFightHud } from '@/composables/useBossFightHud'
@@ -209,7 +214,7 @@ watch(
       // visuell, spart aber ein Fünftel der Modal-Re-Renders und Arc-Repaints
       tickInterval ??= setInterval(() => {
         now.value = Date.now()
-      }, 250)
+      }, STAR_FIGHT_MODAL_TICK_MS)
     } else if (tickInterval) {
       clearInterval(tickInterval)
       tickInterval = null
@@ -331,7 +336,9 @@ function renderModalPlanet() {
   svg.setAttribute('viewBox', '0 0 600 600')
   svg.style.width = '100%'
   svg.style.height = '100%'
-  const radius = isGalaxyBoss.value ? 290 : 260
+  const radius = isGalaxyBoss.value
+    ? STAR_FIGHT_MODAL_PLANET_R_GALAXY_BOSS
+    : STAR_FIGHT_MODAL_PLANET_R
   drawPlanet(svg, `modal-bg-${Date.now()}`, activeBoss.value.planetType, 300, 300, radius)
   modalPlanetBgRef.value.appendChild(svg)
 }
@@ -399,18 +406,7 @@ function handleShake(ms: number) {
 }
 
 function emberStyle(i: number): Record<string, string> {
-  const duration = 1.8 + (i % 6) * 0.7
-  const delay = (i % 11) * -0.35
-  const left = (i * 4.55) % 100
-  const size = 1.5 + (i % 3)
-  return {
-    left: `${left}%`,
-    width: `${size}px`,
-    height: `${size}px`,
-    animationDuration: `${duration}s`,
-    animationDelay: `${delay}s`,
-    opacity: `${0.4 + (i % 4) * 0.15}`,
-  }
+  return emberField(i, EMBER_LEFT_STEP_STAR_FIGHT_PCT)
 }
 </script>
 

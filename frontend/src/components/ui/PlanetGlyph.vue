@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PLANET_GLYPH_DEFAULT_SIZE_PX } from '@/config/constants'
 /**
  * One of the game's own procedurally drawn planets, at icon size.
  *
@@ -22,7 +23,7 @@ const props = withDefaults(
     /** Rendered height in px — the width follows the viewBox aspect. */
     size?: number
   }>(),
-  { size: 96 },
+  { size: PLANET_GLYPH_DEFAULT_SIZE_PX },
 )
 
 /** Gradient/clip ids inside the generated SVG must not collide between glyphs. */

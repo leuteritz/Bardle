@@ -1379,3 +1379,36 @@ export interface ChampionLevelCost {
   chimes: number
   materials: Record<string, number>
 }
+
+// ── Planeten-Slots ─────────────────────────────────────────────────────────
+// Rollen der sechs Orbit-Slots. Die Tabellen dazu stehen in config/constants.ts,
+// die Logik im planetShopStore — der Typ gehört keiner der beiden Seiten allein.
+export type PlanetRoleType =
+  | 'turret_planet'
+  | 'harvest_node'
+  | 'expedition_relay'
+  | 'shield_barrier'
+  | 'time_capsule'
+  | 'resonance_tower'
+
+export interface PlanetRole {
+  id: PlanetRoleType
+  name: string
+  bonusType:
+    | 'auto_attack_dps'
+    | 'material_harvest_rate'
+    | 'expedition_reward_multiplier'
+    | 'boss_damage_reduction'
+    | 'offline_boost'
+    | 'building_cps_multiplier'
+  bonusPerSlot: number
+  icon: string
+  color: string
+  image: string
+}
+
+export interface JungleBuffDef {
+  name: string
+  multiplier: number
+  durationMs: number
+}

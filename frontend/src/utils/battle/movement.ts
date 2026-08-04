@@ -23,6 +23,36 @@ import {
   FINAL_PUSH_LAST_STAND_TRAVEL_T,
   JUNGLE_BUFF_CLEAR_DURATION_T,
   JUNGLE_ROAM_AFTER_BUFFS_T,
+  MOVE_MAP_CLAMP_MIN,
+  MOVE_MAP_CLAMP_MAX,
+  MOVE_JITTER_DEFAULT,
+  MOVE_JITTER_FIGHT,
+  MOVE_JITTER_OBJECTIVE,
+  MOVE_JITTER_KILLER,
+  MOVE_JITTER_VICTIM,
+  MOVE_JITTER_ROAM,
+  MOVE_JITTER_PUSH_DEFENSE,
+  MOVE_JITTER_PUSH_NEXUS,
+  MOVE_JITTER_DEFENDER_LINE,
+  MOVE_FIGHT_HOLD_T,
+  MOVE_OBJECTIVE_HOLD_BARON_T,
+  MOVE_OBJECTIVE_HOLD_DRAKE_T,
+  MOVE_ROAM_START_OFFSET_T,
+  MOVE_ROAM_END_MARGIN_T,
+  MOVE_ROAM_STEP_BASE_T,
+  MOVE_ROAM_STEP_RANGE_T,
+  MOVE_ROAM_HOLD_T,
+  MOVE_LANE_DRIFT_START_OFFSET_T,
+  MOVE_LANE_DRIFT_END_MARGIN_T,
+  MOVE_LANE_DRIFT_STEP_BASE_T,
+  MOVE_LANE_DRIFT_STEP_RANGE_T,
+  MOVE_LANE_DRIFT_HOLD_T,
+  MOVE_JUNGLE_WALKOUT_PATH_START,
+  MOVE_JUNGLE_WALKOUT_PATH_END,
+  MOVE_JUNGLE_WALKOUT_PATH_SAMPLES,
+  MINION_PROGRESS_MIN,
+  MINION_PROGRESS_MAX,
+  MINION_SPACING,
 } from '../../config/constants'
 import {
   type MapPoint,
@@ -71,10 +101,15 @@ function subPath(path: MapPoint[], fromFrac: number, toFrac: number, steps = 6):
   return pts
 }
 
-function jittered(p: MapPoint, rng: () => number, amount = 4): MapPoint {
+function jittered(
+  p: MapPoint,
+  rng: () => number,
+  amount = MOVE_JITTER_DEFAULT,
+): MapPoint {
+  const clamp = (v: number) => Math.max(MOVE_MAP_CLAMP_MIN, Math.min(MOVE_MAP_CLAMP_MAX, v))
   return {
-    x: Math.max(3, Math.min(97, p.x + (rng() - 0.5) * amount * 2)),
-    y: Math.max(3, Math.min(97, p.y + (rng() - 0.5) * amount * 2)),
+    x: clamp(p.x + (rng() - 0.5) * amount * 2),
+    y: clamp(p.y + (rng() - 0.5) * amount * 2),
   }
 }
 
@@ -148,8 +183,8 @@ function buildChampionSchedule(
     if (e.type === 'fightStart' && e.location && inFight) {
       orders.push({
         t: Math.max(0, e.t - MOVE_FIGHT_GATHER_LEAD_T),
-        location: jittered(e.location, rng, 3),
-        holdUntil: e.t + 140,
+        location: jittered(e.location, rng, MOVE_JITTER_FIGHT),
+        holdUntil: e.t + MOVE_FIGHT_HOLD_T,
         kind: 'fight',
       })
     }
@@ -157,8 +192,10 @@ function buildChampionSchedule(
       // drakes chain back to back, so their pit hold is shorter than the baron's
       orders.push({
         t: Math.max(0, e.t - MOVE_FIGHT_GATHER_LEAD_T),
-        location: jittered(e.location, rng, 4),
-        holdUntil: e.t + (e.objective === 'baron' ? 600 : 300),
+        location: jittered(e.location, rng, MOVE_JITTER_OBJECTIVE),
+        holdUntil:
+          e.t +
+          (e.objective === 'baron' ? MOVE_OBJECTIVE_HOLD_BARON_T : MOVE_OBJECTIVE_HOLD_DRAKE_T),
         kind: 'objective',
       })
     }
@@ -187,7 +224,7 @@ function buildChampionSchedule(
       if (isKiller || isVictim) {
         orders.push({
           t: Math.max(0, e.t - MOVE_KILL_CONVERGE_LEAD_T),
-          location: jittered(e.location, rng, isKiller ? 2.5 : 1.5),
+          location: jittered(e.location, rng, isKiller ? MOVE_JITTER_KILLER : MOVE_JITTER_VICTIM),
           // killer lingers over the corpse; the victim only needs to be there at death
           holdUntil: isKiller ? e.t + MOVE_KILL_KILLER_HOLD_T : e.t,
           kind: 'fight',
@@ -223,26 +260,30 @@ function buildChampionSchedule(
     const roamStart =
       teamBuffEvents.length > 1
         ? teamBuffEvents[1].t + JUNGLE_ROAM_AFTER_BUFFS_T
-        : MOVE_WALKOUT_END_T + 60
-    for (let t = roamStart; t < TIMELINE_NEXUS_FALL_T - 400; t += 260 + Math.floor(rng() * 200)) {
+        : MOVE_WALKOUT_END_T + MOVE_ROAM_START_OFFSET_T
+    for (
+      let t = roamStart;
+      t < TIMELINE_NEXUS_FALL_T - MOVE_ROAM_END_MARGIN_T;
+      t += MOVE_ROAM_STEP_BASE_T + Math.floor(rng() * MOVE_ROAM_STEP_RANGE_T)
+    ) {
       orders.push({
         t,
-        location: jittered(circuit[Math.floor(rng() * circuit.length)], rng, 2),
-        holdUntil: t + 200,
+        location: jittered(circuit[Math.floor(rng() * circuit.length)], rng, MOVE_JITTER_ROAM),
+        holdUntil: t + MOVE_ROAM_HOLD_T,
         kind: 'roam',
       })
     }
   } else {
     // laners drift around their hold point now and then
     for (
-      let t = MOVE_WALKOUT_END_T + 120;
-      t < TIMELINE_NEXUS_FALL_T - 500;
-      t += 320 + Math.floor(rng() * 260)
+      let t = MOVE_WALKOUT_END_T + MOVE_LANE_DRIFT_START_OFFSET_T;
+      t < TIMELINE_NEXUS_FALL_T - MOVE_LANE_DRIFT_END_MARGIN_T;
+      t += MOVE_LANE_DRIFT_STEP_BASE_T + Math.floor(rng() * MOVE_LANE_DRIFT_STEP_RANGE_T)
     ) {
       orders.push({
         t,
         location: laneHoldPoint(role, team, rng),
-        holdUntil: t + 260,
+        holdUntil: t + MOVE_LANE_DRIFT_HOLD_T,
         kind: 'lane',
       })
     }
@@ -261,7 +302,7 @@ function buildChampionSchedule(
     const enemyNexus = team === 1 ? RED_NEXUS : BLUE_NEXUS
     orders.push({
       t: pushT,
-      location: jittered(defensePoint, rng, 2.5),
+      location: jittered(defensePoint, rng, MOVE_JITTER_PUSH_DEFENSE),
       holdUntil: breakthroughT,
       kind: 'push',
       // must preempt any lingering lane-drift hold, or the march never starts
@@ -272,7 +313,7 @@ function buildChampionSchedule(
     })
     orders.push({
       t: breakthroughT,
-      location: jittered(enemyNexus, rng, 3),
+      location: jittered(enemyNexus, rng, MOVE_JITTER_PUSH_NEXUS),
       holdUntil: BATTLE_TOTAL_GAME_SECONDS,
       kind: 'push',
       priority: true,
@@ -285,7 +326,7 @@ function buildChampionSchedule(
     orders.push({
       // defenders have the shorter way — they stand first
       t: pushT - FINAL_PUSH_DEFENDER_LEAD_T,
-      location: jittered(defensePoint, rng, 3.5),
+      location: jittered(defensePoint, rng, MOVE_JITTER_DEFENDER_LINE),
       holdUntil: breakthroughT,
       kind: 'retreat',
       priority: true,
@@ -319,7 +360,12 @@ function buildChampionSchedule(
     role === 'jungle'
       ? [
           fountain,
-          ...subPath(lanePath, team === 1 ? 0.06 : 0.94, team === 1 ? 0.2 : 0.8, 3).slice(1),
+          ...subPath(
+            lanePath,
+            team === 1 ? MOVE_JUNGLE_WALKOUT_PATH_START : 1 - MOVE_JUNGLE_WALKOUT_PATH_START,
+            team === 1 ? MOVE_JUNGLE_WALKOUT_PATH_END : 1 - MOVE_JUNGLE_WALKOUT_PATH_END,
+            MOVE_JUNGLE_WALKOUT_PATH_SAMPLES,
+          ).slice(1),
           { ...jungleWalkoutTarget },
         ]
       : team === 1
@@ -446,12 +492,12 @@ export function minionsAt(gameTime: number): MinionDot[] {
     for (let w = Math.max(0, currentWave - MINION_WAVES_VISIBLE + 1); w <= currentWave; w++) {
       const spawnT = w * MINION_WAVE_INTERVAL_T
       const progress = (gameTime - spawnT) * MINION_PATH_SPEED
-      if (progress <= 0.02 || progress >= 0.48) continue
+      if (progress <= MINION_PROGRESS_MIN || progress >= MINION_PROGRESS_MAX) continue
       for (let m = 0; m < MINIONS_PER_WAVE; m++) {
-        const offset = m * 0.012
+        const offset = m * MINION_SPACING
         const blue = pointAlongPath(path, Math.min(0.5, progress - offset))
         const red = pointAlongPath(path, Math.max(0.5, 1 - progress + offset))
-        if (progress - offset > 0.02) {
+        if (progress - offset > MINION_PROGRESS_MIN) {
           out.push({ x: blue.x, y: blue.y, team: 1, lane, key: `b-${lane}-${w}-${m}` })
           out.push({ x: red.x, y: red.y, team: 2, lane, key: `r-${lane}-${w}-${m}` })
         }

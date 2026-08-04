@@ -584,6 +584,7 @@ import {
   SHOP_JUMP_SPY_LOCK_MS,
   SHOP_JUMP_EXPAND_SETTLE_MS,
   SHOP_SCROLL_SETTLE_MS,
+  CHAMPION_NEW_BADGE_DISMISS_MS,
 } from '../../../../config/constants'
 import { useActionToast } from '../../../../composables/useActionToast'
 import type {
@@ -1587,7 +1588,7 @@ const shopChampionNames = computed(() =>
       hoverTimer = setTimeout(() => {
         battleStore.dismissNewChampion(name)
         hoverTimer = null
-      }, 75)
+      }, CHAMPION_NEW_BADGE_DISMISS_MS)
     }
 
     function getChampionDetail(name: string) {

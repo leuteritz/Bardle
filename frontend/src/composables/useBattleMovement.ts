@@ -16,6 +16,14 @@ import {
   TRAIL_MAX_POINTS,
   TRAIL_MIN_DISTANCE_UNITS,
   TRAIL_TELEPORT_RESET_UNITS,
+  MOVE_JITTER_PHASE_X,
+  MOVE_JITTER_PHASE_Y,
+  MOVE_JITTER_INDEX_X,
+  MOVE_JITTER_INDEX_Y,
+  MOVE_JITTER_TEAM_Y,
+  MOVE_JITTER_AMPLITUDE,
+  MOVE_DISPLAY_CLAMP_MIN,
+  MOVE_DISPLAY_CLAMP_MAX,
 } from '@/config/constants'
 
 export interface LiveChampionPosition {
@@ -144,13 +152,21 @@ export function useBattleMovement() {
         const p = positionAt(sched, t)
         updateTrail(team, idx, p.x, p.y)
         // small cosmetic jitter so idle champions don't look frozen
-        const jx = Math.sin(jitterPhase * 0.7 + idx * 2.1 + team) * MOVE_JITTER_UNITS * 0.5
-        const jy = Math.cos(jitterPhase * 0.9 + idx * 1.7 + team * 2) * MOVE_JITTER_UNITS * 0.5
+        const jx =
+          Math.sin(jitterPhase * MOVE_JITTER_PHASE_X + idx * MOVE_JITTER_INDEX_X + team) *
+          MOVE_JITTER_UNITS *
+          MOVE_JITTER_AMPLITUDE
+        const jy =
+          Math.cos(
+            jitterPhase * MOVE_JITTER_PHASE_Y + idx * MOVE_JITTER_INDEX_Y + team * MOVE_JITTER_TEAM_Y,
+          ) *
+          MOVE_JITTER_UNITS *
+          MOVE_JITTER_AMPLITUDE
         out.push({
           team,
           idx,
-          x: Math.max(2, Math.min(98, p.x + jx)),
-          y: Math.max(2, Math.min(98, p.y + jy)),
+          x: Math.max(MOVE_DISPLAY_CLAMP_MIN, Math.min(MOVE_DISPLAY_CLAMP_MAX, p.x + jx)),
+          y: Math.max(MOVE_DISPLAY_CLAMP_MIN, Math.min(MOVE_DISPLAY_CLAMP_MAX, p.y + jy)),
           walking: p.kind === 'respawn-walk',
         })
       })
