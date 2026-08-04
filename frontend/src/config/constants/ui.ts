@@ -170,6 +170,14 @@ export const MINIMAP_ARRIVAL_CLEARED_SCALE = 0.58 // a freed planet shrinks to t
 export const MINIMAP_ARRIVAL_CLEARED_ALPHA = 0.42 // … and dims to this alpha (slot keeps its orbit)
 export const MINIMAP_ARRIVAL_PREVIEW_MIN = 3 // preview slot count before the star exists
 export const MINIMAP_ARRIVAL_PREVIEW_RANGE = 2 // … plus 0..RANGE-1 extra preview slots
+// Status colouring of the docked system — same crimson / violet as the status
+// marks at the star (StarSystemComponent) and the header timer bars, so rage
+// and curse read identically wherever the player looks.
+export const MINIMAP_ARRIVAL_RAGE_RGB = '255, 46, 99' // boss rage crimson
+export const MINIMAP_ARRIVAL_CURSE_RGB = '160, 40, 220' // curse violet
+export const MINIMAP_ARRIVAL_RAGE_RING_MS = 900 // travel time of one expanding rage wave
+export const MINIMAP_ARRIVAL_RAGE_RINGS = 2 // rage waves visible at the same time
+export const MINIMAP_ARRIVAL_CURSE_PULSE_MS = 2600 // breathing period of the curse vignette
 
 // ── FPS-Zähler (neben der Signatur unten links) ─────────────────────────────
 /** Ab hier läuft es rund — der Zähler steht grün. */

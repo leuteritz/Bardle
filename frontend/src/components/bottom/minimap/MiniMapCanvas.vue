@@ -10,6 +10,7 @@ import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { livePlanetAngles } from '@/composables/useStarSystem'
 import type { StarPlanetSlot } from '@/stores/starGroupStore'
@@ -53,6 +54,11 @@ import {
   MINIMAP_ARRIVAL_CLEARED_ALPHA,
   MINIMAP_ARRIVAL_PREVIEW_MIN,
   MINIMAP_ARRIVAL_PREVIEW_RANGE,
+  MINIMAP_ARRIVAL_RAGE_RGB,
+  MINIMAP_ARRIVAL_CURSE_RGB,
+  MINIMAP_ARRIVAL_RAGE_RING_MS,
+  MINIMAP_ARRIVAL_RAGE_RINGS,
+  MINIMAP_ARRIVAL_CURSE_PULSE_MS,
   HYPERSPACE_FLASH_AT_MS,
   HYPERSPACE_FADEOUT_AT_MS,
   HYPERSPACE_END_AT_MS,
@@ -94,6 +100,7 @@ export default defineComponent({
     const gameStore = useGameStore()
     const starGroupStore = useStarGroupStore()
     const planetBossStore = usePlanetBossStore()
+    const roleBehaviorStore = useRoleBehaviorStore()
     const solarUpgradeStore = useSolarUpgradeStore()
 
     const battleStore = useBattleStore()
@@ -737,6 +744,23 @@ export default defineComponent({
       const championStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
       const [sr, sg, sb] = championStar?.starColor ?? [255, 160, 60]
 
+      // ── Statuslage des Systems ────────────────────────────────────────────
+      // Rage gehört dem Boss (Crimson, schlägt am Stern aus), der Fluch liegt
+      // auf dem Stern (Violett, färbt den Raum drumherum). Beide werden an
+      // unterschiedlichen Stellen gezeichnet und bleiben so gleichzeitig
+      // ablesbar — wie am Stern selbst im Idle-Orbit.
+      const starId = championStar?.id
+      const raging =
+        !!starId &&
+        roleBehaviorStore.rageStarId === starId &&
+        roleBehaviorStore.rageActiveUntil > nowMs
+      const curse = roleBehaviorStore.activeCurse
+      const cursed =
+        !!starId &&
+        roleBehaviorStore.cursedStarId === starId &&
+        !!curse &&
+        nowMs < curse.activeUntil
+
       // Hover state — drives visual enhancements
       const isHovered = !!championStar && starGroupStore.hoveredTimerStarId === championStar.id
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -913,6 +937,38 @@ export default defineComponent({
       ctx.fill()
       ctx.shadowBlur = 0
 
+      // ── Boss Rage: der Stern glüht crimson und stösst Wellen aus ──────────
+      // Liegt zwischen Sternkörper und Vordergrundplaneten, damit die Planeten
+      // vor der Welle bleiben und die Tiefenstaffelung erhalten bleibt.
+      if (raging) {
+        const ragePulse = 0.5 + 0.5 * Math.sin(nowMs / 380)
+        const rageGlow = ctx.createRadialGradient(
+          cx,
+          cy,
+          ARRIVAL_STAR_R * 0.8,
+          cx,
+          cy,
+          ARRIVAL_STAR_R * (2.6 + 0.5 * ragePulse),
+        )
+        rageGlow.addColorStop(0, `rgba(${MINIMAP_ARRIVAL_RAGE_RGB}, ${(0.3 + 0.14 * ragePulse).toFixed(3)})`)
+        rageGlow.addColorStop(0.5, `rgba(${MINIMAP_ARRIVAL_RAGE_RGB}, ${(0.12 + 0.08 * ragePulse).toFixed(3)})`)
+        rageGlow.addColorStop(1, `rgba(${MINIMAP_ARRIVAL_RAGE_RGB}, 0)`)
+        ctx.beginPath()
+        ctx.arc(cx, cy, ARRIVAL_STAR_R * (2.6 + 0.5 * ragePulse), 0, Math.PI * 2)
+        ctx.fillStyle = rageGlow
+        ctx.fill()
+
+        for (let ring = 0; ring < MINIMAP_ARRIVAL_RAGE_RINGS; ring++) {
+          const ringT =
+            ((nowMs / MINIMAP_ARRIVAL_RAGE_RING_MS + ring / MINIMAP_ARRIVAL_RAGE_RINGS) % 1)
+          ctx.beginPath()
+          ctx.arc(cx, cy, ARRIVAL_STAR_R * (1.02 + ringT * 1.5), 0, Math.PI * 2)
+          ctx.strokeStyle = `rgba(${MINIMAP_ARRIVAL_RAGE_RGB}, ${((1 - ringT) * 0.6).toFixed(3)})`
+          ctx.lineWidth = 2.5
+          ctx.stroke()
+        }
+      }
+
       // Foreground planets (py >= cy) at full opacity
       planetData.forEach(({ px, py, planetR, idx, cleared }) => {
         if (py < cy) return
@@ -929,6 +985,27 @@ export default defineComponent({
         drawChampionPortrait(ctx, px, py, planetR, slot, 1)
       })
 
+      // ── Fluch: violette Randglut über dem ganzen System ───────────────────
+      // Ganz oben und von aussen nach innen — die Mitte bleibt frei, sonst
+      // würde der Fluch die Rage am Sternkörper überdecken. Der Fluch liegt
+      // auf dem Stern, nicht auf einem Planeten: er färbt den Raum, nicht ein
+      // Objekt.
+      if (cursed) {
+        const cursePulse = 0.5 + 0.5 * Math.sin((nowMs / MINIMAP_ARRIVAL_CURSE_PULSE_MS) * Math.PI * 2)
+        const outerR = Math.max(w, h) * 0.62
+        const vignette = ctx.createRadialGradient(cx, cy, outerR * 0.34, cx, cy, outerR)
+        vignette.addColorStop(0, `rgba(${MINIMAP_ARRIVAL_CURSE_RGB}, 0)`)
+        vignette.addColorStop(
+          0.62,
+          `rgba(${MINIMAP_ARRIVAL_CURSE_RGB}, ${(0.1 + 0.05 * cursePulse).toFixed(3)})`,
+        )
+        vignette.addColorStop(
+          1,
+          `rgba(${MINIMAP_ARRIVAL_CURSE_RGB}, ${(0.3 + 0.12 * cursePulse).toFixed(3)})`,
+        )
+        ctx.fillStyle = vignette
+        ctx.fillRect(0, 0, w, h)
+      }
     }
 
     function drawRotationTransition(ctx: CanvasRenderingContext2D, w: number, h: number) {

@@ -29,6 +29,30 @@
       </div>
       <div class="ah-planets-label">Planets active</div>
     </div>
+
+    <!-- Statusmarken des Systems, unten mittig im freien Feld. Reihenfolge
+         wie am Stern selbst (StarSystemComponent): Fluch oben — unser Debuff
+         AUF dem Stern —, Rage darunter, weil sie dem Boss gehört. -->
+    <div class="ah-states">
+      <Transition name="ah-state">
+        <div
+          v-if="curseDef && curseSecsLeft > 0"
+          class="ah-state ah-state--curse"
+          :class="{ 'ah-state--urgent': curseSecsLeft <= STATE_URGENT_S }"
+        >
+          <Icon :icon="curseDef.icon" class="ah-state-icon" width="16" height="16" />
+          <span class="ah-state-label">{{ curseDef.name }}</span>
+          <span class="ah-state-secs">{{ curseSecsLeft }}s</span>
+        </div>
+      </Transition>
+
+      <Transition name="ah-state">
+        <div v-if="rageSecsLeft > 0" class="ah-state ah-state--rage">
+          <span class="ah-state-label">Rage</span>
+          <span class="ah-state-secs">{{ rageSecsLeft }}s</span>
+        </div>
+      </Transition>
+    </div>
   </div>
 </template>
 
@@ -36,14 +60,19 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useStarGroupStore } from '@/stores/starGroupStore'
+import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
 import {
   HUD_COUNTDOWN_TICK_MS,
   MS_PER_SECOND,
+  ROLE_MID_CURSE_URGENT_S,
   STAR_FIGHT_TIMER_CRITICAL_S,
   STAR_FIGHT_TIMER_WARNING_S,
 } from '@/config/constants'
 
 const starGroupStore = useStarGroupStore()
+const roleBehaviorStore = useRoleBehaviorStore()
+
+const STATE_URGENT_S = ROLE_MID_CURSE_URGENT_S
 
 // Die Deadline im Store ist reaktiv, Date.now() nicht — ein Ticker treibt den
 // Vergleich. Die Komponente existiert nur im Arrival-Zustand (v-if im Parent),
@@ -101,6 +130,30 @@ const totalCount = computed(() => star.value?.planetSlots.length ?? 0)
 const activeCount = computed(
   () => star.value?.planetSlots.filter((p) => !p.cleared).length ?? 0,
 )
+
+// ── Statuslage: Fluch liegt auf dem Stern, Rage gehört seinem Boss ──────────
+const activeCurse = computed(() => {
+  const c = roleBehaviorStore.activeCurse
+  if (!c || !star.value) return null
+  if (roleBehaviorStore.cursedStarId !== star.value.id) return null
+  if (now.value >= c.activeUntil) return null
+  return c
+})
+
+const curseDef = computed(() => (activeCurse.value ? CURSE_DEFS[activeCurse.value.type] : null))
+
+const curseSecsLeft = computed(() =>
+  activeCurse.value
+    ? Math.max(0, Math.ceil((activeCurse.value.activeUntil - now.value) / MS_PER_SECOND))
+    : 0,
+)
+
+const rageSecsLeft = computed(() => {
+  if (!star.value || roleBehaviorStore.rageStarId !== star.value.id) return 0
+  const until = roleBehaviorStore.rageActiveUntil
+  if (until <= now.value) return 0
+  return Math.max(0, Math.ceil((until - now.value) / MS_PER_SECOND))
+})
 </script>
 
 <style scoped>
@@ -243,8 +296,126 @@ const activeCount = computed(
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
+/* ── Status marks (bottom centre, in the free field below the system) ── */
+.ah-states {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.ah-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 3px 9px;
+  border-radius: 4px;
+}
+
+.ah-state--rage {
+  background: rgba(26, 5, 14, 0.88);
+  border: 1px solid rgba(255, 46, 99, 0.75);
+}
+
+.ah-state--curse {
+  background: rgba(16, 4, 30, 0.88);
+  border: 1px solid rgba(160, 40, 255, 0.75);
+}
+
+.ah-state-label {
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.ah-state-secs {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+  /* Tabellenziffern: die Marke darf beim Herunterzählen nicht zappeln */
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.ah-state-icon {
+  flex-shrink: 0;
+}
+
+.ah-state--rage .ah-state-label {
+  color: #ffb0c4;
+  text-shadow:
+    0 0 8px rgba(255, 46, 99, 0.8),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.ah-state--rage .ah-state-secs {
+  color: #ff5c85;
+  text-shadow:
+    0 0 8px rgba(255, 46, 99, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.ah-state--curse .ah-state-label {
+  /* Fluchnamen sind länger als "Rage" — engere Sperrung hält die Marke schmal */
+  letter-spacing: 0.14em;
+  color: #d9a0ff;
+  text-shadow:
+    0 0 8px rgba(160, 40, 255, 0.8),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.ah-state--curse .ah-state-secs {
+  color: #c060ff;
+  text-shadow:
+    0 0 8px rgba(160, 40, 255, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.ah-state--curse .ah-state-icon {
+  color: #cc44ff;
+}
+
+/* Letzte Sekunden: der Fluch blinkt, bleibt aber violett — ein Umschlag auf
+   Rot läse sich direkt über der Crimson-Rage als zweiter Rage-Zustand. */
+.ah-state--urgent {
+  animation: ah-state-urgent 0.55s ease-in-out infinite;
+}
+
+@keyframes ah-state-urgent {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.ah-state-enter-active,
+.ah-state-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.ah-state-enter-from,
+.ah-state-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .ah-timer--critical .ah-timer-value {
+  .ah-timer--critical .ah-timer-value,
+  .ah-state--urgent {
     animation: none;
   }
 }

@@ -30,6 +30,7 @@ export const ROLE_MID_CURSE_ATTACK_DEBUFF = 0.4 // Weakness: enemy deals only 40
 export const ROLE_MID_CURSE_DAMAGE_AMP = 1.8 // Hexblight: all player damage ×1.8
 export const ROLE_MID_CURSE_ATTACK_SLOW = 3.0 // Petrify: enemy attack interval ×3
 export const ROLE_MID_CURSE_DAMNATION_FRAC = 0.2 // Damnation: instant 20% of boss maxHP
+export const ROLE_MID_CURSE_URGENT_S = 3 // last seconds: the curse mark starts blinking
 export const ROLE_ADC_BURST_DAMAGE = 80 // bonus burst hit on boss
 export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
 
