@@ -68,6 +68,17 @@
       <span class="bc-lens"></span>
     </template>
 
+    <!-- Sundering Chord — a note already breaking apart: two half-arcs beating
+         out of step, a jagged rift down the middle, splinters drifting off. -->
+    <template v-else-if="kind === 'chord'">
+      <span class="cd-arc cd-arc--l"></span>
+      <span class="cd-arc cd-arc--r"></span>
+      <span class="cd-rift"></span>
+      <span class="cd-core"></span>
+      <span class="cd-splinter"></span>
+      <span class="cd-splinter cd-splinter--b"></span>
+    </template>
+
     <!-- Star Leviathan — the big one: hull, beating fluke, steering fin. -->
     <template v-else>
       <span class="lv-tail"></span>
@@ -625,6 +636,126 @@ const tint = computed(() => ({
   }
   50% {
     transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+/* ── Sundering Chord ── */
+/* Two open half-rings facing each other: a sound leaving a source, cut in half
+   down the middle. They pulse on the same duration but half a cycle apart, so
+   the shape never reads as one symmetrical ring — it reads as a chord coming
+   apart. Only the arc colour side is painted; the other three border sides stay
+   transparent, which is what makes a bordered circle into an arc. */
+.cd-arc {
+  top: 50%;
+  left: 50%;
+  width: 96%;
+  height: 96%;
+  margin: -48% 0 0 -48%;
+  border: calc(4 * var(--u)) solid transparent;
+  border-radius: 50%;
+  animation: cd-beat 2.4s ease-out infinite;
+}
+
+.cd-arc--l {
+  --dir: -1;
+  border-left-color: var(--c-80);
+}
+
+.cd-arc--r {
+  --dir: 1;
+  border-right-color: var(--c-80);
+  animation-delay: -1.2s;
+}
+
+/* The fracture itself: a lightning-shaped sliver running top to bottom, bright
+   at the middle where the chord tears. */
+.cd-rift {
+  top: 50%;
+  left: 50%;
+  width: 26%;
+  height: 112%;
+  margin: -56% 0 0 -13%;
+  clip-path: polygon(46% 0%, 72% 30%, 52% 44%, 78% 60%, 44% 100%, 26% 62%, 48% 48%, 22% 32%);
+  background: linear-gradient(180deg, var(--c-30) 0%, #fff 48%, var(--c) 62%, var(--c-30) 100%);
+  animation: cd-tear 1.6s ease-in-out infinite;
+}
+
+/* A struck note held in the tear — square turned on its point, slowly turning
+   past the rift so the body has one calm element among three restless ones. */
+.cd-core {
+  top: 50%;
+  left: 50%;
+  width: 34%;
+  height: 34%;
+  margin: -17% 0 0 -17%;
+  border-radius: 4px;
+  background: radial-gradient(circle at 36% 30%, #fffdf8 0%, var(--c) 52%, #4a0a24 100%);
+  box-shadow: inset 0 0 0 calc(2 * var(--u)) rgba(255, 255, 255, 0.4);
+  animation: cd-turn 5.4s linear infinite;
+}
+
+.cd-splinter {
+  top: 50%;
+  left: 50%;
+  width: 13%;
+  height: 22%;
+  margin: -11% 0 0 -6.5%;
+  clip-path: polygon(50% 0%, 100% 74%, 50% 100%, 0% 74%);
+  background: linear-gradient(180deg, #ffffff 0%, var(--c) 100%);
+  animation: cd-drift 2.9s ease-in-out infinite;
+}
+
+.cd-splinter--b {
+  --flip: -1;
+  animation-delay: -1.45s;
+}
+
+@keyframes cd-beat {
+  0% {
+    transform: rotate(calc(var(--dir) * 8deg)) scale(0.62);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(calc(var(--dir) * 26deg)) scale(1.12);
+    opacity: 0;
+  }
+}
+
+@keyframes cd-tear {
+  0%,
+  100% {
+    transform: rotate(-5deg) scaleY(0.9);
+    opacity: 0.65;
+  }
+  50% {
+    transform: rotate(4deg) scaleY(1.06);
+    opacity: 1;
+  }
+}
+
+@keyframes cd-turn {
+  from {
+    transform: rotate(45deg);
+  }
+  to {
+    transform: rotate(405deg);
+  }
+}
+
+/* Splinters push out along the tear and fall back — the shape keeps trying to
+   fly apart without ever leaving the body's own box. */
+@keyframes cd-drift {
+  0%,
+  100% {
+    transform: translate(calc(var(--flip, 1) * 60%), -140%) rotate(calc(var(--flip, 1) * 18deg));
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate(calc(var(--flip, 1) * 152%), 96%) rotate(calc(var(--flip, 1) * 62deg));
     opacity: 1;
   }
 }

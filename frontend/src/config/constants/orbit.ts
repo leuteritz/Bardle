@@ -494,3 +494,30 @@ export const DRIFTER_CARD_URGENT_MS = 4000
 
 /** Kopfzeilen-Icon der Infokarte (Peilung eines Signals). */
 export const DRIFTER_CARD_ICON = 'game-icons:radar-sweep'
+
+// ── Orbit-Strike (Sundering Chord) ──────────────────────────────────────────
+// Ein eingesammelter Schadens-Drifter schlägt alle Planeten gleichzeitig. Die
+// Welle geht vom Bildmittelpunkt aus — dort steht die Sonne, um die alle
+// getroffenen Planeten kreisen; vom Klickpunkt aus liefe sie an ihnen vorbei.
+
+/** Gesamtlaufzeit der Schockwelle, danach wird der Knoten entfernt. Muss über
+ *  der längsten Einzelanimation samt Versatz liegen (Front 1,1 s + 0,24 s
+ *  Versatz der dritten Welle), sonst wird mitten im Auslaufen abgeschnitten. */
+export const DRIFTER_STRIKE_FX_MS = 1500
+
+/** Radiale Risse, die mit der Welle nach außen schießen. Ungerade Zahl: ein
+ *  gerades Speichenkreuz liest sich als Fadenkreuz, nicht als Bruch. */
+export const DRIFTER_STRIKE_RIFT_COUNT = 7
+
+/** Drehung des Rissbündels je Auslösung (Grad × Sequenznummer). Deterministisch
+ *  statt gewürfelt — ein Math.random im Style-Getter zöge bei jedem Re-Render
+ *  neu und ließe die Risse mitten in der Animation springen. */
+export const DRIFTER_STRIKE_RIFT_SEQ_TURN_DEG = 37
+
+/** Reichweite der Ringe als Vielfaches der Bildschirmdiagonale — etwas über 1,
+ *  damit die Front auch in den Ecken noch außerhalb des Bildes ankommt. */
+export const DRIFTER_STRIKE_REACH_FACTOR = 1.08
+
+/** Höhe der Trefferbilanz über der Bildmitte (in % der Viewport-Höhe). Über der
+ *  Sonne, unter dem Header — auf jeder Referenz-Auflösung freier Raum. */
+export const DRIFTER_STRIKE_REPORT_TOP_PCT = 26

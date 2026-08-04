@@ -47,6 +47,10 @@
       <span class="burst-label" :style="{ color: burst.color }">{{ burst.name }}</span>
       <span class="burst-effect">{{ burst.effect }}</span>
     </div>
+
+    <!-- Shockwave of a damage drifter. Owns its own trigger (the store's strike
+         counter), so it also fires for an admin-forced collect. -->
+    <OrbitStrikeWave />
   </div>
 </template>
 
@@ -61,6 +65,7 @@ import { logDrifterCollected } from '@/config/gameEventLogger'
 import { getDrifter } from '@/config/drifters'
 import { drifterEntryEdge } from '@/utils/drifterPath'
 import DrifterObject from './DrifterObject.vue'
+import OrbitStrikeWave from './OrbitStrikeWave.vue'
 import {
   DRIFTER_EDGE_PING_LEAD_MS,
   DRIFTER_COLLECT_FX_MS,

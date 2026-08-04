@@ -107,6 +107,25 @@ export const DRIFTERS: DrifterDef[] = [
     buff: { durationMs: 45_000, effects: { combatDpsMult: 2 } },
   },
   {
+    id: 'sunderingChord',
+    name: 'Sundering Chord',
+    rarity: 'rare',
+    weight: 7,
+    icon: 'game-icons:resonance',
+    body: 'chord',
+    color: '#ff4f8b',
+    // The one drifter that is not a payout but a weapon: catching it fires a
+    // shockwave through the whole orbit and hits every planet at once. Short,
+    // urgent flight — a strike the player has to decide on, not collect at
+    // leisure. Worth a share of MAX health rather than a flat number, so it
+    // stays exactly as relevant in galaxy 1 as in galaxy 12.
+    flightMs: 10_500,
+    sizePx: 56,
+    hits: 1,
+    effectLine: '−20% max HP on every planet in orbit',
+    reward: { orbitStrikeMaxHpPct: 0.2 },
+  },
+  {
     id: 'wayfarerBeacon',
     name: "Wayfarer's Beacon",
     rarity: 'rare',

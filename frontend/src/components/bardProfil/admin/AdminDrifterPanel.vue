@@ -87,11 +87,11 @@ function clearField(): void {
 </template>
 
 <style scoped>
-/* Eight types, four columns — two even rows, same rhythm as the star-phase
+/* Nine types, three columns — three even rows, same rhythm as the star-phase
    grid one panel above. */
 .dr-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 

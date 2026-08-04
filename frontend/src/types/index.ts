@@ -882,6 +882,11 @@ export interface DrifterInstantReward {
   dwellSkipSeconds?: number
   /** Extend every active star's despawn timer by this many seconds. */
   starTimeSeconds?: number
+  /** Strike EVERY living planet boss in the orbit at once for this fraction of
+   *  its own maximum health. A share rather than a flat number on purpose: boss
+   *  HP scales with level, production, team strength and galaxy, so a fixed
+   *  amount would one-shot the early game and be a scratch later on. */
+  orbitStrikeMaxHpPct?: number
 }
 
 /** Which CSS body `DrifterBody.vue` builds for a drifter in flight. Every type
@@ -895,6 +900,7 @@ export type DrifterBodyKind =
   | 'surge'
   | 'vortex'
   | 'beacon'
+  | 'chord'
   | 'leviathan'
 
 /** Static definition of a drifter type — pure data, no runtime state. */
@@ -950,6 +956,23 @@ export interface DrifterActiveBuff {
   expiresAt: number
   durationMs: number
   effects: DrifterBuffEffects
+}
+
+/** The tally of the last orbit-wide strike. The store records it, the shockwave
+ *  layer replays itself off `seq` — so an admin-forced collect looks exactly
+ *  like a clicked one, and the same drifter caught twice still fires twice. */
+export interface DrifterOrbitStrike {
+  /** Bumped on every strike; `0` means none has happened yet. */
+  seq: number
+  at: number
+  /** Which type fired it — the wave takes its color from that definition. */
+  defId: string
+  /** Living bosses that took the hit. `0` = the orbit was empty. */
+  planetsHit: number
+  /** Damage actually applied, after every boss-damage multiplier. */
+  damage: number
+  /** How many of those planets the wave killed outright. */
+  kills: number
 }
 
 export type MissionConditionType =

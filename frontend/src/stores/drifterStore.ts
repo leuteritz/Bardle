@@ -1,5 +1,11 @@
 import { defineStore } from 'pinia'
-import type { ActiveDrifter, DrifterActiveBuff, DrifterDef, DrifterRarity } from '../types'
+import type {
+  ActiveDrifter,
+  DrifterActiveBuff,
+  DrifterDef,
+  DrifterOrbitStrike,
+  DrifterRarity,
+} from '../types'
 import { DRIFTERS, getDrifter } from '../config/drifters'
 import { logger } from '../utils/logger'
 import {
@@ -18,6 +24,7 @@ import { useShopStore } from './shopStore'
 import { useInventoryStore } from './inventoryStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useStarGroupStore } from './starGroupStore'
+import { usePlanetBossStore } from './planetBossStore'
 import { useCpsStore } from './cpsStore'
 
 let uidCounter = 0
@@ -98,6 +105,15 @@ export const useDrifterStore = defineStore('drifter', {
     /** Bumped whenever a drifter left uncollected — the info card turns this
      *  into a "got away" state instead of just vanishing mid-countdown. */
     lastExpired: { defId: '', at: 0, seq: 0 },
+    /** Tally of the last orbit-wide strike — drives the shockwave layer. */
+    lastOrbitStrike: {
+      seq: 0,
+      at: 0,
+      defId: '',
+      planetsHit: 0,
+      damage: 0,
+      kills: 0,
+    } as DrifterOrbitStrike,
     // ── Lifetime counters (Bard Stats catalog) ──
     totalDriftersSpawned: 0,
     totalDriftersCollected: 0,
@@ -297,9 +313,59 @@ export const useDrifterStore = defineStore('drifter', {
         }
       }
 
+      if (def.reward?.orbitStrikeMaxHpPct) {
+        this._applyOrbitStrike(def, def.reward.orbitStrikeMaxHpPct)
+      }
+
       if (def.buff) {
         this.applyBuff(def)
       }
+    },
+
+    /**
+     * Strike every living planet boss in the orbit at once, each for the same
+     * share of its OWN maximum health.
+     *
+     * Deliberately not gated on `bossPlanetInForeground`: this is a wave through
+     * the whole system, not a shot at one planet — a target that happens to be
+     * behind the sun this second is still inside the orbit.
+     *
+     * Kills are not reported to `starGroupStore` from here. The boss watcher in
+     * `useStarSystem` picks up every `defeated` flag and clears the star slot,
+     * which is the same path a turret volley or a click kill takes.
+     */
+    _applyOrbitStrike(def: DrifterDef, maxHpPct: number): void {
+      const bossStore = usePlanetBossStore()
+      // Snapshot the list: `dealDamageToBoss` schedules removals, and a kill
+      // must not shorten the very array being walked.
+      const targets = bossStore.activeBosses.filter((b) => !b.defeated && !b.expired)
+
+      let damage = 0
+      let kills = 0
+      for (const boss of targets) {
+        // At least 1, so a boss with a tiny max HP is never a no-op hit.
+        const amount = Math.max(1, Math.ceil(boss.maxHP * maxHpPct))
+        const hpBefore = boss.currentHP
+        const defeated = bossStore.dealDamageToBoss(boss, amount)
+        // Read back what actually landed — boss damage multipliers raise it,
+        // the last hit on a dying boss caps it at its remaining health.
+        damage += hpBefore - boss.currentHP
+        if (defeated) kills++
+      }
+
+      this.lastOrbitStrike = {
+        seq: this.lastOrbitStrike.seq + 1,
+        at: Date.now(),
+        defId: def.id,
+        planetsHit: targets.length,
+        damage,
+        kills,
+      }
+      logger.info('Drifter', `${def.name} struck the orbit`, {
+        planets: targets.length,
+        damage,
+        kills,
+      })
     },
 
     /** Start (or refresh) a drifter buff. Re-collecting a type restarts its

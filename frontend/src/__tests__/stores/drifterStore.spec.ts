@@ -6,6 +6,7 @@ import { useShopStore } from '../../stores/shopStore'
 import { useInventoryStore } from '../../stores/inventoryStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import { useStarGroupStore } from '../../stores/starGroupStore'
+import { usePlanetBossStore } from '../../stores/planetBossStore'
 import { useChampionLevelStore } from '../../stores/championLevelStore'
 import { getDrifter, DRIFTERS } from '../../config/drifters'
 import {
@@ -380,6 +381,76 @@ describe('drifterStore', () => {
       const def = getDrifter('wayfarerBeacon')!
       expect(timed.durationMs! - before).toBe(def.reward!.starTimeSeconds! * 1000)
       expect(starGroup.activeStars.find((s) => s.id === 'timeless')!.durationMs).toBeUndefined()
+    })
+  })
+
+  describe('orbit strike', () => {
+    /** Two stars' worth of planets — every one of them a live boss. */
+    function fillOrbit() {
+      const starGroup = useStarGroupStore()
+      starGroup.spawnResourceStar()
+      starGroup.spawnResourceStar()
+      const bosses = usePlanetBossStore().activeBosses
+      expect(bosses.length).toBeGreaterThan(1)
+      return bosses
+    }
+
+    it('hits every living planet for its own share of max health', () => {
+      const store = useDrifterStore()
+      const bosses = fillOrbit()
+      const pct = getDrifter('sunderingChord')!.reward!.orbitStrikeMaxHpPct!
+      const before = bosses.map((b) => b.currentHP)
+
+      store.hitDrifter(spawn('sunderingChord').uid)
+
+      bosses.forEach((boss, i) => {
+        // A share, not a flat number: each planet loses at least its own
+        // percentage, whatever its max HP happens to be.
+        expect(before[i] - boss.currentHP).toBeGreaterThanOrEqual(Math.ceil(boss.maxHP * pct))
+      })
+    })
+
+    it('reports the tally so the shockwave can replay it', () => {
+      const store = useDrifterStore()
+      const bosses = fillOrbit()
+
+      store.hitDrifter(spawn('sunderingChord').uid)
+
+      expect(store.lastOrbitStrike.seq).toBe(1)
+      expect(store.lastOrbitStrike.defId).toBe('sunderingChord')
+      expect(store.lastOrbitStrike.planetsHit).toBe(bosses.length)
+      expect(store.lastOrbitStrike.damage).toBeGreaterThan(0)
+    })
+
+    it('spares planets that are already down and counts the ones it kills', () => {
+      const store = useDrifterStore()
+      const bosses = fillOrbit()
+      const dead = bosses[0]
+      dead.defeated = true
+      const doomed = bosses[1]
+      // One hit away from death — the strike has to finish it and say so.
+      doomed.currentHP = 1
+      const untouched = dead.currentHP
+
+      store.hitDrifter(spawn('sunderingChord').uid)
+
+      expect(dead.currentHP).toBe(untouched)
+      expect(store.lastOrbitStrike.planetsHit).toBe(bosses.length - 1)
+      expect(store.lastOrbitStrike.kills).toBeGreaterThanOrEqual(1)
+      expect(doomed.defeated).toBe(true)
+    })
+
+    it('still fires on an empty orbit, reporting zero targets', () => {
+      const store = useDrifterStore()
+      expect(usePlanetBossStore().activeBosses).toHaveLength(0)
+
+      store.hitDrifter(spawn('sunderingChord').uid)
+
+      // The wave plays either way — a collected drifter that silently does
+      // nothing would read as a bug, not as an empty sky.
+      expect(store.lastOrbitStrike.seq).toBe(1)
+      expect(store.lastOrbitStrike.planetsHit).toBe(0)
+      expect(store.lastOrbitStrike.damage).toBe(0)
     })
   })
 
