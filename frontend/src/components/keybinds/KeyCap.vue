@@ -7,7 +7,23 @@
       { 'keycap--pressed': pressed, 'keycap--lit': lit },
     ]"
   >
-    <span class="keycap__face">{{ cap }}</span>
+    <span class="keycap__face">
+      <!-- MedievalSharp legt seine Glyphen asymmetrisch in die Box: das „P"
+           steht fast vollständig über der Baseline und hat ein ungleiches
+           Seitenlager. Zentriert man nur die Layout-Box, sitzt die sichtbare
+           Tinte darin merklich zu hoch und leicht zu weit links. Die Direktive
+           misst beide Abweichungen bei genau diesem Schriftgrad und schiebt sie
+           über `translate` zurück.
+
+           Sie sitzt an einer eigenen Hülle NUR um den Buchstaben, nicht am
+           Deckel: der trägt Füllung, Lichtkante und den 2px-Hub, die alle
+           mitwandern würden — die Taste sähe dann heruntergedrückt aus, während
+           der Buchstabe darin unverändert schief bliebe.
+
+           Der Bindungswert verwirft die Messung, wenn dieselbe Taste in einer
+           anderen Größe erscheint (sm/md/lg haben eigene Schriftgrade). -->
+      <span v-ink-center.x.y="size" class="keycap__ink">{{ cap }}</span>
+    </span>
   </span>
 </template>
 
@@ -77,6 +93,12 @@ withDefaults(
   transition:
     transform 90ms cubic-bezier(0.3, 0, 0.2, 1),
     color 160ms ease;
+}
+
+/* Trägt nur den Buchstaben — kein Hintergrund, keine Kante. Alles, was hier
+   verschoben wird, ist damit ausschließlich die Tinte. */
+.keycap__ink {
+  display: block;
 }
 
 /* Gedrückt: der Deckel sinkt auf den Sockel — nur transform bewegt sich. */
