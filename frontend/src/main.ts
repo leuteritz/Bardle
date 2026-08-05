@@ -22,20 +22,29 @@ app.config.globalProperties.$formatNumber = formatNumber
 // setzt die Glyphen asymmetrisch in ihre Boxen (siehe utils/ui/textInkOffset.ts).
 app.directive('ink-center', vInkCenter)
 
-app.mount('#app')
+// Vor dem Mount: `var(--bp-radius)` hat an seinen 40+ Fundstellen bewusst KEINEN
+// Fallback, damit der Wert nur einmal existiert. Wird die Variable erst nach dem
+// Mount gesetzt, rendert der erste Frame die Radien als 0 — heute noch nicht
+// sichtbar, weil beides im selben Task läuft, aber nur solange dazwischen nichts
+// einen Frame erzwingt.
 document.documentElement.style.setProperty('--bp-radius', `${BARD_PROFILE_RADIUS}px`)
 document.documentElement.style.setProperty('--bottom-notch-r', `${BOTTOM_BAR_NOTCH_R}px`)
+
+app.mount('#app')
 
 const { loadGame, saveGame } = usePersistence()
 loadGame()
 
-let saveTimer: ReturnType<typeof setInterval> | null = setInterval(
-  saveGame,
-  AUTO_SAVE_INTERVAL_MS,
-)
+let saveTimer: ReturnType<typeof setInterval> | null = setInterval(saveGame, AUTO_SAVE_INTERVAL_MS)
 
-// Keep the battle loop alive even when the browser throttles setInterval on hidden tabs.
-// syncFromTimestamps() is idempotent and safe to call frequently.
+// Der einzige periodische Antrieb der Auto-Battle-Phasenkette — bewusst hier und
+// nicht in gameStore.tick(), der aus IdleGameComponent kommt und damit am
+// Komponentenlebenszyklus hängt.
+//
+// Ein verstecktes Tab drosselt AUCH dieses Intervall (auf ~1/min). Das ist
+// verkraftbar, weil syncFromTimestamps() den Zustand aus Zeitstempeln herleitet
+// statt fortzuschreiben: Nach der Drosselung holt ein einzelner Aufruf alles
+// Verpasste auf. Idempotent, deshalb ist häufiges Aufrufen unschädlich.
 setInterval(() => {
   const bs = useBattleStore()
   if (bs.isAutoBattleInitialized && bs.autoBattleEnabled) {

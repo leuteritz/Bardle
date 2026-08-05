@@ -100,6 +100,7 @@ import {
   CHIME_BURST_ANGLE_JITTER,
   CHIME_POPUP_FONT_MIN_PX,
   CHIME_POPUP_FONT_SUN_FACTOR,
+  GAME_TICK_INTERVAL_MS,
 } from '@/config/constants'
 
 interface ChimeBurstParticle {
@@ -250,7 +251,7 @@ export default defineComponent({
       if (gameTimer) return
       gameTimer = setInterval(() => {
         gameStore.tick()
-      }, 1000)
+      }, GAME_TICK_INTERVAL_MS)
     }
 
     const stopGameTimer = () => {
