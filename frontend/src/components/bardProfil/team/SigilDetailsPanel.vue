@@ -365,7 +365,6 @@ const railSeats = computed<RailSeat[]>(() => [
     sworn: sub < SWORN_ALLY_COUNT,
   })),
 ])
-const filledSeats = computed(() => railSeats.value.filter((s) => s.name).length)
 /**
  * Dot portrait. 'md' — the -256 step — for every tier, including the 30px bench
  * dot the table would put on -128: the rail shows the SAME six champions the
@@ -858,8 +857,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </button>
           </template>
         </div>
-
-        <span class="sdp-rail-count">{{ filledSeats }}/{{ railSeats.length }}</span>
+        <!-- No headcount here. The dots ARE the count: an unfilled seat is a
+             dashed square with a ＋ in it, so "4/6" only restated what six
+             squares in a row already showed. -->
       </div>
 
       <!-- the grip: one control for both directions, and the chevron turns over
@@ -1541,12 +1541,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   font-size: 15px;
   line-height: 1;
   color: color-mix(in srgb, var(--rc) 55%, #6b5c44);
-}
-.sdp-rail-count {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: #8a7a5c;
-  letter-spacing: 0.04em;
 }
 
 /* ── the grip ───────────────────────────────────────────────────────────────
