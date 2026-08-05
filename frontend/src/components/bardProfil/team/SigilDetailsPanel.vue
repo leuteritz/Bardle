@@ -1064,11 +1064,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                  of the right column, which is the one place on this page where
                  a sentence had to be read to learn a number.
 
-                 Each is a number and the noun it counts now: the left pair is
-                 the effect, the right pair is always the cooldown, so both
-                 entries scan in the same order. The wording is one hover away
-                 (title) — prose belongs in a tooltip on a page whose job is
-                 comparison.
+                 What is left of each is a sigil and two numbers: the left pair
+                 is the effect, the right pair is always the cooldown, so both
+                 entries scan in the same order. No ability name — it was the
+                 only thing here that could not be acted on, and dropping it is
+                 what buys the icon its size and the numbers theirs. Name,
+                 scope and full wording stay one hover away (title).
 
                  They sit BELOW the chips rather than between them and the name:
                  name and chips are one thing (who this is, what they are), and
@@ -1082,10 +1083,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 :style="{ '--kc': ab.color }"
                 :title="`${ab.scope} — ${ab.name}: ${ab.desc}`"
               >
-                <div class="sdp-kit-head">
-                  <Icon :icon="ab.icon" width="16" height="16" class="sdp-kit-icon" />
-                  <span class="sdp-kit-name">{{ ab.name }}</span>
-                </div>
+                <Icon :icon="ab.icon" width="30" height="30" class="sdp-kit-icon" />
                 <div class="sdp-kit-metrics">
                   <span v-for="m in ab.metrics" :key="m.label" class="sdp-kit-metric">
                     <span class="sdp-kit-value">{{ m.value }}</span>
@@ -2605,16 +2603,22 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 
 /* ══ kit — the seat's two abilities, under the name ═════════════════════════
  * Side by side, and each says the same three things in the same three places:
- * which ability, what it does, how often. Effect left, cooldown right, in both
- * entries — two entries read in one sweep because the reading order is the
- * same, and a player comparing two roles compares numbers, not paragraphs.
+ * which ability (the sigil), what it does, how often. Effect left, cooldown
+ * right, in both entries — two entries read in one sweep because the reading
+ * order is the same, and a player comparing two roles compares numbers, not
+ * paragraphs.
+ *
+ * The ability's NAME is not among them. "Aegis Wall" is flavour, not something
+ * a player can act on, and it was costing the two things that are: a sigil big
+ * enough to identify at a glance and figures big enough to read from a lean
+ * back. Name, scope and full wording live in the tooltip.
  *
  * It is written ON the art, so it is not built as two cards: no frame, no drop
  * shadow, no icon well. A thin scrim carries the type over whatever the splash
  * is doing underneath, and the only hard edge is the 2px rule at the left of
- * each entry — which is also the one thing carrying the scope, the role's own
- * accent for the universe and gold for the pit. That is why neither entry needs
- * a scope caption.
+ * each entry — which, with the sigil, is what carries the scope: the role's own
+ * accent for the universe, gold for the pit. That is why neither entry needs a
+ * scope caption.
  *
  * Its width is the name plate's, so the pair lines up with the name above and
  * the XP bar below; the two halves are even, because the entries are peers. */
@@ -2630,72 +2634,62 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-splash:has(.sdp-kit:hover) .sdp-splash-swap-hint {
   opacity: 0;
 }
+/* Sigil first, then the two figures — one row, and the row is the whole entry:
+   with the ability's name gone there is nothing left to stack, which is what
+   lets both the icon and the numbers be as large as they are. */
 .sdp-kit-tile {
   min-width: 0;
-  padding: 5px 8px 6px 9px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 10px;
   border-radius: 3px;
   border-left: 2px solid var(--kc);
-  /* a scrim, not a card: enough to carry small type over a bright splash,
-     little enough that the art still reads through it */
+  /* a scrim, not a card: enough to carry the type over a bright splash, little
+     enough that the art still reads through it */
   background: rgba(6, 4, 2, 0.54);
   cursor: default;
 }
-.sdp-kit-head {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-}
+/* The sigil is the entry's name now — big enough to be recognised as a shape
+   rather than decoded, and in the scope's colour, which is the same accent the
+   rule on the left carries. */
 .sdp-kit-icon {
   flex-shrink: 0;
   color: var(--kc);
-  opacity: 0.85;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
-.sdp-kit-name {
-  min-width: 0;
-  font-size: 10px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--kc);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-/* One line, both pairs: the entry is wide now, so the number and the noun it
-   counts sit beside each other the way they would be spoken, and the whole kit
-   costs the name plate two lines instead of four.
-
-   Content-sized columns with a real gap, never two halves — the labels are
-   nowrap, and an even split lets the longest pair ("Per Stack" beside
-   "Cooldown") run out of its half and butt against its neighbour. */
+/* Content-sized columns with a real gap, never two halves — the labels are
+   nowrap, and an even split lets the longest pair ("Per Stack" over "Cooldown")
+   run out of its half and butt against its neighbour. */
 .sdp-kit-metrics {
+  min-width: 0;
   display: grid;
   grid-template-columns: auto auto;
   justify-content: start;
-  column-gap: 12px;
-  margin-top: 3px;
-  padding-left: 21px;
+  column-gap: 16px;
 }
+/* Figure over caption: the number is what is being compared, so it takes the
+   line, and the noun it counts sits under it in small caps. */
 .sdp-kit-metric {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
 }
 .sdp-kit-value {
-  font-size: 15px;
+  font-size: 18px;
   line-height: 1;
   color: #f4e6bc;
   white-space: nowrap;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
 }
 .sdp-kit-label {
-  font-size: 8.5px;
+  margin-top: 3px;
+  font-size: 9.5px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: rgba(200, 164, 90, 0.58);
+  color: rgba(200, 164, 90, 0.62);
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
@@ -3694,25 +3688,22 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     gap: 6px;
   }
   .sdp-kit-tile {
-    padding: 4px 7px 5px 8px;
+    gap: 8px;
+    padding: 5px 7px 5px 9px;
   }
   .sdp-kit-icon {
-    width: 15px;
-    height: 15px;
-  }
-  .sdp-kit-name {
-    font-size: 9.5px;
+    width: 26px;
+    height: 26px;
   }
   .sdp-kit-metrics {
-    column-gap: 10px;
-    margin-top: 2px;
-    padding-left: 20px;
+    column-gap: 13px;
   }
   .sdp-kit-value {
-    font-size: 14px;
+    font-size: 16px;
   }
   .sdp-kit-label {
-    font-size: 8px;
+    margin-top: 2px;
+    font-size: 9px;
   }
 }
 
@@ -3764,30 +3755,29 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   .sdp-pdetail-desc {
     font-size: 14px;
   }
-  /* kit — the splash is half again as tall here, so the numbers grow with it
-     rather than sitting under the name as two postage stamps */
+  /* kit — the splash is half again as tall here, so sigil and figures grow with
+     it rather than sitting under the name as two postage stamps. The plate does
+     NOT get wider on 4K (the panel is a fixed width), so this step is the one
+     that has to stay inside its half — see the fit measurement. */
   .sdp-kit {
     gap: 10px;
   }
   .sdp-kit-tile {
-    padding: 7px 11px 8px 12px;
+    gap: 11px;
+    padding: 9px 9px 9px 12px;
   }
   .sdp-kit-icon {
-    width: 21px;
-    height: 21px;
-  }
-  .sdp-kit-name {
-    font-size: 12.5px;
+    width: 34px;
+    height: 34px;
   }
   .sdp-kit-metrics {
-    column-gap: 18px;
-    margin-top: 5px;
-    padding-left: 26px;
+    column-gap: 17px;
   }
   .sdp-kit-value {
-    font-size: 19px;
+    font-size: 21px;
   }
   .sdp-kit-label {
+    margin-top: 4px;
     font-size: 10.5px;
   }
 }
