@@ -356,6 +356,55 @@ export function drawPhaseSun(
   ctx.stroke()
 }
 
+/**
+ * Offscreen-Ebene mit Schlüssel-Invalidierung. Für Inhalte, die nur von Kamera,
+ * Seed, Auflösung und Spielstand abhängen — also KEINE Zeitkomponente haben:
+ * einmal rastern, danach pro Frame nur noch ein `drawImage`. Ändert sich der
+ * Schlüssel oder die Canvas-Größe, wird neu gerastert.
+ *
+ * `composite` gilt INNERHALB der Ebene (additiv für Partikelfelder); wie die
+ * fertige Ebene auf den Hauptcanvas kommt, entscheidet der Aufrufer.
+ */
+export function createCachedLayer(composite: GlobalCompositeOperation = 'source-over') {
+  let layer: HTMLCanvasElement | null = null
+  let layerKey = ''
+
+  function get(
+    w: number,
+    h: number,
+    dpr: number,
+    key: string,
+    render: (c: CanvasRenderingContext2D) => void,
+  ): HTMLCanvasElement {
+    const pw = Math.max(1, Math.round(w * dpr))
+    const ph = Math.max(1, Math.round(h * dpr))
+    if (!layer) layer = document.createElement('canvas')
+    const resized = layer.width !== pw || layer.height !== ph
+    if (resized) {
+      layer.width = pw
+      layer.height = ph
+    }
+    if (!resized && layerKey === key) return layer
+
+    const lctx = layer.getContext('2d')
+    if (lctx) {
+      lctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      lctx.clearRect(0, 0, w, h)
+      lctx.globalCompositeOperation = composite
+      render(lctx)
+    }
+    layerKey = key
+    return layer
+  }
+
+  function dispose() {
+    layer = null
+    layerKey = ''
+  }
+
+  return { get, dispose }
+}
+
 export function smoothstep(v: number, a: number, b: number): number {
   const t = Math.max(0, Math.min(1, (v - a) / (b - a)))
   return t * t * (3 - 2 * t)

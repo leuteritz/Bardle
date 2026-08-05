@@ -109,8 +109,7 @@ export function armAngle(geo: GalaxyGeo, arm: number, t: number): number {
 /** Arm radius in galaxy-plane units at normalized t. */
 export function armRadius(geo: GalaxyGeo, t: number): number {
   return (
-    (MINIMAP_GALAXY_INNER_RADIUS +
-      t * (MINIMAP_GALAXY_RADIUS - MINIMAP_GALAXY_INNER_RADIUS)) *
+    (MINIMAP_GALAXY_INNER_RADIUS + t * (MINIMAP_GALAXY_RADIUS - MINIMAP_GALAXY_INNER_RADIUS)) *
     geo.radiusScale
   )
 }
@@ -340,7 +339,15 @@ export function drawPlanet(
   const rng = seededRng(seed >>> 0)
   const pal = palOverride ?? PLANET_PALETTES[Math.floor(rng() * PLANET_PALETTES.length)]
   const glowMult =
-    state === 'target' ? (pulse ? 2.5 : 2.1) : state === 'rescued' ? 1.9 : state === 'failed' ? 1.45 : 1.55
+    state === 'target'
+      ? pulse
+        ? 2.5
+        : 2.1
+      : state === 'rescued'
+        ? 1.9
+        : state === 'failed'
+          ? 1.45
+          : 1.55
   const glowR = r * glowMult
   const atmoGrad = ctx.createRadialGradient(x, y, r * 0.7, x, y, glowR)
   if (state === 'rescued') {
@@ -511,7 +518,95 @@ export function drawPlanet(
   }
 }
 
+/* ── Vorgerasterte Marker der besuchten Sterne ────────────────────────────
+   Für 'rescued' und 'failed' liest drawPlanet die geseedete Palette überhaupt
+   nicht: beide Zustände zeichnen ausschließlich feste Farben, und der Ring
+   ist für sie ohnehin abgeschaltet. Jeder Marker desselben Zustands ist damit
+   pixelgleich — es gibt keinen Grund, ihn 40× pro Frame aus zwei Radial-
+   verläufen, einem clip() und zwei Zügen mit shadowBlur neu aufzubauen. Genau
+   das war der Grund, warum eine Galaxie voller gescheiterter Sterne die
+   Framerate halbiert hat.
+
+   Einmal in ein kleines Sprite rastern, danach kostet ein Marker ein
+   drawImage. Eine kamerabezogene Offscreen-Ebene wäre die naheliegendere
+   Lösung gewesen, hilft aber ausgerechnet während der MINIMAP_ZOOM_TRIGGER_MS
+   langen Zoomfahrt nicht — dort ändert sich die Kamera in jedem Frame. Ein
+   Sprite ist von der Kamera unabhängig und trägt in jedem Zustand. */
+
+const markerSprites = new Map<string, HTMLCanvasElement>()
+
+/** Randzone um den Körper: größter Glow (r × 1.9) plus shadowBlur der Kontur. */
+function markerPad(r: number) {
+  return Math.ceil(r * 1.9 + 12)
+}
+
+function getMarkerSprite(r: number, state: 'rescued' | 'failed', dpr: number): HTMLCanvasElement {
+  const key = `${state}|${r}|${dpr}`
+  const cached = markerSprites.get(key)
+  if (cached) return cached
+
+  const pad = markerPad(r)
+  const size = pad * 2
+  const sprite = document.createElement('canvas')
+  sprite.width = Math.max(1, Math.round(size * dpr))
+  sprite.height = Math.max(1, Math.round(size * dpr))
+  const sctx = sprite.getContext('2d')
+  if (sctx) {
+    sctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    drawPlanet(sctx, pad, pad, r, 0, state)
+  }
+  markerSprites.set(key, sprite)
+  return sprite
+}
+
+/**
+ * Marker eines besuchten Sterns — optisch identisch zu drawPlanet(state), aber
+ * aus dem Sprite-Cache statt jedes Mal neu gezeichnet.
+ */
+export function drawVisitedStar(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  state: 'rescued' | 'failed',
+  dpr: number,
+) {
+  const pad = markerPad(r)
+  ctx.drawImage(getMarkerSprite(r, state, dpr), x - pad, y - pad, pad * 2, pad * 2)
+}
+
 /* ── Route arrowheads ────────────────────────────────────────────────────── */
+
+/** Chevron einer Route-Etappe in den LAUFENDEN Pfad legen, ohne ihn zu zeichnen.
+ *  Alle Chevrons einer Route teilen sich Farbe und Strichstärke — als ein
+ *  einziger Pfad gestrichen kostet eine lange Route einen Zug statt einen pro
+ *  Etappe. Etappen, die zu kurz für das Zeichen sind, werden übersprungen. */
+export function pathRouteArrowhead(
+  ctx: CanvasRenderingContext2D,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  gap: number,
+  size: number,
+) {
+  const dx = x1 - x0
+  const dy = y1 - y0
+  const len = Math.sqrt(dx * dx + dy * dy)
+  if (len < gap + size * 2) return
+  const ang = Math.atan2(dy, dx)
+  const tipX = x1 - (dx / len) * gap
+  const tipY = y1 - (dy / len) * gap
+  ctx.moveTo(
+    tipX - size * Math.cos(ang - MINIMAP_ROUTE_ARROW_SPREAD),
+    tipY - size * Math.sin(ang - MINIMAP_ROUTE_ARROW_SPREAD),
+  )
+  ctx.lineTo(tipX, tipY)
+  ctx.lineTo(
+    tipX - size * Math.cos(ang + MINIMAP_ROUTE_ARROW_SPREAD),
+    tipY - size * Math.sin(ang + MINIMAP_ROUTE_ARROW_SPREAD),
+  )
+}
 
 /** Open chevron on a route segment, tip placed `gap` px before the endpoint
  *  so it never overlaps the star marker. Skips segments too short to fit it. */
@@ -526,28 +621,13 @@ export function drawRouteArrowhead(
   strokeStyle: string,
   lineWidth: number,
 ) {
-  const dx = x1 - x0
-  const dy = y1 - y0
-  const len = Math.sqrt(dx * dx + dy * dy)
-  if (len < gap + size * 2) return
-  const ang = Math.atan2(dy, dx)
-  const tipX = x1 - (dx / len) * gap
-  const tipY = y1 - (dy / len) * gap
   ctx.save()
   ctx.beginPath()
   ctx.strokeStyle = strokeStyle
   ctx.lineWidth = lineWidth
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
-  ctx.moveTo(
-    tipX - size * Math.cos(ang - MINIMAP_ROUTE_ARROW_SPREAD),
-    tipY - size * Math.sin(ang - MINIMAP_ROUTE_ARROW_SPREAD),
-  )
-  ctx.lineTo(tipX, tipY)
-  ctx.lineTo(
-    tipX - size * Math.cos(ang + MINIMAP_ROUTE_ARROW_SPREAD),
-    tipY - size * Math.sin(ang + MINIMAP_ROUTE_ARROW_SPREAD),
-  )
+  pathRouteArrowhead(ctx, x0, y0, x1, y1, gap, size)
   ctx.stroke()
   ctx.restore()
 }

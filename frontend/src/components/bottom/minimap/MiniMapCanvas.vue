@@ -73,7 +73,8 @@ import {
   minimapAccentForTheme,
   STAR_PALETTE,
   drawPlanet,
-  drawRouteArrowhead,
+  drawVisitedStar,
+  pathRouteArrowhead,
   generateGalaxyDots,
 } from './minimapGalaxyGeometry'
 
@@ -81,6 +82,7 @@ import { hexToRgba } from '@/utils/ui/format'
 import {
   ARRIVAL_TRANSITION_MS,
   PLANET_TYPE_PALETTES,
+  createCachedLayer,
   createWarpEffect,
   drawMiniSun,
   drawPhaseSun,
@@ -127,6 +129,8 @@ export default defineComponent({
     // during the final travel phase it eases toward the destination star.
     const camera = { x: 0.5, y: 0.5, zoom: 1 }
     let prevCamZoom = 1
+    let prevCamX = 0.5
+    let prevCamY = 0.5
 
     // ── Canvas-Maße ohne Layout-Zwang ───────────────────────────────────────
     // offsetWidth/offsetHeight im rAF-Loop zu lesen erzwingt pro Frame ein
@@ -150,35 +154,13 @@ export default defineComponent({
     // Wird nur neu gerastert, wenn sich Kamera, Seed, Theme, Auflösung oder
     // die Overview-Deckkraft ändern; sonst kostet die Galaxie pro Frame ein
     // einziges drawImage statt MINIMAP_GALAXY_PARTICLES Einzelpfade.
-    let galaxyLayer: HTMLCanvasElement | null = null
-    let galaxyLayerKey = ''
+    const galaxyLayer = createCachedLayer('lighter')
 
-    function getGalaxyLayer(
-      w: number,
-      h: number,
-      key: string,
-      render: (c: CanvasRenderingContext2D) => void,
-    ): HTMLCanvasElement {
-      const pw = Math.max(1, Math.round(w * renderDpr))
-      const ph = Math.max(1, Math.round(h * renderDpr))
-      if (!galaxyLayer) galaxyLayer = document.createElement('canvas')
-      const resized = galaxyLayer.width !== pw || galaxyLayer.height !== ph
-      if (resized) {
-        galaxyLayer.width = pw
-        galaxyLayer.height = ph
-      }
-      if (!resized && galaxyLayerKey === key) return galaxyLayer
-
-      const lctx = galaxyLayer.getContext('2d')
-      if (lctx) {
-        lctx.setTransform(renderDpr, 0, 0, renderDpr, 0, 0)
-        lctx.clearRect(0, 0, w, h)
-        lctx.globalCompositeOperation = 'lighter'
-        render(lctx)
-      }
-      galaxyLayerKey = key
-      return galaxyLayer
-    }
+    // ── Offscreen-Layer für Route + Marker der besuchten Sterne ─────────────
+    // Gleiches Muster, gleicher Grund: beides hängt nur an Kamera, Seed und
+    // Ergebnisliste. Solange die Kamera steht — also fast immer —, kostet eine
+    // Galaxie voller besuchter Sterne ein drawImage statt einer Marker-Schleife.
+    const markerLayer = createCachedLayer()
 
     let hyperspacePhase: HyperspacePhase = 'idle'
     let hyperspacePhaseStart = 0
@@ -291,7 +273,13 @@ export default defineComponent({
 
       // Zoom velocity → motion streaks while the camera dives in
       const zoomVel = cam.zoom - prevCamZoom
+      // Steht die Kamera, sind alle kamerabezogenen Ebenen gültig; bewegt sie
+      // sich (die Zoomfahrt dauert MINIMAP_ZOOM_TRIGGER_MS), würde eine Ebene
+      // in jedem Frame verworfen — dann wird direkt gezeichnet.
+      const camMoving = cam.zoom !== prevCamZoom || cam.x !== prevCamX || cam.y !== prevCamY
       prevCamZoom = cam.zoom
+      prevCamX = cam.x
+      prevCamY = cam.y
       const streaking = zoomVel > 0.002 && cam.zoom > 1.6
       // Zielkontext ist Parameter, damit derselbe Partikel-Look sowohl direkt
       // auf den Hauptcanvas als auch in den Offscreen-Layer gezeichnet wird.
@@ -395,8 +383,8 @@ export default defineComponent({
         if (streaking) {
           drawGalaxyBody(ctx)
         } else {
-          const key = `${w}|${h}|${renderDpr}|${galaxyStore.mapSeed}|${galaxyStore.currentThemeIndex}|${cam.x}|${cam.y}|${cam.zoom}|${farAlpha.toFixed(4)}`
-          ctx.drawImage(getGalaxyLayer(w, h, key, drawGalaxyBody), 0, 0, w, h)
+          const key = `${galaxyStore.mapSeed}|${galaxyStore.currentThemeIndex}|${cam.x}|${cam.y}|${cam.zoom}|${farAlpha.toFixed(4)}`
+          ctx.drawImage(galaxyLayer.get(w, h, renderDpr, key, drawGalaxyBody), 0, 0, w, h)
         }
         ctx.restore()
       }
@@ -424,43 +412,6 @@ export default defineComponent({
           const a = (0.25 + nfRng() * 0.5) * nearAlpha
           const [px, py] = wToC(wx, wy)
           drawStarParticle(ctx, px, py, size, tint < 0.6 ? '255, 246, 228' : themeAccent, a)
-        }
-        ctx.restore()
-      }
-
-      // Flown route so far: spawn point → every visited star, in visit order
-      if (attempts >= 1 && farAlpha > 0.01) {
-        ctx.save()
-        ctx.globalAlpha = farAlpha
-        ctx.beginPath()
-        ctx.strokeStyle = 'rgba(232, 192, 64, 0.55)'
-        ctx.lineWidth = 2
-        ctx.lineCap = 'round'
-        ctx.lineJoin = 'round'
-        const [spx, spy] = wToC(spawnPos.value.x, spawnPos.value.y)
-        ctx.moveTo(spx, spy)
-        for (let i = 0; i < attempts; i++) {
-          const [sx, sy] = wToC(dots[i].x, dots[i].y)
-          ctx.lineTo(sx, sy)
-        }
-        ctx.stroke()
-        // One chevron per flown leg, just before its destination star —
-        // the route reads as a followable trail of arrowheads.
-        let [ax, ay] = [spx, spy]
-        for (let i = 0; i < attempts; i++) {
-          const [sx, sy] = wToC(dots[i].x, dots[i].y)
-          drawRouteArrowhead(
-            ctx,
-            ax,
-            ay,
-            sx,
-            sy,
-            MINIMAP_ROUTE_ARROW_GAP,
-            MINIMAP_ROUTE_ARROW_SIZE,
-            'rgba(240, 205, 96, 0.85)',
-            2,
-          )
-          ;[ax, ay] = [sx, sy]
         }
         ctx.restore()
       }
@@ -500,20 +451,84 @@ export default defineComponent({
         }
       }
 
-      // Overview markers belong to the galaxy overview → fade with it.
-      // Only stars already visited are drawn: rescued ✦ or failed ✕ — the
-      // upcoming target is rendered separately, future stars stay hidden.
-      const galaxySeed = galaxyStore.currentGalaxy * 10007
-      if (farAlpha > 0.01) {
-        ctx.save()
-        ctx.globalAlpha = farAlpha
+      // ── Geflogene Route + besuchte Sterne ────────────────────────────────
+      // Startpunkt → jeder besuchte Stern in Besuchsreihenfolge, dazu je ein
+      // Chevron pro Etappe und der Marker des Sterns (gerettet ✦ / gescheitert
+      // ✕). Nur bereits besuchte Sterne — der kommende Zielstern wird separat
+      // gezeichnet, künftige bleiben verborgen. Alles blendet mit der Übersicht
+      // aus.
+      //
+      // Das war der teuerste Posten der ganzen Leiste: eine volle Galaxie
+      // bedeutete 40× zwei Radialverläufe, ein clip() und zwei Züge mit
+      // shadowBlur — gemessen die halbe Framerate. Drei Hebel, alle nötig:
+      //   1. Marker aus dem Sprite-Cache (drawVisitedStar) statt neu gezeichnet
+      //   2. alle Chevrons in EINEM Pfad statt einem Zug pro Etappe
+      //   3. das Ganze in eine Offscreen-Ebene, solange die Kamera steht
+      // Punkt 3 allein reicht nicht: die Zoomfahrt bewegt die Kamera
+      // MINIMAP_ZOOM_TRIGGER_MS lang in jedem Frame, dort tragen 1 und 2.
+      /** Randzone = größter Marker-Glow plus shadowBlur. */
+      const inView = (sx: number, sy: number) =>
+        sx > -36 && sx < w + 36 && sy > -36 && sy < h + 36
+
+      function drawRouteAndMarkers(c: CanvasRenderingContext2D) {
+        c.beginPath()
+        c.strokeStyle = 'rgba(232, 192, 64, 0.55)'
+        c.lineWidth = 2
+        c.lineCap = 'round'
+        c.lineJoin = 'round'
+        const [spx, spy] = wToC(spawnPos.value.x, spawnPos.value.y)
+        c.moveTo(spx, spy)
         for (let i = 0; i < attempts; i++) {
           const [sx, sy] = wToC(dots[i].x, dots[i].y)
-          if (results[i] === 'failed') {
-            drawPlanet(ctx, sx, sy, 9, galaxySeed + i, 'failed')
-          } else {
-            drawPlanet(ctx, sx, sy, 11, galaxySeed + i, 'rescued')
+          c.lineTo(sx, sy)
+        }
+        c.stroke()
+
+        // One chevron per flown leg, just before its destination star —
+        // the route reads as a followable trail of arrowheads.
+        c.beginPath()
+        c.strokeStyle = 'rgba(240, 205, 96, 0.85)'
+        let ax = spx
+        let ay = spy
+        for (let i = 0; i < attempts; i++) {
+          const [sx, sy] = wToC(dots[i].x, dots[i].y)
+          if (inView(sx, sy)) {
+            pathRouteArrowhead(c, ax, ay, sx, sy, MINIMAP_ROUTE_ARROW_GAP, MINIMAP_ROUTE_ARROW_SIZE)
           }
+          ax = sx
+          ay = sy
+        }
+        c.stroke()
+
+        for (let i = 0; i < attempts; i++) {
+          const [sx, sy] = wToC(dots[i].x, dots[i].y)
+          // Während der Zoomfahrt liegt der Großteil außerhalb des Fensters —
+          // was nicht sichtbar ist, wird auch nicht gezeichnet.
+          if (!inView(sx, sy)) continue
+          if (results[i] === 'failed') {
+            drawVisitedStar(c, sx, sy, 9, 'failed', renderDpr)
+          } else {
+            drawVisitedStar(c, sx, sy, 11, 'rescued', renderDpr)
+          }
+        }
+      }
+
+      if (attempts >= 1 && farAlpha > 0.01) {
+        ctx.save()
+        ctx.globalAlpha = farAlpha
+        if (camMoving) {
+          drawRouteAndMarkers(ctx)
+        } else {
+          // Ergebnisliste wächst im Spiel nur am Ende, das Admin-Panel darf sie
+          // aber komplett ersetzen — deshalb eine Signatur statt der Länge.
+          // Die Deckkraft steht bewusst NICHT im Schlüssel: sie liegt auf dem
+          // Kompositschritt, sonst würde die Zoomblende die Ebene verwerfen.
+          let sig = attempts
+          for (let i = 0; i < attempts; i++) {
+            sig = (Math.imul(sig, 31) + (results[i] === 'failed' ? 1 : 2)) >>> 0
+          }
+          const key = `${galaxyStore.mapSeed}|${galaxyStore.currentGalaxy}|${attempts}|${sig}|${cam.x}|${cam.y}|${cam.zoom}`
+          ctx.drawImage(markerLayer.get(w, h, renderDpr, key, drawRouteAndMarkers), 0, 0, w, h)
         }
         ctx.restore()
       }
@@ -1378,8 +1393,8 @@ export default defineComponent({
       }
       sizeObserver?.disconnect()
       sizeObserver = null
-      galaxyLayer = null
-      galaxyLayerKey = ''
+      galaxyLayer.dispose()
+      markerLayer.dispose()
       for (const id of hyperspaceTimeouts) window.clearTimeout(id)
       hyperspaceTimeouts = []
       arrivalTransitionStart = -1
