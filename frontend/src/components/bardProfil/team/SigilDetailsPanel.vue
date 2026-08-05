@@ -1131,6 +1131,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             <span class="sdp-section-accent">✦</span>
             <span class="sdp-section-title">Skin</span>
             <div class="sdp-section-rule" />
+            <span class="sdp-section-count">{{ skinEntries.length }} looks</span>
           </div>
           <div class="sdp-skins">
             <button
@@ -1145,8 +1146,15 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             >
               <img :src="entry.image" :alt="entry.label" class="sdp-skin-img" loading="lazy" />
               <span class="sdp-skin-fade" />
+              <!-- One chip per card, and which one it is says everything: gold
+                   means "this is the look you wear", green means "click and it
+                   becomes it". The green one only appears under the cursor, so a
+                   full grid stays a grid of splashes rather than of buttons. -->
+              <span v-if="entry.id === equippedSkin" class="sdp-skin-chip sdp-skin-chip--on">
+                ✓ Equipped
+              </span>
+              <span v-else class="sdp-skin-chip sdp-skin-chip--cta">Equip</span>
               <span class="sdp-skin-name">{{ entry.label }}</span>
-              <span v-if="entry.id === equippedSkin" class="sdp-skin-tick">✓</span>
             </button>
           </div>
         </div>
@@ -2491,18 +2499,23 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   text-overflow: ellipsis;
 }
 /* ── skin grid ───────────────────────────────────────────────────────────────
-   Splash cards in three columns. Cards are fixed-size so twelve skins cannot
-   reflow the column, and only the equipped one is lit: the rest sit at reduced
-   opacity so the current look is findable at a glance instead of needing a badge
-   on every card.
+   Splash cards in TWO columns rather than three. A skin is a picture, and the
+   whole point of the block is recognising which picture you are wearing — at the
+   old ~136px a splash was a smear you had to hover to identify. Two columns give
+   each card ~208px (see SKIN_THUMB_MIN_WIDTH for the arithmetic), which is
+   enough to read the champion, the pose and the colour of the skin at a glance.
+   Cards stay fixed-size so twelve skins cannot reflow the column, and only the
+   equipped one is lit: the rest sit at reduced opacity so the current look is
+   findable without a badge on every card.
 
    Hover and selection move opacity and transform only — the strip sits over a
    board that keeps orbiting, and a border-colour transition on a dozen cards is
-   exactly the kind of per-frame raster work the project bans. */
+   exactly the kind of per-frame raster work the project bans. The equipped
+   card's frame and glow are a STATIC state, switched without a transition. */
 .sdp-skins {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(v-bind(skinThumbMinWidthPx), 1fr));
-  gap: 8px;
+  gap: 10px;
   max-height: v-bind(skinGridMaxHeightPx);
   overflow-y: auto;
   overflow-x: hidden;
@@ -2529,9 +2542,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   height: v-bind(skinThumbHeightPx);
   overflow: hidden;
   cursor: pointer;
+  padding: 0;
   border-radius: 4px;
   border: 1px solid #3e3a30;
   background: #141410;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
   opacity: 0.62;
   transition:
     opacity 0.15s ease,
@@ -2539,57 +2554,100 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 .sdp-skin:hover {
   opacity: 1;
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+}
+.sdp-skin:focus-visible {
+  opacity: 1;
+  outline: 2px solid #e8c040;
+  outline-offset: 2px;
 }
 .sdp-skin--on {
   opacity: 1;
   border-color: #c89040;
+  box-shadow:
+    inset 0 0 0 1px #5c3310,
+    0 0 14px rgba(232, 192, 64, 0.22);
 }
+/* The card is a window on the art: the image sits a touch oversized and slides
+   back into place on hover, so the splash reads as the surface of the card
+   rather than as a thumbnail glued into a frame. Transform only. */
 .sdp-skin-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 22%;
   display: block;
+  transition: transform 0.22s ease-out;
+}
+.sdp-skin:hover .sdp-skin-img {
+  transform: scale(1.06);
 }
 .sdp-skin-fade {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 62%;
-  background: linear-gradient(to top, rgba(8, 6, 3, 0.95), transparent);
+  height: 58%;
+  background: linear-gradient(
+    to top,
+    rgba(8, 6, 3, 0.96) 0%,
+    rgba(8, 6, 3, 0.62) 45%,
+    transparent 100%
+  );
   pointer-events: none;
 }
 .sdp-skin-name {
   position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 5px;
-  font-size: 11px;
+  left: 9px;
+  right: 9px;
+  bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   line-height: 1.15;
-  color: #e8dcc0;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+  color: #f4e6bc;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: left;
   pointer-events: none;
 }
-.sdp-skin-tick {
+/* ── the one chip: gold = worn, green = the click that would change it ── */
+.sdp-skin-chip {
   position: absolute;
-  top: 4px;
-  right: 5px;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 3px;
-  background: #2e7a1a;
-  border: 1px solid #6ec040;
-  color: #dff5d0;
-  font-size: 12px;
-  line-height: 1;
+  top: 7px;
+  right: 7px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+  border: 1px solid;
   pointer-events: none;
+}
+.sdp-skin-chip--on {
+  color: #f0d68a;
+  background: rgba(12, 8, 3, 0.86);
+  border-color: #c89040;
+}
+.sdp-skin-chip--cta {
+  color: #0c1a06;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border-color: #6ec040;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.sdp-skin:hover .sdp-skin-chip--cta,
+.sdp-skin:focus-visible .sdp-skin-chip--cta {
+  opacity: 1;
+  transform: translateY(0);
 }
 /* The gear block is the left column's only padded child — the splash runs edge
    to edge and the advance block brings its own padding. It also carries the

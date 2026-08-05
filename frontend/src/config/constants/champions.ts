@@ -177,27 +177,39 @@ export const SKIN_CARD_MIN_WIDTH = 300
 /**
  * Inline skin gallery in the details page.
  *
- * MIN_WIDTH is the smallest a card may get before the grid drops a column — the
- * right column fits three, and the splash is legible at that size rather than
- * being a thumbnail you have to squint at. It sits in the 111–220px band of the
- * art table, so the cards load the 512px variant ('lg').
+ * MIN_WIDTH is the smallest a card may get before the grid drops a column. The
+ * right column is 464px wide (900 panel − 434 left − border) and gives the grid
+ * ~425px of usable width, so this value decides the column count outright: at
+ * 190 two columns fit (2×190 + 8 gap = 388) and three cannot (3×190 + 16 = 586).
+ * Two it is — a skin card is a splash art, and at ~208px the champion in it is
+ * recognisable instead of being a smear you have to hover to identify. It stays
+ * inside the 111–220px band of the art table, so the cards keep loading the
+ * 512px variant ('lg').
  *
  * MAX_HEIGHT holds two full rows plus the gap; anything beyond that scrolls, so
  * a champion with a dozen skins cannot push Stats off the page.
  */
-export const SKIN_THUMB_MIN_WIDTH = 132
+export const SKIN_THUMB_MIN_WIDTH = 190
 /**
  * Card height, explicit rather than an `aspect-ratio`. A ratio on a grid item
  * whose width comes from `1fr` is circular — the row needs the item's height,
  * the item's height needs its width, and the width is only known once the row
  * is laid out. Chrome resolves that by collapsing the row (measured: 37px rows
  * under 78px cards, every card overlapping the one below). A fixed height
- * breaks the cycle. 78 is 16:9 at the ~139px the right column actually gives a
- * card, and `object-fit: cover` absorbs any drift if that width ever changes.
+ * breaks the cycle. 118 is 16:9 at the ~208px two columns actually give a card,
+ * and `object-fit: cover` absorbs any drift if that width ever changes.
  */
-export const SKIN_THUMB_HEIGHT = 78
-/** Exactly two rows plus the gap between them — beyond that the grid scrolls. */
-export const SKIN_GRID_MAX_HEIGHT = 164
+export const SKIN_THUMB_HEIGHT = 118
+/**
+ * Exactly two rows plus the gap between them — beyond that the grid scrolls.
+ *
+ * No Full HD step-down for this block, unlike its neighbours: the whole details
+ * page is already fit-scaled to ~0.88 on the flattest desktop (measured), so the
+ * cards arrive there at ~186×104 on their own. Shrinking them a second time
+ * would take back exactly what this block is sized for — being able to tell the
+ * skins apart — to save 36px of a column that overflows by ten times that.
+ */
+export const SKIN_GRID_MAX_HEIGHT = 246
 
 /**
  * Downscaled art variants generated next to every splash
