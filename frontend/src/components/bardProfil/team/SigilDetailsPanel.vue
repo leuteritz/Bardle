@@ -797,8 +797,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     </div>
 
       <!-- ══ the folded rail — what the strip leaves behind ══
-           Left: the subject, because a page of stats with no name on it is a
-           page of anonymous numbers. Right: one dot per seat, carrying the same
+           Left: the SEAT, at title size — Main, Sworn II, Ally 3. The champion's
+           own name is already the headline of the card right below the rail, so
+           printing it twice within 60px would be the one thing a fold must not
+           do; what the columns cannot say for themselves is which of the six
+           seats they belong to. Right: one dot per seat, carrying the same
            ladder the cards do (the captain wider, the sworn pair rimmed, the
            bench plain), so switching subject stays ONE click while folded — the
            whole point of leaving a rail rather than nothing. -->
@@ -810,7 +813,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           @click="rosterOpen = true"
         >
           <span class="sdp-rail-seat">{{ subjectSeatLabel }}</span>
-          <span class="sdp-rail-name">{{ champion ?? 'Empty' }}</span>
         </button>
 
         <div class="sdp-rail-dots" @mouseleave="emit('hover-ally', null)">
@@ -863,7 +865,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         @click="rosterOpen = !rosterOpen"
       >
         <span class="sdp-fold-grain" aria-hidden="true" />
-        <Icon icon="lucide:chevron-up" width="15" height="15" class="sdp-fold-chevron" />
+        <Icon icon="lucide:chevron-up" width="26" height="26" class="sdp-fold-chevron" />
       </button>
     </div>
 
@@ -1417,41 +1419,48 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   transform: none;
   pointer-events: auto;
 }
-/* the subject, and a second way back out of the fold */
+/* The seat, as the rail's title — and a second way back out of the fold. No
+   box around it: a chip would read as one more control on a rail that already
+   has seven, where a title reads as what the rail IS about. It borrows the
+   grammar the section heads use (✦ then the word), one size up, so the folded
+   rail announces itself in the page's own voice. */
 .sdp-rail-subject {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
-  padding: 4px 9px;
-  border-radius: 4px;
-  background: #141410;
-  border: 1px solid color-mix(in srgb, var(--rc) 26%, transparent);
+  padding: 2px 4px;
+  border: none;
+  background: none;
   cursor: pointer;
   text-align: left;
-  transition:
-    border-color 0.15s,
-    background 0.15s;
 }
-.sdp-rail-subject:hover {
-  border-color: var(--rc);
-  background: #1b1610;
+.sdp-rail-accent {
+  flex-shrink: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--rc);
+  transition: transform 0.18s;
+}
+.sdp-rail-subject:hover .sdp-rail-accent {
+  transform: rotate(90deg);
 }
 .sdp-rail-seat {
-  flex-shrink: 0;
-  font-size: 9px;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--rc) 60%, #c8b491);
-}
-.sdp-rail-name {
   min-width: 0;
-  font-size: 14px;
-  line-height: 1.1;
-  color: #f0dcae;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #e8c040;
+  /* static, never animated — a title's weight, not a running glow */
+  text-shadow:
+    0 0 14px color-mix(in srgb, var(--rc) 45%, transparent),
+    0 2px 0 #1a0e04;
+  transition: color 0.15s;
+}
+.sdp-rail-subject:hover .sdp-rail-seat {
+  color: #f8e08c;
 }
 
 /* One dot per seat, carrying the SAME ladder the cards do — captain wider,
@@ -1563,37 +1572,47 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   justify-content: center;
   padding: 0;
   border: none;
-  border-left: 1px solid #3e200a;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.4));
-  color: color-mix(in srgb, var(--rc) 55%, #9b8a6c);
+  border-left: 2px solid #5c3310;
+  background: linear-gradient(90deg, #1a0f06, #241505 60%, #180d04);
+  color: color-mix(in srgb, var(--rc) 50%, #c8a860);
   cursor: pointer;
   transition:
     color 0.15s,
     background 0.15s;
 }
 .sdp-fold:hover {
-  color: #e8c040;
+  color: #f4dc90;
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0),
-    color-mix(in srgb, var(--rc) 22%, transparent)
+    #1a0f06,
+    color-mix(in srgb, var(--rc) 26%, #2c1a08) 60%,
+    #180d04
   );
 }
-/* the notches that say "pull me" — three hairlines stacked behind the chevron,
-   the only ornament on the grip */
+/* The wood the whole panel is framed in, run down the grip's inner edge — the
+   plate reads as part of the frame rather than a button dropped on top of it. */
+.sdp-fold::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: #3e200a;
+}
+/* the notches that say "pull me" — hairlines above and below the chevron, the
+   grip's only ornament, and the reason it reads as a handle at a glance */
 .sdp-fold-grain {
   position: absolute;
   left: 50%;
-  bottom: 9px;
-  width: 8px;
-  height: 5px;
-  transform: translateX(-50%);
-  background: repeating-linear-gradient(
-    180deg,
-    currentColor 0 1px,
-    transparent 1px 3px
-  );
-  opacity: 0.4;
+  top: 50%;
+  width: 14px;
+  height: 62px;
+  transform: translate(-50%, -50%);
+  background:
+    repeating-linear-gradient(180deg, currentColor 0 1px, transparent 1px 5px) top center /
+      100% 17px no-repeat,
+    repeating-linear-gradient(180deg, currentColor 0 1px, transparent 1px 5px) bottom center /
+      100% 17px no-repeat;
+  opacity: 0.32;
 }
 .sdp-roster-shell--folded .sdp-fold-grain {
   display: none;
@@ -1601,6 +1620,8 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 /* one icon, turned over — no second name to keep in sync, and a transform is
    free where an icon swap would remount an SVG */
 .sdp-fold-chevron {
+  position: relative;
+  z-index: 1;
   transition: transform v-bind(foldMs) cubic-bezier(0.33, 1, 0.68, 1);
 }
 .sdp-roster-shell--folded .sdp-fold-chevron {
