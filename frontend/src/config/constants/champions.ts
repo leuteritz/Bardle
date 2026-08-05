@@ -186,30 +186,48 @@ export const SKIN_CARD_MIN_WIDTH = 300
  * inside the 111–220px band of the art table, so the cards keep loading the
  * 512px variant ('lg').
  *
- * MAX_HEIGHT holds two full rows plus the gap; anything beyond that scrolls, so
- * a champion with a dozen skins cannot push Stats off the page.
+ * The card HEIGHT is not authored at all: the grid divides whatever height the
+ * block ends up with into whole rows (`grid-auto-rows: calc((100% - gaps) / n)`,
+ * 2 rows normally, 3 on a 4K column). That is the only way to keep a no-scroll
+ * column honest — an authored height either leaves a band of dead space or slices
+ * the second row in half, and which of the two you get depends on the resolution.
+ * Rows follow the room; the values below only bound how much room the grid asks
+ * for.
  */
 export const SKIN_THUMB_MIN_WIDTH = 190
 /**
- * Card height, explicit rather than an `aspect-ratio`. A ratio on a grid item
- * whose width comes from `1fr` is circular — the row needs the item's height,
- * the item's height needs its width, and the width is only known once the row
- * is laid out. Chrome resolves that by collapsing the row (measured: 37px rows
- * under 78px cards, every card overlapping the one below). A fixed height
- * breaks the cycle. 118 is 16:9 at the ~208px two columns actually give a card,
- * and `object-fit: cover` absorbs any drift if that width ever changes.
- */
-export const SKIN_THUMB_HEIGHT = 118
-/**
- * Exactly two rows plus the gap between them — beyond that the grid scrolls.
+ * What the grid ASKS for (its flex basis) and the least it will accept, per
+ * desktop height class:
  *
- * No Full HD step-down for this block, unlike its neighbours: the whole details
- * page is already fit-scaled to ~0.88 on the flattest desktop (measured), so the
- * cards arrive there at ~186×104 on their own. Shrinking them a second time
- * would take back exactly what this block is sized for — being able to tell the
- * skins apart — to save 36px of a column that overflows by ten times that.
+ *   viewport ≤ 1100px  (Full HD 950 / WUXGA 1070 → column 598–627px)  COMPACT
+ *   viewport ≤ 1600px  (2K 1310 → column 767px)                       default
+ *   viewport  > 1600px (4K 2030 → column 1397px)                      LARGE
+ *
+ * BASIS is two rows at a comfortable card height (three at 4K). MIN is the floor
+ * the other blocks may not push it below — two rows of ~65px, still a readable
+ * splash at 208px wide, and the point past which the gallery would stop being
+ * able to answer "which look is this".
  */
-export const SKIN_GRID_MAX_HEIGHT = 246
+export const SKIN_GRID_BASIS = 234
+/** Floor of the 2K/default step. */
+export const SKIN_GRID_MIN = 168
+/** Full HD / WUXGA — the column is a fifth shorter, so it asks for less. */
+export const SKIN_GRID_BASIS_COMPACT = 172
+/** Floor at Full HD: two ~62px rows. Below this the strip stops being legible. */
+export const SKIN_GRID_MIN_COMPACT = 132
+/** 4K — three rows of ~152px; the column has ~600px spare there. */
+export const SKIN_GRID_BASIS_LARGE = 480
+/** Floor at 4K: three rows of ~100px. */
+export const SKIN_GRID_MIN_LARGE = 324
+/**
+ * While a perk choice is open the gallery drops to ONE row (see the `:has()`
+ * rule on the column). The choice expires and the skins do not, so for those few
+ * seconds the three cards outrank the second row of splashes — and one full-height
+ * row still shows two skins rather than a band of crops.
+ */
+export const SKIN_GRID_BASIS_CHOOSING = 104
+/** Floor of the one-row state — 208×92 is still a readable splash. */
+export const SKIN_GRID_MIN_CHOOSING = 92
 
 /**
  * Downscaled art variants generated next to every splash

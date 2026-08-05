@@ -58,8 +58,14 @@ import {
   SWORN_ICON,
   SKIN_ORIGINAL,
   SKIN_THUMB_MIN_WIDTH,
-  SKIN_THUMB_HEIGHT,
-  SKIN_GRID_MAX_HEIGHT,
+  SKIN_GRID_BASIS,
+  SKIN_GRID_MIN,
+  SKIN_GRID_BASIS_COMPACT,
+  SKIN_GRID_MIN_COMPACT,
+  SKIN_GRID_BASIS_LARGE,
+  SKIN_GRID_MIN_LARGE,
+  SKIN_GRID_BASIS_CHOOSING,
+  SKIN_GRID_MIN_CHOOSING,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_DETAILS_LEFT_WIDTH,
   TEAM_SIGIL_MAIN_CHIP_WIDTH,
@@ -187,8 +193,14 @@ const splashBadgeInsetPx = computed(
   () => `${Math.round(splashBadgeSize.value * CHAMPION_REGALIA_SPLASH_INSET_RATIO)}px`,
 )
 const skinThumbMinWidthPx = `${SKIN_THUMB_MIN_WIDTH}px`
-const skinThumbHeightPx = `${SKIN_THUMB_HEIGHT}px`
-const skinGridMaxHeightPx = `${SKIN_GRID_MAX_HEIGHT}px`
+const skinGridBasisPx = `${SKIN_GRID_BASIS}px`
+const skinGridMinPx = `${SKIN_GRID_MIN}px`
+const skinGridBasisCompactPx = `${SKIN_GRID_BASIS_COMPACT}px`
+const skinGridMinCompactPx = `${SKIN_GRID_MIN_COMPACT}px`
+const skinGridBasisLargePx = `${SKIN_GRID_BASIS_LARGE}px`
+const skinGridMinLargePx = `${SKIN_GRID_MIN_LARGE}px`
+const skinGridBasisChoosingPx = `${SKIN_GRID_BASIS_CHOOSING}px`
+const skinGridMinChoosingPx = `${SKIN_GRID_MIN_CHOOSING}px`
 const leftWidthPx = `${TEAM_SIGIL_DETAILS_LEFT_WIDTH}px`
 const splashHeightPx = `${TEAM_SIGIL_SPLASH_HEIGHT}px`
 const splashHeightCompactPx = `${TEAM_SIGIL_SPLASH_HEIGHT_COMPACT}px`
@@ -567,6 +579,38 @@ const perkPath = computed<PerkSlot[]>(() => {
   return slots
 })
 const takenPerkCount = computed(() => perkPath.value.filter((s) => s.state === 'taken').length)
+
+/**
+ * The path is a RAIL of beads now, not a stack of rows, and one milestone at a
+ * time spells itself out underneath it.
+ *
+ * The stack cost ~220px of a column that has ~550px to give four blocks — five
+ * rows, four of them saying nothing but "9 levels to go". The rail says the same
+ * thing in one line of beads (the level is on the bead) and spends the saved
+ * height on the milestone the player actually cares about, in full.
+ *
+ * Which one that is: whatever the player last clicked, else the unspent choice
+ * (it expires, so it outranks everything), else the newest perk taken, else the
+ * next one still ahead.
+ */
+const clickedPerkLevel = ref<number | null>(null)
+/** The milestone with an unspent choice, if any — the loud one. */
+const openPerkSlot = computed(() => perkPath.value.find((s) => s.state === 'open') ?? null)
+const focusedPerkSlot = computed<PerkSlot | null>(() => {
+  const path = perkPath.value
+  if (!path.length) return null
+  const clicked = path.find((s) => s.level === clickedPerkLevel.value)
+  if (clicked) return clicked
+  if (openPerkSlot.value) return openPerkSlot.value
+  const lastTaken = [...path].reverse().find((s) => s.state === 'taken')
+  if (lastTaken) return lastTaken
+  return path.find((s) => s.state === 'locked') ?? path[0]
+})
+// A different champion has a different ladder — the level clicked on the last
+// one would land on an unrelated milestone here.
+watch(champion, () => {
+  clickedPerkLevel.value = null
+})
 
 function pickPerk(perkId: string) {
   const name = champion.value
@@ -1209,89 +1253,131 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           </div>
         </div>
 
-        <!-- ── perk path — every milestone the cap allows, taken or not, strung
-             on one spine so the whole ladder reads at a glance. It sits with the
-             stats because both answer the same question: what has this champion
-             become? The column scrolls as a whole, so the path no longer needs a
-             scroller of its own. ── -->
-        <div v-if="champion" class="sdp-block sdp-block--perks">
+        <!-- ── perk path — every milestone the cap allows, taken or not, on one
+             rail. The beads carry the state (perk sigil / gold medal / level
+             number) and the line under them spells out whichever milestone is
+             in focus, in full. It sits with the stats because both answer the
+             same question: what has this champion become? ── -->
+        <div
+          v-if="champion"
+          class="sdp-block sdp-block--perks"
+          :class="{ 'sdp-block--choosing': !!openPerkSlot }"
+        >
           <div class="sdp-section-head">
-            <span class="sdp-section-accent">✦</span>
-            <span class="sdp-section-title">Perk Path</span>
-            <div class="sdp-section-rule" />
-            <span class="sdp-section-count">{{ takenPerkCount }}/{{ perkPath.length }}</span>
+            <span class="sdp-section-accent" :class="{ 'sdp-section-accent--hot': openPerkSlot }">
+              ✦
+            </span>
+            <span class="sdp-section-title" :class="{ 'sdp-section-title--hot': openPerkSlot }">
+              Perk Path
+            </span>
+            <div class="sdp-section-rule" :class="{ 'sdp-section-rule--hot': openPerkSlot }" />
+            <span class="sdp-section-count" :class="{ 'sdp-section-count--hot': openPerkSlot }">
+              {{ openPerkSlot ? 'Pick one' : `${takenPerkCount}/${perkPath.length}` }}
+            </span>
           </div>
 
-          <div class="sdp-path-track">
+          <div class="sdp-path">
+            <div class="sdp-path-rail">
+              <button
+                v-for="slot in perkPath"
+                :key="slot.level"
+                class="sdp-pnode"
+                :class="[
+                  `sdp-pnode--${slot.state}`,
+                  { 'sdp-pnode--focus': slot.level === focusedPerkSlot?.level },
+                ]"
+                :style="slot.perk ? { '--pc': slot.perk.color } : undefined"
+                type="button"
+                :title="slot.perk ? `${slot.perk.name} — ${slot.perk.desc}` : `Level ${slot.level}`"
+                @click="clickedPerkLevel = slot.level"
+              >
+                <span class="sdp-pnode-bead">
+                  <Icon
+                    v-if="slot.perk"
+                    :icon="slot.perk.icon"
+                    width="26"
+                    height="26"
+                    class="sdp-pnode-icon"
+                  />
+                  <Icon
+                    v-else-if="slot.state === 'open'"
+                    icon="game-icons:ribbon-medal"
+                    width="24"
+                    height="24"
+                    class="sdp-pnode-icon"
+                  />
+                  <span v-else class="sdp-pnode-lv">{{ slot.level }}</span>
+                </span>
+                <!-- A locked bead already IS its level, so the caption under it
+                     would say the same thing twice. It carries the distance
+                     instead, which is the only thing still unknown about it. -->
+                <span v-if="slot.state === 'locked'" class="sdp-pnode-cap">
+                  {{ level >= slot.level ? 'open' : `+${slot.level - level}` }}
+                </span>
+                <span v-else class="sdp-pnode-cap">Lv {{ slot.level }}</span>
+              </button>
+            </div>
+
+            <!-- the one milestone in focus, spelled out -->
             <div
-              v-for="slot in perkPath"
-              :key="slot.level"
-              class="sdp-node"
-              :class="[`sdp-node--${slot.state}`]"
-              :style="slot.perk ? { '--pc': slot.perk.color } : undefined"
+              v-if="focusedPerkSlot"
+              class="sdp-pdetail"
+              :class="`sdp-pdetail--${focusedPerkSlot.state}`"
+              :style="focusedPerkSlot.perk ? { '--pc': focusedPerkSlot.perk.color } : undefined"
             >
-              <!-- the spine bead: perk sigil once taken, milestone level until then -->
-              <div class="sdp-node-bead">
-                <Icon
-                  v-if="slot.perk"
-                  :icon="slot.perk.icon"
-                  width="30"
-                  height="30"
-                  class="sdp-node-icon"
-                />
-                <Icon
-                  v-else-if="slot.state === 'open'"
-                  icon="game-icons:ribbon-medal"
-                  width="28"
-                  height="28"
-                  class="sdp-node-icon"
-                />
-                <span v-else class="sdp-node-lv">{{ slot.level }}</span>
-              </div>
+              <template v-if="focusedPerkSlot.perk">
+                <div class="sdp-pdetail-name">
+                  {{ focusedPerkSlot.perk.name }}
+                  <span class="sdp-pdetail-tag">Lv {{ focusedPerkSlot.level }}</span>
+                </div>
+                <div class="sdp-pdetail-desc">{{ focusedPerkSlot.perk.desc }}</div>
+              </template>
 
-              <div class="sdp-node-body">
-                <template v-if="slot.perk">
-                  <div class="sdp-node-name">
-                    {{ slot.perk.name }}
-                    <span class="sdp-node-tag">Lv {{ slot.level }}</span>
-                  </div>
-                  <div class="sdp-node-desc">{{ slot.perk.desc }}</div>
-                </template>
+              <!-- the open one needs no paragraph: the three cards right below
+                   ARE the explanation, and the height a second one would take is
+                   height they need -->
+              <template v-else-if="focusedPerkSlot.state === 'open'">
+                <div class="sdp-pdetail-name sdp-pdetail-name--open">
+                  Milestone reached
+                  <span class="sdp-pdetail-tag">Lv {{ focusedPerkSlot.level }}</span>
+                </div>
+              </template>
 
-                <template v-else-if="slot.state === 'open'">
-                  <div class="sdp-node-name sdp-node-name--open">
-                    Milestone reached
-                    <span class="sdp-node-tag">Lv {{ slot.level }}</span>
-                  </div>
-                  <div class="sdp-node-desc">Pick one — the others stay in the pool.</div>
-                  <div class="sdp-choice">
-                    <button
-                      v-for="perk in perkChoices"
-                      :key="perk.id"
-                      class="sdp-choice-card"
-                      :style="{ '--pc': perk.color }"
-                      @click="pickPerk(perk.id)"
-                    >
-                      <Icon :icon="perk.icon" width="30" height="30" class="sdp-choice-icon" />
-                      <span class="sdp-choice-text">
-                        <span class="sdp-choice-name">{{ perk.name }}</span>
-                        <span class="sdp-choice-desc">{{ perk.desc }}</span>
-                      </span>
-                    </button>
-                  </div>
-                </template>
+              <template v-else>
+                <div class="sdp-pdetail-name sdp-pdetail-name--locked">
+                  Level {{ focusedPerkSlot.level }}
+                </div>
+                <div class="sdp-pdetail-desc sdp-pdetail-desc--locked">
+                  <template v-if="focusedPerkSlot.exhausted">No perk left in this pool</template>
+                  <template v-else-if="level >= focusedPerkSlot.level">Choice still open</template>
+                  <template v-else>
+                    {{ focusedPerkSlot.level - level }} level{{
+                      focusedPerkSlot.level - level === 1 ? '' : 's'
+                    }}
+                    to go
+                  </template>
+                </div>
+              </template>
+            </div>
 
-                <template v-else>
-                  <div class="sdp-node-name sdp-node-name--locked">Level {{ slot.level }}</div>
-                  <div class="sdp-node-desc sdp-node-desc--locked">
-                    <template v-if="slot.exhausted">No perk left in this pool</template>
-                    <template v-else-if="level >= slot.level">Choice still open</template>
-                    <template v-else>
-                      {{ slot.level - level }} level{{ slot.level - level === 1 ? '' : 's' }} to go
-                    </template>
-                  </div>
-                </template>
-              </div>
+            <!-- the choice, whichever bead is in focus: it expires, so it is
+                 never hidden behind a click on the right bead -->
+            <div v-if="openPerkSlot" class="sdp-choice">
+              <button
+                v-for="perk in perkChoices"
+                :key="perk.id"
+                class="sdp-choice-card"
+                :style="{ '--pc': perk.color }"
+                type="button"
+                :title="perk.desc"
+                @click="pickPerk(perk.id)"
+              >
+                <Icon :icon="perk.icon" width="26" height="26" class="sdp-choice-icon" />
+                <span class="sdp-choice-text">
+                  <span class="sdp-choice-name">{{ perk.name }}</span>
+                  <span class="sdp-choice-desc">{{ perk.desc }}</span>
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -1305,7 +1391,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             <span class="sdp-section-count">{{ roleDef.label }}</span>
           </div>
           <div class="sdp-ability-cards">
-            <div class="sdp-ability-card">
+            <div class="sdp-ability-card" :title="orbitAbility.desc">
               <div class="sdp-ability-card-icon">
                 <Icon
                   :icon="orbitAbility.icon"
@@ -1322,7 +1408,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 <div class="sdp-ability-card-desc">{{ orbitAbility.desc }}</div>
               </div>
             </div>
-            <div class="sdp-ability-card sdp-ability-card--gold">
+            <div class="sdp-ability-card sdp-ability-card--gold" :title="objectiveAbility.desc">
               <div class="sdp-ability-card-icon">
                 <Icon :icon="objectiveAbility.icon" width="28" height="28" style="color: #e8c040" />
               </div>
@@ -2206,91 +2292,87 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   min-height: 0;
   border-right: 2px solid #5c3310;
 }
+/* The column does NOT scroll. Its four blocks divide the height it has and each
+   one fits itself into its share — that is the whole contract of this side of
+   the page, and every rule below exists to keep it: the two blocks with a
+   variable amount to show (the skin gallery, the perk choice) scroll INSIDE
+   their share, the two with a fixed amount (stats, role abilities) shrink their
+   type and padding by height class instead.
+   A scrollbar here would hide the block a player is not currently looking at,
+   which on a page whose job is "what is this champion" is the one thing it must
+   not do. */
 .sdp-right {
   flex: 1;
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 14px;
+  overflow: hidden;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  /* gap is the floor; whatever the block caps decline (4K only) spreads here */
-  justify-content: space-between;
-  gap: 16px;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
+  justify-content: flex-start;
+  gap: 12px;
 }
 /* While the picker holds the column it owns its own scrolling: the grid keeps
-   its header pinned and scrolls the cards under it, so the column outside must
-   not scroll as well — two scrollbars over one list is one too many. The
-   details layout's space-between and gap go with it; the grid is one child that
-   fills the column outright. */
+   its header pinned and scrolls the cards under it. The details layout's gap
+   goes with it — the grid is one child that fills the column outright. */
 .sdp-right--swap {
-  overflow: hidden;
-  justify-content: flex-start;
   gap: 0;
 }
-.sdp-right::-webkit-scrollbar {
-  width: 4px;
-}
-.sdp-right::-webkit-scrollbar-track {
-  background: #111;
-}
-.sdp-right::-webkit-scrollbar-thumb {
-  background: #5c3310;
-  border-radius: 2px;
-}
-
-/* ── the right column's three sections share whatever height is left over ──
- * At Full HD there is none — the column already overflows and scrolls, which is
- * why every block grows but NONE of them shrink (`flex: n 0 auto`). Shrinking
- * would trade the scrollbar for clipped cards; growing only ever engages on the
- * taller desktops, where the column would otherwise end above a black band.
+/* ── how the four blocks divide a column that cannot scroll ───────────────────
+ * Two kinds of block, and they get opposite flex contracts:
  *
- * The grow factors are NOT the blocks' own heights — they are how much each one
- * can DO with a taller box, which is a different question and was worth
- * measuring. A stat tile is an icon beside a number over two short lines: give
- * it height and the whole tile grows into a plate you can read across the room,
- * so stats take the lion's share. An ability card is a paragraph pinned to the
- * top of its box; every pixel past the last line of text is air, so it takes
- * little. Equipment is three buttons and leads the column as the one thing here
- * you can act on — it stays a compact action row rather than three tall wells.
+ *   VARIABLE (skins, perk path) — how much they have to show depends on the
+ *   champion: two skins or twelve, a quiet ladder or an open choice. They GROW
+ *   into spare height and SHRINK when there is none (`flex: n 1 …`), and their
+ *   body scrolls inside whatever share it ends up with.
  *
- * Each cap is roughly twice the block's Full HD height, which is what a 4K
- * column would be entitled to if the whole page scaled with the screen. Without
- * them a 4K column has spare height enough to blow one block up to nine hundred
- * pixels; with them the blocks stop and the last of the room becomes spacing
- * (space-between on the column), which on a 2160px screen reads as air rather
- * than as a gap. Nothing here engages at Full HD — the column overflows there,
- * so there is no free space to hand out. */
+ *   FIXED (stats, role abilities) — always exactly four tiles and two cards.
+ *   They grow but never shrink (`flex: n 0 auto`), so their content is never
+ *   clipped; where the column is short they get smaller through the height-class
+ *   media queries at the bottom of this file, not through flex.
+ *
+ * The grow factors say what a block can DO with more height, not how tall it is.
+ * A splash card and a stat plate both read better bigger, so those two take the
+ * lion's share on 2K and 4K; the perk rail is one line of beads and a paragraph,
+ * so past a point extra height is just air, and the caps stop it there.
+ *
+ * The floor is what makes the no-scroll promise hold: skins keep one full row,
+ * the path keeps its rail and one detail line, and those two floors plus the two
+ * fixed blocks fit the shortest supported column (Full HD, ~598px) with room to
+ * spare — measured, not estimated. */
 .sdp-block {
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
-/* The skin strip is the one block with a height of its own: its cards are a
-   fixed width at a fixed aspect, so there is nothing for spare room to grow
-   into. It neither grows nor shrinks and leaves the whole surplus to the blocks
-   below, which do have something to do with it. */
+/* First in line for spare height and first to give it back (shrink 6 against the
+   path's 1): the gallery is the block that can lose a row without losing an
+   answer, because what it loses is still one scroll away. */
 .sdp-block--skins {
-  flex: 0 0 auto;
+  flex: 4 6 auto;
+  min-height: 0;
 }
 .sdp-block--stats {
-  flex: 6 0 auto;
+  flex: 3 0 auto;
   max-height: 444px;
 }
-/* The ladder spreads its beads over whatever it is given, so height is never
-   wasted on it — but it is also the tallest block by content, so it takes a
-   middling factor rather than the biggest one. */
+/* A rail and one clamped paragraph — a known, small height, so it takes its
+   content and never gives it back. The skin grid is the one block that yields
+   when the column is short, because it is the one that can (it scrolls). */
 .sdp-block--perks {
-  flex: 3 0 auto;
+  flex: 2 0 auto;
+  min-height: 0;
+  max-height: 460px;
+}
+/* While a choice is open the block leads the column — the cards under the rail
+   are the one thing on this page that expires — and it is allowed to give way
+   again, since the choice can scroll inside it. */
+.sdp-block--choosing {
+  flex-grow: 5;
+  flex-shrink: 1;
   max-height: 620px;
 }
-/* The abilities pair is the block that gave the skin gallery its room. It used
-   to take a share of the column's growth AND cap at 420px; now it neither grows
-   nor stretches — two cards need the height of two cards. Everything it used to
-   claim goes to the blocks that can actually use it. */
+/* Two cards need the height of two cards — no more, and never less. */
 .sdp-block--abilities {
   flex: 0 0 auto;
 }
@@ -2515,14 +2597,35 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-skins {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(v-bind(skinThumbMinWidthPx), 1fr));
+  /* TWO WHOLE ROWS, whatever height the block ends up with. The percentage is
+     resolved against the grid's own (definite) height, so the rows divide the
+     share exactly — no dead band under the second row on one resolution and no
+     card sliced in half on the next. Rows past the second scroll inside the grid;
+     the column itself never does. */
+  grid-auto-rows: calc((100% - 10px) / 2);
   gap: 10px;
-  max-height: v-bind(skinGridMaxHeightPx);
+  /* asks for two comfortable rows, accepts down to two legible ones */
+  flex: 1 1 v-bind(skinGridBasisPx);
+  min-height: v-bind(skinGridMinPx);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
   align-content: start;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
+}
+/* While a choice is open the gallery steps back to a single row and hands the
+   height to the three cards — the choice expires, the skins do not. One row, not
+   two half ones: the row formula switches to 100% with it. */
+.sdp-right:has(.sdp-block--choosing) .sdp-skins {
+  grid-auto-rows: 100%;
+  flex-basis: v-bind(skinGridBasisChoosingPx);
+  min-height: v-bind(skinGridMinChoosingPx);
+}
+/* and the ability paragraphs give up their last line for the same few seconds —
+   the perk descriptions are what is being compared right now */
+.sdp-right:has(.sdp-block--choosing) .sdp-ability-card-desc {
+  -webkit-line-clamp: 1;
 }
 .sdp-skins::-webkit-scrollbar {
   width: 7px;
@@ -2537,9 +2640,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-skin {
   position: relative;
   width: 100%;
-  /* height, not aspect-ratio — see SKIN_THUMB_HEIGHT for why a ratio collapses
-     the grid rows here */
-  height: v-bind(skinThumbHeightPx);
+  /* fills its row — the row height is the grid's business (grid-auto-rows), not
+     the card's. An `aspect-ratio` here would be circular and collapse the row:
+     the row needs the card's height, the card's height would need its width, and
+     the width only exists once the row is laid out. */
+  height: 100%;
   overflow: hidden;
   cursor: pointer;
   padding: 0;
@@ -2708,47 +2813,89 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 
 /* ══ perk path ══════════════════════════════════════════════════════════════
-   One node per milestone the cap allows, strung on a single spine. A node is
-   taken (perk sigil, full colour), open (gold, carries the choice cards) or
-   locked (dim, counts down the levels). Reading top to bottom answers both
-   "what did I pick?" and "what is still ahead?" without a second view. */
-/* The beads spread over whatever height the path was given rather than bunching
-   at the top of it — the spine is drawn between the first and the last, so a
-   ladder that fills its box is exactly what the drawing wants. `gap` stays the
-   floor: where there is nothing spare, space-between reads as flex-start. */
-.sdp-path-track {
-  position: relative;
-  flex: 1 0 auto;
+   One bead per milestone the cap allows, on one rail, and the milestone in focus
+   spelled out underneath. A bead is taken (perk sigil in the perk's colour),
+   open (gold medal, the only thing on this page that expires) or locked (the
+   level number, dim).
+
+   It used to be a stack: five rows, each with its own icon well and two lines of
+   text. That cost ~220px of a column which has ~550px to hand out to four
+   blocks, and four of those rows only ever said "9 levels to go". Laid along a
+   rail the same five milestones cost ~70px, the state still reads at a glance,
+   and the height that frees up goes to the two blocks that have something to
+   show: the skin gallery and the stats. */
+.sdp-path {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 9px;
+  /* Only ever engages while a choice is open on a short desktop — the rail plus
+     one detail line always fits. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
-/* the spine — one line behind every bead, drawn from the first to the last */
-.sdp-path-track::before {
+.sdp-path::-webkit-scrollbar {
+  width: 6px;
+}
+.sdp-path::-webkit-scrollbar-track {
+  background: #111;
+}
+.sdp-path::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 3px;
+}
+/* the rail — beads spread evenly, one line drawn behind them */
+.sdp-path-rail {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+.sdp-path-rail::before {
   content: '';
   position: absolute;
-  left: 23px;
-  top: 12px;
-  bottom: 12px;
-  width: 2px;
+  left: 8%;
+  right: 8%;
+  top: 22px;
+  height: 2px;
   background: linear-gradient(
-    to bottom,
+    to right,
     color-mix(in srgb, var(--rc) 55%, transparent),
     rgba(200, 164, 90, 0.14)
   );
 }
-.sdp-node {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-.sdp-node-bead {
+.sdp-pnode {
   position: relative;
   z-index: 1;
-  width: 48px;
-  height: 48px;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  /* transform only — five of these sit over a board that keeps orbiting */
+  transition: transform 0.15s ease;
+}
+.sdp-pnode:hover {
+  transform: translateY(-2px);
+}
+.sdp-pnode:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.sdp-pnode-bead {
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -2757,154 +2904,188 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   background: #141410;
   border: 2px solid rgba(200, 164, 90, 0.18);
 }
-.sdp-node-icon {
+.sdp-pnode-icon {
   color: var(--pc, #c8a860);
 }
-.sdp-node-lv {
-  font-size: 17px;
+.sdp-pnode-lv {
+  font-size: 16px;
   line-height: 1;
   color: rgba(200, 164, 90, 0.45);
 }
-.sdp-node-body {
-  flex: 1;
-  min-width: 0;
-  padding-top: 3px;
+.sdp-pnode-cap {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(230, 220, 196, 0.35);
+  white-space: nowrap;
 }
-.sdp-node-name {
+/* taken — the bead carries the perk's own colour */
+.sdp-pnode--taken .sdp-pnode-bead {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--pc) 26%, #141410), #0d0b07);
+  border-color: color-mix(in srgb, var(--pc) 70%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--pc) 30%, transparent);
+}
+.sdp-pnode--taken .sdp-pnode-cap {
+  color: rgba(230, 220, 196, 0.5);
+}
+/* open — it expires, so it is the loudest thing in the block */
+.sdp-pnode--open .sdp-pnode-bead {
+  position: relative;
+  background: linear-gradient(160deg, #2a1c08, #0d0b07);
+  border-color: #e8c040;
+  box-shadow: 0 0 16px rgba(232, 192, 64, 0.4);
+}
+/* The waiting pulse rides a layer of its own and fades in and out. The glow
+   itself is rasterised ONCE and then only composited — animating the bead's own
+   box-shadow would re-raster the box on every frame, over a board that is
+   orbiting behind it. */
+.sdp-pnode--open .sdp-pnode-bead::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 6px;
+  box-shadow: 0 0 22px rgba(232, 192, 64, 0.6);
+  pointer-events: none;
+  animation: sdp-node-wait 2s ease-in-out infinite;
+}
+.sdp-pnode--open .sdp-pnode-icon {
+  color: #e8c040;
+}
+.sdp-pnode--open .sdp-pnode-cap {
+  color: #e8c040;
+}
+.sdp-pnode--locked {
+  opacity: 0.55;
+}
+/* the bead being read below — a ring, no glow, so it never competes with the
+   gold one */
+.sdp-pnode--focus .sdp-pnode-bead {
+  border-color: #c89040;
+}
+.sdp-pnode--focus .sdp-pnode-cap {
+  color: #e8dcc0;
+}
+@keyframes sdp-node-wait {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── the milestone in focus, in full ── */
+.sdp-pdetail {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(200, 164, 90, 0.12);
+  border-left: 3px solid var(--pc, rgba(200, 164, 90, 0.4));
+}
+.sdp-pdetail--open {
+  border-left-color: #e8c040;
+}
+.sdp-pdetail-name {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1.15;
   color: var(--pc, #c8a860);
 }
-.sdp-node-tag {
-  font-size: 10.5px;
+.sdp-pdetail-name--open {
+  color: #e8c040;
+}
+.sdp-pdetail-name--locked {
+  color: rgba(200, 164, 90, 0.62);
+}
+.sdp-pdetail-tag {
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(230, 220, 196, 0.4);
 }
-.sdp-node-desc {
-  margin-top: 4px;
+.sdp-pdetail-desc {
+  margin-top: 3px;
   font-size: 12.5px;
   font-weight: 500;
   color: #bcae8c;
-  line-height: 1.4;
+  line-height: 1.35;
+  /* two lines is every perk description in the game; the clamp is the guarantee
+     that a longer one can never push the block past its share */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
-
-/* taken — the bead carries the perk's own colour */
-.sdp-node--taken .sdp-node-bead {
-  background: linear-gradient(160deg, color-mix(in srgb, var(--pc) 26%, #141410), #0d0b07);
-  border-color: color-mix(in srgb, var(--pc) 70%, transparent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--pc) 30%, transparent);
-}
-
-/* open — the only thing on this page that expires, so it is the loudest */
-.sdp-node--open .sdp-node-bead {
-  background: linear-gradient(160deg, #2a1c08, #0d0b07);
-  border-color: #e8c040;
-  box-shadow: 0 0 16px rgba(232, 192, 64, 0.4);
-  animation: sdp-node-wait 2s ease-in-out infinite;
-}
-.sdp-node--open .sdp-node-icon {
-  color: #e8c040;
-}
-.sdp-node-name--open {
-  color: #e8c040;
-}
-@keyframes sdp-node-wait {
-  0%,
-  100% {
-    box-shadow: 0 0 12px rgba(232, 192, 64, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 22px rgba(232, 192, 64, 0.6);
-  }
-}
-
-/* Locked — present but quiet; it is a promise, not an action. Compact too: a
-   locked slot has nothing to read, and every row it saves is a row the taken
-   perks above it get to keep on screen. */
-.sdp-node--locked {
-  opacity: 0.62;
-  align-items: center;
-}
-.sdp-node--locked .sdp-node-bead {
-  width: 36px;
-  height: 36px;
-  margin-left: 6px;
-}
-.sdp-node--locked .sdp-node-body {
-  padding-top: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-}
-.sdp-node-name--locked {
-  font-size: 14.5px;
-  color: rgba(200, 164, 90, 0.6);
-}
-.sdp-node-desc--locked {
-  margin-top: 0;
-  font-size: 12px;
+.sdp-pdetail-desc--locked {
   color: rgba(230, 220, 196, 0.32);
-  white-space: nowrap;
-}
-.sdp-node--locked .sdp-node-lv {
-  font-size: 14px;
 }
 
-/* the choice itself — full-width cards inside the open node */
+/* The choice itself — three cards SIDE BY SIDE under the rail, always visible
+   while it is open, whichever bead is being read.
+   Side by side rather than stacked because it is a choice: three options in one
+   glance read as "pick one of these", a column of three reads as a list you work
+   through. It also costs a third of the height, which is what lets the whole
+   choice sit in the block without the column scrolling. */
 .sdp-choice {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  margin-top: 9px;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 .sdp-choice-card {
   display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 10px 11px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 8px 9px;
+  min-width: 0;
   text-align: left;
   cursor: pointer;
   border-radius: 4px;
   background: #141410;
   border: 1px solid rgba(200, 164, 90, 0.2);
-  border-left: 3px solid var(--pc);
-  transition:
-    transform 0.15s,
-    border-color 0.15s,
-    box-shadow 0.15s;
+  border-top: 3px solid var(--pc);
+  transition: transform 0.15s;
 }
 .sdp-choice-card:hover {
-  transform: translateX(3px);
-  border-color: var(--pc);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--pc) 38%, transparent);
+  transform: translateY(-3px);
+}
+.sdp-choice-card:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: 2px;
 }
 .sdp-choice-icon {
   flex-shrink: 0;
   color: var(--pc);
 }
 .sdp-choice-text {
-  flex: 1;
+  width: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 .sdp-choice-name {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.1;
   color: var(--pc);
 }
 .sdp-choice-desc {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: #dcc99a;
-  line-height: 1.35;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 /* ── advance block ── */
@@ -3071,7 +3252,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 13px;
+  padding: 9px 12px;
   border-radius: 4px;
   overflow: hidden;
   background: #1c1c18;
@@ -3206,12 +3387,19 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   margin-top: 2px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
+/* Clamped, because this block never shrinks: the longest ability text in the
+   game would otherwise decide how much height the two blocks above it get. The
+   full wording stays one hover away (title on the card). */
 .sdp-ability-card-desc {
   font-size: 12px;
   font-weight: 500;
   color: #dcc99a;
   line-height: 1.35;
   margin-top: 3px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 /* ── equipment ── */
@@ -3322,6 +3510,13 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 /* Full HD class viewports — the flattest desktops we target. The splash gives
    back height so the progression block and the pinned Level Up button below it
    never get squeezed out of the left column. */
+/* ══ height classes ═════════════════════════════════════════════════════════
+ * The right column cannot scroll, so on the flattest desktops the four blocks
+ * have to fit into ~598px (Full HD) or ~627px (WUXGA) instead of the ~767px a 2K
+ * screen gives them. That is a fifth of the height gone, and it comes out of
+ * type and padding here rather than out of a block: every block keeps every word
+ * it has at every resolution, it just sets it tighter where the column is short.
+ * Measured floors — nothing below is guesswork, see the audit in the commit. */
 @media (max-height: 1100px) {
   .sdp-splash {
     flex-basis: v-bind(splashHeightCompactPx);
@@ -3329,20 +3524,186 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   .sdp-name {
     font-size: 28px;
   }
-  .sdp-stat {
-    padding: 10px 12px;
-  }
-  .sdp-stat-value {
-    font-size: 24px;
-  }
   .sdp-equip {
     height: 92px;
+  }
+  /* the column itself */
+  .sdp-right {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .sdp-section-head {
+    margin-bottom: 6px;
+  }
+  .sdp-section-title {
+    font-size: 12.5px;
+  }
+  /* skins — still two whole rows and two columns, one step shorter */
+  .sdp-skins {
+    gap: 8px;
+    grid-auto-rows: calc((100% - 8px) / 2);
+    flex-basis: v-bind(skinGridBasisCompactPx);
+    min-height: v-bind(skinGridMinCompactPx);
+  }
+  .sdp-skin-name {
+    font-size: 12.5px;
+    left: 7px;
+    right: 7px;
+    bottom: 6px;
+  }
+  .sdp-skin-chip {
+    top: 5px;
+    right: 5px;
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+  /* stats — the number stays the loudest thing in the tile */
+  .sdp-stats {
+    gap: 7px;
+  }
+  .sdp-stat {
+    padding: 6px 9px;
+    gap: 8px;
+  }
+  .sdp-stat-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .sdp-stat-value {
+    font-size: 19px;
+  }
+  .sdp-stat-effect {
+    margin-top: 2px;
+    font-size: 11px;
+  }
+  .sdp-stat-sworn {
+    font-size: 10.5px;
+  }
+  /* perk rail */
+  .sdp-path {
+    gap: 7px;
+  }
+  .sdp-pnode-bead {
+    width: 38px;
+    height: 38px;
+  }
+  .sdp-path-rail::before {
+    top: 19px;
+  }
+  .sdp-pnode-cap {
+    font-size: 9px;
+  }
+  .sdp-pdetail {
+    padding: 6px 9px;
+  }
+  .sdp-pdetail-name {
+    font-size: 14.5px;
+  }
+  .sdp-pdetail-desc {
+    font-size: 11.5px;
+  }
+  .sdp-choice-card {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  .sdp-choice-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .sdp-choice-name {
+    font-size: 13px;
+  }
+  .sdp-choice-desc {
+    font-size: 10.5px;
+  }
+  /* role abilities — two lines instead of three, everything else unchanged */
+  .sdp-ability-cards {
+    gap: 7px;
+  }
+  .sdp-ability-card {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+  .sdp-ability-card-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .sdp-ability-card-tag {
+    font-size: 9px;
+  }
+  .sdp-ability-card-name {
+    font-size: 14px;
+    margin-top: 1px;
+  }
+  .sdp-ability-card-desc {
+    font-size: 10.5px;
+    line-height: 1.3;
+    margin-top: 2px;
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* 4K and taller — the column has ~1400px and the same four blocks. Left alone
+   they would sit in a sea of gap and read as a page designed for a smaller
+   screen; every step below spends that height on the content itself. */
+@media (min-height: 1601px) {
+  /* three rows, not two taller ones — a 208px-wide card at 250px tall is a
+     portrait crop of a landscape splash, and a third row shows three more skins
+     instead */
+  .sdp-skins {
+    gap: 12px;
+    grid-auto-rows: calc((100% - 24px) / 3);
+    flex-basis: v-bind(skinGridBasisLargePx);
+    min-height: v-bind(skinGridMinLargePx);
+  }
+  .sdp-skin-name {
+    font-size: 16px;
+  }
+  .sdp-skin-chip {
+    font-size: 11px;
+    padding: 4px 9px;
+  }
+  .sdp-section-title {
+    font-size: 15.5px;
+  }
+  .sdp-section-count {
+    font-size: 12.5px;
+  }
+  .sdp-stat-value {
+    font-size: 31px;
+  }
+  .sdp-stat-effect {
+    font-size: 14.5px;
+  }
+  .sdp-pnode-bead {
+    width: 54px;
+    height: 54px;
+  }
+  .sdp-path-rail::before {
+    top: 27px;
+  }
+  .sdp-pnode-cap {
+    font-size: 11.5px;
+  }
+  .sdp-pdetail-name {
+    font-size: 18px;
+  }
+  .sdp-pdetail-desc {
+    font-size: 14px;
+  }
+  .sdp-ability-card-name {
+    font-size: 19px;
+  }
+  /* the one place the third line fits without costing another block anything */
+  .sdp-ability-card-desc {
+    font-size: 13.5px;
+    -webkit-line-clamp: 3;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .sdp-splash-select-cta,
-  .sdp-node--open .sdp-node-bead {
+  .sdp-pnode--open .sdp-pnode-bead::after {
     animation: none;
     opacity: 1;
   }
