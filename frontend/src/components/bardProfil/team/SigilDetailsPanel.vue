@@ -872,7 +872,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         :title="rosterOpen ? 'Fold the roster away' : 'Unfold the roster'"
         @click="rosterOpen = !rosterOpen"
       >
-        <span class="sdp-fold-grain" aria-hidden="true" />
         <Icon icon="lucide:chevron-up" width="26" height="26" class="sdp-fold-chevron" />
       </button>
     </div>
@@ -1583,25 +1582,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   inset: 0 auto 0 0;
   width: 2px;
   background: #3e200a;
-}
-/* the notches that say "pull me" — hairlines above and below the chevron, the
-   grip's only ornament, and the reason it reads as a handle at a glance */
-.sdp-fold-grain {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 14px;
-  height: 62px;
-  transform: translate(-50%, -50%);
-  background:
-    repeating-linear-gradient(180deg, currentColor 0 1px, transparent 1px 5px) top center /
-      100% 17px no-repeat,
-    repeating-linear-gradient(180deg, currentColor 0 1px, transparent 1px 5px) bottom center /
-      100% 17px no-repeat;
-  opacity: 0.32;
-}
-.sdp-roster-shell--folded .sdp-fold-grain {
-  display: none;
 }
 /* one icon, turned over — no second name to keep in sync, and a transform is
    free where an icon swap would remount an SVG */
