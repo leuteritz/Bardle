@@ -194,13 +194,14 @@ export const TEAM_SIGIL_MAIN_PORTRAIT_WIDTH = 92
  */
 export const TEAM_SIGIL_ROSTER_RAIL_HEIGHT = 64
 /**
- * Seat-dot heights (px) on the folded rail — the SAME three-rank ladder the
- * cards carry, at rail scale, so the fold does not flatten the roster into six
- * equal squares. Sized off the captain: it must stay clear of the rail's own
- * height, the two below it step down from there.
+ * Seat-dot heights (px) on the folded rail. Size alone carries the three-rank
+ * ladder here — no ornament is laid over the portraits — so the steps are even
+ * and wide enough to read without comparison: 10px apart, half again from bench
+ * to captain. The captain is bounded by the rail's own height, the two below it
+ * step down from there.
  */
-export const TEAM_SIGIL_ROSTER_DOT_MAIN = 46
-export const TEAM_SIGIL_ROSTER_DOT_SWORN = 38
+export const TEAM_SIGIL_ROSTER_DOT_MAIN = 50
+export const TEAM_SIGIL_ROSTER_DOT_SWORN = 40
 export const TEAM_SIGIL_ROSTER_DOT_ALLY = 30
 /** The captain's dot runs landscape — this much wider than tall, so its art gets
  *  a crop instead of a face squeezed into a square. */
