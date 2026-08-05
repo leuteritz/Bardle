@@ -187,17 +187,18 @@ export const TEAM_SIGIL_MAIN_PORTRAIT_WIDTH = 92
 /**
  * The roster strip folds away — see .sdp-roster-shell in SigilDetailsPanel.
  * Folded it leaves this rail (px) behind rather than nothing: the page still
- * has to say WHOSE stats it is printing, and switching subject stays one click
- * on a seat dot instead of two on a drawer. Tall enough for a 26px dot plus its
- * ring, short enough that the fold is worth doing — a fold that buys 40px of
- * the ~180 the strip takes would be theatre.
+ * has to say WHICH SEAT it is printing, and switching subject stays one click
+ * on a seat dot instead of two on a drawer. Tall enough to carry the seat name
+ * at title size, short enough that the fold is worth doing — a fold that buys
+ * 40px of the ~180 the strip takes would be theatre.
  */
-export const TEAM_SIGIL_ROSTER_RAIL_HEIGHT = 42
+export const TEAM_SIGIL_ROSTER_RAIL_HEIGHT = 54
 /** Portrait size (px) of a seat dot on that rail — inside the -128 band. */
-export const TEAM_SIGIL_ROSTER_RAIL_DOT = 26
+export const TEAM_SIGIL_ROSTER_RAIL_DOT = 30
 /** Width (px) of the drawer grip down the strip's right edge — the fold toggle.
- *  The strip pads itself by this much so no card ever runs under the grip. */
-export const TEAM_SIGIL_ROSTER_GRIP_WIDTH = 24
+ *  The strip pads itself by this much so no card ever runs under the grip. Wide
+ *  enough to read as a control from across the panel rather than a seam. */
+export const TEAM_SIGIL_ROSTER_GRIP_WIDTH = 44
 /** Fold/unfold duration (ms). One-shot, so a height transition is affordable —
  *  the strip's own contents cross-fade on transform/opacity alongside it. */
 export const TEAM_SIGIL_ROSTER_FOLD_MS = 240
