@@ -1390,46 +1390,79 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               </button>
             </div>
 
-            <!-- the one milestone in focus, spelled out -->
+            <!-- ══ the one milestone in focus, spelled out ══════════════════
+                 This is the block's floor, and the floor is what takes whatever
+                 height the column has left over — see .sdp-pdetail. That is why
+                 it is a CARD and not the caption strip it used to be: a strip
+                 stretched to 120 spare pixels is 120 pixels of nothing, while a
+                 card with the milestone's own sigil beside its text simply gets
+                 more generous as the desktop gets taller. Nothing else on the
+                 page has to change for the column to end flush at the bottom on
+                 every resolution. ══ -->
             <div
               v-if="focusedPerkSlot"
               class="sdp-pdetail"
               :class="`sdp-pdetail--${focusedPerkSlot.state}`"
               :style="focusedPerkSlot.perk ? { '--pc': focusedPerkSlot.perk.color } : undefined"
             >
-              <template v-if="focusedPerkSlot.perk">
-                <div class="sdp-pdetail-name">
-                  {{ focusedPerkSlot.perk.name }}
-                  <span class="sdp-pdetail-tag">Lv {{ focusedPerkSlot.level }}</span>
-                </div>
-                <div class="sdp-pdetail-desc">{{ focusedPerkSlot.perk.desc }}</div>
-              </template>
+              <!-- the sigil repeats the bead's own state, at the size the card
+                   can afford: the perk's mark, the gold medal of a milestone
+                   waiting to be spent, or the level that unlocks it -->
+              <span class="sdp-pdetail-sigil">
+                <Icon
+                  v-if="focusedPerkSlot.perk"
+                  :icon="focusedPerkSlot.perk.icon"
+                  width="34"
+                  height="34"
+                  class="sdp-pdetail-sigil-icon"
+                />
+                <Icon
+                  v-else-if="focusedPerkSlot.state === 'open'"
+                  icon="game-icons:ribbon-medal"
+                  width="34"
+                  height="34"
+                  class="sdp-pdetail-sigil-icon"
+                />
+                <span v-else class="sdp-pdetail-sigil-lv">{{ focusedPerkSlot.level }}</span>
+              </span>
 
-              <!-- the open one needs no paragraph: the three cards right below
-                   ARE the explanation, and the height a second one would take is
-                   height they need -->
-              <template v-else-if="focusedPerkSlot.state === 'open'">
-                <div class="sdp-pdetail-name sdp-pdetail-name--open">
-                  Milestone reached
-                  <span class="sdp-pdetail-tag">Lv {{ focusedPerkSlot.level }}</span>
-                </div>
-              </template>
+              <div class="sdp-pdetail-body">
+                <template v-if="focusedPerkSlot.perk">
+                  <div class="sdp-pdetail-name">
+                    {{ focusedPerkSlot.perk.name }}
+                    <span class="sdp-pdetail-tag">Lv {{ focusedPerkSlot.level }}</span>
+                  </div>
+                  <div class="sdp-pdetail-desc">{{ focusedPerkSlot.perk.desc }}</div>
+                </template>
 
-              <template v-else>
-                <div class="sdp-pdetail-name sdp-pdetail-name--locked">
-                  Level {{ focusedPerkSlot.level }}
-                </div>
-                <div class="sdp-pdetail-desc sdp-pdetail-desc--locked">
-                  <template v-if="focusedPerkSlot.exhausted">No perk left in this pool</template>
-                  <template v-else-if="level >= focusedPerkSlot.level">Choice still open</template>
-                  <template v-else>
-                    {{ focusedPerkSlot.level - level }} level{{
-                      focusedPerkSlot.level - level === 1 ? '' : 's'
-                    }}
-                    to go
-                  </template>
-                </div>
-              </template>
+                <!-- the open one needs no paragraph: the three cards right below
+                     ARE the explanation, and the height a second one would take
+                     is height they need -->
+                <template v-else-if="focusedPerkSlot.state === 'open'">
+                  <div class="sdp-pdetail-name sdp-pdetail-name--open">
+                    Milestone reached
+                    <span class="sdp-pdetail-tag">Lv {{ focusedPerkSlot.level }}</span>
+                  </div>
+                  <div class="sdp-pdetail-desc">Pick one of the perks below.</div>
+                </template>
+
+                <template v-else>
+                  <div class="sdp-pdetail-name sdp-pdetail-name--locked">
+                    Level {{ focusedPerkSlot.level }}
+                    <span class="sdp-pdetail-tag">Milestone</span>
+                  </div>
+                  <div class="sdp-pdetail-desc sdp-pdetail-desc--locked">
+                    <template v-if="focusedPerkSlot.exhausted">No perk left in this pool</template>
+                    <template v-else-if="level >= focusedPerkSlot.level">Choice still open</template>
+                    <template v-else>
+                      {{ focusedPerkSlot.level - level }} level{{
+                        focusedPerkSlot.level - level === 1 ? '' : 's'
+                      }}
+                      to go
+                    </template>
+                  </div>
+                </template>
+              </div>
             </div>
 
             <!-- the choice, whichever bead is in focus: it expires, so it is
@@ -3100,24 +3133,70 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   }
 }
 
-/* ── the milestone in focus, in full ── */
+/* ── the milestone in focus, in full ─────────────────────────────────────────
+   The card that closes the column, and the one element on this side that GROWS:
+   `flex: 1` here is what makes the right column end flush at the bottom instead
+   of trailing off into 20px of nothing on Full HD and 120 on 4K. The three
+   blocks above it are sized by what they have to show; this one is sized by
+   what is left, which is why it had to stop being a caption strip — a strip
+   stretched to twice its height is padding, a card with a sigil in it is a
+   card. Its content stays vertically centred, so the extra height reads as air
+   around a focus, not as a gap under a line of text. */
 .sdp-pdetail {
-  flex: 0 0 auto;
-  padding: 8px 11px;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 10px 13px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(200, 164, 90, 0.12);
   border-left: 3px solid var(--pc, rgba(200, 164, 90, 0.4));
+  overflow: hidden;
 }
 .sdp-pdetail--open {
   border-left-color: #e8c040;
+}
+/* the milestone's own mark, at the size the card can afford */
+.sdp-pdetail-sigil {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: #141410;
+  border: 2px solid color-mix(in srgb, var(--pc, #c8a860) 40%, transparent);
+  color: var(--pc, #c8a860);
+}
+.sdp-pdetail--open .sdp-pdetail-sigil {
+  border-color: rgba(232, 192, 64, 0.6);
+  color: #e8c040;
+}
+.sdp-pdetail--locked .sdp-pdetail-sigil {
+  border-color: rgba(200, 164, 90, 0.18);
+}
+.sdp-pdetail-sigil-icon {
+  width: 34px;
+  height: 34px;
+}
+.sdp-pdetail-sigil-lv {
+  font-size: 21px;
+  line-height: 1;
+  color: rgba(200, 164, 90, 0.45);
+}
+.sdp-pdetail-body {
+  flex: 1;
+  min-width: 0;
 }
 .sdp-pdetail-name {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.15;
   color: var(--pc, #c8a860);
 }
@@ -3135,16 +3214,17 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   color: rgba(230, 220, 196, 0.4);
 }
 .sdp-pdetail-desc {
-  margin-top: 3px;
-  font-size: 12.5px;
+  margin-top: 4px;
+  font-size: 13px;
   font-weight: 500;
   color: #bcae8c;
-  line-height: 1.35;
-  /* two lines is every perk description in the game; the clamp is the guarantee
-     that a longer one can never push the block past its share */
+  line-height: 1.4;
+  /* three lines is every perk description in the game with room to spare; the
+     clamp is the guarantee that a longer one can never outgrow the card, which
+     now has a fixed share of the column rather than its own content's height */
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   overflow: hidden;
 }
 .sdp-pdetail-desc--locked {
@@ -3158,7 +3238,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    through. It also costs a third of the height, which is what lets the whole
    choice sit in the block without the column scrolling. */
 .sdp-choice {
-  flex: 0 0 auto;
+  /* While a choice is open the spare height is split with the focus card above,
+     two parts to one: the cards are what expires, so they lead — but handing
+     them ALL of it turned three cards into three tall empty plates on a 4K
+     column, which is the same wasted space in a different place. */
+  flex: 2 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
@@ -3167,6 +3252,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: center;
   gap: 5px;
   padding: 8px 9px;
   min-width: 0;
@@ -3659,14 +3745,30 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   .sdp-pnode-cap {
     font-size: 9px;
   }
+  /* the focus card is the block's floor here too — it just has less to fill,
+     so the sigil steps down a size and the paragraph back to two lines */
   .sdp-pdetail {
-    padding: 6px 9px;
+    gap: 10px;
+    padding: 8px 10px;
+  }
+  .sdp-pdetail-sigil {
+    width: 42px;
+    height: 42px;
+  }
+  .sdp-pdetail-sigil-icon {
+    width: 27px;
+    height: 27px;
+  }
+  .sdp-pdetail-sigil-lv {
+    font-size: 17px;
   }
   .sdp-pdetail-name {
-    font-size: 14.5px;
+    font-size: 15px;
   }
   .sdp-pdetail-desc {
-    font-size: 11.5px;
+    margin-top: 3px;
+    font-size: 12px;
+    -webkit-line-clamp: 2;
   }
   .sdp-choice-card {
     padding: 6px 8px;
@@ -3749,11 +3851,50 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   .sdp-pnode-cap {
     font-size: 11.5px;
   }
+  /* the focus card gets the lion's share of a 4K column — ~200px against ~65 on
+     Full HD — so everything in it steps up with the box it fills. Sized so the
+     card reads as a card at that height and not as a strip with air under it. */
+  .sdp-pdetail {
+    gap: 18px;
+    padding: 14px 18px;
+  }
+  .sdp-pdetail-sigil {
+    width: 76px;
+    height: 76px;
+  }
+  .sdp-pdetail-sigil-icon {
+    width: 50px;
+    height: 50px;
+  }
+  .sdp-pdetail-sigil-lv {
+    font-size: 30px;
+  }
   .sdp-pdetail-name {
-    font-size: 18px;
+    font-size: 21px;
+  }
+  .sdp-pdetail-tag {
+    font-size: 12px;
   }
   .sdp-pdetail-desc {
+    margin-top: 6px;
+    font-size: 15.5px;
+  }
+  /* the three choice cards get a tall row here — their type grows with it so a
+     card reads as a card rather than as a plate with a label on it */
+  .sdp-choice-card {
+    gap: 8px;
+    padding: 12px 14px;
+  }
+  .sdp-choice-icon {
+    width: 38px;
+    height: 38px;
+  }
+  .sdp-choice-name {
+    font-size: 18px;
+  }
+  .sdp-choice-desc {
     font-size: 14px;
+    -webkit-line-clamp: 4;
   }
   /* kit — the splash is half again as tall here, so sigil and figures grow with
      it rather than sitting under the name as two postage stamps. The plate does
