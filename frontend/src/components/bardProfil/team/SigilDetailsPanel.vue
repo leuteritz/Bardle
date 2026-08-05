@@ -78,7 +78,6 @@ import {
   CHAMPION_PERK_INTERVAL,
   CHAMPION_XP_BAR_HEIGHT,
   CHAMPION_REGALIA_SIZE_ALLY,
-  CHAMPION_REGALIA_SIZE_CHIP_MAIN,
   CHAMPION_REGALIA_SIZE_SPLASH,
   CHAMPION_REGALIA_SIZE_SPLASH_MIN,
   CHAMPION_REGALIA_SIZE_SPLASH_MAX,
@@ -634,14 +633,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           <span class="sdp-chip-role">Main</span>
           <span class="sdp-chip-name">{{ main ?? 'Empty' }}</span>
         </span>
-        <ChampionLevelBadge
-          v-if="main"
-          :level="levelOf(main)"
-          :color="roleDef.color"
-          :size="CHAMPION_REGALIA_SIZE_CHIP_MAIN"
-          :attention="needsAttentionOf(main)"
-          class="sdp-chip-badge"
-        />
+        <!-- No medallion on the captain. Its level is already the largest thing
+             on the page — the splash badge in the left column — and a second
+             seal on the card only crowded the art it sat on. The card's rank is
+             told by its frame now (see the corner-bracket block in the styles);
+             the small seats keep their medallion, which is the only place they
+             carry a level at all. -->
       </button>
 
       <div class="sdp-roster-right">
@@ -842,11 +839,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 decoding="async"
               />
               <span v-else class="sdp-rail-dot-plus" aria-hidden="true">＋</span>
-              <span
-                v-if="seat.name && needsAttentionOf(seat.name)"
-                class="sdp-rail-dot-ping"
-                aria-hidden="true"
-              />
+              <!-- No attention pip here. A gold dot is the one thing on this rail
+                   that is not in the role's colour, and at 30px it read as damage
+                   to the portrait rather than as a mark on it. The medallions in
+                   the unfolded strip and on the sigil board already carry it. -->
             </button>
           </template>
         </div>
@@ -1527,18 +1523,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   line-height: 1;
   color: color-mix(in srgb, var(--rc) 55%, #6b5c44);
 }
-/* banked XP or an unspent perk — the same ping the medallions carry, shrunk to
-   a corner pip because a dot has no room for a medallion */
-.sdp-rail-dot-ping {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #e8c040;
-  box-shadow: 0 0 0 1px #100e0a;
-}
 .sdp-rail-count {
   flex-shrink: 0;
   font-size: 11px;
@@ -1804,26 +1788,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 /* The two ends of the card, not the top of it: the seat tag heads the tile and
    the champion's name sits on its bottom edge, with the splash between them.
    That is what turns the leftover space into the subject of the card instead of
-   into a black corner under the text. The seal takes the opposite top corner
-   (see the badge rule above), so tag and seal share the top line and the name
-   below clears both. */
+   into a black corner under the text. Both hug the LEFT edge, which is what
+   leaves the whole right half of the card to the art — and to the frame. */
 .sdp-chip--main > .sdp-chip-text {
   justify-content: space-between;
   gap: 6px;
   padding: 10px 12px 10px 12px;
-}
-/* The captain's medallion leaves the flex row and pins to the card's upper right
-   corner. As a row item it charged the text column 38px of its 137, so the
-   champion's name ran into an ellipsis; out of the flow it costs the text
-   nothing. It shares the top of the card with the MAIN tag rather than colliding
-   with it: the tag is short and left-aligned, so the two sit on one line with a
-   wide gap between them, and the name below clears the medallion's lower edge. */
-.sdp-chip--main > .sdp-chip-badge {
-  position: absolute;
-  top: 9px;
-  right: 10px;
-  align-self: auto;
-  margin-right: 0;
 }
 /* the captain's tag is styled with the other two — see "seat tag" below */
 /* The champion is the headline of its own card, and the headline grew with the
@@ -1890,6 +1860,94 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   --chip-rim-a: 20%;
   --chip-lift: inset 0 2px 4px rgba(0, 0, 0, 0.55);
   background: #100e0a;
+}
+
+/* ── the portrait frame — one motif, three strengths ──────────────────────────
+ * Corner brackets, the mark a framed picture wears, laid ON the art itself. The
+ * card rims already tell the seat ladder, but they tell it at the card's outer
+ * edge, where the eye is not looking — it is looking at the champion. So the
+ * same ladder is repeated where the eye already is:
+ *
+ *   captain   four corners, 2px, plus a gold liner around the whole tile
+ *   sworn     two corners (the left pair), 2px, no liner
+ *   bench     one corner (top-left), 1px, no liner
+ *
+ * Count, weight and heat step down together — three signals saying one thing,
+ * which is what makes the rank land before any single one of them is read.
+ *
+ * It is ONE rule with four corners always declared; a tier switches a corner
+ * off by giving its length 0, so the three tiers are three variable blocks and
+ * can never drift into three different frames. Painted once, never animated,
+ * and `pointer-events: none` so it can lie over the whole card without ever
+ * eating a click meant for the seat underneath.
+ *
+ * Empty seats are excluded: an unfilled seat is dashed and quiet by design, and
+ * there is no art there for a frame to be around. */
+.sdp-chip {
+  --fr-g: linear-gradient(var(--fr-c), var(--fr-c));
+  --fr-c: color-mix(in srgb, var(--rc) var(--fr-a), transparent);
+}
+.sdp-chip--main:not(.sdp-chip--empty)::after,
+.sdp-chip--sworn:not(.sdp-chip--empty) .sdp-chip-portrait::after,
+.sdp-chip--ally:not(.sdp-chip--empty) .sdp-chip-portrait::after {
+  content: '';
+  position: absolute;
+  inset: var(--fr-inset);
+  pointer-events: none;
+  background:
+    var(--fr-g) left top / var(--fr-tl) var(--fr-w) no-repeat,
+    var(--fr-g) left top / var(--fr-w) var(--fr-tl) no-repeat,
+    var(--fr-g) right top / var(--fr-tr) var(--fr-w) no-repeat,
+    var(--fr-g) right top / var(--fr-w) var(--fr-tr) no-repeat,
+    var(--fr-g) left bottom / var(--fr-bl) var(--fr-w) no-repeat,
+    var(--fr-g) left bottom / var(--fr-w) var(--fr-bl) no-repeat,
+    var(--fr-g) right bottom / var(--fr-br) var(--fr-w) no-repeat,
+    var(--fr-g) right bottom / var(--fr-w) var(--fr-br) no-repeat;
+}
+/* captain — all four, and the gold liner that closes them into a frame */
+.sdp-chip--main {
+  --fr-inset: 5px;
+  --fr-w: 2px;
+  --fr-tl: 20px;
+  --fr-tr: 20px;
+  --fr-bl: 20px;
+  --fr-br: 20px;
+  --fr-a: 88%;
+}
+.sdp-chip--main:not(.sdp-chip--empty)::after {
+  box-shadow: inset 0 0 0 1px rgba(232, 192, 64, 0.22);
+}
+/* Sworn — the left pair, which is also the pair the diagonal cut leaves whole.
+   The COUNT is what descends here, not the weight: these portraits are a third
+   of the captain's tile, and a bracket thinned to match the tier would simply
+   have disappeared at Full HD. Two full-strength marks against four is a ladder
+   you can see; two faint ones against four is a ladder you have to look for. */
+.sdp-chip--sworn {
+  --fr-inset: 4px;
+  --fr-w: 2px;
+  --fr-tl: 16px;
+  --fr-tr: 0px;
+  --fr-bl: 16px;
+  --fr-br: 0px;
+  --fr-a: 85%;
+}
+/* bench — one mark, and the quietest, but still a mark you can find */
+.sdp-chip--ally {
+  --fr-inset: 3px;
+  --fr-w: 2px;
+  --fr-tl: 11px;
+  --fr-tr: 0px;
+  --fr-bl: 0px;
+  --fr-br: 0px;
+  --fr-a: 60%;
+}
+/* Selection and hover light the frame with the card rather than leaving it
+   behind. A colour swap and nothing else — custom properties do not tween, so
+   this lands instantly, which is what a repaint of a static ornament should do
+   anyway. */
+.sdp-chip--active,
+.sdp-chip:hover {
+  --fr-a: 100%;
 }
 .sdp-chip--sworn .sdp-chip-portrait {
   width: 64px;
