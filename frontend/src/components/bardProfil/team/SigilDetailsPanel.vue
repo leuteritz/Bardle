@@ -1419,31 +1419,20 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   transform: none;
   pointer-events: auto;
 }
-/* The seat, as the rail's title — and a second way back out of the fold. No
-   box around it: a chip would read as one more control on a rail that already
-   has seven, where a title reads as what the rail IS about. It borrows the
-   grammar the section heads use (✦ then the word), one size up, so the folded
-   rail announces itself in the page's own voice. */
+/* The seat, as the rail's title — and a second way back out of the fold. No box
+   around it and no mark in front of it: a chip would read as one more control
+   on a rail that already has seven, and an accent glyph would compete with the
+   ✦ that opens every section head in the columns below. The word alone, at
+   title size, is the whole left half. */
 .sdp-rail-subject {
   display: flex;
   align-items: center;
-  gap: 10px;
   min-width: 0;
   padding: 2px 4px;
   border: none;
   background: none;
   cursor: pointer;
   text-align: left;
-}
-.sdp-rail-accent {
-  flex-shrink: 0;
-  font-size: 15px;
-  line-height: 1;
-  color: var(--rc);
-  transition: transform 0.18s;
-}
-.sdp-rail-subject:hover .sdp-rail-accent {
-  transform: rotate(90deg);
 }
 .sdp-rail-seat {
   min-width: 0;
