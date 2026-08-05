@@ -93,7 +93,6 @@ import {
   CHAMPION_REGALIA_SIZE_SPLASH_MAX,
   CHAMPION_REGALIA_SPLASH_HEIGHT_RATIO,
   CHAMPION_REGALIA_SPLASH_INSET_RATIO,
-  CHAMPION_REGALIA_STACK_GAP_RATIO,
 } from '@/config/constants'
 import ChampionLevelBadge from './ChampionLevelBadge.vue'
 import ChampionSwapCompare from './swap/ChampionSwapCompare.vue'
@@ -174,6 +173,8 @@ watch(splashEl, (el) => {
 onBeforeUnmount(() => {
   splashObserver?.disconnect()
   splashObserver = null
+  splashBottomObserver?.disconnect()
+  splashBottomObserver = null
 })
 
 const splashBadgeSize = computed(() => {
@@ -195,14 +196,30 @@ const splashBadgeInsetPx = computed(
   () => `${Math.round(splashBadgeSize.value * CHAMPION_REGALIA_SPLASH_INSET_RATIO)}px`,
 )
 /**
- * …and the room the ability bands keep below it. Derived from the same diameter,
- * so a champion who levels into a crown pushes them down by exactly what the
- * crown added — see CHAMPION_REGALIA_STACK_GAP_RATIO for why it is the smaller
- * of the two ratios.
+ * Height of the name plate at the foot of the splash — measured, because it is
+ * the one part of the portrait whose height is not ours to choose: a champion
+ * with four traits wraps its chips onto a second line, and the two abilities
+ * under them make the plate taller again.
+ *
+ * Everything that centres itself on the ART rather than on the element reads
+ * this: the swap pill and the empty seat's call to action both centre in what
+ * is left ABOVE the plate. Centred on the splash itself they would sit on the
+ * abilities exactly for the champions whose plate is tallest.
  */
-const splashRailGapPx = computed(
-  () => `${Math.round(splashBadgeSize.value * CHAMPION_REGALIA_STACK_GAP_RATIO)}px`,
-)
+const splashBottomEl = ref<HTMLElement | null>(null)
+const splashBottomHeight = ref(0)
+let splashBottomObserver: ResizeObserver | null = null
+watch(splashBottomEl, (el) => {
+  splashBottomObserver?.disconnect()
+  splashBottomObserver = null
+  if (!el || typeof ResizeObserver === 'undefined') return
+  splashBottomObserver = new ResizeObserver((entries) => {
+    const h = entries[0]?.contentRect.height
+    if (h) splashBottomHeight.value = h
+  })
+  splashBottomObserver.observe(el)
+})
+const splashBottomHeightPx = computed(() => `${Math.round(splashBottomHeight.value)}px`)
 const skinThumbMinWidthPx = `${SKIN_THUMB_MIN_WIDTH}px`
 const skinGridBasisPx = `${SKIN_GRID_BASIS}px`
 const skinGridMinPx = `${SKIN_GRID_MIN}px`
@@ -984,60 +1001,24 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             </div>
           </div>
 
-          <!-- ══ the corner rail: level medallion, then the seat's kit ═══════
-               One column, and that is the whole trick. The medallion grows with
-               the champion — every fifth level adds a regalia layer, and at the
-               cap it is a crowned plate half again the size it starts at — so
-               anything at a TYPED distance below it is either overlapped by the
-               crown or floating in air. Stacked in a flex column it cannot be:
-               the medallion keeps the top corner at whatever size it is that
-               level, and the abilities sit under whatever it currently takes.
-               The gap is the same number that keeps the regalia off the clip
-               edge (see .sdp-splash-rail), so it grows with it too.
-
-               The abilities themselves used to be two paragraph cards at the
-               foot of the right column — the one place on this page where a
-               sentence had to be read to learn a number. Each is a number and
-               the noun it counts now: left cell the effect, right cell always
-               the cooldown, so the second column reads as time down the rail.
-               The wording is one hover away (title). ══ -->
-          <div class="sdp-splash-rail">
-            <div v-if="champion" class="sdp-splash-badge">
-              <ChampionLevelBadge
-                :level="level"
-                :color="roleDef.color"
-                :size="splashBadgeSize"
-                :attention="needsAttentionOf(champion)"
-              />
-            </div>
-
-            <div class="sdp-kit" @click.stop>
-              <div
-                v-for="ab in kitAbilities"
-                :key="ab.name"
-                class="sdp-kit-tile"
-                :style="{ '--kc': ab.color }"
-                :title="`${ab.scope} — ${ab.name}: ${ab.desc}`"
-              >
-                <div class="sdp-kit-head">
-                  <Icon :icon="ab.icon" width="17" height="17" class="sdp-kit-icon" />
-                  <span class="sdp-kit-name">{{ ab.name }}</span>
-                </div>
-                <div class="sdp-kit-metrics">
-                  <span v-for="m in ab.metrics" :key="m.label" class="sdp-kit-metric">
-                    <span class="sdp-kit-value">{{ m.value }}</span>
-                    <span class="sdp-kit-label">{{ m.label }}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
+          <!-- Level medallion, alone in the top-left corner. It carries the
+               level number, the rank colour and the regalia stage, which is
+               everything the "Level x / y RANK" line used to say beside it. -->
+          <div v-if="champion" class="sdp-splash-badge">
+            <ChampionLevelBadge
+              :level="level"
+              :color="roleDef.color"
+              :size="splashBadgeSize"
+              :attention="needsAttentionOf(champion)"
+            />
           </div>
 
-          <!-- hero footer — who this is, then what they are, then how far along:
-               name, the tier/origin/trait chips, and the XP bar as the card's
-               base. The chips used to float in the top corner on their own; down
-               here they read as a subtitle to the name they describe. -->
-          <div class="sdp-splash-bottom">
+          <!-- hero footer — who this is, then what they are, then what the seat
+               brings, then how far along: name, the tier/origin/trait chips, the
+               two role abilities, and the XP bar as the card's base. The chips
+               used to float in the top corner on their own; down here they read
+               as a subtitle to the name they describe. -->
+          <div ref="splashBottomEl" class="sdp-splash-bottom">
             <!-- Just the name. Everything about skins — picking one and seeing
                  which one is worn — lives in the gallery at the top of the right
                  column, where the lit card is the answer. -->
@@ -1076,6 +1057,42 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 <Icon :icon="trait.icon" width="15" height="15" class="sdp-hero-chip-icon" />
                 {{ trait.name }}
               </span>
+            </div>
+
+            <!-- ══ the seat's kit — two abilities, side by side under the name
+                 they belong to. They used to be two paragraph cards at the foot
+                 of the right column, which is the one place on this page where
+                 a sentence had to be read to learn a number.
+
+                 Each is a number and the noun it counts now: the left pair is
+                 the effect, the right pair is always the cooldown, so both
+                 entries scan in the same order. The wording is one hover away
+                 (title) — prose belongs in a tooltip on a page whose job is
+                 comparison.
+
+                 They sit BELOW the chips rather than between them and the name:
+                 name and chips are one thing (who this is, what they are), and
+                 the kit is the other (what the seat does), which is also why it
+                 stays put when the roster switches champion. ══ -->
+            <div class="sdp-kit" @click.stop>
+              <div
+                v-for="ab in kitAbilities"
+                :key="ab.name"
+                class="sdp-kit-tile"
+                :style="{ '--kc': ab.color }"
+                :title="`${ab.scope} — ${ab.name}: ${ab.desc}`"
+              >
+                <div class="sdp-kit-head">
+                  <Icon :icon="ab.icon" width="16" height="16" class="sdp-kit-icon" />
+                  <span class="sdp-kit-name">{{ ab.name }}</span>
+                </div>
+                <div class="sdp-kit-metrics">
+                  <span v-for="m in ab.metrics" :key="m.label" class="sdp-kit-metric">
+                    <span class="sdp-kit-value">{{ m.value }}</span>
+                    <span class="sdp-kit-label">{{ m.label }}</span>
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div v-if="champion" class="sdp-xp">
@@ -2414,11 +2431,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    the thing worth making bigger, not the gap above the Level Up button. */
 .sdp-splash {
   position: relative;
-  /* Width of the kit rail, declared HERE rather than on the rail itself: the
-     swap pill has to stay out of the rail's column at every splash height, and
-     it can only do that if it can read the number. One value, two users, and
-     the height classes below move both by changing this line. */
-  --kit-w: 150px;
   /* Grow factor 4 against the perk path's 1: on a tall desktop four fifths of
      the spare height go to the portrait, which is the part of this column that
      is actually worth more pixels, and the path still stops the column ending
@@ -2449,20 +2461,16 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   transform: scale(1.04);
   filter: brightness(0.75);
 }
-/* Centred in the art it belongs to, not in the element: the pill sits in the
-   lane RIGHT of the corner rail (left/right both set, width fit-content, auto
-   margins do the centring). Centring on the splash itself would put its left
-   edge under the rail on a short portrait, where the rail reaches furthest
-   down — and a rail sized in px against a pill centred in % overlaps at SOME
-   height, whatever the two numbers are. This way it cannot. */
+/* Centred in the ART, not in the element: half of what is left above the name
+   plate, whose height is measured (splashBottomHeight). Centred on the splash
+   itself the pill would land on the plate — and it would land there hardest for
+   the champions whose plate is tallest, four traits and two ability rows, which
+   is exactly when there is most to cover. */
 .sdp-splash-swap-hint {
   position: absolute;
-  left: calc(var(--kit-w) + 22px);
-  right: 12px;
-  width: fit-content;
-  margin-inline: auto;
-  top: 50%;
-  transform: translateY(-50%) translateY(4px);
+  left: 50%;
+  top: calc((100% - v-bind(splashBottomHeightPx)) / 2);
+  transform: translate(-50%, -50%) translateY(4px);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2485,7 +2493,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-splash:hover .sdp-splash-swap-hint,
 .sdp-splash:focus-visible .sdp-splash-swap-hint {
   opacity: 1;
-  transform: translateY(-50%) translateY(0);
+  transform: translate(-50%, -50%) translateY(0);
 }
 .sdp-splash-fade {
   position: absolute;
@@ -2498,11 +2506,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   );
 }
 /* An empty seat still has a kit — the abilities belong to the seat, not to
-   whoever sits in it — so the "Select Champion" call sits in the same lane the
-   swap pill uses, right of the rail, instead of centring under it. */
+   whoever sits in it — so the "Select Champion" call centres above the plate
+   the same way the swap pill does, instead of centring on top of it. */
 .sdp-splash-empty {
   position: absolute;
-  inset: 0 12px 0 calc(var(--kit-w) + 22px);
+  inset: 0 12px v-bind(splashBottomHeightPx) 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2587,49 +2595,33 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    The inset is derived from the badge's own diameter rather than typed as a
    corner margin: the regalia grows ornaments with level, and the splash clips.
    See CHAMPION_REGALIA_SPLASH_INSET_RATIO for the measured overhangs. */
-/* The rail is what is absolutely placed now; the medallion just sits at the top
-   of it, and the abilities take whatever is left under it. Both distances are
-   shares of the badge's own diameter, so levelling into a crown moves the bands
-   down by exactly what the crown added — the corner needs no second rule and no
-   media query to stay right. The two ratios differ on purpose: the corner inset
-   clears the clip edge, the stack gap clears the opaque regalia. See
-   CHAMPION_REGALIA_SPLASH_INSET_RATIO and CHAMPION_REGALIA_STACK_GAP_RATIO. */
-.sdp-splash-rail {
+.sdp-splash-badge {
   position: absolute;
   top: v-bind(splashBadgeInsetPx);
   left: v-bind(splashBadgeInsetPx);
   z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: v-bind(splashRailGapPx);
-}
-.sdp-splash-badge {
   pointer-events: none;
 }
 
-/* ══ kit — the seat's two abilities, under the medallion ════════════════════
- * Every entry says the same three things in the same three places: which
- * ability, what it does, how often. The doing and the how-often are numbers in
- * two cells — the right one is ALWAYS the cooldown, so the second column reads
- * as time down the whole rail and a player comparing two roles compares two
- * numbers, not two paragraphs.
+/* ══ kit — the seat's two abilities, under the name ═════════════════════════
+ * Side by side, and each says the same three things in the same three places:
+ * which ability, what it does, how often. Effect left, cooldown right, in both
+ * entries — two entries read in one sweep because the reading order is the
+ * same, and a player comparing two roles compares numbers, not paragraphs.
  *
  * It is written ON the art, so it is not built as two cards: no frame, no drop
- * shadow, no closed rectangle. Each entry is a band that fades out to the right
- * — dark where the type sits, gone by the time it reaches the champion — and
- * the only hard edge on it is the 2px rule at its left, which is also the one
- * thing carrying the scope. That rule lines up with the medallion's left edge,
- * so the corner reads as one column rather than as a badge plus a widget.
+ * shadow, no icon well. A thin scrim carries the type over whatever the splash
+ * is doing underneath, and the only hard edge is the 2px rule at the left of
+ * each entry — which is also the one thing carrying the scope, the role's own
+ * accent for the universe and gold for the pit. That is why neither entry needs
+ * a scope caption.
  *
- * Colour carries the scope the way it does everywhere else on this page: the
- * role's own accent for what happens in the universe, gold for what happens in
- * the pit. That is why neither entry needs a scope caption. */
+ * Its width is the name plate's, so the pair lines up with the name above and
+ * the XP bar below; the two halves are even, because the entries are peers. */
 .sdp-kit {
-  width: var(--kit-w);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
 }
 /* While the rail is being read, the swap pill stands down: the pointer is on a
    number, not on the portrait, and the page should not answer that with an
@@ -2639,15 +2631,13 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   opacity: 0;
 }
 .sdp-kit-tile {
-  padding: 4px 10px 5px 8px;
+  min-width: 0;
+  padding: 5px 8px 6px 9px;
+  border-radius: 3px;
   border-left: 2px solid var(--kc);
-  /* the band: opaque under the numbers, nothing at all by the far edge */
-  background: linear-gradient(
-    90deg,
-    rgba(8, 6, 3, 0.76) 0%,
-    rgba(8, 6, 3, 0.55) 55%,
-    rgba(8, 6, 3, 0) 100%
-  );
+  /* a scrim, not a card: enough to carry small type over a bright splash,
+     little enough that the art still reads through it */
+  background: rgba(6, 4, 2, 0.54);
   cursor: default;
 }
 .sdp-kit-head {
@@ -2667,47 +2657,45 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--kc);
-  opacity: 0.88;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
-/* Content-sized columns with a real gap between them, not two halves of the
-   width: the labels are nowrap, so an even split lets the longest pair ("Per
-   Stack" beside "Cooldown") run out of its half and butt up against its
-   neighbour with no space at all. Sized to their content they cannot. */
+/* One line, both pairs: the entry is wide now, so the number and the noun it
+   counts sit beside each other the way they would be spoken, and the whole kit
+   costs the name plate two lines instead of four.
+
+   Content-sized columns with a real gap, never two halves — the labels are
+   nowrap, and an even split lets the longest pair ("Per Stack" beside
+   "Cooldown") run out of its half and butt against its neighbour. */
 .sdp-kit-metrics {
   display: grid;
   grid-template-columns: auto auto;
   justify-content: start;
   column-gap: 12px;
-  margin-top: 2px;
-  padding-left: 22px;
+  margin-top: 3px;
+  padding-left: 21px;
 }
-/* Left-aligned under the name, not centred in a cell: with no frame around them
-   an axis is what holds the entry together, and centring inside an invisible
-   box only makes the numbers wander. */
 .sdp-kit-metric {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: baseline;
+  gap: 4px;
   min-width: 0;
 }
 .sdp-kit-value {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
   color: #f4e6bc;
   white-space: nowrap;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
 }
 .sdp-kit-label {
-  margin-top: 3px;
   font-size: 8.5px;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(200, 164, 90, 0.55);
+  color: rgba(200, 164, 90, 0.58);
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
@@ -3700,16 +3688,13 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   .sdp-choice-desc {
     font-size: 10.5px;
   }
-  /* kit — one step narrower and tighter, so the corner column still ends well
-     above the name plate on the shortest splash this class produces */
-  .sdp-splash {
-    --kit-w: 138px;
-  }
+  /* kit — one step tighter, because every pixel the name plate takes here comes
+     off the portrait above it */
   .sdp-kit {
-    gap: 3px;
+    gap: 6px;
   }
   .sdp-kit-tile {
-    padding: 3px 9px 4px 7px;
+    padding: 4px 7px 5px 8px;
   }
   .sdp-kit-icon {
     width: 15px;
@@ -3720,14 +3705,13 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   }
   .sdp-kit-metrics {
     column-gap: 10px;
-    margin-top: 1px;
+    margin-top: 2px;
     padding-left: 20px;
   }
   .sdp-kit-value {
     font-size: 14px;
   }
   .sdp-kit-label {
-    margin-top: 1px;
     font-size: 8px;
   }
 }
@@ -3781,33 +3765,29 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     font-size: 14px;
   }
   /* kit — the splash is half again as tall here, so the numbers grow with it
-     rather than sitting under the medallion as two postage stamps */
-  .sdp-splash {
-    --kit-w: 178px;
-  }
+     rather than sitting under the name as two postage stamps */
   .sdp-kit {
-    gap: 8px;
+    gap: 10px;
   }
   .sdp-kit-tile {
-    padding: 7px 13px 8px 10px;
+    padding: 7px 11px 8px 12px;
   }
   .sdp-kit-icon {
     width: 21px;
     height: 21px;
   }
   .sdp-kit-name {
-    font-size: 12px;
+    font-size: 12.5px;
   }
   .sdp-kit-metrics {
-    column-gap: 15px;
+    column-gap: 18px;
     margin-top: 5px;
     padding-left: 26px;
   }
   .sdp-kit-value {
-    font-size: 20px;
+    font-size: 19px;
   }
   .sdp-kit-label {
-    margin-top: 4px;
     font-size: 10.5px;
   }
 }
