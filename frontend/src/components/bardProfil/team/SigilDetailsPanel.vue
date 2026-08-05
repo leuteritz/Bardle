@@ -1497,15 +1497,33 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 </template>
 
 <style scoped>
+/* The rail's own surface — the same one the shop opens onto, and for the same
+   two reasons.
+ *
+ * COLOUR: the flat deep base (--rpg-bg-deep), not a gradient. Every other
+ * destination in this tab is that colour, because the shop's frame paints it
+ * (.rpg-frame); a gradient here made the role page read as a different kind of
+ * surface than the shop opening in the same slot.
+ *
+ * LAYER: `position: relative` + z-index, which is the part that actually
+ * mattered. The tab's starfield (.cosmic-stage-bg) is absolutely positioned at
+ * z-index 0, so it paints in the positioned step — ABOVE a static panel, no
+ * matter how opaque that panel's background is. The shop never showed the stars
+ * because its .rpg-frame is positioned and therefore paints in the same step,
+ * later in DOM order. This page was static, so the starfield lay over the whole
+ * page: stars in the skin gallery, stars across the perk path. Positioning it
+ * puts the surface back on top. */
 .sdp-panel {
   /* fixed-px content designed for 1920×1080 — zoom down on smaller desktops */
   zoom: var(--team-ui-scale, 1);
+  position: relative;
+  z-index: 1;
   width: v-bind(panelWidthPx);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: linear-gradient(180deg, #1a1008, #0d0905);
+  background: var(--rpg-bg-deep, #111008);
   border-left: 2px solid #5c3310;
 }
 
