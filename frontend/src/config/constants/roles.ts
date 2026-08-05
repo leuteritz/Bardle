@@ -22,6 +22,14 @@ export const SUPPORT_PLANET_HEAL_INTERVAL_MS = 2000 // interval between two Plan
 export const SUPPORT_MAX_HEAL_TARGETS = 1 // max. planets healed simultaneously per heal tick
 export const ROLE_TOP_SHIELD_REBUILD_MS = 5000 // seconds to rebuild shield after absorbing a shot
 export const ROLE_MID_CURSE_INTERVAL_MS = 15000 // curse: 15s cooldown between casts
+/**
+ * Wie viele verschiedene Flüche der Midlaner werfen kann. Die Flüche selbst
+ * stehen als CURSE_DEFS im roleBehaviorStore (sie tragen Verhaltensdaten, kein
+ * reines Zahlenwerk) — eine Konstante darf aus config/ nicht in einen Store
+ * greifen, deshalb steht die Anzahl hier. Sie ist die Kardinalität von
+ * MidCurseType in `types/combat.ts`: wächst der Typ, wächst diese Zahl mit.
+ */
+export const ROLE_MID_CURSE_TYPE_COUNT = 5
 export const ROLE_MID_CURSE_DURATION_MS = 10000 // curse lasts 10s
 export const ROLE_MID_CURSE_RANGE = 1500 // px screen-space range from midlaner to boss planet
 export const ROLE_MID_CURSE_CAST_MS = 600 // cast flash animation duration

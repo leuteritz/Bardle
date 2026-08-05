@@ -20,11 +20,12 @@ const sharedRosterOpen = ref(true)
  *   roster strip   a large captain card for the main plus the bench beside it —
  *                  a click switches which champion the page describes
  *   left column    the subject's portrait, XP, ascension and the Level Up button
- *   right column   stats, perks, role abilities and the role's equipment
+ *   right column   the skins, the stats and the perks that shaped them
  *
  * Subject vs role: the roster switches which CHAMPION the left column and the
- * stats/perks describe, while role abilities and equipment belong to the SLOT
- * and never change with it. Two scopes, so both are labelled.
+ * stats/perks describe, while the two role abilities (.sdp-kit, on the
+ * portrait) and the equipment belong to the SLOT and never change with it. Two
+ * scopes, so both are labelled.
  *
  * Swapping happens HERE too, not in a modal over the page: clicking the
  * portrait turns both columns into the picker — the compare column on the left,
@@ -622,6 +623,16 @@ function pickPerk(perkId: string) {
 // ── Role scope: abilities + equipment belong to the slot, not the champion ───
 const orbitAbility = computed(() => ORBIT_ROLE_ABILITIES[roleDef.value.key])
 const objectiveAbility = computed(() => OBJECTIVE_ROLE_ABILITIES[roleDef.value.key])
+/**
+ * The two abilities as the portrait shows them — see .sdp-kit. Both are read the
+ * same way, so both carry the same four fields; only the scope differs, and it
+ * is the tile's colour: the role's own for the orbit, gold for the pit, exactly
+ * the two accents this page uses everywhere else.
+ */
+const kitAbilities = computed(() => [
+  { scope: 'Universe', color: roleDef.value.color, ...orbitAbility.value },
+  { scope: 'Objective · Baron & Drake', color: '#e8c040', ...objectiveAbility.value },
+])
 const equipment = computed(() => itemStore.slotEquipment[props.roleIndex])
 
 const CAT_LABELS: Record<ItemCategory, string> = {
@@ -974,6 +985,42 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               :size="splashBadgeSize"
               :attention="needsAttentionOf(champion)"
             />
+          </div>
+
+          <!-- ══ kit rail — what the SEAT brings, on the portrait of whoever
+               holds it. It used to be two paragraph cards at the foot of the
+               right column, which is the one place on this page where a
+               sentence had to be read to learn a number.
+
+               Now each ability is a number and the noun it counts: the left
+               cell is the effect, the right one is always the cooldown, so the
+               second column reads as time down the whole rail. The wording is
+               one hover away (title), which is where prose belongs on a page
+               whose job is comparison.
+
+               It sits opposite the level medallion and stops well above the
+               name plate, so nothing on the splash overlaps — and it steps
+               aside while the portrait is hovered, because that hover means
+               "swap", not "read". ══ -->
+          <div class="sdp-kit" @click.stop>
+            <div
+              v-for="ab in kitAbilities"
+              :key="ab.name"
+              class="sdp-kit-tile"
+              :style="{ '--kc': ab.color }"
+              :title="`${ab.scope} — ${ab.name}: ${ab.desc}`"
+            >
+              <div class="sdp-kit-head">
+                <Icon :icon="ab.icon" width="20" height="20" class="sdp-kit-icon" />
+                <span class="sdp-kit-name">{{ ab.name }}</span>
+              </div>
+              <div class="sdp-kit-metrics">
+                <span v-for="m in ab.metrics" :key="m.label" class="sdp-kit-metric">
+                  <span class="sdp-kit-value">{{ m.value }}</span>
+                  <span class="sdp-kit-label">{{ m.label }}</span>
+                </span>
+              </div>
+            </div>
           </div>
 
           <!-- hero footer — who this is, then what they are, then how far along:
@@ -1382,48 +1429,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           </div>
         </div>
 
-        <!-- role abilities — belong to the slot, not to the champion in it -->
-        <div class="sdp-block sdp-block--abilities">
-          <div class="sdp-section-head">
-            <span class="sdp-section-accent">✦</span>
-            <span class="sdp-section-title">Role Abilities</span>
-            <div class="sdp-section-rule" />
-            <span class="sdp-section-count">{{ roleDef.label }}</span>
-          </div>
-          <div class="sdp-ability-cards">
-            <div class="sdp-ability-card" :title="orbitAbility.desc">
-              <div class="sdp-ability-card-icon">
-                <Icon
-                  :icon="orbitAbility.icon"
-                  width="28"
-                  height="28"
-                  :style="{ color: roleDef.color }"
-                />
-              </div>
-              <div class="sdp-ability-card-text">
-                <div class="sdp-ability-card-tag">Universe</div>
-                <div class="sdp-ability-card-name" :style="{ color: roleDef.color }">
-                  {{ orbitAbility.name }}
-                </div>
-                <div class="sdp-ability-card-desc">{{ orbitAbility.desc }}</div>
-              </div>
-            </div>
-            <div class="sdp-ability-card sdp-ability-card--gold" :title="objectiveAbility.desc">
-              <div class="sdp-ability-card-icon">
-                <Icon :icon="objectiveAbility.icon" width="28" height="28" style="color: #e8c040" />
-              </div>
-              <div class="sdp-ability-card-text">
-                <div class="sdp-ability-card-tag sdp-ability-card-tag--gold">
-                  Objective · Baron &amp; Drake
-                </div>
-                <div class="sdp-ability-card-name" style="color: #e8c040">
-                  {{ objectiveAbility.name }}
-                </div>
-                <div class="sdp-ability-card-desc">{{ objectiveAbility.desc }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- Role abilities used to close this column. They are on the portrait
+             now (.sdp-kit) — the seat's kit belongs with the seat's face, and
+             the height it leaves behind goes to the skins and the stats. -->
         </template>
       </div>
     </div>
@@ -2292,12 +2300,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   min-height: 0;
   border-right: 2px solid #5c3310;
 }
-/* The column does NOT scroll. Its four blocks divide the height it has and each
+/* The column does NOT scroll. Its three blocks divide the height it has and each
    one fits itself into its share — that is the whole contract of this side of
    the page, and every rule below exists to keep it: the two blocks with a
    variable amount to show (the skin gallery, the perk choice) scroll INSIDE
-   their share, the two with a fixed amount (stats, role abilities) shrink their
-   type and padding by height class instead.
+   their share, the one with a fixed amount (stats) shrinks its type and padding
+   by height class instead.
    A scrollbar here would hide the block a player is not currently looking at,
    which on a page whose job is "what is this champion" is the one thing it must
    not do. */
@@ -2318,7 +2326,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-right--swap {
   gap: 0;
 }
-/* ── how the four blocks divide a column that cannot scroll ───────────────────
+/* ── how the three blocks divide a column that cannot scroll ──────────────────
  * Two kinds of block, and they get opposite flex contracts:
  *
  *   VARIABLE (skins, perk path) — how much they have to show depends on the
@@ -2326,10 +2334,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
  *   into spare height and SHRINK when there is none (`flex: n 1 …`), and their
  *   body scrolls inside whatever share it ends up with.
  *
- *   FIXED (stats, role abilities) — always exactly four tiles and two cards.
- *   They grow but never shrink (`flex: n 0 auto`), so their content is never
- *   clipped; where the column is short they get smaller through the height-class
- *   media queries at the bottom of this file, not through flex.
+ *   FIXED (stats) — always exactly four tiles. It grows but never shrinks
+ *   (`flex: n 0 auto`), so its content is never clipped; where the column is
+ *   short it gets smaller through the height-class media queries at the bottom
+ *   of this file, not through flex.
  *
  * The grow factors say what a block can DO with more height, not how tall it is.
  * A splash card and a stat plate both read better bigger, so those two take the
@@ -2337,9 +2345,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
  * so past a point extra height is just air, and the caps stop it there.
  *
  * The floor is what makes the no-scroll promise hold: skins keep one full row,
- * the path keeps its rail and one detail line, and those two floors plus the two
- * fixed blocks fit the shortest supported column (Full HD, ~598px) with room to
- * spare — measured, not estimated. */
+ * the path keeps its rail and one detail line, and those two floors plus the
+ * stat plate fit the shortest supported column (Full HD, ~598px) with room to
+ * spare — measured, not estimated. Since the two ability cards left this column
+ * for the portrait (.sdp-kit), that room is ~150px larger still. */
 .sdp-block {
   display: flex;
   flex-direction: column;
@@ -2372,10 +2381,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   flex-shrink: 1;
   max-height: 620px;
 }
-/* Two cards need the height of two cards — no more, and never less. */
-.sdp-block--abilities {
-  flex: 0 0 auto;
-}
 /* Equipment lives in the LEFT column now (see .sdp-gear) — it keeps the same
    grow-never-shrink contract there, and the cap is what stops three buttons
    from becoming three tall wells on a 4K screen. */
@@ -2385,14 +2390,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 /* the section body takes the block's growth; the head above it stays put */
 .sdp-block > .sdp-stats,
-.sdp-block > .sdp-ability-cards,
 .sdp-block > .sdp-equips {
   flex: 1 0 auto;
   min-height: 0;
 }
-/* grid rows and flex tiles then stretch into it rather than sitting on top */
-.sdp-block > .sdp-stats,
-.sdp-block > .sdp-ability-cards {
+/* grid rows then stretch into it rather than sitting on top */
+.sdp-block > .sdp-stats {
   align-content: stretch;
 }
 
@@ -2401,6 +2404,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    the thing worth making bigger, not the gap above the Level Up button. */
 .sdp-splash {
   position: relative;
+  /* Width of the kit rail, declared HERE rather than on the rail itself: the
+     swap pill has to stay out of the rail's column at every splash height, and
+     it can only do that if it can read the number. One value, two users, and
+     the height classes below move both by changing this line. */
+  --kit-w: 150px;
   /* Grow factor 4 against the perk path's 1: on a tall desktop four fifths of
      the spare height go to the portrait, which is the part of this column that
      is actually worth more pixels, and the path still stops the column ending
@@ -2431,11 +2439,20 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   transform: scale(1.04);
   filter: brightness(0.75);
 }
+/* Centred in the art it belongs to, not in the element: the pill sits in the
+   lane LEFT of the kit rail (left/right both set, width fit-content, auto
+   margins do the centring). Centring on the splash itself would put its right
+   edge under the rail on a short portrait, where the rail reaches furthest
+   down — and a rail sized in px against a pill centred in % overlaps at SOME
+   height, whatever the two numbers are. This way it cannot. */
 .sdp-splash-swap-hint {
   position: absolute;
-  left: 50%;
+  left: 12px;
+  right: calc(var(--kit-w) + 22px);
+  width: fit-content;
+  margin-inline: auto;
   top: 50%;
-  transform: translate(-50%, -50%) translateY(4px);
+  transform: translateY(-50%) translateY(4px);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2458,7 +2475,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-splash:hover .sdp-splash-swap-hint,
 .sdp-splash:focus-visible .sdp-splash-swap-hint {
   opacity: 1;
-  transform: translate(-50%, -50%) translateY(0);
+  transform: translateY(-50%) translateY(0);
 }
 .sdp-splash-fade {
   position: absolute;
@@ -2470,9 +2487,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     rgba(13, 9, 5, 0.99) 100%
   );
 }
+/* An empty seat still has a kit — the abilities belong to the seat, not to
+   whoever sits in it — so the "Select Champion" call sits in the same lane the
+   swap pill uses, left of the rail, instead of centring under it. */
 .sdp-splash-empty {
   position: absolute;
-  inset: 0;
+  inset: 0 calc(var(--kit-w) + 22px) 0 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2564,6 +2584,98 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   z-index: 3;
   pointer-events: none;
 }
+
+/* ══ kit rail — the seat's two abilities, on the portrait ═══════════════════
+ * Two tiles, and every tile says the same three things in the same three
+ * places: which ability, what it does, how often. The doing and the how-often
+ * are numbers in two cells — the right cell is ALWAYS the cooldown, so the
+ * whole rail has one column of time down its right edge and a player comparing
+ * two roles compares two numbers, not two paragraphs.
+ *
+ * Where it sits is the whole reason it works: it takes the corner opposite the
+ * level medallion, keeps to the column the swap pill is kept out of (--kit-w),
+ * and stops far above the name plate. The champion keeps the two thirds of the
+ * frame that carry the face — measured on all five roles at Full HD and 2K.
+ *
+ * Colour carries the scope, the way it does everywhere else on this page: the
+ * role's own accent for what happens in the universe, gold for what happens in
+ * the pit. That is why neither tile needs a scope caption. */
+.sdp-kit {
+  position: absolute;
+  top: v-bind(splashBadgeInsetPx);
+  right: v-bind(splashBadgeInsetPx);
+  z-index: 3;
+  width: var(--kit-w);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* While the rail is being read, the swap pill stands down: the pointer is on a
+   number, not on the portrait, and the page should not answer that with an
+   offer to replace the champion. Same specificity as the rule that raises the
+   pill, so this one wins by coming later. */
+.sdp-splash:has(.sdp-kit:hover) .sdp-splash-swap-hint {
+  opacity: 0;
+}
+.sdp-kit-tile {
+  padding: 8px 9px 9px;
+  border-radius: 4px;
+  background: rgba(10, 7, 4, 0.86);
+  border: 1px solid #3e200a;
+  border-left: 3px solid var(--kc);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  cursor: default;
+}
+.sdp-kit-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.sdp-kit-icon {
+  flex-shrink: 0;
+  color: var(--kc);
+}
+.sdp-kit-name {
+  min-width: 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--kc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sdp-kit-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 6px;
+}
+.sdp-kit-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+/* one hairline between the two cells — the tile needs no other rule */
+.sdp-kit-metric + .sdp-kit-metric {
+  border-left: 1px solid rgba(200, 164, 90, 0.16);
+}
+.sdp-kit-value {
+  font-size: 19px;
+  line-height: 1;
+  color: #f4e6bc;
+  white-space: nowrap;
+}
+.sdp-kit-label {
+  margin-top: 4px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(200, 164, 90, 0.62);
+  white-space: nowrap;
+}
 .sdp-name-row {
   display: flex;
   align-items: flex-end;
@@ -2621,11 +2733,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   grid-auto-rows: 100%;
   flex-basis: v-bind(skinGridBasisChoosingPx);
   min-height: v-bind(skinGridMinChoosingPx);
-}
-/* and the ability paragraphs give up their last line for the same few seconds —
-   the perk descriptions are what is being compared right now */
-.sdp-right:has(.sdp-block--choosing) .sdp-ability-card-desc {
-  -webkit-line-clamp: 1;
 }
 .sdp-skins::-webkit-scrollbar {
   width: 7px;
@@ -3341,74 +3448,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   color: rgba(232, 192, 64, 0.75);
 }
 
-/* ── role abilities ── */
-.sdp-ability-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 9px;
-}
-/* Tightened along with the block above: less padding, a smaller icon well and a
-   closer line height. The two cards keep every word they had — only the air
-   around them went to the skin gallery. */
-.sdp-ability-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 9px 10px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(200, 164, 90, 0.12);
-  border-left: 3px solid var(--rc);
-}
-.sdp-ability-card--gold {
-  border-left-color: #c89040;
-}
-.sdp-ability-card-icon {
-  width: 38px;
-  height: 38px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  background: #141410;
-  border: 1px solid rgba(220, 180, 90, 0.3);
-}
-.sdp-ability-card-text {
-  flex: 1;
-  min-width: 0;
-}
-.sdp-ability-card-tag {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(200, 164, 90, 0.6);
-}
-.sdp-ability-card-tag--gold {
-  color: rgba(232, 192, 64, 0.75);
-}
-.sdp-ability-card-name {
-  font-size: 17px;
-  line-height: 1.15;
-  margin-top: 2px;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
-}
-/* Clamped, because this block never shrinks: the longest ability text in the
-   game would otherwise decide how much height the two blocks above it get. The
-   full wording stays one hover away (title on the card). */
-.sdp-ability-card-desc {
-  font-size: 12px;
-  font-weight: 500;
-  color: #dcc99a;
-  line-height: 1.35;
-  margin-top: 3px;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
 /* ── equipment ── */
 .sdp-equips {
   display: flex;
@@ -3626,30 +3665,33 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   .sdp-choice-desc {
     font-size: 10.5px;
   }
-  /* role abilities — two lines instead of three, everything else unchanged */
-  .sdp-ability-cards {
-    gap: 7px;
+  /* kit rail — one step narrower and tighter, so it still ends well above the
+     name plate on the shortest splash this class produces */
+  .sdp-splash {
+    --kit-w: 136px;
   }
-  .sdp-ability-card {
-    padding: 6px 8px;
-    gap: 8px;
+  .sdp-kit {
+    gap: 6px;
   }
-  .sdp-ability-card-icon {
-    width: 28px;
-    height: 28px;
+  .sdp-kit-tile {
+    padding: 6px 8px 7px;
   }
-  .sdp-ability-card-tag {
+  .sdp-kit-icon {
+    width: 18px;
+    height: 18px;
+  }
+  .sdp-kit-name {
+    font-size: 10px;
+  }
+  .sdp-kit-metrics {
+    margin-top: 4px;
+  }
+  .sdp-kit-value {
+    font-size: 17px;
+  }
+  .sdp-kit-label {
+    margin-top: 3px;
     font-size: 9px;
-  }
-  .sdp-ability-card-name {
-    font-size: 14px;
-    margin-top: 1px;
-  }
-  .sdp-ability-card-desc {
-    font-size: 10.5px;
-    line-height: 1.3;
-    margin-top: 2px;
-    -webkit-line-clamp: 2;
   }
 }
 
@@ -3701,13 +3743,29 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   .sdp-pdetail-desc {
     font-size: 14px;
   }
-  .sdp-ability-card-name {
-    font-size: 19px;
+  /* kit rail — the splash is half again as tall here, so the numbers grow with
+     it rather than sitting in a corner as two postage stamps */
+  .sdp-splash {
+    --kit-w: 176px;
   }
-  /* the one place the third line fits without costing another block anything */
-  .sdp-ability-card-desc {
-    font-size: 13.5px;
-    -webkit-line-clamp: 3;
+  .sdp-kit {
+    gap: 10px;
+  }
+  .sdp-kit-tile {
+    padding: 10px 11px 11px;
+  }
+  .sdp-kit-icon {
+    width: 24px;
+    height: 24px;
+  }
+  .sdp-kit-name {
+    font-size: 13px;
+  }
+  .sdp-kit-value {
+    font-size: 23px;
+  }
+  .sdp-kit-label {
+    font-size: 11px;
   }
 }
 

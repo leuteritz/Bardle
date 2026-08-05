@@ -3,6 +3,8 @@
 // denen beides stattfindet. Alle Zeiten in Spielsekunden — 60 davon vergehen je
 // Sekunde Echtzeit.
 
+import type { RoleAbilityMetric } from '@/types'
+
 export const BLUE_NEXUS = { x: 12, y: 88 }
 export const RED_NEXUS = { x: 88, y: 12 }
 export const BLUE_FOUNTAIN = { x: 8, y: 92 }
@@ -150,32 +152,58 @@ export const OBJECTIVE_SUPPORT_MEND_HEAL = 24
 export const OBJECTIVE_JUNGLE_BUFF_MULT = 1.4
 /** Top "Challenge": taunted enemies pour their FULL objective DPS onto the top laner */
 export const OBJECTIVE_TOP_TAUNT_TARGETS = 2
-/** Role ability metadata for the objective fight panels (colors come from ROLE_BY_KEY) */
+/**
+ * Role ability metadata for the objective fight panels (colors come from
+ * ROLE_BY_KEY).
+ *
+ * `metrics` trägt dieselbe Kurzform wie ORBIT_ROLE_ABILITIES: [Wirkung, Takt],
+ * beide aus den Konstanten darüber abgeleitet.
+ */
 export const OBJECTIVE_ROLE_ABILITIES = {
   top: {
     name: 'Challenge',
     icon: 'game-icons:enrage',
     desc: 'Roars a challenge — two enemies turn their full damage on the Top laner instead of the objective, buying the team free swings.',
+    metrics: [
+      { value: `${OBJECTIVE_TOP_TAUNT_TARGETS}`, label: 'Taunted' },
+      { value: `${OBJECTIVE_ABILITY_CD_S.top}s`, label: 'Cooldown' },
+    ] satisfies RoleAbilityMetric[],
   },
   jungle: {
     name: 'Wild Rally',
     icon: 'game-icons:uprising',
     desc: 'Rallies a random standing ally, sharpening their strikes by 40% for a short window.',
+    metrics: [
+      { value: `+${Math.round((OBJECTIVE_JUNGLE_BUFF_MULT - 1) * 100)}%`, label: 'Damage' },
+      { value: `${OBJECTIVE_ABILITY_CD_S.jungle}s`, label: 'Cooldown' },
+    ] satisfies RoleAbilityMetric[],
   },
   mid: {
     name: 'Hex Curse',
     icon: 'game-icons:cursed-star',
     desc: 'Stacks a permanent curse on the objective — each stack burns it for 6 damage per second for the rest of the fight, as long as the Mid stands.',
+    metrics: [
+      { value: `${OBJECTIVE_MID_CURSE_DPS}/s`, label: 'Per Stack' },
+      { value: `${OBJECTIVE_ABILITY_CD_S.mid}s`, label: 'Cooldown' },
+    ] satisfies RoleAbilityMetric[],
   },
   adc: {
     name: 'Focus Fire',
     icon: 'game-icons:dead-eye',
     desc: 'Every shot can crit for double damage — while Focus Fire burns, every shot does.',
+    metrics: [
+      { value: `×${OBJECTIVE_ADC_CRIT_MULT}`, label: 'Crit' },
+      { value: `${OBJECTIVE_ABILITY_CD_S.adc}s`, label: 'Cooldown' },
+    ] satisfies RoleAbilityMetric[],
   },
   support: {
     name: 'Mend',
     icon: 'game-icons:healing',
     desc: 'A burst of light that instantly mends the most wounded ally still standing.',
+    metrics: [
+      { value: `${OBJECTIVE_SUPPORT_MEND_HEAL} HP`, label: 'Heal' },
+      { value: `${OBJECTIVE_ABILITY_CD_S.support}s`, label: 'Cooldown' },
+    ] satisfies RoleAbilityMetric[],
   },
 } as const
 

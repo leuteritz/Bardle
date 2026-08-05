@@ -2,38 +2,74 @@
 // Sterne, ihr Verhalten hinter der Sonne, die Cooldown-Ringe und die Drifter,
 // die durch das Bild fliegen.
 
-import type { ChampionRole } from '@/types'
+import type { ChampionRole, RoleAbilityMetric } from '@/types'
 import { SUN_RADIUS } from '@/config/constants/sun'
+import {
+  ROLE_TOP_SHIELD_REBUILD_MS,
+  ROLE_MID_CURSE_INTERVAL_MS,
+  ROLE_MID_CURSE_TYPE_COUNT,
+  ROLE_ADC_BURST_DAMAGE,
+  ROLE_ADC_BURST_INTERVAL_MS,
+  SUPPORT_PLANET_HEAL_AMOUNT,
+  SUPPORT_PLANET_HEAL_INTERVAL_MS,
+} from '@/config/constants/roles'
+import { JUNGLE_BUFF_DEFS, JUNGLE_BUFF_COOLDOWN_MS } from '@/config/constants/planets'
 
 export const STAR_FIGHT_TIMER_WARNING_S = 20 // star-fight timer turns amber below this
 export const STAR_FIGHT_TIMER_CRITICAL_S = 10 // star-fight timer turns red + pulses below this
 
-/** Role ability metadata for the orbit/universe combat (roleBehaviorStore) */
+/**
+ * Role ability metadata for the orbit/universe combat (roleBehaviorStore).
+ *
+ * `metrics` is the form the details page shows: [Wirkung, Takt] — siehe
+ * RoleAbilityMetric. Die Zahlen stammen aus denselben Konstanten, die das
+ * Verhalten steuern, damit eine Balance-Änderung die Anzeige mitnimmt.
+ */
 export const ORBIT_ROLE_ABILITIES = {
   top: {
     name: 'Aegis Wall',
     icon: 'game-icons:bordered-shield',
     desc: 'Raises a shield that swallows the next enemy shot — reforged every 5 seconds.',
+    metrics: [
+      { value: '1', label: 'Shot' },
+      { value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s`, label: 'Rebuild' },
+    ] satisfies RoleAbilityMetric[],
   },
   jungle: {
     name: 'Wild Blessing',
     icon: 'game-icons:vine-whip',
     desc: 'Patrols the orbit and blesses nearby planets with potent jungle buffs.',
+    metrics: [
+      { value: `${Object.keys(JUNGLE_BUFF_DEFS).length}`, label: 'Buffs' },
+      { value: `${JUNGLE_BUFF_COOLDOWN_MS / 1000}s`, label: 'Cooldown' },
+    ] satisfies RoleAbilityMetric[],
   },
   mid: {
     name: 'Chaos Curse',
     icon: 'game-icons:spell-book',
     desc: 'Every 15 seconds hurls a random curse at the boss — rot, weakness or instant doom.',
+    metrics: [
+      { value: `${ROLE_MID_CURSE_TYPE_COUNT}`, label: 'Curses' },
+      { value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s`, label: 'Cooldown' },
+    ] satisfies RoleAbilityMetric[],
   },
   adc: {
     name: 'Piercing Volley',
     icon: 'game-icons:striking-arrows',
     desc: 'Looses a focused volley every 5 seconds, striking the boss for heavy bonus damage.',
+    metrics: [
+      { value: `${ROLE_ADC_BURST_DAMAGE}`, label: 'Damage' },
+      { value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s`, label: 'Cooldown' },
+    ] satisfies RoleAbilityMetric[],
   },
   support: {
     name: 'Guardian Light',
     icon: 'game-icons:glowing-hands',
     desc: 'Mends wounded planets nearby — and the Bard himself when all is calm.',
+    metrics: [
+      { value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP`, label: 'Mend' },
+      { value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s`, label: 'Cooldown' },
+    ] satisfies RoleAbilityMetric[],
   },
 } as const
 
