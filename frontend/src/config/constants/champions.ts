@@ -474,6 +474,22 @@ export const CHAMPION_REGALIA_SIZE_SPLASH = 60
  * longer read as sitting in the corner.
  */
 export const CHAMPION_REGALIA_SPLASH_INSET_RATIO = 0.44
+/**
+ * Clearance BELOW that medallion, as a share of its diameter — what the corner
+ * column on the splash puts between the badge and the first ability band
+ * (.sdp-splash-rail).
+ *
+ * Smaller than the inset above, and for a reason: the inset has to clear the
+ * orbit spark (0.41), because a hard clip would cut it in half and leave a
+ * sawn-off ornament at the frame edge. Below the badge there is no clip — a
+ * spark passing over a semi-transparent band is a spark on a portrait, not a
+ * defect. What must not be crowded are the two OPAQUE layers, plate (0.29 of
+ * the diameter) and crown (0.28), so the gap covers those and stops there.
+ *
+ * Being a ratio is the whole point: the medallion grows with the champion, and
+ * the abilities under it have to move down by exactly as much as it grew.
+ */
+export const CHAMPION_REGALIA_STACK_GAP_RATIO = 0.3
 /** Rotation periods (ms) of the animated regalia layers. */
 export const CHAMPION_REGALIA_SHEEN_MS = 7000
 export const CHAMPION_REGALIA_ORBIT_MS = 4200
