@@ -4,7 +4,7 @@
 // Quelle der Bahnwinkel; der Tab liest sie nur und übersetzt sie in den
 // Fortschritt der Keyframe-Animation. Selbst weiterdrehen dürfte er nicht —
 // beide Loops zusammen würden den Orbit doppelt so schnell laufen lassen.
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import { usePlanetShopStore, isPlanetDown } from '@/stores/world/planetShopStore'
 import type { PlanetSlot } from '@/stores/world/planetShopStore'
@@ -25,10 +25,15 @@ function orbitDelayFor(progress: number): string {
  * @param selectedSlotId  Aktuell im Tab gewählter Slot.
  * @param getOrbitEl      Liefert das Orbit-Wrapper-Element der Bühne (kann null sein,
  *                        solange die Bühne nicht gerendert ist).
+ * @param isActive        Ist der Planeten-Tab gerade zu sehen? Der Tab bleibt nach
+ *                        dem ersten Öffnen gemountet (siehe BardProfileMenu) — ohne
+ *                        dieses Signal liefe die Schleife für immer weiter und
+ *                        schriebe 60-mal pro Sekunde an ein unsichtbares Element.
  */
 export function usePlanetTabOrbit(
   selectedSlotId: Ref<string | null>,
   getOrbitEl: () => HTMLElement | null,
+  isActive: Ref<boolean>,
 ) {
   const store = usePlanetShopStore()
 
@@ -55,7 +60,8 @@ export function usePlanetTabOrbit(
     const idx = slotId ? slots.findIndex((s) => s.id === slotId) : -1
     if (idx < 0) return 0
     const { ratio, tiltRad } = orbitTierForSlotIndex(idx)
-    const angle = planetOrbitPhases.get(slots[idx].id)?.angle ?? initialOrbitAngle(idx, slots.length)
+    const angle =
+      planetOrbitPhases.get(slots[idx].id)?.angle ?? initialOrbitAngle(idx, slots.length)
     return orbitEclipsePhase(angle, slots[idx].direction, ratio, tiltRad)
   }
 
@@ -106,12 +112,26 @@ export function usePlanetTabOrbit(
     frame = requestAnimationFrame(tick)
   }
 
-  onMounted(() => {
+  function startLoop() {
+    if (frame) return
     frame = requestAnimationFrame(tick)
-  })
-  onUnmounted(() => {
+  }
+
+  function stopLoop() {
+    if (!frame) return
     cancelAnimationFrame(frame)
+    frame = 0
+  }
+
+  watch(isActive, (active) => {
+    if (active) startLoop()
+    else stopLoop()
   })
+
+  onMounted(() => {
+    if (isActive.value) startLoop()
+  })
+  onUnmounted(stopLoop)
 
   return { orbitBehind, eclipsedSlotIds, isSlotEclipsed, orbitPhaseStyle }
 }

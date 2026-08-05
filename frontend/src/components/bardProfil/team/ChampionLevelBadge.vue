@@ -8,8 +8,9 @@
  * Everything is drawn in the champion's single identity colour — rank is told
  * through metal, geometry, brightness and motion, never through a second hue.
  *
- * Cost: only transform-animated layers, and the ornaments are dropped on small
- * badges, so a full board (5 nodes + 15 satellites) stays cheap to composite.
+ * Cost: only transform-animated layers, and every ornament is dropped below
+ * CHAMPION_REGALIA_ORNAMENT_MIN_SIZE — a full board wears 25 satellite badges,
+ * so what a 21px medallion carries is paid for twenty-five times over.
  */
 import { computed } from 'vue'
 import { regaliaStageFor, regaliaStageIndexFor } from '@/config/champions/championLevels'
@@ -44,7 +45,23 @@ const isApex = computed(() => stageIndex.value === CHAMPION_REGALIA_STAGES.lengt
 /** Ornaments need room — on a 21px satellite they would only add noise. */
 const ornate = computed(() => props.size >= CHAMPION_REGALIA_ORNAMENT_MIN_SIZE)
 
-const showSheen = computed(() => stage.value.sheen)
+/**
+ * Unterhalb der Schwelle bleiben Scheibe und Zahl — sonst nichts.
+ *
+ * Facettenplatte, Glanz und Corona hingen früher allein an der Stufe und
+ * standen damit auch auf einem 21px-Satelliten, wo eine `clip-path`-Facette
+ * keine zwei Pixel breit ist und der wandernde Glanz als Flimmern ankommt.
+ * Sichtbar war davon nichts, bezahlt wurde es voll: die Bench trägt 25 solcher
+ * Medaillen, jede mit eigenem Rasterziel und eigener Dauer-Animation.
+ *
+ * Gemessen beim Öffnen des Team-Tabs über eine Rollenkarte im Command Panel
+ * (voller Kader, Median über 9 Läufe): verlorene Frame-Zeit 104 ms mit diesen
+ * Ebenen, 65 ms ohne — bei gleichem Bild. Damit fällt auch der letzte Frame
+ * über 50 ms weg.
+ */
+const showSheen = computed(() => ornate.value && stage.value.sheen)
+const showPlate = computed(() => ornate.value && stage.value.facets > 0)
+const showCorona = computed(() => ornate.value && isApex.value)
 const showDualSheen = computed(() => ornate.value && stage.value.sheenDual)
 const showOrbit = computed(() => ornate.value && stage.value.orbit)
 const showRays = computed(() => ornate.value && stage.value.rays)
@@ -92,8 +109,8 @@ const vars = computed(() => {
     :aria-label="label"
   >
     <span v-if="showRays" class="rg-rays" aria-hidden="true" />
-    <span v-if="isApex" class="rg-corona" aria-hidden="true" />
-    <span v-if="stage.facets > 0" class="rg-plate" aria-hidden="true" />
+    <span v-if="showCorona" class="rg-corona" aria-hidden="true" />
+    <span v-if="showPlate" class="rg-plate" aria-hidden="true" />
     <span class="rg-disc" aria-hidden="true" />
     <span v-if="showSheen" class="rg-sheen" aria-hidden="true" />
     <span v-if="showDualSheen" class="rg-sheen rg-sheen--rev" aria-hidden="true" />

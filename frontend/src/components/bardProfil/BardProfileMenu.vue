@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, computed, ref, onUnmounted } from 'vue'
+import { watch, computed, ref, reactive, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/core/uiStore'
@@ -61,21 +61,43 @@ const menuItems: {
   { id: 'admin', label: 'Admin', icon: 'lucide:settings-2', src: '' },
 ]
 
-/* Tree-Tab lazy mounten und danach behalten (v-show): der Vue-Flow-Remount
-   (26 Nodes + fitView) bei jedem Tab-Wechsel verursachte spürbare FPS-Drops. */
-const treeTabMounted = ref(false)
+/**
+ * Was einmal stand, bleibt stehen — Modalrahmen wie Tab-Inhalte.
+ *
+ * Vorher hing der ganze Rahmen an einem `v-if`: jedes Öffnen baute ihn samt
+ * gewähltem Tab neu auf, jedes Schließen riss ihn ab. Gemessen mit vollem Team
+ * (verlorene Frame-Zeit je 800ms-Fenster, Median aus 10 Durchläufen, Grundlast
+ * 98 ms): Team-Tab öffnen 294 ms, schließen 253 ms — nicht EIN langer Frame,
+ * sondern über zehn schlechte hintereinander. Genau das liest sich als Freeze.
+ *
+ * Der Tree-Tab hatte dieses Muster als Einzelfall schon (Vue-Flow-Remount); es
+ * gilt für jeden Tab, nur dass die anderen ihre Kosten in DOM-Masse statt in
+ * einer Bibliothek tragen — der Team-Tab allein bringt 1438 Knoten, 363
+ * SVG-Elemente und 106 laufende Animationen mit.
+ *
+ * Preis dafür: der Inhalt lebt weiter, während niemand hinsieht. Zwei Regeln
+ * halten das im Zaum, beide in den Tabs selbst:
+ *   • laufende Arbeit (rAF-Schleifen, Intervalle, Fenster-Listener) hängt an
+ *     der SICHTBARKEIT des Tabs, nicht mehr an seiner Lebensdauer
+ *   • Zustand wird beim VERLASSEN zurückgesetzt, nicht beim Betreten — sonst
+ *     käme der Reset einer Öffnungs-Anfrage (`requestOpenRolesTab`) im selben
+ *     Flush in die Quere und löschte die Rolle, die gerade geöffnet werden soll
+ */
+const modalMounted = ref(false)
+const mountedTabs = reactive(new Set<BardTabId>())
 
 watch(
   () => uiStore.bardActiveTab,
   (val) => {
-    if (val === 'tree') treeTabMounted.value = true
-    // Modal geschlossen → Wrapper (v-if) zerstört alle Tabs mit; ein noch
-    // offener Battle-Return-Kontext ist dann obsolet (Return-Button hat beim
-    // Klick bereits selbst gecleart — hier greift nur das manuelle Schließen)
-    else if (val === null) {
-      treeTabMounted.value = false
-      uiStore.clearBattleReturn()
+    if (val !== null) {
+      modalMounted.value = true
+      mountedTabs.add(val)
+      return
     }
+    // Modal geschlossen: ein noch offener Battle-Return-Kontext ist obsolet
+    // (der Return-Button hat beim Klick bereits selbst gecleart — hier greift
+    // nur das manuelle Schließen)
+    uiStore.clearBattleReturn()
   },
 )
 
@@ -170,103 +192,120 @@ onUnmounted(() => {
       />
     </Transition>
 
-    <Transition name="modal-pop">
-      <div v-if="uiStore.bardActiveTab !== null" class="rp-wrapper">
-        <div class="flex flex-col rp-modal">
-          <RpgFrame />
-          <div class="rp-accent-bar" />
+    <!-- `v-if` erst beim ersten Öffnen, danach nur noch `v-show`: der Rahmen
+         wird einmal gebaut und bleibt. Ein `<template v-if>` erzeugt dabei kein
+         eigenes Element, der Wrapper bleibt also das direkte Transition-Kind. -->
+    <template v-if="modalMounted">
+      <Transition name="modal-pop">
+        <div v-show="uiStore.bardActiveTab !== null" class="rp-wrapper">
+          <div class="flex flex-col rp-modal">
+            <RpgFrame />
+            <div class="rp-accent-bar" />
 
-          <div class="flex items-center flex-shrink-0 rp-modal-header">
-            <div class="flex items-center justify-center flex-1 gap-1.5 px-2 py-2">
-              <button
-                v-for="item in menuItems"
-                :key="item.id"
-                @click="uiStore.setBardTab(item.id)"
-                class="rp-tab relative flex items-center justify-center gap-1.5 overflow-hidden"
-                :class="uiStore.bardActiveTab === item.id ? 'rp-tab--active' : ''"
-              >
-                <img
-                  v-if="item.src"
-                  :src="item.src"
-                  :alt="item.label"
-                  class="relative z-10 object-contain rp-tab-img"
-                  :class="uiStore.bardActiveTab === item.id ? 'rp-tab-img-glow' : ''"
-                />
-                <Icon v-else-if="item.icon.includes(':')" :icon="item.icon" class="relative z-10 rp-tab-icon" />
-                <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
-                <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
-                <span
-                  v-if="uiStore.bardActiveTab === item.id"
-                  class="absolute bottom-0 rp-tab-indicator left-2 right-2"
-                />
-                <div v-if="item.id === 'team'" class="team-badge-row">
-                  <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
-                  <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
-                </div>
-                <div v-if="item.id === 'shop' && forgeBadgeReady" class="team-badge-row">
-                  <span class="mini-badge mini-badge--forge">✦</span>
-                </div>
-                <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
-                  <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
-                </div>
-                <div v-if="item.id === 'planets' && planetBadgeCount > 0" class="team-badge-row">
+            <div class="flex items-center flex-shrink-0 rp-modal-header">
+              <div class="flex items-center justify-center flex-1 gap-1.5 px-2 py-2">
+                <button
+                  v-for="item in menuItems"
+                  :key="item.id"
+                  @click="uiStore.setBardTab(item.id)"
+                  class="rp-tab relative flex items-center justify-center gap-1.5 overflow-hidden"
+                  :class="uiStore.bardActiveTab === item.id ? 'rp-tab--active' : ''"
+                >
+                  <img
+                    v-if="item.src"
+                    :src="item.src"
+                    :alt="item.label"
+                    class="relative z-10 object-contain rp-tab-img"
+                    :class="uiStore.bardActiveTab === item.id ? 'rp-tab-img-glow' : ''"
+                  />
+                  <Icon v-else-if="item.icon.includes(':')" :icon="item.icon" class="relative z-10 rp-tab-icon" />
+                  <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
+                  <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
                   <span
-                    class="mini-badge mini-badge--planet"
-                    :title="`${planetBadgeCount} planet ${planetBadgeCount === 1 ? 'level-up' : 'level-ups'} affordable — level up your orbit slots`"
-                  >{{ planetBadgeLabel }}</span>
-                </div>
-              </button>
+                    v-if="uiStore.bardActiveTab === item.id"
+                    class="absolute bottom-0 rp-tab-indicator left-2 right-2"
+                  />
+                  <div v-if="item.id === 'team'" class="team-badge-row">
+                    <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
+                    <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
+                  </div>
+                  <div v-if="item.id === 'shop' && forgeBadgeReady" class="team-badge-row">
+                    <span class="mini-badge mini-badge--forge">✦</span>
+                  </div>
+                  <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
+                    <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
+                  </div>
+                  <div v-if="item.id === 'planets' && planetBadgeCount > 0" class="team-badge-row">
+                    <span
+                      class="mini-badge mini-badge--planet"
+                      :title="`${planetBadgeCount} planet ${planetBadgeCount === 1 ? 'level-up' : 'level-ups'} affordable — level up your orbit slots`"
+                    >{{ planetBadgeLabel }}</span>
+                  </div>
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
-            <ActionToast />
-            <!-- Battle-Tab: immer gemountet (v-show), Watch + Simulation bleiben aktiv -->
-            <div v-show="uiStore.bardActiveTab === 'battle'" class="battle-tab-layer">
-              <BattleResultComponent />
-            </div>
+            <!-- Jeder Tab ein eigener Layer: einmal gemountet (`v-if`), danach
+                 nur noch ein- und ausgeblendet (`v-show`). Kein `Transition
+                 mode="out-in"` mehr — der erzwang bei jedem Wechsel zwei
+                 Transition-Phasen samt `forceReflow`, und ein Kreuzblende
+                 zwischen zwei bereits stehenden Layern bringt nichts, was den
+                 Preis wert wäre. -->
+            <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
+              <ActionToast />
+              <!-- Battle-Tab: von Anfang an gemountet, Watch + Simulation laufen -->
+              <div v-show="uiStore.bardActiveTab === 'battle'" class="tab-layer tab-layer--scroll">
+                <BattleResultComponent />
+              </div>
 
-            <!-- Tree-Tab: nach erstem Öffnen gemountet lassen (v-show) — spart
-                 den teuren Vue-Flow-Remount bei jedem erneuten Reintappen -->
-            <div v-show="uiStore.bardActiveTab === 'tree'" class="tree-tab-layer">
-              <SkillTreeComponent v-if="treeTabMounted" />
-            </div>
+              <div v-show="uiStore.bardActiveTab === 'tree'" class="tab-layer">
+                <SkillTreeComponent v-if="mountedTabs.has('tree')" />
+              </div>
 
-            <Transition name="tab-fade" mode="out-in">
-              <div v-if="uiStore.bardActiveTab === 'bard'" key="bard" class="h-full">
+              <div
+                v-if="mountedTabs.has('bard')"
+                v-show="uiStore.bardActiveTab === 'bard'"
+                class="tab-layer"
+              >
                 <BardStatsTab />
               </div>
+
               <div
-                v-else-if="uiStore.bardActiveTab === 'shop'"
-                key="shop"
-                class="h-full overflow-y-auto rp-scrollbar"
+                v-if="mountedTabs.has('shop')"
+                v-show="uiStore.bardActiveTab === 'shop'"
+                class="tab-layer tab-layer--scroll rp-scrollbar"
               >
                 <ShopComponent />
               </div>
-              <div v-else-if="uiStore.bardActiveTab === 'team'" key="team" class="h-full">
+
+              <div
+                v-if="mountedTabs.has('team')"
+                v-show="uiStore.bardActiveTab === 'team'"
+                class="tab-layer"
+              >
                 <TeamTabComponent />
               </div>
 
               <div
-                v-else-if="uiStore.bardActiveTab === 'planets'"
-                key="planets"
-                class="h-full overflow-hidden"
+                v-if="mountedTabs.has('planets')"
+                v-show="uiStore.bardActiveTab === 'planets'"
+                class="tab-layer"
               >
                 <PlanetSelectTabComponent />
               </div>
 
               <div
-                v-else-if="uiStore.bardActiveTab === 'admin'"
-                key="admin"
-                class="h-full overflow-hidden"
+                v-if="mountedTabs.has('admin')"
+                v-show="uiStore.bardActiveTab === 'admin'"
+                class="tab-layer"
               >
                 <AdminDashboard />
               </div>
-            </Transition>
+            </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </template>
   </Teleport>
 </template>
 
@@ -468,20 +507,21 @@ onUnmounted(() => {
   background: #1a1008;
 }
 
-.battle-tab-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
-}
-
-.tree-tab-layer {
+/* Alle Tabs liegen als gleichrangige Layer übereinander; sichtbar ist immer
+   genau einer. Ein versteckter Layer steht auf `display: none` (v-show) und
+   kostet damit weder Layout noch Paint noch Compositor-Zeit. */
+.tab-layer {
   position: absolute;
   inset: 0;
   z-index: 1;
   overflow: hidden;
+}
+
+.tab-layer--scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
 
 /* ═══════════════════════════════════════════
@@ -523,15 +563,6 @@ onUnmounted(() => {
 }
 .backdrop-enter-from,
 .backdrop-leave-to {
-  opacity: 0;
-}
-
-.tab-fade-enter-active,
-.tab-fade-leave-active {
-  transition: opacity 0.15s ease;
-}
-.tab-fade-enter-from,
-.tab-fade-leave-to {
   opacity: 0;
 }
 

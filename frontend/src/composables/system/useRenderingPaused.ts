@@ -1,8 +1,9 @@
-import { ref, computed, readonly } from 'vue'
+import { ref, computed, readonly, watch } from 'vue'
 import { useWindowFocus } from '@/composables/system/useWindowFocus'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { IDLE_RESUME_DELAY_FRAMES } from '@/config/constants'
 
 const _isDocHidden = ref(typeof document !== 'undefined' ? document.hidden : false)
 
@@ -40,7 +41,7 @@ function createInstance() {
    * `activeChampionBehindState`) werden VOR dem Ausstieg geschrieben, der
    * foregroundGate liest also weiter aktuelle Werte.
    */
-  const isIdleRenderingPaused = computed(
+  const idleHiddenRaw = computed(
     () =>
       isRenderingPaused.value ||
       uiStore.bardActiveTab !== null ||
@@ -49,6 +50,49 @@ function createInstance() {
       // ist der Import-Zyklus längst aufgelöst.
       useStarGroupStore().starFightModalOpen,
   )
+
+  /**
+   * Dasselbe Signal, aber asymmetrisch getaktet: Anhalten sofort, Fortsetzen
+   * erst `IDLE_RESUME_DELAY_FRAMES` Frames später.
+   *
+   * Der Grund steht an der Konstante — beide Vorgänge, Overlay-Abbau und erster
+   * vollständiger Neuaufbau aller Canvas-Renderer, fielen sonst in denselben
+   * Frame und ergaben zusammen den Ruckler beim Schließen des Bard-Profils.
+   */
+  const idleHiddenGated = ref(idleHiddenRaw.value)
+  let resumeFrame = 0
+
+  function cancelResume(): void {
+    if (!resumeFrame) return
+    cancelAnimationFrame(resumeFrame)
+    resumeFrame = 0
+  }
+
+  watch(idleHiddenRaw, (hidden) => {
+    cancelResume()
+    if (hidden) {
+      idleHiddenGated.value = true
+      return
+    }
+    // Kein rAF (Tests, SSR) → ohne Umweg fortsetzen, sonst bliebe es für immer
+    // pausiert.
+    if (typeof requestAnimationFrame !== 'function') {
+      idleHiddenGated.value = false
+      return
+    }
+    let left = IDLE_RESUME_DELAY_FRAMES
+    const step = () => {
+      if (--left > 0) {
+        resumeFrame = requestAnimationFrame(step)
+        return
+      }
+      resumeFrame = 0
+      idleHiddenGated.value = false
+    }
+    resumeFrame = requestAnimationFrame(step)
+  })
+
+  const isIdleRenderingPaused = computed(() => idleHiddenGated.value)
 
   /**
    * Pause signal for the idle layer's SIMULATION — orbit angles, behind-the-sun

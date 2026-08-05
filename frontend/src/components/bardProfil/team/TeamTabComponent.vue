@@ -10,6 +10,7 @@ import {
   TEAM_TAB_MOUNT_STAGE_SATELLITES,
   TEAM_TAB_MOUNT_STAGE_PANEL,
   TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
+  SIGIL_DETAILS_OPEN_DEFER_FRAMES,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_SYNERGIES_PANEL_WIDTH,
   TEAM_SHOP_PANEL_WIDTH,
@@ -52,6 +53,13 @@ const { showToast } = useActionToast()
 // ── Gestaffelter Aufbau ──────────────────────────────────────────────────────
 // Siehe TEAM_TAB_MOUNT_STAGE_*: der Tab baut sich über drei Frames auf, damit
 // das Öffnen nicht in einem einzigen langen Frame stattfindet.
+//
+// Nur beim ERSTEN Mal. Beim Wiedereinblenden (der Tab bleibt seither gemountet,
+// siehe BardProfileMenu) wäre ein erneuter Durchlauf kontraproduktiv: er risse
+// Satelliten und Detailspalte aus dem DOM, um sie Frame für Frame neu zu bauen.
+// Gemessen mit voller Besetzung, Öffnen über eine Rollenkarte im Command Panel
+// (Median des längsten Einzelframes, 11 Läufe): 47 ms ohne erneute Staffelung,
+// 56 ms mit. Das Einblenden allein ist billiger als Abriss plus Wiederaufbau.
 const mountStage = ref(TEAM_TAB_MOUNT_STAGE_BOARD)
 let mountFrame: number | null = null
 
@@ -286,17 +294,48 @@ function handleShopRoleChange(role: ChampionRole | 'all') {
  * The two-frame defer that used to sit here went with the modal: the inline
  * grid is windowed (useVirtualGrid), so it lays out a dozen cards, not 160.
  */
+/** Läuft, solange die Detailspalte dem Board nachläuft (siehe unten). */
+let detailsFrame: number | null = null
+
+function cancelDetailsDefer() {
+  if (detailsFrame === null) return
+  cancelAnimationFrame(detailsFrame)
+  detailsFrame = null
+}
+
 function applyRolesOpenRequest() {
-  synergiesOpen.value = false
-  selectedRole.value = uiStore.rolesActiveSlot
+  const slot = uiStore.rolesActiveSlot
   const subSlot = uiStore.rolesActiveSubSlot
   uiStore.clearRolesOpenPending()
+  synergiesOpen.value = false
   activeDestination.value = null
-  if (subSlot < 0) {
-    focusSeat(null)
+
+  const apply = () => {
+    detailsFrame = null
+    selectedRole.value = slot
+    focusSeat(subSlot < 0 ? null : subSlot, subSlot >= 0)
+  }
+
+  // Steht die Spalte schon, ist nichts einzublenden — nur ihr Inhalt wechselt.
+  if (selectedRole.value !== null) {
+    cancelDetailsDefer()
+    apply()
     return
   }
-  focusSeat(subSlot, true)
+
+  // Sie geht neu auf. Kam die Anfrage aus dem Command Panel, wird der Tab im
+  // selben Flush sichtbar — dann träfe ihr Mount auf das Einblenden des ganzen
+  // Boards. Ein paar Frames Versatz trennen beides (SIGIL_DETAILS_OPEN_DEFER_FRAMES).
+  cancelDetailsDefer()
+  let left = SIGIL_DETAILS_OPEN_DEFER_FRAMES
+  const step = () => {
+    if (--left > 0) {
+      detailsFrame = requestAnimationFrame(step)
+      return
+    }
+    apply()
+  }
+  detailsFrame = requestAnimationFrame(step)
 }
 
 watch(() => uiStore.rolesOpenToken, applyRolesOpenRequest)
@@ -342,18 +381,62 @@ function onEsc(e: KeyboardEvent) {
   e.preventDefault()
 }
 
+// ── Sichtbarkeit statt Lebensdauer ───────────────────────────────────────────
+/**
+ * Der Tab wird nach dem ersten Öffnen nicht mehr abgerissen, sondern nur noch
+ * versteckt (siehe BardProfileMenu). Alles, was früher an Mount und Unmount
+ * hing, hängt deshalb jetzt hieran — sonst bliebe der Escape-Handler dauerhaft
+ * am Fenster und verbrauchte die Taste auch im Idle-Orbit.
+ */
+const isVisible = computed(() => uiStore.bardActiveTab === 'team')
+
+/**
+ * Der Tab beginnt jedes Mal frisch: Board ohne Detailseite, keine Schiene, kein
+ * Rest der letzten Sitzung.
+ *
+ * Zurückgesetzt wird beim VERLASSEN, nicht beim Betreten. Eine Öffnungs-Anfrage
+ * (`requestOpenRolesTab`) setzt Rolle und Tab im selben Flush — ein Reset beim
+ * Betreten liefe mit ihr um die Wette und löschte je nach Watcher-Reihenfolge
+ * genau die Rolle, die geöffnet werden sollte.
+ */
+function resetTabState() {
+  // Ein noch nachlaufender Detailspalten-Frame gehört zu einem Tab, der bereits
+  // zu ist — er dürfte die Spalte nicht nachträglich doch noch aufschlagen.
+  cancelDetailsDefer()
+  selectedRole.value = null
+  synergiesOpen.value = false
+  activeDestination.value = null
+  searchHighlights.value = []
+  hoveredAllySub.value = null
+  boardHoveredAlly.value = null
+  focusAlly.value = null
+  focusSwap.value = false
+  swapOpen.value = false
+  shopDetailOpen.value = false
+}
+
+watch(isVisible, (visible) => {
+  if (visible) {
+    window.addEventListener('keydown', onEsc)
+    return
+  }
+  window.removeEventListener('keydown', onEsc)
+  // Die gespiegelte Auswahl fällt mit (über den selectedRole-Watcher), sonst
+  // bliebe im Command Panel eine Markierung ohne offenes Panel stehen.
+  resetTabState()
+})
+
 onMounted(() => {
   advanceMountStages()
-  window.addEventListener('keydown', onEsc)
+  if (isVisible.value) window.addEventListener('keydown', onEsc)
   // the tab may have just been opened BY a requestOpenRolesTab call — the token
   // watcher above wasn't registered yet, so consume the pending request here
   if (uiStore.rolesOpenPending) applyRolesOpenRequest()
 })
 onUnmounted(() => {
   if (mountFrame !== null) cancelAnimationFrame(mountFrame)
+  cancelDetailsDefer()
   window.removeEventListener('keydown', onEsc)
-  // Tab zu → die gespiegelte Auswahl fällt mit, sonst bliebe im Command Panel
-  // eine Markierung stehen, zu der es kein offenes Panel mehr gibt
   uiStore.setTeamActiveRole(null)
 })
 </script>

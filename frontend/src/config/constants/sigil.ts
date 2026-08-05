@@ -276,6 +276,23 @@ export const TEAM_TAB_MOUNT_STAGE_BOARD = 0
 export const TEAM_TAB_MOUNT_STAGE_SATELLITES = 1
 export const TEAM_TAB_MOUNT_STAGE_PANEL = 2
 export const TEAM_TAB_MOUNT_STAGE_ORNAMENTS = 3
+
+/**
+ * Frames, die die Rollen-Detailspalte dem Board nachläuft, wenn der Team-Tab
+ * MIT bereits gewählter Rolle aufgeht — der Weg über eine Rollenkarte im
+ * Command Panel (`requestOpenRolesTab`).
+ *
+ * Sonst fällt beides in denselben Frame: der Tab-Layer wird von `display: none`
+ * sichtbar (rund 900 Elemente durch Style, Layout, Layerize, Paint) UND die
+ * Detailspalte mountet neu. Gemessen mit voller Besetzung (5 Mains, 25 Allies,
+ * 6 belegte Planeten, 4 Sterne), Median über 11 Läufe: zusammen 65 ms für den
+ * längsten Einzelframe, nachgezogen 50 ms.
+ *
+ * Zwei Frames reichen nicht — die Einblendarbeit des Boards ist dann noch nicht
+ * durch und beide Posten treffen sich doch wieder. Deutlich mehr würde man als
+ * Nachklappen der Spalte sehen.
+ */
+export const SIGIL_DETAILS_OPEN_DEFER_FRAMES = 5
 /** Ally-hover spotlight — hovering an ally row in the details panel mirrors onto
  *  the board: the matching satellite scales up + pings once, its siblings dim. */
 export const SIGIL_ALLY_HOVER_SCALE = 1.4

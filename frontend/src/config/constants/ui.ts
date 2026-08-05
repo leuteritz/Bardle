@@ -2,6 +2,21 @@
 // Pause- und Offline-Overlay, Tooltips, Ton und die Timings, mit denen das
 // alles ein- und ausblendet.
 
+// ── Idle-Layer hinter einem Overlay: Anhalten und Wiederanlaufen ───────────
+/**
+ * Wie viele Frames der Idle-Layer nach dem SCHLIESSEN eines deckenden Overlays
+ * (Bard-Profil, Star-Fight-Modal) wartet, bevor er wieder zeichnet.
+ *
+ * Angehalten wird sofort — das kostet nichts und spart ab dem nächsten Frame.
+ * Das Fortsetzen ist die teure Richtung: Sternenhintergrund, Minimap und
+ * Kometen zeichnen ihren ersten Frame nach der Pause vollständig neu (gemessen:
+ * `drawImage` 20 ms + 14 ms, `animateStars` 9 ms), und ohne diese Verzögerung
+ * fällt das alles in genau den Frame, in dem auch das Overlay abgebaut wird.
+ * Zwei Frames Abstand reichen, damit beides nacheinander statt übereinander
+ * läuft; mehr würde man als Nachziehen des Hintergrunds sehen.
+ */
+export const IDLE_RESUME_DELAY_FRAMES = 2
+
 // ── Offline-Minispiel: Ring treffen ───────────────────────────────────────
 /** SVG-Einheiten im viewBox `0 0 280 280`. */
 export const OFFLINE_MINIGAME_CENTER = 140

@@ -25,6 +25,10 @@ const store = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
 const { showToast } = useActionToast()
 
+/** Sichtbar = dieser Tab ist der offene. Steuert Uhr und Orbit-Schleife, die
+ *  beide früher an der Lebensdauer der Komponente hingen. */
+const isVisible = computed(() => uiStore.bardActiveTab === 'planets')
+
 // ── Slot-Auswahl ───────────────────────────────────────────────────────────
 const selectedSlotId = ref<string | null>(null)
 
@@ -65,19 +69,48 @@ const stageRef = ref<InstanceType<typeof PlanetStagePanel> | null>(null)
 const { orbitBehind, isSlotEclipsed, orbitPhaseStyle } = usePlanetTabOrbit(
   selectedSlotId,
   () => stageRef.value?.orbitEl ?? null,
+  isVisible,
 )
 
 // ── Gemeinsame Uhr für alle Countdowns (Buff-Dauer, Respawn) ───────────────
+/**
+ * Läuft nur, solange der Tab auch zu sehen ist. Er wird nach dem ersten Öffnen
+ * nicht mehr abgerissen (siehe BardProfileMenu), ein an die Lebensdauer
+ * gebundenes Intervall tickte sonst für immer weiter — mitsamt der Countdowns,
+ * die es neu berechnen lässt, während niemand hinsieht.
+ */
 const now = ref(Date.now())
 let nowInterval = 0
-onMounted(() => {
+
+function startClock() {
+  if (nowInterval) return
+  now.value = Date.now()
   nowInterval = window.setInterval(() => {
     now.value = Date.now()
   }, 500)
-})
-onUnmounted(() => {
+}
+
+function stopClock() {
+  if (!nowInterval) return
   window.clearInterval(nowInterval)
+  nowInterval = 0
+}
+
+watch(isVisible, (visible) => {
+  if (visible) {
+    // Beim Betreten dieselbe Ableitung wie früher beim Mount — der Store kann
+    // inzwischen eine andere Kachel angefragt haben.
+    initSlot()
+    startClock()
+  } else {
+    stopClock()
+  }
 })
+
+onMounted(() => {
+  if (isVisible.value) startClock()
+})
+onUnmounted(stopClock)
 
 const jungleBuffSecsLeft = computed(() => {
   const jb = activeSlot.value?.jungleBuff
