@@ -1210,7 +1210,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             <span class="sdp-section-title">Stats</span>
             <div class="sdp-section-rule" />
             <span v-if="hasSwornBonus" class="sdp-section-count sdp-section-count--sworn">
-              <Icon :icon="SWORN_ICON" width="12" height="12" />
+              <Icon :icon="SWORN_ICON" width="14" height="14" />
               sworn included
             </span>
             <span v-else class="sdp-section-count">{{ champion }}</span>
@@ -3236,10 +3236,17 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-section-rule--hot {
   background: rgba(232, 192, 64, 0.35);
 }
+/* The readout on the right of a heading — "3/5", "10 looks", the champion's
+   name. It carries as much as the heading itself does (how far along the perk
+   path is, how many skins there are), so it is set at heading size rather than
+   as fine print; the colour, not the size, is what keeps it second. */
 .sdp-section-count {
-  font-size: 11px;
+  font-size: 15px;
   letter-spacing: 0.06em;
-  color: rgba(230, 220, 196, 0.4);
+  color: rgba(230, 220, 196, 0.55);
+}
+.sdp-section-count--hot {
+  color: #e8c040;
 }
 /* ── stats — four large tiles, two per row ── */
 .sdp-stats {
@@ -3538,6 +3545,9 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   .sdp-section-title {
     font-size: 12.5px;
   }
+  .sdp-section-count {
+    font-size: 13.5px;
+  }
   /* skins — still two whole rows and two columns, one step shorter */
   .sdp-skins {
     gap: 8px;
@@ -3667,7 +3677,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     font-size: 15.5px;
   }
   .sdp-section-count {
-    font-size: 12.5px;
+    font-size: 19px;
   }
   .sdp-stat-value {
     font-size: 31px;
