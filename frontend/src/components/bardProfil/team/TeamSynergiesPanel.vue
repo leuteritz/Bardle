@@ -346,15 +346,21 @@ function championImage(name: string): string {
 
 <style scoped>
 /* ── side panel shell (mirrors SigilDetailsPanel) ── */
+/* Same surface and same layer as the other rails — flat deep base, and
+   positioned so the tab's starfield (absolute, z-index 0) cannot paint over it.
+   See TeamSidePanelShell/.tsps-panel for why a static panel loses that fight no
+   matter how opaque its background is. */
 .tsp-panel {
   /* fixed-px content designed for 1920×1080 — zoom down on smaller desktops */
   zoom: var(--team-ui-scale, 1);
+  position: relative;
+  z-index: 1;
   width: v-bind(panelWidthPx);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: linear-gradient(180deg, #1a1008, #0d0905);
+  background: var(--rpg-bg-deep, #111008);
   border-left: 2px solid #5c3310;
 }
 .tsp-goldline {

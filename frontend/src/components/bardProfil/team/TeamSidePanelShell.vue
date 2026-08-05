@@ -57,15 +57,29 @@ const widthPx = computed(() => `${props.width}px`)
 </template>
 
 <style scoped>
+/* The rail's surface, shared by every destination that opens into it.
+ *
+ * `position: relative` + z-index is not cosmetic: the tab's starfield
+ * (.cosmic-stage-bg) is absolutely positioned at z-index 0, so it paints in the
+ * positioned step — above any STATIC sibling, however opaque. The shop never
+ * showed stars only because its own .rpg-frame is positioned and paints later;
+ * expeditions and equipment, which bring no such frame, had the starfield lying
+ * over their content. The shell carries the fix, so all three inherit it.
+ *
+ * The colour goes with it: the flat deep base the shop's frame paints, not a
+ * gradient, so a destination opening looks like the same surface as the role
+ * page opening in the same slot (see .sdp-panel). */
 .tsps-panel {
   /* fixed-px content designed for 1920×1080 — zoom down on smaller desktops */
   zoom: var(--team-ui-scale, 1);
+  position: relative;
+  z-index: 1;
   width: v-bind(widthPx);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: linear-gradient(180deg, #1a1008, #0d0905);
+  background: var(--rpg-bg-deep, #111008);
   border-left: 2px solid #5c3310;
 }
 .tsps-goldline {
