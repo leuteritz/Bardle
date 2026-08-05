@@ -192,9 +192,19 @@ export const TEAM_SIGIL_MAIN_PORTRAIT_WIDTH = 92
  * at title size, short enough that the fold is worth doing — a fold that buys
  * 40px of the ~180 the strip takes would be theatre.
  */
-export const TEAM_SIGIL_ROSTER_RAIL_HEIGHT = 54
-/** Portrait size (px) of a seat dot on that rail — inside the -128 band. */
-export const TEAM_SIGIL_ROSTER_RAIL_DOT = 30
+export const TEAM_SIGIL_ROSTER_RAIL_HEIGHT = 64
+/**
+ * Seat-dot heights (px) on the folded rail — the SAME three-rank ladder the
+ * cards carry, at rail scale, so the fold does not flatten the roster into six
+ * equal squares. Sized off the captain: it must stay clear of the rail's own
+ * height, the two below it step down from there.
+ */
+export const TEAM_SIGIL_ROSTER_DOT_MAIN = 46
+export const TEAM_SIGIL_ROSTER_DOT_SWORN = 38
+export const TEAM_SIGIL_ROSTER_DOT_ALLY = 30
+/** The captain's dot runs landscape — this much wider than tall, so its art gets
+ *  a crop instead of a face squeezed into a square. */
+export const TEAM_SIGIL_ROSTER_DOT_MAIN_RATIO = 1.35
 /** Width (px) of the drawer grip down the strip's right edge — the fold toggle.
  *  The strip pads itself by this much so no card ever runs under the grip. Wide
  *  enough to read as a control from across the panel rather than a seam. */

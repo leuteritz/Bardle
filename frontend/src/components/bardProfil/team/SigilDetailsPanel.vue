@@ -65,7 +65,10 @@ import {
   TEAM_SIGIL_MAIN_CHIP_WIDTH,
   TEAM_SIGIL_MAIN_PORTRAIT_WIDTH,
   TEAM_SIGIL_ROSTER_RAIL_HEIGHT,
-  TEAM_SIGIL_ROSTER_RAIL_DOT,
+  TEAM_SIGIL_ROSTER_DOT_MAIN,
+  TEAM_SIGIL_ROSTER_DOT_SWORN,
+  TEAM_SIGIL_ROSTER_DOT_ALLY,
+  TEAM_SIGIL_ROSTER_DOT_MAIN_RATIO,
   TEAM_SIGIL_ROSTER_GRIP_WIDTH,
   TEAM_SIGIL_ROSTER_FOLD_MS,
   SIGIL_CHIP_HOVER_DIM_OPACITY,
@@ -196,7 +199,10 @@ const mainPortraitWidthPx = `${TEAM_SIGIL_MAIN_PORTRAIT_WIDTH}px`
 const chipDimOpacity = String(SIGIL_CHIP_HOVER_DIM_OPACITY)
 const chipSweepMs = `${SIGIL_CHIP_HOVER_SWEEP_MS}ms`
 const railHeightPx = `${TEAM_SIGIL_ROSTER_RAIL_HEIGHT}px`
-const railDotPx = `${TEAM_SIGIL_ROSTER_RAIL_DOT}px`
+const railDotMainPx = `${TEAM_SIGIL_ROSTER_DOT_MAIN}px`
+const railDotMainWidthPx = `${Math.round(TEAM_SIGIL_ROSTER_DOT_MAIN * TEAM_SIGIL_ROSTER_DOT_MAIN_RATIO)}px`
+const railDotSwornPx = `${TEAM_SIGIL_ROSTER_DOT_SWORN}px`
+const railDotAllyPx = `${TEAM_SIGIL_ROSTER_DOT_ALLY}px`
 const gripWidthPx = `${TEAM_SIGIL_ROSTER_GRIP_WIDTH}px`
 const foldMs = `${TEAM_SIGIL_ROSTER_FOLD_MS}ms`
 
@@ -360,9 +366,15 @@ const railSeats = computed<RailSeat[]>(() => [
   })),
 ])
 const filledSeats = computed(() => railSeats.value.filter((s) => s.name).length)
-/** Dot portrait: 26px on screen, which the resolution table puts on the -128 step. */
+/**
+ * Dot portrait. 'md' — the -256 step — for every tier, including the 30px bench
+ * dot the table would put on -128: the rail shows the SAME six champions the
+ * strip's portraits do, and those are already 'md'. A second step here would be
+ * a second download and a second decode of the same motif instead of a cache
+ * hit (CLAUDE.md → "Zwei Stellen, dieselben Champions → dieselbe Stufe").
+ */
 function railDotImage(name: string): string {
-  return battleStore.getChampionImage(name, { size: 'sm' })
+  return battleStore.getChampionImage(name, { size: 'md' })
 }
 
 /**
@@ -1454,19 +1466,20 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-rail-dots {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   margin-left: auto;
 }
 .sdp-rail-sep {
   width: 1px;
-  height: 18px;
-  margin: 0 3px;
+  height: 30px;
+  margin: 0 5px;
   background: #3e200a;
 }
+/* the bench sets the base — the two ranks above it only step up from here */
 .sdp-rail-dot {
   position: relative;
-  width: v-bind(railDotPx);
-  height: v-bind(railDotPx);
+  width: v-bind(railDotAllyPx);
+  height: v-bind(railDotAllyPx);
   flex-shrink: 0;
   padding: 0;
   overflow: hidden;
@@ -1483,12 +1496,18 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   transform: translateY(-2px);
   border-color: var(--rc);
 }
+/* The captain: half again as tall as the bench and landscape on top of that, so
+   its art gets a crop where the others get a face. Size is the first thing the
+   rail says, before any rim or corner mark is read. */
 .sdp-rail-dot--main {
-  width: calc(v-bind(railDotPx) * 1.35);
+  width: v-bind(railDotMainWidthPx);
+  height: v-bind(railDotMainPx);
   border-width: 3px;
   border-color: color-mix(in srgb, var(--rc) 80%, transparent);
 }
 .sdp-rail-dot--sworn {
+  width: v-bind(railDotSwornPx);
+  height: v-bind(railDotSwornPx);
   border-width: 2px;
   border-color: color-mix(in srgb, var(--rc) 48%, transparent);
 }
@@ -1519,7 +1538,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1;
   color: color-mix(in srgb, var(--rc) 55%, #6b5c44);
 }
@@ -1882,14 +1901,19 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
  * eating a click meant for the seat underneath.
  *
  * Empty seats are excluded: an unfilled seat is dashed and quiet by design, and
- * there is no art there for a frame to be around. */
-.sdp-chip {
+ * there is no art there for a frame to be around.
+ *
+ * The folded rail's seat dots run on the SAME rule and the same variables, one
+ * size down — folding the strip away must not also fold away what it teaches. */
+.sdp-chip,
+.sdp-rail-dot {
   --fr-g: linear-gradient(var(--fr-c), var(--fr-c));
   --fr-c: color-mix(in srgb, var(--rc) var(--fr-a), transparent);
 }
 .sdp-chip--main:not(.sdp-chip--empty)::after,
 .sdp-chip--sworn:not(.sdp-chip--empty) .sdp-chip-portrait::after,
-.sdp-chip--ally:not(.sdp-chip--empty) .sdp-chip-portrait::after {
+.sdp-chip--ally:not(.sdp-chip--empty) .sdp-chip-portrait::after,
+.sdp-rail-dot:not(.sdp-rail-dot--empty)::after {
   content: '';
   position: absolute;
   inset: var(--fr-inset);
@@ -1941,12 +1965,44 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   --fr-br: 0px;
   --fr-a: 60%;
 }
+/* ── the same three ranks on the folded rail's dots ── */
+/* the bench sets the base here too — one mark, top-left, and the faintest */
+.sdp-rail-dot {
+  --fr-inset: 3px;
+  --fr-w: 2px;
+  --fr-tl: 8px;
+  --fr-tr: 0px;
+  --fr-bl: 0px;
+  --fr-br: 0px;
+  --fr-a: 58%;
+}
+.sdp-rail-dot--sworn {
+  --fr-inset: 3px;
+  --fr-tl: 11px;
+  --fr-bl: 11px;
+  --fr-a: 82%;
+}
+.sdp-rail-dot--main {
+  --fr-inset: 4px;
+  --fr-tl: 15px;
+  --fr-tr: 15px;
+  --fr-bl: 15px;
+  --fr-br: 15px;
+  --fr-a: 88%;
+}
+/* and the captain's gold liner, the one ornament neither rank below it gets */
+.sdp-rail-dot--main:not(.sdp-rail-dot--empty)::after {
+  box-shadow: inset 0 0 0 1px rgba(232, 192, 64, 0.22);
+}
+
 /* Selection and hover light the frame with the card rather than leaving it
    behind. A colour swap and nothing else — custom properties do not tween, so
    this lands instantly, which is what a repaint of a static ornament should do
    anyway. */
 .sdp-chip--active,
-.sdp-chip:hover {
+.sdp-chip:hover,
+.sdp-rail-dot--active,
+.sdp-rail-dot:hover {
   --fr-a: 100%;
 }
 .sdp-chip--sworn .sdp-chip-portrait {
