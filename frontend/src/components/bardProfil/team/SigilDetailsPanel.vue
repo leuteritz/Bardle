@@ -1,3 +1,16 @@
+<script lang="ts">
+import { ref } from 'vue'
+
+/**
+ * Is the roster strip unfolded? Module scope, not component state: the details
+ * page is destroyed whenever another destination takes the rail (shop,
+ * expeditions, equipment) and rebuilt on the way back — and a drawer that
+ * springs open again every time you fetch an item is not a drawer. One choice,
+ * kept for the session.
+ */
+const sharedRosterOpen = ref(true)
+</script>
+
 <script setup lang="ts">
 /**
  * The role details page of the team tab — everything about one slot on one
@@ -18,7 +31,9 @@
  * the champion grid on the right — while the roster strip stays put and keeps
  * naming the seat being filled. See swapOpen.
  */
-import { computed, ref, watch, onBeforeUnmount } from 'vue'
+// `ref` is imported by the plain <script> block above — both blocks compile into
+// one module, so a second import of the same binding is a duplicate, not a scope.
+import { computed, watch, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battle/battleStore'
@@ -49,6 +64,10 @@ import {
   TEAM_SIGIL_DETAILS_LEFT_WIDTH,
   TEAM_SIGIL_MAIN_CHIP_WIDTH,
   TEAM_SIGIL_MAIN_PORTRAIT_WIDTH,
+  TEAM_SIGIL_ROSTER_RAIL_HEIGHT,
+  TEAM_SIGIL_ROSTER_RAIL_DOT,
+  TEAM_SIGIL_ROSTER_GRIP_WIDTH,
+  TEAM_SIGIL_ROSTER_FOLD_MS,
   SIGIL_CHIP_HOVER_DIM_OPACITY,
   SIGIL_CHIP_HOVER_SWEEP_MS,
   TEAM_SIGIL_SPLASH_HEIGHT,
@@ -177,6 +196,10 @@ const mainChipWidthPx = `${TEAM_SIGIL_MAIN_CHIP_WIDTH}px`
 const mainPortraitWidthPx = `${TEAM_SIGIL_MAIN_PORTRAIT_WIDTH}px`
 const chipDimOpacity = String(SIGIL_CHIP_HOVER_DIM_OPACITY)
 const chipSweepMs = `${SIGIL_CHIP_HOVER_SWEEP_MS}ms`
+const railHeightPx = `${TEAM_SIGIL_ROSTER_RAIL_HEIGHT}px`
+const railDotPx = `${TEAM_SIGIL_ROSTER_RAIL_DOT}px`
+const gripWidthPx = `${TEAM_SIGIL_ROSTER_GRIP_WIDTH}px`
+const foldMs = `${TEAM_SIGIL_ROSTER_FOLD_MS}ms`
 
 const battleStore = useBattleStore()
 const gameStore = useGameStore()
@@ -312,6 +335,36 @@ const benchSlots = computed<AllySlot[]>(() =>
 )
 /** Percentage the sworn share is worth — printed, never hard-coded in a string. */
 const swornSharePct = computed(() => Math.round(SWORN_STAT_SHARE * 100))
+
+// ── Roster fold ──────────────────────────────────────────────────────────────
+// The strip is the tallest fixed thing on the page and, once a role is staffed,
+// the least often needed: you set the seats, then you spend your time in the
+// columns underneath. So it folds, and what it folds down to is not nothing —
+// a rail that keeps answering the two questions the strip answers all the time:
+// whose stats are being printed, and how do I get to another seat.
+const rosterOpen = sharedRosterOpen
+
+/** Every seat of the slot in strip order — the folded rail draws one dot each. */
+interface RailSeat {
+  sub: number
+  name: string | null
+  label: string
+  sworn: boolean
+}
+const railSeats = computed<RailSeat[]>(() => [
+  { sub: MAIN_SUBJECT, name: main.value, label: 'Main', sworn: false },
+  ...allies.value.map((name, sub) => ({
+    sub,
+    name,
+    label: allySlotLabel(sub),
+    sworn: sub < SWORN_ALLY_COUNT,
+  })),
+])
+const filledSeats = computed(() => railSeats.value.filter((s) => s.name).length)
+/** Dot portrait: 26px on screen, which the resolution table puts on the -128 step. */
+function railDotImage(name: string): string {
+  return battleStore.getChampionImage(name, { size: 'sm' })
+}
 
 /**
  * A satellite on the sigil board is under the cursor — the strip answers with a
@@ -536,8 +589,12 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   <div class="sdp-panel" :style="{ '--rc': roleDef.color, '--rank': rank.color }">
     <!-- ══ roster strip — captain card + bench. No close button: the panel is
          dismissed by clicking the empty sigil board (or Escape), so the whole
-         width belongs to the champions. ══ -->
-    <div class="sdp-roster">
+         width belongs to the champions.
+
+         It is a drawer, though: the grip down its right edge folds the whole
+         strip into .sdp-rail and hands its height to the columns below. ══ -->
+    <div class="sdp-roster-shell" :class="{ 'sdp-roster-shell--folded': !rosterOpen }">
+    <div class="sdp-roster" :inert="!rosterOpen || undefined">
       <!-- the slot's captain: one large card heading the seat ladder — MAIN,
            then SWORN I / II, then the bench, so all four cards name a SEAT.
            The role itself reads from the card's colour and its tooltip; it does
@@ -737,6 +794,77 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           </button>
         </div>
       </div>
+    </div>
+
+      <!-- ══ the folded rail — what the strip leaves behind ══
+           Left: the subject, because a page of stats with no name on it is a
+           page of anonymous numbers. Right: one dot per seat, carrying the same
+           ladder the cards do (the captain wider, the sworn pair rimmed, the
+           bench plain), so switching subject stays ONE click while folded — the
+           whole point of leaving a rail rather than nothing. -->
+      <div class="sdp-rail" :inert="rosterOpen || undefined">
+        <button
+          class="sdp-rail-subject"
+          type="button"
+          title="Unfold the roster"
+          @click="rosterOpen = true"
+        >
+          <span class="sdp-rail-seat">{{ subjectSeatLabel }}</span>
+          <span class="sdp-rail-name">{{ champion ?? 'Empty' }}</span>
+        </button>
+
+        <div class="sdp-rail-dots" @mouseleave="emit('hover-ally', null)">
+          <template v-for="seat in railSeats" :key="seat.sub">
+            <!-- the captain is followed by a hairline: main | sworn sworn bench… -->
+            <span v-if="seat.sub === 0" class="sdp-rail-sep" aria-hidden="true" />
+            <button
+              class="sdp-rail-dot"
+              :class="{
+                'sdp-rail-dot--main': seat.sub === MAIN_SUBJECT,
+                'sdp-rail-dot--sworn': seat.sworn,
+                'sdp-rail-dot--active': subject === seat.sub,
+                'sdp-rail-dot--empty': !seat.name,
+                'sdp-rail-dot--highlight': highlightedAlly === seat.sub,
+                'sdp-rail-dot--dimmed': boardSpotlight && highlightedAlly !== seat.sub,
+              }"
+              type="button"
+              :title="seat.name ? `${seat.name} — ${seat.label}` : `Assign ${seat.label}`"
+              @click="selectSubject(seat.sub)"
+              @mouseenter="emit('hover-ally', seat.sub === MAIN_SUBJECT ? null : seat.sub)"
+            >
+              <img
+                v-if="seat.name"
+                :src="railDotImage(seat.name)"
+                :alt="seat.name"
+                class="sdp-rail-dot-img"
+                decoding="async"
+              />
+              <span v-else class="sdp-rail-dot-plus" aria-hidden="true">＋</span>
+              <span
+                v-if="seat.name && needsAttentionOf(seat.name)"
+                class="sdp-rail-dot-ping"
+                aria-hidden="true"
+              />
+            </button>
+          </template>
+        </div>
+
+        <span class="sdp-rail-count">{{ filledSeats }}/{{ railSeats.length }}</span>
+      </div>
+
+      <!-- the grip: one control for both directions, and the chevron turns over
+           rather than being swapped for a second icon — a transform, so the
+           fold costs the compositor nothing either way -->
+      <button
+        class="sdp-fold"
+        type="button"
+        :aria-expanded="rosterOpen"
+        :title="rosterOpen ? 'Fold the roster away' : 'Unfold the roster'"
+        @click="rosterOpen = !rosterOpen"
+      >
+        <span class="sdp-fold-grain" aria-hidden="true" />
+        <Icon icon="lucide:chevron-up" width="15" height="15" class="sdp-fold-chevron" />
+      </button>
     </div>
 
     <!-- ══ two columns ══ -->
@@ -1224,16 +1352,259 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
  * splash stops gaining anything from more room.
  *
  * Percentages resolve against the panel, which is stretched to a definite
- * height by the tab's flex row — see .sdp-panel. */
-.sdp-roster {
+ * height by the tab's flex row — see .sdp-panel.
+ *
+ * The shell owns that height, the surface and the fold; .sdp-roster below only
+ * lays the cards out inside it. That is why the background and the bottom
+ * border live up here — folded, the strip's own box is gone and the rail is
+ * what the player sees, but the panel's header edge must not move with it. */
+.sdp-roster-shell {
+  position: relative;
   flex-shrink: 0;
   height: clamp(150px, 18%, 240px);
+  overflow: hidden;
+  background: #1e1006;
+  border-bottom: 3px solid #5c3310;
+  /* One-shot on a click, never per frame — the only place on this page where a
+     layout property is allowed to animate. Everything INSIDE the shell rides
+     transform/opacity alongside it, so the frames in between stay cheap. */
+  transition: height v-bind(foldMs) cubic-bezier(0.33, 1, 0.68, 1);
+}
+.sdp-roster-shell--folded {
+  height: v-bind(railHeightPx);
+}
+.sdp-roster {
+  height: 100%;
   display: flex;
   align-items: stretch;
   gap: 12px;
-  padding: 10px 12px;
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
+  /* the grip claims the right edge — the cards stop short of it rather than
+     running underneath */
+  padding: 10px calc(v-bind(gripWidthPx) + 8px) 10px 12px;
+  transition:
+    opacity calc(v-bind(foldMs) * 0.6),
+    transform v-bind(foldMs);
+}
+.sdp-roster-shell--folded .sdp-roster {
+  opacity: 0;
+  transform: translateY(-16px);
+  pointer-events: none;
+}
+
+/* ── the folded rail ────────────────────────────────────────────────────────
+   Absolute, so it costs the shell no height of its own and the two states can
+   cross-fade instead of reflowing into each other. It is only ever as tall as
+   the folded shell, which is exactly TEAM_SIGIL_ROSTER_RAIL_HEIGHT. */
+.sdp-rail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: v-bind(railHeightPx);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 calc(v-bind(gripWidthPx) + 10px) 0 12px;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition:
+    opacity calc(v-bind(foldMs) * 0.6),
+    transform v-bind(foldMs);
+}
+.sdp-roster-shell--folded .sdp-rail {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+/* the subject, and a second way back out of the fold */
+.sdp-rail-subject {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 9px;
+  border-radius: 4px;
+  background: #141410;
+  border: 1px solid color-mix(in srgb, var(--rc) 26%, transparent);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.sdp-rail-subject:hover {
+  border-color: var(--rc);
+  background: #1b1610;
+}
+.sdp-rail-seat {
+  flex-shrink: 0;
+  font-size: 9px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--rc) 60%, #c8b491);
+}
+.sdp-rail-name {
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.1;
+  color: #f0dcae;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* One dot per seat, carrying the SAME ladder the cards do — captain wider,
+   sworn pair rimmed, bench plain. A row of six identical squares would have
+   thrown away the one thing the strip teaches. */
+.sdp-rail-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+.sdp-rail-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: #3e200a;
+}
+.sdp-rail-dot {
+  position: relative;
+  width: v-bind(railDotPx);
+  height: v-bind(railDotPx);
+  flex-shrink: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #100e0a;
+  border: 1px solid color-mix(in srgb, var(--rc) 22%, transparent);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    opacity 0.16s;
+}
+.sdp-rail-dot:hover {
+  transform: translateY(-2px);
+  border-color: var(--rc);
+}
+.sdp-rail-dot--main {
+  width: calc(v-bind(railDotPx) * 1.35);
+  border-width: 3px;
+  border-color: color-mix(in srgb, var(--rc) 80%, transparent);
+}
+.sdp-rail-dot--sworn {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--rc) 48%, transparent);
+}
+.sdp-rail-dot--empty {
+  border-style: dashed;
+}
+.sdp-rail-dot--active {
+  border-color: var(--rc);
+  box-shadow: 0 0 0 1px var(--rc);
+}
+/* the board's spotlight reaches the rail as well: one lit, the rest quiet —
+   the same language the cards speak, see .sdp-chip--dimmed */
+.sdp-rail-dot--dimmed {
+  opacity: v-bind(chipDimOpacity);
+}
+.sdp-rail-dot--highlight {
+  border-color: var(--rc);
+  transform: translateY(-2px);
+}
+.sdp-rail-dot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sdp-rail-dot-plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 12px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--rc) 55%, #6b5c44);
+}
+/* banked XP or an unspent perk — the same ping the medallions carry, shrunk to
+   a corner pip because a dot has no room for a medallion */
+.sdp-rail-dot-ping {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e8c040;
+  box-shadow: 0 0 0 1px #100e0a;
+}
+.sdp-rail-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #8a7a5c;
+  letter-spacing: 0.04em;
+}
+
+/* ── the grip ───────────────────────────────────────────────────────────────
+   A drawer edge down the right side rather than a button dropped on the strip:
+   it is the full height of whatever state the shell is in, so it is in the same
+   place open OR folded and never covers a card. */
+.sdp-fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: v-bind(gripWidthPx);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-left: 1px solid #3e200a;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.4));
+  color: color-mix(in srgb, var(--rc) 55%, #9b8a6c);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.sdp-fold:hover {
+  color: #e8c040;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0),
+    color-mix(in srgb, var(--rc) 22%, transparent)
+  );
+}
+/* the notches that say "pull me" — three hairlines stacked behind the chevron,
+   the only ornament on the grip */
+.sdp-fold-grain {
+  position: absolute;
+  left: 50%;
+  bottom: 9px;
+  width: 8px;
+  height: 5px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(
+    180deg,
+    currentColor 0 1px,
+    transparent 1px 3px
+  );
+  opacity: 0.4;
+}
+.sdp-roster-shell--folded .sdp-fold-grain {
+  display: none;
+}
+/* one icon, turned over — no second name to keep in sync, and a transform is
+   free where an icon swap would remount an SVG */
+.sdp-fold-chevron {
+  transition: transform v-bind(foldMs) cubic-bezier(0.33, 1, 0.68, 1);
+}
+.sdp-roster-shell--folded .sdp-fold-chevron {
+  transform: rotate(180deg);
 }
 /* One card per champion of the slot — the whole roster is always visible, so
    switching subject never costs a navigation step. No card frames its portrait:
