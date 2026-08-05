@@ -17,7 +17,7 @@ import {
   MINIMAP_GALAXY_BRIGHT_STARS,
   MINIMAP_ROUTE_ARROW_SPREAD,
 } from '@/config/constants'
-import { GALAXY_THEMES } from '@/config/galaxyThemes'
+import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 
 export function seededRng(seed: number) {
   let s = seed >>> 0

@@ -1,4 +1,4 @@
-import type { BattleRole, BattleTimeline, MultikillCounts } from '../../types'
+import type { BattleRole, BattleTimeline, MultikillCounts } from '@/types'
 import {
   BLUE_FOUNTAIN,
   RED_FOUNTAIN,
@@ -53,7 +53,7 @@ import {
   MINION_PROGRESS_MIN,
   MINION_PROGRESS_MAX,
   MINION_SPACING,
-} from '../../config/constants'
+} from '@/config/constants'
 import {
   type MapPoint,
   pointAlongPath,
@@ -69,9 +69,9 @@ import {
   MINIONS_PER_WAVE,
   TOP_LANE_PATH,
   BOT_LANE_PATH,
-} from '../../config/battleRoutes'
-import { createRng, BATTLE_ROLES } from './timeline'
-import { parseStructureId, killRoutePoints, LANE_TIER_ORDER } from './structures'
+} from '@/config/battle/battleRoutes'
+import { createRng, BATTLE_ROLES } from '@/utils/battle/timeline'
+import { parseStructureId, killRoutePoints, LANE_TIER_ORDER } from '@/utils/battle/structures'
 
 export interface MovementSegment {
   tStart: number
@@ -88,7 +88,7 @@ export interface ChampionPosition {
   kind: MovementSegment['kind'] | 'hold'
 }
 
-// ── Geometry helpers (moved to config/battleRoutes, re-exported for consumers) ──
+// ── Geometry helpers (moved to config/battle/battleRoutes, re-exported for consumers) ──
 
 export { pointAlongPath }
 

@@ -52,7 +52,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { Icon } from '@iconify/vue'
-import { truncate } from '../../../../config/numberFormat'
+import { truncate } from '@/config/ui/numberFormat'
 
 /**
  * Single item card in the unified shop grid — purely presentational, mirrors

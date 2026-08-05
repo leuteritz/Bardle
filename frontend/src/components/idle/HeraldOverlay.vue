@@ -43,10 +43,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useHerald } from '@/composables/useHerald'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { useBattleStore } from '@/stores/battleStore'
-import { GALAXY_THEMES } from '@/config/galaxyThemes'
+import { useHerald } from '@/composables/ui/useHerald'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import {
   RANK_TIERS,
   RANK_DIVISIONS,

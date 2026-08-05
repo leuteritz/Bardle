@@ -1,14 +1,14 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { useDrifterStore } from '../../stores/drifterStore'
-import { useGameStore } from '../../stores/gameStore'
-import { useShopStore } from '../../stores/shopStore'
-import { useInventoryStore } from '../../stores/inventoryStore'
-import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
-import { useStarGroupStore } from '../../stores/starGroupStore'
-import { usePlanetBossStore } from '../../stores/planetBossStore'
-import { useChampionLevelStore } from '../../stores/championLevelStore'
-import { getDrifter, DRIFTERS } from '../../config/drifters'
+import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { getDrifter, DRIFTERS } from '@/config/world/drifters'
 import {
   DRIFTER_MAX_CONCURRENT,
   DRIFTER_CHIME_REWARD_MIN_CLICKS,
@@ -17,7 +17,7 @@ import {
   DRIFTER_FIRST_DELAY_SEC,
   DRIFTER_SPAWN_RETRY_SEC,
   GAME_TICK_INTERVAL_MS,
-} from '../../config/constants'
+} from '@/config/constants'
 
 /** Spawns a specific type and returns its live instance. */
 function spawn(defId: string) {

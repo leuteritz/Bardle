@@ -2,17 +2,17 @@
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useBattleScoreboardStats } from '@/composables/useBattleScoreboardStats'
-import { useBattlePhase } from '@/composables/useBattlePhase'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useBattleScoreboardStats } from '@/composables/battle/useBattleScoreboardStats'
+import { useBattlePhase } from '@/composables/battle/useBattlePhase'
 import {
   useScoreboardFit,
   MEASURE_FONT_PX,
   type ScoreboardFitSource,
   type ScoreboardCrestSource,
-} from '@/composables/useScoreboardFit'
-import { formatNumberCompact } from '@/config/numberFormat'
+} from '@/composables/battle/useScoreboardFit'
+import { formatNumberCompact } from '@/config/ui/numberFormat'
 import {
   BATTLE_PHASES,
   OBJECTIVE_FIGHT_STATUS,
@@ -36,7 +36,7 @@ import {
   BATTLE_STAT_IMAGES,
   SCOREBOARD_RESULT_BADGE_MS,
 } from '@/config/constants'
-import { DRAKE_TYPES } from '@/config/drakes'
+import { DRAKE_TYPES } from '@/config/battle/drakes'
 
 const battleStore = useBattleStore()
 const uiStore = useUiStore()
@@ -334,7 +334,7 @@ const liveStatus = computed(() => {
 
    The strip measures its own halves and every string it is about to render,
    then derives ONE shared value size plus the per-cell width weights (see
-   utils/scoreboardFit.ts). Nothing here is a guessed glyph width, so the
+   utils/ui/scoreboardFit.ts). Nothing here is a guessed glyph width, so the
    numbers grow to fill Full HD, 2K and 4K instead of stopping at a hardcoded
    ceiling — and nothing is ever clipped, because the fit is what decides.
    ══════════════════════════════════════════════════════════════════════ */
@@ -563,7 +563,7 @@ const phaseProgressStyle = computed(() => ({
     </div>
 
     <!-- CENTER · title crest — ornament row, then one line as large as its box
-         and the strip height allow (see SCOREBOARD_CREST / utils/scoreboardFit),
+         and the strip height allow (see SCOREBOARD_CREST / utils/ui/scoreboardFit),
          then the running phase's progress hairline along the bottom edge.
          While a battle runs the line is that battle's state, so it opens the
          battle tab exactly like the stat halves flanking it. -->

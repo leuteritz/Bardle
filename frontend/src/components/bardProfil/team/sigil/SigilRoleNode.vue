@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useBattleStore } from '@/stores/battleStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useChampionLevelStore } from '@/stores/championLevelStore'
-import { getChampionTier } from '@/config/championTiers'
-import { regaliaStageFor, regaliaStageIndexFor } from '@/config/championLevels'
-import { facetClipPath, studRingGradient } from '@/utils/geometry'
-import { allySlotLabel } from '@/utils/format'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { getChampionTier } from '@/config/champions/championTiers'
+import { regaliaStageFor, regaliaStageIndexFor } from '@/config/champions/championLevels'
+import { facetClipPath, studRingGradient } from '@/utils/orbit/geometry'
+import { allySlotLabel } from '@/utils/ui/format'
 import ChampionLevelBadge from '../ChampionLevelBadge.vue'
 import {
   ROLES,
@@ -49,7 +49,7 @@ import {
   SIGIL_TIER_AUREOLE_MIN_STAR,
   SIGIL_TIER_AUREOLE_MS,
 } from '@/config/constants'
-import type { SigilPoint } from '@/composables/useTeamSigil'
+import type { SigilPoint } from '@/composables/ui/useTeamSigil'
 import type { ChampionArtSize } from '@/types'
 
 const props = defineProps<{

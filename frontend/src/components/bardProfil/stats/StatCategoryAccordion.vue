@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, toRef, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useStatCatalog } from '@/composables/useStatCatalog'
-import { STAT_CATEGORIES } from '@/config/statCategories'
+import { useStatCatalog } from '@/composables/ui/useStatCatalog'
+import { STAT_CATEGORIES } from '@/config/ui/statCategories'
 import type { StatCategoryId } from '@/types'
 
 const props = defineProps<{

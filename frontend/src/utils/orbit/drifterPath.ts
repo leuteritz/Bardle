@@ -9,7 +9,7 @@ import {
   HUD_SCALE_REF_WIDTH_PX,
   HUD_SCALE_REF_HEIGHT_PX,
   DRIFTER_TANGENT_PROBE_STEP,
-} from '../config/constants'
+} from '@/config/constants'
 
 export interface DrifterFieldRect {
   left: number

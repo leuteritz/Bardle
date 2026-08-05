@@ -1,11 +1,11 @@
-import type { ChampionTierId, ChampionTierDef } from '../types'
+import type { ChampionTierId, ChampionTierDef } from '@/types'
 import {
   CHAMPION_TIER_CHIMES_PRICE,
   CHAMPION_TIER_REQUIRED_GALAXY,
   MAX_STAR_LEVEL,
   TIER_SPAWN_WEIGHTS,
-} from './constants'
-import { CHAMPION_DATA } from './championData'
+} from '@/config/constants'
+import { CHAMPION_DATA } from '@/config/champions/championData'
 
 // ── Champion Tiers ────────────────────────────────────────────────────────────
 // The spawn-pool axis: exactly 6 Champion Tiers, weakest (★1, most champions) →

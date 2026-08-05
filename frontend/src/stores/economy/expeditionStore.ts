@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia'
-import { useGameStore } from './gameStore'
-import { useBattleStore } from './battleStore'
-import { usePlanetShopStore } from './planetShopStore'
-import { useStarForgeStore } from './starForgeStore'
-import { useMeepTreeStore } from './meepTreeStore'
-import { useChampionLevelStore } from './championLevelStore'
-import { getChampionRoles } from '../config/championData'
-import { useEventLog, type GameEventType } from '../composables/useEventLog'
-import { formatNumber } from '../config/numberFormat'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { getChampionRoles } from '@/config/champions/championData'
+import { useEventLog, type GameEventType } from '@/composables/ui/useEventLog'
+import { formatNumber } from '@/config/ui/numberFormat'
 import {
   CHAMPION_BASE_POWER,
   CHAMPION_POWER_PER_LEVEL,
@@ -34,9 +34,9 @@ import {
   type ExpeditionTier,
   EXPEDITION_SUCCESS_CHANCE_MIN,
   EXPEDITION_SUCCESS_CHANCE_MAX,
-} from '../config/constants'
-import type { ExpeditionMission, AvailableExpeditionSlot, ChampionRole } from '../types'
-import { logger } from '../utils/logger'
+} from '@/config/constants'
+import type { ExpeditionMission, AvailableExpeditionSlot, ChampionRole } from '@/types'
+import { logger } from '@/utils/logger'
 
 const ROLE_EVENT_TYPE: Record<ChampionRole, GameEventType> = {
   jungle: 'jungle',

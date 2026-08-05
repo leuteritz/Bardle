@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import { AUGMENTS } from '../config/augments'
-import type { ModifierEffects, TimedBuff } from '../types'
-import { logger } from '../utils/logger'
+import { AUGMENTS } from '@/config/economy/augments'
+import type { ModifierEffects, TimedBuff } from '@/types'
+import { logger } from '@/utils/logger'
 import {
   AUGMENT_CLICK_HISTORY_SIZE,
   AUGMENT_GRAVITY_FLIP_DURATION_MS,
@@ -11,7 +11,7 @@ import {
   AUGMENT_ECHO_CHAMBER_DEFAULT_MS,
   AUGMENT_KEYBOARD_SMASH_DEFAULT_MIN,
   AUGMENT_KEYBOARD_SMASH_DEFAULT_MAX,
-} from '../config/constants'
+} from '@/config/constants'
 
 export const useAugmentStore = defineStore('augment', {
   state: () => ({

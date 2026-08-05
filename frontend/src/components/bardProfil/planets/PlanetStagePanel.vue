@@ -6,19 +6,19 @@ import {
   PLANET_ROLES,
   computePlanetMaxHp,
   isPlanetDown,
-} from '@/stores/planetShopStore'
-import type { PlanetSlot } from '@/stores/planetShopStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useShopStore } from '@/stores/shopStore'
-import { MATERIALS } from '@/config/materials'
+} from '@/stores/world/planetShopStore'
+import type { PlanetSlot } from '@/stores/world/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { MATERIALS } from '@/config/economy/materials'
 import {
   MATERIAL_RARITY_COLOR,
   PLANET_RESPAWN_MS,
   PLANET_TAB_SUN_MAX_DIAMETER,
   STAR_PHASE_FINAL_INDEX,
 } from '@/config/constants'
-import { hpTier, hpPercentOf, planetBonusTextFor } from '@/utils/planetStatus'
-import { useActionToast } from '@/composables/useActionToast'
+import { hpTier, hpPercentOf, planetBonusTextFor } from '@/utils/orbit/planetStatus'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import PlanetTargetPickerModal from './PlanetTargetPickerModal.vue'

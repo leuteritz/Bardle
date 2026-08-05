@@ -1,12 +1,12 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useInventoryStore } from '../../stores/inventoryStore'
-import { usePersistence } from '../../composables/usePersistence'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { usePersistence } from '@/composables/system/usePersistence'
 import {
   SAVE_KEY,
   MATERIAL_RATE_BUCKET_COUNT,
   MATERIAL_RATE_BUCKET_MS,
-} from '../../config/constants'
+} from '@/config/constants'
 
 /** Die Test-Umgebung stellt kein globales localStorage bereit → In-Memory-Stub. */
 function makeLocalStorageStub() {

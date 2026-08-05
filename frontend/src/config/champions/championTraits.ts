@@ -1,5 +1,5 @@
-import type { TraitDefinition, TraitId } from '../types'
-import { CHAMPION_DATA } from './championData'
+import type { TraitDefinition, TraitId } from '@/types'
+import { CHAMPION_DATA } from '@/config/champions/championData'
 
 // 15 TFT-inspired trait definitions with 4 activation thresholds each
 export const TRAIT_DEFINITIONS: TraitDefinition[] = [

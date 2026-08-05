@@ -10,7 +10,7 @@ import {
   DRAKE_ELDER_LP_BONUS,
   DRAKE_INFERNAL_BURN_DPS,
   BARON_LP_LOSS_SHIELD_MULT,
-} from './constants'
+} from '@/config/constants'
 
 export type DrakeTypeId =
   | 'chemtech'

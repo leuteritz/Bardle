@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import { useGameStore } from './gameStore'
-import { usePlayerStore } from './playerStore'
-import { useShopStore } from './shopStore'
-import { useCpsStore } from './cpsStore'
-import { useStarForgeStore } from './starForgeStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { useCpsStore } from '@/stores/core/cpsStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import {
   SOLAR_FLIGHT_BASE_COST,
   SOLAR_FLIGHT_MULTIPLIER,
@@ -26,7 +26,7 @@ import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
   SUN_EVOLVE_TRANSITION_MS,
-} from '../config/constants'
+} from '@/config/constants'
 
 export type SolarBranchId =
   | 'flightSpeed'

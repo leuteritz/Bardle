@@ -20,14 +20,14 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGameStore } from '@/stores/gameStore'
-import { useGalaxyStore, firstGalaxyOfTier, starLevelForGalaxy } from '@/stores/galaxyStore'
-import { useInventoryStore } from '@/stores/inventoryStore'
-import { GALAXY_THEMES } from '@/config/galaxyThemes'
-import { MATERIALS } from '@/config/materials'
-import { formatNumber, formatNumberCompact } from '@/config/numberFormat'
-import { formatCompactDuration } from '@/utils/format'
-import { clampPercent } from '@/utils/geometry'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useGalaxyStore, firstGalaxyOfTier, starLevelForGalaxy } from '@/stores/world/galaxyStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
+import { MATERIALS } from '@/config/economy/materials'
+import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import { formatCompactDuration } from '@/utils/ui/format'
+import { clampPercent } from '@/utils/orbit/geometry'
 import {
   MS_PER_SECOND,
   GALAXY_ATTEMPT_STRIP_MAX,

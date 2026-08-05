@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 
 /**
  * Career totals merged with the running battle — shared between the battle

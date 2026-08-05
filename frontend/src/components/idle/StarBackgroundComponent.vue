@@ -28,8 +28,8 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useStarBackground } from '../../composables/starBackground'
-import { useGamePause } from '../../composables/useGamePause'
+import { useStarBackground } from '@/composables/starBackground'
+import { useGamePause } from '@/composables/system/useGamePause'
 import BackgroundComets from '../ui/BackgroundComets.vue'
 
 const props = withDefaults(

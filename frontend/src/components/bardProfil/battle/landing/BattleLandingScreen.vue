@@ -70,9 +70,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useBattleScoreboardStats } from '@/composables/useBattleScoreboardStats'
-import { formatNumber } from '@/config/numberFormat'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useBattleScoreboardStats } from '@/composables/battle/useBattleScoreboardStats'
+import { formatNumber } from '@/config/ui/numberFormat'
 import { BATTLE_STAT_GAME_ICONS, HOT_WIN_STREAK_THRESHOLD } from '@/config/constants'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import RankBandPanel from './RankBandPanel.vue'

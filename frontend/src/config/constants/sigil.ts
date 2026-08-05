@@ -3,9 +3,9 @@
 // mehrere Randbedingungen gleichzeitig gelöst — einzeln geändert überlappen
 // Namensschild, Medaille und Verbindungslinien.
 
-import type { ChampionArtSize, SigilStageDef } from '../../types'
-import { ALLIES_PER_ROLE } from './champions'
-import { ROLES } from './roles'
+import type { ChampionArtSize, SigilStageDef } from '@/types'
+import { ALLIES_PER_ROLE } from '@/config/constants/champions'
+import { ROLES } from '@/config/constants/roles'
 
 // ── Sigil-Board: Abstand der Verbindungslinien ────────────────────────────
 /**

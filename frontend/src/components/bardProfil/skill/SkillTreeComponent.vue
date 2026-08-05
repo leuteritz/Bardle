@@ -10,8 +10,8 @@ import {
 import { Controls } from '@vue-flow/controls'
 import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
-import { useMeepTreeStore } from '@/stores/meepTreeStore'
-import { MEEP_TREE_BRANCHES } from '@/config/meepTree'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { MEEP_TREE_BRANCHES } from '@/config/progression/meepTree'
 import {
   SKILL_TREE_BASE_ANGLES_DEG,
   SKILL_TREE_TIER_JITTER_DEG,

@@ -1,4 +1,4 @@
-import type { ShopItem, ItemCategory, ItemRarity } from '../types'
+import type { ShopItem, ItemCategory, ItemRarity, ItemSetBonus } from '@/types'
 
 /* ── Unified shop: item category + rarity definitions (chips, section headers,
    detail panel). Images are the former item-shop tab icons. ── */
@@ -330,3 +330,29 @@ const ITEM_MAP = new Map<string, ShopItem>(SHOP_ITEMS.map((item) => [item.id, it
 export function getItemById(id: string): ShopItem | undefined {
   return ITEM_MAP.get(id)
 }
+
+/* ── Set bonuses: granted when a champion wears a full item set. ── */
+
+export const ITEM_SETS: ItemSetBonus[] = [
+  {
+    setId: 'arcane',
+    setName: 'Arcane Bond',
+    icon: 'game-icons:crystal-cluster',
+    description: '+15% CPS & +10% Combat Power',
+    bonusEffect: { cpsMultiplier: 1.15, powerMultiplier: 1.1 },
+  },
+  {
+    setId: 'cosmic',
+    setName: 'Cosmic Power',
+    icon: 'game-icons:galaxy',
+    description: '+15% CPS & +20% Combat Power',
+    bonusEffect: { cpsMultiplier: 1.15, powerMultiplier: 1.2 },
+  },
+  {
+    setId: 'stellar',
+    setName: 'Stellar Origin',
+    icon: '/img/star-128.png',
+    description: '+30% CPS & +25% Combat Power',
+    bonusEffect: { cpsMultiplier: 1.3, powerMultiplier: 1.25 },
+  },
+]

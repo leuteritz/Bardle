@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue'
-import { useGameStore } from '@/stores/gameStore'
+import { useGameStore } from '@/stores/core/gameStore'
 
 const gameStore = useGameStore()
 

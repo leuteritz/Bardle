@@ -1,13 +1,13 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useBattleStore, makeChampionState, defaultAllTimeStats } from '../../stores/battleStore'
-import { useGameStore } from '../../stores/gameStore'
-import { generateTimeline } from '../../utils/battle/timeline'
+import { useBattleStore, makeChampionState, defaultAllTimeStats } from '@/stores/battle/battleStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { generateTimeline } from '@/utils/battle/timeline'
 import {
   BATTLE_TOTAL_GAME_SECONDS,
   HONOR_MAX_SELECTIONS,
   HONOR_MVP_BUFF_DURATION_S,
-} from '../../config/constants'
+} from '@/config/constants'
 
 const T1_NAMES = ['Garen', 'Lee Sin', 'Ahri', 'Jinx', 'Bard']
 const T2_NAMES = ['Darius', 'Kha Zix', 'Zed', 'Caitlyn', 'Thresh']

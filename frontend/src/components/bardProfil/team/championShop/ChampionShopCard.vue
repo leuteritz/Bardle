@@ -70,7 +70,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import RpgNotifyBadge from '../../../ui/RpgNotifyBadge.vue'
-import { truncate } from '../../../../config/numberFormat'
+import { truncate } from '@/config/ui/numberFormat'
 
 /**
  * Single champion card in the shop grid — purely presentational.

@@ -112,9 +112,9 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import LoadingChampionCard from './LoadingChampionCard.vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useBattlePhase } from '@/composables/useBattlePhase'
-import { formatNumber } from '@/config/numberFormat'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useBattlePhase } from '@/composables/battle/useBattlePhase'
+import { formatNumber } from '@/config/ui/numberFormat'
 import {
   BATTLE_PHASES,
   HOT_WIN_STREAK_THRESHOLD,
@@ -126,10 +126,10 @@ import {
   RANK_TIER_COLORS,
   RANK_TIER_SHORT,
 } from '@/config/constants'
-import { CHAMPION_DATA } from '@/config/championData'
-import { getChampionStarLevel } from '@/config/championTiers'
-import { TRAIT_DEFINITIONS } from '@/config/championTraits'
-import { ORIGIN_COLORS } from '@/config/championOrigins'
+import { CHAMPION_DATA } from '@/config/champions/championData'
+import { getChampionStarLevel } from '@/config/champions/championTiers'
+import { TRAIT_DEFINITIONS } from '@/config/champions/championTraits'
+import { ORIGIN_COLORS } from '@/config/champions/championOrigins'
 import type { ChampionState, LoadingScreenCard, LoadingScreenStat } from '@/types'
 
 const battleStore = useBattleStore()

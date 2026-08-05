@@ -7,7 +7,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import type { ProjectileShot } from '@/composables/useProjectileSystem'
+import type { ProjectileShot } from '@/composables/orbit/useProjectileSystem'
 
 // Canvas statt SVG: Die frühere SVG-Variante renderte pro Schuss 7+ Elemente
 // mit mehrstufigen feGaussianBlur-Filtern, die jeden Frame neu gerastert

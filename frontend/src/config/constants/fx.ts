@@ -2,7 +2,7 @@
 // Hintergrund-Kometen, die Abgangs-Effekte der Sterne, Supernova und der
 // Hyperspace-Sprung.
 
-// ── Deko-Partikelfelder (utils/particleField.ts) ───────────────────────────
+// ── Deko-Partikelfelder (utils/fx/particleField.ts) ───────────────────────────
 // Aufsteigende Glut hinter Star-Fight- und Rescue-Overlay sowie die treibenden
 // Staubkörner im Pause-Overlay. Alle Werte werden aus dem Partikel-Index
 // abgeleitet, nicht gewürfelt: die Felder müssen über einen Re-Render hinweg
@@ -137,7 +137,7 @@ export const HYPERSPACE_ANIM_END_MS = 3500
 /** Winkel-Schrittweite, mit der die Bahntangente eines Sterns abgetastet wird. */
 export const STAR_FX_TANGENT_PROBE_RAD = 0.05
 
-// ── Star despawn FX (utils/starVanishFx.ts) ──────────────────────────────────
+// ── Star despawn FX (utils/fx/starVanishFx.ts) ──────────────────────────────────
 // Ein einziges additiv gezeichnetes Canvas für ALLE Sternabgänge. Gezeichnet
 // wird ausschliesslich ein pro Farbe gecachtes Glow-Sprite (drawImage) plus
 // wenige arc()-Strokes — deshalb bleiben auch 30 gleichzeitige Effekte im

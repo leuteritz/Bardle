@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { useGameStore } from './gameStore'
-import type { TimePeriod } from '../types'
+import { useGameStore } from '@/stores/core/gameStore'
+import type { TimePeriod } from '@/types'
 import {
   GAME_TICK_INTERVAL_MS,
   BUILDING_HISTORY_BUFFER_SIZE,
@@ -12,8 +12,8 @@ import {
   MS_PER_SECOND,
   SECONDS_PER_MINUTE,
   SECONDS_PER_HOUR,
-} from '../config/constants'
-import { splitDuration } from '../utils/format'
+} from '@/config/constants'
+import { splitDuration } from '@/utils/ui/format'
 
 export const useCpsStore = defineStore('cps', {
   state: () => ({

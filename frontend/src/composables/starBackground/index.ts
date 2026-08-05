@@ -1,2 +1,2 @@
-export { useStarBackground } from './useStarBackground'
-export { useBackgroundComets } from './useBackgroundComets'
+export { useStarBackground } from '@/composables/starBackground/useStarBackground'
+export { useBackgroundComets } from '@/composables/starBackground/useBackgroundComets'

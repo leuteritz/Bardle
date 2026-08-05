@@ -1,5 +1,5 @@
-import type { BattleRole, StructureTier } from '../types'
-import { BLUE_FOUNTAIN, RED_FOUNTAIN } from './constants'
+import type { BattleRole, StructureTier } from '@/types'
+import { BLUE_FOUNTAIN, RED_FOUNTAIN } from '@/config/constants'
 
 export interface MapPoint {
   x: number

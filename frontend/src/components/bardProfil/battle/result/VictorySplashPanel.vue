@@ -81,8 +81,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { formatNumber } from '@/config/numberFormat'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { formatNumber } from '@/config/ui/numberFormat'
 import {
   LP_NORMAL_PROMOTION_THRESHOLD,
   LP_MASTER_PROMOTION_THRESHOLD,

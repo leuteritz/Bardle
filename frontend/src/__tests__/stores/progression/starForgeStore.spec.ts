@@ -1,9 +1,9 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useStarForgeStore } from '../../stores/starForgeStore'
-import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
-import { useGameStore } from '../../stores/gameStore'
-import { useInventoryStore } from '../../stores/inventoryStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import {
   FORGE_BRANCH_BASE_MAX_LEVEL,
   FORGE_BRANCH_MAX_LEVEL_CAP,
@@ -12,8 +12,8 @@ import {
   FORGE_LEAF_MAX_LEVEL,
   FORGE_LEAF_AMPLIFY_PER_LEVEL,
   FORGE_BARGAIN_RESTOCK_MS,
-} from '../../config/constants'
-import { getForgeNode, FORGE_RELICS, FORGE_CONSTELLATIONS } from '../../config/starForge'
+} from '@/config/constants'
+import { getForgeNode, FORGE_RELICS, FORGE_CONSTELLATIONS } from '@/config/progression/starForge'
 
 /** Puts the game into a state where `solarSails` (branch of flightSpeed) is buyable. */
 function unlockBranchPrereqs(nodeId = 'solarSails') {

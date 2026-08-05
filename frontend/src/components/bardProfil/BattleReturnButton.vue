@@ -18,8 +18,8 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useUiStore } from '@/stores/uiStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import {
   BATTLE_RETURN_TICK_MS,
   STAR_FIGHT_TIMER_WARNING_S,

@@ -2,8 +2,8 @@
 // Sterne, ihr Verhalten hinter der Sonne, die Cooldown-Ringe und die Drifter,
 // die durch das Bild fliegen.
 
-import type { ChampionRole } from '../../types'
-import { SUN_RADIUS } from './sun'
+import type { ChampionRole } from '@/types'
+import { SUN_RADIUS } from '@/config/constants/sun'
 
 export const STAR_FIGHT_TIMER_WARNING_S = 20 // star-fight timer turns amber below this
 export const STAR_FIGHT_TIMER_CRITICAL_S = 10 // star-fight timer turns red + pulses below this

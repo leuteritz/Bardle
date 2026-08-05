@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { splitDuration } from '@/utils/format'
+import { splitDuration } from '@/utils/ui/format'
 import {
   OFFLINE_COUNTER_ANIM_MS,
   OFFLINE_MINIGAME_START_DELAY_MS,
 } from '@/config/constants'
 import { ref, watch, computed } from 'vue'
-import { useGameStore } from '@/stores/gameStore'
-import { formatNumber } from '@/config/numberFormat'
+import { useGameStore } from '@/stores/core/gameStore'
+import { formatNumber } from '@/config/ui/numberFormat'
 import OfflineMinigame from './OfflineMinigame.vue'
 
 const gameStore = useGameStore()

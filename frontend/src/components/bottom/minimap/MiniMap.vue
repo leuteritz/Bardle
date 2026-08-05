@@ -122,14 +122,14 @@
 
 <script lang="ts">
 import { defineComponent, computed, watch } from 'vue'
-import { useGalaxyStore } from '../../../stores/galaxyStore'
-import { useStarGroupStore } from '../../../stores/starGroupStore'
-import { useActionToast } from '../../../composables/useActionToast'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import {
   HUD_PANEL_ARC_R,
   SKIP_DURATION_SECONDS,
   MINIMAP_TIER_FLASH_MS,
-} from '../../../config/constants'
+} from '@/config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
 import MiniMapHudPanel from './MiniMapHudPanel.vue'
 import MiniMapArrivalHud from './MiniMapArrivalHud.vue'

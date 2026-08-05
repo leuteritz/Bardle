@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { ChampionCombatState, ChampionCombatPhase, DamageFloat } from '../types'
+import type { ChampionCombatState, ChampionCombatPhase, DamageFloat } from '@/types'
 import {
   CHAMPION_DETECT_RADIUS,
   CHAMPION_ORBIT_HIT_RANGE,
@@ -18,16 +18,16 @@ import {
   COMBAT_FLOAT_OFFSET_X_SPREAD,
   CHAMPION_EXECUTE_HP_THRESHOLD,
   CHAMPION_CRIT_DAMAGE_MULT,
-} from '../config/constants'
-import { activePlanetPositions } from '../utils/liveState'
-import { usePlanetBossStore } from './planetBossStore'
-import { useBattleStore } from './battleStore'
-import { useGameStore } from './gameStore'
-import { useSynergyStore } from './synergyStore'
-import { useStarForgeStore } from './starForgeStore'
-import { useMeepTreeStore } from './meepTreeStore'
-import { useChampionLevelStore } from './championLevelStore'
-import { useDrifterStore } from './drifterStore'
+} from '@/config/constants'
+import { activePlanetPositions } from '@/utils/orbit/liveState'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useSynergyStore } from '@/stores/champions/synergyStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { useDrifterStore } from '@/stores/world/drifterStore'
 
 let _damageFloatId = 0
 

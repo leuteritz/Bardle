@@ -69,7 +69,7 @@
 import { computed, type CSSProperties } from 'vue'
 import { Icon } from '@iconify/vue'
 import ChampionRankFrame from '../landing/ChampionRankFrame.vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import {
   LOADING_READY_PERCENT,
   RANK_FRAME_CONTENT_INSET,

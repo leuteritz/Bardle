@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import { multikillLabel } from '@/utils/battle/movement'
 import {
   ANNOUNCE_DISPLAY_MS,

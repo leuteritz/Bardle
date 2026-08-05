@@ -1,7 +1,7 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useBattleStore } from '../../stores/battleStore'
-import { WINPROB_MIN, WINPROB_MAX } from '../../config/constants'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { WINPROB_MIN, WINPROB_MAX } from '@/config/constants'
 
 describe('battleStore liveWinMomentum', () => {
   beforeEach(() => {

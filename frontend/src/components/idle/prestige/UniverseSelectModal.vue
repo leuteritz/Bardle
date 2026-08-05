@@ -14,9 +14,9 @@ import {
 import { computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgFrame from '../../ui/RpgFrame.vue'
-import { useGameStore } from '../../../stores/gameStore'
-import { universes } from '../../../config/universes'
-import type { ModifierEffects } from '../../../types'
+import { useGameStore } from '@/stores/core/gameStore'
+import { universes } from '@/config/progression/universes'
+import type { ModifierEffects } from '@/types'
 
 const gameStore = useGameStore()
 

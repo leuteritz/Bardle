@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { useRenderingPaused } from './useRenderingPaused'
-import { EVENT_LOG_MAX_SIZE, EVENT_LOG_DISMISS_MS } from '../config/constants'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { EVENT_LOG_MAX_SIZE, EVENT_LOG_DISMISS_MS } from '@/config/constants'
 
 export type GameEventType =
   | 'support'

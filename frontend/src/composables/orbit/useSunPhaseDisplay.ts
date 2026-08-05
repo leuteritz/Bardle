@@ -2,7 +2,7 @@
 // Sternphasen erscheinen daher als Index + Offset. Fünf Komponenten haben diese
 // Rechnung vorher jeweils selbst gemacht — hier steht sie einmal.
 import { computed } from 'vue'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { SUN_PHASE_DISPLAY_OFFSET, SUN_PHASE_DISPLAY_TOTAL } from '@/config/constants'
 
 /** Phasen-Index (0-basiert) → angezeigte Phasennummer. */

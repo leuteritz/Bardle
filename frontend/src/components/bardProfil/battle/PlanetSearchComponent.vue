@@ -12,7 +12,7 @@
 </template>
 
 <script lang="ts">
-import { hexToRgb } from '@/utils/format'
+import { hexToRgb } from '@/utils/ui/format'
 import { defineComponent, ref, onUnmounted, nextTick } from 'vue'
 import WarpHudOverlay from './search/WarpHudOverlay.vue'
 import {

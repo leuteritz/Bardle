@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatNumberCompact } from '../../config/numberFormat'
+import { formatNumberCompact } from '@/config/ui/numberFormat'
 
 describe('formatNumberCompact', () => {
   it('leaves values below 1000 as plain integers', () => {

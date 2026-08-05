@@ -114,7 +114,7 @@
 <script setup lang="ts">
 import { computed, getCurrentInstance } from 'vue'
 import { storeToRefs } from 'pinia'
-import { usePlanetShopStore } from '@/stores/planetShopStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { HOVER_DIM_OPACITY } from '@/config/constants'
 
 const props = withDefaults(

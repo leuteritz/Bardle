@@ -21,20 +21,20 @@
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
-import { useBattleStore } from '@/stores/battleStore'
-import { useGameStore } from '@/stores/gameStore'
-import { useInventoryStore } from '@/stores/inventoryStore'
-import { useItemStore } from '@/stores/itemStore'
-import { useSkinStore } from '@/stores/skinStore'
-import { useChampionLevelStore } from '@/stores/championLevelStore'
-import { useActionToast } from '@/composables/useActionToast'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useItemStore } from '@/stores/economy/itemStore'
+import { useSkinStore } from '@/stores/champions/skinStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import {
   ascensionRank,
   perkChoicesFor,
   statEffectLabel,
   CHAMPION_STATS,
   PERK_BY_ID,
-} from '@/config/championLevels'
+} from '@/config/champions/championLevels'
 import {
   ROLES,
   ALLIES_PER_ROLE,
@@ -69,18 +69,18 @@ import {
 import ChampionLevelBadge from './ChampionLevelBadge.vue'
 import ChampionSwapCompare from './swap/ChampionSwapCompare.vue'
 import ChampionSwapGrid from './swap/ChampionSwapGrid.vue'
-import { allySlotLabel } from '@/utils/format'
+import { allySlotLabel } from '@/utils/ui/format'
 import {
   getChampionSkins,
   formatSkinName,
   getSkinImagePath,
   getOriginalPreviewPath,
-} from '@/utils/champions'
-import { getChampionTier } from '@/config/championTiers'
-import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
-import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
-import { SHOP_ITEMS } from '@/config/items'
-import { MATERIALS } from '@/config/materials'
+} from '@/utils/game/champions'
+import { getChampionTier } from '@/config/champions/championTiers'
+import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/champions/championOrigins'
+import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/champions/championTraits'
+import { SHOP_ITEMS } from '@/config/economy/items'
+import { MATERIALS } from '@/config/economy/materials'
 import type { ItemCategory, ShopItem, ChampionStatKey, ChampionPerkDef } from '@/types'
 
 const props = defineProps<{

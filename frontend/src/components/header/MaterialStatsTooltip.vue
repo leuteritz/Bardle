@@ -13,10 +13,10 @@
  */
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useInventoryStore } from '@/stores/inventoryStore'
-import { MATERIALS } from '@/config/materials'
-import { formatNumber, formatNumberCompact } from '@/config/numberFormat'
-import { formatCompactDuration } from '@/utils/format'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { MATERIALS } from '@/config/economy/materials'
+import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import { formatCompactDuration } from '@/utils/ui/format'
 import type { MaterialFlowShare } from '@/types'
 import {
   MATERIAL_COLOR,

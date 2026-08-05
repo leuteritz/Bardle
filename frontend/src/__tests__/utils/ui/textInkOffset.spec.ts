@@ -4,7 +4,7 @@ import {
   inkMiddleOffsetPx,
   clearInkOffsetCache,
   vInkCenter,
-} from '../../utils/textInkOffset'
+} from '@/utils/ui/textInkOffset'
 
 const FONT = {
   font: '800 13px MedievalSharp',

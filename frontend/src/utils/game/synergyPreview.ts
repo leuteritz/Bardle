@@ -1,5 +1,5 @@
-import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
-import { getChampionOrigin, ORIGIN_SYNERGIES } from '@/config/championOrigins'
+import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/champions/championTraits'
+import { getChampionOrigin, ORIGIN_SYNERGIES } from '@/config/champions/championOrigins'
 import { SYNERGY_NEUTRAL_ORIGIN } from '@/config/constants'
 import type { ChampionOrigin } from '@/types'
 

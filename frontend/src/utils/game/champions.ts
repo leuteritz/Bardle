@@ -1,6 +1,6 @@
 // Champion-bezogene Helfer: Stammdaten-Ladung und alles rund um gebündelte
 // Skins (Pfade, Namen, Verfügbarkeit).
-import { CHAMPION_SKINS } from '@/config/championSkins'
+import { CHAMPION_SKINS } from '@/config/champions/championSkins'
 import {
   CHAMPION_ART_VARIANT_PX,
   CHAMPION_ART_SM_MAX_EDGE,

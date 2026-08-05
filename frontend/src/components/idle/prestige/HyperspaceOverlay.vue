@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
-import { useGameStore } from '@/stores/gameStore'
+import { useGameStore } from '@/stores/core/gameStore'
 import {
   HYPERSPACE_FLASH_AT_MS,
   HYPERSPACE_FADEOUT_AT_MS,

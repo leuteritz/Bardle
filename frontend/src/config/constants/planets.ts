@@ -2,7 +2,7 @@
 // Slots, ihre Attunement-Stufen, sowie die Boss-Kämpfe mitsamt Arena, Turret-
 // Batterie und Striker-Squad.
 
-import type { ChampionRole, PlanetRole, PlanetRoleType, JungleBuffDef } from '../../types'
+import type { ChampionRole, PlanetRole, PlanetRoleType, JungleBuffDef } from '@/types'
 
 /** Eigene, tiefere Warnschwelle der Striker-Plakette im Star-Fight. */
 export const STRIKER_HP_LOW_PCT = 25
@@ -43,7 +43,7 @@ export const BOSS_CPS_PENALTY_FRACTION = 0.05
 export const BOSS_CPS_PENALTY_DURATION_MS = 30_000
 /** Nachlauf, bevor ein besiegter oder abgelaufener Boss vom Planeten verschwindet. */
 export const BOSS_REMOVE_DELAY_MS = 900
-export { BOSS_NAMES } from '../bossNames'
+export { BOSS_NAMES } from '@/config/battle/bossNames'
 
 // ── Boss-Arena: Darstellung des Kampfes (BossArenaSection) ─────────────────
 /** Takt eines Champion-Angriffszyklus und der Punkt darin, an dem der Schlag landet. */

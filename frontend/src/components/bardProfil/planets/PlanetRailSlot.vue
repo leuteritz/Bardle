@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useUiStore } from '@/stores/uiStore'
-import { usePlanetShopStore, PLANET_ROLES, isPlanetDown } from '@/stores/planetShopStore'
-import type { PlanetSlot } from '@/stores/planetShopStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { usePlanetShopStore, PLANET_ROLES, isPlanetDown } from '@/stores/world/planetShopStore'
+import type { PlanetSlot } from '@/stores/world/planetShopStore'
 import { PLANET_RESPAWN_MS } from '@/config/constants'
-import { hpTier, hpPercentOf } from '@/utils/planetStatus'
-import { displaySunPhase } from '@/composables/useSunPhaseDisplay'
+import { hpTier, hpPercentOf } from '@/utils/orbit/planetStatus'
+import { displaySunPhase } from '@/composables/orbit/useSunPhaseDisplay'
 
 const props = defineProps<{
   planet: PlanetSlot

@@ -1,11 +1,11 @@
-import { hexToRgb } from '@/utils/format'
+import { hexToRgb } from '@/utils/ui/format'
 import { defineStore } from 'pinia'
-import type { PlanetType, StarType } from '../types'
-import { pickConfig } from '../utils/planetDraw'
-import { usePlanetBossStore } from './planetBossStore'
-import { useGalaxyStore } from './galaxyStore'
-import { useGameStore } from './gameStore'
-import { CHAMPION_ROLES } from '../config/championData'
+import type { PlanetType, StarType } from '@/types'
+import { pickConfig } from '@/utils/planetDraw'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { CHAMPION_ROLES } from '@/config/champions/championData'
 import {
   RESOURCE_STAR_PLANET_COUNT,
   RESOURCE_STAR_DURATION_MS,
@@ -63,7 +63,7 @@ import {
   RESOURCE_STAR_COLORS,
   ROLE_COLORS,
   GALAXY_BOSS_ESCORT_ORBIT_SPREAD,
-} from '../config/constants'
+} from '@/config/constants'
 
 let starIdCounter = 0
 let planetIdCounter = 0
@@ -96,7 +96,7 @@ export interface StarGroup {
   starColor: [number, number, number]
   /**
    * Warum der Stern das Bild verlässt — steuert die Abgangs-Animation im
-   * Idle-Orbit (`utils/starVanishFx.ts`). `'rescued'` heisst: alle Planeten
+   * Idle-Orbit (`utils/fx/starVanishFx.ts`). `'rescued'` heisst: alle Planeten
    * wurden im Zeitlimit befreit. `'expired'` deckt Timer-Ablauf UND gescheiterte
    * Boss-Kämpfe ab; einmal gesetzt bleibt es stehen, ein einzelner Fehlschlag
    * macht aus dem Stern also keine Rettung mehr.

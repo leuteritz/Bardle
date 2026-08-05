@@ -197,17 +197,17 @@
 </template>
 
 <script lang="ts">
-import { getOrbitPos } from '@/utils/geometry'
+import { getOrbitPos } from '@/utils/orbit/geometry'
 import { Icon } from '@iconify/vue'
 import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRenderingPaused } from '@/composables/useRenderingPaused'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import {
   usePlanetShopStore,
   PLANET_ROLES,
   JUNGLE_BUFF_DEFS,
   isPlanetDown,
-} from '../../../stores/planetShopStore'
-import { usePlanetBossStore } from '../../../stores/planetBossStore'
+} from '@/stores/world/planetShopStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import {
   ORBIT_TIERS,
   PLANET_SLOT_MAX_HP,
@@ -239,14 +239,14 @@ import {
   COOLDOWN_RING_TIP_RADIUS,
   COOLDOWN_RING_TIP_RADIUS_HOT,
 } from '@/config/constants'
-import { useUiStore } from '@/stores/uiStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
-import { activePlanetPositions, activePlayerPlanetPositions } from '../../../utils/liveState'
-import { planetOrbitPhases } from '../../../utils/planetOrbitPhase'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { activePlanetPositions, activePlayerPlanetPositions } from '@/utils/orbit/liveState'
+import { planetOrbitPhases } from '@/utils/orbit/planetOrbitPhase'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
-import { useProjectileSystem } from '@/composables/useProjectileSystem'
-import { useOrbitScale } from '@/composables/useOrbitScale'
+import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
+import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
 
 const MIN_SHOT_DISTANCE = 32
 

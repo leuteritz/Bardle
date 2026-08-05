@@ -2,10 +2,10 @@
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
-import { formatCompactDuration } from '@/utils/format'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import type { CompletedGalaxyRecord } from '@/stores/galaxyStore'
-import { renderGalaxySnapshot } from '@/utils/galaxySnapshot'
+import { formatCompactDuration } from '@/utils/ui/format'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
+import { renderGalaxySnapshot } from '@/utils/fx/galaxySnapshot'
 import StatsColumnHeader from './StatsColumnHeader.vue'
 
 /**

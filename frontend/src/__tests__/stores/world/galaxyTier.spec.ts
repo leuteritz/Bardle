@@ -6,9 +6,9 @@ import {
   starLevelForGalaxy,
   computeTierUnlockCost,
   useGalaxyStore,
-} from '../../stores/galaxyStore'
-import { useGameStore } from '../../stores/gameStore'
-import { useInventoryStore } from '../../stores/inventoryStore'
+} from '@/stores/world/galaxyStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import {
   getChampionStarLevel,
   requiredGalaxyForTier,
@@ -18,14 +18,14 @@ import {
   perChampionSpawnPercents,
   CHAMPION_TIERS,
   CHAMPION_TIERS_BY_STAR,
-} from '../../config/championTiers'
-import { CHAMPION_DATA } from '../../config/championData'
+} from '@/config/champions/championTiers'
+import { CHAMPION_DATA } from '@/config/champions/championData'
 import {
   MAX_STAR_LEVEL,
   CHAMPION_TIER_CHIMES_PRICE,
   CHAMPION_TIER_REQUIRED_GALAXY,
   TIER_SPAWN_WEIGHTS,
-} from '../../config/constants'
+} from '@/config/constants'
 
 describe('Galaxy Tier helpers', () => {
   describe('tierOf', () => {

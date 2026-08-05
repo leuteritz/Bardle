@@ -16,8 +16,8 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
-import { useRenderingPaused } from '@/composables/useRenderingPaused'
+import { useNebulaTrigger } from '@/composables/orbit/useNebulaTrigger'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 
 // ─── Palettes ──────────────────────────────────────────────────────────────────
 

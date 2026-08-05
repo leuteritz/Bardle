@@ -5,7 +5,7 @@
 
 // ── Zeit-Umrechnung ────────────────────────────────────────────────────────
 // Jede Dauer-Anzeige im Spiel zerlegt Sekunden in Tage/Stunden/Minuten. Die
-// Zerlegung selbst steht als `splitDuration` in utils/format.ts — hier liegen
+// Zerlegung selbst steht als `splitDuration` in utils/ui/format.ts — hier liegen
 // nur die Faktoren, damit auch Stores und Composables sie benennen können.
 export const MS_PER_SECOND = 1000
 export const SECONDS_PER_MINUTE = 60
@@ -17,7 +17,7 @@ export const SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY
 /**
  * Obergrenze für Zähler-Badges. Darüber steht `99+` — die Badges sitzen auf
  * dem Header-Bogen und im Profilmenü, wo eine dreistellige Zahl den Kreis
- * sprengen würde. Format über `formatBadgeCount` in utils/format.ts.
+ * sprengen würde. Format über `formatBadgeCount` in utils/ui/format.ts.
  */
 export const BADGE_COUNT_CAP = 99
 
@@ -25,7 +25,7 @@ export const BADGE_COUNT_CAP = 99
  * Farbstufen einer HP-Leiste in Prozent. Objective-Modal, Rift-Minimap und
  * Team-Spalte zeigen dieselben Kämpfer nebeneinander — laufen die Schwellen
  * auseinander, ist derselbe Champion links gelb und rechts grün.
- * Klasse über `hpStageClass` in utils/format.ts.
+ * Klasse über `hpStageClass` in utils/ui/format.ts.
  */
 export const HP_STAGE_HIGH_PCT = 60
 export const HP_STAGE_MID_PCT = 35

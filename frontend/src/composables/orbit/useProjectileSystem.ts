@@ -1,6 +1,6 @@
-// frontend/src/composables/useProjectileSystem.ts
+// frontend/src/composables/orbit/useProjectileSystem.ts
 import { shallowRef } from 'vue'
-import { PROJECTILE_SHOT_DURATION_MS } from '../config/constants'
+import { PROJECTILE_SHOT_DURATION_MS } from '@/config/constants'
 
 export interface ProjectileShot {
   id: number

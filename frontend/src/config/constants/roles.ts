@@ -3,8 +3,8 @@
 // aufsteigen. Die Registry ROLES ist die Single Source of Truth für Farbe,
 // Icon und Bahnmaße einer Rolle.
 
-import type { ChampionRole, RoleStat, RoleAbilityDetail } from '../../types'
-import { SUN_RADIUS } from './sun'
+import type { ChampionRole, RoleStat, RoleAbilityDetail } from '@/types'
+import { SUN_RADIUS } from '@/config/constants/sun'
 
 /** Nachlauf nach der Rollenwahl, damit die Auswahl-Animation sichtbar bleibt. */
 export const ROLE_SELECTION_CONFIRM_DELAY_MS = 260

@@ -215,9 +215,9 @@ import { defineComponent } from 'vue'
 import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '../../../ui/CosmicStageBackground.vue'
 import PlanetGlyph from '../../../ui/PlanetGlyph.vue'
-import { formatNumber } from '../../../../config/numberFormat'
-import { SHOP_HOME_PLANET_GLYPH_SIZE } from '../../../../config/constants'
-import type { ShopChampionDetail } from '../../../../types'
+import { formatNumber } from '@/config/ui/numberFormat'
+import { SHOP_HOME_PLANET_GLYPH_SIZE } from '@/config/constants'
+import type { ShopChampionDetail } from '@/types'
 
 /**
  * Right-hand detail panel of the Champion Shop — purely presentational.

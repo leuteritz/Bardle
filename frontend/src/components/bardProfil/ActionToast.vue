@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useActionToast } from '@/composables/useActionToast'
+import { useActionToast } from '@/composables/ui/useActionToast'
 
 const { message, visible } = useActionToast()
 </script>

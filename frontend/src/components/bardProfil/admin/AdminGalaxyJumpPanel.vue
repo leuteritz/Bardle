@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { CHAMPION_TIERS_BY_STAR, requiredGalaxyForTier } from '@/config/championTiers'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { CHAMPION_TIERS_BY_STAR, requiredGalaxyForTier } from '@/config/champions/championTiers'
 import { GALAXY_JUMP_WARP_MS, ADMIN_JUMP_SHAKE_MS } from '@/config/constants'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
 

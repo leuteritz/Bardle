@@ -42,7 +42,7 @@ import AutoBattleStopBar from './AutoBattleStopBar.vue'
 import DrakeBuffBadges from './DrakeBuffBadges.vue'
 import AnnouncementBanner from './AnnouncementBanner.vue'
 import ObjectiveModalComponent from '../ObjectiveModalComponent.vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 
 const battleStore = useBattleStore()
 </script>

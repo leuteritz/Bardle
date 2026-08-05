@@ -14,16 +14,16 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useChampionLevelStore } from '@/stores/championLevelStore'
-import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/championTraits'
-import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/championOrigins'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/champions/championTraits'
+import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/champions/championOrigins'
 import {
   getChampionTier,
   getChampionStarLevel,
   CHAMPION_TIERS_BY_STAR,
-} from '@/config/championTiers'
-import { CHAMPION_DATA, CHAMPION_ROLES, getChampionRoles } from '@/config/championData'
+} from '@/config/champions/championTiers'
+import { CHAMPION_DATA, CHAMPION_ROLES, getChampionRoles } from '@/config/champions/championData'
 import {
   ROLE_BY_KEY,
   ROLES,
@@ -32,7 +32,7 @@ import {
   CHAMPION_PICKER_GRID_GAP,
   CHAMPION_PICKER_OVERSCAN_ROWS,
 } from '@/config/constants'
-import { useVirtualGrid } from '@/composables/useVirtualGrid'
+import { useVirtualGrid } from '@/composables/ui/useVirtualGrid'
 import type { ChampionRole } from '@/types'
 
 const props = defineProps<{

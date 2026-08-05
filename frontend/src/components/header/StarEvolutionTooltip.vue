@@ -19,9 +19,9 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/solarUpgradeStore'
-import { useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
-import { formatCompactDuration } from '@/utils/format'
+import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
+import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
+import { formatCompactDuration } from '@/utils/ui/format'
 import {
   MS_PER_SECOND,
   STAR_PHASE_DATA,

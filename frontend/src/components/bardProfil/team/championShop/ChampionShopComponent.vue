@@ -556,25 +556,24 @@
 <script lang="ts">
 import { ref, defineComponent, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '../../../../stores/battleStore'
-import { useInventoryStore } from '../../../../stores/inventoryStore'
-import { useGameStore } from '../../../../stores/gameStore'
-import { useUiStore } from '../../../../stores/uiStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import ChampionShopCard from './ChampionShopCard.vue'
 import ChampionDetailPanel from './ChampionDetailPanel.vue'
 import ItemShopCard from './ItemShopCard.vue'
 import ItemDetailPanel from './ItemDetailPanel.vue'
 import RpgSearchBar from '../../../ui/RpgSearchBar.vue'
-import { useItemStore } from '../../../../stores/itemStore'
-import { SHOP_ITEMS, ITEM_CATEGORIES, ITEM_RARITIES } from '../../../../config/items'
-import { ITEM_SETS } from '../../../../config/sets'
-import { getChampionRoles, CHAMPION_ROLES, getChampionNames } from '../../../../config/championData'
-import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../../config/championTraits'
-import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../../config/championOrigins'
-import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, isChampionTierUnlocked, championTierSpawnPercent, CHAMPION_TIERS_BY_STAR } from '../../../../config/championTiers'
-import { useGalaxyStore } from '../../../../stores/galaxyStore'
-import { MATERIALS } from '../../../../config/materials'
-import { getHomePlanetConfig } from '../../../../config/championHomePlanets'
+import { useItemStore } from '@/stores/economy/itemStore'
+import { SHOP_ITEMS, ITEM_CATEGORIES, ITEM_RARITIES, ITEM_SETS } from '@/config/economy/items'
+import { getChampionRoles, CHAMPION_ROLES, getChampionNames } from '@/config/champions/championData'
+import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/champions/championTraits'
+import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/champions/championOrigins'
+import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, isChampionTierUnlocked, championTierSpawnPercent, CHAMPION_TIERS_BY_STAR } from '@/config/champions/championTiers'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { MATERIALS } from '@/config/economy/materials'
+import { getHomePlanetConfig } from '@/config/champions/championHomePlanets'
 import {
   PLANET_TYPE_NAMES,
   ROLES,
@@ -585,8 +584,8 @@ import {
   SHOP_JUMP_EXPAND_SETTLE_MS,
   SHOP_SCROLL_SETTLE_MS,
   CHAMPION_NEW_BADGE_DISMISS_MS,
-} from '../../../../config/constants'
-import { useActionToast } from '../../../../composables/useActionToast'
+} from '@/config/constants'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import type {
   ChampionRole,
   ShopChampionDetail,
@@ -594,7 +593,7 @@ import type {
   ItemCategory,
   ItemRarity,
   PlanetType,
-} from '../../../../types'
+} from '@/types'
 
 
 export default defineComponent({

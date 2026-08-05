@@ -1,7 +1,7 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useMeepTreeStore } from '../../stores/meepTreeStore'
-import { useGameStore } from '../../stores/gameStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useGameStore } from '@/stores/core/gameStore'
 
 /* The first node of every branch has no prerequisite; melody_1 costs 3 Meeps. */
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { getOrbitPos, orbitBehindProgress } from '../../utils/geometry'
-import { ORBIT_TIERS, SUN_RADIUS } from '../../config/constants'
+import { getOrbitPos, orbitBehindProgress } from '@/utils/orbit/geometry'
+import { ORBIT_TIERS, SUN_RADIUS } from '@/config/constants'
 
 // Schwelle und Bahnen wie im Sternsystem (useStarSystem: BEHIND_THRESHOLD)
 const THRESHOLD = -0.05

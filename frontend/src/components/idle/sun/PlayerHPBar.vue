@@ -29,9 +29,9 @@
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { usePlayerStore } from '../../../stores/playerStore'
-import { usePlanetShopStore } from '../../../stores/planetShopStore'
-import { PLAYER_HP_HIT_FLASH_MS } from '../../../config/constants'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { PLAYER_HP_HIT_FLASH_MS } from '@/config/constants'
 
 export default defineComponent({
   name: 'PlayerHPBar',

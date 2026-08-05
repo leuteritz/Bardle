@@ -144,8 +144,8 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { Icon } from '@iconify/vue'
-import { formatNumber } from '../../../../config/numberFormat'
-import type { ShopItemDetail } from '../../../../types'
+import { formatNumber } from '@/config/ui/numberFormat'
+import type { ShopItemDetail } from '@/types'
 
 /**
  * Right-hand detail panel of the unified shop for items — purely presentational.

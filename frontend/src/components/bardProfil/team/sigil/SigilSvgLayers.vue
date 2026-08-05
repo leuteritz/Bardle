@@ -13,7 +13,7 @@ import {
   SIGIL_LINK_GAP_BENCH,
 } from '@/config/constants'
 import type { SigilStageDef } from '@/types'
-import type { SigilPoint } from '@/composables/useTeamSigil'
+import type { SigilPoint } from '@/composables/ui/useTeamSigil'
 
 const props = defineProps<{
   stage: SigilStageDef

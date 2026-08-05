@@ -1,8 +1,8 @@
 import { ref, computed, readonly } from 'vue'
-import { useWindowFocus } from './useWindowFocus'
-import { useGameStore } from '@/stores/gameStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
+import { useWindowFocus } from '@/composables/system/useWindowFocus'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
 
 const _isDocHidden = ref(typeof document !== 'undefined' ? document.hidden : false)
 

@@ -1,9 +1,9 @@
-// frontend/src/stores/planetShopStore.ts
+// frontend/src/stores/world/planetShopStore.ts
 import { defineStore } from 'pinia'
-import { useGameStore } from './gameStore'
-import { useShopStore } from './shopStore'
-import { useInventoryStore } from './inventoryStore'
-import { logger } from '../utils/logger'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { logger } from '@/utils/logger'
 import {
   PLANET_SLOT_ORBITS,
   PLANET_HARVEST_INTERVAL_TICKS,
@@ -29,14 +29,14 @@ import {
 // Rollen- und Buff-Tabellen leben in config/constants.ts; hier nur noch
 // weitergereicht, damit die bestehenden Importpfade gültig bleiben.
 export { PLANET_ROLES, PLANET_ROLES_LIST, JUNGLE_BUFF_DEFS } from '@/config/constants'
-import { useSolarUpgradeStore } from './solarUpgradeStore'
-import { useDrifterStore } from './drifterStore'
-import { getOrbitSunRadius, getOrbitSunScale } from '../utils/geometry'
-import { playerSlotInForeground } from '../utils/foregroundGate'
-import { logPlanetDestroyed, logPlanetRestored } from '@/config/gameEventLogger'
-import type { PlanetRoleType, JungleBuffDef } from '../types'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useDrifterStore } from '@/stores/world/drifterStore'
+import { getOrbitSunRadius, getOrbitSunScale } from '@/utils/orbit/geometry'
+import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
+import { logPlanetDestroyed, logPlanetRestored } from '@/config/ui/eventLog'
+import type { PlanetRoleType, JungleBuffDef } from '@/types'
 // Typen liegen zentral in types/; hier weitergereicht für die bisherigen Importpfade.
-export type { PlanetRole, PlanetRoleType, JungleBuffDef } from '../types'
+export type { PlanetRole, PlanetRoleType, JungleBuffDef } from '@/types'
 
 export interface JungleBuff {
   active: boolean

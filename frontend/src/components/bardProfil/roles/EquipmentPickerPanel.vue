@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useItemStore } from '@/stores/itemStore'
-import { SHOP_ITEMS } from '@/config/items'
+import { useItemStore } from '@/stores/economy/itemStore'
+import { SHOP_ITEMS } from '@/config/economy/items'
 import type { ItemCategory, SlotEquipment } from '@/types'
 
 const CATEGORIES: Array<{ id: ItemCategory; label: string }> = [

@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useBattleStore } from '@/stores/battleStore'
-import { getChampionStarLevel } from '@/config/championTiers'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { getChampionStarLevel } from '@/config/champions/championTiers'
 import {
   ROLES,
   SIGIL_STAGE_SIZE,

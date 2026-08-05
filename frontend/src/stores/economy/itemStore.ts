@@ -1,11 +1,10 @@
 import { defineStore } from 'pinia'
-import { useGameStore } from './gameStore'
-import { useInventoryStore } from './inventoryStore'
-import { useShopStore } from './shopStore'
-import { SHOP_ITEMS, getItemById } from '../config/items'
-import { ITEM_SLOT_COUNT } from '../config/constants'
-import { ITEM_SETS } from '../config/sets'
-import type { SlotEquipment, ItemCategory, ItemSetBonus } from '../types'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { SHOP_ITEMS, getItemById, ITEM_SETS } from '@/config/economy/items'
+import { ITEM_SLOT_COUNT } from '@/config/constants'
+import type { SlotEquipment, ItemCategory, ItemSetBonus } from '@/types'
 
 function emptySlotEquipment(): SlotEquipment {
   return { weapon: null, armor: null, artefact: null }

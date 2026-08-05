@@ -187,12 +187,12 @@
 
 <script setup lang="ts">
 import { computed, ref, reactive, watch, onMounted, onUnmounted } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useChampionLevelStore } from '@/stores/championLevelStore'
-import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
-import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
-import { useUiStore } from '@/stores/uiStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import {
   ROLE_BY_KEY,
   ROLE_STAR_ATTACKS,
@@ -225,10 +225,10 @@ import {
   STRIKER_SPARK_DIRS,
   STRIKER_MUZZLE_OFFSET_PX,
 } from '@/config/constants'
-import { CHAMPION_STATS, statEffectLabel } from '@/config/championLevels'
+import { CHAMPION_STATS, statEffectLabel } from '@/config/champions/championLevels'
 import type { ChampionRole, StrikerStatCell } from '@/types'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
-import { activeChampionBehindState } from '@/utils/liveState'
+import { activeChampionBehindState } from '@/utils/orbit/liveState'
 import { Icon } from '@iconify/vue'
 
 const battleStore = useBattleStore()

@@ -1,36 +1,36 @@
 import { computed, type ComputedRef, type Ref } from 'vue'
-import { useGameStore } from '@/stores/gameStore'
-import { useShopStore } from '@/stores/shopStore'
-import { useBattleStore } from '@/stores/battleStore'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
-import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { usePlanetShopStore, PLANET_ROLES_LIST } from '@/stores/planetShopStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useStarForgeStore } from '@/stores/starForgeStore'
-import { useMeepTreeStore } from '@/stores/meepTreeStore'
-import { useExpeditionStore } from '@/stores/expeditionStore'
-import { useInventoryStore } from '@/stores/inventoryStore'
-import { useItemStore } from '@/stores/itemStore'
-import { useSynergyStore } from '@/stores/synergyStore'
-import { useAugmentStore } from '@/stores/augmentStore'
-import { useDrifterStore } from '@/stores/drifterStore'
-import { usePlayerStore } from '@/stores/playerStore'
-import { useSectionStore } from '@/stores/sectionStore'
-import { useChampionLevelStore } from '@/stores/championLevelStore'
-import { STAT_CATEGORIES } from '@/config/statCategories'
-import { formatNumber } from '@/config/numberFormat'
-import { formatCompactDuration } from '@/utils/format'
-import { MATERIALS } from '@/config/materials'
-import { AUGMENTS } from '@/config/augments'
-import { ITEM_SETS } from '@/config/sets'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { usePlanetShopStore, PLANET_ROLES_LIST } from '@/stores/world/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useItemStore } from '@/stores/economy/itemStore'
+import { useSynergyStore } from '@/stores/champions/synergyStore'
+import { useAugmentStore } from '@/stores/economy/augmentStore'
+import { useDrifterStore } from '@/stores/world/drifterStore'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useSectionStore } from '@/stores/core/sectionStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { STAT_CATEGORIES } from '@/config/ui/statCategories'
+import { formatNumber } from '@/config/ui/numberFormat'
+import { formatCompactDuration } from '@/utils/ui/format'
+import { MATERIALS } from '@/config/economy/materials'
+import { AUGMENTS } from '@/config/economy/augments'
+import { ITEM_SETS } from '@/config/economy/items'
 import {
   FORGE_BRANCHES,
   FORGE_LEAVES,
   FORGE_RELICS,
   FORGE_CONSTELLATIONS,
-} from '@/config/starForge'
-import { MEEP_TREE_BRANCHES, MEEP_TREE_TOTAL_NODES } from '@/config/meepTree'
+} from '@/config/progression/starForge'
+import { MEEP_TREE_BRANCHES, MEEP_TREE_TOTAL_NODES } from '@/config/progression/meepTree'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
@@ -60,7 +60,7 @@ const ratio = (a: number, b: number): string => `${int(a)} / ${int(b)}`
 
 /**
  * Every readable number in Bardle, grouped into the categories of
- * `config/statCategories.ts` and filtered by a free-text query.
+ * `config/ui/statCategories.ts` and filtered by a free-text query.
  *
  * Display-only: the composable reads stores and formats, it never mutates.
  * Adding a stat means adding one `StatEntry` to the matching builder below —

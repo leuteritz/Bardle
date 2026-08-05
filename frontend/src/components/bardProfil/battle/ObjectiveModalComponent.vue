@@ -401,8 +401,8 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ObjectiveFighter } from '@/types'
-import { useBattleStore } from '@/stores/battleStore'
-import { useFitScale } from '@/composables/useFitScale'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useFitScale } from '@/composables/ui/useFitScale'
 import ObjectiveResultSummary from './ObjectiveResultSummary.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 import {
@@ -439,8 +439,8 @@ import {
   OBJECTIVE_MODAL_MAX_SCALE,
   OBJECTIVE_MODAL_FIT_PADDING_PX,
 } from '@/config/constants'
-import { hpStageClass } from '@/utils/format'
-import { DRAKE_TYPES, BARON_BUFF } from '@/config/drakes'
+import { hpStageClass } from '@/utils/ui/format'
+import { DRAKE_TYPES, BARON_BUFF } from '@/config/battle/drakes'
 
 const BARON_THEME = BARON_BUFF
 

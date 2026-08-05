@@ -4,8 +4,8 @@
 
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount } from 'vue'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useActionToast } from '@/composables/useActionToast'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import {
   SUPERNOVA_DURATION_MS,
   SUPERNOVA_FLASH_FRACTION,

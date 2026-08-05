@@ -124,10 +124,10 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, reactive, computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { usePlanetBossStore } from '../../../stores/planetBossStore'
-import { useBattleStore } from '../../../stores/battleStore'
-import { useStarGroupStore } from '../../../stores/starGroupStore'
-import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
 import {
   ROLE_BY_KEY,
   BOSS_IMAGE_PATHS,
@@ -157,10 +157,10 @@ import {
   BOSS_ARENA_ARC_RADIUS_PX,
   BOSS_ARENA_STRIKE_REACH_PX,
   BOSS_ARENA_STRIKE_STAGGER_S,
-} from '../../../config/constants'
-import { formatNumber } from '../../../config/numberFormat'
-import { bossPlanetInForeground } from '../../../utils/foregroundGate'
-import { bossSpriteFor } from '../../../utils/bossSprite'
+} from '@/config/constants'
+import { formatNumber } from '@/config/ui/numberFormat'
+import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
+import { bossSpriteFor } from '@/utils/fx/bossSprite'
 
 const CYCLE_MS = BOSS_ARENA_ATTACK_CYCLE_MS
 const IMPACT_OFFSET_MS = Math.round(BOSS_ARENA_IMPACT_OFFSET_FRACTION * CYCLE_MS)

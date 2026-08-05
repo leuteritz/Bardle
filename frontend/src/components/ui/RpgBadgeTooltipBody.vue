@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGameStore } from '@/stores/gameStore'
-import { useMeepTreeStore } from '@/stores/meepTreeStore'
-import { useExpeditionStore } from '@/stores/expeditionStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useBattleStore } from '@/stores/battleStore'
-import { usePlanetShopStore, PLANET_ROLES } from '@/stores/planetShopStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useActionToast } from '@/composables/useActionToast'
-import { CHAMPION_ROLES } from '@/config/championData'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { usePlanetShopStore, PLANET_ROLES } from '@/stores/world/planetShopStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useActionToast } from '@/composables/ui/useActionToast'
+import { CHAMPION_ROLES } from '@/config/champions/championData'
 import {
   CHAMP_TOOLTIP_MAX_VISIBLE,
   ROLE_BY_KEY,

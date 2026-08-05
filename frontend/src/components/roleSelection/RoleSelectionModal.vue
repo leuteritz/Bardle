@@ -3,16 +3,16 @@ import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { useBattleStore } from '@/stores/battleStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import { ROLES, ROLE_SELECTION_CONFIRM_DELAY_MS } from '@/config/constants'
-import { CHAMPION_DATA, getChampionRoles } from '@/config/championData'
+import { CHAMPION_DATA, getChampionRoles } from '@/config/champions/championData'
 import {
   getChampionStarLevel,
   getChampionTier,
   isChampionTierUnlocked,
   perChampionSpawnPercents,
-} from '@/config/championTiers'
+} from '@/config/champions/championTiers'
 import type { ChampionRole } from '@/types'
 
 const galaxyStore = useGalaxyStore()

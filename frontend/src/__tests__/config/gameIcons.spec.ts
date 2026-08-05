@@ -1,10 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { isValidIcon } from '../../utils/iconUtils'
-import { MEEP_TREE_BRANCHES } from '../../config/meepTree'
-import { CHAMPION_PERKS, CHAMPION_STATS } from '../../config/championLevels'
-import { AUGMENTS, AUGMENT_POOL } from '../../config/augments'
+import { isValidIcon } from '@/utils/game/iconUtils'
+import { MEEP_TREE_BRANCHES } from '@/config/progression/meepTree'
+import { CHAMPION_PERKS, CHAMPION_STATS } from '@/config/champions/championLevels'
+import { AUGMENTS, AUGMENT_POOL } from '@/config/economy/augments'
 
 /*
  * Icons may be reused freely across the project — what still has to hold is that

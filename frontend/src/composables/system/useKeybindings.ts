@@ -1,4 +1,4 @@
-// composables/useKeybindings.ts
+// composables/system/useKeybindings.ts
 // Verteiler für Tastenkürzel: EIN globaler keydown-Listener für das ganze
 // Spiel statt eines pro Komponente.
 //

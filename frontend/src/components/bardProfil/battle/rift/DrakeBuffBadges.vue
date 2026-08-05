@@ -61,8 +61,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { DRAKE_TYPES, BARON_BUFF, type DrakeTypeDef } from '@/config/drakes'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { DRAKE_TYPES, BARON_BUFF, type DrakeTypeDef } from '@/config/battle/drakes'
 import { BUFF_RAIL_IMAGES, BUFF_RAIL_TEAM_LABELS } from '@/config/constants'
 
 interface EffectSegment {

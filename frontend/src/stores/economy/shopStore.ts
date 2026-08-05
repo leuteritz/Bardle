@@ -1,24 +1,24 @@
 import { defineStore } from 'pinia'
-import { useGameStore } from './gameStore'
-import { useCpsStore } from './cpsStore'
-import { useAugmentStore } from './augmentStore'
-import { useItemStore } from './itemStore'
-import { usePlanetBossStore } from './planetBossStore'
-import type { ShopUpgrade, BuildingStat } from '../types'
-import { logger } from '../utils/logger'
-import { usePlanetShopStore } from './planetShopStore'
-import { useSynergyStore } from './synergyStore'
-import { useSolarUpgradeStore } from './solarUpgradeStore'
-import { useStarForgeStore } from './starForgeStore'
-import { useMeepTreeStore } from './meepTreeStore'
-import { useDrifterStore } from './drifterStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useCpsStore } from '@/stores/core/cpsStore'
+import { useAugmentStore } from '@/stores/economy/augmentStore'
+import { useItemStore } from '@/stores/economy/itemStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import type { ShopUpgrade, BuildingStat } from '@/types'
+import { logger } from '@/utils/logger'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useSynergyStore } from '@/stores/champions/synergyStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useDrifterStore } from '@/stores/world/drifterStore'
 import {
   SECONDS_PER_HOUR,
   EFFICIENCY_STARS_DIVISOR,
   EFFICIENCY_STARS_MAX,
   EFFICIENCY_STARS_MIN,
   SHOP_UPGRADE_CATALOG,
-} from '../config/constants'
+} from '@/config/constants'
 
 
 export const useShopStore = defineStore('shop', {

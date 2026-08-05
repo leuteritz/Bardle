@@ -1,10 +1,10 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   COMET_MIN_DWELL_SECONDS,
   STAR_PHASE_MIN_DWELL_SECONDS,
-} from '../../config/constants'
+} from '@/config/constants'
 
 /** Raise all five solar roots to the given level (the evolve branch gate). */
 function setAllBranchLevels(store: ReturnType<typeof useSolarUpgradeStore>, level: number) {

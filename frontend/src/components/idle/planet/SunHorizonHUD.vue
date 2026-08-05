@@ -80,10 +80,10 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { usePlayerStore } from '@/stores/playerStore'
-import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { formatNumber } from '@/config/numberFormat'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { formatNumber } from '@/config/ui/numberFormat'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,

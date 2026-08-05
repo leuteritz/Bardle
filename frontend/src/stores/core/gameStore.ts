@@ -1,28 +1,27 @@
 import { defineStore } from 'pinia'
-import { useShopStore } from './shopStore'
-import { useItemStore } from './itemStore'
-import { useSynergyStore } from './synergyStore'
-import { usePlanetEventStore } from './planetEventStore'
-import { usePlanetBossStore } from './planetBossStore'
-import { useGalaxyStore } from './galaxyStore'
-import { useStarGroupStore } from './starGroupStore'
-import { useExpeditionStore } from './expeditionStore'
-import { useCombatStore } from './combatStore'
-import { usePlayerStore } from './playerStore'
-import { useRoleBehaviorStore } from './roleBehaviorStore'
-import { useChampionLevelStore } from './championLevelStore'
-import { usePlanetShopStore } from './planetShopStore'
-import { useSolarUpgradeStore } from './solarUpgradeStore'
-import { useStarForgeStore } from './starForgeStore'
-import { useMeepTreeStore } from './meepTreeStore'
-import { useDrifterStore } from './drifterStore'
-import { useInventoryStore } from './inventoryStore'
-import { universes } from '../config/universes'
-import { clampPercent } from '../utils/geometry'
-import { bossPlanetInForeground } from '../utils/foregroundGate'
-import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
-import { logAugmentAutoPicked } from '../config/gameEventLogger'
-import { useAugmentStore } from './augmentStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { useItemStore } from '@/stores/economy/itemStore'
+import { useSynergyStore } from '@/stores/champions/synergyStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useCombatStore } from '@/stores/battle/combatStore'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { universes } from '@/config/progression/universes'
+import { clampPercent } from '@/utils/orbit/geometry'
+import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
+import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '@/config/economy/augments'
+import { logAugmentAutoPicked } from '@/config/ui/eventLog'
+import { useAugmentStore } from '@/stores/economy/augmentStore'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -54,7 +53,7 @@ import {
   HONOR_MVP_BUFF_DURATION_S,
   HONOR_MVP_BUFF_MULT,
   UNIVERSE_RUN_HISTORY_LIMIT,
-} from '../config/constants'
+} from '@/config/constants'
 import type {
   UniverseRunBaseline,
   UniverseRunRecord,
@@ -67,8 +66,8 @@ import type {
   AugmentEffects,
   AugmentDefinition,
   AugmentRarity,
-} from '../types'
-import { logger } from '../utils/logger'
+} from '@/types'
+import { logger } from '@/utils/logger'
 
 function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT): number {
   if (level <= 0) return 0
@@ -665,9 +664,15 @@ export const useGameStore = defineStore('game', {
       // already on the balance it pays from. Returns immediately while the
       // switch is off, which is the default.
       useChampionLevelStore().autoLevelTick()
-      const planetEventStore = usePlanetEventStore()
-      planetEventStore.checkAndMaybeSpawnEvent()
+      // Boss-Enrage und Champion-Reise. Beides lief bis hierher über einen
+      // planetEventStore, der nichts anderes tat, als die zwei Aufrufe
+      // weiterzureichen — Reihenfolge unverändert.
+      const planetBossStore = usePlanetBossStore()
       const galaxyStore = useGalaxyStore()
+      if (planetBossStore.isBossActive) {
+        planetBossStore.checkEnrage()
+      }
+      galaxyStore.tickChampionTravel()
       const starGroupStore = useStarGroupStore()
       // Zufällig gestaffelte Resource-Star-Spawns; spawnResourceStar respektiert
       // das Concurrency-Limit selbst. Läuft auch während Pause weiter, damit
@@ -679,7 +684,6 @@ export const useGameStore = defineStore('game', {
       starGroupStore.tickChampionStar()
       const roleBehaviorStore = useRoleBehaviorStore()
       roleBehaviorStore.tick()
-      const planetBossStore = usePlanetBossStore()
       if (planetBossStore.isBossActive) {
         planetBossStore.applyPassiveDamage()
       }

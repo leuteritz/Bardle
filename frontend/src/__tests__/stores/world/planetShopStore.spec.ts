@@ -11,16 +11,16 @@ import {
   planetLevelUpCost,
   planetLevelRequiredPhase,
   isPlanetDown,
-} from '../../stores/planetShopStore'
-import type { PlanetRoleType } from '../../stores/planetShopStore'
-import { useGameStore } from '../../stores/gameStore'
-import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
+} from '@/stores/world/planetShopStore'
+import type { PlanetRoleType } from '@/stores/world/planetShopStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   PLANET_SLOT_MAX_HP,
   PLANET_SLOT_SUN_PHASE_REQUIREMENTS,
   PLANET_RESPAWN_MS,
   STAR_PHASE_DATA,
-} from '../../config/constants'
+} from '@/config/constants'
 
 describe('planetShopStore — Attunement leveling', () => {
   beforeEach(() => {

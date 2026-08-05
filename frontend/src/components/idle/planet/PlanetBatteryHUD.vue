@@ -205,21 +205,21 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import {
   usePlanetShopStore,
   PLANET_ROLES,
   planetLevelBonusMultiplier,
-} from '@/stores/planetShopStore'
+} from '@/stores/world/planetShopStore'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
 import TurretCdPill from '@/components/idle/planet/TurretCdPill.vue'
-import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/geometry'
-import { playerSlotInForeground } from '@/utils/foregroundGate'
+import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/orbit/geometry'
+import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
 import { Icon } from '@iconify/vue'
-import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
-import { formatNumber } from '@/config/numberFormat'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { formatNumber } from '@/config/ui/numberFormat'
 import {
   GAME_TICK_INTERVAL_MS,
   PLANET_SLOT_MAX_HP,

@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 
 const battleStore = useBattleStore()
 </script>

@@ -5,9 +5,9 @@ import {
   onKeybinding,
   triggerKeybind,
   __resetKeybindingsForTest,
-} from '../../composables/useKeybindings'
-import { useGamePause } from '../../composables/useGamePause'
-import { KEYBINDINGS, KEYBIND_CATEGORIES } from '../../config/constants'
+} from '@/composables/system/useKeybindings'
+import { useGamePause } from '@/composables/system/useGamePause'
+import { KEYBINDINGS, KEYBIND_CATEGORIES } from '@/config/constants'
 
 function press(key: string, init: KeyboardEventInit = {}, target?: EventTarget) {
   const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init })

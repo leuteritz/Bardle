@@ -1,6 +1,6 @@
 import { ref, watch, readonly } from 'vue'
-import { useRenderingPaused } from './useRenderingPaused'
-import { useStarGroupStore } from '@/stores/starGroupStore'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import {
   MUSIC_DEFAULT_VOLUME,
   MUSIC_FADE_DURATION_MS,

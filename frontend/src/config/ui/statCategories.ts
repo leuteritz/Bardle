@@ -1,4 +1,4 @@
-import type { StatCategoryDef } from '../types'
+import type { StatCategoryDef } from '@/types'
 
 /**
  * Static metadata of the Bard-Stats catalog categories (Journey column).

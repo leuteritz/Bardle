@@ -60,12 +60,12 @@
 import { defineComponent, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgFrame from '../../ui/RpgFrame.vue'
-import { useGalaxyStore, starLevelForGalaxy } from '../../../stores/galaxyStore'
-import { useGameStore } from '../../../stores/gameStore'
-import { useInventoryStore } from '../../../stores/inventoryStore'
-import { MATERIALS } from '../../../config/materials'
-import { CHAMPION_TIER_BY_STAR, CHAMPION_TIERS } from '../../../config/championTiers'
-import { formatNumber } from '../../../config/numberFormat'
+import { useGalaxyStore, starLevelForGalaxy } from '@/stores/world/galaxyStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { MATERIALS } from '@/config/economy/materials'
+import { CHAMPION_TIER_BY_STAR, CHAMPION_TIERS } from '@/config/champions/championTiers'
+import { formatNumber } from '@/config/ui/numberFormat'
 
 export default defineComponent({
   name: 'TierUnlockPanel',

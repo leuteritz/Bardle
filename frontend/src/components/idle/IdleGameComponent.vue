@@ -71,13 +71,13 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
-import { useGameStore } from '../../stores/gameStore'
-import { useBattleStore } from '../../stores/battleStore'
-import { useAugmentStore } from '../../stores/augmentStore'
-import { useGalaxyStore } from '../../stores/galaxyStore'
-import { usePlanetShopStore } from '../../stores/planetShopStore'
-import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
-import { formatNumber } from '../../config/numberFormat'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useAugmentStore } from '@/stores/economy/augmentStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { formatNumber } from '@/config/ui/numberFormat'
 import SunComponent from './sun/SunComponent.vue'
 import ChampionOrbit from './sun/ChampionOrbit.vue'
 import PlayerHPBar from './sun/PlayerHPBar.vue'
@@ -85,7 +85,7 @@ import StarSystemComponent from './sun/StarSystemComponent.vue'
 import StarSystemRescueTransition from './sun/StarSystemRescueTransition.vue'
 import PlanetOrbit from './sun/PlanetOrbit.vue'
 import MvpBuffOverlay from './MvpBuffOverlay.vue'
-import { playChimeSound } from '../../composables/useChimeSound'
+import { playChimeSound } from '@/composables/system/useChimeSound'
 import {
   CHIME_BURST_COUNT,
   CHIME_BURST_DURATION_MS,
@@ -100,7 +100,7 @@ import {
   CHIME_BURST_ANGLE_JITTER,
   CHIME_POPUP_FONT_MIN_PX,
   CHIME_POPUP_FONT_SUN_FACTOR,
-} from '../../config/constants'
+} from '@/config/constants'
 
 interface ChimeBurstParticle {
   dx: number

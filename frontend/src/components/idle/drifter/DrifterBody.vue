@@ -93,7 +93,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { hexToRgba } from '@/utils/format'
+import { hexToRgba } from '@/utils/ui/format'
 import type { DrifterBodyKind } from '@/types'
 
 const props = defineProps<{

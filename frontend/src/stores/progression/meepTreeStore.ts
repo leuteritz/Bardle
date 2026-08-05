@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia'
-import { useGameStore } from './gameStore'
-import { useShopStore } from './shopStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useShopStore } from '@/stores/economy/shopStore'
 import {
   MEEP_TREE_BRANCHES,
   MEEP_TREE_NODE_INDEX,
   MEEP_TREE_MULTIPLICATIVE_KEYS,
   type MeepTreeEffects,
-} from '../config/meepTree'
-import { logger } from '../utils/logger'
+} from '@/config/progression/meepTree'
+import { logger } from '@/utils/logger'
 
 export type MeepTreeNodeState = 'bought' | 'buyable' | 'locked'
 

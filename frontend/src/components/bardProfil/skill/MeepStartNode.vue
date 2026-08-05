@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Handle, Position } from '@vue-flow/core'
-import { MEEP_TREE_START_ICON } from '@/config/meepTree'
+import { MEEP_TREE_START_ICON } from '@/config/progression/meepTree'
 </script>
 
 <template>

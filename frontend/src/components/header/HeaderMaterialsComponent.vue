@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useInventoryStore } from '@/stores/inventoryStore'
-import { MATERIALS } from '@/config/materials'
-import { formatNumberCompact } from '@/config/numberFormat'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { MATERIALS } from '@/config/economy/materials'
+import { formatNumberCompact } from '@/config/ui/numberFormat'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
 import MaterialStatsTooltip from './MaterialStatsTooltip.vue'
 import {

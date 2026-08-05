@@ -7,13 +7,13 @@ import {
   PLANET_ROLES,
   JUNGLE_BUFF_DEFS,
   isPlanetDown,
-} from '@/stores/planetShopStore'
-import type { PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
-import { formatNumber } from '@/config/numberFormat'
-import { playerSlotInForeground } from '@/utils/foregroundGate'
-import { toRoman } from '@/utils/format'
+} from '@/stores/world/planetShopStore'
+import type { PlanetRoleType, PlanetSlot } from '@/stores/world/planetShopStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
+import { formatNumber } from '@/config/ui/numberFormat'
+import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
+import { toRoman } from '@/utils/ui/format'
 import {
   PLANET_IMAGE_DIR,
   PLANET_IMAGE_THUMB_DIR,

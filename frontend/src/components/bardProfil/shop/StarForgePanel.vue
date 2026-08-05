@@ -197,24 +197,24 @@
 </template>
 
 <script setup lang="ts">
-import { formatClock } from '@/utils/format'
+import { formatClock } from '@/utils/ui/format'
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useInventoryStore } from '@/stores/inventoryStore'
-import { useStarForgeStore } from '@/stores/starForgeStore'
-import { MATERIALS } from '@/config/materials'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { MATERIALS } from '@/config/economy/materials'
 import {
   FORGE_RELICS,
   FORGE_CONSTELLATIONS,
   getForgeNode,
-} from '@/config/starForge'
+} from '@/config/progression/starForge'
 import {
   FORGE_CONSTELLATION_REQUIRED_LEVEL,
   FORGE_BARGAIN_REROLL_COST,
   FORGE_BARGAIN_REROLL_MATERIAL,
 } from '@/config/constants'
-import { formatNumber } from '@/config/numberFormat'
-import { useActionToast } from '@/composables/useActionToast'
+import { formatNumber } from '@/config/ui/numberFormat'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import type { ForgeRelicDef, ForgeConstellationDef, ForgeActiveBuff } from '@/types'
 
 const inventoryStore = useInventoryStore()

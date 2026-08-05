@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from './svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Neon – night-side tech world: dark slate sphere webbed with glowing

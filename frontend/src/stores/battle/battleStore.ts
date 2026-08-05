@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import { useGameStore } from './gameStore'
-import { useInventoryStore } from './inventoryStore'
-import { useAugmentStore } from './augmentStore'
-import { useSkinStore } from './skinStore'
-import { useChampionLevelStore } from './championLevelStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useAugmentStore } from '@/stores/economy/augmentStore'
+import { useSkinStore } from '@/stores/champions/skinStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import {
   createEmptyAllyRows,
   ELO_K_FACTOR,
@@ -111,8 +111,8 @@ import {
   BATTLE_COSMETIC_HP_MIX_TIME,
   BATTLE_COSMETIC_HP_MIX_TEAM,
   BATTLE_COSMETIC_HP_MIX_SEED,
-} from '../config/constants'
-import { DRAKE_TYPES, type DrakeTypeId } from '../config/drakes'
+} from '@/config/constants'
+import { DRAKE_TYPES, type DrakeTypeId } from '@/config/battle/drakes'
 import type {
   AllTimeBattleStats,
   BattleEvent,
@@ -131,7 +131,7 @@ import type {
   RecruitableChampion,
   StructureFeedEntry,
   StructureId,
-} from '../types'
+} from '@/types'
 import {
   BATTLE_ROLES,
   bountyGold,
@@ -140,16 +140,16 @@ import {
   generateTimeline,
   mvpScore,
   reseedTimelineFrom,
-} from '../utils/battle/timeline'
+} from '@/utils/battle/timeline'
 import {
   fetchChampionNames,
   getChampionIconPath,
   getSkinArtPath,
   pickRandomSkin,
-} from '../utils/champions'
-import { logger } from '../utils/logger'
-import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
-import { CHAMPION_ROLES } from '../config/championData'
+} from '@/utils/game/champions'
+import { logger } from '@/utils/logger'
+import { CHAMPION_HOME_PLANETS } from '@/config/champions/championHomePlanets'
+import { CHAMPION_ROLES } from '@/config/champions/championData'
 let _visibilityHandler: (() => void) | null = null
 
 export function zeroLiveBattleStats(): LiveBattleStats {

@@ -7,7 +7,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { GAME_TICK_INTERVAL_MS, TURRET_CD_TICK_MS } from '@/config/constants'
 
 const bossStore = usePlanetBossStore()

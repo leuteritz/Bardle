@@ -5,9 +5,9 @@ import type {
   DrifterDef,
   DrifterOrbitStrike,
   DrifterRarity,
-} from '../types'
-import { DRIFTERS, getDrifter } from '../config/drifters'
-import { logger } from '../utils/logger'
+} from '@/types'
+import { DRIFTERS, getDrifter } from '@/config/world/drifters'
+import { logger } from '@/utils/logger'
 import {
   DRIFTER_SPAWN_INTERVAL_SEC,
   DRIFTER_FIRST_DELAY_SEC,
@@ -18,14 +18,14 @@ import {
   DRIFTER_CHIME_REWARD_MIN_CLICKS,
   DRIFTER_ROUTES,
   GAME_TICK_INTERVAL_MS,
-} from '../config/constants'
-import { useGameStore } from './gameStore'
-import { useShopStore } from './shopStore'
-import { useInventoryStore } from './inventoryStore'
-import { useSolarUpgradeStore } from './solarUpgradeStore'
-import { useStarGroupStore } from './starGroupStore'
-import { usePlanetBossStore } from './planetBossStore'
-import { useCpsStore } from './cpsStore'
+} from '@/config/constants'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useCpsStore } from '@/stores/core/cpsStore'
 
 let uidCounter = 0
 

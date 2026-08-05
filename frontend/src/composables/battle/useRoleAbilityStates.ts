@@ -1,6 +1,6 @@
 import { computed } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
 import {
   ROLES,
   ROLE_TOP_SHIELD_REBUILD_MS,

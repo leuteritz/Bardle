@@ -1,6 +1,6 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useBattleStore, makeChampionState } from '../../stores/battleStore'
+import { useBattleStore, makeChampionState } from '@/stores/battle/battleStore'
 import {
   OBJECTIVE_DPS_TICK_MS,
   OBJECTIVE_MAX_DURATION_MS,
@@ -22,9 +22,9 @@ import {
   BARON_LP_LOSS_SHIELD_MULT,
   BARON_BOUNTY_PRODUCTION_SECONDS,
   BARON_BOUNTY_MIN_CLICKS,
-} from '../../config/constants'
-import { DRAKE_TYPES } from '../../config/drakes'
-import { useGameStore } from '../../stores/gameStore'
+} from '@/config/constants'
+import { DRAKE_TYPES } from '@/config/battle/drakes'
+import { useGameStore } from '@/stores/core/gameStore'
 
 const T1_NAMES = ['Garen', 'Lee Sin', 'Ahri', 'Jinx', 'Bard']
 const T2_NAMES = ['Darius', 'Kha Zix', 'Zed', 'Caitlyn', 'Thresh']

@@ -1,5 +1,5 @@
-import { PLANET_TYPE_CONFIGS } from './types'
-import type { PlanetTypeConfig } from './types'
+import { PLANET_TYPE_CONFIGS } from '@/utils/planetDraw/types'
+import type { PlanetTypeConfig } from '@/utils/planetDraw/types'
 
 export const NS = 'http://www.w3.org/2000/svg'
 

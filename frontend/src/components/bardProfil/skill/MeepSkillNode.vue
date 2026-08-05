@@ -2,9 +2,9 @@
 import { computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { Icon } from '@iconify/vue'
-import { useMeepTreeStore } from '@/stores/meepTreeStore'
-import { useActionToast } from '@/composables/useActionToast'
-import { MEEP_TREE_BADGE_ICON, type MeepTreeNodeDef } from '@/config/meepTree'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useActionToast } from '@/composables/ui/useActionToast'
+import { MEEP_TREE_BADGE_ICON, type MeepTreeNodeDef } from '@/config/progression/meepTree'
 
 const props = defineProps<{
   data: {

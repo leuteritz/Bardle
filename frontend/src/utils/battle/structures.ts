@@ -1,5 +1,5 @@
-import type { BattleEvent, StructureId, StructureLaneKey, StructureTier } from '../../types'
-import { LANE_FIGHT_POSITIONS } from '../../config/constants'
+import type { BattleEvent, StructureId, StructureLaneKey, StructureTier } from '@/types'
+import { LANE_FIGHT_POSITIONS } from '@/config/constants'
 import {
   type MapPoint,
   type LaneStructureTier,
@@ -8,7 +8,7 @@ import {
   RED_NEXUS_TURRET_POSITIONS,
   BLUE_NEXUS_MAP_POSITION,
   RED_NEXUS_MAP_POSITION,
-} from '../../config/battleRoutes'
+} from '@/config/battle/battleRoutes'
 
 // Pure structure bookkeeping for the battle timeline: ids, fixed map
 // positions, and the LoL destruction-order rules (outer → inner →

@@ -249,28 +249,28 @@
 </template>
 
 <script setup lang="ts">
-import { hexToRgb } from '@/utils/format'
+import { hexToRgb } from '@/utils/ui/format'
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
-import { useStarSystem } from '../../../composables/useStarSystem'
+import { useStarSystem } from '@/composables/orbit/useStarSystem'
 import OrbitPath from './OrbitPath.vue'
-import type { StarRenderEntry } from '../../../composables/useStarSystem'
+import type { StarRenderEntry } from '@/composables/orbit/useStarSystem'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
-import { usePlanetBossStore } from '../../../stores/planetBossStore'
-import { useStarGroupStore } from '../../../stores/starGroupStore'
-import { useCombatStore } from '../../../stores/combatStore'
-import { useBattleStore } from '../../../stores/battleStore'
-import { usePlanetShopStore } from '../../../stores/planetShopStore'
-import { usePlayerStore } from '../../../stores/playerStore'
-import { useRoleBehaviorStore, CURSE_DEFS } from '../../../stores/roleBehaviorStore'
-import { useUiStore } from '../../../stores/uiStore'
-import { useRenderingPaused } from '../../../composables/useRenderingPaused'
-import { resetCanvasIfContextLost } from '../../../utils/canvasContext'
-import { useOrbitScale } from '../../../composables/useOrbitScale'
-import { useProjectileSystem } from '../../../composables/useProjectileSystem'
-import { MATERIALS } from '../../../config/materials'
-import { formatNumber } from '../../../config/numberFormat'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useCombatStore } from '@/stores/battle/combatStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/battle/roleBehaviorStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
+import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
+import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
+import { MATERIALS } from '@/config/economy/materials'
+import { formatNumber } from '@/config/ui/numberFormat'
 import {
   ORBIT_TIERS,
   ROLE_BY_KEY,
@@ -295,12 +295,12 @@ import {
   COOLDOWN_RING_TIP_RADIUS_HOT,
   STAR_ORBIT_MIN_SUN_SCALE,
   HINT_SPRITE_CACHE_LIMIT,
-} from '../../../config/constants'
-import { CHAMPION_ROLES } from '../../../config/championData'
-import { activeChampionBehindState, activePlayerPlanetPositions, activeStarCombatState } from '../../../utils/liveState'
-import type { ChampionRole, StarType } from '../../../types'
-import { starBodySize } from '../../../utils/geometry'
-import { clearStarVanishFx } from '../../../utils/starVanishFx'
+} from '@/config/constants'
+import { CHAMPION_ROLES } from '@/config/champions/championData'
+import { activeChampionBehindState, activePlayerPlanetPositions, activeStarCombatState } from '@/utils/orbit/liveState'
+import type { ChampionRole, StarType } from '@/types'
+import { starBodySize } from '@/utils/orbit/geometry'
+import { clearStarVanishFx } from '@/utils/fx/starVanishFx'
 
 const uiStore = useUiStore()
 const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)

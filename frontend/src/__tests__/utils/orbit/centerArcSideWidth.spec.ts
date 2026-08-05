@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { centerArcSideWidth, type HeaderCenterArc } from '@/utils/geometry'
+import { centerArcSideWidth, type HeaderCenterArc } from '@/utils/orbit/geometry'
 
 // Maße in der Größenordnung des echten Headers auf Full HD: Das Chimes-Panel
 // ist ~210 px breit, ~100 px hoch und ragt ~50 px unter die Header-Kante.

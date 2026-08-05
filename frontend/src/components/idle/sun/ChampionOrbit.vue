@@ -149,20 +149,20 @@
 </template>
 
 <script lang="ts">
-import { getOrbitPos } from '@/utils/geometry'
+import { getOrbitPos } from '@/utils/orbit/geometry'
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useRenderingPaused } from '@/composables/useRenderingPaused'
-import { useCombatStore } from '../../../stores/combatStore'
-import { useBattleStore } from '../../../stores/battleStore'
-import { usePlanetBossStore } from '../../../stores/planetBossStore'
-import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
-import { useSynergyStore } from '../../../stores/synergyStore'
-import { usePlanetShopStore } from '../../../stores/planetShopStore'
-import { useStarGroupStore } from '../../../stores/starGroupStore'
-import { useUiStore } from '../../../stores/uiStore'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { useCombatStore } from '@/stores/battle/combatStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
+import { useSynergyStore } from '@/stores/champions/synergyStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import { ROLE_HOVER_COLORS } from '@/config/constants'
-import { activePlanetPositions, activeChampionBehindState } from '../../../utils/liveState'
+import { activePlanetPositions, activeChampionBehindState } from '@/utils/orbit/liveState'
 import {
   ORBIT_TIERS,
   SUPPORT_ANGLE_OFFSET,
@@ -197,9 +197,9 @@ import {
   PLANET_ORBIT_FOREGROUND_DEPTH,
 } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
-import { useProjectileSystem } from '@/composables/useProjectileSystem'
-import { useOrbitScale } from '@/composables/useOrbitScale'
-import type { ChampionRole } from '../../../types'
+import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
+import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
+import type { ChampionRole } from '@/types'
 
 interface ChampionRenderPos {
   name: string

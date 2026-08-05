@@ -1,4 +1,4 @@
-import type { EncyclopediaCategory } from './types'
+import type { EncyclopediaCategory } from '@/config/encyclopedia/types'
 
 export const galaxiesCategory: EncyclopediaCategory = {
   id: 'galaxies',

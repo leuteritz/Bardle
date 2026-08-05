@@ -6,8 +6,8 @@ import {
   PLAYER_LOW_HP_THRESHOLD_PCT,
   DAMAGE_FLOAT_DURATION_MS,
 } from '@/config/constants'
-import { useStarForgeStore } from './starForgeStore'
-import { useMeepTreeStore } from './meepTreeStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 
 export const usePlayerStore = defineStore('player', {
   state: () => ({

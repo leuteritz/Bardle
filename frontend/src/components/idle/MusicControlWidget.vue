@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { useSpaceMusic } from '@/composables/useSpaceMusic'
+import { useSpaceMusic } from '@/composables/system/useSpaceMusic'
 
 const { volume, isMuted, toggleMute, setVolume } = useSpaceMusic()
 

@@ -32,12 +32,12 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRenderingPaused } from '@/composables/useRenderingPaused'
-import { resetCanvasIfContextLost } from '@/utils/canvasContext'
-import { useCombatStore } from '@/stores/combatStore'
-import { usePlanetShopStore } from '@/stores/planetShopStore'
-import { useGameStore } from '@/stores/gameStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
+import { useCombatStore } from '@/stores/battle/combatStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   SUN_BG_DISC_RADIUS_FACTOR,
   CHIME_PARTICLE_POOL_SIZE,

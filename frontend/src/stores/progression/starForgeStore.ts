@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
-import { useGameStore } from './gameStore'
-import { usePlayerStore } from './playerStore'
-import { useShopStore } from './shopStore'
-import { useInventoryStore } from './inventoryStore'
-import { useSolarUpgradeStore } from './solarUpgradeStore'
-import type { ForgeActiveBuff, ForgeBargainDef, ForgeNodeDef } from '../types'
+import { useGameStore } from '@/stores/core/gameStore'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import type { ForgeActiveBuff, ForgeBargainDef, ForgeNodeDef } from '@/types'
 import {
   FORGE_NODES,
   FORGE_LEAVES,
@@ -15,7 +15,7 @@ import {
   getForgeRelic,
   getForgeConstellation,
   getForgeBargain,
-} from '../config/starForge'
+} from '@/config/progression/starForge'
 import {
   FORGE_BRANCH_BASE_MAX_LEVEL,
   FORGE_BRANCH_MAX_LEVEL_CAP,
@@ -35,8 +35,8 @@ import {
   FORGE_CONSTELLATION_BULWARK_DAMAGE_MULT,
   FORGE_CONSTELLATION_STELLAR_WIND_CPS_MULT,
   FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT,
-} from '../config/constants'
-import type { SolarBranchId } from './solarUpgradeStore'
+} from '@/config/constants'
+import type { SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 
 /** Caps so stacked effects can never break the game loop. */
 const MIN_DAMAGE_TAKEN_MULT = FORGE_MIN_DAMAGE_TAKEN_MULT

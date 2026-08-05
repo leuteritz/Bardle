@@ -2,9 +2,9 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
-import { useGameStore } from '@/stores/gameStore'
-import { usePersistence } from '@/composables/usePersistence'
-import { AUGMENTS } from '@/config/augments'
+import { useGameStore } from '@/stores/core/gameStore'
+import { usePersistence } from '@/composables/system/usePersistence'
+import { AUGMENTS } from '@/config/economy/augments'
 import { AUGMENT_RARITY_COLOR, AUGMENT_RARITY_LABEL, AUTO_PICK_ICON } from '@/config/constants'
 import type { AugmentDefinition } from '@/types'
 

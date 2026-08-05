@@ -79,9 +79,9 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import KeyCap from './KeyCap.vue'
-import { onKeybinding, triggerKeybind, useKeybindings } from '@/composables/useKeybindings'
-import { useGamePause } from '@/composables/useGamePause'
-import { useUiStore } from '@/stores/uiStore'
+import { onKeybinding, triggerKeybind, useKeybindings } from '@/composables/system/useKeybindings'
+import { useGamePause } from '@/composables/system/useGamePause'
+import { useUiStore } from '@/stores/core/uiStore'
 import { KEYBINDINGS, KEYBIND_CATEGORIES, KEYBIND_FLASH_MS } from '@/config/constants'
 import type { KeybindId } from '@/types'
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
-import { useUiStore } from '@/stores/uiStore'
-import { usePlanetShopStore } from '@/stores/planetShopStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
@@ -11,8 +11,8 @@ import {
   PLANET_TAB_PLANET_DIAMETER,
   HP_BAR_SEGMENTS,
 } from '@/config/constants'
-import { usePlanetTabOrbit } from '@/composables/usePlanetTabOrbit'
-import { useActionToast } from '@/composables/useActionToast'
+import { usePlanetTabOrbit } from '@/composables/orbit/usePlanetTabOrbit'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import PlanetRailSlot from './PlanetRailSlot.vue'

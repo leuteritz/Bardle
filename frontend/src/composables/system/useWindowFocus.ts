@@ -1,4 +1,4 @@
-// composables/useWindowFocus.ts
+// composables/system/useWindowFocus.ts
 // Globaler Fokus-Zustand — einmal erstellt, überall nutzbar.
 // windowFocused = false wenn der Nutzer auf einen anderen Monitor/Fenster klickt.
 // Die Spiellogik (gameStore.tick) läuft IMMER weiter.

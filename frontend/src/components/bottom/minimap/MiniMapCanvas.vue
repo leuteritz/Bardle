@@ -4,18 +4,18 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRenderingPaused } from '@/composables/useRenderingPaused'
-import { resetCanvasIfContextLost } from '@/utils/canvasContext'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { useGameStore } from '@/stores/gameStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
-import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
-import { useBattleStore } from '@/stores/battleStore'
-import { livePlanetAngles } from '@/composables/useStarSystem'
-import type { StarPlanetSlot } from '@/stores/starGroupStore'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { livePlanetAngles } from '@/composables/orbit/useStarSystem'
+import type { StarPlanetSlot } from '@/stores/world/starGroupStore'
 import type { PlanetType } from '@/types'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   GALAXY_TRANS_WARP_MS,
   GALAXY_TRANS_DECEL_MS,
@@ -77,7 +77,7 @@ import {
   generateGalaxyDots,
 } from './minimapGalaxyGeometry'
 
-import { hexToRgba } from '@/utils/format'
+import { hexToRgba } from '@/utils/ui/format'
 import {
   ARRIVAL_TRANSITION_MS,
   PLANET_TYPE_PALETTES,

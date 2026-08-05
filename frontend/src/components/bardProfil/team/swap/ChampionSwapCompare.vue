@@ -14,18 +14,18 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useChampionLevelStore } from '@/stores/championLevelStore'
-import { CHAMPION_STATS } from '@/config/championLevels'
-import { getChampionTier, getChampionStarLevel } from '@/config/championTiers'
-import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { CHAMPION_STATS } from '@/config/champions/championLevels'
+import { getChampionTier, getChampionStarLevel } from '@/config/champions/championTiers'
+import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/champions/championOrigins'
 import {
   ROLES,
   CHAMPION_REGALIA_SIZE_CHIP_MAIN,
   CHAMPION_SWAP_PORTRAIT_MIN_HEIGHT,
   CHAMPION_SWAP_PORTRAIT_MAX_HEIGHT,
 } from '@/config/constants'
-import { synergyShift } from '@/utils/synergyPreview'
+import { synergyShift } from '@/utils/game/synergyPreview'
 import ChampionLevelBadge from '../ChampionLevelBadge.vue'
 import type { ChampionStatKey } from '@/types'
 

@@ -9,7 +9,7 @@ import type {
   ChampionPerkTier,
   ChampionLevelCost,
   ChampionRegaliaStage,
-} from '../types'
+} from '@/types'
 import {
   CHAMPION_REGALIA_STAGES,
   CHAMPION_XP_BASE,
@@ -28,9 +28,9 @@ import {
   CHAMPION_FOCUS_CD_DIVISOR,
   CHAMPION_FOCUS_CD_FLOOR,
   CHAMPION_FORTUNE_DIVISOR,
-} from './constants'
-import { CHAMPION_DATA } from './championData'
-import { CHAMPION_TIERS } from './championTiers'
+} from '@/config/constants'
+import { CHAMPION_DATA } from '@/config/champions/championData'
+import { CHAMPION_TIERS } from '@/config/champions/championTiers'
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 // Four stats, one gameplay effect each — no stat is decorative.

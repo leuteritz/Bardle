@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { synergyStandings, synergyShift } from '@/utils/synergyPreview'
-import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
-import { getChampionOrigin } from '@/config/championOrigins'
+import { synergyStandings, synergyShift } from '@/utils/game/synergyPreview'
+import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/champions/championTraits'
+import { getChampionOrigin } from '@/config/champions/championOrigins'
 import { SYNERGY_NEUTRAL_ORIGIN } from '@/config/constants'
 
 /**

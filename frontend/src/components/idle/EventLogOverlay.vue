@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useEventLog } from '@/composables/useEventLog'
-import { typeColor } from '@/config/eventLogTypes'
+import { useEventLog } from '@/composables/ui/useEventLog'
+import { typeColor } from '@/config/ui/eventLog'
 
 const { events } = useEventLog()
 </script>

@@ -357,12 +357,12 @@
 </template>
 
 <script lang="ts">
-import { formatShortDuration } from '@/utils/format'
+import { formatShortDuration } from '@/utils/ui/format'
 import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useExpeditionStore } from '@/stores/expeditionStore'
-import { useBattleStore } from '@/stores/battleStore'
-import { getChampionRoles } from '@/config/championData'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { getChampionRoles } from '@/config/champions/championData'
 import {
   MAX_ACTIVE_EXPEDITIONS,
   EXPEDITION_MAX_AVAILABLE,
@@ -376,7 +376,7 @@ import {
   EXPEDITION_CHIME_POP_LIFETIME_MS,
   EXPEDITION_CHIME_POP_SPREAD_PX,
 } from '@/config/constants'
-import { useActionToast } from '@/composables/useActionToast'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import type { ChampionRole, AvailableExpeditionSlot, ExpeditionMission } from '@/types'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 

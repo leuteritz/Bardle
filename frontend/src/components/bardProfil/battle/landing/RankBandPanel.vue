@@ -130,7 +130,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import RankStatColumn, { type RankStatGroup } from './RankStatColumn.vue'
 import {
   LP_NORMAL_PROMOTION_THRESHOLD,

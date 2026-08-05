@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from './svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Shattered – broken world: cracked stone crust over a glowing molten core,

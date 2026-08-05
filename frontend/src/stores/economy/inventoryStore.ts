@@ -1,15 +1,15 @@
 import { defineStore } from 'pinia'
-import { MATERIALS } from '../config/materials'
-import type { Material, MaterialSinkId, MaterialSourceId } from '../types'
-import { logger } from '../utils/logger'
+import { MATERIALS } from '@/config/economy/materials'
+import type { Material, MaterialSinkId, MaterialSourceId } from '@/types'
+import { logger } from '@/utils/logger'
 import {
   MATERIAL_DROP_BASE_CHANCE,
   MATERIAL_RATE_BUCKET_COUNT,
   MATERIAL_RATE_BUCKET_MS,
-} from '../config/constants'
-import { useStarForgeStore } from './starForgeStore'
-import { useMeepTreeStore } from './meepTreeStore'
-import { useDrifterStore } from './drifterStore'
+} from '@/config/constants'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useDrifterStore } from '@/stores/world/drifterStore'
 
 export const useInventoryStore = defineStore('inventory', {
   state: () => ({

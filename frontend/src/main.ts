@@ -2,16 +2,16 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import './assets/main.css'
-import { formatNumber } from './config/numberFormat'
+import { formatNumber } from '@/config/ui/numberFormat'
 import {
   BARD_PROFILE_RADIUS,
   BOTTOM_BAR_NOTCH_R,
   AUTO_SAVE_INTERVAL_MS,
   BATTLE_SYNC_INTERVAL_MS,
-} from './config/constants'
-import { usePersistence } from './composables/usePersistence'
-import { useBattleStore } from './stores/battleStore'
-import { vInkCenter } from './utils/textInkOffset'
+} from '@/config/constants'
+import { usePersistence } from '@/composables/system/usePersistence'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { vInkCenter } from '@/utils/ui/textInkOffset'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -19,7 +19,7 @@ const pinia = createPinia()
 app.use(pinia)
 app.config.globalProperties.$formatNumber = formatNumber
 // v-ink-center: rückt zentrierten Text auf seine optische Achse — MedievalSharp
-// setzt die Glyphen asymmetrisch in ihre Boxen (siehe utils/textInkOffset.ts).
+// setzt die Glyphen asymmetrisch in ihre Boxen (siehe utils/ui/textInkOffset.ts).
 app.directive('ink-center', vInkCenter)
 
 app.mount('#app')

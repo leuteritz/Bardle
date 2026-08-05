@@ -42,9 +42,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { ActiveDrifter, DrifterDef } from '@/types'
-import { drifterField, drifterPointAt, measuredFieldInsets } from '@/utils/drifterPath'
-import { hexToRgba } from '@/utils/format'
-import { DRIFTER_RARITY_GLOW } from '@/config/drifters'
+import { drifterField, drifterPointAt, measuredFieldInsets } from '@/utils/orbit/drifterPath'
+import { hexToRgba } from '@/utils/ui/format'
+import { DRIFTER_RARITY_GLOW } from '@/config/world/drifters'
 import DrifterBody from './DrifterBody.vue'
 import {
   DRIFTER_FADE_IN_FRAC,

@@ -93,10 +93,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import { mvpScore } from '@/utils/battle/timeline'
 import { JUNGLE_BUFF_CARRY_DURATION_T } from '@/config/constants'
-import { hpStageClass } from '@/utils/format'
+import { hpStageClass } from '@/utils/ui/format'
 
 const props = defineProps<{ side: 'blue' | 'red' }>()
 

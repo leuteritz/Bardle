@@ -27,7 +27,7 @@
            Seitenlager — zentriert steht die Tinte sichtbar zu hoch und zu weit
            links. Reiter und Wert stehen zudem in verschiedenen Schriftgraden,
            deren Versatz sich NICHT proportional verhält; die Direktive misst
-           jeden Grad einzeln nach (utils/textInkOffset.ts). -->
+           jeden Grad einzeln nach (utils/ui/textInkOffset.ts). -->
       <span v-if="level || hit" class="sip-chips">
         <span v-if="level" class="sip-chip" :title="`Champion level ${level}`">
           <span v-ink-center.x.y class="sip-chip-tag">LVL</span>

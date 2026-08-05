@@ -1,5 +1,5 @@
 import { computed, onUnmounted, ref } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import { BATTLE_PHASES } from '@/config/constants'
 import type { BattlePhaseConfig, BattlePhaseKey } from '@/types'
 

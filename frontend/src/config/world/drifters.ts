@@ -1,4 +1,4 @@
-import type { DrifterBuffEffects, DrifterDef, DrifterRarity } from '../types'
+import type { DrifterBuffEffects, DrifterDef, DrifterRarity } from '@/types'
 
 /**
  * Drifters — objects that pass through the idle orbit view and pay out when

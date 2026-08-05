@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import { useSolarUpgradeStore } from './solarUpgradeStore'
-import { useGameStore } from './gameStore'
-import { useInventoryStore } from './inventoryStore'
-import { useUiStore } from './uiStore'
-import { GALAXY_THEMES } from '../config/galaxyThemes'
-import { unlockedChampionTierCount } from '../config/championTiers'
-import type { ChampionRole } from '../types'
-import { clampPercent } from '../utils/geometry'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
+import { unlockedChampionTierCount } from '@/config/champions/championTiers'
+import type { ChampionRole } from '@/types'
+import { clampPercent } from '@/utils/orbit/geometry'
 import {
   CHAMPION_TRAVEL_BASE_MS,
   CHAMPION_TRAVEL_SCALE_MS,
@@ -28,7 +28,7 @@ import {
   TIER_UNLOCK_CHIMES_GROWTH,
   TIER_UNLOCK_MATERIAL_GROWTH,
   TIER_UNLOCK_MATERIAL_BASE,
-} from '../config/constants'
+} from '@/config/constants'
 
 export type ChampionTravelState = 'idle' | 'traveling' | 'champion_available' | 'champion_spawned'
 

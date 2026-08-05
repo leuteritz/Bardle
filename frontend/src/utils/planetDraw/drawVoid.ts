@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from './svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Void – abyssal dark world: near-black body, glowing magenta rift network, violet aura

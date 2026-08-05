@@ -16,8 +16,8 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useGalaxyStore } from '@/stores/galaxyStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import {
   COMET_PHASE_DATA,
   STAR_PHASE_DATA,

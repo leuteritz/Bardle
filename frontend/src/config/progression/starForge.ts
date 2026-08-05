@@ -3,11 +3,11 @@ import type {
   ForgeRelicDef,
   ForgeConstellationDef,
   ForgeBargainDef,
-} from '../types'
+} from '@/types'
 import {
   FORGE_BRANCH_UNLOCK_PHASE,
   FORGE_LEAF_UNLOCK_PHASE,
-} from './constants'
+} from '@/config/constants'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // STAR FORGE — static catalog

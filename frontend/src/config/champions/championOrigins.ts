@@ -1,5 +1,5 @@
-import type { ChampionOrigin, OriginSynergyDef } from '../types'
-import { CHAMPION_DATA } from './championData'
+import type { ChampionOrigin, OriginSynergyDef } from '@/types'
+import { CHAMPION_DATA } from '@/config/champions/championData'
 
 export const ORIGIN_COLORS: Record<ChampionOrigin, string> = {
   'Bandle': '#f5c842',

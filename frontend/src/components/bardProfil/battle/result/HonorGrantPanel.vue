@@ -102,7 +102,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import { HONOR_MAX_SELECTIONS, BATTLE_RESULT_COUNTDOWN_SECONDS } from '@/config/constants'
 
 const battleStore = useBattleStore()

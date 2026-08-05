@@ -17,13 +17,13 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
-import { useGalaxyStore } from '../../../stores/galaxyStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import {
   CHAMPION_TRAVEL_BASE_LY,
   CHAMPION_TRAVEL_LY_PER_GALAXY,
   MS_PER_SECOND,
-} from '../../../config/constants'
-import { splitDuration } from '../../../utils/format'
+} from '@/config/constants'
+import { splitDuration } from '@/utils/ui/format'
 
 export default defineComponent({
   name: 'MiniMapHudPanel',

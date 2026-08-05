@@ -1,8 +1,8 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { drawStarSprite, drawDotSprite } from './starSprites'
-import { useGameStore } from '../../stores/gameStore'
-import { useGalaxyStore } from '../../stores/galaxyStore'
-import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
+import { drawStarSprite, drawDotSprite } from '@/composables/starBackground/starSprites'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   STAR_COUNT,
   STAR_BG_MIN_STARS,
@@ -36,9 +36,9 @@ import {
   FLIGHT_BURST_WIDTH,
   STAR_PHASE_DATA,
   FOCUS_POLL_INTERVAL_MS,
-} from '../../config/constants'
-import { useWindowFocus } from '../useWindowFocus'
-import { useRenderingPaused } from '../useRenderingPaused'
+} from '@/config/constants'
+import { useWindowFocus } from '@/composables/system/useWindowFocus'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import {
   EMISSION_MAX_COUNT,
   EMISSION_NEBULA_PALETTES,
@@ -55,7 +55,7 @@ import {
   type NebulaMovingItem,
   type StarCluster,
   type StarItem,
-} from './types'
+} from '@/composables/starBackground/types'
 import {
   NS,
   addStop,
@@ -69,7 +69,7 @@ import {
   drawStarburst,
   pickGalaxyTypeConfig,
   svgEl,
-} from './galaxyRenderers'
+} from '@/composables/starBackground/galaxyRenderers'
 
 /** FLIGHT_STREAK_ALPHA as a 2-digit hex suffix for 8-digit-hex canvas colors. */
 const STREAK_ALPHA_HEX = Math.round(FLIGHT_STREAK_ALPHA * 255)

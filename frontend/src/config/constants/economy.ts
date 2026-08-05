@@ -220,7 +220,7 @@ export const AUGMENT_CLICK_HISTORY_SIZE = 5
 export const AUGMENT_GRAVITY_FLIP_DURATION_MS = 3000
 /**
  * Rückfallwerte für Augment-Spezialeffekte. Die echten Werte stehen als
- * `specialEffect.params` in config/augments.ts — greifen die hier, fehlt dort
+ * `specialEffect.params` in config/economy/augments.ts — greifen die hier, fehlt dort
  * ein Parameter, und der Effekt läuft trotzdem mit sinnvoller Wirkung.
  */
 export const AUGMENT_OVERCLOCK_DEFAULT_MS = 30_000

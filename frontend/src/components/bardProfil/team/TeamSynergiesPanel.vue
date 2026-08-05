@@ -2,8 +2,8 @@
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
-import { useBattleStore } from '@/stores/battleStore'
-import { useSynergyStore } from '@/stores/synergyStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useSynergyStore } from '@/stores/champions/synergyStore'
 import { TEAM_SIGIL_SYNERGIES_PANEL_WIDTH } from '@/config/constants'
 import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 

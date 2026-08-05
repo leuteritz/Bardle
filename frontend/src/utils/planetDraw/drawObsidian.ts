@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from './svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Obsidian – volcanic-glass world: mirror-black surface with hard specular

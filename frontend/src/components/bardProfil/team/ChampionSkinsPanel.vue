@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useSkinStore } from '@/stores/skinStore'
-import { useActionToast } from '@/composables/useActionToast'
+import { useSkinStore } from '@/stores/champions/skinStore'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import { SKIN_ORIGINAL, SKIN_CARD_ASPECT_RATIO, SKIN_CARD_MIN_WIDTH } from '@/config/constants'
 import {
   getChampionSkins,
   getSkinImagePath,
   getOriginalPreviewPath,
   formatSkinName,
-} from '@/utils/champions'
+} from '@/utils/game/champions'
 
 const props = defineProps<{
   /** Champion whose skins are browsed (the selected role's main champion). */

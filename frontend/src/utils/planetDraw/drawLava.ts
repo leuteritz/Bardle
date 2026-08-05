@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from './svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Lava – 3-layer crack glow (outer/mid/inner), hot-spot nodes, ember atmosphere

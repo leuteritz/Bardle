@@ -1,8 +1,8 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useSkinStore } from '../../stores/skinStore'
-import { useBattleStore } from '../../stores/battleStore'
-import { SKIN_ORIGINAL } from '../../config/constants'
+import { useSkinStore } from '@/stores/champions/skinStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { SKIN_ORIGINAL } from '@/config/constants'
 import {
   toSkinFolder,
   getChampionSkins,
@@ -13,9 +13,9 @@ import {
   withArtVariant,
   pickRandomSkin,
   formatSkinName,
-} from '../../utils/champions'
-import { CHAMPION_SKINS } from '../../config/championSkins'
-import { CHAMPION_DATA } from '../../config/championData'
+} from '@/utils/game/champions'
+import { CHAMPION_SKINS } from '@/config/champions/championSkins'
+import { CHAMPION_DATA } from '@/config/champions/championData'
 
 describe('championSkins utils', () => {
   describe('toSkinFolder', () => {

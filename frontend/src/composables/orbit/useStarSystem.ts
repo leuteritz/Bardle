@@ -1,12 +1,12 @@
 import { shallowRef, watch, onMounted, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
-import { useStarGroupStore } from '../stores/starGroupStore'
-import { usePlanetBossStore } from '../stores/planetBossStore'
-import { useGalaxyStore } from '../stores/galaxyStore'
-import { useRenderingPaused } from './useRenderingPaused'
-import { activePlanetPositions, activeStarCombatState } from '../utils/liveState'
-import { getOrbitPos, orbitBehindArc, orbitBehindProgress, starBodySize } from '../utils/geometry'
-import { playStarVanishFx } from '../utils/starVanishFx'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { activePlanetPositions, activeStarCombatState } from '@/utils/orbit/liveState'
+import { getOrbitPos, orbitBehindArc, orbitBehindProgress, starBodySize } from '@/utils/orbit/geometry'
+import { playStarVanishFx } from '@/utils/fx/starVanishFx'
 import {
   STAR_SPAWN_DURATION_MS,
   STAR_SPAWN_FLY_EASING,
@@ -39,10 +39,10 @@ import {
   STAR_PLANET_FLY_IN_FACTOR,
   STAR_PLANET_RADIUS_LERP,
   STAR_PLANET_SAVED_LINGER_MS,
-} from '../config/constants'
-import { usePlanetShopStore } from '../stores/planetShopStore'
-import { useOrbitScale } from './useOrbitScale'
-import type { PlanetType, StarType } from '../types'
+} from '@/config/constants'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
+import type { PlanetType, StarType } from '@/types'
 
 export const livePlanetAngles = new Map<string, number>()
 

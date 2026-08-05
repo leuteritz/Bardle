@@ -32,7 +32,7 @@ export const OBJECTIVE_BASE_DPS_PER_CHAMP = 45
 export const OBJECTIVE_CLICK_DAMAGE = 15
 export const OBJECTIVE_BARON_WIN_BONUS = 0.12
 
-// ── Drake Types (see src/config/drakes.ts for the full definitions) ────────
+// ── Drake Types (see src/config/battle/drakes.ts for the full definitions) ────────
 /** Win-chance swing for Infernal — the biggest basic swing, plus its burn */
 export const DRAKE_WIN_BONUS_MAJOR = 0.1
 /** Win-chance swing for basic drakes that carry a secondary battle effect */

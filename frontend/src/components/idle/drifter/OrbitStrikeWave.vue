@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useDrifterStore } from '@/stores/drifterStore'
-import { getDrifter } from '@/config/drifters'
-import { hexToRgba } from '@/utils/format'
+import { useDrifterStore } from '@/stores/world/drifterStore'
+import { getDrifter } from '@/config/world/drifters'
+import { hexToRgba } from '@/utils/ui/format'
 import {
   DRIFTER_STRIKE_FX_MS,
   DRIFTER_STRIKE_RIFT_COUNT,
@@ -57,7 +57,7 @@ watch(
     // Die Risse stehen fest, sobald die Welle gezündet ist: der Versatz kommt
     // aus der Sequenznummer, nicht aus Math.random. Ein Zufallswert im
     // Style-Getter würde bei jedem Re-Render neu ziehen und die Risse mitten
-    // in der Animation umspringen lassen (siehe utils/particleField.ts).
+    // in der Animation umspringen lassen (siehe utils/fx/particleField.ts).
     const turn = seq * DRIFTER_STRIKE_RIFT_SEQ_TURN_DEG
     wave.value = {
       seq,

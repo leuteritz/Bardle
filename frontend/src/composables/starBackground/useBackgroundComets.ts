@@ -1,9 +1,9 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useGameStore } from '../../stores/gameStore'
-import { useGalaxyStore } from '../../stores/galaxyStore'
-import { GALAXY_THEMES } from '../../config/galaxyThemes'
-import { useWindowFocus } from '../useWindowFocus'
-import { useRenderingPaused } from '../useRenderingPaused'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
+import { useWindowFocus } from '@/composables/system/useWindowFocus'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import {
   COMET_BG_MAX_COUNT,
   COMET_BG_INTERVAL_MIN_SEC,
@@ -49,7 +49,7 @@ import {
   COMET_BG_COSMIC_FIRST_DELAY_MAX_SEC,
   COMET_BG_COSMIC_MAX_COUNT,
   COMET_BG_COSMIC_COUNT_WEIGHTS,
-} from '../../config/constants'
+} from '@/config/constants'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

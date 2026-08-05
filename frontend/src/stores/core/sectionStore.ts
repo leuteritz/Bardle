@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
-import { SECTIONS } from '../config/sections'
-import type { SectionProgress } from '../types'
-import { TOTAL_SECTIONS } from '../config/constants'
-import { clampPercent } from '../utils/geometry'
+import { SECTIONS } from '@/config/progression/sections'
+import type { SectionProgress } from '@/types'
+import { TOTAL_SECTIONS } from '@/config/constants'
+import { clampPercent } from '@/utils/orbit/geometry'
 
 export const useSectionStore = defineStore('section', {
   state: () => ({

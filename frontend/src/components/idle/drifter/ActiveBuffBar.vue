@@ -49,9 +49,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGameStore } from '@/stores/gameStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useDrifterStore } from '@/stores/drifterStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useDrifterStore } from '@/stores/world/drifterStore'
 import {
   getDrifter,
   DRIFTER_BUFF_EFFECT_LABELS,
@@ -60,7 +60,7 @@ import {
   MVP_BUFF_COLOR,
   MVP_BUFF_LABEL,
   MVP_BUFF_NAME,
-} from '@/config/drifters'
+} from '@/config/world/drifters'
 import type { DrifterBuffEffects } from '@/types'
 import {
   DRIFTER_BUFF_EXPIRY_WARN_SEC,

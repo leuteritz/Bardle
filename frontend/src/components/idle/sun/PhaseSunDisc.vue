@@ -6,8 +6,8 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
-import { usePlanetShopStore } from '@/stores/planetShopStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { STAR_PHASE_DATA, STAR_PHASE_FINAL_INDEX } from '@/config/constants'
 import BlackHoleDisc from './BlackHoleDisc.vue'
 

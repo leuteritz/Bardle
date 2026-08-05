@@ -3,7 +3,7 @@
 // und die Anzeige von Verlauf und Ergebnis. Was WÄHREND des Kampfes passiert,
 // steht nebenan in battleSim.ts.
 
-import type { BattlePhaseConfig, BattlePhaseKey } from '../../types'
+import type { BattlePhaseConfig, BattlePhaseKey } from '@/types'
 
 // ELO rating system
 export const ELO_K_FACTOR = 32
@@ -361,7 +361,7 @@ export const SCOREBOARD_VALUE_BUDGET = [
 ] as const
 
 /**
- * Auto-fit budget of the bottom scoreboard (see utils/scoreboardFit.ts).
+ * Auto-fit budget of the bottom scoreboard (see utils/ui/scoreboardFit.ts).
  *
  * The strip measures its real cells and its real glyph widths, then derives ONE
  * shared value size that is as large as the tightest cell allows — instead of

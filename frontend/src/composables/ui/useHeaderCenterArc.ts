@@ -9,7 +9,7 @@
 // Zeile liegt tiefer und trifft den Bogen an einer anderen Breite. Das ist eine
 // Wurzelrechnung, die in CSS nicht zuverlässig verfügbar ist.
 import { shallowRef } from 'vue'
-import type { HeaderCenterArc } from '@/utils/geometry'
+import type { HeaderCenterArc } from '@/utils/orbit/geometry'
 
 const arc = shallowRef<HeaderCenterArc | null>(null)
 

@@ -1,4 +1,4 @@
-// composables/useGamePause.ts
+// composables/system/useGamePause.ts
 // Ein Pause-Signal für das ganze Spiel.
 //
 // Bisher war „pausiert" gleichbedeutend mit „Fenster hat keinen Fokus": das
@@ -11,7 +11,7 @@
 // Absichtlich NICHT im Save: eine Pause endet mit der Sitzung.
 
 import { computed, readonly, ref } from 'vue'
-import { useWindowFocus } from './useWindowFocus'
+import { useWindowFocus } from '@/composables/system/useWindowFocus'
 
 /** Vom Spieler ausdrücklich gesetzte Pause (Taste oder Klick auf die Keycap). */
 const manualPaused = ref(false)

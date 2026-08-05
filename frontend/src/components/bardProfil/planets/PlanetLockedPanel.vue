@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { usePlanetShopStore } from '@/stores/planetShopStore'
-import type { PlanetSlot } from '@/stores/planetShopStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useGameStore } from '@/stores/gameStore'
-import { toRoman } from '@/utils/format'
-import { displaySunPhase, useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import type { PlanetSlot } from '@/stores/world/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { toRoman } from '@/utils/ui/format'
+import { displaySunPhase, useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 
 const props = defineProps<{ planet: PlanetSlot; slotIndex: number }>()
 const emit = defineEmits<{ buy: [slotId: string] }>()

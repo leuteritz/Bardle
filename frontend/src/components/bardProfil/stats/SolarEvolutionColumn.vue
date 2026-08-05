@@ -2,12 +2,12 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
-import { formatCompactDuration, splitDuration } from '@/utils/format'
-import { useGameStore } from '@/stores/gameStore'
-import { useSynergyStore } from '@/stores/synergyStore'
-import { useAugmentStore } from '@/stores/augmentStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useUiStore } from '@/stores/uiStore'
+import { formatCompactDuration, splitDuration } from '@/utils/ui/format'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useSynergyStore } from '@/stores/champions/synergyStore'
+import { useAugmentStore } from '@/stores/economy/augmentStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import {
   AUGMENT_RARITY_COLOR,
   AUTO_PICK_ICON,
@@ -21,8 +21,8 @@ import {
   SUN_PHASE_DISPLAY_TOTAL,
   MS_PER_SECOND,
 } from '@/config/constants'
-import { AUGMENTS } from '@/config/augments'
-import { useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
+import { AUGMENTS } from '@/config/economy/augments'
+import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import StatsColumnHeader from './StatsColumnHeader.vue'

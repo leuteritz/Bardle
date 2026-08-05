@@ -1,11 +1,11 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { ref } from 'vue'
-import { useStatCatalog } from '../../composables/useStatCatalog'
-import { STAT_CATEGORIES } from '../../config/statCategories'
-import { isValidIcon } from '../../utils/iconUtils'
-import { useBattleStore } from '../../stores/battleStore'
-import { useGameStore } from '../../stores/gameStore'
+import { useStatCatalog } from '@/composables/ui/useStatCatalog'
+import { STAT_CATEGORIES } from '@/config/ui/statCategories'
+import { isValidIcon } from '@/utils/game/iconUtils'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useGameStore } from '@/stores/core/gameStore'
 
 describe('statCategories — definitions', () => {
   it('has unique ids and no duplicate icons', () => {

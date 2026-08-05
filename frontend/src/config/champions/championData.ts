@@ -4,7 +4,7 @@ import type {
   TraitId,
   PlanetType,
   ChampionTierId,
-} from '../types'
+} from '@/types'
 
 export interface ChampionDef {
   role: ChampionRole

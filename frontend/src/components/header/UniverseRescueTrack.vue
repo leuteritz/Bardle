@@ -14,8 +14,8 @@
  * noch, wenn der Button den Balken abgelöst hat.
  */
 import { ref, computed } from 'vue'
-import { useGameStore } from '@/stores/gameStore'
-import { formatNumber } from '@/config/numberFormat'
+import { useGameStore } from '@/stores/core/gameStore'
+import { formatNumber } from '@/config/ui/numberFormat'
 import { UNIVERSE_BAR_TICK_PERCENTS, UNIVERSE_BAR_FILL_INSET_PX } from '@/config/constants'
 
 const props = defineProps<{

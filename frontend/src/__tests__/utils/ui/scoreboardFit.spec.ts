@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { computeScoreboardFit } from '@/utils/scoreboardFit'
+import { computeScoreboardFit } from '@/utils/ui/scoreboardFit'
 import {
   SCOREBOARD_FIT,
   SCOREBOARD_CREST,
   SCOREBOARD_VALUE_BUDGET,
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
-import { formatNumberCompact } from '@/config/numberFormat'
+import { formatNumberCompact } from '@/config/ui/numberFormat'
 import type { ScoreboardFitCell, ScoreboardFitInput } from '@/types'
 
 /* Gemessene em-Breiten der echten Schrift (MedievalSharp) in der Größenordnung,

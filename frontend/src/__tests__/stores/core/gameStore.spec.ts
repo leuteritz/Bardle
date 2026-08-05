@@ -1,7 +1,7 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useGameStore } from '../../stores/gameStore'
-import { LEVEL_BASE } from '../../config/constants'
+import { useGameStore } from '@/stores/core/gameStore'
+import { LEVEL_BASE } from '@/config/constants'
 
 describe('gameStore', () => {
   beforeEach(() => {

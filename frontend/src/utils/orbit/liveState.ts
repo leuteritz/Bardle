@@ -5,7 +5,7 @@
 // sollen kein Reaktivitäts-Update pro Frame auslösen. Einzige Ausnahme ist
 // `activeChampionBehindState`, dessen Ergebnis direkt das Rendering steuert.
 import { reactive } from 'vue'
-import type { MidCurseType } from '../types'
+import type { MidCurseType } from '@/types'
 
 /** Bildschirmposition eines Orbit-Körpers — Ziel- bzw. Startpunkt für Projektile. */
 export interface OrbitScreenPosition {

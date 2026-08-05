@@ -1,11 +1,11 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useBattleStore } from '../../stores/battleStore'
-import { useCombatStore } from '../../stores/combatStore'
-import { usePlanetBossStore } from '../../stores/planetBossStore'
-import { normalizeSecondarySlots } from '../../composables/usePersistence'
-import { activePlanetPositions } from '../../utils/liveState'
-import { ALLIES_PER_ROLE, ALLY_DPS_CONTRIBUTION, CHAMPION_DPS_BASE } from '../../config/constants'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useCombatStore } from '@/stores/battle/combatStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { normalizeSecondarySlots } from '@/composables/system/usePersistence'
+import { activePlanetPositions } from '@/utils/orbit/liveState'
+import { ALLIES_PER_ROLE, ALLY_DPS_CONTRIBUTION, CHAMPION_DPS_BASE } from '@/config/constants'
 
 describe('ally slots (5 per role)', () => {
   beforeEach(() => {

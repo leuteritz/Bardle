@@ -36,7 +36,7 @@ import {
   LANE_TIER_ORDER,
   parseStructureId,
 } from '@/utils/battle/structures'
-import { DRAKE_TYPES } from '@/config/drakes'
+import { DRAKE_TYPES } from '@/config/battle/drakes'
 import type { BattleEvent, ChampionState } from '@/types'
 
 describe('createRng', () => {

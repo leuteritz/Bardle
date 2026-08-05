@@ -144,8 +144,8 @@
 <script setup lang="ts">
 import { computed, onUnmounted, type CSSProperties } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useUiStore } from '@/stores/uiStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import {
   ROLES,
   ROSTER_CARD_MAX_BADGES,
@@ -157,7 +157,7 @@ import {
   RANK_FRAME_MAX_SCALE,
   RANK_TIER_COLORS,
 } from '@/config/constants'
-import { formatNumber } from '@/config/numberFormat'
+import { formatNumber } from '@/config/ui/numberFormat'
 import ChampionRankFrame from './ChampionRankFrame.vue'
 
 const uiStore = useUiStore()

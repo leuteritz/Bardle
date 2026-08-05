@@ -1,4 +1,4 @@
-import type { PlanetType } from '../../types'
+import type { PlanetType } from '@/types'
 
 export type { PlanetType }
 

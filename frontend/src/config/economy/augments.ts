@@ -1,4 +1,4 @@
-import type { AugmentDefinition, AugmentRarity } from '../types'
+import type { AugmentDefinition, AugmentRarity } from '@/types'
 
 export const RARITY_WEIGHTS: Record<AugmentRarity, number> = {
   common: 60,

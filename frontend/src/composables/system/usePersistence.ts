@@ -1,23 +1,26 @@
-import { useGameStore } from '@/stores/gameStore'
-import { useShopStore } from '@/stores/shopStore'
-import { useBattleStore, defaultAllTimeStats, defaultChampionCareer } from '@/stores/battleStore'
-import { useExpeditionStore } from '@/stores/expeditionStore'
-import { useInventoryStore } from '@/stores/inventoryStore'
-import { useAugmentStore } from '@/stores/augmentStore'
-import { useItemStore } from '@/stores/itemStore'
-import { usePlanetEventStore } from '@/stores/planetEventStore'
-import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
-import { useCpsStore } from '@/stores/cpsStore'
-import { usePlayerStore } from '@/stores/playerStore'
-import { usePlanetShopStore, computePlanetMaxHp } from '@/stores/planetShopStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useStarForgeStore } from '@/stores/starForgeStore'
-import { useMeepTreeStore } from '@/stores/meepTreeStore'
-import { useDrifterStore } from '@/stores/drifterStore'
-import { useSkinStore } from '@/stores/skinStore'
-import { useChampionLevelStore } from '@/stores/championLevelStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import {
+  useBattleStore,
+  defaultAllTimeStats,
+  defaultChampionCareer,
+} from '@/stores/battle/battleStore'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useAugmentStore } from '@/stores/economy/augmentStore'
+import { useItemStore } from '@/stores/economy/itemStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useCpsStore } from '@/stores/core/cpsStore'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { usePlanetShopStore, computePlanetMaxHp } from '@/stores/world/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useSkinStore } from '@/stores/champions/skinStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import type {
   ChampionProgress,
   PendingPerkChoice,
@@ -42,7 +45,7 @@ import {
   UNIVERSE_RESCUE_INITIAL_COST,
   BATTLE_HISTORY_SAVE_LIMIT,
 } from '@/config/constants'
-import { DRAKE_TYPES, type DrakeTypeId } from '@/config/drakes'
+import { DRAKE_TYPES, type DrakeTypeId } from '@/config/battle/drakes'
 import { logger } from '@/utils/logger'
 
 /** Normalize saved ally rows to exactly ALLIES_PER_ROLE entries per role.
@@ -1005,8 +1008,6 @@ export function usePersistence() {
     inventoryStore.$reset()
     const expeditionStore = useExpeditionStore()
     expeditionStore.$reset()
-    const planetEventStore = usePlanetEventStore()
-    planetEventStore.$reset()
     const planetBossStore = usePlanetBossStore()
     planetBossStore.$reset()
     const galaxyStoreReset = useGalaxyStore()

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useUiStore } from '@/stores/uiStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
@@ -11,7 +11,7 @@ import {
   HEADER_STAT_TOOLTIP_GAP_PX,
   HEADER_TOOLTIP_CLEAR_SELECTOR,
 } from '@/config/constants'
-import { splitDuration } from '@/utils/format'
+import { splitDuration } from '@/utils/ui/format'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
 import StarEvolutionTooltip from './StarEvolutionTooltip.vue'
 

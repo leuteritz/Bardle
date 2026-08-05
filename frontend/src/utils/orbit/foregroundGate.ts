@@ -14,8 +14,8 @@ import {
   activePlayerPlanetPositions,
   activePlanetPositions,
   activeStarCombatState,
-} from './liveState'
-import { useRenderingPaused } from '@/composables/useRenderingPaused'
+} from '@/utils/orbit/liveState'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 
 function idleOrbitLive(): boolean {
   const { isIdleSimulationPaused } = useRenderingPaused()

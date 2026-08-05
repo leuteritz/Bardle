@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
   COMET_PHASE_DATA,
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
-import { displaySunPhase, useSunPhaseDisplay } from '@/composables/useSunPhaseDisplay'
+import { displaySunPhase, useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
 
 withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })

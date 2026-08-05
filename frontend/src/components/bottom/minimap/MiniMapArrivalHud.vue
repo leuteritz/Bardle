@@ -59,8 +59,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useStarGroupStore } from '@/stores/starGroupStore'
-import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/battle/roleBehaviorStore'
 import {
   HUD_COUNTDOWN_TICK_MS,
   MS_PER_SECOND,

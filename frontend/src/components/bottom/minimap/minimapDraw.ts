@@ -13,7 +13,7 @@ import {
   BLACK_HOLE_BODY_TO_BOX_FACTOR,
 } from '@/config/constants'
 import { STAR_PALETTE } from './minimapGalaxyGeometry'
-import { hexToRgba } from '@/utils/format'
+import { hexToRgba } from '@/utils/ui/format'
 
 export const ARRIVAL_TRANSITION_MS = 900
 

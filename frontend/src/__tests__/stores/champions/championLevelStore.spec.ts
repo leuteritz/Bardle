@@ -1,11 +1,11 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { usePersistence } from '../../composables/usePersistence'
-import { useChampionLevelStore } from '../../stores/championLevelStore'
-import { useBattleStore } from '../../stores/battleStore'
-import { useGameStore } from '../../stores/gameStore'
-import { useInventoryStore } from '../../stores/inventoryStore'
-import { useGalaxyStore } from '../../stores/galaxyStore'
+import { usePersistence } from '@/composables/system/usePersistence'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import {
   xpForLevel,
   levelUpCost,
@@ -25,7 +25,7 @@ import {
   regaliaStageFor,
   regaliaStageIndexFor,
   isApexRegalia,
-} from '../../config/championLevels'
+} from '@/config/champions/championLevels'
 import {
   CHAMPION_ALLY_XP_SHARE,
   CHAMPION_AUTO_LEVEL_MAX_PER_TICK,
@@ -40,8 +40,8 @@ import {
   SWORN_STAT_SHARE,
   ALLIES_PER_ROLE,
   SAVE_KEY,
-} from '../../config/constants'
-import { CHAMPION_DATA } from '../../config/championData'
+} from '@/config/constants'
+import { CHAMPION_DATA } from '@/config/champions/championData'
 
 /** The test environment has no global localStorage → in-memory stub. */
 function makeLocalStorageStub() {

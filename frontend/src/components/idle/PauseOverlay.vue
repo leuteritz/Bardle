@@ -362,18 +362,18 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGamePause } from '@/composables/useGamePause'
-import { onKeybinding } from '@/composables/useKeybindings'
-import { useFitScale } from '@/composables/useFitScale'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { useGameStore } from '@/stores/gameStore'
-import { usePlayerStore } from '@/stores/playerStore'
-import { usePlanetShopStore } from '@/stores/planetShopStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
-import { useUiStore } from '@/stores/uiStore'
-import { formatNumber } from '@/config/numberFormat'
-import { MATERIALS, materialIconMd } from '@/config/materials'
+import { useGamePause } from '@/composables/system/useGamePause'
+import { onKeybinding } from '@/composables/system/useKeybindings'
+import { useFitScale } from '@/composables/ui/useFitScale'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { formatNumber } from '@/config/ui/numberFormat'
+import { MATERIALS, materialIconMd } from '@/config/economy/materials'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
@@ -394,8 +394,8 @@ import {
   KEYBINDINGS,
   PAUSE_ESCAPE_CAP,
 } from '@/config/constants'
-import { splitDuration } from '@/utils/format'
-import { pauseDustStyle } from '@/utils/particleField'
+import { splitDuration } from '@/utils/ui/format'
+import { pauseDustStyle } from '@/utils/fx/particleField'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
@@ -1263,7 +1263,7 @@ function particleStyle(i: number): Record<string, string> {
   line-height: 1;
   /* Der Höhenausgleich gegen die Chime-Grafik daneben kommt gemessen von
      v-ink-center.y — die Schriftgröße hängt hier an vw, ein fester em-Wert
-     träfe nur eine Fensterbreite (siehe utils/textInkOffset.ts). */
+     träfe nur eine Fensterbreite (siehe utils/ui/textInkOffset.ts). */
   color: #f0d060;
   font-variant-numeric: tabular-nums;
   text-shadow:

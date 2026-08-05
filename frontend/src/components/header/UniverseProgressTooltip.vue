@@ -15,11 +15,11 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGameStore } from '@/stores/gameStore'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { universes } from '@/config/universes'
-import { formatNumber, formatNumberCompact } from '@/config/numberFormat'
-import { formatCompactDuration, toRoman } from '@/utils/format'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { universes } from '@/config/progression/universes'
+import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import { formatCompactDuration, toRoman } from '@/utils/ui/format'
 import {
   MS_PER_SECOND,
   UNIVERSE_BAR_TICK_PERCENTS,

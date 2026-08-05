@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { usePlanetShopStore, PLANET_ROLES, PLANET_ROLES_LIST } from '@/stores/planetShopStore'
-import type { PlanetRoleType } from '@/stores/planetShopStore'
-import { planetBonusText } from '@/utils/planetStatus'
-import { toRoman } from '@/utils/format'
-import { useActionToast } from '@/composables/useActionToast'
+import { usePlanetShopStore, PLANET_ROLES, PLANET_ROLES_LIST } from '@/stores/world/planetShopStore'
+import type { PlanetRoleType } from '@/stores/world/planetShopStore'
+import { planetBonusText } from '@/utils/orbit/planetStatus'
+import { toRoman } from '@/utils/ui/format'
+import { useActionToast } from '@/composables/ui/useActionToast'
 
 const props = defineProps<{ slotId: string }>()
 

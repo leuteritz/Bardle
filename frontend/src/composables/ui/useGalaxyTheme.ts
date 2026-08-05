@@ -1,6 +1,6 @@
 import { watch, onMounted } from 'vue'
-import { useGalaxyStore } from '../stores/galaxyStore'
-import { GALAXY_THEMES } from '../config/galaxyThemes'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 
 function applyTheme(index: number): void {
   const theme = GALAXY_THEMES[index % GALAXY_THEMES.length]

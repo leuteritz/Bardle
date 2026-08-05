@@ -64,34 +64,34 @@ import {
   ROLE_EVENT_THROTTLE_SUPPORT_PLAYER_MS,
   ROLE_EVENT_THROTTLE_MID_CURSE_MS,
   ROLE_EVENT_THROTTLE_ADC_BURST_MS,
-} from '../config/constants'
-import { getChampionStarLevel } from '../config/championTiers'
-import { usePlayerStore } from './playerStore'
-import { useBattleStore } from './battleStore'
-import { usePlanetBossStore } from './planetBossStore'
-import { useCombatStore } from './combatStore'
-import { useChampionLevelStore } from './championLevelStore'
+} from '@/config/constants'
+import { getChampionStarLevel } from '@/config/champions/championTiers'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useCombatStore } from '@/stores/battle/combatStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import {
   usePlanetShopStore,
   PLANET_ROLES,
   JUNGLE_BUFF_DEFS,
   isPlanetDown,
   type PlanetSlot,
-} from './planetShopStore'
-import { useStarGroupStore } from './starGroupStore'
+} from '@/stores/world/planetShopStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import {
   activePlanetPositions,
   activePlayerPlanetPositions,
   activeMidCurse,
-} from '../utils/liveState'
+} from '@/utils/orbit/liveState'
 import {
   championInForeground,
   playerSlotInForeground,
   bossPlanetInForeground,
-} from '../utils/foregroundGate'
-import type { ChampionRole, MidCurseType, ActiveCurse } from '../types'
-import { useEventLog } from '@/composables/useEventLog'
-import { useRenderingPaused } from '@/composables/useRenderingPaused'
+} from '@/utils/orbit/foregroundGate'
+import type { ChampionRole, MidCurseType, ActiveCurse } from '@/types'
+import { useEventLog } from '@/composables/ui/useEventLog'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 
 /** Rollen der aktuell in headerSlots besetzten Team-Slots. */
 const ORBIT_SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']

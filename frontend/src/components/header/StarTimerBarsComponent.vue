@@ -159,11 +159,11 @@
 </template>
 
 <script setup lang="ts">
-import { hexToRgb } from '@/utils/format'
+import { hexToRgb } from '@/utils/ui/format'
 import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useStarGroupStore } from '../../stores/starGroupStore'
-import { usePlanetBossStore } from '../../stores/planetBossStore'
-import { useRoleBehaviorStore } from '../../stores/roleBehaviorStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
 import {
   ROLE_MID_CURSE_DURATION_MS,
   ROLE_COLORS,
@@ -177,14 +177,14 @@ import {
   STAR_TIMER_HP_REVEAL_MS,
   STAR_TIMER_CENTER_OVERLAP_PX,
   STAR_TIMER_WIDTH_SNAP_PX,
-} from '../../config/constants'
-import { CHAMPION_ROLES } from '../../config/championData'
-import { starEclipseState } from '../../utils/foregroundGate'
-import { useHeaderCenterArc } from '../../composables/useHeaderCenterArc'
-import { centerArcSideWidth } from '../../utils/geometry'
+} from '@/config/constants'
+import { CHAMPION_ROLES } from '@/config/champions/championData'
+import { starEclipseState } from '@/utils/orbit/foregroundGate'
+import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
+import { centerArcSideWidth } from '@/utils/orbit/geometry'
 import StarTimerCenterSeam from './StarTimerCenterSeam.vue'
-import type { StarGroup } from '../../stores/starGroupStore'
-import type { StarType } from '../../types'
+import type { StarGroup } from '@/stores/world/starGroupStore'
+import type { StarType } from '@/types'
 
 const starGroupStore = useStarGroupStore()
 const planetBossStore = usePlanetBossStore()
@@ -1594,7 +1594,7 @@ watch(
   /* Der Metrik-Ausgleich nach unten kommt nicht mehr aus einer em-Konstante,
      sondern gemessen von `v-ink-center.y` im Template: der nötige Versatz ist
      kein fester Bruchteil der Schriftgröße, sondern wächst zwischen Full HD
-     und 2K von 0.079em auf 0.117em (siehe utils/textInkOffset.ts). Die alten
+     und 2K von 0.079em auf 0.117em (siehe utils/ui/textInkOffset.ts). Die alten
      0.16em standen deshalb nur auf 2K richtig und ließen die Zahl auf Full HD
      gut einen Pixel zu tief stehen. */
   /* Flüssig skaliert für 1280px (~11.3px) bis 2560px (~14.7px) Viewport-Breite */

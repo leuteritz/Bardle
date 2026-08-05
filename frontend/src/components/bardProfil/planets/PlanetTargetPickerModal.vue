@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { usePlanetShopStore } from '@/stores/planetShopStore'
-import type { PlanetSlot } from '@/stores/planetShopStore'
-import { useShopStore } from '@/stores/shopStore'
-import { MATERIALS } from '@/config/materials'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import type { PlanetSlot } from '@/stores/world/planetShopStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { MATERIALS } from '@/config/economy/materials'
 import { MATERIAL_RARITY_COLOR } from '@/config/constants'
 
 const props = defineProps<{ planet: PlanetSlot }>()

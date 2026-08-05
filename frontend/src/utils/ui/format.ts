@@ -4,7 +4,7 @@
 // Format herauskommt.
 //
 // Zahlen (Chimes, Schaden …) laufen weiterhin über `formatNumber` aus
-// `config/numberFormat.ts` bzw. die globale `$formatNumber`-Property.
+// `config/ui/numberFormat.ts` bzw. die globale `$formatNumber`-Property.
 
 import {
   SWORN_ALLY_COUNT,

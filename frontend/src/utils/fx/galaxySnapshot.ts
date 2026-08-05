@@ -22,7 +22,7 @@ import {
   SNAPSHOT_ROUTE_ARROW_SIZE,
   SNAPSHOT_ROUTE_ARROW_GAP,
 } from '@/config/constants'
-import type { CompletedGalaxyRecord } from '@/stores/galaxyStore'
+import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 
 /** Logical snapshot size (rendered at 2× for crisp HiDPI display). */
 export const GALAXY_SNAPSHOT_W = 320

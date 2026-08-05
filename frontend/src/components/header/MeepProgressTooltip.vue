@@ -15,12 +15,12 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGameStore } from '@/stores/gameStore'
-import { useMeepTreeStore } from '@/stores/meepTreeStore'
-import { MEEP_TREE_BRANCHES, type MeepTreeEffects } from '@/config/meepTree'
-import { formatNumber, formatNumberCompact } from '@/config/numberFormat'
-import { formatCompactDuration } from '@/utils/format'
-import { clampPercent } from '@/utils/geometry'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { MEEP_TREE_BRANCHES, type MeepTreeEffects } from '@/config/progression/meepTree'
+import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import { formatCompactDuration } from '@/utils/ui/format'
+import { clampPercent } from '@/utils/orbit/geometry'
 import {
   MS_PER_SECOND,
   MEEP_POWER_MULTIPLIER,

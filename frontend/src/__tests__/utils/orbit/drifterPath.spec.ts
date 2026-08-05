@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { drifterField, drifterPointAt, drifterEntryEdge } from '../../utils/drifterPath'
+import { drifterField, drifterPointAt, drifterEntryEdge } from '@/utils/orbit/drifterPath'
 import {
   DRIFTER_ROUTES,
   DRIFTER_CENTER_CLEARANCE,
   DRIFTER_FIELD_TOP_PX,
   DRIFTER_FIELD_BOTTOM_PX,
   DRIFTER_HUD_PANEL_MARGIN_PX,
-} from '../../config/constants'
-import { DRIFTERS } from '../../config/drifters'
+} from '@/config/constants'
+import { DRIFTERS } from '@/config/world/drifters'
 
 /** The desktop reference resolutions from CLAUDE.md, viewport heights. */
 const VIEWPORTS: Array<[number, number]> = [

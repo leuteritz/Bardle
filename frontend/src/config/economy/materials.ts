@@ -1,5 +1,5 @@
-import type { Material } from '../types'
-import { MATERIAL_ICON_SM_SUFFIX, MATERIAL_ICON_MD_SUFFIX } from './constants'
+import type { Material } from '@/types'
+import { MATERIAL_ICON_SM_SUFFIX, MATERIAL_ICON_MD_SUFFIX } from '@/config/constants'
 
 /**
  * Größere Auflösungsvariante eines Material-Icons.

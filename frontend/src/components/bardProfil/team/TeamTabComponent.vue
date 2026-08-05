@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useItemStore } from '@/stores/itemStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useActionToast } from '@/composables/useActionToast'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useItemStore } from '@/stores/economy/itemStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import {
   ROLES,
   TEAM_TAB_MOUNT_STAGE_BOARD,
@@ -16,8 +16,8 @@ import {
   TEAM_EXPEDITION_PANEL_WIDTH,
   TEAM_EQUIPMENT_PANEL_WIDTH,
 } from '@/config/constants'
-import { getChampionRoles } from '@/config/championData'
-import { allySlotLabel } from '@/utils/format'
+import { getChampionRoles } from '@/config/champions/championData'
+import { allySlotLabel } from '@/utils/ui/format'
 import type { ChampionRole, ItemCategory } from '@/types'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import SigilBoardComponent from './sigil/SigilBoardComponent.vue'

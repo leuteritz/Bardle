@@ -121,7 +121,7 @@ export const FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT = FORGE_LEAF_AMPLIFY_PER_LEVEL * 1
 
 /**
  * Wirkung der geschmiedeten Konstellationen. Die Zahlen stehen zusätzlich als
- * Prozentangabe im `desc`-Text der jeweiligen Definition in config/starForge.ts
+ * Prozentangabe im `desc`-Text der jeweiligen Definition in config/progression/starForge.ts
  * — ändert sich eine, muss der Text mitgeführt werden.
  */
 export const FORGE_CONSTELLATION_BULWARK_DAMAGE_MULT = 0.9

@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import { useDrifterStore } from './drifterStore'
+import { useDrifterStore } from '@/stores/world/drifterStore'
 import type {
   ChampionProgress,
   ChampionStats,
   ChampionRole,
   PendingPerkChoice,
   ChampionLevelCost,
-} from '../types'
+} from '@/types'
 import {
   CHAMPION_LEVEL_START_CAP,
   CHAMPION_LEVEL_CAP_PER_GALAXY,
@@ -17,7 +17,7 @@ import {
   SWORN_ALLY_COUNT,
   SWORN_STAT_SHARE,
   ROLES,
-} from '../config/constants'
+} from '@/config/constants'
 import {
   xpForLevel,
   resolveChampionStats,
@@ -32,14 +32,14 @@ import {
   ascensionStars,
   ascensionRank,
   PERK_BY_ID,
-} from '../config/championLevels'
-import { CHAMPION_DATA, CHAMPION_ROLES } from '../config/championData'
-import { useGameStore } from './gameStore'
-import { useInventoryStore } from './inventoryStore'
-import { useBattleStore } from './battleStore'
-import { useGalaxyStore } from './galaxyStore'
-import { usePlayerStore } from './playerStore'
-import { logger } from '../utils/logger'
+} from '@/config/champions/championLevels'
+import { CHAMPION_DATA, CHAMPION_ROLES } from '@/config/champions/championData'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { logger } from '@/utils/logger'
 
 export function defaultChampionProgress(): ChampionProgress {
   return { level: 1, xp: 0, totalXp: 0, perks: {} }

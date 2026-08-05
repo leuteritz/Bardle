@@ -58,10 +58,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { MATERIALS, materialIconMd } from '@/config/materials'
+import { MATERIALS, materialIconMd } from '@/config/economy/materials'
 import { LOOT_MONOGRAM_MAX_CHARS } from '@/config/constants'
-import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useBattleStore } from '@/stores/battleStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 
 const bossStore = usePlanetBossStore()
 const battleStore = useBattleStore()

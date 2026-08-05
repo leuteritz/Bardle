@@ -315,8 +315,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useBattleMovement, type ChampionTrail } from '@/composables/useBattleMovement'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useBattleMovement, type ChampionTrail } from '@/composables/battle/useBattleMovement'
 import {
   DRAKE_POS,
   BARON_POS,
@@ -326,9 +326,9 @@ import {
   JUNGLE_BUFF_RESPAWN_T,
   KILL_MARK_WINDOW_T,
 } from '@/config/constants'
-import { hpStageClass } from '@/utils/format'
-import { DRAKE_TYPES } from '@/config/drakes'
-import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION, JUNGLE_BUFF_CAMPS } from '@/config/battleRoutes'
+import { hpStageClass } from '@/utils/ui/format'
+import { DRAKE_TYPES } from '@/config/battle/drakes'
+import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION, JUNGLE_BUFF_CAMPS } from '@/config/battle/battleRoutes'
 import {
   ALL_STRUCTURE_IDS,
   STRUCTURE_POSITIONS,
@@ -1335,7 +1335,7 @@ const structureMarkers = computed(() => {
        worth avoiding here
      · no will-change: the running animations promote these layers anyway, and
        forcing it would just pin 15 extra layers in memory for nothing
-   Colors mirror BARON_BUFF in config/drakes.ts. */
+   Colors mirror BARON_BUFF in config/battle/drakes.ts. */
 .baron-aura {
   position: absolute;
   top: 50%;

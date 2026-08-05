@@ -1,7 +1,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useRenderingPaused } from '@/composables/useRenderingPaused'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import {
   buildMovementSchedules,
   positionAt,

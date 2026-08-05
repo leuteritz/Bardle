@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { useGameStore } from '@/stores/gameStore'
+import { useGameStore } from '@/stores/core/gameStore'
 import {
   UNIVERSE_MILESTONE_COUNT,
   UNIVERSE_MILESTONE_STEP_PERCENT,

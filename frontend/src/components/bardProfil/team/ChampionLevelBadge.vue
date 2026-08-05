@@ -12,7 +12,7 @@
  * badges, so a full board (5 nodes + 15 satellites) stays cheap to composite.
  */
 import { computed } from 'vue'
-import { regaliaStageFor, regaliaStageIndexFor } from '@/config/championLevels'
+import { regaliaStageFor, regaliaStageIndexFor } from '@/config/champions/championLevels'
 import {
   CHAMPION_REGALIA_BASE_SIZE,
   CHAMPION_REGALIA_ORNAMENT_MIN_SIZE,
@@ -22,7 +22,7 @@ import {
   CHAMPION_REGALIA_FONT_RATIO,
   CHAMPION_REGALIA_STAGES,
 } from '@/config/constants'
-import { facetClipPath } from '@/utils/geometry'
+import { facetClipPath } from '@/utils/orbit/geometry'
 
 const props = withDefaults(
   defineProps<{

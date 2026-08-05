@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { formatNumber } from '@/config/numberFormat'
+import { formatNumber } from '@/config/ui/numberFormat'
 import { BOSS_RAGE_DMG_MULT } from '@/config/constants'
-import { useBossFightHud } from '@/composables/useBossFightHud'
+import { useBossFightHud } from '@/composables/orbit/useBossFightHud'
 import BossTimerRing from './BossTimerRing.vue'
 
 const props = defineProps<{

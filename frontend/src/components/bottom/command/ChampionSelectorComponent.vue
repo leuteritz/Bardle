@@ -2,11 +2,11 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battleStore'
-import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
-import { useUiStore } from '@/stores/uiStore'
-import { useRoleAbilityStates } from '@/composables/useRoleAbilityStates'
-import { championInForeground } from '@/utils/foregroundGate'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useRoleAbilityStates } from '@/composables/battle/useRoleAbilityStates'
+import { championInForeground } from '@/utils/orbit/foregroundGate'
 import {
   ROLES,
   COMMAND_PANEL_ART_SIZE,

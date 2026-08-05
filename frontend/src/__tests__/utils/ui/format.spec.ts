@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { durationSegments } from '../../utils/format'
+import { durationSegments } from '@/utils/ui/format'
 
 const S = 1000
 const M = 60 * S

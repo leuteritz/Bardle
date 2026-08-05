@@ -6,10 +6,10 @@
 // Zeitpunkt sehen — ein zweiter, eigener Ticker würde sichtbar auseinanderlaufen.
 import { computed } from 'vue'
 import type { Ref } from 'vue'
-import { useStarGroupStore } from '@/stores/starGroupStore'
-import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useBattleStore } from '@/stores/battleStore'
-import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/battle/roleBehaviorStore'
 import {
   BOSS_AUTO_ATTACK_DAMAGE,
   BOSS_AUTO_INTERVAL_MS,

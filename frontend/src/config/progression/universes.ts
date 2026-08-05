@@ -1,4 +1,4 @@
-import type { UniverseConfig } from '../types'
+import type { UniverseConfig } from '@/types'
 
 export const universes: UniverseConfig[] = [
   {

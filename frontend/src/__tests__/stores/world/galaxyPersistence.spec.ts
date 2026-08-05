@@ -12,9 +12,9 @@ function makeLocalStorageStub() {
     clear: () => store.clear(),
   }
 }
-import { usePersistence } from '../../composables/usePersistence'
-import { useGalaxyStore } from '../../stores/galaxyStore'
-import { SAVE_KEY } from '../../config/constants'
+import { usePersistence } from '@/composables/system/usePersistence'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { SAVE_KEY } from '@/config/constants'
 
 /** Ob die Minimap (MiniMap.vue `show`) für den aktuellen Store-Zustand
  *  sichtbar wäre — gespiegelte Bedingung aus der Komponente. */

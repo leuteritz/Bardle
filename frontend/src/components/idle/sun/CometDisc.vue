@@ -9,7 +9,7 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { COMET_PHASE_DATA, COMET_STAGE_GOLD } from '@/config/constants'
 
 /**

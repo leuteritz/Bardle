@@ -2,8 +2,8 @@
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
-import { useDrifterStore } from '@/stores/drifterStore'
-import { getDrifter, DRIFTER_BUFF_EFFECT_LABELS, DRIFTER_BUFF_LABEL_ALL } from '@/config/drifters'
+import { useDrifterStore } from '@/stores/world/drifterStore'
+import { getDrifter, DRIFTER_BUFF_EFFECT_LABELS, DRIFTER_BUFF_LABEL_ALL } from '@/config/world/drifters'
 import type { DrifterBuffEffects, DrifterDef } from '@/types'
 import {
   DRIFTER_CARD_ICON,

@@ -6,15 +6,15 @@
 // beide Loops zusammen würden den Orbit doppelt so schnell laufen lassen.
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Ref } from 'vue'
-import { usePlanetShopStore, isPlanetDown } from '@/stores/planetShopStore'
-import type { PlanetSlot } from '@/stores/planetShopStore'
+import { usePlanetShopStore, isPlanetDown } from '@/stores/world/planetShopStore'
+import type { PlanetSlot } from '@/stores/world/planetShopStore'
 import {
   initialOrbitAngle,
   orbitEclipsePhase,
   orbitTierForSlotIndex,
   planetOrbitPhases,
-} from '@/utils/planetOrbitPhase'
-import { playerSlotInForeground } from '@/utils/foregroundGate'
+} from '@/utils/orbit/planetOrbitPhase'
+import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
 import { PLANET_TAB_ORBIT_PERIOD_SEC } from '@/config/constants'
 
 function orbitDelayFor(progress: number): string {

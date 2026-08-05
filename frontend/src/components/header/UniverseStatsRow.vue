@@ -16,10 +16,10 @@
  */
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGameStore } from '@/stores/gameStore'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { formatNumberCompact } from '@/config/numberFormat'
-import { toRoman } from '@/utils/format'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { formatNumberCompact } from '@/config/ui/numberFormat'
+import { toRoman } from '@/utils/ui/format'
 import {
   HEADER_UNIVERSE_ICON,
   HEADER_TOOLTIP_CLEAR_SELECTOR,

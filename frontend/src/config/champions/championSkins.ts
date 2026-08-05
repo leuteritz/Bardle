@@ -1,7 +1,7 @@
 // AUTO-GENERATED from public/img/skins/ — folder name → skin file basenames.
 // Regenerate when skin images are added/removed (see scripts in repo history).
 // Keys are the PascalCase folder names; resolve a champion name to its folder
-// with toSkinFolder() from '@/utils/champions'.
+// with toSkinFolder() from '@/utils/game/champions'.
 
 export const CHAMPION_SKINS: Readonly<Record<string, readonly string[]>> = {
   Aatrox: ['OriginalSkin', 'JusticarSkin', 'MechaSkin', 'VictoriousSkin'],

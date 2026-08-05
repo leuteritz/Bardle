@@ -1,4 +1,4 @@
-// utils/canvasContext.ts
+// utils/fx/canvasContext.ts
 // Chrome darf den Backing-Store eines 2D-Canvas verwerfen, wenn der Tab lange
 // im Hintergrund war (GPU-Speicherdruck). Danach werden alle Zeichenbefehle
 // stillschweigend verworfen — die rAF-Loop läuft normal weiter, aber der

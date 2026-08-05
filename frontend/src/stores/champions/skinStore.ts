@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { SKIN_ORIGINAL } from '@/config/constants'
-import { getSkinImagePath, hasChampionSkin } from '@/utils/champions'
+import { getSkinImagePath, hasChampionSkin } from '@/utils/game/champions'
 import type { ChampionArtSize } from '@/types'
 
 /**

@@ -2,8 +2,8 @@
 // Regalia-Stufen, Tiers und Rekrutierungskosten, Skins und Bildgrößen sowie
 // die verbündeten Slots (Sworn Allies + Bank).
 
-import type { ChampionRegaliaStage, ChampionRole } from '../../types'
-import { ROLES } from './roles'
+import type { ChampionRegaliaStage, ChampionRole } from '@/types'
+import { ROLES } from '@/config/constants/roles'
 
 // Champion travel timing
 export const CHAMPION_TRAVEL_BASE_MS = 60_000 // 60s base travel time
@@ -224,8 +224,8 @@ export const CHAMP_TOOLTIP_MAX_VISIBLE = 5
 
 // ── Champion Levels ───────────────────────────────────────────────────────────
 // Every champion earns XP from kills and can be levelled with chimes + materials.
-// Levels grant four stats (config/championLevels.ts), an ascension star every 5
-// levels and a perk choice every 10. Store: stores/championLevelStore.ts.
+// Levels grant four stats (config/champions/championLevels.ts), an ascension star every 5
+// levels and a perk choice every 10. Store: stores/champions/championLevelStore.ts.
 /** XP required to leave level N: BASE * N^EXPONENT. */
 export const CHAMPION_XP_BASE = 120
 export const CHAMPION_XP_EXPONENT = 1.55

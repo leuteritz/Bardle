@@ -4,7 +4,7 @@ import {
   type GalaxyPalette,
   type GalaxyType,
   type GalaxyTypeConfig,
-} from './types'
+} from '@/composables/starBackground/types'
 
 // ─── SVG Helpers ─────────────────────────────────────────────────────────────
 

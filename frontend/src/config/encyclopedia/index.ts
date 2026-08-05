@@ -1,16 +1,16 @@
-import { resourcesCategory, levelingCategory, buildingsCategory } from './coreProgression'
-import { sunForgeCategory, meepTreeCategory, planetSlotsCategory } from './sunAndForge'
-import { battleCategory, championsCategory } from './battleAndChampions'
-import { orbitCombatCategory, starFightsCategory, planetBossCategory } from './combatAndStars'
+import { resourcesCategory, levelingCategory, buildingsCategory } from '@/config/encyclopedia/coreProgression'
+import { sunForgeCategory, meepTreeCategory, planetSlotsCategory } from '@/config/encyclopedia/sunAndForge'
+import { battleCategory, championsCategory } from '@/config/encyclopedia/battleAndChampions'
+import { orbitCombatCategory, starFightsCategory, planetBossCategory } from '@/config/encyclopedia/combatAndStars'
 import {
   galaxiesCategory,
   expeditionsCategory,
   itemsCategory,
   prestigeCategory,
-} from './worldAndMeta'
-import type { EncyclopediaCategory } from './types'
+} from '@/config/encyclopedia/worldAndMeta'
+import type { EncyclopediaCategory } from '@/config/encyclopedia/types'
 
-export type { EncyclopediaEntry, EncyclopediaCategory } from './types'
+export type { EncyclopediaEntry, EncyclopediaCategory } from '@/config/encyclopedia/types'
 
 export const encyclopediaData: EncyclopediaCategory[] = [
   resourcesCategory,

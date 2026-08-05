@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGameStore } from '../../stores/gameStore'
+import { useGameStore } from '@/stores/core/gameStore'
 import RpgSearchBar from '../ui/RpgSearchBar.vue'
-import { encyclopediaData } from '../../config/encyclopedia'
-import type { EncyclopediaEntry } from '../../config/encyclopedia'
+import { encyclopediaData } from '@/config/encyclopedia'
+import type { EncyclopediaEntry } from '@/config/encyclopedia'
 import {
   BOTTOM_BAR_HEIGHT,
   BOTTOM_BAR_SIDE_W,
@@ -19,7 +19,7 @@ import {
   ENCYCLOPEDIA_BOOKMARKS_STORAGE_KEY,
   ENCYCLOPEDIA_COPY_FEEDBACK_MS,
   ENCYCLOPEDIA_FLASH_MS,
-} from '../../config/constants'
+} from '@/config/constants'
 
 const gameStore = useGameStore()
 

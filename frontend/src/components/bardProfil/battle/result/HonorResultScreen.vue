@@ -10,7 +10,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import VictorySplashPanel from './VictorySplashPanel.vue'
 import HonorGrantPanel from './HonorGrantPanel.vue'
 

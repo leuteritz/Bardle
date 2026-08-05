@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useDrifterStore } from '@/stores/drifterStore'
-import { useUiStore } from '@/stores/uiStore'
-import { DRIFTERS, getDrifter } from '@/config/drifters'
+import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { DRIFTERS, getDrifter } from '@/config/world/drifters'
 import { DRIFTER_RARITY_COLOR, ADMIN_DRIFTER_PREVIEW_PX } from '@/config/constants'
 import DrifterBody from '@/components/idle/drifter/DrifterBody.vue'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'

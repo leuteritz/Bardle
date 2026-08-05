@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
-import { useBattleStore } from './battleStore'
-import { getChampionOrigin, ORIGIN_SYNERGIES } from '../config/championOrigins'
-import { CHAMPION_TRAITS, TRAIT_BY_ID } from '../config/championTraits'
-import type { ActiveOriginSynergy, ActiveSynergy, ActiveTrait, ChampionOrigin, TraitId } from '../types'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { getChampionOrigin, ORIGIN_SYNERGIES } from '@/config/champions/championOrigins'
+import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/champions/championTraits'
+import type { ActiveOriginSynergy, ActiveSynergy, ActiveTrait, ChampionOrigin, TraitId } from '@/types'
 
 export const useSynergyStore = defineStore('synergy', () => {
   const battleStore = useBattleStore()

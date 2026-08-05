@@ -1,4 +1,4 @@
-import allIconsRaw from '../config/gameicons.txt?raw'
+import allIconsRaw from '@/config/gameicons.txt?raw'
 
 /**
  * The complete game-icons set, read from the local list — no network access.

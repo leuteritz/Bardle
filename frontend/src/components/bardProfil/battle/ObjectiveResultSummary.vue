@@ -68,9 +68,9 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ObjectiveFighter } from '@/types'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import { OBJECTIVE_RESULT_DELAY_MS, OBJECTIVE_BARON_WIN_BONUS } from '@/config/constants'
-import { DRAKE_TYPES, BARON_BUFF } from '@/config/drakes'
+import { DRAKE_TYPES, BARON_BUFF } from '@/config/battle/drakes'
 
 interface Award {
   key: string

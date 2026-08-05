@@ -2,8 +2,8 @@
 // Rail-Kachel, Bühne und Command Panel müssen dieselbe Farbstufe und denselben
 // Prozentwert zeigen, sonst driften die drei Anzeigen auseinander.
 import { HP_COLOR_THRESHOLD_HIGH, HP_COLOR_THRESHOLD_LOW } from '@/config/constants'
-import { PLANET_ROLES, planetLevelBonusMultiplier } from '@/stores/planetShopStore'
-import type { PlanetRole, PlanetRoleType } from '@/stores/planetShopStore'
+import { PLANET_ROLES, planetLevelBonusMultiplier } from '@/stores/world/planetShopStore'
+import type { PlanetRole, PlanetRoleType } from '@/stores/world/planetShopStore'
 
 export type HpTier = 'high' | 'mid' | 'low'
 

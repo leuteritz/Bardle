@@ -1,5 +1,5 @@
-import { GAS_GIANT_PALETTES } from './types'
-import { svgEl, setAttrs, addGradStop, addClip } from './svgHelpers'
+import { GAS_GIANT_PALETTES } from '@/utils/planetDraw/types'
+import { svgEl, setAttrs, addGradStop, addClip } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Gas Giant – 7 bands, 3-layer nested storm, specular shine gradient

@@ -63,7 +63,7 @@ import {
   STAR_EXPIRE_FX_DUST_LIFE,
   STAR_EXPIRE_FX_COOL_TINT,
   STAR_EXPIRE_FX_COOL_MIX,
-} from '../config/constants'
+} from '@/config/constants'
 
 export type StarVanishKind = 'rescued' | 'expired'
 

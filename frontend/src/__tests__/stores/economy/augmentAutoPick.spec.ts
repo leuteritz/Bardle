@@ -1,8 +1,8 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { useGameStore } from '../../stores/gameStore'
-import { usePersistence } from '../../composables/usePersistence'
-import { AUGMENTS } from '../../config/augments'
+import { useGameStore } from '@/stores/core/gameStore'
+import { usePersistence } from '@/composables/system/usePersistence'
+import { AUGMENTS } from '@/config/economy/augments'
 
 /** Die Test-Umgebung stellt kein globales localStorage bereit → In-Memory-Stub. */
 function makeLocalStorageStub() {

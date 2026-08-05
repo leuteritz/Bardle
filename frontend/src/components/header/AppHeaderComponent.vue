@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useGameStore } from '../../stores/gameStore'
-import { useUiStore } from '../../stores/uiStore'
-import { useBattleStore } from '../../stores/battleStore'
-import { useExpeditionStore } from '../../stores/expeditionStore'
-import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
-import { useMeepTreeStore } from '../../stores/meepTreeStore'
-import { usePlanetShopStore } from '../../stores/planetShopStore'
-import { formatNumber, formatNumberCompact } from '../../config/numberFormat'
-import { usePersistence } from '../../composables/usePersistence'
-import { useHeaderCenterArc } from '../../composables/useHeaderCenterArc'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import { usePersistence } from '@/composables/system/usePersistence'
+import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import {
   BOTTOM_FRAME_STROKE_SHADOW,
   BOTTOM_FRAME_STROKE_WOOD,
@@ -20,7 +20,7 @@ import {
   HEADER_NOTIF_BADGE_MAX_PX,
   HEADER_BADGE_EDGE_GAP_FRAC,
   CENTER_CHIMES_TOOLTIP_GAP_PX,
-} from '../../config/constants'
+} from '@/config/constants'
 import {
   HEADER_BADGE_OVERLAP_FRAC,
   HEADER_LEVEL_BADGE_DIAMETER_FACTOR,
@@ -29,8 +29,8 @@ import {
   HEADER_BADGE_ARC_STEP_RAD,
   HEADER_BADGE_ARC_MIN_RAD,
   HEADER_BADGE_MAX_COUNT,
-} from '../../config/constants'
-import { formatBadgeCount } from '../../utils/format'
+} from '@/config/constants'
+import { formatBadgeCount } from '@/utils/ui/format'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '../ui/RpgBadgeTooltipBody.vue'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
@@ -152,7 +152,7 @@ const { setHeaderCenterArc } = useHeaderCenterArc()
 
 /* Die Chimes-Zahl steht über zwei exakt mittigen Achsen (Chime-Icon der
    Unterzeile, Level-Badge) — sichtbarer Versatz fällt dort sofort auf. Die
-   Korrektur übernimmt v-ink-center im Template (utils/textInkOffset.ts). */
+   Korrektur übernimmt v-ink-center im Template (utils/ui/textInkOffset.ts). */
 const chimesText = computed(() => formatNumber(gameStore.chimes))
 let resizeObserver: ResizeObserver | null = null
 

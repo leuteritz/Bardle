@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { PlanetBossEvent, PlanetBossRewardSlot, PlanetType } from '../types'
+import type { PlanetBossEvent, PlanetBossRewardSlot, PlanetType } from '@/types'
 import {
   BOSS_BASE_HP,
   BOSS_HP_LEVEL_SCALE,
@@ -27,33 +27,33 @@ import {
   CHAMPION_XP_CHAMPION_PLANET_MULT,
   CHAMPION_XP_BOSS_ESCORT_MULT,
   BOSS_REMOVE_DELAY_MS,
-} from '../config/constants'
-import { pickMaterial } from '../config/materials'
-import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
-import { CHAMPION_ROLES } from '../config/championData'
+} from '@/config/constants'
+import { pickMaterial } from '@/config/economy/materials'
+import { CHAMPION_HOME_PLANETS } from '@/config/champions/championHomePlanets'
+import { CHAMPION_ROLES } from '@/config/champions/championData'
 import {
   getChampionStarLevel,
   unlockedChampionTierCount,
   tierSpawnWeights,
-} from '../config/championTiers'
-import { activeMidCurse } from '../utils/liveState'
-import { bossPlanetInForeground } from '../utils/foregroundGate'
-import { prewarmBossSprite } from '../utils/bossSprite'
-import { ROLE_MID_CURSE_DAMAGE_AMP } from '../config/constants'
-import { useGameStore } from './gameStore'
-import { useShopStore } from './shopStore'
-import { useBattleStore } from './battleStore'
-import { useInventoryStore } from './inventoryStore'
-import { useSectionStore } from './sectionStore'
-import { useGalaxyStore } from './galaxyStore'
-import { usePlayerStore } from './playerStore'
-import { useStarGroupStore } from './starGroupStore'
-import { useSolarUpgradeStore } from './solarUpgradeStore'
-import { useStarForgeStore } from './starForgeStore'
-import { useMeepTreeStore } from './meepTreeStore'
-import { useChampionLevelStore } from './championLevelStore'
-import { SECTIONS } from '../config/sections'
-import { logger } from '../utils/logger'
+} from '@/config/champions/championTiers'
+import { activeMidCurse } from '@/utils/orbit/liveState'
+import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
+import { prewarmBossSprite } from '@/utils/fx/bossSprite'
+import { ROLE_MID_CURSE_DAMAGE_AMP } from '@/config/constants'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useShopStore } from '@/stores/economy/shopStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useSectionStore } from '@/stores/core/sectionStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { SECTIONS } from '@/config/progression/sections'
+import { logger } from '@/utils/logger'
 
 export const usePlanetBossStore = defineStore('planetBoss', {
   state: () => ({

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGameStore } from '@/stores/gameStore'
-import { AUGMENTS } from '@/config/augments'
+import { useGameStore } from '@/stores/core/gameStore'
+import { AUGMENTS } from '@/config/economy/augments'
 import {
   AUGMENT_RARITY_COLOR,
   AUTO_PICK_ICON,

@@ -1,10 +1,10 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useBattleStore } from '../../stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import {
   BATTLE_POWER_RATING_SWING,
   BATTLE_ENEMY_WEAKEN_RATING_SWING,
-} from '../../config/constants'
+} from '@/config/constants'
 
 describe('battleStore', () => {
   beforeEach(() => {

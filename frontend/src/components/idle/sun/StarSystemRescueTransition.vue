@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount } from 'vue'
-import { useGalaxyStore } from '../../../stores/galaxyStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 
 import {
   STAR_RESCUE_BURST_DURATION_MS as BURST_DURATION_MS,
@@ -17,7 +17,7 @@ import {
   STAR_RESCUE_BURST_MAX_ALPHA as BURST_MAX_ALPHA,
   STAR_RESCUE_BURST_RAY_MIN_LEN as BURST_RAY_MIN_LEN,
   STAR_RESCUE_BURST_RAY_MAX_LEN as BURST_RAY_MAX_LEN,
-} from '../../../config/constants'
+} from '@/config/constants'
 
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 

@@ -136,9 +136,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useStarGroupStore } from '@/stores/starGroupStore'
-import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
 import {
   BOSS_REMOVAL_DELAY_MS,
   BOSS_WAVE_TRAVEL_MS,
@@ -150,10 +150,10 @@ import {
   STAR_FIGHT_MODAL_PLANET_R,
   STAR_FIGHT_MODAL_PLANET_R_GALAXY_BOSS,
 } from '@/config/constants'
-import { emberStyle as emberField } from '@/utils/particleField'
+import { emberStyle as emberField } from '@/utils/fx/particleField'
 import { NS, drawPlanet } from '@/utils/planetDraw'
-import { bossPlanetInForeground } from '@/utils/foregroundGate'
-import { useBossFightHud } from '@/composables/useBossFightHud'
+import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
+import { useBossFightHud } from '@/composables/orbit/useBossFightHud'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'

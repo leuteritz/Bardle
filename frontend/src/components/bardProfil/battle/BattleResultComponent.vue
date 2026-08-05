@@ -50,7 +50,7 @@ import BattleLandingScreen from './landing/BattleLandingScreen.vue'
 import BattleLoadingScreen from './loading/BattleLoadingScreen.vue'
 import RiftBattleBoard from './rift/RiftBattleBoard.vue'
 import HonorResultScreen from './result/HonorResultScreen.vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import {
   LOADING_PHASE_POLL_MS,
   PLANET_SEARCH_ANIM_DURATION_MS,
