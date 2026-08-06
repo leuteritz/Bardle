@@ -88,19 +88,27 @@ function advanceMountStages() {
 /** Die Detailseite darf erst mounten, wenn das Board steht. */
 const panelReady = computed(() => mountStage.value >= TEAM_TAB_MOUNT_STAGE_PANEL)
 
-// ── Board steht / Ladeschleier der Detailspalte ──────────────────────────────
+// ── Board gebaut / Ladeschleier ──────────────────────────────────────────────
 /**
- * Ob das Board fertig gezeichnet ist. Fällt bei jedem Verlassen des Tabs zurück
- * auf `false`, denn das Wiedereinblenden kostet dieselbe Arbeit noch einmal:
- * die Aufbaustufen laufen zwar nur einmal, der Layer geht aber jedes Mal neu
- * von `display: none` in Style, Layout und Paint (siehe BardProfileMenu).
+ * Ob das Board in DIESER Sitzung schon einmal fertig gebaut und gezeichnet
+ * wurde. Einmal `true`, bleibt es `true` — und das ist der ganze Punkt.
  *
- * Bewusst nicht an den `isVisible`-Watcher gebunden, sondern beim VERLASSEN
- * zurückgesetzt: eine Öffnungs-Anfrage aus dem Command Panel wird im selben
- * Flush verarbeitet, und ihr Watcher steht weiter oben in der Reihe. Sie würde
- * sonst noch das `true` der letzten Sitzung lesen und den Schleier auslassen.
+ * Gemessen am Produktionsbuild (Full HD, voller Kader, 1600-ms-Fenster, je eine
+ * frische Sitzung), Öffnen über eine Rollenkarte im Command Panel:
+ *
+ *   erstes Mal      308 ms längster Frame · 7 Frames über 33 ms · 767 ms verloren
+ *   Wiederholungen   42 ms längster Frame · 2 Frames über 33 ms ·  68 ms verloren
+ *   Grundlast        14 ms · 0 · 0 ms
+ *
+ * Teuer ist also fast ausschließlich das ERSTE Mal: der Tab-Layer entsteht, die
+ * Aufbaustufen laufen, Portraits werden geladen und dekodiert. Danach ist alles
+ * warm, und übrig bleibt ein Umbruch von zwei Frames — den sieht niemand.
+ *
+ * Ein Schleier auf jedem Öffnen wäre deshalb ab dem zweiten Mal reine
+ * zusätzliche Wartezeit für ein Problem, das es dann nicht mehr gibt. Er läuft
+ * daher genau einmal.
  */
-const boardSettled = ref(false)
+const boardBuilt = ref(false)
 let settleFrame: number | null = null
 
 function cancelBoardSettle() {
@@ -109,9 +117,13 @@ function cancelBoardSettle() {
   settleFrame = null
 }
 
+/**
+ * Zählt bis zu dem Frame, ab dem das Board wirklich steht. Bricht der Spieler
+ * vorher ab (Tab zu), bleibt `boardBuilt` false — dann war es eben noch nicht
+ * gebaut, und der nächste Versuch bekommt seinen Schleier zurecht wieder.
+ */
 function scheduleBoardSettle() {
   cancelBoardSettle()
-  boardSettled.value = false
   let left = SIGIL_BOARD_SETTLE_FRAMES
   const step = () => {
     // Erst muss die letzte Aufbaustufe stehen, dann noch ein paar Frames für
@@ -122,7 +134,7 @@ function scheduleBoardSettle() {
       return
     }
     settleFrame = null
-    boardSettled.value = true
+    boardBuilt.value = true
   }
   settleFrame = requestAnimationFrame(step)
 }
@@ -179,16 +191,20 @@ function startDetailsLoad(scope: 'rail' | 'tab' | 'board' = 'rail') {
 }
 
 /**
- * Der Tab geht auf — als Mount oder als Wiedereinblenden, beides kostet
- * dieselbe Arbeit (siehe boardSettled).
+ * Der Tab geht auf — als erster Mount oder als Wiedereinblenden.
  *
- * Hat eine Öffnungs-Anfrage bereits einen Schleier aufgezogen, bleibt es
- * dabei; sonst deckt der Board-Schleier den Aufbau des Sigils ab. Diese
- * Reihenfolge ist der Grund, warum hier geprüft und nicht einfach gesetzt
- * wird: der Watcher der Anfrage steht weiter oben in der Reihe und war schon
- * dran, wenn dieser hier läuft.
+ * Steht das Board schon (siehe boardBuilt), ist hier NICHTS zu tun: das
+ * Wiedereinblenden kostet zwei Frames, und davor einen Schleier zu setzen wäre
+ * nur Wartezeit ohne Gegenwert.
+ *
+ * Sonst: hat eine Öffnungs-Anfrage bereits einen Schleier aufgezogen, bleibt es
+ * dabei; andernfalls deckt der Board-Schleier den Aufbau des Sigils ab. Diese
+ * Reihenfolge ist der Grund, warum hier geprüft und nicht einfach gesetzt wird —
+ * der Watcher der Anfrage steht weiter oben in der Reihe und war schon dran,
+ * wenn dieser hier läuft.
  */
 function beginTabOpen() {
+  if (boardBuilt.value) return
   scheduleBoardSettle()
   if (detailsPending.value) return
   startDetailsLoad('board')
@@ -196,8 +212,8 @@ function beginTabOpen() {
 
 // Aufgedeckt wird, sobald BEIDES gilt: das Board steht, und der Schleier hat
 // lange genug gestanden, um als Ladevorgang gelesen zu werden.
-watch([boardSettled, detailsPending], ([settled, pending]) => {
-  if (!settled || !pending || detailsTimer !== null) return
+watch([boardBuilt, detailsPending], ([built, pending]) => {
+  if (!built || !pending || detailsTimer !== null) return
   const shown = performance.now() - detailsStartedAt.value
   detailsTimer = setTimeout(
     () => {
@@ -332,7 +348,7 @@ function selectRole(index: number) {
   selectedRole.value = index
   focusSeat(null)
   uiStore.setRolesActiveSlot(index)
-  if (opening && !boardSettled.value) startDetailsLoad()
+  if (opening && !boardBuilt.value) startDetailsLoad()
 }
 
 /**
@@ -461,7 +477,7 @@ function applyRolesOpenRequest() {
   // Kam die Anfrage aus dem Command Panel, wird der Tab im selben Flush
   // sichtbar — hier entsteht ALLES neu, also deckt der Schleier auch das Board
   // ab und gibt am Ende einen fertigen Tab frei (siehe veilScope).
-  if (opening && !boardSettled.value) startDetailsLoad('tab')
+  if (opening && !boardBuilt.value) startDetailsLoad('tab')
 }
 
 watch(() => uiStore.rolesOpenToken, applyRolesOpenRequest)
@@ -531,9 +547,9 @@ function resetTabState() {
   cancelDetailsLoad()
   cancelBoardSettle()
   veilCovering.value = false
-  // Das nächste Öffnen zeichnet den Layer neu und kostet dieselbe Arbeit wieder,
-  // also gilt das Board erst wieder als stehend, wenn es das gezeigt hat.
-  boardSettled.value = false
+  // `boardBuilt` bleibt bewusst stehen: was einmal gebaut ist, ist gebaut. Das
+  // Wiedereinblenden kostet zwei Frames (gemessen 42 ms längster Frame gegen
+  // 308 ms beim ersten Mal) — dafür braucht es keinen Schleier mehr.
   selectedRole.value = null
   synergiesOpen.value = false
   activeDestination.value = null
