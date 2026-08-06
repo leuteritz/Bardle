@@ -278,21 +278,37 @@ export const TEAM_TAB_MOUNT_STAGE_PANEL = 2
 export const TEAM_TAB_MOUNT_STAGE_ORNAMENTS = 3
 
 /**
- * Frames, die die Rollen-Detailspalte dem Board nachläuft, wenn der Team-Tab
- * MIT bereits gewählter Rolle aufgeht — der Weg über eine Rollenkarte im
- * Command Panel (`requestOpenRolesTab`).
- *
- * Sonst fällt beides in denselben Frame: der Tab-Layer wird von `display: none`
+ * Der Team-Tab geht MIT bereits gewählter Rolle auf — der Weg über eine
+ * Rollenkarte im Command Panel (`requestOpenRolesTab`). Board und Detailspalte
+ * fielen dabei in denselben Frame: der Tab-Layer wird von `display: none`
  * sichtbar (rund 900 Elemente durch Style, Layout, Layerize, Paint) UND die
- * Detailspalte mountet neu. Gemessen mit voller Besetzung (5 Mains, 25 Allies,
- * 6 belegte Planeten, 4 Sterne), Median über 11 Läufe: zusammen 65 ms für den
- * längsten Einzelframe, nachgezogen 50 ms.
+ * zweispaltige Detailseite mountet neu. Gemessen mit voller Besetzung (5 Mains,
+ * 25 Allies, 6 belegte Planeten, 4 Sterne), Median über 11 Läufe: zusammen
+ * 65 ms für den längsten Einzelframe.
  *
- * Zwei Frames reichen nicht — die Einblendarbeit des Boards ist dann noch nicht
- * durch und beide Posten treffen sich doch wieder. Deutlich mehr würde man als
- * Nachklappen der Spalte sehen.
+ * Die Spalte deshalb um ein paar Frames nachzuziehen war die falsche Antwort:
+ * die Arbeit war zwar verteilt, aber man SAH die Spalte nachklappen — ein
+ * zweites Aufgehen kurz nach dem ersten. Stattdessen steht in der Schiene vom
+ * ersten Frame an ein Ladeschleier (`SigilDetailsLoader`): er belegt die volle
+ * Breite der Spalte, das Board rechnet seine Kamera also sofort mit dem
+ * endgültigen Layout, und die Detailseite mountet erst DAHINTER. Der teure
+ * Frame liegt damit hinter einer deckenden Fläche, und das Aufdecken ist eine
+ * reine Opazitäts-Blende.
  */
-export const SIGIL_DETAILS_OPEN_DEFER_FRAMES = 5
+/**
+ * Frames nach dem letzten Aufbauschritt (TEAM_TAB_MOUNT_STAGE_ORNAMENTS), ab
+ * denen das Board als gezeichnet gilt. Beim Wiedereinblenden steht die Stufe
+ * längst auf Maximum — dann zählen diese Frames das Sichtbarwerden des
+ * Tab-Layers ab, das denselben Ruckler trägt.
+ */
+export const SIGIL_BOARD_SETTLE_FRAMES = 4
+/**
+ * Mindeststandzeit des Ladeschleiers. Nicht Kosmetik: ein Schleier, der nach
+ * zwei Frames wieder weg ist, liest sich als Blitzer statt als Ladevorgang.
+ * Deckt zugleich das Einblenden des Modals (`modal-pop`) ab, sodass die
+ * Detailseite in eine bereits stehende Oberfläche aufgedeckt wird.
+ */
+export const SIGIL_DETAILS_LOADER_MIN_MS = 480
 /** Ally-hover spotlight — hovering an ally row in the details panel mirrors onto
  *  the board: the matching satellite scales up + pings once, its siblings dim. */
 export const SIGIL_ALLY_HOVER_SCALE = 1.4

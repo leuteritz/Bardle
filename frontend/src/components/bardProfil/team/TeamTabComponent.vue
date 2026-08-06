@@ -10,7 +10,8 @@ import {
   TEAM_TAB_MOUNT_STAGE_SATELLITES,
   TEAM_TAB_MOUNT_STAGE_PANEL,
   TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
-  SIGIL_DETAILS_OPEN_DEFER_FRAMES,
+  SIGIL_BOARD_SETTLE_FRAMES,
+  SIGIL_DETAILS_LOADER_MIN_MS,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_SYNERGIES_PANEL_WIDTH,
   TEAM_SHOP_PANEL_WIDTH,
@@ -23,6 +24,7 @@ import type { ChampionRole, ItemCategory } from '@/types'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import SigilBoardComponent from './sigil/SigilBoardComponent.vue'
 import SigilDetailsPanel from './SigilDetailsPanel.vue'
+import SigilDetailsLoader from './SigilDetailsLoader.vue'
 import TeamSidePanelShell from './TeamSidePanelShell.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
@@ -85,6 +87,87 @@ function advanceMountStages() {
 /** Die Detailseite darf erst mounten, wenn das Board steht. */
 const panelReady = computed(() => mountStage.value >= TEAM_TAB_MOUNT_STAGE_PANEL)
 
+// ── Board steht / Ladeschleier der Detailspalte ──────────────────────────────
+/**
+ * Ob das Board fertig gezeichnet ist. Fällt bei jedem Verlassen des Tabs zurück
+ * auf `false`, denn das Wiedereinblenden kostet dieselbe Arbeit noch einmal:
+ * die Aufbaustufen laufen zwar nur einmal, der Layer geht aber jedes Mal neu
+ * von `display: none` in Style, Layout und Paint (siehe BardProfileMenu).
+ *
+ * Bewusst nicht an den `isVisible`-Watcher gebunden, sondern beim VERLASSEN
+ * zurückgesetzt: eine Öffnungs-Anfrage aus dem Command Panel wird im selben
+ * Flush verarbeitet, und ihr Watcher steht weiter oben in der Reihe. Sie würde
+ * sonst noch das `true` der letzten Sitzung lesen und den Schleier auslassen.
+ */
+const boardSettled = ref(false)
+let settleFrame: number | null = null
+
+function cancelBoardSettle() {
+  if (settleFrame === null) return
+  cancelAnimationFrame(settleFrame)
+  settleFrame = null
+}
+
+function scheduleBoardSettle() {
+  cancelBoardSettle()
+  boardSettled.value = false
+  let left = SIGIL_BOARD_SETTLE_FRAMES
+  const step = () => {
+    // Erst muss die letzte Aufbaustufe stehen, dann noch ein paar Frames für
+    // das Zeichnen selbst — der Frame, in dem der Layer sichtbar wird, ist der
+    // teuerste von allen und liegt nach dem Setzen der Stufe.
+    if (mountStage.value < TEAM_TAB_MOUNT_STAGE_ORNAMENTS || --left > 0) {
+      settleFrame = requestAnimationFrame(step)
+      return
+    }
+    settleFrame = null
+    boardSettled.value = true
+  }
+  settleFrame = requestAnimationFrame(step)
+}
+
+/** Der Schleier steht — die Detailseite ist noch nicht gemountet. */
+const detailsPending = ref(false)
+/** Startzeitpunkt des Ladens, Basis der Zeitangabe im Schleier. */
+const detailsStartedAt = ref(0)
+let detailsTimer: ReturnType<typeof setTimeout> | null = null
+/**
+ * Vom Aufziehen des Schleiers bis zum Ende seines Ausblendens. Solange gleitet
+ * die Schiene NICHT herein: der Schleier deckt sie vollständig, die Bewegung
+ * liefe unsichtbar mit und wäre nach dem Aufdecken als Nachzucken zu sehen.
+ */
+const veilCovering = ref(false)
+
+function cancelDetailsLoad() {
+  if (detailsTimer !== null) {
+    clearTimeout(detailsTimer)
+    detailsTimer = null
+  }
+  detailsPending.value = false
+}
+
+/** Schleier hoch — die Detailseite mountet erst, wenn das Board durch ist. */
+function startDetailsLoad() {
+  cancelDetailsLoad()
+  detailsStartedAt.value = performance.now()
+  detailsPending.value = true
+  veilCovering.value = true
+}
+
+// Aufgedeckt wird, sobald BEIDES gilt: das Board steht, und der Schleier hat
+// lange genug gestanden, um als Ladevorgang gelesen zu werden.
+watch([boardSettled, detailsPending], ([settled, pending]) => {
+  if (!settled || !pending || detailsTimer !== null) return
+  const shown = performance.now() - detailsStartedAt.value
+  detailsTimer = setTimeout(
+    () => {
+      detailsTimer = null
+      detailsPending.value = false
+    },
+    Math.max(0, SIGIL_DETAILS_LOADER_MIN_MS - shown),
+  )
+})
+
 // ── Tab UI state ─────────────────────────────────────────────────────────────
 /** null = details panel closed (sigil fills the tab). */
 const selectedRole = ref<number | null>(null)
@@ -142,6 +225,26 @@ const activeDestination = ref<TeamDestination>(null)
 const shopRole = ref<ChampionRole | 'all'>('all')
 const equipCategory = ref<ItemCategory>('weapon')
 
+/**
+ * Steht der Ladeschleier gerade in der Schiene? Bewusst abgeleitet statt
+ * mitgeführt: damit nimmt JEDER Weg, der die Spalte wegräumt — Escape, Klick
+ * ins leere Board, eine Schienen-Destination — den Schleier gleich mit, ohne
+ * dass jeder dieser Wege ihn einzeln kennen müsste.
+ */
+const detailsVeilVisible = computed(
+  () => detailsPending.value && selectedRole.value !== null && activeDestination.value === null,
+)
+
+/**
+ * Der Übergang, mit dem die Schiene wechselt — normalerweise das Hereingleiten,
+ * unter dem Schleier ein harter Schnitt: die Detailseite mountet DAHINTER und
+ * wird durch sein Ausblenden aufgedeckt, eine zusätzliche Bewegung wäre erst
+ * unsichtbar und dann ein Nachzucken.
+ */
+const railTransition = computed(() =>
+  veilCovering.value && activeDestination.value === null ? 'sdp-instant' : 'sdp-slide',
+)
+
 /** Width the board has to subtract to fit itself beside the open rail. */
 const sidePanelWidth = computed(() => {
   switch (activeDestination.value) {
@@ -181,9 +284,13 @@ function focusSeat(subSlot: number | null, swap = false) {
 function selectRole(index: number) {
   synergiesOpen.value = false
   activeDestination.value = null
+  // Geht die Spalte NEU auf, während das Board noch aufbaut, übernimmt der
+  // Ladeschleier ihren Platz — steht das Board schon, mountet sie sofort.
+  const opening = selectedRole.value === null
   selectedRole.value = index
   focusSeat(null)
   uiStore.setRolesActiveSlot(index)
+  if (opening && !boardSettled.value) startDetailsLoad()
 }
 
 /**
@@ -294,15 +401,6 @@ function handleShopRoleChange(role: ChampionRole | 'all') {
  * The two-frame defer that used to sit here went with the modal: the inline
  * grid is windowed (useVirtualGrid), so it lays out a dozen cards, not 160.
  */
-/** Läuft, solange die Detailspalte dem Board nachläuft (siehe unten). */
-let detailsFrame: number | null = null
-
-function cancelDetailsDefer() {
-  if (detailsFrame === null) return
-  cancelAnimationFrame(detailsFrame)
-  detailsFrame = null
-}
-
 function applyRolesOpenRequest() {
   const slot = uiStore.rolesActiveSlot
   const subSlot = uiStore.rolesActiveSubSlot
@@ -310,32 +408,18 @@ function applyRolesOpenRequest() {
   synergiesOpen.value = false
   activeDestination.value = null
 
-  const apply = () => {
-    detailsFrame = null
-    selectedRole.value = slot
-    focusSeat(subSlot < 0 ? null : subSlot, subSlot >= 0)
-  }
-
   // Steht die Spalte schon, ist nichts einzublenden — nur ihr Inhalt wechselt.
-  if (selectedRole.value !== null) {
-    cancelDetailsDefer()
-    apply()
-    return
-  }
+  const opening = selectedRole.value === null
+  // Die Auswahl fällt SOFORT, nicht erst nach dem Laden: sie bestimmt die
+  // Breite der Schiene und damit die Kamera des Boards. Beides muss vom ersten
+  // Frame an stimmen, sonst rückt das Board beim Aufdecken noch einmal nach.
+  selectedRole.value = slot
+  focusSeat(subSlot < 0 ? null : subSlot, subSlot >= 0)
 
-  // Sie geht neu auf. Kam die Anfrage aus dem Command Panel, wird der Tab im
-  // selben Flush sichtbar — dann träfe ihr Mount auf das Einblenden des ganzen
-  // Boards. Ein paar Frames Versatz trennen beides (SIGIL_DETAILS_OPEN_DEFER_FRAMES).
-  cancelDetailsDefer()
-  let left = SIGIL_DETAILS_OPEN_DEFER_FRAMES
-  const step = () => {
-    if (--left > 0) {
-      detailsFrame = requestAnimationFrame(step)
-      return
-    }
-    apply()
-  }
-  detailsFrame = requestAnimationFrame(step)
+  // Kam die Anfrage aus dem Command Panel, wird der Tab im selben Flush
+  // sichtbar — der Schleier hält der Detailseite die Schiene frei, bis das
+  // Board fertig gezeichnet ist (siehe SIGIL_DETAILS_LOADER_MIN_MS).
+  if (opening && !boardSettled.value) startDetailsLoad()
 }
 
 watch(() => uiStore.rolesOpenToken, applyRolesOpenRequest)
@@ -400,9 +484,14 @@ const isVisible = computed(() => uiStore.bardActiveTab === 'team')
  * genau die Rolle, die geöffnet werden sollte.
  */
 function resetTabState() {
-  // Ein noch nachlaufender Detailspalten-Frame gehört zu einem Tab, der bereits
-  // zu ist — er dürfte die Spalte nicht nachträglich doch noch aufschlagen.
-  cancelDetailsDefer()
+  // Ein noch laufender Ladevorgang gehört zu einem Tab, der bereits zu ist — er
+  // dürfte die Spalte nicht nachträglich doch noch aufschlagen.
+  cancelDetailsLoad()
+  cancelBoardSettle()
+  veilCovering.value = false
+  // Das nächste Öffnen zeichnet den Layer neu und kostet dieselbe Arbeit wieder,
+  // also gilt das Board erst wieder als stehend, wenn es das gezeigt hat.
+  boardSettled.value = false
   selectedRole.value = null
   synergiesOpen.value = false
   activeDestination.value = null
@@ -418,6 +507,7 @@ function resetTabState() {
 watch(isVisible, (visible) => {
   if (visible) {
     window.addEventListener('keydown', onEsc)
+    scheduleBoardSettle()
     return
   }
   window.removeEventListener('keydown', onEsc)
@@ -428,6 +518,7 @@ watch(isVisible, (visible) => {
 
 onMounted(() => {
   advanceMountStages()
+  scheduleBoardSettle()
   if (isVisible.value) window.addEventListener('keydown', onEsc)
   // the tab may have just been opened BY a requestOpenRolesTab call — the token
   // watcher above wasn't registered yet, so consume the pending request here
@@ -435,7 +526,8 @@ onMounted(() => {
 })
 onUnmounted(() => {
   if (mountFrame !== null) cancelAnimationFrame(mountFrame)
-  cancelDetailsDefer()
+  cancelDetailsLoad()
+  cancelBoardSettle()
   window.removeEventListener('keydown', onEsc)
   uiStore.setTeamActiveRole(null)
 })
@@ -466,7 +558,7 @@ onUnmounted(() => {
     <!-- ══ RIGHT — the one rail: board destination, role details or synergies ══
          One Transition for all of them, so opening the shop while the details
          page is up is a single slide, not a close followed by an open. -->
-    <Transition name="sdp-slide" mode="out-in">
+    <Transition :name="railTransition" mode="out-in">
       <TeamSidePanelShell
         v-if="activeDestination === 'shop'"
         key="shop"
@@ -518,7 +610,7 @@ onUnmounted(() => {
       </TeamSidePanelShell>
 
       <SigilDetailsPanel
-        v-else-if="selectedRole !== null && panelReady"
+        v-else-if="selectedRole !== null && panelReady && !detailsPending"
         key="details"
         :role-index="selectedRole"
         :highlighted-ally="boardHoveredAlly"
@@ -537,6 +629,21 @@ onUnmounted(() => {
         key="synergies"
         @close="synergiesOpen = false"
         @highlight="searchHighlights = $event"
+      />
+    </Transition>
+
+    <!-- ══ Ladeschleier der Detailspalte ══
+         Sitzt IM Flex-Fluss und belegt exakt die Breite der Seite, die gleich
+         kommt: das Board rechnet seine Kamera also vom ersten Frame an mit dem
+         endgültigen Layout, und nichts rückt beim Aufdecken noch einmal nach.
+         Beim Verschwinden verlässt er den Fluss (siehe .sdv-leave-active), die
+         Seite nimmt seinen Platz im SELBEN Frame ein — es gibt keinen Frame
+         ohne Schiene, in dem das Board kurz breiter würde. -->
+    <Transition name="sdv" @after-leave="veilCovering = false">
+      <SigilDetailsLoader
+        v-if="detailsVeilVisible"
+        :role-index="selectedRole ?? 0"
+        :started-at="detailsStartedAt"
       />
     </Transition>
   </div>
@@ -563,6 +670,46 @@ onUnmounted(() => {
 .sdp-slide-leave-to {
   transform: translateX(100%);
 }
+/* Harter Schnitt: gilt nur, während der Ladeschleier die Schiene deckt — die
+   Detailseite mountet dahinter und wird durch sein Ausblenden aufgedeckt. */
+.sdp-instant-enter-active,
+.sdp-instant-leave-active {
+  transition: none;
+}
+
+/* ── Ladeschleier ──
+   Herein nur eine kurze Blende mit einem Hauch Versatz: er erscheint zusammen
+   mit dem ganzen Modal (modal-pop), ein volles Hereingleiten über die
+   Schienenbreite liefe dagegen an.
+
+   Hinaus wird er absolut über die Schiene gelegt. Das ist der Kern des ganzen
+   Übergangs: er gibt seinen Platz im Fluss im selben Frame frei, in dem die
+   Detailseite ihn einnimmt, und blendet danach über ihr weg — der teure
+   Mount-Frame liegt vollständig hinter einer deckenden Fläche. */
+.sdv-enter-active {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sdv-enter-from {
+  opacity: 0;
+  transform: translateX(22px);
+}
+.sdv-leave-active {
+  /* `!important`, weil hier zwei scoped Regeln gleicher Spezifität gegeneinander
+     stehen: die des Schleiers (position: relative) und diese. Wer gewinnt, hinge
+     sonst an der Reihenfolge der Style-Injektion — und die ist keine Zusage. */
+  position: absolute !important;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  transition: opacity 0.32s ease;
+}
+.sdv-leave-to {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sdp-slide-enter-active,
   .sdp-slide-leave-active {
@@ -572,6 +719,9 @@ onUnmounted(() => {
   .sdp-slide-leave-to {
     transform: none !important;
     opacity: 0;
+  }
+  .sdv-enter-from {
+    transform: none !important;
   }
 }
 </style>
