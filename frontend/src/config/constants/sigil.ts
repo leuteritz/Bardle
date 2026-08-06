@@ -310,6 +310,18 @@ export const SIGIL_BOARD_SETTLE_FRAMES = 4
  */
 export const SIGIL_DETAILS_LOADER_MIN_MS = 480
 /**
+ * Mindeststandzeit, wenn der Tab OHNE gewählte Rolle aufgeht — der Weg über die
+ * Tab-Leiste des Bard-Profils. Kürzer als oben, weil dann nur das Board
+ * entsteht und keine Detailseite: der Spieler soll nicht länger warten, als
+ * tatsächlich gebaut wird.
+ */
+export const SIGIL_BOARD_LOADER_MIN_MS = 340
+/**
+ * Akzent des Ladeschleiers, solange keine Rolle gewählt ist. Ohne Rolle gibt es
+ * keine Rollenfarbe — dann trägt er das Gold des Sigils selbst.
+ */
+export const SIGIL_LOADER_NEUTRAL_ACCENT = '#e8c040'
+/**
  * Radius der Rollenknoten im Board-Skelett des Ladeschleiers, in Prozent seiner
  * halben Kantenlänge. Kein Nachbau der Sigil-Geometrie — nur die Andeutung
  * „fünf Knoten auf einem Kreis", damit die verdeckte Fläche nicht leer wirkt.

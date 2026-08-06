@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Der Ladeschleier des Team-Tabs. Er hat zwei Reichweiten:
+ * Der Ladeschleier des Team-Tabs. Er hat drei Reichweiten:
  *
  *   `rail`  nur die Schiene rechts — die Detailseite geht auf, während das Board
  *           schon steht. Er liegt IM Flex-Fluss und ist exakt so breit wie die
@@ -10,6 +10,11 @@
  *           dem Board UND Seite gleichzeitig neu entstehen. Hier deckt er alles
  *           ab und liegt absolut darüber; die Umbrüche des Layouts fallen damit
  *           hinter die deckende Fläche.
+ *   `board` der ganze Tab, aber nur mit dem Sigil-Skelett — der Weg über die
+ *           Tab-Leiste des Bard-Profils, bei dem keine Rolle gewählt ist. Es
+ *           entsteht nur das Board, also zeigt der Schleier auch nur das, trägt
+ *           das Gold des Sigils statt einer Rollenfarbe und steht kürzer
+ *           (SIGIL_BOARD_LOADER_MIN_MS).
  *
  * Warum `tab` nichts kostet: gewartet wird in diesem Fall ohnehin, denn die
  * Detailseite braucht ihre Zeit (SIGIL_DETAILS_LOADER_MIN_MS). Ohne den
@@ -31,6 +36,7 @@ import {
   ALLIES_PER_ROLE,
   SWORN_ALLY_COUNT,
   SIGIL_SKELETON_NODE_RADIUS_PCT,
+  SIGIL_LOADER_NEUTRAL_ACCENT,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_DETAILS_LEFT_WIDTH,
   TEAM_SIGIL_MAIN_CHIP_WIDTH,
@@ -38,15 +44,32 @@ import {
 import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 
 const props = defineProps<{
-  /** Rolle, deren Seite gleich erscheint — Farbe, Kürzel und Wappen kommen daher. */
-  roleIndex: number
+  /** Rolle, deren Seite gleich erscheint — Farbe, Kürzel und Wappen kommen
+   *  daher. `null`, wenn der Tab ohne gewählte Rolle aufgeht. */
+  roleIndex: number | null
   /** `performance.now()` beim Aufziehen des Schleiers — Basis der Zeitangabe. */
   startedAt: number
-  /** Wie weit er deckt: nur die Schiene oder den ganzen Tab. */
-  cover: 'rail' | 'tab'
+  /** Wie weit er deckt — siehe Kopfkommentar. */
+  cover: 'rail' | 'tab' | 'board'
 }>()
 
-const roleDef = computed(() => ROLES[props.roleIndex])
+const roleDef = computed(() => (props.roleIndex === null ? null : ROLES[props.roleIndex]))
+
+/** Das Board zeigt er überall außer in der Schiene, die Seite überall außer im
+ *  Board-Fall — beides folgt direkt aus dem, was gerade wirklich entsteht. */
+const showBoard = computed(() => props.cover !== 'rail')
+const showPage = computed(() => props.cover !== 'board')
+
+/**
+ * Ohne Rolle steht das Sigil selbst im Mittelpunkt: sein Wappen, sein Gold und
+ * sein Name — dasselbe Motiv, das die Mitte des Boards trägt.
+ */
+const accent = computed(() => roleDef.value?.color ?? SIGIL_LOADER_NEUTRAL_ACCENT)
+const beaconIcon = computed(() => roleDef.value?.icon ?? 'game-icons:crenel-crown')
+const beaconTitle = computed(() => roleDef.value?.short ?? 'Battle Sigil')
+const beaconCaption = computed(() =>
+  roleDef.value ? 'Assembling role details' : 'Assembling the battle sigil',
+)
 
 /**
  * Die Breiten kommen aus denselben Konstanten wie die der echten Seite, den
@@ -89,9 +112,9 @@ const skeletonNodes = computed(() =>
 </script>
 
 <template>
-  <div class="ttl" :class="`ttl--${cover}`" :style="{ '--rc': roleDef.color }">
-    <!-- ══ Board-Skelett — nur, wenn der Schleier den ganzen Tab deckt ══ -->
-    <div v-if="cover === 'tab'" class="ttl-board" aria-hidden="true">
+  <div class="ttl" :class="`ttl--${cover}`" :style="{ '--rc': accent }">
+    <!-- ══ Board-Skelett — überall außer in der reinen Schienen-Variante ══ -->
+    <div v-if="showBoard" class="ttl-board" aria-hidden="true">
       <div class="ttl-sigil">
         <span class="ttl-sigil-ring" />
         <span class="ttl-sigil-crest" />
@@ -104,8 +127,8 @@ const skeletonNodes = computed(() =>
       </div>
     </div>
 
-    <!-- ══ Skelett der Detailseite ══ -->
-    <div class="ttl-page" aria-hidden="true">
+    <!-- ══ Skelett der Detailseite — entfällt, wenn keine Rolle offen ist ══ -->
+    <div v-if="showPage" class="ttl-page" aria-hidden="true">
       <div class="ttl-roster">
         <span class="ttl-block ttl-block--main" />
         <div class="ttl-bench">
@@ -141,10 +164,10 @@ const skeletonNodes = computed(() =>
 
     <LoadingBeacon
       class="ttl-beacon"
-      :accent="roleDef.color"
-      :icon="roleDef.icon"
-      :title="roleDef.short"
-      caption="Assembling role details"
+      :accent="accent"
+      :icon="beaconIcon"
+      :title="beaconTitle"
+      :caption="beaconCaption"
       :started-at="startedAt"
     />
   </div>
@@ -168,9 +191,10 @@ const skeletonNodes = computed(() =>
   flex-shrink: 0;
   border-left: 2px solid #5c3310;
 }
-/* Deckt den ganzen Tab: liegt über Board UND Schiene, damit die Umbrüche beim
+/* Decken den ganzen Tab: liegen über Board UND Schiene, damit die Umbrüche beim
    Aufdecken (Board wird schmaler, Seite nimmt ihren Platz) unsichtbar bleiben. */
-.ttl--tab {
+.ttl--tab,
+.ttl--board {
   position: absolute;
   inset: 0;
   z-index: 5;

@@ -12,6 +12,7 @@ import {
   TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
   SIGIL_BOARD_SETTLE_FRAMES,
   SIGIL_DETAILS_LOADER_MIN_MS,
+  SIGIL_BOARD_LOADER_MIN_MS,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_SYNERGIES_PANEL_WIDTH,
   TEAM_SHOP_PANEL_WIDTH,
@@ -138,17 +139,27 @@ let detailsTimer: ReturnType<typeof setTimeout> | null = null
  */
 const veilCovering = ref(false)
 /**
- * Wie weit der Schleier deckt.
+ * Wie weit der Schleier deckt — es gibt genau drei Wege in den Tab, und jeder
+ * bringt etwas anderes hervor:
  *
- * `tab` nur auf dem Weg über das Command Panel: dort entstehen Board UND Seite
- * gleichzeitig neu, und gewartet wird wegen der Seite ohnehin — den Aufbau des
- * Boards mit abzudecken kostet daher keine zusätzliche Zeit, spart aber das
- * sichtbare Zusammenwachsen des Sigils daneben (gemessen 125 ms längster Frame).
- *
- * `rail` überall sonst: dort steht das Board bereits ganz oder teilweise, und
- * etwas zu verdecken, was der Spieler schon sieht, wäre ein Rückschritt.
+ * `tab`   über eine Rollenkarte im Command Panel: Board UND Detailseite
+ *         entstehen gleichzeitig neu. Gewartet wird wegen der Seite ohnehin —
+ *         den Aufbau des Boards mit abzudecken kostet daher keine zusätzliche
+ *         Zeit, spart aber das sichtbare Zusammenwachsen des Sigils daneben
+ *         (gemessen 125 ms längster Frame).
+ * `board` über die Tab-Leiste des Bard-Profils: es entsteht nur das Board, ohne
+ *         gewählte Rolle. Der Schleier zeigt entsprechend nur das Sigil-Skelett
+ *         und steht kürzer (SIGIL_BOARD_LOADER_MIN_MS).
+ * `rail`  eine Rolle wird angeklickt, während das Board schon steht — dann darf
+ *         nur die Schiene verdeckt werden. Was der Spieler bereits sieht,
+ *         nachträglich zuzudecken, wäre ein Rückschritt.
  */
-const veilScope = ref<'rail' | 'tab'>('rail')
+const veilScope = ref<'rail' | 'tab' | 'board'>('rail')
+
+/** Ohne Detailseite wird nur auf das Board gewartet — also auch kürzer. */
+const loaderMinMs = computed(() =>
+  veilScope.value === 'board' ? SIGIL_BOARD_LOADER_MIN_MS : SIGIL_DETAILS_LOADER_MIN_MS,
+)
 
 function cancelDetailsLoad() {
   if (detailsTimer !== null) {
@@ -158,13 +169,29 @@ function cancelDetailsLoad() {
   detailsPending.value = false
 }
 
-/** Schleier hoch — die Detailseite mountet erst, wenn das Board durch ist. */
-function startDetailsLoad(scope: 'rail' | 'tab' = 'rail') {
+/** Schleier hoch — was dahinter entsteht, mountet erst, wenn das Board durch ist. */
+function startDetailsLoad(scope: 'rail' | 'tab' | 'board' = 'rail') {
   cancelDetailsLoad()
   detailsStartedAt.value = performance.now()
   veilScope.value = scope
   detailsPending.value = true
   veilCovering.value = true
+}
+
+/**
+ * Der Tab geht auf — als Mount oder als Wiedereinblenden, beides kostet
+ * dieselbe Arbeit (siehe boardSettled).
+ *
+ * Hat eine Öffnungs-Anfrage bereits einen Schleier aufgezogen, bleibt es
+ * dabei; sonst deckt der Board-Schleier den Aufbau des Sigils ab. Diese
+ * Reihenfolge ist der Grund, warum hier geprüft und nicht einfach gesetzt
+ * wird: der Watcher der Anfrage steht weiter oben in der Reihe und war schon
+ * dran, wenn dieser hier läuft.
+ */
+function beginTabOpen() {
+  scheduleBoardSettle()
+  if (detailsPending.value) return
+  startDetailsLoad('board')
 }
 
 // Aufgedeckt wird, sobald BEIDES gilt: das Board steht, und der Schleier hat
@@ -177,7 +204,7 @@ watch([boardSettled, detailsPending], ([settled, pending]) => {
       detailsTimer = null
       detailsPending.value = false
     },
-    Math.max(0, SIGIL_DETAILS_LOADER_MIN_MS - shown),
+    Math.max(0, loaderMinMs.value - shown),
   )
 })
 
@@ -244,9 +271,11 @@ const equipCategory = ref<ItemCategory>('weapon')
  * ins leere Board, eine Schienen-Destination — den Schleier gleich mit, ohne
  * dass jeder dieser Wege ihn einzeln kennen müsste.
  */
-const detailsVeilVisible = computed(
-  () => detailsPending.value && selectedRole.value !== null && activeDestination.value === null,
-)
+const detailsVeilVisible = computed(() => {
+  if (!detailsPending.value || activeDestination.value !== null) return false
+  // Der Board-Schleier wartet auf gar keine Rolle — alle anderen schon.
+  return veilScope.value === 'board' || selectedRole.value !== null
+})
 
 /**
  * Der Übergang, mit dem die Schiene wechselt — normalerweise das Hereingleiten,
@@ -520,7 +549,7 @@ function resetTabState() {
 watch(isVisible, (visible) => {
   if (visible) {
     window.addEventListener('keydown', onEsc)
-    scheduleBoardSettle()
+    beginTabOpen()
     return
   }
   window.removeEventListener('keydown', onEsc)
@@ -531,11 +560,12 @@ watch(isVisible, (visible) => {
 
 onMounted(() => {
   advanceMountStages()
-  scheduleBoardSettle()
   if (isVisible.value) window.addEventListener('keydown', onEsc)
   // the tab may have just been opened BY a requestOpenRolesTab call — the token
   // watcher above wasn't registered yet, so consume the pending request here
   if (uiStore.rolesOpenPending) applyRolesOpenRequest()
+  // …und erst DANACH der Schleier, damit er der Anfrage nicht vorgreift
+  beginTabOpen()
 })
 onUnmounted(() => {
   if (mountFrame !== null) cancelAnimationFrame(mountFrame)
@@ -655,7 +685,7 @@ onUnmounted(() => {
     <Transition name="sdv" @after-leave="veilCovering = false">
       <TeamTabLoader
         v-if="detailsVeilVisible"
-        :role-index="selectedRole ?? 0"
+        :role-index="selectedRole"
         :started-at="detailsStartedAt"
         :cover="veilScope"
       />
