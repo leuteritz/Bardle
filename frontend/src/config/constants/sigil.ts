@@ -309,6 +309,12 @@ export const SIGIL_BOARD_SETTLE_FRAMES = 4
  * Detailseite in eine bereits stehende Oberfläche aufgedeckt wird.
  */
 export const SIGIL_DETAILS_LOADER_MIN_MS = 480
+/**
+ * Radius der Rollenknoten im Board-Skelett des Ladeschleiers, in Prozent seiner
+ * halben Kantenlänge. Kein Nachbau der Sigil-Geometrie — nur die Andeutung
+ * „fünf Knoten auf einem Kreis", damit die verdeckte Fläche nicht leer wirkt.
+ */
+export const SIGIL_SKELETON_NODE_RADIUS_PCT = 38
 /** Ally-hover spotlight — hovering an ally row in the details panel mirrors onto
  *  the board: the matching satellite scales up + pings once, its siblings dim. */
 export const SIGIL_ALLY_HOVER_SCALE = 1.4

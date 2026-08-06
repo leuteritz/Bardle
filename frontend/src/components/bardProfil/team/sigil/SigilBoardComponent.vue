@@ -555,6 +555,13 @@ watch(
 <style scoped>
 .sigil-board {
   position: relative;
+  /* Eigener Stapelkontext — sonst schlügen die eigenen Ebenen des Boards (Shop-
+     und Expedition-Knopf, die Admin-Leiste; alle auf z-index 6) durch den
+     Ladeschleier des Tabs hindurch, der das Board gerade abdecken soll. Nach
+     innen ändert das nichts: die Ebenen ordnen sich weiterhin untereinander,
+     nur eben in diesem Kontext. Nach außen auch nicht — Board und Schiene
+     liegen nebeneinander und überlappen sich nie. */
+  z-index: 0;
   flex: 1;
   min-width: 0;
   height: 100%;

@@ -10,6 +10,33 @@ export const STRIKER_HP_LOW_PCT = 25
 // ── Weitere UI-Timings ────────────────────────────────────────────────────
 /** Auffrisch-Takt des Star-Fight-Modals: 4 Hz reichen für Ringe und Countdowns. */
 export const STAR_FIGHT_MODAL_TICK_MS = 250
+
+/**
+ * Ladeschleier des Star-Fight-Modals.
+ *
+ * Arena, Turret-Batterie, Striker-Squad, Loot-Banner und das 600×600-Planeten-SVG
+ * mounten zusammen rund 5000 Zeilen Komponenten. Den Inhalt einen Frame nach der
+ * Hülle zu mounten war der erste Schritt, hat den teuren Frame aber nur
+ * verschoben — mitten in die 220 ms lange Einblendung. Gemessen mit voller
+ * Besetzung: 206 ms längster Einzelframe, 9 Frames über 33 ms, 722 ms verlorene
+ * Zeit. Das ist der schlimmste Ruckler im Spiel, und anders als das erste Öffnen
+ * eines Tabs wiederholt er sich bei JEDEM Sternklick.
+ *
+ * Deshalb steht jetzt ein Schleier in der Arena, solange der Inhalt entsteht:
+ *   1. Die Hülle blendet sauber ein — sie ist billig, der Schleier auch.
+ *   2. Nach MOUNT_DELAY (Einblendung durch) mountet der Inhalt DAHINTER; der
+ *      teure Frame ist damit unsichtbar. Die Karte dreht sich weiter, weil sie
+ *      nur `transform` animiert und das im Compositor läuft.
+ *   3. Nach SETTLE_FRAMES ist gezeichnet, nach MIN_MS ist der Schleier lange
+ *      genug gestanden, um als Ladevorgang gelesen zu werden — dann blendet er
+ *      über der fertigen Arena weg.
+ *
+ * MIN_MS liegt bewusst unter dem des Team-Tabs: hier wartet der Spieler auf
+ * einen laufenden Kampf, nicht auf eine Übersichtsseite.
+ */
+export const STAR_FIGHT_CONTENT_MOUNT_DELAY_MS = 210
+export const STAR_FIGHT_LOADER_SETTLE_FRAMES = 3
+export const STAR_FIGHT_LOADER_MIN_MS = 380
 /** Radius des Planeten-Hintergrunds im Star-Fight-Modal (600er viewBox). */
 export const STAR_FIGHT_MODAL_PLANET_R = 260
 export const STAR_FIGHT_MODAL_PLANET_R_GALAXY_BOSS = 290

@@ -127,6 +127,20 @@
               <RoleStrikerSquad />
             </div>
           </div>
+
+          <!-- ── Ladeschleier ──
+               Deckt die Arena, solange sie entsteht, und blendet danach über
+               der fertigen weg. Er steht IN .sf-main, liegt also unter den
+               Ecksteuerelementen (z-index 6) — der Schließen-Button bleibt
+               während des Ladens erreichbar. -->
+          <Transition name="sfl-reveal">
+            <StarFightLoader
+              v-if="loaderVisible"
+              :boss-name="activeBoss?.bossName ?? 'Unknown Boss'"
+              :is-galaxy-boss="isGalaxyBoss"
+              :started-at="loaderStartedAt"
+            />
+          </Transition>
         </div>
       </div>
     </div>
@@ -149,6 +163,9 @@ import {
   STAR_FIGHT_MODAL_TICK_MS,
   STAR_FIGHT_MODAL_PLANET_R,
   STAR_FIGHT_MODAL_PLANET_R_GALAXY_BOSS,
+  STAR_FIGHT_CONTENT_MOUNT_DELAY_MS,
+  STAR_FIGHT_LOADER_SETTLE_FRAMES,
+  STAR_FIGHT_LOADER_MIN_MS,
 } from '@/config/constants'
 import { emberStyle as emberField } from '@/utils/fx/particleField'
 import { NS, drawPlanet } from '@/utils/planetDraw'
@@ -160,6 +177,7 @@ import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
 import PlanetBatteryHUD from '@/components/idle/planet/PlanetBatteryHUD.vue'
 import SunHorizonHUD from '@/components/idle/planet/SunHorizonHUD.vue'
 import StarFightBossHud from '@/components/idle/planet/StarFightBossHud.vue'
+import StarFightLoader from '@/components/idle/planet/StarFightLoader.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 
@@ -175,29 +193,76 @@ const modalPlanetBgRef = ref<HTMLDivElement | null>(null)
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
 /**
- * Der Inhalt kommt einen Frame nach dem Öffnen.
+ * Der Inhalt entsteht HINTER einem Ladeschleier, nicht in der Einblendung.
  *
  * Arena, Turret-Batterie, Striker-Squad, Loot-Banner und das 600×600-Planeten-SVG
- * mounten zusammen ~5000 Zeilen Komponenten. Lag das im selben Frame wie das
- * Einblenden, dauerte dieser Frame gemessen 80–330 ms (bei kaltem Cache bis
- * 444 ms) — der sichtbare Ruckler beim Öffnen. Jetzt zeigt Frame 1 nur die
- * billige Modal-Hülle (Rahmen, Goldleiste, Hintergrund) und startet die
- * Einblendung; Frame 2 mountet den Inhalt.
+ * mounten zusammen ~5000 Zeilen Komponenten. Den Inhalt einen Frame nach der
+ * Hülle zu mounten war der erste Schritt, hat den teuren Frame aber nur in die
+ * 220 ms lange Einblendung verschoben: gemessen 206 ms längster Einzelframe,
+ * 9 Frames über 33 ms, 722 ms verlorene Zeit — und das bei JEDEM Sternklick.
+ *
+ * Jetzt in drei Stufen (siehe STAR_FIGHT_* in constants/planets.ts):
+ *   1. Hülle + Schleier blenden ein, beide billig.
+ *   2. Nach MOUNT_DELAY mountet der Inhalt unter dem deckenden Schleier.
+ *   3. Nach SETTLE_FRAMES und MIN_MS blendet der Schleier über der fertigen
+ *      Arena weg.
  */
 const contentReady = ref(false)
-let contentFrame = 0
+/** Der Schleier steht — Frame 1 bis zum Aufdecken. */
+const loaderVisible = ref(false)
+const loaderStartedAt = ref(0)
+let contentTimer: ReturnType<typeof setTimeout> | null = null
+let revealTimer: ReturnType<typeof setTimeout> | null = null
+let revealFrame = 0
+
+function cancelOpenSequence() {
+  if (contentTimer !== null) {
+    clearTimeout(contentTimer)
+    contentTimer = null
+  }
+  if (revealTimer !== null) {
+    clearTimeout(revealTimer)
+    revealTimer = null
+  }
+  cancelAnimationFrame(revealFrame)
+}
+
+/** Zählt Frames, bis der gemountete Inhalt auch wirklich gezeichnet ist. */
+function revealWhenPainted() {
+  let left = STAR_FIGHT_LOADER_SETTLE_FRAMES
+  const step = () => {
+    if (--left > 0) {
+      revealFrame = requestAnimationFrame(step)
+      return
+    }
+    const shown = performance.now() - loaderStartedAt.value
+    revealTimer = setTimeout(
+      () => {
+        revealTimer = null
+        loaderVisible.value = false
+      },
+      Math.max(0, STAR_FIGHT_LOADER_MIN_MS - shown),
+    )
+  }
+  revealFrame = requestAnimationFrame(step)
+}
 
 watch(
   () => starGroupStore.starFightModalOpen,
   (open) => {
-    cancelAnimationFrame(contentFrame)
+    cancelOpenSequence()
     if (!open) {
       contentReady.value = false
+      loaderVisible.value = false
       return
     }
-    contentFrame = requestAnimationFrame(() => {
+    loaderStartedAt.value = performance.now()
+    loaderVisible.value = true
+    contentTimer = setTimeout(() => {
+      contentTimer = null
       contentReady.value = true
-    })
+      revealWhenPainted()
+    }, STAR_FIGHT_CONTENT_MOUNT_DELAY_MS)
   },
   { immediate: true },
 )
@@ -225,7 +290,7 @@ watch(
 
 onUnmounted(() => {
   if (tickInterval) clearInterval(tickInterval)
-  cancelAnimationFrame(contentFrame)
+  cancelOpenSequence()
 })
 
 // ── Computed ──────────────────────────────────────────────────────────────
@@ -634,6 +699,11 @@ function emberStyle(i: number): Record<string, string> {
 
 .sf-arena-wrap {
   position: relative;
+  /* Eigener Stapelkontext — sonst schlügen die hohen z-index der Arena
+     (Schadenszahlen liegen auf 9999) durch den Ladeschleier hindurch, der die
+     Arena gerade abdecken soll. Nach innen ändert das nichts: alle Ebenen der
+     Arena ordnen sich weiterhin untereinander, nur eben in diesem Kontext. */
+  z-index: 0;
   flex: 1 1 0;
   min-height: 0;
   display: flex;
@@ -1184,6 +1254,16 @@ function emberStyle(i: number): Record<string, string> {
    170 px Blur, Boss-Sprite). Chrome musste diesen Baum dadurch für 220 ms in
    eine Layer rastern und jeden Frame neu skalieren — genau während gemountet
    wurde. Ein reiner Opacity-Fade ist ein Compositor-Job und kostet nichts. */
+/* Der Ladeschleier kommt ohne eigene Einblendung — er ist ab Frame 1 da und
+   blendet mit der Modal-Hülle zusammen ein. Nur das Aufdecken ist eine Blende,
+   und zwar über der bereits fertig gezeichneten Arena. */
+.sfl-reveal-leave-active {
+  transition: opacity 0.3s ease;
+}
+.sfl-reveal-leave-to {
+  opacity: 0;
+}
+
 .sf-entrance-enter-active {
   transition: opacity 0.22s ease;
 }

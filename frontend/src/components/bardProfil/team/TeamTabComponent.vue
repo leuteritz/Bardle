@@ -24,7 +24,7 @@ import type { ChampionRole, ItemCategory } from '@/types'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import SigilBoardComponent from './sigil/SigilBoardComponent.vue'
 import SigilDetailsPanel from './SigilDetailsPanel.vue'
-import SigilDetailsLoader from './SigilDetailsLoader.vue'
+import TeamTabLoader from './TeamTabLoader.vue'
 import TeamSidePanelShell from './TeamSidePanelShell.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
@@ -137,6 +137,18 @@ let detailsTimer: ReturnType<typeof setTimeout> | null = null
  * liefe unsichtbar mit und wäre nach dem Aufdecken als Nachzucken zu sehen.
  */
 const veilCovering = ref(false)
+/**
+ * Wie weit der Schleier deckt.
+ *
+ * `tab` nur auf dem Weg über das Command Panel: dort entstehen Board UND Seite
+ * gleichzeitig neu, und gewartet wird wegen der Seite ohnehin — den Aufbau des
+ * Boards mit abzudecken kostet daher keine zusätzliche Zeit, spart aber das
+ * sichtbare Zusammenwachsen des Sigils daneben (gemessen 125 ms längster Frame).
+ *
+ * `rail` überall sonst: dort steht das Board bereits ganz oder teilweise, und
+ * etwas zu verdecken, was der Spieler schon sieht, wäre ein Rückschritt.
+ */
+const veilScope = ref<'rail' | 'tab'>('rail')
 
 function cancelDetailsLoad() {
   if (detailsTimer !== null) {
@@ -147,9 +159,10 @@ function cancelDetailsLoad() {
 }
 
 /** Schleier hoch — die Detailseite mountet erst, wenn das Board durch ist. */
-function startDetailsLoad() {
+function startDetailsLoad(scope: 'rail' | 'tab' = 'rail') {
   cancelDetailsLoad()
   detailsStartedAt.value = performance.now()
+  veilScope.value = scope
   detailsPending.value = true
   veilCovering.value = true
 }
@@ -417,9 +430,9 @@ function applyRolesOpenRequest() {
   focusSeat(subSlot < 0 ? null : subSlot, subSlot >= 0)
 
   // Kam die Anfrage aus dem Command Panel, wird der Tab im selben Flush
-  // sichtbar — der Schleier hält der Detailseite die Schiene frei, bis das
-  // Board fertig gezeichnet ist (siehe SIGIL_DETAILS_LOADER_MIN_MS).
-  if (opening && !boardSettled.value) startDetailsLoad()
+  // sichtbar — hier entsteht ALLES neu, also deckt der Schleier auch das Board
+  // ab und gibt am Ende einen fertigen Tab frei (siehe veilScope).
+  if (opening && !boardSettled.value) startDetailsLoad('tab')
 }
 
 watch(() => uiStore.rolesOpenToken, applyRolesOpenRequest)
@@ -640,10 +653,11 @@ onUnmounted(() => {
          Seite nimmt seinen Platz im SELBEN Frame ein — es gibt keinen Frame
          ohne Schiene, in dem das Board kurz breiter würde. -->
     <Transition name="sdv" @after-leave="veilCovering = false">
-      <SigilDetailsLoader
+      <TeamTabLoader
         v-if="detailsVeilVisible"
         :role-index="selectedRole ?? 0"
         :started-at="detailsStartedAt"
+        :cover="veilScope"
       />
     </Transition>
   </div>
@@ -678,23 +692,15 @@ onUnmounted(() => {
 }
 
 /* ── Ladeschleier ──
-   Herein nur eine kurze Blende mit einem Hauch Versatz: er erscheint zusammen
-   mit dem ganzen Modal (modal-pop), ein volles Hereingleiten über die
-   Schienenbreite liefe dagegen an.
+   BEWUSST ohne Einblendung: er ist ab dem ersten Frame voll deckend da. Eine
+   Blende von 200 ms hieße 200 ms lang halbdurchsichtig — und dahinter sähe man
+   genau das Zusammenwachsen des Boards, das er verdecken soll. Sichtbar wird er
+   ohnehin sanft, weil das Modal um ihn herum aufgeht (modal-pop).
 
    Hinaus wird er absolut über die Schiene gelegt. Das ist der Kern des ganzen
    Übergangs: er gibt seinen Platz im Fluss im selben Frame frei, in dem die
    Detailseite ihn einnimmt, und blendet danach über ihr weg — der teure
    Mount-Frame liegt vollständig hinter einer deckenden Fläche. */
-.sdv-enter-active {
-  transition:
-    opacity 0.22s ease,
-    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.sdv-enter-from {
-  opacity: 0;
-  transform: translateX(22px);
-}
 .sdv-leave-active {
   /* `!important`, weil hier zwei scoped Regeln gleicher Spezifität gegeneinander
      stehen: die des Schleiers (position: relative) und diese. Wer gewinnt, hinge
@@ -719,9 +725,6 @@ onUnmounted(() => {
   .sdp-slide-leave-to {
     transform: none !important;
     opacity: 0;
-  }
-  .sdv-enter-from {
-    transform: none !important;
   }
 }
 </style>
