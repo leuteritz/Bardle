@@ -424,7 +424,9 @@ const frameVars = computed<Record<string, string>>(() => {
         <i v-if="tierApex" class="sigil-node-rank-sheen" aria-hidden="true" />
       </span>
       <span class="sigil-node-name-body">
-        <span class="sigil-node-name-text">{{ main ?? roleDef.label }}</span>
+        <span class="sigil-node-name-text" :class="{ 'sigil-node-name-text--role': !main }">{{
+          main ?? roleDef.label
+        }}</span>
         <span v-if="mainXp" class="sigil-node-xp-num" :class="{ 'is-ready': mainXpReady }">
           <template v-if="mainXp.capped">
             <span class="sigil-node-xp-cur">{{ $formatNumber(mainXp.current) }}</span>
@@ -988,6 +990,14 @@ const frameVars = computed<Record<string, string>>(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* empty seat — the plate names the role instead of a champion. ADC is an
+   acronym and sets itself in capitals; the other four would otherwise read as
+   a different kind of word on the same board. All five go in caps, with the
+   wider tracking a run of capitals needs to stay legible at 12px. */
+.sigil-node-name-text--role {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 /* XP row — hierarchy by size and weight, contrast held for all of it */
