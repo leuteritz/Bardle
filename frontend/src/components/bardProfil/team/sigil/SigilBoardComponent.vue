@@ -28,6 +28,7 @@ import {
   TEAM_TAB_MOUNT_STAGE_SATELLITES,
   TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
   COMMAND_PANEL_ART_SIZE,
+  SIGIL_ACTIONS_COMPACT_MAX_W,
 } from '@/config/constants'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
@@ -176,11 +177,18 @@ onMounted(() => {
   resizeObserver.observe(tabEl)
 })
 
+/** What the board is left with once the open rail has taken its share. */
+const boardWidth = computed(() => tabRect.value.width - props.sidePanelWidth)
+
 const fitScale = computed(() => {
-  const boardWidth = tabRect.value.width - props.sidePanelWidth
-  if (boardWidth <= 0 || tabRect.value.height <= 0) return 1
-  return Math.min(boardWidth, tabRect.value.height) / SIGIL_STAGE_SIZE
+  if (boardWidth.value <= 0 || tabRect.value.height <= 0) return 1
+  return Math.min(boardWidth.value, tabRect.value.height) / SIGIL_STAGE_SIZE
 })
+
+/** Shop and expedition sit at opposite bottom corners — see the constant. */
+const compactActions = computed(
+  () => boardWidth.value > 0 && boardWidth.value < SIGIL_ACTIONS_COMPACT_MAX_W,
+)
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
@@ -349,7 +357,10 @@ watch(
   <div
     ref="panelEl"
     class="sigil-board"
-    :class="{ 'sigil-board--dragging': isDragging }"
+    :class="{
+      'sigil-board--dragging': isDragging,
+      'sigil-board--compact-actions': compactActions,
+    }"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerEnd"
@@ -395,10 +406,16 @@ watch(
       </button>
     </div>
 
-    <!-- board actions: shop + expedition (always reachable) -->
+    <!-- board actions: shop + expedition (always reachable) ──
+         The shop is two shops behind one door — champions on one tab, gear on
+         the other — and the single word "Shop" said neither. It now names what
+         is in there instead of what it is; the glyph is what still says "shop",
+         and it says it better than before: a shopping bag is what you carry
+         away, `shop` is the place you walk into. One line, one size — the
+         contents ARE the label here, not a footnote to it. -->
     <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
-      <Icon icon="game-icons:shopping-bag" width="26" height="26" class="sigil-action-icon" />
-      Shop
+      <Icon icon="game-icons:shop" width="26" height="26" class="sigil-action-icon" />
+      Champions &amp; Items
       <RpgNotifyBadge
         :count="shopBadgeCount"
         variant="shop"
@@ -648,7 +665,8 @@ watch(
   background: #3c1e14;
 }
 
-/* ── board actions (shop / expedition) ── */
+/* ── board actions (shop / expedition) ──
+   Two buttons pinned to opposite bottom corners of the board, one line each. */
 .sigil-action {
   position: absolute;
   bottom: 22px;
@@ -656,7 +674,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 13px 24px;
+  padding: 13px 20px;
   border-radius: 5px;
   background: rgba(14, 10, 5, 0.88);
   border: 2px solid #5c3310;
@@ -686,6 +704,27 @@ watch(
 .sigil-action-icon {
   color: #e8c040;
   flex-shrink: 0;
+}
+/* ── Compact: the board squeezed by an open rail ──
+   At Full HD the shop rail leaves the board 340 px, and at full size the two
+   buttons overlapped by 3.5 px — before the shop label grew at all. Everything
+   shrinks by the same step so the row keeps its proportions; the edge inset
+   gives up the rest. */
+.sigil-board--compact-actions .sigil-action {
+  gap: 6px;
+  padding: 9px 10px;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+}
+.sigil-board--compact-actions .sigil-action--shop {
+  left: 12px;
+}
+.sigil-board--compact-actions .sigil-action--expedition {
+  right: 12px;
+}
+.sigil-board--compact-actions .sigil-action-icon {
+  width: 18px;
+  height: 18px;
 }
 
 /* ── auto level-up, under the power crest ──
