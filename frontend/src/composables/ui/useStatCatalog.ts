@@ -36,7 +36,6 @@ import {
   COMET_PHASE_DATA,
   SOLAR_MAX_LEVELS,
   TOTAL_SECTIONS,
-  MAX_ACTIVE_EXPEDITIONS,
   ITEM_SLOT_COUNT,
   BATTLE_TOTAL_GAME_SECONDS,
   SECONDS_PER_HOUR,
@@ -1121,9 +1120,15 @@ export function useStatCatalog(query: Ref<string>): {
         value: num(expeditionStore.totalExpeditionsFailed),
       },
       {
+        // The cap is no longer fixed — it widens with the expedition ledger rank.
         key: 'active',
         label: 'Running Right Now',
-        value: ratio(active.length, MAX_ACTIVE_EXPEDITIONS),
+        value: ratio(active.length, expeditionStore.maxActiveExpeditions),
+      },
+      {
+        key: 'ledgerRank',
+        label: 'Ledger Standing',
+        value: `${expeditionStore.ledgerRank.name} (${expeditionStore.ledgerCompleted})`,
       },
       { key: 'ready', label: 'Waiting to be Collected', value: int(ready.length) },
       {

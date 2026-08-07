@@ -1,6 +1,13 @@
 // Wirtschaft: Gebäude-Katalog des Shops, Augment-Effekte, Material-Inventar
 // samt Drop-Buchführung und die Expeditionen, die beides verbinden.
 
+import type {
+  ExpeditionHazardDef,
+  ExpeditionHazardId,
+  ExpeditionLedgerRankDef,
+  ExpeditionSpoilsDef,
+} from '@/types'
+
 /** Aufsammel-Blitz und Lebensdauer eines Chime-Pops im Expeditions-Panel. */
 export const EXPEDITION_COLLECT_FLASH_MS = 600
 export const EXPEDITION_CHIME_POP_LIFETIME_MS = 850
@@ -99,7 +106,10 @@ export const MATERIAL_TOOLTIP_BREAKDOWN_ROWS = 4
 // Sparkline viewBox (unitless; the SVG stretches to the row via preserveAspectRatio).
 export const MATERIAL_SPARK_VIEW_H = 24
 
-export const MAX_ACTIVE_EXPEDITIONS = 3
+// How many expeditions may run at once, and how many contracts sit on the board,
+// are no longer fixed — both widen with the ledger rank. See
+// EXPEDITION_LEDGER_RANKS and the store getters that read it.
+
 // Weighted tier roll (d100): r < epic → epic, r < rare → rare, else common
 export const EXPEDITION_TIER_THRESHOLDS = { epic: 10, rare: 40 }
 export const EXPEDITION_ID_RANDOM_MAX = 9999 // random suffix range for expedition slot IDs
@@ -251,8 +261,6 @@ export const EXPEDITION_COLORS: ExpeditionColorDef[] = [
 export const EXPEDITION_AVAILABILITY_DURATION_MS = 5 * 60 * 1000
 /** Minimum interval (ms) between consecutive slot spawns */
 export const EXPEDITION_SPAWN_INTERVAL_MS = 2 * 60 * 1000
-/** Maximum number of simultaneously visible expedition slots */
-export const EXPEDITION_MAX_AVAILABLE = 3
 /** Time threshold (ms) below which a slot enters the "expiring soon" warning state */
 export const EXPEDITION_EXPIRY_WARNING_MS = 30_000
 
@@ -313,12 +321,19 @@ export const EXPEDITION_ICON_POOL: string[] = [
 ]
 
 // Expedition mechanics
-/** Full-role-match synergy bonus multiplier */
-export const EXPEDITION_ROLE_SYNERGY_BONUS = 1.0
-/** Partial/no-role-match synergy penalty multiplier */
-export const EXPEDITION_ROLE_SYNERGY_PENALTY = 0.6
+//
+// The success chance is ADDITIVE — base plus a signed contribution per factor.
+// It used to be multiplicative (base × role-synergy), which cannot be shown as a
+// breakdown: a multiplier has no honest "worth this many points" reading once a
+// second one joins it. Every contribution below is a number the player can read
+// off the card and change by picking a different champion.
+
+/** Additive penalty when the crew does not cover every required role. */
+export const EXPEDITION_ROLE_MATCH_PENALTY = 0.2
 /** Max additive power bonus cap in success calculation */
 export const EXPEDITION_POWER_BONUS_CAP = 0.4
+/** Mirror of the cap for an UNDER-strength crew — a weak crew loses points. */
+export const EXPEDITION_POWER_MALUS_CAP = 0.25
 /** Scales power ratio into a bonus (powerRatio - 1) * this = bonus */
 export const EXPEDITION_POWER_BONUS_SCALE = 0.2
 /** Base success probability before role/power modifiers */
@@ -332,6 +347,161 @@ export const EXPEDITION_SUCCESS_CHANCE_MIN = 0.05
 export const EXPEDITION_SUCCESS_CHANCE_MAX = 0.95
 /** Fraction of base reward granted on expedition failure */
 export const EXPEDITION_FAILURE_REWARD_FRACTION = 0.1
+
+// ── Expedition hazards ────────────────────────────────────────────────────────
+//
+// A hazard is what turns "which champion" into a question. Four of them read a
+// champion STAT, so levelling anyone raises the odds; two read the crew's
+// COMPOSITION, so who stands next to whom matters even at equal level.
+//
+// Stat hazards mitigate on a RAMP, not a threshold: half the required stat
+// removes half the penalty. A cliff would make every champion below the line
+// interchangeable with every other one below it — the ramp makes each level-up
+// visible on the card the moment it happens.
+
+/** Crew stat required per member to fully shrug off a stat hazard, per tier. */
+export const EXPEDITION_HAZARD_STAT_PER_MEMBER = { common: 26, rare: 55, epic: 100 } as const
+
+/**
+ * Crew strength a mission expects PER REQUIRED ROLE, per tier.
+ *
+ * Measured against the sum of all four stats, where a freshly recruited level-1
+ * champion is worth 40. Common therefore sits just above a raw recruit, epic
+ * wants a crew somewhere around level 30 to break even.
+ */
+export const EXPEDITION_CREW_POWER_PER_ROLE = { common: 55, rare: 130, epic: 260 } as const
+
+/** Success-chance points a single unmitigated hazard costs. */
+export const EXPEDITION_HAZARD_PENALTY = 0.18
+
+/** How many hazards a mission of each tier carries. */
+export const EXPEDITION_HAZARD_COUNT = { common: 1, rare: 1, epic: 2 } as const
+
+export const EXPEDITION_HAZARDS: ExpeditionHazardDef[] = [
+  {
+    id: 'voidStatic',
+    name: 'Void Static',
+    icon: 'game-icons:lightning-arc',
+    kind: 'stat',
+    counterStat: 'focus',
+    desc: 'Screaming interference. Only a focused mind keeps the heading.',
+  },
+  {
+    id: 'crushingGravity',
+    name: 'Crushing Gravity',
+    icon: 'game-icons:heavy-fall',
+    kind: 'stat',
+    counterStat: 'vitality',
+    desc: 'The well pulls hard. Frail crews do not walk back out.',
+  },
+  {
+    id: 'hostileWardens',
+    name: 'Hostile Wardens',
+    icon: 'game-icons:crossed-swords',
+    kind: 'stat',
+    counterStat: 'power',
+    desc: 'Something guards this place, and it does not negotiate.',
+  },
+  {
+    id: 'sealedVault',
+    name: 'Sealed Vault',
+    icon: 'game-icons:stone-tablet',
+    kind: 'stat',
+    counterStat: 'fortune',
+    desc: 'The prize sits behind a lock that opens for the lucky.',
+  },
+  {
+    id: 'ancientSeals',
+    name: 'Ancient Seals',
+    icon: 'game-icons:tribal-pendant',
+    kind: 'kinship',
+    counterStat: null,
+    desc: 'The seals answer only to a shared bloodline — send two of one origin.',
+  },
+  {
+    id: 'shiftingPaths',
+    name: 'Shifting Paths',
+    icon: 'game-icons:maze',
+    kind: 'diversity',
+    counterStat: null,
+    desc: 'Every road lies differently. No two travellers may share an origin.',
+  },
+]
+
+export const EXPEDITION_HAZARD_BY_ID = Object.fromEntries(
+  EXPEDITION_HAZARDS.map((h) => [h.id, h]),
+) as Record<ExpeditionHazardId, ExpeditionHazardDef>
+
+// ── Expedition spoils ─────────────────────────────────────────────────────────
+//
+// Chimes alone were never a reason to run an expedition — the idle loop prints
+// them faster than any mission pays. Materials are: outside of boss kills and
+// drifters there is no way to farm a specific one, and the tab has been
+// promising them in its subtitle all along. A failed run pays neither.
+
+export const EXPEDITION_SPOILS: Record<ExpeditionTier, ExpeditionSpoilsDef> = {
+  common: { materialRolls: 1, materialChance: 0.55, meep: 0 },
+  rare: { materialRolls: 2, materialChance: 0.7, meep: 0 },
+  epic: { materialRolls: 3, materialChance: 0.85, meep: 1 },
+}
+
+// ── Expedition ledger ─────────────────────────────────────────────────────────
+//
+// The meta layer: every resolved mission counts once, forever. Ranks widen the
+// operation itself (more missions in the field, more contracts on the board)
+// rather than handing out a flat number — the reward for running expeditions is
+// being able to run more of them.
+
+export const EXPEDITION_LEDGER_RANKS: ExpeditionLedgerRankDef[] = [
+  {
+    tier: 1,
+    name: 'Wayfinder',
+    icon: 'game-icons:compass',
+    required: 0,
+    activeSlots: 3,
+    offerSlots: 3,
+    chanceBonus: 0,
+  },
+  {
+    tier: 2,
+    name: 'Trailblazer',
+    icon: 'game-icons:mountain-road',
+    required: 12,
+    activeSlots: 3,
+    offerSlots: 4,
+    chanceBonus: 0.02,
+  },
+  {
+    tier: 3,
+    name: 'Pathwarden',
+    icon: 'game-icons:treasure-map',
+    required: 35,
+    activeSlots: 4,
+    offerSlots: 4,
+    chanceBonus: 0.04,
+  },
+  {
+    tier: 4,
+    name: 'Starcharter',
+    icon: 'game-icons:radar-dish',
+    required: 80,
+    activeSlots: 4,
+    offerSlots: 5,
+    chanceBonus: 0.07,
+  },
+  {
+    tier: 5,
+    name: 'Voidwalker',
+    icon: 'game-icons:black-hole-bolas',
+    required: 160,
+    activeSlots: 5,
+    offerSlots: 5,
+    chanceBonus: 0.1,
+  },
+]
+
+/** How many resolved missions the ledger history keeps for display. */
+export const EXPEDITION_LEDGER_HISTORY_MAX = 24
 
 // Gameplay — click base
 export const CHIMES_PER_CLICK_BASE = 20

@@ -1,9 +1,77 @@
 // Wirtschaft: Shop, Items, Materialien, Augments, Expeditionen, Missionen.
 
 import type { ChampionRole } from '@/types/core'
+import type { ChampionStatKey } from '@/types/champions'
 
 // Expedition types
 export type ExpeditionStatus = 'active' | 'success' | 'failure'
+
+export type ExpeditionHazardId =
+  | 'voidStatic'
+  | 'crushingGravity'
+  | 'hostileWardens'
+  | 'sealedVault'
+  | 'ancientSeals'
+  | 'shiftingPaths'
+
+/**
+ * A condition on the mission that the crew either answers or pays for.
+ *
+ * `stat` hazards mitigate on a ramp against the crew's summed stat; `kinship`
+ * wants two champions of one origin, `diversity` wants no two alike. The last
+ * two are the reason a crew is more than the sum of its levels.
+ */
+export interface ExpeditionHazardDef {
+  id: ExpeditionHazardId
+  name: string
+  icon: string
+  kind: 'stat' | 'kinship' | 'diversity'
+  /** Which champion stat answers this hazard — null for composition hazards. */
+  counterStat: ChampionStatKey | null
+  desc: string
+}
+
+/** What a tier pays beyond chimes. A failed run pays none of it. */
+export interface ExpeditionSpoilsDef {
+  materialRolls: number
+  materialChance: number
+  meep: number
+}
+
+/** What a resolved mission actually handed over — kept for the result card. */
+export interface ExpeditionSpoilsPayout {
+  materials: { id: string; qty: number }[]
+  meep: number
+}
+
+export interface ExpeditionLedgerRankDef {
+  tier: number
+  name: string
+  icon: string
+  /** Missions resolved before this rank applies. */
+  required: number
+  activeSlots: number
+  offerSlots: number
+  chanceBonus: number
+}
+
+/** One signed line of the success-chance sum, as shown on the contract card. */
+export interface ExpeditionChanceEntry {
+  id: string
+  label: string
+  icon: string
+  /** Signed contribution in probability points (0.12 = +12 %). */
+  value: number
+  /** Extra note under the label — e.g. how far a hazard is mitigated. */
+  detail?: string
+}
+
+export interface ExpeditionChanceBreakdown {
+  base: number
+  entries: ExpeditionChanceEntry[]
+  /** Clamped final chance — what the dice actually use. */
+  total: number
+}
 
 export interface AvailableExpeditionSlot {
   id: string
@@ -17,6 +85,9 @@ export interface AvailableExpeditionSlot {
   durationSeconds: number
   requiredRoles: ChampionRole[]
   minPowerThreshold: number
+  hazards: ExpeditionHazardId[]
+  /** Crew stat that fully answers a stat hazard on this mission. */
+  hazardThreshold: number
 }
 
 export interface ExpeditionMission {
@@ -34,6 +105,10 @@ export interface ExpeditionMission {
   status: ExpeditionStatus
   reward: number
   colorKey?: string
+  tier?: 'common' | 'rare' | 'epic'
+  hazards?: ExpeditionHazardId[]
+  /** Filled in on resolve — what the run brought home besides chimes. */
+  spoils?: ExpeditionSpoilsPayout
 }
 
 export interface ShopUpgrade {
@@ -194,7 +269,7 @@ export interface Material {
 }
 
 /** Where a unit of material entered the inventory. Labels: MATERIAL_SOURCE_LABELS. */
-export type MaterialSourceId = 'drop' | 'harvest' | 'boss' | 'drifter' | 'bargain'
+export type MaterialSourceId = 'drop' | 'harvest' | 'boss' | 'drifter' | 'bargain' | 'expedition'
 
 /** What a unit of material was spent on. Labels: MATERIAL_SINK_LABELS. */
 export type MaterialSinkId =

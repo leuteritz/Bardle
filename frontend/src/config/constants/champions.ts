@@ -45,10 +45,9 @@ export const XP_NOISE_DAMPING = 0.4
 /** Verweilzeit, bevor die „Neu"-Markierung eines Champions verschwindet. */
 export const CHAMPION_NEW_BADGE_DISMISS_MS = 75
 
-// Expedition system
-export const CHAMPION_BASE_POWER = 50
-
-export const CHAMPION_POWER_PER_LEVEL = 10
+// Expedition crew strength used to be a flat figure derived from the BARD's
+// level, which made every champion interchangeable. It now reads the champions'
+// own stats (see expeditionStore.crewPowerOf), so these two are gone.
 
 // Champion Combat System
 /** Detection radius from screen center in px. Planet within this range → champions can hit it. Not sun-relative. */

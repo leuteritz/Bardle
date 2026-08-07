@@ -1,353 +1,304 @@
+<script setup lang="ts">
+/**
+ * The expedition tab.
+ *
+ * Laid out as the loop it models, left to right: what is IN THE FIELD (and what
+ * came back needing collecting) beside the CONTRACTS on offer, with the crew
+ * roster underneath both. It used to be one narrow column of stacked sections in
+ * a 900 px rail — mostly empty, and it hid the fact that collecting and sending
+ * are two different halves of the same rhythm.
+ *
+ * The command bar on top carries the ledger: the rank, and how many more runs
+ * buy the next one. That is the only progression the tab has, so it sits where
+ * the eye lands first.
+ */
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useActionToast } from '@/composables/ui/useActionToast'
+import {
+  EXPEDITION_LEDGER_RANKS,
+  EXPEDITION_COLLECT_FLASH_MS,
+  EXPEDITION_CHIME_POP_LIFETIME_MS,
+  EXPEDITION_CHIME_POP_SPREAD_PX,
+} from '@/config/constants'
+import type { AvailableExpeditionSlot } from '@/types'
+import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
+import ExpeditionContractCard from './ExpeditionContractCard.vue'
+import ExpeditionFieldCard from './ExpeditionFieldCard.vue'
+import ExpeditionRoster from './ExpeditionRoster.vue'
+
+const expeditionStore = useExpeditionStore()
+const { showToast } = useActionToast()
+
+const now = ref(Date.now())
+const isDev = import.meta.env.DEV
+const collectFlashing = ref(false)
+
+let timer: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  timer = setInterval(() => {
+    now.value = Date.now()
+  }, 1000)
+})
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+})
+
+// ── Field ───────────────────────────────────────────────────────────────────
+const readyMissions = computed(() =>
+  expeditionStore.activeExpeditions.filter((e) => e.status !== 'active'),
+)
+const runningMissions = computed(() =>
+  expeditionStore.activeExpeditions.filter((e) => e.status === 'active'),
+)
+const readyCount = computed(() => readyMissions.value.length)
+const activeCount = computed(() => expeditionStore.activeExpeditions.length)
+
+// ── Ledger ──────────────────────────────────────────────────────────────────
+const rank = computed(() => expeditionStore.ledgerRank)
+const nextRank = computed(() => expeditionStore.nextLedgerRank)
+/** Progress through the CURRENT rank band, so the bar never restarts at zero. */
+const rankProgress = computed(() => {
+  const next = nextRank.value
+  if (!next) return 1
+  const span = next.required - rank.value.required
+  if (span <= 0) return 1
+  return Math.min(1, (expeditionStore.ledgerCompleted - rank.value.required) / span)
+})
+
+const timeUntilNextSpawn = computed(() =>
+  Math.max(0, expeditionStore.nextSpawnAt - now.value),
+)
+const offersFull = computed(
+  () => expeditionStore.availableExpeditions.length >= expeditionStore.maxAvailableOffers,
+)
+
+// ── Actions ─────────────────────────────────────────────────────────────────
+const canSendAll = computed(
+  () =>
+    expeditionStore.canStartExpedition &&
+    expeditionStore.availableExpeditions.some((o) =>
+      expeditionStore.crewFor(o).every((c) => !!c),
+    ),
+)
+
+function sendExpedition(offer: AvailableExpeditionSlot) {
+  const crew = expeditionStore.crewFor(offer)
+  if (crew.some((c) => !c)) return
+  const assigned = crew.map((name, i) => ({
+    name: name as string,
+    role: offer.requiredRoles[i],
+  }))
+  if (expeditionStore.startExpedition(offer.id, assigned)) {
+    showToast(`${offer.name} started!`)
+  }
+}
+
+function sendAll() {
+  for (const offer of [...expeditionStore.availableExpeditions]) {
+    if (!expeditionStore.canStartExpedition) break
+    if (expeditionStore.crewFor(offer).every((c) => !!c)) sendExpedition(offer)
+  }
+}
+
+function collectMission(id: string, toast = true) {
+  const mission = expeditionStore.activeExpeditions.find((e) => e.id === id)
+  const status = mission?.status
+  const reward = mission?.reward ?? 0
+  expeditionStore.collectExpedition(id)
+  if (reward > 0) spawnChimePop(reward)
+  if (toast) {
+    showToast(status === 'success' ? 'Expedition rewards collected!' : 'Expedition completed.')
+  }
+}
+
+function collectAll() {
+  if (readyCount.value === 0) return
+  for (const mission of [...readyMissions.value]) collectMission(mission.id, false)
+  collectFlashing.value = true
+  setTimeout(() => {
+    collectFlashing.value = false
+  }, EXPEDITION_COLLECT_FLASH_MS)
+}
+
+// ── Chime pops ──────────────────────────────────────────────────────────────
+const chimePops = ref<Array<{ id: number; amount: number; dx: number }>>([])
+let popSeq = 0
+function spawnChimePop(amount: number) {
+  if (amount <= 0) return
+  const id = ++popSeq
+  const dx = Math.round((Math.random() - 0.5) * EXPEDITION_CHIME_POP_SPREAD_PX)
+  chimePops.value.push({ id, amount, dx })
+  setTimeout(() => {
+    chimePops.value = chimePops.value.filter((p) => p.id !== id)
+  }, EXPEDITION_CHIME_POP_LIFETIME_MS)
+}
+
+function formatCountdown(ms: number): string {
+  const secs = Math.ceil(Math.max(0, ms) / 1000)
+  return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`
+}
+</script>
+
 <template>
   <div class="ec-panel">
-
-    <!-- ── Status strip ─────────────────────────────────────── -->
-    <div class="ec-status-strip">
-      <div class="ec-stat" :class="{ 'ec-stat--full': slotsFull }">
-        <Icon icon="lucide:timer" width="22" height="22" class="ec-stat-ico" />
-        <div class="ec-stat-text">
-          <span class="ec-stat-value">{{ slotsFull ? 'FULL' : formatCountdown(timeUntilNextSpawn) }}</span>
-          <span class="ec-stat-label">Next Offer</span>
+    <!-- ══ Command bar ══════════════════════════════════════════ -->
+    <div class="ec-bar">
+      <div class="ec-ledger" :title="`${expeditionStore.ledgerCompleted} expeditions resolved`">
+        <Icon :icon="rank.icon" width="26" height="26" class="ec-ledger-ico" />
+        <div class="ec-ledger-text">
+          <span class="ec-ledger-name">{{ rank.name }}</span>
+          <span class="ec-ledger-sub">
+            <template v-if="nextRank">
+              {{ expeditionStore.ledgerCompleted }} / {{ nextRank.required }} to
+              {{ nextRank.name }}
+            </template>
+            <template v-else>Ledger complete — {{ expeditionStore.ledgerCompleted }} runs</template>
+          </span>
+          <div class="ec-ledger-track">
+            <div class="ec-ledger-fill" :style="{ transform: `scaleX(${rankProgress})` }" />
+          </div>
+        </div>
+        <div class="ec-ledger-pips">
+          <span
+            v-for="r in EXPEDITION_LEDGER_RANKS"
+            :key="r.tier"
+            class="ec-pip"
+            :class="{ 'ec-pip--on': expeditionStore.ledgerCompleted >= r.required }"
+            :title="`${r.name} — ${r.activeSlots} active, ${r.offerSlots} offers`"
+          />
         </div>
       </div>
 
       <div class="ec-stat" :class="{ 'ec-stat--live': activeCount > 0 }">
-        <Icon icon="game-icons:campfire" width="22" height="22" class="ec-stat-ico" />
-        <div class="ec-stat-text">
-          <span class="ec-stat-value">{{ activeCount }}/{{ MAX_ACTIVE_EXPEDITIONS }}</span>
-          <span class="ec-stat-label">Active</span>
-        </div>
+        <span class="ec-stat-value">{{ activeCount }}/{{ expeditionStore.maxActiveExpeditions }}</span>
+        <span class="ec-stat-label">In field</span>
       </div>
 
       <div class="ec-stat">
-        <Icon icon="game-icons:rolled-cloth" width="22" height="22" class="ec-stat-ico" />
-        <div class="ec-stat-text">
-          <span class="ec-stat-value">{{ expeditionStore.availableExpeditions.length }}/{{ EXPEDITION_MAX_AVAILABLE }}</span>
-          <span class="ec-stat-label">Offers</span>
-        </div>
+        <span class="ec-stat-value">
+          {{ expeditionStore.availableExpeditions.length }}/{{ expeditionStore.maxAvailableOffers }}
+        </span>
+        <span class="ec-stat-label">Contracts</span>
+      </div>
+
+      <div class="ec-stat" :class="{ 'ec-stat--full': offersFull }">
+        <span class="ec-stat-value">{{
+          offersFull ? 'FULL' : formatCountdown(timeUntilNextSpawn)
+        }}</span>
+        <span class="ec-stat-label">Next offer</span>
       </div>
 
       <button
         v-if="isDev"
-        class="ec-admin-btn"
-        @click.stop="expeditionStore.forceSpawn()"
+        class="ec-admin"
         aria-label="Force spawn expedition (dev)"
+        @click.stop="expeditionStore.forceSpawn()"
       >
         <Icon icon="game-icons:lightning-arc" width="12" height="12" />
         Spawn
       </button>
     </div>
 
-    <!-- ── Scrolling body ───────────────────────────────────── -->
-    <div class="ec-body">
-
-      <!-- Max-limit warning -->
-      <div v-if="!expeditionStore.canStartExpedition" class="ec-warning">
-        <Icon icon="game-icons:hazard-sign" width="18" height="18" class="ec-warning-ico" />
-        Maximum reached ({{ MAX_ACTIVE_EXPEDITIONS }}) — collect active expeditions first
-      </div>
-
-      <!-- ══ ACTIVE EXPEDITIONS ═══════════════════════════════ -->
-      <section v-if="activeCount > 0" class="ec-section">
-        <div
-          class="ec-section-banner ec-section-banner--active"
-          role="button"
-          tabindex="0"
-          :aria-expanded="!activeCollapsed"
-          @click="activeCollapsed = !activeCollapsed"
-          @keydown.enter.prevent="activeCollapsed = !activeCollapsed"
-          @keydown.space.prevent="activeCollapsed = !activeCollapsed"
-        >
-          <span class="ec-banner-chevron" :class="{ 'ec-banner-chevron--collapsed': activeCollapsed }">▾</span>
-          <Icon icon="game-icons:campfire" width="24" height="24" class="ec-banner-ico" />
-          <span class="ec-banner-title">Active Expeditions</span>
-          <span class="ec-banner-count">{{ activeCount }}/{{ MAX_ACTIVE_EXPEDITIONS }}</span>
-          <span class="ec-banner-spacer"></span>
-
+    <!-- ══ Two columns ══════════════════════════════════════════ -->
+    <div class="ec-columns">
+      <!-- ── In the field ──────────────────────────────────────── -->
+      <section class="ec-col ec-col--field">
+        <header class="ec-col-head ec-col-head--field">
+          <Icon icon="game-icons:campfire" width="20" height="20" class="ec-col-ico" />
+          <span class="ec-col-title">In the field</span>
+          <span class="ec-col-count">{{ activeCount }}</span>
           <button
-            class="ec-bulk-btn ec-bulk-btn--collect"
+            class="ec-bulk ec-bulk--collect"
             :class="{
               'is-ready': readyCount > 0,
               'is-flashing': collectFlashing,
-              'ec-bulk-btn--muted': readyCount === 0,
+              'is-muted': readyCount === 0,
             }"
             :disabled="readyCount === 0"
-            @click.stop="collectAll"
             aria-label="Collect all completed expeditions"
+            @click.stop="collectAll"
           >
-            <Icon icon="game-icons:chest" width="16" height="16" />
-            Collect All
+            <Icon icon="game-icons:chest" width="15" height="15" />
+            Collect all
             <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" />
           </button>
+        </header>
+
+        <div class="ec-col-body">
+          <TransitionGroup name="ec-fly" tag="div" class="ec-stack">
+            <ExpeditionFieldCard
+              v-for="m in readyMissions"
+              :key="m.id"
+              :mission="m"
+              :now="now"
+              @collect="collectMission"
+            />
+            <ExpeditionFieldCard
+              v-for="m in runningMissions"
+              :key="m.id"
+              :mission="m"
+              :now="now"
+              @collect="collectMission"
+            />
+          </TransitionGroup>
+
+          <div v-if="activeCount === 0" class="ec-empty">
+            <Icon icon="game-icons:camping-tent" width="34" height="34" class="ec-empty-ico" />
+            <span class="ec-empty-title">Nobody is out there</span>
+            <span class="ec-empty-sub">Send a crew from the contracts beside this</span>
+          </div>
         </div>
-
-        <TransitionGroup v-show="!activeCollapsed" name="ec-card-fly" tag="div" class="ec-active-list">
-          <!-- Ready to collect -->
-          <div
-            v-for="exp in doneExpeditions"
-            :key="exp.id"
-            class="ec-active-card"
-            :class="exp.status === 'success' ? 'ec-active-card--success' : 'ec-active-card--failure'"
-          >
-            <div
-              class="ec-active-accent"
-              :class="exp.status === 'success' ? 'ec-active-accent--success' : 'ec-active-accent--failure'"
-            ></div>
-            <div class="ec-active-body">
-              <div class="ec-active-top">
-                <div class="ec-active-name-wrap">
-                  <Icon :icon="exp.icon || 'game-icons:rolled-cloth'" width="24" height="24" class="ec-active-ico" />
-                  <span class="ec-active-name">{{ exp.name }}</span>
-                </div>
-                <span
-                  class="ec-status-badge"
-                  :class="exp.status === 'success' ? 'ec-status-badge--success' : 'ec-status-badge--failure'"
-                >
-                  {{ exp.status === 'success' ? '✓ Success' : '✕ Failed' }}
-                </span>
-              </div>
-
-              <div class="ec-champ-tags">
-                <span
-                  v-for="champ in exp.assignedChampions"
-                  :key="champ.name"
-                  class="ec-champ-tag"
-                  :style="{ color: getRoleColor(champ.role) }"
-                >
-                  <img :src="getChampionImage(champ.name)" :alt="champ.name" class="ec-champ-img" />
-                  {{ champ.name }}
-                </span>
-              </div>
-
-              <div class="ec-active-foot">
-                <div class="ec-active-reward">
-                  <img src="/img/BardAbilities/BardChime-128.png" class="ec-chime-img" alt="" aria-hidden="true" />
-                  <span
-                    class="ec-active-reward-amount"
-                    :class="{ 'ec-active-reward-amount--fail': exp.status !== 'success' }"
-                  >+{{ $formatNumber(exp.reward) }}</span>
-                  <span class="ec-active-reward-label">Chimes</span>
-                </div>
-                <button
-                  class="ec-collect-btn"
-                  :class="exp.status === 'success' ? 'rpg-btn-green' : 'ec-collect-btn--fail'"
-                  @click.stop="collectExpedition(exp.id)"
-                >
-                  Collect
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Running -->
-          <div
-            v-for="exp in runningExpeditions"
-            :key="exp.id"
-            class="ec-active-card ec-active-card--running"
-            :style="activeCardStyle(exp)"
-          >
-            <div class="ec-active-accent ec-active-accent--running"></div>
-            <div class="ec-active-body">
-              <div class="ec-active-top">
-                <div class="ec-active-name-wrap">
-                  <Icon
-                    :icon="exp.icon || 'game-icons:rolled-cloth'"
-                    width="24"
-                    height="24"
-                    class="ec-active-ico"
-                    :style="{ color: getExpeditionColor(exp).dim }"
-                  />
-                  <span class="ec-active-name">{{ exp.name }}</span>
-                </div>
-                <span class="ec-active-time">
-                  <Icon icon="lucide:timer" width="14" height="14" class="ec-active-time-ico" />
-                  {{ getTimeRemaining(exp) }}
-                </span>
-              </div>
-
-              <div class="ec-champ-tags">
-                <span
-                  v-for="champ in exp.assignedChampions"
-                  :key="champ.name"
-                  class="ec-champ-tag"
-                  :style="{ color: getRoleColor(champ.role) }"
-                >
-                  <img :src="getChampionImage(champ.name)" :alt="champ.name" class="ec-champ-img" />
-                  {{ champ.name }}
-                </span>
-              </div>
-
-              <div class="ec-progress">
-                <div class="ec-progress-track">
-                  <div class="ec-progress-fill" :style="{ width: getProgress(exp) + '%' }"></div>
-                </div>
-                <div class="ec-progress-meta">
-                  <span>{{ Math.round(getProgress(exp)) }}%</span>
-                  <span>{{ Math.round(exp.successChance * 100) }}% success chance</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </TransitionGroup>
       </section>
 
-      <!-- ══ AVAILABLE ════════════════════════════════════════ -->
-      <section class="ec-section">
-        <div
-          class="ec-section-banner ec-section-banner--offers"
-          role="button"
-          tabindex="0"
-          :aria-expanded="!availableCollapsed"
-          @click="availableCollapsed = !availableCollapsed"
-          @keydown.enter.prevent="availableCollapsed = !availableCollapsed"
-          @keydown.space.prevent="availableCollapsed = !availableCollapsed"
-        >
-          <span class="ec-banner-chevron" :class="{ 'ec-banner-chevron--collapsed': availableCollapsed }">▾</span>
-          <Icon icon="game-icons:rolled-cloth" width="24" height="24" class="ec-banner-ico" />
-          <span class="ec-banner-title">Available</span>
-          <span class="ec-banner-count">{{ expeditionStore.availableExpeditions.length }}/{{ EXPEDITION_MAX_AVAILABLE }}</span>
-          <span class="ec-banner-spacer"></span>
-
+      <!-- ── Contracts ─────────────────────────────────────────── -->
+      <section class="ec-col ec-col--offers">
+        <header class="ec-col-head ec-col-head--offers">
+          <Icon icon="game-icons:rolled-cloth" width="20" height="20" class="ec-col-ico" />
+          <span class="ec-col-title">Contracts</span>
+          <span class="ec-col-count">{{ expeditionStore.availableExpeditions.length }}</span>
           <button
-            class="ec-bulk-btn ec-bulk-btn--send"
-            :class="{ 'ec-bulk-btn--muted': !canSendAll }"
+            class="ec-bulk ec-bulk--send"
+            :class="{ 'is-muted': !canSendAll }"
             :disabled="!canSendAll"
+            aria-label="Send every crewed contract"
             @click.stop="sendAll"
-            aria-label="Send all available expeditions"
           >
-            <Icon icon="game-icons:camping-tent" width="16" height="16" />
-            Send All
+            <Icon icon="game-icons:camping-tent" width="15" height="15" />
+            Send all
           </button>
-        </div>
+        </header>
 
-        <!-- Empty state -->
-        <div v-if="!availableCollapsed && expeditionStore.availableExpeditions.length === 0" class="ec-empty">
-          <div class="ec-empty-icon">✦</div>
-          <div>No expeditions available</div>
-          <div class="ec-empty-sub">Next in {{ formatCountdown(timeUntilNextSpawn) }}</div>
-        </div>
+        <div class="ec-col-body">
+          <TransitionGroup name="ec-fly" tag="div" class="ec-stack">
+            <ExpeditionContractCard
+              v-for="offer in expeditionStore.availableExpeditions"
+              :key="offer.id"
+              :offer="offer"
+              :now="now"
+              @send="sendExpedition"
+            />
+          </TransitionGroup>
 
-        <!-- Offer rows -->
-        <TransitionGroup
-          v-if="expeditionStore.availableExpeditions.length > 0"
-          v-show="!availableCollapsed"
-          name="ec-card-fly"
-          tag="div"
-          class="ec-offer-list"
-        >
-          <div
-            v-for="slot in expeditionStore.availableExpeditions"
-            :key="slot.id"
-            class="ec-card"
-            :class="[
-              canQuickstart(slot) ? 'ec-card--available' : 'ec-card--locked',
-              isExpiringSoon(slot) ? 'ec-card--expiring' : ''
-            ]"
-            :style="cardStyle(slot)"
-          >
-            <div class="ec-card-accent"></div>
-
-            <div class="ec-card-body">
-              <div class="ec-card-icon-wrap">
-                <Icon :icon="slot.icon" width="48" height="48" class="ec-card-ico" :style="{ color: getColor(slot.colorKey).primary }" />
-              </div>
-
-              <div class="ec-card-info">
-                <div class="ec-card-top">
-                  <span class="ec-card-name">{{ slot.name }}</span>
-                  <span v-if="slot.tier !== 'common'" class="ec-tier-badge" :class="`ec-tier-badge--${slot.tier}`">
-                    {{ slot.tier === 'epic' ? 'EPIC' : 'RARE' }}
-                  </span>
-                </div>
-
-                <div class="ec-card-meta">
-                  <div class="ec-card-reward">
-                    <img src="/img/BardAbilities/BardChime-128.png" class="ec-chime-img" alt="" aria-hidden="true" />
-                    <span class="ec-reward-amount">{{ $formatNumber(slot.baseReward) }}</span>
-                    <span class="ec-reward-label">Chimes</span>
-                  </div>
-                  <span class="ec-meta-sep">·</span>
-                  <div class="ec-card-duration">
-                    <Icon icon="lucide:hourglass" width="15" height="15" class="ec-dur-ico" />
-                    <span>{{ formatShortDuration(slot.durationSeconds) }}</span>
-                  </div>
-                  <span class="ec-meta-sep">·</span>
-                  <div class="ec-card-roles">
-                    <img
-                      v-for="(role, i) in slot.requiredRoles"
-                      :key="`${role}-${i}`"
-                      :src="ROLE_IMG[role]"
-                      :alt="role"
-                      :title="role"
-                      class="ec-role-img"
-                    />
-                  </div>
-                </div>
-
-                <!-- Auto-selected crew: who quickstart sends + their chance share -->
-                <div class="ec-card-crew">
-                  <span
-                    v-for="(p, ci) in getQuickstartPreview(slot)"
-                    :key="p.role"
-                    class="ec-crew-chip"
-                  >
-                    <img
-                      v-if="p.champion"
-                      :src="getChampionImage(p.champion)"
-                      :alt="p.champion"
-                      class="ec-crew-img"
-                    />
-                    <img v-else :src="ROLE_IMG[p.role]" :alt="p.role" class="ec-crew-img ec-crew-img--role" />
-                    <span
-                      class="ec-crew-name"
-                      :class="{ 'ec-crew-name--missing': !p.champion }"
-                      :style="p.champion ? { color: getRoleColor(p.role) } : undefined"
-                    >
-                      {{ p.champion ?? 'no champion' }}
-                    </span>
-                    <span v-if="p.champion && getCrewShares(slot)" class="ec-crew-share">
-                      +{{ getCrewShares(slot)![ci] }}%
-                    </span>
-                  </span>
-                </div>
-
-                <div class="ec-avail-timer" :class="{ 'ec-avail-timer--expiring': isExpiringSoon(slot) }">
-                  <span>{{ isExpiringSoon(slot) ? '⚠' : '⏱' }}</span>
-                  <span>{{ formatCountdown(slot.availableUntil - now) }} left</span>
-                </div>
-              </div>
-
-              <div class="ec-card-side" :title="getTooltipText(slot)">
-                <div
-                  v-if="getQuickstartChance(slot) !== null"
-                  class="ec-qs-chance"
-                  :class="chanceTone(getQuickstartChance(slot)!)"
-                  title="Success chance with the quickstart lineup"
-                >
-                  {{ Math.round(getQuickstartChance(slot)! * 100) }}% success
-                </div>
-                <button
-                  class="ec-qs-btn"
-                  :class="canQuickstart(slot) ? 'ec-qs-btn--active' : 'ec-qs-btn--disabled'"
-                  :disabled="!canQuickstart(slot)"
-                  @click.stop="quickstartExpedition(slot)"
-                >
-                  <Icon icon="game-icons:plasma-bolt" width="18" height="18" class="ec-qs-ico" />
-                  Quickstart
-                </button>
-              </div>
-            </div>
+          <div v-if="!expeditionStore.availableExpeditions.length" class="ec-empty">
+            <Icon icon="game-icons:rolled-cloth" width="34" height="34" class="ec-empty-ico" />
+            <span class="ec-empty-title">The board is empty</span>
+            <span class="ec-empty-sub">Next contract in {{ formatCountdown(timeUntilNextSpawn) }}</span>
           </div>
-        </TransitionGroup>
+        </div>
       </section>
     </div>
 
-    <!-- ── Floating chime-collect feedback ──────────────────── -->
-    <div class="ec-chime-pops" aria-hidden="true">
+    <!-- ══ Crew roster ══════════════════════════════════════════ -->
+    <ExpeditionRoster />
+
+    <!-- Floating collect feedback -->
+    <div class="ec-pops" aria-hidden="true">
       <span
         v-for="pop in chimePops"
         :key="pop.id"
-        class="ec-chime-pop"
+        class="ec-pop"
         :style="{ '--pop-dx': pop.dx + 'px' }"
       >
         +{{ $formatNumber(pop.amount) }}
@@ -356,308 +307,7 @@
   </div>
 </template>
 
-<script lang="ts">
-import { formatShortDuration } from '@/utils/ui/format'
-import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
-import { Icon } from '@iconify/vue'
-import { useExpeditionStore } from '@/stores/economy/expeditionStore'
-import { useBattleStore } from '@/stores/battle/battleStore'
-import { getChampionRoles } from '@/config/champions/championData'
-import {
-  MAX_ACTIVE_EXPEDITIONS,
-  EXPEDITION_MAX_AVAILABLE,
-  EXPEDITION_EXPIRY_WARNING_MS,
-  EXPEDITION_COLORS,
-  ROLE_BY_KEY,
-  type ExpeditionColorDef,
-  EXPEDITION_CHANCE_GOOD,
-  EXPEDITION_CHANCE_MID,
-  EXPEDITION_COLLECT_FLASH_MS,
-  EXPEDITION_CHIME_POP_LIFETIME_MS,
-  EXPEDITION_CHIME_POP_SPREAD_PX,
-} from '@/config/constants'
-import { useActionToast } from '@/composables/ui/useActionToast'
-import type { ChampionRole, AvailableExpeditionSlot, ExpeditionMission } from '@/types'
-import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
-
-const ROLE_IMG: Record<string, string> = {
-  top:     '/img/roles/top-128.png',
-  jungle:  '/img/roles/jungle-128.png',
-  mid:     '/img/roles/mid-128.png',
-  adc:     '/img/roles/adc-128.png',
-  support: '/img/roles/supp-128.png',
-}
-
-export default defineComponent({
-  name: 'ExpeditionComponent',
-  components: { Icon, RpgNotifyBadge },
-  setup() {
-    const expeditionStore = useExpeditionStore()
-    const battleStore = useBattleStore()
-    const { showToast } = useActionToast()
-
-    const now = ref(Date.now())
-    const isDev = import.meta.env.DEV
-    const collectFlashing = ref(false)
-    // Collapsible sections — both expanded by default
-    const activeCollapsed = ref(false)
-    const availableCollapsed = ref(false)
-
-    let timer: ReturnType<typeof setInterval> | null = null
-
-    onMounted(() => { timer = setInterval(() => { now.value = Date.now() }, 1000) })
-    onUnmounted(() => { if (timer) clearInterval(timer) })
-
-    // ── Computed ──────────────────────────────────────────────
-    const timeUntilNextSpawn = computed(() =>
-      Math.max(0, expeditionStore.nextSpawnAt - now.value),
-    )
-    const slotsFull = computed(
-      () => expeditionStore.availableExpeditions.length >= EXPEDITION_MAX_AVAILABLE,
-    )
-    const activeCount = computed(() => expeditionStore.activeExpeditions.length)
-    const readyCount = computed(() =>
-      expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
-    )
-    const doneExpeditions = computed(() =>
-      expeditionStore.activeExpeditions.filter((e) => e.status !== 'active'),
-    )
-    const runningExpeditions = computed(() =>
-      expeditionStore.activeExpeditions.filter((e) => e.status === 'active'),
-    )
-
-    // ── Color helpers ─────────────────────────────────────────
-    function getColor(key: string): ExpeditionColorDef {
-      return EXPEDITION_COLORS.find((c) => c.key === key) ?? EXPEDITION_COLORS[0]
-    }
-    function cardStyle(slot: AvailableExpeditionSlot) {
-      const c = getColor(slot.colorKey)
-      return { '--exp-p': c.primary, '--exp-d': c.dim, '--exp-glow': c.glowRgb }
-    }
-    function getExpeditionColor(expedition: ExpeditionMission): ExpeditionColorDef {
-      const key = expedition.colorKey ?? 'gold'
-      return EXPEDITION_COLORS.find((x) => x.key === key) ?? EXPEDITION_COLORS[0]
-    }
-    function activeCardStyle(expedition: ExpeditionMission) {
-      const c = getExpeditionColor(expedition)
-      return { '--exp-p': c.primary, '--exp-d': c.dim, '--exp-glow': c.glowRgb }
-    }
-
-    // ── Availability helpers ──────────────────────────────────
-    function isExpiringSoon(slot: AvailableExpeditionSlot): boolean {
-      return slot.availableUntil - now.value < EXPEDITION_EXPIRY_WARNING_MS
-    }
-    function getAvailableForRole(role: ChampionRole, usedChamps: string[]): string[] {
-      const onExpedition = expeditionStore.championsOnExpedition
-      return battleStore.ownedChampions.filter(
-        (c) =>
-          c !== 'Bard' &&
-          !onExpedition.includes(c) &&
-          !usedChamps.includes(c) &&
-          getChampionRoles(c).includes(role),
-      )
-    }
-    function canQuickstart(slot: AvailableExpeditionSlot): boolean {
-      if (!expeditionStore.canStartExpedition) return false
-      const used: string[] = []
-      for (const role of slot.requiredRoles) {
-        const avail = getAvailableForRole(role, used)
-        if (!avail.length) return false
-        used.push(avail[0])
-      }
-      return true
-    }
-    function getTooltipText(slot: AvailableExpeditionSlot): string {
-      if (!expeditionStore.canStartExpedition)
-        return `Maximum of ${MAX_ACTIVE_EXPEDITIONS} active expeditions reached`
-      const used: string[] = []
-      for (const role of slot.requiredRoles) {
-        const avail = getAvailableForRole(role, used)
-        if (!avail.length) return `No ${role} champion available`
-        used.push(avail[0])
-      }
-      return ''
-    }
-    function quickstartExpedition(slot: AvailableExpeditionSlot) {
-      if (!canQuickstart(slot)) return
-      const used: string[] = []
-      const assigned = slot.requiredRoles.map((role) => {
-        const avail = getAvailableForRole(role, used)
-        const name = avail[0]
-        used.push(name)
-        return { name, role }
-      })
-      if (expeditionStore.startExpedition(slot.id, assigned)) {
-        showToast(`${slot.name} started!`)
-      }
-    }
-    function getQuickstartPreview(slot: AvailableExpeditionSlot): Array<{ role: ChampionRole; champion: string | null }> {
-      const used: string[] = []
-      return slot.requiredRoles.map((role) => {
-        const avail = getAvailableForRole(role, used)
-        const champion = avail[0] ?? null
-        if (champion) used.push(champion)
-        return { role, champion }
-      })
-    }
-    /** Success chance of the quickstart lineup, or null if a role can't be filled. */
-    function getQuickstartChance(slot: AvailableExpeditionSlot): number | null {
-      const preview = getQuickstartPreview(slot)
-      if (preview.some((p) => !p.champion)) return null
-      const assigned = preview.map((p) => ({ name: p.champion!, role: p.role }))
-      return expeditionStore.calculateSuccessChance(
-        assigned,
-        slot.requiredRoles,
-        slot.minPowerThreshold,
-      )
-    }
-    function chanceTone(chance: number): string {
-      if (chance >= EXPEDITION_CHANCE_GOOD) return 'ec-qs-chance--good'
-      if (chance >= EXPEDITION_CHANCE_MID) return 'ec-qs-chance--mid'
-      return 'ec-qs-chance--bad'
-    }
-
-    /** Per-champion share of the total chance (largest-remainder rounding so the
-     *  shares sum exactly to the rounded total shown at the quickstart button). */
-    function getCrewShares(slot: AvailableExpeditionSlot): number[] | null {
-      const chance = getQuickstartChance(slot)
-      if (chance === null) return null
-      const n = slot.requiredRoles.length
-      const totalPct = Math.round(chance * 100)
-      const base = Math.floor(totalPct / n)
-      const remainder = totalPct - base * n
-      return Array.from({ length: n }, (_, i) => base + (i < remainder ? 1 : 0))
-    }
-
-    // ── Bulk Actions ──────────────────────────────────────────
-    const canSendAll = computed(
-      () =>
-        expeditionStore.canStartExpedition &&
-        expeditionStore.availableExpeditions.some((slot) => canQuickstart(slot)),
-    )
-
-    function collectAll() {
-      if (readyCount.value === 0) return
-      for (const exp of [...doneExpeditions.value]) {
-        collectExpedition(exp.id, false)
-      }
-      collectFlashing.value = true
-      setTimeout(() => {
-        collectFlashing.value = false
-      }, EXPEDITION_COLLECT_FLASH_MS)
-    }
-
-    function sendAll() {
-      const slots = [...expeditionStore.availableExpeditions]
-      for (const slot of slots) {
-        if (!expeditionStore.canStartExpedition) break
-        if (canQuickstart(slot)) {
-          quickstartExpedition(slot)
-        }
-      }
-    }
-
-    // ── Active expedition helpers ─────────────────────────────
-    function getProgress(expedition: ExpeditionMission): number {
-      return Math.min(
-        100,
-        ((now.value - expedition.startTime) / (expedition.durationSeconds * 1000)) * 100,
-      )
-    }
-    function getTimeRemaining(expedition: ExpeditionMission): string {
-      const remaining = Math.max(
-        0,
-        expedition.durationSeconds * 1000 - (now.value - expedition.startTime),
-      )
-      const secs = Math.ceil(remaining / 1000)
-      return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`
-    }
-    function getChampionImage(name: string): string {
-      return battleStore.getChampionImage(name, { size: 'sm' })
-    }
-    /** Role accent color (same palette as everywhere else in the app). */
-    function getRoleColor(role: ChampionRole): string {
-      return ROLE_BY_KEY[role]?.color ?? '#e8c040'
-    }
-
-    // ── Animated collect feedback ─────────────────────────────
-    const chimePops = ref<Array<{ id: number; amount: number; dx: number }>>([])
-    let popSeq = 0
-    function spawnChimePop(amount: number) {
-      if (amount <= 0) return
-      const id = ++popSeq
-      const dx = Math.round((Math.random() - 0.5) * EXPEDITION_CHIME_POP_SPREAD_PX)
-      chimePops.value.push({ id, amount, dx })
-      setTimeout(() => {
-        chimePops.value = chimePops.value.filter((p) => p.id !== id)
-      }, EXPEDITION_CHIME_POP_LIFETIME_MS)
-    }
-
-    function collectExpedition(id: string, toast = true) {
-      const expedition = expeditionStore.activeExpeditions.find((e) => e.id === id)
-      const status = expedition?.status
-      const reward = expedition?.reward ?? 0
-      expeditionStore.collectExpedition(id)
-      if (reward > 0) spawnChimePop(reward)
-      if (toast) {
-        showToast(status === 'success' ? 'Expedition rewards collected!' : 'Expedition completed.')
-      }
-    }
-
-    // ── Format helpers ────────────────────────────────────────
-    function formatCountdown(ms: number): string {
-      const secs = Math.ceil(Math.max(0, ms) / 1000)
-      const m = Math.floor(secs / 60)
-      const s = secs % 60
-      return `${m}:${s.toString().padStart(2, '0')}`
-    }
-
-    return {
-      expeditionStore,
-      now,
-      isDev,
-      collectFlashing,
-      activeCollapsed,
-      availableCollapsed,
-      timeUntilNextSpawn,
-      slotsFull,
-      activeCount,
-      readyCount,
-      doneExpeditions,
-      runningExpeditions,
-      getColor,
-      cardStyle,
-      getExpeditionColor,
-      activeCardStyle,
-      isExpiringSoon,
-      canQuickstart,
-      getTooltipText,
-      quickstartExpedition,
-      getQuickstartPreview,
-      getQuickstartChance,
-      chanceTone,
-      getCrewShares,
-      getProgress,
-      getTimeRemaining,
-      getChampionImage,
-      getRoleColor,
-      collectExpedition,
-      formatShortDuration,
-      formatCountdown,
-      chimePops,
-      MAX_ACTIVE_EXPEDITIONS,
-      EXPEDITION_MAX_AVAILABLE,
-      ROLE_IMG,
-      canSendAll,
-      collectAll,
-      sendAll,
-    }
-  },
-})
-</script>
-
 <style scoped>
-/* ── Panel ────────────────────────────────────────────────── */
 .ec-panel {
   position: relative;
   display: flex;
@@ -668,29 +318,100 @@ export default defineComponent({
   overflow: hidden;
 }
 
-/* ── Status strip (fixed — only the body below scrolls) ───── */
-.ec-status-strip {
+/* ══ Command bar ══════════════════════════════════════════════ */
+.ec-bar {
   flex-shrink: 0;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   background: #16100a;
   border-bottom: 2px solid #5c3310;
 }
-.ec-stat {
+.ec-ledger {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 7px 14px;
-  border-radius: 4px;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 12px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid #3e200a;
+  border-radius: 4px;
 }
-.ec-stat-ico { color: rgba(200, 144, 64, 0.6); flex-shrink: 0; }
-.ec-stat-text { display: flex; flex-direction: column; gap: 1px; }
+.ec-ledger-ico {
+  color: #e8c040;
+  flex-shrink: 0;
+}
+.ec-ledger-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ec-ledger-name {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e8c040;
+  line-height: 1;
+}
+.ec-ledger-sub {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(200, 144, 64, 0.6);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ec-ledger-track {
+  height: 4px;
+  background: #111008;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.ec-ledger-fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(to right, #c89040, #e8c060);
+  transition: transform 0.4s ease;
+}
+.ec-ledger-pips {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.ec-pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #241408;
+  border: 1px solid #3e200a;
+}
+.ec-pip--on {
+  background: #e8c040;
+  border-color: #c89040;
+}
+
+.ec-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  flex-shrink: 0;
+  min-width: 76px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+}
 .ec-stat-value {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
@@ -698,84 +419,85 @@ export default defineComponent({
   white-space: nowrap;
 }
 .ec-stat-label {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(200, 144, 64, 0.55);
   line-height: 1;
 }
-.ec-stat--full { border-color: #5c3310; background: rgba(200, 144, 64, 0.1); }
-.ec-stat--full .ec-stat-value { color: #e8c040; }
-.ec-stat--live { border-color: rgba(100, 220, 180, 0.35); background: rgba(100, 220, 180, 0.06); }
-.ec-stat--live .ec-stat-value { color: #a0f0d0; }
-.ec-stat--live .ec-stat-ico { color: rgba(100, 220, 180, 0.6); }
+.ec-stat--live {
+  border-color: rgba(100, 220, 180, 0.35);
+  background: rgba(100, 220, 180, 0.06);
+}
+.ec-stat--live .ec-stat-value {
+  color: #a0f0d0;
+}
+.ec-stat--full {
+  border-color: #5c3310;
+  background: rgba(200, 144, 64, 0.1);
+}
+.ec-stat--full .ec-stat-value {
+  color: #e8c040;
+}
 
-/* ── Admin Button ─────────────────────────────────────────── */
-.ec-admin-btn {
+.ec-admin {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
-  padding: 6px 12px;
+  flex-shrink: 0;
+  padding: 0 11px;
   background: #1c1008;
   border: 1px solid #5c3310;
   border-radius: 4px;
   color: rgba(200, 144, 64, 0.55);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.06em;
   cursor: pointer;
-  flex-shrink: 0;
-  transition: color 0.12s, border-color 0.12s, box-shadow 0.12s;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
 }
-.ec-admin-btn:hover {
+.ec-admin:hover {
   color: #e8c040;
   border-color: #c89040;
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.2);
 }
-.ec-admin-btn:active { transform: scale(0.95); }
 
-/* ── Body — the panel's only scroll area ──────────────────── */
-.ec-body {
+/* ══ Columns ══════════════════════════════════════════════════ */
+.ec-columns {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  display: flex;
+  gap: 12px;
+  padding: 12px 12px 10px;
+  overflow: hidden;
+}
+.ec-col {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 14px 14px 12px;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
+  min-width: 0;
+  min-height: 0;
+  gap: 9px;
 }
-.ec-body::-webkit-scrollbar {
-  width: 4px;
-}
-.ec-body::-webkit-scrollbar-track {
-  background: #111;
-}
-.ec-body::-webkit-scrollbar-thumb {
-  background: #5c3310;
-  border-radius: 2px;
+/* Even halves. The two hold the same number of cards at every ledger rank, and
+   a contract needs the width more than the field does — its breakdown lines put
+   a label and a figure on one row. */
+.ec-col--field,
+.ec-col--offers {
+  flex: 1;
 }
 
-/* ── Section ──────────────────────────────────────────────── */
-.ec-section { display: flex; flex-direction: column; gap: 11px; }
-
-/* Section headlines — big glowing titles (no box, so they can't be mistaken
-   for cards), color-coded with a gradient underline; click to collapse */
-.ec-section-banner {
+.ec-col-head {
   --sec-c: #e8c040;
   position: relative;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 2px 2px 10px;
-  cursor: pointer;
-  user-select: none;
+  gap: 8px;
+  padding: 0 2px 8px;
+  flex-shrink: 0;
 }
-.ec-section-banner::after {
+.ec-col-head::after {
   content: '';
   position: absolute;
   left: 0;
@@ -783,553 +505,190 @@ export default defineComponent({
   bottom: 0;
   height: 2px;
   border-radius: 2px;
-  background: linear-gradient(to right, var(--sec-c), color-mix(in srgb, var(--sec-c) 35%, transparent) 55%, transparent);
+  background: linear-gradient(
+    to right,
+    var(--sec-c),
+    color-mix(in srgb, var(--sec-c) 35%, transparent) 55%,
+    transparent
+  );
 }
-.ec-section-banner--active { --sec-c: #64dcb4; }
-.ec-section-banner--active .ec-banner-ico,
-.ec-section-banner--active .ec-banner-title,
-.ec-section-banner--active .ec-banner-chevron { color: #a0f0d0; }
-.ec-section-banner--offers { --sec-c: #e8c040; }
-.ec-section-banner--offers .ec-banner-ico,
-.ec-section-banner--offers .ec-banner-title,
-.ec-section-banner--offers .ec-banner-chevron { color: #e8c040; }
-.ec-section-banner:hover .ec-banner-title {
-  text-shadow: 0 0 18px color-mix(in srgb, var(--sec-c) 75%, transparent);
+.ec-col-head--field {
+  --sec-c: #64dcb4;
 }
-.ec-banner-chevron {
+.ec-col-head--field .ec-col-ico,
+.ec-col-head--field .ec-col-title {
+  color: #a0f0d0;
+}
+.ec-col-head--offers .ec-col-ico,
+.ec-col-head--offers .ec-col-title {
+  color: #e8c040;
+}
+.ec-col-ico {
+  flex-shrink: 0;
+}
+.ec-col-title {
   font-size: 15px;
-  line-height: 1;
-  opacity: 0.8;
-  transition: transform 0.2s;
-  flex-shrink: 0;
-}
-.ec-banner-chevron--collapsed { transform: rotate(-90deg); }
-.ec-banner-ico {
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--sec-c) 50%, transparent));
-}
-.ec-banner-title {
-  font-size: 20px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
   line-height: 1;
-  text-shadow: 0 0 12px color-mix(in srgb, var(--sec-c) 45%, transparent);
-  transition: text-shadow 0.15s;
 }
-.ec-banner-count {
-  font-size: 13px;
+.ec-col-count {
+  font-size: 12px;
   font-weight: 700;
-  color: rgba(230, 220, 196, 0.5);
+  color: rgba(230, 220, 196, 0.45);
   font-variant-numeric: tabular-nums;
-  align-self: flex-end;
-  padding-bottom: 2px;
 }
-.ec-banner-spacer { flex: 1; }
 
-/* ── Bulk Action Buttons ──────────────────────────────────── */
-.ec-bulk-btn {
+.ec-bulk {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 16px;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 6px 12px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  flex-shrink: 0;
   position: relative;
   overflow: visible;
-  transition: box-shadow 0.15s, opacity 0.15s;
   white-space: nowrap;
+  transition:
+    box-shadow 0.15s,
+    opacity 0.15s;
 }
-.ec-bulk-btn--muted { opacity: 0.38; cursor: not-allowed; }
-.ec-bulk-btn--send {
+.ec-bulk.is-muted {
+  opacity: 0.36;
+  cursor: not-allowed;
+}
+.ec-bulk--send {
   background: linear-gradient(to bottom, #7a5c20, #5c3e10);
   border: 1px solid #c9a84c;
   color: #e8c040;
 }
-.ec-bulk-btn--send:not(.ec-bulk-btn--muted):hover {
+.ec-bulk--send:not(.is-muted):hover {
   box-shadow: 0 0 12px rgba(201, 168, 76, 0.4);
 }
-.ec-bulk-btn--send:not(.ec-bulk-btn--muted):active { transform: scale(0.95); }
-
-/* Collect All */
-.ec-bulk-btn--collect {
+.ec-bulk--collect {
   background: linear-gradient(to bottom, #2a5c3a, #1a3c24);
   border: 1px solid rgba(100, 220, 180, 0.3);
   color: rgba(100, 220, 180, 0.6);
 }
-.ec-bulk-btn--collect.is-ready {
+.ec-bulk--collect.is-ready {
   background: linear-gradient(to bottom, #2e7a4e, #1e5433);
   border-color: #64dcb4;
   color: #a0f0d0;
-  animation: collect-pulse 2s ease-in-out infinite;
 }
-.ec-bulk-btn--collect.is-ready:hover { box-shadow: 0 0 16px rgba(100, 220, 180, 0.5); }
-.ec-bulk-btn--collect.is-ready:active { transform: scale(0.95); }
-.ec-bulk-btn--collect.is-flashing { animation: collect-flash 0.55s ease forwards; }
-@keyframes collect-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(100, 220, 180, 0); }
-  50%       { box-shadow: 0 0 10px 2px rgba(100, 220, 180, 0.4); }
+.ec-bulk--collect.is-ready:hover {
+  box-shadow: 0 0 16px rgba(100, 220, 180, 0.5);
 }
-@keyframes collect-flash {
-  0%   { background: linear-gradient(to bottom, #2e7a4e, #1e5433); }
-  30%  { background: linear-gradient(to bottom, #52c890, #2e8a5a); box-shadow: 0 0 20px rgba(100, 220, 180, 0.7); }
-  100% { background: linear-gradient(to bottom, #2e7a4e, #1e5433); box-shadow: none; }
+.ec-bulk--collect.is-flashing {
+  animation: ec-flash 0.55s ease forwards;
 }
-.ec-bulk-btn--collect :deep(.rpg-notify-badge) { top: -6px; right: -6px; }
+.ec-bulk:not(.is-muted):active {
+  transform: scale(0.96);
+}
+@keyframes ec-flash {
+  0% {
+    background: linear-gradient(to bottom, #2e7a4e, #1e5433);
+  }
+  30% {
+    background: linear-gradient(to bottom, #52c890, #2e8a5a);
+  }
+  100% {
+    background: linear-gradient(to bottom, #2e7a4e, #1e5433);
+  }
+}
+.ec-bulk--collect :deep(.rpg-notify-badge) {
+  top: -6px;
+  right: -6px;
+}
 
-/* ── Active Mission Cards ─────────────────────────────────── */
-.ec-active-list { display: flex; flex-direction: column; gap: 10px; }
-.ec-active-card {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid;
-  border-radius: 4px;
+.ec-col-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* the picker pops out of a card and must not be clipped horizontally */
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
-.ec-active-card--success { background: #0e1a0e; border-color: rgba(82, 184, 48, 0.3); }
-.ec-active-card--failure { background: #1a0e0e; border-color: rgba(204, 96, 80, 0.3); }
-.ec-active-card--running { background: #1a1008; border-color: rgba(92, 51, 16, 0.5); }
-
-.ec-active-accent {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
+.ec-col-body::-webkit-scrollbar {
+  width: 4px;
 }
-.ec-active-accent--success { background: linear-gradient(to right, #2e7a1a, #52b830, #2e7a1a); opacity: 0.7; }
-.ec-active-accent--failure { background: linear-gradient(to right, #a04030, #cc6050, #a04030); opacity: 0.7; }
-.ec-active-accent--running { background: linear-gradient(to right, transparent, var(--exp-p, #e8c040), transparent); opacity: 0.5; }
-
-.ec-active-body {
+.ec-col-body::-webkit-scrollbar-track {
+  background: #111;
+}
+.ec-col-body::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 2px;
+}
+.ec-stack {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 13px 15px 12px;
-}
-.ec-active-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.ec-active-name-wrap { display: flex; align-items: center; gap: 9px; min-width: 0; }
-.ec-active-ico { color: #c89040; flex-shrink: 0; }
-.ec-active-name {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.92);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ec-active-time {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 14px;
-  font-weight: 800;
-  color: rgba(200, 144, 64, 0.75);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-.ec-active-time-ico { color: rgba(200, 144, 64, 0.5); }
-
-/* Status badge */
-.ec-status-badge {
-  flex-shrink: 0;
-  padding: 4px 12px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: 1px solid;
-  border-radius: 4px;
-}
-.ec-status-badge--success { background: rgba(82, 184, 48, 0.12); border-color: rgba(82, 184, 48, 0.35); color: #52b830; }
-.ec-status-badge--failure { background: rgba(204, 96, 80, 0.12); border-color: rgba(204, 96, 80, 0.35); color: #cc6050; }
-
-/* Champion tags — same look as the quickstart preview rows */
-.ec-champ-tags { display: flex; flex-wrap: wrap; gap: 8px 16px; }
-.ec-champ-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #e8c040;
-}
-.ec-champ-img {
-  width: 32px;
-  height: 32px;
-  object-fit: cover;
-  object-position: center top;
-  border-radius: 50%;
-  border: 1px solid rgba(200, 144, 64, 0.4);
-  image-rendering: auto;
-  flex-shrink: 0;
 }
 
-/* Reward + collect footer */
-.ec-active-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.ec-active-reward { display: flex; align-items: center; gap: 7px; }
-.ec-active-reward-amount {
-  font-size: 19px;
-  font-weight: 800;
-  color: #ffd060;
-  font-variant-numeric: tabular-nums;
-}
-.ec-active-reward-amount--fail { color: #cc6050; }
-.ec-active-reward-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(200, 144, 64, 0.55);
-}
-.ec-collect-btn {
-  padding: 8px 24px;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.15s;
-  flex-shrink: 0;
-}
-.ec-collect-btn:active { transform: scale(0.95); }
-.ec-collect-btn--fail {
-  background: #2a1410;
-  border: 1px solid rgba(204, 96, 80, 0.4);
-  color: #cc6050;
-}
-.ec-collect-btn--fail:hover { box-shadow: 0 0 10px rgba(204, 96, 80, 0.3); }
-
-/* Progress */
-.ec-progress { display: flex; flex-direction: column; gap: 6px; }
-.ec-progress-track {
-  width: 100%;
-  height: 12px;
-  background: #111008;
-  border: 1px solid rgba(92, 51, 16, 0.5);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.ec-progress-fill {
-  height: 100%;
-  background: linear-gradient(to right, var(--exp-d, #c89040), var(--exp-p, #e8c040));
-  transition: width 1s linear;
-  box-shadow: 0 0 8px rgba(var(--exp-glow, 200, 144, 64), 0.5);
-}
-.ec-progress-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.5);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Warning / Empty ──────────────────────────────────────── */
-.ec-warning {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #1a0a08;
-  border: 1px solid #cc6050;
-  border-radius: 4px;
-  color: #cc6050;
-  padding: 11px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-.ec-warning-ico { color: #e8c040; flex-shrink: 0; }
+/* ── Empty states ─────────────────────────────────────────── */
 .ec-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 44px 0 40px;
-  color: rgba(200, 144, 64, 0.35);
-  font-size: 14px;
-  font-weight: 700;
+  gap: 7px;
+  padding: 46px 12px;
+  text-align: center;
+}
+.ec-empty-ico {
+  color: rgba(200, 144, 64, 0.24);
+}
+.ec-empty-title {
+  font-size: 13px;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  text-align: center;
+  color: rgba(200, 144, 64, 0.45);
 }
-.ec-empty-icon { font-size: 30px; opacity: 0.35; margin-bottom: 4px; }
 .ec-empty-sub {
-  font-size: 15px;
-  font-weight: 800;
-  color: rgba(200, 144, 64, 0.6);
-  letter-spacing: 0.04em;
-  text-transform: none;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Offer list (one large row per offer) ─────────────────── */
-.ec-offer-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* ── Available Card ───────────────────────────────────────── */
-.ec-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, rgba(var(--exp-glow, 200,144,64), 0.035) 0%, #1a1008 38%);
-  border: 1px solid color-mix(in srgb, var(--exp-d, #7a4e20) 55%, #241408);
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 1px rgba(62, 32, 10, 0.6);
-  overflow: visible;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.ec-card--available:hover {
-  border-color: color-mix(in srgb, var(--exp-p, #e8c040) 75%, transparent);
-  box-shadow: inset 0 0 0 1px rgba(62, 32, 10, 0.6), 0 0 14px rgba(var(--exp-glow, 232,192,64), 0.18);
-}
-.ec-card--available:hover .ec-card-ico {
-  opacity: 1;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6))
-    drop-shadow(0 0 12px rgba(var(--exp-glow, 200, 144, 64), 0.5));
-  transform: scale(1.06);
-}
-.ec-card--locked {
-  opacity: 0.52;
-  filter: grayscale(35%);
-  border-color: #5c2a10;
-}
-.ec-card--expiring { animation: pulse-border 1.4s ease-in-out infinite; }
-@keyframes pulse-border {
-  0%, 100% { box-shadow: inset 0 0 0 1px #3e200a, 0 0 6px rgba(204, 96, 80, 0.2); }
-  50%       { box-shadow: inset 0 0 0 1px #3e200a, 0 0 14px rgba(204, 96, 80, 0.5); }
-}
-.ec-card-accent {
-  height: 2px;
-  background: linear-gradient(to right, transparent, var(--exp-p, #e8c040) 30%, var(--exp-p, #e8c040) 70%, transparent);
-  opacity: 0.45;
-  flex-shrink: 0;
-  border-radius: 2px 2px 0 0;
-}
-
-/* Tier badge — inline next to the name */
-.ec-tier-badge {
-  flex-shrink: 0;
-  padding: 3px 9px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  border-radius: 4px;
-  border: 1px solid;
-  color: var(--exp-p, #e8c040);
-  border-color: var(--exp-d, #c89040);
-  background: rgba(var(--exp-glow, 200,144,64), 0.15);
-}
-.ec-tier-badge--epic { box-shadow: 0 0 8px rgba(var(--exp-glow, 232,192,64), 0.5); }
-
-/* Card body — icon | info | quickstart */
-.ec-card-body {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 13px 15px;
-  flex: 1;
-}
-/* Frameless icon — floats on the card with a soft glow in the expedition color */
-.ec-card-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 64px;
-  flex-shrink: 0;
-  background: radial-gradient(circle, rgba(var(--exp-glow, 200, 144, 64), 0.12) 0%, transparent 68%);
-}
-.ec-card-ico {
-  opacity: 0.85;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6))
-    drop-shadow(0 0 6px rgba(var(--exp-glow, 200, 144, 64), 0.2));
-  transition: filter 0.15s, transform 0.15s, opacity 0.15s;
-}
-.ec-card-info { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
-.ec-card-top { display: flex; align-items: center; gap: 9px; min-width: 0; }
-.ec-card-name {
-  font-size: 17px;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--exp-p, #e8c040) 62%, #cfc2a4);
-  letter-spacing: 0.02em;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ec-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.ec-meta-sep { color: rgba(200, 144, 64, 0.3); font-size: 13px; line-height: 1; }
-.ec-card-reward { display: flex; align-items: center; gap: 5px; }
-.ec-chime-img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-.ec-reward-amount { font-size: 16px; font-weight: 800; color: #ffd060; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
-.ec-reward-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: rgba(200, 144, 64, 0.55);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.ec-card-duration {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 14px;
-  font-weight: 700;
-  color: rgba(200, 144, 64, 0.7);
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.ec-dur-ico { color: rgba(200, 144, 64, 0.55); flex-shrink: 0; }
-.ec-card-roles { display: flex; align-items: center; gap: 4px; }
-.ec-role-img {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  image-rendering: auto;
-  flex-shrink: 0;
-}
-.ec-avail-timer {
-  display: flex;
-  align-items: center;
-  gap: 5px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--exp-p, #e8c040);
-  letter-spacing: 0.03em;
-  opacity: 0.8;
-  font-variant-numeric: tabular-nums;
-}
-.ec-avail-timer--expiring { color: #cc6050; opacity: 1; font-weight: 800; }
-
-/* Quickstart column */
-.ec-card-side {
-  flex-shrink: 0;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-}
-.ec-qs-chance {
-  text-align: center;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
-}
-.ec-qs-chance--good { color: #52b830; }
-.ec-qs-chance--mid { color: #e8c040; }
-.ec-qs-chance--bad { color: #cc6050; }
-.ec-qs-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 11px 22px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: box-shadow 0.18s, background 0.18s;
-  white-space: nowrap;
-}
-.ec-qs-ico { color: #e8c040; flex-shrink: 0; }
-.ec-qs-btn--active {
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  border: 1px solid #6ec040;
-  color: #fff;
-}
-.ec-qs-btn--active:hover { box-shadow: 0 0 14px rgba(82, 184, 48, 0.55), 0 0 4px rgba(82, 184, 48, 0.3); }
-.ec-qs-btn--active:active { transform: scale(0.97); }
-.ec-qs-btn--disabled {
-  background: #1c1408;
-  border: 1px solid #3e200a;
-  color: rgba(200, 144, 64, 0.25);
-  cursor: not-allowed;
-}
-
-/* Auto-selected crew — always visible on the card */
-.ec-card-crew {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 16px;
-}
-.ec-crew-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-.ec-crew-img {
-  width: 28px;
-  height: 28px;
-  object-fit: cover;
-  object-position: center top;
-  border-radius: 50%;
-  border: 1px solid rgba(200, 144, 64, 0.4);
-  image-rendering: auto;
-  flex-shrink: 0;
-}
-.ec-crew-img--role {
-  padding: 5px;
-  object-fit: contain;
-  opacity: 0.6;
-  border-style: dashed;
-}
-.ec-crew-name {
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.ec-crew-name--missing { color: rgba(204, 96, 80, 0.7); font-style: italic; }
-.ec-crew-share {
-  font-size: 12px;
-  font-weight: 800;
-  color: #ffd060;
+  color: rgba(200, 144, 64, 0.35);
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Card transitions (send / collect closure) ───────────── */
-.ec-card-fly-enter-active { transition: opacity 0.25s ease, transform 0.25s ease; }
-.ec-card-fly-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
-.ec-card-fly-enter-from { opacity: 0; transform: translateY(8px) scale(0.96); }
-.ec-card-fly-leave-to { opacity: 0; transform: translateY(-8px) scale(0.9); }
+/* ── Card transitions ─────────────────────────────────────── */
+.ec-fly-enter-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.ec-fly-leave-active {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+.ec-fly-enter-from {
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+}
+.ec-fly-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.9);
+}
 
-/* ── Floating chime-collect pops ──────────────────────────── */
-.ec-chime-pops {
+/* ── Chime pops ───────────────────────────────────────────── */
+.ec-pops {
   position: absolute;
-  top: 46px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 62px;
+  left: 30%;
   z-index: 30;
   pointer-events: none;
 }
-.ec-chime-pop {
+.ec-pop {
   position: absolute;
   left: 50%;
   bottom: 0;
@@ -1338,12 +697,24 @@ export default defineComponent({
   color: #e8c040;
   white-space: nowrap;
   -webkit-text-stroke: 1.5px #3e200a;
-  text-shadow: 0 0 6px #e8c040, 0 0 14px #c89040, 0 0 28px rgba(232, 192, 64, 0.5);
-  animation: ec-chime-float 0.85s ease-out forwards;
+  text-shadow:
+    0 0 6px #e8c040,
+    0 0 14px #c89040,
+    0 0 28px rgba(232, 192, 64, 0.5);
+  animation: ec-pop-float 0.85s ease-out forwards;
 }
-@keyframes ec-chime-float {
-  0%   { opacity: 0; transform: translateX(calc(-50% + var(--pop-dx, 0px))) translateY(0) scale(0.8); }
-  15%  { opacity: 1; transform: translateX(calc(-50% + var(--pop-dx, 0px))) translateY(-12px) scale(1.12); }
-  100% { opacity: 0; transform: translateX(calc(-50% + var(--pop-dx, 0px))) translateY(-58px) scale(0.9); }
+@keyframes ec-pop-float {
+  0% {
+    opacity: 0;
+    transform: translateX(calc(-50% + var(--pop-dx, 0px))) translateY(0) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(calc(-50% + var(--pop-dx, 0px))) translateY(-12px) scale(1.12);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc(-50% + var(--pop-dx, 0px))) translateY(-58px) scale(0.9);
+  }
 }
 </style>

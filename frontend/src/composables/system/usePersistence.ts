@@ -186,6 +186,7 @@ export function usePersistence() {
         totalExpeditionsSucceeded: expeditionStore.totalExpeditionsSucceeded,
         totalExpeditionsFailed: expeditionStore.totalExpeditionsFailed,
         totalExpeditionChimes: expeditionStore.totalExpeditionChimes,
+        ledgerCompleted: expeditionStore.ledgerCompleted,
       },
       inventory: {
         collectedMaterials: { ...inventoryStore.collectedMaterials },
@@ -528,6 +529,16 @@ export function usePersistence() {
           expeditionStore.availableExpeditions = saved.expeditions.availableExpeditions
         if (typeof saved.expeditions.nextSpawnAt === 'number')
           expeditionStore.nextSpawnAt = saved.expeditions.nextSpawnAt
+
+        // Offers saved before hazards existed carry neither field. The chance
+        // breakdown reads both unconditionally, so fill them in rather than let a
+        // pre-update save render a mission with an undefined threshold — an offer
+        // lives five minutes, so no-hazard stragglers clear themselves out.
+        for (const slot of expeditionStore.availableExpeditions) {
+          if (!Array.isArray(slot.hazards)) slot.hazards = []
+          if (typeof slot.hazardThreshold !== 'number') slot.hazardThreshold = 0
+        }
+
         const completed = expeditionStore.completedExpeditions
         expeditionStore.totalExpeditionsStarted =
           saved.expeditions.totalExpeditionsStarted ?? completed.length
@@ -538,6 +549,13 @@ export function usePersistence() {
           saved.expeditions.totalExpeditionsFailed ??
           completed.filter((e) => e.status === 'failure').length
         expeditionStore.totalExpeditionChimes = saved.expeditions.totalExpeditionChimes ?? 0
+        // Ledger rank is earned by RESOLVING missions, so a save from before the
+        // ledger existed is credited with everything it already finished rather
+        // than starting the player back at Wayfinder.
+        expeditionStore.ledgerCompleted =
+          saved.expeditions.ledgerCompleted ??
+          (saved.expeditions.totalExpeditionsSucceeded ?? 0) +
+            (saved.expeditions.totalExpeditionsFailed ?? 0)
       }
 
       // Restore inventoryStore
