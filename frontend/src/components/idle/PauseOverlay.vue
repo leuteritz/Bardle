@@ -359,7 +359,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, toRaw, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { onKeybinding } from '@/composables/system/useKeybindings'
@@ -367,6 +367,7 @@ import { useFitScale } from '@/composables/ui/useFitScale'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
+import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
@@ -396,6 +397,7 @@ import {
 } from '@/config/constants'
 import type { PlanetType } from '@/types'
 import { splitDuration } from '@/utils/ui/format'
+import { starRemainingMs, starTotalMs } from '@/utils/orbit/starLifetime'
 import { pauseDustStyle } from '@/utils/fx/particleField'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
@@ -421,6 +423,7 @@ const { scale: panelScale } = useFitScale(stageEl, panelEl, {
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
 const playerStore = usePlayerStore()
+const planetBossStore = usePlanetBossStore()
 const planetShopStore = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
 
@@ -541,6 +544,12 @@ const accumulatedChimes = computed(() => {
 // Während der Pause laufen Resource-Stars weiter: sie werden per Passivschaden
 // bekämpft und despawnen bei Timer-Ende. Hier live pro Stern: Restsekunden bis
 // zum Verschwinden + Planeten (übrig/gesamt). pauseTick treibt die 1s-Reaktivität.
+//
+// Die Restzeit kommt aus `starRemainingMs` — derselben Rechnung, die auch die
+// Star-Timer-Bars im Header anstellen. Vorher stand hier nur die eigene
+// Despawn-Frist des Sterns (45 s); tatsächlich läuft ihr die Enrage-Uhr seiner
+// Bosse (ab 30 s) davon, weshalb das Overlay noch zählte, als der Stern längst
+// weg war.
 interface PauseResourceStar {
   id: string
   secs: number
@@ -556,15 +565,18 @@ interface PauseResourceStar {
 const activeResourceStars = computed<PauseResourceStar[]>(() => {
   void pauseTick.value
   const now = Date.now()
+  // Ungetrackt gelesen: die Bosse nehmen während der Pause laufend Passivschaden,
+  // ein reaktiver Zugriff ließe den ganzen Abschnitt bei jedem Treffer neu
+  // rendern. Getaktet wird ausschließlich über pauseTick (1 s).
+  const bosses = toRaw(planetBossStore.activeBosses)
+  const bossTimer = (planetId: string) => bosses.find((b) => b.planetId === planetId)
+
   return starGroupStore.activeStars
     .filter((s) => s.starType === 'resource')
     .map((s) => {
       const remainingPlanets = s.planetSlots.filter((p) => !p.cleared).length
-      const durationMs = s.durationMs ?? 0
-      const remainingMs =
-        s.spawnedAt !== undefined && durationMs > 0
-          ? Math.max(0, s.spawnedAt + durationMs - now)
-          : 0
+      const remainingMs = starRemainingMs(s, now, bossTimer)
+      const durationMs = starTotalMs(s, bossTimer)
       const [r, g, b] = s.starColor
       return {
         id: s.id,

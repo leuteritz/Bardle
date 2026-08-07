@@ -180,6 +180,8 @@ import {
 } from '@/config/constants'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import { starEclipseState } from '@/utils/orbit/foregroundGate'
+import { starRemainingMs, starTotalMs } from '@/utils/orbit/starLifetime'
+import type { StarBossTimer } from '@/utils/orbit/starLifetime'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { centerArcSideWidth } from '@/utils/orbit/geometry'
 import StarTimerCenterSeam from './StarTimerCenterSeam.vue'
@@ -557,10 +559,12 @@ function getStarRoleColor(star: StarGroup): string | null {
   return role ? ROLE_COLORS[role] : null
 }
 
-function getBossRemainingMs(planetId: string): number | null {
-  const boss = bossSnapshot.value.get(planetId)
-  if (!boss) return null
-  return Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
+/**
+ * Enrage-Uhren für `starRemainingMs` — aus dem ungetrackten Snapshot, damit die
+ * Bars nicht bei jedem Schadensereignis neu rechnen (siehe refreshBossSnapshot).
+ */
+function bossTimerLookup(planetId: string): StarBossTimer | undefined {
+  return bossSnapshot.value.get(planetId)
 }
 
 /**
@@ -609,28 +613,6 @@ function buildPlanetDots(star: StarGroup): PlanetDot[] {
   return ordered
 }
 
-function getSharedStarRemainingMs(star: {
-  starType: StarType
-  planetSlots: { planetId: string; cleared: boolean }[]
-  spawnedAt?: number
-  durationMs?: number
-}): number {
-  const activePlanetIds = star.planetSlots.filter((p) => !p.cleared).map((p) => p.planetId)
-
-  const bossRemainings = activePlanetIds
-    .map((planetId) => getBossRemainingMs(planetId))
-    .filter((v): v is number => v !== null)
-
-  if (bossRemainings.length > 0) {
-    return Math.min(...bossRemainings)
-  }
-
-  if (star.spawnedAt !== undefined && star.durationMs !== undefined) {
-    return Math.max(0, star.spawnedAt + star.durationMs - now.value)
-  }
-
-  return 0
-}
 
 const sortedEntries = computed<BarEntry[]>(() => {
   const raw: Omit<
@@ -672,16 +654,10 @@ const sortedEntries = computed<BarEntry[]>(() => {
     const hpLabels = planets.filter((p) => p.showHp).reverse()
 
     if (star.starType === 'resource') {
-      const remaining = allCleared ? 0 : getSharedStarRemainingMs(star)
-      const durationFromBoss =
-        star.planetSlots
-          .filter((p) => !p.cleared)
-          .map((p) => bossSnapshot.value.get(p.planetId)?.enrageTimerMs)
-          .find((v): v is number => typeof v === 'number' && v > 0) ??
-        star.durationMs ??
-        0
+      const remaining = allCleared ? 0 : starRemainingMs(star, nowTs, bossTimerLookup)
+      const totalMs = starTotalMs(star, bossTimerLookup)
 
-      const fillRatio = durationFromBoss > 0 ? remaining / durationFromBoss : 0
+      const fillRatio = totalMs > 0 ? remaining / totalMs : 0
 
       if (!allCleared || remaining > 0) {
         raw.push({
