@@ -323,23 +323,27 @@ const breakdown = computed(() => {
 .core:focus-visible .core-shares {
   opacity: 1;
 }
-/* Bare figures, straight on the metal — no plate, no border, nothing between the
-   number and its arc. That costs one thing and buys another.
+/* The figure is its role's colour, lit, with no plate under it — the contrast it
+   needs comes from a dark outline ON THE GLYPH instead of a box behind it. That
+   keeps the ring whole (the plate this replaced covered 36 % of the
+   circumference, a third of the gauge hidden behind its own labels) while the
+   number still reads as the role's own colour rather than as ink.
 
-   The cost: a figure printed on its own role's arc cannot ALSO be that role's
-   colour at full saturation, because same hue on same hue is not a contrast. So
-   it takes the role's colour as a dark SHADE of it — the same inversion the
-   level tab on every name plate uses, dark ink on lit metal. The hue is still
-   the role's and the arc underneath states it at full strength anyway, so
-   nothing is lost in identifying whose figure this is.
+   An outline is the only way to have both. Lit role colour straight on the
+   matching arc is same-hue-on-same-hue: mixed toward white it measures 2.7 : 1
+   on Top and 1.5 : 1 on Support, i.e. not readable at any mix. With the outline
+   the figure no longer sits on its arc at all, it sits on its own dark edge, so
+   the arc underneath stops mattering and the fill can stay bright.
 
-   What it buys: the ring stays whole. The plate this replaced covered 36 % of
-   the circumference — a third of the gauge hidden behind its own labels.
+   `paint-order: stroke fill` paints the outline first and the letterform over
+   it, so the stroke only ever grows OUTWARD — without it half of its 2px would
+   be cut out of the stem of a 12px glyph and the figure would come out spindly.
+   2px is where it stopped: at 2.6 the figures read as black shapes with a
+   coloured core, and the fill was lifted to 46 % white in the same pass so the
+   colour carries the number and the edge only separates it.
 
-   22 % is where the mix stops. Measured against the five arcs it lands at
-   5.4 : 1 (Top, the tightest), 6.5, 9.0, 9.0 and 12.3 — all clear of 4.5 : 1
-   with the darkest role colour still leaving room. Raise it toward the arc for
-   more hue and Top falls under the line first. */
+   Static paint, no layout, no filter: the label box stays 23×12, well inside the
+   13.6px band, and the outline adds nothing to it. */
 .core-share {
   position: absolute;
   /* seat and tangent come inline — they are geometry, not style */
@@ -349,7 +353,9 @@ const breakdown = computed(() => {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  color: color-mix(in srgb, var(--arc-color) 22%, #050302);
+  color: color-mix(in srgb, #fff 46%, var(--arc-color));
+  -webkit-text-stroke: 2px rgba(5, 3, 1, 0.94);
+  paint-order: stroke fill;
   white-space: nowrap;
 }
 
