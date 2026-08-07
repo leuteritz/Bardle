@@ -6,6 +6,8 @@ import {
   ARC_GUIDE_MAX_EXTEND_DEG,
   ARC_GUIDE_PLANET_RADIUS_FRAC,
   ARC_GUIDE_STEP_DEG,
+  ORBIT_SIZE_LATE_GROWTH_DAMPING,
+  ORBIT_SIZE_SUN_SCALE_EXPONENT,
   ORBIT_SUN_GROWTH_FACTOR,
   ORBIT_SUN_SCALE_ANCHOR_RADIUS,
   ORBIT_TIERS,
@@ -80,20 +82,55 @@ export function getOrbitSunScale(sunRadius: number): number {
   return getOrbitSunRadius(sunRadius) / SUN_RADIUS
 }
 
+/** Sonnenskalierung am Kometen-Anker — dort knickt die Größenkurve ab. */
+const ORBIT_SIZE_ANCHOR_SUN_SCALE = ORBIT_SUN_SCALE_ANCHOR_RADIUS / SUN_RADIUS
+
+/**
+ * Größenfaktor eines Orbit-Körpers zu einer gegebenen Sonnenskalierung. Einzige
+ * Quelle für „wie groß wird ein Champion / Planet / Stern bei dieser Sonne" —
+ * alle drei müssen dieselbe Kurve fahren, sonst springt ein Champion in der
+ * Größe, sobald er auf einen Stern wechselt.
+ *
+ * Die Kurve knickt am Kometen-Anker, genau wie `getOrbitSunRadius` es für den
+ * Bahnradius tut: bis dahin `sunScale ** exponent` unverändert, darüber wird der
+ * Exponent zusätzlich mit `ORBIT_SIZE_LATE_GROWTH_DAMPING` gestaucht. Jede
+ * Sonnenphase bleibt damit sichtbar größer als die vorige, ohne dass die
+ * späten Phasen den Viewport zustellen.
+ *
+ * `exponent` ist die Grundkurve des Körpertyps: Champions und Planeten laufen
+ * gedämpft (`ORBIT_SIZE_SUN_SCALE_EXPONENT`), Sterne linear (1).
+ */
+export function getOrbitBodyScale(
+  sunScale: number,
+  exponent: number = ORBIT_SIZE_SUN_SCALE_EXPONENT,
+): number {
+  if (sunScale <= ORBIT_SIZE_ANCHOR_SUN_SCALE) return Math.pow(sunScale, exponent)
+  return (
+    Math.pow(ORBIT_SIZE_ANCHOR_SUN_SCALE, exponent) *
+    Math.pow(sunScale / ORBIT_SIZE_ANCHOR_SUN_SCALE, exponent * ORBIT_SIZE_LATE_GROWTH_DAMPING)
+  )
+}
+
 /**
  * Durchmesser der Sternkugel im Idle-Orbit (px). Endkampf-Sterne skalieren zwar
  * mit der Sonne, haben aber eine Mindestgröße — der Galaxieboss soll auch bei
  * kleiner Sonne episch wirken. Geteilt von der Darstellung (StarSystemComponent)
  * und den Abgangs-Effekten (useStarSystem → starVanishFx), damit der Effekt
  * exakt so groß startet wie der Stern, den er ersetzt.
+ *
+ * Sterne folgen der Sonne LINEAR (Exponent 1) statt gedämpft wie Champions und
+ * Planeten — das ist gewollt, ein Stern soll das größte Ding im Bild sein.
+ * Oberhalb des Kometen-Ankers greift trotzdem dieselbe Spätdämpfung, sonst
+ * würde er in den letzten Phasen unverhältnismäßig davonziehen.
  */
 export function starBodySize(type: StarType, sunScale: number): number {
-  if (type === 'champion') return ORBIT_TIERS.star[0].size * sunScale
-  if (type === 'resource') return ORBIT_TIERS.star[1].size * sunScale
+  const bodyScale = getOrbitBodyScale(sunScale, 1)
+  if (type === 'champion') return ORBIT_TIERS.star[0].size * bodyScale
+  if (type === 'resource') return ORBIT_TIERS.star[1].size * bodyScale
   if (type === 'boss_escort') {
-    return Math.max(STAR_BODY_SIZE_BOSS_ESCORT * sunScale, STAR_BODY_SIZE_BOSS_ESCORT_MIN)
+    return Math.max(STAR_BODY_SIZE_BOSS_ESCORT * bodyScale, STAR_BODY_SIZE_BOSS_ESCORT_MIN)
   }
-  return Math.max(STAR_BODY_SIZE_GALAXY_BOSS * sunScale, STAR_BODY_SIZE_GALAXY_BOSS_MIN)
+  return Math.max(STAR_BODY_SIZE_GALAXY_BOSS * bodyScale, STAR_BODY_SIZE_GALAXY_BOSS_MIN)
 }
 
 /**

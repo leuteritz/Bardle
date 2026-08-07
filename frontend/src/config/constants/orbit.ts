@@ -167,6 +167,20 @@ export const ORBIT_MAX_RX_VIEWPORT_FRACTION = 0.85
 export const ORBIT_MAX_RX_VIEWPORT_FILL = 0.9
 /** Exponent, mit dem Sprite-Größen der Sonnenskalierung folgen (<1 = gedämpft). */
 export const ORBIT_SIZE_SUN_SCALE_EXPONENT = 0.65
+/**
+ * Zusätzliche Dämpfung des Größenwachstums OBERHALB des Kometen-Ankers
+ * (`ORBIT_SUN_SCALE_ANCHOR_RADIUS`) — derselbe Knick, den `getOrbitSunRadius`
+ * dem Bahnradius gibt, nur eine Ebene weiter. Multipliziert dort den Exponenten
+ * jeder Körperkurve, also `0.65 → 0.48` für Champions/Planeten und `1 → 0.74`
+ * für Sterne; unterhalb des Ankers (Kometen-Stufen) ändert sich nichts.
+ *
+ * Ohne ihn verdoppelte sich jeder Körper von Spark bis Collapse und die späten
+ * Phasen wurden zugestellt. Mit ihm wächst er noch um Faktor 1,7 — je Phase
+ * spürbare +11 bis +12 %, aber Collapse fällt 21 % kleiner aus (Fläche −37 %).
+ * Niedriger setzen macht die Schritte irgendwann unmerklich: bei 0.55 bleiben
+ * nur noch +8 % je Phase.
+ */
+export const ORBIT_SIZE_LATE_GROWTH_DAMPING = 0.74
 /** relY-Schwelle, unterhalb derer ein Objekt hinter der Sonne steht. */
 export const ORBIT_BEHIND_REL_Y = -0.05
 /** relY-Band unterhalb der Schwelle, über das der Hinweisring aufblendet. */

@@ -173,7 +173,7 @@
 </template>
 
 <script lang="ts">
-import { getOrbitPos } from '@/utils/orbit/geometry'
+import { getOrbitBodyScale, getOrbitPos } from '@/utils/orbit/geometry'
 import { Icon } from '@iconify/vue'
 import { defineComponent, ref, shallowRef, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
@@ -195,7 +195,6 @@ import {
   PLANET_BUFF_MARK_GAP_PX,
   PLANET_BUFF_URGENT_SECS,
   ORBIT_MAX_RX_VIEWPORT_FRACTION,
-  ORBIT_SIZE_SUN_SCALE_EXPONENT,
   ORBIT_BEHIND_REL_Y,
   ORBIT_BEHIND_FADE_BAND,
   ORBIT_BEHIND_SPEED_LERP,
@@ -676,7 +675,7 @@ export default defineComponent({
         const slotIdx = purchased.indexOf(slot)
         const tier = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length]
         const orbitColor = tier.color
-        const baseSize = tier.size * Math.pow(sunScale, ORBIT_SIZE_SUN_SCALE_EXPONENT)
+        const baseSize = tier.size * getOrbitBodyScale(sunScale)
 
         const tiltRad = tier.tiltRad
         const rawRy = tier.ry * sunScale * orbitScaleVal

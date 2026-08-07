@@ -139,7 +139,7 @@
 </template>
 
 <script lang="ts">
-import { getOrbitPos } from '@/utils/orbit/geometry'
+import { getOrbitBodyScale, getOrbitPos } from '@/utils/orbit/geometry'
 import { defineComponent, ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
@@ -168,7 +168,6 @@ import {
   ORBIT_MIN_RY_SUN_FACTOR_ROLELESS,
   ORBIT_MIN_RY_VIEWPORT_FACTOR_ROLELESS,
   ORBIT_MAX_RX_VIEWPORT_FRACTION,
-  ORBIT_SIZE_SUN_SCALE_EXPONENT,
   ORBIT_BEHIND_REL_Y,
   ORBIT_BEHIND_FADE_BAND,
   ORBIT_BEHIND_SPEED_LERP,
@@ -509,8 +508,7 @@ export default defineComponent({
         const tiltDeg = roleTier ? roleTier.tiltDeg : planetTier.tiltDeg
         const orbitColor = roleTier ? roleTier.color : planetTier.color
         const baseSize =
-          (roleTier ? roleTier.championSize : planetTier.size) *
-          Math.pow(sunScale, ORBIT_SIZE_SUN_SCALE_EXPONENT)
+          (roleTier ? roleTier.championSize : planetTier.size) * getOrbitBodyScale(sunScale)
         const orbitSpeed = roleTier ? roleTier.speed : c.baseSpeed
 
         let ls = localStates.get(c.name)

@@ -5,7 +5,13 @@ import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { activePlanetPositions, activeStarCombatState } from '@/utils/orbit/liveState'
-import { getOrbitPos, orbitBehindArc, orbitBehindProgress, starBodySize } from '@/utils/orbit/geometry'
+import {
+  getOrbitBodyScale,
+  getOrbitPos,
+  orbitBehindArc,
+  orbitBehindProgress,
+  starBodySize,
+} from '@/utils/orbit/geometry'
 import { playStarVanishFx } from '@/utils/fx/starVanishFx'
 import {
   STAR_SPAWN_DURATION_MS,
@@ -17,7 +23,6 @@ import {
   ORBIT_MIN_RY_SUN_FACTOR_BY_ROLE,
   ORBIT_MIN_RY_VIEWPORT_FACTOR_BY_ROLE,
   ORBIT_MAX_RX_VIEWPORT_FRACTION,
-  ORBIT_SIZE_SUN_SCALE_EXPONENT,
   ORBIT_BEHIND_REL_Y,
   ORBIT_BEHIND_FADE_BAND,
   ORBIT_BEHIND_SPEED_LERP,
@@ -398,7 +403,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
             ? STAR_PLANET_SIZE_GALAXY_BOSS
             : slot.isChampionPlanet
               ? STAR_PLANET_SIZE_CHAMPION
-              : STAR_PLANET_SIZE_NORMAL) * Math.pow(sunScale, ORBIT_SIZE_SUN_SCALE_EXPONENT)
+              : STAR_PLANET_SIZE_NORMAL) * getOrbitBodyScale(sunScale)
 
         const pRelY = (py - sy) / Math.max(targetSlotRy, 1)
         const pIsBehind = pRelY < ORBIT_BEHIND_REL_Y
