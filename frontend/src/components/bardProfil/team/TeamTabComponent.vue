@@ -402,6 +402,29 @@ function openExpedition() {
   openDestination('expedition')
 }
 
+/**
+ * The board's two entrances toggle: clicking the button whose rail is already
+ * up closes it again, so the same button both opens and dismisses. Only from
+ * the BOARD — openShop(role) coming from a role card is a request for a
+ * specific role and must never be answered by closing anything.
+ */
+function toggleShop() {
+  if (activeDestination.value === 'shop') closeDestination()
+  else openShop('all')
+}
+
+function toggleExpedition() {
+  if (activeDestination.value === 'expedition') closeDestination()
+  else openExpedition()
+}
+
+/** Which board entrance is currently showing its rail — lights that button. */
+const boardActiveAction = computed<'shop' | 'expedition' | null>(() =>
+  activeDestination.value === 'shop' || activeDestination.value === 'expedition'
+    ? activeDestination.value
+    : null,
+)
+
 function openSynergies() {
   activeDestination.value = null
   selectedRole.value = null
@@ -605,11 +628,12 @@ onUnmounted(() => {
       :side-panel-width="sidePanelWidth"
       :search-highlights="searchHighlights"
       :hovered-ally="spotlightAlly"
+      :active-action="boardActiveAction"
       @select-role="selectRole"
       @select-ally="selectAlly"
       @hover-ally="boardHoveredAlly = $event"
-      @open-shop="openShop('all')"
-      @open-expedition="openExpedition"
+      @open-shop="toggleShop"
+      @open-expedition="toggleExpedition"
       @open-synergies="openSynergies"
       @deselect="dismissPanels"
     />

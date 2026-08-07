@@ -54,6 +54,12 @@ const props = defineProps<{
   searchHighlights?: string[]
   /** Ally sub-slot hovered in the details panel — spotlights that satellite of the selected role. */
   hoveredAlly?: number | null
+  /**
+   * Which of the board's two entrances currently has its rail up, so that
+   * button can show it is the open one. The tab owns the answer — it is the
+   * only place that knows what the rail holds.
+   */
+  activeAction?: 'shop' | 'expedition' | null
 }>()
 
 const emit = defineEmits<{
@@ -423,9 +429,19 @@ watch(
          behind one door, champions on one tab and gear on the other, and the
          word "Shop" said neither. The glyph carries that word now, and carries
          it better: a shopping bag is what you take away, `shop` is the place
-         you walk into. -->
+         you walk into.
+         Both toggle: pressing the one that is already open closes its rail
+         again, and while it is open the button holds a lit state with a gold
+         edge on the side the rail comes from — the button and the panel read
+         as one connected piece rather than two things that happen to be up. -->
     <div class="sigil-actions">
-      <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
+      <button
+        class="sigil-action sigil-action--shop"
+        :class="{ 'sigil-action--open': activeAction === 'shop' }"
+        :aria-expanded="activeAction === 'shop'"
+        :title="activeAction === 'shop' ? 'Close the shop' : 'Recruit champions and buy gear'"
+        @click.stop="emit('open-shop')"
+      >
         <Icon icon="game-icons:shop" width="34" height="34" class="sigil-action-icon" />
         <span class="sigil-action-label">Champions &amp; Items</span>
         <RpgNotifyBadge
@@ -435,7 +451,13 @@ watch(
         />
       </button>
 
-      <button class="sigil-action sigil-action--expedition" @click.stop="emit('open-expedition')">
+      <button
+        class="sigil-action sigil-action--expedition"
+        :class="{ 'sigil-action--open': activeAction === 'expedition' }"
+        :aria-expanded="activeAction === 'expedition'"
+        :title="activeAction === 'expedition' ? 'Close the expeditions' : 'Send champions out for materials'"
+        @click.stop="emit('open-expedition')"
+      >
         <Icon icon="game-icons:campfire" width="34" height="34" class="sigil-action-icon" />
         <span class="sigil-action-label">Expedition</span>
         <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
@@ -732,6 +754,38 @@ watch(
 }
 .sigil-action-label {
   white-space: nowrap;
+}
+
+/* ── Open state ──
+   The button whose rail is up stops being a thing to press and becomes the
+   label of what is on screen: warmer fill, gold outline, and a solid gold edge
+   on the RIGHT — the side the rail slides in from, so the two read as one
+   connected piece instead of two things that happen to be open at once.
+   It does not lift on hover any more either; there is nothing left to open. */
+.sigil-action--open {
+  background: rgba(44, 28, 10, 0.95);
+  border-color: #c89040;
+  color: #f4d878;
+  box-shadow: 0 0 16px rgba(232, 192, 64, 0.22);
+}
+.sigil-action--open:hover {
+  border-color: #e8c060;
+  transform: none;
+}
+.sigil-action--open .sigil-action-icon {
+  color: #f4d878;
+}
+/* Inset 6 px top and bottom so the bar stops short of the 5 px rounded corners
+   instead of cutting across them — nothing clips it, it has to keep clear. */
+.sigil-action--open::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  right: -2px;
+  width: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, #c89040, #e8c060, #c89040);
 }
 
 /* ── Compact: the board squeezed by an open rail ──
