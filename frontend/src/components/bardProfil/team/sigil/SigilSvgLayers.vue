@@ -11,6 +11,8 @@ import {
   SIGIL_LINK_GAP_MAIN,
   SIGIL_LINK_GAP_SWORN,
   SIGIL_LINK_GAP_BENCH,
+  SIGIL_SPOKE_WIDTH_BASE,
+  SIGIL_SPOKE_WIDTH_SHARE,
 } from '@/config/constants'
 import type { SigilStageDef } from '@/types'
 import type { SigilPoint } from '@/composables/ui/useTeamSigil'
@@ -24,6 +26,8 @@ const props = defineProps<{
   /** Per role: which ally sub-slots hold a champion. */
   allyFilled: boolean[][]
   roleColors: string[]
+  /** Each role's share (0..1) of the team power — sets the spoke's weight. */
+  roleShares: number[]
   mainFilled: boolean[]
   roleFull: boolean[]
   selectedRole: number | null
@@ -71,6 +75,17 @@ const pentagramEdges = computed(() => {
 
 function spokeColor(i: number): string {
   return props.mainFilled[i] ? props.roleColors[i] : SIGIL_DIM_COLOR
+}
+
+/**
+ * The spoke is the line the core's gauge is summing along, so it carries the
+ * same information as that role's arc: the more of the team power comes from
+ * this role, the heavier the line running into the middle. A static attribute —
+ * it is recomputed when a slot changes, never per frame.
+ */
+function spokeWidth(i: number): number {
+  const share = props.roleShares[i] ?? 0
+  return SIGIL_SPOKE_WIDTH_BASE + share * SIGIL_SPOKE_WIDTH_SHARE
 }
 
 /** Gaps that keep a link off the champion images it connects, per endpoint kind.
@@ -344,8 +359,9 @@ const allyLinks = computed<SigilLink[]>(() => {
       />
     </g>
 
-    <!-- spokes: center → role vertex, lit in role color once the main is set -->
-    <g stroke-width="1.5" stroke-linecap="round">
+    <!-- spokes: center → role vertex, lit in role color once the main is set,
+         and as heavy as that role's share of the team power in the core -->
+    <g stroke-linecap="round">
       <line
         v-for="(p, i) in rolePoints"
         :key="`spoke-${i}`"
@@ -354,6 +370,7 @@ const allyLinks = computed<SigilLink[]>(() => {
         :x2="p.x"
         :y2="p.y"
         :stroke="spokeColor(i)"
+        :stroke-width="spokeWidth(i)"
         :opacity="mainFilled[i] ? 0.7 : 0.4"
       />
     </g>

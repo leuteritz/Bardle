@@ -8,6 +8,7 @@ import { getChampionTier } from '@/config/champions/championTiers'
 import { regaliaStageFor, regaliaStageIndexFor } from '@/config/champions/championLevels'
 import { facetClipPath, studRingGradient } from '@/utils/orbit/geometry'
 import { allySlotLabel } from '@/utils/ui/format'
+import { formatNumberCompact } from '@/config/ui/numberFormat'
 import ChampionLevelBadge from '../ChampionLevelBadge.vue'
 import {
   ROLES,
@@ -45,6 +46,7 @@ import {
   SIGIL_XP_STROKE_BASE,
   SIGIL_XP_STROKE_STEP,
   SIGIL_NODE_LEVEL_TAB_WIDTH,
+  SIGIL_NODE_POWER_TAB_WIDTH,
   SIGIL_TIER_CROWN_MIN_STAR,
   SIGIL_TIER_AUREOLE_MIN_STAR,
   SIGIL_TIER_AUREOLE_MS,
@@ -58,6 +60,8 @@ const props = defineProps<{
   allyPoints: SigilPoint[]
   selected: boolean
   full: boolean
+  /** What this role contributes to the team power printed in the sigil's core. */
+  power: number
   /** Die Satelliten kommen einen Frame nach dem Knoten — siehe
    *  TEAM_TAB_MOUNT_STAGE_*. Fünf Rollen × fünf Satelliten in einem Frame zu
    *  mounten ist der teuerste Einzelposten beim Öffnen des Tabs. */
@@ -118,7 +122,17 @@ const tierVars = computed<Record<string, string>>(() => ({
 }))
 
 const levelTabWidth = `${SIGIL_NODE_LEVEL_TAB_WIDTH}px`
+const powerTabWidth = `${SIGIL_NODE_POWER_TAB_WIDTH}px`
 const tierSheenMs = `${SIGIL_TIER_AUREOLE_MS}ms`
+
+// ── Role power ───────────────────────────────────────────────────────────────
+// The figure this whole cluster — main plus every ally under it — adds to the
+// number in the sigil's core. It rides the plate's RIGHT edge, mirroring the
+// level tab on the left, so the plate reads left to right as rank, identity,
+// contribution. Compact form: a role tops out at 1350, which is four characters
+// there and five in the default format ("1.35K").
+const powerLabel = computed(() => formatNumberCompact(props.power))
+const powerTitle = computed(() => `${props.power} team power from this role`)
 const allies = computed(
   () => secondarySlots.value[props.roleIndex] ?? Array<string | null>(ALLIES_PER_ROLE).fill(null),
 )
@@ -439,6 +453,18 @@ const frameVars = computed<Record<string, string>>(() => {
             <span class="sigil-node-xp-unit">XP</span>
           </template>
         </span>
+      </span>
+      <!-- power tab — what this role sends to the core. Struck into the plate's
+           right edge on a dark ground, the inverse of the lit metal on the left:
+           two lit tabs would read as two ranks, and only one of these is one. -->
+      <span
+        v-if="power > 0"
+        class="sigil-node-pwr"
+        :title="powerTitle"
+        :aria-label="powerTitle"
+      >
+        <span class="sigil-node-pwr-num">{{ powerLabel }}</span>
+        <span class="sigil-node-pwr-unit">PWR</span>
       </span>
     </span>
   </button>
@@ -961,6 +987,64 @@ const frameVars = computed<Record<string, string>>(() => {
   100% {
     transform: translateY(240%);
   }
+}
+
+/* ── power tab ────────────────────────────────────────────────────────────────
+   The role's share of the number in the sigil's core, on the plate's far edge.
+   Deliberately NOT a second metal plate: the level tab is dark ink on lit metal,
+   this is lit ink on a dark ground, so the eye reads one rank and one quantity
+   rather than two ranks. A hairline of the role's colour separates it from the
+   caption, which is all the edge it needs — a full border would box a 36px
+   column into something that looks pressable.
+
+   Two lines, because the unit has to be said: a bare "1.2K" beside a name and an
+   XP figure is one more number on a plate that already has two, and the whole
+   point of this tab is that it is a DIFFERENT quantity. The word is small enough
+   to stay a label and never compete with the figure above it. */
+.sigil-node-pwr {
+  position: relative;
+  flex: 0 0 auto;
+  width: v-bind(powerTabWidth);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 2px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--role-color) 10%, #0c0805),
+    color-mix(in srgb, var(--role-color) 22%, #0c0805)
+  );
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--role-color) 55%, transparent);
+}
+.sigil-node-pwr-num {
+  font-size: 12.5px;
+  line-height: 0.9;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: color-mix(in srgb, #fff 50%, var(--role-color));
+}
+.sigil-node-pwr-unit {
+  font-size: 8.5px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--role-color) 70%, #8b8172);
+}
+/* selected: the same one-off brightening the rest of the plate takes */
+.sigil-node--selected .sigil-node-pwr {
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--role-color) 18%, #0c0805),
+    color-mix(in srgb, var(--role-color) 34%, #0c0805)
+  );
+}
+.sigil-node--selected .sigil-node-pwr-num {
+  color: color-mix(in srgb, #fff 68%, var(--role-color));
+}
+.sigil-node--selected .sigil-node-pwr-unit {
+  color: color-mix(in srgb, #fff 22%, var(--role-color));
 }
 
 /* ★4+ — the plate itself takes the tier: a tint bleeding out of the tab and a

@@ -131,12 +131,45 @@ export const SIGIL_SWORN_GLOW_PX = 11
  * selected (that node scales 1.12), at Full HD and 2K.
  */
 export const SIGIL_NODE_NAME_OFFSET = 80
-/** Name plates truncate rather than sprawl — a long name must not reach a satellite. */
-export const SIGIL_NODE_NAME_MAX_WIDTH = 132
+/**
+ * Name plates truncate rather than sprawl — a long name must not reach a
+ * satellite. The bound that actually binds is the CORE, not the satellites: the
+ * plate rides the inward radial, so a wider plate walks its far corner toward
+ * the crest. The two roles at ±18° are the tightest — their plate centre sits at
+ * (166.4, ∓54.1) from the stage centre, so a plate of width W comes within
+ * hypot(166.4 − W/2, 37.6) of it. At 146 that is 100.7 px against a crest radius
+ * of 85, i.e. ~16 px of air; at 160 it would be 88 and the plate would graze the
+ * core. Raised from 132 when the power tab joined the level tab on the plate —
+ * without it the two tabs would have left the name 70 px.
+ */
+export const SIGIL_NODE_NAME_MAX_WIDTH = 146
 export const SIGIL_NODE_SIZE = 94
 export const SIGIL_ALLY_SIZE = 36
 export const SIGIL_CREST_SIZE = 170
 
+/**
+ * ── Power core (centre of the sigil) ───────────────────────────────────────
+ * The crest is a distribution gauge: a ring inset at the disc's rim, cut into
+ * one arc per role, each arc as long as that role's share of the team power
+ * printed inside it. Read together with the power tab on every name plate
+ * (SIGIL_NODE_POWER_TAB_WIDTH), the middle says what the five nodes add up to
+ * and the ring says who carried it.
+ *
+ * Geometry is in the gauge's own 0–100 viewBox, so it scales with
+ * SIGIL_CREST_SIZE and never has to be re-solved when the crest changes size.
+ * Everything here is painted once per team change — no animation touches it.
+ */
+export const SIGIL_CORE_GAUGE_RADIUS = 43
+export const SIGIL_CORE_GAUGE_CIRCUMFERENCE = 2 * Math.PI * SIGIL_CORE_GAUGE_RADIUS
+export const SIGIL_CORE_GAUGE_STROKE = 7
+/** Gap between two role arcs, in the same units — keeps the colours from butting. */
+export const SIGIL_CORE_GAUGE_GAP = 3.4
+/**
+ * Shortest arc a role that has ANY power may be drawn at. A single ★1 main next
+ * to four full roles is a 1.8 % share, which without a floor would round down to
+ * a sliver thinner than the gap beside it and read as absent.
+ */
+export const SIGIL_CORE_GAUGE_MIN_ARC = 5
 
 /**
  * XP arc traced around a role node, in a 0–100 viewBox so it scales with the
@@ -355,6 +388,15 @@ export const SIGIL_PENTAGRAM_AT_MAINS = 5
 export const SIGIL_MANDALA_AT_FILLED = SIGIL_TOTAL_SLOTS
 /** Unlit color for pentagon vertices, spokes and rune ticks. */
 export const SIGIL_DIM_COLOR = '#3a2a12'
+/**
+ * Spoke weight (SVG stroke-width): every spoke starts at BASE and gains up to
+ * SHARE more in proportion to that role's share of the team power. The line from
+ * a role to the core is literally what the core's gauge is summing, so the
+ * heavier line is the role feeding it more. A static attribute — it changes only
+ * when a slot changes, never per frame.
+ */
+export const SIGIL_SPOKE_WIDTH_BASE = 1.5
+export const SIGIL_SPOKE_WIDTH_SHARE = 4.5
 export const SIGIL_STAGES: SigilStageDef[] = [
   {
     name: 'Dormant',
@@ -462,6 +504,19 @@ export const SIGIL_XP_STROKE_STEP = 0.14
  * single star level needed) a "12" ran straight out of the tab.
  */
 export const SIGIL_NODE_LEVEL_TAB_WIDTH = 26
+
+/**
+ * Width (px) of the power tab struck into the plate's RIGHT edge — the figure
+ * this role contributes to the team power printed in the sigil's core, so the
+ * sum in the middle can be read back to the five nodes it came from.
+ *
+ * Sized for the widest value the ladder can produce: a role caps at
+ * SIGIL_POWER_PER_STAR * MAX_STAR_LEVEL + ALLIES_PER_ROLE *
+ * SIGIL_ALLY_POWER_PER_STAR * MAX_STAR_LEVEL = 1350, which
+ * `formatNumberCompact` writes as four characters ("1.4K"). Two characters
+ * narrower than that would start clipping the moment a role fills out.
+ */
+export const SIGIL_NODE_POWER_TAB_WIDTH = 36
 
 /** From this star level the plate itself takes the tier's tint and outline. */
 export const SIGIL_TIER_CROWN_MIN_STAR = 4

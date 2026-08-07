@@ -72,16 +72,13 @@ export function useTeamSigil() {
   /** Per-role "main champion set" flags (index-aligned with ROLES). */
   const mainFilled = computed(() => headerSlots.value.map((c) => !!c))
   const filledMains = computed(() => headerSlots.value.filter(Boolean).length)
-  const filledAllies = computed(
-    () => secondarySlots.value.flat().filter(Boolean).length,
-  )
+  const filledAllies = computed(() => secondarySlots.value.flat().filter(Boolean).length)
   const filledSlots = computed(() => filledMains.value + filledAllies.value)
 
   /** Roles with main + all allies set (index-aligned with ROLES). */
   const roleFull = computed(() =>
     ROLES.map(
-      (_, i) =>
-        !!headerSlots.value[i] && (secondarySlots.value[i] ?? []).every((a) => !!a),
+      (_, i) => !!headerSlots.value[i] && (secondarySlots.value[i] ?? []).every((a) => !!a),
     ),
   )
   const fullRoles = computed(() => roleFull.value.filter(Boolean).length)
@@ -98,17 +95,30 @@ export function useTeamSigil() {
   const showPentagram = computed(() => filledMains.value >= SIGIL_PENTAGRAM_AT_MAINS)
   const showMandala = computed(() => filledSlots.value >= SIGIL_MANDALA_AT_FILLED)
 
-  const teamPower = computed(() => {
-    let power = 0
-    headerSlots.value.forEach((champion) => {
-      if (champion) power += getChampionStarLevel(champion) * SIGIL_POWER_PER_STAR
-    })
-    secondarySlots.value.forEach((allies) =>
-      allies.forEach((ally) => {
+  /**
+   * Power contributed by each role (index-aligned with ROLES) — its main plus
+   * every ally seated under it. The team power is the SUM of this array rather
+   * than a second walk over the same slots: the core's gauge, the power tab on
+   * every name plate and the figure in the middle then cannot disagree, because
+   * there is only one formula for all three.
+   */
+  const rolePower = computed<number[]>(() =>
+    ROLES.map((_, i) => {
+      const main = headerSlots.value[i]
+      let power = main ? getChampionStarLevel(main) * SIGIL_POWER_PER_STAR : 0
+      for (const ally of secondarySlots.value[i] ?? []) {
         if (ally) power += getChampionStarLevel(ally) * SIGIL_ALLY_POWER_PER_STAR
-      }),
-    )
-    return power
+      }
+      return power
+    }),
+  )
+
+  const teamPower = computed(() => rolePower.value.reduce((sum, p) => sum + p, 0))
+
+  /** Each role's share of the team power (0..1) — 0 for all while the team is empty. */
+  const roleShares = computed<number[]>(() => {
+    const total = teamPower.value
+    return total > 0 ? rolePower.value.map((p) => p / total) : rolePower.value.map(() => 0)
   })
 
   const avgTier = computed(() => {
@@ -185,6 +195,8 @@ export function useTeamSigil() {
     showPentagram,
     showMandala,
     teamPower,
+    rolePower,
+    roleShares,
     avgTier,
     rolePoints,
     allyPoints,

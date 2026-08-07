@@ -13,7 +13,6 @@ import type { ChampionArtSize } from '@/types'
 import {
   ROLES,
   SIGIL_STAGE_SIZE,
-  SIGIL_CREST_SIZE,
   SIGIL_NODE_SIZE,
   SIGIL_SWORN_SIZE,
   TEAM_SIGIL_FOCUS_ZOOM,
@@ -29,6 +28,7 @@ import {
 } from '@/config/constants'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
+import SigilPowerCore from './SigilPowerCore.vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import BattleTabReturnButton from '@/components/bardProfil/BattleTabReturnButton.vue'
@@ -152,6 +152,8 @@ const {
   showPentagram,
   showMandala,
   teamPower,
+  rolePower,
+  roleShares,
   rolePoints,
   allyPoints,
   embers,
@@ -505,6 +507,7 @@ watch(
         :ally-points="allyPoints"
         :ally-filled="allyFilled"
         :role-colors="roleColors"
+        :role-shares="roleShares"
         :main-filled="mainFilled"
         :role-full="roleFull"
         :selected-role="selectedRole"
@@ -512,44 +515,14 @@ watch(
         :show-mandala="showMandala"
       />
 
-      <!-- center crest -->
-      <div
-        class="sigil-crest-pulse"
-        :style="{
-          width: `${SIGIL_CREST_SIZE}px`,
-          height: `${SIGIL_CREST_SIZE}px`,
-          borderColor: sigilStage.crestColor,
-          animationDuration: sigilStage.pulseSec > 0 ? `${sigilStage.pulseSec}s` : undefined,
-          animationName: sigilStage.pulseSec > 0 ? undefined : 'none',
-        }"
+      <!-- centre: the team power, and the ring that says which role carried it -->
+      <SigilPowerCore
+        :stage="sigilStage"
+        :team-power="teamPower"
+        :role-power="rolePower"
+        :synergy-count="activeSynergyCount"
+        @open="emit('open-synergies')"
       />
-      <button
-        class="sigil-crest"
-        :style="{ width: `${SIGIL_CREST_SIZE}px`, height: `${SIGIL_CREST_SIZE}px` }"
-        aria-label="Open team synergies"
-        @click.stop="emit('open-synergies')"
-      >
-        <Icon
-          icon="game-icons:crenel-crown"
-          width="30"
-          height="30"
-          :style="{ color: sigilStage.crestColor }"
-        />
-        <div class="sigil-crest-power" :style="{ color: sigilStage.crestColor }">
-          {{ $formatNumber(teamPower) }}
-        </div>
-        <div class="sigil-crest-label">Team Power</div>
-        <div
-          class="sigil-crest-stage"
-          :style="{ color: sigilStage.crestColor, textShadow: `0 0 9px ${sigilStage.crestColor}` }"
-        >
-          {{ sigilStage.name }}
-        </div>
-        <span class="sigil-crest-syn">
-          <Icon icon="game-icons:linked-rings" width="14" height="14" />
-          {{ activeSynergyCount }}
-        </span>
-      </button>
 
       <!-- escalation embers -->
       <div
@@ -577,6 +550,7 @@ watch(
         :ally-points="allyPoints[i]"
         :selected="selectedRole === i"
         :full="roleFull[i]"
+        :power="rolePower[i]"
         :show-allies="satellitesReady"
         :show-ornaments="ornamentsReady"
         :node-art-size="nodeArtSize"
@@ -906,85 +880,6 @@ watch(
   /* camera pan/zoom (TEAM_SIGIL_CAMERA_MS) — also smooths wheel zoom */
   transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.35, 1);
 }
-.sigil-crest-pulse {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  border: 2px solid;
-  pointer-events: none;
-  animation: crest-pulse 3.5s ease-out infinite;
-}
-/* crest doubles as the team-synergies trigger */
-.sigil-crest {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  padding: 0;
-  border: none;
-  cursor: pointer;
-  background: radial-gradient(circle at 50% 36%, #2a1f10, #0e0906);
-  box-shadow:
-    0 0 0 2px #7a5a1e,
-    0 0 28px rgba(220, 170, 60, 0.3),
-    inset 0 0 22px rgba(0, 0, 0, 0.75);
-  transition:
-    box-shadow 0.2s,
-    transform 0.2s;
-}
-.sigil-crest:hover {
-  transform: translate(-50%, -50%) scale(1.03);
-  box-shadow:
-    0 0 0 2px #c89040,
-    0 0 40px rgba(232, 192, 64, 0.5),
-    inset 0 0 22px rgba(0, 0, 0, 0.75);
-}
-.sigil-crest-syn {
-  position: absolute;
-  left: 50%;
-  bottom: -11px;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border-radius: 4px;
-  background: #1e1006;
-  border: 1px solid #c89040;
-  color: #e8c040;
-  font-size: 12px;
-  line-height: 1;
-  white-space: nowrap;
-  transition: box-shadow 0.2s;
-}
-.sigil-crest:hover .sigil-crest-syn {
-  box-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
-}
-.sigil-crest-power {
-  font-size: 28px;
-  line-height: 1;
-  text-shadow: 0 0 12px rgba(220, 170, 60, 0.45);
-}
-.sigil-crest-label {
-  font-size: 8.5px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(200, 164, 90, 0.6);
-}
-.sigil-crest-stage {
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin-top: 2px;
-}
 .sigil-ember {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -995,17 +890,6 @@ watch(
   z-index: 1;
 }
 
-@keyframes crest-pulse {
-  0% {
-    opacity: 0.5;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  72%,
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.55);
-  }
-}
 @keyframes ember-rise {
   0% {
     opacity: 0;
@@ -1023,7 +907,6 @@ watch(
   .sigil-stage {
     transition: none;
   }
-  .sigil-crest-pulse,
   .sigil-ember {
     animation: none !important;
   }
