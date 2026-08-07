@@ -364,6 +364,15 @@ export const SHOP_HOME_PLANET_GLYPH_SIZE = 84
 export const SHOP_JUMP_SCROLL_OFFSET_PX = 8
 /** Items count as "active" once their section top passes this viewport share. */
 export const SHOP_JUMP_SPY_THRESHOLD = 0.4
+/**
+ * Dead band (px) the items section has to travel back DOWN before the spy hands
+ * the highlight back to the champions. The spy drives the filter panel too, and
+ * the two chip sets are not the same height — switching back to the champions
+ * makes the panel taller, which makes the grid shorter, which moves the
+ * threshold the spy just crossed. Without a band around it the boundary chases
+ * its own tail and the panel flickers while the player scrolls through it.
+ */
+export const SHOP_JUMP_SPY_HYSTERESIS_PX = 120
 /** Scroll-spy stays locked this long after a jump so smooth-scroll can settle. */
 export const SHOP_JUMP_SPY_LOCK_MS = 700
 /** Corrective scroll runs after the section expand animation (0.28s) settles. */

@@ -213,7 +213,10 @@
                        Bild; sie bekommen dasselbe Monogramm wie im Loot-Band
                        des Star-Fight-Modals, statt leer zu bleiben. -->
                   <span v-else class="mat-card__mono">{{ mat.monogram }}</span>
-                  <span class="mat-card__amount">×{{ formatNumber(mat.amount) }}</span>
+                  <span class="mat-card__amount"
+                    ><span class="mat-card__x" aria-hidden="true">×</span
+                    >{{ formatNumber(mat.amount) }}</span
+                  >
                 </div>
                 <div v-if="hiddenMaterialCount > 0" key="more" class="mat-card mat-card--more">
                   +{{ hiddenMaterialCount }}
@@ -1496,12 +1499,14 @@ function particleStyle(i: number): Record<string, string> {
     0 0 10px color-mix(in srgb, var(--mat-color) 40%, transparent);
 }
 /* Die Menge sitzt auf der unteren Kante des Bildes — ohne Plakette darunter,
-   die Lesbarkeit trägt der Schatten. */
+   die Lesbarkeit trägt der Schatten. Sie ist der eigentliche Messwert der
+   Kachel und deshalb bewusst groß: bei ~62px Zellenbreite bleibt selbst die
+   längste Ausgabe des Formatierers („×999.9K") innerhalb der Zelle. */
 .mat-card__amount {
   position: absolute;
-  right: 1px;
-  bottom: 0;
-  font-size: 0.82rem;
+  right: 0;
+  bottom: -1px;
+  font-size: 1.02rem;
   font-weight: 800;
   line-height: 1;
   color: var(--mat-color);
@@ -1510,6 +1515,15 @@ function particleStyle(i: number): Record<string, string> {
     0 1px 2px rgba(6, 4, 0, 1),
     0 0 4px rgba(6, 4, 0, 1),
     0 0 9px rgba(6, 4, 0, 0.9);
+}
+/* Das Malzeichen trägt keine Information, die die Zahl nicht selbst hat — es
+   bleibt klein und zurückgenommen. Der gesparte Platz gehört der Zahl: die
+   längste Ausgabe („×999.9K") bleibt damit sicher in der Zelle, statt in den
+   Spalt zur Nachbarkarte zu ragen. */
+.mat-card__x {
+  font-size: 0.7em;
+  font-weight: 700;
+  opacity: 0.6;
 }
 
 /* Neue Materialkarte federt ins Raster ein — derselbe Pop wie bei den

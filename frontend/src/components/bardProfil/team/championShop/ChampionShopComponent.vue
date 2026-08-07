@@ -5,7 +5,10 @@
          Top row of the rail now that it carries no title stripe, so it doubles
          as the shop's own header: it names what is in here and, through the
          scroll spy, which half is under the eye. Above the search on purpose —
-         picking a domain comes before narrowing it down. -->
+         picking a domain comes before narrowing it down. The lit half is also
+         the one the filter panel below is currently filtering, which is why
+         these two buttons are the only switch that scope needs: jumping to a
+         section and filtering it are the same intent. -->
     <div class="cs-jump-row" aria-label="Jump to section">
       <button
         class="cs-jump-btn"
@@ -13,7 +16,7 @@
         :disabled="!showChampions"
         :title="
           showChampions
-            ? `${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`
+            ? `${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies. Jumps here and switches the filters to role, tier, traits and origins.`
             : 'Hidden by item filters'
         "
         @click="jumpTo('champions')"
@@ -26,7 +29,11 @@
         class="cs-jump-btn"
         :class="{ 'cs-jump-btn--active': activeJump === 'items' }"
         :disabled="!showItems"
-        :title="showItems ? 'Jump to items' : 'Hidden by champion filters'"
+        :title="
+          showItems
+            ? 'Jump to the items and switch the filters to rarity and category'
+            : 'Hidden by champion filters'
+        "
         @click="jumpTo('items')"
       >
         <Icon icon="game-icons:light-backpack" width="22" height="22" class="cs-jump-icon" />
@@ -151,164 +158,180 @@
         </button>
       </div>
 
-      <!-- ── Filter panel: labeled category sections ── -->
+      <!-- ── Filter panel: labeled category sections ──
+           The panel only carries the chips that apply to the half of the shop
+           the player is actually looking at. Which half that is comes from the
+           same flag the domain bar lights up (`activeJump`): the scroll spy sets
+           it while scrolling, a click on Champions/Items sets it directly. The
+           other domain's chips would narrow a list that is off screen — or, once
+           a domain filter is set, one that is hidden outright.
+           Rarity is an item property and therefore belongs to the item set — and
+           opens it, because it is the coarsest cut through the loot table; the
+           category is the finer one underneath. The always-visible "Active:" row
+           above keeps every set chip reachable, whichever domain is showing. -->
       <Transition name="filter-panel">
       <div v-show="filterOpen" class="cs-filter-panel">
+        <Transition name="cs-filter-domain" mode="out-in">
 
-        <!-- Section: Role -->
-        <div class="filter-divider">
-          <span class="filter-divider-label">Role</span>
-        </div>
-        <div class="cs-filter-row cs-filter-row--wrap">
-          <button
-            v-for="r in roleChips"
-            :key="r.key"
-            class="trait-chip role-chip"
-            :class="{
-              'trait-chip--active': activeRole === r.key,
-              'trait-chip--disabled': !r.available,
-            }"
-            :style="`--chip-color: ${r.color}`"
-            :disabled="!r.available"
-            :title="r.available ? r.label : 'No champions in shop'"
-            @click="setActiveRole(activeRole === r.key ? 'all' : (r.key as any))"
-          >
-            <img :src="r.image" :alt="r.label" class="role-chip-img" />
-            {{ r.short }}
-          </button>
-        </div>
+          <!-- ══ Item domain: Rarity, then Category ══ -->
+          <div v-if="activeJump === 'items'" key="items" class="cs-filter-group">
+            <div class="filter-divider">
+              <span class="filter-divider-label">Rarity</span>
+            </div>
+            <div class="cs-filter-row cs-filter-row--wrap">
+              <button
+                v-for="r in ITEM_RARITIES"
+                :key="r.id"
+                class="trait-chip"
+                :class="{ 'trait-chip--active': activeRarities.includes(r.id) }"
+                :style="`--chip-color: ${r.color}`"
+                :title="`${r.label} items`"
+                @click="toggleRarity(r.id)"
+              >
+                {{ r.label }}
+                <span v-if="activeRarities.includes(r.id)" class="chip-dismiss">×</span>
+              </button>
+            </div>
 
-        <!-- Section: Tier -->
-        <div class="filter-divider">
-          <span class="filter-divider-label">Tier</span>
-        </div>
-        <div class="cs-filter-row cs-filter-row--wrap">
-          <button
-            v-for="t in tierChips"
-            :key="t.starLevel"
-            class="trait-chip"
-            :class="{
-              'trait-chip--active': activeTier === t.starLevel,
-              'trait-chip--disabled': t.locked || !t.available,
-            }"
-            :style="`--chip-color: ${t.color}`"
-            :disabled="t.locked || !t.available"
-            :title="
-              t.locked
-                ? `Locked — unlocks by Galaxy ${t.requiredGalaxy}`
-                : !t.available
-                  ? 'No champions in shop'
-                  : `★${t.starLevel} ${t.name}`
-            "
-            @click="activeTier = activeTier === t.starLevel ? 'all' : t.starLevel"
-          >
-            <Icon :icon="t.icon" class="trait-chip-icon" />
-            {{ t.name }}
-          </button>
-        </div>
+            <div class="filter-divider">
+              <span class="filter-divider-label">Item Category</span>
+            </div>
+            <div class="cs-filter-row cs-filter-row--wrap">
+              <button
+                v-for="cat in ITEM_CATEGORIES"
+                :key="cat.id"
+                class="trait-chip role-chip"
+                :class="{ 'trait-chip--active': activeItemCats.includes(cat.id) }"
+                :style="`--chip-color: ${cat.color}`"
+                :title="cat.label"
+                @click="toggleItemCat(cat.id)"
+              >
+                <img :src="cat.image" :alt="cat.label" class="role-chip-img" />
+                {{ cat.label }}
+                <span v-if="activeItemCats.includes(cat.id)" class="chip-dismiss">×</span>
+              </button>
+            </div>
+          </div>
 
-        <!-- Row 2: Trait chips (all visible; unavailable ones greyed out) -->
-        <div class="filter-divider">
-          <span class="filter-divider-label">Traits</span>
-        </div>
-        <div v-if="noTraitFound" class="trait-empty-state">No trait found</div>
-        <div v-else class="cs-filter-row cs-filter-row--wrap">
-          <TransitionGroup tag="div" name="chip" class="chip-group">
-            <button
-              v-for="trait in traitChips"
-              :key="trait.id"
-              v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
-              class="trait-chip"
-              :class="{
-                'trait-chip--active': activeTraits.includes(trait.id),
-                'trait-chip--disabled': !trait.available,
-                'trait-chip--search-match': searchMatchedTraits.has(trait.id) && !activeTraits.includes(trait.id),
-                'trait-chip--cross-role': activeRole !== 'all' && searchQuery.trim() && !roleTraitIds.has(trait.id),
-              }"
-              :style="`--chip-color: ${trait.color}`"
-              :disabled="!trait.available"
-              :title="trait.available ? `${filterChampionCount[trait.id] ?? 0} Champions${activeRole !== 'all' && !roleTraitIds.has(trait.id) ? ' (other roles)' : ''}` : 'No champions in shop'"
-              tabindex="0"
-              @click="toggleTrait(trait.id)"
-              @keydown="onChipKeydown($event, trait.id)"
-            >
-              <Icon :icon="trait.icon" class="trait-chip-icon" />
-              {{ trait.name }}
-              <span v-if="activeTraits.includes(trait.id)" class="chip-dismiss" @click.stop="toggleTrait(trait.id)">×</span>
-            </button>
-          </TransitionGroup>
-        </div>
+          <!-- ══ Champion domain: Role, Tier, Traits, Origins ══ -->
+          <div v-else key="champions" class="cs-filter-group">
+            <!-- Section: Role -->
+            <div class="filter-divider">
+              <span class="filter-divider-label">Role</span>
+            </div>
+            <div class="cs-filter-row cs-filter-row--wrap">
+              <button
+                v-for="r in roleChips"
+                :key="r.key"
+                class="trait-chip role-chip"
+                :class="{
+                  'trait-chip--active': activeRole === r.key,
+                  'trait-chip--disabled': !r.available,
+                }"
+                :style="`--chip-color: ${r.color}`"
+                :disabled="!r.available"
+                :title="r.available ? r.label : 'No champions in shop'"
+                @click="setActiveRole(activeRole === r.key ? 'all' : (r.key as any))"
+              >
+                <img :src="r.image" :alt="r.label" class="role-chip-img" />
+                {{ r.short }}
+              </button>
+            </div>
 
-        <!-- Row 3: Origin chips (all visible; unavailable ones greyed out) -->
-        <div class="filter-divider">
-          <span class="filter-divider-label">Origins</span>
-        </div>
-        <div class="cs-filter-row cs-filter-row--wrap">
-          <TransitionGroup tag="div" name="chip" class="chip-group">
-            <button
-              v-for="origin in originChips"
-              :key="origin.origin"
-              v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
-              class="trait-chip"
-              :class="{
-                'trait-chip--active': activeTraits.includes(origin.origin),
-                'trait-chip--disabled': !origin.available,
-                'trait-chip--search-match': searchMatchedTraits.has(origin.origin) && !activeTraits.includes(origin.origin),
-                'trait-chip--cross-role': activeRole !== 'all' && searchQuery.trim() && !roleOriginIds.has(origin.origin),
-              }"
-              :style="`--chip-color: ${origin.color}`"
-              :disabled="!origin.available"
-              :title="origin.available ? `${filterChampionCount[origin.origin] ?? 0} Champions${activeRole !== 'all' && !roleOriginIds.has(origin.origin) ? ' (other roles)' : ''}` : 'No champions in shop'"
-              tabindex="0"
-              @click="toggleTrait(origin.origin)"
-              @keydown="onChipKeydown($event, origin.origin)"
-            >
-              <Icon :icon="origin.icon" class="trait-chip-icon" />
-              {{ origin.origin }}
-              <span v-if="activeTraits.includes(origin.origin)" class="chip-dismiss" @click.stop="toggleTrait(origin.origin)">×</span>
-            </button>
-          </TransitionGroup>
-        </div>
+            <!-- Section: Tier -->
+            <div class="filter-divider">
+              <span class="filter-divider-label">Tier</span>
+            </div>
+            <div class="cs-filter-row cs-filter-row--wrap">
+              <button
+                v-for="t in tierChips"
+                :key="t.starLevel"
+                class="trait-chip"
+                :class="{
+                  'trait-chip--active': activeTier === t.starLevel,
+                  'trait-chip--disabled': t.locked || !t.available,
+                }"
+                :style="`--chip-color: ${t.color}`"
+                :disabled="t.locked || !t.available"
+                :title="
+                  t.locked
+                    ? `Locked — unlocks by Galaxy ${t.requiredGalaxy}`
+                    : !t.available
+                      ? 'No champions in shop'
+                      : `★${t.starLevel} ${t.name}`
+                "
+                @click="activeTier = activeTier === t.starLevel ? 'all' : t.starLevel"
+              >
+                <Icon :icon="t.icon" class="trait-chip-icon" />
+                {{ t.name }}
+              </button>
+            </div>
 
-        <!-- Section: Item Category (items only) -->
-        <div class="filter-divider">
-          <span class="filter-divider-label">Item Category</span>
-        </div>
-        <div class="cs-filter-row cs-filter-row--wrap">
-          <button
-            v-for="cat in ITEM_CATEGORIES"
-            :key="cat.id"
-            class="trait-chip role-chip"
-            :class="{ 'trait-chip--active': activeItemCats.includes(cat.id) }"
-            :style="`--chip-color: ${cat.color}`"
-            :title="cat.label"
-            @click="toggleItemCat(cat.id)"
-          >
-            <img :src="cat.image" :alt="cat.label" class="role-chip-img" />
-            {{ cat.label }}
-            <span v-if="activeItemCats.includes(cat.id)" class="chip-dismiss">×</span>
-          </button>
-        </div>
+            <!-- Row 2: Trait chips (all visible; unavailable ones greyed out) -->
+            <div class="filter-divider">
+              <span class="filter-divider-label">Traits</span>
+            </div>
+            <div v-if="noTraitFound" class="trait-empty-state">No trait found</div>
+            <div v-else class="cs-filter-row cs-filter-row--wrap">
+              <TransitionGroup tag="div" name="chip" class="chip-group">
+                <button
+                  v-for="trait in traitChips"
+                  :key="trait.id"
+                  v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
+                  class="trait-chip"
+                  :class="{
+                    'trait-chip--active': activeTraits.includes(trait.id),
+                    'trait-chip--disabled': !trait.available,
+                    'trait-chip--search-match': searchMatchedTraits.has(trait.id) && !activeTraits.includes(trait.id),
+                    'trait-chip--cross-role': activeRole !== 'all' && searchQuery.trim() && !roleTraitIds.has(trait.id),
+                  }"
+                  :style="`--chip-color: ${trait.color}`"
+                  :disabled="!trait.available"
+                  :title="trait.available ? `${filterChampionCount[trait.id] ?? 0} Champions${activeRole !== 'all' && !roleTraitIds.has(trait.id) ? ' (other roles)' : ''}` : 'No champions in shop'"
+                  tabindex="0"
+                  @click="toggleTrait(trait.id)"
+                  @keydown="onChipKeydown($event, trait.id)"
+                >
+                  <Icon :icon="trait.icon" class="trait-chip-icon" />
+                  {{ trait.name }}
+                  <span v-if="activeTraits.includes(trait.id)" class="chip-dismiss" @click.stop="toggleTrait(trait.id)">×</span>
+                </button>
+              </TransitionGroup>
+            </div>
 
-        <!-- Section: Item Rarity (items only) -->
-        <div class="filter-divider">
-          <span class="filter-divider-label">Rarity</span>
-        </div>
-        <div class="cs-filter-row cs-filter-row--wrap">
-          <button
-            v-for="r in ITEM_RARITIES"
-            :key="r.id"
-            class="trait-chip"
-            :class="{ 'trait-chip--active': activeRarities.includes(r.id) }"
-            :style="`--chip-color: ${r.color}`"
-            :title="`${r.label} items`"
-            @click="toggleRarity(r.id)"
-          >
-            {{ r.label }}
-            <span v-if="activeRarities.includes(r.id)" class="chip-dismiss">×</span>
-          </button>
-        </div>
+            <!-- Row 3: Origin chips (all visible; unavailable ones greyed out) -->
+            <div class="filter-divider">
+              <span class="filter-divider-label">Origins</span>
+            </div>
+            <div class="cs-filter-row cs-filter-row--wrap">
+              <TransitionGroup tag="div" name="chip" class="chip-group">
+                <button
+                  v-for="origin in originChips"
+                  :key="origin.origin"
+                  v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
+                  class="trait-chip"
+                  :class="{
+                    'trait-chip--active': activeTraits.includes(origin.origin),
+                    'trait-chip--disabled': !origin.available,
+                    'trait-chip--search-match': searchMatchedTraits.has(origin.origin) && !activeTraits.includes(origin.origin),
+                    'trait-chip--cross-role': activeRole !== 'all' && searchQuery.trim() && !roleOriginIds.has(origin.origin),
+                  }"
+                  :style="`--chip-color: ${origin.color}`"
+                  :disabled="!origin.available"
+                  :title="origin.available ? `${filterChampionCount[origin.origin] ?? 0} Champions${activeRole !== 'all' && !roleOriginIds.has(origin.origin) ? ' (other roles)' : ''}` : 'No champions in shop'"
+                  tabindex="0"
+                  @click="toggleTrait(origin.origin)"
+                  @keydown="onChipKeydown($event, origin.origin)"
+                >
+                  <Icon :icon="origin.icon" class="trait-chip-icon" />
+                  {{ origin.origin }}
+                  <span v-if="activeTraits.includes(origin.origin)" class="chip-dismiss" @click.stop="toggleTrait(origin.origin)">×</span>
+                </button>
+              </TransitionGroup>
+            </div>
+          </div>
 
+        </Transition>
       </div>
       </Transition>
     </div>
@@ -580,6 +603,7 @@ import {
   MATERIAL_COLOR,
   SHOP_JUMP_SCROLL_OFFSET_PX,
   SHOP_JUMP_SPY_THRESHOLD,
+  SHOP_JUMP_SPY_HYSTERESIS_PX,
   SHOP_JUMP_SPY_LOCK_MS,
   SHOP_JUMP_EXPAND_SETTLE_MS,
   SHOP_SCROLL_SETTLE_MS,
@@ -1528,8 +1552,18 @@ const shopChampionNames = computed(() =>
         activeJump.value = 'items'
         return
       }
+      // Asymmetric boundary: the items section has to come up to the threshold to
+      // take the highlight, but fall a band BELOW it to give it back. The spy also
+      // decides which chips the filter panel shows, and that swap resizes the grid
+      // the boundary is measured in — a bare threshold would sit right where its
+      // own consequence puts it back and flicker under a slow scroll.
       const rel = el.getBoundingClientRect().top - grid.getBoundingClientRect().top
-      activeJump.value = rel <= grid.clientHeight * SHOP_JUMP_SPY_THRESHOLD ? 'items' : 'champions'
+      const line = grid.clientHeight * SHOP_JUMP_SPY_THRESHOLD
+      if (activeJump.value === 'items') {
+        if (rel > line + SHOP_JUMP_SPY_HYSTERESIS_PX) activeJump.value = 'champions'
+      } else if (rel <= line) {
+        activeJump.value = 'items'
+      }
     }
 
     // Domain filters can remove the section the highlight points at.
@@ -2103,6 +2137,37 @@ const shopChampionNames = computed(() =>
 .is-scrolling .item-card-slot {
   pointer-events: none;
   --pulse-play: paused;
+}
+
+/* ── Filter scope swap ──
+   Champion chips and item chips never stand in the panel at the same time, so
+   the exchange gets a beat of its own instead of snapping: the leaving set
+   drops away, the arriving one settles in from just above. Both stay on
+   opacity/transform — the orbit keeps running behind the open rail, and a
+   height or shadow animation here would be paid per frame by everything on
+   screen, not just by the four rows of chips. */
+.cs-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cs-filter-domain-enter-active {
+  transition:
+    opacity 0.17s ease-out,
+    transform 0.17s ease-out;
+}
+.cs-filter-domain-leave-active {
+  transition:
+    opacity 0.1s ease-in,
+    transform 0.1s ease-in;
+}
+.cs-filter-domain-enter-from {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+.cs-filter-domain-leave-to {
+  opacity: 0;
+  transform: translateY(5px);
 }
 
 /* ── Domain bar: Champions | Items ──
