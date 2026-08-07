@@ -13,9 +13,11 @@
  * changes. Nothing in here animates except the crest's own pulse ring, which
  * animates transform and opacity alone — see the performance rules in CLAUDE.md.
  */
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, ref, shallowRef } from 'vue'
 import { Icon } from '@iconify/vue'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import { inkCenterOffsetPx, inkMiddleOffsetPx } from '@/utils/ui/textInkOffset'
+import type { InkFontDescriptor } from '@/utils/ui/textInkOffset'
 import {
   ROLES,
   SIGIL_CREST_SIZE,
@@ -144,6 +146,59 @@ const segments = computed<GaugeSegment[]>(() => {
   })
 })
 
+// ── Optical centring of the share figures ────────────────────────────────────
+// MedievalSharp seats its digits almost entirely above the baseline, so a
+// centred line box puts the visible ink noticeably high inside it — on a 13.6px
+// band that reads as a figure sitting on the arc's outer edge rather than in the
+// middle of it. `utils/ui/textInkOffset` measures that offset; the `v-ink-center`
+// directive built on it cannot be used here, because it writes the standalone
+// `translate` property and that is applied BEFORE `transform`, i.e. in the
+// parent's axes — on a tangentially turned label it would push all five the same
+// way down the screen instead of each one across its own band. Folding the same
+// measurement in AFTER the rotation puts it on the label's own axes: x runs
+// along the arc, y across the band.
+const shareRef = ref<HTMLElement | null>(null)
+/** Read once from a real label — font, size and line height never change here. */
+const inkFont = shallowRef<InkFontDescriptor | null>(null)
+
+function readInkFont(): void {
+  const el = shareRef.value?.firstElementChild as HTMLElement | null
+  if (!el) return
+  const cs = getComputedStyle(el)
+  inkFont.value = {
+    font: `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`,
+    letterSpacing: cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing,
+    fontFamily: cs.fontFamily,
+    fontWeight: cs.fontWeight,
+    fontSize: cs.fontSize,
+    lineHeight: cs.lineHeight,
+  }
+}
+
+// Deliberately a frame late. Setting the descriptor is what lets the labels ask
+// for their offsets, and answering costs a canvas pixel-scan plus a layout probe
+// — work that has no business in the frame the team tab mounts in, the most
+// expensive one there is. The labels are invisible until the core is pointed at,
+// so a frame of delay is free.
+onMounted(() => {
+  requestAnimationFrame(readInkFont)
+  // Before the webfont lands the canvas measures the fallback — remeasure once.
+  document.fonts?.ready.then(() => {
+    inkFont.value = null
+    nextTick(() => requestAnimationFrame(readInkFont))
+  })
+})
+
+function shareTransform(segment: GaugeSegment): string {
+  const seat = `translate(-50%, -50%) rotate(${segment.rot})`
+  const d = inkFont.value
+  if (!d) return seat
+  const text = `${segment.pct}%`
+  const dx = -inkCenterOffsetPx(text, d.font, d.letterSpacing)
+  const dy = -inkMiddleOffsetPx(text, d)
+  return `${seat} translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px)`
+}
+
 const powerLabel = computed(() => formatNumberCompact(props.teamPower))
 const synergyLabel = computed(() =>
   props.synergyCount === 1 ? '1 Synergy' : `${props.synergyCount} Synergies`,
@@ -206,7 +261,7 @@ const breakdown = computed(() => {
          bigger slice; this says by how much, and it says it where the answer is
          rather than in a legend the eye has to walk to. Dark ink on lit metal,
          the same inversion the level tab on every name plate uses. -->
-    <span class="core-shares" aria-hidden="true">
+    <span ref="shareRef" class="core-shares" aria-hidden="true">
       <span
         v-for="segment in segments"
         :key="`pct-${segment.key}`"
@@ -214,7 +269,7 @@ const breakdown = computed(() => {
         :style="{
           left: segment.left,
           top: segment.top,
-          transform: `translate(-50%, -50%) rotate(${segment.rot})`,
+          transform: shareTransform(segment),
           '--arc-color': segment.color,
         }"
         >{{ segment.pct }}%</span
