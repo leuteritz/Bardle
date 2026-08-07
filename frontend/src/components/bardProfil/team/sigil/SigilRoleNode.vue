@@ -456,15 +456,17 @@ const frameVars = computed<Record<string, string>>(() => {
       </span>
       <!-- power tab — what this role sends to the core. Struck into the plate's
            right edge on a dark ground, the inverse of the lit metal on the left:
-           two lit tabs would read as two ranks, and only one of these is one. -->
+           two lit tabs would read as two ranks, and only one of these is one.
+           The figure stands alone, no "PWR" under it: the unit cost the numeral
+           the height it needed at the size this tab actually renders, and the
+           gauge in the core says what the number is anyway. -->
       <span
         v-if="power > 0"
         class="sigil-node-pwr"
         :title="powerTitle"
         :aria-label="powerTitle"
       >
-        <span class="sigil-node-pwr-num">{{ powerLabel }}</span>
-        <span class="sigil-node-pwr-unit">PWR</span>
+        <span v-ink-center.x.y class="sigil-node-pwr-num">{{ powerLabel }}</span>
       </span>
     </span>
   </button>
@@ -994,22 +996,21 @@ const frameVars = computed<Record<string, string>>(() => {
    Deliberately NOT a second metal plate: the level tab is dark ink on lit metal,
    this is lit ink on a dark ground, so the eye reads one rank and one quantity
    rather than two ranks. A hairline of the role's colour separates it from the
-   caption, which is all the edge it needs — a full border would box a 36px
+   caption, which is all the edge it needs — a full border would box a narrow
    column into something that looks pressable.
 
-   Two lines, because the unit has to be said: a bare "1.2K" beside a name and an
-   XP figure is one more number on a plate that already has two, and the whole
-   point of this tab is that it is a DIFFERENT quantity. The word is small enough
-   to stay a label and never compete with the figure above it. */
+   One line, no unit. A stacked "PWR" under the figure held the numeral to
+   12.5px on a tab that renders around 10px on an unfocused board and 7px with a
+   rail open — the label survived that squeeze, the number it labelled did not,
+   which is backwards. Alone it gets 16px, and what it means is said by the gauge
+   in the core, whose five arcs ARE these five figures. */
 .sigil-node-pwr {
   position: relative;
   flex: 0 0 auto;
   width: v-bind(powerTabWidth);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
   padding: 0 2px;
   background: linear-gradient(
     to right,
@@ -1019,18 +1020,13 @@ const frameVars = computed<Record<string, string>>(() => {
   box-shadow: inset 1px 0 0 color-mix(in srgb, var(--role-color) 55%, transparent);
 }
 .sigil-node-pwr-num {
-  font-size: 12.5px;
+  font-size: 16px;
   line-height: 0.9;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
   color: color-mix(in srgb, #fff 50%, var(--role-color));
-}
-.sigil-node-pwr-unit {
-  font-size: 8.5px;
-  line-height: 1;
-  letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--role-color) 70%, #8b8172);
 }
 /* selected: the same one-off brightening the rest of the plate takes */
 .sigil-node--selected .sigil-node-pwr {
@@ -1042,9 +1038,6 @@ const frameVars = computed<Record<string, string>>(() => {
 }
 .sigil-node--selected .sigil-node-pwr-num {
   color: color-mix(in srgb, #fff 68%, var(--role-color));
-}
-.sigil-node--selected .sigil-node-pwr-unit {
-  color: color-mix(in srgb, #fff 22%, var(--role-color));
 }
 
 /* ★4+ — the plate itself takes the tier: a tint bleeding out of the tab and a

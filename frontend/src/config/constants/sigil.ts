@@ -520,11 +520,12 @@ export const SIGIL_NODE_LEVEL_TAB_WIDTH = 26
  * this role contributes to the team power printed in the sigil's core, so the
  * sum in the middle can be read back to the five nodes it came from.
  *
- * Sized for the widest value the ladder can produce: a role caps at
- * SIGIL_POWER_PER_STAR * MAX_STAR_LEVEL + ALLIES_PER_ROLE *
- * SIGIL_ALLY_POWER_PER_STAR * MAX_STAR_LEVEL = 1350, which
- * `formatNumberCompact` writes as four characters ("1.4K"). Two characters
- * narrower than that would start clipping the moment a role fills out.
+ * Sized against every value the ladder can actually produce, measured in the
+ * font rather than estimated: main 0–MAX_STAR_LEVEL stars × SIGIL_POWER_PER_STAR
+ * plus ALLIES_PER_ROLE × 0–MAX_STAR_LEVEL × SIGIL_ALLY_POWER_PER_STAR is 54
+ * distinct figures, and the widest of them at 16px is "300" at 30.3px — not the
+ * cap (1350), which `formatNumberCompact` shortens to a narrow "1.4K" (27px).
+ * 36 = 31 + the tab's 2px of padding either side, with a pixel to spare.
  */
 export const SIGIL_NODE_POWER_TAB_WIDTH = 36
 
