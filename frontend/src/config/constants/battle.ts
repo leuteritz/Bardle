@@ -730,6 +730,43 @@ export const LOADING_THREAT_LABELS = { low: 'LOW', medium: 'MED', high: 'HIGH' }
 export const LOADING_ENEMY_FALLBACK_TIER = 'Silver'
 
 /**
+ * ── Ladeschleier des Battle-Tabs ──
+ *
+ * Der Tab ist der einzige, der von Anfang an gemountet bleibt (die Simulation
+ * läuft weiter, während niemand hinsieht) — sein Öffnen ist deshalb kein Mount,
+ * sondern das Wiedereinblenden eines `display: none`-Teilbaums. Der ist hier
+ * aber kein stilles Panel, sondern das laufende Rift-Board: Score-Leiste,
+ * Minimap samt Bewegung, zwei Team-Spalten, Meta-Platten, Kill-Feed. Style,
+ * Layout und Layer entstehen für all das in einem Frame neu.
+ *
+ * Gemessen am PRODUKTIONSBUILD (Full HD, voller Kader, laufender Kampf,
+ * 1600-ms-Fenster, Öffnen über das Bottom-Scoreboard) — je Zelle *längster
+ * Einzelframe · Frames über 33 ms · verlorene Zeit*:
+ *
+ *   Grundlast (Modal zu)              22 ms · 0 · 5 ms
+ *   erstes Öffnen                    283 ms · 6 · 528 ms
+ *   Wiederholungen (Median aus 6)     97 ms · 5 · 255 ms
+ *   Wechsel aus einem anderen Tab    283 ms · 6 · 437 ms
+ *
+ * Anders als Team-Tab und Star-Fight-Arena (dort 42 bzw. 44 ms ab dem zweiten
+ * Öffnen — „das sieht niemand") bleibt es hier bei JEDEM Öffnen sichtbar teuer:
+ * der Teilbaum ist beim Verstecken jedes Mal verworfen worden, und was er beim
+ * Zeigen aufbaut, ist eine bewegte Fläche. Der Schleier läuft deshalb immer,
+ * nur kürzer, sobald das Board schon einmal stand — er soll so lange stehen,
+ * wie tatsächlich gebaut wird, keine Sekunde länger.
+ *
+ * NUR für das Rift-Board. Landing (172 ms · 3 · 259 ms bei 56 ms Grundlast),
+ * Suchphase und Ladebildschirm bringen entweder kaum Last mit oder sind selbst
+ * schon eine Inszenierung des Wartens — ein Schleier davor wäre Wartezeit vor
+ * einem Startknopf.
+ */
+export const BATTLE_TAB_LOADER_SETTLE_FRAMES = 4
+/** Mindeststandzeit beim ersten Aufbau des Boards (528 ms verlorene Zeit). */
+export const BATTLE_TAB_LOADER_MIN_MS = 460
+/** Mindeststandzeit, sobald das Board schon einmal stand (255 ms). */
+export const BATTLE_TAB_LOADER_REPEAT_MIN_MS = 300
+
+/**
  * ── Battle phase registry ──
  * Single source of truth for the auto-battle cycle. The store derives the
  * running phase from its timestamps (battleStore.currentBattlePhase), every

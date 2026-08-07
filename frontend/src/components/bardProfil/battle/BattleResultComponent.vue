@@ -39,22 +39,40 @@
         <HonorResultScreen v-if="battleStore.showAutoBattleResult" />
       </Transition>
     </template>
+
+    <!-- ══ Ladeschleier ══
+         Deckt das Rift-Board, solange es beim Öffnen des Tabs entsteht, und
+         blendet danach über dem fertigen weg. Er trägt Farbe und Wappen der
+         LAUFENDEN Phase, nicht der beim Aufziehen gültigen: endet der Kampf
+         während seiner Standzeit, wechselt er mit. -->
+    <Transition name="btl-reveal">
+      <BattleTabLoader
+        v-if="loaderVisible"
+        :phase-key="battleStore.currentBattlePhase"
+        :started-at="loaderStartedAt"
+      />
+    </Transition>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, onMounted, ref, watch } from 'vue'
+import { defineComponent, computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import PlanetSearchComponent from './PlanetSearchComponent.vue'
 import PlanetBattleBackgroundComponent from './PlanetBattleBackgroundComponent.vue'
 import BattleLandingScreen from './landing/BattleLandingScreen.vue'
 import BattleLoadingScreen from './loading/BattleLoadingScreen.vue'
 import RiftBattleBoard from './rift/RiftBattleBoard.vue'
 import HonorResultScreen from './result/HonorResultScreen.vue'
+import BattleTabLoader from './BattleTabLoader.vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import {
   LOADING_PHASE_POLL_MS,
   PLANET_SEARCH_ANIM_DURATION_MS,
   UNIVERSE_ANIM_MIN_REMAINING_MS,
+  BATTLE_TAB_LOADER_SETTLE_FRAMES,
+  BATTLE_TAB_LOADER_MIN_MS,
+  BATTLE_TAB_LOADER_REPEAT_MIN_MS,
 } from '@/config/constants'
 
 export default defineComponent({
@@ -66,10 +84,12 @@ export default defineComponent({
     BattleLoadingScreen,
     RiftBattleBoard,
     HonorResultScreen,
+    BattleTabLoader,
   },
 
   setup() {
     const battleStore = useBattleStore()
+    const uiStore = useUiStore()
 
     const isStarting = ref(false)
     const isUniverseAnimating = ref(false)
@@ -158,6 +178,96 @@ export default defineComponent({
       }
     })
 
+    /**
+     * ── Ladeschleier ──
+     *
+     * Dieser Tab bleibt als einziger dauerhaft gemountet (die Simulation läuft
+     * weiter, während niemand hinsieht) — sein Öffnen ist also kein Mount,
+     * sondern das Wiedereinblenden eines `display: none`-Teilbaums. Genau das
+     * ist hier teuer: verworfen werden Style, Layout und Layer des ganzen
+     * laufenden Rift-Boards, und aufgebaut werden sie in einem Frame neu.
+     * Die Messwerte stehen bei BATTLE_TAB_LOADER_MIN_MS.
+     *
+     * Anders als bei Team-Tab und Star-Fight-Arena läuft er deshalb bei JEDEM
+     * Öffnen, nur kürzer, sobald das Board schon einmal stand — dort fiel die
+     * Wiederholung auf Grundlast, hier bleibt sie bei 97 ms längstem Frame.
+     */
+    const loaderVisible = ref(false)
+    const loaderStartedAt = ref(0)
+    /** Stand das Board in dieser Sitzung schon einmal? Steuert nur die Standzeit. */
+    const boardBuilt = ref(false)
+    let revealTimer: ReturnType<typeof setTimeout> | null = null
+    let revealFrame = 0
+
+    /**
+     * Nur das Rift-Board rechtfertigt einen Schleier. Landing, Suchphase und
+     * Ladebildschirm bringen entweder kaum Last mit oder sind selbst schon eine
+     * Inszenierung des Wartens — davor wäre er nur Wartezeit vor einem
+     * Startknopf.
+     */
+    const riftBoardShowing = computed(
+      () =>
+        battleStore.isAutoBattleInitialized &&
+        !battleStore.isViewingLanding &&
+        battleStore.currentBattlePhase === 'battle',
+    )
+
+    function cancelLoader() {
+      if (revealTimer !== null) {
+        clearTimeout(revealTimer)
+        revealTimer = null
+      }
+      cancelAnimationFrame(revealFrame)
+    }
+
+    /** Zählt Frames, bis das wiedereingeblendete Board auch gezeichnet ist. */
+    function revealWhenPainted() {
+      let left = BATTLE_TAB_LOADER_SETTLE_FRAMES
+      const step = () => {
+        if (--left > 0) {
+          revealFrame = requestAnimationFrame(step)
+          return
+        }
+        const minMs = boardBuilt.value
+          ? BATTLE_TAB_LOADER_REPEAT_MIN_MS
+          : BATTLE_TAB_LOADER_MIN_MS
+        const shown = performance.now() - loaderStartedAt.value
+        revealTimer = setTimeout(
+          () => {
+            revealTimer = null
+            boardBuilt.value = true
+            loaderVisible.value = false
+          },
+          Math.max(0, minMs - shown),
+        )
+      }
+      revealFrame = requestAnimationFrame(step)
+    }
+
+    // Der Auslöser ist die SICHTBARKEIT des Tabs, nicht ein bestimmter Weg
+    // dorthin: Scoreboard, Tab-Leiste, Kürzel und Return-Button teilen sich
+    // denselben Aufbau und damit denselben Schleier. `immediate` deckt das
+    // allererste Öffnen ab, bei dem diese Komponente selbst erst entsteht.
+    watch(
+      () => uiStore.bardActiveTab === 'battle',
+      (visible) => {
+        cancelLoader()
+        if (!visible) {
+          // Ein noch laufender Ladevorgang gehört zu einem Tab, der bereits zu
+          // ist — beim nächsten Öffnen zieht der Schleier ohnehin neu auf.
+          loaderVisible.value = false
+          return
+        }
+        if (!riftBoardShowing.value) return
+        loaderStartedAt.value = performance.now()
+        loaderVisible.value = true
+        revealWhenPainted()
+      },
+      { immediate: true },
+    )
+
+    onBeforeUnmount(cancelLoader)
+
     const startBattle = async () => {
       if (isStarting.value) return
       if (battleStore.isAutoBattleInitialized) {
@@ -189,6 +299,8 @@ export default defineComponent({
       universeAnim,
       planetVariant,
       startBattle,
+      loaderVisible,
+      loaderStartedAt,
     }
   },
 })
@@ -219,6 +331,16 @@ export default defineComponent({
 .loading-fade-leave-to {
   opacity: 0;
   transform: scale(1.02);
+}
+
+/* Ladeschleier: nur Aufdecken, kein Einblenden. Eine Enter-Blende hieße, den
+   Aufbau eine Blendendauer lang halbdurchsichtig zu zeigen — also genau das,
+   was verdeckt werden soll. */
+.btl-reveal-leave-active {
+  transition: opacity 0.3s ease;
+}
+.btl-reveal-leave-to {
+  opacity: 0;
 }
 
 /* Honor screen fade */

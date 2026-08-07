@@ -11,6 +11,9 @@ node_modules
 .DS_Store
 dist
 dist-ssr
+# Vergleichsbuilds für A/B-Messungen (dist-before / dist-after) — Wegwerfware,
+# die `git add -A` sonst mitnimmt
+dist-*
 coverage
 *.local
 
