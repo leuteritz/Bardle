@@ -14,7 +14,6 @@ import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import type { BardTabId } from '@/stores/core/uiStore'
 import type { KeybindId } from '@/types'
 import { formatBadgeCount } from '@/utils/ui/format'
-import { PLANET_TAB_RAIL_WIDTH_CSS, PLANET_TAB_RAIL_SEAM_WIDTH } from '@/config/constants'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
@@ -50,18 +49,22 @@ const planetBadgeLabel = computed(() => formatBadgeCount(planetBadgeCount.value)
 /**
  * Rechter Rand, den der Action-Toast dem aktiven Tab überlässt. Er steht über
  * ALLEN Tabs (eine Instanz, siehe .rp-modal-content) und zentrierte deshalb im
- * ganzen Modal — im Planet-Tab landete die Karte damit neben der Bühne, auf die
- * sie sich bezieht, weil rechts die Slot-Schiene ein Fünftel der Breite hält.
+ * ganzen Modal — in Planet- und Team-Tab landete die Karte damit neben dem
+ * Inhalt, auf den sie sich bezieht, weil rechts eine Schiene liegt.
  *
- * Die Menü-Ebene ist die einzige, die Toast UND aktiven Tab kennt: der Toast ist
- * ein Geschwister der Tab-Layer, eine Variable aus einem Tab heraus erreicht ihn
- * also nicht. Tabs ohne Seitenschiene bleiben bei 0 und damit bei der Mitte.
+ * Diese Ebene ist die einzige, die Toast UND aktiven Tab kennt: der Toast ist
+ * ein Geschwister der Tab-Layer, eine CSS-Variable aus einem Tab heraus erreicht
+ * ihn also nicht. Die Geometrie bleibt trotzdem beim Tab — jeder meldet seine
+ * eigene Schienenbreite als CSS-Länge, hier wird nur die des sichtbaren Tabs
+ * durchgereicht. Tabs, die nichts melden, bleiben bei 0 und damit bei der Mitte.
  */
-const toastInsetRight = computed(() =>
-  uiStore.bardActiveTab === 'planets'
-    ? `calc(${PLANET_TAB_RAIL_WIDTH_CSS} + ${PLANET_TAB_RAIL_SEAM_WIDTH}px)`
-    : '0px',
-)
+const tabToastInset = reactive<Partial<Record<BardTabId, string>>>({})
+
+function setTabToastInset(tab: BardTabId, css: string) {
+  tabToastInset[tab] = css
+}
+
+const toastInsetRight = computed(() => tabToastInset[uiStore.bardActiveTab] ?? '0px')
 
 const menuItems: {
   id: BardTabId
@@ -303,7 +306,7 @@ onUnmounted(() => {
                 v-show="uiStore.bardActiveTab === 'team'"
                 class="tab-layer"
               >
-                <TeamTabComponent />
+                <TeamTabComponent @toast-inset="setTabToastInset('team', $event)" />
               </div>
 
               <div
@@ -311,7 +314,7 @@ onUnmounted(() => {
                 v-show="uiStore.bardActiveTab === 'planets'"
                 class="tab-layer"
               >
-                <PlanetSelectTabComponent />
+                <PlanetSelectTabComponent @toast-inset="setTabToastInset('planets', $event)" />
               </div>
 
               <div

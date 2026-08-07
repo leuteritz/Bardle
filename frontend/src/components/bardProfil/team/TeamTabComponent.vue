@@ -317,6 +317,29 @@ const sidePanelWidth = computed(() => {
   return synergiesOpen.value ? TEAM_SIGIL_SYNERGIES_PANEL_WIDTH : 0
 })
 
+/**
+ * Der Action-Toast steht über allen Tabs (eine Instanz in .rp-modal-content) und
+ * zentriert deshalb im ganzen Modal. Hier gehört er über das SIGIL-BOARD, also
+ * meldet der Tab die Breite seiner rechten Schiene und die Menü-Ebene rückt die
+ * Karte darum ein.
+ *
+ * Als CSS-Ausdruck statt als Zahl: die Schienen tragen `zoom:
+ * var(--team-ui-scale)` (siehe .sdp-panel, .rpg-side-shell), ihre fixen px sind
+ * also erst nach der Skalierung das, was sie im Layout einnehmen — und die
+ * Skala ist eine CSS-Variable, die hier niemand auflösen muss.
+ *
+ * Gemeldet wird der ZIELWERT, nicht die gemessene Breite: die Schiene gleitet
+ * herein, ein ResizeObserver darauf feuerte pro Frame und schickte jedes Mal
+ * einen Render durch das Menü.
+ */
+const emit = defineEmits<{ 'toast-inset': [css: string] }>()
+
+watch(
+  sidePanelWidth,
+  (w) => emit('toast-inset', w > 0 ? `calc(${w}px * var(--team-ui-scale, 1))` : '0px'),
+  { immediate: true },
+)
+
 const roleIndex = computed(() => selectedRole.value ?? uiStore.rolesActiveSlot)
 const roleDef = computed(() => ROLES[roleIndex.value])
 const currentEquipment = computed(() => itemStore.slotEquipment[roleIndex.value])

@@ -22,10 +22,22 @@ import PlanetLockedPanel from './PlanetLockedPanel.vue'
 import PlanetRoleChoicePanel from './PlanetRoleChoicePanel.vue'
 import PlanetStagePanel from './PlanetStagePanel.vue'
 
-/** Schienenbreite und Naht kommen aus der Konstante — der Action-Toast rechnet
- *  mit denselben Werten, damit er in der Bühne zentriert bleibt. */
+/**
+ * Der Action-Toast steht über allen Tabs und zentriert deshalb im ganzen Modal.
+ * Hier soll er in der BÜHNE stehen, nicht neben ihr — also meldet der Tab, wie
+ * breit seine rechte Schiene ist, und die Menü-Ebene rückt die Karte darum ein.
+ * Der Wert ändert sich nie, ein einziges Mal beim Aufbau genügt.
+ */
+const emit = defineEmits<{ 'toast-inset': [css: string] }>()
+
+/** Schienenbreite und Naht kommen aus der Konstante — dieselben Werte gehen an
+ *  den Toast, damit die beiden nicht auseinanderlaufen können. */
 const railWidthCss = PLANET_TAB_RAIL_WIDTH_CSS
 const railSeamWidthPx = `${PLANET_TAB_RAIL_SEAM_WIDTH}px`
+
+onMounted(() =>
+  emit('toast-inset', `calc(${PLANET_TAB_RAIL_WIDTH_CSS} + ${PLANET_TAB_RAIL_SEAM_WIDTH}px)`),
+)
 
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
