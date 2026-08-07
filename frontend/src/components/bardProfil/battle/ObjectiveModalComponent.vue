@@ -224,7 +224,7 @@
           <!-- Floating crit numbers -->
           <TransitionGroup name="dmg-float" tag="div" class="dmg-floats">
             <span v-for="f in damageFloats" :key="f.id" class="dmg-float" :style="{ '--rot': f.rot + 'deg', left: f.left + '%' }">
-              -{{ f.value }}
+              -{{ $formatNumber(f.value) }}
             </span>
           </TransitionGroup>
 

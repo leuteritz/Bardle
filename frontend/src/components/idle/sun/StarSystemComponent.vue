@@ -1448,7 +1448,6 @@ function starCountStyle(star: StarRenderEntry) {
     0 0 20px rgba(255, 60, 40, 0.4),
     inset 0 0 20px rgba(255, 60, 40, 0.18);
   animation: sun-aim-spin 7s linear infinite;
-  will-change: transform;
 }
 
 /* Innerer, durchgezogener Ring auf Höhe der Sonnenscheibe — gegenläufig */
@@ -1507,7 +1506,6 @@ function starCountStyle(star: StarRenderEntry) {
     rgba(255, 50, 30, 0.2) 100%
   );
   animation: sun-aim-tint 0.6s ease-in-out infinite alternate;
-  will-change: opacity;
 }
 
 @keyframes sun-aim-in {
@@ -1546,6 +1544,12 @@ function starCountStyle(star: StarRenderEntry) {
   will-change: transform, opacity;
 }
 
+/* Bewusst OHNE `will-change`: Der Körper sitzt im `.star-body-wrap`, der die
+   Bewegung trägt und dafür bereits eine eigene Ebene bekommt. Eine zweite
+   Ebene je Stern — mit `filter` sogar eine eigene Rendering-Surface — hat sich
+   als Bumerang erwiesen: Chrome deckelt den Speicher fürs Compositing, und
+   sobald das Budget reißt, verliert JEDE Animation auf der Seite ihren
+   Compositor-Platz und läuft wieder über den Hauptthread. */
 .star-body {
   position: absolute;
   top: 0;
@@ -1553,7 +1557,6 @@ function starCountStyle(star: StarRenderEntry) {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  will-change: transform, filter;
   animation: star-spawn 0.7s ease-out;
   pointer-events: none;
 }
@@ -1571,8 +1574,11 @@ function starCountStyle(star: StarRenderEntry) {
     transparent 78%
   );
   opacity: 0;
+  /* Kein `will-change`: für eine LAUFENDE Opazitäts-Animation legt Chrome die
+     Ebene ohnehin an. Vorgezogen hätte sie nur eine Ebene je Stern dauerhaft
+     belegt — und das Compositing-Budget ist die knappe Ressource, sobald
+     zehn Sterne gleichzeitig im Orbit stehen. */
   animation: star-pulse-opacity 2.8s ease-in-out 0.7s infinite;
-  will-change: opacity;
   pointer-events: none;
 }
 
@@ -1684,7 +1690,6 @@ function starCountStyle(star: StarRenderEntry) {
   -webkit-mask-image: radial-gradient(circle, transparent 42%, #000 55%, transparent 76%);
   mask-image: radial-gradient(circle, transparent 42%, #000 55%, transparent 76%);
   animation: galaxy-boss-corona-spin 9s linear infinite;
-  will-change: transform;
   pointer-events: none;
 }
 
@@ -2259,7 +2264,12 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 /* Border-Puls über Opacity eines Overlays statt border-color-Animation —
-   border-color muss der Browser jeden Frame neu malen, Opacity nicht. */
+   border-color muss der Browser jeden Frame neu malen, Opacity nicht.
+
+   Er läuft nur noch, wo er etwas AUSSAGT: auf einem verfluchten oder wütenden
+   Stern. Auf dem gewöhnlichen Zähler war er Zierrat auf einem gut 30 px
+   breiten Chip — kaum wahrnehmbar, aber pro Stern eine dauerhaft laufende
+   Animation, und bei zehn Sternen im Orbit zählt genau diese Menge. */
 .star-planet-count::after {
   content: '';
   position: absolute;
@@ -2267,8 +2277,12 @@ function starCountStyle(star: StarRenderEntry) {
   border: 1px solid rgba(232, 192, 64, 0.95);
   border-radius: 4px;
   opacity: 0;
-  animation: star-count-pulse-fade 2.2s ease-in-out infinite;
   pointer-events: none;
+}
+
+.star-planet-count--cursed::after,
+.star-planet-count--raging::after {
+  animation: star-count-pulse-fade 2.2s ease-in-out infinite;
 }
 
 @keyframes star-count-pulse-fade {

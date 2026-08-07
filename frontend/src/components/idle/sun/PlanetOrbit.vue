@@ -1273,8 +1273,11 @@ export default defineComponent({
   border-radius: 50%;
   border: 1.5px solid rgba(126, 240, 140, 0.85);
   box-shadow: 0 0 10px rgba(62, 207, 90, 0.45);
+  /* Kein `will-change`: die laufende Animation holt sich ihre Ebene ohnehin.
+     Vorgezogen belegten die beiden Wellen JEDES gebufften Planeten dauerhaft
+     zwei Ebenen — zwölf allein hierfür, und das Compositing-Budget ist die
+     knappe Ressource, an der am Ende alle Animationen hängen. */
   animation: planet-buff-wave 2.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
-  will-change: transform, opacity;
 }
 
 /* Zweite Welle über einen negativen Delay: sie startet nicht erst nach der

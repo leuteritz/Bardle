@@ -426,14 +426,12 @@ onBeforeUnmount(() => {
   height: 130%;
   pointer-events: none;
   mix-blend-mode: screen;
-  will-change: transform, opacity;
 }
 .nf-dust {
   position: absolute;
   pointer-events: none;
   mix-blend-mode: multiply;
   border-radius: 50%;
-  will-change: transform;
 }
 .nf-dust-0 {
   width: 70%;
@@ -449,12 +447,15 @@ onBeforeUnmount(() => {
   left: 40%;
   background: radial-gradient(ellipse, rgba(0, 0, 0, 0.22) 0%, transparent 65%);
 }
+/* Ohne `will-change`: alle Ebenen des Durchflugs liegen auf `mix-blend-mode`
+   und lassen sich deshalb gar nicht isoliert compositen — `left`/`top` darin
+   war ohnehin wirkungslos, beides sind Layout-Eigenschaften. Was bleibt, wäre
+   nur der Ebenen-Speicher, und der ist die knappe Ressource. */
 .nf-void {
   position: absolute;
   pointer-events: none;
   mix-blend-mode: multiply;
   border-radius: 50%;
-  will-change: transform, opacity, left, top;
 }
 .nf-void-0 {
   width: 58%;

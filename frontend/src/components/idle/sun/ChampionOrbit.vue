@@ -127,8 +127,13 @@
             :style="{ left: f.x + 'px', top: f.y + 'px' }"
           >
             <template v-if="f.shieldFloat"><Icon icon="game-icons:shield-reflect" width="16" height="16" style="color: #5090e8" /></template>
-            <template v-else-if="f.healFloat">+{{ f.value }}</template>
-            <template v-else>-{{ f.value }}<span v-if="f.crit" class="champion-dmg-crit-tag">CRIT</span></template>
+            <!-- Schaden und Heilung kommen als rohe Fließkommazahl aus der
+                 DPS-Rechnung — ungerundet stünde da „-383.7261120000000006“. -->
+            <template v-else-if="f.healFloat">+{{ $formatNumber(f.value) }}</template>
+            <template v-else
+              >-{{ $formatNumber(f.value)
+              }}<span v-if="f.crit" class="champion-dmg-crit-tag">CRIT</span></template
+            >
           </span>
         </TransitionGroup>
       </div>

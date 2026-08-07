@@ -95,6 +95,25 @@ function createInstance() {
   const isIdleRenderingPaused = computed(() => idleHiddenGated.value)
 
   /**
+   * Dasselbe Signal als Klasse am <body>: `.idle-deco-paused` hält die
+   * laufenden CSS-Animationen des Idle-Layers an (Regel dazu in main.css).
+   *
+   * Der Frame-Ausstieg oben stoppt nur, was JS zeichnet — CSS-Animationen
+   * laufen unabhängig davon weiter und erklären pro Frame den Stil ihres
+   * Elements für ungültig, auch unter einem deckenden Overlay. Am <body>,
+   * weil die Orbit-Ebenen per <Teleport> dorthin hängen.
+   */
+  if (typeof document !== 'undefined') {
+    watch(
+      idleHiddenGated,
+      (hidden) => {
+        document.body.classList.toggle('idle-deco-paused', hidden)
+      },
+      { immediate: true },
+    )
+  }
+
+  /**
    * Pause signal for the idle layer's SIMULATION — orbit angles, behind-the-sun
    * state and the screen positions the combat logic reads. Diese läuft weiter,
    * während ein Bard-Tab offen ist: Champions sollen ihre Fähigkeiten auch dann

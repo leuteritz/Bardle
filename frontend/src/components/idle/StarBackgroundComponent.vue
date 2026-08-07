@@ -131,11 +131,20 @@ onBeforeUnmount(() => {
   transition: none !important;
 }
 
+/* Die Himmelskörper im Hintergrund tragen bewusst KEIN `will-change`.
+   Sie sind die größten Flächen der Seite (mehrere hundert Pixel Kante) und
+   liegen alle auf `mix-blend-mode: screen` — Blending braucht den Untergrund,
+   eine isolierte Compositor-Ebene bringt hier also ohnehin nichts, kostet aber
+   das Vielfache an Ebenen-Speicher. Und dieser Speicher ist gedeckelt: reißt
+   das Budget, verliert JEDE Animation der Seite ihren Compositor-Platz und
+   fällt auf den Hauptthread zurück — gemessen der Grund, warum im vollen
+   Spielstand selbst reine Opazitäts-Pulse pro Frame Stil-Neuberechnungen
+   auslösten. Für ihre laufenden Bahn-Animationen legt Chrome die Ebene
+   ohnehin an, solange sie läuft. */
 .galaxy {
   position: absolute;
   pointer-events: none;
   z-index: 2;
-  will-change: transform, opacity, filter;
   mix-blend-mode: screen;
   filter: blur(0.5px) brightness(1.1) saturate(1.3);
 }
@@ -144,7 +153,6 @@ onBeforeUnmount(() => {
   position: absolute;
   pointer-events: none;
   z-index: 2;
-  will-change: transform, opacity;
   mix-blend-mode: screen;
   filter: blur(2px) brightness(1.2) saturate(1.5);
 }
@@ -153,7 +161,6 @@ onBeforeUnmount(() => {
   position: absolute;
   pointer-events: none;
   z-index: 2;
-  will-change: transform, opacity;
   mix-blend-mode: screen;
   filter: blur(5px) brightness(1.1) saturate(1.3);
 }
@@ -196,7 +203,6 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   pointer-events: none;
   mix-blend-mode: screen;
-  will-change: transform;
 }
 
 .nebula-1 {
@@ -362,7 +368,6 @@ onBeforeUnmount(() => {
   position: absolute;
   pointer-events: none;
   z-index: 2;
-  will-change: transform, opacity, filter;
 }
 
 .planet--rescue {

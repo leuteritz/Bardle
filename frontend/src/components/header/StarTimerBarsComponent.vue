@@ -978,7 +978,6 @@ watch(
   border-radius: inherit;
   background: linear-gradient(to bottom, #ff5c85 0%, #ff2e63 55%, #b8003a 100%);
   animation: bar-rage-pulse 1.1s ease-in-out infinite;
-  will-change: opacity;
   pointer-events: none;
 }
 
@@ -1646,7 +1645,6 @@ watch(
   color: #ffc9b8;
   transform-origin: left center;
   animation: hp-num-pulse 1.15s ease-in-out infinite;
-  will-change: opacity, transform;
 }
 
 .planet-dots--right .planet-hp--critical {

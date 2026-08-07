@@ -43,3 +43,33 @@
   user-select: none;
   -webkit-user-select: none; /* Safari */
 }
+
+/* ── Verdeckter Idle-Layer: Deko anhalten ───────────────────────────────────
+   Liegt ein Bard-Profil-Tab oder das Star-Fight-Modal über dem Orbit, endet
+   dort bereits der Frame vor dem Zeichnen (useRenderingPaused). Die laufenden
+   CSS-Animationen kannte diese Bremse bisher nicht: Sterne pulsten, Fluglinien
+   flogen und Nebel zogen unter einem deckenden Overlay weiter — und jede
+   laufende Animation erklärt pro Frame den Stil ihres Elements für ungültig.
+   Im vollen Spielstand sind das rund neunzig Stück.
+
+   Die Klasse setzt useRenderingPaused am <body>, weil die Orbit-Ebenen sich
+   per <Teleport> dorthin hängen und ein Container weiter innen sie nicht mehr
+   erreichen würde. `animation-play-state` friert ein, statt zurückzusetzen:
+   beim Aufdecken laufen alle Takte dort weiter, wo sie standen. */
+.idle-deco-paused .champion-orbit-layer *,
+.idle-deco-paused .planet-orbit-layer *,
+.idle-deco-paused .planet-orbit-rings *,
+.idle-deco-paused .star-sys-layer *,
+.idle-deco-paused .star-count-layer *,
+.idle-deco-paused .orbit-tracks-svg *,
+.idle-deco-paused .drifter-layer *,
+/* Nur die Bühne selbst — Sonne und Sternfeld gibt es auch als `contained`
+   Ausschnitt INNERHALB eines offenen Overlays (Star Forge, Star-Fight-Arena).
+   Der liegt dann sichtbar davor und darf keinesfalls einfrieren. */
+.idle-deco-paused .sun-container:not(.contained) *,
+.idle-deco-paused .stars:not(.stars--contained) * {
+  animation-play-state: paused !important;
+}
+/* `.cosmic-stage-bg` steht bewusst NICHT in der Liste: dieses Sternfeld gehört
+   den Profil-Tabs (Rift-Board, Sigil-Detailspalte) und ist genau dann sichtbar,
+   wenn der Idle-Layer verdeckt ist. */
