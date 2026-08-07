@@ -24,6 +24,7 @@ import {
   SIGIL_CORE_GAUGE_STROKE,
   SIGIL_CORE_GAUGE_GAP,
   SIGIL_CORE_GAUGE_MIN_ARC,
+  SIGIL_CORE_GAUGE_LABEL_PX,
 } from '@/config/constants'
 import type { SigilStageDef } from '@/types'
 
@@ -41,13 +42,56 @@ const emit = defineEmits<{ open: [] }>()
 
 const crestPx = `${SIGIL_CREST_SIZE}px`
 const gaugeStroke = String(SIGIL_CORE_GAUGE_STROKE)
+const labelPx = `${SIGIL_CORE_GAUGE_LABEL_PX}px`
 
 interface GaugeSegment {
   key: string
   color: string
   dash: string
   offset: number
+  /** Whole-percent share, the figure printed on the arc while the core is hovered. */
+  pct: number
+  /** Label seat: the arc's middle, on the ring's centre line, in % of the crest box. */
+  left: string
+  top: string
+  /** Tangent of the ring at that seat, flipped where it would read upside down. */
+  rot: string
 }
+
+/**
+ * Whole percentages that add up to 100 exactly (largest remainder). Plain
+ * rounding would let five arcs read 21/21/21/21/21 and leave the player looking
+ * for the missing 5 % — the ring is a breakdown, so its figures have to close.
+ */
+function wholePercents(values: number[], total: number): number[] {
+  const raw = values.map((v) => (v / total) * 100)
+  const out = raw.map(Math.floor)
+  const remainder = 100 - out.reduce((sum, v) => sum + v, 0)
+  const byFraction = raw
+    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+    .sort((a, b) => b.frac - a.frac)
+  for (let k = 0; k < remainder; k++) out[byFraction[k % byFraction.length].i]++
+  return out
+}
+
+/** Roles that hold any power at all, in ROLES order. */
+const active = computed(() =>
+  props.rolePower.map((power, index) => ({ power, index })).filter((r) => r.power > 0),
+)
+
+/** Share per role, index-aligned with ROLES (0 where the role is empty). */
+const rolePct = computed<number[]>(() => {
+  const out = props.rolePower.map(() => 0)
+  if (props.teamPower <= 0) return out
+  const percents = wholePercents(
+    active.value.map((r) => r.power),
+    props.teamPower,
+  )
+  active.value.forEach((r, k) => {
+    out[r.index] = percents[k]
+  })
+  return out
+})
 
 /**
  * One arc per role that actually contributes, laid out clockwise from twelve
@@ -59,24 +103,41 @@ interface GaugeSegment {
  * "nothing here yet" reading.
  */
 const segments = computed<GaugeSegment[]>(() => {
-  const active = props.rolePower
-    .map((power, index) => ({ power, index }))
-    .filter((r) => r.power > 0)
-  if (active.length === 0) return []
+  if (active.value.length === 0) return []
 
-  const total = active.reduce((sum, r) => sum + r.power, 0)
   // One gap per arc — the last one closes the circle back onto the first, so a
   // single contributing role reads as an arc rather than as a plain ring.
-  const usable = Math.max(SIGIL_CORE_GAUGE_CIRCUMFERENCE - active.length * SIGIL_CORE_GAUGE_GAP, 0)
+  const usable = Math.max(
+    SIGIL_CORE_GAUGE_CIRCUMFERENCE - active.value.length * SIGIL_CORE_GAUGE_GAP,
+    0,
+  )
 
   let cursor = 0
-  return active.map(({ power, index }) => {
-    const length = Math.max((power / total) * usable, SIGIL_CORE_GAUGE_MIN_ARC)
+  return active.value.map(({ power, index }) => {
+    const length = Math.max((power / props.teamPower) * usable, SIGIL_CORE_GAUGE_MIN_ARC)
+    // The arc's middle, taken along the stroke and turned back into an angle.
+    // −90° because the gauge group is rotated to start at twelve o'clock.
+    const mid = ((cursor + length / 2) / SIGIL_CORE_GAUGE_CIRCUMFERENCE) * 360 - 90
+    const rad = (mid * Math.PI) / 180
+    // The figure follows the ring instead of standing upright: a horizontal
+    // label is at most 12px tall but over 20px wide, and at the ring's left and
+    // right the WIDTH is what has to cross a 13.6px band — two thirds of it
+    // would end up on the dark disc either side of its own arc. Turned tangent,
+    // only its height crosses the band and it fits with room to spare. Flipped
+    // by half a turn on the far side so it never reads upside down.
+    const tangent = mid + 90
+    const rot = tangent > 90 && tangent < 270 ? tangent - 180 : tangent
     const segment: GaugeSegment = {
       key: `core-arc-${index}`,
       color: ROLES[index].color,
       dash: `${length.toFixed(2)} ${SIGIL_CORE_GAUGE_CIRCUMFERENCE.toFixed(2)}`,
       offset: -cursor,
+      pct: rolePct.value[index],
+      // The gauge's viewBox is 0–100, so a radius in viewBox units IS a
+      // percentage of the crest box — no second unit to keep in step.
+      left: `${(50 + SIGIL_CORE_GAUGE_RADIUS * Math.cos(rad)).toFixed(2)}%`,
+      top: `${(50 + SIGIL_CORE_GAUGE_RADIUS * Math.sin(rad)).toFixed(2)}%`,
+      rot: `${rot.toFixed(1)}deg`,
     }
     cursor += length + SIGIL_CORE_GAUGE_GAP
     return segment
@@ -90,7 +151,9 @@ const synergyLabel = computed(() =>
 
 /** The breakdown in words — the ring says the proportions, this says the numbers. */
 const breakdown = computed(() => {
-  const parts = ROLES.map((role, i) => `${role.label} ${formatNumber(props.rolePower[i] ?? 0)}`)
+  const parts = ROLES.map(
+    (role, i) => `${role.label} ${formatNumber(props.rolePower[i] ?? 0)} (${rolePct.value[i]}%)`,
+  )
   return `Team Power ${formatNumber(props.teamPower)} — ${parts.join(' · ')}`
 })
 </script>
@@ -137,6 +200,25 @@ const breakdown = computed(() => {
         />
       </g>
     </svg>
+
+    <!-- Share readout — one figure per arc, seated on the arc it belongs to and
+         only while the core is pointed at. The ring alone says which role is the
+         bigger slice; this says by how much, and it says it where the answer is
+         rather than in a legend the eye has to walk to. Dark ink on lit metal,
+         the same inversion the level tab on every name plate uses. -->
+    <span class="core-shares" aria-hidden="true">
+      <span
+        v-for="segment in segments"
+        :key="`pct-${segment.key}`"
+        class="core-share"
+        :style="{
+          left: segment.left,
+          top: segment.top,
+          transform: `translate(-50%, -50%) rotate(${segment.rot})`,
+        }"
+        >{{ segment.pct }}%</span
+      >
+    </span>
 
     <span class="core-face">
       <span class="core-label">Team Power</span>
@@ -225,10 +307,39 @@ const breakdown = computed(() => {
   stroke-linecap: butt;
 }
 
+/* ── share readout (hover) ──
+   Five figures on the ring's centre line, each at the middle of its own arc.
+   Opacity only — the labels are laid out once when a slot changes and just fade
+   in, so pointing at the core costs a compositor pass and nothing else. */
+.core-shares {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+.core:hover .core-shares,
+.core:focus-visible .core-shares {
+  opacity: 1;
+}
+.core-share {
+  position: absolute;
+  /* seat and tangent come inline — they are geometry, not style */
+  font-size: v-bind(labelPx);
+  line-height: 1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  /* dark ink, because every role colour is a mid-to-light tone — the one
+     constant that reads on all five arcs without a plate behind it */
+  color: #0b0704;
+  white-space: nowrap;
+}
+
 /* The face is a RECTANGLE inside a circle, so its width is bounded by its own
-   height, not by the ring's diameter: the gauge's inner edge sits at 39.5% of
-   the crest (67px), the block is ~72px tall, so its half-width may reach
-   √(67² − 36²) = 56px — 66% of the crest. 64% keeps a hair of air at the corners
+   height, not by the ring's diameter: the gauge's inner edge sits at 39% of the
+   crest (66px), the block is ~72px tall, so its half-width may reach
+   √(66² − 36²) = 55px — 65% of the crest. 62% keeps a hair of air at the corners
    where the bottom rule runs widest. */
 .core-face {
   position: relative;
@@ -236,7 +347,7 @@ const breakdown = computed(() => {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  max-width: 64%;
+  max-width: 62%;
 }
 .core-label {
   font-size: 10.5px;

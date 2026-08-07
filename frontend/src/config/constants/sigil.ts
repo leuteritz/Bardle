@@ -161,7 +161,17 @@ export const SIGIL_CREST_SIZE = 170
  */
 export const SIGIL_CORE_GAUGE_RADIUS = 43
 export const SIGIL_CORE_GAUGE_CIRCUMFERENCE = 2 * Math.PI * SIGIL_CORE_GAUGE_RADIUS
-export const SIGIL_CORE_GAUGE_STROKE = 7
+/**
+ * Band width. It is not a free number: on hover the arcs carry each role's share
+ * as a percentage printed INSIDE the band, so the band has to be taller than the
+ * digits. 8 units = 13.6 px of the 170 px crest, against ~8.4 px of cap height at
+ * SIGIL_CORE_GAUGE_LABEL_PX — 2.6 px of air above and below. Thicker and the
+ * ring's inner edge starts cutting into the face, thinner and the figures spill
+ * onto the dark disc where dark ink disappears.
+ */
+export const SIGIL_CORE_GAUGE_STROKE = 8
+/** Font size (px, stage units) of the per-arc share labels. */
+export const SIGIL_CORE_GAUGE_LABEL_PX = 12
 /** Gap between two role arcs, in the same units — keeps the colours from butting. */
 export const SIGIL_CORE_GAUGE_GAP = 3.4
 /**
