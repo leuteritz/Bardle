@@ -44,9 +44,32 @@
              LP_METER_TICKS_PER_ZONE). The colour ramp sits on the track, not on
              the fill, so a given LP value always wears the same shade. -->
         <div class="lp-block">
+          <!-- Both ends read like the bar itself: the number carries the light,
+               the words step back, and the destination wears its own tier
+               colour so the next rung is visible before it is reached. -->
           <div class="lp-meta">
-            <span class="lp-meta-scale">{{ lpScaleLabel }}</span>
-            <span class="lp-meta-goal">{{ promotionGoal }}</span>
+            <span class="lp-meta-scale">
+              <span class="scale-now" :style="{ color: rankColor }">{{ currentRank.lp }}</span>
+              <template v-if="!isChallenger">
+                <span class="scale-sep">/</span>
+                <span class="scale-cap">{{ lpCap }}</span>
+              </template>
+              <span class="scale-word">LP</span>
+            </span>
+
+            <span class="lp-meta-goal">
+              <template v-if="promotion.flat">
+                <span class="goal-flat" :style="{ color: rankColor }">{{ promotion.flat }}</span>
+              </template>
+              <template v-else>
+                <span class="goal-num">{{ promotion.need }}</span>
+                <span class="goal-word">LP TO</span>
+                <span class="goal-dest" :style="{ color: promotion.destColor }">
+                  {{ promotion.dest }}
+                </span>
+                <span class="goal-arrow" :style="{ color: promotion.destColor }">›</span>
+              </template>
+            </span>
           </div>
           <div
             class="lp-track"
@@ -395,27 +418,46 @@ const plinthBg = computed(
   () => `linear-gradient(to right, #241c0f, ${rankColorDeep.value} 55%, ${rankColor.value})`,
 )
 
-/** Left end of the LP bar: how far along the current tier the player stands. */
-const lpScaleLabel = computed(() =>
-  currentRank.value.tier === 'Challenger'
-    ? `${currentRank.value.lp} LP`
-    : `${currentRank.value.lp} / ${lpCap.value} LP`,
-)
+/** Challenger has nothing above it, so it shows a bare LP count and no goal. */
+const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
 
-/** Where the player is headed next — the idle-game carrot under the LP bar. */
-const promotionGoal = computed(() => {
+interface Promotion {
+  /** Set only where no promotion is left — replaces the whole goal line */
+  flat?: string
+  need?: number
+  dest?: string
+  destColor?: string
+}
+
+/** Where the player is headed next — the idle-game carrot under the LP bar.
+ *  Split into parts instead of one string so the destination can wear the
+ *  colour of the tier it names. */
+const promotion = computed<Promotion>(() => {
   const { tier, division, lp } = currentRank.value
-  if (tier === 'Challenger') return 'TOP OF THE LADDER'
-  const lpNeeded = Math.max(0, lpCap.value - lp)
-  if (tier === 'Master') return `${lpNeeded} LP TO GRANDMASTER`
-  if (tier === 'Grandmaster') return `${lpNeeded} LP TO CHALLENGER`
+  if (tier === 'Challenger') return { flat: 'TOP OF THE LADDER' }
+  const need = Math.max(0, lpCap.value - lp)
+  if (tier === 'Master') {
+    return { need, dest: 'GRANDMASTER', destColor: RANK_TIER_COLORS.Grandmaster }
+  }
+  if (tier === 'Grandmaster') {
+    return { need, dest: 'CHALLENGER', destColor: RANK_TIER_COLORS.Challenger }
+  }
   const divIdx = RANK_DIVISIONS.indexOf(division as (typeof RANK_DIVISIONS)[number])
   if (divIdx >= 0 && divIdx < RANK_DIVISIONS.length - 1) {
-    return `${lpNeeded} LP TO ${tier.toUpperCase()} ${RANK_DIVISIONS[divIdx + 1]}`
+    // still climbing inside the tier — the destination keeps the tier's colour
+    return {
+      need,
+      dest: `${tier.toUpperCase()} ${RANK_DIVISIONS[divIdx + 1]}`,
+      destColor: rankColor.value,
+    }
   }
   const tierIdx = RANK_TIERS.indexOf(tier as (typeof RANK_TIERS)[number])
   const nextTier = RANK_TIERS[tierIdx + 1] ?? 'Master'
-  return `${lpNeeded} LP TO ${nextTier.toUpperCase()}`
+  return {
+    need,
+    dest: nextTier.toUpperCase(),
+    destColor: RANK_TIER_COLORS[nextTier] ?? '#d4a020',
+  }
 })
 </script>
 
@@ -800,26 +842,77 @@ const promotionGoal = computed(() => {
   gap: clamp(3px, 0.7cqh, 8px);
 }
 
+/* ── The two ends of the scale ──
+   Same grammar as the bar: the value burns, the vocabulary recedes. Sized off
+   the bar, so the line does not shrink into a caption under a 40 px meter. */
 .lp-meta {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.lp-meta-scale {
-  font-size: clamp(9px, 1.2cqh, 12px);
-  font-weight: 700;
-  letter-spacing: 2px;
+.lp-meta-scale,
+.lp-meta-goal {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(3px, 0.5vw, 7px);
+  min-width: 0;
+}
+
+/* Current LP — the reading the bar's leading edge stands at */
+.scale-now {
+  font-size: clamp(13px, 1.95cqh, 22px);
+  line-height: 1;
+  letter-spacing: 0.5px;
+}
+
+.scale-sep {
+  font-size: clamp(10px, 1.4cqh, 15px);
+  color: #4e422c;
+}
+
+/* The cap — the far end of the scale, the number the bar is heading for */
+.scale-cap {
+  font-size: clamp(11px, 1.55cqh, 17px);
+  letter-spacing: 0.5px;
   color: #b8ad92;
 }
 
-.lp-meta-goal {
-  font-size: clamp(9px, 1.2cqh, 12px);
-  font-weight: 700;
+.scale-word,
+.goal-word {
+  font-size: clamp(9px, 1.2cqh, 13px);
   letter-spacing: 2px;
-  color: #c8a058;
-  white-space: nowrap;
+  color: #7a6a48;
+}
+
+/* LP still owed for the next rung */
+.goal-num {
+  font-size: clamp(13px, 1.95cqh, 22px);
+  line-height: 1;
+  letter-spacing: 0.5px;
+  color: #e8c040;
+}
+
+/* Where those LP lead — in the colour of the tier it names */
+.goal-dest {
+  font-size: clamp(11px, 1.55cqh, 17px);
+  letter-spacing: 1.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.goal-arrow {
+  font-size: clamp(12px, 1.7cqh, 19px);
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.goal-flat {
+  font-size: clamp(11px, 1.55cqh, 17px);
+  letter-spacing: 2px;
 }
 
 /* ── LP meter: one bar, gauged by scale strokes ──
