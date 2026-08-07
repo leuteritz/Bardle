@@ -463,31 +463,23 @@ export const SIGIL_XP_STROKE_STEP = 0.14
 
 /**
  * Champion LEVEL on a role node — a tab struck into the LEFT EDGE of the name
- * plate. The level and the tier swapped seats: the level is the number, and a
- * number wants a plate with a straight edge and a dark ink on lit metal, which
- * is what this tab is. The tier moved onto the portrait, where a single glyph
- * says it without a digit — see SIGIL_NODE_TIER_GLYPH_PX.
+ * plate. It took this seat from the champion TIER, which used to state its star
+ * level here as a digit: a number wants a plate with a straight edge and dark
+ * ink on lit metal, and the level is the number this slot is about.
+ *
+ * The tier kept no readout of its own. Nothing is printed across the portrait —
+ * two attempts at that failed before (a six-rung ladder, a crown of forged
+ * points) because anything drawn over a 94 px portrait competes with the
+ * champion's face for the only surface that carries the champion's identity.
+ * What the tier still has is the plate AROUND this tab (tint from
+ * CROWN_MIN_STAR, glow from AUREOLE_MIN_STAR, a sheen at the apex), the regalia
+ * frame on the portrait, and the plate's tooltip.
  *
  * Wide enough for two digits: the cap is 50, and at 17 px (what the tier's
  * single star level needed) a "12" ran straight out of the tab.
  */
 export const SIGIL_NODE_LEVEL_TAB_WIDTH = 26
 
-/**
- * Champion tier on a role node — its own glyph, seated across the portrait's
- * foot in the tier's colour.
- *
- * Two attempts at stating the tier on the portrait failed before: a six-rung
- * ladder and a crown of forged points, both because anything that draws a RANK
- * on a 94 px portrait competes with the champion's face for the only surface
- * that carries the champion's identity. A glyph does not draw a rank — it draws
- * an identity, the same kind of thing the portrait already is, so the two sit
- * together instead of fighting. It also settles what forced the tier to be a
- * digit in the first place: ★ 2 #4e96e0 and ★ 3 #5e86d4 are near-identical blues
- * and colour alone could never tell them apart, but a star-gate and a
- * star-prominence never look alike at any size.
- */
-export const SIGIL_NODE_TIER_GLYPH_PX = 30
 /** From this star level the plate itself takes the tier's tint and outline. */
 export const SIGIL_TIER_CROWN_MIN_STAR = 4
 /** From this star level the plate carries a glow in the tier's own colour. */
