@@ -384,6 +384,7 @@ export const EXPEDITION_HAZARDS: ExpeditionHazardDef[] = [
     icon: 'game-icons:lightning-arc',
     kind: 'stat',
     counterStat: 'focus',
+    requirement: 'Send high Focus',
     desc: 'Screaming interference. Only a focused mind keeps the heading.',
   },
   {
@@ -392,6 +393,7 @@ export const EXPEDITION_HAZARDS: ExpeditionHazardDef[] = [
     icon: 'game-icons:heavy-fall',
     kind: 'stat',
     counterStat: 'vitality',
+    requirement: 'Send high Vitality',
     desc: 'The well pulls hard. Frail crews do not walk back out.',
   },
   {
@@ -400,6 +402,7 @@ export const EXPEDITION_HAZARDS: ExpeditionHazardDef[] = [
     icon: 'game-icons:crossed-swords',
     kind: 'stat',
     counterStat: 'power',
+    requirement: 'Send high Power',
     desc: 'Something guards this place, and it does not negotiate.',
   },
   {
@@ -408,6 +411,7 @@ export const EXPEDITION_HAZARDS: ExpeditionHazardDef[] = [
     icon: 'game-icons:stone-tablet',
     kind: 'stat',
     counterStat: 'fortune',
+    requirement: 'Send high Fortune',
     desc: 'The prize sits behind a lock that opens for the lucky.',
   },
   {
@@ -416,7 +420,8 @@ export const EXPEDITION_HAZARDS: ExpeditionHazardDef[] = [
     icon: 'game-icons:tribal-pendant',
     kind: 'kinship',
     counterStat: null,
-    desc: 'The seals answer only to a shared bloodline — send two of one origin.',
+    requirement: 'Send 2 of the same origin',
+    desc: 'The seals answer only to a shared bloodline.',
   },
   {
     id: 'shiftingPaths',
@@ -424,7 +429,8 @@ export const EXPEDITION_HAZARDS: ExpeditionHazardDef[] = [
     icon: 'game-icons:maze',
     kind: 'diversity',
     counterStat: null,
-    desc: 'Every road lies differently. No two travellers may share an origin.',
+    requirement: 'Send all different origins',
+    desc: 'Every road lies differently. No two travellers may share a home.',
   },
 ]
 

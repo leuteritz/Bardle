@@ -115,9 +115,13 @@ function championImage(name: string): string {
         </div>
         <div class="efc-meta">
           <span>{{ Math.round(progress * 100) }}%</span>
+          <!-- Named, not just pictured: a bare glyph here meant nothing without
+               a hover, and the run is already underway — this is the record of
+               what it went up against. -->
           <span class="efc-hazard-list">
-            <span v-for="h in hazards" :key="h.id" class="efc-hazard" :title="h.desc">
-              <Icon :icon="h.icon" width="12" height="12" />
+            <span v-for="h in hazards" :key="h.id" class="efc-hazard">
+              <Icon :icon="h.icon" width="13" height="13" />
+              {{ h.name }}
             </span>
           </span>
           <span>{{ Math.round(mission.successChance * 100) }}% odds</span>
@@ -308,12 +312,19 @@ function championImage(name: string): string {
 .efc-hazard-list {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
 }
 .efc-hazard {
   display: inline-flex;
-  color: rgba(216, 144, 96, 0.7);
-  cursor: help;
+  align-items: center;
+  gap: 4px;
+  color: rgba(216, 144, 96, 0.82);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 /* ── Haul ─────────────────────────────────────────────────── */

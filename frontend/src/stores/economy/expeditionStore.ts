@@ -283,10 +283,12 @@ export const useExpeditionStore = defineStore('expedition', {
       if (rank.chanceBonus > 0) {
         entries.push({
           id: 'ledger',
-          label: `${rank.name} standing`,
+          // Named by what it is, not by its flavour title — "Pathwarden standing"
+          // told a player nothing about where the bonus came from.
+          label: 'Expedition rank',
           icon: rank.icon,
           value: rank.chanceBonus,
-          detail: `Ledger rank ${rank.tier}`,
+          detail: `Rank ${rank.tier} of ${EXPEDITION_LEDGER_RANKS.length}`,
         })
       }
 

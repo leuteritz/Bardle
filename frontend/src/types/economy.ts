@@ -28,6 +28,12 @@ export interface ExpeditionHazardDef {
   kind: 'stat' | 'kinship' | 'diversity'
   /** Which champion stat answers this hazard — null for composition hazards. */
   counterStat: ChampionStatKey | null
+  /**
+   * What the crew must bring, in four or five words, shown ON the card.
+   * The flavour line below is decoration; this is the part a player acts on, so
+   * it may never live in a tooltip.
+   */
+  requirement: string
   desc: string
 }
 
