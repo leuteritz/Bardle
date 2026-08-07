@@ -102,7 +102,7 @@ export const PAUSE_SUN_VH_FACTOR = 0.24
 
 /** Pause overlay panel — fixed design surface (px) that useFitScale shrinks on
  *  flat viewports (Full HD) and grows (up to max scale) on 2K/4K. */
-export const PAUSE_PANEL_DESIGN_WIDTH = 560
+export const PAUSE_PANEL_DESIGN_WIDTH = 620
 export const PAUSE_PANEL_MAX_SCALE = 1.3
 
 // HUD panel corner arc radius (shared by CommandPanel and MiniMap)

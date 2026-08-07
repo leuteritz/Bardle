@@ -183,9 +183,10 @@
 
             <!-- Materialien bekommen die breitere der beiden Spalten: fünf
                  Karten je Reihe, zwei Reihen — damit passen alle zehn
-                 Materialien hinein. Die Karten sind so groß, dass das Material
-                 am Bild erkennbar ist; vorher waren es 14px-Icons, durch den
-                 Fit-Scale des Overlays effektiv 10px. -->
+                 Materialien hinein. Die Karten haben KEINE eigene Fassung mehr
+                 (kein Rahmen, keine Füllung, keine Aura): der Platz, den sie
+                 gekostet haben, gehört jetzt dem Bild — es füllt seine Zelle
+                 vollständig aus. Übrig bleiben Bild und Menge. -->
             <div class="stat-tile stat-tile--materials">
               <span class="stat-tile__label">
                 <Icon icon="game-icons:ore" width="17" height="17" class="stat-tile__icon" aria-hidden="true" />
@@ -207,7 +208,6 @@
                   :style="{ '--mat-color': mat.color }"
                   :title="`${mat.name} — ${mat.rarity}`"
                 >
-                  <span class="mat-card__aura" aria-hidden="true" />
                   <img v-if="mat.image" :src="mat.image" :alt="mat.name" class="mat-card__img" />
                   <!-- Vier der zehn Materialien haben in den Stammdaten kein
                        Bild; sie bekommen dasselbe Monogramm wie im Loot-Band
@@ -812,12 +812,19 @@ function particleStyle(i: number): Record<string, string> {
 /* Same frame as the BardProfileMenu modal (.rp-modal): flat dark body, the
    bottom-bar notch curvature and the gold accent line along the top edge.
    Feste Design-Breite (PAUSE_PANEL_DESIGN_WIDTH) — Größenanpassung übernimmt
-   ausschließlich useFitScale per transform: scale(). */
+   ausschließlich useFitScale per transform: scale().
+
+   Die Breite ist bewusst großzügig: der Fit-Scale ist auf JEDER
+   Desktop-Referenzauflösung höhenlimitiert (Full HD gemessen: 0,64 aus der
+   Höhe gegen 3,4, die die Bühnenbreite zuließe). Zusätzliche Panelbreite
+   kostet also nichts an Skalierung, während zusätzliche Panelhöhe alles
+   gleichmäßig schrumpfen ließe — sie geht direkt in die Inhalte, allen voran
+   in die Materialbilder. */
 .pause-panel {
   position: relative;
   z-index: 1;
   overflow: hidden;
-  width: 560px;
+  width: 620px;
   flex-shrink: 0;
   transform-origin: center center;
   display: flex;
@@ -1282,8 +1289,8 @@ function particleStyle(i: number): Record<string, string> {
      Inhalt (HP-Leiste, Material-Karten) eine einzelne Kachel hat. Bemessen
      am größten Inhalt — zwei Reihen Material-Karten. */
   /* Bemessen am höheren Inhalt: Kopfzeile (32) + Abstand (7) + zwei Reihen
-     Material-Karten (109) + Innenabstand (28). */
-  grid-auto-rows: 180px;
+     Material-Bilder (128) + Innenabstand (28). */
+  grid-auto-rows: 190px;
   /* Explizit, nicht dem geerbten `baseline` überlassen: die Material-Kachel
      hat ihre erste Baseline im Kartenraster statt in einer Wertzeile und
      rutschte dadurch gegenüber Health und Kills nach unten. */
@@ -1331,6 +1338,18 @@ function particleStyle(i: number): Record<string, string> {
 .stat-tile__icon {
   color: #c89040;
   flex-shrink: 0;
+}
+/* Die Materialkachel gibt ihren seitlichen Innenabstand an das Bildraster ab:
+   ohne Rahmen um die einzelnen Karten ist jeder Pixel Kachelrand ein Pixel
+   weniger Material. Die Kopfzeile behält ihren Abstand über ein eigenes
+   Padding, damit sie nicht am Kachelrand klebt. */
+.stat-tile--materials {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.stat-tile--materials .stat-tile__label {
+  padding-left: 7px;
+  padding-right: 7px;
 }
 /* Die Kachel füllt sich mit Karten statt mit einer Zahl — der reservierte
    Bar-Slot der anderen beiden entfällt hier, sonst stünde das Raster
@@ -1392,9 +1411,17 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Materialien in der Stat-Kachel ───────────────────────
-   Die Karten tragen ihre Seltenheitsfarbe (--mat-color, aus
-   MATERIAL_RARITY_COLOR) — Rahmen, Aura hinter dem Icon und Mengenzahl teilen
-   sie sich, sodass Wert und Menge in einem Blick zusammenfallen.
+   Die Karten haben keine eigene Fassung: kein Rahmen, keine Füllung, keine
+   Aura. Was von jeder Karte bleibt, sind Bild und Menge — der Zierrat kostete
+   in einer 52px-Zelle mehr Fläche, als er trug (siehe „Performance" Regel 7).
+   Die Seltenheit steckt weiterhin in --mat-color, die jetzt allein die
+   Mengenzahl färbt.
+
+   Der gewonnene Platz geht ins Bild: es füllt seine Rasterzelle vollständig
+   aus und ist damit gut die Hälfte größer als zuvor (40px → ~62px Kantenlänge
+   auf der Design-Breite, mit dem Fit-Scale wächst es auf 2K/4K entsprechend
+   mit). Das bleibt in der 256er-Variante von materialIconMd korrekt
+   eingebettet — bei DPR 2 sind das 124px Anzeige gegen 256px Quelle.
 
    Feste Maße statt vh-Clamps: das Panel hat eine feste Design-Breite, die
    Größenanpassung an den Viewport macht ausschließlich useFitScale. Ein
@@ -1404,8 +1431,12 @@ function particleStyle(i: number): Record<string, string> {
    auf, wüchse mitten in der Pause die Panelhöhe und mit ihr sprünge der
    Fit-Scale des gesamten Overlays. */
 .mat-grid {
-  --mat-row-h: 52px;
-  --mat-gap: 5px;
+  /* So hoch wie die Zelle breit ist: die Materialbilder sind quadratisch,
+     jede zusätzliche Zeilenhöhe darüber hinaus wäre Leerraum. */
+  --mat-row-h: 62px;
+  /* Ohne Rahmen trennt schon die Silhouette der Bilder — ein breiter Spalt
+     würde sie nur kleiner machen. */
+  --mat-gap: 4px;
   display: grid;
   grid-template-columns: repeat(var(--mat-cols, 4), 1fr);
   grid-template-rows: repeat(var(--mat-rows, 2), var(--mat-row-h));
@@ -1423,88 +1454,62 @@ function particleStyle(i: number): Record<string, string> {
   color: rgba(216, 200, 160, 0.3);
 }
 
-/* Icon füllt die Karte, die Menge liegt als Badge auf der unteren Kante — in
-   einer 52px-Zelle wäre für Bild UND Zeile untereinander kein Platz, ohne
-   beides zu verkleinern. */
+/* Reiner Rahmen im Wortsinn nicht mehr vorhanden: die Karte ist nur noch die
+   Zelle, in der Bild und Menge liegen. */
 .mat-card {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 0;
-  overflow: hidden;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--mat-color) 42%, transparent);
-  background: linear-gradient(
-    160deg,
-    color-mix(in srgb, var(--mat-color) 13%, transparent),
-    rgba(255, 200, 80, 0.03) 65%
-  );
 }
-/* Überzähliges: gleiche Fassung, aber neutral — es ist kein Material */
+/* Überzähliges ist kein Material — nur eine Zahl, entsprechend zurückgenommen */
 .mat-card--more {
-  border-color: rgba(122, 78, 32, 0.5);
-  background: rgba(255, 200, 80, 0.05);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 800;
-  color: rgba(216, 200, 160, 0.55);
+  color: rgba(216, 200, 160, 0.5);
   font-variant-numeric: tabular-nums;
 }
-/* Aura hinter dem Icon — gibt der Karte Tiefe, ohne das Bild einzufärben */
-.mat-card__aura {
-  position: absolute;
-  top: 46%;
-  left: 50%;
-  width: 108%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--mat-color) 26%, transparent) 0%,
-    transparent 62%
-  );
-  pointer-events: none;
-}
-/* Das Icon füllt die Karte — die Menge sitzt als Badge in der Ecke darüber,
-   wie in einem Inventarslot. Untereinander gestellt müssten beide schrumpfen,
-   damit sie in die 52px-Zelle passen. */
+/* Das Bild füllt die Zelle vollständig aus; `contain` hält das
+   Seitenverhältnis, die quadratischen Quellen landen also auf der
+   Zellenbreite. Der Schatten trennt es vom Panelgrund, seit der Rahmen es
+   nicht mehr tut — statisch, nicht animiert. */
 .mat-card__img {
-  position: relative;
-  width: 40px;
-  height: 40px;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.75));
 }
-/* Bildloses Material: Initialen im Stil des Icons, gleiche Kartengeometrie */
+/* Bildloses Material: nur die Initialen in der Seltenheitsfarbe, ohne Scheibe
+   — dieselbe Regel wie für die Karte selbst. Dafür so groß, dass sie das
+   Gewicht eines Bildes haben. */
 .mat-card__mono {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--mat-color) 35%, transparent);
-  background: rgba(0, 0, 0, 0.35);
-  font-size: 0.82rem;
+  font-size: 1.3rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   color: var(--mat-color);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 10px color-mix(in srgb, var(--mat-color) 40%, transparent);
 }
+/* Die Menge sitzt auf der unteren Kante des Bildes — ohne Plakette darunter,
+   die Lesbarkeit trägt der Schatten. */
 .mat-card__amount {
   position: absolute;
-  right: 2px;
-  bottom: 1px;
-  padding: 1px 3px;
-  border-radius: 3px;
-  background: rgba(6, 4, 0, 0.78);
-  font-size: 0.72rem;
+  right: 1px;
+  bottom: 0;
+  font-size: 0.82rem;
   font-weight: 800;
   line-height: 1;
   color: var(--mat-color);
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  text-shadow:
+    0 1px 2px rgba(6, 4, 0, 1),
+    0 0 4px rgba(6, 4, 0, 1),
+    0 0 9px rgba(6, 4, 0, 0.9);
 }
 
 /* Neue Materialkarte federt ins Raster ein — derselbe Pop wie bei den
