@@ -151,6 +151,7 @@ function attune(count: number) {
       gained === 1
         ? `Planet reached Lvl ${props.planet.level}!`
         : `+${gained} Levels → Lvl ${props.planet.level} (was ${before})`,
+      'levelup',
     )
   }
 }

@@ -235,3 +235,32 @@ export interface KeybindDef {
   /** true = Keycap steht dauerhaft in der HUD-Leiste. */
   inHud: boolean
 }
+
+// ── Action-Toast ─────────────────────────────────────────────────────────────
+// Die Registry liegt als TOAST_KINDS in config/constants/ui.ts. Jede
+// showToast-Stelle nennt die Art ihres Ereignisses, daraus holt sich die Karte
+// Sigil, Kopfzeile und Akzentfarbe — der Spieler erkennt so schon am Rand der
+// Karte, WORUM es geht, bevor er den Satz gelesen hat.
+
+export type ToastKind =
+  | 'levelup'
+  | 'recruit'
+  | 'assign'
+  | 'purchase'
+  | 'unlock'
+  | 'equip'
+  | 'perk'
+  | 'forge'
+  | 'expedition'
+  | 'event'
+  | 'warning'
+  | 'info'
+
+export interface ToastKindDef {
+  /** Kopfzeile über der Meldung — sagt in einem Wort, was passiert ist. */
+  label: string
+  /** Iconify-Name des Sigils links (Spielinhalt → game-icons). */
+  icon: string
+  /** Akzent für Sigil, Kopfzeile, Randleiste und Laufbalken. */
+  accent: string
+}

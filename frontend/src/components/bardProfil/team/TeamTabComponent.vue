@@ -445,10 +445,10 @@ function closeDestination() {
 function assignChampion(subSlot: number, champion: string) {
   if (subSlot === -1) {
     battleStore.setHeaderSlot(roleIndex.value, champion)
-    showToast(`${champion} set as ${roleDef.value.label}!`)
+    showToast(`${champion} set as ${roleDef.value.label}!`, 'assign')
   } else {
     battleStore.setSecondarySlot(roleIndex.value, subSlot, champion)
-    showToast(`${champion} assigned as ${allySlotLabel(subSlot)}!`)
+    showToast(`${champion} assigned as ${allySlotLabel(subSlot)}!`, 'assign')
   }
 }
 

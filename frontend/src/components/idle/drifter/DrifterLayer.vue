@@ -163,7 +163,7 @@ watch(
     const def = getDrifter(lastCollect.value.defId)
     if (!def) return
 
-    showToast(`${def.name} — ${def.effectLine}`)
+    showToast(`${def.name} — ${def.effectLine}`, 'event')
     logDrifterCollected(def.name, def.effectLine)
 
     if (def.rarity === 'legendary') {

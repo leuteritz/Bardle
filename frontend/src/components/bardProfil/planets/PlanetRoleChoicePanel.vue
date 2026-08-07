@@ -40,7 +40,7 @@ function confirmRole() {
   const roleId = pendingRoleId.value
   store.assignRole(props.slotId, roleId)
   pendingRoleId.value = null
-  showToast(`${PLANET_ROLES[roleId]?.name ?? roleId} locked in — this choice is permanent!`)
+  showToast(`${PLANET_ROLES[roleId]?.name ?? roleId} locked in — this choice is permanent!`, 'assign')
 }
 </script>
 

@@ -96,6 +96,7 @@ function toggleAutoLevel() {
     autoLevelEnabled.value
       ? 'Auto level-up on — champions level as soon as you can pay for it.'
       : 'Auto level-up off — levels are bought by hand again.',
+    'info',
   )
 }
 
@@ -117,10 +118,10 @@ const adminLevelableCount = computed(() => {
 function adminLevelTeam(steps: number) {
   const granted = levelStore.adminLevelUpTeam(steps)
   if (granted === 0) {
-    showToast('Whole team is already at the level cap.')
+    showToast('Whole team is already at the level cap.', 'warning')
     return
   }
-  showToast(`+${granted} champion level${granted === 1 ? '' : 's'} granted.`)
+  showToast(`+${granted} champion level${granted === 1 ? '' : 's'} granted.`, 'levelup')
 }
 
 /** Satelliten und Deko erscheinen erst, wenn das Board selbst steht. */

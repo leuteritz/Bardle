@@ -225,7 +225,7 @@ watch(
   () => solarStore.supernovaTrigger,
   (value) => {
     if (!value) return
-    showToast('The star has collapsed — a black hole remains')
+    showToast('The star has collapsed — a black hole remains', 'event')
     if (prefersReducedMotion) return
     shards = buildShards()
     startedAt = performance.now()

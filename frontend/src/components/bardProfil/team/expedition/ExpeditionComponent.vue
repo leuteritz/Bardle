@@ -113,7 +113,7 @@ function sendExpedition(offer: AvailableExpeditionSlot) {
     role: offer.requiredRoles[i],
   }))
   if (expeditionStore.startExpedition(offer.id, assigned)) {
-    showToast(`${offer.name} started!`)
+    showToast(`${offer.name} started!`, 'expedition')
   }
 }
 
@@ -131,7 +131,10 @@ function collectMission(id: string, toast = true) {
   expeditionStore.collectExpedition(id)
   if (reward > 0) spawnChimePop(reward)
   if (toast) {
-    showToast(status === 'success' ? 'Expedition rewards collected!' : 'Expedition completed.')
+    showToast(
+      status === 'success' ? 'Expedition rewards collected!' : 'Expedition completed.',
+      'expedition',
+    )
   }
 }
 

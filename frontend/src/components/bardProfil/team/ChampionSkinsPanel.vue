@@ -50,7 +50,7 @@ const selected = computed(() => skinStore.getSelectedSkin(props.champion))
 function equip(entry: SkinEntry) {
   if (entry.id === selected.value) return
   skinStore.setSkin(props.champion, entry.id)
-  showToast(`${props.champion}: ${entry.label} equipped!`)
+  showToast(`${props.champion}: ${entry.label} equipped!`, 'equip')
 }
 </script>
 

@@ -120,7 +120,7 @@ const jungleBuffSecsLeft = computed(() => {
 
 function buySlot(slotId: string) {
   store.buySlot(slotId)
-  showToast('Planet orbit slot unlocked!')
+  showToast('Planet orbit slot unlocked!', 'unlock')
 }
 
 // Current Sun-Phase colors for the stage backdrop sun (mirrors SunComponent vars).

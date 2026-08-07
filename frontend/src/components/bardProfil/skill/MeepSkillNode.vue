@@ -36,7 +36,7 @@ function acknowledge() {
 function handleBuy() {
   if (state.value !== 'buyable') return
   if (meepTree.buyNode(props.data.node.id)) {
-    showToast(`${props.data.node.name} learned!`)
+    showToast(`${props.data.node.name} learned!`, 'perk')
   }
 }
 </script>

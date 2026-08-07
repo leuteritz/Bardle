@@ -2,6 +2,8 @@
 // Pause- und Offline-Overlay, Tooltips, Ton und die Timings, mit denen das
 // alles ein- und ausblendet.
 
+import type { ToastKind, ToastKindDef } from '@/types'
+
 // ── Idle-Layer hinter einem Overlay: Anhalten und Wiederanlaufen ───────────
 /**
  * Wie viele Frames der Idle-Layer nach dem SCHLIESSEN eines deckenden Overlays
@@ -403,8 +405,36 @@ export const STATS_TAB_GAUGE = {
 /** Max augment selections queued by a single admin level grant (keeps a "+500 levels" from queueing 500 modals) */
 export const ADMIN_LEVEL_AUGMENT_QUEUE_MAX = 10
 
-// ── UI Timing ─────────────────────────────────────────────────────────────────
-export const TOAST_DURATION_MS = 800
+// ── Action-Toast ──────────────────────────────────────────────────────────────
+/**
+ * Standzeit einer Meldung. Bewusst lang genug, um einen ganzen Satz zu lesen —
+ * die Karte trägt Kopfzeile UND Meldung, und die längsten Sätze (Auto-Level-Up,
+ * Planeten-Rolle) sind über 60 Zeichen lang.
+ */
+export const TOAST_DURATION_MS = 2600
+
+/**
+ * Ein Eintrag je Ereignisart im Bard-Profil — Kopfzeile, Sigil und Akzent.
+ * Jede showToast-Stelle nennt ihre Art; ohne Angabe greift `info`.
+ *
+ * Die Akzente sind paarweise unterscheidbar gewählt: zwei Meldungen kurz
+ * hintereinander (Champion gekauft → Champion zugewiesen) sollen sich schon an
+ * der Farbe auseinanderhalten lassen, ohne dass man den Text vergleicht.
+ */
+export const TOAST_KINDS: Record<ToastKind, ToastKindDef> = {
+  levelup: { label: 'Level Up', icon: 'game-icons:progression', accent: '#7ddc4a' },
+  recruit: { label: 'Recruited', icon: 'game-icons:contract', accent: '#c9a0ff' },
+  assign: { label: 'Assigned', icon: 'game-icons:rank-3', accent: '#d8709a' },
+  purchase: { label: 'Purchased', icon: 'game-icons:two-coins', accent: '#e8c040' },
+  unlock: { label: 'Unlocked', icon: 'game-icons:unlocking', accent: '#5fd4c8' },
+  equip: { label: 'Equipped', icon: 'game-icons:shirt', accent: '#e08a4a' },
+  perk: { label: 'Learned', icon: 'game-icons:brain', accent: '#8fb8ff' },
+  forge: { label: 'Forged', icon: 'game-icons:anvil-impact', accent: '#ff8a3d' },
+  expedition: { label: 'Expedition', icon: 'game-icons:caravel', accent: '#4fb8e8' },
+  event: { label: 'Cosmic Event', icon: 'game-icons:star-formation', accent: '#a8b4ff' },
+  warning: { label: 'Heads Up', icon: 'game-icons:hazard-sign', accent: '#cc6050' },
+  info: { label: 'Notice', icon: 'game-icons:sparkles', accent: '#c8b89a' },
+}
 
 // ── Music ─────────────────────────────────────────────────────────────────────
 export const MUSIC_DEFAULT_VOLUME = 0.1

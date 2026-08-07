@@ -579,7 +579,10 @@ function handleEvolve(): void {
   const wasComet = solarStore.isCometState
   const targetName = nextStage.value.name
   solarStore.upgradeStar()
-  showToast(wasComet ? `The comet ignites into ${targetName}…` : `Star evolving to ${targetName}…`)
+  showToast(
+    wasComet ? `The comet ignites into ${targetName}…` : `Star evolving to ${targetName}…`,
+    'event',
+  )
 }
 
 function handleNodeClick(node: TreeNode): void {
@@ -588,13 +591,13 @@ function handleNodeClick(node: TreeNode): void {
     solarStore.buyBranch(node.id as SolarBranchId)
     if (solarStore.branchLevel(node.id as SolarBranchId) > before) {
       flashSun()
-      showToast(`${node.name} upgraded!`)
+      showToast(`${node.name} upgraded!`, 'forge')
     }
     return
   }
   if (forgeStore.buyNode(node.id)) {
     flashSun()
-    showToast(`${node.name} grown to Lv ${forgeStore.nodeLevel(node.id)}!`)
+    showToast(`${node.name} grown to Lv ${forgeStore.nodeLevel(node.id)}!`, 'forge')
   }
 }
 

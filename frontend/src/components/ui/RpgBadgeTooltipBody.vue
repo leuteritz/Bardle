@@ -53,7 +53,7 @@ function collectAll() {
   const ready = [...readyExpeditions.value]
   if (ready.length === 0) return
   for (const exp of ready) expeditionStore.collectExpedition(exp.id)
-  showToast('Expedition rewards collected!')
+  showToast('Expedition rewards collected!', 'expedition')
   props.close?.()
 }
 

@@ -151,7 +151,7 @@ export default defineComponent({
       () => galaxyStore.tierJustUnlocked,
       (justUnlocked) => {
         if (!justUnlocked) return
-        showToast(`✦ Tier ${galaxyStore.unlockedTier} unlocked!`)
+        showToast(`Tier ${galaxyStore.unlockedTier} unlocked!`, 'unlock')
         setTimeout(() => {
           galaxyStore.tierJustUnlocked = false
         }, TIER_FLASH_MS)

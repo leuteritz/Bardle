@@ -246,7 +246,7 @@ function materialImage(matId: string): string | undefined {
 
 function handleForgeRelic(relic: ForgeRelicDef): void {
   if (forgeStore.forgeRelic(relic.id)) {
-    showToast(`${relic.name} forged — Lv ${forgeStore.relicLevel(relic.id)}!`)
+    showToast(`${relic.name} forged — Lv ${forgeStore.relicLevel(relic.id)}!`, 'forge')
   }
 }
 
@@ -262,7 +262,7 @@ function constellationCostTitle(constellation: ForgeConstellationDef): string {
 
 function handleForgeConstellation(constellation: ForgeConstellationDef): void {
   if (forgeStore.forgeConstellation(constellation.id)) {
-    showToast(`Constellation forged: ${constellation.name}!`)
+    showToast(`Constellation forged: ${constellation.name}!`, 'forge')
   }
 }
 
@@ -290,13 +290,13 @@ const rerollMatImage = computed(() =>
 function handleBuyBargain(): void {
   const name = deal.value?.name ?? 'Bargain'
   if (forgeStore.buyBargain()) {
-    showToast(`${name} purchased!`)
+    showToast(`${name} purchased!`, 'purchase')
   }
 }
 
 function handleReroll(): void {
   if (forgeStore.rerollBargain()) {
-    showToast('Bargain rerolled!')
+    showToast('Bargain rerolled!', 'info')
   }
 }
 

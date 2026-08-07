@@ -859,7 +859,7 @@ export default defineComponent({
       if (!canClickBuy(name)) return
       const idx = visibleChampionList.value.indexOf(name)
       battleStore.recruitChampion(name)
-      showToast(`${name} recruited!`)
+      showToast(`${name} recruited!`, 'recruit')
       // Keep the detail panel in place: jump to the champion that now occupies
       // the recruited champion's list position (or the last one).
       const list = visibleChampionList.value
@@ -1938,7 +1938,7 @@ const shopChampionNames = computed(() =>
       const item = SHOP_ITEMS.find((i) => i.id === id)
       if (!item) return
       itemStore.buyItem(id)
-      showToast(`${item.name} purchased!`)
+      showToast(`${item.name} purchased!`, 'purchase')
     }
 
     return {

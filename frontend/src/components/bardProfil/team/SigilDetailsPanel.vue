@@ -490,7 +490,7 @@ function equipSkin(id: string, label: string) {
   const name = champion.value
   if (!name || id === equippedSkin.value) return
   skinStore.setSkin(name, id)
-  showToast(`${name}: ${label} equipped!`)
+  showToast(`${name}: ${label} equipped!`, 'equip')
 }
 
 // ── Progression ──────────────────────────────────────────────────────────────
@@ -529,7 +529,7 @@ function doLevelUp() {
   const name = champion.value
   if (!name) return
   if (!levelStore.levelUp(name)) return
-  showToast(`${name} reached level ${levelStore.levelOf(name)}!`)
+  showToast(`${name} reached level ${levelStore.levelOf(name)}!`, 'levelup')
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
@@ -644,7 +644,7 @@ function pickPerk(perkId: string) {
   const name = champion.value
   if (!name) return
   if (!levelStore.choosePerk(name, perkId)) return
-  showToast(`${name} learned ${PERK_BY_ID[perkId]?.name ?? perkId}!`)
+  showToast(`${name} learned ${PERK_BY_ID[perkId]?.name ?? perkId}!`, 'perk')
 }
 
 // ── Role scope: abilities + equipment belong to the slot, not the champion ───
