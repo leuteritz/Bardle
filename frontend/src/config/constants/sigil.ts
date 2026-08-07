@@ -462,24 +462,32 @@ export const SIGIL_XP_STROKE_BASE = 3.2
 export const SIGIL_XP_STROKE_STEP = 0.14
 
 /**
- * Champion tier on a role node — a rank tab on the LEFT EDGE of the name plate,
- * not a mark on the portrait.
+ * Champion LEVEL on a role node — a tab struck into the LEFT EDGE of the name
+ * plate. The level and the tier swapped seats: the level is the number, and a
+ * number wants a plate with a straight edge and a dark ink on lit metal, which
+ * is what this tab is. The tier moved onto the portrait, where a single glyph
+ * says it without a digit — see SIGIL_NODE_TIER_GLYPH_PX.
  *
- * Two attempts lived on the portrait before this one: a six-rung ladder and a
- * crown of forged points. Both failed for the same reason, and it was never
- * their styling — anything that states a rank on a 94px portrait competes with
- * the champion's face for the only surface that carries the champion's identity,
- * and it has to bring its own scrim to stay legible on top of it.
- *
- * The name plate already sits below the node with room to spare and already
- * carries the two other numbers about this slot (name, XP). A tab on its edge
- * costs the portrait nothing, states the tier as a DIGIT (exact, comparable —
- * which matters because ★2 #4e96e0 and ★3 #5e86d4 are near-identical blues, so
- * colour alone could never carry it), and hands the plate a second escalation
- * axis: the tier's own colour on its metal, and from CROWN_MIN_STAR upward a
- * tinted plate, an outline and a glow.
+ * Wide enough for two digits: the cap is 50, and at 17 px (what the tier's
+ * single star level needed) a "12" ran straight out of the tab.
  */
-export const SIGIL_TIER_RANK_WIDTH = 17
+export const SIGIL_NODE_LEVEL_TAB_WIDTH = 26
+
+/**
+ * Champion tier on a role node — its own glyph, seated across the portrait's
+ * foot in the tier's colour.
+ *
+ * Two attempts at stating the tier on the portrait failed before: a six-rung
+ * ladder and a crown of forged points, both because anything that draws a RANK
+ * on a 94 px portrait competes with the champion's face for the only surface
+ * that carries the champion's identity. A glyph does not draw a rank — it draws
+ * an identity, the same kind of thing the portrait already is, so the two sit
+ * together instead of fighting. It also settles what forced the tier to be a
+ * digit in the first place: ★ 2 #4e96e0 and ★ 3 #5e86d4 are near-identical blues
+ * and colour alone could never tell them apart, but a star-gate and a
+ * star-prominence never look alike at any size.
+ */
+export const SIGIL_NODE_TIER_GLYPH_PX = 30
 /** From this star level the plate itself takes the tier's tint and outline. */
 export const SIGIL_TIER_CROWN_MIN_STAR = 4
 /** From this star level the plate carries a glow in the tier's own colour. */

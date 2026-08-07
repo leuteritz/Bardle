@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { Icon } from '@iconify/vue'
 import { getChampionTier } from '@/config/champions/championTiers'
 import { regaliaStageFor, regaliaStageIndexFor } from '@/config/champions/championLevels'
 import { facetClipPath, studRingGradient } from '@/utils/orbit/geometry'
@@ -44,7 +45,8 @@ import {
   SIGIL_FRAME_HALO_MS,
   SIGIL_XP_STROKE_BASE,
   SIGIL_XP_STROKE_STEP,
-  SIGIL_TIER_RANK_WIDTH,
+  SIGIL_NODE_LEVEL_TAB_WIDTH,
+  SIGIL_NODE_TIER_GLYPH_PX,
   SIGIL_TIER_CROWN_MIN_STAR,
   SIGIL_TIER_AUREOLE_MIN_STAR,
   SIGIL_TIER_AUREOLE_MS,
@@ -97,14 +99,14 @@ const mainImage = computed(() =>
   main.value ? battleStore.getChampionImage(main.value, { size: props.nodeArtSize }) : '',
 )
 const tier = computed(() => (main.value ? getChampionTier(main.value) : null))
-/** The crest carries no text — the tier's name and headroom live in its tooltip. */
+/** The glyph carries no text — the tier's name and headroom live in its tooltip. */
 const tierLabel = computed(() =>
   tier.value ? `Tier ${tier.value.starLevel}/${MAX_STAR_LEVEL} — ${tier.value.name}` : '',
 )
 
 // ── Champion tier ────────────────────────────────────────────────────────────
-// The tier lives on the NAME PLATE, as a rank tab struck into its left edge —
-// the portrait carries none of it. Three things climb with the star level and
+// The tier lives on the PORTRAIT, as its own glyph across the foot; the name
+// plate's tab carries the level instead. Three things climb with the star level and
 // they climb on the plate, never on the champion's face: the tab's metal is
 // always the tier's own colour, from ★4 the plate takes that colour as a tint
 // and an outline, from ★5 it glows, and the apex tab carries a slow sheen.
@@ -117,7 +119,8 @@ const tierVars = computed<Record<string, string>>(() => ({
   '--tier-color': tier.value?.color ?? roleDef.value.color,
 }))
 
-const tierRankWidth = `${SIGIL_TIER_RANK_WIDTH}px`
+const levelTabWidth = `${SIGIL_NODE_LEVEL_TAB_WIDTH}px`
+const tierGlyphPx = SIGIL_NODE_TIER_GLYPH_PX
 const tierSheenMs = `${SIGIL_TIER_AUREOLE_MS}ms`
 const allies = computed(
   () => secondarySlots.value[props.roleIndex] ?? Array<string | null>(ALLIES_PER_ROLE).fill(null),
@@ -237,6 +240,8 @@ const mainXpReady = computed(() => !!mainXp.value && !mainXp.value.capped && mai
 // the apex spin animate, all transform/opacity — up to the starting cap that is
 // one animated layer per node, five on a full board.
 const mainLevel = computed(() => (main.value ? levelStore.levelOf(main.value) : 1))
+/** The tab shows the bare figure — the word belongs in the tooltip. */
+const levelLabel = computed(() => `Level ${mainLevel.value}`)
 const mainStage = computed(() => regaliaStageFor(mainLevel.value))
 const mainStageIndex = computed(() => (main.value ? regaliaStageIndexFor(mainLevel.value) : 0))
 
@@ -385,13 +390,26 @@ const frameVars = computed<Record<string, string>>(() => {
         <img :src="roleDef.image" :alt="roleDef.label" class="sigil-node-role-ghost" />
       </span>
 
-      <!-- the portrait carries nothing but the champion and its level: the tier
-           is struck into the name plate's edge instead, see .sigil-node-rank -->
-
-      <!-- level — the headline number, seated across the portrait's foot -->
-      <span v-if="main" class="sigil-node-lvl" :class="{ 'is-attention': mainAttention }">
-        <span class="sigil-node-lvl-tag">LV</span>
-        <span v-ink-center class="sigil-node-lvl-num">{{ mainLevel }}</span>
+      <!-- tier — the champion's own kind, seated across the portrait's foot as
+           the tier's glyph in the tier's colour. No digit: a glyph belongs on a
+           portrait the way a rank never did, and it tells ★2 from ★3 where
+           their near-identical blues could not. The number this slot is about is
+           the LEVEL, and that one moved to the plate's tab. -->
+      <span
+        v-if="main && tier"
+        class="sigil-node-tier"
+        :class="{ 'sigil-node-tier--apex': tierApex }"
+        :style="{ '--tier-color': tier.color }"
+        :title="tierLabel"
+        :aria-label="tierLabel"
+      >
+        <Icon
+          :icon="tier.icon"
+          :width="tierGlyphPx"
+          :height="tierGlyphPx"
+          class="sigil-node-tier-glyph"
+        />
+        <i v-if="tierApex" class="sigil-node-tier-sheen" aria-hidden="true" />
       </span>
     </span>
 
@@ -408,12 +426,19 @@ const frameVars = computed<Record<string, string>>(() => {
       }"
       :style="tierVars"
     >
-      <!-- rank tab — the champion tier, struck into the plate's left edge in
-           that tier's own metal. Digit, because ★2 and ★3 are near-identical
-           blues and a colour alone could not tell them apart. -->
-      <span v-if="main && tier" class="sigil-node-rank" :title="tierLabel" :aria-label="tierLabel">
-        <span v-ink-center class="sigil-node-rank-num">{{ tier.starLevel }}</span>
-        <i v-if="tierApex" class="sigil-node-rank-sheen" aria-hidden="true" />
+      <!-- level tab — struck into the plate's left edge in the role's own metal.
+           A number wants a straight-edged plate and dark ink on lit metal, and
+           it wants to sit beside the XP figure it belongs to rather than across
+           the champion's face. -->
+      <span
+        v-if="main"
+        class="sigil-node-rank"
+        :class="{ 'is-attention': mainAttention }"
+        :title="levelLabel"
+        :aria-label="levelLabel"
+      >
+        <span v-ink-center class="sigil-node-rank-num">{{ mainLevel }}</span>
+        <i v-if="mainAttention" class="sigil-node-rank-pulse" aria-hidden="true" />
       </span>
       <span class="sigil-node-name-body">
         <span class="sigil-node-name-text">{{ main ?? roleDef.label }}</span>
@@ -815,17 +840,16 @@ const frameVars = computed<Record<string, string>>(() => {
   opacity: 0.55;
 }
 
-/* ── level ────────────────────────────────────────────────────────────────────
-   The number the whole node is about, seated across the portrait's foot where
-   the tier caption used to be. It replaced the 34px medallion that hung off the
-   node's outward rim: that badge repeated a rank the regalia frame around the
-   portrait already tells in plates, studs, sweep and halo, and it said it in a
-   second geometry hanging off the silhouette. The frame keeps the rank; the foot
-   keeps the number, and it can be twice the size for it.
-
-   Its brightness still climbs with the regalia stage (--node-heat-ink), so the
-   numeral warms as the frame does — one ladder, told twice, never two colours. */
-.sigil-node-lvl {
+/* ── tier glyph ──────────────────────────────────────────────────
+   The champion's kind, seated across the portrait's foot on the same scrim the
+   level numeral used to stand on — same seat, same footprint, so nothing around
+   it had to move. What changed is what it says: a glyph rather than a figure.
+   A portrait is an identity, and a glyph is the only kind of rank mark that is
+   also one; the two sit together instead of competing, which is what sank the
+   ladder and the crown of points that tried this spot before.
+   It is drawn in the tier's own colour, not the role's — this is the one mark
+   on the node that is about the champion rather than the seat. */
+.sigil-node-tier {
   position: absolute;
   left: 0;
   right: 0;
@@ -834,46 +858,39 @@ const frameVars = computed<Record<string, string>>(() => {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 2px;
-  /* the numeral's own box reaches the circle's chord at this depth — 8px is what
-     keeps a two-digit level clear of the crop on every role */
-  padding-bottom: 8px;
+  padding-bottom: 5px;
+  overflow: hidden;
   background: linear-gradient(to top, rgba(6, 4, 2, 0.95) 30%, rgba(6, 4, 2, 0.7) 62%, transparent);
   pointer-events: none;
 }
-.sigil-node-lvl-tag {
-  margin-bottom: 5px;
-  font-size: 8px;
-  line-height: 1;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--role-color) 75%, #8b8172);
+.sigil-node-tier-glyph {
+  color: var(--tier-color);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.92));
 }
-.sigil-node-lvl-num {
-  font-size: 26px;
-  line-height: 0.8;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, #fff var(--node-heat-ink, 26%), var(--role-color));
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.92);
+/* apex only — a highlight travels across the glyph, clipped by the seat's own
+   overflow. Transform alone, one layer, and only ever on ★6 slots. */
+.sigil-node-tier--apex .sigil-node-tier-glyph {
+  color: color-mix(in srgb, #fff 22%, var(--tier-color));
 }
-/* banked XP or an unspent perk — the numeral goes to full brightness and a rail
-   breathes under it, in step with the XP arc. Opacity only, one layer. */
-.sigil-node-lvl.is-attention .sigil-node-lvl-num {
-  color: color-mix(in srgb, #fff 70%, var(--role-color));
-}
-.sigil-node-lvl.is-attention::before {
-  content: '';
+.sigil-node-tier-sheen {
   position: absolute;
-  left: 50%;
-  bottom: 2px;
-  width: 26px;
-  height: 2px;
-  margin-left: -13px;
-  border-radius: 1px;
-  background: color-mix(in srgb, #fff 42%, var(--role-color));
-  animation: sigil-xp-breathe 1.9s ease-in-out infinite;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 60%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.34), transparent);
+  animation: sigil-tier-sheen v-bind(tierSheenMs) linear infinite;
 }
+@keyframes sigil-tier-sheen {
+  0% {
+    transform: translateX(-120%);
+  }
+  55%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
 /* ── name plate ───────────────────────────────────────────────────────────────
    Two rows on one plate: the name, and beneath it the number the XP arc draws.
    The second row is the quieter one — the arc around the portrait is the
@@ -934,62 +951,59 @@ const frameVars = computed<Record<string, string>>(() => {
    details panel squeezes the board) does not reach the tab: its numeral is 15px
    and a single glyph, which survives the same squeeze at any contrast.
 
-   Escalation lives here and on the plate around it — never on the portrait:
-     ★1-3  tab in tier metal, plate untouched
-     ★4+   plate tinted from the tab outward, tier hairline around it
+   The TIER's escalation stayed on the plate around the tab, where it always
+   was — only its readout moved to the portrait:
+     ★1-3  plate untouched
+     ★4+   plate tinted, tier hairline around it
      ★5+   plate glows in the tier's colour
-     ★6    a sheen crosses the tab (transform only, one layer, apex slots only) */
+     ★6    a sheen crosses the tier glyph (transform only, one layer, apex only) */
 .sigil-node-rank {
   position: relative;
   flex: 0 0 auto;
-  width: v-bind(tierRankWidth);
+  width: v-bind(levelTabWidth);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   background: linear-gradient(
     158deg,
-    color-mix(in srgb, #fff 46%, var(--tier-color)),
-    var(--tier-color) 52%,
-    color-mix(in srgb, var(--tier-color) 68%, #0a0704)
+    color-mix(in srgb, #fff 46%, var(--role-color)),
+    var(--role-color) 52%,
+    color-mix(in srgb, var(--role-color) 68%, #0a0704)
   );
   box-shadow: inset -1px 0 0 rgba(6, 4, 2, 0.65);
 }
-/* The digit stands alone — a ★ over it drew as a smudge at the size this tab
-   actually renders (~6px on an unfocused board) and cost the numeral the height
-   it needed. What tells the digit apart from the LV numeral on the portrait is
-   the inversion: dark ink on lit metal here, lit type on a dark ground there. */
+/* The figure stands alone — no "LV" beside it. The word cost the numeral the
+   height it needed at the size this tab actually renders (~7 px on an unfocused
+   board), and nothing else on the plate is a bare number it could be confused
+   with. What sets it apart from the tier glyph across the portrait is the
+   inversion: dark ink on lit metal here, a lit glyph on a dark ground there. */
 .sigil-node-rank-num {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 0.8;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #0b0704;
 }
-/* apex — a hairline of white inside the tab's own edge, static */
-.sigil-node-name--apex .sigil-node-rank {
-  box-shadow:
-    inset -1px 0 0 rgba(6, 4, 2, 0.65),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.5);
+/* Banked XP or an unspent perk — the metal goes bright and a rail breathes along
+   the tab's foot, in step with the XP arc. Opacity only, one layer. */
+.sigil-node-rank.is-attention {
+  background: linear-gradient(
+    158deg,
+    color-mix(in srgb, #fff 68%, var(--role-color)),
+    color-mix(in srgb, #fff 22%, var(--role-color)) 52%,
+    var(--role-color)
+  );
 }
-/* apex only — a highlight travels down the tab, clipped by its own overflow */
-.sigil-node-rank-sheen {
+.sigil-node-rank-pulse {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 55%;
-  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.5), transparent);
-  animation: sigil-rank-sheen v-bind(tierSheenMs) linear infinite;
-}
-@keyframes sigil-rank-sheen {
-  0% {
-    transform: translateY(-120%);
-  }
-  55%,
-  100% {
-    transform: translateY(240%);
-  }
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 1px;
+  background: #0b0704;
+  animation: sigil-xp-breathe 1.9s ease-in-out infinite;
 }
 
 /* ★4+ — the plate itself takes the tier: a tint bleeding out of the tab and a
@@ -1359,12 +1373,12 @@ const frameVars = computed<Record<string, string>>(() => {
     opacity: 1;
   }
   .sigil-ally--spotlight,
-  .sigil-node-rank-sheen,
+  .sigil-node-tier-sheen,
   .sigil-node--spin .sigil-node-plate,
   .sigil-node-sweep,
   .sigil-node-halo,
   .sigil-node-xp--attention .sigil-node-xp-fill,
-  .sigil-node-lvl.is-attention::before {
+  .sigil-node-rank-pulse {
     animation: none !important;
   }
 }
