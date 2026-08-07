@@ -20,8 +20,6 @@
     </template>
   </svg>
 
-  <AttackProjectileLayer :shots="shots" />
-
   <div
     class="planet-orbit-layer planet-orbit-back"
     aria-hidden="true"
@@ -224,7 +222,6 @@ import { useUiStore } from '@/stores/core/uiStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { activePlanetPositions, activePlayerPlanetPositions } from '@/utils/orbit/liveState'
 import { planetOrbitPhases } from '@/utils/orbit/planetOrbitPhase'
-import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
 import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
@@ -283,7 +280,7 @@ interface LocalPlanetState {
 
 export default defineComponent({
   name: 'PlanetOrbit',
-  components: { AttackProjectileLayer, OrbitPath, Icon },
+  components: { OrbitPath, Icon },
   setup() {
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
@@ -344,7 +341,9 @@ export default defineComponent({
     const tierIsBehind = ref<boolean[]>(ORBIT_TIERS.planet.map(() => false))
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    const { shots, spawnShot, tickShots } = useProjectileSystem()
+    // Der geteilte AttackProjectileLayer holt sich die Schuss-Liste selbst —
+    // hier bleiben nur Abschuss und Flugtakt.
+    const { spawnShot, tickShots } = useProjectileSystem()
     const { orbitScale } = useOrbitScale()
 
     const screenCx = ref(window.innerWidth / 2)
@@ -988,7 +987,6 @@ export default defineComponent({
       renderPositions,
       tierIsBehind,
       tierOrbitDimensions,
-      shots,
       screenCx,
       screenCy,
       screenW,

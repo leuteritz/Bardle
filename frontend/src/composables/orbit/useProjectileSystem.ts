@@ -1,5 +1,5 @@
 // frontend/src/composables/orbit/useProjectileSystem.ts
-import { shallowRef } from 'vue'
+import { shallowRef, onScopeDispose } from 'vue'
 import { PROJECTILE_SHOT_DURATION_MS } from '@/config/constants'
 
 export interface ProjectileShot {
@@ -25,11 +25,37 @@ export interface ProjectileShot {
 const SHOT_DURATION_MS = PROJECTILE_SHOT_DURATION_MS
 let _nextId = 0
 
+/**
+ * Alle lebenden Schuss-Listen — Champion-Orbit, Turret-Salven und die Salven
+ * der Sterne halten je eine eigene, weil jedes System seine Schüsse im eigenen
+ * Frame-Takt bewegt. GEZEICHNET werden sie zusammen: ein einziger
+ * AttackProjectileLayer liest hier alle Listen.
+ *
+ * Vorher mountete jedes System seinen eigenen Layer — drei Vollbild-Canvas
+ * übereinander. Jedes davon belegt eine Compositor-Ebene in Bildschirmgröße
+ * (bei Full HD gut 6 MB) und zwingt zusätzlich jede darüberliegende Ebene in
+ * eine eigene, weil sie es überlappt. Für drei Listen, die fast immer leer
+ * sind, war das der teuerste Posten im ganzen Ebenen-Haushalt.
+ */
+const projectilePools = new Set<ProjectileShot[]>()
+
+/** Alle registrierten Schuss-Listen — nur für den Zeichen-Layer gedacht. */
+export function allProjectilePools(): Set<ProjectileShot[]> {
+  return projectilePools
+}
+
 export function useProjectileSystem() {
   // shallowRef mit stabiler Array-Identität: Schüsse werden in-place mutiert,
   // damit per-Frame-Updates keine Vue-Re-Renders der Eltern-Templates auslösen.
   // Der Canvas-Projektil-Layer liest das Array imperativ in seiner eigenen rAF-Loop.
   const shots = shallowRef<ProjectileShot[]>([])
+
+  // Die Liste selbst ist stabil (in-place mutiert), also genügt es, sie einmal
+  // anzumelden. `onScopeDispose` greift auch außerhalb einer Komponente.
+  projectilePools.add(shots.value)
+  onScopeDispose(() => {
+    projectilePools.delete(shots.value)
+  })
 
   /**
    * Spawnt einen neuen Schuss – NUR wenn Schütze UND Ziel im Vordergrund sind.

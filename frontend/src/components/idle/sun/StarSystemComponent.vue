@@ -102,9 +102,6 @@
            RAF-Loop gezeichnet — kein Per-Stern-DOM, keine Style-Recalcs -->
       <canvas ref="cooldownCanvas" class="orbit-hints-canvas" />
 
-      <!-- ③ Enemy Projectiles -->
-      <AttackProjectileLayer :shots="enemyShots" />
-
       <!-- ③b Zielscheibe auf der Sonne: der Boss hat den Spieler im Visier.
            Gleicher Telegraph wie bei Champions (rsq-aim-lock) und Turret-
            Planeten (tbh-aim-lock), aber als CSS-Reticle statt als Icon: die
@@ -255,7 +252,6 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useStarSystem } from '@/composables/orbit/useStarSystem'
 import OrbitPath from './OrbitPath.vue'
 import type { StarRenderEntry } from '@/composables/orbit/useStarSystem'
-import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useCombatStore } from '@/stores/battle/combatStore'
@@ -742,11 +738,9 @@ function onResize() {
 }
 
 // ── Enemy Planet Attack System ────────────────────────────────────────────────
-const {
-  shots: enemyShots,
-  spawnShot: spawnEnemyShot,
-  tickShots: tickEnemyShots,
-} = useProjectileSystem()
+// Gezeichnet werden die Schüsse vom geteilten AttackProjectileLayer, der sich
+// alle Listen selbst holt — hier bleiben nur Abschuss und Flugtakt.
+const { spawnShot: spawnEnemyShot, tickShots: tickEnemyShots } = useProjectileSystem()
 
 const ENEMY_TRAIL_COLOR = '#cc5500'
 const ENEMY_HEAD_COLOR = '#ff8800'

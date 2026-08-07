@@ -49,6 +49,10 @@
     <ChampionOrbit />
     <PlanetOrbit />
     <StarSystemComponent />
+    <!-- EIN Projektil-Canvas für alle Schuss-Quellen (Champions, Turrets,
+         Sterne). Es holt sich die Schuss-Listen selbst; früher mountete jede
+         der drei Quellen ihre eigene Vollbild-Ebene. -->
+    <AttackProjectileLayer />
     <PlayerHPBar />
     <StarSystemRescueTransition />
     <MvpBuffOverlay />
@@ -80,6 +84,7 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { formatNumber } from '@/config/ui/numberFormat'
 import SunComponent from './sun/SunComponent.vue'
 import ChampionOrbit from './sun/ChampionOrbit.vue'
+import AttackProjectileLayer from './sun/AttackProjectileLayer.vue'
 import PlayerHPBar from './sun/PlayerHPBar.vue'
 import StarSystemComponent from './sun/StarSystemComponent.vue'
 import StarSystemRescueTransition from './sun/StarSystemRescueTransition.vue'
@@ -120,6 +125,7 @@ export default defineComponent({
   components: {
     SunComponent,
     ChampionOrbit,
+    AttackProjectileLayer,
     PlayerHPBar,
     StarSystemComponent,
     StarSystemRescueTransition,

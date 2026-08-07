@@ -7,13 +7,19 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
+import { allProjectilePools } from '@/composables/orbit/useProjectileSystem'
 import type { ProjectileShot } from '@/composables/orbit/useProjectileSystem'
 
 // Canvas statt SVG: Die frühere SVG-Variante renderte pro Schuss 7+ Elemente
 // mit mehrstufigen feGaussianBlur-Filtern, die jeden Frame neu gerastert
 // wurden. Der additive Glow ('lighter') mit Gradients erzielt denselben
 // Neon-Look zu einem Bruchteil der Kosten und skaliert auf viele Schüsse.
-const props = defineProps<{ shots: ProjectileShot[] }>()
+//
+// EINE Instanz für alle Schuss-Quellen: der Layer holt sich die Listen selbst
+// aus useProjectileSystem, statt eine als Prop zu bekommen. Jede zusätzliche
+// Instanz wäre ein weiteres Vollbild-Canvas — eine eigene Compositor-Ebene in
+// Bildschirmgröße, die obendrein alles darüber in eigene Ebenen zwingt.
+const pools = allProjectilePools()
 
 const canvasEl = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
@@ -101,17 +107,21 @@ function drawShot(c: CanvasRenderingContext2D, shot: ProjectileShot) {
 function draw() {
   raf = requestAnimationFrame(draw)
   if (!ctx || !canvasEl.value) return
-  const shots = props.shots
-  if (shots.length === 0 && !hadShots) return
-  hadShots = shots.length > 0
+
+  let total = 0
+  for (const pool of pools) total += pool.length
+  if (total === 0 && !hadShots) return
+  hadShots = total > 0
 
   // Leeren Canvas ausblenden, damit der Compositor ihn überspringt
-  canvasEl.value.style.display = shots.length > 0 ? '' : 'none'
+  canvasEl.value.style.display = total > 0 ? '' : 'none'
 
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
   ctx.globalCompositeOperation = 'lighter'
   ctx.lineCap = 'round'
-  for (const shot of shots) drawShot(ctx, shot)
+  for (const pool of pools) {
+    for (const shot of pool) drawShot(ctx, shot)
+  }
   ctx.globalCompositeOperation = 'source-over'
 }
 

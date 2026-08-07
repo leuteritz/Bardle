@@ -1,8 +1,5 @@
 <!-- frontend/src/components/idle/sun/ChampionOrbit.vue -->
 <template>
-  <!-- Projektile: teleportiert sich selbst nach body -->
-  <AttackProjectileLayer :shots="shots" />
-
   <!-- ① Back-Layer: Champions HINTER der Sonne -->
   <div
     class="champion-orbit-layer champion-orbit-back"
@@ -192,7 +189,6 @@ import {
   FRAME_EL_SWEEP_INTERVAL,
 } from '@/config/constants'
 import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
-import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
 import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
 import type { ChampionRole } from '@/types'
@@ -253,7 +249,7 @@ interface LocalChampState {
 
 export default defineComponent({
   name: 'ChampionOrbit',
-  components: { AttackProjectileLayer, Icon },
+  components: { Icon },
   setup() {
     const combatStore = useCombatStore()
     const battleStore = useBattleStore()
@@ -299,7 +295,9 @@ export default defineComponent({
       return next
     }
 
-    const { shots, spawnShot, tickShots } = useProjectileSystem()
+    // Der geteilte AttackProjectileLayer holt sich die Schuss-Liste selbst —
+    // hier bleiben nur Abschuss und Flugtakt.
+    const { spawnShot, tickShots } = useProjectileSystem()
     const { orbitScale } = useOrbitScale()
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -777,7 +775,6 @@ export default defineComponent({
       backChampions,
       frontChampions,
       championRenderPositions,
-      shots,
       topHitActive,
       isAbilityActive,
       screenCx,
