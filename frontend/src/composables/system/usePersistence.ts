@@ -19,12 +19,15 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import type {
   ChampionProgress,
   PendingPerkChoice,
   DrifterActiveBuff,
+  BardAbilityBuff,
+  BardAbilityId,
   UniverseRunRecord,
 } from '@/types'
 import {
@@ -79,6 +82,7 @@ export function usePersistence() {
     const starGroupStore = useStarGroupStore()
     const championLevelStore = useChampionLevelStore()
     const drifterStore = useDrifterStore()
+    const bardAbilityStore = useBardAbilityStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -318,6 +322,20 @@ export function usePersistence() {
         totalDriftersSpawned: drifterStore.totalDriftersSpawned,
         totalDriftersCollected: drifterStore.totalDriftersCollected,
         totalDriftersMissed: drifterStore.totalDriftersMissed,
+      },
+      // Bard-Fähigkeiten. Abklingzeiten und Stase stehen als absolute
+      // Zeitstempel — genau wie die Drifter-Buffs darüber laufen sie damit
+      // auch bei geschlossenem Spiel weiter ab, statt beim Laden von vorn zu
+      // beginnen. Die Resonance dagegen ist erspielt und bleibt.
+      bardAbility: {
+        cooldownReadyAt: { ...bardAbilityStore.cooldownReadyAt },
+        resonance: bardAbilityStore.resonance,
+        resonanceProgress: bardAbilityStore.resonanceProgress,
+        buffs: bardAbilityStore.buffs.map((b) => ({ ...b })),
+        stasisUntil: bardAbilityStore.stasisUntil,
+        totalCasts: bardAbilityStore.totalCasts,
+        totalAbilityDamage: bardAbilityStore.totalAbilityDamage,
+        totalAbilityHealing: bardAbilityStore.totalAbilityHealing,
       },
     }
 
@@ -851,6 +869,28 @@ export function usePersistence() {
       drifterStore.totalDriftersCollected = saved.drifter?.totalDriftersCollected ?? 0
       drifterStore.totalDriftersMissed = saved.drifter?.totalDriftersMissed ?? 0
 
+      // Bard-Fähigkeiten. Was während der Abwesenheit abgelaufen ist, fällt
+      // hier heraus, statt danach noch einmal herunterzuzählen; eine Stase, die
+      // in der Zwischenzeit endete, wird verworfen — ihr Schlussschlag hätte
+      // Bosse getroffen, die zu ihrer Zeit gar nicht standen.
+      const bardAbilityStore = useBardAbilityStore()
+      const bardNow = Date.now()
+      bardAbilityStore.abilityNow = bardNow
+      const savedCooldowns = saved.bardAbility?.cooldownReadyAt ?? {}
+      for (const id of ['q', 'w', 'e', 'r'] as BardAbilityId[]) {
+        bardAbilityStore.cooldownReadyAt[id] = savedCooldowns[id] ?? 0
+      }
+      bardAbilityStore.resonance = saved.bardAbility?.resonance ?? 0
+      bardAbilityStore.resonanceProgress = saved.bardAbility?.resonanceProgress ?? 0
+      bardAbilityStore.buffs = ((saved.bardAbility?.buffs ?? []) as BardAbilityBuff[])
+        .filter((b) => b.expiresAt > bardNow)
+        .map((b) => ({ ...b }))
+      bardAbilityStore.stasisUntil =
+        (saved.bardAbility?.stasisUntil ?? 0) > bardNow ? saved.bardAbility.stasisUntil : 0
+      bardAbilityStore.totalCasts = saved.bardAbility?.totalCasts ?? 0
+      bardAbilityStore.totalAbilityDamage = saved.bardAbility?.totalAbilityDamage ?? 0
+      bardAbilityStore.totalAbilityHealing = saved.bardAbility?.totalAbilityHealing ?? 0
+
       // Recalculate derived CPS/CPC after all levels (buildings + solar + forge) are restored
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
@@ -1057,6 +1097,9 @@ export function usePersistence() {
 
     // 7g. Reset drifterStore — clears the sky and every running buff
     useDrifterStore().$reset()
+
+    // 7h. Reset bardAbilityStore — resonance, cooldowns and any running stasis
+    useBardAbilityStore().$reset()
 
     // 7b. Reset planetShopStore – alle Slots zurücksetzen
     const planetShopStoreR = usePlanetShopStore()

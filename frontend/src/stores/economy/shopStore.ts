@@ -12,6 +12,7 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import {
   SECONDS_PER_HOUR,
   EFFICIENCY_STARS_DIVISOR,
@@ -19,7 +20,6 @@ import {
   EFFICIENCY_STARS_MIN,
   SHOP_UPGRADE_CATALOG,
 } from '@/config/constants'
-
 
 export const useShopStore = defineStore('shop', {
   state: () => ({
@@ -247,6 +247,8 @@ export const useShopStore = defineStore('shop', {
       const treeMul = useMeepTreeStore().fx.cpsMult
       // Collected drifters (Errant Chime & co.) — timed, expires on its own
       const drifterMul = useDrifterStore().cpsMult
+      // Caretaker's Shrine (bard W) — the afterglow of a cast shrine
+      const bardMul = useBardAbilityStore().cpsMult
       return Math.floor(
         (baseCPS + solarCPS) *
           gameStore.abilityCPSMultiplier *
@@ -254,7 +256,8 @@ export const useShopStore = defineStore('shop', {
           flightMul *
           forgeMul *
           treeMul *
-          drifterMul,
+          drifterMul *
+          bardMul,
       )
     },
 
@@ -278,13 +281,18 @@ export const useShopStore = defineStore('shop', {
       // Ember Shard (drifter): multiplies the click value, not the CpS portion —
       // that share already carries the drifter CpS multiplier of its own.
       const drifterMul = useDrifterStore().cpcMult
+      // Magical Journey (bard E) — the travel window multiplies clicks only,
+      // for the same reason the drifter multiplier does: the CpS portion above
+      // already carries its own multipliers.
+      const bardMul = useBardAbilityStore().cpcMult
       return Math.floor(
         (baseCPC + upgradeBonus) *
           gameStore.abilityCPCMultiplier *
           cpcMul *
           forge.cpcMult *
           tree.cpcMult *
-          drifterMul +
+          drifterMul *
+          bardMul +
           cpsPortion,
       )
     },

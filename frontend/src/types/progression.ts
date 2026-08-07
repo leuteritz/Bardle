@@ -85,3 +85,50 @@ export interface UniverseRunRecord {
   chimes: number
   completedAt: number
 }
+
+// ── Bard-Fähigkeiten (Passive + Q/W/E/R) ─────────────────────────────────────
+
+/** Die vier aktiven Fähigkeiten. Die Passive hat keinen Slot — sie läuft immer. */
+export type BardAbilityId = 'q' | 'w' | 'e' | 'r'
+
+/**
+ * Statische Beschreibung einer Fähigkeit. Alles Zahlenmäßige steht in
+ * `config/constants/abilities.ts`; hier liegt nur, was die Kachel zeigt und
+ * ab wann sie überhaupt existiert.
+ */
+export interface BardAbilityDef {
+  id: BardAbilityId
+  /** Beschriftung der Keycap — zugleich die Taste selbst. */
+  key: string
+  name: string
+  /** Ein Satz Flavour über dem Wirkungstext. */
+  tagline: string
+  /** Bild in `public/img/BardAbilities/`. */
+  image: string
+  /** Leitfarbe der Kachel: Rahmen, Ring, Zahlen. */
+  color: string
+  /** Bard-Level, ab dem die Fähigkeit nutzbar ist. */
+  unlockLevel: number
+  /** Grundabklingzeit in Sekunden bei Rang 1, ohne jede Reduktion. */
+  baseCooldownSec: number
+}
+
+/** Was ein Wirken tatsächlich bewirkt hat — Grundlage der Rückmeldung im HUD. */
+export interface BardAbilityCastResult {
+  id: BardAbilityId
+  /** Zählt bei jedem Wirken hoch, damit zweimal dasselbe erneut auslöst. */
+  seq: number
+  at: number
+  /** Eine Zeile Klartext: „2 bosses struck for 1.2M". */
+  summary: string
+}
+
+/** Ein laufender Zeiteffekt einer Fähigkeit — Gegenstück zu `DrifterActiveBuff`. */
+export interface BardAbilityBuff {
+  sourceId: BardAbilityId
+  expiresAt: number
+  durationMs: number
+  cpsMult?: number
+  cpcMult?: number
+  combatDpsMult?: number
+}

@@ -7,6 +7,7 @@
 //
 //   core           21 Konstanten
 //   progression    55 Konstanten
+//   abilities      41 Konstanten
 //   economy        83 Konstanten
 //   roles          45 Konstanten
 //   champions     117 Konstanten
@@ -23,6 +24,7 @@
 
 export * from '@/config/constants/core'
 export * from '@/config/constants/progression'
+export * from '@/config/constants/abilities'
 export * from '@/config/constants/economy'
 export * from '@/config/constants/roles'
 export * from '@/config/constants/champions'

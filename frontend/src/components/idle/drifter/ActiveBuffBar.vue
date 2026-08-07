@@ -142,7 +142,11 @@ const chips = computed<BuffChip[]>(() => {
   --chip-w: 176px;
   --chip-h: 84px;
   position: fixed;
-  bottom: calc(79px * var(--hud-scale, 1) + 16px);
+  /* Die Fähigkeitenleiste belegt dieselbe Ankerlinie über dem Scoreboard und
+     veröffentlicht ihre gemessene Höhe — die Buff-Reihe stapelt sich darüber,
+     statt eine Zahl zu raten. Ohne Leiste greift der Default 0px und die Reihe
+     sitzt wieder wie zuvor. */
+  bottom: calc(79px * var(--hud-scale, 1) + 16px + var(--ability-bar-h, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 10001;

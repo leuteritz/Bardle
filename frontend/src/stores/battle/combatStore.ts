@@ -28,6 +28,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 
 let _damageFloatId = 0
 
@@ -173,7 +174,9 @@ export const useCombatStore = defineStore('combat', {
           useSynergyStore().dpsSynergyMultiplier *
           useStarForgeStore().championDpsMult *
           useMeepTreeStore().fx.championDpsMult *
-          useDrifterStore().combatDpsMult
+          useDrifterStore().combatDpsMult *
+          // Tempered Fate (bard R): the orbit keeps swinging while the stasis holds
+          useBardAbilityStore().combatDpsMult
         const defeated = bossStore.dealDamage(totalDPS)
         if (!defeated) {
           // Spawn one combined float at the planet position showing total damage

@@ -28,6 +28,8 @@ import SupernovaTransition from '@/components/idle/sun/SupernovaTransition.vue'
 import DrifterLayer from '@/components/idle/drifter/DrifterLayer.vue'
 import DrifterInfoCard from '@/components/idle/drifter/DrifterInfoCard.vue'
 import ActiveBuffBar from '@/components/idle/drifter/ActiveBuffBar.vue'
+import BardAbilityBar from '@/components/idle/abilities/BardAbilityBar.vue'
+import TemperedFateOverlay from '@/components/idle/abilities/TemperedFateOverlay.vue'
 import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 import KeybindHud from '@/components/keybinds/KeybindHud.vue'
 import KeybindPanel from '@/components/keybinds/KeybindPanel.vue'
@@ -92,6 +94,12 @@ watch(
     <DrifterLayer />
     <DrifterInfoCard />
     <ActiveBuffBar />
+
+    <!-- Bard-Fähigkeiten: die Leiste sitzt über dem Scoreboard und schiebt die
+         Buff-Reihe über sich; der Stase-Schleier liegt über dem Orbit, aber
+         unter jedem Modal. -->
+    <BardAbilityBar />
+    <TemperedFateOverlay />
 
     <MusicControlWidget />
 

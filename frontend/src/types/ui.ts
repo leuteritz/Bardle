@@ -206,7 +206,15 @@ export interface ScoreboardFit {
 // Ein Eintrag dort erscheint automatisch im Controls-Panel; `inHud` entscheidet
 // zusätzlich über die Keycap in der schwebenden Leiste.
 
-export type KeybindId = 'pause' | 'shop' | 'tree' | 'controls'
+export type KeybindId =
+  | 'pause'
+  | 'shop'
+  | 'tree'
+  | 'controls'
+  | 'abilityQ'
+  | 'abilityW'
+  | 'abilityE'
+  | 'abilityR'
 
 export type KeybindCategoryId = 'game' | 'interface'
 

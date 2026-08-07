@@ -15,6 +15,7 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { universes } from '@/config/progression/universes'
 import { clampPercent } from '@/utils/orbit/geometry'
@@ -221,6 +222,9 @@ export const useGameStore = defineStore('game', {
       this.totalChimesEarned += gain
       this.chimesEarnedForLevel += gain
       this.totalClicks += 1
+      // Traveler's Call (bard passive): the click builds resonance and takes a
+      // slice off every running ability cooldown.
+      useBardAbilityStore().registerClick()
       this.calculateLevel()
       this.addMeep()
       this.checkPrestigeAvailability()
@@ -643,6 +647,10 @@ export const useGameStore = defineStore('game', {
       // and roll for the next spawn. Runs before production so a buff that ends
       // this second is already gone when the chimes below are credited.
       useDrifterStore().tick()
+      // Bard abilities: expire the shrine/journey windows and carry a running
+      // stasis forward. Same reasoning as the drifters above — a window that
+      // closes this second must be gone before the chimes are credited.
+      useBardAbilityStore().tick()
       // Material intake window: slide the minute buckets forward even in a
       // minute where nothing dropped, so the header sparkline shows the gap
       // instead of an hour-old spike frozen at the right edge.

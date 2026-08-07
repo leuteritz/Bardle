@@ -31,6 +31,7 @@ import {
 export { PLANET_ROLES, PLANET_ROLES_LIST, JUNGLE_BUFF_DEFS } from '@/config/constants'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { getOrbitSunRadius, getOrbitSunScale } from '@/utils/orbit/geometry'
 import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
 import { logPlanetDestroyed, logPlanetRestored } from '@/config/ui/eventLog'
@@ -196,7 +197,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
             PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
           )
         }, 0)
-      return base * useDrifterStore().combatDpsMult
+      return base * useDrifterStore().combatDpsMult * useBardAbilityStore().combatDpsMult
     },
 
     activeHarvestSlots(state): { materialId: string }[] {

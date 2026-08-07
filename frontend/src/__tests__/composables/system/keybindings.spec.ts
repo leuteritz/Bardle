@@ -69,7 +69,16 @@ describe('keybindFor', () => {
   })
 
   it('returns null for keys nobody claimed', () => {
-    expect(keybindFor(new KeyboardEvent('keydown', { key: 'q' }))).toBeNull()
+    // Bewusst eine Taste, die kein Kürzel je beanspruchen wird — `q` war es
+    // bis zu den Bard-Fähigkeiten, die seither Q/W/E/R belegen.
+    expect(keybindFor(new KeyboardEvent('keydown', { key: 'y' }))).toBeNull()
+  })
+
+  it('maps the four ability slots to their bard abilities', () => {
+    expect(keybindFor(new KeyboardEvent('keydown', { key: 'q' }))?.id).toBe('abilityQ')
+    expect(keybindFor(new KeyboardEvent('keydown', { key: 'w' }))?.id).toBe('abilityW')
+    expect(keybindFor(new KeyboardEvent('keydown', { key: 'e' }))?.id).toBe('abilityE')
+    expect(keybindFor(new KeyboardEvent('keydown', { key: 'r' }))?.id).toBe('abilityR')
   })
 })
 

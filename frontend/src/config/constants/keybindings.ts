@@ -14,6 +14,53 @@ export const KEYBIND_CATEGORIES: readonly KeybindCategory[] = [
 ] as const
 
 export const KEYBINDINGS: readonly KeybindDef[] = [
+  // Die vier Bard-Fähigkeiten. `inHud: false` — sie haben mit der
+  // Fähigkeitenleiste über dem Scoreboard bereits ihre eigene, weit größere
+  // Anzeige; in der Keycap-Zeile stünden sie ein zweites Mal.
+  {
+    id: 'abilityQ',
+    keys: ['q'],
+    cap: 'Q',
+    label: 'Cosmic Binding',
+    description:
+      'Fires a bolt through the orbit: it strikes up to two planet bosses, damages both and holds their enrage clock. With no boss out there the bolt rebounds off the sun and knocks a burst of chimes loose.',
+    icon: 'game-icons:lightning-arc',
+    category: 'game',
+    inHud: false,
+  },
+  {
+    id: 'abilityW',
+    keys: ['w'],
+    cap: 'W',
+    label: "Caretaker's Shrine",
+    description:
+      'Sets a shrine on the sun: restores a quarter of its health, lifts the chime penalty a lost boss left behind, and lets production ring on above normal for a while.',
+    icon: 'game-icons:crystal-shrine',
+    category: 'game',
+    inHud: false,
+  },
+  {
+    id: 'abilityE',
+    keys: ['e'],
+    cap: 'E',
+    label: 'Magical Journey',
+    description:
+      'Opens a corridor through time. Running expeditions and the sun phase jump ahead, every star in the orbit is granted extra time, and clicks pay triple while the corridor stands.',
+    icon: 'game-icons:magic-portal',
+    category: 'game',
+    inHud: false,
+  },
+  {
+    id: 'abilityR',
+    keys: ['r'],
+    cap: 'R',
+    label: 'Tempered Fate',
+    description:
+      'The ultimate. Everything out there holds still — enrage clocks and star timers alike — while your orbit keeps swinging for triple damage. When the stasis breaks, every boss takes the parting blow.',
+    icon: 'game-icons:time-trap',
+    category: 'game',
+    inHud: false,
+  },
   {
     id: 'pause',
     keys: ['p'],

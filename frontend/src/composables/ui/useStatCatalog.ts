@@ -18,6 +18,7 @@ import { useDrifterStore } from '@/stores/world/drifterStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useSectionStore } from '@/stores/core/sectionStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { STAT_CATEGORIES } from '@/config/ui/statCategories'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { formatCompactDuration } from '@/utils/ui/format'
@@ -39,6 +40,7 @@ import {
   ITEM_SLOT_COUNT,
   BATTLE_TOTAL_GAME_SECONDS,
   SECONDS_PER_HOUR,
+  RESONANCE_MAX_STACKS,
 } from '@/config/constants'
 import type { StatCategoryId, StatCategoryView, StatEntry } from '@/types'
 
@@ -86,6 +88,7 @@ export function useStatCatalog(query: Ref<string>): {
   const synergyStore = useSynergyStore()
   const augmentStore = useAugmentStore()
   const drifterStore = useDrifterStore()
+  const bardAbilityStore = useBardAbilityStore()
   const playerStore = usePlayerStore()
   const sectionStore = useSectionStore()
   const championLevelStore = useChampionLevelStore()
@@ -1380,6 +1383,47 @@ export function useStatCatalog(query: Ref<string>): {
         key: 'drifter-xp',
         label: 'Drifter XP Buff',
         value: bonus(drifterStore.xpMult),
+      },
+      // ── Bard-Fähigkeiten ──
+      {
+        key: 'resonance',
+        label: 'Resonance',
+        value: `${int(bardAbilityStore.resonance)} / ${RESONANCE_MAX_STACKS}`,
+        highlight: true,
+        keywords: "traveler's call passive stacks clicks",
+      },
+      // Durchweg mit `bard-` vorangestellt: „ability-power" ist oben bereits an
+      // die Meep-Fähigkeiten vergeben, und die beiden Systeme dürfen im Katalog
+      // nicht ineinanderlaufen.
+      {
+        key: 'bard-ability-power',
+        label: 'Bard Ability Power',
+        value: bonus(bardAbilityStore.resonancePowerMult),
+        keywords: 'resonance passive q w e r',
+      },
+      {
+        key: 'bard-ability-cdr',
+        label: 'Bard Cooldown Reduction',
+        value: pct(bardAbilityStore.resonanceCdr),
+        keywords: 'resonance passive cooldown',
+      },
+      {
+        key: 'bard-abilities-cast',
+        label: 'Bard Abilities Cast',
+        value: num(bardAbilityStore.totalCasts),
+        keywords: 'q w e r binding shrine journey fate',
+      },
+      {
+        key: 'bard-ability-damage',
+        label: 'Bard Ability Damage',
+        value: num(bardAbilityStore.totalAbilityDamage),
+        keywords: 'cosmic binding tempered fate boss',
+      },
+      {
+        key: 'bard-ability-healing',
+        label: 'Bard Ability Healing',
+        value: num(bardAbilityStore.totalAbilityHealing),
+        keywords: "caretaker's shrine heal",
       },
     )
     return rows
