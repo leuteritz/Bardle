@@ -28,15 +28,6 @@
           <div class="rank-name" :style="{ color: rankColor, textShadow: nameGlow }">
             {{ rankTitle }}
           </div>
-
-          <div class="core-divider" :style="{ background: dividerBg }" />
-
-          <div class="lp-tower">
-            <span class="lp-num" :style="{ color: rankColor, textShadow: nameGlow }">
-              {{ currentRank.lp }}
-            </span>
-            <span v-ink-center class="lp-unit">LEAGUE POINTS</span>
-          </div>
         </div>
 
         <!-- LP progress toward the next rank: one bar, gauged by scale strokes
@@ -44,33 +35,6 @@
              LP_METER_TICKS_PER_ZONE). The colour ramp sits on the track, not on
              the fill, so a given LP value always wears the same shade. -->
         <div class="lp-block">
-          <!-- Both ends read like the bar itself: the number carries the light,
-               the words step back, and the destination wears its own tier
-               colour so the next rung is visible before it is reached. -->
-          <div class="lp-meta">
-            <span class="lp-meta-scale">
-              <span class="scale-now" :style="{ color: rankColor }">{{ currentRank.lp }}</span>
-              <template v-if="!isChallenger">
-                <span class="scale-sep">/</span>
-                <span class="scale-cap">{{ lpCap }}</span>
-              </template>
-              <span class="scale-word">LP</span>
-            </span>
-
-            <span class="lp-meta-goal">
-              <template v-if="promotion.flat">
-                <span class="goal-flat" :style="{ color: rankColor }">{{ promotion.flat }}</span>
-              </template>
-              <template v-else>
-                <span class="goal-num">{{ promotion.need }}</span>
-                <span class="goal-word">LP TO</span>
-                <span class="goal-dest" :style="{ color: promotion.destColor }">
-                  {{ promotion.dest }}
-                </span>
-                <span class="goal-arrow" :style="{ color: promotion.destColor }">›</span>
-              </template>
-            </span>
-          </div>
           <div
             class="lp-track"
             :class="{ 'lp-track--maxed': lpPercent >= 100 }"
@@ -99,6 +63,18 @@
             </span>
 
             <span class="lp-plinth" :style="{ background: plinthBg }" />
+          </div>
+
+          <!-- The reading of the bar, standing under it: the count the leading
+               edge points at, over the scale's own end. -->
+          <div class="lp-readout">
+            <span class="lp-count">
+              <span class="lp-num" :style="{ color: rankColor, textShadow: nameGlow }">
+                {{ currentRank.lp }}
+              </span>
+              <span v-if="!isChallenger" class="lp-of">/ {{ lpCap }}</span>
+            </span>
+            <span v-ink-center class="lp-unit">LEAGUE POINTS</span>
           </div>
         </div>
       </div>
@@ -226,9 +202,6 @@ const emblemGlowBg = computed(
   () => `radial-gradient(circle, ${rankColor.value}3d, transparent 70%)`,
 )
 const nameGlow = computed(() => `0 0 26px ${rankColor.value}59`)
-const dividerBg = computed(
-  () => `linear-gradient(to bottom, transparent, ${rankColor.value}66, transparent)`,
-)
 const railGlow = computed(() => `0 0 12px ${rankColor.value}80`)
 const tickGlow = computed(() => `0 0 6px ${rankColor.value}99`)
 
@@ -418,47 +391,8 @@ const plinthBg = computed(
   () => `linear-gradient(to right, #241c0f, ${rankColorDeep.value} 55%, ${rankColor.value})`,
 )
 
-/** Challenger has nothing above it, so it shows a bare LP count and no goal. */
+/** Challenger has no cap above it, so its readout is a bare LP count. */
 const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
-
-interface Promotion {
-  /** Set only where no promotion is left — replaces the whole goal line */
-  flat?: string
-  need?: number
-  dest?: string
-  destColor?: string
-}
-
-/** Where the player is headed next — the idle-game carrot under the LP bar.
- *  Split into parts instead of one string so the destination can wear the
- *  colour of the tier it names. */
-const promotion = computed<Promotion>(() => {
-  const { tier, division, lp } = currentRank.value
-  if (tier === 'Challenger') return { flat: 'TOP OF THE LADDER' }
-  const need = Math.max(0, lpCap.value - lp)
-  if (tier === 'Master') {
-    return { need, dest: 'GRANDMASTER', destColor: RANK_TIER_COLORS.Grandmaster }
-  }
-  if (tier === 'Grandmaster') {
-    return { need, dest: 'CHALLENGER', destColor: RANK_TIER_COLORS.Challenger }
-  }
-  const divIdx = RANK_DIVISIONS.indexOf(division as (typeof RANK_DIVISIONS)[number])
-  if (divIdx >= 0 && divIdx < RANK_DIVISIONS.length - 1) {
-    // still climbing inside the tier — the destination keeps the tier's colour
-    return {
-      need,
-      dest: `${tier.toUpperCase()} ${RANK_DIVISIONS[divIdx + 1]}`,
-      destColor: rankColor.value,
-    }
-  }
-  const tierIdx = RANK_TIERS.indexOf(tier as (typeof RANK_TIERS)[number])
-  const nextTier = RANK_TIERS[tierIdx + 1] ?? 'Master'
-  return {
-    need,
-    dest: nextTier.toUpperCase(),
-    destColor: RANK_TIER_COLORS[nextTier] ?? '#d4a020',
-  }
-})
 </script>
 
 <style scoped>
@@ -539,13 +473,6 @@ const promotion = computed<Promotion>(() => {
   justify-content: center;
   gap: clamp(14px, 1.6vw, 26px);
   max-width: 100%;
-}
-
-.core-divider {
-  align-self: stretch;
-  width: 1px;
-  flex-shrink: 0;
-  margin: clamp(4px, 0.6cqh, 8px) 0;
 }
 
 .rank-emblem {
@@ -811,12 +738,26 @@ const promotion = computed<Promotion>(() => {
   color: #e8c040;
 }
 
-.lp-tower {
-  flex-shrink: 0;
+/* ── Readout under the bar ── */
+.lp-readout {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+}
+
+.lp-count {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(6px, 0.8vw, 13px);
+}
+
+/* The scale's far end, kept a step behind the count itself */
+.lp-of {
+  font-size: clamp(13px, 2.4cqh, 28px);
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #8a7444;
 }
 
 .lp-num {
@@ -840,79 +781,6 @@ const promotion = computed<Promotion>(() => {
   display: flex;
   flex-direction: column;
   gap: clamp(3px, 0.7cqh, 8px);
-}
-
-/* ── The two ends of the scale ──
-   Same grammar as the bar: the value burns, the vocabulary recedes. Sized off
-   the bar, so the line does not shrink into a caption under a 40 px meter. */
-.lp-meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.lp-meta-scale,
-.lp-meta-goal {
-  display: flex;
-  align-items: baseline;
-  gap: clamp(3px, 0.5vw, 7px);
-  min-width: 0;
-}
-
-/* Current LP — the reading the bar's leading edge stands at */
-.scale-now {
-  font-size: clamp(13px, 1.95cqh, 22px);
-  line-height: 1;
-  letter-spacing: 0.5px;
-}
-
-.scale-sep {
-  font-size: clamp(10px, 1.4cqh, 15px);
-  color: #4e422c;
-}
-
-/* The cap — the far end of the scale, the number the bar is heading for */
-.scale-cap {
-  font-size: clamp(11px, 1.55cqh, 17px);
-  letter-spacing: 0.5px;
-  color: #b8ad92;
-}
-
-.scale-word,
-.goal-word {
-  font-size: clamp(9px, 1.2cqh, 13px);
-  letter-spacing: 2px;
-  color: #7a6a48;
-}
-
-/* LP still owed for the next rung */
-.goal-num {
-  font-size: clamp(13px, 1.95cqh, 22px);
-  line-height: 1;
-  letter-spacing: 0.5px;
-  color: #e8c040;
-}
-
-/* Where those LP lead — in the colour of the tier it names */
-.goal-dest {
-  font-size: clamp(11px, 1.55cqh, 17px);
-  letter-spacing: 1.5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.goal-arrow {
-  font-size: clamp(12px, 1.7cqh, 19px);
-  line-height: 1;
-  opacity: 0.75;
-}
-
-.goal-flat {
-  font-size: clamp(11px, 1.55cqh, 17px);
-  letter-spacing: 2px;
 }
 
 /* ── LP meter: one bar, gauged by scale strokes ──
