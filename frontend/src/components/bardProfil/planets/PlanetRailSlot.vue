@@ -125,8 +125,13 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
         </span>
         <!-- Hinter der Sonne: dasselbe Medaillon wie auf der Bühne und im
              Command Panel, aus derselben Positions-Map im selben Frame —
-             bewusst ohne Transition, damit es exakt mit den anderen
-             beiden umschaltet. -->
+             bewusst ohne Transition, damit es exakt mit den anderen beiden
+             umschaltet. Es steht auf dem PLANETEN, nicht in der Kachelmitte:
+             dort liefe es quer durch den Rollennamen, und die Aussage über die
+             ganze Kachel trägt ohnehin der Schleier. Über den Schleier hebt es
+             allein sein z-index — .ps-slot-icon eröffnet keinen eigenen
+             Stapelkontext (position: relative, z-index: auto), der Wert zählt
+             also gegen den der Kachel. -->
         <span
           v-else-if="showEclipse"
           class="ps-slot-eclipse-emblem"
@@ -169,6 +174,10 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
         </div>
       </template>
     </div>
+
+    <!-- Der Zustand gilt der GANZEN Kachel, nicht nur ihrem Planetenbild: der
+         Schleier legt sich über Bild, Beschriftung, Plakette und Leiste. -->
+    <span v-if="showEclipse" class="ps-slot-eclipse-veil" aria-hidden="true" />
   </button>
 </template>
 
@@ -651,7 +660,9 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
 }
 
 .ps-slot-btn--eclipsed .ps-slot-btn-img {
-  filter: grayscale(65%) brightness(0.5) saturate(0.6);
+  /* Nur noch entsättigt — das Abdunkeln macht der Schleier für die GANZE
+     Kachel; beides übereinander löschte den Planeten ganz aus. */
+  filter: grayscale(70%) saturate(0.6);
   transition: filter 0.4s ease;
 }
 
@@ -660,10 +671,30 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   opacity: 1;
 }
 
+/* Der Schleier über der ganzen Kachel — Bild, Beschriftung, Level-Plakette und
+   HP-Leiste fallen gemeinsam zurück, denn außer Reichweite ist der Slot als
+   Ganzes, nicht nur sein Planet.
+ *
+ * Er füllt mit der GRUNDFARBE der Rail (--rpg-bg-deep), nicht mit Schwarz:
+ * damit sieht die Kachel exakt so aus, als läge Opazität auf ihr selbst — nur
+ * dass das Medaillon und die Auswahl-Marke darüber stehen bleiben statt
+ * mitzuverblassen. Eine Opazität auf dem Button hätte beide mitgenommen, denn
+ * sie fasst den ganzen Teilbaum zu einer Gruppe zusammen. */
+.ps-slot-eclipse-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: var(--bp-radius);
+  background: color-mix(in srgb, var(--rpg-bg-deep, #111008) 62%, transparent);
+  pointer-events: none;
+}
+
 /* Medaillon mittig auf dem Planeten — Größe folgt dem Kachel-Container wie das
-   Planetenbild, damit es auf 4K nicht schrumpft und auf Full HD nicht überdeckt. */
+   Planetenbild, damit es auf 4K nicht schrumpft und auf Full HD nicht überdeckt.
+   z-index hebt es über den Schleier, siehe Template. */
 .ps-slot-eclipse-emblem {
   position: absolute;
+  z-index: 4;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
