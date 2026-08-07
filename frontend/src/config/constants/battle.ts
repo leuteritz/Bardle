@@ -272,6 +272,15 @@ export const LP_MASTER_DEMOTION_VALUE = 400
 export const LP_GRANDMASTER_DEMOTION_VALUE = 900
 export const LP_BASE_CHANGE = 20
 
+/** Zones the LP meter is divided into by its heavy scale strokes. Every zone
+ *  burns a step brighter than the one to its left, so the climb from 0 LP to
+ *  promotion reads as an escalation instead of one flat bar. Zones are equal
+ *  fractions of whatever cap the tier has (100 / 500 / 1000). */
+export const LP_METER_ZONES = 4
+/** Light scale strokes inside a zone — with 4 zones over 100 LP that is one
+ *  stroke every 5 LP, and a heavy one at every 25. */
+export const LP_METER_TICKS_PER_ZONE = 5
+
 // Battle constants
 export const OPPONENT_MMR_VARIANCE = 200
 export const BATTLE_TIME_MIN_SECONDS = 30
