@@ -93,10 +93,9 @@ watch(isSearching, (searching, wasSearching) => {
         <span class="sc-head-ico">
           <Icon :icon="cat.icon" width="36" height="36" />
         </span>
-        <span class="sc-head-text">
-          <span class="sc-head-name">{{ cat.label }}</span>
-          <span class="sc-head-blurb">{{ cat.blurb }}</span>
-        </span>
+        <!-- One line only: the category name carries the row, the blurb lives
+             on as the row's tooltip -->
+        <span class="sc-head-name">{{ cat.label }}</span>
         <span v-ink-center class="sc-head-count">
           {{ isSearching ? `${cat.stats.length}/${cat.totalCount}` : cat.totalCount }}
         </span>
@@ -267,19 +266,15 @@ watch(isSearching, (searching, wasSearching) => {
   filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 55%, transparent));
 }
 
-.sc-head-text {
+/* Single line, so it may carry the row: the name gets the size the two-line
+   stack used to spend on itself plus its blurb. */
+.sc-head-name {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.sc-head-name {
-  font-size: 16px;
+  font-size: 21px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1.15;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
   text-transform: uppercase;
   color: #e8e0cc;
   white-space: nowrap;
@@ -288,17 +283,6 @@ watch(isSearching, (searching, wasSearching) => {
 }
 .sc-cat.is-open .sc-head-name {
   color: var(--accent);
-}
-
-.sc-head-blurb {
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
-  color: var(--rpg-text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sc-head-count {
@@ -452,7 +436,7 @@ watch(isSearching, (searching, wasSearching) => {
     height: 32px;
   }
   .sc-head-name {
-    font-size: 15px;
+    font-size: 19px;
   }
   .sc-body {
     padding: 7px 9px 8px;
