@@ -72,6 +72,14 @@ export const HEADER_BADGE_MAX_COUNT = 3
 export const BOTTOM_BAR_SEAM_TOP_OFFSET_PX = 10
 export const BOTTOM_BAR_SEAM_BOTTOM_OFFSET_PX = 28
 
+/**
+ * Umfang der Cooldown-Kreislinie auf den Rollenkarten (2·π·r bei r = 47.5 im
+ * viewBox 0 0 100 100). Der Ring läuft über `stroke-dashoffset`, das zwischen
+ * diesem Wert (leer) und 0 (voll) fährt — dieselbe Zahl steht als
+ * `stroke-dasharray` im CSS von `.champ-ability-ring__fill`.
+ */
+export const ABILITY_RING_CIRCUMFERENCE = 298.45
+
 /** Einsammel-Burst: Streuung um den Sollwinkel, als Anteil des Winkelschritts. */
 /** Aufblitz-Dauer einer geänderten Admin-Zahl. */
 export const ADMIN_FIELD_FLASH_MS = 280

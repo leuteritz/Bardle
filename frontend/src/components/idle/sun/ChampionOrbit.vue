@@ -16,16 +16,10 @@
         'champion-orbit-avatar--role-colored': !!pos.primaryRole,
         'champion-orbit-avatar--role-hover': hoveredChampionRole !== null && !isChampionDimmed(pos),
         'champion-orbit-avatar--role-hover-primary': pos.primaryRole === hoveredChampionRole && pos.isMain,
-        'champion-orbit-avatar--dim': pos.dimFactor <= HOVER_DIM_HIDDEN_THRESHOLD,
+        'champion-orbit-avatar--dim': pos.dimHidden,
       }"
-      :style="{
-        width: pos.size + 'px',
-        height: pos.size + 'px',
-        transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
-        opacity: pos.opacity * pos.dimFactor,
-        '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
-        '--hover-role-color': hoverColor || undefined,
-      }"
+      :style="avatarStyle(pos)"
+      :ref="(el) => setMapEl(backAvatarEls, pos.name, el)"
     >
       <img :src="pos.img" :alt="pos.name" class="champion-orbit-portrait" />
     </div>
@@ -63,21 +57,20 @@
         'champion-orbit-avatar--synergy': pos.synergyActive,
         'champion-orbit-avatar--role-hover': hoveredChampionRole !== null && !isChampionDimmed(pos),
         'champion-orbit-avatar--role-hover-primary': pos.primaryRole === hoveredChampionRole && pos.isMain,
-        'champion-orbit-avatar--dim': pos.dimFactor <= HOVER_DIM_HIDDEN_THRESHOLD,
+        'champion-orbit-avatar--dim': pos.dimHidden,
         'champion-orbit-avatar--hit': pos.isHit,
         'champion-orbit-avatar--down': pos.isDown,
       }"
-      :style="{
-        width: pos.size + 'px',
-        height: pos.size + 'px',
-        transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
-        opacity: pos.opacity * pos.dimFactor,
-        zIndex: pos.zIndex,
-        '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
-        '--hover-role-color': hoverColor || undefined,
-      }"
+      :style="avatarStyle(pos)"
+      :ref="(el) => setMapEl(frontAvatarEls, pos.name, el)"
     >
       <img :src="pos.img" :alt="pos.name" class="champion-orbit-portrait" />
+      <!-- Zustands-Glow als eigene Ebene: der Schein selbst steht STATISCH im
+           CSS, geatmet wird ausschließlich seine Deckkraft. Früher pulsierten
+           box-shadow und border-width am Avatar direkt — beides zwingt den
+           Browser, die komplette Box samt Schatten in JEDEM Frame neu zu
+           rastern, und zwar für jeden markierten Champion gleichzeitig. -->
+      <span class="champion-orbit-glow" aria-hidden="true" />
       <Transition name="ability-icon">
         <span
           v-if="pos.isMain && pos.primaryRole && isAbilityActive(pos.primaryRole)"
@@ -94,13 +87,8 @@
       <div
         v-if="pos.isMain && pos.maxHp > 0"
         class="champ-hp-wrap"
-        :style="{
-          transform: `translate(${pos.x - Math.max(pos.size, 52) / 2}px, ${pos.y + pos.size / 2 + 6}px)`,
-          width: Math.max(pos.size, 52) + 'px',
-          opacity: pos.dimFactor,
-          zIndex: pos.zIndex,
-          '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
-        }"
+        :style="hpWrapStyle(pos)"
+        :ref="(el) => setMapEl(hpWrapEls, pos.name, el)"
       >
         <div class="champ-hp-bar-track" :class="{ 'champ-hp-bar-track--low': pos.hpPercent < 25 }">
           <div class="champ-hp-ghost" :style="{ width: pos.hpPercent + '%' }" />
@@ -150,7 +138,7 @@
 
 <script lang="ts">
 import { getOrbitPos } from '@/utils/orbit/geometry'
-import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { defineComponent, ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { useCombatStore } from '@/stores/battle/combatStore'
@@ -195,7 +183,10 @@ import {
   CHAMPION_ORBIT_INTERCEPT_DURATION_MS,
   CHAMPION_ORBIT_INTERCEPT_OUT_FRACTION,
   PLANET_ORBIT_FOREGROUND_DEPTH,
+  ORBIT_SCALE_QUANTIZE_STEPS,
+  FRAME_EL_SWEEP_INTERVAL,
 } from '@/config/constants'
+import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
 import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
@@ -206,6 +197,15 @@ interface ChampionRenderPos {
   img: string
   x: number
   y: number
+  /**
+   * Ungeschrumpfte Kantenlänge — sie steht als width/height am Element und
+   * ändert sich nur mit dem Sonnenradius. Die Parallax-Verkleinerung fährt
+   * `scale` im transform, damit pro Frame kein Layout anfällt.
+   */
+  baseSize: number
+  /** Parallax-Faktor auf 1 %-Stufen quantisiert. */
+  scale: number
+  /** Effektive Kantenlänge (baseSize × scale) — für Abstände und Canvas-Radien. */
   size: number
   opacity: number
   isAttacking: boolean
@@ -228,6 +228,8 @@ interface ChampionRenderPos {
   isHit: boolean
   /** Hover-Fokus-Blende, 1 = voll sichtbar, HOVER_DIM_OPACITY = ausgeblendet */
   dimFactor: number
+  /** Blende so weit zu, dass der Avatar als versteckt gilt (Zustandsklasse). */
+  dimHidden: boolean
 }
 
 interface Assignment {
@@ -315,10 +317,135 @@ export default defineComponent({
       }, TOP_TIER.hitIntervalMs)
     }
 
-    const championRenderPositions = ref<ChampionRenderPos[]>([])
+    // shallowRef: die Positionsfelder werden pro Frame in-place mutiert, ohne
+    // dass Vue davon aufwacht — ein neues Array kommt nur bei Strukturwechsel.
+    const championRenderPositions = shallowRef<ChampionRenderPos[]>([])
 
     const backChampions = computed(() => championRenderPositions.value.filter((p) => p.isBehind))
     const frontChampions = computed(() => championRenderPositions.value.filter((p) => !p.isBehind))
+
+    // ── Per-Frame-DOM-Updates am Vue-Rendering vorbei ────────────────────────
+    // Vue rendert nur noch, wenn sich die STRUKTUR ändert (Champion kommt/geht,
+    // Ebenenwechsel, Zustandsklasse, HP-Zahl). Bahn, Parallax und Blende
+    // schreibt applyFrames() direkt auf die registrierten Elemente. Vorher lief
+    // pro Frame ein VNode-Diff über jeden Avatar samt HP-Leiste — gemessen der
+    // größte Einzelposten des Idle-Orbits.
+    const backAvatarEls = new Map<string, HTMLElement>()
+    const frontAvatarEls = new Map<string, HTMLElement>()
+    const hpWrapEls = new Map<string, HTMLElement>()
+    const ALL_EL_MAPS: Map<string, Element>[] = [backAvatarEls, frontAvatarEls, hpWrapEls]
+    let sweepCounter = 0
+
+    /** Zuletzt geschriebener z-index je Champion — er wechselt nur stufenweise. */
+    const lastZIndex = new Map<string, number>()
+
+    /** Kantenlänge der HP-Leiste — folgt der ungeschrumpften Avatar-Größe. */
+    function hpWrapWidth(pos: ChampionRenderPos): number {
+      return Math.max(pos.baseSize, 52)
+    }
+
+    function avatarTransform(pos: ChampionRenderPos): string {
+      const half = pos.baseSize / 2
+      return `translate(${(pos.x - half).toFixed(1)}px, ${(pos.y - half).toFixed(1)}px) scale(${pos.scale})`
+    }
+
+    function hpWrapTransform(pos: ChampionRenderPos): string {
+      const x = pos.x - hpWrapWidth(pos) / 2
+      const y = pos.y + pos.size / 2 + 6
+      return `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`
+    }
+
+    /** Initialstil für einen Vue-Render — pro Frame überschreibt applyFrames ihn. */
+    function avatarStyle(pos: ChampionRenderPos) {
+      return {
+        width: pos.baseSize + 'px',
+        height: pos.baseSize + 'px',
+        transform: avatarTransform(pos),
+        opacity: pos.opacity * pos.dimFactor,
+        zIndex: pos.isBehind ? undefined : pos.zIndex,
+        '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
+        '--hover-role-color': hoverColor.value || undefined,
+      }
+    }
+
+    function hpWrapStyle(pos: ChampionRenderPos) {
+      return {
+        transform: hpWrapTransform(pos),
+        width: hpWrapWidth(pos) + 'px',
+        opacity: pos.dimFactor,
+        zIndex: pos.zIndex,
+        '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
+      }
+    }
+
+    function applyFrames(positions: ChampionRenderPos[]) {
+      if (++sweepCounter >= FRAME_EL_SWEEP_INTERVAL) {
+        sweepCounter = 0
+        sweepMapEls(ALL_EL_MAPS)
+        const alive = new Set(positions.map((p) => p.name))
+        for (const name of lastZIndex.keys()) {
+          if (!alive.has(name)) lastZIndex.delete(name)
+        }
+      }
+
+      for (const pos of positions) {
+        const transform = avatarTransform(pos)
+        const opacity = (pos.opacity * pos.dimFactor).toFixed(3)
+        // z-index wechselt nur stufenweise — jedes Schreiben kostet eine
+        // Neusortierung der Paint-Reihenfolge, deshalb nur bei echtem Wechsel.
+        const zChanged = lastZIndex.get(pos.name) !== pos.zIndex
+        if (zChanged) lastZIndex.set(pos.name, pos.zIndex)
+
+        const el = pos.isBehind ? backAvatarEls.get(pos.name) : frontAvatarEls.get(pos.name)
+        if (el) {
+          el.style.transform = transform
+          el.style.opacity = opacity
+          if (zChanged && !pos.isBehind) el.style.zIndex = String(pos.zIndex)
+        }
+
+        const hp = hpWrapEls.get(pos.name)
+        if (hp) {
+          hp.style.transform = hpWrapTransform(pos)
+          hp.style.opacity = pos.dimFactor.toFixed(3)
+          if (zChanged) hp.style.zIndex = String(pos.zIndex)
+        }
+      }
+    }
+
+    /**
+     * Alles, was das Template liest und NICHT pro Frame läuft. Ändert sich der
+     * Schlüssel, rendert Vue neu — sonst bleibt der Baum stehen.
+     */
+    function structureKey(positions: ChampionRenderPos[]): string {
+      let key = ''
+      for (const p of positions) {
+        key +=
+          p.name +
+          (p.isBehind ? '1' : '0') +
+          (p.isAttacking ? '1' : '0') +
+          (p.isForeground ? '1' : '0') +
+          (p.isMain ? '1' : '0') +
+          (p.synergyActive ? '1' : '0') +
+          (p.dimHidden ? '1' : '0') +
+          (p.isHit ? '1' : '0') +
+          (p.isDown ? '1' : '0') +
+          p.downSecs +
+          '_' +
+          p.primaryRole +
+          '_' +
+          Math.round(p.baseSize) +
+          '_' +
+          Math.round(p.currentHp) +
+          '/' +
+          p.maxHp +
+          '_' +
+          p.img +
+          ';'
+      }
+      return key
+    }
+
+    let lastStructureKey = ''
 
     let animFrame = 0
     let lastTs = 0
@@ -430,8 +557,16 @@ export default defineComponent({
         const isBehind = relY < ORBIT_BEHIND_REL_Y
         const depth = (relY + 1) / 2
 
-        const parallaxScale = ORBIT_PARALLAX_SCALE_BASE + depth * ORBIT_PARALLAX_SCALE_SPAN
-        const size = c.isAttacking ? baseSize : Math.round(baseSize * parallaxScale)
+        // Parallax fährt als transform-scale, nicht mehr als width/height:
+        // eine Größenänderung in px erzwingt pro Frame Layout, Repaint und —
+        // hinter der Sonne — eine Neurasterung des geblurrten Avatars.
+        const fixedSize = Math.round(baseSize)
+        const rawScale = c.isAttacking
+          ? 1
+          : ORBIT_PARALLAX_SCALE_BASE + depth * ORBIT_PARALLAX_SCALE_SPAN
+        const scale =
+          Math.round(rawScale * ORBIT_SCALE_QUANTIZE_STEPS) / ORBIT_SCALE_QUANTIZE_STEPS
+        const size = fixedSize * scale
         const opacity = c.isAttacking
           ? 1
           : isBehind
@@ -470,11 +605,15 @@ export default defineComponent({
         const isDown = downUntil > nowMs
         const hitAt = isMain && primaryRole ? roleBehaviorStore.championHitAt[primaryRole] : 0
 
+        const dimFactor = stepDimFactor(c.name, primaryRole, dt)
+
         newPositions.push({
           name: c.name,
           img: battleStore.getChampionImage(c.name, { size: 'sm' }),
           x: renderX,
           y: renderY,
+          baseSize: fixedSize,
+          scale,
           size,
           opacity,
           isAttacking: c.isAttacking,
@@ -495,7 +634,8 @@ export default defineComponent({
           isDown,
           downSecs: isDown ? Math.ceil((downUntil - nowMs) / 1000) : 0,
           isHit: !isDown && nowMs - hitAt < CHAMPION_HIT_FLASH_MS,
-          dimFactor: stepDimFactor(c.name, primaryRole, dt),
+          dimFactor,
+          dimHidden: dimFactor <= HOVER_DIM_HIDDEN_THRESHOLD,
         })
       }
 
@@ -540,7 +680,35 @@ export default defineComponent({
       }
       // ─────────────────────────────────────────────────────────────────────────
 
-      championRenderPositions.value = newPositions
+      // Vue rendert nur bei struktureller Änderung. Sonst werden die
+      // Positionsfelder IN-PLACE in die bestehenden Objekte geschrieben —
+      // so sieht ein Render aus fremdem Anlass (Hover, Ability-Flag) immer
+      // die aktuelle Bahn, ohne dass hier ein VNode-Diff pro Frame anfällt.
+      const key = structureKey(newPositions)
+      if (key !== lastStructureKey) {
+        lastStructureKey = key
+        championRenderPositions.value = newPositions
+      } else {
+        const prev = championRenderPositions.value
+        for (let i = 0; i < newPositions.length; i++) {
+          const n = newPositions[i]
+          const o = prev[i]
+          if (!o) continue
+          o.x = n.x
+          o.y = n.y
+          o.scale = n.scale
+          o.size = n.size
+          o.opacity = n.opacity
+          o.zIndex = n.zIndex
+          o.dimFactor = n.dimFactor
+          o.hpPercent = n.hpPercent
+          o.hintOpacity = n.hintOpacity
+          o.orbitRx = n.orbitRx
+          o.orbitRy = n.orbitRy
+        }
+      }
+
+      applyFrames(newPositions)
       animFrame = requestAnimationFrame(animate)
     }
 
@@ -613,7 +781,12 @@ export default defineComponent({
       hoveredChampionRole,
       hoverColor,
       isChampionDimmed,
-      HOVER_DIM_HIDDEN_THRESHOLD,
+      avatarStyle,
+      hpWrapStyle,
+      setMapEl,
+      backAvatarEls,
+      frontAvatarEls,
+      hpWrapEls,
     }
   },
 })
@@ -686,37 +859,53 @@ export default defineComponent({
   filter: brightness(1.18) saturate(1.2);
 }
 
-/* ── Synergie-Glow ──────────────────────────────────────────────────────── */
-@keyframes synergy-shimmer {
-  0%, 100% {
-    box-shadow:
-      0 0 12px rgba(232, 192, 64, 0.6),
-      0 0 28px rgba(232, 192, 64, 0.25),
-      inset 0 0 8px rgba(232, 192, 64, 0.1);
-  }
-  50% {
-    box-shadow:
-      0 0 20px rgba(255, 220, 120, 0.85),
-      0 0 50px rgba(232, 192, 64, 0.45),
-      inset 0 0 14px rgba(232, 192, 64, 0.2);
-  }
+/* ── Zustands-Glow-Ebene ───────────────────────────────────────────────────
+   Ein Element pro Avatar, das ALLE atmenden Zustände trägt (Synergie, Schild,
+   bereite Fähigkeit, Angriff). Der Schein steht je Zustand statisch im CSS,
+   animiert wird ausschließlich `opacity` — reine Compositor-Arbeit, die auch
+   dann nichts kostet, wenn alle fünf Mains gleichzeitig markiert sind.
+
+   Vorher pulsierten hier `box-shadow`, `border-width` und `filter` direkt am
+   Avatar. Jeder Frame erzwang damit eine Neurasterung der Box samt Schatten —
+   bei border-width zusätzlich ein Layout — und das pro markiertem Champion. */
+.champion-orbit-glow {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  z-index: -1;
 }
 
-.champion-orbit-avatar--synergy {
-  animation: synergy-shimmer 2s ease-in-out infinite;
-}
-
-.champion-orbit-avatar--attacking {
-  animation: champion-attack-pulse 0.5s ease-in-out infinite alternate;
-}
-
-@keyframes champion-attack-pulse {
+/* Ein einziger Takt für alle Dauer-Zustände: nur die Deckkraft atmet. */
+@keyframes orbit-glow-breathe {
   from {
-    filter: brightness(1) saturate(1);
+    opacity: 0.45;
   }
   to {
-    filter: brightness(1.4) saturate(1.25);
+    opacity: 1;
   }
+}
+
+/* ── Synergie-Glow ──────────────────────────────────────────────────────── */
+.champion-orbit-avatar--synergy .champion-orbit-glow {
+  box-shadow:
+    0 0 20px rgba(255, 220, 120, 0.85),
+    0 0 50px rgba(232, 192, 64, 0.45),
+    inset 0 0 14px rgba(232, 192, 64, 0.2);
+  animation: orbit-glow-breathe 2s ease-in-out infinite alternate;
+}
+
+/* Angriff: der Avatar wird heller. `filter` als Dauer-Animation kostete pro
+   Frame eine eigene Rendering-Surface je angreifendem Champion — dieselbe
+   Aufhellung leistet ein weißer Schleier, der nur seine Deckkraft ändert. */
+.champion-orbit-avatar--attacking .champion-orbit-glow {
+  background: rgba(255, 245, 220, 0.32);
+  box-shadow:
+    0 0 16px rgba(255, 236, 190, 0.75),
+    0 0 34px rgba(255, 210, 120, 0.4);
+  z-index: 1;
+  animation: orbit-glow-breathe 0.5s ease-in-out infinite alternate;
 }
 
 /* ── Ability-Glows ────────────────────────────────────────────────────────── */
@@ -728,25 +917,18 @@ export default defineComponent({
     0 0 40px rgba(245, 71, 71, 0.7),
     0 0 70px rgba(245, 71, 71, 0.35),
     inset 0 0 14px rgba(245, 71, 71, 0.25);
-  animation: shield-pulse 0.7s ease-in-out infinite alternate;
 }
 
-@keyframes shield-pulse {
-  from {
-    border-width: 4px;
-    box-shadow:
-      0 0 14px rgba(245, 71, 71, 0.9),
-      0 0 32px rgba(245, 71, 71, 0.55),
-      0 0 58px rgba(245, 71, 71, 0.28);
-  }
-  to {
-    border-width: 8px;
-    box-shadow:
-      0 0 28px rgba(255, 80, 80, 1),
-      0 0 60px rgba(245, 71, 71, 0.85),
-      0 0 100px rgba(245, 71, 71, 0.5),
-      inset 0 0 20px rgba(245, 71, 71, 0.4);
-  }
+/* Der Schild atmet über die Glow-Ebene: derselbe an- und abschwellende Schein
+   wie zuvor, aber ohne wachsende `border-width` (Layout je Frame) und ohne
+   Schatten-Keyframes (Neurasterung je Frame). */
+.champion-orbit-avatar--shield .champion-orbit-glow {
+  box-shadow:
+    0 0 28px rgba(255, 80, 80, 1),
+    0 0 60px rgba(245, 71, 71, 0.85),
+    0 0 100px rgba(245, 71, 71, 0.5),
+    inset 0 0 20px rgba(245, 71, 71, 0.4);
+  animation: orbit-glow-breathe 0.7s ease-in-out infinite alternate;
 }
 
 /* Fluch-Cast Burst */
@@ -809,25 +991,15 @@ export default defineComponent({
     0 0 42px rgba(85, 152, 246, 0.7),
     0 0 80px rgba(85, 152, 246, 0.35),
     inset 0 0 14px rgba(85, 152, 246, 0.25);
-  animation: mid-ability-pulse 1.2s ease-in-out infinite alternate;
 }
 
-@keyframes mid-ability-pulse {
-  from {
-    border-width: 4px;
-    box-shadow:
-      0 0 14px rgba(85, 152, 246, 0.9),
-      0 0 32px rgba(85, 152, 246, 0.55),
-      0 0 60px rgba(85, 152, 246, 0.28);
-  }
-  to {
-    border-width: 8px;
-    box-shadow:
-      0 0 28px rgba(110, 170, 255, 1),
-      0 0 60px rgba(85, 152, 246, 0.85),
-      0 0 100px rgba(85, 152, 246, 0.5),
-      inset 0 0 20px rgba(85, 152, 246, 0.4);
-  }
+.champion-orbit-avatar--ability-mid .champion-orbit-glow {
+  box-shadow:
+    0 0 28px rgba(110, 170, 255, 1),
+    0 0 60px rgba(85, 152, 246, 0.85),
+    0 0 100px rgba(85, 152, 246, 0.5),
+    inset 0 0 20px rgba(85, 152, 246, 0.4);
+  animation: orbit-glow-breathe 1.2s ease-in-out infinite alternate;
 }
 
 /* Heal-Farbe: Teal-Mint (#00e5a0) */
@@ -889,25 +1061,15 @@ export default defineComponent({
     0 0 42px rgba(62, 234, 88, 0.7),
     0 0 80px rgba(62, 234, 88, 0.35),
     inset 0 0 14px rgba(62, 234, 88, 0.25);
-  animation: jungle-ability-pulse 1.2s ease-in-out infinite alternate;
 }
 
-@keyframes jungle-ability-pulse {
-  from {
-    border-width: 4px;
-    box-shadow:
-      0 0 14px rgba(62, 234, 88, 0.9),
-      0 0 32px rgba(62, 234, 88, 0.55),
-      0 0 60px rgba(62, 234, 88, 0.28);
-  }
-  to {
-    border-width: 8px;
-    box-shadow:
-      0 0 28px rgba(92, 230, 106, 1),
-      0 0 60px rgba(62, 234, 88, 0.85),
-      0 0 100px rgba(62, 234, 88, 0.5),
-      inset 0 0 20px rgba(62, 234, 88, 0.4);
-  }
+.champion-orbit-avatar--ability-jungle .champion-orbit-glow {
+  box-shadow:
+    0 0 28px rgba(92, 230, 106, 1),
+    0 0 60px rgba(62, 234, 88, 0.85),
+    0 0 100px rgba(62, 234, 88, 0.5),
+    inset 0 0 20px rgba(62, 234, 88, 0.4);
+  animation: orbit-glow-breathe 1.2s ease-in-out infinite alternate;
 }
 
 /* ── ADC Burst Active (short-lived snap flash) ────────────────────────────── */
@@ -989,6 +1151,12 @@ export default defineComponent({
   filter: grayscale(1) brightness(0.55) !important;
   border-color: #5a2020 !important;
   box-shadow: 0 0 10px rgba(120, 20, 20, 0.5) !important;
+  animation: none !important;
+}
+
+/* Gefallen: kein Zustands-Schein mehr, egal welche Klasse noch anliegt. */
+.champion-orbit-avatar--down .champion-orbit-glow {
+  opacity: 0 !important;
   animation: none !important;
 }
 
@@ -1319,6 +1487,8 @@ export default defineComponent({
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .champion-orbit-glow,
+  .champion-ability-badge::after,
   .champion-orbit-avatar--attacking,
   .champion-orbit-avatar--hit,
   .champ-hp-bar-fill--low,
@@ -1363,7 +1533,22 @@ export default defineComponent({
   pointer-events: none;
   z-index: 4;
   transition: opacity 150ms ease;
-  animation: ability-badge-pulse 1.6s ease-in-out infinite;
+}
+
+/* Der Puls des Badges liegt auf einer eigenen Ebene: der hellere Schein steht
+   statisch, nur seine Deckkraft atmet. Ein animierter box-shadow hätte das
+   Badge samt Schatten in jedem Frame neu gerastert — fünfmal gleichzeitig,
+   sobald alle Rollen ihre Fähigkeit bereit haben. */
+.champion-ability-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--role-color, #c89040) 95%, transparent),
+    0 0 26px color-mix(in srgb, var(--role-color, #c89040) 50%, transparent);
+  animation: orbit-glow-breathe 1.6s ease-in-out infinite alternate;
 }
 
 .champion-ability-badge img {
@@ -1372,21 +1557,6 @@ export default defineComponent({
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 3px color-mix(in srgb, var(--role-color, #c89040) 80%, transparent));
-}
-
-@keyframes ability-badge-pulse {
-  0%, 100% {
-    box-shadow:
-      0 0 8px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent),
-      0 0 18px color-mix(in srgb, var(--role-color, #c89040) 30%, transparent),
-      0 2px 6px rgba(0, 0, 0, 0.55);
-  }
-  50% {
-    box-shadow:
-      0 0 12px color-mix(in srgb, var(--role-color, #c89040) 95%, transparent),
-      0 0 26px color-mix(in srgb, var(--role-color, #c89040) 50%, transparent),
-      0 2px 6px rgba(0, 0, 0, 0.55);
-  }
 }
 
 .ability-icon-enter-active,
@@ -1419,6 +1589,11 @@ export default defineComponent({
 .champion-orbit-avatar--dim .champion-ability-badge {
   opacity: 0;
   animation: none;
+}
+
+.champion-orbit-avatar--dim .champion-orbit-glow {
+  opacity: 0 !important;
+  animation: none !important;
 }
 
 /* Burst-Ringe (Curse, ADC, Heal) auf gedimmten Avataren unterdrücken */

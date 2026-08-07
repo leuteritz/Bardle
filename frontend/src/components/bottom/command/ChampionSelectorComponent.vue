@@ -13,6 +13,7 @@ import {
   ROLE_HOVER_COLORS,
   CHAMPION_REVIVE_MS,
   HUD_COUNTDOWN_TICK_MS,
+  ABILITY_RING_CIRCUMFERENCE,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
@@ -164,9 +165,28 @@ function onSlotLeave() {
               'champ-ability--cd': !!roleAbilities[i].timer,
               'champ-ability--cast': roleAbilities[i].isFlashing,
             }"
-            :style="{ '--cd-progress': roleAbilities[i].progress }"
           >
             <span class="champ-ability-orb">
+              <!-- Fortschrittsring als SVG-Kontur. Vorher trieb eine Transition
+                   auf der VERERBTEN Custom Property `--cd-progress` einen
+                   conic-gradient samt Maske und drop-shadow: das rechnete pro
+                   Frame den Farbverlauf neu, legte eigene Rendering-Surfaces an
+                   und machte obendrein den ganzen Teilbaum der Karte dreckig —
+                   fünfmal gleichzeitig, denn ein Cooldown läuft immer.
+                   Der Bogen hier ist eine gestrichelte Kreislinie; bewegt wird
+                   nur ihr `stroke-dashoffset`. -->
+              <svg class="champ-ability-ring" viewBox="0 0 100 100" aria-hidden="true">
+                <circle class="champ-ability-ring__track" cx="50" cy="50" r="47.5" />
+                <circle
+                  class="champ-ability-ring__fill"
+                  cx="50"
+                  cy="50"
+                  r="47.5"
+                  :style="{
+                    strokeDashoffset: ABILITY_RING_CIRCUMFERENCE * (1 - roleAbilities[i].progress),
+                  }"
+                />
+              </svg>
               <img :src="roleAbilities[i].image" alt="" draggable="false" />
             </span>
             <!-- Restzeit, solange eine läuft — sonst "READY". timer ist leer,
@@ -234,19 +254,20 @@ function onSlotLeave() {
 /* ── Durchgehend laufende Fortschrittsringe ─────────────────────────────────
    Die Ring-Werte kommen aus diskreten Takten: der Cooldown aus dem 1s-Game-
    Tick, die Revive-Zeit aus dem 250ms-HUD-Ticker. Als rohe Zahl gesetzt würde
-   der conic-gradient in ebenso großen Stufen springen — bei nur 8s Revive-Zeit
-   sind das gut sichtbare Sprünge.
-   Über @property werden die Custom Properties als <number> typisiert und damit
-   für den Browser interpolierbar: eine Transition über die Länge des jeweiligen
-   Takts füllt die Lücke zwischen zwei Werten linear auf, der Ring läuft
-   durchgehend. inherits: true, damit der laufende Wert auch im ::before des
-   Rings ankommt. */
-@property --cd-progress {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 1;
-}
+   der Ring in ebenso großen Stufen springen — bei nur 8s Revive-Zeit sind das
+   gut sichtbare Sprünge. Eine Transition über die Länge des jeweiligen Takts
+   füllt die Lücke linear auf, der Ring läuft durchgehend.
 
+   Der COOLDOWN-Ring tut das über `stroke-dashoffset` einer SVG-Kreislinie
+   (siehe .champ-ability-ring): er läuft dauerhaft, und eine Transition auf
+   einer VERERBTEN Custom Property hätte in jedem Frame den ganzen Teilbaum
+   der Karte für ungültig erklärt und einen conic-gradient samt Maske und
+   drop-shadow neu gerastert — fünfmal gleichzeitig.
+
+   Der REVIVE-Ring darf bei seiner Bauart bleiben: er steht nur die wenigen
+   Sekunden, die ein gefallener Champion am Boden liegt, und ist damit kein
+   Dauerläufer. @property typisiert den Wert als <number> und macht ihn für
+   den Browser interpolierbar; inherits: true, damit er im ::before ankommt. */
 @property --down-progress {
   syntax: '<number>';
   inherits: true;
@@ -441,9 +462,6 @@ function onSlotLeave() {
   transform: translate(-50%, -50%);
   z-index: 4;
   pointer-events: none;
-  /* Taktlänge = GAME_TICK_INTERVAL_MS (der Store zählt den Cooldown im
-     1s-Raster herunter) */
-  transition: --cd-progress 1s linear;
 }
 
 .champ-ability-orb {
@@ -471,23 +489,37 @@ function onSlotLeave() {
   transition: box-shadow 0.25s ease;
 }
 
-/* Fortschrittsring — füllt sich über den Cooldown bis zum geschlossenen Kreis */
-.champ-ability-orb::before {
-  content: '';
+/* Fortschrittsring — füllt sich über den Cooldown bis zum geschlossenen Kreis.
+   Beginnt oben (rotate -90deg) und läuft im Uhrzeigersinn. */
+.champ-ability-ring {
   position: absolute;
   inset: -3px;
-  border-radius: 50%;
-  background: conic-gradient(
-    var(--role-color, #c89040) calc(var(--cd-progress, 1) * 360deg),
-    rgba(255, 240, 210, 0.1) 0
-  );
-  -webkit-mask: radial-gradient(
-    farthest-side,
-    transparent calc(100% - 3px),
-    #000 calc(100% - 2.5px)
-  );
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent));
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  transform: rotate(-90deg);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.champ-ability-ring__track,
+.champ-ability-ring__fill {
+  fill: none;
+  stroke-width: 5;
+}
+
+.champ-ability-ring__track {
+  stroke: rgba(255, 240, 210, 0.1);
+}
+
+.champ-ability-ring__fill {
+  stroke: var(--role-color, #c89040);
+  stroke-linecap: round;
+  /* Umfang bei r = 47.5 → 2·π·47.5 = 298.45 (ABILITY_RING_CIRCUMFERENCE) */
+  stroke-dasharray: 298.45;
+  /* Taktlänge = GAME_TICK_INTERVAL_MS (der Store zählt den Cooldown im
+     1s-Raster herunter) — die Transition füllt die Lücke zwischen zwei Werten
+     linear auf, damit der Ring durchgehend läuft. */
+  transition: stroke-dashoffset 1s linear;
 }
 
 .champ-ability-orb img {

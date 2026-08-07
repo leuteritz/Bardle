@@ -35,13 +35,8 @@
         'planet-orbit-item--hover-focus': pos.id === hoveredPlanetSlotId,
         'planet-orbit-item--down': pos.isDown,
       }"
-      :style="{
-        width: pos.size + 'px',
-        height: pos.size + 'px',
-        transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
-        opacity: pos.opacity * pos.dimFactor,
-        '--planet-color': pos.color,
-      }"
+      :style="itemStyle(pos)"
+      :ref="(el) => setMapEl(backItemEls, pos.id, el)"
     >
       <img
         :src="pos.planetImage"
@@ -65,13 +60,8 @@
       <div
         v-if="pos.isJungleBuffed && !pos.isDown"
         class="planet-buff-aura"
-        :style="{
-          width: pos.size + 'px',
-          height: pos.size + 'px',
-          transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
-          opacity: pos.opacity * pos.dimFactor,
-          zIndex: pos.zIndex - 1,
-        }"
+        :style="auraStyle(pos)"
+        :ref="(el) => setMapEl(auraEls, pos.id, el)"
         aria-hidden="true"
       >
         <span class="planet-buff-aura__halo" />
@@ -92,14 +82,8 @@
         'planet-orbit-item--hover-focus': pos.id === hoveredPlanetSlotId,
         'planet-orbit-item--down': pos.isDown,
       }"
-      :style="{
-        width: pos.size + 'px',
-        height: pos.size + 'px',
-        transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
-        opacity: pos.opacity * pos.dimFactor,
-        zIndex: pos.zIndex,
-        '--planet-color': pos.color,
-      }"
+      :style="itemStyle(pos)"
+      :ref="(el) => setMapEl(frontItemEls, pos.id, el)"
     >
       <img
         :src="pos.planetImage"
@@ -120,12 +104,8 @@
       v-for="pos in frontPlanets"
       :key="'hp-' + pos.id"
       class="planet-hp-wrap"
-      :style="{
-        transform: `translate(${pos.x - Math.max(pos.size, 48) / 2}px, ${pos.y + pos.size / 2 + 5}px)`,
-        width: Math.max(pos.size, 48) + 'px',
-        opacity: pos.dimFactor,
-        zIndex: pos.zIndex,
-      }"
+      :style="hpWrapStyle(pos)"
+      :ref="(el) => setMapEl(hpWrapEls, pos.id, el)"
     >
       <div class="planet-hp-bar-track">
         <div
@@ -150,11 +130,8 @@
     <template v-for="pos in frontPlanets" :key="'jbuff-' + pos.id">
       <div
         class="planet-buff-anchor"
-        :style="{
-          transform: `translate(${pos.x}px, ${pos.y - pos.size / 2}px)`,
-          opacity: pos.dimFactor,
-          zIndex: pos.zIndex + 2,
-        }"
+        :style="anchorStyle(pos)"
+        :ref="(el) => setMapEl(anchorEls, pos.id, el)"
       >
         <Transition name="planet-buff">
           <div v-if="pos.isJungleBuffed && !pos.isDown" class="planet-buff-stack">
@@ -185,6 +162,7 @@
               <span
                 class="planet-buff-mark__fuse"
                 :style="{ transform: `scaleX(${pos.jungleBuffProgress})` }"
+                :ref="(el) => setMapEl(fuseEls, pos.id, el)"
               />
             </div>
             <span class="planet-buff-leash" />
@@ -199,7 +177,7 @@
 <script lang="ts">
 import { getOrbitPos } from '@/utils/orbit/geometry'
 import { Icon } from '@iconify/vue'
-import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { defineComponent, ref, shallowRef, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import {
   usePlanetShopStore,
@@ -238,7 +216,10 @@ import {
   COOLDOWN_RING_HOT_PROGRESS,
   COOLDOWN_RING_TIP_RADIUS,
   COOLDOWN_RING_TIP_RADIUS_HOT,
+  ORBIT_SCALE_QUANTIZE_STEPS,
+  FRAME_EL_SWEEP_INTERVAL,
 } from '@/config/constants'
+import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { activePlanetPositions, activePlayerPlanetPositions } from '@/utils/orbit/liveState'
@@ -255,6 +236,15 @@ interface PlanetRenderPos {
   name: string
   x: number
   y: number
+  /**
+   * Ungeschrumpfte Kantenlänge — steht als width/height am Element und ändert
+   * sich nur mit dem Sonnenradius. Die Parallax-Verkleinerung fährt `scale`
+   * im transform, damit pro Frame kein Layout anfällt.
+   */
+  baseSize: number
+  /** Parallax-Faktor auf 1 %-Stufen quantisiert. */
+  scale: number
+  /** Effektive Kantenlänge (baseSize × scale) — für Abstände und Ring-Radien. */
   size: number
   opacity: number
   isBehind: boolean
@@ -305,7 +295,35 @@ export default defineComponent({
     const starFocusActive = computed(() => starGroupStore.hoveredTimerStarId !== null)
     const localStates = new Map<string, LocalPlanetState>()
     const planetSpeedMuls = new Map<string, number>()
-    const renderPositions = ref<PlanetRenderPos[]>([])
+    // shallowRef: die Positionsfelder werden pro Frame in-place mutiert, ohne
+    // dass Vue aufwacht — ein neues Array kommt nur bei Strukturwechsel.
+    const renderPositions = shallowRef<PlanetRenderPos[]>([])
+
+    // ── Per-Frame-DOM-Updates am Vue-Rendering vorbei ────────────────────────
+    // Dasselbe Muster wie in StarSystemComponent und ChampionOrbit: Vue rendert
+    // nur bei struktureller Änderung (Planet kommt/geht, Ebenenwechsel,
+    // Zustandsklasse, HP-Zahl, Buff-Sekunde), die Bewegung schreibt
+    // applyFrames() direkt auf die registrierten Elemente. Ein Planet trägt
+    // fünf mitwandernde Ebenen (Körper, Aura, HP-Leiste, Marke, Zündschnur) —
+    // pro Frame ein VNode-Diff über alle sechs Slots war der zweitgrößte
+    // Posten des Idle-Orbits.
+    const backItemEls = new Map<string, HTMLElement>()
+    const frontItemEls = new Map<string, HTMLElement>()
+    const auraEls = new Map<string, HTMLElement>()
+    const hpWrapEls = new Map<string, HTMLElement>()
+    const anchorEls = new Map<string, HTMLElement>()
+    const fuseEls = new Map<string, HTMLElement>()
+    const ALL_EL_MAPS: Map<string, Element>[] = [
+      backItemEls,
+      frontItemEls,
+      auraEls,
+      hpWrapEls,
+      anchorEls,
+      fuseEls,
+    ]
+    let sweepCounter = 0
+    /** Zuletzt geschriebener z-index je Slot — er wechselt nur stufenweise. */
+    const lastZIndex = new Map<string, number>()
 
     // Weiche Hover-Blende OHNE CSS-Transition: der Wert wird pro Slot gehalten,
     // im Frame Richtung Ziel gezogen und in die ohnehin pro Frame gesetzte
@@ -353,6 +371,153 @@ export default defineComponent({
 
     const backPlanets = computed(() => renderPositions.value.filter((p) => p.isBehind))
     const frontPlanets = computed(() => renderPositions.value.filter((p) => !p.isBehind))
+
+    /** Breite der HP-Leiste — folgt der ungeschrumpften Planetengröße. */
+    function hpWrapWidth(pos: PlanetRenderPos): number {
+      return Math.max(pos.baseSize, 48)
+    }
+
+    function bodyTransform(pos: PlanetRenderPos): string {
+      const half = pos.baseSize / 2
+      return `translate(${(pos.x - half).toFixed(1)}px, ${(pos.y - half).toFixed(1)}px) scale(${pos.scale})`
+    }
+
+    function hpWrapTransform(pos: PlanetRenderPos): string {
+      const x = pos.x - hpWrapWidth(pos) / 2
+      const y = pos.y + pos.size / 2 + 5
+      return `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`
+    }
+
+    function anchorTransform(pos: PlanetRenderPos): string {
+      return `translate(${pos.x.toFixed(1)}px, ${(pos.y - pos.size / 2).toFixed(1)}px)`
+    }
+
+    // Initialstile für einen Vue-Render — pro Frame überschreibt applyFrames sie.
+    function itemStyle(pos: PlanetRenderPos) {
+      return {
+        width: pos.baseSize + 'px',
+        height: pos.baseSize + 'px',
+        transform: bodyTransform(pos),
+        opacity: pos.opacity * pos.dimFactor,
+        zIndex: pos.isBehind ? undefined : pos.zIndex,
+        '--planet-color': pos.color,
+      }
+    }
+
+    function auraStyle(pos: PlanetRenderPos) {
+      return {
+        width: pos.baseSize + 'px',
+        height: pos.baseSize + 'px',
+        transform: bodyTransform(pos),
+        opacity: pos.opacity * pos.dimFactor,
+        zIndex: pos.zIndex - 1,
+      }
+    }
+
+    function hpWrapStyle(pos: PlanetRenderPos) {
+      return {
+        transform: hpWrapTransform(pos),
+        width: hpWrapWidth(pos) + 'px',
+        opacity: pos.dimFactor,
+        zIndex: pos.zIndex,
+      }
+    }
+
+    function anchorStyle(pos: PlanetRenderPos) {
+      return {
+        transform: anchorTransform(pos),
+        opacity: pos.dimFactor,
+        zIndex: pos.zIndex + 2,
+      }
+    }
+
+    function applyFrames(positions: PlanetRenderPos[]) {
+      if (++sweepCounter >= FRAME_EL_SWEEP_INTERVAL) {
+        sweepCounter = 0
+        sweepMapEls(ALL_EL_MAPS)
+        const alive = new Set(positions.map((p) => p.id))
+        for (const id of lastZIndex.keys()) {
+          if (!alive.has(id)) lastZIndex.delete(id)
+        }
+      }
+
+      for (const pos of positions) {
+        const transform = bodyTransform(pos)
+        const opacity = (pos.opacity * pos.dimFactor).toFixed(3)
+        const dim = pos.dimFactor.toFixed(3)
+        // z-index wechselt nur stufenweise — jedes Schreiben sortiert die
+        // Paint-Reihenfolge neu, deshalb nur bei echtem Wechsel.
+        const zChanged = lastZIndex.get(pos.id) !== pos.zIndex
+        if (zChanged) lastZIndex.set(pos.id, pos.zIndex)
+
+        const body = pos.isBehind ? backItemEls.get(pos.id) : frontItemEls.get(pos.id)
+        if (body) {
+          body.style.transform = transform
+          body.style.opacity = opacity
+          if (zChanged && !pos.isBehind) body.style.zIndex = String(pos.zIndex)
+        }
+
+        const aura = auraEls.get(pos.id)
+        if (aura) {
+          aura.style.transform = transform
+          aura.style.opacity = opacity
+          if (zChanged) aura.style.zIndex = String(pos.zIndex - 1)
+        }
+
+        const hp = hpWrapEls.get(pos.id)
+        if (hp) {
+          hp.style.transform = hpWrapTransform(pos)
+          hp.style.opacity = dim
+          if (zChanged) hp.style.zIndex = String(pos.zIndex)
+        }
+
+        const anchor = anchorEls.get(pos.id)
+        if (anchor) {
+          anchor.style.transform = anchorTransform(pos)
+          anchor.style.opacity = dim
+          if (zChanged) anchor.style.zIndex = String(pos.zIndex + 2)
+        }
+
+        const fuse = fuseEls.get(pos.id)
+        if (fuse) fuse.style.transform = `scaleX(${pos.jungleBuffProgress.toFixed(3)})`
+      }
+    }
+
+    /**
+     * Alles, was das Template liest und NICHT pro Frame läuft. Ändert sich der
+     * Schlüssel, rendert Vue neu — sonst bleibt der Baum stehen.
+     */
+    function structureKey(positions: PlanetRenderPos[]): string {
+      let key = ''
+      for (const p of positions) {
+        key +=
+          p.id +
+          (p.isBehind ? '1' : '0') +
+          (p.isForeground ? '1' : '0') +
+          (p.isTurret ? '1' : '0') +
+          (p.isHealing ? '1' : '0') +
+          (p.isJungleBuffed ? '1' : '0') +
+          (p.isDown ? '1' : '0') +
+          p.downSecs +
+          '_' +
+          Math.round(p.baseSize) +
+          '_' +
+          Math.round(p.currentHp) +
+          '/' +
+          p.maxHp +
+          '_' +
+          p.jungleBuffType +
+          p.jungleBuffMult +
+          Math.ceil(p.jungleBuffSecsLeft) +
+          '_' +
+          p.color +
+          p.planetImage +
+          ';'
+      }
+      return key
+    }
+
+    let lastStructureKey = ''
 
     const tierOrbitDimensions = computed(() =>
       ORBIT_TIERS.planet.map((tier, i) => {
@@ -582,9 +747,15 @@ export default defineComponent({
         const isBehind = relY < ORBIT_BEHIND_REL_Y
         const depth = (relY + 1) / 2
 
-        const parallaxScale =
+        // Parallax fährt als transform-scale, nicht mehr als width/height: eine
+        // Größenänderung in px erzwingt pro Frame Layout, Repaint und — hinter
+        // der Sonne — eine Neurasterung des geblurrten Planeten.
+        const fixedSize = Math.round(baseSize)
+        const rawScale =
           PLANET_ORBIT_PARALLAX_SCALE_BASE + depth * PLANET_ORBIT_PARALLAX_SCALE_SPAN
-        const size = Math.round(baseSize * parallaxScale)
+        const scale =
+          Math.round(rawScale * ORBIT_SCALE_QUANTIZE_STEPS) / ORBIT_SCALE_QUANTIZE_STEPS
+        const size = fixedSize * scale
         const opacity = isBehind
           ? PLANET_ORBIT_OPACITY_BEHIND_BASE + depth * PLANET_ORBIT_OPACITY_BEHIND_SPAN
           : PLANET_ORBIT_OPACITY_FRONT_BASE + depth * PLANET_ORBIT_OPACITY_FRONT_SPAN
@@ -650,6 +821,8 @@ export default defineComponent({
           name: slot.role ? PLANET_ROLES[slot.role].name : `Orbit ${slot.id.replace('slot_', '')}`,
           x: ls.x,
           y: ls.y,
+          baseSize: fixedSize,
+          scale,
           size,
           opacity,
           isBehind,
@@ -717,7 +890,37 @@ export default defineComponent({
         return
       }
 
-      renderPositions.value = newPositions
+      // Vue rendert nur bei struktureller Änderung. Sonst werden die
+      // Positionsfelder IN-PLACE geschrieben — so sieht ein Render aus fremdem
+      // Anlass (Hover, Buff-Wechsel) immer die aktuelle Bahn, ohne dass hier
+      // pro Frame ein VNode-Diff über sechs Slots mal fünf Ebenen anfällt.
+      const key = structureKey(newPositions)
+      if (key !== lastStructureKey) {
+        lastStructureKey = key
+        renderPositions.value = newPositions
+      } else {
+        const prev = renderPositions.value
+        for (let i = 0; i < newPositions.length; i++) {
+          const n = newPositions[i]
+          const o = prev[i]
+          if (!o) continue
+          o.x = n.x
+          o.y = n.y
+          o.scale = n.scale
+          o.size = n.size
+          o.opacity = n.opacity
+          o.zIndex = n.zIndex
+          o.dimFactor = n.dimFactor
+          o.hpPercent = n.hpPercent
+          o.hintOpacity = n.hintOpacity
+          o.orbitRx = n.orbitRx
+          o.orbitRy = n.orbitRy
+          o.jungleBuffProgress = n.jungleBuffProgress
+          o.jungleBuffSecsLeft = n.jungleBuffSecsLeft
+        }
+      }
+
+      applyFrames(newPositions)
 
       const tierCount = ORBIT_TIERS.planet.length
       for (let i = 0; i < tierCount; i++) {
@@ -792,6 +995,17 @@ export default defineComponent({
       screenH,
       ORBIT_TIERS,
       PLANET_ROLES,
+      itemStyle,
+      auraStyle,
+      hpWrapStyle,
+      anchorStyle,
+      setMapEl,
+      backItemEls,
+      frontItemEls,
+      auraEls,
+      hpWrapEls,
+      anchorEls,
+      fuseEls,
     }
   },
 })

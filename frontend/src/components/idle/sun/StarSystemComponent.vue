@@ -252,7 +252,6 @@
 import { hexToRgb } from '@/utils/ui/format'
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import type { ComponentPublicInstance } from 'vue'
 import { useStarSystem } from '@/composables/orbit/useStarSystem'
 import OrbitPath from './OrbitPath.vue'
 import type { StarRenderEntry } from '@/composables/orbit/useStarSystem'
@@ -295,7 +294,9 @@ import {
   COOLDOWN_RING_TIP_RADIUS_HOT,
   STAR_ORBIT_MIN_SUN_SCALE,
   HINT_SPRITE_CACHE_LIMIT,
+  FRAME_EL_SWEEP_INTERVAL,
 } from '@/config/constants'
+import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import { activeChampionBehindState, activePlayerPlanetPositions, activeStarCombatState } from '@/utils/orbit/liveState'
 import type { ChampionRole, StarType } from '@/types'
@@ -380,27 +381,9 @@ const starWrapEls = new Map<string, HTMLElement>()
 const summaryEls = new Map<string, HTMLElement>()
 const countEls = new Map<string, HTMLElement>()
 
-type TemplateRef = Element | ComponentPublicInstance | null | undefined
-
-function setMapEl<T extends Element>(map: Map<string, T>, id: string, el: TemplateRef) {
-  if (el) {
-    map.set(id, el as T)
-  } else {
-    // Beim Ebenenwechsel feuert der alte null-Ref nach dem neuen Set-Ref:
-    // nur löschen, wenn das gespeicherte Element wirklich entfernt wurde.
-    const cur = map.get(id)
-    if (cur && !cur.isConnected) map.delete(id)
-  }
-}
-
-// Elemente in Transitions bleiben beim Unmount kurz "connected" und würden
-// sonst als verwaiste Map-Einträge liegen bleiben — periodisch aufräumen.
-const ALL_EL_MAPS: Map<string, Element>[] = [
-  starBackEls,
-  starWrapEls,
-  summaryEls,
-  countEls,
-]
+// Registrierung und Aufräumen liegen in utils/orbit/frameEls.ts — dasselbe
+// Muster nutzen inzwischen auch ChampionOrbit und PlanetOrbit.
+const ALL_EL_MAPS: Map<string, Element>[] = [starBackEls, starWrapEls, summaryEls, countEls]
 let sweepCounter = 0
 
 // ── Orbit-Glow-Ringe als Canvas-Sprites ──────────────────────────────────────
@@ -530,13 +513,9 @@ function sizeHintCanvases() {
 let lastDimTs = 0
 
 function applyFrames() {
-  if (++sweepCounter >= 300) {
+  if (++sweepCounter >= FRAME_EL_SWEEP_INTERVAL) {
     sweepCounter = 0
-    for (const map of ALL_EL_MAPS) {
-      for (const [id, el] of map) {
-        if (!el.isConnected) map.delete(id)
-      }
-    }
+    sweepMapEls(ALL_EL_MAPS)
     // Blendenwerte despawnter Sterne mitnehmen, sonst wächst die Map mit
     // jedem Stern, der je im Orbit war.
     const alive = new Set(starRenders.value.map((s) => s.id))
@@ -586,6 +565,9 @@ function applyFrames() {
     if (count) {
       count.style.transform = `translate(${star.x}px, ${star.y - half - 25}px) translateX(-50%) translateY(-100%)`
       count.style.opacity = (baseOpacity * dimFactor).toFixed(3)
+      // Rahmenpuls nur im Vordergrund — classList.toggle schreibt von sich aus
+      // nur bei echtem Wechsel, kostet hier also nichts pro Frame.
+      count.classList.toggle('star-planet-count--behind', star.isBehind && !focus)
     }
   }
 
@@ -1407,6 +1389,25 @@ function starCountStyle(star: StarRenderEntry) {
 
 .star-sys-back {
   z-index: 3;
+}
+
+/* Hinter der Sonne ruht die Deko. Der Stern liegt dort geblurrt und auf einem
+   Bruchteil seiner Deckkraft — von Ringpuls und Kernpuls ist nichts mehr
+   auszumachen. Eine laufende Animation erklärt aber pro Frame den Style ihres
+   Elements für ungültig, und das mal der Zahl der Sterne: bei zehn Sternen
+   waren allein die Stern-Pulse rund zwölf Neuberechnungen je Frame. Was man
+   nicht sieht, soll auch nichts kosten. */
+.star-sys-back .star-pulse-overlay,
+.star-sys-back .star-body::before,
+.star-sys-back .star-body::after {
+  animation: none;
+}
+
+/* Dasselbe für den Planetenzähler, dessen Rahmenpuls im Back-Zustand ebenso
+   verschwindet — er hängt in einer eigenen Ebene und bekommt die Kennung
+   deshalb pro Ebenenwechsel aus applyFrames(). */
+.star-planet-count--behind::after {
+  animation: none;
 }
 
 .star-sys-front {

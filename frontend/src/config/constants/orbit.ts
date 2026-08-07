@@ -245,6 +245,20 @@ export const CHAMPION_ORBIT_INTERCEPT_DURATION_MS = 500
 /** Anteil der Dauer für den Hinweg; der Rest ist der Rückweg auf die Bahn. */
 export const CHAMPION_ORBIT_INTERCEPT_OUT_FRACTION = 0.3
 
+// ── Per-Frame-DOM-Updates ──────────────────────────────────────────────────
+// Sterne, Champions und Planeten schreiben ihre Bewegung direkt auf die
+// registrierten Elemente (utils/orbit/frameEls.ts) statt über einen
+// Vue-Re-Render pro Frame.
+/** Nach so vielen Frames werden verwaiste Element-Einträge aufgeräumt. */
+export const FRAME_EL_SWEEP_INTERVAL = 300
+/**
+ * Stufung des Parallax-Scale. Translation ist für den Compositor gratis, jede
+ * Scale-ÄNDERUNG kann dagegen eine Neurasterung des Layers auslösen (samt
+ * Rahmen, Schatten und Blur). Auf 1 %-Stufen quantisiert bleibt der Effekt
+ * optisch stufenlos, die Zahl der Neurasterungen fällt aber um ein Vielfaches.
+ */
+export const ORBIT_SCALE_QUANTIZE_STEPS = 100
+
 // ── Cooldown-Ringe ─────────────────────────────────────────────────────────
 // Ein Muster, drei Zeichenstellen: Turret-Salve (PlanetOrbit), Stern-Angriff
 // (StarSystemComponent) und Planeten-Batterie (PlanetBatteryHUD).
