@@ -43,8 +43,18 @@ export const FORGE_ROOT_ANGLES_DEG = {
 export const FORGE_ICON_SIZE_ROOT = 28
 export const FORGE_ICON_SIZE_BRANCH = 22
 export const FORGE_ICON_SIZE_LEAF = 18
-/** Freiraum am oberen Rand für das schwebende Phasen-Dock. */
-export const FORGE_PHASE_DOCK_HEADROOM_PX = 96
+/**
+ * Luft an JEDER Seite beim Einpassen des Baums.
+ *
+ * Vorher standen hier 96 px, aber nur oben — Kopfraum für das schwebende
+ * Phasen-Dock, unter dem die Bühne zusätzlich um die halbe Höhe nach unten
+ * gerückt war. Das Dock sitzt jetzt als Kopfleiste in der Forge-Sidebar, also
+ * verteilt sich derselbe Betrag auf beide Seiten: die Bühne steht mittig und
+ * bleibt exakt so groß wie zuvor (auf jedem Desktop-Format begrenzt die Höhe,
+ * und 780 − 2·48 ist dasselbe wie 780 − 96). Der Baum wird durch den Umzug
+ * also weder größer noch kleiner, nur zentriert.
+ */
+export const FORGE_TREE_FIT_PADDING_PX = 48
 /** Radius, an dem eine Wurzel-Verbindung am Sonnenrand ansetzt. */
 export const FORGE_SUN_EDGE_R = 110
 

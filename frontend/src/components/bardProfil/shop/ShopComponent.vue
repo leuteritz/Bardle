@@ -21,10 +21,12 @@ import StarForgePanel from './StarForgePanel.vue'
 
 /* Tree gets every spare pixel; the forge column stays a readable, bounded
    width across common desktop resolutions (1280 → 4K). */
+/* The seam between the two columns is the forge panel's own border-left — the
+   same 2px #5c3310 the role detail page uses. A second line here would double
+   it. */
 .shop-tree-col {
   flex: 1;
   min-width: 0;
-  border-right: 2px solid #2a1a08;
 }
 
 .shop-forge-col {
@@ -43,8 +45,7 @@ import StarForgePanel from './StarForgePanel.vue'
 
   .shop-tree-col {
     flex: 0 0 420px;
-    border-right: none;
-    border-bottom: 2px solid #2a1a08;
+    border-bottom: 2px solid #5c3310;
   }
 
   .shop-forge-col {
