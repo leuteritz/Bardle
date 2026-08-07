@@ -255,10 +255,32 @@
 
           <!-- Awaiting on return — immer gerendert mit fester Zeilenhöhe, damit
                aufpoppende Badges die Panel-Höhe (und den Fit-Scale) nie ändern -->
-          <div class="callout-section">
-            <span class="callout-heading">Awaiting your return</span>
+          <div
+            class="callout-section"
+            :style="{ '--star-card-h': `${PAUSE_STAR_CARD_HEIGHT}px` }"
+          >
+            <!-- Kopfzeile mit fester Höhe: die Level-Up-Marke sitzt neben der
+                 Überschrift statt zwischen den Flyby-Karten. Sie ist kein
+                 laufender Vorgang, sondern etwas, das auf eine Entscheidung
+                 wartet — und die Kartenreihe bleibt dadurch sortenrein. -->
+            <div class="callout-head">
+              <span class="callout-heading">Awaiting your return</span>
+              <Transition name="callout-pop">
+                <span v-if="pendingAugmentCount > 0" class="level-chip">
+                  <Icon
+                    icon="game-icons:upgrade"
+                    width="14"
+                    height="14"
+                    class="level-chip__icon"
+                    aria-hidden="true"
+                  />
+                  Level-Up
+                  <span class="level-chip__count">×{{ pendingAugmentCount }}</span>
+                </span>
+              </Transition>
+            </div>
             <TransitionGroup
-              v-if="callouts.length > 0 || isPlanetDiscovered"
+              v-if="activeResourceStars.length > 0 || isPlanetDiscovered"
               tag="div"
               name="callout-pop"
               class="callout-row"
@@ -291,43 +313,17 @@
                 </span>
               </div>
 
-              <div v-for="c in callouts" :key="c.key" class="callout" :class="c.cls">
-                <!-- Icon steht frei: der Kreis drumherum war eine zweite
-                     Fassung innerhalb einer Pille, die selbst schon eine ist. -->
-                <Icon :icon="c.icon" width="17" height="17" class="callout__icon" aria-hidden="true" />
-
-                <!-- Stern: Planeten als Punktreihe, Restzeit rechts. Die Punkte
-                     bleiben stehen und leeren sich nur — dadurch ändert der
-                     Callout seine Breite über die gesamte Lebensdauer des
-                     Sterns nicht, weder beim Herunterzählen noch beim
-                     Befreien eines Planeten. -->
-                <template v-if="c.kind === 'star'">
-                  <span
-                    class="callout__pips"
-                    :aria-label="`${c.remaining} of ${c.total} planets left`"
-                  >
-                    <span
-                      v-for="i in c.total"
-                      :key="i"
-                      class="pip"
-                      :class="{ 'pip--cleared': i > c.remaining! }"
-                    />
-                  </span>
-                  <span class="callout__secs">{{ c.secs }}s</span>
-                  <!-- Restlaufzeit als abbrennende Linie am Fuß — inline
-                       gesetzter Transform statt CSS-Variable am Container. -->
-                  <span
-                    class="callout__fuse"
-                    :style="{ transform: `scaleX(${c.progress})` }"
-                    aria-hidden="true"
-                  />
-                </template>
-
-                <span v-else class="callout__text">
-                  {{ c.text }}
-                  <span v-if="c.count > 0" class="callout__count">×{{ c.count }}</span>
-                </span>
-              </div>
+              <!-- Ein Flyby, eine Karte: Zifferblatt der Restzeit, echte
+                   Planetenkunst der Slots, Akzent in der Spektralfarbe des
+                   Sterns. Höchstens RESOURCE_STAR_MAX_CONCURRENT nebeneinander. -->
+              <PauseStarCard
+                v-for="s in activeResourceStars"
+                :key="s.id"
+                :secs="s.secs"
+                :progress="s.progress"
+                :color="s.color"
+                :planets="s.planets"
+              />
             </TransitionGroup>
             <div v-else class="callout-row">
               <span class="callout-empty">All quiet so far — the cosmos drifts on</span>
@@ -396,7 +392,9 @@ import {
   ROLE_ART_MD_SUFFIX,
   KEYBINDINGS,
   PAUSE_ESCAPE_CAP,
+  PAUSE_STAR_CARD_HEIGHT,
 } from '@/config/constants'
+import type { PlanetType } from '@/types'
 import { splitDuration } from '@/utils/ui/format'
 import { pauseDustStyle } from '@/utils/fx/particleField'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
@@ -404,6 +402,7 @@ import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import KeyCap from '@/components/keybinds/KeyCap.vue'
+import PauseStarCard from './PauseStarCard.vue'
 
 // Die Pause hat zwei Quellen — Fenster ohne Fokus und das Kürzel des Spielers.
 // Beide laufen in useGamePause zusammen; dieses Overlay kennt nur noch das
@@ -546,9 +545,12 @@ interface PauseResourceStar {
   id: string
   secs: number
   remainingPlanets: number
-  total: number
-  /** Restanteil der Despawn-Zeit (1 = frisch gespawnt) für die Fuse-Linie. */
+  /** Restanteil der Despawn-Zeit (1 = frisch gespawnt) für den Zeitbogen. */
   progress: number
+  /** Spektralfarbe des Sterns als fertiger CSS-Wert (StarGroup.starColor). */
+  color: string
+  /** Die Slots in ihrer echten Gestalt — die Karte zeichnet sie als Planeten. */
+  planets: { id: string; type: PlanetType; cleared: boolean }[]
 }
 
 const activeResourceStars = computed<PauseResourceStar[]>(() => {
@@ -557,19 +559,24 @@ const activeResourceStars = computed<PauseResourceStar[]>(() => {
   return starGroupStore.activeStars
     .filter((s) => s.starType === 'resource')
     .map((s) => {
-      const total = s.planetSlots.length
       const remainingPlanets = s.planetSlots.filter((p) => !p.cleared).length
       const durationMs = s.durationMs ?? 0
       const remainingMs =
         s.spawnedAt !== undefined && durationMs > 0
           ? Math.max(0, s.spawnedAt + durationMs - now)
           : 0
+      const [r, g, b] = s.starColor
       return {
         id: s.id,
         secs: Math.ceil(remainingMs / 1000),
         remainingPlanets,
-        total,
         progress: durationMs > 0 ? Math.min(1, remainingMs / durationMs) : 0,
+        color: `rgb(${r}, ${g}, ${b})`,
+        planets: s.planetSlots.map((p) => ({
+          id: p.planetId,
+          type: p.type,
+          cleared: p.cleared,
+        })),
       }
     })
     .filter((s) => s.remainingPlanets > 0 && s.secs > 0)
@@ -699,48 +706,11 @@ const championArt = computed(() =>
  */
 const championStarPending = computed(() => galaxyStore.pendingChampionStar)
 
-interface PauseCallout {
-  key: string
-  /** `star` rendert Punktreihe + Timer, `text` eine Beschriftung mit Zähler. */
-  kind: 'text' | 'star'
-  icon: string
-  cls: string
-  text?: string
-  count?: number
-  secs?: number
-  remaining?: number
-  total?: number
-  progress?: number
-}
-
-const callouts = computed<PauseCallout[]>(() => {
-  const list: PauseCallout[] = []
-  // Der Champion steckt nicht mehr in dieser Liste — er bekommt den Herald
-  // über den Badges, siehe Template.
-  if (gameStore.pendingAugmentSelections.length > 0) {
-    list.push({
-      key: 'level',
-      kind: 'text',
-      icon: 'game-icons:upgrade',
-      text: 'Level-Up',
-      count: gameStore.pendingAugmentSelections.length,
-      cls: 'callout--level',
-    })
-  }
-  for (const s of activeResourceStars.value) {
-    list.push({
-      key: `star-${s.id}`,
-      kind: 'star',
-      icon: 'game-icons:star-formation',
-      cls: 'callout--star',
-      secs: s.secs,
-      remaining: s.remainingPlanets,
-      total: s.total,
-      progress: s.progress,
-    })
-  }
-  return list
-})
+/**
+ * Offene Level-Up-Wahlen. Sie stehen als Marke neben der Überschrift, nicht in
+ * der Kartenreihe: dort läuft ausschließlich, was gerade abläuft.
+ */
+const pendingAugmentCount = computed(() => gameStore.pendingAugmentSelections.length)
 
 function unpause() {
   resumeGame()
@@ -1648,11 +1618,23 @@ function particleStyle(i: number): Record<string, string> {
 
 /* ── Callouts ─────────────────────────────────────────── */
 .callout-section {
+  /* Höhe des Champion-Heralds — geht in die Reservierung der Reihe ein.
+     --star-card-h kommt inline aus PAUSE_STAR_CARD_HEIGHT. */
+  --herald-h: 52px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   width: 100%;
+}
+/* Überschrift und Level-Up-Marke auf einer Zeile mit fester Höhe: taucht die
+   Marke mitten in der Pause auf, rückt darunter nichts nach. */
+.callout-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 22px;
 }
 .callout-heading {
   font-size: 0.76rem;
@@ -1661,11 +1643,39 @@ function particleStyle(i: number): Record<string, string> {
   text-transform: uppercase;
   color: rgba(216, 200, 160, 0.55);
 }
-/* Feste Höhe: reservierter Platz, egal ob 0 oder 5 Badges — das Panel bleibt
-   stabil. Zwei Zeilen sind reserviert, weil der Vollausbau (3 Resource-Sterne
-   nach RESOURCE_STAR_MAX_CONCURRENT plus Champion- und Level-Marke) nicht in
-   eine Zeile passt. Vorher stand hier nowrap mit overflow: hidden — die Badges
-   wurden dann gequetscht, bis die Sekundenzahl am Rand abriss. */
+/* Die einzige verbliebene Pille im Abschnitt — sie meldet keine laufende Frist,
+   sondern eine offene Entscheidung, und steht deshalb bei der Überschrift. */
+.level-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(116, 212, 72, 0.45);
+  background: linear-gradient(135deg, rgba(116, 212, 72, 0.16), rgba(116, 212, 72, 0.05));
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #b6ec96;
+  white-space: nowrap;
+}
+.level-chip__icon {
+  flex-shrink: 0;
+  color: #74d448;
+  filter: drop-shadow(0 0 5px rgba(116, 212, 72, 0.8));
+}
+.level-chip__count {
+  font-size: 1.05em;
+  color: #74d448;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 10px rgba(116, 212, 72, 0.55);
+}
+/* Feste Höhe: reservierter Platz, egal ob leer oder voll besetzt — das Panel
+   bleibt stabil. Zwei Zeilen sind reserviert: der Champion-Herald über die
+   volle Breite und darunter die Flyby-Karten (bis zu
+   RESOURCE_STAR_MAX_CONCURRENT nebeneinander). Beides fest, damit ein Fund
+   oder ein neu gespawnter Stern das Panel nicht springen lässt. */
 .callout-row {
   display: flex;
   flex-wrap: wrap;
@@ -1673,10 +1683,7 @@ function particleStyle(i: number): Record<string, string> {
   align-content: center;
   justify-content: center;
   gap: 8px;
-  /* Erste Zeile gehört dem Champion-Herald (52), darunter die Badge-Zeile
-     (37) — beides fest reserviert, damit der Fund das Panel nicht springen
-     lässt, wenn er mitten in der Pause eintrifft. */
-  height: 97px;
+  height: calc(var(--herald-h) + 8px + var(--star-card-h));
   width: 100%;
   overflow: hidden;
 }
@@ -1692,7 +1699,7 @@ function particleStyle(i: number): Record<string, string> {
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 52px;
+  height: var(--herald-h);
   padding: 0 14px 0 8px;
   overflow: hidden;
   border-radius: 12px;
@@ -1788,130 +1795,7 @@ function particleStyle(i: number): Record<string, string> {
   letter-spacing: 0.06em;
   color: rgba(216, 200, 160, 0.32);
 }
-/* One shared callout style — modifiers only swap the accent color (--co-color). */
-.callout {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  /* Nicht schrumpfen: lieber bricht die Zeile um, als dass die Restzeit am
-     Rand abgeschnitten wird. */
-  flex-shrink: 0;
-  gap: 8px;
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-size: clamp(0.72rem, 1vw, 0.82rem);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  border: 1px solid color-mix(in srgb, var(--co-color) 45%, transparent);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--co-color) 14%, transparent),
-    color-mix(in srgb, var(--co-color) 5%, transparent)
-  );
-  color: color-mix(in srgb, var(--co-color) 55%, #f2ead0);
-  overflow: hidden;
-}
-/* Der Puls sitzt auf einem Overlay und bewegt nur dessen Opazität. Vorher
-   animierte der Callout selbst seinen box-shadow — das rastert die Box in
-   jedem Frame neu, und zwar pro Badge. */
-.callout::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: 0 0 16px color-mix(in srgb, var(--co-color) 32%, transparent);
-  opacity: 0;
-  pointer-events: none;
-  animation: callout-glow 2.6s ease-in-out infinite;
-}
-.callout--level {
-  --co-color: #74d448;
-}
-.callout--star {
-  --co-color: #7fd8d0;
-}
-@keyframes callout-glow {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-.callout__icon {
-  flex-shrink: 0;
-  color: var(--co-color);
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--co-color) 80%, transparent));
-}
-
-/* ── Stern-Callout ────────────────────────────────────────
-   Ein Punkt je Planet: gefüllt = steht noch, hohl = befreit. Die Punkte
-   verschwinden nie, sie leeren sich nur — die Breite des Badges steht damit
-   ab dem Spawn fest, und der Fortschritt ist ohne Bruchzahl ablesbar. */
-.callout__pips {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-.pip {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--co-color);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--co-color) 60%, transparent);
-}
-.pip--cleared {
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--co-color) 40%, transparent);
-  box-shadow: none;
-}
-/* Feste Zellbreite für die längste vorkommende Angabe (RESOURCE_STAR_DURATION_MS
-   = 45s, also drei Zeichen): der Wechsel auf zweistellig und später einstellig
-   macht das Badge dadurch nicht schmaler. */
-.callout__secs {
-  min-width: 3.2ch;
-  flex-shrink: 0;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  color: var(--co-color);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--co-color) 45%, transparent);
-}
-/* Restlaufzeit als Linie am Fuß der Pille — brennt von rechts ab */
-.callout__fuse {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 2px;
-  height: 2px;
-  border-radius: 1px;
-  transform-origin: left center;
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--co-color) 55%, transparent),
-    var(--co-color)
-  );
-}
-.callout__text {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.callout__count {
-  font-size: 1.05em;
-  font-weight: 800;
-  color: var(--co-color);
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 10px color-mix(in srgb, var(--co-color) 55%, transparent);
-}
-
-/* Badge-Pop: neue Callouts federn in die reservierte Zeile ein */
+/* Pop-in: neue Karten und Marken federn in die reservierte Zeile ein */
 .callout-pop-enter-active {
   transition:
     transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -2019,7 +1903,6 @@ function particleStyle(i: number): Record<string, string> {
 @media (prefers-reduced-motion: reduce) {
   .particle,
   .chime-img,
-  .callout::after,
   .champion-herald__sheen,
   .vital-bar--crit .vital-bar__pulse,
   .pause-timer__value {

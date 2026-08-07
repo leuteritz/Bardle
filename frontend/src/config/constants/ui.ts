@@ -230,6 +230,35 @@ export const PAUSE_HP_CRIT_PERCENT = 25
 // Stützstellen decken beide Fälle ab; die Spalte nimmt die breiteste.
 export const PAUSE_HP_WIDTH_PROBES = [1, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1]
 
+// ── Pause-Overlay: Flyby-Karten der Resource-Stars ─────────────────────────
+// Ein Stern je Karte, höchstens RESOURCE_STAR_MAX_CONCURRENT nebeneinander.
+// Breite × 3 plus zwei Lücken muss in die Panelbreite abzüglich Innenabstand
+// passen (620 − 2 × 44 = 532) — sonst bricht die Reihe um und die reservierte
+// Höhe stimmt nicht mehr.
+export const PAUSE_STAR_CARD_WIDTH = 170
+export const PAUSE_STAR_CARD_HEIGHT = 74
+/** Zifferblatt der Restzeit: Radius und Umfang der SVG-Kreislinie.
+ *  Der Fortschritt läuft über stroke-dashoffset — dieselbe Technik wie beim
+ *  Ability-Ring, siehe „Performance" Regel 11. */
+export const PAUSE_STAR_RING_RADIUS = 23
+export const PAUSE_STAR_RING_CIRCUMFERENCE = 2 * Math.PI * PAUSE_STAR_RING_RADIUS
+/** Ab dieser Restzeit (Sekunden) schlägt das Zifferblatt auf Alarm um. */
+export const PAUSE_STAR_URGENT_SECS = 10
+// Planeten-Glyphen in der Karte (echte Planetenkunst statt abstrakter Punkte).
+// Der Viewport von PlanetGlyph ist absichtlich breiter als der Planet — die
+// Ringe eines Ringed-Planeten reichen bis fast an den Rand. Für eine Reihe aus
+// drei Welten ist dieser Leerraum zu teuer: die Zelle ist deshalb schmaler als
+// der Glyph und lässt ihn seitlich überstehen. Die leeren Ränder benachbarter
+// Glyphen überlappen sich, die Planetenkörper (0,62 × Glyphhöhe) nicht.
+export const PAUSE_STAR_PLANET_GLYPH_PX = 34
+export const PAUSE_STAR_PLANET_CELL_PX = 27
+export const PAUSE_STAR_PLANET_GAP_PX = 3
+/** Platz, den die Planetenreihe in der Karte hat: Kartenbreite abzüglich
+ *  Innenabstand (2 × 10), Zifferblatt (52) und dessen Lücke (8). Trägt ein
+ *  Stern mehr Slots als die Regel-Anzahl, rücken Zelle und Glyph zusammen,
+ *  statt aus der Karte zu laufen. */
+export const PAUSE_STAR_PLANET_ROW_WIDTH = 90
+
 // ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
 // Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,
 // der im Takt von STAR_TIMER_TICK_MS neu gebaut wird. Damit invalidiert das
