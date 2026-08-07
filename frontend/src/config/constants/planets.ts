@@ -505,6 +505,20 @@ export const PLANET_TAB_SUN_MAX_DIAMETER = 560
 /** Fixed base diameter (px) of the orbiting planet image (kept small vs. the sun). */
 export const PLANET_TAB_PLANET_DIAMETER = 112
 
+/**
+ * Breite der Slot-Schiene rechts im Planet-Tab, als CSS-Ausdruck — sie skaliert
+ * mit dem Viewport und lässt sich deshalb nicht als Zahl fassen.
+ *
+ * Zwei Stellen lesen sie: die Schiene selbst und der Action-Toast, der NICHT im
+ * ganzen Modal zentriert, sondern in dem, was links von der Schiene übrig
+ * bleibt — sonst steht seine Karte neben der Bühne, auf die sie sich bezieht.
+ * Deshalb hier und nicht als Literal im CSS: liefen die beiden auseinander,
+ * wäre der Toast wieder aus der Mitte.
+ */
+export const PLANET_TAB_RAIL_WIDTH_CSS = 'clamp(210px, 16vw, 320px)'
+/** Breite der Goldnaht zwischen Bühne und Schiene (px). */
+export const PLANET_TAB_RAIL_SEAM_WIDTH = 3
+
 // ── Planet glyph (PlanetGlyph.vue) ───────────────────────────────────────────
 /**
  * Drawing box of the icon-sized planet renderer. Wider than tall because a

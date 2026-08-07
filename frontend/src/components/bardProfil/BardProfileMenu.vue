@@ -14,6 +14,7 @@ import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import type { BardTabId } from '@/stores/core/uiStore'
 import type { KeybindId } from '@/types'
 import { formatBadgeCount } from '@/utils/ui/format'
+import { PLANET_TAB_RAIL_WIDTH_CSS, PLANET_TAB_RAIL_SEAM_WIDTH } from '@/config/constants'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
@@ -45,6 +46,22 @@ const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
 const planetBadgeCount = computed(() => planetShopStore.affordableLevelCount)
 // Compact label — the total can climb high, so cap the glyph.
 const planetBadgeLabel = computed(() => formatBadgeCount(planetBadgeCount.value))
+
+/**
+ * Rechter Rand, den der Action-Toast dem aktiven Tab überlässt. Er steht über
+ * ALLEN Tabs (eine Instanz, siehe .rp-modal-content) und zentrierte deshalb im
+ * ganzen Modal — im Planet-Tab landete die Karte damit neben der Bühne, auf die
+ * sie sich bezieht, weil rechts die Slot-Schiene ein Fünftel der Breite hält.
+ *
+ * Die Menü-Ebene ist die einzige, die Toast UND aktiven Tab kennt: der Toast ist
+ * ein Geschwister der Tab-Layer, eine Variable aus einem Tab heraus erreicht ihn
+ * also nicht. Tabs ohne Seitenschiene bleiben bei 0 und damit bei der Mitte.
+ */
+const toastInsetRight = computed(() =>
+  uiStore.bardActiveTab === 'planets'
+    ? `calc(${PLANET_TAB_RAIL_WIDTH_CSS} + ${PLANET_TAB_RAIL_SEAM_WIDTH}px)`
+    : '0px',
+)
 
 const menuItems: {
   id: BardTabId
@@ -251,7 +268,10 @@ onUnmounted(() => {
                  Transition-Phasen samt `forceReflow`, und ein Kreuzblende
                  zwischen zwei bereits stehenden Layern bringt nichts, was den
                  Preis wert wäre. -->
-            <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
+            <div
+              class="relative flex-1 min-h-0 overflow-hidden rp-modal-content"
+              :style="{ '--toast-inset-right': toastInsetRight }"
+            >
               <ActionToast />
               <!-- Battle-Tab: von Anfang an gemountet, Watch + Simulation laufen -->
               <div v-show="uiStore.bardActiveTab === 'battle'" class="tab-layer tab-layer--scroll">

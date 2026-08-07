@@ -9,6 +9,8 @@ import {
   PLANET_TAB_SUN_MIN_DIAMETER,
   PLANET_TAB_SUN_MAX_DIAMETER,
   PLANET_TAB_PLANET_DIAMETER,
+  PLANET_TAB_RAIL_WIDTH_CSS,
+  PLANET_TAB_RAIL_SEAM_WIDTH,
   HP_BAR_SEGMENTS,
 } from '@/config/constants'
 import { usePlanetTabOrbit } from '@/composables/orbit/usePlanetTabOrbit'
@@ -19,6 +21,11 @@ import PlanetRailSlot from './PlanetRailSlot.vue'
 import PlanetLockedPanel from './PlanetLockedPanel.vue'
 import PlanetRoleChoicePanel from './PlanetRoleChoicePanel.vue'
 import PlanetStagePanel from './PlanetStagePanel.vue'
+
+/** Schienenbreite und Naht kommen aus der Konstante — der Action-Toast rechnet
+ *  mit denselben Werten, damit er in der Bühne zentriert bleibt. */
+const railWidthCss = PLANET_TAB_RAIL_WIDTH_CSS
+const railSeamWidthPx = `${PLANET_TAB_RAIL_SEAM_WIDTH}px`
 
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
@@ -312,7 +319,7 @@ const sunPhaseStyle = computed(() => {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  width: clamp(210px, 16vw, 320px);
+  width: v-bind(railWidthCss);
   display: flex;
   flex-direction: column;
   gap: clamp(6px, 0.8vh, 12px);
@@ -328,7 +335,7 @@ const sunPhaseStyle = computed(() => {
 .ps-rail-seam {
   position: relative;
   z-index: 2;
-  flex: 0 0 3px;
+  flex: 0 0 v-bind(railSeamWidthPx);
   align-self: stretch;
   background: linear-gradient(
     to bottom,

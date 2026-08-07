@@ -50,12 +50,18 @@ const timerDuration = `${TOAST_DURATION_MS}ms`
 
 <style scoped>
 /* Die Karte schwebt über dem Tab-Inhalt und darf ihn nie blockieren — der
-   alte Vollbreiten-Streifen fing Klicks in der obersten Zeile jedes Tabs ab. */
+   alte Vollbreiten-Streifen fing Klicks in der obersten Zeile jedes Tabs ab.
+ *
+ * Zentriert wird im BÜHNENBEREICH des aktiven Tabs, nicht im ganzen Modal: hat
+ * ein Tab eine Seitenschiene (Planet-Tab), meldet er ihre Breite als
+ * --toast-inset-right an .rp-modal-content an, und die Karte hält sich links
+ * davon. Ohne das stand sie neben dem Planeten, auf den sie sich bezieht.
+ * Tabs ohne Schiene lassen die Variable ungesetzt und bekommen die 0. */
 .action-toast {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
+  right: var(--toast-inset-right, 0px);
   z-index: 20;
   display: flex;
   align-items: center;
