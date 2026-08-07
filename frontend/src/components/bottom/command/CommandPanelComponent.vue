@@ -1225,16 +1225,11 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
     radial-gradient(ellipse at 50% 58%, rgba(12, 18, 38, 0.7) 0%, rgba(3, 5, 12, 0.88) 100%);
   pointer-events: none;
   z-index: 2;
-  animation: cmd-eclipse-drift 4.5s ease-in-out infinite alternate;
-}
-
-@keyframes cmd-eclipse-drift {
-  from {
-    opacity: 0.8;
-  }
-  to {
-    opacity: 1;
-  }
+  /* Der Schleier stand still zwischen 80 % und 100 % Deckkraft — auf einem
+     ohnehin fast schwarzen Verlauf war das kaum auszumachen, lief aber
+     dauerhaft für jeden verdeckten Slot. Das Atmen trägt jetzt allein das
+     Medaillon darüber, das die Aussage ohnehin führt. */
+  opacity: 0.9;
 }
 
 /* ── Zerstört: Planet ist aus dem Orbit raus und wartet auf seinen Respawn ──

@@ -1638,6 +1638,12 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
+/* Der Ring atmet nur noch am CHAMPION-Stern. Ressourcensterne stellen die
+   Masse im Orbit — bei zehn Stück lief hier zehnmal dieselbe Animation, für
+   einen 1,5 px starken Ring, dessen Deckkraft zwischen 45 % und 82 % wandert.
+   Den lebendigen Stern trägt sein Kernpuls (.star-pulse-overlay) allein; das
+   Atmen bleibt denen vorbehalten, die Aufmerksamkeit verdienen — Champion,
+   Eskorte und Galaxieboss. */
 .star-body--champion::after,
 .star-body--resource::after {
   content: '';
@@ -1645,8 +1651,13 @@ function starCountStyle(star: StarRenderEntry) {
   inset: var(--ring-inset, -11px);
   border-radius: 50%;
   border: 1.5px solid rgba(var(--star-rgb), 0.45);
-  animation: star-ring-pulse 2.8s ease-in-out infinite;
+  opacity: 0.62;
   pointer-events: none;
+}
+
+.star-body--champion::after {
+  opacity: 1;
+  animation: star-ring-pulse 2.8s ease-in-out infinite;
 }
 
 /* ── Galaxieboss: episches Doppelring- + Corona-Styling ─────────────────────

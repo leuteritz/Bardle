@@ -841,16 +841,8 @@ function onSlotLeave() {
       transparent 74%
     ),
     radial-gradient(ellipse at 50% 58%, rgba(12, 18, 38, 0.72) 0%, rgba(3, 5, 12, 0.9) 100%);
-  animation: champ-eclipse-drift 4.5s ease-in-out infinite alternate;
-}
-
-@keyframes champ-eclipse-drift {
-  from {
-    opacity: 0.8;
-  }
-  to {
-    opacity: 1;
-  }
+  /* Wie im Command Panel: der Schleier steht, das Medaillon atmet. */
+  opacity: 0.9;
 }
 .champ-card--eclipsed .champ-ability {
   opacity: 0.42;
