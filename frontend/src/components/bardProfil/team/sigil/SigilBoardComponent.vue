@@ -14,9 +14,6 @@ import {
   ROLES,
   SIGIL_STAGE_SIZE,
   SIGIL_CREST_SIZE,
-  SIGIL_POWER_AUTO_GAP,
-  SIGIL_POWER_AUTO_WIDTH,
-  SIGIL_POWER_AUTO_HEIGHT,
   SIGIL_NODE_SIZE,
   SIGIL_SWORN_SIZE,
   TEAM_SIGIL_FOCUS_ZOOM,
@@ -462,6 +459,32 @@ watch(
         <span class="sigil-action-label">Expedition</span>
         <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
       </button>
+
+      <!-- auto level-up — third row of the same column, and deliberately a
+           notch quieter than the two above it: those are doors, this is a
+           setting, and a setting that looked like a door would be pressed by
+           mistake. It used to ride the STAGE under the power crest, squeezed
+           into 24 px because that was the whole gap between the synergy badge
+           and the bottom name plates. Down here it is a control at a control's
+           size, it stops zooming with the sigil, and the switch it reads
+           (roster-wide) finally sits with the other roster-wide actions. -->
+      <button
+        class="sigil-action sigil-action--auto"
+        :class="{ 'sigil-action--auto-on': autoLevelEnabled }"
+        type="button"
+        role="switch"
+        :aria-checked="autoLevelEnabled"
+        :title="
+          autoLevelEnabled
+            ? 'On — every champion buys its next level as soon as its XP, chimes and materials are in stock'
+            : 'Off — levels are bought by hand on the champion page'
+        "
+        @click.stop="toggleAutoLevel"
+      >
+        <Icon icon="game-icons:circle-sparks" width="24" height="24" class="sigil-action-icon" />
+        <span class="sigil-action-label">Auto Level</span>
+        <span class="sigil-auto-track"><span class="sigil-auto-knob" /></span>
+      </button>
     </div>
 
 
@@ -525,36 +548,6 @@ watch(
           <Icon icon="game-icons:linked-rings" width="14" height="14" />
           {{ activeSynergyCount }}
         </span>
-      </button>
-
-      <!-- auto level-up, seated under the power crest. On the STAGE rather than
-           on the board, so it stays under the crest through every pan and zoom
-           instead of drifting off it. Sibling of the crest, not a child: the
-           crest already owns a click (team synergies) and the two must not
-           swallow each other. Flat and small on purpose — the gap between the
-           synergy badge and the bottom name plates is 29 stage-px, and that is
-           the whole budget (see SIGIL_POWER_AUTO_*). -->
-      <button
-        class="sigil-power-auto"
-        :class="{ 'sigil-power-auto--on': autoLevelEnabled }"
-        :style="{
-          top: `calc(50% + ${SIGIL_CREST_SIZE / 2 + SIGIL_POWER_AUTO_GAP}px)`,
-          width: `${SIGIL_POWER_AUTO_WIDTH}px`,
-          height: `${SIGIL_POWER_AUTO_HEIGHT}px`,
-        }"
-        type="button"
-        role="switch"
-        :aria-checked="autoLevelEnabled"
-        :title="
-          autoLevelEnabled
-            ? 'On — every champion buys its next level as soon as its XP, chimes and materials are in stock'
-            : 'Off — levels are bought by hand on the champion page'
-        "
-        @click.stop="toggleAutoLevel"
-      >
-        <Icon icon="game-icons:circle-sparks" width="13" height="13" />
-        <span class="sigil-power-auto-label">Auto Level</span>
-        <span class="sigil-power-auto-track"><span class="sigil-power-auto-knob" /></span>
       </button>
 
       <!-- escalation embers -->
@@ -805,83 +798,101 @@ watch(
   width: 26px;
   height: 26px;
 }
+/* The admin strip is 310–344 px wide on its own, so on a squeezed board nothing
+   fits beside the column — it has to clear it vertically instead. Measured with
+   the column's three rows: 166 px tall from bottom 22, i.e. its top edge at 188.
+   With a battle CTA holding the baseline the column starts 70 px higher again. */
 .sigil-board--compact-actions .sigil-admin {
-  bottom: 160px;
+  bottom: 200px;
+}
+.sigil-board--compact-actions:has(.brb, .btrb) .sigil-admin {
+  bottom: 270px;
 }
 
-/* ── auto level-up, under the power crest ──
-   Width, height and vertical offset come from the SIGIL_POWER_AUTO_* constants
-   and are set inline, because the gap they fit into is stage geometry rather
-   than a styling choice. Everything below is only the look.
-
-   Flat and quiet: it sits inside the sigil, where the crest is the thing meant
-   to carry weight. The knob is the single moving part and it moves on transform
-   alone, so a full board keeps compositing at rate. */
-.sigil-power-auto {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 8px;
-  cursor: pointer;
-  border-radius: 4px;
-  background: rgba(14, 10, 5, 0.92);
-  border: 1px solid #5c3310;
+/* ── auto level-up — third row of the action column ──
+   It shares the column's frame so the three read as one block, and undercuts it
+   everywhere else so nobody mistakes a setting for a door: shorter, smaller
+   type, smaller glyph, and the switch pushed out to the right edge where a
+   switch belongs. On is the project's green, the same one that marks anything
+   active or affordable.
+   The knob is the single moving part and it moves on transform alone, so a full
+   board keeps compositing at rate. */
+.sigil-action--auto {
+  gap: 11px;
+  padding: 11px 20px;
+  font-size: 15px;
   color: #9c927c;
   transition:
     border-color 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
-.sigil-power-auto:hover {
+.sigil-action--auto .sigil-action-icon {
+  color: currentColor;
+}
+.sigil-action--auto:hover {
   border-color: #c89040;
   color: #e8dcc0;
+  box-shadow: none;
+  transform: none;
 }
-.sigil-power-auto--on {
+.sigil-action--auto-on {
   border-color: #6ec040;
   color: #a8d890;
 }
-.sigil-power-auto--on:hover {
+.sigil-action--auto-on:hover {
   border-color: #8ee060;
 }
-.sigil-power-auto-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  line-height: 1;
-  white-space: nowrap;
-}
-.sigil-power-auto-track {
+.sigil-auto-track {
   flex-shrink: 0;
+  /* the switch reads as the row's right-hand end, not as a third label */
+  margin-left: auto;
   position: relative;
-  width: 26px;
-  height: 13px;
+  width: 30px;
+  height: 15px;
   border-radius: 3px;
   background: #0d0c08;
   border: 1px solid #5c3310;
   transition: border-color 0.15s ease;
 }
-.sigil-power-auto--on .sigil-power-auto-track {
+.sigil-action--auto-on .sigil-auto-track {
   border-color: #6ec040;
 }
-.sigil-power-auto-knob {
+.sigil-auto-knob {
   position: absolute;
   top: 1px;
   left: 1px;
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
   border-radius: 2px;
   background: #6b6455;
   transition:
     transform 0.15s ease,
     background 0.15s ease;
 }
-.sigil-power-auto--on .sigil-power-auto-knob {
+.sigil-action--auto-on .sigil-auto-knob {
   background: #52b830;
+  transform: translateX(15px);
+}
+/* compact board — the same step down the two rows above take */
+.sigil-board--compact-actions .sigil-action--auto {
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.sigil-board--compact-actions .sigil-action--auto .sigil-action-icon {
+  width: 18px;
+  height: 18px;
+}
+.sigil-board--compact-actions .sigil-auto-track {
+  width: 26px;
+  height: 13px;
+}
+.sigil-board--compact-actions .sigil-auto-knob {
+  width: 9px;
+  height: 9px;
+}
+.sigil-board--compact-actions .sigil-action--auto-on .sigil-auto-knob {
   transform: translateX(13px);
 }
 

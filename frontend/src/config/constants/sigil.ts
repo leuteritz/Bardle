@@ -137,23 +137,6 @@ export const SIGIL_NODE_SIZE = 94
 export const SIGIL_ALLY_SIZE = 36
 export const SIGIL_CREST_SIZE = 170
 
-/**
- * Auto level-up switch, seated on the stage directly under the power crest.
- *
- * The gap it lives in is fixed stage geometry, not a screen measurement: below
- * the crest sit the synergy badge (which hangs 11px past the rim and stands
- * ~22px tall) and, 40px under the rim, the name plates of the two bottom role
- * nodes. That leaves 29 stage-px — measured at Full HD and 2K, where the same
- * gap renders as 25.1px and 34.1px and both divide back to 29.
- *
- * GAP clears the synergy badge with 2px to spare, and HEIGHT leaves 3px above
- * the name plates. Neither has room to grow without moving the name plates
- * (SIGIL_NODE_NAME_OFFSET), whose radius is solved against seven other
- * constraints — so raise these two only after re-measuring that gap.
- */
-export const SIGIL_POWER_AUTO_GAP = 13
-export const SIGIL_POWER_AUTO_WIDTH = 168
-export const SIGIL_POWER_AUTO_HEIGHT = 24
 
 /**
  * XP arc traced around a role node, in a 0–100 viewBox so it scales with the
