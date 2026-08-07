@@ -6,11 +6,7 @@
     <!-- ══ PHASE 1 · LANDING (career stats + start) ══ -->
     <Transition name="start-fade">
       <BattleLandingScreen
-        v-if="
-          (!battleStore.isAutoBattleInitialized || battleStore.isViewingLanding) &&
-          !isUniverseAnimating &&
-          !isStarting
-        "
+        v-if="landingShowing"
         :is-starting="isStarting"
         @start="startBattle"
       />
@@ -41,14 +37,16 @@
     </template>
 
     <!-- ══ Ladeschleier ══
-         Deckt das Rift-Board, solange es beim Öffnen des Tabs entsteht, und
-         blendet danach über dem fertigen weg. Er trägt Farbe und Wappen der
-         LAUFENDEN Phase, nicht der beim Aufziehen gültigen: endet der Kampf
-         während seiner Standzeit, wechselt er mit. -->
+         Deckt, was beim Öffnen des Tabs entsteht — je nach Spielstand das
+         Rift-Board oder der Landing-Screen — und blendet danach über dem
+         fertigen weg. Er trägt Farbe und Wappen der LAUFENDEN Phase, nicht der
+         beim Aufziehen gültigen: endet der Kampf während seiner Standzeit,
+         wechselt er mit. -->
     <Transition name="btl-reveal">
       <BattleTabLoader
         v-if="loaderVisible"
         :phase-key="battleStore.currentBattlePhase"
+        :variant="loaderVariant"
         :started-at="loaderStartedAt"
       />
     </Transition>
@@ -73,6 +71,7 @@ import {
   BATTLE_TAB_LOADER_SETTLE_FRAMES,
   BATTLE_TAB_LOADER_MIN_MS,
   BATTLE_TAB_LOADER_REPEAT_MIN_MS,
+  BATTLE_TAB_LANDING_LOADER_MIN_MS,
 } from '@/config/constants'
 
 export default defineComponent({
@@ -95,6 +94,20 @@ export default defineComponent({
     const isUniverseAnimating = ref(false)
     const universeAnim = ref<{ trigger: () => Promise<void>; stopAnimation: () => void } | null>(
       null,
+    )
+
+    /**
+     * Steht gerade der Landing-Screen? Eine Wahrheit für zweierlei: sein eigenes
+     * `v-if` und die Wahl des Schleier-Skeletts. Liefe beides getrennt, deckte
+     * der Schleier irgendwann ein anderes Bild ab, als danach erscheint — und
+     * ein Platzhalter mit fremden Maßen ersetzt den Ruckler nur durch einen
+     * Sprung.
+     */
+    const landingShowing = computed(
+      () =>
+        (!battleStore.isAutoBattleInitialized || battleStore.isViewingLanding) &&
+        !isUniverseAnimating.value &&
+        !isStarting.value,
     )
 
     async function runUniverseAnimation(): Promise<void> {
@@ -200,16 +213,21 @@ export default defineComponent({
     let revealFrame = 0
 
     /**
-     * Nur das Rift-Board rechtfertigt einen Schleier. Landing, Suchphase und
-     * Ladebildschirm bringen entweder kaum Last mit oder sind selbst schon eine
-     * Inszenierung des Wartens — davor wäre er nur Wartezeit vor einem
-     * Startknopf.
+     * Zwei Bilder rechtfertigen einen Schleier: das Rift-Board und der
+     * Landing-Screen. Suchphase und Champion-Ladebildschirm bekommen keinen —
+     * beide sind selbst schon eine Inszenierung des Wartens, ein Schleier davor
+     * verdeckte nur die Inszenierung.
      */
     const riftBoardShowing = computed(
       () =>
         battleStore.isAutoBattleInitialized &&
         !battleStore.isViewingLanding &&
         battleStore.currentBattlePhase === 'battle',
+    )
+
+    /** Welches Skelett der Schleier zeigt — die Maße folgen dem, was entsteht. */
+    const loaderVariant = computed<'rift' | 'landing'>(() =>
+      landingShowing.value ? 'landing' : 'rift',
     )
 
     function cancelLoader() {
@@ -228,14 +246,22 @@ export default defineComponent({
           revealFrame = requestAnimationFrame(step)
           return
         }
-        const minMs = boardBuilt.value
-          ? BATTLE_TAB_LOADER_REPEAT_MIN_MS
-          : BATTLE_TAB_LOADER_MIN_MS
+        // Vor dem Landing wird kürzer gedeckt: dort entsteht weniger, und am
+        // Ende wartet ein Startknopf — jede Millisekunde darüber hinaus hielte
+        // den Spieler von der Handlung ab, für die er den Tab geöffnet hat.
+        const landing = loaderVariant.value === 'landing'
+        const minMs = landing
+          ? BATTLE_TAB_LANDING_LOADER_MIN_MS
+          : boardBuilt.value
+            ? BATTLE_TAB_LOADER_REPEAT_MIN_MS
+            : BATTLE_TAB_LOADER_MIN_MS
         const shown = performance.now() - loaderStartedAt.value
         revealTimer = setTimeout(
           () => {
             revealTimer = null
-            boardBuilt.value = true
+            // Der Merker gehört dem BOARD: hätte ein Landing-Öffnen ihn gesetzt,
+            // liefe der erste echte Board-Aufbau schon mit der kurzen Standzeit.
+            if (!landing) boardBuilt.value = true
             loaderVisible.value = false
           },
           Math.max(0, minMs - shown),
@@ -258,7 +284,7 @@ export default defineComponent({
           loaderVisible.value = false
           return
         }
-        if (!riftBoardShowing.value) return
+        if (!riftBoardShowing.value && !landingShowing.value) return
         loaderStartedAt.value = performance.now()
         loaderVisible.value = true
         revealWhenPainted()
@@ -296,10 +322,12 @@ export default defineComponent({
       isStarting,
       isUniverseAnimating,
       isLoadingPhase,
+      landingShowing,
       universeAnim,
       planetVariant,
       startBattle,
       loaderVisible,
+      loaderVariant,
       loaderStartedAt,
     }
   },

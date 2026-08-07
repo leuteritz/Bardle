@@ -656,6 +656,19 @@ export const RANK_FRAME_HOVER_GLOW_FACTOR = 1.45
 export const RANK_FRAME_CONTENT_INSET = 5
 /** How far the crown's foot reaches down into the card in px — the rest rises above it */
 export const RANK_FRAME_CROWN_FOOT = 5
+/**
+ * Headroom above the roster cards, in px at --frame-scale 1. Reserved once for
+ * the TALLEST crown in the game rather than the one currently worn: sizing it to
+ * the current tier would make every promotion shrink the cards to pay for its
+ * bigger crown — this way the crown grows into room that was always there and
+ * the cards never move.
+ *
+ * Der Ladeschleier des Battle-Tabs rechnet mit demselben Wert (BattleTabLoader),
+ * sonst säßen seine Platzhalter-Karten höher als die echten und das Aufdecken
+ * wäre ein Sprung statt eines Schärferwerdens.
+ */
+export const RANK_FRAME_CROWN_HEADROOM =
+  Math.max(...Object.values(RANK_FRAME_STYLES).map((s) => s.crownH)) - RANK_FRAME_CROWN_FOOT
 /** Largest --frame-scale any viewport applies — the role stripe clears the line at every size */
 export const RANK_FRAME_MAX_SCALE = 1.25
 
@@ -755,16 +768,24 @@ export const LOADING_ENEMY_FALLBACK_TIER = 'Silver'
  * nur kürzer, sobald das Board schon einmal stand — er soll so lange stehen,
  * wie tatsächlich gebaut wird, keine Sekunde länger.
  *
- * NUR für das Rift-Board. Landing (172 ms · 3 · 259 ms bei 56 ms Grundlast),
- * Suchphase und Ladebildschirm bringen entweder kaum Last mit oder sind selbst
- * schon eine Inszenierung des Wartens — ein Schleier davor wäre Wartezeit vor
- * einem Startknopf.
+ * Zwei Bilder, zwei Skelette: das Rift-Board und der Landing-Screen, mit dem
+ * man ins Auto-Battle einsteigt (Rangband, Kader, Startknopf — gemessen 172 ms ·
+ * 3 · 259 ms). Suchphase und Champion-Ladebildschirm bekommen KEINEN: beide sind
+ * selbst schon eine Inszenierung des Wartens, ein Schleier davor verdeckte nur
+ * die Inszenierung.
  */
 export const BATTLE_TAB_LOADER_SETTLE_FRAMES = 4
 /** Mindeststandzeit beim ersten Aufbau des Boards (528 ms verlorene Zeit). */
 export const BATTLE_TAB_LOADER_MIN_MS = 460
 /** Mindeststandzeit, sobald das Board schon einmal stand (255 ms). */
 export const BATTLE_TAB_LOADER_REPEAT_MIN_MS = 300
+/**
+ * Mindeststandzeit vor dem Landing-Screen. Kürzer als vor dem Board, weil dort
+ * auch weniger entsteht — und weil am Ende ein Startknopf wartet: jede
+ * Millisekunde darüber hinaus hielte den Spieler von der Handlung ab, für die
+ * er den Tab überhaupt geöffnet hat.
+ */
+export const BATTLE_TAB_LANDING_LOADER_MIN_MS = 300
 
 /**
  * ── Battle phase registry ──
