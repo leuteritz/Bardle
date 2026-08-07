@@ -487,14 +487,13 @@ export const SIGIL_TIER_AUREOLE_MIN_STAR = 5
 /** Travel period (ms) of the sheen crossing the apex tier's rank tab. */
 export const SIGIL_TIER_AUREOLE_MS = 4200
 
-// ── Board actions (shop / expedition, along the bottom edge) ─────────────────
+// ── Board actions (shop / expedition, right edge of the board) ───────────────
 /**
- * Below this board width (px) the two bottom actions switch to their compact
- * size. They sit at opposite edges of the board, so the space they share is
- * whatever the open rail leaves over: at Full HD the shop rail cuts the board
- * to 340 px and the two labelled buttons ran INTO each other (measured: −3.5 px
- * between them). Wider boards — 2K with a rail open, any resolution without one
- * — keep the full size. The trigger is the board, not the viewport, so it has
- * to be a class the component sets, not a media query.
+ * Below this board width (px) the two right-edge actions step down one size.
+ * The board keeps whatever an open rail leaves it — at Full HD that is 340 px,
+ * and the full-size column (288 px) would cover both the admin strip and the
+ * foot of the sigil. Wider boards — 2K with a rail open, any resolution with
+ * none — keep the full size. The trigger is the board, not the viewport, so it
+ * has to be a class the component sets rather than a media query.
  */
 export const SIGIL_ACTIONS_COMPACT_MAX_W = 520

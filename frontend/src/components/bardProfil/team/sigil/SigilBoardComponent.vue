@@ -185,7 +185,7 @@ const fitScale = computed(() => {
   return Math.min(boardWidth.value, tabRect.value.height) / SIGIL_STAGE_SIZE
 })
 
-/** Shop and expedition sit at opposite bottom corners — see the constant. */
+/** Right-edge actions step down on a board an open rail has squeezed. */
 const compactActions = computed(
   () => boardWidth.value > 0 && boardWidth.value < SIGIL_ACTIONS_COMPACT_MAX_W,
 )
@@ -406,34 +406,41 @@ watch(
       </button>
     </div>
 
-    <!-- board actions: shop + expedition (always reachable) ──
-         The shop is two shops behind one door — champions on one tab, gear on
-         the other — and the single word "Shop" said neither. It now names what
-         is in there instead of what it is; the glyph is what still says "shop",
-         and it says it better than before: a shopping bag is what you carry
-         away, `shop` is the place you walk into. One line, one size — the
-         contents ARE the label here, not a footnote to it. -->
-    <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
-      <Icon icon="game-icons:shop" width="26" height="26" class="sigil-action-icon" />
-      Champions &amp; Items
-      <RpgNotifyBadge
-        :count="shopBadgeCount"
-        variant="shop"
-        label="Champions available in shop"
-      />
-    </button>
-
-    <!-- Rücksprung zum laufenden StarFight — mittig zwischen Shop + Expedition -->
+    <!-- Rücksprung zum laufenden StarFight — bleibt mittig auf der Grundlinie -->
     <BattleReturnButton @click.stop />
     <!-- Gleicher Ankerpunkt: Rückweg in den Battle-Tab, wenn der Team-Tab von
          einem offenen Rollen-Slot der Battle-Landing aus geöffnet wurde -->
     <BattleTabReturnButton @click.stop />
 
-    <button class="sigil-action sigil-action--expedition" @click.stop="emit('open-expedition')">
-      <Icon icon="game-icons:campfire" width="26" height="26" class="sigil-action-icon" />
-      Expedition
-      <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
-    </button>
+    <!-- ── board actions: shop + expedition (always reachable) ──
+         Both stand at the board's RIGHT edge, stacked, because that is the edge
+         the rail opens from: the button and the panel it summons are the same
+         gesture, so they belong on the same side. Stacked rather than side by
+         side for the room — with a rail open the board is 340 px wide at Full
+         HD, which is one big button, not two; downwards there is more space
+         than either needs.
+         The shop names what is in there instead of what it is — it is two shops
+         behind one door, champions on one tab and gear on the other, and the
+         word "Shop" said neither. The glyph carries that word now, and carries
+         it better: a shopping bag is what you take away, `shop` is the place
+         you walk into. -->
+    <div class="sigil-actions">
+      <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
+        <Icon icon="game-icons:shop" width="34" height="34" class="sigil-action-icon" />
+        <span class="sigil-action-label">Champions &amp; Items</span>
+        <RpgNotifyBadge
+          :count="shopBadgeCount"
+          variant="shop"
+          label="Champions available in shop"
+        />
+      </button>
+
+      <button class="sigil-action sigil-action--expedition" @click.stop="emit('open-expedition')">
+        <Icon icon="game-icons:campfire" width="34" height="34" class="sigil-action-icon" />
+        <span class="sigil-action-label">Expedition</span>
+        <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
+      </button>
+    </div>
 
 
     <!-- scaled sigil stage -->
@@ -666,32 +673,50 @@ watch(
 }
 
 /* ── board actions (shop / expedition) ──
-   Two buttons pinned to opposite bottom corners of the board, one line each. */
-.sigil-action {
+   One column at the right edge — the edge the rail opens from, so the button
+   and the panel it summons sit on the same side. Stacked rather than side by
+   side because of the room: with a rail open the board is 340 px wide at Full
+   HD, which is one big button, not two. `align-items: stretch` gives both the
+   width of the longer label, so the two icons line up on a common left edge and
+   the pair reads as one block instead of two chips that happen to share a
+   column. */
+.sigil-actions {
   position: absolute;
+  right: 26px;
   bottom: 22px;
   z-index: 6;
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  /* never grow into the sigil on a board an open rail has squeezed */
+  max-width: calc(100% - 52px);
+}
+/* When a battle CTA holds the bottom line, the column steps above it. At Full
+   HD with a rail open the board is 340 px — the centred CTA and this column
+   cannot share that line, and the CTA is the time-critical one, so it keeps the
+   baseline. */
+.sigil-board:has(.brb, .btrb) .sigil-actions {
+  bottom: 92px;
+}
+.sigil-action {
+  /* the notify badges hang off the button's own corner */
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px 20px;
+  gap: 14px;
+  padding: 17px 24px;
   border-radius: 5px;
   background: rgba(14, 10, 5, 0.88);
   border: 2px solid #5c3310;
   color: #e8c040;
-  font-size: 15px;
+  font-size: 19px;
   letter-spacing: 0.06em;
   cursor: pointer;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
     transform 0.15s ease;
-}
-.sigil-action--shop {
-  left: 26px;
-}
-.sigil-action--expedition {
-  right: 26px;
 }
 .sigil-action:hover {
   border-color: #c89040;
@@ -705,26 +730,29 @@ watch(
   color: #e8c040;
   flex-shrink: 0;
 }
+.sigil-action-label {
+  white-space: nowrap;
+}
+
 /* ── Compact: the board squeezed by an open rail ──
-   At Full HD the shop rail leaves the board 340 px, and at full size the two
-   buttons overlapped by 3.5 px — before the shop label grew at all. Everything
-   shrinks by the same step so the row keeps its proportions; the edge inset
-   gives up the rest. */
+   340 px at Full HD. One step down keeps the column clear of the sigil's foot,
+   and the admin strip — 310 px wide on its own — moves above the column, since
+   at that width nothing fits beside it. Still well over the size these two
+   buttons had when they sat in the bottom corners. */
+.sigil-board--compact-actions .sigil-actions {
+  gap: 10px;
+}
 .sigil-board--compact-actions .sigil-action {
-  gap: 6px;
-  padding: 9px 10px;
-  font-size: 11.5px;
-  letter-spacing: 0.04em;
-}
-.sigil-board--compact-actions .sigil-action--shop {
-  left: 12px;
-}
-.sigil-board--compact-actions .sigil-action--expedition {
-  right: 12px;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 15px;
 }
 .sigil-board--compact-actions .sigil-action-icon {
-  width: 18px;
-  height: 18px;
+  width: 26px;
+  height: 26px;
+}
+.sigil-board--compact-actions .sigil-admin {
+  bottom: 160px;
 }
 
 /* ── auto level-up, under the power crest ──
