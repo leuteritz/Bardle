@@ -186,11 +186,13 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   align-items: center;
   gap: clamp(10px, 0.8vw, 18px);
   padding: clamp(8px, 1.2vh, 18px) clamp(10px, 0.8vw, 18px);
-  padding-left: clamp(15px, 1vw, 24px);
+  /* room for the accent rail on the card's OUTER edge — the rail sits right */
+  padding-right: clamp(15px, 1vw, 24px);
   min-width: 0;
   text-align: left;
-  /* Translucent card — the shared starfield keeps showing through, so the rail
-     never reads as a pasted-on panel. */
+  /* Translucent card — it now sits on the rail's own deep base rather than on
+     the starfield, which lands it near the profile's item-row tone (#1c1c18)
+     without a second colour to keep in sync. */
   background: linear-gradient(150deg, rgba(32, 27, 17, 0.82) 0%, rgba(13, 11, 7, 0.88) 100%);
   border: 1px solid #2e2416;
   border-radius: var(--bp-radius);
@@ -206,17 +208,19 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
     transform 180ms ease;
 }
 
-/* Left accent rail — always present in the planet's role color (dim), so every
-   card carries its identity at rest and only intensifies on hover/active. */
+/* Outer accent rail — always present in the planet's role color (dim), so every
+   card carries its identity at rest and only intensifies on hover/active. It
+   rides the card's OUTER edge (right, since the rail sits right), leaving the
+   inner one free for the selection caret — both on one edge would overlap. */
 .ps-slot-btn::before {
   content: '';
   position: absolute;
-  left: 0;
+  right: 0;
   top: 0;
   bottom: 0;
   width: 4px;
   background: var(--rc, #3a2c12);
-  border-radius: var(--bp-radius) 0 0 var(--bp-radius);
+  border-radius: 0 var(--bp-radius) var(--bp-radius) 0;
   opacity: 0.4;
   transition:
     opacity 180ms ease,
@@ -233,15 +237,16 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   box-shadow: 0 0 12px var(--rc, #e8c040);
 }
 
-/* Selection caret — role-colored gem straddling the card's inner edge */
+/* Selection caret — role-colored gem straddling the card's inner edge (left,
+   pointing at the stage) */
 .ps-slot-caret {
   position: absolute;
   z-index: 3;
   top: 50%;
-  right: -1px;
+  left: -1px;
   width: 13px;
   height: 13px;
-  transform: translate(50%, -50%) rotate(45deg);
+  transform: translate(-50%, -50%) rotate(45deg);
   background: linear-gradient(
     135deg,
     color-mix(in srgb, var(--rc, #52b830) 88%, white) 0%,

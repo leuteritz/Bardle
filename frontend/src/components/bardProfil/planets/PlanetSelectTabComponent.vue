@@ -163,34 +163,18 @@ const sunPhaseStyle = computed(() => {
 
 <template>
   <div class="ps-tab" :style="[{ '--hp-seg': HP_BAR_SEGMENTS }, sunPhaseStyle]">
-    <!-- ONE shared cosmic backdrop for the whole tab — rail and detail panel sit
-         on the same continuous starfield instead of two separate surfaces. The
-         phase vars live on this root, so the near stars carry the sun's tint
-         across both columns. -->
+    <!-- Cosmic backdrop of the tab. The rail covers its own share of it with a
+         solid panel, so what is left of the starfield is what the stage shows —
+         which is where it belongs. The phase vars live on this root, so the near
+         stars still carry the sun's tint. -->
     <CosmicStageBackground />
 
-    <!-- Full-height split: left rail (6 slots) + right detail panel.
+    <!-- Full-height split: left stage + right slot rail — the same hand the team
+         tab plays, where the board sits left and its details page right. The tabs
+         of one profile must not mirror each other.
          No in-tab header — Chimes/CPS live permanently in the global app header. -->
     <div class="ps-split">
-      <!-- LEFT RAIL ───────────────────────────────────────────────── -->
-      <div class="ps-rail">
-        <PlanetRailSlot
-          v-for="(slot, slotIndex) in store.slots"
-          :key="slot.id"
-          :planet="slot"
-          :slot-index="slotIndex"
-          :selected="selectedSlotId === slot.id"
-          :eclipsed="isSlotEclipsed(slot)"
-          :now="now"
-          @select="selectSlot"
-        />
-      </div>
-
-      <!-- Gold seam — the only hard edge between rail and stage; replaces the old
-           opaque wooden border so the starfield reads as one surface behind it. -->
-      <span class="ps-rail-seam" aria-hidden="true" />
-
-      <!-- RIGHT DETAIL ─────────────────────────────────────────────── -->
+      <!-- LEFT DETAIL ──────────────────────────────────────────────── -->
       <!-- sunPhaseStyle stays on the wrapper too: the stage's own children read
            --ps-sun-d / --phase-* from here. -->
       <div class="ps-detail" :style="sunPhaseStyle">
@@ -246,6 +230,25 @@ const sunPhaseStyle = computed(() => {
              slot state; only visible while the jumped-from star fight is live. -->
         <BattleReturnButton />
       </div>
+
+      <!-- Gold seam — the only hard edge between stage and rail. It stands in for
+           the team page's plain wooden border-left: same job, this tab's own
+           language. -->
+      <span class="ps-rail-seam" aria-hidden="true" />
+
+      <!-- RIGHT RAIL ──────────────────────────────────────────────── -->
+      <div class="ps-rail">
+        <PlanetRailSlot
+          v-for="(slot, slotIndex) in store.slots"
+          :key="slot.id"
+          :planet="slot"
+          :slot-index="slotIndex"
+          :selected="selectedSlotId === slot.id"
+          :eclipsed="isSlotEclipsed(slot)"
+          :now="now"
+          @select="selectSlot"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -272,14 +275,16 @@ const sunPhaseStyle = computed(() => {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  /* Anchors follow the stage, which now sits left — the bloom belongs on the
+     sun's side, and the two cold/warm corner tones on the far one. */
   background:
     radial-gradient(
-      110% 90% at 62% 42%,
+      110% 90% at 38% 42%,
       color-mix(in srgb, var(--phase-glow, #ff8c42) 12%, transparent) 0%,
       transparent 62%
     ),
-    radial-gradient(80% 70% at 0% 100%, rgba(46, 34, 96, 0.22) 0%, transparent 64%),
-    radial-gradient(70% 60% at 4% 0%, rgba(92, 51, 16, 0.2) 0%, transparent 60%);
+    radial-gradient(80% 70% at 100% 100%, rgba(46, 34, 96, 0.22) 0%, transparent 64%),
+    radial-gradient(70% 60% at 96% 0%, rgba(92, 51, 16, 0.2) 0%, transparent 60%);
 }
 
 /* ── Split layout (full height, no header) ─────────────────────────────────── */
@@ -291,9 +296,18 @@ const sunPhaseStyle = computed(() => {
   min-height: 0;
 }
 
-/* Left rail: 6 slots filling the full column height. No opaque panel any more —
-   only a vertical scrim that damps the shared starfield just enough to keep the
-   labels readable, so rail and stage read as ONE space. Width is unchanged. */
+/* Right rail: 6 slots filling the full column height — the seat the team tab
+   gives its details page, and now the same surface too.
+ *
+ * COLOUR: the flat deep base (--rpg-bg-deep), not the old translucent scrim. The
+ * scrim let the shared starfield through, which read as a second kind of space
+ * next to every other panel of the profile; the stage keeps that starfield and
+ * the rail is now plainly a panel on it. Width is unchanged.
+ *
+ * LAYER: `position: relative` + z-index is what makes the opacity count — the
+ * tab's .cosmic-stage-bg is absolutely positioned at z-index 0 and would
+ * otherwise paint OVER a static panel however opaque its background is (same
+ * trap the team page documents on .sdp-panel). */
 .ps-rail {
   position: relative;
   z-index: 1;
@@ -303,12 +317,7 @@ const sunPhaseStyle = computed(() => {
   flex-direction: column;
   gap: clamp(6px, 0.8vh, 12px);
   padding: clamp(8px, 1vh, 14px);
-  background: linear-gradient(
-    to right,
-    rgba(9, 8, 5, 0.92) 0%,
-    rgba(13, 11, 7, 0.82) 55%,
-    rgba(9, 8, 5, 0.7) 100%
-  );
+  background: var(--rpg-bg-deep, #111008);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
@@ -334,7 +343,7 @@ const sunPhaseStyle = computed(() => {
     0 0 3px rgba(232, 192, 96, 0.6);
 }
 
-/* Right detail panel — column layout: stage (flexible, dominates) on top +
+/* Left detail panel — column layout: stage (flexible, dominates) on top +
    compact horizontal upgrade dock pinned to the bottom. The sun system gets
    the full remaining width AND height, so it stays the visual hero. */
 .ps-detail {
