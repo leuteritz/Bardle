@@ -16,6 +16,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useActionToast } from '@/composables/ui/useActionToast'
+import { toRoman } from '@/utils/ui/format'
 import {
   EXPEDITION_LEDGER_RANKS,
   EXPEDITION_COLLECT_FLASH_MS,
@@ -143,51 +144,65 @@ function formatCountdown(ms: number): string {
 
 <template>
   <div class="ec-panel">
-    <!-- ══ Command bar ══════════════════════════════════════════ -->
-    <div class="ec-bar">
-      <div class="ec-ledger" :title="`${expeditionStore.ledgerCompleted} expeditions resolved`">
-        <Icon :icon="rank.icon" width="26" height="26" class="ec-ledger-ico" />
-        <div class="ec-ledger-text">
-          <span class="ec-ledger-name">{{ rank.name }}</span>
-          <span class="ec-ledger-sub">
+    <!-- ══ Command bar ══════════════════════════════════════════
+         One continuous strip, not four boxed tiles. The rank sits on the left
+         as the header's own title, the readouts are separated by hairlines
+         instead of frames, and the bar's bottom edge IS the rank progress — the
+         line that closes the header doubles as the thing it measures. -->
+    <header class="ec-bar">
+      <div class="ec-rank" :title="`${expeditionStore.ledgerCompleted} expeditions resolved`">
+        <Icon :icon="rank.icon" width="30" height="30" class="ec-rank-ico" />
+        <div class="ec-rank-text">
+          <div class="ec-rank-line">
+            <span class="ec-rank-name">{{ rank.name }}</span>
+            <!-- A numeral, not a row of dots: five pips beside a word read as an
+                 ellipsis, and the unearned ones were invisible on this ground. -->
+            <span
+              class="ec-rank-tier"
+              :title="`Ledger rank ${rank.tier} of ${EXPEDITION_LEDGER_RANKS.length} — ${rank.activeSlots} in field, ${rank.offerSlots} contracts`"
+            >
+              {{ toRoman(rank.tier) }}
+            </span>
+          </div>
+          <span class="ec-rank-goal">
             <template v-if="nextRank">
-              {{ expeditionStore.ledgerCompleted }} / {{ nextRank.required }} to
+              {{ expeditionStore.ledgerCompleted }} / {{ nextRank.required }} runs to
               {{ nextRank.name }}
             </template>
-            <template v-else>Ledger complete — {{ expeditionStore.ledgerCompleted }} runs</template>
+            <template v-else>
+              Ledger complete — {{ expeditionStore.ledgerCompleted }} runs
+            </template>
           </span>
-          <div class="ec-ledger-track">
-            <div class="ec-ledger-fill" :style="{ transform: `scaleX(${rankProgress})` }" />
-          </div>
-        </div>
-        <div class="ec-ledger-pips">
-          <span
-            v-for="r in EXPEDITION_LEDGER_RANKS"
-            :key="r.tier"
-            class="ec-pip"
-            :class="{ 'ec-pip--on': expeditionStore.ledgerCompleted >= r.required }"
-            :title="`${r.name} — ${r.activeSlots} active, ${r.offerSlots} offers`"
-          />
         </div>
       </div>
 
-      <div class="ec-stat" :class="{ 'ec-stat--live': activeCount > 0 }">
-        <span class="ec-stat-value">{{ activeCount }}/{{ expeditionStore.maxActiveExpeditions }}</span>
-        <span class="ec-stat-label">In field</span>
-      </div>
+      <div class="ec-readouts">
+        <div class="ec-read" :class="{ 'ec-read--live': activeCount > 0 }">
+          <span class="ec-read-value">
+            {{ activeCount }}<span class="ec-read-cap">/{{ expeditionStore.maxActiveExpeditions }}</span>
+          </span>
+          <span class="ec-read-label">In field</span>
+        </div>
 
-      <div class="ec-stat">
-        <span class="ec-stat-value">
-          {{ expeditionStore.availableExpeditions.length }}/{{ expeditionStore.maxAvailableOffers }}
-        </span>
-        <span class="ec-stat-label">Contracts</span>
-      </div>
+        <div class="ec-read" :class="{ 'ec-read--live': readyCount > 0 }">
+          <span class="ec-read-value">{{ readyCount }}</span>
+          <span class="ec-read-label">Ready</span>
+        </div>
 
-      <div class="ec-stat" :class="{ 'ec-stat--full': offersFull }">
-        <span class="ec-stat-value">{{
-          offersFull ? 'FULL' : formatCountdown(timeUntilNextSpawn)
-        }}</span>
-        <span class="ec-stat-label">Next offer</span>
+        <div class="ec-read">
+          <span class="ec-read-value">
+            {{ expeditionStore.availableExpeditions.length
+            }}<span class="ec-read-cap">/{{ expeditionStore.maxAvailableOffers }}</span>
+          </span>
+          <span class="ec-read-label">Contracts</span>
+        </div>
+
+        <div class="ec-read" :class="{ 'ec-read--full': offersFull }">
+          <span class="ec-read-value">{{
+            offersFull ? 'FULL' : formatCountdown(timeUntilNextSpawn)
+          }}</span>
+          <span class="ec-read-label">Next offer</span>
+        </div>
       </div>
 
       <button
@@ -199,7 +214,11 @@ function formatCountdown(ms: number): string {
         <Icon icon="game-icons:lightning-arc" width="12" height="12" />
         Spawn
       </button>
-    </div>
+
+      <div class="ec-bar-progress">
+        <div class="ec-bar-progress-fill" :style="{ transform: `scaleX(${rankProgress})` }" />
+      </div>
+    </header>
 
     <!-- ══ Two columns ══════════════════════════════════════════ -->
     <div class="ec-columns">
@@ -318,126 +337,132 @@ function formatCountdown(ms: number): string {
   overflow: hidden;
 }
 
-/* ══ Command bar ══════════════════════════════════════════════ */
+/* ══ Command bar ══════════════════════════════════════════════
+   No inner frames. The strip itself is the container; the rank titles it and
+   the readouts are set off by hairlines only. A box around each figure read as
+   four competing panels in a header that is one thought. */
 .ec-bar {
+  position: relative;
   flex-shrink: 0;
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
-  padding: 9px 12px;
-  background: #16100a;
-  border-bottom: 2px solid #5c3310;
-}
-.ec-ledger {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 18px;
+  padding: 11px 14px 12px;
+  background: linear-gradient(180deg, #1b120a 0%, #16100a 100%);
+  border-bottom: 2px solid #3e200a;
+}
+
+/* ── Rank: the header's title ─────────────────────────────── */
+.ec-rank {
+  display: flex;
+  align-items: center;
+  gap: 11px;
   flex: 1;
   min-width: 0;
-  padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid #3e200a;
-  border-radius: 4px;
 }
-.ec-ledger-ico {
-  color: #e8c040;
+/* Glow instead of a frame — the icon reads as an emblem, not a button. */
+.ec-rank-ico {
   flex-shrink: 0;
+  color: #e8c040;
+  filter: drop-shadow(0 0 10px rgba(232, 192, 64, 0.35));
 }
-.ec-ledger-text {
-  flex: 1;
-  min-width: 0;
+.ec-rank-text {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+  min-width: 0;
 }
-.ec-ledger-name {
-  font-size: 14px;
+.ec-rank-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.ec-rank-name {
+  font-size: 17px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #e8c040;
   line-height: 1;
+  text-shadow: 0 0 14px rgba(232, 192, 64, 0.3);
+  white-space: nowrap;
 }
-.ec-ledger-sub {
+.ec-rank-tier {
+  flex-shrink: 0;
+  padding: 2px 7px;
   font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.15;
+  color: #e8c040;
+  background: rgba(232, 192, 64, 0.12);
+  border: 1px solid rgba(200, 144, 64, 0.4);
+  border-radius: 4px;
+  cursor: help;
+}
+.ec-rank-goal {
+  font-size: 11px;
   font-weight: 700;
-  color: rgba(200, 144, 64, 0.6);
+  letter-spacing: 0.03em;
+  color: rgba(200, 144, 64, 0.62);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ec-ledger-track {
-  height: 4px;
-  background: #111008;
-  border-radius: 2px;
-  overflow: hidden;
-}
-.ec-ledger-fill {
-  height: 100%;
-  width: 100%;
-  transform-origin: left center;
-  background: linear-gradient(to right, #c89040, #e8c060);
-  transition: transform 0.4s ease;
-}
-.ec-ledger-pips {
+
+/* ── Readouts: hairline-separated, never boxed ────────────── */
+.ec-readouts {
   display: flex;
-  gap: 3px;
+  align-items: stretch;
   flex-shrink: 0;
 }
-.ec-pip {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #241408;
-  border: 1px solid #3e200a;
-}
-.ec-pip--on {
-  background: #e8c040;
-  border-color: #c89040;
-}
-
-.ec-stat {
+.ec-read {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
-  flex-shrink: 0;
-  min-width: 76px;
-  padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid #3e200a;
-  border-radius: 4px;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 74px;
+  padding: 2px 14px;
+  border-left: 1px solid #402a12;
 }
-.ec-stat-value {
-  font-size: 15px;
+.ec-read:first-child {
+  border-left: 0;
+}
+.ec-read-value {
+  font-size: 18px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  transition: color 0.2s;
 }
-.ec-stat-label {
-  font-size: 9.5px;
+/* The cap is context, not the reading — it steps back so the count leads. */
+.ec-read-cap {
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  color: rgba(200, 144, 64, 0.42);
+}
+.ec-read-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.55);
+  color: rgba(200, 144, 64, 0.5);
   line-height: 1;
+  white-space: nowrap;
 }
-.ec-stat--live {
-  border-color: rgba(100, 220, 180, 0.35);
-  background: rgba(100, 220, 180, 0.06);
-}
-.ec-stat--live .ec-stat-value {
+/* State lives in the figure's colour now that there is no border to carry it. */
+.ec-read--live .ec-read-value {
   color: #a0f0d0;
 }
-.ec-stat--full {
-  border-color: #5c3310;
-  background: rgba(200, 144, 64, 0.1);
+.ec-read--live .ec-read-label {
+  color: rgba(160, 240, 208, 0.6);
 }
-.ec-stat--full .ec-stat-value {
+.ec-read--full .ec-read-value {
   color: #e8c040;
 }
 
@@ -446,11 +471,11 @@ function formatCountdown(ms: number): string {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  padding: 0 11px;
-  background: #1c1008;
-  border: 1px solid #5c3310;
+  padding: 6px 11px;
+  background: transparent;
+  border: 1px solid #3e200a;
   border-radius: 4px;
-  color: rgba(200, 144, 64, 0.55);
+  color: rgba(200, 144, 64, 0.5);
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -462,6 +487,24 @@ function formatCountdown(ms: number): string {
 .ec-admin:hover {
   color: #e8c040;
   border-color: #c89040;
+}
+
+/* ── The bar's own bottom edge, doubling as the rank track ── */
+.ec-bar-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ec-bar-progress-fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(to right, #8a5a1c, #c89040 45%, #e8c060);
+  transition: transform 0.45s ease;
 }
 
 /* ══ Columns ══════════════════════════════════════════════════ */

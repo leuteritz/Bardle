@@ -669,10 +669,13 @@ onUnmounted(() => {
         key="expedition"
         title="Expeditions"
         icon="game-icons:campfire"
-        subtitle="Send champions out for materials"
         :width="TEAM_EXPEDITION_PANEL_WIDTH"
+        hide-header
         @close="closeDestination"
       >
+        <!-- Same deal as the shop: no title stripe and no ✕. The command bar
+             with the ledger rank is the top of the rail, and a second press on
+             the Expedition button closes it again. -->
         <ExpeditionComponent />
       </TeamSidePanelShell>
 
