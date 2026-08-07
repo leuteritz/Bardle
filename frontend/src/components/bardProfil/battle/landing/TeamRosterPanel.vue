@@ -71,7 +71,48 @@
 
           <!-- Name + headline stats, bottom -->
           <div class="card-foot">
-            <span class="card-name">{{ battleStore.headerSlots[idx] }}</span>
+            <!-- Identity line: the level insignia leads, the name follows.
+                 The plate carries the same escalation the team tab's medallion
+                 does (rim, heat, glow per regalia stage) — just without the
+                 ornaments, which would read as noise over splash art. -->
+            <div v-if="levelBySlot[idx]" class="foot-id">
+              <span
+                class="lvl-badge"
+                :class="{
+                  'lvl-badge--max': levelBySlot[idx]!.capped,
+                  'lvl-badge--attention': levelBySlot[idx]!.attention,
+                }"
+                :style="levelBySlot[idx]!.vars"
+                :title="levelBySlot[idx]!.title"
+                :aria-label="levelBySlot[idx]!.title"
+              >
+                <span v-if="levelBySlot[idx]!.attention" class="lvl-ping" aria-hidden="true" />
+                <span class="lvl-plate" aria-hidden="true" />
+                <span class="lvl-core" aria-hidden="true" />
+                <span class="lvl-face">
+                  <span class="lvl-tag">{{ levelBySlot[idx]!.capped ? 'MAX' : 'LV' }}</span>
+                  <span v-ink-center class="lvl-num">{{ levelBySlot[idx]!.level }}</span>
+                </span>
+              </span>
+              <span class="card-name">{{ battleStore.headerSlots[idx] }}</span>
+            </div>
+            <span v-else class="card-name">{{ battleStore.headerSlots[idx] }}</span>
+
+            <!-- XP rail — the divider above the numbers IS the progress bar, so
+                 the card gains a readout without giving up a line of height.
+                 scaleX on its own layer: no per-frame layout, no repaint. -->
+            <span
+              v-if="levelBySlot[idx]"
+              class="card-xp"
+              :class="{ 'card-xp--max': levelBySlot[idx]!.capped }"
+              aria-hidden="true"
+            >
+              <span
+                class="card-xp-fill"
+                :style="{ transform: `scaleX(${levelBySlot[idx]!.pct})` }"
+              />
+            </span>
+
             <div class="card-stats">
               <div class="card-stat">
                 <span class="card-stat-value card-stat-value--kills">
@@ -95,7 +136,14 @@
           <!-- Hover stat sheet: the champion's headline career numbers -->
           <div class="card-detail">
             <div class="detail-head">
-              <span class="detail-name">{{ battleStore.headerSlots[idx] }}</span>
+              <div class="detail-top">
+                <span class="detail-name">{{ battleStore.headerSlots[idx] }}</span>
+                <!-- the sheet hides the foot, so the level comes along -->
+                <span v-if="levelBySlot[idx]" class="detail-lvl">
+                  <span class="detail-lvl-num">{{ levelBySlot[idx]!.level }}</span>
+                  <span class="detail-lvl-rank">{{ levelBySlot[idx]!.stageName }}</span>
+                </span>
+              </div>
               <span class="detail-cta">MANAGE ROLE →</span>
             </div>
             <div class="detail-grid">
@@ -146,9 +194,14 @@ import { computed, onUnmounted, type CSSProperties } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useUiStore } from '@/stores/core/uiStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { regaliaStageFor } from '@/config/champions/championLevels'
+import { facetClipPath } from '@/utils/orbit/geometry'
 import {
   ROLES,
   ROSTER_CARD_MAX_BADGES,
+  ROSTER_LEVEL_PLATE_FACETS,
+  CHAMPION_REGALIA_BASE_SIZE,
   RANK_FRAME_STYLES,
   RANK_FRAME_EMPTY_GLOW_FACTOR,
   RANK_FRAME_HOVER_GLOW_FACTOR,
@@ -162,6 +215,67 @@ import ChampionRankFrame from './ChampionRankFrame.vue'
 
 const uiStore = useUiStore()
 const battleStore = useBattleStore()
+const levelStore = useChampionLevelStore()
+
+// ── Champion level ──
+// Every filled card wears its champion's level the way the team tab does — the
+// numeral on a faceted plate that grows richer with the regalia stage, plus the
+// XP arc flattened into the rail above the headline numbers.
+//
+// The plate is authored against CHAMPION_REGALIA_BASE_SIZE and handed on as
+// RATIOS, so it can ride the card's own clamp() instead of a fixed px size: on
+// 4K the insignia grows with the card, on Full HD it stays inside it.
+const LEVEL_PLATE_CLIP = facetClipPath(ROSTER_LEVEL_PLATE_FACETS)
+/** Half a corner off the plate — the core reads as a second, turned facet. */
+const LEVEL_CORE_CLIP = facetClipPath(ROSTER_LEVEL_PLATE_FACETS, 0.5)
+
+interface RosterLevel {
+  level: number
+  /** 0…1 fill of the XP rail; 1 once the level cap is reached */
+  pct: number
+  capped: boolean
+  /** banked XP or an unspent perk — the plate pings, never a second colour */
+  attention: boolean
+  stageName: string
+  title: string
+  vars: CSSProperties
+}
+
+function buildLevel(name: string): RosterLevel {
+  const level = levelStore.levelOf(name)
+  const xp = levelStore.xpBarOf(name)
+  const stage = regaliaStageFor(level)
+  const { stars, rank } = levelStore.ascensionOf(name)
+  const ratio = (v: number) => String(Math.round((v / CHAMPION_REGALIA_BASE_SIZE) * 1000) / 1000)
+  return {
+    level,
+    pct: xp.pct,
+    capped: xp.capped,
+    attention: levelStore.needsAttention(name),
+    stageName: stage.name,
+    title:
+      `Level ${level} — ${stage.name}` +
+      (stars > 0 ? ` · ${stars}★ ${rank.name}` : '') +
+      (xp.capped ? ' · level cap' : ` · ${Math.round(xp.pct * 100)}% to next`),
+    vars: {
+      '--lv-clip': LEVEL_PLATE_CLIP,
+      '--lv-core-clip': LEVEL_CORE_CLIP,
+      '--lv-rim': ratio(stage.rim),
+      '--lv-glow': ratio(stage.glow),
+      '--lv-glow-a': `${Math.round(stage.glowAlpha * 100)}%`,
+      // the rim runs hottest, the numeral a touch cooler so digits stay legible
+      '--lv-heat': `${Math.round(stage.heat * 100)}%`,
+      '--lv-heat-ink': `${Math.round(30 + stage.heat * 52)}%`,
+      '--lv-core': `${Math.round(12 + stage.heat * 26)}%`,
+    } as CSSProperties,
+  }
+}
+
+/** One pass per slot instead of a getter call per template expression — every
+ *  level getter is a Pinia function getter and hands back an uncached closure. */
+const levelBySlot = computed<(RosterLevel | null)[]>(() =>
+  battleStore.headerSlots.map((name) => (name ? buildLevel(name) : null)),
+)
 
 // ── Rank frame ──
 // Every card wears the player's current ladder tier, so the whole roster grows
@@ -737,7 +851,17 @@ const mvpHolder = computed<string | null>(() => {
   transition: opacity 0.22s ease;
 }
 
+/* Identity line: insignia + name share one row, the name takes what is left */
+.foot-id {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 0.6vw, 12px);
+  min-width: 0;
+}
+
 .card-name {
+  flex: 1;
+  min-width: 0;
   font-size: clamp(17px, 2.5cqh, 30px);
   color: #fff;
   line-height: 1.05;
@@ -747,13 +871,154 @@ const mvpHolder = computed<string | null>(() => {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
 }
 
+/* ── Level insignia ──
+   A faceted plate carrying the champion's level, drawn entirely in the role
+   colour: rank is told through metal, heat and glow, never through a second
+   hue — the same language the team tab's medallion speaks. Ornaments (crown,
+   rays, orbit spark) are deliberately left out: over splash art at this size
+   they read as noise, and five cards would pay for them at once.
+
+   Everything static — the only animated layer is the attention ping, and it
+   moves on transform/opacity alone. */
+.lvl-badge {
+  --lv-size: clamp(38px, 6.2cqh, 68px);
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: var(--lv-size);
+  height: var(--lv-size);
+  line-height: 1;
+}
+
+/* the plate itself: cut metal in the role colour, brightening with the stage */
+.lvl-plate {
+  position: absolute;
+  inset: 0;
+  clip-path: var(--lv-clip);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, #fff var(--lv-heat, 0%), var(--role-color, #c89040)),
+    color-mix(in srgb, var(--role-color, #c89040) 62%, #0a0704) 62%,
+    color-mix(in srgb, var(--role-color, #c89040) 38%, #0a0704)
+  );
+  filter: drop-shadow(
+    0 0 calc(var(--lv-size) * var(--lv-glow, 0.18))
+      color-mix(in srgb, var(--role-color, #c89040) var(--lv-glow-a, 20%), transparent)
+  );
+}
+
+/* the dark core, turned half a corner against the plate — two hexagons make a
+   twelve-point star, so the higher stages read richer without a new layer */
+.lvl-core {
+  position: absolute;
+  inset: calc(var(--lv-size) * var(--lv-rim, 0.05));
+  clip-path: var(--lv-core-clip);
+  background: radial-gradient(
+    circle at 50% 30%,
+    color-mix(in srgb, var(--role-color, #c89040) var(--lv-core, 16%), #12100a),
+    #080603 78%
+  );
+}
+
+.lvl-face {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lvl-tag {
+  font-size: clamp(8px, 1.05cqh, 13px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  color: color-mix(in srgb, var(--role-color, #c89040) 72%, #d8cdb6);
+}
+
+.lvl-num {
+  font-size: clamp(18px, 2.9cqh, 33px);
+  font-weight: 800;
+  line-height: 0.85;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, #fff var(--lv-heat-ink, 30%), var(--role-color, #c89040));
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.92);
+}
+
+/* Level cap: the one place a second colour is earned — it is an end state, not
+   a rank on the same ladder. */
+.lvl-badge--max .lvl-tag {
+  color: #e8c040;
+}
+.lvl-badge--max .lvl-num {
+  color: #fff;
+}
+
+/* Banked XP or an unspent perk: one hexagon expanding out of the plate */
+.lvl-ping {
+  position: absolute;
+  inset: 0;
+  clip-path: var(--lv-clip);
+  background: var(--role-color, #c89040);
+  animation: lvl-ping 2s ease-out infinite;
+  pointer-events: none;
+}
+.lvl-badge--attention .lvl-num {
+  color: color-mix(in srgb, #fff 70%, var(--role-color, #c89040));
+}
+
+@keyframes lvl-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+/* ── XP rail ──
+   The hairline that used to separate name and numbers now carries the progress
+   toward the next level, so the readout costs no height at all. */
+.card-xp {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  height: clamp(4px, 0.55cqh, 7px);
+  border-radius: 3px;
+  /* strong enough that an empty rail still reads as the divider it replaced */
+  background: color-mix(in srgb, var(--role-color, #d4a020) 26%, rgba(0, 0, 0, 0.62));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+}
+
+.card-xp-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--role-color, #d4a020) 55%, #0a0704),
+    color-mix(in srgb, #fff 30%, var(--role-color, #d4a020))
+  );
+  box-shadow: 0 0 8px color-mix(in srgb, var(--role-color, #d4a020) 45%, transparent);
+  transition: transform 0.35s ease;
+}
+
+/* Capped: the rail turns to the gold every finished thing wears in Bardle */
+.card-xp--max .card-xp-fill {
+  background: linear-gradient(to right, #8a6410, #e8c040 55%, #f4d868);
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.45);
+}
+
 /* The three headline numbers — the card's whole resting story */
 .card-stats {
   display: flex;
   justify-content: space-between;
   gap: 4px;
   padding-top: clamp(5px, 0.8cqh, 9px);
-  border-top: 1px solid color-mix(in srgb, var(--role-color, #d4a020) 30%, transparent);
 }
 
 .card-stat {
@@ -816,7 +1081,41 @@ const mvpHolder = computed<string | null>(() => {
   border-bottom: 1px solid color-mix(in srgb, var(--role-color, #d4a020) 32%, transparent);
   flex-shrink: 0;
 }
+/* Name left, level right — one line, so a long name can never push the level
+   out of the sheet; it ellipses instead. */
+.detail-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: clamp(6px, 0.6vw, 12px);
+  min-width: 0;
+}
+
+.detail-lvl {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.detail-lvl-num {
+  font-size: clamp(15px, 2.1cqh, 24px);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, #fff 30%, var(--role-color, #c89040));
+}
+.detail-lvl-rank {
+  font-size: clamp(7px, 0.95cqh, 10px);
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(232, 226, 208, 0.5);
+  white-space: nowrap;
+}
+
 .detail-name {
+  flex: 1;
+  min-width: 0;
   font-size: clamp(15px, 2.1cqh, 24px);
   font-weight: 700;
   line-height: 1.05;
@@ -1020,6 +1319,13 @@ const mvpHolder = computed<string | null>(() => {
   .card-stat-label {
     display: none;
   }
+  /* the insignia gives up its caption before the numeral gets small */
+  .lvl-badge {
+    --lv-size: 28px;
+  }
+  .lvl-tag {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1034,8 +1340,12 @@ const mvpHolder = computed<string | null>(() => {
   .champ-card--filled:hover .card-art {
     transform: none;
   }
-  .empty-ring {
+  .empty-ring,
+  .lvl-ping {
     animation: none;
+  }
+  .card-xp-fill {
+    transition: none;
   }
 }
 </style>

@@ -31,6 +31,13 @@ export const SIGIL_EMBER_DURATION_SPREAD_S = 1.8
 /** Standout badges a roster card shows before it truncates (TeamRosterPanel) */
 export const ROSTER_CARD_MAX_BADGES = 4
 
+/**
+ * Corners of the plate behind the level numeral on a roster card. Six, like the
+ * first faceted regalia stage — the card's insignia speaks the same geometry as
+ * the team tab's medallion without carrying its ornaments (see TeamRosterPanel).
+ */
+export const ROSTER_LEVEL_PLATE_FACETS = 6
+
 /** Magnifier size (px) of the shared search bar (`ui/RpgSearchBar.vue`), per
  *  size variant. The icon is an Iconify component, so the value has to come
  *  from script — it cannot live in the stylesheet with the rest of the sizing. */
