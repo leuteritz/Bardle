@@ -215,6 +215,7 @@ const breakdown = computed(() => {
           left: segment.left,
           top: segment.top,
           transform: `translate(-50%, -50%) rotate(${segment.rot})`,
+          '--arc-color': segment.color,
         }"
         >{{ segment.pct }}%</span
       >
@@ -322,17 +323,40 @@ const breakdown = computed(() => {
 .core:focus-visible .core-shares {
   opacity: 1;
 }
+/* Each figure wears its own role's colour, which means it cannot be printed
+   straight onto that role's arc — same hue on same hue is not a contrast. It
+   rides a dark plate instead: the plate gives the colour something to read
+   against, and it is the same small dark-plate-with-a-coloured-edge every other
+   readout in the game uses (name plate, synergy chip, tooltip), so it belongs
+   here without being explained.
+
+   Two things keep the plate from eating the ring it is annotating. It is only
+   as wide as its own figure — five opaque tags at any comfortable padding would
+   cover over 40 % of the circumference and the gauge would stop reading as one.
+   And it is translucent rather than solid, so its own arc still glows through
+   and the ring keeps running behind the label instead of being interrupted by
+   it; at 78 % black the colour underneath is dark enough for the lifted figure
+   to sit on.
+
+   The plate is taller than the 13.6px band and overhangs it on each side. That
+   is deliberate and it is measured: outward it stops short of the disc's rim,
+   inward it clears the face's corner. */
 .core-share {
   position: absolute;
   /* seat and tangent come inline — they are geometry, not style */
+  display: block;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(6, 4, 2, 0.78);
+  border: 1px solid color-mix(in srgb, var(--arc-color) 62%, transparent);
   font-size: v-bind(labelPx);
   line-height: 1;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  /* dark ink, because every role colour is a mid-to-light tone — the one
-     constant that reads on all five arcs without a plate behind it */
-  color: #0b0704;
+  /* the role's own colour, lifted toward white so it stays a figure and not a
+     glow — the plate under it is near-black, so the lift is what carries it */
+  color: color-mix(in srgb, #fff 40%, var(--arc-color));
   white-space: nowrap;
 }
 
