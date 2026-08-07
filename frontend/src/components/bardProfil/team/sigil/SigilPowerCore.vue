@@ -323,40 +323,33 @@ const breakdown = computed(() => {
 .core:focus-visible .core-shares {
   opacity: 1;
 }
-/* Each figure wears its own role's colour, which means it cannot be printed
-   straight onto that role's arc — same hue on same hue is not a contrast. It
-   rides a dark plate instead: the plate gives the colour something to read
-   against, and it is the same small dark-plate-with-a-coloured-edge every other
-   readout in the game uses (name plate, synergy chip, tooltip), so it belongs
-   here without being explained.
+/* Bare figures, straight on the metal — no plate, no border, nothing between the
+   number and its arc. That costs one thing and buys another.
 
-   Two things keep the plate from eating the ring it is annotating. It is only
-   as wide as its own figure — five opaque tags at any comfortable padding would
-   cover over 40 % of the circumference and the gauge would stop reading as one.
-   And it is translucent rather than solid, so its own arc still glows through
-   and the ring keeps running behind the label instead of being interrupted by
-   it; at 78 % black the colour underneath is dark enough for the lifted figure
-   to sit on.
+   The cost: a figure printed on its own role's arc cannot ALSO be that role's
+   colour at full saturation, because same hue on same hue is not a contrast. So
+   it takes the role's colour as a dark SHADE of it — the same inversion the
+   level tab on every name plate uses, dark ink on lit metal. The hue is still
+   the role's and the arc underneath states it at full strength anyway, so
+   nothing is lost in identifying whose figure this is.
 
-   The plate is taller than the 13.6px band and overhangs it on each side. That
-   is deliberate and it is measured: outward it stops short of the disc's rim,
-   inward it clears the face's corner. */
+   What it buys: the ring stays whole. The plate this replaced covered 36 % of
+   the circumference — a third of the gauge hidden behind its own labels.
+
+   22 % is where the mix stops. Measured against the five arcs it lands at
+   5.4 : 1 (Top, the tightest), 6.5, 9.0, 9.0 and 12.3 — all clear of 4.5 : 1
+   with the darkest role colour still leaving room. Raise it toward the arc for
+   more hue and Top falls under the line first. */
 .core-share {
   position: absolute;
   /* seat and tangent come inline — they are geometry, not style */
   display: block;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: rgba(6, 4, 2, 0.78);
-  border: 1px solid color-mix(in srgb, var(--arc-color) 62%, transparent);
   font-size: v-bind(labelPx);
   line-height: 1;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  /* the role's own colour, lifted toward white so it stays a figure and not a
-     glow — the plate under it is near-black, so the lift is what carries it */
-  color: color-mix(in srgb, #fff 40%, var(--arc-color));
+  color: color-mix(in srgb, var(--arc-color) 22%, #050302);
   white-space: nowrap;
 }
 
