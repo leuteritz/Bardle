@@ -1,25 +1,25 @@
 <template>
   <div class="rpg-frame cs-layout h-full">
     <div class="cs-left">
-    <!-- ── Domain bar: the shop's two halves ──
+    <!-- ── Domain tabs: the shop's two halves ──
          Top row of the rail now that it carries no title stripe, so it doubles
-         as the shop's own header: it names what is in here and, through the
-         scroll spy, which half is under the eye. Above the search on purpose —
-         picking a domain comes before narrowing it down. The lit half is also
-         the one the filter panel below is currently filtering, which is why
-         these two buttons are the only switch that scope needs: jumping to a
-         section and filtering it are the same intent. -->
-    <div class="cs-jump-row" aria-label="Jump to section">
+         as the shop's own header. The two halves are no longer one scroll with
+         a heading in the middle: a tab shows ONLY its own domain, and takes the
+         filter panel with it. Champions and items share nothing — not a price,
+         not a stat, not a way of being read — so scrolling past one to reach the
+         other only ever cost the player the distance.
+         The counts are what keeps the split honest: each tab carries how many
+         cards it holds under the current search and filters, so the other half
+         can never quietly swallow a hit. Above the search on purpose — picking a
+         domain comes before narrowing it down. -->
+    <div class="cs-jump-row" role="tablist" aria-label="Shop domain">
       <button
         class="cs-jump-btn"
-        :class="{ 'cs-jump-btn--active': activeJump === 'champions' }"
-        :disabled="!showChampions"
-        :title="
-          showChampions
-            ? `${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies. Jumps here and switches the filters to role, tier, traits and origins.`
-            : 'Hidden by item filters'
-        "
-        @click="jumpTo('champions')"
+        :class="{ 'cs-jump-btn--active': activeDomain === 'champions' }"
+        role="tab"
+        :aria-selected="activeDomain === 'champions'"
+        :title="`${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`"
+        @click="showDomain('champions')"
       >
         <Icon icon="game-icons:crested-helmet" width="22" height="22" class="cs-jump-icon" />
         Champions
@@ -27,14 +27,11 @@
       </button>
       <button
         class="cs-jump-btn"
-        :class="{ 'cs-jump-btn--active': activeJump === 'items' }"
-        :disabled="!showItems"
-        :title="
-          showItems
-            ? 'Jump to the items and switch the filters to rarity and category'
-            : 'Hidden by champion filters'
-        "
-        @click="jumpTo('items')"
+        :class="{ 'cs-jump-btn--active': activeDomain === 'items' }"
+        role="tab"
+        :aria-selected="activeDomain === 'items'"
+        :title="`${visibleItemsCount} item(s) on offer under the current filters`"
+        @click="showDomain('items')"
       >
         <Icon icon="game-icons:light-backpack" width="22" height="22" class="cs-jump-icon" />
         Items
@@ -73,13 +70,13 @@
           <span v-if="hasActiveFilter && !filterOpen" class="filter-active-dot"></span>
         </button>
 
-        <!-- Collapse / expand all tier sections -->
+        <!-- Collapse / expand every section of the open tab -->
         <button
-          v-if="tierGroups.length > 1"
+          v-if="canCollapseAll"
           class="tier-collapse-all"
           :class="{ 'tier-collapse-all--active': allTiersCollapsed }"
-          :title="allTiersCollapsed ? 'Expand all tiers' : 'Collapse all tiers'"
-          :aria-label="allTiersCollapsed ? 'Expand all tiers' : 'Collapse all tiers'"
+          :title="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+          :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
           @click="toggleAllTiers"
           @keydown.enter.prevent="toggleAllTiers"
           @keydown.space.prevent="toggleAllTiers"
@@ -159,22 +156,19 @@
       </div>
 
       <!-- ── Filter panel: labeled category sections ──
-           The panel only carries the chips that apply to the half of the shop
-           the player is actually looking at. Which half that is comes from the
-           same flag the domain bar lights up (`activeJump`): the scroll spy sets
-           it while scrolling, a click on Champions/Items sets it directly. The
-           other domain's chips would narrow a list that is off screen — or, once
-           a domain filter is set, one that is hidden outright.
+           The panel carries only the chips that apply to the open tab — the
+           other domain's chips would narrow a list that is not on screen at all.
            Rarity is an item property and therefore belongs to the item set — and
            opens it, because it is the coarsest cut through the loot table; the
-           category is the finer one underneath. The always-visible "Active:" row
-           above keeps every set chip reachable, whichever domain is showing. -->
+           category is the finer one underneath. The "Active:" row above stays
+           whole across both tabs, so a chip set in one half is never lost behind
+           the other. -->
       <Transition name="filter-panel">
       <div v-show="filterOpen" class="cs-filter-panel">
         <Transition name="cs-filter-domain" mode="out-in">
 
           <!-- ══ Item domain: Rarity, then Category ══ -->
-          <div v-if="activeJump === 'items'" key="items" class="cs-filter-group">
+          <div v-if="activeDomain === 'items'" key="items" class="cs-filter-group">
             <div class="filter-divider">
               <span class="filter-divider-label">Rarity</span>
             </div>
@@ -336,39 +330,43 @@
       </Transition>
     </div>
 
-    <!-- ── Champion Grid ── -->
+    <!-- ── Grid: the open tab, and nothing else ── -->
     <div
       ref="gridRef"
       class="flex-1 min-h-0 overflow-y-auto rpg-scrollbar cs-grid"
       :class="{ 'is-scrolling': gridScrolling }"
       @scroll.passive="onGridScroll"
     >
+    <Transition name="cs-domain-swap" mode="out-in">
+
+    <!-- ══ Champions ══ -->
+    <div v-if="activeDomain === 'champions'" key="champions">
       <!-- Empty: current role has no matches but cross-role does -->
       <div v-if="crossRoleOnly" class="cross-role-only-state">
         <p class="empty-label">Not in this role</p>
       </div>
-      <!-- Empty: nothing anywhere -->
+      <!-- Empty: no champion matches this half's filters. The count on the other
+           tab is the only thing that can still be wrong about the search, so the
+           empty state offers it as a way out instead of just stating a negative. -->
       <div
-        v-else-if="nothingFound"
+        v-else-if="noChampionsFound"
         class="flex flex-col items-center justify-center gap-4 py-12"
       >
         <div class="flex items-center justify-center empty-icon-box w-14 h-14">
           <Icon icon="lucide:search-x" width="32" height="32" style="color: #7a4e20; opacity: 0.4" />
         </div>
-        <p class="empty-label">No results found.</p>
+        <p class="empty-label">No champions found.</p>
+        <button v-if="visibleItemsCount > 0" class="cs-empty-jump" @click="showDomain('items')">
+          <Icon icon="game-icons:light-backpack" width="16" height="16" />
+          {{ visibleItemsCount }} matching item{{ visibleItemsCount === 1 ? '' : 's' }}
+          <span class="cs-empty-jump-arrow">→</span>
+        </button>
       </div>
 
       <div v-else class="tier-groups">
-        <!-- ── Epic section heading: Champions ── -->
-        <div v-if="showChampions && tierGroups.length > 0" class="shop-section-heading">
-          <span class="shop-heading-line shop-heading-line--left"></span>
-          <span class="shop-heading-text">Champions</span>
-          <span class="shop-heading-line shop-heading-line--right"></span>
-        </div>
-
         <!-- Tier section: header (click to collapse) + its own grid -->
         <div
-          v-for="group in showChampions ? tierGroups : []"
+          v-for="group in tierGroups"
           :key="group.tier"
           class="tier-group"
           :data-tier-section="group.tier"
@@ -447,17 +445,64 @@
           </Transition>
         </div>
 
-        <!-- ── Item sections: same collapsible headers, one per category ── -->
-        <div v-if="showItems && itemGroups.length > 0" ref="itemsSectionRef">
-          <!-- ── Epic section heading: Items ── -->
-          <div
-            class="shop-section-heading"
-            :class="{ 'shop-section-heading--follow': showChampions }"
-          >
-            <span class="shop-heading-line shop-heading-line--left"></span>
-            <span class="shop-heading-text">Items</span>
-            <span class="shop-heading-line shop-heading-line--right"></span>
+      </div>
+
+      <!-- ── Cross-role search results ── -->
+      <Transition name="cross-role-fade">
+        <div v-if="crossRoleChampions.length > 0" class="cross-role-section">
+          <div class="cross-role-divider">
+            <span class="cross-role-divider-label">Other Roles</span>
           </div>
+          <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+            <ChampionShopCard
+              v-for="champion in crossRoleChampions"
+              :key="'cross-' + champion.name"
+              class="cross-role-card"
+              :name="champion.name"
+              :image="battleStore.getChampionImage(champion.name, { size: 'lg' })"
+              :role="CHAMPION_ROLES[champion.name]"
+              :role-badge="ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]"
+              :tier-color="getTierColor(champion.name)"
+              :tier-name="getChampionDetail(champion.name).cosmic.name"
+              :star-level="getChampionDetail(champion.name).starLevel"
+              :card-class="getCardClass(champion.name)"
+              :owned="isOwned(champion.name)"
+              :locked="isLocked(champion.name)"
+              :buyable="isUnlocked(champion.name) && canAffordChampion(champion.name)"
+              :selected="selectedChampion === champion.name"
+              :is-new="isNew(champion.name)"
+              :locked-tooltip="getLockedTooltip(champion.name)"
+              @select="openChampion"
+              @hover="dismissNewOnHover"
+            />
+          </div>
+        </div>
+      </Transition>
+    </div>
+
+    <!-- ══ Items ══ -->
+    <div v-else key="items">
+      <div
+        v-if="noItemsFound"
+        class="flex flex-col items-center justify-center gap-4 py-12"
+      >
+        <div class="flex items-center justify-center empty-icon-box w-14 h-14">
+          <Icon icon="lucide:search-x" width="32" height="32" style="color: #7a4e20; opacity: 0.4" />
+        </div>
+        <p class="empty-label">No items found.</p>
+        <button
+          v-if="reachableChampionCount > 0"
+          class="cs-empty-jump"
+          @click="showDomain('champions')"
+        >
+          <Icon icon="game-icons:crested-helmet" width="16" height="16" />
+          {{ reachableChampionCount }} matching champion{{ reachableChampionCount === 1 ? '' : 's' }}
+          <span class="cs-empty-jump-arrow">→</span>
+        </button>
+      </div>
+
+      <!-- ── Item sections: same collapsible headers, one per category ── -->
+      <div v-else class="tier-groups">
           <div v-for="group in itemGroups" :key="'cat-' + group.id" class="tier-group">
             <div
               class="tier-header"
@@ -502,40 +547,10 @@
               </div>
             </Transition>
           </div>
-        </div>
       </div>
+    </div>
 
-      <!-- ── Cross-role search results ── -->
-      <Transition name="cross-role-fade">
-        <div v-if="crossRoleChampions.length > 0" class="cross-role-section">
-          <div class="cross-role-divider">
-            <span class="cross-role-divider-label">Other Roles</span>
-          </div>
-          <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
-            <ChampionShopCard
-              v-for="champion in crossRoleChampions"
-              :key="'cross-' + champion.name"
-              class="cross-role-card"
-              :name="champion.name"
-              :image="battleStore.getChampionImage(champion.name, { size: 'lg' })"
-              :role="CHAMPION_ROLES[champion.name]"
-              :role-badge="ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]"
-              :tier-color="getTierColor(champion.name)"
-              :tier-name="getChampionDetail(champion.name).cosmic.name"
-              :star-level="getChampionDetail(champion.name).starLevel"
-              :card-class="getCardClass(champion.name)"
-              :owned="isOwned(champion.name)"
-              :locked="isLocked(champion.name)"
-              :buyable="isUnlocked(champion.name) && canAffordChampion(champion.name)"
-              :selected="selectedChampion === champion.name"
-              :is-new="isNew(champion.name)"
-              :locked-tooltip="getLockedTooltip(champion.name)"
-              @select="openChampion"
-              @hover="dismissNewOnHover"
-            />
-          </div>
-        </div>
-      </Transition>
+    </Transition>
     </div>
     </div>
 
@@ -602,9 +617,6 @@ import {
   ROLES,
   MATERIAL_COLOR,
   SHOP_JUMP_SCROLL_OFFSET_PX,
-  SHOP_JUMP_SPY_THRESHOLD,
-  SHOP_JUMP_SPY_HYSTERESIS_PX,
-  SHOP_JUMP_SPY_LOCK_MS,
   SHOP_JUMP_EXPAND_SETTLE_MS,
   SHOP_SCROLL_SETTLE_MS,
   CHAMPION_NEW_BADGE_DISMISS_MS,
@@ -651,6 +663,12 @@ export default defineComponent({
     const activeItemCats = ref<ItemCategory[]>([])
     const activeRarities = ref<ItemRarity[]>([])
     const filterOpen = ref(false)
+    /**
+     * Which half of the shop is on screen. Declared up here with the filter
+     * state because that is what it is: the coarsest filter of them all, above
+     * search and chips, and half the panel below reads it.
+     */
+    const activeDomain = ref<'champions' | 'items'>('champions')
     const searchInputRef = ref<InstanceType<typeof RpgSearchBar> | null>(null)
     // Tier chips / sections are the 6 Champion Tiers (weak→strong), not price tiers.
     // Galaxy-locked tiers stay visible but greyed out (same lock as the grid sections);
@@ -1092,7 +1110,7 @@ const shopChampionNames = computed(() =>
       }
       const activeStar = galaxyStore.requiredStarLevel
       const galaxy = galaxyStore.currentGalaxy
-      const tiers = searchOrFilterActive.value
+      const tiers = championNarrowed.value
         ? CHAMPION_TIERS_BY_STAR.filter((t) => groups.has(t.starLevel))
         : CHAMPION_TIERS_BY_STAR
       return tiers.map((t) => ({
@@ -1155,14 +1173,32 @@ const shopChampionNames = computed(() =>
         collapsedTiers.value = next
       },
     )
-    // While searching/filtering, force every tier open so matches are never hidden.
-    const searchOrFilterActive = computed(
-      () => searchQuery.value.trim() !== '' || hasActiveFilter.value,
+    // ── Narrowing, counted per domain ──
+    // The two tabs are filtered by different chips, so "is this list narrowed"
+    // has to be asked per tab: a rarity chip must not force the champion tiers
+    // open, and a role chip must not force the item categories open. Only the
+    // search text is common to both — it reads names on either side.
+    // Declared here, above their first reader (tierGroups), because a watcher
+    // further down runs immediately and would otherwise hit them in their TDZ.
+    const championFiltersActive = computed(
+      () =>
+        activeTraits.value.length > 0 || activeTier.value !== 'all' || activeRole.value !== 'all',
+    )
+    const itemFiltersActive = computed(
+      () => activeItemCats.value.length > 0 || activeRarities.value.length > 0,
+    )
+    /** While searching/filtering, force every tier open so matches are never hidden. */
+    const championNarrowed = computed(
+      () => searchQuery.value.trim() !== '' || championFiltersActive.value,
+    )
+    /** Same for the item categories, driven by the item chips. */
+    const itemNarrowed = computed(
+      () => searchQuery.value.trim() !== '' || itemFiltersActive.value,
     )
     function isTierCollapsed(tier: number): boolean {
       // Galaxy-locked tiers never expand, regardless of search/collapse state.
       if (isTierGalaxyLocked(tier)) return true
-      return searchOrFilterActive.value ? false : collapsedTiers.value.has(tier)
+      return championNarrowed.value ? false : collapsedTiers.value.has(tier)
     }
     function toggleTier(tier: number) {
       if (isTierGalaxyLocked(tier)) return
@@ -1171,31 +1207,41 @@ const shopChampionNames = computed(() =>
       else next.add(tier)
       collapsedTiers.value = next
     }
-    // Collapse-all governs the openable tiers plus the item category sections.
+    // Collapse-all governs the sections of the OPEN tab only — the button sits
+    // above one list, and folding away rows nobody can see would leave the other
+    // tab in a state the player never asked for and would find on arriving.
     const allTiersCollapsed = computed(() => {
-      if (searchOrFilterActive.value) return false
+      if (activeDomain.value === 'items') {
+        if (itemNarrowed.value) return false
+        return ITEM_CATEGORIES.every((c) => collapsedItemCats.value.has(c.id))
+      }
+      if (championNarrowed.value) return false
       const unlocked = tierGroups.value.filter((g) => !g.isGalaxyLocked)
-      const itemsCollapsed = ITEM_CATEGORIES.every((c) => collapsedItemCats.value.has(c.id))
-      return (
-        unlocked.length > 0 &&
-        unlocked.every((g) => collapsedTiers.value.has(g.tier)) &&
-        itemsCollapsed
-      )
+      return unlocked.length > 0 && unlocked.every((g) => collapsedTiers.value.has(g.tier))
     })
     function toggleAllTiers() {
+      const collapsed = allTiersCollapsed.value
+      if (activeDomain.value === 'items') {
+        const nextCats = new Set(collapsedItemCats.value)
+        for (const c of ITEM_CATEGORIES) {
+          if (collapsed) nextCats.delete(c.id)
+          else nextCats.add(c.id)
+        }
+        collapsedItemCats.value = nextCats
+        return
+      }
       const unlockedKeys = tierGroups.value.filter((g) => !g.isGalaxyLocked).map((g) => g.tier)
       const next = new Set(collapsedTiers.value)
-      const nextCats = new Set(collapsedItemCats.value)
-      if (allTiersCollapsed.value) {
-        for (const k of unlockedKeys) next.delete(k)
-        for (const c of ITEM_CATEGORIES) nextCats.delete(c.id)
-      } else {
-        for (const k of unlockedKeys) next.add(k)
-        for (const c of ITEM_CATEGORIES) nextCats.add(c.id)
+      for (const k of unlockedKeys) {
+        if (collapsed) next.delete(k)
+        else next.add(k)
       }
       collapsedTiers.value = next
-      collapsedItemCats.value = nextCats
     }
+    /** Only worth offering where the open tab actually has sections to fold. */
+    const canCollapseAll = computed(() =>
+      activeDomain.value === 'items' ? itemGroups.value.length > 1 : tierGroups.value.length > 1,
+    )
 
     // Tier expand/collapse animation — animate height 0 ↔ scrollHeight, then clear
     // inline styles so an open tier is overflow:visible (hover-expanded cards spill out).
@@ -1291,23 +1337,6 @@ const shopChampionNames = computed(() =>
         activeRarities.value.length > 0,
     )
 
-    // ── Unified shop: domain visibility ──
-    // A champion-only filter hides the item sections and vice versa; with no
-    // domain-specific filter (or filters in both domains) both stay visible.
-    const championFiltersActive = computed(
-      () =>
-        activeTraits.value.length > 0 || activeTier.value !== 'all' || activeRole.value !== 'all',
-    )
-    const itemFiltersActive = computed(
-      () => activeItemCats.value.length > 0 || activeRarities.value.length > 0,
-    )
-    const showChampions = computed(
-      () => !itemFiltersActive.value || championFiltersActive.value,
-    )
-    const showItems = computed(
-      () => !championFiltersActive.value || itemFiltersActive.value,
-    )
-
     // ── Items: search + chip filtering, grouped by category ──
     const RARITY_BY_ID = new Map(ITEM_RARITIES.map((r) => [r.id, r]))
     const RARITY_RANK = new Map(ITEM_RARITIES.map((r, i) => [r.id, i]))
@@ -1347,7 +1376,7 @@ const shopChampionNames = computed(() =>
         const bucket = byCat.get(item.category) ?? byCat.set(item.category, []).get(item.category)!
         bucket.push(item)
       }
-      const cats = searchOrFilterActive.value
+      const cats = itemNarrowed.value
         ? ITEM_CATEGORIES.filter((c) => (byCat.get(c.id)?.length ?? 0) > 0)
         : ITEM_CATEGORIES
       return cats.map((c) => ({
@@ -1373,8 +1402,14 @@ const shopChampionNames = computed(() =>
       }))
     })
 
+    /**
+     * How many item cards the Items tab holds under the current search and item
+     * chips. It is the tab's badge, so it has to stay true while the player is
+     * standing in the OTHER tab — that number is the only thing telling them a
+     * search landed over there.
+     */
     const visibleItemsCount = computed(() =>
-      showItems.value ? itemGroups.value.reduce((sum, g) => sum + g.items.length, 0) : 0,
+      itemGroups.value.reduce((sum, g) => sum + g.items.length, 0),
     )
 
     /**
@@ -1393,26 +1428,22 @@ const shopChampionNames = computed(() =>
       tierGroups.value.reduce((sum, g) => (g.isGalaxyLocked ? sum : sum + g.champions.length), 0),
     )
 
-    // ── Grid empty states across both domains ──
+    // ── Grid empty states, one per tab ──
+    // tierGroups / itemGroups only drop sections while the domain is narrowed;
+    // unnarrowed they always list every tier and category (with "All recruited ✓"
+    // inside), so an empty list here really does mean "nothing matched".
     const crossRoleOnly = computed(
-      () =>
-        showChampions.value &&
-        filteredChampions.value.length === 0 &&
-        crossRoleChampions.value.length > 0 &&
-        visibleItemsCount.value === 0,
+      () => tierGroups.value.length === 0 && crossRoleChampions.value.length > 0,
     )
-    const nothingFound = computed(
-      () =>
-        (!showChampions.value || filteredChampions.value.length === 0) &&
-        crossRoleChampions.value.length === 0 &&
-        visibleItemsCount.value === 0 &&
-        searchOrFilterActive.value,
+    const noChampionsFound = computed(
+      () => tierGroups.value.length === 0 && crossRoleChampions.value.length === 0,
     )
+    const noItemsFound = computed(() => itemGroups.value.length === 0)
 
     // ── Collapsible item category sections (all start collapsed) ──
     const collapsedItemCats = ref(new Set<ItemCategory>(ITEM_CATEGORIES.map((c) => c.id)))
     function isItemCatCollapsed(cat: ItemCategory): boolean {
-      return searchOrFilterActive.value ? false : collapsedItemCats.value.has(cat)
+      return itemNarrowed.value ? false : collapsedItemCats.value.has(cat)
     }
     function toggleItemCatSection(cat: ItemCategory) {
       const next = new Set(collapsedItemCats.value)
@@ -1421,39 +1452,11 @@ const shopChampionNames = computed(() =>
       collapsedItemCats.value = next
     }
 
-    // ── Quick jump (Champions ↔ Items) with a scroll spy on the grid ──
+    // ── The two tabs ──
     const gridRef = ref<HTMLElement | null>(null)
-    const itemsSectionRef = ref<HTMLElement | null>(null)
-    const activeJump = ref<'champions' | 'items'>('champions')
-    // While a smooth jump scroll is in flight the spy is muted, otherwise the
-    // passing sections would flip the highlight back and forth mid-animation.
-    let spyLocked = false
-    let spyLockTimer: ReturnType<typeof setTimeout> | null = null
-    function lockSpy() {
-      spyLocked = true
-      if (spyLockTimer !== null) clearTimeout(spyLockTimer)
-      spyLockTimer = setTimeout(() => {
-        spyLocked = false
-        spyLockTimer = null
-      }, SHOP_JUMP_SPY_LOCK_MS)
-    }
-
-    // Puts the "Items" section heading (with the open Weapons group right under
-    // it) at the very top of the grid.
-    function scrollToItemsTop() {
-      const grid = gridRef.value
-      const section = itemsSectionRef.value
-      if (!grid || !section) return
-      const top =
-        section.getBoundingClientRect().top -
-        grid.getBoundingClientRect().top +
-        grid.scrollTop -
-        SHOP_JUMP_SCROLL_OFFSET_PX
-      grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
-    }
 
     // Puts the highest unlocked tier's header (freshly expanded) at the very
-    // top of the grid — mirrors scrollToItemsTop for the champion domain.
+    // top of the grid.
     function scrollToTierTop(tier: number) {
       const grid = gridRef.value
       if (!grid) return
@@ -1467,60 +1470,54 @@ const shopChampionNames = computed(() =>
       grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
     }
 
+    /**
+     * Opens a tab. Each one lands the player where its next decision is rather
+     * than on a stack of closed rows:
+     *  • Champions — on the highest unlocked tier that still has someone to
+     *    recruit, expanded, its header at the top edge. A tier whose champions
+     *    are all recruited is skipped: landing on "All recruited ✓" answers
+     *    nothing; only if every tier is cleared does the last one stand.
+     *  • Items — on the first category (Weapons), open, at the top. The items
+     *    now start at the grid's top edge, so that is a plain scroll reset.
+     */
     let jumpSettleTimer: ReturnType<typeof setTimeout> | null = null
-    function jumpTo(target: 'champions' | 'items') {
+    function showDomain(target: 'champions' | 'items') {
       const grid = gridRef.value
       if (!grid) return
-      if (target === 'champions' && !showChampions.value) return
-      if (target === 'items' && !showItems.value) return
-      activeJump.value = target
-      lockSpy()
-      if (target === 'champions') {
-        // The jump lands on the highest unlocked tier that still has someone to
-        // recruit, expanded, header at the top edge of the grid. A tier whose
-        // champions are all recruited is skipped — landing on "All recruited ✓"
-        // answers nothing; only if every tier is cleared does the last one stand.
-        const unlocked = tierGroups.value.filter((g) => !g.isGalaxyLocked)
-        const stocked = unlocked.filter((g) => g.champions.length > 0)
-        const pool = stocked.length > 0 ? stocked : unlocked
-        const highest = pool[pool.length - 1]
-        if (jumpSettleTimer !== null) {
-          clearTimeout(jumpSettleTimer)
-          jumpSettleTimer = null
+      activeDomain.value = target
+      if (jumpSettleTimer !== null) {
+        clearTimeout(jumpSettleTimer)
+        jumpSettleTimer = null
+      }
+      if (target === 'items') {
+        const firstCat = itemGroups.value[0]?.id
+        if (firstCat && collapsedItemCats.value.has(firstCat)) {
+          const next = new Set(collapsedItemCats.value)
+          next.delete(firstCat)
+          collapsedItemCats.value = next
         }
-        if (!highest) {
-          grid.scrollTo({ top: 0, behavior: 'smooth' })
-          return
-        }
-        if (collapsedTiers.value.has(highest.tier)) {
-          const next = new Set(collapsedTiers.value)
-          next.delete(highest.tier)
-          collapsedTiers.value = next
-        }
-        nextTick(() => scrollToTierTop(highest.tier))
-        // Correct the position once the expand animation settled (same trick
-        // as the items jump below).
-        jumpSettleTimer = setTimeout(() => {
-          jumpSettleTimer = null
-          scrollToTierTop(highest.tier)
-        }, SHOP_JUMP_EXPAND_SETTLE_MS)
+        grid.scrollTop = 0
         return
       }
-      // The jump always lands on an OPEN first category (Weapons), header at
-      // the top edge of the grid.
-      const firstCat = itemGroups.value[0]?.id
-      if (firstCat && collapsedItemCats.value.has(firstCat)) {
-        const next = new Set(collapsedItemCats.value)
-        next.delete(firstCat)
-        collapsedItemCats.value = next
+      const unlocked = tierGroups.value.filter((g) => !g.isGalaxyLocked)
+      const stocked = unlocked.filter((g) => g.champions.length > 0)
+      const pool = stocked.length > 0 ? stocked : unlocked
+      const highest = pool[pool.length - 1]
+      if (!highest) {
+        grid.scrollTop = 0
+        return
       }
-      nextTick(scrollToItemsTop)
-      // While the section is still expanding, the grid's scrollHeight is too
-      // small to put the header at the top — correct once the animation settled.
-      if (jumpSettleTimer !== null) clearTimeout(jumpSettleTimer)
+      if (collapsedTiers.value.has(highest.tier)) {
+        const next = new Set(collapsedTiers.value)
+        next.delete(highest.tier)
+        collapsedTiers.value = next
+      }
+      // The tab swap remounts the list, so the first pass measures a grid that
+      // is only half built; correct once the expand animation settled too.
+      nextTick(() => scrollToTierTop(highest.tier))
       jumpSettleTimer = setTimeout(() => {
         jumpSettleTimer = null
-        scrollToItemsTop()
+        scrollToTierTop(highest.tier)
       }, SHOP_JUMP_EXPAND_SETTLE_MS)
     }
 
@@ -1540,37 +1537,7 @@ const shopChampionNames = computed(() =>
         gridScrolling.value = false
         gridScrollTimer = null
       }, SHOP_SCROLL_SETTLE_MS)
-      if (spyLocked) return
-      const grid = gridRef.value
-      const el = itemsSectionRef.value
-      if (!grid) return
-      if (!el || !showItems.value) {
-        activeJump.value = 'champions'
-        return
-      }
-      if (!showChampions.value) {
-        activeJump.value = 'items'
-        return
-      }
-      // Asymmetric boundary: the items section has to come up to the threshold to
-      // take the highlight, but fall a band BELOW it to give it back. The spy also
-      // decides which chips the filter panel shows, and that swap resizes the grid
-      // the boundary is measured in — a bare threshold would sit right where its
-      // own consequence puts it back and flicker under a slow scroll.
-      const rel = el.getBoundingClientRect().top - grid.getBoundingClientRect().top
-      const line = grid.clientHeight * SHOP_JUMP_SPY_THRESHOLD
-      if (activeJump.value === 'items') {
-        if (rel > line + SHOP_JUMP_SPY_HYSTERESIS_PX) activeJump.value = 'champions'
-      } else if (rel <= line) {
-        activeJump.value = 'items'
-      }
     }
-
-    // Domain filters can remove the section the highlight points at.
-    watch([showChampions, showItems], ([champs, items]) => {
-      if (!champs && items) activeJump.value = 'items'
-      else if (!items) activeJump.value = 'champions'
-    })
 
     // ── Active filter summary chips for the item domain ──
     const activeItemCatChips = computed(() =>
@@ -1636,8 +1603,8 @@ const shopChampionNames = computed(() =>
 
     // ── Detail panel selection ──
     // Defined last in setup: the immediate watch below reads through
-    // tierGroups → searchOrFilterActive → hasActiveFilter, so every computed
-    // above must already be initialized (TDZ) before it first runs.
+    // visibleEntries → tierGroups → championNarrowed, so every computed above
+    // must already be initialized (TDZ) before it first runs.
     const selectedChampion = ref<string | null>(null)
     const selectedItem = ref<string | null>(null)
 
@@ -1646,11 +1613,9 @@ const shopChampionNames = computed(() =>
     // handleBuy re-points the detail panel through this list.
     const visibleChampionList = computed(() => {
       const names: string[] = []
-      if (showChampions.value) {
-        for (const g of tierGroups.value) {
-          if (g.isGalaxyLocked) continue
-          for (const c of g.champions) names.push(c.name)
-        }
+      for (const g of tierGroups.value) {
+        if (g.isGalaxyLocked) continue
+        for (const c of g.champions) names.push(c.name)
       }
       for (const c of crossRoleChampions.value) {
         if (!names.includes(c.name)) names.push(c.name)
@@ -1658,21 +1623,22 @@ const shopChampionNames = computed(() =>
       return names
     })
 
-    // Unified grid order for prev/next: champion tiers → item sections →
-    // cross-role search results (matches the visual top-to-bottom order).
+    // Grid order for the detail panel's ← / →, scoped to the OPEN tab: champion
+    // tiers then cross-role hits, or the item sections. Stepping out of one
+    // domain into the other would walk past a tab boundary the player just drew
+    // — and land the panel on a card that is not in the list behind it.
     type ShopEntry = { kind: 'champion' | 'item'; id: string }
     const visibleEntries = computed<ShopEntry[]>(() => {
       const entries: ShopEntry[] = []
-      if (showChampions.value) {
-        for (const g of tierGroups.value) {
-          if (g.isGalaxyLocked) continue
-          for (const c of g.champions) entries.push({ kind: 'champion', id: c.name })
-        }
-      }
-      if (showItems.value) {
+      if (activeDomain.value === 'items') {
         for (const g of itemGroups.value) {
           for (const item of g.items) entries.push({ kind: 'item', id: item.id })
         }
+        return entries
+      }
+      for (const g of tierGroups.value) {
+        if (g.isGalaxyLocked) continue
+        for (const c of g.champions) entries.push({ kind: 'champion', id: c.name })
       }
       for (const c of crossRoleChampions.value) {
         if (!entries.some((e) => e.kind === 'champion' && e.id === c.name)) {
@@ -1765,11 +1731,24 @@ const shopChampionNames = computed(() =>
     // deep-link lands on that exact champion/item), else the first visible card
     // in grid order. An empty query keeps the "no auto-select until click"
     // default view.
+    //
+    // The search is the one thing the tabs must NOT be allowed to cut in half:
+    // it reads names on both sides, and a query that only lands in the closed
+    // tab would otherwise read as "no results" while the badge next door says
+    // otherwise. So a search with nothing here and something there moves the
+    // player over. Only in that direction — with hits on this side, staying put
+    // is what they asked for.
     watch(
       searchQuery,
       (raw) => {
         const q = raw.trim().toLowerCase()
         if (!q) return
+        if (visibleEntries.value.length === 0) {
+          const other = activeDomain.value === 'champions' ? 'items' : 'champions'
+          const otherHits =
+            other === 'items' ? visibleItemsCount.value : reachableChampionCount.value
+          if (otherHits > 0) activeDomain.value = other
+        }
         const list = visibleEntries.value
         if (list.length === 0) return
         const exact = list.find((e) => entryName(e).toLowerCase() === q)
@@ -1803,7 +1782,7 @@ const shopChampionNames = computed(() =>
       const pick = highest.champions.find((c) => canClickBuy(c.name)) ?? highest.champions[0]
       if (pick) selectChampion(pick.name)
       // expands the tier and puts its header at the top edge (settle included)
-      jumpTo('champions')
+      showDomain('champions')
     }
 
     onMounted(() => {
@@ -2048,11 +2027,10 @@ const shopChampionNames = computed(() =>
       toggleRarity,
       activeItemCatChips,
       activeRarityChips,
-      showChampions,
-      showItems,
       itemGroups,
       crossRoleOnly,
-      nothingFound,
+      noChampionsFound,
+      noItemsFound,
       reachableChampionCount,
       isItemCatCollapsed,
       toggleItemCatSection,
@@ -2062,9 +2040,9 @@ const shopChampionNames = computed(() =>
       handleBuyItem,
       visibleItemsCount,
       gridRef,
-      itemsSectionRef,
-      activeJump,
-      jumpTo,
+      activeDomain,
+      showDomain,
+      canCollapseAll,
       onGridScroll,
     }
   },
@@ -2253,70 +2231,60 @@ const shopChampionNames = computed(() =>
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
 }
 
-/* ── Epic section headings: one big centered line per domain ── */
-.shop-section-heading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin: 6px 0 14px;
+/* ── Tab swap ──
+   The two halves replace each other in place, so the exchange gets the same
+   beat the filter panel above it uses: the leaving list drops away, the
+   arriving one settles in from just above. Only opacity/transform — the orbit
+   keeps running behind the rail. */
+.cs-domain-swap-enter-active {
+  transition:
+    opacity 0.18s ease-out,
+    transform 0.18s ease-out;
 }
-/* The Items heading needs extra air when it follows the champion tiers. */
-.shop-section-heading--follow {
-  margin-top: 28px;
+.cs-domain-swap-leave-active {
+  transition:
+    opacity 0.09s ease-in,
+    transform 0.09s ease-in;
 }
-.shop-heading-text {
-  position: relative;
-  flex-shrink: 0;
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  line-height: 1.15;
-  color: #eccf82;
-  text-shadow:
-    0 2px 10px rgba(0, 0, 0, 0.85),
-    0 0 22px rgba(232, 192, 64, 0.35);
-  white-space: nowrap;
+.cs-domain-swap-enter-from {
+  opacity: 0;
+  transform: translateY(-6px);
 }
-.shop-heading-line {
-  position: relative;
-  flex: 1;
-  height: 2px;
-  border-radius: 2px;
-}
-.shop-heading-line--left {
-  background: linear-gradient(to right, transparent, #5c3310 45%, #c89040);
-}
-.shop-heading-line--right {
-  background: linear-gradient(to left, transparent, #5c3310 45%, #c89040);
-}
-/* ✦ ornaments where the lines meet the title */
-.shop-heading-line::after {
-  content: '✦';
-  position: absolute;
-  top: 50%;
-  transform: translateY(-54%);
-  font-size: 13px;
-  line-height: 1;
-  color: #c89040;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
-}
-.shop-heading-line--left::after {
-  right: -6px;
-}
-.shop-heading-line--right::after {
-  left: -6px;
+.cs-domain-swap-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
 }
 
-/* Compact heading on flatter viewports (Full HD) */
-@media (max-height: 1100px) {
-  .shop-heading-text {
-    font-size: 22px;
-  }
-  .shop-section-heading--follow {
-    margin-top: 22px;
-  }
+/* ── Empty state: the way over to the other tab ──
+   Reads as a lead, not as a button bar: the count is the message, the arrow
+   only says where it goes. */
+.cs-empty-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #c89040;
+  background: #1a1008;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
+}
+.cs-empty-jump:hover {
+  color: #e8c060;
+  background: #221408;
+  border-color: #7a4e20;
+}
+.cs-empty-jump-arrow {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
 }
 
 /* ── Header-Bar ── */
