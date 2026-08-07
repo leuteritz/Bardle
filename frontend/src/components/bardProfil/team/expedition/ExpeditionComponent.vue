@@ -18,7 +18,6 @@ import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useActionToast } from '@/composables/ui/useActionToast'
 import { toRoman } from '@/utils/ui/format'
 import {
-  EXPEDITION_LEDGER_RANKS,
   EXPEDITION_COLLECT_FLASH_MS,
   EXPEDITION_CHIME_POP_LIFETIME_MS,
   EXPEDITION_CHIME_POP_SPREAD_PX,
@@ -66,6 +65,28 @@ const rankProgress = computed(() => {
   const span = next.required - rank.value.required
   if (span <= 0) return 1
   return Math.min(1, (expeditionStore.ledgerCompleted - rank.value.required) / span)
+})
+
+/**
+ * What the next rank actually hands over, in the player's terms.
+ *
+ * The rank names are flavour — "Pathwarden" tells nobody what it does. This
+ * spells out the reward instead, so the number in the header is a goal rather
+ * than a word to hover and guess at.
+ */
+const nextRankReward = computed(() => {
+  const next = nextRank.value
+  if (!next) return ''
+  const parts: string[] = []
+  if (next.activeSlots > rank.value.activeSlots) {
+    parts.push(`+${next.activeSlots - rank.value.activeSlots} expedition slot`)
+  }
+  if (next.offerSlots > rank.value.offerSlots) {
+    parts.push(`+${next.offerSlots - rank.value.offerSlots} contract slot`)
+  }
+  const odds = Math.round((next.chanceBonus - rank.value.chanceBonus) * 100)
+  if (odds > 0) parts.push(`+${odds}% odds`)
+  return parts.join(' · ')
 })
 
 const timeUntilNextSpawn = computed(() =>
@@ -150,27 +171,25 @@ function formatCountdown(ms: number): string {
          instead of frames, and the bar's bottom edge IS the rank progress — the
          line that closes the header doubles as the thing it measures. -->
     <header class="ec-bar">
-      <div class="ec-rank" :title="`${expeditionStore.ledgerCompleted} expeditions resolved`">
+      <!-- Says what it IS and what the next one GIVES. The rank name stays on as
+           flavour behind the numeral, but nothing you need to hover to read. -->
+      <div class="ec-rank">
         <Icon :icon="rank.icon" width="30" height="30" class="ec-rank-ico" />
         <div class="ec-rank-text">
           <div class="ec-rank-line">
-            <span class="ec-rank-name">{{ rank.name }}</span>
-            <!-- A numeral, not a row of dots: five pips beside a word read as an
-                 ellipsis, and the unearned ones were invisible on this ground. -->
-            <span
-              class="ec-rank-tier"
-              :title="`Ledger rank ${rank.tier} of ${EXPEDITION_LEDGER_RANKS.length} — ${rank.activeSlots} in field, ${rank.offerSlots} contracts`"
-            >
-              {{ toRoman(rank.tier) }}
+            <span class="ec-rank-name">
+              Expedition Rank {{ toRoman(rank.tier) }}
             </span>
+            <span class="ec-rank-flavor">{{ rank.name }}</span>
           </div>
           <span class="ec-rank-goal">
             <template v-if="nextRank">
-              {{ expeditionStore.ledgerCompleted }} / {{ nextRank.required }} runs to
-              {{ nextRank.name }}
+              {{ expeditionStore.ledgerCompleted }} / {{ nextRank.required }} runs
+              <span class="ec-rank-arrow">→</span>
+              <span class="ec-rank-reward">{{ nextRankReward }}</span>
             </template>
             <template v-else>
-              Ledger complete — {{ expeditionStore.ledgerCompleted }} runs
+              Highest rank reached — {{ expeditionStore.ledgerCompleted }} runs
             </template>
           </span>
         </div>
@@ -378,29 +397,29 @@ function formatCountdown(ms: number): string {
   gap: 9px;
 }
 .ec-rank-name {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #e8c040;
   line-height: 1;
   text-shadow: 0 0 14px rgba(232, 192, 64, 0.3);
   white-space: nowrap;
 }
-.ec-rank-tier {
+/* Flavour only — set back far enough that it never competes with the rank. */
+.ec-rank-flavor {
   flex-shrink: 0;
-  padding: 2px 7px;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  line-height: 1.15;
-  color: #e8c040;
-  background: rgba(232, 192, 64, 0.12);
-  border: 1px solid rgba(200, 144, 64, 0.4);
-  border-radius: 4px;
-  cursor: help;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(200, 144, 64, 0.45);
+  line-height: 1;
+  white-space: nowrap;
 }
 .ec-rank-goal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -409,7 +428,14 @@ function formatCountdown(ms: number): string {
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+.ec-rank-arrow {
+  color: rgba(200, 144, 64, 0.35);
+}
+/* The payoff, in the colour the tab uses for a gain. */
+.ec-rank-reward {
+  color: #7ad0a0;
+  font-weight: 800;
 }
 
 /* ── Readouts: hairline-separated, never boxed ────────────── */
