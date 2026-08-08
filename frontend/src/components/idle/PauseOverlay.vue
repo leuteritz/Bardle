@@ -359,7 +359,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, toRaw, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, shallowRef, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { onKeybinding } from '@/composables/system/useKeybindings'
@@ -394,6 +394,7 @@ import {
   KEYBINDINGS,
   PAUSE_ESCAPE_CAP,
   PAUSE_STAR_CARD_HEIGHT,
+  STAR_TIMER_TICK_MS,
 } from '@/config/constants'
 import type { PlanetType } from '@/types'
 import { splitDuration } from '@/utils/ui/format'
@@ -491,6 +492,7 @@ const hpWidthProbes = computed(() =>
 const pauseStartChimes = ref(0)
 const pauseTick = ref(0)
 let pauseInterval: ReturnType<typeof setInterval> | null = null
+let starInterval: ReturnType<typeof setInterval> | null = null
 
 /**
  * Escape beendet die Pause — dieselbe Taste, die im ganzen Spiel jedes Overlay
@@ -517,12 +519,21 @@ watch(
       pauseInterval = setInterval(() => {
         pauseTick.value++
       }, 1000)
+      // Sofort aufbauen, damit die Karten mit dem Overlay erscheinen und nicht
+      // erst beim ersten Takt.
+      lastResourceStarsKey = ''
+      refreshResourceStars()
+      starInterval = setInterval(refreshResourceStars, STAR_TIMER_TICK_MS)
       window.addEventListener('keydown', onEscape)
     } else {
       gameStore.setPauseState(false)
       if (pauseInterval !== null) {
         clearInterval(pauseInterval)
         pauseInterval = null
+      }
+      if (starInterval !== null) {
+        clearInterval(starInterval)
+        starInterval = null
       }
       window.removeEventListener('keydown', onEscape)
     }
@@ -532,6 +543,7 @@ watch(
 
 onUnmounted(() => {
   if (pauseInterval !== null) clearInterval(pauseInterval)
+  if (starInterval !== null) clearInterval(starInterval)
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onEscape)
 })
@@ -543,7 +555,7 @@ const accumulatedChimes = computed(() => {
 
 // Während der Pause laufen Resource-Stars weiter: sie werden per Passivschaden
 // bekämpft und despawnen bei Timer-Ende. Hier live pro Stern: Restsekunden bis
-// zum Verschwinden + Planeten (übrig/gesamt). pauseTick treibt die 1s-Reaktivität.
+// zum Verschwinden + Planeten (übrig/gesamt).
 //
 // Die Restzeit kommt aus `starRemainingMs` — derselben Rechnung, die auch die
 // Star-Timer-Bars im Header anstellen. Vorher stand hier nur die eigene
@@ -562,13 +574,25 @@ interface PauseResourceStar {
   planets: { id: string; type: PlanetType; cleared: boolean }[]
 }
 
-const activeResourceStars = computed<PauseResourceStar[]>(() => {
-  void pauseTick.value
+/**
+ * Die Kartenliste ist KEIN computed, sondern ein Schnappschuss im
+ * Header-Bar-Takt (STAR_TIMER_TICK_MS). Zwei Gründe:
+ *
+ *  • Gleichlauf: die Bars tasten viermal je Sekunde ab. Ein 1-Sekunden-Takt im
+ *    Overlay traf die Sekundenwechsel in beliebiger Phase — beide zeigten
+ *    dieselbe Uhr, aber bis zu eine Sekunde versetzt.
+ *  • Ruhe: ein computed über `planetBossStore.activeBosses` rechnete bei JEDEM
+ *    Treffer des Passivschadens neu. Der Ticker liest ungetrackt (er läuft
+ *    außerhalb jedes Effekts) und schreibt nur, wenn sich etwas ABLESBARES
+ *    ändert — dieselbe Schlüssel-Logik wie beim Boss-Snapshot der Bars. Das
+ *    Panel rendert damit höchstens einmal je Sekunde neu, ist aber auf
+ *    250 ms genau.
+ */
+const activeResourceStars = shallowRef<PauseResourceStar[]>([])
+
+function buildResourceStars(): PauseResourceStar[] {
   const now = Date.now()
-  // Ungetrackt gelesen: die Bosse nehmen während der Pause laufend Passivschaden,
-  // ein reaktiver Zugriff ließe den ganzen Abschnitt bei jedem Treffer neu
-  // rendern. Getaktet wird ausschließlich über pauseTick (1 s).
-  const bosses = toRaw(planetBossStore.activeBosses)
+  const bosses = planetBossStore.activeBosses
   const bossTimer = (planetId: string) => bosses.find((b) => b.planetId === planetId)
 
   return starGroupStore.activeStars
@@ -593,7 +617,23 @@ const activeResourceStars = computed<PauseResourceStar[]>(() => {
     })
     .filter((s) => s.remainingPlanets > 0 && s.secs > 0)
     .sort((a, b) => a.secs - b.secs)
-})
+}
+
+/** Alles, was man der Kartenreihe ansieht — ändert es sich nicht, rendert nichts. */
+function resourceStarsKey(list: PauseResourceStar[]): string {
+  return list
+    .map((s) => `${s.id}:${s.secs}:${s.planets.map((p) => (p.cleared ? 1 : 0)).join('')}`)
+    .join('|')
+}
+
+let lastResourceStarsKey = ''
+function refreshResourceStars(): void {
+  const next = buildResourceStars()
+  const key = resourceStarsKey(next)
+  if (key === lastResourceStarsKey) return
+  lastResourceStarsKey = key
+  activeResourceStars.value = next
+}
 
 const timerChars = computed(() => {
   const { hours, minutes, seconds } = splitDuration(pauseTick.value)
