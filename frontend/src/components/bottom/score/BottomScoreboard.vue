@@ -221,28 +221,54 @@ function shortTime(totalSeconds: number): string {
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
 }
 
-const gameStateDisplay = computed(() => {
+/**
+ * The one part of the status line that changes while the line stands: a clock,
+ * a percentage. `budget` is the character pattern it is rendered into — see
+ * SCOREBOARD_CREST, where those patterns and the reason for them live.
+ */
+interface StatusNumber {
+  text: string
+  budget: string
+}
+
+interface GameStateDisplay {
+  label: string
+  num: StatusNumber
+  color: string
+}
+
+const gameStateDisplay = computed<GameStateDisplay | null>(() => {
   const { label, color, durationMs } = phaseConfig.value
+  const clock = (text: string, budget: string = SCOREBOARD_CREST.CLOCK_BUDGET): GameStateDisplay => ({
+    label,
+    color,
+    num: { text, budget },
+  })
   switch (phaseKey.value) {
-    case 'searching': {
+    case 'searching':
       // counts up to the search duration — the phase's own progress, clamped so
       // a late clock tick can never overshoot the window
-      const elapsed = Math.min(
-        Math.floor((durationMs ?? 0) / 1000),
-        Math.floor(elapsedMs.value / 1000),
+      return clock(
+        shortTime(
+          Math.min(Math.floor((durationMs ?? 0) / 1000), Math.floor(elapsedMs.value / 1000)),
+        ),
       )
-      return { text: `${label}${CREST_SEPARATOR}${shortTime(elapsed)}`, color }
-    }
     case 'loading':
       // counts down to the rift opening, same clock the loading screen shows
-      return { text: `${label}${CREST_SEPARATOR}${shortTime(remainingSeconds.value)}`, color }
+      return clock(shortTime(remainingSeconds.value))
     case 'battle':
-      // Spielzeit tickt in Minutenschritten (60x-Zeitraffer) — Sekunden wären Rauschen
-      return { text: `${label}${CREST_SEPARATOR}${Math.floor(battleTime.value / 60)}:00`, color }
+      /* Spielzeit tickt in Minutenschritten (60x-Zeitraffer) — Sekunden wären
+         Rauschen. Als einzige Phase läuft sie über 9 hinaus und bekommt daher
+         das breitere Raster; die Minuten stehen führend genullt darin, sonst
+         bliebe die erste Zelle eine knappe Stunde lang leer. */
+      return clock(
+        `${String(Math.floor(battleTime.value / 60)).padStart(2, '0')}:00`,
+        SCOREBOARD_CREST.CLOCK_BUDGET_BATTLE,
+      )
     case 'honor':
       // Countdown wie im Honor-Screen des Battle-Tabs: bei 0 beginnt die
       // nächste Planet-Search-Phase
-      return { text: `${label}${CREST_SEPARATOR}${shortTime(remainingSeconds.value)}`, color }
+      return clock(shortTime(remainingSeconds.value))
     default:
       return null
   }
@@ -262,7 +288,9 @@ const objectiveFightDisplay = computed(() => {
     return {
       name,
       icon: image,
-      text: `${name} ${won ? '✓' : '✗'}`,
+      // the verdict replaces the readout — nothing left that counts
+      label: `${name} ${won ? '✓' : '✗'}`,
+      num: null,
       color: won ? OBJECTIVE_FIGHT_STATUS.leadColor : OBJECTIVE_FIGHT_STATUS.behindColor,
       resolved: true,
     }
@@ -273,7 +301,8 @@ const objectiveFightDisplay = computed(() => {
   return {
     name,
     icon: image,
-    text: `${name}${CREST_SEPARATOR}${hpPct}%`,
+    label: name,
+    num: { text: `${hpPct}%`, budget: SCOREBOARD_CREST.OBJECTIVE_BUDGET },
     color: leading ? OBJECTIVE_FIGHT_STATUS.leadColor : OBJECTIVE_FIGHT_STATUS.behindColor,
     resolved: false,
   }
@@ -312,20 +341,66 @@ const hasLiveStatus = computed(
 )
 
 /**
- * What the status line says right now, and what leads it. A phase without its
- * own display (the landing screen) still announces the search — the crest never
- * shows an empty slot once the battle loop is live.
+ * The status line, whatever it currently is: objective fight, result badge or
+ * running phase. One shape for all three — the differences between them are the
+ * ornament that leads the line and whether it carries a counting number, and
+ * both are fields here rather than three near-identical branches in the
+ * template. A phase without its own display (the landing screen) still announces
+ * the search — the crest never shows an empty slot once the battle loop is live.
  */
-const liveStatus = computed(() => {
+interface LiveLine {
+  label: string
+  /** The part that counts, or null for a line that stands still. */
+  num: StatusNumber | null
+  color: string
+  /** Ornament leading the line — image wins over icon, dots are the fallback. */
+  image: string
+  icon: string
+  dots: boolean
+  /** true → the ornament pulses (something is happening right now). */
+  pulse: boolean
+  /** Non-empty → result badge: heavier weight and its own glow. */
+  glow: string
+}
+
+const EMPTY_ORNAMENT = { image: '', icon: '', dots: false, pulse: false, glow: '' }
+
+const liveStatus = computed<LiveLine>(() => {
+  const objective = objectiveFightDisplay.value
+  if (objective) {
+    return {
+      ...EMPTY_ORNAMENT,
+      label: objective.label,
+      num: objective.num,
+      color: objective.color,
+      image: objective.icon,
+      pulse: !objective.resolved,
+    }
+  }
+  const badge = resultBadge.value
+  if (badge) {
+    return { ...EMPTY_ORNAMENT, label: badge.text, num: null, color: badge.color, glow: badge.glow }
+  }
   const display = gameStateDisplay.value
   if (!display) {
-    return { text: BATTLE_PHASES.searching.label, color: BATTLE_PHASES.searching.color, glyph: null }
+    return {
+      ...EMPTY_ORNAMENT,
+      label: BATTLE_PHASES.searching.label,
+      num: null,
+      color: BATTLE_PHASES.searching.color,
+      dots: true,
+    }
   }
   // the search keeps its scan dots, every other phase leads with its own glyph
+  const icon = phaseKey.value === 'searching' ? null : phaseConfig.value.icon
   return {
-    text: display.text,
+    ...EMPTY_ORNAMENT,
+    label: display.label,
+    num: display.num,
     color: display.color,
-    glyph: phaseKey.value === 'searching' ? null : phaseConfig.value.icon,
+    icon: icon ?? '',
+    dots: !icon,
+    pulse: !!icon,
   }
 })
 
@@ -397,12 +472,9 @@ const statusBudget = computed(() => {
   /* The landing fallback announces the search and hands over to it a frame
      later — it is budgeted AS the search, clock included, so that handover
      does not resize the line for one frame. */
-  const label = gameStateDisplay.value ? phaseConfig.value.label : BATTLE_PHASES.searching.label
-  const clock =
-    phaseKey.value === 'battle'
-      ? SCOREBOARD_CREST.CLOCK_BUDGET_BATTLE
-      : SCOREBOARD_CREST.CLOCK_BUDGET
-  return `${label}${CREST_SEPARATOR}${clock}`
+  const display = gameStateDisplay.value
+  const label = display ? phaseConfig.value.label : BATTLE_PHASES.searching.label
+  return `${label}${CREST_SEPARATOR}${display?.num.budget ?? SCOREBOARD_CREST.CLOCK_BUDGET}`
 })
 
 /* What the crest has to hold: one line at a time, each with the ornament that
@@ -423,7 +495,7 @@ const crestSources = computed<{ title: ScoreboardCrestSource; status: Scoreboard
   }),
 )
 
-const { fit } = useScoreboardFit({
+const { fit, crestDigitEm } = useScoreboardFit({
   root: rootRef,
   probes: {
     value: probeValueRef,
@@ -486,7 +558,41 @@ const fitVars = computed(() => ({
   '--sb-crest-orn': px(fit.value.crestOrnamentSize),
   '--sb-crest-row-gap': px(fit.value.crestRowGap),
   '--sb-crest-band': px(fit.value.crestBand),
+  /* Width of one digit cell of the live clock, in em of the status line — so it
+     follows that line's size without a second measurement. */
+  '--sb-num-cell': `${crestDigitEm.value}em`,
 }))
+
+/* ── Standing numbers in a moving line ──
+   A clock inside the status line is the one string that changes while the line
+   stays: "0:05" → "0:04". MedievalSharp has no tabular figures, so the digits
+   are genuinely different widths and, in a centered line, every tick nudged the
+   word in front of it sideways. Fix: the number renders into the cell grid its
+   budget describes (SCOREBOARD_CREST) — digits in a cell as wide as the widest
+   digit, separators in their own width, right-aligned so a minute rolling over
+   fills a cell instead of shifting all of them. The label ahead of it therefore
+   sits at a fixed x for the whole phase. */
+const DIGIT = /\d/
+
+interface NumCell {
+  ch: string
+  digit: boolean
+  blank: boolean
+}
+
+/** true once the digit width is measured; until then the number stays plain
+ *  text — a grid of zero-width cells would collapse it. */
+const numGrid = computed(() => crestDigitEm.value > 0)
+
+function numCells(num: StatusNumber): NumCell[] {
+  return [...num.text.padStart(num.budget.length, ' ')].map((ch) => ({
+    /* A padding cell keeps a digit and only hides it: same line box as every
+       other cell, so the row cannot tilt on the empty ones. */
+    ch: ch === ' ' ? '0' : ch,
+    digit: ch === ' ' || DIGIT.test(ch),
+    blank: ch === ' ',
+  }))
+}
 
 /** flex-grow weight of one cell — its share of the half's width. */
 function cellStyle(key: string) {
@@ -590,45 +696,57 @@ const phaseProgressStyle = computed(() => ({
              und der Swap hängt bis zum 6s-Fallback-Timeout. -->
         <Transition name="crest-swap" mode="out-in" type="transition">
           <div v-if="hasLiveStatus" key="live" class="sb-crest-line sb-crest-line--live">
-            <template v-if="objectiveFightDisplay">
-              <img
-                :src="objectiveFightDisplay.icon"
-                alt=""
-                class="sb-crest-glyph"
-                :class="{ 'sb-status-icon--live': !objectiveFightDisplay.resolved }"
-              />
-              <span class="sb-live-text" :style="{ color: objectiveFightDisplay.color }">
-                {{ objectiveFightDisplay.text }}
-              </span>
-            </template>
-            <template v-else-if="resultBadge">
-              <span
-                class="sb-live-text sb-live-text--badge"
-                :style="{ color: resultBadge.color, '--live-glow': resultBadge.glow }"
-              >
-                {{ resultBadge.text }}
-              </span>
-            </template>
-            <template v-else>
-              <!-- every phase leads with its own registry glyph; the search,
-                   which is a phase of waiting, keeps its scan dots -->
-              <Icon
-                v-if="liveStatus.glyph"
-                :icon="liveStatus.glyph"
-                :width="crestGlyphPx"
-                :height="crestGlyphPx"
-                class="sb-crest-glyph sb-status-icon--live"
-                :style="{ color: liveStatus.color }"
-              />
-              <span v-else class="sb-scan-dots" aria-hidden="true">
-                <span class="sb-scan-dot" />
-                <span class="sb-scan-dot" />
-                <span class="sb-scan-dot" />
-              </span>
-              <span class="sb-live-text" :style="{ color: liveStatus.color }">
-                {{ liveStatus.text }}
-              </span>
-            </template>
+            <!-- Ornament: objective artwork, the phase's own registry glyph, or
+                 the scan dots the search waits with. The result badge leads with
+                 nothing — its glow is the ornament. -->
+            <img
+              v-if="liveStatus.image"
+              :src="liveStatus.image"
+              alt=""
+              class="sb-crest-glyph"
+              :class="{ 'sb-status-icon--live': liveStatus.pulse }"
+            />
+            <Icon
+              v-else-if="liveStatus.icon"
+              :icon="liveStatus.icon"
+              :width="crestGlyphPx"
+              :height="crestGlyphPx"
+              class="sb-crest-glyph"
+              :class="{ 'sb-status-icon--live': liveStatus.pulse }"
+              :style="{ color: liveStatus.color }"
+            />
+            <span v-else-if="liveStatus.dots" class="sb-scan-dots" aria-hidden="true">
+              <span class="sb-scan-dot" />
+              <span class="sb-scan-dot" />
+              <span class="sb-scan-dot" />
+            </span>
+
+            <span
+              class="sb-live-text"
+              :class="{ 'sb-live-text--badge': liveStatus.glow }"
+              :style="{ color: liveStatus.color, '--live-glow': liveStatus.glow || undefined }"
+            >
+              <span>{{ liveStatus.label }}</span>
+              <template v-if="liveStatus.num">
+                <!-- the separator keeps its spaces: the fit measured the line
+                     with exactly this string -->
+                <span class="sb-live-sep">{{ CREST_SEPARATOR }}</span>
+                <span v-if="numGrid" class="sb-live-num">
+                  <span
+                    v-for="(cell, i) in numCells(liveStatus.num)"
+                    :key="i"
+                    class="sb-live-num-cell"
+                    :class="{
+                      'sb-live-num-cell--digit': cell.digit,
+                      'sb-live-num-cell--blank': cell.blank,
+                    }"
+                    :aria-hidden="cell.blank || undefined"
+                    >{{ cell.ch }}</span
+                  >
+                </span>
+                <span v-else>{{ liveStatus.num.text }}</span>
+              </template>
+            </span>
           </div>
 
           <div
@@ -1066,6 +1184,11 @@ const phaseProgressStyle = computed(() => ({
 /* ── Live status in the title slot ── */
 .sb-live-text {
   /* size comes from .sb-crest-line--live — the fit measured this very string */
+  /* Three parts, not one string: label · separator · number. Only the last one
+     changes while the line stands, and it changes inside its own fixed grid
+     below — so the label keeps its x for the whole phase. */
+  display: flex;
+  align-items: center;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -1077,6 +1200,30 @@ const phaseProgressStyle = computed(() => ({
   text-shadow:
     0 1px 3px rgba(0, 0, 0, 0.9),
     0 0 14px currentcolor;
+}
+
+/* Its two spaces are the air between word and number — and the very string the
+   fit budgeted the line with, so measurement and rendering cannot drift. */
+.sb-live-sep {
+  white-space: pre;
+}
+
+/* ── The number's cell grid ──
+   One cell per character of the budget pattern. Digits get a fixed cell as wide
+   as the widest digit (--sb-num-cell, measured); ':' and '%' keep their own
+   width and never change anyway. Padding cells hold a hidden digit rather than
+   nothing, so every cell has the same line box. */
+.sb-live-num {
+  display: flex;
+  align-items: center;
+}
+.sb-live-num-cell--digit {
+  flex: 0 0 auto;
+  width: var(--sb-num-cell);
+  text-align: center;
+}
+.sb-live-num-cell--blank {
+  visibility: hidden;
 }
 
 .sb-live-text--badge {

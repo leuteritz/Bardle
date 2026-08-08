@@ -517,14 +517,27 @@ export const SCOREBOARD_CREST = {
    */
   PROGRESS_RESERVE_PX: 3,
   /**
-   * Widest clock the status line has to hold, per phase. The fit budgets for
-   * this instead of for the current tick, so a running countdown never resizes
-   * the line (tabular numerals — the digits themselves are all the same width).
+   * ── Die Zahlenfelder der Statuszeile ──
+   * Jedes dieser Muster ist zweierlei: die Breite, für die der Fit die
+   * SCHRIFTGRÖSSE budgetiert, UND das Zellenraster, in dem die Zahl gerendert
+   * wird — ein Zeichen des Musters ist eine Zelle (siehe `numCells` in
+   * BottomScoreboard). Ziffernzellen sind fest so breit wie die breiteste
+   * Ziffer, alles andere (`:`, `%`) behält seine natürliche Breite. Deshalb
+   * steht das Wort davor still, während die Uhr läuft: eine "1" ist in
+   * MedievalSharp schmaler als eine "8", der Font kennt kein `tnum`, und ohne
+   * Raster rückte das Label bei jedem Tick um den Unterschied zur Seite.
+   *
+   * Ziffernplatzhalter ist überall die `0` — in MedievalSharp die BREITESTE
+   * Ziffer (gemessen bei 100 px: `0` = 76,1 px, `1` = 42,7 px, `8` = 70,3 px).
+   * Damit ist die budgetierte Breite genau die Summe der Zellen, und der Fit
+   * wählt keine Schrift, die anschließend über ihren Kasten hinausrendert.
+   * Die Zahl steht rechtsbündig im Raster: `9:00` lässt in `00:00` die linke
+   * Zelle leer, und der Sprung auf `10:00` füllt sie, statt alles zu schieben.
    */
-  CLOCK_BUDGET: '8:88',
-  CLOCK_BUDGET_BATTLE: '88:88',
+  CLOCK_BUDGET: '0:00',
+  CLOCK_BUDGET_BATTLE: '00:00',
   /** Worst case of the objective readout ("Infernal · 100%"). */
-  OBJECTIVE_BUDGET: '100%',
+  OBJECTIVE_BUDGET: '000%',
   /**
    * The crest box never falls below this — MIN_PX on a desktop strip, the share
    * on anything narrower, where a fixed 340px would starve the ten stat cells.
