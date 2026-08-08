@@ -218,6 +218,20 @@ export interface ObjectiveFighter {
   abilityActiveUntil: number
   /** Timestamp (ms) when the ability can cast again */
   abilityCooldownUntil: number
+  /** Fight-HP restored to allies (Support's Mend) — the support's only visible output */
+  healingDone: number
+  /** Enemy damage pulled onto this fighter by its own Challenge (taunt), subset of damageTaken */
+  damageDiverted: number
+  /** Ability windows opened this fight */
+  casts: number
+}
+
+/** One sample of the cumulative damage race, taken every OBJECTIVE_TRACK_SAMPLE_MS. */
+export interface ObjectiveTrackSample {
+  /** Milliseconds since fight start */
+  t: number
+  own: number
+  enemy: number
 }
 
 export interface KillFeedEntry {

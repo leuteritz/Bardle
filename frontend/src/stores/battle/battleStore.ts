@@ -62,6 +62,9 @@ import {
   OBJECTIVE_FIGHTER_WEIGHT_MAX,
   OBJECTIVE_MAX_DURATION_MS,
   OBJECTIVE_RESULT_DELAY_MS,
+  OBJECTIVE_TRACK_SAMPLE_MS,
+  OBJECTIVE_TRACK_MAX_SAMPLES,
+  OBJECTIVE_LEAD_CHANGE_MARGIN,
   OBJECTIVE_ROLE_MAX_HP,
   OBJECTIVE_AOE_DPS_DRAKE,
   OBJECTIVE_AOE_DPS_BARON,
@@ -127,6 +130,7 @@ import type {
   KillFeedEntry,
   LiveBattleStats,
   ObjectiveFighter,
+  ObjectiveTrackSample,
   ObjectiveOverride,
   RecruitableChampion,
   StructureFeedEntry,
@@ -412,9 +416,29 @@ export const useBattleStore = defineStore('battle', {
     objectiveCurseStacks: { own: 1, enemy: 1 } as { own: number; enemy: number },
     /** How long the resolved fight ran (ms) — shown in the post-fight summary */
     objectiveFightDurationMs: 0,
+    // ── Post-fight telemetry (transient; feeds the result screen only) ──
+    /** Cumulative damage per side, sampled through the fight — the result graph */
+    objectiveDamageTrack: [] as ObjectiveTrackSample[],
+    /** How often the damage lead actually swapped sides (margin-filtered) */
+    objectiveLeadChanges: 0,
+    /** Player clicks landed on the pit — the count behind objectivePlayerDamage */
+    objectiveClickCount: 0,
+    /** Best single-sample DPS each side reached */
+    objectivePeakDps: { own: 0, enemy: 0 } as { own: number; enemy: number },
+    /** Player's own best click rate (clicks/s over one sample window) */
+    objectivePeakClickRate: 0,
     _objectiveCloseTimeoutId: null as ReturnType<typeof setTimeout> | null,
     _objectiveIntervalId: null as ReturnType<typeof setInterval> | null,
     _objAbilityAccumMs: 0,
+    /** Sampler bookkeeping for objectiveDamageTrack */
+    _objTrackAccumMs: 0,
+    _objTrackPrev: { own: 0, enemy: 0, clicks: 0 } as {
+      own: number
+      enemy: number
+      clicks: number
+    },
+    /** Which side led at the last sample: 0 = tied/undecided */
+    _objTrackLead: 0 as -1 | 0 | 1,
     battlePhaseStartTimestamp: 0,
     resultPhaseStartTimestamp: 0,
     searchingPhaseStartTimestamp: 0,
@@ -941,7 +965,11 @@ export const useBattleStore = defineStore('battle', {
         }
         case 'fightStart': {
           if (e.location) {
-            this.activeFights.push({ x: e.location.x, y: e.location.y, until: e.t + BATTLE_FIGHT_MARKER_DURATION_T })
+            this.activeFights.push({
+              x: e.location.x,
+              y: e.location.y,
+              until: e.t + BATTLE_FIGHT_MARKER_DURATION_T,
+            })
           }
           break
         }
@@ -2120,6 +2148,7 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveCurseStacks = { own: 1, enemy: 1 }
       this.objectiveFightDurationMs = 0
       this._objAbilityAccumMs = 0
+      this._resetObjectiveTelemetry()
 
       this._objectiveIntervalId = setInterval(() => {
         if (!this.objectiveModalOpen || this.objectiveResult !== null) return
@@ -2132,6 +2161,7 @@ export const useBattleStore = defineStore('battle', {
         this.objectiveEnemyDamage += enemyTick
         this.objectiveHP = Math.max(0, this.objectiveHP - ownTick - enemyTick)
         this._runFightAbilityTick()
+        this._sampleObjectiveTrack()
         if (
           this.objectiveHP <= 0 ||
           Date.now() - this.objectiveFightStartMs >= OBJECTIVE_MAX_DURATION_MS
@@ -2139,6 +2169,88 @@ export const useBattleStore = defineStore('battle', {
           this._resolveByDamageLead()
         }
       }, OBJECTIVE_DPS_TICK_MS)
+    },
+
+    /**
+     * Final sample at the moment of resolution. Without it the graph stops at
+     * the last 500ms mark and the curve misses exactly the burst that ended the
+     * fight — the one moment the player wants to see.
+     */
+    _closeObjectiveTrack() {
+      const t = this.objectiveFightDurationMs
+      const last = this.objectiveDamageTrack[this.objectiveDamageTrack.length - 1]
+      if (
+        last &&
+        last.own === this.objectiveOwnDamage &&
+        last.enemy === this.objectiveEnemyDamage
+      ) {
+        return
+      }
+      this.objectiveDamageTrack.push({
+        t,
+        own: this.objectiveOwnDamage,
+        enemy: this.objectiveEnemyDamage,
+      })
+    },
+
+    /** Clears everything the result screen reads, before a new fight starts writing it. */
+    _resetObjectiveTelemetry() {
+      this.objectiveDamageTrack = []
+      this.objectiveLeadChanges = 0
+      this.objectiveClickCount = 0
+      this.objectivePeakDps = { own: 0, enemy: 0 }
+      this.objectivePeakClickRate = 0
+      this._objTrackAccumMs = 0
+      this._objTrackPrev = { own: 0, enemy: 0, clicks: 0 }
+      this._objTrackLead = 0
+    },
+
+    /**
+     * One sample of the damage race, taken every OBJECTIVE_TRACK_SAMPLE_MS.
+     * Records the cumulative totals for the result graph and derives the
+     * per-window rates from the delta to the previous sample — a "peak DPS"
+     * read off the running average would only ever show the average.
+     */
+    _sampleObjectiveTrack() {
+      this._objTrackAccumMs += OBJECTIVE_DPS_TICK_MS
+      if (this._objTrackAccumMs < OBJECTIVE_TRACK_SAMPLE_MS) return
+      const windowS = this._objTrackAccumMs / 1000
+      this._objTrackAccumMs = 0
+
+      const own = this.objectiveOwnDamage
+      const enemy = this.objectiveEnemyDamage
+      const prev = this._objTrackPrev
+
+      this.objectivePeakDps = {
+        own: Math.max(this.objectivePeakDps.own, (own - prev.own) / windowS),
+        enemy: Math.max(this.objectivePeakDps.enemy, (enemy - prev.enemy) / windowS),
+      }
+      this.objectivePeakClickRate = Math.max(
+        this.objectivePeakClickRate,
+        (this.objectiveClickCount - prev.clicks) / windowS,
+      )
+      this._objTrackPrev = { own, enemy, clicks: this.objectiveClickCount }
+
+      // Lead only counts as changed once one side clears the other by a margin —
+      // otherwise two near-identical curves trade the lead on every sample.
+      const total = own + enemy
+      if (total > 0) {
+        const margin = total * OBJECTIVE_LEAD_CHANGE_MARGIN
+        const lead: -1 | 0 | 1 = own - enemy > margin ? 1 : enemy - own > margin ? -1 : 0
+        if (lead !== 0) {
+          if (this._objTrackLead !== 0 && lead !== this._objTrackLead)
+            this.objectiveLeadChanges += 1
+          this._objTrackLead = lead
+        }
+      }
+
+      if (this.objectiveDamageTrack.length < OBJECTIVE_TRACK_MAX_SAMPLES) {
+        this.objectiveDamageTrack.push({
+          t: Date.now() - this.objectiveFightStartMs,
+          own,
+          enemy,
+        })
+      }
     },
 
     /**
@@ -2157,14 +2269,18 @@ export const useBattleStore = defineStore('battle', {
           const duration = OBJECTIVE_ABILITY_DURATION_S[f.role] * 1000
           f.abilityActiveUntil = now + duration
           f.abilityCooldownUntil = f.abilityActiveUntil + OBJECTIVE_ABILITY_CD_S[f.role] * 1000
+          f.casts += 1
           if (f.role === 'support') {
             const standing = fighters.filter((x) => this._isStanding(x))
             if (standing.length > 0) {
               const wounded = standing.reduce((low, x) => (x.fightHp < low.fightHp ? x : low))
+              // Credit only what actually landed — a heal into a full bar is not output.
+              const before = wounded.fightHp
               wounded.fightHp = Math.min(
                 wounded.fightMaxHp,
                 wounded.fightHp + OBJECTIVE_SUPPORT_MEND_HEAL,
               )
+              f.healingDone += wounded.fightHp - before
             }
           }
           if (f.role === 'jungle') {
@@ -2228,6 +2344,9 @@ export const useBattleStore = defineStore('battle', {
           // full damage diverted onto the challenging top laner
           opposingTop!.fightHp = Math.max(0, opposingTop!.fightHp - contrib)
           opposingTop!.damageTaken += contrib
+          // Tracked apart from damageTaken: this share is damage the top PULLED
+          // off the pit, which is the whole point of Challenge — boss AoE isn't.
+          opposingTop!.damageDiverted += contrib
           continue
         }
         f.damage += contrib
@@ -2300,6 +2419,9 @@ export const useBattleStore = defineStore('battle', {
             fightMaxHp: maxHp,
             down: false,
             damageTaken: 0,
+            healingDone: 0,
+            damageDiverted: 0,
+            casts: 0,
             abilityActiveUntil: 0,
             // staggered first casts so the pit doesn't fire everything at once
             abilityCooldownUntil: Date.now() + OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S[role] * 1000,
@@ -2344,6 +2466,7 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveHP = Math.max(0, this.objectiveHP - clickDamage)
       this.objectiveOwnDamage += clickDamage
       this.objectivePlayerDamage += clickDamage
+      this.objectiveClickCount += 1
       if (this.objectiveHP <= 0) {
         this._resolveByDamageLead()
       }
@@ -2382,6 +2505,7 @@ export const useBattleStore = defineStore('battle', {
       }
       this.objectiveResult = by
       this.objectiveFightDurationMs = Date.now() - this.objectiveFightStartMs
+      this._closeObjectiveTrack()
       const objective = this.activeObjective
       if (!objective) return
       const ownWin = by === 'player' || by === 'own'
@@ -2440,6 +2564,7 @@ export const useBattleStore = defineStore('battle', {
       }
       this.objectiveResult = by
       this.objectiveFightDurationMs = Date.now() - this.objectiveFightStartMs
+      this._closeObjectiveTrack()
       this.objectiveWinDelta = 0
       const closeTimeoutId = setTimeout(() => {
         this._closeObjectiveModalAndResume()
@@ -2487,6 +2612,7 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveCurseDamage = { own: 0, enemy: 0 }
       this.objectiveCurseStacks = { own: 1, enemy: 1 }
       this._objAbilityAccumMs = 0
+      this._resetObjectiveTelemetry()
       this._objectiveCloseTimeoutId = null
       this.objectiveModalOpen = false
       this.objectiveResult = null

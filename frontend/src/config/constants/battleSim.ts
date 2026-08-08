@@ -209,8 +209,38 @@ export const OBJECTIVE_ROLE_ABILITIES = {
 
 /** Hard cap on the frozen-time objective fight; resolves by damage lead */
 export const OBJECTIVE_MAX_DURATION_MS = 20000
-/** Post-fight summary display time — dismissible early via the X button */
-export const OBJECTIVE_RESULT_DELAY_MS = 6000
+/** Post-fight summary display time — dismissible early via the X button.
+    Raised with the full scoreboard: 6s was not enough to read ten rows plus the graph. */
+export const OBJECTIVE_RESULT_DELAY_MS = 10000
+
+// ── Post-fight telemetry: the damage graph on the result screen ────────────
+/**
+ * Sampling cadence of the cumulative damage track. At 500ms a 20s fight yields
+ * 40 points — enough for a readable curve, few enough that the whole track is a
+ * plain array the summary can path in one pass.
+ */
+export const OBJECTIVE_TRACK_SAMPLE_MS = 500
+/** Safety cap on stored samples; a fight can never exceed this at the cadence above. */
+export const OBJECTIVE_TRACK_MAX_SAMPLES = 64
+/**
+ * A side must clear the other by this fraction of the running total before the
+ * lead counts as changed — without it, two near-identical curves would trade
+ * "lead changes" on every sample and the number would be noise.
+ */
+export const OBJECTIVE_LEAD_CHANGE_MARGIN = 0.02
+
+// ── Result screen geometry (the SVG graph is drawn in JS, so it needs numbers) ──
+/** viewBox of the damage-history graph — CSS scales it, the aspect stays. */
+export const OBJECTIVE_GRAPH_VIEW_W = 800
+export const OBJECTIVE_GRAPH_VIEW_H = 150
+/** Inner padding of the graph so the curve never touches the frame. */
+export const OBJECTIVE_GRAPH_PAD_X = 4
+export const OBJECTIVE_GRAPH_PAD_TOP = 8
+export const OBJECTIVE_GRAPH_PAD_BOTTOM = 4
+/** Horizontal gridlines behind the curves. */
+export const OBJECTIVE_GRAPH_GRID_LINES = 4
+/** Awards shown as a badge on a scoreboard row — at most this many per side. */
+export const OBJECTIVE_RESULT_MAX_BADGES_PER_ROW = 2
 /** Bottom-bar game-state stat display during a frozen-time objective fight */
 // Die Bilder stehen nur im Crest der Bottom-Bar, dort mit der Statuszeile
 // mitwachsend bis ~40px (4K) — laut Auflösungsvarianten-Regel also -256.

@@ -6,6 +6,11 @@
         <!-- Gold accent bar -->
         <div class="accent-bar" />
 
+        <!-- The whole fight is unmounted once the objective resolves: the arena
+             carries a blurred aura, two spinning rune rings, six embers and a
+             breathing boss sprite, all infinite animations. Leaving them running
+             under a summary nobody can see through cost frames for nothing. -->
+        <template v-if="!resolved">
         <!-- Spawn banner header with instant-resolve buttons -->
         <div class="obj-header">
           <button
@@ -387,11 +392,10 @@
             <span v-else class="race-caption-idle">Most total damage secures it — no steals!</span>
           </div>
         </div>
+        </template>
 
-        <!-- Post-fight summary overlay -->
-        <Transition name="result-pop">
-          <ObjectiveResultSummary v-if="battleStore.objectiveResult !== null" />
-        </Transition>
+        <!-- Post-fight summary — takes the fight's place inside the same shell -->
+        <ObjectiveResultSummary v-else />
       </div>
     </div>
   </Transition>
@@ -447,6 +451,8 @@ const BARON_THEME = BARON_BUFF
 const battleStore = useBattleStore()
 
 const show = computed(() => battleStore.objectiveModalOpen || battleStore.objectiveResult !== null)
+/** The fight is over and the summary holds the shell — nothing below it should still tick. */
+const resolved = computed(() => battleStore.objectiveResult !== null)
 const isDrake = computed(() => battleStore.activeObjective === 'drake')
 
 const drakeDef = computed(() => DRAKE_TYPES[battleStore.activeDrakeType ?? 'infernal'])
@@ -1052,7 +1058,14 @@ function displayedDamage(f: ObjectiveFighter, side: 'own' | 'enemy'): number {
   return Math.round(shownDamage.value[side + f.idx] ?? 0)
 }
 
-watch(show, (v) => (v ? _startFloatScheduler() : _stopFloatScheduler()), { immediate: true })
+/* The scheduler also drives `nowMs`, which every ability window and cooldown
+   reads — leaving it running after the resolve would re-render the (unmounted)
+   fight's dependents ten times a second for nothing. */
+watch(
+  [show, resolved],
+  ([v, done]) => (v && !done ? _startFloatScheduler() : _stopFloatScheduler()),
+  { immediate: true },
+)
 onUnmounted(_stopFloatScheduler)
 </script>
 
@@ -2215,17 +2228,6 @@ onUnmounted(_stopFloatScheduler)
 .obj-pop-leave-to {
   opacity: 0;
   transform: scale(0.9);
-}
-
-.result-pop-enter-active {
-  transition: opacity 0.2s ease;
-}
-.result-pop-leave-active {
-  transition: opacity 0.15s ease;
-}
-.result-pop-enter-from,
-.result-pop-leave-to {
-  opacity: 0;
 }
 
 /* ── Keyframes ───────────────────────────────────────────────────────────── */
