@@ -259,7 +259,7 @@ function buyAllUpgrades() {
     <template v-else-if="kind === 'planet'">
       <div class="bt__title">Orbit Upgrades</div>
       <button class="pu-tt__buyall" @click.stop="buyAllUpgrades">
-        <Icon icon="game-icons:upgrade" width="15" height="15" />
+        <Icon icon="ph:arrow-fat-up-fill" width="15" height="15" />
         Buy All
         <span class="pu-tt__buyall-count">{{ planetLevelCount }}</span>
       </button>
@@ -290,7 +290,7 @@ function buyAllUpgrades() {
             :aria-label="`Level up ${slot.name} ${slot.count} time${slot.count === 1 ? '' : 's'}`"
             @click.stop="levelUpMax(slot.id)"
           >
-            <Icon icon="game-icons:upgrade" width="14" height="14" />
+            <Icon icon="ph:arrow-fat-up-fill" width="14" height="14" />
             Level Up ×{{ slot.count }}
           </button>
         </li>

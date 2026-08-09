@@ -19,7 +19,7 @@
               <div class="feed-item">
                 <span class="feed-name" :class="row.kill.killerTeam === 1 ? 'feed-name--blue' : 'feed-name--red'">{{ row.kill.killerName }}</span>
                 <img :src="feedImg(row.kill.killerName, row.kill.killerTeam)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
-                <Icon icon="game-icons:saber-slash" width="16" height="16" class="feed-star" />
+                <Icon icon="ph:sword-fill" width="16" height="16" class="feed-star" />
                 <template v-if="row.kill.multikillTier">
                   <img
                     v-for="k in multikillChain(row.kill)"
@@ -75,7 +75,7 @@
           <span class="bar-time">{{ formatFeedTime(row.t) }}</span>
           <div v-if="row.type === 'kill'" class="feed-item">
             <img :src="feedImg(row.kill.killerName, row.kill.killerTeam)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
-            <Icon icon="game-icons:saber-slash" width="20" height="20" class="feed-star" />
+            <Icon icon="ph:sword-fill" width="20" height="20" class="feed-star" />
             <template v-if="row.kill.multikillTier">
               <img
                 v-for="k in multikillChain(row.kill)"

@@ -200,7 +200,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
             <Icon
               v-if="g.starIcon"
               class="sf-gauge-sub-ico"
-              icon="game-icons:round-star"
+              icon="ph:star-fill"
               width="11"
               height="11"
             />

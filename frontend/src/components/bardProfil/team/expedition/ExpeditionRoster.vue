@@ -81,7 +81,7 @@ function roleImg(role: ChampionRole): string {
         </div>
         <Icon
           v-if="r.away"
-          icon="game-icons:camping-tent"
+          icon="ph:tent-fill"
           width="13"
           height="13"
           class="ers-away-ico"

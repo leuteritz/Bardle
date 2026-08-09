@@ -96,7 +96,7 @@ const chanceLines = computed(() => {
     out.push({
       id: 'hazards',
       label: hazardCount === 1 ? 'Hazard' : 'Hazards',
-      icon: 'game-icons:hazard-sign',
+      icon: 'ph:warning-fill',
       value: hazardTotal,
       detail: `${hazardsMet} of ${hazardCount} met`,
     })
@@ -236,7 +236,7 @@ function formatCountdown(ms: number): string {
         {{ $formatNumber(offer.baseReward) }}
       </span>
       <span v-if="spoils.materialRolls > 0" class="ecc-spoil">
-        <Icon icon="game-icons:crystal-cluster" width="16" height="16" />
+        <Icon icon="ph:diamonds-four-fill" width="16" height="16" />
         {{ spoils.materialRolls }} material{{ spoils.materialRolls === 1 ? '' : 's' }}
       </span>
       <span v-if="spoils.meep > 0" class="ecc-spoil">
@@ -308,7 +308,7 @@ function formatCountdown(ms: number): string {
       </div>
       <ul class="ecc-lines">
         <li class="ecc-line">
-          <Icon icon="game-icons:dice-six-faces-three" width="13" height="13" class="ecc-line-ico" />
+          <Icon icon="ph:dice-three-fill" width="13" height="13" class="ecc-line-ico" />
           <span class="ecc-line-label">Base odds</span>
           <span class="ecc-line-value">{{ Math.round(breakdown.base * 100) }}</span>
         </li>
@@ -326,7 +326,7 @@ function formatCountdown(ms: number): string {
       </ul>
     </div>
     <div v-else class="ecc-incomplete">
-      <Icon icon="game-icons:hazard-sign" width="15" height="15" />
+      <Icon icon="ph:warning-fill" width="15" height="15" />
       Fill every seat to see the odds
     </div>
 
@@ -349,7 +349,7 @@ function formatCountdown(ms: number): string {
         "
         @click.stop="emit('send', offer)"
       >
-        <Icon icon="game-icons:camping-tent" width="16" height="16" />
+        <Icon icon="ph:tent-fill" width="16" height="16" />
         Send
       </button>
     </footer>

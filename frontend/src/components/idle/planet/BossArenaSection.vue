@@ -63,7 +63,7 @@
               class="champ-avatar"
               @error="($event.target as HTMLImageElement).style.display = 'none'"
             />
-            <div class="champ-dmg"><Icon icon="game-icons:two-handed-sword" width="14" height="14" style="color: #cc6050; vertical-align: middle" /> {{ championDamage ?? 1 }}</div>
+            <div class="champ-dmg"><Icon icon="ph:sword-fill" width="14" height="14" style="color: #cc6050; vertical-align: middle" /> {{ championDamage ?? 1 }}</div>
           </div>
         </div>
       </div>

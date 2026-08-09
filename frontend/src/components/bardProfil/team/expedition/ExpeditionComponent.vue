@@ -233,7 +233,7 @@ function formatCountdown(ms: number): string {
         aria-label="Force spawn expedition (dev)"
         @click.stop="expeditionStore.forceSpawn()"
       >
-        <Icon icon="game-icons:lightning-arc" width="12" height="12" />
+        <Icon icon="ph:lightning-fill" width="12" height="12" />
         Spawn
       </button>
 
@@ -261,7 +261,7 @@ function formatCountdown(ms: number): string {
             aria-label="Collect all completed expeditions"
             @click.stop="collectAll"
           >
-            <Icon icon="game-icons:chest" width="15" height="15" />
+            <Icon icon="ph:treasure-chest-fill" width="15" height="15" />
             Collect all
             <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" />
           </button>
@@ -286,7 +286,7 @@ function formatCountdown(ms: number): string {
           </TransitionGroup>
 
           <div v-if="activeCount === 0" class="ec-empty">
-            <Icon icon="game-icons:camping-tent" width="34" height="34" class="ec-empty-ico" />
+            <Icon icon="ph:tent-fill" width="34" height="34" class="ec-empty-ico" />
             <span class="ec-empty-title">Nobody is out there</span>
             <span class="ec-empty-sub">Send a crew from the contracts beside this</span>
           </div>
@@ -306,7 +306,7 @@ function formatCountdown(ms: number): string {
             aria-label="Send every crewed contract"
             @click.stop="sendAll"
           >
-            <Icon icon="game-icons:camping-tent" width="15" height="15" />
+            <Icon icon="ph:tent-fill" width="15" height="15" />
             Send all
           </button>
         </header>

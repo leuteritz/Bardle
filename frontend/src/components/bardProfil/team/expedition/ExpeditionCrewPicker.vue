@@ -122,7 +122,7 @@ function roleColor(role: ChampionRole): string {
             {{ c.origin }}
           </span>
           <span v-if="!c.matches" class="ecp-offrole" title="Does not play this role">
-            <Icon icon="game-icons:split-arrows" width="13" height="13" />
+            <Icon icon="ph:warning-diamond-fill" width="13" height="13" />
           </span>
           <span class="ecp-lvl">Lv {{ c.level }}</span>
           <span class="ecp-power">{{ c.power }}</span>

@@ -149,7 +149,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
       </div>
       <template v-if="!planet.purchased">
         <span class="ps-slot-phase-badge">
-          <Icon icon="game-icons:sun" width="16" height="16" />
+          <Icon icon="ph:sun-fill" width="16" height="16" />
           Phase {{ requiredPhase }}
         </span>
       </template>

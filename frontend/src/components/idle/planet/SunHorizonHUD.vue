@@ -33,7 +33,7 @@
     <!-- HP direkt über dem Kamm — nur xx / yy, mittig über der Kuppel -->
     <div class="sfsun-hp">
       <div class="sfsun-hp-head">
-        <Icon icon="game-icons:hearts" width="15" height="15" class="sfsun-hp-icon" />
+        <Icon icon="ph:heart-fill" width="15" height="15" class="sfsun-hp-icon" />
         <span class="sfsun-hp-value">
           {{ formatNumber(Math.ceil(playerStore.currentHP)) }}
           <span class="sfsun-hp-sep">/</span>

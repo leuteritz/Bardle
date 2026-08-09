@@ -21,7 +21,7 @@
         :title="`${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`"
         @click="showDomain('champions')"
       >
-        <Icon icon="game-icons:crested-helmet" width="22" height="22" class="cs-jump-icon" />
+        <Icon icon="ph:users-three-fill" width="22" height="22" class="cs-jump-icon" />
         Champions
         <span class="cs-jump-count">{{ reachableChampionCount }}</span>
       </button>
@@ -33,7 +33,7 @@
         :title="`${visibleItemsCount} item(s) on offer under the current filters`"
         @click="showDomain('items')"
       >
-        <Icon icon="game-icons:light-backpack" width="22" height="22" class="cs-jump-icon" />
+        <Icon icon="ph:backpack-fill" width="22" height="22" class="cs-jump-icon" />
         Items
         <span class="cs-jump-count">{{ visibleItemsCount }}</span>
       </button>
@@ -357,7 +357,7 @@
         </div>
         <p class="empty-label">No champions found.</p>
         <button v-if="visibleItemsCount > 0" class="cs-empty-jump" @click="showDomain('items')">
-          <Icon icon="game-icons:light-backpack" width="16" height="16" />
+          <Icon icon="ph:backpack-fill" width="16" height="16" />
           {{ visibleItemsCount }} matching item{{ visibleItemsCount === 1 ? '' : 's' }}
           <span class="cs-empty-jump-arrow">→</span>
         </button>
@@ -495,7 +495,7 @@
           class="cs-empty-jump"
           @click="showDomain('champions')"
         >
-          <Icon icon="game-icons:crested-helmet" width="16" height="16" />
+          <Icon icon="ph:users-three-fill" width="16" height="16" />
           {{ reachableChampionCount }} matching champion{{ reachableChampionCount === 1 ? '' : 's' }}
           <span class="cs-empty-jump-arrow">→</span>
         </button>

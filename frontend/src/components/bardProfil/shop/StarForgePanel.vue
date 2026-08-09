@@ -100,7 +100,7 @@
       <!-- Active blessings — running bargain buffs with countdown -->
       <div v-if="activeBuffs.length > 0" class="blessing-row">
         <div v-for="buff in activeBuffs" :key="buff.id" class="blessing-chip">
-          <Icon icon="game-icons:magic-swirl" width="14" height="14" class="blessing-icon" />
+          <Icon icon="ph:sparkle-fill" width="14" height="14" class="blessing-icon" />
           <span class="blessing-name">{{ buffLabel(buff.id) }}</span>
           <span class="blessing-time">{{ formatClock(buff.expiresAt - forgeStore.forgeNow) }}</span>
         </div>
@@ -270,7 +270,7 @@
               </button>
             </template>
             <button class="reroll-btn" :disabled="!forgeStore.canRerollBargain" @click="handleReroll">
-              <Icon icon="game-icons:card-exchange" width="14" height="14" />
+              <Icon icon="ph:arrows-clockwise-bold" width="14" height="14" />
               Reroll · {{ FORGE_BARGAIN_REROLL_COST }}
               <img v-if="rerollMatImage" :src="rerollMatImage" class="cost-img" alt="Dark Matter" />
             </button>

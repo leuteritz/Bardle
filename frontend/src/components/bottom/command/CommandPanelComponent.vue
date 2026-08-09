@@ -203,7 +203,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
                 class="cmd-eclipse-medal"
                 title="Behind the Sun — combat paused"
               >
-                <Icon icon="game-icons:eclipse-flare" width="16" height="16" />
+                <Icon icon="ph:moon-fill" width="16" height="16" />
               </div>
             </template>
 

@@ -1,25 +1,72 @@
 <!doctype html>
 <html>
-  <body style="background: #111008; color: #e8c040; font: 14px monospace">
+  <head>
+    <meta charset="utf-8" />
+    <title>Icon-Check</title>
+  </head>
+  <body style="background: #111008; color: #e8c040; font: 13px monospace; margin: 0; padding: 12px">
+    <!--
+      Prüft Iconify-Namen aus JEDEM Set — der Browser lädt sie über dieselbe
+      API, aus der das Spiel zur Laufzeit liest. Ersetzt die frühere lokale
+      `gameicons.txt`, die nur ein einziges Set abdeckte.
+
+      Aufruf (Namen als JSON-Array ODER kommagetrennt):
+        /dev/icon-check.html?icons=["ph:sword-fill","lucide:lock"]
+        /dev/icon-check.html?icons=ph:sword-fill,lucide:lock
+
+      Ergebnis steht als JSON in `window.__result` ({ total, missing }) und als
+      Kontaktbogen auf der Seite: fehlende Namen sind rot umrandet. Der Bogen
+      zeigt jedes Icon in 16 px und 40 px — die kleine Stufe entscheidet, ob ein
+      Glyph in einer Chip-Zeile noch lesbar ist.
+    -->
     <div id="out">loading…</div>
+    <div id="sheet" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px"></div>
     <script type="module">
-      import { loadIcons, iconLoaded } from '@iconify/vue'
+      import { loadIcons, iconLoaded, Icon } from '@iconify/vue'
+      import { createApp, h } from 'vue'
 
-      const names = JSON.parse(
-        new URLSearchParams(location.search).get('icons') ?? '[]',
-      )
+      const raw = new URLSearchParams(location.search).get('icons') ?? '[]'
+      const names = raw.trim().startsWith('[')
+        ? JSON.parse(raw)
+        : raw.split(',').map((s) => s.trim()).filter(Boolean)
 
-      loadIcons(names, () => {
+      function render() {
         const missing = names.filter((n) => !iconLoaded(n))
         window.__result = { total: names.length, missing }
         document.getElementById('out').textContent = JSON.stringify(window.__result)
-      })
+
+        const sheet = document.getElementById('sheet')
+        sheet.innerHTML = ''
+        for (const name of names) {
+          const cell = document.createElement('div')
+          const bad = missing.includes(name)
+          cell.style.cssText = `width:132px;text-align:center;padding:6px 2px;background:#1c1c18;
+            border:1px solid ${bad ? '#cc6050' : '#3e200a'};border-radius:4px`
+          const art = document.createElement('div')
+          cell.appendChild(art)
+          const label = document.createElement('div')
+          label.textContent = name
+          label.style.cssText = `font-size:9px;color:${bad ? '#cc6050' : '#8a8578'};word-break:break-all;margin-top:4px`
+          cell.appendChild(label)
+          sheet.appendChild(cell)
+          if (!bad) {
+            createApp({
+              render: () =>
+                h('div', { style: 'display:flex;gap:8px;align-items:center;justify-content:center;color:#d8d2c0' }, [
+                  h(Icon, { icon: name, width: 16, height: 16 }),
+                  h(Icon, { icon: name, width: 40, height: 40 }),
+                ]),
+            }).mount(art)
+          }
+        }
+      }
+
+      loadIcons(names, render)
       // Fallback, falls der Callback nie feuert (kein Netz o. Ä.)
       setTimeout(() => {
         if (!window.__result) {
-          const missing = names.filter((n) => !iconLoaded(n))
-          window.__result = { total: names.length, missing, timedOut: true }
-          document.getElementById('out').textContent = JSON.stringify(window.__result)
+          render()
+          window.__result.timedOut = true
         }
       }, 15000)
     </script>

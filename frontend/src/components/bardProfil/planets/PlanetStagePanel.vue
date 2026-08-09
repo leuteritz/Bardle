@@ -458,7 +458,7 @@ const configTarget = computed(() => {
             <template v-if="down">Back in {{ downSecsLeft }}s</template>
             <template v-else-if="orbitBehind">Out of reach</template>
             <template v-else-if="levelUpReason === 'phase'">
-              <Icon icon="game-icons:sun" width="16" height="16" class="ps-level-req-icon" />
+              <Icon icon="ph:sun-fill" width="16" height="16" class="ps-level-req-icon" />
               Requires Phase {{ levelUpReqPhase }}
             </template>
             <template v-else>

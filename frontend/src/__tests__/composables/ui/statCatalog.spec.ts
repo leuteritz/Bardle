@@ -3,7 +3,6 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { useStatCatalog } from '@/composables/ui/useStatCatalog'
 import { STAT_CATEGORIES } from '@/config/ui/statCategories'
-import { isValidIcon } from '@/utils/game/iconUtils'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGameStore } from '@/stores/core/gameStore'
 
@@ -15,10 +14,11 @@ describe('statCategories — definitions', () => {
     expect(new Set(icons).size).toBe(icons.length)
   })
 
-  it('only uses existing game-icons', () => {
+  // Das Set ist frei wählbar — prüfbar bleibt offline nur, dass eines genannt
+  // ist. Ohne Präfix lädt @iconify/vue nichts und die Kachel bleibt leer.
+  it('every icon names its set', () => {
     for (const cat of STAT_CATEGORIES) {
-      expect(cat.icon.startsWith('game-icons:'), `${cat.id} misses the set prefix`).toBe(true)
-      expect(isValidIcon(cat.icon), `${cat.icon} is not in gameicons.txt`).toBe(true)
+      expect(/^[a-z][a-z0-9-]*:[a-z0-9-]+$/.test(cat.icon), `${cat.id} → "${cat.icon}"`).toBe(true)
     }
   })
 })

@@ -200,7 +200,7 @@
 
           <!-- The boss claws every standing fighter each second -->
           <div class="boss-aoe" title="The objective strikes every standing fighter each second">
-            <Icon icon="game-icons:claw-slashes" width="12" height="12" class="boss-aoe-icon" />
+            <Icon icon="ph:asterisk-bold" width="12" height="12" class="boss-aoe-icon" />
             <span class="boss-aoe-dps">{{ aoeDps }}/s</span>
             <span class="boss-aoe-label">to every fighter</span>
           </div>
@@ -242,7 +242,7 @@
               :class="s === 'own' ? 'curse-badge--own' : 'curse-badge--enemy'"
             >
               <span :key="curseStacks(s)" class="curse-count">
-                <Icon icon="game-icons:burning-skull" width="13" height="13" class="curse-icon" />
+                <Icon icon="ph:flame-fill" width="13" height="13" class="curse-icon" />
                 ×{{ curseStacks(s) }}
               </span>
               <span class="curse-dmg">

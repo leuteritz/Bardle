@@ -75,7 +75,7 @@ function archiveDate(rec: CompletedGalaxyRecord): string {
             <!-- Stars rescued / lost, top-right over the map -->
             <span class="sf-arch-stars">
               <span class="sf-arch-star sf-arch-star--won" title="Stars rescued">
-                <Icon class="sf-arch-star-ico" icon="game-icons:round-star" width="15" height="15" />
+                <Icon class="sf-arch-star-ico" icon="ph:star-fill" width="15" height="15" />
                 <span class="sf-arch-star-n">{{ archiveRescued(rec) }}</span>
               </span>
               <span class="sf-arch-star sf-arch-star--lost" title="Stars lost">

@@ -63,7 +63,7 @@ const canUnlock = computed(() => store.canUnlockPlanetSlot(props.slotIndex))
     <div class="ps-lock-gates">
       <div class="ps-lock-gate" :class="{ 'ps-lock-gate--met': phaseMet }">
         <span class="ps-lock-gate-medal">
-          <Icon icon="game-icons:sun" width="30" height="30" />
+          <Icon icon="ph:sun-fill" width="30" height="30" />
         </span>
         <span class="ps-lock-gate-body">
           <span class="ps-lock-gate-label">Sun Phase</span>

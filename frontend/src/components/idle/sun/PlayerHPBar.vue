@@ -1,7 +1,7 @@
 <template>
   <div class="hp-bar-container" :class="{ 'hp-bar-container--hit': wasHit }" :style="sunRVar">
     <div class="hp-header">
-      <Icon icon="game-icons:hearts" width="16" height="16" class="hp-icon" style="color: #cc6050" />
+      <Icon icon="ph:heart-fill" width="16" height="16" class="hp-icon" style="color: #cc6050" />
       <span class="hp-value">
         {{ Math.ceil(playerStore.currentHP) }}<span class="hp-sep"> / </span>{{ playerStore.maxHP }}
       </span>

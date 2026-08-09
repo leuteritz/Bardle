@@ -123,7 +123,7 @@
             }"
             :style="{ left: f.x + 'px', top: f.y + 'px' }"
           >
-            <template v-if="f.shieldFloat"><Icon icon="game-icons:shield-reflect" width="16" height="16" style="color: #5090e8" /></template>
+            <template v-if="f.shieldFloat"><Icon icon="ph:shield-chevron-fill" width="16" height="16" style="color: #5090e8" /></template>
             <!-- Schaden und Heilung kommen als rohe Fließkommazahl aus der
                  DPS-Rechnung — ungerundet stünde da „-383.7261120000000006“. -->
             <template v-else-if="f.healFloat">+{{ $formatNumber(f.value) }}</template>

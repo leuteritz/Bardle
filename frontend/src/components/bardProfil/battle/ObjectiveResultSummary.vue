@@ -13,7 +13,7 @@
           {{ fightDurationText }}
         </span>
         <span class="res-meta-chip">
-          <Icon icon="game-icons:speedometer" width="13" height="13" />
+          <Icon icon="ph:gauge-fill" width="13" height="13" />
           {{ fmt(totalDps) }}/s
         </span>
       </div>
@@ -58,7 +58,7 @@
         <span class="res-sec-title">DAMAGE LEAD</span>
         <span class="res-sec-note">
           <template v-if="leadChanges > 0">
-            <Icon icon="game-icons:switch-weapon" width="12" height="12" />
+            <Icon icon="ph:arrows-left-right-bold" width="12" height="12" />
             {{ leadChanges }} lead change{{ leadChanges === 1 ? '' : 's' }}
           </template>
           <template v-else>{{ wireToWire }}</template>
@@ -171,23 +171,23 @@
     <!-- ── Everything else worth knowing, one line ─────────────────────────── -->
     <footer class="res-chips">
       <span v-if="clickCount > 0" class="res-chip res-chip--gold">
-        <Icon icon="game-icons:click" width="12" height="12" />
+        <Icon icon="ph:cursor-click-fill" width="12" height="12" />
         {{ clickCount }} clicks · {{ fmt(playerDamage) }} dmg · {{ playerShare }}% of your team
       </span>
       <span v-else class="res-chip res-chip--idle">
-        <Icon icon="game-icons:click" width="12" height="12" />
+        <Icon icon="ph:cursor-click-fill" width="12" height="12" />
         No clicks — the pit is worth tapping
       </span>
       <span v-if="downsCount > 0" class="res-chip res-chip--red">
-        <Icon icon="game-icons:tombstone" width="12" height="12" />
+        <Icon icon="ph:skull-fill" width="12" height="12" />
         {{ downsCount }} down
       </span>
       <span v-if="curseTotal > 0" class="res-chip res-chip--purple">
-        <Icon icon="game-icons:cursed-star" width="12" height="12" />
+        <Icon icon="ph:star-four-fill" width="12" height="12" />
         {{ fmt(curseTotal) }} hex
       </span>
       <span class="res-chip">
-        <Icon icon="game-icons:speedometer" width="12" height="12" />
+        <Icon icon="ph:gauge-fill" width="12" height="12" />
         peak {{ fmt(Math.round(peakDps.own)) }}/s vs {{ fmt(Math.round(peakDps.enemy)) }}/s
       </span>
     </footer>

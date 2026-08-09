@@ -228,7 +228,7 @@
           <!-- Auto-battle record during the pause — feste Höhe, Werte poppen ein -->
           <div class="battle-strip">
             <span class="battle-strip__label">
-              <Icon icon="game-icons:battle-gear" width="14" height="14" class="battle-strip__icon" aria-hidden="true" />
+              <Icon icon="ri:sword-fill" width="14" height="14" class="battle-strip__icon" aria-hidden="true" />
               Auto Battle
             </span>
             <template v-if="pauseBattleTotal > 0">
@@ -268,7 +268,7 @@
               <Transition name="callout-pop">
                 <span v-if="pendingAugmentCount > 0" class="level-chip">
                   <Icon
-                    icon="game-icons:upgrade"
+                    icon="ph:arrow-fat-up-fill"
                     width="14"
                     height="14"
                     class="level-chip__icon"
