@@ -144,7 +144,10 @@ const totalChips = computed<BuffChip[]>(() => {
   if (dpsPct.value > 0)
     chips.push({
       key: 'dps',
-      icon: 'game-icons:sword-clash',
+      // Die Kacheln zeichnen auf 19 px: `sword-clash` verklumpte dort zu einem
+      // Strichbündel. Gekreuzte Klingen gefüllt — dasselbe Zeichen, das der
+      // Battle-Tab und die Kampfphase tragen.
+      icon: 'ri:sword-fill',
       label: 'Combat DPS',
       value: `+${dpsPct.value}%`,
       positive: true,
@@ -160,7 +163,9 @@ const totalChips = computed<BuffChip[]>(() => {
   if (buffExpPct.value > 0)
     chips.push({
       key: 'exp',
-      icon: 'game-icons:treasure-map',
+      // Ebenso `treasure-map` — auf 19 px ein Fleck. Der Kompass trägt dort und
+      // hebt sich als Kreis von der rechteckigen Mauer-Kachel daneben ab.
+      icon: 'ph:compass-fill',
       label: 'Expeditions',
       value: `+${buffExpPct.value}%`,
       positive: true,

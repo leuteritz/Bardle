@@ -947,11 +947,33 @@ const structureMarkers = computed(() => {
 }
 .buff-camp--blue {
   border-color: rgba(147, 197, 253, 0.85);
-  animation: buff-glow-blue 2.2s ease-in-out infinite;
 }
 .buff-camp--red {
   border-color: rgba(252, 165, 165, 0.85);
-  animation: buff-glow-red 2.2s ease-in-out infinite;
+}
+
+/* ── Atmender Schein auf EIGENER Ebene ──
+   Vorher pulste der `box-shadow` direkt am Badge: jeder Frame rasterte die Box
+   samt Schatten neu, mal vier Camps, über die ganze Kampfdauer. Jetzt steht der
+   Schein statisch im CSS und nur die `opacity` dieser Ebene läuft — ein Takt
+   für beide Farben (Muster: `orbit-glow-breathe` an `.champion-orbit-glow`). */
+.buff-camp::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+.buff-camp--blue::after,
+.buff-camp--red::after {
+  animation: buff-glow-breathe 2.2s ease-in-out infinite;
+}
+.buff-camp--blue::after {
+  box-shadow: 0 0 11px rgba(59, 130, 246, 0.95);
+}
+.buff-camp--red::after {
+  box-shadow: 0 0 11px rgba(239, 68, 68, 0.95);
 }
 .buff-camp--blue .buff-camp-icon {
   color: #93c5fd;
@@ -962,20 +984,21 @@ const structureMarkers = computed(() => {
   filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.9));
 }
 
-@keyframes buff-glow-blue {
-  0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
-  50% { box-shadow: 0 0 11px rgba(59, 130, 246, 0.95); }
-}
-@keyframes buff-glow-red {
-  0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); }
-  50% { box-shadow: 0 0 11px rgba(239, 68, 68, 0.95); }
+/* Die Tiefe entspricht dem früheren 5px/0.5-Takt: 0.45 × 0.95 ≈ 0.43 Alpha. */
+@keyframes buff-glow-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
 }
 
 /* Slain state — clearly "not up": grey badge, muted icon, red ✕ stamp */
 .buff-camp--cleared {
   border-color: #4a4436;
   background: rgba(10, 8, 6, 0.88);
+  box-shadow: none;
+}
+.buff-camp--cleared::after {
   animation: none;
+  opacity: 0;
   box-shadow: none;
 }
 .buff-camp--cleared .buff-camp-icon {
@@ -1898,8 +1921,8 @@ const structureMarkers = computed(() => {
   .structure-x--punch,
   .nexus-core,
   .nexus-ring,
-  .buff-camp--blue,
-  .buff-camp--red,
+  .buff-camp--blue::after,
+  .buff-camp--red::after,
   .buff-camp-burst,
   .buff-cd--soon,
   .champ-buff-orb::after,
@@ -1917,6 +1940,12 @@ const structureMarkers = computed(() => {
   .kill-mark-icon,
   .kill-mark-tier {
     animation: none;
+  }
+  /* Der Schein der Camps lebte früher NUR in den Keyframes und war hier damit
+     ganz weg. Jetzt steht er still, statt zu verschwinden. */
+  .buff-camp--blue::after,
+  .buff-camp--red::after {
+    opacity: 0.7;
   }
 }
 </style>
