@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { MATERIALS } from '@/config/economy/materials'
@@ -32,6 +33,7 @@ const gameStore = useGameStore()
 const battleStore = useBattleStore()
 const planetShopStore = usePlanetShopStore()
 const starGroupStore = useStarGroupStore()
+const omenStore = useOmenStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
@@ -381,6 +383,14 @@ function fillTeamWithRandomChampions() {
       </button>
       <!-- Drifters live in AdminDrifterPanel now — every type spawns by name
            there, which the two buttons that used to sit here cannot do. -->
+      <!-- Ein Vorzeichen-Trio sofort auslegen; ein laufendes wird dabei
+           verworfen, sonst käme das Angebot gar nicht erst auf den Schirm. -->
+      <button
+        class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
+        @click="omenStore.forceOffer()"
+      >
+        <Icon icon="game-icons:star-swirl" class="admin-btn-icon" /> Offer Omens
+      </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5"
         @click="startBossPhase"

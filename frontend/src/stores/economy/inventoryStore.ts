@@ -10,6 +10,7 @@ import {
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 
 export const useInventoryStore = defineStore('inventory', {
@@ -167,11 +168,18 @@ export const useInventoryStore = defineStore('inventory', {
       const treeDropMult = useMeepTreeStore().fx.materialDropMult
       // Salvage Probe (drifter): timed boost on top of the permanent ones
       const drifterDropMult = useDrifterStore().materialDropMult
+      // Fulfilled omen: timed as well, earned in another system
+      const omenDropMult = useOmenStore().materialDropMult
       // Starwright (chronicle): earned by stars pulled back out of the dark
       const chronicleDropMult = useAchievementStore().materialDropMult
       if (
         Math.random() >
-        baseDropChance * forge.materialDropMult * treeDropMult * drifterDropMult * chronicleDropMult
+        baseDropChance *
+          forge.materialDropMult *
+          treeDropMult *
+          drifterDropMult *
+          omenDropMult *
+          chronicleDropMult
       ) {
         return null
       }

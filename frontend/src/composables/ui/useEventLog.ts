@@ -15,6 +15,7 @@ export type GameEventType =
   | 'combat'
   | 'prestige'
   | 'chronicle'
+  | 'omen'
   | 'info'
 
 export interface GameEvent {

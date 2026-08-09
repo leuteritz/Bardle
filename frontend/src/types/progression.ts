@@ -1,5 +1,7 @@
 // Fortschritt: Universen, Prestige-Läufe, Abschnitte.
 
+import type { TimedBuffEffects } from './core'
+
 export interface ModifierEffects {
   cpsMultiplier?: number
   cpcMultiplier?: number
@@ -215,4 +217,127 @@ export interface ChronicleTrackView extends ChronicleTrackDef {
   progress: number
   /** Bonuswert der erreichten Stufe in Prozentpunkten (0 ohne Stufe). */
   value: number
+}
+
+// ── OMENS OF THE CARETAKER ───────────────────────────────────────────────────
+
+/**
+ * Die Zahl, an der ein Vorzeichen seinen Fortschritt misst. Wie bei der
+ * Chronicle steht nur der Schlüssel in der Config und der Store löst ihn auf —
+ * `config/` importiert keine Stores.
+ *
+ * Jede Metrik hier MUSS monoton wachsen: der Fortschritt ist die Differenz zu
+ * einem bei der Annahme eingefrorenen Startwert, und ein fallender Zähler
+ * (Prestige) machte daraus eine negative Zahl. Der Store fängt das ab, indem er
+ * den Startwert nachzieht — aber ein Zähler, der REGELMÄSSIG fällt, wäre als
+ * Ziel trotzdem unfair und gehört nicht in diese Liste.
+ */
+export type OmenMetricId =
+  | 'chimesEarned'
+  | 'clicks'
+  | 'meepsEarned'
+  | 'driftersCollected'
+  | 'bossesDefeated'
+  | 'starsRescued'
+  | 'battleWins'
+  | 'championKills'
+  | 'championLevelsGained'
+  | 'materialsCollected'
+  | 'expeditionsCompleted'
+
+/**
+ * Das System, dem ein Vorzeichen entstammt. Rein zum Sortieren des Angebots:
+ * die drei Karten sollen aus DREI verschiedenen Systemen kommen, sonst steht
+ * dreimal dieselbe Beschäftigung zur Wahl und die Entscheidung ist keine.
+ */
+export type OmenDomain = 'economy' | 'cosmos' | 'combat' | 'roster' | 'expedition'
+
+/** Ein Vorzeichen, wie es im Katalog steht. */
+export interface OmenDef {
+  id: string
+  /** Name auf der Karte. */
+  name: string
+  /** Was der Kosmos ankündigt — eine Zeile Stimmung, keine Spielanweisung. */
+  blurb: string
+  /** Was zu tun ist, mit `{n}` für die Zielmenge. */
+  objective: string
+  icon: string
+  /** Leitfarbe der Karte: Rahmen, Balken, Zahl. */
+  color: string
+  domain: OmenDomain
+  metric: OmenMetricId
+  /**
+   * Zielmenge, gemessen ab der Annahme. Für die allermeisten Metriken absolut
+   * und bewusst NICHT mitwachsend: „fälle vier Bosse" bleibt in Galaxie 12
+   * dieselbe Aufgabe wie in Galaxie 1, sie geht nur schneller — genau das soll
+   * ein Vorzeichen belohnen.
+   *
+   * Bei `targetFromCpsSeconds` ist dieser Wert nur der Boden für einen frischen
+   * Spielstand, in dem die Produktion noch bei null liegt.
+   */
+  target: number
+  /**
+   * Nur für Zähler, deren Größenordnung mit dem Spielstand explodiert: das Ziel
+   * ist dann so viel, wie die aktuelle Produktion in dieser Zeit abwirft, und
+   * wird bei der ANNAHME einmal festgeschrieben.
+   *
+   * Ohne das wäre ein festes Chime-Ziel im späten Spiel in einer Sekunde
+   * erfüllt und früh unerreichbar — dieselbe Zahl kann beides nicht leisten.
+   * Dasselbe Muster wie `DrifterInstantReward.chimesFromCpsSeconds`.
+   */
+  targetFromCpsSeconds?: number
+  /** Einheit hinter den Fortschrittszahlen ("stars", "bosses", …). */
+  unit: string
+  /** Frist in Sekunden, ab Annahme. Verstreicht sie, ist NICHTS verloren —
+   *  nur der Eilbonus auf die Buff-Dauer. */
+  deadlineSec: number
+  /** Der Lohn: ein befristeter Buff in ein ANDERES System als `domain`. */
+  reward: {
+    /** Grunddauer in Sekunden. Innerhalb der Frist erfüllt: mal
+     *  `OMEN_SWIFT_DURATION_MULT`. */
+    durationSec: number
+    effects: TimedBuffEffects
+  }
+}
+
+/** Das Vorzeichen, dem Bard gerade folgt. */
+export interface ActiveOmen {
+  defId: string
+  /** Wert der Metrik im Moment der Annahme — der Nullpunkt des Fortschritts. */
+  startValue: number
+  /**
+   * Die bei der Annahme festgeschriebene Zielmenge. Steht hier und nicht nur in
+   * der Definition, weil `targetFromCpsSeconds` sie aus der Produktion ableitet:
+   * ein Ziel, das sich mitbewegte, während der Spieler daran arbeitet, wäre nie
+   * erreichbar — jeder Ausbau der Produktion schöbe es vor sich her.
+   */
+  target: number
+  acceptedAt: number
+  /** Zeitpunkt, ab dem der Eilbonus verfällt. */
+  deadlineAt: number
+}
+
+/** Ein laufender Omen-Buff. Gleiche Bauart wie `DrifterActiveBuff`, damit die
+ *  Buff-Leiste beide durch dieselbe Schleife schicken kann. */
+export interface OmenActiveBuff {
+  sourceId: string
+  expiresAt: number
+  durationMs: number
+  /** Der Eilbonus lag an — die Karte und der Chip sagen es. */
+  swift: boolean
+  effects: TimedBuffEffects
+}
+
+/** Ein Vorzeichen, wie die Karte es zeigt — Definition plus laufender Stand.
+ *  `target` kommt aus dem angenommenen Omen und überschreibt damit den Wert der
+ *  Definition, sobald die Produktion ihn festgeschrieben hat. */
+export interface OmenView extends OmenDef {
+  /** Erreichte Menge seit der Annahme, bei `target` gedeckelt. */
+  progress: number
+  /** Anteil 0–1. */
+  ratio: number
+  /** Sekunden bis zum Verfall des Eilbonus; 0, wenn er schon weg ist. */
+  secondsLeft: number
+  /** Der Eilbonus ist noch zu holen. */
+  swiftAvailable: boolean
 }

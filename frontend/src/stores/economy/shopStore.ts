@@ -12,6 +12,7 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import {
@@ -265,6 +266,8 @@ export const useShopStore = defineStore('shop', {
       const treeMul = useMeepTreeStore().fx.cpsMult
       // Collected drifters (Errant Chime & co.) — timed, expires on its own
       const drifterMul = useDrifterStore().cpsMult
+      // Fulfilled omen — timed, and earned in a different system than this one
+      const omenMul = useOmenStore().cpsMult
       // Caretaker's Shrine (bard W) — the afterglow of a cast shrine
       const bardMul = useBardAbilityStore().cpsMult
       // Chime Cantor (chronicle) — permanent, earned by lifetime chimes
@@ -277,6 +280,7 @@ export const useShopStore = defineStore('shop', {
           forgeMul *
           treeMul *
           drifterMul *
+          omenMul *
           bardMul *
           chronicleMul,
       )
@@ -302,6 +306,8 @@ export const useShopStore = defineStore('shop', {
       // Ember Shard (drifter): multiplies the click value, not the CpS portion —
       // that share already carries the drifter CpS multiplier of its own.
       const drifterMul = useDrifterStore().cpcMult
+      // Fulfilled omen — same reasoning as the drifter multiplier above.
+      const omenMul = useOmenStore().cpcMult
       // Magical Journey (bard E) — the travel window multiplies clicks only,
       // for the same reason the drifter multiplier does: the CpS portion above
       // already carries its own multipliers.
@@ -313,6 +319,7 @@ export const useShopStore = defineStore('shop', {
           forge.cpcMult *
           tree.cpcMult *
           drifterMul *
+          omenMul *
           bardMul +
           cpsPortion,
       )

@@ -15,6 +15,7 @@ import { useItemStore } from '@/stores/economy/itemStore'
 import { useSynergyStore } from '@/stores/champions/synergyStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useSectionStore } from '@/stores/core/sectionStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
@@ -90,6 +91,7 @@ export function useStatCatalog(query: Ref<string>): {
   const synergyStore = useSynergyStore()
   const augmentStore = useAugmentStore()
   const drifterStore = useDrifterStore()
+  const omenStore = useOmenStore()
   const bardAbilityStore = useBardAbilityStore()
   const achievementStore = useAchievementStore()
   const playerStore = usePlayerStore()
@@ -1398,6 +1400,51 @@ export function useStatCatalog(query: Ref<string>): {
         key: 'drifter-xp',
         label: 'Drifter XP Buff',
         value: bonus(drifterStore.xpMult),
+      },
+      // ── Omens ──
+      // Nur die Zähler und die laufende Wirkung: welches Vorzeichen gerade offen
+      // ist, steht als eigene Karte im Spielbild und muss hier nicht doppelt.
+      {
+        key: 'omens-completed',
+        label: 'Omens Fulfilled',
+        value: int(omenStore.totalOmensCompleted),
+        keywords: 'omen caretaker objective',
+      },
+      {
+        key: 'omens-swift',
+        label: 'Omens Fulfilled Swiftly',
+        value: int(omenStore.totalOmensSwift),
+        keywords: 'omen deadline bonus',
+      },
+      {
+        key: 'omen-buffs',
+        label: 'Omen Buffs Running',
+        value: int(omenStore.liveBuffs.length),
+      },
+      {
+        key: 'omen-cps',
+        label: 'Omen Production Buff',
+        value: bonus(omenStore.cpsMult),
+      },
+      {
+        key: 'omen-cpc',
+        label: 'Omen Click Buff',
+        value: bonus(omenStore.cpcMult),
+      },
+      {
+        key: 'omen-dps',
+        label: 'Omen Damage Buff',
+        value: bonus(omenStore.combatDpsMult),
+      },
+      {
+        key: 'omen-drops',
+        label: 'Omen Drop Buff',
+        value: bonus(omenStore.materialDropMult),
+      },
+      {
+        key: 'omen-xp',
+        label: 'Omen XP Buff',
+        value: bonus(omenStore.xpMult),
       },
       // ── Bard-Fähigkeiten ──
       {

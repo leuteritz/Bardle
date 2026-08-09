@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
 import type {
   ChampionProgress,
   ChampionStats,
@@ -351,7 +352,9 @@ export const useChampionLevelStore = defineStore('championLevel', {
       if (amount <= 0) return 0
       const p = this.ensure(name)
       if (!p) return 0
-      const gain = Math.round(amount * useDrifterStore().xpMult * useAchievementStore().xpMult)
+      const gain = Math.round(
+        amount * useDrifterStore().xpMult * useOmenStore().xpMult * useAchievementStore().xpMult,
+      )
       p.xp += gain
       p.totalXp += gain
       this.totalXpEarned += gain

@@ -13,6 +13,7 @@ type LogCategory =
   | 'Drifter'
   | 'BardAbility'
   | 'Chronicle'
+  | 'Omen'
   | 'System'
 
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
@@ -38,6 +39,7 @@ const CATEGORY_COLORS: Record<LogCategory, string> = {
   Augment: '#3b82f6',
   ChampionLevel: '#3b82f6',
   Chronicle: '#8b5cf6',
+  Omen: '#8b5cf6',
   System: '#8b5cf6',
 }
 

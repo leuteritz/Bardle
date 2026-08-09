@@ -1,5 +1,7 @@
 // Welt: Planeten, Sterne, Boss-Events, Drifter, Planeten-Slots.
 
+import type { TimedBuffEffects } from './core'
+
 export type PlanetType =
   | 'rocky'
   | 'ice'
@@ -58,18 +60,13 @@ export type DrifterRarity = 'common' | 'uncommon' | 'rare' | 'legendary'
 
 /** Every multiplier a drifter buff can put on the game. Each key has exactly
  *  one integration point; see `drifterStore`'s effect getters. */
-export interface DrifterBuffEffects {
-  /** Multiplier on total chimes per second. */
-  cpsMult?: number
-  /** Multiplier on total chimes per click. */
-  cpcMult?: number
-  /** Multiplier on orbiting champion DPS and turret volleys. */
-  combatDpsMult?: number
-  /** Multiplier on the material drop chance. */
-  materialDropMult?: number
-  /** Multiplier on champion XP gains. */
-  xpMult?: number
-}
+/**
+ * Die Achsen eines Drifter-Buffs. Namensgleich zu dem, was das Omen-System
+ * ausschüttet — deshalb ein Alias auf den gemeinsamen Typ statt einer zweiten
+ * Liste. Der Drifter-Name bleibt, weil er an jeder Fundstelle sagt, WESSEN Buff
+ * gemeint ist.
+ */
+export type DrifterBuffEffects = TimedBuffEffects
 
 /** Instant, one-shot payouts a drifter grants the moment it is clicked. */
 export interface DrifterInstantReward {

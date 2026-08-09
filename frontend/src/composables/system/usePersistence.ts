@@ -23,6 +23,7 @@ import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
 import type {
   ChampionProgress,
   PendingPerkChoice,
@@ -48,6 +49,7 @@ import {
   CHIMES_PER_CLICK_BASE,
   UNIVERSE_RESCUE_INITIAL_COST,
   BATTLE_HISTORY_SAVE_LIMIT,
+  OMEN_FIRST_OFFER_DELAY_SEC,
 } from '@/config/constants'
 import { DRAKE_TYPES, type DrakeTypeId } from '@/config/battle/drakes'
 import { logger } from '@/utils/logger'
@@ -85,6 +87,7 @@ export function usePersistence() {
     const drifterStore = useDrifterStore()
     const bardAbilityStore = useBardAbilityStore()
     const achievementStore = useAchievementStore()
+    const omenStore = useOmenStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -344,6 +347,19 @@ export function usePersistence() {
       chronicle: {
         stages: { ...achievementStore.stages },
         unseen: [...achievementStore.unseen],
+      },
+      // Omens. Das laufende Vorzeichen samt eingefrorenem Startwert MUSS mit —
+      // ohne ihn wäre der Fortschritt nach einem Reload nicht mehr rekonstruierbar
+      // (er ist eine Differenz, keine gespeicherte Zahl). Die Buff-Ablaufzeiten
+      // sind absolute Zeitstempel und überstehen einen geschlossenen Tab damit
+      // von selbst; das Angebot dagegen wird bewusst NICHT gespeichert: ein
+      // ungewähltes Trio darf beim nächsten Start neu gewürfelt werden.
+      omens: {
+        active: omenStore.active ? { ...omenStore.active } : null,
+        buffs: omenStore.buffs.map((b) => ({ ...b })),
+        offerCooldownSec: omenStore.offerCooldownSec,
+        totalOmensCompleted: omenStore.totalOmensCompleted,
+        totalOmensSwift: omenStore.totalOmensSwift,
       },
     }
 
@@ -912,6 +928,19 @@ export function usePersistence() {
       achievementStore.unseen = [...(saved.chronicle?.unseen ?? [])]
       achievementStore.syncSilently()
 
+      // Omens. Steht ebenfalls nach allen Stores, deren Zahlen ein laufendes
+      // Vorzeichen misst. Abgelaufene Buffs werden hier gleich ausgesiebt: sie
+      // tragen absolute Zeitstempel, und ein Spielstand von gestern brächte
+      // sonst eine Reihe toter Chips mit, die erst der nächste Takt aufräumt.
+      const omenStoreLoad = useOmenStore()
+      const savedOmens = saved.omens
+      omenStoreLoad.active = savedOmens?.active ? { ...savedOmens.active } : null
+      omenStoreLoad.buffs = (savedOmens?.buffs ?? []).filter((b) => b.expiresAt > Date.now())
+      omenStoreLoad.offerCooldownSec = savedOmens?.offerCooldownSec ?? OMEN_FIRST_OFFER_DELAY_SEC
+      omenStoreLoad.totalOmensCompleted = savedOmens?.totalOmensCompleted ?? 0
+      omenStoreLoad.totalOmensSwift = savedOmens?.totalOmensSwift ?? 0
+      omenStoreLoad.omenNow = Date.now()
+
       // Recalculate derived CPS/CPC after all levels (buildings + solar + forge) are restored
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
@@ -1125,6 +1154,9 @@ export function usePersistence() {
     // 7i. Reset achievementStore — a full wipe unwrites the Chronicle. Prestige
     // never does: its milestones are lifetime records and outlive a universe.
     useAchievementStore().$reset()
+
+    // 7j. Reset omenStore — clears the running omen, the offer and every buff.
+    useOmenStore().$reset()
 
     // 7b. Reset planetShopStore – alle Slots zurücksetzen
     const planetShopStoreR = usePlanetShopStore()

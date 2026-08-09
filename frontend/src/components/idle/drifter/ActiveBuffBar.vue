@@ -52,6 +52,8 @@ import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
+import { getOmen } from '@/config/progression/omens'
 import {
   getDrifter,
   DRIFTER_BUFF_EFFECT_LABELS,
@@ -61,7 +63,7 @@ import {
   MVP_BUFF_LABEL,
   MVP_BUFF_NAME,
 } from '@/config/world/drifters'
-import type { DrifterBuffEffects } from '@/types'
+import type { DrifterBuffEffects, TimedBuffEffects } from '@/types'
 import {
   DRIFTER_BUFF_EXPIRY_WARN_SEC,
   HONOR_MVP_BUFF_MULT,
@@ -71,6 +73,7 @@ import {
 const gameStore = useGameStore()
 const uiStore = useUiStore()
 const drifterStore = useDrifterStore()
+const omenStore = useOmenStore()
 
 interface BuffChip {
   key: string
@@ -116,6 +119,28 @@ const chips = computed<BuffChip[]>(() => {
       color: def.color,
       name: def.name,
       // A buff on a single axis names it; one that lifts several says so.
+      label: keys.length === 1 ? DRIFTER_BUFF_EFFECT_LABELS[keys[0]] : DRIFTER_BUFF_LABEL_ALL,
+      multiplier: Math.max(...keys.map((k) => buff.effects[k] ?? 1)),
+      secondsLeft: Math.ceil(remainingMs / 1000),
+      progress: buff.durationMs > 0 ? Math.min(1, remainingMs / buff.durationMs) : 0,
+    })
+  }
+
+  // Omen rewards last: they run the longest of the three, so they belong at the
+  // quiet end of the row where they are not the thing that keeps changing.
+  for (const buff of omenStore.liveBuffs) {
+    const def = getOmen(buff.sourceId)
+    if (!def) continue
+    const keys = Object.keys(buff.effects) as (keyof TimedBuffEffects)[]
+    const remainingMs = Math.max(0, buff.expiresAt - omenStore.omenNow)
+    out.push({
+      key: `omen-${buff.sourceId}`,
+      icon: def.icon,
+      color: def.color,
+      // Der Eilbonus steht im Namen und nicht als eigenes Zeichen: der Chip
+      // hat für ein zweites Abzeichen keinen Platz, und wissen muss man es nur,
+      // solange der Buff läuft.
+      name: buff.swift ? `${def.name} (swift)` : def.name,
       label: keys.length === 1 ? DRIFTER_BUFF_EFFECT_LABELS[keys[0]] : DRIFTER_BUFF_LABEL_ALL,
       multiplier: Math.max(...keys.map((k) => buff.effects[k] ?? 1)),
       secondsLeft: Math.ceil(remainingMs / 1000),

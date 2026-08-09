@@ -226,13 +226,14 @@ onUnmounted(clearTimers)
 </template>
 
 <style scoped>
-/* Direkt unter der Auto-Pick-Meldung, gleiche Ecke, gleiche Breitenlogik:
-   --autopick-bottom wird dort per ResizeObserver gepflegt und ist 0, solange
-   keine Meldung steht. So teilen sich beide Karten die Ecke, ohne sich je zu
-   überdecken. */
+/* Unter dem, was oben links schon steht: der Auto-Pick-Meldung und der
+   Omen-Karte. Beide veröffentlichen ihre eigene Unterkante per ResizeObserver
+   und sind 0, solange sie nicht stehen — `max()` statt einer Summe, weil beide
+   Werte ABSOLUTE Unterkanten sind und nicht Höhen, die sich stapeln ließen.
+   So teilen sich die drei Karten die Ecke, ohne sich je zu überdecken. */
 .dic-root {
   position: fixed;
-  top: calc(var(--autopick-bottom, 0px) + 0.5rem);
+  top: calc(max(var(--autopick-bottom, 0px), var(--omen-card-bottom, 0px)) + 0.5rem);
   left: 0.75rem;
   z-index: 899;
   width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
@@ -514,7 +515,7 @@ onUnmounted(clearTimers)
 
 @media (min-width: 2400px) {
   .dic-root {
-    top: calc(var(--autopick-bottom, 0px) + 0.7rem);
+    top: calc(max(var(--autopick-bottom, 0px), var(--omen-card-bottom, 0px)) + 0.7rem);
     left: 1rem;
     gap: 10px;
     padding: 13px 15px 15px;

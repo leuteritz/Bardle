@@ -28,6 +28,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 
 let _damageFloatId = 0
@@ -175,6 +176,8 @@ export const useCombatStore = defineStore('combat', {
           useStarForgeStore().championDpsMult *
           useMeepTreeStore().fx.championDpsMult *
           useDrifterStore().combatDpsMult *
+          // Fulfilled omen: earned elsewhere, spent here
+          useOmenStore().combatDpsMult *
           // Tempered Fate (bard R): the orbit keeps swinging while the stasis holds
           useBardAbilityStore().combatDpsMult
         const defeated = bossStore.dealDamage(totalDPS)

@@ -31,6 +31,7 @@ import {
 export { PLANET_ROLES, PLANET_ROLES_LIST, JUNGLE_BUFF_DEFS } from '@/config/constants'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { getOrbitSunRadius, getOrbitSunScale } from '@/utils/orbit/geometry'
@@ -210,6 +211,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
       return (
         base *
         useDrifterStore().combatDpsMult *
+        useOmenStore().combatDpsMult *
         useBardAbilityStore().combatDpsMult *
         useAchievementStore().turretDpsMult
       )

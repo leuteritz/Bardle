@@ -30,3 +30,29 @@ export interface RoleAbilityMetric {
   value: string
   label: string
 }
+
+/**
+ * Die Achsen, an denen ein befristeter Buff angreifen kann — die vollständige
+ * Liste der Einbaustellen, an denen ein Multiplikator in eine laufende Rechnung
+ * eingereiht wird.
+ *
+ * Steht hier und nicht bei einer der Quellen, weil inzwischen mehrere davon
+ * dieselben fünf Achsen bedienen (Drifter, Omen). Eine zweite, gleichlautende
+ * Liste würde beim nächsten Zusatz auseinanderlaufen — und die Einbaustelle
+ * bemerkt es nicht, sie sieht ja nur eine Zahl.
+ *
+ * Eine NEUE Achse hier heißt immer auch: ein Getter je Quelle und eine
+ * Multiplikation an der Zielstelle. Ohne die beiden ist der Eintrag wirkungslos.
+ */
+export interface TimedBuffEffects {
+  /** Multiplier on total chimes per second. */
+  cpsMult?: number
+  /** Multiplier on total chimes per click. */
+  cpcMult?: number
+  /** Multiplier on orbiting champion DPS and turret volleys. */
+  combatDpsMult?: number
+  /** Multiplier on the material drop chance. */
+  materialDropMult?: number
+  /** Multiplier on champion XP gains. */
+  xpMult?: number
+}

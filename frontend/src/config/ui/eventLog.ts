@@ -18,6 +18,10 @@ export const typeColor: Record<GameEventType, string> = {
   combat: '#fb923c',
   prestige: '#818cf8',
   chronicle: '#e8c040',
+  // Kühles Violett gegen das Gold der Chronicle: die beiden melden ähnlich
+  // klingende Zeilen (ein Ziel ist erreicht, ein Bonus gilt ab jetzt) und
+  // müssen im Log auf den ersten Blick auseinanderzuhalten sein.
+  omen: '#a8b0f0',
   info: '#c8b89a',
 }
 
@@ -54,4 +58,14 @@ export function logDrifterCollected(name: string, effectLine: string) {
 export function logChronicleStage(trackName: string, numeral: string, effectLine: string) {
   const { addEvent } = useEventLog()
   addEvent(`${trackName} ${numeral} — ${effectLine}`, 'chronicle')
+}
+
+/**
+ * Ein Vorzeichen wurde erfüllt. `swift` steht als Vorsatz in der Zeile und
+ * nicht als eigener Ereignistyp: es ist dasselbe Ereignis, nur pünktlich — ein
+ * zweiter Typ hätte im Log eine zweite Farbe für dieselbe Sache bedeutet.
+ */
+export function logOmenCompleted(omenName: string, effectLine: string, swift: boolean) {
+  const { addEvent } = useEventLog()
+  addEvent(`${swift ? 'Swift omen' : 'Omen'}: ${omenName} — ${effectLine}`, 'omen')
 }

@@ -15,6 +15,7 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
@@ -737,6 +738,12 @@ export const useGameStore = defineStore('game', {
       // Skill-tree notifications: drop stale acknowledgements so a node that
       // became unaffordable re-notifies once the player can afford it again.
       useMeepTreeStore().syncAcknowledged()
+      // Omens directly before the chronicle, for the same reason and with the
+      // same requirement: the running omen measures a DIFFERENCE against the
+      // counters above, so it has to see them at their final value for this
+      // second. Its own payout is a timed buff, which the chronicle does not
+      // read — the order between these two is therefore free.
+      useOmenStore().tick()
       // Chronicle last: every counter this second feeds it (chimes above,
       // bosses, stars, drifters), so a milestone announced here is one that was
       // just earned — not one from the previous tick.

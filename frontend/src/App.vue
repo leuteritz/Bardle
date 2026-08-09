@@ -28,6 +28,8 @@ import SupernovaTransition from '@/components/idle/sun/SupernovaTransition.vue'
 import DrifterLayer from '@/components/idle/drifter/DrifterLayer.vue'
 import DrifterInfoCard from '@/components/idle/drifter/DrifterInfoCard.vue'
 import ActiveBuffBar from '@/components/idle/drifter/ActiveBuffBar.vue'
+import OmenHudCard from '@/components/idle/omen/OmenHudCard.vue'
+import OmenChoiceOverlay from '@/components/idle/omen/OmenChoiceOverlay.vue'
 import BardAbilityBar from '@/components/idle/abilities/BardAbilityBar.vue'
 import TemperedFateOverlay from '@/components/idle/abilities/TemperedFateOverlay.vue'
 import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
@@ -94,6 +96,13 @@ watch(
     <DrifterLayer />
     <DrifterInfoCard />
     <ActiveBuffBar />
+
+    <!-- Omens: die HUD-Karte teilt sich die linke Ecke mit der Drifter-Karte und
+         steht über ihr (sie ist dauerhaft da, die andere nur Sekunden). Das
+         Wahl-Overlay erscheint nur, wenn ein Trio ansteht, und wartet, solange
+         ein Profil-Tab das Spielbild verdeckt. -->
+    <OmenHudCard />
+    <OmenChoiceOverlay />
 
     <!-- Bard-Fähigkeiten: die Leiste sitzt über dem Scoreboard und schiebt die
          Buff-Reihe über sich; der Stase-Schleier liegt über dem Orbit, aber
