@@ -203,15 +203,25 @@ const sunPct = computed(() => {
 
 const sunDiameter = computed(() => Math.round((stagePx.value * sunPct.value) / 100))
 
-/** Baseline of the identity block: the body's VISIBLE top edge, minus the clear
+/** Share of its box the body actually paints. A sun glows out to the edge, the
+ *  comet's rock is inset — so everything that places itself against the body's
+ *  edge measures against THIS, not the box, or it hovers in the void at the
+ *  comet while sitting tight at every sun. */
+const bodyFill = computed(() => (solarStore.isCometState ? COMET_DISC_FILL : 1))
+const bodyVisiblePct = computed(() => sunPct.value * bodyFill.value)
+
+/** Baseline of the identity block: the body's visible top edge, minus the clear
  *  air. The block grows upward from here (translateY(-100%)), so it hugs
- *  whatever the player currently is — a speck of a comet or the widest sun.
- *  The comet's rock only fills part of its box, so measuring against the box
- *  alone would strand the caption above it while a sun sits tight. */
-const identTopPct = computed(() => {
-  const visiblePct = sunPct.value * (solarStore.isCometState ? COMET_DISC_FILL : 1)
-  return O.CENTER_Y - visiblePct / 2 - O.IDENT_GAP_PCT
-})
+ *  whatever the player currently is — a speck of a comet or the widest sun. */
+const identTopPct = computed(() => O.CENTER_Y - bodyVisiblePct.value / 2 - O.BODY_GAP_PCT)
+
+/** Top edge of the evolve chip — the identity block's mirror under the body.
+ *  It lives INSIDE the sun's box, so it is expressed in % of THAT box: half the
+ *  box down to the centre, out to the painted edge, then the same clear air the
+ *  caption keeps above (converted from stage % into box %). */
+const ctaTopPct = computed(
+  () => 50 + bodyFill.value * 50 + (O.BODY_GAP_PCT / sunPct.value) * 100,
+)
 
 /* ── Time in phase ticker ────────────────────────────────────── */
 const now = ref(Date.now())
@@ -408,6 +418,7 @@ const gate = computed<EvolveGate>(() => {
               type="button"
               :class="[`is-${gate.tone}`, { 'is-live': canEvolveNow }]"
               :title="gate.title"
+              :style="{ top: ctaTopPct + '%' }"
               @click.stop="uiStore.setBardTab('shop')"
             >
               <Icon :icon="gate.icon" width="15" height="15" />
@@ -679,14 +690,15 @@ const gate = computed<EvolveGate>(() => {
   }
 }
 
-/* Chip straddling the sun's lower edge — the evolve gate, on the body it acts
-   on. It counts the phase down, then becomes the call to act. Sized off the
-   dial so it never becomes a speck on 4K. */
+/* Chip under the body's lower edge — the evolve gate, on the thing it acts on,
+   and the mirror of the caption above. It counts the phase down, then becomes
+   the call to act. `top` comes from the template (the body's painted edge plus
+   the same clear air the caption keeps) and is in % of the SUN'S box, not the
+   stage. Sized off the dial so it never becomes a speck on 4K. */
 .sf-sun-cta {
   position: absolute;
   left: 50%;
-  top: 100%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   z-index: 3;
   display: flex;
   align-items: center;
@@ -722,7 +734,7 @@ const gate = computed<EvolveGate>(() => {
   border: 1px solid #e8c040;
 }
 .sf-sun-cta:hover {
-  transform: translate(-50%, -50%) scale(1.06);
+  transform: translateX(-50%) scale(1.06);
 }
 /* the icon rides the chip's font size instead of its own fixed box */
 .sf-sun-cta :deep(svg) {
