@@ -77,10 +77,25 @@ const shown = computed(() => tracks.value.find((t) => t.id === shownId.value) ??
 /** Rabatt-Bahnen zählen nach unten; das Vorzeichen gehört zur Aussage. */
 const shownSign = computed(() => (shown.value?.effect.includes('−{v}') ? '−' : '+'))
 
+/**
+ * Der Wert einer Stufe, wie er WIRKLICH wirkt: Grundwert mal Rang-Verstärker.
+ * Das Panel zeigt damit nirgends eine Zahl an, die das Spiel nicht rechnet —
+ * dieselbe Formel steht im Store in `bonusPct`, samt derselben Rundung.
+ */
+function effective(base: number): string {
+  const v = Math.round(base * store.rankMult * 10) / 10
+  return Number.isInteger(v) ? String(v) : v.toFixed(1)
+}
+
+/** „1.30" — der Verstärker, wie er im Balken und am Fokusfeld steht. */
+function multLabel(mult: number): string {
+  return mult.toFixed(2)
+}
+
 const shownEffect = computed(() => {
   if (!shown.value) return ''
   const value = shown.value.stage > 0 ? shown.value.value : shown.value.stages[0].value
-  return shown.value.effect.replace('{v}', String(value))
+  return shown.value.effect.replace('{v}', effective(value))
 })
 
 /** Die Leiter der gezeigten Bahn: jede Stufe mit Schwelle und Wert. */
@@ -88,7 +103,7 @@ const ladder = computed(() =>
   (shown.value?.stages ?? []).map((stage, i) => ({
     numeral: toRoman(i + 1),
     threshold: stage.threshold,
-    value: stage.value,
+    value: effective(stage.value),
     done: i < (shown.value?.stage ?? 0),
     next: i === (shown.value?.stage ?? 0),
   })),
@@ -112,12 +127,18 @@ function pin(id: string) {
          er die zwei Zahlen des Ganzen, jede unter ihrer eigenen Überschrift. -->
     <StatsColumnHeader class="cr-head" title="Astral Codex">
       <template #meta>
-        <span class="cr-read">
+        <span
+          class="cr-read"
+          title="Your standing in the Codex — it rises with the number of stages written and multiplies every track bonus"
+        >
           <span class="cr-read-cap">Rank</span>
           <span class="cr-read-val">{{ store.rankTitle }}</span>
         </span>
         <span class="cr-read-sep" aria-hidden="true"></span>
-        <span class="cr-read">
+        <span
+          class="cr-read"
+          title="Stages written across all eight tracks — every one of them is a permanent bonus"
+        >
           <span class="cr-read-cap">Stages Written</span>
           <span class="cr-read-val">
             {{ store.unlockedStageCount }}<span class="cr-read-of"
@@ -128,7 +149,9 @@ function pin(id: string) {
       </template>
     </StatsColumnHeader>
 
-    <!-- Gesamtleiter mit Rang-Kerben -->
+    <!-- Rangleiter: Balken mit einer Kerbe je Rang, darunter im Klartext, was
+         der erreichte Rang bringt und was der nächste bringen wird. Die Frage
+         „was passiert beim Aufstieg?" darf nicht im Tooltip stehen. -->
     <div class="cr-meter">
       <div class="cr-meter-track">
         <div class="cr-meter-fill" :style="{ transform: `scaleX(${totalProgress})` }" />
@@ -138,14 +161,23 @@ function pin(id: string) {
           class="cr-meter-mark"
           :class="{ 'is-reached': store.unlockedStageCount >= rank.min }"
           :style="{ left: (rank.min / CHRONICLE_TOTAL_STAGES) * 100 + '%' }"
-          :title="`${rank.title} — ${rank.min} stages`"
+          :title="`${rank.title} — ${rank.min} stages · every track bonus ×${multLabel(rank.mult)}`"
         />
       </div>
-      <span v-if="nextRank" class="cr-meter-next">
-        {{ toNextRank }} {{ toNextRank === 1 ? 'stage' : 'stages' }} to
-        <strong>{{ nextRank.title }}</strong>
-      </span>
-      <span v-else class="cr-meter-next is-done">Every stage written</span>
+
+      <div class="cr-meter-legend">
+        <span v-if="store.rankMult > 1" class="cr-boost">
+          Every track bonus <strong>×{{ multLabel(store.rankMult) }}</strong>
+        </span>
+        <span v-else class="cr-boost is-none">Write a stage to earn your first rank</span>
+
+        <span v-if="nextRank" class="cr-meter-next">
+          {{ toNextRank }} {{ toNextRank === 1 ? 'stage' : 'stages' }} to
+          <strong>{{ nextRank.title }}</strong>
+          <span class="cr-meter-next-mult">×{{ multLabel(nextRank.mult) }}</span>
+        </span>
+        <span v-else class="cr-meter-next is-done">Every stage written</span>
+      </div>
     </div>
 
     <!-- Acht Wappen: Bahn, Stufe, Fortschritt -->
@@ -201,9 +233,19 @@ function pin(id: string) {
         </span>
       </div>
 
+      <!-- Die Zeile zeigt, was JETZT wirkt. Steht ein Rang-Verstärker dahinter,
+           sagt die Marke das dazu — sonst wirkte die Zahl gegen die Stufenwerte
+           daneben wie ein Rechenfehler. -->
       <div class="cr-focus-effect">
         <span class="cr-focus-effect-text">{{ shownEffect }}</span>
         <span v-if="shown.stage === 0" class="cr-focus-pending">at I</span>
+        <span
+          v-else-if="store.rankMult > 1"
+          class="cr-focus-rankmark"
+          :title="`Includes the ×${multLabel(store.rankMult)} boost from your ${store.rankTitle} rank`"
+        >
+          incl. rank ×{{ multLabel(store.rankMult) }}
+        </span>
       </div>
 
       <div class="cr-focus-count">
@@ -333,17 +375,19 @@ function pin(id: string) {
   background: #2c1806;
 }
 
-/* ─ Gesamtleiter ─ */
+/* ─ Rangleiter ─
+   Balken oben über die volle Breite, darunter die Beschriftung in zwei Hälften:
+   links, was der Rang JETZT bringt, rechts, was der nächste bringen wird. Beides
+   in Worten — die Kerben allein sagten nur, DASS dort etwas passiert. */
 .cr-meter {
   flex-shrink: 0;
   display: flex;
-  align-items: center;
-  gap: 9px;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .cr-meter-track {
   position: relative;
-  flex: 1;
   height: 7px;
   overflow: hidden;
   background: #0d0b06;
@@ -373,6 +417,32 @@ function pin(id: string) {
   background: #1a1008;
 }
 
+.cr-meter-legend {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Die Antwort auf „was bringt mir der Rang?" — die einzige Zeile im Panel, die
+   den Verstärker benennt, deshalb heller als der Rest der Leiste. */
+.cr-boost {
+  min-width: 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--rpg-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cr-boost strong {
+  font-weight: 900;
+  color: var(--rpg-gold);
+}
+.cr-boost.is-none {
+  color: #6b5a3c;
+}
+
 .cr-meter-next {
   flex-shrink: 0;
   font-size: 11.5px;
@@ -381,6 +451,13 @@ function pin(id: string) {
   color: #6b5a3c;
 }
 .cr-meter-next strong {
+  font-weight: 700;
+  color: var(--rpg-gold-dim);
+}
+/* Was der nächste Rang wert ist — steht direkt an seinem Namen, damit der
+   Aufstieg einen Preis UND einen Gegenwert hat. */
+.cr-meter-next-mult {
+  margin-left: 4px;
   font-weight: 700;
   color: var(--rpg-gold-dim);
 }
@@ -586,6 +663,21 @@ function pin(id: string) {
   color: #6b5a3c;
 }
 
+/* Woher der Aufschlag auf der Zeile darüber kommt. Bewusst leise: die Zahl ist
+   die Aussage, die Herkunft nur ihre Fußnote. */
+.cr-focus-rankmark {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--rpg-gold-dim);
+  background: #141008;
+  border: 1px solid #3e200a;
+  border-radius: 3px;
+}
+
 .cr-focus-count {
   font-size: 12px;
   color: #d8cbb0;
@@ -662,8 +754,12 @@ function pin(id: string) {
 /* Full HD / WUXGA — die flachsten Viewports. Gespart wird an Luft, nicht an
    Schrift: die Wappen rücken zusammen, die Zahlen bleiben. */
 @media (max-height: 1100px) {
+  /* 292 statt 274: die Legende unter dem Rangbalken kostet gemessen 17 px, und
+     das Fokusfeld hatte sie nicht mehr übrig (Überlauf 15 px). Die nimmt hier
+     die Zone, nicht das Feld — der Dial darüber hat auf Full HD noch 267 px und
+     ist als Kreis das Element, das eine Schrumpfung am besten verträgt. */
   .cr-zone {
-    flex-basis: 274px;
+    flex-basis: 292px;
     gap: 6px;
   }
   .cr-crest {
@@ -738,6 +834,9 @@ function pin(id: string) {
   }
   .cr-meter-track {
     height: 9px;
+  }
+  .cr-boost {
+    font-size: 14px;
   }
   .cr-meter-next {
     font-size: 12px;

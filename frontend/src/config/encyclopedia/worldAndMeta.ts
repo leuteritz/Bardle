@@ -166,9 +166,10 @@ export const chronicleCategory: EncyclopediaCategory = {
       description:
         'Eight tracks of milestones, one per system — chimes, roster, ladder, drifters, forge, planets, bosses and stars. ' +
         'Each track watches a number you are already earning and writes a stage once it passes a threshold. ' +
-        'A written stage is permanent: it survives a prestige, and a counter that resets never takes it back.',
+        'A written stage is permanent: it survives a prestige, and a counter that resets never takes it back. ' +
+        'Stages are also what raises your Codex rank, and the rank multiplies every bonus you have written.',
       lore: 'A deed nobody wrote down was only ever weather.',
-      related: ['chronicle-tracks', 'prestige'],
+      related: ['chronicle-tracks', 'chronicle-rank', 'prestige'],
     },
     {
       id: 'chronicle-tracks',
@@ -179,8 +180,21 @@ export const chronicleCategory: EncyclopediaCategory = {
         'discounts its materials, winning on the ladder pays more LP per win. Every stage names one value, and that value is ' +
         'absolute — stage III is exactly what it says, not the sum of I, II and III.',
       lore: 'The deeper you dig one well, the sweeter that water runs.',
-      formula: '5 stages per track · 8 tracks · rank title from the number of stages written',
-      related: ['chronicle'],
+      formula: '5 stages per track · 8 tracks · every value already includes your rank boost',
+      related: ['chronicle', 'chronicle-rank'],
+    },
+    {
+      id: 'chronicle-rank',
+      name: 'Codex Rank',
+      icon: 'game-icons:laurels',
+      description:
+        'The total number of stages written gives you a rank, and the rank multiplies every track bonus you own — ' +
+        'Page Keeper ×1.05 at the first stage, Loremaster ×1.30 at 24, Unending Tale ×1.50 with all 40 written. ' +
+        'It is not a bonus beside the tracks but on top of them: a track paying +20% pays +30% at the highest rank. ' +
+        'That is why filling a ninth stage on a track you have already invested in still pays off everywhere else.',
+      lore: 'A name is what the cosmos calls you once enough of your deeds are written down.',
+      formula: 'track stage value × rank multiplier — the numbers shown are the ones that apply',
+      related: ['chronicle', 'chronicle-tracks'],
     },
   ],
 }

@@ -191,6 +191,12 @@ export function useStatCatalog(query: Ref<string>): {
         value: achievementStore.rankTitle,
         keywords: 'astral codex milestones achievements title chronicle',
       },
+      {
+        key: 'chronicle-rank-boost',
+        label: 'Codex Rank Boost',
+        value: `×${achievementStore.rankMult.toFixed(2)}`,
+        keywords: 'astral codex rank multiplier track bonus chronicle',
+      },
     ]
   })
 

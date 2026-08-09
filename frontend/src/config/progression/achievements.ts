@@ -1,4 +1,4 @@
-import type { ChronicleTrackDef } from '@/types'
+import type { ChronicleRankDef, ChronicleTrackDef } from '@/types'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // THE BARD'S CHRONICLE — statischer Katalog der Meilenstein-Bahnen
@@ -176,25 +176,37 @@ export const CHRONICLE_TRACKS: ChronicleTrackDef[] = [
 export const CHRONICLE_TOTAL_STAGES = CHRONICLE_TRACKS.reduce((sum, t) => sum + t.stages.length, 0)
 
 /**
- * Titel nach Zahl der geschriebenen Stufen. Absteigend gelesen, `min`
+ * Rang nach Zahl der geschriebenen Stufen. Absteigend gelesen, `min`
  * aufsteigend sortiert — derselbe Aufbau wie die Ascension-Ränge der
  * Champions, damit beide Leitern gleich gelesen werden.
+ *
+ * `mult` ist der Verstärker auf JEDEN Bahn-Bonus (siehe `ChronicleRankDef`).
+ * Die Kurve steigt bewusst spät stark an: die ersten Stufen fallen von selbst,
+ * die letzten acht kosten echte Arbeit — und ×1.50 auf ein volles Buch ist der
+ * Grund, es überhaupt zu füllen. Obergrenze ist an der steilsten Bahn geprüft:
+ * Sunsmith V gibt 20 % Materialrabatt, mit ×1.50 also 30 % — spürbar, aber
+ * weit davon entfernt, die Forge zu verschenken.
  */
-export const CHRONICLE_RANKS: { min: number; title: string }[] = [
-  { min: 0, title: 'Unwritten' },
-  { min: 1, title: 'Page Keeper' },
-  { min: 8, title: 'Storywright' },
-  { min: 16, title: 'Codexbound' },
-  { min: 24, title: 'Loremaster' },
-  { min: 32, title: 'Stargazer' },
-  { min: CHRONICLE_TOTAL_STAGES, title: 'Unending Tale' },
+export const CHRONICLE_RANKS: ChronicleRankDef[] = [
+  { min: 0, title: 'Unwritten', mult: 1 },
+  { min: 1, title: 'Page Keeper', mult: 1.05 },
+  { min: 8, title: 'Storywright', mult: 1.15 },
+  { min: 16, title: 'Codexbound', mult: 1.2 },
+  { min: 24, title: 'Loremaster', mult: 1.3 },
+  { min: 32, title: 'Stargazer', mult: 1.4 },
+  { min: CHRONICLE_TOTAL_STAGES, title: 'Unending Tale', mult: 1.5 },
 ]
 
-/** Der Titel, der zu so vielen freigeschalteten Stufen gehört. */
-export function chronicleRank(unlockedStages: number): string {
-  let title = CHRONICLE_RANKS[0].title
-  for (const rank of CHRONICLE_RANKS) {
-    if (unlockedStages >= rank.min) title = rank.title
+/** Der Rang, der zu so vielen freigeschalteten Stufen gehört. */
+export function chronicleRankAt(unlockedStages: number): ChronicleRankDef {
+  let rank = CHRONICLE_RANKS[0]
+  for (const candidate of CHRONICLE_RANKS) {
+    if (unlockedStages >= candidate.min) rank = candidate
   }
-  return title
+  return rank
+}
+
+/** Nur sein Titel — die Kurzform für Anzeigen, die den Faktor nicht brauchen. */
+export function chronicleRank(unlockedStages: number): string {
+  return chronicleRankAt(unlockedStages).title
 }

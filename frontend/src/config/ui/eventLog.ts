@@ -61,6 +61,15 @@ export function logChronicleStage(trackName: string, numeral: string, effectLine
 }
 
 /**
+ * Ein Rang des Codex ist erreicht. Eigene Zeile neben der Stufe, die ihn
+ * ausgelöst hat: die Stufe hebt EINE Bahn, der Rang hebt alle acht.
+ */
+export function logChronicleRank(rankTitle: string, effectLine: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`Codex rank: ${rankTitle} — ${effectLine}`, 'chronicle')
+}
+
+/**
  * Ein Vorzeichen wurde erfüllt. `swift` steht als Vorsatz in der Zeile und
  * nicht als eigener Ereignistyp: es ist dasselbe Ereignis, nur pünktlich — ein
  * zweiter Typ hätte im Log eine zweite Farbe für dieselbe Sache bedeutet.

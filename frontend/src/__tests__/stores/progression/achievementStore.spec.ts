@@ -13,9 +13,19 @@ import {
   CHRONICLE_TOTAL_STAGES,
   CHRONICLE_RANKS,
   chronicleRank,
+  chronicleRankAt,
 } from '@/config/progression/achievements'
 import { CHRONICLE_STAGES_PER_TRACK } from '@/config/constants'
 import type { ChronicleTrackDef } from '@/types'
+
+/**
+ * Der Beitrag einer Stufe NACH der Rang-Verstärkung, mit derselben Rundung wie
+ * `bonusPct` im Store. Steht hier als eigene Zeile, damit die Tests den Vertrag
+ * prüfen („Stufenwert mal Rang") statt die Implementierung abzuschreiben.
+ */
+function boosted(base: number, rankMult: number): number {
+  return Math.round(base * rankMult * 10) / 10
+}
 
 /** Die Bahn zu einer ID — schlägt laut fehl, wenn eine Bahn umbenannt wurde. */
 function track(id: string): ChronicleTrackDef {
@@ -80,9 +90,7 @@ describe('achievementStore (Chronicle)', () => {
           expect(t.stages[i].threshold, `${t.id} stage ${i + 1}`).toBeGreaterThan(
             t.stages[i - 1].threshold,
           )
-          expect(t.stages[i].value, `${t.id} stage ${i + 1}`).toBeGreaterThan(
-            t.stages[i - 1].value,
-          )
+          expect(t.stages[i].value, `${t.id} stage ${i + 1}`).toBeGreaterThan(t.stages[i - 1].value)
         }
       }
     })
@@ -180,7 +188,10 @@ describe('achievementStore (Chronicle)', () => {
       setMetric('drifters', t.stages[2].threshold)
       store.tick()
       // Stufe III heißt genau deren Wert — nicht Stufe I + II + III.
-      expect(store.drifterBuffDurationMult).toBeCloseTo(1 + t.stages[2].value / 100, 10)
+      expect(store.drifterBuffDurationMult).toBeCloseTo(
+        1 + boosted(t.stages[2].value, store.rankMult) / 100,
+        10,
+      )
     })
 
     it('turns the forge track into a discount below 1', () => {
@@ -188,7 +199,10 @@ describe('achievementStore (Chronicle)', () => {
       const t = track('forge')
       setMetric('forge', t.stages[0].threshold)
       store.tick()
-      expect(store.forgeMaterialCostMult).toBeCloseTo(1 - t.stages[0].value / 100, 10)
+      expect(store.forgeMaterialCostMult).toBeCloseTo(
+        1 - boosted(t.stages[0].value, store.rankMult) / 100,
+        10,
+      )
       expect(store.forgeMaterialCostMult).toBeLessThan(1)
     })
 
@@ -278,6 +292,47 @@ describe('achievementStore (Chronicle)', () => {
         expect(index).toBeGreaterThanOrEqual(lastIndex)
         lastIndex = index
       }
+    })
+
+    it('raises the rank multiplier along the same ladder as the titles', () => {
+      // `min` aufsteigend und `mult` nie fallend — sonst wäre ein Aufstieg eine
+      // Verschlechterung, und die Leiter im Panel liefe rückwärts.
+      for (let i = 1; i < CHRONICLE_RANKS.length; i++) {
+        expect(CHRONICLE_RANKS[i].min).toBeGreaterThan(CHRONICLE_RANKS[i - 1].min)
+        expect(CHRONICLE_RANKS[i].mult).toBeGreaterThanOrEqual(CHRONICLE_RANKS[i - 1].mult)
+      }
+      // Der unterste Rang darf nichts verstärken, sonst startet das Spiel mit
+      // einem Bonus auf einen Codex, in dem nichts steht.
+      expect(CHRONICLE_RANKS[0].mult).toBe(1)
+      expect(chronicleRankAt(0)).toBe(CHRONICLE_RANKS[0])
+      expect(chronicleRankAt(CHRONICLE_TOTAL_STAGES)).toBe(
+        CHRONICLE_RANKS[CHRONICLE_RANKS.length - 1],
+      )
+    })
+
+    it('multiplies every track bonus with the rank, not just one of them', () => {
+      const store = useAchievementStore()
+      // Eine einzelne Stufe: Rang „Page Keeper", der erste Verstärker.
+      const drifters = track('drifters')
+      setMetric('drifters', drifters.stages[0].threshold)
+      store.tick()
+      const lowRank = store.rankMult
+      const lowValue = store.drifterBuffDurationMult
+      expect(lowRank).toBeGreaterThan(1)
+
+      // Dieselbe Stufe derselben Bahn, aber ein volles Buch drumherum: der Wert
+      // dieser einen Bahn MUSS steigen, obwohl an ihr selbst nichts passiert ist.
+      for (const t of CHRONICLE_TRACKS) {
+        if (t.id !== 'drifters') setMetric(t.id, t.stages[t.stages.length - 1].threshold)
+      }
+      store.tick()
+      expect(store.stages.drifters).toBe(1)
+      expect(store.rankMult).toBeGreaterThan(lowRank)
+      expect(store.drifterBuffDurationMult).toBeGreaterThan(lowValue)
+      expect(store.drifterBuffDurationMult).toBeCloseTo(
+        1 + boosted(drifters.stages[0].value, store.rankMult) / 100,
+        10,
+      )
     })
 
     it('reports completion once every track is maxed', () => {

@@ -8,14 +8,14 @@ import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useHerald } from '@/composables/ui/useHerald'
-import { logChronicleStage } from '@/config/ui/eventLog'
+import { logChronicleRank, logChronicleStage } from '@/config/ui/eventLog'
 import { toRoman } from '@/utils/ui/format'
 import {
   CHRONICLE_TRACKS,
   CHRONICLE_TOTAL_STAGES,
-  chronicleRank,
+  chronicleRankAt,
 } from '@/config/progression/achievements'
-import { CHRONICLE_HERALD_ACCENT } from '@/config/constants'
+import { CHRONICLE_HERALD_ACCENT, CHRONICLE_RANK_ICON } from '@/config/constants'
 import type {
   ChronicleBonusKey,
   ChronicleMetricId,
@@ -72,7 +72,17 @@ export const useAchievementStore = defineStore('achievement', {
 
     /** Titel zur bisherigen Zahl an Stufen. */
     rankTitle(): string {
-      return chronicleRank(this.unlockedStageCount)
+      return chronicleRankAt(this.unlockedStageCount).title
+    },
+
+    /**
+     * Verstärker des erreichten Rangs auf JEDEN Bahn-Bonus. Er greift an genau
+     * einer Stelle — in `bonusPct` — und wirkt damit von selbst in allen acht
+     * Effekt-Gettern darunter. Wer ihn stattdessen je Getter einbaute, hätte
+     * acht Stellen, die auseinanderlaufen können.
+     */
+    rankMult(): number {
+      return chronicleRankAt(this.unlockedStageCount).mult
     },
 
     /** Alle Stufen geschrieben — die Kopfzeile darf das feiern. */
@@ -136,14 +146,20 @@ export const useAchievementStore = defineStore('achievement', {
     },
 
     /**
-     * Prozentpunkte, die die Bahn hinter einem Bonus gerade beisteuert. Basis
-     * aller acht Getter darunter — die Rechnung selbst steht damit einmal.
+     * Prozentpunkte, die die Bahn hinter einem Bonus gerade beisteuert — bereits
+     * mit dem Rang verstärkt. Basis aller acht Getter darunter UND der Anzeige
+     * im Panel: beide lesen dieselbe Zahl, sonst zeigte die Karte einen Wert an,
+     * den das Spiel nicht rechnet.
+     *
+     * Auf eine Nachkommastelle gerundet, damit „+15 % × 1.3" überall exakt
+     * 19,5 ergibt statt 19,499999999999996.
      */
     bonusPct(state): (key: ChronicleBonusKey) => number {
       return (key) => {
         const track = TRACK_BY_BONUS[key]
         const stage = state.stages[track.id] ?? 0
-        return stage > 0 ? track.stages[stage - 1].value : 0
+        if (stage === 0) return 0
+        return Math.round(track.stages[stage - 1].value * this.rankMult * 10) / 10
       }
     },
 
@@ -216,6 +232,10 @@ export const useAchievementStore = defineStore('achievement', {
       // Boss-Rausch, ein Kauf, der zwanzig Forge-Level bringt). Gemeldet wird
       // dann nur die höchste: vier Banner für eine Bahn sagen viermal dasselbe.
       let ratesTouched = false
+      // Der Rang VOR diesem Lauf. Ein Aufstieg verstärkt jeden Bonus des Buches
+      // auf einmal — das ist der größere Moment als die Stufe, die ihn ausgelöst
+      // hat, und darf deshalb nicht stumm passieren.
+      const rankBefore = chronicleRankAt(this.unlockedStageCount)
 
       for (const track of CHRONICLE_TRACKS) {
         const stage = this.stages[track.id] ?? 0
@@ -237,7 +257,11 @@ export const useAchievementStore = defineStore('achievement', {
         if (!announceStages) continue
 
         const numeral = toRoman(reached)
-        const effect = track.effect.replace('{v}', String(track.stages[reached - 1].value))
+        // Der Wert, der WIRKT — also mit dem Rang verstärkt, genau wie ihn das
+        // Panel zeigt. `bonusPct` ist dieselbe Quelle, aus der auch der
+        // Effekt-Getter dieser Bahn liest; eine eigene Rechnung hier hätte im
+        // Banner eine andere Zahl stehen lassen als in der Karte.
+        const effect = track.effect.replace('{v}', String(this.bonusPct(track.bonus)))
         if (!this.unseen.includes(track.id)) this.unseen.push(track.id)
         logChronicleStage(track.name, numeral, effect)
         useHerald().announce({
@@ -249,6 +273,27 @@ export const useAchievementStore = defineStore('achievement', {
           accent: CHRONICLE_HERALD_ACCENT,
         })
         logger.info('Chronicle', `${track.name} ${numeral}`, { track: track.id, stage: reached })
+      }
+
+      // Rang-Aufstieg — nach den Bahnen, weil er aus ihrer Summe folgt. Er hebt
+      // JEDEN Bonus des Buches zugleich, also auch die sieben, an denen in
+      // diesem Takt nichts passiert ist: `ratesTouched` gilt damit immer.
+      const rankAfter = chronicleRankAt(this.unlockedStageCount)
+      if (rankAfter !== rankBefore) {
+        ratesTouched = true
+        if (announceStages) {
+          const line = `Every Codex track bonus ×${rankAfter.mult.toFixed(2)}`
+          logChronicleRank(rankAfter.title, line)
+          useHerald().announce({
+            kind: 'chronicle',
+            eyebrow: 'CODEX RANK',
+            headline: rankAfter.title,
+            subline: line,
+            icon: CHRONICLE_RANK_ICON,
+            accent: CHRONICLE_HERALD_ACCENT,
+          })
+          logger.info('Chronicle', `rank ${rankAfter.title}`, { mult: rankAfter.mult })
+        }
       }
 
       if (ratesTouched) useShopStore().refreshRates()

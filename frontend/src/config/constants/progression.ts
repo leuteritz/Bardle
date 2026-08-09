@@ -248,3 +248,9 @@ export const CHRONICLE_STAGES_PER_TRACK = 5
  * als solchen, die Bahnfarbe erzählt die Karte im Tab.
  */
 export const CHRONICLE_HERALD_ACCENT = '232, 192, 64'
+/**
+ * Glyph des Rang-Banners. Die Stufen-Banner tragen das Zeichen ihrer Bahn — ein
+ * Rang gehört keiner Bahn, sondern allen, und braucht deshalb ein eigenes. Der
+ * Lorbeer ist die Auszeichnung selbst und steht ebenso am Lexikon-Eintrag.
+ */
+export const CHRONICLE_RANK_ICON = 'game-icons:laurels'

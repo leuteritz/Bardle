@@ -206,6 +206,24 @@ export interface ChronicleTrackDef {
   stages: ChronicleStageDef[]
 }
 
+/**
+ * Ein Rang der Gesamtleiter. Der Titel folgt aus der Zahl geschriebener Stufen,
+ * und er ist nicht nur Zierde: `mult` verstärkt JEDEN Bahn-Bonus.
+ *
+ * Warum ein Faktor und keine eigenen Boni je Rang: die acht Bahnen decken die
+ * acht Systeme bereits ab. Ein Rang mit eigener Wirkung wäre eine zweite
+ * Balance-Achse daneben — als Faktor auf das Vorhandene bleibt es EINE
+ * Einbaustelle (`bonusPct`), und das Panel erzählt eine Geschichte statt zwei:
+ * Stufen geben, der Rang verstärkt.
+ */
+export interface ChronicleRankDef {
+  /** Ab so vielen geschriebenen Stufen gilt der Rang. */
+  min: number
+  title: string
+  /** Faktor auf jeden Bahn-Bonus. 1 = keine Verstärkung. */
+  mult: number
+}
+
 /** Eine Bahn, wie die Karte sie zeigt — Definition plus laufender Stand. */
 export interface ChronicleTrackView extends ChronicleTrackDef {
   /** 0 = noch keine Stufe, 5 = ausgereizt. */
