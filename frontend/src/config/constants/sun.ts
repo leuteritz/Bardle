@@ -415,6 +415,13 @@ export const COMET_PHASE_DATA = {
   pulseSpeed: '6s',
 } as const
 
+/** Share of its box the comet's ROCK actually fills — the disc is inset so the
+ *  tumbling silhouette has room, which a sun (glow to the very edge) does not
+ *  need. Anything that places itself against the body's visible edge has to
+ *  account for it, or it leaves a hole where a sun sits tight. Mirrors
+ *  `.comet-rock { inset: 12% }` in CometDisc.vue — keep the two in sync. */
+export const COMET_DISC_FILL = 0.76
+
 /** Minimum drift time (seconds) before the comet may ignite into Spark. */
 /** Comet growth per Star Forge core ray at Lv 1+ (index 0..5 = rays kindled).
  *  Radius stays well below Spark's 38 — ignition must feel like a jump. */

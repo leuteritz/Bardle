@@ -9,6 +9,7 @@ import {
   STAR_PHASE_FINAL_INDEX,
   STAR_PHASE_MIN_DWELL_SECONDS,
   COMET_PHASE_DATA,
+  COMET_DISC_FILL,
   COMET_MIN_DWELL_SECONDS,
   COMET_STAGE_RADII,
   STATS_TAB_ORBIT,
@@ -202,6 +203,16 @@ const sunPct = computed(() => {
 
 const sunDiameter = computed(() => Math.round((stagePx.value * sunPct.value) / 100))
 
+/** Baseline of the identity block: the body's VISIBLE top edge, minus the clear
+ *  air. The block grows upward from here (translateY(-100%)), so it hugs
+ *  whatever the player currently is — a speck of a comet or the widest sun.
+ *  The comet's rock only fills part of its box, so measuring against the box
+ *  alone would strand the caption above it while a sun sits tight. */
+const identTopPct = computed(() => {
+  const visiblePct = sunPct.value * (solarStore.isCometState ? COMET_DISC_FILL : 1)
+  return O.CENTER_Y - visiblePct / 2 - O.IDENT_GAP_PCT
+})
+
 /* ── Time in phase ticker ────────────────────────────────────── */
 const now = ref(Date.now())
 let ticker: ReturnType<typeof setInterval>
@@ -359,9 +370,11 @@ const gate = computed<EvolveGate>(() => {
             />
           </svg>
 
-          <!-- Who the sun is, in the one band inside the ring that no body ever
-               reaches: below the topmost marker, above the largest disc. -->
-          <div class="sf-orbit-ident" :style="{ top: STATS_TAB_ORBIT.IDENT_TOP_PCT + '%' }">
+          <!-- Who the sun is — riding the body itself, right above its upper
+               edge, the mirror of the evolve chip on its lower one. It moves
+               with the disc from phase to phase, so the comet is named at the
+               comet instead of up at the ring. -->
+          <div class="sf-orbit-ident" :style="{ top: identTopPct + '%' }">
             <span class="sf-ident-step">{{ phaseDisplayLabel }}</span>
             <span class="sf-ident-name" :title="phaseAstroName">{{ phaseName }}</span>
           </div>
@@ -658,7 +671,8 @@ const gate = computed<EvolveGate>(() => {
     transform: scale(1);
     opacity: 0.9;
   }
-  /* stops short of the identity block above the disc */
+  /* by the time it reaches the caption riding the disc's upper edge it has
+     faded out — the last stretch of the ring is already invisible */
   100% {
     transform: scale(1.35);
     opacity: 0;
@@ -717,24 +731,27 @@ const gate = computed<EvolveGate>(() => {
   flex-shrink: 0;
 }
 
-/* ─ Identity, above the sun ─
-   Which step of seven, and who the sun is on it. Everything sizes itself off
-   the DIAL (cqmin of the stage container), not off the viewport: the dial is
-   ~390px on Full HD but over 600px on 2K, so a fixed px size that reads right
-   on one is a speck on the other. Being absolutely placed, growing it moves
-   nothing — the band it sits in is empty at every phase. */
+/* ─ Identity, worn by the body ─
+   Which step of seven, and who the sun is on it. `top` comes from the template
+   and is the body's upper edge less a gap, so the block hangs off the disc
+   rather than off the ring — it grows UPWARD from that line (translateY -100%)
+   and therefore never pushes into the body no matter how tall the caption gets.
+   Everything sizes itself off the DIAL (cqmin of the stage container), not off
+   the viewport: the dial is ~390px on Full HD but over 600px on 2K, so a fixed
+   px size that reads right on one is a speck on the other. */
 .sf-orbit-ident {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -100%);
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
   /* Narrow on purpose: the tags of the two markers at 10 and 2 o'clock reach in
-     to 27% and 73% of the stage, and this block sits at the same height. Its
-     text is centred and never wider than "Collapse", so it stays clear. */
+     to 27% and 73% of the stage, and at the largest sun the block rises to
+     their height. Its text is centred and never wider than "Collapse", so it
+     stays clear. */
   width: 46%;
   text-align: center;
   /* the ring's markers reach into this band's corners and carry generous hover

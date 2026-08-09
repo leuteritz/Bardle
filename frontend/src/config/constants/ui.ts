@@ -368,11 +368,15 @@ export const STATS_TAB_ORBIT = {
    *  phase caption and dwell clock, and an open arc reads as a progression
    *  instead of a cycle */
   SPAN_DEG: 280,
-  /** Top edge (% of the stage) of the identity block above the sun. Sits below
-   *  the ring's topmost marker (which reaches ~9.6%) and above the largest sun
-   *  disc (whose top edge is at 29%) — the one band inside the ring that no
-   *  body ever occupies, at any phase. */
-  IDENT_TOP_PCT: 11.5,
+  /** Clear air (% of the stage) between the celestial body's TOP EDGE and the
+   *  identity block's baseline. The block does not sit at a fixed height in the
+   *  ring — it rides the body, mirroring the evolve chip on its lower edge, so
+   *  name and body always read as one object. That matters most at the comet,
+   *  whose disc is barely a third of the largest sun's: a fixed top edge left
+   *  the caption stranded near the ring while the rock sat far below it.
+   *  Its worst case is the largest sun (top edge at 29%) — even with the tallest
+   *  caption the block ends around 17%, clear of the topmost marker's tag. */
+  IDENT_GAP_PCT: 2.5,
   /** Width (% of the stage) of a marker's hover card. It carries four readouts
    *  in a row, so it is wide — which is why the card anchors to whichever edge
    *  keeps it on the stage instead of always centring on its marker. */
