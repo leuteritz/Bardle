@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { formatCompactDuration, splitDuration } from '@/utils/ui/format'
+import { formatCompactDuration } from '@/utils/ui/format'
 import {
   useSolarUpgradeStore,
   type SolarBranchId,
@@ -12,7 +12,6 @@ import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
   STAR_PHASE_MIN_DWELL_SECONDS,
-  STAR_EVOLUTION_ICONS,
   COMET_PHASE_DATA,
   COMET_DISC_FILL,
   COMET_MIN_DWELL_SECONDS,
@@ -22,7 +21,6 @@ import {
   FORGE_LEAF_UNLOCK_PHASE,
   STATS_TAB_ORBIT,
   SUN_PHASE_DISPLAY_TOTAL,
-  MS_PER_SECOND,
 } from '@/config/constants'
 import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
@@ -263,21 +261,9 @@ const dwellPct = computed(() =>
 /* Active arc segment (current phase → next) creeping forward with dwell progress */
 const orbitActiveLen = computed(() => (ORBIT_SEG_LEN * dwellPct.value) / 100)
 
-/** How long the sun has already been what it is — the reading that turns the
- *  dial into a log book instead of a countdown. */
-const phaseAge = computed(() => {
-  if (!solarStore.phaseEnteredAt) return null
-  const {
-    days: d,
-    hours: h,
-    minutes: m,
-    seconds: s,
-  } = splitDuration((now.value - solarStore.phaseEnteredAt) / MS_PER_SECOND)
-  if (d > 0) return `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`
-  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
-  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`
-  return `${s}s`
-})
+/* Kein „In Phase"-Block mehr auf der Bogenmitte: dieselbe Zahl steht bereits
+   am Marker der laufenden Phase (`sf-tag-time`), und die Konsole darunter
+   trägt die Zeit, die für das Evolve zählt. Drei Anzeigen für eine Uhr. */
 
 /* ══ The evolve console ══════════════════════════════════════════
    The whole mechanic lives HERE now, under the dial it acts on — the dial
@@ -327,58 +313,44 @@ const nextStage = computed(() =>
 /** What the next phase actually opens up — the reason to bother. */
 const nextPhaseGain = computed(() => {
   const next = solarStore.starPhase + 1
-  if (next === FORGE_BRANCH_UNLOCK_PHASE) return '10 new branches open on the Star Forge'
-  if (next === FORGE_LEAF_UNLOCK_PHASE) return '10 leaves open on the Star Forge'
-  return 'every Star Forge branch gains +1 max level'
+  if (next === FORGE_BRANCH_UNLOCK_PHASE) return 'Opens 10 Star Forge branches'
+  if (next === FORGE_LEAF_UNLOCK_PHASE) return 'Opens 10 Star Forge leaves'
+  return '+1 max level on every Star Forge branch'
 })
 
-/** One sentence saying what holds the evolution — or that nothing does. */
+/** What holds the evolution — or, once nothing does, what it pays out.
+ *
+ *  Deliberately a fragment, not a sentence: the two gates right above already
+ *  SHOW their state, so repeating "both gates stand open" spends a line saying
+ *  what the reader just read. What is left is the part the gates cannot say —
+ *  the number that is missing, or the reward that is waiting. */
 const verdict = computed<{
   tone: 'ready' | 'blocked' | 'end'
-  icon: string
   text: string
   /** rays are (part of) the blocker — only then is a pointer at the tree useful */
   raysShort: boolean
 }>(() => {
   if (isMax.value)
-    return {
-      tone: 'end',
-      icon: STAR_EVOLUTION_ICONS.ready,
-      text: 'The last light has gone out — nothing follows the collapse.',
-      raysShort: false,
-    }
+    return { tone: 'end', text: 'Nothing follows the collapse', raysShort: false }
   if (solarStore.isUpgrading)
-    return {
-      tone: 'ready',
-      icon: STAR_EVOLUTION_ICONS.ready,
-      text: `The core is turning over — ${nextStage.value.name} is taking shape…`,
-      raysShort: false,
-    }
+    return { tone: 'ready', text: `${nextStage.value.name} is taking shape…`, raysShort: false }
   if (dwellMet.value && raysAllMet.value)
-    return {
-      tone: 'ready',
-      icon: STAR_EVOLUTION_ICONS.ready,
-      text: `Both gates stand open — ${nextPhaseGain.value}.`,
-      raysShort: false,
-    }
+    return { tone: 'ready', text: nextPhaseGain.value, raysShort: false }
   if (!dwellMet.value && !raysAllMet.value)
     return {
       tone: 'blocked',
-      icon: STAR_EVOLUTION_ICONS.blocked,
-      text: `Both gates hold — ${formatCompactDuration(dwellRemainingMs.value)} of dwell, ${raysShortText.value} below Lv ${requiredRayLevel.value}.`,
+      text: `${formatCompactDuration(dwellRemainingMs.value)} of dwell · ${raysShortText.value} below Lv ${requiredRayLevel.value}`,
       raysShort: true,
     }
   if (!dwellMet.value)
     return {
       tone: 'blocked',
-      icon: STAR_EVOLUTION_ICONS.blocked,
-      text: `Every ray is grown — the sun still owes ${formatCompactDuration(dwellRemainingMs.value)} in this phase.`,
+      text: `${formatCompactDuration(dwellRemainingMs.value)} of dwell left`,
       raysShort: false,
     }
   return {
     tone: 'blocked',
-    icon: STAR_EVOLUTION_ICONS.blocked,
-    text: `Time is served — ${raysShortText.value} still below Lv ${requiredRayLevel.value}.`,
+    text: `${raysShortText.value} below Lv ${requiredRayLevel.value}`,
     raysShort: true,
   }
 })
@@ -499,14 +471,6 @@ function openSolarTree(): void {
             </template>
           </div>
 
-          <!-- How long this phase has already lasted — the dial's log book, parked
-               on the floor of the arc's open bottom so it sits right above the
-               augment deck's rule. -->
-          <div class="sf-orbit-age" :title="`Time spent in the ${phaseName} phase`">
-            <span class="sf-age-lbl">In Phase</span>
-            <span class="sf-age-val">{{ phaseAge ?? '—' }}</span>
-          </div>
-
           <!-- Standing tags: every step names itself and says how long the sun
                stayed there, without waiting to be hovered. They sit on their
                marker's radial (outward, or inward on the flanks) and never take
@@ -604,16 +568,11 @@ function openSolarTree(): void {
       <footer class="se-console" :class="[`is-${verdict.tone}`, { 'is-live': canEvolveNow }]">
         <div v-if="!isMax" class="se-gates">
           <!-- Gate one: the five core rays, each a pip in its own colour, so a
-               glance says WHICH one is short instead of just how many. -->
-          <div class="se-gate" :class="{ 'is-met': raysAllMet }">
-            <Icon
-              :icon="STAR_EVOLUTION_ICONS.gateRays"
-              class="se-gate-ico"
-              width="18"
-              height="18"
-              aria-hidden="true"
-            />
-            <span class="se-gate-k">Core Rays · Lv {{ requiredRayLevel }}</span>
+               glance says WHICH one is short instead of just how many. The
+               required level lives in the pip's title and in the verdict — the
+               gate itself only has to answer "open or not". -->
+          <div class="se-gate" :class="{ 'is-met': raysAllMet }" :title="`Every core ray must reach Lv ${requiredRayLevel}`">
+            <span class="se-gate-k">Rays</span>
             <span class="se-gate-v">
               {{ raysMet }}<span class="se-gate-cap">/{{ SOLAR_BRANCHES.length }}</span>
             </span>
@@ -629,27 +588,22 @@ function openSolarTree(): void {
             </span>
           </div>
 
-          <!-- Gate two: the time this phase is owed -->
-          <div class="se-gate" :class="{ 'is-met': dwellMet }">
-            <Icon
-              :icon="STAR_EVOLUTION_ICONS.gateTime"
-              class="se-gate-ico"
-              width="18"
-              height="18"
-              aria-hidden="true"
-            />
-            <span class="se-gate-k">Dwell Time</span>
-            <!-- compact, not a clock: "00:02:58" spends two thirds of its width
-                 on a leading zero hour, and every other duration on this dial
-                 is written the same way -->
+          <!-- Gate two: the time this phase is owed. Compact, not a clock —
+               "00:02:58" spends two thirds of its width on a zero hour. -->
+          <div class="se-gate" :class="{ 'is-met': dwellMet }" title="Time the sun must spend in this phase">
+            <span class="se-gate-k">Dwell</span>
             <span class="se-gate-v">
-              {{ dwellMet ? 'SERVED' : formatCompactDuration(dwellRemainingMs) }}
+              {{ dwellMet ? 'Served' : formatCompactDuration(dwellRemainingMs) }}
             </span>
             <span class="se-bar">
               <span class="se-bar-fill" :style="{ transform: `scaleX(${dwellPct / 100})` }" />
             </span>
           </div>
         </div>
+
+        <!-- one hairline parts state from action; without it the big gate
+             values and the button read as one undifferentiated block -->
+        <span v-if="!isMax" class="se-rule" aria-hidden="true"></span>
 
         <div class="se-act">
           <button
@@ -669,7 +623,6 @@ function openSolarTree(): void {
         </div>
 
         <p class="se-verdict">
-          <Icon :icon="verdict.icon" class="se-verdict-ico" width="15" height="15" aria-hidden="true" />
           <span class="se-verdict-txt">{{ verdict.text }}</span>
           <button
             v-if="verdict.raysShort"
@@ -865,6 +818,7 @@ function openSolarTree(): void {
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
     'gates gates'
+    'rule rule'
     'act verdict';
   align-items: center;
   column-gap: clamp(9px, 1.3cqw, 20px);
@@ -888,56 +842,54 @@ function openSolarTree(): void {
 }
 
 /* ── the two gates ───────────────────────────────────────────────── */
+/* No boxes inside the box: the gates used to be bordered tiles sitting on a
+   bordered console — three nested frames for two numbers. They are zones now,
+   parted by a single hairline, and the state is carried by the colour of the
+   value and its track alone. */
 .se-gates {
   grid-area: gates;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(7px, 1cqw, 16px);
   min-width: 0;
 }
 
-/* Icon, label and value on one line; the pips / the bar run the full width
-   underneath — side by side neither would have the room to say anything. */
+/* Label and value on one line, the pips / the track full width underneath —
+   side by side neither would have the room to say anything. */
 .se-gate {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: clamp(3px, 0.45cqw, 7px) clamp(5px, 0.7cqw, 11px);
-  padding: clamp(5px, 0.7cqw, 11px) clamp(7px, 0.95cqw, 15px);
-  background: #141410;
-  border: 1px solid #33220e;
-  border-radius: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: clamp(4px, 0.55cqw, 9px) clamp(6px, 0.8cqw, 13px);
+  padding: 0 clamp(8px, 1.1cqw, 18px);
   min-width: 0;
+  cursor: help;
 }
-.se-gate.is-met {
-  border-color: #2e7a1a;
-  background: #121810;
+.se-gate:first-child {
+  padding-left: 0;
 }
-
-.se-gate-ico {
-  width: clamp(15px, 1.7cqw, 27px);
-  height: clamp(15px, 1.7cqw, 27px);
-  color: #a08a5e;
+.se-gate + .se-gate {
+  border-left: 1px solid #2c1806;
 }
-.se-gate.is-met .se-gate-ico {
-  color: #8ad060;
+.se-gate:last-child {
+  padding-right: 0;
 }
 
 .se-gate-k {
   font-size: clamp(9px, 1.05cqw, 16px);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #8a7c66;
+  color: #7a6c56;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* The one thing in the console that has to read across the room */
 .se-gate-v {
-  font-size: clamp(13px, 1.6cqw, 25px);
+  font-size: clamp(16px, 2cqw, 32px);
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -947,9 +899,9 @@ function openSolarTree(): void {
 }
 
 .se-gate-cap {
-  font-size: 0.66em;
+  font-size: 0.58em;
   font-weight: 700;
-  color: #8a7c66;
+  color: #7a6c56;
 }
 
 /* ── gate one: five pips, one per core ray ───────────────────────── */
@@ -959,13 +911,13 @@ function openSolarTree(): void {
   gap: clamp(4px, 0.6cqw, 9px);
 }
 
-/* Diamonds, same shape the header's evolution panel uses for ray levels — a
-   grown ray burns in its OWN colour, a short one stays an empty socket. */
+/* A grown ray burns in its OWN colour, a short one stays an empty socket —
+   which ray is missing is the one thing a bare "3/5" cannot say. */
 .se-pip {
   flex: 1 1 0;
-  height: clamp(6px, 0.75cqw, 11px);
+  height: clamp(5px, 0.6cqw, 9px);
   background: #0d0904;
-  border: 1px solid #33220e;
+  border: 1px solid #2c1806;
   border-radius: 2px;
   cursor: help;
 }
@@ -973,9 +925,9 @@ function openSolarTree(): void {
 /* ── gate two: the dwell track ───────────────────────────────────── */
 .se-bar {
   grid-column: 1 / -1;
-  height: clamp(6px, 0.75cqw, 11px);
+  height: clamp(5px, 0.6cqw, 9px);
   background: #0d0904;
-  border: 1px solid #33220e;
+  border: 1px solid #2c1806;
   border-radius: 2px;
   overflow: hidden;
 }
@@ -990,6 +942,12 @@ function openSolarTree(): void {
 }
 .se-gate.is-met .se-bar-fill {
   background: linear-gradient(to right, #2e7a1a, #6ec040);
+}
+
+.se-rule {
+  grid-area: rule;
+  height: 1px;
+  background: #2c1806;
 }
 
 /* ── the act ─────────────────────────────────────────────────────── */
@@ -1076,18 +1034,13 @@ function openSolarTree(): void {
   align-self: center;
   display: flex;
   align-items: center;
-  gap: clamp(5px, 0.7cqw, 11px);
+  /* generous: with the longest verdict the pointer beside it would otherwise
+     butt straight against the last word */
+  gap: clamp(12px, 1.5cqw, 24px);
   font-size: clamp(10px, 1.15cqw, 18px);
   line-height: 1.25;
   color: #d8b06a;
   min-width: 0;
-}
-
-.se-verdict-ico {
-  width: clamp(13px, 1.4cqw, 22px);
-  height: clamp(13px, 1.4cqw, 22px);
-  flex-shrink: 0;
-  color: #cc6050;
 }
 
 .se-verdict-txt {
@@ -1097,32 +1050,24 @@ function openSolarTree(): void {
 .se-console.is-ready .se-verdict {
   color: #a8e878;
 }
-.se-console.is-ready .se-verdict-ico {
-  color: #6ec040;
-}
 .se-console.is-end .se-verdict {
-  color: #d9b6ff;
-}
-.se-console.is-end .se-verdict-ico {
-  color: #a070e0;
+  color: #b89ad8;
 }
 
 /* Rays are BOUGHT on the tree — this points at it while they are the blocker.
-   Deliberately a ghost chip, not a second solid button: it must never read as
-   a second way to evolve. */
+   A plain worded link, not a chip: a bordered button beside the evolve button
+   would read as a second way to evolve, which is exactly what it is not. */
 .se-goto {
   flex-shrink: 0;
   margin-left: auto;
-  padding: clamp(2px, 0.3cqw, 5px) clamp(6px, 0.85cqw, 13px);
+  padding: 0;
   font-size: clamp(9px, 1.05cqw, 16px);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
   white-space: nowrap;
-  color: #c89040;
+  color: #9a7538;
   background: transparent;
-  border: 1px solid #5c3310;
-  border-radius: 4px;
+  border: none;
   cursor: pointer;
   transition: color 0.15s;
 }
@@ -1178,47 +1123,6 @@ function openSolarTree(): void {
   text-shadow: 0 0 10px var(--phase-glow);
   white-space: nowrap;
   cursor: help;
-}
-
-/* ─ Time in phase, on the floor of the arc ─
-   The dial's log book: no gate, no countdown, just how long this sun has been
-   what it is. Anchored to the stage's bottom edge so it sits directly above
-   the augment deck's rule instead of floating in the ring. */
-.sf-orbit-age {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  width: 96%;
-  text-align: center;
-  cursor: help;
-}
-
-.sf-age-lbl {
-  font-size: 10px;
-  font-size: clamp(10px, 1.9cqmin, 18px);
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #6a5a3a;
-  white-space: nowrap;
-}
-
-.sf-age-val {
-  font-size: 20px;
-  font-size: clamp(19px, 5.4cqmin, 48px);
-  font-weight: 900;
-  letter-spacing: 0.03em;
-  line-height: 1.1;
-  color: #e8e4d8;
-  text-shadow: 0 0 8px rgba(232, 228, 216, 0.35);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 /* ─ Phase markers riding the arc ─

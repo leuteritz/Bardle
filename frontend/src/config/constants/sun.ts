@@ -456,10 +456,12 @@ export const STAR_EVOLUTION_TOOLTIP_WIDTH = 'clamp(380px, 22vw, 520px)'
  * unterscheiden sich in Zahnrad, Stoppuhr und Uhr-mit-Plus, damit sie in der
  * zweispaltigen Zeilenliste nebeneinander unterscheidbar bleiben.
  *
- * ZWEI Verbraucher, ein Satz Glyphen: das Hover-Panel im Header
- * (`StarEvolutionTooltip`) und die Evolve-Konsole unter dem Sonnen-Dial im
- * Bard-Stats-Tab (`SolarEvolutionColumn`). Beide zeigen dieselben zwei Tore —
- * zwei Sanduhren für dieselbe Verweildauer wären zwei Aussagen für eine Sache.
+ * Der Name sagt „Sternentwicklung", nicht „Tooltip": die Glyphen gehören dem
+ * Thema, nicht dem Fenster. Die Evolve-Konsole im Bard-Stats-Tab zeigt
+ * dieselben zwei Tore, kommt dort aber ohne Glyphen aus — auf ihren 15px
+ * zerfallen `game-icons` zu Haarstrichen (siehe „Icons" in CLAUDE.md), und
+ * die Wörter „Rays" und „Dwell" sind kürzer zu lesen als das Zeichen zu
+ * entziffern. Wer sie dort doch wieder braucht, nimmt DIESE hier.
  */
 export const STAR_EVOLUTION_ICONS = {
   gateTime: 'game-icons:hourglass',
