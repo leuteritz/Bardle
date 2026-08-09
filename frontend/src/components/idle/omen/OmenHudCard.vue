@@ -13,12 +13,20 @@ import { OMEN_DEADLINE_WARN_SEC, OMEN_SWIFT_DURATION_MULT } from '@/config/const
  *
  * Die Karte ist der ganze Grund, warum das Omen-System im Spielbild wohnt und
  * nicht in einem Menü: ein mittelfristiges Ziel lenkt nur, solange es sichtbar
- * ist. Deshalb steht hier alles, was die Entscheidung „weiterspielen oder
- * umsteuern" braucht — Ziel, Stand, Restfrist, Lohn — und sonst nichts.
+ * ist. Sie steht damit aber auch DAUERND im Bild, anders als die Drifter-Karte
+ * daneben, die nach Sekunden wieder geht — deshalb ist sie auf drei Zeilen
+ * gedrückt und trägt nur, was die Frage „weiterspielen oder umsteuern"
+ * wirklich braucht.
  *
- * Sie hat KEINEN eigenen Takt: der Store stellt `omenNow` im Sekundentakt, und
- * die Frist ist auf die Sekunde genau schnell genug. Ein zweiter Timer neben dem
- * Spiel-Tick wäre ein zweiter Grund, pro Sekunde zu rendern.
+ * Was dafür weichen musste: die ausgeschriebene Zielzeile („Recover 30
+ * materials"). Sie sagte dasselbe wie der Zähler darunter („12 / 30
+ * materials"), nur länger. Sie steht jetzt im Tooltip der Karte, wo sie beim
+ * Nachschlagen zu finden ist, ohne dauerhaft Fläche zu belegen.
+ *
+ * Die Karte hat KEINEN eigenen Takt: der Store stellt `omenNow` im
+ * Sekundentakt, und die Frist ist auf die Sekunde genau schnell genug. Ein
+ * zweiter Timer neben dem Spiel-Tick wäre ein zweiter Grund, pro Sekunde zu
+ * rendern.
  */
 const omenStore = useOmenStore()
 const uiStore = useUiStore()
@@ -46,11 +54,24 @@ const urgent = computed(
 /** Der Lohn in einer Zeile — dieselbe Fassung, die die Wahlkarte zeigt. */
 const rewardLine = computed(() => (activeView.value ? omenRewardLine(activeView.value) : ''))
 
-/** Zielzeile mit eingesetzter Menge. */
+/** Die Aufgabe mit eingesetzter Menge. Nur ab 2K im Aufriss (siehe CSS), auf
+ *  Full HD trägt sie der Tooltip. */
 const objectiveLine = computed(() => {
   const view = activeView.value
   if (!view) return ''
   return view.objective.replace('{n}', view.target.toLocaleString())
+})
+
+/** Die volle Aufgabe samt Lohn — Tooltip der Karte, weil beides im Aufriss
+ *  keinen Platz mehr hat. */
+const fullTitle = computed(() => {
+  const view = activeView.value
+  if (!view) return ''
+  const objective = view.objective.replace('{n}', view.target.toLocaleString())
+  const swift = view.swiftAvailable
+    ? ` · ${OMEN_SWIFT_DURATION_MULT}× reward duration if fulfilled within ${deadlineLabel.value}`
+    : ' · the swift bonus has lapsed, nothing else is lost'
+  return `${view.name} — ${objective}${swift}`
 })
 
 // ── Unterkante veröffentlichen ───────────────────────────────────────────────
@@ -97,11 +118,13 @@ onUnmounted(() => {
       ref="root"
       class="ohc-root"
       :style="{ '--accent': activeView.color }"
+      :title="fullTitle"
       role="status"
     >
+      <!-- Zeile 1: wer ruft, und wie lange noch. -->
       <div class="ohc-head">
-        <Icon icon="game-icons:star-swirl" width="13" height="13" class="ohc-head__icon" />
-        <span class="ohc-head__lbl">Omen</span>
+        <Icon :icon="activeView.icon" class="ohc-glyph" width="17" height="17" />
+        <span class="ohc-name">{{ activeView.name }}</span>
 
         <!-- Die Frist entscheidet nur über den Eilbonus. Ist sie durch, sagt die
              Karte das auch — ein leerer Platz läse sich wie ein Fehler. -->
@@ -109,50 +132,57 @@ onUnmounted(() => {
           v-if="activeView.swiftAvailable"
           class="ohc-clock"
           :class="{ 'ohc-clock--urgent': urgent }"
-          :title="`Fulfil within ${deadlineLabel} for ${OMEN_SWIFT_DURATION_MULT}× reward duration`"
         >
-          <Icon icon="game-icons:sundial" width="11" height="11" class="ohc-clock__icon" />
-          <span class="ohc-clock__num">{{ deadlineLabel }}</span>
+          {{ deadlineLabel }}
         </span>
-        <span v-else class="ohc-lapsed" title="The swift bonus has lapsed — nothing else is lost">
-          lapsed
-        </span>
+        <span v-else class="ohc-lapsed">—</span>
+
+        <!-- Aufgeben. Ohne diesen Knopf sperrt ein Vorzeichen, dessen Ziel man
+             gerade nicht verfolgt, das ganze System: solange eines läuft, wird
+             kein neues angeboten. Dezent, aber dauerhaft sichtbar — ein nur bei
+             Hover erscheinender Ausweg ist keiner. -->
+        <button
+          type="button"
+          class="ohc-drop"
+          title="Abandon this omen — a new trio is offered shortly"
+          @click="omenStore.abandon()"
+        >
+          ✕
+        </button>
       </div>
 
-      <div class="ohc-main">
-        <span class="ohc-stage">
-          <Icon :icon="activeView.icon" class="ohc-stage__icon" width="26" height="26" />
-        </span>
+      <!-- Die ausgeschriebene Aufgabe. Auf Full HD ausgeblendet (dort sagt der
+           Zähler darunter dasselbe kürzer), ab 2K eingeblendet: die Karte flucht
+           mit der Drifter-Karte und ist dort 548 statt 241 px breit — der Raum
+           gehört mit Information gefüllt, nicht mit Luft. -->
+      <span class="ohc-objective">{{ objectiveLine }}</span>
 
-        <span class="ohc-body">
-          <span class="ohc-name">{{ activeView.name }}</span>
-          <span class="ohc-objective">{{ objectiveLine }}</span>
+      <!-- Zeile 2: Stand links, Lohn rechts. -->
+      <div class="ohc-row">
+        <span class="ohc-count">
+          <span class="ohc-count__now">{{ activeView.progress.toLocaleString() }}</span>
+          <span class="ohc-count__goal">/{{ activeView.target.toLocaleString() }}</span>
+          <span class="ohc-count__unit">{{ activeView.unit }}</span>
         </span>
+        <span class="ohc-reward">{{ rewardLine }}</span>
       </div>
 
-      <div class="ohc-count">
-        <span class="ohc-count__now">{{ activeView.progress.toLocaleString() }}</span>
-        <span class="ohc-count__sep">/</span>
-        <span class="ohc-count__goal">{{ activeView.target.toLocaleString() }}</span>
-        <span class="ohc-count__unit">{{ activeView.unit }}</span>
-      </div>
-
-      <!-- Fortschritt: scaleX am Balken selbst, damit pro Sekunde kein Layout
-           anfällt und der Teilbaum der Karte nicht neu bewertet wird. -->
+      <!-- Fortschritt bündig am Kartenfuß: scaleX am Balken selbst, damit pro
+           Sekunde kein Layout anfällt und der Teilbaum nicht neu bewertet wird. -->
       <span class="ohc-bar">
         <span class="ohc-bar__fill" :style="{ transform: `scaleX(${activeView.ratio})` }"></span>
       </span>
-
-      <span class="ohc-reward">{{ rewardLine }}</span>
     </div>
   </Transition>
 </template>
 
 <style scoped>
 /* Oben links, auf derselben Ankerlinie wie die Drifter-Infokarte — die weicht
-   nach unten aus, sobald diese hier steht (--omen-card-bottom). Die Breite
-   folgt derselben Rechnung wie dort, damit die zwei Karten eine Spalte bilden
-   und nicht zwei verschieden breite Zettel. */
+   nach unten aus, sobald diese hier steht (--omen-card-bottom).
+   Breite WORTGLEICH zu ihr: die beiden stehen übereinander, und zwei Karten in
+   einer Spalte, deren rechte Kanten um 15 px auseinanderliegen, lesen sich als
+   Fehler. Kompakt wird diese Karte über die HÖHE (drei Zeilen statt fünf),
+   nicht über die Breite. */
 .ohc-root {
   position: fixed;
   top: calc(var(--autopick-bottom, 0px) + 0.5rem);
@@ -161,53 +191,51 @@ onUnmounted(() => {
   width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 9px 12px 11px;
+  gap: 5px;
+  /* Unten kein Padding: der Balken sitzt bündig auf der Kante. */
+  padding: 8px 10px 0;
   background: #16140e;
   border: 2px solid #5c3310;
   border-left: 3px solid var(--accent);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8);
   overflow: hidden;
 }
 
-/* ── Kopfzeile ── */
+/* ── Zeile 1 ── */
 .ohc-head {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  min-width: 0;
 }
 
-.ohc-head__icon {
+.ohc-glyph {
   color: var(--accent);
   flex-shrink: 0;
 }
 
-.ohc-head__lbl {
-  font-size: 10px;
+/* Der Name trägt die Zeile und darf kürzen — die volle Aufgabe steht im
+   Tooltip, hier zählt das Wiedererkennen. */
+.ohc-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 1.8px;
-  text-transform: uppercase;
-  color: #8a7a52;
+  line-height: 1.15;
+  color: #f2ead2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ohc-clock {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-  color: #b89b5a;
-}
-
-.ohc-clock__icon {
   flex-shrink: 0;
-}
-
-.ohc-clock__num {
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 800;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #b89b5a;
 }
 
 /* Letzte halbe Minute: der Eilbonus steht auf der Kippe. Nur Opazität —
@@ -228,101 +256,104 @@ onUnmounted(() => {
 }
 
 .ohc-lapsed {
-  margin-left: auto;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: #6a6258;
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1;
+  color: #5a5248;
 }
 
-/* ── Hauptzeile ── */
-.ohc-main {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.ohc-stage {
+.ohc-drop {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--accent) 55%, #14120c);
-  background: radial-gradient(
-    circle at 50% 38%,
-    color-mix(in srgb, var(--accent) 22%, #14120c),
-    #100e08 74%
-  );
+  font-size: 10px;
+  line-height: 1;
+  color: #6a6258;
+  background: transparent;
+  border: 1px solid #3e2a14;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.14s ease-out;
 }
 
-.ohc-stage__icon {
-  color: var(--accent);
+.ohc-drop:hover {
+  color: #cc6050;
 }
 
-.ohc-body {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-  line-height: 1.15;
-}
-
-.ohc-name {
-  font-size: 14px;
-  font-weight: 800;
-  color: #f2ead2;
-}
-
-/* Die Aufgabe ist der Grund für die Karte — sie darf umbrechen, aber nie
-   abgeschnitten werden. */
+/* Erst ab 2K sichtbar — siehe Template. */
 .ohc-objective {
-  font-size: 11px;
+  display: none;
+  font-size: 12px;
+  line-height: 1.25;
   color: #b89b5a;
 }
 
-/* ── Zählzeile ── */
+/* ── Zeile 2 ── */
+.ohc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Kein gap: „2/4" ist EINE Zahl mit Nenner und darf nicht auseinanderklaffen.
+   Die Einheit setzt sich per margin selbst ab. */
 .ohc-count {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
 
+/* Die eine große Zahl der Karte — sie beantwortet „wie weit bin ich". */
 .ohc-count__now {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
   color: var(--accent);
 }
 
-.ohc-count__sep,
 .ohc-count__goal {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   color: #8a7a52;
 }
 
 .ohc-count__unit {
-  margin-left: auto;
-  font-size: 10px;
+  margin-left: 5px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 1.2px;
+  letter-spacing: 0.9px;
   text-transform: uppercase;
   color: #6a6258;
+}
+
+/* Rechtsbündig und kürzbar: der Lohn ist die zweitwichtigste Zahl, aber er
+   darf die Zählung links nie aus der Zeile drücken. */
+.ohc-reward {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #7a9a6a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Balken ── */
 .ohc-bar {
   display: block;
-  height: 5px;
-  border-radius: 2px;
+  height: 3px;
+  margin: 0 -10px;
   background: rgba(255, 255, 255, 0.07);
-  overflow: hidden;
 }
 
 .ohc-bar__fill {
@@ -332,14 +363,6 @@ onUnmounted(() => {
   transform-origin: left center;
   background: var(--accent);
   transition: transform 0.4s ease-out;
-}
-
-/* ── Lohnzeile ── */
-.ohc-reward {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.9px;
-  color: #7a9a6a;
 }
 
 /* ── Ein-/Ausblenden ── */
@@ -355,7 +378,7 @@ onUnmounted(() => {
 }
 .ohc-enter-from {
   opacity: 0;
-  transform: translateX(-14px) scale(0.94);
+  transform: translateX(-12px) scale(0.95);
 }
 .ohc-leave-to {
   opacity: 0;
@@ -363,97 +386,85 @@ onUnmounted(() => {
 }
 
 /* ── Auflösungsstufen ──────────────────────────────────────────────────────
-   Auf 2K/4K wächst die Karte mit, sonst ist sie im Verhältnis zum Orbit ein
-   Zettel. Die Breite regelt bereits die clamp() oben. */
+   Bewusst zurückhaltend: die Karte soll auf 2K/4K lesbar bleiben, aber nicht
+   proportional mitwachsen — sie steht dauerhaft im Bild. */
 @media (min-width: 2400px) {
   .ohc-root {
-    /* left/width mit der Drifter-Karte gleichziehen — die beiden bilden eine
-       Spalte und dürfen auf keiner Stufe um ein paar Pixel versetzt stehen. */
     top: calc(var(--autopick-bottom, 0px) + 0.7rem);
     left: 1rem;
     width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 580px);
-    gap: 9px;
-    padding: 11px 15px 13px;
-  }
-  .ohc-head__lbl {
-    font-size: 12px;
-  }
-  .ohc-clock__num {
-    font-size: 15px;
-  }
-  .ohc-stage {
-    width: 48px;
-    height: 48px;
-  }
-  /* Das Attribut am <Icon> setzt nur die Ausgangsgröße — die Stufe muss das
-     SVG per CSS mitziehen, sonst schwimmt ein 26px-Glyph in einer 48px-Bühne. */
-  .ohc-stage__icon {
-    width: 32px;
-    height: 32px;
+    gap: 6px;
+    padding: 10px 12px 0;
   }
   .ohc-name {
-    font-size: 17px;
+    font-size: 15px;
   }
   .ohc-objective {
+    display: block;
+  }
+  .ohc-clock,
+  .ohc-lapsed {
     font-size: 13px;
   }
   .ohc-count__now {
-    font-size: 24px;
+    font-size: 19px;
   }
-  .ohc-count__sep,
   .ohc-count__goal {
-    font-size: 15px;
+    font-size: 13px;
   }
-  .ohc-count__unit,
-  .ohc-reward,
-  .ohc-lapsed {
+  .ohc-count__unit {
+    font-size: 10.5px;
+  }
+  .ohc-reward {
+    font-size: 11px;
+  }
+  .ohc-drop {
+    width: 18px;
+    height: 18px;
     font-size: 12px;
   }
   .ohc-bar {
-    height: 6px;
+    height: 4px;
+    margin: 0 -12px;
   }
 }
 
 @media (min-width: 3400px) {
   .ohc-root {
     width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 700px);
-    gap: 11px;
-    padding: 14px 18px 16px;
-  }
-  .ohc-head__lbl {
-    font-size: 14px;
-  }
-  .ohc-clock__num {
-    font-size: 18px;
-  }
-  .ohc-stage {
-    width: 58px;
-    height: 58px;
-  }
-  .ohc-stage__icon {
-    width: 40px;
-    height: 40px;
+    gap: 8px;
+    padding: 13px 15px 0;
   }
   .ohc-name {
-    font-size: 21px;
+    font-size: 19px;
   }
   .ohc-objective {
+    font-size: 15px;
+  }
+  .ohc-clock,
+  .ohc-lapsed {
     font-size: 16px;
   }
   .ohc-count__now {
-    font-size: 30px;
+    font-size: 24px;
   }
-  .ohc-count__sep,
   .ohc-count__goal {
-    font-size: 18px;
+    font-size: 16px;
   }
-  .ohc-count__unit,
-  .ohc-reward,
-  .ohc-lapsed {
+  .ohc-count__unit {
+    font-size: 13px;
+  }
+  .ohc-reward {
     font-size: 14px;
   }
+  .ohc-drop {
+    width: 23px;
+    height: 23px;
+    font-size: 15px;
+  }
   .ohc-bar {
-    height: 8px;
+    height: 5px;
+    margin: 0 -15px;
   }
 }
 
