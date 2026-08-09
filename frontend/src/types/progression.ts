@@ -104,8 +104,6 @@ export interface BardAbilityDef {
   /** Beschriftung der Keycap — zugleich die Taste selbst. */
   key: string
   name: string
-  /** Ein Satz Flavour über dem Wirkungstext. */
-  tagline: string
   /** Bild in `public/img/BardAbilities/`. */
   image: string
   /** Leitfarbe der Kachel: Rahmen, Ring, Zahlen. */

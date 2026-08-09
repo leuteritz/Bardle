@@ -52,7 +52,6 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
     id: 'q',
     key: 'Q',
     name: 'Cosmic Binding',
-    tagline: 'A bolt strung between two worlds.',
     image: `${ART}/BardQ-512.png`,
     color: '#7ec8ff',
     unlockLevel: ABILITY_UNLOCK_LEVEL_Q,
@@ -62,7 +61,6 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
     id: 'w',
     key: 'W',
     name: "Caretaker's Shrine",
-    tagline: 'A shrine set down where the light failed.',
     image: `${ART}/BardW-512.png`,
     color: '#6ee08a',
     unlockLevel: ABILITY_UNLOCK_LEVEL_W,
@@ -72,7 +70,6 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
     id: 'e',
     key: 'E',
     name: 'Magical Journey',
-    tagline: 'A corridor opens; your errands take the short way.',
     image: `${ART}/BardE.png`,
     color: '#c89cff',
     unlockLevel: ABILITY_UNLOCK_LEVEL_E,
@@ -82,7 +79,6 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
     id: 'r',
     key: 'R',
     name: 'Tempered Fate',
-    tagline: 'Everything holds still. Everything but you.',
     image: `${ART}/BardR-512.png`,
     color: '#e8c040',
     unlockLevel: ABILITY_UNLOCK_LEVEL_R,
@@ -93,7 +89,6 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
 /** Die Passive steht als eigene, kleinere Kachel links neben den vier Slots. */
 export const BARD_PASSIVE = {
   name: "Traveler's Call",
-  tagline: 'Every chime you strike stays with you.',
   image: `${ART}/Bard-256.png`,
   color: '#f0d890',
 } as const
@@ -140,7 +135,8 @@ export function bardAbilityEffectLines(
           label: 'Afterglow',
           value: `${SHRINE_CPS_MULT}× chimes for ${sec(SHRINE_BUFF_DURATION_MS)}`,
         },
-        { label: 'Also', value: 'lifts the boss chime penalty' },
+        // „Also" war ein Füllwort — links steht, WOFÜR die Zahl gilt.
+        { label: 'Boss penalty', value: 'cleared' },
       ]
     case 'e':
       return [

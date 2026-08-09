@@ -71,9 +71,6 @@
             <span class="ab-tip-read-value">{{ cell.value }}</span>
           </div>
         </footer>
-
-        <!-- Zuletzt die Zeile Welt: sie sagt nichts, was man rechnen kann. -->
-        <p class="ab-tip-tagline">{{ hovered.tagline }}</p>
       </div>
     </Transition>
 
@@ -376,6 +373,10 @@ watch(hoveredId, async () => {
  * Die Hauptwirkung wird nicht hier ausgewählt, sondern ist per Vereinbarung
  * die erste Zeile aus `bardAbilityEffectLines` — die Fähigkeit selbst weiß am
  * besten, worauf es bei ihr ankommt.
+ *
+ * Nichts anderes steht drin. Der Kasten öffnet sich mitten im Spiel über dem
+ * Orbit; alles, was der Spieler beim Überfliegen nicht in eine Entscheidung
+ * übersetzen kann, kostet ihn nur die Zeile, in der es steht.
  */
 const hovered = computed(() => {
   const id = hoveredId.value
@@ -387,7 +388,6 @@ const hovered = computed(() => {
       key: '',
       name: BARD_PASSIVE.name,
       color: BARD_PASSIVE.color,
-      tagline: BARD_PASSIVE.tagline,
       rankLabel: capped ? 'Max resonance' : 'Passive',
       locked: false,
       // Die Passive kühlt nicht ab — der Status-Slot bliebe leer.
@@ -423,7 +423,6 @@ const hovered = computed(() => {
     key: def.key,
     name: def.name,
     color: def.color,
-    tagline: def.tagline,
     rankLabel: locked ? 'Locked' : `Rank ${rank} / ${ABILITY_MAX_RANK}`,
     locked,
     live: !locked,
@@ -762,16 +761,6 @@ onUnmounted(() => {
   color: var(--ab-color, #e8c040);
 }
 
-/* Zum Schluss die Zeile Welt: sie steht unter dem Strich, weil sie nichts
-   beantwortet — und in der Größe, die das zugibt. */
-.ab-tip-tagline {
-  margin: 8px 0 0;
-  font-size: 0.76rem;
-  font-style: italic;
-  line-height: 1.3;
-  color: #8a7a52;
-}
-
 /* ── Ein- und Ausblenden ──────────────────────────────────────────────── */
 .ab-toast-enter-active,
 .ab-tip-enter-active {
@@ -820,9 +809,6 @@ onUnmounted(() => {
   .ab-tip-read-value {
     font-size: 0.92rem;
   }
-  .ab-tip-tagline {
-    font-size: 0.82rem;
-  }
   .ab-toast-text {
     font-size: 1.05rem;
   }
@@ -849,9 +835,6 @@ onUnmounted(() => {
   }
   .ab-tip-read-value {
     font-size: 1.05rem;
-  }
-  .ab-tip-tagline {
-    font-size: 0.94rem;
   }
   .ab-toast-text {
     font-size: 1.25rem;
