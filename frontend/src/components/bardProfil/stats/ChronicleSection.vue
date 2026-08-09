@@ -10,7 +10,6 @@ import {
 import { CHRONICLE_STAGES_PER_TRACK } from '@/config/constants'
 import { toRoman } from '@/utils/ui/format'
 import StatsColumnHeader from './StatsColumnHeader.vue'
-import type { ChronicleTrackView } from '@/types'
 
 /**
  * The Astral Codex — der Streifen unter der Sonne im Bard-Stats-Deck. Die
@@ -27,11 +26,15 @@ import type { ChronicleTrackView } from '@/types'
  * Feld darunter die Tiefe. Das macht den Hover zum Kern der Bedienung statt zur
  * Dekoration: fahren zeigt, klicken heftet an.
  *
- * Der Kopf ist derselbe `StatsColumnHeader` wie über Journey, Galaxy Archive
- * und Buffs & Augments — der Deck-Kanon aus goldener Überschrift und
- * Kontextsuche gilt damit für alle vier durchsuchbaren Panels. Die Suche hat
- * vorher im Kopf der Spalte gestanden und von dort die Wappen gefiltert; sie
- * gehört dorthin, wo sie wirkt.
+ * Der Kopf ist derselbe `StatsColumnHeader` wie über den anderen Panels des
+ * Decks, ohne Suchfeld: acht Bahnen stehen ohnehin alle gleichzeitig auf dem
+ * Schirm — eine Suche über acht sichtbare Kacheln ist ein Feld, das nichts
+ * findet, was das Auge nicht schon sieht.
+ *
+ * An seiner Stelle stehen die zwei Zahlen, die das Panel als Ganzes beschreiben,
+ * und zwar BESCHRIFTET: „Unwritten" und „0/40" allein sagten niemandem, dass das
+ * ein Rang und ein Stand ist. Jede trägt jetzt ihre Überschrift über sich und
+ * die doppelte Schriftgröße.
  */
 const uiStore = useUiStore()
 const store = useAchievementStore()
@@ -57,21 +60,6 @@ const hoverId = ref<string | null>(null)
 
 const tracks = computed(() => store.trackViews)
 
-/** Kontextsuche des Panels — hebt Treffer hervor und dimmt den Rest. */
-const search = ref('')
-
-const query = computed(() => search.value.trim().toLowerCase())
-
-function matches(track: ChronicleTrackView): boolean {
-  if (!query.value) return true
-  return (
-    track.name.toLowerCase().includes(query.value) ||
-    track.blurb.toLowerCase().includes(query.value) ||
-    track.effect.toLowerCase().includes(query.value) ||
-    track.unit.toLowerCase().includes(query.value)
-  )
-}
-
 /**
  * Ohne Zutun zeigt das Feld die Bahn, die dem nächsten Meilenstein am nächsten
  * ist — die Antwort auf „was fällt als Nächstes". Ausgereizte Bahnen zählen
@@ -83,15 +71,7 @@ const autoFocusId = computed(() => {
   return open.reduce((best, t) => (t.progress > best.progress ? t : best)).id
 })
 
-/** Erster Suchtreffer — eine Suche soll das Feld mitziehen, nicht nur dimmen. */
-const searchFocusId = computed(() => {
-  if (!query.value) return null
-  return tracks.value.find(matches)?.id ?? null
-})
-
-const shownId = computed(
-  () => hoverId.value ?? searchFocusId.value ?? pinnedId.value ?? autoFocusId.value,
-)
+const shownId = computed(() => hoverId.value ?? pinnedId.value ?? autoFocusId.value)
 const shown = computed(() => tracks.value.find((t) => t.id === shownId.value) ?? tracks.value[0])
 
 /** Rabatt-Bahnen zählen nach unten; das Vorzeichen gehört zur Aussage. */
@@ -124,28 +104,26 @@ const toNextRank = computed(() =>
 function pin(id: string) {
   pinnedId.value = pinnedId.value === id ? null : id
 }
-
-// Eine angeheftete Bahn, die aus der Suche fällt, würde stumm weiterzeigen.
-watch(query, () => {
-  if (pinnedId.value) pinnedId.value = null
-})
 </script>
 
 <template>
   <div class="cr-zone">
-    <!-- Derselbe Kopf wie über den anderen Deck-Panels, nur mit zwei Ablesungen
-         zwischen Überschrift und Suche: der erreichte Rang und der Stand. -->
-    <StatsColumnHeader
-      v-model="search"
-      class="cr-head"
-      title="Astral Codex"
-      placeholder="Search tracks…"
-    >
+    <!-- Derselbe Kopf wie über den anderen Deck-Panels. Statt einer Suche trägt
+         er die zwei Zahlen des Ganzen, jede unter ihrer eigenen Überschrift. -->
+    <StatsColumnHeader class="cr-head" title="Astral Codex">
       <template #meta>
-        <span class="cr-rank">{{ store.rankTitle }}</span>
-        <span class="cr-count">
-          <span class="cr-count-num">{{ store.unlockedStageCount }}</span>
-          <span class="cr-count-sep">/</span>{{ CHRONICLE_TOTAL_STAGES }}
+        <span class="cr-read">
+          <span class="cr-read-cap">Rank</span>
+          <span class="cr-read-val">{{ store.rankTitle }}</span>
+        </span>
+        <span class="cr-read-sep" aria-hidden="true"></span>
+        <span class="cr-read">
+          <span class="cr-read-cap">Stages Written</span>
+          <span class="cr-read-val">
+            {{ store.unlockedStageCount }}<span class="cr-read-of"
+              >/{{ CHRONICLE_TOTAL_STAGES }}</span
+            >
+          </span>
         </span>
       </template>
     </StatsColumnHeader>
@@ -164,9 +142,10 @@ watch(query, () => {
         />
       </div>
       <span v-if="nextRank" class="cr-meter-next">
-        {{ toNextRank }} to <strong>{{ nextRank.title }}</strong>
+        {{ toNextRank }} {{ toNextRank === 1 ? 'stage' : 'stages' }} to
+        <strong>{{ nextRank.title }}</strong>
       </span>
-      <span v-else class="cr-meter-next is-done">Book full</span>
+      <span v-else class="cr-meter-next is-done">Every stage written</span>
     </div>
 
     <!-- Acht Wappen: Bahn, Stufe, Fortschritt -->
@@ -181,7 +160,6 @@ watch(query, () => {
           'is-pinned': track.id === pinnedId,
           'is-maxed': track.stage >= CHRONICLE_STAGES_PER_TRACK,
           'is-dormant': track.stage === 0,
-          'is-dimmed': !matches(track),
         }"
         :style="{ '--tc': track.color }"
         :title="`${track.name} — stage ${track.stage} of ${CHRONICLE_STAGES_PER_TRACK}`"
@@ -306,64 +284,53 @@ watch(query, () => {
   margin-inline: -12px;
 }
 
-/* Der Rang ist die Belohnung fürs Sammeln — er steht neben dem Namen der Zone
-   und nicht als Fußnote. Er weicht als Erstes: auf der schmalsten Mittelspalte
-   (WUXGA, 397px) müssen Überschrift, Stand und Suche zusammen durchpassen. */
-.cr-rank {
+/* Zwei Ablesungen im Kopf: der erreichte Rang und der Stand. Beide standen
+   vorher als blanke Werte da — „Unwritten" und „0/40" nebeneinander, elf und
+   zwölf Pixel groß, ohne ein Wort dazu, was sie zählen. Jetzt trägt jede ihre
+   Überschrift über sich und ihr Wert die anderthalbfache Größe.
+
+   Rechtsbündig, weil sie an der rechten Kante des Kopfes hängen und eine
+   wachsende Zahl sonst nach rechts ausfranst. */
+.cr-read {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   min-width: 0;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--rpg-gold-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.cr-count {
-  flex-shrink: 0;
-  padding: 3px 8px;
-  font-size: 12px;
+.cr-read-cap {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   line-height: 1;
-  color: var(--rpg-text-muted);
-  background: #141008;
-  border: 1px solid #241a0c;
-  border-radius: 4px;
+  color: #8a7a52;
+  white-space: nowrap;
+}
+
+.cr-read-val {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--rpg-gold);
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.cr-count-num {
-  font-weight: 900;
-  color: var(--rpg-gold);
-}
-
-.cr-count-sep {
+/* Der Nenner tritt zurück: gelesen wird die erreichte Zahl, die 40 ist nur ihr
+   Maßstab. */
+.cr-read-of {
+  font-size: 13px;
   color: #6b5a3c;
 }
 
-/* Vier Ablesungen in einer Zeile, die auf WUXGA nur 397px breit ist: das
-   Suchfeld gibt hier mehr nach als in den Seitenspalten, wo neben der
-   Überschrift nichts sonst steht. */
-.cr-head :deep(.sf-search-wrap) {
-  flex: 0 1 150px;
-  min-width: 92px;
-}
-
-/* Der Rang weicht als Erstes. Gemessen brauchen Überschrift, Rang, Stand und
-   Suche zusammen 459px; die Mittelspalte ist aber auf WUXGA nur 421px breit
-   (dem Engpass — sie ist dort SCHMALER als auf Full HD, weil die
-   Bottom-Bar-Panels mit der Höhe skalieren), und dann ellipsierten Titel UND
-   Rang zugleich. Lieber eine Ablesung ganz weglassen als zwei halbieren: der
-   Name des Panels und sein Stand müssen stehen, der Rangtitel steht ohnehin
-   auch im Stat-Katalog der linken Spalte.
-
-   Die Schwelle hängt am Container, nicht am Viewport — die Breite dieser Zone
-   folgt weder Viewportbreite noch -höhe allein, dasselbe Argument wie bei den
-   `cqw`-Schriftgrößen unten. */
-@container (max-width: 460px) {
-  .cr-rank {
-    display: none;
-  }
+/* Haarlinie zwischen den beiden — trennt ohne einen zweiten Kasten. */
+.cr-read-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 26px;
+  background: #2c1806;
 }
 
 /* ─ Gesamtleiter ─ */
@@ -408,7 +375,7 @@ watch(query, () => {
 
 .cr-meter-next {
   flex-shrink: 0;
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #6b5a3c;
@@ -507,12 +474,6 @@ watch(query, () => {
 }
 .cr-crest.is-dormant .cr-crest-stage {
   color: #6b5a3c;
-}
-
-/* Suchtreffer heben sich ab, indem die anderen zurücktreten — die Reihe behält
-   dabei ihre acht Plätze, sonst springt das Layout bei jedem Tastendruck. */
-.cr-crest.is-dimmed {
-  opacity: 0.32;
 }
 
 /* ─ Fokusfeld ─ */
@@ -732,11 +693,17 @@ watch(query, () => {
     flex-basis: 458px;
     gap: 11px;
   }
-  .cr-rank {
-    font-size: 13px;
+  .cr-read-cap {
+    font-size: 11px;
   }
-  .cr-count {
-    font-size: 14px;
+  .cr-read-val {
+    font-size: 21px;
+  }
+  .cr-read-of {
+    font-size: 16px;
+  }
+  .cr-read-sep {
+    height: 32px;
   }
   .cr-crest {
     padding: 10px 4px 13px;
