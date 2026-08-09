@@ -4,6 +4,7 @@ import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 import type { ForgeActiveBuff, ForgeBargainDef, ForgeNodeDef } from '@/types'
 import {
   FORGE_NODES,
@@ -37,6 +38,15 @@ import {
   FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT,
 } from '@/config/constants'
 import type { SolarBranchId } from '@/stores/progression/solarUpgradeStore'
+
+/**
+ * Eine Materialposition nach dem Sunsmith-Rabatt (Chronicle). Abgerundet wird
+ * nicht: eine Position, die auf 0 fällt, wäre gratis — `hasMaterials` gibt für
+ * eine Null jedes Mal wahr, egal wie leer das Lager ist.
+ */
+function forgeMaterialQty(raw: number, discountMult: number): number {
+  return Math.max(1, Math.round(raw * discountMult))
+}
 
 /** Caps so stacked effects can never break the game loop. */
 const MIN_DAMAGE_TAKEN_MULT = FORGE_MIN_DAMAGE_TAKEN_MULT
@@ -114,9 +124,10 @@ export const useStarForgeStore = defineStore('starForge', {
         const def = getForgeNode(id)
         if (!def) return {}
         const nextLevel = this.nodeLevel(id) + 1
+        const discount = useAchievementStore().forgeMaterialCostMult
         const scaled: Record<string, number> = {}
         for (const [matId, qty] of Object.entries(def.materialCost)) {
-          scaled[matId] = qty * nextLevel
+          scaled[matId] = forgeMaterialQty(qty * nextLevel, discount)
         }
         return scaled
       }
@@ -176,9 +187,10 @@ export const useStarForgeStore = defineStore('starForge', {
         const def = getForgeRelic(id)
         if (!def) return {}
         const nextLevel = this.relicLevel(id) + 1
+        const discount = useAchievementStore().forgeMaterialCostMult
         const scaled: Record<string, number> = {}
         for (const [matId, qty] of Object.entries(def.materialCost)) {
-          scaled[matId] = qty * nextLevel
+          scaled[matId] = forgeMaterialQty(qty * nextLevel, discount)
         }
         return scaled
       }

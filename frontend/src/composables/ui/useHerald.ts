@@ -1,8 +1,8 @@
 import { ref, readonly } from 'vue'
 import { HERALD_DISPLAY_MS, HERALD_QUEUE_MAX } from '@/config/constants'
 
-/** The three milestone moments worth a large centered announcement. */
-export type HeraldKind = 'warp' | 'champion' | 'rankup'
+/** The milestone moments worth a large centered announcement. */
+export type HeraldKind = 'warp' | 'champion' | 'rankup' | 'chronicle'
 
 /** Fully-resolved presentation payload — the composable stays purely mechanical
  *  (queue + preempt + timer); the caller supplies everything the banner shows. */

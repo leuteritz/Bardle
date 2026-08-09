@@ -22,6 +22,7 @@ import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 import type {
   ChampionProgress,
   PendingPerkChoice,
@@ -83,6 +84,7 @@ export function usePersistence() {
     const championLevelStore = useChampionLevelStore()
     const drifterStore = useDrifterStore()
     const bardAbilityStore = useBardAbilityStore()
+    const achievementStore = useAchievementStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -336,6 +338,12 @@ export function usePersistence() {
         totalCasts: bardAbilityStore.totalCasts,
         totalAbilityDamage: bardAbilityStore.totalAbilityDamage,
         totalAbilityHealing: bardAbilityStore.totalAbilityHealing,
+      },
+      // Chronicle. Nur die Stufen, keine Zähler: jede Metrik gehört dem Store,
+      // der sie ohnehin speichert, und wird beim Laden dort gelesen.
+      chronicle: {
+        stages: { ...achievementStore.stages },
+        unseen: [...achievementStore.unseen],
       },
     }
 
@@ -891,6 +899,19 @@ export function usePersistence() {
       bardAbilityStore.totalAbilityDamage = saved.bardAbility?.totalAbilityDamage ?? 0
       bardAbilityStore.totalAbilityHealing = saved.bardAbility?.totalAbilityHealing ?? 0
 
+      // Chronicle. Steht bewusst NACH allen Stores, deren Zahlen es misst, und
+      // VOR der CPS-Neuberechnung darunter: der stille Nachlauf kann eine Stufe
+      // setzen, die den Produktions-Multiplikator anhebt.
+      //
+      // Der Nachlauf ist keine Bequemlichkeit, sondern nötig: ein Spielstand,
+      // der älter ist als das Chronicle, bringt keine `stages` mit und erfüllt
+      // auf einen Schlag ein halbes Buch. Ohne ihn liefe beim ersten Takt eine
+      // Kette von Bannern über den Bildschirm.
+      const achievementStore = useAchievementStore()
+      achievementStore.stages = { ...(saved.chronicle?.stages ?? {}) }
+      achievementStore.unseen = [...(saved.chronicle?.unseen ?? [])]
+      achievementStore.syncSilently()
+
       // Recalculate derived CPS/CPC after all levels (buildings + solar + forge) are restored
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
@@ -1100,6 +1121,10 @@ export function usePersistence() {
 
     // 7h. Reset bardAbilityStore — resonance, cooldowns and any running stasis
     useBardAbilityStore().$reset()
+
+    // 7i. Reset achievementStore — a full wipe unwrites the Chronicle. Prestige
+    // never does: its milestones are lifetime records and outlive a universe.
+    useAchievementStore().$reset()
 
     // 7b. Reset planetShopStore – alle Slots zurücksetzen
     const planetShopStoreR = usePlanetShopStore()

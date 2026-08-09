@@ -26,6 +26,7 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useCpsStore } from '@/stores/core/cpsStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 
 let uidCounter = 0
 
@@ -373,10 +374,16 @@ export const useDrifterStore = defineStore('drifter', {
     applyBuff(def: DrifterDef): void {
       if (!def.buff) return
       this.buffs = this.buffs.filter((b) => b.sourceId !== def.id)
+      // Wanderer's Ear (chronicle): stretches the window. Stored as the buff's
+      // own duration, not applied on read — the bar counts down against
+      // `durationMs`, and a bonus earned mid-buff must not move its end.
+      const durationMs = Math.round(
+        def.buff.durationMs * useAchievementStore().drifterBuffDurationMult,
+      )
       this.buffs.push({
         sourceId: def.id,
-        expiresAt: Date.now() + def.buff.durationMs,
-        durationMs: def.buff.durationMs,
+        expiresAt: Date.now() + durationMs,
+        durationMs,
         effects: { ...def.buff.effects },
       })
       this.drifterNow = Date.now()
@@ -384,14 +391,11 @@ export const useDrifterStore = defineStore('drifter', {
     },
 
     /** CPS and CPC are cached on the game store — recompute after any change to
-     *  a multiplier that feeds them. */
+     *  a multiplier that feeds them. The recomputation itself lives where the
+     *  numbers are computed (`shopStore.refreshRates`); this stays as the name
+     *  every caller in here already uses. */
     refreshRates(): void {
-      const gameStore = useGameStore()
-      const shopStore = useShopStore()
-      const newCps = shopStore.calculateTotalCPS()
-      gameStore.chimesPerSecond = newCps
-      gameStore.chimesPerClick = shopStore.calculateTotalCPC()
-      useCpsStore().updateCurrentCPS(newCps)
+      useShopStore().refreshRates()
     },
 
     /** Called by the rendering layer while an opaque overlay hides the idle

@@ -152,3 +152,34 @@ export const prestigeCategory: EncyclopediaCategory = {
     },
   ],
 }
+
+export const chronicleCategory: EncyclopediaCategory = {
+  id: 'chronicle',
+  title: "The Bard's Chronicle",
+  icon: 'game-icons:book-cover',
+  entries: [
+    {
+      id: 'chronicle',
+      name: 'Chronicle',
+      icon: 'game-icons:scroll-quill',
+      description:
+        'Eight tracks of milestones, one per system — chimes, roster, ladder, drifters, forge, planets, bosses and stars. ' +
+        'Each track watches a number you are already earning and writes a stage once it passes a threshold. ' +
+        'A written stage is permanent: it survives a prestige, and a counter that resets never takes it back.',
+      lore: 'A song nobody wrote down was only ever weather.',
+      related: ['chronicle-tracks', 'prestige'],
+    },
+    {
+      id: 'chronicle-tracks',
+      name: 'Track Rewards',
+      icon: 'game-icons:harp',
+      description:
+        'A track pays back into the system it measures: collecting drifters lengthens their buffs, raising the Star Forge ' +
+        'discounts its materials, winning on the ladder pays more LP per win. Every stage names one value, and that value is ' +
+        'absolute — stage III is exactly what it says, not the sum of I, II and III.',
+      lore: 'The deeper you dig one well, the sweeter that water runs.',
+      formula: '5 stages per track · 8 tracks · rank title from the number of stages written',
+      related: ['chronicle'],
+    },
+  ],
+}

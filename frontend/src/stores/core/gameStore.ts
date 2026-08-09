@@ -14,6 +14,7 @@ import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
@@ -736,6 +737,10 @@ export const useGameStore = defineStore('game', {
       // Skill-tree notifications: drop stale acknowledgements so a node that
       // became unaffordable re-notifies once the player can afford it again.
       useMeepTreeStore().syncAcknowledged()
+      // Chronicle last: every counter this second feeds it (chimes above,
+      // bosses, stars, drifters), so a milestone announced here is one that was
+      // just earned — not one from the previous tick.
+      useAchievementStore().tick()
     },
 
     // Credits offline Chimes and closes the modal

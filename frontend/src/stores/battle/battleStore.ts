@@ -4,6 +4,7 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 import {
   createEmptyAllyRows,
   ELO_K_FACTOR,
@@ -1866,6 +1867,9 @@ export const useBattleStore = defineStore('battle', {
       // Elder Dragon buff: flat bonus LP on a won battle
       const elderBonus = won && this.drakeBuffs.includes('elder') ? DRAKE_ELDER_LP_BONUS : 0
       let lp = Math.round(lpChange * mmrFactor) + elderBonus
+      // Rift Regular (chronicle): a share more per win. Only on the way up — a
+      // milestone earned by winning must never make a defeat cost more.
+      if (won) lp = Math.round(lp * useAchievementStore().lpGainMult)
       // Baron's Aegis (Baron Nashor): a defeat despite the baron costs only a fraction of the LP
       if (!won && this.hasBaronBuff) lp = Math.round(lp * BARON_LP_LOSS_SHIELD_MULT)
       return lp

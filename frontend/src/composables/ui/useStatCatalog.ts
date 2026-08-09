@@ -19,6 +19,7 @@ import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useSectionStore } from '@/stores/core/sectionStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { STAT_CATEGORIES } from '@/config/ui/statCategories'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { formatCompactDuration } from '@/utils/ui/format'
@@ -32,6 +33,7 @@ import {
   FORGE_CONSTELLATIONS,
 } from '@/config/progression/starForge'
 import { MEEP_TREE_BRANCHES, MEEP_TREE_TOTAL_NODES } from '@/config/progression/meepTree'
+import { CHRONICLE_TOTAL_STAGES } from '@/config/progression/achievements'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
@@ -89,6 +91,7 @@ export function useStatCatalog(query: Ref<string>): {
   const augmentStore = useAugmentStore()
   const drifterStore = useDrifterStore()
   const bardAbilityStore = useBardAbilityStore()
+  const achievementStore = useAchievementStore()
   const playerStore = usePlayerStore()
   const sectionStore = useSectionStore()
   const championLevelStore = useChampionLevelStore()
@@ -173,6 +176,18 @@ export function useStatCatalog(query: Ref<string>): {
         key: 'sections-completed',
         label: 'Sections Completed',
         value: ratio(completedSections, TOTAL_SECTIONS),
+      },
+      {
+        key: 'chronicle-stages',
+        label: 'Chronicle Stages',
+        value: ratio(achievementStore.unlockedStageCount, CHRONICLE_TOTAL_STAGES),
+        keywords: 'milestones achievements tracks',
+      },
+      {
+        key: 'chronicle-rank',
+        label: 'Chronicle Rank',
+        value: achievementStore.rankTitle,
+        keywords: 'milestones achievements title',
       },
     ]
   })

@@ -11,6 +11,7 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 import type { BardTabId } from '@/stores/core/uiStore'
 import type { KeybindId } from '@/types'
 import { formatBadgeCount } from '@/utils/ui/format'
@@ -21,6 +22,7 @@ import BattleResultComponent from '@/components/bardProfil/battle/BattleResultCo
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
+import ChronicleTab from '@/components/bardProfil/chronicle/ChronicleTab.vue'
 import ActionToast from '@/components/bardProfil/ActionToast.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 
@@ -32,6 +34,7 @@ const battleStore = useBattleStore()
 const solarStore = useSolarUpgradeStore()
 const meepTreeStore = useMeepTreeStore()
 const planetShopStore = usePlanetShopStore()
+const achievementStore = useAchievementStore()
 const { newlyUnlockedChampions } = storeToRefs(battleStore)
 
 const expeditionBadgeCount = computed(
@@ -40,6 +43,10 @@ const expeditionBadgeCount = computed(
 const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
 const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
 const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
+// Chronicle: Bahnen mit einer Stufe, die der Spieler noch nicht gesehen hat.
+// Das Banner ist längst verklungen, wenn er das Profil öffnet — das Abzeichen
+// ist der Hinweis, dass dort etwas Neues steht.
+const chronicleBadgeCount = computed(() => achievementStore.unseen.length)
 // Planet tab: TOTAL affordable level-ups across all six orbit slots right now
 // (matches the middle-header planet badge).
 const planetBadgeCount = computed(() => planetShopStore.affordableLevelCount)
@@ -78,6 +85,10 @@ const menuItems: {
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM-128.png' },
   { id: 'battle', label: '', icon: '', src: '/img/menu/BATTLE-128.png' },
   { id: 'planets', label: '', icon: '', src: '/img/planet-256.png' },
+  // Kein Artwork unter /img/menu/ — das Chronicle ist als Buch eindeutig genug,
+  // und ein Glyph in der Reihe der Bilder markiert es zusätzlich als das, was es
+  // ist: eine Übersicht über die anderen Tabs, kein System neben ihnen.
+  { id: 'chronicle', label: '', icon: 'game-icons:book-cover', src: '' },
   { id: 'admin', label: 'Admin', icon: 'lucide:settings-2', src: '' },
 ]
 
@@ -238,7 +249,17 @@ onUnmounted(() => {
                     class="relative z-10 object-contain rp-tab-img"
                     :class="uiStore.bardActiveTab === item.id ? 'rp-tab-img-glow' : ''"
                   />
-                  <Icon v-else-if="item.icon.includes(':')" :icon="item.icon" class="relative z-10 rp-tab-icon" />
+                  <!-- Ein Glyph, das ALLEIN für seinen Tab steht, trägt so viel
+                       Fläche wie ein Artwork — sonst sitzt es als kleinerer
+                       Kasten zwischen den Bild-Tabs und liest sich wie ein
+                       Fehler. Der Admin-Tab behält die kleine Fassung: dort
+                       steht ein Label daneben, das die Höhe mitträgt. -->
+                  <Icon
+                    v-else-if="item.icon.includes(':')"
+                    :icon="item.icon"
+                    class="relative z-10 rp-tab-icon"
+                    :class="item.label ? '' : 'rp-tab-icon--solo'"
+                  />
                   <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
                   <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
                   <span
@@ -254,6 +275,12 @@ onUnmounted(() => {
                   </div>
                   <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
                     <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
+                  </div>
+                  <div v-if="item.id === 'chronicle' && chronicleBadgeCount > 0" class="team-badge-row">
+                    <span
+                      class="mini-badge mini-badge--chronicle"
+                      :title="`${chronicleBadgeCount} ${chronicleBadgeCount === 1 ? 'track has' : 'tracks have'} a new stage`"
+                    >{{ chronicleBadgeCount }}</span>
                   </div>
                   <div v-if="item.id === 'planets' && planetBadgeCount > 0" class="team-badge-row">
                     <span
@@ -315,6 +342,14 @@ onUnmounted(() => {
                 class="tab-layer"
               >
                 <PlanetSelectTabComponent @toast-inset="setTabToastInset('planets', $event)" />
+              </div>
+
+              <div
+                v-if="mountedTabs.has('chronicle')"
+                v-show="uiStore.bardActiveTab === 'chronicle'"
+                class="tab-layer"
+              >
+                <ChronicleTab />
               </div>
 
               <div
@@ -404,6 +439,16 @@ onUnmounted(() => {
   --tb-glow-c: rgba(5, 150, 105, 0.45);
 }
 
+/* Kupfer, nicht Gold: der Forge-Stern daneben ist golden, und zwei goldene
+   Marken in derselben Reihe wären beim Hinsehen dasselbe Abzeichen. */
+.mini-badge--chronicle {
+  background: linear-gradient(135deg, #f97316, #c2410c);
+  border: 1.5px solid #fdba74;
+  --tb-glow-a: rgba(249, 115, 22, 0.5);
+  --tb-glow-b: rgba(249, 115, 22, 0.9);
+  --tb-glow-c: rgba(194, 65, 12, 0.45);
+}
+
 @keyframes team-badge-pulse {
   0%,
   100% {
@@ -477,6 +522,13 @@ onUnmounted(() => {
 .rp-tab-icon {
   width: clamp(26px, 3.8vh, 36px);
   height: clamp(26px, 3.8vh, 36px);
+}
+
+/* Dieselbe Kantenlänge wie .rp-tab-img — damit stehen alle labellosen Tabs auf
+   einer Höhe, egal ob ihr Inhalt ein PNG oder ein Glyph ist. */
+.rp-tab-icon--solo {
+  width: clamp(34px, 5vh, 48px);
+  height: clamp(34px, 5vh, 48px);
 }
 
 .rp-tab {

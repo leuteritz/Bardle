@@ -491,14 +491,11 @@ export const useBardAbilityStore = defineStore('bardAbility', {
     },
 
     /** CPS und CPC liegen gecacht im gameStore — nach jeder Änderung an einem
-     *  Faktor, der sie speist, neu rechnen. */
+     *  Faktor, der sie speist, neu rechnen. Die Rechnung selbst steht dort, wo
+     *  gerechnet wird (`shopStore.refreshRates`); hier bleibt der Name stehen,
+     *  den die Aufrufer in dieser Datei schon kennen. */
     refreshRates(): void {
-      const gameStore = useGameStore()
-      const shopStore = useShopStore()
-      const newCps = shopStore.calculateTotalCPS()
-      gameStore.chimesPerSecond = newCps
-      gameStore.chimesPerClick = shopStore.calculateTotalCPC()
-      useCpsStore().updateCurrentCPS(newCps)
+      useShopStore().refreshRates()
     },
 
     /** Admin/Test: alle Abklingzeiten sofort zurücksetzen. */

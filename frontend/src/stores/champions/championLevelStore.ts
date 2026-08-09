@@ -39,6 +39,7 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { logger } from '@/utils/logger'
 
 export function defaultChampionProgress(): ChampionProgress {
@@ -343,13 +344,14 @@ export const useChampionLevelStore = defineStore('championLevel', {
     },
 
     /** Grants XP to a single champion. Returns the amount actually banked.
-     *  The drifter multiplier is applied here rather than at the call sites so
-     *  every XP source — battles, bosses, expeditions — is covered at once. */
+     *  The drifter and chronicle multipliers are applied here rather than at the
+     *  call sites so every XP source — battles, bosses, expeditions — is covered
+     *  at once. */
     grantXp(name: string, amount: number): number {
       if (amount <= 0) return 0
       const p = this.ensure(name)
       if (!p) return 0
-      const gain = Math.round(amount * useDrifterStore().xpMult)
+      const gain = Math.round(amount * useDrifterStore().xpMult * useAchievementStore().xpMult)
       p.xp += gain
       p.totalXp += gain
       this.totalXpEarned += gain

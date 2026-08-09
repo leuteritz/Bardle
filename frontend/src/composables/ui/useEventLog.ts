@@ -14,6 +14,7 @@ export type GameEventType =
   | 'chime'
   | 'combat'
   | 'prestige'
+  | 'chronicle'
   | 'info'
 
 export interface GameEvent {

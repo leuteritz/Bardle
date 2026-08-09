@@ -32,6 +32,7 @@ export { PLANET_ROLES, PLANET_ROLES_LIST, JUNGLE_BUFF_DEFS } from '@/config/cons
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { getOrbitSunRadius, getOrbitSunScale } from '@/utils/orbit/geometry'
 import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
 import { logPlanetDestroyed, logPlanetRestored } from '@/config/ui/eventLog'
@@ -166,8 +167,12 @@ export const usePlanetShopStore = defineStore('planetShop', {
       return state.slots.filter((s) => s.purchased && s.role !== null)
     },
 
+    /** Rohe Salvenstärke aller stehenden Turrets — ohne die ZEITLICHEN Buffs
+     *  (die trägt `foregroundAutoAttackDPS`), aber MIT dem Chronicle-Bonus: der
+     *  ist dauerhaft verdient und gehört damit in die Zahl, die als „Orbit
+     *  Auto-Attack DPS" im Stats-Katalog steht. */
     autoAttackDPS(state): number {
-      return state.slots
+      const base = state.slots
         .filter((s) => s.purchased && s.role === 'turret_planet' && !isPlanetDown(s))
         .reduce((sum, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
@@ -176,11 +181,16 @@ export const usePlanetShopStore = defineStore('planetShop', {
             PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
           )
         }, 0)
+      return base * useAchievementStore().turretDpsMult
     },
 
     /** DPS nur der Turrets im Sonnen-Vordergrund — Turrets hinter der Sonne
      *  feuern nicht (Kampf passiert nur im Vordergrund). Ein eingesammeltes
-     *  Rift Echo (Drifter) hebt die ganze Salve für seine Laufzeit an. */
+     *  Rift Echo (Drifter) hebt die ganze Salve für seine Laufzeit an.
+     *
+     *  Warden of Worlds (Chronicle) steht hier ein zweites Mal, weil dieser
+     *  Getter seine eigene — auf den Vordergrund gefilterte — Summe bildet und
+     *  nicht auf `autoAttackDPS` aufsetzt. */
     foregroundAutoAttackDPS(state): number {
       const base = state.slots
         .filter(
@@ -197,7 +207,12 @@ export const usePlanetShopStore = defineStore('planetShop', {
             PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
           )
         }, 0)
-      return base * useDrifterStore().combatDpsMult * useBardAbilityStore().combatDpsMult
+      return (
+        base *
+        useDrifterStore().combatDpsMult *
+        useBardAbilityStore().combatDpsMult *
+        useAchievementStore().turretDpsMult
+      )
     },
 
     activeHarvestSlots(state): { materialId: string }[] {

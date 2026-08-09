@@ -17,6 +17,7 @@ export const typeColor: Record<GameEventType, string> = {
   chime: '#fde68a',
   combat: '#fb923c',
   prestige: '#818cf8',
+  chronicle: '#e8c040',
   info: '#c8b89a',
 }
 
@@ -44,4 +45,13 @@ export function logAugmentAutoPicked(name: string, effectLine: string) {
 export function logDrifterCollected(name: string, effectLine: string) {
   const { addEvent } = useEventLog()
   addEvent(`${name} collected — ${effectLine}`, 'chime')
+}
+
+/**
+ * Eine Chronicle-Stufe ist gefallen. Das Herald-Banner sagt WAS, diese Zeile
+ * bleibt als Belegkopie im Log — mit der Wirkung, die ab jetzt gilt.
+ */
+export function logChronicleStage(trackName: string, numeral: string, effectLine: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`${trackName} ${numeral} — ${effectLine}`, 'chronicle')
 }

@@ -13,6 +13,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 import {
   SECONDS_PER_HOUR,
   EFFICIENCY_STARS_DIVISOR,
@@ -103,6 +104,23 @@ export const useShopStore = defineStore('shop', {
   actions: {
     setBuyAmount(amount: number | 'max') {
       this.buyAmount = amount
+    },
+
+    /**
+     * CpS und CpC liegen gecacht im gameStore — nach jeder Änderung an einem
+     * Faktor, der sie speist, neu rechnen.
+     *
+     * Steht hier, weil hier gerechnet wird: die Fassung lag wörtlich gleich im
+     * drifterStore und im bardAbilityStore, und mit dem Chronicle wäre sie zum
+     * dritten Mal abgeschrieben worden. Beide delegieren jetzt hierher und
+     * behalten ihre eigene Action nur als Namen, den ihre Aufrufer schon kennen.
+     */
+    refreshRates() {
+      const gameStore = useGameStore()
+      const newCps = this.calculateTotalCPS()
+      gameStore.chimesPerSecond = newCps
+      gameStore.chimesPerClick = this.calculateTotalCPC()
+      useCpsStore().updateCurrentCPS(newCps)
     },
 
     setBuildingLevel(index: number, value: number) {
@@ -249,6 +267,8 @@ export const useShopStore = defineStore('shop', {
       const drifterMul = useDrifterStore().cpsMult
       // Caretaker's Shrine (bard W) — the afterglow of a cast shrine
       const bardMul = useBardAbilityStore().cpsMult
+      // Chime Cantor (chronicle) — permanent, earned by lifetime chimes
+      const chronicleMul = useAchievementStore().cpsMult
       return Math.floor(
         (baseCPS + solarCPS) *
           gameStore.abilityCPSMultiplier *
@@ -257,7 +277,8 @@ export const useShopStore = defineStore('shop', {
           forgeMul *
           treeMul *
           drifterMul *
-          bardMul,
+          bardMul *
+          chronicleMul,
       )
     },
 
