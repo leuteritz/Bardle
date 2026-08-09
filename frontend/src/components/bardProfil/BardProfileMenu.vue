@@ -74,30 +74,51 @@ function setTabToastInset(tab: BardTabId, css: string) {
 const toastInsetRight = computed(() => tabToastInset[uiStore.bardActiveTab] ?? '0px')
 
 /**
- * Ein Glyph je Tab statt eines Artworks. Spielinhalt kommt aus `game-icons`,
- * das Bedienelement (Admin) aus `lucide` — siehe „Icons" in CLAUDE.md.
+ * Ein Glyph je Tab statt eines Artworks.
+ *
+ * BEWUSSTE AUSNAHME von der Set-Regel in CLAUDE.md („Spielinhalt =
+ * game-icons"): Die Leiste ist die oberste Navigationsebene und wird als EINE
+ * Reihe gelesen — dort wiegt gleiche Strichstärke schwerer als die Herkunft
+ * aus einem Set. Die verschnörkelten game-icons liefen bei 48 px in der Reihe
+ * auseinander (`family-tree` fein und spinnenartig neben dem massiven `shop`),
+ * und der lucide-Zahnrad-Regler daneben fiel vollends heraus. Gewählt sind
+ * deshalb durchweg gefüllte Glyphen gleicher Masse, überwiegend aus Phosphor
+ * Fill; zwei Plätze gehen an ein anderes Set, weil dessen Motiv schlicht besser
+ * trifft. Innerhalb der Tabs bleibt es bei game-icons.
+ *
+ *   ph:compass-rose-fill          — der Wandering Caretaker: Journey-Stats,
+ *                                   Solar Evolution, Galaxy-Archiv, Chronicle
+ *   ph:storefront-fill            — der Marktstand
+ *   material-symbols:account-tree — verzweigte Knoten, der Meep Skill Tree
+ *                                   (Phosphors `tree-structure` ist zu fein)
+ *   ph:users-three-fill           — der Kader (Sigil-Board, Allies, Expeditionen)
+ *   ri:sword-fill                 — gekreuzte Klingen, Auto-Battle
+ *                                   (Phosphor hat nur die einzelne Klinge)
+ *   ph:planet-fill                — die Planeten-Slots im Orbit
+ *   ph:gear-six-fill              — Admin
+ *
  * Jedes Motiv steht genau einmal in der Leiste, damit die sieben Tabs
- * nebeneinander unterscheidbar bleiben:
- *   journey       — der Wandering Caretaker und seine Bahn: Journey-Stats,
- *                   Solar Evolution, Galaxy-Archiv, Chronicle
- *   shop          — der Marktstand
- *   family-tree   — verzweigte Knoten, der Meep Skill Tree
- *   three-friends — der Kader (Sigil-Board, Allies, Expeditionen)
- *   crossed-swords— Auto-Battle
- *   ringed-planet — die Planeten-Slots im Orbit
+ * nebeneinander unterscheidbar bleiben.
+ *
+ * `boost` ist die optische Angleichung über Set-Grenzen hinweg: Material und
+ * Remix zeichnen auf einem 24er-Raster mit mehr Rand als Phosphors 256er,
+ * ihre Glyphen sitzen im gleich großen Kasten also kleiner und wirken in der
+ * Reihe zurückgesetzt. Ein statisches `scale` gleicht das aus — es steht fest
+ * am Element und läuft in keiner Animation mit.
  */
 const menuItems: {
   id: BardTabId
   label: string
   icon: string
+  boost?: boolean
 }[] = [
-  { id: 'bard', label: '', icon: 'game-icons:journey' },
-  { id: 'shop', label: '', icon: 'game-icons:shop' },
-  { id: 'tree', label: '', icon: 'game-icons:family-tree' },
-  { id: 'team', label: '', icon: 'game-icons:three-friends' },
-  { id: 'battle', label: '', icon: 'game-icons:crossed-swords' },
-  { id: 'planets', label: '', icon: 'game-icons:ringed-planet' },
-  { id: 'admin', label: 'Admin', icon: 'lucide:settings-2' },
+  { id: 'bard', label: '', icon: 'ph:compass-rose-fill' },
+  { id: 'shop', label: '', icon: 'ph:storefront-fill' },
+  { id: 'tree', label: '', icon: 'material-symbols:account-tree', boost: true },
+  { id: 'team', label: '', icon: 'ph:users-three-fill' },
+  { id: 'battle', label: '', icon: 'ri:sword-fill', boost: true },
+  { id: 'planets', label: '', icon: 'ph:planet-fill' },
+  { id: 'admin', label: 'Admin', icon: 'ph:gear-six-fill' },
 ]
 
 /**
@@ -258,7 +279,7 @@ onUnmounted(() => {
                   <Icon
                     :icon="item.icon"
                     class="relative z-10 rp-tab-icon"
-                    :class="item.label ? '' : 'rp-tab-icon--solo'"
+                    :class="[item.label ? '' : 'rp-tab-icon--solo', item.boost ? 'rp-tab-icon--boost' : '']"
                   />
                   <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
                   <span
@@ -510,6 +531,11 @@ onUnmounted(() => {
   height: clamp(26px, 3.8vh, 36px);
   color: #7d7768;
   transition: color 0.12s;
+}
+
+/* Optische Angleichung fremder Raster — siehe `boost` bei den menuItems. */
+.rp-tab-icon--boost {
+  transform: scale(1.14);
 }
 
 /* Ein labelloses Glyph steht allein für seinen Tab und bekommt deshalb die
