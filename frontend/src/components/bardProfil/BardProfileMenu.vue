@@ -297,14 +297,23 @@ onUnmounted(() => {
                     <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
                     <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
                   </div>
-                  <div v-if="item.id === 'shop' && forgeBadgeReady" class="team-badge-row">
-                    <span class="mini-badge mini-badge--forge">✦</span>
-                  </div>
                   <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
                     <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
                   </div>
-                  <div v-if="item.id === 'bard' && chronicleBadgeCount > 0" class="team-badge-row">
+                  <!-- Bard tab carries both of its own signals: the ready
+                       evolution (the sun dial lives here now, so the ✦ moved
+                       off the Forge tab with it) and unseen Codex stages. -->
+                  <div
+                    v-if="item.id === 'bard' && (forgeBadgeReady || chronicleBadgeCount > 0)"
+                    class="team-badge-row"
+                  >
                     <span
+                      v-if="forgeBadgeReady"
+                      class="mini-badge mini-badge--forge"
+                      title="The sun is ready to evolve — the console sits under the dial"
+                    >✦</span>
+                    <span
+                      v-if="chronicleBadgeCount > 0"
                       class="mini-badge mini-badge--chronicle"
                       :title="`${chronicleBadgeCount} Astral Codex ${chronicleBadgeCount === 1 ? 'track has' : 'tracks have'} a new stage`"
                     >{{ chronicleBadgeCount }}</span>

@@ -2,16 +2,24 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { formatCompactDuration, splitDuration } from '@/utils/ui/format'
-import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import {
+  useSolarUpgradeStore,
+  type SolarBranchId,
+} from '@/stores/progression/solarUpgradeStore'
 import { useUiStore } from '@/stores/core/uiStore'
+import { useActionToast } from '@/composables/ui/useActionToast'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
   STAR_PHASE_MIN_DWELL_SECONDS,
+  STAR_EVOLUTION_ICONS,
   COMET_PHASE_DATA,
   COMET_DISC_FILL,
   COMET_MIN_DWELL_SECONDS,
   COMET_STAGE_RADII,
+  SOLAR_BRANCHES,
+  FORGE_BRANCH_UNLOCK_PHASE,
+  FORGE_LEAF_UNLOCK_PHASE,
   STATS_TAB_ORBIT,
   SUN_PHASE_DISPLAY_TOTAL,
   MS_PER_SECOND,
@@ -32,6 +40,7 @@ import ChronicleSection from './ChronicleSection.vue'
  */
 const solarStore = useSolarUpgradeStore()
 const uiStore = useUiStore()
+const { showToast } = useActionToast()
 
 /* ── Star phase (sun dial) ───────────────────────────────────── */
 const totalPhases = STAR_PHASE_DATA.length
@@ -215,14 +224,6 @@ const bodyVisiblePct = computed(() => sunPct.value * bodyFill.value)
  *  whatever the player currently is — a speck of a comet or the widest sun. */
 const identTopPct = computed(() => O.CENTER_Y - bodyVisiblePct.value / 2 - O.BODY_GAP_PCT)
 
-/** Top edge of the evolve chip — the identity block's mirror under the body.
- *  It lives INSIDE the sun's box, so it is expressed in % of THAT box: half the
- *  box down to the centre, out to the painted edge, then the same clear air the
- *  caption keeps above (converted from stage % into box %). */
-const ctaTopPct = computed(
-  () => 50 + bodyFill.value * 50 + (O.BODY_GAP_PCT / sunPct.value) * 100,
-)
-
 /* ── Time in phase ticker ────────────────────────────────────── */
 const now = ref(Date.now())
 let ticker: ReturnType<typeof setInterval>
@@ -278,44 +279,134 @@ const phaseAge = computed(() => {
   return `${s}s`
 })
 
-/* ── The evolve gate, worn by the sun ────────────────────────────
-   Everything about evolving now sits on the body it happens to: the chip rides
-   the disc's lower edge and reads as a countdown, then as the call to act.
-   Whether the solar branches are high enough is the Solar Shop's business —
-   the dial only ever counts TIME. */
+/* ══ The evolve console ══════════════════════════════════════════
+   The whole mechanic lives HERE now, under the dial it acts on — the dial
+   shows the state, the console performs the act. It used to be a chip on the
+   sun's edge that only counted TIME and then sent the player to the Solar
+   Shop to actually evolve; both gates and the button itself now stand
+   together, so nobody has to leave the tab to find out what is missing.
+
+   Both gates read the same store getters the header's hover panel does
+   (`StarEvolutionTooltip`) — one truth, two windows onto it. */
 const canEvolveNow = computed(() => solarStore.canUpgradeStar)
 
-interface EvolveGate {
-  value: string
-  icon: string
-  tone: 'wait' | 'met' | 'max'
-  title: string
-}
+/** Level EVERY core ray must carry before the next evolution opens. */
+const requiredRayLevel = computed(() =>
+  solarStore.isCometState ? 1 : solarStore.starPhase + 1,
+)
 
-const gate = computed<EvolveGate>(() => {
+/** The five rays, each with its own colour — the gate is a row of five pips,
+ *  not a bare fraction, so a glance says WHICH ray is short. */
+const rayPips = computed(() =>
+  SOLAR_BRANCHES.map((b) => {
+    const level = solarStore.branchLevel(b.id as SolarBranchId)
+    return {
+      id: b.id,
+      name: b.name,
+      icon: b.icon,
+      color: b.color,
+      level,
+      met: level >= requiredRayLevel.value,
+    }
+  }),
+)
+const raysMet = computed(() => rayPips.value.filter((r) => r.met).length)
+const raysAllMet = computed(() => raysMet.value >= SOLAR_BRANCHES.length)
+const raysShortText = computed(() => {
+  const missing = SOLAR_BRANCHES.length - raysMet.value
+  return `${missing} ray${missing === 1 ? '' : 's'}`
+})
+
+/** Where this evolution leads — Spark while still a comet. */
+const nextStage = computed(() =>
+  solarStore.isCometState
+    ? STAR_PHASE_DATA[0]
+    : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, totalPhases - 1)],
+)
+
+/** What the next phase actually opens up — the reason to bother. */
+const nextPhaseGain = computed(() => {
+  const next = solarStore.starPhase + 1
+  if (next === FORGE_BRANCH_UNLOCK_PHASE) return '10 new branches open on the Star Forge'
+  if (next === FORGE_LEAF_UNLOCK_PHASE) return '10 leaves open on the Star Forge'
+  return 'every Star Forge branch gains +1 max level'
+})
+
+/** One sentence saying what holds the evolution — or that nothing does. */
+const verdict = computed<{
+  tone: 'ready' | 'blocked' | 'end'
+  icon: string
+  text: string
+  /** rays are (part of) the blocker — only then is a pointer at the tree useful */
+  raysShort: boolean
+}>(() => {
   if (isMax.value)
     return {
-      value: 'Fully Evolved',
-      icon: 'game-icons:laurel-crown',
-      tone: 'max',
-      title: 'This sun has reached the final phase of its life',
+      tone: 'end',
+      icon: STAR_EVOLUTION_ICONS.ready,
+      text: 'The last light has gone out — nothing follows the collapse.',
+      raysShort: false,
     }
-  if (dwellMet.value)
+  if (solarStore.isUpgrading)
     return {
-      value: 'Evolve',
-      icon: 'game-icons:upgrade',
-      tone: 'met',
-      title: canEvolveNow.value
-        ? 'Every requirement is met — click to open the Solar Shop and evolve'
-        : 'The time in this phase is served — open the Solar Shop to see what else this evolve needs',
+      tone: 'ready',
+      icon: STAR_EVOLUTION_ICONS.ready,
+      text: `The core is turning over — ${nextStage.value.name} is taking shape…`,
+      raysShort: false,
+    }
+  if (dwellMet.value && raysAllMet.value)
+    return {
+      tone: 'ready',
+      icon: STAR_EVOLUTION_ICONS.ready,
+      text: `Both gates stand open — ${nextPhaseGain.value}.`,
+      raysShort: false,
+    }
+  if (!dwellMet.value && !raysAllMet.value)
+    return {
+      tone: 'blocked',
+      icon: STAR_EVOLUTION_ICONS.blocked,
+      text: `Both gates hold — ${formatCompactDuration(dwellRemainingMs.value)} of dwell, ${raysShortText.value} below Lv ${requiredRayLevel.value}.`,
+      raysShort: true,
+    }
+  if (!dwellMet.value)
+    return {
+      tone: 'blocked',
+      icon: STAR_EVOLUTION_ICONS.blocked,
+      text: `Every ray is grown — the sun still owes ${formatCompactDuration(dwellRemainingMs.value)} in this phase.`,
+      raysShort: false,
     }
   return {
-    value: formatCompactDuration(dwellRemainingMs.value),
-    icon: 'game-icons:sands-of-time',
-    tone: 'wait',
-    title: `${formatCompactDuration(dwellElapsedMs.value)} of ${formatCompactDuration(dwellRequiredMs.value)} in this phase — time the sun must spend before it can evolve`,
+    tone: 'blocked',
+    icon: STAR_EVOLUTION_ICONS.blocked,
+    text: `Time is served — ${raysShortText.value} still below Lv ${requiredRayLevel.value}.`,
+    raysShort: true,
   }
 })
+
+const evolveLabel = computed(() => {
+  if (solarStore.isUpgrading) return solarStore.isCometState ? 'Igniting…' : 'Evolving…'
+  if (solarStore.isCometState) return '✦ Ignite the Core'
+  return `✦ Evolve → ${nextStage.value.name}`
+})
+
+/** The act itself — this is the ONLY place the sun evolves. */
+function handleEvolve(): void {
+  if (!solarStore.canUpgradeStar) return
+  const wasComet = solarStore.isCometState
+  const targetName = nextStage.value.name
+  solarStore.upgradeStar()
+  showToast(
+    wasComet ? `The comet ignites into ${targetName}…` : `Star evolving to ${targetName}…`,
+    'event',
+  )
+}
+
+/** Rays are BOUGHT on the Star Forge tree — a pointer there is a navigation
+ *  aid, not a second way to evolve. It only appears while rays are the thing
+ *  in the way. */
+function openSolarTree(): void {
+  uiStore.setBardTab('shop')
+}
 
 /* Der Astral Codex unter dem Dial bringt seinen eigenen Kopf samt Suche mit —
    die stand vorher hier oben und filterte von dort seine Wappen. */
@@ -390,20 +481,14 @@ const gate = computed<EvolveGate>(() => {
           </div>
 
           <!-- The player's actual celestial body, same renderer as the orbit view.
-               It is also the evolve control: the chip on its lower edge counts the
-               phase down and turns into the call to act, so everything about
-               evolving happens on the body it happens to. -->
+               It is a DISPLAY, not a control: the act of evolving happens in the
+               console below, where both its gates stand. All the body does is
+               announce readiness — two rings breaking out of the core. -->
           <div
             class="sf-orbit-sun"
             :class="{ 'is-ready': canEvolveNow }"
-            role="button"
-            :title="
-              canEvolveNow
-                ? 'Ready to evolve — open the Solar Shop'
-                : 'Open the Solar Shop'
-            "
+            :title="`${phaseName} — ${phaseAstroName}`"
             :style="{ width: sunPct + '%', height: sunPct + '%', top: STATS_TAB_ORBIT.CENTER_Y + '%' }"
-            @click="uiStore.setBardTab('shop')"
           >
             <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
             <PhaseSunDisc v-else :diameter="sunDiameter" :pulse="true" />
@@ -412,18 +497,6 @@ const gate = computed<EvolveGate>(() => {
               <span class="sf-sun-ring" aria-hidden="true"></span>
               <span class="sf-sun-ring sf-sun-ring--late" aria-hidden="true"></span>
             </template>
-
-            <button
-              class="sf-sun-cta"
-              type="button"
-              :class="[`is-${gate.tone}`, { 'is-live': canEvolveNow }]"
-              :title="gate.title"
-              :style="{ top: ctaTopPct + '%' }"
-              @click.stop="uiStore.setBardTab('shop')"
-            >
-              <Icon :icon="gate.icon" width="15" height="15" />
-              {{ gate.value }}
-            </button>
           </div>
 
           <!-- How long this phase has already lasted — the dial's log book, parked
@@ -523,6 +596,92 @@ const gate = computed<EvolveGate>(() => {
         </button>
         <!-- /TEMP -->
       </div>
+
+      <!-- ─ Evolve console: both gates, and the act they open ─
+           The dial above says what the sun IS; this says what it takes to
+           become the next thing, and does it. It is the ONLY evolve control in
+           the game — the Star Forge only grows the rays that feed gate one. -->
+      <footer class="se-console" :class="[`is-${verdict.tone}`, { 'is-live': canEvolveNow }]">
+        <div v-if="!isMax" class="se-gates">
+          <!-- Gate one: the five core rays, each a pip in its own colour, so a
+               glance says WHICH one is short instead of just how many. -->
+          <div class="se-gate" :class="{ 'is-met': raysAllMet }">
+            <Icon
+              :icon="STAR_EVOLUTION_ICONS.gateRays"
+              class="se-gate-ico"
+              width="18"
+              height="18"
+              aria-hidden="true"
+            />
+            <span class="se-gate-k">Core Rays · Lv {{ requiredRayLevel }}</span>
+            <span class="se-gate-v">
+              {{ raysMet }}<span class="se-gate-cap">/{{ SOLAR_BRANCHES.length }}</span>
+            </span>
+            <span class="se-pips">
+              <span
+                v-for="ray in rayPips"
+                :key="ray.id"
+                class="se-pip"
+                :class="{ 'is-on': ray.met }"
+                :style="ray.met ? { background: ray.color, borderColor: ray.color } : undefined"
+                :title="`${ray.name} — Lv ${ray.level}${ray.met ? '' : ` · needs Lv ${requiredRayLevel}`}`"
+              />
+            </span>
+          </div>
+
+          <!-- Gate two: the time this phase is owed -->
+          <div class="se-gate" :class="{ 'is-met': dwellMet }">
+            <Icon
+              :icon="STAR_EVOLUTION_ICONS.gateTime"
+              class="se-gate-ico"
+              width="18"
+              height="18"
+              aria-hidden="true"
+            />
+            <span class="se-gate-k">Dwell Time</span>
+            <!-- compact, not a clock: "00:02:58" spends two thirds of its width
+                 on a leading zero hour, and every other duration on this dial
+                 is written the same way -->
+            <span class="se-gate-v">
+              {{ dwellMet ? 'SERVED' : formatCompactDuration(dwellRemainingMs) }}
+            </span>
+            <span class="se-bar">
+              <span class="se-bar-fill" :style="{ transform: `scaleX(${dwellPct / 100})` }" />
+            </span>
+          </div>
+        </div>
+
+        <div class="se-act">
+          <button
+            v-if="!isMax"
+            class="se-evolve"
+            type="button"
+            :disabled="!canEvolveNow"
+            :title="verdict.text"
+            @click="handleEvolve"
+          >
+            {{ evolveLabel }}
+          </button>
+          <span v-else class="se-crown">
+            <Icon icon="game-icons:laurel-crown" width="18" height="18" aria-hidden="true" />
+            Fully Evolved
+          </span>
+        </div>
+
+        <p class="se-verdict">
+          <Icon :icon="verdict.icon" class="se-verdict-ico" width="15" height="15" aria-hidden="true" />
+          <span class="se-verdict-txt">{{ verdict.text }}</span>
+          <button
+            v-if="verdict.raysShort"
+            class="se-goto"
+            type="button"
+            title="Core rays are grown on the Star Forge tree"
+            @click="openSolarTree"
+          >
+            Star Forge ›
+          </button>
+        </p>
+      </footer>
 
       <!-- ─ Astral Codex: die Meilenstein-Bahnen unter dem Dial ─ -->
       <ChronicleSection />
@@ -647,19 +806,16 @@ const gate = computed<EvolveGate>(() => {
   }
 }
 
-/* Click target around the disc — PhaseSunDisc / CometDisc centre themselves
-   absolutely inside it, so this box IS the sun's footprint on the stage.
-   `top` comes from the template (the dial's CENTER_Y). */
+/* The disc's footprint on the stage — PhaseSunDisc / CometDisc centre
+   themselves absolutely inside it. `top` comes from the template (the dial's
+   CENTER_Y). Not a control any more: the evolve button lives in the console
+   below, so the body neither takes the pointer nor lights up under it. */
 .sf-orbit-sun {
   position: absolute;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
-  cursor: pointer;
-  transition: filter 0.18s;
-}
-.sf-orbit-sun:hover {
-  filter: brightness(1.12);
+  cursor: help;
 }
 
 /* ─ Evolve, announced by the sun itself ─
@@ -690,57 +846,288 @@ const gate = computed<EvolveGate>(() => {
   }
 }
 
-/* Chip under the body's lower edge — the evolve gate, on the thing it acts on,
-   and the mirror of the caption above. It counts the phase down, then becomes
-   the call to act. `top` comes from the template (the body's painted edge plus
-   the same clear air the caption keeps) and is in % of the SUN'S box, not the
-   stage. Sized off the dial so it never becomes a speck on 4K. */
-.sf-sun-cta {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
+/* ═══ Evolve console ═══════════════════════════════════════════════
+   The instrument under the dial: two gates on the left, the act on the right,
+   the reason underneath. Its own inline-size container, so every size here
+   scales with the console's WIDTH — the middle column runs from ~600px on
+   Full HD to over 2000px on 4K, and a fixed px scale would read right on
+   exactly one of them. Clamped at both ends so neither extreme runs away. */
+/* Two rows, not one: the middle column measures 415px on Full HD (the two side
+   columns of the deck are fixed), and a single row of gates-plus-button left
+   each gate ~106px — enough to ellipsis "Core R…" and "D…", which is no gate
+   at all. The gates therefore claim the full width, and the act shares the row
+   below with its reason. Same layout at every size: on 2K the row simply
+   breathes instead of rearranging. */
+.se-console {
+  flex: 0 0 auto;
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'gates gates'
+    'act verdict';
+  align-items: center;
+  column-gap: clamp(9px, 1.3cqw, 20px);
+  row-gap: clamp(6px, 0.8cqw, 13px);
+  width: 100%;
+  max-width: 780px;
+  margin-inline: auto;
+  padding: clamp(8px, 1.1cqw, 17px) clamp(10px, 1.4cqw, 22px);
+  background: #1a1008;
+  border: 2px solid #5c3310;
+  border-radius: 4px;
+}
+/* Ready reads as a state of the whole instrument, not just of its button */
+.se-console.is-live {
+  border-color: #6ec040;
+  background: #141c0c;
+}
+.se-console.is-end {
+  border-color: #4a2a7a;
+  background: #170f22;
+}
+
+/* ── the two gates ───────────────────────────────────────────────── */
+.se-gates {
+  grid-area: gates;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(7px, 1cqw, 16px);
+  min-width: 0;
+}
+
+/* Icon, label and value on one line; the pips / the bar run the full width
+   underneath — side by side neither would have the room to say anything. */
+.se-gate {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(3px, 0.45cqw, 7px) clamp(5px, 0.7cqw, 11px);
+  padding: clamp(5px, 0.7cqw, 11px) clamp(7px, 0.95cqw, 15px);
+  background: #141410;
+  border: 1px solid #33220e;
+  border-radius: 4px;
+  min-width: 0;
+}
+.se-gate.is-met {
+  border-color: #2e7a1a;
+  background: #121810;
+}
+
+.se-gate-ico {
+  width: clamp(15px, 1.7cqw, 27px);
+  height: clamp(15px, 1.7cqw, 27px);
+  color: #a08a5e;
+}
+.se-gate.is-met .se-gate-ico {
+  color: #8ad060;
+}
+
+.se-gate-k {
+  font-size: clamp(9px, 1.05cqw, 16px);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a7c66;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.se-gate-v {
+  font-size: clamp(13px, 1.6cqw, 25px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.se-gate.is-met .se-gate-v {
+  color: #a8e878;
+}
+
+.se-gate-cap {
+  font-size: 0.66em;
+  font-weight: 700;
+  color: #8a7c66;
+}
+
+/* ── gate one: five pips, one per core ray ───────────────────────── */
+.se-pips {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: clamp(4px, 0.6cqw, 9px);
+}
+
+/* Diamonds, same shape the header's evolution panel uses for ray levels — a
+   grown ray burns in its OWN colour, a short one stays an empty socket. */
+.se-pip {
+  flex: 1 1 0;
+  height: clamp(6px, 0.75cqw, 11px);
+  background: #0d0904;
+  border: 1px solid #33220e;
+  border-radius: 2px;
+  cursor: help;
+}
+
+/* ── gate two: the dwell track ───────────────────────────────────── */
+.se-bar {
+  grid-column: 1 / -1;
+  height: clamp(6px, 0.75cqw, 11px);
+  background: #0d0904;
+  border: 1px solid #33220e;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+/* scaleX, not width — this creeps forward every second the panel is open */
+.se-bar-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  background: linear-gradient(to right, #b8791c, #e0a828);
+}
+.se-gate.is-met .se-bar-fill {
+  background: linear-gradient(to right, #2e7a1a, #6ec040);
+}
+
+/* ── the act ─────────────────────────────────────────────────────── */
+.se-act {
+  grid-area: act;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 13px;
-  padding: clamp(4px, 1.1cqmin, 10px) clamp(9px, 2.6cqmin, 22px);
-  font-size: 12px;
-  font-size: clamp(12.5px, 2.9cqmin, 26px);
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+}
+
+.se-evolve {
+  position: relative;
+  padding: clamp(9px, 1.25cqw, 20px) clamp(14px, 2cqw, 32px);
+  font-size: clamp(12px, 1.4cqw, 22px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  border-radius: 4px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
-  cursor: pointer;
-  transition: transform 0.14s;
-}
-/* Waiting: a dark plate, readable against any phase colour behind it */
-.sf-sun-cta.is-wait {
-  color: #e8e4d8;
-  background: #16130c;
-  border: 1px solid #5c3310;
-}
-.sf-sun-cta.is-met {
-  color: #f0ffe0;
+  color: #08130a;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #6ec040;
+  border-radius: 4px;
+  cursor: pointer;
 }
-.sf-sun-cta.is-max {
-  color: #f0e0a0;
+.se-evolve:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+/* Blocked is not hidden — the button stays, so the player always sees WHAT is
+   being unlocked; the verdict line beside it says why it will not press. */
+.se-evolve:disabled {
+  color: #7d7364;
+  background: #16130c;
+  border-color: #3e200a;
+  cursor: not-allowed;
+}
+
+/* The call to act breathes on its OWN layer: the glow stands still in CSS and
+   only its opacity animates. Pulsing the button's box-shadow directly would
+   re-raster the box every frame (see „Performance" Regel 2/11). */
+.se-evolve:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 5px;
+  box-shadow: 0 0 16px 2px rgba(140, 240, 110, 0.8);
+  pointer-events: none;
+  animation: se-evolve-breathe 2s ease-in-out infinite;
+}
+@keyframes se-evolve-breathe {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.se-crown {
+  display: flex;
+  align-items: center;
+  gap: clamp(5px, 0.7cqw, 11px);
+  padding: clamp(8px, 1.1cqw, 18px) clamp(13px, 1.8cqw, 29px);
+  font-size: clamp(12px, 1.35cqw, 21px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  color: #e8c040;
   background: #1e1a06;
   border: 1px solid #e8c040;
+  border-radius: 4px;
 }
-.sf-sun-cta:hover {
-  transform: translateX(-50%) scale(1.06);
-}
-/* the icon rides the chip's font size instead of its own fixed box */
-.sf-sun-cta :deep(svg) {
-  width: 1.25em;
-  height: 1.25em;
+.se-crown :deep(svg) {
+  width: 1.3em;
+  height: 1.3em;
   flex-shrink: 0;
+}
+
+/* ── the reason ──────────────────────────────────────────────────── */
+/* Beside the button, not under it — and it WRAPS rather than truncating: the
+   longest verdict names both gates and their numbers, and an ellipsis would
+   eat exactly the part the player came for. */
+.se-verdict {
+  grid-area: verdict;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: clamp(5px, 0.7cqw, 11px);
+  font-size: clamp(10px, 1.15cqw, 18px);
+  line-height: 1.25;
+  color: #d8b06a;
+  min-width: 0;
+}
+
+.se-verdict-ico {
+  width: clamp(13px, 1.4cqw, 22px);
+  height: clamp(13px, 1.4cqw, 22px);
+  flex-shrink: 0;
+  color: #cc6050;
+}
+
+.se-verdict-txt {
+  min-width: 0;
+}
+
+.se-console.is-ready .se-verdict {
+  color: #a8e878;
+}
+.se-console.is-ready .se-verdict-ico {
+  color: #6ec040;
+}
+.se-console.is-end .se-verdict {
+  color: #d9b6ff;
+}
+.se-console.is-end .se-verdict-ico {
+  color: #a070e0;
+}
+
+/* Rays are BOUGHT on the tree — this points at it while they are the blocker.
+   Deliberately a ghost chip, not a second solid button: it must never read as
+   a second way to evolve. */
+.se-goto {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: clamp(2px, 0.3cqw, 5px) clamp(6px, 0.85cqw, 13px);
+  font-size: clamp(9px, 1.05cqw, 16px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #c89040;
+  background: transparent;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.se-goto:hover {
+  color: #e8c060;
 }
 
 /* ─ Identity, worn by the body ─
@@ -1174,13 +1561,33 @@ const gate = computed<EvolveGate>(() => {
     gap: 8px;
   }
   /* the caption is NOT stepped down here — it scales off the dial itself */
+
+  /* Every row the console takes here comes straight off the dial, which is
+     already at its tightest on these viewports — so it gives up padding and
+     the gates lose a hair of height. The type keeps scaling off the width. */
+  .se-console {
+    padding: 6px 9px;
+    column-gap: 9px;
+    row-gap: 5px;
+  }
+  .se-gate {
+    padding: 4px 7px;
+  }
+  .se-evolve {
+    padding: 8px 13px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .sf-orbit-active,
   .sf-orbit-dot.is-current,
-  .sf-sun-ring {
+  .sf-sun-ring,
+  .se-evolve:not(:disabled)::after {
     animation: none;
+  }
+  /* without the breathing glow the ready button must still stand out */
+  .se-evolve:not(:disabled)::after {
+    opacity: 0.6;
   }
   /* without the pulse the ring must still be visible, or "ready" says nothing */
   .sf-sun-ring--late {

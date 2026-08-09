@@ -122,9 +122,11 @@ const champBadgeStyle = computed(() => badgeSlotStyles.value.champion)
 const skillBadgeStyle = computed(() => badgeSlotStyles.value.skill)
 const planetBadgeStyle = computed(() => badgeSlotStyles.value.planet)
 
-function openShopTab() {
+/** The ✦ badge announces a ready EVOLUTION, and that act happens on the sun
+ *  dial in the Bard tab — not in the Forge, which only grows the core rays. */
+function openEvolveConsole() {
   uiStore.openBardModal()
-  uiStore.setBardTab('shop')
+  uiStore.setBardTab('bard')
 }
 
 function openTeamTab() {
@@ -435,7 +437,7 @@ onUnmounted(() => {
             class="header-notif-badge header-notif-badge--forge"
             :style="forgeBadgeStyle"
             aria-label="Sun evolution ready"
-            @click.stop="openShopTab"
+            @click.stop="openEvolveConsole"
           >
             ✦
           </button>

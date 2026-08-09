@@ -38,7 +38,7 @@
           The star burned out and <b class="sf-hint-key">collapsed</b> — the tree is fully grown.
         </template>
         <template v-else-if="solarStore.canUpgradeStar">
-          Evolve to <b class="sf-hint-key">{{ nextStage.name }}</b>
+          Ready for <b class="sf-hint-key">{{ nextStage.name }}</b>
           <span class="sf-hint-arrow">→</span>
           <b class="sf-hint-gain">{{ nextPhaseUnlockText }}</b>
         </template>
@@ -79,11 +79,20 @@
           <span class="sf-read-label">Dwell</span>
         </div>
 
+        <!-- The Forge GROWS the rays; it no longer performs the evolution.
+             That act lives on the sun dial in the Bard tab, where both its
+             gates stand together — here it would have been a button whose
+             second gate was invisible. What is left is the pointer. -->
         <button
           v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
           class="sf-evolve"
           :disabled="solarStore.isUpgrading"
-          @click="handleEvolve"
+          :title="
+            solarStore.isUpgrading
+              ? 'The core is turning over…'
+              : 'Both gates are open — the evolution is performed on the sun dial in the Bard tab'
+          "
+          @click="openEvolveConsole"
         >
           {{ evolveLabel }}
         </button>
@@ -301,6 +310,7 @@ import { Icon } from '@iconify/vue'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import { MATERIALS } from '@/config/economy/materials'
 import {
@@ -327,6 +337,7 @@ import type { ForgeRelicDef, ForgeConstellationDef, ForgeActiveBuff } from '@/ty
 const inventoryStore = useInventoryStore()
 const forgeStore = useStarForgeStore()
 const solarStore = useSolarUpgradeStore()
+const uiStore = useUiStore()
 const { phaseLabel } = useSunPhaseDisplay()
 const { showToast } = useActionToast()
 
@@ -388,18 +399,14 @@ const nextPhaseUnlockText = computed(() => {
 
 const evolveLabel = computed(() => {
   if (solarStore.isUpgrading) return solarStore.isCometState ? 'Igniting…' : 'Evolving…'
-  return solarStore.isCometState ? '✦ Ignite' : '✦ Evolve'
+  return solarStore.isCometState ? '✦ Ignite ›' : '✦ Evolve ›'
 })
 
-function handleEvolve(): void {
-  if (!solarStore.canUpgradeStar) return
-  const wasComet = solarStore.isCometState
-  const targetName = nextStage.value.name
-  solarStore.upgradeStar()
-  showToast(
-    wasComet ? `The comet ignites into ${targetName}…` : `Star evolving to ${targetName}…`,
-    'event',
-  )
+/** Hands the player over to the one place the sun evolves — the console under
+ *  the dial in the Bard tab. The Forge itself never calls `upgradeStar()`. */
+function openEvolveConsole(): void {
+  if (solarStore.isUpgrading) return
+  uiStore.setBardTab('bard')
 }
 
 // ── Active blessings (running bargain buffs) ─────────────────────────────────

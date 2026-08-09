@@ -439,7 +439,7 @@ export const COMET_STAGE_GOLD = [0, 0.2, 0.4, 0.6, 0.8, 1]
 
 export const COMET_MIN_DWELL_SECONDS = 180
 
-// ── Header star-evolution tooltip ──────────────────────────────────────────
+// ── Star evolution: tooltip + evolve console ───────────────────────────────
 /**
  * Etwas breiter als das Galaxie- und das Meep-Panel: die Lebenslauf-Schiene
  * trägt sieben Kugeln nebeneinander, und unter ~380px rücken deren Nummern so
@@ -447,7 +447,7 @@ export const COMET_MIN_DWELL_SECONDS = 180
  */
 export const STAR_EVOLUTION_TOOLTIP_WIDTH = 'clamp(380px, 22vw, 520px)'
 /**
- * Marken des Sternen-Panels — jede genau einmal. Die fünf Kernstrahlen bringen
+ * Marken der Sternentwicklung — jede genau einmal. Die fünf Kernstrahlen bringen
  * ihre eigenen Glyphen mit (`SOLAR_BRANCHES`); hier stehen nur die Dinge, für
  * die es keins gibt. Das Schloss ist ein Bedienzustand und kommt deshalb als
  * einziges aus `lucide` (siehe „Icons" in CLAUDE.md).
@@ -455,8 +455,13 @@ export const STAR_EVOLUTION_TOOLTIP_WIDTH = 'clamp(380px, 22vw, 520px)'
  * Bewusst KEIN zweites Sanduhr-Motiv neben `gateTime`: die vier Zeitangaben
  * unterscheiden sich in Zahnrad, Stoppuhr und Uhr-mit-Plus, damit sie in der
  * zweispaltigen Zeilenliste nebeneinander unterscheidbar bleiben.
+ *
+ * ZWEI Verbraucher, ein Satz Glyphen: das Hover-Panel im Header
+ * (`StarEvolutionTooltip`) und die Evolve-Konsole unter dem Sonnen-Dial im
+ * Bard-Stats-Tab (`SolarEvolutionColumn`). Beide zeigen dieselben zwei Tore —
+ * zwei Sanduhren für dieselbe Verweildauer wären zwei Aussagen für eine Sache.
  */
-export const STAR_EVOLUTION_TOOLTIP_ICONS = {
+export const STAR_EVOLUTION_ICONS = {
   gateTime: 'game-icons:hourglass',
   gateRays: 'game-icons:sun-radiations',
   ready: 'game-icons:star-swirl',

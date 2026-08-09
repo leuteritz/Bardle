@@ -206,7 +206,7 @@ function buyAllUpgrades() {
           <span v-else class="fg-tt__next">Your sun has reached its final phase</span>
         </div>
       </div>
-      <div class="bt__hint">Open the Star Forge to evolve</div>
+      <div class="bt__hint">Open the Bard tab and evolve at the sun dial</div>
     </template>
 
     <!-- ══════════ CHAMPIONS ══════════ -->

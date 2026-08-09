@@ -30,7 +30,7 @@ import {
   SUN_PHASE_DISPLAY_TOTAL,
   SOLAR_BRANCHES,
   SOLAR_MAX_LEVELS,
-  STAR_EVOLUTION_TOOLTIP_ICONS,
+  STAR_EVOLUTION_ICONS,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -176,36 +176,36 @@ const verdict = computed<{ tone: 'ready' | 'blocked' | 'end'; icon: string; text
   if (!nextStage.value) {
     return {
       tone: 'end',
-      icon: STAR_EVOLUTION_TOOLTIP_ICONS.ready,
+      icon: STAR_EVOLUTION_ICONS.ready,
       text: 'The last light has gone out — nothing follows the collapse',
     }
   }
   if (dwellMet.value && raysAllMet.value) {
     return {
       tone: 'ready',
-      icon: STAR_EVOLUTION_TOOLTIP_ICONS.ready,
+      icon: STAR_EVOLUTION_ICONS.ready,
       text: isComet.value
-        ? 'Ready to ignite — light the core in the Star Forge'
-        : 'Ready to evolve — raise the core in the Star Forge',
+        ? 'Ready to ignite — light the core under the Bard tab’s sun'
+        : 'Ready to evolve — raise the core under the Bard tab’s sun',
     }
   }
   if (!dwellMet.value && !raysAllMet.value) {
     return {
       tone: 'blocked',
-      icon: STAR_EVOLUTION_TOOLTIP_ICONS.blocked,
+      icon: STAR_EVOLUTION_ICONS.blocked,
       text: `Both gates hold — ${dwellRemainingText.value} of dwell and ${raysShortText.value} short`,
     }
   }
   if (!dwellMet.value) {
     return {
       tone: 'blocked',
-      icon: STAR_EVOLUTION_TOOLTIP_ICONS.blocked,
+      icon: STAR_EVOLUTION_ICONS.blocked,
       text: `Rays are set — the star still needs ${dwellRemainingText.value} in this phase`,
     }
   }
   return {
     tone: 'blocked',
-    icon: STAR_EVOLUTION_TOOLTIP_ICONS.blocked,
+    icon: STAR_EVOLUTION_ICONS.blocked,
     text: `Time is served — ${raysShortText.value} below Lv ${requiredRayLevel.value}`,
   }
 })
@@ -262,37 +262,37 @@ interface StatRow {
 const timeRows = computed<StatRow[]>(() => [
   {
     key: 'here',
-    icon: STAR_EVOLUTION_TOOLTIP_ICONS.timeInPhase,
+    icon: STAR_EVOLUTION_ICONS.timeInPhase,
     label: 'Time in this phase',
     value: duration(elapsedHere.value),
   },
   {
     key: 'star',
-    icon: STAR_EVOLUTION_TOOLTIP_ICONS.totalAsStar,
+    icon: STAR_EVOLUTION_ICONS.totalAsStar,
     label: 'Burning as a star',
     value: duration(solarStore.totalPhaseSeconds + (isComet.value ? 0 : elapsedHere.value)),
   },
   {
     key: 'comet',
-    icon: STAR_EVOLUTION_TOOLTIP_ICONS.cometDrift,
+    icon: STAR_EVOLUTION_ICONS.cometDrift,
     label: 'Drifted as a comet',
     value: duration(solarStore.cometSeconds + (isComet.value ? elapsedHere.value : 0)),
   },
   {
     key: 'longest',
-    icon: STAR_EVOLUTION_TOOLTIP_ICONS.longestPhase,
+    icon: STAR_EVOLUTION_ICONS.longestPhase,
     label: 'Longest phase',
     value: longestPhaseSeconds.value > 0 ? duration(longestPhaseSeconds.value) : '—',
   },
   {
     key: 'behind',
-    icon: STAR_EVOLUTION_TOOLTIP_ICONS.phasesBehind,
+    icon: STAR_EVOLUTION_ICONS.phasesBehind,
     label: 'Phases behind you',
     value: `${phasesBehind.value} / ${SUN_PHASE_DISPLAY_TOTAL}`,
   },
   {
     key: 'pace',
-    icon: STAR_EVOLUTION_TOOLTIP_ICONS.dwellPace,
+    icon: STAR_EVOLUTION_ICONS.dwellPace,
     label: 'Dwell pace',
     value: dwellPaceText.value,
   },
@@ -371,7 +371,7 @@ const timeRows = computed<StatRow[]>(() => [
       <template v-if="nextStage">
         <div class="set-gate" :class="{ 'set-gate--met': dwellMet }">
           <Icon
-            :icon="STAR_EVOLUTION_TOOLTIP_ICONS.gateTime"
+            :icon="STAR_EVOLUTION_ICONS.gateTime"
             width="16"
             height="16"
             class="set-gate-icon"
@@ -386,7 +386,7 @@ const timeRows = computed<StatRow[]>(() => [
 
         <div class="set-gate" :class="{ 'set-gate--met': raysAllMet }">
           <Icon
-            :icon="STAR_EVOLUTION_TOOLTIP_ICONS.gateRays"
+            :icon="STAR_EVOLUTION_ICONS.gateRays"
             width="16"
             height="16"
             class="set-gate-icon"
