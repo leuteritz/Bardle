@@ -28,18 +28,52 @@
          Bild, und die Leiste ist schmal genug, dass die Zuordnung eindeutig
          bleibt. -->
     <Transition name="ab-tip">
-      <div v-if="hovered" class="ab-tip" :style="{ '--ab-color': hovered.color }">
-        <div class="ab-tip-head">
+      <div
+        v-if="hovered"
+        class="ab-tip"
+        :class="{ 'ab-tip--locked': hovered.locked }"
+        :style="{ '--ab-color': hovered.color }"
+      >
+        <!-- Kopf: wer spricht. Die Keycap wiederholt die Taste der Kachel,
+             damit Tooltip und Feld zusammengehören; der Rang steht rechts,
+             weil er die Zahlen darunter erklärt. -->
+        <header class="ab-tip-head">
+          <span v-if="hovered.key" class="ab-tip-key">{{ hovered.key }}</span>
           <span class="ab-tip-name">{{ hovered.name }}</span>
-          <span class="ab-tip-meta">{{ hovered.meta }}</span>
+          <span class="ab-tip-rank">{{ hovered.rankLabel }}</span>
+        </header>
+
+        <!-- Die Hauptwirkung, allein und als Erstes: der Wert vor seiner
+             Beschriftung, weil er die Antwort auf „was bringt der Druck?" ist.
+             Alles Weitere ist Beiwerk und steht darunter. -->
+        <div class="ab-tip-lead">
+          <span class="ab-tip-lead-value">{{ hovered.lead.value }}</span>
+          <span class="ab-tip-lead-label">{{ hovered.lead.label }}</span>
         </div>
-        <p class="ab-tip-tagline">{{ hovered.tagline }}</p>
-        <dl class="ab-tip-lines">
+
+        <dl v-if="hovered.lines.length" class="ab-tip-lines">
           <template v-for="line in hovered.lines" :key="line.label">
             <dt>{{ line.label }}</dt>
             <dd>{{ line.value }}</dd>
           </template>
         </dl>
+
+        <!-- Fuß: beschriftete Ablesungen wie im Astral Codex. Der Status ist
+             das einzige Feld, das sich WÄHREND des Hovers ändert — er wird
+             deshalb vom Frame-Lauf beschrieben, nicht von Vue gerendert. -->
+        <footer class="ab-tip-foot">
+          <div v-if="hovered.live" class="ab-tip-read">
+            <span class="ab-tip-read-label">Status</span>
+            <span ref="tipStatusEl" class="ab-tip-read-value ab-tip-status"></span>
+          </div>
+          <div v-for="cell in hovered.foot" :key="cell.label" class="ab-tip-read">
+            <span class="ab-tip-read-label">{{ cell.label }}</span>
+            <span class="ab-tip-read-value">{{ cell.value }}</span>
+          </div>
+        </footer>
+
+        <!-- Zuletzt die Zeile Welt: sie sagt nichts, was man rechnen kann. -->
+        <p class="ab-tip-tagline">{{ hovered.tagline }}</p>
       </div>
     </Transition>
 
@@ -68,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import BardAbilityTile from './BardAbilityTile.vue'
 import BardPassiveTile from './BardPassiveTile.vue'
 import { useUiStore } from '@/stores/core/uiStore'
@@ -218,6 +252,10 @@ function paint(): boolean {
     }
   }
 
+  // Der Status im offenen Tooltip hängt an derselben Uhr wie die Schleier —
+  // er läuft deshalb im selben Frame mit, statt einen zweiten Lauf zu starten.
+  paintTipStatus()
+
   if (now < flashUntil) busy = true
   return busy
 }
@@ -296,6 +334,49 @@ watch(
 // ── Tooltip ─────────────────────────────────────────────────────────────────
 const hoveredId = ref<BardAbilityId | 'passive' | null>(null)
 
+/**
+ * Das Statusfeld im Fuß des Tooltips. Es ist das einzige, das sich ändert,
+ * während der Zeiger stillsteht — geschrieben wird es deshalb direkt am
+ * Rendering vorbei (Performance-Regel 3); ginge es über eine Ref, liefe pro
+ * Frame ein VNode-Diff über den ganzen Tooltip samt Wirkungszeilen.
+ */
+const tipStatusEl = ref<HTMLElement | null>(null)
+let tipStatusText = ''
+
+function paintTipStatus(): void {
+  const el = tipStatusEl.value
+  const id = hoveredId.value
+  if (!el || !id || id === 'passive') return
+
+  const leftMs = Math.max(0, (store.cooldownReadyAt[id] ?? 0) - Date.now())
+  const text = leftMs > 0 ? `${cooldownText(leftMs)}s` : 'Ready'
+  if (text === tipStatusText) return
+  el.textContent = text
+  el.classList.toggle('ab-tip-status--ready', leftMs === 0)
+  tipStatusText = text
+}
+
+// Beim Wechsel der überfahrenen Kachel steht ein frisches, leeres Feld da —
+// es einmal zu füllen ist Sache dieses Watchers, danach übernimmt der Lauf.
+watch(hoveredId, async () => {
+  tipStatusText = ''
+  await nextTick()
+  paintTipStatus()
+  ensureLoop()
+})
+
+/**
+ * Der Tooltip in vier Rängen, statt einer Liste gleichwertiger Zeilen:
+ *
+ *   Kopf   — Taste, Name, Rang: welche Fähigkeit, wie weit gewachsen
+ *   Lead   — die EINE Zahl, für die man die Taste drückt
+ *   Zeilen — was sonst noch passiert
+ *   Fuß    — Status und Abklingzeit: darf ich jetzt drücken?
+ *
+ * Die Hauptwirkung wird nicht hier ausgewählt, sondern ist per Vereinbarung
+ * die erste Zeile aus `bardAbilityEffectLines` — die Fähigkeit selbst weiß am
+ * besten, worauf es bei ihr ankommt.
+ */
 const hovered = computed(() => {
   const id = hoveredId.value
   if (!id) return null
@@ -303,21 +384,31 @@ const hovered = computed(() => {
   if (id === 'passive') {
     const capped = store.resonance >= RESONANCE_MAX_STACKS
     return {
+      key: '',
       name: BARD_PASSIVE.name,
       color: BARD_PASSIVE.color,
       tagline: BARD_PASSIVE.tagline,
-      meta: capped ? 'MAX' : `${store.resonance} / ${RESONANCE_MAX_STACKS}`,
+      rankLabel: capped ? 'Max resonance' : 'Passive',
+      locked: false,
+      // Die Passive kühlt nicht ab — der Status-Slot bliebe leer.
+      live: false,
+      lead: {
+        value: `+${((store.resonancePowerMult - 1) * 100).toFixed(0)}%`,
+        label: 'Ability power',
+      },
       lines: [
         // Zuerst, weil die Kachel genau diese Zahl zeigt — gekürzt dort, voll
         // hier, damit der Hover die Frage „wie viele genau?" beantwortet.
         { label: 'Meeps held', value: formatNumber(gameStore.meeps) },
-        { label: 'Ability power', value: `${((store.resonancePowerMult - 1) * 100).toFixed(0)}%` },
         { label: 'Cooldowns', value: `−${(store.resonanceCdr * 100).toFixed(1)}%` },
-        { label: 'Every click', value: `−${(RESONANCE_CLICK_REFUND_MS / 1000).toFixed(2)}s off cooldowns` },
         {
-          label: 'Next stack',
-          value: capped ? 'capped' : `${store.resonanceToNext} clicks`,
+          label: 'Every click',
+          value: `−${(RESONANCE_CLICK_REFUND_MS / 1000).toFixed(2)}s off cooldowns`,
         },
+      ],
+      foot: [
+        { label: 'Resonance', value: `${store.resonance} / ${RESONANCE_MAX_STACKS}` },
+        { label: 'Next stack', value: capped ? 'Capped' : `${store.resonanceToNext} clicks` },
       ],
     }
   }
@@ -326,15 +417,23 @@ const hovered = computed(() => {
   if (!def) return null
   const rank = store.rankOf(id)
   const locked = rank === 0
+  const lines = bardAbilityEffectLines(id, store.powerMultOf(id))
 
   return {
+    key: def.key,
     name: def.name,
     color: def.color,
     tagline: def.tagline,
-    meta: locked
-      ? `Unlocks at level ${def.unlockLevel}`
-      : `Rank ${rank}/${ABILITY_MAX_RANK} · ${(store.cooldownMsOf(id) / 1000).toFixed(1)}s`,
-    lines: bardAbilityEffectLines(id, store.powerMultOf(id)),
+    rankLabel: locked ? 'Locked' : `Rank ${rank} / ${ABILITY_MAX_RANK}`,
+    locked,
+    live: !locked,
+    // Gesperrt zählt nur eines: ab wann. Die Wirkungszeilen bleiben trotzdem
+    // vollständig stehen — als Vorschau auf das, was das Level bringt.
+    lead: locked
+      ? { value: `Level ${def.unlockLevel}`, label: 'Unlocks at' }
+      : { value: lines[0].value, label: lines[0].label },
+    lines: locked ? lines : lines.slice(1),
+    foot: [{ label: 'Cooldown', value: `${(store.cooldownMsOf(id) / 1000).toFixed(1)}s` }],
   }
 })
 
@@ -495,36 +594,101 @@ onUnmounted(() => {
   background: var(--ab-color, #e8c040);
 }
 
+/* Gesperrt trägt der Kasten die Leitfarbe noch nicht — sie gehört zu einer
+   Fähigkeit, die der Spieler wirken kann. */
+.ab-tip--locked::before {
+  background: #5c3310;
+}
+
+/* ── Kopf ─────────────────────────────────────────────────────────────────
+   Taste, Name, Rang in einer Zeile. Die Keycap ist dieselbe wie in der
+   Meldung des letzten Wirkens — sie bindet den Kasten an die Kachel, über
+   der er gerade steht. */
 .ab-tip-head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 3px;
+  gap: 8px;
+}
+
+.ab-tip-key {
+  flex-shrink: 0;
+  align-self: center;
+  min-width: 1.45em;
+  padding: 1px 4px 2px;
+  border: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 55%, transparent);
+  border-radius: 3px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--ab-color, #e8c040);
+  text-align: center;
 }
 
 .ab-tip-name {
+  flex: 1;
+  min-width: 0;
   font-size: 1.05rem;
   font-weight: 900;
   line-height: 1.1;
   color: var(--ab-color, #e8c040);
 }
 
-.ab-tip-meta {
+.ab-tip-rank {
   flex-shrink: 0;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: #8a7a52;
   font-variant-numeric: tabular-nums;
 }
 
-.ab-tip-tagline {
-  margin: 0 0 8px;
-  font-size: 0.82rem;
-  font-style: italic;
-  line-height: 1.3;
-  color: #b89b5a;
+.ab-tip--locked .ab-tip-name,
+.ab-tip--locked .ab-tip-key {
+  color: #a08a5c;
+  border-color: #4a2a0e;
+}
+
+/* ── Hauptwirkung ─────────────────────────────────────────────────────────
+   Der Wert steht VOR seiner Beschriftung — umgekehrt zu den Zeilen darunter,
+   weil er hier die Aussage ist und nicht der Eintrag einer Tabelle. Die
+   Leitfarbe trägt er als Kante links, nicht als Fläche: eine eingefärbte Box
+   in dieser Größe zöge mehr Blick als die Kachel selbst. */
+.ab-tip-lead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 9px 0 9px;
+  padding: 7px 10px 8px;
+  background: #12100a;
+  border-left: 3px solid var(--ab-color, #e8c040);
+  border-radius: 0 3px 3px 0;
+}
+
+.ab-tip-lead-value {
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1.05;
+  color: #f6efd8;
+  font-variant-numeric: tabular-nums;
+}
+
+.ab-tip-lead-label {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a7a52;
+  text-align: right;
+}
+
+.ab-tip--locked .ab-tip-lead {
+  border-left-color: #5c3310;
+}
+.ab-tip--locked .ab-tip-lead-value {
+  color: #c9b384;
 }
 
 /* Zwei Spalten: links wofür, rechts wie viel — die Zahlen stehen dadurch
@@ -537,7 +701,7 @@ onUnmounted(() => {
 }
 
 .ab-tip-lines dt {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #8a7a52;
   white-space: nowrap;
@@ -545,10 +709,67 @@ onUnmounted(() => {
 
 .ab-tip-lines dd {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  color: #f2ead2;
+  color: #ded0a6;
   text-align: right;
+}
+
+/* Gesperrt sind die Zeilen eine Vorschau, kein Versprechen — sie treten
+   entsprechend zurück. */
+.ab-tip--locked .ab-tip-lines dd {
+  color: #a89a74;
+}
+
+/* ── Fuß ──────────────────────────────────────────────────────────────────
+   Beschriftete Ablesungen wie im Astral Codex: Überschrift über dem Wert.
+   „Ready" und „42.0s" allein sagten nicht, was sie zählen. */
+.ab-tip-foot {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #2e2416;
+}
+
+.ab-tip-read {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ab-tip-read-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6f6244;
+}
+
+.ab-tip-read-value {
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #e6dcbe;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bereit ist der einzige Zustand, der eine Farbe verdient — er ist die
+   Aufforderung, die Taste zu drücken. */
+.ab-tip-status--ready {
+  color: var(--ab-color, #e8c040);
+}
+
+/* Zum Schluss die Zeile Welt: sie steht unter dem Strich, weil sie nichts
+   beantwortet — und in der Größe, die das zugibt. */
+.ab-tip-tagline {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
+  font-style: italic;
+  line-height: 1.3;
+  color: #8a7a52;
 }
 
 /* ── Ein- und Ausblenden ──────────────────────────────────────────────── */
@@ -589,9 +810,18 @@ onUnmounted(() => {
   .ab-tip-name {
     font-size: 1.2rem;
   }
+  .ab-tip-lead-value {
+    font-size: 1.32rem;
+  }
   .ab-tip-lines dt,
   .ab-tip-lines dd {
-    font-size: 0.88rem;
+    font-size: 0.86rem;
+  }
+  .ab-tip-read-value {
+    font-size: 0.92rem;
+  }
+  .ab-tip-tagline {
+    font-size: 0.82rem;
   }
   .ab-toast-text {
     font-size: 1.05rem;
@@ -610,9 +840,18 @@ onUnmounted(() => {
   .ab-tip-name {
     font-size: 1.45rem;
   }
+  .ab-tip-lead-value {
+    font-size: 1.6rem;
+  }
   .ab-tip-lines dt,
   .ab-tip-lines dd {
-    font-size: 1rem;
+    font-size: 0.98rem;
+  }
+  .ab-tip-read-value {
+    font-size: 1.05rem;
+  }
+  .ab-tip-tagline {
+    font-size: 0.94rem;
   }
   .ab-toast-text {
     font-size: 1.25rem;

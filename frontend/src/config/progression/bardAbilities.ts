@@ -109,6 +109,10 @@ export function getBardAbility(id: string): BardAbilityDef | undefined {
  * und nicht zur Kachel: der Tooltip bleibt dadurch rein darstellend und muss
  * die Formeln des Stores nicht ein zweites Mal kennen.
  *
+ * DIE ERSTE ZEILE IST DIE HAUPTWIRKUNG. Der Tooltip hebt sie heraus und zeigt
+ * den Rest darunter — deshalb steht vorn, was der Spieler beim Drücken der
+ * Taste bekommt, und nicht, unter welchen Umständen.
+ *
  * @param power Wirkungsfaktor aus Rang und Resonance (`powerMultOf`).
  */
 export function bardAbilityEffectLines(
@@ -121,8 +125,8 @@ export function bardAbilityEffectLines(
   switch (id) {
     case 'q':
       return [
-        { label: 'Targets', value: `${BINDING_TARGET_COUNT} bosses` },
         { label: 'Damage each', value: `${pct(BINDING_DAMAGE_MAX_HP_PCT * power)} max HP` },
+        { label: 'Targets', value: `${BINDING_TARGET_COUNT} bosses` },
         { label: 'Enrage held', value: sec(BINDING_STUN_MS) },
         {
           label: 'No target',
