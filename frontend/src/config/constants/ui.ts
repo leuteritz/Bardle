@@ -329,81 +329,26 @@ export const OFFLINE_CPS_RATE = 0.6
 export const OFFLINE_MAX_HOURS = 10
 export const OFFLINE_MIN_SECONDS = 60
 
-/** Bard Stats "Solar Evolution" — the live sun sits at the centre of the middle
- *  column and the seven phases ride an open orbit around it. Every value is in
- *  the SVG's 100×100 user units, which are also % of the square stage, so the
- *  whole dial scales with the resizable column instead of needing pixel sizes
- *  per resolution. Angles are measured from 12 o'clock, clockwise. */
-export const STATS_TAB_ORBIT = {
-  /** side of the square viewBox — reference frame for every value below */
-  VIEW: 100,
-  /** Vertical centre of the dial (% of the stage). Everything the dial says now
-   *  lives INSIDE the ring — identity above the sun, the evolve gate on it — so
-   *  the ring no longer has to leave a band free at the bottom and sits dead
-   *  centre again. */
-  CENTER_Y: 50,
-  /** Radius of the phase orbit. With no caption block below the arc, the ring
-   *  claims the stage — but every marker now carries a permanent tag, and the
-   *  one at 12 o'clock puts its tag OUTSIDE the ring, so the ring has to leave
-   *  a 10% band at the top for it. */
-  RADIUS: 40,
-  /** Clear air (% of the stage) between a marker's DISC and its permanent tag —
-   *  measured from the disc's edge, not the orbit line, because the markers are
-   *  sized to their phase and the collapse disc is nearly five times the width
-   *  of the comet speck. Outward where the stage has room, inward on the
-   *  flanks, where the stage's edge is right there. */
-  TAG_OUT_PCT: 4.5,
-  TAG_IN_PCT: 6,
-  /** |sin(angle)| above this means the marker sits too far out to the side for
-   *  an outward tag — it gets an inward one instead. */
-  TAG_FLANK_SIN: 0.75,
-  /** Width (% of the stage) of a tag. Fixed, so a long phase name never shifts
-   *  the tag off its marker — and so the clearances above can be computed. */
-  TAG_WIDTH_PCT: 19,
-  /** orbit line thickness */
-  STROKE: 1.6,
-  /** angle of the first step (the comet), i.e. the lower-left end of the arc */
-  START_DEG: -140,
-  /** angular length of the open ring — the 80° gap at the bottom carries the
-   *  phase caption and dwell clock, and an open arc reads as a progression
-   *  instead of a cycle */
-  SPAN_DEG: 280,
-  /** Clear air (% of the stage) between the celestial body's VISIBLE edge and
-   *  what hangs off it — the identity block above, the evolve gate below.
-   *  Neither sits at a fixed height in the ring: both ride the body, so name,
-   *  body and gate always read as one object stacked on the dial's axis. That
-   *  matters most at the comet, barely a third of the largest sun's width — a
-   *  fixed placement left the caption stranded near the ring while the chip cut
-   *  across the rock. The tightest case is the largest sun: the caption ends
-   *  around 17% (clear of the topmost marker's tag) and the chip around 81%
-   *  (clear of the "In Phase" readout on the floor). */
-  BODY_GAP_PCT: 2.5,
-  /** Width (% of the stage) of a marker's hover card. It carries four readouts
-   *  in a row, so it is wide — which is why the card anchors to whichever edge
-   *  keeps it on the stage instead of always centring on its marker. */
-  TIP_WIDTH_PCT: 64,
-  /** Markers further out than this (or than 100 − this) anchor their card by
-   *  the near edge and let it grow toward the middle of the stage. */
-  TIP_EDGE_PCT: 34,
-  /** dot diameter (% of the stage) = phase radius × this — keeps the orbit dots
-   *  true to the in-game sun proportions (1.9%…7%) */
-  DOT_PCT_PER_RADIUS: 0.05,
-  /** comet dot diameter (% of the stage) — a fixed speck, smaller than any sun */
-  COMET_DOT_PCT: 1.5,
-  /** sun disc diameter (% of the stage) at the smallest / largest phase radius */
-  SUN_PCT_MIN: 26,
-  SUN_PCT_MAX: 42,
-  /** comet disc diameter (% of the stage) — the origin body, below every sun */
-  COMET_SUN_PCT: 17,
-  /** Largest rendered stage width (px). Deliberately generous: on 4K the column
-   *  offers ~1400px of height, and a dial capped much lower leaves a band of
-   *  dead space between the ring and the readouts below it. In practice the
-   *  column's own width and height bind first — this is only a ceiling. */
-  MAX_PX: 1200,
-  /** Compact cap (px) on Full-HD-height viewports. Set above what those
-   *  viewports can actually give the dial, so there the HEIGHT decides — the
-   *  cap only guards very wide, very flat windows. */
-  MAX_PX_COMPACT: 520,
+/** Bard Stats "Solar Evolution" — the control desk of the middle column.
+ *  The sun used to sit at the centre of an orbit dial carrying all seven
+ *  phases; on Full HD that column is only 391px wide, so the ring's markers,
+ *  their tags and the console below all fought over the same pixels and every
+ *  one of them ended up small. The panel is stacked slabs now — body, journey
+ *  rail, dwell, rays, act — each with the full width to itself.
+ *  Only what the SCRIPT needs lives here; the slabs size themselves in CSS
+ *  off the panel's own container width. */
+export const SOLAR_EVOLUTION_PANEL = {
+  /** Disc diameter as a share (%) of the sun stage's SHORT side, at the
+   *  smallest and the largest star phase. Near-full, because the stage is now
+   *  a band that holds nothing but the body. */
+  SUN_PCT_MIN: 66,
+  SUN_PCT_MAX: 98,
+  /** The comet is the smallest body of the journey and keeps its own share —
+   *  interpolating it with the stars would make the origin a full-width rock. */
+  COMET_SUN_PCT: 64,
+  /** Ceiling (px) for the disc. On 4K the column offers over 600px of stage
+   *  height, and a sun that large would dwarf the deck it belongs to. */
+  SUN_MAX_PX: 300,
 } as const
 
 /** Bard Stats panel deck — user-resizable column widths (px). The two side
