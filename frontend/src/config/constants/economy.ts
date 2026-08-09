@@ -306,19 +306,12 @@ export const EXPEDITION_NAME_ACTIONS = [
   'Pilgrimage',
 ]
 
-// Expedition generation — thematic icon pool for procedurally named missions
-export const EXPEDITION_ICON_POOL: string[] = [
-  'game-icons:journey',
-  'game-icons:interstellar-path',
-  'game-icons:castle-ruins',
-  'game-icons:dungeon-gate',
-  'game-icons:lantern-flame',
-  'game-icons:caravan',
-  'game-icons:cave-entrance',
-  'game-icons:mountain-road',
-  'game-icons:elven-castle',
-  'game-icons:forest',
-]
+/**
+ * Fallback-Glyphen, wenn eine ID ins Leere zeigt (gelöschtes Augment, unbekanntes
+ * Vorzeichen aus einem alten Spielstand). Ohne sie stünde dort eine leere Fläche.
+ */
+export const AUGMENT_FALLBACK_ICON = 'game-icons:gems'
+export const OMEN_FALLBACK_ICON = 'game-icons:all-seeing-eye'
 
 // Expedition mechanics
 //

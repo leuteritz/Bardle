@@ -27,6 +27,7 @@ import {
   FORGE_LEAF_AMPLIFY_PER_LEVEL,
   FORGE_CONSTELLATION_REQUIRED_LEVEL,
   FORGE_BARGAIN_RESTOCK_MS,
+  FORGE_BARGAIN_EMPTY_ICON,
   FORGE_BARGAIN_REROLL_MATERIAL,
   FORGE_BARGAIN_REROLL_COST,
   FORGE_MIN_DAMAGE_TAKEN_MULT,
@@ -37,6 +38,7 @@ import {
   FORGE_CONSTELLATION_STELLAR_WIND_CPS_MULT,
   FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT,
 } from '@/config/constants'
+import { pickPooledIcon } from '@/config/ui/iconPools'
 import type { SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 
 /**
@@ -245,6 +247,18 @@ export const useStarForgeStore = defineStore('starForge', {
     // ── Cosmic Bargain ────────────────────────────────────────────────────────
     activeDeal(state): ForgeBargainDef | null {
       return getForgeBargain(state.bargainDealId) ?? null
+    },
+
+    /**
+     * Das Zeichen des ausliegenden Handels. Gezogen aus der Motivfamilie des
+     * Angebots, geseedet mit dem Restock-Zeitpunkt: derselbe Handel sieht beim
+     * nächsten Mal anders aus, bleibt aber über Re-Renders und Reloads gleich,
+     * weil `bargainRestockAt` im Spielstand steht.
+     */
+    activeDealIcon(state): string {
+      const def = getForgeBargain(state.bargainDealId)
+      if (!def) return FORGE_BARGAIN_EMPTY_ICON
+      return pickPooledIcon(def.iconPool, `${def.id}#${state.bargainRestockAt}`)
     },
 
     bargainPrice(): (def: ForgeBargainDef) => number {

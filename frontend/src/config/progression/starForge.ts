@@ -425,7 +425,7 @@ export const FORGE_BARGAINS: ForgeBargainDef[] = [
   {
     id: 'midasHour',
     name: 'Midas Hour',
-    icon: 'game-icons:take-my-money',
+    iconPool: 'fortune',
     desc: 'Doubles Chimes/Click for 30 minutes.',
     basePrice: 15_000,
     discountPct: 0.4,
@@ -436,7 +436,7 @@ export const FORGE_BARGAINS: ForgeBargainDef[] = [
   {
     id: 'stellarSurge',
     name: 'Stellar Surge',
-    icon: 'game-icons:profit',
+    iconPool: 'cosmos',
     desc: 'Doubles Chimes/Sec for 1 hour.',
     basePrice: 20_000,
     discountPct: 0.35,
@@ -447,7 +447,7 @@ export const FORGE_BARGAINS: ForgeBargainDef[] = [
   {
     id: 'stellarCache',
     name: 'Stellar Cache',
-    icon: 'game-icons:swap-bag',
+    iconPool: 'forge',
     desc: 'A crate of materials gathered from passing comets.',
     basePrice: 10_000,
     discountPct: 0.3,
@@ -457,7 +457,7 @@ export const FORGE_BARGAINS: ForgeBargainDef[] = [
   {
     id: 'solarWinds',
     name: 'Solar Winds',
-    icon: 'game-icons:time-synchronization',
+    iconPool: 'haste',
     desc: 'Skips 25% of the remaining phase dwell time.',
     basePrice: 25_000,
     discountPct: 0.4,
@@ -467,7 +467,7 @@ export const FORGE_BARGAINS: ForgeBargainDef[] = [
   {
     id: 'goldRush',
     name: 'Gold Rush',
-    icon: 'game-icons:receive-money',
+    iconPool: 'fortune',
     desc: 'Trade rare shards for a heap of chimes.',
     basePrice: 0,
     discountPct: 0,
@@ -478,7 +478,7 @@ export const FORGE_BARGAINS: ForgeBargainDef[] = [
   {
     id: 'solarBalm',
     name: 'Solar Balm',
-    icon: 'game-icons:health-potion',
+    iconPool: 'arcane',
     desc: 'Restores the sun to full HP instantly.',
     basePrice: 8_000,
     discountPct: 0.25,
@@ -487,7 +487,7 @@ export const FORGE_BARGAINS: ForgeBargainDef[] = [
   {
     id: 'voidHarvest',
     name: 'Void Harvest',
-    icon: 'game-icons:crystal-cluster',
+    iconPool: 'forge',
     desc: 'A rare haul of shards from the dark between stars.',
     basePrice: 22_000,
     discountPct: 0.35,

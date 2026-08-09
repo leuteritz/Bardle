@@ -7,6 +7,7 @@ import { useSynergyStore } from '@/stores/champions/synergyStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { AUGMENT_RARITY_COLOR, AUTO_PICK_ICON } from '@/config/constants'
 import { AUGMENTS } from '@/config/economy/augments'
+import { augmentIcon } from '@/utils/game/rolledIcons'
 import StatsColumnHeader from './StatsColumnHeader.vue'
 import type { AugmentDefinition } from '@/types'
 
@@ -37,6 +38,8 @@ const dpsPct = computed(() => Math.round((dpsSynergyMultiplier.value - 1) * 100)
 /* ── Augment shelf ───────────────────────────────────────────── */
 interface AugCard {
   aug: AugmentDefinition
+  /** Das für diesen Platz gezogene Glyph — siehe `augmentIcon`. */
+  icon: string
   key: string
   color: string
 }
@@ -45,7 +48,11 @@ const augCards = computed<AugCard[]>(() =>
   gameStore.activeAugments.flatMap((id, idx) => {
     const aug = AUGMENTS.find((a) => a.id === id)
     if (!aug) return []
-    return [{ aug, key: `${id}-${idx}`, color: AUGMENT_RARITY_COLOR[aug.rarity] }]
+    // Der Platz in der Liste ist der Seed des Glyphs — dasselbe Augment ein
+    // zweites Mal gezogen sieht anders aus, und zwar dauerhaft dasselbe „anders".
+    return [
+      { aug, icon: augmentIcon(id, idx), key: `${id}-${idx}`, color: AUGMENT_RARITY_COLOR[aug.rarity] },
+    ]
   }),
 )
 
@@ -267,7 +274,7 @@ const filteredAugCards = computed(() => {
           :title="`${card.aug.name} — ${card.aug.effectLine}`"
         >
           <div class="sf-aug-icon">
-            <Icon :icon="card.aug.icon" width="26" height="26" class="sf-aug-glyph" />
+            <Icon :icon="card.icon" width="26" height="26" class="sf-aug-glyph" />
           </div>
           <div class="sf-aug-body">
             <span class="sf-aug-name">{{ card.aug.name }}</span>

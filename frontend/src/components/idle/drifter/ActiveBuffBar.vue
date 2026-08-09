@@ -53,6 +53,7 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
+import { omenIcon } from '@/utils/game/rolledIcons'
 import { getOmen } from '@/config/progression/omens'
 import {
   getDrifter,
@@ -135,7 +136,9 @@ const chips = computed<BuffChip[]>(() => {
     const remainingMs = Math.max(0, buff.expiresAt - omenStore.omenNow)
     out.push({
       key: `omen-${buff.sourceId}`,
-      icon: def.icon,
+      // Das Glyph der erfüllten Karte; ein Buff aus einem alten Spielstand hat
+      // keines gespeichert und bekommt eines aus seiner Motivfamilie.
+      icon: buff.icon ?? omenIcon(def.id, 0),
       color: def.color,
       // Der Eilbonus steht im Namen und nicht als eigenes Zeichen: der Chip
       // hat für ein zweites Abzeichen keinen Platz, und wissen muss man es nur,

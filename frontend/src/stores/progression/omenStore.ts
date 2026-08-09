@@ -11,6 +11,8 @@ import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { logOmenCompleted } from '@/config/ui/eventLog'
+import { omenIcon } from '@/utils/game/rolledIcons'
+import { pickDistinctIcons } from '@/config/ui/iconPools'
 import { OMENS, getOmen, omenRewardLine } from '@/config/progression/omens'
 import {
   OMEN_OFFER_SIZE,
@@ -22,7 +24,14 @@ import {
   OMEN_HERALD_ACCENT,
   GAME_TICK_INTERVAL_MS,
 } from '@/config/constants'
-import type { ActiveOmen, OmenActiveBuff, OmenDef, OmenMetricId, OmenView } from '@/types'
+import type {
+  ActiveOmen,
+  OmenActiveBuff,
+  OmenDef,
+  OmenMetricId,
+  OmenOfferCard,
+  OmenView,
+} from '@/types'
 import { logger } from '@/utils/logger'
 
 /**
@@ -50,6 +59,12 @@ export const useOmenStore = defineStore('omen', {
   state: () => ({
     /** IDs der drei Karten, die gerade zur Wahl stehen. Leer = kein Angebot. */
     offer: [] as string[],
+    /**
+     * Wie viele Angebote schon ausgelegen haben. Dient allein als Seed für die
+     * ausgewürfelten Icons (`omenIcon`) — dieselbe Karte trägt bei jedem neuen
+     * Angebot ein anderes Motiv aus der Familie ihrer Domäne.
+     */
+    offerSeq: 0,
     /** Das Vorzeichen, dem Bard folgt. */
     active: null as ActiveOmen | null,
     /** Laufende Belohnungsbuffs. Mehrere möglich: ein Buff läuft Minuten, in
@@ -112,9 +127,17 @@ export const useOmenStore = defineStore('omen', {
       }
     },
 
-    /** Die drei Karten des Angebots als Definitionen. */
-    offerDefs(state): OmenDef[] {
-      return state.offer.map((id) => getOmen(id)).filter((d): d is OmenDef => d !== undefined)
+    /**
+     * Die Karten des Angebots samt ihrem für DIESES Angebot gezogenen Glyph.
+     * `pickDistinctIcons` sorgt dafür, dass keine zwei der drei Karten dasselbe
+     * Motiv tragen — zwei Vorzeichen derselben Domäne ziehen aus demselben Pool.
+     */
+    offerCards(state): OmenOfferCard[] {
+      const defs = state.offer.map((id) => getOmen(id)).filter((d): d is OmenDef => d !== undefined)
+      const icons = pickDistinctIcons(
+        defs.map((d) => ({ pool: d.iconPool, seed: `${d.id}#${state.offerSeq}` })),
+      )
+      return defs.map((def, i) => ({ ...def, icon: icons[i] }))
     },
 
     hasOffer(state): boolean {
@@ -137,6 +160,7 @@ export const useOmenStore = defineStore('omen', {
       const msLeft = state.active.deadlineAt - state.omenNow
       return {
         ...def,
+        icon: state.active.icon ?? omenIcon(def.id, 0),
         target,
         progress,
         ratio: target > 0 ? Math.min(1, progress / target) : 1,
@@ -227,6 +251,9 @@ export const useOmenStore = defineStore('omen', {
       }
 
       this.offer = picked.map((d) => d.id)
+      // Zählt jedes ausgelegte Angebot hoch — er ist der Seed der ausgewürfelten
+      // Icons, damit dieselben drei Vorzeichen beim nächsten Mal anders aussehen.
+      this.offerSeq++
       logger.info('Omen', `Offer drawn`, { omens: this.offer })
     },
 
@@ -270,6 +297,9 @@ export const useOmenStore = defineStore('omen', {
         target: this.resolveTarget(def),
         acceptedAt: now,
         deadlineAt: now + def.deadlineSec * 1000,
+        // Das Glyph wandert mit: die angenommene Karte behält, was im Angebot
+        // stand — bis hinauf zum Erfüllt-Banner.
+        icon: this.offerCards.find((c) => c.id === defId)?.icon,
       }
       this.offer = []
       this.omenNow = now
@@ -322,6 +352,9 @@ export const useOmenStore = defineStore('omen', {
     complete(def: OmenDef): void {
       if (!this.active) return
       const swift = Date.now() < this.active.deadlineAt
+      // Vor dem Leeren merken: das Banner soll das Glyph der erfüllten Karte
+      // tragen, nicht ein frisch gezogenes.
+      const icon = this.active.icon ?? omenIcon(def.id, 0)
 
       this.applyBuff(def, swift)
 
@@ -346,7 +379,7 @@ export const useOmenStore = defineStore('omen', {
         eyebrow: swift ? 'SWIFT OMEN FULFILLED' : 'OMEN FULFILLED',
         headline: def.name,
         subline: effectLine,
-        icon: def.icon,
+        icon,
         accent: OMEN_HERALD_ACCENT,
       })
       logger.info('Omen', `Fulfilled ${def.name}`, { swift })
@@ -370,6 +403,9 @@ export const useOmenStore = defineStore('omen', {
         expiresAt: Date.now() + durationMs,
         durationMs,
         swift,
+        // Das Glyph der erfüllten Karte wandert in den Buff-Chip: der Spieler
+        // soll dort dasselbe Zeichen wiedererkennen, dem er eben gefolgt ist.
+        icon: this.active?.icon ?? omenIcon(def.id, 0),
         effects: { ...def.reward.effects },
       })
       this.omenNow = Date.now()

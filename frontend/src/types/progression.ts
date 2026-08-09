@@ -1,6 +1,7 @@
 // Fortschritt: Universen, Prestige-Läufe, Abschnitte.
 
 import type { TimedBuffEffects } from './core'
+import type { IconPoolKey } from './ui'
 
 export interface ModifierEffects {
   cpsMultiplier?: number
@@ -261,7 +262,12 @@ export interface OmenDef {
   blurb: string
   /** Was zu tun ist, mit `{n}` für die Zielmenge. */
   objective: string
-  icon: string
+  /**
+   * Motivfamilie statt festem Glyph — gezogen wird je Angebot neu (`omenIcon`
+   * in `utils/game/rolledIcons.ts`). Die Familie folgt der `domain`: das Icon
+   * zeigt, WAS zu tun ist, und das steht in der Domäne.
+   */
+  iconPool: IconPoolKey
   /** Leitfarbe der Karte: Rahmen, Balken, Zahl. */
   color: string
   domain: OmenDomain
@@ -300,6 +306,11 @@ export interface OmenDef {
   }
 }
 
+/** Eine Karte im Angebot — die Definition plus das für dieses Angebot gezogene Glyph. */
+export interface OmenOfferCard extends OmenDef {
+  icon: string
+}
+
 /** Das Vorzeichen, dem Bard gerade folgt. */
 export interface ActiveOmen {
   defId: string
@@ -315,6 +326,13 @@ export interface ActiveOmen {
   acceptedAt: number
   /** Zeitpunkt, ab dem der Eilbonus verfällt. */
   deadlineAt: number
+  /**
+   * Das auf der gewählten Karte gezogene Glyph. Festgehalten statt nachgerechnet:
+   * das Angebot löst Dubletten mit einem Versatz auf (`pickDistinctIcons`), und
+   * der ist nach dem Abräumen des Angebots nicht mehr rekonstruierbar. Fehlt es
+   * in einem alten Spielstand, wird eines aus der Familie gezogen.
+   */
+  icon?: string
 }
 
 /** Ein laufender Omen-Buff. Gleiche Bauart wie `DrifterActiveBuff`, damit die
@@ -325,6 +343,11 @@ export interface OmenActiveBuff {
   durationMs: number
   /** Der Eilbonus lag an — die Karte und der Chip sagen es. */
   swift: boolean
+  /**
+   * Das Glyph der erfüllten Karte, damit der Chip dasselbe Zeichen trägt.
+   * Optional: ein Buff aus einem Spielstand von vor den Motiv-Pools hat keines.
+   */
+  icon?: string
   effects: TimedBuffEffects
 }
 
@@ -332,6 +355,8 @@ export interface OmenActiveBuff {
  *  `target` kommt aus dem angenommenen Omen und überschreibt damit den Wert der
  *  Definition, sobald die Produktion ihn festgeschrieben hat. */
 export interface OmenView extends OmenDef {
+  /** Das für diesen Lauf gezogene Glyph — aufgelöst aus `iconPool` + `iconSeq`. */
+  icon: string
   /** Erreichte Menge seit der Annahme, bei `target` gedeckelt. */
   progress: number
   /** Anteil 0–1. */

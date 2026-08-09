@@ -5,6 +5,7 @@ import RpgFrame from '@/components/ui/RpgFrame.vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { usePersistence } from '@/composables/system/usePersistence'
 import { AUGMENTS } from '@/config/economy/augments'
+import { augmentIcon } from '@/utils/game/rolledIcons'
 import { AUGMENT_RARITY_COLOR, AUGMENT_RARITY_LABEL, AUTO_PICK_ICON } from '@/config/constants'
 import type { AugmentDefinition } from '@/types'
 
@@ -17,11 +18,18 @@ const handleReset = () => {
   }
 }
 
-const options = computed<AugmentDefinition[]>(() =>
-  gameStore.pendingAugmentOptions
+/**
+ * Die drei Karten samt ihrem ausgewürfelten Glyph. Der Seed ist der Platz, den
+ * die gewählte Karte gleich in `activeAugments` einnimmt — dadurch trägt sie im
+ * Augment-Deck später exakt dasselbe Motiv wie hier im Modal.
+ */
+const options = computed<(AugmentDefinition & { icon: string })[]>(() => {
+  const slot = gameStore.activeAugments.length
+  return gameStore.pendingAugmentOptions
     .map((id) => AUGMENTS.find((a) => a.id === id))
-    .filter((a): a is AugmentDefinition => !!a),
-)
+    .filter((a): a is AugmentDefinition => !!a)
+    .map((a) => ({ ...a, icon: augmentIcon(a.id, slot) }))
+})
 
 /* Tastatur: 1–3 wählt die Karte an dieser Position, Esc überspringt. Der Listener
    hängt global, greift aber nur solange die Wahl offen ist — sonst würde eine

@@ -89,13 +89,37 @@ describe('omenStore', () => {
   // ── Katalog ────────────────────────────────────────────────────────────────
 
   describe('catalogue', () => {
-    it('has unique ids and icons', () => {
+    it('has unique ids', () => {
       const ids = OMENS.map((o) => o.id)
-      const icons = OMENS.map((o) => o.icon)
       expect(new Set(ids).size).toBe(ids.length)
-      // Alle Vorzeichen können nebeneinander im selben Trio stehen, also müssen
-      // sie über den ganzen Katalog unterscheidbar bleiben.
+    })
+
+    /*
+     * Die Glyphen sind nicht mehr fest, sondern werden je Angebot aus der
+     * Motivfamilie der Domäne gezogen. Unterscheidbarkeit ist deshalb keine
+     * Eigenschaft des Katalogs mehr, sondern der Ziehung — und genau dort wird
+     * sie geprüft: drei Karten, drei verschiedene Motive.
+     */
+    it('draws three distinct glyphs for an offer', () => {
+      const store = useOmenStore()
+      store.rollOffer()
+      const icons = store.offerCards.map((c) => c.icon)
+      expect(icons.length).toBeGreaterThan(0)
       expect(new Set(icons).size).toBe(icons.length)
+    })
+
+    it('draws different glyphs for a later offer', () => {
+      const store = useOmenStore()
+      store.rollOffer()
+      const first = new Map(store.offerCards.map((c) => [c.id, c.icon]))
+      // Zehn weitere Angebote — dieselbe Karte muss dabei mindestens einmal ein
+      // anderes Motiv tragen, sonst wäre der Seed wirkungslos.
+      let changed = false
+      for (let i = 0; i < 10 && !changed; i++) {
+        store.rollOffer()
+        changed = store.offerCards.some((c) => first.has(c.id) && first.get(c.id) !== c.icon)
+      }
+      expect(changed).toBe(true)
     })
 
     it('spans at least as many domains as a single offer has cards', () => {
@@ -228,7 +252,9 @@ describe('omenStore', () => {
 
       expect(store.buffs[0].swift).toBe(true)
       expect(store.totalOmensSwift).toBe(1)
-      expect(store.buffs[0].durationMs).toBe(def.reward.durationSec * 1000 * OMEN_SWIFT_DURATION_MULT)
+      expect(store.buffs[0].durationMs).toBe(
+        def.reward.durationSec * 1000 * OMEN_SWIFT_DURATION_MULT,
+      )
     })
 
     it('still pays out after the deadline, only without the swift bonus', () => {
@@ -360,7 +386,7 @@ describe('omenStore', () => {
         store.offer = []
         store.rollOffer()
         expect(store.offer).toHaveLength(OMEN_OFFER_SIZE)
-        const domains = store.offerDefs.map((d) => d.domain)
+        const domains = store.offerCards.map((d) => d.domain)
         expect(new Set(domains).size).toBe(OMEN_OFFER_SIZE)
       }
     })

@@ -3,6 +3,25 @@
 import type { PlanetType } from '@/types/world'
 import type { ItemCategory, ItemRarity } from '@/types/economy'
 
+// ── Ausgewürfelte Icons ──────────────────────────────────────────────────────
+/**
+ * Motivfamilie für ausgewürfelte Icons — die Schlüssel von `ICON_POOLS`
+ * (`config/ui/iconPools.ts`). Alles, was der Spieler gerollt bekommt, nennt
+ * eine Familie statt eines festen Glyphs, damit jeder Roll anders aussieht.
+ */
+export type IconPoolKey =
+  | 'might'
+  | 'ward'
+  | 'haste'
+  | 'fortune'
+  | 'arcane'
+  | 'ascend'
+  | 'cosmos'
+  | 'journey'
+  | 'fate'
+  | 'forge'
+  | 'roster'
+
 // ── Bard Stats catalog (stats tab, left column) ──────────────────────────────
 /** Identifier of a stat category — the accordion sections in the Journey column. */
 export type StatCategoryId =

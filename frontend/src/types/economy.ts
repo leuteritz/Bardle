@@ -2,6 +2,7 @@
 
 import type { ChampionRole } from '@/types/core'
 import type { ChampionStatKey } from '@/types/champions'
+import type { IconPoolKey } from '@/types/ui'
 
 // Expedition types
 export type ExpeditionStatus = 'active' | 'success' | 'failure'
@@ -212,8 +213,12 @@ export interface AugmentDefinition {
   name: string
   description: string
   effectLine: string
-  /** `game-icons:*` — unique across AUGMENTS, so three offered cards never repeat a symbol */
-  icon: string
+  /**
+   * Motivfamilie statt festem Glyph — das Icon wird bei jedem Roll neu gezogen
+   * (`augmentIcon` in `utils/game/rolledIcons.ts`), damit dasselbe Augment beim
+   * zwanzigsten Mal nicht wieder gleich aussieht.
+   */
+  iconPool: IconPoolKey
   rarity: AugmentRarity
   effects: AugmentEffects
   specialEffect?: AugmentSpecialEffect

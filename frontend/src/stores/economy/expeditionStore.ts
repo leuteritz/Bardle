@@ -23,7 +23,6 @@ import {
   EXPEDITION_NAME_ADJECTIVES,
   EXPEDITION_NAME_TARGETS,
   EXPEDITION_NAME_ACTIONS,
-  EXPEDITION_ICON_POOL,
   EXPEDITION_TIER_THRESHOLDS,
   EXPEDITION_ID_RANDOM_MAX,
   CHAMPION_XP_EXPEDITION_PER_MINUTE,
@@ -53,6 +52,7 @@ import type {
   ExpeditionLedgerRankDef,
   ExpeditionSpoilsPayout,
 } from '@/types'
+import { ICON_POOLS } from '@/config/ui/iconPools'
 import { logger } from '@/utils/logger'
 
 const ROLE_EVENT_TYPE: Record<ChampionRole, GameEventType> = {
@@ -325,9 +325,11 @@ export const useExpeditionStore = defineStore('expedition', {
       const action = pickRandom(EXPEDITION_NAME_ACTIONS)
       const name = `${adj} ${target} ${action}`
 
-      const iconPool =
-        EXPEDITION_ICON_POOL.length > 0 ? EXPEDITION_ICON_POOL : ['game-icons:scroll-unfurled']
-      const icon = pickRandom(iconPool)
+      // Das Glyph kommt aus der Reise-Motivfamilie und wird EINMAL beim Auslegen
+      // gezogen — es steht danach in der Mission und wandert mit ihr durch den
+      // Spielstand. Zwei gleichzeitig ausliegende Verträge sehen so gut wie nie
+      // gleich aus, weil der Pool deutlich größer ist als die drei Slots.
+      const icon = pickRandom(ICON_POOLS.journey as string[])
 
       const baseReward = Math.round(randInt(tierDef.rewardMin, tierDef.rewardMax) / 10) * 10
       // Solar Sails (Star Forge) + Portal Winds (Meep Tree): expeditions complete faster

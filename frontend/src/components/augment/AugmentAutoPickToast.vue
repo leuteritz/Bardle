@@ -3,6 +3,7 @@ import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { AUGMENTS } from '@/config/economy/augments'
+import { augmentIcon } from '@/utils/game/rolledIcons'
 import {
   AUGMENT_RARITY_COLOR,
   AUTO_PICK_ICON,
@@ -29,6 +30,16 @@ let hideTimer: ReturnType<typeof setTimeout> | null = null
 let tick: ReturnType<typeof setInterval> | null = null
 
 const augment = computed(() => AUGMENTS.find((a) => a.id === shownId.value) ?? null)
+/**
+ * Das Glyph des soeben gezogenen Augments. Der Toast erscheint NACH dem
+ * Übernehmen, also steht das Augment schon in `activeAugments` — sein letzter
+ * Platz dort ist der Seed, unter dem es auch im Deck erscheint.
+ */
+const pickedIcon = computed(() => {
+  const id = shownId.value
+  if (!id) return ''
+  return augmentIcon(id, gameStore.activeAugments.lastIndexOf(id))
+})
 const rarityColor = computed(() =>
   augment.value ? AUGMENT_RARITY_COLOR[augment.value.rarity] : '#9d9d9d',
 )
@@ -132,7 +143,7 @@ onUnmounted(() => {
 
       <div class="apt-main">
         <span class="apt-stage">
-          <Icon :icon="augment.icon" class="apt-stage__icon" width="30" height="30" />
+          <Icon :icon="pickedIcon" class="apt-stage__icon" width="30" height="30" />
         </span>
         <span class="apt-body">
           <span class="apt-name">{{ augment.name }}</span>

@@ -223,7 +223,7 @@
       <!-- ── COSMIC BARGAIN ───────────────────────────────────── -->
       <section class="sf-sec">
         <header class="sf-sec-head sf-sec-head--bargain">
-          <Icon icon="game-icons:cash" width="20" height="20" class="sf-sec-ico" />
+          <Icon icon="ph:handshake-fill" width="20" height="20" class="sf-sec-ico" />
           <span v-ink-center class="sf-sec-title">Cosmic Bargain</span>
           <span class="sf-sec-count">
             restocks in {{ formatClock(forgeStore.bargainRestockRemainingMs) }}
@@ -234,7 +234,7 @@
           <div class="bargain-shine" aria-hidden="true" />
           <div class="bargain-top">
             <div class="bargain-icon-box">
-              <Icon :icon="deal.icon" width="30" height="30" class="bargain-icon" />
+              <Icon :icon="forgeStore.activeDealIcon" width="30" height="30" class="bargain-icon" />
             </div>
             <div class="bargain-info">
               <div class="bargain-name-row">
@@ -281,7 +281,7 @@
         <div v-else class="bargain-card bargain-card--empty">
           <div class="bargain-top">
             <div class="bargain-icon-box bargain-icon-box--empty">
-              <Icon icon="game-icons:night-sky" width="28" height="28" class="bargain-icon-empty" />
+              <Icon :icon="FORGE_BARGAIN_EMPTY_ICON" width="28" height="28" class="bargain-icon-empty" />
             </div>
             <div class="bargain-info">
               <span class="bargain-name bargain-name--empty">The merchant drifts between stars…</span>
@@ -312,6 +312,7 @@ import {
   FORGE_CONSTELLATION_REQUIRED_LEVEL,
   FORGE_BARGAIN_REROLL_COST,
   FORGE_BARGAIN_REROLL_MATERIAL,
+  FORGE_BARGAIN_EMPTY_ICON,
   FORGE_BRANCH_UNLOCK_PHASE,
   FORGE_LEAF_UNLOCK_PHASE,
   SOLAR_BRANCHES,

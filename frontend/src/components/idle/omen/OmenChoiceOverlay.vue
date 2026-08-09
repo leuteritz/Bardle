@@ -28,7 +28,7 @@ import type { OmenDef } from '@/types'
  */
 const omenStore = useOmenStore()
 const uiStore = useUiStore()
-const { offerDefs } = storeToRefs(omenStore)
+const { offerCards } = storeToRefs(omenStore)
 
 /**
  * Unter einem offenen Profil-Tab wartet das Angebot, statt sich darüberzulegen:
@@ -108,7 +108,7 @@ function swiftDurationOf(def: OmenDef): string {
 
         <div class="oco-cards">
           <button
-            v-for="def in offerDefs"
+            v-for="def in offerCards"
             :key="def.id"
             type="button"
             class="oco-card"

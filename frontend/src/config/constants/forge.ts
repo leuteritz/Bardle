@@ -146,6 +146,8 @@ export const FORGE_MAX_DOUBLE_CLICK_CHANCE = 0.8
 
 // Cosmic Bargain
 export const FORGE_BARGAIN_RESTOCK_MS = 8 * 3_600_000
+/** Steht auf der Karte, solange kein Handel ausliegt — der Händler ist unterwegs. */
+export const FORGE_BARGAIN_EMPTY_ICON = 'game-icons:night-sky'
 export const FORGE_BARGAIN_REROLL_MATERIAL = 'dark_matter'
 export const FORGE_BARGAIN_REROLL_COST = 1
 

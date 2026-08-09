@@ -1,5 +1,7 @@
 // Star Forge: Baumknoten, Relikte, Konstellationen, Bargains.
 
+import type { IconPoolKey } from './ui'
+
 // ── Star Forge (Shop tab) ────────────────────────────────────────────────────
 
 export type ForgeNodeTier = 'branch' | 'leaf'
@@ -69,7 +71,12 @@ export type ForgeBargainKind = 'buff' | 'materials' | 'gold' | 'dwellSkip' | 'he
 export interface ForgeBargainDef {
   id: string
   name: string
-  icon: string
+  /**
+   * Motivfamilie statt festem Glyph: der Handel wird bei jedem Restock neu
+   * ausgelegt, also trägt er auch jedes Mal ein anderes Zeichen
+   * (`starForgeStore.activeDealIcon`).
+   */
+  iconPool: IconPoolKey
   desc: string
   basePrice: number
   /** 0–1 fraction knocked off basePrice. */
