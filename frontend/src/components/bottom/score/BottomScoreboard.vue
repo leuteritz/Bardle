@@ -78,7 +78,7 @@ const LEFT_STAT_DEFS: readonly StatDef[] = [
   { key: 'kills', color: SCOREBOARD_STAT_COLORS.kills, gameIcon: BATTLE_STAT_GAME_ICONS.kills },
   { key: 'deaths', color: SCOREBOARD_STAT_COLORS.deaths, gameIcon: BATTLE_STAT_GAME_ICONS.deaths },
   { key: 'assists', color: SCOREBOARD_STAT_COLORS.assists, gameIcon: BATTLE_STAT_GAME_ICONS.assists },
-  { key: 'gold', color: SCOREBOARD_STAT_COLORS.gold, icon: BATTLE_STAT_IMAGES.gold },
+  { key: 'gold', color: SCOREBOARD_STAT_COLORS.gold, gameIcon: BATTLE_STAT_GAME_ICONS.gold },
   { key: 'cs', color: SCOREBOARD_STAT_COLORS.cs, gameIcon: BATTLE_STAT_GAME_ICONS.cs },
 ]
 

@@ -570,21 +570,30 @@ export const SCOREBOARD_OPEN_HINT = 'Open Battle Stats'
 //    früheren `game-icons` waren dort keine Zeichen mehr, sondern Flecken —
 //    `piercing-sword` ein Haarstrich, `sabers-choc` ein grauer Klumpen.
 //
-//    Die drei BILDER bleiben Bilder: die Bard-Münze ist eine schlichte Scheibe
-//    mit Gesicht und trägt bei 15 px, Drache und Baron leben von ihrer Farbe
+//    Die zwei BILDER bleiben Bilder: Drache und Baron leben von ihrer Farbe
 //    (Orange, Violett) — die kann kein einfarbiges Glyph ersetzen, und sie
-//    stehen ohnehin auf 19–26 px.
+//    stehen ohnehin auf 19–26 px. Die Bard-Münze stand hier ebenfalls, ist aber
+//    zum Glyph geworden: als einziges Bild in einer Reihe aus Glyphen brachte
+//    sie eine fremde Strichstärke mit, und die ScoreTopBar drückt sie auf 11 px
+//    herunter, wo von der Prägung nichts mehr übrig ist.
 //
-//    Die acht sind gegeneinander auf Silhouette geprüft, denn im Scoreboard
-//    stehen sie in EINER Reihe: Klinge · Schädel · drei Köpfe · Ähre · Flamme ·
-//    Zinne · Raute · Pokal. Links daneben steht das Phasen-Glyph im Crest —
-//    darum trägt `kills` das EINZELNE Schwert und die Phase `battle` die
+//    Die neun sind gegeneinander auf Silhouette geprüft, denn im Scoreboard
+//    stehen sie in EINER Reihe: Klinge · Schädel · drei Köpfe · Münzen · Ähre ·
+//    Flamme · Zinne · Raute · Pokal. Links daneben steht das Phasen-Glyph im
+//    Crest — darum trägt `kills` das EINZELNE Schwert und die Phase `battle` die
 //    gekreuzten Klingen (`ri:sword-fill`), nicht zweimal dasselbe Motiv. ─────
 export const BATTLE_STAT_GAME_ICONS = {
   kills: 'ph:sword-fill',
   deaths: 'ph:skull-fill',
   /** Mithilfe = mehrere Gestalten — die gefüllte Fassung des früheren `three-friends`. */
   assists: 'ph:users-three-fill',
+  /**
+   * Gold: der Münzstapel, nicht die Einzelmünze — bei 11 px in der ScoreTopBar
+   * bleibt der Haufen aus zwei Scheiben lesbar, `ph:coin-fill` fällt dort zu
+   * einer flachen Ellipse zusammen. Dollarzeichen scheiden aus (`…:paid`,
+   * `ph:currency-circle-dollar-fill`): Gold ist Beute, keine Währung mit Kurs.
+   */
+  gold: 'ph:coins-fill',
   /** Creep Score: die Ähre liest sich bei 15 px als „Farm", ein Minionsknäuel nicht. */
   cs: 'ph:grains-fill',
   damage: 'ph:fire-fill',
@@ -594,7 +603,6 @@ export const BATTLE_STAT_GAME_ICONS = {
 } as const
 
 export const BATTLE_STAT_IMAGES = {
-  gold: '/img/BardGold-128.png',
   dragons: '/img/dragon_icon.png',
   barons: '/img/baron_icon.png',
 } as const

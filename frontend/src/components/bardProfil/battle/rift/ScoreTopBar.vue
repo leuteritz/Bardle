@@ -15,7 +15,7 @@
         <span class="stat stat--cs" title="Team creep score"><Icon :icon="BATTLE_STAT_GAME_ICONS.cs" width="17" height="17" class="stat-icon stat-icon--cs" /> <span v-ink-center.y class="stat-value">{{ formatNumber(team1CS) }}</span></span>
         <span class="stat stat--dmg" title="Total damage dealt"><Icon :icon="BATTLE_STAT_GAME_ICONS.damage" width="17" height="17" class="stat-icon stat-icon--dmg" /> <span v-ink-center.y class="stat-value">{{ formatNumber(team1Damage) }}</span></span>
         <span class="stat-divider" />
-        <span class="stat stat--gold"><img :src="BATTLE_STAT_IMAGES.gold" alt="Gold" class="stat-img stat-img--gold" /> <span v-ink-center.y class="stat-value">{{ formatNumber(battleStore.team1Gold) }}</span></span>
+        <span class="stat stat--gold" title="Team gold"><Icon :icon="BATTLE_STAT_GAME_ICONS.gold" width="17" height="17" class="stat-icon stat-icon--gold" /> <span v-ink-center.y class="stat-value">{{ formatNumber(battleStore.team1Gold) }}</span></span>
         <span class="stat-divider" />
         <span class="stat stat--level"><span v-ink-center.y class="stat-value">Lv {{ battleStore.team1AvgLevel }}</span></span>
         <span class="alive-pips" title="Champions alive">
@@ -51,7 +51,7 @@
         </span>
         <span class="stat stat--level"><span v-ink-center.y class="stat-value">Lv {{ battleStore.team2AvgLevel }}</span></span>
         <span class="stat-divider" />
-        <span class="stat stat--gold"><span v-ink-center.y class="stat-value">{{ formatNumber(battleStore.team2Gold) }}</span> <img :src="BATTLE_STAT_IMAGES.gold" alt="Gold" class="stat-img stat-img--gold" /></span>
+        <span class="stat stat--gold" title="Team gold"><span v-ink-center.y class="stat-value">{{ formatNumber(battleStore.team2Gold) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.gold" width="17" height="17" class="stat-icon stat-icon--gold" /></span>
         <span class="stat-divider" />
         <span class="stat stat--dmg" title="Total damage dealt"><span v-ink-center.y class="stat-value">{{ formatNumber(team2Damage) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.damage" width="17" height="17" class="stat-icon stat-icon--dmg" /></span>
         <span class="stat stat--cs" title="Team creep score"><span v-ink-center.y class="stat-value">{{ formatNumber(team2CS) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.cs" width="17" height="17" class="stat-icon stat-icon--cs" /></span>
@@ -276,6 +276,12 @@ watch(bluePercent, (next, prev) => {
   flex-shrink: 0;
 }
 .stat-icon { opacity: 0.85; }
+/* Gold steht als einziger Wert zwischen zwei Trennern und ist der Blick-
+   anker der Leiste — es bleibt voll deckend, wo die Nebenwerte gedämpft sind. */
+.stat-icon--gold {
+  color: #e8c040;
+  opacity: 1;
+}
 .stat-icon--inhib { color: #e884d8; }
 .stat-icon--cs { color: #b0a878; }
 .stat-icon--dmg { color: #e08850; }
