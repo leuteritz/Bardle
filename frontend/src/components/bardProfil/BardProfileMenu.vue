@@ -73,19 +73,31 @@ function setTabToastInset(tab: BardTabId, css: string) {
 
 const toastInsetRight = computed(() => tabToastInset[uiStore.bardActiveTab] ?? '0px')
 
+/**
+ * Ein Glyph je Tab statt eines Artworks. Spielinhalt kommt aus `game-icons`,
+ * das Bedienelement (Admin) aus `lucide` — siehe „Icons" in CLAUDE.md.
+ * Jedes Motiv steht genau einmal in der Leiste, damit die sieben Tabs
+ * nebeneinander unterscheidbar bleiben:
+ *   journey       — der Wandering Caretaker und seine Bahn: Journey-Stats,
+ *                   Solar Evolution, Galaxy-Archiv, Chronicle
+ *   shop          — der Marktstand
+ *   family-tree   — verzweigte Knoten, der Meep Skill Tree
+ *   three-friends — der Kader (Sigil-Board, Allies, Expeditionen)
+ *   crossed-swords— Auto-Battle
+ *   ringed-planet — die Planeten-Slots im Orbit
+ */
 const menuItems: {
   id: BardTabId
   label: string
   icon: string
-  src: string
 }[] = [
-  { id: 'bard', label: '', icon: '', src: '/img/BardAbilities/Bard-128.png' },
-  { id: 'shop', label: '', icon: '', src: '/img/menu/SHOP-128.png' },
-  { id: 'tree', label: '', icon: '', src: '/img/menu/TREE-128.png' },
-  { id: 'team', label: '', icon: '', src: '/img/menu/TEAM-128.png' },
-  { id: 'battle', label: '', icon: '', src: '/img/menu/BATTLE-128.png' },
-  { id: 'planets', label: '', icon: '', src: '/img/planet-256.png' },
-  { id: 'admin', label: 'Admin', icon: 'lucide:settings-2', src: '' },
+  { id: 'bard', label: '', icon: 'game-icons:journey' },
+  { id: 'shop', label: '', icon: 'game-icons:shop' },
+  { id: 'tree', label: '', icon: 'game-icons:family-tree' },
+  { id: 'team', label: '', icon: 'game-icons:three-friends' },
+  { id: 'battle', label: '', icon: 'game-icons:crossed-swords' },
+  { id: 'planets', label: '', icon: 'game-icons:ringed-planet' },
+  { id: 'admin', label: 'Admin', icon: 'lucide:settings-2' },
 ]
 
 /**
@@ -238,25 +250,16 @@ onUnmounted(() => {
                   class="rp-tab relative flex items-center justify-center gap-1.5 overflow-hidden"
                   :class="uiStore.bardActiveTab === item.id ? 'rp-tab--active' : ''"
                 >
-                  <img
-                    v-if="item.src"
-                    :src="item.src"
-                    :alt="item.label"
-                    class="relative z-10 object-contain rp-tab-img"
-                    :class="uiStore.bardActiveTab === item.id ? 'rp-tab-img-glow' : ''"
-                  />
-                  <!-- Ein Glyph, das ALLEIN für seinen Tab steht, trägt so viel
-                       Fläche wie ein Artwork — sonst sitzt es als kleinerer
-                       Kasten zwischen den Bild-Tabs und liest sich wie ein
-                       Fehler. Der Admin-Tab behält die kleine Fassung: dort
-                       steht ein Label daneben, das die Höhe mitträgt. -->
+                  <!-- Ein Glyph, das ALLEIN für seinen Tab steht, trägt die
+                       volle Fläche — sonst sitzt es als kleinerer Kasten
+                       zwischen den anderen und liest sich wie ein Fehler. Der
+                       Admin-Tab behält die kleine Fassung: dort steht ein Label
+                       daneben, das die Höhe mitträgt. -->
                   <Icon
-                    v-else-if="item.icon.includes(':')"
                     :icon="item.icon"
                     class="relative z-10 rp-tab-icon"
                     :class="item.label ? '' : 'rp-tab-icon--solo'"
                   />
-                  <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
                   <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
                   <span
                     v-if="uiStore.bardActiveTab === item.id"
@@ -502,18 +505,15 @@ onUnmounted(() => {
    TABS
    ═══════════════════════════════════════════ */
 /* height-aware tab art: smaller header leaves more room for tab content */
-.rp-tab-img {
-  width: clamp(34px, 5vh, 48px);
-  height: clamp(34px, 5vh, 48px);
-}
-
 .rp-tab-icon {
   width: clamp(26px, 3.8vh, 36px);
   height: clamp(26px, 3.8vh, 36px);
+  color: #7d7768;
+  transition: color 0.12s;
 }
 
-/* Dieselbe Kantenlänge wie .rp-tab-img — damit stehen alle labellosen Tabs auf
-   einer Höhe, egal ob ihr Inhalt ein PNG oder ein Glyph ist. */
+/* Ein labelloses Glyph steht allein für seinen Tab und bekommt deshalb die
+   volle Kantenlänge; alle labellosen Tabs stehen damit auf einer Höhe. */
 .rp-tab-icon--solo {
   width: clamp(34px, 5vh, 48px);
   height: clamp(34px, 5vh, 48px);
@@ -538,6 +538,10 @@ onUnmounted(() => {
   border-color: #333;
 }
 
+.rp-tab:hover:not(.rp-tab--active) .rp-tab-icon {
+  color: #b6ae99;
+}
+
 .rp-tab--active {
   background: linear-gradient(to bottom, #1e2e12, #131e0c);
   border-color: #4a8a28;
@@ -547,8 +551,11 @@ onUnmounted(() => {
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.rp-tab-img-glow {
-  filter: drop-shadow(0 0 6px rgba(100, 210, 50, 0.55));
+/* Statischer Zustand, keine laufende Animation — der Schein wird genau einmal
+   beim Tabwechsel gerastert. */
+.rp-tab--active .rp-tab-icon {
+  color: #9fe062;
+  filter: drop-shadow(0 0 6px rgba(100, 210, 50, 0.5));
 }
 
 .rp-tab-label {
