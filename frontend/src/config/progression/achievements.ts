@@ -20,9 +20,9 @@ import type { ChronicleTrackDef } from '@/types'
 export const CHRONICLE_TRACKS: ChronicleTrackDef[] = [
   {
     id: 'chimes',
-    name: 'Chime Cantor',
-    blurb: 'Every chime the song has ever earned',
-    icon: 'game-icons:harp',
+    name: 'Chime Keeper',
+    blurb: 'Every chime the journey has ever earned',
+    icon: 'game-icons:ringing-bell',
     color: '#e8c040',
     metric: 'lifetimeChimes',
     bonus: 'cpsMult',
@@ -38,7 +38,7 @@ export const CHRONICLE_TRACKS: ChronicleTrackDef[] = [
   },
   {
     id: 'roster',
-    name: 'Kindred Choir',
+    name: 'Kindred Host',
     blurb: 'Champions who answered the call',
     icon: 'game-icons:three-friends',
     color: '#9a6fd0',
@@ -95,7 +95,7 @@ export const CHRONICLE_TRACKS: ChronicleTrackDef[] = [
     name: 'Sunsmith',
     blurb: 'Levels raised across the Star Forge',
     icon: 'game-icons:anvil-impact',
-    // Orange, nicht Gold: Chime Cantor steht mit #e8c040 im gleichen Raster,
+    // Orange, nicht Gold: Chime Keeper steht mit #e8c040 im gleichen Raster,
     // und zwei Goldtöne untereinander lesen sich als dieselbe Bahn.
     color: '#f08030',
     metric: 'forgeLevels',
@@ -182,12 +182,12 @@ export const CHRONICLE_TOTAL_STAGES = CHRONICLE_TRACKS.reduce((sum, t) => sum + 
  */
 export const CHRONICLE_RANKS: { min: number; title: string }[] = [
   { min: 0, title: 'Unwritten' },
-  { min: 1, title: 'Verse Keeper' },
-  { min: 8, title: 'Songwright' },
+  { min: 1, title: 'Page Keeper' },
+  { min: 8, title: 'Storywright' },
   { min: 16, title: 'Chronicler' },
   { min: 24, title: 'Loremaster' },
-  { min: 32, title: 'Starsinger' },
-  { min: CHRONICLE_TOTAL_STAGES, title: 'Eternal Refrain' },
+  { min: 32, title: 'Stargazer' },
+  { min: CHRONICLE_TOTAL_STAGES, title: 'Unending Tale' },
 ]
 
 /** Der Titel, der zu so vielen freigeschalteten Stufen gehört. */

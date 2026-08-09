@@ -35,7 +35,7 @@ export const usePlayerStore = defineStore('player', {
 
   actions: {
     regenTick() {
-      // Base regen + Regeneration branch / Eternal Cadence (Star Forge)
+      // Base regen + Regeneration branch / Eternal Orbit (Star Forge)
       const forgeRegen = useStarForgeStore().hpRegenPerSec
       const treeRegen = useMeepTreeStore().fx.hpRegenPerSec
       const before = this.currentHP
@@ -49,7 +49,7 @@ export const usePlayerStore = defineStore('player', {
      *  callers (e.g. the sun horizon in the Star Fight Modal) display that
      *  value, so they must not recompute the mitigation themselves. */
     takeDamage(amount: number = PLAYER_HP_LOSS_ON_ENRAGE): number {
-      // Aegis branch / Bulwark Choir (Star Forge): reduce incoming damage
+      // Aegis branch / Bulwark Pact (Star Forge): reduce incoming damage
       const reduced = Math.max(
         1,
         Math.round(

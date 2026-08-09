@@ -171,7 +171,7 @@ describe('planetShopStore — Attunement leveling', () => {
     it('returns the highest band whose min <= level', () => {
       expect(planetRankTier(1).name).toBe('Nascent')
       expect(planetRankTier(5).name).toBe('Resonant')
-      expect(planetRankTier(10).name).toBe('Harmonic')
+      expect(planetRankTier(10).name).toBe('Radiant')
       expect(planetRankTier(34).name).toBe('Celestial')
       expect(planetRankTier(35).name).toBe('Transcendent')
     })

@@ -79,7 +79,7 @@ const beaconTitle = computed(() => {
 })
 const beaconCaption = computed(() => {
   if (props.variant === 'landing') return 'Opening the ladder'
-  return props.phaseKey === 'honor' ? 'Tallying the result' : 'Tuning in to the live match'
+  return props.phaseKey === 'honor' ? 'Tallying the result' : 'Joining the live match'
 })
 
 /** Fünf Plätze je Seite — dieselbe Aufstellung, die die Team-Spalten zeigen. */

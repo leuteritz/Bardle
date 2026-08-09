@@ -240,7 +240,7 @@ function formatCountdown(ms: number): string {
         {{ spoils.materialRolls }} material{{ spoils.materialRolls === 1 ? '' : 's' }}
       </span>
       <span v-if="spoils.meep > 0" class="ecc-spoil">
-        <Icon icon="game-icons:musical-notes" width="16" height="16" />
+        <Icon icon="game-icons:meeple" width="16" height="16" />
         {{ spoils.meep }} meep
       </span>
       <span class="ecc-spoil-note">on success</span>

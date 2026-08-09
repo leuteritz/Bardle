@@ -349,7 +349,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const solar = useSolarUpgradeStore()
       const clickDamage = Math.ceil(boss.clickDamagePerHit * solar.dmgMultiplier)
       const defeated = this.dealDamage(clickDamage)
-      // Percussive Nova: clicks splash a fraction of their damage to all other bosses
+      // Shattering Nova: clicks splash a fraction of their damage to all other bosses
       const splashPct = useStarForgeStore().clickSplashPct
       if (splashPct > 0) {
         const splash = Math.ceil(clickDamage * splashPct)

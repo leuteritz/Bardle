@@ -85,53 +85,53 @@ export interface MeepTreeBranchDef {
 
 export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
   {
-    id: 'melody',
-    name: 'Melody',
+    id: 'vigil',
+    name: 'Vigil',
     tagline: 'Idle production & offline echoes',
     color: '#e8c040',
     nodes: [
       {
-        id: 'melody_1',
-        name: 'Gentle Tune',
-        icon: 'game-icons:double-quaver', // a single soft phrase
+        id: 'vigil_1',
+        name: 'Steady Watch',
+        icon: 'game-icons:lantern-flame', // a light left burning
         effect: '+25% Chimes/s',
-        desc: 'A soft melody keeps the chimes ringing on their own.',
+        desc: 'A patient watch keeps the chimes ringing on their own.',
         cost: 3,
         effects: { cpsMult: 1.25 },
       },
       {
-        id: 'melody_2',
-        name: 'Rising Chorus',
-        icon: 'game-icons:sing', // voices joining the chorus
+        id: 'vigil_2',
+        name: 'Widening Orbit',
+        icon: 'game-icons:orbital', // the watch reaches further out
         effect: '+50% Chimes/s',
-        desc: 'More voices join the song of the spheres.',
+        desc: 'Your care reaches further across the sky.',
         cost: 8,
         effects: { cpsMult: 1.5 },
       },
       {
-        id: 'melody_3',
+        id: 'vigil_3',
         name: 'Lingering Echo',
         icon: 'game-icons:night-sleep', // earnings while you are away
         effect: '+50% Offline Earnings',
-        desc: 'The song keeps playing while you are away.',
+        desc: 'The vigil holds while you are away.',
         cost: 20,
         effects: { offlineEarningsMult: 1.5 },
       },
       {
-        id: 'melody_4',
-        name: 'Grand Symphony',
-        icon: 'game-icons:harp', // the full ensemble
+        id: 'vigil_4',
+        name: 'Perfect Alignment',
+        icon: 'game-icons:solar-system', // every body on the same path
         effect: '+100% Chimes/s',
-        desc: 'Every building plays in perfect harmony.',
+        desc: 'Every building falls into the same orbit.',
         cost: 45,
         effects: { cpsMult: 2 },
       },
       {
-        id: 'melody_5',
-        name: 'Eternal Song',
-        icon: 'game-icons:infinity', // a song without end
+        id: 'vigil_5',
+        name: 'Endless Vigil',
+        icon: 'game-icons:infinity', // a watch without end
         effect: '+4h Offline Cap · +50% Chimes/s',
-        desc: 'A song that never truly ends.',
+        desc: 'A watch that never truly ends.',
         cost: 95,
         effects: { offlineMaxHoursBonus: 4, cpsMult: 1.5 },
       },
@@ -182,9 +182,9 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'reso_5',
         name: 'Worldbell',
-        icon: 'game-icons:tarot-21-the-world', // clicks carrying the whole song
+        icon: 'game-icons:tarot-21-the-world', // clicks carrying the whole world
         effect: 'Clicks gain +2% of CpS · +50% Chimes/Click',
-        desc: 'Every strike carries the weight of the whole song.',
+        desc: 'Every strike carries the weight of the whole sky.',
         cost: 95,
         effects: { cpcFromCpsPct: 0.02, cpcMult: 1.5 },
       },
@@ -201,7 +201,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         name: 'Meep Whisper',
         icon: 'game-icons:meeple', // a single meep, cheaper
         effect: '−10% Meep Cost',
-        desc: 'Meeps gather at the sound of fewer chimes.',
+        desc: 'Meeps gather for fewer chimes.',
         cost: 4,
         effects: { meepCostMult: 0.9 },
       },
@@ -216,10 +216,10 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       },
       {
         id: 'cosmos_3',
-        name: 'Meep Choir',
-        icon: 'game-icons:meeple-group', // a whole choir of meeps
+        name: 'Meep Gathering',
+        icon: 'game-icons:meeple-group', // a whole gathering of meeps
         effect: '−15% Meep Cost',
-        desc: 'The choir sings new meeps into being.',
+        desc: 'The gathering calls new meeps into being.',
         cost: 22,
         effects: { meepCostMult: 0.85 },
       },
@@ -251,19 +251,19 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
     nodes: [
       {
         id: 'battle_1',
-        name: 'War Drums',
-        icon: 'game-icons:drum', // the marching beat
+        name: 'Rallying Call',
+        icon: 'game-icons:rally-the-troops', // the whole host answers
         effect: '+500 Power',
-        desc: 'A steady beat drives your team forward.',
+        desc: 'A shared purpose drives your team forward.',
         cost: 4,
         effects: { powerBonus: 500 },
       },
       {
         id: 'battle_2',
-        name: 'Battle Hymn',
-        icon: 'game-icons:trumpet-flag', // the battle fanfare
+        name: 'Honed Edge',
+        icon: 'game-icons:crossed-swords', // sharpened intent
         effect: '+10% Champion DPS',
-        desc: 'Champions strike harder to the rhythm of your song.',
+        desc: 'Champions strike with sharper intent.',
         cost: 10,
         effects: { championDpsMult: 1.1 },
       },
@@ -278,10 +278,10 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       },
       {
         id: 'battle_4',
-        name: 'Crescendo of Blades',
-        icon: 'game-icons:sword-array', // blades swelling with the song
+        name: 'Storm of Blades',
+        icon: 'game-icons:sword-array', // the assault swelling
         effect: '+15% Champion DPS',
-        desc: 'The song swells — and so does every strike.',
+        desc: 'The assault swells — and so does every strike.',
         cost: 48,
         effects: { championDpsMult: 1.15 },
       },
@@ -304,10 +304,10 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
     nodes: [
       {
         id: 'warden_1',
-        name: 'Piercing Note',
-        icon: 'game-icons:stabbed-note', // a note that pierces armor
+        name: 'Piercing Shard',
+        icon: 'game-icons:shard-sword', // a splinter that pierces armor
         effect: '+10% Boss Damage',
-        desc: 'A sharp note that cuts through boss armor.',
+        desc: 'A sharp splinter that cuts through boss armor.',
         cost: 4,
         effects: { bossDamageMult: 1.1 },
       },
@@ -322,28 +322,28 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       },
       {
         id: 'warden_3',
-        name: 'Soothing Refrain',
+        name: 'Soothing Tide',
         icon: 'game-icons:heart-beats', // a mending pulse
         effect: '+1 HP Regen/s',
-        desc: 'A calm refrain mends the sun’s wounds.',
+        desc: 'A calm tide mends the sun’s wounds.',
         cost: 22,
         effects: { hpRegenPerSec: 1 },
       },
       {
         id: 'warden_4',
         name: 'Chime Ward',
-        icon: 'game-icons:vibrating-shield', // a shield made of sound
+        icon: 'game-icons:vibrating-shield', // a shield of ringing chimes
         effect: '−15% Damage Taken',
-        desc: 'A shield of sound blunts every enemy blow.',
+        desc: 'A shield of ringing chimes blunts every enemy blow.',
         cost: 48,
         effects: { damageTakenMult: 0.85 },
       },
       {
         id: 'warden_5',
         name: 'Bossbreaker',
-        icon: 'game-icons:sonic-boom', // the boss-breaking final chord
+        icon: 'game-icons:sonic-boom', // the boss-breaking shockwave
         effect: '+30% Boss Damage',
-        desc: 'No planetary tyrant withstands the final chord.',
+        desc: 'No planetary tyrant withstands the final blow.',
         cost: 100,
         effects: { bossDamageMult: 1.3 },
       },

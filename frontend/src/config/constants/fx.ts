@@ -219,7 +219,7 @@ export const DAMAGE_FLOAT_DURATION_MS = 1400
 /** Total travel duration of a projectile shot (ms) */
 export const PROJECTILE_SHOT_DURATION_MS = 520
 
-// ── Supernova — the one-shot collapse of Requiem into the black hole ─────────
+// ── Supernova — the one-shot collapse of Pyre into the black hole ───────────
 /** Total length of the transition overlay. Long enough to read as an event,
  *  short enough that nobody waits for it twice. */
 export const SUPERNOVA_DURATION_MS = 3400

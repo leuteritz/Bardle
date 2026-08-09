@@ -98,7 +98,7 @@ export type DrifterBodyKind =
   | 'surge'
   | 'vortex'
   | 'beacon'
-  | 'chord'
+  | 'pulse'
   | 'leviathan'
 
 /** Static definition of a drifter type — pure data, no runtime state. */

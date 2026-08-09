@@ -116,7 +116,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
 
     /** Upgrades that shorten dwell times multiply in here (e.g. 0.8 = 20% faster
      *  phases). Keep every consumer on this getter. Currently fed by the Star
-     *  Forge "Allegro" branch (+ its "Time Weaver" leaf). */
+     *  Forge "Quickening" branch (+ its "Time Weaver" leaf). */
     dwellTimeMultiplier(): number {
       return useStarForgeStore().dwellMult
     },

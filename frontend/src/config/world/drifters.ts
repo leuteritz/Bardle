@@ -20,7 +20,7 @@ export const DRIFTERS: DrifterDef[] = [
     name: 'Errant Chime',
     rarity: 'common',
     weight: 30,
-    icon: 'game-icons:musical-notes',
+    icon: 'game-icons:ringing-bell',
     body: 'chime',
     image: '/img/BardAbilities/BardChime-128.png',
     color: '#e8c040',
@@ -107,12 +107,12 @@ export const DRIFTERS: DrifterDef[] = [
     buff: { durationMs: 45_000, effects: { combatDpsMult: 2 } },
   },
   {
-    id: 'sunderingChord',
-    name: 'Sundering Chord',
+    id: 'sunderingPulse',
+    name: 'Sundering Pulse',
     rarity: 'rare',
     weight: 7,
     icon: 'game-icons:resonance',
-    body: 'chord',
+    body: 'pulse',
     color: '#ff4f8b',
     // The one drifter that is not a payout but a weapon: catching it fires a
     // shockwave through the whole orbit and hits every planet at once. Short,
@@ -152,7 +152,7 @@ export const DRIFTERS: DrifterDef[] = [
     flightMs: 26_000,
     sizePx: 128,
     hits: 4,
-    effectLine: "Bard's Serenade — ×3 to everything for 90s",
+    effectLine: "Caretaker's Boon — ×3 to everything for 90s",
     buff: {
       durationMs: 90_000,
       effects: {

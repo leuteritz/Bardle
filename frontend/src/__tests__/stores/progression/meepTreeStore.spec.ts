@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useGameStore } from '@/stores/core/gameStore'
 
-/* The first node of every branch has no prerequisite; melody_1 costs 3 Meeps. */
+/* The first node of every branch has no prerequisite; vigil_1 costs 3 Meeps. */
 
 describe('meepTreeStore — skill-ready notifications', () => {
   beforeEach(() => {
@@ -15,11 +15,11 @@ describe('meepTreeStore — skill-ready notifications', () => {
     const game = useGameStore()
 
     game.meeps = 0
-    expect(store.notifyingNodeIds).not.toContain('melody_1')
+    expect(store.notifyingNodeIds).not.toContain('vigil_1')
     expect(store.unseenBuyableCount).toBe(0)
 
     game.meeps = 5
-    expect(store.notifyingNodeIds).toContain('melody_1')
+    expect(store.notifyingNodeIds).toContain('vigil_1')
     expect(store.unseenBuyableCount).toBeGreaterThan(0)
   })
 
@@ -29,9 +29,9 @@ describe('meepTreeStore — skill-ready notifications', () => {
     game.meeps = 5
 
     const before = store.unseenBuyableCount
-    store.acknowledgeNode('melody_1')
+    store.acknowledgeNode('vigil_1')
 
-    expect(store.notifyingNodeIds).not.toContain('melody_1')
+    expect(store.notifyingNodeIds).not.toContain('vigil_1')
     expect(store.unseenBuyableCount).toBe(before - 1)
   })
 
@@ -40,8 +40,8 @@ describe('meepTreeStore — skill-ready notifications', () => {
     const game = useGameStore()
     game.meeps = 0
 
-    store.acknowledgeNode('melody_1')
-    expect(store.acknowledged).not.toContain('melody_1')
+    store.acknowledgeNode('vigil_1')
+    expect(store.acknowledged).not.toContain('vigil_1')
   })
 
   it('a node re-notifies after it becomes unaffordable and affordable again', () => {
@@ -49,17 +49,17 @@ describe('meepTreeStore — skill-ready notifications', () => {
     const game = useGameStore()
 
     game.meeps = 5
-    store.acknowledgeNode('melody_1')
-    expect(store.notifyingNodeIds).not.toContain('melody_1')
+    store.acknowledgeNode('vigil_1')
+    expect(store.notifyingNodeIds).not.toContain('vigil_1')
 
     // Player spends Meeps elsewhere → node no longer buyable
     game.meeps = 0
     store.syncAcknowledged()
-    expect(store.acknowledged).not.toContain('melody_1')
+    expect(store.acknowledged).not.toContain('vigil_1')
 
     // Back within reach → notifies again
     game.meeps = 5
-    expect(store.notifyingNodeIds).toContain('melody_1')
+    expect(store.notifyingNodeIds).toContain('vigil_1')
   })
 
   it('bought nodes never notify and drop out of the acknowledged list', () => {
@@ -67,10 +67,10 @@ describe('meepTreeStore — skill-ready notifications', () => {
     const game = useGameStore()
     game.meeps = 100
 
-    expect(store.buyNode('melody_1')).toBe(true)
-    expect(store.notifyingNodeIds).not.toContain('melody_1')
+    expect(store.buyNode('vigil_1')).toBe(true)
+    expect(store.notifyingNodeIds).not.toContain('vigil_1')
 
     store.syncAcknowledged()
-    expect(store.acknowledged).not.toContain('melody_1')
+    expect(store.acknowledged).not.toContain('vigil_1')
   })
 })

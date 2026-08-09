@@ -22,11 +22,11 @@ export const sunForgeCategory: EncyclopediaCategory = {
       description:
         'The sun evolves through 7 stages, from Comet to the Collapse. ' +
         'Each evolution needs all Solar Rays levelled evenly plus a minimum dwell time in the current phase. ' +
-        'Requiem is the largest the star ever burns — the last evolution detonates it in a supernova ' +
+        'Pyre is the largest the star ever burns — the last evolution detonates it in a supernova ' +
         'and leaves a black hole behind.',
-      lore: 'A symphony in seven movements. The last one is silence.',
+      lore: 'Seven turns of the wheel. The last one is silence.',
       formula:
-        'Comet → Spark → Prelude → Crescendo → Swell → Requiem → Collapse\n' +
+        'Comet → Spark → Dawn → Zenith → Swell → Pyre → Collapse\n' +
         'Dwell: 3 min → 10 min → 30 min → 90 min → 4 h → 24 h → —\n' +
         'Evolve needs every ray ≥ phase + 1',
       related: ['solar-rays', 'comet-origin', 'planet-slots'],
@@ -78,7 +78,7 @@ export const sunForgeCategory: EncyclopediaCategory = {
       icon: 'game-icons:anvil',
       description:
         'Six craftable relics fuse a fully grown branch (level 3) with materials: Echo of the Void (offline), ' +
-        'Choir of Champions (champion DPS), Heart of the Star (max HP), Midas Bell (clicks gain CPS), ' +
+        'Host of Champions (champion DPS), Heart of the Star (max HP), Midas Bell (clicks gain CPS), ' +
         'Stellar Compass (expedition speed) and Ember Crown (boss damage). Relics level 1–3.',
       lore: 'Forged once, resonating forever.',
       related: ['forge-branches', 'constellations', 'materials'],
@@ -89,7 +89,7 @@ export const sunForgeCategory: EncyclopediaCategory = {
       icon: 'game-icons:north-star-shuriken',
       description:
         'Seven one-time fusions of two level-3 branches with permanent effects — e.g. Stellar Wind (+18% CPS), ' +
-        "Prospector's Song (+1 material per drop), Percussive Nova (click splash damage) and Golden Tempest (+12% CPC).",
+        "Prospector's Charm (+1 material per drop), Shattering Nova (click splash damage) and Golden Tempest (+12% CPC).",
       lore: 'Stars aligned by a patient hand.',
       related: ['forge-relics'],
     },
@@ -123,18 +123,18 @@ export const meepTreeCategory: EncyclopediaCategory = {
       related: ['meeps', 'prestige'],
     },
     {
-      id: 'tree-melody',
-      name: 'Melody Branch',
-      icon: 'game-icons:pan-flute',
+      id: 'tree-vigil',
+      name: 'Vigil Branch',
+      icon: 'game-icons:lantern-flame',
       description:
         'The idle branch: up to +225% CPS, stronger offline earnings and a +4 h offline cap.',
-      lore: 'A song that plays while you sleep.',
+      lore: 'A watch that keeps itself while you sleep.',
       related: ['meep-tree'],
     },
     {
       id: 'tree-resonance',
       name: 'Resonance Branch',
-      icon: 'game-icons:drum-kit',
+      icon: 'game-icons:echo-ripples',
       description:
         'The click branch: up to +200% CPC, a 10% double-click chance and Worldbell — clicks gain +2% of your CPS.',
       lore: 'Strike once, hear it thrice.',
@@ -154,7 +154,7 @@ export const meepTreeCategory: EncyclopediaCategory = {
       name: 'Battle Branch',
       icon: 'game-icons:war-axe',
       description: 'The war branch: up to +7,000 flat combat power and +25% champion DPS.',
-      lore: 'Drums before the storm.',
+      lore: 'The hush before the storm.',
       related: ['meep-tree', 'orbit-combat'],
     },
     {
@@ -163,7 +163,7 @@ export const meepTreeCategory: EncyclopediaCategory = {
       icon: 'game-icons:guards',
       description:
         'The defense branch: +40% boss damage, +20% material drops, +1 HP regen/s and −15% damage taken.',
-      lore: 'A shield sung into being.',
+      lore: 'A shield willed into being.',
       related: ['meep-tree', 'sun-hp'],
     },
   ],
@@ -194,7 +194,7 @@ export const planetSlotsCategory: EncyclopediaCategory = {
       description:
         'Six roles: Turret (auto-attack DPS), Harvester (+1 material every 30 ticks), Relay (+30% expedition rewards), ' +
         'Aegis (−15% boss damage), Timewarp (+25% offline earnings) and Resonator (+25% CPS for one chosen building).',
-      lore: 'Each world hums its own note.',
+      lore: 'Each world keeps its own hour.',
       related: ['planet-slots', 'jungle-buffs', 'turret-salvos'],
     },
     {

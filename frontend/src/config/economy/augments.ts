@@ -11,10 +11,10 @@ export const AUGMENTS: AugmentDefinition[] = [
   // ── Common ──────────────────────────────────────────────────────────────────
   {
     id: 'common_cps_30',
-    name: 'Melodic Surge',
+    name: 'Chime Surge',
     description: 'Your Chimes production flows stronger.',
     effectLine: '+30% CPS',
-    icon: 'game-icons:harp',
+    icon: 'game-icons:sparkles',
     rarity: 'common',
     effects: { cpsMultiplier: 1.3 },
   },
@@ -29,7 +29,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   },
   {
     id: 'common_power_200',
-    name: "Warrior's Beat",
+    name: "Warrior's Resolve",
     description: 'Your combat power grows with every ability level.',
     effectLine: '+200 Power per Ability Level',
     icon: 'game-icons:sword-in-stone',
@@ -38,7 +38,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   },
   {
     id: 'common_building_cost_15',
-    name: 'Frugal Harmony',
+    name: 'Frugal Foundations',
     description: 'Buildings cost fewer Chimes.',
     effectLine: '-15% Building Costs',
     icon: 'game-icons:ancient-columns',
@@ -65,10 +65,10 @@ export const AUGMENTS: AugmentDefinition[] = [
   },
   {
     id: 'common_cps_cpc_20',
-    name: 'Balanced Chord',
+    name: 'Balanced Orbit',
     description: 'Passive and active Chimes gain rise equally.',
     effectLine: '+20% CPS & CPC',
-    icon: 'game-icons:music-spell',
+    icon: 'game-icons:radial-balance',
     rarity: 'common',
     effects: { cpsMultiplier: 1.2, cpcMultiplier: 1.2 },
   },
@@ -112,7 +112,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   // ── Rare ────────────────────────────────────────────────────────────────────
   {
     id: 'rare_cps_70',
-    name: 'Harmonic Cascade',
+    name: 'Stellar Cascade',
     description: 'A mighty torrent of Chimes pours forth every second.',
     effectLine: '+70% CPS',
     icon: 'game-icons:wave-crest',
@@ -130,7 +130,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   },
   {
     id: 'rare_power_500',
-    name: 'Battle Hymn',
+    name: 'Battle Fervor',
     description: 'Each ability level grants noticeably more combat power.',
     effectLine: '+500 Power per Ability Level',
     icon: 'game-icons:roman-shield',
@@ -157,10 +157,10 @@ export const AUGMENTS: AugmentDefinition[] = [
   },
   {
     id: 'rare_cps_power',
-    name: 'Combat Rhythm',
+    name: 'Combat Momentum',
     description: 'Passive production and combat power rise together.',
     effectLine: '+40% CPS & +300 Power/Level',
-    icon: 'game-icons:drum',
+    icon: 'game-icons:gears',
     rarity: 'rare',
     effects: { cpsMultiplier: 1.4, abilityPowerPerLevel: 300 },
   },
@@ -197,10 +197,10 @@ export const AUGMENTS: AugmentDefinition[] = [
   // ── Epic ────────────────────────────────────────────────────────────────────
   {
     id: 'epic_cps_150',
-    name: 'Eternal Melody',
-    description: 'Chimes flow endlessly — an eternal composition.',
+    name: 'Eternal Current',
+    description: 'Chimes flow endlessly — a current without end.',
     effectLine: '+150% CPS',
-    icon: 'game-icons:musical-notes',
+    icon: 'game-icons:star-cycle',
     rarity: 'epic',
     effects: { cpsMultiplier: 2.5 },
   },
@@ -215,16 +215,16 @@ export const AUGMENTS: AugmentDefinition[] = [
   },
   {
     id: 'epic_power_1000',
-    name: "Warlord's Anthem",
+    name: "Warlord's Banner",
     description: 'Your abilities unleash tremendous combat potential.',
     effectLine: '+1000 Power per Ability Level',
-    icon: 'game-icons:mighty-horn',
+    icon: 'game-icons:rally-the-troops',
     rarity: 'epic',
     effects: { abilityPowerPerLevel: 1000 },
   },
   {
     id: 'epic_cps_cpc_80',
-    name: 'Grand Crescendo',
+    name: 'Grand Convergence',
     description: 'All Chimes sources reach their absolute peak.',
     effectLine: '+80% CPS & CPC',
     icon: 'game-icons:firework-rocket',
@@ -326,7 +326,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     name: 'Echo Chamber',
     description: 'The last chosen Augment effect echoes for 60s.',
     effectLine: 'Last Augment active again (60s)',
-    icon: 'game-icons:acoustic-megaphone',
+    icon: 'game-icons:echo-ripples',
     rarity: 'epic',
     effects: {},
     specialEffect: { type: 'echoChamber', params: { duration: 60000 } },

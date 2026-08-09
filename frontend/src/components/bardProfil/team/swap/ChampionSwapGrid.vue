@@ -517,7 +517,7 @@ function onImgError(e: Event) {
     <!-- ── grid ── -->
     <div ref="bodyEl" class="csg-body">
       <div v-if="filteredChampions.length === 0" class="csg-empty">
-        <Icon icon="game-icons:lyre" width="34" height="34" class="csg-empty-icon" />
+        <Icon icon="game-icons:telescope" width="34" height="34" class="csg-empty-icon" />
         <span>
           {{
             rolePool.length === 0

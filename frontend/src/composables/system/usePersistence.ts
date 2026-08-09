@@ -38,6 +38,7 @@ import {
   MEEP_BASE_COST,
   SAVE_KEY,
   SAVE_VERSION,
+  SAVE_ID_RENAMES,
   OFFLINE_CPS_RATE,
   OFFLINE_MAX_HOURS,
   OFFLINE_MIN_SECONDS,
@@ -53,6 +54,41 @@ import {
 } from '@/config/constants'
 import { DRAKE_TYPES, type DrakeTypeId } from '@/config/battle/drakes'
 import { logger } from '@/utils/logger'
+
+/** Content id as the current catalog spells it — see SAVE_ID_RENAMES. An id
+ *  that was never renamed passes through untouched. */
+function migratedId(id: string): string {
+  return SAVE_ID_RENAMES[id] ?? id
+}
+
+/** Same, for a saved list of ids (bought nodes, forged constellations). */
+export function migratedIds(ids: unknown): string[] {
+  return Array.isArray(ids)
+    ? ids.filter((id): id is string => typeof id === 'string').map(migratedId)
+    : []
+}
+
+/** Same, for a saved id → value map (branch levels, relic levels). A rename
+ *  that collides with an existing key keeps the higher level, so no progress
+ *  is ever traded away. */
+export function migratedIdMap<T extends number>(map: unknown): Record<string, T> {
+  const out: Record<string, T> = {}
+  if (!map || typeof map !== 'object') return out
+  for (const [id, value] of Object.entries(map as Record<string, T>)) {
+    const key = migratedId(id)
+    out[key] = out[key] !== undefined && out[key] > value ? out[key] : value
+  }
+  return out
+}
+
+/** Same, for a champion's level → perk-id map. */
+export function migratedPerks(perks: Record<number, string> | undefined): Record<number, string> {
+  const out: Record<number, string> = {}
+  for (const [level, perkId] of Object.entries(perks ?? {})) {
+    out[Number(level)] = migratedId(perkId)
+  }
+  return out
+}
 
 /** Normalize saved ally rows to exactly ALLIES_PER_ROLE entries per role.
  *  Legacy 2-slot saves are padded with nulls; longer rows are truncated.
@@ -662,7 +698,7 @@ export function usePersistence() {
               level: raw?.level ?? 1,
               xp: raw?.xp ?? 0,
               totalXp: raw?.totalXp ?? 0,
-              perks: raw?.perks ? { ...raw.perks } : {},
+              perks: migratedPerks(raw?.perks),
             }
           }
         }
@@ -865,11 +901,11 @@ export function usePersistence() {
       // Restore starForgeStore — missing key (old saves) keeps all-zero defaults
       const starForgeStore = useStarForgeStore()
       if (saved.starForge) {
-        starForgeStore.branchLevels = { ...(saved.starForge.branchLevels ?? {}) }
-        starForgeStore.leafLevels = { ...(saved.starForge.leafLevels ?? {}) }
-        starForgeStore.relicLevels = { ...(saved.starForge.relicLevels ?? {}) }
-        starForgeStore.forgedConstellations = [...(saved.starForge.forgedConstellations ?? [])]
-        starForgeStore.bargainDealId = saved.starForge.bargainDealId ?? ''
+        starForgeStore.branchLevels = migratedIdMap(saved.starForge.branchLevels)
+        starForgeStore.leafLevels = migratedIdMap(saved.starForge.leafLevels)
+        starForgeStore.relicLevels = migratedIdMap(saved.starForge.relicLevels)
+        starForgeStore.forgedConstellations = migratedIds(saved.starForge.forgedConstellations)
+        starForgeStore.bargainDealId = migratedId(saved.starForge.bargainDealId ?? '')
         starForgeStore.bargainRestockAt = saved.starForge.bargainRestockAt ?? 0
         starForgeStore.bargainPurchased = saved.starForge.bargainPurchased ?? false
         starForgeStore.activeBuffs = (saved.starForge.activeBuffs ?? []).map(
@@ -879,8 +915,8 @@ export function usePersistence() {
 
       // Restore meepTreeStore — missing key (old saves) keeps an empty tree
       const meepTreeStore = useMeepTreeStore()
-      meepTreeStore.bought = [...(saved.meepTree?.bought ?? [])]
-      meepTreeStore.acknowledged = [...(saved.meepTree?.acknowledged ?? [])]
+      meepTreeStore.bought = migratedIds(saved.meepTree?.bought)
+      meepTreeStore.acknowledged = migratedIds(saved.meepTree?.acknowledged)
 
       // Restore drifter buffs — expiresAt is absolute, so anything that ran out
       // while the tab was closed is dropped here instead of ticking down again.

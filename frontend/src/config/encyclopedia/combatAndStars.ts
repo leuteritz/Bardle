@@ -12,7 +12,7 @@ export const orbitCombatCategory: EncyclopediaCategory = {
       description:
         'Your five mains orbit the sun and automatically attack the active boss planet when it comes into range. ' +
         'Filled ally rows massively raise their damage.',
-      lore: 'War, set to an orbital rhythm.',
+      lore: 'War, set to an orbital clock.',
       formula:
         'DPS per main = 40 × (1 + allies × 0.4) → ×3 with a full row\n' +
         '× synergy, Star Forge and Meep Tree multipliers',
@@ -25,7 +25,7 @@ export const orbitCombatCategory: EncyclopediaCategory = {
       description:
         'Each role fights its own way: Top blocks shots with Aegis Wall, Mid casts random Chaos Curses, ' +
         'ADC fires Piercing Volleys, Support heals sun and planets, and Jungle patrols to buff your worker planets.',
-      lore: 'Five voices, one chorus.',
+      lore: 'Five hands, one purpose.',
       related: ['jungle-buffs', 'champion-hp'],
     },
     {

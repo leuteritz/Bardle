@@ -394,7 +394,7 @@ onUnmounted(clearTimers)
   text-overflow: ellipsis;
 }
 
-/* Wickelt statt zu kürzen: „Bard's Serenade — ×3 to everything for 90s" passt
+/* Wickelt statt zu kürzen: „Caretaker's Boon — ×3 to everything for 90s" passt
    auf Full HD nicht in eine Zeile, und abgeschnitten ist er wertlos. */
 .dic-effect {
   font-size: 14px;

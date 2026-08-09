@@ -559,7 +559,7 @@ export const DRIFTER_CARD_URGENT_MS = 4000
 /** Kopfzeilen-Icon der Infokarte (Peilung eines Signals). */
 export const DRIFTER_CARD_ICON = 'game-icons:radar-sweep'
 
-// ── Orbit-Strike (Sundering Chord) ──────────────────────────────────────────
+// ── Orbit-Strike (Sundering Pulse) ──────────────────────────────────────────
 // Ein eingesammelter Schadens-Drifter schlägt alle Planeten gleichzeitig. Die
 // Welle geht vom Bildmittelpunkt aus — dort steht die Sonne, um die alle
 // getroffenen Planeten kreisen; vom Klickpunkt aus liefe sie an ihnen vorbei.

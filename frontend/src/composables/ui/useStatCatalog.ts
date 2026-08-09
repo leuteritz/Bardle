@@ -103,7 +103,7 @@ export function useStatCatalog(query: Ref<string>): {
     const completedSections = Object.values(sectionStore.sectionProgress).filter(
       (p) => p.completed,
     ).length
-    const abilityNames = ['Chime Song (CpS)', 'Power Chord', 'Meep Call', 'Click Cadence']
+    const abilityNames = ['Chime Flow (CpS)', 'Power Strike', 'Meep Call', 'Click Surge']
     /* Level / Universe / Play Time are the hero row right above this section —
        they stay searchable as plain rows instead of being highlighted twice. */
     return [
@@ -1011,7 +1011,7 @@ export function useStatCatalog(query: Ref<string>): {
         key: 'forge-dwell',
         label: 'Phase Dwell Reduction',
         value: pct(1 - forgeStore.dwellMult),
-        keywords: 'allegro evolve',
+        keywords: 'quickening evolve',
       },
       {
         key: 'forge-offline',

@@ -69,6 +69,41 @@ export const HUD_SCALE_REF_HEIGHT_PX = 1440
 export const SAVE_KEY = 'bard-idle-save'
 export const SAVE_VERSION = 1
 
+/**
+ * Umbenannte Inhalts-IDs, alt → neu. Ein Spielstand speichert gekaufte Knoten,
+ * geschmiedete Relikte und gewählte Perks als blanke ID-Strings — wird eine ID
+ * im Katalog umbenannt, findet der alte Eintrag nichts mehr und der Fortschritt
+ * ist still verloren. `loadGame` schickt deshalb jede geladene ID durch diese
+ * Tabelle, bevor sie in einen Store geht; eine unbekannte ID bleibt, wie sie ist.
+ *
+ * Alle Einträge stammen aus der Musik-Entfernung: Bardle spielt im Kosmos von
+ * Bard, dem Wandering Caretaker, und trug an diesen Stellen noch Namen aus dem
+ * Vorrat eines Spielmanns. Die Tabelle bleibt dauerhaft stehen — ein Spielstand
+ * kann beliebig alt sein.
+ */
+export const SAVE_ID_RENAMES: Record<string, string> = {
+  // Meep Skill Tree: Branch "Melody" → "Vigil"
+  melody_1: 'vigil_1',
+  melody_2: 'vigil_2',
+  melody_3: 'vigil_3',
+  melody_4: 'vigil_4',
+  melody_5: 'vigil_5',
+  // Star Forge: Zweig, Blatt, Relikt
+  allegro: 'quickening',
+  battleChorus: 'warhost',
+  choirOfChampions: 'hostOfChampions',
+  // Star Forge: Konstellationen
+  percussiveNova: 'shatteringNova',
+  bulwarkChoir: 'bulwarkPact',
+  prospectorsSong: 'prospectorsCharm',
+  eternalCadence: 'eternalOrbit',
+  // Star Forge: Cosmic Bargain
+  midasCadence: 'midasHour',
+  tempoSurge: 'stellarSurge',
+  // Champion-Perk
+  'warp-cadence': 'warp-rush',
+}
+
 /** The game's name, as the crest of the bottom bar renders it. */
 export const GAME_TITLE = 'BARDLE'
 

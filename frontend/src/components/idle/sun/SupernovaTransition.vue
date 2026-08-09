@@ -18,7 +18,7 @@ import {
 } from '@/config/constants'
 
 /**
- * The one moment the sun stops being a sun. Plays exactly once, when Requiem —
+ * The one moment the sun stops being a sun. Plays exactly once, when Pyre —
  * the red giant — evolves into Collapse: a blinding flash, shock rings and an
  * ejecta shell tearing outwards, then everything falling back in and snapping
  * shut on the new black hole.

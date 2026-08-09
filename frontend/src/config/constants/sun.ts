@@ -196,7 +196,7 @@ export const SOLAR_BRANCHES = [
   {
     id: 'chimesPerSecond',
     name: 'Chimes / Sec',
-    icon: 'game-icons:metronome',
+    icon: 'game-icons:hourglass',
     color: '#e89840',
     statLabel: 'CpS Bonus',
   },
@@ -251,7 +251,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '4s',
   },
   {
-    name: 'Prelude',
+    name: 'Dawn',
     astroName: 'Main Sequence (Young)',
     radius: 50,
     core: '#ffffff',
@@ -266,7 +266,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '5s',
   },
   {
-    name: 'Crescendo',
+    name: 'Zenith',
     astroName: 'Main Sequence (Mature)',
     radius: 64,
     core: '#fffce0',
@@ -296,7 +296,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '4s',
   },
   {
-    name: 'Requiem',
+    name: 'Pyre',
     astroName: 'Red Giant',
     radius: 110,
     core: '#ffb0b0',

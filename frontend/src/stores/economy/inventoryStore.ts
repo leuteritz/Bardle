@@ -196,7 +196,7 @@ export const useInventoryStore = defineStore('inventory', {
       }
       // Fallback: last material
       if (!dropped) dropped = MATERIALS[MATERIALS.length - 1]
-      // Prospector's Song (Star Forge): every drop grants extra materials
+      // Prospector's Charm (Star Forge): every drop grants extra materials
       this.addMaterial(dropped.id, source, 1 + forge.extraDropCount)
       return dropped
     },

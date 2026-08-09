@@ -739,7 +739,7 @@ const chronicleSearch = ref('')
   gap: 1px;
   /* Narrow on purpose: the tags of the two markers at 10 and 2 o'clock reach in
      to 27% and 73% of the stage, and this block sits at the same height. Its
-     text is centred and never wider than "Crescendo", so it stays clear. */
+     text is centred and never wider than "Collapse", so it stays clear. */
   width: 46%;
   text-align: center;
   /* the ring's markers reach into this band's corners and carry generous hover

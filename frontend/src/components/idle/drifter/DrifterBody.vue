@@ -68,9 +68,9 @@
       <span class="bc-lens"></span>
     </template>
 
-    <!-- Sundering Chord — a note already breaking apart: two half-arcs beating
+    <!-- Sundering Pulse — a ring already breaking apart: two half-arcs beating
          out of step, a jagged rift down the middle, splinters drifting off. -->
-    <template v-else-if="kind === 'chord'">
+    <template v-else-if="kind === 'pulse'">
       <span class="cd-arc cd-arc--l"></span>
       <span class="cd-arc cd-arc--r"></span>
       <span class="cd-rift"></span>
@@ -640,10 +640,10 @@ const tint = computed(() => ({
   }
 }
 
-/* ── Sundering Chord ── */
-/* Two open half-rings facing each other: a sound leaving a source, cut in half
-   down the middle. They pulse on the same duration but half a cycle apart, so
-   the shape never reads as one symmetrical ring — it reads as a chord coming
+/* ── Sundering Pulse ── */
+/* Two open half-rings facing each other: a shockwave leaving a source, cut in
+   half down the middle. They pulse on the same duration but half a cycle apart,
+   so the shape never reads as one symmetrical ring — it reads as a wave coming
    apart. Only the arc colour side is painted; the other three border sides stay
    transparent, which is what makes a bordered circle into an arc. */
 .cd-arc {
@@ -669,7 +669,7 @@ const tint = computed(() => ({
 }
 
 /* The fracture itself: a lightning-shaped sliver running top to bottom, bright
-   at the middle where the chord tears. */
+   at the middle where the wave tears. */
 .cd-rift {
   top: 50%;
   left: 50%;
@@ -681,7 +681,7 @@ const tint = computed(() => ({
   animation: cd-tear 1.6s ease-in-out infinite;
 }
 
-/* A struck note held in the tear — square turned on its point, slowly turning
+/* A shard held in the tear — square turned on its point, slowly turning
    past the rift so the body has one calm element among three restless ones. */
 .cd-core {
   top: 50%;

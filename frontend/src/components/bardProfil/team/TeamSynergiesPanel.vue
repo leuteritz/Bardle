@@ -32,7 +32,7 @@ function multToPct(mult: number): number {
 }
 
 const summaryChips = computed(() => [
-  { key: 'cps', icon: 'game-icons:sing', label: 'Production', pct: multToPct(cpsSynergyMultiplier.value) },
+  { key: 'cps', icon: 'game-icons:sparkles', label: 'Production', pct: multToPct(cpsSynergyMultiplier.value) },
   { key: 'power', icon: 'game-icons:mailed-fist', label: 'Power', pct: multToPct(powerSynergyMultiplier.value) },
   { key: 'dps', icon: 'game-icons:deadly-strike', label: 'Combat DPS', pct: multToPct(dpsSynergyMultiplier.value) },
 ])

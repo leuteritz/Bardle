@@ -146,7 +146,7 @@ function championImage(name: string): string {
           ×{{ m.qty }}
         </span>
         <span v-if="mission.spoils?.meep" class="efc-mat" title="Meep">
-          <Icon icon="game-icons:musical-notes" width="15" height="15" />
+          <Icon icon="game-icons:meeple" width="15" height="15" />
           ×{{ mission.spoils.meep }}
         </span>
       </div>

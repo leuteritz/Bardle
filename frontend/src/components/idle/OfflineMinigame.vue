@@ -177,7 +177,7 @@ onUnmounted(() => {
           <span class="result-sub">Perfect resonance</span>
         </div>
         <div v-else-if="phase === 'result-lose'" class="result result--lose">
-          <span class="result-sub">Out of tune…</span>
+          <span class="result-sub">Off the mark…</span>
         </div>
       </Transition>
     </button>

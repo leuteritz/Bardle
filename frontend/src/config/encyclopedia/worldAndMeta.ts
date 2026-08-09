@@ -45,7 +45,7 @@ export const galaxiesCategory: EncyclopediaCategory = {
       description:
         'Ten named sections from Veloris Drift to Etherion Rift. Each needs boss rescues to clear and raises ' +
         'both difficulty and rewards.',
-      lore: 'The map ends where the song begins.',
+      lore: 'The map ends where the wandering begins.',
       formula: 'Rescues: 5 → 50 · difficulty ×1 → ×9 · rewards ×1 → ×6.5',
       related: ['boss-hp'],
     },
@@ -147,7 +147,7 @@ export const prestigeCategory: EncyclopediaCategory = {
       description:
         'Ten universes, each with its own laws — Void Nexus doubles CPS but raises building costs, ' +
         'Freljord triples clicks but quarters CPS, Piltover triples nearly everything.',
-      lore: 'Same song, different sky.',
+      lore: 'Same journey, different sky.',
       related: ['prestige'],
     },
   ],
@@ -166,13 +166,13 @@ export const chronicleCategory: EncyclopediaCategory = {
         'Eight tracks of milestones, one per system — chimes, roster, ladder, drifters, forge, planets, bosses and stars. ' +
         'Each track watches a number you are already earning and writes a stage once it passes a threshold. ' +
         'A written stage is permanent: it survives a prestige, and a counter that resets never takes it back.',
-      lore: 'A song nobody wrote down was only ever weather.',
+      lore: 'A deed nobody wrote down was only ever weather.',
       related: ['chronicle-tracks', 'prestige'],
     },
     {
       id: 'chronicle-tracks',
       name: 'Track Rewards',
-      icon: 'game-icons:harp',
+      icon: 'game-icons:star-medal',
       description:
         'A track pays back into the system it measures: collecting drifters lengthens their buffs, raising the Star Forge ' +
         'discounts its materials, winning on the ladder pays more LP per win. Every stage names one value, and that value is ' +

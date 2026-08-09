@@ -188,7 +188,7 @@ export const SHOP_UPGRADE_CATALOG = [
   },
   {
     id: 'klanggenerator',
-    name: 'Sound Generator',
+    name: 'Chime Array',
     baseCost: 100,
     baseCPS: 3,
     costMultiplier: 1.2,
@@ -196,7 +196,7 @@ export const SHOP_UPGRADE_CATALOG = [
   },
   {
     id: 'harmoniewerk',
-    name: 'Harmony Works',
+    name: 'Chime Foundry',
     baseCost: 500,
     baseCPS: 5,
     costMultiplier: 1.25,
@@ -204,7 +204,7 @@ export const SHOP_UPGRADE_CATALOG = [
   },
   {
     id: 'sphaerenMusik',
-    name: 'Sphere Music',
+    name: 'Celestial Spheres',
     baseCost: 2500,
     baseCPS: 10,
     costMultiplier: 1.3,

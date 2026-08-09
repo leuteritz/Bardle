@@ -398,10 +398,10 @@ describe('drifterStore', () => {
     it('hits every living planet for its own share of max health', () => {
       const store = useDrifterStore()
       const bosses = fillOrbit()
-      const pct = getDrifter('sunderingChord')!.reward!.orbitStrikeMaxHpPct!
+      const pct = getDrifter('sunderingPulse')!.reward!.orbitStrikeMaxHpPct!
       const before = bosses.map((b) => b.currentHP)
 
-      store.hitDrifter(spawn('sunderingChord').uid)
+      store.hitDrifter(spawn('sunderingPulse').uid)
 
       bosses.forEach((boss, i) => {
         // A share, not a flat number: each planet loses at least its own
@@ -414,10 +414,10 @@ describe('drifterStore', () => {
       const store = useDrifterStore()
       const bosses = fillOrbit()
 
-      store.hitDrifter(spawn('sunderingChord').uid)
+      store.hitDrifter(spawn('sunderingPulse').uid)
 
       expect(store.lastOrbitStrike.seq).toBe(1)
-      expect(store.lastOrbitStrike.defId).toBe('sunderingChord')
+      expect(store.lastOrbitStrike.defId).toBe('sunderingPulse')
       expect(store.lastOrbitStrike.planetsHit).toBe(bosses.length)
       expect(store.lastOrbitStrike.damage).toBeGreaterThan(0)
     })
@@ -432,7 +432,7 @@ describe('drifterStore', () => {
       doomed.currentHP = 1
       const untouched = dead.currentHP
 
-      store.hitDrifter(spawn('sunderingChord').uid)
+      store.hitDrifter(spawn('sunderingPulse').uid)
 
       expect(dead.currentHP).toBe(untouched)
       expect(store.lastOrbitStrike.planetsHit).toBe(bosses.length - 1)
@@ -444,7 +444,7 @@ describe('drifterStore', () => {
       const store = useDrifterStore()
       expect(usePlanetBossStore().activeBosses).toHaveLength(0)
 
-      store.hitDrifter(spawn('sunderingChord').uid)
+      store.hitDrifter(spawn('sunderingPulse').uid)
 
       // The wave plays either way — a collected drifter that silently does
       // nothing would read as a bug, not as an empty sky.

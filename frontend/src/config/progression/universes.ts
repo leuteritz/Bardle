@@ -24,8 +24,8 @@ export const universes: UniverseConfig[] = [
     name: 'Celestial Realm',
     description: 'Celestial Realm',
     modifier: {
-      id: 'celestial-harmony',
-      name: 'Celestial Harmony',
+      id: 'celestial-order',
+      name: 'Celestial Order',
       description: 'Level up faster (exponent 0.9), max Ability Level 3',
       icon: 'game-icons:star-swirl',
       effects: { levelExponent: 0.9, maxAbilityLevel: 3 },

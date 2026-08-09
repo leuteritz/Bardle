@@ -106,7 +106,7 @@ function getOrbitingRoles(): Set<ChampionRole> {
 }
 
 /**
- * Champion FOCUS shortens the role ability cooldown; the Warp Cadence perk cuts
+ * Champion FOCUS shortens the role ability cooldown; the Warp Rush perk cuts
  * a further slice. Empty slots return the base duration unchanged.
  */
 function roleCooldown(role: ChampionRole, baseMs: number): number {
@@ -691,7 +691,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           (raging ? BOSS_RAGE_DMG_MULT : 1),
       )
 
-      // Der Sonnen-Treffer wird gemitigiert (Aegis / Bulwark Choir) — dessen
+      // Der Sonnen-Treffer wird gemitigiert (Aegis / Bulwark Pact) — dessen
       // Rückgabewert überschreibt autoDmg, damit Label und HP-Verlust passen
       let dealt = dmg
 

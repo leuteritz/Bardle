@@ -270,7 +270,7 @@ export const useShopStore = defineStore('shop', {
       const omenMul = useOmenStore().cpsMult
       // Caretaker's Shrine (bard W) — the afterglow of a cast shrine
       const bardMul = useBardAbilityStore().cpsMult
-      // Chime Cantor (chronicle) — permanent, earned by lifetime chimes
+      // Chime Keeper (chronicle) — permanent, earned by lifetime chimes
       const chronicleMul = useAchievementStore().cpsMult
       return Math.floor(
         (baseCPS + solarCPS) *

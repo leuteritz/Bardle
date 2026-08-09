@@ -205,7 +205,7 @@ export const PLANET_MAX_BULK_LEVELS = 1000 // safety cap for the "Max" simulatio
 export const PLANET_RANK_TIERS: { min: number; name: string; color: string }[] = [
   { min: 1, name: 'Nascent', color: '#9aa0a6' },
   { min: 5, name: 'Resonant', color: '#52b830' },
-  { min: 10, name: 'Harmonic', color: '#40a0e0' },
+  { min: 10, name: 'Radiant', color: '#40a0e0' },
   { min: 20, name: 'Celestial', color: '#c060e0' },
   { min: 35, name: 'Transcendent', color: '#e8c040' },
 ]

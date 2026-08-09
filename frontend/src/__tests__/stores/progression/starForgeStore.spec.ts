@@ -172,13 +172,13 @@ describe('starForgeStore', () => {
       expect(store.offlineEarningsMult).toBe(1)
       store.branchLevels.moonOrbit = 1 // +10%
       store.relicLevels.echoOfTheVoid = 1 // +20%
-      store.forgedConstellations.push('eternalCadence') // +15%
+      store.forgedConstellations.push('eternalOrbit') // +15%
       expect(store.offlineEarningsMult).toBeCloseTo(1.45)
     })
 
     it('dwellMult is clamped at 0.5', () => {
       const store = useStarForgeStore()
-      store.branchLevels.allegro = 5
+      store.branchLevels.quickening = 5
       store.leafLevels.timeWeaver = 3
       // 5 lvl × 5% × 1.75 amp = 43.75% → 0.5625, above clamp
       expect(store.dwellMult).toBeCloseTo(0.5625)
@@ -187,7 +187,7 @@ describe('starForgeStore', () => {
     it('solarUpgradeStore.dwellTimeMultiplier reads the forge', () => {
       const store = useStarForgeStore()
       const solar = useSolarUpgradeStore()
-      store.branchLevels.allegro = 2 // −10%
+      store.branchLevels.quickening = 2 // −10%
       expect(solar.dwellTimeMultiplier).toBeCloseTo(0.9)
     })
   })
@@ -198,13 +198,13 @@ describe('starForgeStore', () => {
     it('requires the branch at required level', () => {
       const store = useStarForgeStore()
       unlockBranchPrereqs()
-      const relic = FORGE_RELICS.find((r) => r.id === 'choirOfChampions')!
+      const relic = FORGE_RELICS.find((r) => r.id === 'hostOfChampions')!
       store.branchLevels[relic.requiresNode] = relic.requiresLevel - 1
-      expect(store.canForgeRelic('choirOfChampions')).toBe(false)
+      expect(store.canForgeRelic('hostOfChampions')).toBe(false)
       store.branchLevels[relic.requiresNode] = relic.requiresLevel
-      expect(store.canForgeRelic('choirOfChampions')).toBe(true)
-      expect(store.forgeRelic('choirOfChampions')).toBe(true)
-      expect(store.relicLevel('choirOfChampions')).toBe(1)
+      expect(store.canForgeRelic('hostOfChampions')).toBe(true)
+      expect(store.forgeRelic('hostOfChampions')).toBe(true)
+      expect(store.relicLevel('hostOfChampions')).toBe(1)
       // championDpsMult: warcry 3×5% + relic 15% = 1.30
       expect(store.championDpsMult).toBeCloseTo(1.3)
     })
@@ -212,10 +212,10 @@ describe('starForgeStore', () => {
     it('stops at maxLevel', () => {
       const store = useStarForgeStore()
       unlockBranchPrereqs()
-      const relic = FORGE_RELICS.find((r) => r.id === 'choirOfChampions')!
+      const relic = FORGE_RELICS.find((r) => r.id === 'hostOfChampions')!
       store.branchLevels[relic.requiresNode] = relic.requiresLevel
-      store.relicLevels.choirOfChampions = relic.maxLevel
-      expect(store.canForgeRelic('choirOfChampions')).toBe(false)
+      store.relicLevels.hostOfChampions = relic.maxLevel
+      expect(store.canForgeRelic('hostOfChampions')).toBe(false)
     })
   })
 
@@ -265,7 +265,7 @@ describe('starForgeStore', () => {
     it('buff deals activate a timed buff that doubles the rate', () => {
       const store = useStarForgeStore()
       unlockBranchPrereqs()
-      store.bargainDealId = 'tempoSurge'
+      store.bargainDealId = 'stellarSurge'
       store.bargainRestockAt = Date.now() + FORGE_BARGAIN_RESTOCK_MS
       store.bargainPurchased = false
       expect(store.buyBargain()).toBe(true)

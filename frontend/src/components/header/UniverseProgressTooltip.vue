@@ -68,7 +68,7 @@ const rescueStatus = computed<RescueStatus>(() => {
     return {
       tone: 'ready',
       icon: UNIVERSE_TOOLTIP_ICONS.universesRescued,
-      text: 'Rescued — prestige to carry the song onward',
+      text: 'Rescued — prestige to carry the journey onward',
     }
   }
   if (!Number.isFinite(etaSeconds.value)) {

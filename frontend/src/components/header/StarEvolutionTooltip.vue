@@ -177,7 +177,7 @@ const verdict = computed<{ tone: 'ready' | 'blocked' | 'end'; icon: string; text
     return {
       tone: 'end',
       icon: STAR_EVOLUTION_TOOLTIP_ICONS.ready,
-      text: 'The last note has sounded — nothing follows the collapse',
+      text: 'The last light has gone out — nothing follows the collapse',
     }
   }
   if (dwellMet.value && raysAllMet.value) {
@@ -354,7 +354,7 @@ const timeRows = computed<StatRow[]>(() => [
         <span v-if="nextStage" class="set-rail-legend-next">
           → {{ nextStage.data.name }} · {{ nextStage.data.astroName }}
         </span>
-        <span v-else class="set-rail-legend-next">→ the end of the song</span>
+        <span v-else class="set-rail-legend-next">→ the end of the journey</span>
       </div>
     </section>
 

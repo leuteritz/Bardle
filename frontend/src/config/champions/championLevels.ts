@@ -181,9 +181,9 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     id: 'attunement',
     tier: 'adept',
     name: 'Attunement',
-    icon: 'game-icons:tune-pitch',
+    icon: 'game-icons:convergence-target',
     color: '#4e96e0',
-    desc: 'Tunes the role ability to a faster rhythm.',
+    desc: 'Cuts the wait before the role ability is ready again.',
     stats: { focus: 20 },
   },
   // ── Master (level 20) — a mechanic on top of the stats ──
@@ -244,9 +244,9 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     value: 0.3,
   },
   {
-    id: 'warp-cadence',
+    id: 'warp-rush',
     tier: 'elite',
-    name: 'Warp Cadence',
+    name: 'Warp Rush',
     icon: 'game-icons:backward-time',
     color: '#b070e0',
     desc: 'Shaves a further 15% off the role ability cooldown.',
@@ -371,7 +371,7 @@ export function fortuneMult(fortune: number): number {
 /**
  * The percentage a stat currently produces, formatted for display — read by
  * both the role details panel and the level panel so the number on a tile is
- * identical wherever it appears. `cooldownRush` is the Warp Cadence perk value.
+ * identical wherever it appears. `cooldownRush` is the Warp Rush perk value.
  */
 export function statEffectLabel(key: ChampionStatKey, value: number, cooldownRush = 0): string {
   switch (key) {

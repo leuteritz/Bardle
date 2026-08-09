@@ -129,7 +129,7 @@ onUnmounted(() => {
       <span v-else class="sw-headline">
         {{ wave.planetsHit }} PLANET{{ wave.planetsHit === 1 ? '' : 'S' }} STRUCK
       </span>
-      <span v-if="wave.planetsHit === 0" class="sw-sub">The chord finds nothing to break</span>
+      <span v-if="wave.planetsHit === 0" class="sw-sub">The pulse finds nothing to break</span>
       <span v-else class="sw-sub">
         −{{ $formatNumber(wave.damage) }} HP
         <template v-if="wave.kills > 0">

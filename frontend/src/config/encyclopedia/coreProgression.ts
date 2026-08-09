@@ -99,9 +99,9 @@ export const levelingCategory: EncyclopediaCategory = {
       name: 'Augment Pool',
       icon: 'game-icons:card-random',
       description:
-        'Eleven augments are in rotation: Melodic Surge (+30% CPS), Resonant Strike (+50% CPC), ' +
-        'Frugal Harmony (−15% building cost), Harmonic Cascade (+70% CPS), Thunder Chime (+100% CPC), ' +
-        'Battle Hymn (+500 power per level), Double Tap (every 10th click counts twice), Eternal Melody (+150% CPS), ' +
+        'Eleven augments are in rotation: Chime Surge (+30% CPS), Resonant Strike (+50% CPC), ' +
+        'Frugal Foundations (−15% building cost), Stellar Cascade (+70% CPS), Thunder Chime (+100% CPC), ' +
+        'Battle Fervor (+500 power per level), Double Tap (every 10th click counts twice), Eternal Current (+150% CPS), ' +
         'Chain Reaction (20% bonus click), Big Bang (one-time 5× power) and Infinite Loop (every 50th click echoes 5 times).',
       lore: 'Small gifts of fate — weak alone, mighty combined.',
       related: ['augment-system'],
@@ -119,15 +119,15 @@ export const buildingsCategory: EncyclopediaCategory = {
       name: 'Chime Buildings',
       icon: 'game-icons:village',
       description:
-        'Five passive producers bought with Chimes: Bell Tower, Sound Generator, Harmony Works, Sphere Music and Time Echo. ' +
+        'Five passive producers bought with Chimes: Bell Tower, Chime Array, Chime Foundry, Celestial Spheres and Time Echo. ' +
         'Each level adds flat CPS; costs grow exponentially.',
-      lore: 'Machines that turn silence into song.',
+      lore: 'Machines that turn silence into chimes.',
       formula:
         'Cost(N) = ceil(base × mult^N)\n' +
         'Bell Tower 25 ×1.15 → +1 CPS\n' +
-        'Sound Generator 100 ×1.2 → +3 CPS\n' +
-        'Harmony Works 500 ×1.25 → +5 CPS\n' +
-        'Sphere Music 2,500 ×1.3 → +10 CPS\n' +
+        'Chime Array 100 ×1.2 → +3 CPS\n' +
+        'Chime Foundry 500 ×1.25 → +5 CPS\n' +
+        'Celestial Spheres 2,500 ×1.3 → +10 CPS\n' +
         'Time Echo 10,000 ×1.4 → +25 CPS',
       related: ['chimes', 'clicker'],
     },

@@ -101,7 +101,7 @@ const totalChips = computed<BuffChip[]>(() => {
   if (buffCPSPct.value > 0)
     chips.push({
       key: 'cps',
-      icon: 'game-icons:lyre',
+      icon: 'game-icons:sparkles',
       label: 'Production',
       value: `+${buffCPSPct.value}%`,
       positive: true,

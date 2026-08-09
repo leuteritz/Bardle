@@ -289,7 +289,7 @@ export const useStarForgeStore = defineStore('starForge', {
 
     /** Multiplier on offline earnings. */
     offlineEarningsMult(): number {
-      const eternal = this.constellationForged('eternalCadence') ? 15 : 0
+      const eternal = this.constellationForged('eternalOrbit') ? 15 : 0
       return (
         1 + (this.branchEffect('moonOrbit') + this.relicEffect('echoOfTheVoid') + eternal) / 100
       )
@@ -303,12 +303,12 @@ export const useStarForgeStore = defineStore('starForge', {
     /** HP restored to the sun per second. */
     hpRegenPerSec(): number {
       const regen = this.branchEffect('regeneration')
-      return this.constellationForged('eternalCadence') ? regen * 2 : regen
+      return this.constellationForged('eternalOrbit') ? regen * 2 : regen
     },
 
     /** Multiplier on incoming damage (< 1 = less damage). */
     damageTakenMult(): number {
-      const bulwark = this.constellationForged('bulwarkChoir')
+      const bulwark = this.constellationForged('bulwarkPact')
         ? FORGE_CONSTELLATION_BULWARK_DAMAGE_MULT
         : 1
       return Math.max(MIN_DAMAGE_TAKEN_MULT, (1 - this.branchEffect('aegis') / 100) * bulwark)
@@ -329,20 +329,20 @@ export const useStarForgeStore = defineStore('starForge', {
       return 1 + this.branchEffect('cometMiner') / 100
     },
 
-    /** Extra materials per successful drop (Prospector's Song). */
+    /** Extra materials per successful drop (Prospector's Charm). */
     extraDropCount(): number {
-      return this.constellationForged('prospectorsSong') ? 1 : 0
+      return this.constellationForged('prospectorsCharm') ? 1 : 0
     },
 
     /** Multiplier on star-phase dwell times (< 1 = faster phases). */
     dwellMult(): number {
-      return Math.max(MIN_DWELL_MULT, 1 - this.branchEffect('allegro') / 100)
+      return Math.max(MIN_DWELL_MULT, 1 - this.branchEffect('quickening') / 100)
     },
 
-    /** Multiplier on orbiting champion DPS (Warcry + Choir of Champions + Hunter's Vigil). */
+    /** Multiplier on orbiting champion DPS (Warcry + Host of Champions + Hunter's Vigil). */
     championDpsMult(): number {
       const vigil = this.constellationForged('huntersVigil') ? 10 : 0
-      return 1 + (this.branchEffect('warcry') + this.relicEffect('choirOfChampions') + vigil) / 100
+      return 1 + (this.branchEffect('warcry') + this.relicEffect('hostOfChampions') + vigil) / 100
     },
 
     /** Multiplier on damage dealt to bosses (Shatter + Ember Crown). */
@@ -350,9 +350,9 @@ export const useStarForgeStore = defineStore('starForge', {
       return 1 + (this.branchEffect('shatter') + this.relicEffect('emberCrown')) / 100
     },
 
-    /** Fraction of click damage splashed to all enemies (Percussive Nova). */
+    /** Fraction of click damage splashed to all enemies (Shattering Nova). */
     clickSplashPct(): number {
-      return this.constellationForged('percussiveNova') ? 0.1 : 0
+      return this.constellationForged('shatteringNova') ? 0.1 : 0
     },
 
     /** Multiplier on total CpS (Stellar Wind + Tempo Surge buff). */
@@ -364,7 +364,7 @@ export const useStarForgeStore = defineStore('starForge', {
       return stellar * buff
     },
 
-    /** Multiplier on total CpC (Golden Tempest + Midas Cadence buff). */
+    /** Multiplier on total CpC (Golden Tempest + Midas Hour buff). */
     cpcMult(): number {
       const tempest = this.constellationForged('goldenTempest')
         ? FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT

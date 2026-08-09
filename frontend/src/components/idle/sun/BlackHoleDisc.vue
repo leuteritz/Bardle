@@ -50,7 +50,7 @@ import {
 } from '@/config/constants'
 
 /**
- * The sun's final phase (Collapse). Requiem — the red giant — detonates in a
+ * The sun's final phase (Collapse). Pyre — the red giant — detonates in a
  * supernova and leaves this behind: an opaque event horizon inside a tilted,
  * Doppler-boosted accretion disc, wrapped by the gravitationally lensed far
  * side of that same disc.
