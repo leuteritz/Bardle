@@ -159,6 +159,15 @@ export const UNIVERSE_TOOLTIP_IMAGES = {
 } as const
 
 /**
+ * Das volle Meep-Artwork — für die beiden Stellen, an denen es GROSS steht:
+ * die Header-Kachel und die Passive-Kachel der Fähigkeitenleiste (dort auf 4K
+ * über 70px hoch). Für die 256er-Stufe gibt es keine Datei, und beide Stellen
+ * greifen bewusst zur selben: eine zweite Stufe wäre ein zweiter Download und
+ * ein zweiter Decode desselben Motivs statt eines Cache-Treffers.
+ */
+export const MEEP_ART_IMAGE = '/img/BardAbilities/BardMeep.png'
+
+/**
  * Das Meep-Sprite ist hochformatig und trägt oben wie unten einen breiten
  * Alpha-Rand — in derselben Box wie Chime und Glyph füllt es nur rund drei
  * Viertel der Höhe und wirkt daneben klein. Vergrößert wird per `scale`, nicht

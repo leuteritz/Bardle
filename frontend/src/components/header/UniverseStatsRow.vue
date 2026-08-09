@@ -30,6 +30,7 @@ import {
   MEEP_COUNTUP_STEPS,
   MEEP_COUNTUP_INTERVAL_MS,
   MEEP_RISING_HOLD_MS,
+  MEEP_ART_IMAGE,
 } from '@/config/constants'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
 import UniverseProgressTooltip from './UniverseProgressTooltip.vue'
@@ -212,7 +213,7 @@ onUnmounted(() => {
         <span class="tile-label label-probe" aria-hidden="true">Meeps</span>
         <div class="tile-row">
           <img
-            src="/img/BardAbilities/BardMeep.png"
+            :src="MEEP_ART_IMAGE"
             class="tile-icon meep-icon"
             alt=""
             aria-hidden="true"

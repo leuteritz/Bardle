@@ -2,7 +2,7 @@
   <div
     class="ab-passive"
     :style="{ '--ab-color': BARD_PASSIVE.color }"
-    :aria-label="`${BARD_PASSIVE.name} — ${resonance} resonance`"
+    :aria-label="`${BARD_PASSIVE.name} — ${resonance} resonance, ${meeps} meeps held`"
     @mouseenter="$emit('hover', true)"
     @mouseleave="$emit('hover', false)"
   >
@@ -29,25 +29,29 @@
 
     <img
       class="ab-passive-art"
-      :src="BARD_PASSIVE.image"
-      :alt="BARD_PASSIVE.name"
+      :src="MEEP_ART_IMAGE"
+      alt="Meep"
       draggable="false"
       @dragstart.prevent
     />
 
-    <!-- Die Stufenzahl sitzt auf der Kachel, nicht daneben: sie ist der ganze
-         Grund, warum die Passive überhaupt eine eigene Fläche bekommt. -->
-    <span class="ab-stacks">{{ resonance }}</span>
+    <!-- Die gehaltenen Meeps, in derselben Kurzform wie die Header-Kachel —
+         dieselbe Sache darf im HUD nicht zweimal anders geschrieben stehen. -->
+    <span class="ab-stacks">{{ formatNumberCompact(meeps) }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { BARD_PASSIVE } from '@/config/progression/bardAbilities'
+import { MEEP_ART_IMAGE } from '@/config/constants'
+import { formatNumberCompact } from '@/config/ui/numberFormat'
 
 defineProps<{
   resonance: number
   /** 0..1 — Anteil der laufenden Stufe. */
   fill: number
+  /** Gehaltene Meeps — dieselbe Zahl, die der Header zeigt. */
+  meeps: number
 }>()
 
 defineEmits<{ hover: [boolean] }>()
@@ -108,36 +112,51 @@ const RING_C = 2 * Math.PI * RING_R
 }
 
 /* `contain`, nicht `cover`: die Vorlage ist eine freigestellte Figur, kein
-   Splash — beschnitten blieb bei dieser Größe nur ein goldener Fleck übrig.
-   Ganz gezeigt ist Bard auch auf 62 px als Figur zu erkennen. */
+   Splash — beschnitten blieb bei dieser Größe nur ein gelber Fleck übrig.
+
+   Das Meep-Sprite ist hochformatig (1024×1536) und trägt oben wie unten einen
+   Alpha-Rand. Die Box ist deshalb höher als beim quadratischen Bard-Artwork:
+   `contain` bindet hier an der HÖHE, die Breite folgt von selbst — eine
+   breitere Box würde die Figur kein Stück wachsen lassen. Der Fuß darf hinter
+   der Zahlenplatte enden; sie ist deckend, das liest sich als Standfläche. */
 .ab-passive-art {
   position: absolute;
-  top: 12%;
+  top: 5%;
   left: 12%;
   width: 76%;
-  height: 62%;
+  height: 68%;
   object-fit: contain;
   image-rendering: high-quality;
+  /* Statisch, nicht animiert: derselbe warme Schein wie an der Header-Kachel,
+     aber ohne deren pulsierenden `drop-shadow` — der wäre pro Frame eine
+     Neurasterung (Performance-Regel 2). */
+  filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.55));
 }
 
-/* Auf dem Fuß der Scheibe, damit die Zahl das Motiv nicht zerschneidet. Die
-   Figur endet darüber (Höhe 62 %), die Platte sitzt also auf freiem Grund. */
+/* Auf dem Fuß der Scheibe, damit die Zahl das Motiv nicht zerschneidet.
+   Orange wie im Header: die gehaltenen Meeps sind dieselbe Sache und tragen
+   im ganzen Spiel dieselbe Farbe. */
 .ab-stacks {
   position: absolute;
   bottom: 2%;
   left: 50%;
   transform: translateX(-50%);
   min-width: 2.4em;
+  max-width: 96%;
   padding: 1px 5px 2px;
   background: #1e1006;
   border: 1px solid #5c3310;
   border-radius: 3px;
-  font-size: calc(var(--ab-passive-size, 72px) * 0.26);
+  /* Etwas kleiner als die frühere Stufenzahl: die Kurzform wird bis zu fünf
+     Zeichen lang ("125Qa"), die einstellige Resonance war es nie. */
+  font-size: calc(var(--ab-passive-size, 72px) * 0.23);
   font-weight: 900;
   line-height: 1;
-  color: var(--ab-color, #f0d890);
+  color: #fed7aa;
+  text-shadow: 0 0 8px rgba(251, 146, 60, 0.35);
   font-variant-numeric: tabular-nums;
   text-align: center;
+  white-space: nowrap;
   pointer-events: none;
 }
 

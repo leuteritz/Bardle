@@ -47,6 +47,7 @@
       <BardPassiveTile
         :resonance="store.resonance"
         :fill="store.resonanceFill"
+        :meeps="gameStore.meeps"
         @hover="(on: boolean) => (hoveredId = on ? 'passive' : null)"
       />
 
@@ -74,6 +75,7 @@ import { useUiStore } from '@/stores/core/uiStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { onKeybinding, triggerKeybind } from '@/composables/system/useKeybindings'
+import { formatNumber } from '@/config/ui/numberFormat'
 import {
   BARD_ABILITIES,
   BARD_PASSIVE,
@@ -306,6 +308,9 @@ const hovered = computed(() => {
       tagline: BARD_PASSIVE.tagline,
       meta: capped ? 'MAX' : `${store.resonance} / ${RESONANCE_MAX_STACKS}`,
       lines: [
+        // Zuerst, weil die Kachel genau diese Zahl zeigt — gekürzt dort, voll
+        // hier, damit der Hover die Frage „wie viele genau?" beantwortet.
+        { label: 'Meeps held', value: formatNumber(gameStore.meeps) },
         { label: 'Ability power', value: `${((store.resonancePowerMult - 1) * 100).toFixed(0)}%` },
         { label: 'Cooldowns', value: `−${(store.resonanceCdr * 100).toFixed(1)}%` },
         { label: 'Every click', value: `−${(RESONANCE_CLICK_REFUND_MS / 1000).toFixed(2)}s off cooldowns` },
