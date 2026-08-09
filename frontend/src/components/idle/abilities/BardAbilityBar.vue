@@ -427,9 +427,9 @@ onUnmounted(() => {
 
 /* Trennt den Zustand (Passive) von den Knöpfen (Q W E R). */
 .ab-divider {
-  width: 2px;
-  height: calc(var(--ab-size) * 0.62);
-  background: linear-gradient(to bottom, transparent, #5c3310 25%, #5c3310 75%, transparent);
+  width: 1px;
+  height: calc(var(--ab-size) * 0.54);
+  background: linear-gradient(to bottom, transparent, #4a2a0e 28%, #4a2a0e 72%, transparent);
 }
 
 /* ── Meldung des letzten Wirkens ──────────────────────────────────────────

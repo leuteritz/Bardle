@@ -16,6 +16,14 @@
     <img class="ab-art" :src="def.image" :alt="def.name" draggable="false" @dragstart.prevent />
 
     <!--
+      Ein Verlauf oben und unten statt zweier Platten. Er fasst das Motiv ein
+      und trägt gleichzeitig die Lesbarkeit von Taste und Rangkerben — dafür
+      standen vorher ein Kasten mit Goldrahmen und eine Balkenreihe über die
+      volle Breite im Bild.
+    -->
+    <span class="ab-veil" aria-hidden="true"></span>
+
+    <!--
       Bereitschaftsschein. Eigene Ebene, damit der Schein selbst statisch im
       CSS steht und nur seine Deckkraft atmet — ein pulsender box-shadow am
       Rahmen würde die Box samt Schatten pro Frame neu rastern, und hier
@@ -88,10 +96,11 @@ const ariaLabel = computed(() =>
 
 <style scoped>
 /* ── Die Kachel ───────────────────────────────────────────────────────────
-   Holzrahmen wie jeder Container im Spiel, aber mit der Leitfarbe der
-   Fähigkeit als innerster Linie — vier Kacheln nebeneinander sind sonst vier
-   gleiche braune Quadrate, und im Kampf muss der Blick sie am Rand
-   auseinanderhalten, nicht am Motiv. */
+   Holzrahmen wie überall im Spiel, aber auf eine dunkle Haarlinie
+   zurückgenommen: vier helle 3px-Rahmen nebeneinander waren im HUD lauter als
+   die Motive, die sie einfassen. Auseinandergehalten werden die Kacheln jetzt
+   über die Leitfarbe an Rangkerbe und Bereitschaftsschein — dort, wo sie etwas
+   bedeutet, statt rundherum. */
 .ab-tile {
   position: relative;
   width: var(--ab-size, 84px);
@@ -100,22 +109,27 @@ const ariaLabel = computed(() =>
   padding: 0;
   overflow: hidden;
   background: #111008;
-  border: 3px solid #7a4e20;
-  border-radius: 5px;
+  border: 2px solid #4a2a0e;
+  border-radius: 4px;
   box-shadow:
-    inset 0 0 0 1px #3e200a,
-    0 6px 18px rgba(0, 0, 0, 0.8);
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 3px 10px rgba(0, 0, 0, 0.6);
   cursor: pointer;
   pointer-events: auto;
   user-select: none;
-  transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 160ms ease;
 }
 
+/* Der Rahmen hellt beim Überfahren auf — ein einmaliger Umschlag, kein
+   Dauerläufer (Performance-Regel 2). */
 .ab-tile:hover:not(:disabled) {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
+  border-color: #6b431a;
 }
 .ab-tile:active:not(:disabled) {
-  transform: translateY(-1px) scale(0.97);
+  transform: translateY(0) scale(0.975);
 }
 
 .ab-art {
@@ -129,32 +143,51 @@ const ariaLabel = computed(() =>
   image-rendering: high-quality;
 }
 
+/* Der Einfass-Verlauf. Zwei Bahnen in einem Element — oben für die Taste,
+   unten für die Kerbenreihe; die Mitte bleibt unberührt, damit das Motiv
+   nichts von seiner Farbe verliert. */
+.ab-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(4, 3, 1, 0.6), rgba(4, 3, 1, 0) 36%),
+    linear-gradient(to top, rgba(4, 3, 1, 0.7), rgba(4, 3, 1, 0) 32%);
+}
+
 /* ── Bereit ───────────────────────────────────────────────────────────────
    Der Schein liegt statisch im CSS; animiert wird nur seine Deckkraft. Die
-   Klasse setzt der Frame-Lauf, sobald die Abklingzeit durch ist. */
+   Klasse setzt der Frame-Lauf, sobald die Abklingzeit durch ist.
+
+   Zurückgenommen auf eine Innenlinie und einen Hauch Innenschein: der äußere
+   Schein legte um jede bereite Kachel einen Hof, und bereit sind meistens alle
+   vier gleichzeitig. */
 .ab-ready-glow {
   position: absolute;
   inset: 0;
-  border-radius: 3px;
+  border-radius: 2px;
   pointer-events: none;
   opacity: 0;
   box-shadow:
-    inset 0 0 0 2px var(--ab-color, #e8c040),
-    inset 0 0 16px color-mix(in srgb, var(--ab-color, #e8c040) 45%, transparent),
-    0 0 18px color-mix(in srgb, var(--ab-color, #e8c040) 40%, transparent);
+    inset 0 0 0 1px color-mix(in srgb, var(--ab-color, #e8c040) 72%, transparent),
+    inset 0 0 12px color-mix(in srgb, var(--ab-color, #e8c040) 20%, transparent);
 }
 
 .ab-tile--ready .ab-ready-glow {
-  animation: ab-breathe 2.2s ease-in-out infinite;
+  animation: ab-breathe 3.4s ease-in-out infinite;
+}
+
+.ab-tile--ready:hover:not(:disabled) .ab-ready-glow {
+  animation-duration: 1.8s;
 }
 
 @keyframes ab-breathe {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.3;
   }
   50% {
-    opacity: 1;
+    opacity: 0.68;
   }
 }
 
@@ -166,7 +199,7 @@ const ariaLabel = computed(() =>
 
 @keyframes ab-cast-flash {
   0% {
-    opacity: 1;
+    opacity: 0.85;
   }
   100% {
     opacity: 0;
@@ -182,7 +215,7 @@ const ariaLabel = computed(() =>
   inset: 0;
   transform-origin: top center;
   transform: scaleY(0);
-  background: rgba(6, 5, 2, 0.78);
+  background: rgba(6, 5, 2, 0.7);
   pointer-events: none;
 }
 
@@ -192,12 +225,14 @@ const ariaLabel = computed(() =>
   display: none;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--ab-size, 84px) * 0.36);
-  font-weight: 900;
+  /* Kleiner als zuvor: die Zahl soll sagen, wie lange es noch dauert, und
+     nicht die Kachel füllen. */
+  font-size: calc(var(--ab-size, 84px) * 0.28);
+  font-weight: 800;
   line-height: 1;
-  color: #f2ead2;
+  color: #e6dcbe;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
   pointer-events: none;
 }
 
@@ -220,8 +255,8 @@ const ariaLabel = computed(() =>
   cursor: not-allowed;
 }
 .ab-tile--locked .ab-art {
-  opacity: 0.5;
-  filter: grayscale(55%);
+  opacity: 0.42;
+  filter: grayscale(70%);
 }
 
 .ab-lock {
@@ -231,73 +266,81 @@ const ariaLabel = computed(() =>
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  background: rgba(6, 5, 2, 0.62);
-  color: #8a7a52;
+  gap: 2px;
+  background: rgba(6, 5, 2, 0.5);
+  color: #6f6244;
   pointer-events: none;
 }
 
 .ab-lock-level {
-  font-size: calc(var(--ab-size, 84px) * 0.15);
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  color: #b8a878;
+  font-size: calc(var(--ab-size, 84px) * 0.13);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #8d7f5c;
 }
 
 /* ── Keycap ───────────────────────────────────────────────────────────────
-   Oben links, auf einer eigenen dunklen Platte: über dem Motiv allein wäre
-   der Buchstabe je nach Bild mal lesbar und mal nicht. */
+   Der Buchstabe steht frei in der oberen Ecke — der Verlauf darunter trägt
+   seine Lesbarkeit, dafür braucht er keine eigene Platte mit Rahmen mehr. Er
+   ruht in gedämpftem Elfenbein und nimmt erst beim Überfahren die Leitfarbe
+   der Fähigkeit an. */
 .ab-key {
   position: absolute;
-  top: 0;
-  left: 0;
-  min-width: calc(var(--ab-size, 84px) * 0.3);
-  padding: 1px 5px 2px;
-  background: #1e1006;
-  border-right: 2px solid #5c3310;
-  border-bottom: 2px solid #5c3310;
-  border-radius: 2px 0 4px 0;
-  font-size: calc(var(--ab-size, 84px) * 0.24);
+  top: calc(var(--ab-size, 84px) * 0.05);
+  left: calc(var(--ab-size, 84px) * 0.09);
+  font-size: calc(var(--ab-size, 84px) * 0.2);
   font-weight: 900;
-  line-height: 1.1;
-  color: #e8c040;
-  text-align: center;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: #ded0a6;
+  opacity: 0.78;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;
+  transition:
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.ab-tile:hover:not(:disabled) .ab-key {
+  color: var(--ab-color, #e8c040);
+  opacity: 1;
 }
 
 .ab-tile--locked .ab-key {
-  color: #8a7a52;
+  color: #7a6d4c;
+  opacity: 0.7;
 }
 
 /* ── Rangkerben ───────────────────────────────────────────────────────────
-   Fünf Segmente über die volle Breite am Fuß. Sie sagen auf einen Blick, wie
-   weit die Fähigkeit gewachsen ist, ohne eine Zahl zu belegen. */
+   Fünf Segmente als Haarlinie am Fuß, eingerückt statt von Kante zu Kante:
+   die Reihe sagt weiterhin auf einen Blick, wie weit die Fähigkeit gewachsen
+   ist, liest sich aber als Teil des Bildes und nicht als Balken davor. */
 .ab-rank {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  right: calc(var(--ab-size, 84px) * 0.11);
+  bottom: calc(var(--ab-size, 84px) * 0.075);
+  left: calc(var(--ab-size, 84px) * 0.11);
   display: flex;
-  gap: 1px;
-  height: calc(var(--ab-size, 84px) * 0.07);
-  padding: 0 1px 1px;
+  gap: 2px;
+  height: max(2px, calc(var(--ab-size, 84px) * 0.028));
   pointer-events: none;
 }
 
 .ab-pip {
   flex: 1;
-  background: rgba(0, 0, 0, 0.65);
-  box-shadow: inset 0 0 0 1px rgba(122, 78, 32, 0.5);
+  border-radius: 1px;
+  background: rgba(232, 224, 196, 0.15);
 }
 
 .ab-pip--on {
   background: var(--ab-color, #e8c040);
+  opacity: 0.82;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ab-tile--ready .ab-ready-glow {
     animation: none;
-    opacity: 0.8;
+    opacity: 0.55;
   }
   .ab-tile--cast .ab-ready-glow {
     animation: none;

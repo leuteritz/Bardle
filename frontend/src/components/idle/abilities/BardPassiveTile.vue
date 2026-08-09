@@ -61,8 +61,9 @@ defineEmits<{ hover: [boolean] }>()
  * Radius zieht mit der halben Strichstärke nach außen, damit die ÄUSSERE Kante
  * bei 48,5 bleibt: die Kachel behält ihren Umriss, dünner wird die Linie nach
  * innen — und genau dieser Gewinn ist der Abstand, den die Figur bekommt.
+ * Zur Strichstärke 3 (siehe `.ab-ring-*`) gehört damit 48,5 − 1,5 = 47.
  */
-const RING_R = 46
+const RING_R = 47
 const RING_C = 2 * Math.PI * RING_R
 </script>
 
@@ -89,31 +90,38 @@ const RING_C = 2 * Math.PI * RING_R
   overflow: visible;
 }
 
+/* Haarlinien statt Bänder: der Fortschritt ist eine Nebeninformation und darf
+   die Kachel nicht umgürten. */
 .ab-ring-track {
   fill: none;
-  stroke: #4a2a0e;
-  stroke-width: 5;
+  stroke: #3a2210;
+  stroke-width: 3;
 }
 
 .ab-ring-fill {
   fill: none;
   stroke: var(--ab-color, #f0d890);
-  stroke-width: 5;
+  stroke-width: 3;
   stroke-linecap: round;
+  opacity: 0.9;
   transition: stroke-dashoffset 260ms ease-out;
 }
 
 /* Die Scheibe unter der Figur — sie trägt den dunklen Grund, damit das Motiv
-   selbst frei stehen kann. */
+   selbst frei stehen kann. Der zweite Verlauf dunkelt ihren Fuß ab und trägt
+   dort die Zahl; die hatte vorher eine eigene Platte mit Rahmen, und drei
+   konzentrische Kanten auf 72 px waren zwei zu viel. */
 .ab-passive-disc {
   position: absolute;
-  top: 7%;
-  left: 7%;
-  width: 86%;
-  height: 86%;
+  top: 6%;
+  left: 6%;
+  width: 88%;
+  height: 88%;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 34%, #241708, #100e08 72%);
-  box-shadow: inset 0 0 0 2px #5c3310;
+  background:
+    linear-gradient(to top, rgba(4, 3, 1, 0.78), rgba(4, 3, 1, 0) 34%),
+    radial-gradient(circle at 50% 34%, #241708, #100e08 72%);
+  box-shadow: inset 0 0 0 1px #45280f;
 }
 
 /* `contain`, nicht `cover`: die Vorlage ist eine freigestellte Figur, kein
@@ -125,43 +133,41 @@ const RING_C = 2 * Math.PI * RING_R
    Stück wachsen lassen, eine höhere schiebt sie sofort an den Ring.
 
    Die Höhe ist gegen die beiden Nachbarn gesetzt, nicht gegen die Kachel: oben
-   die Ring-INNENkante (6,5 %), unten die Oberkante der Zahlenplatte (68 %).
-   Die Figur sitzt mittig in diesem Streifen und hält zu beiden Seiten Luft. */
+   die Ring-INNENkante (4,5 %), unten die Oberkante der Zahl (~72 %). Die Figur
+   sitzt mittig in diesem Streifen und hält zu beiden Seiten Luft. */
 .ab-passive-art {
   position: absolute;
-  top: 9%;
+  top: 11%;
   left: 12%;
   width: 76%;
-  height: 57%;
+  height: 58%;
   object-fit: contain;
   image-rendering: high-quality;
   /* Statisch, nicht animiert: derselbe warme Schein wie an der Header-Kachel,
      aber ohne deren pulsierenden `drop-shadow` — der wäre pro Frame eine
-     Neurasterung (Performance-Regel 2). */
-  filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.55));
+     Neurasterung (Performance-Regel 2). Enger und schwächer als dort: auf
+     72 px war aus dem Schein ein oranger Nebel um die ganze Figur geworden. */
+  filter: drop-shadow(0 1px 4px rgba(251, 146, 60, 0.3));
 }
 
-/* Auf dem Fuß der Scheibe, damit die Zahl das Motiv nicht zerschneidet.
-   Orange wie im Header: die gehaltenen Meeps sind dieselbe Sache und tragen
-   im ganzen Spiel dieselbe Farbe. */
+/* Auf dem Fuß der Scheibe, damit die Zahl das Motiv nicht zerschneidet — und
+   ohne Platte: den dunklen Grund liefert der Verlauf der Scheibe selbst.
+   Orange wie im Header, nur eine Spur gedämpfter: die gehaltenen Meeps sind
+   dieselbe Sache und tragen im ganzen Spiel dieselbe Farbe. */
 .ab-stacks {
   position: absolute;
-  bottom: 2%;
+  bottom: 7%;
   left: 50%;
   transform: translateX(-50%);
-  min-width: 2.4em;
-  max-width: 96%;
-  padding: 1px 5px 2px;
-  background: #1e1006;
-  border: 1px solid #5c3310;
-  border-radius: 3px;
+  max-width: 78%;
   /* Etwas kleiner als die frühere Stufenzahl: die Kurzform wird bis zu fünf
      Zeichen lang ("125Qa"), die einstellige Resonance war es nie. */
-  font-size: calc(var(--ab-passive-size, 72px) * 0.23);
-  font-weight: 900;
+  font-size: calc(var(--ab-passive-size, 72px) * 0.21);
+  font-weight: 800;
   line-height: 1;
-  color: #fed7aa;
-  text-shadow: 0 0 8px rgba(251, 146, 60, 0.35);
+  letter-spacing: 0.01em;
+  color: #f5c99b;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   font-variant-numeric: tabular-nums;
   text-align: center;
   white-space: nowrap;
