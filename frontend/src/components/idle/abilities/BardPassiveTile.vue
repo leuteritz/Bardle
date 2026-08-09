@@ -56,8 +56,13 @@ defineProps<{
 
 defineEmits<{ hover: [boolean] }>()
 
-/** Radius und Umfang der Kreislinie im 100×100-Koordinatenraum des SVG. */
-const RING_R = 45
+/**
+ * Radius und Umfang der Kreislinie im 100×100-Koordinatenraum des SVG. Der
+ * Radius zieht mit der halben Strichstärke nach außen, damit die ÄUSSERE Kante
+ * bei 48,5 bleibt: die Kachel behält ihren Umriss, dünner wird die Linie nach
+ * innen — und genau dieser Gewinn ist der Abstand, den die Figur bekommt.
+ */
+const RING_R = 46
 const RING_C = 2 * Math.PI * RING_R
 </script>
 
@@ -87,13 +92,13 @@ const RING_C = 2 * Math.PI * RING_R
 .ab-ring-track {
   fill: none;
   stroke: #4a2a0e;
-  stroke-width: 8;
+  stroke-width: 5;
 }
 
 .ab-ring-fill {
   fill: none;
   stroke: var(--ab-color, #f0d890);
-  stroke-width: 8;
+  stroke-width: 5;
   stroke-linecap: round;
   transition: stroke-dashoffset 260ms ease-out;
 }
@@ -102,10 +107,10 @@ const RING_C = 2 * Math.PI * RING_R
    selbst frei stehen kann. */
 .ab-passive-disc {
   position: absolute;
-  top: 10%;
-  left: 10%;
-  width: 80%;
-  height: 80%;
+  top: 7%;
+  left: 7%;
+  width: 86%;
+  height: 86%;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 34%, #241708, #100e08 72%);
   box-shadow: inset 0 0 0 2px #5c3310;
@@ -115,16 +120,19 @@ const RING_C = 2 * Math.PI * RING_R
    Splash — beschnitten blieb bei dieser Größe nur ein gelber Fleck übrig.
 
    Das Meep-Sprite ist hochformatig (1024×1536) und trägt oben wie unten einen
-   Alpha-Rand. Die Box ist deshalb höher als beim quadratischen Bard-Artwork:
-   `contain` bindet hier an der HÖHE, die Breite folgt von selbst — eine
-   breitere Box würde die Figur kein Stück wachsen lassen. Der Fuß darf hinter
-   der Zahlenplatte enden; sie ist deckend, das liest sich als Standfläche. */
+   Alpha-Rand. Die Box ist deshalb höher als breit: `contain` bindet hier an der
+   HÖHE, die Breite folgt von selbst — eine breitere Box würde die Figur kein
+   Stück wachsen lassen, eine höhere schiebt sie sofort an den Ring.
+
+   Die Höhe ist gegen die beiden Nachbarn gesetzt, nicht gegen die Kachel: oben
+   die Ring-INNENkante (6,5 %), unten die Oberkante der Zahlenplatte (68 %).
+   Die Figur sitzt mittig in diesem Streifen und hält zu beiden Seiten Luft. */
 .ab-passive-art {
   position: absolute;
-  top: 5%;
+  top: 9%;
   left: 12%;
   width: 76%;
-  height: 68%;
+  height: 57%;
   object-fit: contain;
   image-rendering: high-quality;
   /* Statisch, nicht animiert: derselbe warme Schein wie an der Header-Kachel,
