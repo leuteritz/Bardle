@@ -296,21 +296,16 @@ const gate = computed<EvolveGate>(() => {
   }
 })
 
-/* ── Chronicle ───────────────────────────────────────────────── */
-/* Die Kontextsuche der Spalte filtert die Wappen des Chronicle unter dem Dial.
-   Sie liegt hier, weil der Spaltenkopf sie trägt; ausgewertet wird sie in
-   ChronicleSection. */
-const chronicleSearch = ref('')
-
+/* Der Astral Codex unter dem Dial bringt seinen eigenen Kopf samt Suche mit —
+   die stand vorher hier oben und filterte von dort seine Wappen. */
 </script>
 
 <template>
   <section class="sf-panel sf-col sf-col--solar" :style="phaseVars">
-    <StatsColumnHeader
-      v-model="chronicleSearch"
-      title="Solar Evolution"
-      placeholder="Search milestones…"
-    />
+    <!-- Ohne Suchfeld: die Spalte ist EIN Schaubild, an dem es nichts zu
+         filtern gibt. Das Feld, das hier stand, gehörte dem Codex darunter und
+         steht jetzt in dessen eigenem Kopf. -->
+    <StatsColumnHeader title="Solar Evolution" />
 
     <div class="sf-p-body sf-solar-body">
       <!-- ─ Orbit dial: the live sun ringed by its seven phases ─ -->
@@ -505,8 +500,8 @@ const chronicleSearch = ref('')
         <!-- /TEMP -->
       </div>
 
-      <!-- ─ Chronicle: die Meilenstein-Bahnen unter dem Dial ─ -->
-      <ChronicleSection :search="chronicleSearch" />
+      <!-- ─ Astral Codex: die Meilenstein-Bahnen unter dem Dial ─ -->
+      <ChronicleSection />
     </div>
   </section>
 </template>

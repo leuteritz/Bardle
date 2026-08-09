@@ -14,7 +14,8 @@ export const galaxiesCategory: EncyclopediaCategory = {
         'Travel time grows with depth and shrinks with Flight Speed.',
       lore: 'One rescued light at a time.',
       formula:
-        'Stars required = 3 + (galaxy − 1)\n' + 'Travel = (60 s + (galaxy − 1) × 30 s) / flight speed',
+        'Stars required = 3 + (galaxy − 1)\n' +
+        'Travel = (60 s + (galaxy − 1) × 30 s) / flight speed',
       related: ['galaxy-boss', 'solar-rays'],
     },
     {
@@ -155,12 +156,12 @@ export const prestigeCategory: EncyclopediaCategory = {
 
 export const chronicleCategory: EncyclopediaCategory = {
   id: 'chronicle',
-  title: "The Bard's Chronicle",
+  title: 'The Astral Codex',
   icon: 'game-icons:book-cover',
   entries: [
     {
       id: 'chronicle',
-      name: 'Chronicle',
+      name: 'Astral Codex',
       icon: 'game-icons:scroll-quill',
       description:
         'Eight tracks of milestones, one per system — chimes, roster, ladder, drifters, forge, planets, bosses and stars. ' +

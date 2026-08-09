@@ -299,7 +299,7 @@ onUnmounted(() => {
                   <div v-if="item.id === 'bard' && chronicleBadgeCount > 0" class="team-badge-row">
                     <span
                       class="mini-badge mini-badge--chronicle"
-                      :title="`${chronicleBadgeCount} Chronicle ${chronicleBadgeCount === 1 ? 'track has' : 'tracks have'} a new stage`"
+                      :title="`${chronicleBadgeCount} Astral Codex ${chronicleBadgeCount === 1 ? 'track has' : 'tracks have'} a new stage`"
                     >{{ chronicleBadgeCount }}</span>
                   </div>
                   <div v-if="item.id === 'planets' && planetBadgeCount > 0" class="team-badge-row">

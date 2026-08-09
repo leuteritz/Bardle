@@ -2,20 +2,29 @@
 import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 
 /**
- * The header strip shared by all three Bard-Stats columns: gold headline on the
- * left, context search on the right. It lives in its own component because the
- * three headers must stay pixel-identical — same height, same type scale, same
- * behaviour at every desktop resolution. Only their column widths differ.
+ * The header strip shared by every panel of the Bard-Stats deck: gold headline
+ * on the left, optional readouts and context search on the right. It lives in
+ * its own component because the headers must stay pixel-identical — same
+ * height, same type scale, same behaviour at every desktop resolution. Only
+ * their panel widths differ.
+ *
+ * Two parts are optional so the same strip fits all five call sites:
+ * - no `placeholder` → no search field. The Solar dial is one figure; there is
+ *   nothing in it to filter, and an inert field in its head only suggested
+ *   otherwise.
+ * - `#meta` → readouts that belong to the panel's title rather than its body
+ *   (the Astral Codex puts its rank and stage count there). They sit right of
+ *   the headline, pinned to the search.
  */
 defineProps<{
-  /** gold headline — the column's name */
+  /** gold headline — the panel's name */
   title: string
-  /** placeholder of the column's context search */
-  placeholder: string
+  /** placeholder of the panel's context search; omit it to drop the field */
+  placeholder?: string
 }>()
 
-/** two-way bound query string, owned by the column that renders this header */
-const search = defineModel<string>({ required: true })
+/** two-way bound query string, owned by the panel that renders this header */
+const search = defineModel<string>({ default: '' })
 </script>
 
 <template>
@@ -23,7 +32,16 @@ const search = defineModel<string>({ required: true })
     <span class="sf-p-title">
       <span v-ink-center class="sf-p-label">{{ title }}</span>
     </span>
-    <RpgSearchBar v-model="search" class="sf-search-wrap" size="sm" :placeholder="placeholder" />
+    <span v-if="$slots.meta" class="sf-p-meta">
+      <slot name="meta" />
+    </span>
+    <RpgSearchBar
+      v-if="placeholder"
+      v-model="search"
+      class="sf-search-wrap"
+      size="sm"
+      :placeholder="placeholder"
+    />
   </header>
 </template>
 
@@ -48,6 +66,17 @@ const search = defineModel<string>({ required: true })
   display: flex;
   align-items: center;
   min-width: 0;
+}
+
+/* Readouts next to the headline. `margin-left: auto` beats the parent's
+   space-between, so they never float in the middle of the strip: they park
+   against the search box and travel with it when the panel narrows. */
+.sf-p-meta {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  margin-left: auto;
 }
 
 .sf-p-label {
@@ -76,7 +105,11 @@ const search = defineModel<string>({ required: true })
    titles well above the body type. */
 @media (max-height: 1100px) {
   .sf-p-head {
-    min-height: 44px;
+    /* 47 = die 34px des kompakten Suchfelds plus Polster und Trennlinie. Die
+       Zahl steht hier, weil sie sonst nur DIE Köpfe mit Suche träfen: gemessen
+       fiel der suchlose Kopf über dem Sonnen-Dial auf 44 und stand damit als
+       einziger drei Pixel flacher als seine vier Geschwister. */
+    min-height: 47px;
     padding: 6px 12px;
   }
   .sf-p-label {

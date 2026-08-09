@@ -9,10 +9,13 @@ import {
 } from '@/config/progression/achievements'
 import { CHRONICLE_STAGES_PER_TRACK } from '@/config/constants'
 import { toRoman } from '@/utils/ui/format'
+import StatsColumnHeader from './StatsColumnHeader.vue'
 import type { ChronicleTrackView } from '@/types'
 
 /**
- * The Bard's Chronicle — der Streifen unter der Sonne im Bard-Stats-Deck.
+ * The Astral Codex — der Streifen unter der Sonne im Bard-Stats-Deck. Die
+ * Bahnen heißen im Code weiter `CHRONICLE_*`: die Umbenennung ist eine reine
+ * Anzeigesache, und der Spielstand trägt den Schlüssel `chronicle`.
  *
  * Warum Master-Detail und nicht acht Karten: der Platz hier ist gemessen
  * 422×278 px auf WUXGA (dem Engpass — die Mittelspalte ist dort SCHMALER als
@@ -23,12 +26,13 @@ import type { ChronicleTrackView } from '@/types'
  * Deshalb tragen acht Wappen den Überblick (Bahn, Stufe, Fortschritt) und EIN
  * Feld darunter die Tiefe. Das macht den Hover zum Kern der Bedienung statt zur
  * Dekoration: fahren zeigt, klicken heftet an.
+ *
+ * Der Kopf ist derselbe `StatsColumnHeader` wie über Journey, Galaxy Archive
+ * und Buffs & Augments — der Deck-Kanon aus goldener Überschrift und
+ * Kontextsuche gilt damit für alle vier durchsuchbaren Panels. Die Suche hat
+ * vorher im Kopf der Spalte gestanden und von dort die Wappen gefiltert; sie
+ * gehört dorthin, wo sie wirkt.
  */
-const props = defineProps<{
-  /** Kontextsuche der Spalte — hebt Treffer hervor und dimmt den Rest. */
-  search?: string
-}>()
-
 const uiStore = useUiStore()
 const store = useAchievementStore()
 
@@ -53,7 +57,10 @@ const hoverId = ref<string | null>(null)
 
 const tracks = computed(() => store.trackViews)
 
-const query = computed(() => (props.search ?? '').trim().toLowerCase())
+/** Kontextsuche des Panels — hebt Treffer hervor und dimmt den Rest. */
+const search = ref('')
+
+const query = computed(() => search.value.trim().toLowerCase())
 
 function matches(track: ChronicleTrackView): boolean {
   if (!query.value) return true
@@ -126,15 +133,22 @@ watch(query, () => {
 
 <template>
   <div class="cr-zone">
-    <!-- Rubrik-Zeile: gleiche Bauart wie die anderen Zonen des Decks -->
-    <div class="cr-rule">
-      <span v-ink-center class="cr-rule-lbl">Chronicle</span>
-      <span class="cr-rule-rank">{{ store.rankTitle }}</span>
-      <span class="cr-rule-count">
-        <span class="cr-rule-num">{{ store.unlockedStageCount }}</span>
-        <span class="cr-rule-sep">/</span>{{ CHRONICLE_TOTAL_STAGES }}
-      </span>
-    </div>
+    <!-- Derselbe Kopf wie über den anderen Deck-Panels, nur mit zwei Ablesungen
+         zwischen Überschrift und Suche: der erreichte Rang und der Stand. -->
+    <StatsColumnHeader
+      v-model="search"
+      class="cr-head"
+      title="Astral Codex"
+      placeholder="Search tracks…"
+    >
+      <template #meta>
+        <span class="cr-rank">{{ store.rankTitle }}</span>
+        <span class="cr-count">
+          <span class="cr-count-num">{{ store.unlockedStageCount }}</span>
+          <span class="cr-count-sep">/</span>{{ CHRONICLE_TOTAL_STAGES }}
+        </span>
+      </template>
+    </StatsColumnHeader>
 
     <!-- Gesamtleiter mit Rang-Kerben -->
     <div class="cr-meter">
@@ -261,10 +275,15 @@ watch(query, () => {
 
    Die Werte sind gegen den gemessenen Platz gerechnet: der Spaltenkörper hat
    587 px auf Full HD, 861 auf 2K und 1555 auf 4K. Was hier abgeht, bekommt der
-   Dial — mit 250 px bleiben ihm auf Full HD 329 px, mehr als die 281, die er
-   neben dem alten Augment-Deck hatte. */
+   Dial — mit 274 px bleiben ihm auf Full HD 303 px, mehr als die 281, die er
+   neben dem alten Augment-Deck hatte.
+
+   Die Basiswerte tragen den vollen Deck-Header (50 px / 44 kompakt / 58 auf 4K)
+   statt der 20 px hohen Mini-Rubrik, die hier vorher stand — jede Stufe ist um
+   genau diesen Unterschied gewachsen, damit unter dem Kopf so viel Feld steht
+   wie zuvor. */
 .cr-zone {
-  flex: 0 0 290px;
+  flex: 0 0 320px;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -278,28 +297,20 @@ watch(query, () => {
   container-type: inline-size;
 }
 
-/* ─ Rubrik ─ */
-.cr-rule {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid #2c1806;
+/* ─ Kopf ─
+   Der geteilte Deck-Header. Er zieht sich um das Polster des Spaltenkörpers
+   (10px 12px) nach außen, damit seine Trennlinie wie die der anderen Panels
+   von Kante zu Kante läuft, während sein eigenes 12px-Polster den Text weiter
+   bündig mit dem Inhalt darunter hält. */
+.cr-head {
+  margin-inline: -12px;
 }
 
-.cr-rule-lbl {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--rpg-gold);
-  white-space: nowrap;
-}
-
-/* Der Rang ist die Belohnung fürs Sammeln — er steht direkt neben dem Namen
-   der Zone und nicht als Fußnote. */
-.cr-rule-rank {
+/* Der Rang ist die Belohnung fürs Sammeln — er steht neben dem Namen der Zone
+   und nicht als Fußnote. Er weicht als Erstes: auf der schmalsten Mittelspalte
+   (WUXGA, 397px) müssen Überschrift, Stand und Suche zusammen durchpassen. */
+.cr-rank {
+  min-width: 0;
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -309,8 +320,7 @@ watch(query, () => {
   text-overflow: ellipsis;
 }
 
-.cr-rule-count {
-  margin-left: auto;
+.cr-count {
   flex-shrink: 0;
   padding: 3px 8px;
   font-size: 12px;
@@ -322,13 +332,38 @@ watch(query, () => {
   font-variant-numeric: tabular-nums;
 }
 
-.cr-rule-num {
+.cr-count-num {
   font-weight: 900;
   color: var(--rpg-gold);
 }
 
-.cr-rule-sep {
+.cr-count-sep {
   color: #6b5a3c;
+}
+
+/* Vier Ablesungen in einer Zeile, die auf WUXGA nur 397px breit ist: das
+   Suchfeld gibt hier mehr nach als in den Seitenspalten, wo neben der
+   Überschrift nichts sonst steht. */
+.cr-head :deep(.sf-search-wrap) {
+  flex: 0 1 150px;
+  min-width: 92px;
+}
+
+/* Der Rang weicht als Erstes. Gemessen brauchen Überschrift, Rang, Stand und
+   Suche zusammen 459px; die Mittelspalte ist aber auf WUXGA nur 421px breit
+   (dem Engpass — sie ist dort SCHMALER als auf Full HD, weil die
+   Bottom-Bar-Panels mit der Höhe skalieren), und dann ellipsierten Titel UND
+   Rang zugleich. Lieber eine Ablesung ganz weglassen als zwei halbieren: der
+   Name des Panels und sein Stand müssen stehen, der Rangtitel steht ohnehin
+   auch im Stat-Katalog der linken Spalte.
+
+   Die Schwelle hängt am Container, nicht am Viewport — die Breite dieser Zone
+   folgt weder Viewportbreite noch -höhe allein, dasselbe Argument wie bei den
+   `cqw`-Schriftgrößen unten. */
+@container (max-width: 460px) {
+  .cr-rank {
+    display: none;
+  }
 }
 
 /* ─ Gesamtleiter ─ */
@@ -667,7 +702,7 @@ watch(query, () => {
    Schrift: die Wappen rücken zusammen, die Zahlen bleiben. */
 @media (max-height: 1100px) {
   .cr-zone {
-    flex-basis: 250px;
+    flex-basis: 274px;
     gap: 6px;
   }
   .cr-crest {
@@ -694,16 +729,13 @@ watch(query, () => {
    Viewporthöhe ablesbar ist. */
 @media (min-height: 1600px) {
   .cr-zone {
-    flex-basis: 420px;
+    flex-basis: 458px;
     gap: 11px;
   }
-  .cr-rule-lbl {
-    font-size: 14px;
-  }
-  .cr-rule-rank {
+  .cr-rank {
     font-size: 13px;
   }
-  .cr-rule-count {
+  .cr-count {
     font-size: 14px;
   }
   .cr-crest {

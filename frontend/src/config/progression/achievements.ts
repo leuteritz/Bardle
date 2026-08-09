@@ -184,7 +184,7 @@ export const CHRONICLE_RANKS: { min: number; title: string }[] = [
   { min: 0, title: 'Unwritten' },
   { min: 1, title: 'Page Keeper' },
   { min: 8, title: 'Storywright' },
-  { min: 16, title: 'Chronicler' },
+  { min: 16, title: 'Codexbound' },
   { min: 24, title: 'Loremaster' },
   { min: 32, title: 'Stargazer' },
   { min: CHRONICLE_TOTAL_STAGES, title: 'Unending Tale' },

@@ -181,15 +181,15 @@ export function useStatCatalog(query: Ref<string>): {
       },
       {
         key: 'chronicle-stages',
-        label: 'Chronicle Stages',
+        label: 'Codex Stages',
         value: ratio(achievementStore.unlockedStageCount, CHRONICLE_TOTAL_STAGES),
-        keywords: 'milestones achievements tracks',
+        keywords: 'astral codex milestones achievements tracks chronicle',
       },
       {
         key: 'chronicle-rank',
-        label: 'Chronicle Rank',
+        label: 'Codex Rank',
         value: achievementStore.rankTitle,
-        keywords: 'milestones achievements title',
+        keywords: 'astral codex milestones achievements title chronicle',
       },
     ]
   })

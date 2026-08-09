@@ -10,7 +10,11 @@ import { useShopStore } from '@/stores/economy/shopStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { logChronicleStage } from '@/config/ui/eventLog'
 import { toRoman } from '@/utils/ui/format'
-import { CHRONICLE_TRACKS, CHRONICLE_TOTAL_STAGES, chronicleRank } from '@/config/progression/achievements'
+import {
+  CHRONICLE_TRACKS,
+  CHRONICLE_TOTAL_STAGES,
+  chronicleRank,
+} from '@/config/progression/achievements'
 import { CHRONICLE_HERALD_ACCENT } from '@/config/constants'
 import type {
   ChronicleBonusKey,
@@ -238,7 +242,7 @@ export const useAchievementStore = defineStore('achievement', {
         logChronicleStage(track.name, numeral, effect)
         useHerald().announce({
           kind: 'chronicle',
-          eyebrow: 'CHRONICLE',
+          eyebrow: 'ASTRAL CODEX',
           headline: `${track.name} ${numeral}`,
           subline: effect,
           icon: track.icon,
