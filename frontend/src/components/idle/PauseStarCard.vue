@@ -23,7 +23,9 @@ import PlanetGlyph from '@/components/ui/PlanetGlyph.vue'
 import {
   PAUSE_STAR_CARD_WIDTH,
   PAUSE_STAR_CARD_HEIGHT,
+  PAUSE_STAR_DIAL_PX,
   PAUSE_STAR_RING_RADIUS,
+  PAUSE_STAR_RING_STROKE,
   PAUSE_STAR_RING_CIRCUMFERENCE,
   PAUSE_STAR_URGENT_SECS,
   PAUSE_STAR_PLANET_GLYPH_PX,
@@ -84,6 +86,8 @@ const glyphPx = computed(() =>
       '--planet-cell': `${cellPx}px`,
       '--planet-gap': `${PAUSE_STAR_PLANET_GAP_PX}px`,
       '--planet-row-w': `${PAUSE_STAR_PLANET_ROW_WIDTH}px`,
+      '--dial-px': `${PAUSE_STAR_DIAL_PX}px`,
+      '--ring-stroke': PAUSE_STAR_RING_STROKE,
       width: `${PAUSE_STAR_CARD_WIDTH}px`,
       height: `${PAUSE_STAR_CARD_HEIGHT}px`,
     }"
@@ -106,9 +110,13 @@ const glyphPx = computed(() =>
           :stroke-dashoffset="dashOffset"
         />
       </svg>
-      <span class="dial-value">
-        {{ secs }}<span class="dial-unit">s</span>
-      </span>
+      <!-- `.y` gleicht das Seitenlager der MedievalSharp-Ziffern aus: sie sitzen
+           mit Ascent 17,2 px gegen Descent 0,8 px fast vollständig über der
+           Baseline, und eine bloß zentrierte Zeilenbox stellt sie damit sichtbar
+           zu hoch in den Ring (gemessen 3,7 px bei 21,6 px Schrift). -->
+      <span v-ink-center.y class="dial-value"
+        >{{ secs }}<span class="dial-unit">s</span></span
+      >
     </div>
 
     <div class="star-card__body">
@@ -187,12 +195,14 @@ const glyphPx = computed(() =>
 }
 
 /* ── Zifferblatt ──────────────────────────────────────── */
+/* Maß kommt inline aus PAUSE_STAR_DIAL_PX — dieselbe Quelle, aus der sich die
+   Breite der Planetenspalte ableitet. */
 .star-card__dial {
   position: relative;
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: var(--dial-px);
+  height: var(--dial-px);
   flex-shrink: 0;
 }
 .dial-svg {
@@ -207,12 +217,12 @@ const glyphPx = computed(() =>
 .dial-track {
   fill: none;
   stroke: rgba(122, 78, 32, 0.5);
-  stroke-width: 4;
+  stroke-width: var(--ring-stroke);
 }
 .dial-arc {
   fill: none;
   stroke: var(--star-color);
-  stroke-width: 4.5;
+  stroke-width: var(--ring-stroke);
   stroke-linecap: round;
   /* Weicher Nachlauf beim Sekundensprung — 1×/s, kein Dauerläufer. */
   transition:
@@ -237,9 +247,18 @@ const glyphPx = computed(() =>
 .star-card--urgent .dial-value {
   color: #ff8a7a;
 }
+/* Die Einheit belegt KEINE Breite: sonst wäre nicht die Zahl mittig im Ring,
+   sondern die Gruppe aus Zahl und „s" — und die Ziffern stünden um deren halbe
+   Breite links der Achse (gemessen 3,8 px von 38,5 px Innenkreis). Mit
+   `width: 0` zentriert das Grid des Zifferblatts allein die Ziffern, das „s"
+   ragt nach rechts aus seiner leeren Box. Es bleibt Flex-Item und behält damit
+   die Baseline der Ziffern, ohne dass sie irgendwo nachgerechnet werden müsste;
+   `min-width: 0` ist Pflicht, weil Flex-Items sonst auf ihre Inhaltsbreite
+   aufgehen. */
 .dial-unit {
-  margin-left: 1px;
-  font-size: 0.58em;
+  width: 0;
+  min-width: 0;
+  font-size: 0.5em;
   font-weight: 700;
   opacity: 0.6;
 }

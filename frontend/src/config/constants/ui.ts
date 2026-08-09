@@ -237,10 +237,22 @@ export const PAUSE_HP_WIDTH_PROBES = [1, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1]
 // Höhe stimmt nicht mehr.
 export const PAUSE_STAR_CARD_WIDTH = 170
 export const PAUSE_STAR_CARD_HEIGHT = 74
-/** Zifferblatt der Restzeit: Radius und Umfang der SVG-Kreislinie.
+/** Kantenlänge des Zifferblatts. Sie ist am Textinhalt bemessen, nicht am
+ *  freien Platz: die Restzeit steht IM Ring, und der nutzbare Raum ist der
+ *  Innenkreis, nicht dessen Kasten. Gemessen bei 52 px stand „28s" (34 px
+ *  Advance, 18 px Tinte hoch) in einem Innenkreis von 38,5 px — auf Höhe der
+ *  Tintenkante bleiben davon nur 2 · 3,5 px, und die Zahl klebte am Bogen.
+ *  60 px heben den Innenkreis auf 47 px. */
+export const PAUSE_STAR_DIAL_PX = 60
+/** Zifferblatt der Restzeit: Radius, Strichstärke und Umfang der SVG-Kreislinie
+ *  (viewBox 56 — der Radius ist also keine Pixelangabe, sondern wird mit
+ *  PAUSE_STAR_DIAL_PX / 56 skaliert).
  *  Der Fortschritt läuft über stroke-dashoffset — dieselbe Technik wie beim
- *  Ability-Ring, siehe „Performance" Regel 11. */
-export const PAUSE_STAR_RING_RADIUS = 23
+ *  Ability-Ring, siehe „Performance" Regel 11.
+ *  Track und Bogen teilen sich Radius UND Stärke: liefen sie auseinander, säße
+ *  der abbrennende Bogen neben seiner eigenen Spur. */
+export const PAUSE_STAR_RING_RADIUS = 24
+export const PAUSE_STAR_RING_STROKE = 4
 export const PAUSE_STAR_RING_CIRCUMFERENCE = 2 * Math.PI * PAUSE_STAR_RING_RADIUS
 /** Ab dieser Restzeit (Sekunden) schlägt das Zifferblatt auf Alarm um. */
 export const PAUSE_STAR_URGENT_SECS = 10
@@ -254,10 +266,10 @@ export const PAUSE_STAR_PLANET_GLYPH_PX = 34
 export const PAUSE_STAR_PLANET_CELL_PX = 27
 export const PAUSE_STAR_PLANET_GAP_PX = 3
 /** Platz, den die Planetenreihe in der Karte hat: Kartenbreite abzüglich
- *  Innenabstand (2 × 10), Zifferblatt (52) und dessen Lücke (8). Trägt ein
- *  Stern mehr Slots als die Regel-Anzahl, rücken Zelle und Glyph zusammen,
- *  statt aus der Karte zu laufen. */
-export const PAUSE_STAR_PLANET_ROW_WIDTH = 90
+ *  Innenabstand (2 × 10), Zifferblatt (PAUSE_STAR_DIAL_PX) und dessen Lücke (8).
+ *  Trägt ein Stern mehr Slots als die Regel-Anzahl, rücken Zelle und Glyph
+ *  zusammen, statt aus der Karte zu laufen. */
+export const PAUSE_STAR_PLANET_ROW_WIDTH = PAUSE_STAR_CARD_WIDTH - 2 * 10 - PAUSE_STAR_DIAL_PX - 8
 
 // ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
 // Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,
