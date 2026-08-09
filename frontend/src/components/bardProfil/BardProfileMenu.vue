@@ -22,7 +22,6 @@ import BattleResultComponent from '@/components/bardProfil/battle/BattleResultCo
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
-import ChronicleTab from '@/components/bardProfil/chronicle/ChronicleTab.vue'
 import ActionToast from '@/components/bardProfil/ActionToast.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 
@@ -45,7 +44,8 @@ const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
 const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
 // Chronicle: Bahnen mit einer Stufe, die der Spieler noch nicht gesehen hat.
 // Das Banner ist längst verklungen, wenn er das Profil öffnet — das Abzeichen
-// ist der Hinweis, dass dort etwas Neues steht.
+// ist der Hinweis, dass dort etwas Neues steht. Es hängt am Bard-Tab, weil das
+// Chronicle dort unter der Sonne wohnt.
 const chronicleBadgeCount = computed(() => achievementStore.unseen.length)
 // Planet tab: TOTAL affordable level-ups across all six orbit slots right now
 // (matches the middle-header planet badge).
@@ -85,10 +85,6 @@ const menuItems: {
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM-128.png' },
   { id: 'battle', label: '', icon: '', src: '/img/menu/BATTLE-128.png' },
   { id: 'planets', label: '', icon: '', src: '/img/planet-256.png' },
-  // Kein Artwork unter /img/menu/ — das Chronicle ist als Buch eindeutig genug,
-  // und ein Glyph in der Reihe der Bilder markiert es zusätzlich als das, was es
-  // ist: eine Übersicht über die anderen Tabs, kein System neben ihnen.
-  { id: 'chronicle', label: '', icon: 'game-icons:book-cover', src: '' },
   { id: 'admin', label: 'Admin', icon: 'lucide:settings-2', src: '' },
 ]
 
@@ -276,10 +272,10 @@ onUnmounted(() => {
                   <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
                     <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
                   </div>
-                  <div v-if="item.id === 'chronicle' && chronicleBadgeCount > 0" class="team-badge-row">
+                  <div v-if="item.id === 'bard' && chronicleBadgeCount > 0" class="team-badge-row">
                     <span
                       class="mini-badge mini-badge--chronicle"
-                      :title="`${chronicleBadgeCount} ${chronicleBadgeCount === 1 ? 'track has' : 'tracks have'} a new stage`"
+                      :title="`${chronicleBadgeCount} Chronicle ${chronicleBadgeCount === 1 ? 'track has' : 'tracks have'} a new stage`"
                     >{{ chronicleBadgeCount }}</span>
                   </div>
                   <div v-if="item.id === 'planets' && planetBadgeCount > 0" class="team-badge-row">
@@ -342,14 +338,6 @@ onUnmounted(() => {
                 class="tab-layer"
               >
                 <PlanetSelectTabComponent @toast-inset="setTabToastInset('planets', $event)" />
-              </div>
-
-              <div
-                v-if="mountedTabs.has('chronicle')"
-                v-show="uiStore.bardActiveTab === 'chronicle'"
-                class="tab-layer"
-              >
-                <ChronicleTab />
               </div>
 
               <div

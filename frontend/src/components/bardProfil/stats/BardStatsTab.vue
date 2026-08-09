@@ -5,6 +5,7 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import JourneyStatsColumn from './JourneyStatsColumn.vue'
 import SolarEvolutionColumn from './SolarEvolutionColumn.vue'
 import GalaxyArchiveColumn from './GalaxyArchiveColumn.vue'
+import AugmentBuffPanel from './AugmentBuffPanel.vue'
 
 /**
  * Bard Stats — the "Command Deck". This component owns nothing but the deck
@@ -72,11 +73,17 @@ onUnmounted(stopResize)
     <!-- ══ Shared cosmic backdrop — same component as Shop / Team / Planets ══ -->
     <CosmicStageBackground />
 
-    <!-- ══ Panel deck: journey | solar evolution + augments | galaxy archive ══ -->
+    <!-- ══ Panel deck: journey | sun + chronicle | archive over augments ══ -->
     <div ref="deckEl" class="sf-deck" :style="deckStyle">
       <JourneyStatsColumn />
       <SolarEvolutionColumn />
-      <GalaxyArchiveColumn />
+      <!-- Rechte Spalte trägt zwei Panels übereinander, exakt halbe Höhe je
+           Panel: beide zeigen eine wachsende Sammlung, die auf ihrer Hälfte
+           scrollt. Der Trennstrich sitzt damit auf der Mitte der Spalte. -->
+      <div class="sf-stack">
+        <GalaxyArchiveColumn />
+        <AugmentBuffPanel />
+      </div>
 
       <!-- Drag handles sitting on the two column dividers -->
       <div
@@ -133,11 +140,48 @@ onUnmounted(stopResize)
   grid-template-columns: 360px minmax(0, 1fr) 440px;
   gap: 0;
 }
-/* Frameless panels: the three areas are set apart by these hairlines alone,
-   and the shared cosmic backdrop shows through everywhere else. The columns
-   are child components, so this styles their root elements. */
-.sf-deck .sf-col + .sf-col {
+/* Frameless panels: the areas are set apart by these hairlines alone, and the
+   shared cosmic backdrop shows through everywhere else. Die Spalten sind
+   Kindkomponenten — hier werden also deren Wurzelelemente getroffen. */
+.sf-deck > .sf-col + .sf-col,
+.sf-deck > .sf-stack {
   border-left: 1px solid #4a2c12;
+}
+
+/* Zwei Panels in der rechten Spalte, jedes exakt die halbe Höhe. `flex-basis: 0`
+   plus `flex: 1` teilt die Spalte hälftig UNABHÄNGIG vom Inhalt — mit
+   `flex-basis: auto` würde die längere Sammlung die Mitte verschieben, und die
+   Trennlinie läge je Spielstand woanders. `min-height: 0` ist Pflicht, damit
+   beide innen scrollen statt sich aufzublähen. */
+.sf-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sf-stack > * {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* Die Trennlinie ist bewusst KEIN border: ein Rahmen zählt zur Höhe seines
+   Panels, und damit wäre die untere Hälfte um genau diesen Pixel höher als die
+   obere (gemessen 316,5 gegen 317,6). Als absolut gesetzte Linie auf der
+   Grenzfuge liegt sie exakt auf der Mitte und beide Hälften sind gleich hoch. */
+.sf-stack > *:first-child {
+  position: relative;
+}
+
+.sf-stack > *:first-child::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: #4a2c12;
+  pointer-events: none;
 }
 
 /* ─ Resizable column dividers ─ */

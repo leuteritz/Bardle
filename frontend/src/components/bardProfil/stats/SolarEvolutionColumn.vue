@@ -1,16 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import { formatCompactDuration, splitDuration } from '@/utils/ui/format'
-import { useGameStore } from '@/stores/core/gameStore'
-import { useSynergyStore } from '@/stores/champions/synergyStore'
-import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import {
-  AUGMENT_RARITY_COLOR,
-  AUTO_PICK_ICON,
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
   STAR_PHASE_MIN_DWELL_SECONDS,
@@ -21,33 +15,22 @@ import {
   SUN_PHASE_DISPLAY_TOTAL,
   MS_PER_SECOND,
 } from '@/config/constants'
-import { AUGMENTS } from '@/config/economy/augments'
 import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import StatsColumnHeader from './StatsColumnHeader.vue'
-import type { AugmentDefinition } from '@/types'
+import ChronicleSection from './ChronicleSection.vue'
 
 /**
  * Middle column of the Bard-Stats deck — the stage.
  * The player's live celestial body sits at the centre of an open arc carrying
  * the seven phases it evolves through. Everything the sun has to say lives ON
  * the dial: identity and the evolve gate fill the arc's open bottom, and the
- * evolve call-to-action rides the sun itself. Below that, only the augment deck.
+ * evolve call-to-action rides the sun itself. Below that, the Chronicle — the
+ * augment collection moved to the right column, under the galaxy archive.
  */
-const gameStore = useGameStore()
-const synergyStore = useSynergyStore()
-const augmentStore = useAugmentStore()
 const solarStore = useSolarUpgradeStore()
 const uiStore = useUiStore()
-
-const { activeModifier, abilityCPSMultiplier, abilityCPCMultiplier, abilityPowerBonus } =
-  storeToRefs(gameStore)
-const { cpsSynergyMultiplier, powerSynergyMultiplier, dpsSynergyMultiplier } =
-  storeToRefs(synergyStore)
-const { temporaryCPSMultiplier } = storeToRefs(augmentStore)
-
-const dpsPct = computed(() => Math.round((dpsSynergyMultiplier.value - 1) * 100))
 
 /* ── Star phase (sun dial) ───────────────────────────────────── */
 const totalPhases = STAR_PHASE_DATA.length
@@ -313,176 +296,20 @@ const gate = computed<EvolveGate>(() => {
   }
 })
 
-/* ── Augment shelf ───────────────────────────────────────────── */
-interface AugCard {
-  aug: AugmentDefinition
-  key: string
-  color: string
-}
+/* ── Chronicle ───────────────────────────────────────────────── */
+/* Die Kontextsuche der Spalte filtert die Wappen des Chronicle unter dem Dial.
+   Sie liegt hier, weil der Spaltenkopf sie trägt; ausgewertet wird sie in
+   ChronicleSection. */
+const chronicleSearch = ref('')
 
-const augCards = computed<AugCard[]>(() =>
-  gameStore.activeAugments.flatMap((id, idx) => {
-    const aug = AUGMENTS.find((a) => a.id === id)
-    if (!aug) return []
-    return [{ aug, key: `${id}-${idx}`, color: AUGMENT_RARITY_COLOR[aug.rarity] }]
-  }),
-)
-
-/* ── Aggregate buff chips (augments + abilities + synergies) ─── */
-const buffCPSPct = computed(() => {
-  const mod = activeModifier.value
-  const total =
-    (mod.cpsMultiplier ?? 1) -
-    1 +
-    (abilityCPSMultiplier.value - 1) +
-    (cpsSynergyMultiplier.value - 1) +
-    (temporaryCPSMultiplier.value - 1)
-  return Math.round(total * 100)
-})
-
-const buffCPCPct = computed(() => {
-  const mod = activeModifier.value
-  const total = (mod.cpcMultiplier ?? 1) - 1 + (abilityCPCMultiplier.value - 1)
-  return Math.round(total * 100)
-})
-
-const buffPowerSynergyPct = computed(() => Math.round((powerSynergyMultiplier.value - 1) * 100))
-const buffPowerFlat = computed(() => abilityPowerBonus.value)
-const buffMeepPct = computed(() =>
-  Math.round(((activeModifier.value.meepPowerMultiplier ?? 1) - 1) * 100),
-)
-const buffCDRPct = computed(() => {
-  const mul = activeModifier.value.cooldownMultiplier ?? 1
-  return mul < 1 ? Math.round((1 - mul) * 100) : 0
-})
-const buffExpPct = computed(() =>
-  Math.round(((activeModifier.value.expeditionRewardMultiplier ?? 1) - 1) * 100),
-)
-const buffCostPct = computed(() => {
-  const mul = activeModifier.value.buildingCostMultiplier ?? 1
-  return mul < 1 ? Math.round((1 - mul) * 100) : 0
-})
-const buffEnemyPct = computed(() => {
-  const mul = activeModifier.value.enemySpeedMultiplier ?? 1
-  return mul < 1 ? Math.round((1 - mul) * 100) : 0
-})
-
-interface BuffChip {
-  key: string
-  icon: string
-  label: string
-  value: string
-  positive: boolean
-}
-
-const totalChips = computed<BuffChip[]>(() => {
-  const chips: BuffChip[] = []
-  if (buffCPSPct.value > 0)
-    chips.push({
-      key: 'cps',
-      icon: 'game-icons:lyre',
-      label: 'Production',
-      value: `+${buffCPSPct.value}%`,
-      positive: true,
-    })
-  if (buffCPCPct.value > 0)
-    chips.push({
-      key: 'cpc',
-      icon: 'game-icons:hand',
-      label: 'Click',
-      value: `+${buffCPCPct.value}%`,
-      positive: true,
-    })
-  if (buffPowerSynergyPct.value > 0 || buffPowerFlat.value > 0) {
-    const parts: string[] = []
-    if (buffPowerSynergyPct.value > 0) parts.push(`+${buffPowerSynergyPct.value}%`)
-    if (buffPowerFlat.value > 0) parts.push(`+${buffPowerFlat.value}`)
-    chips.push({
-      key: 'power',
-      icon: 'game-icons:mighty-force',
-      label: 'Power',
-      value: parts.join(' & '),
-      positive: true,
-    })
-  }
-  if (buffMeepPct.value > 0)
-    chips.push({
-      key: 'meep',
-      icon: 'game-icons:meeple-king',
-      label: 'Meep Power',
-      value: `+${buffMeepPct.value}%`,
-      positive: true,
-    })
-  if (dpsPct.value > 0)
-    chips.push({
-      key: 'dps',
-      icon: 'game-icons:sword-clash',
-      label: 'Combat DPS',
-      value: `+${dpsPct.value}%`,
-      positive: true,
-    })
-  if (buffCDRPct.value > 0)
-    chips.push({
-      key: 'cdr',
-      icon: 'game-icons:sands-of-time',
-      label: 'Cooldowns',
-      value: `-${buffCDRPct.value}%`,
-      positive: false,
-    })
-  if (buffExpPct.value > 0)
-    chips.push({
-      key: 'exp',
-      icon: 'game-icons:treasure-map',
-      label: 'Expeditions',
-      value: `+${buffExpPct.value}%`,
-      positive: true,
-    })
-  if (buffCostPct.value > 0)
-    chips.push({
-      key: 'cost',
-      icon: 'game-icons:stone-wall',
-      label: 'Build Cost',
-      value: `-${buffCostPct.value}%`,
-      positive: false,
-    })
-  if (buffEnemyPct.value > 0)
-    chips.push({
-      key: 'enemy',
-      icon: 'game-icons:turtle',
-      label: 'Enemy Speed',
-      value: `-${buffEnemyPct.value}%`,
-      positive: false,
-    })
-  return chips
-})
-
-/* The column's context search filters the augment deck below the dial */
-const augmentSearch = ref('')
-
-const filteredChips = computed(() => {
-  const q = augmentSearch.value.trim().toLowerCase()
-  if (!q) return totalChips.value
-  return totalChips.value.filter((c) => c.label.toLowerCase().includes(q) || c.key.includes(q))
-})
-
-const filteredAugCards = computed(() => {
-  const q = augmentSearch.value.trim().toLowerCase()
-  if (!q) return augCards.value
-  return augCards.value.filter(
-    (c) =>
-      c.aug.name.toLowerCase().includes(q) ||
-      c.aug.effectLine.toLowerCase().includes(q) ||
-      c.aug.rarity.toLowerCase().includes(q),
-  )
-})
 </script>
 
 <template>
   <section class="sf-panel sf-col sf-col--solar" :style="phaseVars">
     <StatsColumnHeader
-      v-model="augmentSearch"
+      v-model="chronicleSearch"
       title="Solar Evolution"
-      placeholder="Search augments…"
+      placeholder="Search milestones…"
     />
 
     <div class="sf-p-body sf-solar-body">
@@ -678,83 +505,8 @@ const filteredAugCards = computed(() => {
         <!-- /TEMP -->
       </div>
 
-      <!-- ─ Augments: the compact deck under the dial ─ -->
-      <div class="sf-aug-zone">
-        <div class="sf-zone-rule">
-          <span v-ink-center class="sf-zone-lbl">Augments</span>
-          <span class="sf-zone-count">{{ filteredAugCards.length }}</span>
-        </div>
-        <div class="sf-aug-scroll rpg-scrollbar">
-          <!-- Not-Aus für den Auto-Pick. Solange er läuft, öffnet sich das
-               Auswahl-Modal nicht mehr — dieser Streifen ist damit der einzige
-               dauerhaft erreichbare Weg zurück und steht deshalb ganz oben. -->
-          <button
-            v-if="gameStore.autoPickAugments"
-            class="sf-auto-row"
-            title="Augments are being picked at random on every level-up — click to choose yourself again"
-            @click="gameStore.setAutoPickAugments(false)"
-          >
-            <Icon :icon="AUTO_PICK_ICON" width="17" height="17" class="sf-auto-icon" />
-            <span class="sf-auto-lbl">Auto-Pick</span>
-            <span class="sf-auto-state">On</span>
-            <span class="sf-auto-stop">Stop</span>
-          </button>
-
-          <!-- Was das Deck als Ganzes bringt — die Zahl, die den Spieler wirklich
-               interessiert, steht deshalb ganz oben und am größten. -->
-          <div class="sf-sub-rule">
-            <span class="sf-sub-lbl">Total Bonus</span>
-            <span class="sf-sub-line"></span>
-          </div>
-          <div class="sf-tiles">
-            <div v-if="filteredChips.length === 0" class="sf-empty-line">
-              {{ totalChips.length === 0 ? 'No buffs active yet' : 'No buffs match' }}
-            </div>
-            <div v-for="chip in filteredChips" :key="chip.key" class="sf-tile">
-              <div class="sf-tile__row">
-                <Icon :icon="chip.icon" width="19" height="19" class="sf-tile__icon" />
-                <span class="sf-tile__val" :class="chip.positive ? 'is-up' : 'is-down'">
-                  {{ chip.value }}
-                </span>
-              </div>
-              <span class="sf-tile__lbl">{{ chip.label }}</span>
-            </div>
-          </div>
-
-          <div class="sf-sub-rule">
-            <span class="sf-sub-lbl">Active Augments</span>
-            <span class="sf-sub-line"></span>
-            <span class="sf-sub-count">{{ filteredAugCards.length }}</span>
-          </div>
-          <div v-if="filteredAugCards.length === 0" class="sf-empty-block">
-            <Icon icon="game-icons:gems" width="26" height="26" class="sf-empty-icon" />
-            <span>
-              {{
-                augCards.length === 0
-                  ? 'No augments active yet — level up to pick your first one'
-                  : 'No augments match your search'
-              }}
-            </span>
-          </div>
-          <div v-else class="sf-aug-grid">
-            <div
-              v-for="card in filteredAugCards"
-              :key="card.key"
-              class="sf-aug-card"
-              :style="{ '--rarity': card.color }"
-              :title="`${card.aug.name} — ${card.aug.effectLine}`"
-            >
-              <div class="sf-aug-icon">
-                <Icon :icon="card.aug.icon" width="26" height="26" class="sf-aug-glyph" />
-              </div>
-              <div class="sf-aug-body">
-                <span class="sf-aug-name">{{ card.aug.name }}</span>
-                <span class="sf-aug-effect">{{ card.aug.effectLine }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- ─ Chronicle: die Meilenstein-Bahnen unter dem Dial ─ -->
+      <ChronicleSection :search="chronicleSearch" />
     </div>
   </section>
 </template>
@@ -1387,336 +1139,8 @@ const filteredAugCards = computed(() => {
   box-shadow: 0 0 8px rgba(204, 96, 80, 0.4);
 }
 
-/* ─ Augment deck — die untere Hälfte der Mittelspalte ─
-   FESTE Höhe, bewusst nicht inhaltsabhängig. Vorher wuchs die Zone mit der
-   Sammlung (0 → 20 Augments = 165 → 317px auf Full HD) und nahm dem Dial
-   darüber genau so viel weg: die Sonne schrumpfte von 391 auf 246px, nur weil
-   der Spieler weitergespielt hatte. Ein Layout-Anker darf nicht davon abhängen,
-   wie voll ein Inventar ist — deshalb steht der Rahmen still und der INHALT
-   scrollt, wenn die Sammlung ihn überholt.
-
-   Die Höhe je Stufe ist so gewählt, dass ohne Scrollen hineinpasst:
-   Rubrik + alle Total-Bonus-Kacheln + zwei Reihen Augment-Karten. */
-.sf-aug-zone {
-  flex: 0 0 345px;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Rubric line — the deck's own heading, since the column header now names
-   the sun. Label left, live count right, hairline underneath. */
-.sf-zone-rule {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 5px;
-  margin-bottom: 7px;
-  border-bottom: 1px solid #2c1806;
-}
-
-.sf-zone-lbl {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--rpg-gold);
-  white-space: nowrap;
-}
-
-.sf-zone-count {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1;
-  padding: 3px 8px;
-  color: var(--rpg-text-muted);
-  background: #141008;
-  border: 1px solid #241a0c;
-  border-radius: 4px;
-  font-variant-numeric: tabular-nums;
-}
-
-.sf-aug-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  /* Weil der Rahmen jetzt fest steht, schneidet er bei voller Sammlung mitten
-     durch eine Kartenreihe. Die letzten Pixel laufen deshalb weich aus — das
-     liest sich als „hier geht es weiter" statt als abgeschnittenes Layout.
-     Reicht der Inhalt nicht bis zum Rand, liegt dort ohnehin nichts, und die
-     Maske bleibt unsichtbar. */
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent 100%);
-}
-
-/* ─ Auto-Pick-Streifen: der dauerhafte Aus-Knopf ─
-   Grün wie alles Aktive im Spiel, damit auf einen Blick klar ist, dass hier
-   etwas LÄUFT — und die rote Stop-Plakette rechts sagt, was ein Klick tut. */
-.sf-auto-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-bottom: 10px;
-  padding: 7px 10px;
-  background: #161a12;
-  border: 1px solid #3a5a28;
-  border-left: 3px solid #52b830;
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  transition:
-    background 0.16s ease,
-    border-color 0.16s ease;
-}
-
-.sf-auto-row:hover {
-  background: #1c2216;
-  border-color: #6ec040;
-}
-
-.sf-auto-icon {
-  flex-shrink: 0;
-  color: #52b830;
-}
-
-.sf-auto-lbl {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #8fd070;
-}
-
-.sf-auto-state {
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #52b830;
-}
-
-.sf-auto-stop {
-  margin-left: auto;
-  padding: 3px 10px;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #cc6050;
-  background: #2a0e0c;
-  border: 1px solid #8a3020;
-  border-radius: 3px;
-}
-
-.sf-auto-row:hover .sf-auto-stop {
-  color: #ff9080;
-  background: #3e1210;
-  border-color: #cc4830;
-}
-
-/* Zwei Mikro-Rubriken teilen das Deck in „Summe" und „Einzelteile" — ohne sie
-   lasen sich Chips und Karten wie zwei gleichrangige Pillen-Reihen. */
-.sf-sub-rule {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 2px 0 8px;
-}
-.sf-sub-rule:not(:first-child) {
-  margin-top: 14px;
-}
-
-.sf-sub-lbl {
-  flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #8a7a52;
-}
-
-.sf-sub-line {
-  flex: 1;
-  height: 1px;
-  background: #241a0c;
-}
-
-.sf-sub-count {
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1;
-  color: #8a7a52;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ─ Total Bonus: ein Tile je Wirkung, Zahl vor Beschriftung ─ */
-.sf-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
-  gap: 6px;
-}
-
-.sf-empty-line {
-  grid-column: 1 / -1;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--rpg-text-dim);
-}
-
-.sf-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  padding: 7px 10px 6px;
-  background: #1c1c18;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-}
-
-.sf-tile__row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-}
-
-.sf-tile__icon {
-  flex-shrink: 0;
-  color: #c89040;
-}
-
-.sf-tile__val {
-  font-size: 19px;
-  font-weight: 900;
-  line-height: 1.05;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sf-tile__val.is-up {
-  color: var(--rpg-gold);
-}
-/* Weniger ist hier besser (Cooldowns, Baukosten) → grün statt gold */
-.sf-tile__val.is-down {
-  color: #52b830;
-}
-
-.sf-tile__lbl {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--rpg-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Horizontal augment cards in a fluid grid — each row ~56px, groß genug dass
-   Name und Wirkung auf Full HD ohne Zusammenkneifen lesbar bleiben. */
-.sf-aug-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
-  gap: 7px;
-}
-
-.sf-aug-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  padding: 7px 10px;
-  background: #1c1c18;
-  border: 1px solid #3e200a;
-  border-left: 3px solid var(--rarity);
-  border-radius: 5px;
-  box-shadow: inset 0 0 10px color-mix(in srgb, var(--rarity) 8%, transparent);
-  transition:
-    box-shadow 0.15s,
-    background 0.15s;
-}
-.sf-aug-card:hover {
-  background: #221f18;
-  box-shadow:
-    inset 0 0 10px color-mix(in srgb, var(--rarity) 15%, transparent),
-    0 0 8px color-mix(in srgb, var(--rarity) 30%, transparent);
-}
-
-/* Runder Sockel in der Seltenheitsfarbe — dieselbe Bildsprache wie die Karten
-   in der Augment-Wahl, damit ein Augment dort und hier gleich aussieht. */
-.sf-aug-icon {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--rarity) 55%, #14120c);
-  background: radial-gradient(
-    circle at 50% 38%,
-    color-mix(in srgb, var(--rarity) 18%, #14120c),
-    #100e08 74%
-  );
-  color: var(--rarity);
-}
-
-.sf-aug-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sf-aug-name {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--rarity);
-  line-height: 1.15;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sf-aug-effect {
-  font-size: 14px;
-  font-weight: 900;
-  color: var(--rpg-gold);
-  line-height: 1.15;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* The short deck has no room for a tall centred empty state, so the message
-   sits on one line next to its icon. */
-.sf-empty-block {
-  min-height: 56px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.35;
-  color: var(--rpg-text-dim);
-}
-.sf-empty-icon {
-  color: #5c4a30;
-  flex-shrink: 0;
-}
-
-/* Full HD / WUXGA: the flattest viewports — a smaller dial and a tighter
-   identity row, so the augment deck below still gets its rows. */
+/* Full HD / WUXGA: the flattest viewports — a smaller dial, so the Chronicle
+   below still gets its rows. */
 @media (max-height: 1100px) {
   .sf-orbit {
     width: min(100%, var(--orbit-max-compact));
@@ -1726,90 +1150,6 @@ const filteredAugCards = computed(() => {
     gap: 8px;
   }
   /* the caption is NOT stepped down here — it scales off the dial itself */
-  /* Full HD ist der flachste Viewport: hier teilen sich Dial und Deck 709px.
-     278px lassen dem Deck Kacheln + zwei Kartenreihen und dem Dial rund 290px –
-     mehr, als er bei voller Sammlung vorher je hatte. */
-  .sf-aug-zone {
-    flex-basis: 278px;
-  }
-  .sf-tile__val {
-    font-size: 18px;
-  }
-  /* Auf dem flachsten Viewport rücken Sockel und Polster zusammen, damit eine
-     dritte Kartenreihe ins Bild passt — die SCHRIFTGRÖSSEN bleiben unangetastet,
-     gespart wird nur an Luft. */
-  .sf-tile {
-    padding: 5px 9px 5px;
-  }
-  .sf-aug-card {
-    padding: 5px 9px;
-    gap: 9px;
-  }
-  .sf-aug-icon {
-    width: 34px;
-    height: 34px;
-  }
-  .sf-aug-glyph {
-    width: 22px;
-    height: 22px;
-  }
-  .sf-sub-rule:not(:first-child) {
-    margin-top: 10px;
-  }
-}
-
-/* 4K and taller: the dial has the room to become the room's centrepiece, so
-   the readouts around it grow with it instead of floating in empty space. */
-@media (min-height: 1600px) {
-  /* 4K deckelt den Dial bei --orbit-max, dadurch bleibt Spaltenhöhe übrig, die
-     sonst niemand nutzt — das Deck nimmt sie und zeigt drei Kartenreihen. */
-  .sf-aug-zone {
-    flex-basis: 470px;
-  }
-  /* Auf 4K wächst die Zeile mit — sonst schrumpfen 19px Zahl und 12px Name
-     auf der großen Fläche optisch zu Fußnoten zusammen. */
-  .sf-zone-lbl {
-    font-size: 14px;
-  }
-  .sf-sub-lbl {
-    font-size: 12px;
-  }
-  .sf-tile__val {
-    font-size: 23px;
-  }
-  .sf-tile__lbl {
-    font-size: 11.5px;
-  }
-  .sf-aug-icon {
-    width: 48px;
-    height: 48px;
-  }
-  .sf-aug-glyph {
-    width: 31px;
-    height: 31px;
-  }
-  .sf-tile__icon {
-    width: 23px;
-    height: 23px;
-  }
-  .sf-aug-name {
-    font-size: 13.5px;
-  }
-  .sf-aug-effect {
-    font-size: 16px;
-  }
-}
-
-/* Ab 2K ist die Mittelspalte doppelt so breit wie auf Full HD. Mit der schmalen
-   Mindestbreite entstünden dort vier enge Spalten, in denen längere Wirkungen
-   ("All Cooldowns Halved") in die Ellipse laufen — breitere Karten statt mehr. */
-@media (min-width: 2200px) {
-  .sf-aug-grid {
-    grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
-  }
-  .sf-tiles {
-    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
