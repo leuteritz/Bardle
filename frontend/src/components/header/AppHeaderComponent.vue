@@ -30,7 +30,9 @@ import {
   HEADER_BADGE_ARC_MIN_RAD,
   HEADER_BADGE_MAX_COUNT,
 } from '@/config/constants'
+import { HEADER_GEM_ICONS } from '@/config/constants'
 import { formatBadgeCount } from '@/utils/ui/format'
+import { Icon } from '@iconify/vue'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '../ui/RpgBadgeTooltipBody.vue'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
@@ -511,7 +513,18 @@ onUnmounted(() => {
           title="Open Skill Tree"
           @click="uiStore.setBardTab('tree')"
         >
-          <img src="/img/menu/TREE-128.png" class="btn-gem-img" alt="Open Skill Tree" />
+          <!-- Dasselbe Glyph wie der Tree-Tab im Bard-Profil (HEADER_GEM_ICONS).
+               OHNE den `boost` der Tab-Leiste: dort gleicht er das Motiv an
+               schlankere Phosphor-Nachbarn in EINER Reihe an — hier steht es
+               allein in seiner Platte und füllt seinen Kasten ohnehin bis an
+               die Kanten, ein Aufschlag drückte es nur ans Label. -->
+          <Icon
+            :icon="HEADER_GEM_ICONS.tree"
+            width="48"
+            height="48"
+            class="btn-gem-icon"
+            aria-hidden="true"
+          />
           <span class="btn-gem-label">Tree</span>
         </button>
       </div>
@@ -977,24 +990,33 @@ onUnmounted(() => {
     inset 0 1px 0 rgba(255, 200, 80, 0.14),
     0 0 12px rgba(232, 192, 64, 0.22);
 }
-.btn-gem:hover .btn-gem-img {
+.btn-gem:hover .btn-gem-icon {
+  color: #ffdc70;
   transform: scale(1.08);
 }
-.btn-gem:active .btn-gem-img {
+.btn-gem:active .btn-gem-icon {
   transform: scale(0.94);
 }
-.btn-gem-img {
+.btn-gem-icon {
   /* Zwei Grenzen statt eines Prozentwerts: die Breite (88 % des Plates) hält
      das Icon von den Seitenrändern weg, die Höhe zieht das Label-Band und den
      Innenabstand ab. Damit wächst das Icon mit der gewonnenen Zeilenhöhe mit,
      statt in einem zentrierten Loch zu schweben — Full HD 40px, 2K 55px,
-     4K 63px (vorher überall 44/52/52px). */
-  --gem-icon-max: calc(var(--gem-plate-h) - var(--gem-label-fs) * 1.15 - 8px);
-  width: min(calc(var(--gem-plate-w) * 0.88), var(--gem-icon-max));
-  height: min(calc(var(--gem-plate-w) * 0.88), var(--gem-icon-max));
-  object-fit: contain;
-  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
-  transition: transform 0.18s ease;
+     4K 63px (vorher überall 44/52/52px).
+
+     Der Faktor 0.82 auf beiden Grenzen nimmt den Rand vorweg, den die früheren
+     PNG-Wappen von Haus aus mittrugen: ein Glyph füllt seine Box fast ganz
+     aus und säße in derselben Kantenlänge merklich massiver in der Platte. */
+  --gem-icon-max: calc((var(--gem-plate-h) - var(--gem-label-fs) * 1.15 - 8px) * 0.82);
+  width: min(calc(var(--gem-plate-w) * 0.72), var(--gem-icon-max));
+  height: min(calc(var(--gem-plate-w) * 0.72), var(--gem-icon-max));
+  color: #e8c040;
+  /* Statischer Zustand, kein Dauerläufer — der Schatten wird einmal gerastert
+     und trägt das Glyph gegen den dunklen Header-Grund. */
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.75));
+  transition:
+    transform 0.18s ease,
+    color 0.2s;
 }
 /* Mikro-Label unter dem Icon: füllt den Höhenüberschuss mit Information statt
    Leerraum und macht die beiden Eckplatten ohne Hover eindeutig. */

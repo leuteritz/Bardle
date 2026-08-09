@@ -533,6 +533,21 @@ export const HEADER_BADGE_EDGE_GAP_FRAC = 0.5
 // Header universe block — icon of the "Universe" stat tile (left of Galaxy).
 export const HEADER_UNIVERSE_ICON = 'game-icons:over-infinity'
 
+/**
+ * Die beiden Header-Ecktasten (Shop links, Skill Tree rechts) und die
+ * gleichnamigen Tabs im Bard-Profil zeigen auf dieselben zwei Ziele — sie
+ * tragen deshalb dasselbe Zeichen und lesen es von hier. Stünde es zweimal im
+ * Code, liefen Header und Tab-Leiste beim nächsten Icon-Wechsel auseinander,
+ * und der Spieler läse zwei Dinge, wo eines gemeint ist.
+ *
+ * Die optische Angleichung (`boost`) bleibt bewusst beim jeweiligen Ort: sie
+ * gleicht das Glyph an SEINE Nachbarn an, nicht an das Motiv.
+ */
+export const HEADER_GEM_ICONS = {
+  shop: 'ph:storefront-fill',
+  tree: 'material-symbols:account-tree',
+} as const
+
 /** Step sizes offered by the team-tab admin level button — plus a MAX press
  *  that asks for CHAMPION_LEVEL_MAX_CAP steps and lands on the cap from any level. */
 export const ADMIN_TEAM_LEVEL_STEPS = [1, 5, 10] as const

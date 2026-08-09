@@ -15,6 +15,7 @@ import { useAchievementStore } from '@/stores/progression/achievementStore'
 import type { BardTabId } from '@/stores/core/uiStore'
 import type { KeybindId } from '@/types'
 import { formatBadgeCount } from '@/utils/ui/format'
+import { HEADER_GEM_ICONS } from '@/config/constants'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
@@ -100,6 +101,10 @@ const toastInsetRight = computed(() => tabToastInset[uiStore.bardActiveTab] ?? '
  * Jedes Motiv steht genau einmal in der Leiste, damit die sieben Tabs
  * nebeneinander unterscheidbar bleiben.
  *
+ * Shop und Tree haben je eine zweite Anlaufstelle — die beiden Ecktasten im
+ * App-Header. Ihre Glyphen kommen deshalb aus `HEADER_GEM_ICONS`, damit dort
+ * dasselbe Zeichen steht wie hier.
+ *
  * `boost` ist die optische Angleichung über Set-Grenzen hinweg: Material und
  * Remix zeichnen auf einem 24er-Raster mit mehr Rand als Phosphors 256er,
  * ihre Glyphen sitzen im gleich großen Kasten also kleiner und wirken in der
@@ -113,8 +118,8 @@ const menuItems: {
   boost?: boolean
 }[] = [
   { id: 'bard', label: '', icon: 'ph:compass-rose-fill' },
-  { id: 'shop', label: '', icon: 'ph:storefront-fill' },
-  { id: 'tree', label: '', icon: 'material-symbols:account-tree', boost: true },
+  { id: 'shop', label: '', icon: HEADER_GEM_ICONS.shop },
+  { id: 'tree', label: '', icon: HEADER_GEM_ICONS.tree, boost: true },
   { id: 'team', label: '', icon: 'ph:users-three-fill' },
   { id: 'battle', label: '', icon: 'ri:sword-fill', boost: true },
   { id: 'planets', label: '', icon: 'ph:planet-fill' },
@@ -237,8 +242,10 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- Dasselbe Glyph wie der Shop-Tab in der Leiste unten (HEADER_GEM_ICONS) —
+       Ecktaste und Tab führen an denselben Ort. -->
   <button class="btn-gem btn-gem--corner-left" title="Open Shop" @click="uiStore.setBardTab('shop')">
-    <img src="/img/menu/SHOP-128.png" class="btn-gem-img" alt="Open Shop" />
+    <Icon :icon="HEADER_GEM_ICONS.shop" width="48" height="48" class="btn-gem-icon" aria-hidden="true" />
     <span class="btn-gem-label">Shop</span>
   </button>
 
