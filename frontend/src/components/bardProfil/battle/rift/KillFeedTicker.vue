@@ -39,7 +39,7 @@
             <template v-else-if="row.type === 'structure'">
               <div class="feed-item feed-item--structure">
                 <Icon
-                  :icon="row.structure.tier === 'inhibitor' ? 'game-icons:floating-crystal' : 'game-icons:watchtower'"
+                  :icon="row.structure.tier === 'inhibitor' ? 'ph:diamond-fill' : 'ph:castle-turret-fill'"
                   width="18"
                   height="18"
                   class="feed-structure-icon"
@@ -91,7 +91,7 @@
           </div>
           <div v-else-if="row.type === 'structure'" class="feed-item feed-item--structure">
             <Icon
-              :icon="row.structure.tier === 'inhibitor' ? 'game-icons:floating-crystal' : 'game-icons:watchtower'"
+              :icon="row.structure.tier === 'inhibitor' ? 'ph:diamond-fill' : 'ph:castle-turret-fill'"
               width="22"
               height="22"
               class="feed-structure-icon"
@@ -116,7 +116,8 @@
         @mouseenter="expanded = true"
         @click="expanded = !expanded"
       >
-        <Icon icon="game-icons:scroll-unfurled" class="ticker-expand-scroll" />
+        <!-- Bedienelement → dünne Outline, und wörtlich zum Label: History. -->
+        <Icon icon="lucide:history" class="ticker-expand-scroll" />
         <span class="ticker-expand-label">History</span>
         <span class="ticker-expand-chevron">▲</span>
       </button>

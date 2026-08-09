@@ -428,13 +428,13 @@ function badgeMapFor(fighters: ObjectiveFighter[]): Record<number, RowBadge[]> {
   }
 
   const mvp = best((f) => f.damage)
-  if (mvp) add(mvp.idx, { key: 'mvp', icon: 'game-icons:laurels', title: 'Top damage' })
+  if (mvp) add(mvp.idx, { key: 'mvp', icon: 'ph:crown-fill', title: 'Top damage' })
   const wall = best((f) => f.damageDiverted)
-  if (wall) add(wall.idx, { key: 'wall', icon: 'game-icons:shield-bash', title: 'Pulled the most damage off the pit' })
+  if (wall) add(wall.idx, { key: 'wall', icon: 'ph:shield-fill', title: 'Pulled the most damage off the pit' })
   const medic = best((f) => f.healingDone)
-  if (medic) add(medic.idx, { key: 'medic', icon: 'game-icons:healing', title: 'Most healing' })
+  if (medic) add(medic.idx, { key: 'medic', icon: 'ph:first-aid-kit-fill', title: 'Most healing' })
   const tank = best((f) => f.damageTaken)
-  if (tank) add(tank.idx, { key: 'tank', icon: 'game-icons:cracked-shield', title: 'Most punished' })
+  if (tank) add(tank.idx, { key: 'tank', icon: 'ph:heart-break-fill', title: 'Most punished' })
 
   for (const idx of Object.keys(map)) {
     map[Number(idx)] = map[Number(idx)].slice(0, OBJECTIVE_RESULT_MAX_BADGES_PER_ROW)

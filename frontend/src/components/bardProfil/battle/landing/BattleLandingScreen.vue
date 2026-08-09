@@ -38,7 +38,7 @@
           <span class="battle-btn-face">
             <Icon
               v-if="isStarting"
-              icon="game-icons:sundial"
+              icon="ph:hourglass-high-fill"
               width="24"
               height="24"
               class="battle-btn-icon"
@@ -119,7 +119,9 @@ const winSharePct = computed(() =>
 // glance — the exhaustive breakdown belongs in Bard Stats, not on this screen.
 const ladderGroup = computed<RankStatGroup>(() => ({
   title: 'LADDER',
-  icon: 'game-icons:crown-coin',
+  // Die Gruppenköpfe stehen auf clamp(14px, 2cqh, 20px) — auf Full HD also am
+  // unteren Rand. Beides deshalb gefüllt und einmotivig statt Krone-auf-Münze.
+  icon: 'ph:ranking-fill',
   color: '#e8c040',
   rows: [
     { label: 'Wins', value: formatNumber(battleStore.totalWins), color: '#52b830' },
@@ -145,7 +147,7 @@ const ladderGroup = computed<RankStatGroup>(() => ({
 
 const legendGroup = computed<RankStatGroup>(() => ({
   title: 'LEGEND',
-  icon: 'game-icons:sword-clash',
+  icon: 'ph:medal-military-fill',
   color: '#cc6050',
   rows: [
     {

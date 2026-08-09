@@ -36,7 +36,7 @@
     <!-- ── Blue side: the player's squad ── -->
     <section class="team-block layer">
       <header class="team-head team-head--blue">
-        <Icon icon="game-icons:helmet" width="24" height="24" class="team-icon" />
+        <Icon icon="ph:flag-banner-fill" width="24" height="24" class="team-icon" />
         <span class="team-name">YOUR TEAM</span>
         <div class="team-chips">
           <span v-for="chip in blueChips" :key="chip.label" class="team-chip">
@@ -83,7 +83,7 @@
     <!-- ── Red side: the scouted opposition ── -->
     <section class="team-block layer">
       <header class="team-head team-head--red">
-        <Icon icon="game-icons:helmet" width="24" height="24" class="team-icon" />
+        <Icon icon="ph:flag-banner-fill" width="24" height="24" class="team-icon" />
         <span class="team-name">ENEMY TEAM</span>
         <div class="team-chips">
           <span v-for="chip in redChips" :key="chip.label" class="team-chip">

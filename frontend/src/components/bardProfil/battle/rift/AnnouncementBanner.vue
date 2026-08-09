@@ -16,7 +16,7 @@
         <div class="banner-portrait-wrap">
           <Icon
             v-if="isStructureKind"
-            icon="game-icons:watchtower"
+            icon="ph:castle-turret-fill"
             class="banner-structure-icon"
             :class="current.team === 1 ? 'structure-icon--blue' : 'structure-icon--red'"
           />

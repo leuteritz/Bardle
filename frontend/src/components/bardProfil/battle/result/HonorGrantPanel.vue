@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="honor-head">
       <div class="head-icon-ring">
-        <Icon icon="game-icons:medal" width="24" height="24" style="color: #e8c040" />
+        <Icon icon="ph:medal-fill" width="24" height="24" style="color: #e8c040" />
       </div>
       <div class="head-titles">
         <span class="honor-title">HONOR CEREMONY</span>
@@ -52,7 +52,7 @@
                 <span class="champ-role">{{ champ.role.toUpperCase() }}</span>
               </span>
               <em v-if="champ.name === mvpName" class="mvp-tag">
-                <Icon icon="game-icons:laurels-trophy" />
+                <Icon icon="ph:crown-fill" />
                 MVP
               </em>
             </span>
@@ -80,7 +80,7 @@
                 <img src="/img/BardAbilities/BardChime-128.png" alt="" class="chime-img" />
               </span>
               <span class="medal-stamp" :class="{ 'medal-stamp--on': isHonored(champ.name) }">
-                <Icon icon="game-icons:medal" width="20" height="20" />
+                <Icon icon="ph:medal-fill" width="20" height="20" />
               </span>
             </span>
           </div>

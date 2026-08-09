@@ -60,6 +60,10 @@
           class="buff-camp"
           :class="[`buff-camp--${camp.buffType}`, { 'buff-camp--cleared': camp.cleared }]"
         >
+          <!-- Die width/height hier sind wirkungslos: `.buff-camp-icon` setzt
+               62 % der Camp-Kante und gewinnt. Die ECHTE Größe folgt der
+               Map-Kante (clamp(24px, 6.5cqmin, 63px)) und liegt im
+               game-icons-Bereich — nicht nach dem Attribut urteilen. -->
           <Icon
             :icon="camp.buffType === 'blue' ? 'game-icons:golem-head' : 'game-icons:lizardman'"
             width="11"
@@ -197,7 +201,7 @@
         <span class="kill-mark-aoe" />
         <span class="kill-mark-ring" />
         <span class="kill-mark-flash" />
-        <Icon icon="game-icons:saber-slash" class="kill-mark-icon" width="26" height="26" />
+        <Icon icon="ph:sword-fill" class="kill-mark-icon" width="26" height="26" />
         <span v-if="mark.tier >= 2" class="kill-mark-tier">{{ mark.tier }}×</span>
       </div>
 
@@ -223,7 +227,7 @@
           <!-- Live MVP: rotating gold ring + floating crown -->
           <template v-if="isMvp(pos.team, pos.idx)">
             <span class="mvp-ring" aria-hidden="true" />
-            <Icon icon="game-icons:imperial-crown" class="mvp-crown" width="18" height="18" />
+            <Icon icon="ph:crown-fill" class="mvp-crown" width="18" height="18" />
           </template>
           <img
             :src="battleStore.getChampionImage(champAt(pos.team, pos.idx)?.name ?? '', { team: pos.team, size: 'md' })"

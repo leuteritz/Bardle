@@ -182,7 +182,7 @@
                   class="fdmg fdmg--own"
                   :class="{ 'fdmg--crit': fl.crit }"
                 >
-                  <Icon icon="game-icons:quick-slash" :width="fl.crit ? 17 : 13" :height="fl.crit ? 17 : 13" class="fdmg-icon" />
+                  <Icon icon="ph:fire-fill" :width="fl.crit ? 17 : 13" :height="fl.crit ? 17 : 13" class="fdmg-icon" />
                   -{{ fl.value }}{{ fl.crit ? '!' : '' }}
                 </span>
               </TransitionGroup>
@@ -242,7 +242,9 @@
               :class="s === 'own' ? 'curse-badge--own' : 'curse-badge--enemy'"
             >
               <span :key="curseStacks(s)" class="curse-count">
-                <Icon icon="ph:flame-fill" width="13" height="13" class="curse-icon" />
+                <!-- Hex-Stern wie im Result-Summary — eine Flamme stünde hier
+                     ununterscheidbar neben den Schadenszahlen (ph:fire-fill). -->
+                <Icon icon="ph:star-four-fill" width="13" height="13" class="curse-icon" />
                 ×{{ curseStacks(s) }}
               </span>
               <span class="curse-dmg">
@@ -365,7 +367,7 @@
                   class="fdmg fdmg--enemy"
                   :class="{ 'fdmg--crit': fl.crit }"
                 >
-                  <Icon icon="game-icons:quick-slash" :width="fl.crit ? 17 : 13" :height="fl.crit ? 17 : 13" class="fdmg-icon" />
+                  <Icon icon="ph:fire-fill" :width="fl.crit ? 17 : 13" :height="fl.crit ? 17 : 13" class="fdmg-icon" />
                   -{{ fl.value }}{{ fl.crit ? '!' : '' }}
                 </span>
               </TransitionGroup>

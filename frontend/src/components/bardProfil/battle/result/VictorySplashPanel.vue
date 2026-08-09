@@ -33,7 +33,7 @@
       <div class="mvp-portrait-wrap">
         <img :src="mvpImage" :alt="mvpName" class="mvp-portrait" />
         <div class="mvp-laurel">
-          <Icon icon="game-icons:laurels-trophy" />
+          <Icon icon="ph:crown-fill" />
         </div>
       </div>
       <div class="mvp-texts">

@@ -561,17 +561,36 @@ export const SCOREBOARD_CREST = {
 export const SCOREBOARD_OPEN_HINT = 'Open Battle Stats'
 
 // ── Battle stat visuals — canonical mapping shared by BottomScoreboard,
-//    ScoreTopBar and BattleLandingScreen: the same stat always carries the
-//    same icon/image everywhere in the UI. ──────────────────────────────
+//    ScoreTopBar, BattleLandingScreen und die Leader-Abzeichen im Roster:
+//    dieselbe Kennzahl trägt überall dasselbe Zeichen.
+//
+//    Alles hier ist gefüllt und geometrisch, weil die Zahlenzeile der engste
+//    Ort im Spiel ist: das Scoreboard lässt ein Icon unter 15 px ganz weg
+//    (SCOREBOARD_FIT.ICON_MIN_PX), die ScoreTopBar zeichnet auf 17 px. Die
+//    früheren `game-icons` waren dort keine Zeichen mehr, sondern Flecken —
+//    `piercing-sword` ein Haarstrich, `sabers-choc` ein grauer Klumpen.
+//
+//    Die drei BILDER bleiben Bilder: die Bard-Münze ist eine schlichte Scheibe
+//    mit Gesicht und trägt bei 15 px, Drache und Baron leben von ihrer Farbe
+//    (Orange, Violett) — die kann kein einfarbiges Glyph ersetzen, und sie
+//    stehen ohnehin auf 19–26 px.
+//
+//    Die acht sind gegeneinander auf Silhouette geprüft, denn im Scoreboard
+//    stehen sie in EINER Reihe: Klinge · Schädel · drei Köpfe · Ähre · Flamme ·
+//    Zinne · Raute · Pokal. Links daneben steht das Phasen-Glyph im Crest —
+//    darum trägt `kills` das EINZELNE Schwert und die Phase `battle` die
+//    gekreuzten Klingen (`ri:sword-fill`), nicht zweimal dasselbe Motiv. ─────
 export const BATTLE_STAT_GAME_ICONS = {
-  kills: 'game-icons:piercing-sword',
-  deaths: 'game-icons:dead-head',
-  assists: 'game-icons:three-friends',
-  cs: 'game-icons:minions',
-  damage: 'game-icons:sabers-choc',
-  turrets: 'game-icons:watchtower',
-  inhibitors: 'game-icons:floating-crystal',
-  winLoss: 'game-icons:podium-winner',
+  kills: 'ph:sword-fill',
+  deaths: 'ph:skull-fill',
+  /** Mithilfe = mehrere Gestalten — die gefüllte Fassung des früheren `three-friends`. */
+  assists: 'ph:users-three-fill',
+  /** Creep Score: die Ähre liest sich bei 15 px als „Farm", ein Minionsknäuel nicht. */
+  cs: 'ph:grains-fill',
+  damage: 'ph:fire-fill',
+  turrets: 'ph:castle-turret-fill',
+  inhibitors: 'ph:diamond-fill',
+  winLoss: 'ph:trophy-fill',
 } as const
 
 export const BATTLE_STAT_IMAGES = {
@@ -825,21 +844,25 @@ export const BATTLE_PHASES: Record<BattlePhaseKey, BattlePhaseConfig> = {
   loading: {
     key: 'loading',
     label: 'Loading',
-    icon: 'game-icons:spawn-node',
+    icon: 'ph:spinner-gap-bold',
     color: '#5b8dd9',
     durationMs: BATTLE_LOADING_PHASE_DURATION_MS,
   },
   battle: {
     key: 'battle',
     label: 'Battle',
-    icon: 'game-icons:broadsword',
+    /* Gekreuzte Klingen — dasselbe Zeichen, das der Battle-Tab in der
+       Profil-Leiste und der Streifen im Pause-Overlay tragen. NICHT auf ein
+       Einzelschwert wechseln: das gehört den Kills, und beide stehen im
+       Bottom-Scoreboard nebeneinander (Crest links, Kill-Zelle daneben). */
+    icon: 'ri:sword-fill',
     color: '#e8c040',
     durationMs: BATTLE_REAL_DURATION_SECONDS * 1000,
   },
   honor: {
     key: 'honor',
     label: 'Honor',
-    icon: 'game-icons:trophy',
+    icon: 'ph:medal-fill',
     color: '#74d448',
     durationMs: BATTLE_RESULT_PAUSE_MS,
   },

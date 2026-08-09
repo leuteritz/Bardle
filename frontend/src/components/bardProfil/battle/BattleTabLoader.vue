@@ -68,7 +68,7 @@ const phase = computed(() => BATTLE_PHASES[props.phaseKey] ?? BATTLE_PHASES.batt
  */
 const accent = computed(() => (props.variant === 'landing' ? BATTLE_PHASES.landing.color : phase.value.color))
 const beaconIcon = computed(() =>
-  props.variant === 'landing' ? 'game-icons:podium' : (phase.value.icon ?? 'game-icons:broadsword'),
+  props.variant === 'landing' ? 'game-icons:podium' : (phase.value.icon ?? 'ri:sword-fill'),
 )
 
 /** Ein Satz je Bild: die Leiter geht auf, der Kampf schaltet sich zu, die
