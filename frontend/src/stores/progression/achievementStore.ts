@@ -9,7 +9,7 @@ import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { logChronicleRank, logChronicleStage } from '@/config/ui/eventLog'
-import { toRoman } from '@/utils/ui/format'
+import { formatPercentValue, toRoman } from '@/utils/ui/format'
 import {
   CHRONICLE_TRACKS,
   CHRONICLE_TOTAL_STAGES,
@@ -261,14 +261,21 @@ export const useAchievementStore = defineStore('achievement', {
         // Panel zeigt. `bonusPct` ist dieselbe Quelle, aus der auch der
         // Effekt-Getter dieser Bahn liest; eine eigene Rechnung hier hätte im
         // Banner eine andere Zahl stehen lassen als in der Karte.
-        const effect = track.effect.replace('{v}', String(this.bonusPct(track.bonus)))
+        const applied = this.bonusPct(track.bonus)
+        const effect = track.effect.replace('{v}', formatPercentValue(applied))
+        // Wie viel davon der Rang beisteuert. Steht in Banner UND Logzeile,
+        // sonst bliebe der Verstärker eine Zahl im Panel, die im Moment seiner
+        // Wirkung nirgends auftaucht.
+        const share = formatPercentValue(applied - track.stages[reached - 1].value)
+        const subline =
+          this.rankMult > 1 ? `${effect} — ${share}% of it from ${this.rankTitle}` : effect
         if (!this.unseen.includes(track.id)) this.unseen.push(track.id)
-        logChronicleStage(track.name, numeral, effect)
+        logChronicleStage(track.name, numeral, subline)
         useHerald().announce({
           kind: 'chronicle',
           eyebrow: 'ASTRAL CODEX',
           headline: `${track.name} ${numeral}`,
-          subline: effect,
+          subline,
           icon: track.icon,
           accent: CHRONICLE_HERALD_ACCENT,
         })
@@ -282,7 +289,11 @@ export const useAchievementStore = defineStore('achievement', {
       if (rankAfter !== rankBefore) {
         ratesTouched = true
         if (announceStages) {
-          const line = `Every Codex track bonus ×${rankAfter.mult.toFixed(2)}`
+          // Mit dem alten Faktor davor: „×1.15" allein sagt nicht, ob das ein
+          // Sprung war. Der Vergleich macht den Aufstieg zur Zahl.
+          const line =
+            `Every Codex track bonus ×${rankBefore.mult.toFixed(2)}` +
+            ` → ×${rankAfter.mult.toFixed(2)}`
           logChronicleRank(rankAfter.title, line)
           useHerald().announce({
             kind: 'chronicle',

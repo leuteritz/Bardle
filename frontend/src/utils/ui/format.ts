@@ -171,6 +171,21 @@ export function formatBadgeCount(count: number): string {
   return count > BADGE_COUNT_CAP ? `${BADGE_COUNT_CAP}+` : String(count)
 }
 
+/**
+ * Prozentpunkte mit höchstens einer Nachkommastelle, ohne `.0` am Ende:
+ * `19.5` → „19.5", `13` → „13", `3.9000000000000004` → „3.9".
+ *
+ * Steht hier und nicht in der Karte, weil DREI Stellen dieselbe Zahl schreiben
+ * müssen: der Store (Effekt-Getter und Herald-Banner) und das Codex-Panel.
+ * Zeigten sie unterschiedlich gerundete Werte, sähe der Spieler im Banner eine
+ * andere Wirkung als in der Karte — und die Differenz eines Rang-Anteils
+ * (`19.5 − 15`) läuft ohne diese Rundung auf `4.499999999999996` hinaus.
+ */
+export function formatPercentValue(value: number): string {
+  const rounded = Math.round(value * 10) / 10
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+}
+
 /** `#rrggbb` → `[r, g, b]`. */
 export function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16)

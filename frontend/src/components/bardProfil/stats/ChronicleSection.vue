@@ -8,7 +8,8 @@ import {
   CHRONICLE_RANKS,
 } from '@/config/progression/achievements'
 import { CHRONICLE_STAGES_PER_TRACK } from '@/config/constants'
-import { toRoman } from '@/utils/ui/format'
+import { formatPercentValue, toRoman } from '@/utils/ui/format'
+import type { ChronicleTrackView } from '@/types'
 import StatsColumnHeader from './StatsColumnHeader.vue'
 
 /**
@@ -83,9 +84,31 @@ const shownSign = computed(() => (shown.value?.effect.includes('−{v}') ? '−'
  * dieselbe Formel steht im Store in `bonusPct`, samt derselben Rundung.
  */
 function effective(base: number): string {
-  const v = Math.round(base * store.rankMult * 10) / 10
-  return Number.isInteger(v) ? String(v) : v.toFixed(1)
+  return formatPercentValue(base * store.rankMult)
 }
+
+/**
+ * Wie viele Prozentpunkte des angezeigten Werts vom Rang kommen — die Antwort
+ * auf „und was bringt mir der Rang HIER?". Erst runden, dann abziehen: sonst
+ * stünde neben „+19.5 %" ein Anteil von 4.499999999999996.
+ */
+function rankShare(base: number): string {
+  return formatPercentValue(Math.round(base * store.rankMult * 10) / 10 - base)
+}
+
+/**
+ * Der Wert, den der Store für die gezeigte Bahn TATSÄCHLICH einsetzt. Für eine
+ * gefallene Stufe wird er nicht nachgerechnet, sondern aus `bonusPct` gelesen —
+ * derselbe Aufruf, aus dem auch der Effekt-Getter dieser Bahn speist. Nur die
+ * Vorschau auf Stufe I und die Stufenleiter brauchen `effective`, weil es zu
+ * ungeschriebenen Stufen im Store nichts zu lesen gibt.
+ */
+const shownApplied = computed(() =>
+  shown.value && shown.value.stage > 0 ? store.bonusPct(shown.value.bonus) : 0,
+)
+
+/** Trägt die gezeigte Bahn überhaupt einen Rang-Anteil? */
+const shownHasShare = computed(() => !!shown.value && shown.value.stage > 0 && store.rankMult > 1)
 
 /** „1.30" — der Verstärker, wie er im Balken und am Fokusfeld steht. */
 function multLabel(mult: number): string {
@@ -94,8 +117,10 @@ function multLabel(mult: number): string {
 
 const shownEffect = computed(() => {
   if (!shown.value) return ''
-  const value = shown.value.stage > 0 ? shown.value.value : shown.value.stages[0].value
-  return shown.value.effect.replace('{v}', effective(value))
+  if (shown.value.stage > 0) {
+    return shown.value.effect.replace('{v}', formatPercentValue(shownApplied.value))
+  }
+  return shown.value.effect.replace('{v}', effective(shown.value.stages[0].value))
 })
 
 /** Die Leiter der gezeigten Bahn: jede Stufe mit Schwelle und Wert. */
@@ -114,6 +139,21 @@ const nextRank = computed(() => CHRONICLE_RANKS.find((r) => r.min > store.unlock
 const toNextRank = computed(() =>
   nextRank.value ? nextRank.value.min - store.unlockedStageCount : 0,
 )
+
+/**
+ * Tooltip eines Wappens. Er trägt die Wirkung mit, weil die Reihe der acht nur
+ * Zeichen und Zahlzeichen zeigt — was eine Bahn EINBRINGT, stand sonst erst im
+ * Fokusfeld, also nur für die eine gerade gezeigte.
+ */
+function crestTitle(t: ChronicleTrackView): string {
+  const head = `${t.name} — stage ${t.stage} of ${CHRONICLE_STAGES_PER_TRACK}`
+  if (t.stage === 0) {
+    return `${head} · ${t.effect.replace('{v}', effective(t.stages[0].value))} at stage I`
+  }
+  const line = t.effect.replace('{v}', effective(t.value))
+  if (store.rankMult <= 1) return `${head} · ${line}`
+  return `${head} · ${line} — ${rankShare(t.value)}% of it from your ${store.rankTitle} rank`
+}
 
 /** Klick heftet an; ein zweiter Klick auf dasselbe Wappen löst wieder. */
 function pin(id: string) {
@@ -194,7 +234,7 @@ function pin(id: string) {
           'is-dormant': track.stage === 0,
         }"
         :style="{ '--tc': track.color }"
-        :title="`${track.name} — stage ${track.stage} of ${CHRONICLE_STAGES_PER_TRACK}`"
+        :title="crestTitle(track)"
         @mouseenter="hoverId = track.id"
         @mouseleave="hoverId = null"
         @focus="hoverId = track.id"
@@ -233,31 +273,38 @@ function pin(id: string) {
         </span>
       </div>
 
-      <!-- Die Zeile zeigt, was JETZT wirkt. Steht ein Rang-Verstärker dahinter,
-           sagt die Marke das dazu — sonst wirkte die Zahl gegen die Stufenwerte
-           daneben wie ein Rechenfehler. -->
+      <!-- Die Zeile zeigt, was JETZT wirkt — Grundwert mal Rang. -->
       <div class="cr-focus-effect">
         <span class="cr-focus-effect-text">{{ shownEffect }}</span>
         <span v-if="shown.stage === 0" class="cr-focus-pending">at I</span>
-        <span
-          v-else-if="store.rankMult > 1"
-          class="cr-focus-rankmark"
-          :title="`Includes the ×${multLabel(store.rankMult)} boost from your ${store.rankTitle} rank`"
-        >
-          incl. rank ×{{ multLabel(store.rankMult) }}
-        </span>
       </div>
 
+      <!-- Links der Stand der Metrik, rechts beziffert, WIE VIEL von der Zahl
+           darüber der Rang beisteuert. Die Aufschlüsselung steht hier und nicht
+           an der Effektzeile, weil sie dort mit langen Wirkungstexten um die
+           Breite kämpfen müsste („Forge node & relic material costs −30%") —
+           diese Zeile ist kurz und hat den Platz übrig. -->
       <div class="cr-focus-count">
-        <template v-if="shown.nextThreshold === null">
-          {{ $formatNumber(shown.current) }} {{ shown.unit }} · complete
-        </template>
-        <template v-else>
-          {{ $formatNumber(shown.current) }}
-          <span class="cr-focus-sep">/</span>
-          {{ $formatNumber(shown.nextThreshold) }}
-          <span class="cr-focus-unit">{{ shown.unit }}</span>
-        </template>
+        <span class="cr-focus-count-main">
+          <template v-if="shown.nextThreshold === null">
+            {{ $formatNumber(shown.current) }} {{ shown.unit }} · complete
+          </template>
+          <template v-else>
+            {{ $formatNumber(shown.current) }}
+            <span class="cr-focus-sep">/</span>
+            {{ $formatNumber(shown.nextThreshold) }}
+            <span class="cr-focus-unit">{{ shown.unit }}</span>
+          </template>
+        </span>
+
+        <span
+          v-if="shownHasShare"
+          class="cr-focus-share"
+          :title="`${shown.value}% base × ${multLabel(store.rankMult)} from your ${store.rankTitle} rank = ${formatPercentValue(shownApplied)}%`"
+        >
+          <span class="cr-focus-share-lbl">from rank</span>
+          <strong>+{{ rankShare(shown.value) }}%</strong>
+        </span>
       </div>
 
       <div class="cr-ladder">
@@ -663,25 +710,50 @@ function pin(id: string) {
   color: #6b5a3c;
 }
 
-/* Woher der Aufschlag auf der Zeile darüber kommt. Bewusst leise: die Zahl ist
-   die Aussage, die Herkunft nur ihre Fußnote. */
-.cr-focus-rankmark {
+/* Beziffert den Rang-Anteil an der Zahl eine Zeile darüber. Rechts am Rand,
+   damit die Aufschlüsselung nicht mit dem Stand der Metrik verschmilzt. */
+.cr-focus-share {
   flex-shrink: 0;
-  padding: 2px 6px;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 7px;
   white-space: nowrap;
-  color: var(--rpg-gold-dim);
   background: #141008;
   border: 1px solid #3e200a;
   border-radius: 3px;
 }
 
+.cr-focus-share-lbl {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a7a52;
+}
+
+.cr-focus-share strong {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--rpg-gold);
+  font-variant-numeric: tabular-nums;
+}
+
 .cr-focus-count {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
   font-size: 12px;
   color: #d8cbb0;
   font-variant-numeric: tabular-nums;
+}
+
+.cr-focus-count-main {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cr-focus-sep {
   color: #6b5a3c;

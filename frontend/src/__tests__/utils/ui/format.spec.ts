@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { durationSegments } from '@/utils/ui/format'
+import { durationSegments, formatPercentValue } from '@/utils/ui/format'
 
 const S = 1000
 const M = 60 * S
@@ -65,5 +65,26 @@ describe('durationSegments', () => {
   it('keeps counting past two digits instead of truncating', () => {
     const [days] = durationSegments(365 * D)
     expect(days).toEqual({ value: '365', unit: 'days', leadingZero: false })
+  })
+})
+
+describe('formatPercentValue', () => {
+  it('drops a trailing .0 but keeps a real decimal', () => {
+    expect(formatPercentValue(13)).toBe('13')
+    expect(formatPercentValue(13.0)).toBe('13')
+    expect(formatPercentValue(19.5)).toBe('19.5')
+  })
+
+  it('swallows the float noise a rank multiplication leaves behind', () => {
+    // 3 × 1.3 und 15 × 1.3 rechnen binär nicht glatt — genau der Fall, für den
+    // es diesen Formatierer gibt.
+    expect(formatPercentValue(3 * 1.3)).toBe('3.9')
+    expect(formatPercentValue(15 * 1.3)).toBe('19.5')
+    expect(formatPercentValue(10 * 1.15)).toBe('11.5')
+  })
+
+  it('rounds to a single decimal instead of trailing digits', () => {
+    expect(formatPercentValue(22 * 1.3)).toBe('28.6')
+    expect(formatPercentValue(16 * 1.15)).toBe('18.4')
   })
 })
