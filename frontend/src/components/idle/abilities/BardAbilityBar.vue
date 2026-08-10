@@ -76,8 +76,6 @@
 
     <div class="ab-row">
       <BardPassiveTile
-        :resonance="store.resonance"
-        :resonance-fill="store.resonanceFill"
         :meep-fill="meepFill"
         :clicks-to-meep="clicksToMeep"
         @hover="(on: boolean) => (hoveredId = on ? 'passive' : null)"
