@@ -18,7 +18,6 @@
  * und damit an der Uhr des Browsers statt am Abtasttakt des Overlays.
  */
 import { computed, ref, watch, onMounted } from 'vue'
-import { Icon } from '@iconify/vue'
 import {
   PAUSE_STAR_CARD_HEIGHT,
   PAUSE_STAR_CARD_PAD_X,
@@ -43,8 +42,8 @@ const props = defineProps<{
   name: string
   /** Farbe seiner Schwere. */
   color: string
-  /** Sein Icon. */
-  icon: string
+  /** Bild des Bewohners — fehlt bei den kleinen, gestaltlosen Wesen. */
+  dweller?: string
   /** Wie viele insgesamt unterwegs sind. */
   count: number
   /** Wie weit das vorderste heruntergeprügelt ist (0..1). */
@@ -52,6 +51,7 @@ const props = defineProps<{
 }>()
 
 const isUrgent = computed(() => props.secs <= PAUSE_VOID_URGENT_SECS)
+const wornPct = computed(() => Math.round(props.worn * 100))
 
 /** Punkte für die Wesen dahinter, gedeckelt — bei zwei Dutzend wäre eine volle
  *  Reihe eine Textur und kein Zählwerk. */
@@ -142,10 +142,27 @@ const dashOffset = computed(() => {
 
     <!-- Was kommt -->
     <div class="pvc-body">
-      <span class="pvc-head">
-        <Icon :icon="icon" width="12" height="12" class="pvc-head__icon" />
-        <span class="pvc-head__name">{{ name }}</span>
-      </span>
+      <!-- Das Wesen selbst — kein Icon, sondern dasselbe Bild, das draussen im
+           Schlund steht. Es liegt HINTER dem Text und läuft nach links ins
+           Dunkel aus, statt als eigene Spalte neben ihm zu stehen: nebeneinander
+           blieben von 208 px nur 56 für die Schrift, und „The Unmaking" wurde
+           zu „The Un…". So bekommt das Bild mehr Fläche als vorher UND der Name
+           seine volle Breite. Die kleinen Wesen haben kein Bild (sie sind
+           gestaltlos), für sie steht der gezeichnete Schlund. -->
+      <div class="pvc-art" aria-hidden="true">
+        <img
+          v-if="dweller"
+          :src="dweller"
+          alt=""
+          class="pvc-art__img"
+          draggable="false"
+          @dragstart.prevent
+        />
+        <span v-else class="pvc-art__maw"></span>
+        <span class="pvc-art__veil"></span>
+      </div>
+
+      <span class="pvc-head__name">{{ name }}</span>
 
       <!-- Wie viele dahinter noch kommen. Der erste Punkt ist das vorderste
            selbst, deshalb hebt er sich ab. -->
@@ -159,9 +176,14 @@ const dashOffset = computed(() => {
         <span v-if="overflow > 0" class="pvc-pips__more">+{{ overflow }}</span>
       </span>
 
-      <!-- Was der Orbit inzwischen geschafft hat — er feuert auch pausiert. -->
-      <span class="pvc-worn">
-        <span class="pvc-worn__fill" :style="{ transform: `scaleX(${worn})` }"></span>
+      <!-- Was der Orbit inzwischen geschafft hat — er feuert auch pausiert.
+           Die Zahl steht daneben und nicht nur der Balken: „wie weit bin ich?"
+           ist die Frage, die entscheidet, ob man zurückkommt. -->
+      <span class="pvc-worn-row">
+        <span class="pvc-worn">
+          <span class="pvc-worn__fill" :style="{ transform: `scaleX(${worn})` }"></span>
+        </span>
+        <span class="pvc-worn__pct">{{ wornPct }}%</span>
       </span>
     </div>
   </div>
@@ -273,34 +295,85 @@ const dashOffset = computed(() => {
 
 /* ── Körper ── */
 .pvc-body {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
   flex: 1;
+  /* Das Bild darf bis an die Kartenkante laufen; die Karte selbst clippt. */
+  align-self: stretch;
+  padding: 6px 0;
 }
 
-.pvc-head {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
+/* ── Bildnis ── */
+/* Dasselbe Bild wie draussen im Schlund, an der rechten Kante angeschnitten und
+   nach links ausblendend. Alles statisch — das Overlay steht, hier bewegt sich
+   nichts. */
+.pvc-art {
+  position: absolute;
+  top: -1px;
+  right: calc(-1 * var(--pvc-pad));
+  bottom: -1px;
+  width: 78%;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-.pvc-head__icon {
-  flex-shrink: 0;
-  color: var(--pvc-color);
+.pvc-art__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 62% 30%;
+  transform: scale(1.12);
+  opacity: 0.9;
+}
+
+/* Die kleinen Wesen sind gestaltlos — für sie steht der Schlund selbst. */
+.pvc-art__maw {
+  position: absolute;
+  top: 50%;
+  right: 14%;
+  width: 54%;
+  height: 62%;
+  border-radius: 50%;
+  transform: translateY(-50%) rotate(-14deg);
+  background: radial-gradient(ellipse, #05030a 0%, #0b0616 55%, transparent 100%);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--pvc-color) 65%, transparent);
+}
+
+/* Der Verlauf nach links ist der Grund, warum der Text lesbar bleibt: er ist
+   dort dicht, wo Schrift steht, und gibt das Bild erst rechts frei. */
+.pvc-art__veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, #140b20 0%, rgba(20, 11, 32, 0.92) 34%, rgba(20, 11, 32, 0.42) 72%, rgba(20, 11, 32, 0.25) 100%),
+    linear-gradient(to bottom, rgba(20, 11, 32, 0.5), transparent 30%, transparent 70%, rgba(20, 11, 32, 0.5));
+}
+
+/* Text über dem Bild. */
+.pvc-head__name,
+.pvc-pips,
+.pvc-worn-row {
+  position: relative;
+  z-index: 1;
 }
 
 .pvc-head__name {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.1;
-  color: #e8dcc0;
+  color: #f0e4c8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Der Name steht über dem Bild — ohne diesen Schatten verlöre er sich in
+     dessen hellen Stellen. */
+  text-shadow: 0 1px 4px rgba(5, 3, 10, 0.95);
 }
 
 /* ── Zählwerk ── */
@@ -332,10 +405,27 @@ const dashOffset = computed(() => {
 }
 
 /* ── Fortschritt des Orbits ── */
+.pvc-worn-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pvc-worn__pct {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  color: #9ae86a;
+  font-variant-numeric: tabular-nums;
+}
+
 .pvc-worn {
   position: relative;
   display: block;
-  height: 3px;
+  flex: 1;
+  min-width: 0;
+  height: 4px;
   background: #0b0616;
   border-radius: 3px;
   overflow: hidden;

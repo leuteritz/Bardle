@@ -286,7 +286,7 @@ export const ADMIN_VOID_SWARM_SIZE = VOID_MAX_CONCURRENT
 
 /** Breite der Void-Karte in der „Awaiting your return"-Reihe. Etwas schmaler
  *  als eine Stern-Karte: sie trägt eine Zeile weniger. */
-export const PAUSE_VOID_CARD_WIDTH = 176
+export const PAUSE_VOID_CARD_WIDTH = 208
 
 /** Ab so vielen Restsekunden bis zum Einschlag schlägt die Karte auf Warnrot
  *  um. Grosszügiger als bei den Sternen (dort 10 s), weil hier nicht ein

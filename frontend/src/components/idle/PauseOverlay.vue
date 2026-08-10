@@ -18,7 +18,10 @@
           <div
             ref="panelEl"
             class="pause-panel"
-            :style="{ transform: `scale(${panelScale})` }"
+            :style="{
+              transform: `scale(${panelScale})`,
+              width: `${PAUSE_PANEL_DESIGN_WIDTH}px`,
+            }"
           >
           <!-- Shared cosmic starfield inside the panel — same backdrop component
                as the shop/skill-tree tabs. Sits above the flat panel fill
@@ -69,7 +72,7 @@
                Die Scheibe bleibt frei: Ring und Plakette lagen vorher genau auf
                der Fläche, an der die Phase erkennbar ist — Korona, Farbe,
                Oberfläche. Die HP stehen deshalb als eigene Leiste darunter. -->
-          <div class="sun-hero">
+          <div class="sun-hero" :style="{ width: `${sunDiameter}px`, height: `${sunDiameter}px` }">
             <div class="sun-hero__disc" aria-hidden="true">
               <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
               <PhaseSunDisc v-else :diameter="sunDiameter" />
@@ -320,7 +323,7 @@
                 :duration-ms="voidThreat.durationMs"
                 :name="voidThreat.name"
                 :color="voidThreat.color"
-                :icon="voidThreat.icon"
+                :dweller="voidThreat.dweller"
                 :count="voidThreat.count"
                 :worn="voidThreat.worn"
               />
@@ -423,6 +426,7 @@ import {
   PAUSE_SUN_MIN_DIAMETER,
   PAUSE_SUN_MAX_DIAMETER,
   PAUSE_SUN_VH_FACTOR,
+  PAUSE_PANEL_DESIGN_WIDTH,
   PAUSE_PANEL_MAX_SCALE,
   PAUSE_MATERIAL_COLUMNS,
   PAUSE_MATERIAL_ROWS,
@@ -730,7 +734,8 @@ interface PauseVoidThreat {
   durationMs: number
   name: string
   color: string
-  icon: string
+  /** Bild des Bewohners — fehlt bei den kleinen, gestaltlosen Wesen. */
+  dweller?: string
   count: number
   worn: number
 }
@@ -749,7 +754,7 @@ function buildVoidThreat(): PauseVoidThreat | null {
     durationMs: lead.travelMs,
     name: def.name,
     color: VOID_SEVERITY_COLOR[def.severity] ?? def.color,
-    icon: def.icon,
+    dweller: def.dweller,
     count: voidStore.active.length,
     // Auf ganze Prozent gerundet: der Balken ist wenige Pixel breit, und der
     // Schlüssel unten schlüge sonst bei jedem Abtasttakt an.
@@ -987,7 +992,10 @@ function particleStyle(i: number): Record<string, string> {
   position: relative;
   z-index: 1;
   overflow: hidden;
-  width: 620px;
+  /* Breite kommt inline aus PAUSE_PANEL_DESIGN_WIDTH — sie stand hier früher
+     ein zweites Mal als feste Zahl, und die Rechnung der Kartenreihe hängt
+     daran. Zwei Quellen für dasselbe Maß laufen beim ersten Nachjustieren
+     auseinander, ohne dass es auffällt. */
   flex-shrink: 0;
   transform-origin: center center;
   display: flex;
@@ -1128,10 +1136,11 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Sun hero ─────────────────────────────────────────── */
+/* Maße kommen inline aus `sunDiameter` (PAUSE_SUN_*): dieselbe Spanne stand
+   hier als `clamp()` ein zweites Mal, und beide Fassungen mussten von Hand
+   gleichgehalten werden. */
 .sun-hero {
   position: relative;
-  width: clamp(160px, 24vh, 300px);
-  height: clamp(160px, 24vh, 300px);
   flex-shrink: 0;
   pointer-events: none;
 }

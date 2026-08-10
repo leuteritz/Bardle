@@ -96,15 +96,27 @@ export const ADMIN_FILL_MATERIAL_AMOUNT = 9999
  *  timestamps are reactive, Date.now() is not — a ref ticks the comparison. */
 export const HUD_COUNTDOWN_TICK_MS = 250
 
-/** Pause overlay sun hero — disc diameter band (px) scaled by viewport height so the
- *  paused sun reads large on every desktop resolution without dwarfing the panel. */
-export const PAUSE_SUN_MIN_DIAMETER = 160
-export const PAUSE_SUN_MAX_DIAMETER = 300
-export const PAUSE_SUN_VH_FACTOR = 0.24
+/**
+ * Pause-Overlay, Sonnen-Hero — Durchmesserband (px), an der Viewporthöhe
+ * skaliert.
+ *
+ * Bewusst kleiner als früher (160–300 bei 0,24 vh): die Sonne ist im Overlay
+ * ein Standbild, das sich nicht ändert, während die Karten darunter etwas
+ * zeigen, das gerade LÄUFT. Der gewonnene Platz geht an sie — und weil das
+ * Panel dadurch insgesamt flacher wird, hebt useFitScale zusätzlich die
+ * Skalierung des ganzen Overlays.
+ *
+ * Diese Werte sind die EINZIGE Quelle: `.sun-hero` liest sie über den inline
+ * gesetzten Durchmesser, statt dieselbe Spanne ein zweites Mal als `clamp()`
+ * im CSS zu führen.
+ */
+export const PAUSE_SUN_MIN_DIAMETER = 118
+export const PAUSE_SUN_MAX_DIAMETER = 200
+export const PAUSE_SUN_VH_FACTOR = 0.16
 
 /** Pause overlay panel — fixed design surface (px) that useFitScale shrinks on
  *  flat viewports (Full HD) and grows (up to max scale) on 2K/4K. */
-export const PAUSE_PANEL_DESIGN_WIDTH = 620
+export const PAUSE_PANEL_DESIGN_WIDTH = 960
 export const PAUSE_PANEL_MAX_SCALE = 1.3
 
 // HUD panel corner arc radius (shared by CommandPanel and MiniMap)
@@ -230,19 +242,27 @@ export const PAUSE_HP_CRIT_PERCENT = 25
 // Stützstellen decken beide Fälle ab; die Spalte nimmt die breiteste.
 export const PAUSE_HP_WIDTH_PROBES = [1, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1]
 
-// ── Pause-Overlay: Flyby-Karten der Resource-Stars ─────────────────────────
-// Ein Stern je Karte, höchstens RESOURCE_STAR_MAX_CONCURRENT nebeneinander.
-// Breite × 3 plus zwei Lücken muss in die Panelbreite abzüglich Innenabstand
-// passen (620 − 2 × 44 = 532) — sonst bricht die Reihe um und die reservierte
-// Höhe stimmt nicht mehr.
-export const PAUSE_STAR_CARD_WIDTH = 172
-export const PAUSE_STAR_CARD_HEIGHT = 74
+// ── Pause-Overlay: Karten der laufenden Vorgänge ───────────────────────────
+// Ein Stern je Karte, höchstens drei nebeneinander — und seit dem Void kommt
+// dessen Karte als VIERTE dazu.
+//
+// Die Rechnung, an der diese Werte hängen: vier Karten plus drei Lücken müssen
+// in die Panelbreite abzüglich Innenabstand passen
+// (960 − 2 × 44 = 872 gegen 4 × 208 + 3 × 6 = 850). Bricht die Reihe um,
+// stimmt die reservierte Höhe nicht mehr und der Fit-Scale springt.
+//
+// Der Platz dafür kam aus zwei Quellen: das Panel ist breiter (was laut
+// `.pause-panel` nichts kostet, weil der Fit-Scale auf jeder Referenzauflösung
+// höhenlimitiert ist) und der Sonnen-Hero kleiner. Beides ging an die Karten —
+// sie zeigen etwas, das gerade LÄUFT, die Sonne ein Standbild.
+export const PAUSE_STAR_CARD_WIDTH = 208
+export const PAUSE_STAR_CARD_HEIGHT = 96
 /** Waagerechter Innenabstand der Karte. Er steht hier und nicht nur im CSS,
  *  weil die Breite der Planetenreihe daraus abgeleitet wird — liefen beide
  *  auseinander, ragte die Reihe aus der Karte. */
-export const PAUSE_STAR_CARD_PAD_X = 6
+export const PAUSE_STAR_CARD_PAD_X = 8
 /** Abstand zwischen Zifferblatt und Planetenreihe. */
-export const PAUSE_STAR_DIAL_GAP_PX = 8
+export const PAUSE_STAR_DIAL_GAP_PX = 10
 /** Lücke zwischen zwei Karten in der Callout-Reihe. Drei Karten plus zwei
  *  Lücken müssen in 532 px passen (172 × 3 + 6 × 2 = 528). */
 export const PAUSE_STAR_CARD_GAP_PX = 6
@@ -252,7 +272,7 @@ export const PAUSE_STAR_CARD_GAP_PX = 6
  *  Advance, 18 px Tinte hoch) in einem Innenkreis von 38,5 px — auf Höhe der
  *  Tintenkante bleiben davon nur 2 · 3,5 px, und die Zahl klebte am Bogen.
  *  60 px heben den Innenkreis auf 47 px. */
-export const PAUSE_STAR_DIAL_PX = 60
+export const PAUSE_STAR_DIAL_PX = 70
 /** Zifferblatt der Restzeit: Radius, Strichstärke und Umfang der SVG-Kreislinie
  *  (viewBox 56 — der Radius ist also keine Pixelangabe, sondern wird mit
  *  PAUSE_STAR_DIAL_PX / 56 skaliert).
@@ -260,7 +280,7 @@ export const PAUSE_STAR_DIAL_PX = 60
  *  Ability-Ring, siehe „Performance" Regel 11.
  *  Track und Bogen teilen sich Radius UND Stärke: liefen sie auseinander, säße
  *  der abbrennende Bogen neben seiner eigenen Spur. */
-export const PAUSE_STAR_RING_RADIUS = 24
+export const PAUSE_STAR_RING_RADIUS = 27
 export const PAUSE_STAR_RING_STROKE = 4
 export const PAUSE_STAR_RING_CIRCUMFERENCE = 2 * Math.PI * PAUSE_STAR_RING_RADIUS
 /** Ab dieser Restzeit (Sekunden) schlägt das Zifferblatt auf Alarm um. */
@@ -280,8 +300,8 @@ export const PAUSE_STAR_URGENT_SECS = 10
 // der Reihenbreite geteilt durch die Zahl der Slots. Ein Stern mit nur einer
 // Welt ließ die halbe Karte leer — er zeigt sie jetzt größer (Körper 31 px),
 // bis die Kartenhöhe die Grenze setzt.
-export const PAUSE_STAR_PLANET_GLYPH_MAX_PX = 50
-export const PAUSE_STAR_PLANET_CELL_MAX_PX = 34
+export const PAUSE_STAR_PLANET_GLYPH_MAX_PX = 62
+export const PAUSE_STAR_PLANET_CELL_MAX_PX = 44
 export const PAUSE_STAR_PLANET_GAP_PX = 2
 /** Luft zwischen zwei Planetenkörpern. Ohne sie füllte der Körper die Zelle
  *  exakt aus und zwei Welten berührten sich bis auf die Flex-Lücke. */
