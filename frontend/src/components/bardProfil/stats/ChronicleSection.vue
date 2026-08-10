@@ -165,7 +165,7 @@ function pin(id: string) {
   <div class="cr-zone">
     <!-- Derselbe Kopf wie über den anderen Deck-Panels. Statt einer Suche trägt
          er die zwei Zahlen des Ganzen, jede unter ihrer eigenen Überschrift. -->
-    <StatsColumnHeader class="cr-head" title="Astral Codex">
+    <StatsColumnHeader class="cr-head" title="Codex">
       <template #meta>
         <span
           class="cr-read"

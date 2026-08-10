@@ -214,7 +214,7 @@ const filteredAugCards = computed(() => {
   <section class="sf-panel sf-col">
     <StatsColumnHeader
       v-model="augmentSearch"
-      title="Buffs & Augments"
+      title="Augments"
       placeholder="Search augments…"
     />
 

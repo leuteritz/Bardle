@@ -275,7 +275,7 @@ function handleEvolve(): void {
 
 <template>
   <section class="sf-panel sf-col sf-col--solar" :style="phaseVars">
-    <StatsColumnHeader title="Solar Evolution" />
+    <StatsColumnHeader title="Evolution" />
 
     <div class="sf-p-body sf-solar-body">
       <!-- ═ 1 · the body itself ═══════════════════════════════════ -->

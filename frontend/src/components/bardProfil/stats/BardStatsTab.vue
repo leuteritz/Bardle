@@ -99,7 +99,7 @@ onUnmounted(stopResize)
         class="sf-deck-handle sf-deck-handle--right"
         :class="{ 'is-active': resizeSide === 'right' }"
         :style="{ right: col3Width + 'px' }"
-        title="Drag to resize the Galaxy Archive column"
+        title="Drag to resize the Archive column"
         @pointerdown="startResize('right', $event)"
       >
         <span class="sf-deck-handle-grip" />
@@ -111,7 +111,7 @@ onUnmounted(stopResize)
 <style scoped>
 /* ══════════════════════════════════════════════════════════════
    BARD STATS — "Command Deck": a fixed-height dashboard of three equal-height
-   panels — Journey | Solar Evolution | Galaxy Archive.
+   panels — Journey | Evolution | Archive.
    The middle one is the stage: the live sun on its phase dial, with the
    augment deck folded into a short strip beneath it.
    The page itself NEVER scrolls; long lists scroll inside their panel.

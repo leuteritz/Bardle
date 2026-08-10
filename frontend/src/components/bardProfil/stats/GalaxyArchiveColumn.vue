@@ -43,7 +43,7 @@ function archiveDate(rec: CompletedGalaxyRecord): string {
   <section class="sf-panel sf-col">
     <StatsColumnHeader
       v-model="archiveSearch"
-      title="Galaxy Archive"
+      title="Archive"
       placeholder="Search galaxies…"
     />
 

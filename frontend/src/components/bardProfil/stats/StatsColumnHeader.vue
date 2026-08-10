@@ -118,11 +118,11 @@ const search = defineModel<string>({ default: '' })
 }
 
 /* 4K and taller: the default sizes would start to look lost on the huge canvas,
-   so the titles scale up. The ceiling is not the viewport but the archive
-   column, which stays 440px wide at every resolution — measured, the longest
-   title ("Galaxy Archive") already needs 230px there at 25px, more than the
-   column leaves next to the search box, so anything larger than this would
-   ellipsise the headline instead of growing it. */
+   so the titles scale up. The ceiling was measured back when the headlines ran
+   two words ("Galaxy Archive" needed 230px at 25px in the 440px-wide archive
+   column, more than it leaves next to the search box). The titles are single
+   words now and have room to spare — the size stays where it is because it is
+   tuned against the body type, not because the words no longer fit. */
 @media (min-height: 1600px) {
   .sf-p-head {
     min-height: 58px;
