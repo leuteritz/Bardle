@@ -115,10 +115,18 @@ export const VOID_TRAVEL_MS: Record<VoidRiftSeverity, number> = {
 }
 
 /**
- * Wie weit ausserhalb des sichtbaren Feldes ein Wesen aufreisst, als Anteil
- * seiner eigenen Grösse. Es soll ins Bild HEREINkommen, nicht darin erscheinen.
+ * Wie weit hinter der Bildkante ein Wesen aufreisst — als Anteil seines EIGENEN
+ * Radius im Moment des Aufreissens, nicht seiner Endgrösse (es ist dann erst
+ * `VOID_SPAWN_SCALE` gross). 0 setzte den Mittelpunkt genau auf die Kante,
+ * 1 schöbe ihn um einen ganzen Radius dahinter; dazwischen ragt es angeschnitten
+ * herein und kriecht ins Bild, statt darin zu erscheinen.
+ *
+ * Bezug ist die ECHTE Kante in Anflugrichtung. Vorher stand hier die halbe
+ * Bilddiagonale, und die liegt bei einem Anflug von oben eine halbe Bildhöhe
+ * über dem Rand: ein Wesen war dann gut die halbe Reise lang unsichtbar,
+ * während die HUD-Karte oben links es längst meldete.
  */
-export const VOID_SPAWN_OVERSHOOT = 0.9
+export const VOID_SPAWN_EDGE_OFFSET = 0.35
 
 /**
  * Grösse beim Aufreissen, als Anteil der Endgrösse. Das Wesen wächst auf dem

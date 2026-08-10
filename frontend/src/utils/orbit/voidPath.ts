@@ -1,11 +1,14 @@
 import {
-  VOID_SPAWN_OVERSHOOT,
+  VOID_SPAWN_EDGE_OFFSET,
   VOID_SPAWN_SCALE,
   VOID_PATH_DRIFT_MAX,
   VOID_ARRIVAL_SUN_FRAC,
   VOID_HIT_RADIUS_SCALE,
   VOID_HIT_RADIUS_MIN_PX,
 } from '@/config/constants'
+// Die HUD-Kanten misst der Drifter bereits, und er misst sie nicht für sich
+// selbst, sondern für das Spiel — dieselbe Frage, dieselbe Antwort.
+import { measuredFieldInsets, type DrifterFieldInsets } from '@/utils/orbit/drifterPath'
 
 /** Was `voidPositionAt` mindestens über ein Wesen wissen muss. */
 export interface VoidPathState {
@@ -25,6 +28,32 @@ export interface VoidPoint {
 }
 
 /**
+ * Abstand von der Sonne zur Kante des Feldes in Richtung (`cos`, `sin`).
+ *
+ * Das Feld ist NICHT mittenzentriert — oben nimmt der Header mehr weg als die
+ * Bottom-Bar unten —, also der allgemeine Strahl-Rechteck-Schnitt und nicht die
+ * kürzere Fassung über halbe Kantenlängen. Läuft der Strahl parallel zu einem
+ * Kantenpaar, ist dessen Wert unendlich und `Math.min` wählt von selbst das
+ * andere.
+ */
+function rectEdgeRadius(
+  cos: number,
+  sin: number,
+  cx: number,
+  cy: number,
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+): number {
+  const toVertical =
+    cos > 1e-6 ? (right - cx) / cos : cos < -1e-6 ? (left - cx) / cos : Number.POSITIVE_INFINITY
+  const toHorizontal =
+    sin > 1e-6 ? (bottom - cy) / sin : sin < -1e-6 ? (top - cy) / sin : Number.POSITIVE_INFINITY
+  return Math.max(0, Math.min(toVertical, toHorizontal))
+}
+
+/**
  * Wo ein Void-Wesen zur Zeit `now` steht.
  *
  * Die Position wird IMMER neu aus der Wanduhr gerechnet und nie fortgeschrieben:
@@ -37,6 +66,10 @@ export interface VoidPoint {
  * der Bildschirm sähe aus wie ein Explosionsdiagramm. Ziel ist NICHT die
  * Bildmitte, sondern der Sonnenrand aus der eigenen Anflugrichtung — sonst
  * stapeln sich alle Einschläge auf einem Punkt.
+ *
+ * `insets` sind die HUD-Kanten, hinter denen nichts zu sehen ist. Wer je Frame
+ * über alle Wesen läuft, misst sie EINMAL und reicht sie durch; der Default
+ * misst selbst und ist für die seltenen Einzelabfragen gedacht (Ausgangseffekt).
  */
 export function voidPositionAt(
   state: VoidPathState,
@@ -45,6 +78,7 @@ export function voidPositionAt(
   now: number,
   viewportW = typeof window === 'undefined' ? 0 : window.innerWidth,
   viewportH = typeof window === 'undefined' ? 0 : window.innerHeight,
+  insets: DrifterFieldInsets = measuredFieldInsets(),
 ): VoidPoint {
   const cx = viewportW / 2
   const cy = viewportH / 2
@@ -55,11 +89,26 @@ export function voidPositionAt(
   const cos = Math.cos(state.angle)
   const sin = Math.sin(state.angle)
 
-  // Startpunkt: so weit draussen, dass der Körper vollständig ausserhalb liegt.
-  // Bezug ist die halbe Diagonale, damit derselbe Winkel auf 16:9 und 21:9
-  // gleich weit draussen beginnt.
-  const halfDiag = Math.hypot(viewportW, viewportH) / 2
-  const startR = halfDiag + sizePx * VOID_SPAWN_OVERSHOOT
+  // Startpunkt: an der Kante des SICHTBAREN Feldes in dieser Richtung. Zwei
+  // Dinge stecken darin, und beide entschieden darüber, ob man das Wesen
+  // überhaupt zu sehen bekommt, während die HUD-Karte oben links es meldet:
+  //
+  // Erstens die Form. Vorher war der Bezug die halbe Bilddiagonale — auf 16:9
+  // sind das 1082 px in JEDE Richtung, während die echte Kante von oben nur
+  // 500 px entfernt ist. Ein Wesen von oben reisste also mehr als eine halbe
+  // Bildhöhe ausserhalb auf und war 55 seiner 96 Sekunden unsichtbar.
+  //
+  // Zweitens das HUD. Header und Bottom-Bar liegen über dem Void-Layer und
+  // gehen über die volle Breite; die nackte Bildkante hätte ein Wesen von oben
+  // hinter dem Header aufreissen lassen, was für den Spieler dasselbe ist wie
+  // ausserhalb. Gemessen wird mit demselben Werkzeug wie beim Drifter: das
+  // sind die Kanten des SPIELS, nicht etwas, das einem der beiden gehört.
+  const top = Math.min(insets.headerBottomPx ?? 0, cy - 1)
+  const bottom = Math.max(viewportH - (insets.bottomBarHeightPx ?? 0), cy + 1)
+  const edgeR = rectEdgeRadius(cos, sin, cx, cy, 0, top, viewportW, bottom)
+  // Hinter die Kante nur noch um einen Bruchteil des Körpers, den es JETZT hat —
+  // es ist beim Aufreissen erst `VOID_SPAWN_SCALE` gross.
+  const startR = edgeR + (sizePx / 2) * VOID_SPAWN_SCALE * VOID_SPAWN_EDGE_OFFSET
   const x0 = cx + cos * startR
   const y0 = cy + sin * startR
 
@@ -68,10 +117,13 @@ export function voidPositionAt(
   const x2 = cx + cos * endR
   const y2 = cy + sin * endR
 
-  // Kontrollpunkt: Mitte der Sehne, senkrecht dazu versetzt.
+  // Kontrollpunkt: Mitte der Sehne, senkrecht dazu versetzt. Der Versatz hängt
+  // an der Länge DIESER Sehne, nicht an der Bilddiagonale: ein Anflug von oben
+  // ist nur halb so lang wie einer von der Seite, und ein fester Versatz
+  // krümmte ihn dort zu einem Bogen, der aus dem Bild führt.
   const mx = (x0 + x2) / 2
   const my = (y0 + y2) / 2
-  const offset = state.drift * VOID_PATH_DRIFT_MAX * halfDiag
+  const offset = state.drift * VOID_PATH_DRIFT_MAX * Math.max(0, startR - endR)
   // Normale zur Anflugrichtung.
   const x1 = mx + -sin * offset
   const y1 = my + cos * offset

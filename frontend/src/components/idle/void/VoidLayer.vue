@@ -65,6 +65,7 @@ import { logVoidRiftSealed, logVoidRiftCollapsed } from '@/config/ui/eventLog'
 import { getVoidRift } from '@/config/world/void'
 import { hexToRgbTriple } from '@/utils/ui/format'
 import { voidPositionAt, voidHitRadius } from '@/utils/orbit/voidPath'
+import { measuredFieldInsets } from '@/utils/orbit/drifterPath'
 import { getVoidSprite, voidSpriteDrawSize } from '@/utils/fx/voidSprite'
 import {
   VOID_SEAL_BURST_PARTICLES,
@@ -148,11 +149,15 @@ function draw(): void {
 
   ctx.clearRect(0, 0, cssW, cssH)
 
+  // Einmal je Frame, nicht je Wesen: die Messung liest berechnete Stile, und
+  // bei zwei Dutzend Wesen wären das 1440 Abfragen je Sekunde.
+  const insets = measuredFieldInsets()
+
   for (const m of active.value) {
     const def = getVoidRift(m.defId)
     if (!def) continue
 
-    const pos = voidPositionAt(m, def.sizePx, sunRadius, now, cssW, cssH)
+    const pos = voidPositionAt(m, def.sizePx, sunRadius, now, cssW, cssH, insets)
     const size = voidSpriteDrawSize(def.sizePx) * pos.scale
     const half = size / 2
 
@@ -212,12 +217,13 @@ function monsterAt(x: number, y: number): number | null {
   if (active.value.length === 0) return null
   const now = Date.now()
   const sunRadius = planetShop.orbitSunRadius
+  const insets = measuredFieldInsets()
   let bestUid: number | null = null
   let bestT = -1
   for (const m of active.value) {
     const def = getVoidRift(m.defId)
     if (!def) continue
-    const pos = voidPositionAt(m, def.sizePx, sunRadius, now, cssW, cssH)
+    const pos = voidPositionAt(m, def.sizePx, sunRadius, now, cssW, cssH, insets)
     const r = voidHitRadius(def.sizePx, pos.scale)
     if (Math.hypot(pos.x - x, pos.y - y) > r) continue
     if (pos.t > bestT) {
