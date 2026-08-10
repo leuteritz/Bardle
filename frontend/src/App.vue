@@ -267,13 +267,24 @@ watch(
 
 /* Spiel pausiert (Fenster ohne Fokus / Tab im Hintergrund): CSS-Animationen und
    Transitions einfrieren — sie kosten Compositor-Zeit, ohne dass jemand hinsieht.
-   AUSGENOMMEN ist die Bottom-Bar: sie liegt mit z-index 10000 über dem
-   Pause-Overlay (9998), bleibt also sichtbar. Minimap, Scoreboard und Command
-   Panel laufen dort weiter (siehe useRenderingPaused → isHudPaused), und ihre
-   Cooldown-Ringe, Scan-Punkte und Balken müssen das mitmachen. */
-.rendering-paused *:not(.bottom-bar-shell, .bottom-bar-shell *),
-.rendering-paused *:not(.bottom-bar-shell, .bottom-bar-shell *)::before,
-.rendering-paused *:not(.bottom-bar-shell, .bottom-bar-shell *)::after {
+
+   AUSGENOMMEN sind die beiden Ebenen, die im pausierten Spiel SICHTBAR bleiben:
+
+   • Die Bottom-Bar liegt mit z-index 10000 über dem Pause-Overlay (9998).
+     Minimap, Scoreboard und Command Panel laufen dort weiter (siehe
+     useRenderingPaused → isHudPaused), und ihre Cooldown-Ringe, Scan-Punkte und
+     Balken müssen das mitmachen.
+   • Das Pause-Overlay selbst. Es EXISTIERT nur in diesem Zustand — jede seiner
+     Animationen lag hier also tot, vom atmenden Titel über das Glühen der
+     Chime-Münze bis zum Staub im Hintergrund. Sichtbar wurde das an den
+     Flyby-Karten: ihr Zeitbogen soll stetig abbrennen, stand aber still und
+     ruckte einmal je Sekunde auf den nächsten gebundenen Wert. Was hier läuft,
+     ist genau das, worauf der Spieler gerade schaut. */
+.rendering-paused *:not(.bottom-bar-shell, .bottom-bar-shell *, .pause-overlay, .pause-overlay *),
+.rendering-paused
+  *:not(.bottom-bar-shell, .bottom-bar-shell *, .pause-overlay, .pause-overlay *)::before,
+.rendering-paused
+  *:not(.bottom-bar-shell, .bottom-bar-shell *, .pause-overlay, .pause-overlay *)::after {
   animation-play-state: paused !important;
   transition: none !important;
 }

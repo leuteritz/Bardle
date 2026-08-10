@@ -415,10 +415,8 @@ const glyphPx = computed(() =>
   border-radius: 2px;
   background: linear-gradient(to bottom, var(--hp-hi), var(--hp-lo));
   /* Passivschaden fällt im Sekundentakt an — der Balken rutscht ihm nach,
-     statt zu springen. Dieselbe Kurve wie die Vitalitäts-Leiste im Panel.
-     Als Variable, weil die Ausnahme unten sie ein zweites Mal setzen muss. */
-  --hp-slide: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
-  transition: var(--hp-slide);
+     statt zu springen. Dieselbe Kurve wie die Vitalitäts-Leiste im Panel. */
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .planet-hp.hp--high {
   --hp-hi: #74d448;
@@ -436,27 +434,6 @@ const glyphPx = computed(() =>
    stehen, damit die Reihe ihre Grundlinie behält. */
 .planet-cell--cleared .planet-hp {
   opacity: 0.3;
-}
-
-/* ── Ausnahme vom Pausen-Freeze ───────────────────────────
-   Diese Karte ist ausschließlich sichtbar, während App.vue per
-   `.rendering-paused` ALLE Animationen und Transitions anhält — die Regel dort
-   zielt auf die eingefrorene Spielwelt unter dem Overlay, und für dessen Deko
-   ist das Anhalten auch richtig.
-
-   Die Karte zeigt jedoch einen LAUFENDEN Vorgang: der Stern verschwindet
-   weiter, seine Bosse nehmen weiter Schaden. Ohne diese Ausnahme stünde der
-   Zeitbogen still und ruckte einmal je Sekunde auf den nächsten gebundenen
-   Wert — genau das Stocken, das die Animation abschaffen soll.
-
-   Es sind höchstens RESOURCE_STAR_MAX_CONCURRENT Karten, und der Rest des
-   Panels bleibt eingefroren. */
-.rendering-paused .star-card .dial-arc,
-.rendering-paused .star-card--urgent .star-card__alarm {
-  animation-play-state: running !important;
-}
-.rendering-paused .star-card .planet-hp__fill {
-  transition: var(--hp-slide) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
