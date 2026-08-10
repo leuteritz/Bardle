@@ -500,6 +500,30 @@ export const SFX_CHIME_SUB_DECAY_S = 0.22
 // ── Admin / Debug ─────────────────────────────────────────────────────────────
 export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000
 
+// ── Admin: "Max Everything" (utils/game/maxEverything.ts) ─────────────────────
+// Endzustand-Knopf im Admin-Tab. Die Beträge sind bewusst gross genug, dass
+// jeder Kauf im Spiel gedeckt ist, aber klein genug, dass die Kostenformeln
+// (Multiplikatoren über dutzende Stufen) nicht gegen Infinity laufen.
+export const ADMIN_MAX_CHIMES = 1e15
+export const ADMIN_MAX_MATERIAL_AMOUNT = 999_999
+export const ADMIN_MAX_SKILL_POINTS = 999
+/** Bard-Level. Über 65, weil R erst dort seinen fünften Rang erreicht
+ *  (ABILITY_UNLOCK_LEVEL_R + 4 × ABILITY_LEVELS_PER_RANK). */
+export const ADMIN_MAX_BARD_LEVEL = 100
+/** Letztes Universum im Katalog (config/progression/universes.ts). */
+export const ADMIN_MAX_UNIVERSE = 10
+export const ADMIN_MAX_GALAXY = 50
+/** Gebäudestufen kennen kein Cap — dieser Wert ist die gewählte Testhöhe. */
+export const ADMIN_MAX_BUILDING_LEVEL = 500
+/** Planeten-Level. Ab Sonnenphase 5 greift kein Phasen-Gate mehr, die Zahl ist
+ *  also frei wählbar; PLANET_MAX_BULK_LEVELS deckelt den Aufruf intern. */
+export const ADMIN_MAX_PLANET_LEVEL = 60
+/** Schleifen-Abbruch: adminPromoteRank() steigt nur EINE Stufe pro Aufruf. */
+export const ADMIN_RANK_PROMOTE_GUARD = 60
+/** Schleifen-Abbruch beim Auflösen offener Perk-Wahlen — choosePerk() gibt bei
+ *  ungültiger Wahl `false` zurück, ohne den Eintrag zu entfernen. */
+export const ADMIN_PERK_RESOLVE_GUARD = 2000
+
 /** Kantenlänge der Drifter-Silhouette auf den Spawn-Kacheln des Admin-Panels.
  *  Groß genug, dass Splitter, Sonde und Leviathan auseinanderzuhalten sind,
  *  klein genug für zwei Reihen à vier Kacheln neben den anderen Panels. */

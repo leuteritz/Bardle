@@ -4,6 +4,7 @@ import AdminGalaxyJumpPanel from './AdminGalaxyJumpPanel.vue'
 import AdminStarPhasePanel from './AdminStarPhasePanel.vue'
 import AdminDrifterPanel from './AdminDrifterPanel.vue'
 import AdminVoidPanel from './AdminVoidPanel.vue'
+import AdminMaxEverythingPanel from './AdminMaxEverythingPanel.vue'
 </script>
 
 <template>
@@ -28,7 +29,16 @@ import AdminVoidPanel from './AdminVoidPanel.vue'
     </div>
     <div class="admin-dash-right">
       <AdminGalaxyJumpPanel dashboard />
-      <AdminStarPhasePanel dashboard />
+      <AdminStarPhasePanel dashboard class="admin-dash-grow" />
+      <!-- Der Endzustand-Knopf steht unten über die volle Spaltenbreite: er tut,
+           was die neun Quick Actions zusammen tun, und wäre als zehnte Kachel im
+           3er-Raster eine vierte Zeile mit zwei Lücken.
+           Warum RECHTS und nicht unter Quick Actions: die linke Spalte hat keine
+           Höhe übrig. Gemessen (Full HD) kostete er dort 66 px, und Quick Actions
+           lief um 18 px über — die letzten drei Knöpfe standen unter der
+           Kartenkante. Rechts gibt die Sternphasen-Karte den Platz aus ihrem
+           gestreckten Kachelraster ab, ohne selbst überzulaufen. -->
+      <AdminMaxEverythingPanel />
     </div>
   </div>
 </template>
@@ -76,10 +86,14 @@ import AdminVoidPanel from './AdminVoidPanel.vue'
   gap: clamp(10px, 1.3vw, 18px);
 }
 
-.admin-dash-right > :first-child {
+/* Nicht positionell, sondern benannt: als `:first-child`/`:last-child`
+   geschrieben galt die Regel nur, solange genau zwei Panels in der Spalte
+   standen — mit dem dritten hätte `:last-child` still den Endzustand-Knopf
+   gestreckt statt die Sternphasen-Karte. Wer wächst, sagt es selbst. */
+.admin-dash-right > * {
   flex: 0 0 auto;
 }
-.admin-dash-right > :last-child {
+.admin-dash-right > .admin-dash-grow {
   flex: 1;
   min-height: 0;
 }

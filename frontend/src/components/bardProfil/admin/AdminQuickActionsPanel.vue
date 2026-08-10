@@ -9,37 +9,28 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { MATERIALS } from '@/config/economy/materials'
 import { useNebulaTrigger } from '@/composables/orbit/useNebulaTrigger'
-import { CHAMPION_ROLES } from '@/config/champions/championData'
-import { usePlanetShopStore } from '@/stores/world/planetShopStore'
-import { useItemStore } from '@/stores/economy/itemStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
-import { useSkinStore } from '@/stores/champions/skinStore'
-import { getChampionSkins } from '@/utils/game/champions'
+// Die Kader-Befüllung teilen sich zwei Knöpfe (hier und "Max Everything") und
+// lebt deshalb in utils/game statt zweimal als Kopie in je einer Komponente.
+import { fillTeamWithRandomChampions } from '@/utils/game/maxEverything'
 import {
   ADMIN_QUICK_RESOURCE_AMOUNT,
-  ALLIES_PER_ROLE,
   GALAXY_BOSS_SPAWN_ANIM_MS,
-  SKIN_ORIGINAL,
-  createEmptyAllyRows,
   ADMIN_FIELD_FLASH_MS,
   ADMIN_CHIMES_STEP,
   ADMIN_FILL_MATERIAL_AMOUNT,
 } from '@/config/constants'
-import type { ChampionRole } from '@/types'
 
 withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
-const planetShopStore = usePlanetShopStore()
 const starGroupStore = useStarGroupStore()
 const omenStore = useOmenStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
-const itemStore = useItemStore()
 const planetBossStore = usePlanetBossStore()
-const skinStore = useSkinStore()
 
 const editingKey = ref<string | null>(null)
 const editingValue = ref<string>('')
@@ -241,54 +232,6 @@ function fillAllResources() {
   gameStore.chimes += ADMIN_QUICK_RESOURCE_AMOUNT
   gameStore.meeps += ADMIN_QUICK_RESOURCE_AMOUNT
   battleStore.addAllRecruitableChampions()
-}
-
-/** Equip a random look: the default (Original) or any bundled alternate skin. */
-function assignRandomSkin(name: string) {
-  const options = [SKIN_ORIGINAL, ...getChampionSkins(name).filter((s) => s !== SKIN_ORIGINAL)]
-  skinStore.setSkin(name, options[Math.floor(Math.random() * options.length)])
-}
-
-function fillTeamWithRandomChampions() {
-  battleStore.unlockAllChampions()
-  const roles: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
-  const used = new Set<string>()
-  const pool = [...battleStore.ownedChampions]
-    .filter((c) => c !== 'Bard')
-    .sort(() => Math.random() - 0.5)
-
-  battleStore.headerSlots.splice(0, 5, null, null, null, null, null)
-  battleStore.secondarySlots = createEmptyAllyRows()
-  battleStore.syncTeam1ToSlots()
-
-  roles.forEach((role, slotIndex) => {
-    const roleMatch = pool.filter(
-      (name) => !used.has(name) && (CHAMPION_ROLES[name] ?? []).includes(role),
-    )
-    const fallback = pool.filter((name) => !used.has(name))
-    const pick =
-      roleMatch.length > 0 ? roleMatch[Math.floor(Math.random() * roleMatch.length)] : fallback[0]
-    if (!pick) return
-    used.add(pick)
-    battleStore.setHeaderSlot(slotIndex, pick)
-    assignRandomSkin(pick)
-
-    const secondaryPool = pool.filter(
-      (name) => !used.has(name) && (CHAMPION_ROLES[name] ?? []).includes(role),
-    )
-    for (let subIndex = 0; subIndex < ALLIES_PER_ROLE; subIndex++) {
-      if (secondaryPool.length === 0) break
-      const idx = Math.floor(Math.random() * secondaryPool.length)
-      const secondary = secondaryPool.splice(idx, 1)[0]
-      used.add(secondary)
-      battleStore.setSecondarySlot(slotIndex, subIndex, secondary)
-      assignRandomSkin(secondary)
-    }
-  })
-
-  planetShopStore.adminFillRandomRoles()
-  itemStore.adminUnlockAllItems()
-  itemStore.adminFillRandomEquipment()
 }
 
 // Reset Cooldowns lebt jetzt direkt über dem Command Panel
