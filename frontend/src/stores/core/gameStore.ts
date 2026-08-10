@@ -619,10 +619,10 @@ export const useGameStore = defineStore('game', {
     openPrestigeModal() {
       if (!this.prestigeAvailable || this.totalUniverses <= 1) return
       if (this.isHyperspaceActive) return
-      // Das Vorsehungs-Angebot wird EINMAL beim Öffnen gezogen, nicht beim
-      // Rendern der Karten: sonst würfelte jedes Re-Render des Modals neue
-      // Karten unter dem Cursor des Spielers.
-      useProvidenceStore().rollOffer()
+      // Das Angebot wird EINMAL beim Öffnen gezogen, nicht beim Rendern der
+      // Karten: sonst würfelte jedes Re-Render neue Karten unter dem Cursor des
+      // Spielers. Das laufende Universum kommt nicht ins Angebot.
+      useProvidenceStore().rollOffer(this.currentUniverse)
       this.showUniverseSelectModal = true
     },
 
@@ -860,8 +860,17 @@ export const useGameStore = defineStore('game', {
       return result
     },
 
+    /**
+     * Die Effekte, unter denen dieser Durchlauf steht — Vorsehung mal Augments.
+     *
+     * Die Basis kam früher aus `universes[…].modifier`, also fest aus dem
+     * Katalog. Seit Universum und Vorsehung beim Prestige ZUSAMMEN gezogen
+     * werden, liefert die gewählte Vorsehung sie; das Universum trägt nur noch
+     * Name und Wappen. Alle Lesestellen dieses Getters blieben dabei unverändert
+     * — genau dafür ist er die eine Stelle, an der die Quelle steht.
+     */
     activeModifier(): ModifierEffects {
-      const base = universes[this.currentUniverse - 1]?.modifier?.effects ?? {}
+      const base = useProvidenceStore().activeEffects
       const aug = this.combinedAugmentEffects
       return {
         cpsMultiplier: (base.cpsMultiplier ?? 1) * (aug.cpsMultiplier ?? 1),

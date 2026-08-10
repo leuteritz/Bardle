@@ -40,8 +40,6 @@ const providenceStore = useProvidenceStore()
 
 const universe = computed(() => universes[gameStore.currentUniverse - 1])
 const universeRoman = computed(() => toRoman(gameStore.currentUniverse))
-const modifier = computed(() => universe.value?.modifier ?? null)
-
 /** Die gewählte Vorsehung dieses Durchlaufs — `null` im ersten Lauf. */
 const providence = computed(() => providenceStore.active)
 const providenceLines = computed(() =>
@@ -222,20 +220,11 @@ const lifetimeRows = computed<StatRow[]>(() => [
 
     <p v-if="universe?.description" class="upt-desc">{{ universe.description }}</p>
 
-    <!-- ════════ Das Gesetz, unter dem dieses Universum steht ════════ -->
-    <section v-if="modifier" class="upt-block upt-law">
-      <Icon :icon="modifier.icon" width="26" height="26" class="upt-law-icon" aria-hidden="true" />
-      <div class="upt-law-text">
-        <div class="upt-law-name">{{ modifier.name }}</div>
-        <div class="upt-law-desc">{{ modifier.description }}</div>
-      </div>
-    </section>
-
-    <!-- ════════ Die Vorsehung, unter der Bard dieses Universum bereist ════════ -->
-    <!-- Steht direkt unter dem Gesetz des Universums, weil die beiden zusammen
-         den Charakter des Laufs ergeben: das eine färbt die Wirtschaft, die
-         andere den Kosmos. Getrennte Blöcke, damit ablesbar bleibt, welcher
-         Wert woher kommt. Fehlt sie (erster Lauf), fehlt der Block ganz. -->
+    <!-- ════════ Die Vorsehung, unter der Bard dieses Universum bereist ════════
+         Das einzige Gesetz des Durchlaufs. Bis das Universum seinen festen
+         Modifier abgab, standen hier zwei Blöcke übereinander — heute bringt die
+         beim Prestige gezogene Vorsehung beides mit. Fehlt sie (erster Lauf,
+         noch nie geprestiged), fehlt der Block ganz. -->
     <section v-if="providence" class="upt-block upt-prov">
       <Icon
         :icon="providence.icon"
@@ -550,39 +539,9 @@ const lifetimeRows = computed<StatRow[]>(() => [
 }
 
 /* ── Das Gesetz des Universums ─────────────────────────────────── */
-.upt-law {
-  display: flex;
-  align-items: center;
-  gap: 0.7em;
-  background: #170f22;
-}
-
-.upt-law-icon {
-  flex-shrink: 0;
-  width: 2em;
-  height: 2em;
-  color: #b98cf5;
-}
-
-.upt-law-text {
-  min-width: 0;
-}
-
-.upt-law-name {
-  font-size: 1.05em;
-  font-weight: 700;
-  color: #d7bcff;
-}
-
-.upt-law-desc {
-  font-size: 0.95em;
-  color: #a99b83;
-}
-
 /* ── Vorsehung ─────────────────────────────────────────────────────
-   Eigene Farbfamilie (Blaugrün) gegen das Violett des Universums-Gesetzes:
-   die beiden Blöcke stehen untereinander und sagen verschiedene Dinge —
-   gleiche Farbe läse sich als eine einzige, zweizeilige Angabe. */
+   Blaugrün, wie die Vorsehungszeile auf der Prestige-Karte: der Spieler soll
+   hier dieselbe Sache wiedererkennen, die er beim Aufbruch gewählt hat. */
 .upt-prov {
   display: flex;
   align-items: center;

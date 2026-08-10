@@ -4,29 +4,55 @@ import { PROVIDENCE_NEUTRAL_MULTIPLIER } from '@/config/constants'
 /**
  * PROVIDENCES OF THE WANDERER
  *
- * Beim Prestige wählt Bard zwei Dinge: das Universum und die Vorsehung, unter
- * der er es bereist. Die Trennung zwischen beiden ist die Regel, an der das
- * System hängt — **das Universum färbt die Wirtschaft, die Vorsehung den
- * Kosmos**. `ModifierEffects` bewegt CPS, CPC, Gebäudekosten, Meep-Preise und
- * die Bard-Levelkurve; keiner der Schlüssel hier tut das, und keiner dort
- * berührt Sterne, Kampf, Kader, Forge, Expeditionen oder Drifter.
+ * Was beim Prestige über einem Universum steht. Jede Vorsehung trägt genau EIN
+ * Plus und genau EIN Minus, und beim Prestige liegen drei davon aus — je eine
+ * über einem anderen Universum, je eine aus einer anderen Domäne.
  *
- * Ohne diese Trennung wäre die Vorsehung eine zweite Ausgabe des
- * Universe-Modifiers: zwei Karten, die dieselbe Zahl in dieselbe Richtung
- * schieben, und ein Spieler, der nicht mehr sagen kann, woher sein CPS kommt.
+ * ── Warum die Effekte nicht mehr am Universum hängen ────────────────────────
+ * Sie taten es einmal: jedes Universum hatte einen festen `modifier`. Das ergab
+ * zehn Universen und damit zehn feste Läufe — der zweite Besuch von Void Nexus
+ * war Zeile für Zeile der erste. Seit die Vorsehung gezogen wird, sind es zehn
+ * mal achtzehn, ohne dass ein Universum seine Herkunft verliert: das Universum
+ * sagt WOHIN, die Vorsehung WORUNTER.
  *
  * ── Warum jede Vorsehung etwas kostet ───────────────────────────────────────
- * Jede trägt genau ein Plus und genau ein Minus. Eine Karte ohne Preis wäre
- * keine Wahl, sondern ein Geschenk, und drei Geschenke nebeneinander sind ein
- * Ranking — der Spieler nimmt das grösste und denkt nicht weiter nach. Erst der
- * Preis macht aus dem Angebot eine Frage: worauf will ich diesen Lauf spielen?
+ * Eine Karte ohne Preis wäre keine Wahl, sondern ein Geschenk, und drei
+ * Geschenke nebeneinander sind ein Ranking — der Spieler nimmt das grösste und
+ * denkt nicht weiter nach. Erst der Preis macht aus dem Angebot eine Frage:
+ * worauf will ich diesen Lauf spielen? Eine Spec bindet die Regel an den
+ * Katalog.
  *
- * Die Paare sind deshalb bewusst gegenläufig gebaut (Ironclad ↔ Bladed,
- * Emberthrift ↔ Cinder Hoard, Far Wanderer ↔ Swift Relay): dieselbe Achse,
- * andere Richtung. Wer eine Karte verstanden hat, versteht ihr Gegenstück
- * sofort mit.
+ * Die Paare sind deshalb gegenläufig gebaut (Ironclad ↔ Bladed, Emberthrift ↔
+ * Cinder Hoard, Far Wanderer ↔ Swift Relay): dieselbe Achse, andere Richtung.
+ * Wer eine Karte verstanden hat, versteht ihr Gegenstück sofort mit.
  */
 export const PROVIDENCES: ProvidenceDef[] = [
+  // ── economy: Produktion, Klick, Meeps ──────────────────────────────────────
+  {
+    id: 'gilded-tide',
+    name: 'Gilded Tide',
+    description: 'Chimes come in waves. Everything you build costs what a wave is worth.',
+    icon: 'game-icons:coins-pile',
+    domain: 'economy',
+    effects: { cpsMultiplier: 2.4, buildingCostMultiplier: 1.8 },
+  },
+  {
+    id: 'wanderers-hand',
+    name: "Wanderer's Hand",
+    description: 'The cosmos answers the hand, not the machine.',
+    icon: 'game-icons:windchimes',
+    domain: 'economy',
+    effects: { cpcMultiplier: 3, cpsMultiplier: 0.5 },
+  },
+  {
+    id: 'meep-covenant',
+    name: 'Meep Covenant',
+    description: 'They gather willingly, and ask for little. They carry little, too.',
+    icon: 'game-icons:sparkles',
+    domain: 'economy',
+    effects: { meepCostMultiplier: 0.4, meepPowerMultiplier: 0.55 },
+  },
+
   // ── cosmos: Sterne und Drifter ─────────────────────────────────────────────
   {
     id: 'long-vigil',
@@ -47,8 +73,7 @@ export const PROVIDENCES: ProvidenceDef[] = [
   {
     id: 'hollow-tide',
     name: 'Hollow Tide',
-    description:
-      'The void sends its flotsam twice as often, and takes back the gift twice as fast.',
+    description: 'The void sends its flotsam twice as often, and takes back the gift twice as fast.',
     icon: 'game-icons:scout-ship',
     domain: 'cosmos',
     effects: { drifterSpawnIntervalMult: 0.5, drifterBuffDurationMult: 0.5 },
@@ -97,6 +122,14 @@ export const PROVIDENCES: ProvidenceDef[] = [
     domain: 'roster',
     effects: { lpGainMult: 1.8, xpMult: 0.55 },
   },
+  {
+    id: 'proven-in-fire',
+    name: 'Proven in Fire',
+    description: 'A roster forged for war carries no room for salvage.',
+    icon: 'game-icons:heraldic-sun',
+    domain: 'roster',
+    effects: { eloPowerMultiplier: 2.4, materialDropMult: 0.6 },
+  },
 
   // ── forge: Schmiede und Material ───────────────────────────────────────────
   {
@@ -114,6 +147,14 @@ export const PROVIDENCES: ProvidenceDef[] = [
     icon: 'game-icons:crystal-cluster',
     domain: 'forge',
     effects: { materialDropMult: 1.9, forgeMaterialCostMult: 1.5 },
+  },
+  {
+    id: 'molten-tithe',
+    name: 'Molten Tithe',
+    description: 'The sun takes its cut from the works, not from the ore.',
+    icon: 'game-icons:contract',
+    domain: 'forge',
+    effects: { forgeMaterialCostMult: 0.4, cpsMultiplier: 0.65 },
   },
 
   // ── expedition: die langen Wege ────────────────────────────────────────────
@@ -133,38 +174,169 @@ export const PROVIDENCES: ProvidenceDef[] = [
     domain: 'expedition',
     effects: { expeditionSpeedMult: 0.5, expeditionRewardMult: 0.6 },
   },
+  {
+    id: 'distant-shores',
+    name: 'Distant Shores',
+    description: 'What lies beyond the reach pays better than what lies under the hand.',
+    icon: 'game-icons:galaxy',
+    domain: 'expedition',
+    effects: { expeditionRewardMult: 2, cpcMultiplier: 0.5 },
+  },
 ]
 
 /**
- * Wie eine Effektachse heisst und in welche Richtung sie gut ist.
+ * Wie eine Effektachse heisst, wo sie neutral steht und über welchen Weg sie
+ * wirkt.
  *
- * Steht hier und nicht in der Komponente: die Karte im Prestige-Modal und der
- * Chip im Header lesen beide daraus, und ein Effekt, der an einer Stelle grün
- * und an der anderen rot erscheint, wäre schlimmer als gar keine Färbung.
+ * `via` trennt die beiden Klassen, die sich seit der Zusammenführung in einer
+ * Struktur teilen:
+ *  - `'modifier'` — geerbt von `ModifierEffects`, gelesen über
+ *    `gameStore.activeModifier` (shopStore, gameStore, planetShopStore),
+ *  - `'store'` — Kosmos-Achsen mit je einem Getter im `providenceStore`.
+ * Eine Spec prüft daran, dass keine `'store'`-Achse ohne Getter im Katalog steht.
+ *
+ * `neutral` steht je Achse und nicht global, damit eine spätere Achse mit
+ * anderem Nullpunkt nicht still falsch eingefärbt wird. Heute ist es überall
+ * `PROVIDENCE_NEUTRAL_MULTIPLIER` — jede verwendete Achse ist ein reiner
+ * Multiplikator, siehe `ProvidenceEffects`.
+ *
+ * Steht hier und nicht in der Komponente: Prestige-Karte und Header-Tooltip
+ * lesen beide daraus, und ein Effekt, der an einer Stelle grün und an der
+ * anderen rot erscheint, wäre schlimmer als gar keine Färbung.
  */
-export const PROVIDENCE_EFFECT_META: Record<
-  keyof ProvidenceEffects,
-  { label: string; higherIsBetter: boolean }
-> = {
-  starLifetimeMult: { label: 'Star lifetime', higherIsBetter: true },
-  materialDropMult: { label: 'Material drops', higherIsBetter: true },
-  combatDpsMult: { label: 'Champion DPS', higherIsBetter: true },
-  turretDpsMult: { label: 'Turret DPS', higherIsBetter: true },
-  bossHpMult: { label: 'Boss HP', higherIsBetter: false },
-  bossRewardMult: { label: 'Boss spoils', higherIsBetter: true },
-  xpMult: { label: 'Champion XP', higherIsBetter: true },
-  lpGainMult: { label: 'LP per win', higherIsBetter: true },
-  forgeMaterialCostMult: { label: 'Forge cost', higherIsBetter: false },
-  expeditionSpeedMult: { label: 'Expedition time', higherIsBetter: false },
-  expeditionRewardMult: { label: 'Expedition rewards', higherIsBetter: true },
-  drifterSpawnIntervalMult: { label: 'Drifter interval', higherIsBetter: false },
-  drifterBuffDurationMult: { label: 'Drifter buff time', higherIsBetter: true },
+export interface ProvidenceEffectMeta {
+  label: string
+  higherIsBetter: boolean
+  neutral: number
+  via: 'modifier' | 'store'
 }
 
-/** Wie eine Domäne auf der Karte heisst. Steht hier, damit die drei Karten des
- *  Angebots ihre Herkunft benennen können — ohne das Label sähe eine Auswahl aus
+export const PROVIDENCE_EFFECT_META: Partial<
+  Record<keyof ProvidenceEffects, ProvidenceEffectMeta>
+> = {
+  // Wirtschaft — über activeModifier
+  cpsMultiplier: {
+    label: 'Chimes/sec',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'modifier',
+  },
+  cpcMultiplier: {
+    label: 'Chimes/click',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'modifier',
+  },
+  buildingCostMultiplier: {
+    label: 'Building cost',
+    higherIsBetter: false,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'modifier',
+  },
+  meepCostMultiplier: {
+    label: 'Meep cost',
+    higherIsBetter: false,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'modifier',
+  },
+  meepPowerMultiplier: {
+    label: 'Meep power',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'modifier',
+  },
+  eloPowerMultiplier: {
+    label: 'Battle power',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'modifier',
+  },
+
+  // Kosmos — über je einen Getter im providenceStore
+  starLifetimeMult: {
+    label: 'Star lifetime',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  materialDropMult: {
+    label: 'Material drops',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  combatDpsMult: {
+    label: 'Champion DPS',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  turretDpsMult: {
+    label: 'Turret DPS',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  bossHpMult: {
+    label: 'Boss HP',
+    higherIsBetter: false,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  bossRewardMult: {
+    label: 'Boss spoils',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  xpMult: {
+    label: 'Champion XP',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  lpGainMult: {
+    label: 'LP per win',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  forgeMaterialCostMult: {
+    label: 'Forge cost',
+    higherIsBetter: false,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  expeditionSpeedMult: {
+    label: 'Expedition time',
+    higherIsBetter: false,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  expeditionRewardMult: {
+    label: 'Expedition rewards',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  drifterSpawnIntervalMult: {
+    label: 'Drifter interval',
+    higherIsBetter: false,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+  drifterBuffDurationMult: {
+    label: 'Drifter buff time',
+    higherIsBetter: true,
+    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
+    via: 'store',
+  },
+}
+
+/** Wie eine Domäne auf der Karte heisst. Ohne das Label sähe eine Auswahl aus
  *  drei Domänen wie drei beliebige Karten aus. */
 export const PROVIDENCE_DOMAIN_LABELS: Record<ProvidenceDef['domain'], string> = {
+  economy: 'Economy',
   cosmos: 'Cosmos',
   combat: 'Combat',
   roster: 'Roster',
@@ -185,10 +357,8 @@ export function providenceEffectLines(def: ProvidenceDef): ProvidenceEffectLine[
   const lines: ProvidenceEffectLine[] = []
   for (const [key, value] of Object.entries(def.effects)) {
     const meta = PROVIDENCE_EFFECT_META[key as keyof ProvidenceEffects]
-    if (!meta || value === undefined) continue
-    const positive = meta.higherIsBetter
-      ? value > PROVIDENCE_NEUTRAL_MULTIPLIER
-      : value < PROVIDENCE_NEUTRAL_MULTIPLIER
+    if (!meta || typeof value !== 'number') continue
+    const positive = meta.higherIsBetter ? value > meta.neutral : value < meta.neutral
     lines.push({ text: `${meta.label} x${value}`, positive })
   }
   return lines

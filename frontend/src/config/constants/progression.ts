@@ -32,16 +32,10 @@ export const UNIVERSE_RESCUE_INITIAL_COST = 100_000
 export const UNIVERSE_RESCUE_COST_MULTIPLIER = 2
 
 // Ability defaults (??-operator fallbacks)
-/**
- * Neutrale Universums-Effekte — der Zustand ohne jeden Modifikator. Das
- * Auswahl-Modal vergleicht die Effekte eines Universums gegen diese Werte, um
- * Verbesserung von Verschlechterung zu unterscheiden.
- */
-export const UNIVERSE_NEUTRAL_MULTIPLIER = 1
-export const UNIVERSE_NEUTRAL_LEVEL_EXPONENT = 1.2
-export const UNIVERSE_NEUTRAL_MAX_ABILITY_LEVEL = 5
-export const UNIVERSE_NEUTRAL_SKILL_POINT_INTERVAL = 2
-export const UNIVERSE_NEUTRAL_HP_DRAIN = 0
+// Die früheren UNIVERSE_NEUTRAL_* standen hier, solange das Auswahl-Modal die
+// festen Universums-Modifier gegen ihren Nullpunkt verglich. Seit Universum und
+// Vorsehung zusammen gezogen werden, trägt jede Effektachse ihren Neutralwert
+// selbst (`PROVIDENCE_EFFECT_META.neutral`) — dort, wo auch ihr Label steht.
 
 export const ABILITY_CPS_PER_LEVEL_DEFAULT = 0.15
 export const ABILITY_POWER_PER_LEVEL_DEFAULT = 300

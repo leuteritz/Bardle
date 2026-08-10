@@ -25,37 +25,49 @@ export interface ModifierEffects {
   enemyMaxHPDrainPerSecond?: number
 }
 
-export interface UniverseModifier {
-  id: string
-  name: string
-  description: string
-  icon: string
-  effects: ModifierEffects
-}
-
+/**
+ * Ein Universum — nur noch Identität.
+ *
+ * Seine Effekte trug es früher als fester `modifier` mit sich; das hiess zehn
+ * feste Kombinationen, und der zweite Besuch von Void Nexus war Zeile für Zeile
+ * der erste. Heute bringt die beim Prestige GEZOGENE Vorsehung die Effekte mit
+ * (`ProvidenceDef.effects` → `gameStore.activeModifier`), und das Universum
+ * steuert bei, was es immer schon ausgemacht hat: Name, Farbe, Herkunft.
+ */
 export interface UniverseConfig {
   id: number
   name: string
   description: string
-  modifier: UniverseModifier | null
+  /** Wappen des Universums auf der Prestige-Karte. */
+  icon: string
 }
 
 // ── Providence (chosen at prestige, runs for the whole universe) ─────────────
 
 /**
- * Womit eine Vorsehung den Lauf färbt.
+ * Womit eine Vorsehung den Lauf färbt — die EINZIGE Effektquelle eines
+ * Durchlaufs.
  *
- * Bewusst KEINE Überschneidung mit `ModifierEffects`: das Universum stellt die
- * Wirtschaft (CPS, CPC, Kosten, Bard-Level), die Vorsehung den Kosmos (Sterne,
- * Kampf, Kader, Forge, Expeditionen, Drifter). Griffen beide auf dieselbe Achse,
- * wäre auf der Karte nicht mehr abzulesen, welcher Wert woher kommt — und der
- * Spieler wählte zweimal dasselbe.
+ * Erbt von `ModifierEffects`, und das ist der Kern der Zusammenführung: früher
+ * gab es zwei Schichten (das Universum stellte die Wirtschaft, die Vorsehung den
+ * Kosmos) und damit zwei Wahlen hintereinander. Heute trägt eine Karte beides,
+ * und `gameStore.activeModifier` liest schlicht die Effekte der gewählten
+ * Vorsehung — jede der rund 25 Lesestellen im Projekt blieb dabei unangetastet.
  *
- * Jeder Schlüssel ist ein reiner Multiplikator um 1 herum und hat im
- * `providenceStore` GENAU einen Getter und an seinem Zielstore genau eine
- * Multiplikation.
+ * Zwei Klassen von Achsen, unterschieden durch `via` in
+ * `PROVIDENCE_EFFECT_META`:
+ *  - `'modifier'` — die geerbten Wirtschaftsachsen, gelesen über
+ *    `activeModifier` (shopStore, gameStore, planetShopStore),
+ *  - `'store'` — die Kosmos-Achsen darunter, mit je einem Getter im
+ *    `providenceStore` und genau einer Multiplikation am Zielstore.
+ *
+ * Alle verwendeten Achsen sind reine Multiplikatoren um 1 herum. Achsen von
+ * `ModifierEffects`, die etwas anderes sind (`levelExponent`,
+ * `maxAbilityLevel`, `skillPointInterval`), stehen bewusst in KEINER Definition:
+ * sie liessen sich auf einer Karte nicht als „x1.4" lesen und bräuchten je eine
+ * eigene Schreibweise.
  */
-export interface ProvidenceEffects {
+export interface ProvidenceEffects extends ModifierEffects {
   /** Wie lange ein Resource-Star im Orbit steht. */
   starLifetimeMult?: number
   /** Chance, dass ein Kill Material fallen lässt. */
@@ -89,7 +101,7 @@ export interface ProvidenceEffects {
  * eine Karte aus DREI verschiedenen Domänen aus — dieselbe Regel wie bei den
  * Omen, und aus demselben Grund: drei Varianten desselben Themas sind keine Wahl.
  */
-export type ProvidenceDomain = 'cosmos' | 'combat' | 'roster' | 'forge' | 'expedition'
+export type ProvidenceDomain = 'economy' | 'cosmos' | 'combat' | 'roster' | 'forge' | 'expedition'
 
 export interface ProvidenceDef {
   id: string
@@ -107,6 +119,19 @@ export interface ProvidenceDef {
 export interface ProvidenceEffectLine {
   text: string
   positive: boolean
+}
+
+/**
+ * Eine der drei Karten beim Prestige: wohin es geht und worunter.
+ *
+ * Universum und Vorsehung werden ZUSAMMEN gezogen und zusammen gewählt — der
+ * Spieler trifft eine Entscheidung, nicht zwei hintereinander. Die Karte trägt
+ * den Namen des Universums und darunter den der Vorsehung, so wie früher der
+ * feste Modifier dort stand.
+ */
+export interface PrestigeOffer {
+  universeId: number
+  providenceId: string
 }
 
 export interface SectionProgress {
