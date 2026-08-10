@@ -78,7 +78,15 @@ const slainPct = computed(() => Math.round((1 - hpRatio.value) * 100))
 function sample(): void {
   const lead = voidStore.leadMonster
   swarmCount.value = active.value.length
-  if (!lead) return
+  if (!lead) {
+    // Nichts mehr unterwegs und kein Ergebnis, das noch steht: die Karte
+    // schliesst. Ohne das lief der Ticker mit den letzten Werten weiter und
+    // die Karte blieb auf null Sekunden stehen — etwa wenn das Feld ohne
+    // Ausgang geräumt wird (Prestige, Admin).
+    clearTimers()
+    if (state.value === 'inbound') visible.value = false
+    return
+  }
   const def = getVoidRift(lead.defId)
   if (!def) return
   shownDef.value = def

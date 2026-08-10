@@ -130,6 +130,22 @@ function draw(): void {
 
   const now = Date.now()
   const sunRadius = planetShop.orbitSunRadius
+
+  // Ankunft in DEM Frame abrechnen, in dem sie zu sehen ist. Der Store prüft
+  // sie ausserdem im Sekundentakt — der allein reichte aber nicht: das Wesen
+  // stand bis zu eine Sekunde sichtbar auf der Sonne, die HUD-Karte zeigte
+  // dabei null Sekunden, und genau dieser Moment liest sich wie ein Fehler.
+  // Der Tick bleibt der Auffang, wenn ein Modal den Layer deckt und hier gar
+  // nicht gezeichnet wird.
+  if (active.value.some((m) => now >= m.spawnedAt + m.travelMs)) {
+    voidStore.resolveArrivals(now)
+    if (active.value.length === 0) {
+      ctx.clearRect(0, 0, cssW, cssH)
+      frame = requestAnimationFrame(draw)
+      return
+    }
+  }
+
   ctx.clearRect(0, 0, cssW, cssH)
 
   for (const m of active.value) {

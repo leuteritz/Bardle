@@ -207,7 +207,11 @@ describe('voidStore', () => {
       unlock()
       const store = useVoidStore()
       const a = spawn('sunlessBreach')
-      spawn('sunlessBreach')
+      const b = spawn('sunlessBreach')
+      // Beide exakt gleich weit: fällt zwischen die zwei Aufrufe eine
+      // Millisekunde, steht das zweite Wesen minimal weiter draussen und die
+      // Rampe weicht um mehr ab, als die Toleranz unten zulässt.
+      b.spawnedAt = a.spawnedAt
       store.voidNow = a.spawnedAt + a.travelMs
       const def = getVoidRift('sunlessBreach')!
       expect(store.cpsMult).toBeCloseTo(def.drain.cpsMult! ** 2, 6)
@@ -293,12 +297,42 @@ describe('voidStore', () => {
       unlock()
       const store = useVoidStore()
       const m = spawn('sunlessBreach')
-      store.voidNow = m.spawnedAt + m.travelMs
-      store.resolveArrivals()
+      store.resolveArrivals(m.spawnedAt + m.travelMs)
 
       expect(store.active).toHaveLength(0)
       expect(store.totalRiftsCollapsed).toBe(1)
       expect(store.lastOutcome.sealed).toBe(false)
+    })
+
+    // Der Layer ruft das je Frame auf, damit ein Wesen nicht bis zu eine
+    // Sekunde sichtbar auf der Sonne klebt. Er reicht dabei seine eigene Uhr
+    // durch — `voidNow` darf davon unberührt bleiben, sonst weckte jeder Frame
+    // die Drossel-Getter.
+    it('nimmt die Ankunftszeit von aussen, ohne die Store-Uhr zu stellen', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      const clockBefore = store.voidNow
+
+      store.resolveArrivals(m.spawnedAt - 1)
+      expect(store.active).toHaveLength(1)
+      expect(store.voidNow).toBe(clockBefore)
+    })
+
+    // Ein Prestige setzt das Level auf 1 — ein Wesen, das gerade anflog, hing
+    // sonst für immer fest: unbesiegbar, nie einschlagend, mit voller Drossel.
+    it('rechnet unterwegs befindliche Wesen auch ohne Freischaltung ab', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      m.spawnedAt = Date.now() - m.travelMs - 1
+
+      useGameStore().level = VOID_UNLOCK_LEVEL - 1
+      expect(store.isUnlocked).toBe(false)
+      store.tick()
+
+      expect(store.active).toHaveLength(0)
+      expect(store.totalRiftsCollapsed).toBe(1)
     })
 
     it('kostet Sonnen-HP und hinterlässt ein Nachbeben', () => {

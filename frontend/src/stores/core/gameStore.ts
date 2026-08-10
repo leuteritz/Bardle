@@ -604,6 +604,11 @@ export const useGameStore = defineStore('game', {
       this.totalBuildingProduction = {}
       // totalChimesEarned & totalClicks persist across prestiges
       useMeepTreeStore().resetTree()
+      // Der Void reist nicht mit. Ein Wesen, das im Moment des Aufbruchs anflog,
+      // gehört zum verlassenen Universum — und da das Level hier auf 1 fällt,
+      // stünde es im neuen unter der Freischaltschwelle da: sichtbar, drosselnd
+      // und ohne Weg, es loszuwerden. Auch die Nachbeben bleiben zurück.
+      useVoidStore().clearAll()
       const augmentStore = useAugmentStore()
       augmentStore.$reset()
       const shopStore = useShopStore()

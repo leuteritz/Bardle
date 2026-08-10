@@ -249,21 +249,22 @@ export const useVoidStore = defineStore('void', {
       this.aftermaths = this.aftermaths.filter((a) => a.expiresAt > this.voidNow)
       const aftermathEnded = this.aftermaths.length !== before
 
-      if (!this.isUnlocked) {
-        // Ein noch laufendes Nachbeben darf trotzdem sauber auslaufen — sonst
-        // hinge nach einem Wipe ein Faktor fest, den niemand mehr sieht.
-        if (aftermathEnded) this.refreshRates()
-        return
-      }
-
+      // Was schon unterwegs ist, wird IMMER zu Ende gerechnet — auch ohne
+      // Freischaltung. Ein Prestige setzt das Level auf 1 zurück, und ein Wesen,
+      // das in diesem Moment anflog, hing sonst für immer auf der Sonne fest:
+      // unbesiegbar, nie einschlagend, mit voller Drossel auf den Büchern und
+      // einer HUD-Karte, die bei null Sekunden stehenblieb. Freigeschaltet sein
+      // muss nur, was NEU aufreisst.
       this.applyOrbitPressure()
-      this.resolveArrivals()
+      this.resolveArrivals(this.voidNow)
 
       // Die Rampe verschiebt die Drossel in JEDEM Takt, nicht nur beim Wechsel —
-      // deshalb hier und nicht nur bei einem Ereignis.
+      // deshalb hier und nicht nur bei einem Ereignis. Auch das gilt ohne
+      // Freischaltung: sonst hinge nach einem Wipe ein Faktor fest, den niemand
+      // mehr sieht.
       if (aftermathEnded || this.touchesRates) this.refreshRates()
 
-      if (this.spawningBlocked) return
+      if (!this.isUnlocked || this.spawningBlocked) return
       this.tickSpawnClocks()
     },
 
@@ -354,10 +355,18 @@ export const useVoidStore = defineStore('void', {
       return this.damageMonster(uid, m.maxHp * VOID_CLICK_DAMAGE_PCT)
     },
 
-    /** Alles, was seinen Weg vollendet hat, schlägt ein. */
-    resolveArrivals(): void {
+    /**
+     * Alles, was seinen Weg vollendet hat, schlägt ein.
+     *
+     * Die Zeit kommt von aussen und wird NICHT nach `voidNow` geschrieben: der
+     * Layer ruft das hier in dem Frame auf, in dem ein Wesen die Sonne berührt,
+     * und `voidNow` speist die Drossel-Getter — es jeden Frame anzufassen
+     * würde deren Verbraucher sechzigmal je Sekunde wecken. Schlägt wirklich
+     * etwas ein, stellt `impactMonster` die Uhr selbst.
+     */
+    resolveArrivals(now: number = Date.now()): void {
       if (this.active.length === 0) return
-      const arrived = this.active.filter((m) => this.voidNow >= m.spawnedAt + m.travelMs)
+      const arrived = this.active.filter((m) => now >= m.spawnedAt + m.travelMs)
       for (const m of arrived) this.impactMonster(m)
     },
 
