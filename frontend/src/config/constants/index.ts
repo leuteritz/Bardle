@@ -18,7 +18,7 @@
 //   sun            81 Konstanten
 //   orbit         148 Konstanten
 //   planets       167 Konstanten
-//   voidTide       31 Konstanten
+//   void           33 Konstanten
 //   forge          52 Konstanten
 //   fx            193 Konstanten
 //   ui            149 Konstanten
@@ -38,7 +38,7 @@ export * from '@/config/constants/battleSim'
 export * from '@/config/constants/sun'
 export * from '@/config/constants/orbit'
 export * from '@/config/constants/planets'
-export * from '@/config/constants/voidTide'
+export * from '@/config/constants/void'
 export * from '@/config/constants/forge'
 export * from '@/config/constants/fx'
 export * from '@/config/constants/ui'

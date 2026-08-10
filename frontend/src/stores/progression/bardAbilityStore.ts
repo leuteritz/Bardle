@@ -48,7 +48,7 @@ import { useShopStore } from '@/stores/economy/shopStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
-import { useVoidTideStore } from '@/stores/world/voidTideStore'
+import { useVoidStore } from '@/stores/world/voidStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 
@@ -247,8 +247,8 @@ export const useBardAbilityStore = defineStore('bardAbility', {
       // hielte den Kollaps auf, liesse den Riss aber weiterwachsen — sein
       // Fortschritt misst den Abstand zwischen den beiden, und die Drossel
       // hängt daran. In der Stase steht er still, wie alles andere auch.
-      const voidTide = useVoidTideStore()
-      for (const rift of voidTide.active) {
+      const voidStore = useVoidStore()
+      for (const rift of voidStore.active) {
         rift.openedAt += GAME_TICK_INTERVAL_MS
         rift.collapseAt += GAME_TICK_INTERVAL_MS
       }

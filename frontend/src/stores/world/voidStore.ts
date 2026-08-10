@@ -3,11 +3,11 @@ import type {
   ActiveVoidRift,
   VoidRiftDef,
   VoidRiftSeverity,
-  VoidTideAftermath,
-  VoidTideEffects,
-  VoidTideOutcome,
+  VoidAftermath,
+  VoidEffects,
+  VoidOutcome,
 } from '@/types'
-import { VOID_RIFTS, getVoidRift, VOID_RIFT_SEVERITIES } from '@/config/world/voidTide'
+import { VOID_RIFTS, getVoidRift, VOID_RIFT_SEVERITIES } from '@/config/world/void'
 import { logger } from '@/utils/logger'
 import {
   rollVoidRiftPlacement,
@@ -15,7 +15,7 @@ import {
   voidRiftHalfExtent,
 } from '@/utils/orbit/voidRiftPath'
 import {
-  VOID_TIDE_UNLOCK_LEVEL,
+  VOID_UNLOCK_LEVEL,
   VOID_RIFT_MAX_CONCURRENT,
   VOID_RIFT_SPAWN_INTERVAL_SEC,
   VOID_RIFT_FIRST_DELAY_SEC,
@@ -83,12 +83,12 @@ function rollRiftOfSeverity(severity: VoidRiftSeverity): VoidRiftDef | null {
  * `1` heisst „unberührt" — deshalb ist das Produkt der richtige Weg und nicht
  * die Summe: zwei Quellen, die je auf 0,7 ziehen, ergeben 0,49 und nicht 0,4.
  */
-function multiplyAxis(sources: VoidTideEffects[], key: keyof VoidTideEffects): number {
+function multiplyAxis(sources: VoidEffects[], key: keyof VoidEffects): number {
   return sources.reduce((m, e) => m * (e[key] ?? 1), 1)
 }
 
 /**
- * Void Tide — die Risse, die den Orbit von aussen aufziehen.
+ * The Void — die Risse, die den Orbit von aussen aufziehen.
  *
  * Das einzige System in Bardle, dessen Uhr GEGEN den Spieler läuft. Ein Riss
  * steht am Bildrand, zieht an einer Achse der laufenden Wirtschaft und wird
@@ -100,10 +100,10 @@ function multiplyAxis(sources: VoidTideEffects[], key: keyof VoidTideEffects): n
  * Wachstum leitet der Renderer aus `openedAt` ab, damit ein gedrosselter Tab
  * sie nicht desynchronisieren kann.
  */
-export const useVoidTideStore = defineStore('voidTide', {
+export const useVoidStore = defineStore('void', {
   state: () => ({
     active: [] as ActiveVoidRift[],
-    aftermaths: [] as VoidTideAftermath[],
+    aftermaths: [] as VoidAftermath[],
     /** Sekunden bis zum nächsten Riss je Schwere. Vom Tick heruntergezählt. */
     spawnCooldowns: rollInitialCooldowns(),
     /** Reaktive Uhr für die Drossel- und Nachbeben-Getter — ein rohes
@@ -122,7 +122,7 @@ export const useVoidTideStore = defineStore('voidTide', {
       x: 0,
       y: 0,
       hpLost: 0,
-    } as VoidTideOutcome,
+    } as VoidOutcome,
     // ── Lifetime counters (Bard Stats catalog) ──
     totalRiftsOpened: 0,
     totalRiftsSealed: 0,
@@ -135,7 +135,7 @@ export const useVoidTideStore = defineStore('voidTide', {
     /** Die Tide beginnt erst, wenn ein Kader dasteht, der einen Riss auch
      *  schliessen kann — vorher wäre die Strafe Willkür statt Entscheidung. */
     isUnlocked(): boolean {
-      return useGameStore().level >= VOID_TIDE_UNLOCK_LEVEL
+      return useGameStore().level >= VOID_UNLOCK_LEVEL
     },
 
     /** Der eine offene Riss, oder `null`. */
@@ -148,7 +148,7 @@ export const useVoidTideStore = defineStore('voidTide', {
     },
 
     /** Nachbeben, die gerade noch laufen. */
-    liveAftermaths(state): VoidTideAftermath[] {
+    liveAftermaths(state): VoidAftermath[] {
       return state.aftermaths.filter((a) => a.expiresAt > state.voidNow)
     },
 
@@ -173,22 +173,22 @@ export const useVoidTideStore = defineStore('voidTide', {
      * aus 0,7 wird bei halber Rampe nicht 0,35, sondern 0,85 — sonst wäre ein
      * junger Riss härter als ein alter.
      */
-    drainEffects(): VoidTideEffects {
+    drainEffects(): VoidEffects {
       const rift = this.activeRift
       if (!rift) return {}
       const def = getVoidRift(rift.defId)
       if (!def) return {}
 
       const ramp = VOID_RIFT_DRAIN_RAMP_MIN + (1 - VOID_RIFT_DRAIN_RAMP_MIN) * this.riftProgress
-      const out: VoidTideEffects = {}
-      for (const [key, value] of Object.entries(def.drain) as [keyof VoidTideEffects, number][]) {
+      const out: VoidEffects = {}
+      for (const [key, value] of Object.entries(def.drain) as [keyof VoidEffects, number][]) {
         out[key] = 1 - (1 - value) * ramp
       }
       return out
     },
 
     /** Alles, was gerade zieht: der offene Riss und jedes laufende Nachbeben. */
-    activeEffects(): VoidTideEffects[] {
+    activeEffects(): VoidEffects[] {
       return [this.drainEffects, ...this.liveAftermaths.map((a) => a.effects)]
     },
 
@@ -378,7 +378,7 @@ export const useVoidTideStore = defineStore('voidTide', {
       this.active.push(rift)
       this.totalRiftsOpened++
       this.voidNow = now
-      logger.info('VoidTide', `${def.name} tore open`, { uid: rift.uid, maxHp })
+      logger.info('Void', `${def.name} tore open`, { uid: rift.uid, maxHp })
       return rift
     },
 
@@ -391,7 +391,7 @@ export const useVoidTideStore = defineStore('voidTide', {
 
       this._applyBoon(def)
       this._recordOutcome(rift, def, true, 0)
-      logger.info('VoidTide', `${def.name} sealed`, { boon: def.boonLine })
+      logger.info('Void', `${def.name} sealed`, { boon: def.boonLine })
     },
 
     /**
@@ -424,7 +424,7 @@ export const useVoidTideStore = defineStore('voidTide', {
       this.refreshRates()
 
       this._recordOutcome(rift, def, false, hpLost)
-      logger.warn('VoidTide', `${def.name} collapsed`, { hpLost, remaining })
+      logger.warn('Void', `${def.name} collapsed`, { hpLost, remaining })
     },
 
     /** Die Beute eines geschlossenen Risses. */
@@ -451,7 +451,7 @@ export const useVoidTideStore = defineStore('voidTide', {
       if (def.boon.materials) {
         const inventory = useInventoryStore()
         for (let i = 0; i < def.boon.materials; i++) {
-          inventory.tryDropMaterial(1, 'voidTide')
+          inventory.tryDropMaterial(1, 'void')
         }
       }
 

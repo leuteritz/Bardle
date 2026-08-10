@@ -31,7 +31,7 @@ import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
-import { useVoidTideStore } from '@/stores/world/voidTideStore'
+import { useVoidStore } from '@/stores/world/voidStore'
 
 let _damageFloatId = 0
 
@@ -60,7 +60,7 @@ function globalDpsMultiplier(): number {
     // orbit that is trying to close it. That feedback is the point: the answer
     // to a rift that outpaces your squad is to click it, and click damage is a
     // share of its own health, untouched by this factor.
-    useVoidTideStore().combatDpsMult
+    useVoidStore().combatDpsMult
   )
 }
 

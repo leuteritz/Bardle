@@ -26,7 +26,7 @@ import PauseOverlay from '@/components/idle/PauseOverlay.vue'
 import HeraldOverlay from '@/components/idle/HeraldOverlay.vue'
 import SupernovaTransition from '@/components/idle/sun/SupernovaTransition.vue'
 import DrifterLayer from '@/components/idle/drifter/DrifterLayer.vue'
-import VoidTideLayer from '@/components/idle/void/VoidTideLayer.vue'
+import VoidLayer from '@/components/idle/void/VoidLayer.vue'
 import VoidRiftHudCard from '@/components/idle/void/VoidRiftHudCard.vue'
 import DrifterInfoCard from '@/components/idle/drifter/DrifterInfoCard.vue'
 import ActiveBuffBar from '@/components/idle/drifter/ActiveBuffBar.vue'
@@ -99,12 +99,12 @@ watch(
     <DrifterInfoCard />
     <ActiveBuffBar />
 
-    <!-- Void Tide: der Riss steht im Orbit auf derselben Ebene wie die Drifter,
+    <!-- The Void: der Riss steht im Orbit auf derselben Ebene wie die Drifter,
          seine Karte an der SPITZE des Stapels oben links — sie meldet als
          einzige der drei eine Frist, die etwas kostet. Beide hängen hier und
          nicht im Idle-Layer, damit ein Riss auch weiterläuft (und kollabiert),
          während das Bard-Profil offen steht. -->
-    <VoidTideLayer />
+    <VoidLayer />
     <VoidRiftHudCard />
 
     <!-- Omens: die HUD-Karte teilt sich die linke Ecke mit der Drifter-Karte und

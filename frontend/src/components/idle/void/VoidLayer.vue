@@ -35,12 +35,12 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useVoidTideStore } from '@/stores/world/voidTideStore'
+import { useVoidStore } from '@/stores/world/voidStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { useActionToast } from '@/composables/ui/useActionToast'
 import { useHerald } from '@/composables/ui/useHerald'
 import { logVoidRiftSealed, logVoidRiftCollapsed } from '@/config/ui/eventLog'
-import { getVoidRift } from '@/config/world/voidTide'
+import { getVoidRift } from '@/config/world/void'
 import { hexToRgbTriple } from '@/utils/ui/format'
 import VoidRiftObject from './VoidRiftObject.vue'
 import {
@@ -49,8 +49,8 @@ import {
   VOID_RIFT_COLLAPSE_FX_MS,
 } from '@/config/constants'
 
-const voidTideStore = useVoidTideStore()
-const { active, lastOutcome } = storeToRefs(voidTideStore)
+const voidStore = useVoidStore()
+const { active, lastOutcome } = storeToRefs(voidStore)
 const { isIdleRenderingPaused } = useRenderingPaused()
 const { showToast } = useActionToast()
 const { announce } = useHerald()
@@ -63,14 +63,14 @@ const activeDef = computed(() =>
 // Kein Aufreissen, solange das Bard-Profil oder ein Star Fight den Idle-Layer
 // deckt: ein Riss, den niemand sehen kann, wäre eine Strafe für das Öffnen
 // eines Menüs und keine Entscheidung.
-watch(isIdleRenderingPaused, (hidden) => voidTideStore.setSpawningBlocked(hidden), {
+watch(isIdleRenderingPaused, (hidden) => voidStore.setSpawningBlocked(hidden), {
   immediate: true,
 })
 
 function onHit(): void {
   const rift = activeRift.value
   if (!rift) return
-  voidTideStore.hitRift(rift.uid)
+  voidStore.hitRift(rift.uid)
 }
 
 // ── Ausgang ─────────────────────────────────────────────────────────────────

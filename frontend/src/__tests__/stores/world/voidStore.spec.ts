@@ -1,14 +1,14 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { useVoidTideStore } from '@/stores/world/voidTideStore'
+import { useVoidStore } from '@/stores/world/voidStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
-import { getVoidRift, VOID_RIFTS } from '@/config/world/voidTide'
+import { getVoidRift, VOID_RIFTS } from '@/config/world/void'
 import { voidRiftScreenPos, voidRiftHalfExtent } from '@/utils/orbit/voidRiftPath'
 import { drifterField, measuredFieldInsets } from '@/utils/orbit/drifterPath'
 import {
-  VOID_TIDE_UNLOCK_LEVEL,
+  VOID_UNLOCK_LEVEL,
   VOID_RIFT_MAX_CONCURRENT,
   VOID_RIFT_HP_BASE,
   VOID_RIFT_HP_PER_GALAXY,
@@ -24,19 +24,19 @@ import {
 
 /** Hebt das Bard-Level über die Freischaltschwelle. */
 function unlock() {
-  useGameStore().level = VOID_TIDE_UNLOCK_LEVEL
+  useGameStore().level = VOID_UNLOCK_LEVEL
 }
 
 /** Reisst einen bestimmten Typ auf und gibt die lebende Instanz zurück. */
 function open(defId: string) {
-  const store = useVoidTideStore()
+  const store = useVoidStore()
   store.active = []
   const rift = store.openRift(defId)
   expect(rift).not.toBeNull()
   return rift!
 }
 
-describe('voidTideStore', () => {
+describe('voidStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
   })
@@ -47,8 +47,8 @@ describe('voidTideStore', () => {
 
   describe('Freischaltung', () => {
     it('bleibt unter dem Freischalt-Level verschlossen', () => {
-      const store = useVoidTideStore()
-      useGameStore().level = VOID_TIDE_UNLOCK_LEVEL - 1
+      const store = useVoidStore()
+      useGameStore().level = VOID_UNLOCK_LEVEL - 1
       expect(store.isUnlocked).toBe(false)
 
       store.spawnCooldowns.lesser = 0
@@ -57,7 +57,7 @@ describe('voidTideStore', () => {
     })
 
     it('öffnet ab dem Freischalt-Level', () => {
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       unlock()
       expect(store.isUnlocked).toBe(true)
 
@@ -69,7 +69,7 @@ describe('voidTideStore', () => {
     // Ein Nachbeben, das beim Wipe des Levels feststeckt, wäre ein Faktor, den
     // niemand mehr sieht und niemand mehr loswird.
     it('lässt ein laufendes Nachbeben auch ohne Freischaltung auslaufen', () => {
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       useGameStore().level = 0
       store.aftermaths = [
         {
@@ -87,7 +87,7 @@ describe('voidTideStore', () => {
   describe('Aufreissen', () => {
     it('hält die Obergrenze gleichzeitiger Risse ein', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       for (let i = 0; i < VOID_RIFT_MAX_CONCURRENT + 3; i++) store.openRift('sunlessBreach')
       expect(store.active).toHaveLength(VOID_RIFT_MAX_CONCURRENT)
     })
@@ -111,7 +111,7 @@ describe('voidTideStore', () => {
 
     it('reisst nicht auf, während ein Overlay den Idle-Layer deckt', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       store.setSpawningBlocked(true)
       store.spawnCooldowns.lesser = 0
       store.tick()
@@ -123,7 +123,7 @@ describe('voidTideStore', () => {
 
     it('lässt eine fällige Uhr kurz warten, wenn schon ein Riss steht', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       open('sunlessBreach')
       store.spawnCooldowns.greater = GAME_TICK_INTERVAL_MS / 1000
       store.tick()
@@ -135,7 +135,7 @@ describe('voidTideStore', () => {
   describe('Ziehen', () => {
     it('zieht frisch geöffnet nur anteilig und bei voller Frist ganz', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const rift = open('sunlessBreach')
       const def = getVoidRift('sunlessBreach')!
       const full = def.drain.cpsMult!
@@ -151,7 +151,7 @@ describe('voidTideStore', () => {
 
     it('lässt jede unberührte Achse auf 1', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       open('starvingMaw')
       expect(store.cpsMult).toBe(1)
       expect(store.xpMult).toBe(1)
@@ -160,7 +160,7 @@ describe('voidTideStore', () => {
 
     it('multipliziert offenen Riss und laufendes Nachbeben', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const rift = open('sunlessBreach')
       store.voidNow = rift.collapseAt
       const fromRift = store.cpsMult
@@ -178,7 +178,7 @@ describe('voidTideStore', () => {
   describe('Schliessen', () => {
     it('nimmt einen Anteil der eigenen Trefferpunkte je Klick', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const rift = open('unmakingScar')
       const before = rift.currentHp
       store.hitRift(rift.uid)
@@ -190,7 +190,7 @@ describe('voidTideStore', () => {
 
     it('schliesst den Riss, sobald die Trefferpunkte fallen', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const rift = open('sunlessBreach')
       const sealed = store.damageRift(rift.maxHp)
       expect(sealed).toBe(true)
@@ -201,7 +201,7 @@ describe('voidTideStore', () => {
 
     it('startet beim Schliessen das Beute-Fenster', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const rift = open('dimmingWound')
       store.damageRift(rift.maxHp)
 
@@ -214,7 +214,7 @@ describe('voidTideStore', () => {
 
     it('zahlt Chimes mindestens in Höhe des Klick-Bodens', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const gameStore = useGameStore()
       gameStore.chimes = 0
       gameStore.chimesPerSecond = 0
@@ -229,7 +229,7 @@ describe('voidTideStore', () => {
   describe('Kollaps', () => {
     it('kollabiert, sobald die Frist abgelaufen ist', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const rift = open('sunlessBreach')
       store.voidNow = rift.collapseAt
       store.checkCollapse()
@@ -241,7 +241,7 @@ describe('voidTideStore', () => {
 
     it('kostet Sonnen-HP und hinterlässt ein Nachbeben', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const player = usePlayerStore()
       const before = player.currentHP
 
@@ -261,7 +261,7 @@ describe('voidTideStore', () => {
     // Antwort auf einen Riss, den man nicht schafft, wäre ihn zu ignorieren.
     it('staffelt den Schaden nach den verbliebenen Trefferpunkten', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const player = usePlayerStore()
 
       const rift = open('unmakingScar')
@@ -276,7 +276,7 @@ describe('voidTideStore', () => {
 
     it('kostet auch bei fast geschlossenem Riss mindestens 1 HP', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const rift = open('sunlessBreach')
       rift.currentHp = 1
       store.collapseRift(rift)
@@ -291,7 +291,7 @@ describe('voidTideStore', () => {
   describe('Platzierung', () => {
     it('stellt keinen Riss unter die erhobenen HUD-Panels', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       const f = drifterField(window.innerWidth, window.innerHeight, measuredFieldInsets())
 
       for (const def of VOID_RIFTS) {
@@ -315,7 +315,7 @@ describe('voidTideStore', () => {
 
     it('hält jeden Riss im sichtbaren Feld', () => {
       unlock()
-      const store = useVoidTideStore()
+      const store = useVoidStore()
       for (const def of VOID_RIFTS) {
         const half = voidRiftHalfExtent(def.sizePx)
         for (let i = 0; i < 25; i++) {
@@ -338,7 +338,7 @@ describe('voidTideStore', () => {
     })
 
     // Ein Riss, der an einer Achse zieht und an einer anderen auszahlt, wäre
-    // zwei Nachrichten statt einer — siehe der Kopf von config/world/voidTide.
+    // zwei Nachrichten statt einer — siehe der Kopf von config/world/void.
     it('zahlt auf denselben Achsen aus, an denen er zieht', () => {
       for (const def of VOID_RIFTS) {
         const drained = Object.keys(def.drain)

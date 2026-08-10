@@ -19,7 +19,7 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
-import { useVoidTideStore } from '@/stores/world/voidTideStore'
+import { useVoidStore } from '@/stores/world/voidStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
@@ -30,7 +30,7 @@ import type {
   ChampionProgress,
   PendingPerkChoice,
   DrifterActiveBuff,
-  VoidTideAftermath,
+  VoidAftermath,
   BardAbilityBuff,
   BardAbilityId,
   UniverseRunRecord,
@@ -124,7 +124,7 @@ export function usePersistence() {
     const starGroupStore = useStarGroupStore()
     const championLevelStore = useChampionLevelStore()
     const drifterStore = useDrifterStore()
-    const voidTideStore = useVoidTideStore()
+    const voidStore = useVoidStore()
     const bardAbilityStore = useBardAbilityStore()
     const achievementStore = useAchievementStore()
     const omenStore = useOmenStore()
@@ -369,18 +369,18 @@ export function usePersistence() {
         totalDriftersCollected: drifterStore.totalDriftersCollected,
         totalDriftersMissed: drifterStore.totalDriftersMissed,
       },
-      // Void Tide. Ein OFFENER Riss wird bewusst nicht gespeichert — dieselbe
+      // The Void. Ein OFFENER Riss wird bewusst nicht gespeichert — dieselbe
       // Begründung wie beim Drifter darüber, nur andersherum: er käme mit halb
       // abgelaufener Frist zurück, und die verstrichene Zeit hat der Spieler
       // nicht gehabt. Was bleibt, sind die Nachbeben und Beute-Fenster, denn
       // deren `expiresAt` ist absolute Wanduhrzeit und läuft auch bei
       // geschlossenem Spiel korrekt ab.
-      voidTide: {
-        aftermaths: voidTideStore.aftermaths.map((a) => ({ ...a, effects: { ...a.effects } })),
-        totalRiftsOpened: voidTideStore.totalRiftsOpened,
-        totalRiftsSealed: voidTideStore.totalRiftsSealed,
-        totalRiftsCollapsed: voidTideStore.totalRiftsCollapsed,
-        totalVoidHpLost: voidTideStore.totalVoidHpLost,
+      void: {
+        aftermaths: voidStore.aftermaths.map((a) => ({ ...a, effects: { ...a.effects } })),
+        totalRiftsOpened: voidStore.totalRiftsOpened,
+        totalRiftsSealed: voidStore.totalRiftsSealed,
+        totalRiftsCollapsed: voidStore.totalRiftsCollapsed,
+        totalVoidHpLost: voidStore.totalVoidHpLost,
       },
       // Bard-Fähigkeiten. Abklingzeiten und Stase stehen als absolute
       // Zeitstempel — genau wie die Drifter-Buffs darüber laufen sie damit
@@ -957,18 +957,18 @@ export function usePersistence() {
       drifterStore.totalDriftersCollected = saved.drifter?.totalDriftersCollected ?? 0
       drifterStore.totalDriftersMissed = saved.drifter?.totalDriftersMissed ?? 0
 
-      // Void Tide — wie oben: was während der Abwesenheit auslief, fällt hier
+      // The Void — wie oben: was während der Abwesenheit auslief, fällt hier
       // heraus, statt danach noch einmal herunterzuzählen. Offene Risse standen
       // nie im Spielstand, das Feld ist nach dem Laden also immer leer.
-      const voidTideStore = useVoidTideStore()
-      voidTideStore.voidNow = Date.now()
-      voidTideStore.aftermaths = ((saved.voidTide?.aftermaths ?? []) as VoidTideAftermath[])
-        .filter((a) => a.expiresAt > voidTideStore.voidNow)
+      const voidStore = useVoidStore()
+      voidStore.voidNow = Date.now()
+      voidStore.aftermaths = ((saved.void?.aftermaths ?? []) as VoidAftermath[])
+        .filter((a) => a.expiresAt > voidStore.voidNow)
         .map((a) => ({ ...a, effects: { ...a.effects } }))
-      voidTideStore.totalRiftsOpened = saved.voidTide?.totalRiftsOpened ?? 0
-      voidTideStore.totalRiftsSealed = saved.voidTide?.totalRiftsSealed ?? 0
-      voidTideStore.totalRiftsCollapsed = saved.voidTide?.totalRiftsCollapsed ?? 0
-      voidTideStore.totalVoidHpLost = saved.voidTide?.totalVoidHpLost ?? 0
+      voidStore.totalRiftsOpened = saved.void?.totalRiftsOpened ?? 0
+      voidStore.totalRiftsSealed = saved.void?.totalRiftsSealed ?? 0
+      voidStore.totalRiftsCollapsed = saved.void?.totalRiftsCollapsed ?? 0
+      voidStore.totalVoidHpLost = saved.void?.totalVoidHpLost ?? 0
 
       // Bard-Fähigkeiten. Was während der Abwesenheit abgelaufen ist, fällt
       // hier heraus, statt danach noch einmal herunterzuzählen; eine Stase, die
@@ -1237,8 +1237,8 @@ export function usePersistence() {
     // 7g. Reset drifterStore — clears the sky and every running buff
     useDrifterStore().$reset()
 
-    // 7g2. Reset voidTideStore — closes any open rift and drops every aftermath
-    useVoidTideStore().$reset()
+    // 7g2. Reset voidStore — closes any open rift and drops every aftermath
+    useVoidStore().$reset()
 
     // 7h. Reset bardAbilityStore — resonance, cooldowns and any running stasis
     useBardAbilityStore().$reset()

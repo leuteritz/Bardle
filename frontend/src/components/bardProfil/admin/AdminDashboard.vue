@@ -3,7 +3,7 @@ import AdminQuickActionsPanel from './AdminQuickActionsPanel.vue'
 import AdminGalaxyJumpPanel from './AdminGalaxyJumpPanel.vue'
 import AdminStarPhasePanel from './AdminStarPhasePanel.vue'
 import AdminDrifterPanel from './AdminDrifterPanel.vue'
-import AdminVoidTidePanel from './AdminVoidTidePanel.vue'
+import AdminVoidPanel from './AdminVoidPanel.vue'
 </script>
 
 <template>
@@ -23,7 +23,7 @@ import AdminVoidTidePanel from './AdminVoidTidePanel.vue'
            keine Höhe. -->
       <div class="admin-dash-events">
         <AdminDrifterPanel dashboard />
-        <AdminVoidTidePanel dashboard />
+        <AdminVoidPanel dashboard />
       </div>
     </div>
     <div class="admin-dash-right">
@@ -66,7 +66,7 @@ import AdminVoidTidePanel from './AdminVoidTidePanel.vue'
   flex: 0 0 auto;
 }
 
-/* Drifter und Void Tide nebeneinander, gleich breit. `align-items: start`,
+/* Drifter und The Void nebeneinander, gleich breit. `align-items: start`,
    damit das kürzere der beiden nicht auf die Höhe des längeren gestreckt wird
    und dabei sein Kachelraster auseinanderzieht. */
 .admin-dash-events {

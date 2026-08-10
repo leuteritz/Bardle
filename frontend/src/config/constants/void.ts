@@ -1,4 +1,4 @@
-// Void Tide — die Risse, die den Orbit von aussen aufziehen.
+// The Void — die Risse, die den Orbit von aussen aufziehen.
 //
 // Das einzige System in Bardle, das NIMMT statt gibt. Alles andere (Forge,
 // Codex, Vorzeichen, Drifter, Vorsehungen) zahlt aus; hier läuft zum ersten
@@ -27,7 +27,7 @@ import type { VoidRiftSeverity } from '@/types'
  * Willen. Wer noch keine drei Rollen besetzt hat, könnte ihn nur wegklicken —
  * dann wäre die Strafe keine Entscheidung, sondern Willkür.
  */
-export const VOID_TIDE_UNLOCK_LEVEL = 12
+export const VOID_UNLOCK_LEVEL = 12
 
 // ── Spawn ───────────────────────────────────────────────────────────────────
 
@@ -244,10 +244,10 @@ export const VOID_RIFT_URGENT_FRAC = 0.72
 
 /** Taktrate des Countdowns auf der HUD-Karte. Bewusst gröber als ein Frame —
  *  die Karte zeigt Sekunden, ein 60-Hz-Update wäre reine Verschwendung. */
-export const VOID_TIDE_CARD_TICK_MS = 100
+export const VOID_CARD_TICK_MS = 100
 
 /** Wie lange die Karte nach dem Ausgang noch stehen bleibt. */
-export const VOID_TIDE_CARD_RESULT_MS = 3600
+export const VOID_CARD_RESULT_MS = 3600
 
 /** Kopfzeilen-Icon der HUD-Karte. */
-export const VOID_TIDE_CARD_ICON = 'game-icons:vortex'
+export const VOID_CARD_ICON = 'game-icons:vortex'

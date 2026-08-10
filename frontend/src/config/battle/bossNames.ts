@@ -92,7 +92,10 @@ function _generateBossNames(): string[] {
     'The Infinite',
     'The Ancient',
     'The Sovereign',
-    'The Void',
+    // 'The Void' stand hier, bis der Void ein eigenes System wurde. Ein Boss
+    // namens „The Void Devourer" hätte sich gelesen wie eine Meldung DES Void —
+    // der Name gehört jetzt der Bedrohung, nicht einem zufälligen Gegner.
+    'The Devouring',
     'The Cosmic',
     'The Abyssal',
     'The Forsaken',

@@ -19,7 +19,10 @@ import { augmentIcon } from '@/utils/game/rolledIcons'
  * Was NICHT mehr offline prüfbar ist: ob der Name im Set wirklich existiert.
  * Dafür gab es die lokale `gameicons.txt`; die deckte nur ein einziges Set ab
  * und fiel mit der Öffnung auf alle Bibliotheken weg. Die Existenzprüfung läuft
- * jetzt im Browser über `dev/icon-check.html` — siehe „Icons" in CLAUDE.md.
+ * im Browser gegen die Iconify-API — `<set>.json?icons=…` nennt in `not_found`,
+ * was fehlt. Es gibt dafür KEINE Prüfseite im Repo (ein früherer Kommentar
+ * verwies auf `dev/icon-check.html`, die es nicht gibt); der Weg steht unter
+ * „Icons", Regel 8 in CLAUDE.md.
  */
 
 /** Sets, die das Projekt benutzt. Ein neues Set kommt hier dazu — bewusst, nicht aus Versehen. */

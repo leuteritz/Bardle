@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useVoidTideStore } from '@/stores/world/voidTideStore'
+import { useVoidStore } from '@/stores/world/voidStore'
 import { useUiStore } from '@/stores/core/uiStore'
-import { VOID_RIFTS, getVoidRift } from '@/config/world/voidTide'
+import { VOID_RIFTS, getVoidRift } from '@/config/world/void'
 import { VOID_RIFT_SEVERITY_COLOR } from '@/config/constants'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
 
 withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
 
-const voidTideStore = useVoidTideStore()
+const voidStore = useVoidStore()
 const uiStore = useUiStore()
 
 /** Was gerade offen steht — der Store lässt nur einen Riss zu, ihn zu benennen
  *  erklärt also jedes „es ist nichts passiert". */
 const openRift = computed(() => {
-  const rift = voidTideStore.active[0]
+  const rift = voidStore.active[0]
   return rift ? (getVoidRift(rift.defId)?.name ?? rift.defId) : null
 })
 
@@ -27,30 +27,30 @@ const openRift = computed(() => {
  */
 function open(defId?: string): void {
   uiStore.closeBardModal()
-  voidTideStore.forceOpen(defId)
+  voidStore.forceOpen(defId)
 }
 
 /** Den offenen Riss sofort kollabieren lassen — der kurze Weg zur Strafe, ohne
  *  eine Minute danebenzustehen. */
 function collapse(): void {
   uiStore.closeBardModal()
-  voidTideStore.forceCollapse()
+  voidStore.forceCollapse()
 }
 
 /** Räumt das Feld UND jedes laufende Nachbeben. */
 function clearField(): void {
-  voidTideStore.clearAll()
+  voidStore.clearAll()
 }
 </script>
 
 <template>
-  <AdminCollapsiblePanel title="Void Tide" icon="game-icons:vortex" :collapsible="!dashboard">
+  <AdminCollapsiblePanel title="The Void" icon="game-icons:vortex" :collapsible="!dashboard">
     <template #meta>
       {{ openRift ? `Open: ${openRift}` : 'No rift' }}
-      <template v-if="!voidTideStore.isUnlocked"> · locked </template>
-      <template v-if="voidTideStore.liveAftermaths.length">
-        · {{ voidTideStore.liveAftermaths.length }} effect{{
-          voidTideStore.liveAftermaths.length === 1 ? '' : 's'
+      <template v-if="!voidStore.isUnlocked"> · locked </template>
+      <template v-if="voidStore.liveAftermaths.length">
+        · {{ voidStore.liveAftermaths.length }} effect{{
+          voidStore.liveAftermaths.length === 1 ? '' : 's'
         }}
       </template>
     </template>

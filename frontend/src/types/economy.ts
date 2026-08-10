@@ -287,7 +287,7 @@ export type MaterialSourceId =
   | 'drifter'
   | 'bargain'
   | 'expedition'
-  | 'voidTide'
+  | 'void'
 
 /** What a unit of material was spent on. Labels: MATERIAL_SINK_LABELS. */
 export type MaterialSinkId =

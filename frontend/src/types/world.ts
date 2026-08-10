@@ -173,7 +173,7 @@ export interface DrifterOrbitStrike {
   kills: number
 }
 
-// ── Void Tide — Risse, die den Orbit von aussen aufziehen ───────────────────
+// ── The Void — Risse, die den Orbit von aussen aufziehen ───────────────────
 // Das Gegenstück zu allem anderen in diesem Spiel: kein System, das etwas gibt,
 // sondern eines, das etwas nimmt, solange man es stehen lässt.
 
@@ -186,11 +186,11 @@ export type VoidRiftSeverity = 'lesser' | 'greater' | 'abyssal'
  * andere, er steht nur unter 1. Eine eigene Liste hätte beim nächsten Zusatz
  * still danebengestanden.
  */
-export type VoidTideEffects = TimedBuffEffects
+export type VoidEffects = TimedBuffEffects
 
 /**
  * Statische Definition eines Riss-Typs — reine Daten. Der Store öffnet, zieht
- * und schliesst sie; gezeichnet werden sie vom `VoidTideLayer`.
+ * und schliesst sie; gezeichnet werden sie vom `VoidLayer`.
  */
 export interface VoidRiftDef {
   id: string
@@ -212,20 +212,20 @@ export interface VoidRiftDef {
   /**
    * Woran er zieht, solange er offen steht. Die Werte gelten bei VOLLEM
    * Wachstum — frisch geöffnet wirkt er anteilig schwächer, siehe
-   * `voidTideStore.drainEffects`.
+   * `voidStore.drainEffects`.
    */
-  drain: VoidTideEffects
+  drain: VoidEffects
   /** Was das Schliessen auszahlt. */
   boon: {
     durationMs: number
-    effects: VoidTideEffects
+    effects: VoidEffects
     /** Chimes im Wert von so vielen Sekunden aktueller Produktion. */
     chimesFromCpsSeconds?: number
     /** So viele Materialwürfe. */
     materials?: number
   }
   /** Was ein Kollaps hinterlässt — dasselbe Ziehen, nur befristet und härter. */
-  aftermath: VoidTideEffects
+  aftermath: VoidEffects
 }
 
 /** Ein Riss, der gerade offen steht. Position und Wachstum leitet der Renderer
@@ -248,16 +248,16 @@ export interface ActiveVoidRift {
 }
 
 /** Ein laufendes Kollaps-Nachbeben. `sourceId` ist die `VoidRiftDef.id`. */
-export interface VoidTideAftermath {
+export interface VoidAftermath {
   sourceId: string
   expiresAt: number
   durationMs: number
-  effects: VoidTideEffects
+  effects: VoidEffects
 }
 
 /** Bilanz des letzten geschlossenen bzw. kollabierten Risses. Der Layer spielt
  *  sich an `seq` ab — ein erzwungener Kollaps sieht damit aus wie ein echter. */
-export interface VoidTideOutcome {
+export interface VoidOutcome {
   /** Hochgezählt bei jedem Ausgang; `0` heisst: noch keiner. */
   seq: number
   at: number

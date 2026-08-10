@@ -1,8 +1,15 @@
 import type { VoidRiftDef, VoidRiftSeverity } from '@/types'
 
 /**
- * Void Tide — die Riss-Typen als reine Daten. Der Store öffnet, zieht und
- * schliesst sie; der `VoidTideLayer` zeichnet sie.
+ * The Void — die Riss-Typen als reine Daten. Der Store öffnet, zieht und
+ * schliesst sie; der `VoidLayer` zeichnet sie.
+ *
+ * Der Void ist das Böse dieses Kosmos: nicht ein Gegner, den man aufsucht,
+ * sondern das, was von aussen hereindrückt, während der Wanderer beschäftigt
+ * ist. Er hat keine Gestalt und keinen Namen — nur Stellen, an denen die Welt
+ * nachgibt. Deshalb heissen die Einträge hier nach dem SCHADEN, den sie
+ * anrichten („Sunless Breach", „Starving Maw"), und nicht nach einem Wesen:
+ * es gibt niemanden zu erschlagen, es gibt nur ein Loch zu schliessen.
  *
  * **Die Regel, die dieses System trägt: ein Riss zieht an genau EINER Achse,
  * und dieselbe Achse zahlt er beim Schliessen aus.** Wer den Sunless Breach
@@ -120,7 +127,9 @@ export const VOID_RIFTS: VoidRiftDef[] = [
 
 /** Jede Schwere, die tatsächlich Risse hat — schwerste zuerst. Das ist die
  *  Reihenfolge, in der gleichzeitig fällige Uhren bedient werden. */
-export const VOID_RIFT_SEVERITIES: VoidRiftSeverity[] = [...new Set(VOID_RIFTS.map((r) => r.severity))]
+export const VOID_RIFT_SEVERITIES: VoidRiftSeverity[] = [
+  ...new Set(VOID_RIFTS.map((r) => r.severity)),
+]
 
 /** Nachschlagen eines Riss-Typs. Gibt `undefined` zurück, statt zu werfen —
  *  ein Spielstand mit einer ID, die es nicht mehr gibt, darf das Laden nicht

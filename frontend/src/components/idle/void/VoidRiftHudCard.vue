@@ -2,13 +2,13 @@
 import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
-import { useVoidTideStore } from '@/stores/world/voidTideStore'
-import { getVoidRift } from '@/config/world/voidTide'
+import { useVoidStore } from '@/stores/world/voidStore'
+import { getVoidRift } from '@/config/world/void'
 import type { VoidRiftDef } from '@/types'
 import {
-  VOID_TIDE_CARD_ICON,
-  VOID_TIDE_CARD_RESULT_MS,
-  VOID_TIDE_CARD_TICK_MS,
+  VOID_CARD_ICON,
+  VOID_CARD_RESULT_MS,
+  VOID_CARD_TICK_MS,
   VOID_RIFT_URGENT_FRAC,
   VOID_RIFT_SEVERITY_COLOR,
   VOID_RIFT_SEVERITY_LABEL,
@@ -30,8 +30,8 @@ import {
  */
 type CardState = 'open' | 'sealed' | 'collapsed'
 
-const voidTideStore = useVoidTideStore()
-const { active, lastOutcome } = storeToRefs(voidTideStore)
+const voidStore = useVoidStore()
+const { active, lastOutcome } = storeToRefs(voidStore)
 
 const shownDef = ref<VoidRiftDef | null>(null)
 const state = ref<CardState>('open')
@@ -113,7 +113,7 @@ watch(
       lifetimeMs.value = Math.max(1, live.collapseAt - live.openedAt)
       remainingMs.value = Math.max(0, live.collapseAt - Date.now())
       hpRatio.value = live.maxHp > 0 ? live.currentHp / live.maxHp : 0
-    }, VOID_TIDE_CARD_TICK_MS)
+    }, VOID_CARD_TICK_MS)
   },
   { immediate: true },
 )
@@ -138,7 +138,7 @@ function showResult(def: VoidRiftDef, next: CardState) {
   resultTimer = setTimeout(() => {
     visible.value = false
     resultTimer = null
-  }, VOID_TIDE_CARD_RESULT_MS)
+  }, VOID_CARD_RESULT_MS)
 }
 
 // ── Unterkante veröffentlichen ──────────────────────────────────────────────
@@ -188,7 +188,7 @@ onUnmounted(() => {
       role="status"
     >
       <div class="vhc-head">
-        <Icon :icon="VOID_TIDE_CARD_ICON" width="13" height="13" class="vhc-head__icon" />
+        <Icon :icon="VOID_CARD_ICON" width="13" height="13" class="vhc-head__icon" />
         <span class="vhc-head__lbl">{{ headline }}</span>
 
         <span

@@ -12,7 +12,7 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
-import { useVoidTideStore } from '@/stores/world/voidTideStore'
+import { useVoidStore } from '@/stores/world/voidStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
@@ -275,7 +275,7 @@ export const useShopStore = defineStore('shop', {
       const chronicleMul = useAchievementStore().cpsMult
       // Sunless Breach (void tide) — the only factor here that pulls DOWNWARD,
       // and it grows the longer the rift is left standing
-      const voidMul = useVoidTideStore().cpsMult
+      const voidMul = useVoidStore().cpsMult
       return Math.floor(
         (baseCPS + solarCPS) *
           gameStore.abilityCPSMultiplier *
@@ -320,7 +320,7 @@ export const useShopStore = defineStore('shop', {
       // Unmaking Scar (void tide): drosselt den Klickwert selbst. Der
       // CpS-Anteil darunter trägt seine eigene Void-Drossel bereits, genau wie
       // bei den beiden Faktoren darüber.
-      const voidMul = useVoidTideStore().cpcMult
+      const voidMul = useVoidStore().cpcMult
       return Math.floor(
         (baseCPC + upgradeBonus) *
           gameStore.abilityCPCMultiplier *
