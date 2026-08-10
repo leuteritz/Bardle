@@ -10,6 +10,7 @@ import {
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useVoidTideStore } from '@/stores/world/voidTideStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
@@ -175,6 +176,8 @@ export const useInventoryStore = defineStore('inventory', {
       const chronicleDropMult = useAchievementStore().materialDropMult
       // Providence: chosen at prestige, holds for the whole universe run
       const providenceDropMult = useProvidenceStore().materialDropMult
+      // Starving Maw (void tide): zieht nach unten, solange der Riss steht
+      const voidDropMult = useVoidTideStore().materialDropMult
       if (
         Math.random() >
         baseDropChance *
@@ -183,7 +186,8 @@ export const useInventoryStore = defineStore('inventory', {
           drifterDropMult *
           omenDropMult *
           chronicleDropMult *
-          providenceDropMult
+          providenceDropMult *
+          voidDropMult
       ) {
         return null
       }

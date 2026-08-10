@@ -18,6 +18,7 @@ import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useVoidTideStore } from '@/stores/world/voidTideStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { universes } from '@/config/progression/universes'
@@ -671,6 +672,13 @@ export const useGameStore = defineStore('game', {
       // stasis forward. Same reasoning as the drifters above — a window that
       // closes this second must be gone before the chimes are credited.
       useBardAbilityStore().tick()
+      // Void Tide: put the orbit's fire on the open rift, collapse it if its
+      // time ran out, and roll for the next one. Runs here — after the stasis
+      // above, before production below — for two reasons: a stasis started this
+      // second must already hold the rift's clock, and the rift's drain has to
+      // be on the books before the chimes are credited. Its own drain moves
+      // every tick with the ramp, so it refreshes the cached rates itself.
+      useVoidTideStore().tick()
       // Material intake window: slide the minute buckets forward even in a
       // minute where nothing dropped, so the header sparkline shows the gap
       // instead of an hour-old spike frozen at the right edge.

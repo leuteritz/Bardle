@@ -64,6 +64,7 @@ import { useHerald } from '@/composables/ui/useHerald'
 import { logDrifterCollected } from '@/config/ui/eventLog'
 import { getDrifter } from '@/config/world/drifters'
 import { drifterEntryEdge } from '@/utils/orbit/drifterPath'
+import { hexToRgbTriple } from '@/utils/ui/format'
 import DrifterObject from './DrifterObject.vue'
 import OrbitStrikeWave from './OrbitStrikeWave.vue'
 import {
@@ -201,16 +202,6 @@ watch(
     }, DRIFTER_COLLECT_FX_MS)
   },
 )
-
-/** Herald wants its accent as an "r, g, b" triple, not a hex string. */
-function hexToRgbTriple(hex: string): string {
-  const h = hex.replace('#', '')
-  return [
-    parseInt(h.slice(0, 2), 16),
-    parseInt(h.slice(2, 4), 16),
-    parseInt(h.slice(4, 6), 16),
-  ].join(', ')
-}
 
 onUnmounted(() => {
   if (pingTimer) clearTimeout(pingTimer)

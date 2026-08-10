@@ -35,6 +35,7 @@ import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { useVoidTideStore } from '@/stores/world/voidTideStore'
 import { getOrbitSunRadius, getOrbitSunScale } from '@/utils/orbit/geometry'
 import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
 import { logPlanetDestroyed, logPlanetRestored } from '@/config/ui/eventLog'
@@ -133,6 +134,48 @@ const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
 
 const CONFIGURABLE_ROLES: PlanetRoleType[] = ['harvest_node', 'resonance_tower']
 
+// ── Turret-Salve ────────────────────────────────────────────────────────────
+// Drei Getter bilden inzwischen eine Salve: die rohe Zahl für den Stats-Katalog,
+// die auf den Vordergrund gefilterte für den Planetenkampf und die ungefilterte
+// für einen Void-Riss. Basis und Faktoren stehen deshalb EINMAL hier — als drei
+// Abschriften wäre der nächste Faktor garantiert nur in zweien angekommen.
+
+/** Summe der stehenden Turrets, optional auf eine Teilmenge gefiltert. */
+function sumTurretBase(slots: PlanetSlot[], extraFilter?: (id: string) => boolean): number {
+  return slots
+    .filter(
+      (s) =>
+        s.purchased &&
+        s.role === 'turret_planet' &&
+        !isPlanetDown(s) &&
+        (!extraFilter || extraFilter(s.id)),
+    )
+    .reduce((sum, slot) => {
+      const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+      return (
+        sum + PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
+      )
+    }, 0)
+}
+
+/** Was dauerhaft verdient wurde — steht in JEDER der drei Zahlen, auch in der
+ *  rohen, weil es kein befristeter Buff ist. */
+function permanentVolleyMult(): number {
+  return useAchievementStore().turretDpsMult * useProvidenceStore().turretDpsMult
+}
+
+/** Was gerade läuft und wieder vergeht. Bewusst NICHT in `autoAttackDPS` —
+ *  die Zahl im Stats-Katalog soll nicht im Sekundentakt springen. */
+function timedVolleyMult(): number {
+  return (
+    useDrifterStore().combatDpsMult *
+    useOmenStore().combatDpsMult *
+    useBardAbilityStore().combatDpsMult *
+    // Dimming Wound (void tide): ein offener Riss dämpft auch die Salve
+    useVoidTideStore().combatDpsMult
+  )
+}
+
 export const usePlanetShopStore = defineStore('planetShop', {
   state: () => ({
     slots: INITIAL_SLOTS.map((s) => ({ ...s })) as PlanetSlot[],
@@ -170,55 +213,36 @@ export const usePlanetShopStore = defineStore('planetShop', {
     },
 
     /** Rohe Salvenstärke aller stehenden Turrets — ohne die ZEITLICHEN Buffs
-     *  (die trägt `foregroundAutoAttackDPS`), aber MIT dem Chronicle-Bonus: der
-     *  ist dauerhaft verdient und gehört damit in die Zahl, die als „Orbit
+     *  (die tragen die beiden Getter darunter), aber MIT dem Chronicle-Bonus:
+     *  der ist dauerhaft verdient und gehört damit in die Zahl, die als „Orbit
      *  Auto-Attack DPS" im Stats-Katalog steht. */
     autoAttackDPS(state): number {
-      const base = state.slots
-        .filter((s) => s.purchased && s.role === 'turret_planet' && !isPlanetDown(s))
-        .reduce((sum, slot) => {
-          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
-          return (
-            sum +
-            PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
-          )
-        }, 0)
-      return base * useAchievementStore().turretDpsMult * useProvidenceStore().turretDpsMult
+      return sumTurretBase(state.slots) * permanentVolleyMult()
     },
 
     /** DPS nur der Turrets im Sonnen-Vordergrund — Turrets hinter der Sonne
      *  feuern nicht (Kampf passiert nur im Vordergrund). Ein eingesammeltes
-     *  Rift Echo (Drifter) hebt die ganze Salve für seine Laufzeit an.
-     *
-     *  Warden of Worlds (Chronicle) steht hier ein zweites Mal, weil dieser
-     *  Getter seine eigene — auf den Vordergrund gefilterte — Summe bildet und
-     *  nicht auf `autoAttackDPS` aufsetzt. */
+     *  Rift Echo (Drifter) hebt die ganze Salve für seine Laufzeit an. */
     foregroundAutoAttackDPS(state): number {
-      const base = state.slots
-        .filter(
-          (s) =>
-            s.purchased &&
-            s.role === 'turret_planet' &&
-            !isPlanetDown(s) &&
-            playerSlotInForeground(s.id),
-        )
-        .reduce((sum, slot) => {
-          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
-          return (
-            sum +
-            PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
-          )
-        }, 0)
       return (
-        base *
-        useDrifterStore().combatDpsMult *
-        useOmenStore().combatDpsMult *
-        useBardAbilityStore().combatDpsMult *
-        useAchievementStore().turretDpsMult *
-        // Ironclad / Bladed Orbit (providence): steht wie der Chronicle-Bonus in
-        // BEIDEN Turret-Gettern, weil dieser hier seine eigene Summe bildet
-        useProvidenceStore().turretDpsMult
+        sumTurretBase(state.slots, playerSlotInForeground) *
+        timedVolleyMult() *
+        permanentVolleyMult()
       )
+    },
+
+    /**
+     * Die Salve, die auf einen Void-Riss geht: ALLE stehenden Turrets, nicht
+     * nur die im Vordergrund.
+     *
+     * Ein Riss ist kein Punkt auf einer Bahn, den man umkreisen muss — er
+     * klafft im ganzen System. Ein Turret, das diese Sekunde hinter der Sonne
+     * steht, feuert trotzdem hinein. Die Zeitfaktoren trägt er wie jede andere
+     * Salve, den Void-Drain eingeschlossen: ein Riss, der die Salve schwächt,
+     * schwächt auch die Salve, die ihn schliessen soll.
+     */
+    riftAutoAttackDPS(state): number {
+      return sumTurretBase(state.slots) * timedVolleyMult() * permanentVolleyMult()
     },
 
     activeHarvestSlots(state): { materialId: string }[] {

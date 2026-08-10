@@ -280,7 +280,14 @@ export interface Material {
 }
 
 /** Where a unit of material entered the inventory. Labels: MATERIAL_SOURCE_LABELS. */
-export type MaterialSourceId = 'drop' | 'harvest' | 'boss' | 'drifter' | 'bargain' | 'expedition'
+export type MaterialSourceId =
+  | 'drop'
+  | 'harvest'
+  | 'boss'
+  | 'drifter'
+  | 'bargain'
+  | 'expedition'
+  | 'voidTide'
 
 /** What a unit of material was spent on. Labels: MATERIAL_SINK_LABELS. */
 export type MaterialSinkId =

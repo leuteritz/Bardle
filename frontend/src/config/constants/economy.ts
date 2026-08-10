@@ -52,6 +52,8 @@ export const MATERIAL_SOURCE_LABELS: Record<string, string> = {
   boss: 'Boss Loot',
   drifter: 'Drifters',
   bargain: 'Forge Deals',
+  expedition: 'Expeditions',
+  voidTide: 'Sealed Rifts',
 }
 export const MATERIAL_SOURCE_ICONS: Record<string, string> = {
   drop: 'game-icons:falling-rocks',
@@ -59,6 +61,8 @@ export const MATERIAL_SOURCE_ICONS: Record<string, string> = {
   boss: 'game-icons:crowned-skull',
   drifter: 'game-icons:ufo',
   bargain: 'game-icons:gems',
+  expedition: 'game-icons:caravan',
+  voidTide: 'game-icons:vortex',
 }
 export const MATERIAL_SINK_LABELS: Record<string, string> = {
   recruit: 'Champion Recruits',

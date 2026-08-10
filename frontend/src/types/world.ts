@@ -173,6 +173,104 @@ export interface DrifterOrbitStrike {
   kills: number
 }
 
+// ── Void Tide — Risse, die den Orbit von aussen aufziehen ───────────────────
+// Das Gegenstück zu allem anderen in diesem Spiel: kein System, das etwas gibt,
+// sondern eines, das etwas nimmt, solange man es stehen lässt.
+
+/** Wie schwer ein Riss wiegt — steuert Spawn-Uhr, Grösse und Kartenfarbe. */
+export type VoidRiftSeverity = 'lesser' | 'greater' | 'abyssal'
+
+/**
+ * Die Achsen, an denen ein Riss zieht bzw. seine Beute zahlt. Bewusst DIESELBE
+ * Liste wie bei Drifter und Omen — ein Riss ist ein Multiplikator wie jeder
+ * andere, er steht nur unter 1. Eine eigene Liste hätte beim nächsten Zusatz
+ * still danebengestanden.
+ */
+export type VoidTideEffects = TimedBuffEffects
+
+/**
+ * Statische Definition eines Riss-Typs — reine Daten. Der Store öffnet, zieht
+ * und schliesst sie; gezeichnet werden sie vom `VoidTideLayer`.
+ */
+export interface VoidRiftDef {
+  id: string
+  /** Was der Spieler liest — Toast, HUD-Karte, Herald. */
+  name: string
+  severity: VoidRiftSeverity
+  /** Relatives Gewicht INNERHALB der eigenen Schwere. */
+  weight: number
+  /** Iconify-Name für die HUD-Karte. Der Riss selbst ist reines CSS. */
+  icon: string
+  /** Signaturfarbe: Aura, Rand-Ping, HUD-Karte. */
+  color: string
+  /** Kantenlänge des Risses in px bei vollem Wachstum. */
+  sizePx: number
+  /** Eine Zeile, die sagt, was er kostet — steht auf der HUD-Karte. */
+  drainLine: string
+  /** Eine Zeile, die sagt, was das Schliessen einbringt. */
+  boonLine: string
+  /**
+   * Woran er zieht, solange er offen steht. Die Werte gelten bei VOLLEM
+   * Wachstum — frisch geöffnet wirkt er anteilig schwächer, siehe
+   * `voidTideStore.drainEffects`.
+   */
+  drain: VoidTideEffects
+  /** Was das Schliessen auszahlt. */
+  boon: {
+    durationMs: number
+    effects: VoidTideEffects
+    /** Chimes im Wert von so vielen Sekunden aktueller Produktion. */
+    chimesFromCpsSeconds?: number
+    /** So viele Materialwürfe. */
+    materials?: number
+  }
+  /** Was ein Kollaps hinterlässt — dasselbe Ziehen, nur befristet und härter. */
+  aftermath: VoidTideEffects
+}
+
+/** Ein Riss, der gerade offen steht. Position und Wachstum leitet der Renderer
+ *  aus `openedAt` ab, damit ein gedrosselter Tab sie nicht desynchronisiert. */
+export interface ActiveVoidRift {
+  /** Eindeutige Instanz-Id — zugleich der Vue-Render-Key. */
+  uid: number
+  defId: string
+  /** Winkel auf dem Rand-Ring (rad) — wo am Bildrand er aufreisst. */
+  angle: number
+  /** Abstand von der Bildmitte, als Anteil der halben Bildschirmdiagonale. */
+  radiusFrac: number
+  openedAt: number
+  /** Wanduhr-Zeitpunkt, an dem er kollabiert, wenn er dann noch steht. */
+  collapseAt: number
+  maxHp: number
+  currentHp: number
+  /** Hochgezählt bei jedem Klick — treibt den Trefferblitz im Layer. */
+  hitsLanded: number
+}
+
+/** Ein laufendes Kollaps-Nachbeben. `sourceId` ist die `VoidRiftDef.id`. */
+export interface VoidTideAftermath {
+  sourceId: string
+  expiresAt: number
+  durationMs: number
+  effects: VoidTideEffects
+}
+
+/** Bilanz des letzten geschlossenen bzw. kollabierten Risses. Der Layer spielt
+ *  sich an `seq` ab — ein erzwungener Kollaps sieht damit aus wie ein echter. */
+export interface VoidTideOutcome {
+  /** Hochgezählt bei jedem Ausgang; `0` heisst: noch keiner. */
+  seq: number
+  at: number
+  defId: string
+  /** `true` = geschlossen, `false` = kollabiert. */
+  sealed: boolean
+  /** Bildschirmposition, an der es passierte — dort spielt der Effekt. */
+  x: number
+  y: number
+  /** Sonnen-HP, die der Kollaps gekostet hat. Bei `sealed` immer 0. */
+  hpLost: number
+}
+
 // ── Planeten-Slots ─────────────────────────────────────────────────────────
 // Rollen der sechs Orbit-Slots. Die Tabellen dazu stehen in config/constants.ts,
 // die Logik im planetShopStore — der Typ gehört keiner der beiden Seiten allein.

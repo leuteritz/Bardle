@@ -48,6 +48,7 @@ import { useShopStore } from '@/stores/economy/shopStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useVoidTideStore } from '@/stores/world/voidTideStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 
@@ -241,6 +242,16 @@ export const useBardAbilityStore = defineStore('bardAbility', {
         if (star.durationMs === undefined) continue
         star.durationMs += GAME_TICK_INTERVAL_MS
       }
+
+      // Void-Risse: BEIDE Marken rücken mit. Nur `collapseAt` zu schieben
+      // hielte den Kollaps auf, liesse den Riss aber weiterwachsen — sein
+      // Fortschritt misst den Abstand zwischen den beiden, und die Drossel
+      // hängt daran. In der Stase steht er still, wie alles andere auch.
+      const voidTide = useVoidTideStore()
+      for (const rift of voidTide.active) {
+        rift.openedAt += GAME_TICK_INTERVAL_MS
+        rift.collapseAt += GAME_TICK_INTERVAL_MS
+      }
     },
 
     /**
@@ -280,6 +291,15 @@ export const useBardAbilityStore = defineStore('bardAbility', {
       if (!this.isUnlocked(id)) return false
       if ((this.cooldownReadyAt[id] ?? 0) > now) return false
 
+      // Die Uhr VOR dem Wirken stellen, nicht danach. Die _cast*-Methoden
+      // setzen sie selbst noch einmal (`_castFate` und `_applyBuff` nehmen ihr
+      // eigenes Date.now()), und ein Nachziehen hier überschriebe deren
+      // neueren Stand mit dem älteren von oben. Die Differenz ist nur die
+      // Laufzeit des Switch, aber sie geht in JEDE Frist ein, die gegen
+      // `abilityNow` gemessen wird: die Stase erschien dadurch um eine Sekunde
+      // länger, als sie hält, und jeder Buff um denselben Bruchteil.
+      this.abilityNow = now
+
       let summary = ''
       switch (id) {
         case 'q':
@@ -297,7 +317,6 @@ export const useBardAbilityStore = defineStore('bardAbility', {
       }
 
       this.cooldownReadyAt[id] = now + this.cooldownMsOf(id)
-      this.abilityNow = now
       this.totalCasts += 1
       this.lastCast = { id, seq: this.lastCast.seq + 1, at: now, summary }
       logger.info('BardAbility', `Cast ${getBardAbility(id)?.name}`, { summary })

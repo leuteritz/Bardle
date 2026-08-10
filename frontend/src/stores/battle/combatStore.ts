@@ -31,8 +31,80 @@ import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { useVoidTideStore } from '@/stores/world/voidTideStore'
 
 let _damageFloatId = 0
+
+/**
+ * Alles, was auf die rohe Kader-Summe global draufgeht — Synergien, Forge,
+ * Meep-Baum und jede laufende Zeitwirkung.
+ *
+ * Steht als eigene Funktion, weil zwei Ziele sie brauchen: der Planeten-Boss
+ * im Tick unten und der Void-Riss, der sich seinen Beschuss aus demselben
+ * Orbit holt. Als zweite Abschrift wäre spätestens der nächste Faktor nur an
+ * einer der beiden Stellen angekommen.
+ */
+function globalDpsMultiplier(): number {
+  return (
+    useSynergyStore().dpsSynergyMultiplier *
+    useStarForgeStore().championDpsMult *
+    useMeepTreeStore().fx.championDpsMult *
+    useDrifterStore().combatDpsMult *
+    // Fulfilled omen: earned elsewhere, spent here
+    useOmenStore().combatDpsMult *
+    // Tempered Fate (bard R): the orbit keeps swinging while the stasis holds
+    useBardAbilityStore().combatDpsMult *
+    // Bladed / Ironclad Orbit (providence): the whole run leans one way
+    useProvidenceStore().combatDpsMult *
+    // Dimming Wound (void tide): an open rift blunts the orbit — including the
+    // orbit that is trying to close it. That feedback is the point: the answer
+    // to a rift that outpaces your squad is to click it, and click damage is a
+    // share of its own health, untouched by this factor.
+    useVoidTideStore().combatDpsMult
+  )
+}
+
+/**
+ * Die rohe Schadenssumme einer Gruppe angreifender Champions, vor den globalen
+ * Faktoren oben.
+ *
+ * `bossHpFraction` entscheidet allein darüber, ob der Execute-Perk greift; ein
+ * Ziel ohne Hinrichtungsschwelle (der Void-Riss) übergibt schlicht 1.
+ */
+function sumChampionDps(
+  attackers: ChampionCombatState[],
+  bossHpFraction: number,
+): { total: number; anyCrit: boolean } {
+  const battleStore = useBattleStore()
+  const levelStore = useChampionLevelStore()
+  let total = 0
+  let anyCrit = false
+
+  for (const a of attackers) {
+    const roleIdx = battleStore.headerSlots.indexOf(a.name)
+    const filledAllies =
+      roleIdx >= 0 ? (battleStore.secondarySlots[roleIdx]?.filter(Boolean).length ?? 0) : 0
+    // Ascendant Aura (perk) makes each assigned ally worth more
+    const allyShare = ALLY_DPS_CONTRIBUTION * levelStore.allyContributionMultOf(a.name)
+    // POWER (champion level) is what separates a fresh recruit from a
+    // levelled one — everything below stacks on top of it.
+    let dps = CHAMPION_DPS_BASE * (1 + filledAllies * allyShare)
+    dps *= levelStore.orbitDpsMultOf(a.name)
+
+    const execute = levelStore.perkEffectOf(a.name, 'execute')
+    if (execute > 0 && bossHpFraction <= CHAMPION_EXECUTE_HP_THRESHOLD) {
+      dps *= 1 + execute
+    }
+    const crit = levelStore.perkEffectOf(a.name, 'critChance')
+    if (crit > 0 && Math.random() < crit) {
+      dps *= CHAMPION_CRIT_DAMAGE_MULT
+      anyCrit = true
+    }
+    total += dps
+  }
+
+  return { total, anyCrit }
+}
 
 function buildChampionState(name: string, index: number, total: number): ChampionCombatState {
   let orbitRadiusX = COMBAT_ORBIT_RADIUS_X_MIN + Math.random() * COMBAT_ORBIT_RADIUS_X_RANGE
@@ -144,45 +216,9 @@ export const useCombatStore = defineStore('combat', {
         const gameStore = useGameStore()
         if (gameStore.isGamePaused && activeBoss.isChampionPlanet) return
         // Each attacking main hits harder per assigned ally of its role (allies no longer orbit)
-        const battleStore = useBattleStore()
-        const levelStore = useChampionLevelStore()
         const bossHpFraction = activeBoss.maxHP > 0 ? activeBoss.currentHP / activeBoss.maxHP : 1
-        let baseDPS = 0
-        let anyCrit = false
-        for (const a of attackers) {
-          const roleIdx = battleStore.headerSlots.indexOf(a.name)
-          const filledAllies =
-            roleIdx >= 0 ? (battleStore.secondarySlots[roleIdx]?.filter(Boolean).length ?? 0) : 0
-          // Ascendant Aura (perk) makes each assigned ally worth more
-          const allyShare = ALLY_DPS_CONTRIBUTION * levelStore.allyContributionMultOf(a.name)
-          // POWER (champion level) is what separates a fresh recruit from a
-          // levelled one — everything below stacks on top of it.
-          let dps = CHAMPION_DPS_BASE * (1 + filledAllies * allyShare)
-          dps *= levelStore.orbitDpsMultOf(a.name)
-
-          const execute = levelStore.perkEffectOf(a.name, 'execute')
-          if (execute > 0 && bossHpFraction <= CHAMPION_EXECUTE_HP_THRESHOLD) {
-            dps *= 1 + execute
-          }
-          const crit = levelStore.perkEffectOf(a.name, 'critChance')
-          if (crit > 0 && Math.random() < crit) {
-            dps *= CHAMPION_CRIT_DAMAGE_MULT
-            anyCrit = true
-          }
-          baseDPS += dps
-        }
-        const totalDPS =
-          baseDPS *
-          useSynergyStore().dpsSynergyMultiplier *
-          useStarForgeStore().championDpsMult *
-          useMeepTreeStore().fx.championDpsMult *
-          useDrifterStore().combatDpsMult *
-          // Fulfilled omen: earned elsewhere, spent here
-          useOmenStore().combatDpsMult *
-          // Tempered Fate (bard R): the orbit keeps swinging while the stasis holds
-          useBardAbilityStore().combatDpsMult *
-          // Bladed / Ironclad Orbit (providence): the whole run leans one way
-          useProvidenceStore().combatDpsMult
+        const { total: baseDPS, anyCrit } = sumChampionDps(attackers, bossHpFraction)
+        const totalDPS = baseDPS * globalDpsMultiplier()
         const defeated = bossStore.dealDamage(totalDPS)
         if (!defeated) {
           // Spawn one combined float at the planet position showing total damage
@@ -197,6 +233,22 @@ export const useCombatStore = defineStore('combat', {
           })
         }
       }
+    },
+
+    /**
+     * Was der GESAMTE Kader in dieser Sekunde austeilt, unabhängig davon, wo
+     * die einzelnen Champions gerade auf ihrer Bahn stehen.
+     *
+     * Der Void-Riss holt sich hierüber seinen Beschuss. Anders als ein
+     * Planeten-Boss ist er kein Punkt im Orbit, den ein Champion erst erreichen
+     * muss — er klafft im ganzen System, also zählt der ganze Kader. Genau
+     * deshalb entfällt hier die Reichweitenprüfung aus `tick()`, und
+     * `bossHpFraction` steht auf 1: ein Riss hat keine Hinrichtungsschwelle.
+     */
+    fullOrbitDps(): number {
+      if (this.champions.length === 0) return 0
+      const { total } = sumChampionDps(this.champions, 1)
+      return total * globalDpsMultiplier()
     },
 
     /** Called by ChampionOrbit.vue rAF when a champion reaches its attack target */

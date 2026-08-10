@@ -12,6 +12,7 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useVoidTideStore } from '@/stores/world/voidTideStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
@@ -272,6 +273,9 @@ export const useShopStore = defineStore('shop', {
       const bardMul = useBardAbilityStore().cpsMult
       // Chime Keeper (chronicle) — permanent, earned by lifetime chimes
       const chronicleMul = useAchievementStore().cpsMult
+      // Sunless Breach (void tide) — the only factor here that pulls DOWNWARD,
+      // and it grows the longer the rift is left standing
+      const voidMul = useVoidTideStore().cpsMult
       return Math.floor(
         (baseCPS + solarCPS) *
           gameStore.abilityCPSMultiplier *
@@ -282,7 +286,8 @@ export const useShopStore = defineStore('shop', {
           drifterMul *
           omenMul *
           bardMul *
-          chronicleMul,
+          chronicleMul *
+          voidMul,
       )
     },
 
@@ -312,6 +317,10 @@ export const useShopStore = defineStore('shop', {
       // for the same reason the drifter multiplier does: the CpS portion above
       // already carries its own multipliers.
       const bardMul = useBardAbilityStore().cpcMult
+      // Unmaking Scar (void tide): drosselt den Klickwert selbst. Der
+      // CpS-Anteil darunter trägt seine eigene Void-Drossel bereits, genau wie
+      // bei den beiden Faktoren darüber.
+      const voidMul = useVoidTideStore().cpcMult
       return Math.floor(
         (baseCPC + upgradeBonus) *
           gameStore.abilityCPCMultiplier *
@@ -320,7 +329,8 @@ export const useShopStore = defineStore('shop', {
           tree.cpcMult *
           drifterMul *
           omenMul *
-          bardMul +
+          bardMul *
+          voidMul +
           cpsPortion,
       )
     },

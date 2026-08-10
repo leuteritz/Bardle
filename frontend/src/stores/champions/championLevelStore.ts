@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useVoidTideStore } from '@/stores/world/voidTideStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import type {
   ChampionProgress,
@@ -359,7 +360,9 @@ export const useChampionLevelStore = defineStore('championLevel', {
           useOmenStore().xpMult *
           useAchievementStore().xpMult *
           // Quickened Path / Rift Ascendant (providence)
-          useProvidenceStore().xpMult,
+          useProvidenceStore().xpMult *
+          // Forgotten Path (void tide): solange der Riss steht, lernt niemand
+          useVoidTideStore().xpMult,
       )
       p.xp += gain
       p.totalXp += gain

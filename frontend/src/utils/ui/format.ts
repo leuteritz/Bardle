@@ -197,3 +197,9 @@ export function hexToRgba(hex: string, alpha: number): string {
   const [r, g, b] = hexToRgb(hex)
   return `rgba(${r},${g},${b},${alpha})`
 }
+
+/** `#rrggbb` → `"r, g, b"`. Genau die Form, die der Herald als `accent`
+ *  erwartet — er setzt sie in eigene `rgba()`-Ausdrücke ein. */
+export function hexToRgbTriple(hex: string): string {
+  return hexToRgb(hex).join(', ')
+}

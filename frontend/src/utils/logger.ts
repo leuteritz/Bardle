@@ -11,6 +11,7 @@ type LogCategory =
   | 'Augment'
   | 'ChampionLevel'
   | 'Drifter'
+  | 'VoidTide'
   | 'BardAbility'
   | 'Chronicle'
   | 'Omen'
@@ -34,6 +35,8 @@ const CATEGORY_COLORS: Record<LogCategory, string> = {
   Expedition: '#22c55e',
   Planet: '#22c55e',
   Drifter: '#22c55e',
+  // Als einziges der Weltereignisse rot — was hier gemeldet wird, kostet
+  VoidTide: '#e0409f',
   BardAbility: '#22c55e',
   Shop: '#3b82f6',
   Inventory: '#3b82f6',

@@ -22,6 +22,11 @@ export const typeColor: Record<GameEventType, string> = {
   // klingende Zeilen (ein Ziel ist erreicht, ein Bonus gilt ab jetzt) und
   // müssen im Log auf den ersten Blick auseinanderzuhalten sein.
   omen: '#a8b0f0',
+  // Magenta, und das einzige Rot-Ende im Log: die Void-Zeilen sind die
+  // einzigen, die von einem VERLUST berichten. Bewusst weit weg vom Violett
+  // der Vorzeichen darüber — die beiden dürfen sich nicht ähneln, weil sie
+  // gegensätzliche Nachrichten tragen.
+  void: '#e0409f',
   info: '#c8b89a',
 }
 
@@ -49,6 +54,22 @@ export function logAugmentAutoPicked(name: string, effectLine: string) {
 export function logDrifterCollected(name: string, effectLine: string) {
   const { addEvent } = useEventLog()
   addEvent(`${name} collected — ${effectLine}`, 'chime')
+}
+
+/** Ein Void-Riss wurde geschlossen — Name plus die Beute, die er freigibt. */
+export function logVoidRiftSealed(name: string, boonLine: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`${name} sealed — ${boonLine}`, 'void')
+}
+
+/**
+ * Ein Void-Riss ist kollabiert. Die einzige Logzeile im Spiel, die einen
+ * Verlust meldet — deshalb steht der HP-Betrag darin und nicht nur der Name:
+ * „was hat mich das gekostet?" ist die Frage, die der Spieler an sie hat.
+ */
+export function logVoidRiftCollapsed(name: string, hpLost: number) {
+  const { addEvent } = useEventLog()
+  addEvent(`${name} collapsed — the sun took ${safeNumber(hpLost)} damage.`, 'void')
 }
 
 /**

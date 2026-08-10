@@ -15,6 +15,7 @@ import { useItemStore } from '@/stores/economy/itemStore'
 import { useSynergyStore } from '@/stores/champions/synergyStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
+import { useVoidTideStore } from '@/stores/world/voidTideStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useSectionStore } from '@/stores/core/sectionStore'
@@ -91,6 +92,7 @@ export function useStatCatalog(query: Ref<string>): {
   const synergyStore = useSynergyStore()
   const augmentStore = useAugmentStore()
   const drifterStore = useDrifterStore()
+  const voidTideStore = useVoidTideStore()
   const omenStore = useOmenStore()
   const bardAbilityStore = useBardAbilityStore()
   const achievementStore = useAchievementStore()
@@ -1451,6 +1453,64 @@ export function useStatCatalog(query: Ref<string>): {
         key: 'omen-xp',
         label: 'Omen XP Buff',
         value: bonus(omenStore.xpMult),
+      },
+      // ── Void Tide ──
+      // Die einzigen Zahlen im Katalog, bei denen ein HOHER Wert schlecht ist.
+      // Die Quote steht deshalb bewusst als „Rifts Sealed" und nicht als
+      // „Rifts Collapsed" — der Katalog soll den Erfolg messen, nicht das
+      // Versäumnis, auch wenn beide Zähler danebenstehen.
+      {
+        key: 'rifts-sealed',
+        label: 'Void Rifts Sealed',
+        value: num(voidTideStore.totalRiftsSealed),
+        highlight: true,
+        keywords: 'void tide rift breach maw wound scar',
+      },
+      {
+        key: 'rifts-seal-rate',
+        label: 'Rift Seal Rate',
+        value:
+          voidTideStore.totalRiftsOpened > 0
+            ? pct(voidTideStore.totalRiftsSealed / voidTideStore.totalRiftsOpened)
+            : '—',
+        keywords: 'void rift accuracy',
+      },
+      {
+        key: 'rifts-collapsed',
+        label: 'Void Rifts Collapsed',
+        value: num(voidTideStore.totalRiftsCollapsed),
+        keywords: 'void rift lost failed',
+      },
+      {
+        key: 'void-hp-lost',
+        label: 'Sun HP Lost to the Void',
+        value: num(voidTideStore.totalVoidHpLost),
+        keywords: 'void rift collapse damage',
+      },
+      {
+        key: 'void-cps',
+        label: 'Void Production Effect',
+        value: bonus(voidTideStore.cpsMult),
+      },
+      {
+        key: 'void-cpc',
+        label: 'Void Click Effect',
+        value: bonus(voidTideStore.cpcMult),
+      },
+      {
+        key: 'void-dps',
+        label: 'Void Damage Effect',
+        value: bonus(voidTideStore.combatDpsMult),
+      },
+      {
+        key: 'void-drops',
+        label: 'Void Drop Effect',
+        value: bonus(voidTideStore.materialDropMult),
+      },
+      {
+        key: 'void-xp',
+        label: 'Void XP Effect',
+        value: bonus(voidTideStore.xpMult),
       },
       // ── Bard-Fähigkeiten ──
       {

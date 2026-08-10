@@ -233,7 +233,13 @@ onUnmounted(clearTimers)
    So teilen sich die drei Karten die Ecke, ohne sich je zu überdecken. */
 .dic-root {
   position: fixed;
-  top: calc(max(var(--autopick-bottom, 0px), var(--omen-card-bottom, 0px)) + 0.5rem);
+  top: calc(
+    max(
+        var(--autopick-bottom, 0px),
+        var(--omen-card-bottom, 0px),
+        var(--void-card-bottom, 0px)
+      ) + 0.5rem
+  );
   left: 0.75rem;
   z-index: 899;
   width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
