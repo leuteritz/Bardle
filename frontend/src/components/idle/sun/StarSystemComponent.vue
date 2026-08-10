@@ -291,8 +291,15 @@ import {
   STAR_ORBIT_MIN_SUN_SCALE,
   HINT_SPRITE_CACHE_LIMIT,
   FRAME_EL_SWEEP_INTERVAL,
+  STAR_SUMMARY_GAP_PX,
+  STAR_SUMMARY_MAX_HEIGHT_PX,
+  STAR_SUMMARY_FLIP_HYSTERESIS_PX,
+  STAR_SUMMARY_FLIP_STACK_PX,
+  STAR_COUNT_GAP_PX,
+  STAR_COUNT_HEIGHT_PX,
 } from '@/config/constants'
 import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
+import { measuredFieldInsets } from '@/utils/orbit/drifterPath'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import { activeChampionBehindState, activePlayerPlanetPositions, activeStarCombatState } from '@/utils/orbit/liveState'
 import type { ChampionRole, StarType } from '@/types'
@@ -518,7 +525,13 @@ function applyFrames() {
     for (const id of starDimFactors.keys()) {
       if (!alive.has(id)) starDimFactors.delete(id)
     }
+    for (const id of summaryFlipped.keys()) {
+      if (!alive.has(id)) summaryFlipped.delete(id)
+    }
   }
+
+  // Einmal je Frame für alle Sterne, nicht je Stern.
+  refreshFieldEdges()
 
   const nowTs = performance.now()
   const dt = lastDimTs === 0 ? 16 : Math.min(nowTs - lastDimTs, 50)
@@ -552,14 +565,21 @@ function applyFrames() {
       }
       const summary = summaryEls.get(star.id)
       if (summary) {
-        summary.style.transform = `translate(${star.x}px, ${star.y + half + 58}px) translateX(-50%)`
+        summary.style.transform = summaryTransform(star, half)
         summary.style.opacity = dimFactor.toFixed(3)
+        // Dreht die Leine mit. `summaryTransform` hat den Zustand gerade
+        // gestellt, also steht hier der Wert dieses Frames; classList.toggle
+        // schreibt von sich aus nur bei echtem Wechsel.
+        summary.classList.toggle(
+          'star-reward-summary--flipped',
+          summaryFlipped.get(star.id) ?? false,
+        )
       }
     }
 
     const count = countEls.get(star.id)
     if (count) {
-      count.style.transform = `translate(${star.x}px, ${star.y - half - 25}px) translateX(-50%) translateY(-100%)`
+      count.style.transform = countTransform(star, half)
       count.style.opacity = (baseOpacity * dimFactor).toFixed(3)
       // Rahmenpuls nur im Vordergrund — classList.toggle schreibt von sich aus
       // nur bei echtem Wechsel, kostet hier also nichts pro Frame.
@@ -1348,17 +1368,86 @@ function getStarRewardSummary(star: StarRenderEntry): StarRewardSummary {
   return rewardSummaries.value.get(star.id) ?? EMPTY_REWARD_SUMMARY
 }
 
-function rewardSummaryStyle(star: StarRenderEntry) {
-  const s = starSize(star.starType)
-  return {
-    transform: `translate(${star.x}px, ${star.y + s / 2 + 58}px) translateX(-50%)`,
+// ── Anhängsel am Stern ──────────────────────────────────────────────────────
+// Belohnungskarte und Planetenzahl hängen am Körper und würden mit ihm unter
+// Bottom-Bar und Header wandern. Beide weichen stattdessen aus — die Karte
+// klappt über den Stern, die Zahl bleibt unter der Header-Kante hängen. Der
+// Grund ist nicht Schönheit: die Karte ist eine SCHALTFLÄCHE, und eine, die
+// unter dem HUD liegt, ist weg (siehe „HUD-Freiraum" in CLAUDE.md).
+//
+// Die Rechnung steht hier EINMAL und wird von beiden Wegen benutzt: dem
+// `:style` beim strukturellen Render und der Frame-Schleife, die danach direkt
+// aufs Element schreibt. Als zwei Kopien liefen sie beim ersten Nachjustieren
+// auseinander, und der eine Frame nach jedem Render zeigte die alte Formel.
+
+/** Ob die Karte eines Sterns gerade oben sitzt. Der Zustand bleibt zwischen den
+ *  Frames stehen, weil die Hysterese ihn braucht. */
+const summaryFlipped = new Map<string, boolean>()
+
+/**
+ * Kanten des freien Feldes. Einmal je Frame gesetzt, nicht je Stern — die
+ * Messung liest berechnete Stile.
+ *
+ * Die Startwerte beschreiben ein Feld OHNE HUD. Das ist der Zustand, in dem
+ * nichts ausweicht: der erste `:style` läuft vor dem ersten Frame, und mit
+ * einer Unterkante von 0 klappte dort jede Karte nach oben, um im nächsten
+ * Frame zurückzuspringen.
+ */
+let fieldBottomPx = typeof window === 'undefined' ? 0 : window.innerHeight
+let fieldTopPx = 0
+
+function refreshFieldEdges(): void {
+  const insets = measuredFieldInsets()
+  fieldTopPx = insets.headerBottomPx ?? 0
+  fieldBottomPx = window.innerHeight - (insets.bottomBarHeightPx ?? 0)
+}
+
+/** Sitzt die Karte dieses Sterns oben? Mit Hysterese, sonst kippt sie an der
+ *  Schwelle jeden Frame hin und her. */
+function isSummaryFlipped(star: StarRenderEntry, half: number): boolean {
+  const bottomIfBelow = star.y + half + STAR_SUMMARY_GAP_PX + STAR_SUMMARY_MAX_HEIGHT_PX
+  const was = summaryFlipped.get(star.id) ?? false
+  const limit = was ? fieldBottomPx - STAR_SUMMARY_FLIP_HYSTERESIS_PX : fieldBottomPx
+  const now = bottomIfBelow > limit
+  summaryFlipped.set(star.id, now)
+  return now
+}
+
+/**
+ * Wo die Unterkante der Planetenzahl sitzt — im freien Feld gehalten, nach oben
+ * gegen den Header, nach unten gegen die Bottom-Bar. Beide Grenzen sind nötig:
+ * die Zahl steht ÜBER dem Körper, aber der Körper selbst darf tief stehen, und
+ * dann ist auch alles darüber noch in der Bar.
+ */
+function countAnchorY(star: StarRenderEntry, half: number): number {
+  const wanted = star.y - half - STAR_COUNT_GAP_PX
+  return Math.min(Math.max(wanted, fieldTopPx + STAR_COUNT_HEIGHT_PX), fieldBottomPx)
+}
+
+function summaryTransform(star: StarRenderEntry, half: number): string {
+  if (isSummaryFlipped(star, half)) {
+    // Über den Stern, und zwar über die Planetenzahl — an DEREN ausgewichener
+    // Position, nicht an einer eigenen Rechnung, sonst legen sich die beiden
+    // Ausweichwege irgendwann übereinander. `translateY(-100%)` verankert die
+    // Unterkante, damit die Platzierung die Kartenhöhe nicht kennen muss und
+    // ohne Layout-Read auskommt.
+    const y = countAnchorY(star, half) - STAR_COUNT_HEIGHT_PX - STAR_SUMMARY_FLIP_STACK_PX
+    return `translate(${star.x}px, ${y}px) translateX(-50%) translateY(-100%)`
   }
+  return `translate(${star.x}px, ${star.y + half + STAR_SUMMARY_GAP_PX}px) translateX(-50%)`
+}
+
+function countTransform(star: StarRenderEntry, half: number): string {
+  return `translate(${star.x}px, ${countAnchorY(star, half)}px) translateX(-50%) translateY(-100%)`
+}
+
+function rewardSummaryStyle(star: StarRenderEntry) {
+  return { transform: summaryTransform(star, starSize(star.starType) / 2) }
 }
 
 function starCountStyle(star: StarRenderEntry) {
-  const s = starSize(star.starType)
   return {
-    transform: `translate(${star.x}px, ${star.y - s / 2 - 25}px) translateX(-50%) translateY(-100%)`,
+    transform: countTransform(star, starSize(star.starType) / 2),
     opacity: isFocusStar(star.id) ? '1' : (star.opacity * starHoverDimFactor(star.id)).toFixed(3),
   }
 }
@@ -1809,6 +1898,23 @@ function starCountStyle(star: StarRenderEntry) {
   height: 52px;
   background: linear-gradient(
     to bottom,
+    transparent 0%,
+    rgba(232, 192, 64, 0.25) 40%,
+    rgba(232, 192, 64, 0.5) 100%
+  );
+}
+
+/* Umgeklappt sitzt die Karte ÜBER dem Stern — dann muss die Leine nach unten
+   zeigen, sonst hängt sie ins Leere. Sie reicht nur bis zur Planetenzahl, die
+   dort direkt darunter steht (der Abstand ist STAR_SUMMARY_FLIP_STACK_PX); von
+   dort führt die Zahl das Auge weiter zum Körper. */
+.star-reward-summary--flipped .summary-inner::before {
+  top: auto;
+  bottom: 0;
+  transform: translate(-50%, 100%);
+  height: 8px;
+  background: linear-gradient(
+    to top,
     transparent 0%,
     rgba(232, 192, 64, 0.25) 40%,
     rgba(232, 192, 64, 0.5) 100%

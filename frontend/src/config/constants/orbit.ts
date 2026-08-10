@@ -228,6 +228,57 @@ export const STAR_TIER_GAP_RESOURCE_PX = 140
 export const STAR_TIER_GAP_CHAMPION_PX = 60
 /** Sicherheitsabstand der äußersten Sternbahn zum Fensterrand. */
 export const STAR_VIEWPORT_MARGIN_PX = 20
+/**
+ * KEIN vertikales Gegenstück zu `STAR_VIEWPORT_MARGIN_PX` — bewusst.
+ *
+ * Ein Cap gegen die Bottom-Bar wurde gebaut und wieder zurückgenommen: der
+ * Platz dafür existiert nicht. Die ADC-Bahn reicht je nach Sonnenphase bis
+ * rx 513–816, der Mindestabstand einer Sternbahn liegt damit bei 653–956
+ * (`STAR_TIER_GAP_RESOURCE_PX`), zwischen Minimap und Command Panel sind aber
+ * nur rund 600 px frei. Was man an HUD-Freiheit gewinnt, verliert man an
+ * Abstand zur Champion-Bahn — und zwei Spielobjekte auf derselben Bahn wiegen
+ * schwerer als eines, das kurz hinter einem Panel durchläuft. Gemessen brachte
+ * das Cap 26,8 % → 28,7 % Verdeckung, also nichts.
+ *
+ * Was stattdessen wirkt: die ANHÄNGSEL weichen aus (siehe `summaryTransform`
+ * in `StarSystemComponent.vue`) — dort sitzt die Klickfläche, und die ist bei
+ * 0 %.
+ */
+
+// ── Anhängsel am Stern: Belohnungskarte unten, Planetenzahl oben ────────────
+// Beide wandern mit dem Körper und weichen dem HUD aus, statt darunter zu
+// verschwinden (siehe „HUD-Freiraum"). Die Karte ist anklickbar — sie unter der
+// Bottom-Bar liegen zu lassen nimmt dem Spieler eine Schaltfläche, nicht nur
+// eine Ansicht.
+
+/** Abstand der Belohnungskarte unter der Unterkante des Sternkörpers. */
+export const STAR_SUMMARY_GAP_PX = 58
+/**
+ * Womit gerechnet wird, wenn gefragt ist, ob die Karte unten noch passt.
+ * Bewusst der GRÖSSTE gemessene Wert (107–138 px je nach Beute und
+ * Statusmarken): dann klappt sie im schlanken Fall etwas zu früh nach oben,
+ * was niemand bemerkt — umgekehrt stünde sie halb in der Bar. Für die
+ * Platzierung selbst wird sie nicht gebraucht, die erledigt
+ * `translateY(-100%)` ohne einen einzigen Layout-Read.
+ */
+export const STAR_SUMMARY_MAX_HEIGHT_PX = 140
+/**
+ * Wie viel Luft nach dem Umklappen wieder da sein muss, bevor die Karte
+ * zurückfällt. Ohne diese Schwelle sitzt ein Stern, der genau auf der Grenze
+ * wandert, in einer Kippschwingung und die Karte springt jeden Frame.
+ */
+export const STAR_SUMMARY_FLIP_HYSTERESIS_PX = 16
+/**
+ * Luft zwischen der umgeklappten Karte und der Planetenzahl, über der sie dann
+ * sitzt. Die Karte wird an DEREN Position gehängt statt an eine eigene Zahl:
+ * beide weichen dem HUD aus, und zwei getrennt gerechnete Ausweichwege legen
+ * sich früher oder später übereinander.
+ */
+export const STAR_SUMMARY_FLIP_STACK_PX = 8
+/** Abstand der Planetenzahl über der Oberkante des Sternkörpers. */
+export const STAR_COUNT_GAP_PX = 25
+/** Höhe der Planetenzahl — sie hält sich damit unter der Header-Kante. */
+export const STAR_COUNT_HEIGHT_PX = 30
 /** Untergrenze der Einflug-Skalierung, damit ein Stern nie auf 0 kollabiert. */
 export const STAR_SPAWN_MIN_SCALE = 0.05
 /** Größe der Planeten-Marker auf einer Sternbahn. */

@@ -29,6 +29,12 @@ export interface DrifterFieldInsets {
   sidePanelWidthPx?: number
   /** Measured full height of the bottom bar (BOTTOM_BAR_HEIGHT × --hud-scale). */
   bottomBarHeightPx?: number
+  /**
+   * Height of the keycap bar (`--kb-hud-h`), which sits ON TOP of the right
+   * side panel and is opaque. It raises the side columns' upper edge — without
+   * it a body dives into a strip that looks free but is not.
+   */
+  keycapBarHeightPx?: number
 }
 
 export interface DrifterPoint {
@@ -62,13 +68,19 @@ export function drifterField(
   const hudScale = Math.min(1, w / HUD_SCALE_REF_WIDTH_PX, viewportH / HUD_SCALE_REF_HEIGHT_PX)
   const sidePanelWidth = insets.sidePanelWidthPx ?? BOTTOM_BAR_SIDE_W * hudScale
   const barHeight = insets.bottomBarHeightPx ?? BOTTOM_BAR_HEIGHT * hudScale
+  // The keycap bar rides on top of the right panel and is just as opaque, so
+  // the columns start above it. Measured on 2K, where the drifter clipped it in
+  // 14.3 % of samples while Full HD showed none — the bar scales with the HUD,
+  // the flight field did not.
+  const keycap = insets.keycapBarHeightPx ?? 0
+  const stackedBottom = keycap > 0 ? barHeight + keycap + DRIFTER_HUD_PANEL_MARGIN_PX : barHeight
   return {
     left: 0,
     top,
     width: w,
     height,
     sidePanelWidth,
-    sidePanelTop: viewportH - barHeight,
+    sidePanelTop: viewportH - stackedBottom,
   }
 }
 
@@ -93,6 +105,7 @@ export function measuredFieldInsets(): DrifterFieldInsets {
     headerBottomPx: chromeBottom,
     sidePanelWidthPx: panel,
     bottomBarHeightPx: scale ? BOTTOM_BAR_HEIGHT * scale : undefined,
+    keycapBarHeightPx: read('--kb-hud-h'),
   }
 }
 
