@@ -1,342 +1,280 @@
-import type { ProvidenceDef, ProvidenceEffectLine, ProvidenceEffects } from '@/types'
-import { PROVIDENCE_NEUTRAL_MULTIPLIER } from '@/config/constants'
+import type {
+  ProvidenceAxis,
+  ProvidenceDomain,
+  ProvidenceEffectLine,
+  ProvidenceEffects,
+  RolledProvidence,
+} from '@/types'
+import { PROVIDENCE_PCT_STEP, PROVIDENCE_MULT_PRECISION } from '@/config/constants'
 
 /**
  * PROVIDENCES OF THE WANDERER
  *
- * Was beim Prestige über einem Universum steht. Jede Vorsehung trägt genau EIN
- * Plus und genau EIN Minus, und beim Prestige liegen drei davon aus — je eine
- * über einem anderen Universum, je eine aus einer anderen Domäne.
+ * Was beim Prestige über einem Universum steht: ein Buff und ein Debuff, beide
+ * im Moment der Ziehung GEWÜRFELT — welche Achse, in welche Richtung, und um
+ * wie viel Prozent.
  *
- * ── Warum die Effekte nicht mehr am Universum hängen ────────────────────────
- * Sie taten es einmal: jedes Universum hatte einen festen `modifier`. Das ergab
- * zehn Universen und damit zehn feste Läufe — der zweite Besuch von Void Nexus
- * war Zeile für Zeile der erste. Seit die Vorsehung gezogen wird, sind es zehn
- * mal achtzehn, ohne dass ein Universum seine Herkunft verliert: das Universum
- * sagt WOHIN, die Vorsehung WORUNTER.
+ * ── Warum kein Katalog mehr ─────────────────────────────────────────────────
+ * Es gab einmal achtzehn fertige Vorsehungen. Achtzehn Karten sind nach ein
+ * paar Läufen auswendig gelernt, und dann ist die Wahl eine Erinnerungsübung:
+ * man weiss, welche die beste ist, und wartet auf sie. Gewürfelte Höhen machen
+ * jede Ziehung zu einer echten Abwägung — „+150 % Champion-DPS für −30 %
+ * Turret-DPS" ist ein anderes Angebot als „+45 % für −50 %", obwohl beide auf
+ * denselben zwei Achsen liegen.
  *
- * ── Warum jede Vorsehung etwas kostet ───────────────────────────────────────
- * Eine Karte ohne Preis wäre keine Wahl, sondern ein Geschenk, und drei
- * Geschenke nebeneinander sind ein Ranking — der Spieler nimmt das grösste und
- * denkt nicht weiter nach. Erst der Preis macht aus dem Angebot eine Frage:
- * worauf will ich diesen Lauf spielen? Eine Spec bindet die Regel an den
- * Katalog.
+ * Geblieben ist alles, was Wiedererkennbarkeit trägt: Name und Glyph hängen an
+ * der BUFF-Achse. „Bladed Orbit" ist immer die Karte, die Champion-Schaden
+ * hebt — nur Höhe und Preis sind jedes Mal andere.
  *
- * Die Paare sind deshalb gegenläufig gebaut (Ironclad ↔ Bladed, Emberthrift ↔
- * Cinder Hoard, Far Wanderer ↔ Swift Relay): dieselbe Achse, andere Richtung.
- * Wer eine Karte verstanden hat, versteht ihr Gegenstück sofort mit.
+ * ── Die Regel, die das Angebot trägt ────────────────────────────────────────
+ * Genau ein Plus und genau ein Minus, nie auf derselben Achse (das hübe sich
+ * auf). Der Debuff kommt bevorzugt aus derselben Domäne wie der Buff: „mehr
+ * Champion-Schaden, dafür schwächere Turrets" ist eine Entscheidung über den
+ * Orbit, „mehr Champion-Schaden, dafür teurere Expeditionen" wären zwei
+ * Nachrichten aus zwei Welten.
  */
-export const PROVIDENCES: ProvidenceDef[] = [
-  // ── economy: Produktion, Klick, Meeps ──────────────────────────────────────
+
+/**
+ * Die Achsen, aus denen gewürfelt wird.
+ *
+ * `buffPct` und `debuffPct` stehen je Achse, weil die Achsen verschieden
+ * empfindlich sind: 150 % mehr Chimes pro Sekunde sind ein guter Lauf, 150 %
+ * mehr Boss-HP wären eine Mauer. Die Spannen sind ausserdem asymmetrisch — ein
+ * Buff darf weiter ausschlagen als ein Debuff, sonst fühlt sich jede Karte wie
+ * ein Nullsummenspiel an, und niemand freut sich über eine Ziehung.
+ *
+ * Jede Domäne führt mindestens ZWEI Achsen, damit der Debuff im Regelfall aus
+ * derselben Domäne kommen kann.
+ */
+export const PROVIDENCE_AXES: ProvidenceAxis[] = [
+  // ── economy ────────────────────────────────────────────────────────────────
   {
-    id: 'gilded-tide',
-    name: 'Gilded Tide',
-    description: 'Chimes come in waves. Everything you build costs what a wave is worth.',
+    key: 'cpsMultiplier',
+    label: 'Chimes/sec',
+    domain: 'economy',
+    higherIsBetter: true,
+    via: 'modifier',
     icon: 'game-icons:coins-pile',
-    domain: 'economy',
-    effects: { cpsMultiplier: 2.4, buildingCostMultiplier: 1.8 },
+    names: ['Gilded Tide', 'Endless Coffer', 'Chime Bloom'],
+    buffPct: [60, 180],
+    debuffPct: [25, 50],
   },
   {
-    id: 'wanderers-hand',
-    name: "Wanderer's Hand",
-    description: 'The cosmos answers the hand, not the machine.',
+    key: 'cpcMultiplier',
+    label: 'Chimes/click',
+    domain: 'economy',
+    higherIsBetter: true,
+    via: 'modifier',
     icon: 'game-icons:windchimes',
+    names: ["Wanderer's Hand", 'Quickened Touch', 'Struck Resonance'],
+    buffPct: [80, 250],
+    debuffPct: [30, 55],
+  },
+  {
+    key: 'buildingCostMultiplier',
+    label: 'Building cost',
     domain: 'economy',
-    effects: { cpcMultiplier: 3, cpsMultiplier: 0.5 },
-  },
-  {
-    id: 'meep-covenant',
-    name: 'Meep Covenant',
-    description: 'They gather willingly, and ask for little. They carry little, too.',
-    icon: 'game-icons:sparkles',
-    domain: 'economy',
-    effects: { meepCostMultiplier: 0.4, meepPowerMultiplier: 0.55 },
-  },
-
-  // ── cosmos: Sterne und Drifter ─────────────────────────────────────────────
-  {
-    id: 'long-vigil',
-    name: 'Long Vigil',
-    description: 'The stars linger, and the wanderer keeps watch far longer than he should.',
-    icon: 'game-icons:all-seeing-eye',
-    domain: 'cosmos',
-    effects: { starLifetimeMult: 1.4, materialDropMult: 0.75 },
-  },
-  {
-    id: 'culling-light',
-    name: 'Culling Light',
-    description: 'Stars burn out in a breath — but what they leave behind is worth the haste.',
-    icon: 'game-icons:falling-star',
-    domain: 'cosmos',
-    effects: { materialDropMult: 2.2, starLifetimeMult: 0.55 },
-  },
-  {
-    id: 'hollow-tide',
-    name: 'Hollow Tide',
-    description:
-      'The void sends its flotsam twice as often, and takes back the gift twice as fast.',
-    icon: 'game-icons:scout-ship',
-    domain: 'cosmos',
-    effects: { drifterSpawnIntervalMult: 0.5, drifterBuffDurationMult: 0.5 },
-  },
-
-  // ── combat: Orbit und Bosse ────────────────────────────────────────────────
-  {
-    id: 'ironclad-orbit',
-    name: 'Ironclad Orbit',
-    description: 'The batteries answer for the orbit. Let the champions rest their blades.',
-    icon: 'game-icons:shield-echoes',
-    domain: 'combat',
-    effects: { turretDpsMult: 2.2, combatDpsMult: 0.6 },
-  },
-  {
-    id: 'bladed-orbit',
-    name: 'Bladed Orbit',
-    description: 'Steel over stone — the guardians strike, and the batteries fall silent.',
-    icon: 'game-icons:crossed-swords',
-    domain: 'combat',
-    effects: { combatDpsMult: 1.8, turretDpsMult: 0.45 },
-  },
-  {
-    id: 'wardens-toll',
-    name: "Warden's Toll",
-    description: 'Every keeper of a world grows heavier — and richer for the felling.',
-    icon: 'game-icons:star-skull',
-    domain: 'combat',
-    effects: { bossRewardMult: 2.5, bossHpMult: 1.6 },
-  },
-
-  // ── roster: Champions und Ladder ───────────────────────────────────────────
-  {
-    id: 'quickened-path',
-    name: 'Quickened Path',
-    description: 'The road teaches quickly, but the rift remembers little of it.',
-    icon: 'game-icons:progression',
-    domain: 'roster',
-    effects: { xpMult: 2.5, lpGainMult: 0.6 },
-  },
-  {
-    id: 'rift-ascendant',
-    name: 'Rift Ascendant',
-    description: 'Glory is counted in the rift alone. What the journey taught fades on arrival.',
-    icon: 'game-icons:podium-winner',
-    domain: 'roster',
-    effects: { lpGainMult: 1.8, xpMult: 0.55 },
-  },
-  {
-    id: 'proven-in-fire',
-    name: 'Proven in Fire',
-    description: 'A roster forged for war carries no room for salvage.',
-    icon: 'game-icons:heraldic-sun',
-    domain: 'roster',
-    effects: { eloPowerMultiplier: 2.4, materialDropMult: 0.6 },
-  },
-
-  // ── forge: Schmiede und Material ───────────────────────────────────────────
-  {
-    id: 'emberthrift',
-    name: 'Emberthrift',
-    description: 'The forge asks for little. The cosmos, in turn, gives up little.',
-    icon: 'game-icons:anvil-impact',
-    domain: 'forge',
-    effects: { forgeMaterialCostMult: 0.55, materialDropMult: 0.7 },
-  },
-  {
-    id: 'cinder-hoard',
-    name: 'Cinder Hoard',
-    description: 'Every shard finds its way to the pile — and the forge knows its worth.',
-    icon: 'game-icons:crystal-cluster',
-    domain: 'forge',
-    effects: { materialDropMult: 1.9, forgeMaterialCostMult: 1.5 },
-  },
-  {
-    id: 'molten-tithe',
-    name: 'Molten Tithe',
-    description: 'The sun takes its cut from the works, not from the ore.',
+    higherIsBetter: false,
+    via: 'modifier',
     icon: 'game-icons:contract',
-    domain: 'forge',
-    effects: { forgeMaterialCostMult: 0.4, cpsMultiplier: 0.65 },
+    names: ['Frugal Pact', 'Lean Foundations', 'Cheap Passage'],
+    buffPct: [20, 45],
+    debuffPct: [30, 70],
+  },
+  {
+    key: 'meepCostMultiplier',
+    label: 'Meep cost',
+    domain: 'economy',
+    higherIsBetter: false,
+    via: 'modifier',
+    icon: 'game-icons:sparkles',
+    names: ['Meep Covenant', 'Willing Flock', 'Easy Summons'],
+    buffPct: [30, 60],
+    debuffPct: [35, 80],
+  },
+  {
+    key: 'meepPowerMultiplier',
+    label: 'Meep power',
+    domain: 'economy',
+    higherIsBetter: true,
+    via: 'modifier',
+    icon: 'game-icons:stars-stack',
+    // „Burdened" stand hier einmal und las sich als Strafe, obwohl der Name nur
+    // fällt, wenn diese Achse der BUFF ist. Ein Kartenname darf nie gegen die
+    // Richtung sprechen, die er ankündigt.
+    names: ['Laden Flock', 'Strong Flock', 'Willing Burden'],
+    buffPct: [40, 120],
+    debuffPct: [25, 50],
   },
 
-  // ── expedition: die langen Wege ────────────────────────────────────────────
+  // ── cosmos ─────────────────────────────────────────────────────────────────
   {
-    id: 'far-wanderer',
-    name: 'Far Wanderer',
-    description: 'The long way round is the only way that pays.',
-    icon: 'game-icons:caravel',
-    domain: 'expedition',
-    effects: { expeditionRewardMult: 2.6, expeditionSpeedMult: 1.8 },
+    key: 'starLifetimeMult',
+    label: 'Star lifetime',
+    domain: 'cosmos',
+    higherIsBetter: true,
+    via: 'store',
+    icon: 'game-icons:all-seeing-eye',
+    names: ['Long Vigil', 'Lingering Light', 'Patient Stars'],
+    buffPct: [25, 70],
+    debuffPct: [20, 45],
   },
   {
-    id: 'swift-relay',
-    name: 'Swift Relay',
-    description: 'Send them out, call them home, send them out again. Nobody counts the haul.',
+    key: 'drifterSpawnIntervalMult',
+    label: 'Drifter interval',
+    domain: 'cosmos',
+    higherIsBetter: false,
+    via: 'store',
+    icon: 'game-icons:scout-ship',
+    names: ['Hollow Tide', 'Restless Drift', 'Crowded Lanes'],
+    buffPct: [25, 55],
+    debuffPct: [30, 70],
+  },
+  {
+    key: 'drifterBuffDurationMult',
+    label: 'Drifter buff time',
+    domain: 'cosmos',
+    higherIsBetter: true,
+    via: 'store',
     icon: 'game-icons:backward-time',
-    domain: 'expedition',
-    effects: { expeditionSpeedMult: 0.5, expeditionRewardMult: 0.6 },
+    names: ['Lasting Boon', 'Slow Fade', 'Held Breath'],
+    buffPct: [40, 110],
+    debuffPct: [25, 50],
+  },
+
+  // ── combat ─────────────────────────────────────────────────────────────────
+  {
+    key: 'combatDpsMult',
+    label: 'Champion DPS',
+    domain: 'combat',
+    higherIsBetter: true,
+    via: 'store',
+    icon: 'game-icons:crossed-swords',
+    names: ['Bladed Orbit', 'Sharpened Guard', 'Keen Escort'],
+    buffPct: [40, 120],
+    debuffPct: [25, 50],
   },
   {
-    id: 'distant-shores',
-    name: 'Distant Shores',
-    description: 'What lies beyond the reach pays better than what lies under the hand.',
-    icon: 'game-icons:galaxy',
+    key: 'turretDpsMult',
+    label: 'Turret DPS',
+    domain: 'combat',
+    higherIsBetter: true,
+    via: 'store',
+    icon: 'game-icons:shield-echoes',
+    names: ['Ironclad Orbit', 'Loaded Batteries', 'Steady Barrage'],
+    buffPct: [50, 150],
+    debuffPct: [30, 55],
+  },
+  {
+    key: 'bossHpMult',
+    label: 'Boss HP',
+    domain: 'combat',
+    higherIsBetter: false,
+    via: 'store',
+    icon: 'game-icons:star-skull',
+    names: ['Brittle Wardens', 'Thin Keepers', 'Hollow Guardians'],
+    buffPct: [20, 45],
+    debuffPct: [30, 70],
+  },
+  {
+    key: 'bossRewardMult',
+    label: 'Boss spoils',
+    domain: 'combat',
+    higherIsBetter: true,
+    via: 'store',
+    icon: 'game-icons:two-coins',
+    names: ["Warden's Toll", 'Rich Felling', 'Deep Spoils'],
+    buffPct: [60, 180],
+    debuffPct: [25, 50],
+  },
+
+  // ── roster ─────────────────────────────────────────────────────────────────
+  {
+    key: 'xpMult',
+    label: 'Champion XP',
+    domain: 'roster',
+    higherIsBetter: true,
+    via: 'store',
+    icon: 'game-icons:progression',
+    names: ['Quickened Path', 'Fast Study', 'Eager Road'],
+    buffPct: [60, 180],
+    debuffPct: [25, 50],
+  },
+  {
+    key: 'lpGainMult',
+    label: 'LP per win',
+    domain: 'roster',
+    higherIsBetter: true,
+    via: 'store',
+    icon: 'game-icons:podium-winner',
+    names: ['Rift Ascendant', 'Crowned Climb', 'Loud Victory'],
+    buffPct: [40, 110],
+    debuffPct: [25, 50],
+  },
+  {
+    key: 'eloPowerMultiplier',
+    label: 'Battle power',
+    domain: 'roster',
+    higherIsBetter: true,
+    via: 'modifier',
+    icon: 'game-icons:heraldic-sun',
+    names: ['Proven in Fire', 'Tempered Roster', 'Battle-Worn'],
+    buffPct: [60, 160],
+    debuffPct: [25, 50],
+  },
+
+  // ── forge ──────────────────────────────────────────────────────────────────
+  {
+    key: 'forgeMaterialCostMult',
+    label: 'Forge cost',
+    domain: 'forge',
+    higherIsBetter: false,
+    via: 'store',
+    icon: 'game-icons:anvil-impact',
+    names: ['Emberthrift', 'Molten Tithe', 'Cheap Kindling'],
+    buffPct: [25, 55],
+    debuffPct: [30, 70],
+  },
+  {
+    key: 'materialDropMult',
+    label: 'Material drops',
+    domain: 'forge',
+    higherIsBetter: true,
+    via: 'store',
+    icon: 'game-icons:crystal-cluster',
+    names: ['Cinder Hoard', 'Rich Seams', 'Generous Dust'],
+    buffPct: [50, 150],
+    debuffPct: [25, 50],
+  },
+
+  // ── expedition ─────────────────────────────────────────────────────────────
+  {
+    key: 'expeditionSpeedMult',
+    label: 'Expedition time',
     domain: 'expedition',
-    effects: { expeditionRewardMult: 2, cpcMultiplier: 0.5 },
+    higherIsBetter: false,
+    via: 'store',
+    icon: 'game-icons:caravel',
+    names: ['Swift Relay', 'Short Passage', 'Fair Winds'],
+    buffPct: [25, 55],
+    debuffPct: [35, 80],
+  },
+  {
+    key: 'expeditionRewardMult',
+    label: 'Expedition rewards',
+    domain: 'expedition',
+    higherIsBetter: true,
+    via: 'store',
+    icon: 'game-icons:galaxy',
+    names: ['Far Wanderer', 'Distant Shores', 'Rich Landfall'],
+    buffPct: [60, 180],
+    debuffPct: [25, 50],
   },
 ]
 
-/**
- * Wie eine Effektachse heisst, wo sie neutral steht und über welchen Weg sie
- * wirkt.
- *
- * `via` trennt die beiden Klassen, die sich seit der Zusammenführung in einer
- * Struktur teilen:
- *  - `'modifier'` — geerbt von `ModifierEffects`, gelesen über
- *    `gameStore.activeModifier` (shopStore, gameStore, planetShopStore),
- *  - `'store'` — Kosmos-Achsen mit je einem Getter im `providenceStore`.
- * Eine Spec prüft daran, dass keine `'store'`-Achse ohne Getter im Katalog steht.
- *
- * `neutral` steht je Achse und nicht global, damit eine spätere Achse mit
- * anderem Nullpunkt nicht still falsch eingefärbt wird. Heute ist es überall
- * `PROVIDENCE_NEUTRAL_MULTIPLIER` — jede verwendete Achse ist ein reiner
- * Multiplikator, siehe `ProvidenceEffects`.
- *
- * Steht hier und nicht in der Komponente: Prestige-Karte und Header-Tooltip
- * lesen beide daraus, und ein Effekt, der an einer Stelle grün und an der
- * anderen rot erscheint, wäre schlimmer als gar keine Färbung.
- */
-export interface ProvidenceEffectMeta {
-  label: string
-  higherIsBetter: boolean
-  neutral: number
-  via: 'modifier' | 'store'
-}
-
-export const PROVIDENCE_EFFECT_META: Partial<
-  Record<keyof ProvidenceEffects, ProvidenceEffectMeta>
-> = {
-  // Wirtschaft — über activeModifier
-  cpsMultiplier: {
-    label: 'Chimes/sec',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'modifier',
-  },
-  cpcMultiplier: {
-    label: 'Chimes/click',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'modifier',
-  },
-  buildingCostMultiplier: {
-    label: 'Building cost',
-    higherIsBetter: false,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'modifier',
-  },
-  meepCostMultiplier: {
-    label: 'Meep cost',
-    higherIsBetter: false,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'modifier',
-  },
-  meepPowerMultiplier: {
-    label: 'Meep power',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'modifier',
-  },
-  eloPowerMultiplier: {
-    label: 'Battle power',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'modifier',
-  },
-
-  // Kosmos — über je einen Getter im providenceStore
-  starLifetimeMult: {
-    label: 'Star lifetime',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  materialDropMult: {
-    label: 'Material drops',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  combatDpsMult: {
-    label: 'Champion DPS',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  turretDpsMult: {
-    label: 'Turret DPS',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  bossHpMult: {
-    label: 'Boss HP',
-    higherIsBetter: false,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  bossRewardMult: {
-    label: 'Boss spoils',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  xpMult: {
-    label: 'Champion XP',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  lpGainMult: {
-    label: 'LP per win',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  forgeMaterialCostMult: {
-    label: 'Forge cost',
-    higherIsBetter: false,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  expeditionSpeedMult: {
-    label: 'Expedition time',
-    higherIsBetter: false,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  expeditionRewardMult: {
-    label: 'Expedition rewards',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  drifterSpawnIntervalMult: {
-    label: 'Drifter interval',
-    higherIsBetter: false,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-  drifterBuffDurationMult: {
-    label: 'Drifter buff time',
-    higherIsBetter: true,
-    neutral: PROVIDENCE_NEUTRAL_MULTIPLIER,
-    via: 'store',
-  },
-}
-
 /** Wie eine Domäne auf der Karte heisst. Ohne das Label sähe eine Auswahl aus
  *  drei Domänen wie drei beliebige Karten aus. */
-export const PROVIDENCE_DOMAIN_LABELS: Record<ProvidenceDef['domain'], string> = {
+export const PROVIDENCE_DOMAIN_LABELS: Record<ProvidenceDomain, string> = {
   economy: 'Economy',
   cosmos: 'Cosmos',
   combat: 'Combat',
@@ -345,27 +283,95 @@ export const PROVIDENCE_DOMAIN_LABELS: Record<ProvidenceDef['domain'], string> =
   expedition: 'Expedition',
 }
 
-export function getProvidence(id: string): ProvidenceDef | undefined {
-  return PROVIDENCES.find((p) => p.id === id)
+/** Alle Domänen, die tatsächlich Achsen führen — die Quelle für die Spreizung
+ *  des Angebots. Abgeleitet statt gepflegt: eine neue Achse bringt ihre Domäne
+ *  von selbst mit. */
+export const PROVIDENCE_DOMAINS: ProvidenceDomain[] = [
+  ...new Set(PROVIDENCE_AXES.map((a) => a.domain)),
+]
+
+export function providenceAxis(key: keyof ProvidenceEffects): ProvidenceAxis | undefined {
+  return PROVIDENCE_AXES.find((a) => a.key === key)
+}
+
+function pick<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)]
+}
+
+/** Ein Prozentwert aus der Spanne, auf `PROVIDENCE_PCT_STEP` gerastert — eine
+ *  krumme „+143 %" läse sich wie Rauschen, „+145 %" wie eine Ansage. */
+function rollPct([min, max]: [number, number]): number {
+  const raw = min + Math.random() * (max - min)
+  return Math.round(raw / PROVIDENCE_PCT_STEP) * PROVIDENCE_PCT_STEP
 }
 
 /**
- * Die Effektzeilen einer Vorsehung, in Katalogreihenfolge — das Plus steht in
- * jeder Definition zuerst, damit die Karte mit dem Grund beginnt, sie zu nehmen,
- * und nicht mit dem Preis.
+ * Der Multiplikator, den ein Prozentwert auf dieser Achse ergibt.
+ *
+ * Ob er hebt oder senkt, folgt aus zwei Fragen: ist das ein Buff, und ist auf
+ * dieser Achse „mehr" gut? Bei gleicher Antwort geht es hinauf, sonst hinunter —
+ * ein Buff auf `buildingCostMultiplier` senkt die Kosten, ein Debuff hebt sie.
  */
-export function providenceEffectLines(def: ProvidenceDef): ProvidenceEffectLine[] {
+function multiplierFor(axis: ProvidenceAxis, pct: number, isBuff: boolean): number {
+  const raises = isBuff === axis.higherIsBetter
+  const value = raises ? 1 + pct / 100 : 1 - pct / 100
+  // Auf feste Stellen bringen: `1 - 0.55` ist in Gleitkomma 0.44999999999999996,
+  // und daraus zurückgerechnete Prozente zeigten sonst „-45.000000000000004".
+  return Number(value.toFixed(PROVIDENCE_MULT_PRECISION))
+}
+
+/**
+ * Eine Vorsehung dieser Domäne würfeln.
+ *
+ * Der Debuff kommt aus derselben Domäne, solange sie eine zweite Achse hat —
+ * sonst (theoretisch, heute führt jede Domäne mindestens zwei) aus dem ganzen
+ * Vorrat. Nie dieselbe Achse wie der Buff: das hübe sich auf und liesse eine
+ * Karte übrig, die nichts tut.
+ */
+export function rollProvidence(domain: ProvidenceDomain): RolledProvidence {
+  const inDomain = PROVIDENCE_AXES.filter((a) => a.domain === domain)
+  const buff = pick(inDomain)
+
+  const sameDomain = inDomain.filter((a) => a.key !== buff.key)
+  const debuffPool = sameDomain.length
+    ? sameDomain
+    : PROVIDENCE_AXES.filter((a) => a.key !== buff.key)
+  const debuff = pick(debuffPool)
+
+  return {
+    name: pick(buff.names),
+    icon: buff.icon,
+    domain,
+    buffKey: buff.key,
+    debuffKey: debuff.key,
+    effects: {
+      [buff.key]: multiplierFor(buff, rollPct(buff.buffPct), true),
+      [debuff.key]: multiplierFor(debuff, rollPct(debuff.debuffPct), false),
+    },
+  }
+}
+
+/**
+ * Die zwei Zeilen einer gewürfelten Vorsehung — Buff zuerst, damit die Karte
+ * mit dem Grund beginnt, sie zu nehmen, und nicht mit dem Preis.
+ *
+ * `positive` kommt aus dem ROLL (welche Achse war der Buff) und wird nicht aus
+ * dem Wert zurückgerechnet: die Bewertung ist eine Eigenschaft der Ziehung, und
+ * sie zweimal unabhängig herzuleiten hiesse, zwei Stellen zu haben, die
+ * auseinanderlaufen können.
+ */
+export function providenceEffectLines(rolled: RolledProvidence): ProvidenceEffectLine[] {
   const lines: ProvidenceEffectLine[] = []
-  for (const [key, value] of Object.entries(def.effects)) {
-    const meta = PROVIDENCE_EFFECT_META[key as keyof ProvidenceEffects]
-    if (!meta || typeof value !== 'number') continue
-    const positive = meta.higherIsBetter ? value > meta.neutral : value < meta.neutral
-    lines.push({
-      label: meta.label,
-      value: `x${value}`,
-      text: `${meta.label} x${value}`,
-      positive,
-    })
+  for (const [key, positive] of [
+    [rolled.buffKey, true],
+    [rolled.debuffKey, false],
+  ] as const) {
+    const axis = providenceAxis(key)
+    const mult = rolled.effects[key]
+    if (!axis || typeof mult !== 'number') continue
+    const pct = Math.round((mult - 1) * 100)
+    const value = `${pct >= 0 ? '+' : '−'}${Math.abs(pct)}%`
+    lines.push({ label: axis.label, value, text: `${axis.label} ${value}`, positive })
   }
   return lines
 }

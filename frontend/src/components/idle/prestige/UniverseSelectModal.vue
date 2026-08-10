@@ -25,8 +25,8 @@ const visible = computed(() => gameStore.showUniverseSelectModal)
  * läuft — die Vorsehung muss davor stehen, sonst liefe der neue Durchlauf für
  * einen Moment unter der alten.
  */
-function pick(universeId: number, providenceId: string) {
-  if (!providenceStore.choose(universeId, providenceId)) return
+function pick(universeId: number) {
+  if (!providenceStore.choose(universeId)) return
   gameStore.selectPrestigeUniverse(universeId)
 }
 
@@ -65,7 +65,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
               :key="card.universe.id"
               :universe="card.universe"
               :providence="card.providence"
-              @pick="pick(card.universe.id, card.providence.id)"
+              @pick="pick(card.universe.id)"
             />
           </div>
 

@@ -399,12 +399,15 @@ export function usePersistence() {
         totalOmensCompleted: omenStore.totalOmensCompleted,
         totalOmensSwift: omenStore.totalOmensSwift,
       },
-      // Providence. Eine einzige ID — alles andere steht im Katalog, und das
-      // Angebot wird beim Öffnen des Prestige-Modals ohnehin frisch gezogen.
-      // Die ID ist damit ein Save-Vertrag wie Meep-Knoten und Relikte: wird sie
-      // im Katalog umbenannt, gehört sie in SAVE_ID_RENAMES.
+      // Providence. Das GANZE gewürfelte Ergebnis, nicht eine ID: seit Achse
+      // und Höhe beim Prestige gezogen werden, steht die laufende Vorsehung in
+      // keinem Katalog mehr und liesse sich aus einer ID nicht rekonstruieren.
+      // Damit sind die Achsen-Schlüssel in `effects` der Save-Vertrag, den
+      // früher die ID war — wer `xpMult` umbenennt, macht laufende Läufe
+      // wirkungslos. Das Angebot wird bewusst NICHT gespeichert: ein
+      // ungewähltes Trio darf beim nächsten Öffnen neu gewürfelt werden.
       providence: {
-        activeId: providenceStore.activeId,
+        active: providenceStore.active ? { ...providenceStore.active } : null,
       },
     }
 
@@ -988,10 +991,15 @@ export function usePersistence() {
 
       // Providence. Ein Spielstand von vor diesem Feature hat keine — der Lauf
       // steht dann unter keiner Vorsehung, alle Effektgetter geben 1 zurück.
+      // Geprüft wird nur, ob überhaupt Effekte dranhängen: ein Eintrag ohne sie
+      // (Spielstand aus der ID-Zeit, halb geschriebenes Objekt) soll wirkungslos
+      // sein und nicht als Vorsehung ohne Wirkung im Tooltip stehen.
       const providenceStoreLoad = useProvidenceStore()
-      const savedProvidenceId = saved.providence?.activeId
-      providenceStoreLoad.activeId =
-        typeof savedProvidenceId === 'string' ? migratedId(savedProvidenceId) : null
+      const savedProvidence = saved.providence?.active
+      providenceStoreLoad.active =
+        savedProvidence && typeof savedProvidence === 'object' && savedProvidence.effects
+          ? { ...savedProvidence }
+          : null
 
       // Recalculate derived CPS/CPC after all levels (buildings + solar + forge) are restored
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()

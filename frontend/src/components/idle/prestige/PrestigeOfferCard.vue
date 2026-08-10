@@ -20,11 +20,13 @@
 import { Icon } from '@iconify/vue'
 import { providenceEffectLines, PROVIDENCE_DOMAIN_LABELS } from '@/config/progression/providences'
 import { PRESTIGE_CARD_UNIVERSE_ICON_PX } from '@/config/constants'
-import type { ProvidenceDef, UniverseConfig } from '@/types'
+import type { RolledProvidence, UniverseConfig } from '@/types'
 
 defineProps<{
   universe: UniverseConfig
-  providence: ProvidenceDef
+  /** Frisch gewürfelt, nicht aus einem Katalog: Achse, Richtung und Höhe
+   *  entstehen im Moment des Prestige. */
+  providence: RolledProvidence
 }>()
 
 const emit = defineEmits<{ pick: [] }>()

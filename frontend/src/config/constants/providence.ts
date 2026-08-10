@@ -25,11 +25,30 @@ export const PROVIDENCE_OFFER_SIZE = 3
 export const PROVIDENCE_MIN_DOMAINS = 3
 
 /**
- * Der Wert, bei dem eine Effektachse nichts tut. Steht als Konstante, weil die
- * Anzeige daran entscheidet, ob eine Zeile grün oder rot ist — ein hartes `1`
- * an dieser Stelle wäre eine unbeschriftete Annahme mitten in der Farblogik.
+ * Der Wert, bei dem eine Effektachse nichts tut — der Rückfall jedes
+ * Effekt-Getters, solange keine Vorsehung läuft.
  */
 export const PROVIDENCE_NEUTRAL_MULTIPLIER = 1
+
+// ── Ziehung ──────────────────────────────────────────────────────────────────
+
+/**
+ * Raster der gewürfelten Prozentwerte.
+ *
+ * Ohne es käme „+143 %" heraus und läse sich wie Rauschen — als hätte niemand
+ * die Zahl gewählt. Auf Fünfern gerastert klingt dieselbe Ziehung nach einer
+ * Ansage, ohne dass die Spannweite darunter leidet.
+ */
+export const PROVIDENCE_PCT_STEP = 5
+
+/**
+ * Nachkommastellen, auf die ein gewürfelter Multiplikator festgeklopft wird.
+ *
+ * `1 - 0.55` ergibt in Gleitkomma 0.44999999999999996; die daraus
+ * zurückgerechnete Prozentzahl stünde als „−45.000000000000004" auf der Karte
+ * und im Spielstand. Vier Stellen sind mehr, als jede Spanne hier braucht.
+ */
+export const PROVIDENCE_MULT_PRECISION = 4
 
 // ── Anzeige ──────────────────────────────────────────────────────────────────
 //

@@ -103,15 +103,52 @@ export interface ProvidenceEffects extends ModifierEffects {
  */
 export type ProvidenceDomain = 'economy' | 'cosmos' | 'combat' | 'roster' | 'forge' | 'expedition'
 
-export interface ProvidenceDef {
-  id: string
+/**
+ * Eine Effektachse, aus der eine Vorsehung gewürfelt wird.
+ *
+ * Der Katalog fester Vorsehungen ist genau das hier geworden: nicht mehr
+ * achtzehn fertige Karten, sondern die Bausteine, aus denen jede Karte im
+ * Moment des Prestige entsteht. Name und Icon hängen an der BUFF-Achse — so
+ * bleibt „Bladed Orbit" die Karte, die Champion-Schaden hebt, auch wenn Höhe
+ * und Preis jedes Mal andere sind.
+ */
+export interface ProvidenceAxis {
+  key: keyof ProvidenceEffects
+  /** „Champion DPS" — steht auf der Karte unter dem Wert. */
+  label: string
+  domain: ProvidenceDomain
+  /** Ob ein HÖHERER Multiplikator die gute Richtung ist. Entscheidet, in welche
+   *  Richtung Buff und Debuff die Achse schieben. */
+  higherIsBetter: boolean
+  /** Wie die Achse wirkt: `'modifier'` über `gameStore.activeModifier`,
+   *  `'store'` über einen Getter im `providenceStore`. */
+  via: 'modifier' | 'store'
+  /** Glyph der Karte, wenn diese Achse der Buff ist. */
+  icon: string
+  /** Namen der Karte, wenn diese Achse der Buff ist — einer wird gezogen. */
+  names: string[]
+  /** Spanne in Prozent, um die ein Buff diese Achse verbessert. */
+  buffPct: [number, number]
+  /** Spanne in Prozent, um die ein Debuff diese Achse verschlechtert. */
+  debuffPct: [number, number]
+}
+
+/**
+ * Eine gewürfelte Vorsehung — das Ergebnis, nicht die Vorlage.
+ *
+ * Sie wird VOLLSTÄNDIG im Spielstand abgelegt, denn sie steht in keinem Katalog:
+ * eine ID liesse sich nicht mehr auflösen. Damit sind die Achsen-SCHLÜSSEL in
+ * `effects` der Save-Vertrag — wer `xpMult` umbenennt, macht laufende Läufe
+ * wirkungslos.
+ */
+export interface RolledProvidence {
   name: string
-  /** Eine Zeile Farbe — was der Kosmos dem Wanderer verspricht. */
-  description: string
-  /** Fest, nicht ausgewürfelt: die Vorsehung hängt einen ganzen Lauf im Header
-   *  und muss wiedererkennbar sein. */
   icon: string
   domain: ProvidenceDomain
+  /** Die Achse, die der Buff hebt — für Anzeige und Tests. */
+  buffKey: keyof ProvidenceEffects
+  /** Die Achse, die der Debuff drückt. */
+  debuffKey: keyof ProvidenceEffects
   effects: ProvidenceEffects
 }
 
@@ -127,9 +164,11 @@ export interface ProvidenceDef {
 export interface ProvidenceEffectLine {
   /** „Champion DPS" */
   label: string
-  /** „x1.8" */
+  /** „+143%" bzw. „−38%" — die Änderung, nicht der Faktor. Seit die Höhe
+   *  gewürfelt wird, gibt es keine runden Multiplikatoren mehr: „x2.43" liest
+   *  sich als Rauschen, „+143%" als Aussage. */
   value: string
-  /** „Champion DPS x1.8" — für kompakte, einzeilige Anzeigen. */
+  /** „Champion DPS +143%" — für kompakte, einzeilige Anzeigen. */
   text: string
   positive: boolean
 }
@@ -144,7 +183,7 @@ export interface ProvidenceEffectLine {
  */
 export interface PrestigeOffer {
   universeId: number
-  providenceId: string
+  providence: RolledProvidence
 }
 
 export interface SectionProgress {
