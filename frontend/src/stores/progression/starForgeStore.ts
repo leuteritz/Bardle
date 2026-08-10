@@ -524,6 +524,53 @@ export const useStarForgeStore = defineStore('starForge', {
       return true
     },
 
+    /**
+     * TEMP (admin/testing): kauft in einem Zug alles, was der Shop gerade
+     * hergibt — Kernstrahlen, Zweige, Blätter, Relikte, Konstellationen — ohne
+     * Chimes und ohne Material.
+     *
+     * Die PHASEN-Gates bleiben stehen: was die Sonne noch nicht freigeschaltet
+     * hat, bleibt zu, und jeder Knoten landet auf der Obergrenze, die für die
+     * LAUFENDE Phase gilt (`nodeMaxLevel`). Sonst stünden im Baum Stufen, die
+     * es im Spiel gar nicht gibt, und die Testlage wäre keine.
+     *
+     * Reihenfolge ist Absicht: Strahlen schalten die Zweige frei, Zweige die
+     * Blätter, und erst gewachsene Zweige erfüllen die Relikt- und
+     * Konstellations-Bedingungen.
+     *
+     * Remove together with the "DEV · Max Forge" button in ShopComponent.vue.
+     */
+    adminMaxAll(): void {
+      const solar = useSolarUpgradeStore()
+      solar.adminMaxBranches()
+
+      for (const def of FORGE_NODES) {
+        if (solar.starPhase < def.phase) continue
+        const max = this.nodeMaxLevel(def.id)
+        if (def.tier === 'branch') this.branchLevels[def.id] = max
+        else this.leafLevels[def.id] = max
+      }
+
+      const player = usePlayerStore()
+      for (const def of FORGE_RELICS) {
+        if (!this.relicRequirementMet(def.id)) continue
+        const steps = def.maxLevel - this.relicLevel(def.id)
+        if (steps <= 0) continue
+        this.relicLevels[def.id] = def.maxLevel
+        // Heart of the Star hebt beim Schmieden die Max-HP — sonst fehlte der
+        // Zuwachs, den `forgeRelic` sonst pro Stufe bucht.
+        if (def.id === 'heartOfTheStar') player.maxHP += steps * def.effectPerLevel
+      }
+
+      for (const def of FORGE_CONSTELLATIONS) {
+        if (this.constellationForged(def.id)) continue
+        if (!this.constellationRequirementMet(def.id)) continue
+        this.forgedConstellations.push(def.id)
+      }
+
+      this.recalcRates()
+    },
+
     /** Push forge multipliers into the cached CpS/CpC values. */
     recalcRates(): void {
       const gameStore = useGameStore()

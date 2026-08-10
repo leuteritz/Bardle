@@ -66,7 +66,7 @@
             </div>
           </div>
 
-          <div v-else-if="view.maxed" class="rr rr--max">
+          <div v-else-if="view.maxed" class="rr rr--max" :title="view.desc">
             <Icon :icon="view.def.icon" width="27" height="27" :style="{ color: view.def.color }" />
             <div class="rr-body">
               <span class="rr-name" :style="{ color: view.def.color }">{{ view.def.name }}</span>

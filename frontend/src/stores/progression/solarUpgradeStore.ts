@@ -240,6 +240,21 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       this.tickDwell()
     },
 
+    /** TEMP (admin/testing): alle fünf Kernstrahlen auf ihre Endstufe, gratis.
+     *  Das Gleichwuchs-Gate (`maxAllowedLevel`) wird bewusst übergangen — am
+     *  Ende stehen ohnehin alle fünf gleich hoch.
+     *  Remove together with the "DEV · Max Forge" button in ShopComponent.vue. */
+    adminMaxBranches(): void {
+      const hpSteps = SOLAR_MAX_LEVELS - this.maxHpLevel
+      if (hpSteps > 0) usePlayerStore().maxHP += hpSteps * SOLAR_HP_PER_LEVEL
+      this.flightSpeedLevel = SOLAR_MAX_LEVELS
+      this.maxHpLevel = SOLAR_MAX_LEVELS
+      this.chimesPerClickLevel = SOLAR_MAX_LEVELS
+      this.chimesPerSecondLevel = SOLAR_MAX_LEVELS
+      this.dmgPerClickLevel = SOLAR_MAX_LEVELS
+      useShopStore().refreshRates()
+    },
+
     buyBranch(id: SolarBranchId): void {
       const gameStore = useGameStore()
       const level = this.branchLevel(id)
