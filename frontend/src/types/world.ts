@@ -205,6 +205,15 @@ export interface VoidRiftDef {
   color: string
   /** Kantenlänge des Risses in px bei vollem Wachstum. */
   sizePx: number
+  /**
+   * Was im Schlund steht — Bildpfad, oder `undefined` für ein leeres Loch.
+   *
+   * Bewusst nicht für jeden Typ gesetzt: die kleinen Risse bleiben leer, und
+   * genau dadurch heisst „da ist etwas drin" etwas. Der Void bekommt so eine
+   * Eskalation, ohne seine Gestaltlosigkeit ganz aufzugeben — man sieht nie
+   * das ganze Wesen, immer nur den Ausschnitt, den der Riss freigibt.
+   */
+  dweller?: string
   /** Eine Zeile, die sagt, was er kostet — steht auf der HUD-Karte. */
   drainLine: string
   /** Eine Zeile, die sagt, was das Schliessen einbringt. */

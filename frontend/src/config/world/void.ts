@@ -74,6 +74,7 @@ export const VOID_RIFTS: VoidRiftDef[] = [
     icon: 'game-icons:shadow-grasp',
     color: '#b04fd8',
     sizePx: 138,
+    dweller: '/img/Void/dweller-greater-256.png',
     drainLine: 'Your orbit strikes softer while it stands',
     boonLine: 'Sealed: the orbit strikes back twice as hard',
     drain: { combatDpsMult: 0.55 },
@@ -92,6 +93,7 @@ export const VOID_RIFTS: VoidRiftDef[] = [
     icon: 'game-icons:crossed-slashes',
     color: '#c94fc0',
     sizePx: 132,
+    dweller: '/img/Void/dweller-greater-256.png',
     drainLine: 'Champions learn nothing while it stands',
     boonLine: 'Sealed: every lesson at once',
     drain: { xpMult: 0.5 },
@@ -110,6 +112,7 @@ export const VOID_RIFTS: VoidRiftDef[] = [
     icon: 'game-icons:sundial',
     color: '#e0409f',
     sizePx: 168,
+    dweller: '/img/Void/dweller-abyssal-256.png',
     // Der einzige Typ, der die Ein-Achsen-Regel oben dehnt — und genau daran
     // soll man merken, dass hier etwas anderes aufgerissen ist als sonst.
     drainLine: 'It pulls at everything you have built',

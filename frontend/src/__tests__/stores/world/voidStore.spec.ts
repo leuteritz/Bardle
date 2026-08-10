@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useVoidStore } from '@/stores/world/voidStore'
@@ -332,6 +334,29 @@ describe('voidStore', () => {
   })
 
   describe('Katalog', () => {
+    // Ein falscher Pfad rendert stumm als leeres Bild — im dunklen Schlund
+    // fiele das niemandem auf, und der Riss stünde ohne sein Wesen da.
+    it('verweist nur auf Bewohner-Bilder, die es wirklich gibt', () => {
+      const publicDir = resolve(__dirname, '../../../../public')
+      for (const def of VOID_RIFTS) {
+        if (!def.dweller) continue
+        const file = join(publicDir, def.dweller)
+        expect(existsSync(file), `${def.id} → ${def.dweller} fehlt`).toBe(true)
+      }
+    })
+
+    // Die Eskalation ist Absicht: bliebe auch der kleine Riss bewohnt, hiesse
+    // „da ist etwas drin" nichts mehr.
+    it('lässt die kleinen Risse leer und bewohnt nur die schweren', () => {
+      for (const def of VOID_RIFTS) {
+        if (def.severity === 'lesser') {
+          expect(def.dweller, `${def.id} sollte ein leeres Loch sein`).toBeUndefined()
+        } else {
+          expect(def.dweller, `${def.id} sollte einen Bewohner haben`).toBeDefined()
+        }
+      }
+    })
+
     it('führt jede Schwere mit mindestens einem Typ', () => {
       const severities = new Set(VOID_RIFTS.map((r) => r.severity))
       expect(severities.size).toBeGreaterThanOrEqual(3)

@@ -24,6 +24,22 @@
            Objekt, das im Orbit schwebt. -->
       <span class="vr-maw" :style="mawStyle" aria-hidden="true"></span>
 
+      <!-- Was im Schlund steht. Nur die schwereren Risse haben eines, und man
+           sieht nie das ganze Wesen: der Rahmen clippt es auf die Ellipse des
+           Schlunds, die Vignette darüber frisst die Ränder weg. Beides ist
+           statisch — animiert wird allein das langsame Heben und Senken, ein
+           `transform`, mehr nicht (Performance-Regel 1). -->
+      <span v-if="def.dweller" class="vr-dweller" aria-hidden="true">
+        <img
+          class="vr-dweller__img"
+          :src="def.dweller"
+          alt=""
+          draggable="false"
+          @dragstart.prevent
+        />
+        <span class="vr-dweller__veil" :style="veilStyle"></span>
+      </span>
+
       <!-- Trefferpunkte als Kreislinie. Pro Frame wird nur `stroke-dashoffset`
            geschrieben, direkt am Element vorbei an Vue. -->
       <svg class="vr-ring" viewBox="0 0 100 100" aria-hidden="true">
@@ -87,6 +103,13 @@ const mawStyle = computed(() => ({
 const ringStyle = computed(() => ({
   stroke: props.def.color,
   strokeDasharray: `${VOID_RIFT_RING_CIRCUMFERENCE}`,
+}))
+
+/** Die Vignette über dem Wesen: aussen dicht, in der Mitte offen. Sie ist der
+ *  Grund, warum das Sprite nicht wie aufgeklebt wirkt — die Silhouette läuft
+ *  zum Rand hin ins Nichts, statt an einer Bildkante zu enden. */
+const veilStyle = computed(() => ({
+  background: `radial-gradient(ellipse at 50% 40%, rgba(5, 3, 10, 0.05) 0%, rgba(5, 3, 10, 0.5) 34%, rgba(5, 3, 10, 0.93) 66%, #05030a 86%)`,
 }))
 
 /** Zacken einmal berechnet — sie drehen sich nicht, sie wachsen nur mit. Der
@@ -259,6 +282,57 @@ onUnmounted(() => {
   transform: translate(-50%, -50%) rotate(-14deg);
 }
 
+/* ── Der Bewohner ── */
+/* Deckungsgleich mit dem Schlund, damit das Bild exakt auf dessen Ellipse
+   beschnitten wird — dieselben Maße und dieselbe Drehung wie `.vr-maw`. */
+.vr-dweller {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--vr-size);
+  height: calc(var(--vr-size) * 0.72);
+  border-radius: 50%;
+  overflow: hidden;
+  transform: translate(-50%, -50%) rotate(-14deg);
+}
+
+.vr-dweller__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* `cover` statt `contain`: der Schlund soll gefüllt wirken. Der Fokus liegt
+     im oberen Drittel — dort sitzt bei beiden Motiven der Kopf, und der ist
+     das, was herausschauen soll. */
+  object-fit: cover;
+  object-position: 50% 32%;
+  /* Die Gegendrehung zur Hülle: sonst stünde das Wesen schief im Loch. */
+  transform: rotate(14deg) scale(1.15);
+  /* Kräftiger als man erwartet — die Vignette darüber nimmt die Ränder ohnehin
+     weg, und ohne diesen Kontrast in der Mitte wirkt der Schlund texturiert
+     statt bewohnt. */
+  opacity: 0.92;
+  animation: vr-dweller-stir 5.5s ease-in-out infinite;
+}
+
+.vr-dweller__veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Nur `transform` — ein langsames Heben und Senken, damit „da regt sich etwas"
+   ohne jede Repaint-Arbeit auskommt. */
+@keyframes vr-dweller-stir {
+  0%,
+  100% {
+    transform: rotate(14deg) scale(1.15) translateY(0);
+  }
+  50% {
+    transform: rotate(14deg) scale(1.18) translateY(-3%);
+  }
+}
+
 /* ── Trefferpunkte ── */
 .vr-ring {
   position: absolute;
@@ -286,6 +360,9 @@ onUnmounted(() => {
   .vr-aura {
     animation: none;
     opacity: 0.8;
+  }
+  .vr-dweller__img {
+    animation: none;
   }
 }
 </style>

@@ -129,14 +129,17 @@ export const BOSS_ARENA_STRIKE_STAGGER_S = 0.65
 export const BOSS_IMAGE_PATHS = [
   '/img/Boss/Boss1.png',
   '/img/Boss/Boss2.png',
-  '/img/Boss/Boss3.png',
+  // Boss3 (verhüllte Gestalt) und Boss10 (Magenta-Kristalle) stehen nicht mehr
+  // hier: sie liegen als `dweller-*` in /img/Void/ und gehören jetzt den
+  // Void-Rissen. Beide waren die einzigen des Satzes im Violett-Magenta-Bereich
+  // — genau deshalb passten sie zum Void, und genau deshalb wären sie als
+  // Planeten-Boss daneben verwechselbar gewesen.
   '/img/Boss/Boss4.png',
   '/img/Boss/Boss5.png',
   '/img/Boss/Boss6.png',
   '/img/Boss/Boss7.png',
   '/img/Boss/Boss8.png',
   '/img/Boss/Boss9.png',
-  '/img/Boss/Boss10.png',
   '/img/Boss/Boss11.png',
   '/img/Boss/Boss12.png',
 ] as const
