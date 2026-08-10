@@ -40,6 +40,75 @@ export interface UniverseConfig {
   modifier: UniverseModifier | null
 }
 
+// ── Providence (chosen at prestige, runs for the whole universe) ─────────────
+
+/**
+ * Womit eine Vorsehung den Lauf färbt.
+ *
+ * Bewusst KEINE Überschneidung mit `ModifierEffects`: das Universum stellt die
+ * Wirtschaft (CPS, CPC, Kosten, Bard-Level), die Vorsehung den Kosmos (Sterne,
+ * Kampf, Kader, Forge, Expeditionen, Drifter). Griffen beide auf dieselbe Achse,
+ * wäre auf der Karte nicht mehr abzulesen, welcher Wert woher kommt — und der
+ * Spieler wählte zweimal dasselbe.
+ *
+ * Jeder Schlüssel ist ein reiner Multiplikator um 1 herum und hat im
+ * `providenceStore` GENAU einen Getter und an seinem Zielstore genau eine
+ * Multiplikation.
+ */
+export interface ProvidenceEffects {
+  /** Wie lange ein Resource-Star im Orbit steht. */
+  starLifetimeMult?: number
+  /** Chance, dass ein Kill Material fallen lässt. */
+  materialDropMult?: number
+  /** Schaden der Champions im Orbit. */
+  combatDpsMult?: number
+  /** Schaden der Turret-Planeten. */
+  turretDpsMult?: number
+  /** Lebenspunkte, mit denen ein Planeten-Boss erscheint. */
+  bossHpMult?: number
+  /** Chimes aus den Belohnungsslots eines gefallenen Bosses. */
+  bossRewardMult?: number
+  /** Champion-XP aus allen Quellen. */
+  xpMult?: number
+  /** LP je gewonnenem Auto-Battle. */
+  lpGainMult?: number
+  /** Materialkosten in der Star Forge. */
+  forgeMaterialCostMult?: number
+  /** Laufzeit einer Expedition — kleiner heisst schneller. */
+  expeditionSpeedMult?: number
+  /** Chimes aus einer erfolgreichen Expedition. */
+  expeditionRewardMult?: number
+  /** Abstand zwischen zwei Drifter-Spawns — kleiner heisst häufiger. */
+  drifterSpawnIntervalMult?: number
+  /** Laufzeit eines eingesammelten Drifter-Buffs. */
+  drifterBuffDurationMult?: number
+}
+
+/**
+ * Das System, aus dem eine Vorsehung ihren Charakter zieht. Das Angebot legt je
+ * eine Karte aus DREI verschiedenen Domänen aus — dieselbe Regel wie bei den
+ * Omen, und aus demselben Grund: drei Varianten desselben Themas sind keine Wahl.
+ */
+export type ProvidenceDomain = 'cosmos' | 'combat' | 'roster' | 'forge' | 'expedition'
+
+export interface ProvidenceDef {
+  id: string
+  name: string
+  /** Eine Zeile Farbe — was der Kosmos dem Wanderer verspricht. */
+  description: string
+  /** Fest, nicht ausgewürfelt: die Vorsehung hängt einen ganzen Lauf im Header
+   *  und muss wiedererkennbar sein. */
+  icon: string
+  domain: ProvidenceDomain
+  effects: ProvidenceEffects
+}
+
+/** Eine Effektzeile, wie die Karte sie zeigt. */
+export interface ProvidenceEffectLine {
+  text: string
+  positive: boolean
+}
+
 export interface SectionProgress {
   rescueCount: number
   completed: boolean

@@ -5,6 +5,7 @@ import { useShopStore } from '@/stores/economy/shopStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import type { ForgeActiveBuff, ForgeBargainDef, ForgeNodeDef } from '@/types'
 import {
   FORGE_NODES,
@@ -126,7 +127,11 @@ export const useStarForgeStore = defineStore('starForge', {
         const def = getForgeNode(id)
         if (!def) return {}
         const nextLevel = this.nodeLevel(id) + 1
-        const discount = useAchievementStore().forgeMaterialCostMult
+        // Chronicle-Rabatt und Vorsehung (Emberthrift / Cinder Hoard) greifen an
+        // derselben Zahl an — der eine dauerhaft verdient, die andere für diesen
+        // Durchlauf gewählt.
+        const discount =
+          useAchievementStore().forgeMaterialCostMult * useProvidenceStore().forgeMaterialCostMult
         const scaled: Record<string, number> = {}
         for (const [matId, qty] of Object.entries(def.materialCost)) {
           scaled[matId] = forgeMaterialQty(qty * nextLevel, discount)
@@ -189,7 +194,11 @@ export const useStarForgeStore = defineStore('starForge', {
         const def = getForgeRelic(id)
         if (!def) return {}
         const nextLevel = this.relicLevel(id) + 1
-        const discount = useAchievementStore().forgeMaterialCostMult
+        // Chronicle-Rabatt und Vorsehung (Emberthrift / Cinder Hoard) greifen an
+        // derselben Zahl an — der eine dauerhaft verdient, die andere für diesen
+        // Durchlauf gewählt.
+        const discount =
+          useAchievementStore().forgeMaterialCostMult * useProvidenceStore().forgeMaterialCostMult
         const scaled: Record<string, number> = {}
         for (const [matId, qty] of Object.entries(def.materialCost)) {
           scaled[matId] = forgeMaterialQty(qty * nextLevel, discount)

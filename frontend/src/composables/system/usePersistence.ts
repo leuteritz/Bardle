@@ -24,6 +24,7 @@ import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import type {
   ChampionProgress,
   PendingPerkChoice,
@@ -124,6 +125,7 @@ export function usePersistence() {
     const bardAbilityStore = useBardAbilityStore()
     const achievementStore = useAchievementStore()
     const omenStore = useOmenStore()
+    const providenceStore = useProvidenceStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -396,6 +398,13 @@ export function usePersistence() {
         offerCooldownSec: omenStore.offerCooldownSec,
         totalOmensCompleted: omenStore.totalOmensCompleted,
         totalOmensSwift: omenStore.totalOmensSwift,
+      },
+      // Providence. Eine einzige ID — alles andere steht im Katalog, und das
+      // Angebot wird beim Öffnen des Prestige-Modals ohnehin frisch gezogen.
+      // Die ID ist damit ein Save-Vertrag wie Meep-Knoten und Relikte: wird sie
+      // im Katalog umbenannt, gehört sie in SAVE_ID_RENAMES.
+      providence: {
+        activeId: providenceStore.activeId,
       },
     }
 
@@ -977,6 +986,13 @@ export function usePersistence() {
       omenStoreLoad.totalOmensSwift = savedOmens?.totalOmensSwift ?? 0
       omenStoreLoad.omenNow = Date.now()
 
+      // Providence. Ein Spielstand von vor diesem Feature hat keine — der Lauf
+      // steht dann unter keiner Vorsehung, alle Effektgetter geben 1 zurück.
+      const providenceStoreLoad = useProvidenceStore()
+      const savedProvidenceId = saved.providence?.activeId
+      providenceStoreLoad.activeId =
+        typeof savedProvidenceId === 'string' ? migratedId(savedProvidenceId) : null
+
       // Recalculate derived CPS/CPC after all levels (buildings + solar + forge) are restored
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
@@ -1193,6 +1209,11 @@ export function usePersistence() {
 
     // 7j. Reset omenStore — clears the running omen, the offer and every buff.
     useOmenStore().$reset()
+
+    // 7k. Reset providenceStore — a full wipe puts the wanderer back on the
+    // first run, which stands under no providence at all. Prestige never does:
+    // there the next one is chosen before the reset runs.
+    useProvidenceStore().$reset()
 
     // 7b. Reset planetShopStore – alle Slots zurücksetzen
     const planetShopStoreR = usePlanetShopStore()

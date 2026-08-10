@@ -12,6 +12,7 @@ import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 
 export const useInventoryStore = defineStore('inventory', {
   state: () => ({
@@ -172,6 +173,8 @@ export const useInventoryStore = defineStore('inventory', {
       const omenDropMult = useOmenStore().materialDropMult
       // Starwright (chronicle): earned by stars pulled back out of the dark
       const chronicleDropMult = useAchievementStore().materialDropMult
+      // Providence: chosen at prestige, holds for the whole universe run
+      const providenceDropMult = useProvidenceStore().materialDropMult
       if (
         Math.random() >
         baseDropChance *
@@ -179,7 +182,8 @@ export const useInventoryStore = defineStore('inventory', {
           treeDropMult *
           drifterDropMult *
           omenDropMult *
-          chronicleDropMult
+          chronicleDropMult *
+          providenceDropMult
       ) {
         return null
       }

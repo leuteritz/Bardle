@@ -5,6 +5,7 @@ import { pickConfig } from '@/utils/planetDraw'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import {
   RESOURCE_STAR_PLANET_COUNT,
@@ -236,7 +237,11 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
         planetSlots: this._buildResourcePlanetSlots(RESOURCE_STAR_PLANET_COUNT),
         spawnedAt: Date.now(),
-        durationMs: RESOURCE_STAR_DURATION_MS,
+        // Long Vigil / Culling Light (providence): die Frist wird beim Spawn
+        // festgeschrieben, nicht beim Ablesen angewandt — `starDeadlineAt`
+        // rechnet aus `spawnedAt + durationMs`, und ein Faktor, der erst dort
+        // dazukäme, verschöbe die Frist eines längst stehenden Sterns.
+        durationMs: Math.round(RESOURCE_STAR_DURATION_MS * useProvidenceStore().starLifetimeMult),
         starColor: pickResourceStarColor(),
       }
       this.activeStars.push(star)

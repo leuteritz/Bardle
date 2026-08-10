@@ -18,6 +18,8 @@ import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { universes } from '@/config/progression/universes'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { providenceEffectLines } from '@/config/progression/providences'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import { formatCompactDuration, toRoman } from '@/utils/ui/format'
 import {
@@ -32,12 +34,19 @@ import {
 
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
+const providenceStore = useProvidenceStore()
 
 /* ── Identität des Universums ────────────────────────────────────────────── */
 
 const universe = computed(() => universes[gameStore.currentUniverse - 1])
 const universeRoman = computed(() => toRoman(gameStore.currentUniverse))
 const modifier = computed(() => universe.value?.modifier ?? null)
+
+/** Die gewählte Vorsehung dieses Durchlaufs — `null` im ersten Lauf. */
+const providence = computed(() => providenceStore.active)
+const providenceLines = computed(() =>
+  providence.value ? providenceEffectLines(providence.value) : [],
+)
 
 /* ── Rettungsfortschritt ─────────────────────────────────────────────────── */
 
@@ -219,6 +228,34 @@ const lifetimeRows = computed<StatRow[]>(() => [
       <div class="upt-law-text">
         <div class="upt-law-name">{{ modifier.name }}</div>
         <div class="upt-law-desc">{{ modifier.description }}</div>
+      </div>
+    </section>
+
+    <!-- ════════ Die Vorsehung, unter der Bard dieses Universum bereist ════════ -->
+    <!-- Steht direkt unter dem Gesetz des Universums, weil die beiden zusammen
+         den Charakter des Laufs ergeben: das eine färbt die Wirtschaft, die
+         andere den Kosmos. Getrennte Blöcke, damit ablesbar bleibt, welcher
+         Wert woher kommt. Fehlt sie (erster Lauf), fehlt der Block ganz. -->
+    <section v-if="providence" class="upt-block upt-prov">
+      <Icon
+        :icon="providence.icon"
+        width="26"
+        height="26"
+        class="upt-prov-icon"
+        aria-hidden="true"
+      />
+      <div class="upt-prov-text">
+        <div class="upt-prov-name">{{ providence.name }}</div>
+        <div class="upt-prov-lines">
+          <span
+            v-for="(line, i) in providenceLines"
+            :key="i"
+            class="upt-prov-line"
+            :class="line.positive ? 'upt-prov-up' : 'upt-prov-down'"
+          >
+            {{ line.positive ? '▲' : '▼' }} {{ line.text }}
+          </span>
+        </div>
       </div>
     </section>
 
@@ -540,6 +577,53 @@ const lifetimeRows = computed<StatRow[]>(() => [
 .upt-law-desc {
   font-size: 0.95em;
   color: #a99b83;
+}
+
+/* ── Vorsehung ─────────────────────────────────────────────────────
+   Eigene Farbfamilie (Blaugrün) gegen das Violett des Universums-Gesetzes:
+   die beiden Blöcke stehen untereinander und sagen verschiedene Dinge —
+   gleiche Farbe läse sich als eine einzige, zweizeilige Angabe. */
+.upt-prov {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  background: #0f1c1a;
+}
+
+.upt-prov-icon {
+  flex-shrink: 0;
+  width: 2em;
+  height: 2em;
+  color: #78c8be;
+}
+
+.upt-prov-text {
+  min-width: 0;
+}
+
+.upt-prov-name {
+  font-size: 1.05em;
+  font-weight: 700;
+  color: #a8e0d6;
+}
+
+.upt-prov-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15em 0.8em;
+  font-size: 0.95em;
+}
+
+.upt-prov-line {
+  white-space: nowrap;
+}
+
+.upt-prov-up {
+  color: #7fc95e;
+}
+
+.upt-prov-down {
+  color: #cc6050;
 }
 
 /* ── Fortschrittsbalken ────────────────────────────────────────── */

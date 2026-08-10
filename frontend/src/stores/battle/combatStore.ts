@@ -30,6 +30,7 @@ import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 
 let _damageFloatId = 0
 
@@ -179,7 +180,9 @@ export const useCombatStore = defineStore('combat', {
           // Fulfilled omen: earned elsewhere, spent here
           useOmenStore().combatDpsMult *
           // Tempered Fate (bard R): the orbit keeps swinging while the stasis holds
-          useBardAbilityStore().combatDpsMult
+          useBardAbilityStore().combatDpsMult *
+          // Bladed / Ironclad Orbit (providence): the whole run leans one way
+          useProvidenceStore().combatDpsMult
         const defeated = bossStore.dealDamage(totalDPS)
         if (!defeated) {
           // Spawn one combined float at the planet position showing total damage

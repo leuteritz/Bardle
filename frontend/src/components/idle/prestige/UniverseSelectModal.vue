@@ -11,16 +11,57 @@ import {
   ABILITY_MEEP_COST_PER_LEVEL_DEFAULT,
   CHIMES_PER_CLICK_BASE,
 } from '@/config/constants'
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgFrame from '../../ui/RpgFrame.vue'
+import ProvidenceChoiceStep from './ProvidenceChoiceStep.vue'
 import { useGameStore } from '@/stores/core/gameStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { universes } from '@/config/progression/universes'
 import type { ModifierEffects } from '@/types'
 
 const gameStore = useGameStore()
+const providenceStore = useProvidenceStore()
 
 const visible = computed(() => gameStore.showUniverseSelectModal)
+
+/* ── Zwei Schritte: erst wohin, dann worunter ──────────────────────────────
+   Das Ziel-Universum wird lokal gehalten und erst beim Antritt der Vorsehung an
+   den Store gereicht. Ein Zwischenzustand im gameStore hätte einen weiteren
+   Fall geschaffen, den jeder Leser von `currentUniverse` mitdenken müsste —
+   „gewählt, aber noch nicht angetreten" existiert für den Rest des Spiels
+   schlicht nicht. */
+const step = ref<'universe' | 'providence'>('universe')
+const pendingUniverse = ref<number | null>(null)
+
+const pendingUniverseName = computed(
+  () => universes.find((u) => u.id === pendingUniverse.value)?.name ?? '',
+)
+
+// Jedes Öffnen beginnt beim ersten Schritt — sonst stünde nach einem
+// abgebrochenen Prestige die Vorsehungswahl zu einem Universum offen, das der
+// Spieler inzwischen vergessen hat.
+watch(visible, (open) => {
+  if (open) {
+    step.value = 'universe'
+    pendingUniverse.value = null
+  }
+})
+
+function chooseUniverse(id: number) {
+  if (id === gameStore.currentUniverse) return
+  pendingUniverse.value = id
+  step.value = 'providence'
+}
+
+/** Vorsehung antreten und das Prestige auslösen. Erst annehmen, dann reisen:
+ *  `selectPrestigeUniverse` startet die Hyperspace-Animation, nach der der Reset
+ *  läuft — die Vorsehung muss davor stehen. */
+function chooseProvidence(id: string) {
+  if (pendingUniverse.value === null) return
+  providenceStore.choose(id)
+  gameStore.selectPrestigeUniverse(pendingUniverse.value)
+}
 
 const N = UNIVERSE_NEUTRAL_MULTIPLIER
 const effectLabels: Record<keyof ModifierEffects, { label: string; neutral: number }> = {
@@ -98,8 +139,16 @@ function getEffectLines(uid: number) {
   return lines
 }
 
+/** Escape-Leiter: aus der Vorsehungswahl zurück zur Universumswahl, von dort
+ *  aus dem Modal. Ein Escape, das aus dem zweiten Schritt direkt alles schliesst,
+ *  verwürfe die erste Wahl mit — für den Spieler sähe das aus wie ein Absturz. */
 function handleEscape(e: KeyboardEvent) {
-  if (e.key === 'Escape') gameStore.closePrestigeModal()
+  if (e.key !== 'Escape') return
+  if (step.value === 'providence') {
+    step.value = 'universe'
+    return
+  }
+  gameStore.closePrestigeModal()
 }
 
 onMounted(() => document.addEventListener('keydown', handleEscape))
@@ -121,12 +170,24 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
 
           <!-- Header -->
           <div class="relative flex items-center justify-center p-6 rpg-header">
-            <h2 class="text-3xl font-bold uni-title">Choose Your Next Universe</h2>
+            <h2 class="text-3xl font-bold uni-title">
+              {{ step === 'universe' ? 'Choose Your Next Universe' : 'Choose Your Providence' }}
+            </h2>
             <button class="modal-close-btn" @click="gameStore.closePrestigeModal()">✕</button>
           </div>
 
-          <!-- Universe Cards Grid -->
+          <!-- Schritt 2: unter welcher Vorsehung -->
+          <ProvidenceChoiceStep
+            v-if="step === 'providence'"
+            :cards="providenceStore.offerCards"
+            :universe-name="pendingUniverseName"
+            @pick="chooseProvidence"
+            @back="step = 'universe'"
+          />
+
+          <!-- Schritt 1: Universe Cards Grid -->
           <div
+            v-else
             class="grid grid-cols-2 gap-4 p-6 overflow-y-auto rpg-scrollbar lg:grid-cols-3 max-h-[65vh]"
           >
             <button
@@ -139,7 +200,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
                   ? 'uni-card--current'
                   : 'uni-card--selectable'
               "
-              @click="gameStore.selectPrestigeUniverse(universe.id)"
+              @click="chooseUniverse(universe.id)"
             >
               <!-- Current badge -->
               <span

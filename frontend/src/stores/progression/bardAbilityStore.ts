@@ -45,7 +45,6 @@ import {
 } from '@/config/constants'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useShopStore } from '@/stores/economy/shopStore'
-import { useCpsStore } from '@/stores/core/cpsStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'

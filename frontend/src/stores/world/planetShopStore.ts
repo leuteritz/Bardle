@@ -34,6 +34,7 @@ import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { getOrbitSunRadius, getOrbitSunScale } from '@/utils/orbit/geometry'
 import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
 import { logPlanetDestroyed, logPlanetRestored } from '@/config/ui/eventLog'
@@ -182,7 +183,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
             PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
           )
         }, 0)
-      return base * useAchievementStore().turretDpsMult
+      return base * useAchievementStore().turretDpsMult * useProvidenceStore().turretDpsMult
     },
 
     /** DPS nur der Turrets im Sonnen-Vordergrund — Turrets hinter der Sonne
@@ -213,7 +214,10 @@ export const usePlanetShopStore = defineStore('planetShop', {
         useDrifterStore().combatDpsMult *
         useOmenStore().combatDpsMult *
         useBardAbilityStore().combatDpsMult *
-        useAchievementStore().turretDpsMult
+        useAchievementStore().turretDpsMult *
+        // Ironclad / Bladed Orbit (providence): steht wie der Chronicle-Bonus in
+        // BEIDEN Turret-Gettern, weil dieser hier seine eigene Summe bildet
+        useProvidenceStore().turretDpsMult
       )
     },
 

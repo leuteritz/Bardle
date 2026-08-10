@@ -25,8 +25,8 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
-import { useCpsStore } from '@/stores/core/cpsStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 
 let uidCounter = 0
 
@@ -41,8 +41,18 @@ function rollRange(range: [number, number] | undefined, fallback: number): numbe
   return range[0] + Math.random() * (range[1] - range[0])
 }
 
+/**
+ * Der Abstand bis zum nächsten Drifter dieser Stufe.
+ *
+ * Hollow Tide (providence) greift HIER an und nicht an den beiden Aufrufstellen:
+ * so bleibt es eine einzige Multiplikation, und eine dritte Stelle, die eine Uhr
+ * neu stellt, bekommt den Faktor automatisch mit. Der Store-Zugriff ist an
+ * dieser Stelle sicher — die Funktion läuft nur aus Actions heraus, nie aus dem
+ * `state()`-Initializer (der benutzt `rollInitialCooldowns`).
+ */
 function rollIntervalSec(rarity: DrifterRarity): number {
-  return rollRange(DRIFTER_SPAWN_INTERVAL_SEC[rarity], DRIFTER_SPAWN_RETRY_SEC)
+  const base = rollRange(DRIFTER_SPAWN_INTERVAL_SEC[rarity], DRIFTER_SPAWN_RETRY_SEC)
+  return base * useProvidenceStore().drifterSpawnIntervalMult
 }
 
 /** Staggered opening delays, one clock per rarity. */
@@ -378,7 +388,10 @@ export const useDrifterStore = defineStore('drifter', {
       // own duration, not applied on read — the bar counts down against
       // `durationMs`, and a bonus earned mid-buff must not move its end.
       const durationMs = Math.round(
-        def.buff.durationMs * useAchievementStore().drifterBuffDurationMult,
+        def.buff.durationMs *
+          useAchievementStore().drifterBuffDurationMult *
+          // Hollow Tide (providence): häufiger, dafür kürzer
+          useProvidenceStore().drifterBuffDurationMult,
       )
       this.buffs.push({
         sourceId: def.id,

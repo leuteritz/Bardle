@@ -4,6 +4,7 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { getChampionRoles } from '@/config/champions/championData'
@@ -333,8 +334,13 @@ export const useExpeditionStore = defineStore('expedition', {
 
       const baseReward = Math.round(randInt(tierDef.rewardMin, tierDef.rewardMax) / 10) * 10
       // Solar Sails (Star Forge) + Portal Winds (Meep Tree): expeditions complete faster
+      // Swift Relay / Far Wanderer (providence) zieht an derselben Zahl — die
+      // Laufzeit steht beim AUSLEGEN fest, ein Wechsel der Vorsehung rührt
+      // ausliegende und laufende Missionen also nicht mehr an.
       const speedMult =
-        useStarForgeStore().expeditionSpeedMult * useMeepTreeStore().fx.expeditionSpeedMult
+        useStarForgeStore().expeditionSpeedMult *
+        useMeepTreeStore().fx.expeditionSpeedMult *
+        useProvidenceStore().expeditionSpeedMult
       const durationSeconds = Math.max(
         5,
         Math.round((randInt(tierDef.durMin, tierDef.durMax) * speedMult) / 5) * 5,
@@ -533,8 +539,9 @@ export const useExpeditionStore = defineStore('expedition', {
           expedition.status = success ? 'success' : 'failure'
           const relayMul = usePlanetShopStore().planetExpeditionRewardMultiplier
           const treeRewardMul = useMeepTreeStore().fx.expeditionRewardMult
+          const providenceRewardMul = useProvidenceStore().expeditionRewardMult
           expedition.reward = success
-            ? Math.floor(expedition.baseReward * relayMul * treeRewardMul)
+            ? Math.floor(expedition.baseReward * relayMul * treeRewardMul * providenceRewardMul)
             : Math.floor(expedition.baseReward * EXPEDITION_FAILURE_REWARD_FRACTION)
           if (success) this.totalExpeditionsSucceeded += 1
           else this.totalExpeditionsFailed += 1

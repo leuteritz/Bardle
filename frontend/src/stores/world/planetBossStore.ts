@@ -53,6 +53,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { SECTIONS } from '@/config/progression/sections'
 import { logger } from '@/utils/logger'
 
@@ -143,6 +144,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const championMult = 1 + totalChampionStars * BOSS_HP_PER_CHAMPION_STAR
       const galaxyMult = 1 + (galaxyStore.currentGalaxy - 1) * BOSS_HP_PER_GALAXY
 
+      const providence = useProvidenceStore()
+
       const maxHP = Math.floor(
         BOSS_BASE_HP *
           (1 + level / BOSS_HP_LEVEL_SCALE) *
@@ -150,7 +153,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           (1 + power / BOSS_HP_POWER_SCALE) *
           hpSectionMult *
           championMult *
-          galaxyMult,
+          galaxyMult *
+          // Warden's Toll (providence): schwerer zu fällen, dafür ergiebiger
+          providence.bossHpMult,
       )
 
       const bonusSeconds =
@@ -168,7 +173,14 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const clickDamagePerHit = Math.max(1, cpc)
       const passiveDPS = Math.max(0, Math.floor(cps * BOSS_PASSIVE_DPS_FRACTION))
 
-      const randomChimes = () => Math.floor(Math.random() * BOSS_REWARD_CHIMES_MAX) + 1
+      // Die Beute wird beim SPAWN gewürfelt und im Boss mitgeschrieben — der
+      // Faktor gehört deshalb hierher und nicht ans Einsammeln: sonst zeigte die
+      // Belohnungsleiste eine Zahl und der Spieler bekäme eine andere.
+      const randomChimes = () =>
+        Math.max(
+          1,
+          Math.floor((Math.random() * BOSS_REWARD_CHIMES_MAX + 1) * providence.bossRewardMult),
+        )
       const randomSlot = (): PlanetBossRewardSlot =>
         Math.random() < BOSS_REWARD_MATERIAL_CHANCE
           ? { type: 'material', materialId: pickMaterial().id }

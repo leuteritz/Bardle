@@ -41,6 +41,7 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { logger } from '@/utils/logger'
 
 export function defaultChampionProgress(): ChampionProgress {
@@ -353,7 +354,12 @@ export const useChampionLevelStore = defineStore('championLevel', {
       const p = this.ensure(name)
       if (!p) return 0
       const gain = Math.round(
-        amount * useDrifterStore().xpMult * useOmenStore().xpMult * useAchievementStore().xpMult,
+        amount *
+          useDrifterStore().xpMult *
+          useOmenStore().xpMult *
+          useAchievementStore().xpMult *
+          // Quickened Path / Rift Ascendant (providence)
+          useProvidenceStore().xpMult,
       )
       p.xp += gain
       p.totalXp += gain

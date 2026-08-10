@@ -16,6 +16,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
@@ -506,12 +507,22 @@ export const useGameStore = defineStore('game', {
       })
     },
 
-    // Checks if Prestige is available
+    /**
+     * Checks if Prestige is available.
+     *
+     * Die Schranke ist „es gibt ein ANDERES Universum", nicht „es gibt ein
+     * höheres". Vorher stand hier `currentUniverse < totalUniverses`, und damit
+     * war das letzte Universum eine Sackgasse: wer es wählte, konnte nie wieder
+     * prestigen, obwohl `selectPrestigeUniverse` jedes andere Ziel längst
+     * zuliess. Die Universen sind keine Leiter, sondern eine Auswahl — und seit
+     * der Vorsehung gibt es einen Grund, dasselbe Universum ein zweites Mal zu
+     * bereisen: gleiche Wirtschaft, anderer Kosmos.
+     */
     checkPrestigeAvailability() {
       if (
         !this.prestigeAvailable &&
         this.chimesForNextUniverse >= this.chimesToUniverseRescue &&
-        this.currentUniverse < this.totalUniverses
+        this.totalUniverses > 1
       ) {
         this.prestigeAvailable = true
       }
@@ -606,14 +617,21 @@ export const useGameStore = defineStore('game', {
 
     // Opens the Universe selection modal
     openPrestigeModal() {
-      if (!this.prestigeAvailable || this.currentUniverse >= this.totalUniverses) return
+      if (!this.prestigeAvailable || this.totalUniverses <= 1) return
       if (this.isHyperspaceActive) return
+      // Das Vorsehungs-Angebot wird EINMAL beim Öffnen gezogen, nicht beim
+      // Rendern der Karten: sonst würfelte jedes Re-Render des Modals neue
+      // Karten unter dem Cursor des Spielers.
+      useProvidenceStore().rollOffer()
       this.showUniverseSelectModal = true
     },
 
     // Closes the Universe selection modal
     closePrestigeModal() {
       this.showUniverseSelectModal = false
+      // Nur das Angebot verwerfen — die laufende Vorsehung bleibt. Ein
+      // abgebrochenes Prestige darf den Spieler nicht ohne sie zurücklassen.
+      useProvidenceStore().clearOffer()
     },
 
     // Selects a universe and starts the Hyperspace animation + reset
