@@ -77,8 +77,9 @@
     <div class="ab-row">
       <BardPassiveTile
         :resonance="store.resonance"
-        :fill="store.resonanceFill"
-        :meeps="gameStore.meeps"
+        :resonance-fill="store.resonanceFill"
+        :meep-fill="meepFill"
+        :clicks-to-meep="clicksToMeep"
         @hover="(on: boolean) => (hoveredId = on ? 'passive' : null)"
       />
 
@@ -106,7 +107,8 @@ import { useUiStore } from '@/stores/core/uiStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { onKeybinding, triggerKeybind } from '@/composables/system/useKeybindings'
-import { formatNumber } from '@/config/ui/numberFormat'
+import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import { formatCompactDuration } from '@/utils/ui/format'
 import {
   BARD_ABILITIES,
   BARD_PASSIVE,
@@ -120,6 +122,7 @@ import {
   ABILITY_CAST_TOAST_MS,
   ABILITY_COOLDOWN_DECIMAL_BELOW_SEC,
   ABILITY_MAX_RANK,
+  MS_PER_SECOND,
   RESONANCE_CLICK_REFUND_MS,
   RESONANCE_MAX_STACKS,
 } from '@/config/constants'
@@ -137,6 +140,44 @@ const KEYBIND_BY_ABILITY: Record<BardAbilityId, KeybindId> = {
   e: 'abilityE',
   r: 'abilityR',
 }
+
+// ── Der nächste Meep ────────────────────────────────────────────────────────
+// Die Passiv-Kachel führt den Weg zum nächsten Meep, nicht den Bestand — der
+// steht im Header. Gerechnet wird auf derselben Grundlage wie im
+// Meep-Tooltip des Headers (`chimesForMeep` gegen `meepChimeRequirement`),
+// damit HUD und Header nie zwei verschiedene Stände zeigen.
+
+/** Offene Chimes bis zum nächsten Meep. */
+const meepRemaining = computed(() =>
+  Math.max(0, gameStore.meepChimeRequirement - gameStore.chimesForMeep),
+)
+
+/** 0..1 — Füllstand des äußeren Rings. */
+const meepFill = computed(() =>
+  Math.min(1, gameStore.chimesForMeep / Math.max(1, gameStore.meepChimeRequirement)),
+)
+
+/**
+ * Klicks, die noch fehlen — die Zahl unter der Figur.
+ *
+ * Bewusst NUR über den Klickwert gerechnet, obwohl die laufende Produktion
+ * ebenfalls einzahlt: die Zahl beantwortet „wie oft muss ich noch drücken?",
+ * und dafür ist die Produktion eine Zugabe, keine Größe der Rechnung. Was die
+ * Produktion allein schafft, steht als Wartezeit im Tooltip daneben.
+ */
+const clicksToMeep = computed(() => {
+  if (meepRemaining.value <= 0) return 0
+  const perClick = Math.max(1, gameStore.chimesPerClick * gameStore.mvpBuffMultiplier)
+  return Math.ceil(meepRemaining.value / perClick)
+})
+
+/** Wartezeit, wenn der Spieler die Hand liegen lässt — `—`, solange nichts läuft. */
+const meepIdleEta = computed(() => {
+  const rate = gameStore.chimesPerSecond * gameStore.mvpBuffMultiplier
+  if (meepRemaining.value <= 0) return 'now'
+  if (rate <= 0) return '—'
+  return formatCompactDuration((meepRemaining.value / rate) * MS_PER_SECOND)
+})
 
 // ── Kachel-Elemente für den Frame-Lauf ──────────────────────────────────────
 // Ein Register statt eines reaktiven Arrays: die Positionen der Ringe werden am
@@ -384,6 +425,7 @@ const hovered = computed(() => {
 
   if (id === 'passive') {
     const capped = store.resonance >= RESONANCE_MAX_STACKS
+    const due = clicksToMeep.value === 0
     return {
       key: '',
       name: BARD_PASSIVE.name,
@@ -392,14 +434,24 @@ const hovered = computed(() => {
       locked: false,
       // Die Passive kühlt nicht ab — der Status-Slot bliebe leer.
       live: false,
-      lead: {
-        value: `+${((store.resonancePowerMult - 1) * 100).toFixed(0)}%`,
-        label: 'Ability power',
-      },
+      // Die Kachel führt mit dem nächsten Meep, also führt der Kasten damit
+      // auch — gekürzt dort, voll hier. Ein Tooltip, der eine andere Zahl
+      // voranstellt als das Feld darunter, lässt den Spieler suchen.
+      lead: due
+        ? { value: 'Arriving', label: 'Next meep' }
+        : { value: formatNumber(clicksToMeep.value), label: 'Clicks to next meep' },
       lines: [
-        // Zuerst, weil die Kachel genau diese Zahl zeigt — gekürzt dort, voll
-        // hier, damit der Hover die Frage „wie viele genau?" beantwortet.
+        {
+          label: 'Meep progress',
+          value: `${formatNumberCompact(gameStore.chimesForMeep)} / ${formatNumberCompact(gameStore.meepChimeRequirement)}`,
+        },
+        // Was die Produktion allein schafft — die Gegenprobe zur Klickzahl.
+        { label: 'Idle in', value: meepIdleEta.value },
         { label: 'Meeps held', value: formatNumber(gameStore.meeps) },
+        {
+          label: 'Ability power',
+          value: `+${((store.resonancePowerMult - 1) * 100).toFixed(0)}%`,
+        },
         { label: 'Cooldowns', value: `−${(store.resonanceCdr * 100).toFixed(1)}%` },
         {
           label: 'Every click',
