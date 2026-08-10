@@ -235,8 +235,17 @@ export const PAUSE_HP_WIDTH_PROBES = [1, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1]
 // Breite × 3 plus zwei Lücken muss in die Panelbreite abzüglich Innenabstand
 // passen (620 − 2 × 44 = 532) — sonst bricht die Reihe um und die reservierte
 // Höhe stimmt nicht mehr.
-export const PAUSE_STAR_CARD_WIDTH = 170
+export const PAUSE_STAR_CARD_WIDTH = 172
 export const PAUSE_STAR_CARD_HEIGHT = 74
+/** Waagerechter Innenabstand der Karte. Er steht hier und nicht nur im CSS,
+ *  weil die Breite der Planetenreihe daraus abgeleitet wird — liefen beide
+ *  auseinander, ragte die Reihe aus der Karte. */
+export const PAUSE_STAR_CARD_PAD_X = 6
+/** Abstand zwischen Zifferblatt und Planetenreihe. */
+export const PAUSE_STAR_DIAL_GAP_PX = 8
+/** Lücke zwischen zwei Karten in der Callout-Reihe. Drei Karten plus zwei
+ *  Lücken müssen in 532 px passen (172 × 3 + 6 × 2 = 528). */
+export const PAUSE_STAR_CARD_GAP_PX = 6
 /** Kantenlänge des Zifferblatts. Sie ist am Textinhalt bemessen, nicht am
  *  freien Platz: die Restzeit steht IM Ring, und der nutzbare Raum ist der
  *  Innenkreis, nicht dessen Kasten. Gemessen bei 52 px stand „28s" (34 px
@@ -262,14 +271,36 @@ export const PAUSE_STAR_URGENT_SECS = 10
 // drei Welten ist dieser Leerraum zu teuer: die Zelle ist deshalb schmaler als
 // der Glyph und lässt ihn seitlich überstehen. Die leeren Ränder benachbarter
 // Glyphen überlappen sich, die Planetenkörper (0,62 × Glyphhöhe) nicht.
-export const PAUSE_STAR_PLANET_GLYPH_PX = 34
-export const PAUSE_STAR_PLANET_CELL_PX = 27
-export const PAUSE_STAR_PLANET_GAP_PX = 3
+//
+// Die Karte trug früher darüber noch eine Zeile „Flyby" samt Sternsymbol. Beide
+// sagten nichts, was die Karte nicht selbst zeigt — der Platz gehört jetzt den
+// Welten: Körper 21 → 26 px bei drei Slots, dazu je ein eigener HP-Balken.
+//
+// Beide Werte sind OBERGRENZEN, keine festen Maße: die Zelle ergibt sich aus
+// der Reihenbreite geteilt durch die Zahl der Slots. Ein Stern mit nur einer
+// Welt ließ die halbe Karte leer — er zeigt sie jetzt größer (Körper 31 px),
+// bis die Kartenhöhe die Grenze setzt.
+export const PAUSE_STAR_PLANET_GLYPH_MAX_PX = 50
+export const PAUSE_STAR_PLANET_CELL_MAX_PX = 34
+export const PAUSE_STAR_PLANET_GAP_PX = 2
+/** Luft zwischen zwei Planetenkörpern. Ohne sie füllte der Körper die Zelle
+ *  exakt aus und zwei Welten berührten sich bis auf die Flex-Lücke. */
+export const PAUSE_STAR_PLANET_BODY_CLEARANCE_PX = 3
+/** Höhe des HP-Balkens unter jeder Welt und sein Abstand zum Glyph. Ein Balken
+ *  UNTER dem Körper ist dasselbe Bild, das der Spieler draußen im Orbit sieht —
+ *  und er hält Zeit (Ring) und Leben (Leiste) sauber auseinander. */
+export const PAUSE_STAR_PLANET_HP_H = 5
+export const PAUSE_STAR_PLANET_HP_GAP = 5
+/** Stufen, auf die der HP-Anteil einer Welt gerundet wird. Bei 29 px Balken
+ *  ist ein Prozentpunkt ein Drittel Pixel — feiner abzutasten hieße nur, den
+ *  Schnappschuss der Kartenreihe bei jedem Takt neu zu schreiben. */
+export const PAUSE_STAR_HP_STEPS = 100
 /** Platz, den die Planetenreihe in der Karte hat: Kartenbreite abzüglich
- *  Innenabstand (2 × 10), Zifferblatt (PAUSE_STAR_DIAL_PX) und dessen Lücke (8).
+ *  Innenabstand, Zifferblatt und dessen Lücke.
  *  Trägt ein Stern mehr Slots als die Regel-Anzahl, rücken Zelle und Glyph
  *  zusammen, statt aus der Karte zu laufen. */
-export const PAUSE_STAR_PLANET_ROW_WIDTH = PAUSE_STAR_CARD_WIDTH - 2 * 10 - PAUSE_STAR_DIAL_PX - 8
+export const PAUSE_STAR_PLANET_ROW_WIDTH =
+  PAUSE_STAR_CARD_WIDTH - 2 * PAUSE_STAR_CARD_PAD_X - PAUSE_STAR_DIAL_PX - PAUSE_STAR_DIAL_GAP_PX
 
 // ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
 // Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,

@@ -257,7 +257,10 @@
                aufpoppende Badges die Panel-Höhe (und den Fit-Scale) nie ändern -->
           <div
             class="callout-section"
-            :style="{ '--star-card-h': `${PAUSE_STAR_CARD_HEIGHT}px` }"
+            :style="{
+              '--star-card-h': `${PAUSE_STAR_CARD_HEIGHT}px`,
+              '--star-card-gap': `${PAUSE_STAR_CARD_GAP_PX}px`,
+            }"
           >
             <!-- Kopfzeile mit fester Höhe: die Level-Up-Marke sitzt neben der
                  Überschrift statt zwischen den Flyby-Karten. Sie ist kein
@@ -314,13 +317,15 @@
               </div>
 
               <!-- Ein Flyby, eine Karte: Zifferblatt der Restzeit, echte
-                   Planetenkunst der Slots, Akzent in der Spektralfarbe des
-                   Sterns. Höchstens RESOURCE_STAR_MAX_CONCURRENT nebeneinander. -->
+                   Planetenkunst der Slots mit ihren Boss-HP, Akzent in der
+                   Spektralfarbe des Sterns. Höchstens
+                   RESOURCE_STAR_MAX_CONCURRENT nebeneinander. -->
               <PauseStarCard
                 v-for="s in activeResourceStars"
                 :key="s.id"
                 :secs="s.secs"
-                :progress="s.progress"
+                :ends-at="s.endsAt"
+                :duration-ms="s.durationMs"
                 :color="s.color"
                 :planets="s.planets"
               />
@@ -394,11 +399,13 @@ import {
   KEYBINDINGS,
   PAUSE_ESCAPE_CAP,
   PAUSE_STAR_CARD_HEIGHT,
+  PAUSE_STAR_CARD_GAP_PX,
+  PAUSE_STAR_HP_STEPS,
   STAR_TIMER_TICK_MS,
 } from '@/config/constants'
 import type { PlanetType } from '@/types'
 import { splitDuration } from '@/utils/ui/format'
-import { starRemainingMs, starTotalMs } from '@/utils/orbit/starLifetime'
+import { starDeadlineAt, starRemainingMs, starTotalMs } from '@/utils/orbit/starLifetime'
 import { pauseDustStyle } from '@/utils/fx/particleField'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
@@ -566,12 +573,17 @@ interface PauseResourceStar {
   id: string
   secs: number
   remainingPlanets: number
-  /** Restanteil der Despawn-Zeit (1 = frisch gespawnt) für den Zeitbogen. */
-  progress: number
+  /**
+   * ABSOLUTER Zeitpunkt des Despawns und die Gesamtlaufzeit derselben Uhr. Die
+   * Karte lässt ihren Zeitbogen daraus als eine durchlaufende Animation
+   * abbrennen — ein Restanteil je Sekunde ließe ihn im Takt stocken.
+   */
+  endsAt: number
+  durationMs: number
   /** Spektralfarbe des Sterns als fertiger CSS-Wert (StarGroup.starColor). */
   color: string
-  /** Die Slots in ihrer echten Gestalt — die Karte zeichnet sie als Planeten. */
-  planets: { id: string; type: PlanetType; cleared: boolean }[]
+  /** Die Slots in ihrer echten Gestalt samt Boss-HP (0..1) für ihre Balken. */
+  planets: { id: string; type: PlanetType; cleared: boolean; hp: number }[]
 }
 
 /**
@@ -600,29 +612,47 @@ function buildResourceStars(): PauseResourceStar[] {
     .map((s) => {
       const remainingPlanets = s.planetSlots.filter((p) => !p.cleared).length
       const remainingMs = starRemainingMs(s, now, bossTimer)
-      const durationMs = starTotalMs(s, bossTimer)
       const [r, g, b] = s.starColor
       return {
         id: s.id,
         secs: Math.ceil(remainingMs / 1000),
         remainingPlanets,
-        progress: durationMs > 0 ? Math.min(1, remainingMs / durationMs) : 0,
+        endsAt: starDeadlineAt(s, bossTimer) ?? now,
+        durationMs: starTotalMs(s, bossTimer),
         color: `rgb(${r}, ${g}, ${b})`,
-        planets: s.planetSlots.map((p) => ({
-          id: p.planetId,
-          type: p.type,
-          cleared: p.cleared,
-        })),
+        planets: s.planetSlots.map((p) => {
+          const boss = bosses.find((b) => b.planetId === p.planetId)
+          // Auf ganze Prozent gerundet: der Balken ist 29 px breit, feiner als
+          // ein Prozentpunkt ist dort nichts mehr zu sehen — und der
+          // Schlüssel unten würde bei jedem Abtasttakt anschlagen.
+          const ratio =
+            p.cleared || !boss || boss.maxHP <= 0
+              ? 0
+              : Math.min(1, Math.max(0, boss.currentHP / boss.maxHP))
+          return {
+            id: p.planetId,
+            type: p.type,
+            cleared: p.cleared,
+            hp: Math.round(ratio * PAUSE_STAR_HP_STEPS) / PAUSE_STAR_HP_STEPS,
+          }
+        }),
       }
     })
     .filter((s) => s.remainingPlanets > 0 && s.secs > 0)
     .sort((a, b) => a.secs - b.secs)
 }
 
-/** Alles, was man der Kartenreihe ansieht — ändert es sich nicht, rendert nichts. */
+/** Alles, was man der Kartenreihe ansieht — ändert es sich nicht, rendert nichts.
+ *  Der Zeitbogen steht bewusst NICHT darin: er läuft in der Karte als eigene
+ *  Animation weiter und hängt nur am Endzeitpunkt, nicht am Abtasttakt. */
 function resourceStarsKey(list: PauseResourceStar[]): string {
   return list
-    .map((s) => `${s.id}:${s.secs}:${s.planets.map((p) => (p.cleared ? 1 : 0)).join('')}`)
+    .map(
+      (s) =>
+        `${s.id}:${s.secs}:${s.endsAt}:${s.planets
+          .map((p) => `${p.cleared ? 'x' : ''}${p.hp}`)
+          .join(',')}`,
+    )
     .join('|')
 }
 
@@ -1728,14 +1758,17 @@ function particleStyle(i: number): Record<string, string> {
    volle Breite und darunter die Flyby-Karten (bis zu
    RESOURCE_STAR_MAX_CONCURRENT nebeneinander). Beides fest, damit ein Fund
    oder ein neu gespawnter Stern das Panel nicht springen lässt. */
+/* Die Lücke kommt inline aus PAUSE_STAR_CARD_GAP_PX — dieselbe Zahl, gegen die
+   die Kartenbreite gerechnet ist (3 × 172 + 2 × 6 = 528 ≤ 532). Sie steht auch
+   in der reservierten Höhe, weil Herald und Kartenreihe untereinander stehen. */
 .callout-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   align-content: center;
   justify-content: center;
-  gap: 8px;
-  height: calc(var(--herald-h) + 8px + var(--star-card-h));
+  gap: var(--star-card-gap);
+  height: calc(var(--herald-h) + var(--star-card-gap) + var(--star-card-h));
   width: 100%;
   overflow: hidden;
 }

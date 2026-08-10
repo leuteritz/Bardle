@@ -50,27 +50,40 @@ function openBossTimers(star: StarLifetimeSource, lookup: StarBossTimerLookup): 
 }
 
 /**
- * Restzeit des Sterns in ms — die früheste der beiden Uhren.
+ * ABSOLUTER Zeitpunkt, an dem die maßgebliche Uhr abläuft — die früheste der
+ * beiden. Solange noch Bosse leben, zählt deren Enrage-Uhr; erst wenn keiner
+ * mehr eine hat, bleibt die eigene Despawn-Frist des Sterns.
  *
- * Solange noch Bosse leben, zählt deren Enrage-Uhr; erst wenn keiner mehr eine
- * hat, bleibt die eigene Despawn-Frist des Sterns.
+ * Der Zeitstempel ist die Grundform, die Restzeit nur seine Differenz zu
+ * `now`. Eine Anzeige, die selbst weiterläuft (der Zeitbogen im Pause-Overlay
+ * läuft als CSS-Animation), braucht genau diesen Fixpunkt: aus `now +
+ * Restzeit` zurückgerechnet wackelte er mit jedem Abtastzeitpunkt um ein paar
+ * Millisekunden — und jede Neuberechnung setzte die Animation zurück.
+ */
+export function starDeadlineAt(
+  star: StarLifetimeSource,
+  lookup: StarBossTimerLookup,
+): number | null {
+  const timers = openBossTimers(star, lookup)
+  if (timers.length > 0) {
+    return Math.min(...timers.map((t) => t.startTime + t.enrageTimerMs))
+  }
+  if (star.spawnedAt !== undefined && star.durationMs !== undefined) {
+    return star.spawnedAt + star.durationMs
+  }
+  return null
+}
+
+/**
+ * Restzeit des Sterns in ms — die früheste der beiden Uhren.
  */
 export function starRemainingMs(
   star: StarLifetimeSource,
   now: number,
   lookup: StarBossTimerLookup,
 ): number {
-  const timers = openBossTimers(star, lookup)
-  if (timers.length > 0) {
-    return Math.max(
-      0,
-      Math.min(...timers.map((t) => t.enrageTimerMs - (now - t.startTime))),
-    )
-  }
-  if (star.spawnedAt !== undefined && star.durationMs !== undefined) {
-    return Math.max(0, star.spawnedAt + star.durationMs - now)
-  }
-  return 0
+  const deadline = starDeadlineAt(star, lookup)
+  return deadline === null ? 0 : Math.max(0, deadline - now)
 }
 
 /**
