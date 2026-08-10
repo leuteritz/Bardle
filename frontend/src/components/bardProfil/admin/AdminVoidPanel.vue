@@ -4,7 +4,7 @@ import { Icon } from '@iconify/vue'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { VOID_RIFTS, getVoidRift } from '@/config/world/void'
-import { VOID_RIFT_SEVERITY_COLOR } from '@/config/constants'
+import { VOID_SEVERITY_COLOR, ADMIN_VOID_SWARM_SIZE } from '@/config/constants'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
 
 withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
@@ -12,29 +12,39 @@ withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
 const voidStore = useVoidStore()
 const uiStore = useUiStore()
 
-/** Was gerade offen steht — der Store lässt nur einen Riss zu, ihn zu benennen
- *  erklärt also jedes „es ist nichts passiert". */
-const openRift = computed(() => {
-  const rift = voidStore.active[0]
-  return rift ? (getVoidRift(rift.defId)?.name ?? rift.defId) : null
+/** Was gerade unterwegs ist — das vorderste beim Namen zu nennen erklärt jedes
+ *  „es ist nichts passiert", und die Zahl dahinter die Lage. */
+const inbound = computed(() => {
+  const lead = voidStore.leadMonster
+  if (!lead) return null
+  const name = getVoidRift(lead.defId)?.name ?? lead.defId
+  const rest = voidStore.active.length - 1
+  return rest > 0 ? `${name} +${rest}` : name
 })
 
 /**
- * Einen Riss aufreissen lassen. Das Profil schliesst dabei zuerst, aus
- * demselben Grund wie beim Drifter-Panel: die Frist läuft ab `openedAt` weiter,
- * und ein Riss, der hinter einem offenen Modal aufgeht, verbrennt einen Teil
- * davon ungesehen — beim kleinsten Typ wäre das schon die Hälfte.
+ * Ein Wesen schicken. Das Profil schliesst dabei zuerst, aus demselben Grund
+ * wie beim Drifter-Panel: die Reise läuft ab `spawnedAt` weiter, und ein Wesen,
+ * das hinter einem offenen Modal losgeht, legt einen Teil des Weges ungesehen
+ * zurück — beim kleinsten Typ wäre das schon die Hälfte.
  */
-function open(defId?: string): void {
+function spawn(defId?: string): void {
   uiStore.closeBardModal()
-  voidStore.forceOpen(defId)
+  voidStore.forceSpawn(defId)
 }
 
-/** Den offenen Riss sofort kollabieren lassen — der kurze Weg zur Strafe, ohne
- *  eine Minute danebenzustehen. */
-function collapse(): void {
+/** Das vorderste Wesen sofort einschlagen lassen — der kurze Weg zur Strafe,
+ *  ohne eine Minute danebenzustehen. */
+function impact(): void {
   uiStore.closeBardModal()
-  voidStore.forceCollapse()
+  voidStore.forceImpact()
+}
+
+/** Stresstest: ein Schwarm auf einmal. Der Renderer trägt ihn (ein Canvas für
+ *  alle), und genau das lässt sich hier in einem Klick nachprüfen. */
+function swarm(): void {
+  uiStore.closeBardModal()
+  for (let i = 0; i < ADMIN_VOID_SWARM_SIZE; i++) voidStore.spawnMonster()
 }
 
 /** Räumt das Feld UND jedes laufende Nachbeben. */
@@ -46,7 +56,7 @@ function clearField(): void {
 <template>
   <AdminCollapsiblePanel title="The Void" icon="game-icons:vortex" :collapsible="!dashboard">
     <template #meta>
-      {{ openRift ? `Open: ${openRift}` : 'No rift' }}
+      {{ inbound ? `Inbound: ${inbound}` : 'Nothing inbound' }}
       <template v-if="!voidStore.isUnlocked"> · locked </template>
       <template v-if="voidStore.liveAftermaths.length">
         · {{ voidStore.liveAftermaths.length }} effect{{
@@ -62,24 +72,28 @@ function clearField(): void {
         class="vt-btn"
         :style="{ '--vt-color': def.color }"
         :title="def.drainLine"
-        @click="open(def.id)"
+        @click="spawn(def.id)"
       >
         <Icon :icon="def.icon" class="vt-icon" width="26" height="26" />
         <span class="vt-name">{{ def.name }}</span>
-        <span class="vt-severity" :style="{ color: VOID_RIFT_SEVERITY_COLOR[def.severity] }">
+        <span class="vt-severity" :style="{ color: VOID_SEVERITY_COLOR[def.severity] }">
           {{ def.severity }}
         </span>
       </button>
     </div>
 
     <div class="vt-footer">
-      <button class="vt-action vt-action--random" @click="open()">
+      <button class="vt-action vt-action--random" @click="spawn()">
         <Icon icon="lucide:dices" width="16" height="16" />
-        Random Rift
+        Random
       </button>
-      <button class="vt-action vt-action--collapse" :disabled="!openRift" @click="collapse">
+      <button class="vt-action vt-action--swarm" @click="swarm">
+        <Icon icon="lucide:layers" width="16" height="16" />
+        Swarm ×{{ ADMIN_VOID_SWARM_SIZE }}
+      </button>
+      <button class="vt-action vt-action--collapse" :disabled="!inbound" @click="impact">
         <Icon icon="lucide:zap" width="16" height="16" />
-        Force Collapse
+        Impact
       </button>
       <button class="vt-action vt-action--clear" @click="clearField">
         <Icon icon="lucide:eraser" width="16" height="16" />
@@ -178,6 +192,16 @@ function clearField(): void {
   background: #1c1810;
   border-color: var(--rpg-gold-dim);
   color: var(--rpg-gold);
+}
+
+.vt-action--swarm {
+  color: #8a6fd0;
+  border-color: #2f2148;
+}
+.vt-action--swarm:hover:not(:disabled) {
+  background: #16102a;
+  border-color: #8a6fd0;
+  color: #b9a4f0;
 }
 
 .vt-action--collapse {

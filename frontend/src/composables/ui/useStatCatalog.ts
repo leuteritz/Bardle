@@ -1456,36 +1456,40 @@ export function useStatCatalog(query: Ref<string>): {
       },
       // ── The Void ──
       // Die einzigen Zahlen im Katalog, bei denen ein HOHER Wert schlecht ist.
-      // Die Quote steht deshalb bewusst als „Rifts Sealed" und nicht als
-      // „Rifts Collapsed" — der Katalog soll den Erfolg messen, nicht das
+      // Die Quote steht deshalb bewusst als „Void Stopped Rate" und nicht als
+      // Durchbruchquote — der Katalog soll den Erfolg messen, nicht das
       // Versäumnis, auch wenn beide Zähler danebenstehen.
+      // Die Store-Felder heissen weiter `totalRifts*`: sie stehen so im
+      // Spielstand, und ein umbenanntes Feld liesse die Zähler still auf null
+      // zurückfallen. Was der Spieler liest, sagt „Void"; was gespeichert wird,
+      // bleibt `rifts` — dasselbe Muster wie bei Chronicle/Astral Codex.
       {
         key: 'rifts-sealed',
-        label: 'Void Rifts Sealed',
+        label: 'Void Slain',
         value: num(voidStore.totalRiftsSealed),
         highlight: true,
-        keywords: 'void tide rift breach maw wound scar',
+        keywords: 'void rift crawler maw husk pilgrim unmaking',
       },
       {
         key: 'rifts-seal-rate',
-        label: 'Rift Seal Rate',
+        label: 'Void Stopped Rate',
         value:
           voidStore.totalRiftsOpened > 0
             ? pct(voidStore.totalRiftsSealed / voidStore.totalRiftsOpened)
             : '—',
-        keywords: 'void rift accuracy',
+        keywords: 'void accuracy stopped',
       },
       {
         key: 'rifts-collapsed',
-        label: 'Void Rifts Collapsed',
+        label: 'Void Breaches',
         value: num(voidStore.totalRiftsCollapsed),
-        keywords: 'void rift lost failed',
+        keywords: 'void breach impact failed',
       },
       {
         key: 'void-hp-lost',
         label: 'Sun HP Lost to the Void',
         value: num(voidStore.totalVoidHpLost),
-        keywords: 'void rift collapse damage',
+        keywords: 'void breach impact damage',
       },
       {
         key: 'void-cps',

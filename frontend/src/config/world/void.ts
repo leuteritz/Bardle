@@ -32,14 +32,14 @@ import type { VoidRiftDef, VoidRiftSeverity } from '@/types'
 export const VOID_RIFTS: VoidRiftDef[] = [
   {
     id: 'sunlessBreach',
-    name: 'Sunless Breach',
+    name: 'Sunless Crawler',
     severity: 'lesser',
     weight: 30,
     icon: 'game-icons:eclipse',
     color: '#8a6fd0',
     sizePx: 112,
-    drainLine: 'Chime production sinks while it stands',
-    boonLine: 'Sealed: a surge of production',
+    drainLine: 'Chime production sinks as it closes in',
+    boonLine: 'Slain: a surge of production',
     drain: { cpsMult: 0.7 },
     boon: {
       durationMs: 60_000,
@@ -56,8 +56,8 @@ export const VOID_RIFTS: VoidRiftDef[] = [
     icon: 'game-icons:black-hole-bolas',
     color: '#9a5fc8',
     sizePx: 118,
-    drainLine: 'Materials stop finding their way to you',
-    boonLine: 'Sealed: everything it swallowed, returned',
+    drainLine: 'It eats the materials before they reach you',
+    boonLine: 'Slain: everything it swallowed, returned',
     drain: { materialDropMult: 0.55 },
     boon: {
       durationMs: 75_000,
@@ -68,15 +68,15 @@ export const VOID_RIFTS: VoidRiftDef[] = [
   },
   {
     id: 'dimmingWound',
-    name: 'Dimming Wound',
+    name: 'Dimming Husk',
     severity: 'greater',
     weight: 16,
     icon: 'game-icons:shadow-grasp',
     color: '#b04fd8',
     sizePx: 138,
     dweller: '/img/Void/dweller-greater-256.png',
-    drainLine: 'Your orbit strikes softer while it stands',
-    boonLine: 'Sealed: the orbit strikes back twice as hard',
+    drainLine: 'Your orbit strikes softer the nearer it gets',
+    boonLine: 'Slain: the orbit strikes back twice as hard',
     drain: { combatDpsMult: 0.55 },
     boon: {
       durationMs: 75_000,
@@ -87,15 +87,15 @@ export const VOID_RIFTS: VoidRiftDef[] = [
   },
   {
     id: 'forgottenPath',
-    name: 'Forgotten Path',
+    name: 'Forgotten Pilgrim',
     severity: 'greater',
     weight: 12,
     icon: 'game-icons:crossed-slashes',
     color: '#c94fc0',
     sizePx: 132,
     dweller: '/img/Void/dweller-greater-256.png',
-    drainLine: 'Champions learn nothing while it stands',
-    boonLine: 'Sealed: every lesson at once',
+    drainLine: 'Champions learn nothing while it walks',
+    boonLine: 'Slain: every lesson at once',
     drain: { xpMult: 0.5 },
     boon: {
       durationMs: 90_000,
@@ -106,7 +106,7 @@ export const VOID_RIFTS: VoidRiftDef[] = [
   },
   {
     id: 'unmakingScar',
-    name: 'Unmaking Scar',
+    name: 'The Unmaking',
     severity: 'abyssal',
     weight: 10,
     icon: 'game-icons:sundial',
@@ -115,8 +115,8 @@ export const VOID_RIFTS: VoidRiftDef[] = [
     dweller: '/img/Void/dweller-abyssal-256.png',
     // Der einzige Typ, der die Ein-Achsen-Regel oben dehnt — und genau daran
     // soll man merken, dass hier etwas anderes aufgerissen ist als sonst.
-    drainLine: 'It pulls at everything you have built',
-    boonLine: 'Sealed: everything, doubled, for two minutes',
+    drainLine: 'It drags at everything you have built',
+    boonLine: 'Slain: everything, doubled, for two minutes',
     drain: { cpsMult: 0.65, cpcMult: 0.65, combatDpsMult: 0.65, materialDropMult: 0.65 },
     boon: {
       durationMs: 120_000,

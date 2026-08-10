@@ -9,40 +9,37 @@ import {
   VOID_CARD_ICON,
   VOID_CARD_RESULT_MS,
   VOID_CARD_TICK_MS,
-  VOID_RIFT_URGENT_FRAC,
-  VOID_RIFT_SEVERITY_COLOR,
-  VOID_RIFT_SEVERITY_LABEL,
+  VOID_URGENT_FRAC,
+  VOID_SEVERITY_COLOR,
+  VOID_SEVERITY_LABEL,
 } from '@/config/constants'
 
 /**
- * Was da aufgerissen ist, was es kostet und wie lange noch — oben links, an
- * der Spitze des Kartenstapels.
+ * Die Bedrohungslage — oben links, an der Spitze des Kartenstapels.
  *
- * Sie steht ÜBER Vorzeichen- und Drifter-Karte, und zwar als einzige aus einem
- * inhaltlichen Grund: die beiden anderen melden eine Gelegenheit, diese hier
- * eine Frist. Wer die Ecke überfliegt, muss zuerst das sehen, was ihn etwas
- * kostet.
+ * Sie zeigt bewusst NICHT alles, was unterwegs ist, sondern das VORDERSTE: das
+ * ist auch das Ziel des Orbit-Beschusses, und es ist die einzige Frage, die
+ * gerade zählt („was erreicht die Sonne zuerst?"). Wie viele insgesamt kommen,
+ * steht als Zahl daneben — ein Dutzend Zeilen untereinander wäre eine Liste,
+ * die niemand liest, während etwas heranrückt.
  *
- * Zwei Fortschritte, weil der Spieler zwei Fragen hat. Der breite Balken ist
- * sein eigener („wie weit habe ich ihn?"), die Uhr im Kopf und die Linie am Fuß
- * gehören dem Riss („wie lange habe ich noch?"). Nur einer von beiden liesse
- * die Frage „schaffe ich das?" unbeantwortet.
+ * Sie steht über Vorzeichen- und Drifter-Karte, und zwar aus einem inhaltlichen
+ * Grund: die beiden melden eine Gelegenheit, diese hier eine Frist.
  */
-type CardState = 'open' | 'sealed' | 'collapsed'
+type CardState = 'inbound' | 'slain' | 'impact'
 
 const voidStore = useVoidStore()
 const { active, lastOutcome } = storeToRefs(voidStore)
 
 const shownDef = ref<VoidRiftDef | null>(null)
-const state = ref<CardState>('open')
+const state = ref<CardState>('inbound')
 const visible = ref(false)
 /** Eigene Uhr: der Store tickt im Sekundentakt, der Countdown soll flüssig
- *  laufen und der Balken exakt beim Kollaps ankommen. */
+ *  laufen und der Balken exakt bei der Ankunft ankommen. */
+const progress = ref(0)
 const remainingMs = ref(0)
-const lifetimeMs = ref(1)
-/** Kopie der Trefferpunkte, im selben feinen Takt — der Store schreibt sie nur
- *  einmal je Sekunde, ein Klick soll aber sofort zu sehen sein. */
 const hpRatio = ref(1)
+const swarmCount = ref(0)
 
 let resultTimer: ReturnType<typeof setTimeout> | null = null
 let ticker: ReturnType<typeof setInterval> | null = null
@@ -54,66 +51,56 @@ function clearTimers() {
   ticker = null
 }
 
-const activeRift = computed(() => active.value[0] ?? null)
-
 const severityColor = computed(() =>
-  shownDef.value ? (VOID_RIFT_SEVERITY_COLOR[shownDef.value.severity] ?? '#8a6fd0') : '#8a6fd0',
+  shownDef.value ? (VOID_SEVERITY_COLOR[shownDef.value.severity] ?? '#8a6fd0') : '#8a6fd0',
 )
 const severityLabel = computed(() =>
-  shownDef.value ? (VOID_RIFT_SEVERITY_LABEL[shownDef.value.severity] ?? 'VOID RIFT') : 'VOID RIFT',
+  shownDef.value ? (VOID_SEVERITY_LABEL[shownDef.value.severity] ?? 'VOID') : 'VOID',
 )
 
 const remainingSeconds = computed(() => Math.max(0, Math.ceil(remainingMs.value / 1000)))
 
-/** Ab drei Vierteln der Frist schlägt die Uhr um — nicht bei einer festen
- *  Sekundenzahl, weil die Fristen je Schwere weit auseinanderliegen. */
-const urgent = computed(() => {
-  if (state.value !== 'open' || lifetimeMs.value <= 0) return false
-  const elapsed = 1 - remainingMs.value / lifetimeMs.value
-  return elapsed >= VOID_RIFT_URGENT_FRAC
-})
-
-/** Restanteil der Frist — treibt die Fusslinie. */
-const timeProgress = computed(() => {
-  if (state.value !== 'open' || lifetimeMs.value <= 0) return state.value === 'open' ? 0 : 1
-  return Math.min(1, Math.max(0, remainingMs.value / lifetimeMs.value))
-})
+/** Ab drei Vierteln des Weges schlägt die Uhr um — nicht bei einer festen
+ *  Sekundenzahl, weil die Reisezeiten je Schwere weit auseinanderliegen. */
+const urgent = computed(() => state.value === 'inbound' && progress.value >= VOID_URGENT_FRAC)
 
 const headline = computed(() => {
-  if (state.value === 'sealed') return 'Rift sealed'
-  if (state.value === 'collapsed') return 'Rift collapsed'
+  if (state.value === 'slain') return 'Void slain'
+  if (state.value === 'impact') return 'It reached the sun'
   return severityLabel.value
 })
 
-/** Wie weit der Riss schon weggedrückt ist — das ist die Zahl, die sagt, ob
- *  sich Weiterklicken lohnt. */
-const sealedPct = computed(() => Math.round((1 - hpRatio.value) * 100))
+/** Wie weit das Wesen schon heruntergeprügelt ist. */
+const slainPct = computed(() => Math.round((1 - hpRatio.value) * 100))
 
-// ── Zustandswechsel ─────────────────────────────────────────────────────────
+// ── Laufender Stand ─────────────────────────────────────────────────────────
+
+function sample(): void {
+  const lead = voidStore.leadMonster
+  swarmCount.value = active.value.length
+  if (!lead) return
+  const def = getVoidRift(lead.defId)
+  if (!def) return
+  shownDef.value = def
+  const span = Math.max(1, lead.travelMs)
+  const t = Math.min(1, Math.max(0, (Date.now() - lead.spawnedAt) / span))
+  progress.value = t
+  remainingMs.value = Math.max(0, lead.spawnedAt + span - Date.now())
+  hpRatio.value = lead.maxHp > 0 ? lead.currentHp / lead.maxHp : 0
+}
 
 watch(
-  activeRift,
-  (rift) => {
-    if (!rift) return
-    const def = getVoidRift(rift.defId)
-    if (!def) return
-    clearTimers()
-    shownDef.value = def
-    state.value = 'open'
-    visible.value = true
-    lifetimeMs.value = Math.max(1, rift.collapseAt - rift.openedAt)
-    remainingMs.value = Math.max(0, rift.collapseAt - Date.now())
-    hpRatio.value = rift.maxHp > 0 ? rift.currentHp / rift.maxHp : 0
-    ticker = setInterval(() => {
-      const live = activeRift.value
-      if (!live) return
-      // Die Frist wird bei einer Stase mitgeschoben — deshalb hier jedes Mal
-      // neu aus dem Riss lesen statt einen einmal gemerkten Endzeitpunkt zu
-      // halten, sonst liefe die Karte während der Stase gegen null.
-      lifetimeMs.value = Math.max(1, live.collapseAt - live.openedAt)
-      remainingMs.value = Math.max(0, live.collapseAt - Date.now())
-      hpRatio.value = live.maxHp > 0 ? live.currentHp / live.maxHp : 0
-    }, VOID_CARD_TICK_MS)
+  () => active.value.length,
+  (n) => {
+    if (n === 0) return
+    // Ein Ergebnis darf ausstehen bleiben; die Karte kehrt danach von selbst
+    // zur Lage zurück, weil der Ticker weiterläuft.
+    if (state.value === 'inbound') {
+      clearTimers()
+      visible.value = true
+      sample()
+      ticker = setInterval(sample, VOID_CARD_TICK_MS)
+    }
   },
   { immediate: true },
 )
@@ -124,7 +111,7 @@ watch(
     if (!seq) return
     const def = getVoidRift(lastOutcome.value.defId)
     if (!def) return
-    showResult(def, lastOutcome.value.sealed ? 'sealed' : 'collapsed')
+    showResult(def, lastOutcome.value.sealed ? 'slain' : 'impact')
   },
 )
 
@@ -133,18 +120,25 @@ function showResult(def: VoidRiftDef, next: CardState) {
   shownDef.value = def
   state.value = next
   visible.value = true
-  remainingMs.value = 0
-  hpRatio.value = next === 'sealed' ? 0 : 1
+  hpRatio.value = next === 'slain' ? 0 : 1
   resultTimer = setTimeout(() => {
-    visible.value = false
     resultTimer = null
+    // Zurück zur Lage, wenn noch etwas unterwegs ist — sonst ausblenden.
+    if (active.value.length > 0) {
+      state.value = 'inbound'
+      sample()
+      ticker = setInterval(sample, VOID_CARD_TICK_MS)
+    } else {
+      visible.value = false
+      state.value = 'inbound'
+    }
   }, VOID_CARD_RESULT_MS)
 }
 
 // ── Unterkante veröffentlichen ──────────────────────────────────────────────
 // Dieselbe Mechanik wie bei Auto-Pick- und Vorzeichen-Karte: wer oben links
 // steht, sagt, wo er aufhört. Diese hier steht an der SPITZE des Stapels, also
-// weichen die beiden anderen ihr aus und nicht umgekehrt.
+// weichen die anderen ihr aus und nicht umgekehrt.
 const root = ref<HTMLElement>()
 let resizeObserver: ResizeObserver | null = null
 
@@ -191,17 +185,23 @@ onUnmounted(() => {
         <Icon :icon="VOID_CARD_ICON" width="13" height="13" class="vhc-head__icon" />
         <span class="vhc-head__lbl">{{ headline }}</span>
 
+        <!-- Wie viele insgesamt unterwegs sind. Steht auch im Ergebniszustand,
+             denn genau dann will man wissen, was noch kommt. -->
+        <span v-if="swarmCount > 1" class="vhc-swarm" :title="`${swarmCount} inbound`">
+          ×{{ swarmCount }}
+        </span>
+
         <span
-          v-if="state === 'open'"
+          v-if="state === 'inbound'"
           class="vhc-clock"
           :class="{ 'vhc-clock--urgent': urgent }"
-          :title="`${remainingSeconds}s until it collapses`"
+          :title="`${remainingSeconds}s until it reaches the sun`"
         >
           <span class="vhc-clock__num">{{ remainingSeconds }}</span>
           <span class="vhc-clock__unit">s</span>
         </span>
         <span v-else class="vhc-mark" :class="`vhc-mark--${state}`">
-          {{ state === 'sealed' ? '✓' : '✕' }}
+          {{ state === 'slain' ? '✓' : '✕' }}
         </span>
       </div>
 
@@ -212,37 +212,32 @@ onUnmounted(() => {
 
         <span class="vhc-body">
           <span class="vhc-name">{{ shownDef.name }}</span>
-          <!-- Was es kostet, ist der Grund für die Karte — darf umbrechen,
-               niemals abgeschnitten werden. -->
           <span class="vhc-effect">
-            {{ state === 'sealed' ? shownDef.boonLine : shownDef.drainLine }}
+            {{ state === 'slain' ? shownDef.boonLine : shownDef.drainLine }}
           </span>
         </span>
       </div>
 
-      <!-- Der eigene Fortschritt. scaleX am Balken selbst, damit pro Takt kein
-           Layout anfällt und der Teilbaum nicht neu bewertet wird. -->
-      <div v-if="state === 'open'" class="vhc-seal">
-        <span class="vhc-seal__lbl">Sealed</span>
-        <span class="vhc-seal__pct">{{ sealedPct }}%</span>
+      <!-- Der eigene Fortschritt am Wesen. -->
+      <div v-if="state === 'inbound'" class="vhc-seal">
+        <span class="vhc-seal__lbl">Worn down</span>
+        <span class="vhc-seal__pct">{{ slainPct }}%</span>
         <span class="vhc-seal__track">
           <span class="vhc-seal__fill" :style="{ transform: `scaleX(${1 - hpRatio})` }"></span>
         </span>
       </div>
 
-      <!-- Die Frist des Risses, bündig am Kartenfuss. -->
+      <!-- Sein Weg zur Sonne, bündig am Kartenfuss. Er FÜLLT sich, während die
+           anderen Karten des Stapels leerlaufen — hier wächst eine Gefahr,
+           statt dass eine Gelegenheit vergeht. -->
       <span class="vhc-bar">
-        <span class="vhc-bar__fill" :style="{ transform: `scaleX(${timeProgress})` }"></span>
+        <span class="vhc-bar__fill" :style="{ transform: `scaleX(${progress})` }"></span>
       </span>
     </div>
   </Transition>
 </template>
 
 <style scoped>
-/* An der Spitze des Stapels oben links — nur die Auto-Pick-Meldung steht noch
-   darüber. Breite WORTGLEICH zu Vorzeichen- und Drifter-Karte: die drei stehen
-   in einer Spalte, und rechte Kanten, die um ein paar Pixel auseinanderliegen,
-   lesen sich als Fehler. */
 .vhc-root {
   position: fixed;
   top: calc(var(--autopick-bottom, 0px) + 0.5rem);
@@ -262,10 +257,10 @@ onUnmounted(() => {
   transition: top 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.vhc-root--sealed {
+.vhc-root--slain {
   border-left-color: #52b830;
 }
-.vhc-root--collapsed {
+.vhc-root--impact {
   border-left-color: #cc6050;
 }
 
@@ -287,6 +282,24 @@ onUnmounted(() => {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--severity);
+}
+
+.vhc-swarm {
+  margin-left: auto;
+  padding: 1px 6px 2px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #e8dcc0;
+  background: #2a1030;
+  border: 1px solid var(--severity);
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Steht ein Schwarm-Chip daneben, rückt die Uhr nicht mehr selbst nach rechts. */
+.vhc-swarm + .vhc-clock,
+.vhc-swarm + .vhc-mark {
+  margin-left: 6px;
 }
 
 .vhc-clock {
@@ -333,10 +346,10 @@ onUnmounted(() => {
   font-weight: 900;
   line-height: 1;
 }
-.vhc-mark--sealed {
+.vhc-mark--slain {
   color: #52b830;
 }
-.vhc-mark--collapsed {
+.vhc-mark--impact {
   color: #cc6050;
 }
 
@@ -429,7 +442,7 @@ onUnmounted(() => {
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
 }
 
-/* ── Frist ── */
+/* ── Weg zur Sonne ── */
 .vhc-bar {
   position: relative;
   display: block;

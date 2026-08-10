@@ -7,20 +7,20 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { getVoidRift, VOID_RIFTS } from '@/config/world/void'
-import { voidRiftScreenPos, voidRiftHalfExtent } from '@/utils/orbit/voidRiftPath'
-import { drifterField, measuredFieldInsets } from '@/utils/orbit/drifterPath'
+import { voidPositionAt } from '@/utils/orbit/voidPath'
 import {
   VOID_UNLOCK_LEVEL,
-  VOID_RIFT_MAX_CONCURRENT,
-  VOID_RIFT_HP_BASE,
-  VOID_RIFT_HP_PER_GALAXY,
-  VOID_RIFT_HP_SEVERITY_MULT,
-  VOID_RIFT_LIFETIME_MS,
-  VOID_RIFT_CLICK_DAMAGE_PCT,
-  VOID_RIFT_DRAIN_RAMP_MIN,
-  VOID_COLLAPSE_HP_LOSS,
-  VOID_COLLAPSE_AFTERMATH_MS,
-  VOID_RIFT_SPAWN_RETRY_SEC,
+  VOID_MAX_CONCURRENT,
+  VOID_HP_BASE,
+  VOID_HP_PER_GALAXY,
+  VOID_HP_SEVERITY_MULT,
+  VOID_TRAVEL_MS,
+  VOID_CLICK_DAMAGE_PCT,
+  VOID_DRAIN_RAMP_MIN,
+  VOID_DRAIN_FLOOR,
+  VOID_IMPACT_HP_LOSS,
+  VOID_IMPACT_AFTERMATH_MS,
+  VOID_SPAWN_RETRY_SEC,
   GAME_TICK_INTERVAL_MS,
 } from '@/config/constants'
 
@@ -29,13 +29,12 @@ function unlock() {
   useGameStore().level = VOID_UNLOCK_LEVEL
 }
 
-/** Reisst einen bestimmten Typ auf und gibt die lebende Instanz zurück. */
-function open(defId: string) {
+/** Schickt ein bestimmtes Wesen los und gibt die lebende Instanz zurück. */
+function spawn(defId: string) {
   const store = useVoidStore()
-  store.active = []
-  const rift = store.openRift(defId)
-  expect(rift).not.toBeNull()
-  return rift!
+  const m = store.spawnMonster(defId)
+  expect(m).not.toBeNull()
+  return m!
 }
 
 describe('voidStore', () => {
@@ -58,7 +57,7 @@ describe('voidStore', () => {
       expect(store.active).toHaveLength(0)
     })
 
-    it('öffnet ab dem Freischalt-Level', () => {
+    it('schickt ab dem Freischalt-Level', () => {
       const store = useVoidStore()
       unlock()
       expect(store.isUnlocked).toBe(true)
@@ -68,8 +67,6 @@ describe('voidStore', () => {
       expect(store.active).toHaveLength(1)
     })
 
-    // Ein Nachbeben, das beim Wipe des Levels feststeckt, wäre ein Faktor, den
-    // niemand mehr sieht und niemand mehr loswird.
     it('lässt ein laufendes Nachbeben auch ohne Freischaltung auslaufen', () => {
       const store = useVoidStore()
       useGameStore().level = 0
@@ -87,31 +84,31 @@ describe('voidStore', () => {
   })
 
   describe('Aufreissen', () => {
-    it('hält die Obergrenze gleichzeitiger Risse ein', () => {
+    it('hält die Obergrenze gleichzeitiger Wesen ein', () => {
       unlock()
       const store = useVoidStore()
-      for (let i = 0; i < VOID_RIFT_MAX_CONCURRENT + 3; i++) store.openRift('sunlessBreach')
-      expect(store.active).toHaveLength(VOID_RIFT_MAX_CONCURRENT)
+      for (let i = 0; i < VOID_MAX_CONCURRENT + 5; i++) store.spawnMonster('sunlessBreach')
+      expect(store.active).toHaveLength(VOID_MAX_CONCURRENT)
     })
 
     it('skaliert die Zähigkeit mit Schwere und Galaxie', () => {
       unlock()
       useGalaxyStore().currentGalaxy = 3
-      const rift = open('sunlessBreach')
+      const m = spawn('sunlessBreach')
       const expected = Math.round(
-        VOID_RIFT_HP_BASE * VOID_RIFT_HP_SEVERITY_MULT.lesser * (1 + 2 * VOID_RIFT_HP_PER_GALAXY),
+        VOID_HP_BASE * VOID_HP_SEVERITY_MULT.lesser * (1 + 2 * VOID_HP_PER_GALAXY),
       )
-      expect(rift.maxHp).toBe(expected)
-      expect(rift.currentHp).toBe(expected)
+      expect(m.maxHp).toBe(expected)
+      expect(m.currentHp).toBe(expected)
     })
 
-    it('setzt die Frist nach der Schwere', () => {
+    it('setzt die Reisedauer nach der Schwere', () => {
       unlock()
-      const rift = open('unmakingScar')
-      expect(rift.collapseAt - rift.openedAt).toBe(VOID_RIFT_LIFETIME_MS.abyssal)
+      const m = spawn('unmakingScar')
+      expect(m.travelMs).toBe(VOID_TRAVEL_MS.abyssal)
     })
 
-    it('reisst nicht auf, während ein Overlay den Idle-Layer deckt', () => {
+    it('schickt nichts, während ein Overlay den Idle-Layer deckt', () => {
       unlock()
       const store = useVoidStore()
       store.setSpawningBlocked(true)
@@ -119,53 +116,119 @@ describe('voidStore', () => {
       store.tick()
       expect(store.active).toHaveLength(0)
       // Die Uhr darf dabei nicht leerlaufen, sonst kippt beim Schliessen des
-      // Overlays ein Stapel Risse auf einmal heraus.
+      // Overlays ein Stapel auf einmal heraus.
       expect(store.spawnCooldowns.lesser).toBe(0)
     })
 
-    it('lässt eine fällige Uhr kurz warten, wenn schon ein Riss steht', () => {
+    it('lässt eine fällige Uhr kurz warten, wenn das Feld voll ist', () => {
       unlock()
       const store = useVoidStore()
-      open('sunlessBreach')
+      for (let i = 0; i < VOID_MAX_CONCURRENT; i++) store.spawnMonster('sunlessBreach')
       store.spawnCooldowns.greater = GAME_TICK_INTERVAL_MS / 1000
       store.tick()
-      expect(store.active).toHaveLength(1)
-      expect(store.spawnCooldowns.greater).toBe(VOID_RIFT_SPAWN_RETRY_SEC)
+      expect(store.active).toHaveLength(VOID_MAX_CONCURRENT)
+      expect(store.spawnCooldowns.greater).toBe(VOID_SPAWN_RETRY_SEC)
+    })
+  })
+
+  describe('Die Reise', () => {
+    it('legt den Weg über die Reisedauer zurück', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+
+      store.voidNow = m.spawnedAt
+      expect(store.progressByUid.get(m.uid)).toBeCloseTo(0, 5)
+
+      store.voidNow = m.spawnedAt + m.travelMs / 2
+      expect(store.progressByUid.get(m.uid)).toBeCloseTo(0.5, 5)
+
+      store.voidNow = m.spawnedAt + m.travelMs
+      expect(store.progressByUid.get(m.uid)).toBeCloseTo(1, 5)
+    })
+
+    // Der gebündelte Beschuss und die HUD-Karte hängen beide daran.
+    it('kennt das vorderste Wesen', () => {
+      unlock()
+      const store = useVoidStore()
+      const slow = spawn('unmakingScar')
+      const fast = spawn('sunlessBreach')
+      // Das kleine ist schneller unterwegs, also ist es nach gleicher Zeit weiter.
+      store.voidNow = Date.now() + 20_000
+      expect(store.leadMonster?.uid).toBe(fast.uid)
+      expect(slow.travelMs).toBeGreaterThan(fast.travelMs)
+    })
+
+    it('kommt in der Bildmitte an, nicht am Rand', () => {
+      unlock()
+      const def = getVoidRift('sunlessBreach')!
+      const m = spawn('sunlessBreach')
+      const w = 1920
+      const h = 1080
+      const sun = 120
+
+      const start = voidPositionAt(m, def.sizePx, sun, m.spawnedAt, w, h)
+      const end = voidPositionAt(m, def.sizePx, sun, m.spawnedAt + m.travelMs, w, h)
+      const dStart = Math.hypot(start.x - w / 2, start.y - h / 2)
+      const dEnd = Math.hypot(end.x - w / 2, end.y - h / 2)
+
+      // Beginnt ausserhalb des Bildes und endet auf der Sonnenscheibe.
+      expect(dStart).toBeGreaterThan(Math.hypot(w, h) / 2)
+      expect(dEnd).toBeLessThanOrEqual(sun)
+      expect(end.scale).toBeCloseTo(1, 5)
     })
   })
 
   describe('Ziehen', () => {
-    it('zieht frisch geöffnet nur anteilig und bei voller Frist ganz', () => {
+    it('zieht am Rand nur anteilig und an der Sonne ganz', () => {
       unlock()
       const store = useVoidStore()
-      const rift = open('sunlessBreach')
+      const m = spawn('sunlessBreach')
       const def = getVoidRift('sunlessBreach')!
       const full = def.drain.cpsMult!
 
-      // Frisch: die Rampe steht auf ihrem Minimum.
-      store.voidNow = rift.openedAt
-      expect(store.cpsMult).toBeCloseTo(1 - (1 - full) * VOID_RIFT_DRAIN_RAMP_MIN, 6)
+      store.voidNow = m.spawnedAt
+      expect(store.cpsMult).toBeCloseTo(1 - (1 - full) * VOID_DRAIN_RAMP_MIN, 6)
 
-      // Kurz vor dem Kollaps: volle Wirkung.
-      store.voidNow = rift.collapseAt
+      store.voidNow = m.spawnedAt + m.travelMs
       expect(store.cpsMult).toBeCloseTo(full, 6)
     })
 
     it('lässt jede unberührte Achse auf 1', () => {
       unlock()
       const store = useVoidStore()
-      open('starvingMaw')
+      spawn('starvingMaw')
       expect(store.cpsMult).toBe(1)
       expect(store.xpMult).toBe(1)
       expect(store.materialDropMult).toBeLessThan(1)
     })
 
-    it('multipliziert offenen Riss und laufendes Nachbeben', () => {
+    it('summiert mehrere Wesen derselben Achse', () => {
       unlock()
       const store = useVoidStore()
-      const rift = open('sunlessBreach')
-      store.voidNow = rift.collapseAt
-      const fromRift = store.cpsMult
+      const a = spawn('sunlessBreach')
+      spawn('sunlessBreach')
+      store.voidNow = a.spawnedAt + a.travelMs
+      const def = getVoidRift('sunlessBreach')!
+      expect(store.cpsMult).toBeCloseTo(def.drain.cpsMult! ** 2, 6)
+    })
+
+    // Ohne diesen Deckel multiplizieren sich zwei Dutzend Faktoren gegen null,
+    // und eine Wirtschaft bei 2 % ist kein Druck mehr, sondern ein Abbruch.
+    it('fällt nie unter den Drossel-Boden, egal wie viele kommen', () => {
+      unlock()
+      const store = useVoidStore()
+      for (let i = 0; i < VOID_MAX_CONCURRENT; i++) store.spawnMonster('sunlessBreach')
+      store.voidNow = Date.now() + VOID_TRAVEL_MS.lesser
+      expect(store.cpsMult).toBeGreaterThanOrEqual(VOID_DRAIN_FLOOR)
+    })
+
+    it('multipliziert Wanderer und laufendes Nachbeben', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      store.voidNow = m.spawnedAt + m.travelMs
+      const fromMonster = store.cpsMult
 
       store.aftermaths.push({
         sourceId: 'other',
@@ -173,39 +236,36 @@ describe('voidStore', () => {
         durationMs: 10_000,
         effects: { cpsMult: 0.5 },
       })
-      expect(store.cpsMult).toBeCloseTo(fromRift * 0.5, 6)
+      expect(store.cpsMult).toBeCloseTo(fromMonster * 0.5, 6)
     })
   })
 
-  describe('Schliessen', () => {
+  describe('Erlegen', () => {
     it('nimmt einen Anteil der eigenen Trefferpunkte je Klick', () => {
       unlock()
       const store = useVoidStore()
-      const rift = open('unmakingScar')
-      const before = rift.currentHp
-      store.hitRift(rift.uid)
-      expect(store.active[0].currentHp).toBeCloseTo(
-        before - rift.maxHp * VOID_RIFT_CLICK_DAMAGE_PCT,
-        6,
-      )
+      const m = spawn('unmakingScar')
+      const before = m.currentHp
+      store.hitMonster(m.uid)
+      expect(store.active[0].currentHp).toBeCloseTo(before - m.maxHp * VOID_CLICK_DAMAGE_PCT, 6)
     })
 
-    it('schliesst den Riss, sobald die Trefferpunkte fallen', () => {
+    it('erlegt das Wesen, sobald die Trefferpunkte fallen', () => {
       unlock()
       const store = useVoidStore()
-      const rift = open('sunlessBreach')
-      const sealed = store.damageRift(rift.maxHp)
-      expect(sealed).toBe(true)
+      const m = spawn('sunlessBreach')
+      const slain = store.damageMonster(m.uid, m.maxHp)
+      expect(slain).toBe(true)
       expect(store.active).toHaveLength(0)
       expect(store.totalRiftsSealed).toBe(1)
       expect(store.lastOutcome.sealed).toBe(true)
     })
 
-    it('startet beim Schliessen das Beute-Fenster', () => {
+    it('startet beim Erlegen das Beute-Fenster', () => {
       unlock()
       const store = useVoidStore()
-      const rift = open('dimmingWound')
-      store.damageRift(rift.maxHp)
+      const m = spawn('dimmingWound')
+      store.damageMonster(m.uid, m.maxHp)
 
       const boon = store.aftermaths.find((a) => a.sourceId === 'dimmingWound')
       expect(boon).toBeDefined()
@@ -222,19 +282,19 @@ describe('voidStore', () => {
       gameStore.chimesPerSecond = 0
       gameStore.chimesPerClick = 10
 
-      const rift = open('sunlessBreach')
-      store.damageRift(rift.maxHp)
+      const m = spawn('sunlessBreach')
+      store.damageMonster(m.uid, m.maxHp)
       expect(gameStore.chimes).toBeGreaterThan(0)
     })
   })
 
-  describe('Kollaps', () => {
-    it('kollabiert, sobald die Frist abgelaufen ist', () => {
+  describe('Einschlag', () => {
+    it('schlägt ein, sobald der Weg vollendet ist', () => {
       unlock()
       const store = useVoidStore()
-      const rift = open('sunlessBreach')
-      store.voidNow = rift.collapseAt
-      store.checkCollapse()
+      const m = spawn('sunlessBreach')
+      store.voidNow = m.spawnedAt + m.travelMs
+      store.resolveArrivals()
 
       expect(store.active).toHaveLength(0)
       expect(store.totalRiftsCollapsed).toBe(1)
@@ -247,128 +307,125 @@ describe('voidStore', () => {
       const player = usePlayerStore()
       const before = player.currentHP
 
-      const rift = open('sunlessBreach')
-      store.collapseRift(rift)
+      const m = spawn('sunlessBreach')
+      store.impactMonster(m)
 
       expect(player.currentHP).toBeLessThan(before)
       expect(store.totalVoidHpLost).toBeGreaterThan(0)
       const echo = store.aftermaths.find((a) => a.sourceId === 'sunlessBreach')
       expect(echo).toBeDefined()
-      expect(echo!.durationMs).toBe(VOID_COLLAPSE_AFTERMATH_MS)
-      // Das Nachbeben zieht härter als der offene Riss es tat.
-      expect(echo!.effects.cpsMult).toBeLessThan(getVoidRift('sunlessBreach')!.drain.cpsMult!)
+      expect(echo!.durationMs).toBe(VOID_IMPACT_AFTERMATH_MS.lesser)
     })
 
-    // Ohne diese Staffelung wäre angefangene Arbeit wertlos, und die beste
-    // Antwort auf einen Riss, den man nicht schafft, wäre ihn zu ignorieren.
-    it('staffelt den Schaden nach den verbliebenen Trefferpunkten', () => {
+    // Der eigentliche Preis des schweren Wesens: es kostet mehr HP UND zieht
+    // danach viel länger nach.
+    it('staffelt Schaden und Nachbeben nach der Schwere', () => {
+      expect(VOID_IMPACT_HP_LOSS.abyssal).toBeGreaterThan(VOID_IMPACT_HP_LOSS.greater)
+      expect(VOID_IMPACT_HP_LOSS.greater).toBeGreaterThan(VOID_IMPACT_HP_LOSS.lesser)
+      expect(VOID_IMPACT_AFTERMATH_MS.abyssal).toBeGreaterThan(VOID_IMPACT_AFTERMATH_MS.greater)
+      expect(VOID_IMPACT_AFTERMATH_MS.greater).toBeGreaterThan(VOID_IMPACT_AFTERMATH_MS.lesser)
+    })
+
+    // Was ankommt, kommt ganz an — anders als beim früheren stehenden Riss.
+    // Angefangene Arbeit zählt trotzdem: ein angeschlagenes Wesen fällt dem
+    // Orbit-Beschuss unterwegs eher zum Opfer und kommt gar nicht erst an.
+    it('kostet unabhängig vom Restleben denselben Schaden', () => {
       unlock()
       const store = useVoidStore()
       const player = usePlayerStore()
 
-      const rift = open('unmakingScar')
-      rift.currentHp = rift.maxHp * 0.25
-      store.collapseRift(rift)
+      const full = spawn('sunlessBreach')
+      store.impactMonster(full)
+      const costFull = store.totalVoidHpLost
 
-      const full = VOID_COLLAPSE_HP_LOSS.abyssal
-      expect(store.totalVoidHpLost).toBeLessThan(full)
-      expect(store.totalVoidHpLost).toBeGreaterThan(0)
-      expect(player.currentHP).toBeGreaterThan(0)
-    })
+      player.currentHP = player.maxHP
+      store.totalVoidHpLost = 0
+      const hurt = spawn('sunlessBreach')
+      hurt.currentHp = hurt.maxHp * 0.05
+      store.impactMonster(hurt)
 
-    it('kostet auch bei fast geschlossenem Riss mindestens 1 HP', () => {
-      unlock()
-      const store = useVoidStore()
-      const rift = open('sunlessBreach')
-      rift.currentHp = 1
-      store.collapseRift(rift)
-      expect(store.totalVoidHpLost).toBeGreaterThanOrEqual(1)
+      expect(store.totalVoidHpLost).toBe(costFull)
     })
   })
 
-  // Ein Riss hinter der deckenden Minimap oder dem Command-Panel wäre
-  // unsichtbar UND unklickbar — also ein sicherer Kollaps, den der Spieler
-  // nicht abwenden kann. Das ist der eine Ausgang, den dieses System nie
-  // erzwingen darf, deshalb steht die Geometrie hier unter Test.
-  describe('Platzierung', () => {
-    it('stellt keinen Riss unter die erhobenen HUD-Panels', () => {
+  describe('Orbit-Beschuss', () => {
+    // Streufeuer über alle hätte bei einem Dutzend Wesen zur Folge, dass keines
+    // rechtzeitig fällt und alle ankommen.
+    it('bündelt sich auf das vorderste Wesen', () => {
       unlock()
       const store = useVoidStore()
-      const f = drifterField(window.innerWidth, window.innerHeight, measuredFieldInsets())
+      const back = spawn('sunlessBreach')
+      const front = spawn('sunlessBreach')
+      // Das zweite ein Stück vorziehen, damit es eindeutig vorne liegt.
+      front.spawnedAt -= 10_000
+      store.voidNow = Date.now()
 
-      for (const def of VOID_RIFTS) {
-        const half = voidRiftHalfExtent(def.sizePx)
-        for (let i = 0; i < 40; i++) {
-          store.active = []
-          const rift = store.openRift(def.id)!
-          const pos = voidRiftScreenPos(rift, half)
-          const inSideColumn =
-            pos.x < f.left + f.sidePanelWidth + half ||
-            pos.x > f.left + f.width - f.sidePanelWidth - half
-          if (inSideColumn) {
-            expect(
-              pos.y + half,
-              `${def.id} steht in der Seitenspalte und ragt in das HUD-Panel`,
-            ).toBeLessThanOrEqual(f.sidePanelTop)
-          }
-        }
+      const damage = front.maxHp * 0.5
+      let pool = damage
+      const order = [front, back]
+      for (const m of order) {
+        if (pool <= 0) break
+        const dealt = Math.min(pool, m.currentHp)
+        pool -= dealt
+        store.damageMonster(m.uid, dealt)
       }
+      expect(front.currentHp).toBeCloseTo(front.maxHp - damage, 6)
+      expect(back.currentHp).toBe(back.maxHp)
     })
 
-    it('hält jeden Riss im sichtbaren Feld', () => {
+    it('reicht Überschuss an das nächste Wesen weiter', () => {
       unlock()
       const store = useVoidStore()
-      for (const def of VOID_RIFTS) {
-        const half = voidRiftHalfExtent(def.sizePx)
-        for (let i = 0; i < 25; i++) {
-          store.active = []
-          const rift = store.openRift(def.id)!
-          const pos = voidRiftScreenPos(rift, half)
-          expect(pos.x - half).toBeGreaterThanOrEqual(0)
-          expect(pos.x + half).toBeLessThanOrEqual(window.innerWidth)
-          expect(pos.y - half).toBeGreaterThanOrEqual(0)
-          expect(pos.y + half).toBeLessThanOrEqual(window.innerHeight)
-        }
+      const front = spawn('sunlessBreach')
+      const back = spawn('sunlessBreach')
+      front.spawnedAt -= 10_000
+      store.voidNow = Date.now()
+
+      // Genug, um das vorderste zu erlegen und beim zweiten anzukommen.
+      let pool = front.maxHp * 1.5
+      for (const m of [front, back]) {
+        if (pool <= 0) break
+        const dealt = Math.min(pool, m.currentHp)
+        pool -= dealt
+        store.damageMonster(m.uid, dealt)
       }
+      expect(store.totalRiftsSealed).toBe(1)
+      expect(store.active).toHaveLength(1)
+      expect(store.active[0].currentHp).toBeLessThan(back.maxHp)
     })
   })
 
   describe('Katalog', () => {
-    // Ein falscher Pfad rendert stumm als leeres Bild — im dunklen Schlund
-    // fiele das niemandem auf, und der Riss stünde ohne sein Wesen da.
+    it('führt jede Schwere mit mindestens einem Typ', () => {
+      const severities = new Set(VOID_RIFTS.map((r) => r.severity))
+      expect(severities.size).toBeGreaterThanOrEqual(3)
+    })
+
     it('verweist nur auf Bewohner-Bilder, die es wirklich gibt', () => {
       const publicDir = resolve(__dirname, '../../../../public')
       for (const def of VOID_RIFTS) {
         if (!def.dweller) continue
-        const file = join(publicDir, def.dweller)
-        expect(existsSync(file), `${def.id} → ${def.dweller} fehlt`).toBe(true)
+        expect(existsSync(join(publicDir, def.dweller)), `${def.id} → ${def.dweller} fehlt`).toBe(
+          true,
+        )
       }
     })
 
-    // Die Eskalation ist Absicht: bliebe auch der kleine Riss bewohnt, hiesse
-    // „da ist etwas drin" nichts mehr.
-    it('lässt die kleinen Risse leer und bewohnt nur die schweren', () => {
+    it('lässt die kleinen Wesen gestaltlos und bewohnt nur die schweren', () => {
       for (const def of VOID_RIFTS) {
         if (def.severity === 'lesser') {
-          expect(def.dweller, `${def.id} sollte ein leeres Loch sein`).toBeUndefined()
+          expect(def.dweller, `${def.id} sollte gestaltlos sein`).toBeUndefined()
         } else {
           expect(def.dweller, `${def.id} sollte einen Bewohner haben`).toBeDefined()
         }
       }
     })
 
-    it('führt jede Schwere mit mindestens einem Typ', () => {
-      const severities = new Set(VOID_RIFTS.map((r) => r.severity))
-      expect(severities.size).toBeGreaterThanOrEqual(3)
-    })
-
-    // Ein Riss, der an einer Achse zieht und an einer anderen auszahlt, wäre
+    // Ein Wesen, das an einer Achse zieht und an einer anderen auszahlt, wäre
     // zwei Nachrichten statt einer — siehe der Kopf von config/world/void.
-    it('zahlt auf denselben Achsen aus, an denen er zieht', () => {
+    it('zahlt auf denselben Achsen aus, an denen es zieht', () => {
       for (const def of VOID_RIFTS) {
-        const drained = Object.keys(def.drain)
-        const paid = Object.keys(def.boon.effects)
-        expect(paid.sort()).toEqual(drained.sort())
+        expect(Object.keys(def.boon.effects).sort()).toEqual(Object.keys(def.drain).sort())
       }
     })
 
@@ -386,6 +443,13 @@ describe('voidStore', () => {
           expect(value).toBeLessThanOrEqual(def.drain[key as keyof typeof def.drain]!)
         }
       }
+    })
+
+    // Tempo ist die Drohung, Zähigkeit die Arbeit — beides zugleich hochzudrehen
+    // machte aus einer Entscheidung eine Strafe.
+    it('lässt die schweren Wesen langsamer reisen, nicht schneller', () => {
+      expect(VOID_TRAVEL_MS.abyssal).toBeGreaterThan(VOID_TRAVEL_MS.greater)
+      expect(VOID_TRAVEL_MS.greater).toBeGreaterThan(VOID_TRAVEL_MS.lesser)
     })
   })
 })

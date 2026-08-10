@@ -173,24 +173,29 @@ export interface DrifterOrbitStrike {
   kills: number
 }
 
-// ── The Void — Risse, die den Orbit von aussen aufziehen ───────────────────
+// ── The Void — was aus der Leere auf die Sonne zukriecht ───────────────────
 // Das Gegenstück zu allem anderen in diesem Spiel: kein System, das etwas gibt,
-// sondern eines, das etwas nimmt, solange man es stehen lässt.
+// sondern eines, das etwas nimmt, wenn man es gewähren lässt.
+//
+// Ein Void-Wesen reisst am Bildrand aus dem Nichts und wandert von dort zur
+// Sonne. Es hat keine Frist — es hat einen WEG, und der ist die Uhr. Wer nicht
+// eingreift, sieht es ankommen; das ist die Drohung, und sie steht die ganze
+// Zeit sichtbar auf dem Schirm, statt in einem Countdown zu stecken.
 
-/** Wie schwer ein Riss wiegt — steuert Spawn-Uhr, Grösse und Kartenfarbe. */
+/** Wie schwer ein Wesen wiegt — steuert Spawn-Uhr, Grösse, Tempo und Einschlag. */
 export type VoidRiftSeverity = 'lesser' | 'greater' | 'abyssal'
 
 /**
- * Die Achsen, an denen ein Riss zieht bzw. seine Beute zahlt. Bewusst DIESELBE
- * Liste wie bei Drifter und Omen — ein Riss ist ein Multiplikator wie jeder
+ * Die Achsen, an denen der Void zieht bzw. seine Beute zahlt. Bewusst DIESELBE
+ * Liste wie bei Drifter und Omen — der Void ist ein Multiplikator wie jeder
  * andere, er steht nur unter 1. Eine eigene Liste hätte beim nächsten Zusatz
  * still danebengestanden.
  */
 export type VoidEffects = TimedBuffEffects
 
 /**
- * Statische Definition eines Riss-Typs — reine Daten. Der Store öffnet, zieht
- * und schliesst sie; gezeichnet werden sie vom `VoidLayer`.
+ * Statische Definition eines Void-Wesens — reine Daten. Der Store lässt sie
+ * wandern, der `VoidLayer` zeichnet sie alle in EINEM Canvas.
  */
 export interface VoidRiftDef {
   id: string
@@ -199,32 +204,31 @@ export interface VoidRiftDef {
   severity: VoidRiftSeverity
   /** Relatives Gewicht INNERHALB der eigenen Schwere. */
   weight: number
-  /** Iconify-Name für die HUD-Karte. Der Riss selbst ist reines CSS. */
+  /** Iconify-Name für die HUD-Karte. Der Körper wird gezeichnet, nicht geicont. */
   icon: string
-  /** Signaturfarbe: Aura, Rand-Ping, HUD-Karte. */
+  /** Signaturfarbe: Aura, Schweif, HP-Ring, HUD-Karte. */
   color: string
-  /** Kantenlänge des Risses in px bei vollem Wachstum. */
+  /** Kantenlänge des Wesens in px, wenn es an der Sonne ankommt. */
   sizePx: number
   /**
-   * Was im Schlund steht — Bildpfad, oder `undefined` für ein leeres Loch.
+   * Das Bild im Schlund — oder `undefined` für ein blosses Loch.
    *
-   * Bewusst nicht für jeden Typ gesetzt: die kleinen Risse bleiben leer, und
-   * genau dadurch heisst „da ist etwas drin" etwas. Der Void bekommt so eine
-   * Eskalation, ohne seine Gestaltlosigkeit ganz aufzugeben — man sieht nie
-   * das ganze Wesen, immer nur den Ausschnitt, den der Riss freigibt.
+   * Bewusst nicht für jeden Typ: die kleinen Wesen bleiben gestaltlose Risse,
+   * und genau dadurch heisst „da ist etwas drin" etwas. Der Void bekommt so
+   * eine Eskalation, ohne seine Gestaltlosigkeit ganz aufzugeben — man sieht
+   * nie das ganze Wesen, immer nur den Ausschnitt, den der Riss freigibt.
    */
   dweller?: string
-  /** Eine Zeile, die sagt, was er kostet — steht auf der HUD-Karte. */
+  /** Eine Zeile, die sagt, was es kostet — steht auf der HUD-Karte. */
   drainLine: string
-  /** Eine Zeile, die sagt, was das Schliessen einbringt. */
+  /** Eine Zeile, die sagt, was das Erlegen einbringt. */
   boonLine: string
   /**
-   * Woran er zieht, solange er offen steht. Die Werte gelten bei VOLLEM
-   * Wachstum — frisch geöffnet wirkt er anteilig schwächer, siehe
-   * `voidStore.drainEffects`.
+   * Woran es zieht, während es unterwegs ist. Die Werte gelten bei ANKUNFT —
+   * am Bildrand wirkt es anteilig schwächer, siehe `voidStore.drainEffects`.
    */
   drain: VoidEffects
-  /** Was das Schliessen auszahlt. */
+  /** Was das Erlegen auszahlt. */
   boon: {
     durationMs: number
     effects: VoidEffects
@@ -233,30 +237,37 @@ export interface VoidRiftDef {
     /** So viele Materialwürfe. */
     materials?: number
   }
-  /** Was ein Kollaps hinterlässt — dasselbe Ziehen, nur befristet und härter. */
+  /** Was ein Einschlag hinterlässt — dasselbe Ziehen, nur befristet und härter. */
   aftermath: VoidEffects
 }
 
-/** Ein Riss, der gerade offen steht. Position und Wachstum leitet der Renderer
- *  aus `openedAt` ab, damit ein gedrosselter Tab sie nicht desynchronisiert. */
-export interface ActiveVoidRift {
-  /** Eindeutige Instanz-Id — zugleich der Vue-Render-Key. */
+/**
+ * Ein Wesen, das gerade unterwegs ist.
+ *
+ * Die Position wird NICHT gespeichert, sondern aus `spawnedAt` und der Wanduhr
+ * abgeleitet (siehe `utils/orbit/voidPath.ts`) — dasselbe Prinzip wie beim
+ * Drifter: ein gedrosselter Tab, ein verschluckter Frame oder ein offenes Modal
+ * können es damit nie von der Spiellogik abkoppeln. Gespeichert ist nur, WOHER
+ * es kam und WIE LANGE es braucht.
+ */
+export interface VoidMonster {
+  /** Eindeutige Instanz-Id — auch der Schlüssel im Renderer. */
   uid: number
   defId: string
-  /** Winkel auf dem Rand-Ring (rad) — wo am Bildrand er aufreisst. */
+  /** Winkel des Startpunkts am Bildrand (rad). */
   angle: number
-  /** Abstand von der Bildmitte, als Anteil der halben Bildschirmdiagonale. */
-  radiusFrac: number
-  openedAt: number
-  /** Wanduhr-Zeitpunkt, an dem er kollabiert, wenn er dann noch steht. */
-  collapseAt: number
+  /** Seitlicher Versatz der Bahn (−1..1) — sonst laufen alle exakt radial. */
+  drift: number
+  spawnedAt: number
+  /** Reisedauer in ms. `spawnedAt + travelMs` ist der Einschlag. */
+  travelMs: number
   maxHp: number
   currentHp: number
-  /** Hochgezählt bei jedem Klick — treibt den Trefferblitz im Layer. */
+  /** Hochgezählt bei jedem Klick — treibt den Trefferblitz. */
   hitsLanded: number
 }
 
-/** Ein laufendes Kollaps-Nachbeben. `sourceId` ist die `VoidRiftDef.id`. */
+/** Ein laufendes Einschlag-Nachbeben. `sourceId` ist die `VoidRiftDef.id`. */
 export interface VoidAftermath {
   sourceId: string
   expiresAt: number
@@ -264,19 +275,19 @@ export interface VoidAftermath {
   effects: VoidEffects
 }
 
-/** Bilanz des letzten geschlossenen bzw. kollabierten Risses. Der Layer spielt
- *  sich an `seq` ab — ein erzwungener Kollaps sieht damit aus wie ein echter. */
+/** Bilanz des letzten Ausgangs. Der Layer spielt sich an `seq` ab — ein
+ *  erzwungener Einschlag sieht damit aus wie ein erspielter. */
 export interface VoidOutcome {
   /** Hochgezählt bei jedem Ausgang; `0` heisst: noch keiner. */
   seq: number
   at: number
   defId: string
-  /** `true` = geschlossen, `false` = kollabiert. */
+  /** `true` = erlegt, `false` = eingeschlagen. */
   sealed: boolean
   /** Bildschirmposition, an der es passierte — dort spielt der Effekt. */
   x: number
   y: number
-  /** Sonnen-HP, die der Kollaps gekostet hat. Bei `sealed` immer 0. */
+  /** Sonnen-HP, die der Einschlag gekostet hat. Bei `sealed` immer 0. */
   hpLost: number
 }
 

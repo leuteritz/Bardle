@@ -243,14 +243,15 @@ export const useBardAbilityStore = defineStore('bardAbility', {
         star.durationMs += GAME_TICK_INTERVAL_MS
       }
 
-      // Void-Risse: BEIDE Marken rücken mit. Nur `collapseAt` zu schieben
-      // hielte den Kollaps auf, liesse den Riss aber weiterwachsen — sein
-      // Fortschritt misst den Abstand zwischen den beiden, und die Drossel
-      // hängt daran. In der Stase steht er still, wie alles andere auch.
+      // Void-Wesen: `spawnedAt` mitschieben lässt sie auf der Stelle stehen.
+      // Ihr Weg misst `(now − spawnedAt) / travelMs` — rückt die Startmarke im
+      // selben Takt mit wie die Uhr, bleibt der Bruch konstant, und damit
+      // Position, Grösse UND Drossel. `travelMs` anzufassen wäre falsch: das
+      // würde sie verlangsamen statt anzuhalten, und die Stase soll die Welt
+      // stillstellen, nicht zähflüssig machen.
       const voidStore = useVoidStore()
-      for (const rift of voidStore.active) {
-        rift.openedAt += GAME_TICK_INTERVAL_MS
-        rift.collapseAt += GAME_TICK_INTERVAL_MS
+      for (const monster of voidStore.active) {
+        monster.spawnedAt += GAME_TICK_INTERVAL_MS
       }
     },
 

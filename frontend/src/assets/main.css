@@ -73,3 +73,12 @@
 /* `.cosmic-stage-bg` steht bewusst NICHT in der Liste: dieses Sternfeld gehört
    den Profil-Tabs (Rift-Board, Sigil-Detailspalte) und ist genau dann sichtbar,
    wenn der Idle-Layer verdeckt ist. */
+
+/* Void: Zeigefinger, solange der Cursor über einem Wesen steht. Die Klasse
+   setzt der VoidLayer per Hit-Test, weil sein Canvas `pointer-events: none`
+   trägt — es liegt über der Sonne und dürfte deren Klicks nicht abfangen, also
+   kann es auch keinen eigenen Cursor führen. */
+body.void-target-hover,
+body.void-target-hover * {
+  cursor: crosshair !important;
+}

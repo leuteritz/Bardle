@@ -1,22 +1,28 @@
 <template>
   <div class="void-layer">
-    <VoidRiftObject
-      v-if="activeRift && activeDef"
-      :key="activeRift.uid"
-      :rift="activeRift"
-      :def="activeDef"
-      :paused="isIdleRenderingPaused"
-      @hit="onHit"
-    />
+    <!-- EIN Canvas für alle Wesen. Bewusst kein Knoten je Wesen: bei zwei
+         Dutzend gleichzeitig wären das hunderte DOM-Elemente mit eigener
+         Frame-Schleife, eigenem Layer und eigenem Style-Recalc
+         (Performance-Regel 4). `pointer-events: none` ist dabei Pflicht — das
+         Canvas deckt die Sonne ab, und ein Klick, der auf ihr landen soll, darf
+         hier nicht hängenbleiben. Getroffen wird über einen Capture-Listener,
+         siehe unten. -->
+    <canvas
+      ref="canvasEl"
+      class="void-canvas"
+      :style="{ display: hasActive ? 'block' : 'none' }"
+      aria-hidden="true"
+    ></canvas>
 
-    <!-- Ausgang: Funken beim Schliessen, eine einfahrende Welle beim Kollaps.
-         Beides hängt am Zähler des Stores, damit ein erzwungener Ausgang
-         genauso aussieht wie ein erspielter. -->
+    <!-- Ausgang: Funken beim Erlegen, ein Einschlag an der Sonne. Beides hängt
+         am Zähler des Stores, damit ein erzwungener Ausgang genauso aussieht
+         wie ein erspielter. Als DOM, nicht im Canvas: es ist selten, kurz und
+         trägt Text. -->
     <div
       v-if="outcome"
       :key="`vo-${outcome.seq}`"
       class="vo-burst"
-      :class="outcome.sealed ? 'vo-burst--sealed' : 'vo-burst--collapsed'"
+      :class="outcome.sealed ? 'vo-burst--sealed' : 'vo-burst--impact'"
       :style="{ left: `${outcome.x}px`, top: `${outcome.y}px` }"
       aria-hidden="true"
     >
@@ -29,48 +35,209 @@
       <span class="vo-label" :style="{ color: outcome.color }">{{ outcome.title }}</span>
       <span class="vo-sub">{{ outcome.sub }}</span>
     </div>
+
+    <!-- Die Schockwelle eines Einschlags — sie geht von der SONNE aus, nicht
+         vom Aufschlagpunkt: getroffen wurde sie, nicht die Stelle am Rand. -->
+    <div
+      v-if="impactWave"
+      :key="`vw-${impactWave.seq}`"
+      class="vo-wave"
+      :class="`vo-wave--${impactWave.severity}`"
+      :style="{ '--wave-color': impactWave.color }"
+      aria-hidden="true"
+    >
+      <span class="vo-wave__ring"></span>
+      <span class="vo-wave__ring vo-wave__ring--2"></span>
+      <span class="vo-wave__flash"></span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useVoidStore } from '@/stores/world/voidStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { useActionToast } from '@/composables/ui/useActionToast'
 import { useHerald } from '@/composables/ui/useHerald'
 import { logVoidRiftSealed, logVoidRiftCollapsed } from '@/config/ui/eventLog'
 import { getVoidRift } from '@/config/world/void'
 import { hexToRgbTriple } from '@/utils/ui/format'
-import VoidRiftObject from './VoidRiftObject.vue'
+import { voidPositionAt, voidHitRadius } from '@/utils/orbit/voidPath'
+import { getVoidSprite, voidSpriteDrawSize } from '@/utils/fx/voidSprite'
 import {
   VOID_SEAL_BURST_PARTICLES,
-  VOID_RIFT_SEAL_FX_MS,
-  VOID_RIFT_COLLAPSE_FX_MS,
+  VOID_SEAL_FX_MS,
+  VOID_IMPACT_FX_MS,
+  VOID_SEVERITY_COLOR,
 } from '@/config/constants'
 
 const voidStore = useVoidStore()
+const planetShop = usePlanetShopStore()
 const { active, lastOutcome } = storeToRefs(voidStore)
 const { isIdleRenderingPaused } = useRenderingPaused()
 const { showToast } = useActionToast()
 const { announce } = useHerald()
 
-const activeRift = computed(() => active.value[0] ?? null)
-const activeDef = computed(() =>
-  activeRift.value ? (getVoidRift(activeRift.value.defId) ?? null) : null,
-)
+const canvasEl = ref<HTMLCanvasElement>()
+const hasActive = computed(() => active.value.length > 0)
 
 // Kein Aufreissen, solange das Bard-Profil oder ein Star Fight den Idle-Layer
-// deckt: ein Riss, den niemand sehen kann, wäre eine Strafe für das Öffnen
-// eines Menüs und keine Entscheidung.
+// deckt: ein Wesen, das niemand sehen kann, liefe ungesehen bis zur Sonne.
 watch(isIdleRenderingPaused, (hidden) => voidStore.setSpawningBlocked(hidden), {
   immediate: true,
 })
 
-function onHit(): void {
-  const rift = activeRift.value
-  if (!rift) return
-  voidStore.hitRift(rift.uid)
+// ── Zeichnen ────────────────────────────────────────────────────────────────
+
+let frame = 0
+let ctx: CanvasRenderingContext2D | null = null
+let cssW = 0
+let cssH = 0
+let dpr = 1
+/** Zuletzt gesehene Trefferzahl je Wesen — daraus wird der kurze Aufblitz. */
+const lastHits = new Map<number, { hits: number; at: number }>()
+
+function resize(): void {
+  const el = canvasEl.value
+  if (!el) return
+  dpr = Math.min(2, window.devicePixelRatio || 1)
+  cssW = window.innerWidth
+  cssH = window.innerHeight
+  el.width = Math.round(cssW * dpr)
+  el.height = Math.round(cssH * dpr)
+  el.style.width = `${cssW}px`
+  el.style.height = `${cssH}px`
+  ctx = el.getContext('2d')
+  // Ab hier wird durchweg in CSS-Pixeln gerechnet; die Pixeldichte steckt
+  // allein in dieser Transformation und in der Auflösung der Sprites.
+  ctx?.setTransform(dpr, 0, 0, dpr, 0, 0)
+}
+
+function draw(): void {
+  const el = canvasEl.value
+  if (!el || !ctx) {
+    frame = requestAnimationFrame(draw)
+    return
+  }
+  // Nicht Sichtbares kostet nichts (Performance-Regel 5): liegt ein Modal
+  // darüber, endet der Frame vor dem Zeichnen.
+  if (isIdleRenderingPaused.value || active.value.length === 0) {
+    frame = requestAnimationFrame(draw)
+    return
+  }
+
+  const now = Date.now()
+  const sunRadius = planetShop.orbitSunRadius
+  ctx.clearRect(0, 0, cssW, cssH)
+
+  for (const m of active.value) {
+    const def = getVoidRift(m.defId)
+    if (!def) continue
+
+    const pos = voidPositionAt(m, def.sizePx, sunRadius, now, cssW, cssH)
+    const size = voidSpriteDrawSize(def.sizePx) * pos.scale
+    const half = size / 2
+
+    // Ein `drawImage` je Wesen — der ganze Körper samt Aura, Zacken und
+    // Bewohner steckt im vorgerenderten Sprite.
+    ctx.drawImage(getVoidSprite(def, dpr), pos.x - half, pos.y - half, size, size)
+
+    // Trefferblitz: kurz nach einem Klick liegt ein heller Schleier darüber.
+    const hit = lastHits.get(m.uid)
+    if (hit && hit.hits !== m.hitsLanded) {
+      hit.hits = m.hitsLanded
+      hit.at = now
+    } else if (!hit) {
+      lastHits.set(m.uid, { hits: m.hitsLanded, at: 0 })
+    }
+    const flashAge = hit ? now - hit.at : Infinity
+    if (flashAge < 160) {
+      ctx.save()
+      ctx.globalAlpha = (1 - flashAge / 160) * 0.55
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.drawImage(getVoidSprite(def, dpr), pos.x - half, pos.y - half, size, size)
+      ctx.restore()
+    }
+
+    // Trefferpunkte nur zeichnen, wenn schon etwas fehlt — ein voller Ring an
+    // zwei Dutzend Wesen wäre Rauschen, und er kostet je Wesen einen Pfad.
+    const hpFrac = m.maxHp > 0 ? m.currentHp / m.maxHp : 0
+    if (hpFrac < 0.999) {
+      const r = (def.sizePx / 2) * pos.scale * 1.28
+      ctx.save()
+      ctx.lineWidth = Math.max(2, 3 * pos.scale)
+      ctx.strokeStyle = 'rgba(36,21,54,0.85)'
+      ctx.beginPath()
+      ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.strokeStyle = def.color
+      ctx.beginPath()
+      ctx.arc(pos.x, pos.y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * hpFrac)
+      ctx.stroke()
+      ctx.restore()
+    }
+  }
+
+  frame = requestAnimationFrame(draw)
+}
+
+// ── Treffen ─────────────────────────────────────────────────────────────────
+// Der Klick läuft NICHT über das Canvas (das ist `pointer-events: none`,
+// sonst käme kein Klick mehr bei der Sonne an), sondern über einen Listener in
+// der CAPTURE-Phase: er sieht den Klick vor jedem anderen Handler, prüft, ob
+// ein Wesen an dieser Stelle steht, und hält ihn nur dann auf. Trifft er
+// nichts, passiert gar nichts und der Klick geht seinen normalen Weg zur Sonne.
+
+/** Das Wesen unter einem Punkt — das VORDERSTE zuerst, denn genau das will man
+ *  treffen, wenn zwei sich überlappen. */
+function monsterAt(x: number, y: number): number | null {
+  if (active.value.length === 0) return null
+  const now = Date.now()
+  const sunRadius = planetShop.orbitSunRadius
+  let bestUid: number | null = null
+  let bestT = -1
+  for (const m of active.value) {
+    const def = getVoidRift(m.defId)
+    if (!def) continue
+    const pos = voidPositionAt(m, def.sizePx, sunRadius, now, cssW, cssH)
+    const r = voidHitRadius(def.sizePx, pos.scale)
+    if (Math.hypot(pos.x - x, pos.y - y) > r) continue
+    if (pos.t > bestT) {
+      bestT = pos.t
+      bestUid = m.uid
+    }
+  }
+  return bestUid
+}
+
+function onClickCapture(event: MouseEvent): void {
+  if (isIdleRenderingPaused.value || active.value.length === 0) return
+  const uid = monsterAt(event.clientX, event.clientY)
+  if (uid === null) return
+  // Nur wenn wirklich getroffen: sonst wäre jeder Klick neben einem Wesen ein
+  // verschluckter Sonnenklick.
+  event.stopPropagation()
+  event.preventDefault()
+  voidStore.hitMonster(uid)
+}
+
+/** Zeigefinger, wenn der Cursor über einem Wesen steht. Gedrosselt, weil ein
+ *  Hit-Test bei jeder Mausbewegung über zwei Dutzend Wesen läuft. */
+let hoverCheckAt = 0
+let hovering = false
+function onMouseMove(event: MouseEvent): void {
+  const now = performance.now()
+  if (now - hoverCheckAt < 60) return
+  hoverCheckAt = now
+  const over =
+    !isIdleRenderingPaused.value &&
+    active.value.length > 0 &&
+    monsterAt(event.clientX, event.clientY) !== null
+  if (over === hovering) return
+  hovering = over
+  document.body.classList.toggle('void-target-hover', over)
 }
 
 // ── Ausgang ─────────────────────────────────────────────────────────────────
@@ -91,7 +258,9 @@ const outcome = ref<{
   sub: string
   particles: OutcomeSpark[]
 } | null>(null)
+const impactWave = ref<{ seq: number; severity: string; color: string } | null>(null)
 let outcomeTimer: ReturnType<typeof setTimeout> | null = null
+let waveTimer: ReturnType<typeof setTimeout> | null = null
 
 watch(
   () => lastOutcome.value.seq,
@@ -101,19 +270,29 @@ watch(
     if (!def) return
 
     if (result.sealed) {
-      showToast(`${def.name} sealed — ${def.boonLine}`, 'event')
+      showToast(`${def.name} slain — ${def.boonLine}`, 'event')
       logVoidRiftSealed(def.name, def.boonLine)
     } else {
-      showToast(`${def.name} collapsed — ${result.hpLost} HP lost`, 'warning')
+      showToast(`${def.name} reached the sun — ${result.hpLost} HP lost`, 'warning')
       logVoidRiftCollapsed(def.name, result.hpLost)
+      impactWave.value = {
+        seq: result.seq,
+        severity: def.severity,
+        color: VOID_SEVERITY_COLOR[def.severity] ?? def.color,
+      }
+      if (waveTimer) clearTimeout(waveTimer)
+      waveTimer = setTimeout(() => {
+        impactWave.value = null
+        waveTimer = null
+      }, VOID_IMPACT_FX_MS)
     }
 
-    // Nur der schwerste Riss verdient ein Banner. Ein Herald für jeden kleinen
-    // Riss würde die Meldung entwerten, die für den Warp reserviert ist.
+    // Nur das schwerste Wesen verdient ein Banner. Ein Herald für jedes kleine
+    // würde die Meldung entwerten, die für den Warp reserviert ist.
     if (def.severity === 'abyssal') {
       announce({
         kind: 'champion',
-        eyebrow: result.sealed ? 'RIFT SEALED' : 'RIFT COLLAPSED',
+        eyebrow: result.sealed ? 'VOID SLAIN' : 'THE VOID BROKE THROUGH',
         headline: def.name,
         subline: result.sealed ? def.boonLine : `The sun took ${result.hpLost} damage`,
         icon: def.icon,
@@ -123,9 +302,9 @@ watch(
 
     const step = (Math.PI * 2) / VOID_SEAL_BURST_PARTICLES
     const base = result.seq * 0.7
-    // Beim Schliessen fliegen die Funken nach AUSSEN, beim Kollaps fallen sie
+    // Beim Erlegen fliegen die Funken nach AUSSEN, beim Einschlag fallen sie
     // nach innen — dieselbe Geometrie, umgekehrtes Vorzeichen, und man sieht
-    // auf einen Blick, welcher der beiden Ausgänge eingetreten ist.
+    // auf einen Blick, welcher Ausgang eingetreten ist.
     const dir = result.sealed ? 1 : -1
     outcome.value = {
       seq: result.seq,
@@ -133,7 +312,7 @@ watch(
       x: result.x,
       y: result.y,
       color: def.color,
-      title: result.sealed ? 'SEALED' : 'COLLAPSED',
+      title: result.sealed ? 'SLAIN' : 'BREACH',
       sub: result.sealed ? def.boonLine : `−${result.hpLost} HP`,
       particles: Array.from({ length: VOID_SEAL_BURST_PARTICLES }, (_, i) => {
         const angle = base + step * i
@@ -147,24 +326,51 @@ watch(
         outcome.value = null
         outcomeTimer = null
       },
-      result.sealed ? VOID_RIFT_SEAL_FX_MS : VOID_RIFT_COLLAPSE_FX_MS,
+      result.sealed ? VOID_SEAL_FX_MS : VOID_IMPACT_FX_MS,
     )
   },
 )
 
+// Weggefallene Wesen aus der Blitz-Tabelle räumen, sonst wächst sie über eine
+// lange Sitzung mit jedem erlegten Wesen weiter.
+watch(active, (list) => {
+  if (lastHits.size <= list.length) return
+  const live = new Set(list.map((m) => m.uid))
+  for (const uid of [...lastHits.keys()]) if (!live.has(uid)) lastHits.delete(uid)
+})
+
+onMounted(() => {
+  resize()
+  window.addEventListener('resize', resize)
+  document.addEventListener('click', onClickCapture, true)
+  window.addEventListener('mousemove', onMouseMove, { passive: true })
+  frame = requestAnimationFrame(draw)
+})
+
 onUnmounted(() => {
+  window.removeEventListener('resize', resize)
+  document.removeEventListener('click', onClickCapture, true)
+  window.removeEventListener('mousemove', onMouseMove)
+  document.body.classList.remove('void-target-hover')
+  if (frame) cancelAnimationFrame(frame)
   if (outcomeTimer) clearTimeout(outcomeTimer)
+  if (waveTimer) clearTimeout(waveTimer)
 })
 </script>
 
 <style scoped>
 /* Auf derselben Höhe wie der Drifter-Layer: über der Klickfläche der Sonne,
-   unter Header, Bottom-Bar und jedem Modal. Die Hülle selbst fängt nie einen
-   Klick ab — das tut allein die Trefferfläche des Risses. */
+   unter Header, Bottom-Bar und jedem Modal. */
 .void-layer {
   position: fixed;
   inset: 0;
   z-index: 42;
+  pointer-events: none;
+}
+
+.void-canvas {
+  position: fixed;
+  inset: 0;
   pointer-events: none;
 }
 
@@ -187,7 +393,7 @@ onUnmounted(() => {
   animation: vo-fly-out 0.72s cubic-bezier(0.18, 0.7, 0.35, 1) forwards;
 }
 
-.vo-burst--collapsed .vo-spark {
+.vo-burst--impact .vo-spark {
   animation: vo-fall-in 0.9s cubic-bezier(0.5, 0, 0.75, 0.2) forwards;
 }
 
@@ -242,7 +448,7 @@ onUnmounted(() => {
   animation: vo-rise-sub 1s ease-out forwards;
 }
 
-.vo-burst--collapsed .vo-sub {
+.vo-burst--impact .vo-sub {
   color: #cc6050;
 }
 
@@ -276,8 +482,87 @@ onUnmounted(() => {
   }
 }
 
+/* ── Einschlag an der Sonne ── */
+/* Zwei Ringe und ein Blitz, alle aus der Bildmitte. Nur `transform` und
+   `opacity` sind animiert; die Ringstärke unterscheidet die Schwere, nicht
+   eine zweite Animation. */
+.vo-wave {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.vo-wave__ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 220px;
+  height: 220px;
+  margin: -110px 0 0 -110px;
+  border-radius: 50%;
+  border: 3px solid var(--wave-color);
+  animation: vo-wave-out 1.15s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
+}
+
+.vo-wave__ring--2 {
+  animation-delay: 0.16s;
+  border-width: 2px;
+  opacity: 0.7;
+}
+
+.vo-wave--greater .vo-wave__ring {
+  border-width: 4px;
+}
+.vo-wave--abyssal .vo-wave__ring {
+  border-width: 6px;
+}
+
+.vo-wave__flash {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 300px;
+  height: 300px;
+  margin: -150px 0 0 -150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--wave-color) 0%, transparent 70%);
+  animation: vo-wave-flash 0.5s ease-out forwards;
+}
+
+.vo-wave--abyssal .vo-wave__flash {
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+}
+
+@keyframes vo-wave-out {
+  0% {
+    transform: scale(0.25);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+
+@keyframes vo-wave-flash {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .vo-spark {
+  .vo-spark,
+  .vo-wave {
     display: none;
   }
 }

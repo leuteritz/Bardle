@@ -56,20 +56,20 @@ export function logDrifterCollected(name: string, effectLine: string) {
   addEvent(`${name} collected — ${effectLine}`, 'chime')
 }
 
-/** Ein Void-Riss wurde geschlossen — Name plus die Beute, die er freigibt. */
+/** Ein Void-Wesen wurde erlegt — Name plus die Beute, die es freigibt. */
 export function logVoidRiftSealed(name: string, boonLine: string) {
   const { addEvent } = useEventLog()
-  addEvent(`${name} sealed — ${boonLine}`, 'void')
+  addEvent(`${name} slain — ${boonLine}`, 'void')
 }
 
 /**
- * Ein Void-Riss ist kollabiert. Die einzige Logzeile im Spiel, die einen
- * Verlust meldet — deshalb steht der HP-Betrag darin und nicht nur der Name:
- * „was hat mich das gekostet?" ist die Frage, die der Spieler an sie hat.
+ * Ein Void-Wesen hat die Sonne erreicht. Die einzige Logzeile im Spiel, die
+ * einen Verlust meldet — deshalb steht der HP-Betrag darin und nicht nur der
+ * Name: „was hat mich das gekostet?" ist die Frage, die der Spieler an sie hat.
  */
 export function logVoidRiftCollapsed(name: string, hpLost: number) {
   const { addEvent } = useEventLog()
-  addEvent(`${name} collapsed — the sun took ${safeNumber(hpLost)} damage.`, 'void')
+  addEvent(`${name} reached the sun — it took ${safeNumber(hpLost)} damage.`, 'void')
 }
 
 /**

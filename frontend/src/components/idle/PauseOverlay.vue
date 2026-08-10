@@ -303,11 +303,27 @@
               </Transition>
             </div>
             <TransitionGroup
-              v-if="activeResourceStars.length > 0 || isPlanetDiscovered"
+              v-if="activeResourceStars.length > 0 || isPlanetDiscovered || voidThreat"
               tag="div"
               name="callout-pop"
               class="callout-row"
             >
+              <!-- Der Void läuft während der Pause weiter — Kader und Turrets
+                   feuern auch pausiert, also darf er auch pausiert verloren
+                   gehen. Er steht deshalb VOR den Stern-Karten: von allem, was
+                   hier läuft, ist er das einzige, das der Sonne wehtut. -->
+              <PauseVoidCard
+                v-if="voidThreat"
+                key="void-threat"
+                :secs="voidThreat.secs"
+                :ends-at="voidThreat.endsAt"
+                :duration-ms="voidThreat.durationMs"
+                :name="voidThreat.name"
+                :color="voidThreat.color"
+                :icon="voidThreat.icon"
+                :count="voidThreat.count"
+                :worn="voidThreat.worn"
+              />
               <!-- Champion-Herald: nimmt die erste Zeile für sich. Der Fund ist
                    der Höhepunkt einer Galaxierunde und stand vorher als
                    gleichrangiges Badge zwischen den Stern-Countdowns. Farbe und
@@ -396,7 +412,9 @@ import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useVoidStore } from '@/stores/world/voidStore'
 import { useUiStore } from '@/stores/core/uiStore'
+import { getVoidRift } from '@/config/world/void'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { MATERIALS, materialIconMd } from '@/config/economy/materials'
 import {
@@ -422,6 +440,7 @@ import {
   PAUSE_STAR_CARD_GAP_PX,
   PAUSE_STAR_HP_STEPS,
   STAR_TIMER_TICK_MS,
+  VOID_SEVERITY_COLOR,
 } from '@/config/constants'
 import type { PlanetType } from '@/types'
 import { splitDuration } from '@/utils/ui/format'
@@ -433,6 +452,7 @@ import RpgFrame from '@/components/ui/RpgFrame.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import KeyCap from '@/components/keybinds/KeyCap.vue'
 import PauseStarCard from './PauseStarCard.vue'
+import PauseVoidCard from './PauseVoidCard.vue'
 
 // Die Pause hat zwei Quellen — Fenster ohne Fokus und das Kürzel des Spielers.
 // Beide laufen in useGamePause zusammen; dieses Overlay kennt nur noch das
@@ -462,6 +482,7 @@ onKeybinding('pause', () => {
   togglePause()
 })
 const starGroupStore = useStarGroupStore()
+const voidStore = useVoidStore()
 const uiStore = useUiStore()
 
 function computeSunDiameter(): number {
@@ -549,8 +570,13 @@ watch(
       // Sofort aufbauen, damit die Karten mit dem Overlay erscheinen und nicht
       // erst beim ersten Takt.
       lastResourceStarsKey = ''
+      lastVoidThreatKey = ''
       refreshResourceStars()
-      starInterval = setInterval(refreshResourceStars, STAR_TIMER_TICK_MS)
+      refreshVoidThreat()
+      starInterval = setInterval(() => {
+        refreshResourceStars()
+        refreshVoidThreat()
+      }, STAR_TIMER_TICK_MS)
       window.addEventListener('keydown', onEscape)
     } else {
       gameStore.setPauseState(false)
@@ -683,6 +709,68 @@ function refreshResourceStars(): void {
   if (key === lastResourceStarsKey) return
   lastResourceStarsKey = key
   activeResourceStars.value = next
+}
+
+// ── Der Void während der Pause ──────────────────────────────────────────────
+// Er läuft weiter: Kader und Turrets feuern auch pausiert, und was passiv
+// bekämpft wird, darf auch passiv verloren gehen — dieselbe Regel wie bei
+// Sternen und Bossen. NEUE Wesen erscheinen nicht (`spawningBlocked`), sonst
+// legte eines den halben Weg ungesehen zurück.
+//
+// Angezeigt wird nur das VORDERSTE plus die Zahl der übrigen: bei zwei Dutzend
+// wäre eine Karte je Wesen eine Wand, und die einzige Frage, die hier zählt,
+// ist ohnehin „was trifft die Sonne zuerst?".
+//
+// Wie bei den Sternen ein Schnappschuss im selben Takt und KEIN computed: ein
+// computed über `voidStore.active` rechnete bei jedem Treffer des
+// Orbit-Beschusses neu, und der fällt jede Sekunde.
+interface PauseVoidThreat {
+  secs: number
+  endsAt: number
+  durationMs: number
+  name: string
+  color: string
+  icon: string
+  count: number
+  worn: number
+}
+
+const voidThreat = shallowRef<PauseVoidThreat | null>(null)
+
+function buildVoidThreat(): PauseVoidThreat | null {
+  const lead = voidStore.leadMonster
+  if (!lead) return null
+  const def = getVoidRift(lead.defId)
+  if (!def) return null
+  const endsAt = lead.spawnedAt + lead.travelMs
+  return {
+    secs: Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)),
+    endsAt,
+    durationMs: lead.travelMs,
+    name: def.name,
+    color: VOID_SEVERITY_COLOR[def.severity] ?? def.color,
+    icon: def.icon,
+    count: voidStore.active.length,
+    // Auf ganze Prozent gerundet: der Balken ist wenige Pixel breit, und der
+    // Schlüssel unten schlüge sonst bei jedem Abtasttakt an.
+    worn:
+      lead.maxHp > 0 ? Math.round((1 - lead.currentHp / lead.maxHp) * 100) / 100 : 0,
+  }
+}
+
+/** Alles, was man der Karte ansieht. Der Zeitbogen steht bewusst NICHT darin —
+ *  er läuft in der Karte als eigene Animation und hängt nur am Endzeitpunkt. */
+function voidThreatKey(t: PauseVoidThreat | null): string {
+  return t ? `${t.name}:${t.secs}:${t.endsAt}:${t.count}:${t.worn}` : ''
+}
+
+let lastVoidThreatKey = ''
+function refreshVoidThreat(): void {
+  const next = buildVoidThreat()
+  const key = voidThreatKey(next)
+  if (key === lastVoidThreatKey) return
+  lastVoidThreatKey = key
+  voidThreat.value = next
 }
 
 const timerChars = computed(() => {
