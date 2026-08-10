@@ -30,7 +30,7 @@ import StarForgePanel from './StarForgePanel.vue'
 }
 
 .shop-forge-col {
-  flex: 0 0 clamp(340px, 32vw, 440px);
+  flex: 0 0 clamp(340px, 32vw, 470px);
   min-width: 0;
 }
 

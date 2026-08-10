@@ -94,3 +94,31 @@ export interface ForgeActiveBuff {
   id: 'cpcX2' | 'cpsX2'
   expiresAt: number
 }
+
+// ── Detailspalte des Shop-Tabs (StarForgePanel) ──────────────────────────────
+
+/** Die drei Abteilungen der Forge-Detailspalte, je ein Reiter. */
+export type ForgeSectionId = 'relics' | 'constellations' | 'bargain'
+
+export interface ForgeSectionDef {
+  id: ForgeSectionId
+  label: string
+  icon: string
+  /** Leitfarbe des Reiters und seiner Überschrift. */
+  accent: string
+}
+
+/**
+ * Eine Kostenposition, wie die Spalte sie zeigt: was verlangt wird UND was im
+ * Lager liegt. Ein blankes „×5" beantwortet die Frage nicht, die der Spieler
+ * beim Schmieden wirklich hat.
+ */
+export interface ForgeCostItem {
+  id: string
+  name: string
+  image?: string
+  need: number
+  have: number
+  /** Lager deckt die Position. */
+  ok: boolean
+}

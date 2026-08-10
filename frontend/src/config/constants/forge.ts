@@ -1,6 +1,8 @@
 // Star Forge (Sonnen-Baum aus Roots, Branches und Leaves samt Relikten,
 // Konstellationen und Schnäppchen) und der Meep Skill Tree.
 
+import type { ForgeSectionDef } from '@/types'
+
 // ── Meep Skill Tree: radiales Netz-Layout (SkillTreeComponent) ─────────────
 // Ein Startknoten in der Mitte, fünf Pfade strahlen aus; leichter Zickzack pro
 // Stufe für den organischen Netz-Look. Die Radien sind so gewählt, dass sich
@@ -143,6 +145,29 @@ export const FORGE_MIN_DAMAGE_TAKEN_MULT = 0.25
 export const FORGE_MIN_DWELL_MULT = 0.5
 export const FORGE_MIN_EXPEDITION_MULT = 0.4
 export const FORGE_MAX_DOUBLE_CLICK_CHANCE = 0.8
+
+// ── Detailspalte des Shop-Tabs (StarForgePanel) ───────────────────────────────
+/**
+ * Die drei Abteilungen der rechten Spalte, Reihenfolge = Reiterfolge.
+ * Gestapelt waren sie ein Endlos-Scroll in einer 440px-Spalte; als Reiter
+ * bekommt jede die volle Höhe, und darum darf die Schrift so groß sein, dass
+ * man sie liest.
+ */
+export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
+  { id: 'relics', label: 'Relics', icon: 'game-icons:anvil-impact', accent: '#e8a020' },
+  {
+    id: 'constellations',
+    label: 'Constellations',
+    icon: 'game-icons:barbed-star',
+    accent: '#86d0ff',
+  },
+  { id: 'bargain', label: 'Bargain', icon: 'ph:handshake-fill', accent: '#e8c040' },
+]
+
+/** Platzhalter im `desc` einer Forge-Definition, den der Stufenwert ersetzt. */
+export const FORGE_DESC_VALUE_TOKEN = '{v}'
+/** Derselbe Platzhalter mit Prozentzeichen — daran hängt die Einheit der Werte. */
+export const FORGE_DESC_PERCENT_TOKEN = `${FORGE_DESC_VALUE_TOKEN}%`
 
 // Cosmic Bargain
 export const FORGE_BARGAIN_RESTOCK_MS = 8 * 3_600_000
