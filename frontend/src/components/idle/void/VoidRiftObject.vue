@@ -152,6 +152,12 @@ function refreshPos(): void {
   cachedPos = voidRiftScreenPos(props.rift, voidRiftHalfExtent(props.def.sizePx))
 }
 
+// Bewusst OHNE Vergleich auf den zuletzt geschriebenen Wert: der Riss steht
+// 75–160 s und schreibt damit tausende Male denselben `transform`, aber Blink
+// verwirft eine Zuweisung an `element.style`, wenn der Wert identisch ist —
+// gemessen 0 Attribut-Mutationen bei 100 gleichen Zuweisungen gegen 100 bei
+// wechselnden. Ein `if (wert !== zuletzt)` davor spart also nichts und schafft
+// nur zwei Felder, die mit dem Element auseinanderlaufen können.
 function renderFrame(): void {
   const el = shell.value
   if (!el) {
