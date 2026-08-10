@@ -115,8 +115,21 @@ export interface ProvidenceDef {
   effects: ProvidenceEffects
 }
 
-/** Eine Effektzeile, wie die Karte sie zeigt. */
+/**
+ * Eine Effektzeile.
+ *
+ * Label und Wert stehen GETRENNT, weil die beiden Anzeigestellen sie
+ * verschieden gewichten: die Prestige-Karte setzt den Wert gross und das Label
+ * als kleine Überschrift darüber — dort wird verglichen, und verglichen wird die
+ * Zahl. Der Header-Tooltip nimmt `text`, weil er in eine Zeile passen muss.
+ * Beide aus einer Quelle, damit sie nie auseinanderlaufen.
+ */
 export interface ProvidenceEffectLine {
+  /** „Champion DPS" */
+  label: string
+  /** „x1.8" */
+  value: string
+  /** „Champion DPS x1.8" — für kompakte, einzeilige Anzeigen. */
   text: string
   positive: boolean
 }

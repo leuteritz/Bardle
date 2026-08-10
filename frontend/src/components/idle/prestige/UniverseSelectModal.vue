@@ -56,12 +56,10 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
             <button class="modal-close-btn" @click="gameStore.closePrestigeModal()">✕</button>
           </div>
 
-          <p class="uni-lead">
-            Three roads lie open. Each carries its own blessing — and its own price.
-          </p>
-
-          <!-- Die drei gezogenen Karten -->
-          <div class="flex gap-4 px-6 pb-6 uni-offer">
+          <!-- Die drei gezogenen Karten. Ohne erklärende Zeile darüber: der
+               Titel sagt, was zu tun ist, und die Karten sagen es noch einmal —
+               ein Satz dazwischen stünde nur zwischen Blick und Entscheidung. -->
+          <div class="flex gap-4 px-6 pt-6 pb-6 uni-offer">
             <PrestigeOfferCard
               v-for="card in providenceStore.offerCards"
               :key="card.universe.id"
@@ -96,15 +94,6 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
 .uni-title {
   color: var(--rpg-gold);
   text-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
-}
-
-.uni-lead {
-  padding: 0 1.5rem;
-  margin-top: 1.1rem;
-  margin-bottom: 1rem;
-  font-size: 0.85rem;
-  color: var(--rpg-text-dim);
-  text-align: center;
 }
 
 /* Gleich hohe Karten, damit die Effektblöcke am Fuss auf einer Linie liegen —

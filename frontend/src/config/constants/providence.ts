@@ -39,15 +39,12 @@ export const PROVIDENCE_NEUTRAL_MULTIPLIER = 1
 // ihm nur, was er gerade getan hat. Ihre Anzeige ist der Chip im Header, und der
 // steht dort den ganzen Lauf.
 
-/** Mindestbreite einer Wahlkarte im Prestige-Modal. Drei davon nebeneinander
- *  passen damit auch auf Full HD in den Rahmen, ohne dass die längste
- *  Effektzeile umbricht. */
-export const PROVIDENCE_CARD_MIN_WIDTH_PX = 200
-
-/** Größe des Glyphs auf der Wahlkarte — dieselbe wie die Modifier-Ikone der
- *  Universumskarte im selben Modal, damit beide Schritte gleich schwer wirken. */
-export const PROVIDENCE_CARD_ICON_PX = 30
-
-/** Größe des Glyphs im Header-Chip. Klein, aber über der 18-px-Grenze, ab der
- *  `game-icons`-Motive zu Grau zerfallen. */
-export const PROVIDENCE_CHIP_ICON_PX = 20
+/**
+ * Wappen des Universums auf der Prestige-Karte.
+ *
+ * Deutlich grösser als ein gewöhnliches Feature-Icon: die Karte trägt seit der
+ * Straffung nur noch Wappen, Namen und zwei Zahlen, und das Wappen ist das
+ * Erste, was das Auge findet. Bei den drei Karten nebeneinander ist es die
+ * einzige Fläche, die den Ort überhaupt zeigt.
+ */
+export const PRESTIGE_CARD_UNIVERSE_ICON_PX = 44

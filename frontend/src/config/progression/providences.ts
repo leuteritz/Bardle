@@ -73,7 +73,8 @@ export const PROVIDENCES: ProvidenceDef[] = [
   {
     id: 'hollow-tide',
     name: 'Hollow Tide',
-    description: 'The void sends its flotsam twice as often, and takes back the gift twice as fast.',
+    description:
+      'The void sends its flotsam twice as often, and takes back the gift twice as fast.',
     icon: 'game-icons:scout-ship',
     domain: 'cosmos',
     effects: { drifterSpawnIntervalMult: 0.5, drifterBuffDurationMult: 0.5 },
@@ -359,7 +360,12 @@ export function providenceEffectLines(def: ProvidenceDef): ProvidenceEffectLine[
     const meta = PROVIDENCE_EFFECT_META[key as keyof ProvidenceEffects]
     if (!meta || typeof value !== 'number') continue
     const positive = meta.higherIsBetter ? value > meta.neutral : value < meta.neutral
-    lines.push({ text: `${meta.label} x${value}`, positive })
+    lines.push({
+      label: meta.label,
+      value: `x${value}`,
+      text: `${meta.label} x${value}`,
+      positive,
+    })
   }
   return lines
 }
