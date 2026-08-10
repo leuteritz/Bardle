@@ -293,13 +293,15 @@ import {
   FRAME_EL_SWEEP_INTERVAL,
   STAR_SUMMARY_GAP_PX,
   STAR_SUMMARY_MAX_HEIGHT_PX,
+  STAR_SUMMARY_HALF_WIDTH_PX,
   STAR_SUMMARY_FLIP_HYSTERESIS_PX,
   STAR_SUMMARY_FLIP_STACK_PX,
   STAR_COUNT_GAP_PX,
   STAR_COUNT_HEIGHT_PX,
 } from '@/config/constants'
 import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
-import { measuredFieldInsets } from '@/utils/orbit/drifterPath'
+import { hudFieldMetrics, hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
+import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import { activeChampionBehindState, activePlayerPlanetPositions, activeStarCombatState } from '@/utils/orbit/liveState'
 import type { ChampionRole, StarType } from '@/types'
@@ -594,6 +596,9 @@ function applyFrames() {
 const { starRenders } = useStarSystem(effectiveHoveredStarId, applyFrames)
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
+// Kurve des Header-Ovals — die Anhängsel weichen der KONTUR aus, nicht einer
+// geraden Kante darunter.
+const { headerCenterArc } = useHeaderCenterArc()
 
 function handleStarClick(star: StarRenderEntry) {
   if (starGroupStore.starFightModalOpen) return
@@ -1385,21 +1390,31 @@ function getStarRewardSummary(star: StarRenderEntry): StarRewardSummary {
 const summaryFlipped = new Map<string, boolean>()
 
 /**
- * Kanten des freien Feldes. Einmal je Frame gesetzt, nicht je Stern — die
+ * Die HUD-Kontur dieses Frames. Einmal je Frame gelesen, nicht je Stern — die
  * Messung liest berechnete Stile.
  *
- * Die Startwerte beschreiben ein Feld OHNE HUD. Das ist der Zustand, in dem
- * nichts ausweicht: der erste `:style` läuft vor dem ersten Frame, und mit
- * einer Unterkante von 0 klappte dort jede Karte nach oben, um im nächsten
- * Frame zurückzuspringen.
+ * `null` heisst „noch nicht gemessen" und damit ein Feld OHNE HUD: der erste
+ * `:style` läuft vor dem ersten Frame, und mit einer Unterkante von 0 klappte
+ * dort jede Karte nach oben, um im nächsten Frame zurückzuspringen.
  */
-let fieldBottomPx = typeof window === 'undefined' ? 0 : window.innerHeight
-let fieldTopPx = 0
+let hudField: HudFieldMetrics | null = null
 
 function refreshFieldEdges(): void {
-  const insets = measuredFieldInsets()
-  fieldTopPx = insets.headerBottomPx ?? 0
-  fieldBottomPx = window.innerHeight - (insets.bottomBarHeightPx ?? 0)
+  hudField = hudFieldMetrics(headerCenterArc.value ?? null)
+}
+
+/**
+ * Die freie Spanne an der Stelle `x`. Bewusst spaltenweise statt als ein
+ * Rechteck fürs ganze Bild: die Bottom-Bar fällt in der Mitte auf einen
+ * schmalen Streifen ab, und genau dort — unter der Sonne — hängen die meisten
+ * Belohnungskarten. Mit einer geraden Kante gerechnet klappten sie um, wo
+ * 250 px Platz waren.
+ */
+function freeBandAt(x: number): { top: number; bottom: number } {
+  if (!hudField) return { top: 0, bottom: typeof window === 'undefined' ? 0 : window.innerHeight }
+  // Über die BREITE der Karte, nicht an ihrem Mittelpunkt — sonst hängt in der
+  // Kehle neben einem Seitenpanel eine Ecke im HUD.
+  return hudFreeBandOver(x, STAR_SUMMARY_HALF_WIDTH_PX, hudField)
 }
 
 /** Sitzt die Karte dieses Sterns oben? Mit Hysterese, sonst kippt sie an der
@@ -1407,7 +1422,8 @@ function refreshFieldEdges(): void {
 function isSummaryFlipped(star: StarRenderEntry, half: number): boolean {
   const bottomIfBelow = star.y + half + STAR_SUMMARY_GAP_PX + STAR_SUMMARY_MAX_HEIGHT_PX
   const was = summaryFlipped.get(star.id) ?? false
-  const limit = was ? fieldBottomPx - STAR_SUMMARY_FLIP_HYSTERESIS_PX : fieldBottomPx
+  const edge = freeBandAt(star.x).bottom
+  const limit = was ? edge - STAR_SUMMARY_FLIP_HYSTERESIS_PX : edge
   const now = bottomIfBelow > limit
   summaryFlipped.set(star.id, now)
   return now
@@ -1421,7 +1437,8 @@ function isSummaryFlipped(star: StarRenderEntry, half: number): boolean {
  */
 function countAnchorY(star: StarRenderEntry, half: number): number {
   const wanted = star.y - half - STAR_COUNT_GAP_PX
-  return Math.min(Math.max(wanted, fieldTopPx + STAR_COUNT_HEIGHT_PX), fieldBottomPx)
+  const band = freeBandAt(star.x)
+  return Math.min(Math.max(wanted, band.top + STAR_COUNT_HEIGHT_PX), band.bottom)
 }
 
 function summaryTransform(star: StarRenderEntry, half: number): string {

@@ -65,7 +65,8 @@ import { logVoidRiftSealed, logVoidRiftCollapsed } from '@/config/ui/eventLog'
 import { getVoidRift } from '@/config/world/void'
 import { hexToRgbTriple } from '@/utils/ui/format'
 import { voidPositionAt, voidHitRadius } from '@/utils/orbit/voidPath'
-import { measuredFieldInsets } from '@/utils/orbit/drifterPath'
+import { hudFieldMetrics } from '@/utils/ui/hudField'
+import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { getVoidSprite, voidSpriteDrawSize } from '@/utils/fx/voidSprite'
 import {
   VOID_SEAL_BURST_PARTICLES,
@@ -78,6 +79,9 @@ const voidStore = useVoidStore()
 const planetShop = usePlanetShopStore()
 const { active, lastOutcome } = storeToRefs(voidStore)
 const { isIdleRenderingPaused } = useRenderingPaused()
+// Der Header veröffentlicht die Kurve seines Mittelovals — die Wesen reissen
+// entlang dieser Kontur auf, nicht auf einer geraden Linie darunter.
+const { headerCenterArc } = useHeaderCenterArc()
 const { showToast } = useActionToast()
 const { announce } = useHerald()
 
@@ -151,7 +155,7 @@ function draw(): void {
 
   // Einmal je Frame, nicht je Wesen: die Messung liest berechnete Stile, und
   // bei zwei Dutzend Wesen wären das 1440 Abfragen je Sekunde.
-  const insets = measuredFieldInsets()
+  const insets = hudFieldMetrics(headerCenterArc.value ?? null)
 
   for (const m of active.value) {
     const def = getVoidRift(m.defId)
@@ -217,7 +221,7 @@ function monsterAt(x: number, y: number): number | null {
   if (active.value.length === 0) return null
   const now = Date.now()
   const sunRadius = planetShop.orbitSunRadius
-  const insets = measuredFieldInsets()
+  const insets = hudFieldMetrics(headerCenterArc.value ?? null)
   let bestUid: number | null = null
   let bestT = -1
   for (const m of active.value) {

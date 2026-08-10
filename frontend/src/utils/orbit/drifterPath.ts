@@ -10,6 +10,7 @@ import {
   HUD_SCALE_REF_HEIGHT_PX,
   DRIFTER_TANGENT_PROBE_STEP,
 } from '@/config/constants'
+import { hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
 
 export interface DrifterFieldRect {
   left: number
@@ -204,6 +205,31 @@ function pushBelowHeader(yPx: number, field: DrifterFieldRect, bodyRadiusPx: num
 }
 
 /**
+ * Dieselbe Arbeit wie die beiden Funktionen darüber, aber gegen die KONTUR des
+ * HUD statt gegen ein Rechteck: die Bottom-Bar fällt in der Mitte auf einen
+ * schmalen Streifen ab (rund 250 px mehr Luft als ihre Rechteckhöhe hergibt)
+ * und den Header gibt es an den äusseren Rändern gar nicht.
+ *
+ * Die Semantik von `pushBelowHeader` bleibt: Ein Punkt, der oben oder unten
+ * WIRKLICH aus dem Bild läuft, wird nicht zurückgeholt — dort verlässt eine
+ * Route die Bühne, und dass der Körper dabei hinter dem Chrome verschwindet,
+ * ist genau richtig.
+ */
+function clampToHudContour(
+  xPx: number,
+  yPx: number,
+  bodyRadiusPx: number,
+  metrics: HudFieldMetrics,
+): number {
+  // Über die Breite des Körpers, nicht an seinem Mittelpunkt: in der Kehle
+  // neben einem Seitenpanel springt die Kontur auf wenigen Pixeln.
+  const band = hudFreeBandOver(xPx, bodyRadiusPx, metrics)
+  if (yPx >= band.top && yPx <= band.bottom) return yPx
+  if (yPx < band.top) return yPx < 0 ? yPx : band.top + bodyRadiusPx
+  return yPx > metrics.viewportH ? yPx : band.bottom - bodyRadiusPx
+}
+
+/**
  * Position of a drifter at flight progress `t` (0 = spawn, 1 = gone), in
  * viewport pixels, plus the heading it is banking into.
  *
@@ -217,6 +243,7 @@ export function drifterPointAt(
   t: number,
   field: DrifterFieldRect,
   bodyRadiusPx = 0,
+  metrics?: HudFieldMetrics,
 ): DrifterPoint {
   const route = DRIFTER_ROUTES[routeIndex % DRIFTER_ROUTES.length]
   const clamped = Math.min(Math.max(t, 0), 1)
@@ -227,8 +254,14 @@ export function drifterPointAt(
     const safe = pushOutOfCenter(mx, raw.y, field)
     const x = field.left + safe.x * field.width
     let y = field.top + safe.y * field.height
-    y = pushBelowHeader(y, field, bodyRadiusPx)
-    y = pushAboveSidePanels(x, y, field, bodyRadiusPx)
+    if (metrics) {
+      // Die Kontur kennt Header UND Bar an genau dieser Spalte und ersetzt
+      // damit beide Rechteck-Klemmungen darunter.
+      y = clampToHudContour(x, y, bodyRadiusPx, metrics)
+    } else {
+      y = pushBelowHeader(y, field, bodyRadiusPx)
+      y = pushAboveSidePanels(x, y, field, bodyRadiusPx)
+    }
     return { x, y }
   }
 

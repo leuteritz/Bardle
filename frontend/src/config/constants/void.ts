@@ -129,6 +129,23 @@ export const VOID_TRAVEL_MS: Record<VoidRiftSeverity, number> = {
 export const VOID_SPAWN_EDGE_OFFSET = 0.35
 
 /**
+ * Wie fein der Strahl zur Feldkante abgetastet wird, bezogen auf die
+ * Bilddiagonale. Grob genug, um billig zu bleiben, fein genug, um den
+ * schmalsten Abschnitt der HUD-Kontur nicht zu überspringen — die engste
+ * Stelle ist die Kehle zwischen Seitenpanel und Mittelstreifen.
+ */
+export const VOID_EDGE_MARCH_STEPS = 48
+/** Halbierungsschritte danach: 48 Schritte auf 2200 px sind ~46 px, sechs
+ *  Halbierungen bringen das auf unter einen Pixel. */
+export const VOID_EDGE_REFINE_STEPS = 6
+/**
+ * Auflösung des Winkel-Schlüssels im Kanten-Zwischenspeicher. 512 Stufen je
+ * Radiant sind rund 0,1° — feiner als jeder sichtbare Unterschied und grob
+ * genug, dass zwei Wesen aus fast derselben Richtung sich den Eintrag teilen.
+ */
+export const VOID_EDGE_ANGLE_KEY_SCALE = 512
+
+/**
  * Grösse beim Aufreissen, als Anteil der Endgrösse. Das Wesen wächst auf dem
  * Weg — das liest sich als Annäherung und macht die Bedrohung ablesbar, ohne
  * dass irgendwo eine Zahl stehen müsste.

@@ -5,10 +5,19 @@ import {
   VOID_ARRIVAL_SUN_FRAC,
   VOID_HIT_RADIUS_SCALE,
   VOID_HIT_RADIUS_MIN_PX,
+  VOID_EDGE_MARCH_STEPS,
+  VOID_EDGE_REFINE_STEPS,
+  VOID_EDGE_ANGLE_KEY_SCALE,
 } from '@/config/constants'
-// Die HUD-Kanten misst der Drifter bereits, und er misst sie nicht für sich
-// selbst, sondern für das Spiel — dieselbe Frage, dieselbe Antwort.
-import { measuredFieldInsets, type DrifterFieldInsets } from '@/utils/orbit/drifterPath'
+// Die HUD-Kontur gehört dem Spiel, nicht dem Void — sie steht in `hudField`
+// und wird von Drifter, Sternen und diesem Modul gleichermassen gelesen.
+import { hudFreeBandAt, hudFieldMetrics, type HudFieldMetrics } from '@/utils/ui/hudField'
+import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
+
+/** Der Header-Bogen liegt in einem geteilten Ref; hier nur lesend abgeholt. */
+function sharedHeaderArc() {
+  return useHeaderCenterArc().headerCenterArc.value ?? null
+}
 
 /** Was `voidPositionAt` mindestens über ein Wesen wissen muss. */
 export interface VoidPathState {
@@ -28,29 +37,101 @@ export interface VoidPoint {
 }
 
 /**
- * Abstand von der Sonne zur Kante des Feldes in Richtung (`cos`, `sin`).
+ * Abstand von der Sonne zur Kante des freien Feldes in Richtung (`cos`, `sin`).
  *
- * Das Feld ist NICHT mittenzentriert — oben nimmt der Header mehr weg als die
- * Bottom-Bar unten —, also der allgemeine Strahl-Rechteck-Schnitt und nicht die
- * kürzere Fassung über halbe Kantenlängen. Läuft der Strahl parallel zu einem
- * Kantenpaar, ist dessen Wert unendlich und `Math.min` wählt von selbst das
- * andere.
+ * Das Feld ist weder mittenzentriert noch rechteckig: die Bottom-Bar steht an
+ * den Enden hoch und fällt in der Mitte auf einen schmalen Streifen ab, der
+ * Header hängt mittig als Oval herunter und hört seitlich ganz auf. Mit einem
+ * Rechteck gerechnet reissen alle Wesen auf derselben geraden Linie auf, ein
+ * gutes Stück innerhalb dessen, was frei ist — unter der Sonne sind das rund
+ * 250 px.
+ *
+ * Gesucht ist der ERSTE Austritt aus dem freien Feld, und dafür braucht es
+ * Marching: eine Fixpunkt-Iteration stand hier zuerst und schwang bei schrägen
+ * Winkeln zwischen zwei Ästen hin und her (der Strahl verlässt das Feld über
+ * einem Seitenpanel, die Kontur an der NEUEN Stelle erlaubt wieder mehr, und
+ * so fort). Das Ergebnis war ein Startpunkt mitten auf der Bühne statt am Rand.
+ *
+ * Grobe Abtastung bis zum ersten unfreien Schritt, dann Bisektion auf ein paar
+ * Pixel genau. Nicht-monoton ist die Freiheit ausdrücklich — deshalb keine
+ * reine Bisektion von aussen.
  */
-function rectEdgeRadius(
+function marchEdgeRadius(
   cos: number,
   sin: number,
   cx: number,
   cy: number,
-  left: number,
-  top: number,
-  right: number,
-  bottom: number,
+  metrics: HudFieldMetrics,
+  overshoot: number,
 ): number {
-  const toVertical =
-    cos > 1e-6 ? (right - cx) / cos : cos < -1e-6 ? (left - cx) / cos : Number.POSITIVE_INFINITY
-  const toHorizontal =
-    sin > 1e-6 ? (bottom - cy) / sin : sin < -1e-6 ? (top - cy) / sin : Number.POSITIVE_INFINITY
-  return Math.max(0, Math.min(toVertical, toHorizontal))
+  const W = metrics.viewportW
+  const H = metrics.viewportH
+  const limit = Math.hypot(W, H)
+
+  const isFree = (r: number): boolean => {
+    const x = cx + cos * r
+    const y = cy + sin * r
+    if (x < 0 || x > W || y < 0 || y > H) return false
+    const band = hudFreeBandAt(x, metrics)
+    return y >= band.top && y <= band.bottom
+  }
+
+  const step = limit / VOID_EDGE_MARCH_STEPS
+  let lastFree = 0
+  let firstBlocked = limit
+  for (let r = step; r <= limit; r += step) {
+    if (isFree(r)) {
+      lastFree = r
+    } else {
+      firstBlocked = r
+      break
+    }
+  }
+  // Auf die Kante einschnüren.
+  for (let i = 0; i < VOID_EDGE_REFINE_STEPS; i++) {
+    const mid = (lastFree + firstBlocked) / 2
+    if (isFree(mid)) lastFree = mid
+    else firstBlocked = mid
+  }
+
+  // Der Überstand hinter die Kante gehört hierher und nicht zum Aufrufer: an
+  // einer STEILEN Stelle der Kontur — der senkrechten Wand eines Seitenpanels
+  // — schiebt er das Wesen nicht ein Stück hinter den Rand, sondern mit einem
+  // Satz mehrere hundert Pixel hinter das Panel. Wo er nicht mehr passt, endet
+  // das Wesen eben genau auf der Kante.
+  const withOvershoot = lastFree + overshoot
+  return isFree(withOvershoot) ? withOvershoot : lastFree
+}
+
+/**
+ * Wie `marchEdgeRadius`, nur einmal je Richtung gerechnet.
+ *
+ * Der Startpunkt eines Wesens hängt allein an seinem Winkel und an der Form des
+ * HUD — er ändert sich auf der ganzen Reise nicht. Der Zwischenspeicher hängt
+ * deshalb am Metrics-OBJEKT: `hudFieldMetrics()` gibt dasselbe Objekt zurück,
+ * solange sich nichts bewegt, und liefert bei jedem Resize ein neues. Damit
+ * räumt sich der Speicher von selbst auf, ohne dass jemand daran denken muss.
+ */
+const edgeCache = new WeakMap<HudFieldMetrics, Map<string, number>>()
+
+function spawnRadius(
+  angle: number,
+  cx: number,
+  cy: number,
+  metrics: HudFieldMetrics,
+  overshoot: number,
+): number {
+  let perAngle = edgeCache.get(metrics)
+  if (!perAngle) {
+    perAngle = new Map()
+    edgeCache.set(metrics, perAngle)
+  }
+  const key = `${Math.round(angle * VOID_EDGE_ANGLE_KEY_SCALE)}|${Math.round(overshoot)}`
+  const hit = perAngle.get(key)
+  if (hit !== undefined) return hit
+  const r = marchEdgeRadius(Math.cos(angle), Math.sin(angle), cx, cy, metrics, overshoot)
+  perAngle.set(key, r)
+  return r
 }
 
 /**
@@ -67,9 +148,9 @@ function rectEdgeRadius(
  * Bildmitte, sondern der Sonnenrand aus der eigenen Anflugrichtung — sonst
  * stapeln sich alle Einschläge auf einem Punkt.
  *
- * `insets` sind die HUD-Kanten, hinter denen nichts zu sehen ist. Wer je Frame
- * über alle Wesen läuft, misst sie EINMAL und reicht sie durch; der Default
- * misst selbst und ist für die seltenen Einzelabfragen gedacht (Ausgangseffekt).
+ * `metrics` ist die HUD-Kontur, hinter der nichts zu sehen ist. Wer je Frame
+ * über alle Wesen läuft, liest sie EINMAL und reicht sie durch; der Default
+ * liest selbst und ist für die seltenen Einzelabfragen gedacht (Ausgangseffekt).
  */
 export function voidPositionAt(
   state: VoidPathState,
@@ -78,7 +159,7 @@ export function voidPositionAt(
   now: number,
   viewportW = typeof window === 'undefined' ? 0 : window.innerWidth,
   viewportH = typeof window === 'undefined' ? 0 : window.innerHeight,
-  insets: DrifterFieldInsets = measuredFieldInsets(),
+  metrics?: HudFieldMetrics,
 ): VoidPoint {
   const cx = viewportW / 2
   const cy = viewportH / 2
@@ -89,26 +170,38 @@ export function voidPositionAt(
   const cos = Math.cos(state.angle)
   const sin = Math.sin(state.angle)
 
-  // Startpunkt: an der Kante des SICHTBAREN Feldes in dieser Richtung. Zwei
-  // Dinge stecken darin, und beide entschieden darüber, ob man das Wesen
+  // Startpunkt: an der Kante des SICHTBAREN Feldes in dieser Richtung. Drei
+  // Dinge stecken darin, und jedes entschied darüber, ob man das Wesen
   // überhaupt zu sehen bekommt, während die HUD-Karte oben links es meldet:
   //
-  // Erstens die Form. Vorher war der Bezug die halbe Bilddiagonale — auf 16:9
-  // sind das 1082 px in JEDE Richtung, während die echte Kante von oben nur
-  // 500 px entfernt ist. Ein Wesen von oben reisste also mehr als eine halbe
-  // Bildhöhe ausserhalb auf und war 55 seiner 96 Sekunden unsichtbar.
+  // Erstens die Entfernung. Der Bezug war einmal die halbe Bilddiagonale — auf
+  // 16:9 sind das 1082 px in JEDE Richtung, während die echte Kante von oben
+  // nur 500 px entfernt ist. Ein Wesen von oben reisste also mehr als eine
+  // halbe Bildhöhe ausserhalb auf und war 55 seiner 96 Sekunden unsichtbar.
   //
-  // Zweitens das HUD. Header und Bottom-Bar liegen über dem Void-Layer und
-  // gehen über die volle Breite; die nackte Bildkante hätte ein Wesen von oben
-  // hinter dem Header aufreissen lassen, was für den Spieler dasselbe ist wie
-  // ausserhalb. Gemessen wird mit demselben Werkzeug wie beim Drifter: das
-  // sind die Kanten des SPIELS, nicht etwas, das einem der beiden gehört.
-  const top = Math.min(insets.headerBottomPx ?? 0, cy - 1)
-  const bottom = Math.max(viewportH - (insets.bottomBarHeightPx ?? 0), cy + 1)
-  const edgeR = rectEdgeRadius(cos, sin, cx, cy, 0, top, viewportW, bottom)
-  // Hinter die Kante nur noch um einen Bruchteil des Körpers, den es JETZT hat —
-  // es ist beim Aufreissen erst `VOID_SPAWN_SCALE` gross.
-  const startR = edgeR + (sizePx / 2) * VOID_SPAWN_SCALE * VOID_SPAWN_EDGE_OFFSET
+  // Zweitens das HUD selbst: Header und Bottom-Bar liegen über dem Void-Layer
+  // und sind undurchsichtig. Hinter ihnen aufzureissen ist für den Spieler
+  // dasselbe wie ausserhalb des Bildes.
+  //
+  // Drittens ihre FORM. Als Rechteck gerechnet reissen alle Wesen auf einer
+  // geraden Linie auf, deutlich innerhalb dessen, was frei ist: die Bar fällt
+  // in der Mitte auf einen schmalen Streifen ab (rund 250 px Unterschied), und
+  // den Header gibt es an den äusseren Rändern gar nicht. `hudField` liefert
+  // die Kontur, gerechnet aus denselben Konstanten, aus denen die Formen
+  // gezeichnet werden.
+  // Die Kontur muss von DEMSELBEN Bild ausgehen wie die Bahn. Weicht sie ab —
+  // was passiert, sobald jemand Viewport-Maße von Hand übergibt —, liegt die
+  // Sonne ausserhalb des Feldes, das die Kontur beschreibt, und der Strahl
+  // findet keinen freien Punkt mehr.
+  const base = metrics ?? hudFieldMetrics(sharedHeaderArc())
+  const field: HudFieldMetrics =
+    base.viewportW === viewportW && base.viewportH === viewportH
+      ? base
+      : { ...base, viewportW, viewportH, headerRight: viewportW - base.headerLeft }
+  // Hinter die Kante nur um einen Bruchteil des Körpers, den es JETZT hat — es
+  // ist beim Aufreissen erst `VOID_SPAWN_SCALE` gross.
+  const overshoot = (sizePx / 2) * VOID_SPAWN_SCALE * VOID_SPAWN_EDGE_OFFSET
+  const startR = spawnRadius(state.angle, cx, cy, field, overshoot)
   const x0 = cx + cos * startR
   const y0 = cy + sin * startR
 

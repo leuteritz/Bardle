@@ -263,6 +263,13 @@ export const STAR_SUMMARY_GAP_PX = 58
  */
 export const STAR_SUMMARY_MAX_HEIGHT_PX = 140
 /**
+ * Halbe Breite der Karte, für die Frage „passt sie an dieser Stelle?". Die
+ * HUD-Kontur springt in der Kehle zwischen Seitenpanel und Mittelstreifen auf
+ * wenigen Pixeln um mehrere hundert — nur ihren Mittelpunkt zu prüfen hängt die
+ * Karte dort mit einer Ecke ins Panel.
+ */
+export const STAR_SUMMARY_HALF_WIDTH_PX = 42
+/**
  * Wie viel Luft nach dem Umklappen wieder da sein muss, bevor die Karte
  * zurückfällt. Ohne diese Schwelle sitzt ein Stern, der genau auf der Grenze
  * wandert, in einer Kippschwingung und die Karte springt jeden Frame.

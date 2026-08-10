@@ -43,6 +43,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { ActiveDrifter, DrifterDef } from '@/types'
 import { drifterField, drifterPointAt, measuredFieldInsets } from '@/utils/orbit/drifterPath'
+import { hudFieldMetrics } from '@/utils/ui/hudField'
+import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { hexToRgba } from '@/utils/ui/format'
 import { DRIFTER_RARITY_GLOW } from '@/config/world/drifters'
 import DrifterBody from './DrifterBody.vue'
@@ -126,6 +128,12 @@ function refreshField(): void {
   cachedField = drifterField(window.innerWidth, window.innerHeight, measuredFieldInsets())
 }
 
+// Die HUD-Kontur — sie ersetzt die beiden Rechteck-Klemmungen im Pfad. Der
+// Zwischenspeicher in `hudField` hält sie zwischen Resizes fest, der Aufruf
+// hier kostet also keinen Style-Read je Frame (worauf der Cache oben schon
+// einmal teuer aufmerksam gemacht hat).
+const { headerCenterArc } = useHeaderCenterArc()
+
 function renderFrame(): void {
   const el = shell.value
   if (!el) {
@@ -145,6 +153,7 @@ function renderFrame(): void {
     t,
     field,
     props.def.sizePx / 2,
+    hudFieldMetrics(headerCenterArc.value ?? null),
   )
 
   // Fade in on entry, out on exit — the body itself carries the envelope so

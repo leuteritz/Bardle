@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { voidPositionAt } from '@/utils/orbit/voidPath'
+import { hudBarTopAt, hudHeaderBottomAt, type HudFieldMetrics } from '@/utils/ui/hudField'
 import { VOID_SPAWN_SCALE, VOID_ARRIVAL_SUN_FRAC } from '@/config/constants'
 
 /**
@@ -24,7 +25,24 @@ const monster = (angle: number, drift = 0) => ({
 })
 
 /** Halber Körper im Moment des Aufreissens — er ist dann erst anteilig gross. */
-const spawnRadius = SIZE / 2 * VOID_SPAWN_SCALE
+const spawnRadius = (SIZE / 2) * VOID_SPAWN_SCALE
+
+/**
+ * Eine HUD-Kontur, wie sie auf Full HD gemessen wurde: Bar-Skalierung 0,694,
+ * Header von x=265 bis x=1655 mit 86 px Kante und einem Oval, das mittig auf
+ * 133 px herunterreicht.
+ */
+const METRICS: HudFieldMetrics = {
+  viewportW: W,
+  viewportH: H,
+  hudScale: 0.694444,
+  headerBottom: 86,
+  headerLeft: 265,
+  headerRight: W - 265,
+  headerCenterBottom: 133,
+  centerArc: { cx: 695, rx: 134, ry: 106, topOffset: 84 },
+  keycapBar: 30,
+}
 
 const UP = -Math.PI / 2
 const DOWN = Math.PI / 2
@@ -37,7 +55,9 @@ describe('voidPath', () => {
     // in jede Richtung, während die Kante nach oben nur 500 px entfernt ist.
     // Ein Wesen von oben war damit den halben Anflug lang unsichtbar.
     it('startet an der echten Bildkante, nicht auf der halben Diagonale', () => {
-      const p = voidPositionAt(monster(UP), SIZE, SUN, SPAWNED_AT, W, H)
+      // Ohne HUD gemessen: dann ist die Kante die nackte Bildkante.
+      const bare = { ...METRICS, headerBottom: 0, headerCenterBottom: 0, centerArc: null }
+      const p = voidPositionAt(monster(UP), SIZE, SUN, SPAWNED_AT, W, H, bare)
       expect(p.y).toBeLessThan(0 + spawnRadius + 1)
       expect(p.y).toBeGreaterThan(-spawnRadius - 1)
       expect(Math.hypot(p.x - W / 2, p.y - H / 2)).toBeLessThan(Math.hypot(W, H) / 2)
@@ -45,7 +65,7 @@ describe('voidPath', () => {
 
     it('ragt aus jeder Richtung sofort ins Bild', () => {
       for (const angle of [UP, DOWN, LEFT, RIGHT, 0.7, 2.4, 4.1, 5.6]) {
-        const p = voidPositionAt(monster(angle), SIZE, SUN, SPAWNED_AT, W, H)
+        const p = voidPositionAt(monster(angle), SIZE, SUN, SPAWNED_AT, W, H, METRICS)
         const intoView =
           p.x + spawnRadius > 0 &&
           p.x - spawnRadius < W &&
@@ -55,18 +75,50 @@ describe('voidPath', () => {
       }
     })
 
-    // Header und Bottom-Bar liegen ÜBER dem Void-Layer und gehen über die volle
-    // Breite. Hinter ihnen aufzureissen ist für den Spieler dasselbe wie
-    // ausserhalb des Bildes.
+    // Header und Bottom-Bar liegen ÜBER dem Void-Layer. Hinter ihnen
+    // aufzureissen ist für den Spieler dasselbe wie ausserhalb des Bildes.
     it('bleibt unter dem Header und über der Bottom-Bar', () => {
-      const insets = { headerBottomPx: 133, bottomBarHeightPx: 308 }
-      const top = voidPositionAt(monster(UP), SIZE, SUN, SPAWNED_AT, W, H, insets)
-      const bottom = voidPositionAt(monster(DOWN), SIZE, SUN, SPAWNED_AT, W, H, insets)
+      const top = voidPositionAt(monster(UP), SIZE, SUN, SPAWNED_AT, W, H, METRICS)
+      const bottom = voidPositionAt(monster(DOWN), SIZE, SUN, SPAWNED_AT, W, H, METRICS)
 
+      const headerAtTop = hudHeaderBottomAt(top.x, METRICS)
+      const barAtBottom = hudBarTopAt(bottom.x, METRICS)
       // Der Körper ragt unter der Header-Kante hervor …
-      expect(top.y + spawnRadius).toBeGreaterThan(insets.headerBottomPx)
+      expect(top.y + spawnRadius).toBeGreaterThan(headerAtTop)
       // … und über der Oberkante der Bottom-Bar.
-      expect(bottom.y - spawnRadius).toBeLessThan(H - insets.bottomBarHeightPx)
+      expect(bottom.y - spawnRadius).toBeLessThan(barAtBottom)
+    })
+
+    // Der eigentliche Gewinn der Kontur: unter der Sonne fällt die Bar auf
+    // einen schmalen Streifen ab. Mit einem Rechteck gerechnet reissen die
+    // Wesen dort mehrere hundert Pixel zu früh auf — auf freier Fläche.
+    it('reisst in der Bar-Mitte auf dem Streifen auf, nicht auf Rechteckhöhe', () => {
+      const mid = voidPositionAt(monster(DOWN), SIZE, SUN, SPAWNED_AT, W, H, METRICS)
+      // Genau auf der Kante des niedrigen Mittelstreifens …
+      expect(mid.y).toBeCloseTo(hudBarTopAt(mid.x, METRICS), 0)
+      // … und damit weit unter der Oberkante des Bar-RECHTECKS, mit der eine
+      // pauschale Rechnung arbeiten müsste.
+      const rectTop = H - 443 * METRICS.hudScale
+      expect(mid.y).toBeGreaterThan(rectTop + 200)
+    })
+
+    // Über den erhöhten Enden gilt dagegen die Panel-Kante, und die liegt weit
+    // höher. Beides aus derselben Kontur, ohne Sonderfall im Aufrufer.
+    it('hält über den Seitenpanels deren viel höhere Kante ein', () => {
+      for (const angle of [2.9, 0.25]) {
+        const p = voidPositionAt(monster(angle), SIZE, SUN, SPAWNED_AT, W, H, METRICS)
+        expect(p.y - spawnRadius).toBeLessThan(hudBarTopAt(p.x, METRICS))
+      }
+    })
+
+    // Am äusseren Rand gibt es gar keinen Header — dort darf ein Wesen bis an
+    // die Bildkante heran aufreissen.
+    it('nutzt oben die volle Höhe, wo der Header aufhört', () => {
+      // Schräg nach oben-aussen, jenseits der Header-Box.
+      const outer = voidPositionAt(monster(-2.6), SIZE, SUN, SPAWNED_AT, W, H, METRICS)
+      const straightUp = voidPositionAt(monster(UP), SIZE, SUN, SPAWNED_AT, W, H, METRICS)
+      expect(outer.x).toBeLessThan(METRICS.headerLeft)
+      expect(outer.y).toBeLessThan(straightUp.y)
     })
   })
 
@@ -97,7 +149,11 @@ describe('voidPath', () => {
               W,
               H,
             )
-            const outside = p.x < -spawnRadius || p.x > W + spawnRadius || p.y < -spawnRadius || p.y > H + spawnRadius
+            const outside =
+              p.x < -spawnRadius ||
+              p.x > W + spawnRadius ||
+              p.y < -spawnRadius ||
+              p.y > H + spawnRadius
             expect(
               outside,
               `Anflug ${angle.toFixed(2)} rad, Versatz ${drift} bei t=${t.toFixed(2)}`,
