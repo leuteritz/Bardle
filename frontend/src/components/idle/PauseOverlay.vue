@@ -171,7 +171,7 @@
                  sobald während der Pause die erste Kategorie dazukommt. -->
             <div class="stat-tile stat-tile--kills">
               <span class="stat-tile__label">
-                <Icon icon="game-icons:crossed-swords" width="17" height="17" class="stat-tile__icon" aria-hidden="true" />
+                <Icon icon="game-icons:crossed-swords" width="20" height="20" class="stat-tile__icon" aria-hidden="true" />
                 Kills
                 <span v-if="pauseKills > 0" class="stat-tile__total">{{ formatNumber(pauseKills) }}</span>
               </span>
@@ -182,8 +182,8 @@
                 <template v-for="row in killBreakdown" :key="row.key">
                   <Icon
                     :icon="row.icon"
-                    width="14"
-                    height="14"
+                    width="18"
+                    height="18"
                     class="kill-cell kill-cell__icon"
                     :class="{ 'kill-cell--zero': row.count === 0 }"
                     :style="{ color: row.color }"
@@ -212,7 +212,7 @@
                  vollständig aus. Übrig bleiben Bild und Menge. -->
             <div class="stat-tile stat-tile--materials">
               <span class="stat-tile__label">
-                <Icon icon="game-icons:ore" width="17" height="17" class="stat-tile__icon" aria-hidden="true" />
+                <Icon icon="game-icons:ore" width="20" height="20" class="stat-tile__icon" aria-hidden="true" />
                 Materials
                 <span v-if="totalMaterials > 0" class="stat-tile__total">{{ formatNumber(totalMaterials) }}</span>
               </span>
@@ -251,7 +251,7 @@
           <!-- Auto-battle record during the pause — feste Höhe, Werte poppen ein -->
           <div class="battle-strip">
             <span class="battle-strip__label">
-              <Icon icon="ri:sword-fill" width="14" height="14" class="battle-strip__icon" aria-hidden="true" />
+              <Icon icon="ri:sword-fill" width="18" height="18" class="battle-strip__icon" aria-hidden="true" />
               Auto Battle
             </span>
             <template v-if="pauseBattleTotal > 0">
@@ -1496,9 +1496,19 @@ function particleStyle(i: number): Record<string, string> {
   /* Feste Zeilenhöhe: alle drei Tiles exakt gleich groß, egal wie viel
      Inhalt (HP-Leiste, Material-Karten) eine einzelne Kachel hat. Bemessen
      am größten Inhalt — zwei Reihen Material-Karten. */
-  /* Bemessen am höheren Inhalt: Kopfzeile (32) + Abstand (7) + zwei Reihen
-     Material-Bilder (128) + Innenabstand (28). */
-  grid-auto-rows: 190px;
+  /* Bemessen am höheren Inhalt und NACHGEMESSEN, nicht gerechnet: Kopfzeile,
+     Abstand, zwei Reihen Material-Bilder (2 × 78 + 6 Lücke) und Innenabstand
+     ergeben zusammen 236 px.
+     Mit dem breiteren Panel (960 statt 620) ist die Material-Kachel rund 560 px
+     breit — fünf Zellen à über 100 px. Die Bilder sind quadratisch, ihre HÖHE
+     ist damit der Engpass, nicht die Breite: 78 px ist die Zeilenhöhe, die noch
+     in die Kachel passt, ohne dass die zusätzliche Panelhöhe den Fit-Scale
+     spürbar drückt.
+     Diese Zahl und `--mat-row-h` hängen zusammen — mit 84 px Zeilenhöhe kam der
+     Inhalt auf 240 px und die zweite Materialreihe wurde unten abgeschnitten.
+     Das fällt nur mit GEFÜLLTEM Inventar auf; ein leeres Overlay sieht in
+     beiden Fällen richtig aus. */
+  grid-auto-rows: 238px;
   /* Explizit, nicht dem geerbten `baseline` überlassen: die Material-Kachel
      hat ihre erste Baseline im Kartenraster statt in einer Wertzeile und
      rutschte dadurch gegenüber Health und Kills nach unten. */
@@ -1536,7 +1546,7 @@ function particleStyle(i: number): Record<string, string> {
   justify-self: stretch;
   padding-bottom: 7px;
   border-bottom: 1px solid rgba(122, 78, 32, 0.45);
-  font-size: 0.88rem;
+  font-size: 1.02rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1575,10 +1585,15 @@ function particleStyle(i: number): Record<string, string> {
   /* Füllt den Bereich unter der Überschrift und verteilt die drei Zeilen
      gleichmäßig darin, statt sie oben zusammenzudrängen. */
   align-content: space-evenly;
-  justify-self: stretch;
+  justify-self: center;
   height: 100%;
-  column-gap: 6px;
-  row-gap: 6px;
+  column-gap: 10px;
+  row-gap: 8px;
+  /* Nicht über die ganze Kachelbreite ziehen: mit dem breiteren Panel
+     stünden Label und Zahl sonst an entgegengesetzten Rändern und die
+     Zeile läse sich als zwei getrennte Angaben statt als eine. */
+  max-width: 210px;
+  margin: 0 auto;
 }
 /* Die Kategoriefarbe kommt inline aus killBreakdown — Planeten bernstein,
    Sterne im Türkis der Stern-Callouts, Galaxiebosse im Warnrot der
@@ -1587,7 +1602,7 @@ function particleStyle(i: number): Record<string, string> {
   filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.6));
 }
 .kill-cell__label {
-  font-size: 0.66rem;
+  font-size: 0.84rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1595,7 +1610,7 @@ function particleStyle(i: number): Record<string, string> {
   white-space: nowrap;
 }
 .kill-cell__count {
-  font-size: 0.94rem;
+  font-size: 1.32rem;
   font-weight: 800;
   line-height: 1;
   color: #ece0c0;
@@ -1626,10 +1641,10 @@ function particleStyle(i: number): Record<string, string> {
    Mengenzahl färbt.
 
    Der gewonnene Platz geht ins Bild: es füllt seine Rasterzelle vollständig
-   aus und ist damit gut die Hälfte größer als zuvor (40px → ~62px Kantenlänge
+   aus und ist damit gut die Hälfte größer als zuvor (40px → ~84px Kantenlänge
    auf der Design-Breite, mit dem Fit-Scale wächst es auf 2K/4K entsprechend
    mit). Das bleibt in der 256er-Variante von materialIconMd korrekt
-   eingebettet — bei DPR 2 sind das 124px Anzeige gegen 256px Quelle.
+   eingebettet — bei DPR 2 sind das 168px Anzeige gegen 256px Quelle.
 
    Feste Maße statt vh-Clamps: das Panel hat eine feste Design-Breite, die
    Größenanpassung an den Viewport macht ausschließlich useFitScale. Ein
@@ -1641,10 +1656,10 @@ function particleStyle(i: number): Record<string, string> {
 .mat-grid {
   /* So hoch wie die Zelle breit ist: die Materialbilder sind quadratisch,
      jede zusätzliche Zeilenhöhe darüber hinaus wäre Leerraum. */
-  --mat-row-h: 62px;
+  --mat-row-h: 78px;
   /* Ohne Rahmen trennt schon die Silhouette der Bilder — ein breiter Spalt
      würde sie nur kleiner machen. */
-  --mat-gap: 4px;
+  --mat-gap: 6px;
   display: grid;
   grid-template-columns: repeat(var(--mat-cols, 4), 1fr);
   grid-template-rows: repeat(var(--mat-rows, 2), var(--mat-row-h));
@@ -1656,7 +1671,7 @@ function particleStyle(i: number): Record<string, string> {
   width: 100%;
 }
 .mat-empty {
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-style: italic;
   letter-spacing: 0.06em;
   color: rgba(216, 200, 160, 0.3);
@@ -1673,7 +1688,7 @@ function particleStyle(i: number): Record<string, string> {
 }
 /* Überzähliges ist kein Material — nur eine Zahl, entsprechend zurückgenommen */
 .mat-card--more {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: rgba(216, 200, 160, 0.5);
   font-variant-numeric: tabular-nums;
@@ -1695,7 +1710,7 @@ function particleStyle(i: number): Record<string, string> {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: 1.7rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   color: var(--mat-color);
@@ -1705,13 +1720,13 @@ function particleStyle(i: number): Record<string, string> {
 }
 /* Die Menge sitzt auf der unteren Kante des Bildes — ohne Plakette darunter,
    die Lesbarkeit trägt der Schatten. Sie ist der eigentliche Messwert der
-   Kachel und deshalb bewusst groß: bei ~62px Zellenbreite bleibt selbst die
+   Kachel und deshalb bewusst groß: bei ~84px Zellenbreite bleibt selbst die
    längste Ausgabe des Formatierers („×999.9K") innerhalb der Zelle. */
 .mat-card__amount {
   position: absolute;
   right: 0;
   bottom: -1px;
-  font-size: 1.02rem;
+  font-size: 1.24rem;
   font-weight: 800;
   line-height: 1;
   color: var(--mat-color);
@@ -1763,14 +1778,14 @@ function particleStyle(i: number): Record<string, string> {
   justify-content: space-between;
   gap: clamp(10px, 1.4vw, 16px);
   width: 100%;
-  height: 40px;
+  height: 54px;
   padding: 0 clamp(12px, 1.6vw, 16px);
   background: rgba(255, 200, 80, 0.05);
   border: 1px solid rgba(122, 78, 32, 0.55);
   border-radius: 12px;
 }
 .battle-strip__idle {
-  font-size: clamp(0.68rem, 0.95vw, 0.78rem);
+  font-size: clamp(0.85rem, 1.1vw, 0.95rem);
   font-style: italic;
   letter-spacing: 0.06em;
   color: rgba(216, 200, 160, 0.32);
@@ -1781,7 +1796,7 @@ function particleStyle(i: number): Record<string, string> {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 0.88rem;
+  font-size: 1.02rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1796,7 +1811,7 @@ function particleStyle(i: number): Record<string, string> {
   display: inline-flex;
   align-items: baseline;
   gap: 7px;
-  font-size: clamp(0.95rem, 1.4vw, 1.2rem);
+  font-size: clamp(1.25rem, 1.8vw, 1.55rem);
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1815,7 +1830,7 @@ function particleStyle(i: number): Record<string, string> {
   font-weight: 700;
 }
 .battle-strip__lp {
-  font-size: clamp(0.85rem, 1.25vw, 1.1rem);
+  font-size: clamp(1.1rem, 1.6vw, 1.38rem);
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1836,7 +1851,7 @@ function particleStyle(i: number): Record<string, string> {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: clamp(0.85rem, 1.25vw, 1.1rem);
+  font-size: clamp(1.1rem, 1.6vw, 1.38rem);
   font-weight: 800;
   line-height: 1;
   color: #f0d060;
@@ -1845,8 +1860,8 @@ function particleStyle(i: number): Record<string, string> {
   white-space: nowrap;
 }
 .battle-strip__chime-img {
-  width: clamp(16px, 2.2vh, 20px);
-  height: clamp(16px, 2.2vh, 20px);
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.5));
 }
