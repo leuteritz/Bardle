@@ -30,6 +30,18 @@
             <h1 class="pause-title">Paused</h1>
             <div class="pause-timer" role="timer" aria-label="Pause duration">
               <span class="pause-timer__value">
+                <!-- Zweite, deckungsgleiche Lage derselben Ziffern: sie trägt
+                     KEINE Farbe, nur den kräftigen Schein, und allein ihre
+                     Opazität atmet. Der Takt lag vorher auf `text-shadow` der
+                     Ziffern selbst — das rastert die Zeile in jedem Frame neu
+                     (siehe „Performance" Regel 2 und 11). -->
+                <span class="pause-timer__glow" aria-hidden="true">
+                  <span
+                    v-for="(ch, i) in timerChars"
+                    :key="i"
+                    :class="ch === ':' ? 'timer-sep' : 'timer-digit'"
+                  >{{ ch }}</span>
+                </span>
                 <span
                   v-for="(ch, i) in timerChars"
                   :key="i"
@@ -135,7 +147,15 @@
           </div>
 
           <div class="chime-readout">
-            <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
+            <!-- Der Heiligenschein liegt als eigene Ebene hinter der Münze und
+                 blendet im Takt auf; die Münze selbst trägt ihren Schatten
+                 statisch. Vorher atmete ein `drop-shadow`-Filter direkt am
+                 Bild — jeder Frame eine Neurasterung (siehe „Performance"
+                 Regel 2). -->
+            <span class="chime-orb">
+              <span class="chime-orb__halo" aria-hidden="true" />
+              <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
+            </span>
             <span v-ink-center.y class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
           </div>
 
@@ -939,15 +959,33 @@ function particleStyle(i: number): Record<string, string> {
   margin-top: clamp(6px, 1vh, 10px);
 }
 .pause-timer__value {
+  position: relative;
   display: inline-flex;
   align-items: baseline;
   font-size: clamp(2rem, 3.6vw, 3rem);
   font-weight: 800;
   line-height: 1;
   color: #f0d060;
+  /* Grundschein statisch. Was atmet, ist die Ebene darunter. */
   text-shadow:
     0 0 22px rgba(240, 208, 96, 0.45),
     0 0 48px rgba(200, 144, 64, 0.22);
+}
+/* Farbloser Zwilling hinter den Ziffern: `text-shadow` zeichnet auch bei
+   transparenter Schrift, übrig bleibt also reiner Schein. Er liegt exakt auf
+   den Ziffern (dieselbe Zeichenkette, dieselben Zellenbreiten) und blendet im
+   Takt auf — animiert wird nur `opacity`, das bleibt Compositor-Arbeit. */
+.pause-timer__glow {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: baseline;
+  color: transparent;
+  text-shadow:
+    0 0 30px rgba(240, 208, 96, 0.4),
+    0 0 64px rgba(200, 144, 64, 0.2);
+  opacity: 0;
+  pointer-events: none;
   animation: timer-breathe 5s ease-in-out infinite;
 }
 /* Every glyph sits in a fixed-width cell so nothing shifts as digits change. */
@@ -965,14 +1003,10 @@ function particleStyle(i: number): Record<string, string> {
 @keyframes timer-breathe {
   0%,
   100% {
-    text-shadow:
-      0 0 22px rgba(240, 208, 96, 0.45),
-      0 0 48px rgba(200, 144, 64, 0.22);
+    opacity: 0;
   }
   50% {
-    text-shadow:
-      0 0 30px rgba(240, 208, 96, 0.7),
-      0 0 64px rgba(200, 144, 64, 0.35);
+    opacity: 1;
   }
 }
 .pause-meta-row {
@@ -1303,20 +1337,42 @@ function particleStyle(i: number): Record<string, string> {
   align-items: center;
   gap: clamp(12px, 1.6vw, 20px);
 }
+.chime-orb {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+}
 .chime-img {
+  position: relative;
   width: clamp(54px, 7.5vh, 84px);
   height: clamp(54px, 7.5vh, 84px);
   object-fit: contain;
-  filter: drop-shadow(0 0 16px rgba(232, 192, 64, 0.65));
+  /* Statischer Grundschatten — der Umschlag nach oben kommt vom Halo. */
+  filter: drop-shadow(0 0 12px rgba(232, 192, 64, 0.5));
+}
+/* Runder Schein hinter der Münze. Er greift über deren Kante hinaus, damit der
+   Verlauf dort ankommt, wo vorher der weite drop-shadow lag. */
+.chime-orb__halo {
+  position: absolute;
+  inset: -35%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(232, 192, 64, 0.5) 0%,
+    rgba(232, 192, 64, 0.22) 42%,
+    transparent 70%
+  );
+  opacity: 0;
+  pointer-events: none;
   animation: chime-glow 5s ease-in-out infinite;
 }
 @keyframes chime-glow {
   0%,
   100% {
-    filter: drop-shadow(0 0 12px rgba(232, 192, 64, 0.5));
+    opacity: 0;
   }
   50% {
-    filter: drop-shadow(0 0 22px rgba(232, 192, 64, 0.8));
+    opacity: 1;
   }
 }
 .chime-value {
@@ -1986,11 +2042,13 @@ function particleStyle(i: number): Record<string, string> {
 
 /* ── Reduced motion ───────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
+  /* Die beiden Scheine liegen jetzt auf eigenen Ebenen — angehalten wird
+     deshalb dort, und zwar auf ihrem ruhigen Ende (opacity 0). */
   .particle,
-  .chime-img,
+  .chime-orb__halo,
+  .pause-timer__glow,
   .champion-herald__sheen,
-  .vital-bar--crit .vital-bar__pulse,
-  .pause-timer__value {
+  .vital-bar--crit .vital-bar__pulse {
     animation: none;
   }
   .vital-bar__fill,
