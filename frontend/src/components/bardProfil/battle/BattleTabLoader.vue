@@ -717,7 +717,7 @@ const crownSpaceStyle = { '--crown-headroom': `${RANK_FRAME_CROWN_HEADROOM}px` }
     --btn-pad: 6px;
   }
   .btl-band-lp-track {
-    height: 56px;
+    height: 58px;
   }
 }
 /* Kronenraum: der Rahmen wächst auf hohen Stufen mit den Karten mit */

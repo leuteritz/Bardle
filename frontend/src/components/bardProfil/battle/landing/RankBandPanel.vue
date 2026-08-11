@@ -73,7 +73,7 @@
                 </span>
                 <span v-if="!isChallenger" class="lp-of">/ {{ lpCap }}</span>
               </span>
-              <span v-ink-center class="lp-unit">{{ lpCaption }}</span>
+              <span v-if="lpCaption" v-ink-center class="lp-unit">{{ lpCaption }}</span>
             </div>
             <div
               class="lp-readout lp-readout--on-fill"
@@ -84,7 +84,7 @@
                 <span class="lp-num">{{ currentRank.lp }}</span>
                 <span v-if="!isChallenger" class="lp-of">/ {{ lpCap }}</span>
               </span>
-              <span v-ink-center class="lp-unit">{{ lpCaption }}</span>
+              <span v-if="lpCaption" v-ink-center class="lp-unit">{{ lpCaption }}</span>
             </div>
 
             <span class="lp-plinth" :style="{ background: plinthBg }" />
@@ -346,12 +346,13 @@ const lpTrackClass = computed(() => ({
   'lp-track--apex': isChallenger.value,
 }))
 
-/** The caption doubles as the state's own announcement — the frame changes
- *  colour, but only a word says what the colour means. */
+/** A word only where there is something to say. In the ordinary case the bar
+ *  carries the count and nothing else; in a promotion state it has to speak,
+ *  because a frame that changes colour does not say what the colour means. */
 const lpCaption = computed(() => {
   if (isChallenger.value) return 'APEX — NO CAP'
   if (isImminent.value) return 'PROMOTION IN REACH'
-  return 'LEAGUE POINTS'
+  return ''
 })
 
 /** Everything about the meter that only moves when the rank colour changes —
@@ -372,6 +373,10 @@ const lpTrackStyle = computed<Record<string, string>>(() => {
   return {
     '--lp-accent': c,
     '--lp-accent-soft': withAlpha(c, 0.45),
+    // Stand and cap are the same SIZE now, so the colour carries the whole
+    // distinction — tied to the rank rather than a fixed brown, or the cap
+    // would read as a foreign element next to its own number.
+    '--lp-cap-ink': withAlpha(c, 0.55),
     '--lp-zones': `linear-gradient(to right, ${zones.join(', ')})`,
     // horizontal heat ramp × vertical volume — the further right, the hotter
     '--lp-ramp':
@@ -394,11 +399,13 @@ interface LpTick {
   style: Record<string, string>
 }
 
-/** The scale itself. Strokes stand on the plinth as a ruler along the foot of
- *  the gauge — light ones inside a zone, heavy ones on every zone edge. They
- *  are kept SHORT (a fifth of the track at most) because the chamber above them
- *  now holds the count; the escalation toward promotion is carried by their
- *  width and their light instead of by their height. */
+/** The scale itself. Strokes stand on the plinth as a hairline ruler along the
+ *  foot of the gauge — light ones inside a zone, heavy ones on every zone edge.
+ *  They are kept SHORT (an eighth of the track at most) because the count sits
+ *  centred over the whole height and would otherwise catch them in its
+ *  descenders; the tight case is the promotion state, where the caption adds a
+ *  second line. The escalation toward promotion is carried by their width and
+ *  their light instead of by their height. */
 const lpTicks = computed<LpTick[]>(() => {
   const steps = LP_METER_ZONES * LP_METER_TICKS_PER_ZONE
   const capped = isChallenger.value
@@ -415,7 +422,7 @@ const lpTicks = computed<LpTick[]>(() => {
       title: capped ? '' : `${lp} LP`,
       style: {
         left: `${(t * 100).toFixed(3)}%`,
-        '--tick-h': major ? `${(13 + t * 7).toFixed(1)}%` : `${(9 + t * 5).toFixed(1)}%`,
+        '--tick-h': major ? `${(7 + t * 3).toFixed(1)}%` : `${(4.5 + t * 2.5).toFixed(1)}%`,
         '--tick-w': major ? `${(2 + t * 1.6).toFixed(1)}px` : '1px',
         // ahead of the fill: a lit mark, brighter the closer to promotion
         '--tick-dim': `rgba(255, 240, 200, ${(major ? 0.16 + t * 0.3 : 0.075 + t * 0.155).toFixed(3)})`,
@@ -779,16 +786,13 @@ const plinthBg = computed(
 /* ── The reading, inside the gauge ──
    Two congruent layers, so the count survives whatever ground the fill puts
    under it: the base one lit for the dark track, the twin dark and clipped at
-   the fill edge. Both cover the whole track and centre in the chamber ABOVE the
-   foot rail (--lp-rail) — centring in the plain middle of the box would drop
-   the caption onto the scale strokes. */
+   the fill edge. Both cover the whole track and centre over its FULL height —
+   equal air above and below, and that holds in the promotion state too, where
+   a second line joins and the block simply re-centres. Keeping the strokes
+   clear of it is the scale's job (see --tick-h), not this box's. */
 .lp-readout {
   position: absolute;
   inset: 0;
-  /* NOT a percentage: percentage padding resolves against the WIDTH, and this
-     track is ~750 px wide — `20%` came out as 150 px of padding and shoved the
-     count clean out through the top of the bar. */
-  padding-bottom: var(--lp-rail);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -807,20 +811,21 @@ const plinthBg = computed(
   text-shadow: 0 1px 0 rgba(255, 248, 222, 0.3);
 }
 .lp-readout--on-fill .lp-of {
-  color: rgba(14, 10, 4, 0.8);
+  color: rgba(14, 10, 4, 0.62);
+  text-shadow: none;
 }
 .lp-readout--on-fill .lp-unit {
   color: rgba(14, 10, 4, 0.82);
 }
 
+/* The size lives HERE, not on the two spans — stand and cap read as one value,
+   and the three height tiers below then have a single number to override
+   instead of two that can drift apart. */
 .lp-count {
   display: flex;
   align-items: baseline;
-  gap: clamp(5px, 0.7vw, 11px);
-}
-
-.lp-num {
-  font-size: clamp(21px, 4.2cqh, 54px);
+  gap: clamp(4px, 0.5vw, 9px);
+  font-size: clamp(24px, 4.6cqh, 56px);
   font-weight: 700;
   line-height: 0.95;
   letter-spacing: 1px;
@@ -828,18 +833,23 @@ const plinthBg = computed(
   font-variant-numeric: tabular-nums;
 }
 
-/* The scale's far end, kept a step behind the count itself */
+.lp-num {
+  font-size: inherit;
+}
+
+/* The scale's far end. Same size as the count, so the colour alone says which
+   of the two numbers is the player's own standing. */
 .lp-of {
-  font-size: clamp(11px, 1.9cqh, 23px);
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #8a7444;
-  font-variant-numeric: tabular-nums;
+  font-size: inherit;
+  color: var(--lp-cap-ink);
 }
 
 .lp-unit {
   font-size: clamp(7px, 0.95cqh, 11px);
   font-weight: 700;
+  /* One line, so the default `normal` leading is pure padding — and it is the
+     promotion state that has the least room to spare against the scale. */
+  line-height: 1;
   letter-spacing: 3px;
   color: #a08448;
   white-space: nowrap;
@@ -866,11 +876,6 @@ const plinthBg = computed(
    animate, and both move on opacity/transform alone. */
 .lp-track {
   --track-h: clamp(52px, 9.2cqh, 112px);
-  /* The foot rail the scale strokes stand in; the reading centres above it.
-     A shade taller than the tallest stroke (20 % of the track, see lpTicks) so
-     the caption keeps clear of the scale. Derived from --track-h, so the two
-     compact tiers below inherit the proportion by setting the height alone. */
-  --lp-rail: calc(var(--track-h) * 0.26);
   position: relative;
   height: var(--track-h);
   background:
@@ -1085,8 +1090,8 @@ const plinthBg = computed(
   .rank-name {
     font-size: clamp(24px, 3.8cqh, 40px);
   }
-  .lp-num {
-    font-size: clamp(26px, 4cqh, 38px);
+  .lp-count {
+    font-size: clamp(28px, 4.4cqh, 40px);
   }
   /* Taller than the 40 px it was, because the count now lives inside — but the
      LP block as a whole still shrinks: bar plus separate readout used to run to
@@ -1124,15 +1129,14 @@ const plinthBg = computed(
     font-size: 24px;
     letter-spacing: 2px;
   }
-  .lp-num {
-    font-size: 22px;
+  .lp-count {
+    font-size: 26px;
   }
-  .lp-of {
-    font-size: 11px;
-  }
-  /* was 30 px plus a ~46 px readout under it; one 56 px gauge instead */
+  /* was 30 px plus a ~46 px readout under it; one 58 px gauge instead. The
+     four px over the other tiers' proportion buy the promotion caption its
+     clearance from the scale — here the margin is thinnest. */
   .lp-track {
-    --track-h: 56px;
+    --track-h: 58px;
   }
   .tier-ladder {
     --pip: 32px;
