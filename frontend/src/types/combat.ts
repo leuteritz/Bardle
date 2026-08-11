@@ -43,6 +43,8 @@ export interface DamageFloat {
   healFloat?: boolean
   shieldFloat?: boolean
   curseFloat?: boolean
+  /** Ein Orbit-Körper hat ein Void-Wesen berührt — magenta statt orange. */
+  voidFloat?: boolean
   /** Starfall perk landed a critical orbit hit — the float is highlighted. */
   crit?: boolean
 }

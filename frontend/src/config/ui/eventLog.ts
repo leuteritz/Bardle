@@ -73,6 +73,44 @@ export function logVoidRiftCollapsed(name: string, hpLost: number) {
 }
 
 /**
+ * Top hat ein Wesen körperlich aufgehalten.
+ *
+ * Die zweite Hälfte der Zeile ist wichtiger als die erste: ein angehaltenes
+ * Wesen klettert nicht weiter, verliert damit die Führung, und der gesamte
+ * Orbit-Beschuss springt auf das nächste. Ohne diesen Satz liest niemand das ab.
+ */
+export function logVoidBlocked(championName: string, verb: string, riftName: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`${championName}'s ${verb} stops ${riftName} dead — the orbit shifts its fire.`, 'top')
+}
+
+/** Der Jungler hat ein angeschlagenes Wesen hingerichtet. */
+export function logVoidCulled(championName: string, verb: string, riftName: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`${championName}'s ${verb} finishes ${riftName} before it closes in.`, 'jungle')
+}
+
+/** Support hat die Drossel eines Wesens stillgelegt. */
+export function logVoidWarded(
+  championName: string,
+  verb: string,
+  riftName: string,
+  seconds: number,
+) {
+  const { addEvent } = useEventLog()
+  addEvent(
+    `${championName}'s ${verb} silences ${riftName} — its pull goes quiet for ${seconds}s.`,
+    'support',
+  )
+}
+
+/** Ein Relay-Planet hat ein Wesen zurückgeworfen. */
+export function logVoidBanished(planetName: string, riftName: string, seconds: number) {
+  const { addEvent } = useEventLog()
+  addEvent(`${planetName} opens a corridor — ${riftName} loses ${seconds}s of ground.`, 'void')
+}
+
+/**
  * Eine Chronicle-Stufe ist gefallen. Das Herald-Banner sagt WAS, diese Zeile
  * bleibt als Belegkopie im Log — mit der Wirkung, die ab jetzt gilt.
  */

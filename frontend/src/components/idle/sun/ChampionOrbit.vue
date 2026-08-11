@@ -119,6 +119,7 @@
               'champion-dmg-float--heal': f.healFloat,
               'champion-dmg-float--shield': f.shieldFloat,
               'champion-dmg-float--curse': f.curseFloat,
+              'champion-dmg-float--void': f.voidFloat,
               'champion-dmg-float--crit': f.crit,
             }"
             :style="{ left: f.x + 'px', top: f.y + 'px' }"
@@ -152,7 +153,11 @@ import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { ROLE_HOVER_COLORS } from '@/config/constants'
-import { activePlanetPositions, activeChampionBehindState } from '@/utils/orbit/liveState'
+import {
+  activePlanetPositions,
+  activeChampionBehindState,
+  activeChampionBodies,
+} from '@/utils/orbit/liveState'
 import {
   ORBIT_TIERS,
   SUPPORT_ANGLE_OFFSET,
@@ -303,6 +308,10 @@ export default defineComponent({
     const localStates = new Map<string, LocalChampState>()
     const champSpeedMuls = new Map<string, number>()
     const lastFiredAt = new Map<string, number>()
+    // Welche Rollen im laufenden Frame einen Körper gemeldet haben. Ein
+    // wiederverwendetes Set statt eines neuen je Frame — fünf Einträge, aber
+    // sechzigmal je Sekunde.
+    const seenBodyRoles = new Set<ChampionRole>()
 
     // topHitActive bleibt für den --top-hit CSS-Flash-Effekt am Avatar erhalten
     const topHitActive = ref(false)
@@ -466,6 +475,7 @@ export default defineComponent({
       const screenCy = window.innerHeight / 2
       const champions = combatStore.champions
       const newPositions: ChampionRenderPos[] = []
+      seenBodyRoles.clear()
 
       const adcName = battleStore.headerSlots[3]
       const adcState = adcName ? localStates.get(adcName) : null
@@ -579,6 +589,25 @@ export default defineComponent({
 
         const isForeground = !isBehind && depth > PLANET_ORBIT_FOREGROUND_DEPTH
 
+        // Körper für die Void-Berührung veröffentlichen — noch VOR dem
+        // Render-Ausstieg unten, genau wie PlanetOrbit es tut: unter dem
+        // Bard-Profil laufen die Bahnen weiter, also muss auch weiter berührt
+        // werden können. Der Radius ist exakt die Zahl, die der Renderer gleich
+        // benutzt (`size` aus fixedSize × scale) — ihn anderswo nachzurechnen
+        // hiesse zwei Quellen für dasselbe Mass.
+        if (isMain && primaryRole) {
+          seenBodyRoles.add(primaryRole)
+          let body = activeChampionBodies.get(primaryRole)
+          if (!body) {
+            body = { cx: 0, cy: 0, isForeground: false, r: 0 }
+            activeChampionBodies.set(primaryRole, body)
+          }
+          body.cx = ls.x
+          body.cy = ls.y
+          body.isForeground = isForeground
+          body.r = size / 2
+        }
+
         const visibleFactor = Math.max(
           0,
           Math.min(1, (relY - ORBIT_BEHIND_REL_Y + ORBIT_BEHIND_FADE_BAND) / ORBIT_BEHIND_FADE_BAND),
@@ -646,6 +675,15 @@ export default defineComponent({
           champSpeedMuls.delete(key)
           lastFiredAt.delete(key)
           dimFactors.delete(key)
+        }
+      }
+
+      // Eine leergeräumte Rolle muss auch aus der Körper-Map verschwinden,
+      // sonst berührte ein Void-Wesen weiter den Geist eines Champions, der
+      // längst nicht mehr im Orbit steht.
+      if (activeChampionBodies.size !== seenBodyRoles.size) {
+        for (const role of activeChampionBodies.keys()) {
+          if (!seenBodyRoles.has(role)) activeChampionBodies.delete(role)
         }
       }
 
@@ -1395,6 +1433,19 @@ export default defineComponent({
   text-shadow:
     0 0 10px rgba(180, 50, 255, 0.95),
     0 0 22px rgba(140, 20, 240, 0.55);
+}
+
+/* Ein Orbit-Körper hat ein Void-Wesen gestreift. Magenta wie die Leere selbst
+   (VOID_SEVERITY_COLOR.abyssal), damit die Zahl nicht mit dem Bossschaden
+   daneben verwechselt wird. Steht NACH --planet, damit ein Planetentreffer am
+   Void trotzdem magenta bleibt. */
+.champion-dmg-float--void {
+  font-size: 1.1rem;
+  color: #e0409f;
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.85);
+  text-shadow:
+    0 0 10px rgba(224, 64, 159, 0.95),
+    0 0 22px rgba(176, 79, 216, 0.55);
 }
 
 /* ── Schaden-Transitions ──────────────────────────────────────────────────── */

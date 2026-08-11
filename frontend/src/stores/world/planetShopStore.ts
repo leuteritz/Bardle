@@ -589,6 +589,29 @@ export const usePlanetShopStore = defineStore('planetShop', {
       logPlanetDestroyed(planetLabel(slot), PLANET_RESPAWN_MS / 1000)
     },
 
+    /**
+     * Abnutzung durch eine Void-Berührung — der EINZIGE Schaden im Spiel, an
+     * dem ein Planet nicht sterben kann.
+     *
+     * Der Boden bei 1 HP ist keine Milde, sondern die Regel, die eine Spirale
+     * bricht: ein zerstörter Planet fällt aus `riftAutoAttackDPS`, also stirbt
+     * weniger Void, also kommen mehr durch, also fallen weitere Planeten — und
+     * anders als beim Boss kann man dem nicht ausweichen, denn zwei Dutzend
+     * Wesen wandern quer durch alle sechs Bahnen. Der Void tötet die SONNE; die
+     * Planeten sind das Gelände, das er dabei abträgt. Damit bekommt Supports
+     * Planetenheilung nebenbei eine Daueraufgabe.
+     *
+     * @returns Was tatsächlich abgezogen wurde — der Aufrufer zeigt diese Zahl.
+     */
+    takeVoidChip(slotId: string, amount: number): number {
+      const slot = this.getSlot(slotId)
+      if (!slot || !slot.purchased || isPlanetDown(slot) || amount <= 0) return 0
+      const dealt = Math.min(amount, Math.max(0, slot.currentHp - 1))
+      if (dealt <= 0) return 0
+      slot.currentHp -= dealt
+      return dealt
+    },
+
     /** Abgelaufene Ausfallzeiten beenden — pro Game-Tick aufgerufen. */
     tickRespawn(): void {
       const now = Date.now()

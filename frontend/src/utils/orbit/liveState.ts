@@ -5,17 +5,38 @@
 // sollen kein Reaktivitäts-Update pro Frame auslösen. Einzige Ausnahme ist
 // `activeChampionBehindState`, dessen Ergebnis direkt das Rendering steuert.
 import { reactive } from 'vue'
-import type { MidCurseType } from '@/types'
+import type { ChampionRole, MidCurseType } from '@/types'
 
 /** Bildschirmposition eines Orbit-Körpers — Ziel- bzw. Startpunkt für Projektile. */
 export interface OrbitScreenPosition {
   cx: number
   cy: number
   isForeground: boolean
+  /**
+   * Halber DARGESTELLTER Durchmesser in CSS-px — der Körper, nicht die Bahn.
+   *
+   * Trägt nur, wer eine Kollision beantworten muss (Spieler-Planeten und die
+   * Champion-Bodies unten); die Gegner-Planeten lassen ihn leer, weil sie nur
+   * als Projektilziel gelesen werden.
+   */
+  r?: number
 }
 
 /** Champion-Name → steht der Champion gerade hinter der Sonne? Pro Frame von ChampionOrbit gesetzt. */
 export const activeChampionBehindState = reactive<Record<string, boolean>>({})
+
+/**
+ * Rolle → Körper ihres MAIN-Champions. Pro Frame von ChampionOrbit in place
+ * mutiert, bewusst ausserhalb von Pinia: den Radius je Frame nach
+ * `combatStore` zu schreiben wäre ein reaktiver Schreibvorgang pro Frame
+ * (Performance-Regel 3), und dort schreibt `setChampionScreenPos` ohnehin
+ * schon mit 60 Hz.
+ *
+ * Schlüssel ist die ROLLE, nicht der Name — jeder Verbraucher braucht sie, und
+ * ChampionOrbit löst sie über `getAssignment` ohnehin schon auf. Über den
+ * Namen zu gehen hiesse `headerSlots.indexOf` je Wesen und Frame.
+ */
+export const activeChampionBodies = new Map<ChampionRole, OrbitScreenPosition>()
 
 /** Gegner-Planeten, mit 60fps aus useStarSystem / PlanetOrbit befüllt. Quelle für Projektil-Ziele. */
 export const activePlanetPositions = new Map<string, OrbitScreenPosition>()

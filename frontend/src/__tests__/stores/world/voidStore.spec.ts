@@ -5,9 +5,17 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useCombatStore } from '@/stores/battle/combatStore'
+import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
+import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { usePlanetShopStore, isPlanetDown } from '@/stores/world/planetShopStore'
 import { getVoidRift, VOID_RIFTS } from '@/config/world/void'
 import { voidPositionAt } from '@/utils/orbit/voidPath'
+import { hudFieldMetrics } from '@/utils/ui/hudField'
+import { activeChampionBodies, activePlayerPlanetPositions } from '@/utils/orbit/liveState'
+import { contactCooldownCount, resetContactCooldowns } from '@/utils/orbit/voidContact'
+import type { ChampionRole, VoidMonster } from '@/types'
 import {
   VOID_UNLOCK_LEVEL,
   VOID_MAX_CONCURRENT,
@@ -21,6 +29,20 @@ import {
   VOID_IMPACT_HP_LOSS,
   VOID_IMPACT_AFTERMATH_MS,
   VOID_SPAWN_RETRY_SEC,
+  VOID_CONTACT_VERB,
+  VOID_CONTACT_REARM_MS,
+  VOID_PLANET_CONTACT_REARM_MS,
+  VOID_PLANET_RIDER,
+  VOID_TOP_BLOCK_MS,
+  VOID_MID_CURSE_MS,
+  VOID_MID_CURSE_AMP,
+  VOID_ADC_FOCUS_MS,
+  VOID_SUPPORT_WARD_MS,
+  VOID_JUNGLE_STRIKE_PCT,
+  VOID_JUNGLE_EXECUTE_PCT,
+  ROLE_SUPPORT_HEAL_AMOUNT,
+  ROLES,
+  PLANET_ROLES_LIST,
   GAME_TICK_INTERVAL_MS,
 } from '@/config/constants'
 
@@ -37,13 +59,46 @@ function spawn(defId: string) {
   return m!
 }
 
+/**
+ * Setzt einen Orbit-Körper GENAU dorthin, wo das Wesen zu diesem Zeitpunkt
+ * steht — mit denselben Argumenten, mit denen der Store die Position rechnet.
+ * Ein von Hand gesetzter Punkt träfe je nach jsdom-Viewport mal und mal nicht.
+ */
+function placeBodyOn(
+  m: VoidMonster,
+  kind: 'champion' | 'planet',
+  key: string,
+  now: number,
+  radius = 60,
+) {
+  const def = getVoidRift(m.defId)!
+  const metrics = hudFieldMetrics(null)
+  const pos = voidPositionAt(
+    m,
+    def.sizePx,
+    usePlanetShopStore().orbitSunRadius,
+    now,
+    metrics.viewportW,
+    metrics.viewportH,
+    metrics,
+  )
+  const body = { cx: pos.x, cy: pos.y, isForeground: true, r: radius }
+  if (kind === 'champion') activeChampionBodies.set(key as ChampionRole, body)
+  else activePlayerPlanetPositions.set(key, body)
+}
+
 describe('voidStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    // Modul-Zustand ausserhalb von Pinia — er überlebt sonst den Testfall.
+    activeChampionBodies.clear()
+    activePlayerPlanetPositions.clear()
+    resetContactCooldowns()
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   describe('Freischaltung', () => {
@@ -428,6 +483,404 @@ describe('voidStore', () => {
       expect(store.totalRiftsSealed).toBe(1)
       expect(store.active).toHaveLength(1)
       expect(store.active[0].currentHp).toBeLessThan(back.maxHp)
+    })
+  })
+
+  // ── Berührung ─────────────────────────────────────────────────────────────
+  // Der Orbit steht dem Void körperlich im Weg. Die Bahnradien geben die
+  // Reihenfolge vor — Support/ADC ganz aussen, dann Mid, dann Jungle, zuletzt
+  // Top —, und jede Rolle tut etwas anderes.
+  describe('Berührung', () => {
+    it('feuert je Paar nur einmal je Sperrzeit, egal wie oft gefragt wird', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      const now = Date.now()
+      placeBodyOn(m, 'champion', 'mid', now)
+
+      // Sechzig Frames innerhalb einer Sekunde. Ohne die Paar-Sperre stünde der
+      // Fluch danach sechzigmal neu — und das Wesen wäre dauerhaft verflucht,
+      // statt es für eine begrenzte Zeit zu sein.
+      for (let i = 0; i < 60; i++) store.resolveOrbitContacts(now + i)
+      expect(m.cursedUntil).toBe(now + VOID_MID_CURSE_MS)
+    })
+
+    it('lässt Frame-Takt und Sekundentakt nicht doppelt zünden', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      const now = Date.now()
+      placeBodyOn(m, 'champion', 'adc', now)
+
+      store.resolveOrbitContacts(now)
+      const afterFirst = m.currentHp
+      expect(afterFirst).toBeLessThan(m.maxHp)
+
+      // Der Sekundentakt ruft denselben Auflöser — er darf den Burst nicht
+      // ein zweites Mal abrechnen.
+      store.tick()
+      expect(m.currentHp).toBe(afterFirst)
+    })
+
+    it('hält ein Wesen an, ohne seinen Fortschritt zurückzudrehen', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      m.spawnedAt -= 20_000
+      store.voidNow = Date.now()
+      const before = store.progressByUid.get(m.uid)!
+
+      m.blockedUntil = Date.now() + VOID_TOP_BLOCK_MS
+      // Eine Sekunde Wanduhr weiter, und der Halte-Tick schiebt die Startmarke
+      // im selben Takt mit: der Bruch bleibt stehen, er springt nicht zurück.
+      store.voidNow = Date.now() + GAME_TICK_INTERVAL_MS
+      store._tickContactHolds()
+      const after = (store.voidNow - m.spawnedAt) / m.travelMs
+
+      expect(after).toBeCloseTo(before, 6)
+      expect(after).toBeGreaterThanOrEqual(0)
+    })
+
+    it('verschiebt spawnedAt nicht doppelt, während die Stase läuft', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      m.blockedUntil = Date.now() + VOID_TOP_BLOCK_MS
+
+      // Bard R schiebt bereits JEDES spawnedAt um einen vollen Takt, und sie
+      // läuft im selben gameStore-Tick VOR uns. Ein zweites Schieben liesse
+      // ein gehaltenes Wesen rückwärts laufen.
+      useBardAbilityStore().stasisUntil = Date.now() + 10_000
+      useBardAbilityStore().abilityNow = Date.now()
+
+      const before = m.spawnedAt
+      store.voidNow = Date.now()
+      store._tickContactHolds()
+      expect(m.spawnedAt).toBe(before)
+    })
+
+    it('schiebt die Ankunft nach hinten, statt sie zu verhindern', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      const arrivalBefore = m.spawnedAt + m.travelMs
+
+      m.blockedUntil = Date.now() + VOID_TOP_BLOCK_MS
+      store.voidNow = Date.now()
+      store._tickContactHolds()
+
+      expect(m.spawnedAt + m.travelMs).toBe(arrivalBefore + GAME_TICK_INTERVAL_MS)
+      expect(store.active).toHaveLength(1)
+    })
+
+    it('bremst ein verflucht-langsames Wesen, ohne es ganz anzuhalten', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      m.slowedUntil = Date.now() + VOID_MID_CURSE_MS
+      const before = m.spawnedAt
+
+      store.voidNow = Date.now()
+      store._tickContactHolds()
+
+      const shift = m.spawnedAt - before
+      expect(shift).toBeGreaterThan(0)
+      expect(shift).toBeLessThan(GAME_TICK_INTERVAL_MS)
+    })
+
+    it('nimmt ein gewardetes Wesen aus der Drossel, lässt es aber weiterlaufen', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      m.spawnedAt -= VOID_TRAVEL_MS.lesser / 2
+      store.voidNow = Date.now()
+      expect(store.cpsMult).toBeLessThan(1)
+
+      // Über die reaktive Liste setzen, nicht über die rohe Instanz: der
+      // Drossel-Getter ist gecacht und würde eine Mutation am Rohobjekt nicht
+      // bemerken.
+      store.active[0].wardedUntil = store.voidNow + VOID_SUPPORT_WARD_MS
+      expect(store.cpsMult).toBe(1)
+
+      // Es zieht nicht mehr — aufgehalten ist es deswegen nicht.
+      const progress = store.progressByUid.get(m.uid)!
+      expect(progress).toBeGreaterThan(0.4)
+      store.resolveArrivals(m.spawnedAt + m.travelMs)
+      expect(store.active).toHaveLength(0)
+    })
+
+    it('gibt die Führung ab, solange es aufgehalten wird', () => {
+      unlock()
+      const store = useVoidStore()
+      const held = spawn('sunlessBreach')
+      const runner = spawn('sunlessBreach')
+      held.spawnedAt -= 20_000
+      runner.spawnedAt -= 19_000
+      store.voidNow = Date.now()
+      expect(store.leadMonster?.uid).toBe(held.uid)
+
+      // Das vordere anhalten: das nächste zieht vorbei, und mit ihm springt der
+      // gesamte Orbit-Beschuss um — ohne eine Zeile Zusatzcode.
+      held.blockedUntil = store.voidNow + 60_000
+      for (let i = 1; i <= 3; i++) {
+        store.voidNow = Date.now() + i * GAME_TICK_INTERVAL_MS
+        store._tickContactHolds()
+      }
+      expect(store.leadMonster?.uid).toBe(runner.uid)
+    })
+
+    it('verstärkt jeden Schaden am verfluchten Wesen und reicht den Überschuss exakt weiter', () => {
+      unlock()
+      const store = useVoidStore()
+      const front = spawn('sunlessBreach')
+      const back = spawn('sunlessBreach')
+      front.spawnedAt -= 10_000
+      store.voidNow = Date.now()
+      front.cursedUntil = Date.now() + VOID_MID_CURSE_MS
+
+      // Genau so viel Rohschaden, wie es braucht, um das verfluchte vordere
+      // Wesen zu erlegen — plus einen bekannten Rest für das zweite. Ohne die
+      // Deckelung auf currentHp/amp ginge dieser Rest um genau den
+      // Fluchfaktor daneben.
+      const rest = 40
+      let pool = front.maxHp / VOID_MID_CURSE_AMP + rest
+      for (const m of [front, back]) {
+        if (pool <= 0) break
+        const dealt = Math.min(
+          pool,
+          m.currentHp / (m.cursedUntil > Date.now() ? VOID_MID_CURSE_AMP : 1),
+        )
+        pool -= dealt
+        store.damageMonster(m.uid, dealt)
+      }
+      expect(store.totalRiftsSealed).toBe(1)
+      expect(store.active).toHaveLength(1)
+      expect(store.active[0].currentHp).toBeCloseTo(back.maxHp - rest, 6)
+    })
+
+    it('nimmt beim Klick verstärkten Schaden, solange der Fluch steht', () => {
+      unlock()
+      const store = useVoidStore()
+      const m = spawn('sunlessBreach')
+      m.cursedUntil = Date.now() + VOID_MID_CURSE_MS
+      store.hitMonster(m.uid)
+      expect(m.currentHp).toBeCloseTo(
+        m.maxHp - m.maxHp * VOID_CLICK_DAMAGE_PCT * VOID_MID_CURSE_AMP,
+        6,
+      )
+    })
+
+    it('lenkt den Beschuss auf das markierte Wesen, nicht auf das vorderste', () => {
+      unlock()
+      const store = useVoidStore()
+      const front = spawn('sunlessBreach')
+      const marked = spawn('sunlessBreach')
+      front.spawnedAt -= 20_000
+      store.voidNow = Date.now()
+      marked.focusedUntil = store.voidNow + VOID_ADC_FOCUS_MS
+
+      // Der Pool kommt aus zwei fremden Stores; hier zählt allein, in welcher
+      // Reihenfolge applyOrbitPressure die Wesen bedient.
+      vi.spyOn(useCombatStore(), 'fullOrbitDps').mockReturnValue(marked.maxHp * 0.5)
+      store.applyOrbitPressure()
+
+      expect(marked.currentHp).toBeLessThan(marked.maxHp)
+      expect(front.currentHp).toBe(front.maxHp)
+    })
+
+    it('erlegt unter der Hinrichtungsschwelle, darüber nur Schaden', () => {
+      unlock()
+      const store = useVoidStore()
+      const now = Date.now()
+
+      const healthy = spawn('sunlessBreach')
+      placeBodyOn(healthy, 'champion', 'jungle', now)
+      store.resolveOrbitContacts(now)
+      expect(store.active).toHaveLength(1)
+      expect(healthy.currentHp).toBeCloseTo(
+        healthy.maxHp - healthy.maxHp * VOID_JUNGLE_STRIKE_PCT,
+        6,
+      )
+
+      // Dasselbe Wesen, diesmal angeschlagen unter die Schwelle.
+      store.clearAll()
+      const wounded = spawn('sunlessBreach')
+      wounded.currentHp = wounded.maxHp * VOID_JUNGLE_EXECUTE_PCT * 0.5
+      placeBodyOn(wounded, 'champion', 'jungle', now)
+      store.resolveOrbitContacts(now)
+      expect(store.active).toHaveLength(0)
+      expect(store.totalRiftsSealed).toBe(1)
+    })
+
+    it('bricht Tops Schild und stellt es erst nach dem Wiederaufbau', () => {
+      unlock()
+      const store = useVoidStore()
+      const rb = useRoleBehaviorStore()
+      rb.tankShieldActive = true
+      const now = Date.now()
+
+      const first = spawn('sunlessBreach')
+      placeBodyOn(first, 'champion', 'top', now)
+      store.resolveOrbitContacts(now)
+
+      expect(first.blockedUntil).toBe(now + VOID_TOP_BLOCK_MS)
+      expect(rb.tankShieldActive).toBe(false)
+      expect(rb.tankShieldBrokenMs).toBeGreaterThan(0)
+
+      // Ohne Schild hält Top nichts mehr auf — EIN Wesen je Wiederaufbau,
+      // egal wie viele kommen.
+      const second = spawn('sunlessBreach')
+      placeBodyOn(second, 'champion', 'top', now)
+      store.resolveOrbitContacts(now)
+      expect(second.blockedUntil).toBe(0)
+    })
+
+    it('verbrennt die Sperre nicht, wenn Tops Schild gerade unten ist', () => {
+      unlock()
+      const store = useVoidStore()
+      const rb = useRoleBehaviorStore()
+      rb.tankShieldActive = false
+      const now = Date.now()
+      const m = spawn('sunlessBreach')
+      placeBodyOn(m, 'champion', 'top', now)
+
+      store.resolveOrbitContacts(now)
+      expect(m.blockedUntil).toBe(0)
+
+      // Schild wieder da, gleiche Sekunde: der gescheiterte Versuch darf das
+      // Wesen nicht sekundenlang unberührbar gemacht haben.
+      rb.tankShieldActive = true
+      store.resolveOrbitContacts(now)
+      expect(m.blockedUntil).toBe(now + VOID_TOP_BLOCK_MS)
+    })
+
+    it('wardet und heilt, ohne dem Wesen zu schaden', () => {
+      unlock()
+      const store = useVoidStore()
+      const player = usePlayerStore()
+      player.currentHP = player.maxHP - ROLE_SUPPORT_HEAL_AMOUNT
+      const now = Date.now()
+      const m = spawn('sunlessBreach')
+      placeBodyOn(m, 'champion', 'support', now)
+
+      store.resolveOrbitContacts(now)
+      expect(m.wardedUntil).toBe(now + VOID_SUPPORT_WARD_MS)
+      expect(m.currentHp).toBe(m.maxHp)
+      expect(player.currentHP).toBe(player.maxHP)
+    })
+
+    it('zerstört einen Planeten nie durch Berührung', () => {
+      unlock()
+      const store = useVoidStore()
+      const shop = usePlanetShopStore()
+      const slot = shop.slots[0]
+      slot.purchased = true
+      slot.role = 'turret_planet'
+      slot.currentHp = 1
+
+      const now = Date.now()
+      const m = spawn('unmakingScar')
+      placeBodyOn(m, 'planet', slot.id, now)
+
+      // Hämmern, so oft die Sperre es zulässt — der Boden bei 1 HP hält.
+      for (let i = 0; i < 20; i++) {
+        store.resolveOrbitContacts(now + i * VOID_PLANET_CONTACT_REARM_MS * 2)
+        if (store.active.length === 0) spawn('unmakingScar')
+        placeBodyOn(store.active[0], 'planet', slot.id, now)
+      }
+      expect(slot.currentHp).toBeGreaterThanOrEqual(1)
+      expect(isPlanetDown(slot)).toBe(false)
+      expect(slot.downUntilMs).toBe(0)
+    })
+
+    it('lässt einen Aegis-Planeten weder austeilen noch einstecken', () => {
+      unlock()
+      const store = useVoidStore()
+      const shop = usePlanetShopStore()
+      const slot = shop.slots[0]
+      slot.purchased = true
+      slot.role = 'shield_barrier'
+      const hpBefore = slot.currentHp
+
+      const now = Date.now()
+      const m = spawn('unmakingScar')
+      placeBodyOn(m, 'planet', slot.id, now)
+      store.resolveOrbitContacts(now)
+
+      expect(slot.currentHp).toBe(hpBefore)
+      expect(m.currentHp).toBe(m.maxHp)
+    })
+
+    it('wirft ein Wesen am Relay zurück, ohne den Fortschritt unter null zu drücken', () => {
+      unlock()
+      const store = useVoidStore()
+      const shop = usePlanetShopStore()
+      const slot = shop.slots[0]
+      slot.purchased = true
+      slot.role = 'expedition_relay'
+
+      const now = Date.now()
+      const m = spawn('sunlessBreach')
+      placeBodyOn(m, 'planet', slot.id, now)
+      store.resolveOrbitContacts(now)
+
+      // Frisch aufgerissen: der Rückwurf darf spawnedAt nicht in die Zukunft
+      // schieben, sonst läuft der Fortschritt ins Negative.
+      expect(m.spawnedAt).toBeLessThanOrEqual(now)
+      store.voidNow = now
+      expect(store.progressByUid.get(m.uid)!).toBeGreaterThanOrEqual(0)
+    })
+
+    it('berührt nichts, was hinter der Sonne steht', () => {
+      unlock()
+      const store = useVoidStore()
+      const now = Date.now()
+      const m = spawn('sunlessBreach')
+      placeBodyOn(m, 'champion', 'mid', now)
+      activeChampionBodies.get('mid')!.isForeground = false
+
+      store.resolveOrbitContacts(now)
+      expect(m.cursedUntil).toBe(0)
+    })
+
+    it('räumt die Sperrzeiten erlegter Wesen wieder ab', () => {
+      unlock()
+      const store = useVoidStore()
+      const now = Date.now()
+      for (let i = 0; i < 30; i++) {
+        const m = spawn('sunlessBreach')
+        placeBodyOn(m, 'champion', 'mid', now)
+        store.resolveOrbitContacts(now)
+        store.slayMonster(m)
+      }
+      expect(contactCooldownCount()).toBeGreaterThan(0)
+      store.tick()
+      expect(contactCooldownCount()).toBe(0)
+    })
+
+    it('nennt für jede Rolle ein Berührungsverhalten', () => {
+      for (const role of ROLES) {
+        expect(VOID_CONTACT_VERB[role.key], `${role.key} ohne Verb`).toBeTruthy()
+        expect(VOID_CONTACT_REARM_MS[role.key], `${role.key} ohne Sperrzeit`).toBeGreaterThan(0)
+      }
+    })
+
+    it('nennt für jede Planetenrolle einen Rider', () => {
+      for (const planetRole of PLANET_ROLES_LIST) {
+        const rider = VOID_PLANET_RIDER[planetRole.id]
+        expect(rider, `${planetRole.id} ohne Rider`).toBeDefined()
+        expect(rider.damageMult).toBeGreaterThanOrEqual(0)
+      }
+    })
+
+    // Die Sperre je Paar muss länger stehen als die Wirkung, die sie auslöst —
+    // sonst frischt ein Champion, der eine Weile mitläuft, seinen eigenen
+    // Effekt dauernd auf, und aus einem Moment wird ein Dauerzustand.
+    it('hält jede Sperrzeit länger als die Wirkung, die sie auslöst', () => {
+      expect(VOID_CONTACT_REARM_MS.top).toBeGreaterThan(VOID_TOP_BLOCK_MS)
+      expect(VOID_CONTACT_REARM_MS.mid).toBeGreaterThan(VOID_MID_CURSE_MS)
+      expect(VOID_CONTACT_REARM_MS.adc).toBeGreaterThan(VOID_ADC_FOCUS_MS)
+      expect(VOID_CONTACT_REARM_MS.support).toBeGreaterThan(VOID_SUPPORT_WARD_MS)
     })
   })
 

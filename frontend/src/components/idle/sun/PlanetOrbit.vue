@@ -870,11 +870,18 @@ export default defineComponent({
           activePlayerPlanetPositions.delete(pos.id)
           continue
         }
-        activePlayerPlanetPositions.set(pos.id, {
-          cx: pos.x,
-          cy: pos.y,
-          isForeground: pos.isForeground,
-        })
+        // In place mutieren statt sechs Objektliterale je Frame zu werfen —
+        // `r` ist die DARGESTELLTE Halbkante und damit exakt der Körper, gegen
+        // den die Void-Berührung prüft.
+        let entry = activePlayerPlanetPositions.get(pos.id)
+        if (!entry) {
+          entry = { cx: 0, cy: 0, isForeground: false, r: 0 }
+          activePlayerPlanetPositions.set(pos.id, entry)
+        }
+        entry.cx = pos.x
+        entry.cy = pos.y
+        entry.isForeground = pos.isForeground
+        entry.r = pos.size / 2
       }
       for (const key of activePlayerPlanetPositions.keys()) {
         if (!newPositions.some((p) => p.id === key)) activePlayerPlanetPositions.delete(key)

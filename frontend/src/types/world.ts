@@ -265,6 +265,49 @@ export interface VoidMonster {
   currentHp: number
   /** Hochgezählt bei jedem Klick — treibt den Trefferblitz. */
   hitsLanded: number
+
+  // ── Was der Orbit ihm angetan hat ────────────────────────────────────────
+  // Alles absolute Wanduhrzeit, wie jede andere Frist im Spiel: ein
+  // gedrosselter Tab oder ein Reload kann sie damit nicht desynchronisieren.
+  // Flache Zahlen statt eines `marks`-Objekts — ein verschachteltes Objekt im
+  // Pinia-State wird proxiert, und jeder Lesevorgang liefe durch den Proxy.
+  /** Bis wann Top es körperlich aufhält (0 = frei). */
+  blockedUntil: number
+  /** Bis wann sein Vorrücken gebremst ist — Mid-Fluch ODER Zeitkapsel. */
+  slowedUntil: number
+  /** Bis wann es verflucht ist und allen Schaden verstärkt nimmt. */
+  cursedUntil: number
+  /** Bis wann die ADC-Marke darauf steht — der Beschuss geht zuerst hierher. */
+  focusedUntil: number
+  /** Bis wann ein Ward seine Drossel stilllegt. */
+  wardedUntil: number
+  /** Letzte Berührung — treibt den Funken im Canvas. */
+  lastContactAt: number
+}
+
+/**
+ * Was der Orbit einem Wesen gerade auferlegt — in der Reihenfolge, in der der
+ * Zustandsring sie zeigt. Es wird immer nur EINER gezeichnet: vier Ringe auf
+ * zwei Dutzend Wesen wären echte Arbeit, und der oberste sagt ohnehin das
+ * Dringlichste.
+ */
+export type VoidContactState = 'blocked' | 'warded' | 'cursed' | 'focused'
+
+/** Was ein Planet tut, wenn ein Wesen ihn streift. */
+export type VoidPlanetVerb = 'volley' | 'absorb' | 'slow' | 'scavenge' | 'splash' | 'banish'
+
+/**
+ * Der Rider einer Planetenrolle bei Berührung.
+ *
+ * Als `Record<PlanetRoleType, …>` getippt: eine siebte Planetenrolle ist damit
+ * ein Compile-Fehler und kein stiller Leerlauf.
+ */
+export interface VoidPlanetRider {
+  verb: VoidPlanetVerb
+  /** Faktor auf `VOID_PLANET_STRIKE_PCT`. 0 = dieser Planet schlägt nicht zu. */
+  damageMult: number
+  /** Nimmt der Planet bei Berührung selbst Schaden? */
+  takesChip: boolean
 }
 
 /** Ein laufendes Einschlag-Nachbeben. `sourceId` ist die `VoidRiftDef.id`. */

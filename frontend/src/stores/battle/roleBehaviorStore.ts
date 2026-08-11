@@ -70,6 +70,7 @@ import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useCombatStore } from '@/stores/battle/combatStore'
+import { spawnFloat } from '@/utils/fx/damageFloats'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import {
   usePlanetShopStore,
@@ -136,7 +137,6 @@ export const CURSE_DEFS: Record<MidCurseType, { name: string; icon: string; effe
 
 const CURSE_TYPES = Object.keys(CURSE_DEFS) as MidCurseType[]
 
-let _floatId = 900_000
 const _throttleMap = new Map<string, number>()
 
 function throttledEvent(key: string, intervalMs: number, fn: () => void) {
@@ -147,24 +147,6 @@ function throttledEvent(key: string, intervalMs: number, fn: () => void) {
     _throttleMap.set(key, now)
     fn()
   }
-}
-
-function spawnFloat(
-  value: number,
-  x: number,
-  y: number,
-  durationMs: number,
-  extra: Record<string, boolean> = {},
-) {
-  const combatStore = useCombatStore()
-  combatStore.damageFloats.push({
-    id: _floatId++,
-    value,
-    x,
-    y,
-    expiresAt: Date.now() + durationMs,
-    ...extra,
-  } as (typeof combatStore.damageFloats)[number])
 }
 
 function formatSlotId(id: string): string {
@@ -981,9 +963,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       ) {
         const dotDamage = roleAbility('mid', ROLE_MID_CURSE_DOT_DPS)
         const defeated = bossStore.dealDamage(dotDamage)
-        throttledEvent(`mid-curse-dot-${activeBoss.planetId}`, ROLE_EVENT_THROTTLE_MID_CURSE_MS, () => {
-          addEvent(`${championName} Corruption: ${dotDamage} dmg.`, 'mid')
-        })
+        throttledEvent(
+          `mid-curse-dot-${activeBoss.planetId}`,
+          ROLE_EVENT_THROTTLE_MID_CURSE_MS,
+          () => {
+            addEvent(`${championName} Corruption: ${dotDamage} dmg.`, 'mid')
+          },
+        )
         if (!defeated) {
           const pos = activePlanetPositions.get(activeBoss.planetId)
           if (pos) {
@@ -1082,9 +1068,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
           const burstDamage = roleAbility('adc', ROLE_ADC_BURST_DAMAGE)
-          throttledEvent(`adc-burst-${activeBoss.planetId}`, ROLE_EVENT_THROTTLE_ADC_BURST_MS, () => {
-            addEvent(`${championName} burst: ${burstDamage} dmg.`, 'adc')
-          })
+          throttledEvent(
+            `adc-burst-${activeBoss.planetId}`,
+            ROLE_EVENT_THROTTLE_ADC_BURST_MS,
+            () => {
+              addEvent(`${championName} burst: ${burstDamage} dmg.`, 'adc')
+            },
+          )
 
           // Auch der Burst fliegt als Projektil — Schaden erst beim Einschlag
           const target = activeBoss
@@ -1110,7 +1100,23 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       }
     },
 
-    triggerIntercept(dirX: number, dirY: number, topX: number, topY: number) {
+    /**
+     * Das Schild fängt etwas ab und bricht dabei.
+     *
+     * `source` sagt nur, WAS abgefangen wurde: ein gegnerischer Schuss oder ein
+     * Void-Körper, der sich an der Wand festfährt. Alles andere ist identisch,
+     * und genau deshalb teilen sich beide diese Aktion — der Void-Block IST die
+     * Aegis Wall, nur von einem Körper ausgelöst. Beim Void schreibt der
+     * voidStore seine eigene Zeile (sie muss die Umlenkung des Beschusses
+     * mitteilen), hier bleibt es deshalb bei der Meldung für den Schuss.
+     */
+    triggerIntercept(
+      dirX: number,
+      dirY: number,
+      topX: number,
+      topY: number,
+      source: 'shot' | 'void' = 'shot',
+    ) {
       this.tankInterceptActive = true
       this.tankInterceptStartMs = Date.now()
       this.tankInterceptDirX = dirX
@@ -1121,6 +1127,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       this.tankShieldBrokenMs = rebuildMs
 
       spawnFloat(0, topX, topY - SHIELD_FLOAT_Y_OFFSET, SHIELD_FLOAT_MS, { shieldFloat: true })
+
+      if (source === 'void') {
+        setTimeout(() => {
+          this.tankInterceptActive = false
+        }, INTERCEPT_SHIELD_ANIM_MS)
+        return
+      }
 
       const { addEvent } = useEventLog()
       const championName = getChampionNameByRole('top')

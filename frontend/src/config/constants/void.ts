@@ -17,6 +17,7 @@
 // ganz unten in der Themen-Hierarchie — sie kann von überall gelesen werden,
 // ohne einen Zyklus zu riskieren.
 
+import type { ChampionRole, PlanetRoleType, VoidContactState, VoidPlanetRider } from '@/types'
 import type { VoidRiftSeverity } from '@/types'
 
 // ── Freischaltung ───────────────────────────────────────────────────────────
@@ -207,6 +208,209 @@ export const VOID_HP_SEVERITY_MULT: Record<VoidRiftSeverity, number> = {
  * dass man bei einem Dutzend gleichzeitig wählen muss.
  */
 export const VOID_CLICK_DAMAGE_PCT = 0.12
+
+// ── Berührung ───────────────────────────────────────────────────────────────
+// Der Orbit steht dem Void nicht nur statistisch im Weg, sondern körperlich.
+//
+// Die Dramaturgie liegt in den Bahnradien und musste nicht erfunden werden.
+// GEMESSEN (grösster Abstand zur Bildmitte über 200 Frames, in px):
+//
+//   Viewport    Phase  Sonne   top  jungle   mid   adc  support
+//   1920×1000     0      34    143     188   395   509      401
+//   1920×1000     2      53    137     277   396   436      513
+//   1920×1000     5     106    326     434   518   351      564
+//   2560×1310     0      34    207     254   518   672      605
+//   2560×1310     5     106    326     430   515   473      652
+//
+// **Top ist die innerste Bahn — auf jeder Auflösung und in jeder Sonnenphase.**
+// Genau deshalb ist die Toplane hier wirklich die letzte Barriere und nicht nur
+// erzählt: was an ihr vorbeikommt, trifft die Sonne. Jungle liegt durchweg als
+// zweitinnerste dahinter; Mid, ADC und Support stehen aussen und tauschen dort
+// untereinander die Plätze, je nach Sonnenphase.
+//
+// Auf `ROLES[].orbit.rx` allein darf man dabei NICHT schliessen (Top 2.58 ·
+// Jungle 7.8 · Mid 10.75 · ADC/Support 12.67 × SUN_RADIUS): die Mindestradien
+// je Rolle (`ORBIT_MIN_RY_*_BY_ROLE`) und die Viewport-Deckelung schreiben die
+// Reihenfolge im laufenden Spiel um — der Tier-Wert sagt am Ende nur, wer
+// innen und wer aussen liegt, nicht die genaue Staffelung.
+//
+// Die Regel, die das System trägt: NUR Jungle und die Planeten machen bei
+// Berührung Schaden. `combatStore.fullOrbitDps()` zählt bereits JEDEN Champion
+// ohne Reichweitenprüfung — würde jede Rolle zusätzlich HP abziehen, zählte
+// derselbe Champion doppelt und `VOID_HP_BASE` müsste neu geeicht werden. Die
+// anderen vier ändern deshalb nicht die Schadensmenge, sondern WOHIN sie fällt
+// und WIE WEIT sie trägt: Mids Verstärkung und ADCs Marke wirken multiplikativ
+// auf den Pool, der ohnehin schon feuert.
+
+/**
+ * Berührungsradius eines Wesens, als Vielfaches seiner halben DARGESTELLTEN
+ * Grösse.
+ *
+ * Bewusst NICHT `VOID_HIT_RADIUS_SCALE`: der ist ein grosszügiger Zielradius
+ * für die Maus samt Boden von 26 px, und ein frisch aufgerissenes Wesen bei
+ * `VOID_SPAWN_SCALE` (0,32) würde damit einen Champion blocken, den es sichtbar
+ * nicht berührt. Hier zählt der Körper, also kein Boden.
+ */
+export const VOID_CONTACT_RADIUS_SCALE = 0.42
+
+/**
+ * Sperrzeit je Paar aus Wesen und Rolle. Ohne sie zündete dieselbe Berührung
+ * sechzigmal je Sekunde, solange sich die beiden überlappen.
+ *
+ * Je Rolle eigen, und immer LÄNGER als die Wirkung, die sie auslöst — sonst
+ * frischte ein Champion, der eine Weile mitläuft, seinen eigenen Effekt
+ * dauernd auf, und aus einem Moment würde ein Dauerzustand.
+ */
+export const VOID_CONTACT_REARM_MS: Record<ChampionRole, number> = {
+  top: 9_000,
+  jungle: 8_000,
+  mid: 12_000,
+  adc: 9_000,
+  support: 15_000,
+}
+
+/** Sperrzeit je Paar aus Wesen und Planet. Deutlich länger als bei den
+ *  Champions: ein Wesen, das langsam an einem Planeten vorbeikriecht, darf ihn
+ *  nicht kleinmahlen. */
+export const VOID_PLANET_CONTACT_REARM_MS = 14_000
+
+/** Wie lange der Kontaktfunke am Körper nachleuchtet. */
+export const VOID_CONTACT_FLASH_MS = 340
+
+/** Deckel auf Schadenszahlen je Auflösungslauf. `combatStore.damageFloats`
+ *  wird nur mit 1 Hz gefegt — ein Schwarm, der gleichzeitig berührt, dürfte
+ *  die Liste sonst mit zwei Dutzend Zahlen fluten. */
+export const VOID_CONTACT_FLOAT_MAX_PER_TICK = 4
+
+/**
+ * Farbe des Zustandsrings — die Farbe der ROLLE, die den Zustand gesetzt hat.
+ * Damit liest der Ring nicht nur „hier läuft etwas", sondern „wer hält das
+ * Ding gerade". Reihenfolge der Prüfung: blocked > warded > cursed > focused.
+ */
+export const VOID_CONTACT_STATE_COLOR: Record<VoidContactState, string> = {
+  blocked: '#e05050',
+  warded: '#b8c8d8',
+  cursed: '#5090e8',
+  focused: '#e89840',
+}
+
+/** Wie das Verb je Rolle heisst — Eventlog und Tooltip lesen von hier, damit
+ *  nicht zwei Stellen zwei Namen für dieselbe Sache tragen. */
+export const VOID_CONTACT_VERB: Record<ChampionRole, string> = {
+  top: 'Aegis Wall',
+  jungle: 'Cull',
+  mid: 'Unravelling',
+  adc: 'Focus Mark',
+  support: 'Warding Light',
+}
+
+// ── top · Aegis Wall ──
+/**
+ * Wie lange Top ein Wesen körperlich anhält.
+ *
+ * Selbstbegrenzend durch das Schild: der Block verbraucht es
+ * (`triggerIntercept`), und erst nach `ROLE_TOP_SHIELD_REBUILD_MS` kann Top
+ * wieder blocken. EIN Wesen je Schild-Zyklus, egal wie viele kommen — genau
+ * das ist „letzte Barriere" und nicht „Mauer, die alles hält".
+ */
+export const VOID_TOP_BLOCK_MS = 3_500
+
+/** Was der Aufprall am Wesen kostet, als Anteil seiner eigenen maxHp. Anteilig
+ *  aus demselben Grund wie beim Klick: ein fester Betrag verkäme in Galaxie 12
+ *  zur Geste. */
+export const VOID_TOP_BLOCK_DAMAGE_PCT = 0.1
+
+// ── jungle · Cull ──
+/** Unter diesem Anteil seiner maxHp richtet der Jungler ein Wesen auf der
+ *  Stelle hin — voller Boon. Smite, nur gegen die Leere. */
+export const VOID_JUNGLE_EXECUTE_PCT = 0.22
+
+/** Darüber bleibt es beim Schlag: Anteil der maxHp. */
+export const VOID_JUNGLE_STRIKE_PCT = 0.08
+
+/** Rollen-eigene Abklingzeit ZUSÄTZLICH zur Paar-Sperre — ohne sie räumte ein
+ *  einziger Durchlauf durch einen Schwarm alles Angeschlagene ab. */
+export const VOID_JUNGLE_CULL_COOLDOWN_MS = 12_000
+
+// ── mid · Unravelling ──
+/** Wie lange der Fluch am Wesen hängt. */
+export const VOID_MID_CURSE_MS = 9_000
+
+/** Faktor auf JEDEN Schaden am verfluchten Wesen — Klick, Orbit-Pool und
+ *  Berührung gleichermassen, weil er in `damageMonster` sitzt. */
+export const VOID_MID_CURSE_AMP = 1.6
+
+/** Anteil, mit dem ein verfluchtes Wesen noch vorrückt. */
+export const VOID_MID_CURSE_SLOW = 0.45
+
+// ── adc · Focus Mark ──
+/** Wie lange die Marke steht. Solange sie hält, bündelt `applyOrbitPressure`
+ *  auf DIESES Wesen statt auf das vorderste. */
+export const VOID_ADC_FOCUS_MS = 7_000
+
+// ── support · Warding Light ──
+/**
+ * Wie lange ein Ward die Drossel eines Wesens stilllegt.
+ *
+ * Bewusst lang. Bei vollem Feld beisst `VOID_DRAIN_FLOOR` (0,25), und ein
+ * einzelner Ward von 24 wiegt dort kaum noch etwas — die sichtbare Auszahlung
+ * ist dann die Heilung, nicht die Wirtschaft. Support ist die einzige Rolle,
+ * die bei Berührung gar keinen Schaden macht.
+ */
+export const VOID_SUPPORT_WARD_MS = 12_000
+
+// ── Planeten ──
+/**
+ * Was eine Berührung den Planeten kostet, als Anteil seiner maxHp — je Schwere.
+ *
+ * Anteilig, damit das Planeten-Level zählt und ein kleines Wesen ein Kratzer
+ * bleibt. Ein Planet kann daran NIE sterben (`takeVoidChip` hält bei 1 HP): ein
+ * zerstörter Planet fiele aus `riftAutoAttackDPS`, also stürbe weniger Void,
+ * also kämen mehr durch — eine Todesspirale, aus der man nicht mehr
+ * herausspielt. Der Boden bricht sie, und Supports Planetenheilung bekommt
+ * dafür eine Daueraufgabe.
+ */
+export const VOID_PLANET_CONTACT_HP_FRAC: Record<VoidRiftSeverity, number> = {
+  lesser: 0.03,
+  greater: 0.07,
+  abyssal: 0.14,
+}
+
+/** Grundschaden eines Planeten am Wesen, Anteil dessen maxHp. Der Rider
+ *  darunter skaliert ihn je Rolle. */
+export const VOID_PLANET_STRIKE_PCT = 0.06
+
+/**
+ * Ein Verb je Planetenrolle. Als `Record<PlanetRoleType, …>` getippt, damit
+ * eine siebte Rolle ein Compile-Fehler wird statt eines stillen Leerlaufs.
+ *
+ * `shield_barrier` ist die Bau-Antwort des Spielers: eine reine Wand, die
+ * nichts austeilt und nichts einsteckt. `expedition_relay` ist ein Kurier — er
+ * kämpft nicht, er öffnet einen Korridor und schickt das Ding zurück.
+ */
+export const VOID_PLANET_RIDER: Record<PlanetRoleType, VoidPlanetRider> = {
+  turret_planet: { verb: 'volley', damageMult: 2.2, takesChip: true },
+  shield_barrier: { verb: 'absorb', damageMult: 0, takesChip: false },
+  time_capsule: { verb: 'slow', damageMult: 0.6, takesChip: true },
+  harvest_node: { verb: 'scavenge', damageMult: 0.5, takesChip: true },
+  resonance_tower: { verb: 'splash', damageMult: 1, takesChip: true },
+  expedition_relay: { verb: 'banish', damageMult: 0, takesChip: true },
+}
+
+/** Reichweite des Resonator-Splashes in px, um den getroffenen Körper herum. */
+export const VOID_PLANET_SPLASH_RADIUS_PX = 180
+
+/** Anteil des Kontaktschadens, den der Splash an die Nachbarn weiterreicht. */
+export const VOID_PLANET_SPLASH_FRAC = 0.4
+
+/** Wie weit der Relay ein Wesen zurückwirft. Als Zeit, nicht als Strecke — die
+ *  Bahn kennt nur `spawnedAt`, und eine Verschiebung darauf ist überall
+ *  gleichzeitig wirksam (Position, Grösse, Drossel). */
+export const VOID_PLANET_RELAY_BANISH_MS = 4_000
+
+/** Wie lange die Zeitkapsel ein Wesen bremst — dasselbe `slowedUntil` wie der
+ *  Mid-Fluch, das spätere Ablaufdatum gewinnt. */
+export const VOID_PLANET_SLOW_MS = 6_000
 
 // ── Ziehen ──────────────────────────────────────────────────────────────────
 

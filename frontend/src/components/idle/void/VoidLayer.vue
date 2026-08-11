@@ -73,7 +73,10 @@ import {
   VOID_SEAL_FX_MS,
   VOID_IMPACT_FX_MS,
   VOID_SEVERITY_COLOR,
+  VOID_CONTACT_FLASH_MS,
+  VOID_CONTACT_STATE_COLOR,
 } from '@/config/constants'
+import type { VoidContactState, VoidMonster } from '@/types'
 
 const voidStore = useVoidStore()
 const planetShop = usePlanetShopStore()
@@ -103,6 +106,17 @@ let cssH = 0
 let dpr = 1
 /** Zuletzt gesehene Trefferzahl je Wesen — daraus wird der kurze Aufblitz. */
 const lastHits = new Map<number, { hits: number; at: number }>()
+
+/** Welcher Zustand gezeigt wird, wenn mehrere laufen. Die Reihenfolge ist die
+ *  Dringlichkeit: festgehalten schlägt stillgelegt schlägt verflucht schlägt
+ *  markiert. */
+function contactStateOf(m: VoidMonster, now: number): VoidContactState | null {
+  if (m.blockedUntil > now) return 'blocked'
+  if (m.wardedUntil > now) return 'warded'
+  if (m.cursedUntil > now) return 'cursed'
+  if (m.focusedUntil > now) return 'focused'
+  return null
+}
 
 function resize(): void {
   const el = canvasEl.value
@@ -157,6 +171,18 @@ function draw(): void {
   // bei zwei Dutzend Wesen wären das 1440 Abfragen je Sekunde.
   const insets = hudFieldMetrics(headerCenterArc.value ?? null)
 
+  // Berührungen im FRAME auflösen, nicht erst im Sekundentakt: Champions und
+  // Planeten wandern mit 60 Hz, und ein Kontaktfenster dauert Bruchteile einer
+  // Sekunde — bei 1 Hz gingen die meisten schlicht verloren. Der Store prüft
+  // trotzdem im Tick mit, das ist der Auffang unter einem offenen Modal. Dass
+  // beides zusammen nicht doppelt zündet, sichert die Paar-Sperre in
+  // `voidContact`, nicht dieser Aufruf.
+  voidStore.resolveOrbitContacts(now)
+  if (active.value.length === 0) {
+    frame = requestAnimationFrame(draw)
+    return
+  }
+
   for (const m of active.value) {
     const def = getVoidRift(m.defId)
     if (!def) continue
@@ -186,6 +212,22 @@ function draw(): void {
       ctx.restore()
     }
 
+    // Kontaktfunke: ein Orbit-Körper hat es gerade gestreift. Der Store setzt
+    // `lastContactAt` nur bei einer WIRKLICH gezündeten Berührung — hier wird
+    // also nichts geprüft, nur nachgeleuchtet.
+    const contactAge = now - m.lastContactAt
+    if (m.lastContactAt > 0 && contactAge < VOID_CONTACT_FLASH_MS) {
+      ctx.save()
+      ctx.globalAlpha = 1 - contactAge / VOID_CONTACT_FLASH_MS
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.lineWidth = Math.max(2, 4 * pos.scale)
+      ctx.strokeStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.arc(pos.x, pos.y, (def.sizePx / 2) * pos.scale * 1.05, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.restore()
+    }
+
     // Trefferpunkte nur zeichnen, wenn schon etwas fehlt — ein voller Ring an
     // zwei Dutzend Wesen wäre Rauschen, und er kostet je Wesen einen Pfad.
     const hpFrac = m.maxHp > 0 ? m.currentHp / m.maxHp : 0
@@ -200,6 +242,25 @@ function draw(): void {
       ctx.strokeStyle = def.color
       ctx.beginPath()
       ctx.arc(pos.x, pos.y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * hpFrac)
+      ctx.stroke()
+      ctx.restore()
+    }
+
+    // GENAU EIN Zustandsring, in der Farbe der Rolle, die ihn gesetzt hat —
+    // vier getrennte Ringe auf zwei Dutzend Wesen wären echte Arbeit, und der
+    // oberste sagt ohnehin das Dringlichste. Gezeichnet wird nur, wenn
+    // überhaupt ein Zustand läuft.
+    const state = contactStateOf(m, now)
+    if (state) {
+      const r = (def.sizePx / 2) * pos.scale * 1.46
+      ctx.save()
+      ctx.lineWidth = Math.max(2, 3 * pos.scale)
+      ctx.strokeStyle = VOID_CONTACT_STATE_COLOR[state]
+      // Gestrichelt: der Zustandsring darf nie mit dem HP-Ring darunter
+      // verwechselt werden, und Farbe allein trüge das nicht.
+      ctx.setLineDash([6 * pos.scale, 5 * pos.scale])
+      ctx.beginPath()
+      ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2)
       ctx.stroke()
       ctx.restore()
     }
