@@ -80,11 +80,15 @@ import {
   TEAM_SIGIL_ROSTER_FOLD_MS,
   SIGIL_CHIP_HOVER_DIM_OPACITY,
   SIGIL_CHIP_HOVER_SWEEP_MS,
+  SIGIL_CHIPS_BADGE_GAP,
   TEAM_SIGIL_SPLASH_HEIGHT,
   TEAM_SIGIL_SPLASH_HEIGHT_COMPACT,
   TEAM_SIGIL_SPLASH_MAX_SHARE,
   ORBIT_ROLE_ABILITIES,
   OBJECTIVE_ROLE_ABILITIES,
+  OBJECTIVE_KIT_ACCENT,
+  VOID_ROLE_ABILITIES,
+  VOID_KIT_ACCENT,
   CHAMPION_PERK_INTERVAL,
   CHAMPION_XP_BAR_HEIGHT,
   CHAMPION_REGALIA_SIZE_ALLY,
@@ -194,6 +198,16 @@ const splashBadgeSize = computed(() => {
 /** Corner inset that keeps every opaque regalia layer clear of the clip edge. */
 const splashBadgeInsetPx = computed(
   () => `${Math.round(splashBadgeSize.value * CHAMPION_REGALIA_SPLASH_INSET_RATIO)}px`,
+)
+/**
+ * Where the identity chips may start, so a wrapping row never runs under the
+ * medallion opposite them. Derived from the badge's own size rather than typed
+ * as a corner margin — the regalia grows with level AND with the splash, so a
+ * fixed number cleared it on Full HD and collided at 2K.
+ */
+const chipsLeftPx = computed(
+  () =>
+    `${Math.round(splashBadgeSize.value * (1 + CHAMPION_REGALIA_SPLASH_INSET_RATIO)) + SIGIL_CHIPS_BADGE_GAP}px`,
 )
 /**
  * Height of the name plate at the foot of the splash — measured, because it is
@@ -648,17 +662,32 @@ function pickPerk(perkId: string) {
 }
 
 // ── Role scope: abilities + equipment belong to the slot, not the champion ───
-const orbitAbility = computed(() => ORBIT_ROLE_ABILITIES[roleDef.value.key])
-const objectiveAbility = computed(() => OBJECTIVE_ROLE_ABILITIES[roleDef.value.key])
 /**
- * The two abilities as the portrait shows them — see .sdp-kit. Both are read the
- * same way, so both carry the same four fields; only the scope differs, and it
- * is the tile's colour: the role's own for the orbit, gold for the pit, exactly
- * the two accents this page uses everywhere else.
+ * The three places this seat fights, in the order the page shows them — see
+ * .sdp-kit. All three are read the same way because all three ARE the same
+ * shape (RoleKitAbility); what differs is the scope, and the scope is the row's
+ * accent: the role's own out in the universe, gold in the pit, void magenta
+ * against the void. Three accents this page already uses elsewhere.
+ *
+ * Keyed on `scope` in the template, not on `name` — scope is unique by
+ * construction, a name need not be.
  */
 const kitAbilities = computed(() => [
-  { scope: 'Universe', color: roleDef.value.color, ...orbitAbility.value },
-  { scope: 'Objective · Baron & Drake', color: '#e8c040', ...objectiveAbility.value },
+  {
+    scope: 'Universe',
+    color: roleDef.value.color,
+    ...ORBIT_ROLE_ABILITIES[roleDef.value.key],
+  },
+  {
+    scope: 'Objective · Baron & Drake',
+    color: OBJECTIVE_KIT_ACCENT,
+    ...OBJECTIVE_ROLE_ABILITIES[roleDef.value.key],
+  },
+  {
+    scope: 'The Void',
+    color: VOID_KIT_ACCENT,
+    ...VOID_ROLE_ABILITIES[roleDef.value.key],
+  },
 ])
 const equipment = computed(() => itemStore.slotEquipment[props.roleIndex])
 
@@ -1013,98 +1042,111 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             />
           </div>
 
-          <!-- hero footer — who this is, then what they are, then what the seat
-               brings, then how far along: name, the tier/origin/trait chips, the
-               two role abilities, and the XP bar as the card's base. The chips
-               used to float in the top corner on their own; down here they read
-               as a subtitle to the name they describe. -->
+          <!-- Identity chips, opposite the medallion. They read best as a
+               subtitle under the name and that is where they sat; they moved up
+               here when the kit below grew to three rows, because out of the
+               footer's flow they cost the portrait nothing. See .sdp-chips. -->
+          <div v-if="champion" class="sdp-chips">
+            <span
+              v-if="tier"
+              class="sdp-hero-chip"
+              :style="{ borderColor: tier.color, color: tier.color }"
+            >
+              ★{{ tier.starLevel }} {{ tier.name }}
+            </span>
+            <span
+              v-if="origin"
+              class="sdp-hero-chip"
+              :style="{ borderColor: originColor, color: originColor }"
+            >
+              <Icon
+                v-if="originIcon.includes(':')"
+                :icon="originIcon"
+                width="15"
+                height="15"
+                class="sdp-hero-chip-icon"
+              />
+              {{ origin }}
+            </span>
+            <span
+              v-for="trait in traits"
+              :key="trait.id"
+              class="sdp-hero-chip"
+              :style="{ borderColor: trait.color, color: trait.color }"
+            >
+              <Icon :icon="trait.icon" width="15" height="15" class="sdp-hero-chip-icon" />
+              {{ trait.name }}
+            </span>
+          </div>
+
+          <!-- hero footer — who this is, then what the seat does, then how far
+               along: name and XP count, the three role abilities, and the XP bar
+               as the card's base. The chips were the second line here and now
+               ride in the top corner instead; the kit needed their height, and
+               identity labels survive the move better than the kit would have. -->
           <div ref="splashBottomEl" class="sdp-splash-bottom">
-            <!-- Just the name. Everything about skins — picking one and seeing
-                 which one is worn — lives in the gallery at the top of the right
-                 column, where the lit card is the answer. -->
+            <!-- Name, and the XP count that used to head the bar below. They
+                 pair well: the count is a fact about this champion, like the
+                 name, and reading it here costs no line of its own. Everything
+                 about skins lives in the gallery at the top of the right column,
+                 where the lit card is the answer. -->
             <div class="sdp-name-row">
               <div class="sdp-name">{{ champion ?? 'No Champion' }}</div>
-            </div>
-
-            <div v-if="champion" class="sdp-chips">
-              <span
-                v-if="tier"
-                class="sdp-hero-chip"
-                :style="{ borderColor: tier.color, color: tier.color }"
-              >
-                ★{{ tier.starLevel }} {{ tier.name }}
-              </span>
-              <span
-                v-if="origin"
-                class="sdp-hero-chip"
-                :style="{ borderColor: originColor, color: originColor }"
-              >
-                <Icon
-                  v-if="originIcon.includes(':')"
-                  :icon="originIcon"
-                  width="15"
-                  height="15"
-                  class="sdp-hero-chip-icon"
-                />
-                {{ origin }}
-              </span>
-              <span
-                v-for="trait in traits"
-                :key="trait.id"
-                class="sdp-hero-chip"
-                :style="{ borderColor: trait.color, color: trait.color }"
-              >
-                <Icon :icon="trait.icon" width="15" height="15" class="sdp-hero-chip-icon" />
-                {{ trait.name }}
+              <span v-if="champion" class="sdp-xp-value" title="Experience">
+                <template v-if="xpBar.capped">Banked {{ $formatNumber(xpBar.current) }}</template>
+                <template v-else>
+                  {{ $formatNumber(xpBar.current) }} / {{ $formatNumber(xpBar.needed) }}
+                </template>
               </span>
             </div>
 
-            <!-- ══ the seat's kit — two abilities, side by side under the name
-                 they belong to. They used to be two paragraph cards at the foot
-                 of the right column, which is the one place on this page where
-                 a sentence had to be read to learn a number.
+            <!-- ══ the seat's kit — the three places it fights, one row each:
+                 out in the universe, down in the pit, and against the void.
+                 They used to be two paragraph cards at the foot of the right
+                 column, then two number tiles side by side here.
 
-                 What is left of each is a sigil and two numbers: the left pair
-                 is the effect, the right pair is always the cooldown, so both
-                 entries scan in the same order. No ability name — it was the
-                 only thing here that could not be acted on, and dropping it is
-                 what buys the icon its size and the numbers theirs. Name,
-                 scope and full wording stay one hover away (title).
+                 Side by side, each tile got ~200px, and the ability's NAME was
+                 dropped to buy the sigil and the figures their size. Stacked,
+                 every row gets the full 404 — enough for the name AND a line of
+                 plain English, without either the sigil or the figures giving
+                 anything back. That line is the point of the change: `desc` is
+                 rendered nowhere in the game but a native title=, so until now
+                 the only way to learn what a role does was to hover and wait.
 
-                 They sit BELOW the chips rather than between them and the name:
-                 name and chips are one thing (who this is, what they are), and
-                 the kit is the other (what the seat does), which is also why it
-                 stays put when the roster switches champion. ══ -->
+                 Every row says the same four things in the same four places —
+                 sigil, name, one clause, then the figures, effect before
+                 cadence. Three rows read in one sweep because the reading order
+                 never changes, and a player comparing scopes compares the same
+                 slot each time. The full wording is still one hover away.
+
+                 They sit directly under the name — the chips that used to be
+                 between them now ride in the top-right corner, because out of
+                 the footer's flow they cost the portrait nothing. ══ -->
             <div class="sdp-kit" @click.stop>
               <div
                 v-for="ab in kitAbilities"
-                :key="ab.name"
+                :key="ab.scope"
                 class="sdp-kit-tile"
                 :style="{ '--kc': ab.color }"
-                :title="`${ab.scope} — ${ab.name}: ${ab.desc}`"
+                :title="`${ab.scope} · ${ab.desc}`"
               >
                 <Icon :icon="ab.icon" width="30" height="30" class="sdp-kit-icon" />
+                <span class="sdp-kit-name">{{ ab.name }}</span>
                 <div class="sdp-kit-metrics">
                   <span v-for="m in ab.metrics" :key="m.label" class="sdp-kit-metric">
                     <span class="sdp-kit-value">{{ m.value }}</span>
                     <span class="sdp-kit-label">{{ m.label }}</span>
                   </span>
                 </div>
+                <span class="sdp-kit-line">{{ ab.line }}</span>
               </div>
             </div>
 
+            <!-- Just the bar. Its figure moved onto the name line above, and
+                 the word "Experience" went with the head that carried it: a
+                 bar with a count beside it still says how far along this
+                 champion is, and the 22px the head cost is 22px of portrait. -->
             <div v-if="champion" class="sdp-xp">
-              <div class="sdp-xp-head">
-                <span class="sdp-xp-label">Experience</span>
-                <span class="sdp-xp-value">
-                  <template v-if="xpBar.capped">
-                    Banked {{ $formatNumber(xpBar.current) }}
-                  </template>
-                  <template v-else>
-                    {{ $formatNumber(xpBar.current) }} / {{ $formatNumber(xpBar.needed) }}
-                  </template>
-                </span>
-              </div>
               <div class="sdp-xp-track">
                 <div
                   class="sdp-xp-fill"
@@ -2480,11 +2522,15 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    the thing worth making bigger, not the gap above the Level Up button. */
 .sdp-splash {
   position: relative;
-  /* Grow factor 4 against the perk path's 1: on a tall desktop four fifths of
-     the spare height go to the portrait, which is the part of this column that
-     is actually worth more pixels, and the path still stops the column ending
-     short once the portrait hits its share cap. */
-  flex: 4 1 v-bind(splashHeightPx);
+  /* Grow factor 12 against the gear block's 1: nearly all the spare height goes
+     to the portrait, which is the part of this column actually worth more
+     pixels, and the gear still stops the column ending short once the portrait
+     hits its share cap.
+     It was 4, and the gear's share of that was measurably air — its equipment
+     tiles are held at their own floor, so the block grew and nothing in it did.
+     Raised when the kit went from one row to three and the portrait needed the
+     difference back: measured on Full HD this alone is +18px of art. */
+  flex: 12 1 v-bind(splashHeightPx);
   min-height: v-bind(splashHeightCompactPx);
   max-height: v-bind(splashMaxShare);
   overflow: hidden;
@@ -2597,13 +2643,31 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     opacity: 1;
   }
 }
-/* Chips ride in the footer's flow now, between the name and the XP bar, so they
-   need no corner reserve and no absolute placement — they simply wrap under the
-   name as a subtitle would. */
+/* Chips ride in the top-right corner, opposite the level medallion.
+ *
+ * They read best as a subtitle under the name, and that is where they were —
+ * but the kit below them grew from one row to three, and measured on Full HD
+ * (the flattest desktop we target) the footer then left the portrait 88px of
+ * art. Out of the flow they cost the footer nothing, and 38px of the ~90 the
+ * kit needed comes from here alone.
+ *
+ * Right, not left: the medallion owns the left corner and grows ornaments with
+ * level. `left` clears it so a four-trait champion wraps DOWN the right edge
+ * instead of running under the badge; each chip carries its own scrim, so they
+ * hold over a bright splash without one behind the group. */
 .sdp-chips {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  /* Derived from the medallion's own size — see chipsLeftPx. A typed number
+     cleared it on Full HD and collided at 2K, where the badge is half again
+     as big. */
+  left: v-bind(chipsLeftPx);
+  z-index: 3;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: flex-end;
   gap: 5px;
 }
 .sdp-hero-chip {
@@ -2652,80 +2716,128 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   pointer-events: none;
 }
 
-/* ══ kit — the seat's two abilities, under the name ═════════════════════════
- * Side by side, and each says the same three things in the same three places:
- * which ability (the sigil), what it does, how often. Effect left, cooldown
- * right, in both entries — two entries read in one sweep because the reading
- * order is the same, and a player comparing two roles compares numbers, not
- * paragraphs.
+/* ══ kit — the three places this seat fights, one row each ══════════════════
+ * Universe, the objective pit, the void. Every row says the same four things in
+ * the same four places: sigil, name, one clause of plain English, then the
+ * figures — effect first, cadence second, everywhere. Three rows read in one
+ * sweep because the reading order never changes, and a player comparing scopes
+ * compares the same slot each time.
  *
- * The ability's NAME is not among them. "Aegis Wall" is flavour, not something
- * a player can act on, and it was costing the two things that are: a sigil big
- * enough to identify at a glance and figures big enough to read from a lean
- * back. Name, scope and full wording live in the tooltip.
+ * It used to be two entries SIDE BY SIDE, and the ability's NAME was
+ * deliberately dropped: at ~200px a tile there was no room for it without
+ * taking size off the sigil or the figures, which are the things a player can
+ * act on. Stacked, each row has the full 404px, so the name comes back and
+ * neither of the other two gives anything up — the icon and the value keep
+ * their size at every breakpoint.
  *
- * It is written ON the art, so it is not built as two cards: no frame, no drop
- * shadow, no icon well. A thin scrim carries the type over whatever the splash
- * is doing underneath, and the only hard edge is the 2px rule at the left of
- * each entry — which, with the sigil, is what carries the scope: the role's own
- * accent for the universe, gold for the pit. That is why neither entry needs a
+ * The clause is why the change was worth its height. `desc` is rendered nowhere
+ * in this game except a native title=, so until now the only way to learn what
+ * a role actually does was to hover and wait. It is NOT a shortened `desc`: two
+ * independent fields, one always visible, one only on hover.
+ *
+ * Written ON the art, so it is not built as three cards: no frame, no drop
+ * shadow, no icon well. ONE scrim on the group rather than one per row — three
+ * separate scrims would leave stripes of bare art between the bands — and the
+ * only hard edge is the 2px rule at the left of each row, which with the sigil
+ * is what carries the scope: the role's own accent out in the universe, gold
+ * for the pit, the void's magenta against the void. That is why no row needs a
  * scope caption.
  *
- * Its width is the name plate's, so the pair lines up with the name above and
- * the XP bar below; the two halves are even, because the entries are peers. */
+ * Height is the whole design constraint here, and it was paid for rather than
+ * absorbed. Stacking alone cost 90px of portrait; four things gave it back, and
+ * none of them shrinks the kit: the chips left the footer for the top-right
+ * corner (38px), the XP figure moved onto the name line and its head went with
+ * it (22px), the splash takes a larger share of the column (18px), and the
+ * figures column stopped being inflated by an unstyled separator (24px — see
+ * .sdp-kit-metric::before).
+ *
+ * Measured, portrait art before → after: Full HD 178.8 → 181.7 · WUXGA
+ * 204.3 → 210.2 · 2K 297.4 → 303.1. Three rows where there was one, and the
+ * portrait is LARGER on every resolution we target. */
 .sdp-kit {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 3px;
+  /* a scrim, not a card: enough to carry the type over a bright splash, little
+     enough that the art still reads through it. On the group, not the rows. */
+  background: rgba(6, 4, 2, 0.5);
 }
-/* While the rail is being read, the swap pill stands down: the pointer is on a
+/* While a row is being read, the swap pill stands down: the pointer is on a
    number, not on the portrait, and the page should not answer that with an
-   offer to replace the champion. Same specificity as the rule that raises the
-   pill, so this one wins by coming later. */
-.sdp-splash:has(.sdp-kit:hover) .sdp-splash-swap-hint {
+   offer to replace the champion. Scoped to the ROW, not the group — the kit now
+   covers the bottom third, and the gaps between rows should stay portrait.
+   Same specificity as the rule that raises the pill, so this one wins by
+   coming later. */
+.sdp-splash:has(.sdp-kit-tile:hover) .sdp-splash-swap-hint {
   opacity: 0;
 }
-/* Sigil first, then the two figures — one row, and the row is the whole entry:
-   with the ability's name gone there is nothing left to stack, which is what
-   lets both the icon and the numbers be as large as they are. */
+/* Sigil spanning both lines, then name and figures on the first, the clause
+   across the full width on the second. The figures sit hard right so the three
+   rows share one number column; the name gets whatever is left and ellipses
+   rather than pushing them out of alignment. */
 .sdp-kit-tile {
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 10px;
-  padding: 7px 8px 7px 10px;
+  column-gap: 11px;
+  row-gap: 2px;
+  padding: 6px 10px 6px 11px;
   border-radius: 3px;
   border-left: 2px solid var(--kc);
-  /* a scrim, not a card: enough to carry the type over a bright splash, little
-     enough that the art still reads through it */
-  background: rgba(6, 4, 2, 0.54);
   cursor: default;
 }
-/* The sigil is the entry's name now — big enough to be recognised as a shape
-   rather than decoded, and in the scope's colour, which is the same accent the
-   rule on the left carries. */
+/* The sigil identifies the scope as a shape rather than a word — big enough to
+   read at a glance, in the same accent the rule on the left carries. */
 .sdp-kit-icon {
+  grid-row: 1 / 3;
+  align-self: center;
   flex-shrink: 0;
   color: var(--kc);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
-/* Content-sized columns with a real gap, never two halves — the labels are
-   nowrap, and an even split lets the longest pair ("Per Stack" over "Cooldown")
-   run out of its half and butt against its neighbour. */
-.sdp-kit-metrics {
+.sdp-kit-name {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
-  display: grid;
-  grid-template-columns: auto auto;
-  justify-content: start;
-  column-gap: 16px;
+  font-size: 16px;
+  line-height: 1.15;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f4e6bc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
 }
-/* Figure over caption: the number is what is being compared, so it takes the
-   line, and the noun it counts sits under it in small caps. */
-.sdp-kit-metric {
+/* Figures INLINE, not figure-over-caption. Stacked they made the first line
+   33px tall on their own, which put the row at 62px and the kit at 200 — it
+   stopped fitting anywhere. Side by side the row is one text line high. */
+.sdp-kit-metrics {
+  grid-column: 3;
+  grid-row: 1;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 0;
+  align-items: baseline;
+  gap: 7px;
+}
+.sdp-kit-metric {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+/* Size and line-height are load-bearing, not tidiness: a pseudo-element with no
+   font-size inherits the panel's base, and its line box then sets the height of
+   the whole figures column through the baseline alignment above it. Left
+   unstyled it measured the column at 24px against a 15px figure — 8px per row,
+   24px over three rows, straight off the portrait. */
+.sdp-kit-metric + .sdp-kit-metric::before {
+  content: '·';
+  margin-right: 3px;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(200, 164, 90, 0.45);
 }
 .sdp-kit-value {
   font-size: 18px;
@@ -2734,14 +2846,34 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   white-space: nowrap;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
 }
+/* `line-height: 1` is load-bearing, not tidiness. Left at `normal` the label's
+   line box is a third taller than its glyphs, and baseline alignment stacks
+   that slack ON TOP of the value's — the figures column measured 24px against a
+   15px figure, which put every row 8px over and the kit 24px over. */
 .sdp-kit-label {
-  margin-top: 3px;
   font-size: 9.5px;
+  line-height: 1;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: rgba(200, 164, 90, 0.62);
   white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+/* One line, never two. A wrap would change the measured footer height, and that
+   feeds both the empty seat's inset and the swap pill's centring — one long
+   string would silently cost the portrait a whole line. The ellipse is a net;
+   ROLE_KIT_LINE_MAX_CHARS and its spec are what keep it from ever firing. */
+.sdp-kit-line {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(230, 214, 178, 0.74);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 .sdp-name-row {
@@ -2943,27 +3075,15 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 }
 
 /* ── hero footer readouts ── */
-.sdp-xp-label,
+/* The count rides on the name line now, so it needs no head and no label of its
+   own — a figure next to the name, over a bar, reads as progress without the
+   word for it. The word survives as the element's title. */
 .sdp-xp-value {
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
-}
-.sdp-xp-head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-bottom: 6px;
-}
-.sdp-xp-label {
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #c8a860;
-}
-.sdp-xp-value {
-  margin-left: auto;
+  flex-shrink: 0;
   font-size: 12.5px;
   color: #dcc99a;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
 }
 .sdp-xp-track {
   height: v-bind(xpBarHeightPx);
@@ -3802,28 +3922,50 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   .sdp-choice-desc {
     font-size: 10.5px;
   }
-  /* kit — one step tighter, because every pixel the name plate takes here comes
-     off the portrait above it */
+  /* kit — one step tighter, because every pixel the footer takes here comes off
+     the portrait above it. The three rows keep every word they have; what steps
+     down is type and padding, never a row and never the clause. */
   .sdp-kit {
-    gap: 6px;
+    gap: 5px;
   }
   .sdp-kit-tile {
-    gap: 8px;
-    padding: 5px 7px 5px 9px;
+    column-gap: 9px;
+    row-gap: 1px;
+    padding: 4px 8px 4px 9px;
   }
   .sdp-kit-icon {
     width: 26px;
     height: 26px;
   }
+  .sdp-kit-name {
+    font-size: 14.5px;
+  }
   .sdp-kit-metrics {
-    column-gap: 13px;
+    gap: 6px;
   }
   .sdp-kit-value {
-    font-size: 16px;
+    font-size: 15px;
   }
   .sdp-kit-label {
-    margin-top: 2px;
-    font-size: 9px;
+    font-size: 8.5px;
+  }
+  .sdp-kit-line {
+    font-size: 11px;
+  }
+  /* The footer's own margins, and the last of what the kit needed: the chips
+     are out of the flow, the XP head is gone, and these two give the rest. */
+  .sdp-splash-bottom {
+    gap: 6px;
+    bottom: 9px;
+  }
+  .sdp-hero-chip {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+  /* Here the equipment tiles are pinned by their own floor, so anything the
+     block grows past them is empty space under them. Let the splash have it. */
+  .sdp-block--equipment {
+    flex-grow: 0;
   }
 }
 
@@ -3914,30 +4056,37 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
     font-size: 14px;
     -webkit-line-clamp: 4;
   }
-  /* kit — the splash is half again as tall here, so sigil and figures grow with
-     it rather than sitting under the name as two postage stamps. The plate does
-     NOT get wider on 4K (the panel is a fixed width), so this step is the one
-     that has to stay inside its half — see the fit measurement. */
+  /* kit — the splash is half again as tall here, so sigil, name and figures grow
+     with it rather than sitting under the name as three postage stamps. The
+     plate does NOT get wider on 4K (the panel is a fixed width), so this is the
+     step where the clause is closest to its ellipse: ROLE_KIT_LINE_MAX_CHARS is
+     measured against THIS size, not against Full HD. */
   .sdp-kit {
-    gap: 10px;
+    gap: 9px;
   }
   .sdp-kit-tile {
-    gap: 11px;
-    padding: 9px 9px 9px 12px;
+    column-gap: 13px;
+    row-gap: 3px;
+    padding: 9px 12px 9px 14px;
   }
   .sdp-kit-icon {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
+  }
+  .sdp-kit-name {
+    font-size: 19px;
   }
   .sdp-kit-metrics {
-    column-gap: 17px;
+    gap: 10px;
   }
   .sdp-kit-value {
     font-size: 21px;
   }
   .sdp-kit-label {
-    margin-top: 4px;
     font-size: 10.5px;
+  }
+  .sdp-kit-line {
+    font-size: 14.5px;
   }
 }
 

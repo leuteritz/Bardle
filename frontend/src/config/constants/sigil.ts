@@ -268,22 +268,45 @@ export const TEAM_EXPEDITION_PANEL_WIDTH = TEAM_SIGIL_DETAILS_PANEL_WIDTH
 export const TEAM_EQUIPMENT_PANEL_WIDTH = 660
 /** Height (px) of the details-panel splash header (hero card: name + tier/origin/trait chips). */
 export const TEAM_SIGIL_SPLASH_HEIGHT = 292
+
+/**
+ * Längster erlaubter Klartext einer Kit-Zeile (`RoleKitAbility.line`).
+ *
+ * Die Zeile wird NICHT umbrochen: ein Umbruch änderte die gemessene Höhe der
+ * Hero-Fusszeile, und die speist den leeren Sitz und die Swap-Pille. Sie trägt
+ * deshalb eine CSS-Ellipse — und eine Spec, die diese Länge bindet, damit die
+ * Ellipse ein Netz bleibt, das nie auslöst.
+ *
+ * Massgeblich ist der 4K-Schritt, nicht Full HD: die Zeile bekommt auf jeder
+ * Auflösung dieselben ~350 px, aber dort ist die Schrift am grössten.
+ */
+export const ROLE_KIT_LINE_MAX_CHARS = 46
+
+/** Luft (px) zwischen der Level-Medaille und den Identitäts-Chips ihr gegenüber.
+ *  Der Rest der Freistellung kommt aus der Medaillengrösse selbst — sie wächst
+ *  mit Level UND Splash-Höhe, eine feste Zahl hielt auf Full HD und stiess auf
+ *  2K an. */
+export const SIGIL_CHIPS_BADGE_GAP = 14
 /**
  * Ceiling the splash may grow to, as a share (%) of the left column's height —
  * a share rather than a pixel cap, so the column fills out just as tightly at 4K
  * as at Full HD.
  *
- * Raised from 52 when the perk path moved to the right column. The old value
- * existed to stop a tall column from becoming one giant portrait over a squeezed
- * ladder; there is no ladder under the portrait any more, only the Level Up block
+ * Raised from 52 when the perk path moved to the right column, and from 62 when
+ * the kit under the name grew from one row to three. The old values existed to
+ * stop a tall column from becoming one giant portrait over a squeezed ladder;
+ * there is no ladder under the portrait any more, only the Level Up block
  * (fixed height) and the equipment row (its own per-tile floor). What the cap
  * still does is keep the crop from going absurdly tall and narrow in a 434px
  * column, and hold something back for the gear below.
  *
- * Never binding at Full HD — there the splash sits on its own
- * TEAM_SIGIL_SPLASH_HEIGHT_COMPACT floor and the column already overflows.
+ * Never binding at Full HD — measured there the splash reaches 365 against a
+ * cap of 371, so what limits it is the flex ratio against the gear block, not
+ * this number. It binds at 2K and above, and that is where raising it pays:
+ * the taller kit costs the same pixels on every resolution, but only the tall
+ * columns have them to give.
  */
-export const TEAM_SIGIL_SPLASH_MAX_SHARE = 62
+export const TEAM_SIGIL_SPLASH_MAX_SHARE = 68
 /** Max camera drag-pan as a fraction of the scaled stage size (rubber-band bound). */
 export const TEAM_SIGIL_PAN_MAX_FRACTION = 0.15
 /** Pointer travel (px) below which a pointer-down still counts as a click, not a drag. */

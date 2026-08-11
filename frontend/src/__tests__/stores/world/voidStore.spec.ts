@@ -29,7 +29,7 @@ import {
   VOID_IMPACT_HP_LOSS,
   VOID_IMPACT_AFTERMATH_MS,
   VOID_SPAWN_RETRY_SEC,
-  VOID_CONTACT_VERB,
+  VOID_ROLE_ABILITIES,
   VOID_CONTACT_REARM_MS,
   VOID_PLANET_CONTACT_REARM_MS,
   VOID_PLANET_RIDER,
@@ -860,7 +860,7 @@ describe('voidStore', () => {
 
     it('nennt für jede Rolle ein Berührungsverhalten', () => {
       for (const role of ROLES) {
-        expect(VOID_CONTACT_VERB[role.key], `${role.key} ohne Verb`).toBeTruthy()
+        expect(VOID_ROLE_ABILITIES[role.key]?.name, `${role.key} ohne Verb`).toBeTruthy()
         expect(VOID_CONTACT_REARM_MS[role.key], `${role.key} ohne Sperrzeit`).toBeGreaterThan(0)
       }
     })

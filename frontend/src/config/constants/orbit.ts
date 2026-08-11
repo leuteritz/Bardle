@@ -2,7 +2,7 @@
 // Sterne, ihr Verhalten hinter der Sonne, die Cooldown-Ringe und die Drifter,
 // die durch das Bild fliegen.
 
-import type { ChampionRole, RoleAbilityMetric } from '@/types'
+import type { ChampionRole, RoleAbilityMetric, RoleKitAbility } from '@/types'
 import { SUN_RADIUS } from '@/config/constants/sun'
 import {
   ROLE_TOP_SHIELD_REBUILD_MS,
@@ -14,11 +14,6 @@ import {
   SUPPORT_PLANET_HEAL_INTERVAL_MS,
 } from '@/config/constants/roles'
 import { JUNGLE_BUFF_DEFS, JUNGLE_BUFF_COOLDOWN_MS } from '@/config/constants/planets'
-import {
-  VOID_JUNGLE_EXECUTE_PCT,
-  VOID_MID_CURSE_AMP,
-  VOID_SUPPORT_WARD_MS,
-} from '@/config/constants/void'
 
 export const STAR_FIGHT_TIMER_WARNING_S = 20 // star-fight timer turns amber below this
 export const STAR_FIGHT_TIMER_CRITICAL_S = 10 // star-fight timer turns red + pulses below this
@@ -28,13 +23,24 @@ export const STAR_FIGHT_TIMER_CRITICAL_S = 10 // star-fight timer turns red + pu
  *
  * `metrics` is the form the details page shows: [Wirkung, Takt] — siehe
  * RoleAbilityMetric. Die Zahlen stammen aus denselben Konstanten, die das
- * Verhalten steuern, damit eine Balance-Änderung die Anzeige mitnimmt.
+ * Verhalten steuern, damit eine Balance-Änderung die Anzeige mitnimmt. Aus
+ * demselben Grund steht auch in `desc` keine getippte Zahl mehr: dort standen
+ * einmal „every 5 seconds" neben einer Metrik, die dieselben 5 Sekunden aus der
+ * Konstante ableitete — zwei Quellen für eine Zahl, und die Prosa hätte beim
+ * ersten Nachjustieren gelogen.
+ *
+ * Was der Void dieser Rolle antut, steht NICHT hier, sondern als eigener
+ * Bereich in `VOID_ROLE_ABILITIES`. Er stand kurzzeitig als Zusatzsatz in
+ * `desc`, weil es dafür keine sichtbare Fläche gab — `desc` erscheint nur im
+ * Tooltip. Jetzt gibt es eine, und derselbe Satz an zwei Orten wäre eine
+ * Aussage zu viel.
  */
 export const ORBIT_ROLE_ABILITIES = {
   top: {
     name: 'Aegis Wall',
     icon: 'game-icons:bordered-shield',
-    desc: 'Raises a shield that swallows the next enemy shot — reforged every 5 seconds. On the innermost orbit it is the last barrier: a void creature that runs into it stops dead, and the shield breaks holding it.',
+    line: 'Swallows the next enemy shot',
+    desc: `Raises a shield that swallows the next enemy shot, reforged every ${ROLE_TOP_SHIELD_REBUILD_MS / 1000} seconds.`,
     metrics: [
       { value: '1', label: 'Shot' },
       { value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s`, label: 'Rebuild' },
@@ -43,7 +49,8 @@ export const ORBIT_ROLE_ABILITIES = {
   jungle: {
     name: 'Wild Blessing',
     icon: 'game-icons:vine-whip',
-    desc: `Patrols the orbit and blesses nearby planets with potent jungle buffs. Culls any void creature it brushes past below ${Math.round(VOID_JUNGLE_EXECUTE_PCT * 100)}% health outright.`,
+    line: 'Blesses passing planets with a jungle buff',
+    desc: 'Patrols the orbit and blesses nearby planets with potent jungle buffs.',
     metrics: [
       { value: `${Object.keys(JUNGLE_BUFF_DEFS).length}`, label: 'Buffs' },
       { value: `${JUNGLE_BUFF_COOLDOWN_MS / 1000}s`, label: 'Cooldown' },
@@ -52,7 +59,8 @@ export const ORBIT_ROLE_ABILITIES = {
   mid: {
     name: 'Chaos Curse',
     icon: 'game-icons:spell-book',
-    desc: `Every 15 seconds hurls a random curse at the boss — rot, weakness or instant doom. A void creature it touches unravels: ×${VOID_MID_CURSE_AMP} damage taken and a stalled approach.`,
+    line: 'Hurls a random curse at the boss',
+    desc: `Every ${ROLE_MID_CURSE_INTERVAL_MS / 1000} seconds hurls a random curse at the boss — rot, weakness or instant doom.`,
     metrics: [
       { value: `${ROLE_MID_CURSE_TYPE_COUNT}`, label: 'Curses' },
       { value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s`, label: 'Cooldown' },
@@ -61,7 +69,8 @@ export const ORBIT_ROLE_ABILITIES = {
   adc: {
     name: 'Piercing Volley',
     icon: 'game-icons:striking-arrows',
-    desc: 'Looses a focused volley every 5 seconds, striking the boss for heavy bonus damage. Marks any void creature it touches — the whole orbit then fires at that one instead of the nearest.',
+    line: 'A focused volley straight into the boss',
+    desc: `Looses a focused volley every ${ROLE_ADC_BURST_INTERVAL_MS / 1000} seconds, striking the boss for heavy bonus damage.`,
     metrics: [
       { value: `${ROLE_ADC_BURST_DAMAGE}`, label: 'Damage' },
       { value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s`, label: 'Cooldown' },
@@ -70,13 +79,14 @@ export const ORBIT_ROLE_ABILITIES = {
   support: {
     name: 'Guardian Light',
     icon: 'game-icons:glowing-hands',
-    desc: `Mends wounded planets nearby — and the Bard himself when all is calm. Wards any void creature it touches, silencing its pull for ${Math.round(VOID_SUPPORT_WARD_MS / 1000)}s without harming it.`,
+    line: 'Mends wounded planets, and Bard when calm',
+    desc: 'Mends wounded planets nearby — and the Bard himself when all is calm.',
     metrics: [
       { value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP`, label: 'Mend' },
       { value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s`, label: 'Cooldown' },
     ] satisfies RoleAbilityMetric[],
   },
-} as const
+} as const satisfies Record<ChampionRole, RoleKitAbility>
 
 /** Obergrenze des Hinweisring-Sprite-Caches, bevor er geleert wird. */
 export const HINT_SPRITE_CACHE_LIMIT = 64

@@ -3,7 +3,7 @@
 // denen beides stattfindet. Alle Zeiten in Spielsekunden — 60 davon vergehen je
 // Sekunde Echtzeit.
 
-import type { RoleAbilityMetric } from '@/types'
+import type { ChampionRole, RoleAbilityMetric, RoleKitAbility } from '@/types'
 
 export const BLUE_NEXUS = { x: 12, y: 88 }
 export const RED_NEXUS = { x: 88, y: 12 }
@@ -163,6 +163,7 @@ export const OBJECTIVE_ROLE_ABILITIES = {
   top: {
     name: 'Challenge',
     icon: 'game-icons:enrage',
+    line: 'Two enemies turn their damage on it',
     desc: 'Roars a challenge — two enemies turn their full damage on the Top laner instead of the objective, buying the team free swings.',
     metrics: [
       { value: `${OBJECTIVE_TOP_TAUNT_TARGETS}`, label: 'Taunted' },
@@ -172,6 +173,7 @@ export const OBJECTIVE_ROLE_ABILITIES = {
   jungle: {
     name: 'Wild Rally',
     icon: 'game-icons:uprising',
+    line: "Sharpens a standing ally's strikes",
     desc: 'Rallies a random standing ally, sharpening their strikes by 40% for a short window.',
     metrics: [
       { value: `+${Math.round((OBJECTIVE_JUNGLE_BUFF_MULT - 1) * 100)}%`, label: 'Damage' },
@@ -181,6 +183,7 @@ export const OBJECTIVE_ROLE_ABILITIES = {
   mid: {
     name: 'Hex Curse',
     icon: 'game-icons:cursed-star',
+    line: 'Stacks a burn that never wears off',
     desc: 'Stacks a permanent curse on the objective — each stack burns it for 6 damage per second for the rest of the fight, as long as the Mid stands.',
     metrics: [
       { value: `${OBJECTIVE_MID_CURSE_DPS}/s`, label: 'Per Stack' },
@@ -190,6 +193,7 @@ export const OBJECTIVE_ROLE_ABILITIES = {
   adc: {
     name: 'Focus Fire',
     icon: 'game-icons:dead-eye',
+    line: 'Every shot crits while the window burns',
     desc: 'Every shot can crit for double damage — while Focus Fire burns, every shot does.',
     metrics: [
       { value: `×${OBJECTIVE_ADC_CRIT_MULT}`, label: 'Crit' },
@@ -199,13 +203,19 @@ export const OBJECTIVE_ROLE_ABILITIES = {
   support: {
     name: 'Mend',
     icon: 'game-icons:healing',
+    line: 'Heals the most wounded ally still standing',
     desc: 'A burst of light that instantly mends the most wounded ally still standing.',
     metrics: [
       { value: `${OBJECTIVE_SUPPORT_MEND_HEAL} HP`, label: 'Heal' },
       { value: `${OBJECTIVE_ABILITY_CD_S.support}s`, label: 'Cooldown' },
     ] satisfies RoleAbilityMetric[],
   },
-} as const
+} as const satisfies Record<ChampionRole, RoleKitAbility>
+
+/** Akzent des Objective-Bereichs auf der Champion-Detailseite — das Gold, das
+ *  auf dieser Seite ohnehin für die Grube steht. Stand dort als Hex-Literal in
+ *  der Komponente; die gehört nicht zu den Stellen, die eine Farbe festlegen. */
+export const OBJECTIVE_KIT_ACCENT = '#e8c040'
 
 /** Hard cap on the frozen-time objective fight; resolves by damage lead */
 export const OBJECTIVE_MAX_DURATION_MS = 20000

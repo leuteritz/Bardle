@@ -17,7 +17,13 @@
 // ganz unten in der Themen-Hierarchie — sie kann von überall gelesen werden,
 // ohne einen Zyklus zu riskieren.
 
-import type { ChampionRole, PlanetRoleType, VoidContactState, VoidPlanetRider } from '@/types'
+import type {
+  ChampionRole,
+  PlanetRoleType,
+  RoleKitAbility,
+  VoidContactState,
+  VoidPlanetRider,
+} from '@/types'
 import type { VoidRiftSeverity } from '@/types'
 
 // ── Freischaltung ───────────────────────────────────────────────────────────
@@ -294,15 +300,9 @@ export const VOID_CONTACT_STATE_COLOR: Record<VoidContactState, string> = {
   focused: '#e89840',
 }
 
-/** Wie das Verb je Rolle heisst — Eventlog und Tooltip lesen von hier, damit
- *  nicht zwei Stellen zwei Namen für dieselbe Sache tragen. */
-export const VOID_CONTACT_VERB: Record<ChampionRole, string> = {
-  top: 'Aegis Wall',
-  jungle: 'Cull',
-  mid: 'Unravelling',
-  adc: 'Focus Mark',
-  support: 'Warding Light',
-}
+/** Akzent des Void-Bereichs auf der Detailseite. Dieselbe Farbe, in der der
+ *  Void überall sonst spricht — nicht als Hex in die Komponente getippt. */
+export const VOID_KIT_ACCENT = VOID_SEVERITY_COLOR.abyssal
 
 // ── top · Aegis Wall ──
 /**
@@ -411,6 +411,83 @@ export const VOID_PLANET_RELAY_BANISH_MS = 4_000
 /** Wie lange die Zeitkapsel ein Wesen bremst — dasselbe `slowedUntil` wie der
  *  Mid-Fluch, das spätere Ablaufdatum gewinnt. */
 export const VOID_PLANET_SLOW_MS = 6_000
+
+/**
+ * Was jede Rolle tut, wenn ein Void-Wesen sie streift — in der Form, in der die
+ * Champion-Detailseite sie neben Orbit- und Objective-Fähigkeit zeigt.
+ *
+ * Dieselbe Gestalt wie `ORBIT_ROLE_ABILITIES` und `OBJECTIVE_ROLE_ABILITIES`
+ * (`RoleKitAbility`), damit die drei Bereiche dort EINE Schleife sind statt
+ * dreier Sonderfälle. Auch der Eventlog liest den Namen von hier — dafür stand
+ * einmal eine zweite Liste daneben, und zwei Listen für denselben Namen laufen
+ * auseinander.
+ *
+ * Steht am ENDE des Abschnitts, nicht an seinem Anfang: jede Zahl darin ist
+ * eine der Konstanten darüber, und ein `const` ist vor seiner Deklaration nicht
+ * lesbar — weiter oben wäre die Datei beim Laden gestorben.
+ *
+ * Jede dieser Zahlen steht bereits in DIESER Datei, und das ist Bedingung, nicht
+ * Zufall: der Kopf oben erklärt, dass hier nichts hereingezogen wird ausser den
+ * eigenen Typen. Tops Schild-Wiederaufbau (`roles.ts`) wäre deshalb tabu — und
+ * stünde ohnehin doppelt, weil ihn die Orbit-Zeile daneben schon zeigt.
+ *
+ * Tops Verb heisst „Last Barrier" und nicht wie im Orbit „Aegis Wall", obwohl
+ * es technisch dasselbe Schild ist (`triggerIntercept`): beide Namen stünden
+ * sonst untereinander in derselben Spalte. Gemessen hält Top ohnehin die
+ * innerste Bahn — der Name sagt also, was die Geometrie tut.
+ */
+export const VOID_ROLE_ABILITIES = {
+  top: {
+    name: 'Last Barrier',
+    icon: 'game-icons:stone-wall',
+    line: 'Stops a creature dead; the shield breaks',
+    desc: 'On the innermost orbit the shield is the last thing between the void and the sun. A creature that runs into it halts where it stands — and the shield breaks holding it, so exactly one is held per rebuild.',
+    metrics: [
+      { value: `${VOID_TOP_BLOCK_MS / 1000}s`, label: 'Halt' },
+      { value: `${VOID_CONTACT_REARM_MS.top / 1000}s`, label: 'Rearm' },
+    ],
+  },
+  jungle: {
+    name: 'Cull',
+    icon: 'game-icons:sword-slice',
+    line: 'Executes a creature already near death',
+    desc: 'The patrol finishes what the orbit started: any creature it brushes past below the execute threshold dies on the spot and pays out its full boon.',
+    metrics: [
+      { value: `${Math.round(VOID_JUNGLE_EXECUTE_PCT * 100)}%`, label: 'Execute' },
+      { value: `${VOID_JUNGLE_CULL_COOLDOWN_MS / 1000}s`, label: 'Cooldown' },
+    ],
+  },
+  mid: {
+    name: 'Unravelling',
+    icon: 'game-icons:shattered-glass',
+    line: 'It takes more damage and its crawl stalls',
+    desc: 'A touched creature comes apart: everything that hits it — clicks, the orbit, the turrets — lands harder, and its approach slows to a crawl.',
+    metrics: [
+      { value: `×${VOID_MID_CURSE_AMP}`, label: 'Damage' },
+      { value: `${VOID_MID_CURSE_MS / 1000}s`, label: 'Curse' },
+    ],
+  },
+  adc: {
+    name: 'Focus Mark',
+    icon: 'game-icons:bullseye',
+    line: 'The whole orbit fires at that one',
+    desc: 'The mark redirects the orbit: while it holds, the squad and every turret bundle their fire onto the marked creature instead of the nearest one.',
+    metrics: [
+      { value: '1', label: 'Target' },
+      { value: `${VOID_ADC_FOCUS_MS / 1000}s`, label: 'Mark' },
+    ],
+  },
+  support: {
+    name: 'Warding Light',
+    icon: 'game-icons:eye-shield',
+    line: 'Silences its pull without harming it',
+    desc: 'A ward silences what a creature drains from the economy — it keeps coming, it simply stops taking. The only role that deals no damage on contact; the Bard is mended instead.',
+    metrics: [
+      { value: '100%', label: 'Pull' },
+      { value: `${VOID_SUPPORT_WARD_MS / 1000}s`, label: 'Silence' },
+    ],
+  },
+} as const satisfies Record<ChampionRole, RoleKitAbility>
 
 // ── Ziehen ──────────────────────────────────────────────────────────────────
 

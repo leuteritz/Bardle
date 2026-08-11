@@ -43,7 +43,7 @@ import {
   VOID_CONTACT_REARM_MS,
   VOID_PLANET_CONTACT_REARM_MS,
   VOID_CONTACT_FLOAT_MAX_PER_TICK,
-  VOID_CONTACT_VERB,
+  VOID_ROLE_ABILITIES,
   VOID_TOP_BLOCK_MS,
   VOID_TOP_BLOCK_DAMAGE_PCT,
   VOID_JUNGLE_EXECUTE_PCT,
@@ -657,7 +657,7 @@ export const useVoidStore = defineStore('void', {
       contactFloat(dmg, hit.cx, hit.cy, { voidFloat: true })
       this.damageMonster(m.uid, dmg)
 
-      logVoidBlocked(championNameByRole('top'), VOID_CONTACT_VERB.top, def.name)
+      logVoidBlocked(championNameByRole('top'), VOID_ROLE_ABILITIES.top.name, def.name)
       return true
     },
 
@@ -673,7 +673,7 @@ export const useVoidStore = defineStore('void', {
         this.jungleCullReadyAt = now + VOID_JUNGLE_CULL_COOLDOWN_MS
         contactFloat(m.currentHp, hit.cx, hit.cy, { voidFloat: true, crit: true })
         this.slayMonster(m)
-        logVoidCulled(championNameByRole('jungle'), VOID_CONTACT_VERB.jungle, def.name)
+        logVoidCulled(championNameByRole('jungle'), VOID_ROLE_ABILITIES.jungle.name, def.name)
         return true
       }
 
@@ -719,7 +719,7 @@ export const useVoidStore = defineStore('void', {
 
       logVoidWarded(
         championNameByRole('support'),
-        VOID_CONTACT_VERB.support,
+        VOID_ROLE_ABILITIES.support.name,
         def.name,
         Math.round(VOID_SUPPORT_WARD_MS / 1000),
       )
