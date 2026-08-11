@@ -30,16 +30,13 @@
           </div>
         </div>
 
-        <!-- LP progress toward the next rank: one bar, gauged by scale strokes
-             that grow taller and brighter toward promotion (LP_METER_ZONES ·
-             LP_METER_TICKS_PER_ZONE). The colour ramp sits on the track, not on
-             the fill, so a given LP value always wears the same shade. -->
+        <!-- LP progress toward the next rank: one gauge that carries its own
+             reading. The colour ramp sits on the track, not on the fill, so a
+             given LP value always wears the same shade; the scale strokes stand
+             as a ruler along its foot (LP_METER_ZONES · LP_METER_TICKS_PER_ZONE),
+             leaving the chamber above them to the count. -->
         <div class="lp-block">
-          <div
-            class="lp-track"
-            :class="{ 'lp-track--maxed': lpPercent >= 100 }"
-            :style="lpTrackStyle"
-          >
+          <div class="lp-track" :class="lpTrackClass" :style="lpTrackStyle">
             <!-- the lit part: clipped, never resized, so the ramp stays put -->
             <div class="lp-ink" :style="{ clipPath: lpInkClip }">
               <span class="ink-grain" />
@@ -62,19 +59,35 @@
               <span class="head-blade" />
             </span>
 
-            <span class="lp-plinth" :style="{ background: plinthBg }" />
-          </div>
-
-          <!-- The reading of the bar, standing under it: the count the leading
-               edge points at, over the scale's own end. -->
-          <div class="lp-readout">
-            <span class="lp-count">
-              <span class="lp-num" :style="{ color: rankColor, textShadow: nameGlow }">
-                {{ currentRank.lp }}
+            <!-- The reading, standing inside the gauge it belongs to. Two
+                 congruent layers: the lower one lit, for the dark stretch of
+                 track; the upper one dark ink, cut at the SAME edge that cuts
+                 the ramp (lpInkClip) — so the glyphs flip colour exactly where
+                 the fill passes beneath them and stay legible on either ground.
+                 One source for that edge, no second reckoning to drift.
+                 Pattern taken from header/UniverseRescueTrack.vue. -->
+            <div class="lp-readout">
+              <span class="lp-count">
+                <span class="lp-num" :style="{ color: rankColor, textShadow: nameGlow }">
+                  {{ currentRank.lp }}
+                </span>
+                <span v-if="!isChallenger" class="lp-of">/ {{ lpCap }}</span>
               </span>
-              <span v-if="!isChallenger" class="lp-of">/ {{ lpCap }}</span>
-            </span>
-            <span v-ink-center class="lp-unit">LEAGUE POINTS</span>
+              <span v-ink-center class="lp-unit">{{ lpCaption }}</span>
+            </div>
+            <div
+              class="lp-readout lp-readout--on-fill"
+              :style="{ clipPath: lpInkClip }"
+              aria-hidden="true"
+            >
+              <span class="lp-count">
+                <span class="lp-num">{{ currentRank.lp }}</span>
+                <span v-if="!isChallenger" class="lp-of">/ {{ lpCap }}</span>
+              </span>
+              <span v-ink-center class="lp-unit">{{ lpCaption }}</span>
+            </div>
+
+            <span class="lp-plinth" :style="{ background: plinthBg }" />
           </div>
         </div>
       </div>
@@ -154,6 +167,7 @@ import {
   LP_GRANDMASTER_PROMOTION_THRESHOLD,
   LP_METER_ZONES,
   LP_METER_TICKS_PER_ZONE,
+  LP_PROMOTION_IMMINENT_PCT,
   RANK_TIERS,
   RANK_DIVISIONS,
   RANK_EMBLEM_IMAGES,
@@ -305,6 +319,9 @@ const divisionTicks = computed<DivisionTick[]>(() => {
   return ticks
 })
 
+/** Challenger has no cap above it, so its readout is a bare LP count. */
+const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
+
 const lpCap = computed(() => {
   const tier = currentRank.value.tier
   if (tier === 'Master') return LP_MASTER_PROMOTION_THRESHOLD
@@ -313,8 +330,28 @@ const lpCap = computed(() => {
 })
 
 const lpPercent = computed(() => {
-  if (currentRank.value.tier === 'Challenger') return 100
+  if (isChallenger.value) return 100
   return Math.min(100, Math.max(0, (currentRank.value.lp / lpCap.value) * 100))
+})
+
+/** The meter can never come to rest at its cap for a normal tier — updateLP()
+ *  promotes the instant the threshold is hit. So „nearly there" is the state
+ *  that has to carry the promotion, and a genuinely full bar means Challenger. */
+const isImminent = computed(
+  () => !isChallenger.value && lpPercent.value >= LP_PROMOTION_IMMINENT_PCT,
+)
+
+const lpTrackClass = computed(() => ({
+  'lp-track--imminent': isImminent.value,
+  'lp-track--apex': isChallenger.value,
+}))
+
+/** The caption doubles as the state's own announcement — the frame changes
+ *  colour, but only a word says what the colour means. */
+const lpCaption = computed(() => {
+  if (isChallenger.value) return 'APEX — NO CAP'
+  if (isImminent.value) return 'PROMOTION IN REACH'
+  return 'LEAGUE POINTS'
 })
 
 /** Everything about the meter that only moves when the rank colour changes —
@@ -334,6 +371,7 @@ const lpTrackStyle = computed<Record<string, string>>(() => {
   }
   return {
     '--lp-accent': c,
+    '--lp-accent-soft': withAlpha(c, 0.45),
     '--lp-zones': `linear-gradient(to right, ${zones.join(', ')})`,
     // horizontal heat ramp × vertical volume — the further right, the hotter
     '--lp-ramp':
@@ -356,11 +394,14 @@ interface LpTick {
   style: Record<string, string>
 }
 
-/** The scale itself. Strokes stand on the plinth and grow toward promotion —
- *  light ones inside a zone, heavy ones on every zone edge. */
+/** The scale itself. Strokes stand on the plinth as a ruler along the foot of
+ *  the gauge — light ones inside a zone, heavy ones on every zone edge. They
+ *  are kept SHORT (a fifth of the track at most) because the chamber above them
+ *  now holds the count; the escalation toward promotion is carried by their
+ *  width and their light instead of by their height. */
 const lpTicks = computed<LpTick[]>(() => {
   const steps = LP_METER_ZONES * LP_METER_TICKS_PER_ZONE
-  const capped = currentRank.value.tier === 'Challenger'
+  const capped = isChallenger.value
   const ticks: LpTick[] = []
   // no stroke at 0 or at the far end — the track's own frame stands there
   for (let k = 1; k < steps; k++) {
@@ -374,7 +415,7 @@ const lpTicks = computed<LpTick[]>(() => {
       title: capped ? '' : `${lp} LP`,
       style: {
         left: `${(t * 100).toFixed(3)}%`,
-        '--tick-h': major ? `${(58 + t * 42).toFixed(1)}%` : `${(24 + t * 26).toFixed(1)}%`,
+        '--tick-h': major ? `${(13 + t * 7).toFixed(1)}%` : `${(9 + t * 5).toFixed(1)}%`,
         '--tick-w': major ? `${(2 + t * 1.6).toFixed(1)}px` : '1px',
         // ahead of the fill: a lit mark, brighter the closer to promotion
         '--tick-dim': `rgba(255, 240, 200, ${(major ? 0.16 + t * 0.3 : 0.075 + t * 0.155).toFixed(3)})`,
@@ -390,9 +431,6 @@ const lpTicks = computed<LpTick[]>(() => {
 const plinthBg = computed(
   () => `linear-gradient(to right, #241c0f, ${rankColorDeep.value} 55%, ${rankColor.value})`,
 )
-
-/** Challenger has no cap above it, so its readout is a bare LP count. */
-const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
 </script>
 
 <style scoped>
@@ -738,59 +776,101 @@ const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
   color: #e8c040;
 }
 
-/* ── Readout under the bar ── */
+/* ── The reading, inside the gauge ──
+   Two congruent layers, so the count survives whatever ground the fill puts
+   under it: the base one lit for the dark track, the twin dark and clipped at
+   the fill edge. Both cover the whole track and centre in the chamber ABOVE the
+   foot rail (--lp-rail) — centring in the plain middle of the box would drop
+   the caption onto the scale strokes. */
 .lp-readout {
+  position: absolute;
+  inset: 0;
+  /* NOT a percentage: percentage padding resolves against the WIDTH, and this
+     track is ~750 px wide — `20%` came out as 150 px of padding and shoved the
+     count clean out through the top of the bar. */
+  padding-bottom: var(--lp-rail);
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
+  pointer-events: none;
+}
+
+/* The dark twin: same geometry, inverted ink, cut at the fill edge. Its
+   transition matches the ramp's exactly, so glyphs and fill flip as one. */
+.lp-readout--on-fill {
+  transition: clip-path 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.lp-readout--on-fill .lp-num {
+  color: #0b0904;
+  text-shadow: 0 1px 0 rgba(255, 248, 222, 0.3);
+}
+.lp-readout--on-fill .lp-of {
+  color: rgba(14, 10, 4, 0.8);
+}
+.lp-readout--on-fill .lp-unit {
+  color: rgba(14, 10, 4, 0.82);
 }
 
 .lp-count {
   display: flex;
   align-items: baseline;
-  gap: clamp(6px, 0.8vw, 13px);
+  gap: clamp(5px, 0.7vw, 11px);
+}
+
+.lp-num {
+  font-size: clamp(21px, 4.2cqh, 54px);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: 1px;
+  /* fixed digit widths — the two layers have to stay congruent while LP counts */
+  font-variant-numeric: tabular-nums;
 }
 
 /* The scale's far end, kept a step behind the count itself */
 .lp-of {
-  font-size: clamp(13px, 2.4cqh, 28px);
+  font-size: clamp(11px, 1.9cqh, 23px);
   font-weight: 700;
   letter-spacing: 1px;
   color: #8a7444;
-}
-
-.lp-num {
-  font-size: clamp(26px, 5.6cqh, 66px);
-  font-weight: 700;
-  line-height: 0.95;
-  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
 }
 
 .lp-unit {
-  font-size: clamp(8px, 1.05cqh, 11px);
+  font-size: clamp(7px, 0.95cqh, 11px);
   font-weight: 700;
   letter-spacing: 3px;
   color: #a08448;
+  white-space: nowrap;
+}
+
+/* Promotion states speak through the caption too — a frame that changes colour
+   without a word next to it does not say what the colour means. */
+.lp-track--imminent .lp-readout:not(.lp-readout--on-fill) .lp-unit,
+.lp-track--apex .lp-readout:not(.lp-readout--on-fill) .lp-unit {
+  color: var(--lp-accent);
 }
 
 /* ── LP progress ── */
 .lp-block {
   position: relative;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(3px, 0.7cqh, 8px);
 }
 
-/* ── LP meter: one bar, gauged by scale strokes ──
+/* ── LP meter: one gauge, carrying its own reading ──
    The lit part is a heat ramp spanning the whole track that gets CLIPPED, never
    scaled — so the shade at 60 LP is the shade of 60 LP whatever the fill does.
-   Every escalating layer (zone shading, ramp, stroke height, stroke light) is a
+   Every escalating layer (zone shading, ramp, stroke width, stroke light) is a
    static gradient set once per rank change; only the head halo and the sheen
    animate, and both move on opacity/transform alone. */
 .lp-track {
-  --track-h: clamp(30px, 5.2cqh, 62px);
+  --track-h: clamp(52px, 9.2cqh, 112px);
+  /* The foot rail the scale strokes stand in; the reading centres above it.
+     A shade taller than the tallest stroke (20 % of the track, see lpTicks) so
+     the caption keeps clear of the scale. Derived from --track-h, so the two
+     compact tiers below inherit the proportion by setting the height alone. */
+  --lp-rail: calc(var(--track-h) * 0.26);
   position: relative;
   height: var(--track-h);
   background:
@@ -798,14 +878,55 @@ const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
     linear-gradient(to bottom, rgba(16, 14, 9, 0.92), rgba(6, 5, 3, 0.95));
   border: 1px solid #2b2312;
   border-radius: 5px;
+  /* chamfer: gold hairline inside the frame, then depth. All static — the only
+     thing that moves here is the one-off switch into a promotion state. */
   box-shadow:
-    inset 0 1px 0 rgba(255, 240, 200, 0.05),
-    inset 0 0 12px rgba(0, 0, 0, 0.7);
+    inset 0 0 0 1px rgba(232, 192, 64, 0.1),
+    inset 0 2px 3px rgba(0, 0, 0, 0.8),
+    inset 0 0 16px rgba(0, 0, 0, 0.68);
   overflow: hidden;
-  transition: border-color 0.4s ease;
+  transition:
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
 }
-.lp-track--maxed {
+
+/* Promotion in reach, and the apex above it: the frame takes the rank's own
+   colour. Reachable states — the meter never rests at the cap for a normal
+   tier, so a rule pinned to 100 % would only ever fire for Challenger. */
+.lp-track--imminent,
+.lp-track--apex {
   border-color: var(--lp-accent);
+  box-shadow:
+    inset 0 0 0 1px var(--lp-accent-soft),
+    inset 0 2px 3px rgba(0, 0, 0, 0.8),
+    inset 0 0 22px rgba(0, 0, 0, 0.6);
+}
+
+/* Gate posts: a mark at 0 LP and one at the cap, so the scale has a visible
+   start and end. One overlay, no extra elements — ::after is the last child,
+   so it lands over track, ramp and strokes alike. */
+.lp-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+        to bottom,
+        transparent,
+        rgba(255, 240, 200, 0.24) 20%,
+        rgba(255, 240, 200, 0.24) 80%,
+        transparent
+      )
+      left / 2px 100% no-repeat,
+    linear-gradient(
+        to bottom,
+        transparent,
+        var(--lp-accent-soft) 16%,
+        var(--lp-accent-soft) 84%,
+        transparent
+      )
+      right / 2px 100% no-repeat;
 }
 
 .lp-ink {
@@ -816,7 +937,8 @@ const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
 }
 
 /* Ribbing that thickens toward promotion — the mask does the escalating, so
-   one static gradient covers the whole ramp */
+   one static gradient covers the whole ramp. Kept lighter than it used to be:
+   the count now sits over this stretch and the ribbing was eating its edges. */
 .ink-grain {
   position: absolute;
   inset: 0;
@@ -827,7 +949,7 @@ const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
   );
   -webkit-mask-image: linear-gradient(to right, transparent, #000);
   mask-image: linear-gradient(to right, transparent, #000);
-  opacity: 0.38;
+  opacity: 0.26;
   pointer-events: none;
 }
 
@@ -881,11 +1003,13 @@ const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
 }
 
 .head-blade {
+  /* grows with the taller gauge, so the edge keeps its weight against the frame */
+  --blade-w: clamp(3px, 0.45cqh, 5px);
   position: absolute;
   top: 0;
   bottom: 0;
-  left: -1.5px;
-  width: 3px;
+  width: var(--blade-w);
+  left: calc(var(--blade-w) / -2);
   border-radius: 2px;
   background: linear-gradient(to bottom, #fff8e0, var(--lp-accent) 52%, #fff8e0);
   box-shadow: var(--lp-glow);
@@ -962,10 +1086,13 @@ const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
     font-size: clamp(24px, 3.8cqh, 40px);
   }
   .lp-num {
-    font-size: clamp(28px, 4.4cqh, 46px);
+    font-size: clamp(26px, 4cqh, 38px);
   }
+  /* Taller than the 40 px it was, because the count now lives inside — but the
+     LP block as a whole still shrinks: bar plus separate readout used to run to
+     about 91 px here, this is 68. */
   .lp-track {
-    --track-h: 40px;
+    --track-h: 68px;
   }
   .tier-ladder {
     --pip: 44px;
@@ -998,10 +1125,14 @@ const isChallenger = computed(() => currentRank.value.tier === 'Challenger')
     letter-spacing: 2px;
   }
   .lp-num {
-    font-size: 28px;
+    font-size: 22px;
   }
+  .lp-of {
+    font-size: 11px;
+  }
+  /* was 30 px plus a ~46 px readout under it; one 56 px gauge instead */
   .lp-track {
-    --track-h: 30px;
+    --track-h: 56px;
   }
   .tier-ladder {
     --pip: 32px;

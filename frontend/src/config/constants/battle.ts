@@ -281,6 +281,14 @@ export const LP_METER_ZONES = 4
  *  stroke every 5 LP, and a heavy one at every 25. */
 export const LP_METER_TICKS_PER_ZONE = 5
 
+/** Fill level (%) at which the climb counts as within reach — the LP meter
+ *  switches into its promotion state. Deliberately not 100: updateLP() promotes
+ *  the moment the threshold is hit, so a genuinely full bar only ever exists at
+ *  Challenger, and a state pinned to 100 would be unreachable for every other
+ *  tier. Shared by the landing band and the result screen's promotion hint, so
+ *  both screens make the same claim about the same climb. */
+export const LP_PROMOTION_IMMINENT_PCT = 90
+
 // Battle constants
 export const OPPONENT_MMR_VARIANCE = 200
 export const BATTLE_TIME_MIN_SECONDS = 30

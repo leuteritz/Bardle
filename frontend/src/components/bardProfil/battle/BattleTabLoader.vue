@@ -128,9 +128,10 @@ const crownSpaceStyle = { '--crown-headroom': `${RANK_FRAME_CROWN_HEADROOM}px` }
               <span class="btl-band-emblem" />
               <span class="btl-band-name" />
             </div>
+            <!-- Die LP-Anzeige trägt ihre Ablesung seit dem Umbau INNEN, ist
+                 also ein einziger hoher Balken und kein Balken plus Textzeile -->
             <div class="btl-band-lp">
               <span class="btl-band-lp-track" />
-              <span class="btl-band-lp-readout" />
             </div>
           </div>
 
@@ -364,20 +365,14 @@ const crownSpaceStyle = { '--crown-headroom': `${RANK_FRAME_CROWN_HEADROOM}px` }
 }
 .btl-band-lp {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(3px, 0.7cqh, 8px);
 }
+/* Maße wie .lp-track in RankBandPanel — inklusive dessen Höhenstufen weiter
+   unten. Läuft das auseinander, springt das Layout beim Aufdecken. */
 .btl-band-lp-track {
-  height: clamp(26px, 5.1cqh, 60px);
+  height: clamp(52px, 9.2cqh, 112px);
   border-radius: 4px;
   border: 1px solid #3e200a;
   background: #16140e;
-}
-.btl-band-lp-readout {
-  height: clamp(30px, 6.3cqh, 74px);
-  border-radius: 4px;
-  background: #14120c;
 }
 
 /* Tier-Leiter — Maße wie .tier-ladder: zehn gleich breite Stufen, jede ein
@@ -709,6 +704,9 @@ const crownSpaceStyle = { '--crown-headroom': `${RANK_FRAME_CROWN_HEADROOM}px` }
   .btl-action-btn {
     --btn-pad: 7px;
   }
+  .btl-band-lp-track {
+    height: 68px;
+  }
 }
 @container (max-height: 620px) {
   .btl-landing {
@@ -717,6 +715,9 @@ const crownSpaceStyle = { '--crown-headroom': `${RANK_FRAME_CROWN_HEADROOM}px` }
   }
   .btl-action-btn {
     --btn-pad: 6px;
+  }
+  .btl-band-lp-track {
+    height: 56px;
   }
 }
 /* Kronenraum: der Rahmen wächst auf hohen Stufen mit den Karten mit */

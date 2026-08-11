@@ -18,13 +18,21 @@
       <div class="lp-sub">LEAGUE POINTS</div>
     </div>
 
+    <!-- The standing rank, read inside its own gauge. Same language as the
+         landing band (RankBandPanel): rank on the left, count centred, and two
+         congruent text layers so the glyphs flip colour at the fill edge
+         instead of dissolving into it. -->
     <div class="lp-progress">
-      <div class="lp-progress-head">
-        <span>{{ rankLabel }}</span>
-        <span>{{ battleStore.currentRank.lp }} / {{ promotionCap }} LP</span>
-      </div>
       <div class="lp-track">
-        <div class="lp-fill" :style="{ width: lpPercent + '%' }" />
+        <div class="lp-fill" :style="{ clipPath: lpClip }" />
+        <div class="lp-legend">
+          <span class="lp-rank">{{ rankLabel }}</span>
+          <span class="lp-count">{{ battleStore.currentRank.lp }} / {{ promotionCap }} LP</span>
+        </div>
+        <div class="lp-legend lp-legend--on-fill" :style="{ clipPath: lpClip }" aria-hidden="true">
+          <span class="lp-rank">{{ rankLabel }}</span>
+          <span class="lp-count">{{ battleStore.currentRank.lp }} / {{ promotionCap }} LP</span>
+        </div>
       </div>
       <div v-if="promoHint" class="promo-hint">▲ {{ promoHint }}</div>
     </div>
@@ -87,6 +95,7 @@ import {
   LP_NORMAL_PROMOTION_THRESHOLD,
   LP_MASTER_PROMOTION_THRESHOLD,
   LP_GRANDMASTER_PROMOTION_THRESHOLD,
+  LP_PROMOTION_IMMINENT_PCT,
   HONOR_MVP_BUFF_MULT,
   HONOR_MVP_BUFF_DURATION_S,
 } from '@/config/constants'
@@ -139,9 +148,16 @@ const lpPercent = computed(() =>
   Math.min(100, Math.max(0, (battleStore.currentRank.lp / promotionCap.value) * 100)),
 )
 
+/** Right-hand cut of the lit part — and of the dark text layer over it, so both
+ *  read from ONE edge. `inset()` is a plain rectangle, so the clip stays cheap
+ *  and can carry the transition that `width` used to. */
+const lpClip = computed(() => `inset(0 ${(100 - lpPercent.value).toFixed(2)}% 0 0)`)
+
 const promoHint = computed(() => {
   if (battleStore.currentRank.tier === 'Challenger') return ''
-  if (lpPercent.value >= 80) return 'Promotion within reach'
+  // same threshold the landing band switches its meter on — one claim about
+  // the same climb, not two screens disagreeing
+  if (lpPercent.value >= LP_PROMOTION_IMMINENT_PCT) return 'Promotion within reach'
   return ''
 })
 </script>
@@ -276,34 +292,78 @@ const promoHint = computed(() => {
 }
 .splash--loss .lp-sub { color: #8a5a50; }
 
-/* ── LP progress ── */
+/* ── LP progress: the standing rank, read inside its own gauge ──
+   Same construction as the landing band, one size down. The fill spans the
+   whole track and is CLIPPED rather than resized — the dark text layer needs
+   that same edge anyway, and a width transition under a glow re-rasters the
+   box for the whole 0.8 s. The lit tip lives in the gradient instead of a
+   box-shadow, which `overflow: hidden` clipped away regardless. */
 .lp-progress {
   width: 82%;
 }
-.lp-progress-head {
-  display: flex;
-  justify-content: space-between;
-  font-size: clamp(11px, 1.8cqh, 16px);
-  color: #6a5820;
-  margin-bottom: 5px;
-}
 .lp-track {
-  height: 9px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 4px;
+  position: relative;
+  height: clamp(22px, 3.6cqh, 34px);
+  background: linear-gradient(to bottom, rgba(16, 14, 9, 0.92), rgba(6, 5, 3, 0.95));
+  border: 1px solid #2b2312;
+  border-radius: 5px;
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 192, 64, 0.1),
+    inset 0 2px 3px rgba(0, 0, 0, 0.8);
   overflow: hidden;
 }
+/* Green whatever the verdict was: this bar shows where the climb STANDS, not
+   how the match went — that is the big number above it. */
 .lp-fill {
-  height: 100%;
-  background: linear-gradient(to right, #2a7a50, #3cbc78);
-  box-shadow: 0 0 10px #3cbc78;
-  border-radius: 4px;
-  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #1f6440, #3cbc78 88%, #9cf0c0);
+  transition: clip-path 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lp-legend {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+/* The dark twin, cut at the fill edge — same timing as the fill, so glyphs and
+   ground turn over together */
+.lp-legend--on-fill {
+  transition: clip-path 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.lp-legend--on-fill .lp-rank {
+  color: rgba(8, 22, 14, 0.7);
+}
+.lp-legend--on-fill .lp-count {
+  color: #06180f;
+  text-shadow: 0 1px 0 rgba(220, 255, 235, 0.3);
+}
+
+.lp-rank {
+  position: absolute;
+  left: clamp(7px, 1.2cqh, 12px);
+  font-size: clamp(8px, 1.3cqh, 12px);
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #7a6a3a;
+  white-space: nowrap;
+}
+.lp-count {
+  font-size: clamp(10px, 1.7cqh, 15px);
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #d8c88a;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
 }
 .promo-hint {
   font-size: clamp(11px, 1.9cqh, 16px);
   color: #3cbc78;
-  margin-top: 7px;
+  margin-top: 6px;
   text-align: center;
 }
 
