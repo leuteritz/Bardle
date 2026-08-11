@@ -158,3 +158,18 @@ export const ABILITY_BAR_REVEAL_MS = 700
  * den Wert nur noch auf ihre eigene Ankerlinie.
  */
 export const ABILITY_BAR_STACK_GAP_PX = 12
+
+/**
+ * Wie lange der Meep-Gewinn über der Passiv-Kachel aufsteigt. Länger als der
+ * Cast-Blitz, kürzer als die Klartextzeile: der Gewinn ist ein Ereignis, das
+ * man sehen soll, aber keine Meldung, die man lesen muss.
+ */
+export const ABILITY_MEEP_GAIN_FLOAT_MS = 1400
+
+/**
+ * Sammelfenster für Meep-Zuwächse. Muss über `MEEP_ADD_DELAY_MS` (100ms)
+ * liegen — `gameStore.addMeep` schreibt verzögert gut, und mehrere Gutschriften
+ * in diesem Fenster sollen als EIN Float mit der Summe erscheinen statt als
+ * zwei, die einander abwürgen.
+ */
+export const ABILITY_MEEP_GAIN_COALESCE_MS = 220

@@ -78,6 +78,8 @@
       <BardPassiveTile
         :meep-fill="meepFill"
         :clicks-to-meep="clicksToMeep"
+        :gain-amount="meepGainAmount"
+        :gain-key="meepGainKey"
         @hover="(on: boolean) => (hoveredId = on ? 'passive' : null)"
       />
 
@@ -120,6 +122,8 @@ import {
   ABILITY_CAST_TOAST_MS,
   ABILITY_COOLDOWN_DECIMAL_BELOW_SEC,
   ABILITY_MAX_RANK,
+  ABILITY_MEEP_GAIN_COALESCE_MS,
+  ABILITY_MEEP_GAIN_FLOAT_MS,
   MS_PER_SECOND,
   RESONANCE_CLICK_REFUND_MS,
   RESONANCE_MAX_STACKS,
@@ -176,6 +180,54 @@ const meepIdleEta = computed(() => {
   if (rate <= 0) return '—'
   return formatCompactDuration((meepRemaining.value / rate) * MS_PER_SECOND)
 })
+
+// ── Der Gewinn ──────────────────────────────────────────────────────────────
+// Die Kachel zeigt die offene Strecke; erreicht sie ihr Ziel, meldet ein Float
+// darüber den Gewinn. Gelesen wird `totalMeepsEarned` und nicht `meeps`: der
+// Lifetime-Zähler ist monoton und sinkt beim Ausgeben nicht — ein Kauf im
+// Skill-Tree darf keinen Gewinn vortäuschen. Sinkt er doch (Prestige setzt ihn
+// zurück), zieht die Grundlinie stillschweigend nach.
+
+/** Betrag im laufenden Float; 0 = keiner steht. */
+const meepGainAmount = ref(0)
+/** Steigt mit jeder Gutschrift — der Key-Bump stößt die Animation neu an. */
+const meepGainKey = ref(0)
+
+/** Was seit dem letzten Float dazukam, aber noch nicht gezeigt wurde. */
+let meepGainPending = 0
+let meepGainCoalesceTimer: ReturnType<typeof setTimeout> | null = null
+let meepGainClearTimer: ReturnType<typeof setTimeout> | null = null
+
+function showMeepGain(): void {
+  meepGainCoalesceTimer = null
+  if (meepGainPending <= 0) return
+  meepGainAmount.value = meepGainPending
+  meepGainPending = 0
+  meepGainKey.value += 1
+  if (meepGainClearTimer) clearTimeout(meepGainClearTimer)
+  meepGainClearTimer = setTimeout(() => {
+    meepGainAmount.value = 0
+    meepGainClearTimer = null
+  }, ABILITY_MEEP_GAIN_FLOAT_MS)
+}
+
+watch(
+  () => gameStore.totalMeepsEarned,
+  (now, before) => {
+    const delta = now - before
+    if (delta <= 0) return
+    // Solange die Leiste noch nicht hereingefahren ist, wird nur mitgezählt und
+    // nichts gezeigt: `loadGame()` läuft direkt nach `app.mount()` und hebt den
+    // Zähler in EINEM Schritt auf den gespeicherten Stand — ohne diese Sperre
+    // begrüßte das Spiel jeden Wiederkehrer mit „+312 MEEPS".
+    if (!revealed.value) return
+    meepGainPending += delta
+    // Gesammelt statt sofort gezeigt: `addMeep` schreibt verzögert gut, mehrere
+    // Gutschriften im selben Fenster sollen EIN Float mit der Summe ergeben.
+    if (meepGainCoalesceTimer) clearTimeout(meepGainCoalesceTimer)
+    meepGainCoalesceTimer = setTimeout(showMeepGain, ABILITY_MEEP_GAIN_COALESCE_MS)
+  },
+)
 
 // ── Kachel-Elemente für den Frame-Lauf ──────────────────────────────────────
 // Ein Register statt eines reaktiven Arrays: die Positionen der Ringe werden am
@@ -531,6 +583,8 @@ onUnmounted(() => {
   if (revealTimer) clearTimeout(revealTimer)
   if (toastTimer) clearTimeout(toastTimer)
   if (flashTimer) clearTimeout(flashTimer)
+  if (meepGainCoalesceTimer) clearTimeout(meepGainCoalesceTimer)
+  if (meepGainClearTimer) clearTimeout(meepGainClearTimer)
   sizeObserver?.disconnect()
   document.documentElement.style.removeProperty('--ability-bar-h')
 })

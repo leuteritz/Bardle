@@ -162,6 +162,16 @@ export const UNIVERSE_TOOLTIP_IMAGES = {
 export const MEEP_ART_IMAGE = '/img/BardAbilities/BardMeep.png'
 
 /**
+ * Dieselbe Figur KLEIN — im Gewinn-Float über der Passiv-Kachel misst sie je
+ * nach Auflösung 22–33px, das Original wäre dort ein 1024er-Bild auf ein
+ * Zwanzigstel gequetscht. Die 128er-Stufe hält bei DPR 2 noch echtes
+ * Downsampling ein (33 × 2 = 66 ≤ 128) und ist bewusst dieselbe Datei, die
+ * `UNIVERSE_TOOLTIP_IMAGES.meeps` und `MEEP_TREE_START_ICON` schon laden — ein
+ * Cache-Treffer statt eines zweiten Decodes desselben Motivs.
+ */
+export const MEEP_ART_IMAGE_SM = '/img/BardAbilities/BardMeep-128.png'
+
+/**
  * Das Meep-Sprite ist hochformatig und trägt oben wie unten einen breiten
  * Alpha-Rand — in derselben Box wie Chime und Glyph füllt es nur rund drei
  * Viertel der Höhe und wirkt daneben klein. Vergrößert wird per `scale`, nicht
