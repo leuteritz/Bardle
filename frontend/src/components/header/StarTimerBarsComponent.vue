@@ -14,6 +14,7 @@
           'timer-bar-row--raging': entry.isRaging,
           'timer-bar-row--eclipsed': entry.isEclipsed,
           'timer-bar-row--joined': entry.joined,
+          'timer-bar-row--targeted': targetedStarId === entry.starId,
           'star-hover-active': starGroupStore.hoveredTimerStarId === entry.starId,
         }"
         :style="entry.style"
@@ -353,6 +354,12 @@ function measureRowBottoms(): void {
 const focusedBossId = shallowRef<string | null>(null)
 
 /**
+ * Sein Stern — die Zeile bekommt dieselbe Zielmarke wie der Stern im Orbit.
+ * Quelle ist der Store-Getter, damit beide Ansichten denselben Stern meinen.
+ */
+const targetedStarId = shallowRef<string | null>(null)
+
+/**
  * Treffer werden aus dem HP-Verlauf zweier Snapshots abgeleitet, nicht an den
  * Schadensquellen gemeldet: So erfasst die Anzeige jede Quelle automatisch
  * (Klick, Splash, Rollen-Burst, Turret, DoT), ohne dass eine davon die
@@ -390,6 +397,9 @@ function refreshBossSnapshot(): void {
   // Ebenfalls ungetrackt gelesen — ein reaktiver Zugriff auf activeBoss würde
   // die Bars bei jeder Boss-Mutation invalidieren und den Snapshot aushebeln.
   focusedBossId.value = planetBossStore.activeBoss?.planetId ?? null
+  // Dieselbe Quelle wie die Zielmarke am Stern im Orbit, aus demselben Grund
+  // ungetrackt: der Getter hängt an activeBoss.
+  targetedStarId.value = starGroupStore.targetedStarId
 }
 
 let ticker: ReturnType<typeof setInterval> | null = null
@@ -978,6 +988,26 @@ watch(
 .timer-bar-row--raging.star-hover-active {
   outline: 1px solid rgba(255, 92, 133, 0.55);
   outline-offset: 1px;
+}
+
+/* ── Zielmarke: auf DIESE Zeile schiessen Champions und Turrets gerade ───────
+   Dieselbe Aussage wie die Marke am Stern im Orbit, im selben Cyan.
+
+   Bewusst STATISCH und ohne Puls. Am Stern ist die Marke ein einzelnes Objekt
+   in einer weiten Szene, dort liest sich ein Atmen als Leben; hier ist sie eine
+   ~14 px hohe Zeile in einem Stapel von bis zu 30, und eine davon, die atmet,
+   ist Unruhe statt Auskunft. Ein statischer Zustand ist ausdrücklich erlaubt
+   (Performance-Regel 2) und kostet gar nichts.
+
+   Der Ring liegt am RAND der Zeile, nicht auf der Füllung: Fluch (Innenring),
+   Rage (Überzug) und Eclipse (Füllung wird Rahmen) teilen sich diese Fläche
+   bereits, und der Zielstern ist regelmäßig auch der rasende — ein vierter Ring
+   dort verdeckte einen der drei. */
+.timer-bar-row--targeted {
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 1px rgba(95, 240, 255, 0.5),
+    0 0 10px rgba(40, 200, 235, 0.28);
 }
 
 .bar-side {

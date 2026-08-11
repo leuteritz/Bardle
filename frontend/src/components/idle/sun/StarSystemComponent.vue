@@ -56,6 +56,17 @@
           :ref="(el) => setMapEl(starBackEls, star.id, el)"
         >
           <div class="star-pulse-overlay" />
+          <!-- Zielmarke: hinter der Sonne gibt es keinen Wrap, sie sitzt deshalb
+               IM Körper. Dessen Box ist dieselbe wie die des Wraps im
+               Front-Layer (starBodyBackStyle spreizt starWrapStyle), die
+               Prozent-Insets treffen also dieselbe Geometrie. `.star-sys-back`
+               legt ihre Takte still, der Behind-Blur nimmt sie mit — Ziel ja,
+               Beschuss gerade nicht. -->
+          <div v-if="targetedStarId === star.id" class="star-target-lock">
+            <span class="star-target-lock__halo" />
+            <span class="star-target-lock__reticle" />
+            <span class="star-target-lock__ping" />
+          </div>
         </div>
       </template>
     </div>
@@ -94,6 +105,17 @@
             tabindex="0"
           >
             <div class="star-pulse-overlay" />
+          </div>
+          <!-- Zielmarke NEBEN dem Körper, nicht darin: `.star-body` bekommt beim
+               Hover `filter: drop-shadow(#ffe066) … brightness(1.3)` und
+               `star-hover-pulse` (scale 1 → 1.35). Ein `filter` und ein
+               `transform` gelten für den ganzen Teilbaum — die Marke würde beim
+               Überfahren golden werden und pumpen, also genau das, was sie nicht
+               sein soll. Nach dem Körper, damit sie über dessen Schein liegt. -->
+          <div v-if="targetedStarId === star.id" class="star-target-lock">
+            <span class="star-target-lock__halo" />
+            <span class="star-target-lock__reticle" />
+            <span class="star-target-lock__ping" />
           </div>
         </div>
       </template>
@@ -781,17 +803,13 @@ interface StarBurstState {
 }
 const starBurstStates = new Map<string, StarBurstState>()
 
-// ── Shock Nova: der Stern des aktiven Bosses folgt NICHT dem normalen
-// Burst-Takt — sein Ring spiegelt 1:1 den Nova-Cooldown aus dem
-// roleBehaviorStore (synchron zum Nova-Ring im Star-Fight-Modal)
-const novaStarId = computed(() => {
-  const boss = bossStore.activeBoss
-  if (!boss || boss.defeated || boss.expired) return null
-  return (
-    starGroupStore.activeStars.find((s) => s.planetSlots.some((p) => p.planetId === boss.planetId))
-      ?.id ?? null
-  )
-})
+// ── Zielstern: der Stern des aktiven Bosses. Auf ihn schlagen Champions und
+// Turret-Planeten gerade ein — er trägt die Zielmarke am Körper und die Marke
+// seiner Header-Zeile. Zugleich folgt sein Ring NICHT dem normalen Burst-Takt,
+// sondern spiegelt 1:1 den Shock-Nova-Cooldown aus dem roleBehaviorStore
+// (synchron zum Nova-Ring im Star-Fight-Modal).
+// Die Herleitung steht im Store, damit Orbit und Header denselben Stern meinen.
+const targetedStarId = computed(() => starGroupStore.targetedStarId)
 
 const NOVA_TRAIL_COLOR = '#ff4400'
 const NOVA_HEAD_COLOR = '#ffd080'
@@ -804,7 +822,7 @@ watch(
   () => roleBehaviorStore.novaCounter,
   () => {
     if (reducedMotion || isIdleRenderingPaused.value) return
-    const starId = novaStarId.value
+    const starId = targetedStarId.value
     if (!starId) return
     const star = starRenders.value.find((s) => s.id === starId)
     if (!star || star.isBehind || star.opacity <= ORBIT_RING_MIN_OPACITY) return
@@ -854,7 +872,7 @@ watch(
   () => roleBehaviorStore.autoCounter,
   () => {
     if (reducedMotion || isIdleRenderingPaused.value) return
-    const starId = novaStarId.value
+    const starId = targetedStarId.value
     if (!starId) return
     const star = starRenders.value.find((s) => s.id === starId)
     if (!star || star.isBehind || star.opacity <= ORBIT_RING_MIN_OPACITY) return
@@ -1023,7 +1041,7 @@ function drawCooldownRings() {
 
     // Boss-Stern: Ring spiegelt den Shock-Nova-Cooldown aus dem Store —
     // exakt synchron zum Nova-Ring im Star-Fight-Modal
-    const isNovaStar = star.id === novaStarId.value
+    const isNovaStar = star.id === targetedStarId.value
     const state = starBurstStates.get(star.id)
     if (!state && !isNovaStar) continue
 
@@ -1104,7 +1122,7 @@ function enemyAttackLoop(ts: number) {
 
       // Boss-Stern: feuert nicht im Burst-Takt — seine Shock Nova läuft über
       // den Store-Cooldown (siehe novaCounter-Watch), Ring kommt aus dem Store
-      if (starId === novaStarId.value) {
+      if (starId === targetedStarId.value) {
         starBurstStates.delete(starId)
         continue
       }
@@ -1499,7 +1517,10 @@ function starCountStyle(star: StarRenderEntry) {
    nicht sieht, soll auch nichts kosten. */
 .star-sys-back .star-pulse-overlay,
 .star-sys-back .star-body::before,
-.star-sys-back .star-body::after {
+.star-sys-back .star-body::after,
+.star-sys-back .star-target-lock__halo,
+.star-sys-back .star-target-lock__reticle,
+.star-sys-back .star-target-lock__ping {
   animation: none;
 }
 
@@ -1860,6 +1881,149 @@ function starCountStyle(star: StarRenderEntry) {
   }
   100% {
     filter: brightness(1) saturate(1);
+  }
+}
+
+/* ── Zielmarke: DIESER Stern ist das Ziel des laufenden Beschusses ────────────
+   Immer genau EINER trägt sie. Champions (`combatStore.tick`) und
+   Turret-Planeten (`gameStore`-Tick) schlagen beide auf denselben
+   `planetBossStore.activeBoss` ein; der Stern dazu steht als
+   `starGroupStore.targetedStarId` an einer Stelle, aus der auch die
+   Header-Zeile liest.
+
+   Gebaut nach Performance-Regel 11: der Schein steht STATISCH im Stil, animiert
+   werden nur `opacity` und `transform`. Kein `will-change` — für eine laufende
+   Animation legt Chrome die Ebene ohnehin an, und das Compositing-Budget ist
+   die knappe Ressource (siehe Kommentar über `.star-body`). Drei Ebenen mehr
+   kosten hier nichts, weil es immer bei EINEM Stern bleibt; gewarnt war der
+   Fall „eine Ebene je Stern".
+
+   Farbe: Cyan. Gold gehört dem Hover, Crimson der Rage, Violett dem Fluch, Glut
+   den Cooldown-Ringen, Rot der Zielscheibe auf der Sonne — Cyan ist der einzige
+   Ton, der am Stern noch frei ist, und als Komplement zu den gelb-cremefarbenen
+   Sternkörpern steht er am weitesten von ihnen ab. */
+.star-target-lock {
+  position: absolute;
+  /* Prozent statt `--ring-inset`: die Marke hängt im Front-Layer am WRAP und im
+     Back-Layer am KÖRPER. Beide Boxen sind exakt das Sternquadrat, ein
+     Prozentwert trifft deshalb in beiden dieselbe Geometrie — die Custom
+     Property steht dagegen nur am Körper und fiele am Wrap still auf ihren
+     Fallback zurück, womit die Marke nicht mehr mit dem Stern skalierte.
+     22 % liegen ausserhalb von Typring (16 %) und Cooldown-Ring. */
+  inset: -22%;
+  border-radius: 50%;
+  /* Pflicht, kein Feinschliff: die Marke ragt über den Wrap hinaus, und der
+     trägt `pointer-events: auto`. Ohne das bekäme ausgerechnet der Zielstern
+     eine größere Klick- und Hoverfläche als jeder andere. */
+  pointer-events: none;
+}
+
+/* ① Halo — statischer Ringverlauf, nur die Deckkraft atmet. Mit ausgespartem
+   Kern: der Sternkörper behält seine Farbe, die Marke legt sich nicht als
+   Schleier darüber. `closest-side` ist Pflicht — der Default `farthest-corner`
+   rechnet 100 % auf die Halbdiagonale, alles unter ~71 % wäre unsichtbar. */
+.star-target-lock__halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle closest-side,
+    transparent 58%,
+    rgba(95, 240, 255, 0.5) 76%,
+    rgba(60, 210, 240, 0.3) 88%,
+    rgba(40, 180, 225, 0.08) 97%,
+    transparent 100%
+  );
+  opacity: 0.7;
+  animation: star-target-breathe 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ② Reticle — vier Klammern statt eines geschlossenen Rings: ein voller Ring
+   wäre der dritte am selben Stern (Typring, Cooldown-Ring) und ginge in ihnen
+   unter. Der Ring ist ein echter `border`, die Lücken schneidet eine STATISCHE
+   `repeating-conic-gradient`-Maske; animiert wird allein `transform: rotate` —
+   dasselbe Muster wie die Galaxieboss-Corona. */
+.star-target-lock__reticle {
+  position: absolute;
+  /* Ein Stück weiter aussen als der Rest der Marke: der Cooldown-Ring des
+     Zielsterns liegt bei `(size/2 + 9) · scale` und damit dicht daneben. Zwei
+     Ringe auf fast demselben Radius lesen sich als ein unruhiges Bündel statt
+     als zwei Aussagen — die Klammern brauchen den Abstand. */
+  inset: -5%;
+  border-radius: 50%;
+  border: 2.5px solid rgba(150, 250, 255, 0.95);
+  -webkit-mask-image: repeating-conic-gradient(
+    from 32deg,
+    #000 0deg 34deg,
+    transparent 34deg 90deg
+  );
+  mask-image: repeating-conic-gradient(from 32deg, #000 0deg 34deg, transparent 34deg 90deg);
+  animation: star-target-spin 16s linear infinite;
+  pointer-events: none;
+}
+
+/* ③ Ping — eine einzelne Front, die vom Rand des Körpers nach aussen läuft.
+   Langsam getaktet: die Marke soll melden, nicht blinken. */
+.star-target-lock__ping {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(140, 248, 255, 0.75);
+  opacity: 0;
+  animation: star-target-ping 3.2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes star-target-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes star-target-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes star-target-ping {
+  0% {
+    transform: scale(0.72);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.6;
+  }
+  70%,
+  100% {
+    transform: scale(1.06);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Halo und Reticle bleiben STEHEN — ohne Keyframes fiele der Halo sonst je
+     nach Position mal voll und mal unsichtbar aus. Der Ping fällt ganz weg:
+     eine eingefrorene Druckwelle sagt nichts. */
+  .star-target-lock__halo,
+  .star-target-lock__reticle {
+    animation: none;
+  }
+
+  .star-target-lock__halo {
+    opacity: 0.7;
+  }
+
+  .star-target-lock__ping {
+    display: none;
   }
 }
 

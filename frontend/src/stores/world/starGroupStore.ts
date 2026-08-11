@@ -152,6 +152,28 @@ export const useStarGroupStore = defineStore('starGroup', {
       if (!this.starFightModalOpen || !this.starFightPlanetQueue.length) return null
       return this.starFightPlanetQueue[this.starFightCurrentIndex] ?? null
     },
+    /**
+     * Der Stern, dessen Boss gerade beschossen wird — die EINE Quelle für
+     * „wer ist das Ziel".
+     *
+     * Champions (`combatStore.tick`) und Turret-Planeten (`gameStore`-Tick,
+     * `foregroundAutoAttackDPS`) schlagen beide auf `planetBossStore.activeBoss`
+     * ein; der Stern dazu wurde bisher an jeder Anzeigestelle einzeln aus den
+     * `planetSlots` gesucht. Orbit-Zielmarke und Header-Zeile müssen denselben
+     * Stern meinen, also steht die Herleitung hier.
+     *
+     * Ein besiegter oder abgelaufener Boss ist kein Ziel mehr — `activeBoss`
+     * gibt über `selectedBossId` auch solche zurück. Hängt bewusst NICHT an
+     * `currentHP`: Boss-Schaden invalidiert den Getter damit nicht.
+     */
+    targetedStarId(): string | null {
+      const boss = usePlanetBossStore().activeBoss
+      if (!boss || boss.defeated || boss.expired) return null
+      return (
+        this.activeStars.find((s) => s.planetSlots.some((p) => p.planetId === boss.planetId))?.id ??
+        null
+      )
+    },
   },
 
   actions: {
