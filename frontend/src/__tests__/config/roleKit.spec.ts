@@ -4,7 +4,7 @@ import {
   ORBIT_ROLE_ABILITIES,
   OBJECTIVE_ROLE_ABILITIES,
   VOID_ROLE_ABILITIES,
-  ROLE_KIT_LINE_MAX_CHARS,
+  ROLE_KIT_DESC_MAX_CHARS,
 } from '@/config/constants'
 import type { ChampionRole, RoleKitAbility } from '@/types'
 
@@ -15,11 +15,13 @@ import type { ChampionRole, RoleKitAbility } from '@/types'
  * Spec: sobald eine der Tabellen aus der Form fällt, hat eine Zeile dort ein
  * leeres Feld, und leere Felder fallen im Betrieb niemandem auf.
  *
- * Der Längen-Deckel ist der wichtigste Wächter hier. Die Klartext-Zeile wird
- * NICHT umbrochen — ein Umbruch änderte die gemessene Höhe der Hero-Fusszeile,
- * und die speist den leeren Sitz und die Swap-Pille. Sie trägt deshalb eine
- * CSS-Ellipse, und diese Spec ist es, die aus der Ellipse ein Netz macht, das
- * nie auslöst.
+ * Zwei Wächter tragen die Darstellung:
+ *   `short` MUSS ein Wort sein — die Zeile hat neben Sigill und zwei grossen
+ *   Zahlen keinen Platz für mehr, und ein zweites Wort schöbe entweder die
+ *   Zahlen zusammen oder liefe in die Ellipse.
+ *   `desc` MUSS kurz bleiben — es steht in der Hover-Karte, die über dem
+ *   Portrait schwebt; drei Zeilen dort verdecken das Bild, das der Spieler
+ *   gerade ansieht.
  */
 
 const TABLES: { scope: string; table: Record<ChampionRole, RoleKitAbility> }[] = [
@@ -64,8 +66,8 @@ describe('Rollen-Kit', () => {
       for (const role of ROLE_KEYS) {
         const ab = table[role]
         expect(ab.name, `${role}: name`).toBeTruthy()
+        expect(ab.short, `${role}: short`).toBeTruthy()
         expect(ab.icon, `${role}: icon`).toBeTruthy()
-        expect(ab.line, `${role}: line`).toBeTruthy()
         expect(ab.desc, `${role}: desc`).toBeTruthy()
         // Genau zwei, immer in derselben Reihenfolge — erst die Wirkung, dann
         // der Takt. Nur dadurch liest sich die zweite Spalte über alle drei
@@ -79,34 +81,54 @@ describe('Rollen-Kit', () => {
     })
   })
 
-  describe('Die sichtbare Zeile', () => {
-    // DER Wächter dieser Spec. Ohne ihn wäre die CSS-Ellipse kein Netz,
-    // sondern eine abgeschnittene Aussage.
-    it.each(TABLES)('$scope bleibt unter dem Längen-Deckel', ({ table }) => {
+  describe('Das eine Wort in der Zeile', () => {
+    // DER Wächter dieser Spec. Neben Sigill und zwei grossen Zahlen ist genau
+    // ein Wort das, was ohne Ellipse hineinpasst.
+    it.each(TABLES)('$scope nennt je Rolle GENAU ein Wort', ({ table }) => {
       for (const role of ROLE_KEYS) {
-        const line = table[role].line
-        expect(line.length, `${role}: „${line}" (${line.length})`).toBeLessThanOrEqual(
-          ROLE_KIT_LINE_MAX_CHARS,
+        const short = table[role].short
+        expect(short.trim().split(/\s+/), `${role}: „${short}"`).toHaveLength(1)
+        // Kein Bindestrich-Ersatz für zwei Wörter, das umgeht die Regel nur.
+        expect(short, `${role}: „${short}"`).not.toMatch(/[-–—]/)
+      }
+    })
+
+    it.each(TABLES)('$scope beginnt das Wort gross und ohne Punkt', ({ table }) => {
+      for (const role of ROLE_KEYS) {
+        const short = table[role].short
+        expect(short[0], `${role}: „${short}"`).toBe(short[0].toUpperCase())
+        expect(short.endsWith('.'), `${role}: „${short}"`).toBe(false)
+      }
+    })
+  })
+
+  describe('Die Hover-Karte', () => {
+    it.each(TABLES)('$scope hält die Beschreibung unter dem Deckel', ({ table }) => {
+      for (const role of ROLE_KEYS) {
+        const desc = table[role].desc
+        expect(desc.length, `${role}: „${desc}" (${desc.length})`).toBeLessThanOrEqual(
+          ROLE_KIT_DESC_MAX_CHARS,
         )
       }
     })
 
-    it.each(TABLES)('$scope schreibt eine Aussage, keinen Satz mit Punkt', ({ table }) => {
+    it.each(TABLES)('$scope schreibt einen ganzen Satz', ({ table }) => {
       for (const role of ROLE_KEYS) {
-        const line = table[role].line
-        // Kein Schlusspunkt: die Zeile steht ohne Nachbarn auf dem Portrait,
-        // und ein Punkt sähe neben der Ellipse aus wie ein Fehler.
-        expect(line.endsWith('.'), `${role}: „${line}"`).toBe(false)
-        expect(line[0], `${role}: „${line}"`).toBe(line[0].toUpperCase())
+        const desc = table[role].desc
+        // Anders als das eine Wort in der Zeile IST das hier ein Satz — die
+        // Karte hat Platz dafür, und ein Fragment läse sich dort wie ein
+        // abgeschnittener Text.
+        expect(desc.endsWith('.'), `${role}: „${desc}"`).toBe(true)
+        expect(desc[0], `${role}: „${desc}"`).toBe(desc[0].toUpperCase())
       }
     })
 
-    it('ist nicht die Kurzfassung von desc, sondern ein eigenes Feld', () => {
-      // Wäre `line` nur ein abgeschnittenes `desc`, könnte man sie generieren.
-      // Sie ist es nicht, und das soll auch so bleiben.
+    it('trägt in der Karte den VOLLEN Namen, nicht das Wort aus der Zeile', () => {
+      // Die Karte ist der Ort, an dem „Volley" wieder „Piercing Volley" heisst.
+      // Wären beide Felder gleich, hätte die Zeile nichts verkürzt.
       for (const { table } of TABLES) {
         for (const role of ROLE_KEYS) {
-          expect(table[role].line).not.toBe(table[role].desc)
+          expect(table[role].name.length).toBeGreaterThanOrEqual(table[role].short.length)
         }
       }
     })
@@ -131,6 +153,16 @@ describe('Rollen-Kit', () => {
         expect(new Set(names).size, `${role}: ${names.join(' · ')}`).toBe(3)
       }
     })
+
+    // Und dasselbe für das eine Wort — es ist das, was tatsächlich untereinander
+    // steht. Drei verschiedene Namen nützen nichts, wenn sie auf dasselbe Wort
+    // verkürzt werden.
+    it('gibt jeder Rolle drei unterscheidbare Wörter', () => {
+      for (const role of ROLE_KEYS) {
+        const shorts = TABLES.map((t) => t.table[role].short)
+        expect(new Set(shorts).size, `${role}: ${shorts.join(' · ')}`).toBe(3)
+      }
+    })
   })
 
   describe('Sigille', () => {
@@ -150,7 +182,7 @@ describe('Rollen-Kit', () => {
           const ab = table[role]
           for (const [field, text] of [
             ['name', ab.name],
-            ['line', ab.line],
+            ['short', ab.short],
             ['desc', ab.desc],
           ] as const) {
             expect(MUSICAL.test(text), `${scope}/${role}/${field}: „${text}"`).toBe(false)

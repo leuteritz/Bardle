@@ -439,9 +439,9 @@ export const VOID_PLANET_SLOW_MS = 6_000
 export const VOID_ROLE_ABILITIES = {
   top: {
     name: 'Last Barrier',
+    short: 'Barrier',
     icon: 'game-icons:stone-wall',
-    line: 'Stops a creature dead; the shield breaks',
-    desc: 'On the innermost orbit the shield is the last thing between the void and the sun. A creature that runs into it halts where it stands — and the shield breaks holding it, so exactly one is held per rebuild.',
+    desc: 'Halts a void creature where it stands; the shield breaks doing it.',
     metrics: [
       { value: `${VOID_TOP_BLOCK_MS / 1000}s`, label: 'Halt' },
       { value: `${VOID_CONTACT_REARM_MS.top / 1000}s`, label: 'Rearm' },
@@ -449,9 +449,9 @@ export const VOID_ROLE_ABILITIES = {
   },
   jungle: {
     name: 'Cull',
+    short: 'Cull',
     icon: 'game-icons:sword-slice',
-    line: 'Executes a creature already near death',
-    desc: 'The patrol finishes what the orbit started: any creature it brushes past below the execute threshold dies on the spot and pays out its full boon.',
+    desc: 'Instantly kills a void creature that is already near death.',
     metrics: [
       { value: `${Math.round(VOID_JUNGLE_EXECUTE_PCT * 100)}%`, label: 'Execute' },
       { value: `${VOID_JUNGLE_CULL_COOLDOWN_MS / 1000}s`, label: 'Cooldown' },
@@ -459,9 +459,9 @@ export const VOID_ROLE_ABILITIES = {
   },
   mid: {
     name: 'Unravelling',
+    short: 'Unravel',
     icon: 'game-icons:shattered-glass',
-    line: 'It takes more damage and its crawl stalls',
-    desc: 'A touched creature comes apart: everything that hits it — clicks, the orbit, the turrets — lands harder, and its approach slows to a crawl.',
+    desc: 'The creature takes more damage from everything and slows down.',
     metrics: [
       { value: `×${VOID_MID_CURSE_AMP}`, label: 'Damage' },
       { value: `${VOID_MID_CURSE_MS / 1000}s`, label: 'Curse' },
@@ -469,9 +469,9 @@ export const VOID_ROLE_ABILITIES = {
   },
   adc: {
     name: 'Focus Mark',
+    short: 'Mark',
     icon: 'game-icons:bullseye',
-    line: 'The whole orbit fires at that one',
-    desc: 'The mark redirects the orbit: while it holds, the squad and every turret bundle their fire onto the marked creature instead of the nearest one.',
+    desc: 'The whole orbit fires at that creature instead of the nearest.',
     metrics: [
       { value: '1', label: 'Target' },
       { value: `${VOID_ADC_FOCUS_MS / 1000}s`, label: 'Mark' },
@@ -479,9 +479,9 @@ export const VOID_ROLE_ABILITIES = {
   },
   support: {
     name: 'Warding Light',
+    short: 'Ward',
     icon: 'game-icons:eye-shield',
-    line: 'Silences its pull without harming it',
-    desc: 'A ward silences what a creature drains from the economy — it keeps coming, it simply stops taking. The only role that deals no damage on contact; the Bard is mended instead.',
+    desc: 'Stops a creature draining the economy, without harming it.',
     metrics: [
       { value: '100%', label: 'Pull' },
       { value: `${VOID_SUPPORT_WARD_MS / 1000}s`, label: 'Silence' },

@@ -46,12 +46,22 @@ export interface RoleAbilityMetric {
  * „Abgleich" der beiden nähme der Zeile genau das, wofür sie da ist.
  */
 export interface RoleKitAbility {
+  /** Der volle Name — Eventlog, Hover-Karte, Tooltips ausserhalb der Leiste. */
   name: string
+  /**
+   * EIN Wort, und immer das treffendste. Das ist, was in der Leiste steht:
+   * neben einem Sigill und zwei grossen Zahlen bleibt für „Piercing Volley"
+   * kein Platz, ohne dass die Zahlen kleiner werden — und die Zahlen sind das,
+   * was der Spieler vergleicht. Eine Spec bindet die Ein-Wort-Regel.
+   */
+  short: string
   icon: string
-  /** EINE sichtbare Zeile Klartext. Wird nicht umbrochen — Länge deshalb auf
-   *  `ROLE_KIT_LINE_MAX_CHARS` gedeckelt, gebunden durch eine Spec. */
-  line: string
-  /** Der volle Wortlaut. Erscheint nur im Tooltip. */
+  /**
+   * Was die Fähigkeit tut, in EINEM kurzen Satz. Erscheint beim Überfahren der
+   * Zeile als Karte darüber — nicht als Dauertext, weil in der Leiste sonst
+   * dreimal ein Satz stünde, den man nach dem zweiten Blick nicht mehr liest.
+   * Länge auf `ROLE_KIT_DESC_MAX_CHARS` gedeckelt.
+   */
   desc: string
   metrics: readonly RoleAbilityMetric[]
 }

@@ -162,9 +162,9 @@ export const OBJECTIVE_TOP_TAUNT_TARGETS = 2
 export const OBJECTIVE_ROLE_ABILITIES = {
   top: {
     name: 'Challenge',
+    short: 'Challenge',
     icon: 'game-icons:enrage',
-    line: 'Two enemies turn their damage on it',
-    desc: 'Roars a challenge — two enemies turn their full damage on the Top laner instead of the objective, buying the team free swings.',
+    desc: 'Two enemies attack the top laner instead of the objective.',
     metrics: [
       { value: `${OBJECTIVE_TOP_TAUNT_TARGETS}`, label: 'Taunted' },
       { value: `${OBJECTIVE_ABILITY_CD_S.top}s`, label: 'Cooldown' },
@@ -172,9 +172,9 @@ export const OBJECTIVE_ROLE_ABILITIES = {
   },
   jungle: {
     name: 'Wild Rally',
+    short: 'Rally',
     icon: 'game-icons:uprising',
-    line: "Sharpens a standing ally's strikes",
-    desc: 'Rallies a random standing ally, sharpening their strikes by 40% for a short window.',
+    desc: "Boosts one standing ally's damage for a short window.",
     metrics: [
       { value: `+${Math.round((OBJECTIVE_JUNGLE_BUFF_MULT - 1) * 100)}%`, label: 'Damage' },
       { value: `${OBJECTIVE_ABILITY_CD_S.jungle}s`, label: 'Cooldown' },
@@ -182,9 +182,9 @@ export const OBJECTIVE_ROLE_ABILITIES = {
   },
   mid: {
     name: 'Hex Curse',
+    short: 'Hex',
     icon: 'game-icons:cursed-star',
-    line: 'Stacks a burn that never wears off',
-    desc: 'Stacks a permanent curse on the objective — each stack burns it for 6 damage per second for the rest of the fight, as long as the Mid stands.',
+    desc: 'Adds a burn stack that lasts the rest of the fight.',
     metrics: [
       { value: `${OBJECTIVE_MID_CURSE_DPS}/s`, label: 'Per Stack' },
       { value: `${OBJECTIVE_ABILITY_CD_S.mid}s`, label: 'Cooldown' },
@@ -192,9 +192,9 @@ export const OBJECTIVE_ROLE_ABILITIES = {
   },
   adc: {
     name: 'Focus Fire',
+    short: 'Focus',
     icon: 'game-icons:dead-eye',
-    line: 'Every shot crits while the window burns',
-    desc: 'Every shot can crit for double damage — while Focus Fire burns, every shot does.',
+    desc: 'Every shot crits for double damage while it lasts.',
     metrics: [
       { value: `×${OBJECTIVE_ADC_CRIT_MULT}`, label: 'Crit' },
       { value: `${OBJECTIVE_ABILITY_CD_S.adc}s`, label: 'Cooldown' },
@@ -202,9 +202,9 @@ export const OBJECTIVE_ROLE_ABILITIES = {
   },
   support: {
     name: 'Mend',
+    short: 'Mend',
     icon: 'game-icons:healing',
-    line: 'Heals the most wounded ally still standing',
-    desc: 'A burst of light that instantly mends the most wounded ally still standing.',
+    desc: 'Instantly heals the most wounded ally still standing.',
     metrics: [
       { value: `${OBJECTIVE_SUPPORT_MEND_HEAL} HP`, label: 'Heal' },
       { value: `${OBJECTIVE_ABILITY_CD_S.support}s`, label: 'Cooldown' },

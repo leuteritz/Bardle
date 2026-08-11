@@ -1105,19 +1105,22 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                  They used to be two paragraph cards at the foot of the right
                  column, then two number tiles side by side here.
 
-                 Side by side, each tile got ~200px, and the ability's NAME was
+                 Side by side, each tile got ~200px, and the ability's name was
                  dropped to buy the sigil and the figures their size. Stacked,
-                 every row gets the full 404 — enough for the name AND a line of
-                 plain English, without either the sigil or the figures giving
-                 anything back. That line is the point of the change: `desc` is
-                 rendered nowhere in the game but a native title=, so until now
-                 the only way to learn what a role does was to hover and wait.
+                 every row gets the full 404 — enough for a name AND figures big
+                 enough to read leaning back, which is what a player compares.
 
-                 Every row says the same four things in the same four places —
-                 sigil, name, one clause, then the figures, effect before
-                 cadence. Three rows read in one sweep because the reading order
-                 never changes, and a player comparing scopes compares the same
-                 slot each time. The full wording is still one hover away.
+                 ONE word for the name, not the full one: "Piercing Volley" next
+                 to two figures either shrinks the figures or ellipses itself,
+                 and neither is worth it when the full name is one hover away.
+
+                 The explanation is a HOVER CARD above the row, not a second line
+                 under it. As a standing line it was three sentences on the
+                 portrait that nobody reads twice; as a card it appears when
+                 asked, floats over the art instead of sitting in the layout, so
+                 it costs the portrait nothing and can be set large enough to
+                 actually read. That card is what `desc` is for — before it, the
+                 field was rendered nowhere in this game but a native title=.
 
                  They sit directly under the name — the chips that used to be
                  between them now ride in the top-right corner, because out of
@@ -1128,17 +1131,25 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 :key="ab.scope"
                 class="sdp-kit-tile"
                 :style="{ '--kc': ab.color }"
-                :title="`${ab.scope} · ${ab.desc}`"
               >
                 <Icon :icon="ab.icon" width="30" height="30" class="sdp-kit-icon" />
-                <span class="sdp-kit-name">{{ ab.name }}</span>
+                <span class="sdp-kit-name">{{ ab.short }}</span>
                 <div class="sdp-kit-metrics">
                   <span v-for="m in ab.metrics" :key="m.label" class="sdp-kit-metric">
                     <span class="sdp-kit-value">{{ m.value }}</span>
                     <span class="sdp-kit-label">{{ m.label }}</span>
                   </span>
                 </div>
-                <span class="sdp-kit-line">{{ ab.line }}</span>
+                <!-- Rides above the row it belongs to, over the art. No native
+                     title= alongside it: two tooltips for one hover is one too
+                     many, and the OS one arrives half a second late. -->
+                <span class="sdp-kit-hint">
+                  <span class="sdp-kit-hint-head">
+                    <span class="sdp-kit-hint-name">{{ ab.name }}</span>
+                    <span class="sdp-kit-hint-scope">{{ ab.scope }}</span>
+                  </span>
+                  <span class="sdp-kit-hint-desc">{{ ab.desc }}</span>
+                </span>
               </div>
             </div>
 
@@ -2772,18 +2783,16 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 .sdp-splash:has(.sdp-kit-tile:hover) .sdp-splash-swap-hint {
   opacity: 0;
 }
-/* Sigil spanning both lines, then name and figures on the first, the clause
-   across the full width on the second. The figures sit hard right so the three
-   rows share one number column; the name gets whatever is left and ellipses
-   rather than pushing them out of alignment. */
+/* One line: sigil, the one-word name, the figures hard right. The figures sit
+   in the same column across all three rows, so they read as a table; the name
+   takes whatever is left. `position: relative` anchors the hover card. */
 .sdp-kit-tile {
+  position: relative;
   min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-rows: auto auto;
   align-items: center;
   column-gap: 11px;
-  row-gap: 2px;
   padding: 6px 10px 6px 11px;
   border-radius: 3px;
   border-left: 2px solid var(--kc);
@@ -2792,17 +2801,13 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
 /* The sigil identifies the scope as a shape rather than a word — big enough to
    read at a glance, in the same accent the rule on the left carries. */
 .sdp-kit-icon {
-  grid-row: 1 / 3;
-  align-self: center;
   flex-shrink: 0;
   color: var(--kc);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
 .sdp-kit-name {
-  grid-column: 2;
-  grid-row: 1;
   min-width: 0;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.15;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -2816,8 +2821,6 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
    33px tall on their own, which put the row at 62px and the kit at 200 — it
    stopped fitting anywhere. Side by side the row is one text line high. */
 .sdp-kit-metrics {
-  grid-column: 3;
-  grid-row: 1;
   display: flex;
   align-items: baseline;
   gap: 7px;
@@ -2839,8 +2842,11 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   line-height: 1;
   color: rgba(200, 164, 90, 0.45);
 }
+/* The figures are the point of the row — with the explanation gone to the hover
+   card, they are what a player is here to compare, so they run bigger than the
+   name beside them. */
 .sdp-kit-value {
-  font-size: 18px;
+  font-size: 21px;
   line-height: 1;
   color: #f4e6bc;
   white-space: nowrap;
@@ -2860,21 +2866,75 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
-/* One line, never two. A wrap would change the measured footer height, and that
-   feeds both the empty seat's inset and the swap pill's centring — one long
-   string would silently cost the portrait a whole line. The ellipse is a net;
-   ROLE_KIT_LINE_MAX_CHARS and its spec are what keep it from ever firing. */
-.sdp-kit-line {
-  grid-column: 2 / 4;
-  grid-row: 2;
-  min-width: 0;
-  font-size: 12px;
-  line-height: 1.2;
-  color: rgba(230, 214, 178, 0.74);
+/* ── the hover card ──────────────────────────────────────────────────────────
+ * What the ability actually does, shown when it is asked for.
+ *
+ * It floats ABOVE its row and OUT of the layout (absolute), which is the whole
+ * reason it can be this size: it borrows the portrait for as long as the
+ * pointer rests there and gives it straight back, so the footer's measured
+ * height never moves — and that height feeds the empty seat's inset and the
+ * swap pill's centring.
+ *
+ * Anchored to the row rather than shown once for the group, so the card always
+ * points at the thing it describes. `bottom: 100%` puts the third row's card
+ * over the second and the first row's over bare art; all three stay inside the
+ * splash, which is what clips here.
+ *
+ * Only `opacity` moves. It also carries the project's tooltip skin, because
+ * that is what it is — the native title= it replaces arrived half a second late
+ * and could not be styled. */
+.sdp-kit-hint {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 12px;
+  border-radius: 4px;
+  background: #16140e;
+  border: 2px solid #5c3310;
+  border-left: 3px solid var(--kc);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-out;
+}
+.sdp-kit-tile:hover .sdp-kit-hint {
+  opacity: 1;
+}
+.sdp-kit-hint-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+/* The full name lives here — the row shows one word of it. */
+.sdp-kit-hint-name {
+  font-size: 16px;
+  line-height: 1.1;
+  color: var(--kc);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sdp-kit-hint-scope {
+  margin-left: auto;
+  font-size: 9.5px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(230, 220, 196, 0.42);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+/* Wraps freely — nothing measures this box, so a two-line sentence costs
+   nothing. ROLE_KIT_DESC_MAX_CHARS is what keeps it from becoming a paragraph
+   that covers the portrait. */
+.sdp-kit-hint-desc {
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: #c9bb98;
 }
 .sdp-name-row {
   display: flex;
@@ -3930,27 +3990,32 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   }
   .sdp-kit-tile {
     column-gap: 9px;
-    row-gap: 1px;
-    padding: 4px 8px 4px 9px;
+    padding: 5px 8px 5px 9px;
   }
   .sdp-kit-icon {
-    width: 26px;
-    height: 26px;
+    width: 27px;
+    height: 27px;
   }
   .sdp-kit-name {
-    font-size: 14.5px;
+    font-size: 15px;
   }
   .sdp-kit-metrics {
     gap: 6px;
   }
   .sdp-kit-value {
-    font-size: 15px;
+    font-size: 18px;
   }
   .sdp-kit-label {
     font-size: 8.5px;
   }
-  .sdp-kit-line {
-    font-size: 11px;
+  .sdp-kit-hint {
+    padding: 7px 10px;
+  }
+  .sdp-kit-hint-name {
+    font-size: 14.5px;
+  }
+  .sdp-kit-hint-desc {
+    font-size: 12.5px;
   }
   /* The footer's own margins, and the last of what the kit needed: the chips
      are out of the flow, the XP head is gone, and these two give the rest. */
@@ -4066,27 +4131,36 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   }
   .sdp-kit-tile {
     column-gap: 13px;
-    row-gap: 3px;
     padding: 9px 12px 9px 14px;
   }
   .sdp-kit-icon {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
   }
   .sdp-kit-name {
-    font-size: 19px;
+    font-size: 21px;
   }
   .sdp-kit-metrics {
     gap: 10px;
   }
   .sdp-kit-value {
-    font-size: 21px;
+    font-size: 26px;
   }
   .sdp-kit-label {
-    font-size: 10.5px;
+    font-size: 11.5px;
   }
-  .sdp-kit-line {
-    font-size: 14.5px;
+  .sdp-kit-hint {
+    gap: 6px;
+    padding: 12px 15px;
+  }
+  .sdp-kit-hint-name {
+    font-size: 20px;
+  }
+  .sdp-kit-hint-scope {
+    font-size: 11.5px;
+  }
+  .sdp-kit-hint-desc {
+    font-size: 16.5px;
   }
 }
 

@@ -270,17 +270,15 @@ export const TEAM_EQUIPMENT_PANEL_WIDTH = 660
 export const TEAM_SIGIL_SPLASH_HEIGHT = 292
 
 /**
- * Längster erlaubter Klartext einer Kit-Zeile (`RoleKitAbility.line`).
+ * Längste erlaubte Beschreibung einer Kit-Fähigkeit (`RoleKitAbility.desc`).
  *
- * Die Zeile wird NICHT umbrochen: ein Umbruch änderte die gemessene Höhe der
- * Hero-Fusszeile, und die speist den leeren Sitz und die Swap-Pille. Sie trägt
- * deshalb eine CSS-Ellipse — und eine Spec, die diese Länge bindet, damit die
- * Ellipse ein Netz bleibt, das nie auslöst.
- *
- * Massgeblich ist der 4K-Schritt, nicht Full HD: die Zeile bekommt auf jeder
- * Auflösung dieselben ~350 px, aber dort ist die Schrift am grössten.
+ * Sie steht in der Hover-Karte über der Zeile, und die schwebt über dem
+ * Portrait: zwei Zeilen deckt sie noch, drei fangen an, das Bild zu verdecken,
+ * das der Spieler gerade ansieht. Der Deckel hält die fünfzehn Sätze deshalb
+ * auf einer Aussage — „kurz und präzise" ist hier keine Stilfrage, sondern die
+ * Bedingung dafür, dass die Karte klein bleiben darf.
  */
-export const ROLE_KIT_LINE_MAX_CHARS = 46
+export const ROLE_KIT_DESC_MAX_CHARS = 96
 
 /** Luft (px) zwischen der Level-Medaille und den Identitäts-Chips ihr gegenüber.
  *  Der Rest der Freistellung kommt aus der Medaillengrösse selbst — sie wächst

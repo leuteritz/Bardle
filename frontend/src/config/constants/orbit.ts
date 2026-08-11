@@ -38,9 +38,9 @@ export const STAR_FIGHT_TIMER_CRITICAL_S = 10 // star-fight timer turns red + pu
 export const ORBIT_ROLE_ABILITIES = {
   top: {
     name: 'Aegis Wall',
+    short: 'Aegis',
     icon: 'game-icons:bordered-shield',
-    line: 'Swallows the next enemy shot',
-    desc: `Raises a shield that swallows the next enemy shot, reforged every ${ROLE_TOP_SHIELD_REBUILD_MS / 1000} seconds.`,
+    desc: 'Absorbs one enemy shot, then rebuilds.',
     metrics: [
       { value: '1', label: 'Shot' },
       { value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s`, label: 'Rebuild' },
@@ -48,9 +48,9 @@ export const ORBIT_ROLE_ABILITIES = {
   },
   jungle: {
     name: 'Wild Blessing',
+    short: 'Blessing',
     icon: 'game-icons:vine-whip',
-    line: 'Blesses passing planets with a jungle buff',
-    desc: 'Patrols the orbit and blesses nearby planets with potent jungle buffs.',
+    desc: 'Grants a jungle buff to the planets it passes.',
     metrics: [
       { value: `${Object.keys(JUNGLE_BUFF_DEFS).length}`, label: 'Buffs' },
       { value: `${JUNGLE_BUFF_COOLDOWN_MS / 1000}s`, label: 'Cooldown' },
@@ -58,9 +58,9 @@ export const ORBIT_ROLE_ABILITIES = {
   },
   mid: {
     name: 'Chaos Curse',
+    short: 'Curse',
     icon: 'game-icons:spell-book',
-    line: 'Hurls a random curse at the boss',
-    desc: `Every ${ROLE_MID_CURSE_INTERVAL_MS / 1000} seconds hurls a random curse at the boss — rot, weakness or instant doom.`,
+    desc: 'Throws one of five curses at the boss — rot, weakness or doom.',
     metrics: [
       { value: `${ROLE_MID_CURSE_TYPE_COUNT}`, label: 'Curses' },
       { value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s`, label: 'Cooldown' },
@@ -68,9 +68,9 @@ export const ORBIT_ROLE_ABILITIES = {
   },
   adc: {
     name: 'Piercing Volley',
+    short: 'Volley',
     icon: 'game-icons:striking-arrows',
-    line: 'A focused volley straight into the boss',
-    desc: `Looses a focused volley every ${ROLE_ADC_BURST_INTERVAL_MS / 1000} seconds, striking the boss for heavy bonus damage.`,
+    desc: 'A heavy bonus strike straight into the boss.',
     metrics: [
       { value: `${ROLE_ADC_BURST_DAMAGE}`, label: 'Damage' },
       { value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s`, label: 'Cooldown' },
@@ -78,9 +78,9 @@ export const ORBIT_ROLE_ABILITIES = {
   },
   support: {
     name: 'Guardian Light',
+    short: 'Guardian',
     icon: 'game-icons:glowing-hands',
-    line: 'Mends wounded planets, and Bard when calm',
-    desc: 'Mends wounded planets nearby — and the Bard himself when all is calm.',
+    desc: 'Heals damaged planets, or the Bard when none are hurt.',
     metrics: [
       { value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP`, label: 'Mend' },
       { value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s`, label: 'Cooldown' },
