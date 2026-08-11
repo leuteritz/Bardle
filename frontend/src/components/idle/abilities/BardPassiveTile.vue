@@ -51,42 +51,18 @@
       formatNumberCompact(clicksToMeep)
     }}</span>
 
-    <!--
-      Der Gewinn. Die ganze Klickstrecke zielt auf diesen Moment, und er lief
-      bisher stumm ab — die Zahl sprang einfach auf einen neuen Wert.
-
-      `:key` statt einer Liste: es steht immer nur einer gleichzeitig, und der
-      Key-Bump ist es, der die CSS-Animation neu anstößt (dasselbe Muster wie
-      `.chime-popup` am Sonnenklick). Der Betrag kommt aus dem tatsächlichen
-      Zuwachs, nicht als feste 1 — gibt es später mehr als einen Meep je
-      Auslösung, steht hier von selbst „+3".
-
-      `aria-hidden`, weil die laufende Produktion ebenfalls Meeps abwirft: ein
-      Screenreader bekäme sonst im Sekundentakt dieselbe Zeile vorgelesen. Der
-      Bestand steht im Header.
-    -->
-    <div
-      v-if="gainAmount > 0"
-      :key="gainKey"
-      class="ab-meep-gain"
-      :style="{ '--ab-meep-float-ms': `${ABILITY_MEEP_GAIN_FLOAT_MS}ms` }"
-      aria-hidden="true"
-    >
-      <img class="ab-meep-gain-art" :src="MEEP_ART_IMAGE_SM" alt="" draggable="false" />
-      <span class="ab-meep-gain-value">+{{ formatNumberCompact(gainAmount) }}</span>
-      <span class="ab-meep-gain-label">{{ gainAmount === 1 ? 'MEEP' : 'MEEPS' }}</span>
-    </div>
+    <!-- Der Gewinn steht für sich (MeepGainFloat) — die Kachel ist nur sein
+         Anker. `:key` hier, nicht dort: der Bump ist es, der die Animation neu
+         anstößt, und er gehört zu dem, was den Betrag liefert. -->
+    <MeepGainFloat v-if="gainAmount > 0" :key="gainKey" :amount="gainAmount" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import MeepGainFloat from './MeepGainFloat.vue'
 import { BARD_PASSIVE } from '@/config/progression/bardAbilities'
-import {
-  ABILITY_MEEP_GAIN_FLOAT_MS,
-  MEEP_ART_IMAGE,
-  MEEP_ART_IMAGE_SM,
-} from '@/config/constants'
+import { MEEP_ART_IMAGE } from '@/config/constants'
 import { formatNumberCompact } from '@/config/ui/numberFormat'
 
 const props = defineProps<{
@@ -229,136 +205,9 @@ const RING_C = 2 * Math.PI * RING_R
   pointer-events: none;
 }
 
-/* ── Der Gewinn ───────────────────────────────────────────────────────────
-   Steht ÜBER der Kachel, nicht in ihr: die Kachel zeigt eine offene Strecke,
-   der Float ein abgeschlossenes Ereignis — zwei verschiedene Aussagen, die
-   sich nicht überlagern dürfen. Die Kachel hat kein `overflow: hidden`, das
-   Element darf also frei über ihren Rand hinausragen.
-
-   `pointer-events: none` ist Pflicht und kein Detail: die Leiste lässt die
-   Lücken zwischen ihren Kacheln bewusst zur Sonne durch, und ein Float, das
-   1,4s lang über ihr steht, würde dort sonst jeden Klick schlucken. */
-.ab-meep-gain {
-  position: absolute;
-  bottom: calc(100% + 7px);
-  left: 50%;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px 7px;
-  background: linear-gradient(to bottom, #1e1409, #14120c);
-  border: 2px solid #7a4e20;
-  border-radius: 4px;
-  /* Alles statisch — die Animation fasst nur `transform` und `opacity` an, der
-     Kasten wird also EINMAL gerastert und danach nur noch geblendet
-     (Performance-Regel 2). Der warme Schein trägt den Gewinn über den dunklen
-     Grund des Orbits hinaus; ohne ihn ging der Kasten zwischen den Kacheln
-     unter, deren Rahmen dieselbe Farbe hat. */
-  box-shadow:
-    inset 0 0 0 1px #3e200a,
-    0 0 20px rgba(251, 146, 60, 0.3),
-    0 6px 18px rgba(0, 0, 0, 0.8);
-  white-space: nowrap;
-  pointer-events: none;
-  animation: ab-meep-rise var(--ab-meep-float-ms, 1400ms) cubic-bezier(0.22, 1, 0.36, 1)
-    forwards;
-}
-
-/* Dieselbe Linie, die der Tooltip der Leiste trägt (`.ab-tip::before`) — nur
-   hier in Meep-Orange statt in der Leitfarbe einer Fähigkeit. Sie bindet den
-   Float an die Leiste, statt ihn wie eine fremde Meldung wirken zu lassen. */
-.ab-meep-gain::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 3px;
-  background: linear-gradient(to right, #7c2d12, #fb923c 35%, #fed7aa 50%, #fb923c 65%, #7c2d12);
-}
-
-/* Die 128er-Stufe, nicht das volle Artwork: hier misst die Figur 24–37px,
-   siehe MEEP_ART_IMAGE_SM. */
-.ab-meep-gain-art {
-  width: calc(var(--ab-passive-size, 72px) * 0.34);
-  height: calc(var(--ab-passive-size, 72px) * 0.34);
-  object-fit: contain;
-  image-rendering: high-quality;
-  filter: drop-shadow(0 1px 3px rgba(251, 146, 60, 0.45));
-}
-
-/* Der Betrag ist die Antwort, das Wort daneben nur die Frage dazu — deshalb
-   trägt er das Gewicht und die hellere Stufe des Meep-Orange, dieselbe, die
-   der Ring im fälligen Zustand zeigt. */
-.ab-meep-gain-value {
-  font-size: calc(var(--ab-passive-size, 72px) * 0.36);
-  font-weight: 900;
-  line-height: 1;
-  color: #fdba74;
-  text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.9),
-    0 0 10px rgba(251, 146, 60, 0.5);
-  font-variant-numeric: tabular-nums;
-}
-
-.ab-meep-gain-label {
-  font-size: calc(var(--ab-passive-size, 72px) * 0.17);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.09em;
-  color: #fed7aa;
-  opacity: 0.82;
-}
-
-/* Der Überschwung bei 16% ist das Anschlagen — ohne ihn blendet der Gewinn
-   nur ein, und ein Einblenden liest sich als Zustand, nicht als Ereignis. */
-@keyframes ab-meep-rise {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(8px) scale(0.7);
-  }
-  16% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(-2px) scale(1.08);
-  }
-  30% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(-7px) scale(1);
-  }
-  72% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(-22px) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-40px) scale(0.94);
-  }
-}
-
-/* Ohne Fahrt: der Gewinn steht still an seinem Platz und blendet aus. Die
-   Keyframes stehen bewusst AUSSERHALB der Media-Query — verschachtelt hinge
-   ihr Scope-Suffix davon ab, dass das Scoped-Plugin auch in @media hineinsieht,
-   und ein nicht suffigierter Name findet seine Keyframes nie. */
-@keyframes ab-meep-hold {
-  0%,
-  72% {
-    opacity: 1;
-    transform: translateX(-50%);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-50%);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .ab-ring-meep {
     transition: none;
-  }
-
-  .ab-meep-gain {
-    animation-name: ab-meep-hold;
   }
 }
 </style>
