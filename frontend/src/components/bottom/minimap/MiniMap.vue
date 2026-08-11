@@ -134,6 +134,7 @@ import MiniMapCanvas from './MiniMapCanvas.vue'
 import MiniMapHudPanel from './MiniMapHudPanel.vue'
 import MiniMapArrivalHud from './MiniMapArrivalHud.vue'
 import TierUnlockPanel from './TierUnlockPanel.vue'
+import { gameNow } from '@/utils/game/gameClock'
 
 const CORNER_R = 20
 const TIER_FLASH_MS = MINIMAP_TIER_FLASH_MS
@@ -198,7 +199,7 @@ export default defineComponent({
     function teleportNearPlanet() {
       if (galaxyStore.championTravelState !== 'traveling') return
       galaxyStore.championTravelStartTime =
-        Date.now() - (galaxyStore.championTravelDurationMs - SKIP_DURATION_SECONDS * 1000)
+        gameNow() - (galaxyStore.championTravelDurationMs - SKIP_DURATION_SECONDS * 1000)
     }
 
     const ARC_R = HUD_PANEL_ARC_R

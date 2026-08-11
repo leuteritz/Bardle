@@ -447,6 +447,7 @@ import {
 } from '@/config/constants'
 import { hpStageClass } from '@/utils/ui/format'
 import { DRAKE_TYPES, BARON_BUFF } from '@/config/battle/drakes'
+import { gameNow } from '@/utils/game/gameClock'
 
 const BARON_THEME = BARON_BUFF
 
@@ -525,7 +526,7 @@ const CURSE_SIDES = ['own', 'enemy'] as const
 const rallyPercent = Math.round((OBJECTIVE_JUNGLE_BUFF_MULT - 1) * 100)
 
 /** Ticking clock (100ms via the float scheduler) so ability windows render reactively. */
-const nowMs = ref(Date.now())
+const nowMs = ref(gameNow())
 
 function isAbilityActive(f: ObjectiveFighter): boolean {
   return isStanding(f) && f.abilityActiveUntil > nowMs.value
@@ -958,7 +959,7 @@ function _spawnFighterFloat(f: ObjectiveFighter, key: string, side: 'own' | 'ene
 function _checkStrikes(fighters: ObjectiveFighter[], side: 'own' | 'enemy') {
   const cycleMs = OBJECTIVE_LUNGE_CYCLE_S * 1000
   const strikeMs = OBJECTIVE_LUNGE_STRIKE_FRACTION * cycleMs
-  const now = Date.now()
+  const now = gameNow()
   fighters.forEach((f, i) => {
     if (!isStanding(f)) return
     const elapsed = now - battleStore.objectiveFightStartMs - lungeDelayS(i, side === 'enemy') * 1000
@@ -1033,7 +1034,7 @@ function _startFloatScheduler() {
   _prevHp.clear()
   cardFlash.value = {}
   _floatSchedulerId = setInterval(() => {
-    nowMs.value = Date.now()
+    nowMs.value = gameNow()
     if (!battleStore.objectiveModalOpen || battleStore.objectiveResult !== null) return
     if (!battleStore.objectiveFighters) return
     _checkStrikes(fightersOwn.value, 'own')

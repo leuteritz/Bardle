@@ -21,6 +21,7 @@ import {
   PLANET_RESPAWN_MS,
 } from '@/config/constants'
 import ChampionSelectorComponent from '@/components/bottom/command/ChampionSelectorComponent.vue'
+import { gameNow } from '@/utils/game/gameClock'
 
 const planetStore = usePlanetShopStore()
 const uiStore = useUiStore()
@@ -49,8 +50,8 @@ function roleImage(role: PlanetRoleType): string {
   return PLANET_ROLES[role].image.replace(PLANET_IMAGE_DIR, PLANET_IMAGE_THUMB_DIR)
 }
 
-// Ticker für den Buff-Countdown-Ring: activeUntil ist reaktiv, Date.now() nicht.
-const buffNow = ref(Date.now())
+// Ticker für den Buff-Countdown-Ring: activeUntil ist reaktiv, gameNow() nicht.
+const buffNow = ref(gameNow())
 let buffTicker = 0
 
 // Eclipse-Status: die 60fps-Positions-Map (activePlayerPlanetPositions) ist
@@ -75,7 +76,7 @@ function pollEclipse() {
 
 onMounted(() => {
   buffTicker = window.setInterval(() => {
-    buffNow.value = Date.now()
+    buffNow.value = gameNow()
   }, HUD_COUNTDOWN_TICK_MS)
   eclipseFrame = requestAnimationFrame(pollEclipse)
 })

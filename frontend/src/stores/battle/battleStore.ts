@@ -154,6 +154,7 @@ import {
   pickRandomSkin,
 } from '@/utils/game/champions'
 import { logger } from '@/utils/logger'
+import { gameIntervalMs, gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { CHAMPION_HOME_PLANETS } from '@/config/champions/championHomePlanets'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 let _visibilityHandler: (() => void) | null = null
@@ -743,6 +744,9 @@ export const useBattleStore = defineStore('battle', {
       this.recruitableChampions.push({
         name,
         materialCost,
+        // Wanduhr: Fundstempel eines Champions, wird als Datum gelesen und nie
+        // gegen eine Frist geprüft.
+        // eslint-disable-next-line no-restricted-syntax
         discoveredAt: Date.now(),
         chimesPrice,
       })
@@ -867,11 +871,13 @@ export const useBattleStore = defineStore('battle', {
       // On resume, elapsed real time is correctly mapped
       // by battlePhaseStartTimestamp (set in beginSimulation).
       if (!resume) {
-        this.battlePhaseStartTimestamp = Date.now()
+        this.battlePhaseStartTimestamp = gameNow()
       }
       if (this.battleSimIntervalId) clearInterval(this.battleSimIntervalId)
+      // Der Abstand ist Spielzeit: bei Zeitraffer feuert er entsprechend enger,
+      // damit `Math.floor(elapsedS) * 60` weiter ganzzahlig aufgeht.
       this.battleSimIntervalId = setInterval(() => {
-        const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
+        const realElapsedS = (gameNow() - this.battlePhaseStartTimestamp) / 1000
         // floor(realS) * 60 statt floor(realS * 60): hält battleTime immer
         // minutengenau. Sub-Sekunden-Versatz des Ankers (Objective-Freeze-Slide,
         // verzögerte Ticks, Tab-Resume) würde sonst dauerhaft krumme Zeiten
@@ -893,7 +899,7 @@ export const useBattleStore = defineStore('battle', {
           this._clearObjectiveModal()
           this.runBattleCycle()
         }
-      }, GAME_TICK_INTERVAL_MS)
+      }, gameIntervalMs(GAME_TICK_INTERVAL_MS))
     },
 
     /**
@@ -1374,6 +1380,8 @@ export const useBattleStore = defineStore('battle', {
       await this.refreshTeams()
       this.predetermineOutcome()
       if (this.team1.length > 0 && this.team2.length > 0) {
+        // Wanduhr: reine Entropie für die Kampf-Saat, keine Frist.
+        // eslint-disable-next-line no-restricted-syntax
         this.battleSeed = (Date.now() ^ Math.imul(this.currentBattleId, 2654435761)) >>> 0
         this.objectiveOverrides = []
         this.timelineCursor = 0
@@ -1397,8 +1405,8 @@ export const useBattleStore = defineStore('battle', {
       // No rosters (e.g. reloaded mid-search) — nothing to load; the rescue in
       // syncFromTimestamps rebuilds the match instead.
       if (!this.hasReadyTeams) return
-      this.loadingPhaseStartTimestamp = Date.now()
-      const id = setTimeout(() => this.beginSimulation(), BATTLE_LOADING_PHASE_DURATION_MS)
+      this.loadingPhaseStartTimestamp = gameNow()
+      const id = gameTimeout(() => this.beginSimulation(), BATTLE_LOADING_PHASE_DURATION_MS)
       this.timerIds.push(id)
     },
 
@@ -1408,7 +1416,7 @@ export const useBattleStore = defineStore('battle', {
         // Loading screen is over the moment game-time starts.
         this.loadingPhaseStartTimestamp = 0
         // Timestamp hier setzen – erst jetzt beginnt die echte Spielzeit.
-        this.battlePhaseStartTimestamp = Date.now()
+        this.battlePhaseStartTimestamp = gameNow()
         this.startBattleSimulation()
       }
     },
@@ -1754,6 +1762,8 @@ export const useBattleStore = defineStore('battle', {
     /** Stamp the first time a tier is reached — later visits keep the original
      *  date, so the ladder can show "climbed here on …" per tier. */
     markTierReached(tier: string) {
+      // Wanduhr: Rangstempel der Ladder, wird als Datum gelesen.
+      // eslint-disable-next-line no-restricted-syntax
       if (!this.tierReachedAt[tier]) this.tierReachedAt[tier] = Date.now()
     },
 
@@ -1979,7 +1989,7 @@ export const useBattleStore = defineStore('battle', {
       this.finalizeHonors()
       this.showAutoBattleResult = true
       this.isViewingLanding = false
-      this.resultPhaseStartTimestamp = Date.now()
+      this.resultPhaseStartTimestamp = gameNow()
 
       this.resultCountdown = BATTLE_RESULT_COUNTDOWN_SECONDS
       if (this.resultCountdownTimer) clearInterval(this.resultCountdownTimer)
@@ -1989,8 +1999,8 @@ export const useBattleStore = defineStore('battle', {
           clearInterval(this.resultCountdownTimer!)
           this.resultCountdownTimer = null
         }
-      }, GAME_TICK_INTERVAL_MS)
-      const pauseId = setTimeout(() => {
+      }, gameIntervalMs(GAME_TICK_INTERVAL_MS))
+      const pauseId = gameTimeout(() => {
         this.dismissResult()
       }, BATTLE_RESULT_PAUSE_MS)
       this.timerIds.push(pauseId)
@@ -1998,8 +2008,8 @@ export const useBattleStore = defineStore('battle', {
 
     async proceedToNextBattle() {
       await this.initializeBattle()
-      this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
-      this.searchingPhaseStartTimestamp = Date.now()
+      this.autoBattleTimerEndTimestamp = gameNow() + this.autoBattleInterval
+      this.searchingPhaseStartTimestamp = gameNow()
       this.simulationReadyToStart = true
       this.startCountdown()
       // beginSimulation() wird NICHT sofort aufgerufen –
@@ -2034,8 +2044,8 @@ export const useBattleStore = defineStore('battle', {
         document.addEventListener('visibilitychange', _visibilityHandler)
       }
       await this.initializeBattle()
-      this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
-      this.searchingPhaseStartTimestamp = Date.now()
+      this.autoBattleTimerEndTimestamp = gameNow() + this.autoBattleInterval
+      this.searchingPhaseStartTimestamp = gameNow()
       // simulationReadyToStart and startCountdown() are NOT set here —
       // the initial start goes through startBattle() in BattleResultComponent,
       // which calls beginSimulation() directly after its animation. Setting
@@ -2064,7 +2074,7 @@ export const useBattleStore = defineStore('battle', {
       this.timeUntilNextBattle = this.autoBattleInterval / 1000
       if (this.countdownTimer) clearInterval(this.countdownTimer)
       this.countdownTimer = setInterval(() => {
-        const remaining = this.autoBattleTimerEndTimestamp - Date.now()
+        const remaining = this.autoBattleTimerEndTimestamp - gameNow()
         this.timeUntilNextBattle = Math.max(0, Math.ceil(remaining / 1000))
         if (this.timeUntilNextBattle <= 0) {
           clearInterval(this.countdownTimer!)
@@ -2075,7 +2085,7 @@ export const useBattleStore = defineStore('battle', {
             this.beginLoadingPhase()
           }
         }
-      }, BATTLE_COUNTDOWN_INTERVAL_MS)
+      }, gameIntervalMs(BATTLE_COUNTDOWN_INTERVAL_MS))
     },
 
     markBattleProcessed() {
@@ -2112,7 +2122,7 @@ export const useBattleStore = defineStore('battle', {
       this._clearObjectiveModal()
       this.applyTimelineUpTo(targetSeconds)
 
-      this.battlePhaseStartTimestamp = Date.now() - (targetSeconds / 60) * 1000
+      this.battlePhaseStartTimestamp = gameNow() - (targetSeconds / 60) * 1000
       this.battleTime = targetSeconds
       this.startBattleSimulation(true)
     },
@@ -2150,8 +2160,8 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveModalOpen = true
 
       this.pauseBattleSimulation()
-      this.objectiveFreezeStartMs = Date.now()
-      this.objectiveFightStartMs = Date.now()
+      this.objectiveFreezeStartMs = gameNow()
+      this.objectiveFightStartMs = gameNow()
       this.objectiveBuffTarget = { own: null, enemy: null }
       this.objectiveCurseDamage = { own: 0, enemy: 0 }
       this.objectiveCurseStacks = { own: 1, enemy: 1 }
@@ -2173,11 +2183,11 @@ export const useBattleStore = defineStore('battle', {
         this._sampleObjectiveTrack()
         if (
           this.objectiveHP <= 0 ||
-          Date.now() - this.objectiveFightStartMs >= OBJECTIVE_MAX_DURATION_MS
+          gameNow() - this.objectiveFightStartMs >= OBJECTIVE_MAX_DURATION_MS
         ) {
           this._resolveByDamageLead()
         }
-      }, OBJECTIVE_DPS_TICK_MS)
+      }, gameIntervalMs(OBJECTIVE_DPS_TICK_MS))
     },
 
     /**
@@ -2255,7 +2265,7 @@ export const useBattleStore = defineStore('battle', {
 
       if (this.objectiveDamageTrack.length < OBJECTIVE_TRACK_MAX_SAMPLES) {
         this.objectiveDamageTrack.push({
-          t: Date.now() - this.objectiveFightStartMs,
+          t: gameNow() - this.objectiveFightStartMs,
           own,
           enemy,
         })
@@ -2269,7 +2279,7 @@ export const useBattleStore = defineStore('battle', {
      * ally for the window.
      */
     _runAbilityCasts() {
-      const now = Date.now()
+      const now = gameNow()
       for (const side of ['own', 'enemy'] as const) {
         const fighters = side === 'own' ? this.objectiveFighters!.t1 : this.objectiveFighters!.t2
         for (const f of fighters) {
@@ -2323,7 +2333,7 @@ export const useBattleStore = defineStore('battle', {
     _runFightDamageTick(side: 'own' | 'enemy'): number {
       const fighters = side === 'own' ? this.objectiveFighters!.t1 : this.objectiveFighters!.t2
       const dt = OBJECTIVE_DPS_TICK_MS / 1000
-      const now = Date.now()
+      const now = gameNow()
       const dpsMult = side === 'own' ? this.objectiveOwnDpsMult : this.objectiveEnemyDpsMult
       const buffIdx = this.objectiveBuffTarget[side]
       // this side is taunted while the OPPOSING top's Challenge window is active
@@ -2433,7 +2443,7 @@ export const useBattleStore = defineStore('battle', {
             casts: 0,
             abilityActiveUntil: 0,
             // staggered first casts so the pit doesn't fire everything at once
-            abilityCooldownUntil: Date.now() + OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S[role] * 1000,
+            abilityCooldownUntil: gameNow() + OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S[role] * 1000,
           }
         })
       const living = fighters.filter((f) => f.alive)
@@ -2457,8 +2467,8 @@ export const useBattleStore = defineStore('battle', {
      */
     _slideFreezeAnchor() {
       if (this.objectiveFreezeStartMs <= 0) return
-      this.battlePhaseStartTimestamp += Date.now() - this.objectiveFreezeStartMs
-      this.objectiveFreezeStartMs = Date.now()
+      this.battlePhaseStartTimestamp += gameNow() - this.objectiveFreezeStartMs
+      this.objectiveFreezeStartMs = gameNow()
     },
 
     /** Instantly slays the active objective and credits the chosen team. */
@@ -2513,7 +2523,7 @@ export const useBattleStore = defineStore('battle', {
         this._objectiveIntervalId = null
       }
       this.objectiveResult = by
-      this.objectiveFightDurationMs = Date.now() - this.objectiveFightStartMs
+      this.objectiveFightDurationMs = gameNow() - this.objectiveFightStartMs
       this._closeObjectiveTrack()
       const objective = this.activeObjective
       if (!objective) return
@@ -2558,7 +2568,7 @@ export const useBattleStore = defineStore('battle', {
         if (this.timelineCursor < 0) this.timelineCursor = this.timeline.events.length
       }
 
-      const closeTimeoutId = setTimeout(() => {
+      const closeTimeoutId = gameTimeout(() => {
         this._closeObjectiveModalAndResume()
       }, OBJECTIVE_RESULT_DELAY_MS)
       this._objectiveCloseTimeoutId = closeTimeoutId
@@ -2572,10 +2582,10 @@ export const useBattleStore = defineStore('battle', {
         this._objectiveIntervalId = null
       }
       this.objectiveResult = by
-      this.objectiveFightDurationMs = Date.now() - this.objectiveFightStartMs
+      this.objectiveFightDurationMs = gameNow() - this.objectiveFightStartMs
       this._closeObjectiveTrack()
       this.objectiveWinDelta = 0
-      const closeTimeoutId = setTimeout(() => {
+      const closeTimeoutId = gameTimeout(() => {
         this._closeObjectiveModalAndResume()
       }, OBJECTIVE_RESULT_DELAY_MS)
       this._objectiveCloseTimeoutId = closeTimeoutId
@@ -2636,7 +2646,7 @@ export const useBattleStore = defineStore('battle', {
         // (background tabs where the local setTimeout was throttled).
         if (
           this.resultPhaseStartTimestamp > 0 &&
-          Date.now() - this.resultPhaseStartTimestamp >= BATTLE_RESULT_PAUSE_MS
+          gameNow() - this.resultPhaseStartTimestamp >= BATTLE_RESULT_PAUSE_MS
         ) {
           this.autoSimulateHonorAndProceed()
         }
@@ -2654,7 +2664,7 @@ export const useBattleStore = defineStore('battle', {
           this._slideFreezeAnchor()
           return
         }
-        const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
+        const realElapsedS = (gameNow() - this.battlePhaseStartTimestamp) / 1000
         // minutengenau wie in startBattleSimulation (siehe Kommentar dort)
         const gameTime = Math.floor(realElapsedS) * 60
         if (gameTime >= BATTLE_TOTAL_GAME_SECONDS) {
@@ -2682,7 +2692,7 @@ export const useBattleStore = defineStore('battle', {
         this.battlePhaseStartTimestamp === 0 &&
         !this.showAutoBattleResult
       ) {
-        if (Date.now() - this.loadingPhaseStartTimestamp >= BATTLE_LOADING_PHASE_DURATION_MS) {
+        if (gameNow() - this.loadingPhaseStartTimestamp >= BATTLE_LOADING_PHASE_DURATION_MS) {
           this.beginSimulation()
         }
         return
@@ -2713,7 +2723,7 @@ export const useBattleStore = defineStore('battle', {
         !this.battleSimIntervalId &&
         this.battlePhaseStartTimestamp === 0 &&
         !this.showAutoBattleResult &&
-        Date.now() - this.searchingPhaseStartTimestamp >
+        gameNow() - this.searchingPhaseStartTimestamp >
           PLANET_SEARCH_ANIM_DURATION_MS +
             PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS +
             BATTLE_SIM_START_SAFETY_MARGIN_MS
@@ -2728,7 +2738,7 @@ export const useBattleStore = defineStore('battle', {
         this.autoBattleTimerEndTimestamp > 0 &&
         this.battlePhase !== 'result' &&
         !this.showAutoBattleResult &&
-        Date.now() >= this.autoBattleTimerEndTimestamp
+        gameNow() >= this.autoBattleTimerEndTimestamp
       ) {
         if (this.autoBattleTimer) {
           clearTimeout(this.autoBattleTimer)
@@ -2783,7 +2793,7 @@ export const useBattleStore = defineStore('battle', {
         this.rebuildTimeline()
         this.timelineCursor = 0
         if (this.battlePhaseStartTimestamp > 0) {
-          const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
+          const realElapsedS = (gameNow() - this.battlePhaseStartTimestamp) / 1000
           // minutengenau wie in startBattleSimulation (siehe Kommentar dort)
           const gameTime = Math.min(BATTLE_TOTAL_GAME_SECONDS, Math.floor(realElapsedS) * 60)
           this.applyTimelineUpTo(gameTime)
@@ -2794,9 +2804,9 @@ export const useBattleStore = defineStore('battle', {
       // window (syncFromTimestamps would otherwise only catch it on its 1s poll).
       if (this.loadingPhaseStartTimestamp > 0 && this.battlePhaseStartTimestamp === 0) {
         const remaining =
-          BATTLE_LOADING_PHASE_DURATION_MS - (Date.now() - this.loadingPhaseStartTimestamp)
+          BATTLE_LOADING_PHASE_DURATION_MS - (gameNow() - this.loadingPhaseStartTimestamp)
         if (remaining > 0) {
-          this.timerIds.push(setTimeout(() => this.beginSimulation(), remaining))
+          this.timerIds.push(gameTimeout(() => this.beginSimulation(), remaining))
         }
       }
       if (!_visibilityHandler) {
@@ -2813,7 +2823,7 @@ export const useBattleStore = defineStore('battle', {
         // loading phase is excluded: it already has its own timer, and
         // simulationReadyToStart would replay the whole search animation on top.
         if (
-          this.autoBattleTimerEndTimestamp > Date.now() &&
+          this.autoBattleTimerEndTimestamp > gameNow() &&
           this.battlePhaseStartTimestamp === 0 &&
           this.loadingPhaseStartTimestamp === 0 &&
           !this.showAutoBattleResult

@@ -105,8 +105,8 @@ import {
   CHIME_BURST_ANGLE_JITTER,
   CHIME_POPUP_FONT_MIN_PX,
   CHIME_POPUP_FONT_SUN_FACTOR,
-  GAME_TICK_INTERVAL_MS,
 } from '@/config/constants'
+import { gameTickPlan, onGameSpeedChange } from '@/utils/game/gameClock'
 
 interface ChimeBurstParticle {
   dx: number
@@ -253,11 +253,18 @@ export default defineComponent({
       }, CHIME_BURST_DURATION_MS)
     }
 
+    // Der Haupttakt. Unterhalb von GAME_TICK_MIN_INTERVAL_MS wird nicht der
+    // Timer schneller gestellt, sondern je Feuern mehrfach getickt — Browser
+    // klemmen kurze Intervalle weg, und ein geklemmter Timer bricht die
+    // Invariante, an der der Zeitraffer hängt: EIN Tick ist bei jeder
+    // Geschwindigkeit genau eine Spielsekunde. `setInterval` (statt einer
+    // setTimeout-Kette) behält dabei seine Kadenz und driftet nicht.
     const startGameTimer = () => {
       if (gameTimer) return
+      const { interval, catchUp } = gameTickPlan()
       gameTimer = setInterval(() => {
-        gameStore.tick()
-      }, GAME_TICK_INTERVAL_MS)
+        for (let i = 0; i < catchUp; i++) gameStore.tick()
+      }, interval)
     }
 
     const stopGameTimer = () => {
@@ -267,11 +274,18 @@ export default defineComponent({
       }
     }
 
+    let unsubscribeSpeed: (() => void) | null = null
+
     onMounted(() => {
       startGameTimer()
+      unsubscribeSpeed = onGameSpeedChange(() => {
+        stopGameTimer()
+        startGameTimer()
+      })
     })
 
     onUnmounted(() => {
+      unsubscribeSpeed?.()
       stopGameTimer()
       if (punchTimer) clearTimeout(punchTimer)
     })

@@ -2,6 +2,7 @@ import { computed, onUnmounted, ref } from 'vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { BATTLE_PHASES } from '@/config/constants'
 import type { BattlePhaseConfig, BattlePhaseKey } from '@/types'
+import { gameNow } from '@/utils/game/gameClock'
 
 /**
  * UI view of the battle phase machine. The phase itself and its start time live
@@ -15,9 +16,9 @@ import type { BattlePhaseConfig, BattlePhaseKey } from '@/types'
 export function useBattlePhase(tickMs = 1000) {
   const battleStore = useBattleStore()
 
-  const now = ref(Date.now())
+  const now = ref(gameNow())
   const tickerId = setInterval(() => {
-    now.value = Date.now()
+    now.value = gameNow()
   }, tickMs)
   onUnmounted(() => clearInterval(tickerId))
 

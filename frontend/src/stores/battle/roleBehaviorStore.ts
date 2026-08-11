@@ -71,6 +71,7 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useCombatStore } from '@/stores/battle/combatStore'
 import { spawnFloat } from '@/utils/fx/damageFloats'
+import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import {
   usePlanetShopStore,
@@ -140,7 +141,7 @@ const CURSE_TYPES = Object.keys(CURSE_DEFS) as MidCurseType[]
 const _throttleMap = new Map<string, number>()
 
 function throttledEvent(key: string, intervalMs: number, fn: () => void) {
-  const now = Date.now()
+  const now = gameNow()
   const last = _throttleMap.get(key) ?? 0
 
   if (now - last >= intervalMs) {
@@ -356,7 +357,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const starGroupStore = useStarGroupStore()
       const activeBoss = bossStore.activeBoss
       const { addEvent } = useEventLog()
-      const now = Date.now()
+      const now = gameNow()
 
       if (!activeBoss || activeBoss.defeated || activeBoss.expired) {
         // Boss besiegt/weg: eine laufende Rage gilt als verbraucht — der
@@ -426,7 +427,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const bossAlive = !!activeBoss && !activeBoss.defeated && !activeBoss.expired
       const combatStore = useCombatStore()
       const { addEvent } = useEventLog()
-      const now = Date.now()
+      const now = gameNow()
 
       // Revive-Fenster + Out-of-Combat-Regeneration laufen im Sekundentakt
       for (const role of Object.keys(this.championHp) as ChampionRole[]) {
@@ -600,7 +601,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const bossStore = usePlanetBossStore()
       const activeBoss = bossStore.activeBoss
       const bossAlive = !!activeBoss && !activeBoss.defeated && !activeBoss.expired
-      const now = Date.now()
+      const now = gameNow()
 
       if (!bossAlive) {
         this.autoCooldownMs = BOSS_AUTO_INTERVAL_MS
@@ -727,7 +728,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         }
 
         // Am Boden liegende Champions greifen nicht an — Cooldown friert ein
-        if (this.championDownUntil[role] > Date.now()) continue
+        if (this.championDownUntil[role] > gameNow()) continue
 
         this.roleAttackCooldownMs[role] = Math.max(0, this.roleAttackCooldownMs[role] - tickMs)
         if (this.roleAttackCooldownMs[role] > 0) continue
@@ -756,7 +757,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         // das Event-Log fluten
 
         const target = activeBoss
-        window.setTimeout(() => {
+        gameTimeout(() => {
           if (target.defeated || target.expired) return
           const defeated = bossStore.dealDamageToBoss(target, def.damage)
           if (!defeated) {
@@ -777,7 +778,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     _expireJungleBuffs() {
       const planetShopStore = usePlanetShopStore()
       const { addEvent } = useEventLog()
-      const now = Date.now()
+      const now = gameNow()
       for (const slot of planetShopStore.purchasedSlots) {
         if (slot.jungleBuff?.active && slot.jungleBuff.activeUntil <= now) {
           const label = getPlanetLabel(slot)
@@ -938,7 +939,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const activeBoss = bossStore.activeBoss
       const { addEvent } = useEventLog()
       const championName = getChampionNameByRole('mid')
-      const now = Date.now()
+      const now = gameNow()
 
       // ── Curse expiry ────────────────────────────────────────────────────────
       if (this.activeCurse && now >= this.activeCurse.activeUntil) {
@@ -1018,7 +1019,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       activeMidCurse.activeUntil = curse.activeUntil
 
       this.midCurseFlashActive = true
-      window.setTimeout(() => {
+      gameTimeout(() => {
         this.midCurseFlashActive = false
       }, ROLE_MID_CURSE_CAST_MS)
       this.midCurseCooldownMs = roleCooldown('mid', ROLE_MID_CURSE_INTERVAL_MS)
@@ -1062,7 +1063,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
         this.adcBurstCooldownMs = roleCooldown('adc', ROLE_ADC_BURST_INTERVAL_MS)
         this.adcBurstActive = true
-        window.setTimeout(() => {
+        gameTimeout(() => {
           this.adcBurstActive = false
         }, ADC_BURST_ACTIVE_MS)
 
@@ -1078,7 +1079,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
           // Auch der Burst fliegt als Projektil — Schaden erst beim Einschlag
           const target = activeBoss
-          window.setTimeout(() => {
+          gameTimeout(() => {
             if (target.defeated || target.expired) return
             const defeated = bossStore.dealDamageToBoss(target, burstDamage)
             if (!defeated) {
@@ -1118,7 +1119,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       source: 'shot' | 'void' = 'shot',
     ) {
       this.tankInterceptActive = true
-      this.tankInterceptStartMs = Date.now()
+      this.tankInterceptStartMs = gameNow()
       this.tankInterceptDirX = dirX
       this.tankInterceptDirY = dirY
 
@@ -1129,7 +1130,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       spawnFloat(0, topX, topY - SHIELD_FLOAT_Y_OFFSET, SHIELD_FLOAT_MS, { shieldFloat: true })
 
       if (source === 'void') {
-        setTimeout(() => {
+        gameTimeout(() => {
           this.tankInterceptActive = false
         }, INTERCEPT_SHIELD_ANIM_MS)
         return
@@ -1142,7 +1143,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         'top',
       )
 
-      setTimeout(() => {
+      gameTimeout(() => {
         this.tankInterceptActive = false
       }, INTERCEPT_SHIELD_ANIM_MS)
     },
@@ -1196,7 +1197,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       if (triggered) {
         this.jungleBuffCooldownMs = JUNGLE_BUFF_COOLDOWN_MS
         this.jungleBuffFlashActive = true
-        window.setTimeout(() => {
+        gameTimeout(() => {
           this.jungleBuffFlashActive = false
         }, JUNGLE_BUFF_FLASH_ANIM_MS)
       }

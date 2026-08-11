@@ -21,6 +21,7 @@ import PlanetRailSlot from './PlanetRailSlot.vue'
 import PlanetLockedPanel from './PlanetLockedPanel.vue'
 import PlanetRoleChoicePanel from './PlanetRoleChoicePanel.vue'
 import PlanetStagePanel from './PlanetStagePanel.vue'
+import { gameNow } from '@/utils/game/gameClock'
 
 /**
  * Der Action-Toast steht über allen Tabs und zentriert deshalb im ganzen Modal.
@@ -98,14 +99,14 @@ const { orbitBehind, isSlotEclipsed, orbitPhaseStyle } = usePlanetTabOrbit(
  * gebundenes Intervall tickte sonst für immer weiter — mitsamt der Countdowns,
  * die es neu berechnen lässt, während niemand hinsieht.
  */
-const now = ref(Date.now())
+const now = ref(gameNow())
 let nowInterval = 0
 
 function startClock() {
   if (nowInterval) return
-  now.value = Date.now()
+  now.value = gameNow()
   nowInterval = window.setInterval(() => {
-    now.value = Date.now()
+    now.value = gameNow()
   }, 500)
 }
 

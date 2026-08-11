@@ -12,6 +12,7 @@ import {
   DRIFTER_CARD_URGENT_MS,
   DRIFTER_RARITY_COLOR,
 } from '@/config/constants'
+import { gameNow } from '@/utils/game/gameClock'
 
 /**
  * Was fliegt da gerade, was bringt es, und wie lange ist es noch da —
@@ -102,9 +103,9 @@ watch(
     state.value = 'inbound'
     visible.value = true
     const endsAt = d.spawnedAt + d.flightMs
-    remainingMs.value = Math.max(0, endsAt - Date.now())
+    remainingMs.value = Math.max(0, endsAt - gameNow())
     ticker = setInterval(() => {
-      remainingMs.value = Math.max(0, endsAt - Date.now())
+      remainingMs.value = Math.max(0, endsAt - gameNow())
     }, DRIFTER_CARD_TICK_MS)
   },
   { immediate: true },

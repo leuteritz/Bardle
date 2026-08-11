@@ -8,6 +8,7 @@ import {
 } from '@/config/constants'
 import { displaySunPhase, useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
+import { gameNow } from '@/utils/game/gameClock'
 
 withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
 
@@ -15,7 +16,7 @@ const solarStore = useSolarUpgradeStore()
 const { currentDisplayPhase } = useSunPhaseDisplay()
 
 function setStarPhase(phase: number) {
-  const elapsed = Math.floor((Date.now() - solarStore.phaseEnteredAt) / 1000)
+  const elapsed = Math.floor((gameNow() - solarStore.phaseEnteredAt) / 1000)
   solarStore.totalPhaseSeconds += elapsed
   solarStore.phaseTimeHistory[solarStore.starPhase] =
     (solarStore.phaseTimeHistory[solarStore.starPhase] ?? 0) + elapsed
@@ -23,20 +24,20 @@ function setStarPhase(phase: number) {
   // origin flag would keep rendering the comet for every phase.
   solarStore.isCometState = false
   solarStore.starPhase = Math.max(0, Math.min(STAR_PHASE_DATA.length - 1, phase))
-  solarStore.phaseEnteredAt = Date.now()
+  solarStore.phaseEnteredAt = gameNow()
   // Jumping straight to the final phase should look like the real thing —
   // and it doubles as the only way to replay the transition while testing.
   if (solarStore.starPhase === STAR_PHASE_FINAL_INDEX) solarStore.supernovaTrigger++
 }
 
 function setCometState() {
-  const elapsed = Math.floor((Date.now() - solarStore.phaseEnteredAt) / 1000)
+  const elapsed = Math.floor((gameNow() - solarStore.phaseEnteredAt) / 1000)
   solarStore.totalPhaseSeconds += elapsed
   solarStore.phaseTimeHistory[solarStore.starPhase] =
     (solarStore.phaseTimeHistory[solarStore.starPhase] ?? 0) + elapsed
   solarStore.isCometState = true
   solarStore.starPhase = 0
-  solarStore.phaseEnteredAt = Date.now()
+  solarStore.phaseEnteredAt = gameNow()
 }
 </script>
 

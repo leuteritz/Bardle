@@ -33,6 +33,7 @@ import type {
   OmenView,
 } from '@/types'
 import { logger } from '@/utils/logger'
+import { gameNow } from '@/utils/game/gameClock'
 
 /**
  * OMENS OF THE CARETAKER
@@ -73,11 +74,11 @@ export const useOmenStore = defineStore('omen', {
     /** Sekunden bis zum nächsten Angebot. Zählt nur, solange keins steht. */
     offerCooldownSec: OMEN_FIRST_OFFER_DELAY_SEC,
     /**
-     * Reaktive Uhr für die Buff- und Fristgetter. Ein rohes `Date.now()` in
+     * Reaktive Uhr für die Buff- und Fristgetter. Ein rohes `gameNow()` in
      * einem Getter würde nie neu ausgewertet — dieselbe Krücke wie
      * `drifterStore.drifterNow`, im Sekundentakt vom Spiel-Tick gestellt.
      */
-    omenNow: Date.now(),
+    omenNow: gameNow(),
     /** Letzte Erfüllung — treibt Banner und Karte, `seq` erlaubt dasselbe
      *  Vorzeichen zweimal hintereinander. */
     lastCompleted: { defId: '', at: 0, swift: false, seq: 0 },
@@ -203,7 +204,7 @@ export const useOmenStore = defineStore('omen', {
      * bis zum nächsten Angebot herunterzählen.
      */
     tick(): void {
-      this.omenNow = Date.now()
+      this.omenNow = gameNow()
 
       const before = this.buffs.length
       this.buffs = this.buffs.filter((b) => b.expiresAt > this.omenNow)
@@ -290,7 +291,7 @@ export const useOmenStore = defineStore('omen', {
       const def = getOmen(defId)
       if (!def) return false
 
-      const now = Date.now()
+      const now = gameNow()
       this.active = {
         defId,
         startValue: this.metricValue(def.metric),
@@ -351,7 +352,7 @@ export const useOmenStore = defineStore('omen', {
     /** Auszahlen: Buff starten, melden, Uhr fürs nächste Trio stellen. */
     complete(def: OmenDef): void {
       if (!this.active) return
-      const swift = Date.now() < this.active.deadlineAt
+      const swift = gameNow() < this.active.deadlineAt
       // Vor dem Leeren merken: das Banner soll das Glyph der erfüllten Karte
       // tragen, nicht ein frisch gezogenes.
       const icon = this.active.icon ?? omenIcon(def.id, 0)
@@ -362,7 +363,7 @@ export const useOmenStore = defineStore('omen', {
       if (swift) this.totalOmensSwift++
       this.lastCompleted = {
         defId: def.id,
-        at: Date.now(),
+        at: gameNow(),
         swift,
         seq: this.lastCompleted.seq + 1,
       }
@@ -400,7 +401,7 @@ export const useOmenStore = defineStore('omen', {
       )
       this.buffs.push({
         sourceId: def.id,
-        expiresAt: Date.now() + durationMs,
+        expiresAt: gameNow() + durationMs,
         durationMs,
         swift,
         // Das Glyph der erfüllten Karte wandert in den Buff-Chip: der Spieler
@@ -408,7 +409,7 @@ export const useOmenStore = defineStore('omen', {
         icon: this.active?.icon ?? omenIcon(def.id, 0),
         effects: { ...def.reward.effects },
       })
-      this.omenNow = Date.now()
+      this.omenNow = gameNow()
       useShopStore().refreshRates()
     },
 

@@ -37,6 +37,7 @@ import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { getOrbitSunRadius, getOrbitSunScale } from '@/utils/orbit/geometry'
+import { gameNow } from '@/utils/game/gameClock'
 import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
 import { logPlanetDestroyed, logPlanetRestored } from '@/config/ui/eventLog'
 import type { PlanetRoleType, JungleBuffDef } from '@/types'
@@ -584,7 +585,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
       // Zerstört: Der Planet verlässt den Orbit, sein Rollen-Bonus fällt aus und
       // er ist kein Ziel mehr. tickRespawn holt ihn mit vollen HP zurück.
-      slot.downUntilMs = Date.now() + PLANET_RESPAWN_MS
+      slot.downUntilMs = gameNow() + PLANET_RESPAWN_MS
       slot.jungleBuff = null
       logPlanetDestroyed(planetLabel(slot), PLANET_RESPAWN_MS / 1000)
     },
@@ -614,7 +615,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
     /** Abgelaufene Ausfallzeiten beenden — pro Game-Tick aufgerufen. */
     tickRespawn(): void {
-      const now = Date.now()
+      const now = gameNow()
       for (const slot of this.slots) {
         if (slot.downUntilMs === 0 || now < slot.downUntilMs) continue
         slot.downUntilMs = 0
@@ -631,7 +632,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
       // Ausfallzeit zurück, sonst könnte Support den Tod sofort aufheben.
       if (!slot || !slot.purchased || isPlanetDown(slot)) return
       slot.currentHp = Math.min(slot.maxHp, slot.currentHp + amount)
-      slot.healingUntilMs = Date.now() + 1000
+      slot.healingUntilMs = gameNow() + 1000
     },
 
     applyJungleBuff(slotId: string, def: JungleBuffDef): void {
@@ -643,7 +644,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
         active: true,
         buffType: def.name,
         multiplier: def.multiplier,
-        activeUntil: Date.now() + def.durationMs,
+        activeUntil: gameNow() + def.durationMs,
       }
     },
 

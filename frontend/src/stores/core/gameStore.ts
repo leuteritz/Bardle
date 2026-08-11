@@ -39,6 +39,7 @@ import {
   BOSS_PASSIVE_DPS_FRACTION,
   TURRET_PROJECTILE_FLIGHT_MS,
   GAME_TICK_INTERVAL_MS,
+  GAME_SPEED_DEFAULT,
   MEEP_ADD_DELAY_MS,
   AUGMENT_CHOICE_COUNT,
   ADMIN_LEVEL_AUGMENT_QUEUE_MAX,
@@ -73,6 +74,8 @@ import type {
   AugmentRarity,
 } from '@/types'
 import { logger } from '@/utils/logger'
+import { gameNow, gameTimeout, setGameSpeed } from '@/utils/game/gameClock'
+import { recordTelemetry } from '@/utils/game/telemetry'
 
 function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT): number {
   if (level <= 0) return 0
@@ -84,7 +87,19 @@ function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT
 
 export const useGameStore = defineStore('game', {
   state: () => ({
-    gameSpeed: GAME_TICK_INTERVAL_MS,
+    /**
+     * Zeitraffer-Faktor. 1 ist das Live-Spiel; alles darüber beschleunigt die
+     * Spieluhr UND den Takt gleichermaßen (siehe `utils/game/gameClock.ts`).
+     * Nur ein Spiegel — die Uhr selbst hält den maßgeblichen Wert.
+     */
+    gameSpeed: GAME_SPEED_DEFAULT,
+    /**
+     * Zeitraffer, mit dem der geladene Spielstand geschrieben wurde. Er wird
+     * bewusst NICHT angewandt — ein über den Reload überlebendes 10× ruiniert
+     * genau die Live-Messung, für die der Regler da ist. Das Admin-Panel bietet
+     * ihn als Ein-Klick-Knopf an.
+     */
+    lastGameSpeed: GAME_SPEED_DEFAULT,
     inGameTime: 0,
 
     chimes: 0,
@@ -187,10 +202,20 @@ export const useGameStore = defineStore('game', {
     universeRuns: [] as UniverseRunRecord[],
   }),
   actions: {
+    /**
+     * Stellt den Zeitraffer. Die Uhr (`utils/game/gameClock.ts`) ist die
+     * Autorität; dieses Feld ist ihr Spiegel für Anzeige und Spielstand —
+     * deshalb wird der GEKLEMMTE Rückgabewert übernommen und nicht das Argument.
+     */
+    setGameSpeed(next: number) {
+      this.gameSpeed = setGameSpeed(next)
+      logger.info('Game', `Game speed set to ${this.gameSpeed}x`)
+    },
+
     // Adds a Meep when enough Chimes have been collected
     addMeep() {
       if (this.chimesForMeep >= this.meepChimeRequirement) {
-        setTimeout(() => {
+        gameTimeout(() => {
           this.meeps += 1
           this.totalMeepsEarned += 1
           const baseCost = Math.max(
@@ -393,6 +418,9 @@ export const useGameStore = defineStore('game', {
       if (options.length === 0) return
       const id = options[Math.floor(Math.random() * options.length)]
       this._commitAugment(id)
+      // Wanduhr: `at` ist ein Ereignisstempel für die Meldung, die Anzeige zählt
+      // über `seq` und ihre eigene reale Standzeit.
+      // eslint-disable-next-line no-restricted-syntax
       this.lastAutoPick = { id, at: Date.now(), seq: this.lastAutoPick.seq + 1 }
       const aug = AUGMENTS.find((a) => a.id === id)
       if (aug) logAugmentAutoPicked(aug.name, aug.effectLine)
@@ -566,6 +594,8 @@ export const useGameStore = defineStore('game', {
         starsRescued: stats.starsRescued,
         galaxiesFreed: stats.galaxiesFreed,
         chimes: this.chimesForNextUniverse,
+        // Wanduhr: Chronikstempel eines abgeschlossenen Universums-Durchlaufs.
+        // eslint-disable-next-line no-restricted-syntax
         completedAt: Date.now(),
       })
       const overflow = this.universeRuns.length - UNIVERSE_RUN_HISTORY_LIMIT
@@ -656,10 +686,10 @@ export const useGameStore = defineStore('game', {
       }
 
       this.isHyperspaceActive = true
-      setTimeout(() => {
+      gameTimeout(() => {
         this.executePrestigeReset(targetUniverse)
       }, HYPERSPACE_ANIM_START_MS)
-      setTimeout(() => {
+      gameTimeout(() => {
         this.isHyperspaceActive = false
       }, HYPERSPACE_ANIM_END_MS)
     },
@@ -728,7 +758,7 @@ export const useGameStore = defineStore('game', {
       if (planetBossStore.isBossActive) {
         planetBossStore.applyPassiveDamage()
       }
-      if (planetBossStore.cpsPenaltyActive && Date.now() >= planetBossStore.cpsPenaltyExpiresAt) {
+      if (planetBossStore.cpsPenaltyActive && gameNow() >= planetBossStore.cpsPenaltyExpiresAt) {
         planetBossStore.clearPenalty()
       }
       const expeditionStore = useExpeditionStore()
@@ -752,7 +782,7 @@ export const useGameStore = defineStore('game', {
           bossPlanetInForeground(target.planetId)
         ) {
           planetBossStore.turretVolleyCounter++
-          setTimeout(() => {
+          gameTimeout(() => {
             if (target.defeated || target.expired) return
             planetBossStore.dealDamageToBoss(target, autoAttackDPS)
           }, TURRET_PROJECTILE_FLIGHT_MS)
@@ -779,6 +809,11 @@ export const useGameStore = defineStore('game', {
       // bosses, stars, drifters), so a milestone announced here is one that was
       // just earned — not one from the previous tick.
       useAchievementStore().tick()
+
+      // Ganz zuletzt, und aus demselben Grund wie der Chronicle: die Telemetrie
+      // soll den ENDSTAND dieser Sekunde festhalten. Ausgeschaltet kostet der
+      // Aufruf einen Boolean-Vergleich.
+      recordTelemetry()
     },
 
     // Credits offline Chimes and closes the modal
@@ -820,7 +855,7 @@ export const useGameStore = defineStore('game', {
         universeId,
         universeName,
         meepsSent,
-        startTime: Date.now(),
+        startTime: gameNow(),
         durationMs,
         reward,
         collected: false,
@@ -831,7 +866,7 @@ export const useGameStore = defineStore('game', {
     // Collects a completed expedition
     collectExpedition() {
       if (!this.activeExpedition) return
-      if (Date.now() < this.activeExpedition.startTime + this.activeExpedition.durationMs) return
+      if (gameNow() < this.activeExpedition.startTime + this.activeExpedition.durationMs) return
       const { reward, meepsSent } = this.activeExpedition
       this.chimes += reward
       this.chimesEarnedForLevel += reward
@@ -1055,12 +1090,12 @@ export const useGameStore = defineStore('game', {
 
     isExpeditionComplete(): boolean {
       if (!this.activeExpedition) return false
-      return Date.now() >= this.activeExpedition.startTime + this.activeExpedition.durationMs
+      return gameNow() >= this.activeExpedition.startTime + this.activeExpedition.durationMs
     },
 
     expeditionProgress(): number {
       if (!this.activeExpedition) return 0
-      const elapsed = Date.now() - this.activeExpedition.startTime
+      const elapsed = gameNow() - this.activeExpedition.startTime
       return clampPercent((elapsed / this.activeExpedition.durationMs) * 100)
     },
   },

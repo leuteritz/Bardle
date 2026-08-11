@@ -68,21 +68,22 @@ import {
   STAR_FIGHT_TIMER_CRITICAL_S,
   STAR_FIGHT_TIMER_WARNING_S,
 } from '@/config/constants'
+import { gameNow } from '@/utils/game/gameClock'
 
 const starGroupStore = useStarGroupStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 
 const STATE_URGENT_S = ROLE_MID_CURSE_URGENT_S
 
-// Die Deadline im Store ist reaktiv, Date.now() nicht — ein Ticker treibt den
+// Die Deadline im Store ist reaktiv, gameNow() nicht — ein Ticker treibt den
 // Vergleich. Die Komponente existiert nur im Arrival-Zustand (v-if im Parent),
 // der Timer läuft also nicht nebenher weiter.
-const now = ref(Date.now())
+const now = ref(gameNow())
 let tickId: number | null = null
 
 onMounted(() => {
   tickId = window.setInterval(() => {
-    now.value = Date.now()
+    now.value = gameNow()
   }, HUD_COUNTDOWN_TICK_MS)
 })
 

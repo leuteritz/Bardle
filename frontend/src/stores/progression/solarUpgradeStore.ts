@@ -4,6 +4,7 @@ import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useCpsStore } from '@/stores/core/cpsStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import {
   SOLAR_FLIGHT_BASE_COST,
   SOLAR_FLIGHT_MULTIPLIER,
@@ -59,12 +60,12 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     /** Seconds spent drifting as a comet (kept out of phaseTimeHistory). */
     cometSeconds: 0 as number,
     isUpgrading: false as boolean,
-    phaseEnteredAt: Date.now() as number,
+    phaseEnteredAt: gameNow() as number,
     totalPhaseSeconds: 0 as number,
     phaseTimeHistory: [] as number[],
     /** Reactive clock for dwell-time getters — advanced by gameStore.tick() once
-     *  per second (a raw Date.now() inside a getter would never re-evaluate). */
-    dwellNow: Date.now() as number,
+     *  per second (a raw gameNow() inside a getter would never re-evaluate). */
+    dwellNow: gameNow() as number,
     /** Bumped exactly once, when the star evolves INTO the final phase — the red
      *  giant detonates and collapses. SupernovaTransition watches this counter.
      *  Deliberately not persisted (see usePersistence's explicit solar field
@@ -229,14 +230,14 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
   actions: {
     /** Advance the reactive dwell clock — called by gameStore.tick() every second. */
     tickDwell(): void {
-      this.dwellNow = Date.now()
+      this.dwellNow = gameNow()
     },
 
     /** TEMP (admin/testing): instantly satisfy the current phase's dwell-time gate
      *  by backdating phaseEnteredAt. Branch requirements stay untouched.
      *  Remove together with the "DEV · Skip Time" button in BardStatsTab.vue. */
     adminSkipDwellTime(): void {
-      this.phaseEnteredAt = Date.now() - this.phaseDwellRequiredMs
+      this.phaseEnteredAt = gameNow() - this.phaseDwellRequiredMs
       this.tickDwell()
     },
 
@@ -296,14 +297,14 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     upgradeStar(): void {
       if (!this.canUpgradeStar) return
       this.isUpgrading = true
-      setTimeout(() => {
-        const elapsed = Math.floor((Date.now() - this.phaseEnteredAt) / 1000)
+      gameTimeout(() => {
+        const elapsed = Math.floor((gameNow() - this.phaseEnteredAt) / 1000)
         if (this.isCometState) {
           // Ignition: the comet becomes Spark — starPhase stays 0, the
           // Spark dwell timer starts fresh at this moment.
           this.cometSeconds += elapsed
           this.isCometState = false
-          this.phaseEnteredAt = Date.now()
+          this.phaseEnteredAt = gameNow()
           this.isUpgrading = false
           console.log('[Bardle] Comet ignited into Spark')
           return
@@ -312,7 +313,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
         this.phaseTimeHistory[this.starPhase] =
           (this.phaseTimeHistory[this.starPhase] ?? 0) + elapsed
         this.starPhase++
-        this.phaseEnteredAt = Date.now()
+        this.phaseEnteredAt = gameNow()
         this.isUpgrading = false
         // The last evolution is not a growth step: the red giant blows itself
         // apart and what is left collapses. Fire the one-shot transition.

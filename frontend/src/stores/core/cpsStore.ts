@@ -14,13 +14,14 @@ import {
   SECONDS_PER_HOUR,
 } from '@/config/constants'
 import { splitDuration } from '@/utils/ui/format'
+import { gameIntervalMs, gameNow, onGameSpeedChange } from '@/utils/game/gameClock'
 
 export const useCpsStore = defineStore('cps', {
   state: () => ({
     // Currently selected time period for the production chart
     selectedTimePeriod: '1min' as string,
     // Start time for the CPS tracking system
-    startTime: Date.now(),
+    startTime: gameNow(),
 
     // Stores CPS history data for various time periods as arrays
     productionHistories: {
@@ -38,6 +39,9 @@ export const useCpsStore = defineStore('cps', {
 
     // Reference for the main CPS tracking timer
     mainTimer: null as ReturnType<typeof setInterval> | null,
+
+    /** Abmelder des Zeitraffer-Rückrufs, der den Takt neu stellt. */
+    unsubscribeSpeed: null as (() => void) | null,
 
     // Configuration of available time periods for CPS analysis
     timePeriods: [
@@ -91,7 +95,7 @@ export const useCpsStore = defineStore('cps', {
     // Starts CPS tracking with initialization of all periods
     startProductionTracking() {
       const gameStore = useGameStore()
-      const now = Date.now()
+      const now = gameNow()
       this.startTime = now
 
       Object.keys(this.lastUpdateTimes).forEach((key) => {
@@ -114,7 +118,7 @@ export const useCpsStore = defineStore('cps', {
     // Updates CPS histories for all periods based on configured intervals
     updateAllHistories() {
       const gameStore = useGameStore()
-      const now = Date.now()
+      const now = gameNow()
       const currentCPS = gameStore.chimesPerSecond || 0
 
       this.timePeriods.forEach((period) => {
@@ -133,15 +137,24 @@ export const useCpsStore = defineStore('cps', {
       })
     },
 
-    // Starts 1-second timer for continuous history updates
+    // Starts 1-second timer for continuous history updates.
+    // Die Perioden (1min/10min/1h) meinen SPIELzeit — bei laufendem Zeitraffer
+    // deckt der Graph also weiter eine Spielminute ab, nicht eine reale. Genau
+    // das braucht ein Balancing-Lauf; dafür muss der Takt mitziehen.
     startTimer() {
       if (this.mainTimer) {
         clearInterval(this.mainTimer)
       }
+      // Genau EINMAL anmelden — `startTimer` läuft auch aus dem Rückruf heraus.
+      if (!this.unsubscribeSpeed) {
+        this.unsubscribeSpeed = onGameSpeedChange(() => {
+          if (this.mainTimer) this.startTimer()
+        })
+      }
 
       this.mainTimer = setInterval(() => {
         this.updateAllHistories()
-      }, GAME_TICK_INTERVAL_MS)
+      }, gameIntervalMs(GAME_TICK_INTERVAL_MS))
 
       document.addEventListener('visibilitychange', this._handleVisibilityChange)
     },
@@ -152,6 +165,8 @@ export const useCpsStore = defineStore('cps', {
         clearInterval(this.mainTimer)
         this.mainTimer = null
       }
+      this.unsubscribeSpeed?.()
+      this.unsubscribeSpeed = null
       document.removeEventListener('visibilitychange', this._handleVisibilityChange)
     },
 

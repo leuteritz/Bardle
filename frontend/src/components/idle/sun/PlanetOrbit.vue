@@ -224,6 +224,7 @@ import { planetOrbitPhases } from '@/utils/orbit/planetOrbitPhase'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
 import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
+import { gameNow, getGameSpeed } from '@/utils/game/gameClock'
 
 const MIN_SHOT_DISTANCE = 32
 
@@ -535,7 +536,7 @@ export default defineComponent({
     const turretRingCanvas = ref<HTMLCanvasElement | null>(null)
     const TWO_PI = Math.PI * 2
     let turretRingCanvasWasEmpty = false
-    let turretLastVolleyMs = Date.now()
+    let turretLastVolleyMs = gameNow()
 
     function sizeTurretRingCanvas() {
       const cv = turretRingCanvas.value
@@ -554,7 +555,7 @@ export default defineComponent({
       let drewAny = false
       const progress = reducedMotion
         ? 1
-        : Math.min(1, (Date.now() - turretLastVolleyMs) / GAME_TICK_INTERVAL_MS)
+        : Math.min(1, (gameNow() - turretLastVolleyMs) / GAME_TICK_INTERVAL_MS)
 
       // Ohne lebenden Boss ruht der Salven-Takt — kein Ring, statt eines
       // eingefrorenen "voll"-Zustands ohne Ziel
@@ -614,7 +615,7 @@ export default defineComponent({
     watch(
       () => planetBossStore.turretVolleyCounter,
       () => {
-        turretLastVolleyMs = Date.now()
+        turretLastVolleyMs = gameNow()
         if (reducedMotion) return
         // Idle-Layer pausiert (Star-Fight-Modal / Profil offen): keine Schüsse
         // ansammeln, die beim Fortsetzen alle gleichzeitig losfliegen würden
@@ -661,7 +662,7 @@ export default defineComponent({
     )
 
     function animate(ts: number) {
-      const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)
+      const dt = (lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)) * getGameSpeed()
       lastTs = ts
 
       const cx = window.innerWidth / 2
@@ -778,20 +779,20 @@ export default defineComponent({
         const currentHp = slot.currentHp ?? PLANET_SLOT_MAX_HP
         const maxHp = slot.maxHp ?? PLANET_SLOT_MAX_HP
         const hpPercent = (currentHp / Math.max(maxHp, 1)) * 100
-        const isHealing = Date.now() < (slot.healingUntilMs ?? 0)
+        const isHealing = gameNow() < (slot.healingUntilMs ?? 0)
 
         // Zerstört: Der Planet bleibt sichtbar, aber ausgegraut — gleiche
         // Darstellung wie ein gefallener Champion im ChampionOrbit; die HP-Zahl
         // weicht dem Respawn-Countdown.
         const isDown = isPlanetDown(slot)
         const downSecs = isDown
-          ? Math.max(0, Math.ceil((slot.downUntilMs - Date.now()) / 1000))
+          ? Math.max(0, Math.ceil((slot.downUntilMs - gameNow()) / 1000))
           : 0
 
         const jb = slot.jungleBuff
         const isJungleBuffed = !!jb?.active
         const jungleBuffSecsLeft = isJungleBuffed
-          ? Math.max(0, (jb!.activeUntil - Date.now()) / 1000)
+          ? Math.max(0, (jb!.activeUntil - gameNow()) / 1000)
           : 0
         const jungleBuffType = jb?.buffType ?? ''
         const jungleBuffDurationMs = slot.role ? JUNGLE_BUFF_DEFS[slot.role].durationMs : 0

@@ -25,6 +25,7 @@ import {
   MOVE_DISPLAY_CLAMP_MIN,
   MOVE_DISPLAY_CLAMP_MAX,
 } from '@/config/constants'
+import { gameNow } from '@/utils/game/gameClock'
 
 export interface LiveChampionPosition {
   team: 1 | 2
@@ -96,7 +97,7 @@ export function useBattleMovement() {
 
   function preciseGameTime(): number {
     if (battleStore.battlePhaseStartTimestamp <= 0) return battleStore.battleTime
-    const realElapsedS = (Date.now() - battleStore.battlePhaseStartTimestamp) / 1000
+    const realElapsedS = (gameNow() - battleStore.battlePhaseStartTimestamp) / 1000
     return Math.min(BATTLE_TOTAL_GAME_SECONDS, realElapsedS * 60)
   }
 

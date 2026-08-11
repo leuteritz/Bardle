@@ -37,6 +37,7 @@ import {
   tierSpawnWeights,
 } from '@/config/champions/championTiers'
 import { activeMidCurse } from '@/utils/orbit/liveState'
+import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
 import { prewarmBossSprite } from '@/utils/fx/bossSprite'
 import { ROLE_MID_CURSE_DAMAGE_AMP } from '@/config/constants'
@@ -270,7 +271,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         planetId,
         planetType,
         bossName,
-        startTime: Date.now(),
+        startTime: gameNow(),
         enrageTimerMs,
         maxHP,
         currentHP: maxHP,
@@ -324,7 +325,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     /** Applies damage (incl. curse + Star Forge boss multipliers) to a specific boss. */
     dealDamageToBoss(boss: PlanetBossEvent, amount: number): boolean {
       const banished =
-        activeMidCurse.type === 'banishment' && Date.now() < activeMidCurse.activeUntil
+        activeMidCurse.type === 'banishment' && gameNow() < activeMidCurse.activeUntil
       const cursed = banished ? amount * ROLE_MID_CURSE_DAMAGE_AMP : amount
       const effective = Math.round(
         cursed *
@@ -344,7 +345,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         this.bossModalOpen = false
         logger.info('Planet', 'Boss defeated!', { totalDamage: boss.totalDamageDealt })
         const planetId = boss.planetId
-        setTimeout(() => {
+        gameTimeout(() => {
           this.removeBoss(planetId)
         }, BOSS_REMOVAL_DELAY_MS)
         return true
@@ -393,7 +394,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
           logger.info('Planet', 'Boss defeated by passive DPS!')
           const planetId = boss.planetId
-          setTimeout(() => {
+          gameTimeout(() => {
             this.removeBoss(planetId)
           }, BOSS_REMOVAL_DELAY_MS)
         }
@@ -413,7 +414,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
         if (starGroupStore.starFightModalOpen && boss.planetId !== this.selectedBossId) continue
 
-        const elapsed = Date.now() - boss.startTime
+        const elapsed = gameNow() - boss.startTime
         if (elapsed < boss.enrageTimerMs) continue
 
         if (boss.noEnrage) {
@@ -421,7 +422,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           this.totalBossesLost += 1
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
           const planetId = boss.planetId
-          setTimeout(() => {
+          gameTimeout(() => {
             this.removeBoss(planetId)
           }, BOSS_REMOVAL_LONG_DELAY_MS)
           continue
@@ -433,7 +434,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         this.lastBossResult = 'defeat'
 
         this.cpsPenaltyActive = true
-        this.cpsPenaltyExpiresAt = Date.now() + BOSS_CPS_PENALTY_DURATION_MS
+        this.cpsPenaltyExpiresAt = gameNow() + BOSS_CPS_PENALTY_DURATION_MS
         const shopStore = useShopStore()
         const gameStore = useGameStore()
         gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
@@ -444,7 +445,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         logger.info('Planet', 'Boss enraged! CPS penalty applied.')
 
         const planetId = boss.planetId
-        setTimeout(() => {
+        gameTimeout(() => {
           this.removeBoss(planetId)
         }, BOSS_REMOVE_DELAY_MS)
       }
@@ -548,7 +549,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
         if (starGroupStore.starFightModalOpen && boss.planetId !== this.selectedBossId) continue
 
-        const elapsed = Date.now() - boss.startTime
+        const elapsed = gameNow() - boss.startTime
         if (elapsed < boss.enrageTimerMs) continue
 
         if (boss.noEnrage) {
@@ -556,7 +557,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           this.totalBossesLost += 1
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
           const planetId = boss.planetId
-          setTimeout(() => {
+          gameTimeout(() => {
             this.removeBoss(planetId)
           }, BOSS_REMOVAL_LONG_DELAY_MS)
           continue
@@ -573,7 +574,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         }
 
         const planetId = boss.planetId
-        setTimeout(() => {
+        gameTimeout(() => {
           this.removeBoss(planetId)
         }, BOSS_REMOVE_DELAY_MS)
       }

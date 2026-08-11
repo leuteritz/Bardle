@@ -41,6 +41,7 @@ import {
 } from '@/config/constants'
 import { pickPooledIcon } from '@/config/ui/iconPools'
 import type { SolarBranchId } from '@/stores/progression/solarUpgradeStore'
+import { gameNow } from '@/utils/game/gameClock'
 
 /**
  * Eine Materialposition nach dem Sunsmith-Rabatt (Chronicle). Abgerundet wird
@@ -72,7 +73,7 @@ export const useStarForgeStore = defineStore('starForge', {
     bargainPurchased: false as boolean,
     activeBuffs: [] as ForgeActiveBuff[],
     /** Reactive clock — advanced by gameStore.tick() once per second. */
-    forgeNow: Date.now() as number,
+    forgeNow: gameNow() as number,
   }),
 
   getters: {
@@ -400,7 +401,7 @@ export const useStarForgeStore = defineStore('starForge', {
     /** Advance the reactive clock, expire buffs, restock the bargain.
      *  Called by gameStore.tick() once per second. */
     tick(): void {
-      this.forgeNow = Date.now()
+      this.forgeNow = gameNow()
       const hadBuffs = this.activeBuffs.length > 0
       this.activeBuffs = this.activeBuffs.filter((b) => b.expiresAt > this.forgeNow)
       if (hadBuffs && this.activeBuffs.length === 0) this.recalcRates()
@@ -416,7 +417,7 @@ export const useStarForgeStore = defineStore('starForge', {
       const pick = pool[Math.floor(Math.random() * pool.length)] ?? FORGE_BARGAINS[0]
       this.bargainDealId = pick.id
       this.bargainPurchased = false
-      this.bargainRestockAt = Date.now() + FORGE_BARGAIN_RESTOCK_MS
+      this.bargainRestockAt = gameNow() + FORGE_BARGAIN_RESTOCK_MS
     },
 
     buyNode(id: string): boolean {
@@ -486,7 +487,7 @@ export const useStarForgeStore = defineStore('starForge', {
         case 'buff':
           if (def.buffId && def.durationMs) {
             this.activeBuffs = this.activeBuffs.filter((b) => b.id !== def.buffId)
-            this.activeBuffs.push({ id: def.buffId, expiresAt: Date.now() + def.durationMs })
+            this.activeBuffs.push({ id: def.buffId, expiresAt: gameNow() + def.durationMs })
           }
           break
         case 'materials': {

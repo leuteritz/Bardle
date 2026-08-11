@@ -63,11 +63,16 @@ export const usePlayerStore = defineStore('player', {
       this.damageFloats.push({
         id: this._nextFloatId++,
         value: reduced,
+        // Wanduhr: die Zahl steigt per CSS-Animation auf und muss so lange
+        // stehen, wie das Auge sie liest — beide Enden des Vergleichs stehen in
+        // diesem Store.
+        // eslint-disable-next-line no-restricted-syntax
         expiresAt: Date.now() + DAMAGE_FLOAT_DURATION_MS,
       })
       return reduced
     },
     pruneFloats() {
+      // eslint-disable-next-line no-restricted-syntax -- Wanduhr, siehe takeDamage
       const now = Date.now()
       this.damageFloats = this.damageFloats.filter((f) => f.expiresAt > now)
     },

@@ -13,6 +13,7 @@ import {
   VOID_SEVERITY_COLOR,
   VOID_SEVERITY_LABEL,
 } from '@/config/constants'
+import { gameNow } from '@/utils/game/gameClock'
 
 /**
  * Die Bedrohungslage — oben links, an der Spitze des Kartenstapels.
@@ -91,9 +92,9 @@ function sample(): void {
   if (!def) return
   shownDef.value = def
   const span = Math.max(1, lead.travelMs)
-  const t = Math.min(1, Math.max(0, (Date.now() - lead.spawnedAt) / span))
+  const t = Math.min(1, Math.max(0, (gameNow() - lead.spawnedAt) / span))
   progress.value = t
-  remainingMs.value = Math.max(0, lead.spawnedAt + span - Date.now())
+  remainingMs.value = Math.max(0, lead.spawnedAt + span - gameNow())
   hpRatio.value = lead.maxHp > 0 ? lead.currentHp / lead.maxHp : 0
 }
 

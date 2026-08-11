@@ -9,23 +9,24 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { GAME_TICK_INTERVAL_MS, TURRET_CD_TICK_MS } from '@/config/constants'
+import { gameNow } from '@/utils/game/gameClock'
 
 const bossStore = usePlanetBossStore()
 
-let lastVolleyMs = Date.now()
+let lastVolleyMs = gameNow()
 const cdLeft = ref(1)
 let tick: ReturnType<typeof setInterval> | null = null
 
 watch(
   () => bossStore.turretVolleyCounter,
   () => {
-    lastVolleyMs = Date.now()
+    lastVolleyMs = gameNow()
   },
 )
 
 onMounted(() => {
   tick = setInterval(() => {
-    cdLeft.value = Math.max(0, (lastVolleyMs + GAME_TICK_INTERVAL_MS - Date.now()) / 1000)
+    cdLeft.value = Math.max(0, (lastVolleyMs + GAME_TICK_INTERVAL_MS - gameNow()) / 1000)
   }, TURRET_CD_TICK_MS)
 })
 

@@ -42,6 +42,7 @@ import {
   PLANET_GLYPH_VIEW_H,
 } from '@/config/constants'
 import type { PlanetType } from '@/types'
+import { gameNow } from '@/utils/game/gameClock'
 
 const props = defineProps<{
   /** Restsekunden bis zum Despawn — die Zahl im Ring. */
@@ -91,7 +92,7 @@ function armDial(): void {
   const el = arcEl.value
   if (!el) return
   const total = Math.max(1, props.durationMs)
-  const elapsed = Math.min(total, Math.max(0, total - (props.endsAt - Date.now())))
+  const elapsed = Math.min(total, Math.max(0, total - (props.endsAt - gameNow())))
   // Ohne Zurücksetzen samt erzwungenem Reflow übernimmt der Browser die
   // laufende Animation gleichen Namens mitsamt ihrer alten Phase.
   el.style.animationName = 'none'
@@ -115,7 +116,7 @@ watch([() => props.endsAt, () => props.durationMs], armDial)
 const dashOffset = computed(() => {
   void props.secs
   const total = Math.max(1, props.durationMs)
-  const left = Math.min(1, Math.max(0, (props.endsAt - Date.now()) / total))
+  const left = Math.min(1, Math.max(0, (props.endsAt - gameNow()) / total))
   return PAUSE_STAR_RING_CIRCUMFERENCE * (1 - left)
 })
 

@@ -94,6 +94,7 @@ import {
   smoothstep,
   type HyperspacePhase,
 } from './minimapDraw'
+import { gameNow } from '@/utils/game/gameClock'
 
 export default defineComponent({
   name: 'MiniMapCanvas',
@@ -224,7 +225,7 @@ export default defineComponent({
         const startTime = galaxyStore.championTravelStartTime
         const duration = galaxyStore.championTravelDurationMs
         const progress =
-          startTime > 0 && duration > 0 ? Math.min((Date.now() - startTime) / duration, 1) : 0
+          startTime > 0 && duration > 0 ? Math.min((gameNow() - startTime) / duration, 1) : 0
         return {
           x: from.x + (target.x - from.x) * progress,
           y: from.y + (target.y - from.y) * progress,

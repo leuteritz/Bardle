@@ -1,4 +1,5 @@
 import { hexToRgb } from '@/utils/ui/format'
+import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { defineStore } from 'pinia'
 import type { PlanetType, StarType } from '@/types'
 import { pickConfig } from '@/utils/planetDraw'
@@ -258,7 +259,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitTilt: tier.tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
         planetSlots: this._buildResourcePlanetSlots(RESOURCE_STAR_PLANET_COUNT),
-        spawnedAt: Date.now(),
+        spawnedAt: gameNow(),
         // Long Vigil / Culling Light (providence): die Frist wird beim Spawn
         // festgeschrieben, nicht beim Ablesen angewandt — `starDeadlineAt`
         // rechnet aus `spawnedAt + durationMs`, und ein Faktor, der erst dort
@@ -287,7 +288,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         planetSlots: this._buildResourcePlanetSlots(
           STAR_FORCED_PLANET_MIN + Math.floor(Math.random() * STAR_FORCED_PLANET_RANGE),
         ),
-        spawnedAt: Date.now(),
+        spawnedAt: gameNow(),
         durationMs: RESOURCE_STAR_DURATION_MS,
         starColor: pickResourceStarColor(),
       }
@@ -358,7 +359,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitTilt: tier.tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_CHAMPION,
         planetSlots,
-        spawnedAt: Date.now(),
+        spawnedAt: gameNow(),
         durationMs: CHAMPION_STAR_DURATION_MS,
         starColor: champStarColor,
       }
@@ -520,7 +521,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           // Im Timeout per ID suchen — ein eingefrorener Index zeigt auf den
           // falschen Stern, sobald zwischenzeitlich gespawnt/entfernt wurde
           // (z. B. mehrere Eskorten gleichzeitig durch Splash-Damage besiegt).
-          setTimeout(() => {
+          gameTimeout(() => {
             const currentIdx = this.activeStars.findIndex((s) => s.id === star.id)
             if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
           }, STAR_REMOVAL_DELAY_MS)
@@ -546,7 +547,7 @@ export const useStarGroupStore = defineStore('starGroup', {
     // dessen Despawn-Timer abgelaufen ist ODER dessen Planeten alle gerettet/
     // gekillt wurden. So verschwinden Sterne auch während der Pause korrekt.
     tickResourceStars() {
-      const now = Date.now()
+      const now = gameNow()
       for (const star of this.activeStars) {
         if (star.starType !== 'resource') continue
         if (resourceDespawnScheduled.has(star.id)) continue
@@ -578,7 +579,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           bossStore.removeBoss(slot.planetId)
         }
       }
-      setTimeout(() => {
+      gameTimeout(() => {
         const idx = this.activeStars.findIndex((s) => s.id === starId)
         if (idx !== -1) this.activeStars.splice(idx, 1)
         resourceDespawnScheduled.delete(starId)
@@ -590,7 +591,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       if (galaxyStore.championTravelState !== 'champion_spawned') return
       const champion = this.activeStars.find((s) => s.starType === 'champion')
       if (!champion || champion.spawnedAt === undefined || champion.durationMs === undefined) return
-      if (Date.now() >= champion.spawnedAt + champion.durationMs) {
+      if (gameNow() >= champion.spawnedAt + champion.durationMs) {
         this.clearChampionStar()
       }
     },
@@ -604,7 +605,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       for (const star of toRemove) {
         if (this.activeFightStarId === star.id) this.closeStarFightModal()
         const starRef = star
-        setTimeout(() => {
+        gameTimeout(() => {
           if (!starRef.despawnReason) starRef.despawnReason = 'expired'
           for (const slot of starRef.planetSlots) {
             if (!slot.cleared) {
@@ -613,7 +614,7 @@ export const useStarGroupStore = defineStore('starGroup', {
             }
           }
           // One JS tick later so the render loop sees allSlotsCleared and fires the vanish effect
-          setTimeout(() => {
+          gameTimeout(() => {
             const currentIdx = this.activeStars.indexOf(starRef)
             if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
           }, 0)

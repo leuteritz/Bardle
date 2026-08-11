@@ -12,6 +12,16 @@ import {
 import { usePersistence } from '@/composables/system/usePersistence'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { vInkCenter } from '@/utils/ui/textInkOffset'
+import { useGameStore } from '@/stores/core/gameStore'
+import { gameIntervalMs, getGameSpeed, onGameSpeedChange } from '@/utils/game/gameClock'
+import {
+  disableTelemetry,
+  enableTelemetry,
+  telemetryCsv,
+  telemetryElapsed,
+  telemetryFirsts,
+  telemetryRows,
+} from '@/utils/game/telemetry'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -45,12 +55,38 @@ let saveTimer: ReturnType<typeof setInterval> | null = setInterval(saveGame, AUT
 // verkraftbar, weil syncFromTimestamps() den Zustand aus Zeitstempeln herleitet
 // statt fortzuschreiben: Nach der Drosselung holt ein einzelner Aufruf alles
 // Verpasste auf. Idempotent, deshalb ist häufiges Aufrufen unschädlich.
-setInterval(() => {
-  const bs = useBattleStore()
-  if (bs.isAutoBattleInitialized && bs.autoBattleEnabled) {
-    bs.syncFromTimestamps()
+//
+// Der Abstand ist SPIELzeit: bei laufendem Zeitraffer muss die Phasenkette
+// entsprechend feiner abgetastet werden, sonst überspringt ein einzelner Aufruf
+// bei 50× eine ganze Kampfphase.
+let battleSyncTimer: ReturnType<typeof setInterval> | null = null
+const startBattleSync = () => {
+  if (battleSyncTimer) clearInterval(battleSyncTimer)
+  battleSyncTimer = setInterval(() => {
+    const bs = useBattleStore()
+    if (bs.isAutoBattleInitialized && bs.autoBattleEnabled) {
+      bs.syncFromTimestamps()
+    }
+  }, gameIntervalMs(BATTLE_SYNC_INTERVAL_MS))
+}
+startBattleSync()
+onGameSpeedChange(startBattleSync)
+
+// Der einzige Griff, den ein Messtreiber von außen braucht — nur im Dev-Build.
+// Alles andere liest er aus den Pinia-Stores, die dort ohnehin am App-Knoten
+// hängen.
+if (import.meta.env.DEV) {
+  ;(window as unknown as Record<string, unknown>).__bardle = {
+    setGameSpeed: (s: number) => useGameStore().setGameSpeed(s),
+    getGameSpeed,
+    enableTelemetry,
+    disableTelemetry,
+    telemetryRows,
+    telemetryFirsts,
+    telemetryElapsed,
+    telemetryCsv,
   }
-}, BATTLE_SYNC_INTERVAL_MS)
+}
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {

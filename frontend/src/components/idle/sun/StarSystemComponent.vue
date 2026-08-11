@@ -329,6 +329,7 @@ import { activeChampionBehindState, activePlayerPlanetPositions, activeStarComba
 import type { ChampionRole, StarType } from '@/types'
 import { starBodySize } from '@/utils/orbit/geometry'
 import { clearStarVanishFx } from '@/utils/fx/starVanishFx'
+import { gameNow, getGameSpeed } from '@/utils/game/gameClock'
 
 const uiStore = useUiStore()
 const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
@@ -925,7 +926,7 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 
 function effectiveBurstCooldown(): number {
   const curse = roleBehaviorStore.activeCurse
-  const glaciated = curse?.type === 'glaciation' && Date.now() < curse.activeUntil
+  const glaciated = curse?.type === 'glaciation' && gameNow() < curse.activeUntil
   return glaciated ? STAR_BURST_COOLDOWN * ROLE_MID_CURSE_ATTACK_SLOW : STAR_BURST_COOLDOWN
 }
 
@@ -944,7 +945,7 @@ function pickEnemyShotTarget(): { x: number; y: number; slotId: string | null } 
 /** Trefferschaden einer Salve — Fluch-Abschwächung inklusive. */
 function applyEnemyShotDamage(slotId: string | null) {
   const curse = roleBehaviorStore.activeCurse
-  const weakened = curse?.type === 'weakness' && Date.now() < curse.activeUntil
+  const weakened = curse?.type === 'weakness' && gameNow() < curse.activeUntil
   const dmg = weakened
     ? Math.max(1, Math.round(ENEMY_PROJECTILE_DAMAGE * ROLE_MID_CURSE_ATTACK_DEBUFF))
     : ENEMY_PROJECTILE_DAMAGE
@@ -1055,7 +1056,7 @@ function drawCooldownRings() {
       ? roleBehaviorStore.novaReadyAt > 0
         ? Math.max(
             0,
-            Math.min(1, 1 - (roleBehaviorStore.novaReadyAt - Date.now()) / BOSS_NOVA_INTERVAL_MS),
+            Math.min(1, 1 - (roleBehaviorStore.novaReadyAt - gameNow()) / BOSS_NOVA_INTERVAL_MS),
           )
         : 0
       : bursting
@@ -1106,7 +1107,7 @@ function drawCooldownRings() {
 }
 
 function enemyAttackLoop(ts: number) {
-  const dt = enemyLastTs === 0 ? 16 : Math.min(ts - enemyLastTs, 50)
+  const dt = (enemyLastTs === 0 ? 16 : Math.min(ts - enemyLastTs, 50)) * getGameSpeed()
   enemyLastTs = ts
 
   if (!reducedMotion) {
@@ -1178,8 +1179,8 @@ function enemyAttackLoop(ts: number) {
     // ── Fluch-Timer aktualisieren (ganze Sekunden → max. 1 Re-Render/s) ──────
     const curse = roleBehaviorStore.activeCurse
     const secsLeft =
-      curse && Date.now() < curse.activeUntil
-        ? Math.max(0, Math.ceil((curse.activeUntil - Date.now()) / 1000))
+      curse && gameNow() < curse.activeUntil
+        ? Math.max(0, Math.ceil((curse.activeUntil - gameNow()) / 1000))
         : 0
     if (secsLeft !== curseSecsLeft.value) curseSecsLeft.value = secsLeft
     // ─────────────────────────────────────────────────────────────────────────
@@ -1190,7 +1191,7 @@ function enemyAttackLoop(ts: number) {
     // Schleife nichts, also rendert Vue auch nichts neu.
     const rageUntil = roleBehaviorStore.rageActiveUntil
     const rageSecs =
-      rageUntil > Date.now() ? Math.max(0, Math.ceil((rageUntil - Date.now()) / 1000)) : 0
+      rageUntil > gameNow() ? Math.max(0, Math.ceil((rageUntil - gameNow()) / 1000)) : 0
     const ragingId = rageSecs > 0 ? roleBehaviorStore.rageStarId : null
     if (rageSecs !== rageSecsLeft.value) rageSecsLeft.value = rageSecs
     if (ragingId !== ragingStarId.value) ragingStarId.value = ragingId

@@ -4,6 +4,7 @@ import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { getGameSpeed } from '@/utils/game/gameClock'
 import { activePlanetPositions, activeStarCombatState } from '@/utils/orbit/liveState'
 import {
   getOrbitBodyScale,
@@ -191,7 +192,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
   )
 
   function animate(ts: number) {
-    const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)
+    const dt = (lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)) * getGameSpeed()
     lastTs = ts
 
     const screenCx = window.innerWidth / 2

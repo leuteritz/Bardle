@@ -54,9 +54,11 @@ import {
   UNIVERSE_RESCUE_INITIAL_COST,
   BATTLE_HISTORY_SAVE_LIMIT,
   OMEN_FIRST_OFFER_DELAY_SEC,
+  GAME_SPEED_DEFAULT,
 } from '@/config/constants'
 import { DRAKE_TYPES, type DrakeTypeId } from '@/config/battle/drakes'
 import { logger } from '@/utils/logger'
+import { anchorGameClock, gameClockOffset, gameNow } from '@/utils/game/gameClock'
 
 /** Content id as the current catalog spells it — see SAVE_ID_RENAMES. An id
  *  that was never renamed passes through untouched. */
@@ -132,8 +134,18 @@ export function usePersistence() {
 
     const saveData = {
       version: SAVE_VERSION,
+      // Wanduhr: der Offline-Ertrag misst, wie lange der Spieler WEG war, nicht
+      // wie lange die Spielwelt lief.
       savedAt: Date.now(),
+      /**
+       * Vorlauf der Spieluhr gegenüber der Wanduhr. Alle Fristen unten stammen
+       * aus der Spielachse dieser Sitzung; ohne diesen Wert läge nach einem
+       * Reload jede von ihnen in ferner Zukunft (oder Vergangenheit).
+       */
+      gameClockOffset: gameClockOffset(),
       game: {
+        /** Nur zur Kenntlichkeit: geladen wird immer mit 1 (siehe loadGame). */
+        gameSpeed: gameStore.gameSpeed,
         inGameTime: gameStore.inGameTime,
         chimes: gameStore.chimes,
         chimesForNextLevel: gameStore.chimesForNextLevel,
@@ -438,6 +450,12 @@ export function usePersistence() {
       const saved = JSON.parse(raw)
       if (!saved || saved.version !== SAVE_VERSION) return
 
+      // ZUERST die Uhr verankern, vor jedem Store-Restore: alles, was unten
+      // geladen wird, ist eine Frist aus der Spielachse der Vorsitzung. Der
+      // Vorlauf friert über die Offline-Lücke ein — abwesende Zeit vergeht für
+      // die Spielwelt genauso schnell wie für die Wanduhr.
+      anchorGameClock(saved.gameClockOffset ?? 0)
+
       const gameStore = useGameStore()
       const shopStore = useShopStore()
       const battleStore = useBattleStore()
@@ -448,6 +466,8 @@ export function usePersistence() {
       let universeRunRestored = false
       if (saved.game) {
         const g = saved.game
+        // Nur merken, nicht anwenden — siehe gameStore.lastGameSpeed.
+        gameStore.lastGameSpeed = g.gameSpeed ?? GAME_SPEED_DEFAULT
         gameStore.inGameTime = g.inGameTime ?? gameStore.inGameTime
         gameStore.chimes = g.chimes ?? gameStore.chimes
         const restoredLevel = g.level ?? gameStore.level
@@ -912,7 +932,7 @@ export function usePersistence() {
         // Clamp to the current phase list — older saves may hold indices from a
         // longer STAR_PHASE_DATA (e.g. the removed White Dwarf phase).
         solarStore.starPhase = Math.min(saved.solar.starPhase ?? 0, STAR_PHASE_DATA.length - 1)
-        solarStore.phaseEnteredAt = saved.solar.phaseEnteredAt ?? Date.now()
+        solarStore.phaseEnteredAt = saved.solar.phaseEnteredAt ?? gameNow()
         solarStore.totalPhaseSeconds = saved.solar.totalPhaseSeconds ?? 0
         solarStore.phaseTimeHistory = saved.solar.phaseTimeHistory ?? []
       }
@@ -949,7 +969,7 @@ export function usePersistence() {
       // Restore drifter buffs — expiresAt is absolute, so anything that ran out
       // while the tab was closed is dropped here instead of ticking down again.
       const drifterStore = useDrifterStore()
-      drifterStore.drifterNow = Date.now()
+      drifterStore.drifterNow = gameNow()
       drifterStore.buffs = ((saved.drifter?.buffs ?? []) as DrifterActiveBuff[])
         .filter((b) => b.expiresAt > drifterStore.drifterNow)
         .map((b) => ({ ...b, effects: { ...b.effects } }))
@@ -961,7 +981,7 @@ export function usePersistence() {
       // heraus, statt danach noch einmal herunterzuzählen. Offene Risse standen
       // nie im Spielstand, das Feld ist nach dem Laden also immer leer.
       const voidStore = useVoidStore()
-      voidStore.voidNow = Date.now()
+      voidStore.voidNow = gameNow()
       voidStore.aftermaths = ((saved.void?.aftermaths ?? []) as VoidAftermath[])
         .filter((a) => a.expiresAt > voidStore.voidNow)
         .map((a) => ({ ...a, effects: { ...a.effects } }))
@@ -975,7 +995,7 @@ export function usePersistence() {
       // in der Zwischenzeit endete, wird verworfen — ihr Schlussschlag hätte
       // Bosse getroffen, die zu ihrer Zeit gar nicht standen.
       const bardAbilityStore = useBardAbilityStore()
-      const bardNow = Date.now()
+      const bardNow = gameNow()
       bardAbilityStore.abilityNow = bardNow
       const savedCooldowns = saved.bardAbility?.cooldownReadyAt ?? {}
       for (const id of ['q', 'w', 'e', 'r'] as BardAbilityId[]) {
@@ -1012,11 +1032,11 @@ export function usePersistence() {
       const omenStoreLoad = useOmenStore()
       const savedOmens = saved.omens
       omenStoreLoad.active = savedOmens?.active ? { ...savedOmens.active } : null
-      omenStoreLoad.buffs = (savedOmens?.buffs ?? []).filter((b) => b.expiresAt > Date.now())
+      omenStoreLoad.buffs = (savedOmens?.buffs ?? []).filter((b) => b.expiresAt > gameNow())
       omenStoreLoad.offerCooldownSec = savedOmens?.offerCooldownSec ?? OMEN_FIRST_OFFER_DELAY_SEC
       omenStoreLoad.totalOmensCompleted = savedOmens?.totalOmensCompleted ?? 0
       omenStoreLoad.totalOmensSwift = savedOmens?.totalOmensSwift ?? 0
-      omenStoreLoad.omenNow = Date.now()
+      omenStoreLoad.omenNow = gameNow()
 
       // Providence. Ein Spielstand von vor diesem Feature hat keine — der Lauf
       // steht dann unter keiner Vorsehung, alle Effektgetter geben 1 zurück.
@@ -1041,6 +1061,8 @@ export function usePersistence() {
       if (!universeRunRestored) gameStore.beginUniverseRun()
 
       // ── Offline Progress ─────────────────────────────────────────────────────
+      // Wanduhr: gemessen wird die Abwesenheit des Spielers, nicht der Lauf der
+      // Spielwelt.
       const now = Date.now()
       const savedAt = saved.savedAt as number | undefined
       if (savedAt && typeof savedAt === 'number') {

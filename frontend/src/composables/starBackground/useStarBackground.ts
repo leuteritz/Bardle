@@ -70,6 +70,7 @@ import {
   pickGalaxyTypeConfig,
   svgEl,
 } from '@/composables/starBackground/galaxyRenderers'
+import { gameNow } from '@/utils/game/gameClock'
 
 /** FLIGHT_STREAK_ALPHA as a 2-digit hex suffix for 8-digit-hex canvas colors. */
 const STREAK_ALPHA_HEX = Math.round(FLIGHT_STREAK_ALPHA * 255)
@@ -849,7 +850,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         if (prefersReducedMotion.value) {
           galaxyStore.endRescueRotation()
         } else {
-          const elapsed = Date.now() - galaxyStore.rescueRotationStartTime
+          const elapsed = gameNow() - galaxyStore.rescueRotationStartTime
           const t = Math.min(elapsed / RESCUE_ROTATION_DURATION_MS, 1)
           // sin-Kurve: langsam starten, in der Mitte peak, wieder langsam enden
           const angularDelta =

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { AUGMENTS } from '@/config/economy/augments'
 import type { ModifierEffects, TimedBuff } from '@/types'
 import { logger } from '@/utils/logger'
+import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import {
   AUGMENT_CLICK_HISTORY_SIZE,
   AUGMENT_GRAVITY_FLIP_DURATION_MS,
@@ -25,7 +26,7 @@ export const useAugmentStore = defineStore('augment', {
 
   getters: {
     temporaryCPSMultiplier(): number {
-      const now = Date.now()
+      const now = gameNow()
       return this.activeTimedBuffs
         .filter((b) => b.effectKey === 'cpsMultiplier' && b.expiresAt > now)
         .reduce((mul, b) => mul * b.multiplier, 1)
@@ -97,7 +98,7 @@ export const useAugmentStore = defineStore('augment', {
     },
 
     onTick() {
-      const now = Date.now()
+      const now = gameNow()
       this.activeTimedBuffs = this.activeTimedBuffs.filter((b) => b.expiresAt > now)
     },
 
@@ -111,7 +112,7 @@ export const useAugmentStore = defineStore('augment', {
           augmentId: 'rare_overclock',
           effectKey: 'cpsMultiplier',
           multiplier,
-          expiresAt: Date.now() + duration,
+          expiresAt: gameNow() + duration,
         })
       }
     },
@@ -141,7 +142,7 @@ export const useAugmentStore = defineStore('augment', {
       // Gravity Flip: set visual flag briefly
       if (aug.specialEffect.type === 'gravityFlip') {
         this.gravityFlipActive = true
-        setTimeout(() => {
+        gameTimeout(() => {
           this.gravityFlipActive = false
         }, AUGMENT_GRAVITY_FLIP_DURATION_MS)
       }
@@ -165,7 +166,7 @@ export const useAugmentStore = defineStore('augment', {
       const lastAug = AUGMENTS.find((a) => a.id === lastId)
       if (!lastAug) return
 
-      const expiresAt = Date.now() + duration
+      const expiresAt = gameNow() + duration
       for (const [key, val] of Object.entries(lastAug.effects)) {
         if (typeof val === 'number') {
           this.activeTimedBuffs.push({

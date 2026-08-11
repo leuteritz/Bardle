@@ -178,6 +178,7 @@ import { EMBER_LEFT_STEP_RESCUE_PCT } from '@/config/constants'
 import { emberStyle as emberField } from '@/utils/fx/particleField'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import type { PlanetBossRewardSlot } from '@/types'
+import { gameNow } from '@/utils/game/gameClock'
 
 const bossStore = usePlanetBossStore()
 const battleStore = useBattleStore()
@@ -193,7 +194,7 @@ const CURSE_DESC: Record<string, string> = {
 
 const activeCurse = computed(() => {
   const c = roleBehaviorStore.activeCurse
-  return c && Date.now() < c.activeUntil ? c : null
+  return c && gameNow() < c.activeUntil ? c : null
 })
 
 const curseSecsLeft = computed(() => {
@@ -205,12 +206,12 @@ const teamChampions = computed<string[]>(() => battleStore.selectedChampions.sli
 
 const isShaking = ref(false)
 
-const now = ref(Date.now())
+const now = ref(gameNow())
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   tickInterval = setInterval(() => {
-    now.value = Date.now()
+    now.value = gameNow()
   }, 200)
 })
 onUnmounted(() => {

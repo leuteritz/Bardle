@@ -230,6 +230,7 @@ import type { ChampionRole, StrikerStatCell } from '@/types'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
 import { activeChampionBehindState } from '@/utils/orbit/liveState'
 import { Icon } from '@iconify/vue'
+import { gameNow } from '@/utils/game/gameClock'
 
 const battleStore = useBattleStore()
 const levelStore = useChampionLevelStore()
@@ -277,7 +278,7 @@ const arenaSize = ref({ w: 0, h: 0 })
 let resizeObserver: ResizeObserver | null = null
 
 // Sekundentakt für Down-Countdown (Store-Timestamps sind statisch)
-const nowTick = ref(Date.now())
+const nowTick = ref(gameNow())
 
 const strikers = computed(() =>
   SQUAD_ROLES.flatMap((role) => {
@@ -502,7 +503,7 @@ for (const role of SQUAD_ROLES) {
     () => roleBehaviorStore.roleAttackCooldownMs[role],
     (ms) => {
       const champion = battleStore.headerSlots[SLOT_BY_ROLE[role]]
-      const isDown = roleBehaviorStore.championDownUntil[role] > Date.now()
+      const isDown = roleBehaviorStore.championDownUntil[role] > gameNow()
       if (ms > 0 && ms <= STRIKER_ATTACK_WINDUP_MS && champion && !isDown && hasLiveBoss.value) {
         windupRoles.add(role)
       } else if (ms > STRIKER_ATTACK_WINDUP_MS) {
@@ -554,7 +555,7 @@ for (const role of SQUAD_ROLES) {
     () => roleBehaviorStore.championHitAt[role],
     () => {
       const boss = bossStore.activeBoss
-      const raging = roleBehaviorStore.rageActiveUntil > Date.now()
+      const raging = roleBehaviorStore.rageActiveUntil > gameNow()
       const dmg = Math.round(
         BOSS_CHAMPION_ATTACK_DPS *
           (boss?.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
@@ -631,7 +632,7 @@ let dotInterval: number | null = null
 
 onMounted(() => {
   dotInterval = window.setInterval(() => {
-    nowTick.value = Date.now()
+    nowTick.value = gameNow()
     if (roleBehaviorStore.activeCurse?.type === 'corruption' && hasLiveBoss.value) {
       pushFloat('mid', ROLE_MID_CURSE_DOT_DPS, 'dot')
     }

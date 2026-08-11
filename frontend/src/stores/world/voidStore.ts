@@ -10,6 +10,7 @@ import type {
 import type { ChampionRole } from '@/types'
 import { VOID_RIFTS, getVoidRift, VOID_RIFT_SEVERITIES } from '@/config/world/void'
 import { logger } from '@/utils/logger'
+import { gameNow } from '@/utils/game/gameClock'
 import { rollVoidApproach, voidPositionAt } from '@/utils/orbit/voidPath'
 import type { ContactHit } from '@/utils/orbit/voidContact'
 import {
@@ -168,8 +169,8 @@ export const useVoidStore = defineStore('void', {
     /** Sekunden bis zum nächsten Wesen je Schwere. Vom Tick heruntergezählt. */
     spawnCooldowns: rollInitialCooldowns(),
     /** Reaktive Uhr für die Drossel- und Nachbeben-Getter — ein rohes
-     *  Date.now() in einem Getter würde nie neu ausgewertet werden. */
-    voidNow: Date.now(),
+     *  gameNow() in einem Getter würde nie neu ausgewertet werden. */
+    voidNow: gameNow(),
     /** Unterdrückt das Aufreissen, solange ein deckendes Overlay den Idle-Layer
      *  verbirgt: ein Wesen, das niemand sehen kann, liefe ungesehen durch. */
     spawningBlocked: false,
@@ -334,7 +335,7 @@ export const useVoidStore = defineStore('void', {
      * Nachschub würfeln.
      */
     tick(): void {
-      this.voidNow = Date.now()
+      this.voidNow = gameNow()
 
       const before = this.aftermaths.length
       this.aftermaths = this.aftermaths.filter((a) => a.expiresAt > this.voidNow)
@@ -452,7 +453,7 @@ export const useVoidStore = defineStore('void', {
     /** Faktor, mit dem ein verfluchtes Wesen Schaden nimmt. Sitzt an EINER
      *  Stelle, damit Klick, Orbit-Pool und Berührung ihn alle bekommen. */
     _curseAmp(m: VoidMonster): number {
-      return m.cursedUntil > Date.now() ? VOID_MID_CURSE_AMP : 1
+      return m.cursedUntil > gameNow() ? VOID_MID_CURSE_AMP : 1
     },
 
     /**
@@ -537,7 +538,7 @@ export const useVoidStore = defineStore('void', {
      * durchzureichen — eine Signatur heisst, dass die beiden Takte nicht
      * auseinanderlaufen können.
      */
-    resolveOrbitContacts(now: number = Date.now()): void {
+    resolveOrbitContacts(now: number = gameNow()): void {
       if (this.active.length === 0) return
 
       const sunRadius = usePlanetShopStore().orbitSunRadius
@@ -808,7 +809,7 @@ export const useVoidStore = defineStore('void', {
      * würde deren Verbraucher sechzigmal je Sekunde wecken. Schlägt wirklich
      * etwas ein, stellt `impactMonster` die Uhr selbst.
      */
-    resolveArrivals(now: number = Date.now()): void {
+    resolveArrivals(now: number = gameNow()): void {
       if (this.active.length === 0) return
       const arrived = this.active.filter((m) => now >= m.spawnedAt + m.travelMs)
       for (const m of arrived) this.impactMonster(m)
@@ -830,7 +831,7 @@ export const useVoidStore = defineStore('void', {
           VOID_HP_SEVERITY_MULT[def.severity] *
           (1 + Math.max(0, galaxy - 1) * VOID_HP_PER_GALAXY),
       )
-      const now = Date.now()
+      const now = gameNow()
       const approach = rollVoidApproach()
 
       const monster: VoidMonster = {
@@ -902,11 +903,11 @@ export const useVoidStore = defineStore('void', {
       this.aftermaths = this.aftermaths.filter((a) => a.sourceId !== def.id)
       this.aftermaths.push({
         sourceId: def.id,
-        expiresAt: Date.now() + durationMs,
+        expiresAt: gameNow() + durationMs,
         durationMs,
         effects: { ...def.aftermath },
       })
-      this.voidNow = Date.now()
+      this.voidNow = gameNow()
       this.refreshRates()
 
       this._recordOutcome(monster, def, false, hpLost)
@@ -947,11 +948,11 @@ export const useVoidStore = defineStore('void', {
       this.aftermaths = this.aftermaths.filter((a) => a.sourceId !== def.id)
       this.aftermaths.push({
         sourceId: def.id,
-        expiresAt: Date.now() + def.boon.durationMs,
+        expiresAt: gameNow() + def.boon.durationMs,
         durationMs: def.boon.durationMs,
         effects: { ...def.boon.effects },
       })
-      this.voidNow = Date.now()
+      this.voidNow = gameNow()
       this.refreshRates()
     },
 
@@ -959,10 +960,10 @@ export const useVoidStore = defineStore('void', {
      *  Stelle spielt — auch bei einem erzwungenen Einschlag. */
     _recordOutcome(monster: VoidMonster, def: VoidRiftDef, sealed: boolean, hpLost: number): void {
       const sunRadius = usePlanetShopStore().orbitSunRadius
-      const pos = voidPositionAt(monster, def.sizePx, sunRadius, Date.now())
+      const pos = voidPositionAt(monster, def.sizePx, sunRadius, gameNow())
       this.lastOutcome = {
         seq: this.lastOutcome.seq + 1,
-        at: Date.now(),
+        at: gameNow(),
         defId: def.id,
         sealed,
         x: pos.x,

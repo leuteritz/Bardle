@@ -55,6 +55,7 @@ import type {
 } from '@/types'
 import { ICON_POOLS } from '@/config/ui/iconPools'
 import { logger } from '@/utils/logger'
+import { gameNow } from '@/utils/game/gameClock'
 
 const ROLE_EVENT_TYPE: Record<ChampionRole, GameEventType> = {
   jungle: 'jungle',
@@ -387,11 +388,11 @@ export const useExpeditionStore = defineStore('expedition', {
     },
 
     forceSpawn() {
-      this._spawnOneExpedition(Date.now())
+      this._spawnOneExpedition(gameNow())
     },
 
     checkAvailability() {
-      const now = Date.now()
+      const now = gameNow()
       const expired = this.availableExpeditions.filter((s) => s.availableUntil <= now)
       for (const slot of expired) delete this.draftCrews[slot.id]
       this.availableExpeditions = this.availableExpeditions.filter((s) => s.availableUntil > now)
@@ -470,7 +471,7 @@ export const useExpeditionStore = defineStore('expedition', {
       if (slotIdx === -1) return false
 
       const slot = this.availableExpeditions[slotIdx]
-      if (slot.availableUntil < Date.now()) return false
+      if (slot.availableUntil < gameNow()) return false
 
       if (assignedChampions.length !== slot.requiredRoles.length) return false
 
@@ -480,7 +481,7 @@ export const useExpeditionStore = defineStore('expedition', {
       const successChance = this.chanceBreakdownFor(assignedChampions, slot).total
 
       const expedition: ExpeditionMission = {
-        id: `exp-${slot.id}-${Date.now()}`,
+        id: `exp-${slot.id}-${gameNow()}`,
         configId: slot.id,
         name: slot.name,
         description: '',
@@ -488,7 +489,7 @@ export const useExpeditionStore = defineStore('expedition', {
         requiredRoles: slot.requiredRoles,
         assignedChampions,
         durationSeconds: slot.durationSeconds,
-        startTime: Date.now(),
+        startTime: gameNow(),
         baseReward: slot.baseReward,
         successChance,
         status: 'active',
@@ -530,7 +531,7 @@ export const useExpeditionStore = defineStore('expedition', {
     },
 
     checkExpeditions() {
-      const now = Date.now()
+      const now = gameNow()
       for (const expedition of this.activeExpeditions) {
         if (expedition.status !== 'active') continue
         const elapsed = now - expedition.startTime

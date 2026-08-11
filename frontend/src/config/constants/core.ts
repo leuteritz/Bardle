@@ -110,6 +110,35 @@ export const GAME_TITLE = 'BARDLE'
 // Game Loop
 export const GAME_TICK_INTERVAL_MS = 1000
 
+/**
+ * Zeitraffer. `1` ist das Live-Spiel und muss es bleiben — bei genau diesem Wert
+ * verhält sich Bardle bit-identisch zu einem Build ohne Zeitraffer, weil die
+ * Spieluhr (`utils/game/gameClock.ts`) dann wörtlich `Date.now()` zurückgibt und
+ * der Takt wörtlich `setInterval(tick, 1000)` ist.
+ *
+ * Der Regler existiert fürs Balancing: die längste Uhr im Spiel ist die
+ * Verweildauer der letzten Sonnenphase mit 24 Stunden — ein Durchlauf bis dorthin
+ * dauert in Echtzeit länger als ein Arbeitstag, und ohne Zeitraffer wäre jede
+ * Balance-Zahl geraten statt gemessen.
+ *
+ * Werte unter 1 sind erlaubt und gemeint: eine Zeitlupe macht Frame-Effekte
+ * sichtbar, die bei vollem Tempo vorbeihuschen.
+ */
+export const GAME_SPEED_DEFAULT = 1
+export const GAME_SPEED_MIN = 0.1
+export const GAME_SPEED_MAX = 100
+/** Angebot im Admin-Panel. `1` steht dort separat als „back to live". */
+export const GAME_SPEED_PRESETS = [2, 5, 10, 25, 50, 100]
+
+/**
+ * Untergrenze für den realen Timer-Abstand. Darunter holt der Takt mehrere Ticks
+ * je Feuern nach, statt den Timer schneller zu stellen — Browser klemmen kurze
+ * Intervalle, und ein geklemmter Timer bricht die Invariante, an der der gesamte
+ * Zeitraffer hängt: EIN Tick ist bei jeder Geschwindigkeit genau
+ * `GAME_TICK_INTERVAL_MS` Spieluhr-Millisekunden.
+ */
+export const GAME_TICK_MIN_INTERVAL_MS = 50
+
 // Section navigation
 /** Total number of sections in the game */
 export const TOTAL_SECTIONS = 10

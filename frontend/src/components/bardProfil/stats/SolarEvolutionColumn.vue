@@ -21,6 +21,7 @@ import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import StatsColumnHeader from './StatsColumnHeader.vue'
 import ChronicleSection from './ChronicleSection.vue'
+import { gameNow } from '@/utils/game/gameClock'
 
 /**
  * Middle column of the Bard-Stats deck — the sun's control desk.
@@ -76,7 +77,7 @@ const phaseAstroName = computed(() =>
 /* ── Live clock ───────────────────────────────────────────────────
    One ticker for the whole panel: the dwell readout, its track and the time
    banked on the rail's current step all read from it. */
-const now = ref(Date.now())
+const now = ref(gameNow())
 let ticker: ReturnType<typeof setInterval>
 
 /** Seconds banked on the step the sun is standing on. */
@@ -109,9 +110,9 @@ const sunDiameter = computed(() => {
 })
 
 onMounted(() => {
-  if (!solarStore.phaseEnteredAt) solarStore.phaseEnteredAt = Date.now()
+  if (!solarStore.phaseEnteredAt) solarStore.phaseEnteredAt = gameNow()
   ticker = setInterval(() => {
-    now.value = Date.now()
+    now.value = gameNow()
   }, 1000)
   if (stageEl.value) {
     stageW.value = stageEl.value.clientWidth

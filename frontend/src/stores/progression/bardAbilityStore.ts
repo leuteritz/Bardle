@@ -51,6 +51,7 @@ import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { gameNow } from '@/utils/game/gameClock'
 
 /** Leere Abklingzeit-Tafel — alles sofort bereit. */
 function freshCooldowns(): Record<BardAbilityId, number> {
@@ -75,11 +76,11 @@ export const useBardAbilityStore = defineStore('bardAbility', {
     stasisUntil: 0,
 
     /**
-     * Reaktive Uhr für die Getter. Ein rohes Date.now() in einem Getter würde
+     * Reaktive Uhr für die Getter. Ein rohes gameNow() in einem Getter würde
      * nie neu ausgewertet; die Leiste bekommt ihre feine Auflösung ohnehin aus
      * ihrem eigenen rAF-Lauf und nicht von hier.
      */
-    abilityNow: Date.now(),
+    abilityNow: gameNow(),
 
     /** Zuletzt gewirkt — `seq` zählt hoch, damit zweimal dasselbe erneut meldet. */
     lastCast: { id: '' as BardAbilityId | '', seq: 0, at: 0, summary: '' },
@@ -204,7 +205,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
     /** Hängt an `gameStore.tick()`: Uhr stellen, Effekte auslaufen lassen,
      *  und die Stase weitertragen. */
     tick(): void {
-      this.abilityNow = Date.now()
+      this.abilityNow = gameNow()
 
       const before = this.buffs.length
       this.buffs = this.buffs.filter((b) => b.expiresAt > this.abilityNow)
@@ -273,7 +274,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
         if (this.resonance >= RESONANCE_MAX_STACKS) this.resonanceProgress = 0
       }
 
-      const now = Date.now()
+      const now = gameNow()
       for (const def of BARD_ABILITIES) {
         const readyAt = this.cooldownReadyAt[def.id]
         if (readyAt > now) {
@@ -288,13 +289,13 @@ export const useBardAbilityStore = defineStore('bardAbility', {
     cast(id: BardAbilityId): boolean {
       // Bewusst gegen die echte Uhr und nicht gegen `abilityNow`: die steht bis
       // zu eine Sekunde still, und so lange darf sich kein Druck totlaufen.
-      const now = Date.now()
+      const now = gameNow()
       if (!this.isUnlocked(id)) return false
       if ((this.cooldownReadyAt[id] ?? 0) > now) return false
 
       // Die Uhr VOR dem Wirken stellen, nicht danach. Die _cast*-Methoden
       // setzen sie selbst noch einmal (`_castFate` und `_applyBuff` nehmen ihr
-      // eigenes Date.now()), und ein Nachziehen hier überschriebe deren
+      // eigenes gameNow()), und ein Nachziehen hier überschriebe deren
       // neueren Stand mit dem älteren von oben. Die Differenz ist nur die
       // Laufzeit des Switch, aber sie geht in JEDE Frist ein, die gegen
       // `abilityNow` gemessen wird: die Stase erschien dadurch um eine Sekunde
@@ -396,7 +397,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
 
       this._applyBuff({
         sourceId: 'w',
-        expiresAt: Date.now() + SHRINE_BUFF_DURATION_MS,
+        expiresAt: gameNow() + SHRINE_BUFF_DURATION_MS,
         durationMs: SHRINE_BUFF_DURATION_MS,
         cpsMult: SHRINE_CPS_MULT,
       })
@@ -444,7 +445,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
 
       this._applyBuff({
         sourceId: 'e',
-        expiresAt: Date.now() + JOURNEY_BUFF_DURATION_MS,
+        expiresAt: gameNow() + JOURNEY_BUFF_DURATION_MS,
         durationMs: JOURNEY_BUFF_DURATION_MS,
         cpcMult: JOURNEY_CPC_MULT,
       })
@@ -462,7 +463,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
      * dreifachen Schaden schlägt. Beim Auflösen fällt der Schlussschlag.
      */
     _castFate(): string {
-      const now = Date.now()
+      const now = gameNow()
       this.stasisUntil = now + FATE_STASIS_DURATION_MS
       this.abilityNow = now
 
@@ -494,7 +495,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
       this.lastCast = {
         id: 'r',
         seq: this.lastCast.seq + 1,
-        at: Date.now(),
+        at: gameNow(),
         summary: `Stasis broke for ${formatNumber(damage)}${killNote}`,
       }
       logger.info('BardAbility', 'Tempered Fate finale', { damage, kills })
@@ -505,7 +506,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
     _applyBuff(buff: BardAbilityBuff): void {
       this.buffs = this.buffs.filter((b) => b.sourceId !== buff.sourceId)
       this.buffs.push(buff)
-      this.abilityNow = Date.now()
+      this.abilityNow = gameNow()
       this.refreshRates()
     },
 
@@ -520,7 +521,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
     /** Admin/Test: alle Abklingzeiten sofort zurücksetzen. */
     resetCooldowns(): void {
       this.cooldownReadyAt = freshCooldowns()
-      this.abilityNow = Date.now()
+      this.abilityNow = gameNow()
     },
   },
 })

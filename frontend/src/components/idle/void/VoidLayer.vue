@@ -77,6 +77,7 @@ import {
   VOID_CONTACT_STATE_COLOR,
 } from '@/config/constants'
 import type { VoidContactState, VoidMonster } from '@/types'
+import { gameNow } from '@/utils/game/gameClock'
 
 const voidStore = useVoidStore()
 const planetShop = usePlanetShopStore()
@@ -147,7 +148,7 @@ function draw(): void {
     return
   }
 
-  const now = Date.now()
+  const now = gameNow()
   const sunRadius = planetShop.orbitSunRadius
 
   // Ankunft in DEM Frame abrechnen, in dem sie zu sehen ist. Der Store prüft
@@ -280,7 +281,7 @@ function draw(): void {
  *  treffen, wenn zwei sich überlappen. */
 function monsterAt(x: number, y: number): number | null {
   if (active.value.length === 0) return null
-  const now = Date.now()
+  const now = gameNow()
   const sunRadius = planetShop.orbitSunRadius
   const insets = hudFieldMetrics(headerCenterArc.value ?? null)
   let bestUid: number | null = null

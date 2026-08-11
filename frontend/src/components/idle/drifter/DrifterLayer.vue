@@ -75,6 +75,7 @@ import {
   DRIFTER_BURST_DIST_MIN_FACTOR,
   DRIFTER_BURST_DIST_RANGE_FACTOR,
 } from '@/config/constants'
+import { gameNow } from '@/utils/game/gameClock'
 
 const drifterStore = useDrifterStore()
 const { active, lastCollect } = storeToRefs(drifterStore)
@@ -109,7 +110,7 @@ watch(activeDrifter, (drifter) => {
   }
   // Late arrivals (a save restored mid-flight) get no ping — the marker would
   // point at an edge the drifter has long left.
-  const elapsed = Date.now() - drifter.spawnedAt
+  const elapsed = gameNow() - drifter.spawnedAt
   if (elapsed > DRIFTER_EDGE_PING_LEAD_MS) {
     pingVisible.value = false
     return

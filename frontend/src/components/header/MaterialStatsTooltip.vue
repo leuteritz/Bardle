@@ -33,6 +33,7 @@ import {
   MATERIAL_TOOLTIP_BREAKDOWN_ROWS,
   MATERIAL_SPARK_VIEW_H,
 } from '@/config/constants'
+import { gameNow } from '@/utils/game/gameClock'
 
 const props = defineProps<{ materialId: string }>()
 
@@ -40,10 +41,10 @@ const inventoryStore = useInventoryStore()
 
 /* Live clock — "4m ago" and the per-hour figure would otherwise freeze at the
    value they had when the panel opened. */
-const now = ref(Date.now())
+const now = ref(gameNow())
 let clock: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
-  clock = setInterval(() => (now.value = Date.now()), MATERIAL_TOOLTIP_TICK_MS)
+  clock = setInterval(() => (now.value = gameNow()), MATERIAL_TOOLTIP_TICK_MS)
 })
 onBeforeUnmount(() => {
   if (clock) clearInterval(clock)

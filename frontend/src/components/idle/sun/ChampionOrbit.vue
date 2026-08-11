@@ -196,6 +196,7 @@ import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
 import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
 import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
 import type { ChampionRole } from '@/types'
+import { gameNow, getGameSpeed } from '@/utils/game/gameClock'
 
 interface ChampionRenderPos {
   name: string
@@ -468,7 +469,7 @@ export default defineComponent({
     }
 
     function animate(ts: number) {
-      const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)
+      const dt = (lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)) * getGameSpeed()
       lastTs = ts
 
       const screenCx = window.innerWidth / 2
@@ -617,7 +618,7 @@ export default defineComponent({
         let renderX = ls.x
         let renderY = ls.y
         if (isMain && primaryRole === 'top' && roleBehaviorStore.tankInterceptActive) {
-          const elapsed = Date.now() - roleBehaviorStore.tankInterceptStartMs
+          const elapsed = gameNow() - roleBehaviorStore.tankInterceptStartMs
           const t = Math.min(1, elapsed / CHAMPION_ORBIT_INTERCEPT_DURATION_MS)
           const out = CHAMPION_ORBIT_INTERCEPT_OUT_FRACTION
           const progress = t < out ? t / out : 1 - (t - out) / (1 - out)
@@ -629,7 +630,7 @@ export default defineComponent({
 
         // ── Champion-HP (nur Mains haben einen HP-Pool) ────────────────────
         const hpPool = isMain && primaryRole ? roleBehaviorStore.championHp[primaryRole] : null
-        const nowMs = Date.now()
+        const nowMs = gameNow()
         const downUntil =
           isMain && primaryRole ? roleBehaviorStore.championDownUntil[primaryRole] : 0
         const isDown = downUntil > nowMs

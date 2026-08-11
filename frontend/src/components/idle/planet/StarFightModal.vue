@@ -180,6 +180,7 @@ import StarFightBossHud from '@/components/idle/planet/StarFightBossHud.vue'
 import StarFightLoader from '@/components/idle/planet/StarFightLoader.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
+import { gameNow } from '@/utils/game/gameClock'
 
 // ── Stores ───────────────────────────────────────────────────────────────
 const starGroupStore = useStarGroupStore()
@@ -188,7 +189,7 @@ const roleBehaviorStore = useRoleBehaviorStore()
 
 // ── Reactive values ───────────────────────────────────────────────────────
 const isShaking = ref(false)
-const now = ref(Date.now())
+const now = ref(gameNow())
 const modalPlanetBgRef = ref<HTMLDivElement | null>(null)
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
@@ -299,11 +300,11 @@ watch(
   () => starGroupStore.starFightModalOpen,
   (open) => {
     if (open) {
-      now.value = Date.now()
+      now.value = gameNow()
       // 250 statt 200 ms: treibt Star-/Rage-Ring + Countdowns — 4 Hz reichen
       // visuell, spart aber ein Fünftel der Modal-Re-Renders und Arc-Repaints
       tickInterval ??= setInterval(() => {
-        now.value = Date.now()
+        now.value = gameNow()
       }, STAR_FIGHT_MODAL_TICK_MS)
     } else if (tickInterval) {
       clearInterval(tickInterval)

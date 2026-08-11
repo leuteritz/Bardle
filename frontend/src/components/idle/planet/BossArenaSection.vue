@@ -161,6 +161,7 @@ import {
 import { formatNumber } from '@/config/ui/numberFormat'
 import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
 import { bossSpriteFor } from '@/utils/fx/bossSprite'
+import { gameNow } from '@/utils/game/gameClock'
 
 const CYCLE_MS = BOSS_ARENA_ATTACK_CYCLE_MS
 const IMPACT_OFFSET_MS = Math.round(BOSS_ARENA_IMPACT_OFFSET_FRACTION * CYCLE_MS)
@@ -187,7 +188,7 @@ const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
 const bossHPPercent = computed(() => bossStore.bossHPPercent)
 const teamChampions = computed(() => battleStore.selectedChampions.slice(0, 4))
 
-const now = ref(Date.now())
+const now = ref(gameNow())
 let nowTimer: number
 
 const secondsRemaining = computed(() => {
@@ -402,7 +403,7 @@ onMounted(() => {
   // 250 ms statt 100 ms — das Intervall re-rendert die ganze Arena-Subtree;
   // 10×/s war im Star-Fight-Modal ein spürbarer FPS-Fresser
   nowTimer = window.setInterval(() => {
-    now.value = Date.now()
+    now.value = gameNow()
   }, BOSS_ARENA_TICK_INTERVAL_MS)
   startAttackCycles()
 })

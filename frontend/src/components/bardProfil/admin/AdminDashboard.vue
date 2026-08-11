@@ -5,6 +5,7 @@ import AdminStarPhasePanel from './AdminStarPhasePanel.vue'
 import AdminDrifterPanel from './AdminDrifterPanel.vue'
 import AdminVoidPanel from './AdminVoidPanel.vue'
 import AdminMaxEverythingPanel from './AdminMaxEverythingPanel.vue'
+import AdminGameSpeedPanel from './AdminGameSpeedPanel.vue'
 </script>
 
 <template>
@@ -28,6 +29,9 @@ import AdminMaxEverythingPanel from './AdminMaxEverythingPanel.vue'
       </div>
     </div>
     <div class="admin-dash-right">
+      <!-- Ganz oben, weil er kein einzelnes System stellt, sondern den Takt für
+           ALLE darunter — und weil man ihn beim Messen zuerst sucht. -->
+      <AdminGameSpeedPanel />
       <AdminGalaxyJumpPanel dashboard />
       <AdminStarPhasePanel dashboard class="admin-dash-grow" />
       <!-- Der Endzustand-Knopf steht unten über die volle Spaltenbreite: er tut,

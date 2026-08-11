@@ -188,11 +188,12 @@ import { centerArcSideWidth } from '@/utils/orbit/geometry'
 import StarTimerCenterSeam from './StarTimerCenterSeam.vue'
 import type { StarGroup } from '@/stores/world/starGroupStore'
 import type { StarType } from '@/types'
+import { gameNow } from '@/utils/game/gameClock'
 
 const starGroupStore = useStarGroupStore()
 const planetBossStore = usePlanetBossStore()
 const roleBehaviorStore = useRoleBehaviorStore()
-const now = ref(Date.now())
+const now = ref(gameNow())
 
 /**
  * Getakteter Boss-Snapshot statt reaktivem Zugriff auf `activeBosses`.
@@ -373,7 +374,7 @@ const targetedStarId = shallowRef<string | null>(null)
 function refreshBossSnapshot(): void {
   const prevSnap = bossSnapshot.value
   const next = new Map<string, BossSnapshot>()
-  const nowTs = Date.now()
+  const nowTs = gameNow()
 
   for (const boss of planetBossStore.activeBosses) {
     const ratio = clamp01(boss.maxHP > 0 ? boss.currentHP / boss.maxHP : 0)
@@ -419,7 +420,7 @@ onMounted(() => {
   ticker = setInterval(() => {
     refreshBossSnapshot()
     refreshEclipseSnapshot()
-    now.value = Date.now()
+    now.value = gameNow()
   }, STAR_TIMER_TICK_MS)
 })
 onUnmounted(() => {

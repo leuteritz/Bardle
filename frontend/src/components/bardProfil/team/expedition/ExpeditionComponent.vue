@@ -27,18 +27,19 @@ import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import ExpeditionContractCard from './ExpeditionContractCard.vue'
 import ExpeditionFieldCard from './ExpeditionFieldCard.vue'
 import ExpeditionRoster from './ExpeditionRoster.vue'
+import { gameNow } from '@/utils/game/gameClock'
 
 const expeditionStore = useExpeditionStore()
 const { showToast } = useActionToast()
 
-const now = ref(Date.now())
+const now = ref(gameNow())
 const isDev = import.meta.env.DEV
 const collectFlashing = ref(false)
 
 let timer: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
   timer = setInterval(() => {
-    now.value = Date.now()
+    now.value = gameNow()
   }, 1000)
 })
 onUnmounted(() => {

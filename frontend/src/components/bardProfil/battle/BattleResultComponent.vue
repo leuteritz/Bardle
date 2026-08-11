@@ -73,6 +73,7 @@ import {
   BATTLE_TAB_LOADER_REPEAT_MIN_MS,
   BATTLE_TAB_LANDING_LOADER_MIN_MS,
 } from '@/config/constants'
+import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 
 export default defineComponent({
   name: 'BattleResultComponent',
@@ -112,15 +113,15 @@ export default defineComponent({
 
     async function runUniverseAnimation(): Promise<void> {
       isUniverseAnimating.value = true
-      const t0 = Date.now()
+      const t0 = gameNow()
       await universeAnim.value?.trigger()
       // Wird das Bard-Modal während der Suchphase geschlossen, unmountet die
       // PlanetSearchComponent und resolved ihr Animations-Promise sofort
       // (stopAnimation). Die Suchphase ist aber Teil des Spielablaufs, nicht
       // nur Deko: restliche Dauer real abwarten, sonst springt der Gamestatus
       // direkt ins Battle. Im Normalfall (Animation komplett) ist remaining ≤ 0.
-      const remaining = PLANET_SEARCH_ANIM_DURATION_MS - (Date.now() - t0)
-      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining))
+      const remaining = PLANET_SEARCH_ANIM_DURATION_MS - (gameNow() - t0)
+      if (remaining > 0) await new Promise((r) => gameTimeout(() => r(null), remaining))
       isUniverseAnimating.value = false
     }
 
@@ -170,13 +171,13 @@ export default defineComponent({
       }
       const remaining =
         PLANET_SEARCH_ANIM_DURATION_MS -
-        (Date.now() - battleStore.searchingPhaseStartTimestamp)
+        (gameNow() - battleStore.searchingPhaseStartTimestamp)
       if (remaining < UNIVERSE_ANIM_MIN_REMAINING_MS) return
       isUniverseAnimating.value = true
       void universeAnim.value?.trigger()
-      const deadline = Date.now() + remaining
+      const deadline = gameNow() + remaining
       while (
-        Date.now() < deadline &&
+        gameNow() < deadline &&
         battleStore.battlePhaseStartTimestamp === 0 &&
         !battleStore.showAutoBattleResult
       ) {
@@ -302,7 +303,7 @@ export default defineComponent({
         return
       }
       isStarting.value = true
-      battleStore.searchingPhaseStartTimestamp = Date.now()
+      battleStore.searchingPhaseStartTimestamp = gameNow()
       await runUniverseAnimation()
       await battleStore.initializePersistentAutoBattle()
       // The loading screen takes over from here; releasing isStarting first

@@ -8,6 +8,7 @@ import type {
 } from '@/types'
 import { DRIFTERS, getDrifter } from '@/config/world/drifters'
 import { logger } from '@/utils/logger'
+import { gameNow } from '@/utils/game/gameClock'
 import {
   DRIFTER_SPAWN_INTERVAL_SEC,
   DRIFTER_FIRST_DELAY_SEC,
@@ -104,9 +105,9 @@ export const useDrifterStore = defineStore('drifter', {
     buffs: [] as DrifterActiveBuff[],
     /** Seconds until each rarity's next appearance. Counted down by the tick. */
     spawnCooldowns: rollInitialCooldowns(),
-    /** Reactive clock for the buff getters — a raw Date.now() inside a getter
+    /** Reactive clock for the buff getters — a raw gameNow() inside a getter
      *  would never re-evaluate. Advanced once per second by the game tick. */
-    drifterNow: Date.now(),
+    drifterNow: gameNow(),
     /** Suppresses spawning while an opaque overlay covers the idle layer: a
      *  drifter nobody can see would just expire unnoticed. Set by the layer. */
     spawningBlocked: false,
@@ -168,7 +169,7 @@ export const useDrifterStore = defineStore('drifter', {
     /** Called once per second from gameStore.tick(): advance the clock, expire
      *  finished buffs and roll for the next spawn. */
     tick(): void {
-      this.drifterNow = Date.now()
+      this.drifterNow = gameNow()
 
       const before = this.buffs.length
       this.buffs = this.buffs.filter((b) => b.expiresAt > this.drifterNow)
@@ -217,7 +218,7 @@ export const useDrifterStore = defineStore('drifter', {
       const last = gone[gone.length - 1]
       this.lastExpired = {
         defId: last.defId,
-        at: Date.now(),
+        at: gameNow(),
         seq: this.lastExpired.seq + 1,
       }
     },
@@ -233,7 +234,7 @@ export const useDrifterStore = defineStore('drifter', {
         defId: def.id,
         routeIndex: Math.floor(Math.random() * DRIFTER_ROUTES.length),
         mirrored: Math.random() < 0.5,
-        spawnedAt: Date.now(),
+        spawnedAt: gameNow(),
         flightMs: def.flightMs,
         hitsLanded: 0,
       }
@@ -264,7 +265,7 @@ export const useDrifterStore = defineStore('drifter', {
       this._applyReward(def)
       this.lastCollect = {
         defId: def.id,
-        at: Date.now(),
+        at: gameNow(),
         x,
         y,
         seq: this.lastCollect.seq + 1,
@@ -366,7 +367,7 @@ export const useDrifterStore = defineStore('drifter', {
 
       this.lastOrbitStrike = {
         seq: this.lastOrbitStrike.seq + 1,
-        at: Date.now(),
+        at: gameNow(),
         defId: def.id,
         planetsHit: targets.length,
         damage,
@@ -395,11 +396,11 @@ export const useDrifterStore = defineStore('drifter', {
       )
       this.buffs.push({
         sourceId: def.id,
-        expiresAt: Date.now() + durationMs,
+        expiresAt: gameNow() + durationMs,
         durationMs,
         effects: { ...def.buff.effects },
       })
-      this.drifterNow = Date.now()
+      this.drifterNow = gameNow()
       this.refreshRates()
     },
 

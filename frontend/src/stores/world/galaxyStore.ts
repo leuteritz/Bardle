@@ -7,6 +7,7 @@ import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { unlockedChampionTierCount } from '@/config/champions/championTiers'
 import type { ChampionRole } from '@/types'
 import { clampPercent } from '@/utils/orbit/geometry'
+import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import {
   CHAMPION_TRAVEL_BASE_MS,
   CHAMPION_TRAVEL_SCALE_MS,
@@ -287,7 +288,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       if (this.championTravelState !== 'traveling') return 0
       const dur = this.effectiveTravelDurationMs
       if (dur <= 0 || this.championTravelStartTime === 0) return 0
-      const elapsed = Date.now() - this.championTravelStartTime
+      const elapsed = gameNow() - this.championTravelStartTime
       return clampPercent((elapsed / dur) * 100)
     },
 
@@ -295,7 +296,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       void this._travelTickMs
       if (this.championTravelState !== 'traveling') return 0
       if (this.championTravelStartTime === 0) return this.effectiveTravelDurationMs
-      const elapsed = Date.now() - this.championTravelStartTime
+      const elapsed = gameNow() - this.championTravelStartTime
       return Math.max(0, this.effectiveTravelDurationMs - elapsed)
     },
 
@@ -329,7 +330,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         CHAMPION_TRAVEL_BASE_MS + (this.currentGalaxy - 1) * CHAMPION_TRAVEL_SCALE_MS
       this.championTravelBaseDurationMs = baseDuration
       this.championTravelState = 'traveling'
-      this.championTravelStartTime = Date.now()
+      this.championTravelStartTime = gameNow()
       this.championTravelDurationMs = Math.round(
         baseDuration / useSolarUpgradeStore().flightSpeedMultiplier,
       )
@@ -341,12 +342,12 @@ export const useGalaxyStore = defineStore('galaxy', {
       // end an expired rotation here so the departure never stalls.
       if (
         this.rescueRotationPhase === 'rotating' &&
-        Date.now() - this.rescueRotationStartTime >= RESCUE_ROTATION_DURATION_MS
+        gameNow() - this.rescueRotationStartTime >= RESCUE_ROTATION_DURATION_MS
       ) {
         this.endRescueRotation()
       }
       if (this.championTravelState !== 'traveling') return
-      const now = Date.now()
+      const now = gameNow()
       this._travelTickMs = now
       if (this.championTravelStartTime === 0) {
         this.championTravelStartTime = now
@@ -361,14 +362,14 @@ export const useGalaxyStore = defineStore('galaxy', {
           this.initBossWave()
           this.pendingGalaxyBoss = true
           this.galaxyBossJustSpawned = true
-          setTimeout(() => {
+          gameTimeout(() => {
             this.galaxyBossJustSpawned = false
           }, GALAXY_BOSS_SPAWN_ANIM_MS)
           return
         }
         this.championTravelState = 'champion_available'
         this.championJustArrived = true
-        setTimeout(() => {
+        gameTimeout(() => {
           this.championJustArrived = false
         }, GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS)
       }
@@ -401,7 +402,7 @@ export const useGalaxyStore = defineStore('galaxy', {
 
     startRescueRotation() {
       this.rescueRotationPhase = 'rotating'
-      this.rescueRotationStartTime = Date.now()
+      this.rescueRotationStartTime = gameNow()
       this.rescueRotationDirection = Math.random() < 0.5 ? 1 : -1
       this.rescueBurstAngleDeg = Math.random() * 360
     },
@@ -441,7 +442,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.attemptResults.push('failed')
       this.totalStarsLost++
       this.starJustFailed = true
-      setTimeout(() => {
+      gameTimeout(() => {
         this.starJustFailed = false
       }, GALAXY_STAR_FAILED_SIGNAL_MS)
       // Depart straight from the lost star — no rescue rotation (that
@@ -475,6 +476,9 @@ export const useGalaxyStore = defineStore('galaxy', {
         themeIndex: this.currentThemeIndex,
         attemptResults: [...this.attemptResults],
         durationSeconds: Math.max(0, inGameTime - this.galaxyStartedAtInGameTime),
+        // Wanduhr: Chronikstempel, wird im Galaxy-Archiv als Datum gelesen und
+        // nie gegen eine Frist geprüft.
+        // eslint-disable-next-line no-restricted-syntax
         completedAt: Date.now(),
       })
     },
@@ -514,8 +518,8 @@ export const useGalaxyStore = defineStore('galaxy', {
         // isGalaxyTransitioning guard).
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
           this.setGalaxyTransitioning(true)
-          window.setTimeout(() => this.commitAdvance(), GALAXY_TRANS_WARP_MS)
-          window.setTimeout(
+          gameTimeout(() => this.commitAdvance(), GALAXY_TRANS_WARP_MS)
+          gameTimeout(
             () => this.setGalaxyTransitioning(false),
             GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS,
           )

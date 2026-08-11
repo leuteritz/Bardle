@@ -245,6 +245,7 @@ import {
   BATTERY_PLANET_VIEWPORT_H_FRACTION,
   BATTERY_RING_SEAM_PX,
 } from '@/config/constants'
+import { gameNow } from '@/utils/game/gameClock'
 
 const bossStore = usePlanetBossStore()
 const planetShopStore = usePlanetShopStore()
@@ -476,7 +477,7 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 const TWO_PI = Math.PI * 2
 // Rand um den Ring für Glüh-Spitze (r 3) + halbe Strichstärke (1.5)
 const RING_CANVAS_PAD = 5
-let lastVolleyMs = Date.now()
+let lastVolleyMs = gameNow()
 let ringAnimFrame = 0
 
 function setRingCanvas(slotId: string, el: unknown) {
@@ -513,7 +514,7 @@ function drawRings() {
   const side = Math.round(r + RING_CANVAS_PAD) * 2
   const progress = reducedMotion
     ? 1
-    : Math.min(1, (Date.now() - lastVolleyMs) / GAME_TICK_INTERVAL_MS)
+    : Math.min(1, (gameNow() - lastVolleyMs) / GAME_TICK_INTERVAL_MS)
 
   for (const [slotId, cv] of ringCanvases) {
     // Backing-Store folgt der Viewport-Höhe (7vh) — billiger Check pro Frame
@@ -608,7 +609,7 @@ function later(ms: number, fn: () => void) {
 
 function fireVolley() {
   if (!bossAlive.value || turretEntries.value.length === 0) return
-  lastVolleyMs = Date.now()
+  lastVolleyMs = gameNow()
 
   volleyFlash.value = false
   requestAnimationFrame(() => {

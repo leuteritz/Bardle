@@ -168,6 +168,9 @@ export const useCombatStore = defineStore('combat', {
       const activeBoss = bossStore.activeBoss
 
       // Clean up expired damage floats
+      // Wanduhr: reine Anzeige, an eine CSS-Animation gebunden (wie
+      // playerStore.damageFloats).
+      // eslint-disable-next-line no-restricted-syntax
       const now = Date.now()
       this.damageFloats = this.damageFloats.filter((f) => f.expiresAt > now)
 

@@ -16,6 +16,7 @@ import {
   ABILITY_RING_CIRCUMFERENCE,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
+import { gameNow } from '@/utils/game/gameClock'
 
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -23,13 +24,13 @@ const uiStore = useUiStore()
 const { headerSlots } = storeToRefs(battleStore)
 const { roleAbilities } = useRoleAbilityStates()
 
-// Ticker für den Revive-Countdown: championDownUntil ist reaktiv, Date.now() nicht.
-const downNow = ref(Date.now())
+// Ticker für den Revive-Countdown: championDownUntil ist reaktiv, gameNow() nicht.
+const downNow = ref(gameNow())
 let downTicker = 0
 
 onMounted(() => {
   downTicker = window.setInterval(() => {
-    downNow.value = Date.now()
+    downNow.value = gameNow()
   }, HUD_COUNTDOWN_TICK_MS)
 })
 onUnmounted(() => window.clearInterval(downTicker))

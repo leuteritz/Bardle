@@ -457,6 +457,7 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import KeyCap from '@/components/keybinds/KeyCap.vue'
 import PauseStarCard from './PauseStarCard.vue'
 import PauseVoidCard from './PauseVoidCard.vue'
+import { gameNow } from '@/utils/game/gameClock'
 
 // Die Pause hat zwei Quellen — Fenster ohne Fokus und das Kürzel des Spielers.
 // Beide laufen in useGamePause zusammen; dieses Overlay kennt nur noch das
@@ -653,7 +654,7 @@ interface PauseResourceStar {
 const activeResourceStars = shallowRef<PauseResourceStar[]>([])
 
 function buildResourceStars(): PauseResourceStar[] {
-  const now = Date.now()
+  const now = gameNow()
   const bosses = planetBossStore.activeBosses
   const bossTimer = (planetId: string) => bosses.find((b) => b.planetId === planetId)
 
@@ -749,7 +750,7 @@ function buildVoidThreat(): PauseVoidThreat | null {
   if (!def) return null
   const endsAt = lead.spawnedAt + lead.travelMs
   return {
-    secs: Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)),
+    secs: Math.max(0, Math.ceil((endsAt - gameNow()) / 1000)),
     endsAt,
     durationMs: lead.travelMs,
     name: def.name,

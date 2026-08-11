@@ -25,16 +25,17 @@ import {
   STAR_FIGHT_TIMER_WARNING_S,
   STAR_FIGHT_TIMER_CRITICAL_S,
 } from '@/config/constants'
+import { gameNow } from '@/utils/game/gameClock'
 
 const uiStore = useUiStore()
 const starGroupStore = useStarGroupStore()
 
-const now = ref(Date.now())
+const now = ref(gameNow())
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   tickInterval = setInterval(() => {
-    now.value = Date.now()
+    now.value = gameNow()
   }, BATTLE_RETURN_TICK_MS)
 })
 onUnmounted(() => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import { GAME_SPEED_DEFAULT } from '@/config/constants'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyTheme } from '@/composables/ui/useGalaxyTheme'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
@@ -41,6 +42,9 @@ import KeybindPanel from '@/components/keybinds/KeybindPanel.vue'
 const gameStore = useGameStore()
 useGalaxyTheme()
 useSpaceMusic()
+
+/** Der Spiegel im Store ist reaktiv, die Uhr selbst nicht. */
+const isTimeWarped = computed(() => gameStore.gameSpeed !== GAME_SPEED_DEFAULT)
 
 const { isRenderingPaused, isIdleRenderingPaused } = useRenderingPaused()
 
@@ -139,6 +143,17 @@ watch(
     <KeybindHud />
     <KeybindPanel />
 
+    <!-- Zeitraffer-Warnung. Sie ist die wichtigere Hälfte des Reglers: ein Lauf
+         bei 10× sieht auf einem Screenshot exakt aus wie ein Live-Lauf, und eine
+         Balance-Messung, die versehentlich beschleunigt lief, ist wertlos.
+         Der Rahmen liegt am Bildrand statt in der Bühne — dort verdeckt er
+         nichts Spielbares (siehe „HUD-Freiraum"), ist aber immer im Blick. -->
+    <div v-if="isTimeWarped" class="warp-frame" aria-hidden="true"></div>
+    <div v-if="isTimeWarped" class="warp-pill">
+      <Icon icon="game-icons:extra-time" width="15" height="15" />
+      {{ gameStore.gameSpeed }}× TIME WARP — NOT LIVE
+    </div>
+
     <!-- Signatur und FPS-Zähler sitzen als ein Paar unten links über der
          Minimap — die obere linke Ecke gehört der Auto-Pick-Meldung. -->
     <div class="credit-row">
@@ -236,6 +251,42 @@ watch(
   .credit-row {
     font-size: 1.5rem;
   }
+}
+
+/* ── Zeitraffer-Warnung ───────────────────────────────────────────────────
+   Der Rahmen sitzt AUF der Bildkante und damit außerhalb des freien Feldes —
+   er verdeckt nichts Spielbares, ist aber aus jedem Blickwinkel da. Statisch,
+   ohne Animation: er steht minutenlang, und ein pulsender Schatten über die
+   ganze Bildfläche wäre eine Neurasterung pro Frame. */
+.warp-frame {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99998;
+  box-shadow: inset 0 0 0 3px #cc6050;
+}
+
+/* Unten links über der Signatur — dieselbe Ecke, die das Spiel schon für
+   Chrome nutzt. Über dem Minimap-Panel, damit sie nichts überdeckt. */
+.warp-pill {
+  position: fixed;
+  bottom: calc(var(--hud-panel-size, 330px) + 30px);
+  left: 0.75rem;
+  z-index: 99999;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid #cc6050;
+  background: #1e1008;
+  color: #e89080;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .galaxy-tint-overlay {

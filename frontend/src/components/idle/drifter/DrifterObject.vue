@@ -58,6 +58,7 @@ import {
   DRIFTER_TRAIL_WIDTH_MAX_PX,
   DRIFTER_TRAIL_WIDTH_MIN_PX,
 } from '@/config/constants'
+import { gameNow } from '@/utils/game/gameClock'
 
 const props = defineProps<{
   drifter: ActiveDrifter
@@ -145,7 +146,7 @@ function renderFrame(): void {
     return
   }
 
-  const t = (Date.now() - props.drifter.spawnedAt) / props.drifter.flightMs
+  const t = (gameNow() - props.drifter.spawnedAt) / props.drifter.flightMs
   const field = cachedField
   const point = drifterPointAt(
     props.drifter.routeIndex,

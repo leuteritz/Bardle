@@ -14,6 +14,7 @@ import { useVoidStore } from '@/stores/world/voidStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { gameNow } from '@/utils/game/gameClock'
 
 export const useInventoryStore = defineStore('inventory', {
   state: () => ({
@@ -52,25 +53,25 @@ export const useInventoryStore = defineStore('inventory', {
 
     /** materialId → MATERIAL_RATE_BUCKET_COUNT minute buckets. */
     rateBuckets: {} as Record<string, number[]>,
-    /** Minute index (Date.now() / bucket size) the last bucket represents. */
-    rateEpochMinute: Math.floor(Date.now() / MATERIAL_RATE_BUCKET_MS),
+    /** Minute index (gameNow() / bucket size) the last bucket represents. */
+    rateEpochMinute: Math.floor(gameNow() / MATERIAL_RATE_BUCKET_MS),
     /** When measuring started — the per-hour figure divides by this, capped
         to the window, so a two-minute-old session is not extrapolated wildly. */
-    rateStartedAt: Date.now(),
+    rateStartedAt: gameNow(),
   }),
 
   getters: {
     /** Milliseconds of intake actually measured, capped to the window length. */
     rateWindowMs(): number {
       const windowMs = MATERIAL_RATE_BUCKET_COUNT * MATERIAL_RATE_BUCKET_MS
-      return Math.min(Date.now() - this.rateStartedAt, windowMs)
+      return Math.min(gameNow() - this.rateStartedAt, windowMs)
     },
   },
 
   actions: {
     addMaterial(materialId: string, source: MaterialSourceId = 'drop', qty = 1): void {
       if (qty <= 0) return
-      const now = Date.now()
+      const now = gameNow()
 
       this.collectedMaterials[materialId] = (this.collectedMaterials[materialId] ?? 0) + qty
       this.totalMaterialsCollected += qty
@@ -108,7 +109,7 @@ export const useInventoryStore = defineStore('inventory', {
      * Slides the minute buckets forward to `now`. Idempotent within a minute,
      * so calling it from the game tick AND from `addMaterial` is free.
      */
-    advanceRateWindow(now = Date.now()): void {
+    advanceRateWindow(now = gameNow()): void {
       const minute = Math.floor(now / MATERIAL_RATE_BUCKET_MS)
       const steps = minute - this.rateEpochMinute
       if (steps <= 0) return
@@ -128,8 +129,8 @@ export const useInventoryStore = defineStore('inventory', {
         gap would otherwise read as an hour of zero intake. */
     resetRateWindow(): void {
       this.rateBuckets = {}
-      this.rateEpochMinute = Math.floor(Date.now() / MATERIAL_RATE_BUCKET_MS)
-      this.rateStartedAt = Date.now()
+      this.rateEpochMinute = Math.floor(gameNow() / MATERIAL_RATE_BUCKET_MS)
+      this.rateStartedAt = gameNow()
     },
 
     tryDropSpecificMaterial(

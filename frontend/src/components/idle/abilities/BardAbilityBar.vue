@@ -129,6 +129,7 @@ import {
   RESONANCE_MAX_STACKS,
 } from '@/config/constants'
 import type { BardAbilityId, KeybindId } from '@/types'
+import { gameNow } from '@/utils/game/gameClock'
 
 const uiStore = useUiStore()
 const store = useBardAbilityStore()
@@ -302,7 +303,7 @@ const slots = computed(() =>
 )
 
 function paint(): boolean {
-  const now = Date.now()
+  const now = gameNow()
   let busy = false
 
   for (const slot of slots.value) {
@@ -375,7 +376,7 @@ function castAbility(id: BardAbilityId): void {
     void els.tile.offsetWidth
     els.tile.classList.add('ab-tile--cast')
   }
-  flashUntil = Date.now() + ABILITY_CAST_FLASH_MS
+  flashUntil = gameNow() + ABILITY_CAST_FLASH_MS
   ensureLoop()
 }
 
@@ -436,7 +437,7 @@ function paintTipStatus(): void {
   const id = hoveredId.value
   if (!el || !id || id === 'passive') return
 
-  const leftMs = Math.max(0, (store.cooldownReadyAt[id] ?? 0) - Date.now())
+  const leftMs = Math.max(0, (store.cooldownReadyAt[id] ?? 0) - gameNow())
   const text = leftMs > 0 ? `${cooldownText(leftMs)}s` : 'Ready'
   if (text === tipStatusText) return
   el.textContent = text
