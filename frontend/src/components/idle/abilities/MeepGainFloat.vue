@@ -53,21 +53,46 @@ defineProps<{
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 7px;
+  /* Relativ, nicht fest: die negativen Margins der Bildbox zehren einen Teil
+     der Lücke auf, und ein fester Wert wäre auf 4K wieder ein Kleben. */
+  gap: calc(var(--ab-passive-size, 72px) * 0.13);
+  /* `max-content` ist Pflicht, nicht Geschmack: ein absolut gesetztes Element
+     mit `left: 50%` bekommt als Shrink-to-fit-Breite nur, was RECHTS davon im
+     Containing Block liegt — bei einer 72px-Kachel also 36px. Ohne diese Zeile
+     wurde der Float auf 48px gequetscht, seine Kinder liefen nach rechts über,
+     und `translateX(-50%)` zog um die halbe FALSCHE Breite zurück. Ergebnis
+     war eine Gruppe, die rund 12px rechts der Kachelmitte stand. */
+  width: max-content;
   white-space: nowrap;
   pointer-events: none;
+  /* Auch als Basis-Transform, nicht nur in den Keyframes — sonst steht der
+     Float bei jedem `animation: none` (reduzierte Bewegung ist davon nicht
+     betroffen, aber jede Messung und jedes Debugging) um seine halbe Breite
+     daneben. */
+  transform: translateX(-50%);
   animation: mg-rise var(--mg-float-ms, 1400ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* Halbe Kachelhöhe: 36px auf Full HD, 44px ab 2400 und 54px ab 3400 — die
-   Breakpoints der Leiste tragen das von selbst, weil sie `--ab-passive-size`
-   setzen. Die 128er-Stufe des Motivs hält dabei auch auf 4K noch echtes
-   Downsampling ein (siehe MEEP_ART_IMAGE_SM). */
+/* Die Höhe der BOX; die Breite folgt dem Seitenverhältnis. Das ergibt 45px auf
+   Full HD, 55px ab 2400 und 67px ab 3400 — die Breakpoints der Leiste tragen
+   das von selbst, weil sie `--ab-passive-size` setzen.
+
+   Die Box ist höher als die halbe Kachel, weil das Sprite oben und unten
+   durchsichtigen Rand trägt (gemessen 11,7 % und 12,5 %): sichtbar bleiben
+   damit rund 34px, also genau die Höhe der Ziffern daneben. */
 .mg-art {
-  width: calc(var(--ab-passive-size, 72px) * 0.5);
-  height: calc(var(--ab-passive-size, 72px) * 0.5);
+  --mg-art-h: calc(var(--ab-passive-size, 72px) * 0.62);
+  height: var(--mg-art-h);
+  width: auto;
   object-fit: contain;
   image-rendering: high-quality;
+  /* Denselben Rand trägt das Sprite auch seitlich — gemessen 18,8 % links und
+     21,2 % rechts der 85×128-Stufe. Ohne diese Korrektur steht neben der Figur
+     Luft, die in der Gruppe als Versatz nach rechts liest; die Box umschließt
+     so nur noch die Figur selbst. Faktor = Rand-Anteil × Seitenverhältnis
+     (85/128 = 0,664). */
+  margin-left: calc(var(--mg-art-h) * -0.125);
+  margin-right: calc(var(--mg-art-h) * -0.141);
   /* Statisch — die Animation fasst nur `transform` und `opacity` an, das
      Element wird einmal gerastert und danach nur geblendet
      (Performance-Regel 2). */
