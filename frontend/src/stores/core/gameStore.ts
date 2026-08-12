@@ -1160,7 +1160,32 @@ export const useGameStore = defineStore('game', {
      * werden müsste.
      */
     pendingMeeps(): number {
-      return Math.floor(MEEP_RUN_FACTOR * Math.sqrt(this.chimesForNextUniverse / MEEP_RUN_BASE))
+      return Math.floor(this.exactPendingMeeps)
+    },
+
+    /**
+     * Die Chime-Anforderung je Meep — früher `meepChimeRequirement`, heute die
+     * Bezugsgröße der Wurzelformel.
+     *
+     * Drei Quellen SENKEN sie, alle mit Faktoren unter 1: der Baumknoten
+     * `meepCostMult`, das Augment `meepCostMultiplier` (über `activeModifier`,
+     * also auch die Vorsehung) und die dritte Bard-Fähigkeit. Sie greifen
+     * bewusst an der BASIS und nicht am Ergebnis: die Wurzel übersetzt eine
+     * halbierte Anforderung damit in das 1,41-Fache an Meeps statt ins
+     * Doppelte — dieselbe Dämpfung, die auch längere Läufe erfahren.
+     */
+    meepChimeRequirement(): number {
+      const modifierMult = this.activeModifier.meepCostMultiplier ?? 1
+      const treeMult = useMeepTreeStore().fx.meepCostMult
+      return Math.max(
+        1,
+        MEEP_RUN_BASE * this.abilityMeepCostMultiplier * modifierMult * treeMult,
+      )
+    },
+
+    /** Ungerundete Ausbeute — eine Quelle für Zahl, Füllstand und Restweg. */
+    exactPendingMeeps(): number {
+      return MEEP_RUN_FACTOR * Math.sqrt(this.chimesForNextUniverse / this.meepChimeRequirement)
     },
 
     /**
@@ -1170,14 +1195,14 @@ export const useGameStore = defineStore('game', {
      * CLAUDE.md). Der Weg ist jetzt der Nachkommaanteil der Wurzelformel.
      */
     pendingMeepFill(): number {
-      const exact = MEEP_RUN_FACTOR * Math.sqrt(this.chimesForNextUniverse / MEEP_RUN_BASE)
+      const exact = this.exactPendingMeeps
       return Math.min(1, Math.max(0, exact - Math.floor(exact)))
     },
 
     /** Chimes, die dem nächsten anstehenden Meep noch fehlen. */
     chimesToNextMeep(): number {
       const next = this.pendingMeeps + 1
-      const needed = Math.pow(next / MEEP_RUN_FACTOR, 2) * MEEP_RUN_BASE
+      const needed = Math.pow(next / MEEP_RUN_FACTOR, 2) * this.meepChimeRequirement
       return Math.max(0, Math.ceil(needed - this.chimesForNextUniverse))
     },
     dmgPerSecond(): number {

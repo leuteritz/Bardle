@@ -62,14 +62,30 @@ export const LEVEL_SCALING_CAP_LEVEL = 100
  * Chime-Ertrag rund Faktor 10, nach der Wurzel nur noch 3 — die Zahl bleibt
  * über das ganze Spiel lesbar.
  *
- * **Eichung.** Aus dem 76-Stunden-Referenzlauf: erster Aufbruch bei ~1,5e11
- * Chimes ergibt ~20 Meeps, ein später Drei-Stunden-Lauf bei ~1e12 ergibt ~51.
- * Über die dort gemessenen 24 Prestiges summiert das auf ~840 gegen 894 für
- * den vollen Baum — er ist also ungefähr am Ende des Gerüsts fertig. Das ist
- * eine Vorhersage aus der Messkurve, kein Messwert; sie wird nachgemessen.
+ * **Eichung, gemessen.** Ein 76-Stunden-Referenzlauf mit 24 Aufbrüchen
+ * schüttete 4482 Meeps aus — der erste Aufbruch rund 16, späte je 130 bis 290.
+ * Die Baumkosten sind gegen genau diese Zahl gestellt (`MEEP_TREE_TOTAL_COST`,
+ * 4029), denn der Baum ist die einzige Senke: er überlebt jetzt jedes
+ * Prestige. Eine erste Fassung schoss hier vorbei — 894 Kosten gegen 4482
+ * Ertrag hieß, dass der Baum nach 28 Stunden stand und der Prestige-Lohn
+ * danach 48 Stunden lang kein Ziel mehr hatte.
+ *
+ * Wer an einer der beiden Zahlen dreht, verschiebt die andere mit: die
+ * Ausbeute wächst mit der WURZEL der Laufchimes, die Baumkosten sind eine
+ * feste Summe. `__tests__/config/meepEconomy.spec.ts` hält beide zusammen.
  */
 export const MEEP_RUN_BASE = 1e9
 export const MEEP_RUN_FACTOR = 1.6
+
+/**
+ * Was der ganze Meep-Baum kostet — die Summe seiner 25 Knoten.
+ *
+ * Steht hier und nicht nur im Katalog, weil sie eine BALANCE-Größe ist: sie
+ * gehört neben die Ausbeute, gegen die sie geeicht wurde, nicht zwischen die
+ * Icons und Beschreibungen der Knoten. Eine Spec prüft, dass der Katalog
+ * dieselbe Summe ergibt.
+ */
+export const MEEP_TREE_TOTAL_COST = 4029
 
 // Abilities
 export const MAX_ABILITY_LEVEL = 5
