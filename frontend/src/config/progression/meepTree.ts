@@ -15,6 +15,13 @@
  * deshalb bei 6420: nicht am vollen Zufluss ausgerichtet, weil ein langsamer
  * wachsender Baum auch später verbilligt und der Zufluss damit mitfällt.
  *
+ * Nachgemessen mit dieser Summe: der erste Knoten fällt nach 3,2 Stunden (noch
+ * vor dem ersten Aufbruch, aus Drifter-Funden), der zehnte nach 9,8, der
+ * zwanzigste nach 42 und der letzte nach 68,4 von 76 Stunden; am Ende bleiben
+ * 1374 Meeps übrig statt 4336. Die Kurve ist vorn schnell und hinten gestreckt
+ * — gewollt, denn die frühen Knoten sind das, was den Aufbruch überhaupt
+ * lohnend macht.
+ *
  * Wer die Ausbeute ändert (`MEEP_RUN_FACTOR`, `MEEP_RUN_BASE`) oder eine
  * Stufe hier anfasst, verschiebt diese Balance: eine Spec bindet die Summe an
  * `MEEP_TREE_TOTAL_COST`, damit die beiden Zahlen nicht stillschweigend

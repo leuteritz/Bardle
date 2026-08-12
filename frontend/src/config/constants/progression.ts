@@ -62,13 +62,18 @@ export const LEVEL_SCALING_CAP_LEVEL = 100
  * Chime-Ertrag rund Faktor 10, nach der Wurzel nur noch 3 — die Zahl bleibt
  * über das ganze Spiel lesbar.
  *
- * **Eichung, gemessen.** Ein 76-Stunden-Referenzlauf mit 24 Aufbrüchen
- * schüttete 4482 Meeps aus — der erste Aufbruch rund 16, späte je 130 bis 290.
- * Die Baumkosten sind gegen genau diese Zahl gestellt (`MEEP_TREE_TOTAL_COST`,
- * 6420), denn der Baum ist die einzige Senke: er überlebt jetzt jedes
- * Prestige. Eine erste Fassung schoss hier vorbei — 894 Kosten gegen 4482
- * Ertrag hieß, dass der Baum nach 28 Stunden stand und der Prestige-Lohn
- * danach 48 Stunden lang kein Ziel mehr hatte.
+ * **Eichung, gemessen.** In einem 76-Stunden-Referenzlauf mit 24 Aufbrüchen
+ * bringt der erste rund 16 Meeps, späte je 130 bis 290. Die Baumkosten sind
+ * gegen diesen Zufluss gestellt (`MEEP_TREE_TOTAL_COST`, 6420), denn der Baum
+ * ist die einzige Senke: er überlebt jetzt jedes Prestige. Nachgemessen fällt
+ * sein letzter Knoten nach 68,4 Stunden, es bleiben 1374 Meeps übrig.
+ *
+ * Zwei Fassungen davor lagen daneben, beide in dieselbe Richtung: 894 Kosten
+ * hießen ein fertiger Baum nach 28 Stunden, 4029 einen nach 40 — und danach
+ * hatte der Prestige-Lohn kein Ziel mehr. Wer hier nachjustiert, muss die
+ * Rückkopplung mitrechnen: der Knoten `meepCostMult` senkt diese Anforderung,
+ * ein wachsender Baum erhöht also seinen eigenen Zufluss (gemessen von 5376
+ * auf 8830).
  *
  * Wer an einer der beiden Zahlen dreht, verschiebt die andere mit: die
  * Ausbeute wächst mit der WURZEL der Laufchimes, die Baumkosten sind eine
