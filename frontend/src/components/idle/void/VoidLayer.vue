@@ -357,12 +357,21 @@ watch(
     const def = getVoidRift(result.defId)
     if (!def) return
 
+    // Einmal gebaut, dreimal gelesen: Toast, Herald und die Marke am
+    // Einschlagsort tragen denselben Satzteil — drei Anzeigen desselben
+    // Ereignisses dürfen nicht in drei Fassungen sprechen. Leer, wenn der Lauf
+    // nichts gesammelt hatte: dann gab es auch nichts zu holen.
+    const meepClause =
+      result.meepsLost > 0
+        ? ` · −${result.meepsLost} meep${result.meepsLost === 1 ? '' : 's'}`
+        : ''
+
     if (result.sealed) {
       showToast(`${def.name} slain — ${def.boonLine}`, 'event')
       logVoidRiftSealed(def.name, def.boonLine)
     } else {
-      showToast(`${def.name} reached the sun — ${result.hpLost} HP lost`, 'warning')
-      logVoidRiftCollapsed(def.name, result.hpLost)
+      showToast(`${def.name} reached the sun — ${result.hpLost} HP lost${meepClause}`, 'warning')
+      logVoidRiftCollapsed(def.name, result.hpLost, result.meepsLost)
       impactWave.value = {
         seq: result.seq,
         severity: def.severity,
@@ -382,7 +391,9 @@ watch(
         kind: 'champion',
         eyebrow: result.sealed ? 'VOID SLAIN' : 'THE VOID BROKE THROUGH',
         headline: def.name,
-        subline: result.sealed ? def.boonLine : `The sun took ${result.hpLost} damage`,
+        subline: result.sealed
+          ? def.boonLine
+          : `The sun took ${result.hpLost} damage${meepClause}`,
         icon: def.icon,
         accent: hexToRgbTriple(def.color),
       })
@@ -401,7 +412,7 @@ watch(
       y: result.y,
       color: def.color,
       title: result.sealed ? 'SLAIN' : 'BREACH',
-      sub: result.sealed ? def.boonLine : `−${result.hpLost} HP`,
+      sub: result.sealed ? def.boonLine : `−${result.hpLost} HP${meepClause}`,
       particles: Array.from({ length: VOID_SEAL_BURST_PARTICLES }, (_, i) => {
         const angle = base + step * i
         const dist = def.sizePx * (dir > 0 ? 1.15 : 1.6)

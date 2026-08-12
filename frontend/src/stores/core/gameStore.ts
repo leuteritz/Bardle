@@ -49,7 +49,8 @@ import {
   HYPERSPACE_ANIM_END_MS,
   UNIVERSE_RESCUE_INITIAL_COST,
   UNIVERSE_RESCUE_COST_MULTIPLIER,
-  MEEP_RUN_BASE,
+  MEEP_RUN_BASE_MIN,
+  MEEP_RUN_SHARE,
   MEEP_RUN_FACTOR,
   MEEP_POWER_MULTIPLIER,
   ABILITY_CPS_PER_LEVEL_DEFAULT,
@@ -131,6 +132,37 @@ export const useGameStore = defineStore('game', {
     chimesPerClick: CHIMES_PER_CLICK_BASE,
     baseChimesPerClick: CHIMES_PER_CLICK_BASE,
     chimesForNextUniverse: 0,
+    /**
+     * Chimes des BESTEN abgeschlossenen Durchlaufs — der Anker, gegen den die
+     * Meep-Anforderung gemessen wird (siehe `MEEP_RUN_SHARE`).
+     *
+     * Er steigt AUSSCHLIESSLICH in `finishUniverseRun()`, also nur im Moment des
+     * Aufbruchs. Das ist keine Bequemlichkeit, sondern die tragende Eigenschaft
+     * des Systems: solange ein Lauf läuft, steht `meepChimeRequirement` still,
+     * und `pendingMeeps` kann aus dieser Quelle nie sinken. Monoton ist er
+     * ausserdem, ein absichtlich winziger Lauf senkt ihn also nicht.
+     * `executePrestigeReset` fasst ihn NICHT an — er IST die Ratsche.
+     */
+    bestUniverseRunChimes: 0,
+    /**
+     * Anstehende Meeps, die der Void in diesem Lauf gefressen hat — ein OFFSET
+     * auf `pendingMeeps`, kein Abzug an den Chimes. Läuft beim Prestige
+     * zusammen mit `chimesForNextUniverse` auf 0 zurück.
+     */
+    meepsDevoured: 0,
+    /**
+     * Kleinster Augment-/Vorsehungs-Faktor auf die Meep-Anforderung, den dieser
+     * Lauf je gesehen hat.
+     *
+     * Er ist eine RATSCHE, weil `activeModifier` keine ist: `_addAugment` wirft
+     * bei vollem `AUGMENT_ACTIVE_CAP` das schwächste Augment heraus, und das
+     * kann `common_meep_cost` (×0,8) sein. Die Anforderung spränge dann um
+     * 1/0,8 zurück und `exactPendingMeeps` fiele um 10,6 % — bei 32 anstehenden
+     * also drei bis vier Meeps in einem Frame, an genau der Kachel, an der ein
+     * Rückgang seit dem Void „gefressen" bedeutet. Mit dieser Untergrenze ist
+     * JEDE Eingabe der Anforderung innerhalb eines Laufs monoton fallend.
+     */
+    runMeepCostFloor: 1,
     chimesToUniverseRescue: UNIVERSE_RESCUE_INITIAL_COST,
     meeps: 0,
     chimesEarnedForLevel: 0,
@@ -197,6 +229,8 @@ export const useGameStore = defineStore('game', {
     totalMeepsEarned: 0,
     /** Meeps ever spent on abilities / universe expeditions. */
     totalMeepsSpent: 0,
+    /** Meeps the Void has ever devoured — across all universes. */
+    totalMeepsDevoured: 0,
     /** Completed prestige resets (universe hops). */
     totalPrestiges: 0,
     /** Chimes ever granted by offline progress, and the seconds behind them. */
@@ -244,6 +278,32 @@ export const useGameStore = defineStore('game', {
       if (amount <= 0) return
       this.meeps += amount
       this.totalMeepsEarned += amount
+    },
+
+    /**
+     * Der Void frisst anstehende Meeps — der Gegenweg zu `grantMeeps`.
+     *
+     * Verloren gehen kann nur, was der Lauf schon GESAMMELT hat: `available`
+     * ist `pendingMeeps`, und bei 0 kostet ein Einschlag ausschliesslich
+     * Sonnen-HP. Damit bestraft der Void nie jemanden, der nichts im Feuer hat
+     * — und trifft am härtesten den, der den Aufbruch hinauszögert. Genau die
+     * Entscheidung, die die Wurzelformel der Ausbeute ohnehin stellt, bekommt
+     * dadurch eine zweite Seite.
+     *
+     * Gezählt wird als OFFSET, nicht als Abzug an den Chimes: `pendingMeeps`
+     * bleibt ein Getter auf `chimesForNextUniverse`, und Rettungsbalken, ETA
+     * und der Archiveintrag des Laufs (aus dem die Ratsche liest!) bleiben
+     * unberührt.
+     *
+     * @returns Was tatsächlich verloren ging — 0, wenn nichts anstand.
+     */
+    devourMeeps(pct: number, min: number): number {
+      const available = this.pendingMeeps
+      if (available <= 0) return 0
+      const loss = Math.min(available, Math.max(min, Math.ceil(pct * available)))
+      this.meepsDevoured += loss
+      this.totalMeepsDevoured += loss
+      return loss
     },
 
     /** Grants (or refreshes) the MVP honor buff — 2× chime production for a short window. */
@@ -412,26 +472,36 @@ export const useGameStore = defineStore('game', {
      */
     _addAugment(id: string) {
       this.activeAugments.push(id)
-      if (this.activeAugments.length <= AUGMENT_ACTIVE_CAP) return
-
-      // Häufigkeitsgewicht als Stärkemaß — dieselbe Tabelle, aus der die
-      // Angebote gezogen werden. Ein höheres Gewicht heißt „häufiger", also
-      // schwächer.
-      let dropIdx = 0
-      let dropWeight = -1
-      for (let i = 0; i < this.activeAugments.length; i++) {
-        const aug = AUGMENTS.find((a) => a.id === this.activeAugments[i])
-        const weight = aug ? (RARITY_WEIGHTS[aug.rarity] ?? RARITY_WEIGHT_FALLBACK) : Infinity
-        if (weight > dropWeight) {
-          dropWeight = weight
-          dropIdx = i
+      if (this.activeAugments.length > AUGMENT_ACTIVE_CAP) {
+        // Häufigkeitsgewicht als Stärkemaß — dieselbe Tabelle, aus der die
+        // Angebote gezogen werden. Ein höheres Gewicht heißt „häufiger", also
+        // schwächer.
+        let dropIdx = 0
+        let dropWeight = -1
+        for (let i = 0; i < this.activeAugments.length; i++) {
+          const aug = AUGMENTS.find((a) => a.id === this.activeAugments[i])
+          const weight = aug ? (RARITY_WEIGHTS[aug.rarity] ?? RARITY_WEIGHT_FALLBACK) : Infinity
+          if (weight > dropWeight) {
+            dropWeight = weight
+            dropIdx = i
+          }
         }
+        const dropped = this.activeAugments.splice(dropIdx, 1)[0]
+        logger.info('Game', `Augment displaced by cap: ${dropped}`, {
+          cap: AUGMENT_ACTIVE_CAP,
+          added: id,
+        })
       }
-      const dropped = this.activeAugments.splice(dropIdx, 1)[0]
-      logger.info('Game', `Augment displaced by cap: ${dropped}`, {
-        cap: AUGMENT_ACTIVE_CAP,
-        added: id,
-      })
+
+      // Die Meep-Untergrenze NACH der Verdrängung ziehen — siehe
+      // `runMeepCostFloor`. Ein Augment, das sich selbst wieder verdrängt hat,
+      // senkt sie damit richtigerweise nicht; eines, das später hinausfällt,
+      // lässt seinen Rabatt für den Rest des Laufs stehen. Beides zusammen ist
+      // der Grund, warum `pendingMeeps` nur durch einen Void-Frass sinken kann.
+      this.runMeepCostFloor = Math.min(
+        this.runMeepCostFloor,
+        this.activeModifier.meepCostMultiplier ?? 1,
+      )
     },
 
     /** Gemeinsamer Kern von Hand- und Auto-Wahl: übernehmen, registrieren, CPS/CPC neu. */
@@ -642,24 +712,38 @@ export const useGameStore = defineStore('game', {
       })
       const overflow = this.universeRuns.length - UNIVERSE_RUN_HISTORY_LIMIT
       if (overflow > 0) this.universeRuns.splice(0, overflow)
+      // Die Ratsche der Meep-Anforderung. Sie steht hier und nicht im Takt,
+      // weil sie NUR beim Aufbruch steigen darf (siehe `bestUniverseRunChimes`).
+      // Der Aufrufer muss den Lohn VORHER gelesen haben — ab dieser Zeile gilt
+      // die neue Anforderung.
+      this.bestUniverseRunChimes = Math.max(this.bestUniverseRunChimes, this.chimesForNextUniverse)
     },
 
     // Executes the actual Prestige reset
     executePrestigeReset(targetUniverse?: number) {
       const nextUniverse = targetUniverse ?? this.currentUniverse + 1
       logger.info('Game', `Prestige reset -> Universe ${nextUniverse}`)
+      // Der Lohn steht fest, BEVOR irgendetwas sich bewegt — und zwar aus zwei
+      // Gründen, die beide in den nächsten Zeilen stehen. `finishUniverseRun()`
+      // hebt `bestUniverseRunChimes` auf die Chimes dieses Laufs, womit die
+      // Anforderung sofort nachzieht: danach gelesen zahlte der Aufbruch rund
+      // ein Drittel weniger, als der Header eine Sekunde zuvor versprochen hat
+      // (200k Chimes gegen 100k Bestwert: 45 versprochen, 32 gezahlt). Und
+      // `chimesForNextUniverse = 0` weiter unten löscht ohnehin die Grundlage.
+      const owed = this.pendingMeeps
       // Vor jeder Mutation: der Datensatz beschreibt das Universum, das gerade
       // verlassen wird, und liest dafür dessen noch unveränderte Zähler.
       this.finishUniverseRun()
-      // Der Lohn des Aufbruchs, VOR dem Nullen der Laufzähler: `pendingMeeps`
-      // liest `chimesForNextUniverse`, und die Zeile darunter löscht es.
-      this.grantMeeps(this.pendingMeeps)
+      this.grantMeeps(owed)
       this.currentUniverse = nextUniverse
       this.totalPrestiges += 1
       this.chimesToUniverseRescue = Math.ceil(
         this.chimesToUniverseRescue * UNIVERSE_RESCUE_COST_MULTIPLIER,
       )
       this.chimesForNextUniverse = 0
+      // Läuft mit den Laufchimes zusammen zurück: der neue Lauf startet ohne
+      // Frass. `totalMeepsDevoured` bleibt stehen, es ist ein Lebenszeit-Zähler.
+      this.meepsDevoured = 0
       this.prestigeAvailable = false
       this.chimes = 0
       this.level = 1
@@ -668,6 +752,8 @@ export const useGameStore = defineStore('game', {
       this.skillPoints = 0
       this.abilityLevels = [0, 0, 0, 0]
       this.activeAugments = []
+      // Mit den Augments fällt auch deren Rabatt-Untergrenze zurück.
+      this.runMeepCostFloor = 1
       this.pendingAugmentChoice = false
       this.pendingAugmentOptions = []
       this.pendingAugmentSelections = []
@@ -1158,50 +1244,76 @@ export const useGameStore = defineStore('game', {
      * und zwei Quellen laufen auseinander, sobald jemand eine anfasst. So ist
      * die Ausbeute nebenbei reload-fest, ohne dass etwas zusätzlich gespeichert
      * werden müsste.
+     *
+     * Abgezogen wird, was der Void in diesem Lauf geholt hat (`meepsDevoured`).
+     * Nie negativ: `devourMeeps` klemmt bereits auf den Bestand, das `max`
+     * fängt nur den Randfall ab, dass `exactPendingMeeps` nachträglich fällt.
      */
     pendingMeeps(): number {
-      return Math.floor(this.exactPendingMeeps)
+      return Math.max(0, Math.floor(this.exactPendingMeeps) - this.meepsDevoured)
     },
 
     /**
-     * Die Chime-Anforderung je Meep — früher `meepChimeRequirement`, heute die
-     * Bezugsgröße der Wurzelformel.
+     * Die Chime-Anforderung je Meep — die Bezugsgröße der Wurzelformel.
      *
-     * Drei Quellen SENKEN sie, alle mit Faktoren unter 1: der Baumknoten
-     * `meepCostMult`, das Augment `meepCostMultiplier` (über `activeModifier`,
-     * also auch die Vorsehung) und die dritte Bard-Fähigkeit. Sie greifen
-     * bewusst an der BASIS und nicht am Ergebnis: die Wurzel übersetzt eine
-     * halbierte Anforderung damit in das 1,41-Fache an Meeps statt ins
-     * Doppelte — dieselbe Dämpfung, die auch längere Läufe erfahren.
+     * Der Anker ist der BESTE abgeschlossene Lauf des Spielers, mit einem Boden
+     * für das erste Universum; die Herleitung beider Zahlen steht bei
+     * `MEEP_RUN_BASE_MIN` / `MEEP_RUN_SHARE`. Weil `bestUniverseRunChimes` nur
+     * beim Aufbruch steigt, steht diese Zahl während eines Laufs STILL.
+     *
+     * Drei Quellen SENKEN sie zusätzlich, alle mit Faktoren unter 1: der
+     * Baumknoten `meepCostMult`, das Augment `meepCostMultiplier` (über
+     * `activeModifier`, also auch die Vorsehung) und die dritte Bard-Fähigkeit.
+     * Sie greifen bewusst an der BASIS und nicht am Ergebnis: die Wurzel
+     * übersetzt eine halbierte Anforderung damit in das 1,41-Fache an Meeps
+     * statt ins Doppelte — dieselbe Dämpfung, die auch längere Läufe erfahren.
+     *
+     * Der Augment-Anteil läuft über `runMeepCostFloor`, weil er als einziger
+     * auch wieder STEIGEN könnte (der Augment-Deckel verdrängt) — und ein
+     * steigender Faktor liesse `pendingMeeps` mitten im Lauf fallen.
      */
     meepChimeRequirement(): number {
-      const modifierMult = this.activeModifier.meepCostMultiplier ?? 1
-      const treeMult = useMeepTreeStore().fx.meepCostMult
-      return Math.max(
-        1,
-        MEEP_RUN_BASE * this.abilityMeepCostMultiplier * modifierMult * treeMult,
+      const anchor = Math.max(MEEP_RUN_BASE_MIN, this.bestUniverseRunChimes * MEEP_RUN_SHARE)
+      const modifierMult = Math.min(
+        this.runMeepCostFloor,
+        this.activeModifier.meepCostMultiplier ?? 1,
       )
+      const treeMult = useMeepTreeStore().fx.meepCostMult
+      return Math.max(1, anchor * this.abilityMeepCostMultiplier * modifierMult * treeMult)
     },
 
-    /** Ungerundete Ausbeute — eine Quelle für Zahl, Füllstand und Restweg. */
+    /**
+     * Ungerundete GESAMMELTE Ausbeute — vor dem Abzug des Voids. Eine Quelle
+     * für Zahl, Füllstand und Restweg.
+     *
+     * Der Ring der Passiv-Kachel hängt an ihrem Nachkommaanteil und füllt sich
+     * deshalb auch unmittelbar nach einem Einschlag weiter: gefressen wird die
+     * Ernte, nicht der Weg dorthin.
+     */
     exactPendingMeeps(): number {
       return MEEP_RUN_FACTOR * Math.sqrt(this.chimesForNextUniverse / this.meepChimeRequirement)
     },
 
     /**
-     * Fortschritt zum nächsten anstehenden Meep, 0..1.
-     *
-     * Die Passiv-Kachel zeigt seit jeher den WEG, nicht den Bestand (siehe
-     * CLAUDE.md). Der Weg ist jetzt der Nachkommaanteil der Wurzelformel.
+     * Fortschritt zum nächsten anstehenden Meep, 0..1 — der Ring der
+     * Passiv-Kachel. Er misst den WEG und nicht den Bestand, deshalb rührt ein
+     * Void-Frass ihn nicht an: gefressen wird die Ernte, nicht die Strecke.
      */
     pendingMeepFill(): number {
       const exact = this.exactPendingMeeps
       return Math.min(1, Math.max(0, exact - Math.floor(exact)))
     },
 
-    /** Chimes, die dem nächsten anstehenden Meep noch fehlen. */
+    /**
+     * Chimes, die dem nächsten anstehenden Meep noch fehlen.
+     *
+     * Der Zielindex zählt den Frass MIT: gefressene Meeps sind gesammelt und
+     * bezahlt, der nächste ist also der (gesammelt + 1)-te und nicht der
+     * (gehaltene + 1)-te. Ohne diesen Term zeigte die Anzeige nach einem
+     * Einschlag eine Strecke an, die längst zurückgelegt ist.
+     */
     chimesToNextMeep(): number {
-      const next = this.pendingMeeps + 1
+      const next = this.pendingMeeps + this.meepsDevoured + 1
       const needed = Math.pow(next / MEEP_RUN_FACTOR, 2) * this.meepChimeRequirement
       return Math.max(0, Math.ceil(needed - this.chimesForNextUniverse))
     },

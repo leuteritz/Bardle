@@ -533,6 +533,39 @@ export const VOID_IMPACT_AFTERMATH_MS: Record<VoidRiftSeverity, number> = {
   abyssal: 110_000,
 }
 
+/**
+ * Anteil der ANSTEHENDEN Meeps, den ein Einschlag frisst — je Schwere.
+ *
+ * Sonnen-HP allein war kein Einsatz: sie regenerieren mit 1/s von selbst, und
+ * 0 HP hat im ganzen Spiel keine Folge. Meeps dagegen sind der Lohn des
+ * Aufbruchs, also genau das, worauf ein Lauf hinarbeitet.
+ *
+ * Prozentual und nicht pauschal, damit dieselbe Zahl früh wie spät dasselbe
+ * bedeutet — „ein Stück deiner Ernte" statt „drei Meeps, die im Spätspiel
+ * niemand merkt". `VOID_IMPACT_MEEP_LOSS_MIN` darunter hält den Einschlag auch
+ * bei kleiner Ernte spürbar; bei den typischen 32 anstehenden Meeps ergibt
+ * beides zusammen 2 / 3 / 5.
+ *
+ * Gefressen wird nur, was der Lauf schon GESAMMELT hat (`gameStore.devourMeeps`
+ * klemmt auf `pendingMeeps`): wer gerade aufgebrochen ist, verliert nichts. Der
+ * Void trifft damit am härtesten den, der den nächsten Aufbruch hinauszögert —
+ * dieselbe Entscheidung, die die Wurzelformel der Ausbeute ohnehin stellt, nur
+ * von der anderen Seite.
+ */
+export const VOID_IMPACT_MEEP_LOSS_PCT: Record<VoidRiftSeverity, number> = {
+  lesser: 0.04,
+  greater: 0.08,
+  abyssal: 0.15,
+}
+
+/** Untergrenze des Meep-Zolls — ein Einschlag bleibt nie folgenlos, sobald
+ *  überhaupt etwas ansteht. */
+export const VOID_IMPACT_MEEP_LOSS_MIN: Record<VoidRiftSeverity, number> = {
+  lesser: 1,
+  greater: 2,
+  abyssal: 3,
+}
+
 // ── Beute ───────────────────────────────────────────────────────────────────
 
 /** Deckel auf der Chime-Auszahlung: so viele Sekunden Produktion maximal,

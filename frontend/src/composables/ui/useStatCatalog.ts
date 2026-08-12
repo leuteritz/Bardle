@@ -247,6 +247,12 @@ export function useStatCatalog(query: Ref<string>): {
       },
       { key: 'meeps-spent', label: 'Meeps Spent', value: num(gameStore.totalMeepsSpent) },
       {
+        key: 'meeps-devoured-run',
+        label: 'Meeps Devoured (Run)',
+        value: num(gameStore.meepsDevoured),
+        keywords: 'void breach loss devoured',
+      },
+      {
         key: 'next-meep',
         label: 'Chimes to Next Meep',
         value: num(gameStore.chimesToNextMeep),
@@ -1490,6 +1496,12 @@ export function useStatCatalog(query: Ref<string>): {
         label: 'Sun HP Lost to the Void',
         value: num(voidStore.totalVoidHpLost),
         keywords: 'void breach impact damage',
+      },
+      {
+        key: 'void-meeps-lost',
+        label: 'Meeps Lost to the Void',
+        value: num(gameStore.totalMeepsDevoured),
+        keywords: 'void breach impact meep devoured',
       },
       {
         key: 'void-cps',

@@ -58,7 +58,11 @@ export const DRIFTERS: DrifterDef[] = [
     flightMs: 16_000,
     sizePx: 50,
     hits: 1,
-    effectLine: '+1 Meep and a full meep bar',
+    // Die „volle Meep-Leiste" gibt es seit dem Ökonomie-Umbau nicht mehr —
+    // Meeps zahlt jetzt der Aufbruch. Der Fund bleibt bei 1 und ist dabei
+    // WERTVOLLER geworden: gegen die Senke gerechnet ist das ein Drittel des
+    // billigsten Baumknotens statt eines Fünfzehntels.
+    effectLine: '+1 Meep',
     reward: { meeps: 1 },
   },
   {

@@ -28,6 +28,8 @@ import {
   VOID_DRAIN_FLOOR,
   VOID_IMPACT_HP_LOSS,
   VOID_IMPACT_AFTERMATH_MS,
+  VOID_IMPACT_MEEP_LOSS_PCT,
+  VOID_IMPACT_MEEP_LOSS_MIN,
   VOID_SPAWN_RETRY_SEC,
   VOID_ROLE_ABILITIES,
   VOID_CONTACT_REARM_MS,
@@ -436,6 +438,63 @@ describe('voidStore', () => {
       store.impactMonster(hurt)
 
       expect(store.totalVoidHpLost).toBe(costFull)
+    })
+
+    // Der zweite Preis neben den HP, und der schwerere: Sonnen-HP regenerieren
+    // von selbst, anstehende Meeps nicht.
+    it('frisst anstehende Meeps und meldet sie im Ausgang', () => {
+      unlock()
+      const store = useVoidStore()
+      const gameStore = useGameStore()
+      gameStore.chimesForNextUniverse = 400 * 100 // 20 anstehende Meeps
+      const before = gameStore.pendingMeeps
+      expect(before).toBe(20)
+
+      store.impactMonster(spawn('sunlessBreach'))
+
+      expect(gameStore.pendingMeeps).toBeLessThan(before)
+      expect(store.lastOutcome.meepsLost).toBe(before - gameStore.pendingMeeps)
+      expect(gameStore.totalMeepsDevoured).toBe(store.lastOutcome.meepsLost)
+    })
+
+    // Wer nichts im Feuer hat, verliert nichts — das Frühspiel wird vom Void
+    // bedroht, aber nicht bestraft.
+    it('kostet ohne Ernte nur HP, keine Meeps', () => {
+      unlock()
+      const store = useVoidStore()
+      const gameStore = useGameStore()
+      const player = usePlayerStore()
+      gameStore.chimesForNextUniverse = 0
+      const hpBefore = player.currentHP
+
+      store.impactMonster(spawn('sunlessBreach'))
+
+      expect(player.currentHP).toBeLessThan(hpBefore)
+      expect(store.lastOutcome.meepsLost).toBe(0)
+      expect(gameStore.meepsDevoured).toBe(0)
+    })
+
+    it('ein erlegtes Wesen frisst nichts', () => {
+      unlock()
+      const store = useVoidStore()
+      const gameStore = useGameStore()
+      gameStore.chimesForNextUniverse = 400 * 100
+      const before = gameStore.pendingMeeps
+
+      store.slayMonster(spawn('sunlessBreach'))
+
+      expect(store.lastOutcome.sealed).toBe(true)
+      expect(store.lastOutcome.meepsLost).toBe(0)
+      // Die Beute kann Chimes gutschreiben, aber nichts wegnehmen.
+      expect(gameStore.pendingMeeps).toBeGreaterThanOrEqual(before)
+      expect(gameStore.meepsDevoured).toBe(0)
+    })
+
+    it('staffelt auch den Meep-Frass nach der Schwere', () => {
+      expect(VOID_IMPACT_MEEP_LOSS_PCT.abyssal).toBeGreaterThan(VOID_IMPACT_MEEP_LOSS_PCT.greater)
+      expect(VOID_IMPACT_MEEP_LOSS_PCT.greater).toBeGreaterThan(VOID_IMPACT_MEEP_LOSS_PCT.lesser)
+      expect(VOID_IMPACT_MEEP_LOSS_MIN.abyssal).toBeGreaterThan(VOID_IMPACT_MEEP_LOSS_MIN.greater)
+      expect(VOID_IMPACT_MEEP_LOSS_MIN.greater).toBeGreaterThan(VOID_IMPACT_MEEP_LOSS_MIN.lesser)
     })
   })
 

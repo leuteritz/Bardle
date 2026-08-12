@@ -77,6 +77,8 @@
     <div class="ab-row">
       <BardPassiveTile
         :meep-fill="meepFill"
+        :pending-meeps="gameStore.pendingMeeps"
+        :meeps-devoured="gameStore.meepsDevoured"
         :clicks-to-meep="clicksToMeep"
         :gain-amount="meepGainAmount"
         :gain-key="meepGainKey"
@@ -107,7 +109,7 @@ import { useUiStore } from '@/stores/core/uiStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { onKeybinding, triggerKeybind } from '@/composables/system/useKeybindings'
-import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import { formatNumber } from '@/config/ui/numberFormat'
 import { formatCompactDuration } from '@/utils/ui/format'
 import {
   BARD_ABILITIES,
@@ -125,7 +127,6 @@ import {
   ABILITY_MEEP_GAIN_COALESCE_MS,
   ABILITY_MEEP_GAIN_FLOAT_MS,
   MS_PER_SECOND,
-  RESONANCE_CLICK_REFUND_MS,
   RESONANCE_MAX_STACKS,
 } from '@/config/constants'
 import type { BardAbilityId, KeybindId } from '@/types'
@@ -485,28 +486,30 @@ const hovered = computed(() => {
       locked: false,
       // Die Passive kühlt nicht ab — der Status-Slot bliebe leer.
       live: false,
-      // Die Kachel führt mit dem nächsten Meep, also führt der Kasten damit
-      // auch — gekürzt dort, voll hier. Ein Tooltip, der eine andere Zahl
-      // voranstellt als das Feld darunter, lässt den Spieler suchen.
-      lead: due
-        ? { value: 'Arriving', label: 'Next meep' }
-        : { value: formatNumber(clicksToMeep.value), label: 'Clicks to next meep' },
+      // Die Kachel führt mit der Ernte, also führt der Kasten damit auch — ein
+      // Tooltip, der eine andere Zahl voranstellt als das Feld darunter, lässt
+      // den Spieler suchen.
+      lead: { value: formatNumber(gameStore.pendingMeeps), label: 'Meeps on departure' },
       lines: [
-        {
-          label: 'Meeps on departure',
-          value: formatNumber(gameStore.pendingMeeps),
-        },
+        // Die Klickzahl von der Kachel: dort war sie eine Zahl, die sich nicht
+        // rührte, hier ist sie die Antwort auf „soll ich noch klicken?".
+        due
+          ? { label: 'Next meep', value: 'Arriving' }
+          : { label: 'Clicks to next meep', value: formatNumber(clicksToMeep.value) },
         // Was die Produktion allein schafft — die Gegenprobe zur Klickzahl.
         { label: 'Idle in', value: meepIdleEta.value },
+        ...(gameStore.meepsDevoured > 0
+          ? [
+              {
+                label: 'Devoured by the Void',
+                value: `−${formatNumber(gameStore.meepsDevoured)}`,
+              },
+            ]
+          : []),
         { label: 'Meeps held', value: formatNumber(gameStore.meeps) },
         {
-          label: 'Ability power',
-          value: `+${((store.resonancePowerMult - 1) * 100).toFixed(0)}%`,
-        },
-        { label: 'Cooldowns', value: `−${(store.resonanceCdr * 100).toFixed(1)}%` },
-        {
-          label: 'Every click',
-          value: `−${(RESONANCE_CLICK_REFUND_MS / 1000).toFixed(2)}s off cooldowns`,
+          label: 'Resonance grants',
+          value: `+${((store.resonancePowerMult - 1) * 100).toFixed(0)}% power · −${(store.resonanceCdr * 100).toFixed(1)}% cooldowns`,
         },
       ],
       foot: [

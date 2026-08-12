@@ -57,6 +57,13 @@ const barText = computed(() =>
  */
 const pendingMeeps = computed(() => gameStore.pendingMeeps)
 
+/**
+ * Was der Void aus derselben Ernte geholt hat. Steht NEBEN dem Ertrag und nicht
+ * an seiner Stelle: der Spieler soll beides sehen — was er mitnimmt und was ihm
+ * genommen wurde. Der Ertrag daneben ist bereits netto.
+ */
+const meepsDevoured = computed(() => gameStore.meepsDevoured)
+
 /* Die Zahl steht mittig im Balken und wird beim Füllen von der Goldkante
    überlaufen — eine einzelne Textfarbe ist dann zwangsläufig irgendwann
    falsch. Statt einer Umschaltschwelle liegen zwei identisch positionierte
@@ -127,9 +134,12 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
          ablöst — und genau dann ist sie am wichtigsten. Rechts außen, weil
          die Füllkante sie dort erst kurz vor 100 % erreicht und Prozentwert
          wie Knopfbeschriftung ihre Mitte behalten. -->
-    <div v-if="pendingMeeps > 0" class="rescue-yield">
+    <div v-if="pendingMeeps > 0 || meepsDevoured > 0" class="rescue-yield">
       <img :src="MEEP_ART_IMAGE" class="rescue-yield-img" alt="" aria-hidden="true" />
       <span>+{{ formatNumberCompact(pendingMeeps) }}</span>
+      <span v-if="meepsDevoured > 0" class="rescue-yield-loss"
+        >−{{ formatNumberCompact(meepsDevoured) }}</span
+      >
     </div>
   </div>
 </template>
@@ -282,6 +292,13 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
   pointer-events: none;
+}
+
+/* Die einzige Zahl an diesem Balken, die nach unten zeigt — deshalb die
+   Verlustfarbe und kleiner als der Ertrag, den sie kommentiert. */
+.rescue-yield-loss {
+  font-size: 0.82em;
+  color: #cc6050;
 }
 
 .rescue-yield-img {

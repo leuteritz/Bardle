@@ -43,7 +43,7 @@ export const LEVEL_SCALING_CAP_LEVEL = 100
 
 /**
  * Was ein Universums-Durchlauf an Meeps einbringt:
- * `floor(MEEP_RUN_FACTOR × √(Chimes dieses Laufs / MEEP_RUN_BASE))`.
+ * `floor(MEEP_RUN_FACTOR × √(Chimes dieses Laufs / meepChimeRequirement))`.
  *
  * Meeps waren einmal eine laufende Währung — alle paar Sekunden fiel einer,
  * sobald genug Chimes zusammen waren, und das Prestige löschte anschliessend
@@ -58,28 +58,58 @@ export const LEVEL_SCALING_CAP_LEVEL = 100
  * doppelt so lange spielen, doppelt so viele Meeps — dann gäbe es nie einen
  * Grund aufzubrechen. Mit der Wurzel bringt ein längerer Lauf zwar mehr, aber
  * mit abnehmendem Ertrag, und „wann prestige ich?" wird zu einer Entscheidung.
- * Nebeneffekt: zwischen dem ersten und einem späten Durchlauf liegt beim
- * Chime-Ertrag rund Faktor 10, nach der Wurzel nur noch 3 — die Zahl bleibt
- * über das ganze Spiel lesbar.
  *
- * **Eichung, gemessen.** In einem 76-Stunden-Referenzlauf mit 24 Aufbrüchen
- * bringt der erste rund 16 Meeps, späte je 130 bis 290. Die Baumkosten sind
- * gegen diesen Zufluss gestellt (`MEEP_TREE_TOTAL_COST`, 6420), denn der Baum
- * ist die einzige Senke: er überlebt jetzt jedes Prestige. Nachgemessen fällt
- * sein letzter Knoten nach 68,4 Stunden, es bleiben 1374 Meeps übrig.
+ * **Die Bezugsgröße ist NICHT mehr eine feste Zahl, sondern der BESTE
+ * abgeschlossene Lauf des Spielers:**
  *
- * Zwei Fassungen davor lagen daneben, beide in dieselbe Richtung: 894 Kosten
- * hießen ein fertiger Baum nach 28 Stunden, 4029 einen nach 40 — und danach
- * hatte der Prestige-Lohn kein Ziel mehr. Wer hier nachjustiert, muss die
- * Rückkopplung mitrechnen: der Knoten `meepCostMult` senkt diese Anforderung,
- * ein wachsender Baum erhöht also seinen eigenen Zufluss (gemessen von 5376
- * auf 8830).
+ *     meepChimeRequirement = max(MEEP_RUN_BASE_MIN, bestUniverseRunChimes × MEEP_RUN_SHARE)
+ *                            × abilityMeepCostMultiplier × modifierMult × treeMult
  *
- * Wer an einer der beiden Zahlen dreht, verschiebt die andere mit: die
- * Ausbeute wächst mit der WURZEL der Laufchimes, die Baumkosten sind eine
- * feste Summe. `__tests__/config/meepEconomy.spec.ts` hält beide zusammen.
+ * **Warum eine Ratsche statt einer Konstante.** Eine feste Basis ist genau
+ * einmal richtig geeicht — davor zahlt sie nichts, danach alles. Die alte Basis
+ * (1e9) liess den ersten Meep 390 Mio. Chimes kosten: im frischen Spielstand
+ * mit `chimesPerClick = 1` zeigte die Passiv-Kachel „390.6M" und rührte sich
+ * über Millionen Klicks nicht, während das Prestige-Tor schon bei 100 000 stand
+ * — vier Größenordnungen Abstand, und die ersten zwölf Universen zahlten
+ * schlicht null. Gegen den eigenen besten Lauf gemessen gibt dieselbe Formel in
+ * JEDER Spielphase dieselbe Antwort: „so viel wie beim letzten Mal" zahlt immer
+ * gleich viel. Die Ausbeute hängt danach nur noch am VERHÄLTNIS
+ * `Laufchimes / Bestlauf` und nie mehr an der absoluten Größe der Zahlen — eine
+ * Inflation der Wirtschaft kann sie deshalb nicht mehr verschieben.
+ *
+ * **Warum die Ratsche nur beim Aufbruch steigt** (`finishUniverseRun()`): so
+ * steht die Anforderung innerhalb eines Laufs STILL, und `pendingMeeps` kann
+ * aus dieser Quelle nie sinken. Monoton ist sie ausserdem, ein absichtlich
+ * winziger Lauf senkt den Anker also nicht.
+ *
+ * **Die beiden Zahlen sind aufeinander abgestimmt, nicht frei gewählt.**
+ * `MEEP_RUN_BASE_MIN` macht den ERSTEN Meep exakt 100 Chimes teuer
+ * ((1/1,6)² × 256 = 100); Meep k kostet im ersten Lauf damit exakt k² × 100
+ * (100 · 400 · 900 · 1600 · 2500 …), die Lücken wachsen in Hunderterschritten
+ * und sind ab dem ersten Klick sichtbar. `MEEP_RUN_SHARE` zahlt für einen Lauf,
+ * der den eigenen Bestwert TRIFFT, 1,6/√0,0025 = 32 Meeps; 2× Best → 45,
+ * 4× → 64, 10× → 101, 100× → 320. Und beide greifen ineinander: der
+ * Mindestwert bindet, bis der beste Lauf 256/0,0025 = 102 400 Chimes
+ * übersteigt — das ist `UNIVERSE_RESCUE_INITIAL_COST` (100 000). Die Ratsche
+ * übernimmt exakt dort, wo das erste Universum endet. (Der erste Aufbruch zahlt
+ * deshalb 31 statt 32: bei 100 000 Laufchimes bindet noch der Mindestwert 256
+ * statt der 250 aus dem Anteil.)
+ *
+ * **Was das für den Rhythmus heisst.** `UNIVERSE_RESCUE_COST_MULTIPLIER` ist 2,
+ * wer also jeweils an der Rettungsschwelle aufbricht, liegt dauerhaft bei 2×
+ * Bestwert und bekommt 45 Meeps je Aufbruch — über das ganze Spiel. 24
+ * Aufbrüche ergeben rund 1080, mit dem Rabatt des eigenen Baums
+ * (`meepCostMult` 0,6885 voll gekauft ⇒ ×1,21) rund 1250. Dagegen steht
+ * `MEEP_TREE_TOTAL_COST`; `__tests__/config/meepEconomy.spec.ts` hält beide
+ * zusammen.
+ *
+ * Gegenkraft dazu ist der Void: ein Einschlag frisst einen Teil der ANSTEHENDEN
+ * Meeps (`gameStore.devourMeeps`, `VOID_IMPACT_MEEP_LOSS_PCT`). Wer den Aufbruch
+ * hinauszögert, hat mehr im Feuer — genau die Entscheidung, die die Wurzel
+ * ohnehin stellt, bekommt dadurch eine zweite Seite.
  */
-export const MEEP_RUN_BASE = 1e9
+export const MEEP_RUN_BASE_MIN = 256
+export const MEEP_RUN_SHARE = 0.0025
 export const MEEP_RUN_FACTOR = 1.6
 
 /**
@@ -89,14 +119,15 @@ export const MEEP_RUN_FACTOR = 1.6
  * gehört neben die Ausbeute, gegen die sie geeicht wurde, nicht zwischen die
  * Icons und Beschreibungen der Knoten. Eine Spec prüft, dass der Katalog
  * dieselbe Summe ergibt.
+ *
+ * Bei 45 Meeps je Aufbruch im Dauerrhythmus sind das rund 26 Aufbrüche, mit dem
+ * eigenen `meepCostMult`-Rabatt des Baums rund 22 — er ist also ein Ziel über
+ * das ganze Spiel und kein Mitnahmekauf.
  */
-export const MEEP_TREE_TOTAL_COST = 6420
+export const MEEP_TREE_TOTAL_COST = 1188
 
 // Abilities
 export const MAX_ABILITY_LEVEL = 5
-
-// Skill Tree Meep costs (Q, W, E, R)
-export const SKILL_MEEP_COSTS = [3, 8, 20, 45] as const
 
 export const RESCUE_ROTATION_DURATION_MS = 2_000 // camera spin after role selection
 
@@ -348,6 +379,9 @@ export const MEEP_TOOLTIP_ICONS = {
   costPerMeep: 'game-icons:price-tag',
   eta: 'game-icons:hourglass',
   locked: 'lucide:lock',
+  // Derselbe Glyph, den `VOID_CARD_ICON` und die Material-Quelle `void`
+  // tragen — der Spieler soll die Zeile ohne Umweg dem Void zuordnen.
+  devoured: 'game-icons:vortex',
 } as const
 
 // ── Chronicle (Meilensteine) ───────────────────────────────────────────────

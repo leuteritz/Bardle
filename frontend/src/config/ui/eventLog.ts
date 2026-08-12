@@ -64,12 +64,17 @@ export function logVoidRiftSealed(name: string, boonLine: string) {
 
 /**
  * Ein Void-Wesen hat die Sonne erreicht. Die einzige Logzeile im Spiel, die
- * einen Verlust meldet — deshalb steht der HP-Betrag darin und nicht nur der
+ * einen Verlust meldet — deshalb stehen die Beträge darin und nicht nur der
  * Name: „was hat mich das gekostet?" ist die Frage, die der Spieler an sie hat.
+ *
+ * Der Meep-Teil entfällt, wenn nichts anstand: eine Null zu melden, wo nichts
+ * verloren ging, macht aus einer Bilanz eine Floskel.
  */
-export function logVoidRiftCollapsed(name: string, hpLost: number) {
+export function logVoidRiftCollapsed(name: string, hpLost: number, meepsLost = 0) {
   const { addEvent } = useEventLog()
-  addEvent(`${name} reached the sun — it took ${safeNumber(hpLost)} damage.`, 'void')
+  const meeps = safeNumber(meepsLost)
+  const clause = meeps > 0 ? ` and devoured ${meeps} meep${meeps === 1 ? '' : 's'}` : ''
+  addEvent(`${name} reached the sun — it took ${safeNumber(hpLost)} damage${clause}.`, 'void')
 }
 
 /**

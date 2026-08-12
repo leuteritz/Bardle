@@ -141,6 +141,9 @@ export const useMeepTreeStore = defineStore('meepTree', {
       const gameStore = useGameStore()
       const { node } = MEEP_TREE_NODE_INDEX[id]
       gameStore.meeps -= node.cost
+      // Der Baum ist die einzige Senke der Währung — ohne diese Zeile stand
+      // „Meeps spent" im Katalog und im Header dauerhaft auf 0.
+      gameStore.totalMeepsSpent += node.cost
       this.bought.push(id)
       logger.info('Game', `Meep tree node bought: ${node.name}`, { cost: node.cost })
       // Production-affecting nodes must refresh the cached CPS/CPC values

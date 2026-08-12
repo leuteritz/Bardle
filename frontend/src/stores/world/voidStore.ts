@@ -39,6 +39,8 @@ import {
   VOID_DRAIN_FLOOR,
   VOID_IMPACT_HP_LOSS,
   VOID_IMPACT_AFTERMATH_MS,
+  VOID_IMPACT_MEEP_LOSS_PCT,
+  VOID_IMPACT_MEEP_LOSS_MIN,
   VOID_BOON_CHIME_CAP_SEC,
   VOID_BOON_CHIME_MIN_CLICKS,
   VOID_CONTACT_REARM_MS,
@@ -187,6 +189,7 @@ export const useVoidStore = defineStore('void', {
       x: 0,
       y: 0,
       hpLost: 0,
+      meepsLost: 0,
     } as VoidOutcome,
     // ── Lifetime counters (Bard Stats catalog) ──
     totalRiftsOpened: 0,
@@ -875,7 +878,7 @@ export const useVoidStore = defineStore('void', {
       if (!def) return
 
       this._applyBoon(def)
-      this._recordOutcome(monster, def, true, 0)
+      this._recordOutcome(monster, def, true, 0, 0)
       logger.info('Void', `${def.name} slain`, { boon: def.boonLine })
     },
 
@@ -887,6 +890,10 @@ export const useVoidStore = defineStore('void', {
      * Arbeit zählt trotzdem, sie zählt nur an anderer Stelle — ein Wesen, das
      * man auf ein Viertel heruntergeprügelt hat, fällt dem Orbit-Beschuss
      * unterwegs viel eher zum Opfer und kommt gar nicht erst an.
+     *
+     * Bezahlt wird in ZWEI Währungen. Sonnen-HP allein war kein Einsatz — sie
+     * regenerieren von selbst, und 0 HP hat im Spiel keine Folge. Der Meep-Zoll
+     * trifft dagegen das, worauf der ganze Lauf hinarbeitet.
      */
     impactMonster(monster: VoidMonster): void {
       const def = getVoidRift(monster.defId)
@@ -899,6 +906,13 @@ export const useVoidStore = defineStore('void', {
       const hpLost = usePlayerStore().takeDamage(VOID_IMPACT_HP_LOSS[def.severity])
       this.totalVoidHpLost += hpLost
 
+      // Nur was der Lauf schon gesammelt hat — `devourMeeps` klemmt auf
+      // `pendingMeeps` und gibt 0 zurück, wenn nichts anstand.
+      const meepsLost = useGameStore().devourMeeps(
+        VOID_IMPACT_MEEP_LOSS_PCT[def.severity],
+        VOID_IMPACT_MEEP_LOSS_MIN[def.severity],
+      )
+
       const durationMs = VOID_IMPACT_AFTERMATH_MS[def.severity]
       this.aftermaths = this.aftermaths.filter((a) => a.sourceId !== def.id)
       this.aftermaths.push({
@@ -910,8 +924,12 @@ export const useVoidStore = defineStore('void', {
       this.voidNow = gameNow()
       this.refreshRates()
 
-      this._recordOutcome(monster, def, false, hpLost)
-      logger.warn('Void', `${def.name} reached the sun`, { hpLost, severity: def.severity })
+      this._recordOutcome(monster, def, false, hpLost, meepsLost)
+      logger.warn('Void', `${def.name} reached the sun`, {
+        hpLost,
+        meepsLost,
+        severity: def.severity,
+      })
     },
 
     /** Die Beute eines erlegten Wesens. */
@@ -956,7 +974,13 @@ export const useVoidStore = defineStore('void', {
 
     /** Ausgang festhalten, damit der Layer seinen Effekt an der richtigen
      *  Stelle spielt — auch bei einem erzwungenen Einschlag. */
-    _recordOutcome(monster: VoidMonster, def: VoidRiftDef, sealed: boolean, hpLost: number): void {
+    _recordOutcome(
+      monster: VoidMonster,
+      def: VoidRiftDef,
+      sealed: boolean,
+      hpLost: number,
+      meepsLost: number,
+    ): void {
       const sunRadius = usePlanetShopStore().orbitSunRadius
       const pos = voidPositionAt(monster, def.sizePx, sunRadius, gameNow())
       this.lastOutcome = {
@@ -967,6 +991,7 @@ export const useVoidStore = defineStore('void', {
         x: pos.x,
         y: pos.y,
         hpLost,
+        meepsLost,
       }
     },
 

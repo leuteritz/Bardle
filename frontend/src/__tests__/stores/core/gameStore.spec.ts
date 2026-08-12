@@ -8,6 +8,8 @@ import {
   LEVEL_SCALING_FACTOR,
   LEVEL_SCALING_CAP_LEVEL,
   AUGMENT_LEVEL_INTERVAL,
+  MEEP_POWER_MULTIPLIER,
+  ABILITY_POWER_PER_LEVEL_DEFAULT,
 } from '@/config/constants'
 
 describe('gameStore', () => {
@@ -100,18 +102,21 @@ describe('gameStore', () => {
       expect(store.totalPower).toBe(0)
     })
 
-    it('10 meeps → 1000 power (10 * 100 * multiplier)', () => {
+    // Gegen die Konstanten gerechnet, nicht gegen abgeschriebene Zahlen:
+    // `MEEP_POWER_MULTIPLIER` ist eine Balance-Größe und wurde mit der
+    // Meep-Ökonomie schon einmal nachgezogen. Ein Literal hier hiesse, dass
+    // jede Eichung zwei Fehlschläge produziert, die nichts aussagen.
+    it('Meeps tragen den Löwenanteil der Power', () => {
       const store = useGameStore()
       store.meeps = 10
-      expect(store.totalPower).toBe(1000)
+      expect(store.totalPower).toBe(10 * MEEP_POWER_MULTIPLIER)
     })
 
-    it('W ability level 2 adds 600 power bonus (2 * 300)', () => {
+    it('W-Rang addiert seinen Power-Bonus obendrauf', () => {
       const store = useGameStore()
       store.meeps = 5
       store.abilityLevels = [0, 2, 0, 0]
-      // totalPower = floor((5*100 + 600) * 1) = 1100
-      expect(store.totalPower).toBe(1100)
+      expect(store.totalPower).toBe(5 * MEEP_POWER_MULTIPLIER + 2 * ABILITY_POWER_PER_LEVEL_DEFAULT)
     })
   })
 

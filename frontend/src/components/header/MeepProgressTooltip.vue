@@ -162,6 +162,8 @@ interface StatRow {
   value: string
   /** Ungekürzter Wert für das native title-Attribut, wo einer existiert. */
   full?: string
+  /** Färbt den Wert in der Verlustfarbe — bislang nur der Void-Frass. */
+  loss?: boolean
 }
 
 const count = (value: number) => ({
@@ -183,11 +185,31 @@ const lifetimeRows = computed<StatRow[]>(() => [
     label: 'Meeps spent',
     ...count(gameStore.totalMeepsSpent),
   },
+  // Der Frass DIESES Laufs steht direkt über der Ausbeute, denn er ist bereits
+  // von ihr abgezogen — sonst suchte der Spieler die Differenz.
+  ...(gameStore.meepsDevoured > 0
+    ? [
+        {
+          key: 'devoured-run',
+          icon: MEEP_TOOLTIP_ICONS.devoured,
+          label: 'Devoured this run',
+          loss: true,
+          ...count(gameStore.meepsDevoured),
+        },
+      ]
+    : []),
   {
     key: 'cost',
     icon: MEEP_TOOLTIP_ICONS.costPerMeep,
     label: 'Meeps on departure',
     ...count(gameStore.pendingMeeps),
+  },
+  {
+    key: 'devoured-total',
+    icon: MEEP_TOOLTIP_ICONS.devoured,
+    label: 'Devoured by the Void',
+    loss: true,
+    ...count(gameStore.totalMeepsDevoured),
   },
   {
     key: 'eta',
@@ -390,7 +412,9 @@ const lifetimeRows = computed<StatRow[]>(() => [
             aria-hidden="true"
           />
           <span class="mpt-row-k">{{ row.label }}</span>
-          <span class="mpt-row-v" :title="row.full">{{ row.value }}</span>
+          <span class="mpt-row-v" :class="{ 'mpt-row-v--loss': row.loss }" :title="row.full">{{
+            row.value
+          }}</span>
         </div>
       </div>
       <div class="mpt-hint">
@@ -854,6 +878,12 @@ const lifetimeRows = computed<StatRow[]>(() => [
   font-variant-numeric: tabular-nums;
   color: #e8c040;
   white-space: nowrap;
+}
+
+/* Gold zählt, was gewonnen wurde — der Void-Frass ist die einzige Zeile hier,
+   die in die andere Richtung zeigt, und trägt deshalb die Verlustfarbe. */
+.mpt-row-v--loss {
+  color: #cc6050;
 }
 
 .mpt-hint {

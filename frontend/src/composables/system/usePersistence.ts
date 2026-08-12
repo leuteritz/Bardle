@@ -150,6 +150,9 @@ export function usePersistence() {
         chimesPerClick: gameStore.chimesPerClick,
         baseChimesPerClick: gameStore.baseChimesPerClick,
         chimesForNextUniverse: gameStore.chimesForNextUniverse,
+        bestUniverseRunChimes: gameStore.bestUniverseRunChimes,
+        meepsDevoured: gameStore.meepsDevoured,
+        runMeepCostFloor: gameStore.runMeepCostFloor,
         chimesToUniverseRescue: gameStore.chimesToUniverseRescue,
         meeps: gameStore.meeps,
         level: gameStore.level,
@@ -168,6 +171,7 @@ export function usePersistence() {
         totalClicks: gameStore.totalClicks,
         totalMeepsEarned: gameStore.totalMeepsEarned,
         totalMeepsSpent: gameStore.totalMeepsSpent,
+        totalMeepsDevoured: gameStore.totalMeepsDevoured,
         totalPrestiges: gameStore.totalPrestiges,
         totalOfflineChimes: gameStore.totalOfflineChimes,
         totalOfflineSeconds: gameStore.totalOfflineSeconds,
@@ -493,12 +497,31 @@ export function usePersistence() {
         // Lifetime counters added later — saves without them start the tally at 0
         gameStore.totalMeepsEarned = g.totalMeepsEarned ?? gameStore.meeps
         gameStore.totalMeepsSpent = g.totalMeepsSpent ?? 0
+        gameStore.totalMeepsDevoured = g.totalMeepsDevoured ?? 0
+        gameStore.meepsDevoured = g.meepsDevoured ?? 0
+        gameStore.runMeepCostFloor = g.runMeepCostFloor ?? 1
         gameStore.totalPrestiges = g.totalPrestiges ?? Math.max(0, gameStore.currentUniverse - 1)
         gameStore.totalOfflineChimes = g.totalOfflineChimes ?? 0
         gameStore.totalOfflineSeconds = g.totalOfflineSeconds ?? 0
         if (Array.isArray(g.universeRuns)) {
           gameStore.universeRuns = g.universeRuns.map((run: UniverseRunRecord) => ({ ...run }))
         }
+        // Die Meep-Ratsche — MUSS nach `universeRuns` stehen, sie liest daraus.
+        //
+        // Kennt der Spielstand sie nicht, wird sie aus dem besten archivierten
+        // Lauf UND dem laufenden rekonstruiert. Beide Hälften sind nötig: ohne
+        // das Archiv fiele ein alter Spielstand auf `MEEP_RUN_BASE_MIN` zurück
+        // und machte aus 1e16 Laufchimes zehn Millionen anstehende Meeps; ohne
+        // den laufenden Lauf bekäme jemand, der seit Stunden nicht aufgebrochen
+        // ist, beim nächsten Aufbruch den 100×-Bonus geschenkt.
+        // `UniverseRunRecord.chimes` ist exakt `chimesForNextUniverse` zum
+        // Prestige-Zeitpunkt, also die richtige Quelle.
+        gameStore.bestUniverseRunChimes =
+          g.bestUniverseRunChimes ??
+          Math.max(
+            gameStore.chimesForNextUniverse,
+            ...gameStore.universeRuns.map((run) => run.chimes ?? 0),
+          )
         // Die Basislinie wird hier nur übernommen, wenn sie im Spielstand steht.
         // Fehlt sie (Spielstand von vor dem Tooltip), setzt loadGame sie unten
         // aus den gerade wiederhergestellten Zählern — dann beginnt die
@@ -1115,6 +1138,9 @@ export function usePersistence() {
     gameStore.baseChimesPerClick = CHIMES_PER_CLICK_BASE
     gameStore.chimesForNextLevel = LEVEL_BASE
     gameStore.chimesForNextUniverse = 0
+    gameStore.bestUniverseRunChimes = 0
+    gameStore.meepsDevoured = 0
+    gameStore.runMeepCostFloor = 1
     gameStore.chimesToUniverseRescue = UNIVERSE_RESCUE_INITIAL_COST
     gameStore.meeps = 0
     gameStore.chimesEarnedForLevel = 0
@@ -1143,6 +1169,7 @@ export function usePersistence() {
     gameStore.showOfflineModal = false
     gameStore.totalMeepsEarned = 0
     gameStore.totalMeepsSpent = 0
+    gameStore.totalMeepsDevoured = 0
     gameStore.totalPrestiges = 0
     gameStore.totalOfflineChimes = 0
     gameStore.totalOfflineSeconds = 0

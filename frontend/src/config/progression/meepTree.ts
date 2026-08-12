@@ -6,25 +6,28 @@
  * Die Preise sind gegen die AUSSCHÜTTUNG geeicht, nicht frei gewählt. Meeps
  * fallen seit dem Umbau nur beim Aufbruch in ein neues Universum an
  * (`gameStore.pendingMeeps`), und der Baum überlebt das Prestige — er ist
- * damit die einzige Senke dafür. Zwei Referenzläufe über je 76 Spielstunden
- * haben die Summe eingestellt: ein Baum für 894 stand nach 28 Stunden und ließ
- * 4336 Meeps ohne Verwendung liegen; einer für 4029 stand nach 40. Der zweite
- * Lauf zeigte auch, warum die erste Korrektur zu klein war — der Knoten
- * `meepCostMult` senkt `meepChimeRequirement`, der Baum verbilligt also seinen
- * eigenen Rest, und der Zufluss stieg von 5376 auf 8830. Die Summe liegt
- * deshalb bei 6420: nicht am vollen Zufluss ausgerichtet, weil ein langsamer
- * wachsender Baum auch später verbilligt und der Zufluss damit mitfällt.
+ * damit die einzige Senke dafür.
  *
- * Nachgemessen mit dieser Summe: der erste Knoten fällt nach 3,2 Stunden (noch
- * vor dem ersten Aufbruch, aus Drifter-Funden), der zehnte nach 9,8, der
- * zwanzigste nach 42 und der letzte nach 68,4 von 76 Stunden; am Ende bleiben
- * 1374 Meeps übrig statt 4336. Die Kurve ist vorn schnell und hinten gestreckt
- * — gewollt, denn die frühen Knoten sind das, was den Aufbruch überhaupt
- * lohnend macht.
+ * Der Bezugspunkt ist der DAUERRHYTHMUS, seit die Ausbeute gegen den besten
+ * abgeschlossenen Lauf misst (`MEEP_RUN_BASE_MIN` / `MEEP_RUN_SHARE`): weil
+ * `UNIVERSE_RESCUE_COST_MULTIPLIER` 2 ist, liegt wer jeweils an der
+ * Rettungsschwelle aufbricht dauerhaft bei 2× Bestwert und bekommt **45 Meeps
+ * je Aufbruch** — über das ganze Spiel, unabhängig von der Größenordnung der
+ * Chime-Zahlen. Die Summe 1188 entspricht damit rund 26 Aufbrüchen; mit dem
+ * eigenen Rabatt des Baums (`meepCostMult`, voll gekauft 0,6885 ⇒ ×1,21
+ * Ausbeute) sind es rund 22. Der Baum verbilligt also seinen eigenen Rest, und
+ * die Summe ist bewusst NICHT am vollen Zufluss ausgerichtet.
  *
- * Wer die Ausbeute ändert (`MEEP_RUN_FACTOR`, `MEEP_RUN_BASE`) oder eine
- * Stufe hier anfasst, verschiebt diese Balance: eine Spec bindet die Summe an
- * `MEEP_TREE_TOTAL_COST`, damit die beiden Zahlen nicht stillschweigend
+ * Die Leiter ist vorn schnell und hinten gestreckt: die 31 Meeps des ersten
+ * Aufbruchs kaufen alle fünf Erststufen plus einen Zweitstufen-Knoten, der
+ * teuerste bleibt Spätspielziel. Gewollt — die frühen Knoten sind das, was den
+ * Aufbruch überhaupt lohnend macht.
+ *
+ * Wer die Ausbeute ändert (`MEEP_RUN_FACTOR`, `MEEP_RUN_BASE_MIN`,
+ * `MEEP_RUN_SHARE`) oder eine Stufe hier anfasst, verschiebt diese Balance:
+ * `__tests__/config/meepEconomy.spec.ts` bindet die Summe an
+ * `MEEP_TREE_TOTAL_COST` und prüft zusätzlich, dass der ganze Baum in 20 bis 32
+ * Aufbrüche passt — damit die beiden Zahlen nicht stillschweigend
  * auseinanderlaufen.
  */
 
@@ -120,7 +123,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:lantern-flame', // a light left burning
         effect: '+25% Chimes/s',
         desc: 'A patient watch keeps the chimes ringing on their own.',
-        cost: 15,
+        cost: 3,
         effects: { cpsMult: 1.25 },
       },
       {
@@ -129,7 +132,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:orbital', // the watch reaches further out
         effect: '+50% Chimes/s',
         desc: 'Your care reaches further across the sky.',
-        cost: 65,
+        cost: 10,
         effects: { cpsMult: 1.5 },
       },
       {
@@ -138,7 +141,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:night-sleep', // earnings while you are away
         effect: '+50% Offline Earnings',
         desc: 'The vigil holds while you are away.',
-        cost: 145,
+        cost: 26,
         effects: { offlineEarningsMult: 1.5 },
       },
       {
@@ -147,7 +150,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:solar-system', // every body on the same path
         effect: '+100% Chimes/s',
         desc: 'Every building falls into the same orbit.',
-        cost: 320,
+        cost: 55,
         effects: { cpsMult: 2 },
       },
       {
@@ -156,7 +159,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:infinity', // a watch without end
         effect: '+4h Offline Cap · +50% Chimes/s',
         desc: 'A watch that never truly ends.',
-        cost: 670,
+        cost: 110,
         effects: { offlineMaxHoursBonus: 4, cpsMult: 1.5 },
       },
     ],
@@ -173,7 +176,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:fist', // a firm strike
         effect: '+25% Chimes/Click',
         desc: 'Each touch of the chime rings a little louder.',
-        cost: 15,
+        cost: 3,
         effects: { cpcMult: 1.25 },
       },
       {
@@ -182,7 +185,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:ringing-bell', // the chime answers the blow
         effect: '+50% Chimes/Click',
         desc: 'The chime answers your hand with force.',
-        cost: 65,
+        cost: 10,
         effects: { cpcMult: 1.5 },
       },
       {
@@ -191,7 +194,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:echo-ripples', // one strike ringing twice
         effect: '10% Double-Click Chance',
         desc: 'Sometimes a single strike rings twice.',
-        cost: 145,
+        cost: 26,
         effects: { doubleClickChance: 0.1 },
       },
       {
@@ -200,7 +203,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:thunder-struck', // strikes that shake the sky
         effect: '+100% Chimes/Click',
         desc: 'Your strikes shake the firmament.',
-        cost: 320,
+        cost: 55,
         effects: { cpcMult: 2 },
       },
       {
@@ -209,7 +212,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:tarot-21-the-world', // clicks carrying the whole world
         effect: 'Clicks gain +2% of CpS · +50% Chimes/Click',
         desc: 'Every strike carries the weight of the whole sky.',
-        cost: 670,
+        cost: 110,
         effects: { cpcFromCpsPct: 0.02, cpcMult: 1.5 },
       },
     ],
@@ -226,7 +229,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:meeple', // a single meep, cheaper
         effect: '−10% Meep Cost',
         desc: 'Meeps gather for fewer chimes.',
-        cost: 30,
+        cost: 4,
         effects: { meepCostMult: 0.9 },
       },
       {
@@ -235,7 +238,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:interstellar-path', // charted expedition routes
         effect: '+25% Expedition Rewards',
         desc: 'Well-planned journeys return with richer spoils.',
-        cost: 70,
+        cost: 14,
         effects: { expeditionRewardMult: 1.25 },
       },
       {
@@ -244,7 +247,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:meeple-group', // a whole gathering of meeps
         effect: '−15% Meep Cost',
         desc: 'The gathering calls new meeps into being.',
-        cost: 160,
+        cost: 32,
         effects: { meepCostMult: 0.85 },
       },
       {
@@ -253,7 +256,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:magic-portal', // faster portal travel
         effect: 'Expeditions 20% Faster',
         desc: 'Favorable winds carry your champions home sooner.',
-        cost: 350,
+        cost: 70,
         effects: { expeditionSpeedMult: 0.8 },
       },
       {
@@ -262,7 +265,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:relationship-bounds', // the keeper-meep bond
         effect: '+30% Meep Power · −10% Meep Cost',
         desc: 'Your meeps fight — and multiply — for their keeper.',
-        cost: 720,
+        cost: 140,
         effects: { meepPowerMult: 1.3, meepCostMult: 0.9 },
       },
     ],
@@ -279,7 +282,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:rally-the-troops', // the whole host answers
         effect: '+500 Power',
         desc: 'A shared purpose drives your team forward.',
-        cost: 30,
+        cost: 4,
         effects: { powerBonus: 500 },
       },
       {
@@ -288,7 +291,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:crossed-swords', // sharpened intent
         effect: '+10% Champion DPS',
         desc: 'Champions strike with sharper intent.',
-        cost: 70,
+        cost: 14,
         effects: { championDpsMult: 1.1 },
       },
       {
@@ -297,7 +300,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:knight-banner', // the raised standard
         effect: '+1500 Power',
         desc: 'Your banner alone tips the scales of ranked battles.',
-        cost: 160,
+        cost: 32,
         effects: { powerBonus: 1500 },
       },
       {
@@ -306,7 +309,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:sword-array', // the assault swelling
         effect: '+15% Champion DPS',
         desc: 'The assault swells — and so does every strike.',
-        cost: 350,
+        cost: 70,
         effects: { championDpsMult: 1.15 },
       },
       {
@@ -315,7 +318,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:relic-blade', // a legend of the rift
         effect: '+5000 Power',
         desc: 'Tales of your team echo through every universe.',
-        cost: 720,
+        cost: 140,
         effects: { powerBonus: 5000 },
       },
     ],
@@ -332,7 +335,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:shard-sword', // a splinter that pierces armor
         effect: '+10% Boss Damage',
         desc: 'A sharp splinter that cuts through boss armor.',
-        cost: 30,
+        cost: 4,
         effects: { bossDamageMult: 1.1 },
       },
       {
@@ -341,7 +344,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:minerals', // richer material finds
         effect: '+20% Material Drop Chance',
         desc: 'You hear where the rarest materials hide.',
-        cost: 70,
+        cost: 14,
         effects: { materialDropMult: 1.2 },
       },
       {
@@ -350,7 +353,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:heart-beats', // a mending pulse
         effect: '+1 HP Regen/s',
         desc: 'A calm tide mends the sun’s wounds.',
-        cost: 160,
+        cost: 32,
         effects: { hpRegenPerSec: 1 },
       },
       {
@@ -359,7 +362,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:vibrating-shield', // a shield of ringing chimes
         effect: '−15% Damage Taken',
         desc: 'A shield of ringing chimes blunts every enemy blow.',
-        cost: 350,
+        cost: 70,
         effects: { damageTakenMult: 0.85 },
       },
       {
@@ -368,7 +371,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         icon: 'game-icons:sonic-boom', // the boss-breaking shockwave
         effect: '+30% Boss Damage',
         desc: 'No planetary tyrant withstands the final blow.',
-        cost: 720,
+        cost: 140,
         effects: { bossDamageMult: 1.3 },
       },
     ],

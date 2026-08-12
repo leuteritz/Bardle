@@ -62,7 +62,17 @@ export const FORGE_SUN_EDGE_R = 110
 
 export const MEEP_ADD_DELAY_MS = 100
 
-export const MEEP_POWER_MULTIPLIER = 100
+/**
+ * Battle Power je gehaltenem Meep. Der Meep-Term dominiert `totalPower` —
+ * `abilityPowerBonus` und `tree.powerBonus` sind daneben Beiwerk.
+ *
+ * Angehoben von 100, als die Meep-Ausbeute auf den Ratschen-Anker umgestellt
+ * wurde (`MEEP_RUN_BASE_MIN`/`MEEP_RUN_SHARE`): der Lebenszufluss fiel dabei
+ * von rund 7800 auf rund 1250 Meeps, also auf ein Sechstel. Geeicht ist der
+ * Faktor am ZUFLUSS-Verhältnis und nicht am Endstand — der Spieler hält fast
+ * durchweg Zwischenbestände zwischen zwei Baumkäufen, nicht den Rest am Ende.
+ */
+export const MEEP_POWER_MULTIPLIER = 600
 
 /**
  * Wie die gefalteten Baum-Effekte im Meep-Panel des Headers gelesen werden.

@@ -332,6 +332,9 @@ export interface VoidOutcome {
   y: number
   /** Sonnen-HP, die der Einschlag gekostet hat. Bei `sealed` immer 0. */
   hpLost: number
+  /** Anstehende Meeps, die der Einschlag gefressen hat. Bei `sealed` immer 0 —
+   *  und auch bei einem Einschlag 0, wenn der Lauf nichts gesammelt hatte. */
+  meepsLost: number
 }
 
 // ── Planeten-Slots ─────────────────────────────────────────────────────────
