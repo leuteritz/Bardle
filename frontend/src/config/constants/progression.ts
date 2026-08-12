@@ -65,7 +65,7 @@ export const LEVEL_SCALING_CAP_LEVEL = 100
  * **Eichung, gemessen.** Ein 76-Stunden-Referenzlauf mit 24 Aufbrüchen
  * schüttete 4482 Meeps aus — der erste Aufbruch rund 16, späte je 130 bis 290.
  * Die Baumkosten sind gegen genau diese Zahl gestellt (`MEEP_TREE_TOTAL_COST`,
- * 4029), denn der Baum ist die einzige Senke: er überlebt jetzt jedes
+ * 6420), denn der Baum ist die einzige Senke: er überlebt jetzt jedes
  * Prestige. Eine erste Fassung schoss hier vorbei — 894 Kosten gegen 4482
  * Ertrag hieß, dass der Baum nach 28 Stunden stand und der Prestige-Lohn
  * danach 48 Stunden lang kein Ziel mehr hatte.
@@ -85,7 +85,7 @@ export const MEEP_RUN_FACTOR = 1.6
  * Icons und Beschreibungen der Knoten. Eine Spec prüft, dass der Katalog
  * dieselbe Summe ergibt.
  */
-export const MEEP_TREE_TOTAL_COST = 4029
+export const MEEP_TREE_TOTAL_COST = 6420
 
 // Abilities
 export const MAX_ABILITY_LEVEL = 5
