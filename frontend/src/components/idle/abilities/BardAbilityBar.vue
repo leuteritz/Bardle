@@ -77,8 +77,6 @@
     <div class="ab-row">
       <BardPassiveTile
         :meep-fill="meepFill"
-        :pending-meeps="gameStore.pendingMeeps"
-        :meeps-devoured="gameStore.meepsDevoured"
         :clicks-to-meep="clicksToMeep"
         :gain-amount="meepGainAmount"
         :gain-key="meepGainKey"
@@ -486,18 +484,19 @@ const hovered = computed(() => {
       locked: false,
       // Die Passive kühlt nicht ab — der Status-Slot bliebe leer.
       live: false,
-      // Die Kachel führt mit der Ernte, also führt der Kasten damit auch — ein
-      // Tooltip, der eine andere Zahl voranstellt als das Feld darunter, lässt
-      // den Spieler suchen.
-      lead: { value: formatNumber(gameStore.pendingMeeps), label: 'Meeps on departure' },
+      // Die Kachel führt mit den offenen Klicks, also führt der Kasten damit
+      // auch — gekürzt dort, voll hier. Ein Tooltip, der eine andere Zahl
+      // voranstellt als das Feld darunter, lässt den Spieler suchen.
+      lead: due
+        ? { value: 'Arriving', label: 'Next meep' }
+        : { value: formatNumber(clicksToMeep.value), label: 'Clicks to next meep' },
       lines: [
-        // Die Klickzahl von der Kachel: dort war sie eine Zahl, die sich nicht
-        // rührte, hier ist sie die Antwort auf „soll ich noch klicken?".
-        due
-          ? { label: 'Next meep', value: 'Arriving' }
-          : { label: 'Clicks to next meep', value: formatNumber(clicksToMeep.value) },
         // Was die Produktion allein schafft — die Gegenprobe zur Klickzahl.
         { label: 'Idle in', value: meepIdleEta.value },
+        // Wofür die Strecke überhaupt gelaufen wird: die Ernte des Durchlaufs.
+        { label: 'Meeps on departure', value: formatNumber(gameStore.pendingMeeps) },
+        // Nur wenn der Void wirklich zugeschlagen hat — eine Null zu melden,
+        // wo nichts verloren ging, macht aus einer Bilanz eine Floskel.
         ...(gameStore.meepsDevoured > 0
           ? [
               {

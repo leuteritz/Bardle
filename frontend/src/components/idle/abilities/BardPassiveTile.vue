@@ -40,24 +40,27 @@
       @dragstart.prevent
     />
 
-    <!-- Die ERNTE des Laufs, nicht die offene Strecke.
+    <!-- Was noch zu tun ist: die Klicks bis zum nächsten Meep. Sie zählt mit
+         JEDEM Klick herunter, und das ist ihr ganzer Zweck — die Frage, die der
+         Spieler beim Klicken stellt, ist „wie oft noch?", nicht „wie viel habe
+         ich schon?". Der Bestand steht im Header, die Ernte des Laufs im
+         Tooltip und am Rettungsbalken.
 
-         Hier stand die Klickzahl, solange sie „wie oft muss ich noch drücken?"
-         beantwortete. Mit der alten festen Basis waren das im frischen
-         Spielstand 390,6 Millionen — und die Kurzform rührte sich über
-         Millionen Klicks nicht. Was sich jetzt bewegt, ist der Ring (der
-         Bruchteil zum nächsten Meep); was zählt, ist die Ernte, und seit dem
-         Void ist sie zugleich das, was auf dem Spiel steht. Ein- bis
-         dreistellig, immer lesbar. Die Klickzahl ist nicht weg, sie steht im
-         Tooltip — dort ist sie eine Antwort, hier war sie eine Tapete. -->
-    <span class="ab-tally" aria-hidden="true">
-      <span class="ab-pending">{{ formatNumberCompact(pendingMeeps) }}</span>
-      <!-- Statisch eingefärbt, nicht animiert: eine Marke, die pulst, wäre je
-           Frame eine Neurasterung (Performance-Regel 2). -->
-      <span v-if="meepsDevoured > 0" class="ab-devoured"
-        >−{{ formatNumberCompact(meepsDevoured) }}</span
-      >
-    </span>
+         Dass sie hier einmal unbrauchbar war, lag nicht an ihr, sondern an der
+         Bezugsgröße: mit der alten festen Basis stand im frischen Spielstand
+         390,6 Millionen, und die Kurzform rührte sich über Millionen Klicks
+         nicht. Mit dem Ratschen-Anker beginnt sie bei 100.
+
+         Ist nichts mehr offen, steht hier NICHTS — den Zustand trägt der volle
+         Ring, das Ereignis der Float darüber.
+
+         KEINE Void-Verlustmarke an dieser Stelle: neben einer Klickzahl läse
+         sich ein „−3" als drei Klicks weniger statt als drei verlorene Meeps.
+         Der Frass steht am Rettungsbalken neben dem Meep-Ertrag, im Tooltip,
+         im Eventlog und im Toast. -->
+    <span v-if="clicksToMeep > 0" class="ab-clicks" aria-hidden="true">{{
+      formatNumberCompact(clicksToMeep)
+    }}</span>
 
     <!-- Der Gewinn steht für sich (MeepGainFloat) — die Kachel ist nur sein
          Anker. `:key` hier, nicht dort: der Bump ist es, der die Animation neu
@@ -76,12 +79,7 @@ import { formatNumberCompact } from '@/config/ui/numberFormat'
 const props = defineProps<{
   /** 0..1 — Weg zum nächsten Meep. */
   meepFill: number
-  /** Was der laufende Durchlauf beim Aufbruch einbringt — die große Zahl. */
-  pendingMeeps: number
-  /** Was der Void in diesem Durchlauf davon geholt hat; 0 = keine Marke. */
-  meepsDevoured: number
-  /** Nur noch für den Fällig-Zustand und die Vorlesehilfe — die Zahl selbst
-   *  steht im Tooltip. */
+  /** Klicks, die bis zum nächsten Meep noch fehlen; 0, wenn er fällig ist. */
   clicksToMeep: number
   /** Gerade gutgeschriebene Meeps; 0 = kein Float. */
   gainAmount: number
@@ -92,9 +90,9 @@ const props = defineProps<{
 defineEmits<{ hover: [boolean] }>()
 
 const meepAria = computed(() =>
-  props.meepsDevoured > 0
-    ? `${BARD_PASSIVE.name} — ${props.pendingMeeps} meeps on departure, ${props.meepsDevoured} devoured by the Void`
-    : `${BARD_PASSIVE.name} — ${props.pendingMeeps} meeps on departure`,
+  props.clicksToMeep > 0
+    ? `${BARD_PASSIVE.name} — ${props.clicksToMeep} clicks to the next meep`
+    : `${BARD_PASSIVE.name} — next meep ready`,
 )
 
 /**
@@ -197,40 +195,25 @@ const RING_C = 2 * Math.PI * RING_R
 
 /* Auf dem Fuß der Scheibe, damit die Zahl das Motiv nicht zerschneidet — und
    ohne Platte: den dunklen Grund liefert der Verlauf der Scheibe selbst.
-   Eine Flexzeile auf gemeinsamer Grundlinie, damit Bestand und Verlustmarke
-   sich nie überlagern, egal wie breit die beiden werden. */
-.ab-tally {
+   Sie steht in derselben Orange-Familie wie der Ring darüber, denn beide
+   zählen dieselbe Strecke — der Ring als Anteil, die Zahl in Klicks. */
+.ab-clicks {
   position: absolute;
   bottom: 7%;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 92%;
-  display: flex;
-  align-items: baseline;
-  gap: 0.18em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  pointer-events: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
-/* Dieselbe Orange-Familie wie der Ring darüber: beide sprechen von derselben
-   Sache — der Ring vom Weg, die Zahl vom Ergebnis. */
-.ab-pending {
+  max-width: 84%;
+  /* Die Kurzform wird bis zu fünf Zeichen lang ("125Qa"). */
   font-size: calc(var(--ab-passive-size, 72px) * 0.21);
   font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.01em;
   color: #fed7aa;
-}
-
-/* Das einzige Rot der Kachel — dieselbe Verlustfarbe wie am Rettungsbalken und
-   im Meep-Panel. Kleiner als der Bestand: sie ist dessen Fußnote, nicht sein
-   Gegenstück. */
-.ab-devoured {
-  font-size: calc(var(--ab-passive-size, 72px) * 0.145);
-  font-weight: 700;
-  color: #cc6050;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
