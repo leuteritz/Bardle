@@ -141,7 +141,7 @@ export const RARITY_WEIGHT_FALLBACK = 60
 export const MAX_STAR_LEVEL = 6
 
 // Champion Tier → galaxy at which that tier unlocks (cumulatively). Index 0 = Tier 1
-// (Galaxy 1, always available) … index 5 = Tier 6 (Galaxy 40). Once a tier's galaxy is
+// (Galaxy 1, always available) … index 5 = Tier 6 (Galaxy 48). Once a tier's galaxy is
 // reached it joins the weighted spawn pool AND is revealed in the Shop. A tier also
 // auto-unlocks once the player owns/has discovered any champion of that tier, so a
 // champion found via spawning is never stranded behind a far-off lock.
@@ -152,7 +152,7 @@ export const MAX_STAR_LEVEL = 6
 //
 // Die ersten DREI Einträge stehen bewusst still: Tier 2 (G3) und Tier 3 (G6)
 // fallen weiter nach ~30 Minuten bzw. ~2 Stunden. Gestreckt wird nur, was
-// dahinter liegt. Tier 6 wandert von Galaxie 21 auf 40, also von ~7 auf ~55
+// dahinter liegt. Tier 6 wandert von Galaxie 21 auf 48, also von ~7 auf über 60
 // Spielstunden — dieselben 165 Champions, dreifache Strecke, kein einziger
 // neuer Datensatz.
 export const CHAMPION_TIER_REQUIRED_GALAXY: number[] = [1, 3, 6, 12, 24, 48]
@@ -208,13 +208,19 @@ export const TIER_UNLOCK_LATE_FROM_TIER = 5
  * Ab diesem Tier hören die Freischaltkosten auf zu wachsen.
  *
  * Galaxien laufen unbegrenzt weiter, neuer INHALT endet aber mit dem letzten
- * Champion-Tier (`CHAMPION_TIER_REQUIRED_GALAXY`, Galaxie 40 → Tier 14). Eine
- * Sperre, die darüber hinaus weiterwächst, hält nichts mehr auf, was der
- * Spieler noch sehen könnte — sie mauert nur Zahlen zu. Gemessen in einem
- * 72-Stunden-Lauf: Tier 15 verlangte 2647 nebula_quartz, Tier 16 wären 4288
- * gewesen, und die Galaxie-Achse stand über zehn Spielstunden still.
+ * Champion-Tier. Eine Sperre, die darüber hinaus weiterwächst, hält nichts mehr
+ * auf, was der Spieler noch sehen könnte — sie mauert nur Zahlen zu. Gemessen
+ * in einem 72-Stunden-Lauf: Tier 15 verlangte 2647 nebula_quartz, Tier 16 wären
+ * 4288 gewesen, und die Galaxie-Achse stand über zehn Spielstunden still.
  *
- * 14 = tierOf(40), also genau das Tier des letzten Champion-Tors.
+ * Die 14 stammt aus dieser Messung — es ist das letzte Tor, das noch bezahlbar
+ * war. Sie war ursprünglich zusätzlich damit begründet, dass 14 = tierOf(40)
+ * genau das Tier des letzten Champion-Tors sei; seit
+ * `CHAMPION_TIER_REQUIRED_GALAXY` auf Galaxie 48 endet (= tierOf(48) = 17),
+ * stimmt das nicht mehr. Die drei Tore 15–17 laufen damit zu gedeckelten
+ * Kosten, obwohl hinter dem letzten noch Tier-6-Champions stehen — wer die
+ * Galaxie-Achse dort wieder straffen will, hebt DIESEN Wert auf 17 und misst
+ * nach, ob die Materialkosten dann noch tragbar bleiben.
  */
 export const TIER_UNLOCK_COST_CAP_TIER = 14
 export const TIER_UNLOCK_MATERIAL_LATE: Record<string, number> = {

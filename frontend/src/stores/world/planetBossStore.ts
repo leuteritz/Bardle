@@ -261,7 +261,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         // geht schnell, es kommt ein Champion-Stern je Sternrettung —, verteilte
         // das Spiel die gesperrten Champions trotzdem. Gemessen über 72
         // Spielstunden: der komplette Kader stand nach 6,4 Stunden, obwohl das
-        // letzte Tier erst bei Galaxie 40 aufgehen sollte. Eine Sperre, die
+        // letzte Tier erst bei Galaxie 48 aufgehen sollte. Eine Sperre, die
         // sich selbst aufhebt, taktet nichts.
         //
         // Ohne den Griff bleibt der Stern nicht leer: sein Boss steht, fällt,
