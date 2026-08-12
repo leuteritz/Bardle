@@ -226,8 +226,29 @@ export const PLANET_SLOT_MAX_HP = 100
 export const PLANET_LEVEL_BONUS_PCT = 0.1 // +10% to the role's bonusPerSlot per level above 1
 export const PLANET_LEVEL_HP_PCT = 0.2 // +20% of base max HP per level above 1
 export const PLANET_LEVEL_COST_FACTOR = 0.5 // level-up base cost = slot.baseCost * factor
-export const PLANET_LEVEL_COST_MULTIPLIER = 1.6 // geometric cost growth per level
-export const PLANET_LEVELS_PER_PHASE = 5 // levels unlocked per Sun Phase
+/**
+ * Von 1.6 auf 1.28 gesenkt — und das macht Planetenlevel ERST zu einem Ziel.
+ *
+ * Mit 1.6 kostete Stufe 100 eines Slots rund 10²², die Achse war also nicht
+ * teuer, sondern abgeschnitten; die Codex-Bahn „Warden of Worlds" verlangte 600
+ * Planetenlevel und war damit ökonomisch unerreichbar. Mit 1.28 kosten sechs
+ * Slots auf Level 60 zusammen ~2,6e12 Chimes — bei erreichbarer CpS rund elf
+ * Stunden Sparzeit, und zwar in direkter Konkurrenz zu den Gebäuden, weil beide
+ * aus derselben Kasse zahlen.
+ *
+ * Das ist der einzige echte Chime-Sink des Spätspiels. Alles andere (Forge,
+ * Prestige, Champion-Level, Items) fällt unter der Endgame-CpS in Sekunden.
+ */
+export const PLANET_LEVEL_COST_MULTIPLIER = 1.28 // geometric cost growth per level
+/**
+ * Von 5 auf 12 — die Sonnenphase gibt jetzt zwölf Stufen auf einmal frei.
+ *
+ * Damit sind Level 1–12 gar nicht mehr phasengetort (Frühspiel schneller), und
+ * Level 49–60 gehen bei Phase 4 auf. Ohne diese Anhebung läge das Sparziel aus
+ * `PLANET_LEVEL_COST_MULTIPLIER` hinter einem Tor, das erst am Ende der
+ * gestreckten Sonnenrampe fällt — und käme damit zu spät, um noch zu wirken.
+ */
+export const PLANET_LEVELS_PER_PHASE = 12 // levels unlocked per Sun Phase
 export const PLANET_LEVEL_MAX_PHASE = 5 // cap aligned to starPhase max (0–5)
 export const PLANET_MILESTONE_INTERVAL = 5 // every Nth Attunement grants a perk spike
 export const PLANET_MILESTONE_BONUS = 0.25 // +25% of base role bonus per milestone reached

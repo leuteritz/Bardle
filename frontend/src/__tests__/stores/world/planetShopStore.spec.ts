@@ -10,13 +10,20 @@ import {
   computePlanetMaxHp,
   planetLevelUpCost,
   planetLevelRequiredPhase,
+  harvestIntervalTicks,
   isPlanetDown,
 } from '@/stores/world/planetShopStore'
 import type { PlanetRoleType } from '@/stores/world/planetShopStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import {
   PLANET_SLOT_MAX_HP,
+  PLANET_HARVEST_INTERVAL_TICKS,
+  PLANET_LEVEL_COST_FACTOR,
+  PLANET_LEVEL_COST_MULTIPLIER,
+  PLANET_LEVELS_PER_PHASE,
+  PLANET_LEVEL_MAX_PHASE,
   PLANET_SLOT_SUN_PHASE_REQUIREMENTS,
   PLANET_RESPAWN_MS,
   STAR_PHASE_DATA,
@@ -41,15 +48,28 @@ describe('planetShopStore — Attunement leveling', () => {
     })
 
     it('planetLevelUpCost grows geometrically from baseCost', () => {
-      expect(planetLevelUpCost({ baseCost: 1000, level: 1 })).toBe(Math.ceil(1000 * 0.5))
-      expect(planetLevelUpCost({ baseCost: 1000, level: 2 })).toBe(Math.ceil(1000 * 0.5 * 1.6))
+      // Aus den Konstanten gelesen: der Multiplikator ist eine Balance-Groesse
+      // (zuletzt 1.6 -> 1.28, damit Planetenlevel ueberhaupt ein erreichbares
+      // Sparziel werden) und darf wandern, ohne diese Spec zu brechen.
+      expect(planetLevelUpCost({ baseCost: 1000, level: 1 })).toBe(
+        Math.ceil(1000 * PLANET_LEVEL_COST_FACTOR),
+      )
+      expect(planetLevelUpCost({ baseCost: 1000, level: 2 })).toBe(
+        Math.ceil(1000 * PLANET_LEVEL_COST_FACTOR * PLANET_LEVEL_COST_MULTIPLIER),
+      )
+      expect(planetLevelUpCost({ baseCost: 1000, level: 3 })).toBeGreaterThan(
+        planetLevelUpCost({ baseCost: 1000, level: 2 }),
+      )
     })
 
-    it('planetLevelRequiredPhase: ~5 levels per phase, capped at 5', () => {
+    it('planetLevelRequiredPhase: eine Phase je PLANET_LEVELS_PER_PHASE Stufen, gedeckelt', () => {
       expect(planetLevelRequiredPhase(2)).toBe(0)
-      expect(planetLevelRequiredPhase(6)).toBe(1)
-      expect(planetLevelRequiredPhase(31)).toBe(5)
-      expect(planetLevelRequiredPhase(100)).toBe(5)
+      expect(planetLevelRequiredPhase(PLANET_LEVELS_PER_PHASE)).toBe(0)
+      expect(planetLevelRequiredPhase(PLANET_LEVELS_PER_PHASE + 1)).toBe(1)
+      expect(planetLevelRequiredPhase(PLANET_LEVEL_MAX_PHASE * PLANET_LEVELS_PER_PHASE + 1)).toBe(
+        PLANET_LEVEL_MAX_PHASE,
+      )
+      expect(planetLevelRequiredPhase(10_000)).toBe(PLANET_LEVEL_MAX_PHASE)
     })
 
     it('every sun phase after the comet unlocks one planet slot', () => {
@@ -121,8 +141,8 @@ describe('planetShopStore — Attunement leveling', () => {
     })
 
     it('blocked when sun phase too low', () => {
-      // next level 6 requires phase 1; phase 0 must block even with plenty of chimes
-      const { store, slot } = setup(5, 0, 1e9)
+      // Die erste Stufe hinter dem Phasen-Tor muss auch mit voller Kasse blocken.
+      const { store, slot } = setup(PLANET_LEVELS_PER_PHASE, 0, 1e9)
       expect(store.planetLevelUpBlockReason(slot.id)).toBe('phase')
       expect(store.canLevelUpPlanet(slot.id)).toBe(false)
     })
@@ -216,11 +236,11 @@ describe('planetShopStore — Attunement leveling', () => {
     })
 
     it('stops at the phase gate', () => {
-      // phase 0 allows levels up to 5 (next level 6 needs phase 1)
+      // Phase 0 gibt genau PLANET_LEVELS_PER_PHASE Stufen frei.
       const { store, slot } = setup(1, 0, 1e12)
-      const gained = store.levelUpPlanetTimes(slot.id, 100)
-      expect(slot.level).toBe(5)
-      expect(gained).toBe(4)
+      const gained = store.levelUpPlanetTimes(slot.id, 1000)
+      expect(slot.level).toBe(PLANET_LEVELS_PER_PHASE)
+      expect(gained).toBe(PLANET_LEVELS_PER_PHASE - 1)
       expect(store.planetLevelUpBlockReason(slot.id)).toBe('phase')
     })
 
@@ -332,6 +352,56 @@ describe('planetShopStore — Attunement leveling', () => {
 
       store.applyJungleBuff(slot.id, JUNGLE_BUFF_DEFS.turret_planet)
       expect(slot.jungleBuff).toBeNull()
+    })
+  })
+
+  // ── Ernteuhr ──────────────────────────────────────────────────────────────
+  // Der Harvester trägt `bonusType: 'material_harvest_rate'`, aber sein Takt war
+  // eine feste Zahl — Level 60 lieferte genau so viel wie Level 1. Material ist
+  // der Taktgeber der Galaxie-Achse, und über 24 gemessene Spielstunden war JEDE
+  // späte Blockade das Tier-Tor mit fehlendem Material.
+  describe('harvestIntervalTicks', () => {
+    it('lässt Level 1 exakt beim Grundtakt', () => {
+      expect(harvestIntervalTicks(1)).toBe(PLANET_HARVEST_INTERVAL_TICKS)
+    })
+
+    it('wird mit jedem Level dichter und fällt nie unter einen Tick', () => {
+      let prev = harvestIntervalTicks(1)
+      for (const level of [5, 12, 30, 60]) {
+        const cur = harvestIntervalTicks(level)
+        expect(cur).toBeLessThan(prev)
+        expect(cur).toBeGreaterThanOrEqual(1)
+        prev = cur
+      }
+      // Ein Harvester auf 12 erntet gut doppelt so oft wie einer auf 1.
+      expect(harvestIntervalTicks(12)).toBeLessThanOrEqual(PLANET_HARVEST_INTERVAL_TICKS / 2)
+    })
+
+    it('erntet je Slot in seinem eigenen Takt', () => {
+      const store = usePlanetShopStore()
+      const gameStore = useGameStore()
+      const solar = useSolarUpgradeStore()
+      const inventory = useInventoryStore()
+      solar.isCometState = false
+      solar.starPhase = 5
+      gameStore.chimes = 1e12
+
+      // Zwei Harvester, einer frisch, einer ausgebaut.
+      const ids = store.slots.slice(0, 2).map((s) => s.id)
+      for (const id of ids) {
+        store.buySlot(id)
+        store.assignRole(id, 'harvest_node')
+        store.setSlotConfig(id, { materialId: 'stardust' })
+      }
+      const [slow, fast] = ids.map((id) => store.getSlot(id)!)
+      fast.level = 12
+
+      const before = inventory.collectedMaterials.stardust ?? 0
+      // Ein Takt, in dem NUR der ausgebaute Slot fällig ist.
+      const t = harvestIntervalTicks(fast.level)
+      expect(t % harvestIntervalTicks(slow.level)).not.toBe(0)
+      store.tickHarvest(t)
+      expect((inventory.collectedMaterials.stardust ?? 0) - before).toBe(1)
     })
   })
 })

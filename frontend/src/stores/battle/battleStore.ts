@@ -25,6 +25,7 @@ import {
   LP_MASTER_DEMOTION_VALUE,
   LP_GRANDMASTER_DEMOTION_VALUE,
   LP_BASE_CHANGE,
+  LP_TIER_GAIN_MULT,
   OPPONENT_MMR_VARIANCE,
   BATTLE_TIME_MIN_SECONDS,
   BATTLE_TIME_RANGE_SECONDS,
@@ -1884,7 +1885,15 @@ export const useBattleStore = defineStore('battle', {
       // und aus demselben Grund: eine Vorsehung, die den Siegertrag SENKT, darf
       // eine Niederlage nicht im Gegenzug verbilligen.
       if (won)
-        lp = Math.round(lp * useAchievementStore().lpGainMult * useProvidenceStore().lpGainMult)
+        lp = Math.round(
+          lp *
+            useAchievementStore().lpGainMult *
+            useProvidenceStore().lpGainMult *
+            // Die Leiter wird nach oben hin zäher — steht in derselben Klammer
+            // und aus demselben Grund wie die beiden Faktoren darüber: was den
+            // Aufstieg bremst, darf den Abstieg nicht verbilligen.
+            (LP_TIER_GAIN_MULT[this.currentRank.tier] ?? 1),
+        )
       // Baron's Aegis (Baron Nashor): a defeat despite the baron costs only a fraction of the LP
       if (!won && this.hasBaronBuff) lp = Math.round(lp * BARON_LP_LOSS_SHIELD_MULT)
       return lp

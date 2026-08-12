@@ -1,6 +1,7 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useShopStore } from '@/stores/economy/shopStore'
+import { useShopStore, buildingMilestoneMultiplier } from '@/stores/economy/shopStore'
+import { BUILDING_MILESTONE_INTERVAL, BUILDING_MILESTONE_MULT } from '@/config/constants'
 
 describe('shopStore', () => {
   beforeEach(() => {
@@ -91,6 +92,53 @@ describe('shopStore', () => {
       const klicker = store.shopUpgrades.find((u) => u.id === 'chimeClicker')!
       klicker.level = 5 // baseCPC=1
       expect(store.calculateTotalCPC()).toBe(25)
+    })
+  })
+
+  // ─── Gebäude-Meilensteine ─────────────────────────────────────────────────
+  // Der Ertrag war streng linear, die Kosten geometrisch — daraus folgt eine
+  // CpS, die nur logarithmisch mit den Ausgaben wächst. Gemessen trugen alle
+  // sechs Gebäude zusammen rund 1000 von 2,6e7 CpS bei; Gebäudekauf war im
+  // Spätspiel keine Entscheidung mehr.
+  describe('buildingMilestoneMultiplier', () => {
+    it('lässt die Stufen vor dem ersten Meilenstein unangetastet', () => {
+      for (let level = 0; level < BUILDING_MILESTONE_INTERVAL; level++) {
+        expect(buildingMilestoneMultiplier(level)).toBe(1)
+      }
+    })
+
+    it('verdoppelt an jedem Meilenstein', () => {
+      expect(buildingMilestoneMultiplier(BUILDING_MILESTONE_INTERVAL)).toBe(BUILDING_MILESTONE_MULT)
+      expect(buildingMilestoneMultiplier(BUILDING_MILESTONE_INTERVAL * 3)).toBe(
+        BUILDING_MILESTONE_MULT ** 3,
+      )
+    })
+
+    it('wächst langsamer als die Kosten — die Wand bleibt eine Wand', () => {
+      // Der Punkt der Meilensteine ist NICHT mehr CpS, sondern ein Sparziel.
+      // Wenn der Ertrag je Stufenblock schneller stiege als der Preis, wäre die
+      // Wirtschaft offen und alles andere im Spiel bedeutungslos.
+      const store = useShopStore()
+      for (const upgrade of store.shopUpgrades) {
+        const costFactor = upgrade.costMultiplier ** BUILDING_MILESTONE_INTERVAL
+        const yieldFactor =
+          ((BUILDING_MILESTONE_INTERVAL * 2) / BUILDING_MILESTONE_INTERVAL) *
+          BUILDING_MILESTONE_MULT
+        expect(costFactor).toBeGreaterThan(yieldFactor)
+      }
+    })
+
+    it('greift in calculateTotalCPS', () => {
+      const store = useShopStore()
+      const tower = store.shopUpgrades.find((u) => u.id === 'glockenturm')!
+      tower.level = BUILDING_MILESTONE_INTERVAL
+      const withMilestone = store.calculateTotalCPS()
+
+      tower.level = BUILDING_MILESTONE_INTERVAL - 1
+      const without = store.calculateTotalCPS()
+
+      // Eine Stufe mehr, aber der Sprung ist grösser als eine Stufe.
+      expect(withMilestone).toBeGreaterThan(without * 1.5)
     })
   })
 })

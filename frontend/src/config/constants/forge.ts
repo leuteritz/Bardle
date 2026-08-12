@@ -119,8 +119,22 @@ export const FORGE_LEAF_UNLOCK_PHASE = 4
 /** Branch max level at unlock; +1 per phase past the unlock phase, up to the cap
  *  → "old upgrades gain new tiers" with every sun evolution. */
 export const FORGE_BRANCH_BASE_MAX_LEVEL = 3
-export const FORGE_BRANCH_MAX_LEVEL_CAP = 5
-export const FORGE_LEAF_MAX_LEVEL = 3
+/**
+ * Von 5 auf 6 gehoben, und die Blätter von 3 auf 4.
+ *
+ * Zwei Gründe, die dasselbe verlangen. Erstens war die Codex-Bahn „Sunsmith"
+ * dadurch UNERREICHBAR: ihre letzte Stufe verlangt 200 `forgeLevels`, das
+ * theoretische Maximum lag bei 10 Branches × 5 + 10 Leaves × 3 + 6 Relikte × 3
+ * = 98. Zweitens braucht die verlängerte Sonnenrampe Inhalt: `nodeMaxLevel`
+ * staffelt „+1 je Phase über der Freischaltphase", die letzte Branch-Stufe
+ * existiert damit erst in der Schlussphase.
+ *
+ * Neues Maximum: 60 + 40 + 30 = 130. Die Materialkosten skalieren bereits mit
+ * der Stufe (`qty × nextLevel`) und ziehen damit am selben Strang wie die
+ * Tier-Tore — eine Quelle, mehrere Verbraucher, sechs Slots, eine Entscheidung.
+ */
+export const FORGE_BRANCH_MAX_LEVEL_CAP = 6
+export const FORGE_LEAF_MAX_LEVEL = 4
 /** Parent level required before a child node can be bought. */
 export const FORGE_BRANCH_PARENT_MIN_LEVEL = 1
 export const FORGE_LEAF_PARENT_MIN_LEVEL = 2

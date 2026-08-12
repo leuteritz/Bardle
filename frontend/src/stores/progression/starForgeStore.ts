@@ -503,7 +503,7 @@ export const useStarForgeStore = defineStore('starForge', {
         case 'dwellSkip': {
           const solar = useSolarUpgradeStore()
           const remaining = solar.phaseDwellRemainingMs
-          solar.phaseEnteredAt -= Math.floor(remaining * (def.dwellSkipPct ?? 0))
+          solar.skipDwell(Math.floor(remaining * (def.dwellSkipPct ?? 0)))
           solar.tickDwell()
           break
         }

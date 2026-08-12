@@ -118,6 +118,28 @@ export function planetLevelRequiredPhase(nextLevel: number): number {
   return Math.min(PLANET_LEVEL_MAX_PHASE, Math.floor((nextLevel - 1) / PLANET_LEVELS_PER_PHASE))
 }
 
+/**
+ * Erntetakt eines Harvesters in Ticks — je höher sein Level, desto dichter.
+ *
+ * Die Rolle heisst `harvest_node` und trägt `bonusType: 'material_harvest_rate'`,
+ * aber der Takt war eine feste Zahl: ein Harvester auf Level 60 lieferte exakt
+ * so viel wie auf Level 1, nämlich eine Einheit alle 30 Sekunden. Das Versprechen
+ * der Rolle war unerfüllt, und die Folge war im Messlauf sichtbar — Material ist
+ * der Taktgeber der Galaxie-Achse, und JEDE späte Blockade über 24 Spielstunden
+ * war das Tier-Tor mit fehlendem Material bei gleichzeitig dreitausendfach
+ * übererfüllten Chimes.
+ *
+ * Level 1 ergibt weiter genau 30 Ticks — das Frühspiel ändert sich nicht.
+ * Level 12 kommt auf 14, Level 60 auf 5. Damit wird aus einer Wartezeit ein
+ * Sparziel: wer Chimes in Planetenlevel steckt, kommt schneller ans nächste
+ * Tier. Und weil ein Slot entweder erntet oder Bosse beschiesst, ist es eine
+ * echte Entscheidung.
+ */
+export function harvestIntervalTicks(level: number): number {
+  const rate = 1 + Math.max(0, level - 1) * PLANET_LEVEL_BONUS_PCT
+  return Math.max(1, Math.ceil(PLANET_HARVEST_INTERVAL_TICKS / rate))
+}
+
 const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
   ...SLOT_CONFIG[i],
   purchased: false,
@@ -246,7 +268,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
       return sumTurretBase(state.slots) * timedVolleyMult() * permanentVolleyMult()
     },
 
-    activeHarvestSlots(state): { materialId: string }[] {
+    activeHarvestSlots(state): { materialId: string; intervalTicks: number }[] {
       return state.slots
         .filter(
           (s) =>
@@ -255,7 +277,10 @@ export const usePlanetShopStore = defineStore('planetShop', {
             !isPlanetDown(s) &&
             s.slotConfig?.materialId,
         )
-        .map((s) => ({ materialId: s.slotConfig!.materialId! }))
+        .map((s) => ({
+          materialId: s.slotConfig!.materialId!,
+          intervalTicks: harvestIntervalTicks(s.level),
+        }))
     },
 
     planetExpeditionRewardMultiplier(state): number {
@@ -558,15 +583,21 @@ export const usePlanetShopStore = defineStore('planetShop', {
     },
 
     tickHarvest(inGameTime: number): void {
-      if (inGameTime % PLANET_HARVEST_INTERVAL_TICKS !== 0) return
       const harvestSlots = this.activeHarvestSlots
       if (harvestSlots.length === 0) return
 
+      // Jeder Slot hat seinen EIGENEN Takt (siehe harvestIntervalTicks) — der
+      // gemeinsame Modulo-Test von früher konnte das nicht abbilden.
       const inventoryStore = useInventoryStore()
-      for (const { materialId } of harvestSlots) {
+      let harvested = 0
+      for (const { materialId, intervalTicks } of harvestSlots) {
+        if (inGameTime % intervalTicks !== 0) continue
         inventoryStore.addMaterial(materialId, 'harvest')
+        harvested++
       }
-      logger.info('Planet', `Harvest-Tick: ${harvestSlots.length} Materialien geerntet`)
+      if (harvested > 0) {
+        logger.info('Planet', `Harvest-Tick: ${harvested} Materialien geerntet`)
+      }
     },
 
     openRoleModal(slotId: string): void {

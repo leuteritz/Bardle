@@ -313,7 +313,7 @@ export const useDrifterStore = defineStore('drifter', {
         // Backdating the phase clock is exactly how the admin skip works —
         // the dwell getters read (now − phaseEnteredAt), nothing else.
         const solar = useSolarUpgradeStore()
-        solar.phaseEnteredAt -= def.reward.dwellSkipSeconds * 1000
+        solar.skipDwell(def.reward.dwellSkipSeconds * 1000)
         solar.tickDwell()
       }
 

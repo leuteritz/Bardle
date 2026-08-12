@@ -4,6 +4,9 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import {
   BATTLE_POWER_RATING_SWING,
   BATTLE_ENEMY_WEAKEN_RATING_SWING,
+  LP_BASE_CHANGE,
+  LP_TIER_GAIN_MULT,
+  RANK_TIERS,
 } from '@/config/constants'
 
 describe('battleStore', () => {
@@ -56,6 +59,41 @@ describe('battleStore', () => {
     it('loss + half mmrChange(16) → -10 LP', () => {
       const store = useBattleStore()
       expect(store.calculateLPChange(16, false)).toBe(-10)
+    })
+
+    // Die Leiter wird nach oben hin zäher — sonst liegen zwischen Start und
+    // Challenger nur ~430 Siege, und der höchste Rang ist ein Nachmittagsziel.
+    it('gibt in hohen Rängen weniger LP je Sieg', () => {
+      const store = useBattleStore()
+      const gains: number[] = []
+      for (const tier of ['Silver', 'Gold', 'Platinum', 'Diamond', 'Grandmaster']) {
+        store.currentRank = { ...store.currentRank, tier }
+        gains.push(store.calculateLPChange(32, true))
+      }
+      for (let i = 1; i < gains.length; i++) {
+        expect(gains[i]).toBeLessThan(gains[i - 1])
+      }
+      expect(gains[0]).toBe(LP_BASE_CHANGE) // Startrang unverändert
+      expect(gains[gains.length - 1]).toBeGreaterThan(0) // nie eine Sackgasse
+    })
+
+    it('lässt den VERLUST unangetastet', () => {
+      // Eine Pechsträhne darf teuer sein, aber keine Sackgasse: was den
+      // Aufstieg bremst, darf den Abstieg nicht zusätzlich verbilligen oder
+      // verteuern.
+      const store = useBattleStore()
+      for (const tier of ['Silver', 'Diamond', 'Grandmaster']) {
+        store.currentRank = { ...store.currentRank, tier }
+        expect(store.calculateLPChange(32, false)).toBe(-LP_BASE_CHANGE)
+      }
+    })
+
+    it('kennt jeden Rang der Leiter', () => {
+      // MMR_RANK_THRESHOLDS hat neun Einträge, RANK_TIERS zehn (Emerald fehlt
+      // dort) — eine indexbasierte Tabelle läge ab Emerald um einen Rang daneben.
+      for (const tier of RANK_TIERS) {
+        expect(LP_TIER_GAIN_MULT[tier]).toBeGreaterThan(0)
+      }
     })
   })
 

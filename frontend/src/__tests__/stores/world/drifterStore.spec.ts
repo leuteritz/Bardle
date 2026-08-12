@@ -10,6 +10,7 @@ import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { getDrifter, DRIFTERS } from '@/config/world/drifters'
 import {
+  DWELL_SKIP_PHASE_FRACTION,
   DRIFTER_MAX_CONCURRENT,
   DRIFTER_CHIME_REWARD_MIN_CLICKS,
   DRIFTER_CHIME_REWARD_CAP_SEC,
@@ -355,16 +356,25 @@ describe('drifterStore', () => {
       expect(inventory.totalMaterialsCollected).toBeGreaterThanOrEqual(def.reward!.materials!)
     })
 
-    it('backdates the star-phase dwell clock', () => {
+    it('backdates the star-phase dwell clock, aber nur im gemeinsamen Rahmen', () => {
+      // Der Drifter-Lohn ist eine von DREI Quellen, die Verweildauer
+      // überspringen (dazu Bard-E und das Relikt „Solar Winds"). Alle drei
+      // teilen sich denselben Deckel je Phase — sonst verschiebt sich das
+      // Problem nur auf die Quelle, die gerade nicht geklemmt ist. Ungedeckelt
+      // fiel die volle Sonne nach 13,9 statt ~38 Spielstunden.
       const solar = useSolarUpgradeStore()
       const store = useDrifterStore()
       solar.phaseEnteredAt = Date.now()
       const before = solar.phaseEnteredAt
       const def = getDrifter('coronalSurge')!
+      const budget = solar.phaseDwellRequiredMs * DWELL_SKIP_PHASE_FRACTION
 
       store.hitDrifter(spawn('coronalSurge').uid)
 
-      expect(before - solar.phaseEnteredAt).toBe(def.reward!.dwellSkipSeconds! * 1000)
+      const skipped = before - solar.phaseEnteredAt
+      expect(skipped).toBeGreaterThan(0)
+      expect(skipped).toBe(Math.min(def.reward!.dwellSkipSeconds! * 1000, budget))
+      expect(solar.phaseDwellSkippedMs).toBe(skipped)
     })
 
     it('extends every star timer, leaving timerless stars alone', () => {

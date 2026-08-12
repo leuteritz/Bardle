@@ -127,6 +127,22 @@ export const ITEM_SLOT_COUNT = 5 // champion team slots that can hold weapon/arm
 export const SHOP_SUN_MIN_DIAMETER = 170
 export const SHOP_SUN_MAX_DIAMETER = 240
 
+/**
+ * Alle wie viel Stufen ein Gebäude seinen Ertrag verdoppelt.
+ *
+ * Ohne Meilensteine ist der Ertrag linear in der Stufe und die Kosten
+ * geometrisch — die CpS aus Gebäuden wächst dann nur logarithmisch mit dem
+ * Ausgegebenen. Gemessen: alle sechs Gebäude zusammen trugen rund 1000 von
+ * 2,6e7 CpS bei, der Rest kam aus Faktoren, die keine Chimes kosten. Ein
+ * Gebäudekauf war damit im Spätspiel bedeutungslos.
+ *
+ * 25 Stufen sind so gewählt, dass der erste Meilenstein bei rund 5300 Chimes
+ * liegt — also in den ersten zwanzig Minuten. Das Frühspiel wird dadurch
+ * schneller und zeigt in Stunde 1, worauf man in Stunde 50 spart.
+ */
+export const BUILDING_MILESTONE_INTERVAL = 25
+export const BUILDING_MILESTONE_MULT = 2
+
 export const AUGMENT_CHOICE_COUNT = 3
 
 /**

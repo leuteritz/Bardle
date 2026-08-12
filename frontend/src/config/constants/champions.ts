@@ -28,8 +28,15 @@ export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy
  * spawnen NUR während `championTravelState === 'traveling'`. Material je
  * GALAXIE sinkt dadurch, Material je STUNDE bleibt gleich (das Spawn-Intervall
  * ist zeitbasiert).
+ *
+ * Von 240 auf 200 Sekunden GESENKT, obwohl das Spiel insgesamt länger werden
+ * soll. Das ist kein Widerspruch: die Länge kommt aus der ZAHL der Sterne und
+ * Galaxien (`GALAXY_STARS_LATE_BONUS`, `CHAMPION_TIER_REQUIRED_GALAXY`), nicht
+ * aus der Dauer einer einzelnen Reise. Ein Stern ist eine Schleife aus
+ * Rollenwahl, Reise, Ankunft und Bosskampf — eine längere Reise ist nur
+ * Warten. Dieselbe Wandzeit, mehr Ereignisse darin.
  */
-export const CHAMPION_TRAVEL_MAX_MS = 240_000
+export const CHAMPION_TRAVEL_MAX_MS = 200_000
 
 export const CHAMPION_TRAVEL_BASE_LY = 500 // 500 LY for Galaxy 1
 export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LY per Galaxy
@@ -134,11 +141,21 @@ export const RARITY_WEIGHT_FALLBACK = 60
 export const MAX_STAR_LEVEL = 6
 
 // Champion Tier → galaxy at which that tier unlocks (cumulatively). Index 0 = Tier 1
-// (Galaxy 1, always available) … index 5 = Tier 6 (Galaxy 21). Once a tier's galaxy is
+// (Galaxy 1, always available) … index 5 = Tier 6 (Galaxy 40). Once a tier's galaxy is
 // reached it joins the weighted spawn pool AND is revealed in the Shop. A tier also
 // auto-unlocks once the player owns/has discovered any champion of that tier, so a
 // champion found via spawning is never stranded behind a far-off lock.
-export const CHAMPION_TIER_REQUIRED_GALAXY: number[] = [1, 3, 6, 10, 15, 21]
+//
+// Früher `[1, 3, 6, 10, 15, 21]`. Gemessen war damit der gesamte Kader nach 7,5
+// Spielstunden vollständig, und ab Galaxie 21 gab es überhaupt keinen neuen
+// Inhalt mehr — der Rest eines Durchlaufs lief ins Leere.
+//
+// Die ersten DREI Einträge stehen bewusst still: Tier 2 (G3) und Tier 3 (G6)
+// fallen weiter nach ~30 Minuten bzw. ~2 Stunden. Gestreckt wird nur, was
+// dahinter liegt. Tier 6 wandert von Galaxie 21 auf 40, also von ~7 auf ~55
+// Spielstunden — dieselben 165 Champions, dreifache Strecke, kein einziger
+// neuer Datensatz.
+export const CHAMPION_TIER_REQUIRED_GALAXY: number[] = [1, 3, 6, 12, 24, 40]
 
 // Spawn probability per Champion Tier, indexed by how many tiers are currently
 // unlocked (row N-1 = N unlocked tiers). Tier 1 always has the highest share; each
@@ -156,14 +173,53 @@ export const TIER_SPAWN_WEIGHTS: number[][] = [
 // Chimes grow geometrically so each tier feels like a real milestone:
 //   chimes(tier) = ceil(BASE * GROWTH^(tier - 2))   → 50k, 160k, 512k, …
 export const TIER_UNLOCK_CHIMES_BASE = 50_000
-export const TIER_UNLOCK_CHIMES_GROWTH = 3.2
+// Flacher als früher (3.2): seit die Champion-Tiers über 40 statt 21 Galaxien
+// laufen, gibt es dreizehn Tier-Tore statt sieben. Mit dem alten Exponenten
+// stünde Tier 14 bei 10^13 — eine Zahl, die nichts mehr abwägt, sondern nur
+// noch blockiert.
+export const TIER_UNLOCK_CHIMES_GROWTH = 2.6
 
 // Material cost scales the same way from a flat base set:
 //   amount(tier) = ceil(baseAmount * MATERIAL_GROWTH^(tier - 2))
-export const TIER_UNLOCK_MATERIAL_GROWTH = 2
+export const TIER_UNLOCK_MATERIAL_GROWTH = 1.62
 export const TIER_UNLOCK_MATERIAL_BASE: Record<string, number> = {
   nebula_quartz: 5,
   stardust: 4,
+}
+
+/**
+ * Zweite Materialrezeptur, die erst ab `TIER_UNLOCK_LATE_FROM_TIER` mitzählt.
+ *
+ * Material ist der Taktgeber der Galaxie-Achse — die Chime-Seite der Tier-Tore
+ * ist im Spätspiel dreitausendfach übererfüllt und damit Deko. Wenn also die
+ * Galaxien länger dauern sollen, muss es an dieser Achse liegen.
+ *
+ * Zwei WEITERE Materialien statt grösserer Mengen derselben zwei: `stardust`
+ * und `nebula_quartz` sind die häufigsten Drops, ein Harvester deckt sie im
+ * Dauerlauf. `solar_essence` und `void_shard` sind seltener und zwingen zu
+ * einer Entscheidung darüber, worauf die sechs Planeten-Slots stehen.
+ *
+ * Der späte Einstieg ist Absicht: Tier 5 liegt bei Galaxie 12, also rund vier
+ * Spielstunden. Das Frühspiel sieht diese Rezeptur nie.
+ */
+export const TIER_UNLOCK_LATE_FROM_TIER = 5
+
+/**
+ * Ab diesem Tier hören die Freischaltkosten auf zu wachsen.
+ *
+ * Galaxien laufen unbegrenzt weiter, neuer INHALT endet aber mit dem letzten
+ * Champion-Tier (`CHAMPION_TIER_REQUIRED_GALAXY`, Galaxie 40 → Tier 14). Eine
+ * Sperre, die darüber hinaus weiterwächst, hält nichts mehr auf, was der
+ * Spieler noch sehen könnte — sie mauert nur Zahlen zu. Gemessen in einem
+ * 72-Stunden-Lauf: Tier 15 verlangte 2647 nebula_quartz, Tier 16 wären 4288
+ * gewesen, und die Galaxie-Achse stand über zehn Spielstunden still.
+ *
+ * 14 = tierOf(40), also genau das Tier des letzten Champion-Tors.
+ */
+export const TIER_UNLOCK_COST_CAP_TIER = 14
+export const TIER_UNLOCK_MATERIAL_LATE: Record<string, number> = {
+  solar_essence: 4,
+  void_shard: 3,
 }
 
 export const CHAMPION_STAR_FIXED_ANGLE_FRAC_PI = 0.6

@@ -106,12 +106,16 @@ export const CHRONICLE_TRACKS: ChronicleTrackDef[] = [
     // diese beiden. Der Text sagt es, damit die Karte nicht mehr verspricht,
     // als der Rabatt einlöst.
     effect: 'Forge node & relic material costs −{v}%',
+    // Die letzte Stufe stand auf 200 und war damit UNERREICHBAR: das
+    // theoretische Maximum lag bei 10 Branches x 5 + 10 Leaves x 3 + 6 Relikte
+    // x 3 = 98. Mit den angehobenen Caps sind jetzt 130 moeglich; 125 laesst
+    // genau so viel Luft, dass man nicht jeden einzelnen Knoten ausreizen muss.
     stages: [
       { threshold: 5, value: 4 },
       { threshold: 20, value: 8 },
       { threshold: 50, value: 12 },
-      { threshold: 100, value: 16 },
-      { threshold: 200, value: 20 },
+      { threshold: 90, value: 16 },
+      { threshold: 125, value: 20 },
     ],
   },
   {
@@ -126,12 +130,16 @@ export const CHRONICLE_TRACKS: ChronicleTrackDef[] = [
     bonus: 'turretDpsMult',
     unit: 'planet levels',
     effect: 'Turret auto-attack damage +{v}%',
+    // 600 hiess sechs Slots auf Level 100 — bei der alten Kostenkurve rund
+    // 1,7e26 Chimes, also oekonomisch unerreichbar. 360 ist 6 x
+    // ADMIN_MAX_PLANET_LEVEL und damit genau das, was ein voll ausgebauter
+    // Orbit hergibt.
     stages: [
       { threshold: 10, value: 6 },
       { threshold: 40, value: 12 },
-      { threshold: 100, value: 20 },
-      { threshold: 250, value: 30 },
-      { threshold: 600, value: 45 },
+      { threshold: 120, value: 20 },
+      { threshold: 240, value: 30 },
+      { threshold: 360, value: 45 },
     ],
   },
   {

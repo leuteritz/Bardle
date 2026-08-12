@@ -27,6 +27,7 @@ import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
   SUN_EVOLVE_TRANSITION_MS,
+  DWELL_SKIP_PHASE_FRACTION,
 } from '@/config/constants'
 
 export type SolarBranchId =
@@ -61,6 +62,16 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     cometSeconds: 0 as number,
     isUpgrading: false as boolean,
     phaseEnteredAt: gameNow() as number,
+    /**
+     * Wie viel Verweildauer in DIESER Phase schon übersprungen wurde — über
+     * ALLE Quellen zusammen (Bard-E, Drifter-Lohn, Relikt „Solar Winds").
+     *
+     * Fällt bei jedem Phasenwechsel auf 0. Ohne diesen Zähler waren die
+     * Abkürzungen ungedeckelt und ersetzten die Sonnenachse, statt sie
+     * abzukürzen — gemessen fiel die volle Sonne nach 13,9 statt der aus der
+     * Rampe folgenden ~38 Spielstunden (siehe `DWELL_SKIP_PHASE_FRACTION`).
+     */
+    phaseDwellSkippedMs: 0 as number,
     totalPhaseSeconds: 0 as number,
     phaseTimeHistory: [] as number[],
     /** Reactive clock for dwell-time getters — advanced by gameStore.tick() once
@@ -233,6 +244,33 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       this.dwellNow = gameNow()
     },
 
+    /**
+     * Die EINE Stelle, an der Verweildauer übersprungen wird — und die einzige,
+     * die dabei einen Deckel kennt.
+     *
+     * Drei Quellen kürzen die Sonnenphase ab: Bard-E, der Drifter-Lohn und das
+     * Relikt „Solar Winds". Jede datierte `phaseEnteredAt` früher selbst zurück,
+     * jede ohne Grenze. In der Summe war die Sonnenachse damit nicht gebremst,
+     * sondern erledigt: gemessen über 72 Spielstunden fiel die volle Sonne nach
+     * 13,9 statt der aus der Rampe folgenden ~38 Stunden.
+     *
+     * Der Deckel gilt JE PHASE und für ALLE Quellen zusammen — sonst verschiebt
+     * sich das Problem nur auf die Quelle, die gerade nicht geklemmt ist.
+     * Zurückgegeben wird, was tatsächlich gutgeschrieben wurde, damit der
+     * Aufrufer ehrlich melden kann, was er bewirkt hat.
+     */
+    skipDwell(ms: number): number {
+      if (ms <= 0) return 0
+      const budget = this.phaseDwellRequiredMs * DWELL_SKIP_PHASE_FRACTION
+      const granted = Math.max(0, Math.min(ms, budget - this.phaseDwellSkippedMs))
+      if (granted > 0) {
+        this.phaseEnteredAt -= granted
+        this.phaseDwellSkippedMs += granted
+      }
+      this.tickDwell()
+      return granted
+    },
+
     /** TEMP (admin/testing): instantly satisfy the current phase's dwell-time gate
      *  by backdating phaseEnteredAt. Branch requirements stay untouched.
      *  Remove together with the "DEV · Skip Time" button in BardStatsTab.vue. */
@@ -305,6 +343,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
           this.cometSeconds += elapsed
           this.isCometState = false
           this.phaseEnteredAt = gameNow()
+          this.phaseDwellSkippedMs = 0
           this.isUpgrading = false
           console.log('[Bardle] Comet ignited into Spark')
           return
@@ -314,6 +353,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
           (this.phaseTimeHistory[this.starPhase] ?? 0) + elapsed
         this.starPhase++
         this.phaseEnteredAt = gameNow()
+        this.phaseDwellSkippedMs = 0
         this.isUpgrading = false
         // The last evolution is not a growth step: the red giant blows itself
         // apart and what is left collapses. Fire the one-shot transition.

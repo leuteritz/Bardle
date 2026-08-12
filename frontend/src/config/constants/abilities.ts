@@ -101,7 +101,31 @@ export const SHRINE_CPS_MULT = 1.6
 export const JOURNEY_EXPEDITION_SKIP_SEC = 120
 
 /** Sekunden, die die Sonnenphase vorrückt. */
-export const JOURNEY_DWELL_SKIP_SEC = 120
+export const JOURNEY_DWELL_SKIP_SEC = 60
+
+/**
+ * Höchstanteil einer Sonnenphase, den ALLE Abkürzungen zusammen überspringen
+ * können — Bard-E, Drifter-Lohn und das Relikt „Solar Winds".
+ *
+ * Ohne Deckel war der Skip nicht eine Abkürzung, sondern der eigentliche Takt
+ * der Sonnenachse: die Abklingzeit von 90 s sinkt über Resonance auf ~49 s, der
+ * Rangfaktor geht bis ×4, und der Sprung wurde ungeklemmt vom Phasenbeginn
+ * abgezogen. Gemessen ergab das rund 480 übersprungene Sekunden je 40 Sekunden
+ * Echtzeit — Faktor 12 auf die gesamte Rampe. Die Sonne war deshalb nach 4,4
+ * statt nach 21 Spielstunden fertig, und jede Änderung an
+ * `STAR_PHASE_MIN_DWELL_SECONDS` lief ins Leere.
+ *
+ * 15 % je Phase lassen jede Quelle spürbar bleiben, ohne dass sie die Achse
+ * ersetzt. Der Deckel gilt für alle GEMEINSAM (siehe
+ * `solarUpgradeStore.skipDwell`) — ein Deckel je Quelle würde das Problem nur
+ * auf die jeweils nächste verschieben. Gemessen mit nur EINER gedeckelten
+ * Quelle: die volle Sonne fiel nach 13,9 statt der aus der Rampe folgenden
+ * ~38 Spielstunden.
+ *
+ * Die übrigen Wirkungen von Bard-E — Expeditionen, Sternfristen und die
+ * Championreise — bleiben ungedeckelt.
+ */
+export const DWELL_SKIP_PHASE_FRACTION = 0.15
 
 /** Sekunden zusätzlicher Standzeit für jeden Stern im Orbit. */
 export const JOURNEY_STAR_TIME_SEC = 60

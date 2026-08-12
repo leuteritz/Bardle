@@ -22,7 +22,31 @@ import {
   EFFICIENCY_STARS_MAX,
   EFFICIENCY_STARS_MIN,
   SHOP_UPGRADE_CATALOG,
+  BUILDING_MILESTONE_INTERVAL,
+  BUILDING_MILESTONE_MULT,
 } from '@/config/constants'
+
+/**
+ * Meilenstein-Faktor auf den Ertrag EINES Gebäudes.
+ *
+ * Der Ertrag war streng linear (`baseCPS × level`), die Kosten dagegen
+ * geometrisch (×1,15…1,40 je Stufe). Daraus folgt eine CpS, die nur
+ * LOGARITHMISCH mit den ausgegebenen Chimes wächst — gemessen lieferten alle
+ * Gebäude zusammen rund 1000 CpS von 2,6e7, die übrigen 99,996 % kamen aus
+ * Faktoren, die gar keine Chimes kosten (Augments, Forge, Meep-Baum, Codex).
+ * Gebäude zu kaufen war deshalb im Spätspiel keine Entscheidung mehr, sondern
+ * eine Formalie, und jede Chime-Kostenschraube lief ins Leere.
+ *
+ * Alle `BUILDING_MILESTONE_INTERVAL` Stufen verdoppelt sich der Ertrag. Das
+ * explodiert nicht, weil die Kostenkurve schneller wächst als die Belohnung:
+ * 25 Stufen kosten beim Time Echo das 4500-fache für den 2,7-fachen Ertrag,
+ * die CpS wächst also weiterhin nur als schwache Potenz der Ausgaben. Was sich
+ * ändert, ist nicht die Höhe — sondern dass es wieder ein Ziel gibt, auf das
+ * man zusparen kann.
+ */
+export function buildingMilestoneMultiplier(level: number): number {
+  return Math.pow(BUILDING_MILESTONE_MULT, Math.floor(level / BUILDING_MILESTONE_INTERVAL))
+}
 
 export const useShopStore = defineStore('shop', {
   state: () => ({
@@ -249,7 +273,14 @@ export const useShopStore = defineStore('shop', {
       const baseCPS = this.shopUpgrades.reduce((total, upgrade) => {
         const universeMul = mod.buildingMultipliers?.[upgrade.id] ?? 1
         const resonanceMul = resonanceMuls[upgrade.id] ?? 1
-        return total + (upgrade.baseCPS || 0) * upgrade.level * universeMul * resonanceMul
+        return (
+          total +
+          (upgrade.baseCPS || 0) *
+            upgrade.level *
+            buildingMilestoneMultiplier(upgrade.level) *
+            universeMul *
+            resonanceMul
+        )
       }, 0)
       const itemStore = useItemStore()
       const bossStore = usePlanetBossStore()

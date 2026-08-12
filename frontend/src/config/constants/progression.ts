@@ -76,6 +76,32 @@ export const ABILITY_CPC_PER_LEVEL_DEFAULT = 0.25
 
 // Galaxy boss search
 export const GALAXY_STARS_BASE_REQUIRED = 3
+
+/**
+ * Ab welcher Galaxie die Sternzahl schneller wächst — und um wie viel.
+ *
+ * Bis einschliesslich `GALAXY_STARS_LATE_FROM` gilt die alte Reihe `3 + (g−1)`,
+ * also 3/4/5/6/7/8. Das ist die erste Spielstunde, und die soll unverändert
+ * schnell bleiben. Danach kommen `GALAXY_STARS_LATE_BONUS` Sterne je Galaxie
+ * obendrauf.
+ *
+ * Der Grund steht in der Struktur des Spiels: Galaxien, Ladder und Sonnenphasen
+ * sind drei parallel laufende Uhren, die Gesamtdauer ist also das MAXIMUM der
+ * drei, nicht ihre Summe. Gemessen war die Galaxie-Achse mit ~22 h die längste;
+ * sie muss mitwachsen, wenn das Spiel länger werden soll — sonst entsteht nur
+ * Leerlauf auf den anderen beiden.
+ */
+export const GALAXY_STARS_LATE_FROM = 6
+export const GALAXY_STARS_LATE_BONUS = 2
+
+/**
+ * Höchstzahl Sterne je Galaxie.
+ *
+ * Ohne Deckel verlangte Galaxie 40 achtzig Sterne — dieselbe Schleife achtzig
+ * Mal, das ist kein Fortschritt mehr, sondern eine Strafe. Mit 36 bleibt eine
+ * späte Galaxie bei rund zwei Stunden.
+ */
+export const GALAXY_STARS_MAX = 36
 export const GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS = 4000
 export const GALAXY_STAR_FAILED_SIGNAL_MS = 2600 // "Star Lost" flash on the minimap
 export const GALAXY_BOSS_SPAWN_ANIM_MS = 5_000

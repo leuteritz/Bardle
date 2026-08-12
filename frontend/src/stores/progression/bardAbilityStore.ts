@@ -433,10 +433,15 @@ export const useBardAbilityStore = defineStore('bardAbility', {
       expeditionStore.checkExpeditions()
 
       // Sonnenphase: das Zurückdatieren der Phasenuhr ist derselbe Weg, den
-      // der Admin-Skip und der Drifter-Lohn gehen.
+      // der Admin-Skip und der Drifter-Lohn gehen — hier aber GEDECKELT.
+      //
+      // Ungeklemmt war dieser eine Effekt der eigentliche Taktgeber der
+      // Sonnenachse: kurze Abklingzeit mal Rangfaktor ergab rund 480
+      // übersprungene Sekunden je 40 Sekunden Echtzeit, also Faktor 12 auf die
+      // ganze Rampe. Die Sonne war damit nach 4,4 statt nach 21 Spielstunden
+      // fertig, und jede Änderung an der Rampe lief ins Leere.
       const solar = useSolarUpgradeStore()
-      solar.phaseEnteredAt -= dwellSkipSec * 1000
-      solar.tickDwell()
+      solar.skipDwell(dwellSkipSec * 1000)
 
       const starGroup = useStarGroupStore()
       let stars = 0

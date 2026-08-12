@@ -24,7 +24,18 @@ export const BATTLE_ENEMY_WEAKEN_RATING_SWING = 150
 export const ELO_LUCK_FACTOR = 0.15
 
 // Auto-battle
-export const AUTO_BATTLE_INTERVAL_MS = 45000
+/**
+ * Pause zwischen zwei Kampfzyklen.
+ *
+ * Von 45 auf 30 Sekunden GESENKT. Diese Zahl ist reine Totzeit: der Spieler
+ * sieht in ihr nichts und entscheidet in ihr nichts. Der Weg bis Challenger
+ * soll länger werden, aber über die ZAHL der Kämpfe (siehe
+ * `LP_TIER_GAIN_MULT`), nicht über Leerlauf zwischen ihnen — 12 % mehr Kämpfe
+ * je Stunde heissen zugleich mehr Champion-XP, mehr Tribut und mehr Ehre.
+ *
+ * Diese Konstante wird nie wieder erhöht.
+ */
+export const AUTO_BATTLE_INTERVAL_MS = 30000
 export const BATTLE_REAL_DURATION_SECONDS = 60
 /** Total simulated game-seconds per battle (60 game-seconds per real second) */
 export const BATTLE_TOTAL_GAME_SECONDS = BATTLE_REAL_DURATION_SECONDS * 60
@@ -271,6 +282,43 @@ export const LP_DEMOTION_VALUE = 75
 export const LP_MASTER_DEMOTION_VALUE = 400
 export const LP_GRANDMASTER_DEMOTION_VALUE = 900
 export const LP_BASE_CHANGE = 20
+
+/**
+ * Faktor auf den LP-GEWINN, je Rangstufe.
+ *
+ * Die Leiter war über alle 28 Divisionen flach: ±20 LP, egal ob Iron oder
+ * Grandmaster. Damit lagen zwischen Start und Challenger rund 430 Siege ≈ 9
+ * Stunden — bei einem Spiel, dessen Gerüst mehrere Tage tragen soll, ist der
+ * höchste Rang damit ein Nachmittagsziel.
+ *
+ * Echte Leitern werden nach oben hin zäher, und genau das ist hier der Punkt:
+ * die unteren Ränge fallen mit dem verkürzten Zyklus (`AUTO_BATTLE_INTERVAL_MS`)
+ * sogar SCHNELLER als früher, die oberen kosten Arbeit. Rechnung bei 65 %
+ * Siegquote: ~1590 Kämpfe ≈ 48 h; bei 60 %: ~2380 ≈ 71 h.
+ *
+ * Und diese Spanne ist Absicht — sie ist die Stellschraube des Spielers.
+ * Champion-Level, Kaderbreite, Synergien und der Codex-Bonus auf LP entscheiden,
+ * wo im Fenster er landet. Kein einzelner Kampf dauert länger; es werden mehr.
+ *
+ * Der Faktor greift NUR auf den Gewinn, nie auf den Verlust: eine Pechsträhne
+ * darf teuer sein, aber keine Sackgasse.
+ *
+ * Nach NAMEN gekeyt, nicht nach Index. `MMR_RANK_THRESHOLDS` hat neun Einträge
+ * (Emerald fehlt dort), `RANK_TIERS` hat zehn — eine indexbasierte Tabelle läge
+ * ab Emerald still um einen Rang daneben.
+ */
+export const LP_TIER_GAIN_MULT: Record<string, number> = {
+  Iron: 1,
+  Bronze: 1,
+  Silver: 1,
+  Gold: 0.8,
+  Platinum: 0.65,
+  Emerald: 0.5,
+  Diamond: 0.4,
+  Master: 0.3,
+  Grandmaster: 0.22,
+  Challenger: 1,
+}
 
 /** Zones the LP meter is divided into by its heavy scale strokes. Every zone
  *  burns a step brighter than the one to its left, so the climb from 0 LP to

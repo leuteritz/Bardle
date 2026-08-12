@@ -15,6 +15,9 @@ import {
   RESOURCE_STAR_INTERVAL_MIN_MS,
   RESOURCE_STAR_INTERVAL_MAX_MS,
   GALAXY_STARS_BASE_REQUIRED,
+  GALAXY_STARS_LATE_FROM,
+  GALAXY_STARS_LATE_BONUS,
+  GALAXY_STARS_MAX,
   GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS,
   GALAXY_STAR_FAILED_SIGNAL_MS,
   GALAXY_BOSS_SPAWN_ANIM_MS,
@@ -30,6 +33,9 @@ import {
   TIER_UNLOCK_CHIMES_GROWTH,
   TIER_UNLOCK_MATERIAL_GROWTH,
   TIER_UNLOCK_MATERIAL_BASE,
+  TIER_UNLOCK_MATERIAL_LATE,
+  TIER_UNLOCK_LATE_FROM_TIER,
+  TIER_UNLOCK_COST_CAP_TIER,
 } from '@/config/constants'
 
 export type ChampionTravelState = 'idle' | 'traveling' | 'champion_available' | 'champion_spawned'
@@ -55,8 +61,24 @@ export interface TierUnlockCost {
   material: Record<string, number>
 }
 
+/**
+ * Sterne, die eine Galaxie verlangt.
+ *
+ * Bis Galaxie 6 unverändert `3 + (g−1)` — das Frühspiel soll genau so schnell
+ * bleiben, wie es ist. Ab dort wächst die Zahl doppelt so schnell und läuft
+ * gegen `GALAXY_STARS_MAX`.
+ *
+ * Warum die Sternzahl und nicht die Reisedauer: beides streckt die Achse, aber
+ * ein Stern ist eine Schleife aus Rollenwahl, Reise, Ankunft und Bosskampf,
+ * eine längere Reise dagegen nichts als Warten. Der Deckel verhindert, dass
+ * eine späte Galaxie zu einem Marathon aus vierzig gleichen Sternen wird.
+ */
 function computeRequired(galaxy: number): number {
-  return GALAXY_STARS_BASE_REQUIRED + (galaxy - 1)
+  const raw =
+    GALAXY_STARS_BASE_REQUIRED +
+    (galaxy - 1) +
+    GALAXY_STARS_LATE_BONUS * Math.max(0, galaxy - GALAXY_STARS_LATE_FROM)
+  return Math.min(raw, GALAXY_STARS_MAX)
 }
 
 // Eskorten-Sterne, die zusammen mit dem Galaxieboss auftauchen — frühe
@@ -87,11 +109,27 @@ export function starLevelForGalaxy(galaxy: number): number {
 // Tier 1 is free. From tier 2 up, Chimes + Material grow geometrically.
 export function computeTierUnlockCost(tier: number): TierUnlockCost {
   if (tier <= 1) return { chimes: 0, material: {} }
-  const exp = tier - 2
+  // Jenseits des letzten INHALTS-Tiers hört das Wachstum auf.
+  //
+  // Galaxien laufen unbegrenzt weiter, neuer Inhalt gibt es aber nur bis zum
+  // letzten Champion-Tier. Wächst die Sperre danach weiter, bremst sie nichts
+  // mehr, sondern mauert bloss Zahlen zu: gemessen brauchte Tier 15 schon 2647
+  // nebula_quartz, Tier 16 wären 4288 — die Galaxie-Achse stand über zehn
+  // Spielstunden an einem Tor, hinter dem gar nichts Neues mehr lag.
+  const exp = Math.min(tier, TIER_UNLOCK_COST_CAP_TIER) - 2
   const chimes = Math.ceil(TIER_UNLOCK_CHIMES_BASE * Math.pow(TIER_UNLOCK_CHIMES_GROWTH, exp))
   const material: Record<string, number> = {}
   for (const [id, base] of Object.entries(TIER_UNLOCK_MATERIAL_BASE)) {
     material[id] = Math.ceil(base * Math.pow(TIER_UNLOCK_MATERIAL_GROWTH, exp))
+  }
+  // Die zweite Rezeptur steigt erst spät ein und rechnet mit eigenem Exponenten
+  // — sonst stünde sie bei Tier 14 auf demselben Vielfachen wie die erste und
+  // wäre nur „dieselbe Wand in einer anderen Farbe".
+  if (tier >= TIER_UNLOCK_LATE_FROM_TIER) {
+    const lateExp = Math.min(tier, TIER_UNLOCK_COST_CAP_TIER) - TIER_UNLOCK_LATE_FROM_TIER
+    for (const [id, base] of Object.entries(TIER_UNLOCK_MATERIAL_LATE)) {
+      material[id] = Math.ceil(base * Math.pow(TIER_UNLOCK_MATERIAL_GROWTH, lateExp))
+    }
   }
   return { chimes, material }
 }

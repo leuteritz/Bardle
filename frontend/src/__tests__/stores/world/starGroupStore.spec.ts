@@ -61,8 +61,8 @@ function legacyTargetedStarId(): string | null {
   const boss = usePlanetBossStore().activeBoss
   if (!boss || boss.defeated || boss.expired) return null
   return (
-    starStore.activeStars.find((s) => s.planetSlots.some((p) => p.planetId === boss.planetId))?.id ??
-    null
+    starStore.activeStars.find((s) => s.planetSlots.some((p) => p.planetId === boss.planetId))
+      ?.id ?? null
   )
 }
 
@@ -142,5 +142,48 @@ describe('starGroupStore.targetedStarId', () => {
       const hit = starStore.activeStars.filter((s) => s.id === starStore.targetedStarId)
       expect(hit).toHaveLength(1)
     }
+  })
+})
+
+/**
+ * Der Champion-Stern darf nie ausbleiben.
+ *
+ * `spawnChampionStar()` kehrt sofort zurück, solange noch ein Champion-Stern
+ * lebt — etwa der Vorgänger in seiner Entfernungsverzögerung. Das ist richtig
+ * so, macht den Aufruf aber zu einem Versuch, der scheitern KANN. Wer ihn nur
+ * beim Zustandswechsel auf 'champion_available' auslöst, verliert den Stern
+ * genau dann lautlos, und weil der Zustand danach stehen bleibt, kommt kein
+ * zweiter Versuch: die Reise ist zu Ende, der Stern erscheint nicht, und damit
+ * steht die ganze Stern→Boss→Material→Galaxie-Kette für immer.
+ *
+ * Gemessen in einem 72-Stunden-Lauf: ab Spielstunde 15,8 keine einzige
+ * Sternrettung mehr über acht Spielstunden, während Chimes und Material
+ * weiterliefen. Der Watcher in `useStarSystem` beobachtet deshalb den Zustand
+ * ZUSAMMEN mit `hasActiveChampionStar` — diese Spec hält die Eigenschaft fest,
+ * auf die er sich verlässt.
+ */
+describe('spawnChampionStar — ein verpuffter Versuch muss nachholbar sein', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('lehnt ab, solange ein Champion-Stern steht, und gelingt danach', () => {
+    const starStore = useStarGroupStore()
+
+    starStore.spawnChampionStar()
+    expect(starStore.hasActiveChampionStar).toBe(true)
+    const first = starStore.activeStars.find((s) => s.starType === 'champion')!
+
+    // Zweiter Versuch bei besetztem Platz: nichts passiert, kein Fehler.
+    starStore.spawnChampionStar()
+    expect(starStore.activeStars.filter((s) => s.starType === 'champion')).toHaveLength(1)
+
+    // Sobald der alte weg ist, trägt derselbe Aufruf wieder — genau darauf
+    // stützt sich das Nachziehen im Orbit-Layer.
+    starStore.activeStars = starStore.activeStars.filter((s) => s.id !== first.id)
+    expect(starStore.hasActiveChampionStar).toBe(false)
+
+    starStore.spawnChampionStar()
+    expect(starStore.hasActiveChampionStar).toBe(true)
   })
 })

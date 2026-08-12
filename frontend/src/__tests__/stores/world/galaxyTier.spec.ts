@@ -26,8 +26,16 @@ import { CHAMPION_DATA } from '@/config/champions/championData'
 import {
   MAX_STAR_LEVEL,
   CHAMPION_TIER_CHIMES_PRICE,
+  TIER_UNLOCK_CHIMES_BASE,
+  TIER_UNLOCK_CHIMES_GROWTH,
+  TIER_UNLOCK_MATERIAL_BASE,
+  TIER_UNLOCK_MATERIAL_LATE,
+  TIER_UNLOCK_LATE_FROM_TIER,
   CHAMPION_TIER_REQUIRED_GALAXY,
   TIER_SPAWN_WEIGHTS,
+  GALAXY_STARS_BASE_REQUIRED,
+  GALAXY_STARS_LATE_FROM,
+  GALAXY_STARS_MAX,
 } from '@/config/constants'
 
 describe('Galaxy Tier helpers', () => {
@@ -76,13 +84,40 @@ describe('Galaxy Tier helpers', () => {
     it('grows geometrically from tier 2', () => {
       const t2 = computeTierUnlockCost(2)
       const t3 = computeTierUnlockCost(3)
-      expect(t2.chimes).toBe(50_000)
-      expect(t3.chimes).toBe(160_000)
+      expect(t2.chimes).toBe(TIER_UNLOCK_CHIMES_BASE)
+      expect(t3.chimes).toBe(Math.ceil(TIER_UNLOCK_CHIMES_BASE * TIER_UNLOCK_CHIMES_GROWTH))
       expect(t3.chimes).toBeGreaterThan(t2.chimes)
       // material amounts also scale up
       for (const id of Object.keys(t2.material)) {
         expect(t3.material[id]).toBeGreaterThan(t2.material[id])
       }
+    })
+
+    // Die Galaxie-Achse wird von MATERIAL getaktet, nicht von Chimes — die
+    // Chime-Seite war im Messlauf dreitausendfach übererfüllt. Deshalb steigt
+    // spät eine zweite Rezeptur aus SELTENEREN Materialien ein, statt die
+    // vorhandenen Mengen weiter hochzudrehen.
+    it('nimmt ab dem späten Tier zwei weitere Materialien dazu', () => {
+      const before = computeTierUnlockCost(TIER_UNLOCK_LATE_FROM_TIER - 1)
+      const after = computeTierUnlockCost(TIER_UNLOCK_LATE_FROM_TIER)
+
+      for (const id of Object.keys(TIER_UNLOCK_MATERIAL_LATE)) {
+        expect(before.material[id]).toBeUndefined()
+        expect(after.material[id]).toBe(TIER_UNLOCK_MATERIAL_LATE[id])
+      }
+      // Die frühen Materialien laufen unverändert weiter.
+      for (const id of Object.keys(TIER_UNLOCK_MATERIAL_BASE)) {
+        expect(after.material[id]).toBeGreaterThan(before.material[id])
+      }
+    })
+
+    it('bleibt über die ganze neue Tier-Strecke bezahlbar', () => {
+      // 40 Galaxien bedeuten Tier 14 statt 7. Mit dem alten Wachstum (3.2)
+      // stünde das letzte Tor bei über 10^13 Chimes — eine Zahl, die nichts
+      // mehr abwägt. Die Reihe muss steigen, aber im Rahmen bleiben.
+      const last = computeTierUnlockCost(tierOf(CHAMPION_TIER_REQUIRED_GALAXY[5]))
+      expect(last.chimes).toBeGreaterThan(computeTierUnlockCost(5).chimes)
+      expect(last.chimes).toBeLessThan(1e11)
     })
   })
 })
@@ -181,15 +216,42 @@ describe('Weighted champion-tier spawn', () => {
   })
 
   it('unlockedChampionTierCount grows cumulatively with the galaxy, clamped 1..6', () => {
-    // CHAMPION_TIER_REQUIRED_GALAXY = [1, 3, 6, 10, 15, 21]
+    // Aus der Tabelle gelesen statt abgeschrieben: die Werte sind eine
+    // Balance-Grösse und wandern (zuletzt von [1,3,6,10,15,21] auf
+    // [1,3,6,12,24,40], damit der Kader nicht nach 7,5 Stunden vollständig ist).
+    // Fest verdrahtete Zahlen brechen dann, ohne dass etwas kaputt wäre.
     expect(unlockedChampionTierCount(1)).toBe(1)
     expect(unlockedChampionTierCount(2)).toBe(1)
-    expect(unlockedChampionTierCount(3)).toBe(2)
-    expect(unlockedChampionTierCount(6)).toBe(3)
-    expect(unlockedChampionTierCount(10)).toBe(4)
-    expect(unlockedChampionTierCount(15)).toBe(5)
-    expect(unlockedChampionTierCount(21)).toBe(6)
-    expect(unlockedChampionTierCount(999)).toBe(6) // clamped to MAX
+    CHAMPION_TIER_REQUIRED_GALAXY.forEach((galaxy, i) => {
+      expect(unlockedChampionTierCount(galaxy)).toBe(i + 1)
+      if (galaxy > 1) expect(unlockedChampionTierCount(galaxy - 1)).toBe(i)
+    })
+    expect(unlockedChampionTierCount(9999)).toBe(MAX_STAR_LEVEL) // clamped to MAX
+  })
+
+  it('streckt die Tiers über die ganze Strecke, aber lässt das Frühspiel in Ruhe', () => {
+    // Die ersten drei Tore sind Frühspiel (Galaxie 1/3/6, also die erste
+    // Spielstunde) und stehen bewusst still; gestreckt wird nur, was dahinter
+    // liegt.
+    expect(CHAMPION_TIER_REQUIRED_GALAXY.slice(0, 3)).toEqual([1, 3, 6])
+    expect(CHAMPION_TIER_REQUIRED_GALAXY[5]).toBeGreaterThanOrEqual(40)
+  })
+
+  it('lässt die Sternzahl im Frühspiel unverändert und wächst erst danach', () => {
+    setActivePinia(createPinia())
+    const store = useGalaxyStore()
+    // Bis GALAXY_STARS_LATE_FROM gilt die alte Reihe 3/4/5/6/7/8 — die erste
+    // Spielstunde soll genau so schnell bleiben, wie sie ist.
+    for (let g = 1; g <= GALAXY_STARS_LATE_FROM; g++) {
+      store.adminJumpToGalaxy(g)
+      expect(store.starsRequired).toBe(GALAXY_STARS_BASE_REQUIRED + (g - 1))
+    }
+    // Danach doppelt so schnell …
+    store.adminJumpToGalaxy(GALAXY_STARS_LATE_FROM + 1)
+    expect(store.starsRequired).toBe(GALAXY_STARS_BASE_REQUIRED + GALAXY_STARS_LATE_FROM + 2)
+    // … und gedeckelt, damit keine Galaxie zum Marathon aus gleichen Sternen wird.
+    store.adminJumpToGalaxy(60)
+    expect(store.starsRequired).toBe(GALAXY_STARS_MAX)
   })
 
   it('tierSpawnWeights returns the row for the unlocked-tier count', () => {

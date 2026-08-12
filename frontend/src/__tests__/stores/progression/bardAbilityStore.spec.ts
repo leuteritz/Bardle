@@ -25,6 +25,7 @@ import {
   FATE_STASIS_DURATION_MS,
   GAME_TICK_INTERVAL_MS,
   JOURNEY_DWELL_SKIP_SEC,
+  DWELL_SKIP_PHASE_FRACTION,
   JOURNEY_EXPEDITION_SKIP_SEC,
   JOURNEY_STAR_TIME_SEC,
   JOURNEY_TRAVEL_SKIP_SEC,
@@ -299,6 +300,8 @@ describe('bardAbilityStore', () => {
       const store = useBardAbilityStore()
       const solar = useSolarUpgradeStore()
       unlock('e')
+      solar.isCometState = false
+      solar.starPhase = 3 // lange Phase → das Budget ist nicht die Bremse
       solar.phaseEnteredAt = Date.now()
       const before = solar.phaseEnteredAt
 
@@ -306,6 +309,32 @@ describe('bardAbilityStore', () => {
 
       const skipped = Math.round(JOURNEY_DWELL_SKIP_SEC * store.powerMultOf('e'))
       expect(solar.phaseEnteredAt).toBe(before - skipped * 1000)
+      expect(solar.phaseDwellSkippedMs).toBe(skipped * 1000)
+    })
+
+    // Ungeklemmt war dieser eine Effekt der eigentliche Taktgeber der
+    // Sonnenachse: kurze Abklingzeit mal Rangfaktor ergaben rund 480
+    // übersprungene Sekunden je 40 Sekunden Echtzeit — Faktor 12 auf die ganze
+    // Rampe. Die Sonne war dadurch nach 4,4 statt 21 Spielstunden fertig, und
+    // jede Änderung an der Rampe lief ins Leere.
+    it('überspringt nie mehr als seinen Anteil einer Phase', () => {
+      const store = useBardAbilityStore()
+      const solar = useSolarUpgradeStore()
+      unlock('e')
+      solar.isCometState = false
+      solar.starPhase = 0
+      solar.phaseEnteredAt = Date.now()
+      const budget = solar.phaseDwellRequiredMs * DWELL_SKIP_PHASE_FRACTION
+
+      // Viel öfter zünden, als das Budget hergibt.
+      for (let i = 0; i < 50; i++) {
+        store.cooldownReadyAt.e = 0
+        store.cast('e')
+      }
+
+      expect(solar.phaseDwellSkippedMs).toBeLessThanOrEqual(budget)
+      expect(solar.phaseDwellSkippedMs).toBeGreaterThan(0)
+      expect(solar.phaseDwellElapsedMs).toBeLessThan(solar.phaseDwellRequiredMs)
     })
 
     it('pulls every running expedition forward and leaves resolved ones alone', () => {

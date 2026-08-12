@@ -230,19 +230,25 @@ export interface StarPhaseData {
 
 /** Minimum time (seconds) the sun must spend in each phase before it may evolve
  *  to the next one — index = current starPhase (evolutions 0→1 … 4→5).
- *  Ramp: 15min, 45min, 2.25h, 6h, 12h. Future upgrades can shorten these via
+ *  Ramp: 15min, 45min, 3.5h, 12h, 28h. Future upgrades can shorten these via
  *  solarUpgradeStore.dwellTimeMultiplier.
  *
- *  Die Rampe war einmal 10min/30min/1.5h/4h/**24h**. Gemessen über 24
- *  Spielstunden lag der Referenzspieler damit nach 4,5 h auf der vorletzten
- *  Phase und stand dort **19,5 Stunden** — das letzte Tor allein trug 79 % des
- *  gesamten Zeitbudgets der Achse, während die vier davor in einem Nachmittag
- *  durchfielen. Jetzt tragen die frühen Phasen mehr (der Weg bis zur vorletzten
- *  wächst von 6,2 auf 9,4 h) und die letzte Stufe kostet 12 statt 24 Stunden:
- *  die volle Sonne ist innerhalb eines Referenztages erreichbar, ohne dass ein
- *  einzelnes Tor die Achse auffrisst. Der Charakter der Rampe bleibt — jeweils
- *  etwa ×3, der letzte Schritt ×2. */
-export const STAR_PHASE_MIN_DWELL_SECONDS = [900, 2_700, 8_100, 21_600, 43_200]
+ *  Die Sonne ist die einzige Achse des Spiels, die ehrlich eine UHR ist — hier
+ *  kommt Länge aus Zeit, nicht aus Arbeit. Deshalb ist sie auch die einzige
+ *  Stelle, an der bewusst nacktes Warten hinzugefügt wird.
+ *
+ *  Die ersten beiden Tore stehen unverändert: sie fallen in die erste
+ *  Spielstunde, und das Frühspiel soll schnell bleiben. Gestreckt wird nur, was
+ *  dahinter liegt — Summe 44,5 h nominal statt 21,3.
+ *
+ *  Warum nicht noch länger: die Achse schaltet Forge-Stufen, Planeten-Slots und
+ *  Planeten-Level-Kappen frei. Wäre sie erst am Ende des Durchlaufs fertig,
+ *  käme all das zu spät, um noch etwas zu bewirken. Sie soll bei etwa zwei
+ *  Dritteln des Weges stehen, nicht am Schluss.
+ *
+ *  Und sie ist nicht das einzige, was in dieser Zeit läuft: Galaxien und Ladder
+ *  laufen parallel darunter weiter, und in jeder Phase geht etwas Neues auf. */
+export const STAR_PHASE_MIN_DWELL_SECONDS = [900, 2_700, 12_600, 43_200, 100_800]
 
 export const STAR_PHASE_DATA: StarPhaseData[] = [
   {

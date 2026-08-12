@@ -249,12 +249,22 @@ export const usePlanetBossStore = defineStore('planetBoss', {
             CHAMPION_HOME_PLANETS.filter((c) => isUnrecruitedUnowned(c.championName)),
           )
         }
-        // 3) last resort: any unrecruited at all (covers fully-recruited unlocked
-        //    tiers) so a champion star is never left without a champion.
-        if (!chosen) {
-          const any = CHAMPION_HOME_PLANETS.filter((c) => isUnrecruitedUnowned(c.championName))
-          if (any.length > 0) chosen = any[Math.floor(Math.random() * any.length)].championName
-        }
+        // Es gibt bewusst KEINEN dritten Griff mehr.
+        //
+        // Hier stand einmal „last resort: any unrecruited at all", damit ein
+        // Champion-Stern nie ohne Champion dasteht. Der Gedanke ist
+        // nachvollziehbar, die Wirkung war aber, dass die Tier-Sperre gar keine
+        // war: sobald die freigeschalteten Tiers leergeräumt sind — und das
+        // geht schnell, es kommt ein Champion-Stern je Sternrettung —, verteilte
+        // das Spiel die gesperrten Champions trotzdem. Gemessen über 72
+        // Spielstunden: der komplette Kader stand nach 6,4 Stunden, obwohl das
+        // letzte Tier erst bei Galaxie 40 aufgehen sollte. Eine Sperre, die
+        // sich selbst aufhebt, taktet nichts.
+        //
+        // Ohne den Griff bleibt der Stern nicht leer: sein Boss steht, fällt,
+        // zahlt Chimes, Material und Champion-XP wie jeder andere — nur einen
+        // NEUEN Champion gibt es erst, wenn das nächste Tier aufgeht. Genau das
+        // soll die Sperre bedeuten.
         if (chosen) {
           homePlanetChampion = chosen
           // Do NOT clear nextStarRole here: the role stays selected until the

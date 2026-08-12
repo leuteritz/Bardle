@@ -120,17 +120,35 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
   let animFrame = 0
   let lastTs = 0
 
+  // Der Champion-Stern erscheint, sobald das Schiff angekommen ist.
+  //
+  // Beobachtet wird der Zustand ZUSAMMEN mit „steht schon ein Stern?", und das
+  // ist der ganze Punkt: `spawnChampionStar()` kehrt sofort zurück, wenn noch
+  // ein Champion-Stern lebt — etwa der Vorgänger in seiner Entfernungs-
+  // verzögerung. Hing der Watcher allein am Zustand, verpuffte der Spawn in
+  // diesem Fall lautlos, und weil `championTravelState` danach auf
+  // 'champion_available' STEHEN BLEIBT, feuerte er nie wieder: die Reise war zu
+  // Ende, der Stern kam nicht, und damit stand die ganze
+  // Stern→Boss→Material→Galaxie-Kette für immer.
+  //
+  // Gemessen in einem 72-Stunden-Lauf: ab Spielstunde 15,8 keine einzige
+  // Sternrettung mehr, acht Stunden lang, während Chimes und Material
+  // weiterliefen. Mit dem zweiten Signal zieht der Spawn nach, sobald der alte
+  // Stern verschwunden ist.
   watch(
-    () => galaxyStore.championTravelState,
-    (state) => {
-      if (state === 'champion_available') {
-        if (isRenderingPaused.value) {
-          galaxyStore.pendingChampionStar = true
-        } else {
-          starGroupStore.spawnChampionStar()
-        }
+    () => ({
+      state: galaxyStore.championTravelState,
+      occupied: starGroupStore.hasActiveChampionStar,
+    }),
+    ({ state, occupied }) => {
+      if (state !== 'champion_available' || occupied) return
+      if (isRenderingPaused.value) {
+        galaxyStore.pendingChampionStar = true
+      } else {
+        starGroupStore.spawnChampionStar()
       }
     },
+    { immediate: true },
   )
 
   // Endkampf-Choreografie am Galaxiekern: zuerst kommen die Eskorten-Wellen —
