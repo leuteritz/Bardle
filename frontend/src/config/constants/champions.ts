@@ -155,7 +155,7 @@ export const MAX_STAR_LEVEL = 6
 // dahinter liegt. Tier 6 wandert von Galaxie 21 auf 40, also von ~7 auf ~55
 // Spielstunden — dieselben 165 Champions, dreifache Strecke, kein einziger
 // neuer Datensatz.
-export const CHAMPION_TIER_REQUIRED_GALAXY: number[] = [1, 3, 6, 12, 24, 40]
+export const CHAMPION_TIER_REQUIRED_GALAXY: number[] = [1, 3, 6, 12, 24, 48]
 
 // Spawn probability per Champion Tier, indexed by how many tiers are currently
 // unlocked (row N-1 = N unlocked tiers). Tier 1 always has the highest share; each
