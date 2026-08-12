@@ -60,8 +60,6 @@ export const FORGE_TREE_FIT_PADDING_PX = 48
 /** Radius, an dem eine Wurzel-Verbindung am Sonnenrand ansetzt. */
 export const FORGE_SUN_EDGE_R = 110
 
-export const MEEP_ADD_DELAY_MS = 100
-
 /**
  * Battle Power je gehaltenem Meep. Der Meep-Term dominiert `totalPower` —
  * `abilityPowerBonus` und `tree.powerBonus` sind daneben Beiwerk.

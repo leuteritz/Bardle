@@ -203,9 +203,15 @@ export const ABILITY_BAR_STACK_GAP_PX = 12
 export const ABILITY_MEEP_GAIN_FLOAT_MS = 1400
 
 /**
- * Sammelfenster für Meep-Zuwächse. Muss über `MEEP_ADD_DELAY_MS` (100ms)
- * liegen — `gameStore.addMeep` schreibt verzögert gut, und mehrere Gutschriften
- * in diesem Fenster sollen als EIN Float mit der Summe erscheinen statt als
- * zwei, die einander abwürgen.
+ * Sammelfenster für Meep-Zuwächse.
+ *
+ * Ein Chime-Schub — ein gefällter Boss, ein eingesammelter Drifter, der
+ * Offline-Ertrag — hebt `chimesForNextUniverse` in einem Sprung und kann damit
+ * mehrere anstehende Meeps gleichzeitig auslösen. Sie sollen als EIN Float mit
+ * der Summe erscheinen statt als mehrere, die einander abwürgen.
+ *
+ * (Der Wert stammt aus der Zeit, als `gameStore.addMeep()` verzögert
+ * gutschrieb. Die Funktion gibt es nicht mehr, der Grund für ein Sammelfenster
+ * schon.)
  */
 export const ABILITY_MEEP_GAIN_COALESCE_MS = 220

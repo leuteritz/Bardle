@@ -183,10 +183,27 @@ const meepIdleEta = computed(() => {
 
 // ── Der Gewinn ──────────────────────────────────────────────────────────────
 // Die Kachel zeigt die offene Strecke; erreicht sie ihr Ziel, meldet ein Float
-// darüber den Gewinn. Gelesen wird `totalMeepsEarned` und nicht `meeps`: der
-// Lifetime-Zähler ist monoton und sinkt beim Ausgeben nicht — ein Kauf im
-// Skill-Tree darf keinen Gewinn vortäuschen. Sinkt er doch (Prestige setzt ihn
-// zurück), zieht die Grundlinie stillschweigend nach.
+// darüber den Gewinn.
+//
+// Gemessen wird an „Meeps, die je VERDIENT wurden" — der Summe aus gehaltenen
+// und anstehenden. Weder Summand allein trägt das:
+//
+//   `meeps` sinkt beim Ausgeben, ein Kauf im Skill-Tree täuschte also einen
+//   Gewinn vor, sobald der Bestand wieder steigt.
+//
+//   `totalMeepsEarned` bewegt sich nur über `grantMeeps()`, und das läuft seit
+//   dem Ökonomie-Umbau NUR beim Aufbruch (plus Drifter-Fund und Expedition).
+//   Wer die Klickstrecke vollendet, bekommt einen ANSTEHENDEN Meep — damit
+//   feuerte der Float genau in dem Moment nicht, für den er gebaut ist. Es fiel
+//   nur deshalb lange nicht auf, weil der erste Meep vor der Umstellung auf den
+//   Ratschen-Anker 390 Mio. Chimes kostete.
+//
+// Die Summe löst zusätzlich den Aufbruch ohne Sonderfall: dort wandern dieselben
+// Meeps von „anstehend" nach „gehalten" (+45 / −45), die Summe bleibt stehen,
+// und es kommt KEIN zweiter Float für Meeps, die beim Verdienen schon gemeldet
+// wurden. Ein Meep wird einmal verdient — wenn der Lauf ihn sichert; das
+// Prestige reicht ihn nur weiter.
+const meepsEverEarned = computed(() => gameStore.totalMeepsEarned + gameStore.pendingMeeps)
 
 /** Betrag im laufenden Float; 0 = keiner steht. */
 const meepGainAmount = ref(0)
@@ -211,23 +228,25 @@ function showMeepGain(): void {
   }, ABILITY_MEEP_GAIN_FLOAT_MS)
 }
 
-watch(
-  () => gameStore.totalMeepsEarned,
-  (now, before) => {
-    const delta = now - before
-    if (delta <= 0) return
-    // Solange die Leiste noch nicht hereingefahren ist, wird nur mitgezählt und
-    // nichts gezeigt: `loadGame()` läuft direkt nach `app.mount()` und hebt den
-    // Zähler in EINEM Schritt auf den gespeicherten Stand — ohne diese Sperre
-    // begrüßte das Spiel jeden Wiederkehrer mit „+312 MEEPS".
-    if (!revealed.value) return
-    meepGainPending += delta
-    // Gesammelt statt sofort gezeigt: `addMeep` schreibt verzögert gut, mehrere
-    // Gutschriften im selben Fenster sollen EIN Float mit der Summe ergeben.
-    if (meepGainCoalesceTimer) clearTimeout(meepGainCoalesceTimer)
-    meepGainCoalesceTimer = setTimeout(showMeepGain, ABILITY_MEEP_GAIN_COALESCE_MS)
-  },
-)
+watch(meepsEverEarned, (now, before) => {
+  const delta = now - before
+  // Nur nach oben. Der Void frisst anstehende Meeps und drückt die Summe damit
+  // nach unten — ein Verlust darf keinen Gewinn-Float auslösen, er wird an
+  // vier anderen Stellen gemeldet (Toast, Eventlog, Plakette, Rettungsbalken).
+  if (delta <= 0) return
+  // Solange die Leiste noch nicht hereingefahren ist, wird nur mitgezählt und
+  // nichts gezeigt: `loadGame()` läuft direkt nach `app.mount()` und hebt die
+  // Zähler in EINEM Schritt auf den gespeicherten Stand — ohne diese Sperre
+  // begrüßte das Spiel jeden Wiederkehrer mit „+312 MEEPS".
+  if (!revealed.value) return
+  meepGainPending += delta
+  // Gesammelt statt sofort gezeigt: ein Chime-Schub (gefällter Boss, eingesammelter
+  // Drifter, Offline-Ertrag) kann mehrere anstehende Meeps auf einmal auslösen,
+  // und die sollen EIN Float mit der Summe ergeben statt mehrerer, die einander
+  // abwürgen.
+  if (meepGainCoalesceTimer) clearTimeout(meepGainCoalesceTimer)
+  meepGainCoalesceTimer = setTimeout(showMeepGain, ABILITY_MEEP_GAIN_COALESCE_MS)
+})
 
 // ── Kachel-Elemente für den Frame-Lauf ──────────────────────────────────────
 // Ein Register statt eines reaktiven Arrays: die Positionen der Ringe werden am
