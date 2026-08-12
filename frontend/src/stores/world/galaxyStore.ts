@@ -11,6 +11,7 @@ import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import {
   CHAMPION_TRAVEL_BASE_MS,
   CHAMPION_TRAVEL_SCALE_MS,
+  CHAMPION_TRAVEL_MAX_MS,
   RESOURCE_STAR_INTERVAL_MIN_MS,
   RESOURCE_STAR_INTERVAL_MAX_MS,
   GALAXY_STARS_BASE_REQUIRED,
@@ -326,8 +327,14 @@ export const useGalaxyStore = defineStore('galaxy', {
     },
 
     startChampionTravel() {
-      const baseDuration =
-        CHAMPION_TRAVEL_BASE_MS + (this.currentGalaxy - 1) * CHAMPION_TRAVEL_SCALE_MS
+      // Gedeckelt: die Reise wuchs linear und ungedeckelt, ihre Gegenkraft
+      // (flightSpeedMultiplier) endet bei ×1,6 — ab Galaxie 13 wurde daraus das
+      // Tempolimit des ganzen Spiels. Ab dem Deckel wächst nur noch die ANZAHL
+      // der Sterne je Galaxie.
+      const baseDuration = Math.min(
+        CHAMPION_TRAVEL_MAX_MS,
+        CHAMPION_TRAVEL_BASE_MS + (this.currentGalaxy - 1) * CHAMPION_TRAVEL_SCALE_MS,
+      )
       this.championTravelBaseDurationMs = baseDuration
       this.championTravelState = 'traveling'
       this.championTravelStartTime = gameNow()
@@ -510,20 +517,27 @@ export const useGalaxyStore = defineStore('galaxy', {
       // profile is open) resumes on close and drives the transition from the
       // pendingTransition flag.
       const ui = useUiStore()
-      if (ui.bardActiveTab !== null) {
-        ui.closeBardModal()
-        // With reduced motion the background loop never restarts, so nothing
-        // would drive the warp — advance the galaxy on wall-clock timers
-        // instead (the loop skips a transition already running via the
-        // isGalaxyTransitioning guard).
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          this.setGalaxyTransitioning(true)
-          gameTimeout(() => this.commitAdvance(), GALAXY_TRANS_WARP_MS)
-          gameTimeout(
-            () => this.setGalaxyTransitioning(false),
-            GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS,
-          )
-        }
+      if (ui.bardActiveTab !== null) ui.closeBardModal()
+      // Bei reduzierter Bewegung gibt es die Hintergrundschleife GAR NICHT:
+      // `useStarBackground` kapselt ihren kompletten Aufbau in
+      // `if (!prefersReducedMotion)`. Dann treibt niemand den Warp, und weil
+      // `pendingTransition` gesetzt bleibt, kehrt jeder weitere Aufruf oben
+      // sofort zurück — die Galaxie wäre dauerhaft verriegelt.
+      //
+      // Dieser Ersatzpfad hing früher INNERHALB des `bardActiveTab`-Zweigs und
+      // griff damit nur, wenn zufällig das Bard-Profil offen war. Wer die
+      // Galaxie mit geschlossenem Profil abschloss, sass fest. Die Bedingung
+      // gehört an die Bewegungseinstellung, nicht an ein offenes Modal.
+      //
+      // Doppelter Warp ist ausgeschlossen: die Schleife läuft hier nicht, und
+      // ihre Bedingung verlangt ohnehin `!isGalaxyTransitioning`.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        this.setGalaxyTransitioning(true)
+        gameTimeout(() => this.commitAdvance(), GALAXY_TRANS_WARP_MS)
+        gameTimeout(
+          () => this.setGalaxyTransitioning(false),
+          GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS,
+        )
       }
     },
 

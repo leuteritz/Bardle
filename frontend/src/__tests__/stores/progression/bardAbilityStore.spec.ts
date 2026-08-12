@@ -6,6 +6,7 @@ import { useShopStore } from '@/stores/economy/shopStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
@@ -26,6 +27,7 @@ import {
   JOURNEY_DWELL_SKIP_SEC,
   JOURNEY_EXPEDITION_SKIP_SEC,
   JOURNEY_STAR_TIME_SEC,
+  JOURNEY_TRAVEL_SKIP_SEC,
   RESONANCE_CDR_PER_STACK,
   RESONANCE_CLICKS_PER_STACK,
   RESONANCE_CLICK_REFUND_MS,
@@ -321,6 +323,36 @@ describe('bardAbilityStore', () => {
       const skipped = Math.round(JOURNEY_EXPEDITION_SKIP_SEC * store.powerMultOf('e'))
       expect(expeditions.activeExpeditions[0].startTime).toBe(started - skipped * 1000)
       expect(expeditions.activeExpeditions[1].startTime).toBe(started)
+    })
+
+    // Die Championreise ist die einzige Uhr des Spiels ohne aktiven Griff und
+    // ab Galaxie 13 die, die am längsten warten lässt. Dass ausgerechnet
+    // „Magical Journey" sie nicht anfasste, war ein Loch im eigenen Namen.
+    it('rafft die laufende Championreise', () => {
+      const store = useBardAbilityStore()
+      const galaxy = useGalaxyStore()
+      unlock('e')
+      galaxy.championTravelState = 'traveling'
+      const started = Date.now()
+      galaxy.championTravelStartTime = started
+
+      store.cast('e')
+
+      const skipped = Math.round(JOURNEY_TRAVEL_SKIP_SEC * store.powerMultOf('e'))
+      expect(galaxy.championTravelStartTime).toBe(started - skipped * 1000)
+    })
+
+    it('lässt eine nicht laufende Reise unangetastet', () => {
+      const store = useBardAbilityStore()
+      const galaxy = useGalaxyStore()
+      unlock('e')
+      galaxy.championTravelState = 'idle'
+      galaxy.championTravelStartTime = 0
+
+      store.cast('e')
+
+      expect(galaxy.championTravelStartTime).toBe(0)
+      expect(galaxy.championTravelState).toBe('idle')
     })
   })
 

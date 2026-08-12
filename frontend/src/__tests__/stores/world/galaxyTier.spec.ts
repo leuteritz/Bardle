@@ -1,5 +1,8 @@
 import { setActivePinia, createPinia } from 'pinia'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { useUiStore } from '@/stores/core/uiStore'
+import { resetGameClock } from '@/utils/game/gameClock'
+import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '@/config/constants'
 import {
   tierOf,
   firstGalaxyOfTier,
@@ -210,7 +213,13 @@ describe('Weighted champion-tier spawn', () => {
     const g1 = perChampionSpawnPercents(new Map([[1, 4]]), 1)
     expect(g1.get(1)).toBeCloseTo(25)
     // Galaxy 3 → [70, 30]: 7 T1 champs → 10% each, 2 T2 champs → 15% each
-    const g3 = perChampionSpawnPercents(new Map([[1, 7], [2, 2]]), 3)
+    const g3 = perChampionSpawnPercents(
+      new Map([
+        [1, 7],
+        [2, 2],
+      ]),
+      3,
+    )
     expect(g3.get(1)).toBeCloseTo(10)
     expect(g3.get(2)).toBeCloseTo(15)
   })
@@ -218,12 +227,25 @@ describe('Weighted champion-tier spawn', () => {
   it('perChampionSpawnPercents drops empty/locked tiers and renormalizes (like the spawn pick)', () => {
     // Galaxy 6 → [55, 30, 15], but Tier 1 is exhausted for this role:
     // T2 and T3 renormalize over 45 → 30/45 and 15/45, split per champion.
-    const g6 = perChampionSpawnPercents(new Map([[1, 0], [2, 3], [3, 1]]), 6)
+    const g6 = perChampionSpawnPercents(
+      new Map([
+        [1, 0],
+        [2, 3],
+        [3, 1],
+      ]),
+      6,
+    )
     expect(g6.has(1)).toBe(false)
-    expect(g6.get(2)).toBeCloseTo((30 / 45) * 100 / 3)
+    expect(g6.get(2)).toBeCloseTo(((30 / 45) * 100) / 3)
     expect(g6.get(3)).toBeCloseTo((15 / 45) * 100)
     // Tier 3 is locked at Galaxy 3 → excluded even if champions were discovered
-    const g3 = perChampionSpawnPercents(new Map([[1, 2], [3, 5]]), 3)
+    const g3 = perChampionSpawnPercents(
+      new Map([
+        [1, 2],
+        [3, 5],
+      ]),
+      3,
+    )
     expect(g3.has(3)).toBe(false)
     expect(g3.get(1)).toBeCloseTo(50)
     // percentages across the pool always sum to 100
@@ -325,5 +347,81 @@ describe('adminJumpToGalaxy', () => {
     for (const tier of CHAMPION_TIERS_BY_STAR) {
       expect(store.currentGalaxy >= requiredGalaxyForTier(tier.starLevel)).toBe(true)
     }
+  })
+})
+
+describe('Warp bei reduzierter Bewegung', () => {
+  // Unter `prefers-reduced-motion: reduce` startet useStarBackground seine
+  // rAF-Schleife gar nicht erst — sie kann den Warp also nicht treiben.
+  // requestTransition muss ihn dann selbst über gameTimeout ausführen, und zwar
+  // UNABHÄNGIG davon, ob gerade ein Bard-Tab offen ist. Hing der Ersatzpfad an
+  // einem offenen Modal, blieb `pendingTransition` bei geschlossenem Profil für
+  // immer stehen und jeder weitere Aufruf kehrte sofort zurück: Softlock.
+  function stubReducedMotion(matches: boolean) {
+    window.matchMedia = ((query: string) =>
+      ({
+        matches,
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList) as typeof window.matchMedia
+  }
+
+  const originalMatchMedia = window.matchMedia
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    resetGameClock()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    resetGameClock()
+    window.matchMedia = originalMatchMedia
+  })
+
+  function completeGalaxy(store: ReturnType<typeof useGalaxyStore>) {
+    store.starsRescued = store.starsRequired
+    store.galaxyBossDefeated = true
+    store.bossEscortsTotal = 0
+    store.bossEscortsDefeated = 0
+    store.unlockedTier = 9
+  }
+
+  it('zählt die Galaxie hoch, obwohl kein Bard-Tab offen ist', () => {
+    stubReducedMotion(true)
+    const store = useGalaxyStore()
+    const uiStore = useUiStore()
+    uiStore.closeBardModal()
+    completeGalaxy(store)
+
+    store.requestTransition()
+    expect(store.pendingTransition).toBe(true)
+    expect(store.isGalaxyTransitioning).toBe(true)
+
+    vi.advanceTimersByTime(GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS + 100)
+
+    expect(store.currentGalaxy).toBe(2)
+    expect(store.pendingTransition).toBe(false)
+    expect(store.isGalaxyTransitioning).toBe(false)
+  })
+
+  it('überlässt den Warp ohne reduzierte Bewegung der Hintergrundschleife', () => {
+    stubReducedMotion(false)
+    const store = useGalaxyStore()
+    completeGalaxy(store)
+
+    store.requestTransition()
+    vi.advanceTimersByTime(GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS + 100)
+
+    // Kein Ersatz-Timer: `pendingTransition` steht als Signal für die Schleife,
+    // die Galaxie bleibt bis zu ihrem Zutun stehen.
+    expect(store.currentGalaxy).toBe(1)
+    expect(store.pendingTransition).toBe(true)
   })
 })

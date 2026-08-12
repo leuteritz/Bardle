@@ -9,6 +9,28 @@ import { ROLES } from '@/config/constants/roles'
 export const CHAMPION_TRAVEL_BASE_MS = 60_000 // 60s base travel time
 export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy
 
+/**
+ * Obergrenze der Reisedauer, bevor der Flight-Ausbau sie teilt.
+ *
+ * Die Reise wuchs linear und ungedeckelt (`60s + 30s je Galaxie`), ihre einzige
+ * Gegenkraft — `flightSpeedMultiplier` — endet dagegen bei ×1,6. Ab etwa
+ * Galaxie 13 bestimmte deshalb nicht mehr eine Ressource das Tempo, sondern die
+ * Wartezeit: gemessen über 24 Spielstunden lauteten sämtliche späten
+ * Stillstands-Akten „unterwegs", und Galaxie 16 kostete allein 2,7 Stunden
+ * reine Reisezeit bei 19 Reisen.
+ *
+ * 4 Minuten ist bei Galaxie 7 erreicht — bis dahin wächst die Reise wie bisher
+ * und trägt das Gefühl wachsender Entfernungen. Danach wächst nur noch die
+ * ANZAHL der Sterne je Galaxie (`starsRequired = g + 2`), was denselben Effekt
+ * hat, ohne dass die einzelne Wartezeit ins Unerträgliche läuft.
+ *
+ * Zu beachten: die Reise ist zugleich das Materialfenster — Resource-Sterne
+ * spawnen NUR während `championTravelState === 'traveling'`. Material je
+ * GALAXIE sinkt dadurch, Material je STUNDE bleibt gleich (das Spawn-Intervall
+ * ist zeitbasiert).
+ */
+export const CHAMPION_TRAVEL_MAX_MS = 240_000
+
 export const CHAMPION_TRAVEL_BASE_LY = 500 // 500 LY for Galaxy 1
 export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LY per Galaxy
 

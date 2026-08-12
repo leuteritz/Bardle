@@ -42,8 +42,7 @@ export const useAugmentStore = defineStore('augment', {
       return {
         enemySpeedMultiplier: activeModifier.enemySpeedMultiplier ?? 1,
         enemyMaxHPDrainPerSecond: activeModifier.enemyMaxHPDrainPerSecond ?? 0,
-        bigBangAvailable:
-          !this.bigBangUsed && activeAugments.includes('legendary_big_bang'),
+        bigBangAvailable: !this.bigBangUsed && activeAugments.includes('legendary_big_bang'),
       }
     },
 
@@ -108,6 +107,23 @@ export const useAugmentStore = defineStore('augment', {
         const aug = AUGMENTS.find((a) => a.id === 'rare_overclock')
         const duration = aug?.specialEffect?.params.duration ?? AUGMENT_OVERCLOCK_DEFAULT_MS
         const multiplier = aug?.specialEffect?.params.multiplier ?? AUGMENT_OVERCLOCK_DEFAULT_MULT
+        // ERNEUERN, nicht stapeln — dasselbe Muster wie `bardAbilityStore._applyBuff`.
+        //
+        // Vorher legte jedes Level-Up eine weitere Kopie auf den Stapel, und
+        // `temporaryCPSMultiplier` multipliziert alle gleichzeitig laufenden.
+        // Damit war der Kreis geschlossen: Level-Up → mehr CpS → schnelleres
+        // Level-Up → noch eine Kopie. Gemessen im Referenzlauf ein Faktor von
+        // 2,2e12 aus einundvierzig überlappenden Kopien, der die CpS für die
+        // Dauer des Fensters auf 2,9e17 hob und danach spurlos verschwand —
+        // in der Anzeige sah die Wirtschaft normal aus, im Levelzähler nicht.
+        //
+        // Die Exponentialbremse der Levelkurve hat das bisher überdeckt, nicht
+        // behoben (siehe LEVEL_SCALING_THRESHOLD): sie lief dem Kreis davon.
+        // Ein Buff mit fester Dauer soll sein Fenster verlängern, wenn er neu
+        // ausgelöst wird, nicht seine Wirkung quadrieren.
+        this.activeTimedBuffs = this.activeTimedBuffs.filter(
+          (b) => !(b.augmentId === 'rare_overclock' && b.effectKey === 'cpsMultiplier'),
+        )
         this.activeTimedBuffs.push({
           augmentId: 'rare_overclock',
           effectKey: 'cpsMultiplier',
@@ -158,9 +174,7 @@ export const useAugmentStore = defineStore('augment', {
 
     activateEchoChamber(duration: number, activeAugments: string[]) {
       // Find the last chosen augment that has multiplier effects (not the echo chamber itself)
-      const lastId = activeAugments
-        .filter((id) => id !== 'epic_echo_chamber')
-        .at(-1)
+      const lastId = activeAugments.filter((id) => id !== 'epic_echo_chamber').at(-1)
       if (!lastId) return
 
       const lastAug = AUGMENTS.find((a) => a.id === lastId)

@@ -106,6 +106,18 @@ export const JOURNEY_DWELL_SKIP_SEC = 120
 /** Sekunden zusätzlicher Standzeit für jeden Stern im Orbit. */
 export const JOURNEY_STAR_TIME_SEC = 60
 
+/**
+ * Sekunden, die die laufende Championreise überspringt.
+ *
+ * „Magical Journey" öffnet einen Korridor — und raffte bislang alles ausser
+ * der einzigen Sache, die im Namen steht. Das war nicht nur thematisch schief:
+ * die Reise ist ab Galaxie 13 das Tempolimit des Spiels (siehe
+ * `CHAMPION_TRAVEL_MAX_MS`), und sie war die einzige Uhr ohne jeden aktiven
+ * Griff. Mit 90 s bei Rang 1 nimmt ein Guss einer gedeckelten 4-Minuten-Reise
+ * gut ein Drittel — spürbar, aber kein Ersatz für den Flight-Ausbau.
+ */
+export const JOURNEY_TRAVEL_SKIP_SEC = 90
+
 /** Dauer des Reisefensters. */
 export const JOURNEY_BUFF_DURATION_MS = 20_000
 

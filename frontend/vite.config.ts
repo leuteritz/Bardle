@@ -13,5 +13,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Füllt Browser-APIs auf, die jsdom nicht mitbringt (matchMedia).
+    setupFiles: ['./src/__tests__/setup.ts'],
   },
 })

@@ -1,4 +1,4 @@
-import { useGameStore } from '@/stores/core/gameStore'
+import { useGameStore, chimeThresholdForLevel } from '@/stores/core/gameStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import {
   useBattleStore,
@@ -37,7 +37,6 @@ import type {
 } from '@/types'
 import {
   LEVEL_BASE,
-  LEVEL_EXPONENT,
   MEEP_BASE_COST,
   SAVE_KEY,
   SAVE_VERSION,
@@ -471,9 +470,7 @@ export function usePersistence() {
         gameStore.inGameTime = g.inGameTime ?? gameStore.inGameTime
         gameStore.chimes = g.chimes ?? gameStore.chimes
         const restoredLevel = g.level ?? gameStore.level
-        gameStore.chimesForNextLevel = Math.ceil(
-          LEVEL_BASE * Math.pow(restoredLevel, LEVEL_EXPONENT),
-        )
+        gameStore.chimesForNextLevel = chimeThresholdForLevel(restoredLevel)
         gameStore.baseChimesPerClick = g.baseChimesPerClick ?? gameStore.baseChimesPerClick
         gameStore.chimesForMeep = g.chimesForMeep ?? gameStore.chimesForMeep
         gameStore.chimesForNextUniverse = g.chimesForNextUniverse ?? gameStore.chimesForNextUniverse

@@ -10,6 +10,37 @@ export const LEVEL_EXPONENT = 2.2
 export const LEVEL_SCALING_THRESHOLD = 30
 export const LEVEL_SCALING_FACTOR = 1.1
 
+/**
+ * Der Wert, gegen den die Exponentialbremse läuft — ausgedrückt als Level.
+ *
+ * Sie wächst nicht bis hierhin und hört dann auf, sie NÄHERT sich an: der
+ * gebremste Anteil ist `span · (1 − e^(−over/span))` mit `span = cap −
+ * threshold`. Ein harter Deckel wäre eine Klippe in den Stufenkosten (die
+ * Stufe dahinter kostete ein Fünftel der davor); so gibt es keinen Sprung.
+ *
+ * Ohne diesen Deckel ist die Bremse der ganze Berg: bei Level 200 steuert die
+ * Potenz `L^2,2` eine Differenz von 3,2e6 bei, `1,1^170` dagegen 1,1e7 — die
+ * Schwelle wächst also mit `1,1^L`, während CPS bestenfalls ebenso schnell
+ * wächst (über gestapelte Augments, denn Gebäude skalieren nur logarithmisch
+ * mit den Ausgaben). Zwei gleich schnelle Kurven, von denen eine multiplikativ
+ * vorne liegt, laufen auseinander: gemessen über 24 Spielstunden stand das
+ * Bard-Level nach 40 Minuten und brauchte bei Level 217 rechnerisch 28
+ * Spieljahre für die nächste Stufe.
+ *
+ * Oberhalb des Deckels wächst die Schwelle nur noch polynomial. Damit kann die
+ * Wirtschaft wieder aufschliessen und Level fallen spät erneut — statt gar
+ * nicht mehr. 100 liegt bewusst hinter allem, was der Level FREISCHALTET
+ * (Fähigkeitsränge sind bei 65 fertig, Skillpunkte verfallen ab 40): der
+ * gebremste Bereich deckt die ganze Freischaltkurve ab, der freie dahinter ist
+ * reiner Zahlenlauf.
+ *
+ * Der Preis dafür — häufigere Level und damit häufigere Augment-Wahl — wird
+ * nicht in Kauf genommen, sondern getrennt bezahlt: `AUGMENT_LEVEL_INTERVAL`
+ * entkoppelt die Auswahl vom einzelnen Level-Up. Ohne diese zweite Änderung
+ * dreht der Deckel genau die Entscheidung um, die die Bremse begründet hat.
+ */
+export const LEVEL_SCALING_CAP_LEVEL = 100
+
 // Meep cost formula: 20 * meeps^1.2
 export const MEEP_BASE_COST = 20
 export const MEEP_COST_EXPONENT = 1.2

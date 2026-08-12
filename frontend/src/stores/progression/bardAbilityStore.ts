@@ -37,6 +37,7 @@ import {
   JOURNEY_EXPEDITION_SKIP_SEC,
   JOURNEY_DWELL_SKIP_SEC,
   JOURNEY_STAR_TIME_SEC,
+  JOURNEY_TRAVEL_SKIP_SEC,
   JOURNEY_BUFF_DURATION_MS,
   JOURNEY_CPC_MULT,
   FATE_STASIS_DURATION_MS,
@@ -48,6 +49,7 @@ import { useShopStore } from '@/stores/economy/shopStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
@@ -416,6 +418,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
       const expeditionSkipMs = Math.round(JOURNEY_EXPEDITION_SKIP_SEC * 1000 * power)
       const dwellSkipSec = Math.round(JOURNEY_DWELL_SKIP_SEC * power)
       const starBonusMs = Math.round(JOURNEY_STAR_TIME_SEC * 1000 * power)
+      const travelSkipMs = Math.round(JOURNEY_TRAVEL_SKIP_SEC * 1000 * power)
 
       // Expeditionen: das Zurückdatieren des Starts spult den Fortschritt vor —
       // der Store rechnet `now − startTime` gegen `durationSeconds`. Sein
@@ -443,6 +446,19 @@ export const useBardAbilityStore = defineStore('bardAbility', {
         stars++
       }
 
+      // Die Championreise — dieselbe Mechanik wie oben: der Start wird
+      // zurückdatiert, `tickChampionTravel` rechnet `now − startTime` gegen die
+      // Dauer und löst die Ankunft danach ganz normal aus. Sie ist die einzige
+      // Uhr, die sonst KEINEN aktiven Griff hat, und ab Galaxie 13 die, die den
+      // Spieler am längsten warten lässt.
+      const galaxy = useGalaxyStore()
+      let travelSkipped = false
+      if (galaxy.championTravelState === 'traveling' && galaxy.championTravelStartTime > 0) {
+        galaxy.championTravelStartTime -= travelSkipMs
+        galaxy.tickChampionTravel()
+        travelSkipped = true
+      }
+
       this._applyBuff({
         sourceId: 'e',
         expiresAt: gameNow() + JOURNEY_BUFF_DURATION_MS,
@@ -452,6 +468,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
 
       const parts: string[] = []
       if (missions > 0) parts.push(`${missions} expedition${missions === 1 ? '' : 's'} hastened`)
+      if (travelSkipped) parts.push('journey shortened')
       if (stars > 0) parts.push(`${stars} star${stars === 1 ? '' : 's'} held longer`)
       parts.push(`${JOURNEY_CPC_MULT}× clicks`)
       return `Corridor open · ${parts.join(' · ')}`

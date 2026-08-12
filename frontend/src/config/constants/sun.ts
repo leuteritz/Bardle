@@ -230,9 +230,19 @@ export interface StarPhaseData {
 
 /** Minimum time (seconds) the sun must spend in each phase before it may evolve
  *  to the next one — index = current starPhase (evolutions 0→1 … 4→5).
- *  Ramp: 10min, 30min, 1.5h, 4h, 24h. Future upgrades can shorten these via
- *  solarUpgradeStore.dwellTimeMultiplier. */
-export const STAR_PHASE_MIN_DWELL_SECONDS = [600, 1_800, 5_400, 14_400, 86_400]
+ *  Ramp: 15min, 45min, 2.25h, 6h, 12h. Future upgrades can shorten these via
+ *  solarUpgradeStore.dwellTimeMultiplier.
+ *
+ *  Die Rampe war einmal 10min/30min/1.5h/4h/**24h**. Gemessen über 24
+ *  Spielstunden lag der Referenzspieler damit nach 4,5 h auf der vorletzten
+ *  Phase und stand dort **19,5 Stunden** — das letzte Tor allein trug 79 % des
+ *  gesamten Zeitbudgets der Achse, während die vier davor in einem Nachmittag
+ *  durchfielen. Jetzt tragen die frühen Phasen mehr (der Weg bis zur vorletzten
+ *  wächst von 6,2 auf 9,4 h) und die letzte Stufe kostet 12 statt 24 Stunden:
+ *  die volle Sonne ist innerhalb eines Referenztages erreichbar, ohne dass ein
+ *  einzelnes Tor die Achse auffrisst. Der Charakter der Rampe bleibt — jeweils
+ *  etwa ×3, der letzte Schritt ×2. */
+export const STAR_PHASE_MIN_DWELL_SECONDS = [900, 2_700, 8_100, 21_600, 43_200]
 
 export const STAR_PHASE_DATA: StarPhaseData[] = [
   {

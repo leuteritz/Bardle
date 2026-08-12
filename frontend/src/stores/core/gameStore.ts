@@ -32,6 +32,7 @@ import {
   LEVEL_EXPONENT,
   LEVEL_SCALING_THRESHOLD,
   LEVEL_SCALING_FACTOR,
+  LEVEL_SCALING_CAP_LEVEL,
   MEEP_BASE_COST,
   MEEP_COST_EXPONENT,
   MAX_ABILITY_LEVEL,
@@ -43,6 +44,7 @@ import {
   MEEP_ADD_DELAY_MS,
   AUGMENT_CHOICE_COUNT,
   AUGMENT_ACTIVE_CAP,
+  AUGMENT_LEVEL_INTERVAL,
   ADMIN_LEVEL_AUGMENT_QUEUE_MAX,
   RARITY_WEIGHT_FALLBACK,
   BUILDING_HISTORY_BUFFER_SIZE,
@@ -78,12 +80,31 @@ import { logger } from '@/utils/logger'
 import { gameNow, gameTimeout, setGameSpeed } from '@/utils/game/gameClock'
 import { recordTelemetry } from '@/utils/game/telemetry'
 
-function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT): number {
+/**
+ * Kumulative Chime-Schwelle für ein Bard-Level.
+ *
+ * Exportiert, weil sie die EINZIGE Quelle dieser Zahl sein muss: sie stand
+ * einmal an drei Stellen ausgeschrieben, zweimal davon ohne die
+ * Exponentialbremse — einmal als Ein-Tick-Anzeigefehler beim Laden, einmal als
+ * Endlosschleife in `skipAllAugments`.
+ */
+export function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT): number {
   if (level <= 0) return 0
   const base = Math.ceil(LEVEL_BASE * Math.pow(level, exponent))
   if (level <= LEVEL_SCALING_THRESHOLD) return base
-  // Above threshold: exponential braking prevents augment-choice loop at high levels
-  return Math.ceil(base * Math.pow(LEVEL_SCALING_FACTOR, level - LEVEL_SCALING_THRESHOLD))
+  // Above threshold: exponential braking prevents augment-choice loop at high levels.
+  //
+  // Die Bremse läuft aus, statt zu deckeln. Ein hartes `min(level, cap)` wäre
+  // eine KLIPPE: die Stufe direkt hinter dem Deckel kostete schlagartig ein
+  // Fünftel der Stufe davor, weil der Bremsfaktor von einem Schritt auf den
+  // nächsten stehenbleibt. Die Sättigungskurve nähert sich demselben Wert an,
+  // ohne Sprung in den Stufenkosten — nahe der Schwelle ist sie von der alten
+  // Formel praktisch nicht zu unterscheiden (bei +10 Leveln 9,3 statt 10
+  // gebremste Stufen), weit dahinter läuft sie gegen `span`.
+  const span = LEVEL_SCALING_CAP_LEVEL - LEVEL_SCALING_THRESHOLD
+  const over = level - LEVEL_SCALING_THRESHOLD
+  const brakedLevels = span * (1 - Math.exp(-over / span))
+  return Math.ceil(base * Math.pow(LEVEL_SCALING_FACTOR, brakedLevels))
 }
 
 export const useGameStore = defineStore('game', {
@@ -275,7 +296,7 @@ export const useGameStore = defineStore('game', {
 
       if (this.chimesEarnedForLevel >= chimesNeededThisLevel) {
         this.level++
-        this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, exponent))
+        this.chimesForNextLevel = chimeThresholdForLevel(this.level, exponent)
         // Transfer overflow into the new level (don't hard reset to 0!)
         this.chimesEarnedForLevel = Math.max(0, this.chimesEarnedForLevel - chimesNeededThisLevel)
         if (this.level % spInterval === 0) {
@@ -286,7 +307,12 @@ export const useGameStore = defineStore('game', {
         logger.info('Game', `Level up: ${oldLevel} -> ${this.level}`, {
           skillPoints: this.skillPoints,
         })
-        this.triggerAugmentSelection()
+        // Nicht bei JEDEM Level — siehe AUGMENT_LEVEL_INTERVAL. Seit die
+        // Exponentialbremse gedeckelt ist, fallen späte Level wieder schnell,
+        // und ein Modal je Stufe wäre ein Hindernis statt eines Angebots.
+        if (this.level % AUGMENT_LEVEL_INTERVAL === 0) {
+          this.triggerAugmentSelection()
+        }
       }
     },
 
@@ -333,8 +359,10 @@ export const useGameStore = defineStore('game', {
       const gained = newLevel - this.level
       this.level = newLevel
       if (gained <= 0) return
-      const grants = Math.min(gained, ADMIN_LEVEL_AUGMENT_QUEUE_MAX)
-      if (grants < gained) {
+      // Wie im echten Level-Up: eine Wahl je AUGMENT_LEVEL_INTERVAL Stufen.
+      const earned = Math.floor(gained / AUGMENT_LEVEL_INTERVAL)
+      const grants = Math.min(earned, ADMIN_LEVEL_AUGMENT_QUEUE_MAX)
+      if (grants < earned) {
         logger.info('Game', `Admin level grant capped: ${gained} levels, ${grants} augment picks`)
       }
       const augmentStore = useAugmentStore()
@@ -480,12 +508,19 @@ export const useGameStore = defineStore('game', {
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
       const spInterval = this.activeModifier.skillPointInterval ?? 2
 
+      // Beide Enden derselben Achse: die Schwelle kommt IMMER aus
+      // `chimeThresholdForLevel`. Stand hier die Formel nochmal ausgeschrieben,
+      // fehlte ihr die Exponentialbremse — die Differenz zur gebremsten
+      // Vorstufe wurde oberhalb von LEVEL_SCALING_THRESHOLD negativ, die
+      // Schleifenbedingung damit immer wahr, und `chimesEarnedForLevel` wuchs
+      // durch die Subtraktion sogar. „Skip all augments" hängte den Tab ab
+      // Level 31 auf.
       let chimesNeededThisLevel =
         this.chimesForNextLevel - chimeThresholdForLevel(this.level - 1, exponent)
 
       while (this.chimesEarnedForLevel >= chimesNeededThisLevel) {
         this.level++
-        this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, exponent))
+        this.chimesForNextLevel = chimeThresholdForLevel(this.level, exponent)
         this.chimesEarnedForLevel = Math.max(0, this.chimesEarnedForLevel - chimesNeededThisLevel)
         // Calculate new threshold for the next level
         chimesNeededThisLevel =
@@ -495,7 +530,10 @@ export const useGameStore = defineStore('game', {
           this.skillPoints++
         }
 
-        this.triggerAugmentSelection()
+        // Dasselbe Intervall wie in calculateLevel — sonst bekäme, wer die
+        // Auswahl überspringt, doppelt so viele Augments wie jemand, der sie
+        // durchklickt.
+        if (this.level % AUGMENT_LEVEL_INTERVAL === 0) this.triggerAugmentSelection()
         if (this.pendingAugmentOptions.length > 0) {
           const firstId = this.pendingAugmentOptions[0]
           if (!this.activeAugments.includes(firstId)) this._addAugment(firstId)

@@ -28,6 +28,7 @@ import {
   JOURNEY_EXPEDITION_SKIP_SEC,
   JOURNEY_DWELL_SKIP_SEC,
   JOURNEY_STAR_TIME_SEC,
+  JOURNEY_TRAVEL_SKIP_SEC,
   JOURNEY_BUFF_DURATION_MS,
   JOURNEY_CPC_MULT,
   FATE_STASIS_DURATION_MS,
@@ -144,6 +145,7 @@ export function bardAbilityEffectLines(
           label: 'Expeditions',
           value: `−${Math.round(JOURNEY_EXPEDITION_SKIP_SEC * power)}s each`,
         },
+        { label: 'Champion travel', value: `−${Math.round(JOURNEY_TRAVEL_SKIP_SEC * power)}s` },
         { label: 'Sun phase', value: `+${Math.round(JOURNEY_DWELL_SKIP_SEC * power)}s` },
         { label: 'Star timers', value: `+${Math.round(JOURNEY_STAR_TIME_SEC * power)}s` },
         {
