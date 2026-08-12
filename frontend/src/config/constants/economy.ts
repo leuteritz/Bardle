@@ -129,6 +129,22 @@ export const SHOP_SUN_MAX_DIAMETER = 240
 
 export const AUGMENT_CHOICE_COUNT = 3
 
+/**
+ * Wie viele Augments gleichzeitig wirken.
+ *
+ * Ohne diesen Deckel war die Liste ein reines Push-Array, und
+ * `combinedAugmentEffects` multipliziert JEDEN Eintrag: jedes Level-Up legte
+ * einen Faktor drauf, mehr CpS führte zu schnelleren Leveln, und das ist eine
+ * geschlossene exponentielle Rückkopplung. Gemessen über einen
+ * Universums-Durchlauf: Level 5 → 2800 und CpS 10² → 10⁹⁹ in zwei Spielstunden.
+ * Das entwertete nebenbei die Level-Kurve, sprengte die Boss-HP-Formel (die auf
+ * CpS steht) und machte jedes Prestige zum Rückschritt statt zum Fortschritt.
+ *
+ * Der Deckel macht die Wahl beim Level-Up überhaupt erst zu einer: vorher bekam
+ * man ohnehin alles, nur in anderer Reihenfolge.
+ */
+export const AUGMENT_ACTIVE_CAP = 10
+
 /** Wie lange die Auto-Pick-Meldung stehen bleibt, bevor sie ausblendet. */
 export const AUTO_PICK_TOAST_MS = 6500
 /** Taktung der Restsekunden-Anzeige in dieser Meldung. */

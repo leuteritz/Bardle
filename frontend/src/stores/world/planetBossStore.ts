@@ -2,10 +2,8 @@ import { defineStore } from 'pinia'
 import type { PlanetBossEvent, PlanetBossRewardSlot, PlanetType } from '@/types'
 import {
   BOSS_BASE_HP,
-  BOSS_HP_LEVEL_SCALE,
-  BOSS_HP_CPS_SCALE,
-  BOSS_HP_POWER_SCALE,
-  BOSS_HP_PER_CHAMPION_STAR,
+  BOSS_TARGET_KILL_SECONDS,
+  BOSS_ASSUMED_CLICKS_PER_SEC,
   BOSS_HP_PER_GALAXY,
   BOSS_ENRAGE_BASE_SECONDS,
   BOSS_ENRAGE_LEVEL_STEP,
@@ -49,6 +47,8 @@ import { useSectionStore } from '@/stores/core/sectionStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useCombatStore } from '@/stores/battle/combatStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
@@ -126,7 +126,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const level = gameStore.level
       const cps = gameStore.chimesPerSecond
       const cpc = gameStore.chimesPerClick
-      const power = gameStore.totalPower
 
       const galaxyStore = useGalaxyStore()
       const sectionStore = useSectionStore()
@@ -134,29 +133,32 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const hpSectionMult = sectionConfig?.difficultyMultiplier ?? 1
       const enrageSectionMult = sectionConfig?.enrageMultiplier ?? 1
 
-      // Gegengewicht zu den Schadensquellen im Star-Fight-Modal: Team-Stärke
-      // (Summe der Stern-Level aller aufgestellten Champions) und Galaxie-
-      // Fortschritt skalieren die Boss-HP mit
-      const battleStore = useBattleStore()
-      const totalChampionStars = battleStore.headerSlots.reduce(
-        (sum, name) => (name ? sum + getChampionStarLevel(name) : sum),
-        0,
-      )
-      const championMult = 1 + totalChampionStars * BOSS_HP_PER_CHAMPION_STAR
       const galaxyMult = 1 + (galaxyStore.currentGalaxy - 1) * BOSS_HP_PER_GALAXY
-
       const providence = useProvidenceStore()
 
-      const maxHP = Math.floor(
-        BOSS_BASE_HP *
-          (1 + level / BOSS_HP_LEVEL_SCALE) *
-          (1 + cps / BOSS_HP_CPS_SCALE) *
-          (1 + power / BOSS_HP_POWER_SCALE) *
-          hpSectionMult *
-          championMult *
-          galaxyMult *
-          // Warden's Toll (providence): schwerer zu fällen, dafür ergiebiger
-          providence.bossHpMult,
+      const clickDamagePerHit = Math.max(1, cpc)
+      const passiveDPS = Math.max(0, Math.floor(cps * BOSS_PASSIVE_DPS_FRACTION))
+
+      // Die HP folgen dem Schaden, nicht dem Fortschritt: geschätzt wird, was
+      // der Spieler in DIESEM Moment aufbringt — Passivschaden, die ganze
+      // Turret-Batterie, der Kader im Orbit und ein gemäßigter Klick-Anteil.
+      // Details und Begründung an BOSS_TARGET_KILL_SECONDS.
+      const expectedDps =
+        passiveDPS +
+        usePlanetShopStore().autoAttackDPS +
+        useCombatStore().fullOrbitDps() +
+        clickDamagePerHit * BOSS_ASSUMED_CLICKS_PER_SEC
+
+      const maxHP = Math.max(
+        BOSS_BASE_HP,
+        Math.floor(
+          expectedDps *
+            BOSS_TARGET_KILL_SECONDS *
+            hpSectionMult *
+            galaxyMult *
+            // Warden's Toll (providence): schwerer zu fällen, dafür ergiebiger
+            providence.bossHpMult,
+        ),
       )
 
       const bonusSeconds =
@@ -170,9 +172,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         Math.floor(baseEnrageSec * enrageSectionMult),
       )
       const enrageTimerMs = enrageSec * 1000
-
-      const clickDamagePerHit = Math.max(1, cpc)
-      const passiveDPS = Math.max(0, Math.floor(cps * BOSS_PASSIVE_DPS_FRACTION))
 
       // Die Beute wird beim SPAWN gewürfelt und im Boss mitgeschrieben — der
       // Faktor gehört deshalb hierher und nicht ans Einsammeln: sonst zeigte die

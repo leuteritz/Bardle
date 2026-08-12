@@ -6,7 +6,12 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { usePersistence } from '@/composables/system/usePersistence'
 import { AUGMENTS } from '@/config/economy/augments'
 import { augmentIcon } from '@/utils/game/rolledIcons'
-import { AUGMENT_RARITY_COLOR, AUGMENT_RARITY_LABEL, AUTO_PICK_ICON } from '@/config/constants'
+import {
+  AUGMENT_ACTIVE_CAP,
+  AUGMENT_RARITY_COLOR,
+  AUGMENT_RARITY_LABEL,
+  AUTO_PICK_ICON,
+} from '@/config/constants'
 import type { AugmentDefinition } from '@/types'
 
 const gameStore = useGameStore()
@@ -64,6 +69,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           <div class="text-center">
             <div class="aug-level">Level {{ gameStore.level }}</div>
             <h2 v-ink-center class="aug-title">Choose an Augment</h2>
+            <!-- Der Deckel gehört in den Kopf, nicht in einen Tooltip: bei
+                 vollem Satz verdrängt die Wahl etwas, und wer das erst danach
+                 merkt, hat die Entscheidung nicht getroffen, sondern erlitten. -->
+            <div class="aug-slots">
+              <template v-if="gameStore.activeAugments.length < AUGMENT_ACTIVE_CAP">
+                {{ gameStore.activeAugments.length }} / {{ AUGMENT_ACTIVE_CAP }} attuned
+              </template>
+              <template v-else>
+                {{ AUGMENT_ACTIVE_CAP }} / {{ AUGMENT_ACTIVE_CAP }} attuned — the weakest gives way
+              </template>
+            </div>
           </div>
 
           <button class="aug-reset-btn" title="Delete save" @click.stop="handleReset">
@@ -145,6 +161,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a7a52;
+}
+
+.aug-slots {
+  margin-top: 2px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #8a7a52;
 }

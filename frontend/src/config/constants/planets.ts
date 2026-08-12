@@ -54,14 +54,42 @@ export const RESOURCE_STAR_DURATION_MS = 45_000 // flyby lasts 45s
 export const RESOURCE_STAR_PLANET_COUNT = 3 // max. planets per flyby
 
 // Planet Boss Fight
+/**
+ * Untergrenze der Boss-HP. Ein früher Boss soll nicht am ersten Klick zerfallen,
+ * auch wenn der Spieler noch fast keinen Schaden macht.
+ */
 export const BOSS_BASE_HP = 200
-export const BOSS_HP_LEVEL_SCALE = 10
-// Gegengewicht zu den vielen sichtbaren Schadensquellen im Star-Fight-Modal:
-// jeder Champion-Stern im Team und jede erreichte Galaxie skalieren die HP mit
-export const BOSS_HP_PER_CHAMPION_STAR = 0.1 // +10% HP per star level of each slotted champion
-export const BOSS_HP_PER_GALAXY = 0.2 // +20% HP per galaxy beyond the first
-export const BOSS_HP_CPS_SCALE = 50
-export const BOSS_HP_POWER_SCALE = 5000
+
+/**
+ * **Wie lange ein Boss stehen soll** — daraus wird seine HP gerechnet, nicht
+ * umgekehrt.
+ *
+ * Vorher war die HP ein Produkt aus Level, CpS, Bard-Power, Champion-Sternen und
+ * Galaxie. Alle fünf wachsen mit dem Fortschritt, der Schaden dagegen kommt aus
+ * Passivschaden (ein Anteil der CpS), Turrets, Orbit-Kader und Klicks — die
+ * wachsen anders und teils gar nicht. Gemessen war das Ergebnis eine Sackgasse:
+ * nach etwa zehn Spielminuten war kein Boss mehr fällbar, und ohne gefällte
+ * Bosse gibt es keine geretteten Sterne, keine Champion-Planeten, keinen Kader
+ * und kein Auto-Battle. Ein geschlossener Kreis, aus dem das Spiel nicht mehr
+ * herausfand.
+ *
+ * Jetzt schätzt `spawnBoss` den Schaden, den der Spieler in diesem Moment
+ * WIRKLICH aufbringt, und setzt die HP auf so viele Sekunden davon. Die
+ * Kampfdauer ist damit eine entworfene Zahl, und die Enrage-Uhr
+ * (`BOSS_ENRAGE_BASE_SECONDS`, 30–60 s) bekommt wieder eine Bedeutung: sie ist
+ * die Frist, gegen die diese Dauer läuft.
+ */
+export const BOSS_TARGET_KILL_SECONDS = 18
+
+/**
+ * Klicks je Sekunde, die in die Schadensschätzung eingehen. Bewusst niedrig: wer
+ * mitklickt, soll den Boss spürbar schneller fällen als der, der zusieht — und
+ * wer gar nicht klickt, soll ihn trotzdem schaffen.
+ */
+export const BOSS_ASSUMED_CLICKS_PER_SEC = 1
+
+/** +20 % HP je Galaxie jenseits der ersten — die eine Achse, die weiter steigt. */
+export const BOSS_HP_PER_GALAXY = 0.2
 export const BOSS_ENRAGE_BASE_SECONDS = 30
 export const BOSS_ENRAGE_LEVEL_STEP = 5
 export const BOSS_ENRAGE_MAX_SECONDS = 60

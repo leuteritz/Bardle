@@ -42,6 +42,7 @@ import {
   GAME_SPEED_DEFAULT,
   MEEP_ADD_DELAY_MS,
   AUGMENT_CHOICE_COUNT,
+  AUGMENT_ACTIVE_CAP,
   ADMIN_LEVEL_AUGMENT_QUEUE_MAX,
   RARITY_WEIGHT_FALLBACK,
   BUILDING_HISTORY_BUFFER_SIZE,
@@ -382,9 +383,42 @@ export const useGameStore = defineStore('game', {
       this._activateNextPendingSelection()
     },
 
+    /**
+     * Nimmt ein Augment in die aktive Liste auf und hält dabei
+     * `AUGMENT_ACTIVE_CAP` ein: ist der Deckel erreicht, fällt das SCHWÄCHSTE
+     * heraus — die häufigste Rarität zuerst, unter gleichen die älteste.
+     *
+     * Dass ein neues Common bei vollem Deckel sich selbst verdrängt, ist
+     * gewollt: sonst könnte eine schwache Wahl ein Legendary hinauswerfen, und
+     * die Entscheidung beim Level-Up wäre wieder folgenlos.
+     */
+    _addAugment(id: string) {
+      this.activeAugments.push(id)
+      if (this.activeAugments.length <= AUGMENT_ACTIVE_CAP) return
+
+      // Häufigkeitsgewicht als Stärkemaß — dieselbe Tabelle, aus der die
+      // Angebote gezogen werden. Ein höheres Gewicht heißt „häufiger", also
+      // schwächer.
+      let dropIdx = 0
+      let dropWeight = -1
+      for (let i = 0; i < this.activeAugments.length; i++) {
+        const aug = AUGMENTS.find((a) => a.id === this.activeAugments[i])
+        const weight = aug ? (RARITY_WEIGHTS[aug.rarity] ?? RARITY_WEIGHT_FALLBACK) : Infinity
+        if (weight > dropWeight) {
+          dropWeight = weight
+          dropIdx = i
+        }
+      }
+      const dropped = this.activeAugments.splice(dropIdx, 1)[0]
+      logger.info('Game', `Augment displaced by cap: ${dropped}`, {
+        cap: AUGMENT_ACTIVE_CAP,
+        added: id,
+      })
+    },
+
     /** Gemeinsamer Kern von Hand- und Auto-Wahl: übernehmen, registrieren, CPS/CPC neu. */
     _commitAugment(id: string) {
-      this.activeAugments.push(id)
+      this._addAugment(id)
       this.pendingAugmentChoice = false
       this.pendingAugmentOptions = []
       const augmentStore = useAugmentStore()
@@ -437,9 +471,7 @@ export const useGameStore = defineStore('game', {
     skipAllAugments() {
       if (this.pendingAugmentOptions.length > 0) {
         const firstId = this.pendingAugmentOptions[0]
-        if (!this.activeAugments.includes(firstId)) {
-          this.activeAugments.push(firstId)
-        }
+        if (!this.activeAugments.includes(firstId)) this._addAugment(firstId)
       }
 
       this.pendingAugmentChoice = false
@@ -466,9 +498,7 @@ export const useGameStore = defineStore('game', {
         this.triggerAugmentSelection()
         if (this.pendingAugmentOptions.length > 0) {
           const firstId = this.pendingAugmentOptions[0]
-          if (!this.activeAugments.includes(firstId)) {
-            this.activeAugments.push(firstId)
-          }
+          if (!this.activeAugments.includes(firstId)) this._addAugment(firstId)
         }
         this.pendingAugmentChoice = false
         this.pendingAugmentOptions = []
@@ -476,9 +506,7 @@ export const useGameStore = defineStore('game', {
 
       for (const pending of this.pendingAugmentSelections) {
         const id = pending.options[0]
-        if (id && !this.activeAugments.includes(id)) {
-          this.activeAugments.push(id)
-        }
+        if (id && !this.activeAugments.includes(id)) this._addAugment(id)
       }
       this.pendingAugmentSelections = []
 
