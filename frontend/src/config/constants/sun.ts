@@ -127,7 +127,21 @@ export interface SunGrowthStage {
   label: string
 }
 
-/** Sun growth stages — thresholds match planet slot costs so stage N is met when slot N becomes affordable. */
+/**
+ * Sun growth stages.
+ *
+ * Von dieser Tabelle wird nur noch der RADIUS der letzten Stufe gelesen
+ * (`useOrbitScale.ts:8`, als Obergrenze der Orbit-Skalierung). Die
+ * `chimesThreshold`-Spalte hat keinen Verbraucher mehr — der Sonnenradius kommt
+ * längst aus `STAR_PHASE_DATA` über `planetShopStore.currentSunRadius`.
+ *
+ * Hier stand einmal „thresholds match planet slot costs so stage N is met when
+ * slot N becomes affordable". Das stimmt seit der Senkung der frühen Preise
+ * (`PLANET_SLOT_CONFIG`, erster Slot 500 → 100) nicht mehr, und es stimmte auch
+ * vorher nur zufällig: die Kopplung war nirgends erzwungen. Wer die Schwellen
+ * wieder benutzen will, muss sie neu setzen — nicht an den alten Zahlen
+ * ablesen.
+ */
 export const SUN_GROWTH_STAGES: SunGrowthStage[] = [
   { stage: 0, chimesThreshold: 0, radius: 34, label: 'Nascent' },
   { stage: 1, chimesThreshold: 500, radius: 44, label: 'Kindling' },
@@ -140,15 +154,19 @@ export const SUN_GROWTH_STAGES: SunGrowthStage[] = [
 
 // Solar Upgrade Tree
 export const SOLAR_STAR_SPEED_BONUS = 0.35
-export const SOLAR_FLIGHT_BASE_COST = 200
+// Die fuenf Grundpreise wurden zusammen mit CHIMES_PER_CLICK_BASE (20 -> 1) um
+// Faktor 5 gesenkt. Sie sind das Erste, worauf ein Spieler spart; blieben sie
+// stehen, waere der Einstieg schlagartig zwanzigmal zaeher, ohne dass sich am
+// Spiel etwas geaendert haette.
+export const SOLAR_FLIGHT_BASE_COST = 40
 export const SOLAR_FLIGHT_MULTIPLIER = 1.6
-export const SOLAR_HP_BASE_COST = 150
+export const SOLAR_HP_BASE_COST = 30
 export const SOLAR_HP_MULTIPLIER = 1.5
-export const SOLAR_CPC_BASE_COST = 50
+export const SOLAR_CPC_BASE_COST = 10
 export const SOLAR_CPC_MULTIPLIER = 1.5
-export const SOLAR_CPS_BASE_COST = 50
+export const SOLAR_CPS_BASE_COST = 10
 export const SOLAR_CPS_MULTIPLIER = 1.5
-export const SOLAR_DMG_BASE_COST = 200
+export const SOLAR_DMG_BASE_COST = 40
 export const SOLAR_DMG_MULTIPLIER = 1.6
 export const SOLAR_MAX_LEVELS = 6
 export const SOLAR_HP_PER_LEVEL = 25

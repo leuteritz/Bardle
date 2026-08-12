@@ -146,19 +146,19 @@ const KEYBIND_BY_ABILITY: Record<BardAbilityId, KeybindId> = {
 
 // ── Der nächste Meep ────────────────────────────────────────────────────────
 // Die Passiv-Kachel führt den Weg zum nächsten Meep, nicht den Bestand — der
-// steht im Header. Gerechnet wird auf derselben Grundlage wie im
-// Meep-Tooltip des Headers (`chimesForMeep` gegen `meepChimeRequirement`),
-// damit HUD und Header nie zwei verschiedene Stände zeigen.
+// steht im Header. Beide lesen dieselbe Quelle (`pendingMeeps` und seine
+// Geschwister im gameStore), damit HUD und Header nie zwei Stände zeigen.
+//
+// „Der nächste Meep" heisst seit dem Umbau: der nächste, den der AUFBRUCH
+// auszahlt. Meeps fallen nicht mehr laufend — sie sind der Lohn des Prestige,
+// und was der laufende Durchlauf bis jetzt eingebracht hat, wächst mit jedem
+// Chime weiter.
 
-/** Offene Chimes bis zum nächsten Meep. */
-const meepRemaining = computed(() =>
-  Math.max(0, gameStore.meepChimeRequirement - gameStore.chimesForMeep),
-)
+/** Offene Chimes bis zum nächsten anstehenden Meep. */
+const meepRemaining = computed(() => gameStore.chimesToNextMeep)
 
 /** 0..1 — Füllstand des äußeren Rings. */
-const meepFill = computed(() =>
-  Math.min(1, gameStore.chimesForMeep / Math.max(1, gameStore.meepChimeRequirement)),
-)
+const meepFill = computed(() => gameStore.pendingMeepFill)
 
 /**
  * Klicks, die noch fehlen — die Zahl unter der Figur.
@@ -493,8 +493,8 @@ const hovered = computed(() => {
         : { value: formatNumber(clicksToMeep.value), label: 'Clicks to next meep' },
       lines: [
         {
-          label: 'Meep progress',
-          value: `${formatNumberCompact(gameStore.chimesForMeep)} / ${formatNumberCompact(gameStore.meepChimeRequirement)}`,
+          label: 'Meeps on departure',
+          value: formatNumber(gameStore.pendingMeeps),
         },
         // Was die Produktion allein schafft — die Gegenprobe zur Klickzahl.
         { label: 'Idle in', value: meepIdleEta.value },

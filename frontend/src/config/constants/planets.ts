@@ -88,6 +88,23 @@ export const BOSS_TARGET_KILL_SECONDS = 18
  */
 export const BOSS_ASSUMED_CLICKS_PER_SEC = 1
 
+/**
+ * Schaden eines Klicks am Planeten-Boss, bevor Upgrades ihn heben.
+ *
+ * Diese Zahl war nie eine eigene: der Boss rechnete direkt mit
+ * `gameStore.chimesPerClick`, der Klick richtete also so viel Schaden an, wie er
+ * Chimes einbrachte. Solange beide Zahlen zufällig zueinander passten, fiel das
+ * nicht auf — beim Absenken des Klickwerts von 20 auf 1 aber sofort: der
+ * Schaden fiel um 95 %, die Boss-HP nur um 44 %, weil `BOSS_BASE_HP` als Boden
+ * greift. Der erste Boss hätte statt 18 Klicks deren 200 gebraucht, bei 30
+ * Sekunden Enrage-Uhr.
+ *
+ * 20 ist der Wert, den der Kampf vorher effektiv hatte — die Zahl ist also
+ * bewusst konservativ gewählt: sie ändert am Bosskampf nichts, sie macht ihn
+ * nur unabhängig von der Wirtschaft.
+ */
+export const BOSS_CLICK_DAMAGE_BASE = 20
+
 /** +20 % HP je Galaxie jenseits der ersten — die eine Achse, die weiter steigt. */
 export const BOSS_HP_PER_GALAXY = 0.2
 export const BOSS_ENRAGE_BASE_SECONDS = 30
@@ -478,7 +495,7 @@ export const JUNGLE_BUFF_DEFS: Record<PlanetRoleType, JungleBuffDef> = {
 
 /** Laufrichtung, Bahngeschwindigkeit und Grundpreis je Slot. */
 export const PLANET_SLOT_CONFIG = [
-  { id: 'slot_1', direction: 1 as const, baseSpeed: 0.00018, baseCost: 500 },
+  { id: 'slot_1', direction: 1 as const, baseSpeed: 0.00018, baseCost: 100 },
   { id: 'slot_2', direction: -1 as const, baseSpeed: 0.00014, baseCost: 2000 },
   { id: 'slot_3', direction: 1 as const, baseSpeed: 0.0001, baseCost: 8000 },
   { id: 'slot_4', direction: -1 as const, baseSpeed: 0.00007, baseCost: 35000 },

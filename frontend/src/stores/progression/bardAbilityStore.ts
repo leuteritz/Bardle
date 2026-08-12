@@ -348,12 +348,10 @@ export const useBardAbilityStore = defineStore('bardAbility', {
           Math.floor(gameStore.chimesPerClick * BINDING_EMPTY_CLICK_VALUES * power),
         )
         gameStore.chimes += gain
-        gameStore.chimesForMeep += gain
         gameStore.chimesForNextUniverse += gain
         gameStore.totalChimesEarned += gain
         gameStore.chimesEarnedForLevel += gain
         gameStore.calculateLevel()
-        gameStore.addMeep()
         return `Bolt rebounded off the sun · +${formatNumber(gain)} chimes`
       }
 

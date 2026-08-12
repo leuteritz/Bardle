@@ -249,7 +249,7 @@ export function useStatCatalog(query: Ref<string>): {
       {
         key: 'next-meep',
         label: 'Chimes to Next Meep',
-        value: num(Math.max(0, gameStore.meepChimeRequirement - gameStore.chimesForMeep)),
+        value: num(gameStore.chimesToNextMeep),
       },
       {
         key: 'offline-chimes',

@@ -225,7 +225,7 @@ export const SHOP_UPGRADE_CATALOG = [
   {
     id: 'chimeClicker',
     name: 'Clicker',
-    baseCost: 50,
+    baseCost: 10,
     baseCPC: 1,
     costMultiplier: 1.2,
     icon: '/img/ChimesPerClick.png',
@@ -233,7 +233,7 @@ export const SHOP_UPGRADE_CATALOG = [
   {
     id: 'glockenturm',
     name: 'Bell Tower',
-    baseCost: 25,
+    baseCost: 5,
     baseCPS: 1,
     costMultiplier: 1.15,
     icon: '/img/Glockenturm.png',
@@ -241,7 +241,7 @@ export const SHOP_UPGRADE_CATALOG = [
   {
     id: 'klanggenerator',
     name: 'Chime Array',
-    baseCost: 100,
+    baseCost: 20,
     baseCPS: 3,
     costMultiplier: 1.2,
     icon: '/img/KlangGenerator.png',
@@ -249,7 +249,7 @@ export const SHOP_UPGRADE_CATALOG = [
   {
     id: 'harmoniewerk',
     name: 'Chime Foundry',
-    baseCost: 500,
+    baseCost: 100,
     baseCPS: 5,
     costMultiplier: 1.25,
     icon: '/img/HarmonieWerk.png',
@@ -257,7 +257,7 @@ export const SHOP_UPGRADE_CATALOG = [
   {
     id: 'sphaerenMusik',
     name: 'Celestial Spheres',
-    baseCost: 2500,
+    baseCost: 500,
     baseCPS: 10,
     costMultiplier: 1.3,
     icon: '/img/SphaerenMusik.png',
@@ -265,7 +265,7 @@ export const SHOP_UPGRADE_CATALOG = [
   {
     id: 'zeitEcho',
     name: 'Time Echo',
-    baseCost: 10000,
+    baseCost: 2000,
     baseCPS: 25,
     costMultiplier: 1.4,
     icon: '/img/ZeitEcho.png',
@@ -555,7 +555,28 @@ export const EXPEDITION_LEDGER_RANKS: ExpeditionLedgerRankDef[] = [
 export const EXPEDITION_LEDGER_HISTORY_MAX = 24
 
 // Gameplay — click base
-export const CHIMES_PER_CLICK_BASE = 20
+/**
+ * Chimes für den allerersten Klick, bevor irgendein Upgrade greift.
+ *
+ * War 20, und das machte den Klick zu einer Zahl, an der man nichts ablesen
+ * konnte: das Klicker-Gebäude gibt +1 je Stufe, seine erste Stufe war also ein
+ * Zuwachs von fünf Prozent — unsichtbar. Bei 1 ist dieselbe Stufe eine
+ * Verdopplung.
+ *
+ * Spät ist dieser Wert ohnehin bedeutungslos. `calculateTotalCPC` addiert am
+ * Ende einen Anteil der GESAMTEN CpS je Klick (bis 64 % über Star Forge und
+ * Meep-Baum); im Spätspiel stehen dort sechsstellige Beträge gegen die paar
+ * hundert aus dem additiven Teil. Die Änderung von 20 auf 1 wirkt deshalb
+ * ausschliesslich in den ersten Minuten — dort aber deutlich, weshalb die
+ * frühen Preisanker (siehe SHOP_UPGRADE_CATALOG, SOLAR_*_BASE_COST,
+ * PLANET_SLOT_CONFIG) mitgesenkt wurden.
+ *
+ * WICHTIG: Diese Zahl ist keine Kampfgrösse. Der Boss-Klickschaden hat seit
+ * dieser Änderung seine eigene Basis (`BOSS_CLICK_DAMAGE_BASE`) — vorher hing
+ * beides an diesem einen Wert, und ein Absenken hätte den ersten Boss von 18
+ * auf 200 Klicks gebracht.
+ */
+export const CHIMES_PER_CLICK_BASE = 1
 
 // CPS tracking periods (seconds) and update intervals (ms)
 export const CPS_PERIOD_1MIN_S = 60

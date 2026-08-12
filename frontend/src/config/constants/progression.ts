@@ -41,9 +41,35 @@ export const LEVEL_SCALING_FACTOR = 1.1
  */
 export const LEVEL_SCALING_CAP_LEVEL = 100
 
-// Meep cost formula: 20 * meeps^1.2
-export const MEEP_BASE_COST = 20
-export const MEEP_COST_EXPONENT = 1.2
+/**
+ * Was ein Universums-Durchlauf an Meeps einbringt:
+ * `floor(MEEP_RUN_FACTOR × √(Chimes dieses Laufs / MEEP_RUN_BASE))`.
+ *
+ * Meeps waren einmal eine laufende Währung — alle paar Sekunden fiel einer,
+ * sobald genug Chimes zusammen waren, und das Prestige löschte anschliessend
+ * Bestand UND den gesamten Skill-Tree. Der Baum wurde also je Universum neu
+ * gekauft, und ein Aufbruch war ein reiner Rückschritt.
+ *
+ * Jetzt sind sie der Lohn des Aufbruchs: gesammelt wird über den ganzen
+ * Durchlauf, ausgezahlt beim Prestige, und der Baum bleibt stehen. Damit hat
+ * das Prestige zum ersten Mal etwas, das über den Durchlauf hinaus wächst.
+ *
+ * **Warum die Wurzel.** Ein linearer Anteil an den Chimes würde bedeuten:
+ * doppelt so lange spielen, doppelt so viele Meeps — dann gäbe es nie einen
+ * Grund aufzubrechen. Mit der Wurzel bringt ein längerer Lauf zwar mehr, aber
+ * mit abnehmendem Ertrag, und „wann prestige ich?" wird zu einer Entscheidung.
+ * Nebeneffekt: zwischen dem ersten und einem späten Durchlauf liegt beim
+ * Chime-Ertrag rund Faktor 10, nach der Wurzel nur noch 3 — die Zahl bleibt
+ * über das ganze Spiel lesbar.
+ *
+ * **Eichung.** Aus dem 76-Stunden-Referenzlauf: erster Aufbruch bei ~1,5e11
+ * Chimes ergibt ~20 Meeps, ein später Drei-Stunden-Lauf bei ~1e12 ergibt ~51.
+ * Über die dort gemessenen 24 Prestiges summiert das auf ~840 gegen 894 für
+ * den vollen Baum — er ist also ungefähr am Ende des Gerüsts fertig. Das ist
+ * eine Vorhersage aus der Messkurve, kein Messwert; sie wird nachgemessen.
+ */
+export const MEEP_RUN_BASE = 1e9
+export const MEEP_RUN_FACTOR = 1.6
 
 // Abilities
 export const MAX_ABILITY_LEVEL = 5

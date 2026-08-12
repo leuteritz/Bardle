@@ -332,18 +332,18 @@ describe('drifterStore', () => {
       expect(game.chimes - before).toBeLessThanOrEqual(1000 * DRIFTER_CHIME_REWARD_CAP_SEC)
     })
 
-    it('hands over a meep and fills the meep bar', () => {
+    it('hands over a meep on the spot — die einzige Quelle ausserhalb des Prestige', () => {
+      // Meeps fallen sonst nur beim Aufbruch in ein neues Universum. Dass der
+      // Drifter sie SOFORT gutschreibt, ist der ganze Reiz dieses Fundes; die
+      // Schwelle, die diese Stelle früher mit auffüllte, gibt es nicht mehr.
       const game = useGameStore()
       const store = useDrifterStore()
       game.meeps = 4
-      game.chimesForMeep = 0
-      game.meepChimeRequirement = 5000
 
       store.hitDrifter(spawn('lostMeep').uid)
 
       expect(game.meeps).toBe(5)
       expect(game.totalMeepsEarned).toBe(1)
-      expect(game.chimesForMeep).toBe(5000)
     })
 
     it('drops the promised number of materials', () => {

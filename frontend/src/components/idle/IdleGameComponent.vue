@@ -195,7 +195,6 @@ export default defineComponent({
 
       if (bonus > 0) {
         gameStore.chimes += bonus
-        gameStore.chimesForMeep += bonus
         gameStore.chimesForNextUniverse += bonus
       }
 

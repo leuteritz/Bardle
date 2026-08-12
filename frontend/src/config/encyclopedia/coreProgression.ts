@@ -15,7 +15,7 @@ export const resourcesCategory: EncyclopediaCategory = {
       lore: 'Cosmic sounds echoing through dimensions.',
       formula:
         'Click: +CPC · Passive: +CPS per second\n' +
-        'Base CPC = 20\n' +
+        'Base CPC = 1 — upgrades carry it from there\n' +
         'Both scale with augments, items, synergies,\n' +
         'Solar Rays, Star Forge and Meep Tree bonuses',
       related: ['buildings', 'clicker', 'augment-system'],
@@ -25,13 +25,14 @@ export const resourcesCategory: EncyclopediaCategory = {
       name: 'Meeps',
       icon: '/img/BardAbilities/BardMeep.png',
       description:
-        'Cosmic companions that spawn automatically once enough Chimes accumulate. ' +
-        'Each Meep grants +100 combat power — and Meeps are the currency of the Meep Skill Tree.',
+        'Cosmic companions gathered across a whole universe and handed over when you depart. ' +
+        'The header shows what the next departure would bring — the Chimes of the current run set that number. ' +
+        'Each Meep grants +100 combat power, and Meeps buy the Meep Skill Tree, which now survives every prestige.',
       lore: 'Loyal spirits from the space between worlds.',
       formula:
-        'Next Meep = ceil(20 × meeps^1.2) Chimes\n' +
-        'Power = Meeps × 100 (× tree & augment bonuses)\n' +
-        'Cost reduced by Meep Tree nodes',
+        'On departure = floor(1.6 × sqrt(run chimes / 1e9))\n' +
+        'Longer runs pay more, but with diminishing returns\n' +
+        'Power = Meeps × 100 (× tree & augment bonuses)',
       related: ['meep-tree', 'level-system'],
     },
     {

@@ -286,20 +286,18 @@ export const useDrifterStore = defineStore('drifter', {
         const floor = gameStore.chimesPerClick * DRIFTER_CHIME_REWARD_MIN_CLICKS
         const gain = Math.max(capped, floor)
         gameStore.chimes += gain
-        gameStore.chimesForMeep += gain
         gameStore.chimesForNextUniverse += gain
         gameStore.totalChimesEarned += gain
         gameStore.chimesEarnedForLevel += gain
         gameStore.calculateLevel()
-        gameStore.addMeep()
       }
 
       if (def.reward?.meeps) {
-        gameStore.meeps += def.reward.meeps
-        gameStore.totalMeepsEarned += def.reward.meeps
-        // Top the bar off as well — "a meep joins you" should also mean the
-        // next one is within reach, not that the counter silently jumped.
-        gameStore.chimesForMeep = gameStore.meepChimeRequirement
+        // Der einzige Weg an einen Meep ausserhalb des Prestige — und genau
+        // deshalb bleibt er: was sonst erst der Aufbruch auszahlt, findet man
+        // hier unterwegs. Der Balken, den diese Stelle früher noch auffüllte,
+        // existiert nicht mehr; Meeps haben keine laufende Schwelle.
+        gameStore.grantMeeps(def.reward.meeps)
       }
 
       if (def.reward?.materials) {

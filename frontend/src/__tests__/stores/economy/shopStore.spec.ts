@@ -1,7 +1,11 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useShopStore, buildingMilestoneMultiplier } from '@/stores/economy/shopStore'
-import { BUILDING_MILESTONE_INTERVAL, BUILDING_MILESTONE_MULT } from '@/config/constants'
+import {
+  BUILDING_MILESTONE_INTERVAL,
+  BUILDING_MILESTONE_MULT,
+  CHIMES_PER_CLICK_BASE,
+} from '@/config/constants'
 
 describe('shopStore', () => {
   beforeEach(() => {
@@ -10,25 +14,39 @@ describe('shopStore', () => {
 
   // ─── getUpgradeCost ───────────────────────────────────────────────────────────
 
-  describe('getUpgradeCost (Glockenturm: baseCost=25, mul=1.15)', () => {
-    it('level=0 → 25', () => {
+  // Die Basispreise sind eine Balance-Groesse — sie wurden zuletzt zusammen mit
+  // CHIMES_PER_CLICK_BASE (20 -> 1) um Faktor 5 gesenkt. Die Spec prueft deshalb
+  // die FORMEL gegen den Katalog, nicht abgeschriebene Zahlen.
+  describe('getUpgradeCost (geometrisch ueber baseCost)', () => {
+    const tower = () => useShopStore().shopUpgrades.find((u) => u.id === 'glockenturm')!
+
+    it('level=0 kostet genau baseCost', () => {
       const store = useShopStore()
-      const glockenturm = store.shopUpgrades.find((u) => u.id === 'glockenturm')!
-      expect(store.getUpgradeCost(glockenturm)).toBe(25)
+      const g = tower()
+      expect(store.getUpgradeCost(g)).toBe(g.baseCost)
     })
 
-    it('level=1 → 29 (ceil(25*1.15))', () => {
+    it('jede Stufe kostet costMultiplier mal die vorige', () => {
       const store = useShopStore()
-      const glockenturm = store.shopUpgrades.find((u) => u.id === 'glockenturm')!
-      glockenturm.level = 1
-      expect(store.getUpgradeCost(glockenturm)).toBe(29)
+      const g = tower()
+      for (const level of [1, 10]) {
+        g.level = level
+        expect(store.getUpgradeCost(g)).toBe(
+          Math.ceil(g.baseCost * Math.pow(g.costMultiplier, level)),
+        )
+      }
     })
 
-    it('level=10 → 102 (ceil(25*1.15^10))', () => {
+    it('waechst streng monoton', () => {
       const store = useShopStore()
-      const glockenturm = store.shopUpgrades.find((u) => u.id === 'glockenturm')!
-      glockenturm.level = 10
-      expect(store.getUpgradeCost(glockenturm)).toBe(102)
+      const g = tower()
+      let prev = 0
+      for (const level of [0, 1, 2, 5, 10]) {
+        g.level = level
+        const cost = store.getUpgradeCost(g)
+        expect(cost).toBeGreaterThan(prev)
+        prev = cost
+      }
     })
   })
 
@@ -42,14 +60,15 @@ describe('shopStore', () => {
       expect(store.getTotalUpgradeCost(glockenturm)).toBe(store.getUpgradeCost(glockenturm))
     })
 
-    it('buyAmount=3, level=0 → sum of levels 0+1+2 costs (25+29+34=88)', () => {
+    it('buyAmount=3 summiert die drei naechsten Stufenpreise', () => {
       const store = useShopStore()
       store.buyAmount = 3
-      const glockenturm = store.shopUpgrades.find((u) => u.id === 'glockenturm')!
-      // level 0: ceil(25 * 1.15^0) = 25
-      // level 1: ceil(25 * 1.15^1) = 29
-      // level 2: ceil(25 * 1.15^2) = ceil(33.0625) = 34
-      expect(store.getTotalUpgradeCost(glockenturm)).toBe(88)
+      const g = store.shopUpgrades.find((u) => u.id === 'glockenturm')!
+      const expected = [0, 1, 2].reduce(
+        (sum, step) => sum + Math.ceil(g.baseCost * Math.pow(g.costMultiplier, g.level + step)),
+        0,
+      )
+      expect(store.getTotalUpgradeCost(g)).toBe(expected)
     })
   })
 
@@ -82,16 +101,29 @@ describe('shopStore', () => {
   // ─── calculateTotalCPC ───────────────────────────────────────────────────────
 
   describe('calculateTotalCPC', () => {
-    it('no upgrades → 20 (baseChimesPerClick)', () => {
+    it('ohne Upgrades genau CHIMES_PER_CLICK_BASE', () => {
+      // Aus der Konstante gelesen statt abgeschrieben: der Startwert ist eine
+      // Balance-Groesse (zuletzt 20 -> 1, damit die erste Klicker-Stufe eine
+      // Verdopplung ist statt fuenf Prozent) und darf wandern.
       const store = useShopStore()
-      expect(store.calculateTotalCPC()).toBe(20)
+      expect(store.calculateTotalCPC()).toBe(CHIMES_PER_CLICK_BASE)
     })
 
-    it('Klicker level=5 → 25 (floor((20 + 1*5) * 1 * 1))', () => {
+    it('das Klicker-Gebaeude addiert seinen baseCPC je Stufe', () => {
       const store = useShopStore()
       const klicker = store.shopUpgrades.find((u) => u.id === 'chimeClicker')!
-      klicker.level = 5 // baseCPC=1
-      expect(store.calculateTotalCPC()).toBe(25)
+      klicker.level = 5
+      expect(store.calculateTotalCPC()).toBe(CHIMES_PER_CLICK_BASE + 5 * (klicker.baseCPC ?? 0))
+    })
+
+    it('die erste Klicker-Stufe ist spuerbar, nicht kosmetisch', () => {
+      // Der eigentliche Grund fuer die Absenkung des Startwerts: bei 20 war
+      // Stufe 1 ein Zuwachs von fuenf Prozent und damit unsichtbar.
+      const store = useShopStore()
+      const before = store.calculateTotalCPC()
+      const klicker = store.shopUpgrades.find((u) => u.id === 'chimeClicker')!
+      klicker.level = 1
+      expect(store.calculateTotalCPC()).toBeGreaterThanOrEqual(before * 1.5)
     })
   })
 

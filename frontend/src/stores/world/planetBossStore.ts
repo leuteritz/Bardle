@@ -125,7 +125,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
       const level = gameStore.level
       const cps = gameStore.chimesPerSecond
-      const cpc = gameStore.chimesPerClick
 
       const galaxyStore = useGalaxyStore()
       const sectionStore = useSectionStore()
@@ -136,7 +135,11 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const galaxyMult = 1 + (galaxyStore.currentGalaxy - 1) * BOSS_HP_PER_GALAXY
       const providence = useProvidenceStore()
 
-      const clickDamagePerHit = Math.max(1, cpc)
+      // Der Kampf hat seine EIGENE Klickzahl (`gameStore.dmgPerClick`), nicht den
+      // Chime-Klickwert. Beides an einem Wert hiess: eine Änderung an der
+      // Wirtschaft verschob still die Boss-HP mit — und zwar unsymmetrisch,
+      // weil `BOSS_BASE_HP` unten als Boden greift, der Klickschaden aber nicht.
+      const clickDamagePerHit = Math.max(1, gameStore.dmgPerClick)
       const passiveDPS = Math.max(0, Math.floor(cps * BOSS_PASSIVE_DPS_FRACTION))
 
       // Die HP folgen dem Schaden, nicht dem Fortschritt: geschätzt wird, was

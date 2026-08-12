@@ -37,7 +37,6 @@ import type {
 } from '@/types'
 import {
   LEVEL_BASE,
-  MEEP_BASE_COST,
   SAVE_KEY,
   SAVE_VERSION,
   SAVE_ID_RENAMES,
@@ -150,11 +149,9 @@ export function usePersistence() {
         chimesForNextLevel: gameStore.chimesForNextLevel,
         chimesPerClick: gameStore.chimesPerClick,
         baseChimesPerClick: gameStore.baseChimesPerClick,
-        chimesForMeep: gameStore.chimesForMeep,
         chimesForNextUniverse: gameStore.chimesForNextUniverse,
         chimesToUniverseRescue: gameStore.chimesToUniverseRescue,
         meeps: gameStore.meeps,
-        meepChimeRequirement: gameStore.meepChimeRequirement,
         level: gameStore.level,
         skillPoints: gameStore.skillPoints,
         abilityLevels: [...gameStore.abilityLevels],
@@ -472,12 +469,10 @@ export function usePersistence() {
         const restoredLevel = g.level ?? gameStore.level
         gameStore.chimesForNextLevel = chimeThresholdForLevel(restoredLevel)
         gameStore.baseChimesPerClick = g.baseChimesPerClick ?? gameStore.baseChimesPerClick
-        gameStore.chimesForMeep = g.chimesForMeep ?? gameStore.chimesForMeep
         gameStore.chimesForNextUniverse = g.chimesForNextUniverse ?? gameStore.chimesForNextUniverse
         gameStore.chimesToUniverseRescue =
           g.chimesToUniverseRescue ?? gameStore.chimesToUniverseRescue
         gameStore.meeps = g.meeps ?? gameStore.meeps
-        gameStore.meepChimeRequirement = g.meepChimeRequirement ?? gameStore.meepChimeRequirement
         gameStore.level = g.level ?? gameStore.level
         gameStore.skillPoints = g.skillPoints ?? gameStore.skillPoints
         if (Array.isArray(g.abilityLevels)) gameStore.abilityLevels = g.abilityLevels
@@ -1119,11 +1114,9 @@ export function usePersistence() {
     gameStore.chimesPerClick = CHIMES_PER_CLICK_BASE
     gameStore.baseChimesPerClick = CHIMES_PER_CLICK_BASE
     gameStore.chimesForNextLevel = LEVEL_BASE
-    gameStore.chimesForMeep = 0
     gameStore.chimesForNextUniverse = 0
     gameStore.chimesToUniverseRescue = UNIVERSE_RESCUE_INITIAL_COST
     gameStore.meeps = 0
-    gameStore.meepChimeRequirement = MEEP_BASE_COST
     gameStore.chimesEarnedForLevel = 0
     gameStore.level = 1
     gameStore.skillPoints = 0

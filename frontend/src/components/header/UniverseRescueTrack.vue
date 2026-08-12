@@ -15,8 +15,12 @@
  */
 import { ref, computed } from 'vue'
 import { useGameStore } from '@/stores/core/gameStore'
-import { formatNumber } from '@/config/ui/numberFormat'
-import { UNIVERSE_BAR_TICK_PERCENTS, UNIVERSE_BAR_FILL_INSET_PX } from '@/config/constants'
+import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import {
+  UNIVERSE_BAR_TICK_PERCENTS,
+  UNIVERSE_BAR_FILL_INSET_PX,
+  MEEP_ART_IMAGE,
+} from '@/config/constants'
 
 const props = defineProps<{
   /** Hover-Zustand der umgebenden Zeile — hebt Fassung und Kontur hervor. */
@@ -40,6 +44,18 @@ const barText = computed(() =>
     ? `${formatNumber(gameStore.chimesForNextUniverse)}/${formatNumber(gameStore.chimesToUniverseRescue)}`
     : `${progress.value.toFixed(1)}%`,
 )
+
+/**
+ * Was der Aufbruch einbringt — die Meep-Ausbeute des laufenden Durchlaufs.
+ *
+ * Sie steht hier und nicht an der Meep-Kachel darüber, obwohl die Kachel die
+ * näherliegende Stelle wäre: dort ist kein Platz (drei gleich breite Felder,
+ * gemessen überlappte eine Marke ab vierstelligen Beständen die Icon-Zeile),
+ * und inhaltlich gehört sie ohnehin an DIESEN Balken — er misst genau die
+ * Chimes des Durchlaufs, aus denen sich die Ausbeute rechnet. Die Kachel
+ * darüber zeigt den Bestand, diese Zeile den Zuwachs.
+ */
+const pendingMeeps = computed(() => gameStore.pendingMeeps)
 
 /* Die Zahl steht mittig im Balken und wird beim Füllen von der Goldkante
    überlaufen — eine einzelne Textfarbe ist dann zwangsläufig irgendwann
@@ -105,6 +121,16 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
         <span v-ink-center.x.y class="prestige-label">Prestige</span>
       </button>
     </Transition>
+
+    <!-- Die Ausbeute liegt über dem gemeinsamen Feld, nicht im Balken: so
+         steht sie an derselben Stelle, wenn der Prestige-Knopf den Balken
+         ablöst — und genau dann ist sie am wichtigsten. Rechts außen, weil
+         die Füllkante sie dort erst kurz vor 100 % erreicht und Prozentwert
+         wie Knopfbeschriftung ihre Mitte behalten. -->
+    <div v-if="pendingMeeps > 0" class="rescue-yield">
+      <img :src="MEEP_ART_IMAGE" class="rescue-yield-img" alt="" aria-hidden="true" />
+      <span>+{{ formatNumberCompact(pendingMeeps) }}</span>
+    </div>
   </div>
 </template>
 
@@ -237,6 +263,33 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
 /* Die Prozentzahl steht auf beiden Achsen mittig im Balken. Kein Glow
    hinter der Schrift — auf dem hellen Goldfüller trägt allein der harte
    dunkle Schlagschatten die Lesbarkeit. */
+/* Die Meep-Ausbeute am rechten Rand des Feldes — über Füllung, Fassung und
+   Knopf, damit sie beim Wachsen des Balkens nicht mitwandert und den
+   Zustandswechsel unverändert übersteht. */
+.rescue-yield {
+  position: absolute;
+  right: calc(var(--rescue-track-h) * 0.34);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 4;
+  font-size: max(9px, min(calc(var(--rescue-track-h) * 0.46), 13px));
+  font-weight: 800;
+  line-height: 1;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.rescue-yield-img {
+  width: max(10px, min(calc(var(--rescue-track-h) * 0.55), 16px));
+  height: max(10px, min(calc(var(--rescue-track-h) * 0.55), 16px));
+  object-fit: contain;
+}
+
 .rpg-bar-text {
   position: absolute;
   inset: 0;

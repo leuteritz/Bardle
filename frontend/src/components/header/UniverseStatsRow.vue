@@ -52,6 +52,13 @@ const galaxyStore = useGalaxyStore()
 const universeRoman = computed(() => toRoman(gameStore.currentUniverse))
 
 /* ── Meep-Zähler ─────────────────────────────────────────────────────── */
+
+/* Die Kachel zeigt allein den BESTAND. Was der nächste Aufbruch einbringt,
+   steht eine Zeile tiefer am Fortschrittsbalken — er misst ohnehin genau die
+   Chimes, aus denen sich die Ausbeute rechnet. In dieser Kachel wäre kein
+   Platz dafür: die drei Felder sind per Konstruktion gleich breit (nur so
+   steht Galaxy mittig über dem Balken), und eine Marke daneben überlappte
+   gemessen ab vierstelligen Beständen die Icon-Zeile. */
 const displayMeeps = ref(gameStore.meeps)
 const isIncreasing = ref(false)
 

@@ -9,7 +9,9 @@
  * gemacht hat, unten die Bilanz.
  *
  * Ohne eigenen Timer: der Fortschritt zum nächsten Meep hängt an
- * `gameStore.chimesForMeep`, das der Spieltakt jede Sekunde fortschreibt.
+ * `gameStore.pendingMeeps`, das mit jedem Chime des laufenden Durchlaufs
+ * weiterwächst — Meeps fallen nicht mehr einzeln, sie sind der Lohn des
+ * Aufbruchs.
  * Und da das Panel nur im geöffneten Zustand existiert (v-if hinter dem
  * Teleport in RpgBadgeTooltip), kostet der Header im Ruhezustand nichts.
  */
@@ -35,13 +37,9 @@ const meepTreeStore = useMeepTreeStore()
 
 /* ── Der nächste Meep ────────────────────────────────────────────────────── */
 
-const meepPercent = computed(() =>
-  clampPercent((gameStore.chimesForMeep / Math.max(1, gameStore.meepChimeRequirement)) * 100),
-)
+const meepPercent = computed(() => clampPercent(gameStore.pendingMeepFill * 100))
 
-const meepRemaining = computed(() =>
-  Math.max(0, gameStore.meepChimeRequirement - gameStore.chimesForMeep),
-)
+const meepRemaining = computed(() => gameStore.chimesToNextMeep)
 
 /** Sekundenertrag, mit dem die Schätzung rechnet — inkl. laufendem MVP-Buff. */
 const chimeRate = computed(() => gameStore.chimesPerSecond * gameStore.mvpBuffMultiplier)
@@ -188,8 +186,8 @@ const lifetimeRows = computed<StatRow[]>(() => [
   {
     key: 'cost',
     icon: MEEP_TOOLTIP_ICONS.costPerMeep,
-    label: 'Chimes per meep',
-    ...count(gameStore.meepChimeRequirement),
+    label: 'Meeps on departure',
+    ...count(gameStore.pendingMeeps),
   },
   {
     key: 'eta',
@@ -246,8 +244,8 @@ const lifetimeRows = computed<StatRow[]>(() => [
           aria-hidden="true"
         />
         <span v-if="chimeRate > 0">
-          {{ formatNumberCompact(gameStore.chimesForMeep) }} /
-          {{ formatNumberCompact(gameStore.meepChimeRequirement) }} chimes gathered
+          {{ formatNumberCompact(gameStore.chimesForNextUniverse) }} chimes this run —
+          {{ formatNumber(gameStore.pendingMeeps) }} meeps on departure
         </span>
         <span v-else>No passive chimes yet — build a chime works to set a pace</span>
         <span v-if="chimeRate > 0" class="mpt-status-rate">

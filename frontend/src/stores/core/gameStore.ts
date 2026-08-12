@@ -33,15 +33,12 @@ import {
   LEVEL_SCALING_THRESHOLD,
   LEVEL_SCALING_FACTOR,
   LEVEL_SCALING_CAP_LEVEL,
-  MEEP_BASE_COST,
-  MEEP_COST_EXPONENT,
   MAX_ABILITY_LEVEL,
-  SKILL_MEEP_COSTS,
   BOSS_PASSIVE_DPS_FRACTION,
+  BOSS_CLICK_DAMAGE_BASE,
   TURRET_PROJECTILE_FLIGHT_MS,
   GAME_TICK_INTERVAL_MS,
   GAME_SPEED_DEFAULT,
-  MEEP_ADD_DELAY_MS,
   AUGMENT_CHOICE_COUNT,
   AUGMENT_ACTIVE_CAP,
   AUGMENT_LEVEL_INTERVAL,
@@ -52,6 +49,8 @@ import {
   HYPERSPACE_ANIM_END_MS,
   UNIVERSE_RESCUE_INITIAL_COST,
   UNIVERSE_RESCUE_COST_MULTIPLIER,
+  MEEP_RUN_BASE,
+  MEEP_RUN_FACTOR,
   MEEP_POWER_MULTIPLIER,
   ABILITY_CPS_PER_LEVEL_DEFAULT,
   ABILITY_POWER_PER_LEVEL_DEFAULT,
@@ -131,11 +130,9 @@ export const useGameStore = defineStore('game', {
     chimesForNextLevel: LEVEL_BASE,
     chimesPerClick: CHIMES_PER_CLICK_BASE,
     baseChimesPerClick: CHIMES_PER_CLICK_BASE,
-    chimesForMeep: 0,
     chimesForNextUniverse: 0,
     chimesToUniverseRescue: UNIVERSE_RESCUE_INITIAL_COST,
     meeps: 0,
-    meepChimeRequirement: MEEP_BASE_COST,
     chimesEarnedForLevel: 0,
 
     level: 1,
@@ -234,24 +231,19 @@ export const useGameStore = defineStore('game', {
       logger.info('Game', `Game speed set to ${this.gameSpeed}x`)
     },
 
-    // Adds a Meep when enough Chimes have been collected
-    addMeep() {
-      if (this.chimesForMeep >= this.meepChimeRequirement) {
-        gameTimeout(() => {
-          this.meeps += 1
-          this.totalMeepsEarned += 1
-          const baseCost = Math.max(
-            MEEP_BASE_COST,
-            Math.ceil(MEEP_BASE_COST * Math.pow(this.meeps, MEEP_COST_EXPONENT)),
-          )
-          const meepCostMod = this.activeModifier.meepCostMultiplier ?? 1
-          const treeCostMod = useMeepTreeStore().fx.meepCostMult
-          this.meepChimeRequirement = Math.ceil(
-            baseCost * this.abilityMeepCostMultiplier * meepCostMod * treeCostMod,
-          )
-          this.chimesForMeep = 0
-        }, MEEP_ADD_DELAY_MS)
-      }
+    /**
+     * Schreibt Meeps unmittelbar gut — der Ausnahmeweg.
+     *
+     * Der REGELWEG ist das Prestige: was ein Durchlauf einbringt, steht in
+     * `pendingMeeps` und wird beim Aufbruch ausgezahlt. Diese Action bleibt für
+     * die zwei Quellen, die einen Meep als FUND vergeben statt als Ertrag — der
+     * Drifter „Lost Meep" und die Beute einer Expedition. Sie sollen sich genau
+     * deshalb besonders anfühlen: sie umgehen die Wartezeit.
+     */
+    grantMeeps(amount = 1) {
+      if (amount <= 0) return
+      this.meeps += amount
+      this.totalMeepsEarned += amount
     },
 
     /** Grants (or refreshes) the MVP honor buff — 2× chime production for a short window. */
@@ -268,7 +260,6 @@ export const useGameStore = defineStore('game', {
       const clickValue = this.chimesPerClick * this.mvpBuffMultiplier
       const gain = doubled ? clickValue * 2 : clickValue
       this.chimes += gain
-      this.chimesForMeep += gain
       this.chimesForNextUniverse += gain
       this.totalChimesEarned += gain
       this.chimesEarnedForLevel += gain
@@ -277,7 +268,6 @@ export const useGameStore = defineStore('game', {
       // slice off every running ability cooldown.
       useBardAbilityStore().registerClick()
       this.calculateLevel()
-      this.addMeep()
       this.checkPrestigeAvailability()
     },
 
@@ -554,20 +544,6 @@ export const useGameStore = defineStore('game', {
     },
 
     // Unlocks an ability with Meeps (one-time, sequentially)
-    unlockSkillWithMeeps(index: number) {
-      const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL
-      if (index > 0 && this.abilityLevels[index - 1] === 0) return
-      const cost = SKILL_MEEP_COSTS[index]
-      if (this.meeps >= cost && this.abilityLevels[index] === 0) {
-        this.meeps -= cost
-        this.totalMeepsSpent += cost
-        this.abilityLevels[index] = maxLevel
-        const shopStore = useShopStore()
-        this.chimesPerSecond = shopStore.calculateTotalCPS()
-        this.chimesPerClick = shopStore.calculateTotalCPC()
-      }
-    },
-
     // Increases an ability level when skill points are available
     upgradeAbility(index: number) {
       const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL
@@ -675,6 +651,9 @@ export const useGameStore = defineStore('game', {
       // Vor jeder Mutation: der Datensatz beschreibt das Universum, das gerade
       // verlassen wird, und liest dafür dessen noch unveränderte Zähler.
       this.finishUniverseRun()
+      // Der Lohn des Aufbruchs, VOR dem Nullen der Laufzähler: `pendingMeeps`
+      // liest `chimesForNextUniverse`, und die Zeile darunter löscht es.
+      this.grantMeeps(this.pendingMeeps)
       this.currentUniverse = nextUniverse
       this.totalPrestiges += 1
       this.chimesToUniverseRescue = Math.ceil(
@@ -683,12 +662,9 @@ export const useGameStore = defineStore('game', {
       this.chimesForNextUniverse = 0
       this.prestigeAvailable = false
       this.chimes = 0
-      this.chimesForMeep = 0
       this.level = 1
       this.chimesForNextLevel = LEVEL_BASE
       this.chimesEarnedForLevel = 0
-      this.meeps = 0
-      this.meepChimeRequirement = MEEP_BASE_COST
       this.skillPoints = 0
       this.abilityLevels = [0, 0, 0, 0]
       this.activeAugments = []
@@ -699,7 +675,13 @@ export const useGameStore = defineStore('game', {
       this.buildingProductionHistory = {}
       this.totalBuildingProduction = {}
       // totalChimesEarned & totalClicks persist across prestiges
-      useMeepTreeStore().resetTree()
+      //
+      // Der Meep-Baum bleibt STEHEN. Er wurde einmal hier zurückgesetzt, und
+      // zusammen mit `meeps = 0` hiess das: der Spieler kaufte dieselben 25
+      // Knoten in jedem Universum neu. Seit Meeps der Lohn des Aufbruchs sind,
+      // wäre das ein Widerspruch in sich — man bekäme die Währung genau in dem
+      // Moment, in dem das Gekaufte verschwindet. Der Baum ist jetzt die eine
+      // Achse, die über Universen hinweg wächst.
       // Der Void reist nicht mit. Ein Wesen, das im Moment des Aufbruchs anflog,
       // gehört zum verlassenen Universum — und da das Level hier auf 1 fällt,
       // stünde es im neuen unter der Freischaltschwelle da: sichtbar, drosselnd
@@ -788,12 +770,10 @@ export const useGameStore = defineStore('game', {
       if (this.mvpBuffSecondsLeft > 0) this.mvpBuffSecondsLeft--
       if (cps > 0) {
         this.chimes += cps
-        this.chimesForMeep += cps
         this.chimesForNextUniverse += cps
         this.totalChimesEarned += cps
         this.chimesEarnedForLevel += cps
         this.calculateLevel()
-        this.addMeep()
         this.trackBuildingProduction()
       }
       this.checkPrestigeAvailability()
@@ -1147,8 +1127,58 @@ export const useGameStore = defineStore('game', {
       return this.universeRuns[this.universeRuns.length - 1]?.durationSeconds ?? 0
     },
 
+    /**
+     * Schaden, den ein Klick am Planeten-Boss anrichtet.
+     *
+     * Das war einmal schlicht `max(1, chimesPerClick)` — der Klick richtete also
+     * so viel Schaden an, wie er Chimes einbrachte. Zwei Grössen an einem Wert,
+     * und eine davon ist eine reine Wirtschaftszahl: als der Klickwert von 20
+     * auf 1 gesenkt wurde, fiel der Boss-Schaden um 95 %, die Boss-HP aber nur
+     * um 44 %, weil `BOSS_BASE_HP` als Boden greift. Der erste Boss wäre von 18
+     * auf 200 Klicks gegangen, bei 30 Sekunden Enrage-Uhr.
+     *
+     * Jetzt hat der Kampf seine eigene Basis. Der Solar-Zweig `chimesPerClick`
+     * zahlt weiterhin ein — er heisst im Spiel „Chimes per Click" und darf beide
+     * Seiten heben —, aber die Wirtschaft kann sich frei bewegen, ohne dass ein
+     * Bosskampf sich mitverschiebt.
+     *
+     * Dieser Getter war lange tot: `planetBossStore` rechnete direkt mit
+     * `chimesPerClick`, niemand las ihn. Er ist jetzt die Quelle.
+     */
     dmgPerClick(): number {
-      return Math.max(1, this.chimesPerClick)
+      return BOSS_CLICK_DAMAGE_BASE + useSolarUpgradeStore().cpcBonus
+    },
+
+    /**
+     * Meeps, die der laufende Durchlauf beim Aufbruch einbringt.
+     *
+     * Ein reiner Getter, kein eigenes Feld: `chimesForNextUniverse` sammelt
+     * bereits jeden Chime dieses Laufs und wird beim Prestige auf 0 gesetzt.
+     * Ein zweiter Zähler daneben wäre eine zweite Quelle für dieselbe Zahl —
+     * und zwei Quellen laufen auseinander, sobald jemand eine anfasst. So ist
+     * die Ausbeute nebenbei reload-fest, ohne dass etwas zusätzlich gespeichert
+     * werden müsste.
+     */
+    pendingMeeps(): number {
+      return Math.floor(MEEP_RUN_FACTOR * Math.sqrt(this.chimesForNextUniverse / MEEP_RUN_BASE))
+    },
+
+    /**
+     * Fortschritt zum nächsten anstehenden Meep, 0..1.
+     *
+     * Die Passiv-Kachel zeigt seit jeher den WEG, nicht den Bestand (siehe
+     * CLAUDE.md). Der Weg ist jetzt der Nachkommaanteil der Wurzelformel.
+     */
+    pendingMeepFill(): number {
+      const exact = MEEP_RUN_FACTOR * Math.sqrt(this.chimesForNextUniverse / MEEP_RUN_BASE)
+      return Math.min(1, Math.max(0, exact - Math.floor(exact)))
+    },
+
+    /** Chimes, die dem nächsten anstehenden Meep noch fehlen. */
+    chimesToNextMeep(): number {
+      const next = this.pendingMeeps + 1
+      const needed = Math.pow(next / MEEP_RUN_FACTOR, 2) * MEEP_RUN_BASE
+      return Math.max(0, Math.ceil(needed - this.chimesForNextUniverse))
     },
     dmgPerSecond(): number {
       return Math.max(0, Math.floor(this.chimesPerSecond * BOSS_PASSIVE_DPS_FRACTION))

@@ -571,10 +571,8 @@ export const useExpeditionStore = defineStore('expedition', {
 
       const gameStore = useGameStore()
       gameStore.chimes += expedition.reward
-      gameStore.chimesForMeep += expedition.reward
       gameStore.chimesForNextUniverse += expedition.reward
       gameStore.calculateLevel()
-      gameStore.addMeep()
       gameStore.checkPrestigeAvailability()
 
       const { addEvent } = useEventLog()
@@ -604,7 +602,7 @@ export const useExpeditionStore = defineStore('expedition', {
         for (const { id, qty } of spoils.materials) {
           inventory.addMaterial(id, 'expedition', qty)
         }
-        for (let i = 0; i < spoils.meep; i++) gameStore.addMeep()
+        gameStore.grantMeeps(spoils.meep)
       }
 
       // Champion XP — paid per minute in the field, so long missions are worth

@@ -927,12 +927,10 @@ export const useVoidStore = defineStore('void', {
         const floor = gameStore.chimesPerClick * VOID_BOON_CHIME_MIN_CLICKS
         const gain = Math.max(capped, floor)
         gameStore.chimes += gain
-        gameStore.chimesForMeep += gain
         gameStore.chimesForNextUniverse += gain
         gameStore.totalChimesEarned += gain
         gameStore.chimesEarnedForLevel += gain
         gameStore.calculateLevel()
-        gameStore.addMeep()
       }
 
       if (def.boon.materials) {
