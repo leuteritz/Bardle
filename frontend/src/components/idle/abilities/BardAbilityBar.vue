@@ -626,8 +626,10 @@ const hovered = computed<TipView | null>(() => {
       key: '',
       name: BARD_PASSIVE.name,
       color: BARD_PASSIVE.color,
-      // Das einzige, was vom Stapelzähler bleibt: das Wort, dass er voll ist.
-      rankLabel: capped ? 'Max resonance' : 'Passive',
+      // Das einzige, was vom Stapelzähler bleibt: die Auskunft, dass er voll
+      // ist. Bewusst OHNE das Wort „resonance" — es hätte im Kasten keinen
+      // Anker mehr, seit weder Zähler noch Klartextsatz es nennen.
+      rankLabel: capped ? 'Maxed' : 'Passive',
       levelLabel: '',
       locked: false,
       // Die Passive kühlt nicht ab — der Status-Slot bliebe leer.

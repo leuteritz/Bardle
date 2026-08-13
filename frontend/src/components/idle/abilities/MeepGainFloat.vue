@@ -56,43 +56,80 @@ defineProps<{
   /* Relativ, nicht fest: die negativen Margins der Bildbox zehren einen Teil
      der Lücke auf, und ein fester Wert wäre auf 4K wieder ein Kleben. */
   gap: calc(var(--ab-passive-size, 72px) * 0.13);
-  /* `max-content` ist Pflicht, nicht Geschmack: ein absolut gesetztes Element
-     mit `left: 50%` bekommt als Shrink-to-fit-Breite nur, was RECHTS davon im
-     Containing Block liegt — bei einer 72px-Kachel also 36px. Ohne diese Zeile
-     wurde der Float auf 48px gequetscht, seine Kinder liefen nach rechts über,
-     und `translateX(-50%)` zog um die halbe FALSCHE Breite zurück. Ergebnis
-     war eine Gruppe, die rund 12px rechts der Kachelmitte stand. */
-  width: max-content;
+  /* NULLBREIT plus `justify-content: center` — der Float ist keine Box, die
+     zentriert wird, sondern eine ACHSE, an der ausgerichtet wird. `left: 50%`
+     legt sie auf die Kachelmitte; bei nullbreitem Container ist der freie Raum
+     negativ (`0 − Inhaltsbreite`), und `center` verteilt ihn gleichmäßig auf
+     beide Seiten. Die Gruppe läuft also um exakt ihre halbe Breite nach links
+     und rechts über die Achse und steht damit mittig.
+
+     Warum nicht wieder `width: max-content` + `translateX(-50%)`, was dasselbe
+     Ziel hatte: weil das die Position an die SELBST GEMESSENE Breite hängt, und
+     die ist keine Konstante —
+       · das Bild hatte vor seinem `load` mit `width: auto` gar keine (der Float
+         zeigte dann kurz nur die Zahl und sprang beim Laden, gemessen; siehe
+         `.mg-art`),
+       · „+1" ist schmaler als „+1.2K",
+       · und vor dem Font-Swap misst die Fallback-Schrift.
+     Die Flex-Verteilung kennt diese Zeitpunkte nicht: sie rechnet bei jedem
+     Layout neu, statt einen Prozentsatz auf eine einmal gemessene Breite
+     anzuwenden.
+
+     (Davor stand hier `width: max-content` gegen einen noch ÄLTEREN Versatz:
+     ein absolut gesetztes Element mit `left: 50%` bekommt als
+     Shrink-to-fit-Breite nur, was RECHTS davon im Containing Block liegt — bei
+     72px Kachel also 36px, Ergebnis waren 12px daneben. Die Zeile heilte das
+     Symptom; die Wurzel war schon damals, überhaupt anhand der eigenen Breite
+     zu zentrieren.) */
+  width: 0;
+  justify-content: center;
   white-space: nowrap;
   pointer-events: none;
-  /* Auch als Basis-Transform, nicht nur in den Keyframes — sonst steht der
-     Float bei jedem `animation: none` (reduzierte Bewegung ist davon nicht
-     betroffen, aber jede Messung und jedes Debugging) um seine halbe Breite
-     daneben. */
-  transform: translateX(-50%);
   animation: mg-rise var(--mg-float-ms, 1400ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* Die Höhe der BOX; die Breite folgt dem Seitenverhältnis. Das ergibt 45px auf
-   Full HD, 55px ab 2400 und 67px ab 3400 — die Breakpoints der Leiste tragen
-   das von selbst, weil sie `--ab-passive-size` setzen.
+/* Bei nullbreitem Container darf nichts schrumpfen — sonst quetschte der
+   Flex-Algorithmus die Kinder auf ihre automatische Mindestgröße. */
+.mg-art,
+.mg-value {
+  flex: 0 0 auto;
+}
+
+/* Die Höhe der BOX, aus der die Breite folgt. Das ergibt 45px auf Full HD,
+   55px ab 2400 und 67px ab 3400 — die Breakpoints der Leiste tragen das von
+   selbst, weil sie `--ab-passive-size` setzen.
 
    Die Box ist höher als die halbe Kachel, weil das Sprite oben und unten
    durchsichtigen Rand trägt (gemessen 11,7 % und 12,5 %): sichtbar bleiben
    damit rund 34px, also genau die Höhe der Ziffern daneben. */
 .mg-art {
   --mg-art-h: calc(var(--ab-passive-size, 72px) * 0.62);
+  /* Die Breite EXPLIZIT, nicht `auto`: ein noch nicht dekodiertes Bild hat kein
+     Seitenverhältnis, und `auto` ergibt dann eine Box, die nichts mit der
+     späteren zu tun hat. Das Sprite misst 85×128 (verifiziert), das Verhältnis
+     ist also fest bekannt — damit stimmt die Box ab dem ERSTEN Frame, auch beim
+     kalten Cache. */
+  --mg-art-w: calc(var(--mg-art-h) * 0.664);
   height: var(--mg-art-h);
-  width: auto;
+  width: var(--mg-art-w);
+  /* Pflicht, sobald der Anker nullbreit ist: Tailwinds Preflight setzt allen
+     Bildern `max-width: 100%`, und 100 % des Containers sind hier NULL — das
+     Sprite wurde damit auf 0 gequetscht (gemessen: Bildbreite 0, die Zahl
+     rutschte um die volle Figurbreite nach links). */
+  max-width: none;
   object-fit: contain;
   image-rendering: high-quality;
-  /* Denselben Rand trägt das Sprite auch seitlich — gemessen 18,8 % links und
-     21,2 % rechts der 85×128-Stufe. Ohne diese Korrektur steht neben der Figur
-     Luft, die in der Gruppe als Versatz nach rechts liest; die Box umschließt
-     so nur noch die Figur selbst. Faktor = Rand-Anteil × Seitenverhältnis
-     (85/128 = 0,664). */
-  margin-left: calc(var(--mg-art-h) * -0.125);
-  margin-right: calc(var(--mg-art-h) * -0.141);
+  /* Das Sprite trägt seitlich 18,8 % Alpha-Rand links und 21,2 % rechts
+     (gemessen). Die negativen Margins holen ihn aus dem Layout, womit sich die
+     Layout-Box mit der SICHTBAREN Figur deckt.
+
+     Das ist die Voraussetzung dafür, dass „mittig" überhaupt stimmt: sonst
+     zentriert die Flex-Verteilung des Elternteils den durchsichtigen Rand mit,
+     und weil er links und rechts verschieden breit ist, säße die Gruppe schief.
+     Beide Werte sind rechnerisch dieselben wie in der Fassung davor (−0,125
+     bzw. −0,141 der HÖHE), nur über die Breite ausgedrückt statt über die Höhe. */
+  margin-left: calc(var(--mg-art-w) * -0.188);
+  margin-right: calc(var(--mg-art-w) * -0.212);
   /* Statisch — die Animation fasst nur `transform` und `opacity` an, das
      Element wird einmal gerastert und danach nur geblendet
      (Performance-Regel 2). */
@@ -117,27 +154,34 @@ defineProps<{
 }
 
 /* Der Überschwung bei 16% ist das Anschlagen — ohne ihn blendet der Gewinn nur
-   ein, und ein Einblenden liest sich als Zustand, nicht als Ereignis. */
+   ein, und ein Einblenden liest sich als Zustand, nicht als Ereignis.
+
+   Kein `translateX(-50%)` mehr in den Keyframes: die Waagerechte macht das
+   Layout (nullbreiter Anker + negatives Margin), die Animation nur noch Höhe
+   und Größe. Das ist auch der Grund, warum der Anschlag jetzt sauber wirkt —
+   `transform-origin` liegt bei `width: 0` AUF der Achse, der Überschwung
+   pivotiert also genau auf dem Meep statt auf einer Gruppenmitte, die je nach
+   Betrag woanders lag. */
 @keyframes mg-rise {
   0% {
     opacity: 0;
-    transform: translateX(-50%) translateY(10px) scale(0.68);
+    transform: translateY(10px) scale(0.68);
   }
   16% {
     opacity: 1;
-    transform: translateX(-50%) translateY(-2px) scale(1.1);
+    transform: translateY(-2px) scale(1.1);
   }
   30% {
     opacity: 1;
-    transform: translateX(-50%) translateY(-8px) scale(1);
+    transform: translateY(-8px) scale(1);
   }
   70% {
     opacity: 1;
-    transform: translateX(-50%) translateY(-26px) scale(1);
+    transform: translateY(-26px) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-48px) scale(0.92);
+    transform: translateY(-48px) scale(0.92);
   }
 }
 
@@ -149,11 +193,9 @@ defineProps<{
   0%,
   70% {
     opacity: 1;
-    transform: translateX(-50%);
   }
   100% {
     opacity: 0;
-    transform: translateX(-50%);
   }
 }
 

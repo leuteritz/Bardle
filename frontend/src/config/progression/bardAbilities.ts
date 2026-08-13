@@ -98,7 +98,7 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
     // gestrichene Zeile „Held: enrage clocks and star timers" war unvollständig,
     // der Void steht ebenfalls still.
     description:
-      'Everything out there stops — enrage clocks, star timers, the Void alike — while your champions strike threefold. What survives takes a parting blow.',
+      'Everything out there stops (enrage clocks, star timers, the Void alike) while your champions strike threefold. What survives takes a parting blow.',
     image: `${ART}/BardR-512.png`,
     color: '#e8c040',
     unlockLevel: ABILITY_UNLOCK_LEVEL_R,
@@ -114,7 +114,7 @@ export const BARD_PASSIVE = {
   // Abklingzeit: bei ihr ist die Erklärung die Hauptsache, und die Zahlen sind
   // der Beleg. Bei den vier Slots ist es umgekehrt.
   description:
-    'Every click on the sun deepens your resonance — abilities grow stronger, cool faster, and each click trims what is already cooling.',
+    'Every click on the sun raises your ability power and lowers your cooldowns. Clicking while an ability is on cooldown brings it back sooner.',
   image: `${ART}/Bard-256.png`,
   color: '#f0d890',
 } as const
