@@ -9,6 +9,7 @@ import {
   ROLE_SUPPORT_HEAL_INTERVAL_MS,
   JUNGLE_BUFF_COOLDOWN_MS,
 } from '@/config/constants'
+import { formatCooldownSeconds, formatShortDuration } from '@/utils/ui/format'
 import type { ChampionRole } from '@/types'
 
 /** Volle Cooldown-Dauer je Rolle — Bezugsgröße für den Fortschrittsring. */
@@ -33,11 +34,10 @@ export interface RoleAbilityState {
   progress: number
 }
 
+/** `45s` / `2m 30s` — dieselbe Rundung, die auch die Bard-Leiste zeigt. */
 function fmtCd(ms: number): string {
-  const s = Math.ceil(ms / 1000)
-  if (s <= 0) return ''
-  if (s < 60) return `${s}s`
-  return `${Math.floor(s / 60)}m ${s % 60}s`
+  const s = formatCooldownSeconds(ms)
+  return s <= 0 ? '' : formatShortDuration(s)
 }
 
 /**

@@ -173,7 +173,6 @@ import {
   ABILITY_BAR_STACK_GAP_PX,
   ABILITY_CAST_FLASH_MS,
   ABILITY_CAST_TOAST_MS,
-  ABILITY_COOLDOWN_DECIMAL_BELOW_SEC,
   ABILITY_MAX_RANK,
   ABILITY_MEEP_GAIN_COALESCE_MS,
   ABILITY_MEEP_GAIN_FLOAT_MS,
@@ -182,6 +181,7 @@ import {
 } from '@/config/constants'
 import type { BardAbilityId, BardEffectLine, KeybindId } from '@/types'
 import { gameNow } from '@/utils/game/gameClock'
+import { formatCooldownSeconds } from '@/utils/ui/format'
 
 const uiStore = useUiStore()
 const store = useBardAbilityStore()
@@ -354,13 +354,6 @@ function setTileRef(id: BardAbilityId, el: unknown): void {
 let rafId: number | null = null
 let flashUntil = 0
 
-function cooldownText(leftMs: number): string {
-  const leftSec = leftMs / 1000
-  return leftSec > ABILITY_COOLDOWN_DECIMAL_BELOW_SEC
-    ? String(Math.ceil(leftSec))
-    : leftSec.toFixed(1)
-}
-
 /**
  * Was sich zwischen zwei Frames NICHT ändert: Sperre und volle Abklingzeit
  * hängen allein am Bard-Level und an der Resonance. Als computed werden sie
@@ -398,7 +391,7 @@ function paint(): boolean {
       // Der einzige Wert, der wirklich in jeden Frame gehört.
       const rest = total > 0 ? Math.min(1, leftMs / total) : 0
       if (els.sweep) els.sweep.style.transform = `scaleY(${rest})`
-      const text = cooldownText(leftMs)
+      const text = String(formatCooldownSeconds(leftMs))
       if (els.clock && text !== els.clockText) {
         els.clock.textContent = text
         els.clockText = text
@@ -570,7 +563,7 @@ function paintTipStatus(): void {
   if (!el || !id || id === 'passive') return
 
   const leftMs = Math.max(0, (store.cooldownReadyAt[id] ?? 0) - gameNow())
-  const text = leftMs > 0 ? `${cooldownText(leftMs)}s` : 'Ready'
+  const text = leftMs > 0 ? `${formatCooldownSeconds(leftMs)}s` : 'Ready'
   if (text === tipStatusText) return
   el.textContent = text
   el.classList.toggle('ab-tip-status--ready', leftMs === 0)
@@ -716,7 +709,9 @@ const hovered = computed<TipView | null>(() => {
     lead: lines[0],
     lines: lines.slice(1),
     note: def.description,
-    foot: [{ label: 'Cooldown', value: `${(store.cooldownMsOf(id) / 1000).toFixed(1)}s` }],
+    // Dieselbe Rundung wie die Uhr auf der Kachel — die Zahl hier IST der Wert,
+    // mit dem der Countdown beim nächsten Druck losläuft.
+    foot: [{ label: 'Cooldown', value: `${formatCooldownSeconds(store.cooldownMsOf(id))}s` }],
   }
 })
 
@@ -1205,7 +1200,7 @@ onUnmounted(() => {
 
 /* ── Fuß ──────────────────────────────────────────────────────────────────
    Beschriftete Ablesungen wie im Astral Codex: Überschrift über dem Wert.
-   „Ready" und „42.0s" allein sagten nicht, was sie zählen.
+   „Ready" und „42s" allein sagten nicht, was sie zählen.
 
    Es stehen bis zu DREI Zellen nebeneinander (Status · Cooldown · Next rank) —
    die Lücke ist deshalb knapper gesetzt als bei zwei.

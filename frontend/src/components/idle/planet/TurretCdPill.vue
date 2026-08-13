@@ -8,13 +8,17 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
-import { GAME_TICK_INTERVAL_MS, TURRET_CD_TICK_MS } from '@/config/constants'
+import { GAME_TICK_INTERVAL_MS, TURRET_CD_READY_MS, TURRET_CD_TICK_MS } from '@/config/constants'
 import { gameNow } from '@/utils/game/gameClock'
+import { formatCooldownSeconds } from '@/utils/ui/format'
 
 const bossStore = usePlanetBossStore()
 
 let lastVolleyMs = gameNow()
-const cdLeft = ref(1)
+/** Restzeit in MILLISEKUNDEN — die Einheit, in der `formatCooldownSeconds`
+ *  rechnet; die Pille zeigt dieselben ganzen Sekunden wie jede andere
+ *  Abklingzeit im Spiel. */
+const cdLeftMs = ref(GAME_TICK_INTERVAL_MS)
 let tick: ReturnType<typeof setInterval> | null = null
 
 watch(
@@ -26,7 +30,7 @@ watch(
 
 onMounted(() => {
   tick = setInterval(() => {
-    cdLeft.value = Math.max(0, (lastVolleyMs + GAME_TICK_INTERVAL_MS - gameNow()) / 1000)
+    cdLeftMs.value = Math.max(0, lastVolleyMs + GAME_TICK_INTERVAL_MS - gameNow())
   }, TURRET_CD_TICK_MS)
 })
 
@@ -34,8 +38,8 @@ onUnmounted(() => {
   if (tick) clearInterval(tick)
 })
 
-const display = computed(() => cdLeft.value.toFixed(1))
-const ready = computed(() => cdLeft.value <= 0.1)
+const display = computed(() => formatCooldownSeconds(cdLeftMs.value))
+const ready = computed(() => cdLeftMs.value <= TURRET_CD_READY_MS)
 </script>
 
 <style scoped>

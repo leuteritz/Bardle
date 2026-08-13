@@ -301,12 +301,6 @@ export const ABILITY_CAST_FLASH_MS = 420
 /** Wie lange die Klartextzeile über der Leiste stehen bleibt. */
 export const ABILITY_CAST_TOAST_MS = 3200
 
-/**
- * Ab dieser Restzeit zeigt die Kachel Zehntelsekunden statt ganzer Sekunden —
- * dieselbe Schwelle, ab der ein Cooldown im MOBA-HUD feiner wird.
- */
-export const ABILITY_COOLDOWN_DECIMAL_BELOW_SEC = 5
-
 /** Verzögerung, bis die Leiste nach dem Laden hereinfährt (wie die Keycap-Leiste). */
 export const ABILITY_BAR_REVEAL_MS = 700
 

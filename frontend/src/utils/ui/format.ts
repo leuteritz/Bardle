@@ -126,6 +126,24 @@ export function durationSegments(ms: number): DurationSegment[] {
   })
 }
 
+/**
+ * Eine Abklingzeit, wie der Spieler sie liest: ganze Sekunden, AUFGERUNDET.
+ *
+ * Aufgerundet, damit die volle Dauer im Tooltip dieselbe Zahl ist, mit der der
+ * Countdown auf der Kachel losläuft — sie zeigte einmal `23.3s`, während die
+ * Uhr beim Druck auf `24` sprang. Und damit die letzte gezeigte Sekunde `1`
+ * ist statt `0`: eine `0` auf einer noch kühlenden Kachel liest sich als
+ * „bereit", und genau das ist sie nicht.
+ *
+ * Gibt eine ZAHL zurück, keinen String: die Kachel schreibt sie nackt, der
+ * Tooltip mit `s` dahinter, das Command Panel reicht sie an
+ * `formatShortDuration` weiter. Ein fertiger String müsste an einer der drei
+ * Stellen wieder zerlegt werden.
+ */
+export function formatCooldownSeconds(ms: number): number {
+  return Math.ceil(Math.max(0, ms) / MS_PER_SECOND)
+}
+
 /** Sekunden als kurze Restdauer: `5m 30s`, `40s`, `3m`. */
 export function formatShortDuration(seconds: number): string {
   const min = Math.floor(seconds / SECONDS_PER_MINUTE)
