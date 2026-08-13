@@ -22,42 +22,104 @@
     -->
     <svg class="ab-ring" viewBox="0 0 100 100" aria-hidden="true">
       <defs>
-        <!-- Statischer Verlauf, einmal gerastert. Er läuft diagonal gegen die
-             Richtung der Füllung: dunkel dort, wo der Bogen beginnt, hell dort,
-             wo er bei fortgeschrittenem Stand endet. Ein echter Verlauf ENTLANG
-             des Bogens ginge nur per conic-gradient und wäre pro Änderung eine
-             Neuberechnung (Performance-Regel 11) — über 360° kann eine Gerade
-             das ohnehin nicht leisten. -->
+        <!-- Der Verlauf läuft diagonal gegen die Richtung der Füllung: dunkel
+             dort, wo der Bogen beginnt, hell dort, wo er bei fortgeschrittenem
+             Stand endet. Ein echter Verlauf ENTLANG des Bogens ginge nur per
+             conic-gradient und wäre pro Änderung eine Neuberechnung
+             (Performance-Regel 11) — über 360° kann eine Gerade das ohnehin
+             nicht leisten.
+
+             Seine drei Farben hängen an der ZONE, nicht am Füllstand: sie
+             wechseln beim Durchschreiten einer Viertel-Marke, also höchstens
+             dreimal je Meep-Schritt, und laufen dabei als Übergang. Am
+             Füllstand selbst zu hängen hiesse, den Verlauf im Klicktakt neu zu
+             rastern — genau das, was Performance-Regel 2 meint. -->
         <linearGradient id="abPassiveRingGrad" x1="1" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#c2410c" />
-          <stop offset="55%" stop-color="#fb923c" />
-          <stop offset="100%" stop-color="#fdba74" />
+          <stop class="ab-grad-stop" offset="0%" :stop-color="zoneColors[0]" />
+          <stop class="ab-grad-stop" offset="55%" :stop-color="zoneColors[1]" />
+          <stop class="ab-grad-stop" offset="100%" :stop-color="zoneColors[2]" />
         </linearGradient>
+
+        <!-- Die Viertel-Marken STANZEN den Ring aus, statt ihn dunkel zu
+             übermalen. Der Unterschied ist nicht kosmetisch: eine übermalte
+             Kerbe trägt eine eigene Farbe und steht damit gegen den Grund, über
+             dem die Kachel gerade liegt — hier ist das ein bewegtes Sternenfeld.
+             Ausgestanzt bleibt eine echte Lücke, und der Ring liest sich als
+             vier Segmente.
+
+             Schwarz löscht, Weiß lässt stehen; das `rect` ist der Grund, auf dem
+             die Linien radieren. -->
+        <mask
+          id="abPassiveRingMask"
+          maskUnits="userSpaceOnUse"
+          x="0"
+          y="0"
+          width="100"
+          height="100"
+        >
+          <rect x="0" y="0" width="100" height="100" fill="#fff" />
+          <line
+            v-for="tick in ticks"
+            :key="tick.fraction"
+            :x1="tick.x1"
+            :y1="tick.y1"
+            :x2="tick.x2"
+            :y2="tick.y2"
+            stroke="#000"
+            :stroke-width="ABILITY_PASSIVE_RING.TICK_GAP"
+            stroke-linecap="butt"
+          />
+        </mask>
       </defs>
 
-      <circle class="ab-ring-track" cx="50" cy="50" :r="RING_R" />
+      <!-- Track und Füllung teilen sich die Maske: würde nur eines von beiden
+           getrennt, säßen die Segmentgrenzen des leeren und des vollen Teils an
+           verschiedenen Stellen. -->
+      <g mask="url(#abPassiveRingMask)">
+        <circle class="ab-ring-track" cx="50" cy="50" :r="RING_R" />
 
+        <circle
+          class="ab-ring-meep"
+          cx="50"
+          cy="50"
+          :r="RING_R"
+          :stroke-dasharray="RING_C"
+          :stroke-dashoffset="RING_C * (1 - meepFill)"
+        />
+      </g>
+
+      <!-- In der Lücke, NICHT maskiert: die Marke selbst. Sie schlägt um, sobald
+           der Bogen sie passiert hat — damit sagt die Kachel „knapp über der
+           Hälfte", ohne dass die Zahl gelesen werden muss. Ein einmaliger
+           Umschlag der Malfarbe, keine laufende Animation. -->
       <circle
-        class="ab-ring-meep"
-        cx="50"
-        cy="50"
-        :r="RING_R"
-        :stroke-dasharray="RING_C"
-        :stroke-dashoffset="RING_C * (1 - meepFill)"
+        v-for="tick in ticks"
+        :key="`dot-${tick.fraction}`"
+        class="ab-ring-tick-dot"
+        :class="{ 'is-passed': meepFill >= tick.fraction, 'is-pulsing': flashTick === tick }"
+        :cx="tick.cx"
+        :cy="tick.cy"
+        :r="ABILITY_PASSIVE_RING.TICK_DOT_RADIUS"
       />
 
-      <!-- ÜBER der Füllung, in der Farbe des Grundes: die Marken kerben den
-           Ring, statt eine vierte konzentrische Kante aufzumachen. Sie geben
-           dem Auge die Viertel, ohne dass die Zahl dafür gelesen werden muss. -->
-      <line
-        v-for="tick in ticks"
-        :key="tick.fraction"
-        class="ab-ring-tick"
-        :x1="tick.x1"
-        :y1="tick.y1"
-        :x2="tick.x2"
-        :y2="tick.y2"
-      />
+      <!-- Das Ereignis selbst: eine Welle, die von der eben durchschrittenen
+           Marke ausgeht. Sie läuft EINMAL und räumt sich danach selbst ab.
+
+           Die Gruppe trägt die Verschiebung, der Kreis darin sitzt im Ursprung
+           — damit ist der Drehpunkt der Skalierung die Marke, ohne dass
+           `transform-origin` auf einem SVG-Element geraten werden müsste.
+           `non-scaling-stroke` hält die Linie beim Aufgehen dünn; sonst würde
+           aus der Welle eine wachsende Scheibe. -->
+      <g v-if="flashTick" :key="`flash-${flashKey}`" :transform="flashTick.translate">
+        <circle
+          class="ab-ring-tick-wave"
+          cx="0"
+          cy="0"
+          :r="ABILITY_PASSIVE_RING.TICK_DOT_RADIUS"
+          vector-effect="non-scaling-stroke"
+          @animationend="endFlash"
+        />
+      </g>
 
       <!-- Der Kopfpunkt sitzt am Ende der Füllung und wandert mit ihr: EINE
            Rotation um die Ringmitte, mit derselben Dauer wie der Nachlauf des
@@ -155,13 +217,15 @@ const RING_R = ABILITY_PASSIVE_RING.RADIUS
 const RING_C = 2 * Math.PI * RING_R
 
 /**
- * Die Tick-Marken, einmal gerechnet: Anteil → Winkel → zwei Punkte radial um
- * die Linie.
+ * Die Viertel-Marken, einmal gerechnet: Anteil → Winkel → die Strecke, die den
+ * Ring dort ausstanzt (`x1..y2`), und der Mittelpunkt der Lücke, auf dem die
+ * Marke sitzt (`cx`/`cy`). Beide aus DEMSELBEN Winkel — sonst säße der Punkt
+ * nicht in seiner eigenen Lücke.
  *
  * Nullpunkt ist 3 UHR, nicht 12 — im Koordinatenraum beginnt auch der Bogen
  * dort (`stroke-dasharray` läuft ab Winkel 0). Oben landen beide erst durch das
  * `rotate(-90deg)`, das am SVG hängt und ALLES gemeinsam dreht: Track, Füllung,
- * Ticks und Kopfpunkt. Wer hier einen eigenen Versatz einrechnet, verschiebt
+ * Marken und Kopfpunkt. Wer hier einen eigenen Versatz einrechnet, verschiebt
  * die Marken um 90° gegen die Füllung.
  */
 const ticks = ABILITY_PASSIVE_RING.TICK_FRACTIONS.map((fraction) => {
@@ -175,6 +239,9 @@ const ticks = ABILITY_PASSIVE_RING.TICK_FRACTIONS.map((fraction) => {
     y1: 50 + dy * (RING_R - half),
     x2: 50 + dx * (RING_R + half),
     y2: 50 + dy * (RING_R + half),
+    cx: 50 + dx * RING_R,
+    cy: 50 + dy * RING_R,
+    translate: `translate(${50 + dx * RING_R} ${50 + dy * RING_R})`,
   }
 })
 
@@ -188,6 +255,10 @@ const ticks = ABILITY_PASSIVE_RING.TICK_FRACTIONS.map((fraction) => {
  *
  * Zwei verschachtelte rAF sind nötig, kein einzelnes: das erste feuert noch
  * bevor der Browser die neue Position gerechnet hat.
+ *
+ * Dieser Beobachter steht VOR dem der Zone, und das ist kein Zufall: Vue ruft
+ * sie in Registrierungsreihenfolge auf, und die Welle unten fragt `warping` ab.
+ * Andersherum liefe sie beim Schrittwechsel einmal zu oft.
  */
 const warping = ref(false)
 let warpRaf = 0
@@ -206,6 +277,42 @@ watch(
 )
 
 onBeforeUnmount(() => cancelAnimationFrame(warpRaf))
+
+/**
+ * Die Zone, in der der Bogen gerade steht: 0 bis 3, gezählt als „wie viele
+ * Marken liegen hinter mir". Genau die Zahl, an der die Verlaufsfarben hängen —
+ * und die Änderung, die die Welle auslöst.
+ */
+const zone = computed(() => ticks.filter((t) => props.meepFill >= t.fraction).length)
+
+const zoneColors = computed(
+  () => ABILITY_PASSIVE_RING.ZONE_COLORS[zone.value] ?? ABILITY_PASSIVE_RING.ZONE_COLORS[0],
+)
+
+/**
+ * Die Welle beim Durchschreiten.
+ *
+ * NUR nach vorn: beim Erreichen eines Meeps fällt der Füllstand auf 0 und die
+ * Zone mit ihm — dort ist nichts durchschritten worden, sondern etwas
+ * abgeschlossen, und das meldet der Float über der Kachel. Ein Rückwärtsblitz
+ * an drei Marken gleichzeitig wäre schlicht falsch.
+ *
+ * Springt die Zone um mehrere Stufen (Boss-Ertrag, Offline-Gutschrift, ein
+ * geladener Spielstand), läuft die Welle an der ZULETZT erreichten Marke — eine
+ * Welle je Ereignis, nicht drei übereinander.
+ */
+const flashKey = ref(0)
+const flashTick = ref<(typeof ticks)[number] | null>(null)
+
+watch(zone, (now, before) => {
+  if (now <= before || warping.value) return
+  flashTick.value = ticks[now - 1] ?? null
+  flashKey.value += 1
+})
+
+function endFlash(): void {
+  flashTick.value = null
+}
 </script>
 
 <style scoped>
@@ -248,12 +355,85 @@ onBeforeUnmount(() => cancelAnimationFrame(warpRaf))
   transition: stroke-dashoffset 260ms ease-out;
 }
 
-/* In der Farbe des Scheibengrundes: die Marke schneidet den Ring, statt eine
-   eigene Linie zu sein. */
-.ab-ring-tick {
-  stroke: #14100a;
-  stroke-width: 1.6;
-  stroke-linecap: butt;
+/* Der Zonenwechsel als Übergang. Er läuft höchstens dreimal je Meep-Schritt,
+   und nur dann wird der Verlauf neu gerastert — an den Füllstand gehängt wäre
+   dasselbe im Klicktakt und damit ein Dauerläufer (Performance-Regel 2).
+
+   Länger als der Nachlauf des Bogens (260 ms): die Farbe soll dem Auge
+   nachziehen, nicht mit der Bewegung um Aufmerksamkeit streiten. */
+.ab-grad-stop {
+  transition: stop-color 520ms ease-out;
+}
+
+/* Die Marke in der Lücke. Offen ist sie ein ruhiger Punkt in der Track-Familie;
+   passiert der Bogen sie, schlägt sie ins Meep-Orange um — ein einmaliger
+   Wechsel der Malfarbe, keine laufende Animation (Performance-Regel 2 betrifft
+   filter/box-shadow, nicht `fill` an einem SVG-Element). */
+.ab-ring-tick-dot {
+  fill: #6b4420;
+  transition: fill 200ms ease-out;
+}
+
+.ab-ring-tick-dot.is-passed {
+  fill: #fdba74;
+}
+
+/* Die Welle. Nur `transform` und `opacity` — sie hängt an einem Element, das
+   ausschliesslich für ihre Dauer im DOM steht und sich per `animationend`
+   selbst abräumt. `forwards` hält sie bis dahin unsichtbar am Endzustand,
+   statt sie zurückspringen zu lassen.
+
+   Die Deckkraft steigt erst AN und fällt dann: eine Welle, die von Frame eins
+   an verblasst, ist auf 72 px nach zwei Zehnteln nicht mehr da. Der kurze
+   Anstieg gibt ihr den Anschlag, den ein Ereignis braucht. */
+.ab-ring-tick-wave {
+  fill: none;
+  stroke: #ffedd5;
+  stroke-width: 2.4;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ab-tick-wave 620ms ease-out forwards;
+  pointer-events: none;
+}
+
+/* Die Welle startet AUSSERHALB des gepulsten Punktes (unten max. 1,75) — sonst
+   fährt sie in ihm an, und übrig bleibt ein Punkt, der kurz dick wird. Die
+   beiden Radien dürfen sich nie überholen. */
+@keyframes ab-tick-wave {
+  0% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  14% {
+    transform: scale(2.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(5.2);
+    opacity: 0;
+  }
+}
+
+/* Die gequerte Marke poppt einmal auf — dieselbe Quelle wie die Welle, damit
+   das Ereignis auch im Zentrum Masse hat und nicht nur als Rand davonläuft.
+   `fill-box` macht den Kreismittelpunkt zum Drehpunkt; ohne ihn würde die
+   Skalierung den Punkt aus seiner Lücke schieben. */
+.ab-ring-tick-dot.is-pulsing {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ab-tick-pop 460ms ease-out;
+}
+
+@keyframes ab-tick-pop {
+  0% {
+    transform: scale(1);
+  }
+  32% {
+    transform: scale(1.75);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .ab-ring-head {
@@ -369,11 +549,23 @@ onBeforeUnmount(() => cancelAnimationFrame(warpRaf))
 
 @media (prefers-reduced-motion: reduce) {
   .ab-ring-meep,
-  .ab-ring-head {
+  .ab-ring-head,
+  .ab-ring-tick-dot,
+  .ab-grad-stop {
     transition: none;
   }
 
+  /* Die Welle entfällt hier nicht, sie läuft nur sofort ab — sonst bliebe ihr
+     Element bis zum `animationend` hängen, das dann nie käme. */
   .ab-ring-head-glow {
+    animation: none;
+  }
+
+  .ab-ring-tick-wave {
+    animation-duration: 1ms;
+  }
+
+  .ab-ring-tick-dot.is-pulsing {
     animation: none;
   }
 }

@@ -50,8 +50,41 @@ export const ABILITY_PASSIVE_RING = {
   HEAD_RADIUS: 3.4,
   /** Viertel-Orientierung. Bei 0 sitzt schon der Ringanfang. */
   TICK_FRACTIONS: [0.25, 0.5, 0.75],
-  /** Halbe Länge einer Tick-Marke, radial gemessen. */
-  TICK_HALF_LENGTH: 2.6,
+  /**
+   * Halbe radiale Länge der Maskenlinie, die den Ring an einem Viertel
+   * DURCHTRENNT. Muss `STROKE` sicher überschreiten, sonst bleiben Fransen der
+   * Linie stehen — mit 3,2 zu 3 ist an jeder Seite Reserve.
+   */
+  TICK_HALF_LENGTH: 3.2,
+  /**
+   * Breite der Lücke ENTLANG des Bogens, gegen `STROKE` gesetzt: die doppelte
+   * Ringstärke liest sich als Trennung, ohne dass die vier Segmente zerfallen.
+   * Wandert die Strichstärke, wandert dieser Wert mit.
+   */
+  TICK_GAP: 6,
+  /**
+   * Der Marken-Punkt in der Lücke. Bewusst halb so groß wie `HEAD_RADIUS` — die
+   * wandernde Marke soll die eindeutige bleiben.
+   */
+  TICK_DOT_RADIUS: 1.7,
+  /**
+   * Die vier Zonen zwischen den Viertel-Marken, je drei Farben für die Stops
+   * des Ring-Verlaufs. Der Ring HEIZT zum Ziel hin auf: von gedämpftem Kupfer
+   * über das Meep-Orange bis an die Goldkante, sobald das letzte Viertel läuft.
+   *
+   * Bewusst alles in EINER Familie — der Wechsel soll das Vorankommen fühlbar
+   * machen, nicht eine neue Bedeutung ankündigen. Meep-Orange (`#fb923c`) bleibt
+   * der Ankerton, den auch Header und Materialleiste tragen.
+   *
+   * Ein Zonenwechsel kommt höchstens DREIMAL je Meep-Schritt vor. Deshalb darf
+   * er als Übergang laufen: er ist ein Ereignis, kein Dauerläufer.
+   */
+  ZONE_COLORS: [
+    ['#8a3a12', '#d9600f', '#f59356'],
+    ['#a33d0d', '#ec6c10', '#fba263'],
+    ['#c2410c', '#fb923c', '#fdba74'],
+    ['#d4560e', '#fdae67', '#fde3a7'],
+  ],
   /**
    * Nachlauf von Füllung und Kopfpunkt. Lang genug, dass ein einzelner Klick
    * sichtbar wandert, kurz genug, dass schnelles Klicken nicht nachhinkt.
