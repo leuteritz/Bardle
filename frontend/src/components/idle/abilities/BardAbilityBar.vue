@@ -37,24 +37,47 @@
         :style="{ '--ab-color': hovered.color }"
       >
         <!-- Kopf: wer spricht. Die Keycap wiederholt links die Taste der
-             Kachel, damit Tooltip und Feld zusammengehören; rechts steht ihr
-             Gegenstück, die Plakette aus Rang und nächstem Level. Beides sind
-             Aussagen über die Fähigkeit selbst — der Kopf liest sich damit von
-             Rand zu Rand als eine Zeile.
+             Kachel, damit Tooltip und Feld zusammengehören; rechts steht die
+             zweite große Aussage des Kastens — der Rang. Beides sind Aussagen
+             über die Fähigkeit selbst, der Kopf liest sich damit von Rand zu
+             Rand als eine Zeile.
 
-             Alle drei hängen an der MITTE der Bande, nicht an einer gemeinsamen
-             Grundlinie — die Keycap und die Plakette sind Kästchen, und ein
-             Kästchen richtet sich nicht an einer Baseline aus. Damit die Tinte
-             darin auch wirklich mittig sitzt, trägt jeder Textknoten
-             `v-ink-center.y`: MedievalSharp setzt seine Glyphen fast vollständig
-             über die Baseline, zentrierte Zeilenboxen stehen dadurch sichtbar zu
-             hoch (utils/ui/textInkOffset.ts). -->
+             Der Rang trägt KEINE eigene Fläche mehr: er stand einmal als
+             umrandete Plakette hier und war darin ausgerechnet das kleinste
+             Element. Jetzt trennt ihn allein die Typografie — die Zahl in der
+             Größe des Namens, das Wort davor als zurücktretende Beschriftung,
+             der Nenner als sein Anhang. Das nächste Level rutscht dabei in die
+             Rolle, die es inhaltlich hat: die Fußnote „ab wann geht es weiter?".
+
+             Alles hängt an der MITTE der Bande, nicht an einer gemeinsamen
+             Grundlinie — die Keycap ist ein Kästchen, und ein Kästchen richtet
+             sich nicht an einer Baseline aus; die vier Teile des Rangs sind
+             verschieden groß und hätten auf einer Baseline sichtbar
+             auseinandergestanden. Damit die Tinte in jeder Zeilenbox wirklich
+             mittig sitzt, trägt jeder Textknoten `v-ink-center.y`: MedievalSharp
+             setzt seine Glyphen fast vollständig über die Baseline, zentrierte
+             Zeilenboxen stehen dadurch sichtbar zu hoch
+             (utils/ui/textInkOffset.ts). -->
         <header class="ab-tip-head">
           <span v-if="hovered.key" v-ink-center.x.y class="ab-tip-key">{{ hovered.key }}</span>
           <span v-ink-center.y class="ab-tip-name">{{ hovered.name }}</span>
-          <span class="ab-tip-badge">
-            <span v-ink-center.y class="ab-tip-badge-rank">{{ hovered.rankLabel }}</span>
-            <span v-if="hovered.levelLabel" v-ink-center.y class="ab-tip-badge-level">{{
+          <span class="ab-tip-rank">
+            <span v-if="hovered.rank.word" v-ink-center.y class="ab-tip-rank-word">{{
+              hovered.rank.word
+            }}</span>
+            <!-- Zahl und Nenner ohne Lücke dazwischen: der `gap` des Blocks
+                 trennt Wort | Zähler | Level, nicht „3" von „/5". -->
+            <span class="ab-tip-rank-count">
+              <span
+                v-ink-center.y
+                class="ab-tip-rank-value"
+                :class="{ 'ab-tip-rank-value--word': !hovered.rank.total }"
+                >{{ hovered.rank.value }}</span
+              ><span v-if="hovered.rank.total" v-ink-center.y class="ab-tip-rank-total"
+                >/{{ hovered.rank.total }}</span
+              >
+            </span>
+            <span v-if="hovered.levelLabel" v-ink-center.y class="ab-tip-rank-level">{{
               hovered.levelLabel
             }}</span>
           </span>
@@ -599,11 +622,19 @@ interface TipView {
   key: string
   name: string
   color: string
-  /** Linke Hälfte der Kopf-Plakette: „Rank 3/5", „Locked", „Passive". */
-  rankLabel: string
   /**
-   * Rechte Hälfte der Kopf-Plakette: das Level, ab dem es weitergeht — bei
-   * gesperrt die Freischaltung, sonst der nächste Rang.
+   * Der Rang im Kopf, dreigeteilt — das Wort tritt zurück, die Zahl trägt den
+   * Blick, der Nenner hängt an ihr. Ein fertiger String („Rank 3/5") ließe sich
+   * typografisch nicht mehr auseinanderziehen.
+   *
+   * Leeres `total` heißt „kein Zähler": dann steht in `value` ein Zustandswort
+   * („Locked", „Passive", „Maxed"), das der Kopf kleiner setzt als eine Zahl —
+   * ein Wort in voller Namensgröße stünde als zweiter Titel gegen den ersten.
+   */
+  rank: { word: string; value: string; total: string }
+  /**
+   * Rechts neben dem Rang: das Level, ab dem es weitergeht — bei gesperrt die
+   * Freischaltung, sonst der nächste Rang.
    *
    * Leer am Höchstrang (dort sagt „Rank 5/5" bereits, dass keins mehr kommt)
    * und bei der Passive, die weder Rang noch Freischaltung hat.
@@ -636,8 +667,9 @@ const hovered = computed<TipView | null>(() => {
       color: BARD_PASSIVE.color,
       // Das einzige, was vom Stapelzähler bleibt: die Auskunft, dass er voll
       // ist. Bewusst OHNE das Wort „resonance" — es hätte im Kasten keinen
-      // Anker mehr, seit weder Zähler noch Klartextsatz es nennen.
-      rankLabel: capped ? 'Maxed' : 'Passive',
+      // Anker mehr, seit weder Zähler noch Klartextsatz es nennen. Ein Zähler
+      // steht hier nie: die Passive hat keine Ränge, ihr Feld trägt ein Wort.
+      rank: { word: '', value: capped ? 'Maxed' : 'Passive', total: '' },
       levelLabel: '',
       locked: false,
       // Die Passive kühlt nicht ab — der Status-Slot bliebe leer.
@@ -664,21 +696,23 @@ const hovered = computed<TipView | null>(() => {
   const locked = rank === 0
   const lines = bardAbilityEffectLines(id, rank, store.resonancePowerMult)
   // `nextRankLevelOf` liefert bei gesperrt bereits das Freischalt-Level und am
-  // Höchstrang 0 — beide Fälle der Plakette kommen aus derselben Quelle.
+  // Höchstrang 0 — beide Fälle des Kopffelds kommen aus derselben Quelle.
   const nextLevel = store.nextRankLevelOf(id)
 
   return {
     key: def.key,
     name: def.name,
     color: def.color,
-    rankLabel: locked ? 'Locked' : `Rank ${rank}/${ABILITY_MAX_RANK}`,
+    rank: locked
+      ? { word: '', value: 'Locked', total: '' }
+      : { word: 'Rank', value: String(rank), total: String(ABILITY_MAX_RANK) },
     levelLabel: nextLevel > 0 ? `Lv ${nextLevel}` : '',
     locked,
     live: !locked,
     // Gesperrt kein Sonderfall mehr: das Lead-Feld führt in JEDEM Zustand die
     // Hauptwirkung — bei gesperrt eben als Vorschau auf Rang 1. Was der Kasten
-    // sonst vorangestellt hätte (das Freischalt-Level), steht oben in der
-    // Plakette und braucht den größten Platz im Kasten nicht.
+    // sonst vorangestellt hätte (das Freischalt-Level), steht oben neben dem
+    // Rang und braucht den größten Platz im Kasten nicht.
     lead: lines[0],
     lines: lines.slice(1),
     note: def.description,
@@ -837,8 +871,12 @@ onUnmounted(() => {
 .ab-tip {
   position: relative;
   left: 0;
+  /* Die Größe der Kopfzeile — Name UND Rangzahl lesen sie. Beide sollen gleich
+     groß sein; stünde die Zahl zweimal da, liefen sie spätestens auf der
+     nächsten Auflösungsstufe auseinander. */
+  --ab-tip-title: 1.05rem;
   /* Breit genug, dass der Kopf auch mit dem längsten Namen („Caretaker's
-     Shrine") samt Keycap UND Plakette in eine Zeile passt. Breite ist hier
+     Shrine") samt Keycap UND Rangfeld in eine Zeile passt. Breite ist hier
      billig: der Kasten bleibt auf jeder Stufe schmaler als die Kachelreihe,
      die er überspannt, und der Klartextsatz bekommt sie gleich mit. */
   width: 348px;
@@ -911,10 +949,11 @@ onUnmounted(() => {
    die Bande wirklich bis an beide Rahmen läuft. */
 .ab-tip-head {
   display: flex;
-  /* `center`, nicht `baseline`: Keycap und Plakette sind Kästchen und tragen
-     ohnehin `align-self: center` — auf einer Baseline stand allein der Name, und
-     zwar sichtbar höher als die beiden. Die Tinte holt `v-ink-center.y` im
-     Template auf die Mitte zurück. */
+  /* `center`, nicht `baseline`: die Keycap ist ein Kästchen, das Rangfeld ein
+     Satz verschieden großer Zahlen und Wörter — beide tragen `align-self:
+     center`. Auf einer Baseline stand allein der Name, und zwar sichtbar höher
+     als die beiden. Die Tinte holt `v-ink-center.y` im Template auf die Mitte
+     zurück. */
   align-items: center;
   gap: 8px;
   margin: 0 -12px;
@@ -946,56 +985,100 @@ onUnmounted(() => {
 .ab-tip-name {
   flex: 1;
   min-width: 0;
-  font-size: 1.05rem;
+  font-size: var(--ab-tip-title);
   font-weight: 900;
   line-height: 1.1;
   color: var(--ab-color, #e8c040);
 }
 
-/* Rang und nächstes Level als EINE Plakette rechts im Kopf — das Gegenstück
-   zur Keycap links, gleiche Bauart, gleicher Radius, gleiche Leitfarbe. Die
-   Beschriftung tritt zurück, die ZAHL trägt die Farbe: sie ist es, weshalb der
-   Spieler hersieht.
+/* Der Rang rechts im Kopf — die zweite Aussage der Zeile, gleichrangig mit dem
+   Namen und deshalb in seiner Größe. Er stand hier einmal als umrandete
+   Plakette; die Fläche gab dem Feld Gewicht, das der Rang darin selbst nicht
+   hatte — er war das kleinste Element in seinem eigenen Kasten. Jetzt trennt
+   ihn allein die Typografie vom Namen: keine Fläche, keine Kante, nur Größe,
+   Sperrung und Farbtiefe.
 
-   Die Kinder messen in `em`, nicht in `rem` — dann genügt je Auflösungsstufe
-   EINE Regel an der Plakette selbst. */
-.ab-tip-badge {
+   Der Block selbst trägt nur die em-Basis für seine kleinen Teile — dann genügt
+   je Auflösungsstufe EINE Regel an ihm, die große Zahl folgt der Titelgröße. */
+.ab-tip-rank {
   display: inline-flex;
   flex-shrink: 0;
   align-self: center;
-  /* Auch hier Mitte statt Baseline: die beiden Hälften sind verschieden groß,
-     und jede trägt ihre eigene Ink-Korrektur. */
+  /* Mitte statt Baseline: die vier Teile sind verschieden groß, und jeder trägt
+     seine eigene Ink-Korrektur. */
   align-items: center;
-  gap: 6px;
-  padding: 3px 6px;
-  background: #12100a;
-  border: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 55%, transparent);
-  border-radius: 3px;
+  gap: 8px;
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
 }
 
-.ab-tip-badge-rank {
+/* „RANK" — die Beschriftung zur Zahl. Sie sagt, was die Zahl ist, und tritt
+   dafür zurück: gesperrt, in Versalien, in einem Ton zwischen Leitfarbe und
+   Bandengrund. Ohne sie wäre „3/5" im Kopf mehrdeutig. */
+.ab-tip-rank-word {
   font-size: 0.85em;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #8a7a52;
+  color: color-mix(in srgb, var(--ab-color, #e8c040) 30%, #7c6c48);
 }
 
-.ab-tip-badge-level {
+.ab-tip-rank-count {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Die Zahl. Sie ist es, weshalb der Spieler hersieht — volle Leitfarbe, volle
+   Titelgröße, dasselbe Gewicht wie der Name. */
+.ab-tip-rank-value {
+  font-size: var(--ab-tip-title);
+  font-weight: 900;
+  line-height: 1.1;
+  color: var(--ab-color, #e8c040);
+}
+
+/* „Locked", „Passive", „Maxed" sind Wörter, keine Zahlen: eine Spur kleiner und
+   gesperrt, damit rechts im Kopf kein zweiter Titel gegen den ersten steht. */
+.ab-tip-rank-value--word {
+  font-size: calc(var(--ab-tip-title) * 0.82);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ab-color, #e8c040) 55%, #8a7a52);
+}
+
+/* „/5" hängt an der Zahl und skaliert mit ihr, nicht mit der em-Basis des
+   Blocks — sonst risse das Verhältnis der beiden auf der nächsten Stufe auf.
+   Blasser als die Zahl: das Maximum ändert sich nie, der Zähler schon. */
+.ab-tip-rank-total {
+  font-size: calc(var(--ab-tip-title) * 0.62);
   font-weight: 900;
   line-height: 1;
-  color: var(--ab-color, #e8c040);
+  color: color-mix(in srgb, var(--ab-color, #e8c040) 45%, transparent);
+}
+
+/* Das nächste Level ist die Fußnote zum Rang — es trug einmal die Leitfarbe und
+   damit den Blick, den jetzt die Zahl bekommt. Etwas mehr Luft als der Abstand
+   innerhalb des Rangs: „RANK 3/5" ist EINE Aussage, das Level die nächste. */
+.ab-tip-rank-level {
+  margin-left: 4px;
+  font-weight: 900;
+  line-height: 1;
+  color: color-mix(in srgb, var(--ab-color, #e8c040) 38%, #8a7a52);
 }
 
 /* Die Leitfarbe gehört einer Fähigkeit, die man wirken kann — gesperrt fällt
    JEDE der neuen Farbflächen auf ihren neutralen Ton zurück. */
 .ab-tip--locked .ab-tip-name,
 .ab-tip--locked .ab-tip-key,
-.ab-tip--locked .ab-tip-badge-level {
+.ab-tip--locked .ab-tip-rank-value,
+.ab-tip--locked .ab-tip-rank-level {
   color: #a08a5c;
   border-color: #4a2a0e;
+}
+
+.ab-tip--locked .ab-tip-rank-word,
+.ab-tip--locked .ab-tip-rank-total {
+  color: #7c6c48;
 }
 
 .ab-tip--locked .ab-tip-key {
@@ -1005,10 +1088,6 @@ onUnmounted(() => {
 .ab-tip--locked .ab-tip-head {
   background: #1a1610;
   border-bottom-color: #2e2416;
-}
-
-.ab-tip--locked .ab-tip-badge {
-  border-color: #4a2a0e;
 }
 
 /* ── Hauptwirkung ─────────────────────────────────────────────────────────
@@ -1209,6 +1288,7 @@ onUnmounted(() => {
     --ab-gap: 12px;
   }
   .ab-tip {
+    --ab-tip-title: 1.2rem;
     width: 410px;
     padding: 0 14px 13px;
   }
@@ -1218,13 +1298,10 @@ onUnmounted(() => {
     margin: 0 -14px;
     padding: 12px 14px 9px;
   }
-  .ab-tip-name {
-    font-size: 1.2rem;
-  }
   .ab-tip-key {
     font-size: 0.88rem;
   }
-  .ab-tip-badge {
+  .ab-tip-rank {
     font-size: 0.88rem;
   }
   .ab-tip-lead-value {
@@ -1252,6 +1329,7 @@ onUnmounted(() => {
     --ab-gap: 14px;
   }
   .ab-tip {
+    --ab-tip-title: 1.45rem;
     width: 480px;
     padding: 0 16px 15px;
   }
@@ -1259,13 +1337,10 @@ onUnmounted(() => {
     margin: 0 -16px;
     padding: 14px 16px 11px;
   }
-  .ab-tip-name {
-    font-size: 1.45rem;
-  }
   .ab-tip-key {
     font-size: 1rem;
   }
-  .ab-tip-badge {
+  .ab-tip-rank {
     font-size: 1rem;
   }
   .ab-tip-lead-value {
