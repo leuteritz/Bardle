@@ -36,13 +36,20 @@
         :class="{ 'ab-tip--locked': hovered.locked }"
         :style="{ '--ab-color': hovered.color }"
       >
-        <!-- Kopf: wer spricht. Die Keycap wiederholt die Taste der Kachel,
-             damit Tooltip und Feld zusammengehören; der Rang steht rechts,
-             weil er die Zahlen darunter erklärt. -->
+        <!-- Kopf: wer spricht. Die Keycap wiederholt links die Taste der
+             Kachel, damit Tooltip und Feld zusammengehören; rechts steht ihr
+             Gegenstück, die Plakette aus Rang und nächstem Level. Beides sind
+             Aussagen über die Fähigkeit selbst — der Kopf liest sich damit von
+             Rand zu Rand als eine Zeile. -->
         <header class="ab-tip-head">
           <span v-if="hovered.key" class="ab-tip-key">{{ hovered.key }}</span>
           <span class="ab-tip-name">{{ hovered.name }}</span>
-          <span class="ab-tip-rank">{{ hovered.rankLabel }}</span>
+          <span class="ab-tip-badge">
+            <span class="ab-tip-badge-rank">{{ hovered.rankLabel }}</span>
+            <span v-if="hovered.levelLabel" class="ab-tip-badge-level">{{
+              hovered.levelLabel
+            }}</span>
+          </span>
         </header>
 
         <!-- Was die Fähigkeit TUT, in Klartext und vor jeder Zahl: dass der
@@ -570,7 +577,13 @@ watch(hoveredId, async () => {
  *   Satz   — was sie TUT, in Klartext und ohne eine Zahl
  *   Lead   — die EINE Zahl, für die man die Taste drückt
  *   Zeilen — was sonst noch passiert, je mit dem Ausblick auf den nächsten Rang
- *   Fuß    — Status, Abklingzeit, nächster Rang: darf ich drücken, und was kommt?
+ *   Fuß    — Status und Abklingzeit: darf ich JETZT drücken?
+ *
+ * Der Kopf trägt beide Fortschrittsangaben: welcher Rang steht, und ab welchem
+ * Level der nächste fällt. Das ist eine Aussage über die Fähigkeit selbst und
+ * gehört deshalb neben ihren Namen — nicht in den Fuß, wo der Spieler den
+ * Momentzustand sucht, und erst recht nicht ins Lead-Feld, das in allen fünf
+ * Kästen dieselbe Rolle hat.
  *
  * Erst der Satz, dann die Zahlen — in ALLEN fünf Kästen gleich. Wer die
  * Fähigkeit noch nicht kennt, liest von oben und braucht zuerst das Was; wer
@@ -590,7 +603,16 @@ interface TipView {
   key: string
   name: string
   color: string
+  /** Linke Hälfte der Kopf-Plakette: „Rank 3/5", „Locked", „Passive". */
   rankLabel: string
+  /**
+   * Rechte Hälfte der Kopf-Plakette: das Level, ab dem es weitergeht — bei
+   * gesperrt die Freischaltung, sonst der nächste Rang.
+   *
+   * Leer am Höchstrang (dort sagt „Rank 5/5" bereits, dass keins mehr kommt)
+   * und bei der Passive, die weder Rang noch Freischaltung hat.
+   */
+  levelLabel: string
   locked: boolean
   live: boolean
   lead: BardEffectLine
@@ -613,6 +635,7 @@ const hovered = computed<TipView | null>(() => {
       name: BARD_PASSIVE.name,
       color: BARD_PASSIVE.color,
       rankLabel: capped ? 'Max resonance' : 'Passive',
+      levelLabel: '',
       locked: false,
       // Die Passive kühlt nicht ab — der Status-Slot bliebe leer.
       live: false,
@@ -652,26 +675,26 @@ const hovered = computed<TipView | null>(() => {
   const rank = store.rankOf(id)
   const locked = rank === 0
   const lines = bardAbilityEffectLines(id, rank, store.resonancePowerMult)
-  const cooldown = { label: 'Cooldown', value: `${(store.cooldownMsOf(id) / 1000).toFixed(1)}s` }
+  // `nextRankLevelOf` liefert bei gesperrt bereits das Freischalt-Level und am
+  // Höchstrang 0 — beide Fälle der Plakette kommen aus derselben Quelle.
   const nextLevel = store.nextRankLevelOf(id)
 
   return {
     key: def.key,
     name: def.name,
     color: def.color,
-    rankLabel: locked ? 'Locked' : `Rank ${rank} / ${ABILITY_MAX_RANK}`,
+    rankLabel: locked ? 'Locked' : `Rank ${rank}/${ABILITY_MAX_RANK}`,
+    levelLabel: nextLevel > 0 ? `Lv ${nextLevel}` : '',
     locked,
     live: !locked,
-    // Gesperrt zählt nur eines: ab wann. Die Wirkungszeilen bleiben trotzdem
-    // vollständig stehen — als Vorschau auf das, was das Level bringt.
-    lead: locked ? { value: `Level ${def.unlockLevel}`, label: 'Unlocks at' } : lines[0],
-    lines: locked ? lines : lines.slice(1),
+    // Gesperrt kein Sonderfall mehr: das Lead-Feld führt in JEDEM Zustand die
+    // Hauptwirkung — bei gesperrt eben als Vorschau auf Rang 1. Was der Kasten
+    // sonst vorangestellt hätte (das Freischalt-Level), steht oben in der
+    // Plakette und braucht den größten Platz im Kasten nicht.
+    lead: lines[0],
+    lines: lines.slice(1),
     note: def.description,
-    // Gesperrt entfällt der Ausblick: die nächste Frage ist die Freischaltung,
-    // und die steht schon als Lead.
-    foot: locked
-      ? [cooldown]
-      : [cooldown, { label: 'Next rank', value: nextLevel > 0 ? `Lv ${nextLevel}` : 'Max' }],
+    foot: [{ label: 'Cooldown', value: `${(store.cooldownMsOf(id) / 1000).toFixed(1)}s` }],
   }
 })
 
@@ -823,7 +846,11 @@ onUnmounted(() => {
 .ab-tip {
   position: relative;
   left: 0;
-  width: 320px;
+  /* Breit genug, dass der Kopf auch mit dem längsten Namen („Caretaker's
+     Shrine") samt Keycap UND Plakette in eine Zeile passt. Breite ist hier
+     billig: der Kasten bleibt auf jeder Stufe schmaler als die Kachelreihe,
+     die er überspannt, und der Klartextsatz bekommt sie gleich mit. */
+  width: 348px;
   margin-bottom: 14px;
   padding: 10px 12px 11px;
   background: #16140e;
@@ -898,19 +925,50 @@ onUnmounted(() => {
   color: var(--ab-color, #e8c040);
 }
 
-.ab-tip-rank {
+/* Rang und nächstes Level als EINE Plakette rechts im Kopf — das Gegenstück
+   zur Keycap links, gleiche Bauart, gleicher Radius, gleiche Leitfarbe. Die
+   Beschriftung tritt zurück, die ZAHL trägt die Farbe: sie ist es, weshalb der
+   Spieler hersieht.
+
+   Die Kinder messen in `em`, nicht in `rem` — dann genügt je Auflösungsstufe
+   EINE Regel an der Plakette selbst. */
+.ab-tip-badge {
+  display: inline-flex;
   flex-shrink: 0;
-  font-size: 0.68rem;
+  align-self: center;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 6px 3px;
+  background: #12100a;
+  border: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 45%, transparent);
+  border-radius: 3px;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ab-tip-badge-rank {
+  font-size: 0.85em;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #8a7a52;
-  font-variant-numeric: tabular-nums;
 }
 
+.ab-tip-badge-level {
+  font-weight: 900;
+  line-height: 1;
+  color: var(--ab-color, #e8c040);
+}
+
+/* Die Leitfarbe gehört einer Fähigkeit, die man wirken kann. */
 .ab-tip--locked .ab-tip-name,
-.ab-tip--locked .ab-tip-key {
+.ab-tip--locked .ab-tip-key,
+.ab-tip--locked .ab-tip-badge-level {
   color: #a08a5c;
+  border-color: #4a2a0e;
+}
+
+.ab-tip--locked .ab-tip-badge {
   border-color: #4a2a0e;
 }
 
@@ -1101,10 +1159,13 @@ onUnmounted(() => {
     --ab-gap: 12px;
   }
   .ab-tip {
-    width: 380px;
+    width: 410px;
   }
   .ab-tip-name {
     font-size: 1.2rem;
+  }
+  .ab-tip-badge {
+    font-size: 0.88rem;
   }
   .ab-tip-lead-value {
     font-size: 1.32rem;
@@ -1131,10 +1192,13 @@ onUnmounted(() => {
     --ab-gap: 14px;
   }
   .ab-tip {
-    width: 450px;
+    width: 480px;
   }
   .ab-tip-name {
     font-size: 1.45rem;
+  }
+  .ab-tip-badge {
+    font-size: 1rem;
   }
   .ab-tip-lead-value {
     font-size: 1.6rem;

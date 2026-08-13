@@ -316,7 +316,7 @@ export const ABILITY_BAR_REVEAL_MS = 700
  * Der Kasten steht über SEINER Kachel und wird dafür waagerecht aus der
  * Leistenmitte geschoben. Erreicht wird diese Grenze auf keiner unterstützten
  * Auflösung — der Kasten ist auf jeder Stufe schmaler als die Kachelreihe, die
- * er überspannt (320/380/450 px gegen 459/565/691 px), und die Leiste sitzt
+ * er überspannt (348/410/480 px gegen 459/565/691 px), und die Leiste sitzt
  * mittig. Der Wert steht als Wächter da: eine breitere Fassung des Kastens
  * soll nicht still aus dem Bild laufen, sondern am Rand anstoßen.
  */
