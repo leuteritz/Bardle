@@ -97,8 +97,14 @@ export interface ForgeActiveBuff {
 
 // ── Detailspalte des Shop-Tabs (StarForgePanel) ──────────────────────────────
 
-/** Die drei Abteilungen der Forge-Detailspalte, je ein Reiter. */
-export type ForgeSectionId = 'relics' | 'constellations' | 'bargain'
+/**
+ * Die Abteilungen der Forge-Detailspalte, je ein Reiter.
+ *
+ * `upgrades` steht bewusst vorn: die drei anderen zeigen, was aus dem Baum
+ * FOLGT — dieser zeigt den Baum selbst. Ohne ihn war alles Kaufbare nur als
+ * Kreis auf der Leinwand erreichbar, einer nach dem anderen per Tooltip.
+ */
+export type ForgeSectionId = 'upgrades' | 'relics' | 'constellations' | 'bargain'
 
 export interface ForgeSectionDef {
   id: ForgeSectionId
@@ -121,4 +127,57 @@ export interface ForgeCostItem {
   have: number
   /** Lager deckt die Position. */
   ok: boolean
+}
+
+// ── Kaufbares im Baum: eine Fassung für Wurzeln UND Forge-Knoten ─────────────
+
+/** Welcher Ring — Wurzeln liegen im solarUpgradeStore, der Rest im starForgeStore. */
+export type ForgeUpgradeTier = 'root' | ForgeNodeTier
+
+/**
+ * Zustand eines Knotens, wie ihn Baum und Liste gleichermaßen lesen.
+ *
+ * `capped` und `locked` schließen sich gegenseitig aus und gehören je einem
+ * Ring: nur Wurzeln kennen die Gleichwuchs-Sperre (`maxAllowedLevel`), nur
+ * Branches und Leaves kennen eine Freischaltung über Phase und Elternstufe.
+ */
+export type ForgeUpgradeState = 'locked' | 'empty' | 'partial' | 'affordable' | 'capped' | 'maxed'
+
+/**
+ * Ein kaufbarer Knoten, fertig zum Anzeigen — ohne jede Geometrie.
+ *
+ * Der Baum hängt seine Polarkoordinaten daneben, die Liste nicht. Beide lesen
+ * denselben Eintrag, damit ein Kauf auf der einen Seite die andere sofort
+ * mitzieht und Kosten, Wirkung und Sperrgrund nirgends ein zweites Mal
+ * gerechnet werden.
+ */
+export interface ForgeUpgradeEntry {
+  id: string
+  name: string
+  icon: string
+  color: string
+  tier: ForgeUpgradeTier
+  /** ROOT / BRANCH / LEAF — die Beschriftung des Tier-Chips. */
+  tierLabel: string
+  level: number
+  maxLevel: number
+  state: ForgeUpgradeState
+  goldCost: number
+  goldOk: boolean
+  materials: ForgeCostItem[]
+  /** Wirkungssatz auf der aktuellen Stufe — der ganze Satz, mit Zahl darin. */
+  desc: string
+  /** Derselbe Satz mit dem Wert der nächsten Stufe. */
+  nextDesc: string
+  /** Nur der Wert der aktuellen Stufe — die linke Hälfte der Now-→-After-Zeile. */
+  nowText: string
+  /** Nur der Wert nach dem Kauf — die rechte Hälfte. */
+  nextText: string
+  /** Klartext, warum gerade nicht gekauft werden kann — leer, wenn offen. */
+  lockReason: string
+  /** Name des Elternknotens (Wurzel bei Branches, Branch bei Leaves). */
+  parentName: string
+  /** Fortschritt zur Freischaltung, 0–1 — nur bei `locked` aussagekräftig. */
+  unlockProgress: number
+  canBuy: boolean
 }

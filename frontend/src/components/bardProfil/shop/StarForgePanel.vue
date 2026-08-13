@@ -14,6 +14,7 @@
         :class="{ 'sf-tab--on': activeSection === sec.id }"
         :style="{ '--tab-c': sec.accent }"
         role="tab"
+        :title="sec.label"
         :aria-selected="activeSection === sec.id"
         @click="selectSection(sec.id)"
       >
@@ -37,13 +38,16 @@
 
     <!-- ══ Scrolling body ════════════════════════════════════════ -->
     <div class="sf-body">
+      <!-- ── THE TREE ITSELF ──────────────────────────────────── -->
+      <ForgeUpgradesSection v-if="activeSection === 'upgrades'" />
+
       <!-- ── CRAFTED RELICS ───────────────────────────────────── -->
-      <template v-if="activeSection === 'relics'">
-        <div class="sf-meta">
-          <span class="sf-meta-main">
+      <template v-else-if="activeSection === 'relics'">
+        <div class="fc-meta">
+          <span class="fc-meta-main">
             <b>{{ relicsForged }}</b> of {{ FORGE_RELICS.length }} relics forged
           </span>
-          <span v-if="readyCounts.relics > 0" class="sf-meta-live">
+          <span v-if="readyCounts.relics > 0" class="fc-meta-live">
             {{ readyCounts.relics }} ready
           </span>
         </div>
@@ -51,92 +55,81 @@
         <template v-for="view in relicViews" :key="view.def.id">
           <!-- Locked and maxed relics have nothing to decide — they collapse to
                one line so the cards that DO want a decision stand alone. -->
-          <div v-if="!view.reqMet" class="rr rr--locked" :title="view.desc">
+          <div v-if="!view.reqMet" class="fc-row fc-row--locked" :title="view.desc">
             <Icon :icon="view.def.icon" width="27" height="27" :style="{ color: view.def.color }" />
-            <div class="rr-body">
-              <span class="rr-name">{{ view.def.name }}</span>
-              <span class="rr-meta">
+            <div class="fc-row-body">
+              <span class="fc-row-name">{{ view.def.name }}</span>
+              <span class="fc-row-meta">
                 <Icon icon="lucide:lock" width="14" height="14" />
                 Grow {{ view.reqNodeName }} to Lv {{ view.reqNeed }}
               </span>
             </div>
-            <span class="rr-num">{{ view.reqHave }}/{{ view.reqNeed }}</span>
-            <div class="rr-track">
+            <span class="fc-row-num">{{ view.reqHave }}/{{ view.reqNeed }}</span>
+            <div class="fc-track">
               <i :style="{ transform: `scaleX(${view.reqProgress})` }" />
             </div>
           </div>
 
-          <div v-else-if="view.maxed" class="rr rr--max" :title="view.desc">
+          <div v-else-if="view.maxed" class="fc-row fc-row--max" :title="view.desc">
             <Icon :icon="view.def.icon" width="27" height="27" :style="{ color: view.def.color }" />
-            <div class="rr-body">
-              <span class="rr-name" :style="{ color: view.def.color }">{{ view.def.name }}</span>
-              <span class="rr-meta rr-meta--gain">{{ view.desc }}</span>
+            <div class="fc-row-body">
+              <span class="fc-row-name" :style="{ color: view.def.color }">{{ view.def.name }}</span>
+              <span class="fc-row-meta fc-row-meta--gain">{{ view.desc }}</span>
             </div>
-            <span class="rr-max-badge">✦ MAX</span>
+            <span class="fc-badge">✦ MAX</span>
           </div>
 
-          <article v-else class="rc" :class="{ 'rc--ready': view.ready, 'rc--owned': view.level > 0 }">
-            <div v-if="view.ready" class="rc-glow" aria-hidden="true" />
+          <article
+            v-else
+            class="fc-card"
+            :class="{ 'fc-card--ready': view.ready, 'fc-card--owned': view.level > 0 && !view.ready }"
+          >
+            <div v-if="view.ready" class="fc-glow" aria-hidden="true" />
 
-            <header class="rc-head">
-              <div class="rc-ico">
+            <header class="fc-card-head">
+              <div class="fc-ico">
                 <Icon :icon="view.def.icon" width="34" height="34" :style="{ color: view.def.color }" />
               </div>
-              <div class="rc-id">
-                <div class="rc-name-row">
-                  <span class="rc-name" :style="{ color: view.def.color }">{{ view.def.name }}</span>
-                  <span class="rarity-chip" :class="`rarity-chip--${view.def.rarity}`">
+              <div class="fc-id">
+                <div class="fc-name-row">
+                  <span class="fc-name" :style="{ color: view.def.color }">{{ view.def.name }}</span>
+                  <span class="fc-chip" :style="{ '--chip-c': FORGE_RELIC_RARITY_COLOR[view.def.rarity] }">
                     {{ view.def.rarity.toUpperCase() }}
                   </span>
                 </div>
-                <div class="rc-lvl-row">
-                  <span class="rc-pips">
+                <div class="fc-lvl-row">
+                  <span class="fc-pips">
                     <i
                       v-for="step in view.maxLevel"
                       :key="step"
-                      class="rc-pip"
-                      :class="{ 'rc-pip--on': step <= view.level }"
+                      class="fc-pip"
+                      :class="{ 'fc-pip--on': step <= view.level }"
                     />
                   </span>
-                  <span class="rc-lvl">Lv {{ view.level }} / {{ view.maxLevel }}</span>
+                  <span class="fc-lvl">Lv {{ view.level }} / {{ view.maxLevel }}</span>
                 </div>
               </div>
             </header>
 
-            <p class="rc-desc">{{ view.desc }}</p>
+            <p class="fc-desc">{{ view.desc }}</p>
 
             <!-- What the next strike actually buys — the one number the old
                  card never showed. -->
-            <div class="rc-delta">
-              <div class="rc-delta-cell">
-                <span class="rc-delta-label">Now</span>
-                <span class="rc-delta-value">{{ view.nowText }}</span>
+            <div class="fc-delta">
+              <div class="fc-delta-cell">
+                <span class="fc-delta-label">Now</span>
+                <span class="fc-delta-value">{{ view.nowText }}</span>
               </div>
-              <span class="rc-delta-arrow">→</span>
-              <div class="rc-delta-cell rc-delta-cell--next">
-                <span class="rc-delta-label">After forging</span>
-                <span class="rc-delta-value rc-delta-value--next">{{ view.nextText }}</span>
+              <span class="fc-delta-arrow">→</span>
+              <div class="fc-delta-cell fc-delta-cell--next">
+                <span class="fc-delta-label">After forging</span>
+                <span class="fc-delta-value fc-delta-value--next">{{ view.nextText }}</span>
               </div>
             </div>
 
-            <div class="cost-row">
-              <span class="cost-pair" :class="{ 'cost-pair--missing': !view.goldOk }">
-                <img src="/img/BardGold-128.png" class="cost-img" alt="Chimes" />
-                <span class="cost-gold">{{ formatNumber(view.gold) }}</span>
-              </span>
-              <span
-                v-for="mat in view.mats"
-                :key="mat.id"
-                class="cost-pair"
-                :class="{ 'cost-pair--missing': !mat.ok }"
-                :title="mat.name"
-              >
-                <img v-if="mat.image" :src="mat.image" class="cost-img" :alt="mat.name" />
-                <span class="cost-qty">{{ mat.have }}<span class="cost-need">/{{ mat.need }}</span></span>
-              </span>
-            </div>
+            <ForgeCostRow :gold="view.gold" :gold-ok="view.goldOk" :materials="view.mats" />
 
-            <button class="act-btn" :disabled="!view.ready" @click="handleForgeRelic(view.def)">
+            <button class="fc-act" :disabled="!view.ready" @click="handleForgeRelic(view.def)">
               {{ view.level === 0 ? '✦ Forge Relic' : `Upgrade → Lv ${view.level + 1}` }}
             </button>
           </article>
@@ -145,33 +138,37 @@
 
       <!-- ── CONSTELLATIONS ───────────────────────────────────── -->
       <template v-else-if="activeSection === 'constellations'">
-        <div class="sf-meta">
-          <span class="sf-meta-main">
+        <div class="fc-meta">
+          <span class="fc-meta-main">
             <b>{{ forgedCount }}</b> of {{ FORGE_CONSTELLATIONS.length }} constellations fused
           </span>
-          <span v-if="readyCounts.constellations > 0" class="sf-meta-live">
+          <span v-if="readyCounts.constellations > 0" class="fc-meta-live">
             {{ readyCounts.constellations }} ready
           </span>
         </div>
 
         <template v-for="view in constellationViews" :key="view.def.id">
-          <div v-if="view.forged" class="rr rr--done">
+          <div v-if="view.forged" class="fc-row fc-row--done">
             <Icon :icon="view.def.icon" width="27" height="27" :style="{ color: view.def.color }" />
-            <div class="rr-body">
-              <span class="rr-name" :style="{ color: view.def.color }">{{ view.def.name }}</span>
-              <span class="rr-meta rr-meta--gain">{{ view.def.desc }}</span>
+            <div class="fc-row-body">
+              <span class="fc-row-name" :style="{ color: view.def.color }">{{ view.def.name }}</span>
+              <span class="fc-row-meta fc-row-meta--gain">{{ view.def.desc }}</span>
             </div>
-            <span class="rr-max-badge rr-max-badge--forged">✦ FUSED</span>
+            <span class="fc-badge fc-badge--forged">✦ FUSED</span>
           </div>
 
-          <article v-else class="cc" :class="{ 'cc--ready': view.ready, 'cc--locked': !view.reqMet }">
-            <div v-if="view.ready" class="rc-glow" aria-hidden="true" />
+          <article
+            v-else
+            class="fc-card"
+            :class="{ 'fc-card--ready': view.ready, 'fc-card--locked': !view.reqMet }"
+          >
+            <div v-if="view.ready" class="fc-glow" aria-hidden="true" />
 
             <header class="cc-head">
               <Icon :icon="view.def.icon" width="30" height="30" :style="{ color: view.def.color }" />
-              <span class="cc-name" :style="{ color: view.def.color }">{{ view.def.name }}</span>
+              <span class="fc-name" :style="{ color: view.def.color }">{{ view.def.name }}</span>
             </header>
-            <p class="cc-desc">{{ view.def.desc }}</p>
+            <p class="fc-desc">{{ view.def.desc }}</p>
 
             <!-- The old row said "Both branches Lv 3" and left the player to go
                  look up where they stand. Now it says it. -->
@@ -187,24 +184,9 @@
               </div>
             </div>
 
-            <div class="cost-row">
-              <span class="cost-pair" :class="{ 'cost-pair--missing': !view.goldOk }">
-                <img src="/img/BardGold-128.png" class="cost-img" alt="Chimes" />
-                <span class="cost-gold">{{ formatNumber(view.def.goldCost) }}</span>
-              </span>
-              <span
-                v-for="mat in view.mats"
-                :key="mat.id"
-                class="cost-pair"
-                :class="{ 'cost-pair--missing': !mat.ok }"
-                :title="mat.name"
-              >
-                <img v-if="mat.image" :src="mat.image" class="cost-img" :alt="mat.name" />
-                <span class="cost-qty">{{ mat.have }}<span class="cost-need">/{{ mat.need }}</span></span>
-              </span>
-            </div>
+            <ForgeCostRow :gold="view.def.goldCost" :gold-ok="view.goldOk" :materials="view.mats" />
 
-            <button class="act-btn" :disabled="!view.ready" @click="handleForgeConstellation(view.def)">
+            <button class="fc-act" :disabled="!view.ready" @click="handleForgeConstellation(view.def)">
               {{ view.reqMet ? '✦ Fuse Constellation' : 'Branches not grown yet' }}
             </button>
           </article>
@@ -213,17 +195,17 @@
 
       <!-- ── COSMIC BARGAIN ───────────────────────────────────── -->
       <template v-else>
-        <div class="sf-meta">
-          <span class="sf-meta-main">The merchant restocks in</span>
-          <span class="sf-meta-live sf-meta-live--calm">
+        <div class="fc-meta">
+          <span class="fc-meta-main">The merchant restocks in</span>
+          <span class="fc-meta-live fc-meta-live--calm">
             {{ formatCompactDuration(forgeStore.bargainRestockRemainingMs) }}
           </span>
         </div>
-        <div class="bg-restock-track">
+        <div class="fc-track bg-restock-track">
           <i :style="{ transform: `scaleX(${restockProgress})` }" />
         </div>
 
-        <article v-if="deal" class="bg-card">
+        <article v-if="deal" class="fc-card bg-card">
           <div class="bg-shine" aria-hidden="true" />
 
           <header class="bg-head">
@@ -248,13 +230,13 @@
           <div v-if="dealRewards.length > 0" class="bg-line">
             <span class="bg-line-label">You get</span>
             <span class="bg-line-items">
-              <span v-for="item in dealRewards" :key="item.id" class="cost-pair" :title="item.name">
-                <img v-if="item.image" :src="item.image" class="cost-img" :alt="item.name" />
-                <span class="cost-qty">×{{ item.need }}</span>
+              <span v-for="item in dealRewards" :key="item.id" class="fc-cost-pair" :title="item.name">
+                <img v-if="item.image" :src="item.image" class="fc-cost-img" :alt="item.name" />
+                <span class="fc-cost-qty">×{{ item.need }}</span>
               </span>
-              <span v-if="deal.kind === 'gold' && deal.goldReward" class="cost-pair">
-                <img src="/img/BardGold-128.png" class="cost-img" alt="Chimes" />
-                <span class="cost-gold">{{ formatNumber(deal.goldReward) }}</span>
+              <span v-if="deal.kind === 'gold' && deal.goldReward" class="fc-cost-pair">
+                <img src="/img/BardGold-128.png" class="fc-cost-img" alt="Chimes" />
+                <span class="fc-cost-gold">{{ formatNumber(deal.goldReward) }}</span>
               </span>
             </span>
           </div>
@@ -265,19 +247,19 @@
               <span v-if="deal.discountPct > 0" class="price-struck">
                 {{ formatNumber(deal.basePrice) }}
               </span>
-              <span v-if="dealPrice > 0" class="cost-pair" :class="{ 'cost-pair--missing': !dealGoldOk }">
-                <img src="/img/BardGold-128.png" class="cost-img cost-img--big" alt="Chimes" />
-                <span class="cost-gold cost-gold--big">{{ formatNumber(dealPrice) }}</span>
+              <span v-if="dealPrice > 0" class="fc-cost-pair" :class="{ 'fc-cost-pair--missing': !dealGoldOk }">
+                <img src="/img/BardGold-128.png" class="fc-cost-img fc-cost-img--big" alt="Chimes" />
+                <span class="fc-cost-gold fc-cost-gold--big">{{ formatNumber(dealPrice) }}</span>
               </span>
               <span
                 v-for="mat in dealCosts"
                 :key="mat.id"
-                class="cost-pair"
-                :class="{ 'cost-pair--missing': !mat.ok }"
+                class="fc-cost-pair"
+                :class="{ 'fc-cost-pair--missing': !mat.ok }"
                 :title="mat.name"
               >
-                <img v-if="mat.image" :src="mat.image" class="cost-img" :alt="mat.name" />
-                <span class="cost-qty">{{ mat.have }}<span class="cost-need">/{{ mat.need }}</span></span>
+                <img v-if="mat.image" :src="mat.image" class="fc-cost-img" :alt="mat.name" />
+                <span class="fc-cost-qty">{{ mat.have }}<span class="fc-cost-need">/{{ mat.need }}</span></span>
               </span>
               <span v-if="dealPrice === 0 && dealCosts.length === 0" class="bg-free">Free</span>
             </span>
@@ -287,7 +269,7 @@
             <span v-if="forgeStore.bargainPurchased" class="sold-note">✦ SOLD — restocking…</span>
             <button
               v-else
-              class="act-btn act-btn--gold"
+              class="fc-act fc-act--gold"
               :disabled="!forgeStore.canBuyBargain"
               @click="handleBuyBargain"
             >
@@ -301,8 +283,8 @@
             >
               <Icon icon="ph:arrows-clockwise-bold" width="17" height="17" />
               Reroll
-              <img v-if="rerollMatImage" :src="rerollMatImage" class="cost-img" alt="Dark Matter" />
-              <span class="cost-qty">{{ rerollMatHave }}<span class="cost-need">/{{ FORGE_BARGAIN_REROLL_COST }}</span></span>
+              <img v-if="rerollMatImage" :src="rerollMatImage" class="fc-cost-img" alt="Dark Matter" />
+              <span class="fc-cost-qty">{{ rerollMatHave }}<span class="fc-cost-need">/{{ FORGE_BARGAIN_REROLL_COST }}</span></span>
             </button>
           </div>
         </article>
@@ -346,12 +328,16 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { MATERIALS } from '@/config/economy/materials'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   FORGE_RELICS,
   FORGE_CONSTELLATIONS,
   FORGE_BARGAINS,
+  FORGE_NODES,
   getForgeNode,
 } from '@/config/progression/starForge'
+import ForgeUpgradesSection from './ForgeUpgradesSection.vue'
+import ForgeCostRow from './ForgeCostRow.vue'
 import {
   FORGE_CONSTELLATION_REQUIRED_LEVEL,
   FORGE_BARGAIN_REROLL_COST,
@@ -359,6 +345,8 @@ import {
   FORGE_BARGAIN_RESTOCK_MS,
   FORGE_BARGAIN_EMPTY_ICON,
   FORGE_PANEL_SECTIONS,
+  FORGE_RELIC_RARITY_COLOR,
+  SOLAR_BRANCHES,
   FORGE_DESC_VALUE_TOKEN,
   FORGE_DESC_PERCENT_TOKEN,
   MS_PER_SECOND,
@@ -379,10 +367,13 @@ import type {
 const inventoryStore = useInventoryStore()
 const gameStore = useGameStore()
 const forgeStore = useStarForgeStore()
+const solarStore = useSolarUpgradeStore()
 const { showToast } = useActionToast()
 
 // ── Sections ─────────────────────────────────────────────────────────────────
-const activeSection = ref<ForgeSectionId>('relics')
+/** Der Baum steht vorn: Relikte, Konstellationen und der Handel zeigen, was aus
+ *  ihm FOLGT — dieser Reiter zeigt ihn selbst. */
+const activeSection = ref<ForgeSectionId>('upgrades')
 
 function selectSection(id: ForgeSectionId): void {
   activeSection.value = id
@@ -612,7 +603,18 @@ function handleReroll(): void {
 }
 
 // ── Tab badges — only what can be acted on right now ─────────────────────────
+/**
+ * Der Upgrade-Zähler fragt die Stores DIREKT und nicht `useForgeUpgrades()`.
+ * Der Grund ist der Lebenszyklus: der Shop-Tab wird einmal gemountet und danach
+ * nur noch per `v-show` umgeschaltet, die Reiterleiste rechnet also auch bei
+ * geschlossenem Reiter weiter. Über das Ansichtsmodell liefe dabei jede Sekunde
+ * der volle Aufbau aller 25 Einträge samt Materiallisten mit — hier bleiben es
+ * 25 Getter-Aufrufe, dieselbe Größenordnung wie bei den Relikten darunter.
+ */
 const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
+  upgrades:
+    SOLAR_BRANCHES.filter((branch) => solarStore.canAfford(branch.id)).length +
+    FORGE_NODES.filter((node) => forgeStore.canAffordNode(node.id)).length,
   relics: relicViews.value.filter((v) => v.ready).length,
   constellations: constellationViews.value.filter((v) => v.ready).length,
   bargain: forgeStore.canBuyBargain ? 1 : 0,
@@ -647,19 +649,22 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
   border-bottom: 2px solid #3e200a;
 }
 
-/* `flex-basis: auto`, nicht `0` — bei gleichen Dritteln passt „Constellations"
-   nicht in seine Zelle, während „Relics" die Hälfte seiner leer lässt. So
-   startet jeder Reiter auf seiner Inhaltsbreite, und der Rest wird gleichmäßig
-   verteilt. */
+/* Gestapelt statt nebeneinander, seit „Upgrades" als vierter Reiter dazukam.
+   Nebeneinander brauchten die vier Beschriftungen bei 13,5px zusammen 526px —
+   die Spalte ist auf `clamp(340px, 32vw, 470px)` gedeckelt, „Constellations"
+   wäre also auf jedem Desktop abgeschnitten. Übereinander bekommt jedes Label
+   die volle Zellenbreite, und die vier Zellen teilen sich die Spalte gleich
+   (`flex-basis: 0`, weil die Breite jetzt nicht mehr am längsten Wort hängt). */
 .sf-tab {
   position: relative;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 15px 8px 16px;
+  gap: 6px;
+  padding: 11px 6px 12px;
   border: 0;
   border-right: 1px solid #2a1a08;
   background: transparent;
@@ -705,9 +710,10 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
 }
 
 .sf-tab-label {
-  font-size: 13.5px;
+  max-width: 100%;
+  font-size: 12.5px;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1;
   white-space: nowrap;
@@ -739,17 +745,27 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
   font-variant-numeric: tabular-nums;
 }
 
-/* Narrow sidebars (small desktops): the longest label would otherwise clip. */
-@container (max-width: 400px) {
+/* Der Deckel der Spalte liegt bei 470px, vier Reiter bekommen davon also je
+   rund 117px — und „Constellations" ist das längste Wort der Leiste. Die Stufe
+   MUSS deshalb oberhalb dieser 470px greifen, sonst schaltet sie auf keinem
+   Desktop je um und das Wort steht dauerhaft abgeschnitten da. Gemessen bei
+   1920×1080 nachgezogen, nicht geschätzt. */
+@container (max-width: 560px) {
   .sf-tab {
     gap: 5px;
-    padding-left: 4px;
-    padding-right: 4px;
+    padding-left: 3px;
+    padding-right: 3px;
   }
 
   .sf-tab-label {
-    font-size: 11.5px;
-    letter-spacing: 0.02em;
+    font-size: 10.5px;
+    letter-spacing: 0;
+  }
+}
+
+@container (max-width: 400px) {
+  .sf-tab-label {
+    font-size: 9.5px;
   }
 }
 
@@ -829,474 +845,11 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
   flex-shrink: 0;
 }
 
-/* ── Section meta line: what the tab holds, in one sentence ──── */
-.sf-meta {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 0 2px 2px;
-}
-
-.sf-meta-main {
-  font-size: 14px;
-  font-weight: 700;
-  color: rgba(200, 144, 64, 0.6);
-}
-
-.sf-meta-main b {
-  font-weight: 900;
-  color: #e8c040;
-}
-
-.sf-meta-live {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #a0f0d0;
-  font-variant-numeric: tabular-nums;
-}
-
-.sf-meta-live--calm {
-  color: #e8c040;
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 15px;
-}
-
-/* ══════════════════════════════════════════════════
-   COMPACT ROWS — locked, maxed, already fused
-   Nothing to decide here, so nothing takes a card's worth of height.
-══════════════════════════════════════════════════ */
-.rr {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 12px 15px 13px;
-  background: #17170f;
-  border: 1px solid #32210c;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.rr--locked {
-  opacity: 0.68;
-}
-
-.rr--max {
-  border-color: #7a5a1c;
-  background: #1a1408;
-}
-
-.rr--done {
-  border-color: #3f6b2c;
-  background: #101a14;
-}
-
-.rr-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.rr-name {
-  font-size: 15px;
-  font-weight: 900;
-  color: #e8dcc0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rr-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.45);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rr-meta--gain {
-  color: rgba(160, 240, 208, 0.72);
-}
-
-.rr-num {
-  flex-shrink: 0;
-  font-size: 15px;
-  font-weight: 900;
-  color: rgba(255, 200, 80, 0.7);
-  font-variant-numeric: tabular-nums;
-}
-
-.rr-max-badge {
-  flex-shrink: 0;
-  font-size: 12.5px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #e8c040;
-  border: 1px solid rgba(232, 192, 64, 0.4);
-  background: rgba(232, 192, 64, 0.1);
-  border-radius: 4px;
-  padding: 5px 9px;
-}
-
-.rr-max-badge--forged {
-  color: #a0ffa0;
-  border-color: rgba(82, 184, 48, 0.45);
-  background: rgba(82, 184, 48, 0.12);
-}
-
-/* The requirement's progress reads along the row's own bottom edge. */
-.rr-track {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  background: #241708;
-  overflow: hidden;
-}
-
-.rr-track i {
-  display: block;
-  height: 100%;
-  width: 100%;
-  transform-origin: left center;
-  background: linear-gradient(to right, #8a5a1c, #e8a020);
-}
-
-/* ══════════════════════════════════════════════════
-   RELIC CARDS
-══════════════════════════════════════════════════ */
-.rc {
-  position: relative;
-  background: #1c1c18;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-  padding: 15px 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  transition: border-color 0.2s ease;
-}
-
-.rc:hover {
-  border-color: #7a4e20;
-}
-
-.rc--owned {
-  border-color: #4a8a28;
-}
-
-.rc--ready {
-  border-color: #c89040;
-}
-
-/* Ready-to-forge breathes on its own layer: the glow is static CSS, only its
-   opacity animates. See "Performance" rule 11 — the previous keyframe pulsed
-   box-shadow and border-color, which re-rasters every card, every frame. */
-.rc-glow {
-  position: absolute;
-  inset: -1px;
-  border-radius: 5px;
-  border: 1px solid #e8c060;
-  box-shadow: 0 0 20px 1px rgba(232, 192, 64, 0.55);
-  pointer-events: none;
-  animation: sf-breathe 2.2s ease-in-out infinite;
-}
-
-.rc-head {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-}
-
-.rc-ico {
-  width: 56px;
-  height: 56px;
-  border-radius: 4px;
-  background: #141410;
-  border: 1px solid #5c3310;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.rc-id {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.rc-name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.rc-name {
-  font-size: 17.5px;
-  font-weight: 900;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rarity-chip {
-  flex-shrink: 0;
-  font-size: 11.5px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  padding: 4px 8px;
-  border-radius: 3px;
-}
-
-.rarity-chip--epic {
-  color: #c9a0ff;
-  background: rgba(150, 80, 220, 0.15);
-  border: 1px solid rgba(150, 80, 220, 0.4);
-}
-
-.rarity-chip--rare {
-  color: #7bb8ff;
-  background: rgba(74, 144, 217, 0.15);
-  border: 1px solid rgba(74, 144, 217, 0.4);
-}
-
-.rc-lvl-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.rc-pips {
-  display: flex;
-  gap: 4px;
-}
-
-.rc-pip {
-  width: 21px;
-  height: 6px;
-  border-radius: 2px;
-  background: #241708;
-  border: 1px solid #3e200a;
-}
-
-.rc-pip--on {
-  background: #e8a020;
-  border-color: #e8c060;
-}
-
-.rc-lvl {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.65);
-  font-variant-numeric: tabular-nums;
-}
-
-.rc-desc {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-/* ── The one number the old card never showed ────────────────── */
-.rc-delta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  background: #141410;
-  border: 1px solid #32210c;
-  border-radius: 4px;
-}
-
-.rc-delta-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.rc-delta-cell--next {
-  margin-left: auto;
-  align-items: flex-end;
-  text-align: right;
-}
-
-.rc-delta-label {
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.5);
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.rc-delta-value {
-  font-size: 19px;
-  font-weight: 900;
-  line-height: 1;
-  color: rgba(232, 220, 192, 0.75);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.rc-delta-value--next {
-  color: #7ad0a0;
-}
-
-.rc-delta-arrow {
-  flex-shrink: 0;
-  font-size: 19px;
-  color: rgba(200, 144, 64, 0.4);
-}
-
-/* ══════════════════════════════════════════════════
-   COST DISPLAY (shared)
-   Always "have / need" — a bare "×3" leaves the player to go count.
-══════════════════════════════════════════════════ */
-.cost-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.cost-pair {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.cost-pair--missing .cost-qty,
-.cost-pair--missing .cost-gold {
-  color: #cc6050;
-}
-
-.cost-pair--missing .cost-need {
-  color: rgba(204, 96, 80, 0.65);
-}
-
-.cost-img {
-  height: 22px;
-  width: auto;
-  object-fit: contain;
-}
-
-.cost-img--big {
-  height: 26px;
-}
-
-.cost-gold {
-  font-size: 15px;
-  font-weight: 900;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-}
-
-.cost-gold--big {
-  font-size: 19.5px;
-}
-
-.cost-qty {
-  font-size: 15px;
-  font-weight: 900;
-  color: #e8d8b0;
-  font-variant-numeric: tabular-nums;
-}
-
-.cost-need {
-  font-size: 13px;
-  font-weight: 700;
-  color: rgba(232, 216, 176, 0.45);
-}
-
 .sold-note {
   font-size: 15px;
   font-weight: 900;
   color: rgba(160, 255, 160, 0.75);
   letter-spacing: 0.05em;
-}
-
-/* ══════════════════════════════════════════════════
-   ACTION BUTTON — full width, one decision per card
-══════════════════════════════════════════════════ */
-.act-btn {
-  width: 100%;
-  padding: 13px 16px;
-  border: 1px solid #6ec040;
-  border-radius: 4px;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  color: #08130a;
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-}
-
-.act-btn--gold {
-  border-color: #e8c060;
-  background: linear-gradient(to bottom, #e8c040, #b8860a);
-  color: #2a1a04;
-}
-
-.act-btn:hover:not(:disabled) {
-  filter: brightness(1.12);
-}
-
-/* Ein ausgegrauter Grünverlauf trägt seine fast schwarze Schrift nicht mehr —
-   die Zeile darauf sagt aber, WARUM der Knopf nicht geht. Der gesperrte Zustand
-   wird deshalb flach und heller beschriftet statt gedimmt. */
-.act-btn:disabled {
-  border-color: #4a3a1c;
-  background: #241a0c;
-  color: rgba(232, 216, 176, 0.55);
-  cursor: not-allowed;
-}
-
-/* ══════════════════════════════════════════════════
-   CONSTELLATIONS
-══════════════════════════════════════════════════ */
-.cc {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 15px 16px 16px;
-  background: #1c1c18;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-  transition: border-color 0.2s ease;
-}
-
-.cc:hover:not(.cc--locked) {
-  border-color: #7a4e20;
-}
-
-.cc--ready {
-  border-color: #c89040;
-}
-
-.cc--locked {
-  opacity: 0.72;
 }
 
 .cc-head {
@@ -1306,20 +859,6 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
   min-width: 0;
 }
 
-.cc-name {
-  font-size: 17.5px;
-  font-weight: 900;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cc-desc {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.7);
-}
 
 /* Both gates, spelled out — the old row only named the level and left the
    player to look up where they stood. */
@@ -1643,7 +1182,7 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
   gap: 9px;
 }
 
-.bg-actions .act-btn {
+.bg-actions .fc-act {
   flex: 1;
 }
 
@@ -1678,20 +1217,6 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
   cursor: not-allowed;
 }
 
-/* ══════════════════════════════════════════════════
-   SHARED ANIMATIONS
-   Only opacity — the glow itself stands still in CSS.
-══════════════════════════════════════════════════ */
-@keyframes sf-breathe {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
 /* Stacked layout (below every desktop reference) — the tree carries the seam
    as its bottom edge there, so the panel drops its own. */
 @media (max-width: 900px) {
@@ -1705,7 +1230,8 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
 ══════════════════════════════════════════════════ */
 @media (max-height: 1100px) {
   .sf-tab {
-    padding: 11px 8px 12px;
+    gap: 5px;
+    padding: 8px 6px 9px;
   }
 
   .sf-buffs {
@@ -1715,17 +1241,6 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
   .sf-body {
     padding: 14px 15px 22px;
     gap: 11px;
-  }
-
-  .rc,
-  .cc {
-    padding: 13px 14px 14px;
-    gap: 11px;
-  }
-
-  .rc-ico {
-    width: 52px;
-    height: 52px;
   }
 
   .bg-ico {
@@ -1738,7 +1253,6 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
    REDUCED MOTION
 ══════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
-  .rc-glow,
   .bg-shine {
     animation: none;
   }

@@ -20,6 +20,7 @@
 import { Icon } from '@iconify/vue'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useActionToast } from '@/composables/ui/useActionToast'
+import { FORGE_YIELD_PLINTH_HEIGHT_PX } from '@/config/constants'
 import ForgeTreePanel from './ForgeTreePanel.vue'
 import StarForgePanel from './StarForgePanel.vue'
 
@@ -57,9 +58,11 @@ function maxOutForge(): void {
 }
 
 /* ── TEMP admin button ─────────────────────────────────────────── */
+/* Sitzt ÜBER dem Ertrags-Sockel, nicht darauf: der Sockel belegt seit dem
+   Umbau die untere Kante der Baumspalte. Fällt mit dem Knopf zusammen weg. */
 .shop-admin-max {
   position: absolute;
-  bottom: 14px;
+  bottom: v-bind('`${FORGE_YIELD_PLINTH_HEIGHT_PX + 14}px`');
   left: 14px;
   z-index: 20;
   display: inline-flex;

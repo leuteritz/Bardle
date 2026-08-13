@@ -718,3 +718,458 @@
     transition: none !important;
   }
 }
+
+/* ── Star Forge card system (.fc-*) ─────────────────────────────────────────
+   EINE Kartensprache für alle vier Reiter der Shop-Detailspalte: Upgrades,
+   Relics, Constellations, Bargain.
+
+   Warum global und nicht scoped: scoped haengt ein data-v-* an die Elemente der
+   EIGENEN Komponente. Die Upgrade-Liste ist eine eigene Komponente neben
+   StarForgePanel und erbt dessen scoped-Regeln also nicht; :deep() dreht die
+   Zustaendigkeit um, statt sie zu teilen. Dieselbe Loesung traegt hier schon den
+   Champion-Filter und den Tier-Header darueber.
+
+   Der fc-Praefix ist Absicht: die Vorgaengernamen (.rc, .cc, .rr) sind fuer ein
+   globales Blatt viel zu allgemein.
+
+   Performance: animiert wird ausschliesslich die Deckkraft von .fc-glow, einer
+   eigenen Ebene mit STATISCHEM Schein. Alles andere ist Zustand, kein
+   Dauerlaeufer. In der Upgrade-Liste stehen bis zu 25 Karten gleichzeitig; eine
+   Animation auf box-shadow oder border-color rastert dort jede Karte in jedem
+   Frame neu (Performance-Regel 2 in CLAUDE.md).
+════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Abschnittskopf: „3 of 10 grown" plus Bereitschaft ── */
+.fc-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 2px 2px;
+}
+.fc-meta-main {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(200, 144, 64, 0.6);
+}
+.fc-meta-main b {
+  font-weight: 900;
+  color: #e8c040;
+}
+.fc-meta-live {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #a0f0d0;
+  font-variant-numeric: tabular-nums;
+}
+.fc-meta-live--calm {
+  color: #e8c040;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 15px;
+}
+
+/* ── Kompaktzeilen: gesperrt, fertig, bereits verschmolzen ──
+   Hier ist nichts zu entscheiden, also kostet es auch keine Kartenhöhe. */
+.fc-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 12px 15px 13px;
+  background: #17170f;
+  border: 1px solid #32210c;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.fc-row--locked {
+  opacity: 0.68;
+}
+.fc-row--max {
+  border-color: #7a5a1c;
+  background: #1a1408;
+}
+.fc-row--done {
+  border-color: #3f6b2c;
+  background: #101a14;
+}
+.fc-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.fc-row-name {
+  font-size: 15px;
+  font-weight: 900;
+  color: #e8dcc0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc-row-meta--gain {
+  color: rgba(160, 240, 208, 0.72);
+}
+.fc-row-num {
+  flex-shrink: 0;
+  font-size: 15px;
+  font-weight: 900;
+  color: rgba(255, 200, 80, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+.fc-badge {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #e8c040;
+  border: 1px solid rgba(232, 192, 64, 0.4);
+  background: rgba(232, 192, 64, 0.1);
+  border-radius: 4px;
+  padding: 5px 9px;
+}
+.fc-badge--forged {
+  color: #a0ffa0;
+  border-color: rgba(82, 184, 48, 0.45);
+  background: rgba(82, 184, 48, 0.12);
+}
+
+/* Der Fortschritt zur Freischaltung läuft an der Unterkante der Zeile selbst. */
+.fc-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: #241708;
+  overflow: hidden;
+}
+.fc-track i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(to right, #8a5a1c, #e8a020);
+}
+
+/* ── Die volle Karte ── */
+.fc-card {
+  position: relative;
+  background: #1c1c18;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  padding: 15px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.2s ease;
+}
+.fc-card:hover:not(.fc-card--locked) {
+  border-color: #7a4e20;
+}
+.fc-card--owned {
+  border-color: #4a8a28;
+}
+.fc-card--ready {
+  border-color: #c89040;
+}
+.fc-card--locked {
+  opacity: 0.72;
+}
+
+/* Kaufbereit atmet auf EIGENER Ebene: der Schein ist statisches CSS, animiert
+   wird nur seine Deckkraft. Der Vorgänger pulste box-shadow und border-color
+   und rasterte damit jede Karte in jedem Frame neu. */
+.fc-glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: 5px;
+  border: 1px solid #e8c060;
+  box-shadow: 0 0 20px 1px rgba(232, 192, 64, 0.55);
+  pointer-events: none;
+  animation: fc-breathe 2.2s ease-in-out infinite;
+}
+
+/* Der einmalige Quittungsblitz nach dem Kauf — eine Transition, kein
+   Dauerläufer, auf derselben eigenen Ebene wie der Schein darüber. */
+.fc-flash {
+  position: absolute;
+  inset: -1px;
+  border-radius: 5px;
+  border: 1px solid #b8ffb0;
+  box-shadow: 0 0 22px 2px rgba(120, 255, 140, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.42s ease-out;
+}
+.fc-flash--on {
+  opacity: 1;
+  transition-duration: 0.06s;
+}
+
+.fc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.fc-ico {
+  width: 56px;
+  height: 56px;
+  border-radius: 4px;
+  background: #141410;
+  border: 1px solid #5c3310;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.fc-id {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fc-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.fc-name {
+  font-size: 17.5px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Tier- und Seltenheits-Chip — die Leitfarbe kommt inline als --chip-c. */
+.fc-chip {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  padding: 4px 8px;
+  border-radius: 3px;
+  color: var(--chip-c, #c89040);
+  background: color-mix(in srgb, var(--chip-c, #c89040) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip-c, #c89040) 40%, transparent);
+}
+.fc-lvl-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.fc-pips {
+  display: flex;
+  gap: 4px;
+}
+.fc-pip {
+  width: 21px;
+  height: 6px;
+  border-radius: 2px;
+  background: #241708;
+  border: 1px solid #3e200a;
+}
+.fc-pip--on {
+  background: #e8a020;
+  border-color: #e8c060;
+}
+.fc-lvl {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.65);
+  font-variant-numeric: tabular-nums;
+}
+.fc-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Jetzt → danach: die eine Zahl, nach der gekauft wird ── */
+.fc-delta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: #141410;
+  border: 1px solid #32210c;
+  border-radius: 4px;
+}
+.fc-delta-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.fc-delta-cell--next {
+  margin-left: auto;
+  align-items: flex-end;
+  text-align: right;
+}
+.fc-delta-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.5);
+  line-height: 1;
+  white-space: nowrap;
+}
+.fc-delta-value {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+  color: rgba(232, 220, 192, 0.75);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fc-delta-value--next {
+  color: #7ad0a0;
+}
+.fc-delta-arrow {
+  flex-shrink: 0;
+  font-size: 19px;
+  color: rgba(200, 144, 64, 0.4);
+}
+
+/* ── Kosten — immer „have / need". Ein blankes „x3" lässt den Spieler selbst
+      nachzählen. ── */
+.fc-cost-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.fc-cost-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.fc-cost-pair--missing .fc-cost-qty,
+.fc-cost-pair--missing .fc-cost-gold {
+  color: #cc6050;
+}
+.fc-cost-pair--missing .fc-cost-need {
+  color: rgba(204, 96, 80, 0.65);
+}
+.fc-cost-img {
+  height: 22px;
+  width: auto;
+  object-fit: contain;
+}
+.fc-cost-img--big {
+  height: 26px;
+}
+.fc-cost-gold {
+  font-size: 15px;
+  font-weight: 900;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+}
+.fc-cost-gold--big {
+  font-size: 19.5px;
+}
+.fc-cost-qty {
+  font-size: 15px;
+  font-weight: 900;
+  color: #e8d8b0;
+  font-variant-numeric: tabular-nums;
+}
+.fc-cost-need {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(232, 216, 176, 0.45);
+}
+
+/* ── Aktionsknopf — volle Breite, eine Entscheidung je Karte ── */
+.fc-act {
+  width: 100%;
+  padding: 13px 16px;
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  color: #08130a;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+.fc-act--gold {
+  border-color: #e8c060;
+  background: linear-gradient(to bottom, #e8c040, #b8860a);
+  color: #2a1a04;
+}
+.fc-act:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+/* Ein ausgegrauter Grünverlauf trägt seine fast schwarze Schrift nicht mehr —
+   die Zeile darauf sagt aber, WARUM der Knopf nicht geht. Der gesperrte
+   Zustand wird deshalb flach und heller beschriftet statt gedimmt. */
+.fc-act:disabled {
+  border-color: #4a3a1c;
+  background: #241a0c;
+  color: rgba(232, 216, 176, 0.55);
+  cursor: not-allowed;
+}
+
+@keyframes fc-breathe {
+  0%,
+  100% {
+    opacity: 0.32;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* Flache Viewports: die Karten geben Höhe ab, bevor sie Lesbarkeit abgeben. */
+@media (max-height: 1100px) {
+  .fc-card {
+    padding: 12px 14px 13px;
+    gap: 10px;
+  }
+  .fc-ico {
+    width: 48px;
+    height: 48px;
+  }
+  .fc-row {
+    padding: 10px 13px 11px;
+  }
+  .fc-delta {
+    padding: 9px 12px;
+  }
+  .fc-act {
+    padding: 11px 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-glow {
+    animation: none;
+    opacity: 0.6;
+  }
+  .fc-flash,
+  .fc-card {
+    transition: none;
+  }
+}

@@ -1,7 +1,7 @@
 // Star Forge (Sonnen-Baum aus Roots, Branches und Leaves samt Relikten,
 // Konstellationen und Schnäppchen) und der Meep Skill Tree.
 
-import type { ForgeSectionDef } from '@/types'
+import type { ForgeRelicRarity, ForgeSectionDef, ForgeUpgradeState } from '@/types'
 
 // ── Meep Skill Tree: radiales Netz-Layout (SkillTreeComponent) ─────────────
 // Ein Startknoten in der Mitte, fünf Pfade strahlen aus; leichter Zickzack pro
@@ -170,12 +170,22 @@ export const FORGE_MAX_DOUBLE_CLICK_CHANCE = 0.8
 
 // ── Detailspalte des Shop-Tabs (StarForgePanel) ───────────────────────────────
 /**
- * Die drei Abteilungen der rechten Spalte, Reihenfolge = Reiterfolge.
+ * Die Abteilungen der rechten Spalte, Reihenfolge = Reiterfolge.
  * Gestapelt waren sie ein Endlos-Scroll in einer 440px-Spalte; als Reiter
  * bekommt jede die volle Höhe, und darum darf die Schrift so groß sein, dass
  * man sie liest.
+ *
+ * `upgrades` steht vorn und ist die Startansicht: Relikte, Konstellationen und
+ * der Handel zeigen, was aus dem Baum FOLGT — der Baum selbst war vorher nur
+ * als Kreisfeld auf der Leinwand erreichbar, ein Knoten je Tooltip.
+ *
+ * Sein Glyph ist absichtlich dasselbe wie `STAR_EVOLUTION_ICONS.gateRays`: dort
+ * steht es für die Bedingung „alle Strahlen auf Stufe n", hier für die Strahlen
+ * selbst — eine Bedeutung, ein Zeichen. Grün, weil Grün im Projekt „kaufbar"
+ * heißt; die drei anderen tragen Bernstein, Eisblau und Gold.
  */
 export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
+  { id: 'upgrades', label: 'Upgrades', icon: 'game-icons:sun-radiations', accent: '#7fd048' },
   { id: 'relics', label: 'Relics', icon: 'game-icons:anvil-impact', accent: '#e8a020' },
   {
     id: 'constellations',
@@ -185,6 +195,128 @@ export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
   },
   { id: 'bargain', label: 'Bargain', icon: 'ph:handshake-fill', accent: '#e8c040' },
 ]
+
+/**
+ * Die drei Ringe als Abschnitte der Upgrade-Liste — Lesereihenfolge von innen
+ * nach außen, dieselbe, in der sie freigeschaltet werden.
+ *
+ * Namen und Glyphen sind KEINE freie Wahl: „Solar Rays", „Forge Branches" und
+ * „Forge Leaves" stehen samt `beam-wake`, `tree-branch` und `falling-leaf`
+ * bereits im Lexikon (config/encyclopedia/sunAndForge.ts). Derselbe Baum darf
+ * nicht an zwei Stellen anders heißen.
+ *
+ * Die Farben sind nicht die der Knoten (die tragen ihre eigene aus dem
+ * Katalog), sondern die des Abschnittsstrichs: Gold für den Kern, Grün für die
+ * Zweige, Eisblau für die Blätter — je weiter außen, desto kühler.
+ */
+export const FORGE_UPGRADE_GROUPS = [
+  {
+    tier: 'root' as const,
+    title: 'Solar Rays',
+    icon: 'game-icons:beam-wake',
+    hint: 'The five rays the star grows on',
+    accent: '#e8c040',
+  },
+  {
+    tier: 'branch' as const,
+    title: 'Forge Branches',
+    icon: 'game-icons:tree-branch',
+    hint: 'Each ray forks in two',
+    accent: '#7fd048',
+  },
+  {
+    tier: 'leaf' as const,
+    title: 'Forge Leaves',
+    icon: 'game-icons:falling-leaf',
+    hint: 'Amplify the branch they hang on',
+    accent: '#86d0ff',
+  },
+]
+
+/**
+ * Leitfarbe des Seltenheits-Chips auf einer Relikt-Karte. Steht hier und nicht
+ * in `economy.ts`: `MATERIAL_RARITY_COLOR` und `AUGMENT_RARITY_COLOR` decken
+ * andere Skalen ab (vier bzw. vier Stufen) — Relikte kennen nur diese zwei, und
+ * die Werte sind die des bisherigen `.rarity-chip`.
+ */
+export const FORGE_RELIC_RARITY_COLOR: Record<ForgeRelicRarity, string> = {
+  rare: '#7bb8ff',
+  epic: '#c9a0ff',
+}
+
+/** Beschriftung des Tier-Chips — gekürzte Einzahl der Abschnittsnamen oben. */
+export const FORGE_UPGRADE_TIER_LABELS = {
+  root: 'SOLAR RAY',
+  branch: 'BRANCH',
+  leaf: 'LEAF',
+} as const
+
+/**
+ * Sortierung innerhalb eines Abschnitts. Was eine Entscheidung verlangt, steht
+ * oben; Gesperrtes und Fertiges sinkt.
+ *
+ * Sortiert wird nach ZUSTAND, nicht nach Kaufbarkeit — dieselbe Regel, die die
+ * Relikt-Liste schon trägt (`relicViews` in StarForgePanel.vue). `affordable`
+ * und `partial`/`empty` teilen sich deshalb absichtlich Rang 0: die Chimes
+ * ticken jede Sekunde, und eine Liste, die Bezahlbares nach oben zieht, ordnet
+ * sich unter dem Mauszeiger neu, während man auf einen Knopf zielt.
+ *
+ * `capped` bleibt oben, weil die Karte ihre Kosten weiter zeigen muss — der
+ * Strahl ist nicht zu, er wartet nur auf seine vier Geschwister.
+ */
+export const FORGE_UPGRADE_STATE_ORDER: Record<ForgeUpgradeState, number> = {
+  affordable: 0,
+  partial: 0,
+  empty: 0,
+  capped: 0,
+  locked: 1,
+  maxed: 2,
+}
+
+/** Wie lange die gekaufte Karte aufleuchtet. Rein visuell, daher reale Zeit. */
+export const FORGE_CARD_FLASH_MS = 420
+/** Dasselbe für den Sonnenblitz im Baum — er quittiert denselben Kauf. */
+export const FORGE_SUN_FLASH_MS = 500
+
+/**
+ * Grund, warum ein Kernstrahl gerade nicht weitergeht: `maxAllowedLevel` lässt
+ * ihn nur eine Stufe über den niedrigsten der fünf steigen. Der Zustand hat
+ * nichts mit Kosten zu tun, deshalb braucht er einen eigenen Satz statt eines
+ * ausgegrauten Knopfes.
+ */
+export const FORGE_UPGRADE_CAPPED_REASON = 'Raise the other rays to match'
+
+// ── Ertrags-Sockel unter der Sonne (ForgeYieldPlinth) ─────────────────────────
+/**
+ * Der Sockel steht IM FLUSS unter der Baumbühne, nicht als schwebende Karte
+ * darauf. Zwei Gründe, beide zwingend:
+ *
+ * 1. Die Bühne trägt `transform: scale()` mit Zoom 0,55–2,2. Alles darin
+ *    skaliert mit, und eine Ertragszeile in halber Größe ist keine Anzeige mehr.
+ * 2. Bei Standardzoom (1,7) ragt die Bühne weit über das Panel hinaus — der
+ *    Zweigring liegt dann bei rund 500px vom Zentrum, also genau dort, wo eine
+ *    unten zentrierte Karte läge. Ein Knoten hinter dem Sockel liefe weiter,
+ *    wäre aber nicht mehr anklickbar.
+ *
+ * Der Preis ist, dass die Bühne diese Höhe verliert und bei Einpasszoom rund
+ * ein Zehntel kleiner rendert. Das ist der ehrliche Preis für eine Anzeige, die
+ * nie etwas verdeckt.
+ */
+export const FORGE_YIELD_PLINTH_HEIGHT_PX = 72
+export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 60
+/**
+ * Glyphen der Felder. Sanduhr und Goldklumpen sind KEINE freie Wahl — sie
+ * stehen in `SOLAR_BRANCHES` bereits für „Chimes/Sek" und „Chimes/Klick", und
+ * genau diese beiden Zahlen zeigt der Sockel. Der Chime-Bestand selbst trägt
+ * kein Iconify-Zeichen, sondern dasselbe Bild wie jede Kostenzeile.
+ */
+export const FORGE_YIELD_ICONS = {
+  perSecond: 'game-icons:hourglass',
+  perClick: 'game-icons:gold-nuggets',
+  forgeShare: 'game-icons:anvil-impact',
+} as const
+/** Chime-Bild der Kostenzeilen — dieselbe Datei, damit es ein Cache-Treffer ist. */
+export const FORGE_CHIME_IMAGE = '/img/BardGold-128.png'
 
 /** Platzhalter im `desc` einer Forge-Definition, den der Stufenwert ersetzt. */
 export const FORGE_DESC_VALUE_TOKEN = '{v}'

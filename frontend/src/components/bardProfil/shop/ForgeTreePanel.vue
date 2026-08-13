@@ -1,8 +1,12 @@
 <template>
-  <div ref="panelEl" class="tree-panel" :style="stageStyle" @wheel.prevent="onWheel">
+  <div class="tree-panel" :style="stageStyle">
     <!-- shared cosmic backdrop (same starfield as Team / Planets / Skill Tree) -->
     <CosmicStageBackground />
 
+    <!-- Alles Skalierte lebt im Viewport, der Ertrags-Sockel darunter NICHT.
+         Die Bühne ragt bei Standardzoom weit über ihre Zelle hinaus; eine
+         schwebende Sockelkarte läge damit über anklickbaren Knoten. -->
+    <div ref="viewportEl" class="tree-viewport" @wheel.prevent="onWheel">
     <!-- Zoom control -->
     <div class="tree-zoom">
       <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
@@ -100,15 +104,15 @@
       >
         <div
           class="node-circle"
-          :class="[`node-circle--${node.sizeClass}`, `node-circle--${nodeState(node)}`]"
+          :class="[`node-circle--${node.sizeClass}`, `node-circle--${entryOf(node).state}`]"
           :style="{ '--node-color': node.color }"
           @click="handleNodeClick(node)"
           @mouseenter="hoveredId = node.id"
           @mouseleave="hoveredId = null"
         >
           <Icon :icon="node.icon" :width="node.iconSize" :height="node.iconSize" :style="{ color: node.color }" />
-          <span v-if="nodeLevelOf(node) > 0 || nodeState(node) !== 'locked'" class="node-level">
-            {{ nodeLevelOf(node) }}/{{ nodeMaxOf(node) }}
+          <span v-if="entryOf(node).level > 0 || entryOf(node).state !== 'locked'" class="node-level">
+            {{ entryOf(node).level }}/{{ entryOf(node).maxLevel }}
           </span>
         </div>
 
@@ -120,37 +124,38 @@
         >
           <div class="tt-head">
             <span class="tt-name" :style="{ color: node.color }">{{ node.name }}</span>
-            <span class="tt-tier">{{ tierLabel(node) }}</span>
+            <span class="tt-tier">{{ entryOf(node).tierLabel }}</span>
           </div>
-          <div class="tt-desc">{{ nodeDesc(node) }}</div>
-          <template v-if="nodeState(node) === 'locked'">
-            <div class="tt-lock">{{ lockReason(node) }}</div>
+          <div class="tt-desc">{{ entryOf(node).desc }}</div>
+          <template v-if="entryOf(node).state === 'locked' || entryOf(node).state === 'capped'">
+            <div class="tt-lock">{{ entryOf(node).lockReason }}</div>
           </template>
-          <template v-else-if="nodeLevelOf(node) >= nodeMaxOf(node)">
+          <template v-else-if="entryOf(node).state === 'maxed'">
             <div class="tt-maxed">✦ MAXED</div>
           </template>
           <template v-else>
-            <div v-if="nodeNextLine(node)" class="tt-next">
-              <span class="tt-arrow">→</span> {{ nodeNextLine(node) }}
-            </div>
+            <div class="tt-next"><span class="tt-arrow">→</span> {{ entryOf(node).nextDesc }}</div>
             <div class="tt-cost-row">
-              <span class="tt-cost" :class="{ 'tt-cost--cant': !canBuy(node) }">
-                {{ formatNumber(nodeGoldOf(node)) }} G
+              <span class="tt-cost" :class="{ 'tt-cost--cant': !entryOf(node).canBuy }">
+                {{ formatNumber(entryOf(node).goldCost) }} G
               </span>
               <span
-                v-for="(qty, matId) in nodeMaterialsOf(node)"
-                :key="matId"
+                v-for="mat in entryOf(node).materials"
+                :key="mat.id"
                 class="tt-mat"
-                :class="{ 'tt-mat--missing': (inventoryStore.collectedMaterials[matId] ?? 0) < qty }"
+                :class="{ 'tt-mat--missing': !mat.ok }"
               >
-                <img v-if="materialImage(matId)" :src="materialImage(matId)" class="tt-mat-img" :alt="materialName(matId)" />
-                ×{{ qty }}
+                <img v-if="mat.image" :src="mat.image" class="tt-mat-img" :alt="mat.name" />
+                ×{{ mat.need }}
               </span>
             </div>
           </template>
         </div>
       </div>
     </div>
+    </div>
+
+    <ForgeYieldPlinth />
   </div>
 </template>
 
@@ -158,19 +163,19 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
-import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
-import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { FORGE_NODES } from '@/config/progression/starForge'
-import { MATERIALS } from '@/config/economy/materials'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { useActionToast } from '@/composables/ui/useActionToast'
-import type { ForgeNodeDef } from '@/types'
+import {
+  useForgeUpgrades,
+  FORGE_EMPTY_UPGRADE_ENTRY,
+} from '@/composables/ui/useForgeUpgrades'
+import type { ForgeNodeDef, ForgeUpgradeEntry } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
+import ForgeYieldPlinth from './ForgeYieldPlinth.vue'
 import {
-  SOLAR_MAX_LEVELS,
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
   COMET_PHASE_DATA,
@@ -186,22 +191,19 @@ import {
   FORGE_TREE_ZOOM_MAX,
   FORGE_TREE_ZOOM_STEP,
   FORGE_TREE_ZOOM_DEFAULT,
-  SUN_PHASE_DISPLAY_OFFSET,
   FORGE_ROOT_ANGLES_DEG,
   SOLAR_BRANCHES,
   FORGE_ICON_SIZE_ROOT,
   FORGE_ICON_SIZE_BRANCH,
   FORGE_ICON_SIZE_LEAF,
-  FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT,
   FORGE_TREE_FIT_PADDING_PX,
   FORGE_SUN_EDGE_R,
+  FORGE_SUN_FLASH_MS,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
-const forgeStore = useStarForgeStore()
 const playerStore = usePlayerStore()
-const inventoryStore = useInventoryStore()
-const { showToast } = useActionToast()
+const { entryById, buyUpgrade } = useForgeUpgrades()
 
 const C = FORGE_STAGE_SIZE / 2
 
@@ -332,10 +334,7 @@ const limbs = computed<Limb[]>(() => {
 })
 
 const activeLimbs = computed(() =>
-  limbs.value.filter((limb) => {
-    const node = allNodes.value.find((n) => n.id === limb.targetId)
-    return node && nodeLevelOf(node) > 0
-  }),
+  limbs.value.filter((limb) => (entryById.value.get(limb.targetId)?.level ?? 0) > 0),
 )
 
 function ringLabelStyle(r: number): Record<string, string> {
@@ -361,105 +360,16 @@ const leafRingLabel = computed(() =>
     : `Phase ${FORGE_LEAF_UNLOCK_PHASE + 1} → locked`,
 )
 
-// ── Node state helpers ────────────────────────────────────────────────────────
-function nodeLevelOf(node: TreeNode): number {
-  if (node.tier === 'root') return solarStore.branchLevel(node.id as SolarBranchId)
-  return forgeStore.nodeLevel(node.id)
-}
-
-function nodeMaxOf(node: TreeNode): number {
-  if (node.tier === 'root') return SOLAR_MAX_LEVELS
-  return forgeStore.nodeMaxLevel(node.id)
-}
-
-function nodeGoldOf(node: TreeNode): number {
-  if (node.tier === 'root') return solarStore.branchCost(node.id as SolarBranchId)
-  return forgeStore.nodeGoldCost(node.id)
-}
-
-function nodeMaterialsOf(node: TreeNode): Record<string, number> {
-  if (node.tier === 'root') return {}
-  return forgeStore.nodeMaterialCost(node.id)
-}
-
-function canBuy(node: TreeNode): boolean {
-  if (node.tier === 'root') return solarStore.canAfford(node.id as SolarBranchId)
-  return forgeStore.canAffordNode(node.id)
-}
-
-type NodeState = 'locked' | 'empty' | 'partial' | 'affordable' | 'capped' | 'maxed'
-
-function nodeState(node: TreeNode): NodeState {
-  const level = nodeLevelOf(node)
-  if (node.tier === 'root') {
-    if (level >= SOLAR_MAX_LEVELS) return 'maxed'
-    if (level >= solarStore.maxAllowedLevel) return 'capped'
-    if (solarStore.canAfford(node.id as SolarBranchId)) return 'affordable'
-    if (level > 0) return 'partial'
-    return 'empty'
-  }
-  if (!forgeStore.nodeUnlocked(node.id)) return 'locked'
-  if (level >= nodeMaxOf(node)) return 'maxed'
-  if (forgeStore.canAffordNode(node.id)) return 'affordable'
-  if (level > 0) return 'partial'
-  return 'empty'
-}
-
-function tierLabel(node: TreeNode): string {
-  if (node.tier === 'root') return 'ROOT'
-  if (node.tier === 'branch') return 'BRANCH'
-  return 'LEAF'
-}
-
-function nodeDesc(node: TreeNode): string {
-  if (node.tier === 'root') {
-    const root = ROOTS.find((r) => r.id === node.id)
-    const val = solarStore.statDisplay(node.id as SolarBranchId, nodeLevelOf(node))
-    return `${root?.statLabel ?? ''}: ${val}`
-  }
-  const def = node.def
-  if (!def) return ''
-  if (def.tier === 'leaf') {
-    const parent = FORGE_NODES.find((n) => n.id === def.parentId)
-    const pct = nodeLevelOf(node) * FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT
-    return def.desc.replace('{p}', parent?.name ?? 'its branch').replace('{v}', String(pct))
-  }
-  const value = forgeStore.branchEffect(node.id)
-  return def.desc.replace('{v}', trimNumber(value))
-}
-
-function nodeNextLine(node: TreeNode): string {
-  if (node.tier === 'root') {
-    return solarStore.statDisplay(node.id as SolarBranchId, nodeLevelOf(node) + 1)
-  }
-  const def = node.def
-  if (!def) return ''
-  if (def.tier === 'leaf') {
-    const pct = (nodeLevelOf(node) + 1) * FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT
-    return `Amplify +${pct}%`
-  }
-  // Next-level branch effect keeps the current leaf amplifier
-  const leaf = forgeStore.leafOfBranch(node.id)
-  const leafLevel = leaf ? forgeStore.nodeLevel(leaf.id) : 0
-  const amp = 1 + leafLevel * 0.25
-  const next = (nodeLevelOf(node) + 1) * def.effectPerLevel * amp
-  return def.desc.replace('{v}', trimNumber(next))
-}
-
-function trimNumber(v: number): string {
-  return Number.isInteger(v) ? String(v) : v.toFixed(1)
-}
-
-function lockReason(node: TreeNode): string {
-  const def = node.def
-  if (!def) return ''
-  if (solarStore.starPhase < def.phase) {
-    const phaseName = STAR_PHASE_DATA[def.phase]?.name ?? `Phase ${def.phase + SUN_PHASE_DISPLAY_OFFSET}`
-    return `Unlocks at ${phaseName}`
-  }
-  const parent = allNodes.value.find((n) => n.id === def.parentId)
-  const required = def.tier === 'branch' ? 1 : 2
-  return `Requires ${parent?.name ?? 'parent'} Lv ${required}`
+/**
+ * Stufe, Kosten, Wirkung und Sperrgrund eines Knotens kommen aus
+ * `useForgeUpgrades()` — dieselbe Quelle, aus der die Upgrade-Liste in der
+ * rechten Spalte liest. Hier bleibt nur, was Geometrie ist.
+ *
+ * Ein fehlender Eintrag kann nicht vorkommen (beide Seiten laufen über
+ * denselben Katalog), der Rückfall hält lediglich das Rendern am Leben.
+ */
+function entryOf(node: TreeNode): ForgeUpgradeEntry {
+  return entryById.value.get(node.id) ?? FORGE_EMPTY_UPGRADE_ENTRY
 }
 
 function isTooltipBelow(angleDeg: number): boolean {
@@ -470,53 +380,38 @@ function isTooltipBelow(angleDeg: number): boolean {
   return n >= 180
 }
 
-function materialImage(matId: string): string | undefined {
-  return MATERIALS.find((m) => m.id === matId)?.image
-}
-
-function materialName(matId: string): string {
-  return MATERIALS.find((m) => m.id === matId)?.name ?? matId
-}
-
 // ── Interaction ───────────────────────────────────────────────────────────────
 const hoveredId = ref<string | null>(null)
 const purchaseFlash = ref(false)
 
 function flashSun(): void {
   purchaseFlash.value = true
+  // Rein visuell — kein Spielzustand hängt daran, also reale Zeit.
   setTimeout(() => {
     purchaseFlash.value = false
-  }, 500)
+  }, FORGE_SUN_FLASH_MS)
 }
 
+/** Kauf und Meldung liegen im Composable, damit der Baum und die Upgrade-Liste
+ *  denselben Weg nehmen. Hier bleibt nur, was der Baum eigenes tut. */
 function handleNodeClick(node: TreeNode): void {
-  if (node.tier === 'root') {
-    const before = solarStore.branchLevel(node.id as SolarBranchId)
-    solarStore.buyBranch(node.id as SolarBranchId)
-    if (solarStore.branchLevel(node.id as SolarBranchId) > before) {
-      flashSun()
-      showToast(`${node.name} upgraded!`, 'forge')
-    }
-    return
-  }
-  if (forgeStore.buyNode(node.id)) {
-    flashSun()
-    showToast(`${node.name} grown to Lv ${forgeStore.nodeLevel(node.id)}!`, 'forge')
-  }
+  if (buyUpgrade(node.id)) flashSun()
 }
 
 // ── Zoom (buttons + wheel) with container fit ─────────────────────────────────
-const panelEl = ref<HTMLElement | null>(null)
+const viewportEl = ref<HTMLElement | null>(null)
 const zoom = ref(FORGE_TREE_ZOOM_DEFAULT)
 const fitScale = ref(1)
 
 let resizeObserver: ResizeObserver | null = null
 
 onMounted(() => {
-  if (!panelEl.value) return
+  if (!viewportEl.value) return
   resizeObserver = new ResizeObserver((entries) => {
     const rect = entries[0]?.contentRect
     if (!rect) return
+    // Gemessen wird der VIEWPORT, nicht das Panel: der Ertrags-Sockel darunter
+    // gehört nicht zur Fläche, in die der Baum passen muss.
     // The phase dock moved into the forge sidebar, so the air it needed at the
     // top now sits on all four sides instead — same fit as before, centred.
     fitScale.value = Math.max(
@@ -524,7 +419,7 @@ onMounted(() => {
       (Math.min(rect.width, rect.height) - FORGE_TREE_FIT_PADDING_PX * 2) / FORGE_STAGE_SIZE,
     )
   })
-  resizeObserver.observe(panelEl.value)
+  resizeObserver.observe(viewportEl.value)
 })
 
 onBeforeUnmount(() => {
@@ -603,10 +498,23 @@ const nextPhasePreviewStyle = computed(() => ({
 /* ══════════════════════════════════════════════════
    PANEL
 ══════════════════════════════════════════════════ */
+/* Spalte statt Fläche: oben der Viewport mit der skalierten Bühne, darunter der
+   Ertrags-Sockel im Fluss. Der Sockel liegt damit garantiert neben und nie über
+   einem Knoten — bei jedem Zoom. */
 .tree-panel {
   position: relative;
   overflow: hidden;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-viewport {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ══════════════════════════════════════════════════
