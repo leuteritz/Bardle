@@ -82,7 +82,7 @@
         <!-- Fuß: beschriftete Ablesungen wie im Astral Codex. Der Status ist
              das einzige Feld, das sich WÄHREND des Hovers ändert — er wird
              deshalb vom Frame-Lauf beschrieben, nicht von Vue gerendert. -->
-        <footer class="ab-tip-foot">
+        <footer v-if="hovered.live || hovered.foot.length" class="ab-tip-foot">
           <div v-if="hovered.live" class="ab-tip-read">
             <span class="ab-tip-read-label">Status</span>
             <span ref="tipStatusEl" class="ab-tip-read-value ab-tip-status"></span>
@@ -131,7 +131,6 @@ import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { onKeybinding, triggerKeybind } from '@/composables/system/useKeybindings'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { formatCompactDuration } from '@/utils/ui/format'
 import {
   BARD_ABILITIES,
   BARD_PASSIVE,
@@ -148,8 +147,6 @@ import {
   ABILITY_MEEP_GAIN_COALESCE_MS,
   ABILITY_MEEP_GAIN_FLOAT_MS,
   ABILITY_TIP_VIEWPORT_MARGIN_PX,
-  MS_PER_SECOND,
-  RESONANCE_CLICK_REFUND_MS,
   RESONANCE_MAX_STACKS,
 } from '@/config/constants'
 import type { BardAbilityId, BardEffectLine, KeybindId } from '@/types'
@@ -206,21 +203,12 @@ const meepStepKey = computed(() => gameStore.pendingMeeps + gameStore.meepsDevou
  *
  * Bewusst NUR über den Klickwert gerechnet, obwohl die laufende Produktion
  * ebenfalls einzahlt: die Zahl beantwortet „wie oft muss ich noch drücken?",
- * und dafür ist die Produktion eine Zugabe, keine Größe der Rechnung. Was die
- * Produktion allein schafft, steht als Wartezeit im Tooltip daneben.
+ * und dafür ist die Produktion eine Zugabe, keine Größe der Rechnung.
  */
 const clicksToMeep = computed(() => {
   if (meepRemaining.value <= 0) return 0
   const perClick = Math.max(1, gameStore.chimesPerClick * gameStore.mvpBuffMultiplier)
   return Math.ceil(meepRemaining.value / perClick)
-})
-
-/** Wartezeit, wenn der Spieler die Hand liegen lässt — `—`, solange nichts läuft. */
-const meepIdleEta = computed(() => {
-  const rate = gameStore.chimesPerSecond * gameStore.mvpBuffMultiplier
-  if (meepRemaining.value <= 0) return 'now'
-  if (rate <= 0) return '—'
-  return formatCompactDuration((meepRemaining.value / rate) * MS_PER_SECOND)
 })
 
 // ── Der Gewinn ──────────────────────────────────────────────────────────────
@@ -629,44 +617,34 @@ const hovered = computed<TipView | null>(() => {
   if (id === 'passive') {
     const capped = store.resonance >= RESONANCE_MAX_STACKS
     const due = clicksToMeep.value === 0
-    const idle = meepIdleEta.value
+    // Der Kasten beantwortet ZWEI Fragen und keine dritte: „wie oft muss ich
+    // noch drücken?" und „was gibt mir die Passive gerade?". Der Resonanz-Stand
+    // („12 / 100", „noch 13 Klicks bis zum nächsten Stapel") stand hier einmal
+    // und ist bewusst weg — er ist die HERKUNFT der beiden Prozentwerte, nicht
+    // ihre Aussage, und zwang den Spieler zum Umrechnen.
     return {
       key: '',
       name: BARD_PASSIVE.name,
       color: BARD_PASSIVE.color,
+      // Das einzige, was vom Stapelzähler bleibt: das Wort, dass er voll ist.
       rankLabel: capped ? 'Max resonance' : 'Passive',
       levelLabel: '',
       locked: false,
       // Die Passive kühlt nicht ab — der Status-Slot bliebe leer.
       live: false,
-      // Der Kasten erklärt die FÄHIGKEIT, genau wie bei Q/W/E/R: vorn steht,
-      // was der Spieler aufbaut. Der Meep-Ring der Kachel ist das Nebengleis —
-      // Bestand und Void-Fraß stehen ohnehin im Header und am Rettungsbalken.
       note: BARD_PASSIVE.description,
-      lead: { value: `${store.resonance} / ${RESONANCE_MAX_STACKS}`, label: 'Resonance' },
+      // Der Lead führt die Frage, die der Ring der Kachel stellt. Die Wartezeit
+      // ohne Klicken steht im Meep-Tooltip des Headers, nicht noch einmal hier.
+      lead: {
+        value: due ? 'Arriving' : `${formatNumber(clicksToMeep.value)} clicks`,
+        label: 'Next meep',
+      },
+      // Nur, was die Passive JETZT gibt — der Fuß bleibt leer.
       lines: [
-        // Der eigentliche Kniff der Passive: der Grund, weiterzuklicken, wenn
-        // die Produktion längst von allein läuft.
-        {
-          label: 'Every click',
-          value: `−${(RESONANCE_CLICK_REFUND_MS / MS_PER_SECOND).toFixed(2)}s on all cooldowns`,
-        },
-        // Der Meep in EINER Zeile: offene Klicks und, was die Produktion allein
-        // schafft — die beiden Zahlen, die der Ring darunter meint.
-        {
-          label: 'Next meep',
-          value: due
-            ? 'Arriving'
-            : idle === '—'
-              ? `${formatNumber(clicksToMeep.value)} clicks`
-              : `${formatNumber(clicksToMeep.value)} clicks · ${idle} idle`,
-        },
-      ],
-      foot: [
-        { label: 'Power', value: `+${((store.resonancePowerMult - 1) * 100).toFixed(0)}%` },
+        { label: 'Ability power', value: `+${((store.resonancePowerMult - 1) * 100).toFixed(0)}%` },
         { label: 'Cooldowns', value: `−${(store.resonanceCdr * 100).toFixed(1)}%` },
-        { label: 'Next stack', value: capped ? 'Capped' : `${store.resonanceToNext} clicks` },
       ],
+      foot: [],
     }
   }
 
@@ -1085,9 +1063,12 @@ onUnmounted(() => {
    Beschriftete Ablesungen wie im Astral Codex: Überschrift über dem Wert.
    „Ready" und „42.0s" allein sagten nicht, was sie zählen.
 
-   Es stehen bis zu DREI Zellen nebeneinander (Status · Cooldown · Next rank,
-   bei der Passive Power · Cooldowns · Next stack) — die Lücke ist deshalb
-   knapper gesetzt als bei zwei. */
+   Es stehen bis zu DREI Zellen nebeneinander (Status · Cooldown · Next rank) —
+   die Lücke ist deshalb knapper gesetzt als bei zwei.
+
+   Die Passive hat keinen Fuß: sie kühlt nicht ab, und ihre Wirkung steht
+   vollständig in den Zeilen darüber. Der `v-if` am `<footer>` hält den
+   Trennstrich fern, wenn nichts zu lesen wäre. */
 .ab-tip-foot {
   display: flex;
   gap: 12px;
