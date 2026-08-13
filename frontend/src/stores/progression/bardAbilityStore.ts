@@ -9,10 +9,20 @@
 // Wirkung und Abklingzeit hängen an zwei Skalen:
 //   Rang       — steigt mit dem Bard-Level (ABILITY_LEVELS_PER_RANK)
 //   Resonance  — die Passive, aufgebaut durch Klicken auf die Sonne
+//
+// Der Rang greift dabei auf ZWEI Wegen an, die Resonance nur auf dem ersten:
+// multiplikativ über `powerMultOf` (Schaden, Heilung, Zeitsprünge) und additiv
+// über `bardRankValue` (Zielzahl, Stasedauer, Fensterlängen — die vier Getter
+// unter „Der zweite Skalierungsweg").
 
 import { defineStore } from 'pinia'
 import type { BardAbilityBuff, BardAbilityId } from '@/types'
-import { BARD_ABILITIES, getBardAbility } from '@/config/progression/bardAbilities'
+import {
+  BARD_ABILITIES,
+  bardRankPowerMult,
+  bardRankValue,
+  getBardAbility,
+} from '@/config/progression/bardAbilities'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { logger } from '@/utils/logger'
 import {
@@ -24,23 +34,18 @@ import {
   RESONANCE_CLICK_REFUND_MS,
   ABILITY_LEVELS_PER_RANK,
   ABILITY_MAX_RANK,
-  ABILITY_RANK_POWER_STEP,
   ABILITY_RANK_CDR_STEP,
   ABILITY_CDR_CAP,
-  BINDING_TARGET_COUNT,
   BINDING_DAMAGE_MAX_HP_PCT,
   BINDING_STUN_MS,
   BINDING_EMPTY_CLICK_VALUES,
   SHRINE_HEAL_MAX_HP_PCT,
-  SHRINE_BUFF_DURATION_MS,
   SHRINE_CPS_MULT,
   JOURNEY_EXPEDITION_SKIP_SEC,
   JOURNEY_DWELL_SKIP_SEC,
   JOURNEY_STAR_TIME_SEC,
   JOURNEY_TRAVEL_SKIP_SEC,
-  JOURNEY_BUFF_DURATION_MS,
   JOURNEY_CPC_MULT,
-  FATE_STASIS_DURATION_MS,
   FATE_DAMAGE_MULT,
   FATE_FINALE_MAX_HP_PCT,
 } from '@/config/constants'
@@ -138,12 +143,49 @@ export const useBardAbilityStore = defineStore('bardAbility', {
       return (id: BardAbilityId): boolean => this.rankOf(id) > 0
     },
 
+    /**
+     * Bard-Level, bei dem die nächste Rangstufe fällt — 0 am Höchstrang.
+     *
+     * Die Umkehrung von `rankOf` und deshalb direkt daneben: die Schrittweite
+     * `ABILITY_LEVELS_PER_RANK` darf nicht an zwei Enden des Hauses stehen.
+     */
+    nextRankLevelOf() {
+      return (id: BardAbilityId): number => {
+        const def = getBardAbility(id)
+        if (!def) return 0
+        const rank = this.rankOf(id)
+        if (rank === 0) return def.unlockLevel
+        if (rank >= ABILITY_MAX_RANK) return 0
+        return def.unlockLevel + rank * ABILITY_LEVELS_PER_RANK
+      }
+    },
+
     /** Gesamter Wirkungsfaktor einer Fähigkeit: Rang × Resonance. */
     powerMultOf() {
-      return (id: BardAbilityId): number => {
-        const rank = Math.max(1, this.rankOf(id))
-        return (1 + (rank - 1) * ABILITY_RANK_POWER_STEP) * this.resonancePowerMult
-      }
+      return (id: BardAbilityId): number =>
+        bardRankPowerMult(this.rankOf(id)) * this.resonancePowerMult
+    },
+
+    // ── Der zweite Skalierungsweg: Rang OHNE Resonance ──────────────────────
+    // Parameterlos, weil jedes dieser Felder zu genau einer Fähigkeit gehört —
+    // ein `id`-Parameter wäre eine Lüge über die Zuständigkeit, und Pinia cacht
+    // parameterlose Getter obendrein.
+
+    /** Q — wie viele Bosse der Blitz durchschlägt (2 … 6). */
+    bindingTargets(): number {
+      return bardRankValue('bindingTargets', this.rankOf('q'))
+    },
+    /** W — Länge des Nachklangs (25 … 37 s). */
+    shrineBuffMs(): number {
+      return bardRankValue('shrineBuffMs', this.rankOf('w'))
+    },
+    /** E — Länge des Reisefensters (20 … 32 s). */
+    journeyBuffMs(): number {
+      return bardRankValue('journeyBuffMs', this.rankOf('e'))
+    },
+    /** R — Standzeit der Stase (8 … 12 s). */
+    stasisMs(): number {
+      return bardRankValue('stasisMs', this.rankOf('r'))
     },
 
     /** Abklingzeit in Millisekunden, alle Reduktionen eingerechnet. */
@@ -328,9 +370,10 @@ export const useBardAbilityStore = defineStore('bardAbility', {
     },
 
     /**
-     * Q — Cosmic Binding. Der Blitz schlägt durch bis zu zwei Planeten-Bosse,
-     * setzt deren Enrage-Uhr zurück und trifft, falls keiner im Orbit steht,
-     * die Sonne selbst: dann fällt ein Schwall Chimes ab.
+     * Q — Cosmic Binding. Der Blitz schlägt durch mehrere Planeten-Bosse (zwei
+     * bei Rang 1, am Höchstrang den ganzen Orbit), setzt deren Enrage-Uhr
+     * zurück und trifft, falls keiner im Orbit steht, die Sonne selbst: dann
+     * fällt ein Schwall Chimes ab.
      */
     _castBinding(): string {
       const bossStore = usePlanetBossStore()
@@ -339,7 +382,7 @@ export const useBardAbilityStore = defineStore('bardAbility', {
       // die Liste, über die gerade gelaufen wird, nicht verkürzen.
       const targets = bossStore.activeBosses
         .filter((b) => !b.defeated && !b.expired)
-        .slice(0, BINDING_TARGET_COUNT)
+        .slice(0, this.bindingTargets)
 
       if (targets.length === 0) {
         const gameStore = useGameStore()
@@ -395,10 +438,11 @@ export const useBardAbilityStore = defineStore('bardAbility', {
       const hadPenalty = bossStore.cpsPenaltyActive
       if (hadPenalty) bossStore.clearPenalty()
 
+      const windowMs = this.shrineBuffMs
       this._applyBuff({
         sourceId: 'w',
-        expiresAt: gameNow() + SHRINE_BUFF_DURATION_MS,
-        durationMs: SHRINE_BUFF_DURATION_MS,
+        expiresAt: gameNow() + windowMs,
+        durationMs: windowMs,
         cpsMult: SHRINE_CPS_MULT,
       })
 
@@ -462,10 +506,11 @@ export const useBardAbilityStore = defineStore('bardAbility', {
         travelSkipped = true
       }
 
+      const windowMs = this.journeyBuffMs
       this._applyBuff({
         sourceId: 'e',
-        expiresAt: gameNow() + JOURNEY_BUFF_DURATION_MS,
-        durationMs: JOURNEY_BUFF_DURATION_MS,
+        expiresAt: gameNow() + windowMs,
+        durationMs: windowMs,
         cpcMult: JOURNEY_CPC_MULT,
       })
 
@@ -484,12 +529,13 @@ export const useBardAbilityStore = defineStore('bardAbility', {
      */
     _castFate(): string {
       const now = gameNow()
-      this.stasisUntil = now + FATE_STASIS_DURATION_MS
+      const stasisMs = this.stasisMs
+      this.stasisUntil = now + stasisMs
       this.abilityNow = now
 
       const bossStore = usePlanetBossStore()
       const held = bossStore.activeBosses.filter((b) => !b.defeated && !b.expired).length
-      const seconds = Math.round(FATE_STASIS_DURATION_MS / 1000)
+      const seconds = Math.round(stasisMs / 1000)
       const heldNote = held > 0 ? `${held} held` : 'the orbit stilled'
       return `Fate suspended for ${seconds}s · ${heldNote} · ${FATE_DAMAGE_MULT}× damage`
     },

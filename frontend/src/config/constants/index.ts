@@ -7,7 +7,7 @@
 //
 //   core           21 Konstanten
 //   progression    55 Konstanten
-//   abilities      41 Konstanten
+//   abilities      51 Konstanten
 //   omens          12 Konstanten
 //   providence      6 Konstanten
 //   economy        83 Konstanten

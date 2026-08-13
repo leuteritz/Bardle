@@ -23,13 +23,15 @@
       </div>
     </Transition>
 
-    <!-- Tooltip der überfahrenen Kachel: mittig über der Leiste statt über der
-         Kachel selbst — bei fünf Feldern rutschte er sonst am Rand aus dem
-         Bild, und die Leiste ist schmal genug, dass die Zuordnung eindeutig
-         bleibt. -->
+    <!-- Tooltip der überfahrenen Kachel — er steht über IHR, nicht mittig über
+         der Leiste: bei fünf Feldern nebeneinander musste der Spieler die
+         Zuordnung sonst raten. Verschoben wird nur waagerecht (placeTip), die
+         Höhe bleibt im Spaltenfluss, damit die Meldung darüber nicht springt.
+         Der Zeiger unten am Kasten zeigt auf die Kachel. -->
     <Transition name="ab-tip">
       <div
         v-if="hovered"
+        ref="tipEl"
         class="ab-tip"
         :class="{ 'ab-tip--locked': hovered.locked }"
         :style="{ '--ab-color': hovered.color }"
@@ -47,14 +49,20 @@
              Beschriftung, weil er die Antwort auf „was bringt der Druck?" ist.
              Alles Weitere ist Beiwerk und steht darunter. -->
         <div class="ab-tip-lead">
-          <span class="ab-tip-lead-value">{{ hovered.lead.value }}</span>
+          <span class="ab-tip-lead-value">
+            {{ hovered.lead.value }}
+            <span v-if="hovered.lead.next" class="ab-tip-next">→ {{ hovered.lead.next }}</span>
+          </span>
           <span class="ab-tip-lead-label">{{ hovered.lead.label }}</span>
         </div>
 
         <dl v-if="hovered.lines.length" class="ab-tip-lines">
           <template v-for="line in hovered.lines" :key="line.label">
             <dt>{{ line.label }}</dt>
-            <dd>{{ line.value }}</dd>
+            <dd>
+              {{ line.value
+              }}<span v-if="line.next" class="ab-tip-next">→ {{ line.next }}</span>
+            </dd>
           </template>
         </dl>
 
@@ -76,6 +84,7 @@
 
     <div class="ab-row">
       <BardPassiveTile
+        ref="passiveTile"
         :meep-fill="meepFill"
         :clicks-to-meep="clicksToMeep"
         :step-key="meepStepKey"
@@ -125,10 +134,12 @@ import {
   ABILITY_MAX_RANK,
   ABILITY_MEEP_GAIN_COALESCE_MS,
   ABILITY_MEEP_GAIN_FLOAT_MS,
+  ABILITY_TIP_VIEWPORT_MARGIN_PX,
   MS_PER_SECOND,
+  RESONANCE_CLICK_REFUND_MS,
   RESONANCE_MAX_STACKS,
 } from '@/config/constants'
-import type { BardAbilityId, KeybindId } from '@/types'
+import type { BardAbilityId, BardEffectLine, KeybindId } from '@/types'
 import { gameNow } from '@/utils/game/gameClock'
 
 const uiStore = useUiStore()
@@ -458,6 +469,59 @@ watch(
 
 // ── Tooltip ─────────────────────────────────────────────────────────────────
 const hoveredId = ref<BardAbilityId | 'passive' | null>(null)
+const tipEl = ref<HTMLElement | null>(null)
+const passiveTile = ref<{ tileEl: HTMLElement | null } | null>(null)
+
+/** Die Kachel, über der der Kasten stehen soll — oder null, wenn keiner offen ist. */
+function hoveredTileEl(): HTMLElement | null {
+  const id = hoveredId.value
+  if (!id) return null
+  return id === 'passive' ? (passiveTile.value?.tileEl ?? null) : (tileEls.get(id)?.tile ?? null)
+}
+
+/**
+ * Den Kasten über SEINE Kachel schieben — waagerecht, und sonst nichts.
+ *
+ * Er bleibt Flex-Kind der Spalte. Damit fällt seine HÖHE weiterhin in den Fluss,
+ * die Cast-Meldung stapelt sich unverändert darüber, und die Spalte bleibt
+ * gleich hoch. Ein Kasten, der per `position: fixed` aus dem Fluss fiele,
+ * verschöbe die Meldung bei JEDEM Überfahren nach unten — und genau diese
+ * Kombination tritt dauernd auf: Klick auf die Kachel, Meldung erscheint, der
+ * Zeiger steht noch darauf.
+ *
+ * `left` an einem ohnehin `position: relative` stehenden Kasten ändert seinen
+ * Platz im Fluss nicht. Die Kachelreihe ist auf jeder Auflösungsstufe breiter
+ * als der Kasten (459/565/691 gegen 320/380/450 px), der Versatz kann die
+ * `max-content`-Breite der Spalte also auch nicht anrühren.
+ *
+ * Gemessen wird EINMAL je Wechsel der überfahrenen Kachel — Performance-Regel 3
+ * meint Werte, die pro Frame fallen; dazwischen bewegt sich hier nichts, beide
+ * Kästen stehen fest. Geschrieben wird an den Kasten selbst, nicht an einen
+ * Container.
+ */
+function placeTip(): void {
+  const tip = tipEl.value
+  const tile = hoveredTileEl()
+  if (!tip || !tile) return
+
+  const rect = tile.getBoundingClientRect()
+  // Die Leiste ist `fixed; left: 50%` und um ihre halbe Breite zurückgeschoben:
+  // ihre Mitte IST die Bildmitte und muss nicht gemessen werden.
+  const barCenter = window.innerWidth / 2
+  const wanted = rect.left + rect.width / 2 - barCenter
+
+  const half = tip.offsetWidth / 2
+  const margin = ABILITY_TIP_VIEWPORT_MARGIN_PX
+  const shift = Math.min(
+    Math.max(wanted, margin + half - barCenter),
+    window.innerWidth - margin - half - barCenter,
+  )
+
+  tip.style.left = `${Math.round(shift)}px`
+  // Solange nichts geklemmt wird, ist die Differenz 0 und der Zeiger sitzt ohne
+  // jede Rechnung in der Kastenmitte — die IST dann die Kachelmitte.
+  tip.style.setProperty('--ab-caret-dx', `${Math.round(wanted - shift)}px`)
+}
 
 /**
  * Das Statusfeld im Fuß des Tooltips. Es ist das einzige, das sich ändert,
@@ -486,6 +550,9 @@ function paintTipStatus(): void {
 watch(hoveredId, async () => {
   tipStatusText = ''
   await nextTick()
+  // Vor dem Zeichnen desselben Frames — sonst stünde der Kasten einen Frame
+  // lang an der Stelle der zuvor überfahrenen Kachel.
+  placeTip()
   paintTipStatus()
   ensureLoop()
 })
@@ -495,8 +562,8 @@ watch(hoveredId, async () => {
  *
  *   Kopf   — Taste, Name, Rang: welche Fähigkeit, wie weit gewachsen
  *   Lead   — die EINE Zahl, für die man die Taste drückt
- *   Zeilen — was sonst noch passiert
- *   Fuß    — Status und Abklingzeit: darf ich jetzt drücken?
+ *   Zeilen — was sonst noch passiert, je mit dem Ausblick auf den nächsten Rang
+ *   Fuß    — Status, Abklingzeit, nächster Rang: darf ich drücken, und was kommt?
  *
  * Die Hauptwirkung wird nicht hier ausgewählt, sondern ist per Vereinbarung
  * die erste Zeile aus `bardAbilityEffectLines` — die Fähigkeit selbst weiß am
@@ -506,13 +573,26 @@ watch(hoveredId, async () => {
  * Orbit; alles, was der Spieler beim Überfliegen nicht in eine Entscheidung
  * übersetzen kann, kostet ihn nur die Zeile, in der es steht.
  */
-const hovered = computed(() => {
+interface TipView {
+  key: string
+  name: string
+  color: string
+  rankLabel: string
+  locked: boolean
+  live: boolean
+  lead: BardEffectLine
+  lines: BardEffectLine[]
+  foot: { label: string; value: string }[]
+}
+
+const hovered = computed<TipView | null>(() => {
   const id = hoveredId.value
   if (!id) return null
 
   if (id === 'passive') {
     const capped = store.resonance >= RESONANCE_MAX_STACKS
     const due = clicksToMeep.value === 0
+    const idle = meepIdleEta.value
     return {
       key: '',
       name: BARD_PASSIVE.name,
@@ -521,35 +601,31 @@ const hovered = computed(() => {
       locked: false,
       // Die Passive kühlt nicht ab — der Status-Slot bliebe leer.
       live: false,
-      // Die Kachel führt mit den offenen Klicks, also führt der Kasten damit
-      // auch — gekürzt dort, voll hier. Ein Tooltip, der eine andere Zahl
-      // voranstellt als das Feld darunter, lässt den Spieler suchen.
-      lead: due
-        ? { value: 'Arriving', label: 'Next meep' }
-        : { value: formatNumber(clicksToMeep.value), label: 'Clicks to next meep' },
+      // Der Kasten erklärt die FÄHIGKEIT, genau wie bei Q/W/E/R: vorn steht,
+      // was der Spieler aufbaut. Der Meep-Ring der Kachel ist das Nebengleis —
+      // Bestand und Void-Fraß stehen ohnehin im Header und am Rettungsbalken.
+      lead: { value: `${store.resonance} / ${RESONANCE_MAX_STACKS}`, label: 'Resonance' },
       lines: [
-        // Was die Produktion allein schafft — die Gegenprobe zur Klickzahl.
-        { label: 'Idle in', value: meepIdleEta.value },
-        // Wofür die Strecke überhaupt gelaufen wird: die Ernte des Durchlaufs.
-        { label: 'Meeps on departure', value: formatNumber(gameStore.pendingMeeps) },
-        // Nur wenn der Void wirklich zugeschlagen hat — eine Null zu melden,
-        // wo nichts verloren ging, macht aus einer Bilanz eine Floskel.
-        ...(gameStore.meepsDevoured > 0
-          ? [
-              {
-                label: 'Devoured by the Void',
-                value: `−${formatNumber(gameStore.meepsDevoured)}`,
-              },
-            ]
-          : []),
-        { label: 'Meeps held', value: formatNumber(gameStore.meeps) },
+        // Der eigentliche Kniff der Passive: der Grund, weiterzuklicken, wenn
+        // die Produktion längst von allein läuft.
         {
-          label: 'Resonance grants',
-          value: `+${((store.resonancePowerMult - 1) * 100).toFixed(0)}% power · −${(store.resonanceCdr * 100).toFixed(1)}% cooldowns`,
+          label: 'Every click',
+          value: `−${(RESONANCE_CLICK_REFUND_MS / MS_PER_SECOND).toFixed(2)}s on all cooldowns`,
+        },
+        // Der Meep in EINER Zeile: offene Klicks und, was die Produktion allein
+        // schafft — die beiden Zahlen, die der Ring darunter meint.
+        {
+          label: 'Next meep',
+          value: due
+            ? 'Arriving'
+            : idle === '—'
+              ? `${formatNumber(clicksToMeep.value)} clicks`
+              : `${formatNumber(clicksToMeep.value)} clicks · ${idle} idle`,
         },
       ],
       foot: [
-        { label: 'Resonance', value: `${store.resonance} / ${RESONANCE_MAX_STACKS}` },
+        { label: 'Power', value: `+${((store.resonancePowerMult - 1) * 100).toFixed(0)}%` },
+        { label: 'Cooldowns', value: `−${(store.resonanceCdr * 100).toFixed(1)}%` },
         { label: 'Next stack', value: capped ? 'Capped' : `${store.resonanceToNext} clicks` },
       ],
     }
@@ -559,7 +635,9 @@ const hovered = computed(() => {
   if (!def) return null
   const rank = store.rankOf(id)
   const locked = rank === 0
-  const lines = bardAbilityEffectLines(id, store.powerMultOf(id))
+  const lines = bardAbilityEffectLines(id, rank, store.resonancePowerMult)
+  const cooldown = { label: 'Cooldown', value: `${(store.cooldownMsOf(id) / 1000).toFixed(1)}s` }
+  const nextLevel = store.nextRankLevelOf(id)
 
   return {
     key: def.key,
@@ -570,11 +648,13 @@ const hovered = computed(() => {
     live: !locked,
     // Gesperrt zählt nur eines: ab wann. Die Wirkungszeilen bleiben trotzdem
     // vollständig stehen — als Vorschau auf das, was das Level bringt.
-    lead: locked
-      ? { value: `Level ${def.unlockLevel}`, label: 'Unlocks at' }
-      : { value: lines[0].value, label: lines[0].label },
+    lead: locked ? { value: `Level ${def.unlockLevel}`, label: 'Unlocks at' } : lines[0],
     lines: locked ? lines : lines.slice(1),
-    foot: [{ label: 'Cooldown', value: `${(store.cooldownMsOf(id) / 1000).toFixed(1)}s` }],
+    // Gesperrt entfällt der Ausblick: die nächste Frage ist die Freischaltung,
+    // und die steht schon als Lead.
+    foot: locked
+      ? [cooldown]
+      : [cooldown, { label: 'Next rank', value: nextLevel > 0 ? `Lv ${nextLevel}` : 'Max' }],
   }
 })
 
@@ -614,6 +694,10 @@ onMounted(() => {
     sizeObserver = new ResizeObserver(measureRow)
     sizeObserver.observe(row)
   }
+  // Die Leiste ist zentriert: ein Breitenwechsel verschiebt jede Kachel, und
+  // damit den Anker eines offenen Kastens. `placeTip` steigt sofort aus, wenn
+  // keiner offen ist.
+  window.addEventListener('resize', placeTip)
   ensureLoop()
 })
 
@@ -625,6 +709,7 @@ onUnmounted(() => {
   if (flashTimer) clearTimeout(flashTimer)
   if (meepGainCoalesceTimer) clearTimeout(meepGainCoalesceTimer)
   if (meepGainClearTimer) clearTimeout(meepGainClearTimer)
+  window.removeEventListener('resize', placeTip)
   sizeObserver?.disconnect()
   document.documentElement.style.removeProperty('--ability-bar-h')
 })
@@ -714,17 +799,37 @@ onUnmounted(() => {
 
 /* ── Tooltip ──────────────────────────────────────────────────────────────
    Der Kasten des Spiels, mit einer Haarlinie in der Leitfarbe der Fähigkeit —
-   dieselbe Behandlung, die die Buff-Chips für dieselbe Aufgabe benutzen. */
+   dieselbe Behandlung, die die Buff-Chips für dieselbe Aufgabe benutzen.
+
+   `left` schreibt `placeTip()` einmal je Hover-Wechsel: der Kasten steht damit
+   über SEINER Kachel, ohne seinen Platz im Spaltenfluss zu verlassen. */
 .ab-tip {
   position: relative;
+  left: 0;
   width: 320px;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   padding: 10px 12px 11px;
   background: #16140e;
   border: 2px solid #5c3310;
   border-radius: 4px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
   text-align: left;
+}
+
+/* Der Zeiger auf die Kachel. Er sitzt in der Kastenmitte, weil die bei
+   ungeklemmtem Versatz die Kachelmitte IST; `--ab-caret-dx` trägt nur die
+   Strecke, die ein Bildrand dem Kasten abgeschnitten hätte. */
+.ab-tip::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: calc(50% + var(--ab-caret-dx, 0px));
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-right: 7px solid transparent;
+  border-left: 7px solid transparent;
+  border-top: 7px solid #5c3310;
 }
 
 .ab-tip::before {
@@ -817,6 +922,22 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
+/* Der Ausblick auf den nächsten Rang: dieselbe Zeile, gedämpft und kleiner.
+   Die Größe steht in `em` statt `rem` — damit folgt sie den Auflösungsstufen
+   von selbst und braucht dort keine eigene Regel. */
+.ab-tip-next {
+  margin-left: 5px;
+  font-size: 0.82em;
+  font-weight: 800;
+  color: #8a7a52;
+  white-space: nowrap;
+}
+
+/* Gesperrt gibt es keinen Ausblick — der Lead nennt das Freischalt-Level. */
+.ab-tip--locked .ab-tip-next {
+  color: #6f6244;
+}
+
 .ab-tip-lead-label {
   flex-shrink: 0;
   font-size: 0.68rem;
@@ -866,10 +987,14 @@ onUnmounted(() => {
 
 /* ── Fuß ──────────────────────────────────────────────────────────────────
    Beschriftete Ablesungen wie im Astral Codex: Überschrift über dem Wert.
-   „Ready" und „42.0s" allein sagten nicht, was sie zählen. */
+   „Ready" und „42.0s" allein sagten nicht, was sie zählen.
+
+   Es stehen bis zu DREI Zellen nebeneinander (Status · Cooldown · Next rank,
+   bei der Passive Power · Cooldowns · Next stack) — die Lücke ist deshalb
+   knapper gesetzt als bei zwei. */
 .ab-tip-foot {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px solid #2e2416;

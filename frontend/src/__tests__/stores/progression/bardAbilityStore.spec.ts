@@ -21,9 +21,15 @@ import {
   BINDING_DAMAGE_MAX_HP_PCT,
   BINDING_STUN_MS,
   BINDING_TARGET_COUNT,
+  BINDING_TARGET_PER_RANK,
   FATE_DAMAGE_MULT,
   FATE_STASIS_DURATION_MS,
+  FATE_STASIS_PER_RANK_MS,
   GAME_TICK_INTERVAL_MS,
+  JOURNEY_BUFF_DURATION_MS,
+  JOURNEY_BUFF_PER_RANK_MS,
+  SHRINE_BUFF_DURATION_MS,
+  SHRINE_BUFF_PER_RANK_MS,
   JOURNEY_DWELL_SKIP_SEC,
   DWELL_SKIP_PHASE_FRACTION,
   JOURNEY_EXPEDITION_SKIP_SEC,
@@ -169,6 +175,70 @@ describe('bardAbilityStore', () => {
       store.resonance = RESONANCE_MAX_STACKS * 10
       expect(store.cooldownMsOf('q')).toBe(Math.round(base * (1 - ABILITY_CDR_CAP)))
     })
+
+    it('names the level of the next rank, and none at the cap', () => {
+      const store = useBardAbilityStore()
+
+      useGameStore().level = ABILITY_UNLOCK_LEVEL_Q - 1
+      expect(store.nextRankLevelOf('q')).toBe(ABILITY_UNLOCK_LEVEL_Q)
+
+      unlock('q')
+      expect(store.nextRankLevelOf('q')).toBe(ABILITY_UNLOCK_LEVEL_Q + ABILITY_LEVELS_PER_RANK)
+
+      unlock('q', ABILITY_LEVELS_PER_RANK * 2)
+      expect(store.nextRankLevelOf('q')).toBe(ABILITY_UNLOCK_LEVEL_Q + 3 * ABILITY_LEVELS_PER_RANK)
+
+      unlock('q', ABILITY_LEVELS_PER_RANK * 50)
+      expect(store.nextRankLevelOf('q')).toBe(0)
+    })
+  })
+
+  // Der zweite Skalierungsweg. Zielzahl, Stasedauer und die beiden Fenster
+  // wachsen ALLEIN mit dem Rang — hinge eines davon an der Resonance, dann
+  // verlängerte Klicken das Fenster, in dem Klicken mehr zählt. Genau das
+  // binden die zweiten Erwartungen unten fest.
+  describe('rank-scaled values (resonance must not touch them)', () => {
+    const CASES = [
+      ['bindingTargets', 'q', BINDING_TARGET_COUNT, BINDING_TARGET_PER_RANK],
+      ['shrineBuffMs', 'w', SHRINE_BUFF_DURATION_MS, SHRINE_BUFF_PER_RANK_MS],
+      ['journeyBuffMs', 'e', JOURNEY_BUFF_DURATION_MS, JOURNEY_BUFF_PER_RANK_MS],
+      ['stasisMs', 'r', FATE_STASIS_DURATION_MS, FATE_STASIS_PER_RANK_MS],
+    ] as const
+
+    it.each(CASES)('%s grows by one step per rank', (field, id, base, step) => {
+      const store = useBardAbilityStore()
+
+      unlock(id)
+      expect(store[field]).toBe(base)
+
+      unlock(id, ABILITY_LEVELS_PER_RANK * 2)
+      expect(store[field]).toBe(base + 2 * step)
+    })
+
+    it.each(CASES)('%s stops at ABILITY_MAX_RANK', (field, id, base, step) => {
+      const store = useBardAbilityStore()
+      unlock(id, ABILITY_LEVELS_PER_RANK * 50)
+      expect(store[field]).toBe(base + (ABILITY_MAX_RANK - 1) * step)
+    })
+
+    it.each(CASES)('%s reads as rank 1 while the ability is still locked', (field, id, base) => {
+      const store = useBardAbilityStore()
+      useGameStore().level = 1
+      expect(store.rankOf(id)).toBe(0)
+      expect(store[field]).toBe(base)
+    })
+
+    it.each(CASES)('%s is untouched by resonance', (field, id, base, step) => {
+      const store = useBardAbilityStore()
+      unlock(id, ABILITY_LEVELS_PER_RANK * 2)
+      const withoutResonance = store[field]
+
+      store.resonance = RESONANCE_MAX_STACKS
+
+      expect(store.powerMultOf(id)).toBeGreaterThan(1) // die Resonance wirkt sehr wohl …
+      expect(store[field]).toBe(withoutResonance) // … nur eben nicht hier
+      expect(store[field]).toBe(base + 2 * step)
+    })
   })
 
   describe('casting', () => {
@@ -198,20 +268,41 @@ describe('bardAbilityStore', () => {
   })
 
   describe('Q — Cosmic Binding', () => {
-    it('strikes at most BINDING_TARGET_COUNT bosses for a share of their own max HP', () => {
+    it('strikes as many bosses as the rank allows, for a share of their own max HP', () => {
       const store = useBardAbilityStore()
       unlock('q')
       const bosses = [addBoss('p1', 10_000), addBoss('p2', 20_000), addBoss('p3', 30_000)]
 
       store.cast('q')
 
+      // Gegen den GETTER geprüft, nicht gegen die Basiskonstante: sonst liefe
+      // die Schleife auf höherem Rang an den zusätzlichen Zielen vorbei und der
+      // Test würde still weniger prüfen, als er verspricht.
+      const reach = store.bindingTargets
+      expect(reach).toBe(BINDING_TARGET_COUNT)
+
       const power = store.powerMultOf('q')
-      for (let i = 0; i < BINDING_TARGET_COUNT; i++) {
+      for (let i = 0; i < reach; i++) {
         const expected = Math.ceil(bosses[i].maxHP * BINDING_DAMAGE_MAX_HP_PCT * power)
         expect(bosses[i].currentHP).toBe(bosses[i].maxHP - expected)
       }
-      // Das dritte Ziel liegt hinter dem Blitz und bleibt unberührt.
-      expect(bosses[2].currentHP).toBe(bosses[2].maxHP)
+      // Was hinter der Reichweite des Blitzes liegt, bleibt unberührt.
+      expect(bosses[reach].currentHP).toBe(bosses[reach].maxHP)
+    })
+
+    it('reaches one boss further per rank', () => {
+      const store = useBardAbilityStore()
+      unlock('q', ABILITY_LEVELS_PER_RANK * 2) // Rang 3 → vier Ziele
+      const reach = BINDING_TARGET_COUNT + 2 * BINDING_TARGET_PER_RANK
+      const bosses = Array.from({ length: reach }, (_, i) => addBoss(`p${i}`, 10_000))
+      const spare = addBoss('spare', 10_000)
+
+      store.cast('q')
+
+      expect(store.bindingTargets).toBe(reach)
+      for (const boss of bosses) expect(boss.currentHP).toBeLessThan(boss.maxHP)
+      // Der Blitz endet an seiner Reichweite und nicht an der Bosszahl.
+      expect(spare.currentHP).toBe(spare.maxHP)
     })
 
     it('holds the enrage clock of every boss it did not kill', () => {
@@ -276,6 +367,19 @@ describe('bardAbilityStore', () => {
 
       expect(store.cpsMult).toBe(SHRINE_CPS_MULT)
       expect(game.chimesPerSecond).toBe(Math.floor(plain * SHRINE_CPS_MULT))
+    })
+
+    it('lets the afterglow run as long as the rank allows', () => {
+      const store = useBardAbilityStore()
+      unlock('w', ABILITY_LEVELS_PER_RANK * 2) // Rang 3
+
+      store.cast('w')
+
+      // Der Getter ist an anderer Stelle gebunden — hier zählt, dass die
+      // EINBAUSTELLE ihn benutzt und nicht weiter die Basiskonstante.
+      const buff = store.buffs.find((b) => b.sourceId === 'w')
+      expect(buff?.durationMs).toBe(store.shrineBuffMs)
+      expect(buff?.durationMs).toBe(SHRINE_BUFF_DURATION_MS + 2 * SHRINE_BUFF_PER_RANK_MS)
     })
   })
 
@@ -383,6 +487,17 @@ describe('bardAbilityStore', () => {
       expect(galaxy.championTravelStartTime).toBe(0)
       expect(galaxy.championTravelState).toBe('idle')
     })
+
+    it('holds the travel window open as long as the rank allows', () => {
+      const store = useBardAbilityStore()
+      unlock('e', ABILITY_LEVELS_PER_RANK * 2) // Rang 3
+
+      store.cast('e')
+
+      const buff = store.buffs.find((b) => b.sourceId === 'e')
+      expect(buff?.durationMs).toBe(store.journeyBuffMs)
+      expect(buff?.durationMs).toBe(JOURNEY_BUFF_DURATION_MS + 2 * JOURNEY_BUFF_PER_RANK_MS)
+    })
   })
 
   describe('R — Tempered Fate', () => {
@@ -396,6 +511,20 @@ describe('bardAbilityStore', () => {
       expect(store.stasisActive).toBe(true)
       expect(store.combatDpsMult).toBe(FATE_DAMAGE_MULT)
       expect(store.stasisSecondsLeft).toBe(Math.round(FATE_STASIS_DURATION_MS / 1000))
+    })
+
+    it('holds the stasis longer with every rank', () => {
+      const store = useBardAbilityStore()
+      unlock('r', ABILITY_LEVELS_PER_RANK * 2) // Rang 3
+
+      store.cast('r')
+
+      expect(store.stasisSecondsLeft).toBe(
+        Math.round((FATE_STASIS_DURATION_MS + 2 * FATE_STASIS_PER_RANK_MS) / 1000),
+      )
+      // Die Klartextzeile nennt dieselbe Zahl — sie wird aus derselben Quelle
+      // gebildet und darf nicht auf der Basiskonstante hängenbleiben.
+      expect(store.lastCast.summary).toContain(`${Math.round(store.stasisMs / 1000)}s`)
     })
 
     it('carries enrage clocks and star timers along with each tick', () => {

@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="tileEl"
     class="ab-passive"
     :class="{ 'ab-passive--due': clicksToMeep === 0, 'ab-passive--warp': warping }"
     :style="{ '--ab-color': BARD_PASSIVE.color }"
@@ -204,6 +205,19 @@ const props = defineProps<{
 }>()
 
 defineEmits<{ hover: [boolean] }>()
+
+/**
+ * Der Anker für den Tooltip: die Leiste misst diese Kachel, um den Kasten über
+ * IHR zu verankern statt mittig über der ganzen Reihe. Gemessen wird einmal je
+ * Hover-Wechsel, nicht pro Frame.
+ *
+ * Bewusst NICHT über `setTileRef` der Leiste registriert — deren Register trägt
+ * Schleier und Uhr einer Abklingzeit, die es hier nicht gibt, und der Frame-Lauf
+ * geht ohnehin nur über `BARD_ABILITIES`. Der Name `tileEl` ist derselbe wie in
+ * `BardAbilityTile`, damit die Leiste beide Kachelarten gleich anfassen kann.
+ */
+const tileEl = ref<HTMLElement | null>(null)
+defineExpose({ tileEl })
 
 const meepAria = computed(() =>
   props.clicksToMeep > 0

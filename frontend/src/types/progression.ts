@@ -270,6 +270,22 @@ export interface BardAbilityCastResult {
   summary: string
 }
 
+/**
+ * Eine Wirkungszeile im Tooltip einer Fähigkeit — was sie tut, mit der Zahl,
+ * die JETZT gilt, und optional derselben Zahl eine Rangstufe weiter.
+ */
+export interface BardEffectLine {
+  label: string
+  value: string
+  /**
+   * Derselbe Wert bei Rang + 1. Fehlt, wenn sich die ANZEIGE nicht bewegt (ein
+   * Zuwachs, der auf denselben Text rundet, verspricht nichts Ablesbares), am
+   * Höchstrang, und bei einer gesperrten Fähigkeit — dort ist die nächste Frage
+   * die Freischaltung, nicht der Rang danach.
+   */
+  next?: string
+}
+
 /** Ein laufender Zeiteffekt einer Fähigkeit — Gegenstück zu `DrifterActiveBuff`. */
 export interface BardAbilityBuff {
   sourceId: BardAbilityId
