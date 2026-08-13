@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   BARD_ABILITIES,
+  BARD_PASSIVE,
   bardAbilityEffectLines,
   bardRankPowerMult,
   bardRankValue,
@@ -50,6 +51,30 @@ describe('bardRankPowerMult', () => {
       1 + (ABILITY_MAX_RANK - 1) * ABILITY_RANK_POWER_STEP,
     )
   })
+})
+
+describe('descriptions', () => {
+  /** Fließtext im Kasten — lang genug für einen Satz, kurz genug für den Blick. */
+  const MAX_CHARS = 170
+
+  it.each([...BARD_ABILITIES, BARD_PASSIVE])(
+    '$name explains itself in plain words',
+    ({ description }: { description: string }) => {
+      expect(description.length).toBeGreaterThan(40)
+      expect(description.length).toBeLessThanOrEqual(MAX_CHARS)
+      expect(description.trim()).toBe(description)
+      expect(description).toMatch(/[.!]$/)
+    },
+  )
+
+  it.each([...BARD_ABILITIES, BARD_PASSIVE])(
+    '$name keeps the numbers out of its description',
+    ({ description }: { description: string }) => {
+      // Die Zahlen stehen darüber und wachsen mit dem Rang. Eine im Satz wäre
+      // eine zweite Quelle, die beim nächsten Balance-Schritt stehenbleibt.
+      expect(description).not.toMatch(/\d/)
+    },
+  )
 })
 
 describe('bardAbilityEffectLines', () => {

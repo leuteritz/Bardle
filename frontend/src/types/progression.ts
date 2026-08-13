@@ -250,6 +250,13 @@ export interface BardAbilityDef {
   /** Beschriftung der Keycap — zugleich die Taste selbst. */
   key: string
   name: string
+  /**
+   * Ein bis zwei Sätze in Klartext: was die Fähigkeit TUT, ohne eine einzige
+   * Zahl. Die Zahlen stehen darüber; dieser Satz beantwortet, was sie
+   * bedeuten — dass der Blitz mehrere Planeten auf einmal nimmt, dass die
+   * Stase wirklich ALLES anhält.
+   */
+  description: string
   /** Bild in `public/img/BardAbilities/`. */
   image: string
   /** Leitfarbe der Kachel: Rahmen, Ring, Zahlen. */

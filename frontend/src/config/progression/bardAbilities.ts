@@ -57,6 +57,10 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
     id: 'q',
     key: 'Q',
     name: 'Cosmic Binding',
+    // Nennt den Rückprall, der als eigene Zeile aus dem Kasten geflogen ist:
+    // als Randfall taugte er keine Tabellenzeile, als Satz sehr wohl.
+    description:
+      'Chains through several planet bosses at once, stalling each enrage. With none in the orbit, the bolt rebounds off the sun for chimes.',
     image: `${ART}/BardQ-512.png`,
     color: '#7ec8ff',
     unlockLevel: ABILITY_UNLOCK_LEVEL_Q,
@@ -66,6 +70,8 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
     id: 'w',
     key: 'W',
     name: "Caretaker's Shrine",
+    description:
+      'Mends the sun, lifts the toll a lost boss left on your chimes, and keeps them flowing richer while the shrine glows.',
     image: `${ART}/BardW-512.png`,
     color: '#6ee08a',
     unlockLevel: ABILITY_UNLOCK_LEVEL_W,
@@ -75,6 +81,10 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
     id: 'e',
     key: 'E',
     name: 'Magical Journey',
+    // Die Sonnenphase steht bewusst nicht drin — sie ist gedeckelt, und ein
+    // Satz, der sie verspricht, wäre so schief wie die gestrichene Zahlenzeile.
+    description:
+      'Opens a corridor. Expeditions and travelling champions leap ahead, stars linger longer, and every click pays triple until it closes.',
     image: `${ART}/BardE.png`,
     color: '#c89cff',
     unlockLevel: ABILITY_UNLOCK_LEVEL_E,
@@ -84,6 +94,11 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
     id: 'r',
     key: 'R',
     name: 'Tempered Fate',
+    // „Alles" ist hier wörtlich zu nehmen und darum ausgeschrieben: die
+    // gestrichene Zeile „Held: enrage clocks and star timers" war unvollständig,
+    // der Void steht ebenfalls still.
+    description:
+      'Everything out there stops — enrage clocks, star timers, the Void alike — while your champions strike threefold. What survives takes a parting blow.',
     image: `${ART}/BardR-512.png`,
     color: '#e8c040',
     unlockLevel: ABILITY_UNLOCK_LEVEL_R,
@@ -94,6 +109,12 @@ export const BARD_ABILITIES: readonly BardAbilityDef[] = [
 /** Die Passive steht als eigene, kleinere Kachel links neben den vier Slots. */
 export const BARD_PASSIVE = {
   name: "Traveler's Call",
+  // Steht im Kasten GANZ OBEN, vor den Zahlen — anders als bei Q/W/E/R, wo der
+  // Satz unter ihnen sitzt. Die Passive hat keine Taste, keinen Rang und keine
+  // Abklingzeit: bei ihr ist die Erklärung die Hauptsache, und die Zahlen sind
+  // der Beleg. Bei den vier Slots ist es umgekehrt.
+  description:
+    'Every click on the sun deepens your resonance — abilities grow stronger, cool faster, and each click trims what is already cooling.',
   image: `${ART}/Bard-256.png`,
   color: '#f0d890',
 } as const

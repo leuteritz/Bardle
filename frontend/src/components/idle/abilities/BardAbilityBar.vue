@@ -45,7 +45,13 @@
           <span class="ab-tip-rank">{{ hovered.rankLabel }}</span>
         </header>
 
-        <!-- Die Hauptwirkung, allein und als Erstes: der Wert vor seiner
+        <!-- Was die Fähigkeit TUT, in Klartext und vor jeder Zahl: dass der
+             Blitz mehrere Planeten auf einmal nimmt, dass die Stase wirklich
+             alles anhält. Wer sie kennt, springt darüber hinweg an den
+             Zahlenblock — der steht in jedem der fünf Kästen gleich tief. -->
+        <p class="ab-tip-note">{{ hovered.note }}</p>
+
+        <!-- Die Hauptwirkung: der Wert vor seiner
              Beschriftung, weil er die Antwort auf „was bringt der Druck?" ist.
              Alles Weitere ist Beiwerk und steht darunter. -->
         <div class="ab-tip-lead">
@@ -561,9 +567,16 @@ watch(hoveredId, async () => {
  * Der Tooltip in vier Rängen, statt einer Liste gleichwertiger Zeilen:
  *
  *   Kopf   — Taste, Name, Rang: welche Fähigkeit, wie weit gewachsen
+ *   Satz   — was sie TUT, in Klartext und ohne eine Zahl
  *   Lead   — die EINE Zahl, für die man die Taste drückt
  *   Zeilen — was sonst noch passiert, je mit dem Ausblick auf den nächsten Rang
  *   Fuß    — Status, Abklingzeit, nächster Rang: darf ich drücken, und was kommt?
+ *
+ * Erst der Satz, dann die Zahlen — in ALLEN fünf Kästen gleich. Wer die
+ * Fähigkeit noch nicht kennt, liest von oben und braucht zuerst das Was; wer
+ * sie kennt, springt an den Zahlenblock, und der steht in jedem Kasten an
+ * derselben Stelle. Eine Ausnahme für die Passive hätte genau diese
+ * Verlässlichkeit gekostet.
  *
  * Die Hauptwirkung wird nicht hier ausgewählt, sondern ist per Vereinbarung
  * die erste Zeile aus `bardAbilityEffectLines` — die Fähigkeit selbst weiß am
@@ -582,6 +595,8 @@ interface TipView {
   live: boolean
   lead: BardEffectLine
   lines: BardEffectLine[]
+  /** Der Klartextsatz aus der Definition — steht über den Zahlen. */
+  note: string
   foot: { label: string; value: string }[]
 }
 
@@ -604,6 +619,7 @@ const hovered = computed<TipView | null>(() => {
       // Der Kasten erklärt die FÄHIGKEIT, genau wie bei Q/W/E/R: vorn steht,
       // was der Spieler aufbaut. Der Meep-Ring der Kachel ist das Nebengleis —
       // Bestand und Void-Fraß stehen ohnehin im Header und am Rettungsbalken.
+      note: BARD_PASSIVE.description,
       lead: { value: `${store.resonance} / ${RESONANCE_MAX_STACKS}`, label: 'Resonance' },
       lines: [
         // Der eigentliche Kniff der Passive: der Grund, weiterzuklicken, wenn
@@ -650,6 +666,7 @@ const hovered = computed<TipView | null>(() => {
     // vollständig stehen — als Vorschau auf das, was das Level bringt.
     lead: locked ? { value: `Level ${def.unlockLevel}`, label: 'Unlocks at' } : lines[0],
     lines: locked ? lines : lines.slice(1),
+    note: def.description,
     // Gesperrt entfällt der Ausblick: die nächste Frage ist die Freischaltung,
     // und die steht schon als Lead.
     foot: locked
@@ -985,6 +1002,27 @@ onUnmounted(() => {
   color: #a89a74;
 }
 
+/* ── Der Klartextsatz ─────────────────────────────────────────────────────
+   Er steht zwischen Namen und Zahlen und braucht deshalb KEINE Trennlinie: er
+   gehört zum Kopf, nicht zu einem eigenen Block.
+
+   Bewusst GRÖSSER als die Zahlenzeilen darunter (0,86 gegen 0,78 rem) — er ist
+   Fließtext und wird gelesen, nicht abgelesen; bei gleicher Größe verschwände
+   er zwischen den Tabellenzeilen, obwohl er den längsten Weg durchs Auge hat.
+   Die Farbe bleibt trotzdem unter der der Werte: er erklärt sie, ersetzt sie
+   nicht. */
+.ab-tip-note {
+  margin: 7px 0 0;
+  font-size: 0.86rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #c6b68c;
+}
+
+.ab-tip--locked .ab-tip-note {
+  color: #9b8c68;
+}
+
 /* ── Fuß ──────────────────────────────────────────────────────────────────
    Beschriftete Ablesungen wie im Astral Codex: Überschrift über dem Wert.
    „Ready" und „42.0s" allein sagten nicht, was sie zählen.
@@ -1075,6 +1113,9 @@ onUnmounted(() => {
   .ab-tip-lines dd {
     font-size: 0.86rem;
   }
+  .ab-tip-note {
+    font-size: 0.95rem;
+  }
   .ab-tip-read-value {
     font-size: 0.92rem;
   }
@@ -1101,6 +1142,9 @@ onUnmounted(() => {
   .ab-tip-lines dt,
   .ab-tip-lines dd {
     font-size: 0.98rem;
+  }
+  .ab-tip-note {
+    font-size: 1.08rem;
   }
   .ab-tip-read-value {
     font-size: 1.05rem;
