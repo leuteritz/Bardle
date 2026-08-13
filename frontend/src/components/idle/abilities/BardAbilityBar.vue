@@ -832,7 +832,11 @@ onUnmounted(() => {
      die er überspannt, und der Klartextsatz bekommt sie gleich mit. */
   width: 348px;
   margin-bottom: 14px;
-  padding: 10px 12px 11px;
+  /* Oben kein Polster: der Kopf ist eine randbündige Bande in der Leitfarbe und
+     bringt sein eigenes mit. `overflow: hidden` wäre der bequeme Weg, die Bande
+     am Kastenradius zu beschneiden — er schnitte den Zeiger unten (::after) ab.
+     Der Kopf rundet deshalb selbst: 4px Kastenradius minus 2px Rahmen = 2px. */
+  padding: 0 12px 11px;
   background: #16140e;
   border: 2px solid #5c3310;
   border-radius: 4px;
@@ -856,18 +860,30 @@ onUnmounted(() => {
   border-top: 7px solid #5c3310;
 }
 
+/* Die Linie oben, im Bogen der Goldlinie des Spiels — nur in der Leitfarbe der
+   Fähigkeit statt in Gold. Sie liegt ÜBER der Kopf-Bande, nicht neben ihr: der
+   Kasten fängt damit mit der Farbe an, bevor das erste Wort steht. */
 .ab-tip::before {
   content: '';
   position: absolute;
   top: 0;
   right: 0;
   left: 0;
+  z-index: 1;
   height: 3px;
-  background: var(--ab-color, #e8c040);
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--ab-color, #e8c040) 65%, transparent) 16%,
+    var(--ab-color, #e8c040) 50%,
+    color-mix(in srgb, var(--ab-color, #e8c040) 65%, transparent) 84%,
+    transparent
+  );
 }
 
 /* Gesperrt trägt der Kasten die Leitfarbe noch nicht — sie gehört zu einer
-   Fähigkeit, die der Spieler wirken kann. */
+   Fähigkeit, die der Spieler wirken kann. Flach, nicht als Verlauf: sonst
+   gewänne die Regel darüber. */
 .ab-tip--locked::before {
   background: #5c3310;
 }
@@ -876,23 +892,38 @@ onUnmounted(() => {
    Taste, Name, Rang in einer Zeile. Die Keycap ist dieselbe wie in der
    Meldung des letzten Wirkens — sie bindet den Kasten an die Kachel, über
    der er gerade steht. */
+/* Der Kopf ist eine eigene Fläche in der Leitfarbe — dasselbe Mittel, mit dem
+   jedes Modal des Spiels seinen Kopfstreifen vom Inhalt trennt, nur eben in der
+   Farbe der Fähigkeit statt im Holzton. Er ist der Grund, weshalb sich fünf
+   Kästen aus dem Augenwinkel unterscheiden lassen; alles Weitere darunter ist
+   Bestätigung. Der negative Seitenmargin hebt das Polster des Kastens auf, damit
+   die Bande wirklich bis an beide Rahmen läuft. */
 .ab-tip-head {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  margin: 0 -12px;
+  padding: 10px 12px 8px;
+  background: color-mix(in srgb, var(--ab-color, #e8c040) 12%, #1a1610);
+  border-bottom: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 32%, transparent);
+  border-radius: 2px 2px 0 0;
 }
 
+/* Gefüllt statt umrandet: die Keycap ist im getönten Kopf der eine Fleck VOLLER
+   Leitfarbe, mit dunklem Text darauf. Alle fünf Leitfarben sind hell genug, dass
+   das trägt — und die Kachel darunter zeigt dieselbe Taste, nur andersherum. */
 .ab-tip-key {
   flex-shrink: 0;
   align-self: center;
   min-width: 1.45em;
   padding: 1px 4px 2px;
-  border: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 55%, transparent);
+  background: var(--ab-color, #e8c040);
+  border: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 70%, #000);
   border-radius: 3px;
   font-size: 0.78rem;
   font-weight: 900;
   line-height: 1;
-  color: var(--ab-color, #e8c040);
+  color: #12100a;
   text-align: center;
 }
 
@@ -920,7 +951,7 @@ onUnmounted(() => {
   gap: 6px;
   padding: 2px 6px 3px;
   background: #12100a;
-  border: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 55%, transparent);
   border-radius: 3px;
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
@@ -940,12 +971,22 @@ onUnmounted(() => {
   color: var(--ab-color, #e8c040);
 }
 
-/* Die Leitfarbe gehört einer Fähigkeit, die man wirken kann. */
+/* Die Leitfarbe gehört einer Fähigkeit, die man wirken kann — gesperrt fällt
+   JEDE der neuen Farbflächen auf ihren neutralen Ton zurück. */
 .ab-tip--locked .ab-tip-name,
 .ab-tip--locked .ab-tip-key,
 .ab-tip--locked .ab-tip-badge-level {
   color: #a08a5c;
   border-color: #4a2a0e;
+}
+
+.ab-tip--locked .ab-tip-key {
+  background: #2a2318;
+}
+
+.ab-tip--locked .ab-tip-head {
+  background: #1a1610;
+  border-bottom-color: #2e2416;
 }
 
 .ab-tip--locked .ab-tip-badge {
@@ -964,16 +1005,19 @@ onUnmounted(() => {
   gap: 12px;
   margin: 9px 0 9px;
   padding: 7px 10px 8px;
-  background: #12100a;
+  background: color-mix(in srgb, var(--ab-color, #e8c040) 9%, #12100a);
   border-left: 3px solid var(--ab-color, #e8c040);
   border-radius: 0 3px 3px 0;
 }
 
+/* Der Wert trägt die Leitfarbe selbst — er ist die Antwort auf „was bringt der
+   Druck?", und im Kasten die einzige Zahl, die diesen Rang hat. Die Zeilen
+   darunter bleiben Creme: sie werden verglichen, nicht angesehen. */
 .ab-tip-lead-value {
   font-size: 1.15rem;
   font-weight: 900;
   line-height: 1.05;
-  color: #f6efd8;
+  color: var(--ab-color, #e8c040);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1004,6 +1048,7 @@ onUnmounted(() => {
 }
 
 .ab-tip--locked .ab-tip-lead {
+  background: #12100a;
   border-left-color: #5c3310;
 }
 .ab-tip--locked .ab-tip-lead-value {
@@ -1050,7 +1095,7 @@ onUnmounted(() => {
    Die Farbe bleibt trotzdem unter der der Werte: er erklärt sie, ersetzt sie
    nicht. */
 .ab-tip-note {
-  margin: 7px 0 0;
+  margin: 9px 0 0;
   font-size: 0.86rem;
   font-weight: 400;
   line-height: 1.4;
@@ -1076,7 +1121,11 @@ onUnmounted(() => {
   gap: 12px;
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px solid #2e2416;
+  border-top: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 20%, #2e2416);
+}
+
+.ab-tip--locked .ab-tip-foot {
+  border-top-color: #2e2416;
 }
 
 .ab-tip-read {
@@ -1143,9 +1192,19 @@ onUnmounted(() => {
   }
   .ab-tip {
     width: 410px;
+    padding: 0 14px 13px;
+  }
+  /* Der negative Margin muss dem Seitenpolster des Kastens EXAKT folgen, sonst
+     bleibt die Bande schmaler als er. */
+  .ab-tip-head {
+    margin: 0 -14px;
+    padding: 12px 14px 9px;
   }
   .ab-tip-name {
     font-size: 1.2rem;
+  }
+  .ab-tip-key {
+    font-size: 0.88rem;
   }
   .ab-tip-badge {
     font-size: 0.88rem;
@@ -1176,9 +1235,17 @@ onUnmounted(() => {
   }
   .ab-tip {
     width: 480px;
+    padding: 0 16px 15px;
+  }
+  .ab-tip-head {
+    margin: 0 -16px;
+    padding: 14px 16px 11px;
   }
   .ab-tip-name {
     font-size: 1.45rem;
+  }
+  .ab-tip-key {
+    font-size: 1rem;
   }
   .ab-tip-badge {
     font-size: 1rem;
