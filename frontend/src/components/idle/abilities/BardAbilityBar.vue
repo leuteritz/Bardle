@@ -78,6 +78,7 @@
       <BardPassiveTile
         :meep-fill="meepFill"
         :clicks-to-meep="clicksToMeep"
+        :step-key="meepStepKey"
         :gain-amount="meepGainAmount"
         :gain-key="meepGainKey"
         @hover="(on: boolean) => (hoveredId = on ? 'passive' : null)"
@@ -156,8 +157,25 @@ const KEYBIND_BY_ABILITY: Record<BardAbilityId, KeybindId> = {
 /** Offene Chimes bis zum nächsten anstehenden Meep. */
 const meepRemaining = computed(() => gameStore.chimesToNextMeep)
 
-/** 0..1 — Füllstand des äußeren Rings. */
+/**
+ * 0..1 — Füllstand des Rings.
+ *
+ * Er misst dieselbe Strecke wie `clicksToMeep` darunter, und zwar in denselben
+ * Einheiten: `pendingMeepFill` rechnet in Chimes INNERHALB des laufenden
+ * Meep-Schritts, ist also linear in Klicks. Steht die Zahl bei der Hälfte
+ * ihres Startwerts, steht der Ring auf 50 %.
+ */
 const meepFill = computed(() => gameStore.pendingMeepFill)
+
+/**
+ * Der Index des laufenden Meep-Schritts. Er ändert sich genau dann, wenn
+ * `meepFill` von ~1 auf ~0 fällt — die Kachel schaltet in diesem Frame ihren
+ * Nachlauf ab, damit der Ring nicht rückwärts um den Kreis fährt.
+ *
+ * `meepsDevoured` zählt mit: gefressene Meeps sind gesammelt und bezahlt, ihr
+ * Schritt war ein Schritt. Dieselbe Summe wie in `chimesToNextMeep`.
+ */
+const meepStepKey = computed(() => gameStore.pendingMeeps + gameStore.meepsDevoured)
 
 /**
  * Klicks, die noch fehlen — die Zahl unter der Figur.

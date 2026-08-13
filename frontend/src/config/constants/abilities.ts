@@ -31,6 +31,34 @@ export const RESONANCE_CDR_PER_STACK = 0.0025
  */
 export const RESONANCE_CLICK_REFUND_MS = 150
 
+/**
+ * Der Fortschrittsring der Passiv-Kachel — Maße im 100×100-Koordinatenraum
+ * ihres SVG, nicht in Pixeln. Die Kachel skaliert über `--ab-passive-size`
+ * (72 / 88 / 108 px), der Ring wächst über den `viewBox` von selbst mit.
+ *
+ * `RADIUS` zieht mit der halben Strichstärke nach INNEN, damit die äußere Kante
+ * bei 48,5 bleibt: die Kachel behält ihren Umriss, dünner wird die Linie nach
+ * innen. Zur Strichstärke 3 gehört damit 48,5 − 1,5 = 47.
+ *
+ * Die Ticks sind Anteile, keine Winkel — der Ring beginnt oben und läuft im
+ * Uhrzeigersinn, die Umrechnung macht die Komponente.
+ */
+export const ABILITY_PASSIVE_RING = {
+  RADIUS: 47,
+  STROKE: 3,
+  /** Der Punkt am Ende der Füllung; etwas dicker als die Linie, damit er trägt. */
+  HEAD_RADIUS: 3.4,
+  /** Viertel-Orientierung. Bei 0 sitzt schon der Ringanfang. */
+  TICK_FRACTIONS: [0.25, 0.5, 0.75],
+  /** Halbe Länge einer Tick-Marke, radial gemessen. */
+  TICK_HALF_LENGTH: 2.6,
+  /**
+   * Nachlauf von Füllung und Kopfpunkt. Lang genug, dass ein einzelner Klick
+   * sichtbar wandert, kurz genug, dass schnelles Klicken nicht nachhinkt.
+   */
+  TRANSITION_MS: 260,
+} as const
+
 // ── Ränge ───────────────────────────────────────────────────────────────────
 
 /** Bard-Level zwischen zwei Rängen einer bereits freigeschalteten Fähigkeit. */

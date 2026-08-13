@@ -1283,12 +1283,9 @@ export const useGameStore = defineStore('game', {
     },
 
     /**
-     * Ungerundete GESAMMELTE Ausbeute — vor dem Abzug des Voids. Eine Quelle
-     * für Zahl, Füllstand und Restweg.
-     *
-     * Der Ring der Passiv-Kachel hängt an ihrem Nachkommaanteil und füllt sich
-     * deshalb auch unmittelbar nach einem Einschlag weiter: gefressen wird die
-     * Ernte, nicht der Weg dorthin.
+     * Ungerundete GESAMMELTE Ausbeute — vor dem Abzug des Voids. Die Quelle für
+     * die ganze Zahl der Ausbeute; Füllstand und Restweg rechnen dagegen in
+     * Chimes (siehe `pendingMeepFill`).
      */
     exactPendingMeeps(): number {
       return MEEP_RUN_FACTOR * Math.sqrt(this.chimesForNextUniverse / this.meepChimeRequirement)
@@ -1296,12 +1293,35 @@ export const useGameStore = defineStore('game', {
 
     /**
      * Fortschritt zum nächsten anstehenden Meep, 0..1 — der Ring der
-     * Passiv-Kachel. Er misst den WEG und nicht den Bestand, deshalb rührt ein
-     * Void-Frass ihn nicht an: gefressen wird die Ernte, nicht die Strecke.
+     * Passiv-Kachel und der Prozentwert im Header-Tooltip.
+     *
+     * Gerechnet wird in CHIMES innerhalb des laufenden Schritts, nicht am
+     * Nachkommaanteil von `exactPendingMeeps`. Der Unterschied ist der ganze
+     * Punkt: die Wurzel ist innerhalb eines Schritts konkav, der Ring lief
+     * deshalb vorn zu schnell und hinten zu langsam. Beim ERSTEN Meep stand er
+     * bei der Hälfte der Strecke auf 70,7 % — und daneben die Zahl, die linear
+     * in Klicks herunterzählt. Zwei Anzeigen derselben Strecke, zwei Kurven.
+     *
+     * Index und Formel sind bewusst dieselben wie in `chimesToNextMeep`: nur
+     * so stimmen Ring und Zahl zwingend überein. `lower` ist die Chime-Marke,
+     * bei der der Schritt begann, `span` seine Länge — und weil
+     * `clicksToMeep = ⌈(upper − c) / Klickwert⌉` ist und die Klickzahl zu
+     * Schrittbeginn `span / Klickwert`, kürzt sich der Klickwert weg. Steigt
+     * er mitten im Schritt (Upgrade, MVP-Buff), steht der Ring still und nur
+     * die Zahl springt herunter — der zurückgelegte Weg ist ja real.
+     *
+     * Wie zuvor misst er den WEG und nicht den Bestand, deshalb rührt ein
+     * Void-Frass ihn nicht an: `meepsDevoured` zählt im Index mit, gefressen
+     * wird die Ernte, nicht die Strecke.
      */
     pendingMeepFill(): number {
-      const exact = this.exactPendingMeeps
-      return Math.min(1, Math.max(0, exact - Math.floor(exact)))
+      const next = this.pendingMeeps + this.meepsDevoured + 1
+      const req = this.meepChimeRequirement
+      const upper = Math.pow(next / MEEP_RUN_FACTOR, 2) * req
+      const lower = Math.pow((next - 1) / MEEP_RUN_FACTOR, 2) * req
+      const span = upper - lower
+      if (span <= 0) return 1
+      return Math.min(1, Math.max(0, (this.chimesForNextUniverse - lower) / span))
     },
 
     /**

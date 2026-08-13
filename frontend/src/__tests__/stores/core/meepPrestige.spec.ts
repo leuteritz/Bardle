@@ -117,6 +117,32 @@ describe('Meeps als Prestige-Währung', () => {
     expect(game.pendingMeepFill).toBeLessThan(0.01)
   })
 
+  it('der Ring läuft LINEAR zur Klickzahl — halbe Strecke, halber Ring', () => {
+    // Der Ring der Passiv-Kachel und die Klickzahl darunter zeigen dieselbe
+    // Strecke. Hing der Ring am Nachkommaanteil von `exactPendingMeeps`, liefen
+    // sie auf zwei Kurven auseinander: die Wurzel ist innerhalb eines Schritts
+    // konkav, beim ersten Meep stand der Ring bei 50 offenen Klicks von 100 auf
+    // 70,7 %. Diese Spec ist der Rückfallschutz.
+    const game = useGameStore()
+    game.chimesForNextUniverse = 50
+    expect(game.chimesToNextMeep).toBe(50)
+    expect(game.pendingMeepFill).toBeCloseTo(0.5, 5)
+  })
+
+  it('linear bleibt er in JEDEM Schritt, nicht nur im ersten', () => {
+    // Die Schritte werden mit k immer länger (k² × 100). Geprüft wird der
+    // Anteil INNERHALB des Schritts, nicht am Gesamtweg.
+    const game = useGameStore()
+    for (const k of [1, 3, 8]) {
+      const lower = (k - 1) * (k - 1) * 100
+      const upper = k * k * 100
+      for (const share of [0.25, 0.5, 0.75]) {
+        game.chimesForNextUniverse = lower + (upper - lower) * share
+        expect(game.pendingMeepFill).toBeCloseTo(share, 5)
+      }
+    }
+  })
+
   it('der Aufbruch zahlt genau die angezeigte Menge — die Ratsche greift erst danach', () => {
     // Die Regression, an der die Reihenfolge in `executePrestigeReset` hängt:
     // `finishUniverseRun()` hebt den Anker, und die Anforderung zieht in
