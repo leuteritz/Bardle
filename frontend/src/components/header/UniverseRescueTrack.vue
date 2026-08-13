@@ -15,12 +15,8 @@
  */
 import { ref, computed } from 'vue'
 import { useGameStore } from '@/stores/core/gameStore'
-import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
-import {
-  UNIVERSE_BAR_TICK_PERCENTS,
-  UNIVERSE_BAR_FILL_INSET_PX,
-  MEEP_ART_IMAGE,
-} from '@/config/constants'
+import { formatNumber } from '@/config/ui/numberFormat'
+import { UNIVERSE_BAR_TICK_PERCENTS, UNIVERSE_BAR_FILL_INSET_PX } from '@/config/constants'
 
 const props = defineProps<{
   /** Hover-Zustand der umgebenden Zeile — hebt Fassung und Kontur hervor. */
@@ -45,26 +41,12 @@ const barText = computed(() =>
     : `${progress.value.toFixed(1)}%`,
 )
 
-/**
- * Was der Aufbruch einbringt — die Meep-Ausbeute des laufenden Durchlaufs.
- *
- * Sie steht hier und nicht an der Meep-Kachel darüber, obwohl die Kachel die
- * näherliegende Stelle wäre: dort ist kein Platz (drei gleich breite Felder,
- * gemessen überlappte eine Marke ab vierstelligen Beständen die Icon-Zeile),
- * und inhaltlich gehört sie ohnehin an DIESEN Balken — er misst genau die
- * Chimes des Durchlaufs, aus denen sich die Ausbeute rechnet. Die Kachel
- * darüber zeigt den Bestand, diese Zeile den Zuwachs.
- */
-const pendingMeeps = computed(() => gameStore.pendingMeeps)
+/* Der Balken trägt keine Meep-Zahl mehr: Ausbeute und Fraß stehen an der
+   Meep-Kachel darüber, in Klammern hinter dem Bestand (UniverseStatsRow).
+   Dort gehören sie hin — der Spieler liest, was er HAT und was er BEKOMMT,
+   in einem Blick, statt die zweite Zahl eine Zeile tiefer zu suchen. */
 
-/**
- * Was der Void aus derselben Ernte geholt hat. Steht NEBEN dem Ertrag und nicht
- * an seiner Stelle: der Spieler soll beides sehen — was er mitnimmt und was ihm
- * genommen wurde. Der Ertrag daneben ist bereits netto.
- */
-const meepsDevoured = computed(() => gameStore.meepsDevoured)
-
-/* Die Zahl steht mittig im Balken und wird beim Füllen von der Goldkante
+/* Die Prozentzahl steht mittig im Balken und wird beim Füllen von der Goldkante
    überlaufen — eine einzelne Textfarbe ist dann zwangsläufig irgendwann
    falsch. Statt einer Umschaltschwelle liegen zwei identisch positionierte
    Ebenen übereinander: hell für den dunklen Track, dunkel für den Füller.
@@ -128,19 +110,6 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
         <span v-ink-center.x.y class="prestige-label">Prestige</span>
       </button>
     </Transition>
-
-    <!-- Die Ausbeute liegt über dem gemeinsamen Feld, nicht im Balken: so
-         steht sie an derselben Stelle, wenn der Prestige-Knopf den Balken
-         ablöst — und genau dann ist sie am wichtigsten. Rechts außen, weil
-         die Füllkante sie dort erst kurz vor 100 % erreicht und Prozentwert
-         wie Knopfbeschriftung ihre Mitte behalten. -->
-    <div v-if="pendingMeeps > 0 || meepsDevoured > 0" class="rescue-yield">
-      <img :src="MEEP_ART_IMAGE" class="rescue-yield-img" alt="" aria-hidden="true" />
-      <span>+{{ formatNumberCompact(pendingMeeps) }}</span>
-      <span v-if="meepsDevoured > 0" class="rescue-yield-loss"
-        >−{{ formatNumberCompact(meepsDevoured) }}</span
-      >
-    </div>
   </div>
 </template>
 
@@ -273,40 +242,6 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
 /* Die Prozentzahl steht auf beiden Achsen mittig im Balken. Kein Glow
    hinter der Schrift — auf dem hellen Goldfüller trägt allein der harte
    dunkle Schlagschatten die Lesbarkeit. */
-/* Die Meep-Ausbeute am rechten Rand des Feldes — über Füllung, Fassung und
-   Knopf, damit sie beim Wachsen des Balkens nicht mitwandert und den
-   Zustandswechsel unverändert übersteht. */
-.rescue-yield {
-  position: absolute;
-  right: calc(var(--rescue-track-h) * 0.34);
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  z-index: 4;
-  font-size: max(9px, min(calc(var(--rescue-track-h) * 0.46), 13px));
-  font-weight: 800;
-  line-height: 1;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-/* Die einzige Zahl an diesem Balken, die nach unten zeigt — deshalb die
-   Verlustfarbe und kleiner als der Ertrag, den sie kommentiert. */
-.rescue-yield-loss {
-  font-size: 0.82em;
-  color: #cc6050;
-}
-
-.rescue-yield-img {
-  width: max(10px, min(calc(var(--rescue-track-h) * 0.55), 16px));
-  height: max(10px, min(calc(var(--rescue-track-h) * 0.55), 16px));
-  object-fit: contain;
-}
-
 .rpg-bar-text {
   position: absolute;
   inset: 0;

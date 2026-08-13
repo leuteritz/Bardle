@@ -14,7 +14,7 @@
  * je ihr eigenes. Die früheren `title`-Attribute sind damit verschwunden: ein
  * nativer Tooltip legte sich sonst über das Panel.
  */
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
@@ -30,6 +30,7 @@ import {
   MEEP_COUNTUP_STEPS,
   MEEP_COUNTUP_INTERVAL_MS,
   MEEP_RISING_HOLD_MS,
+  MEEP_GAIN_PULSE_MS,
   MEEP_ART_IMAGE,
 } from '@/config/constants'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
@@ -53,14 +54,42 @@ const universeRoman = computed(() => toRoman(gameStore.currentUniverse))
 
 /* ── Meep-Zähler ─────────────────────────────────────────────────────── */
 
-/* Die Kachel zeigt allein den BESTAND. Was der nächste Aufbruch einbringt,
-   steht eine Zeile tiefer am Fortschrittsbalken — er misst ohnehin genau die
-   Chimes, aus denen sich die Ausbeute rechnet. In dieser Kachel wäre kein
-   Platz dafür: die drei Felder sind per Konstruktion gleich breit (nur so
-   steht Galaxy mittig über dem Balken), und eine Marke daneben überlappte
-   gemessen ab vierstelligen Beständen die Icon-Zeile. */
+/* Die Kachel trägt BEIDE Zahlen: den Bestand groß, und in Klammern dahinter,
+   was der nächste Aufbruch einbringt — der Ertrag und, was der Void aus
+   derselben Ernte geholt hat. Früher stand beides am Fortschrittsbalken
+   darunter, weil hier kein Platz war; der ist inzwischen beschafft (siehe die
+   Anteile an .uni-tile--universe) und die Zeile misst nach, was sie trägt
+   (measureFit). Der Balken zeigt jetzt keine Meep-Zahl mehr. */
 const displayMeeps = ref(gameStore.meeps)
 const isIncreasing = ref(false)
+
+/** Was der Aufbruch einbringt — bereits netto, der Fraß ist abgezogen. */
+const pendingMeeps = computed(() => gameStore.pendingMeeps)
+
+/** Was der Void aus derselben Ernte geholt hat. Steht NEBEN dem Ertrag und
+    nicht an seiner Stelle: der Spieler soll beides sehen. */
+const meepsDevoured = computed(() => gameStore.meepsDevoured)
+
+/** Ohne Ertrag und ohne Fraß entfällt die Klammer ganz — direkt nach einem
+    Aufbruch steht die Kachel wieder allein für den Bestand. */
+const showGain = computed(() => pendingMeeps.value > 0 || meepsDevoured.value > 0)
+
+/* Quittung für einen ganzen dazugewonnenen Meep. pendingMeeps zählt in ganzen
+   Zahlen (Math.floor im Store), der Puls ist also ein Ereignis und kein
+   Dauerläufer — animiert wird allein transform. */
+const gainPulse = ref(false)
+let gainPulseTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(pendingMeeps, async (newVal, oldVal) => {
+  if (newVal <= oldVal) return
+  if (gainPulseTimer) clearTimeout(gainPulseTimer)
+  // Erst aus, dann wieder an: eine bereits gesetzte Klasse startet die
+  // Animation sonst nicht erneut.
+  gainPulse.value = false
+  await nextTick()
+  gainPulse.value = true
+  gainPulseTimer = setTimeout(() => (gainPulse.value = false), MEEP_GAIN_PULSE_MS)
+})
 
 // Ein einziger laufender Tween: ohne das Aufräumen stapeln sich bei mehreren
 // Meep-Gewinnen kurz hintereinander die Intervalle und zählen gegeneinander.
@@ -89,78 +118,132 @@ watch(
   },
 )
 
-/* ── Ausgeschriebene oder gekürzte Bezeichnungen ─────────────────────── */
+/* ── Sparleiter: was die Zeile trägt, wird gemessen ──────────────────── */
 const statsEl = ref<HTMLElement | null>(null)
 const showFullLabels = ref(true)
+const compactValues = ref(false)
+const showLossPart = ref(true)
+
+/** Je Kachel die breitere ihrer beiden Zeilen: die Bezeichnung, oder
+    Icon + Innenabstand + Wert (+ Innenabstand + Klammer, wo es eine gibt).
+    Wert und Klammer zählen über scrollWidth, also ungekürzt, auch wenn sie
+    im Layout gerade ellipsieren. */
+function tileNeed(tile: HTMLElement): number {
+  const row = tile.querySelector<HTMLElement>('.tile-row')
+  const icon = tile.querySelector<HTMLElement>('.tile-icon')
+  const label = tile.querySelector<HTMLElement>('.tile-label')
+  const value = tile.querySelector<HTMLElement>('.tile-value')
+  if (!row || !icon || !label || !value) return 0
+  // getComputedStyle statt getBoundingClientRect: das Meep-Icon ist per
+  // scale vergrößert, und die Rect-Breite würde diese Skalierung mitzählen —
+  // fürs Layout gilt die unskalierte Box.
+  const gap = parseFloat(getComputedStyle(row).columnGap) || 0
+  let rowNeed = (parseFloat(getComputedStyle(icon).width) || 0) + gap + value.scrollWidth
+  const gain = tile.querySelector<HTMLElement>('.meep-gain')
+  if (gain) rowNeed += gap + gain.scrollWidth
+  return Math.max(label.scrollWidth, rowNeed)
+}
+
+function fitsAll(): boolean {
+  const root = statsEl.value
+  if (!root || !root.clientWidth) return true
+  return Array.from(root.querySelectorAll<HTMLElement>('.uni-tile')).every(
+    (tile) => tileNeed(tile) <= tile.clientWidth,
+  )
+}
+
+/* Geordnete Sparmaßnahmen — erst Größe opfern, dann Information. Reicht der
+   Platz auch nur in EINER Kachel nicht, greift die nächste Stufe für alle
+   drei: eine Zeile aus verschieden großen Zahlen wäre schlechter zu lesen
+   als eine, die durchgehend eine Stufe kleiner steht. */
+const FIT_LADDER: Array<() => void> = [
+  () => (showFullLabels.value = false),
+  () => (compactValues.value = true),
+  () => (showLossPart.value = false),
+]
+
+let measuring = false
+let remeasure = false
 
 /**
- * Prüft, ob JEDE Kachel die ausgeschriebene Bezeichnung trägt — reicht der
- * Platz auch nur in einer nicht, gehen alle drei auf die Kurzform, damit
- * die Zeile einheitlich bleibt.
+ * Fährt die Leiter ab, bis die Zeile passt, und beginnt dabei JEDES Mal bei
+ * der reichsten Darstellung — nur so kommt sie zurück, sobald wieder Platz
+ * ist (etwa nach einem Aufbruch, wenn der Bestand kurz und die Klammer leer
+ * ist).
  *
- * Gemessen wird gegen die Kachelbreite, und die steht seit den festen
- * flex-Anteilen unabhängig vom Inhalt fest. Genau das macht die Prüfung
- * schwingungsfrei: sonst schafften kurze Bezeichnungen Platz, der Platz
- * erlaubte lange, und die nähmen ihn wieder weg. Die unsichtbaren Sonden
- * (.label-probe) tragen die langen Wörter unabhängig vom Anzeigezustand.
+ * Zwischen den Stufen liegt ein nextTick: eine Sparmaßnahme wirkt erst,
+ * wenn Vue sie ins DOM geschrieben hat, und gemessen wird das DOM. Das ist
+ * bezahlbar, weil die Funktion nur bei Größen- und Wertwechseln läuft, nie
+ * pro Frame.
  *
- * Je Kachel zählt die breitere ihrer beiden Zeilen: die Bezeichnung, oder
- * Icon + Innenabstand + Wert. Der Wert zählt über scrollWidth, also
- * ungekürzt, auch wenn er im Layout gerade ellipsiert.
+ * Schwingungsfrei bleibt sie, weil gegen die KACHELBREITE gemessen wird und
+ * die durch die festen flex-Anteile unabhängig vom Inhalt feststeht — eine
+ * Sparmaßnahme schafft also keinen Platz, den eine frühere Stufe wieder
+ * beanspruchen könnte.
  */
-function measureFit(): void {
-  const root = statsEl.value
-  if (!root || !root.clientWidth) return
-  for (const tile of Array.from(root.querySelectorAll<HTMLElement>('.uni-tile'))) {
-    const row = tile.querySelector<HTMLElement>('.tile-row')
-    const icon = tile.querySelector<HTMLElement>('.tile-icon')
-    const probe = tile.querySelector<HTMLElement>('.label-probe')
-    const value = tile.querySelector<HTMLElement>('.tile-value')
-    if (!row || !icon || !probe || !value) return
-    // getComputedStyle statt getBoundingClientRect: das Meep-Icon ist per
-    // scale vergrößert, und die Rect-Breite würde diese Skalierung
-    // mitzählen — fürs Layout gilt die unskalierte Box.
-    const need = Math.max(
-      probe.getBoundingClientRect().width,
-      (parseFloat(getComputedStyle(icon).width) || 0) +
-        (parseFloat(getComputedStyle(row).columnGap) || 0) +
-        value.scrollWidth,
-    )
-    if (need > tile.clientWidth) {
-      showFullLabels.value = false
-      return
-    }
+async function measureFit(): Promise<void> {
+  // Läuft schon einer, wird sein Ergebnis durch die neue Anforderung
+  // hinfällig — statt parallel zu messen, hängt er eine Runde an.
+  if (measuring) {
+    remeasure = true
+    return
   }
-  showFullLabels.value = true
+  measuring = true
+  try {
+    do {
+      remeasure = false
+      showFullLabels.value = true
+      compactValues.value = false
+      showLossPart.value = true
+      for (let step = 0; step <= FIT_LADDER.length; step++) {
+        await nextTick()
+        if (step === FIT_LADDER.length || fitsAll()) break
+        FIT_LADDER[step]()
+      }
+    } while (remeasure)
+  } finally {
+    measuring = false
+  }
 }
 
 let resizeObserver: ResizeObserver | null = null
 
 onMounted(() => {
-  measureFit()
-  resizeObserver = new ResizeObserver(measureFit)
+  void measureFit()
+  resizeObserver = new ResizeObserver(() => void measureFit())
   if (statsEl.value) resizeObserver.observe(statsEl.value)
   // Vor dem Laden von MedievalSharp misst der Fallback-Font eine andere Breite.
-  document.fonts?.ready.then(measureFit)
+  document.fonts?.ready.then(() => void measureFit())
 })
 
 // Ein längerer Wert kann die Zeile kippen — Galaxie- und Meep-Zahl wachsen
-// im Spielverlauf, die römische Ziffer beim Prestige. flush: 'post' ist
-// zwingend: ein Watcher läuft sonst VOR dem DOM-Update und misst noch den
-// vorigen Wert, wodurch die Umschaltung eine Änderung hinterherhinkt.
-watch([universeRoman, () => galaxyStore.currentGalaxy, displayMeeps], measureFit, {
-  flush: 'post',
-})
+// im Spielverlauf, die römische Ziffer beim Prestige, und die Klammer mit
+// jedem Chime des laufenden Durchlaufs. flush: 'post' ist zwingend: ein
+// Watcher läuft sonst VOR dem DOM-Update und misst noch den vorigen Wert,
+// wodurch die Umschaltung eine Änderung hinterherhinkt.
+watch(
+  [
+    universeRoman,
+    () => galaxyStore.currentGalaxy,
+    displayMeeps,
+    pendingMeeps,
+    meepsDevoured,
+    showGain,
+  ],
+  () => void measureFit(),
+  { flush: 'post' },
+)
 
 onUnmounted(() => {
   resizeObserver?.disconnect()
   if (countUpTimer) clearInterval(countUpTimer)
   if (risingTimer) clearTimeout(risingTimer)
+  if (gainPulseTimer) clearTimeout(gainPulseTimer)
 })
 </script>
 
 <template>
-  <div ref="statsEl" class="uni-stats">
+  <div ref="statsEl" class="uni-stats" :class="{ 'uni-stats--compact': compactValues }">
     <!-- Die Kachel benennt dieselbe Sache wie der Balken darunter — also
          dasselbe Panel, statt eines zweiten mit denselben Zahlen. -->
     <RpgBadgeTooltip
@@ -170,7 +253,6 @@ onUnmounted(() => {
     >
       <div class="uni-tile uni-tile--universe">
         <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Universe' : 'Uni' }}</span>
-        <span class="tile-label label-probe" aria-hidden="true">Universe</span>
         <div class="tile-row">
           <Icon
             :icon="HEADER_UNIVERSE_ICON"
@@ -194,7 +276,6 @@ onUnmounted(() => {
     >
       <div class="uni-tile uni-tile--galaxy">
         <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Galaxy' : 'Gal' }}</span>
-        <span class="tile-label label-probe" aria-hidden="true">Galaxy</span>
         <div class="tile-row">
           <img src="/img/galaxy-far-128.png" class="tile-icon gx-icon" alt="" aria-hidden="true" />
           <span v-ink-center.x.y class="tile-value gx-value">{{ galaxyStore.currentGalaxy }}</span>
@@ -217,20 +298,33 @@ onUnmounted(() => {
         @mouseleave="emit('meep-hover', false)"
       >
         <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Meeps' : 'Meep' }}</span>
-        <span class="tile-label label-probe" aria-hidden="true">Meeps</span>
         <div class="tile-row">
-          <img
-            :src="MEEP_ART_IMAGE"
-            class="tile-icon meep-icon"
-            alt=""
-            aria-hidden="true"
-          />
-          <!-- Kurzform (max. 4 Zeichen) wie in der Materialleiste: die drei
-               Kacheln sind gleich breit, und "999.9M" allein bräuchte davon so
-               viel, dass die Galaxy-Kachel nicht mehr mittig stehen könnte. -->
+          <img :src="MEEP_ART_IMAGE" class="tile-icon meep-icon" alt="" aria-hidden="true" />
+          <!-- Kurzform (max. 4 Zeichen) wie in der Materialleiste: "999.9M"
+               allein bräuchte so viel Breite, dass die Galaxy-Kachel nicht
+               mehr mittig stehen könnte. -->
           <span v-ink-center.x.y class="tile-value meep-value">{{
             formatNumberCompact(displayMeeps)
           }}</span>
+          <!-- Was der Aufbruch einbringt, in Klammern hinter dem Bestand:
+               Gold für den Ertrag, Rot für den Fraß. Die Klammern selbst
+               setzt die CSS-Regel, damit sie in der Sparstufe ohne Fraßzahl
+               die Verlustfarbe annehmen können, ohne die Ertragszahl mit
+               umzufärben. -->
+          <span
+            v-if="showGain"
+            class="meep-gain"
+            :class="{
+              'meep-gain--pulse': gainPulse,
+              'meep-gain--nibbled': !showLossPart && meepsDevoured > 0,
+            }"
+            :style="{ animationDuration: `${MEEP_GAIN_PULSE_MS}ms` }"
+          >
+            <span class="meep-gain-plus">+{{ formatNumberCompact(pendingMeeps) }}</span>
+            <span v-if="showLossPart && meepsDevoured > 0" class="meep-gain-loss"
+              >−{{ formatNumberCompact(meepsDevoured) }}</span
+            >
+          </span>
         </div>
       </div>
       <template #tip>
@@ -251,8 +345,16 @@ onUnmounted(() => {
    ================================================================ */
 .uni-stats {
   /* Einmal berechnet, zweimal gebraucht: als Schriftgröße des Werts und als
-     Bezug für den Tintenausgleich der Textspalte (siehe .tile-text). */
-  --stat-value-size: min(calc(var(--header-height) * 0.28), 24px);
+     Bezug für den Tintenausgleich der Textspalte (siehe .tile-text).
+
+     Cap 21px statt der früheren 24px: die Meep-Kachel trägt jetzt die Klammer
+     mit, und bei 24px stand der Normalfall ("142 (+12)") 4px über seinem Feld.
+     Ein Cap, der nur greift, SOBALD eine Klammer da ist, wäre schlechter — die
+     Zahl spränge dann bei jedem Aufbruch in der Größe. */
+  --stat-value-size: min(calc(var(--header-height) * 0.245), 21px);
+  /* Die Klammer — gut halb so groß wie der Bestand, den sie kommentiert. Die
+     Untergrenze ist kein Zierwert: darunter zerfallen die Ziffern auf Full HD. */
+  --stat-gain-size: max(9px, min(calc(var(--header-height) * 0.117), 10px));
   display: flex;
   align-items: center;
   /* Trennt die drei Felder; ihre Breiten stehen fest (siehe .uni-tile--*).
@@ -265,6 +367,14 @@ onUnmounted(() => {
   width: 100%;
   min-width: 0;
   flex-shrink: 0;
+}
+
+/* Stufe 2 der Sparleiter (siehe measureFit): eine Größenstufe tiefer, für
+   ALLE DREI Werte gemeinsam. Nur die Größe gibt hier nach — es geht keine
+   Zahl verloren. */
+.uni-stats--compact {
+  --stat-value-size: min(calc(var(--header-height) * 0.198), 17px);
+  --stat-gain-size: max(8px, min(calc(var(--header-height) * 0.099), 8.5px));
 }
 
 /* Zwei Zeilen: die Bezeichnung über Icon und Wert. Die Kachel wird dadurch
@@ -296,23 +406,30 @@ onUnmounted(() => {
   max-width: 100%;
 }
 
-/* Drei GLEICHE feste Anteile statt inhaltsbreiter Kacheln. flex-basis 0
-   macht die Aufteilung unabhängig davon, wie lang die Werte gerade sind:
-   wächst die Meep-Zahl von "1.2K" auf "12K", bleiben Universe und Galaxy
-   stehen — vorher rückte die ganze Zeile.
+/* Feste Anteile statt inhaltsbreiter Kacheln. flex-basis 0 macht die
+   Aufteilung unabhängig davon, wie lang die Werte gerade sind: wächst die
+   Meep-Zahl von "1.2K" auf "12K", bleiben Universe und Galaxy stehen —
+   vorher rückte die ganze Zeile.
 
-   Gleiche Anteile sind hier keine Kosmetik, sondern die Bedingung für die
-   mittige Galaxy-Kachel: bei drei gleich breiten Feldern W und zwei gleichen
-   Abständen g liegt die Mitte des mittleren bei 1,5W + g — und das ist per
-   Konstruktion exakt die halbe Blockbreite, also die Mitte des Balkens
-   darunter. Mit den früheren Anteilen 27/29/44 saß Galaxy bei 42,1 %.
+   Die Bedingung für die mittige Galaxy-Kachel ist SYMMETRIE der äußeren
+   Anteile, nicht Gleichheit aller drei: bei a : b : a liegt die Mitte des
+   mittleren Feldes immer in der Blockmitte — also über der Mitte des Balkens
+   darunter —, ganz gleich wie groß b ist. (Hier stand früher 1 : 1 : 1; das
+   ist ein Sonderfall davon, und er verschenkte Platz. Mit den noch früheren
+   Anteilen 27/29/44 saß Galaxy dagegen bei 42,1 %.)
 
-   Möglich wurde das erst durch die Kurzform der Meep-Zahl: ungekürzt brauchte
-   sie 119px und damit mehr als ein Drittel des Blocks. */
+   Genutzt wird das für die Klammer an der Meep-Kachel: Universe zeigt nur
+   eine römische Ziffer und Galaxy ein bis zwei Stellen, beide hatten Luft.
+   Galaxy darf dabei 59px nicht unterschreiten — Icon 25,7 + Abstand 3,1 +
+   zwei Ziffern 30,5 auf Full HD; das ist die Grenze für b. */
 .uni-tile--universe,
-.uni-tile--galaxy,
 .uni-tile--meep {
-  flex: 1 1 0;
+  flex: 1.17 1 0;
+  min-width: 0;
+}
+
+.uni-tile--galaxy {
+  flex: 0.66 1 0;
   min-width: 0;
 }
 
@@ -345,20 +462,7 @@ onUnmounted(() => {
   color: #9b8461;
 }
 
-/* Unsichtbare Sonde: trägt immer die ausgeschriebene Bezeichnung und gibt
-   measureFit() deren Breite, ohne das Layout zu verändern. */
-.label-probe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .tile-value {
-  /* Cap 24px aus der Messung: bei ~290px Blockbreite passt "999.9M" in die
-     Meep-Kachel und "VIII" in die Universe-Kachel gerade noch ungekürzt —
-     eine Stufe größer und beide ellipsieren. */
   font-size: var(--stat-value-size);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
@@ -445,6 +549,82 @@ onUnmounted(() => {
   transform: scale(calc(var(--meep-scale) * 1.04)) translateZ(0);
 }
 
+/* ── Die Klammer: was der Aufbruch einbringt ───────────────────────── */
+/* Gold gegen das Orange des Bestands — zwei Farben für zwei Bedeutungen:
+   was DA ist, und was KOMMT. Das Gold ist dasselbe, das die Zahl am
+   Fortschrittsbalken trug, bevor sie hierher gezogen ist.
+
+   flex-shrink: 0, damit im Engpass der Bestand ellipsiert und nicht die
+   Klammer zerfällt — der Bestand ist mit vier Zeichen ohnehin gekürzt, die
+   Klammer wäre ohne ihre Ziffern sinnlos. */
+.meep-gain {
+  display: inline-block;
+  flex-shrink: 0;
+  /* Etwas mehr Luft, als der Spaltenabstand der Zeile hergibt — der ist für
+     Icon und Bestand bemessen, und die kleine Klammer klebte damit an der
+     großen Ziffer. Als padding statt margin, weil measureFit über scrollWidth
+     misst und padding darin enthalten ist, margin aber nicht. */
+  padding-left: 2px;
+  font-size: var(--stat-gain-size);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+  color: #e8c040;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+  transition: color 0.3s;
+}
+
+/* Die Klammern kommen aus der Regel, nicht aus dem Markup: nur so lassen sie
+   sich in der Sparstufe ohne Fraßzahl einfärben, ohne die Ertragszahl mit
+   umzufärben. */
+.meep-gain::before {
+  content: '(';
+}
+
+.meep-gain::after {
+  content: ')';
+}
+
+.meep-gain-loss {
+  margin-left: 0.25em;
+  color: #cc6050;
+}
+
+/* Sparstufe 3: die Fraßzahl passte nicht mehr in die Zeile. Die Klammern
+   tragen die Verlustfarbe und halten den Hinweis, dass der Void mitgegessen
+   hat — die genaue Zahl steht im Hover-Panel ("Devoured this run"). */
+.meep-gain--nibbled::before,
+.meep-gain--nibbled::after {
+  color: #cc6050;
+}
+
+/* Ein ganzer Meep mehr für den Aufbruch — einmaliger Puls, kein Dauerläufer,
+   und ausschließlich über transform: die Zeile liegt im Header und dürfte
+   für ein Aufblitzen nicht jede Frame neu gezeichnet werden.
+
+   Der Keyframe-Name steht hier und wird NIE aus JavaScript gesetzt — Vue
+   hängt in <style scoped> einen Scope-Suffix an, den JS nicht kennt. Die
+   Dauer kommt dagegen von dort (MEEP_GAIN_PULSE_MS), damit sie und der
+   Timer, der die Klasse wieder abnimmt, nicht auseinanderlaufen können. */
+.meep-gain--pulse {
+  animation-name: meepGainPop;
+  animation-timing-function: ease-out;
+  animation-iteration-count: 1;
+}
+
+@keyframes meepGainPop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 @keyframes meep-pulse {
   0%,
   100% {
@@ -456,7 +636,8 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .meep-icon {
+  .meep-icon,
+  .meep-gain--pulse {
     animation: none;
   }
 }

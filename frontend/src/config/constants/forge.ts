@@ -210,3 +210,7 @@ export const MEEP_COUNTUP_STEPS = 20
 export const MEEP_COUNTUP_INTERVAL_MS = 16
 // How long the meep counter keeps its "rising" highlight after the tween ends.
 export const MEEP_RISING_HOLD_MS = 300
+// How long the departure yield next to the stock keeps its acknowledgement
+// pulse. Long enough to catch the eye, short enough that it is over before the
+// next whole meep can accrue.
+export const MEEP_GAIN_PULSE_MS = 520
