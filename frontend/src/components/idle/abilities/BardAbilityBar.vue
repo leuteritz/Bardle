@@ -18,8 +18,8 @@
          anderen, weil es die Rückmeldung auf die gerade gedrückte Taste ist. -->
     <Transition name="ab-toast">
       <div v-if="toast" class="ab-toast" :style="{ '--ab-color': toastColor }" role="status">
-        <span class="ab-toast-key">{{ toastKey }}</span>
-        <span class="ab-toast-text">{{ toast }}</span>
+        <span v-ink-center.x.y class="ab-toast-key">{{ toastKey }}</span>
+        <span v-ink-center.y class="ab-toast-text">{{ toast }}</span>
       </div>
     </Transition>
 
@@ -40,13 +40,21 @@
              Kachel, damit Tooltip und Feld zusammengehören; rechts steht ihr
              Gegenstück, die Plakette aus Rang und nächstem Level. Beides sind
              Aussagen über die Fähigkeit selbst — der Kopf liest sich damit von
-             Rand zu Rand als eine Zeile. -->
+             Rand zu Rand als eine Zeile.
+
+             Alle drei hängen an der MITTE der Bande, nicht an einer gemeinsamen
+             Grundlinie — die Keycap und die Plakette sind Kästchen, und ein
+             Kästchen richtet sich nicht an einer Baseline aus. Damit die Tinte
+             darin auch wirklich mittig sitzt, trägt jeder Textknoten
+             `v-ink-center.y`: MedievalSharp setzt seine Glyphen fast vollständig
+             über die Baseline, zentrierte Zeilenboxen stehen dadurch sichtbar zu
+             hoch (utils/ui/textInkOffset.ts). -->
         <header class="ab-tip-head">
-          <span v-if="hovered.key" class="ab-tip-key">{{ hovered.key }}</span>
-          <span class="ab-tip-name">{{ hovered.name }}</span>
+          <span v-if="hovered.key" v-ink-center.x.y class="ab-tip-key">{{ hovered.key }}</span>
+          <span v-ink-center.y class="ab-tip-name">{{ hovered.name }}</span>
           <span class="ab-tip-badge">
-            <span class="ab-tip-badge-rank">{{ hovered.rankLabel }}</span>
-            <span v-if="hovered.levelLabel" class="ab-tip-badge-level">{{
+            <span v-ink-center.y class="ab-tip-badge-rank">{{ hovered.rankLabel }}</span>
+            <span v-if="hovered.levelLabel" v-ink-center.y class="ab-tip-badge-level">{{
               hovered.levelLabel
             }}</span>
           </span>
@@ -800,7 +808,10 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   min-width: 1.5em;
-  padding: 1px 4px 2px;
+  /* Symmetrisch: das eine Pixel mehr unten war der Ausgleich von Hand für den
+     hohen Sitz der Tinte — den übernimmt jetzt `v-ink-center.y`, und beides
+     zusammen schöbe die Taste zu tief. */
+  padding: 2px 4px;
   background: #1e1006;
   border: 1px solid var(--ab-color, #e8c040);
   border-radius: 3px;
@@ -900,7 +911,11 @@ onUnmounted(() => {
    die Bande wirklich bis an beide Rahmen läuft. */
 .ab-tip-head {
   display: flex;
-  align-items: baseline;
+  /* `center`, nicht `baseline`: Keycap und Plakette sind Kästchen und tragen
+     ohnehin `align-self: center` — auf einer Baseline stand allein der Name, und
+     zwar sichtbar höher als die beiden. Die Tinte holt `v-ink-center.y` im
+     Template auf die Mitte zurück. */
+  align-items: center;
   gap: 8px;
   margin: 0 -12px;
   padding: 10px 12px 8px;
@@ -916,7 +931,8 @@ onUnmounted(() => {
   flex-shrink: 0;
   align-self: center;
   min-width: 1.45em;
-  padding: 1px 4px 2px;
+  /* Symmetrisch — die Ink-Korrektur sitzt jetzt im Template. */
+  padding: 2px 4px;
   background: var(--ab-color, #e8c040);
   border: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 70%, #000);
   border-radius: 3px;
@@ -947,9 +963,11 @@ onUnmounted(() => {
   display: inline-flex;
   flex-shrink: 0;
   align-self: center;
-  align-items: baseline;
+  /* Auch hier Mitte statt Baseline: die beiden Hälften sind verschieden groß,
+     und jede trägt ihre eigene Ink-Korrektur. */
+  align-items: center;
   gap: 6px;
-  padding: 2px 6px 3px;
+  padding: 3px 6px;
   background: #12100a;
   border: 1px solid color-mix(in srgb, var(--ab-color, #e8c040) 55%, transparent);
   border-radius: 3px;
