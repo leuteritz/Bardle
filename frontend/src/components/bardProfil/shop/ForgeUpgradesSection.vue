@@ -50,13 +50,14 @@
           v-else
           class="fc-card"
           :class="{ 'fc-card--ready': entry.canBuy, 'fc-card--owned': entry.level > 0 && !entry.canBuy }"
+          :style="{ '--node-c': entry.color }"
         >
           <div v-if="entry.canBuy" class="fc-glow" aria-hidden="true" />
           <div class="fc-flash" :class="{ 'fc-flash--on': flashedId === entry.id }" aria-hidden="true" />
 
           <header class="fc-card-head">
             <div class="fc-ico">
-              <Icon :icon="entry.icon" width="34" height="34" :style="{ color: entry.color }" />
+              <Icon :icon="entry.icon" width="38" height="38" :style="{ color: entry.color }" />
             </div>
             <div class="fc-id">
               <div class="fc-name-row">
@@ -93,9 +94,7 @@
 
           <ForgeCostRow :gold="entry.goldCost" :gold-ok="entry.goldOk" :materials="entry.materials" />
 
-          <!-- Ein gedeckelter Strahl wartet nicht auf Chimes, sondern auf seine
-               vier Geschwister — das gehört auf den Knopf, nicht in einen
-               Tooltip. -->
+          <!-- Warum der Knopf nicht geht, steht AUF ihm — siehe buttonLabel(). -->
           <button class="fc-act" :disabled="!entry.canBuy" @click="grow(entry)">
             {{ buttonLabel(entry) }}
           </button>
@@ -126,6 +125,10 @@ import {
   FORGE_UPGRADE_GROUPS,
   FORGE_UPGRADE_STATE_ORDER,
   FORGE_CARD_FLASH_MS,
+  FORGE_SHORT_CHIMES_LABEL,
+  FORGE_SHORT_MATERIAL_PREFIX,
+  FORGE_GROW_LABEL,
+  FORGE_GROW_NEXT_PREFIX,
 } from '@/config/constants'
 
 const { upgradeEntries, buyUpgrade } = useForgeUpgrades()
@@ -151,10 +154,19 @@ const totalCount = computed(() => upgradeEntries.value.length)
 const grownCount = computed(() => upgradeEntries.value.filter((entry) => entry.level > 0).length)
 const readyCount = computed(() => upgradeEntries.value.filter((entry) => entry.canBuy).length)
 
+/**
+ * Ein gedeckelter Strahl wartet nicht auf Chimes, sondern auf seine vier
+ * Geschwister — und ein Knopf, der nur `disabled` ist, lässt den Spieler raten,
+ * ob die Kasse oder das Lager leer ist. Beides steht direkt darüber, aber der
+ * Knopf ist die Stelle, auf die er schaut.
+ */
 function buttonLabel(entry: ForgeUpgradeEntry): string {
   if (entry.state === 'capped') return entry.lockReason
-  if (entry.level === 0) return '✦ Grow'
-  return `Grow → Lv ${entry.level + 1}`
+  if (!entry.goldOk) return FORGE_SHORT_CHIMES_LABEL
+  const short = entry.materials.find((mat) => !mat.ok)
+  if (short) return `${FORGE_SHORT_MATERIAL_PREFIX}${short.need - short.have} ${short.name}`
+  if (entry.level === 0) return FORGE_GROW_LABEL
+  return `${FORGE_GROW_NEXT_PREFIX}${entry.level + 1}`
 }
 
 /** Welche Karte gerade quittiert. Rein visuell, daher reale Zeit. */

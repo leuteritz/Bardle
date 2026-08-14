@@ -927,12 +927,19 @@
   align-items: center;
   gap: 13px;
 }
+/* Die Bühne trägt die Leitfarbe des Knotens als STATISCHEN Verlauf — bei 25
+   Karten gleichzeitig darf davon nichts animiert sein. `--node-c` setzt die
+   Karte inline; der Rückfall hält Relikte und Konstellationen im Goldton. */
 .fc-ico {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 4px;
-  background: #141410;
-  border: 1px solid #5c3310;
+  background: radial-gradient(
+    circle at 50% 38%,
+    color-mix(in srgb, var(--node-c, #c89040) 18%, #14120c),
+    #100e08 74%
+  );
+  border: 1px solid color-mix(in srgb, var(--node-c, #c89040) 45%, #5c3310);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -952,7 +959,7 @@
   min-width: 0;
 }
 .fc-name {
-  font-size: 17.5px;
+  font-size: 19px;
   font-weight: 900;
   white-space: nowrap;
   overflow: hidden;
@@ -980,15 +987,17 @@
   gap: 4px;
 }
 .fc-pip {
-  width: 21px;
-  height: 6px;
+  width: 24px;
+  height: 7px;
   border-radius: 2px;
   background: #241708;
   border: 1px solid #3e200a;
 }
+/* Gefüllte Stufen tragen die Knotenfarbe statt eines Einheitsgolds — bei 25
+   Karten untereinander ist das der schnellste Weg, eine wiederzufinden. */
 .fc-pip--on {
-  background: #e8a020;
-  border-color: #e8c060;
+  background: var(--node-c, #e8a020);
+  border-color: color-mix(in srgb, var(--node-c, #e8a020) 55%, #e8c060);
 }
 .fc-lvl {
   font-size: 13px;
@@ -1000,9 +1009,9 @@
 }
 .fc-desc {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 /* ── Jetzt → danach: die eine Zahl, nach der gekauft wird ── */
@@ -1043,8 +1052,14 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* Die Zahl, wegen der gekauft wird, bekommt eine eigene Marke statt nur einer
+   Farbe — sie ist das Ergebnis der Entscheidung, nicht ein Wert von zweien. */
 .fc-delta-value--next {
   color: #7ad0a0;
+  padding: 3px 9px;
+  border-radius: 3px;
+  background: rgba(122, 208, 160, 0.12);
+  border: 1px solid rgba(122, 208, 160, 0.35);
 }
 .fc-delta-arrow {
   flex-shrink: 0;
@@ -1053,17 +1068,54 @@
 }
 
 /* ── Kosten — immer „have / need". Ein blankes „x3" lässt den Spieler selbst
-      nachzählen. ── */
+      nachzählen.
+
+   Der Block trägt die goldene Linkskante, die im Projekt überall den Träger
+   einer Aussage markiert (.sdp-stat, .dic-root, .po-effect). Sie ist hier nicht
+   Zierrat, sondern der Unterschied zum neutralen .fc-delta-Kasten direkt
+   darüber: zwei gleich aussehende Kästen untereinander lesen sich als ein
+   Kasten. Fehlt etwas, kippt die KANTE auf Rot — nicht nur die eine Zahl, die
+   in einer vollen Zeile untergeht. Alles daran ist Zustand, kein Dauerläufer;
+   eine Transition auf border-color rasterte bei 25 Karten jede davon neu. ── */
+.fc-cost {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 13px 10px;
+  background: #181510;
+  border: 1px solid #32210c;
+  border-left: 3px solid #c89040;
+  border-radius: 4px;
+}
+.fc-cost--short {
+  background: #1c1410;
+  border-left-color: #cc6050;
+}
+/* Im Handel steht „You pay" schon davor — dort ist der Block nur die Zeile. */
+.fc-cost--bare {
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+.fc-cost-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a7a52;
+  line-height: 1;
+}
 .fc-cost-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 .fc-cost-pair {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 .fc-cost-pair--missing .fc-cost-qty,
 .fc-cost-pair--missing .fc-cost-gold {
@@ -1073,32 +1125,58 @@
   color: rgba(204, 96, 80, 0.65);
 }
 .fc-cost-img {
-  height: 22px;
+  height: 26px;
   width: auto;
   object-fit: contain;
 }
 .fc-cost-img--big {
+  height: 32px;
+}
+/* Träger für die vier Materialien ohne Artwork — dasselbe Kürzel-Kästchen wie
+   in der Header-Leiste, damit dieselbe Sache nicht zweimal anders aussieht. */
+.fc-cost-ph {
+  width: 26px;
   height: 26px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: #141410;
+  border: 1px solid #32210c;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
 }
 .fc-cost-gold {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
 }
 .fc-cost-gold--big {
-  font-size: 19.5px;
+  font-size: 21px;
 }
 .fc-cost-qty {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 900;
   color: #e8d8b0;
   font-variant-numeric: tabular-nums;
 }
 .fc-cost-need {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
   color: rgba(232, 216, 176, 0.45);
+}
+/* Zweitkodierung neben der Farbe — Rot allein trägt die Aussage nicht. */
+.fc-cost-state {
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  color: #6ec040;
+}
+.fc-cost-pair--missing .fc-cost-state {
+  color: #cc6050;
 }
 
 /* ── Aktionsknopf — volle Breite, eine Entscheidung je Karte ── */
@@ -1149,14 +1227,47 @@
     gap: 10px;
   }
   .fc-ico {
-    width: 48px;
-    height: 48px;
+    width: 54px;
+    height: 54px;
+  }
+  .fc-name {
+    font-size: 17.5px;
+  }
+  .fc-desc {
+    font-size: 14px;
+    line-height: 1.5;
   }
   .fc-row {
     padding: 10px 13px 11px;
   }
   .fc-delta {
     padding: 9px 12px;
+  }
+  .fc-cost {
+    gap: 5px;
+    padding: 7px 11px 8px;
+  }
+  .fc-cost-row {
+    gap: 11px;
+  }
+  .fc-cost-img,
+  .fc-cost-ph {
+    height: 22px;
+  }
+  .fc-cost-ph {
+    width: 22px;
+  }
+  .fc-cost-img--big {
+    height: 26px;
+  }
+  .fc-cost-gold {
+    font-size: 15px;
+  }
+  .fc-cost-gold--big {
+    font-size: 19.5px;
+  }
+  .fc-cost-qty {
+    font-size: 15px;
   }
   .fc-act {
     padding: 11px 15px;

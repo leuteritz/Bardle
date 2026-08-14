@@ -143,8 +143,10 @@ export function useForgeUpgrades(): {
     )
   }
 
-  /** Die fünf Kernstrahlen. Sie kennen keine Materialien und keine Sperre durch
-   *  einen Elternknoten — dafür die Gleichwuchs-Regel über `maxAllowedLevel`. */
+  /** Die fünf Kernstrahlen. Sie kennen keine Sperre durch einen Elternknoten —
+   *  dafür die Gleichwuchs-Regel über `maxAllowedLevel`. Material verlangen sie
+   *  erst ab `SOLAR_MATERIAL_FROM_LEVEL`; darunter gibt `rayMaterialCost` eine
+   *  leere Rezeptur zurück und die Kostenzeile zeigt nur den Chime-Preis. */
   function rootEntry(root: RootMeta): ForgeUpgradeEntry {
     const level = solarStore.branchLevel(root.id)
     const goldCost = solarStore.branchCost(root.id)
@@ -174,7 +176,7 @@ export function useForgeUpgrades(): {
       state,
       goldCost,
       goldOk,
-      materials: [],
+      materials: costItems(forgeStore.rayMaterialCost(root.id)),
       desc: `${root.statLabel}: ${nowText}`,
       nextDesc: `${root.statLabel}: ${nextText}`,
       nowText,

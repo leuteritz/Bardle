@@ -176,6 +176,18 @@ export const SOLAR_CPS_FLIGHT_BONUS = 0.1
 export const SOLAR_DMG_BONUS = 0.25
 
 /**
+ * Ab welcher STUFE ein Kernstrahl zusätzlich Material verlangt.
+ *
+ * Die ersten drei Käufe bleiben reine Chime-Sache, und zwar aus zwei Gründen:
+ * die Strahlpreise sind das Erste, worauf ein Spieler überhaupt spart
+ * (docs/balance.md, „Die Wirtschaft"), und Material fällt erst, wenn ein Kader
+ * unterwegs ist — Resource-Sterne spawnen nur bei
+ * `championTravelState === 'traveling'`. Eine Materialforderung auf Lv 1 wäre
+ * damit kein Preis, sondern eine geschlossene Tür.
+ */
+export const SOLAR_MATERIAL_FROM_LEVEL = 4
+
+/**
  * Die fünf Kernstrahlen der Sonne — Name, Glyph und Farbe.
  *
  * Sie sind das zweite Tor jeder Sternentwicklung (`branchesReadyForEvolve`
@@ -188,6 +200,13 @@ export const SOLAR_DMG_BONUS = 0.25
  * `FORGE_ROOT_ANGLES_DEG` in `forge.ts` — sie sind Layout des Baums, keine
  * Eigenschaft des Strahls. Die Reihenfolge hier ist die Lesereihenfolge der
  * Liste, nicht die des Rings.
+ *
+ * `material`/`materialQty` sind die Rezeptur ab `SOLAR_MATERIAL_FROM_LEVEL`.
+ * Je Strahl ein EIGENES Material, damit die fünf in der Liste als Signatur
+ * lesbar bleiben — und nur solche mit Artwork, sonst stünde in der Kostenzeile
+ * eine Zahl ohne Träger. `dark_matter` bleibt bewusst frei: es gehört den
+ * Blättern. Die Menge steigt linear mit dem Abstand zur Schwelle (1/2/3), die
+ * Seltenheit steckt in `materialQty` — gewöhnlich 3, ungewöhnlich 2, selten 1.
  */
 export const SOLAR_BRANCHES = [
   {
@@ -196,6 +215,8 @@ export const SOLAR_BRANCHES = [
     icon: 'game-icons:feathered-wing',
     color: '#e8c040',
     statLabel: 'CpS Mult.',
+    material: 'stardust',
+    materialQty: 3,
   },
   {
     id: 'maxHp',
@@ -203,6 +224,8 @@ export const SOLAR_BRANCHES = [
     icon: 'game-icons:health-increase',
     color: '#e05050',
     statLabel: 'HP Bonus',
+    material: 'moon_crystal',
+    materialQty: 3,
   },
   {
     id: 'chimesPerClick',
@@ -210,6 +233,8 @@ export const SOLAR_BRANCHES = [
     icon: 'game-icons:gold-nuggets',
     color: '#52b830',
     statLabel: 'CpC Bonus',
+    material: 'nebula_quartz',
+    materialQty: 2,
   },
   {
     id: 'chimesPerSecond',
@@ -217,6 +242,8 @@ export const SOLAR_BRANCHES = [
     icon: 'game-icons:hourglass',
     color: '#e89840',
     statLabel: 'CpS Bonus',
+    material: 'solar_essence',
+    materialQty: 1,
   },
   {
     id: 'dmgPerClick',
@@ -224,6 +251,8 @@ export const SOLAR_BRANCHES = [
     icon: 'game-icons:fist',
     color: '#c060a0',
     statLabel: 'Dmg Mult.',
+    material: 'void_shard',
+    materialQty: 1,
   },
 ] as const
 

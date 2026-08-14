@@ -3,6 +3,7 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useCpsStore } from '@/stores/core/cpsStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import {
@@ -215,7 +216,8 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
         return (
           this.branchLevel(id) < SOLAR_MAX_LEVELS &&
           this.branchLevel(id) < this.maxAllowedLevel &&
-          gameStore.chimes >= this.branchCost(id)
+          gameStore.chimes >= this.branchCost(id) &&
+          useInventoryStore().hasMaterials(useStarForgeStore().rayMaterialCost(id))
         )
       }
     },
@@ -301,6 +303,12 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       if (level >= this.maxAllowedLevel) return
       const cost = this.branchCost(id)
       if (gameStore.chimes < cost) return
+
+      // Material zuerst — das ist der Schritt, der scheitern kann. Dieselbe
+      // Reihenfolge wie `starForgeStore.buyNode`; andersherum wären die Chimes
+      // weg, bevor sich herausstellt, dass das Lager nicht reicht.
+      if (!useInventoryStore().removeMaterials(useStarForgeStore().rayMaterialCost(id), 'forge'))
+        return
 
       gameStore.chimes -= cost
 

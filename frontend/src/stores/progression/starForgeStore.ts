@@ -38,6 +38,8 @@ import {
   FORGE_CONSTELLATION_BULWARK_DAMAGE_MULT,
   FORGE_CONSTELLATION_STELLAR_WIND_CPS_MULT,
   FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT,
+  SOLAR_BRANCHES,
+  SOLAR_MATERIAL_FROM_LEVEL,
 } from '@/config/constants'
 import { pickPooledIcon } from '@/config/ui/iconPools'
 import type { SolarBranchId } from '@/stores/progression/solarUpgradeStore'
@@ -138,6 +140,29 @@ export const useStarForgeStore = defineStore('starForge', {
           scaled[matId] = forgeMaterialQty(qty * nextLevel, discount)
         }
         return scaled
+      }
+    },
+
+    /**
+     * Materialkosten der NÄCHSTEN Stufe eines Kernstrahls — leer, solange die
+     * Stufe unter `SOLAR_MATERIAL_FROM_LEVEL` liegt.
+     *
+     * Warum das hier steht und nicht im `solarUpgradeStore`, dem die Strahlen
+     * gehören: Rabatt (Chronicle/Providence) und Rundung liegen bereits in
+     * diesem Modul, und eine zweite Fassung davon liefe beim nächsten
+     * Balance-Eingriff von der ersten weg. Der Strahl ist ohnehin die Wurzel
+     * desselben Baums.
+     */
+    rayMaterialCost(): (id: SolarBranchId) => Record<string, number> {
+      return (id) => {
+        const def = SOLAR_BRANCHES.find((branch) => branch.id === id)
+        if (!def) return {}
+        const nextLevel = useSolarUpgradeStore().branchLevel(id) + 1
+        if (nextLevel < SOLAR_MATERIAL_FROM_LEVEL) return {}
+        const step = nextLevel - SOLAR_MATERIAL_FROM_LEVEL + 1
+        const discount =
+          useAchievementStore().forgeMaterialCostMult * useProvidenceStore().forgeMaterialCostMult
+        return { [def.material]: forgeMaterialQty(def.materialQty * step, discount) }
       }
     },
 

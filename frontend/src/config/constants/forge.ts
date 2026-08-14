@@ -315,8 +315,25 @@ export const FORGE_YIELD_ICONS = {
   perClick: 'game-icons:gold-nuggets',
   forgeShare: 'game-icons:anvil-impact',
 } as const
-/** Chime-Bild der Kostenzeilen — dieselbe Datei, damit es ein Cache-Treffer ist. */
-export const FORGE_CHIME_IMAGE = '/img/BardGold-128.png'
+/**
+ * Chime-Bild der Kostenzeilen — dasselbe Artwork, das Header, Command Panel,
+ * Sigil-Panel und Champion-Shop zeigen. Die Forge trug hier lange die
+ * Goldmünze (`BardGold`) und war damit der einzige Ort im Spiel, an dem die
+ * Währung anders aussah als überall sonst; die gemeinsame Datei ist obendrein
+ * ein Cache-Treffer. Größte Anzeige ist 32px, `-128` bleibt die richtige Stufe.
+ */
+export const FORGE_CHIME_IMAGE = '/img/BardAbilities/BardChime-128.png'
+
+/**
+ * Was auf dem Kaufknopf steht, wenn er nicht geht. Ein bloßes `disabled` lässt
+ * den Spieler raten, ob die Kasse oder das Lager leer ist — beides steht direkt
+ * darüber, aber der Knopf ist die Stelle, auf die er schaut.
+ */
+export const FORGE_COST_LABEL = 'Cost'
+export const FORGE_SHORT_CHIMES_LABEL = 'Not enough Chimes'
+export const FORGE_SHORT_MATERIAL_PREFIX = 'Need '
+export const FORGE_GROW_LABEL = '✦ Grow'
+export const FORGE_GROW_NEXT_PREFIX = 'Grow → Lv '
 
 /** Platzhalter im `desc` einer Forge-Definition, den der Stufenwert ersetzt. */
 export const FORGE_DESC_VALUE_TOKEN = '{v}'

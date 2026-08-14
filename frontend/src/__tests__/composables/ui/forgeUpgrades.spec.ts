@@ -10,6 +10,7 @@ import { FORGE_NODES, getForgeNode } from '@/config/progression/starForge'
 import {
   SOLAR_BRANCHES,
   SOLAR_MAX_LEVELS,
+  SOLAR_MATERIAL_FROM_LEVEL,
   STAR_PHASE_DATA,
   FORGE_BRANCH_UNLOCK_PHASE,
   FORGE_LEAF_UNLOCK_PHASE,
@@ -356,11 +357,14 @@ describe('useForgeUpgrades — Invarianten', () => {
     ['fresh', () => {}],
     ['branches open', unlockBranches],
     ['leaves open', () => unlockLeaves()],
-    ['everything maxed out', () => {
-      fillPurse()
-      useSolarUpgradeStore().starPhase = FORGE_LEAF_UNLOCK_PHASE
-      setAllRoots(SOLAR_MAX_LEVELS)
-    }],
+    [
+      'everything maxed out',
+      () => {
+        fillPurse()
+        useSolarUpgradeStore().starPhase = FORGE_LEAF_UNLOCK_PHASE
+        setAllRoots(SOLAR_MAX_LEVELS)
+      },
+    ],
   ])('canBuy means affordable and nothing else — %s', (_label, arrange) => {
     arrange()
     const { upgradeEntries } = useForgeUpgrades()
@@ -374,5 +378,77 @@ describe('useForgeUpgrades — Invarianten', () => {
       // Ein Grund steht nur dort, wo es etwas zu erklären gibt.
       if (e.state !== 'locked' && e.state !== 'capped') expect(e.lockReason).toBe('')
     }
+  })
+})
+
+/**
+ * Die fünf Kernstrahlen waren lange die einzigen Upgrades ohne Materialkosten.
+ * Seit `SOLAR_MATERIAL_FROM_LEVEL` verlangen sie ab Lv 4 je ein eigenes
+ * Material — die Schwelle ist der ganze Punkt: darunter darf sich am Frühspiel
+ * NICHTS geändert haben, weil dort noch kein Kader reist und also nichts fällt.
+ */
+describe('useForgeUpgrades — Material der Kernstrahlen', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('asks for nothing below the threshold', () => {
+    fillPurse()
+    setAllRoots(SOLAR_MATERIAL_FROM_LEVEL - 2)
+    for (const id of ROOT_IDS) expect(entry(id).materials).toEqual([])
+  })
+
+  it('asks for its own material from the threshold on', () => {
+    fillPurse()
+    setAllRoots(SOLAR_MATERIAL_FROM_LEVEL - 1)
+    for (const def of SOLAR_BRANCHES) {
+      const mats = entry(def.id).materials
+      expect(mats).toHaveLength(1)
+      expect(mats[0].id).toBe(def.material)
+      expect(mats[0].need).toBe(def.materialQty)
+    }
+  })
+
+  it('scales the quantity with the distance to the threshold', () => {
+    const def = SOLAR_BRANCHES[0]
+    for (let step = 1; step <= SOLAR_MAX_LEVELS - SOLAR_MATERIAL_FROM_LEVEL + 1; step++) {
+      setActivePinia(createPinia())
+      fillPurse()
+      setAllRoots(SOLAR_MATERIAL_FROM_LEVEL - 1 + (step - 1))
+      expect(entry(def.id).materials[0].need).toBe(def.materialQty * step)
+    }
+  })
+
+  it('refuses a ray with a full purse but an empty store', () => {
+    fillPurse()
+    useInventoryStore().collectedMaterials = {}
+    setAllRoots(SOLAR_MATERIAL_FROM_LEVEL - 1)
+    const solar = useSolarUpgradeStore()
+    const { buyUpgrade } = useForgeUpgrades()
+
+    const e = entry(ROOT_IDS[0])
+    expect(e.goldOk).toBe(true)
+    expect(e.canBuy).toBe(false)
+    expect(buyUpgrade(ROOT_IDS[0])).toBe(false)
+    expect(solar.branchLevel(ROOT_IDS[0])).toBe(SOLAR_MATERIAL_FROM_LEVEL - 1)
+  })
+
+  it('spends chimes AND material when both are there', () => {
+    fillPurse()
+    setAllRoots(SOLAR_MATERIAL_FROM_LEVEL - 1)
+    const def = SOLAR_BRANCHES[0]
+    const solar = useSolarUpgradeStore()
+    const game = useGameStore()
+    const inventory = useInventoryStore()
+    const { buyUpgrade } = useForgeUpgrades()
+
+    const purse = game.chimes
+    const cost = solar.branchCost(def.id)
+    const stock = inventory.collectedMaterials[def.material]!
+
+    expect(buyUpgrade(def.id)).toBe(true)
+    expect(solar.branchLevel(def.id)).toBe(SOLAR_MATERIAL_FROM_LEVEL)
+    expect(game.chimes).toBe(purse - cost)
+    expect(inventory.collectedMaterials[def.material]).toBe(stock - def.materialQty)
   })
 })

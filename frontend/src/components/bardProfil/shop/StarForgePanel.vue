@@ -83,12 +83,13 @@
             v-else
             class="fc-card"
             :class="{ 'fc-card--ready': view.ready, 'fc-card--owned': view.level > 0 && !view.ready }"
+            :style="{ '--node-c': view.def.color }"
           >
             <div v-if="view.ready" class="fc-glow" aria-hidden="true" />
 
             <header class="fc-card-head">
               <div class="fc-ico">
-                <Icon :icon="view.def.icon" width="34" height="34" :style="{ color: view.def.color }" />
+                <Icon :icon="view.def.icon" width="38" height="38" :style="{ color: view.def.color }" />
               </div>
               <div class="fc-id">
                 <div class="fc-name-row">
@@ -161,6 +162,7 @@
             v-else
             class="fc-card"
             :class="{ 'fc-card--ready': view.ready, 'fc-card--locked': !view.reqMet }"
+            :style="{ '--node-c': view.def.color }"
           >
             <div v-if="view.ready" class="fc-glow" aria-hidden="true" />
 
@@ -235,7 +237,7 @@
                 <span class="fc-cost-qty">×{{ item.need }}</span>
               </span>
               <span v-if="deal.kind === 'gold' && deal.goldReward" class="fc-cost-pair">
-                <img src="/img/BardGold-128.png" class="fc-cost-img" alt="Chimes" />
+                <img :src="FORGE_CHIME_IMAGE" class="fc-cost-img" alt="Chimes" />
                 <span class="fc-cost-gold">{{ formatNumber(deal.goldReward) }}</span>
               </span>
             </span>
@@ -248,7 +250,7 @@
                 {{ formatNumber(deal.basePrice) }}
               </span>
               <span v-if="dealPrice > 0" class="fc-cost-pair" :class="{ 'fc-cost-pair--missing': !dealGoldOk }">
-                <img src="/img/BardGold-128.png" class="fc-cost-img fc-cost-img--big" alt="Chimes" />
+                <img :src="FORGE_CHIME_IMAGE" class="fc-cost-img fc-cost-img--big" alt="Chimes" />
                 <span class="fc-cost-gold fc-cost-gold--big">{{ formatNumber(dealPrice) }}</span>
               </span>
               <span
@@ -346,6 +348,7 @@ import {
   FORGE_BARGAIN_EMPTY_ICON,
   FORGE_PANEL_SECTIONS,
   FORGE_RELIC_RARITY_COLOR,
+  FORGE_CHIME_IMAGE,
   SOLAR_BRANCHES,
   FORGE_DESC_VALUE_TOKEN,
   FORGE_DESC_PERCENT_TOKEN,
