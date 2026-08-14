@@ -97,8 +97,8 @@
 
       <!-- Sun -->
       <div class="sun-wrapper" :class="{ 'sun-flash': purchaseFlash }">
-        <CometDisc v-if="solarStore.isCometState" :diameter="SHOP_SUN_MIN_DIAMETER" />
-        <BlackHoleDisc v-else-if="isCollapsed" :diameter="SHOP_SUN_MAX_DIAMETER" />
+        <CometDisc v-if="solarStore.isCometState" :diameter="bodyDiameter" />
+        <BlackHoleDisc v-else-if="isCollapsed" :diameter="bodyDiameter" />
         <div v-else class="tree-stage-sun" />
         <div class="sun-flash-veil" :style="sunFlashVeilStyle" />
         <div
@@ -233,7 +233,8 @@ import {
   FORGE_ICON_SIZE_BRANCH,
   FORGE_ICON_SIZE_LEAF,
   FORGE_TREE_FIT_PADDING_PX,
-  FORGE_SUN_EDGE_R,
+  FORGE_BODY_EDGE_FRACTION,
+  FORGE_SUN_EDGE_GAP,
   FORGE_SUN_FLASH_MS,
   FORGE_SPOTLIGHT_NODE_SCALE,
   FORGE_SPOTLIGHT_DIM_OPACITY,
@@ -253,6 +254,47 @@ const C = FORGE_STAGE_SIZE / 2
 const isCollapsed = computed(
   () => !solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
 )
+
+// ── Der Körper in der Mitte — seine Größe ist zugleich Geometrie ──────────────
+/* Steht VOR dem Knotenmodell, weil die Wurzel-Äste an seinem Rand ansetzen:
+   Durchmesser und Phasenfarben kommen aus derselben Rechnung, damit die Striche
+   nicht an einer zweiten, danebenliegenden Zahl hängen. */
+const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
+/** While still a comet, the next evolution target is Spark (phase 0). */
+const nextStage = computed(() =>
+  solarStore.isCometState
+    ? STAR_PHASE_DATA[0]
+    : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, STAR_PHASE_DATA.length - 1)],
+)
+
+const PHASE_RADIUS_MIN = Math.min(...STAR_PHASE_DATA.map((p) => p.radius))
+const PHASE_RADIUS_MAX = Math.max(...STAR_PHASE_DATA.map((p) => p.radius))
+
+/** Kantenlänge der Scheibe, die gerade gerendert wird — Komet, Plasma oder
+ *  Schwarzes Loch. Eine Quelle für `--shop-sun-d`, den Kaufblitz und den
+ *  Ansatzpunkt der Wurzel-Äste. */
+const bodyDiameter = computed(() => {
+  if (solarStore.isCometState) return SHOP_SUN_MIN_DIAMETER
+  if (isCollapsed.value) return SHOP_SUN_MAX_DIAMETER
+  const s = currentStage.value
+  const t = (s.radius - PHASE_RADIUS_MIN) / (PHASE_RADIUS_MAX - PHASE_RADIUS_MIN || 1)
+  return Math.round(SHOP_SUN_MIN_DIAMETER + t * (SHOP_SUN_MAX_DIAMETER - SHOP_SUN_MIN_DIAMETER))
+})
+
+/**
+ * Radius, an dem eine Wurzel-Verbindung ansetzt: der SICHTBARE Rand des
+ * aktuellen Körpers plus einen Finger Luft. Der Komet füllt seinen Kasten nur
+ * zu 76 %, Plasmascheibe und Schwarzes Loch bis zur Kante — deshalb der Anteil
+ * je Körper statt einer Zahl für alle.
+ */
+const sunEdgeR = computed(() => {
+  const fraction = solarStore.isCometState
+    ? FORGE_BODY_EDGE_FRACTION.comet
+    : isCollapsed.value
+      ? FORGE_BODY_EDGE_FRACTION.blackHole
+      : FORGE_BODY_EDGE_FRACTION.star
+  return (bodyDiameter.value / 2) * fraction + FORGE_SUN_EDGE_GAP
+})
 
 // ── Node model — roots (solar) + branches/leaves (forge) in one render list ──
 interface TreeNode {
@@ -355,7 +397,7 @@ const limbs = computed<Limb[]>(() => {
   for (const node of allNodes.value) {
     let from: { x: number; y: number }
     if (node.tier === 'root') {
-      from = pt(node.angleDeg, FORGE_SUN_EDGE_R)
+      from = pt(node.angleDeg, sunEdgeR.value)
     } else {
       const parent = nodeById.value.get(node.parentId ?? '')
       if (!parent) continue
@@ -383,8 +425,8 @@ const limbByTarget = computed(() => new Map(limbs.value.map((limb) => [limb.targ
 
 /**
  * Der Weg vom Sternenrand bis zum gezeigten Knoten, Glied für Glied: ein Blatt
- * hängt an seinem Zweig, der Zweig an seiner Wurzel, die Wurzel am Rand der
- * Sonne (`FORGE_SUN_EDGE_R`). Die Kette läuft über `parentId` nach innen und
+ * hängt an seinem Zweig, der Zweig an seiner Wurzel, die Wurzel am Rand des
+ * Körpers (`sunEdgeR`). Die Kette läuft über `parentId` nach innen und
  * ist damit höchstens `FORGE_SPOTLIGHT_MAX_LIMBS` lang.
  *
  * Sie zeigt, was die Liste rechts nicht sagen kann: WO im Baum das Upgrade
@@ -525,17 +567,6 @@ function onWheel(event: WheelEvent): void {
 }
 
 // ── Phase-colored stage vars (mirrors PlanetSelectTabComponent sunPhaseStyle) ─
-const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
-/** While still a comet, the next evolution target is Spark (phase 0). */
-const nextStage = computed(() =>
-  solarStore.isCometState
-    ? STAR_PHASE_DATA[0]
-    : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, STAR_PHASE_DATA.length - 1)],
-)
-
-const PHASE_RADIUS_MIN = Math.min(...STAR_PHASE_DATA.map((p) => p.radius))
-const PHASE_RADIUS_MAX = Math.max(...STAR_PHASE_DATA.map((p) => p.radius))
-
 const stageStyle = computed(() => {
   if (solarStore.isCometState) {
     return {
@@ -545,13 +576,11 @@ const stageStyle = computed(() => {
       '--phase-primary': COMET_PHASE_DATA.accent,
       '--phase-glow': COMET_PHASE_DATA.glow,
       '--pulse-speed': COMET_PHASE_DATA.pulseSpeed,
-      '--shop-sun-d': `${SHOP_SUN_MIN_DIAMETER}px`,
+      '--shop-sun-d': `${bodyDiameter.value}px`,
       '--sun-edge': COMET_PHASE_DATA.edge,
     }
   }
   const s = currentStage.value
-  const t = (s.radius - PHASE_RADIUS_MIN) / (PHASE_RADIUS_MAX - PHASE_RADIUS_MIN || 1)
-  const sunD = SHOP_SUN_MIN_DIAMETER + t * (SHOP_SUN_MAX_DIAMETER - SHOP_SUN_MIN_DIAMETER)
   return {
     '--phase-core': s.core,
     '--phase-mid': s.mid,
@@ -559,7 +588,7 @@ const stageStyle = computed(() => {
     '--phase-primary': s.phasePrimary,
     '--phase-glow': s.phaseGlow,
     '--pulse-speed': s.pulseSpeed,
-    '--shop-sun-d': `${Math.round(sunD)}px`,
+    '--shop-sun-d': `${bodyDiameter.value}px`,
     // --sun-edge färbt ausschließlich die HP-Zahl auf der Sonne. Bei den
     // Plasmaphasen ist der dunkle Saum darauf gut lesbar — auf dem schwarzen
     // Ereignishorizont der Endphase verschwände er, dort trägt der helle
@@ -569,14 +598,13 @@ const stageStyle = computed(() => {
 })
 
 /**
- * Der Kaufblitz deckt die Scheibe, die gerade steht. In den Plasmaphasen und im
- * Kometenzustand ist das genau `--shop-sun-d` (oben gesetzt); nur das Schwarze
- * Loch rendert mit fester Endgröße und braucht deshalb einen eigenen Wert.
+ * Der Kaufblitz deckt die Scheibe, die gerade steht — Komet, Plasma oder
+ * Schwarzes Loch, alle drei tragen jetzt denselben `bodyDiameter`.
  * Die Dauer steht als Variable am Element, damit CSS und `flashSun()` dieselbe
  * Zahl lesen — sie wechselt nie, ist also kein Wert pro Frame.
  */
 const sunFlashVeilStyle = computed(() => {
-  const d = isCollapsed.value ? `${SHOP_SUN_MAX_DIAMETER}px` : 'var(--shop-sun-d, 200px)'
+  const d = `${bodyDiameter.value}px`
   return { width: d, height: d, '--sun-flash-ms': `${FORGE_SUN_FLASH_MS}ms` }
 })
 

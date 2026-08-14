@@ -57,8 +57,31 @@ export const FORGE_ICON_SIZE_LEAF = 18
  * also weder größer noch kleiner, nur zentriert.
  */
 export const FORGE_TREE_FIT_PADDING_PX = 48
-/** Radius, an dem eine Wurzel-Verbindung am Sonnenrand ansetzt. */
-export const FORGE_SUN_EDGE_R = 110
+/**
+ * Wo eine Wurzel-Verbindung ansetzt — am RAND des Körpers, der gerade in der
+ * Mitte steht, nicht an einem festen Radius.
+ *
+ * Vorher stand hier ein fester `FORGE_SUN_EDGE_R = 110`. Der Körper wächst aber
+ * mit der Sonnenphase (`SHOP_SUN_MIN_DIAMETER`…`SHOP_SUN_MAX_DIAMETER`, also
+ * Radius 85…120), und im Kometenzustand ist der sichtbare Fels nochmals
+ * kleiner: die Striche begannen dort rund 45 px NEBEN dem Gestein und schwebten
+ * frei im Raum, während sie in der Endphase unter der Scheibe verschwanden.
+ *
+ * `FORGE_BODY_EDGE_FRACTION` sagt je Körper, welchen Anteil seines Kastens er
+ * WIRKLICH ausfüllt — der Komet sitzt als `inset: 12%` in seinem (Anteil 0,76),
+ * Plasmascheibe und Schwarzes Loch reichen bis zur Kastenkante.
+ */
+export const FORGE_BODY_EDGE_FRACTION = { star: 1, comet: 0.76, blackHole: 1 } as const
+/**
+ * Luft zwischen dem Rand des Körpers und dem Beginn der Wurzel-Äste.
+ *
+ * Muss den Atem der Scheibe überbieten, sonst leckt sie im Scheitel der
+ * Pulsanimation an den Strichen: der stärkste ist `tree-sun-pulse` mit
+ * `scale(1.05)`, bei Höchstradius 120 also 6 px. Nach oben begrenzt der
+ * Wurzelring: 165 − 28 (halber Knoten) − 128 lässt bei größtem Körper noch
+ * einen sichtbaren Stummel stehen.
+ */
+export const FORGE_SUN_EDGE_GAP = 8
 
 /**
  * Battle Power je gehaltenem Meep. Der Meep-Term dominiert `totalPower` —
