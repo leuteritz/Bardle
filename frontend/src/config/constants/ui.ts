@@ -528,6 +528,15 @@ export const ADMIN_MAX_UNIVERSE = 10
 export const ADMIN_MAX_GALAXY = 50
 /** Gebäudestufen kennen kein Cap — dieser Wert ist die gewählte Testhöhe. */
 export const ADMIN_MAX_BUILDING_LEVEL = 500
+/**
+ * Dasselbe für die Boughs des Sternbaums (Ring 4). `nodeMaxLevel` gibt dort
+ * `Infinity` zurück — eine Schleife bis zum Maximum liefe endlos, `adminMaxAll`
+ * braucht also eine gewählte Testhöhe. 25 ist bewusst nicht höher: bei
+ * `FORGE_BOUGH_COST_MULTIPLIER` 1,35 ist das rund die Stufe, ab der ein Kauf im
+ * ausgebauten Endspiel mehrere Stunden kostet — der Zustand, den ein Test
+ * abbilden soll, nicht einer, den es im Spiel nie gibt.
+ */
+export const ADMIN_MAX_BOUGH_LEVEL = 25
 /** Planeten-Level. Ab Sonnenphase 5 greift kein Phasen-Gate mehr, die Zahl ist
  *  also frei wählbar; PLANET_MAX_BULK_LEVELS deckelt den Aufruf intern. */
 export const ADMIN_MAX_PLANET_LEVEL = 60

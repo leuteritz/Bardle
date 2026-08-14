@@ -361,6 +361,7 @@ export function usePersistence() {
       starForge: {
         branchLevels: { ...starForgeStore.branchLevels },
         leafLevels: { ...starForgeStore.leafLevels },
+        boughLevels: { ...starForgeStore.boughLevels },
         relicLevels: { ...starForgeStore.relicLevels },
         forgedConstellations: [...starForgeStore.forgedConstellations],
         bargainDealId: starForgeStore.bargainDealId,
@@ -966,6 +967,10 @@ export function usePersistence() {
       if (saved.starForge) {
         starForgeStore.branchLevels = migratedIdMap(saved.starForge.branchLevels)
         starForgeStore.leafLevels = migratedIdMap(saved.starForge.leafLevels)
+        // Ältere Spielstände kennen den vierten Ring nicht — `migratedIdMap`
+        // gibt für ein fehlendes Feld einen leeren Beutel zurück, und das ist
+        // der richtige Startwert.
+        starForgeStore.boughLevels = migratedIdMap(saved.starForge.boughLevels)
         starForgeStore.relicLevels = migratedIdMap(saved.starForge.relicLevels)
         starForgeStore.forgedConstellations = migratedIds(saved.starForge.forgedConstellations)
         starForgeStore.bargainDealId = migratedId(saved.starForge.bargainDealId ?? '')

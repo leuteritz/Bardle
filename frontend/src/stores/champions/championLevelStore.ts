@@ -43,6 +43,7 @@ import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { logger } from '@/utils/logger'
 
 export function defaultChampionProgress(): ChampionProgress {
@@ -361,6 +362,10 @@ export const useChampionLevelStore = defineStore('championLevel', {
           useAchievementStore().xpMult *
           // Quickened Path / Rift Ascendant (providence)
           useProvidenceStore().xpMult *
+          // Eternal Host (Star Forge, Ring 4): der endlose Zweig zahlt auf die
+          // Erfahrung statt auf den Schaden — Champion-DPS steckt über
+          // `fullOrbitDps()` in `expectedDps` und höbe die Boss-HP gleich mit.
+          useStarForgeStore().championXpMult *
           // Forgotten Path (void tide): solange der Riss steht, lernt niemand
           useVoidStore().xpMult,
       )

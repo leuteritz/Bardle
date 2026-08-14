@@ -27,6 +27,7 @@
       :style="{
         transform: `translate(-50%, -50%) scale(${totalScale})`,
         '--inv-scale': (1 / totalScale).toFixed(4),
+        '--forge-stage-size': `${FORGE_STAGE_SIZE}px`,
       }"
     >
       <svg
@@ -45,6 +46,13 @@
           :cx="C" :cy="C" :r="FORGE_RING_LEAF_R" fill="none"
           :stroke="leavesUnlocked ? '#4a6a2a' : '#2a1a08'"
           stroke-width="1.5" stroke-dasharray="4 7" :opacity="leavesUnlocked ? 0.6 : 0.9"
+        />
+        <!-- Ring 4 trägt Violett statt Grün: er ist der einzige ohne Ende, und
+             Violett steht im Projekt für „episch". -->
+        <circle
+          :cx="C" :cy="C" :r="FORGE_RING_BOUGH_R" fill="none"
+          :stroke="boughsUnlocked ? '#5a3a7a' : '#2a1a08'"
+          stroke-width="1.5" stroke-dasharray="3 9" :opacity="boughsUnlocked ? 0.6 : 0.9"
         />
 
         <!-- Limbs: sun → root, root → branch, branch → leaf (dim base) -->
@@ -93,6 +101,12 @@
         :style="ringLabelStyle(FORGE_RING_LEAF_R)"
       >
         {{ leafRingLabel }}
+      </div>
+      <div
+        class="ring-label" :class="boughsUnlocked ? 'ring-label--endless' : 'ring-label--locked'"
+        :style="ringLabelStyle(FORGE_RING_BOUGH_R)"
+      >
+        {{ boughRingLabel }}
       </div>
 
       <!-- Sun -->
@@ -145,7 +159,7 @@
           <span v-if="spotlightId === node.id" class="node-spot" aria-hidden="true" />
           <Icon :icon="node.icon" :width="node.iconSize" :height="node.iconSize" :style="{ color: node.color }" />
           <span v-if="entryOf(node).level > 0 || entryOf(node).state !== 'locked'" class="node-level">
-            {{ entryOf(node).level }}/{{ entryOf(node).maxLevel }}
+            {{ levelChip(entryOf(node)) }}
           </span>
         </div>
 
@@ -206,7 +220,7 @@ import {
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
-import type { ForgeNodeDef, ForgeUpgradeEntry } from '@/types'
+import type { ForgeNodeDef, ForgeNodeTier, ForgeUpgradeEntry, ForgeUpgradeTier } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
@@ -221,8 +235,7 @@ import {
   FORGE_RING_ROOT_R,
   FORGE_RING_BRANCH_R,
   FORGE_RING_LEAF_R,
-  FORGE_BRANCH_UNLOCK_PHASE,
-  FORGE_LEAF_UNLOCK_PHASE,
+  FORGE_RING_BOUGH_R,
   FORGE_TREE_ZOOM_MIN,
   FORGE_TREE_ZOOM_MAX,
   FORGE_TREE_ZOOM_STEP,
@@ -232,6 +245,9 @@ import {
   FORGE_ICON_SIZE_ROOT,
   FORGE_ICON_SIZE_BRANCH,
   FORGE_ICON_SIZE_LEAF,
+  FORGE_ICON_SIZE_BOUGH,
+  FORGE_ENDLESS_SYMBOL,
+  SUN_PHASE_DISPLAY_OFFSET,
   FORGE_TREE_FIT_PADDING_PX,
   FORGE_BODY_EDGE_FRACTION,
   FORGE_SUN_EDGE_GAP,
@@ -304,8 +320,8 @@ interface TreeNode {
   color: string
   angleDeg: number
   dist: number
-  tier: 'root' | 'branch' | 'leaf'
-  sizeClass: 'root' | 'branch' | 'leaf'
+  tier: ForgeUpgradeTier
+  sizeClass: ForgeUpgradeTier
   iconSize: number
   parentId: string | null
   def?: ForgeNodeDef
@@ -318,6 +334,20 @@ interface RootDef {
   angleDeg: number
   color: string
   statLabel: string
+}
+
+/* Ring und Knotengrösse hängen am `tier` und an nichts sonst. Als Tabelle statt
+   als Kette von Ternären: mit vier Ringen wäre die Kette eine Stelle, an der
+   ein neuer Ring stillschweigend auf dem falschen Radius landet. */
+const RING_RADIUS: Record<ForgeNodeTier, number> = {
+  branch: FORGE_RING_BRANCH_R,
+  leaf: FORGE_RING_LEAF_R,
+  bough: FORGE_RING_BOUGH_R,
+}
+const RING_ICON_SIZE: Record<ForgeNodeTier, number> = {
+  branch: FORGE_ICON_SIZE_BRANCH,
+  leaf: FORGE_ICON_SIZE_LEAF,
+  bough: FORGE_ICON_SIZE_BOUGH,
 }
 
 /* Name, Glyph und Farbe der fünf Strahlen stehen als SOLAR_BRANCHES in
@@ -352,10 +382,10 @@ const allNodes = computed<TreeNode[]>(() => {
     icon: def.icon,
     color: def.color,
     angleDeg: def.angleDeg,
-    dist: def.tier === 'branch' ? FORGE_RING_BRANCH_R : FORGE_RING_LEAF_R,
+    dist: RING_RADIUS[def.tier],
     tier: def.tier,
     sizeClass: def.tier,
-    iconSize: def.tier === 'branch' ? FORGE_ICON_SIZE_BRANCH : FORGE_ICON_SIZE_LEAF,
+    iconSize: RING_ICON_SIZE[def.tier],
     parentId: def.parentId,
     def,
   }))
@@ -467,19 +497,63 @@ function ringLabelStyle(r: number): Record<string, string> {
 }
 
 // ── Ring unlock state ─────────────────────────────────────────────────────────
-const branchesUnlocked = computed(() => solarStore.starPhase >= FORGE_BRANCH_UNLOCK_PHASE)
-const leavesUnlocked = computed(() => solarStore.starPhase >= FORGE_LEAF_UNLOCK_PHASE)
+/**
+ * Die Beschriftung eines Rings kommt aus den KNOTEN, die auf ihm liegen, nicht
+ * aus einer festen Zahl. Seit der dritte Zweig je Wurzel eine Phase später
+ * aufgeht, trägt Ring 2 zwei Freischaltphasen — ein hartes „Phase 3+ · open"
+ * wäre schlicht falsch, sobald die Hälfte des Rings noch zu ist.
+ *
+ * Der Ring gilt als offen, sobald sein ERSTER Knoten kaufbar wird; solange noch
+ * ein späterer aussteht, nennt das Label auch dessen Phase.
+ */
+const ringPhases = computed(() => {
+  const out = {} as Record<ForgeNodeTier, { min: number; max: number }>
+  for (const def of FORGE_NODES) {
+    const seen = out[def.tier]
+    if (!seen) out[def.tier] = { min: def.phase, max: def.phase }
+    else {
+      seen.min = Math.min(seen.min, def.phase)
+      seen.max = Math.max(seen.max, def.phase)
+    }
+  }
+  return out
+})
 
-const branchRingLabel = computed(() =>
-  branchesUnlocked.value
-    ? `Phase ${FORGE_BRANCH_UNLOCK_PHASE + 1}+ · open`
-    : `Phase ${FORGE_BRANCH_UNLOCK_PHASE + 1} → locked`,
+/**
+ * Der NAME der Phase, nicht ihre Nummer. Die Karten in der Liste sagen „Unlocks
+ * at Zenith" (`lockedFor` in useForgeUpgrades), und hier stand bislang eine
+ * Nummer, die um eins danebenlag: gerechnet wurde `phase + 1`, während der Rest
+ * des Spiels `SUN_PHASE_DISPLAY_OFFSET` (2) verwendet — der Komet zählt als
+ * Anzeigephase 1. Mit dem Namen kann die Rechnung gar nicht erst auseinander-
+ * laufen, und Ring und Karte sprechen dieselbe Sprache.
+ */
+function phaseName(phase: number): string {
+  return STAR_PHASE_DATA[phase]?.name ?? `Phase ${phase + SUN_PHASE_DISPLAY_OFFSET}`
+}
+
+function ringLabelFor(tier: ForgeNodeTier): string {
+  const span = ringPhases.value[tier]
+  if (!span) return ''
+  if (solarStore.starPhase < span.min) return `${phaseName(span.min)} → locked`
+  if (solarStore.starPhase < span.max) {
+    return `${phaseName(span.min)} · ${phaseName(span.max)} → locked`
+  }
+  return `${phaseName(span.max)} · open`
+}
+
+const branchesUnlocked = computed(
+  () => solarStore.starPhase >= (ringPhases.value.branch?.min ?? Infinity),
 )
-const leafRingLabel = computed(() =>
-  leavesUnlocked.value
-    ? `Phase ${FORGE_LEAF_UNLOCK_PHASE + 1}+ · open`
-    : `Phase ${FORGE_LEAF_UNLOCK_PHASE + 1} → locked`,
+const leavesUnlocked = computed(
+  () => solarStore.starPhase >= (ringPhases.value.leaf?.min ?? Infinity),
 )
+const boughsUnlocked = computed(
+  () => solarStore.starPhase >= (ringPhases.value.bough?.min ?? Infinity),
+)
+
+const branchRingLabel = computed(() => ringLabelFor('branch'))
+const leafRingLabel = computed(() => ringLabelFor('leaf'))
+const boughRingLabel = computed(() => ringLabelFor('bough'))
 
 /**
  * Stufe, Kosten, Wirkung und Sperrgrund eines Knotens kommen aus
@@ -491,6 +565,14 @@ const leafRingLabel = computed(() =>
  */
 function entryOf(node: TreeNode): ForgeUpgradeEntry {
   return entryById.value.get(node.id) ?? FORGE_EMPTY_UPGRADE_ENTRY
+}
+
+/** „3/6" für alles Gedeckelte, „3 ∞" für einen Bough — ein gerendertes
+ *  `Infinity` wäre der rohe JavaScript-Wert. */
+function levelChip(entry: ForgeUpgradeEntry): string {
+  return Number.isFinite(entry.maxLevel)
+    ? `${entry.level}/${entry.maxLevel}`
+    : `${entry.level} ${FORGE_ENDLESS_SYMBOL}`
 }
 
 function isTooltipBelow(angleDeg: number): boolean {
@@ -698,12 +780,16 @@ const nextPhasePreviewStyle = computed(() => ({
 /* ══════════════════════════════════════════════════
    STAGE
 ══════════════════════════════════════════════════ */
+/* Kantenlänge kommt aus `FORGE_STAGE_SIZE` und steht hier NICHT ein zweites Mal
+   als Literal: `fitScale` teilt durch dieselbe Konstante, und zwei Zahlen für
+   eine Bühne laufen beim nächsten Ring auseinander. Einmal beim Rendern
+   gesetzt, kein Wert pro Frame. */
 .tree-stage {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 820px;
-  height: 820px;
+  width: var(--forge-stage-size);
+  height: var(--forge-stage-size);
   transition: transform 0.2s ease;
   z-index: 1;
 }
@@ -732,6 +818,11 @@ const nextPhasePreviewStyle = computed(() => ({
 .ring-label--root {
   color: rgba(232, 192, 64, 0.55);
   background: #12100a;
+}
+
+.ring-label--endless {
+  color: rgba(201, 160, 255, 0.8);
+  background: #150c1a;
 }
 
 .ring-label--now {
@@ -920,6 +1011,15 @@ const nextPhasePreviewStyle = computed(() => ({
   width: 38px;
   height: 38px;
   border: 2px solid #2a1a08;
+}
+
+/* Ring 4 sitzt zwischen Zweig und Blatt: er ist kein Beiwerk wie ein Blatt,
+   aber auch kein Hauptast. Der violette Rand ist das einzige, was ihn optisch
+   vom Rest trennt — dieselbe Farbe wie sein Ring und sein Listenabschnitt. */
+.node-circle--bough {
+  width: 42px;
+  height: 42px;
+  border: 2px solid #4a2a6a;
 }
 
 .node-level {

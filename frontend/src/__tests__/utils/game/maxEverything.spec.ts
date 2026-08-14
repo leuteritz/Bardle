@@ -11,11 +11,13 @@ import { usePlanetShopStore, computePlanetMaxHp } from '@/stores/world/planetSho
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore, FORGE_NODES } from '@/stores/progression/starForgeStore'
+import { FORGE_BOUGHS } from '@/config/progression/starForge'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import { SHOP_ITEMS } from '@/config/economy/items'
 import {
+  ADMIN_MAX_BOUGH_LEVEL,
   ADMIN_MAX_GALAXY,
   ADMIN_MAX_PLANET_LEVEL,
   ADMIN_MAX_UNIVERSE,
@@ -56,8 +58,32 @@ describe('maxEverything', () => {
     expect(gatePhase).toBeGreaterThan(0)
     expect(lateNodes.length).toBeGreaterThan(0)
     for (const def of lateNodes) {
-      const level = def.tier === 'branch' ? forge.branchLevels[def.id] : forge.leafLevels[def.id]
-      expect(level).toBe(forge.nodeMaxLevel(def.id))
+      if (def.tier === 'branch') {
+        expect(forge.branchLevels[def.id], def.id).toBe(forge.nodeMaxLevel(def.id))
+      } else if (def.tier === 'leaf') {
+        expect(forge.leafLevels[def.id], def.id).toBe(forge.nodeMaxLevel(def.id))
+      } else {
+        // Ring 4 hat kein Maximum — `adminMaxAll` setzt dort die gewählte
+        // Testhöhe. Ein `toBe(nodeMaxLevel(...))` verlangte hier `Infinity`.
+        expect(forge.boughLevels[def.id], def.id).toBe(ADMIN_MAX_BOUGH_LEVEL)
+      }
+    }
+  })
+
+  it('maxt auch den endlosen Ring, ohne sich an ihm aufzuhängen', () => {
+    maxEverything()
+    const forge = useStarForgeStore()
+
+    // Der Aufruf ist zweimal hintereinander gültig — beim zweiten Mal steht der
+    // Bough bereits auf der Testhöhe und darf weder weiterwachsen noch die
+    // gebuchte Max-HP ein zweites Mal aufschlagen.
+    const hpAfterFirst = usePlayerStore().maxHP
+    forge.adminMaxAll()
+
+    expect(usePlayerStore().maxHP).toBe(hpAfterFirst)
+    for (const def of FORGE_BOUGHS) {
+      expect(forge.boughLevels[def.id], def.id).toBe(ADMIN_MAX_BOUGH_LEVEL)
+      expect(forge.nodeMaxLevel(def.id)).toBe(Infinity)
     }
   })
 

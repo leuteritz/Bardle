@@ -45,6 +45,7 @@ export const FORGE_ROOT_ANGLES_DEG = {
 export const FORGE_ICON_SIZE_ROOT = 28
 export const FORGE_ICON_SIZE_BRANCH = 22
 export const FORGE_ICON_SIZE_LEAF = 18
+export const FORGE_ICON_SIZE_BOUGH = 20
 /**
  * Luft an JEDER Seite beim Einpassen des Baums.
  *
@@ -138,15 +139,36 @@ export const MEEP_TREE_EFFECT_ROWS: readonly MeepTreeEffectRowDef[] = [
 ] as const
 
 // ── Star Forge (Shop tab) ─────────────────────────────────────────────────────
-// Tree geometry — the tree lives on a square stage, nodes placed on 3 polar rings.
-export const FORGE_STAGE_SIZE = 820
+// Tree geometry — the tree lives on a square stage, nodes placed on 4 polar rings.
+/**
+ * Gewachsen von 820, als der Bough-Ring dazukam: 490 (Ring 4) plus den halben
+ * Knoten (17) sind 507, und 1040/2 = 520 lässt den Rand frei. Die Zahl steht
+ * NUR hier — `ForgeTreePanel` setzt sie als CSS-Variable an die Bühne, statt
+ * sie im scoped CSS ein zweites Mal auszuschreiben.
+ */
+export const FORGE_STAGE_SIZE = 1040
 export const FORGE_RING_ROOT_R = 165
 export const FORGE_RING_BRANCH_R = 285
 export const FORGE_RING_LEAF_R = 385
+export const FORGE_RING_BOUGH_R = 490
 
 // Ring unlock gating (starPhase index)
 export const FORGE_BRANCH_UNLOCK_PHASE = 2
 export const FORGE_LEAF_UNLOCK_PHASE = 4
+/**
+ * Der dritte Zweig je Wurzel geht eine Phase später auf als die beiden ersten —
+ * er ist stärker und teurer, und die Ringe sollen sich nicht auf einen Schlag
+ * füllen.
+ */
+export const FORGE_BRANCH_LATE_UNLOCK_PHASE = 3
+/** Die Blätter an den späten Zweigen kommen mit dem regulären Blätter-Ring. */
+export const FORGE_LEAF_LATE_UNLOCK_PHASE = 4
+/**
+ * Ring 4 geht in der ENDPHASE auf — genau dann, wenn die Sonnenrampe endet und
+ * jeder andere Knoten des Baums seine Obergrenze erreichen kann. Vorher hätte
+ * ein Knoten ohne Deckel keine Aufgabe; danach ist er die einzige, die bleibt.
+ */
+export const FORGE_BOUGH_UNLOCK_PHASE = 5
 /** Branch max level at unlock; +1 per phase past the unlock phase, up to the cap
  *  → "old upgrades gain new tiers" with every sun evolution. */
 export const FORGE_BRANCH_BASE_MAX_LEVEL = 3
@@ -169,6 +191,54 @@ export const FORGE_LEAF_MAX_LEVEL = 4
 /** Parent level required before a child node can be bought. */
 export const FORGE_BRANCH_PARENT_MIN_LEVEL = 1
 export const FORGE_LEAF_PARENT_MIN_LEVEL = 2
+/**
+ * Ein Bough verlangt einen AUSGEWACHSENEN Zweig unter sich — mehr als das Blatt
+ * daneben. Er ist der letzte Knoten der Kette, und wer ihn erreicht, hat den
+ * Zweig ohnehin längst hochgezogen; die Hürde sorgt nur dafür, dass Ring 4
+ * nicht neben einem halb gewachsenen Ring 2 aufgeht.
+ */
+export const FORGE_BOUGH_PARENT_MIN_LEVEL = 3
+
+/**
+ * Ring 4 kennt keine Obergrenze. Das ist der Punkt: die Sonnenrampe endet nach
+ * rund 44 Spielstunden, danach steht im ganzen Baum nur noch „✦ MAX" — und
+ * Chimes haben im Spätspiel ausser den Planeten-Leveln keine Senke.
+ *
+ * Sicher ist das NUR in dieser Kombination, und sie ist keine Geschmacksfrage:
+ *
+ *   Wirkung je Stufe ADDITIV  (+5 % CpS, nicht ×1,05)
+ *   Kosten je Stufe GEOMETRISCH (`FORGE_BOUGH_COST_MULTIPLIER`)
+ *
+ * Der Ertrag wächst dann linear (`1 + 0,03·n`), der Preis exponentiell
+ * (`1,35ⁿ`). Die Amortisationszeit einer Stufe ist `P(n) = P(1)·1,35ⁿ⁻¹` — das
+ * Verhältnis `P(n+1)/P(n)` ist 1,35, UNABHÄNGIG von der CpS des Spielers. Ein
+ * höheres Einkommen verschiebt die Kette nur nach rechts, es ändert ihre
+ * Steigung nicht. Ein Knoten, der die CpS erhöht, mit der er bezahlt wird, kann
+ * sich damit NIE selbst tragen. Multiplikativ gestapelt — zehn Boughs zu je
+ * ×1,03 — stünde `1,03^(10n)` gegen `1,35ⁿ`, und der Kreis wäre offen:
+ * dieselbe Fehlerklasse wie der Overclock-Stapel (docs/balance.md).
+ *
+ * **Warum 1,35 und nicht flacher.** Der Multiplikator ist der einzige
+ * Parameter, der die LÄNGE des endlosen Rings bestimmt; `baseCost` verschiebt
+ * nur den Anfang. Weil Boughs kein Material verlangen, bremst sie nichts als
+ * die Geometrie: bei 1,22 kaufte ein gesparter Chime-Berg von 1e13 auf einen
+ * Schlag 33 Stufen, bei 1,35 sind es 24. Wirkt der Einstieg zu zäh, senke
+ * `baseCost` — NIE den Multiplikator.
+ *
+ * Zweite Bedingung: nur UNGEDECKELTE Achsen. Ausgeschlossen sind nicht nur die
+ * harten Kappen (`FORGE_MIN_DAMAGE_TAKEN_MULT`, `FORGE_MIN_DWELL_MULT`,
+ * `FORGE_MIN_EXPEDITION_MULT`, `FORGE_MAX_DOUBLE_CLICK_CHANCE`), sondern auch
+ * drei Achsen, die STILL sättigen und deshalb genauso ein bezahltes Nichts
+ * wären:
+ *   • `materialDropMult` — `inventoryStore.tryDropMaterial` vergleicht
+ *     `Math.random() > chance`; oberhalb 1 wirkt keine Stufe mehr.
+ *   • `championDpsMult` — steckt über `combatStore.fullOrbitDps()` in
+ *     `expectedDps` und hebt damit die Boss-HP gleich mit (docs/balance.md).
+ *   • `extraDropCount` — `addMaterial(id, source, qty)` bucht `qty` roh in den
+ *     Bestand; eine Bruchzahl je Stufe hinterliesse Materialien mit
+ *     Nachkommastellen.
+ */
+export const FORGE_BOUGH_COST_MULTIPLIER = 1.35
 /** Each leaf level amplifies its parent branch's effect by this fraction. */
 export const FORGE_LEAF_AMPLIFY_PER_LEVEL = 0.25
 
@@ -220,17 +290,20 @@ export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
 ]
 
 /**
- * Die drei Ringe als Abschnitte der Upgrade-Liste — Lesereihenfolge von innen
+ * Die vier Ringe als Abschnitte der Upgrade-Liste — Lesereihenfolge von innen
  * nach außen, dieselbe, in der sie freigeschaltet werden.
  *
- * Namen und Glyphen sind KEINE freie Wahl: „Solar Rays", „Forge Branches" und
- * „Forge Leaves" stehen samt `beam-wake`, `tree-branch` und `falling-leaf`
- * bereits im Lexikon (config/encyclopedia/sunAndForge.ts). Derselbe Baum darf
- * nicht an zwei Stellen anders heißen.
+ * Namen und Glyphen sind KEINE freie Wahl: „Solar Rays", „Forge Branches",
+ * „Forge Leaves" und „Astral Boughs" stehen samt ihren Zeichen auch im Lexikon
+ * (config/encyclopedia/sunAndForge.ts). Derselbe Baum darf nicht an zwei
+ * Stellen anders heißen.
  *
  * Die Farben sind nicht die der Knoten (die tragen ihre eigene aus dem
  * Katalog), sondern die des Abschnittsstrichs: Gold für den Kern, Grün für die
- * Zweige, Eisblau für die Blätter — je weiter außen, desto kühler.
+ * Zweige, Eisblau für die Blätter, Violett für die Boughs — je weiter außen,
+ * desto kühler. Violett ist zugleich die Farbe, die im Projekt „episch/selten"
+ * trägt (`FORGE_RELIC_RARITY_COLOR.epic`), und der endlose Ring ist das
+ * Seltenste, was der Baum hergibt.
  */
 export const FORGE_UPGRADE_GROUPS = [
   {
@@ -244,7 +317,7 @@ export const FORGE_UPGRADE_GROUPS = [
     tier: 'branch' as const,
     title: 'Forge Branches',
     icon: 'game-icons:tree-branch',
-    hint: 'Each ray forks in two',
+    hint: 'Each ray forks in three',
     accent: '#7fd048',
   },
   {
@@ -253,6 +326,13 @@ export const FORGE_UPGRADE_GROUPS = [
     icon: 'game-icons:falling-leaf',
     hint: 'Amplify the branch they hang on',
     accent: '#86d0ff',
+  },
+  {
+    tier: 'bough' as const,
+    title: 'Astral Boughs',
+    icon: 'game-icons:infinity',
+    hint: 'No final level — the tree keeps growing',
+    accent: '#c9a0ff',
   },
 ]
 
@@ -272,7 +352,15 @@ export const FORGE_UPGRADE_TIER_LABELS = {
   root: 'SOLAR RAY',
   branch: 'BRANCH',
   leaf: 'LEAF',
+  bough: 'BOUGH',
 } as const
+
+/**
+ * Steht überall dort, wo sonst die Höchststufe stünde. Ein gerendertes
+ * „Infinity" wäre der rohe JavaScript-Wert; dies ist ein Schriftzeichen wie
+ * `✦` oder `→` und damit von der Emoji-Regel nicht erfasst.
+ */
+export const FORGE_ENDLESS_SYMBOL = '∞'
 
 /**
  * Sortierung innerhalb eines Abschnitts. Was eine Entscheidung verlangt, steht
@@ -316,10 +404,11 @@ export const FORGE_SPOTLIGHT_NODE_SCALE = 1.22
 export const FORGE_SPOTLIGHT_DIM_OPACITY = 0.3
 export const FORGE_SPOTLIGHT_PING_MS = 450
 /**
- * Sonne → Wurzel → Zweig → Blatt: drei Glieder trennen den äußersten Knoten vom
- * Sternenrand. Zugleich die Abbruchbremse beim Hochlaufen der `parentId`-Kette.
+ * Sonne → Wurzel → Zweig → Blatt/Bough: vier Glieder trennen den äußersten
+ * Knoten vom Sternenrand, seit Ring 4 dazugekommen ist. Zugleich die
+ * Abbruchbremse beim Hochlaufen der `parentId`-Kette.
  */
-export const FORGE_SPOTLIGHT_MAX_LIMBS = 3
+export const FORGE_SPOTLIGHT_MAX_LIMBS = 4
 /**
  * Wartezeit, bevor ein Hover am Baum die zugehörige Karte ins Bild rollt. Ein
  * Schwenk über den Baum soll EINEN Rollbefehl absetzen, nicht fünfundzwanzig.
@@ -397,11 +486,28 @@ export const FORGE_BARGAIN_REROLL_MATERIAL = 'dark_matter'
 export const FORGE_BARGAIN_REROLL_COST = 1
 
 // Tree zoom (wheel + buttons). The default starts zoomed-in on the sun and
-// its five core rays; zooming out reveals the branch and leaf rings.
-export const FORGE_TREE_ZOOM_MIN = 0.55
-export const FORGE_TREE_ZOOM_MAX = 2.2
-export const FORGE_TREE_ZOOM_STEP = 0.15
-export const FORGE_TREE_ZOOM_DEFAULT = 1.7
+// its five core rays; zooming out reveals the branch, leaf and bough rings.
+/**
+ * Alle vier Werte sind mit der Bühne mitgewachsen (820 → 1040, Faktor 1,268).
+ *
+ * Die Rechnung dahinter ist nicht die naheliegende. Dargestellt wird
+ * `FORGE_STAGE_SIZE × fitScale × zoom`, und weil `fitScale` selbst durch
+ * `FORGE_STAGE_SIZE` teilt, kürzt sich die Bühnengröße heraus: die gezeigte
+ * Fläche ist schlicht `(Viewport − 2 × Padding) × zoom`. Was durch den vierten
+ * Ring KLEINER wird, sind die inneren Ringe im Verhältnis zur Bühne — der
+ * Blätterring fällt von 385/820 auf 385/1040. Genau um dieses Verhältnis
+ * (Faktor 1,268) muss jeder Zoomwert steigen, das Minimum eingeschlossen.
+ *
+ * Erst falsch gemacht und im Bild gesehen: das Minimum war stattdessen auf 0,45
+ * gesenkt worden, in der Annahme, der grössere Baum brauche mehr Luft. Er stand
+ * dann als Briefmarke in der Mitte einer leeren Fläche. Bei 0,70 ist die
+ * gezeigte Bühne kleiner als der Viewport, es passt also weiterhin alles ins
+ * Bild — nur eben lesbar.
+ */
+export const FORGE_TREE_ZOOM_MIN = 0.7
+export const FORGE_TREE_ZOOM_MAX = 2.8
+export const FORGE_TREE_ZOOM_STEP = 0.19
+export const FORGE_TREE_ZOOM_DEFAULT = 2.15
 
 // Header universe block — meep counter count-up tween (steps × interval ≈ 320ms)
 export const MEEP_COUNTUP_STEPS = 20

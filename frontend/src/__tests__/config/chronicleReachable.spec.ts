@@ -1,9 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
-import { FORGE_BRANCHES, FORGE_LEAVES, FORGE_RELICS } from '@/config/progression/starForge'
+import {
+  FORGE_BRANCHES,
+  FORGE_LEAVES,
+  FORGE_BOUGHS,
+  FORGE_RELICS,
+} from '@/config/progression/starForge'
 import {
   FORGE_BRANCH_MAX_LEVEL_CAP,
+  FORGE_BRANCH_BASE_MAX_LEVEL,
+  FORGE_BOUGH_PARENT_MIN_LEVEL,
   FORGE_LEAF_MAX_LEVEL,
+  STAR_PHASE_FINAL_INDEX,
   ADMIN_MAX_PLANET_LEVEL,
   PLANET_SLOT_CONFIG,
   CHAMPION_TIER_CHIMES_PRICE,
@@ -34,13 +42,49 @@ const finalThreshold = (id: string) => {
 describe('Astral Codex — jede letzte Stufe muss erreichbar sein', () => {
   it('Sunsmith: forgeLevels bleibt unter dem Maximum des Baums', () => {
     // Genau die Summe, die achievementStore als `forgeLevels` zählt:
-    // Branch- plus Leaf- plus Relikt-Stufen.
-    const maxBranches = FORGE_BRANCHES.length * FORGE_BRANCH_MAX_LEVEL_CAP
+    // Branch- plus Leaf- plus Relikt-Stufen. Die BOUGHS sind absichtlich nicht
+    // dabei — sie haben keine Obergrenze, und eine unbegrenzte Zahl in dieser
+    // Summe machte die Prüfung sinnlos.
+    //
+    // Ein Zweig erreicht `BASE + (Endphase − seiner eigenen Freischaltphase)`,
+    // gedeckelt: die späten Zweige kommen deshalb nur auf 5, nicht auf 6, und
+    // eine pauschale Multiplikation mit dem Cap überschätzte das Maximum.
+    const maxBranches = FORGE_BRANCHES.reduce(
+      (sum, branch) =>
+        sum +
+        Math.min(
+          FORGE_BRANCH_MAX_LEVEL_CAP,
+          FORGE_BRANCH_BASE_MAX_LEVEL + Math.max(0, STAR_PHASE_FINAL_INDEX - branch.phase),
+        ),
+      0,
+    )
     const maxLeaves = FORGE_LEAVES.length * FORGE_LEAF_MAX_LEVEL
     const maxRelics = FORGE_RELICS.reduce((sum, r) => sum + r.maxLevel, 0)
     const reachable = maxBranches + maxLeaves + maxRelics
 
     expect(finalThreshold('forge')).toBeLessThanOrEqual(reachable)
+  })
+
+  it('jeder Bough hängt an einem Zweig, der in der Endphase erreichbar ist', () => {
+    // Ein Ring, den man nicht aufschliessen kann, ist dieselbe Fehlerklasse wie
+    // eine Bahn, die man nicht abschliessen kann: `nodeUnlocked` verlangt einen
+    // Elternzweig auf `FORGE_BOUGH_PARENT_MIN_LEVEL`, und ein spät
+    // freigeschalteter Zweig erreicht in der Endphase nur noch fünf Stufen.
+    for (const bough of FORGE_BOUGHS) {
+      const parent = FORGE_BRANCHES.find((branch) => branch.id === bough.parentId)
+      expect(parent, `${bough.id} hängt an keinem Zweig`).toBeDefined()
+      const parentMax = Math.min(
+        FORGE_BRANCH_MAX_LEVEL_CAP,
+        FORGE_BRANCH_BASE_MAX_LEVEL + Math.max(0, STAR_PHASE_FINAL_INDEX - parent!.phase),
+      )
+      expect(parentMax, `${bough.id}: Elternzweig bleibt zu klein`).toBeGreaterThanOrEqual(
+        FORGE_BOUGH_PARENT_MIN_LEVEL,
+      )
+      // Und der Bough darf nicht vor seinem Elternzweig aufgehen.
+      expect(bough.phase, `${bough.id} geht vor seinem Zweig auf`).toBeGreaterThanOrEqual(
+        parent!.phase,
+      )
+    }
   })
 
   it('Warden of Worlds: planetLevels bleibt im ausgebauten Orbit', () => {

@@ -1015,6 +1015,24 @@ export function useStatCatalog(query: Ref<string>): {
       { key: 'forge-dps', label: 'Champion DPS Bonus', value: bonus(forgeStore.championDpsMult) },
       { key: 'forge-boss', label: 'Boss Damage Bonus', value: bonus(forgeStore.bossDamageMult) },
       { key: 'forge-splash', label: 'Click Splash', value: pct(forgeStore.clickSplashPct) },
+      {
+        key: 'forge-expedition-reward',
+        label: 'Expedition Reward Bonus',
+        value: bonus(forgeStore.expeditionRewardMult),
+        keywords: 'wayfinder hoard',
+      },
+      {
+        key: 'forge-champion-xp',
+        label: 'Champion XP Bonus',
+        value: bonus(forgeStore.championXpMult),
+        keywords: 'eternal host',
+      },
+      {
+        key: 'forge-star-lifetime',
+        label: 'Resource Star Lifetime',
+        value: bonus(forgeStore.starLifetimeMult),
+        keywords: 'warden vigil',
+      },
       { key: 'forge-regen', label: 'Bonus HP Regen / s', value: dec(forgeStore.hpRegenPerSec, 1) },
       {
         key: 'forge-mitigation',

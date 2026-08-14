@@ -21,10 +21,11 @@ import {
 import {
   FORGE_BRANCH_BASE_MAX_LEVEL,
   FORGE_BRANCH_MAX_LEVEL_CAP,
-  FORGE_BRANCH_UNLOCK_PHASE,
   FORGE_BRANCH_PARENT_MIN_LEVEL,
   FORGE_LEAF_MAX_LEVEL,
   FORGE_LEAF_PARENT_MIN_LEVEL,
+  FORGE_BOUGH_PARENT_MIN_LEVEL,
+  ADMIN_MAX_BOUGH_LEVEL,
   FORGE_LEAF_AMPLIFY_PER_LEVEL,
   FORGE_CONSTELLATION_REQUIRED_LEVEL,
   FORGE_BARGAIN_RESTOCK_MS,
@@ -66,6 +67,15 @@ export const useStarForgeStore = defineStore('starForge', {
     branchLevels: {} as Record<string, number>,
     /** Ring-3 node levels, keyed by ForgeNodeDef id. */
     leafLevels: {} as Record<string, number>,
+    /**
+     * Ring-4 node levels, keyed by ForgeNodeDef id. Eigener Beutel und nicht
+     * mit den Zweigen zusammengelegt: `achievementStore` summiert für die
+     * Codex-Bahn „Sunsmith" genau `branchLevels + leafLevels + relicLevels`.
+     * Eine Zahl OHNE Obergrenze in dieser Summe machte jede Bahn-Schwelle
+     * trivial — und der Sunsmith-Rabatt senkt seinerseits die Materialkosten
+     * des Baums, wäre also ein geschlossener Kreis.
+     */
+    boughLevels: {} as Record<string, number>,
     /** Relic levels, keyed by ForgeRelicDef id (0/absent = not forged). */
     relicLevels: {} as Record<string, number>,
     forgedConstellations: [] as string[],
@@ -81,21 +91,30 @@ export const useStarForgeStore = defineStore('starForge', {
   getters: {
     // ── Tree nodes ────────────────────────────────────────────────────────────
     nodeLevel(state): (id: string) => number {
-      return (id) => state.branchLevels[id] ?? state.leafLevels[id] ?? 0
+      return (id) => state.branchLevels[id] ?? state.leafLevels[id] ?? state.boughLevels[id] ?? 0
     },
 
     nodeMaxLevel(): (id: string) => number {
       return (id) => {
         const def = getForgeNode(id)
         if (!def) return 0
+        // Ring 4 kennt keine Obergrenze — `level >= maxLevel` ist damit für ihn
+        // dauerhaft falsch, er wird also nie `maxed`. Wer die Zahl ANZEIGT oder
+        // über sie iteriert, muss sie mit `Number.isFinite` abfangen.
+        if (def.tier === 'bough') return Infinity
         if (def.tier === 'leaf') return FORGE_LEAF_MAX_LEVEL
+        // „+1 je Phase über der eigenen Freischaltphase". Der Bezug ist
+        // `def.phase` und NICHT die globale Freischaltkonstante: für die zehn
+        // frühen Zweige ist beides dasselbe (ihr `phase` IST 2), aber ein
+        // Zweig, der erst in Phase 3 aufgeht, stünde sonst am Tag seiner
+        // Freischaltung schon auf Stufe 4 von 6.
         const phase = useSolarUpgradeStore().starPhase
-        const extra = Math.max(0, phase - FORGE_BRANCH_UNLOCK_PHASE)
+        const extra = Math.max(0, phase - def.phase)
         return Math.min(FORGE_BRANCH_MAX_LEVEL_CAP, FORGE_BRANCH_BASE_MAX_LEVEL + extra)
       }
     },
 
-    /** Parent level of a node — solar root level for branches, branch level for leaves. */
+    /** Parent level of a node — solar root level for branches, node level otherwise. */
     nodeParentLevel(): (def: ForgeNodeDef) => number {
       return (def) => {
         if (def.tier === 'branch') {
@@ -105,14 +124,21 @@ export const useStarForgeStore = defineStore('starForge', {
       }
     },
 
+    /** Elternstufe, die ein Knoten seines Rings verlangt, bevor er aufgeht. */
+    nodeParentRequirement(): (def: ForgeNodeDef) => number {
+      return (def) => {
+        if (def.tier === 'branch') return FORGE_BRANCH_PARENT_MIN_LEVEL
+        if (def.tier === 'leaf') return FORGE_LEAF_PARENT_MIN_LEVEL
+        return FORGE_BOUGH_PARENT_MIN_LEVEL
+      }
+    },
+
     nodeUnlocked(): (id: string) => boolean {
       return (id) => {
         const def = getForgeNode(id)
         if (!def) return false
         if (useSolarUpgradeStore().starPhase < def.phase) return false
-        const required =
-          def.tier === 'branch' ? FORGE_BRANCH_PARENT_MIN_LEVEL : FORGE_LEAF_PARENT_MIN_LEVEL
-        return this.nodeParentLevel(def) >= required
+        return this.nodeParentLevel(def) >= this.nodeParentRequirement(def)
       }
     },
 
@@ -191,6 +217,24 @@ export const useStarForgeStore = defineStore('starForge', {
         const leafLevel = leafDef ? (state.leafLevels[leafDef.id] ?? 0) : 0
         const amp = 1 + leafLevel * FORGE_LEAF_AMPLIFY_PER_LEVEL
         return level * def.effectPerLevel * amp
+      }
+    },
+
+    /**
+     * Wirkung eines Boughs: schlicht Stufe × Wert je Stufe.
+     *
+     * **Ohne Blatt-Verstärker, und das ist der Kern der Sache.** Liefe ein
+     * Bough durch `branchEffect`, multiplizierte ein Blatt auf Stufe 4 einen
+     * UNBEGRENZTEN Term mit 2 — aus „additiv je Stufe" würde ein Faktor, und
+     * die Rechnung, die den endlosen Ring sicher macht, wäre hinfällig.
+     * `branchEffect` weist Boughs bereits über `def.tier !== 'branch'` ab;
+     * dieser Getter ist die andere Hälfte derselben Trennung.
+     */
+    boughEffect(state): (boughId: string) => number {
+      return (boughId) => {
+        const def = getForgeNode(boughId)
+        if (!def || def.tier !== 'bough') return 0
+        return (state.boughLevels[boughId] ?? 0) * def.effectPerLevel
       }
     },
 
@@ -340,8 +384,43 @@ export const useStarForgeStore = defineStore('starForge', {
     offlineEarningsMult(): number {
       const eternal = this.constellationForged('eternalOrbit') ? 15 : 0
       return (
-        1 + (this.branchEffect('moonOrbit') + this.relicEffect('echoOfTheVoid') + eternal) / 100
+        1 +
+        (this.branchEffect('moonOrbit') +
+          this.relicEffect('echoOfTheVoid') +
+          this.boughEffect('sleeplessOrbit') +
+          eternal) /
+          100
       )
+    },
+
+    /**
+     * Multiplier on expedition REWARDS (Wayfinder's Cache + Wayfarer's Hoard).
+     * Nicht zu verwechseln mit `expeditionSpeedMult`, der die DAUER kürzt und
+     * bei `FORGE_MIN_EXPEDITION_MULT` gegen einen Boden läuft — genau deshalb
+     * trägt der endlose Ring die Beute und nicht das Tempo.
+     */
+    expeditionRewardMult(): number {
+      return 1 + (this.branchEffect('wayfindersCache') + this.boughEffect('wayfarersHoard')) / 100
+    },
+
+    /** Multiplier on champion experience gains (Eternal Host). */
+    championXpMult(): number {
+      return 1 + this.boughEffect('eternalHost') / 100
+    },
+
+    /**
+     * Multiplier on how long a resource star stays in the sky (Warden's Vigil +
+     * Kindled Vigil). Der ehrliche Material-Weg: `materialDropMult` sättigt,
+     * weil `tryDropMaterial` gegen `Math.random()` prüft und eine Chance über 1
+     * nichts mehr hinzufügt — mehr ZEIT am Stern sättigt nicht.
+     */
+    starLifetimeMult(): number {
+      return 1 + (this.branchEffect('wardensVigil') + this.boughEffect('kindledVigil')) / 100
+    },
+
+    /** Flat max-HP granted by the Adamant Core bough, in total. */
+    boughMaxHpBonus(): number {
+      return this.boughEffect('adamantCore')
     },
 
     /** Extra hours added to the offline-progress cap (Echo of the Void). */
@@ -368,9 +447,14 @@ export const useStarForgeStore = defineStore('starForge', {
       return Math.min(MAX_DOUBLE_CLICK_CHANCE, this.branchEffect('goldenEcho') / 100)
     },
 
-    /** Fraction of CpS added to every click (Resonance + Midas Bell). */
+    /** Fraction of CpS added to every click (Resonance + Midas Bell + Deep Resonance). */
     cpcFromCpsPct(): number {
-      return (this.branchEffect('resonance') + this.relicEffect('midasBell')) / 100
+      return (
+        (this.branchEffect('resonance') +
+          this.relicEffect('midasBell') +
+          this.boughEffect('deepResonance')) /
+        100
+      )
     },
 
     /** Multiplier on the material drop chance. */
@@ -394,31 +478,51 @@ export const useStarForgeStore = defineStore('starForge', {
       return 1 + (this.branchEffect('warcry') + this.relicEffect('hostOfChampions') + vigil) / 100
     },
 
-    /** Multiplier on damage dealt to bosses (Shatter + Ember Crown). */
+    /** Multiplier on damage dealt to bosses (Shatter + Ember Crown + Undying Wrath). */
     bossDamageMult(): number {
-      return 1 + (this.branchEffect('shatter') + this.relicEffect('emberCrown')) / 100
+      return (
+        1 +
+        (this.branchEffect('shatter') +
+          this.relicEffect('emberCrown') +
+          this.boughEffect('undyingWrath')) /
+          100
+      )
     },
 
-    /** Fraction of click damage splashed to all enemies (Shattering Nova). */
+    /** Fraction of click damage splashed to all enemies
+     *  (Shattering Nova + Sundering Wake + Rending Arc). */
     clickSplashPct(): number {
-      return this.constellationForged('shatteringNova') ? 0.1 : 0
+      const nova = this.constellationForged('shatteringNova') ? 10 : 0
+      return (nova + this.branchEffect('sunderingWake') + this.boughEffect('rendingArc')) / 100
     },
 
-    /** Multiplier on total CpS (Stellar Wind + Tempo Surge buff). */
+    /**
+     * Multiplier on total CpS (Stellar Wind + Tempo Surge buff + Tidal Drift +
+     * Endless Tide).
+     *
+     * Der Baum-Term steht als EIGENER Faktor neben den beiden anderen und
+     * nicht in einer ihrer Klammern: sonst multiplizierte der Stellar-Wind-
+     * Faktor eine unbegrenzt wachsende Zahl mit, und aus dem additiven Bough
+     * würde ein multiplikativer.
+     */
     cpsMult(): number {
       const stellar = this.constellationForged('stellarWind')
         ? FORGE_CONSTELLATION_STELLAR_WIND_CPS_MULT
         : 1
       const buff = this.buffActive('cpsX2') ? 2 : 1
-      return stellar * buff
+      const tree = 1 + (this.branchEffect('tidalDrift') + this.boughEffect('endlessTide')) / 100
+      return stellar * buff * tree
     },
 
-    /** Multiplier on total CpC (Golden Tempest + Midas Hour buff). */
+    /** Multiplier on total CpC (Golden Tempest + Midas Hour buff + Gilded
+     *  Harvest + Gilded Cascade) — derselbe Aufbau wie `cpsMult`. */
     cpcMult(): number {
       const tempest = this.constellationForged('goldenTempest')
         ? FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT
         : 1
-      return tempest * (this.buffActive('cpcX2') ? 2 : 1)
+      const tree =
+        1 + (this.branchEffect('gildedHarvest') + this.boughEffect('gildedCascade')) / 100
+      return tempest * (this.buffActive('cpcX2') ? 2 : 1) * tree
     },
   },
 
@@ -456,8 +560,16 @@ export const useStarForgeStore = defineStore('starForge', {
       gameStore.chimes -= this.nodeGoldCost(id)
       if (def.tier === 'branch') {
         this.branchLevels[id] = (this.branchLevels[id] ?? 0) + 1
-      } else {
+      } else if (def.tier === 'leaf') {
         this.leafLevels[id] = (this.leafLevels[id] ?? 0) + 1
+      } else {
+        this.boughLevels[id] = (this.boughLevels[id] ?? 0) + 1
+        // Max HP ist ein State-Feld und kein Faktor — es wird beim Kauf
+        // gebucht, dasselbe Muster wie `forgeRelic('heartOfTheStar')`. Sicher
+        // ist das, weil der Prestige den Sternbaum NICHT zurücksetzt (siehe
+        // gameStore, „Der Meep-Baum bleibt STEHEN") und `playerStore.maxHP`
+        // im Spielstand liegt; die Buchung kann also nicht auseinanderlaufen.
+        if (id === 'adamantCore') usePlayerStore().maxHP += def.effectPerLevel
       }
       this.recalcRates()
       return true
@@ -561,8 +673,8 @@ export const useStarForgeStore = defineStore('starForge', {
 
     /**
      * TEMP (admin/testing): kauft in einem Zug alles, was der Shop gerade
-     * hergibt — Kernstrahlen, Zweige, Blätter, Relikte, Konstellationen — ohne
-     * Chimes und ohne Material.
+     * hergibt — Kernstrahlen, Zweige, Blätter, Boughs, Relikte, Konstellationen
+     * — ohne Chimes und ohne Material.
      *
      * Die PHASEN-Gates bleiben stehen: was die Sonne noch nicht freigeschaltet
      * hat, bleibt zu, und jeder Knoten landet auf der Obergrenze, die für die
@@ -579,14 +691,27 @@ export const useStarForgeStore = defineStore('starForge', {
       const solar = useSolarUpgradeStore()
       solar.adminMaxBranches()
 
+      const player = usePlayerStore()
+
       for (const def of FORGE_NODES) {
         if (solar.starPhase < def.phase) continue
-        const max = this.nodeMaxLevel(def.id)
-        if (def.tier === 'branch') this.branchLevels[def.id] = max
-        else this.leafLevels[def.id] = max
+        if (def.tier === 'branch') {
+          this.branchLevels[def.id] = this.nodeMaxLevel(def.id)
+        } else if (def.tier === 'leaf') {
+          this.leafLevels[def.id] = this.nodeMaxLevel(def.id)
+        } else {
+          // `nodeMaxLevel` gibt für einen Bough `Infinity` — eine gewählte
+          // Testhöhe muss her, sonst stünde im Baum eine Stufe, die es im Spiel
+          // nicht gibt (und ein `for`-Lauf bis dorthin endete nie).
+          const before = this.boughLevels[def.id] ?? 0
+          if (ADMIN_MAX_BOUGH_LEVEL <= before) continue
+          this.boughLevels[def.id] = ADMIN_MAX_BOUGH_LEVEL
+          if (def.id === 'adamantCore') {
+            player.maxHP += (ADMIN_MAX_BOUGH_LEVEL - before) * def.effectPerLevel
+          }
+        }
       }
 
-      const player = usePlayerStore()
       for (const def of FORGE_RELICS) {
         if (!this.relicRequirementMet(def.id)) continue
         const steps = def.maxLevel - this.relicLevel(def.id)

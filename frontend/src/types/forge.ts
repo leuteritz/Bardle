@@ -4,9 +4,13 @@ import type { IconPoolKey } from './ui'
 
 // ── Star Forge (Shop tab) ────────────────────────────────────────────────────
 
-export type ForgeNodeTier = 'branch' | 'leaf'
+/**
+ * Welcher Ring. `bough` ist der äusserste und der einzige OHNE Obergrenze —
+ * seine Stufen laufen weiter, wenn alles andere im Baum auf MAX steht.
+ */
+export type ForgeNodeTier = 'branch' | 'leaf' | 'bough'
 
-/** A purchasable node on the Forge Tree (rings 2 & 3 around the sun).
+/** A purchasable node on the Forge Tree (rings 2–4 around the sun).
  *  Ring 1 (roots) stays in solarUpgradeStore. */
 export interface ForgeNodeDef {
   id: string
@@ -22,11 +26,16 @@ export interface ForgeNodeDef {
   angleDeg: number
   baseCost: number
   costMultiplier: number
-  /** Materials required per purchase, quantities scale with the level bought. */
+  /**
+   * Materials required per purchase, quantities scale with the level bought.
+   * Boughs lassen die Rezeptur LEER: die Menge wächst mit `qty × nextLevel`,
+   * und bei einem Knoten ohne Obergrenze liefe der Materialbedarf damit ohne
+   * Ende linear davon, während das Lager an Drop-Chancen hängt.
+   */
   materialCost: Record<string, number>
   /** Effect description template — `{v}` is replaced with the level value. */
   desc: string
-  /** Branches: effect magnitude per level. Leaves: unused (uniform amplify). */
+  /** Branches und Boughs: Wirkung je Stufe. Leaves: ungenutzt (fester Verstärker). */
   effectPerLevel: number
 }
 
@@ -160,6 +169,11 @@ export interface ForgeUpgradeEntry {
   /** ROOT / BRANCH / LEAF — die Beschriftung des Tier-Chips. */
   tierLabel: string
   level: number
+  /**
+   * `Infinity` bei einem Bough — er wird deshalb nie `maxed`, und `level >=
+   * maxLevel` bleibt für ihn dauerhaft falsch. Wer die Zahl ANZEIGT oder über
+   * sie iteriert, muss sie vorher mit `Number.isFinite` abfangen.
+   */
   maxLevel: number
   state: ForgeUpgradeState
   goldCost: number

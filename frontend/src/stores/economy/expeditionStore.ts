@@ -541,8 +541,18 @@ export const useExpeditionStore = defineStore('expedition', {
           const relayMul = usePlanetShopStore().planetExpeditionRewardMultiplier
           const treeRewardMul = useMeepTreeStore().fx.expeditionRewardMult
           const providenceRewardMul = useProvidenceStore().expeditionRewardMult
+          // Wayfinder's Cache / Wayfarer's Hoard (Star Forge): der Baum zahlt
+          // auf die BEUTE, nicht auf das Tempo — `expeditionSpeedMult` läuft
+          // gegen einen Boden, dieser Faktor nicht.
+          const forgeRewardMul = useStarForgeStore().expeditionRewardMult
           expedition.reward = success
-            ? Math.floor(expedition.baseReward * relayMul * treeRewardMul * providenceRewardMul)
+            ? Math.floor(
+                expedition.baseReward *
+                  relayMul *
+                  treeRewardMul *
+                  providenceRewardMul *
+                  forgeRewardMul,
+              )
             : Math.floor(expedition.baseReward * EXPEDITION_FAILURE_REWARD_FRACTION)
           if (success) this.totalExpeditionsSucceeded += 1
           else this.totalExpeditionsFailed += 1

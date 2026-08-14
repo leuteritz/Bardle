@@ -1037,6 +1037,19 @@
   color: rgba(200, 144, 64, 0.65);
   font-variant-numeric: tabular-nums;
 }
+/* Steht anstelle der Perlenreihe, wo es kein Ende zu zeigen gibt (Ring 4).
+   Auf die Breite EINES Pips gesetzt, damit die Zeile nicht springt, wenn in
+   der Liste eine endlose Karte auf eine gedeckelte folgt. */
+.fc-endless {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+  font-size: 21px;
+  line-height: 1;
+  color: var(--node-c, #c9a0ff);
+}
 .fc-desc {
   margin: 0;
   font-size: 14.5px;

@@ -12,7 +12,12 @@ import {
   FORGE_LEAF_MAX_LEVEL,
   FORGE_LEAF_AMPLIFY_PER_LEVEL,
   FORGE_BARGAIN_RESTOCK_MS,
+  FORGE_BOUGH_PARENT_MIN_LEVEL,
+  FORGE_BOUGH_COST_MULTIPLIER,
+  STAR_PHASE_FINAL_INDEX,
 } from '@/config/constants'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { getForgeNode, FORGE_RELICS, FORGE_CONSTELLATIONS } from '@/config/progression/starForge'
 
 /** Puts the game into a state where `solarSails` (branch of flightSpeed) is buyable. */
@@ -291,6 +296,106 @@ describe('starForgeStore', () => {
       expect(store.buyBargain()).toBe(true)
       expect(inventory.collectedMaterials.stardust).toBe(12)
       expect(inventory.collectedMaterials.solar_essence).toBe(1)
+    })
+  })
+
+  // ── Ring 4: der endlose Ring ────────────────────────────────────────────────
+  describe('boughs', () => {
+    /** Endphase, Elternzweig ausgewachsen, Kasse voll. */
+    function unlockBough(boughId = 'sleeplessOrbit') {
+      unlockBranchPrereqs()
+      const solar = useSolarUpgradeStore()
+      solar.starPhase = STAR_PHASE_FINAL_INDEX
+      const store = useStarForgeStore()
+      const def = getForgeNode(boughId)!
+      store.branchLevels[def.parentId] = FORGE_BOUGH_PARENT_MIN_LEVEL
+      useGameStore().chimes = 1e18
+      return { store, def }
+    }
+
+    it('kennt keine Obergrenze und wird deshalb nie „maxed"', () => {
+      const { store, def } = unlockBough()
+      expect(store.nodeMaxLevel(def.id)).toBe(Infinity)
+      for (let i = 0; i < 30; i++) expect(store.buyNode(def.id)).toBe(true)
+      expect(store.nodeLevel(def.id)).toBe(30)
+      // Der Zustand, an dem die Liste „✦ MAX" zeigt, kann hier nicht eintreten.
+      expect(store.nodeLevel(def.id) >= store.nodeMaxLevel(def.id)).toBe(false)
+    })
+
+    it('verlangt kein Material und wächst geometrisch im Preis', () => {
+      const { store, def } = unlockBough()
+      expect(store.nodeMaterialCost(def.id)).toEqual({})
+
+      const first = store.nodeGoldCost(def.id)
+      store.buyNode(def.id)
+      const second = store.nodeGoldCost(def.id)
+      expect(second / first).toBeCloseTo(FORGE_BOUGH_COST_MULTIPLIER, 5)
+    })
+
+    it('bleibt zu, solange sein Elternzweig nicht ausgewachsen ist', () => {
+      const { store, def } = unlockBough()
+      store.branchLevels[def.parentId] = FORGE_BOUGH_PARENT_MIN_LEVEL - 1
+      expect(store.nodeUnlocked(def.id)).toBe(false)
+      store.branchLevels[def.parentId] = FORGE_BOUGH_PARENT_MIN_LEVEL
+      expect(store.nodeUnlocked(def.id)).toBe(true)
+    })
+
+    it('trägt KEINEN Blatt-Verstärker — sonst wäre die Wirkung multiplikativ', () => {
+      // Genau die Invariante, die den endlosen Ring sicher macht: liefe ein
+      // Bough durch `branchEffect`, verdoppelte ein Blatt auf Stufe 4 einen
+      // unbegrenzten Term gratis.
+      const { store, def } = unlockBough()
+      store.buyNode(def.id)
+      store.buyNode(def.id)
+      const before = store.boughEffect(def.id)
+
+      const leaf = store.leafOfBranch(def.parentId)
+      if (leaf) store.leafLevels[leaf.id] = FORGE_LEAF_MAX_LEVEL
+
+      expect(store.boughEffect(def.id)).toBe(before)
+      expect(store.boughEffect(def.id)).toBe(2 * def.effectPerLevel)
+      // Und die Gegenrichtung: `branchEffect` weist einen Bough ab.
+      expect(store.branchEffect(def.id)).toBe(0)
+    })
+
+    it('addiert sich in den Baum-Term, statt ihn zu multiplizieren', () => {
+      // Der Elternzweig `tidalDrift` steht durch `unlockBough` bereits auf
+      // seiner Mindeststufe — sein Beitrag ist also schon in `base` drin.
+      const { store } = unlockBough('endlessTide')
+      const def = getForgeNode('endlessTide')!
+      const base = store.cpsMult
+
+      store.buyNode('endlessTide')
+      const afterOne = store.cpsMult
+      store.buyNode('endlessTide')
+      const afterTwo = store.cpsMult
+
+      // Jede Stufe legt DENSELBEN Betrag drauf. Genau daran hängt die
+      // Sicherheit des endlosen Rings: linearer Ertrag gegen geometrische
+      // Kosten. Multiplikativ wäre der zweite Schritt grösser als der erste.
+      expect(afterOne - base).toBeCloseTo(def.effectPerLevel / 100, 9)
+      expect(afterTwo - afterOne).toBeCloseTo(afterOne - base, 9)
+      expect(afterTwo).toBeLessThan(base * (1 + def.effectPerLevel / 100) ** 2)
+    })
+
+    it('bucht die Max-HP des Adamant Core beim Kauf', () => {
+      const { store } = unlockBough('adamantCore')
+      const def = getForgeNode('adamantCore')!
+      const player = usePlayerStore()
+      const before = player.maxHP
+      store.buyNode('adamantCore')
+      store.buyNode('adamantCore')
+      expect(player.maxHP).toBe(before + 2 * def.effectPerLevel)
+    })
+
+    it('zählt NICHT in die Codex-Metrik forgeLevels', () => {
+      // Eine unbegrenzte Zahl dort machte jede Bahn-Schwelle trivial, und der
+      // Lohn der Bahn senkt seinerseits die Materialkosten des Baums.
+      const { store, def } = unlockBough()
+      const achievements = useAchievementStore()
+      const before = achievements.metricValue('forgeLevels')
+      store.buyNode(def.id)
+      expect(achievements.metricValue('forgeLevels')).toBe(before)
     })
   })
 })

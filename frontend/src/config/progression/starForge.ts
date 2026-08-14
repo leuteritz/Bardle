@@ -1,23 +1,24 @@
-import type {
-  ForgeNodeDef,
-  ForgeRelicDef,
-  ForgeConstellationDef,
-  ForgeBargainDef,
-} from '@/types'
+import type { ForgeNodeDef, ForgeRelicDef, ForgeConstellationDef, ForgeBargainDef } from '@/types'
 import {
   FORGE_BRANCH_UNLOCK_PHASE,
+  FORGE_BRANCH_LATE_UNLOCK_PHASE,
   FORGE_LEAF_UNLOCK_PHASE,
+  FORGE_BOUGH_UNLOCK_PHASE,
+  FORGE_BOUGH_COST_MULTIPLIER,
 } from '@/config/constants'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // STAR FORGE — static catalog
 // Ring 1 (roots) = the 5 solar branches in solarUpgradeStore (unchanged).
-// Ring 2 (branches) & ring 3 (leaves) are defined here and live in
-// starForgeStore. Root angles: flightSpeed 270°, maxHp 342°,
+// Ring 2 (branches), ring 3 (leaves) und ring 4 (boughs) stehen hier und leben
+// im starForgeStore. Root angles: flightSpeed 270°, maxHp 342°,
 // chimesPerClick 54°, chimesPerSecond 126°, dmgPerClick 198°.
 // ═════════════════════════════════════════════════════════════════════════════
 
-// ── Branches (ring 2) — two per root, root angle ± 24° ───────────────────────
+// ── Branches (ring 2) — three per root: root angle − 24°, + 24° and 0° ───────
+// Die beiden ersten gehen in Phase 2 auf, der dritte (auf dem Wurzelwinkel)
+// eine Phase später. Damit stehen die fünfzehn Zweige exakt gleichmässig mit
+// 24° über den ganzen Ring, ohne dass sich der Ring auf einen Schlag füllt.
 export const FORGE_BRANCHES: ForgeNodeDef[] = [
   // flightSpeed root (270°)
   {
@@ -174,11 +175,109 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     desc: 'Damage against bosses +{v}%.',
     effectPerLevel: 8,
   },
+
+  // ── Der dritte Zweig je Wurzel, ab Phase 3 ────────────────────────────────
+  // Jeder sitzt auf dem Winkel seiner Wurzel und eröffnet eine Achse, die es in
+  // der Forge bisher nur als einmalige Konstellation oder gar nicht gab.
+  //
+  // Warum ausgerechnet diese fünf: von den zehn Zweigen darüber laufen fünf
+  // gegen einen Boden (Solar Sails 0,4 · Aegis 0,25 · Golden Echo 0,8 ·
+  // Quickening 0,5) oder sättigen still (Comet Miner — `tryDropMaterial`
+  // vergleicht `Math.random() > chance`). Ein dritter Zweig auf einer solchen
+  // Achse wäre nur nominell stärker. Diese fünf sitzen auf Gettern ohne Kappe,
+  // damit „spürbar stärker" auch ankommt.
+  {
+    id: 'wayfindersCache',
+    name: "Wayfinder's Cache",
+    parentId: 'flightSpeed',
+    tier: 'branch',
+    phase: FORGE_BRANCH_LATE_UNLOCK_PHASE,
+    icon: 'game-icons:knapsack',
+    color: '#ffe9a8',
+    angleDeg: 270,
+    baseCost: 5_000,
+    costMultiplier: 2.4,
+    materialCost: { stardust: 6, solar_essence: 1 },
+    desc: 'Expeditions pay {v}% more Chimes.',
+    effectPerLevel: 12,
+  },
+  {
+    // Max HP wäre die naheliegende Achse an dieser Wurzel — sie kann es aber
+    // NICHT sein: `playerStore.maxHP` ist ein State-Feld, das beim Kauf gebucht
+    // wird (Muster `heartOfTheStar`), und ein Zweig trägt den Verstärker seines
+    // Blattes. Ein später gekauftes Blatt müsste die Buchung rückwirkend
+    // erhöhen. Max HP hängt deshalb am Bough darüber, der keinen Verstärker
+    // kennt; hier steht die andere Bewahrungs-Achse des Wandering Caretaker.
+    id: 'wardensVigil',
+    name: "Warden's Vigil",
+    parentId: 'maxHp',
+    tier: 'branch',
+    phase: FORGE_BRANCH_LATE_UNLOCK_PHASE,
+    icon: 'game-icons:heart-tower',
+    color: '#ffb0b0',
+    angleDeg: 342,
+    baseCost: 5_000,
+    costMultiplier: 2.4,
+    materialCost: { moon_crystal: 6, solar_essence: 1 },
+    desc: 'Resource stars linger {v}% longer.',
+    effectPerLevel: 6,
+  },
+  {
+    id: 'gildedHarvest',
+    name: 'Gilded Harvest',
+    parentId: 'chimesPerClick',
+    tier: 'branch',
+    phase: FORGE_BRANCH_LATE_UNLOCK_PHASE,
+    icon: 'game-icons:gold-stack',
+    color: '#b0f090',
+    angleDeg: 54,
+    baseCost: 7_000,
+    costMultiplier: 2.5,
+    materialCost: { nebula_quartz: 5, void_shard: 1 },
+    desc: 'Chimes per click +{v}%.',
+    effectPerLevel: 6,
+  },
+  {
+    id: 'tidalDrift',
+    name: 'Tidal Drift',
+    parentId: 'chimesPerSecond',
+    tier: 'branch',
+    phase: FORGE_BRANCH_LATE_UNLOCK_PHASE,
+    icon: 'game-icons:big-wave',
+    color: '#ffd0a0',
+    angleDeg: 126,
+    baseCost: 8_000,
+    costMultiplier: 2.5,
+    materialCost: { nebula_quartz: 5, solar_essence: 2 },
+    desc: 'Chimes per second +{v}%.',
+    effectPerLevel: 6,
+  },
+  {
+    id: 'sunderingWake',
+    name: 'Sundering Wake',
+    parentId: 'dmgPerClick',
+    tier: 'branch',
+    phase: FORGE_BRANCH_LATE_UNLOCK_PHASE,
+    icon: 'game-icons:impact-point',
+    color: '#f0b8e0',
+    angleDeg: 198,
+    baseCost: 6_000,
+    costMultiplier: 2.4,
+    materialCost: { moon_crystal: 5, void_shard: 2 },
+    desc: 'Clicks splash {v}% of their damage to all enemies.',
+    effectPerLevel: 3,
+  },
 ]
 
 // ── Leaves (ring 3) — one per branch, same angle, uniform amplify mechanic ───
 // Each leaf level amplifies its parent branch's effect by
 // FORGE_LEAF_AMPLIFY_PER_LEVEL (25%).
+/**
+ * `opts` deckt die Blätter an den späten Zweigen ab: dieselbe Mechanik, aber
+ * eine Zehnerpotenz teurer und mit einer steileren Kurve, weil sie einen
+ * stärkeren Zweig verstärken. Alles andere bleibt für alle fünfzehn gleich —
+ * ein zweiter Fabrikkopf hätte nur dieselben Felder ein zweites Mal aufgezählt.
+ */
 function leaf(
   id: string,
   name: string,
@@ -187,6 +286,7 @@ function leaf(
   color: string,
   angleDeg: number,
   materialCost: Record<string, number>,
+  opts: { baseCost?: number; costMultiplier?: number } = {},
 ): ForgeNodeDef {
   return {
     id,
@@ -197,28 +297,265 @@ function leaf(
     icon,
     color,
     angleDeg,
-    baseCost: 25_000,
-    costMultiplier: 2.5,
+    baseCost: opts.baseCost ?? 25_000,
+    costMultiplier: opts.costMultiplier ?? 2.5,
     materialCost,
     desc: 'Amplifies {p} by +{v}%.',
     effectPerLevel: 0,
   }
 }
 
+/** Die abweichende Preisfamilie der fünf späten Blätter — eine Stelle, fünf Nutzer. */
+const LATE_LEAF_COST = { baseCost: 250_000, costMultiplier: 2.8 }
+
 export const FORGE_LEAVES: ForgeNodeDef[] = [
-  leaf('auroraWake', 'Aurora Wake', 'solarSails', 'game-icons:sunrise', '#e8c040', 246, { solar_essence: 2 }),
-  leaf('midnightTide', 'Midnight Tide', 'moonOrbit', 'game-icons:night-sky', '#f0d878', 294, { void_shard: 2 }),
-  leaf('vitalBloom', 'Vital Bloom', 'regeneration', 'game-icons:heart-plus', '#e05050', 318, { solar_essence: 2 }),
-  leaf('echoingBulwark', 'Echoing Bulwark', 'aegis', 'game-icons:shield-echoes', '#ff8080', 6, { void_shard: 2 }),
-  leaf('coinCascade', 'Coin Cascade', 'goldenEcho', 'game-icons:coins-pile', '#52b830', 30, { solar_essence: 2 }),
-  leaf('echoChamber', 'Echo Chamber', 'resonance', 'game-icons:echo-ripples', '#8fe060', 78, { void_shard: 2 }),
-  leaf('deepVein', 'Deep Vein', 'cometMiner', 'game-icons:gold-mine', '#e89840', 102, { solar_essence: 2 }),
-  leaf('timeWeaver', 'Time Weaver', 'quickening', 'game-icons:clockwork', '#ffb860', 150, { dark_matter: 1 }),
-  leaf('warhost', 'Warhost', 'warcry', 'game-icons:swords-power', '#c060a0', 174, { void_shard: 2 }),
-  leaf('starquake', 'Starquake', 'shatter', 'game-icons:implosion', '#e08cc8', 222, { dark_matter: 1 }),
+  leaf('auroraWake', 'Aurora Wake', 'solarSails', 'game-icons:sunrise', '#e8c040', 246, {
+    solar_essence: 2,
+  }),
+  leaf('midnightTide', 'Midnight Tide', 'moonOrbit', 'game-icons:night-sky', '#f0d878', 294, {
+    void_shard: 2,
+  }),
+  leaf('vitalBloom', 'Vital Bloom', 'regeneration', 'game-icons:heart-plus', '#e05050', 318, {
+    solar_essence: 2,
+  }),
+  leaf('echoingBulwark', 'Echoing Bulwark', 'aegis', 'game-icons:shield-echoes', '#ff8080', 6, {
+    void_shard: 2,
+  }),
+  leaf('coinCascade', 'Coin Cascade', 'goldenEcho', 'game-icons:coins-pile', '#52b830', 30, {
+    solar_essence: 2,
+  }),
+  leaf('echoChamber', 'Echo Chamber', 'resonance', 'game-icons:echo-ripples', '#8fe060', 78, {
+    void_shard: 2,
+  }),
+  leaf('deepVein', 'Deep Vein', 'cometMiner', 'game-icons:gold-mine', '#e89840', 102, {
+    solar_essence: 2,
+  }),
+  leaf('timeWeaver', 'Time Weaver', 'quickening', 'game-icons:clockwork', '#ffb860', 150, {
+    dark_matter: 1,
+  }),
+  leaf('warhost', 'Warhost', 'warcry', 'game-icons:swords-power', '#c060a0', 174, {
+    void_shard: 2,
+  }),
+  leaf('starquake', 'Starquake', 'shatter', 'game-icons:implosion', '#e08cc8', 222, {
+    dark_matter: 1,
+  }),
+
+  // ── Die Blätter an den späten Zweigen ─────────────────────────────────────
+  // Sie gehen mit dem regulären Blätter-Ring auf (Phase 4), sind aber die
+  // ersten Knoten des Baums, deren Rezeptur durchgehend Dark Matter oder Void
+  // Shards verlangt — der Chime-Preis ist zu diesem Zeitpunkt Nebensache, das
+  // seltene Material ist der Taktgeber.
+  leaf(
+    'wanderersCrest',
+    "Wanderer's Crest",
+    'wayfindersCache',
+    'game-icons:laurel-crown',
+    '#ffe9a8',
+    270,
+    { void_shard: 2, dark_matter: 1 },
+    LATE_LEAF_COST,
+  ),
+  leaf(
+    'starboundCore',
+    'Starbound Core',
+    'wardensVigil',
+    'game-icons:crystal-cluster',
+    '#ffb0b0',
+    342,
+    { solar_essence: 3, dark_matter: 1 },
+    LATE_LEAF_COST,
+  ),
+  leaf(
+    'sunlitTrove',
+    'Sunlit Trove',
+    'gildedHarvest',
+    'game-icons:open-chest',
+    '#b0f090',
+    54,
+    { void_shard: 3, dark_matter: 1 },
+    LATE_LEAF_COST,
+  ),
+  leaf(
+    'tidewake',
+    'Tidewake',
+    'tidalDrift',
+    'game-icons:wave-crest',
+    '#ffd0a0',
+    126,
+    { void_shard: 2, dark_matter: 2 },
+    LATE_LEAF_COST,
+  ),
+  leaf(
+    'riftshard',
+    'Riftshard',
+    'sunderingWake',
+    'game-icons:crystal-shine',
+    '#f0b8e0',
+    198,
+    { solar_essence: 3, void_shard: 2 },
+    LATE_LEAF_COST,
+  ),
 ]
 
-export const FORGE_NODES: ForgeNodeDef[] = [...FORGE_BRANCHES, ...FORGE_LEAVES]
+// ── Boughs (ring 4) — der einzige Ring OHNE Obergrenze ───────────────────────
+/**
+ * Zehn Knoten, die in der Endphase aufgehen und danach nie fertig werden.
+ *
+ * Sie sind die Antwort auf zwei Löcher im Spätspiel: der Baum stand ab Phase 5
+ * vollständig auf „✦ MAX", und Chimes hatten ausser den Planeten-Leveln keine
+ * Senke mehr. Jeder hängt an dem Zweig, dessen Achse er fortsetzt — vier davon
+ * an Zweigen mit harter Kappe, deren Idee er ungedeckelt weiterträgt.
+ *
+ * Drei Eigenschaften machen sie sicher, und keine davon ist Geschmack (die
+ * ganze Herleitung steht an `FORGE_BOUGH_COST_MULTIPLIER`):
+ *   1. Wirkung ADDITIV je Stufe, Kosten GEOMETRISCH → Ertrag logarithmisch.
+ *   2. Nur ungedeckelte Achsen — was gegen eine Kappe läuft, wäre ein
+ *      bezahltes Nichts.
+ *   3. KEIN Material: `nodeMaterialCost` skaliert `qty × nextLevel`, und ohne
+ *      Obergrenze liefe der Bedarf ohne Ende linear davon.
+ */
+function bough(
+  id: string,
+  name: string,
+  parentId: string,
+  icon: string,
+  color: string,
+  angleDeg: number,
+  baseCost: number,
+  desc: string,
+  effectPerLevel: number,
+): ForgeNodeDef {
+  return {
+    id,
+    name,
+    parentId,
+    tier: 'bough',
+    phase: FORGE_BOUGH_UNLOCK_PHASE,
+    icon,
+    color,
+    angleDeg,
+    baseCost,
+    costMultiplier: FORGE_BOUGH_COST_MULTIPLIER,
+    materialCost: {},
+    desc,
+    effectPerLevel,
+  }
+}
+
+export const FORGE_BOUGHS: ForgeNodeDef[] = [
+  bough(
+    'wayfarersHoard',
+    "Wayfarer's Hoard",
+    'wayfindersCache',
+    'game-icons:swap-bag',
+    '#ffe9a8',
+    270,
+    2.0e9,
+    'Expeditions pay an additional {v}% more.',
+    9,
+  ),
+  bough(
+    'sleeplessOrbit',
+    'Sleepless Orbit',
+    'moonOrbit',
+    'game-icons:orbital',
+    '#f0d878',
+    294,
+    1.5e9,
+    'Offline earnings +{v}%.',
+    8,
+  ),
+  bough(
+    'kindledVigil',
+    'Kindled Vigil',
+    'wardensVigil',
+    'game-icons:round-star',
+    '#ffb0b0',
+    342,
+    2.2e9,
+    'Resource stars linger an additional {v}% longer.',
+    4,
+  ),
+  bough(
+    'adamantCore',
+    'Adamant Core',
+    'regeneration',
+    'game-icons:stone-sphere',
+    '#e05050',
+    318,
+    1.8e9,
+    'Maximum HP of the sun +{v}.',
+    90,
+  ),
+  bough(
+    'gildedCascade',
+    'Gilded Cascade',
+    'gildedHarvest',
+    'game-icons:coins',
+    '#b0f090',
+    54,
+    2.0e9,
+    'Chimes per click +{v}%.',
+    5,
+  ),
+  bough(
+    'deepResonance',
+    'Deep Resonance',
+    'resonance',
+    'game-icons:concentric-crescents',
+    '#8fe060',
+    78,
+    5.0e9,
+    'Clicks gain +{v}% of your Chimes/Sec.',
+    1,
+  ),
+  bough(
+    'endlessTide',
+    'Endless Tide',
+    'tidalDrift',
+    'game-icons:sands-of-time',
+    '#ffd0a0',
+    126,
+    4.0e9,
+    'Chimes per second +{v}%.',
+    3,
+  ),
+  bough(
+    'eternalHost',
+    'Eternal Host',
+    'warcry',
+    'game-icons:winged-sword',
+    '#c060a0',
+    174,
+    1.8e9,
+    'Champions gain +{v}% experience.',
+    8,
+  ),
+  bough(
+    'rendingArc',
+    'Rending Arc',
+    'sunderingWake',
+    'game-icons:explosion-rays',
+    '#f0b8e0',
+    198,
+    2.0e9,
+    'Clicks splash an additional {v}% of their damage.',
+    1.5,
+  ),
+  bough(
+    'undyingWrath',
+    'Undying Wrath',
+    'shatter',
+    'game-icons:burning-embers',
+    '#e08cc8',
+    222,
+    2.5e9,
+    'Damage against bosses +{v}%.',
+    10,
+  ),
+]
+
+export const FORGE_NODES: ForgeNodeDef[] = [...FORGE_BRANCHES, ...FORGE_LEAVES, ...FORGE_BOUGHS]
 
 export function getForgeNode(id: string): ForgeNodeDef | undefined {
   return FORGE_NODES.find((n) => n.id === id)

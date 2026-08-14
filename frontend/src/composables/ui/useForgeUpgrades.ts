@@ -12,8 +12,6 @@ import {
   SOLAR_MAX_LEVELS,
   STAR_PHASE_DATA,
   SUN_PHASE_DISPLAY_OFFSET,
-  FORGE_BRANCH_PARENT_MIN_LEVEL,
-  FORGE_LEAF_PARENT_MIN_LEVEL,
   FORGE_LEAF_AMPLIFY_PER_LEVEL,
   FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT,
   FORGE_DESC_VALUE_TOKEN,
@@ -188,15 +186,16 @@ export function useForgeUpgrades(): {
     }
   }
 
-  /** Warum ein Zweig oder Blatt zu ist — Phase zuerst, dann die Elternstufe. */
+  /** Warum ein Knoten zu ist — Phase zuerst, dann die Elternstufe. */
   function lockedFor(def: ForgeNodeDef): { reason: string; progress: number } {
     if (solarStore.starPhase < def.phase) {
       const phaseName =
         STAR_PHASE_DATA[def.phase]?.name ?? `Phase ${def.phase + SUN_PHASE_DISPLAY_OFFSET}`
       return { reason: `Unlocks at ${phaseName}`, progress: 0 }
     }
-    const required =
-      def.tier === 'branch' ? FORGE_BRANCH_PARENT_MIN_LEVEL : FORGE_LEAF_PARENT_MIN_LEVEL
+    // Welche Elternstufe welcher Ring verlangt, weiss der Store — hier stünde
+    // sonst eine zweite Fassung derselben Weiche.
+    const required = forgeStore.nodeParentRequirement(def)
     const have = forgeStore.nodeParentLevel(def)
     return {
       reason: `Requires ${nodeName(def.parentId)} Lv ${required}`,
@@ -239,6 +238,16 @@ export function useForgeUpgrades(): {
       nextDesc = def.desc.replace('{p}', parent).replace(FORGE_DESC_VALUE_TOKEN, String(nextPct))
       nowText = `+${nowPct}%`
       nextText = `+${nextPct}%`
+    } else if (def.tier === 'bough') {
+      // Kein Blatt-Verstärker: ein Bough trägt schlicht Stufe × Wert je Stufe.
+      // Genau diese Additivität hält den endlosen Ring sicher — die Vorschau
+      // muss sie deshalb auch zeigen und darf nicht durch `branchEffect`.
+      const now = forgeStore.boughEffect(def.id)
+      const next = (level + 1) * def.effectPerLevel
+      desc = def.desc.replace(FORGE_DESC_VALUE_TOKEN, trimNumber(now))
+      nextDesc = def.desc.replace(FORGE_DESC_VALUE_TOKEN, trimNumber(next))
+      nowText = valueText(def, now)
+      nextText = valueText(def, next)
     } else {
       const leafDef = forgeStore.leafOfBranch(def.id)
       const leafLevel = leafDef ? forgeStore.nodeLevel(leafDef.id) : 0

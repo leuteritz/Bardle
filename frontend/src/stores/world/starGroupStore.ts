@@ -7,6 +7,7 @@ import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import {
   RESOURCE_STAR_PLANET_COUNT,
@@ -264,7 +265,14 @@ export const useStarGroupStore = defineStore('starGroup', {
         // festgeschrieben, nicht beim Ablesen angewandt — `starDeadlineAt`
         // rechnet aus `spawnedAt + durationMs`, und ein Faktor, der erst dort
         // dazukäme, verschöbe die Frist eines längst stehenden Sterns.
-        durationMs: Math.round(RESOURCE_STAR_DURATION_MS * useProvidenceStore().starLifetimeMult),
+        // Warden's Vigil / Kindled Vigil (Star Forge) greifen an derselben Zahl
+        // an — der ehrliche Material-Weg des Baums: `materialDropMult` sättigt
+        // gegen `Math.random()`, mehr ZEIT am Stern nicht.
+        durationMs: Math.round(
+          RESOURCE_STAR_DURATION_MS *
+            useProvidenceStore().starLifetimeMult *
+            useStarForgeStore().starLifetimeMult,
+        ),
         starColor: pickResourceStarColor(),
       }
       this.activeStars.push(star)

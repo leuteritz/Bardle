@@ -85,16 +85,26 @@
                 <span class="fc-name" :style="{ color: entry.color }">{{ entry.name }}</span>
                 <span class="fc-chip" :style="{ '--chip-c': group.accent }">{{ entry.tierLabel }}</span>
               </div>
+              <!-- Pips zeigen einen WEG mit Ende. Ein Bough hat keins: das
+                   `v-for` liefe über `Infinity` und hinge den Tab auf, und
+                   selbst gedeckelt sagte eine Perlenreihe hier etwas Falsches.
+                   Stattdessen steht die erreichte Stufe für sich. -->
               <div class="fc-lvl-row">
-                <span class="fc-pips">
-                  <i
-                    v-for="step in entry.maxLevel"
-                    :key="step"
-                    class="fc-pip"
-                    :class="{ 'fc-pip--on': step <= entry.level }"
-                  />
-                </span>
-                <span class="fc-lvl">Lv {{ entry.level }} / {{ entry.maxLevel }}</span>
+                <template v-if="Number.isFinite(entry.maxLevel)">
+                  <span class="fc-pips">
+                    <i
+                      v-for="step in entry.maxLevel"
+                      :key="step"
+                      class="fc-pip"
+                      :class="{ 'fc-pip--on': step <= entry.level }"
+                    />
+                  </span>
+                  <span class="fc-lvl">Lv {{ entry.level }} / {{ entry.maxLevel }}</span>
+                </template>
+                <template v-else>
+                  <span class="fc-endless">{{ FORGE_ENDLESS_SYMBOL }}</span>
+                  <span class="fc-lvl">Lv {{ entry.level }} · no final level</span>
+                </template>
               </div>
             </div>
           </header>
@@ -146,6 +156,7 @@ import type { ForgeUpgradeEntry } from '@/types'
 import {
   FORGE_UPGRADE_GROUPS,
   FORGE_UPGRADE_STATE_ORDER,
+  FORGE_ENDLESS_SYMBOL,
   FORGE_CARD_FLASH_MS,
   FORGE_SHORT_CHIMES_LABEL,
   FORGE_SHORT_MATERIAL_PREFIX,

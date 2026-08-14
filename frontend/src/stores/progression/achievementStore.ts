@@ -108,6 +108,11 @@ export const useAchievementStore = defineStore('achievement', {
           case 'driftersCollected':
             return useDrifterStore().totalDriftersCollected
           case 'forgeLevels': {
+            // `boughLevels` zählt hier ABSICHTLICH nicht mit: Ring 4 kennt
+            // keine Obergrenze, und eine unbegrenzte Zahl in dieser Summe
+            // machte jede Schwelle der Bahn „Sunsmith" trivial. Schlimmer, sie
+            // wäre ein geschlossener Kreis — der Lohn der Bahn ist
+            // `forgeMaterialCostMult`, also billigere Baumknoten.
             const forge = useStarForgeStore()
             const sum = (levels: Record<string, number>) =>
               Object.values(levels).reduce((total, l) => total + l, 0)

@@ -106,16 +106,21 @@ export const CHRONICLE_TRACKS: ChronicleTrackDef[] = [
     // diese beiden. Der Text sagt es, damit die Karte nicht mehr verspricht,
     // als der Rabatt einlöst.
     effect: 'Forge node & relic material costs −{v}%',
-    // Die letzte Stufe stand auf 200 und war damit UNERREICHBAR: das
+    // Die letzte Stufe stand einmal auf 200 und war damit UNERREICHBAR: das
     // theoretische Maximum lag bei 10 Branches x 5 + 10 Leaves x 3 + 6 Relikte
-    // x 3 = 98. Mit den angehobenen Caps sind jetzt 130 moeglich; 125 laesst
-    // genau so viel Luft, dass man nicht jeden einzelnen Knoten ausreizen muss.
+    // x 3 = 98. Mit den angehobenen Caps waren es 130, die Endstufe 125.
+    //
+    // Der vierte Ring hat das Maximum erneut verschoben — 10 fruehe Branches
+    // x 6 + 5 spaete x 5 + 15 Leaves x 4 + 6 Relikte x 5 = 175 (die BOUGHS
+    // zaehlen bewusst NICHT mit, siehe achievementStore). 125 waeren davon nur
+    // noch 71 %, die Bahn haette sich also nebenbei selbst verschenkt; 160
+    // haelt denselben Abstand zum Maximum wie vorher.
     stages: [
       { threshold: 5, value: 4 },
-      { threshold: 20, value: 8 },
-      { threshold: 50, value: 12 },
-      { threshold: 90, value: 16 },
-      { threshold: 125, value: 20 },
+      { threshold: 25, value: 8 },
+      { threshold: 60, value: 12 },
+      { threshold: 110, value: 16 },
+      { threshold: 160, value: 20 },
     ],
   },
   {
