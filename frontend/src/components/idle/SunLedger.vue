@@ -9,12 +9,18 @@
  * macht aus dem Zustand ein Ereignis: die Summe steht dauerhaft, jeder einzelne
  * Treffer steigt als eigene Zahl auf.
  *
- * Es steht nur, was abgelesen wird: das Motiv und die Zahl darunter. Keine
- * Beschriftung, keine Trennlinie, keine zweite Zeile, kein Rahmen und keine
- * Akzentlinie — neben einer Scheibe, die selbst kein Chrome trägt, las sich das
- * als Kasten ohne Rahmen statt als Ablesewert. Das Motiv bleibt als einziges
- * Beiwerk: ohne es trügen allein Farbe und Vorzeichen die Bedeutung, und Rot
- * gegen Grün ist für Farbfehlsichtige keine Unterscheidung.
+ * Es steht NUR die Zahl. Keine Beschriftung, kein Motiv, keine Trennlinie, kein
+ * Rahmen, keine Akzentlinie — neben einer Scheibe, die selbst kein Chrome trägt,
+ * las sich jedes davon als Kasten ohne Rahmen statt als Ablesewert. Die
+ * Bedeutung tragen Farbe und Vorzeichen: grün mit `+` links, rot mit `−` rechts.
+ * Der Wortlaut steckt im `aria-label` der Zahl.
+ *
+ * Und sie steht erst, wenn wirklich etwas passiert ist. Ein dauerhaftes „−0"
+ * wäre eine Anzeige ohne Aussage; so ist jede Zahl an der Scheibe ein Ereignis,
+ * und eine frische Pause bleibt dort so ruhig wie vor diesem Feature. Dass die
+ * Zahl vorher fehlt, verschiebt nichts: die Randspalten der Heldenzeile sind
+ * `minmax(0, 1fr)` und damit inhaltsunabhängig breit, ihre Höhe ist der
+ * Scheibendurchmesser.
  *
  * Die Zahl klebt an der Innenkante und wächst nach AUSSEN — zur Scheibe hin
  * darf sie nie wandern, dort steht der Blickfang des Panels.
@@ -26,13 +32,12 @@
  *    Lage derselben Ziffern — dasselbe Muster wie beim Pause-Timer.
  */
 import { computed } from 'vue'
-import { Icon } from '@iconify/vue'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { DAMAGE_FLOAT_DURATION_MS, PAUSE_LEDGER_POP_OFFSETS } from '@/config/constants'
 
 const props = defineProps<{
-  /** `damage` steht rechts der Scheibe, `regen` links — Farbe, Vorzeichen,
-   *  Motiv und Leserichtung hängen daran. */
+  /** `damage` steht rechts der Scheibe, `regen` links — Farbe, Vorzeichen und
+   *  Leserichtung hängen daran. */
   tone: 'damage' | 'regen'
   /** Summe der laufenden Pause (bereits ganzzahlig, ≥ 0). */
   total: number
@@ -47,12 +52,13 @@ const props = defineProps<{
 const isDamage = computed(() => props.tone === 'damage')
 const sign = computed(() => (isDamage.value ? '−' : '+'))
 const label = computed(() => (isDamage.value ? 'Damage taken' : 'HP restored'))
-const icon = computed(() =>
-  isDamage.value ? 'game-icons:bleeding-wound' : 'game-icons:heart-plus',
-)
-/** Ohne Bewegung im Zähler bleibt der Ledger gedämpft — er steht trotzdem, damit
- *  der erste Treffer keinen Layoutsprung auslöst. */
-const isIdle = computed(() => props.total <= 0)
+/**
+ * Erst wenn wirklich etwas angekommen ist. Die Schwelle liegt bewusst am
+ * GERUNDETEN Wert: die Regeneration fällt in Bruchteilen an, und ein „+0" wäre
+ * eine Anzeige ohne Aussage. Bei unversehrter Sonne bleibt die Seite ganz leer —
+ * `playerStore.regenTick()` schreibt dann nichts in seinen Zähler.
+ */
+const isVisible = computed(() => props.total > 0)
 const valueText = computed(() => `${sign.value}${formatNumber(props.total)}`)
 
 /**
@@ -70,25 +76,22 @@ function popOffset(index: number): string {
 <template>
   <div
     class="ledger"
-    :class="[`ledger--${tone}`, { 'ledger--idle': isIdle }]"
+    :class="`ledger--${tone}`"
     :style="{ '--pop-ms': `${DAMAGE_FLOAT_DURATION_MS}ms` }"
-    role="img"
-    :aria-label="`${label}: ${total}`"
   >
-    <!-- Das Motiv steht ohne Beschriftung. Weglassen ließe es sich nicht: ohne
-         es trügen allein Farbe und Vorzeichen die Bedeutung, und Rot gegen Grün
-         ist für Farbfehlsichtige keine Unterscheidung. Der Wortlaut steckt im
-         `aria-label` des Containers. -->
-    <Icon :icon="icon" width="32" height="32" class="ledger__icon" aria-hidden="true" />
-
-    <span class="ledger__value">
-      <!-- Farbloser Zwilling hinter den Ziffern: `text-shadow` zeichnet auch bei
-           transparenter Schrift, übrig bleibt reiner Schein. Er liegt exakt auf
-           der Zahl und blendet im Takt auf — animiert wird nur `opacity`. Der
-           Takt auf der Zahl selbst rasterte sonst in jedem Frame neu. -->
-      <span class="ledger__glow" aria-hidden="true">{{ valueText }}</span>
-      {{ valueText }}
-    </span>
+    <!-- Der Auftritt gehört der Zahl, nicht dem Container: solange nichts
+         angekommen ist, steht hier auch für Screenreader nichts. Eingeblendet
+         wird über `opacity` und `scale` — beides Compositor-Arbeit. -->
+    <Transition name="ledger-in">
+      <span v-if="isVisible" class="ledger__value" role="img" :aria-label="`${label}: ${total}`">
+        <!-- Farbloser Zwilling hinter den Ziffern: `text-shadow` zeichnet auch bei
+             transparenter Schrift, übrig bleibt reiner Schein. Er liegt exakt auf
+             der Zahl und blendet im Takt auf — animiert wird nur `opacity`. Der
+             Takt auf der Zahl selbst rasterte sonst in jedem Frame neu. -->
+        <span class="ledger__glow" aria-hidden="true">{{ valueText }}</span>
+        {{ valueText }}
+      </span>
+    </Transition>
 
     <!-- Aufsteigende Treffer. Eigene Ebene über allem, ohne Einfluss auf die
          Zeilenhöhe: die Höhe dieser Spalte ist an die Sonnenscheibe geklemmt,
@@ -110,41 +113,52 @@ function popOffset(index: number): string {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   /* Die Spalte ist so hoch wie ihr Inhalt und wird von der Heldenzeile mittig
-     gestellt — sie darf die Zeile nie höher machen als die Scheibe. */
+     gestellt — sie darf die Zeile nie höher machen als die Scheibe. Steht keine
+     Zahl darin, ist sie leer und beansprucht nichts. */
   max-height: 100%;
-  transition: opacity 400ms ease;
 }
 
 /* Der Schaden steht rechts der Scheibe, die Zahl an dessen Innenkante — von
-   dort wächst sie nach außen. Die Regeneration spiegelt das. */
+   dort wächst sie nach außen. Die Regeneration spiegelt das. `transform-origin`
+   folgt derselben Kante, damit die Zahl beim Auftritt aus ihr aufgeht statt von
+   der Scheibe weg zu rutschen. */
 .ledger--damage {
   align-items: flex-start;
   text-align: left;
   --ledger-hi: #ff7a6a;
+  --ledger-origin: left center;
 }
 
 .ledger--regen {
   align-items: flex-end;
   text-align: right;
   --ledger-hi: #74d448;
+  --ledger-origin: right center;
 }
 
-/* Ohne Bewegung im Zähler tritt der Ledger zurück, statt zu verschwinden. Der
-   Umschlag ist einmalig — `opacity` darf deshalb eine Transition tragen. */
-.ledger--idle {
-  opacity: 0.42;
+/* ── Auftritt ──
+   Nur beim ERSCHEINEN, und höchstens einmal je Pause. Kein Leave-Zustand: die
+   Zahl verschwindet während einer Pause nie, und beim Fortsetzen geht das ganze
+   Overlay. */
+.ledger-in-enter-active {
+  transition:
+    opacity 260ms ease-out,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ── Motiv ── */
-/* `align-self: center` zentriert es in der Querachse der Spalte — und deren
-   Breite ist genau die Breite der Zahl. Das Motiv wandert damit mit, wenn die
-   Zahl eine Stelle gewinnt, statt an einer Kante hängenzubleiben. */
-.ledger__icon {
-  flex-shrink: 0;
-  align-self: center;
-  color: var(--ledger-hi);
+.ledger-in-enter-from {
+  opacity: 0;
+  transform: scale(0.72);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ledger-in-enter-active {
+    transition: opacity 160ms ease-out;
+  }
+  .ledger-in-enter-from {
+    transform: none;
+  }
 }
 
 /* ── Die Summe ── */
@@ -156,6 +170,7 @@ function popOffset(index: number): string {
 .ledger__value {
   position: relative;
   display: inline-block;
+  transform-origin: var(--ledger-origin);
   font-size: clamp(2.4rem, calc(var(--sun-d, 180px) * 0.4), 4.4rem);
   font-weight: 800;
   line-height: 1.05;

@@ -1512,12 +1512,19 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* Die Zahl beginnt unmittelbar an der Balkenkante — der gesamte Block hat eine
-   feste Breite, damit weder er noch die Balkenkante wandert. */
+   feste Breite, damit weder er noch die Balkenkante wandert.
+
+   Sie ist absichtlich HÖHER gesetzt als der Balken (28px): der Wert ist die
+   einzige exakte Ablesung der Vitalität im Overlay, und das Panel läuft durch
+   useFitScale skaliert (~0.64 auf Full HD) — kleiner gesetzt bliebe davon real
+   kaum mehr als ein Chip-Text. Die Streifenhöhe (38px) bleibt davon unberührt
+   und muss es auch: sie ginge sonst in die Panelhöhe und damit in den
+   Fit-Scale des ganzen Overlays ein. */
 .vital-strip__value {
   display: inline-flex;
   align-items: baseline;
   flex-shrink: 0;
-  font-size: clamp(1.05rem, 1.65vw, 1.4rem);
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
   font-weight: 800;
   line-height: 1;
   color: var(--hp-txt, #ece0c0);
