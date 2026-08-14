@@ -81,6 +81,7 @@
         <CometDisc v-if="solarStore.isCometState" :diameter="SHOP_SUN_MIN_DIAMETER" />
         <BlackHoleDisc v-else-if="isCollapsed" :diameter="SHOP_SUN_MAX_DIAMETER" />
         <div v-else class="tree-stage-sun" />
+        <div class="sun-flash-veil" :style="sunFlashVeilStyle" />
         <div
           v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
           class="next-phase-preview"
@@ -110,6 +111,7 @@
           @mouseenter="hoveredId = node.id"
           @mouseleave="hoveredId = null"
         >
+          <span class="node-glow" aria-hidden="true" />
           <Icon :icon="node.icon" :width="node.iconSize" :height="node.iconSize" :style="{ color: node.color }" />
           <span v-if="entryOf(node).level > 0 || entryOf(node).state !== 'locked'" class="node-level">
             {{ entryOf(node).level }}/{{ entryOf(node).maxLevel }}
@@ -488,6 +490,18 @@ const stageStyle = computed(() => {
   }
 })
 
+/**
+ * Der Kaufblitz deckt die Scheibe, die gerade steht. In den Plasmaphasen und im
+ * Kometenzustand ist das genau `--shop-sun-d` (oben gesetzt); nur das Schwarze
+ * Loch rendert mit fester Endgröße und braucht deshalb einen eigenen Wert.
+ * Die Dauer steht als Variable am Element, damit CSS und `flashSun()` dieselbe
+ * Zahl lesen — sie wechselt nie, ist also kein Wert pro Frame.
+ */
+const sunFlashVeilStyle = computed(() => {
+  const d = isCollapsed.value ? `${SHOP_SUN_MAX_DIAMETER}px` : 'var(--shop-sun-d, 200px)'
+  return { width: d, height: d, '--sun-flash-ms': `${FORGE_SUN_FLASH_MS}ms` }
+})
+
 const nextPhasePreviewStyle = computed(() => ({
   background: `radial-gradient(circle at 38% 35%, ${nextStage.value.core} 0%, ${nextStage.value.mid} 45%, ${nextStage.value.edge} 100%)`,
   boxShadow: `0 0 40px 16px ${nextStage.value.glow1}88, 0 0 80px 30px ${nextStage.value.glow2}55`,
@@ -675,14 +689,31 @@ const nextPhasePreviewStyle = computed(() => ({
   50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
 }
 
-.sun-wrapper.sun-flash {
-  animation: tree-sun-flash 0.45s ease-out;
+/* Kaufblitz: ein heller Schleier, der nur seine Deckkraft ändert. Ein
+   `filter: brightness()` auf dem Wrapper hätte für seine 0,45 s Sonne,
+   Phasenvorschau und HP-Zahl gemeinsam auf eine eigene Rendering-Surface
+   gezwungen — dieselbe Aufhellung leistet die Ebene ohne Neurasterung
+   (Muster: ChampionOrbit.vue). */
+.sun-flash-veil {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(255, 245, 220, 0.34);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
 }
 
-@keyframes tree-sun-flash {
-  0%   { filter: brightness(1) saturate(1); }
-  35%  { filter: brightness(1.8) saturate(1.5); }
-  100% { filter: brightness(1) saturate(1); }
+.sun-wrapper.sun-flash .sun-flash-veil {
+  animation: sun-flash-veil var(--sun-flash-ms, 450ms) ease-out;
+}
+
+@keyframes sun-flash-veil {
+  0%   { opacity: 0; }
+  35%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .next-phase-preview {
@@ -821,16 +852,44 @@ const nextPhasePreviewStyle = computed(() => ({
   border-color: #c89040;
 }
 
+/* Bereit zum Kauf: der Schein atmet, nicht der Kreis. Im Vollausbau stehen bis
+   zu 25 kaufbare Knoten gleichzeitig — eine Animation auf `box-shadow` und
+   `border-color` rasterte dort jeden einzelnen in jedem Frame samt Schatten neu.
+   Der Schein ist deshalb eine eigene Ebene mit STATISCHEM Schatten; animiert
+   wird ausschließlich ihre Deckkraft. */
+.node-glow {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  z-index: -1;
+}
+
 .node-circle--affordable {
   border-color: #c89040;
-  animation: node-ready 2s ease-in-out infinite;
+}
+
+.node-circle--affordable .node-glow {
+  box-shadow: 0 0 22px rgba(232, 200, 80, 0.85);
+  animation: node-glow-breathe 2s ease-in-out infinite alternate;
+}
+
+@keyframes node-glow-breathe {
+  from { opacity: 0.45; }
+  to   { opacity: 1; }
 }
 
 .node-circle--affordable:hover {
   transform: scale(1.12);
-  animation-play-state: paused;
   border-color: #e8c060;
-  box-shadow: 0 0 22px rgba(232, 200, 80, 0.85);
+}
+
+/* Beim Zeigen steht der Schein still und voll — `animation-play-state: paused`
+   käme hier zu spät, der laufende Keyframe schriebe die Deckkraft weiter. */
+.node-circle--affordable:hover .node-glow {
+  animation: none;
+  opacity: 1;
 }
 
 .node-circle--capped {
@@ -843,11 +902,6 @@ const nextPhasePreviewStyle = computed(() => ({
   border-color: #c89040;
   box-shadow: 0 0 10px rgba(232, 192, 64, 0.5), 0 0 20px rgba(232, 192, 64, 0.2);
   cursor: default;
-}
-
-@keyframes node-ready {
-  0%, 100% { box-shadow: 0 0 10px rgba(200, 144, 64, 0.5); border-color: #c89040; }
-  50% { box-shadow: 0 0 22px rgba(232, 200, 80, 0.85); border-color: #e8c060; }
 }
 
 /* ══════════════════════════════════════════════════
@@ -979,8 +1033,14 @@ const nextPhasePreviewStyle = computed(() => ({
    REDUCED MOTION
 ══════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
-  .node-circle--affordable,
-  .sun-wrapper.sun-flash {
+  /* Der Schein bleibt stehen — ohne die Deckkraft mitzusetzen bliebe er
+     unsichtbar, und der Knoten verlöre sein „bereit"-Zeichen. */
+  .node-circle--affordable .node-glow {
+    animation: none;
+    opacity: 1;
+  }
+
+  .sun-wrapper.sun-flash .sun-flash-veil {
     animation: none;
   }
 }
