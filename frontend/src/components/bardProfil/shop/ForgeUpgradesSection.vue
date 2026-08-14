@@ -1,10 +1,8 @@
 <template>
-  <div class="fu-wrap">
-    <div class="fc-meta">
-      <span class="fc-meta-main"><b>{{ grownCount }}</b> of {{ totalCount }} grown</span>
-      <span v-if="readyCount > 0" class="fc-meta-live">{{ readyCount }} ready</span>
-    </div>
-
+  <!-- Ein einziges `mouseleave` am Rahmen statt eines je Eintrag: zwischen zwei
+       Karten liegen 11px Lücke, und fünfundzwanzig Einzelhandler ließen den
+       Spotlight bei jedem Übergang kurz ausgehen. -->
+  <div ref="wrapEl" class="fu-wrap" @mouseleave="setListHover(null)">
     <section
       v-for="group in groups"
       :key="group.tier"
@@ -15,14 +13,21 @@
         <Icon :icon="group.icon" width="22" height="22" class="fu-head-ico" />
         <span class="fu-head-title">{{ group.title }}</span>
         <span class="fu-head-hint">{{ group.hint }}</span>
-        <span class="fu-head-count">{{ group.grown }}/{{ group.entries.length }}</span>
       </header>
 
       <template v-for="entry in group.entries" :key="entry.id">
         <!-- Gesperrt: ein Einzeiler mit dem Grund und dem Weg dorthin. Eine
              volle Karte für etwas, das man nicht kaufen kann, verdrängt nur
              die, die man kaufen kann. -->
-        <div v-if="entry.state === 'locked'" class="fc-row fc-row--locked" :title="entry.desc">
+        <div
+          v-if="entry.state === 'locked'"
+          class="fc-row fc-row--locked"
+          :class="spotClasses(entry.id)"
+          :style="{ '--node-c': entry.color }"
+          :data-forge-id="entry.id"
+          :title="entry.desc"
+          @mouseenter="setListHover(entry.id)"
+        >
           <Icon :icon="entry.icon" width="27" height="27" :style="{ color: entry.color }" />
           <div class="fc-row-body">
             <span class="fc-row-name">{{ entry.name }}</span>
@@ -37,7 +42,15 @@
         </div>
 
         <!-- Ausgewachsen: nur noch, was er bringt. -->
-        <div v-else-if="entry.state === 'maxed'" class="fc-row fc-row--max" :title="entry.desc">
+        <div
+          v-else-if="entry.state === 'maxed'"
+          class="fc-row fc-row--max"
+          :class="spotClasses(entry.id)"
+          :style="{ '--node-c': entry.color }"
+          :data-forge-id="entry.id"
+          :title="entry.desc"
+          @mouseenter="setListHover(entry.id)"
+        >
           <Icon :icon="entry.icon" width="27" height="27" :style="{ color: entry.color }" />
           <div class="fc-row-body">
             <span class="fc-row-name" :style="{ color: entry.color }">{{ entry.name }}</span>
@@ -49,8 +62,16 @@
         <article
           v-else
           class="fc-card"
-          :class="{ 'fc-card--ready': entry.canBuy, 'fc-card--owned': entry.level > 0 && !entry.canBuy }"
+          :class="[
+            {
+              'fc-card--ready': entry.canBuy,
+              'fc-card--owned': entry.level > 0 && !entry.canBuy,
+            },
+            spotClasses(entry.id),
+          ]"
           :style="{ '--node-c': entry.color }"
+          :data-forge-id="entry.id"
+          @mouseenter="setListHover(entry.id)"
         >
           <div v-if="entry.canBuy" class="fc-glow" aria-hidden="true" />
           <div class="fc-flash" :class="{ 'fc-flash--on': flashedId === entry.id }" aria-hidden="true" />
@@ -116,9 +137,10 @@
  * Baum links liest: ein Kauf hier färbt den Kreis dort im selben Frame, weil
  * beide Seiten dieselben Pinia-Getter lesen und nichts zwischenspeichern.
  */
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import ForgeCostRow from './ForgeCostRow.vue'
 import type { ForgeUpgradeEntry } from '@/types'
 import {
@@ -129,9 +151,11 @@ import {
   FORGE_SHORT_MATERIAL_PREFIX,
   FORGE_GROW_LABEL,
   FORGE_GROW_NEXT_PREFIX,
+  FORGE_SPOTLIGHT_SCROLL_DELAY_MS,
 } from '@/config/constants'
 
 const { upgradeEntries, buyUpgrade } = useForgeUpgrades()
+const { spotlightId, treeHoverId, setListHover } = useForgeSpotlight()
 
 const groups = computed(() =>
   FORGE_UPGRADE_GROUPS.map((group) => {
@@ -142,17 +166,21 @@ const groups = computed(() =>
     const sorted = [...entries].sort(
       (a, b) => FORGE_UPGRADE_STATE_ORDER[a.state] - FORGE_UPGRADE_STATE_ORDER[b.state],
     )
-    return {
-      ...group,
-      entries: sorted,
-      grown: entries.filter((entry) => entry.level > 0).length,
-    }
+    return { ...group, entries: sorted }
   }),
 )
 
-const totalCount = computed(() => upgradeEntries.value.length)
-const grownCount = computed(() => upgradeEntries.value.filter((entry) => entry.level > 0).length)
-const readyCount = computed(() => upgradeEntries.value.filter((entry) => entry.canBuy).length)
+/**
+ * Der Eintrag unter dem Zeiger — hier oder drüben am Baum — tritt hervor, alle
+ * anderen zurück. Dieselben zwei Klassen für Karte und Kompaktzeile: was sie
+ * bedeuten, hängt am Eintrag, nicht an seiner Renderform.
+ */
+function spotClasses(id: string): Record<string, boolean> {
+  return {
+    'fc-spot': spotlightId.value === id,
+    'fc-dimmed': spotlightId.value !== null && spotlightId.value !== id,
+  }
+}
 
 /**
  * Ein gedeckelter Strahl wartet nicht auf Chimes, sondern auf seine vier
@@ -179,6 +207,39 @@ function grow(entry: ForgeUpgradeEntry): void {
     if (flashedId.value === entry.id) flashedId.value = null
   }, FORGE_CARD_FLASH_MS)
 }
+
+const wrapEl = ref<HTMLElement | null>(null)
+let scrollTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * Zeigt der Spieler LINKS auf einen Knoten, rollt die Liste dessen Karte nur
+ * dann ins Bild, wenn sie gerade nicht darin steht: `block: 'nearest'` tut von
+ * sich aus nichts, solange das Element vollständig sichtbar ist, und nimmt
+ * sonst den kürzesten Weg.
+ *
+ * NUR vom Baum aus. Die Karte unter dem Zeiger ist per Definition sichtbar, und
+ * ein Rollen unter dem Zeiger schöbe die nächste Karte darunter — der Hover
+ * spränge weiter und löste das nächste Rollen aus.
+ *
+ * Verzögert, damit ein Schwenk über den Baum EINEN Rollbefehl absetzt statt
+ * fünfundzwanzig. Rein visuell, daher reale Zeit.
+ */
+watch(treeHoverId, (id) => {
+  if (scrollTimer !== null) clearTimeout(scrollTimer)
+  if (id === null) return
+  scrollTimer = setTimeout(() => {
+    wrapEl.value
+      ?.querySelector<HTMLElement>(`[data-forge-id="${id}"]`)
+      ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, FORGE_SPOTLIGHT_SCROLL_DELAY_MS)
+})
+
+/* Der Reiterwechsel räumt diese Sektion per `v-if` ab — ein Zeiger, der dabei
+   auf einer Karte stand, ließe den Knoten am Baum sonst leuchten bleiben. */
+onUnmounted(() => {
+  if (scrollTimer !== null) clearTimeout(scrollTimer)
+  setListHover(null)
+})
 </script>
 
 <style scoped>
@@ -221,6 +282,13 @@ function grow(entry: ForgeUpgradeEntry): void {
   );
 }
 
+/* Der erste Abschnittsstrich ist jetzt die OBERKANTE der Liste — die Luft, die
+   ihn von der Zählzeile darüber trennte, hat keinen Nachbarn mehr. */
+.fu-wrap > .fu-group:first-child .fu-head {
+  margin-top: 0;
+  padding-top: 0;
+}
+
 .fu-head-ico {
   align-self: center;
   flex-shrink: 0;
@@ -247,14 +315,6 @@ function grow(entry: ForgeUpgradeEntry): void {
   text-overflow: ellipsis;
 }
 
-.fu-head-count {
-  flex-shrink: 0;
-  font-size: 13.5px;
-  font-weight: 900;
-  color: rgba(200, 144, 64, 0.75);
-  font-variant-numeric: tabular-nums;
-}
-
 @media (max-height: 1100px) {
   .fu-wrap,
   .fu-group {
@@ -264,6 +324,11 @@ function grow(entry: ForgeUpgradeEntry): void {
   .fu-head {
     padding: 6px 2px 7px;
     margin-top: 3px;
+  }
+
+  .fu-wrap > .fu-group:first-child .fu-head {
+    margin-top: 0;
+    padding-top: 0;
   }
 }
 </style>

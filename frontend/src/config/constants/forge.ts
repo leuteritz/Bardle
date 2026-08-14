@@ -278,6 +278,32 @@ export const FORGE_CARD_FLASH_MS = 420
 /** Dasselbe für den Sonnenblitz im Baum — er quittiert denselben Kauf. */
 export const FORGE_SUN_FLASH_MS = 500
 
+// ── Hover-Spotlight zwischen Sternbaum und Upgrade-Liste ─────────────────────
+/**
+ * Baum links und Liste rechts zeigen denselben Bestand (`useForgeUpgrades`) in
+ * zwei Bildern. Der Zeiger auf EINEM von ihnen hebt deshalb beide Fassungen
+ * desselben Knotens hervor — dieselbe Mechanik wie `SIGIL_ALLY_HOVER_*` im
+ * Team-Tab, und bewusst in denselben Größenordnungen.
+ *
+ * Der Maßstab liegt über dem bestehenden Zeige-Sprung des Knotens (1,12), weil
+ * er beide Gesten bedienen muss: den Zeiger auf dem Kreis UND den Zeiger auf
+ * seiner Karte drüben. Zwei Größen für dieselbe Bedeutung wären ein Fehler.
+ */
+export const FORGE_SPOTLIGHT_NODE_SCALE = 1.22
+export const FORGE_SPOTLIGHT_DIM_OPACITY = 0.3
+export const FORGE_SPOTLIGHT_PING_MS = 450
+/**
+ * Sonne → Wurzel → Zweig → Blatt: drei Glieder trennen den äußersten Knoten vom
+ * Sternenrand. Zugleich die Abbruchbremse beim Hochlaufen der `parentId`-Kette.
+ */
+export const FORGE_SPOTLIGHT_MAX_LIMBS = 3
+/**
+ * Wartezeit, bevor ein Hover am Baum die zugehörige Karte ins Bild rollt. Ein
+ * Schwenk über den Baum soll EINEN Rollbefehl absetzen, nicht fünfundzwanzig.
+ * Rein visuell, daher reale Zeit.
+ */
+export const FORGE_SPOTLIGHT_SCROLL_DELAY_MS = 160
+
 /**
  * Grund, warum ein Kernstrahl gerade nicht weitergeht: `maxAllowedLevel` lässt
  * ihn nur eine Stufe über den niedrigsten der fünf steigen. Der Zustand hat

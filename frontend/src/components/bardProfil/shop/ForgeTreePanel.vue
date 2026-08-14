@@ -6,7 +6,12 @@
     <!-- Alles Skalierte lebt im Viewport, der Ertrags-Sockel darunter NICHT.
          Die Bühne ragt bei Standardzoom weit über ihre Zelle hinaus; eine
          schwebende Sockelkarte läge damit über anklickbaren Knoten. -->
-    <div ref="viewportEl" class="tree-viewport" @wheel.prevent="onWheel">
+    <div
+      ref="viewportEl"
+      class="tree-viewport"
+      @wheel.prevent="onWheel"
+      @mouseleave="setTreeHover(null)"
+    >
     <!-- Zoom control -->
     <div class="tree-zoom">
       <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
@@ -57,6 +62,20 @@
             :stroke="limb.color" opacity="0.55"
           />
         </g>
+
+        <!-- Spotlight chain: star edge → … → the node being pointed at. Exists
+             only while something is hovered, three lines at most. -->
+        <g
+          v-if="spotlightLimbs.length > 0"
+          class="spot-limbs"
+          stroke-width="4" stroke-linecap="round" fill="none"
+        >
+          <line
+            v-for="limb in spotlightLimbs" :key="limb.key + '-spot'"
+            :x1="limb.x1" :y1="limb.y1" :x2="limb.x2" :y2="limb.y2"
+            :stroke="spotlightColor"
+          />
+        </g>
       </svg>
 
       <!-- Ring labels -->
@@ -101,26 +120,40 @@
         v-for="node in allNodes"
         :key="node.id"
         class="tree-node"
+        :class="{ 'tree-node--spot': spotlightId === node.id }"
         :style="nodePos(node)"
       >
         <div
           class="node-circle"
-          :class="[`node-circle--${node.sizeClass}`, `node-circle--${entryOf(node).state}`]"
+          :class="[
+            `node-circle--${node.sizeClass}`,
+            `node-circle--${entryOf(node).state}`,
+            {
+              'node-circle--spot': spotlightId === node.id,
+              'node-circle--dim': spotlightId !== null && spotlightId !== node.id,
+            },
+          ]"
           :style="{ '--node-color': node.color }"
           @click="handleNodeClick(node)"
-          @mouseenter="hoveredId = node.id"
-          @mouseleave="hoveredId = null"
+          @mouseenter="setTreeHover(node.id)"
+          @mouseleave="setTreeHover(null)"
         >
           <span class="node-glow" aria-hidden="true" />
+          <!-- Eine Ebene je Spotlight, nicht eine je Knoten: so existiert genau
+               EINE statt fünfundzwanzig, und der Ping fängt bei jedem neuen
+               Ziel von vorn an, weil das Element selbst neu ist. -->
+          <span v-if="spotlightId === node.id" class="node-spot" aria-hidden="true" />
           <Icon :icon="node.icon" :width="node.iconSize" :height="node.iconSize" :style="{ color: node.color }" />
           <span v-if="entryOf(node).level > 0 || entryOf(node).state !== 'locked'" class="node-level">
             {{ entryOf(node).level }}/{{ entryOf(node).maxLevel }}
           </span>
         </div>
 
-        <!-- Tooltip -->
+        <!-- Tooltip — hängt am Hover DIESER Spalte, nicht am Spotlight: ein
+             Zeiger auf der Karte rechts darf hier keinen zweiten Abzug
+             derselben Zahlen aufklappen. -->
         <div
-          v-if="hoveredId === node.id"
+          v-if="treeHoverId === node.id"
           class="node-tooltip"
           :class="isTooltipBelow(node.angleDeg) ? 'node-tooltip--below' : 'node-tooltip--above'"
         >
@@ -172,6 +205,7 @@ import {
   useForgeUpgrades,
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import type { ForgeNodeDef, ForgeUpgradeEntry } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
@@ -201,11 +235,16 @@ import {
   FORGE_TREE_FIT_PADDING_PX,
   FORGE_SUN_EDGE_R,
   FORGE_SUN_FLASH_MS,
+  FORGE_SPOTLIGHT_NODE_SCALE,
+  FORGE_SPOTLIGHT_DIM_OPACITY,
+  FORGE_SPOTLIGHT_PING_MS,
+  FORGE_SPOTLIGHT_MAX_LIMBS,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
 const playerStore = usePlayerStore()
 const { entryById, buyUpgrade } = useForgeUpgrades()
+const { spotlightId, treeHoverId, setTreeHover, resetForgeSpotlight } = useForgeSpotlight()
 
 const C = FORGE_STAGE_SIZE / 2
 
@@ -309,15 +348,16 @@ interface Limb {
   targetId: string
 }
 
+const nodeById = computed(() => new Map(allNodes.value.map((n) => [n.id, n])))
+
 const limbs = computed<Limb[]>(() => {
   const result: Limb[] = []
-  const nodeById = new Map(allNodes.value.map((n) => [n.id, n]))
   for (const node of allNodes.value) {
     let from: { x: number; y: number }
     if (node.tier === 'root') {
       from = pt(node.angleDeg, FORGE_SUN_EDGE_R)
     } else {
-      const parent = nodeById.get(node.parentId ?? '')
+      const parent = nodeById.value.get(node.parentId ?? '')
       if (!parent) continue
       from = pt(parent.angleDeg, parent.dist)
     }
@@ -338,6 +378,43 @@ const limbs = computed<Limb[]>(() => {
 const activeLimbs = computed(() =>
   limbs.value.filter((limb) => (entryById.value.get(limb.targetId)?.level ?? 0) > 0),
 )
+
+const limbByTarget = computed(() => new Map(limbs.value.map((limb) => [limb.targetId, limb])))
+
+/**
+ * Der Weg vom Sternenrand bis zum gezeigten Knoten, Glied für Glied: ein Blatt
+ * hängt an seinem Zweig, der Zweig an seiner Wurzel, die Wurzel am Rand der
+ * Sonne (`FORGE_SUN_EDGE_R`). Die Kette läuft über `parentId` nach innen und
+ * ist damit höchstens `FORGE_SPOTLIGHT_MAX_LIMBS` lang.
+ *
+ * Sie zeigt, was die Liste rechts nicht sagen kann: WO im Baum das Upgrade
+ * unter dem Zeiger hängt.
+ */
+const spotlightLimbs = computed<Limb[]>(() => {
+  const id = spotlightId.value
+  if (id === null) return []
+  const chain: Limb[] = []
+  let cursor: string | null = id
+  while (cursor !== null && chain.length < FORGE_SPOTLIGHT_MAX_LIMBS) {
+    const limb = limbByTarget.value.get(cursor)
+    if (!limb) break
+    chain.push(limb)
+    cursor = nodeById.value.get(cursor)?.parentId ?? null
+  }
+  return chain
+})
+
+/** EINE Farbe für die ganze Kette — die des gezeigten Knotens. Gliedweise
+ *  eigene Farben ließen den Strahl als drei Striche lesen, nicht als einen. */
+const spotlightColor = computed(
+  () => (spotlightId.value ? nodeById.value.get(spotlightId.value)?.color : null) ?? '#e8c040',
+)
+
+// Für das scoped CSS unten — Muster `SigilRoleNode.vue`: die Zahl steht in den
+// Konstanten, den Keyframe-Namen trägt die CSS-Klasse.
+const spotScale = String(FORGE_SPOTLIGHT_NODE_SCALE)
+const spotDimOpacity = String(FORGE_SPOTLIGHT_DIM_OPACITY)
+const spotPingMs = `${FORGE_SPOTLIGHT_PING_MS}ms`
 
 function ringLabelStyle(r: number): Record<string, string> {
   return {
@@ -383,7 +460,6 @@ function isTooltipBelow(angleDeg: number): boolean {
 }
 
 // ── Interaction ───────────────────────────────────────────────────────────────
-const hoveredId = ref<string | null>(null)
 const purchaseFlash = ref(false)
 
 function flashSun(): void {
@@ -426,6 +502,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
+  // Der Spotlight lebt auf Modulebene und überlebte diese Komponente sonst.
+  resetForgeSpotlight()
 })
 
 const totalScale = computed(() => fitScale.value * zoom.value)
@@ -905,6 +983,103 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 /* ══════════════════════════════════════════════════
+   HOVER-SPOTLIGHT
+══════════════════════════════════════════════════ */
+/* Der Knoten unter dem Zeiger — gleich ob hier oder in der Liste rechts —
+   wächst, atmet in seiner Leitfarbe und bekommt einen einmaligen Ping; die
+   übrigen vierundzwanzig treten zurück.
+
+   Der Ring ist eine EIGENE Ebene mit STATISCHEM Schein, animiert werden nur
+   `opacity` und `transform` (Performance-Regel 11). Ein pulsender `box-shadow`
+   am Kreis rasterte ihn samt Schatten in jedem Frame neu. Und er kann NICHT auf
+   `.node-glow` liegen: dort läuft bei kaufbaren Knoten schon
+   `node-glow-breathe`, zwei Keyframes auf einer Ebene überlagern sich nicht. */
+.node-spot {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--node-color, #c89040);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--node-color, #c89040) 80%, transparent);
+  pointer-events: none;
+  z-index: -1;
+  animation: node-spot-breathe 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes node-spot-breathe {
+  from { opacity: 0.55; transform: scale(1); }
+  to   { opacity: 1; transform: scale(1.06); }
+}
+
+/* Der einmalige Ping auf derselben Marke: ein Ring, der aufgeht und vergeht. */
+.node-spot::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid var(--node-color, #c89040);
+  animation: node-spot-ping v-bind(spotPingMs) ease-out 1 forwards;
+}
+
+@keyframes node-spot-ping {
+  from { opacity: 0.7; transform: scale(1); }
+  to   { opacity: 0; transform: scale(1.9); }
+}
+
+/* Doppelt geschrieben, mit Absicht: `.node-circle--affordable:hover` wiegt
+   0,2,0 und hielte den Knoten sonst auf seinen 1,12 fest. Auf den Knoten zeigen
+   und auf seine Karte zeigen sind EINE Geste — sie dürfen nicht zwei Größen
+   ergeben. */
+.node-circle.node-circle--spot {
+  transform: scale(v-bind(spotScale));
+  transition-duration: 0.12s;
+}
+
+/* Beim Spotlight steht der Kaufbar-Schein still und voll — sonst schwebten zwei
+   atmende Ringe mit verschiedenem Takt übereinander. Dieselbe Auflösung wie in
+   `.node-circle--affordable:hover .node-glow`, nur greift sie jetzt auch, wenn
+   der Zeiger drüben auf der Karte steht. */
+.node-circle--spot .node-glow {
+  animation: none;
+  opacity: 1;
+}
+
+/* Zurücktreten. Klasse je Knoten, NICHT als geerbte Variable am Container
+   (Performance-Regel 3). Steht nach `--locked` (0,5) und `--capped` (0,6) und
+   gewinnt damit bei gleicher Spezifität über die Quellreihenfolge. */
+.node-circle--dim {
+  opacity: v-bind(spotDimOpacity);
+  transition-duration: 0.12s;
+}
+
+/* Und ihr Schein hört auf zu atmen. Das ist der eigentliche Gewinn: statt bis
+   zu fünfundzwanzig laufender `node-glow-breathe` läuft während eines
+   Spotlights genau eine Animation im Knotenfeld. */
+.node-circle--dim .node-glow {
+  animation: none;
+  opacity: 0.25;
+}
+
+/* `scale()` am Kreis öffnet einen Stapelkontext INNERHALB des Wrappers — ohne
+   dieses Anheben läge der vergrößerte Knoten im gedrängten Blattring unter
+   seinem nächsten Geschwister. */
+.tree-node--spot {
+  z-index: 6;
+}
+
+/* Der Lichtlauf auf der Astkette. `stroke-dashoffset` ist der von
+   Performance-Regel 11 ausdrücklich erlaubte Weg; der Offset ist Strich plus
+   Lücke, damit die Schleife nahtlos schließt. Höchstens drei Linien. */
+.spot-limbs line {
+  opacity: 0.95;
+  stroke-dasharray: 14 10;
+  animation: forge-spot-flow 0.9s linear infinite;
+}
+
+@keyframes forge-spot-flow {
+  to { stroke-dashoffset: -24; }
+}
+
+/* ══════════════════════════════════════════════════
    TOOLTIP
 ══════════════════════════════════════════════════ */
 .node-tooltip {
@@ -1042,6 +1217,18 @@ const nextPhasePreviewStyle = computed(() => ({
 
   .sun-wrapper.sun-flash .sun-flash-veil {
     animation: none;
+  }
+
+  /* Dieselbe Falle wie oben, schärfer: der Ping trägt `forwards` und endete bei
+     Deckkraft 0 — ohne das Zurücksetzen verschwände der ganze Spotlight-Ring. */
+  .node-spot,
+  .node-spot::after,
+  .spot-limbs line {
+    animation: none;
+  }
+
+  .node-spot {
+    opacity: 1;
   }
 }
 </style>

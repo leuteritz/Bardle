@@ -739,7 +739,10 @@
    Frame neu (Performance-Regel 2 in CLAUDE.md).
 ════════════════════════════════════════════════════════════════════════════ */
 
-/* ── Abschnittskopf: „3 of 10 grown" plus Bereitschaft ── */
+/* ── Kopfzeile mit Uhr ──
+   Die Zaehlzeilen der Reiter („3 of 10 grown") sind weg: der Reiter traegt die
+   Bereitschaft schon als Badge, und die Hoehe ganz oben ist die teuerste der
+   Spalte. Einziger verbliebener Nutzer ist der Restock-Timer des Haendlers. */
 .fc-meta {
   display: flex;
   align-items: baseline;
@@ -750,10 +753,6 @@
   font-size: 14px;
   font-weight: 700;
   color: rgba(200, 144, 64, 0.6);
-}
-.fc-meta-main b {
-  font-weight: 900;
-  color: #e8c040;
 }
 .fc-meta-live {
   margin-left: auto;
@@ -784,6 +783,9 @@
   border: 1px solid #32210c;
   border-radius: 4px;
   overflow: hidden;
+  transition:
+    opacity 0.12s ease,
+    border-color 0.12s ease;
 }
 .fc-row--locked {
   opacity: 0.68;
@@ -877,7 +879,9 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: border-color 0.2s ease;
+  transition:
+    border-color 0.12s ease,
+    opacity 0.12s ease;
 }
 .fc-card:hover:not(.fc-card--locked) {
   border-color: #7a4e20;
@@ -920,6 +924,32 @@
 .fc-flash--on {
   opacity: 1;
   transition-duration: 0.06s;
+}
+
+/* ── Hover-Spotlight: die Karte hier und der Knoten im Baum sind EIN Ding ──
+   Der Sternbaum links und diese Liste rechts zeigen denselben Bestand. Zeigt
+   der Spieler auf eines der beiden Bilder, tritt das andere mit hervor — und
+   die uebrigen vierundzwanzig treten zurueck, sonst sucht das Auge den Kreis
+   zur Karte unter fuenfundzwanzig gleich hellen selbst.
+
+   Kein Dauerlaeufer: beides ist Zustand, der Umschlag traegt eine Transition
+   auf `opacity` bzw. `border-color`. Die aendern sich genau EINMAL je
+   Hover-Wechsel, nicht in jedem Frame — der einmalige Umschlag, den
+   Performance-Regel 2 ausdruecklich erlaubt.
+
+   Zwei Klassen mit demselben Namen fuer Karte UND Kompaktzeile: was sie
+   bedeuten, haengt am Eintrag, nicht an seiner Renderform. Doppelt geschrieben
+   (`.fc-card.fc-spot`), weil `.fc-card:hover` oben 0,2,0 wiegt und die Karte
+   unter dem Zeiger sonst braun faerbte statt in der Leitfarbe ihres Knotens —
+   und weil `.fc-row--locked`/`--max` ihre eigene Deckkraft mitbringen. */
+.fc-card.fc-spot,
+.fc-row.fc-spot {
+  border-color: var(--node-c, #e8c040);
+  background: #241a10;
+}
+.fc-card.fc-dimmed,
+.fc-row.fc-dimmed {
+  opacity: 0.42;
 }
 
 .fc-card-head {

@@ -43,15 +43,6 @@
 
       <!-- ── CRAFTED RELICS ───────────────────────────────────── -->
       <template v-else-if="activeSection === 'relics'">
-        <div class="fc-meta">
-          <span class="fc-meta-main">
-            <b>{{ relicsForged }}</b> of {{ FORGE_RELICS.length }} relics forged
-          </span>
-          <span v-if="readyCounts.relics > 0" class="fc-meta-live">
-            {{ readyCounts.relics }} ready
-          </span>
-        </div>
-
         <template v-for="view in relicViews" :key="view.def.id">
           <!-- Locked and maxed relics have nothing to decide — they collapse to
                one line so the cards that DO want a decision stand alone. -->
@@ -139,15 +130,6 @@
 
       <!-- ── CONSTELLATIONS ───────────────────────────────────── -->
       <template v-else-if="activeSection === 'constellations'">
-        <div class="fc-meta">
-          <span class="fc-meta-main">
-            <b>{{ forgedCount }}</b> of {{ FORGE_CONSTELLATIONS.length }} constellations fused
-          </span>
-          <span v-if="readyCounts.constellations > 0" class="fc-meta-live">
-            {{ readyCounts.constellations }} ready
-          </span>
-        </div>
-
         <template v-for="view in constellationViews" :key="view.def.id">
           <div v-if="view.forged" class="fc-row fc-row--done">
             <Icon :icon="view.def.icon" width="27" height="27" :style="{ color: view.def.color }" />
@@ -471,8 +453,6 @@ const relicViews = computed<RelicView[]>(() => {
   return views.sort((a, b) => rank(a) - rank(b))
 })
 
-const relicsForged = computed(() => relicViews.value.filter((v) => v.level > 0).length)
-
 function handleForgeRelic(relic: ForgeRelicDef): void {
   if (forgeStore.forgeRelic(relic.id)) {
     showToast(`${relic.name} forged — Lv ${forgeStore.relicLevel(relic.id)}!`, 'forge')
@@ -524,8 +504,6 @@ const constellationViews = computed<ConstellationView[]>(() => {
   }))
   return views.sort((a, b) => Number(a.forged) - Number(b.forged))
 })
-
-const forgedCount = computed(() => forgeStore.forgedConstellations.length)
 
 function handleForgeConstellation(constellation: ForgeConstellationDef): void {
   if (forgeStore.forgeConstellation(constellation.id)) {
@@ -821,7 +799,7 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px 18px 26px;
+  padding: 10px 18px 26px;
   display: flex;
   flex-direction: column;
   gap: 13px;
@@ -1242,7 +1220,7 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
   }
 
   .sf-body {
-    padding: 14px 15px 22px;
+    padding: 9px 15px 22px;
     gap: 11px;
   }
 
