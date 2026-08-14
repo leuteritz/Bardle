@@ -71,12 +71,29 @@
           <!-- Hero: the live sun in its current phase (no planets, no champions).
                Die Scheibe bleibt frei: Ring und Plakette lagen vorher genau auf
                der Fläche, an der die Phase erkennbar ist — Korona, Farbe,
-               Oberfläche. Die HP stehen deshalb als eigene Leiste darunter. -->
-          <div class="sun-hero" :style="{ width: `${sunDiameter}px`, height: `${sunDiameter}px` }">
-            <div class="sun-hero__disc" aria-hidden="true">
-              <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
-              <PhaseSunDisc v-else :diameter="sunDiameter" />
+               Oberfläche. Die HP stehen deshalb als eigene Leiste darunter.
+
+               Links und rechts die Bilanz der laufenden Pause: was die Sonne
+               verloren und was sie zurückgewonnen hat. Beides läuft pausiert
+               weiter — Void-Einschläge und Boss-Enrage treffen sie, die
+               Regeneration hält dagegen —, und bis hierher war davon nur zu
+               sehen, dass die Vitalitätsleiste stiller schrumpfte.
+
+               Die Zeile ist GENAU so hoch wie die Scheibe (`--sun-d`): ein
+               Zuwachs hier änderte die Panelhöhe und zöge den Fit-Scale des
+               ganzen Overlays mit. Die Ledger sind darin nur mittig gestellt. -->
+          <div class="hero-row" :style="{ '--sun-d': `${sunDiameter}px` }">
+            <SunLedger tone="regen" :total="pauseRegen" />
+            <div
+              class="sun-hero"
+              :style="{ width: `${sunDiameter}px`, height: `${sunDiameter}px` }"
+            >
+              <div class="sun-hero__disc" aria-hidden="true">
+                <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
+                <PhaseSunDisc v-else :diameter="sunDiameter" />
+              </div>
             </div>
+            <SunLedger tone="damage" :total="pauseDamage" :pops="damagePops" />
           </div>
           <span class="sun-phase-label" :style="{ color: sunPhaseLabelColor }">
             {{ sunPhase.name }}
@@ -433,6 +450,8 @@ import {
   PAUSE_HP_HEALTHY_PERCENT,
   PAUSE_HP_CRIT_PERCENT,
   PAUSE_HP_WIDTH_PROBES,
+  PAUSE_LEDGER_MAX_POPS,
+  DAMAGE_FLOAT_DURATION_MS,
   MATERIAL_RARITY_COLOR,
   MATERIAL_RARITY_ORDER,
   LOOT_MONOGRAM_MAX_CHARS,
@@ -457,6 +476,7 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import KeyCap from '@/components/keybinds/KeyCap.vue'
 import PauseStarCard from './PauseStarCard.vue'
 import PauseVoidCard from './PauseVoidCard.vue'
+import SunLedger from './SunLedger.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
 // Die Pause hat zwei Quellen — Fenster ohne Fokus und das Kürzel des Spielers.
@@ -547,6 +567,66 @@ const pauseTick = ref(0)
 let pauseInterval: ReturnType<typeof setInterval> | null = null
 let starInterval: ReturnType<typeof setInterval> | null = null
 
+// ── Bilanz der laufenden Pause: Schaden und Regeneration ────────────────────
+// Beides kommt aus den Lebenszeit-Zählern des playerStore (`totalDamageTaken`,
+// `totalHpRegenerated`) als DIFFERENZ zum Stand beim Pausenbeginn — dasselbe
+// Muster wie bei den Chimes darüber. Kein neuer Store-Zustand, kein Ticker:
+// beide Zähler sind reaktiv, die Anzeige läuft dadurch von selbst live.
+const pauseStartDamage = ref(0)
+const pauseStartRegen = ref(0)
+
+/**
+ * Die Treffer, die gerade aufsteigen. Sie kommen bewusst NICHT aus
+ * `playerStore.damageFloats`: diese Liste wird von `PlayerHPBar` gepruned, ihre
+ * Lebensdauer hinge damit an einer fremden Komponente. Hier trägt das Delta des
+ * Lebenszeit-Zählers den Betrag, und aufgeräumt wird im ohnehin laufenden
+ * Sekundentakt — kein zweiter Timer.
+ */
+const damagePops = ref<{ id: number; value: number; bornAt: number }[]>([])
+let nextPopId = 0
+
+const pauseDamage = computed(() =>
+  Math.max(0, Math.round(playerStore.totalDamageTaken - pauseStartDamage.value)),
+)
+// Die Regeneration fällt in Bruchteilen an (Forge- und Baum-Boni sind keine
+// ganzen HP) — gerundet wird erst hier, nicht im Store.
+const pauseRegen = computed(() =>
+  Math.max(0, Math.round(playerStore.totalHpRegenerated - pauseStartRegen.value)),
+)
+
+/**
+ * Jeder Anstieg des Lebenszeit-Zählers ist genau ein Treffer — der Betrag steht
+ * bereits mitigiert darin. Der Wächter läuft NUR während der Pause: die
+ * Komponente bleibt immer montiert (das `v-if` steckt im Teleport), er liefe
+ * sonst durchs ganze Spiel mit.
+ */
+watch(
+  () => playerStore.totalDamageTaken,
+  (now, before) => {
+    if (!isPaused.value) return
+    const dealt = Math.round(now - before)
+    if (dealt <= 0) return
+    damagePops.value = [
+      ...damagePops.value,
+      // Wanduhr: die Zahl steigt per CSS-Animation auf und muss so lange stehen,
+      // wie das Auge sie liest. Rein visuelle Standzeit, beide Enden des
+      // Vergleichs entstehen in diesem Modul — `gameNow()` wäre hier falsch, die
+      // CSS-Animation kennt keinen Zeitraffer.
+      { id: nextPopId++, value: dealt, bornAt: Date.now() },
+    ].slice(-PAUSE_LEDGER_MAX_POPS)
+  },
+)
+
+/** Abgelaufene Treffer entfernen. Läuft im vorhandenen Sekundentakt mit; die
+ *  Zuweisung erfolgt nur, wenn sich wirklich etwas ändert. */
+function prunePops(): void {
+  if (damagePops.value.length === 0) return
+  // Wanduhr, siehe oben
+  const now = Date.now()
+  const next = damagePops.value.filter((p) => p.bornAt + DAMAGE_FLOAT_DURATION_MS > now)
+  if (next.length !== damagePops.value.length) damagePops.value = next
+}
+
 /**
  * Escape beendet die Pause — dieselbe Taste, die im ganzen Spiel jedes Overlay
  * schließt, und deshalb bewusst KEIN Eintrag in der Kürzel-Registry: sie ist
@@ -568,9 +648,13 @@ watch(
     if (paused) {
       gameStore.setPauseState(true)
       pauseStartChimes.value = gameStore.chimes
+      pauseStartDamage.value = playerStore.totalDamageTaken
+      pauseStartRegen.value = playerStore.totalHpRegenerated
+      damagePops.value = []
       pauseTick.value = 0
       pauseInterval = setInterval(() => {
         pauseTick.value++
+        prunePops()
       }, 1000)
       // Sofort aufbauen, damit die Karten mit dem Overlay erscheinen und nicht
       // erst beim ersten Takt.
@@ -1137,6 +1221,43 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Sun hero ─────────────────────────────────────────── */
+/* Die Heldenzeile: Regeneration — Scheibe — Schaden. Beide Randspalten sind
+   gleich breit (1fr), die Scheibe steht dadurch exakt in der Panelmitte, genau
+   wie vor dem Einbau der Ledger.
+
+   Die feste Höhe ist der Kern des Ganzen: sie ist der Durchmesser der Scheibe
+   und NICHT der höchste Inhalt. Wüchse die Zeile mit dem Ledger, änderte sich
+   die Panelhöhe — und mit ihr der Fit-Scale des gesamten Overlays (das Panel
+   ist auf jeder Desktop-Auflösung höhenlimitiert). Der negative `margin-top`
+   des Phasen-Labels darunter hängt ebenfalls daran.
+
+   Platzrechnung je Randspalte: (960 Panelbreite − 2 × 44 Innenabstand
+   − 200 max. Scheibe) / 2 ≈ 336 px gegen ~170 px, die der breiteste Ledger
+   braucht. */
+.hero-row {
+  display: grid;
+  /* `minmax(0, 1fr)` statt `1fr`: eine ungewöhnlich lange Zahl darf die
+     Randspalte nicht über ihren Anteil hinaus aufblähen — sonst wanderte die
+     Scheibe aus der Panelmitte. Sie ragt dann nach außen und wird notfalls vom
+     Panel beschnitten; die Mitte bleibt unangetastet. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+  /* Luft zur Scheibe: ihr Kasten ist quadratisch, ihre Korona läuft darüber
+     hinaus — ohne diesen Abstand berührte die Akzentlinie den Schein. */
+  column-gap: clamp(16px, 2.2vw, 30px);
+  width: 100%;
+  height: var(--sun-d);
+}
+
+/* Beide Ledger kleben an der Scheibe, ihre Zahlen wachsen nach außen. */
+.hero-row > :first-child {
+  justify-self: end;
+}
+.hero-row > :last-child {
+  justify-self: start;
+}
+
 /* Maße kommen inline aus `sunDiameter` (PAUSE_SUN_*): dieselbe Spanne stand
    hier als `clamp()` ein zweites Mal, und beide Fassungen mussten von Hand
    gleichgehalten werden. */

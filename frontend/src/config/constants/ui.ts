@@ -242,6 +242,19 @@ export const PAUSE_HP_CRIT_PERCENT = 25
 // Stützstellen decken beide Fälle ab; die Spalte nimmt die breiteste.
 export const PAUSE_HP_WIDTH_PROBES = [1, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1]
 
+// ── Pause-Overlay: Bilanz neben der Sonnenscheibe ──────────────────────────
+// Rechts der Schaden, links die Regeneration der laufenden Pause. Die Treffer
+// laufen als aufsteigende Zahlen über der Summe — mehr als eine Handvoll
+// gleichzeitig wäre unlesbar UND eine wachsende Liste unsichtbarer Elemente:
+// mehrere Void-Einschläge fallen in derselben Sekunde.
+export const PAUSE_LEDGER_MAX_POPS = 4
+// Wie weit ein Treffer beim Aufsteigen NACH AUSSEN driftet (px, weg von der
+// Scheibe). Zwei Zwecke: gleichzeitige Treffer liegen nicht deckungsgleich
+// übereinander, und die Zahlen laufen in den freien Panelrand statt quer über
+// die Beschriftung. Nach Index gegriffen, nicht gewürfelt — dieselbe Zahl darf
+// beim Neurendern nicht springen.
+export const PAUSE_LEDGER_POP_OFFSETS = [12, 52, 30, 74]
+
 // ── Pause-Overlay: Karten der laufenden Vorgänge ───────────────────────────
 // Ein Stern je Karte, höchstens drei nebeneinander — und seit dem Void kommt
 // dessen Karte als VIERTE dazu.
