@@ -13,13 +13,11 @@ import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 describe('useForgeSpotlight', () => {
   const {
     spotlightId,
-    detailId,
-    pinnedId,
+    listHoverId,
     treeHoverId,
+    listHovering,
     setListHover,
     setTreeHover,
-    setPinned,
-    togglePin,
     resetForgeSpotlight,
   } = useForgeSpotlight()
 
@@ -32,6 +30,7 @@ describe('useForgeSpotlight', () => {
   it('zeigt im Ruhezustand auf nichts', () => {
     expect(spotlightId.value).toBeNull()
     expect(treeHoverId.value).toBeNull()
+    expect(listHoverId.value).toBeNull()
   })
 
   it('spotlightet, worauf der Baum zeigt', () => {
@@ -45,6 +44,8 @@ describe('useForgeSpotlight', () => {
     expect(spotlightId.value).toBe('forge_branch')
     // Der Tooltip im Baum hängt an DIESEM Wert und darf nicht mitziehen.
     expect(treeHoverId.value).toBeNull()
+    // Das schwebende Kärtchen der Liste hängt an DIESEM.
+    expect(listHoverId.value).toBe('forge_branch')
   })
 
   /**
@@ -68,83 +69,39 @@ describe('useForgeSpotlight', () => {
     resetForgeSpotlight()
     expect(spotlightId.value).toBeNull()
     expect(treeHoverId.value).toBeNull()
+    expect(listHoverId.value).toBeNull()
   })
 
   /**
-   * Die Anheftung ist der Grund, warum der Detailkopf überhaupt bedienbar ist:
-   * der Zeiger streift auf dem Weg zum Kaufknopf zwangsläufig andere Zeilen,
-   * und ohne diese Regel risse jede davon das Detail wieder weg.
+   * Die Halte-Geste. Das Empfehlungs-Panel über der Liste hängt an einem Wert,
+   * der auch ohne Zutun kippt — die Chimes ticken jede Sekunde. Erschiene es,
+   * während der Zeiger in der Liste steht, schöbe es sie um dreihundert Pixel
+   * unter ihm weg. Es fragt deshalb hier, ob es warten muss.
    */
-  it('lässt das Angeheftete den Hover schlagen', () => {
-    setPinned('pinned_node')
-    setTreeHover('tree_node')
-    setListHover('list_node')
+  describe('listHovering', () => {
+    it('ist im Ruhezustand falsch', () => {
+      expect(listHovering.value).toBe(false)
+    })
 
-    expect(detailId.value).toBe('pinned_node')
-    // Die HERVORHEBUNG folgt weiter dem Zeiger — nur der Detailkopf steht still.
-    expect(spotlightId.value).toBe('list_node')
-  })
+    it('meldet den gehaltenen Zeiger und sein Loslassen', () => {
+      setListHover('list_node')
+      expect(listHovering.value).toBe(true)
 
-  it('fällt ohne Anheftung auf den Hover zurück', () => {
-    setTreeHover('tree_node')
-    expect(detailId.value).toBe('tree_node')
+      setListHover(null)
+      expect(listHovering.value).toBe(false)
+    })
 
-    setPinned('pinned_node')
-    expect(detailId.value).toBe('pinned_node')
+    /** Der Baum hält nicht — nur die Liste kann von einem Panel verschoben werden. */
+    it('bleibt falsch, wenn nur der Baum zeigt', () => {
+      setTreeHover('tree_node')
+      expect(listHovering.value).toBe(false)
+    })
 
-    setPinned(null)
-    expect(detailId.value).toBe('tree_node')
-  })
-
-  it('löst mit togglePin denselben Knoten wieder', () => {
-    togglePin('node_a')
-    expect(pinnedId.value).toBe('node_a')
-
-    // Ein anderer Knoten übernimmt, statt zu lösen.
-    togglePin('node_b')
-    expect(pinnedId.value).toBe('node_b')
-
-    togglePin('node_b')
-    expect(pinnedId.value).toBeNull()
-  })
-
-  /**
-   * Der Nachhall: verlässt der Zeiger die Liste, bleibt der Detailkopf stehen.
-   * Fiele er stattdessen auf null zurück, wechselte er Inhalt UND Höhe genau in
-   * dem Moment, in dem niemand mehr hinzeigt — und der Spieler verlöre auf dem
-   * Weg zum Kaufknopf, was er gerade gelesen hat.
-   */
-  it('behält den zuletzt gezeigten Knoten, wenn der Zeiger loslässt', () => {
-    setListHover('list_node')
-    setListHover(null)
-
-    expect(detailId.value).toBe('list_node')
-    // Die HERVORHEBUNG geht mit dem Zeiger aus — nur der Detailkopf hält.
-    expect(spotlightId.value).toBeNull()
-  })
-
-  it('lässt den Nachhall vom nächsten Zeigen überschreiben', () => {
-    setTreeHover('tree_node')
-    setTreeHover(null)
-    expect(detailId.value).toBe('tree_node')
-
-    setListHover('list_node')
-    setListHover(null)
-    expect(detailId.value).toBe('list_node')
-  })
-
-  it('räumt auch die Anheftung ab', () => {
-    setPinned('pinned_node')
-    resetForgeSpotlight()
-    expect(pinnedId.value).toBeNull()
-    expect(detailId.value).toBeNull()
-  })
-
-  it('räumt auch den Nachhall ab', () => {
-    setListHover('list_node')
-    setListHover(null)
-    resetForgeSpotlight()
-    expect(detailId.value).toBeNull()
+    it('fällt mit resetForgeSpotlight zurück', () => {
+      setListHover('list_node')
+      resetForgeSpotlight()
+      expect(listHovering.value).toBe(false)
+    })
   })
 
   it('teilt den Zustand über getrennte Aufrufe hinweg', () => {

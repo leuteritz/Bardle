@@ -500,43 +500,79 @@ export const FORGE_BUY_MANY_LABEL = `Buy ×${FORGE_COUNT_TOKEN}`
 /** Die Zeile neben dem Preis: „8× affordable right now". */
 export const FORGE_AFFORDABLE_SUFFIX = '× affordable right now'
 
-// ── Detailkopf der rechten Spalte (ForgeNodeDetail) ──────────────────────────
+// ── Empfehlungs-Panel der rechten Spalte (ForgeNextUpPanel) ──────────────────
 /**
- * Ein Knoten GROSS statt fünfundvierzig mittelgroß.
+ * Was als Nächstes zu wachsen lohnt — EIN Knoten groß, und zwar immer derselbe,
+ * den der Baum links als BEST BUY umringt.
  *
- * Vorher trug jeder Eintrag der Liste eine volle Karte: Icon, Beschreibung,
- * Now-→-After, Kostenzeile und Kaufknopf. Bei Vollausbau standen davon
- * fünfundvierzig untereinander — dieselbe Fläche fünfundvierzig Mal, und keine
- * davon groß genug, um auf einem 4K-Schirm noch etwas herzumachen. Jetzt zeigt
- * der Kopf EINEN Knoten in voller Größe, die Liste darunter nur noch Zeilen.
+ * Der Kopf war einmal ein Hover-Detail mit Anheftung: er zeigte, worauf der
+ * Zeiger zeigte. Das war ein zweiter Weg zu denselben Zahlen, die die Zeile
+ * darunter schon trägt — und er stand auch dann da, wenn es gar nichts zu
+ * kaufen gab. Jetzt beantwortet er genau eine Frage („was jetzt?") und
+ * verschwindet, sobald sie keine Antwort mehr hat: `bestBuyId === null`.
  *
- * Angeheftet wird per Klick, und die Anheftung schlägt jeden Hover — sonst
- * risse der Zeiger auf dem Weg zum Kaufknopf das Detail wieder weg.
+ * Was der Zeiger streift, sagt seitdem das schwebende Kärtchen an der Zeile
+ * (`ForgeRowTooltip`) — es liegt außerhalb des Flusses und kann die Liste
+ * deshalb nicht verschieben.
  */
 export const FORGE_DETAIL_ICON_SIZE = 38
-export const FORGE_DETAIL_PIN_HINT = 'pinned by click — hover no longer steals it'
-export const FORGE_DETAIL_HOVER_HINT = 'click a node or row to pin it here'
-export const FORGE_DETAIL_EMPTY_TITLE = 'Nothing pinned'
-export const FORGE_DETAIL_EMPTY_HINT =
-  'Point at a node in the tree or a row below to inspect it here.'
-export const FORGE_DETAIL_UNPIN_GLYPH = '✕'
-export const FORGE_DETAIL_PATH_TITLE = 'Its place in the tree'
-/** Erstes Glied der Pfadkette — der Körper in der Mitte des Baums. */
-export const FORGE_PATH_ROOT_LABEL = 'Star'
-export const FORGE_PATH_ROOT_ICON = 'game-icons:sun-radiations'
+export const FORGE_NEXT_UP_TITLE = 'Next to grow'
+export const FORGE_NEXT_UP_HINT = 'cheapest you can afford'
+/**
+ * Dieselben zwei Glyphen wie die Töpfe der Liste (`FORGE_UPGRADE_BUCKETS`):
+ * „kaufbar" ist überall der Blitz, „noch nicht" überall die Sanduhr. Eine
+ * Bedeutung, ein Zeichen — auch über Komponentengrenzen hinweg.
+ */
+export const FORGE_NEXT_UP_ICON = 'ph:lightning-fill'
+export const FORGE_NEXT_UP_IDLE_ICON = 'ph:hourglass-medium-fill'
+
+// ── Schwebendes Kärtchen an der Zeile (ForgeRowTooltip) ──────────────────────
+/**
+ * Was der Zeiger in der Liste streift, GROSS — seit der Kopf darüber nicht mehr
+ * dem Zeiger folgt, sondern die Empfehlung zeigt.
+ *
+ * Es schwebt links NEBEN der Spalte statt in ihr: alles, was im Fluss der Liste
+ * läge, verschöbe sie beim Erscheinen unter dem Zeiger, und genau daraus wurde
+ * schon einmal ein selbsttragendes Flackern. `position: fixed` kann das nicht.
+ */
+export const FORGE_ROW_TIP_WIDTH_PX = 250
+/**
+ * Gemessen von der ZEILE aus, nicht von der Spaltenkante — und größer als der
+ * Abstand, den man sehen will: die Zeile sitzt selbst schon 18px innerhalb der
+ * Spalte, und ein kleinerer Wert ließe das Kärtchen ihre Kante überlappen.
+ */
+export const FORGE_ROW_TIP_GAP_PX = 26
+/**
+ * Nur zu sehen, solange der Zeiger die Liste hält und die letzte kaufbare Sache
+ * dabei wegfällt — das Panel wartet dann mit dem Verschwinden, bis er loslässt,
+ * statt ihm die Liste unter den Füßen wegzuziehen.
+ */
+export const FORGE_NEXT_UP_IDLE = 'Nothing ready right now'
 /** „Lv 25 · no final level" bzw. „Lv 3 / 6" — der Rest der Metazeile. */
 export const FORGE_DETAIL_ENDLESS_META = 'no final level'
 export const FORGE_DETAIL_PARENT_PREFIX = 'hangs on '
 
 /**
- * Die Fläche, die der Detailkopf IMMER belegt — gleich, ob er leer ist, ein
- * MAXED-Upgrade ohne Now-→-After zeigt oder einen Bough mit fünfgliedriger
- * Pfadkette und zwei Kaufknöpfen nebeneinander.
+ * Die Fläche, die das Panel IMMER belegt, SOLANGE es da ist.
  *
  * Ohne diese Klammer war der Kopf inhaltshoch, und jeder Hover schob die Liste
  * darunter um rund 300px. Der Zeiger fiel dabei aus der Liste, der Hover ging
  * aus, der Kopf schrumpfte, die Liste kam zurück unter den Zeiger — ein
- * selbsttragendes Flackern, das erst aufhörte, wenn man die Maus wegnahm.
+ * selbsttragendes Flackern, das erst aufhörte, wenn man die Maus wegnahm. Die
+ * Klammer bleibt auch ohne diese Kopplung nötig: der Stapelknopf („Buy ×8")
+ * hängt an den Chimes und käme sonst sekündlich dazu und wieder weg.
+ *
+ * Die Zahlen sind GEMESSEN, nicht geschätzt. Nötig für Kopf, Identität,
+ * einzeilige Beschreibung, Now-→-After und den klebenden Kaufblock: 355px auf
+ * Full HD (mit der Kompakt-Media-Query), 408px ab 2K. Darauf kommen rund 28px
+ * für die Stapelzeile („8× affordable right now" plus zweiter Knopf), die mit
+ * den Chimes dazukommt und wieder geht. Bei 300px deckte der Kaufblock auf
+ * Full HD die Now-→-After-Zeile ab — also genau die Zahl, wegen der man
+ * hinsieht.
+ *
+ * Was darüber hinausgeht — eine drei Zeilen lange Beschreibung — scrollt im
+ * Körper. Das ist der Preis dafür, dass die Liste darunter nie wandert, und er
+ * trifft nur Zierrat: Preis und Knopf kleben.
  *
  * `clamp` statt einer festen Zahl, weil Full HD (~950px Bühne) und 4K (~2030px)
  * dieselbe Spalte teilen: auf dem flachsten Viewport bliebe von der Liste sonst
@@ -544,9 +580,9 @@ export const FORGE_DETAIL_PARENT_PREFIX = 'hangs on '
  * greift, weil `.sf-panel` `height: 100%` trägt und der Elternteil damit eine
  * definite Höhe hat.
  */
-export const FORGE_DETAIL_PANEL_MIN_PX = 300
-export const FORGE_DETAIL_PANEL_FRACTION = 0.46
-export const FORGE_DETAIL_PANEL_MAX_PX = 470
+export const FORGE_DETAIL_PANEL_MIN_PX = 384
+export const FORGE_DETAIL_PANEL_FRACTION = 0.45
+export const FORGE_DETAIL_PANEL_MAX_PX = 440
 
 // ── Abteilungs-Rail ganz rechts (ForgeSectionRail) ───────────────────────────
 /**
@@ -564,8 +600,12 @@ export const FORGE_RAIL_WIDTH_WIDE_PX = 92
 export const FORGE_RAIL_ICON_SIZE = 27
 export const FORGE_RAIL_BARGAIN_LABEL = 'restock'
 
-/** Kopfzeile der kompakten Liste unter dem Detail. */
-export const FORGE_QUEUE_HEAD_HINT = 'click a row to inspect'
+/**
+ * Kopfzeile der kompakten Liste. Sagte „click a row to inspect", solange ein
+ * Klick die Zeile im Detailkopf anheftete — sie tut es nicht mehr, und ein
+ * Hinweis auf eine Geste, die nichts bewirkt, ist schlimmer als keiner.
+ */
+export const FORGE_QUEUE_HEAD_HINT = 'point at a row to inspect · ＋ to grow'
 
 /** Wie lange die gekaufte Karte aufleuchtet. Rein visuell, daher reale Zeit. */
 export const FORGE_CARD_FLASH_MS = 420
@@ -598,6 +638,61 @@ export const FORGE_SPOTLIGHT_MAX_LIMBS = 4
  * Rein visuell, daher reale Zeit.
  */
 export const FORGE_SPOTLIGHT_SCROLL_DELAY_MS = 160
+
+// ── Der Ringfilter siebt auch den Baum ───────────────────────────────────────
+/**
+ * Zwei Dämpfungsstufen stehen hier bewusst nebeneinander, und sie bedeuten
+ * VERSCHIEDENES:
+ *
+ *   • `FORGE_SPOTLIGHT_DIM_OPACITY` (0,3) — „ich zeige gerade woandershin".
+ *     Die vierundvierzig anderen bleiben lesbar; der Zeiger wandert weiter.
+ *   • `FORGE_SIFT_DIM_OPACITY` (0,14) — „das habe ich weggefiltert".
+ *     Eine ABSICHT des Spielers, die stehen bleibt, bis er sie zurücknimmt.
+ *
+ * Der Abstand zwischen beiden muss deutlich sein: läge das Sieb bei 0,25, wäre
+ * ein gefilterter Baum von einem Spotlight nicht zu unterscheiden, und die
+ * Chipwahl sähe aus wie ein Hover, der hängengeblieben ist. Gemessen auf Full HD
+ * bei Standardzoom — bei 0,2 trägt der Blattring noch erkennbar Farbe.
+ *
+ * Ausgefiltert heißt NICHT gesperrt: der Knoten bleibt anklickbar, und ein
+ * Zeiger darauf nimmt ihm die Klasse wieder ab (`ForgeTreePanel`). Der Filter
+ * ist ein Blickfilter.
+ */
+export const FORGE_SIFT_DIM_OPACITY = 0.14
+/**
+ * Zusätzlich die Farbe herausnehmen. STATISCHER Zustand, ausdrücklich NICHT in
+ * der Transition von `.node-circle` — ein `filter` über Zeit rasterte bis zu
+ * fünfundvierzig Kreise samt Schatten in jedem Frame neu (Performance-Regel 2).
+ */
+export const FORGE_SIFT_SATURATE = 0.35
+/** Äste zu einem ausgefilterten Ziel. Tiefer als der Knoten selbst — ein Strich
+ *  trägt keine Form, die man wiedererkennt, nur Helligkeit. */
+export const FORGE_SIFT_LIMB_OPACITY = 0.12
+/** Ringband und Ring-Beschriftung der nicht gewählten Ebenen. */
+export const FORGE_SIFT_RING_OPACITY = 0.15
+
+/**
+ * Der Trefferzähler IM SUCHFELD.
+ *
+ * Ohne ihn liest sich ein Baum, in dem kein einziger Knoten hell steht, wie ein
+ * Fehler statt wie ein Suchwort ohne Treffer — dieselbe Lücke, die der
+ * Leerzustand der Liste mit „Nothing matches that filter" schließt.
+ *
+ * Warum INNEN im Feld und nicht als eigene Marke daneben: eine Marke von 81px
+ * (2K: 159px) hat die Chipreihe der Leiste auf Full HD, WUXGA und 2K in eine
+ * zweite Zeile gedrückt und dem Baum darunter 19 bis 41px genommen — gemessen,
+ * nicht befürchtet. Bei 663px Spaltenbreite ist die Leiste randvoll; im Feld
+ * kostet die Zahl gar nichts, weil sie den Platz des Platzhalters nimmt, der
+ * bei getipptem Wort ohnehin weg ist.
+ *
+ * Warum nur beim SUCHWORT und nicht bei jedem Filter: ein gewählter Ring ist am
+ * markierten Chip abzulesen, und dessen Zweitzeile trägt seine Knotenzahl
+ * bereits. Die Suche ist der einzige Filter ohne eigene Rückmeldung — und damit
+ * der einzige, bei dem ein dunkler Baum unerklärt bliebe.
+ */
+export const FORGE_SIFT_TOTAL_TOKEN = '{t}'
+export const FORGE_SIFT_HITS_TITLE = `${FORGE_COUNT_TOKEN} of ${FORGE_SIFT_TOTAL_TOKEN} nodes match`
+export const FORGE_SIFT_NO_HITS_TITLE = 'No node matches'
 
 /**
  * Grund, warum ein Kernstrahl gerade nicht weitergeht: `maxAllowedLevel` lässt

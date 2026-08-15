@@ -61,6 +61,11 @@
       <button v-if="hasFilter" class="fu-none-reset" @click="resetForgeFilter">Clear filter</button>
     </div>
   </div>
+
+  <!-- Die volle Auskunft zur Zeile unter dem Zeiger. Geschwister der Liste und
+       `position: fixed` — läge es IN ihr, schöbe sein Erscheinen sie unter dem
+       Zeiger weg, und der Hover ginge im selben Zug wieder aus. -->
+  <ForgeRowTooltip :entry="tipEntry" :anchor="tipAnchor" />
 </template>
 
 <script setup lang="ts">
@@ -76,10 +81,11 @@
  * nicht nach dem Ring — die Herleitung steht dort.
  *
  * Was ein Eintrag AUSFÜHRLICH zeigt, steht seit dem Umbau nicht mehr in der
- * Liste, sondern im Detailkopf darüber (`ForgeNodeDetail`): fünfundvierzig
- * volle Karten untereinander waren dieselbe Fläche fünfundvierzig Mal, und
- * keine davon gross genug, um auf einem 4K-Schirm etwas herzumachen. Hier
- * bleibt, was man beim Überfliegen braucht — eine Zeile je Eintrag.
+ * Liste: fünfundvierzig volle Karten untereinander waren dieselbe Fläche
+ * fünfundvierzig Mal, und keine davon gross genug, um auf einem 4K-Schirm etwas
+ * herzumachen. Hier bleibt, was man beim Überfliegen braucht — eine Zeile je
+ * Eintrag; die volle Auskunft schwebt daneben (`ForgeRowTooltip`), und der Kopf
+ * darüber zeigt die Empfehlung (`ForgeNextUpPanel`).
  */
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -87,7 +93,8 @@ import { forgeUpgradeBucket, useForgeUpgrades } from '@/composables/ui/useForgeU
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeFilter } from '@/composables/ui/useForgeFilter'
 import ForgeQueueRow from './ForgeQueueRow.vue'
-import type { ForgeUpgradeBucketId, ForgeUpgradeEntry } from '@/types'
+import ForgeRowTooltip from './ForgeRowTooltip.vue'
+import type { ForgeUpgradeBucketId, ForgeUpgradeEntry, ForgeRowTipAnchor } from '@/types'
 import {
   FORGE_UPGRADE_BUCKETS,
   FORGE_UPGRADE_ARCHIVE_LABEL,
@@ -102,8 +109,8 @@ import {
 } from '@/config/constants'
 
 const { upgradeEntries, entryById, buyUpgrade } = useForgeUpgrades()
-const { treeHoverId, setListHover } = useForgeSpotlight()
-const { searchQuery, activeTier, hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
+const { treeHoverId, listHoverId, setListHover } = useForgeSpotlight()
+const { hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
 
 // ── Eingefrorene Reihenfolge ─────────────────────────────────────────────────
 /**
@@ -198,16 +205,25 @@ let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
  * Ein Knoten, auf den der Spieler LINKS zeigt, muss rechts auch auffindbar
- * sein. Seit die Liste filtert, sucht und ein Archiv hat, kann seine Zeile
- * gerade ausgeblendet sein — `querySelector` fände dann nichts und es passierte
- * sichtbar gar nichts. Ring, Suchwort und Archiv sind reine Ansichtszustände;
- * sie nachzuziehen ist billiger als ein Zeigen, das ins Leere läuft.
+ * sein — soweit er überhaupt gemeint ist.
+ *
+ * Ring und Suchwort nahm diese Funktion früher mit zurück. Das ging, solange
+ * der Filter nur die Liste betraf; seit der Baum ihn mitträgt
+ * (`siftedIds` in `ForgeTreePanel`), wäre es eine Rückkopplung, die sich selbst
+ * frisst: Maus über einen fremden Ring → Filter springt auf „All" → der ganze
+ * Baum hellt auf → die Auswahl, die der Spieler eben getroffen hat, ist weg,
+ * ohne dass er etwas angeklickt hätte.
+ *
+ * Die Auskunft, die dabei verlorenging, gibt jetzt der Baum selbst: ein
+ * ausgefilterter Knoten steht sichtbar zurück, und dass zu ihm rechts keine
+ * Zeile erscheint, ist damit schon beantwortet, bevor die Frage aufkommt.
+ *
+ * Das ARCHIV bleibt: es ist keine Auswahl des Spielers, sondern nur eine
+ * zugeklappte Schublade, und was darin liegt, ist vom Filter durchgelassen.
  */
 function revealForSpotlight(id: string): void {
   const entry = entryById.value.get(id)
   if (!entry) return
-  if (activeTier.value !== 'all' && entry.tier !== activeTier.value) activeTier.value = 'all'
-  if (!matchesForgeFilter(entry)) searchQuery.value = ''
   if (bucketOf(entry) === 'grown') archiveOpen.value = true
 }
 
@@ -222,8 +238,14 @@ function revealForSpotlight(id: string): void {
  * spränge weiter und löste das nächste Rollen aus.
  *
  * Verzögert, damit ein Schwenk über den Baum EINEN Rollbefehl absetzt statt
- * fünfundvierzig. Die Wartezeit deckt zugleich den Neuaufbau ab, den
- * `revealForSpotlight()` ausgelöst haben kann. Rein visuell, daher reale Zeit.
+ * fünfundvierzig. Die Wartezeit deckt zugleich das Aufklappen des Archivs ab,
+ * das `revealForSpotlight()` ausgelöst haben kann. Rein visuell, daher reale
+ * Zeit.
+ *
+ * Steht der Knoten hinter dem Filter, findet `querySelector` seine Zeile nicht
+ * und es passiert nichts — das ist die richtige Antwort, nicht bloß eine
+ * harmlose: der Knoten drüben ist sichtbar zurückgetreten und sagt damit selbst,
+ * dass er gerade nicht gemeint ist.
  */
 watch(treeHoverId, (id) => {
   if (scrollTimer !== null) clearTimeout(scrollTimer)
@@ -234,6 +256,36 @@ watch(treeHoverId, (id) => {
       ?.querySelector<HTMLElement>(`[data-forge-id="${id}"]`)
       ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, FORGE_SPOTLIGHT_SCROLL_DELAY_MS)
+})
+
+// ── Das schwebende Kärtchen ──────────────────────────────────────────────────
+/**
+ * Wo es hängt. Gemessen wird bei jedem HOVER-WECHSEL, nie pro Frame — und nur
+ * die drei Kanten, die das Kärtchen braucht (`ForgeRowTipAnchor`).
+ *
+ * `getBoundingClientRect()` ist hier richtig und nicht teuer: der Zeiger wechselt
+ * die Zeile ein paar Mal je Sekunde, nicht sechzig Mal. Ein `watch` statt eines
+ * Handlers je Zeile, weil die Zeilen ihren Hover ohnehin schon ins Composable
+ * melden.
+ */
+const tipAnchor = ref<ForgeRowTipAnchor | null>(null)
+
+const tipEntry = computed<ForgeUpgradeEntry | null>(() =>
+  listHoverId.value === null ? null : (entryById.value.get(listHoverId.value) ?? null),
+)
+
+watch(listHoverId, (id) => {
+  if (id === null) {
+    tipAnchor.value = null
+    return
+  }
+  const row = wrapEl.value?.querySelector<HTMLElement>(`[data-forge-id="${id}"]`)
+  if (!row) {
+    tipAnchor.value = null
+    return
+  }
+  const rect = row.getBoundingClientRect()
+  tipAnchor.value = { top: rect.top, bottom: rect.bottom, left: rect.left }
 })
 
 /* Der Abschnittswechsel räumt diese Sektion per `v-if` ab — ein Zeiger, der

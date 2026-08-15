@@ -7,18 +7,11 @@
         'fq-row--ready': entry.canBuy,
         'fq-spot': spotlightId === entry.id,
         'fq-dimmed': spotlightId !== null && spotlightId !== entry.id,
-        'fq-row--pinned': pinnedId === entry.id,
       },
     ]"
     :style="{ '--node-c': entry.color }"
     :data-forge-id="entry.id"
-    role="button"
-    :tabindex="0"
-    :title="entry.desc"
     @mouseenter="setListHover(entry.id)"
-    @click="togglePin(entry.id)"
-    @keydown.enter.prevent="togglePin(entry.id)"
-    @keydown.space.prevent="togglePin(entry.id)"
   >
     <div class="fq-flash" :class="{ 'fq-flash--on': flashed }" aria-hidden="true" />
 
@@ -58,7 +51,7 @@
         :disabled="!entry.canBuy"
         :aria-label="`Grow ${entry.name}`"
         :title="entry.canBuy ? `Grow ${entry.name}` : entry.lockReason || 'Not affordable yet'"
-        @click.stop="$emit('buy', entry.id)"
+        @click="$emit('buy', entry.id)"
       >
         ＋
       </button>
@@ -72,12 +65,15 @@
  *
  * Vorher war jeder Eintrag eine volle Karte mit Icon, Beschreibung,
  * Now-→-After, Kostenblock und Kaufknopf — bei Vollausbau fünfundvierzig davon
- * untereinander. Was eine Karte zeigte, steht jetzt oben im Detailkopf
- * (`ForgeNodeDetail`); hier bleibt, was man beim Überfliegen braucht: was es
- * ist, was es bringt, was es kostet, und ein Knopf.
+ * untereinander. Hier bleibt, was man beim Überfliegen braucht: was es ist, was
+ * es bringt, was es kostet, und ein Knopf. Alles Weitere sagt das schwebende
+ * Kärtchen, das dem Zeiger folgt (`ForgeRowTooltip`).
  *
- * Klick auf die Zeile heftet sie oben an, Klick auf ＋ kauft — deshalb das
- * `@click.stop` am Knopf.
+ * Die ZEILE selbst tut nichts — gekauft wird über ihren ＋-Knopf. Sie war
+ * einmal anklickbar (Klick heftete sie im Detailkopf an); mit der Anheftung ist
+ * auch ihre `role="button"` gegangen, denn eine Fläche, die sich als Knopf
+ * ankündigt und nichts tut, ist schlechter als gar keine — und eine breite
+ * Kauffläche, die man beim Scrollen streift, wäre teuer bezahlt.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -94,7 +90,7 @@ const flashDuration = `${FORGE_CARD_FLASH_MS}ms`
 const props = defineProps<{ entry: ForgeUpgradeEntry; flashed: boolean }>()
 defineEmits<{ (e: 'buy', id: string): void }>()
 
-const { spotlightId, pinnedId, setListHover, togglePin } = useForgeSpotlight()
+const { spotlightId, setListHover } = useForgeSpotlight()
 
 /**
  * Was die nächste Stufe bringt, in einer Zeile: „+200% → +208%". Gesperrte und
@@ -128,7 +124,6 @@ const shortMaterials = computed(() => props.entry.materials.filter((mat) => !mat
   background: #1c1c18;
   border: 1px solid #32210c;
   border-radius: 4px;
-  cursor: pointer;
   overflow: hidden;
   transition:
     border-color 0.12s ease,
@@ -154,11 +149,6 @@ const shortMaterials = computed(() => props.entry.materials.filter((mat) => !mat
 
 .fq-row--maxed {
   background: #17170f;
-}
-
-.fq-row--pinned {
-  background: #241a10;
-  border-color: var(--node-c, #e8c040);
 }
 
 /* Hover-Spotlight — dieselbe Bedeutung wie am Knoten im Baum. */

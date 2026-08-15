@@ -149,6 +149,21 @@ export interface ForgeCostItem {
   ok: boolean
 }
 
+/**
+ * Die Kanten der Zeile, an der das schwebende Kärtchen der Upgrade-Liste hängt
+ * (`ForgeRowTooltip`).
+ *
+ * Gemessen wird beim Hover-Wechsel und nur dort — nie pro Frame. Drei Zahlen
+ * statt eines ganzen `DOMRect`, damit klar ist, dass Breite und Höhe der Zeile
+ * hier nichts zu suchen haben: das Kärtchen richtet sich an ihrer Ober- oder
+ * Unterkante aus und liegt links neben der Spalte.
+ */
+export interface ForgeRowTipAnchor {
+  top: number
+  bottom: number
+  left: number
+}
+
 // ── Kaufbares im Baum: eine Fassung für Wurzeln UND Forge-Knoten ─────────────
 
 /** Welcher Ring — Wurzeln liegen im solarUpgradeStore, der Rest im starForgeStore. */

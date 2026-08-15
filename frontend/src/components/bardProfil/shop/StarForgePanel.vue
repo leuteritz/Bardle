@@ -1,11 +1,10 @@
 <template>
   <div class="sf-panel">
-    <!-- ══ Detailkopf ════════════════════════════════════════════
-         EIN Knoten gross statt fünfundvierzig mittelgross. Er trägt zugleich
-         die Goldlinie, die im Projekt an jeder Modalkante steht — die
-         Reiterleiste, die hier bis zum Umbau sass, ist in die Rail ganz rechts
-         gewandert. -->
-    <ForgeNodeDetail v-if="activeSection === 'upgrades'" />
+    <!-- ══ Empfehlung ════════════════════════════════════════════
+         Was als Nächstes zu wachsen lohnt, gross. Es entscheidet SELBST, ob es
+         da ist — nämlich nur, solange es etwas zu empfehlen hat. Es trägt
+         zugleich die Goldlinie, die im Projekt an jeder Modalkante steht. -->
+    <ForgeNextUpPanel v-if="activeSection === 'upgrades'" />
 
     <!-- Running bargain buffs stay above the fold whatever tab is open — they
          are the only thing on this panel with a clock on it. -->
@@ -300,7 +299,7 @@ import {
   getForgeNode,
 } from '@/config/progression/starForge'
 import ForgeUpgradesSection from './ForgeUpgradesSection.vue'
-import ForgeNodeDetail from './ForgeNodeDetail.vue'
+import ForgeNextUpPanel from './ForgeNextUpPanel.vue'
 import ForgeCostRow from './ForgeCostRow.vue'
 import {
   FORGE_CONSTELLATION_REQUIRED_LEVEL,

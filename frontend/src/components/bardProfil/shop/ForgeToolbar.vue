@@ -13,6 +13,23 @@
         :placeholder="searchPlaceholder"
         :aria-label="searchPlaceholder"
       />
+      <!-- Wie viele der fünfundvierzig das Wort trifft — die einzige Rückmeldung
+           zu einer Suche, die es sonst nirgends gäbe: ein Ring steht am
+           markierten Chip, ein Suchwort an nichts. Ohne sie liest sich ein Baum,
+           in dem kein Kreis mehr hell ist, wie ein Fehler.
+
+           Sie steht INNEN und nicht als Marke daneben: gemessen drückte eine
+           eigene Marke die Chipreihe auf Full HD, WUXGA und 2K in eine zweite
+           Zeile und nahm dem Baum darunter bis zu 41px. Hier nimmt sie den Platz
+           des Platzhalters, der bei getipptem Wort ohnehin weg ist. -->
+      <span
+        v-if="searchActive"
+        class="ft-search-hits"
+        :class="{ 'ft-search-hits--none': hitCount === 0 }"
+        :title="hitsTitle"
+      >
+        {{ hitCount }}
+      </span>
       <button
         v-if="searchQuery !== ''"
         class="ft-search-clear"
@@ -108,10 +125,13 @@ import {
   FORGE_BUY_ALL_LABEL,
   FORGE_BUY_ALL_ICON,
   FORGE_ENDLESS_SYMBOL,
+  FORGE_SIFT_HITS_TITLE,
+  FORGE_SIFT_NO_HITS_TITLE,
+  FORGE_SIFT_TOTAL_TOKEN,
 } from '@/config/constants'
 
 const { upgradeEntries, buyAllReady } = useForgeUpgrades()
-const { searchQuery, activeTier } = useForgeFilter()
+const { searchQuery, activeTier, matchesForgeFilter } = useForgeFilter()
 
 // ── Suchzeile ────────────────────────────────────────────────────────────────
 const searchPlaceholder = computed(() =>
@@ -183,6 +203,32 @@ const chips = computed<RingChip[]>(() => {
 
   return [all, ...rings]
 })
+
+// ── Trefferzähler im Suchfeld ────────────────────────────────────────────────
+/**
+ * Der Zähler erscheint am SUCHWORT, nicht an jedem Filter: ein gewählter Ring
+ * steht am markierten Chip und trägt seine Knotenzahl in dessen Zweitzeile
+ * bereits. Die Suche ist der einzige Filter ohne eigene Rückmeldung.
+ *
+ * Gezählt wird über `matchesForgeFilter` — dieselbe Funktion, nach der der Baum
+ * links seine Knoten zurücknimmt und die Liste rechts ihre Zeilen auslässt, und
+ * `upgradeEntries` ist dieselbe Menge, aus der beide lesen: die fünf Strahlen
+ * und die vierzig Knoten des Katalogs, also genau die Kreise auf der Bühne.
+ * Ein Ring bleibt dabei mitgezählt, wenn zusätzlich einer gewählt ist — die
+ * Zahl sagt, was der Spieler SIEHT, nicht was das Wort allein träfe.
+ */
+const searchActive = computed(() => searchQuery.value.trim() !== '')
+
+const hitCount = computed(() => upgradeEntries.value.filter(matchesForgeFilter).length)
+
+const hitsTitle = computed(() =>
+  hitCount.value === 0
+    ? FORGE_SIFT_NO_HITS_TITLE
+    : FORGE_SIFT_HITS_TITLE.replace(FORGE_COUNT_TOKEN, String(hitCount.value)).replace(
+        FORGE_SIFT_TOTAL_TOKEN,
+        String(upgradeEntries.value.length),
+      ),
+)
 
 // ── Sammelkauf ───────────────────────────────────────────────────────────────
 const readyCount = computed(() => upgradeEntries.value.filter((entry) => entry.canBuy).length)
@@ -349,6 +395,26 @@ function handleBuyAll(): void {
   font-weight: 700;
   color: rgba(232, 220, 192, 0.5);
   font-variant-numeric: tabular-nums;
+}
+
+/* Trefferzähler im Feld. Leiser als das Wort daneben — er ist eine Auskunft
+   über die Suche, nicht ihr Inhalt. Feste Mindestbreite, damit der Sprung von
+   „9" auf „10" das Kreuz rechts nicht verschiebt. */
+.ft-search-hits {
+  flex-shrink: 0;
+  min-width: 15px;
+  text-align: right;
+  color: rgba(200, 144, 64, 0.75);
+  font-size: 11.5px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kein Treffer ist kein Fehler, aber eine Sackgasse — und die trägt im Projekt
+   durchgehend Rot. */
+.ft-search-hits--none {
+  color: #cc6050;
 }
 
 /* ══════════════════════════════════════════════════

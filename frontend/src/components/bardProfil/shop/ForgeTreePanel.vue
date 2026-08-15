@@ -42,39 +42,58 @@
         :viewBox="`0 0 ${FORGE_STAGE_SIZE} ${FORGE_STAGE_SIZE}`"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <!-- Phase-band rings -->
-        <circle :cx="C" :cy="C" :r="FORGE_RING_ROOT_R" fill="none" stroke="#3a2a12" stroke-width="1.5" />
+        <!-- Phase-band rings. Ein gewählter Chip färbt SEIN Band in der Chipfarbe
+             und schickt die drei anderen zurück — damit trägt die Ebene ihre
+             Auswahl als Ganzes, nicht nur Knoten für Knoten. Ein bloßes Suchwort
+             tut das nicht (`ringSifted`): es sagt nichts über Ringe aus. -->
+        <circle
+          :cx="C" :cy="C" :r="FORGE_RING_ROOT_R" fill="none" stroke-width="1.5"
+          :stroke="ringStroke('root', true, '#3a2a12')"
+          :opacity="ringOpacity('root', true)"
+        />
         <circle
           :cx="C" :cy="C" :r="FORGE_RING_BRANCH_R" fill="none"
-          :stroke="branchesUnlocked ? '#4a6a2a' : '#2a1a08'"
-          stroke-width="1.5" stroke-dasharray="5 5" :opacity="branchesUnlocked ? 0.6 : 0.9"
+          :stroke="ringStroke('branch', branchesUnlocked, '#4a6a2a')"
+          stroke-width="1.5" stroke-dasharray="5 5"
+          :opacity="ringOpacity('branch', branchesUnlocked)"
         />
         <circle
           :cx="C" :cy="C" :r="FORGE_RING_LEAF_R" fill="none"
-          :stroke="leavesUnlocked ? '#4a6a2a' : '#2a1a08'"
-          stroke-width="1.5" stroke-dasharray="4 7" :opacity="leavesUnlocked ? 0.6 : 0.9"
+          :stroke="ringStroke('leaf', leavesUnlocked, '#4a6a2a')"
+          stroke-width="1.5" stroke-dasharray="4 7"
+          :opacity="ringOpacity('leaf', leavesUnlocked)"
         />
         <!-- Ring 4 trägt Violett statt Grün: er ist der einzige ohne Ende, und
              Violett steht im Projekt für „episch". -->
         <circle
           :cx="C" :cy="C" :r="FORGE_RING_BOUGH_R" fill="none"
-          :stroke="boughsUnlocked ? '#5a3a7a' : '#2a1a08'"
-          stroke-width="1.5" stroke-dasharray="3 9" :opacity="boughsUnlocked ? 0.6 : 0.9"
+          :stroke="ringStroke('bough', boughsUnlocked, '#5a3a7a')"
+          stroke-width="1.5" stroke-dasharray="3 9"
+          :opacity="ringOpacity('bough', boughsUnlocked)"
         />
 
-        <!-- Limbs: sun → root, root → branch, branch → leaf (dim base) -->
+        <!-- Limbs: sun → root, root → branch, branch → leaf (dim base).
+             Ein Ast, der zu einem ausgefilterten Knoten führt, tritt mit ihm
+             zurück — sonst bliebe ein helles Astgerüst um dunkle Kreise stehen
+             und zeichnete weiter genau die Form, die gerade nicht gemeint ist. -->
         <g stroke="#4a3418" stroke-width="4" stroke-linecap="round" fill="none">
           <line
             v-for="limb in limbs" :key="limb.key + '-base'"
             :x1="limb.x1" :y1="limb.y1" :x2="limb.x2" :y2="limb.y2"
+            :class="{ 'limb--sifted': siftedIds.has(limb.targetId) }"
           />
         </g>
-        <!-- Active limbs (target node has levels) -->
+        <!-- Active limbs (target node has levels). Die Grunddeckkraft steht als
+             KLASSE und nicht mehr als `opacity`-Attribut: nur so kann
+             `.limb--sifted` sie überschreiben, ohne sich darauf zu verlassen,
+             dass CSS ein Präsentationsattribut schlägt. -->
         <g stroke-width="2.5" stroke-linecap="round" fill="none">
           <line
             v-for="limb in activeLimbs" :key="limb.key + '-lit'"
             :x1="limb.x1" :y1="limb.y1" :x2="limb.x2" :y2="limb.y2"
-            :stroke="limb.color" opacity="0.55"
+            :stroke="limb.color"
+            class="limb--lit"
+            :class="{ 'limb--sifted': siftedIds.has(limb.targetId) }"
           />
         </g>
 
@@ -93,24 +112,41 @@
         </g>
       </svg>
 
-      <!-- Ring labels -->
-      <div class="ring-label ring-label--root" :style="ringLabelStyle(FORGE_RING_ROOT_R)">
+      <!-- Ring labels — sie tragen die Auswahl mit: die Beschriftung einer nicht
+           gewählten Ebene ist genauso wenig gemeint wie ihr Band. -->
+      <div
+        class="ring-label ring-label--root"
+        :class="{ 'ring-label--sifted': ringSifted('root') }"
+        :style="ringLabelStyle(FORGE_RING_ROOT_R)"
+      >
         Phase 1–2
       </div>
       <div
-        class="ring-label" :class="branchesUnlocked ? 'ring-label--now' : 'ring-label--locked'"
+        class="ring-label"
+        :class="[
+          branchesUnlocked ? 'ring-label--now' : 'ring-label--locked',
+          { 'ring-label--sifted': ringSifted('branch') },
+        ]"
         :style="ringLabelStyle(FORGE_RING_BRANCH_R)"
       >
         {{ branchRingLabel }}
       </div>
       <div
-        class="ring-label" :class="leavesUnlocked ? 'ring-label--now' : 'ring-label--locked'"
+        class="ring-label"
+        :class="[
+          leavesUnlocked ? 'ring-label--now' : 'ring-label--locked',
+          { 'ring-label--sifted': ringSifted('leaf') },
+        ]"
         :style="ringLabelStyle(FORGE_RING_LEAF_R)"
       >
         {{ leafRingLabel }}
       </div>
       <div
-        class="ring-label" :class="boughsUnlocked ? 'ring-label--endless' : 'ring-label--locked'"
+        class="ring-label"
+        :class="[
+          boughsUnlocked ? 'ring-label--endless' : 'ring-label--locked',
+          { 'ring-label--sifted': ringSifted('bough') },
+        ]"
         :style="ringLabelStyle(FORGE_RING_BOUGH_R)"
       >
         {{ boughRingLabel }}
@@ -144,6 +180,13 @@
         :class="{ 'tree-node--spot': spotlightId === node.id }"
         :style="nodePos(node)"
       >
+        <!-- `--sifted` greift ausdrücklich NICHT, solange der Zeiger auf dem
+             Knoten steht. Das ist der ganze Mechanismus hinter „dunkel, aber
+             bedienbar": ein Hover setzt `treeHoverId` und damit `spotlightId`,
+             die Klasse fällt im selben Frame weg, und der bestehende
+             Spotlight-Pfad hebt den Knoten heraus. Kein zweiter Hover-Fall,
+             keine zweite Zahl für „wie hell beim Zeigen", keine
+             Spezifitätskette gegen `.node-circle.node-circle--spot`. -->
         <div
           class="node-circle"
           :class="[
@@ -152,6 +195,7 @@
             {
               'node-circle--spot': spotlightId === node.id,
               'node-circle--dim': spotlightId !== null && spotlightId !== node.id,
+              'node-circle--sifted': siftedIds.has(node.id) && spotlightId !== node.id,
             },
           ]"
           :style="{ '--node-color': node.color }"
@@ -175,8 +219,17 @@
              2/11). „Günstigster kaufbarer" und nicht „stärkster": die Wirkungen
              des Baums stehen in Prozent, HP, Sekunden und Chimes nebeneinander
              und sind nicht vergleichbar — der Preis ist die einzige Zahl, die
-             alle teilen. -->
-        <div v-if="bestBuyId === node.id" class="best-buy" aria-hidden="true">
+             alle teilen.
+
+             Ist ihr Knoten weggefiltert, verschwindet sie mit ihm: eine grün
+             atmende Marke an einem fast unsichtbaren Kreis wäre der lauteste
+             Punkt im Bild und zeigte auf genau das, was der Spieler gerade
+             beiseitegeschoben hat. -->
+        <div
+          v-if="bestBuyId === node.id && !siftedIds.has(node.id)"
+          class="best-buy"
+          aria-hidden="true"
+        >
           <span class="best-buy-ring" />
           <span class="best-buy-label">{{ FORGE_BEST_BUY_LABEL }}</span>
         </div>
@@ -277,14 +330,18 @@ import {
   FORGE_SPOTLIGHT_PING_MS,
   FORGE_SPOTLIGHT_MAX_LIMBS,
   FORGE_BEST_BUY_LABEL,
+  FORGE_UPGRADE_GROUPS,
+  FORGE_SIFT_DIM_OPACITY,
+  FORGE_SIFT_SATURATE,
+  FORGE_SIFT_LIMB_OPACITY,
+  FORGE_SIFT_RING_OPACITY,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
 const playerStore = usePlayerStore()
 const { entryById, bestBuyId, buyUpgrade } = useForgeUpgrades()
-const { spotlightId, treeHoverId, setTreeHover, setPinned, resetForgeSpotlight } =
-  useForgeSpotlight()
-const { resetForgeFilter } = useForgeFilter()
+const { spotlightId, treeHoverId, setTreeHover, resetForgeSpotlight } = useForgeSpotlight()
+const { activeTier, hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
 
 const C = FORGE_STAGE_SIZE / 2
 
@@ -415,6 +472,68 @@ const allNodes = computed<TreeNode[]>(() => {
   return [...roots, ...forge]
 })
 
+// ── Was der Ringfilter durchlässt ────────────────────────────────────────────
+/**
+ * Baum und Liste zeigen denselben Bestand — dann muss die Leiste über dem Baum
+ * auch den Baum sieben und nicht nur die Spalte daneben. Ein Klick auf „Leaves"
+ * hat hier bislang nichts bewirkt, obwohl der Ring, den der Chip meint, direkt
+ * darunter liegt.
+ *
+ * Ein SET und nicht ein Aufruf je Knoten im Template: Knoten, Äste, Ringbänder
+ * und die Best-Buy-Marke fragen alle dieselbe Frage, und `matchesForgeFilter`
+ * ginge sonst gut hundertmal je Render über denselben Eintrag. Im `computed`
+ * gelesen sind `activeTier` und `searchQuery` voll reaktiv, obwohl die Funktion
+ * selbst kein Ref ist.
+ */
+const siftedIds = computed<Set<string>>(() => {
+  if (!hasFilter.value) return new Set()
+  return new Set(
+    allNodes.value.filter((node) => !matchesForgeFilter(entryOf(node))).map((node) => node.id),
+  )
+})
+
+/**
+ * Ein RING ist gewählt — nicht bloß irgendein Filter. Ein Suchwort sagt nichts
+ * über Ebenen aus und darf die Bänder deshalb nicht umfärben; nur die Chips
+ * tun das.
+ */
+function ringSifted(tier: ForgeUpgradeTier): boolean {
+  return activeTier.value !== 'all' && activeTier.value !== tier
+}
+
+/**
+ * Die Leitfarbe des gewählten Rings kommt aus derselben Tabelle, aus der
+ * `ForgeToolbar` seine Chips färbt — sonst stünde die Ebene oben in einem Ton
+ * und unten in einem zweiten. Die gedeckten Ruhefarben bleiben die des Baums:
+ * sie sagen „offen / gesperrt", nicht „gewählt".
+ */
+const RING_ACCENT: Record<ForgeUpgradeTier, string> = Object.fromEntries(
+  FORGE_UPGRADE_GROUPS.map((group) => [group.tier, group.accent]),
+) as Record<ForgeUpgradeTier, string>
+
+function ringStroke(tier: ForgeUpgradeTier, unlocked: boolean, restColor: string): string {
+  if (activeTier.value === tier) return RING_ACCENT[tier]
+  return unlocked ? restColor : '#2a1a08'
+}
+
+/**
+ * Ausgerechnet und nicht per CSS-Klasse überschrieben: ein `opacity` am
+ * `<circle>` ist ein PRÄSENTATIONSATTRIBUT, und dass CSS es schlägt, ist zwar
+ * richtig, aber nichts, worauf der nächste Leser von selbst kommt. Ein Wert,
+ * eine Stelle.
+ *
+ * Der gewählte Ring geht auf VOLL — 0,6 ist die Ruhelage eines offenen Rings,
+ * und die reichte nicht, um ihn neben drei zurückgetretenen als „gewählt" zu
+ * lesen.
+ */
+function ringOpacity(tier: ForgeUpgradeTier, unlocked: boolean): number {
+  if (activeTier.value === tier) return 1
+  if (ringSifted(tier)) return FORGE_SIFT_RING_OPACITY
+  // Der Wurzelring ist immer offen und stand deshalb noch nie gedämpft da.
+  if (tier === 'root') return 1
+  return unlocked ? 0.6 : 0.9
+}
+
 // ── Geometry ──────────────────────────────────────────────────────────────────
 function rad(deg: number): number {
   return (deg * Math.PI) / 180
@@ -510,6 +629,10 @@ const spotlightColor = computed(
 const spotScale = String(FORGE_SPOTLIGHT_NODE_SCALE)
 const spotDimOpacity = String(FORGE_SPOTLIGHT_DIM_OPACITY)
 const spotPingMs = `${FORGE_SPOTLIGHT_PING_MS}ms`
+const siftDimOpacity = String(FORGE_SIFT_DIM_OPACITY)
+const siftSaturate = String(FORGE_SIFT_SATURATE)
+const siftLimbOpacity = String(FORGE_SIFT_LIMB_OPACITY)
+const siftRingOpacity = String(FORGE_SIFT_RING_OPACITY)
 
 function ringLabelStyle(r: number): Record<string, string> {
   return {
@@ -621,14 +744,12 @@ function flashSun(): void {
  * Kauf und Meldung liegen im Composable, damit der Baum und die Upgrade-Liste
  * denselben Weg nehmen. Hier bleibt nur, was der Baum eigenes tut.
  *
- * Angeheftet wird IMMER, gekauft nur, wenn es geht — ein Klick auf einen
- * gesperrten oder ausgewachsenen Knoten hatte bisher gar keine Wirkung, und
- * genau der ist der Fall, in dem man wissen will, warum. `setPinned` statt
- * `togglePin`, weil ein zweiter Kaufklick auf denselben Knoten sonst das Detail
- * darüber wieder abräumte.
+ * Der Klick heftete den Knoten früher zusätzlich im Detailkopf an — das war der
+ * einzige Weg zu erfahren, WARUM ein gesperrter Knoten nicht reagiert. Diese
+ * Auskunft gibt inzwischen der Tooltip direkt am Kreis; der Kopf zeigt seither
+ * die Empfehlung und nicht mehr, worauf man zeigt.
  */
 function handleNodeClick(node: TreeNode): void {
-  setPinned(node.id)
   if (buyUpgrade(node.id)) flashSun()
 }
 
@@ -658,9 +779,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
-  // Spotlight, Anheftung und Filter leben auf Modulebene und überlebten diese
-  // Komponente sonst — ein Suchwort von letzter Sitzung zeigte beim nächsten
-  // Öffnen eine fast leere Liste, ohne dass ersichtlich wäre, warum.
+  // Spotlight und Filter leben auf Modulebene und überlebten diese Komponente
+  // sonst — ein Suchwort von letzter Sitzung zeigte beim nächsten Öffnen eine
+  // fast leere Liste, ohne dass ersichtlich wäre, warum.
   resetForgeSpotlight()
   resetForgeFilter()
 })
@@ -1270,6 +1391,54 @@ const nextPhasePreviewStyle = computed(() => ({
   animation: none;
   opacity: 0.25;
 }
+
+/* ══════════════════════════════════════════════════
+   RINGFILTER — was der Chip oben nicht durchlässt
+══════════════════════════════════════════════════ */
+/* Steht NACH `--dim` und gewinnt damit über die Quellreihenfolge, wenn beides
+   zutrifft: „weggefiltert" wiegt schwerer als „ich zeige woandershin". Der
+   Abstand der beiden Zahlen (0,14 gegen 0,3) trägt genau diesen Unterschied und
+   ist an der Konstante hergeleitet.
+
+   `saturate()` ist ein STATISCHER Zustand und steht bewusst nicht in der
+   Transition von `.node-circle` — ein `filter` über Zeit rasterte bis zu
+   fünfundvierzig Kreise samt Schatten in jedem Frame neu (Performance-Regel 2).
+   Es springt daher hart, während die Deckkraft weich läuft; sichtbar ist davon
+   nichts, weil bei 0,14 ohnehin kaum Farbe übrig ist. */
+.node-circle--sifted {
+  opacity: v-bind(siftDimOpacity);
+  filter: saturate(v-bind(siftSaturate));
+  transition-duration: 0.12s;
+}
+
+/* Der Schein geht ganz aus, nicht nur zurück. Bei gewähltem Ring stehen damit
+   im ganzen Knotenfeld nur noch die Kreise DIESES Rings mit einer laufenden
+   Animation da — derselbe Nebengewinn wie beim Spotlight-Dim, nur für weit
+   mehr Knoten. */
+.node-circle--sifted .node-glow {
+  animation: none;
+  opacity: 0;
+}
+
+/* Äste. Die Grunddeckkraft der gewachsenen Verbindungen lag bis hierher als
+   `opacity`-Attribut am `<line>`; als Klasse kann `--sifted` sie überschreiben,
+   ohne auf „CSS schlägt Präsentationsattribut" zu bauen. */
+.limb--lit {
+  opacity: 0.55;
+}
+
+.limb--sifted {
+  opacity: v-bind(siftLimbOpacity);
+}
+
+.ring-label--sifted {
+  opacity: v-bind(siftRingOpacity);
+}
+
+/* Die Treffer-Marke zu diesem Sieb steht in `ForgeToolbar` — im FLUSS über dem
+   Viewport und nicht darin: hier sind beide freien Ecken vergeben (Zoomkasten
+   rechts, Dev-Knopf links), und eine dritte schwebende Karte machte den Knoten
+   unter sich unklickbar. */
 
 /* `scale()` am Kreis öffnet einen Stapelkontext INNERHALB des Wrappers — ohne
    dieses Anheben läge der vergrößerte Knoten im gedrängten Blattring unter

@@ -47,9 +47,16 @@ export function useForgeFilter(): {
   resetForgeFilter: () => void
 } {
   /**
-   * Ein Zeiger auf einen Knoten LINKS muss dessen Zeile rechts auch finden
-   * können — steht sie gerade hinter einem Filter, nimmt `ForgeUpgradesSection`
-   * ihn zurück. Deshalb ist beides von aussen schreibbar und nicht `readonly`.
+   * Warum `searchQuery` und `activeTier` schreibbar herausgehen und nicht
+   * `readonly`: `ForgeToolbar` BEDIENT sie — `v-model` am Suchfeld,
+   * `activeTier = chip.tier` am Chip. Es gibt keine Setter-Paare dazu, weil ein
+   * `v-model` auf einem Ref genau das ist, was hier gebraucht wird.
+   *
+   * `resetForgeFilter()` selbst hat zwei Aufrufer: die Treffer-Marke im Baum
+   * und der Leerzustand der Liste — beides der Weg zurück aus einem Filter, den
+   * der Spieler gesetzt hat. Der Baum ruft ihn zusätzlich beim Verlassen der
+   * Komponente, weil beide Werte auf Modulebene liegen und ein Suchwort sonst
+   * die Sitzung überlebte.
    */
   function resetForgeFilter(): void {
     searchQuery.value = ''
