@@ -55,14 +55,22 @@ export const RESOURCE_STAR_PLANET_COUNT = 3 // max. planets per flyby
 
 // Planet Boss Fight
 /**
- * Untergrenze der Boss-HP. Ein früher Boss soll nicht am ersten Klick zerfallen,
- * auch wenn der Spieler noch fast keinen Schaden macht.
+ * Notbremse unter der Boss-HP — nicht mehr die Kampfdauer.
+ *
+ * Die Zahl stand einmal auf 200 und war damit ein stiller Boden von ZEHN Klicks
+ * (200 / `BOSS_CLICK_DAMAGE_BASE`). Solange jeder Boss ohnehin 18 Klicks
+ * kostete, fiel das nicht auf; sobald die Rampe (`BOSS_TARGET_CLICKS_START`)
+ * früh weniger verlangt, frisst ein zu hoher Boden sie wortlos auf.
+ *
+ * **Sie muss immer unter dem Startbudget liegen** — `bossScaling.spec.ts` hält
+ * das fest. 60 sind drei Klicks: genug, dass kein Boss am ersten Klick
+ * zerfällt, zu wenig, um der Rampe in den Weg zu kommen.
  */
-export const BOSS_BASE_HP = 200
+export const BOSS_BASE_HP = 60
 
 /**
- * **Wie lange ein Boss stehen soll** — daraus wird seine HP gerechnet, nicht
- * umgekehrt.
+ * **Wie lange ein Boss stehen soll** — daraus wird der DPS-Anteil seiner HP
+ * gerechnet, nicht umgekehrt.
  *
  * Vorher war die HP ein Produkt aus Level, CpS, Bard-Power, Champion-Sternen und
  * Galaxie. Alle fünf wachsen mit dem Fortschritt, der Schaden dagegen kommt aus
@@ -78,15 +86,65 @@ export const BOSS_BASE_HP = 200
  * Kampfdauer ist damit eine entworfene Zahl, und die Enrage-Uhr
  * (`BOSS_ENRAGE_BASE_SECONDS`, 30–60 s) bekommt wieder eine Bedeutung: sie ist
  * die Frist, gegen die diese Dauer läuft.
+ *
+ * Gilt seit der Zwei-Kanal-Rechnung nur noch für den DPS-Anteil — der
+ * Klickanteil hat mit `bossTargetClicks()` seine eigene entworfene Zahl.
  */
 export const BOSS_TARGET_KILL_SECONDS = 18
 
 /**
- * Klicks je Sekunde, die in die Schadensschätzung eingehen. Bewusst niedrig: wer
- * mitklickt, soll den Boss spürbar schneller fällen als der, der zusieht — und
- * wer gar nicht klickt, soll ihn trotzdem schaffen.
+ * Klicks, die der ALLERERSTE Boss kosten soll.
+ *
+ * Vorher gab es diese Zahl nicht, und sie war trotzdem festgelegt — auf 18, für
+ * jeden Boss des ganzen Spiels. Der Klickschaden stand in der HP-Formel auf
+ * beiden Seiten (als Summand im Schätzer, als Nenner beim Klicken) und kürzte
+ * sich weg: `Klicks = angenommene Klickrate × BOSS_TARGET_KILL_SECONDS`. Kein
+ * Upgrade hat daran je etwas geändert.
+ *
+ * Früh trägt der Klick 100 % des Schadens — keine CpS, keine Turrets, kein
+ * Kader. 18 Klicks je Boss mal 3–4 Planeten heisst 54–72 Klicks in einem
+ * Sternfenster von 45 s; ein Ressourcenstern war so praktisch nicht räumbar.
+ * Später drehen Turrets, Orbit-Kader und Striker-Squad das Verhältnis um und
+ * dieselben 18 Klicks sind Beiwerk. Genau verkehrt herum.
  */
-export const BOSS_ASSUMED_CLICKS_PER_SEC = 1
+export const BOSS_TARGET_CLICKS_START = 6
+
+/**
+ * Klicks am Ende der Rampe — bewusst identisch zu dem, was der Kampf vorher
+ * durchgehend kostete (`BOSS_TARGET_KILL_SECONDS` × angenommene Klickrate 1).
+ * Die Rampe ist eine Entlastung am Anfang, KEIN Nerf am Ende;
+ * `bossScaling.spec.ts` friert die 18 dafür ein.
+ */
+export const BOSS_TARGET_CLICKS_MAX = 18
+
+/**
+ * Gefällte Bosse bis zum Endwert. **Der einzige Streckungs-Knopf** — soll die
+ * volle Härte später kommen, gehört nur diese Zahl angefasst (250 statt 120
+ * heisst bei 50 Kills erst 10 statt 13 Klicks).
+ */
+export const BOSS_CLICK_RAMP_KILLS = 120
+
+/**
+ * Kurvenform der Rampe. Unter 1 heisst: die Entlastung hält länger als linear,
+ * die Kurve zieht erst gegen Ende an. Bei 1,0 wäre der Anstieg gleichmäßig und
+ * die frühen Bosse verlören ihren Vorteil zu schnell wieder.
+ */
+export const BOSS_CLICK_RAMP_EXPONENT = 0.7
+
+/**
+ * Was eine Galaxie jenseits der ersten auf der Rampe zählt — als wären so viele
+ * Bosse zusätzlich gefallen.
+ *
+ * Zwei Fortschrittsachsen, EINE Formel: der Bosszähler ist die feine Kurve, die
+ * Galaxie ein Sockel darunter. Wer die Galaxie stattdessen als zweite Kurve
+ * führt, muss zwei Verläufe zueinander passend halten.
+ *
+ * Dass die Galaxie damit doppelt zählt — hier und als `BOSS_HP_PER_GALAXY` —
+ * ist Absicht: sie ist die Achse, an der der Kampf wieder fordernd wird. Ein
+ * offener Kreis entsteht nicht, weil die Klickzahl bei
+ * `BOSS_TARGET_CLICKS_MAX` hart gedeckelt ist.
+ */
+export const BOSS_CLICK_RAMP_GALAXY_KILLS = 25
 
 /**
  * Schaden eines Klicks am Planeten-Boss, bevor Upgrades ihn heben.
@@ -102,6 +160,11 @@ export const BOSS_ASSUMED_CLICKS_PER_SEC = 1
  * 20 ist der Wert, den der Kampf vorher effektiv hatte — die Zahl ist also
  * bewusst konservativ gewählt: sie ändert am Bosskampf nichts, sie macht ihn
  * nur unabhängig von der Wirtschaft.
+ *
+ * Sie ist zugleich der Umrechnungskurs der Rampe: das Klickbudget ist
+ * `BOSS_CLICK_DAMAGE_BASE × bossTargetClicks()`. Bewusst die BASIS, nicht der
+ * aufgewertete `gameStore.dmgPerClick` — sonst stünde der Klickschaden wieder
+ * auf beiden Seiten und jedes Klick-Upgrade wäre für Bosse wirkungslos.
  */
 export const BOSS_CLICK_DAMAGE_BASE = 20
 

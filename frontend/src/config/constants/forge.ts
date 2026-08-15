@@ -233,7 +233,9 @@ export const FORGE_BOUGH_PARENT_MIN_LEVEL = 3
  *   • `materialDropMult` — `inventoryStore.tryDropMaterial` vergleicht
  *     `Math.random() > chance`; oberhalb 1 wirkt keine Stufe mehr.
  *   • `championDpsMult` — steckt über `combatStore.fullOrbitDps()` in
- *     `expectedDps` und hebt damit die Boss-HP gleich mit (docs/balance.md).
+ *     `otherDps` und hebt damit die Boss-HP gleich mit (docs/balance.md). Für
+ *     KLICKschaden gilt das seit der Zwei-Kanal-Rechnung nicht mehr — er steht
+ *     nicht im Schätzer und sättigt daher nicht.
  *   • `extraDropCount` — `addMaterial(id, source, qty)` bucht `qty` roh in den
  *     Bestand; eine Bruchzahl je Stufe hinterliesse Materialien mit
  *     Nachkommastellen.

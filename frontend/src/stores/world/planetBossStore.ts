@@ -3,7 +3,6 @@ import type { PlanetBossEvent, PlanetBossRewardSlot, PlanetType } from '@/types'
 import {
   BOSS_BASE_HP,
   BOSS_TARGET_KILL_SECONDS,
-  BOSS_ASSUMED_CLICKS_PER_SEC,
   BOSS_HP_PER_GALAXY,
   BOSS_ENRAGE_BASE_SECONDS,
   BOSS_ENRAGE_LEVEL_STEP,
@@ -36,6 +35,7 @@ import {
 } from '@/config/champions/championTiers'
 import { activeMidCurse } from '@/utils/orbit/liveState'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
+import { bossClickBudgetHP, bossTargetClicks } from '@/utils/game/bossScaling'
 import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
 import { prewarmBossSprite } from '@/utils/fx/bossSprite'
 import { ROLE_MID_CURSE_DAMAGE_AMP } from '@/config/constants'
@@ -98,18 +98,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     cpsPenaltyMultiplier(): number {
       return this.cpsPenaltyActive ? 1 - BOSS_CPS_PENALTY_FRACTION : 1
     },
-
-    playerDPS(): number {
-      const boss = this.activeBoss
-      if (!boss) return 0
-      return boss.clickDamagePerHit * 3 + boss.passiveDPS
-    },
-
-    requiredDPS(): number {
-      const boss = this.activeBoss
-      if (!boss) return 0
-      return boss.maxHP / (boss.enrageTimerMs / 1000)
-    },
   },
 
   actions: {
@@ -139,24 +127,35 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       // Chime-Klickwert. Beides an einem Wert hiess: eine Änderung an der
       // Wirtschaft verschob still die Boss-HP mit — und zwar unsymmetrisch,
       // weil `BOSS_BASE_HP` unten als Boden greift, der Klickschaden aber nicht.
+      // Das hier ist der AUSGETEILTE Schaden — in die HP-Schätzung geht er
+      // nicht ein, sonst hebt jedes Upgrade die HP gleich mit an (s. unten).
       const clickDamagePerHit = Math.max(1, gameStore.dmgPerClick)
       const passiveDPS = Math.max(0, Math.floor(cps * BOSS_PASSIVE_DPS_FRACTION))
 
-      // Die HP folgen dem Schaden, nicht dem Fortschritt: geschätzt wird, was
-      // der Spieler in DIESEM Moment aufbringt — Passivschaden, die ganze
-      // Turret-Batterie, der Kader im Orbit und ein gemäßigter Klick-Anteil.
-      // Details und Begründung an BOSS_TARGET_KILL_SECONDS.
-      const expectedDps =
-        passiveDPS +
-        usePlanetShopStore().autoAttackDPS +
-        useCombatStore().fullOrbitDps() +
-        clickDamagePerHit * BOSS_ASSUMED_CLICKS_PER_SEC
+      // Die HP laufen über ZWEI Kanäle, und der Klick gehört bewusst nicht in
+      // den ersten:
+      //
+      //   otherDps — was der Spieler ohne Zutun aufbringt (Passivschaden, die
+      //     ganze Turret-Batterie, der Kader im Orbit). Davon so viele Sekunden,
+      //     wie der Kampf stehen soll.
+      //   clickBudgetHP — die entworfene Klickzahl, umgerechnet über die
+      //     Klick-BASIS. Steht der Klickschaden stattdessen in `otherDps`, kürzt
+      //     er sich gegen den Nenner beim Klicken weg: dann kostet jeder Boss
+      //     dieselbe Klickzahl, für immer, und jedes Klick-Upgrade verpufft.
+      //
+      // Details an BOSS_TARGET_KILL_SECONDS und in `utils/game/bossScaling.ts`.
+      const otherDps =
+        passiveDPS + usePlanetShopStore().autoAttackDPS + useCombatStore().fullOrbitDps()
+
+      const targetClicks = bossTargetClicks(this.totalBossesDefeated, galaxyStore.currentGalaxy)
+      const clickBudgetHP = bossClickBudgetHP(this.totalBossesDefeated, galaxyStore.currentGalaxy)
 
       const maxHP = Math.max(
         BOSS_BASE_HP,
         Math.floor(
-          expectedDps *
-            BOSS_TARGET_KILL_SECONDS *
+          // Die Multiplikatoren liegen auf der SUMME: der Klickanteil soll in
+          // späteren Galaxien und härteren Sektionen mitwachsen.
+          (otherDps * BOSS_TARGET_KILL_SECONDS + clickBudgetHP) *
             hpSectionMult *
             galaxyMult *
             // Warden's Toll (providence): schwerer zu fällen, dafür ergiebiger
@@ -315,6 +314,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         enrageSec,
         clickDamage: clickDamagePerHit,
         passiveDPS,
+        targetClicks,
         slots: rewardSlots.length,
       })
     },

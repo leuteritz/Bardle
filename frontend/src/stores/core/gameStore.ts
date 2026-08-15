@@ -34,7 +34,6 @@ import {
   LEVEL_SCALING_FACTOR,
   LEVEL_SCALING_CAP_LEVEL,
   MAX_ABILITY_LEVEL,
-  BOSS_PASSIVE_DPS_FRACTION,
   BOSS_CLICK_DAMAGE_BASE,
   TURRET_PROJECTILE_FLIGHT_MS,
   GAME_TICK_INTERVAL_MS,
@@ -1229,7 +1228,11 @@ export const useGameStore = defineStore('game', {
      * Bosskampf sich mitverschiebt.
      *
      * Dieser Getter war lange tot: `planetBossStore` rechnete direkt mit
-     * `chimesPerClick`, niemand las ihn. Er ist jetzt die Quelle.
+     * `chimesPerClick`, niemand las ihn. Er ist jetzt die Quelle — allerdings
+     * nur für den AUSGETEILTEN Schaden. In die HP-Schätzung eines Bosses geht
+     * er bewusst nicht ein (`utils/game/bossScaling.ts` rechnet mit der reinen
+     * `BOSS_CLICK_DAMAGE_BASE`), sonst hebt jeder Punkt hier die Boss-HP um
+     * genau denselben Betrag mit an und das Upgrade verpufft.
      */
     dmgPerClick(): number {
       return BOSS_CLICK_DAMAGE_BASE + useSolarUpgradeStore().cpcBonus
@@ -1337,10 +1340,6 @@ export const useGameStore = defineStore('game', {
       const needed = Math.pow(next / MEEP_RUN_FACTOR, 2) * this.meepChimeRequirement
       return Math.max(0, Math.ceil(needed - this.chimesForNextUniverse))
     },
-    dmgPerSecond(): number {
-      return Math.max(0, Math.floor(this.chimesPerSecond * BOSS_PASSIVE_DPS_FRACTION))
-    },
-
     isExpeditionComplete(): boolean {
       if (!this.activeExpedition) return false
       return gameNow() >= this.activeExpedition.startTime + this.activeExpedition.durationMs

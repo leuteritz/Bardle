@@ -364,7 +364,7 @@ export const useChampionLevelStore = defineStore('championLevel', {
           useProvidenceStore().xpMult *
           // Eternal Host (Star Forge, Ring 4): der endlose Zweig zahlt auf die
           // Erfahrung statt auf den Schaden — Champion-DPS steckt über
-          // `fullOrbitDps()` in `expectedDps` und höbe die Boss-HP gleich mit.
+          // `fullOrbitDps()` in `otherDps` und höbe die Boss-HP gleich mit.
           useStarForgeStore().championXpMult *
           // Forgotten Path (void tide): solange der Riss steht, lernt niemand
           useVoidStore().xpMult,
