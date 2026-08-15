@@ -118,6 +118,17 @@ export type ForgeSectionId = 'upgrades' | 'relics' | 'constellations' | 'bargain
 export interface ForgeSectionDef {
   id: ForgeSectionId
   label: string
+  /**
+   * DERSELBE Name, nur mit markierten Trennstellen (U+00AD, weiches
+   * Trennzeichen) — für die 78px-Zelle der Rail. Kein zweiter Name und damit
+   * keine zweite Quelle für die Bedeutung; dasselbe Zugeständnis an eine enge
+   * Fläche wie `shortTitle` bei den Ring-Gruppen.
+   *
+   * Nötig, weil Chrome die automatische Silbentrennung (`hyphens: auto`) hier
+   * nicht anwendet: „Constellations" brach gemessen als „CONSTELLATIO / NS".
+   * Fehlt das Feld, steht der `label` unverändert da.
+   */
+  wrapLabel?: string
   icon: string
   /** Leitfarbe des Reiters und seiner Überschrift. */
   accent: string

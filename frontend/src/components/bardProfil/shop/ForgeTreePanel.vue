@@ -3,6 +3,13 @@
     <!-- shared cosmic backdrop (same starfield as Team / Planets / Skill Tree) -->
     <CosmicStageBackground />
 
+    <!-- Suche, Ringfilter und Sammelkauf — IM FLUSS über dem Viewport, nicht
+         schwebend darauf. Ein Knoten unter einer schwebenden Leiste liefe
+         weiter, wäre aber nicht mehr anklickbar; derselbe Grund, aus dem der
+         Ertrags-Sockel unten im Fluss steht. `fitScale` misst den Viewport und
+         zieht deshalb ohne Zutun mit. -->
+    <ForgeToolbar />
+
     <!-- Alles Skalierte lebt im Viewport, der Ertrags-Sockel darunter NICHT.
          Die Bühne ragt bei Standardzoom weit über ihre Zelle hinaus; eine
          schwebende Sockelkarte läge damit über anklickbaren Knoten. -->
@@ -163,6 +170,17 @@
           </span>
         </div>
 
+        <!-- Die BEST-BUY-Marke. Genau EINE im ganzen Bild, und sie animiert nur
+             Deckkraft auf einer Ebene mit statischem Schein (Performance-Regel
+             2/11). „Günstigster kaufbarer" und nicht „stärkster": die Wirkungen
+             des Baums stehen in Prozent, HP, Sekunden und Chimes nebeneinander
+             und sind nicht vergleichbar — der Preis ist die einzige Zahl, die
+             alle teilen. -->
+        <div v-if="bestBuyId === node.id" class="best-buy" aria-hidden="true">
+          <span class="best-buy-ring" />
+          <span class="best-buy-label">{{ FORGE_BEST_BUY_LABEL }}</span>
+        </div>
+
         <!-- Tooltip — hängt am Hover DIESER Spalte, nicht am Spotlight: ein
              Zeiger auf der Karte rechts darf hier keinen zweiten Abzug
              derselben Zahlen aufklappen. -->
@@ -220,11 +238,13 @@ import {
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { useForgeFilter } from '@/composables/ui/useForgeFilter'
 import type { ForgeNodeDef, ForgeNodeTier, ForgeUpgradeEntry, ForgeUpgradeTier } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import ForgeYieldPlinth from './ForgeYieldPlinth.vue'
+import ForgeToolbar from './ForgeToolbar.vue'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
@@ -256,12 +276,15 @@ import {
   FORGE_SPOTLIGHT_DIM_OPACITY,
   FORGE_SPOTLIGHT_PING_MS,
   FORGE_SPOTLIGHT_MAX_LIMBS,
+  FORGE_BEST_BUY_LABEL,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
 const playerStore = usePlayerStore()
-const { entryById, buyUpgrade } = useForgeUpgrades()
-const { spotlightId, treeHoverId, setTreeHover, resetForgeSpotlight } = useForgeSpotlight()
+const { entryById, bestBuyId, buyUpgrade } = useForgeUpgrades()
+const { spotlightId, treeHoverId, setTreeHover, setPinned, resetForgeSpotlight } =
+  useForgeSpotlight()
+const { resetForgeFilter } = useForgeFilter()
 
 const C = FORGE_STAGE_SIZE / 2
 
@@ -594,9 +617,18 @@ function flashSun(): void {
   }, FORGE_SUN_FLASH_MS)
 }
 
-/** Kauf und Meldung liegen im Composable, damit der Baum und die Upgrade-Liste
- *  denselben Weg nehmen. Hier bleibt nur, was der Baum eigenes tut. */
+/**
+ * Kauf und Meldung liegen im Composable, damit der Baum und die Upgrade-Liste
+ * denselben Weg nehmen. Hier bleibt nur, was der Baum eigenes tut.
+ *
+ * Angeheftet wird IMMER, gekauft nur, wenn es geht — ein Klick auf einen
+ * gesperrten oder ausgewachsenen Knoten hatte bisher gar keine Wirkung, und
+ * genau der ist der Fall, in dem man wissen will, warum. `setPinned` statt
+ * `togglePin`, weil ein zweiter Kaufklick auf denselben Knoten sonst das Detail
+ * darüber wieder abräumte.
+ */
 function handleNodeClick(node: TreeNode): void {
+  setPinned(node.id)
   if (buyUpgrade(node.id)) flashSun()
 }
 
@@ -626,8 +658,11 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
-  // Der Spotlight lebt auf Modulebene und überlebte diese Komponente sonst.
+  // Spotlight, Anheftung und Filter leben auf Modulebene und überlebten diese
+  // Komponente sonst — ein Suchwort von letzter Sitzung zeigte beim nächsten
+  // Öffnen eine fast leere Liste, ohne dass ersichtlich wäre, warum.
   resetForgeSpotlight()
+  resetForgeFilter()
 })
 
 const totalScale = computed(() => fitScale.value * zoom.value)
@@ -1111,6 +1146,55 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 /* ══════════════════════════════════════════════════
+   BEST BUY
+   Genau EINE Marke im ganzen Bild — deshalb darf sie auffällig sein. Der Ring
+   ist eine eigene Ebene mit STATISCHEM Schein, animiert wird nur seine
+   Deckkraft (Performance-Regel 2/11); die Beschriftung rechnet den Zoom heraus,
+   damit sie bei jedem Maßstab dieselbe Größe hat wie der Tooltip daneben.
+══════════════════════════════════════════════════ */
+.best-buy {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.best-buy-ring {
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 2px solid #52b830;
+  box-shadow: 0 0 16px rgba(82, 184, 48, 0.8);
+  animation: best-buy-breathe 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes best-buy-breathe {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.best-buy-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 12px);
+  transform: translateX(-50%) scale(var(--inv-scale, 1));
+  transform-origin: top center;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: #1e2e12;
+  border: 1px solid #4a8a28;
+  color: #9fe062;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+/* ══════════════════════════════════════════════════
    HOVER-SPOTLIGHT
 ══════════════════════════════════════════════════ */
 /* Der Knoten unter dem Zeiger — gleich ob hier oder in der Liste rechts —
@@ -1353,6 +1437,13 @@ const nextPhasePreviewStyle = computed(() => ({
   .node-spot::after,
   .spot-limbs line {
     animation: none;
+  }
+
+  /* Dieselbe Falle wie beim Kaufbar-Schein: ohne die Deckkraft mitzusetzen
+     bliebe die Marke bei 0,45 stehen statt voll zu leuchten. */
+  .best-buy-ring {
+    animation: none;
+    opacity: 1;
   }
 
   .node-spot {

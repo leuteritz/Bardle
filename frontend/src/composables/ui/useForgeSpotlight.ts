@@ -26,11 +26,33 @@ const treeHoverId = ref<string | null>(null)
  */
 const spotlightId = computed(() => listHoverId.value ?? treeHoverId.value)
 
+/**
+ * Der Knoten, den der Detailkopf der rechten Spalte GROSS zeigt — angeheftet
+ * per Klick, gleich ob auf den Kreis im Baum oder auf die Zeile in der Liste.
+ */
+const pinnedId = ref<string | null>(null)
+
+/**
+ * Was der Detailkopf zeigt: das Angeheftete, sonst das, worauf gerade gezeigt
+ * wird.
+ *
+ * Die Anheftung schlägt den Hover, und das ist der ganze Sinn der Geste. Ohne
+ * sie risse der Zeiger auf dem Weg zum Kaufknopf das Detail wieder weg — er
+ * streift dabei zwangsläufig andere Zeilen. `spotlightId` bleibt davon
+ * unberührt: die HERVORHEBUNG in Baum und Liste folgt weiter dem Zeiger, nur
+ * der Detailkopf steht still.
+ */
+const detailId = computed(() => pinnedId.value ?? spotlightId.value)
+
 export function useForgeSpotlight(): {
   spotlightId: ComputedRef<string | null>
+  detailId: ComputedRef<string | null>
+  pinnedId: Readonly<Ref<string | null>>
   treeHoverId: Readonly<Ref<string | null>>
   setListHover: (id: string | null) => void
   setTreeHover: (id: string | null) => void
+  setPinned: (id: string | null) => void
+  togglePin: (id: string) => void
   resetForgeSpotlight: () => void
 } {
   function setListHover(id: string | null): void {
@@ -41,20 +63,36 @@ export function useForgeSpotlight(): {
     treeHoverId.value = id
   }
 
+  function setPinned(id: string | null): void {
+    pinnedId.value = id
+  }
+
+  /** Zweiter Klick auf denselben Knoten löst die Anheftung wieder. */
+  function togglePin(id: string): void {
+    pinnedId.value = pinnedId.value === id ? null : id
+  }
+
   /**
    * Beide Seiten löschen. Der Shop-Tab hängt an `v-show` und bleibt gemountet —
    * ohne diesen Weg überlebte ein Zeiger, der den Tab verlässt, den Wechsel.
+   * Die Anheftung geht mit: sie ist Ansichtszustand DIESES Tabs und hätte
+   * beim nächsten Öffnen nichts mehr zu sagen.
    */
   function resetForgeSpotlight(): void {
     listHoverId.value = null
     treeHoverId.value = null
+    pinnedId.value = null
   }
 
   return {
     spotlightId,
+    detailId,
+    pinnedId: readonly(pinnedId),
     treeHoverId: readonly(treeHoverId),
     setListHover,
     setTreeHover,
+    setPinned,
+    togglePin,
     resetForgeSpotlight,
   }
 }

@@ -285,6 +285,9 @@ export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
   {
     id: 'constellations',
     label: 'Constellations',
+    // Das einzige Label, das in keine Rail-Zelle passt — die Trennstelle ist
+    // markiert, der Name bleibt derselbe. Siehe `wrapLabel` in types/forge.ts.
+    wrapLabel: 'Constel­lations',
     icon: 'game-icons:barbed-star',
     accent: '#86d0ff',
   },
@@ -425,6 +428,124 @@ export const FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN = '▾'
 
 /** Der Chip, der die Ringfilterung aufhebt. */
 export const FORGE_UPGRADE_FILTER_ALL_LABEL = 'All'
+
+// ── Kopfleiste der Baumspalte (ForgeToolbar) ─────────────────────────────────
+/**
+ * Suchzeile und Ring-Chips stehen seit dem Umbau ÜBER dem Baum, nicht mehr über
+ * der Liste. Zwei Gründe: die Chips hatten in der 470px-Spalte nur 438px und
+ * mussten auf 11px Schrift heruntergezogen werden, und der Fortschrittsring je
+ * Ring braucht Platz, den es dort nicht gab. Über dem Baum steht das Doppelte
+ * zur Verfügung.
+ *
+ * Die Leiste liegt IM FLUSS, nicht schwebend über der Bühne — dieselbe
+ * Entscheidung wie beim Ertrags-Sockel (`FORGE_YIELD_PLINTH_HEIGHT_PX`): ein
+ * Knoten unter einer schwebenden Karte läuft weiter, ist aber nicht mehr
+ * anklickbar. `fitScale` misst den Viewport darunter und zieht von selbst mit.
+ *
+ * Eine HÖHE steht hier bewusst nicht: die Leiste bemisst sich an ihrem Inhalt
+ * (gemessen 51px bei Full HD, 55px ab 2K), und der Viewport darunter nimmt den
+ * Rest. Eine Konstante wäre eine zweite Quelle für eine Zahl, die das Layout
+ * ohnehin schon kennt.
+ */
+/**
+ * Radius der Fortschrittslinie auf einem Ring-Chip. Der Umfang steht daneben,
+ * weil `stroke-dasharray` ihn braucht — Fortschrittsringe laufen über
+ * `stroke-dashoffset` einer SVG-Kreislinie und NIE über `conic-gradient`
+ * (Performance-Regel 11, Muster `ABILITY_RING_CIRCUMFERENCE`).
+ */
+export const FORGE_CHIP_RING_R = 8
+export const FORGE_CHIP_RING_CIRCUMFERENCE = 2 * Math.PI * FORGE_CHIP_RING_R
+export const FORGE_SEARCH_ICON = 'lucide:search'
+/**
+ * Platzhalter je einer Zahl in einer Beschriftung — Suchfeld, Sammelkauf-Toast
+ * und der Stapelknopf setzen dieselbe Marke ein. Eine Konstante je Text hätte
+ * drei Fassungen desselben Zeichens ergeben.
+ */
+export const FORGE_COUNT_TOKEN = '{n}'
+export const FORGE_SEARCH_PLACEHOLDER = `Search ${FORGE_COUNT_TOKEN} upgrades…`
+export const FORGE_SEARCH_CLEAR_ICON = 'lucide:x'
+export const FORGE_BUY_ALL_LABEL = 'Buy all ready'
+export const FORGE_BUY_ALL_ICON = 'ph:lightning-fill'
+/** Sammelmeldung des Stapelkaufs — die Marke trägt die Zahl der gewachsenen Knoten. */
+export const FORGE_BUY_ALL_TOAST = `Grew ${FORGE_COUNT_TOKEN} upgrades`
+
+/**
+ * Die Marke am günstigsten kaufbaren Knoten.
+ *
+ * „Günstigster" und nicht „stärkster": die Wirkungen des Baums stehen in
+ * Prozent, HP, Sekunden und Chimes nebeneinander — es gibt keine gemeinsame
+ * Einheit, in der man sie rangieren könnte. Der Preis ist die einzige Zahl, die
+ * alle Knoten teilen, und „was kann ich als Nächstes mitnehmen" ist ohnehin die
+ * Frage, die der Spieler vor dem Baum hat.
+ */
+export const FORGE_BEST_BUY_LABEL = 'BEST BUY'
+
+// ── Stapelkauf ───────────────────────────────────────────────────────────────
+/**
+ * Wie viele Stufen ein einzelner „Buy ×N" höchstens auf einmal nimmt.
+ *
+ * Nötig ist der Deckel nur wegen Ring 4: ein Bough hat keine Höchststufe, die
+ * Vorschau-Schleife liefe also bei genug Chimes ohne Ende weiter. Für alle
+ * anderen Ringe greift ihre eigene Obergrenze längst vorher.
+ *
+ * 25 ist kein Geschmack, sondern die Kurve: bei `FORGE_BOUGH_COST_MULTIPLIER`
+ * (1,35) kostet die 25. Stufe das rund 1000-Fache der ersten — ein Vorrat, der
+ * fünfundzwanzig Stufen am Stück deckt, deckt praktisch auch die nächsten
+ * hundert, und ein Knopf, der ohne Deckel den ganzen Bestand verschluckt, ist
+ * kein Knopf mehr, sondern eine Falle.
+ */
+export const FORGE_BULK_BUY_CAP = 25
+/** Beschriftung des Stapelknopfs — die Marke trägt die Zahl der Stufen. */
+export const FORGE_BUY_MANY_LABEL = `Buy ×${FORGE_COUNT_TOKEN}`
+/** Die Zeile neben dem Preis: „8× affordable right now". */
+export const FORGE_AFFORDABLE_SUFFIX = '× affordable right now'
+
+// ── Detailkopf der rechten Spalte (ForgeNodeDetail) ──────────────────────────
+/**
+ * Ein Knoten GROSS statt fünfundvierzig mittelgroß.
+ *
+ * Vorher trug jeder Eintrag der Liste eine volle Karte: Icon, Beschreibung,
+ * Now-→-After, Kostenzeile und Kaufknopf. Bei Vollausbau standen davon
+ * fünfundvierzig untereinander — dieselbe Fläche fünfundvierzig Mal, und keine
+ * davon groß genug, um auf einem 4K-Schirm noch etwas herzumachen. Jetzt zeigt
+ * der Kopf EINEN Knoten in voller Größe, die Liste darunter nur noch Zeilen.
+ *
+ * Angeheftet wird per Klick, und die Anheftung schlägt jeden Hover — sonst
+ * risse der Zeiger auf dem Weg zum Kaufknopf das Detail wieder weg.
+ */
+export const FORGE_DETAIL_ICON_SIZE = 38
+export const FORGE_DETAIL_PIN_HINT = 'pinned by click — hover no longer steals it'
+export const FORGE_DETAIL_HOVER_HINT = 'click a node or row to pin it here'
+export const FORGE_DETAIL_EMPTY_TITLE = 'Nothing pinned'
+export const FORGE_DETAIL_EMPTY_HINT =
+  'Point at a node in the tree or a row below to inspect it here.'
+export const FORGE_DETAIL_UNPIN_GLYPH = '✕'
+export const FORGE_DETAIL_PATH_TITLE = 'Its place in the tree'
+/** Erstes Glied der Pfadkette — der Körper in der Mitte des Baums. */
+export const FORGE_PATH_ROOT_LABEL = 'Star'
+export const FORGE_PATH_ROOT_ICON = 'game-icons:sun-radiations'
+/** „Lv 25 · no final level" bzw. „Lv 3 / 6" — der Rest der Metazeile. */
+export const FORGE_DETAIL_ENDLESS_META = 'no final level'
+export const FORGE_DETAIL_PARENT_PREFIX = 'hangs on '
+
+// ── Abteilungs-Rail ganz rechts (ForgeSectionRail) ───────────────────────────
+/**
+ * Die vier Abteilungen standen als waagerechte Reiterleiste über der Spalte und
+ * kosteten dort die volle Breite mal 46px Höhe — auf dem flachsten Viewport
+ * (Full HD) der teuerste Platz, den es gibt. Senkrecht kosten sie 78px BREITE,
+ * und Breite ist in diesem Layout billig.
+ *
+ * Der Handel bekommt dabei die Fußkachel statt eines gleichrangigen Reiters: er
+ * ist der einzige Abschnitt mit einer laufenden Uhr, und die soll man sehen,
+ * ohne ihn zu öffnen.
+ */
+export const FORGE_RAIL_WIDTH_PX = 78
+export const FORGE_RAIL_WIDTH_WIDE_PX = 92
+export const FORGE_RAIL_ICON_SIZE = 27
+export const FORGE_RAIL_BARGAIN_LABEL = 'restock'
+
+/** Kopfzeile der kompakten Liste unter dem Detail. */
+export const FORGE_QUEUE_HEAD_HINT = 'click a row to inspect'
 
 /** Wie lange die gekaufte Karte aufleuchtet. Rein visuell, daher reale Zeit. */
 export const FORGE_CARD_FLASH_MS = 420

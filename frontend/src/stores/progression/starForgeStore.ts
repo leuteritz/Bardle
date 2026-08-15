@@ -142,36 +142,58 @@ export const useStarForgeStore = defineStore('starForge', {
       }
     },
 
-    nodeGoldCost(): (id: string) => number {
-      return (id) => {
+    /**
+     * Chime-Preis der Stufe, die AUF `atLevel` folgt — die Kurve für eine
+     * beliebige, auch noch nicht erreichte Stufe.
+     *
+     * Der zweite Einstieg existiert für den Stapelkauf: „Buy ×8" muss VOR dem
+     * Klick wissen, was acht Stufen zusammen kosten, und die Kurve darf dafür
+     * kein zweites Mal ausgeschrieben werden (dieselbe Fehlerklasse wie eine
+     * zweite Fassung von `chimeThresholdForLevel`). Muster ist
+     * `solarUpgradeStore.branchCostAt`.
+     */
+    nodeGoldCostAt(): (id: string, atLevel: number) => number {
+      return (id, atLevel) => {
         const def = getForgeNode(id)
         if (!def) return Infinity
-        return Math.ceil(def.baseCost * Math.pow(def.costMultiplier, this.nodeLevel(id)))
+        return Math.ceil(def.baseCost * Math.pow(def.costMultiplier, atLevel))
       }
     },
 
-    /** Material cost for the NEXT level — base quantities × next level. */
-    nodeMaterialCost(): (id: string) => Record<string, number> {
-      return (id) => {
+    nodeGoldCost(): (id: string) => number {
+      return (id) => this.nodeGoldCostAt(id, this.nodeLevel(id))
+    },
+
+    /**
+     * Materialrezeptur für eine bestimmte Stufe — Grundmenge × Stufe.
+     *
+     * Chronicle-Rabatt und Vorsehung (Emberthrift / Cinder Hoard) greifen an
+     * derselben Zahl an — der eine dauerhaft verdient, die andere für diesen
+     * Durchlauf gewählt. Beide bleiben HIER und nicht beim Aufrufer, sonst
+     * zahlte der Stapelkauf einen anderen Preis als der Einzelkauf.
+     */
+    nodeMaterialCostAt(): (id: string, forLevel: number) => Record<string, number> {
+      return (id, forLevel) => {
         const def = getForgeNode(id)
         if (!def) return {}
-        const nextLevel = this.nodeLevel(id) + 1
-        // Chronicle-Rabatt und Vorsehung (Emberthrift / Cinder Hoard) greifen an
-        // derselben Zahl an — der eine dauerhaft verdient, die andere für diesen
-        // Durchlauf gewählt.
         const discount =
           useAchievementStore().forgeMaterialCostMult * useProvidenceStore().forgeMaterialCostMult
         const scaled: Record<string, number> = {}
         for (const [matId, qty] of Object.entries(def.materialCost)) {
-          scaled[matId] = forgeMaterialQty(qty * nextLevel, discount)
+          scaled[matId] = forgeMaterialQty(qty * forLevel, discount)
         }
         return scaled
       }
     },
 
+    /** Material cost for the NEXT level — base quantities × next level. */
+    nodeMaterialCost(): (id: string) => Record<string, number> {
+      return (id) => this.nodeMaterialCostAt(id, this.nodeLevel(id) + 1)
+    },
+
     /**
-     * Materialkosten der NÄCHSTEN Stufe eines Kernstrahls — leer, solange die
-     * Stufe unter `SOLAR_MATERIAL_FROM_LEVEL` liegt.
+     * Materialrezeptur eines Kernstrahls für eine bestimmte Stufe — leer,
+     * solange die Stufe unter `SOLAR_MATERIAL_FROM_LEVEL` liegt.
      *
      * Warum das hier steht und nicht im `solarUpgradeStore`, dem die Strahlen
      * gehören: Rabatt (Chronicle/Providence) und Rundung liegen bereits in
@@ -179,17 +201,21 @@ export const useStarForgeStore = defineStore('starForge', {
      * Balance-Eingriff von der ersten weg. Der Strahl ist ohnehin die Wurzel
      * desselben Baums.
      */
-    rayMaterialCost(): (id: SolarBranchId) => Record<string, number> {
-      return (id) => {
+    rayMaterialCostAt(): (id: SolarBranchId, forLevel: number) => Record<string, number> {
+      return (id, forLevel) => {
         const def = SOLAR_BRANCHES.find((branch) => branch.id === id)
         if (!def) return {}
-        const nextLevel = useSolarUpgradeStore().branchLevel(id) + 1
-        if (nextLevel < SOLAR_MATERIAL_FROM_LEVEL) return {}
-        const step = nextLevel - SOLAR_MATERIAL_FROM_LEVEL + 1
+        if (forLevel < SOLAR_MATERIAL_FROM_LEVEL) return {}
+        const step = forLevel - SOLAR_MATERIAL_FROM_LEVEL + 1
         const discount =
           useAchievementStore().forgeMaterialCostMult * useProvidenceStore().forgeMaterialCostMult
         return { [def.material]: forgeMaterialQty(def.materialQty * step, discount) }
       }
+    },
+
+    /** Materialkosten der NÄCHSTEN Stufe eines Kernstrahls. */
+    rayMaterialCost(): (id: SolarBranchId) => Record<string, number> {
+      return (id) => this.rayMaterialCostAt(id, useSolarUpgradeStore().branchLevel(id) + 1)
     },
 
     canAffordNode(): (id: string) => boolean {

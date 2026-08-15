@@ -11,8 +11,17 @@ import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
  * leuchten, bis der Spieler zufällig wieder über die Spalte fährt.
  */
 describe('useForgeSpotlight', () => {
-  const { spotlightId, treeHoverId, setListHover, setTreeHover, resetForgeSpotlight } =
-    useForgeSpotlight()
+  const {
+    spotlightId,
+    detailId,
+    pinnedId,
+    treeHoverId,
+    setListHover,
+    setTreeHover,
+    setPinned,
+    togglePin,
+    resetForgeSpotlight,
+  } = useForgeSpotlight()
 
   // Zugleich der Beweis, dass die Abräumung wirkt: liefe sie nicht, trüge
   // jeder Test den Zeiger des vorigen mit.
@@ -59,6 +68,51 @@ describe('useForgeSpotlight', () => {
     resetForgeSpotlight()
     expect(spotlightId.value).toBeNull()
     expect(treeHoverId.value).toBeNull()
+  })
+
+  /**
+   * Die Anheftung ist der Grund, warum der Detailkopf überhaupt bedienbar ist:
+   * der Zeiger streift auf dem Weg zum Kaufknopf zwangsläufig andere Zeilen,
+   * und ohne diese Regel risse jede davon das Detail wieder weg.
+   */
+  it('lässt das Angeheftete den Hover schlagen', () => {
+    setPinned('pinned_node')
+    setTreeHover('tree_node')
+    setListHover('list_node')
+
+    expect(detailId.value).toBe('pinned_node')
+    // Die HERVORHEBUNG folgt weiter dem Zeiger — nur der Detailkopf steht still.
+    expect(spotlightId.value).toBe('list_node')
+  })
+
+  it('fällt ohne Anheftung auf den Hover zurück', () => {
+    setTreeHover('tree_node')
+    expect(detailId.value).toBe('tree_node')
+
+    setPinned('pinned_node')
+    expect(detailId.value).toBe('pinned_node')
+
+    setPinned(null)
+    expect(detailId.value).toBe('tree_node')
+  })
+
+  it('löst mit togglePin denselben Knoten wieder', () => {
+    togglePin('node_a')
+    expect(pinnedId.value).toBe('node_a')
+
+    // Ein anderer Knoten übernimmt, statt zu lösen.
+    togglePin('node_b')
+    expect(pinnedId.value).toBe('node_b')
+
+    togglePin('node_b')
+    expect(pinnedId.value).toBeNull()
+  })
+
+  it('räumt auch die Anheftung ab', () => {
+    setPinned('pinned_node')
+    resetForgeSpotlight()
+    expect(pinnedId.value).toBeNull()
+    expect(detailId.value).toBeNull()
   })
 
   it('teilt den Zustand über getrennte Aufrufe hinweg', () => {

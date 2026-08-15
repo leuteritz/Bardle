@@ -27,6 +27,7 @@ import {
   FORGE_UPGRADE_TIER_LABELS,
   FORGE_BOUGH_UNLOCK_PHASE,
   FORGE_BOUGH_PARENT_MIN_LEVEL,
+  FORGE_BULK_BUY_CAP,
 } from '@/config/constants'
 
 /**
@@ -550,5 +551,184 @@ describe('useForgeUpgrades — Material der Kernstrahlen', () => {
     expect(solar.branchLevel(def.id)).toBe(SOLAR_MATERIAL_FROM_LEVEL)
     expect(game.chimes).toBe(purse - cost)
     expect(inventory.collectedMaterials[def.material]).toBe(stock - def.materialQty)
+  })
+})
+
+/**
+ * Der Stapelkauf ist die einzige Stelle des Shops, die eine Kostenkurve VOR dem
+ * Kauf abliest. Sie darf nirgends ein zweites Mal ausgeschrieben stehen — die
+ * Vorschau läuft deshalb über `nodeGoldCostAt`/`nodeMaterialCostAt` derselben
+ * Stores, aus denen auch der Kauf zahlt. Was hier auseinanderliefe, verspräche
+ * dem Spieler eine Zahl, die der Knopf nicht einlöst.
+ */
+describe('useForgeUpgrades — Stapelkauf', () => {
+  const BOUGH_ID = 'wayfarersHoard'
+  const BOUGH_PARENT = 'wayfindersCache'
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  /** Phase, Elternstufe und ein Vorrat, der für Ring 4 reicht. */
+  function unlockBoughs(): void {
+    unlockBranches()
+    useSolarUpgradeStore().starPhase = FORGE_BOUGH_UNLOCK_PHASE
+    useStarForgeStore().branchLevels[BOUGH_PARENT] = FORGE_BOUGH_PARENT_MIN_LEVEL
+  }
+
+  /** Was die nächsten `count` Stufen zusammen kosten — aus dem Store gelesen,
+   *  nicht nachgerechnet. */
+  function chimesFor(id: string, count: number): number {
+    const forge = useStarForgeStore()
+    let sum = 0
+    for (let i = 0; i < count; i++) sum += forge.nodeGoldCostAt(id, i)
+    return sum
+  }
+
+  it('zählt 0, solange nichts kaufbar ist', () => {
+    const { affordableLevels } = useForgeUpgrades()
+    // Frischer Stand: kein Zweig ist freigeschaltet.
+    expect(affordableLevels(BRANCH_ID)).toBe(0)
+  })
+
+  it('zählt genau so viele Stufen, wie die Chimes decken', () => {
+    unlockBoughs()
+    const game = useGameStore()
+    const { affordableLevels } = useForgeUpgrades()
+
+    const forThree = chimesFor(BOUGH_ID, 3)
+    game.chimes = forThree
+    expect(affordableLevels(BOUGH_ID)).toBe(3)
+
+    // Ein einziger Chime weniger, und die dritte Stufe fällt weg.
+    game.chimes = forThree - 1
+    expect(affordableLevels(BOUGH_ID)).toBe(2)
+  })
+
+  /** Ring 4 hat keine Obergrenze — ohne den Deckel liefe die Schleife weiter,
+   *  solange Chimes da sind, und der Knopf verschluckte den ganzen Bestand. */
+  it('deckelt den endlosen Ring bei FORGE_BULK_BUY_CAP', () => {
+    unlockBoughs()
+    useGameStore().chimes = Number.MAX_SAFE_INTEGER
+    expect(useForgeUpgrades().affordableLevels(BOUGH_ID)).toBe(FORGE_BULK_BUY_CAP)
+  })
+
+  it('hält an der Höchststufe eines gedeckelten Rings an', () => {
+    unlockBranches()
+    useSolarUpgradeStore().starPhase = FORGE_BOUGH_UNLOCK_PHASE
+    const forge = useStarForgeStore()
+    const { affordableLevels } = useForgeUpgrades()
+    expect(affordableLevels(BRANCH_ID)).toBe(forge.nodeMaxLevel(BRANCH_ID))
+  })
+
+  /** Die Gleichwuchs-Sperre lässt einen Strahl nur EINE Stufe über den
+   *  niedrigsten der fünf steigen — Vorrat hin oder her. */
+  it('achtet am Kernstrahl auf die Gleichwuchs-Sperre', () => {
+    fillPurse()
+    setAllRoots(1)
+    expect(useForgeUpgrades().affordableLevels(ROOT_IDS[0])).toBe(1)
+  })
+
+  it('bricht ab, sobald das Lager nicht mehr deckt', () => {
+    unlockBranches()
+    useSolarUpgradeStore().starPhase = FORGE_BOUGH_UNLOCK_PHASE
+    const forge = useStarForgeStore()
+    const inventory = useInventoryStore()
+    const { affordableLevels } = useForgeUpgrades()
+
+    // Nur so viel Material, wie die ersten zwei Stufen zusammen verlangen.
+    const need = Object.entries(forge.nodeMaterialCostAt(BRANCH_ID, 1)).concat(
+      Object.entries(forge.nodeMaterialCostAt(BRANCH_ID, 2)),
+    )
+    const stock: Record<string, number> = {}
+    for (const [matId, qty] of need) stock[matId] = (stock[matId] ?? 0) + qty
+    inventory.collectedMaterials = stock
+
+    expect(affordableLevels(BRANCH_ID)).toBe(2)
+  })
+
+  it('buyMany kauft höchstens die verlangte Zahl und hält beim ersten Nein an', () => {
+    unlockBoughs()
+    const game = useGameStore()
+    const forge = useStarForgeStore()
+    const { buyMany } = useForgeUpgrades()
+
+    game.chimes = chimesFor(BOUGH_ID, 3)
+    // Fünf verlangt, drei bezahlbar.
+    expect(buyMany(BOUGH_ID, 5)).toBe(3)
+    expect(forge.nodeLevel(BOUGH_ID)).toBe(3)
+    expect(game.chimes).toBeGreaterThanOrEqual(0)
+  })
+
+  it('buyMany meldet EINMAL, nicht je Stufe', () => {
+    unlockBoughs()
+    useGameStore().chimes = chimesFor(BOUGH_ID, 3)
+    useForgeUpgrades().buyMany(BOUGH_ID, 3)
+    expect(useActionToast().message.value).toContain('Lv 3')
+  })
+
+  it('buyMany tut bei 0 oder weniger gar nichts', () => {
+    unlockBoughs()
+    useGameStore().chimes = chimesFor(BOUGH_ID, 3)
+    const forge = useStarForgeStore()
+    expect(useForgeUpgrades().buyMany(BOUGH_ID, 0)).toBe(0)
+    expect(forge.nodeLevel(BOUGH_ID)).toBe(0)
+  })
+
+  /** Der Knopf in der Kopfleiste. Je EINE Stufe, günstigster zuerst — und das
+   *  Konto darf dabei nie ins Minus laufen. */
+  it('buyAllReady kauft je eine Stufe und überzieht nie', () => {
+    unlockBranches()
+    const game = useGameStore()
+    const forge = useStarForgeStore()
+    const { upgradeEntries, buyAllReady } = useForgeUpgrades()
+
+    const readyIds = upgradeEntries.value.filter((e) => e.canBuy).map((e) => e.id)
+    expect(readyIds.length).toBeGreaterThan(1)
+
+    const bought = buyAllReady()
+    expect(bought).toBeGreaterThan(0)
+    expect(bought).toBeLessThanOrEqual(readyIds.length)
+    expect(game.chimes).toBeGreaterThanOrEqual(0)
+
+    // Keiner der Zweige ist dabei über Stufe 1 hinausgewachsen.
+    for (const id of readyIds) {
+      if (getForgeNode(id)) expect(forge.nodeLevel(id)).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('buyAllReady gibt 0 zurück, wenn nichts bereit ist', () => {
+    useGameStore().chimes = 0
+    expect(useForgeUpgrades().buyAllReady()).toBe(0)
+  })
+})
+
+/**
+ * Die BEST-BUY-Marke im Baum und die Vorgabe des Detailkopfs lesen denselben
+ * Wert. „Günstigster kaufbarer" ist dabei keine Bequemlichkeit: die Wirkungen
+ * des Baums stehen in Prozent, HP, Sekunden und Chimes nebeneinander und sind
+ * nicht vergleichbar — der Preis ist die einzige Zahl, die alle Knoten teilen.
+ */
+describe('useForgeUpgrades — bestBuyId', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('ist null, solange nichts kaufbar ist', () => {
+    useGameStore().chimes = 0
+    expect(useForgeUpgrades().bestBuyId.value).toBeNull()
+  })
+
+  it('zeigt auf den günstigsten kaufbaren Eintrag', () => {
+    unlockBranches()
+    const { upgradeEntries, entryById, bestBuyId } = useForgeUpgrades()
+
+    const id = bestBuyId.value
+    expect(id).not.toBeNull()
+    const best = entryById.value.get(id!)!
+    expect(best.canBuy).toBe(true)
+    for (const e of upgradeEntries.value) {
+      if (e.canBuy) expect(best.goldCost).toBeLessThanOrEqual(e.goldCost)
+    }
   })
 })

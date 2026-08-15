@@ -24,6 +24,9 @@ import {
   FORGE_DESC_PERCENT_TOKEN,
   FORGE_UPGRADE_CAPPED_REASON,
   FORGE_UPGRADE_TIER_LABELS,
+  FORGE_BULK_BUY_CAP,
+  FORGE_BUY_ALL_TOAST,
+  FORGE_COUNT_TOKEN,
 } from '@/config/constants'
 
 /**
@@ -138,7 +141,11 @@ function valueText(def: ForgeNodeDef, value: number): string {
 export function useForgeUpgrades(): {
   upgradeEntries: ComputedRef<ForgeUpgradeEntry[]>
   entryById: ComputedRef<Map<string, ForgeUpgradeEntry>>
-  buyUpgrade: (id: string) => boolean
+  bestBuyId: ComputedRef<string | null>
+  buyUpgrade: (id: string, opts?: { silent?: boolean }) => boolean
+  affordableLevels: (id: string) => number
+  buyMany: (id: string, count: number) => number
+  buyAllReady: () => number
 } {
   const gameStore = useGameStore()
   const inventoryStore = useInventoryStore()
@@ -319,11 +326,33 @@ export function useForgeUpgrades(): {
   const entryById = computed(() => new Map(upgradeEntries.value.map((entry) => [entry.id, entry])))
 
   /**
+   * Der günstigste Eintrag, den Chimes UND Lager gerade decken — die Marke im
+   * Baum und die Vorgabe des Detailkopfs.
+   *
+   * „Günstigster" und nicht „stärkster", und das ist keine Bequemlichkeit: die
+   * Wirkungen des Baums stehen in Prozent, HP, Sekunden und Chimes nebeneinander.
+   * Es gibt keine Einheit, in der `+6% Expeditionsertrag` und `+90 max HP`
+   * vergleichbar wären. Der Preis ist die einzige Zahl, die alle Knoten teilen.
+   */
+  const bestBuyId = computed<string | null>(() => {
+    let best: ForgeUpgradeEntry | null = null
+    for (const entry of upgradeEntries.value) {
+      if (!entry.canBuy) continue
+      if (best === null || entry.goldCost < best.goldCost) best = entry
+    }
+    return best?.id ?? null
+  })
+
+  /**
    * Kauft eine Stufe und meldet, ob es geklappt hat. Die Rückmeldung im Bild —
    * Sonnenblitz im Baum, Kartenblitz in der Liste — bleibt beim Aufrufer; nur
    * der Wortlaut der Meldung steht hier, damit beide Wege gleich sprechen.
+   *
+   * `silent` gibt es für die Stapelkäufe: acht Stufen am Stück wären acht
+   * Meldungen übereinander. Unterdrückt wird ausschliesslich der Toast — der
+   * Kaufweg bleibt derselbe, damit kein Gate umgangen werden kann.
    */
-  function buyUpgrade(id: string): boolean {
+  function buyUpgrade(id: string, opts: { silent?: boolean } = {}): boolean {
     const entry = entryById.value.get(id)
     if (!entry) return false
 
@@ -332,14 +361,132 @@ export function useForgeUpgrades(): {
       const before = solarStore.branchLevel(branchId)
       solarStore.buyBranch(branchId)
       if (solarStore.branchLevel(branchId) === before) return false
-      showToast(`${entry.name} upgraded!`, 'forge')
+      if (!opts.silent) showToast(`${entry.name} upgraded!`, 'forge')
       return true
     }
 
     if (!forgeStore.buyNode(id)) return false
-    showToast(`${entry.name} grown to Lv ${forgeStore.nodeLevel(id)}!`, 'forge')
+    if (!opts.silent) showToast(`${entry.name} grown to Lv ${forgeStore.nodeLevel(id)}!`, 'forge')
     return true
   }
 
-  return { upgradeEntries, entryById, buyUpgrade }
+  /** Die erreichte Stufe eines Eintrags — Strahlen und Baumknoten liegen in
+   *  verschiedenen Stores, sonst stünde die Weiche viermal da. */
+  function currentLevel(entry: ForgeUpgradeEntry): number {
+    return entry.tier === 'root'
+      ? solarStore.branchLevel(entry.id as SolarBranchId)
+      : forgeStore.nodeLevel(entry.id)
+  }
+
+  /**
+   * Wie viele Stufen dieses Knotens Vorrat UND Lager gerade zusammen hergeben —
+   * OHNE etwas zu kaufen. Das ist die Zahl auf „Buy ×8" und in der Zeile
+   * daneben.
+   *
+   * Gerechnet wird über die `…At`-Getter der Stores, nicht über eine zweite
+   * Fassung der Kostenkurve: Chime-Preis, Materialmenge, Chronicle-Rabatt und
+   * Vorsehung liegen dort und dürfen hier nicht ein zweites Mal auftauchen.
+   *
+   * Drei Obergrenzen, jede aus einem anderen Grund:
+   *   • der Ring selbst (`maxLevel`)
+   *   • bei einem Kernstrahl zusätzlich `maxAllowedLevel`, die Gleichwuchs-
+   *     Sperre. Die kann durch den Kauf STEIGEN (wenn der Strahl der bislang
+   *     niedrigste war), nie fallen — die Vorschau bleibt damit im sicheren
+   *     Sinn ungenau: sie verspricht höchstens zu wenig, nie zu viel.
+   *   • `FORGE_BULK_BUY_CAP`, weil ein Bough gar keine Obergrenze hat und die
+   *     Schleife sonst nicht endete.
+   */
+  function affordableLevels(id: string): number {
+    const entry = entryById.value.get(id)
+    if (!entry || !entry.canBuy) return 0
+
+    const isRoot = entry.tier === 'root'
+    const level = currentLevel(entry)
+    const ringCeiling = isRoot
+      ? Math.min(SOLAR_MAX_LEVELS, solarStore.maxAllowedLevel)
+      : Number.isFinite(entry.maxLevel)
+        ? entry.maxLevel
+        : Infinity
+    const ceiling = Math.min(ringCeiling, level + FORGE_BULK_BUY_CAP)
+
+    let chimes = gameStore.chimes
+    const stock: Record<string, number> = { ...inventoryStore.collectedMaterials }
+    let count = 0
+
+    for (let step = level; step < ceiling; step++) {
+      const gold = isRoot
+        ? solarStore.levelCost(id as SolarBranchId, step)
+        : forgeStore.nodeGoldCostAt(id, step)
+      if (chimes < gold) break
+
+      const mats = isRoot
+        ? forgeStore.rayMaterialCostAt(id as SolarBranchId, step + 1)
+        : forgeStore.nodeMaterialCostAt(id, step + 1)
+      const entries = Object.entries(mats)
+      if (entries.some(([matId, need]) => (stock[matId] ?? 0) < need)) break
+
+      chimes -= gold
+      for (const [matId, need] of entries) stock[matId] = (stock[matId] ?? 0) - need
+      count++
+    }
+
+    return count
+  }
+
+  /**
+   * Mehrere Stufen desselben Knotens am Stück. Gerechnet wird dabei NICHT —
+   * jede einzelne Stufe läuft durch `buyUpgrade` und damit durch die Prüfung des
+   * Stores; die Schleife bricht beim ersten Nein ab. Eine Meldung am Ende.
+   */
+  function buyMany(id: string, count: number): number {
+    const entry = entryById.value.get(id)
+    if (!entry || count <= 0) return 0
+
+    let bought = 0
+    while (bought < count && buyUpgrade(id, { silent: true })) bought++
+    if (bought > 0) {
+      showToast(`${entry.name} grown to Lv ${currentLevel(entry)}!`, 'forge')
+    }
+    return bought
+  }
+
+  /**
+   * Je eine Stufe von allem, was Chimes UND Lager gerade decken — der Knopf in
+   * der Kopfleiste.
+   *
+   * Günstigster zuerst, aus zwei Gründen: derselbe Vorrat deckt so die meisten
+   * Stufen, und es ist dieselbe Rangfolge, nach der die BEST-BUY-Marke im Baum
+   * zeigt. Die Reihenfolge steht als Id-Liste fest, bevor der erste Kauf läuft —
+   * `upgradeEntries` ist ein computed und sortierte sich sonst mitten in der
+   * Schleife um.
+   */
+  function buyAllReady(): number {
+    const queue = upgradeEntries.value
+      .filter((entry) => entry.canBuy)
+      .sort((a, b) => a.goldCost - b.goldCost)
+      .map((entry) => entry.id)
+
+    let bought = 0
+    for (const id of queue) {
+      // Der vorige Kauf hat Chimes und Lager gesenkt — was eben noch ging, geht
+      // jetzt vielleicht nicht mehr.
+      if (!entryById.value.get(id)?.canBuy) continue
+      if (buyUpgrade(id, { silent: true })) bought++
+    }
+
+    if (bought > 0) {
+      showToast(FORGE_BUY_ALL_TOAST.replace(FORGE_COUNT_TOKEN, String(bought)), 'forge')
+    }
+    return bought
+  }
+
+  return {
+    upgradeEntries,
+    entryById,
+    bestBuyId,
+    buyUpgrade,
+    affordableLevels,
+    buyMany,
+    buyAllReady,
+  }
 }

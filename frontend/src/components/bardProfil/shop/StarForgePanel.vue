@@ -1,30 +1,11 @@
 <template>
   <div class="sf-panel">
-    <!-- ══ Section tabs ══════════════════════════════════════════
-         Three sections stacked in a 440px column meant scrolling past two of
-         them to reach the third. As tabs each one owns the full height — which
-         is what pays for the larger type below. The badge counts only what can
-         be ACTED on right now, so a closed tab still says "there is something
-         for you here". -->
-    <nav class="sf-tabs" role="tablist" aria-label="Star Forge sections">
-      <button
-        v-for="sec in FORGE_PANEL_SECTIONS"
-        :key="sec.id"
-        class="sf-tab"
-        :class="{ 'sf-tab--on': activeSection === sec.id }"
-        :style="{ '--tab-c': sec.accent }"
-        role="tab"
-        :title="sec.label"
-        :aria-selected="activeSection === sec.id"
-        @click="selectSection(sec.id)"
-      >
-        <span class="sf-tab-ico-wrap">
-          <Icon :icon="sec.icon" width="23" height="23" class="sf-tab-ico" />
-          <span v-if="readyCounts[sec.id] > 0" class="sf-tab-badge">{{ readyCounts[sec.id] }}</span>
-        </span>
-        <span v-ink-center class="sf-tab-label">{{ sec.label }}</span>
-      </button>
-    </nav>
+    <!-- ══ Detailkopf ════════════════════════════════════════════
+         EIN Knoten gross statt fünfundvierzig mittelgross. Er trägt zugleich
+         die Goldlinie, die im Projekt an jeder Modalkante steht — die
+         Reiterleiste, die hier bis zum Umbau sass, ist in die Rail ganz rechts
+         gewandert. -->
+    <ForgeNodeDetail v-if="activeSection === 'upgrades'" />
 
     <!-- Running bargain buffs stay above the fold whatever tab is open — they
          are the only thing on this panel with a clock on it. -->
@@ -306,21 +287,20 @@
 
 <script setup lang="ts">
 import { formatClock, formatCompactDuration } from '@/utils/ui/format'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { MATERIALS } from '@/config/economy/materials'
-import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   FORGE_RELICS,
   FORGE_CONSTELLATIONS,
   FORGE_BARGAINS,
-  FORGE_NODES,
   getForgeNode,
 } from '@/config/progression/starForge'
 import ForgeUpgradesSection from './ForgeUpgradesSection.vue'
+import ForgeNodeDetail from './ForgeNodeDetail.vue'
 import ForgeCostRow from './ForgeCostRow.vue'
 import {
   FORGE_CONSTELLATION_REQUIRED_LEVEL,
@@ -328,10 +308,8 @@ import {
   FORGE_BARGAIN_REROLL_MATERIAL,
   FORGE_BARGAIN_RESTOCK_MS,
   FORGE_BARGAIN_EMPTY_ICON,
-  FORGE_PANEL_SECTIONS,
   FORGE_RELIC_RARITY_COLOR,
   FORGE_CHIME_IMAGE,
-  SOLAR_BRANCHES,
   FORGE_DESC_VALUE_TOKEN,
   FORGE_DESC_PERCENT_TOKEN,
   MS_PER_SECOND,
@@ -349,20 +327,17 @@ import type {
   ForgeSectionId,
 } from '@/types'
 
+/**
+ * Welche Abteilung offen ist, kommt von aussen: die Reiter stehen seit dem
+ * Umbau als eigene Spalte (`ForgeSectionRail`) rechts daneben, und zwei
+ * Geschwister teilen sich einen Zustand nur über ihren Elternteil.
+ */
+defineProps<{ activeSection: ForgeSectionId }>()
+
 const inventoryStore = useInventoryStore()
 const gameStore = useGameStore()
 const forgeStore = useStarForgeStore()
-const solarStore = useSolarUpgradeStore()
 const { showToast } = useActionToast()
-
-// ── Sections ─────────────────────────────────────────────────────────────────
-/** Der Baum steht vorn: Relikte, Konstellationen und der Handel zeigen, was aus
- *  ihm FOLGT — dieser Reiter zeigt ihn selbst. */
-const activeSection = ref<ForgeSectionId>('upgrades')
-
-function selectSection(id: ForgeSectionId): void {
-  activeSection.value = id
-}
 
 // ── Active blessings (running bargain buffs) ─────────────────────────────────
 const activeBuffs = computed(() =>
@@ -582,24 +557,6 @@ function handleReroll(): void {
     showToast('Bargain rerolled!', 'info')
   }
 }
-
-// ── Tab badges — only what can be acted on right now ─────────────────────────
-/**
- * Der Upgrade-Zähler fragt die Stores DIREKT und nicht `useForgeUpgrades()`.
- * Der Grund ist der Lebenszyklus: der Shop-Tab wird einmal gemountet und danach
- * nur noch per `v-show` umgeschaltet, die Reiterleiste rechnet also auch bei
- * geschlossenem Reiter weiter. Über das Ansichtsmodell liefe dabei jede Sekunde
- * der volle Aufbau aller 25 Einträge samt Materiallisten mit — hier bleiben es
- * 25 Getter-Aufrufe, dieselbe Größenordnung wie bei den Relikten darunter.
- */
-const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
-  upgrades:
-    SOLAR_BRANCHES.filter((branch) => solarStore.canAfford(branch.id)).length +
-    FORGE_NODES.filter((node) => forgeStore.canAffordNode(node.id)).length,
-  relics: relicViews.value.filter((v) => v.ready).length,
-  constellations: constellationViews.value.filter((v) => v.ready).length,
-  bargain: forgeStore.canBuyBargain ? 1 : 0,
-}))
 </script>
 
 <style scoped>
@@ -619,136 +576,11 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
   border-left: 2px solid #5c3310;
 }
 
-/* ══════════════════════════════════════════════════
-   SECTION TABS
-══════════════════════════════════════════════════ */
-.sf-tabs {
-  container-type: inline-size;
-  flex-shrink: 0;
-  display: flex;
-  background: #16120a;
-  border-bottom: 2px solid #3e200a;
-}
-
-/* Gestapelt statt nebeneinander, seit „Upgrades" als vierter Reiter dazukam.
-   Nebeneinander brauchten die vier Beschriftungen bei 13,5px zusammen 526px —
-   die Spalte ist auf `clamp(340px, 32vw, 470px)` gedeckelt, „Constellations"
-   wäre also auf jedem Desktop abgeschnitten. Übereinander bekommt jedes Label
-   die volle Zellenbreite, und die vier Zellen teilen sich die Spalte gleich
-   (`flex-basis: 0`, weil die Breite jetzt nicht mehr am längsten Wort hängt). */
-.sf-tab {
-  position: relative;
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 11px 6px 12px;
-  border: 0;
-  border-right: 1px solid #2a1a08;
-  background: transparent;
-  cursor: pointer;
-  color: rgba(200, 144, 64, 0.6);
-  transition: color 0.18s ease, background-color 0.18s ease;
-}
-
-.sf-tab:last-child {
-  border-right: 0;
-}
-
-.sf-tab:hover:not(.sf-tab--on) {
-  background: #1c1408;
-  color: rgba(232, 192, 64, 0.85);
-}
-
-.sf-tab--on {
-  background: #1e1408;
-  color: var(--tab-c, #e8c040);
-}
-
-/* The active marker is a solid rule on the tab's own bottom edge — it overlays
-   the strip's border rather than adding a second line. */
-.sf-tab--on::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -2px;
-  height: 2px;
-  background: var(--tab-c, #e8c040);
-}
-
-.sf-tab-ico-wrap {
-  position: relative;
-  flex-shrink: 0;
-  display: flex;
-}
-
-.sf-tab-ico {
-  color: currentColor;
-}
-
-.sf-tab-label {
-  max-width: 100%;
-  font-size: 12.5px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: currentColor;
-}
-
-/* Only what can be acted on RIGHT NOW — a closed tab still says "something is
-   waiting here". It hangs off the ICON, not off the tab's corner: the corner
-   sits over the label, and "Constellations" is long enough to reach it. */
-.sf-tab-badge {
-  position: absolute;
-  top: -7px;
-  right: -7px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  background: #52b830;
-  border: 1px solid #6ec040;
-  color: #08130a;
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Der Deckel der Spalte liegt bei 470px, vier Reiter bekommen davon also je
-   rund 117px — und „Constellations" ist das längste Wort der Leiste. Die Stufe
-   MUSS deshalb oberhalb dieser 470px greifen, sonst schaltet sie auf keinem
-   Desktop je um und das Wort steht dauerhaft abgeschnitten da. Gemessen bei
-   1920×1080 nachgezogen, nicht geschätzt. */
-@container (max-width: 560px) {
-  .sf-tab {
-    gap: 5px;
-    padding-left: 3px;
-    padding-right: 3px;
-  }
-
-  .sf-tab-label {
-    font-size: 10.5px;
-    letter-spacing: 0;
-  }
-}
-
-@container (max-width: 400px) {
-  .sf-tab-label {
-    font-size: 9.5px;
-  }
-}
+/* Die Reiterleiste stand bis zum Umbau HIER — volle Spaltenbreite mal 46px
+   Höhe, samt zweier Container-Queries, nur damit „Constellations" in eine von
+   vier 117px-Zellen passte. Sie steht jetzt senkrecht als eigene Spalte
+   (`ForgeSectionRail`): dort kostet sie Breite statt Höhe, und Höhe ist auf dem
+   flachsten Viewport des Projekts das Knappe. */
 
 /* ══════════════════════════════════════════════════
    RUNNING BLESSINGS
@@ -1210,11 +1042,6 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
    COMPACT DESKTOPS — Full HD is the flattest viewport
 ══════════════════════════════════════════════════ */
 @media (max-height: 1100px) {
-  .sf-tab {
-    gap: 5px;
-    padding: 8px 6px 9px;
-  }
-
   .sf-buffs {
     padding: 9px 15px;
   }

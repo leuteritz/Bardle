@@ -1,8 +1,14 @@
 <template>
   <div class="shop-frame">
-    <!-- Star Forge — left: growing sun tree · right: forge panel -->
+    <!-- Star Forge — links der wachsende Sonnenbaum, in der Mitte das Detail
+         samt Liste, rechts aussen die Abteilungs-Rail. -->
     <ForgeTreePanel class="shop-tree-col" />
-    <StarForgePanel class="shop-forge-col" />
+    <StarForgePanel class="shop-forge-col" :active-section="activeSection" />
+    <ForgeSectionRail
+      class="shop-rail-col"
+      :active="activeSection"
+      @select="activeSection = $event"
+    />
 
     <!-- TEMP: admin shortcut — buys every ray, branch, leaf, relic and
          constellation the CURRENT star phase allows, free of charge. Floated
@@ -17,20 +23,38 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useActionToast } from '@/composables/ui/useActionToast'
-import { FORGE_YIELD_PLINTH_HEIGHT_PX } from '@/config/constants'
+import type { ForgeSectionId } from '@/types'
+import {
+  FORGE_YIELD_PLINTH_HEIGHT_PX,
+  FORGE_RAIL_WIDTH_PX,
+  FORGE_RAIL_WIDTH_WIDE_PX,
+} from '@/config/constants'
 import ForgeTreePanel from './ForgeTreePanel.vue'
 import StarForgePanel from './StarForgePanel.vue'
+import ForgeSectionRail from './ForgeSectionRail.vue'
 
 const forgeStore = useStarForgeStore()
 const { showToast } = useActionToast()
+
+/**
+ * Welche Abteilung offen ist, liegt HIER und nicht mehr in `StarForgePanel`:
+ * die Rail steht seit dem Umbau als eigene Spalte daneben, die beiden sind also
+ * Geschwister. Der Baum steht vorn — Relikte, Konstellationen und der Handel
+ * zeigen, was aus ihm FOLGT.
+ */
+const activeSection = ref<ForgeSectionId>('upgrades')
 
 function maxOutForge(): void {
   forgeStore.adminMaxAll()
   showToast('Forge maxed out for this star phase', 'forge')
 }
+
+const railWidth = `${FORGE_RAIL_WIDTH_PX}px`
+const railWidthWide = `${FORGE_RAIL_WIDTH_WIDE_PX}px`
 </script>
 
 <style scoped>
@@ -42,19 +66,40 @@ function maxOutForge(): void {
   overflow: hidden;
 }
 
-/* Tree gets every spare pixel; the forge column stays a readable, bounded
-   width across common desktop resolutions (1280 → 4K). */
-/* The seam between the two columns is the forge panel's own border-left — the
-   same 2px #5c3310 the role detail page uses. A second line here would double
-   it. */
+/* Der Baum bekommt jeden freien Pixel; die Forge-Spalte bleibt in einer
+   lesbaren, begrenzten Breite über alle Desktop-Auflösungen (1280 → 4K).
+   Die Naht zwischen zwei Spalten ist jeweils der `border-left` der rechten —
+   eine zweite Linie hier verdoppelte sie. */
 .shop-tree-col {
   flex: 1;
   min-width: 0;
 }
 
+/* Gewachsen von `clamp(340px, 32vw, 470px)`. Der alte Deckel stammt aus der
+   Zeit, in der die Spalte fünf Filterchips UND vier Reiterbeschriftungen in
+   einer Zeile tragen musste; beides steht jetzt woanders. Was hier steht, ist
+   ein Detailkopf mit 23px-Titel und zwei Kaufknöpfen nebeneinander — der
+   braucht die zusätzlichen 90px, und auf 4K sind sie umsonst zu haben. */
 .shop-forge-col {
-  flex: 0 0 clamp(340px, 32vw, 470px);
+  flex: 0 0 clamp(400px, 26vw, 560px);
   min-width: 0;
+}
+
+/* `min-width: 0` ist hier nicht kosmetisch: ohne es gilt `min-width: auto`, und
+   das längste Label der Rail („Constellations") drückte die Spalte gemessen auf
+   96px statt der deklarierten 78 — die Breite stünde dann in Wahrheit im
+   Textumbruch statt in der Konstante. */
+.shop-rail-col {
+  flex: 0 0 v-bind(railWidth);
+  min-width: 0;
+}
+
+/* Ab 2K ist Breite reichlich da: „Constellations" steht dann zweizeilig statt
+   dreizeilig, und die Zelle wirkt nicht mehr wie ein Notbehelf. */
+@media (min-width: 2560px) {
+  .shop-rail-col {
+    flex-basis: v-bind(railWidthWide);
+  }
 }
 
 /* ── TEMP admin button ─────────────────────────────────────────── */
@@ -87,7 +132,7 @@ function maxOutForge(): void {
   color: #e8c040;
 }
 
-/* Narrow layouts: stack tree above the forge panel */
+/* Narrow layouts: stack tree above the forge panel, rail becomes a strip. */
 @media (max-width: 900px) {
   .shop-frame {
     flex-direction: column;
@@ -99,6 +144,11 @@ function maxOutForge(): void {
   .shop-tree-col {
     flex: 0 0 420px;
     border-bottom: 2px solid #5c3310;
+  }
+
+  .shop-rail-col {
+    flex: 0 0 auto;
+    order: -1;
   }
 
   .shop-forge-col {
