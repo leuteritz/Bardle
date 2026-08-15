@@ -1,20 +1,24 @@
 <script setup lang="ts">
 /**
- * Die Orbit-Bühne des Meep Skill Trees.
+ * Die Orbit-Bühne des Meep Skill Trees — eine Spiralgalaxie von oben.
  *
- * Ein `<svg>` trägt die fünf Bahnellipsen und alle Kanten, darüber liegen
- * Startkreis, dreissig Knoten und die fünf Zweignamen als absolut
- * positionierte Elemente. Die Bühne ist so breit wie ihr Design-Kasten und so
- * hoch, wie der Tab-Root sie macht — hier steht deshalb keine einzige
+ * Ein `<svg>` trägt den Kernschein, die fünf Nebelbänder und alle Kanten,
+ * darüber liegen Startkreis, dreissig Knoten und die fünf Zweignamen als
+ * absolut positionierte Elemente. Die Bühne ist so breit wie ihr Design-Kasten
+ * und so hoch, wie der Tab-Root sie macht — hier steht deshalb keine einzige
  * Bildschirmgrösse, nur eine Design-Höhe als Prop.
+ *
+ * **Gezeichnete Rang-Bahnen gibt es nicht mehr.** Fünf konzentrische Ellipsen
+ * ordneten die Ränge, lasen sich aber als Zifferblatt. Was ordnet, sind jetzt
+ * der Radius selbst und die Bänder, die den Armen folgen.
  *
  * **Die Kanten werden nur beim Resize neu gebaut**, nie in einem Frame: ihre
  * Geometrie hängt allein an dieser Höhe (`utils/ui/skillTreeLayout`, gecacht),
- * ihr Aussehen an zwei Attributen, die Vue an der bestehenden `<line>` patcht.
+ * ihr Aussehen an zwei Attributen, die Vue an dem bestehenden `<path>` patcht.
  * Ein Meep-Zuwachs, der reihenweise `nodeState()` kippen lässt, kostet damit
  * keinen Neuaufbau der SVG-Struktur.
  */
-import { computed } from 'vue'
+import { computed, getCurrentInstance } from 'vue'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useMeepSkills } from '@/composables/ui/useMeepSkills'
 import { useMeepSpotlight } from '@/composables/ui/useMeepSpotlight'
@@ -25,6 +29,11 @@ import {
   SKILL_TREE_EDGE_WIDTH_BOUGHT,
   SKILL_TREE_EDGE_WIDTH_BUYABLE,
   SKILL_TREE_EDGE_WIDTH_LOCKED,
+  SKILL_TREE_CORE_STOPS,
+  SKILL_TREE_NEBULA_FADE_MS,
+  SKILL_TREE_NEBULA_OPACITY,
+  SKILL_TREE_NEBULA_OPACITY_FOCUS,
+  SKILL_TREE_NEBULA_WIDTH,
   SKILL_TREE_STAGE_WIDTH,
 } from '@/config/constants'
 import MeepSkillNode from './MeepSkillNode.vue'
@@ -47,8 +56,21 @@ const meepTree = useMeepTreeStore()
 const { bestBuyId } = useMeepSkills()
 const { spotlightId, setOrbitHover } = useMeepSpotlight()
 
-/** Knoten, Kanten, Zweignamen und Bahnen — alles aus der einen Bühnenhöhe. */
+/** Knoten, Kanten, Zweignamen, Bänder und Kern — alles aus der einen Bühnenhöhe. */
 const layout = computed(() => skillTreeLayout(props.height))
+
+/**
+ * Eindeutiges Präfix für die SVG-Verlaufs-Ids. `<style scoped>` scoped `id`s
+ * NICHT — Vue schreibt nur Selektoren um, `url(#…)` löst dokumentweit auf. Bei
+ * einer Kollision gäbe es keinen Fehler, sondern still den ersten Treffer in
+ * Dokumentreihenfolge: ein Falschfarben-Fehler, der nur auf einer Route
+ * auftritt. Muster `components/idle/sun/OrbitPath.vue`.
+ */
+const uid = `mos-${getCurrentInstance()!.uid}`
+
+/* Beide gehen als Zeichenkette ins CSS — die Werte stehen in den Konstanten. */
+const nebulaWidth = `${SKILL_TREE_NEBULA_WIDTH}`
+const nebulaFade = `${SKILL_TREE_NEBULA_FADE_MS}ms`
 
 /* ── Zustand ──────────────────────────────────────────────────────────────
  * Ein primitiver Schlüssel über alle Knotenzustände. Beide Listen unten
@@ -139,6 +161,22 @@ const spotBranchId = computed(() =>
   spotlightId.value === null
     ? null
     : (MEEP_TREE_NODE_INDEX[spotlightId.value]?.branch.id ?? null),
+)
+
+/* ── Nebelbänder ───────────────────────────────────────────────────────────
+ * Das Band des gemeinten Arms tritt hervor — bei einem Zweigfokus wie bei
+ * einem Spotlight, denn beide beantworten dieselbe Frage: welcher Arm ist
+ * gerade gemeint. Umgeschaltet wird AUSSCHLIESSLICH die Deckkraft; Farbe,
+ * Breite und Verlauf bleiben, was sie im CSS sind (Performance-Regel 2).
+ */
+const nebulaArms = computed(() =>
+  layout.value.nebulaArms.map((arm) => ({
+    ...arm,
+    opacity:
+      props.focusBranch === arm.id || spotBranchId.value === arm.id
+        ? SKILL_TREE_NEBULA_OPACITY_FOCUS
+        : SKILL_TREE_NEBULA_OPACITY,
+  })),
 )
 
 /**
@@ -273,9 +311,10 @@ function onArm(branchId: string): void {
 </script>
 
 <template>
-  <!-- `.self`: Bahnen und Startknoten sind `pointer-events: none`, ihre Klicks
-       landen also hier — Knoten und Zweignamen dagegen nie, die behalten ihre
-       Auswahl. Deshalb braucht kein Kind ein `@click.stop`. -->
+  <!-- `.self`: Kern, Bänder, Kanten und Startknoten sind `pointer-events: none`
+       (die ersten drei über das ganze `<svg>`), ihre Klicks landen also hier —
+       Knoten und Zweignamen dagegen nie, die behalten ihre Auswahl. Deshalb
+       braucht kein Kind ein `@click.stop`. -->
   <div
     class="mos-stage"
     :style="{ width: `${SKILL_TREE_STAGE_WIDTH}px` }"
@@ -286,27 +325,74 @@ function onArm(branchId: string): void {
       :viewBox="`0 0 ${SKILL_TREE_STAGE_WIDTH} ${height}`"
       aria-hidden="true"
     >
+      <defs>
+        <!-- Der Kern füllt eine Ellipse, seine Bezugs-Box ist also wohldefiniert
+             — hier reicht das voreingestellte `objectBoundingBox`. -->
+        <radialGradient :id="`${uid}-core`">
+          <stop
+            v-for="(s, i) in SKILL_TREE_CORE_STOPS"
+            :key="i"
+            class="mos-core-stop"
+            :offset="s.offset"
+            :stop-opacity="s.opacity"
+          />
+        </radialGradient>
+
+        <!-- Die Bänder dagegen haben `fill: none`; ihre Fill-Box wäre
+             entartet und der Verlauf kollabierte. Deshalb `userSpaceOnUse`
+             und ein Radius im viewBox-Raum, den das Layout mitrechnet.
+             Dieselbe Begründung trägt `SigilSvgLayers`. -->
+        <radialGradient
+          v-for="arm in nebulaArms"
+          :id="`${uid}-arm-${arm.id}`"
+          :key="arm.id"
+          gradientUnits="userSpaceOnUse"
+          :cx="layout.center.x"
+          :cy="layout.center.y"
+          :r="layout.nebula.radius"
+          :gradientTransform="layout.nebula.squashTransform"
+        >
+          <stop
+            v-for="(s, i) in layout.nebula.stops"
+            :key="i"
+            :offset="s.offset"
+            :stop-color="arm.color"
+            :stop-opacity="s.opacity"
+          />
+        </radialGradient>
+      </defs>
+
+      <!-- Der Kernschein zieht den Blick dorthin, wo alle fünf Arme
+           entspringen — die Aufgabe, die vorher die dichten inneren Ringe
+           nebenbei erledigt haben. -->
       <ellipse
-        v-for="o in layout.orbits"
-        :key="o.key"
-        class="mos-orbit"
-        :cx="layout.center.x"
-        :cy="layout.center.y"
-        :rx="o.rx"
-        :ry="o.ry"
+        class="mos-core"
+        :cx="layout.core.x"
+        :cy="layout.core.y"
+        :rx="layout.core.rx"
+        :ry="layout.core.ry"
+        :fill="`url(#${uid}-core)`"
       />
-      <line
+
+      <g class="mos-nebula">
+        <path
+          v-for="arm in nebulaArms"
+          :key="arm.id"
+          class="mos-arm-band"
+          :d="arm.d"
+          :stroke="`url(#${uid}-arm-${arm.id})`"
+          :style="{ opacity: arm.opacity }"
+        />
+      </g>
+
+      <path
         v-for="e in edges"
-        :id="e.id"
         :key="e.id"
-        :x1="e.x1"
-        :y1="e.y1"
-        :x2="e.x2"
-        :y2="e.y2"
+        class="mos-edge"
+        :d="e.d"
         :stroke="e.stroke"
         :stroke-width="e.width"
         :stroke-dasharray="e.dash"
-        stroke-linecap="round"
       />
     </svg>
 
@@ -350,7 +436,7 @@ function onArm(branchId: string): void {
 
 <style scoped>
 /* Die Breite kommt inline aus `SKILL_TREE_STAGE_WIDTH`, die Höhe vom
-   Design-Kasten — die Bühne füllt ihn ganz aus, damit die Bahnen dieselbe
+   Design-Kasten — die Bühne füllt ihn ganz aus, damit die Arme dieselbe
    Fläche haben, gegen die `skillTreeLayout` gerechnet hat. */
 .mos-stage {
   position: relative;
@@ -366,11 +452,30 @@ function onArm(branchId: string): void {
   pointer-events: none;
 }
 
-/* Die Bahnen liegen weit hinten — sie ordnen, sie zeigen nichts an. */
-.mos-orbit {
+/* ── Kern und Nebelbänder ─────────────────────────────────
+   Was an die Stelle der fünf Rang-Ellipsen getreten ist. Beide sind STATISCH:
+   kein `filter`, kein `feGaussianBlur`. Die Weichheit kommt aus den
+   Verlaufs-Stops, der niedrigen Deckkraft und dem runden Strichende — ein
+   Filter über fünf breite Bänder in demselben SVG, in dem 35 Kanten bei jedem
+   Hover ihre Attribute wechseln, rasterte die Region bei jedem Zug neu. */
+.mos-core-stop {
+  stop-color: var(--rpg-gold);
+}
+
+.mos-arm-band {
   fill: none;
-  stroke: #2a2620;
-  stroke-width: 1;
+  stroke-width: v-bind(nebulaWidth);
+  stroke-linecap: round;
+  /* Der einmalige Umschlag zwischen Ruhe und Fokus — nur die Deckkraft. */
+  transition: opacity v-bind(nebulaFade) ease;
+}
+
+/* Die Kanten folgen der Spirale, statt sie abzukürzen. `fill: none` ist hier
+   PFLICHT und war es als `<line>` nie: ein `<path>` füllt per Voreinstellung
+   schwarz, und die Fläche unter dem Bogen deckte die halbe Bühne zu. */
+.mos-edge {
+  fill: none;
+  stroke-linecap: round;
 }
 
 /* ── Zweignamen am Rand ───────────────────────────────────── */

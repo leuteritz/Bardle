@@ -5,10 +5,11 @@ import type { ForgeRelicRarity, ForgeSectionDef } from '@/types'
 
 // ── Meep Skill Tree: die Orbit-Bühne (SkillTreeComponent / MeepOrbitStage) ──
 //
-// Ein Startkreis in der Mitte, fünf Spiralarme in elliptischen Bahnen. Die
-// Bühne wird SELBST gezeichnet (kein Pan/Zoom, keine Fremdbibliothek) und lebt
-// in einem Design-Koordinatensystem, das die Bühnenspalte des Tabs skaliert.
-// Deshalb sind alle Zahlen hier Design-Pixel, keine Bildschirm-Pixel.
+// Ein leuchtender Kern in der Mitte, fünf Spiralarme darum — eine Galaxie von
+// oben, keine Ringscheibe. Die Bühne wird SELBST gezeichnet (kein Pan/Zoom,
+// keine Fremdbibliothek) und lebt in einem Design-Koordinatensystem, das die
+// Bühnenspalte des Tabs skaliert. Deshalb sind alle Zahlen hier Design-Pixel,
+// keine Bildschirm-Pixel.
 //
 // Skaliert wird NUR die Bühne, nicht der ganze Reiter: das Detail-Blatt daneben
 // ist eine unskalierte Schiene wie die Forge-Spalte im Shop (Breite in
@@ -21,22 +22,35 @@ import type { ForgeRelicRarity, ForgeSectionDef } from '@/types'
 // von 2,00 (Full HD, 1319 × 658) bis unter 1,50 — mit 1240 × 632 blieben unten
 // und oben zusammen bis zu 250 px schwarz stehen. Stattdessen: die Skalierung
 // kommt aus der BREITE, und die Design-Höhe ist das, was der Container bei
-// dieser Skalierung hergibt (`SkillTreeComponent`). Die Bahnen füllen sie über
+// dieser Skalierung hergibt (`SkillTreeComponent`). Die Arme füllen sie über
 // eine mitwachsende y-Stauchung.
+//
+// **Es gibt keine gezeichneten Rang-Bahnen mehr.** Fünf konzentrische Ellipsen
+// ordneten die Ränge, lasen sich aber als Zifferblatt — was die Ränge ordnet,
+// ist jetzt der Radius selbst, und was die ARME ordnet, sind die Nebelbänder
+// (`SKILL_TREE_NEBULA_*`) samt Kernschein (`SKILL_TREE_CORE_*`).
 //
 // Die Radien und die Stauchung hängen ZUSAMMEN und tragen sich gegenseitig;
 // einzeln verstellt kleben Knoten an Nachbarn oder am Startkreis. Die drei
-// engsten Stellen, gegen die sie gerechnet sind — alle drei am UNTEREN Ende der
-// Stauchung, weil größere y-Abstände keine neue Enge erzeugen können:
-//   1. Rang 0 gegen den Startkreis. Bei ±90° wirkt die y-Stauchung voll, der
-//      Abstand schrumpft dort auf `r₀ · Y_SQUASH`. Mit 118 · 0,7 = 82,6 bleiben
-//      über halbem Startkreis (28) plus halbem Knoten (20) noch 34 px Luft.
-//   2. Der äußerste Rang gegen die Bühnenkante. Der resonance-Arm steht bei
-//      Rang 4 fast senkrecht (−18° + 4·26° = 86°): bei minimaler Stauchung
-//      314 · 0,7 = 220, plus halber Knoten und Kostenpille sind 276 von 265
-//      verbraucht — deshalb liegt die Mindesthöhe bei 530, nicht tiefer.
-//   3. Die Gabel gegen ihren eigenen Rang 5. Von (267, θ∓16°) nach (314, θ)
-//      sind es 93 px — 53 px mehr als zwei halbe Knoten brauchen.
+// engsten Stellen, gegen die sie gerechnet sind:
+//   1. Rang 0 gegen den Startkreis — am UNTEREN Ende der Stauchung. Bei ±90°
+//      wirkt sie voll, der Abstand schrumpft auf `r₀ · Y_SQUASH`. Mit
+//      118 · 0,7 = 82,6 bleiben über halbem Startkreis (28) plus halbem Knoten
+//      (20) noch 34 px Luft.
+//   2. Der äußerste Rang gegen die Bühnenkante — ebenfalls unten. Der
+//      battle-Arm steht bei Rang 4 fast senkrecht (126° + 4·30° = 246°): bei
+//      minimaler Stauchung 314 · 0,703 · |sin| = 201, plus halber Knoten und
+//      Kostenpille bleiben 21 px Luft von 265. Deshalb liegt die Mindesthöhe
+//      bei 530, nicht tiefer.
+//   3. **Die Kostenpille gegen den FREMDEN Nachbararm** — die eigentliche
+//      Bremse der Drift, siehe `SKILL_TREE_TIER_DRIFT_DEG`. Gemessen 29,8 px
+//      bei Stauchung 0,703 (`battle` Rang 0 → `cosmos` Rang 2). Sie ist der
+//      Grund, warum die Pille von 44 auf 36 zurückging: die innere
+//      Radiuslücke der geometrischen Reihe ist nur 33 px, eine 44er-Pille an
+//      Rang 0 reichte über den Rang-1-Radius hinaus.
+//      (Die frühere Enge 3 — Gabel gegen ihren eigenen Rang 5 — stand hier mit
+//      „93 px" und war schon damals falsch: gemessen waren es 48,5. Mit der
+//      geometrischen Reihe sind es 77,6 px, sie trägt sich also von selbst.)
 /** Grundwinkel der fünf Zweige, gleichmäßig über 360°. */
 export const SKILL_TREE_BASE_ANGLES_DEG = [-90, -18, 54, 126, 198]
 /** Breite der Orbit-Bühne. Sie ist fest — nur die Höhe atmet. Zugleich die
@@ -58,8 +72,21 @@ export const SKILL_TREE_STAGE_MAX_HEIGHT = 900
 export const SKILL_TREE_MAX_SCALE = 1.9
 /** x-Mitte der Bühne. Die y-Mitte ist immer die halbe (elastische) Höhe. */
 export const SKILL_TREE_CENTER_X = 440
-/** Bahnradius je Rang. Gleichmäßige Abstände — jeder Schritt wiegt gleich. */
-export const SKILL_TREE_TIER_RADIUS = [118, 168, 218, 267, 314]
+/**
+ * Radius je Rang — eine GEOMETRISCHE Reihe (Faktor 1,2769), keine gleichmäßige.
+ *
+ * Zusammen mit dem konstanten Winkeldrift darunter ist das per Definition eine
+ * **logarithmische Spirale**: konstantes Δln(r) bei konstantem Δθ ergibt einen
+ * über den ganzen Arm gleichbleibenden Steigungswinkel, hier 25,0° — der
+ * Bereich, in dem echte Spiralgalaxien liegen. Mit den früheren gleichmäßigen
+ * Abständen (118/168/218/267/314) wurde der Arm nach außen immer flacher und
+ * las sich als Speichenrad mit Knick.
+ *
+ * Innen dichter, außen weiter passt zudem zur Kostenkurve: die späten Ränge
+ * kosten ein Vielfaches der frühen, und der Schritt dorthin ist jetzt auch
+ * optisch der größere (33 / 41 / 54 / 68 px statt viermal 49).
+ */
+export const SKILL_TREE_TIER_RADIUS = [118, 151, 192, 246, 314]
 /**
  * Grenzen der y-Stauchung. Der tatsächliche Wert kommt aus der Bühnenhöhe
  * (`skillTreeLayout`): unter 1 liegt ein Breitbild-Oval, über 1 ein
@@ -68,14 +95,29 @@ export const SKILL_TREE_TIER_RADIUS = [118, 168, 218, 267, 314]
 export const SKILL_TREE_Y_SQUASH_RANGE = { min: 0.7, max: 1.25 } as const
 /**
  * Winkelversatz je Rang. Er ersetzt den früheren Zickzack: ein gleichmäßiger
- * Drift lässt jeden Arm als SPIRALE lesen statt als geknickte Kette, und weil
- * er stetig ist, laufen benachbarte Arme nie aufeinander zu.
+ * Drift lässt jeden Arm als SPIRALE lesen statt als geknickte Kette.
+ *
+ * **Was ihn nach oben begrenzt, ist nicht die Lesbarkeit, sondern der
+ * Nachbararm.** Die fünf Arme stehen 72° auseinander; kommt `k · DRIFT` einem
+ * Vielfachen von 72° nahe, schiebt sich Rang *t* eines Arms neben Rang *t+k*
+ * des Nachbarn — verschiedene Farben in wenigen Pixeln Abstand, und die
+ * Kostenpille des inneren Knotens landet IM äußeren. Gemessen (Pille gegen
+ * fremden Knoten, Stauchung 0,703):
+ *
+ *   26° → 52/78/104, Abstand zu 72/144  20/6/32   →  28,9 px
+ *   30° → 60/90/120, Abstand            12/18/24  →  29,8 px  ← gewählt
+ *   34° → 68/102/136, Abstand            4/30/8   →  13,7 px  ✗ Pille im Knoten
+ *
+ * 30° dreht jeden Arm über 120° und ist damit deutlich spiraliger als die
+ * früheren 26° (104°), ohne den Seam bei 34° aufzureißen.
  */
-export const SKILL_TREE_TIER_DRIFT_DEG = 26
+export const SKILL_TREE_TIER_DRIFT_DEG = 30
 /**
  * Wie weit die beiden Gabelknoten auf Rang 4 auseinanderstehen (∓ je Seite).
  * Groß genug, dass man die Wahl SIEHT, klein genug, dass beide erkennbar zum
  * selben Arm gehören: 32° belegen von den 72° je Zweig weniger als die Hälfte.
+ * Sie sind damit etwa ein voller Rangschritt breit (30°) — die Gabel liest sich
+ * als Verzweigung des Arms, nicht als zwei Knoten nebeneinander.
  */
 export const SKILL_TREE_FORK_OFFSET_DEG = 16
 /** Kantenlänge eines Knotens und seines Glyphs. */
@@ -93,17 +135,26 @@ export const SKILL_TREE_START_SIZE = 56
  * nur an Knoten, die gerade zählen (kaufbar, gewählt, überfahren) — 30 Pillen
  * gleichzeitig überlappten einander und den nächsten Rang, und die Kosten
  * stehen ohnehin im Detail-Blatt.
+ *
+ * **44 ging nicht mehr.** Die geometrische Radienreihe lässt zwischen Rang 0
+ * und Rang 1 nur 33 px; eine 44er-Pille reichte über den nächsten Rang hinaus
+ * und traf im engsten Seam den Knoten des NACHBARARMS (Enge 3 im Blockkommentar
+ * oben). Mit 36 bleiben dort 29,8 px — mehr als die 28,9 px davor.
  */
-export const SKILL_TREE_COST_PILL_RADIUS = 44
+export const SKILL_TREE_COST_PILL_RADIUS = 36
 /**
  * Wo die fünf Zweignamen stehen. Sie sitzen NICHT auf der Achse ihres
  * äußersten Knotens: gemessen lagen sie dort über vier von fünf Rang-5-Knoten,
- * weil 46 px radialer Abstand in y-Richtung auf 32 px zusammenschrumpfen. Der
+ * weil 26 px radialer Abstand in y-Richtung noch weiter zusammenschrumpfen. Der
  * Name läuft dem Arm deshalb ein Stück in Driftrichtung VORAUS — er liest sich
  * dadurch als Fortsetzung der Spirale statt als Etikett daneben.
+ *
+ * Der Vorlauf ging mit der Drift von 16 auf 28: bei 16 blieben dem Namen im
+ * flachsten Viewport nur 13,9 px zum nächsten Knoten, bei 28 sind es 17,9
+ * (flach) und 25,0 (hoch).
  */
 export const SKILL_TREE_ARM_TAG_RADIUS = 340
-export const SKILL_TREE_ARM_TAG_LEAD_DEG = 16
+export const SKILL_TREE_ARM_TAG_LEAD_DEG = 28
 /**
  * Luft über und unter dem äußersten Zweignamen. Sie ist der Puffer, aus dem die
  * y-Stauchung gerechnet wird: der Name ist das oberste und unterste Element der
@@ -149,6 +200,70 @@ export const SKILL_TREE_NODE_OPACITY = {
 export const SKILL_TREE_EDGE_WIDTH_BOUGHT = 3.5
 export const SKILL_TREE_EDGE_WIDTH_BUYABLE = 2.75
 export const SKILL_TREE_EDGE_WIDTH_LOCKED = 2.25
+/**
+ * Wo der Kontrollpunkt der Kante vom Zentrum zu Rang 0 liegt, als Anteil ihres
+ * Radius. Der zugehörige Winkel läuft dem Ziel um einen halben Rangschritt
+ * HINTERHER — der Arm entspringt dem Kern dadurch tangential statt als Speiche.
+ * Alle übrigen Kanten brauchen keine solche Zahl: ihr Kontrollpunkt folgt aus
+ * den beiden Endpunkten (`arcPath` in `skillTreeLayout`).
+ */
+export const SKILL_TREE_CENTER_EDGE_CTRL_FRACTION = 0.5
+
+// ── Meep Skill Tree: Nebelbänder und Kern ─────────────────────────────────
+//
+// Was an die Stelle der fünf Rang-Ellipsen getreten ist. Die Ellipsen ordneten
+// nach RANG, diese beiden ordnen nach ARM und nach MITTE — dieselbe Aufgabe,
+// aber in der Sprache des Themas gestellt.
+//
+// Beide sind STATISCH: kein `filter`, kein `feGaussianBlur`, keine laufende
+// Animation. Die Weichheit kommt aus den Gradient-Stops, der niedrigen
+// Deckkraft und `stroke-linecap: round` — ein Filter über fünf 46 × 300-Bänder
+// in demselben SVG, in dem 35 Kanten bei jedem Hover ihre Attribute wechseln,
+// rasterte die Region bei jedem Zug neu (Performance-Regel 2).
+/** Breite eines Armbandes. Bei 12° Seam berühren sich benachbarte Bänder — als
+ *  Nebel gewollt; breiter zöge der Zweigfokus die halbe Nachbarzone mit hoch. */
+export const SKILL_TREE_NEBULA_WIDTH = 46
+/** Wo ein Band anfängt und endet, radial. Innen knapp vor Rang 0, außen hinter
+ *  Rang 4 — der Arm soll aus dem Kern kommen und ins Nichts auslaufen, nicht an
+ *  einem Knoten beginnen oder enden. */
+export const SKILL_TREE_NEBULA_INNER_R = 88
+export const SKILL_TREE_NEBULA_OUTER_R = 338
+/** Quadratische Segmente je Band. Sechs halten die Abweichung von der echten
+ *  logarithmischen Spirale unter 0,41 px (vier: 1,12 px, acht: 0,28 px). */
+export const SKILL_TREE_NEBULA_SEGMENTS = 6
+/**
+ * Verlauf eines Bandes, als RADIEN statt als Prozentwerte — der Gradient ist
+ * radial um das Bühnenzentrum, nicht linear entlang der Sehne. Ein linearer
+ * Verlauf von Bandanfang zu Bandende liefe bei 120° Armdrehung quer durch die
+ * Galaxie statt von innen nach außen.
+ *
+ * Innen gedämpft, damit das Band nicht am Kernschein klebt; außen auf null,
+ * damit es ausläuft statt an der Bühnenkante abgeschnitten zu werden.
+ */
+export const SKILL_TREE_NEBULA_STOPS = [
+  { r: 88, opacity: 0.3 },
+  { r: 176, opacity: 1 },
+  { r: 338, opacity: 0 },
+] as const
+/** Deckkraft im Ruhezustand und wenn der Arm gemeint ist (Zweigfokus oder ein
+ *  Spotlight auf einem seiner Knoten). Umgeschaltet wird NUR die Deckkraft. */
+export const SKILL_TREE_NEBULA_OPACITY = 0.055
+export const SKILL_TREE_NEBULA_OPACITY_FOCUS = 0.15
+export const SKILL_TREE_NEBULA_FADE_MS = 220
+/**
+ * Der Kernschein um den Startkreis, als x-Radius; der y-Radius folgt der
+ * Stauchung. **150, nicht 200** — bei 200 läge der goldene Verlauf voll über
+ * Rang 0 UND Rang 1, und die Zweigfarben der inneren zehn Knoten stünden auf
+ * Goldwäsche.
+ */
+export const SKILL_TREE_CORE_RADIUS = 150
+/** Stops des Kernscheins: innen sichtbar, ab der Mitte fast weg. Als Liste,
+ *  damit Reihenfolge und Werte an EINER Stelle stehen. */
+export const SKILL_TREE_CORE_STOPS = [
+  { offset: 0, opacity: 0.18 },
+  { offset: 0.45, opacity: 0.07 },
+  { offset: 1, opacity: 0 },
+] as const
 
 // ── Star Forge: Baum-Darstellung (ForgeTreePanel) ─────────────────────────
 /** Winkel der fünf Wurzeln auf dem Ring, im Uhrzeigersinn ab oben. */

@@ -73,12 +73,22 @@ const showCost = computed(
   () => !receded.value && (props.state === 'buyable' || props.selected || props.spot),
 )
 
-/** Radial nach aussen, damit die Pille nie über der eigenen Bahn liegt. */
+/**
+ * Radial nach aussen, weg vom Kern. Die Länge ist knapp bemessen
+ * (`SKILL_TREE_COST_PILL_RADIUS`): innen liegen nur 33 px zwischen zwei Rängen,
+ * und im engsten Punkt zwischen zwei Armen wäre eine längere Pille im Knoten
+ * des NACHBARARMS gelandet.
+ */
 const costOffset = computed(() => {
   const rad = (props.angleDeg * Math.PI) / 180
+  /* `calc(50% + …)`, nicht der blosse Versatz: ein Inline-`left` ERSETZT das
+     `left: 50%` der Regel, es addiert sich nicht dazu. Ohne die halbe Kante
+     kreiste die Pille um die obere linke ECKE des Knotens statt um seine Mitte
+     und sass gemessen 20px zu weit links und oben — auf den weiten Bahnen von
+     früher fiel das nicht auf, zwischen zwei Spiralarmen schon. */
   return {
-    left: `${Math.cos(rad) * SKILL_TREE_COST_PILL_RADIUS}px`,
-    top: `${Math.sin(rad) * SKILL_TREE_COST_PILL_RADIUS}px`,
+    left: `calc(50% + ${Math.cos(rad) * SKILL_TREE_COST_PILL_RADIUS}px)`,
+    top: `calc(50% + ${Math.sin(rad) * SKILL_TREE_COST_PILL_RADIUS}px)`,
   }
 })
 
@@ -134,11 +144,11 @@ const bestBuyTitle = `${MEEP_BEST_BUY_LABEL} — cheapest you can afford`
          Kreises darunter.
 
          Ein Schriftzug wie im Sternbaum steht hier NICHT: dort liegen die
-         Knoten auf vier weiten Ringen, hier auf fünf Bahnen mit 46px radialem
-         Abstand, der in y-Richtung auf rund 32px zusammenschrumpft. Die
-         Kostenpille beansprucht diesen Raum bereits und hängt genau deshalb nur
-         an kaufbaren Knoten. Der Ring ist die einzige grüne Marke auf der
-         Bühne, und der Name steht gross im Panel daneben. -->
+         Knoten auf vier weiten Ringen, hier auf einem Spiralarm mit 33 bis 68px
+         radialem Abstand zwischen den Rängen, der in y-Richtung noch weiter
+         zusammenschrumpft. Die Kostenpille beansprucht diesen Raum bereits und
+         hängt genau deshalb nur an kaufbaren Knoten. Der Ring ist die einzige
+         grüne Marke auf der Bühne, und der Name steht gross im Panel daneben. -->
     <span v-if="bestBuy && !receded" class="msn-best-ring" :title="bestBuyTitle" />
 
     <!-- Die Marke des Spotlights. Genau EINE Ebene je Spotlight, nicht eine je
@@ -190,14 +200,14 @@ const bestBuyTitle = `${MEEP_BEST_BUY_LABEL} — cheapest you can afford`
 /* Ein Knoten mit Notify hebt seinen ganzen Wrapper über die Nachbarn, damit
    das Abzeichen nie hinter einem anderen Kreis verschwindet. Dasselbe gilt für
    die Empfehlungsmarke: ihr Ring ragt 6px über den Kreis hinaus und läge auf
-   den dichten inneren Bahnen sonst unter dem Nachbarrang. */
+   den dichten inneren Rängen sonst unter dem Nachbarrang. */
 .msn-root:has(.msn-notify),
 .msn-root:has(.msn-best-ring) {
   z-index: 40;
 }
 
 /* Der hervorgehobene Knoten liegt über allem anderen — er ist auf den inneren
-   Bahnen sonst der Einzige, dessen Ring unter dem Nachbarrang verschwände,
+   Rängen sonst der Einzige, dessen Ring unter dem Nachbarrang verschwände,
    gerade weil sein Kreis dabei wächst. */
 .msn-root--spot {
   z-index: 50;
