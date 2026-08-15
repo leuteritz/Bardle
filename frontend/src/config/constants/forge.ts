@@ -7,42 +7,60 @@ import type { ForgeRelicRarity, ForgeSectionDef } from '@/types'
 //
 // Ein Startkreis in der Mitte, fünf Spiralarme in elliptischen Bahnen. Die
 // Bühne wird SELBST gezeichnet (kein Pan/Zoom, keine Fremdbibliothek) und lebt
-// in einem festen Design-Koordinatensystem, das per `useFitScale` als Ganzes
-// skaliert wird — dasselbe Muster wie das Pause-Overlay. Deshalb sind alle
-// Zahlen hier Design-Pixel, keine Bildschirm-Pixel.
+// in einem Design-Koordinatensystem, das der Tab-Root als Ganzes skaliert.
+// Deshalb sind alle Zahlen hier Design-Pixel, keine Bildschirm-Pixel.
+//
+// **Die BREITE ist fest, die HÖHE nicht.** Ein Kasten mit fixem Seitenverhältnis
+// kann nur EIN Container-Verhältnis ausfüllen; gemessen reicht das Profil-Modal
+// von 2,00 (Full HD, 1319 × 658) bis unter 1,50 — mit 1240 × 632 blieben unten
+// und oben zusammen bis zu 250 px schwarz stehen. Stattdessen: die Skalierung
+// kommt aus der BREITE, und die Design-Höhe ist das, was der Container bei
+// dieser Skalierung hergibt (`SkillTreeComponent`). Die Bahnen füllen sie über
+// eine mitwachsende y-Stauchung.
 //
 // Die Radien und die Stauchung hängen ZUSAMMEN und tragen sich gegenseitig;
 // einzeln verstellt kleben Knoten an Nachbarn oder am Startkreis. Die drei
-// engsten Stellen, gegen die sie gerechnet sind:
+// engsten Stellen, gegen die sie gerechnet sind — alle drei am UNTEREN Ende der
+// Stauchung, weil größere y-Abstände keine neue Enge erzeugen können:
 //   1. Rang 0 gegen den Startkreis. Bei ±90° wirkt die y-Stauchung voll, der
 //      Abstand schrumpft dort auf `r₀ · Y_SQUASH`. Mit 118 · 0,7 = 82,6 bleiben
-//      über halbem Startkreis (44) plus halbem Knoten (20) noch 18 px Luft.
+//      über halbem Startkreis (28) plus halbem Knoten (20) noch 34 px Luft.
 //   2. Der äußerste Rang gegen die Bühnenkante. Der resonance-Arm steht bei
-//      Rang 4 fast senkrecht (−18° + 4·26° = 86°): 314 · 0,7 = 220, plus halber
-//      Knoten und Kostenpille sind 276 von 288 verbraucht.
+//      Rang 4 fast senkrecht (−18° + 4·26° = 86°): bei minimaler Stauchung
+//      314 · 0,7 = 220, plus halber Knoten und Kostenpille sind 276 von 265
+//      verbraucht — deshalb liegt die Mindesthöhe bei 530, nicht tiefer.
 //   3. Die Gabel gegen ihren eigenen Rang 5. Von (267, θ∓16°) nach (314, θ)
 //      sind es 93 px — 53 px mehr als zwei halbe Knoten brauchen.
 /** Grundwinkel der fünf Zweige, gleichmäßig über 360°. */
 export const SKILL_TREE_BASE_ANGLES_DEG = [-90, -18, 54, 126, 198]
-/**
- * Die Bühne und das Detail-Blatt daneben. Zusammen 1240 px — genau die Breite,
- * die das Profil-Modal auf Full HD hat (`left/right: var(--hud-panel-size)`
- * mit 330 px). Auf Full HD steht die Skalierung damit per Konstruktion auf 1.
- */
-export const SKILL_TREE_STAGE_SIZE = { w: 880, h: 576 } as const
+/** Breite der Orbit-Bühne. Sie ist fest — nur die Höhe atmet. */
+export const SKILL_TREE_STAGE_WIDTH = 880
 export const SKILL_TREE_ASIDE_WIDTH = 360
+/** Spalte zwischen Bühne und Detail-Blatt. */
+export const SKILL_TREE_COLUMN_GAP = 10
+/**
+ * Grenzen der elastischen Design-Höhe. Unten hält die Mindesthöhe die Enge Nr. 2
+ * aus dem Blockkommentar oben frei; oben endet sie dort, wo die Ellipse kippt
+ * und die Arme senkrecht statt kreisend gelesen werden.
+ */
+export const SKILL_TREE_STAGE_MIN_HEIGHT = 530
+export const SKILL_TREE_STAGE_MAX_HEIGHT = 900
 /**
  * Obergrenze der Fit-Skalierung. Das Modal hängt an `--hud-panel-size` und
  * wächst auf 4 K auf rund die doppelte Full-HD-Breite; ohne Deckel würde die
  * Schrift dort mitwachsen, bis sie plakativ wirkt.
  */
 export const SKILL_TREE_MAX_SCALE = 1.9
-/** Mitte der Bühne im Design-Koordinatensystem. */
-export const SKILL_TREE_CENTER = { x: 440, y: 288 } as const
+/** x-Mitte der Bühne. Die y-Mitte ist immer die halbe (elastische) Höhe. */
+export const SKILL_TREE_CENTER_X = 440
 /** Bahnradius je Rang. Gleichmäßige Abstände — jeder Schritt wiegt gleich. */
 export const SKILL_TREE_TIER_RADIUS = [118, 168, 218, 267, 314]
-/** Stauchung der y-Achse — die Bühne ist ein Breitbild, die Bahnen Ellipsen. */
-export const SKILL_TREE_Y_SQUASH = 0.7
+/**
+ * Grenzen der y-Stauchung. Der tatsächliche Wert kommt aus der Bühnenhöhe
+ * (`skillTreeLayout`): unter 1 liegt ein Breitbild-Oval, über 1 ein
+ * hochkant stehendes — beides bleibt eine lesbare Umlaufbahn.
+ */
+export const SKILL_TREE_Y_SQUASH_RANGE = { min: 0.7, max: 1.25 } as const
 /**
  * Winkelversatz je Rang. Er ersetzt den früheren Zickzack: ein gleichmäßiger
  * Drift lässt jeden Arm als SPIRALE lesen statt als geknickte Kette, und weil
@@ -58,8 +76,13 @@ export const SKILL_TREE_FORK_OFFSET_DEG = 16
 /** Kantenlänge eines Knotens und seines Glyphs. */
 export const SKILL_TREE_NODE_SIZE = 40
 export const SKILL_TREE_NODE_ICON_SIZE = 27
-/** Durchmesser des Startkreises in der Mitte. */
-export const SKILL_TREE_START_SIZE = 88
+/**
+ * Durchmesser des Startkreises in der Mitte. Er ist ABSICHTLICH kleiner als ein
+ * Rang-0-Knoten es vermuten ließe: er ist kein Ziel, sondern der Ursprung, von
+ * dem fünf Arme ausgehen. Mit 88 lag das Meep-Bild darin größer als jedes
+ * Zweig-Glyph und zog das Auge in die Mitte, wo es nichts zu wählen gibt.
+ */
+export const SKILL_TREE_START_SIZE = 56
 /**
  * Abstand der Kostenpille vom Knotenmittelpunkt, radial nach AUSSEN. Sie hängt
  * nur an Knoten, die gerade zählen (kaufbar, gewählt, überfahren) — 30 Pillen
@@ -76,6 +99,12 @@ export const SKILL_TREE_COST_PILL_RADIUS = 44
  */
 export const SKILL_TREE_ARM_TAG_RADIUS = 340
 export const SKILL_TREE_ARM_TAG_LEAD_DEG = 16
+/**
+ * Luft über und unter dem äußersten Zweignamen. Sie ist der Puffer, aus dem die
+ * y-Stauchung gerechnet wird: der Name ist das oberste und unterste Element der
+ * Bühne, alles andere liegt innerhalb seiner Bahn.
+ */
+export const SKILL_TREE_ARM_TAG_MARGIN = 26
 /** Umlaufdauer des gestrichelten Rings um den Startkreis. */
 export const SKILL_TREE_RING_SPIN_MS = 46000
 /** Wie viele Knoten „Next worth taking" im Detail-Blatt vorschlägt. */

@@ -4,40 +4,35 @@
  *
  * Ein `<svg>` trägt die fünf Bahnellipsen und alle Kanten, darüber liegen
  * Startkreis, dreissig Knoten und die fünf Zweignamen als absolut
- * positionierte Elemente. Alles rechnet in einem festen Design-Kasten
- * (`SKILL_TREE_STAGE_SIZE`), den der Tab-Root als Ganzes skaliert — hier steht
- * deshalb keine einzige Bildschirmgrösse.
+ * positionierte Elemente. Die Bühne ist so breit wie ihr Design-Kasten und so
+ * hoch, wie der Tab-Root sie macht — hier steht deshalb keine einzige
+ * Bildschirmgrösse, nur eine Design-Höhe als Prop.
  *
- * **Die Kanten werden nie neu gebaut.** Ihre Geometrie ist statisch
- * (`utils/ui/skillTreeLayout`), und ihr Aussehen hängt an zwei Attributen, die
- * Vue an der bestehenden `<line>` patcht. Ein Meep-Zuwachs, der reihenweise
- * `nodeState()` kippen lässt, kostet damit keinen Neuaufbau der SVG-Struktur.
+ * **Die Kanten werden nur beim Resize neu gebaut**, nie in einem Frame: ihre
+ * Geometrie hängt allein an dieser Höhe (`utils/ui/skillTreeLayout`, gecacht),
+ * ihr Aussehen an zwei Attributen, die Vue an der bestehenden `<line>` patcht.
+ * Ein Meep-Zuwachs, der reihenweise `nodeState()` kippen lässt, kostet damit
+ * keinen Neuaufbau der SVG-Struktur.
  */
 import { computed } from 'vue'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { MEEP_TREE_BRANCHES } from '@/config/progression/meepTree'
+import { skillTreeLayout } from '@/utils/ui/skillTreeLayout'
 import {
-  SKILL_TREE_ARM_TAGS,
-  SKILL_TREE_EDGES,
-  SKILL_TREE_PLACEMENTS,
-} from '@/utils/ui/skillTreeLayout'
-import {
-  SKILL_TREE_CENTER,
   SKILL_TREE_EDGE_ALPHA,
   SKILL_TREE_EDGE_WIDTH_BOUGHT,
   SKILL_TREE_EDGE_WIDTH_BUYABLE,
   SKILL_TREE_EDGE_WIDTH_LOCKED,
-  SKILL_TREE_STAGE_SIZE,
-  SKILL_TREE_TIER_RADIUS,
-  SKILL_TREE_Y_SQUASH,
+  SKILL_TREE_STAGE_WIDTH,
 } from '@/config/constants'
 import MeepSkillNode from './MeepSkillNode.vue'
 import MeepStartNode from './MeepStartNode.vue'
 
 const props = defineProps<{
+  /** Design-Höhe der Bühne — sie bestimmt Mitte und y-Stauchung der Bahnen. */
+  height: number
   selectedId: string | null
   focusBranch: string | null
-  query: string
 }>()
 
 const emit = defineEmits<{
@@ -47,50 +42,41 @@ const emit = defineEmits<{
 
 const meepTree = useMeepTreeStore()
 
+/** Knoten, Kanten, Zweignamen und Bahnen — alles aus der einen Bühnenhöhe. */
+const layout = computed(() => skillTreeLayout(props.height))
+
 /* ── Zustand ──────────────────────────────────────────────────────────────
  * Ein primitiver Schlüssel über alle Knotenzustände. Beide Listen unten
  * hängen daran statt einzeln an `nodeState()` — sonst rechnete jeder
  * Meep-Zuwachs dreissig Getter neu, obwohl sich meist nichts kippt.
  */
-const stateKey = computed(() => SKILL_TREE_PLACEMENTS.map((p) => meepTree.nodeState(p.id)).join(','))
+const stateKey = computed(() =>
+  layout.value.placements.map((p) => meepTree.nodeState(p.id)).join(','),
+)
 
 const states = computed<Record<string, string>>(() => {
   const list = stateKey.value.split(',')
   const out: Record<string, string> = {}
-  SKILL_TREE_PLACEMENTS.forEach((p, i) => (out[p.id] = list[i]))
+  layout.value.placements.forEach((p, i) => (out[p.id] = list[i]))
   return out
 })
 
-/* ── Suche und Zweigfokus ──────────────────────────────────────────────────
- * Beide nehmen dieselbe Antwort: welcher Knoten steht gerade im Vordergrund.
- * Was nicht dazugehört, wird nur zurückgenommen, nie ausgeblendet — ein
- * verschwundener Knoten liesse den Arm zerrissen aussehen.
+/* ── Zweigfokus ────────────────────────────────────────────────────────────
+ * Ein Klick auf einen Zweignamen hebt seinen Arm hervor. Was nicht dazugehört,
+ * wird nur zurückgenommen, nie ausgeblendet — ein verschwundener Knoten liesse
+ * den Arm zerrissen aussehen.
  */
-const needle = computed(() => props.query.trim().toLowerCase())
-
-function matchesQuery(id: string): boolean {
-  if (!needle.value) return true
-  const p = SKILL_TREE_PLACEMENTS.find((n) => n.id === id)
-  if (!p) return false
-  return (
-    p.node.name.toLowerCase().includes(needle.value) ||
-    p.node.effect.toLowerCase().includes(needle.value) ||
-    p.branch.name.toLowerCase().includes(needle.value)
-  )
-}
-
-function isDimmed(id: string, branchId: string): boolean {
-  if (props.focusBranch && props.focusBranch !== branchId) return true
-  return !matchesQuery(id)
+function isDimmed(branchId: string): boolean {
+  return props.focusBranch !== null && props.focusBranch !== branchId
 }
 
 /* ── Knoten ──────────────────────────────────────────────────────────────── */
 
 const nodes = computed(() =>
-  SKILL_TREE_PLACEMENTS.map((p) => ({
+  layout.value.placements.map((p) => ({
     placement: p,
     state: states.value[p.id] as ReturnType<typeof meepTree.nodeState>,
-    dimmed: isDimmed(p.id, p.branch.id),
+    dimmed: isDimmed(p.branch.id),
     notifying: meepTree.notifyingNodeIds.includes(p.id),
   })),
 )
@@ -110,7 +96,7 @@ const routeEdgeIds = computed(() => {
   if (!chain) return ids
   // Jeder Kettenknoten samt seiner bereits gelernten Voraussetzung.
   const onPath = new Set([...meepTree.bought, ...chain])
-  for (const e of SKILL_TREE_EDGES) {
+  for (const e of layout.value.edges) {
     if (!onPath.has(e.toId)) continue
     if (e.fromId !== null && !onPath.has(e.fromId)) continue
     if (chain.includes(e.toId) || chain.includes(e.fromId ?? '')) ids.add(e.id)
@@ -124,14 +110,14 @@ const routeEdgeIds = computed(() => {
  * Ketten-Optik wie zuvor, nur jetzt selbst gezeichnet.
  */
 const edges = computed(() =>
-  SKILL_TREE_EDGES.map((e) => {
+  layout.value.edges.map((e) => {
     const color = MEEP_TREE_BRANCHES[e.branchIndex].color
     const targetState = states.value[e.toId]
     const sourceDone = e.fromId === null || states.value[e.fromId] === 'bought'
     const bought = targetState === 'bought'
     const open = sourceDone && (targetState === 'buyable' || targetState === 'reachable')
     const onRoute = routeEdgeIds.value.has(e.id)
-    const dimmed = isDimmed(e.toId, MEEP_TREE_BRANCHES[e.branchIndex].id)
+    const dimmed = isDimmed(MEEP_TREE_BRANCHES[e.branchIndex].id)
 
     const alpha = dimmed
       ? SKILL_TREE_EDGE_ALPHA.dimmed
@@ -157,13 +143,6 @@ const edges = computed(() =>
   }),
 )
 
-/** Die fünf Bahnen als Ellipsen — sie machen die Ränge lesbar, ohne zu ziehen. */
-const orbits = SKILL_TREE_TIER_RADIUS.map((r, i) => ({
-  key: `orbit-${i}`,
-  rx: r,
-  ry: r * SKILL_TREE_Y_SQUASH,
-}))
-
 function onSelect(id: string): void {
   emit('select', id)
 }
@@ -184,21 +163,18 @@ function onArm(branchId: string): void {
 </script>
 
 <template>
-  <div
-    class="mos-stage"
-    :style="{ width: `${SKILL_TREE_STAGE_SIZE.w}px`, height: `${SKILL_TREE_STAGE_SIZE.h}px` }"
-  >
+  <div class="mos-stage" :style="{ width: `${SKILL_TREE_STAGE_WIDTH}px` }">
     <svg
       class="mos-web"
-      :viewBox="`0 0 ${SKILL_TREE_STAGE_SIZE.w} ${SKILL_TREE_STAGE_SIZE.h}`"
+      :viewBox="`0 0 ${SKILL_TREE_STAGE_WIDTH} ${height}`"
       aria-hidden="true"
     >
       <ellipse
-        v-for="o in orbits"
+        v-for="o in layout.orbits"
         :key="o.key"
         class="mos-orbit"
-        :cx="SKILL_TREE_CENTER.x"
-        :cy="SKILL_TREE_CENTER.y"
+        :cx="layout.center.x"
+        :cy="layout.center.y"
         :rx="o.rx"
         :ry="o.ry"
       />
@@ -217,7 +193,7 @@ function onArm(branchId: string): void {
       />
     </svg>
 
-    <MeepStartNode :x="SKILL_TREE_CENTER.x" :y="SKILL_TREE_CENTER.y" />
+    <MeepStartNode :x="layout.center.x" :y="layout.center.y" />
 
     <MeepSkillNode
       v-for="n in nodes"
@@ -236,7 +212,7 @@ function onArm(branchId: string): void {
     />
 
     <button
-      v-for="tag in SKILL_TREE_ARM_TAGS"
+      v-for="tag in layout.armTags"
       :key="tag.id"
       class="mos-arm"
       :class="{ 'mos-arm--active': focusBranch === tag.id }"
@@ -250,9 +226,13 @@ function onArm(branchId: string): void {
 </template>
 
 <style scoped>
+/* Die Breite kommt inline aus `SKILL_TREE_STAGE_WIDTH`, die Höhe vom
+   Design-Kasten — die Bühne füllt ihn ganz aus, damit die Bahnen dieselbe
+   Fläche haben, gegen die `skillTreeLayout` gerechnet hat. */
 .mos-stage {
   position: relative;
   flex-shrink: 0;
+  height: 100%;
 }
 
 .mos-web {

@@ -7,6 +7,9 @@ import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+// Der Skill-Tree-Tab trägt selbst keine Admin-Leiste mehr — die beiden Knöpfe
+// dafür stehen hier bei allen anderen Abkürzungen.
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { MATERIALS } from '@/config/economy/materials'
 import { useNebulaTrigger } from '@/composables/orbit/useNebulaTrigger'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
@@ -29,6 +32,7 @@ const starGroupStore = useStarGroupStore()
 const omenStore = useOmenStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
+const meepTree = useMeepTreeStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
 const planetBossStore = usePlanetBossStore()
 
@@ -370,6 +374,18 @@ function fillAllResources() {
       >
         <Icon icon="lucide:dices" class="admin-btn-icon" /> Random Team Fill
       </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--meep flex items-center gap-1.5 px-3 py-1.5"
+        @click="meepTree.adminUnlockAll()"
+      >
+        <Icon icon="lucide:unlock" class="admin-btn-icon" /> Learn All Skills
+      </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--meep-reset flex items-center gap-1.5 px-3 py-1.5"
+        @click="meepTree.adminResetAll()"
+      >
+        <Icon icon="lucide:rotate-ccw" class="admin-btn-icon" /> Unlearn All Skills
+      </button>
       <!-- Rank Up lives on the battle landing page now (BattleLandingScreen.vue),
            right next to the rank band it manipulates. -->
     </div>
@@ -710,6 +726,27 @@ function fillAllResources() {
   border-color: #9944dd;
   color: #ee99ff;
 }
+/* Meep Skill Tree — dasselbe Magenta wie das Notify-Abzeichen an einem
+   lernbaren Knoten (MeepSkillNode) und wie der Zähler am Tab. */
+.admin-spawn-btn--meep {
+  color: #f9a8d4;
+  border-color: #5a1740;
+  background: linear-gradient(to bottom, #2a0c1e, #180510);
+}
+.admin-spawn-btn--meep:hover {
+  background: #3a1028;
+  border-color: #ec4899;
+}
+
+.admin-spawn-btn--meep-reset {
+  color: #cc6050;
+  border-color: #5a221a;
+}
+.admin-spawn-btn--meep-reset:hover {
+  background: #220f0c;
+  border-color: #cc6050;
+}
+
 .admin-spawn-btn--travel {
   color: #40d8c0;
   border-color: #0a3028;

@@ -1,11 +1,14 @@
 /**
  * Wo jeder Knoten des Meep Skill Trees auf der Orbit-Bühne steht.
  *
- * Der Katalog ändert sich zur Laufzeit nie, also wird hier EINMAL beim Laden
- * des Moduls gerechnet und danach nur noch gelesen — kein Winkel, kein Sinus
- * und keine Kantenliste entsteht je in einem Frame. Was sich ändert, ist
- * ausschliesslich der ZUSTAND eines Knotens; der hängt am Store und wird in
- * der Bühne über Klassen und Attribute geschaltet, nicht über neue Geometrie.
+ * Die Bühne ist so BREIT wie ihr Design-Kasten und so HOCH wie der Container
+ * hergibt (siehe `SkillTreeComponent`) — die Geometrie hängt deshalb an einer
+ * einzigen Zahl, der Bühnenhöhe. Aus ihr folgen Mitte und y-Stauchung, aus
+ * denen wiederum alle Knoten, Kanten und Zweignamen fallen.
+ *
+ * **Gerechnet wird nur, wenn sich diese Höhe ändert** — also beim Öffnen und
+ * beim Resize, nie in einem Frame. Ein Ein-Eintrag-Cache reicht dafür: es gibt
+ * immer genau eine Bühne, und ihre Höhe ist zwischen zwei Resizes konstant.
  *
  * Warum überhaupt ausgelagert: Knoten, Kanten und Zweignamen müssen von
  * DERSELBEN Rechnung kommen. Läge die Formel in der Komponente und würde für
@@ -20,13 +23,14 @@ import {
 } from '@/config/progression/meepTree'
 import {
   SKILL_TREE_ARM_TAG_LEAD_DEG,
+  SKILL_TREE_ARM_TAG_MARGIN,
   SKILL_TREE_ARM_TAG_RADIUS,
   SKILL_TREE_BASE_ANGLES_DEG,
-  SKILL_TREE_CENTER,
+  SKILL_TREE_CENTER_X,
   SKILL_TREE_FORK_OFFSET_DEG,
   SKILL_TREE_TIER_DRIFT_DEG,
   SKILL_TREE_TIER_RADIUS,
-  SKILL_TREE_Y_SQUASH,
+  SKILL_TREE_Y_SQUASH_RANGE,
 } from '@/config/constants'
 
 export interface SkillTreePoint {
@@ -61,17 +65,32 @@ export interface SkillTreeArmTag extends SkillTreePoint {
   color: string
 }
 
+export interface SkillTreeOrbit {
+  key: string
+  rx: number
+  ry: number
+}
+
+export interface SkillTreeLayout {
+  height: number
+  center: SkillTreePoint
+  ySquash: number
+  placements: readonly SkillTreePlacement[]
+  edges: readonly SkillTreeEdge[]
+  armTags: readonly SkillTreeArmTag[]
+  orbits: readonly SkillTreeOrbit[]
+  placementOf: (id: string) => SkillTreePlacement | undefined
+}
+
 /**
- * Ein Punkt auf der Bahn. Die y-Achse wird gestaucht, die x-Achse nicht — so
- * wird aus jedem Kreisradius eine Ellipse, die ins Breitbild passt, ohne dass
- * die Winkelordnung der Arme sich ändert.
+ * Wie stark die y-Achse gestaucht wird, damit der äußerste Zweigname genau in
+ * die gegebene Höhe passt. Unter 1 entsteht ein Breitbild-Oval, über 1 ein
+ * hochkant stehendes; die Grenzen halten beide Extreme davon ab, die Arme
+ * unlesbar flach oder unlesbar steil zu legen.
  */
-function polar(angleDeg: number, radius: number): SkillTreePoint {
-  const rad = (angleDeg * Math.PI) / 180
-  return {
-    x: SKILL_TREE_CENTER.x + Math.cos(rad) * radius,
-    y: SKILL_TREE_CENTER.y + Math.sin(rad) * radius * SKILL_TREE_Y_SQUASH,
-  }
+function squashFor(height: number): number {
+  const raw = (height / 2 - SKILL_TREE_ARM_TAG_MARGIN) / SKILL_TREE_ARM_TAG_RADIUS
+  return Math.min(SKILL_TREE_Y_SQUASH_RANGE.max, Math.max(SKILL_TREE_Y_SQUASH_RANGE.min, raw))
 }
 
 /**
@@ -85,43 +104,48 @@ function spread(indexInTier: number, countInTier: number): number {
   return (indexInTier - (countInTier - 1) / 2) * 2 * SKILL_TREE_FORK_OFFSET_DEG
 }
 
-function placeBranch(branch: MeepTreeBranchDef, branchIndex: number): SkillTreePlacement[] {
-  const base = SKILL_TREE_BASE_ANGLES_DEG[branchIndex]
-  const out: SkillTreePlacement[] = []
-  for (const node of branch.nodes) {
-    const siblings = branch.nodes.filter((n) => n.tier === node.tier)
-    const angleDeg =
-      base + SKILL_TREE_TIER_DRIFT_DEG * node.tier + spread(siblings.indexOf(node), siblings.length)
-    out.push({
-      id: node.id,
-      node,
-      branch,
-      branchIndex,
-      angleDeg,
-      ...polar(angleDeg, SKILL_TREE_TIER_RADIUS[node.tier]),
-    })
+function build(height: number): SkillTreeLayout {
+  const center: SkillTreePoint = { x: SKILL_TREE_CENTER_X, y: height / 2 }
+  const ySquash = squashFor(height)
+
+  /**
+   * Ein Punkt auf der Bahn. Die y-Achse wird gestaucht oder gestreckt, die
+   * x-Achse nie — so wird aus jedem Kreisradius eine Ellipse, die in die
+   * gegebene Höhe passt, ohne dass die Winkelordnung der Arme sich ändert.
+   */
+  const polar = (angleDeg: number, radius: number): SkillTreePoint => {
+    const rad = (angleDeg * Math.PI) / 180
+    return {
+      x: center.x + Math.cos(rad) * radius,
+      y: center.y + Math.sin(rad) * radius * ySquash,
+    }
   }
-  return out
-}
 
-/** Alle 30 Knoten der Bühne, in Katalogreihenfolge. */
-export const SKILL_TREE_PLACEMENTS: readonly SkillTreePlacement[] = MEEP_TREE_BRANCHES.flatMap(
-  (branch, i) => placeBranch(branch, i),
-)
+  const placements: SkillTreePlacement[] = MEEP_TREE_BRANCHES.flatMap((branch, branchIndex) => {
+    const base = SKILL_TREE_BASE_ANGLES_DEG[branchIndex]
+    return branch.nodes.map((node) => {
+      const siblings = branch.nodes.filter((n) => n.tier === node.tier)
+      const angleDeg =
+        base + SKILL_TREE_TIER_DRIFT_DEG * node.tier + spread(siblings.indexOf(node), siblings.length)
+      return {
+        id: node.id,
+        node,
+        branch,
+        branchIndex,
+        angleDeg,
+        ...polar(angleDeg, SKILL_TREE_TIER_RADIUS[node.tier]),
+      }
+    })
+  })
 
-const PLACEMENT_BY_ID = new Map(SKILL_TREE_PLACEMENTS.map((p) => [p.id, p]))
+  const byId = new Map(placements.map((p) => [p.id, p]))
 
-export function placementOf(id: string): SkillTreePlacement | undefined {
-  return PLACEMENT_BY_ID.get(id)
-}
-
-/**
- * Eine Linie je Voraussetzung — Rang 5 bekommt damit ZWEI, eine zu jeder
- * Gabelseite. Das ist keine Verzierung: die Bühne zeigt so, dass beide Wege
- * dorthin führen, und genau das ist die Zusage, die die Gabel erträglich macht.
- */
-export const SKILL_TREE_EDGES: readonly SkillTreeEdge[] = SKILL_TREE_PLACEMENTS.flatMap(
-  (target) => {
+  /**
+   * Eine Linie je Voraussetzung — Rang 5 bekommt damit ZWEI, eine zu jeder
+   * Gabelseite. Das ist keine Verzierung: die Bühne zeigt so, dass beide Wege
+   * dorthin führen, und genau das ist die Zusage, die die Gabel erträglich macht.
+   */
+  const edges: SkillTreeEdge[] = placements.flatMap((target) => {
     const req = MEEP_TREE_NODE_INDEX[target.id]?.req ?? []
     if (req.length === 0) {
       return [
@@ -130,15 +154,15 @@ export const SKILL_TREE_EDGES: readonly SkillTreeEdge[] = SKILL_TREE_PLACEMENTS.
           fromId: null,
           toId: target.id,
           branchIndex: target.branchIndex,
-          x1: SKILL_TREE_CENTER.x,
-          y1: SKILL_TREE_CENTER.y,
+          x1: center.x,
+          y1: center.y,
           x2: target.x,
           y2: target.y,
         },
       ]
     }
     return req.flatMap((sourceId) => {
-      const source = PLACEMENT_BY_ID.get(sourceId)
+      const source = byId.get(sourceId)
       if (!source) return []
       return [
         {
@@ -153,16 +177,14 @@ export const SKILL_TREE_EDGES: readonly SkillTreeEdge[] = SKILL_TREE_PLACEMENTS.
         },
       ]
     })
-  },
-)
+  })
 
-/**
- * Der Zweigname am äußeren Rand — dem Arm ein Stück in Driftrichtung voraus,
- * nicht auf der Achse seines äußersten Knotens. Auf der Achse lag er gemessen
- * über vier von fünf Rang-5-Knoten.
- */
-export const SKILL_TREE_ARM_TAGS: readonly SkillTreeArmTag[] = MEEP_TREE_BRANCHES.map(
-  (branch, i) => ({
+  /**
+   * Der Zweigname am äußeren Rand — dem Arm ein Stück in Driftrichtung voraus,
+   * nicht auf der Achse seines äußersten Knotens. Auf der Achse lag er gemessen
+   * über vier von fünf Rang-5-Knoten.
+   */
+  const armTags: SkillTreeArmTag[] = MEEP_TREE_BRANCHES.map((branch, i) => ({
     id: branch.id,
     name: branch.name,
     color: branch.color,
@@ -172,5 +194,35 @@ export const SKILL_TREE_ARM_TAGS: readonly SkillTreeArmTag[] = MEEP_TREE_BRANCHE
         SKILL_TREE_ARM_TAG_LEAD_DEG,
       SKILL_TREE_ARM_TAG_RADIUS,
     ),
-  }),
-)
+  }))
+
+  /** Die fünf Bahnen als Ellipsen — sie machen die Ränge lesbar, ohne zu ziehen. */
+  const orbits: SkillTreeOrbit[] = SKILL_TREE_TIER_RADIUS.map((r, i) => ({
+    key: `orbit-${i}`,
+    rx: r,
+    ry: r * ySquash,
+  }))
+
+  return {
+    height,
+    center,
+    ySquash,
+    placements,
+    edges,
+    armTags,
+    orbits,
+    placementOf: (id) => byId.get(id),
+  }
+}
+
+let cached: SkillTreeLayout | null = null
+
+/**
+ * Die vollständige Geometrie für eine Bühnenhöhe. Zwei Aufrufe mit derselben
+ * Höhe geben dasselbe Objekt zurück — die Bühne bindet Kanten und Knoten per
+ * `:key` an stabile Ids, Vue patcht also Attribute statt neu aufzubauen.
+ */
+export function skillTreeLayout(height: number): SkillTreeLayout {
+  if (!cached || cached.height !== height) cached = build(height)
+  return cached
+}

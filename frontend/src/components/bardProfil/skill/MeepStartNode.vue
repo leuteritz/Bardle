@@ -47,7 +47,7 @@ defineProps<{ x: number; y: number }>()
    an, und ein von aussen gesetzter Name träfe ihn nicht. */
 .mst-ring {
   position: absolute;
-  inset: -11px;
+  inset: -8px;
   border-radius: 50%;
   border: 1.5px dashed color-mix(in srgb, var(--rpg-gold-dim) 55%, transparent);
   animation: mst-spin linear infinite;
@@ -64,12 +64,12 @@ defineProps<{ x: number; y: number }>()
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 3px solid var(--rpg-gold-dim);
+  border: 2px solid var(--rpg-gold-dim);
   background: radial-gradient(circle at 35% 30%, #33270e, var(--rpg-bg-dark) 75%);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 14px rgba(232, 192, 64, 0.16);
+  box-shadow: inset 0 0 10px rgba(232, 192, 64, 0.16);
 }
 
 /* Schein als Pseudo-Element mit STATISCHEM box-shadow; animiert wird nur die
@@ -79,7 +79,7 @@ defineProps<{ x: number; y: number }>()
   position: absolute;
   inset: -3px;
   border-radius: 50%;
-  box-shadow: 0 0 24px rgba(232, 192, 64, 0.55);
+  box-shadow: 0 0 16px rgba(232, 192, 64, 0.5);
   opacity: 0.6;
   pointer-events: none;
   animation: mst-glow 3s ease-in-out infinite;

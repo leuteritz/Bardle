@@ -245,45 +245,55 @@ function buy(): void {
           </span>
         </button>
       </section>
-
-      <!-- ── Bilanz ── -->
-      <section class="msd-block msd-totals">
-        <span class="msd-section">Tree totals</span>
-        <div class="msd-total-row">
-          <span>Skills learned</span>
-          <span class="msd-total-row__val">
-            {{ meepTree.boughtCount }} / {{ MEEP_TREE_PATH_NODES }}
-          </span>
-        </div>
-        <div class="msd-total-row">
-          <span>Meeps invested</span>
-          <span class="msd-total-row__val">
-            {{ formatNumberCompact(spentOnTree) }} / {{ formatNumberCompact(MEEP_TREE_TOTAL_COST) }}
-          </span>
-        </div>
-      </section>
-
-      <!-- ── Fußzeile: hier und nur hier wird gekauft ── -->
-      <footer class="msd-buy">
-        <div class="msd-buy__price" :class="{ 'is-short': state === 'reachable' }">
-          <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="msd-meep-icon msd-meep-icon--big" />
-          <span v-ink-center>{{ node.cost }}</span>
-          <span v-if="pathCost !== null && pathCost > node.cost" class="msd-buy__path">
-            · {{ pathCost }} with prerequisites
-          </span>
-        </div>
-        <button
-          v-if="state !== 'bought' && state !== 'blocked'"
-          class="msd-buy__btn"
-          :disabled="!canBuy"
-          @click="buy"
-        >
-          {{ canBuy ? 'Learn skill' : `Need ${node.cost - gameStore.meeps} more` }}
-        </button>
-        <span v-else-if="state === 'bought'" class="msd-buy__done">✓ Learned</span>
-        <span v-else class="msd-buy__sealed">Sealed</span>
-      </footer>
     </template>
+
+    <!-- ── Bilanz ──
+         Sie steht in BEIDEN Zuständen und immer am unteren Rand: seit die
+         Kopfleiste über der Bühne weg ist, ist das die einzige Stelle, an der
+         der Fortschritt des Baums als Zahl steht. -->
+    <section class="msd-block msd-totals">
+      <span class="msd-section">Tree totals</span>
+      <div class="msd-total-row">
+        <span>Skills learned</span>
+        <span class="msd-total-row__val">
+          {{ meepTree.boughtCount }} / {{ MEEP_TREE_PATH_NODES }}
+        </span>
+      </div>
+      <div class="msd-total-row">
+        <span>Meeps invested</span>
+        <span class="msd-total-row__val">
+          {{ formatNumberCompact(spentOnTree) }} / {{ formatNumberCompact(MEEP_TREE_TOTAL_COST) }}
+        </span>
+      </div>
+      <div class="msd-total-row">
+        <span>Meeps available</span>
+        <span class="msd-total-row__val msd-total-row__val--held">
+          <img :src="MEEP_TREE_BADGE_ICON" alt="" class="msd-meep-icon" />
+          {{ formatNumberCompact(gameStore.meeps) }}
+        </span>
+      </div>
+    </section>
+
+    <!-- ── Fußzeile: hier und nur hier wird gekauft ── -->
+    <footer v-if="node" class="msd-buy">
+      <div class="msd-buy__price" :class="{ 'is-short': state === 'reachable' }">
+        <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="msd-meep-icon msd-meep-icon--big" />
+        <span v-ink-center>{{ node.cost }}</span>
+        <span v-if="pathCost !== null && pathCost > node.cost" class="msd-buy__path">
+          · {{ pathCost }} with prerequisites
+        </span>
+      </div>
+      <button
+        v-if="state !== 'bought' && state !== 'blocked'"
+        class="msd-buy__btn"
+        :disabled="!canBuy"
+        @click="buy"
+      >
+        {{ canBuy ? 'Learn skill' : `Need ${node.cost - gameStore.meeps} more` }}
+      </button>
+      <span v-else-if="state === 'bought'" class="msd-buy__done">✓ Learned</span>
+      <span v-else class="msd-buy__sealed">Sealed</span>
+    </footer>
   </aside>
 </template>
 
@@ -293,6 +303,8 @@ function buy(): void {
    auseinander. */
 .msd-root {
   flex-shrink: 0;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -588,6 +600,14 @@ function buy(): void {
 .msd-total-row__val {
   font-weight: 800;
   color: var(--rpg-gold);
+}
+
+/* Der Bestand steht mit Bild — er ist die Zahl, gegen die der Spieler den Preis
+   in der Fusszeile hält, und hebt sich dadurch von den beiden Bilanzzeilen ab. */
+.msd-total-row__val--held {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 /* ── Kauf-Fußzeile ────────────────────────────────────────── */
