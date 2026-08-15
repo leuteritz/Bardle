@@ -1,6 +1,10 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useForgeUpgrades, FORGE_EMPTY_UPGRADE_ENTRY } from '@/composables/ui/useForgeUpgrades'
+import {
+  useForgeUpgrades,
+  forgeUpgradeBucket,
+  FORGE_EMPTY_UPGRADE_ENTRY,
+} from '@/composables/ui/useForgeUpgrades'
 import { useActionToast } from '@/composables/ui/useActionToast'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
@@ -21,6 +25,8 @@ import {
   FORGE_DESC_VALUE_TOKEN,
   FORGE_UPGRADE_CAPPED_REASON,
   FORGE_UPGRADE_TIER_LABELS,
+  FORGE_BOUGH_UNLOCK_PHASE,
+  FORGE_BOUGH_PARENT_MIN_LEVEL,
 } from '@/config/constants'
 
 /**
@@ -377,6 +383,100 @@ describe('useForgeUpgrades — Invarianten', () => {
       expect(e.unlockProgress).toBeLessThanOrEqual(1)
       // Ein Grund steht nur dort, wo es etwas zu erklären gibt.
       if (e.state !== 'locked' && e.state !== 'capped') expect(e.lockReason).toBe('')
+    }
+  })
+})
+
+/**
+ * In welchen Abschnitt der Liste ein Eintrag fällt.
+ *
+ * Die Zuordnung ist die eine Regel, an der die Gliederung der Upgrade-Liste
+ * hängt — „Kaufbares ganz oben, Fertiges ins Archiv". Sie steht neben den
+ * Einträgen und nicht im `computed` der Komponente, damit genau diese Fälle
+ * prüfbar sind: die beiden Feinheiten unten ergeben sich aus dem `state`
+ * ALLEIN nicht und kippen beim nächsten Umbau still.
+ */
+describe('forgeUpgradeBucket — welcher Abschnitt', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('bezahlbar → ready', () => {
+    fillPurse()
+    expect(forgeUpgradeBucket(entry(ROOT_IDS[0]))).toBe('ready')
+  })
+
+  it('offen, aber die Kasse ist leer → reach', () => {
+    useGameStore().chimes = 0
+    expect(forgeUpgradeBucket(entry(ROOT_IDS[0]))).toBe('reach')
+  })
+
+  /* Volle Kasse, volles Lager — und trotzdem nicht kaufbar. `state` sagt hier
+     'affordable' NICHT, aber gesperrt ist der Zweig auch nicht. */
+  it('volle Kasse, aber das Lager ist leer → reach', () => {
+    fillPurse()
+    useInventoryStore().collectedMaterials = {}
+    setAllRoots(SOLAR_MATERIAL_FROM_LEVEL - 1)
+    const e = entry(ROOT_IDS[0])
+    expect(e.goldOk).toBe(true)
+    expect(forgeUpgradeBucket(e)).toBe('reach')
+  })
+
+  /* Der Fall, der am ehesten nach 'next' aussieht und es nicht ist: ein
+     gedeckelter Strahl ist nicht gesperrt, er wartet auf seine Geschwister —
+     und muss seine Kosten weiter zeigen, also eine volle Karte bleiben. */
+  it('ein gedeckelter Kernstrahl bleibt bei reach, nicht bei next', () => {
+    fillPurse()
+    setAllRoots(0)
+    useSolarUpgradeStore().flightSpeedLevel = 1
+    const e = entry('flightSpeed')
+    expect(e.state).toBe('capped')
+    expect(forgeUpgradeBucket(e)).toBe('reach')
+  })
+
+  it('gesperrt → next', () => {
+    fillPurse()
+    expect(entry(BRANCH_ID).state).toBe('locked')
+    expect(forgeUpgradeBucket(entry(BRANCH_ID))).toBe('next')
+  })
+
+  it('ausgewachsen → grown', () => {
+    fillPurse()
+    setAllRoots(SOLAR_MAX_LEVELS)
+    expect(forgeUpgradeBucket(entry(ROOT_IDS[0]))).toBe('grown')
+  })
+
+  /* Ring 4 hat keine Obergrenze — ein Bough darf auf keiner Stufe ins Archiv
+     wandern, sonst verschwindet im Spätspiel genau das, was dann noch zu
+     kaufen ist. */
+  it('ein Bough landet auf keiner Stufe im Archiv', () => {
+    const forge = useStarForgeStore()
+    const boughDef = FORGE_NODES.find((node) => node.tier === 'bough')!
+    useSolarUpgradeStore().starPhase = FORGE_BOUGH_UNLOCK_PHASE
+    forge.branchLevels[boughDef.parentId] = FORGE_BOUGH_PARENT_MIN_LEVEL
+
+    for (const level of [0, 1, 25, 500]) {
+      forge.boughLevels[boughDef.id] = level
+      const e = entry(boughDef.id)
+      expect(e.maxLevel).toBe(Infinity)
+      expect(forgeUpgradeBucket(e), `Lv ${level}`).not.toBe('grown')
+    }
+  })
+
+  /* Jeder Eintrag fällt in genau einen Topf, und die vier decken den ganzen
+     Bestand ab — ein Eintrag ohne Topf wäre aus der Liste verschwunden. */
+  it('jeder Eintrag hat genau einen Topf, in jedem Spielstand', () => {
+    for (const arrange of [() => {}, unlockBranches, () => unlockLeaves()]) {
+      setActivePinia(createPinia())
+      arrange()
+      const { upgradeEntries } = useForgeUpgrades()
+      const seen = new Set<string>()
+      for (const e of upgradeEntries.value) {
+        const bucket = forgeUpgradeBucket(e)
+        expect(['ready', 'reach', 'next', 'grown'], `${e.id} → ${bucket}`).toContain(bucket)
+        seen.add(e.id)
+      }
+      expect(seen.size).toBe(upgradeEntries.value.length)
     }
   })
 })

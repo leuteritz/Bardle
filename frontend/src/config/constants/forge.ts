@@ -1,7 +1,7 @@
 // Star Forge (Sonnen-Baum aus Roots, Branches und Leaves samt Relikten,
 // Konstellationen und Schnäppchen) und der Meep Skill Tree.
 
-import type { ForgeRelicRarity, ForgeSectionDef, ForgeUpgradeState } from '@/types'
+import type { ForgeRelicRarity, ForgeSectionDef } from '@/types'
 
 // ── Meep Skill Tree: radiales Netz-Layout (SkillTreeComponent) ─────────────
 // Ein Startknoten in der Mitte, fünf Pfade strahlen aus; leichter Zickzack pro
@@ -304,11 +304,18 @@ export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
  * desto kühler. Violett ist zugleich die Farbe, die im Projekt „episch/selten"
  * trägt (`FORGE_RELIC_RARITY_COLOR.epic`), und der endlose Ring ist das
  * Seltenste, was der Baum hergibt.
+ *
+ * Seit die Liste nach Kaufbarkeit gliedert (`FORGE_UPGRADE_BUCKETS`), sind die
+ * vier Ringe dort kein Abschnitt mehr, sondern die Filterleiste — daher
+ * `shortTitle`. Der lange Name bleibt trotzdem: eine Kopfzeile mit „Rays"
+ * stünde im Widerspruch zum Lexikon, ein Chip mit „Solar Rays" passt zu fünft
+ * nicht in eine 470px-Spalte.
  */
 export const FORGE_UPGRADE_GROUPS = [
   {
     tier: 'root' as const,
     title: 'Solar Rays',
+    shortTitle: 'Rays',
     icon: 'game-icons:beam-wake',
     hint: 'The five rays the star grows on',
     accent: '#e8c040',
@@ -316,6 +323,7 @@ export const FORGE_UPGRADE_GROUPS = [
   {
     tier: 'branch' as const,
     title: 'Forge Branches',
+    shortTitle: 'Branches',
     icon: 'game-icons:tree-branch',
     hint: 'Each ray forks in three',
     accent: '#7fd048',
@@ -323,6 +331,7 @@ export const FORGE_UPGRADE_GROUPS = [
   {
     tier: 'leaf' as const,
     title: 'Forge Leaves',
+    shortTitle: 'Leaves',
     icon: 'game-icons:falling-leaf',
     hint: 'Amplify the branch they hang on',
     accent: '#86d0ff',
@@ -330,6 +339,7 @@ export const FORGE_UPGRADE_GROUPS = [
   {
     tier: 'bough' as const,
     title: 'Astral Boughs',
+    shortTitle: 'Boughs',
     icon: 'game-icons:infinity',
     hint: 'No final level — the tree keeps growing',
     accent: '#c9a0ff',
@@ -363,26 +373,56 @@ export const FORGE_UPGRADE_TIER_LABELS = {
 export const FORGE_ENDLESS_SYMBOL = '∞'
 
 /**
- * Sortierung innerhalb eines Abschnitts. Was eine Entscheidung verlangt, steht
- * oben; Gesperrtes und Fertiges sinkt.
+ * Die Abschnitte der Upgrade-Liste — nicht mehr die vier Ringe, sondern das,
+ * was der Spieler mit einem Eintrag anfangen KANN.
  *
- * Sortiert wird nach ZUSTAND, nicht nach Kaufbarkeit — dieselbe Regel, die die
- * Relikt-Liste schon trägt (`relicViews` in StarForgePanel.vue). `affordable`
- * und `partial`/`empty` teilen sich deshalb absichtlich Rang 0: die Chimes
- * ticken jede Sekunde, und eine Liste, die Bezahlbares nach oben zieht, ordnet
- * sich unter dem Mauszeiger neu, während man auf einen Knopf zielt.
+ * Vorher gliederte die Liste nach Ring und sortierte darin nach Zustand. Das
+ * folgte dem BAUM, nicht dem Spieler: wer im Spätspiel etwas kaufen wollte,
+ * kam an vier Überschriften und dutzenden „✦ MAX"-Zeilen vorbei, und
+ * ausgerechnet die Astral Boughs — der einzige Ring, der nie fertig wird —
+ * standen als vierte Gruppe ganz unten. Jetzt steht Kaufbares oben, gleich aus
+ * welchem Ring; der Ring bleibt als Chip auf der Karte und als Filter darüber.
  *
- * `capped` bleibt oben, weil die Karte ihre Kosten weiter zeigen muss — der
- * Strahl ist nicht zu, er wartet nur auf seine vier Geschwister.
+ * Was hier NICHT steht: das Fertige. Es trägt keinen solchen Kopf, sondern
+ * eine eingeklappte Schaltzeile am Listenende.
+ *
+ * Grün für `ready` ist keine freie Wahl — im Projekt trägt Grün durchgehend
+ * „kaufbar/aktiv" (die Knopf-Verläufe in CLAUDE.md).
  */
-export const FORGE_UPGRADE_STATE_ORDER: Record<ForgeUpgradeState, number> = {
-  affordable: 0,
-  partial: 0,
-  empty: 0,
-  capped: 0,
-  locked: 1,
-  maxed: 2,
-}
+export const FORGE_UPGRADE_BUCKETS = [
+  {
+    id: 'ready' as const,
+    title: 'Ready',
+    hint: 'Chimes and materials are there',
+    icon: 'ph:lightning-fill',
+    accent: '#52b830',
+  },
+  {
+    id: 'reach' as const,
+    title: 'Saving up',
+    hint: 'Open, but out of reach',
+    icon: 'ph:hourglass-medium-fill',
+    accent: '#c89040',
+  },
+  {
+    id: 'next' as const,
+    title: 'Next up',
+    hint: 'What the star opens next',
+    icon: 'lucide:lock',
+    accent: '#7a4e20',
+  },
+]
+
+/** Beschriftung der Archiv-Schaltzeile: „▸ 21 grown". */
+export const FORGE_UPGRADE_ARCHIVE_LABEL = 'grown'
+export const FORGE_UPGRADE_ARCHIVE_HINT = 'Fully grown — nothing left to buy'
+export const FORGE_UPGRADE_ARCHIVE_ICON = 'ph:check-circle-fill'
+/** Chevron der Schaltzeile. Schriftzeichen wie `✦` und `→`, kein Emoji. */
+export const FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED = '▸'
+export const FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN = '▾'
+
+/** Der Chip, der die Ringfilterung aufhebt. */
+export const FORGE_UPGRADE_FILTER_ALL_LABEL = 'All'
 
 /** Wie lange die gekaufte Karte aufleuchtet. Rein visuell, daher reale Zeit. */
 export const FORGE_CARD_FLASH_MS = 420

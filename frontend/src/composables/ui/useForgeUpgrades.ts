@@ -6,7 +6,13 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useActionToast } from '@/composables/ui/useActionToast'
 import { FORGE_NODES } from '@/config/progression/starForge'
 import { MATERIALS } from '@/config/economy/materials'
-import type { ForgeCostItem, ForgeNodeDef, ForgeUpgradeEntry, ForgeUpgradeState } from '@/types'
+import type {
+  ForgeCostItem,
+  ForgeNodeDef,
+  ForgeUpgradeBucketId,
+  ForgeUpgradeEntry,
+  ForgeUpgradeState,
+} from '@/types'
 import {
   SOLAR_BRANCHES,
   SOLAR_MAX_LEVELS,
@@ -83,6 +89,27 @@ export const FORGE_EMPTY_UPGRADE_ENTRY: ForgeUpgradeEntry = {
   parentName: '',
   unlockProgress: 0,
   canBuy: false,
+}
+
+/**
+ * In welchen Abschnitt der Liste ein Eintrag fällt.
+ *
+ * Steht hier und nicht in `ForgeUpgradesSection.vue`, weil sie die eine Regel
+ * ist, an der die neue Gliederung hängt — und damit die Fassung, die beim
+ * nächsten Umbau still kippen könnte. Als Funktion neben den Einträgen ist sie
+ * prüfbar; im `computed` einer Komponente wäre sie es nicht.
+ *
+ * Zwei Feinheiten, die sich aus dem Zustand allein NICHT ergeben:
+ *   - `ready` hängt an `canBuy`, nicht an `state === 'affordable'`. Der Zustand
+ *     kennt nur die Chimes, `canBuy` auch das Materiallager.
+ *   - `capped` fällt zu `reach`, nicht zu `next`. Ein gedeckelter Strahl ist
+ *     nicht gesperrt — er wartet auf seine vier Geschwister und muss seine
+ *     Kosten weiter zeigen.
+ */
+export function forgeUpgradeBucket(entry: ForgeUpgradeEntry): ForgeUpgradeBucketId {
+  if (entry.state === 'maxed') return 'grown'
+  if (entry.state === 'locked') return 'next'
+  return entry.canBuy ? 'ready' : 'reach'
 }
 
 /** Ganze Zahlen bleiben ganz, gebrochene bekommen eine Nachkommastelle. */

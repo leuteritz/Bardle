@@ -153,6 +153,20 @@ export type ForgeUpgradeTier = 'root' | ForgeNodeTier
 export type ForgeUpgradeState = 'locked' | 'empty' | 'partial' | 'affordable' | 'capped' | 'maxed'
 
 /**
+ * Wohin ein Eintrag in der Upgrade-LISTE fällt — nicht zu verwechseln mit
+ * seinem `state`, den auch der Baum liest.
+ *
+ * Der Zustand beschreibt den Knoten, der Topf beschreibt, was der Spieler mit
+ * ihm anfangen kann. Deshalb sind es vier statt sechs: `empty`, `partial` und
+ * `capped` landen gemeinsam in `reach` — alle drei zeigen eine volle Karte samt
+ * Kosten, keiner von ihnen ist kaufbar.
+ *
+ * `ready` hängt an `canBuy`, nicht an `state === 'affordable'`: der Zustand
+ * kennt nur die Chimes, `canBuy` auch das Materiallager.
+ */
+export type ForgeUpgradeBucketId = 'ready' | 'reach' | 'next' | 'grown'
+
+/**
  * Ein kaufbarer Knoten, fertig zum Anzeigen — ohne jede Geometrie.
  *
  * Der Baum hängt seine Polarkoordinaten daneben, die Liste nicht. Beide lesen
