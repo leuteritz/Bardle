@@ -528,6 +528,26 @@ export const FORGE_PATH_ROOT_ICON = 'game-icons:sun-radiations'
 export const FORGE_DETAIL_ENDLESS_META = 'no final level'
 export const FORGE_DETAIL_PARENT_PREFIX = 'hangs on '
 
+/**
+ * Die Fläche, die der Detailkopf IMMER belegt — gleich, ob er leer ist, ein
+ * MAXED-Upgrade ohne Now-→-After zeigt oder einen Bough mit fünfgliedriger
+ * Pfadkette und zwei Kaufknöpfen nebeneinander.
+ *
+ * Ohne diese Klammer war der Kopf inhaltshoch, und jeder Hover schob die Liste
+ * darunter um rund 300px. Der Zeiger fiel dabei aus der Liste, der Hover ging
+ * aus, der Kopf schrumpfte, die Liste kam zurück unter den Zeiger — ein
+ * selbsttragendes Flackern, das erst aufhörte, wenn man die Maus wegnahm.
+ *
+ * `clamp` statt einer festen Zahl, weil Full HD (~950px Bühne) und 4K (~2030px)
+ * dieselbe Spalte teilen: auf dem flachsten Viewport bliebe von der Liste sonst
+ * nichts übrig, auf dem größten stünde der Kopf verloren. Der Prozentanteil
+ * greift, weil `.sf-panel` `height: 100%` trägt und der Elternteil damit eine
+ * definite Höhe hat.
+ */
+export const FORGE_DETAIL_PANEL_MIN_PX = 300
+export const FORGE_DETAIL_PANEL_FRACTION = 0.46
+export const FORGE_DETAIL_PANEL_MAX_PX = 470
+
 // ── Abteilungs-Rail ganz rechts (ForgeSectionRail) ───────────────────────────
 /**
  * Die vier Abteilungen standen als waagerechte Reiterleiste über der Spalte und

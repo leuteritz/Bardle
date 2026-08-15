@@ -5,9 +5,10 @@
     <div class="fd-flash" :class="{ 'fd-flash--on': flashed }" aria-hidden="true" />
 
     <!-- ══ Leerzustand ═══════════════════════════════════════════════
-         In DERSELBEN Höhe wie die gefüllte Fassung. Ein Kopf, der beim ersten
-         Hover aufklappt, schöbe die ganze Liste darunter nach unten — und zwar
-         genau in dem Moment, in dem der Zeiger auf eine Zeile zielt. -->
+         Die Höhe erzwingt `.fd-panel`, nicht dieser Zweig: ein Kopf, der beim
+         ersten Hover aufklappt, schöbe die ganze Liste darunter nach unten —
+         genau in dem Moment, in dem der Zeiger auf eine Zeile zielt, und der
+         Zeiger fiele dabei aus der Liste heraus. -->
     <template v-if="!entry">
       <header class="fd-head">
         <span class="fd-chip fd-chip--muted">{{ FORGE_DETAIL_EMPTY_TITLE }}</span>
@@ -94,23 +95,29 @@
             <i :style="{ transform: `scaleX(${entry.unlockProgress})` }" />
           </div>
         </template>
+        <!-- Preis und Knopf klebt an der Unterkante: sie sind der Grund, warum
+             man überhaupt hier steht, und dürfen nie erst erscrollt werden
+             müssen. Was darüber liegt — Beschreibung, Now-→-After, Pfad — darf
+             wandern. -->
         <template v-else>
-          <ForgeCostRow
-            :gold="entry.goldCost"
-            :gold-ok="entry.goldOk"
-            :materials="entry.materials"
-          />
-          <div v-if="bulkCount > 1" class="fd-bulk-note">
-            {{ bulkCount }}{{ FORGE_AFFORDABLE_SUFFIX }}
-          </div>
+          <div class="fd-foot">
+            <ForgeCostRow
+              :gold="entry.goldCost"
+              :gold-ok="entry.goldOk"
+              :materials="entry.materials"
+            />
+            <div v-if="bulkCount > 1" class="fd-bulk-note">
+              {{ bulkCount }}{{ FORGE_AFFORDABLE_SUFFIX }}
+            </div>
 
-          <div class="fd-actions">
-            <button class="fd-act" :disabled="!entry.canBuy" @click="growOne">
-              {{ buttonLabel }}
-            </button>
-            <button v-if="bulkCount > 1" class="fd-act fd-act--bulk" @click="growMany">
-              {{ bulkLabel }}
-            </button>
+            <div class="fd-actions">
+              <button class="fd-act" :disabled="!entry.canBuy" @click="growOne">
+                {{ buttonLabel }}
+              </button>
+              <button v-if="bulkCount > 1" class="fd-act fd-act--bulk" @click="growMany">
+                {{ bulkLabel }}
+              </button>
+            </div>
           </div>
         </template>
       </div>
@@ -129,8 +136,14 @@
  * darunter besteht aus Zeilen.
  *
  * Gezeigt wird `detailId` aus `useForgeSpotlight`: das Angeheftete schlägt den
- * Hover (Herleitung dort). Ohne beides fällt die Anzeige auf den günstigsten
- * kaufbaren Knoten zurück — dieselbe Wahl, die der Baum als BEST BUY markiert.
+ * Hover, und was der Zeiger verlässt, bleibt als Nachhall stehen (Herleitung
+ * dort). Erst wenn noch NIE irgendwo hingezeigt wurde, fällt die Anzeige auf
+ * den günstigsten kaufbaren Knoten zurück — dieselbe Wahl, die der Baum als
+ * BEST BUY markiert.
+ *
+ * Seine Höhe ist reserviert und inhaltsunabhängig (`FORGE_DETAIL_PANEL_MIN_PX`).
+ * Das ist keine Kosmetik: der Kopf sitzt ÜBER der scrollenden Liste, und ein
+ * mitwachsender Kopf schöbe sie bei jedem Hover unter dem Zeiger weg.
  */
 import { computed, onUnmounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -162,11 +175,19 @@ import {
   FORGE_GROW_LABEL,
   FORGE_GROW_NEXT_PREFIX,
   FORGE_CARD_FLASH_MS,
+  FORGE_DETAIL_PANEL_MIN_PX,
+  FORGE_DETAIL_PANEL_FRACTION,
+  FORGE_DETAIL_PANEL_MAX_PX,
 } from '@/config/constants'
 
 /* Die Dauer steht in den Konstanten und wird von CSS und Timer aus derselben
    Quelle gelesen; den KEYFRAME-Namen setzt weiterhin die CSS-Klasse. */
 const flashDuration = `${FORGE_CARD_FLASH_MS}ms`
+
+/* Die reservierte Fläche des Kopfes — Herleitung an den Konstanten. Ein
+   fertiger String statt dreier `v-bind`, damit die Regel unten in EINEM Stück
+   lesbar bleibt. */
+const panelHeight = `clamp(${FORGE_DETAIL_PANEL_MIN_PX}px, ${FORGE_DETAIL_PANEL_FRACTION * 100}%, ${FORGE_DETAIL_PANEL_MAX_PX}px)`
 
 const { entryById, bestBuyId, buyUpgrade, affordableLevels, buyMany } = useForgeUpgrades()
 const { detailId, pinnedId, setPinned } = useForgeSpotlight()
@@ -318,9 +339,17 @@ function growMany(): void {
 /* ══════════════════════════════════════════════════
    PANEL
 ══════════════════════════════════════════════════ */
+/* Die Höhe ist RESERVIERT, nicht inhaltsabhängig — das ist die ganze Regel
+   dieses Panels. Es sitzt über dem scrollenden `.sf-body`; wüchse es mit seinem
+   Inhalt, schöbe jeder Hover die Liste darunter weg, der Zeiger fiele aus ihr
+   heraus und der Hover ginge im selben Zug wieder aus. Herleitung an
+   `FORGE_DETAIL_PANEL_MIN_PX`. */
 .fd-panel {
   position: relative;
-  flex-shrink: 0;
+  flex: 0 0 v-bind(panelHeight);
+  height: v-bind(panelHeight);
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background: #16120a;
@@ -370,6 +399,7 @@ function growMany(): void {
    KOPFZEILE
 ══════════════════════════════════════════════════ */
 .fd-head {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -427,6 +457,7 @@ function growMany(): void {
    IDENTITÄT
 ══════════════════════════════════════════════════ */
 .fd-id {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -476,12 +507,26 @@ function growMany(): void {
 /* ══════════════════════════════════════════════════
    KÖRPER
 ══════════════════════════════════════════════════ */
+/* Der Körper ist das EINZIGE, was in der reservierten Fläche atmet — passt sein
+   Inhalt nicht (Bough mit fünfgliedriger Pfadkette, dreizeilige Beschreibung),
+   scrollt er in sich, statt das Panel zu dehnen. Der untere Abstand liegt am
+   letzten Kind statt am Körper, damit der klebende Kaufblock ihn selbst
+   mitbringt. */
 .fd-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px 18px 16px;
+  padding: 14px 18px 0;
   background: #111008;
+}
+
+.fd-body > :last-child:not(.fd-foot) {
+  margin-bottom: 16px;
 }
 
 .fd-desc {
@@ -639,6 +684,21 @@ function growMany(): void {
   font-variant-numeric: tabular-nums;
 }
 
+/* Klebt an der Unterkante des scrollenden Körpers — Preis UND Knopf gemeinsam:
+   ein Kaufknopf ohne den Preis daneben ist die schlechtere Hälfte der Auskunft.
+   Der Grund ist derselbe wie am Körper, damit der Inhalt sauber dahinter
+   verschwindet. */
+.fd-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 16px;
+  background: #111008;
+}
+
 .fd-actions {
   display: flex;
   gap: 10px;
@@ -680,9 +740,12 @@ function growMany(): void {
 
 /* ══════════════════════════════════════════════════
    LEERZUSTAND
-   Höhe absichtlich in derselben Größenordnung wie die gefüllte Fassung.
+   Füllt die reservierte Fläche restlos aus — sein Inhalt ist kürzer als der
+   gefüllte, aber die Höhe des Panels darf davon nichts merken.
 ══════════════════════════════════════════════════ */
 .fd-empty {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -726,7 +789,16 @@ function growMany(): void {
 
   .fd-body {
     gap: 10px;
-    padding: 11px 15px 13px;
+    padding: 11px 15px 0;
+  }
+
+  .fd-body > :last-child:not(.fd-foot) {
+    margin-bottom: 13px;
+  }
+
+  .fd-foot {
+    gap: 10px;
+    padding-bottom: 13px;
   }
 
   .fd-desc {

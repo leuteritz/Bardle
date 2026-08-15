@@ -108,10 +108,42 @@ describe('useForgeSpotlight', () => {
     expect(pinnedId.value).toBeNull()
   })
 
+  /**
+   * Der Nachhall: verlässt der Zeiger die Liste, bleibt der Detailkopf stehen.
+   * Fiele er stattdessen auf null zurück, wechselte er Inhalt UND Höhe genau in
+   * dem Moment, in dem niemand mehr hinzeigt — und der Spieler verlöre auf dem
+   * Weg zum Kaufknopf, was er gerade gelesen hat.
+   */
+  it('behält den zuletzt gezeigten Knoten, wenn der Zeiger loslässt', () => {
+    setListHover('list_node')
+    setListHover(null)
+
+    expect(detailId.value).toBe('list_node')
+    // Die HERVORHEBUNG geht mit dem Zeiger aus — nur der Detailkopf hält.
+    expect(spotlightId.value).toBeNull()
+  })
+
+  it('lässt den Nachhall vom nächsten Zeigen überschreiben', () => {
+    setTreeHover('tree_node')
+    setTreeHover(null)
+    expect(detailId.value).toBe('tree_node')
+
+    setListHover('list_node')
+    setListHover(null)
+    expect(detailId.value).toBe('list_node')
+  })
+
   it('räumt auch die Anheftung ab', () => {
     setPinned('pinned_node')
     resetForgeSpotlight()
     expect(pinnedId.value).toBeNull()
+    expect(detailId.value).toBeNull()
+  })
+
+  it('räumt auch den Nachhall ab', () => {
+    setListHover('list_node')
+    setListHover(null)
+    resetForgeSpotlight()
     expect(detailId.value).toBeNull()
   })
 
