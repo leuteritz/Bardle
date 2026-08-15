@@ -9,7 +9,6 @@ import {
   MEEP_TREE_TIERS_PER_BRANCH,
   type MeepTreeEffects,
 } from '@/config/progression/meepTree'
-import { SKILL_TREE_SUGGESTION_COUNT } from '@/config/constants'
 import { logger } from '@/utils/logger'
 
 /**
@@ -180,24 +179,6 @@ export const useMeepTreeStore = defineStore('meepTree', {
       const chain = this.pathTo(id)
       if (!chain) return null
       return chain.reduce((sum, nid) => sum + (MEEP_TREE_NODE_INDEX[nid]?.node.cost ?? 0), 0)
-    },
-
-    /**
-     * What to look at next — the cheapest nodes still standing open.
-     *
-     * Ranked by PRICE, not by effect size: which effect is worth more depends
-     * on how the player is playing, and a store cannot know that. What it can
-     * say honestly is which door is closest.
-     */
-    suggestedNodeIds(limit: number = SKILL_TREE_SUGGESTION_COUNT): string[] {
-      return MEEP_TREE_NODES.filter((n) => {
-        const state = this.nodeState(n.id)
-        return state === 'buyable' || state === 'reachable'
-      })
-        .slice()
-        .sort((a, b) => a.cost - b.cost)
-        .slice(0, limit)
-        .map((n) => n.id)
     },
 
     buyNode(id: string): boolean {

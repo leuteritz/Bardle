@@ -16,6 +16,8 @@
  */
 import { computed } from 'vue'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useMeepSkills } from '@/composables/ui/useMeepSkills'
+import { useMeepSpotlight } from '@/composables/ui/useMeepSpotlight'
 import { MEEP_TREE_BRANCHES } from '@/config/progression/meepTree'
 import { skillTreeLayout } from '@/utils/ui/skillTreeLayout'
 import {
@@ -42,6 +44,8 @@ const emit = defineEmits<{
 }>()
 
 const meepTree = useMeepTreeStore()
+const { bestBuyId } = useMeepSkills()
+const { spotlightId, setOrbitHover } = useMeepSpotlight()
 
 /** Knoten, Kanten, Zweignamen und Bahnen — alles aus der einen Bühnenhöhe. */
 const layout = computed(() => skillTreeLayout(props.height))
@@ -73,12 +77,28 @@ function isDimmed(branchId: string): boolean {
 
 /* ── Knoten ──────────────────────────────────────────────────────────────── */
 
+/**
+ * Zeigt der Spieler in der Liste rechts auf eine Karte, tritt ihr Knoten hier
+ * hervor und die übrigen neunundzwanzig treten zurück — sonst sucht das Auge
+ * den Kreis zur Karte unter dreissig gleich hellen selbst.
+ *
+ * Der Zweigfokus bleibt daneben bestehen: beide nehmen zurück, was gerade nicht
+ * gemeint ist, und ein Knoten, den schon der Fokus gedämpft hat, wird vom
+ * Spotlight nicht ein zweites Mal gedämpft.
+ */
+function isSpotDimmed(id: string): boolean {
+  return spotlightId.value !== null && spotlightId.value !== id
+}
+
 const nodes = computed(() =>
   layout.value.placements.map((p) => ({
     placement: p,
     state: states.value[p.id] as ReturnType<typeof meepTree.nodeState>,
-    dimmed: isDimmed(p.branch.id),
+    dimmed: isDimmed(p.branch.id) || isSpotDimmed(p.id),
     notifying: meepTree.notifyingNodeIds.includes(p.id),
+    /* Dieselbe Empfehlung, die das Panel rechts gross zeigt — ohne die Marke
+       hier fände der Spieler sie unter dreissig Kreisen nicht wieder. */
+    bestBuy: bestBuyId.value === p.id,
   })),
 )
 
@@ -158,9 +178,13 @@ function onSelect(id: string): void {
  * Ein überfahrener Knoten gilt als angesehen — dasselbe wie bisher, damit der
  * pinke Zähler im Header nicht stehen bleibt, während der Spieler die Bühne
  * abtastet. Das Auswählen quittiert zusätzlich (im Tab-Root).
+ *
+ * Derselbe Zeiger meldet sich am Spotlight: die Liste rechts hebt die
+ * zugehörige Karte hervor und rollt sie ins Bild, falls sie ausserhalb steht.
  */
 function onHover(id: string | null): void {
   if (id) meepTree.acknowledgeNode(id)
+  setOrbitHover(id)
 }
 
 /** Ein Klick auf den Zweignamen schaltet den Fokus an oder wieder aus. */
@@ -221,6 +245,7 @@ function onArm(branchId: string): void {
       :selected="selectedId === n.placement.id"
       :notifying="n.notifying"
       :dimmed="n.dimmed"
+      :best-buy="n.bestBuy"
       @select="onSelect"
       @hover="onHover"
     />

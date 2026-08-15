@@ -15,6 +15,7 @@ import { Icon } from '@iconify/vue'
 import { MEEP_TREE_BADGE_ICON, type MeepTreeNodeDef } from '@/config/progression/meepTree'
 import type { MeepTreeNodeState } from '@/stores/progression/meepTreeStore'
 import {
+  MEEP_BEST_BUY_LABEL,
   SKILL_TREE_COST_PILL_RADIUS,
   SKILL_TREE_NODE_ICON_SIZE,
   SKILL_TREE_NODE_OPACITY,
@@ -31,8 +32,14 @@ const props = defineProps<{
   state: MeepTreeNodeState
   selected: boolean
   notifying: boolean
-  /** Von Suche oder Zweigfokus zurückgenommen. */
+  /** Von Zweigfokus oder Spotlight zurückgenommen. */
   dimmed: boolean
+  /**
+   * Der günstigste gerade bezahlbare Knoten — derselbe, den das Panel rechts
+   * gross zeigt. Ohne die Marke hier fände der Spieler die Empfehlung unter
+   * dreissig Kreisen nicht wieder.
+   */
+  bestBuy: boolean
 }>()
 
 defineEmits<{
@@ -67,6 +74,9 @@ const title = computed(() =>
     ? `${props.node.name} — sealed: the other path was taken`
     : `${props.node.name} — ${props.node.effect}`,
 )
+
+/** Was der Ring bedeutet, für alle, die den Farbcode nicht lesen. */
+const bestBuyTitle = `${MEEP_BEST_BUY_LABEL} — cheapest you can afford`
 </script>
 
 <template>
@@ -85,6 +95,18 @@ const title = computed(() =>
     @mouseenter="$emit('hover', node.id)"
     @mouseleave="$emit('hover', null)"
   >
+    <!-- Die Marke der Empfehlung. Eigene Ebene mit STATISCHEM Schein, animiert
+         wird nur ihre Deckkraft — dasselbe Rezept wie der Puls des kaufbaren
+         Kreises darunter.
+
+         Ein Schriftzug wie im Sternbaum steht hier NICHT: dort liegen die
+         Knoten auf vier weiten Ringen, hier auf fünf Bahnen mit 46px radialem
+         Abstand, der in y-Richtung auf rund 32px zusammenschrumpft. Die
+         Kostenpille beansprucht diesen Raum bereits und hängt genau deshalb nur
+         an kaufbaren Knoten. Der Ring ist die einzige grüne Marke auf der
+         Bühne, und der Name steht gross im Panel daneben. -->
+    <span v-if="bestBuy && !dimmed" class="msn-best-ring" :title="bestBuyTitle" />
+
     <button class="msn-circle" :title="title" @click="$emit('select', node.id)">
       <Icon
         :icon="node.icon"
@@ -125,8 +147,11 @@ const title = computed(() =>
 }
 
 /* Ein Knoten mit Notify hebt seinen ganzen Wrapper über die Nachbarn, damit
-   das Abzeichen nie hinter einem anderen Kreis verschwindet. */
-.msn-root:has(.msn-notify) {
+   das Abzeichen nie hinter einem anderen Kreis verschwindet. Dasselbe gilt für
+   die Empfehlungsmarke: ihr Ring ragt 6px über den Kreis hinaus und läge auf
+   den dichten inneren Bahnen sonst unter dem Nachbarrang. */
+.msn-root:has(.msn-notify),
+.msn-root:has(.msn-best-ring) {
   z-index: 40;
 }
 
@@ -229,6 +254,29 @@ const title = computed(() =>
     0 0 0 3px var(--rpg-bg-deep),
     0 0 0 5px var(--rpg-gold-dim),
     0 0 18px rgba(232, 192, 64, 0.5);
+}
+
+/* ── Marke der Empfehlung ─────────────────────────────────────
+   Dieselben Farben wie das Abzeichen im Panel (#52b830 / #4a8a28 / #9fe062) und
+   wie die BEST-BUY-Marke im Sternbaum des Shops — die drei Stellen zeigen
+   dasselbe Ding. Der Schein ist statisch, animiert wird nur die Deckkraft. */
+.msn-best-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid #52b830;
+  box-shadow: 0 0 14px rgba(82, 184, 48, 0.75);
+  pointer-events: none;
+  animation: msn-best-breathe 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes msn-best-breathe {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ── Glyph ────────────────────────────────────────────────── */
@@ -372,5 +420,19 @@ const title = computed(() =>
 .msn-cost-enter-from,
 .msn-cost-leave-to {
   opacity: 0;
+}
+
+/* Beide Dauerläufer stehen still — sie sagen ihre Aussage auch als Zustand:
+   der kaufbare Kreis über seine Randfarbe, die Empfehlung über ihren Ring. */
+@media (prefers-reduced-motion: reduce) {
+  .msn-root--buyable .msn-circle::after {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  .msn-best-ring {
+    animation: none;
+    opacity: 1;
+  }
 }
 </style>

@@ -2,6 +2,11 @@
 
 import type { TimedBuffEffects } from './core'
 import type { IconPoolKey } from './ui'
+/* Reiner Typ-Import — er verschwindet im Build und dreht die Abhängigkeit
+   deshalb nicht wirklich um. `MeepTreeNodeState` steht im Store, weil die
+   Reihenfolge seiner Prüfungen dort die Regel IST (siehe `nodeState`); ihn
+   hierher zu kopieren hiesse, zwei Fassungen derselben Aufzählung zu führen. */
+import type { MeepTreeNodeState } from '@/stores/progression/meepTreeStore'
 
 export interface ModifierEffects {
   cpsMultiplier?: number
@@ -550,4 +555,105 @@ export interface OmenView extends OmenDef {
   secondsLeft: number
   /** Der Eilbonus ist noch zu holen. */
   swiftAvailable: boolean
+}
+
+// ── Meep Skill Tree: die Kaufliste der Detailschiene ─────────────────────────
+
+/**
+ * Wohin ein Knoten in der Skill-LISTE fällt — nicht zu verwechseln mit seinem
+ * `MeepTreeNodeState`, den auch die Orbit-Bühne liest.
+ *
+ * Der Zustand beschreibt den Knoten, der Topf beschreibt, was der Spieler mit
+ * ihm anfangen kann. Deshalb sechs statt fünf: `buyable` teilt sich in `fresh`
+ * und `ready`, je nachdem, ob der Spieler den Knoten schon angesehen hat.
+ * Genau diese Trennung ist „die neusten oben" — sie liest
+ * `meepTreeStore.acknowledged`, das die Notify-Abzeichen ohnehin schon führt,
+ * und kostet damit kein neues Feld im Spielstand.
+ */
+export type MeepSkillBucketId = 'fresh' | 'ready' | 'reach' | 'locked' | 'learned' | 'sealed'
+
+/**
+ * Eine Zeile der Vorher/Nachher-Tabelle eines Knotens.
+ *
+ * `from` und `to` sind fertig geschriebene Werte samt Einheit — wer sie
+ * anzeigt, rechnet nichts mehr. Bei `liveStat`-Zeilen stehen dort echte
+ * Spielwerte (`1.42M/s → 2.13M/s`), sonst der gefaltete Beitrag DES BAUMS.
+ */
+export interface MeepSkillChange {
+  key: string
+  label: string
+  tag: { label: string; icon: string }
+  from: string
+  to: string
+  /** Ob der Wechsel für den Spieler gut ist — bei `lower` ist kleiner besser. */
+  good: boolean
+}
+
+/**
+ * Ein Baumknoten, fertig zum Anzeigen — ohne jede Geometrie.
+ *
+ * Die Orbit-Bühne hängt ihre Polarkoordinaten daneben, die Liste nicht. Panel,
+ * Karte und schwebendes Kärtchen lesen denselben Eintrag, damit ein Kauf auf
+ * der einen Seite die andere sofort mitzieht und Kosten, Wirkung und Sperrgrund
+ * nirgends ein zweites Mal gerechnet werden.
+ */
+export interface MeepSkillEntry {
+  id: string
+  name: string
+  icon: string
+  /** Kurzlabel des Katalogs, z. B. `+50% Chimes/s`. */
+  effect: string
+  desc: string
+  cost: number
+  branchId: string
+  branchName: string
+  /** Leitfarbe des Zweigs — Icon, Rand und Chip lesen sie. */
+  color: string
+  /** Der Rang, wie der Spieler ihn liest: `tier + 1`, also 1 bis 5. */
+  rank: number
+  state: MeepTreeNodeState
+  /** Vorbedingung erfüllt UND bezahlbar. */
+  canBuy: boolean
+  /** Reicht der Bestand für DIESEN Knoten — unabhängig davon, ob er offen ist. */
+  canAfford: boolean
+  /** Wie viele Meeps noch fehlen; 0, sobald der Bestand reicht. */
+  missing: number
+  /** Lernbar und noch nicht angesehen — trägt die Marke und den obersten Topf. */
+  notifying: boolean
+  /** Die Geschwister desselben Rangs — an einer Gabel besetzt, sonst leer. */
+  rivals: { id: string; name: string }[]
+  /** Was ausser dem Knoten selbst noch davor liegt, in Reihenfolge. */
+  prerequisites: { id: string; name: string; icon: string; cost: number }[]
+  /** Was die ganze Kette bis hierher kostet; `null`, wenn versiegelt. */
+  pathCost: number | null
+}
+
+/**
+ * Was ein Knoten ÄNDERT — bewusst NICHT Teil von `MeepSkillEntry`.
+ *
+ * Jede dieser Zeilen kostet einen vollständigen `previewFx()`, also ein Falten
+ * aller gekauften Knoten. Im Eintrag stünde das dreißigmal in einer Liste, in
+ * der es höchstens zweimal gelesen wird — vom Empfehlungspanel und vom
+ * schwebenden Kärtchen. Beide holen es sich einzeln über `detailFor(id)`; die
+ * Liste selbst zeigt den fertigen Kurzsatz `effect` aus dem Katalog.
+ */
+export interface MeepSkillDetail {
+  changes: MeepSkillChange[]
+  /** Ein Chip je berührtem System, ohne Wiederholung. */
+  tags: { label: string; icon: string }[]
+}
+
+/**
+ * Die Kanten der Karte, an der das schwebende Kärtchen der Skill-Liste hängt
+ * (`MeepSkillTooltip`).
+ *
+ * Gemessen wird beim Hover-Wechsel und nur dort — nie pro Frame. Drei Zahlen
+ * statt eines ganzen `DOMRect`, damit klar ist, dass Breite und Höhe der Karte
+ * hier nichts zu suchen haben: das Kärtchen richtet sich an ihrer Ober- oder
+ * Unterkante aus und liegt links neben der Schiene.
+ */
+export interface MeepSkillTipAnchor {
+  top: number
+  bottom: number
+  left: number
 }

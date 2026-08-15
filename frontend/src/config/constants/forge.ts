@@ -112,8 +112,6 @@ export const SKILL_TREE_ARM_TAG_LEAD_DEG = 16
 export const SKILL_TREE_ARM_TAG_MARGIN = 26
 /** Umlaufdauer des gestrichelten Rings um den Startkreis. */
 export const SKILL_TREE_RING_SPIN_MS = 46000
-/** Wie viele Knoten „Next worth taking" im Detail-Blatt vorschlägt. */
-export const SKILL_TREE_SUGGESTION_COUNT = 3
 /**
  * Deckkraft der Kanten als Hex-Suffix an der Zweigfarbe (die Zweigfarben sind
  * durchweg sechsstellige Hex-Werte). Leerer String = voll deckend.
@@ -300,6 +298,176 @@ export const MEEP_TREE_EFFECT_ROWS: readonly MeepTreeEffectRowDef[] = [
     tag: FX_TAG.expeditions,
   },
 ] as const
+
+// ── Skill-Tab: die Kaufliste der Detailschiene (MeepSkillList) ───────────────
+/**
+ * Wonach die Skill-Liste gegliedert ist: nach dem, was der Spieler mit einem
+ * Knoten ANFANGEN kann — nicht nach Zweig. Dieselbe Entscheidung wie
+ * `FORGE_UPGRADE_BUCKETS`, aus demselben Grund: nach Zweig gegliedert stünde
+ * das Kaufbare über fünf Überschriften verstreut, und der Spieler suchte es
+ * unter dreißig Einträgen selbst.
+ *
+ * `fresh` steht VOR `ready`, obwohl beide kaufbar sind. Das ist die Umsetzung
+ * von „die neusten oben": ein Knoten, der gerade erst aufgegangen ist, hat der
+ * Spieler noch nie gesehen — er ist die Neuigkeit, während `ready` das ist, was
+ * schon länger daliegt. Die Unterscheidung kostet kein neues Feld, sie liest
+ * `meepTreeStore.acknowledged`, das die Notify-Abzeichen ohnehin schon führt.
+ *
+ * Grün für die kaufbaren Töpfe ist keine freie Wahl — im Projekt trägt Grün
+ * durchgehend „kaufbar/aktiv" (die Knopf-Verläufe in CLAUDE.md). `fresh`
+ * bekommt Gold daneben, weil es innerhalb des Kaufbaren die Auszeichnung ist.
+ */
+export const MEEP_SKILL_BUCKETS = [
+  {
+    id: 'fresh' as const,
+    title: 'Newly unlocked',
+    hint: 'Never seen before',
+    icon: 'ph:sparkle-fill',
+    accent: '#e8c040',
+  },
+  {
+    id: 'ready' as const,
+    title: 'Ready to learn',
+    hint: 'Meeps are there',
+    icon: 'ph:lightning-fill',
+    accent: '#52b830',
+  },
+  {
+    id: 'reach' as const,
+    title: 'Saving up',
+    hint: 'Open, but out of reach',
+    icon: 'ph:hourglass-medium-fill',
+    accent: '#c89040',
+  },
+  {
+    id: 'locked' as const,
+    title: 'Locked',
+    hint: 'Learn the rank below first',
+    icon: 'lucide:lock',
+    accent: '#7a4e20',
+  },
+]
+
+/**
+ * Beschriftung der Archiv-Schaltzeile am Listenende: „▸ 12 learned · 2 sealed".
+ * EINE Zeile für beide Zustände, nicht zwei — an beiden ist nichts mehr zu
+ * entscheiden, und zwei gleich aussehende Schaltzeilen untereinander lesen sich
+ * als eine.
+ */
+export const MEEP_SKILL_ARCHIVE_LABEL = 'learned'
+export const MEEP_SKILL_ARCHIVE_SEALED_LABEL = 'sealed'
+export const MEEP_SKILL_ARCHIVE_HINT = 'Nothing left to decide here'
+export const MEEP_SKILL_ARCHIVE_ICON = 'ph:check-circle-fill'
+/** Chevron der Schaltzeile. Schriftzeichen wie `✦` und `→`, kein Emoji. */
+export const MEEP_SKILL_ARCHIVE_CHEVRON_CLOSED = '▸'
+export const MEEP_SKILL_ARCHIVE_CHEVRON_OPEN = '▾'
+
+/** Icon-Kantenlänge auf einer Listenkarte. Größer als die 26px der Forge-Zeile:
+ *  hier stehen rund zehn offene Einträge statt fünfundvierzig. */
+export const MEEP_SKILL_CARD_ICON_SIZE = 32
+/** Der Knopf an der Karte trägt ein Wort, nicht das ＋ der Forge-Zeile — auf
+ *  zehn Einträgen ist die Beschriftung bezahlbar und ohne Rätsel lesbar. */
+export const MEEP_SKILL_LEARN_LABEL = 'Learn'
+/** Marke am frisch aufgegangenen Knoten. */
+export const MEEP_SKILL_FRESH_LABEL = 'NEW'
+/** Der Chip an einem Gabel-Knoten — dieselbe Aussage wie der Gabelsatz im
+ *  Kärtchen, nur so kurz, dass sie auf die Karte passt. */
+export const MEEP_SKILL_FORK_LABEL = 'CHOICE'
+export const MEEP_SKILL_FORK_ICON = 'game-icons:path-distance'
+/** Was am Listenende steht, wenn der ganze Baum gelernt ist. */
+export const MEEP_SKILL_ALL_DONE = 'Every skill learned.'
+export const MEEP_SKILL_ALL_DONE_ICON = 'game-icons:laurels'
+/*
+ * Eine Bedienzeile wie `FORGE_QUEUE_HEAD_HINT` steht hier bewusst NICHT.
+ * Im Shop ist sie nötig, weil die Zeile dort auf einen Klick nichts tut und
+ * ihre Auskunft nur am Zeiger hängt. Eine Skill-Karte trägt Icon, Namen,
+ * Wirkung, Preis und einen beschrifteten Knopf — sie erklärt sich selbst. In
+ * der 499px-Schiene stand die Zeile ausserdem neben dem Topf-Hinweis und
+ * schnitt ihn ab (gemessen auf Full HD): zwei Sätze um denselben Platz, von
+ * denen der eine nichts sagt.
+ */
+
+// ── Skill-Tab: das Empfehlungs-Panel (MeepBestBuyPanel) ──────────────────────
+/**
+ * Was als Nächstes zu lernen lohnt — EIN Knoten groß, und zwar derselbe, den
+ * die Orbit-Bühne links als BEST BUY umringt.
+ *
+ * „Günstigster" und nicht „stärkster", genau wie im Shop
+ * (`FORGE_BEST_BUY_LABEL`): die Wirkungen des Baums stehen in Prozent, HP,
+ * Stunden und Chimes nebeneinander — es gibt keine Einheit, in der `+6 %
+ * Expeditionsertrag` und `+1 HP Regen/s` vergleichbar wären. Der Preis ist die
+ * einzige Zahl, die alle dreißig Knoten teilen. Der Store sagt dasselbe schon
+ * seit jeher an `suggestedNodeIds()`; die Regel ist also nicht neu, sie wird
+ * nur sichtbar.
+ */
+export const MEEP_BEST_BUY_LABEL = 'BEST BUY'
+export const MEEP_BEST_BUY_TITLE = 'Best buy'
+export const MEEP_BEST_BUY_HINT = 'cheapest you can afford'
+/**
+ * Dieselben zwei Glyphen wie die Töpfe der Liste (`MEEP_SKILL_BUCKETS`):
+ * „kaufbar" ist überall der Blitz, „noch nicht" überall die Sanduhr. Eine
+ * Bedeutung, ein Zeichen — auch über Komponentengrenzen hinweg.
+ */
+export const MEEP_BEST_BUY_ICON = 'ph:lightning-fill'
+export const MEEP_BEST_BUY_IDLE_ICON = 'ph:hourglass-medium-fill'
+export const MEEP_BEST_BUY_IDLE = 'Nothing ready right now'
+/** Beschriftung des großen Knopfs im Panel. */
+export const MEEP_BEST_BUY_ACT_LABEL = 'Learn skill'
+/** Icon-Kantenlänge in der Identitätszeile des Panels. */
+export const MEEP_BEST_BUY_ICON_SIZE = 40
+
+/**
+ * Die Fläche, die das Panel IMMER belegt, solange es da ist.
+ *
+ * Dieselbe Klammer und derselbe Grund wie `FORGE_DETAIL_PANEL_*`: ein Kopf, der
+ * mit seinem Inhalt wächst, schiebt die Liste darunter — und wenn er dabei
+ * unter dem Zeiger wegrutscht, geht der Hover aus, der Kopf schrumpft, die
+ * Liste kommt zurück, und das Flackern trägt sich selbst.
+ *
+ * Kleiner als die Shop-Werte (384/45 %/440), weil dieses Panel drei Dinge NICHT
+ * hat: die Materialzeile, den Stapelknopf und dessen Hinweiszeile. Es trägt
+ * Kopf, Identität, einzeilige Beschreibung, die Vorher/Nachher-Zeilen und den
+ * Kaufblock — auf Full HD gemessen rund 300px mit der Kompakt-Media-Query.
+ *
+ * Der Anteil greift, weil `.msd-root` `height: 100%` trägt und der Elternteil
+ * damit eine definite Höhe hat. Ohne den Anteil bliebe auf Full HD (~950px) von
+ * der Liste zu wenig und auf 4K (~2030px) stünde der Kopf verloren.
+ */
+export const MEEP_BEST_BUY_PANEL_MIN_PX = 316
+export const MEEP_BEST_BUY_PANEL_FRACTION = 0.36
+export const MEEP_BEST_BUY_PANEL_MAX_PX = 380
+
+// ── Skill-Tab: schwebendes Kärtchen an der Karte (MeepSkillTooltip) ──────────
+/**
+ * Was der Zeiger in der Liste streift, in voller Auskunft: alle
+ * Vorher/Nachher-Zeilen, die berührten Systeme, der Gabelsatz und der noch
+ * fehlende Weg.
+ *
+ * Es schwebt links NEBEN der Schiene statt in ihr — dieselbe Begründung wie
+ * `FORGE_ROW_TIP_*`: alles, was im Fluss der Liste läge, verschöbe sie beim
+ * Erscheinen unter dem Zeiger.
+ */
+export const MEEP_SKILL_TIP_WIDTH_PX = 268
+export const MEEP_SKILL_TIP_GAP_PX = 26
+
+/**
+ * Wie lange die gelernte Karte aufleuchtet. Rein visuell, daher reale Zeit —
+ * derselbe Wert wie im Shop, damit dieselbe Quittung nicht zweimal anders lang
+ * dauert.
+ */
+export const MEEP_SKILL_FLASH_MS = 420
+
+// ── Hover-Spotlight zwischen Orbit-Bühne und Skill-Liste ─────────────────────
+/**
+ * Bühne links und Liste rechts zeigen denselben Bestand in zwei Bildern. Zeigt
+ * der Zeiger auf eines von beiden, tritt das andere mit hervor — sonst sucht
+ * das Auge den Kreis zur Karte unter dreißig gleich hellen selbst.
+ *
+ * Die Verzögerung vor dem Scrollen ist dieselbe Vorsichtsmaßnahme wie im Shop:
+ * wer mit dem Zeiger über die Bühne fährt, streift dabei Knoten, die er nicht
+ * meint — ohne sie sprünge die Liste bei jeder Bewegung.
+ */
+export const MEEP_SPOTLIGHT_SCROLL_DELAY_MS = 120
 
 // ── Star Forge (Shop tab) ─────────────────────────────────────────────────────
 // Tree geometry — the tree lives on a square stage, nodes placed on 4 polar rings.

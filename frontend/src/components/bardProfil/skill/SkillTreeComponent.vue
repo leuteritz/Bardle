@@ -34,6 +34,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useMeepSpotlight } from '@/composables/ui/useMeepSpotlight'
 import { useUiStore } from '@/stores/core/uiStore'
 import { MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import {
@@ -50,6 +51,7 @@ import MeepSkillDetails from './MeepSkillDetails.vue'
 
 const meepTree = useMeepTreeStore()
 const uiStore = useUiStore()
+const { resetMeepSpotlight } = useMeepSpotlight()
 
 const selectedId = ref<string | null>(null)
 const focusBranch = ref<string | null>(null)
@@ -157,8 +159,15 @@ const isVisible = computed(() => uiStore.bardActiveTab === 'tree')
 watch(
   isVisible,
   (visible) => {
-    if (visible) window.addEventListener('keydown', onEsc)
-    else window.removeEventListener('keydown', onEsc)
+    if (visible) {
+      window.addEventListener('keydown', onEsc)
+      return
+    }
+    window.removeEventListener('keydown', onEsc)
+    /* Der Tab wird nur versteckt, nicht abgerissen — ein Zeiger, der ihn beim
+       Wechsel verlässt, hinterlässt sonst einen dauerhaft hervorgehobenen
+       Knoten und eine Empfehlung, die auf sein Loslassen wartet. */
+    resetMeepSpotlight()
   },
   { immediate: true },
 )
