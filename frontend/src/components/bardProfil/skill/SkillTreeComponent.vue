@@ -3,6 +3,15 @@
  * Der Skill-Tree-Tab — nur noch Rahmen: Hintergrund, Fit-Skalierung, und die
  * zwei Teile darin (Orbit-Bühne, Detail-Blatt).
  *
+ * **Warum nur die Bühne skaliert:** dieselbe Dreiteilung wie im Shop
+ * (`ShopComponent`) — links eine Bühne, die jeden freien Pixel bekommt, rechts
+ * eine Detail-Schiene in fester, lesbarer Breite. Bis zum Umbau lag das Blatt
+ * MIT im Skalierkasten; sein `transform: scale()` läuft von ~1,0 auf Full HD bis
+ * zum Deckel 1,9 auf 4K, und damit lief jeder Schriftgrad darin mit. Gemessen
+ * gegen den Shop (dessen Spalte nicht skaliert): 13 px statt 14,5 auf Full HD,
+ * ~24 px statt 14,5 auf 4K. Eine gemeinsame Optik war so nicht erreichbar,
+ * gleich welche Werte im Blatt stehen.
+ *
  * **Warum Auswahl und Zweigfokus hier als `ref` liegen und nicht in Pinia:**
  * sie überleben weder ein Speichern noch das Schliessen des Tabs und werden von
  * keinem anderen System gelesen. Im Store wären es zwei Felder, die jede
@@ -28,8 +37,9 @@ import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import {
-  SKILL_TREE_ASIDE_WIDTH,
-  SKILL_TREE_COLUMN_GAP,
+  BARD_PROFILE_RAIL_MAX_PX,
+  BARD_PROFILE_RAIL_MIN_PX,
+  BARD_PROFILE_RAIL_VW,
   SKILL_TREE_MAX_SCALE,
   SKILL_TREE_STAGE_MAX_HEIGHT,
   SKILL_TREE_STAGE_MIN_HEIGHT,
@@ -46,8 +56,13 @@ const focusBranch = ref<string | null>(null)
 
 /** Luft zwischen Design-Kasten und Containerkante, auf jeder Seite. */
 const PADDING = 10
-const DESIGN_WIDTH = SKILL_TREE_STAGE_WIDTH + SKILL_TREE_COLUMN_GAP + SKILL_TREE_ASIDE_WIDTH
+const DESIGN_WIDTH = SKILL_TREE_STAGE_WIDTH
 
+/** Die Detail-Schiene — dieselbe Breite wie die Forge-Spalte im Shop. */
+const railWidth = `clamp(${BARD_PROFILE_RAIL_MIN_PX}px, ${BARD_PROFILE_RAIL_VW}vw, ${BARD_PROFILE_RAIL_MAX_PX}px)`
+
+/* Gemessen wird die BÜHNENSPALTE, nicht der Tab: die Schiene daneben hat ihre
+   eigene, unskalierte Breite und darf nicht in die Fit-Rechnung eingehen. */
 const container = ref<HTMLElement | null>(null)
 const boxWidth = ref(0)
 const boxHeight = ref(0)
@@ -151,28 +166,34 @@ watch(
 const designStyle = computed(() => ({
   width: `${DESIGN_WIDTH}px`,
   height: `${fit.value.height}px`,
-  gap: `${SKILL_TREE_COLUMN_GAP}px`,
   transform: `scale(${fit.value.scale})`,
 }))
 </script>
 
 <template>
-  <!-- `.self` auf beiden Ebenen: der Fit-Kasten lässt je nach Container Rand
-       stehen, und zwischen Bühne und Blatt liegt die Spaltenlücke — ein Klick
-       dorthin ist genauso „daneben" wie einer auf die freie Bühne. -->
-  <div ref="container" class="st-tab" @click.self="onSelect(null)">
-    <CosmicStageBackground />
+  <!-- Dieselbe Aufteilung wie `ShopComponent`: Bühne links mit jedem freien
+       Pixel, Detail-Schiene rechts in fester Breite. Die Naht zwischen beiden
+       ist der `border-left` der Schiene — eine zweite Linie hier verdoppelte
+       sie. -->
+  <div class="st-tab">
+    <!-- `.self` auf beiden Ebenen: der Fit-Kasten lässt je nach Container Rand
+         stehen — ein Klick dorthin ist genauso „daneben" wie einer auf die
+         freie Bühne. Ein Klick IN die Schiene hebt die Auswahl nicht auf. -->
+    <div ref="container" class="st-stage" @click.self="onSelect(null)">
+      <CosmicStageBackground />
 
-    <div class="st-design" :style="designStyle" @click.self="onSelect(null)">
-      <MeepOrbitStage
-        :height="fit.height"
-        :selected-id="selectedId"
-        :focus-branch="focusBranch"
-        @select="onSelect"
-        @focus="focusBranch = $event"
-      />
-      <MeepSkillDetails :node-id="selectedId" @select="onSelect" />
+      <div class="st-design" :style="designStyle" @click.self="onSelect(null)">
+        <MeepOrbitStage
+          :height="fit.height"
+          :selected-id="selectedId"
+          :focus-branch="focusBranch"
+          @select="onSelect"
+          @focus="focusBranch = $event"
+        />
+      </div>
     </div>
+
+    <MeepSkillDetails class="st-rail" :node-id="selectedId" @select="onSelect" />
   </div>
 </template>
 
@@ -183,15 +204,36 @@ const designStyle = computed(() => ({
   height: 100%;
   min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
   background: var(--rpg-bg-deep);
 }
 
+/* Die Bühnenspalte. Sie ist zugleich das gemessene Element — `clientWidth/Height`
+   ignorieren Transforms, die Messung bleibt also stabil, während die Skalierung
+   ihres Kindes wirkt. */
+.st-stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Die Detail-Schiene. `position: relative` + z-index ist nicht kosmetisch: der
+   Sternenhimmel nebenan ist absolut positioniert (z-index 0) und paints damit
+   im positionierten Schritt — über jedem STATISCHEN Geschwister, wie deckend
+   es auch sei. Dieselbe Absicherung trägt `TeamSidePanelShell`. */
+.st-rail {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 v-bind(railWidth);
+  min-width: 0;
+}
+
 /* Der Design-Kasten. Breite und Höhe kommen inline; nur der Transform passt ihn
-   an den Viewport an, und `clientWidth/Height` des Containers ignorieren
-   Transforms — die Messung bleibt dadurch stabil, während sie wirkt. */
+   an den Viewport an. */
 .st-design {
   position: relative;
   z-index: 1;

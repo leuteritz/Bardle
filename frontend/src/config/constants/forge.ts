@@ -7,8 +7,14 @@ import type { ForgeRelicRarity, ForgeSectionDef } from '@/types'
 //
 // Ein Startkreis in der Mitte, fünf Spiralarme in elliptischen Bahnen. Die
 // Bühne wird SELBST gezeichnet (kein Pan/Zoom, keine Fremdbibliothek) und lebt
-// in einem Design-Koordinatensystem, das der Tab-Root als Ganzes skaliert.
+// in einem Design-Koordinatensystem, das die Bühnenspalte des Tabs skaliert.
 // Deshalb sind alle Zahlen hier Design-Pixel, keine Bildschirm-Pixel.
+//
+// Skaliert wird NUR die Bühne, nicht der ganze Reiter: das Detail-Blatt daneben
+// ist eine unskalierte Schiene wie die Forge-Spalte im Shop (Breite in
+// `BARD_PROFILE_RAIL_*`, `constants/ui.ts`). Im Skalierkasten mitgeführt liefen
+// seine Schriftgrade von ~1,0 auf Full HD bis zum Deckel 1,9 auf 4K mit und
+// trafen den Shop auf keiner Auflösung.
 //
 // **Die BREITE ist fest, die HÖHE nicht.** Ein Kasten mit fixem Seitenverhältnis
 // kann nur EIN Container-Verhältnis ausfüllen; gemessen reicht das Profil-Modal
@@ -33,11 +39,10 @@ import type { ForgeRelicRarity, ForgeSectionDef } from '@/types'
 //      sind es 93 px — 53 px mehr als zwei halbe Knoten brauchen.
 /** Grundwinkel der fünf Zweige, gleichmäßig über 360°. */
 export const SKILL_TREE_BASE_ANGLES_DEG = [-90, -18, 54, 126, 198]
-/** Breite der Orbit-Bühne. Sie ist fest — nur die Höhe atmet. */
+/** Breite der Orbit-Bühne. Sie ist fest — nur die Höhe atmet. Zugleich die
+ *  Design-Breite des Skalierkastens, seit das Detail-Blatt daneben nicht mehr
+ *  mitskaliert. */
 export const SKILL_TREE_STAGE_WIDTH = 880
-export const SKILL_TREE_ASIDE_WIDTH = 360
-/** Spalte zwischen Bühne und Detail-Blatt. */
-export const SKILL_TREE_COLUMN_GAP = 10
 /**
  * Grenzen der elastischen Design-Höhe. Unten hält die Mindesthöhe die Enge Nr. 2
  * aus dem Blockkommentar oben frei; oben endet sie dort, wo die Ellipse kippt

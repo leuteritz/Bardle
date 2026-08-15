@@ -29,6 +29,9 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useActionToast } from '@/composables/ui/useActionToast'
 import type { ForgeSectionId } from '@/types'
 import {
+  BARD_PROFILE_RAIL_MAX_PX,
+  BARD_PROFILE_RAIL_MIN_PX,
+  BARD_PROFILE_RAIL_VW,
   FORGE_YIELD_PLINTH_HEIGHT_PX,
   FORGE_RAIL_WIDTH_PX,
   FORGE_RAIL_WIDTH_WIDE_PX,
@@ -55,6 +58,9 @@ function maxOutForge(): void {
 
 const railWidth = `${FORGE_RAIL_WIDTH_PX}px`
 const railWidthWide = `${FORGE_RAIL_WIDTH_WIDE_PX}px`
+
+/** Die Detailspalte — dieselbe Breite wie die Schiene im Skill-Tree-Tab. */
+const detailWidth = `clamp(${BARD_PROFILE_RAIL_MIN_PX}px, ${BARD_PROFILE_RAIL_VW}vw, ${BARD_PROFILE_RAIL_MAX_PX}px)`
 </script>
 
 <style scoped>
@@ -75,13 +81,11 @@ const railWidthWide = `${FORGE_RAIL_WIDTH_WIDE_PX}px`
   min-width: 0;
 }
 
-/* Gewachsen von `clamp(340px, 32vw, 470px)`. Der alte Deckel stammt aus der
-   Zeit, in der die Spalte fünf Filterchips UND vier Reiterbeschriftungen in
-   einer Zeile tragen musste; beides steht jetzt woanders. Was hier steht, ist
-   ein Detailkopf mit 23px-Titel und zwei Kaufknöpfen nebeneinander — der
-   braucht die zusätzlichen 90px, und auf 4K sind sie umsonst zu haben. */
+/* Die Breite steht als `BARD_PROFILE_RAIL_*` in `constants/ui.ts` samt
+   Herleitung — der Skill-Tree-Tab legt sein Detail-Blatt in dieselbe Schiene,
+   und zwei eigene Zahlen dafür liefen still auseinander. */
 .shop-forge-col {
-  flex: 0 0 clamp(400px, 26vw, 560px);
+  flex: 0 0 v-bind(detailWidth);
   min-width: 0;
 }
 

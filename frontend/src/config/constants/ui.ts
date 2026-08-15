@@ -124,6 +124,25 @@ export const HUD_PANEL_ARC_R = 60
 // Canonical border-radius for bardProfil cards, containers, and buttons
 export const BARD_PROFILE_RADIUS = 4
 
+/* ── Detail-Schiene des Bard-Profils ──────────────────────────────────────────
+ * Die rechte Spalte, in die ein Reiter seine Einzelheiten legt: im Shop die
+ * Forge-Spalte (`ShopComponent.vue`), im Skill-Tree das Detail-Blatt
+ * (`SkillTreeComponent.vue`). Beide lesen dieselben drei Zahlen — zwei eigene
+ * Breiten liefen still auseinander, und die Reiter stehen nebeneinander in
+ * derselben Leiste.
+ *
+ * Gewachsen aus `clamp(340px, 32vw, 470px)`. Der alte Deckel stammt aus der
+ * Zeit, in der die Shop-Spalte fünf Filterchips UND vier Reiterbeschriftungen
+ * in einer Zeile tragen musste; beides steht inzwischen woanders. Was dort
+ * steht, ist ein Detailkopf mit 23px-Titel und zwei Kaufknöpfen nebeneinander —
+ * der braucht die zusätzlichen 90px, und auf 4K sind sie umsonst zu haben.
+ *
+ * Der Boden greift auf dem flachsten Desktop-Viewport (Full HD), die Obergrenze
+ * ab ~2155px Breite; dazwischen wächst die Schiene mit dem Schirm. */
+export const BARD_PROFILE_RAIL_MIN_PX = 400
+export const BARD_PROFILE_RAIL_VW = 26
+export const BARD_PROFILE_RAIL_MAX_PX = 560
+
 // ── Bottom Bar Frame strokes ──────────────────────────────────────────────
 export const BOTTOM_FRAME_STROKE_SHADOW = 'rgba(30,12,0,0.95)' // dark outer shadow
 export const BOTTOM_FRAME_STROKE_WOOD = '#7a4e20' // wood brown — matches --rpg-wood / header border
