@@ -36,7 +36,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  select: [id: string]
+  /** `null` hebt die Auswahl auf — Toggle auf demselben Knoten oder freie Bühne. */
+  select: [id: string | null]
   focus: [branchId: string | null]
 }>()
 
@@ -143,8 +144,14 @@ const edges = computed(() =>
   }),
 )
 
+/**
+ * Ein Klick auf den bereits gewählten Knoten wählt ihn wieder ab — dasselbe
+ * Umschalten wie `onArm` beim Zweigfokus. Der Toggle sitzt hier und NICHT im
+ * Tab-Root: die Detailspalte emittiert `select` auch aus ihren Sprungzeilen,
+ * und dort darf ein Klick nie abwählen.
+ */
 function onSelect(id: string): void {
-  emit('select', id)
+  emit('select', props.selectedId === id ? null : id)
 }
 
 /**
@@ -163,7 +170,14 @@ function onArm(branchId: string): void {
 </script>
 
 <template>
-  <div class="mos-stage" :style="{ width: `${SKILL_TREE_STAGE_WIDTH}px` }">
+  <!-- `.self`: Bahnen und Startknoten sind `pointer-events: none`, ihre Klicks
+       landen also hier — Knoten und Zweignamen dagegen nie, die behalten ihre
+       Auswahl. Deshalb braucht kein Kind ein `@click.stop`. -->
+  <div
+    class="mos-stage"
+    :style="{ width: `${SKILL_TREE_STAGE_WIDTH}px` }"
+    @click.self="emit('select', null)"
+  >
     <svg
       class="mos-web"
       :viewBox="`0 0 ${SKILL_TREE_STAGE_WIDTH} ${height}`"

@@ -25,6 +25,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import { MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import {
   SKILL_TREE_ASIDE_WIDTH,
@@ -38,6 +39,7 @@ import MeepOrbitStage from './MeepOrbitStage.vue'
 import MeepSkillDetails from './MeepSkillDetails.vue'
 
 const meepTree = useMeepTreeStore()
+const uiStore = useUiStore()
 
 const selectedId = ref<string | null>(null)
 const focusBranch = ref<string | null>(null)
@@ -64,7 +66,10 @@ onMounted(() => {
   measure()
 })
 
-onBeforeUnmount(() => observer?.disconnect())
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  window.removeEventListener('keydown', onEsc)
+})
 
 /**
  * Skalierung und Design-Höhe in einem Zug — beide hängen voneinander ab, und
@@ -98,12 +103,50 @@ watch(selectedId, (id) => {
 /**
  * Wählt der Spieler einen Knoten aus einem anderen Zweig, während ein Fokus
  * liegt, würde er hinter dem Schleier verschwinden — der Fokus weicht.
+ *
+ * `null` hebt die Auswahl auf und stellt damit die allgemeine Ansicht des
+ * Blatts wieder her; der Zweigfokus bleibt dabei stehen, er ist eine eigene
+ * Ebene (siehe `onEsc`).
  */
-function onSelect(id: string): void {
+function onSelect(id: string | null): void {
   selectedId.value = id
+  if (id === null) return
   const branchId = MEEP_TREE_NODE_INDEX[id]?.branch.id
   if (focusBranch.value && branchId && focusBranch.value !== branchId) focusBranch.value = null
 }
+
+/* ── Escape ───────────────────────────────────────────────────────────────
+ * Wickelt eine Ebene ab: erst die Auswahl, dann den Zweigfokus. Bleibt nichts
+ * mehr, gehört die Taste dem Profil-Modal, das sich damit ganz schliesst.
+ *
+ * Das `preventDefault()` ist die Meldung dorthin: `BardProfileMenu` entscheidet
+ * erst nach dem gesamten Ereignisdurchlauf anhand von `defaultPrevented`. Ohne
+ * sie fiele mit der innersten Ebene sofort das ganze Profil zu.
+ */
+function onEsc(e: KeyboardEvent): void {
+  if (e.key !== 'Escape') return
+  if (selectedId.value !== null) selectedId.value = null
+  else if (focusBranch.value !== null) focusBranch.value = null
+  else return
+  e.preventDefault()
+}
+
+/**
+ * Der Listener hängt an der SICHTBARKEIT, nicht an der Lebensdauer: der Tab
+ * wird nach dem ersten Öffnen nur noch versteckt, nicht abgerissen (siehe
+ * `BardProfileMenu`). An `onMounted` gebunden verbrauchte er Escape sonst
+ * dauerhaft — auch im Idle-Orbit.
+ */
+const isVisible = computed(() => uiStore.bardActiveTab === 'tree')
+
+watch(
+  isVisible,
+  (visible) => {
+    if (visible) window.addEventListener('keydown', onEsc)
+    else window.removeEventListener('keydown', onEsc)
+  },
+  { immediate: true },
+)
 
 const designStyle = computed(() => ({
   width: `${DESIGN_WIDTH}px`,
@@ -114,10 +157,13 @@ const designStyle = computed(() => ({
 </script>
 
 <template>
-  <div ref="container" class="st-tab">
+  <!-- `.self` auf beiden Ebenen: der Fit-Kasten lässt je nach Container Rand
+       stehen, und zwischen Bühne und Blatt liegt die Spaltenlücke — ein Klick
+       dorthin ist genauso „daneben" wie einer auf die freie Bühne. -->
+  <div ref="container" class="st-tab" @click.self="onSelect(null)">
     <CosmicStageBackground />
 
-    <div class="st-design" :style="designStyle">
+    <div class="st-design" :style="designStyle" @click.self="onSelect(null)">
       <MeepOrbitStage
         :height="fit.height"
         :selected-id="selectedId"

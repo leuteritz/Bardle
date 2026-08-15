@@ -13,7 +13,7 @@
  * zeigen den gefalteten BAUM-Wert selbst; das ist der ehrliche Beitrag des
  * Baums und braucht keine Nachsimulation fremder Systeme.
  */
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
@@ -38,6 +38,18 @@ const emit = defineEmits<{ select: [id: string] }>()
 const gameStore = useGameStore()
 const meepTree = useMeepTreeStore()
 const { showToast } = useActionToast()
+
+/**
+ * Die Spalte scrollt. Ohne das hier bliebe sie beim Wechsel auf einen anderen
+ * Knoten — oder zurück auf die allgemeine Ansicht — mitten im vorigen Text
+ * stehen, und die neue Seite begänne unsichtbar oberhalb.
+ */
+const rootEl = ref<HTMLElement | null>(null)
+
+watch(
+  () => props.nodeId,
+  () => rootEl.value?.scrollTo({ top: 0 }),
+)
 
 const entry = computed(() => (props.nodeId ? MEEP_TREE_NODE_INDEX[props.nodeId] : undefined))
 const node = computed(() => entry.value?.node ?? null)
@@ -150,102 +162,114 @@ function buy(): void {
 </script>
 
 <template>
-  <aside class="msd-root" :style="{ width: `${SKILL_TREE_ASIDE_WIDTH}px` }">
-    <!-- Nichts gewählt: die Bühne bedienen, nicht ins Leere starren -->
-    <div v-if="!node || !branch" class="msd-empty">
-      <Icon icon="game-icons:orbital" width="40" height="40" class="msd-empty__icon" />
-      <p class="msd-empty__title">Pick a skill</p>
-      <p class="msd-empty__hint">
-        Choose any node on the orbit to see what it changes before you spend a single meep.
-      </p>
-      <div v-if="suggestions.length > 0" class="msd-suggest">
-        <span class="msd-section">Next worth taking</span>
-        <button
-          v-for="s in suggestions"
-          :key="s.node.id"
-          class="msd-suggest-row"
-          :style="{ '--branch-color': s.branch.color }"
-          @click="emit('select', s.node.id)"
-        >
-          <Icon :icon="s.node.icon" width="20" height="20" class="msd-suggest-row__icon" />
-          <span class="msd-suggest-row__name">{{ s.node.name }}</span>
-          <span class="msd-suggest-row__cost">
-            <img :src="MEEP_TREE_BADGE_ICON" alt="" class="msd-meep-icon" />
-            {{ s.node.cost }}
-          </span>
-        </button>
+  <aside ref="rootEl" class="msd-root" :style="{ width: `${SKILL_TREE_ASIDE_WIDTH}px` }">
+    <!-- Der Wechsel läuft über EINEN Wrapper mit `mode="out-in"`, gekeyt auf die
+         Knoten-ID: so blendet auch Knoten → Knoten über, und es steht nie mehr
+         als ein Zustand in der Spalte — sonst spränge die Bilanz unten, die per
+         `margin-top: auto` am Rand hängt. -->
+    <Transition name="msd-swap" mode="out-in">
+      <div :key="node?.id ?? 'empty'" class="msd-view">
+        <!-- Nichts gewählt: die Bühne bedienen, nicht ins Leere starren -->
+        <div v-if="!node || !branch" class="msd-empty">
+          <Icon icon="game-icons:orbital" width="40" height="40" class="msd-empty__icon" />
+          <p class="msd-empty__title">Pick a skill</p>
+          <p class="msd-empty__hint">
+            Choose any node on the orbit to see what it changes before you spend a single meep.
+          </p>
+          <div v-if="suggestions.length > 0" class="msd-suggest">
+            <span class="msd-section">Next worth taking</span>
+            <button
+              v-for="s in suggestions"
+              :key="s.node.id"
+              class="msd-suggest-row"
+              :style="{ '--branch-color': s.branch.color }"
+              @click="emit('select', s.node.id)"
+            >
+              <Icon :icon="s.node.icon" width="20" height="20" class="msd-suggest-row__icon" />
+              <span class="msd-suggest-row__name">{{ s.node.name }}</span>
+              <span class="msd-suggest-row__cost">
+                <img :src="MEEP_TREE_BADGE_ICON" alt="" class="msd-meep-icon" />
+                {{ s.node.cost }}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <template v-else>
+          <!-- ── Kopf ── -->
+          <header class="msd-hero" :style="{ '--branch-color': branch.color }">
+            <div class="msd-hero__glyph">
+              <Icon :icon="node.icon" width="34" height="34" />
+            </div>
+            <div class="msd-hero__text">
+              <span class="msd-hero__branch">
+                {{ branch.name }} · Rank {{ branchRank }} of {{ MEEP_TREE_TIERS_PER_BRANCH }}
+              </span>
+              <h3 class="msd-hero__name">{{ node.name }}</h3>
+              <span class="msd-hero__effect">{{ node.effect }}</span>
+            </div>
+          </header>
+
+          <p class="msd-flavour">{{ node.desc }}</p>
+
+          <!-- ── Gabel ── -->
+          <div
+            v-if="rivals.length > 0"
+            class="msd-fork"
+            :class="{ 'msd-fork--sealed': state === 'blocked' }"
+          >
+            <Icon icon="game-icons:path-distance" width="18" height="18" />
+            <p v-if="state === 'blocked'">
+              Sealed — you took <strong>{{ rivals.map((r) => r.name).join(', ') }}</strong> at this
+              rank. The choice holds for this universe.
+            </p>
+            <p v-else>
+              A choice: learning this seals
+              <strong>{{ rivals.map((r) => r.name).join(', ') }}</strong> for good. Rank
+              {{ MEEP_TREE_TIERS_PER_BRANCH }} opens either way.
+            </p>
+          </div>
+
+          <!-- ── Wirkung ── -->
+          <section class="msd-block">
+            <span class="msd-section">What it changes</span>
+            <div v-for="c in changes" :key="c.key" class="msd-change">
+              <span class="msd-change__label">{{ c.label }}</span>
+              <span class="msd-change__values">
+                <span class="msd-change__from">{{ c.from }}</span>
+                <span class="msd-change__arrow">→</span>
+                <span class="msd-change__to" :class="c.good ? 'is-good' : 'is-bad'">{{ c.to }}</span>
+              </span>
+            </div>
+            <div v-if="tags.length > 0" class="msd-tags">
+              <span v-for="t in tags" :key="t.label" class="msd-tag">
+                <Icon :icon="t.icon" width="13" height="13" />
+                {{ t.label }}
+              </span>
+            </div>
+          </section>
+
+          <!-- ── Weg dorthin ── -->
+          <section v-if="prerequisites.length > 0" class="msd-block">
+            <span class="msd-section">Still needed first</span>
+            <button
+              v-for="p in prerequisites"
+              :key="p.id"
+              class="msd-suggest-row"
+              :style="{ '--branch-color': branch.color }"
+              @click="emit('select', p.id)"
+            >
+              <Icon :icon="p.icon" width="20" height="20" class="msd-suggest-row__icon" />
+              <span class="msd-suggest-row__name">{{ p.name }}</span>
+              <span class="msd-suggest-row__cost">
+                <img :src="MEEP_TREE_BADGE_ICON" alt="" class="msd-meep-icon" />
+                {{ p.cost }}
+              </span>
+            </button>
+          </section>
+        </template>
       </div>
-    </div>
-
-    <template v-else>
-      <!-- ── Kopf ── -->
-      <header class="msd-hero" :style="{ '--branch-color': branch.color }">
-        <div class="msd-hero__glyph">
-          <Icon :icon="node.icon" width="34" height="34" />
-        </div>
-        <div class="msd-hero__text">
-          <span class="msd-hero__branch">
-            {{ branch.name }} · Rank {{ branchRank }} of {{ MEEP_TREE_TIERS_PER_BRANCH }}
-          </span>
-          <h3 class="msd-hero__name">{{ node.name }}</h3>
-          <span class="msd-hero__effect">{{ node.effect }}</span>
-        </div>
-      </header>
-
-      <p class="msd-flavour">{{ node.desc }}</p>
-
-      <!-- ── Gabel ── -->
-      <div v-if="rivals.length > 0" class="msd-fork" :class="{ 'msd-fork--sealed': state === 'blocked' }">
-        <Icon icon="game-icons:path-distance" width="18" height="18" />
-        <p v-if="state === 'blocked'">
-          Sealed — you took <strong>{{ rivals.map((r) => r.name).join(', ') }}</strong> at this rank.
-          The choice holds for this universe.
-        </p>
-        <p v-else>
-          A choice: learning this seals
-          <strong>{{ rivals.map((r) => r.name).join(', ') }}</strong> for good. Rank
-          {{ MEEP_TREE_TIERS_PER_BRANCH }} opens either way.
-        </p>
-      </div>
-
-      <!-- ── Wirkung ── -->
-      <section class="msd-block">
-        <span class="msd-section">What it changes</span>
-        <div v-for="c in changes" :key="c.key" class="msd-change">
-          <span class="msd-change__label">{{ c.label }}</span>
-          <span class="msd-change__values">
-            <span class="msd-change__from">{{ c.from }}</span>
-            <span class="msd-change__arrow">→</span>
-            <span class="msd-change__to" :class="c.good ? 'is-good' : 'is-bad'">{{ c.to }}</span>
-          </span>
-        </div>
-        <div v-if="tags.length > 0" class="msd-tags">
-          <span v-for="t in tags" :key="t.label" class="msd-tag">
-            <Icon :icon="t.icon" width="13" height="13" />
-            {{ t.label }}
-          </span>
-        </div>
-      </section>
-
-      <!-- ── Weg dorthin ── -->
-      <section v-if="prerequisites.length > 0" class="msd-block">
-        <span class="msd-section">Still needed first</span>
-        <button
-          v-for="p in prerequisites"
-          :key="p.id"
-          class="msd-suggest-row"
-          :style="{ '--branch-color': branch.color }"
-          @click="emit('select', p.id)"
-        >
-          <Icon :icon="p.icon" width="20" height="20" class="msd-suggest-row__icon" />
-          <span class="msd-suggest-row__name">{{ p.name }}</span>
-          <span class="msd-suggest-row__cost">
-            <img :src="MEEP_TREE_BADGE_ICON" alt="" class="msd-meep-icon" />
-            {{ p.cost }}
-          </span>
-        </button>
-      </section>
-    </template>
+    </Transition>
 
     <!-- ── Bilanz ──
          Sie steht in BEIDEN Zuständen und immer am unteren Rand: seit die
@@ -274,26 +298,33 @@ function buy(): void {
       </div>
     </section>
 
-    <!-- ── Fußzeile: hier und nur hier wird gekauft ── -->
-    <footer v-if="node" class="msd-buy">
-      <div class="msd-buy__price" :class="{ 'is-short': state === 'reachable' }">
-        <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="msd-meep-icon msd-meep-icon--big" />
-        <span v-ink-center>{{ node.cost }}</span>
-        <span v-if="pathCost !== null && pathCost > node.cost" class="msd-buy__path">
-          · {{ pathCost }} with prerequisites
-        </span>
-      </div>
-      <button
-        v-if="state !== 'bought' && state !== 'blocked'"
-        class="msd-buy__btn"
-        :disabled="!canBuy"
-        @click="buy"
-      >
-        {{ canBuy ? 'Learn skill' : `Need ${node.cost - gameStore.meeps} more` }}
-      </button>
-      <span v-else-if="state === 'bought'" class="msd-buy__done">✓ Learned</span>
-      <span v-else class="msd-buy__sealed">Sealed</span>
-    </footer>
+    <!-- ── Fußzeile: hier und nur hier wird gekauft ──
+         Sie steht bewusst AUSSERHALB des Wrappers oben, sonst rutschte sie über
+         die Bilanz. Ihr Einblenden wartet um die Ausblendzeit des Wrappers, damit
+         sie nicht vor der Seite auftaucht, zu der sie gehört. Beim Wechsel von
+         Knoten zu Knoten bleibt sie stehen und tauscht nur ihren Text — der
+         Lernknopf soll beim Durchklicken nicht blinken. -->
+    <Transition name="msd-foot">
+      <footer v-if="node" class="msd-buy">
+        <div class="msd-buy__price" :class="{ 'is-short': state === 'reachable' }">
+          <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="msd-meep-icon msd-meep-icon--big" />
+          <span v-ink-center>{{ node.cost }}</span>
+          <span v-if="pathCost !== null && pathCost > node.cost" class="msd-buy__path">
+            · {{ pathCost }} with prerequisites
+          </span>
+        </div>
+        <button
+          v-if="state !== 'bought' && state !== 'blocked'"
+          class="msd-buy__btn"
+          :disabled="!canBuy"
+          @click="buy"
+        >
+          {{ canBuy ? 'Learn skill' : `Need ${node.cost - gameStore.meeps} more` }}
+        </button>
+        <span v-else-if="state === 'bought'" class="msd-buy__done">✓ Learned</span>
+        <span v-else class="msd-buy__sealed">Sealed</span>
+      </footer>
+    </Transition>
   </aside>
 </template>
 
@@ -315,6 +346,52 @@ function buy(): void {
   border-radius: var(--bp-radius);
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
+}
+
+/* Der Wrapper hält die Flex-Spalte, die die beiden Zustände vorher direkt von
+   `.msd-root` geerbt haben. Er wächst NICHT — dadurch bleibt `.msd-totals` per
+   `margin-top: auto` weiterhin am unteren Rand. */
+.msd-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Nur `opacity` und `transform` — der Wechsel darf nichts rastern. */
+.msd-swap-enter-active {
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.msd-swap-leave-active {
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.msd-swap-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.msd-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* Die Verzögerung entspricht der Ausblendzeit des Wrappers. */
+.msd-foot-enter-active {
+  transition: opacity 0.16s ease 0.12s;
+}
+
+.msd-foot-leave-active {
+  transition: opacity 0.12s ease;
+}
+
+.msd-foot-enter-from,
+.msd-foot-leave-to {
+  opacity: 0;
 }
 
 /* ── Leerzustand ──────────────────────────────────────────── */
