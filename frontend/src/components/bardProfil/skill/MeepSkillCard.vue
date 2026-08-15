@@ -143,8 +143,14 @@ function onEnter(): void {
    KARTE
    Fläche und Rand im Rezept der geteilten `.fc-card` (rpg-theme.css), nur
    höher: die Zeile trägt hier drei Textzeilen statt zwei, und der Knopf ist
-   beschriftet. `.fc-spot`/`.fc-dimmed` kommen global dazu — die Kopplung zur
-   Orbit-Bühne ist dieselbe wie die zwischen Sternbaum und Shop-Liste.
+   beschriftet.
+
+   `.fc-spot`/`.fc-dimmed` stehen im Markup, aber die globalen Regeln dazu sind
+   als `.fc-card.fc-spot` / `.fc-row.fc-spot` geschrieben und verlangen die
+   Trägerklasse mit — diese Karte heisst `.msc-card` und traf keine von beiden.
+   Die Kopplung zur Orbit-Bühne war damit in dieser Richtung ohne jede Wirkung.
+   Sie steht deshalb unten ausformuliert; die geteilten Regeln bleiben
+   unangetastet, sie gehören dem Shop.
 ══════════════════════════════════════════════════ */
 .msc-card {
   position: relative;
@@ -193,6 +199,48 @@ function onEnter(): void {
   background: #17150f;
   border-color: #3a2a12;
   opacity: 0.62;
+}
+
+/* ── Der Zeiger meint diese Karte ─────────────────────────────
+   Gleich, ob er auf ihr steht oder drüben auf ihrem Knoten. Der zweite Fall ist
+   der Grund für die LEITKANTE: kommt der Zeiger von der Bühne, ist die Liste
+   gerade hierher gerollt, und ein Rahmen allein sagt bei zehn gleich hohen
+   Karten zu wenig. Der Streifen trägt die Zweigfarbe des Knotens — dieselbe,
+   die drüben sein Ring trägt, und dieselbe, in der Name und Glyph hier schon
+   stehen.
+
+   Doppelt geschrieben, mit Absicht: `.msc-card--ready:hover` wiegt eine Stufe
+   mehr und färbte den Rahmen sonst grün, sobald der Zeiger wirklich auf der
+   Karte steht — auf den Knoten zeigen und auf seine Karte zeigen sind EINE
+   Geste und dürfen nicht zwei Farben ergeben. Alles hier ist Zustand; der
+   Umschlag trägt die Transition der Karte, kein Dauerläufer. */
+.msc-card.fc-spot.fc-spot {
+  border-color: var(--node-c, #e8c040);
+  background: color-mix(in srgb, var(--node-c, #e8c040) 10%, #241a10);
+}
+
+.msc-card.fc-spot::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--node-c, #e8c040);
+  pointer-events: none;
+}
+
+/* Zurücktreten, solange woandershin gezeigt wird. Klasse je Karte, NICHT als
+   geerbte Variable am Listenrahmen (Performance-Regel 3). */
+.msc-card.fc-dimmed {
+  opacity: 0.42;
+}
+
+/* Und der Schein der frischen Karte hört auf zu atmen — sonst wäre der lauteste
+   Punkt im Bild genau die Karte, auf die der Spieler gerade NICHT zeigt. */
+.msc-card.fc-dimmed .msc-glow {
+  animation: none;
+  opacity: 0.3;
 }
 
 /* Der Schein der frischen Karte — statisches CSS, animiert wird nur `opacity`.

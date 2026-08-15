@@ -18,8 +18,8 @@ import { computed } from 'vue'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useMeepSkills } from '@/composables/ui/useMeepSkills'
 import { useMeepSpotlight } from '@/composables/ui/useMeepSpotlight'
-import { MEEP_TREE_BRANCHES } from '@/config/progression/meepTree'
-import { skillTreeLayout } from '@/utils/ui/skillTreeLayout'
+import { MEEP_TREE_BRANCHES, MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
+import { skillTreeLayout, type SkillTreeEdge } from '@/utils/ui/skillTreeLayout'
 import {
   SKILL_TREE_EDGE_ALPHA,
   SKILL_TREE_EDGE_WIDTH_BOUGHT,
@@ -75,26 +75,94 @@ function isDimmed(branchId: string): boolean {
   return props.focusBranch !== null && props.focusBranch !== branchId
 }
 
-/* ── Knoten ──────────────────────────────────────────────────────────────── */
+/* ── Spotlight ─────────────────────────────────────────────────────────────
+ * Zeigt der Spieler in der Liste rechts auf eine Karte, geht ihr Knoten hier
+ * auf, die KETTE vom Zentrum bis zu ihm leuchtet, und die übrigen treten
+ * zurück — sonst sucht das Auge den Kreis zur Karte unter dreissig gleich
+ * hellen selbst, und ohne die Kette bliebe offen, was vorher zu lernen ist.
+ */
 
 /**
- * Zeigt der Spieler in der Liste rechts auf eine Karte, tritt ihr Knoten hier
- * hervor und die übrigen neunundzwanzig treten zurück — sonst sucht das Auge
- * den Kreis zur Karte unter dreissig gleich hellen selbst.
- *
- * Der Zweigfokus bleibt daneben bestehen: beide nehmen zurück, was gerade nicht
- * gemeint ist, und ein Knoten, den schon der Fokus gedämpft hat, wird vom
- * Spotlight nicht ein zweites Mal gedämpft.
+ * Eingehende Kanten je Ziel. Hängt allein am Layout und wird deshalb NICHT in
+ * `spotChain` gebaut — das läuft bei jedem Hover-Wechsel, diese Tabelle nur beim
+ * Resize.
  */
-function isSpotDimmed(id: string): boolean {
-  return spotlightId.value !== null && spotlightId.value !== id
+const incomingEdges = computed(() => {
+  const map = new Map<string, SkillTreeEdge[]>()
+  for (const e of layout.value.edges) {
+    const list = map.get(e.toId)
+    if (list) list.push(e)
+    else map.set(e.toId, [e])
+  }
+  return map
+})
+
+/**
+ * Der hervorgehobene Knoten samt seiner Ahnenkette bis zum Zentrum, als Mengen
+ * von Knoten- und Kanten-Ids.
+ *
+ * Eine BREITENSUCHE, kein linearer Aufstieg wie in `ForgeTreePanel`: Rang 5 hat
+ * zwei eingehende Kanten, eine je Gabelseite (`skillTreeLayout`), und beide
+ * Wege führen wirklich dorthin — genau die Zusage, die die Gabel erträglich
+ * macht. Der Besuchsschutz ist zugleich die Abbruchbremse.
+ *
+ * NICHT über `meepTree.pathTo()`: das liefert nur den noch ungekauften Rest und
+ * wäre bei einem gelernten Knoten leer. Gemeint ist hier die volle Kette,
+ * unabhängig davon, was schon bezahlt ist.
+ *
+ * Versiegelte Ahnen fallen heraus — ist eine Gabelseite genommen, leuchtet nur
+ * noch die genommene.
+ */
+const spotChain = computed(() => {
+  const nodeIds = new Set<string>()
+  const edgeIds = new Set<string>()
+  const target = spotlightId.value
+  if (target === null) return { nodeIds, edgeIds }
+
+  nodeIds.add(target)
+  const queue = [target]
+  while (queue.length > 0) {
+    const cursor = queue.shift() as string
+    for (const e of incomingEdges.value.get(cursor) ?? []) {
+      if (e.fromId !== null && states.value[e.fromId] === 'blocked') continue
+      edgeIds.add(e.id)
+      if (e.fromId === null || nodeIds.has(e.fromId)) continue
+      nodeIds.add(e.fromId)
+      queue.push(e.fromId)
+    }
+  }
+  return { nodeIds, edgeIds }
+})
+
+/** Zu welchem der fünf Arme der hervorgehobene Knoten gehört. */
+const spotBranchId = computed(() =>
+  spotlightId.value === null
+    ? null
+    : (MEEP_TREE_NODE_INDEX[spotlightId.value]?.branch.id ?? null),
+)
+
+/**
+ * Die EINE Regel, nach der beide Dämpfungen aufgelöst werden: **was auf der
+ * Kette liegt, dämpft nichts** — weder der Zweigfokus noch das Spotlight.
+ *
+ * Der Fokus ist die dauerhafte Aussage und greift sonst härter (0,2 gegen 0,3),
+ * aber er ist auch die ÄLTERE: die Kette beantwortet eine Geste, die der Spieler
+ * gerade macht. Ohne diese Vorfahrt liefe eine leuchtende Route über gedimmte
+ * Kreise oder endete an ihnen, und beides sieht nach einem Fehler aus.
+ */
+function onChain(id: string): boolean {
+  return spotChain.value.nodeIds.has(id)
 }
+
+/* ── Knoten ──────────────────────────────────────────────────────────────── */
 
 const nodes = computed(() =>
   layout.value.placements.map((p) => ({
     placement: p,
     state: states.value[p.id] as ReturnType<typeof meepTree.nodeState>,
-    dimmed: isDimmed(p.branch.id) || isSpotDimmed(p.id),
+    dimmed: isDimmed(p.branch.id) && !onChain(p.id),
+    spot: spotlightId.value === p.id,
+    spotAway: spotlightId.value !== null && !onChain(p.id),
     notifying: meepTree.notifyingNodeIds.includes(p.id),
     /* Dieselbe Empfehlung, die das Panel rechts gross zeigt — ohne die Marke
        hier fände der Spieler sie unter dreissig Kreisen nicht wieder. */
@@ -129,6 +197,11 @@ const routeEdgeIds = computed(() => {
  * Eine Kante trägt die Farbe ihres Zweigs; ihre Deckkraft sagt, wie weit der
  * Spieler auf ihr ist. Gestrichelt bleibt alles, was noch offen ist — dieselbe
  * Ketten-Optik wie zuvor, nur jetzt selbst gezeichnet.
+ *
+ * Die Spotlight-Kette steht VOR allen anderen Fällen und schlägt auch den
+ * Zweigfokus (siehe `onChain`). Was sie NICHT anfasst, ist die Strichelung: sie
+ * hängt weiter allein am Kaufzustand — eine durchgezogene Kette sagt „bezahlt",
+ * und das wäre gelogen, solange der Weg offen ist.
  */
 const edges = computed(() =>
   layout.value.edges.map((e) => {
@@ -138,23 +211,29 @@ const edges = computed(() =>
     const bought = targetState === 'bought'
     const open = sourceDone && (targetState === 'buyable' || targetState === 'reachable')
     const onRoute = routeEdgeIds.value.has(e.id)
-    const dimmed = isDimmed(MEEP_TREE_BRANCHES[e.branchIndex].id)
+    const onSpot = spotChain.value.edgeIds.has(e.id)
+    const spotAway = spotlightId.value !== null && !onSpot
+    const dimmed = isDimmed(MEEP_TREE_BRANCHES[e.branchIndex].id) && !onSpot
 
-    const alpha = dimmed
-      ? SKILL_TREE_EDGE_ALPHA.dimmed
-      : bought
-        ? SKILL_TREE_EDGE_ALPHA.bought
-        : onRoute
-          ? SKILL_TREE_EDGE_ALPHA.path
-          : open
-            ? SKILL_TREE_EDGE_ALPHA.buyable
-            : SKILL_TREE_EDGE_ALPHA.idle
+    const alpha = onSpot
+      ? SKILL_TREE_EDGE_ALPHA.spot
+      : spotAway
+        ? SKILL_TREE_EDGE_ALPHA.spotDimmed
+        : dimmed
+          ? SKILL_TREE_EDGE_ALPHA.dimmed
+          : bought
+            ? SKILL_TREE_EDGE_ALPHA.bought
+            : onRoute
+              ? SKILL_TREE_EDGE_ALPHA.path
+              : open
+                ? SKILL_TREE_EDGE_ALPHA.buyable
+                : SKILL_TREE_EDGE_ALPHA.idle
 
     return {
       ...e,
       stroke: `${color}${alpha}`,
       width:
-        bought || onRoute
+        bought || onRoute || onSpot
           ? SKILL_TREE_EDGE_WIDTH_BOUGHT
           : open
             ? SKILL_TREE_EDGE_WIDTH_BUYABLE
@@ -245,6 +324,8 @@ function onArm(branchId: string): void {
       :selected="selectedId === n.placement.id"
       :notifying="n.notifying"
       :dimmed="n.dimmed"
+      :spot="n.spot"
+      :spot-away="n.spotAway"
       :best-buy="n.bestBuy"
       @select="onSelect"
       @hover="onHover"
@@ -254,7 +335,10 @@ function onArm(branchId: string): void {
       v-for="tag in layout.armTags"
       :key="tag.id"
       class="mos-arm"
-      :class="{ 'mos-arm--active': focusBranch === tag.id }"
+      :class="{
+        'mos-arm--active': focusBranch === tag.id,
+        'mos-arm--spot': spotBranchId === tag.id,
+      }"
       :style="{ left: `${tag.x}px`, top: `${tag.y}px`, '--branch-color': tag.color }"
       :title="`Focus the ${tag.name} branch`"
       @click="onArm(tag.id)"
@@ -311,8 +395,13 @@ function onArm(branchId: string): void {
     background 0.15s;
 }
 
+/* Der Zeiger auf einer Karte drüben zieht denselben Namen mit: die fünf Arme
+   sind sonst nur an ihrer Farbe zu unterscheiden, und ein Blick soll sagen
+   „das gehört zu Vigil". Dieselbe Optik wie Hover und Fokus, weil es dieselbe
+   Aussage ist — welcher Arm gerade gemeint ist. */
 .mos-arm:hover,
-.mos-arm--active {
+.mos-arm--active,
+.mos-arm--spot {
   border-color: var(--branch-color);
   background: color-mix(in srgb, var(--branch-color) 14%, var(--rpg-bg-deep));
   color: color-mix(in srgb, var(--branch-color) 85%, #fff);

@@ -55,34 +55,48 @@ const { listHovering } = useMeepSpotlight()
 const { showToast } = useActionToast()
 
 /**
- * Ob das Panel eine Empfehlung zeigt.
+ * Was gezeigt wird — LIVE, ohne jedes Einfrieren.
  *
- * Es folgt `bestBuyId`, aber NICHT, solange der Zeiger die Liste hält: ein
- * Wechsel in genau dem Moment tauschte den Inhalt unter der Hand. Nachgezogen
- * wird beim Loslassen — dasselbe Motiv wie `frozenBuckets` in `MeepSkillList`.
- *
- * Eingefroren wird nur, WELCHER Knoten gezeigt wird; die Fläche steht ohnehin.
+ * Der Inhalt darf sofort durchschlagen: er wechselt innerhalb der reservierten
+ * Fläche und verschiebt damit nichts. Wer während eines Hovers kauft, sieht in
+ * derselben Sekunde den nächstbesten Knoten — nicht den gerade gelernten mit
+ * ausgegrautem Knopf.
  */
-const shownId = ref<string | null>(bestBuyId.value)
+const entry = computed<MeepSkillEntry | null>(() =>
+  bestBuyId.value === null ? null : (entryById.value.get(bestBuyId.value) ?? null),
+)
+
+/**
+ * Ob es das Panel ÜBERHAUPT gibt.
+ *
+ * Es gibt es nur, solange etwas zu empfehlen ist: ist nichts bezahlbar, fällt
+ * es ganz weg und die Liste bekommt seine 316 Pixel (380 ab 2K) — rund vier
+ * Karten mehr. Dieselbe Regel trägt `ForgeNextUpPanel` im Shop.
+ *
+ * Eingefroren wird die SICHTBARKEIT, nicht der Inhalt, und zwar solange der
+ * Zeiger die Liste hält: ein Erscheinen in genau dem Moment schöbe sie um
+ * dreihundert Pixel unter ihm weg. Nachgezogen wird beim Loslassen — dasselbe
+ * Motiv wie `frozenBuckets` in `MeepSkillList`.
+ *
+ * Aus der Trennung folgt die Zusicherung, auf der der Ruhezustand unten beruht:
+ * `shown && entry === null` kann NUR während eines Hovers eintreten.
+ */
+const shown = ref(bestBuyId.value !== null)
 
 watch(
   [bestBuyId, listHovering],
   ([id, hovering]) => {
-    if (!hovering) shownId.value = id
+    if (!hovering) shown.value = id !== null
   },
   { immediate: true },
 )
 
-const shown = computed<MeepSkillEntry | null>(() =>
-  shownId.value === null ? null : (entryById.value.get(shownId.value) ?? null),
-)
-
 /* Nur für den EINEN gezeigten Knoten gerechnet. */
-const detail = computed(() => (shown.value ? detailFor(shown.value.id) : null))
+const detail = computed(() => (entry.value ? detailFor(entry.value.id) : null))
 
 /** „Vigil · Rank 1 of 5" */
 const metaLine = computed(() => {
-  const e = shown.value
+  const e = entry.value
   if (!e) return ''
   return `${e.branchName} · Rank ${e.rank} of ${MEEP_TREE_TIERS_PER_BRANCH}`
 })
@@ -92,7 +106,7 @@ const flashed = ref(false)
 let flashTimer: ReturnType<typeof setTimeout> | null = null
 
 function learn(): void {
-  const e = shown.value
+  const e = entry.value
   if (!e || !e.canBuy) return
   if (!buySkill(e.id)) return
   showToast(`${e.name} learned!`, 'perk')
@@ -109,7 +123,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="mbb-panel" :style="{ '--node-c': shown?.color ?? '#52b830' }">
+  <!-- Es gibt dieses Panel NUR, solange es etwas zu empfehlen hat. Der Wegfall
+       ist an einen Kauf gebunden, nie an die Maus — deshalb kann er kein
+       Flackern tragen, und die Hover-Sperre an `shown` hält ihn zusätzlich aus
+       jedem Moment heraus, in dem der Spieler zielt. -->
+  <section v-if="shown" class="mbb-panel" :style="{ '--node-c': entry?.color ?? '#52b830' }">
     <div class="mbb-flash" :class="{ 'mbb-flash--on': flashed }" aria-hidden="true" />
 
     <header class="mbb-head">
@@ -117,27 +135,27 @@ onUnmounted(() => {
         <Icon :icon="MEEP_BEST_BUY_ICON" width="13" height="13" />
         {{ MEEP_BEST_BUY_TITLE }}
       </span>
-      <span v-if="shown" class="mbb-hint">{{ MEEP_BEST_BUY_HINT }}</span>
+      <span v-if="entry" class="mbb-hint">{{ MEEP_BEST_BUY_HINT }}</span>
     </header>
 
-    <template v-if="shown">
+    <template v-if="entry">
       <div class="mbb-id">
         <div class="mbb-ico">
           <Icon
-            :icon="shown.icon"
+            :icon="entry.icon"
             :width="MEEP_BEST_BUY_ICON_SIZE"
             :height="MEEP_BEST_BUY_ICON_SIZE"
-            :style="{ color: shown.color }"
+            :style="{ color: entry.color }"
           />
         </div>
         <div class="mbb-id-text">
-          <div class="mbb-name" :style="{ color: shown.color }">{{ shown.name }}</div>
+          <div class="mbb-name" :style="{ color: entry.color }">{{ entry.name }}</div>
           <div class="mbb-meta">{{ metaLine }}</div>
         </div>
       </div>
 
       <div class="mbb-body">
-        <p class="mbb-desc">{{ shown.desc }}</p>
+        <p class="mbb-desc">{{ entry.desc }}</p>
 
         <!-- Now → After: die Werte kommen fertig aus `useMeepSkills`, hier wird
              nichts nachgerechnet. -->
@@ -164,7 +182,7 @@ onUnmounted(() => {
             v-for="t in detail.tags"
             :key="t.label"
             class="fc-chip mbb-tag"
-            :style="{ '--chip-c': shown.color }"
+            :style="{ '--chip-c': entry.color }"
           >
             <Icon :icon="t.icon" width="13" height="13" />
             {{ t.label }}
@@ -188,28 +206,31 @@ onUnmounted(() => {
              und ✓/✕ bleiben, sie tragen die Aussage. -->
         <div
           class="fc-cost mbb-cost"
-          :class="{ 'fc-cost--short': !shown.canAfford }"
-          :title="`You hold ${gameStore.meeps} meeps · ${shown.name} costs ${shown.cost}`"
+          :class="{ 'fc-cost--short': !entry.canAfford }"
+          :title="`You hold ${gameStore.meeps} meeps · ${entry.name} costs ${entry.cost}`"
         >
-          <span class="fc-cost-pair" :class="{ 'fc-cost-pair--missing': !shown.canAfford }">
+          <span class="fc-cost-pair" :class="{ 'fc-cost-pair--missing': !entry.canAfford }">
             <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="fc-cost-img" />
             <span class="fc-cost-qty">
               {{ formatNumberCompact(gameStore.meeps)
-              }}<span class="fc-cost-need">/{{ shown.cost }}</span>
+              }}<span class="fc-cost-need">/{{ entry.cost }}</span>
             </span>
             <span class="fc-cost-state" aria-hidden="true">
-              {{ shown.canAfford ? '✓' : '✕' }}
+              {{ entry.canAfford ? '✓' : '✕' }}
             </span>
           </span>
         </div>
 
-        <button class="fc-act mbb-act" :disabled="!shown.canBuy" @click="learn">
+        <button class="fc-act mbb-act" :disabled="!entry.canBuy" @click="learn">
           {{ MEEP_BEST_BUY_ACT_LABEL }}
         </button>
       </div>
     </template>
 
-    <!-- Füllt dieselbe Fläche, damit auch dieser Moment nichts verschiebt. -->
+    <!-- Nur zu sehen, solange der Zeiger die Liste hält und die letzte lernbare
+         Sache dabei wegfällt — ausserhalb dieses einen Moments folgt `shown`
+         dem Eintrag, und das Panel wäre dann gar nicht da. Füllt dieselbe
+         Fläche, damit auch dieser Moment nichts verschiebt. -->
     <div v-else class="mbb-idle">
       <Icon :icon="MEEP_BEST_BUY_IDLE_ICON" width="30" height="30" class="mbb-idle-ico" />
       <span class="mbb-idle-text">{{ MEEP_BEST_BUY_IDLE }}</span>

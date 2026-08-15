@@ -11,9 +11,20 @@
  *    sonst dreissig davon im Baum.
  *
  * Die Ausrichtung braucht die eigene Höhe NICHT: liegt die Karte in der unteren
- * Bildhälfte, hängt das Kärtchen an ihrer Unterkante nach oben, sonst an ihrer
- * Oberkante nach unten. So bleibt es im Bild, ohne dass ein zweiter Reflow es
- * erst ausmessen müsste.
+ * Bildhälfte, hängt das Kärtchen ÜBER ihr, sonst darunter. So bleibt es im Bild,
+ * ohne dass ein zweiter Reflow es erst ausmessen müsste.
+ *
+ * **Warum es in der SCHIENE liegt und nicht links daneben.** Bis zur
+ * Spotlight-Kopplung hing es links der Karte und ragte damit rund 270 px in die
+ * Orbit-Bühne. Solange die Bühne auf einen Hover in der Liste nicht antwortete,
+ * kostete das nichts. Jetzt antwortet sie — und gemessen verdeckte das Kärtchen
+ * dabei fünf der dreissig Knoten VOLLSTÄNDIG und zwischen 40 und 70 % der
+ * leuchtenden Kette dorthin. Es verdeckte also genau die Auskunft, die es
+ * ausgelöst hatte.
+ *
+ * Es passt mit seinen 268 px bequem in die Schiene (mindestens 400 px). Was es
+ * dort überdeckt, sind Nachbarkarten — und die liest gerade niemand. Die eigene
+ * Karte lässt es frei: es hängt an ihrer Kante, nicht über ihr.
  *
  * Was hier steht, steht NICHT auf der Karte: alle Vorher/Nachher-Zeilen, die
  * berührten Systeme, der Gabelsatz und der noch fehlende Weg. Die Karte trägt,
@@ -43,8 +54,12 @@ const cardStyle = computed(() => {
   if (!a) return {}
   const above = a.top > window.innerHeight / 2
   return {
-    left: `${a.left - MEEP_SKILL_TIP_WIDTH_PX - MEEP_SKILL_TIP_GAP_PX}px`,
-    top: `${above ? a.bottom : a.top}px`,
+    /* Linksbündig mit der Karte — beide stehen damit in derselben Spalte, und
+       das Kärtchen liest sich als Fortsetzung nach unten statt als Fahne. */
+    left: `${a.left}px`,
+    /* Der Abstand geht jetzt nach OBEN bzw. UNTEN: die Karte selbst bleibt frei,
+       sonst läge sie unter ihrer eigenen Auskunft. */
+    top: `${above ? a.top - MEEP_SKILL_TIP_GAP_PX : a.bottom + MEEP_SKILL_TIP_GAP_PX}px`,
     transform: above ? 'translateY(-100%)' : 'none',
   }
 })

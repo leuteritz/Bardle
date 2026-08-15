@@ -16,6 +16,9 @@ import { MEEP_TREE_BADGE_ICON, type MeepTreeNodeDef } from '@/config/progression
 import type { MeepTreeNodeState } from '@/stores/progression/meepTreeStore'
 import {
   MEEP_BEST_BUY_LABEL,
+  MEEP_SPOTLIGHT_DIM_OPACITY,
+  MEEP_SPOTLIGHT_NODE_SCALE,
+  MEEP_SPOTLIGHT_PING_MS,
   SKILL_TREE_COST_PILL_RADIUS,
   SKILL_TREE_NODE_ICON_SIZE,
   SKILL_TREE_NODE_OPACITY,
@@ -32,8 +35,16 @@ const props = defineProps<{
   state: MeepTreeNodeState
   selected: boolean
   notifying: boolean
-  /** Von Zweigfokus oder Spotlight zurückgenommen. */
+  /** Vom ZWEIGFOKUS zurückgenommen — einer Absicht, die stehen bleibt. */
   dimmed: boolean
+  /** Der Zeiger meint genau diesen Knoten — hier oder auf seiner Karte drüben. */
+  spot: boolean
+  /**
+   * Ein Spotlight liegt, aber weder auf diesem Knoten noch auf seiner Kette.
+   * Getrennt von `dimmed`, weil es etwas anderes sagt und weicher zugreift:
+   * „ich zeige gerade woandershin" gegen „das habe ich beiseitegeschoben".
+   */
+  spotAway: boolean
   /**
    * Der günstigste gerade bezahlbare Knoten — derselbe, den das Panel rechts
    * gross zeigt. Ohne die Marke hier fände der Spieler die Empfehlung unter
@@ -47,13 +58,19 @@ defineEmits<{
   hover: [id: string | null]
 }>()
 
+/** Zurückgenommen, gleich aus welchem der beiden Gründe. */
+const receded = computed(() => props.dimmed || props.spotAway)
+
 /**
  * Die Kostenpille hängt nur an Knoten, die gerade zählen. Alle dreissig
  * gleichzeitig überlappten den nächsten Rang — und die Kosten stehen ohnehin
  * gross im Detail-Blatt.
+ *
+ * `spot` gehört dazu: wer auf eine Karte drüben zeigt, fragt als Erstes nach dem
+ * Preis, und der Knoten ist gerade das Einzige, was noch hell steht.
  */
 const showCost = computed(
-  () => !props.dimmed && (props.state === 'buyable' || props.selected),
+  () => !receded.value && (props.state === 'buyable' || props.selected || props.spot),
 )
 
 /** Radial nach aussen, damit die Pille nie über der eigenen Bahn liegt. */
@@ -65,9 +82,23 @@ const costOffset = computed(() => {
   }
 })
 
+/**
+ * Der Zweigfokus gewinnt über das Spotlight — er greift härter zu (0,2 gegen
+ * 0,3), und er ist die dauerhafte Aussage. Ein Knoten, den schon der Fokus
+ * gedämpft hat, wird vom Spotlight nicht ein zweites Mal gedämpft.
+ */
 const opacity = computed(() =>
-  props.dimmed ? SKILL_TREE_NODE_OPACITY.dimmed : SKILL_TREE_NODE_OPACITY[props.state],
+  props.dimmed
+    ? SKILL_TREE_NODE_OPACITY.dimmed
+    : props.spotAway
+      ? MEEP_SPOTLIGHT_DIM_OPACITY
+      : SKILL_TREE_NODE_OPACITY[props.state],
 )
+
+/* Beide gehen als Zeichenkette ins CSS — der Wert steht in den Konstanten, der
+   KEYFRAME-Name bleibt in der Klasse (Performance-Regel 10). */
+const spotScale = `${MEEP_SPOTLIGHT_NODE_SCALE}`
+const spotPingMs = `${MEEP_SPOTLIGHT_PING_MS}ms`
 
 const title = computed(() =>
   props.state === 'blocked'
@@ -82,7 +113,10 @@ const bestBuyTitle = `${MEEP_BEST_BUY_LABEL} — cheapest you can afford`
 <template>
   <div
     class="msn-root"
-    :class="[`msn-root--${state}`, { 'msn-root--selected': selected }]"
+    :class="[
+      `msn-root--${state}`,
+      { 'msn-root--selected': selected, 'msn-root--spot': spot, 'msn-root--away': spotAway },
+    ]"
     :style="{
       '--branch-color': color,
       left: `${x}px`,
@@ -105,7 +139,14 @@ const bestBuyTitle = `${MEEP_BEST_BUY_LABEL} — cheapest you can afford`
          Kostenpille beansprucht diesen Raum bereits und hängt genau deshalb nur
          an kaufbaren Knoten. Der Ring ist die einzige grüne Marke auf der
          Bühne, und der Name steht gross im Panel daneben. -->
-    <span v-if="bestBuy && !dimmed" class="msn-best-ring" :title="bestBuyTitle" />
+    <span v-if="bestBuy && !receded" class="msn-best-ring" :title="bestBuyTitle" />
+
+    <!-- Die Marke des Spotlights. Genau EINE Ebene je Spotlight, nicht eine je
+         Knoten — und weil `v-if` sie bei jedem neuen Ziel neu erzeugt, fängt ihr
+         einmaliger Ping von selbst wieder von vorn an, ohne dass irgendwo eine
+         Animation zurückgesetzt werden müsste. Muster `.node-spot` im
+         Sternbaum des Shops. -->
+    <span v-if="spot" class="msn-spot" aria-hidden="true" />
 
     <button class="msn-circle" :title="title" @click="$emit('select', node.id)">
       <Icon
@@ -155,6 +196,13 @@ const bestBuyTitle = `${MEEP_BEST_BUY_LABEL} — cheapest you can afford`
   z-index: 40;
 }
 
+/* Der hervorgehobene Knoten liegt über allem anderen — er ist auf den inneren
+   Bahnen sonst der Einzige, dessen Ring unter dem Nachbarrang verschwände,
+   gerade weil sein Kreis dabei wächst. */
+.msn-root--spot {
+  z-index: 50;
+}
+
 /* ── Der Kreis ────────────────────────────────────────────── */
 .msn-circle {
   position: relative;
@@ -178,6 +226,15 @@ const bestBuyTitle = `${MEEP_BEST_BUY_LABEL} — cheapest you can afford`
 
 .msn-circle:hover {
   transform: scale(1.14);
+}
+
+/* Auf den Knoten zeigen und auf seine Karte drüben zeigen sind EINE Geste — sie
+   dürfen nicht zwei Grössen ergeben. Der Wert liegt deshalb über dem
+   Zeige-Sprung darüber und steht bei gleicher Spezifität (0,2,0) NACH ihm; der
+   Klick-Rückstoss unten gewinnt aus demselben Grund über beide. */
+.msn-root--spot .msn-circle {
+  transform: scale(v-bind(spotScale));
+  transition-duration: 0.12s;
 }
 
 .msn-circle:active {
@@ -230,6 +287,32 @@ const bestBuyTitle = `${MEEP_BEST_BUY_LABEL} — cheapest you can afford`
   }
 }
 
+/* ── Was während eines Spotlights stillsteht ──────────────────
+   Das ist nicht Kosmetik, sondern der eigentliche Gewinn der Sache: ohne diese
+   zwei Regeln liefen während eines Spotlights weiter bis zu fünf Kaufbar-Pulse
+   im Feld, davon vier an Kreisen, die gerade auf 0,3 zurückgetreten sind und
+   deren Schein niemand mehr liest. Mit ihnen läuft im Knotenfeld genau eine
+   Animation. Dieselbe Auflösung wie `.node-circle--dim .node-glow` im Shop.
+
+   Am Spot-Knoten selbst steht der Puls voll und still — sonst schwebten dort
+   zwei atmende Ringe mit verschiedenem Takt übereinander. */
+.msn-root--away .msn-circle::after {
+  animation: none;
+}
+
+/* Das Notify-ABZEICHEN bleibt stehen — es trägt eine Information, keine Zierde,
+   und tritt mit seinem Knoten ohnehin auf 0,3 zurück. Nur sein Schein hört auf
+   zu atmen. Gemessen macht das den Unterschied zwischen fünf und einer
+   laufenden Animation im Knotenfeld. */
+.msn-root--away .msn-notify::after {
+  animation: none;
+}
+
+.msn-root--spot .msn-circle::after {
+  animation: none;
+  opacity: 1;
+}
+
 .msn-root--reachable .msn-circle {
   border-color: color-mix(in srgb, var(--branch-color) 50%, var(--rpg-border-row));
 }
@@ -276,6 +359,58 @@ const bestBuyTitle = `${MEEP_BEST_BUY_LABEL} — cheapest you can afford`
   }
   to {
     opacity: 1;
+  }
+}
+
+/* ── Marke des Spotlights ─────────────────────────────────────
+   Sie trägt die ZWEIGFARBE, nicht Gold und nicht Grün: die drei Marken auf der
+   Bühne dürfen sich nicht verwechseln lassen — Gold heisst „ausgewählt", Grün
+   heisst „Empfehlung", und diese hier heisst nur „darauf zeige ich gerade".
+
+   Sie liegt weiter aussen als die Empfehlungsmarke (-7 gegen -6), damit beide
+   an demselben Knoten als zwei Ringe lesbar bleiben statt als ein dicker. Der
+   Schein ist STATISCH, animiert werden ausschliesslich `opacity` und
+   `transform` (Performance-Regel 2/11). */
+.msn-spot {
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 2px solid var(--branch-color);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--branch-color) 70%, transparent);
+  pointer-events: none;
+  animation: msn-spot-breathe 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes msn-spot-breathe {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+/* Der einmalige Ping auf derselben Marke: ein Ring, der aufgeht und vergeht.
+   Er läuft genau einmal je Ziel — das Element ist bei jedem Wechsel neu. */
+.msn-spot::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid var(--branch-color);
+  animation: msn-spot-ping v-bind(spotPingMs) ease-out 1 forwards;
+}
+
+@keyframes msn-spot-ping {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.9);
   }
 }
 
@@ -433,6 +568,18 @@ const bestBuyTitle = `${MEEP_BEST_BUY_LABEL} — cheapest you can afford`
   .msn-best-ring {
     animation: none;
     opacity: 1;
+  }
+
+  /* Der Ring bleibt, sein Atem und sein Ping gehen — er sagt seine Aussage auch
+     als Zustand. */
+  .msn-spot {
+    animation: none;
+    opacity: 1;
+  }
+
+  .msn-spot::after {
+    animation: none;
+    opacity: 0;
   }
 }
 </style>

@@ -122,6 +122,15 @@ export const SKILL_TREE_EDGE_ALPHA = {
   buyable: 'd0',
   idle: '3a',
   dimmed: '18',
+  /**
+   * Die Kette vom Zentrum zum hervorgehobenen Knoten — voll deckend, und ihre
+   * Strichstärke ist die einer gekauften Kante. Die STRICHELUNG bleibt dabei am
+   * Kaufzustand hängen: eine durchgezogene Kette sagt „bezahlt", und das wäre
+   * gelogen, solange der Weg noch offen ist.
+   */
+  spot: '',
+  /** Alles, was nicht auf dieser Kette liegt, solange sie leuchtet. */
+  spotDimmed: '14',
 } as const
 /**
  * Deckkraft je Knotenzustand. `blocked` liegt UNTER `locked`: ein versiegelter
@@ -468,6 +477,35 @@ export const MEEP_SKILL_FLASH_MS = 420
  * meint — ohne sie sprünge die Liste bei jeder Bewegung.
  */
 export const MEEP_SPOTLIGHT_SCROLL_DELAY_MS = 120
+/**
+ * Der Maßstab des hervorgehobenen Knotens. Er liegt ÜBER dem Zeige-Sprung von
+ * `.msn-circle:hover` (1,14), weil er beide Gesten bedienen muss: den Zeiger auf
+ * dem Kreis UND den Zeiger auf seiner Karte drüben. Zwei Größen für dieselbe
+ * Bedeutung wären ein Fehler.
+ *
+ * Dieselbe Zahl wie `FORGE_SPOTLIGHT_NODE_SCALE` weiter unten — die Geste ist
+ * dieselbe. Trotzdem eine eigene Konstante: die beiden Reiter teilen keinen
+ * Zustand (siehe `useMeepSpotlight` gegen `useForgeSpotlight`), und ein Name aus
+ * dem Shop im Meep-Baum läse sich als Kopplung, die es nicht gibt.
+ */
+export const MEEP_SPOTLIGHT_NODE_SCALE = 1.22
+/**
+ * Wie weit die übrigen neunundzwanzig zurücktreten, solange ein Spotlight liegt.
+ *
+ * Steht bewusst NEBEN `SKILL_TREE_NODE_OPACITY.dimmed` (0,2) und bedeutet etwas
+ * anderes — dieselbe Trennung wie `FORGE_SPOTLIGHT_DIM_OPACITY` gegen
+ * `FORGE_SIFT_DIM_OPACITY`:
+ *
+ *   • 0,3 hier — „ich zeige gerade woandershin". Der Zeiger wandert weiter, die
+ *     anderen bleiben lesbar.
+ *   • 0,2 dort — der ZWEIGFOKUS, eine Absicht des Spielers, die stehen bleibt,
+ *     bis er sie zurücknimmt. Sie darf härter zugreifen.
+ *
+ * Liegen beide an, gewinnt der Fokus: er ist die dauerhafte Aussage.
+ */
+export const MEEP_SPOTLIGHT_DIM_OPACITY = 0.3
+/** Dauer des einmaligen Rings, der beim Erscheinen der Marke aufgeht und vergeht. */
+export const MEEP_SPOTLIGHT_PING_MS = 450
 
 // ── Star Forge (Shop tab) ─────────────────────────────────────────────────────
 // Tree geometry — the tree lives on a square stage, nodes placed on 4 polar rings.
