@@ -63,10 +63,11 @@ export const RESOURCE_STAR_PLANET_COUNT = 3 // max. planets per flyby
  * früh weniger verlangt, frisst ein zu hoher Boden sie wortlos auf.
  *
  * **Sie muss immer unter dem Startbudget liegen** — `bossScaling.spec.ts` hält
- * das fest. 60 sind drei Klicks: genug, dass kein Boss am ersten Klick
- * zerfällt, zu wenig, um der Rampe in den Weg zu kommen.
+ * das fest. Sie ist deshalb mit der Klick-Basis von 20 auf 1 mitgewandert (60 →
+ * 3): 3 sind drei Klicks des unaufgewerteten Spielers — genug, dass kein Boss
+ * am ersten Klick zerfällt, zu wenig, um der Rampe in den Weg zu kommen.
  */
-export const BOSS_BASE_HP = 60
+export const BOSS_BASE_HP = 3
 
 /**
  * **Wie lange ein Boss stehen soll** — daraus wird der DPS-Anteil seiner HP
@@ -151,22 +152,40 @@ export const BOSS_CLICK_RAMP_GALAXY_KILLS = 25
  *
  * Diese Zahl war nie eine eigene: der Boss rechnete direkt mit
  * `gameStore.chimesPerClick`, der Klick richtete also so viel Schaden an, wie er
- * Chimes einbrachte. Solange beide Zahlen zufällig zueinander passten, fiel das
- * nicht auf — beim Absenken des Klickwerts von 20 auf 1 aber sofort: der
- * Schaden fiel um 95 %, die Boss-HP nur um 44 %, weil `BOSS_BASE_HP` als Boden
- * greift. Der erste Boss hätte statt 18 Klicks deren 200 gebraucht, bei 30
- * Sekunden Enrage-Uhr.
+ * Chimes einbrachte. Als der Klickwert von 20 auf 1 fiel, bekam der Kampf seine
+ * eigene Basis — und zwar auf 20 eingefroren, damit sich die Balance dabei
+ * nicht mitverschiebt.
  *
- * 20 ist der Wert, den der Kampf vorher effektiv hatte — die Zahl ist also
- * bewusst konservativ gewählt: sie ändert am Bosskampf nichts, sie macht ihn
- * nur unabhängig von der Wirtschaft.
+ * **Jetzt steht sie auf 1, und das ist eine Entwurfsentscheidung.** Dieselbe
+ * Überlegung wie bei `CHIMES_PER_CLICK_BASE`: bei Basis 20 ist die erste Stufe
+ * des Solar-Zweigs ein Zuwachs von zehn Prozent und damit unsichtbar, bei Basis
+ * 1 ist sie eine Veränderung, die der Spieler an der Schadenszahl abliest. Der
+ * erste Boss kostet weiterhin `BOSS_TARGET_CLICKS_START` Klicks — nur steht am
+ * Sprite jetzt „-1" statt „-20", und der Boss hat 6 HP statt 120.
  *
- * Sie ist zugleich der Umrechnungskurs der Rampe: das Klickbudget ist
- * `BOSS_CLICK_DAMAGE_BASE × bossTargetClicks()`. Bewusst die BASIS, nicht der
- * aufgewertete `gameStore.dmgPerClick` — sonst stünde der Klickschaden wieder
- * auf beiden Seiten und jedes Klick-Upgrade wäre für Bosse wirkungslos.
+ * Sie ist zugleich der Ankerpunkt der Erwartung: das Klickbudget der Boss-HP
+ * ist `expectedClickDamage(clickPower) × bossTargetClicks()`, und
+ * `expectedClickDamage` ist das GEOMETRISCHE MITTEL aus dieser Basis und dem
+ * echten Klickschaden (`utils/game/bossScaling.ts`). Die feste Basis allein
+ * ging nicht mehr: sie hätte den Klick-Kanal um Faktor 20 schrumpfen lassen,
+ * während der DPS-Kanal absolut bleibt — ab etwa 10 CpS wäre Klicken zwei
+ * Prozent des Kampfes gewesen. Der echte Klickschaden allein geht auch nicht:
+ * er stünde dann wieder auf beiden Seiten und kürzte sich weg. Die halbe Potenz
+ * dazwischen lässt Upgrades Klicks sparen, ohne den Kampf zu entwerten.
  */
-export const BOSS_CLICK_DAMAGE_BASE = 20
+export const BOSS_CLICK_DAMAGE_BASE = 1
+
+/**
+ * Was eine Stufe des Solar-Zweigs „Chimes per Click" am BOSS-Klick bewirkt.
+ *
+ * Der Zweig zahlte bisher additiv ein (`+SOLAR_CPC_PER_LEVEL`, also +2 auf eine
+ * Basis von 20 = +10 %). Auf einer Basis von 1 wären dieselben +2 eine
+ * Verdreifachung je Stufe — und zwar in Chime-Einheiten, an einer Zahl, die
+ * gar keine Chimes mehr sind. Als Faktor ausgedrückt bleibt die Wirkung exakt
+ * dieselbe wie vorher, und der Bossschaden hört auf, in einer fremden Einheit
+ * zu rechnen.
+ */
+export const BOSS_CLICK_DAMAGE_CPC_BONUS = 0.1
 
 /** +20 % HP je Galaxie jenseits der ersten — die eine Achse, die weiter steigt. */
 export const BOSS_HP_PER_GALAXY = 0.2

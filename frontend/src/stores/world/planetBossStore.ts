@@ -75,6 +75,16 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     totalBossesLost: 0,
     /** Damage ever dealt to planet bosses, across every fight. */
     totalBossDamage: 0,
+    /**
+     * Effektiver Schaden des zuletzt über `dealDamageToBoss` gebuchten Treffers.
+     *
+     * Der Rückkanal für `dealClickDamage()`, damit die Arena die ECHTE
+     * Schadenszahl anzeigen kann, ohne die Multiplikatorkette (Fluch, Star
+     * Forge, Meep-Baum, Achievements) ein zweites Mal auszurechnen — zwei
+     * Rechnungen für dieselbe Zahl laufen auseinander, sobald jemand eine
+     * anfasst. Transient, kein Save-Feld.
+     */
+    lastHitDamage: 0,
   }),
 
   getters: {
@@ -97,6 +107,38 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
     cpsPenaltyMultiplier(): number {
       return this.cpsPenaltyActive ? 1 - BOSS_CPS_PENALTY_FRACTION : 1
+    },
+
+    /**
+     * Schaden EINES Klicks, bevor situative Verstärker greifen — die eine Zahl,
+     * an der sowohl der ausgeteilte Schaden als auch die HP-Erwartung hängen.
+     *
+     * Alle fünf Quellen liegen hier zusammen, weil dieser Store sie ohnehin
+     * schon importiert; sie ein zweites Mal in `gameStore` aufzuzählen wäre eine
+     * zweite Quelle für dieselbe Grösse.
+     *
+     * Der Hexblight-Amp (`ROLE_MID_CURSE_DAMAGE_AMP`, `dealDamageToBoss`) gehört
+     * bewusst NICHT dazu: er ist befristet, und die HP eines Bosses dürfen nicht
+     * davon abhängen, ob beim Spawn gerade ein Fluch lief.
+     *
+     * **Gerundet wie beim Buchen, und das ist keine Kosmetik.** Die Erwartung
+     * wächst mit der Wurzel, der gebuchte Schaden in ganzen Schritten — rechnete
+     * sie mit dem ungerundeten Wert, hübe ein schwaches Upgrade (clickPower 1,4)
+     * das Budget um 18 %, während der ausgeteilte Schaden gerundet auf 1 stehen
+     * bliebe: der Spieler hätte investiert und bräuchte MEHR Klicks. Mit
+     * derselben Rundung auf beiden Seiten kann die Klickzahl nur fallen.
+     */
+    clickPower(): number {
+      return Math.max(
+        1,
+        Math.round(
+          useGameStore().dmgPerClick *
+            useSolarUpgradeStore().dmgMultiplier *
+            useStarForgeStore().bossDamageMult *
+            useMeepTreeStore().fx.bossDamageMult *
+            useAchievementStore().bossDamageMult,
+        ),
+      )
     },
   },
 
@@ -138,17 +180,25 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       //   otherDps — was der Spieler ohne Zutun aufbringt (Passivschaden, die
       //     ganze Turret-Batterie, der Kader im Orbit). Davon so viele Sekunden,
       //     wie der Kampf stehen soll.
-      //   clickBudgetHP — die entworfene Klickzahl, umgerechnet über die
-      //     Klick-BASIS. Steht der Klickschaden stattdessen in `otherDps`, kürzt
-      //     er sich gegen den Nenner beim Klicken weg: dann kostet jeder Boss
-      //     dieselbe Klickzahl, für immer, und jedes Klick-Upgrade verpufft.
+      //   clickBudgetHP — die entworfene Klickzahl, umgerechnet über den
+      //     ERWARTETEN Klickschaden: das geometrische Mittel aus der Basis und
+      //     dem, was der Spieler wirklich austeilt. Steht der volle Klickschaden
+      //     stattdessen darin, kürzt er sich gegen den Nenner beim Klicken weg —
+      //     dann kostet jeder Boss dieselbe Klickzahl, für immer, und jedes
+      //     Klick-Upgrade verpufft. Steht nur die Basis darin, schrumpft der
+      //     Kanal seit BOSS_CLICK_DAMAGE_BASE = 1 gegen `otherDps` ins
+      //     Bedeutungslose. Die halbe Potenz hält beides offen.
       //
       // Details an BOSS_TARGET_KILL_SECONDS und in `utils/game/bossScaling.ts`.
       const otherDps =
         passiveDPS + usePlanetShopStore().autoAttackDPS + useCombatStore().fullOrbitDps()
 
       const targetClicks = bossTargetClicks(this.totalBossesDefeated, galaxyStore.currentGalaxy)
-      const clickBudgetHP = bossClickBudgetHP(this.totalBossesDefeated, galaxyStore.currentGalaxy)
+      const clickBudgetHP = bossClickBudgetHP(
+        this.totalBossesDefeated,
+        galaxyStore.currentGalaxy,
+        this.clickPower,
+      )
 
       const maxHP = Math.max(
         BOSS_BASE_HP,
@@ -339,12 +389,22 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const banished =
         activeMidCurse.type === 'banishment' && gameNow() < activeMidCurse.activeUntil
       const cursed = banished ? amount * ROLE_MID_CURSE_DAMAGE_AMP : amount
-      const effective = Math.round(
-        cursed *
-          useStarForgeStore().bossDamageMult *
-          useMeepTreeStore().fx.bossDamageMult *
-          useAchievementStore().bossDamageMult,
+      // EINE Rundung, ganz am Ende der Kette — und ein Boden von 1 wie in
+      // `applyPassiveDamage`. Seit die Klick-Basis auf 1 steht, sind die
+      // Zwischenwerte des Klick-Pfads Bruchzahlen; würde jeder Schritt für sich
+      // aufgerundet, wäre die Rundung der dominante Effekt statt einer
+      // Nachkommastelle (Solar-Stufe 1 ergibt 1,1 → aufgerundet 2, also +100 %
+      // statt der entworfenen +10 %).
+      const effective = Math.max(
+        1,
+        Math.round(
+          cursed *
+            useStarForgeStore().bossDamageMult *
+            useMeepTreeStore().fx.bossDamageMult *
+            useAchievementStore().bossDamageMult,
+        ),
       )
+      this.lastHitDamage = effective
 
       boss.currentHP = Math.max(0, boss.currentHP - effective)
       boss.totalDamageDealt += effective
@@ -365,25 +425,38 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       return false
     },
 
-    dealClickDamage(): boolean {
+    /**
+     * Ein Klick auf den Boss. Gibt den TATSÄCHLICH angerichteten Schaden zurück
+     * (0, wenn nichts ankam) — die Arena zeigt genau diese Zahl als Float.
+     *
+     * Vorher stand dort `boss.clickDamagePerHit`, also der Wert VOR
+     * `dmgMultiplier`, Star Forge, Meep-Baum und Achievements; die Anzeige
+     * untertrieb systematisch. Bei einer Klick-Basis von 20 fiel das kaum auf,
+     * bei 1 stünde dauerhaft „-1" am Sprite, während ein Vielfaches ankommt.
+     */
+    dealClickDamage(): number {
       const boss = this.activeBoss
-      if (!boss || boss.defeated || boss.expired) return false
+      if (!boss || boss.defeated || boss.expired) return 0
       // Vordergrund-Gate: hinter der Sonne ist der Boss unantastbar — auch
       // Spieler-Klicks im Star-Fight-Modal richten dann keinen Schaden an
-      if (!bossPlanetInForeground(boss.planetId)) return false
+      if (!bossPlanetInForeground(boss.planetId)) return 0
       const solar = useSolarUpgradeStore()
-      const clickDamage = Math.ceil(boss.clickDamagePerHit * solar.dmgMultiplier)
-      const defeated = this.dealDamage(clickDamage)
+      // Bewusst OHNE Zwischenrundung — `dealDamageToBoss` rundet einmal am Ende.
+      const clickDamage = boss.clickDamagePerHit * solar.dmgMultiplier
+      this.dealDamage(clickDamage)
+      // Vor dem Splash lesen: der überschreibt `lastHitDamage` sonst mit dem
+      // Streuschaden am letzten Nebenziel.
+      const dealt = this.lastHitDamage
       // Shattering Nova: clicks splash a fraction of their damage to all other bosses
       const splashPct = useStarForgeStore().clickSplashPct
       if (splashPct > 0) {
-        const splash = Math.ceil(clickDamage * splashPct)
+        const splash = clickDamage * splashPct
         for (const other of this.activeBosses) {
           if (other === boss || other.defeated || other.expired) continue
           this.dealDamageToBoss(other, splash)
         }
       }
-      return defeated
+      return dealt
     },
 
     applyPassiveDamage() {

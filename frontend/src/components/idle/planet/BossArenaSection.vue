@@ -278,7 +278,19 @@ const damageFloats = reactive<
 
 const MAX_DAMAGE_FLOATS = 24
 
-function spawnFloat(value: number, x?: number, y?: number, blocked?: boolean) {
+/**
+ * `long` hielt die Zahl früher an ihrer eigenen Größe fest (`value > 1`) — der
+ * Spielerklick machte 20 Schaden, ein Champion-Treffer 1. Seit die Klick-Basis
+ * auf 1 steht, trennt diese Heuristik nichts mehr: sie stufte ausgerechnet den
+ * frühen Spielerklick als Nebensache ein. Die Quelle entscheidet jetzt.
+ */
+function spawnFloat(
+  value: number,
+  x?: number,
+  y?: number,
+  opts: { blocked?: boolean; long?: boolean } = {},
+) {
+  const { blocked, long } = opts
   if (!isMounted) return
   // Deckel gegen Klick-Spam: älteste Zahl verwerfen statt unbegrenzt stapeln
   if (damageFloats.length >= MAX_DAMAGE_FLOATS) damageFloats.shift()
@@ -297,7 +309,7 @@ function spawnFloat(value: number, x?: number, y?: number, blocked?: boolean) {
       const idx = damageFloats.findIndex((d) => d.id === id)
       if (idx !== -1) damageFloats.splice(idx, 1)
     },
-    value > 1 ? BOSS_ARENA_FLOAT_LIFETIME_BIG_MS : BOSS_ARENA_FLOAT_LIFETIME_MS,
+    long ? BOSS_ARENA_FLOAT_LIFETIME_BIG_MS : BOSS_ARENA_FLOAT_LIFETIME_MS,
   )
 }
 
@@ -316,11 +328,15 @@ function handleClick(event: MouseEvent) {
   if (!activeBoss.value || activeBoss.value.defeated || activeBoss.value.expired) return
   // Hinter der Sonne: kein Schaden — statt Schadenszahl ein "ECLIPSED"-Float
   if (bossEclipsed.value) {
-    spawnFloat(0, event.clientX, event.clientY, true)
+    spawnFloat(0, event.clientX, event.clientY, { blocked: true, long: true })
     return
   }
-  bossStore.dealClickDamage()
-  spawnFloat(activeBoss.value.clickDamagePerHit ?? 1, event.clientX, event.clientY)
+  // Der Store meldet den ECHTEN Schaden zurück — inklusive dmgMultiplier, Star
+  // Forge, Meep-Baum und Achievements. `clickDamagePerHit` allein wäre der Wert
+  // vor all dem und untertriebe systematisch; bei einer Klick-Basis von 1 stünde
+  // hier dauerhaft „-1". 0 heisst: der Store hat den Treffer abgewiesen.
+  const dealt = bossStore.dealClickDamage()
+  if (dealt > 0) spawnFloat(dealt, event.clientX, event.clientY, { long: true })
   triggerHit(BOSS_ARENA_HIT_CLICK_MS, BOSS_ARENA_SHAKE_CLICK_MS)
 }
 

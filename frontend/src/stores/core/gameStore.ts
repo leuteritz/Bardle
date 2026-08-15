@@ -35,6 +35,7 @@ import {
   LEVEL_SCALING_CAP_LEVEL,
   MAX_ABILITY_LEVEL,
   BOSS_CLICK_DAMAGE_BASE,
+  BOSS_CLICK_DAMAGE_CPC_BONUS,
   TURRET_PROJECTILE_FLIGHT_MS,
   GAME_TICK_INTERVAL_MS,
   GAME_SPEED_DEFAULT,
@@ -1228,14 +1229,21 @@ export const useGameStore = defineStore('game', {
      * Bosskampf sich mitverschiebt.
      *
      * Dieser Getter war lange tot: `planetBossStore` rechnete direkt mit
-     * `chimesPerClick`, niemand las ihn. Er ist jetzt die Quelle — allerdings
-     * nur für den AUSGETEILTEN Schaden. In die HP-Schätzung eines Bosses geht
-     * er bewusst nicht ein (`utils/game/bossScaling.ts` rechnet mit der reinen
-     * `BOSS_CLICK_DAMAGE_BASE`), sonst hebt jeder Punkt hier die Boss-HP um
-     * genau denselben Betrag mit an und das Upgrade verpufft.
+     * `chimesPerClick`, niemand las ihn. Er ist jetzt die Quelle für den
+     * AUSGETEILTEN Schaden. In die HP-Schätzung geht er nur GEDÄMPFT ein — über
+     * `expectedClickDamage()`, das geometrische Mittel aus ihm und der Basis;
+     * ginge er voll ein, hübe jeder Punkt hier die Boss-HP um genau denselben
+     * Betrag mit an und das Upgrade verpuffte.
+     *
+     * Der Solar-Beitrag ist ein FAKTOR, kein Summand. Additiv war er +2 auf
+     * eine Basis von 20, also +10 %; auf der heutigen Basis von 1 wären
+     * dieselben +2 eine Verdreifachung je Stufe — und zwar in Chime-Einheiten,
+     * an einer Zahl, die keine Chimes mehr sind. `BOSS_CLICK_DAMAGE_CPC_BONUS`
+     * hält die Wirkung des Zweigs bei exakt denselben +10 % je Stufe.
      */
     dmgPerClick(): number {
-      return BOSS_CLICK_DAMAGE_BASE + useSolarUpgradeStore().cpcBonus
+      const solar = useSolarUpgradeStore()
+      return BOSS_CLICK_DAMAGE_BASE * (1 + solar.chimesPerClickLevel * BOSS_CLICK_DAMAGE_CPC_BONUS)
     },
 
     /**

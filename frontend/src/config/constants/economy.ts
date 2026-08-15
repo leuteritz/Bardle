@@ -574,7 +574,10 @@ export const EXPEDITION_LEDGER_HISTORY_MAX = 24
  * WICHTIG: Diese Zahl ist keine Kampfgrösse. Der Boss-Klickschaden hat seit
  * dieser Änderung seine eigene Basis (`BOSS_CLICK_DAMAGE_BASE`) — vorher hing
  * beides an diesem einen Wert, und ein Absenken hätte den ersten Boss von 18
- * auf 200 Klicks gebracht.
+ * auf 200 Klicks gebracht. Dass die Kampfbasis inzwischen ebenfalls auf 1
+ * steht, ist eine eigene Entscheidung aus demselben Grund (Lesbarkeit der
+ * ersten Upgrade-Stufe) und keine Kopplung: die beiden Zahlen können sich seit
+ * der Trennung unabhängig bewegen, und `bossClickDamage.spec.ts` hält das fest.
  */
 export const CHIMES_PER_CLICK_BASE = 1
 

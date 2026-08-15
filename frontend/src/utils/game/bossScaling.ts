@@ -15,7 +15,7 @@ import {
  *
  * ```
  * otherDps      = passiveDPS + autoAttackDPS + fullOrbitDps()
- * clickBudgetHP = BOSS_CLICK_DAMAGE_BASE × bossTargetClicks(...)
+ * clickBudgetHP = expectedClickDamage(clickPower) × bossTargetClicks(...)
  * maxHP         = (otherDps × BOSS_TARGET_KILL_SECONDS + clickBudgetHP) × Multiplikatoren
  * ```
  *
@@ -56,13 +56,46 @@ export function bossTargetClicks(bossesDefeated: number, galaxy: number): number
 }
 
 /**
- * Der Klick-Kanal der Boss-HP, in HP.
+ * Der Klickschaden, den ein Boss ERWARTET — das geometrische Mittel aus der
+ * Basis und dem, was der Spieler wirklich austeilt.
  *
- * Umgerechnet über `BOSS_CLICK_DAMAGE_BASE` — die BASIS, nicht den aufgewerteten
- * `gameStore.dmgPerClick`. Genau darin liegt die Entkopplung: das Budget steht
- * fest, also senkt jedes Klickschaden-Upgrade die nötige Klickzahl wirklich,
- * statt sich gegen mitgewachsene HP wegzukürzen.
+ * ```
+ * expected = √(BASIS × clickPower)          →  Klicks = bossTargetClicks / √(clickPower / BASIS)
+ * ```
+ *
+ * Die beiden Randfälle taugen beide nicht, und genau deshalb steht hier die
+ * halbe Potenz dazwischen:
+ *
+ * - **Nur die BASIS** (der Stand vor dem Absenken auf 1): das Budget steht fest,
+ *   Upgrades senken die Klickzahl voll durch. Bei einer Basis von 20 trug der
+ *   Klick-Kanal damit 120–360 HP und stand dem DPS-Kanal noch gegenüber; bei
+ *   Basis 1 sind es 6–18 HP gegen `otherDps × 18` — ab etwa 10 CpS wäre Klicken
+ *   zwei Prozent des Kampfes.
+ * - **Der volle `clickPower`**: er stünde wieder im Zähler UND im Nenner und
+ *   kürzte sich weg — jeder Boss kostete für immer dieselbe Klickzahl, und kein
+ *   Upgrade änderte etwas. Das ist der Fehler, den diese Datei behoben hat.
+ *
+ * Die Wurzel behält beides: der Kanal wächst mit dem Spieler mit (bleibt also
+ * gegenüber dem DPS-Kanal sichtbar), und Upgrades sparen trotzdem echte Klicks —
+ * nur mit halber statt voller Potenz. Ein hundertfach stärkerer Klick fällt den
+ * Boss in einem Zehntel der Klicks, nicht in einem Hundertstel.
+ *
+ * `clickPower` ist der Schaden EINES Klicks vor situativen Verstärkern
+ * (`planetBossStore.clickPower`); das `max` fängt Stände unter der Basis ab,
+ * damit die Erwartung nie unter den ersten Klick fällt.
  */
-export function bossClickBudgetHP(bossesDefeated: number, galaxy: number): number {
-  return BOSS_CLICK_DAMAGE_BASE * bossTargetClicks(bossesDefeated, galaxy)
+export function expectedClickDamage(clickPower: number): number {
+  return Math.sqrt(BOSS_CLICK_DAMAGE_BASE * Math.max(BOSS_CLICK_DAMAGE_BASE, clickPower))
+}
+
+/**
+ * Der Klick-Kanal der Boss-HP, in HP: die entworfene Klickzahl mal dem
+ * erwarteten Schaden je Klick.
+ */
+export function bossClickBudgetHP(
+  bossesDefeated: number,
+  galaxy: number,
+  clickPower: number,
+): number {
+  return expectedClickDamage(clickPower) * bossTargetClicks(bossesDefeated, galaxy)
 }

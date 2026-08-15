@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bossTargetClicks, bossClickBudgetHP } from '@/utils/game/bossScaling'
+import { bossTargetClicks, bossClickBudgetHP, expectedClickDamage } from '@/utils/game/bossScaling'
 import {
   BOSS_BASE_HP,
   BOSS_CLICK_DAMAGE_BASE,
@@ -57,11 +57,68 @@ describe('Boss-Klickrampe', () => {
   it('der HP-Boden liegt unter dem Startbudget', () => {
     // Der Boden greift NACH allen Multiplikatoren. Stünde er über dem
     // Startbudget, frässe er die Rampe wortlos auf — genau das war der Zustand
-    // bei BOSS_BASE_HP = 200 (ein stiller Boden von zehn Klicks).
-    expect(BOSS_BASE_HP).toBeLessThan(bossClickBudgetHP(0, 1))
+    // bei BOSS_BASE_HP = 200 (ein stiller Boden von zehn Klicks). Gerechnet
+    // wird gegen den SCHWÄCHSTEN Stand: ein Spieler ohne jedes Upgrade.
+    expect(BOSS_BASE_HP).toBeLessThan(bossClickBudgetHP(0, 1, BOSS_CLICK_DAMAGE_BASE))
   })
 
-  it('rechnet das Budget über die Klick-BASIS, nicht über Upgrades', () => {
-    expect(bossClickBudgetHP(0, 1)).toBe(BOSS_CLICK_DAMAGE_BASE * BOSS_TARGET_CLICKS_START)
+  it('der unaufgewertete Spieler klickt gegen die reine Basis', () => {
+    expect(bossClickBudgetHP(0, 1, BOSS_CLICK_DAMAGE_BASE)).toBe(
+      BOSS_CLICK_DAMAGE_BASE * BOSS_TARGET_CLICKS_START,
+    )
+  })
+})
+
+/**
+ * Die Erwartung ist das GEOMETRISCHE MITTEL aus der Klick-Basis und dem, was
+ * der Spieler wirklich austeilt — und beide Randfälle sind bereits einmal
+ * gescheitert.
+ *
+ * Stünde dort der volle Klickschaden, kürzte er sich gegen den Nenner beim
+ * Klicken weg: jeder Boss kostete für immer dieselbe Klickzahl. Stünde dort nur
+ * die Basis, schrumpfte der Klick-Kanal seit `BOSS_CLICK_DAMAGE_BASE = 1` auf
+ * 6–18 HP gegen einen DPS-Kanal von `otherDps × 18` — Klicken wäre ab etwa
+ * 10 CpS zwei Prozent des Kampfes. Diese Suite hält die halbe Potenz fest.
+ */
+describe('Erwarteter Klickschaden', () => {
+  it('ist bei einem unaufgewerteten Klick genau die Basis', () => {
+    expect(expectedClickDamage(BOSS_CLICK_DAMAGE_BASE)).toBe(BOSS_CLICK_DAMAGE_BASE)
+  })
+
+  it('fällt nie unter die Basis', () => {
+    expect(expectedClickDamage(0)).toBe(BOSS_CLICK_DAMAGE_BASE)
+    expect(expectedClickDamage(BOSS_CLICK_DAMAGE_BASE / 100)).toBe(BOSS_CLICK_DAMAGE_BASE)
+  })
+
+  it('wächst monoton mit dem echten Klickschaden', () => {
+    let prev = 0
+    for (const power of [1, 2, 5, 10, 50, 200, 1000, 50_000]) {
+      const expected = expectedClickDamage(BOSS_CLICK_DAMAGE_BASE * power)
+      expect(expected).toBeGreaterThanOrEqual(prev)
+      prev = expected
+    }
+  })
+
+  it('ist das geometrische Mittel — halbe Potenz, nicht volle', () => {
+    // Hundertfacher Klickschaden hebt die Erwartung nur um das Zehnfache.
+    // Wäre es die volle Potenz, hätte der Spieler nichts gewonnen; wäre es gar
+    // keine, verlöre der Klick-Kanal gegen den DPS-Kanal.
+    expect(expectedClickDamage(BOSS_CLICK_DAMAGE_BASE * 100)).toBeCloseTo(
+      BOSS_CLICK_DAMAGE_BASE * 10,
+      10,
+    )
+  })
+
+  it('ein stärkerer Klick spart Klicks, macht den Boss aber nicht trivial', () => {
+    // DIE Eigenschaft, die beide Randfälle ausschliesst.
+    const clicksAt = (power: number) =>
+      bossClickBudgetHP(0, 1, BOSS_CLICK_DAMAGE_BASE * power) / (BOSS_CLICK_DAMAGE_BASE * power)
+
+    const plain = clicksAt(1)
+    const strong = clicksAt(100)
+
+    expect(strong).toBeLessThan(plain) // Upgrades wirken — nicht die volle Potenz
+    expect(strong).toBeCloseTo(plain / 10, 10) // aber gedämpft — nicht Faktor 100
+    expect(plain).toBe(BOSS_TARGET_CLICKS_START)
   })
 })
