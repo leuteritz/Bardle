@@ -33,12 +33,21 @@ const emit = defineEmits<{ 'toast-inset': [css: string] }>()
 
 /** Schienenbreite und Naht kommen aus der Konstante — dieselben Werte gehen an
  *  den Toast, damit die beiden nicht auseinanderlaufen können. */
-const railWidthCss = PLANET_TAB_RAIL_WIDTH_CSS
 const railSeamWidthPx = `${PLANET_TAB_RAIL_SEAM_WIDTH}px`
 
-onMounted(() =>
-  emit('toast-inset', `calc(${PLANET_TAB_RAIL_WIDTH_CSS} + ${PLANET_TAB_RAIL_SEAM_WIDTH}px)`),
-)
+/**
+ * Die AUSSENbreite der Schiene: ihre eigene Breite plus die Naht, die sie seit
+ * dem Umbau selbst als `border-left` zeichnet statt als eigenes Flex-Element
+ * daneben. Die Rechnung ist nötig, weil `box-sizing: border-box` den Rahmen
+ * sonst von der Innenbreite abzöge — die Kacheln würden schmaler, obwohl sich
+ * an der Schiene nichts geändert hat.
+ *
+ * Derselbe Ausdruck geht an den Toast: er ist genau das, was rechts von der
+ * Bühne belegt ist, und zwei getrennte Rechnungen dafür liefen auseinander.
+ */
+const railOuterWidthCss = `calc(${PLANET_TAB_RAIL_WIDTH_CSS} + ${PLANET_TAB_RAIL_SEAM_WIDTH}px)`
+
+onMounted(() => emit('toast-inset', railOuterWidthCss))
 
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
@@ -251,12 +260,11 @@ const sunPhaseStyle = computed(() => {
         <BattleReturnButton />
       </div>
 
-      <!-- Gold seam — the only hard edge between stage and rail. It stands in for
-           the team page's plain wooden border-left: same job, this tab's own
-           language. -->
-      <span class="ps-rail-seam" aria-hidden="true" />
-
       <!-- RIGHT RAIL ──────────────────────────────────────────────── -->
+      <!-- The seam between stage and rail is the rail's own border-left, the
+           same 2px wood every side panel in the profile carries. It used to be
+           a separate 3px gold bar with two glows — "this tab's own language",
+           which is exactly what a shared profile must not have. -->
       <div class="ps-rail">
         <PlanetRailSlot
           v-for="(slot, slotIndex) in store.slots"
@@ -332,35 +340,19 @@ const sunPhaseStyle = computed(() => {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  width: v-bind(railWidthCss);
+  width: v-bind(railOuterWidthCss);
   display: flex;
   flex-direction: column;
   gap: clamp(6px, 0.8vh, 12px);
   padding: clamp(8px, 1vh, 14px);
   background: var(--rpg-bg-deep, #111008);
+  /* The seam every side panel of the profile carries (.sdp-panel, .tsps-panel,
+     .sf-panel, .msd-root). Its width is PLANET_TAB_RAIL_SEAM_WIDTH — the toast
+     inset adds the same number, so the two cannot drift apart. */
+  border-left: v-bind(railSeamWidthPx) solid #5c3310;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
-}
-
-/* Vertical gold seam — same language as the modal goldline, turned 90°. Sits as
-   its own flex item so the rail can scroll without dragging it along. */
-.ps-rail-seam {
-  position: relative;
-  z-index: 2;
-  flex: 0 0 v-bind(railSeamWidthPx);
-  align-self: stretch;
-  background: linear-gradient(
-    to bottom,
-    #5c3310,
-    #c89040 16%,
-    #e8c060 50%,
-    #c89040 84%,
-    #5c3310
-  );
-  box-shadow:
-    0 0 14px rgba(200, 144, 64, 0.35),
-    0 0 3px rgba(232, 192, 96, 0.6);
 }
 
 /* Left detail panel — column layout: stage (flexible, dominates) on top +

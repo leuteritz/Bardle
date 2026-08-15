@@ -45,8 +45,8 @@ function effectSummary(item: (typeof SHOP_ITEMS)[number]): string {
 
 <template>
   <div class="ep-root">
-    <!-- No gold accent bar of its own: the picker lives in the team tab's side
-         rail (TeamSidePanelShell), and that already draws the goldline. -->
+    <!-- No top edge of its own: the picker lives in the team tab's side rail
+         (TeamSidePanelShell), and that already draws the title stripe above it. -->
 
     <!-- Tab bar -->
     <div class="ep-tabs">

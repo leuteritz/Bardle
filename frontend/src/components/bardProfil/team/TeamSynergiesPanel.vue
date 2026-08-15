@@ -188,7 +188,6 @@ function championImage(name: string): string {
 
 <template>
   <div class="tsp-panel">
-    <div class="tsp-goldline" />
     <header class="tsp-head">
       <Icon icon="game-icons:linked-rings" width="20" height="20" class="tsp-head-icon" />
       <span class="tsp-head-title">Team Synergies</span>
@@ -362,19 +361,6 @@ function championImage(name: string): string {
   min-height: 0;
   background: var(--rpg-bg-deep, #111008);
   border-left: 2px solid #5c3310;
-}
-.tsp-goldline {
-  height: 3px;
-  flex-shrink: 0;
-  background: linear-gradient(
-    to right,
-    #5c3310,
-    #c89040,
-    #e8c060,
-    #d4a020,
-    #c89040,
-    #5c3310
-  );
 }
 .tsp-head {
   display: flex;

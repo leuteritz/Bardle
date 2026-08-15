@@ -186,9 +186,6 @@ function buy(): void {
 
 <template>
   <aside class="msd-root">
-    <!-- Goldlinie an der Oberkante — Projektstandard für jede Modalkante. -->
-    <div class="msd-goldline" aria-hidden="true" />
-
     <!-- Das Kopfband steht in BEIDEN Zuständen gleich da, damit der Wechsel
          Knoten ↔ leer nichts verschiebt. Der Bestand gehört hierher und nicht
          in die Bilanz unten: er ist die Zahl, gegen die der Preis in der
@@ -417,12 +414,6 @@ function buy(): void {
   flex-direction: column;
   background: #111008;
   border-left: 2px solid #5c3310;
-}
-
-.msd-goldline {
-  flex-shrink: 0;
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Kopfband ─────────────────────────────────────────────── */

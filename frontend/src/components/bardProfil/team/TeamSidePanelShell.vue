@@ -5,9 +5,9 @@
  * These three used to be modals over the whole tab. A modal answers a question
  * by hiding the thing the question is about: the shop covered the very sigil the
  * player is recruiting for. The details page had already moved to a rail on the
- * right edge, so this shell is that rail, generalised — same goldline, same
- * header stripe, same left border, so a destination opening does not look like a
- * different kind of surface than the role page opening.
+ * right edge, so this shell is that rail, generalised — same flat deep surface,
+ * same left seam, so a destination opening does not look like a different kind
+ * of surface than the role page opening.
  *
  * The shell owns the chrome only. Everything inside is the destination's own
  * component, unchanged, filling the body.
@@ -24,8 +24,9 @@ const props = withDefaults(
     width: number
     /**
      * Drops the title stripe — for a destination whose own first row already
-     * names it and can carry the close button (the shop's search row). The
-     * goldline stays: it is what makes the rail read as a rail.
+     * names it and can carry the close button (the shop's search row). What
+     * makes the rail read as a rail is the seam on its left, not anything at
+     * its top: the role page does the same, its roster deck IS the top edge.
      */
     hideHeader?: boolean
   }>(),
@@ -39,7 +40,6 @@ const widthPx = computed(() => `${props.width}px`)
 
 <template>
   <section class="tsps-panel">
-    <div class="tsps-goldline" />
     <header v-if="!hideHeader" class="tsps-head">
       <Icon :icon="icon" width="20" height="20" class="tsps-head-icon" />
       <div class="tsps-head-text">
@@ -81,11 +81,6 @@ const widthPx = computed(() => `${props.width}px`)
   min-height: 0;
   background: var(--rpg-bg-deep, #111008);
   border-left: 2px solid #5c3310;
-}
-.tsps-goldline {
-  height: 3px;
-  flex-shrink: 0;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 .tsps-head {
   display: flex;

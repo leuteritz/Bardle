@@ -668,8 +668,19 @@ export const PLANET_TAB_PLANET_DIAMETER = 112
  * wäre der Toast wieder aus der Mitte.
  */
 export const PLANET_TAB_RAIL_WIDTH_CSS = 'clamp(210px, 16vw, 320px)'
-/** Breite der Goldnaht zwischen Bühne und Schiene (px). */
-export const PLANET_TAB_RAIL_SEAM_WIDTH = 3
+/**
+ * Breite der Naht zwischen Bühne und Schiene (px) — dieselbe Spaltennaht, die
+ * jede Seitenschiene des Bard-Profils trägt (`.sdp-panel`, `.tsps-panel`,
+ * `.sf-panel`, `.msd-root`: `border-left: 2px solid #5c3310`).
+ *
+ * Sie steht hier und nicht nur im CSS, weil die Zahl an zwei Stellen gebraucht
+ * wird: als `border-left`-Breite der Schiene UND in der Außenbreite, die der
+ * Action-Toast als Versatz bekommt. Wer sie ändert, ändert beides zugleich.
+ *
+ * Bis zum Angleich der Reiter waren es 3 px — ein eigenes Flex-Element mit
+ * senkrechtem Goldverlauf und zwei Glows, die Eigensprache dieses Reiters.
+ */
+export const PLANET_TAB_RAIL_SEAM_WIDTH = 2
 
 // ── Planet glyph (PlanetGlyph.vue) ───────────────────────────────────────────
 /**

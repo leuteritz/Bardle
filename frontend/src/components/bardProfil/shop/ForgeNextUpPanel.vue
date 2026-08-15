@@ -3,8 +3,6 @@
        ist an einen Kauf oder eine Chime-Schwelle gebunden, nie an die Maus —
        deshalb kann er kein Flackern tragen. -->
   <section v-if="shown" class="nu-panel" :style="{ '--node-c': entry?.color ?? '#52b830' }">
-    <!-- Goldlinie an der Oberkante — Projektstandard für jede Modalkante. -->
-    <div class="nu-goldline" aria-hidden="true" />
     <div class="nu-flash" :class="{ 'nu-flash--on': flashed }" aria-hidden="true" />
 
     <header class="nu-head">
@@ -260,12 +258,6 @@ function growMany(): void {
   flex-direction: column;
   background: #16120a;
   border-bottom: 2px solid #3e200a;
-}
-
-.nu-goldline {
-  flex-shrink: 0;
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* Kaufquittung: eine eigene Ebene, deren DECKKRAFT läuft — kein `filter` und
