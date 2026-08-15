@@ -34,11 +34,6 @@
   --rpg-rarity-legendary: #e8c040;
   --rpg-rarity-uncommon: #64e678;
 
-  /* Skill tree (purple/amber — intentionally different from wood palette) */
-  --rpg-skill-bought: #f59e0b;
-  --rpg-skill-buyable: #8b5cf6;
-  --rpg-skill-locked: #374151;
-
   /* Additional surfaces */
   --rpg-bg-hover: #252520;
   --rpg-bg-selected: #2a2010;

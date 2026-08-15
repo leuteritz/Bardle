@@ -1,215 +1,241 @@
 <script setup lang="ts">
+/**
+ * Ein Knoten auf der Orbit-Bühne.
+ *
+ * Der Klick KAUFT nicht — er wählt aus. Gekauft wird ausschliesslich in der
+ * Fusszeile des Detail-Blatts, wo neben dem Preis auch steht, was der Knoten
+ * am Spiel ändert. Vorher lag beides auf derselben Geste: der Spieler klickte
+ * einen Kreis und wusste hinterher nicht, was sich geändert hatte.
+ *
+ * Die Position kommt fertig gerechnet von aussen (`utils/ui/skillTreeLayout`).
+ * Diese Komponente kennt weder Winkel noch Radien — nur ihren Zustand.
+ */
 import { computed } from 'vue'
-import { Handle, Position } from '@vue-flow/core'
 import { Icon } from '@iconify/vue'
-import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
 import { MEEP_TREE_BADGE_ICON, type MeepTreeNodeDef } from '@/config/progression/meepTree'
+import type { MeepTreeNodeState } from '@/stores/progression/meepTreeStore'
+import {
+  SKILL_TREE_COST_PILL_RADIUS,
+  SKILL_TREE_NODE_ICON_SIZE,
+  SKILL_TREE_NODE_OPACITY,
+  SKILL_TREE_NODE_SIZE,
+} from '@/config/constants'
 
 const props = defineProps<{
-  data: {
-    node: MeepTreeNodeDef
-    color: string
-    tier: number
-  }
+  node: MeepTreeNodeDef
+  color: string
+  x: number
+  y: number
+  /** Richtung vom Bühnenzentrum weg — die Kostenpille weicht dorthin aus. */
+  angleDeg: number
+  state: MeepTreeNodeState
+  selected: boolean
+  notifying: boolean
+  /** Von Suche oder Zweigfokus zurückgenommen. */
+  dimmed: boolean
 }>()
 
-const meepTree = useMeepTreeStore()
-const { showToast } = useActionToast()
+defineEmits<{
+  select: [id: string]
+  hover: [id: string | null]
+}>()
 
-const state = computed(() => meepTree.nodeState(props.data.node.id))
-/** Vorgänger gekauft, aber noch nicht genug Meeps → weniger stark gedimmt */
-const reachable = computed(() => state.value === 'locked' && meepTree.isUnlocked(props.data.node.id))
-
-/** Learnable + noch nicht angesehen → Notify-Badge über dem Node zeigen. */
-const notifying = computed(() => meepTree.notifyingNodeIds.includes(props.data.node.id))
-
-const tooltip = computed(
-  () => `${props.data.node.name} — ${props.data.node.effect}\n${props.data.node.desc}`,
+/**
+ * Die Kostenpille hängt nur an Knoten, die gerade zählen. Alle dreissig
+ * gleichzeitig überlappten den nächsten Rang — und die Kosten stehen ohnehin
+ * gross im Detail-Blatt.
+ */
+const showCost = computed(
+  () => !props.dimmed && (props.state === 'buyable' || props.selected),
 )
 
-/** Hover über den Node quittiert die Notify — Badge weg, Header-Zahl sinkt. */
-function acknowledge() {
-  meepTree.acknowledgeNode(props.data.node.id)
-}
-
-function handleBuy() {
-  if (state.value !== 'buyable') return
-  if (meepTree.buyNode(props.data.node.id)) {
-    showToast(`${props.data.node.name} learned!`, 'perk')
+/** Radial nach aussen, damit die Pille nie über der eigenen Bahn liegt. */
+const costOffset = computed(() => {
+  const rad = (props.angleDeg * Math.PI) / 180
+  return {
+    left: `${Math.cos(rad) * SKILL_TREE_COST_PILL_RADIUS}px`,
+    top: `${Math.sin(rad) * SKILL_TREE_COST_PILL_RADIUS}px`,
   }
-}
+})
+
+const opacity = computed(() =>
+  props.dimmed ? SKILL_TREE_NODE_OPACITY.dimmed : SKILL_TREE_NODE_OPACITY[props.state],
+)
+
+const title = computed(() =>
+  props.state === 'blocked'
+    ? `${props.node.name} — sealed: the other path was taken`
+    : `${props.node.name} — ${props.node.effect}`,
+)
 </script>
 
 <template>
   <div
-    :class="['msn-root', `msn-root--${state}`, { 'msn-root--reachable': reachable }]"
-    :style="{ '--branch-color': data.color }"
-    :title="tooltip"
-    @mouseenter="acknowledge"
+    class="msn-root"
+    :class="[`msn-root--${state}`, { 'msn-root--selected': selected }]"
+    :style="{
+      '--branch-color': color,
+      left: `${x}px`,
+      top: `${y}px`,
+      width: `${SKILL_TREE_NODE_SIZE}px`,
+      height: `${SKILL_TREE_NODE_SIZE}px`,
+      margin: `${-SKILL_TREE_NODE_SIZE / 2}px 0 0 ${-SKILL_TREE_NODE_SIZE / 2}px`,
+      opacity,
+    }"
+    @mouseenter="$emit('hover', node.id)"
+    @mouseleave="$emit('hover', null)"
   >
-    <!-- Unsichtbare Handles im Kreiszentrum → Kanten laufen exakt auf die Mitte zu -->
-    <Handle type="target" :position="Position.Top" class="msn-handle" />
-    <Handle type="source" :position="Position.Bottom" class="msn-handle" />
+    <button class="msn-circle" :title="title" @click="$emit('select', node.id)">
+      <Icon
+        :icon="node.icon"
+        :width="SKILL_TREE_NODE_ICON_SIZE"
+        :height="SKILL_TREE_NODE_ICON_SIZE"
+        class="msn-icon"
+      />
 
-    <button
-      class="msn-circle"
-      style="pointer-events: all"
-      :disabled="state !== 'buyable'"
-      @click.stop="handleBuy"
-    >
-      <Icon :icon="data.node.icon" width="44" height="44" class="msn-icon" />
-
-      <!-- Notify-Badge: dieser Skill ist gerade lernbar und noch nicht angesehen -->
+      <!-- Dieser Skill ist lernbar und noch nicht angesehen -->
       <Transition name="msn-notify">
         <span v-if="notifying" class="msn-notify" aria-label="Ready to learn">!</span>
       </Transition>
 
-      <!-- Kosten- / Aktiv-Badge mittig unter dem Kreis -->
-      <span v-if="state === 'bought'" class="msn-badge msn-badge--bought">✓</span>
-      <span v-else class="msn-badge" :class="`msn-badge--${state}`">
-        <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="msn-badge__icon" />
-        <span v-ink-center class="msn-badge__num">{{ data.node.cost }}</span>
-      </span>
+      <span v-if="state === 'bought'" class="msn-check">✓</span>
     </button>
 
-    <div class="msn-label">
-      <span class="msn-name">{{ data.node.name }}</span>
-      <span class="msn-effect">{{ data.node.effect }}</span>
-    </div>
+    <Transition name="msn-cost">
+      <span v-if="showCost" class="msn-cost" :style="costOffset">
+        <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="msn-cost__icon" />
+        <span v-ink-center class="msn-cost__num">{{ node.cost }}</span>
+      </span>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
-/* ── Root ─────────────────────────────────────────────────── */
+/* Das Element sitzt mit seinem MITTELPUNKT auf (x, y) — die Bühne rechnet in
+   Kreiszentren, nicht in Kastenecken. Grösse und der Versatz um ihre Hälfte
+   kommen inline aus `SKILL_TREE_NODE_SIZE`; hier stünde sonst eine zweite
+   Zahl, die beim Verstellen der Konstante still danebenläge. */
 .msn-root {
-  position: relative;
-  width: 156px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  position: absolute;
   transition: opacity 0.2s;
 }
 
-/* Gesperrte Stufen werden über die Icon-FARBE zurückgenommen, nicht über einen
-   Filter — ein SVG-Glyph erbt currentColor, und Filter auf jedem der 25 Nodes
-   machen Pan/Zoom im Vue-Flow-Canvas teuer. */
-.msn-root--locked {
-  opacity: 0.5;
+.msn-root--selected {
+  z-index: 30;
 }
 
-.msn-root--reachable {
-  opacity: 0.82;
+/* Ein Knoten mit Notify hebt seinen ganzen Wrapper über die Nachbarn, damit
+   das Abzeichen nie hinter einem anderen Kreis verschwindet. */
+.msn-root:has(.msn-notify) {
+  z-index: 40;
 }
 
-/* Handles unsichtbar im Kreiszentrum stapeln */
-.msn-handle {
-  opacity: 0;
-  width: 2px;
-  height: 2px;
-  min-width: 0;
-  min-height: 0;
-  border: none;
-  position: absolute;
-  top: 40px;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-/* ── Kreis-Knoten ─────────────────────────────────────────── */
+/* ── Der Kreis ────────────────────────────────────────────── */
 .msn-circle {
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  border: 3px solid var(--rpg-border-row);
+  border: 2px solid var(--rpg-border-row);
   background: radial-gradient(circle at 35% 30%, #232018, var(--rpg-bg-icon) 70%);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
   outline: none;
+  cursor: pointer;
+  /* Nur der einmalige Umschlag trägt eine Transition — kein Dauerläufer. */
   transition:
-    border-color 0.2s,
-    box-shadow 0.2s,
-    transform 0.15s;
+    border-color 0.18s,
+    box-shadow 0.18s,
+    transform 0.14s;
 }
 
-/* Gekauft → Zweigfarbe + Glow */
+.msn-circle:hover {
+  transform: scale(1.14);
+}
+
+.msn-circle:active {
+  transform: scale(0.94);
+}
+
+/* Gekauft → volle Zweigfarbe, statischer Schein */
 .msn-root--bought .msn-circle {
   border-color: var(--branch-color);
   background: radial-gradient(
     circle at 35% 30%,
-    color-mix(in srgb, var(--branch-color) 22%, var(--rpg-bg-dark)),
+    color-mix(in srgb, var(--branch-color) 24%, var(--rpg-bg-dark)),
     var(--rpg-bg-dark) 75%
   );
   box-shadow:
-    0 0 16px color-mix(in srgb, var(--branch-color) 45%, transparent),
-    inset 0 0 10px color-mix(in srgb, var(--branch-color) 20%, transparent);
-  cursor: default;
+    0 0 12px color-mix(in srgb, var(--branch-color) 42%, transparent),
+    inset 0 0 8px color-mix(in srgb, var(--branch-color) 18%, transparent);
 }
 
-/* Kaufbar → kräftige Zweigfarbe, pulsierend. Der Glow liegt in einem
-   Pseudo-Element mit statischem box-shadow; animiert wird nur dessen opacity
-   (GPU-kompositiert) — eine box-shadow-Animation würde jeden Frame einen
-   Repaint erzwingen. */
+/* Kaufbar → aufgehellte Zweigfarbe. Der Puls liegt in einer EIGENEN Ebene mit
+   statischem box-shadow; animiert wird nur deren opacity — ein animierter
+   Schatten rastert die Box jeden Frame neu. */
 .msn-root--buyable .msn-circle {
   border-color: color-mix(in srgb, var(--branch-color) 85%, #fff);
   background: radial-gradient(
     circle at 35% 30%,
-    color-mix(in srgb, var(--branch-color) 16%, var(--rpg-bg-dark)),
+    color-mix(in srgb, var(--branch-color) 18%, var(--rpg-bg-dark)),
     var(--rpg-bg-dark) 75%
   );
-  cursor: pointer;
 }
 
 .msn-root--buyable .msn-circle::after {
   content: '';
   position: absolute;
-  inset: -3px;
+  inset: -2px;
   border-radius: 50%;
-  box-shadow: 0 0 18px color-mix(in srgb, var(--branch-color) 60%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--branch-color) 62%, transparent);
   opacity: 0;
   pointer-events: none;
   animation: msn-pulse 2s ease-in-out infinite;
 }
 
-.msn-root--buyable .msn-circle:hover {
-  transform: scale(1.08);
-  box-shadow: 0 0 22px color-mix(in srgb, var(--branch-color) 65%, transparent);
-}
-
-.msn-root--buyable .msn-circle:active {
-  transform: scale(0.95);
-}
-
-/* Zweig-Identität vor dem Kauf: Border schon leicht in der Zweigfarbe getönt,
-   ab "reachable" etwas kräftiger — voll gefärbt erst nach dem Kauf. */
-.msn-root--locked .msn-circle {
-  cursor: not-allowed;
-  border-color: color-mix(in srgb, var(--branch-color) 32%, var(--rpg-border-row));
-}
-
-.msn-root--reachable .msn-circle {
-  border-color: color-mix(in srgb, var(--branch-color) 50%, var(--rpg-border-row));
-}
-
 @keyframes msn-pulse {
   0%,
   100% {
-    opacity: 0.45;
+    opacity: 0.4;
   }
   50% {
     opacity: 1;
   }
 }
 
-/* Jedes Node trägt sein eigenes game-icons-Glyph; die Zweigfarbe kommt über
-   currentColor, sodass Vektor bleibt Vektor — scharf auf jeder Zoomstufe. */
+.msn-root--reachable .msn-circle {
+  border-color: color-mix(in srgb, var(--branch-color) 50%, var(--rpg-border-row));
+}
+
+.msn-root--locked .msn-circle {
+  border-color: color-mix(in srgb, var(--branch-color) 30%, var(--rpg-border-row));
+}
+
+/* Versiegelt: die Spur einer Entscheidung, kein Ziel mehr. Gestrichelter Rand
+   statt durchgezogenem — auch ohne Farbe erkennbar. */
+.msn-root--blocked .msn-circle {
+  border-style: dashed;
+  border-color: var(--rpg-text-muted);
+  cursor: default;
+}
+
+/* Ausgewählt → Goldring. Statischer Schatten, der Wechsel läuft über die
+   Transition oben. */
+.msn-root--selected .msn-circle {
+  border-color: var(--rpg-gold);
+  box-shadow:
+    0 0 0 3px var(--rpg-bg-deep),
+    0 0 0 5px var(--rpg-gold-dim),
+    0 0 18px rgba(232, 192, 64, 0.5);
+}
+
+/* ── Glyph ────────────────────────────────────────────────── */
 .msn-icon {
   flex-shrink: 0;
   color: color-mix(in srgb, var(--branch-color) 38%, var(--rpg-text-dim));
-  transition: color 0.2s;
+  transition: color 0.18s;
 }
 
 .msn-root--reachable .msn-icon {
@@ -224,17 +250,42 @@ function handleBuy() {
   color: var(--branch-color);
 }
 
-/* ── Notify-Badge über dem Kreis ──────────────────────────── */
-/* Gleiche Sprache wie die RPG-Notifys (Shop/Expedition/Forge): kleiner,
-   pulsierender Kreis — hier in Skill-Tree-Magenta, oben rechts am Node. */
+.msn-root--blocked .msn-icon {
+  color: var(--rpg-text-muted);
+}
+
+/* ── Häkchen am gekauften Knoten ──────────────────────────── */
+.msn-check {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--rpg-bg-deep);
+  background: var(--branch-color);
+  border: 1.5px solid var(--rpg-bg-deep);
+  pointer-events: none;
+}
+
+/* ── Notify ───────────────────────────────────────────────── */
+/* Dieselbe Sprache wie die übrigen RPG-Notifys (Shop, Expedition, Forge):
+   kleiner pulsierender Kreis, hier in Skill-Tree-Magenta. Der Schein liegt
+   auch hier in einer eigenen Ebene, animiert wird nur deren opacity. */
 .msn-notify {
   position: absolute;
-  top: -9px;
-  right: -9px;
+  top: -7px;
+  right: -7px;
   z-index: 5;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 3px;
   border-radius: 999px;
   display: flex;
   align-items: center;
@@ -242,7 +293,7 @@ function handleBuy() {
   background: linear-gradient(to bottom, #ec4899, #be185d);
   border: 2px solid #f9a8d4;
   color: #fff;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 900;
   line-height: 1;
   pointer-events: none;
@@ -250,22 +301,16 @@ function handleBuy() {
   box-shadow:
     0 0 8px rgba(236, 72, 153, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  animation: msn-notify-glow 1.8s ease-in-out infinite;
 }
 
-@keyframes msn-notify-glow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 6px rgba(236, 72, 153, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  }
-  50% {
-    box-shadow:
-      0 0 14px rgba(236, 72, 153, 0.9),
-      0 0 24px rgba(190, 24, 93, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  }
+.msn-notify::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 999px;
+  box-shadow: 0 0 14px rgba(236, 72, 153, 0.9);
+  opacity: 0;
+  animation: msn-pulse 1.8s ease-in-out infinite;
 }
 
 .msn-notify-enter-active,
@@ -280,89 +325,52 @@ function handleBuy() {
   opacity: 0;
 }
 
-/* ── Badge am Kreisrand ───────────────────────────────────── */
-/* Meep-Kosten als gerahmter Pill-Badge (Icon + Zahl) komplett unterhalb des
-   Kreises, horizontal zentriert — überlappt den Kreisrand nicht. */
-.msn-badge {
+/* ── Kostenpille ──────────────────────────────────────────── */
+/* Sitzt radial ausserhalb des Kreises; `left`/`top` kommen als Inline-Offset
+   vom Winkel, die Zentrierung besorgt das Transform. */
+.msn-cost {
   position: absolute;
-  top: calc(100% + 2px);
   left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  z-index: 6;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 3px 12px;
+  gap: 4px;
+  padding: 2px 7px;
   border-radius: 999px;
-  border: 1px solid var(--rpg-border-row);
+  border: 1px solid color-mix(in srgb, var(--branch-color) 60%, var(--rpg-border-row));
   background: var(--rpg-bg-deep);
-  font-size: 17px;
+  font-size: 12px;
   font-weight: 800;
-  color: var(--rpg-text-dim);
+  line-height: 1;
   white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  color: color-mix(in srgb, var(--branch-color) 70%, var(--rpg-text-dim));
 }
 
-.msn-badge__icon {
-  height: 20px;
+.msn-root--buyable .msn-cost {
+  border-color: color-mix(in srgb, var(--branch-color) 85%, var(--rpg-border-row));
+  background: color-mix(in srgb, var(--branch-color) 16%, var(--rpg-bg-deep));
+  color: color-mix(in srgb, var(--branch-color) 85%, #fff);
+}
+
+.msn-cost__icon {
+  height: 14px;
   width: auto;
   flex-shrink: 0;
 }
 
-/* line-height: 1 hält die Ziffern in der Flex-Mitte — Icon und Zahl sitzen
-   dadurch als Paar zentriert im Pill. */
-.msn-badge__num {
+.msn-cost__num {
   line-height: 1;
 }
 
-/* Kosten-Badge in der Zweigfarbe — gesperrt dezent getönt, kaufbar kräftig
-   aufgehellt; "kaufbar" signalisiert zusätzlich der Puls-Glow am Kreis. */
-.msn-badge--locked {
-  border-color: color-mix(in srgb, var(--branch-color) 35%, var(--rpg-border-row));
-  color: color-mix(in srgb, var(--branch-color) 55%, var(--rpg-text-dim));
+.msn-cost-enter-active,
+.msn-cost-leave-active {
+  transition: opacity 0.15s ease;
 }
-
-.msn-badge--buyable {
-  border-color: color-mix(in srgb, var(--branch-color) 80%, var(--rpg-border-row));
-  background: color-mix(in srgb, var(--branch-color) 14%, var(--rpg-bg-deep));
-  color: color-mix(in srgb, var(--branch-color) 85%, #fff);
+.msn-cost-enter-from,
+.msn-cost-leave-to {
+  opacity: 0;
 }
-
-.msn-badge--bought {
-  border-color: color-mix(in srgb, var(--branch-color) 65%, var(--rpg-border-row));
-  background: var(--rpg-bg-deep);
-  color: var(--branch-color);
-  font-size: 17px;
-  padding: 3px 12px;
-}
-
-/* ── Label unter dem Kreis ────────────────────────────────── */
-/* Genug Abstand, damit der Badge (endet ~31px unter dem Kreis) nicht mit dem
-   Node-Namen kollidiert. */
-.msn-label {
-  margin-top: 40px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  text-align: center;
-}
-
-.msn-name {
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.2;
-  color: var(--rpg-text);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
-.msn-effect {
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--branch-color);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
-/* Effekt-Text bleibt in jeder Phase in der Zweigfarbe — der grüne Kosten-Badge
-   ist das alleinige "kaufbar"-Signal. */
 </style>

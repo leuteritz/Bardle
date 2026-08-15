@@ -19,14 +19,18 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
-import { MEEP_TREE_BRANCHES, type MeepTreeEffects } from '@/config/progression/meepTree'
+import {
+  MEEP_TREE_BRANCHES,
+  MEEP_TREE_PATH_NODES,
+  type MeepTreeEffects,
+} from '@/config/progression/meepTree'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import { formatCompactDuration } from '@/utils/ui/format'
 import { clampPercent } from '@/utils/orbit/geometry'
+import { activeEffectRows } from '@/utils/game/meepTreeFx'
 import {
   MS_PER_SECOND,
   MEEP_POWER_MULTIPLIER,
-  MEEP_TREE_EFFECT_ROWS,
   MEEP_TOOLTIP_ICONS,
   UNIVERSE_TOOLTIP_IMAGES,
   UNIVERSE_TOOLTIP_MEEP_SCALE,
@@ -62,7 +66,7 @@ const etaText = computed(() =>
 
 /* ── Skill Tree ──────────────────────────────────────────────────────────── */
 
-const treeTotal = MEEP_TREE_BRANCHES.reduce((sum, b) => sum + b.nodes.length, 0)
+const treeTotal = MEEP_TREE_PATH_NODES
 
 const treePercent = computed(() =>
   clampPercent((meepTreeStore.boughtCount / Math.max(1, treeTotal)) * 100),
@@ -70,22 +74,30 @@ const treePercent = computed(() =>
 
 /**
  * Eine Zeile je Zweig: wie weit er steht, und was als Nächstes an ihm hängt.
- * Der nächste Knoten ist immer der erste ungekaufte — die Zweige sind lineare
- * Ketten, seine Voraussetzung ist damit erfüllt und `locked` bedeutet hier
- * ausschließlich „zu teuer".
+ *
+ * „Der erste ungekaufte Knoten" reicht seit der Gabel auf Rang 4 nicht mehr:
+ * hat der Spieler dort gewählt, ist das Gegenstück für immer versiegelt und
+ * stünde hier trotzdem als nächstes Ziel. Gesucht ist der günstigste Knoten,
+ * der tatsächlich noch erreichbar ist.
  */
 const branchRows = computed(() =>
   MEEP_TREE_BRANCHES.map((branch) => {
-    const bought = branch.nodes.filter((n) => meepTreeStore.isBought(n.id)).length
-    const next = branch.nodes.find((n) => !meepTreeStore.isBought(n.id)) ?? null
+    const { bought, total } = meepTreeStore.branchProgress(branch.id)
+    const next =
+      branch.nodes
+        .filter((n) => {
+          const state = meepTreeStore.nodeState(n.id)
+          return state === 'buyable' || state === 'reachable'
+        })
+        .sort((a, b) => a.cost - b.cost)[0] ?? null
     return {
       id: branch.id,
       name: branch.name,
       tagline: branch.tagline,
       color: branch.color,
       bought,
-      total: branch.nodes.length,
-      percent: (bought / branch.nodes.length) * 100,
+      total,
+      percent: (bought / total) * 100,
       next,
       affordable: next ? gameStore.meeps >= next.cost : false,
     }
@@ -94,57 +106,10 @@ const branchRows = computed(() =>
 
 /* ── Was der Baum bewirkt ────────────────────────────────────────────────── */
 
-/** Neutral bleibt ungezeigt — das Panel listet nur, was tatsächlich wirkt. */
-const activeEffects = computed(() => {
-  const fx = meepTreeStore.fx as unknown as Record<string, number>
-  const out: Array<{ key: string; label: string; value: string; good: boolean }> = []
-  for (const row of MEEP_TREE_EFFECT_ROWS) {
-    const raw = fx[row.key]
-    if (raw === undefined) continue
-    switch (row.kind) {
-      case 'mult':
-        if (raw === 1) continue
-        out.push({ key: row.key, label: row.label, value: `×${trim(raw)}`, good: raw > 1 })
-        break
-      case 'lower':
-        if (raw === 1) continue
-        out.push({
-          key: row.key,
-          label: row.label,
-          value: `−${Math.round((1 - raw) * 100)}%`,
-          good: raw < 1,
-        })
-        break
-      case 'pct':
-        if (raw === 0) continue
-        out.push({ key: row.key, label: row.label, value: `+${trim(raw * 100)}%`, good: true })
-        break
-      case 'flat':
-        if (raw === 0) continue
-        out.push({
-          key: row.key,
-          label: row.label,
-          value: `+${formatNumberCompact(raw)}`,
-          good: true,
-        })
-        break
-      case 'rate':
-        if (raw === 0) continue
-        out.push({ key: row.key, label: row.label, value: `+${trim(raw)}/s`, good: true })
-        break
-      case 'hours':
-        if (raw === 0) continue
-        out.push({ key: row.key, label: row.label, value: `+${trim(raw)}h`, good: true })
-        break
-    }
-  }
-  return out
-})
-
-/** `2` statt `2.00`, `1.25` statt `1.2500` — zwei Stellen, ohne Nullschwanz. */
-function trim(value: number): string {
-  return String(Math.round(value * 100) / 100)
-}
+/** Neutral bleibt ungezeigt — das Panel listet nur, was tatsächlich wirkt.
+ *  Die Schreibweise je `kind` liegt in `utils/game/meepTreeFx.ts`, weil das
+ *  Detail-Blatt des Skill-Tabs dieselbe braucht. */
+const activeEffects = computed(() => activeEffectRows(meepTreeStore.fx))
 
 /* ── Bilanz ──────────────────────────────────────────────────────────────── */
 

@@ -62,13 +62,20 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 }
 
 /**
- * Alles, was wie ein Iconify-Name in Anführungszeichen aussieht. `node:` fliegt
- * raus (Node-Builtins), URLs scheitern schon an der Form (`//` im Namen).
+ * Präfixe, die die Form `prefix:name` erfüllen, aber nie ein Icon meinen:
+ * Node-Builtins und Vue-Emit-Namen aus `v-model:foo` (`update:query`). Beide
+ * stehen als String im Quelltext und liefen sonst als „unbekanntes Set" auf.
+ */
+const NON_ICON_PREFIXES = ['node:', 'update:']
+
+/**
+ * Alles, was wie ein Iconify-Name in Anführungszeichen aussieht. URLs scheitern
+ * schon an der Form (`//` im Namen).
  */
 function iconRefs(text: string): string[] {
   const out: string[] = []
   for (const m of text.matchAll(/['"]([a-z][a-z0-9-]*:[a-z0-9-]+)['"]/g)) {
-    if (!m[1].startsWith('node:')) out.push(m[1])
+    if (!NON_ICON_PREFIXES.some((p) => m[1].startsWith(p))) out.push(m[1])
   }
   return out
 }

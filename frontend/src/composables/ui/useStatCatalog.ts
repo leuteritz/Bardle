@@ -34,7 +34,7 @@ import {
   FORGE_RELICS,
   FORGE_CONSTELLATIONS,
 } from '@/config/progression/starForge'
-import { MEEP_TREE_BRANCHES, MEEP_TREE_TOTAL_NODES } from '@/config/progression/meepTree'
+import { MEEP_TREE_BRANCHES, MEEP_TREE_PATH_NODES } from '@/config/progression/meepTree'
 import { CHRONICLE_TOTAL_STAGES } from '@/config/progression/achievements'
 import {
   STAR_PHASE_DATA,
@@ -1071,7 +1071,10 @@ export function useStatCatalog(query: Ref<string>): {
       {
         key: 'nodes',
         label: 'Skills Learned',
-        value: ratio(meepTreeStore.boughtCount, MEEP_TREE_TOTAL_NODES),
+        // Gegen die erreichbaren Knoten gerechnet, nicht gegen den Katalog: an
+        // der Gabel auf Rang 4 stehen zwei Definitionen für EINEN Schritt, und
+        // ein fertiger Baum stünde sonst dauerhaft bei 25/30.
+        value: ratio(meepTreeStore.boughtCount, MEEP_TREE_PATH_NODES),
         highlight: true,
       },
       {
@@ -1083,16 +1086,16 @@ export function useStatCatalog(query: Ref<string>): {
       {
         key: 'completion',
         label: 'Tree Completion',
-        value: pct(meepTreeStore.boughtCount / Math.max(1, MEEP_TREE_TOTAL_NODES)),
+        value: pct(meepTreeStore.boughtCount / Math.max(1, MEEP_TREE_PATH_NODES)),
         highlight: true,
       },
     ]
     for (const branch of MEEP_TREE_BRANCHES) {
-      const learned = branch.nodes.filter((n) => meepTreeStore.bought.includes(n.id)).length
+      const progress = meepTreeStore.branchProgress(branch.id)
       rows.push({
         key: `branch-${branch.id}`,
         label: `${branch.name} Branch`,
-        value: ratio(learned, branch.nodes.length),
+        value: ratio(progress.bought, progress.total),
         keywords: 'meep branch skill',
       })
     }

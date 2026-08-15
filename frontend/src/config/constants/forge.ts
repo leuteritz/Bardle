@@ -3,30 +3,107 @@
 
 import type { ForgeRelicRarity, ForgeSectionDef } from '@/types'
 
-// ── Meep Skill Tree: radiales Netz-Layout (SkillTreeComponent) ─────────────
-// Ein Startknoten in der Mitte, fünf Pfade strahlen aus; leichter Zickzack pro
-// Stufe für den organischen Netz-Look. Die Radien sind so gewählt, dass sich
-// Kreise und Labels nie überlappen — einzeln geändert kleben sie aneinander.
+// ── Meep Skill Tree: die Orbit-Bühne (SkillTreeComponent / MeepOrbitStage) ──
+//
+// Ein Startkreis in der Mitte, fünf Spiralarme in elliptischen Bahnen. Die
+// Bühne wird SELBST gezeichnet (kein Pan/Zoom, keine Fremdbibliothek) und lebt
+// in einem festen Design-Koordinatensystem, das per `useFitScale` als Ganzes
+// skaliert wird — dasselbe Muster wie das Pause-Overlay. Deshalb sind alle
+// Zahlen hier Design-Pixel, keine Bildschirm-Pixel.
+//
+// Die Radien und die Stauchung hängen ZUSAMMEN und tragen sich gegenseitig;
+// einzeln verstellt kleben Knoten an Nachbarn oder am Startkreis. Die drei
+// engsten Stellen, gegen die sie gerechnet sind:
+//   1. Rang 0 gegen den Startkreis. Bei ±90° wirkt die y-Stauchung voll, der
+//      Abstand schrumpft dort auf `r₀ · Y_SQUASH`. Mit 118 · 0,7 = 82,6 bleiben
+//      über halbem Startkreis (44) plus halbem Knoten (20) noch 18 px Luft.
+//   2. Der äußerste Rang gegen die Bühnenkante. Der resonance-Arm steht bei
+//      Rang 4 fast senkrecht (−18° + 4·26° = 86°): 314 · 0,7 = 220, plus halber
+//      Knoten und Kostenpille sind 276 von 288 verbraucht.
+//   3. Die Gabel gegen ihren eigenen Rang 5. Von (267, θ∓16°) nach (314, θ)
+//      sind es 93 px — 53 px mehr als zwei halbe Knoten brauchen.
 /** Grundwinkel der fünf Zweige, gleichmäßig über 360°. */
 export const SKILL_TREE_BASE_ANGLES_DEG = [-90, -18, 54, 126, 198]
-/** Zickzack-Zuschlag je Stufe, damit die Zweige nicht schnurgerade laufen. */
-export const SKILL_TREE_TIER_JITTER_DEG = [0, 10, -9, 10, -8]
-/** Abstand der fünf Stufen vom Zentrum. */
-export const SKILL_TREE_TIER_RADIUS = [200, 355, 510, 665, 820]
-/** Stauchung der y-Achse — das Netz sitzt in einem Breitbild-Rahmen. */
-export const SKILL_TREE_Y_SQUASH = 0.85
-/** Kreis-Mittelpunkt innerhalb des Node-Wrappers (muss zum CSS passen). */
-export const SKILL_TREE_NODE_CENTER = { x: 78, y: 40 }
-export const SKILL_TREE_START_CENTER = { x: 80, y: 48 }
-/** Einpassung beim Öffnen: Zoom-Clamp, damit das Netz lesbar startet. */
-export const SKILL_TREE_FIT_PADDING = 0.06
-export const SKILL_TREE_FIT_MIN_ZOOM = 0.62
-export const SKILL_TREE_FIT_MAX_ZOOM = 0.9
 /**
- * Verzögerung vor `fitView`. Ohne sie kollidiert die Zoom-Animation mit den
- * Mount-Kosten des Netzes und drückt die Framerate sichtbar.
+ * Die Bühne und das Detail-Blatt daneben. Zusammen 1240 px — genau die Breite,
+ * die das Profil-Modal auf Full HD hat (`left/right: var(--hud-panel-size)`
+ * mit 330 px). Auf Full HD steht die Skalierung damit per Konstruktion auf 1.
  */
-export const SKILL_TREE_FIT_DELAY_MS = 100
+export const SKILL_TREE_STAGE_SIZE = { w: 880, h: 576 } as const
+export const SKILL_TREE_ASIDE_WIDTH = 360
+/**
+ * Obergrenze der Fit-Skalierung. Das Modal hängt an `--hud-panel-size` und
+ * wächst auf 4 K auf rund die doppelte Full-HD-Breite; ohne Deckel würde die
+ * Schrift dort mitwachsen, bis sie plakativ wirkt.
+ */
+export const SKILL_TREE_MAX_SCALE = 1.9
+/** Mitte der Bühne im Design-Koordinatensystem. */
+export const SKILL_TREE_CENTER = { x: 440, y: 288 } as const
+/** Bahnradius je Rang. Gleichmäßige Abstände — jeder Schritt wiegt gleich. */
+export const SKILL_TREE_TIER_RADIUS = [118, 168, 218, 267, 314]
+/** Stauchung der y-Achse — die Bühne ist ein Breitbild, die Bahnen Ellipsen. */
+export const SKILL_TREE_Y_SQUASH = 0.7
+/**
+ * Winkelversatz je Rang. Er ersetzt den früheren Zickzack: ein gleichmäßiger
+ * Drift lässt jeden Arm als SPIRALE lesen statt als geknickte Kette, und weil
+ * er stetig ist, laufen benachbarte Arme nie aufeinander zu.
+ */
+export const SKILL_TREE_TIER_DRIFT_DEG = 26
+/**
+ * Wie weit die beiden Gabelknoten auf Rang 4 auseinanderstehen (∓ je Seite).
+ * Groß genug, dass man die Wahl SIEHT, klein genug, dass beide erkennbar zum
+ * selben Arm gehören: 32° belegen von den 72° je Zweig weniger als die Hälfte.
+ */
+export const SKILL_TREE_FORK_OFFSET_DEG = 16
+/** Kantenlänge eines Knotens und seines Glyphs. */
+export const SKILL_TREE_NODE_SIZE = 40
+export const SKILL_TREE_NODE_ICON_SIZE = 27
+/** Durchmesser des Startkreises in der Mitte. */
+export const SKILL_TREE_START_SIZE = 88
+/**
+ * Abstand der Kostenpille vom Knotenmittelpunkt, radial nach AUSSEN. Sie hängt
+ * nur an Knoten, die gerade zählen (kaufbar, gewählt, überfahren) — 30 Pillen
+ * gleichzeitig überlappten einander und den nächsten Rang, und die Kosten
+ * stehen ohnehin im Detail-Blatt.
+ */
+export const SKILL_TREE_COST_PILL_RADIUS = 44
+/**
+ * Wo die fünf Zweignamen stehen. Sie sitzen NICHT auf der Achse ihres
+ * äußersten Knotens: gemessen lagen sie dort über vier von fünf Rang-5-Knoten,
+ * weil 46 px radialer Abstand in y-Richtung auf 32 px zusammenschrumpfen. Der
+ * Name läuft dem Arm deshalb ein Stück in Driftrichtung VORAUS — er liest sich
+ * dadurch als Fortsetzung der Spirale statt als Etikett daneben.
+ */
+export const SKILL_TREE_ARM_TAG_RADIUS = 340
+export const SKILL_TREE_ARM_TAG_LEAD_DEG = 16
+/** Umlaufdauer des gestrichelten Rings um den Startkreis. */
+export const SKILL_TREE_RING_SPIN_MS = 46000
+/** Wie viele Knoten „Next worth taking" im Detail-Blatt vorschlägt. */
+export const SKILL_TREE_SUGGESTION_COUNT = 3
+/**
+ * Deckkraft der Kanten als Hex-Suffix an der Zweigfarbe (die Zweigfarben sind
+ * durchweg sechsstellige Hex-Werte). Leerer String = voll deckend.
+ */
+export const SKILL_TREE_EDGE_ALPHA = {
+  bought: '',
+  path: 'b0',
+  buyable: 'd0',
+  idle: '3a',
+  dimmed: '18',
+} as const
+/**
+ * Deckkraft je Knotenzustand. `blocked` liegt UNTER `locked`: ein versiegelter
+ * Knoten ist kein Ziel mehr, sondern die sichtbare Spur einer Entscheidung —
+ * er soll da sein, aber nicht mehr ziehen.
+ */
+export const SKILL_TREE_NODE_OPACITY = {
+  bought: 1,
+  buyable: 1,
+  reachable: 0.86,
+  locked: 0.42,
+  blocked: 0.28,
+  dimmed: 0.2,
+} as const
 /** Strichstärke der Verbindungen, je nach Zustand des Zielknotens. */
 export const SKILL_TREE_EDGE_WIDTH_BOUGHT = 3.5
 export const SKILL_TREE_EDGE_WIDTH_BUYABLE = 2.75
@@ -117,25 +194,77 @@ export interface MeepTreeEffectRowDef {
   key: string
   label: string
   kind: MeepTreeEffectKind
+  /**
+   * Wo im Spiel dieser Effekt ankommt — als Chip im Detail-Blatt des
+   * Skill-Tabs. Der Spieler soll vor dem Kauf sehen, welches System sich
+   * ändert, nicht nur um wie viel. Mehrere Zeilen teilen sich einen Tag: der
+   * Chip beschreibt das SYSTEM, nicht die Zeile.
+   */
+  tag: { label: string; icon: string }
+  /**
+   * Nur an Multiplikatoren, die einen bereits GECACHTEN Spielwert direkt
+   * skalieren. Weil der Faktor in `shopStore.calculateTotalCPS/CPC()`
+   * multiplikativ eingeht, ist `aktuellerWert × Faktor` das echte Ergebnis —
+   * das Detail-Blatt kann damit „1.42M/s → 2.13M/s" schreiben, ohne die
+   * Pipeline nachzusimulieren. Jeder andere Schlüssel zeigt stattdessen den
+   * gefalteten Baum-Wert selbst; das ist der ehrliche Beitrag DES BAUMS.
+   */
+  liveStat?: 'chimesPerSecond' | 'chimesPerClick'
 }
 
+/** Die zehn Systeme, auf die der Baum wirkt — je ein Chip, je ein Glyph. */
+const FX_TAG = {
+  income: { label: 'Chime income', icon: 'ph:coins-fill' },
+  clicking: { label: 'Clicking', icon: 'ph:hand-fist-fill' },
+  prestige: { label: 'Prestige', icon: 'ph:sparkle-fill' },
+  ranked: { label: 'Ranked battle', icon: 'ri:sword-fill' },
+  orbit: { label: 'Orbit combat', icon: 'ph:users-three-fill' },
+  bosses: { label: 'Planet bosses', icon: 'ph:planet-fill' },
+  materials: { label: 'Materials', icon: 'ph:diamond-fill' },
+  survival: { label: 'Survival', icon: 'ph:shield-fill' },
+  offline: { label: 'Offline', icon: 'ph:moon-stars-fill' },
+  expeditions: { label: 'Expeditions', icon: 'ph:compass-fill' },
+} as const
+
 export const MEEP_TREE_EFFECT_ROWS: readonly MeepTreeEffectRowDef[] = [
-  { key: 'cpsMult', label: 'Chimes per second', kind: 'mult' },
-  { key: 'cpcMult', label: 'Chimes per click', kind: 'mult' },
-  { key: 'doubleClickChance', label: 'Double-strike chance', kind: 'pct' },
-  { key: 'cpcFromCpsPct', label: 'Click gains of CpS', kind: 'pct' },
-  { key: 'meepCostMult', label: 'Chimes per meep', kind: 'lower' },
-  { key: 'meepPowerMult', label: 'Power per meep', kind: 'mult' },
-  { key: 'powerBonus', label: 'Flat battle power', kind: 'flat' },
-  { key: 'championDpsMult', label: 'Champion orbit DPS', kind: 'mult' },
-  { key: 'bossDamageMult', label: 'Damage to planet bosses', kind: 'mult' },
-  { key: 'materialDropMult', label: 'Material drop chance', kind: 'mult' },
-  { key: 'hpRegenPerSec', label: 'Health regeneration', kind: 'rate' },
-  { key: 'damageTakenMult', label: 'Damage taken', kind: 'lower' },
-  { key: 'offlineEarningsMult', label: 'Offline earnings', kind: 'mult' },
-  { key: 'offlineMaxHoursBonus', label: 'Offline cap', kind: 'hours' },
-  { key: 'expeditionRewardMult', label: 'Expedition rewards', kind: 'mult' },
-  { key: 'expeditionSpeedMult', label: 'Expedition duration', kind: 'lower' },
+  {
+    key: 'cpsMult',
+    label: 'Chimes per second',
+    kind: 'mult',
+    tag: FX_TAG.income,
+    liveStat: 'chimesPerSecond',
+  },
+  {
+    key: 'cpcMult',
+    label: 'Chimes per click',
+    kind: 'mult',
+    tag: FX_TAG.clicking,
+    liveStat: 'chimesPerClick',
+  },
+  { key: 'doubleClickChance', label: 'Double-strike chance', kind: 'pct', tag: FX_TAG.clicking },
+  { key: 'cpcFromCpsPct', label: 'Click gains of CpS', kind: 'pct', tag: FX_TAG.clicking },
+  { key: 'meepCostMult', label: 'Chimes per meep', kind: 'lower', tag: FX_TAG.prestige },
+  { key: 'meepPowerMult', label: 'Power per meep', kind: 'mult', tag: FX_TAG.prestige },
+  { key: 'powerBonus', label: 'Flat battle power', kind: 'flat', tag: FX_TAG.ranked },
+  { key: 'championDpsMult', label: 'Champion orbit DPS', kind: 'mult', tag: FX_TAG.orbit },
+  { key: 'bossDamageMult', label: 'Damage to planet bosses', kind: 'mult', tag: FX_TAG.bosses },
+  { key: 'materialDropMult', label: 'Material drop chance', kind: 'mult', tag: FX_TAG.materials },
+  { key: 'hpRegenPerSec', label: 'Health regeneration', kind: 'rate', tag: FX_TAG.survival },
+  { key: 'damageTakenMult', label: 'Damage taken', kind: 'lower', tag: FX_TAG.survival },
+  { key: 'offlineEarningsMult', label: 'Offline earnings', kind: 'mult', tag: FX_TAG.offline },
+  { key: 'offlineMaxHoursBonus', label: 'Offline cap', kind: 'hours', tag: FX_TAG.offline },
+  {
+    key: 'expeditionRewardMult',
+    label: 'Expedition rewards',
+    kind: 'mult',
+    tag: FX_TAG.expeditions,
+  },
+  {
+    key: 'expeditionSpeedMult',
+    label: 'Expedition duration',
+    kind: 'lower',
+    tag: FX_TAG.expeditions,
+  },
 ] as const
 
 // ── Star Forge (Shop tab) ─────────────────────────────────────────────────────

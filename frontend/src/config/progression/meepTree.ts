@@ -1,7 +1,17 @@
 /**
  * Meep Skill Tree — five themed branches of one-time upgrades bought with Meeps.
- * Every node requires the previous node of its branch (linear chains).
- * Each node carries its own game-icons glyph, tinted in its branch color.
+ * A node opens once ANY node of the rank below it is learned; each node carries
+ * its own game-icons glyph, tinted in its branch color.
+ *
+ * **Rank 4 is a fork.** Every branch offers two nodes there, and learning one
+ * seals the other for the rest of the universe — the first place in the tree
+ * where the player decides rather than accumulates. Rank 5 accepts either side,
+ * so no choice is a dead end.
+ * Both sides of a fork cost the SAME (55 / 55 / 70 / 70 / 70). That is not
+ * cosmetic: it is what keeps "what a full tree costs" a single number at all.
+ * Priced differently, the total would depend on which side the player picks,
+ * and `MEEP_TREE_TOTAL_COST` would stop meaning anything —
+ * `__tests__/config/meepEconomy.spec.ts` binds the equality for that reason.
  *
  * Die Preise sind gegen die AUSSCHÜTTUNG geeicht, nicht frei gewählt. Meeps
  * fallen seit dem Umbau nur beim Aufbruch in ein neues Universum an
@@ -99,6 +109,14 @@ export interface MeepTreeNodeDef {
   desc: string
   cost: number
   effects: Partial<MeepTreeEffects>
+  /**
+   * Rank within the branch, 0-based — the ONLY structural field written by
+   * hand. The array index stopped being a rank the moment rank 4 gained a
+   * second node; everything else (what a node requires, what it seals) is
+   * derived from this number in `MEEP_TREE_NODE_INDEX`, so no two fields can
+   * ever drift apart.
+   */
+  tier: number
 }
 
 export interface MeepTreeBranchDef {
@@ -124,6 +142,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+25% Chimes/s',
         desc: 'A patient watch keeps the chimes ringing on their own.',
         cost: 3,
+        tier: 0,
         effects: { cpsMult: 1.25 },
       },
       {
@@ -133,6 +152,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+50% Chimes/s',
         desc: 'Your care reaches further across the sky.',
         cost: 10,
+        tier: 1,
         effects: { cpsMult: 1.5 },
       },
       {
@@ -142,6 +162,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+50% Offline Earnings',
         desc: 'The vigil holds while you are away.',
         cost: 26,
+        tier: 2,
         effects: { offlineEarningsMult: 1.5 },
       },
       {
@@ -151,7 +172,18 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+100% Chimes/s',
         desc: 'Every building falls into the same orbit.',
         cost: 55,
+        tier: 3,
         effects: { cpsMult: 2 },
+      },
+      {
+        id: 'vigil_4b',
+        name: 'Longnight Watch',
+        icon: 'game-icons:eclipse', // the sky asleep, the watch deepening
+        effect: '+120% Offline Earnings',
+        desc: 'The watch deepens while the sky sleeps.',
+        cost: 55,
+        tier: 3,
+        effects: { offlineEarningsMult: 2.2 },
       },
       {
         id: 'vigil_5',
@@ -160,6 +192,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+4h Offline Cap · +50% Chimes/s',
         desc: 'A watch that never truly ends.',
         cost: 110,
+        tier: 4,
         effects: { offlineMaxHoursBonus: 4, cpsMult: 1.5 },
       },
     ],
@@ -177,6 +210,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+25% Chimes/Click',
         desc: 'Each touch of the chime rings a little louder.',
         cost: 3,
+        tier: 0,
         effects: { cpcMult: 1.25 },
       },
       {
@@ -186,15 +220,17 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+50% Chimes/Click',
         desc: 'The chime answers your hand with force.',
         cost: 10,
+        tier: 1,
         effects: { cpcMult: 1.5 },
       },
       {
         id: 'reso_3',
         name: 'Twin Echo',
         icon: 'game-icons:echo-ripples', // one strike ringing twice
-        effect: '10% Double-Click Chance',
+        effect: '10% Double-Strike Chance',
         desc: 'Sometimes a single strike rings twice.',
         cost: 26,
+        tier: 2,
         effects: { doubleClickChance: 0.1 },
       },
       {
@@ -204,7 +240,18 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+100% Chimes/Click',
         desc: 'Your strikes shake the firmament.',
         cost: 55,
+        tier: 3,
         effects: { cpcMult: 2 },
+      },
+      {
+        id: 'reso_4b',
+        name: 'Split Chime',
+        icon: 'game-icons:beams-aura', // one strike splitting into two answers
+        effect: '+15% Double-Strike Chance',
+        desc: 'One strike, two answers — more often than not.',
+        cost: 55,
+        tier: 3,
+        effects: { doubleClickChance: 0.15 },
       },
       {
         id: 'reso_5',
@@ -213,6 +260,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: 'Clicks gain +2% of CpS · +50% Chimes/Click',
         desc: 'Every strike carries the weight of the whole sky.',
         cost: 110,
+        tier: 4,
         effects: { cpcFromCpsPct: 0.02, cpcMult: 1.5 },
       },
     ],
@@ -230,6 +278,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '−10% Meep Cost',
         desc: 'Meeps gather for fewer chimes.',
         cost: 4,
+        tier: 0,
         effects: { meepCostMult: 0.9 },
       },
       {
@@ -239,6 +288,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+25% Expedition Rewards',
         desc: 'Well-planned journeys return with richer spoils.',
         cost: 14,
+        tier: 1,
         effects: { expeditionRewardMult: 1.25 },
       },
       {
@@ -248,6 +298,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '−15% Meep Cost',
         desc: 'The gathering calls new meeps into being.',
         cost: 32,
+        tier: 2,
         effects: { meepCostMult: 0.85 },
       },
       {
@@ -257,7 +308,18 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: 'Expeditions 20% Faster',
         desc: 'Favorable winds carry your champions home sooner.',
         cost: 70,
+        tier: 3,
         effects: { expeditionSpeedMult: 0.8 },
+      },
+      {
+        id: 'cosmos_4b',
+        name: 'Wandering Comet',
+        icon: 'game-icons:falling-star', // a long tail dragging spoils home
+        effect: '+45% Expedition Rewards',
+        desc: 'A long tail drags richer spoils home.',
+        cost: 70,
+        tier: 3,
+        effects: { expeditionRewardMult: 1.45 },
       },
       {
         id: 'cosmos_5',
@@ -266,6 +328,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+30% Meep Power · −10% Meep Cost',
         desc: 'Your meeps fight — and multiply — for their keeper.',
         cost: 140,
+        tier: 4,
         effects: { meepPowerMult: 1.3, meepCostMult: 0.9 },
       },
     ],
@@ -283,6 +346,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+500 Power',
         desc: 'A shared purpose drives your team forward.',
         cost: 4,
+        tier: 0,
         effects: { powerBonus: 500 },
       },
       {
@@ -292,6 +356,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+10% Champion DPS',
         desc: 'Champions strike with sharper intent.',
         cost: 14,
+        tier: 1,
         effects: { championDpsMult: 1.1 },
       },
       {
@@ -301,6 +366,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+1500 Power',
         desc: 'Your banner alone tips the scales of ranked battles.',
         cost: 32,
+        tier: 2,
         effects: { powerBonus: 1500 },
       },
       {
@@ -310,7 +376,18 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+15% Champion DPS',
         desc: 'The assault swells — and so does every strike.',
         cost: 70,
+        tier: 3,
         effects: { championDpsMult: 1.15 },
+      },
+      {
+        id: 'battle_4b',
+        name: 'Crowned Vanguard',
+        icon: 'game-icons:crown', // the host marching under one crown
+        effect: '+3000 Power',
+        desc: 'The host marches under one crown.',
+        cost: 70,
+        tier: 3,
+        effects: { powerBonus: 3000 },
       },
       {
         id: 'battle_5',
@@ -319,6 +396,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+5000 Power',
         desc: 'Tales of your team echo through every universe.',
         cost: 140,
+        tier: 4,
         effects: { powerBonus: 5000 },
       },
     ],
@@ -336,6 +414,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+10% Boss Damage',
         desc: 'A sharp splinter that cuts through boss armor.',
         cost: 4,
+        tier: 0,
         effects: { bossDamageMult: 1.1 },
       },
       {
@@ -345,6 +424,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+20% Material Drop Chance',
         desc: 'You hear where the rarest materials hide.',
         cost: 14,
+        tier: 1,
         effects: { materialDropMult: 1.2 },
       },
       {
@@ -354,6 +434,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+1 HP Regen/s',
         desc: 'A calm tide mends the sun’s wounds.',
         cost: 32,
+        tier: 2,
         effects: { hpRegenPerSec: 1 },
       },
       {
@@ -363,7 +444,18 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '−15% Damage Taken',
         desc: 'A shield of ringing chimes blunts every enemy blow.',
         cost: 70,
+        tier: 3,
         effects: { damageTakenMult: 0.85 },
+      },
+      {
+        id: 'warden_4b',
+        name: 'Warding Bulwark',
+        icon: 'game-icons:stone-wall', // a wall standing where you cannot
+        effect: '−25% Damage Taken',
+        desc: 'A wall of chimes stands where you cannot.',
+        cost: 70,
+        tier: 3,
+        effects: { damageTakenMult: 0.75 },
       },
       {
         id: 'warden_5',
@@ -372,20 +464,61 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         effect: '+30% Boss Damage',
         desc: 'No planetary tyrant withstands the final blow.',
         cost: 140,
+        tier: 4,
         effects: { bossDamageMult: 1.3 },
       },
     ],
   },
 ]
 
-/** Flat lookup: node id → { branch, node, index within branch }. */
-export const MEEP_TREE_NODE_INDEX: Record<
-  string,
-  { branch: MeepTreeBranchDef; node: MeepTreeNodeDef; index: number }
-> = Object.fromEntries(
-  MEEP_TREE_BRANCHES.flatMap((branch) =>
-    branch.nodes.map((node, index) => [node.id, { branch, node, index }]),
-  ),
+/** Every definition in the catalog, flattened — 30 nodes across 5 branches. */
+export const MEEP_TREE_NODES: readonly MeepTreeNodeDef[] = MEEP_TREE_BRANCHES.flatMap(
+  (branch) => branch.nodes,
 )
 
-export const MEEP_TREE_TOTAL_NODES = MEEP_TREE_BRANCHES.reduce((sum, b) => sum + b.nodes.length, 0)
+/** Ranks per branch — the number the player reads as "Rank N of 5". */
+export const MEEP_TREE_TIERS_PER_BRANCH = 5
+
+/**
+ * How many nodes ONE save can ever hold: one per branch and rank, so a fork
+ * counts once. Every completion readout divides by this — dividing by the
+ * catalog size instead would leave a finished tree sitting at 25/30.
+ */
+export const MEEP_TREE_PATH_NODES = MEEP_TREE_BRANCHES.reduce(
+  (sum, b) => sum + new Set(b.nodes.map((n) => n.tier)).size,
+  0,
+)
+
+/** How many definitions exist. Only icon uniqueness and catalog specs want this. */
+export const MEEP_TREE_CATALOG_NODES = MEEP_TREE_NODES.length
+
+export interface MeepTreeNodeEntry {
+  branch: MeepTreeBranchDef
+  node: MeepTreeNodeDef
+  /** Every node of the rank below — learning ONE of them opens this node. */
+  req: readonly string[]
+  /** Siblings of the same rank — learning one seals the others for good. */
+  excl: readonly string[]
+}
+
+/**
+ * Flat lookup: node id → branch, definition, and the two derived relations.
+ *
+ * `req` and `excl` are computed from `tier` alone, never written by hand: a
+ * fork written out on both sides (`a.excl = 'b'` plus `b.excl = 'a'`) is two
+ * facts that can drift apart, and the drift is silent — one side would simply
+ * stop sealing the other.
+ */
+export const MEEP_TREE_NODE_INDEX: Record<string, MeepTreeNodeEntry> = Object.fromEntries(
+  MEEP_TREE_BRANCHES.flatMap((branch) =>
+    branch.nodes.map((node) => [
+      node.id,
+      {
+        branch,
+        node,
+        req: branch.nodes.filter((n) => n.tier === node.tier - 1).map((n) => n.id),
+        excl: branch.nodes.filter((n) => n.tier === node.tier && n.id !== node.id).map((n) => n.id),
+      } satisfies MeepTreeNodeEntry,
+    ]),
+  ),
+)
