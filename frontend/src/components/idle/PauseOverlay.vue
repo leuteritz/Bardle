@@ -323,15 +323,26 @@
               </Transition>
             </div>
             <TransitionGroup
-              v-if="activeResourceStars.length > 0 || isPlanetDiscovered || voidThreat"
+              v-if="activeResourceStars.length > 0 || championCallout || voidThreat"
               tag="div"
               name="callout-pop"
               class="callout-row"
             >
+              <!-- Der Champion steht IMMER an erster Stelle, ganz oben links —
+                   auch dann, wenn sonst nichts läuft. Er ist der Höhepunkt
+                   einer Galaxierunde, und eine Karte, die je nach Lage um eine
+                   Kartenbreite wandert, muss man erst suchen. Die eine Karte
+                   deckt beide Zustände ab: gefunden-und-wartend sowie
+                   Stern-läuft-samt-Uhr. -->
+              <PauseChampionCard
+                v-if="championCallout"
+                key="champion"
+                :callout="championCallout"
+              />
               <!-- Der Void läuft während der Pause weiter — Kader und Turrets
                    feuern auch pausiert, also darf er auch pausiert verloren
                    gehen. Er steht deshalb VOR den Stern-Karten: von allem, was
-                   hier läuft, ist er das einzige, das der Sonne wehtut. -->
+                   hier abläuft, ist er das einzige, das der Sonne wehtut. -->
               <PauseVoidCard
                 v-if="voidThreat"
                 key="void-threat"
@@ -344,33 +355,6 @@
                 :count="voidThreat.count"
                 :worn="voidThreat.worn"
               />
-              <!-- Champion-Herald: nimmt die erste Zeile für sich. Der Fund ist
-                   der Höhepunkt einer Galaxierunde und stand vorher als
-                   gleichrangiges Badge zwischen den Stern-Countdowns. Farbe und
-                   Motiv kommen aus der Rolle, die der Spieler für diesen Stern
-                   gewählt hat — nie wieder dieselbe Kachel für jede Rolle. -->
-              <div
-                v-if="isPlanetDiscovered"
-                key="champion-herald"
-                class="champion-herald"
-                :style="{ '--role-color': championColor }"
-              >
-                <span class="champion-herald__sheen" aria-hidden="true" />
-                <img
-                  v-if="championArt"
-                  :src="championArt"
-                  alt=""
-                  draggable="false"
-                  class="champion-herald__art"
-                />
-                <span class="champion-herald__text">
-                  <span class="champion-herald__eyebrow">Champion found</span>
-                  <span class="champion-herald__role">{{ championRoleDef?.label ?? 'Unknown' }}</span>
-                </span>
-                <span class="champion-herald__status">
-                  {{ championStarPending ? 'Arrives when you return' : 'Waiting in orbit' }}
-                </span>
-              </div>
 
               <!-- Ein Flyby, eine Karte: Zifferblatt der Restzeit, echte
                    Planetenkunst der Slots mit ihren Boss-HP, Akzent in der
@@ -386,7 +370,7 @@
                 :planets="s.planets"
               />
             </TransitionGroup>
-            <div v-else class="callout-row">
+            <div v-else class="callout-row callout-row--empty">
               <span class="callout-empty">All quiet so far — the cosmos drifts on</span>
             </div>
           </div>
@@ -427,6 +411,7 @@ import { onKeybinding } from '@/composables/system/useKeybindings'
 import { useFitScale } from '@/composables/ui/useFitScale'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
@@ -457,6 +442,7 @@ import {
   LOOT_MONOGRAM_MAX_CHARS,
   ROLE_BY_KEY,
   ROLE_ART_MD_SUFFIX,
+  PAUSE_CHAMPION_FALLBACK_ICON,
   KEYBINDINGS,
   PAUSE_ESCAPE_CAP,
   PAUSE_STAR_CARD_HEIGHT,
@@ -465,15 +451,21 @@ import {
   STAR_TIMER_TICK_MS,
   VOID_SEVERITY_COLOR,
 } from '@/config/constants'
-import type { PlanetType } from '@/types'
+import type { PauseChampionCallout, PlanetType } from '@/types'
 import { splitDuration } from '@/utils/ui/format'
-import { starDeadlineAt, starRemainingMs, starTotalMs } from '@/utils/orbit/starLifetime'
+import {
+  championStarDeadlineAt,
+  starDeadlineAt,
+  starRemainingMs,
+  starTotalMs,
+} from '@/utils/orbit/starLifetime'
 import { pauseDustStyle } from '@/utils/fx/particleField'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import KeyCap from '@/components/keybinds/KeyCap.vue'
+import PauseChampionCard from './PauseChampionCard.vue'
 import PauseStarCard from './PauseStarCard.vue'
 import PauseVoidCard from './PauseVoidCard.vue'
 import SunLedger from './SunLedger.vue'
@@ -495,6 +487,7 @@ const { scale: panelScale } = useFitScale(stageEl, panelEl, {
 })
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
+const battleStore = useBattleStore()
 const playerStore = usePlayerStore()
 const planetBossStore = usePlanetBossStore()
 const planetShopStore = usePlanetShopStore()
@@ -660,11 +653,14 @@ watch(
       // erst beim ersten Takt.
       lastResourceStarsKey = ''
       lastVoidThreatKey = ''
+      lastChampionKey = ''
       refreshResourceStars()
       refreshVoidThreat()
+      refreshChampionCallout()
       starInterval = setInterval(() => {
         refreshResourceStars()
         refreshVoidThreat()
+        refreshChampionCallout()
       }, STAR_TIMER_TICK_MS)
       window.addEventListener('keydown', onEscape)
     } else {
@@ -863,6 +859,113 @@ function refreshVoidThreat(): void {
   voidThreat.value = next
 }
 
+// ── Der Champion ────────────────────────────────────────────────────────────
+// EINE Karte für zwei Zustände, und sie steht immer an erster Stelle:
+//
+//   • `awaited`  — das Schiff ist angekommen, der Stern steht noch nicht am
+//     Himmel. Welcher Champion es wird, entscheidet erst der Spawn; bekannt ist
+//     hier die ROLLE, und die hat der Spieler selbst gewählt — sie trägt
+//     deshalb Farbe und Wappen. Ruht der Idle-Layer, merkt `useStarSystem` den
+//     Stern in `pendingChampionStar` vor und lässt ihn erst beim Zurückkehren
+//     erscheinen; genau das sagt der Status an, statt einen Stern zu
+//     versprechen, der noch gar nicht da ist.
+//   • `active`   — der Stern läuft. Erst hier steht der Champion fest.
+//
+// Vorher endete die Anzeige beim Spawn: der Fund-Banner hing an
+// `champion_available`, und `buildResourceStars()` filtert auf `'resource'` —
+// die 60-Sekunden-Uhr des Champion-Sterns lief in der Pause also unsichtbar ab.
+//
+// Wie bei Sternen und Void ein Schnappschuss im selben Takt und KEIN computed:
+// ein computed über `planetBossStore.activeBosses` rechnete bei jedem Treffer
+// des Passivschadens neu.
+const championCallout = shallowRef<PauseChampionCallout | null>(null)
+
+function buildChampionCallout(): PauseChampionCallout | null {
+  const star = starGroupStore.activeStars.find((s) => s.starType === 'champion')
+
+  if (star) {
+    const slot = star.planetSlots.find((p) => p.isChampionPlanet)
+    const boss = slot
+      ? planetBossStore.activeBosses.find((b) => b.planetId === slot.planetId)
+      : undefined
+    const name = boss?.homePlanetChampion ?? null
+    const escorts = star.planetSlots.filter((p) => !p.isChampionPlanet)
+    const [r, g, b] = star.starColor
+    const deadline = championStarDeadlineAt(star)
+    const durationMs = star.durationMs ?? 0
+    // Auf ganze Prozent gerundet: der Balken ist wenige Pixel breit, und der
+    // Schlüssel unten schlüge sonst bei jedem Abtasttakt an.
+    const ratio =
+      !slot || slot.cleared || !boss || boss.maxHP <= 0
+        ? 0
+        : Math.min(1, Math.max(0, boss.currentHP / boss.maxHP))
+    return {
+      state: 'active',
+      color: `rgb(${r}, ${g}, ${b})`,
+      title: name ?? 'Champion',
+      status: null,
+      // Dieselbe Quelle UND dieselbe Auflösungsstufe wie die Belohnungskarte am
+      // Stern selbst (StarSystemComponent) — sonst lädt derselbe Champion in
+      // derselben Szene ein zweites Mal, statt aus dem Cache zu kommen.
+      art: name ? battleStore.getChampionImage(name, { size: 'md' }) : null,
+      roleIcon: championRoleIcon(),
+      secs: deadline === null ? 0 : Math.max(0, Math.ceil((deadline - gameNow()) / 1000)),
+      endsAt: deadline ?? gameNow(),
+      durationMs,
+      bossHp: Math.round(ratio * PAUSE_STAR_HP_STEPS) / PAUSE_STAR_HP_STEPS,
+      escortTotal: escorts.length,
+      escortCleared: escorts.filter((p) => p.cleared).length,
+    }
+  }
+
+  if (galaxyStore.championTravelState !== 'champion_available') return null
+
+  const role = galaxyStore.nextStarRole ? ROLE_BY_KEY[galaxyStore.nextStarRole] : null
+  return {
+    state: 'awaited',
+    color: role?.color ?? '#f0d060',
+    title: role?.label ?? 'Unknown',
+    // Kurz gehalten: die Pille hat die Körperbreite der Karte (112 px), und
+    // „Arrives when you return" brach dort zu „Arrives when you…" ab.
+    status: galaxyStore.pendingChampionStar ? 'Arrives on return' : 'Waiting in orbit',
+    // Das Rollenbild wird hier mit ~60 px gezeigt — dafür ist die 256er-Stufe
+    // die richtige Quelle; ROLES[].image zeigt bewusst aufs Original, weil
+    // dieselbe Konstante anderswo gross gerendert wird.
+    art: role ? role.image.replace(/\.png$/, ROLE_ART_MD_SUFFIX) : null,
+    roleIcon: championRoleIcon(),
+    secs: 0,
+    endsAt: 0,
+    durationMs: 0,
+    bossHp: 0,
+    escortTotal: 0,
+    escortCleared: 0,
+  }
+}
+
+/** Wappen der Rolle, für die dieser Stern angeflogen wurde. Es steht in beiden
+ *  Zuständen für dieselbe Wahl, deshalb dieselbe Quelle. */
+function championRoleIcon(): string {
+  const role = galaxyStore.nextStarRole ? ROLE_BY_KEY[galaxyStore.nextStarRole] : null
+  return role?.icon ?? PAUSE_CHAMPION_FALLBACK_ICON
+}
+
+/** Alles, was man der Karte ansieht. Der Zeitbogen steht bewusst NICHT darin —
+ *  er läuft in der Karte als eigene Animation und hängt nur am Endzeitpunkt. */
+function championCalloutKey(c: PauseChampionCallout | null): string {
+  return c
+    ? `${c.state}:${c.title}:${c.status}:${c.color}:${c.secs}:${c.endsAt}:${c.bossHp}:${c.escortCleared}/${c.escortTotal}`
+    : ''
+}
+
+let lastChampionKey = ''
+function refreshChampionCallout(): void {
+  const next = buildChampionCallout()
+  const key = championCalloutKey(next)
+  if (key === lastChampionKey) return
+  lastChampionKey = key
+  championCallout.value = next
+}
+
 const timerChars = computed(() => {
   const { hours, minutes, seconds } = splitDuration(pauseTick.value)
   const mm = String(minutes).padStart(2, '0')
@@ -959,32 +1062,6 @@ const visibleMaterials = computed(() => {
 const hiddenMaterialCount = computed(
   () => pauseMaterialEntries.value.length - visibleMaterials.value.length,
 )
-
-const isPlanetDiscovered = computed(
-  () => galaxyStore.championTravelState === 'champion_available',
-)
-
-// Welcher Champion konkret kommt, steht erst beim Spawn des Sterns fest
-// (planetBossStore würfelt ihn dann aus der gewählten Rolle aus). Bekannt ist
-// hier also die ROLLE — und die hat der Spieler selbst gewählt, weshalb sie
-// als Farbe und Motiv des Heralds trägt.
-const championRoleDef = computed(() =>
-  galaxyStore.nextStarRole ? ROLE_BY_KEY[galaxyStore.nextStarRole] : null,
-)
-const championColor = computed(() => championRoleDef.value?.color ?? '#f0d060')
-// Das Rollenbild wird hier mit ~44 px gezeigt — dafür ist die 256er-Stufe die
-// richtige Quelle; ROLES[].image zeigt bewusst aufs Original, weil dieselbe
-// Konstante anderswo groß gerendert wird (siehe „Auflösungsvarianten").
-const championArt = computed(() =>
-  championRoleDef.value ? championRoleDef.value.image.replace(/\.png$/, ROLE_ART_MD_SUFFIX) : null,
-)
-/**
- * Der Champion-Stern wird nicht gespawnt, solange der Idle-Layer ruht — der
- * Watcher in `useStarSystem` merkt ihn stattdessen in `pendingChampionStar` vor
- * und lässt ihn erst beim Zurückkehren erscheinen. Genau das sagt der Herald
- * an, statt einen Stern zu versprechen, der noch gar nicht am Himmel steht.
- */
-const championStarPending = computed(() => galaxyStore.pendingChampionStar)
 
 /**
  * Offene Level-Up-Wahlen. Sie stehen als Marke neben der Überschrift, nicht in
@@ -1997,21 +2074,20 @@ function particleStyle(i: number): Record<string, string> {
 
 /* ── Callouts ─────────────────────────────────────────── */
 .callout-section {
-  /* Höhe des Champion-Heralds — geht in die Reservierung der Reihe ein.
-     --star-card-h kommt inline aus PAUSE_STAR_CARD_HEIGHT. */
-  --herald-h: 52px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
   width: 100%;
 }
 /* Überschrift und Level-Up-Marke auf einer Zeile mit fester Höhe: taucht die
-   Marke mitten in der Pause auf, rückt darunter nichts nach. */
+   Marke mitten in der Pause auf, rückt darunter nichts nach.
+   Linksbündig wie die Karten darunter — beide teilen sich damit EINE Kante,
+   an der das Auge den Abschnitt findet. */
 .callout-head {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
   height: 22px;
 }
@@ -2050,127 +2126,36 @@ function particleStyle(i: number): Record<string, string> {
   font-variant-numeric: tabular-nums;
   text-shadow: 0 0 10px rgba(116, 212, 72, 0.55);
 }
-/* Feste Höhe: reservierter Platz, egal ob leer oder voll besetzt — das Panel
-   bleibt stabil. Zwei Zeilen sind reserviert: der Champion-Herald über die
-   volle Breite und darunter die Flyby-Karten (bis zu
-   RESOURCE_STAR_MAX_CONCURRENT nebeneinander). Beides fest, damit ein Fund
-   oder ein neu gespawnter Stern das Panel nicht springen lässt. */
-/* Die Lücke kommt inline aus PAUSE_STAR_CARD_GAP_PX — dieselbe Zahl, gegen die
-   die Kartenbreite gerechnet ist (3 × 172 + 2 × 6 = 528 ≤ 532). Sie steht auch
-   in der reservierten Höhe, weil Herald und Kartenreihe untereinander stehen. */
+/* Alle Karten sind gleich gross und stehen linksbündig nebeneinander: die
+   Champion-Karte zuerst, dann der Void, dann die Flybys. Ab der fünften Karte
+   bricht die Reihe um — vier passen in den Panelinnenraum
+   (4 × 208 + 3 × 6 = 850 ≤ 872), fünf nicht mehr (1064).
+
+   Feste Höhe für ZWEI Kartenzeilen: reservierter Platz, egal ob leer oder voll
+   besetzt. Eine mitwachsende Höhe liesse den Fit-Scale des ganzen Overlays
+   mitten in der Pause springen, sobald der fünfte Callout auftaucht.
+
+   Die Lücke kommt inline aus PAUSE_STAR_CARD_GAP_PX — dieselbe Zahl steht in
+   der Breitenrechnung und zwischen den beiden Zeilen. */
 .callout-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  align-content: center;
-  justify-content: center;
+  align-items: flex-start;
+  align-content: flex-start;
+  justify-content: flex-start;
   gap: var(--star-card-gap);
-  height: calc(var(--herald-h) + var(--star-card-gap) + var(--star-card-h));
+  height: calc(2 * var(--star-card-h) + var(--star-card-gap));
   width: 100%;
   overflow: hidden;
 }
-
-/* ── Champion-Herald ──────────────────────────────────────
-   Eine eigene Zeile, breit wie das Panel: der Fund ist das Ereignis, auf das
-   die ganze Galaxierunde zuläuft. Die Rollenfarbe (--role-color) trägt Rahmen,
-   Verlauf, Artwork-Kontur und Rollenname, sodass ein Top-Fund anders aussieht
-   als ein Support-Fund. */
-.champion-herald {
-  position: relative;
-  flex-basis: 100%;
-  display: flex;
+/* Der Leersatz hat keine Karte, an der er sich ausrichten könnte — er steht
+   deshalb als einziger mittig im reservierten Feld. */
+.callout-row--empty {
   align-items: center;
-  gap: 12px;
-  height: var(--herald-h);
-  padding: 0 14px 0 8px;
-  overflow: hidden;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--role-color) 60%, transparent);
-  background:
-    radial-gradient(
-      circle at 12% 50%,
-      color-mix(in srgb, var(--role-color) 26%, transparent),
-      transparent 62%
-    ),
-    linear-gradient(
-      100deg,
-      color-mix(in srgb, var(--role-color) 16%, transparent),
-      rgba(255, 200, 80, 0.03) 70%
-    );
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--role-color) 14%, transparent),
-    0 0 18px color-mix(in srgb, var(--role-color) 22%, transparent);
+  align-content: center;
+  justify-content: center;
 }
-/* Lichtstreifen, der einmal je Runde durchläuft — bewegt wird nur ein
-   transform, unabhängig davon wie oft der Herald steht. */
-.champion-herald__sheen {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -40%;
-  width: 35%;
-  background: linear-gradient(
-    100deg,
-    transparent,
-    color-mix(in srgb, var(--role-color) 30%, transparent),
-    transparent
-  );
-  animation: herald-sheen 3.4s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes herald-sheen {
-  0%,
-  62% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(400%);
-  }
-}
-.champion-herald__art {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--role-color) 70%, transparent));
-}
-.champion-herald__text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  min-width: 0;
-}
-.champion-herald__eyebrow {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.6);
-}
-.champion-herald__role {
-  font-family: 'MedievalSharp', cursive;
-  font-size: 1.35rem;
-  line-height: 1;
-  letter-spacing: 0.06em;
-  color: var(--role-color);
-  text-shadow:
-    0 0 14px color-mix(in srgb, var(--role-color) 55%, transparent),
-    0 1px 3px rgba(0, 0, 0, 0.9);
-}
-/* Rechts der Hinweis, dass der Stern erst mit der Rückkehr erscheint */
-.champion-herald__status {
-  margin-left: auto;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(6, 4, 0, 0.55);
-  border: 1px solid color-mix(in srgb, var(--role-color) 35%, transparent);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--role-color) 45%, #f2ead0);
-  white-space: nowrap;
-}
+
 .callout-empty {
   font-size: clamp(0.68rem, 0.95vw, 0.78rem);
   font-style: italic;
@@ -2288,7 +2273,6 @@ function particleStyle(i: number): Record<string, string> {
   .particle,
   .chime-orb__halo,
   .pause-timer__glow,
-  .champion-herald__sheen,
   .vital-bar--crit .vital-bar__pulse {
     animation: none;
   }

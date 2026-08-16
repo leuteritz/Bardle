@@ -69,6 +69,7 @@ import {
   STAR_FIGHT_TIMER_WARNING_S,
 } from '@/config/constants'
 import { gameNow } from '@/utils/game/gameClock'
+import { championStarDeadlineAt } from '@/utils/orbit/starLifetime'
 
 const starGroupStore = useStarGroupStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -96,17 +97,20 @@ const star = computed(
   () => starGroupStore.activeStars.find((s) => s.starType === 'champion') ?? null,
 )
 
+/** Die Frist kommt aus `starLifetime` — dieselbe Rechnung, die auch die
+ *  Header-Bars und die Pause-Karte des Champion-Sterns anstellen. */
+const deadline = computed(() => (star.value ? championStarDeadlineAt(star.value) : null))
+
 const secsLeft = computed<number | null>(() => {
-  const s = star.value
-  if (!s || s.spawnedAt === undefined || s.durationMs === undefined) return null
-  return Math.max(0, Math.ceil((s.spawnedAt + s.durationMs - now.value) / MS_PER_SECOND))
+  if (deadline.value === null) return null
+  return Math.max(0, Math.ceil((deadline.value - now.value) / MS_PER_SECOND))
 })
 
 /** Restanteil 0–1 für den Balken — feiner als die auf Sekunden gerundete Zahl. */
 const timePct = computed(() => {
   const s = star.value
-  if (!s || s.spawnedAt === undefined || s.durationMs === undefined) return 0
-  return Math.max(0, Math.min(1, (s.spawnedAt + s.durationMs - now.value) / s.durationMs))
+  if (!s || deadline.value === null || !s.durationMs) return 0
+  return Math.max(0, Math.min(1, (deadline.value - now.value) / s.durationMs))
 })
 
 const timerText = computed(() => {

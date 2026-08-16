@@ -181,7 +181,11 @@ import {
 } from '@/config/constants'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import { starEclipseState } from '@/utils/orbit/foregroundGate'
-import { starRemainingMs, starTotalMs } from '@/utils/orbit/starLifetime'
+import {
+  championStarDeadlineAt,
+  starRemainingMs,
+  starTotalMs,
+} from '@/utils/orbit/starLifetime'
 import type { StarBossTimer } from '@/utils/orbit/starLifetime'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { centerArcSideWidth } from '@/utils/orbit/geometry'
@@ -687,11 +691,11 @@ const sortedEntries = computed<BarEntry[]>(() => {
         })
       }
     } else if (star.starType === 'champion') {
-      const remaining = allCleared
-        ? 0
-        : star.spawnedAt !== undefined && star.durationMs !== undefined
-          ? Math.max(0, star.spawnedAt + star.durationMs - nowTs)
-          : 0
+      // Der Champion-Stern hat nur seine eigene Uhr — die Rechnung dazu steht
+      // in `starLifetime`, damit Bar, Minimap-HUD und Pause-Karte nicht
+      // auseinanderlaufen können.
+      const deadline = allCleared ? null : championStarDeadlineAt(star)
+      const remaining = deadline === null ? 0 : Math.max(0, deadline - nowTs)
       const totalMs = star.durationMs ?? 1
       const fillRatio = totalMs > 0 ? remaining / totalMs : 0
 

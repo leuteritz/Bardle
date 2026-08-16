@@ -75,6 +75,22 @@ export function starDeadlineAt(
 }
 
 /**
+ * Frist eines CHAMPION-Sterns. Er hat nur EINE Uhr — seine eigene
+ * (`spawnedAt + durationMs`, CHAMPION_STAR_DURATION_MS = 60 s). Die Enrage-Uhr
+ * seiner Bosse zählt hier bewusst nicht: der Champion-Stern verschwindet erst
+ * mit seiner eigenen Frist, ein rasender Boss verkürzt sie nicht.
+ *
+ * Die Formel stand ausgeschrieben in den Header-Bars und im Ankunfts-HUD der
+ * Minimap. Beide zeigen denselben Stern, und sobald eine dritte Anzeige
+ * dazukam, war das genau die Konstellation, an der `starRemainingMs` schon
+ * einmal auseinandergelaufen ist — deshalb steht sie jetzt hier.
+ */
+export function championStarDeadlineAt(star: StarLifetimeSource): number | null {
+  if (star.spawnedAt === undefined || star.durationMs === undefined) return null
+  return star.spawnedAt + star.durationMs
+}
+
+/**
  * Restzeit des Sterns in ms — die früheste der beiden Uhren.
  */
 export function starRemainingMs(

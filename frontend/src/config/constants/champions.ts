@@ -43,6 +43,24 @@ export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LY per Galaxy
 
 export const CHAMPION_STAR_DURATION_MS = 60_000 // champion star window: 60s
 
+// ── Champion-Karte im Pause-Overlay ────────────────────────────────────────
+// Sie steht in derselben Reihe wie die Stern- und die Void-Karte und ist genau
+// so breit wie beide (PAUSE_STAR_CARD_WIDTH / PAUSE_VOID_CARD_WIDTH, beide 208).
+// Die Zahl steht hier und nicht dort, weil sie zum Champion-Stern gehört —
+// dieselbe Aufteilung wie bei PAUSE_VOID_CARD_WIDTH in `void.ts`. Wer sie
+// ändert, muss die Reihenrechnung im Kopf von `ui.ts` mitziehen.
+export const PAUSE_CHAMPION_CARD_WIDTH = 208
+/** So viele Begleitplaneten zeigt die Karte einzeln als Punkt. Ein Champion-
+ *  Stern trägt 1 + STAR_EXTRA_PLANET_MIN…RANGE Welten; darüber steht die Zahl. */
+export const PAUSE_CHAMPION_PIPS_MAX = 5
+/** Kantenlänge des Rollenwappens, das im Zustand „gefunden, wartet" anstelle
+ *  des Zifferblatts steht. Es sitzt im selben Feld (PAUSE_STAR_DIAL_PX = 70),
+ *  füllt es aber nicht aus — der Ring darum ist Teil des Bildes. */
+export const PAUSE_CHAMPION_CREST_PX = 34
+/** Wappen, wenn die Rolle des Sterns (ausnahmsweise) nicht bekannt ist — der
+ *  Stern selbst. Sonst stünde ein leeres Feld an der auffälligsten Stelle. */
+export const PAUSE_CHAMPION_FALLBACK_ICON = 'game-icons:allied-star'
+
 export const CHAMPION_MAX_LEVEL = 18
 
 // ── Champion XP model (per-champion levels, LoL-style) ─────────────────────

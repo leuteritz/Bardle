@@ -319,3 +319,43 @@ export interface HeraldDelta {
   /** false = beim Verdichten ersetzen statt aufsummieren. Default true. */
   sum?: boolean
 }
+
+/**
+ * Was die Champion-Karte des Pause-Overlays zeigt — ein Schnappschuss, kein
+ * Live-Objekt. Er wird im Takt von `STAR_TIMER_TICK_MS` neu gebaut und nur
+ * dann zugewiesen, wenn sich etwas ABLESBARES geändert hat (dasselbe Muster
+ * wie bei den Stern- und der Void-Karte, siehe `PauseOverlay.vue`).
+ *
+ * Zwei Zustände, eine Karte:
+ *  • `awaited` — der Champion ist gefunden, sein Stern steht noch nicht.
+ *    Es gibt nichts zu zählen; `secs`/`endsAt`/`durationMs`/`bossHp` sind 0.
+ *  • `active`  — der Stern läuft, seine Frist zählt ab.
+ * Beide schließen sich aus: `spawnChampionStar()` schaltet den Reisezustand
+ * im selben Zug von `champion_available` auf `champion_spawned`.
+ */
+export interface PauseChampionCallout {
+  state: 'awaited' | 'active'
+  /** Fertiger CSS-Wert: die Rollenfarbe — im laufenden Stern seine `starColor`,
+   *  die aus derselben Rolle abgeleitet ist. */
+  color: string
+  /** Rollenlabel (`awaited`) bzw. Name des Champions (`active`). */
+  title: string
+  /** Nur `awaited`: wann der Stern erscheint. */
+  status: string | null
+  /** Rollenbild (`awaited`) bzw. Porträt des Champions (`active`). */
+  art: string | null
+  /** Iconify-Name des Rollenwappens (ROLES[].icon). */
+  roleIcon: string
+  /** Restsekunden des Sterns — die Zahl im Ring. */
+  secs: number
+  /** ABSOLUTER Zeitpunkt, an dem der Stern verschwindet (ms). Der Zeitbogen
+   *  läuft als Animation und braucht genau diesen Fixpunkt. */
+  endsAt: number
+  /** Gesamtlaufzeit derselben Uhr in ms — der Nenner des Bogens. */
+  durationMs: number
+  /** Leben des Bosses auf dem Champion-Planeten (0..1). */
+  bossHp: number
+  /** Begleitwelten des Sterns: wie viele es sind und wie viele schon frei sind. */
+  escortTotal: number
+  escortCleared: number
+}

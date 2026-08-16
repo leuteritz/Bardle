@@ -275,13 +275,21 @@ export const PAUSE_LEDGER_MAX_POPS = 4
 export const PAUSE_LEDGER_POP_OFFSETS = [12, 52, 30, 74]
 
 // ── Pause-Overlay: Karten der laufenden Vorgänge ───────────────────────────
-// Ein Stern je Karte, höchstens drei nebeneinander — und seit dem Void kommt
-// dessen Karte als VIERTE dazu.
+// Alle Karten der Reihe sind gleich breit: ein Stern je Karte (höchstens drei),
+// dazu die Void-Karte (PAUSE_VOID_CARD_WIDTH) und die Champion-Karte
+// (PAUSE_CHAMPION_CARD_WIDTH) — in der Spitze also FÜNF.
 //
-// Die Rechnung, an der diese Werte hängen: vier Karten plus drei Lücken müssen
-// in die Panelbreite abzüglich Innenabstand passen
-// (960 − 2 × 44 = 872 gegen 4 × 208 + 3 × 6 = 850). Bricht die Reihe um,
-// stimmt die reservierte Höhe nicht mehr und der Fit-Scale springt.
+// Die Rechnung, an der diese Werte hängen (Panelinnenraum 960 − 2 × 44 = 872):
+//
+//   4 Karten → 4 × 208 + 3 × 6 =  850  ≤ 872   → eine Zeile
+//   5 Karten → 5 × 208 + 4 × 6 = 1064  > 872   → zwei Zeilen
+//
+// Die Reihe bricht ab der fünften Karte also um, und genau dafür reserviert
+// `.callout-row` fest ZWEI Kartenzeilen. Die Reservierung ist der Punkt: eine
+// Höhe, die mit der Zahl der Karten wächst, ließe den Fit-Scale des ganzen
+// Overlays mitten in der Pause springen. Wer eine Karte breiter macht, muss
+// entweder das Panel mitziehen oder in Kauf nehmen, dass schon vier Karten
+// umbrechen — dann steht die zweite Zeile fast immer besetzt.
 //
 // Der Platz dafür kam aus zwei Quellen: das Panel ist breiter (was laut
 // `.pause-panel` nichts kostet, weil der Fit-Scale auf jeder Referenzauflösung
@@ -295,8 +303,9 @@ export const PAUSE_STAR_CARD_HEIGHT = 96
 export const PAUSE_STAR_CARD_PAD_X = 8
 /** Abstand zwischen Zifferblatt und Planetenreihe. */
 export const PAUSE_STAR_DIAL_GAP_PX = 10
-/** Lücke zwischen zwei Karten in der Callout-Reihe. Drei Karten plus zwei
- *  Lücken müssen in 532 px passen (172 × 3 + 6 × 2 = 528). */
+/** Lücke zwischen zwei Karten in der Callout-Reihe — waagerecht wie senkrecht.
+ *  Sie steht in beiden Rechnungen oben: in der Breite zwischen den Karten und
+ *  in der reservierten Höhe zwischen den zwei Zeilen. */
 export const PAUSE_STAR_CARD_GAP_PX = 6
 /** Kantenlänge des Zifferblatts. Sie ist am Textinhalt bemessen, nicht am
  *  freien Platz: die Restzeit steht IM Ring, und der nutzbare Raum ist der
