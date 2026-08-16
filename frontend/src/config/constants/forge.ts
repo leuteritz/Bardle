@@ -1227,9 +1227,23 @@ export const FORGE_UPGRADE_CAPPED_REASON = 'Raise the other rays to match'
  * .cpsFactorBreakdown` die Werte. Die niedrigere Höhe fällt von selbst an den
  * Baum-Viewport (`flex: 1`), und `fitScale` nimmt `min(width, height)` — auf
  * flachen Viewports ist die Höhe das Knappe, der Zugewinn also echt.
+ *
+ * **Von 48 auf 64 gewachsen** (kompakt 40 → 56), als das Band aufhörte, nur aus
+ * Farbflächen zu bestehen. Es trägt seitdem drei Zeilen statt einer: die
+ * Kopfzeile mit dem Ergebnis, den Balken mit dem Faktor JE Herkunft, und die
+ * Namen darunter. Die Rechnung für 64: Polster 6 · Kopfzeile 10 · Lücke 5 ·
+ * Balken 20 · Lücke 3 · Namen 10 · Polster 6 = 60, der Rest ist Luft.
+ *
+ * Die sechzehn Pixel sind der Preis dafür, dass man nicht mehr hovern MUSS, um
+ * überhaupt eine Zahl zu sehen — vorher stand im Sockel keine einzige.
  */
-export const FORGE_YIELD_PLINTH_HEIGHT_PX = 48
-export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 40
+export const FORGE_YIELD_PLINTH_HEIGHT_PX = 64
+/**
+ * 60 und nicht 56: bei 56 blieben der Namenszeile gemessen 2px bis zur
+ * Sockelkante. Abgeschnitten war nichts, aber die Reihe stand gedrängt, und
+ * die Namen sind das, was die Farben überhaupt erst zuordenbar macht.
+ */
+export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 60
 
 /**
  * Die Herkünfte des Chime-Ertrags — eine Zeile je Segment des Bandes,
@@ -1282,24 +1296,116 @@ export interface ForgeYieldSourceDef {
   /** Der ausgeschriebene Name im Kärtchen. */
   title: string
   color: string
+  /**
+   * WO man dieses System größer macht — ein Satz, der im Kärtchen unter dem
+   * Faktor steht.
+   *
+   * Er ist der Grund, warum das Band überhaupt jemandem hilft: eine Zahl sagt
+   * „hier stehst du", ein Ort sagt „hier kannst du etwas tun". Derselbe Satz
+   * beantwortet für ein ungenutztes System die Frage „wie fange ich an" — die
+   * Antwort ist beide Male dieselbe Stelle im Spiel.
+   *
+   * Kurz halten: die Zeile steht in einem Kärtchen fester Breite und darf
+   * höchstens zweizeilig umbrechen.
+   */
+  hint: string
 }
 
 export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
-  { id: 'solar', label: 'Solar', title: 'Solar rays', color: '#e8c040' },
-  { id: 'forge', label: 'Forge', title: 'Star Forge', color: '#7fd048' },
-  { id: 'meeps', label: 'Meeps', title: 'Meep skill tree', color: '#40c8b0' },
-  { id: 'codex', label: 'Codex', title: 'Astral Codex', color: '#86d0ff' },
-  { id: 'items', label: 'Items', title: 'Equipped items', color: '#d07a30' },
-  { id: 'traits', label: 'Traits', title: 'Origin traits', color: '#c9a0ff' },
-  { id: 'universe', label: 'Cosmos', title: 'Universe and providences', color: '#6a80d8' },
-  { id: 'boons', label: 'Boons', title: 'Running boons', color: '#a9b6c4' },
-  { id: 'void', label: 'Void', title: 'The Void', color: '#e0409f' },
-  { id: 'bosses', label: 'Bosses', title: 'Planet bosses', color: '#cc6050' },
+  {
+    id: 'solar',
+    label: 'Solar',
+    title: 'Solar rays',
+    color: '#e8c040',
+    hint: 'Raise the five rays at the heart of the tree.',
+  },
+  {
+    id: 'forge',
+    label: 'Forge',
+    title: 'Star Forge',
+    color: '#7fd048',
+    hint: 'Grow branches, leaves and boughs in the tree.',
+  },
+  {
+    id: 'meeps',
+    label: 'Meeps',
+    title: 'Meep skill tree',
+    color: '#40c8b0',
+    hint: 'Spend meeps in the Skill tab. It survives prestige.',
+  },
+  {
+    id: 'codex',
+    label: 'Codex',
+    title: 'Astral Codex',
+    color: '#86d0ff',
+    hint: 'Reach the Chime Keeper stages in the Stats tab.',
+  },
+  {
+    id: 'items',
+    label: 'Items',
+    title: 'Equipped items',
+    color: '#d07a30',
+    hint: 'Equip items on your champions in the Team tab.',
+  },
+  {
+    id: 'traits',
+    label: 'Traits',
+    title: 'Origin traits',
+    color: '#c9a0ff',
+    hint: 'Field champions that share an origin.',
+  },
+  {
+    id: 'universe',
+    label: 'Cosmos',
+    title: 'Universe and providences',
+    color: '#6a80d8',
+    hint: 'Set by your universe and the providences you rolled.',
+  },
+  {
+    id: 'boons',
+    label: 'Boons',
+    title: 'Running boons',
+    color: '#a9b6c4',
+    hint: 'Temporary — drifters, omens, augments and abilities.',
+  },
+  {
+    id: 'void',
+    label: 'Void',
+    title: 'The Void',
+    color: '#e0409f',
+    hint: 'Close the rift. It grows the longer it stands.',
+  },
+  {
+    id: 'bosses',
+    label: 'Bosses',
+    title: 'Planet bosses',
+    color: '#cc6050',
+    hint: 'Defeat the planet boss to lift its toll.',
+  },
 ]
 
-/** Kopfzeile links vom Band und der Leerzustand, solange nichts wirkt. */
-export const FORGE_YIELD_TITLE = 'Chime yield'
-export const FORGE_YIELD_EMPTY = 'Nothing multiplies your yield yet — grow the tree.'
+/**
+ * Die Kopfzeile über dem Band und der Leerzustand.
+ *
+ * Der Titel SAGT, was das Band ist, statt es zu benennen. „Chime yield" stand
+ * hier zuerst und war der Kern der Rückmeldung „verstehe ich nicht": ein Name
+ * über drei Farbflächen erklärt nichts, ein Satz schon. Zusammen mit dem `=`
+ * vor der Leitzahl liest sich die Reihe als das, was sie ist — eine Rechnung.
+ */
+export const FORGE_YIELD_TITLE = 'What multiplies your chimes'
+export const FORGE_YIELD_EMPTY = 'Nothing multiplies your chimes yet — grow the tree.'
+/** Die Zone am Bandende für alles, was noch nichts beiträgt: „4 unused". */
+export const FORGE_YIELD_UNUSED_LABEL = 'unused'
+export const FORGE_YIELD_UNUSED_TITLE = 'Not contributing yet'
+/**
+ * Breite der Geister-Zone in Prozent der Bandbreite — FEST, nicht anteilig.
+ *
+ * Im frischen Spielstand sind sieben von zehn Herkünften neutral; anteilig
+ * gezeichnet wäre das Ungenutzte das größte Element des Bandes und drängte
+ * genau das an den Rand, was der Spieler bereits erreicht hat. Als schmaler
+ * Anhang sagt sie dasselbe, ohne die Aussage zu kippen.
+ */
+export const FORGE_YIELD_UNUSED_WIDTH_PCT = 14
 /**
  * Mindestbreite eines Segments in Prozent der Bandbreite. Ein Faktor von ×1,002
  * ergäbe sonst einen Strich von unter einem Pixel: unsichtbar, aber mit
@@ -1315,6 +1421,22 @@ export const FORGE_YIELD_MIN_SEGMENT_PCT = 2.5
  * auf 4K trägt damit fast jedes Segment sein Wort, auf Full HD nur die breiten.
  */
 export const FORGE_YIELD_LABEL_MIN_PCT = 9
+/**
+ * Ab welcher Breite der FAKTOR im Balken selbst steht. Deutlich niedriger als
+ * die Schwelle für das Wort darunter: `2.8×` sind vier Zeichen, `Cosmos` sechs
+ * bis acht — und der Faktor ist die Zahl, um derentwillen das Band da ist. Wo
+ * er nicht passt, bleibt der Balken leer und die Zahl steht im Kärtchen.
+ */
+export const FORGE_YIELD_VALUE_MIN_PCT = 5.5
+/**
+ * Feste Breite des Kärtchens.
+ *
+ * Fest, weil die Klemmung sie braucht: das Kärtchen steht über dem Segment, auf
+ * das der Zeiger zeigt, und `.tree-panel` schneidet ab (`overflow: hidden`). Mit
+ * `clamp(halbeBreite, mitte, 100% − halbeBreite)` bleibt es ohne jede Messung im
+ * Bild — ein `ResizeObserver` für ein Hover-Element wäre der teurere Weg.
+ */
+export const FORGE_YIELD_TIP_WIDTH_PX = 250
 /**
  * Chime-Bild der Kostenzeilen — dasselbe Artwork, das Header, Command Panel,
  * Sigil-Panel und Champion-Shop zeigen. Die Forge trug hier lange die

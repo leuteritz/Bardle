@@ -41,10 +41,23 @@ export interface YieldBandSegment {
   color: string
   /** Breite in Prozent der Bandbreite. Alle Segmente zusammen ergeben 100. */
   pct: number
+  /**
+   * Die MITTE des Segments in Prozent der Bandbreite — daraus positioniert sich
+   * das Kärtchen über dem Segment, auf das der Zeiger zeigt.
+   *
+   * Steht hier und nicht in der Komponente: es ist dieselbe Darstellungsrechnung
+   * wie `pct`, und sie erst nach dem Anheben der schmalen Segmente zu bilden ist
+   * der einzige Weg, auf dem sie zu den TATSÄCHLICHEN Breiten passt.
+   */
+  center: number
   /** Zieht dieser Eintrag ab, statt beizutragen? */
   drains: boolean
-  /** Was im Kärtchen steht — `×1.42` bzw. `−12 %`. */
+  /** Die kurze Form IM Balken — `2.8×`. Muss in ein schmales Segment passen. */
+  value: string
+  /** Die lange Form im Kärtchen — `×1.42` bzw. `−12 %`. */
   detail: string
+  /** Wo man dieses System größer macht. Ein Satz, aus der Herkunftstabelle. */
+  hint: string
 }
 
 interface Weighted {
@@ -56,6 +69,20 @@ interface Weighted {
 /** `×1.42` — zwei Nachkommastellen, solange sie etwas sagen. */
 function gainText(factor: number): string {
   return `×${factor < 10 ? factor.toFixed(2) : factor.toFixed(1)}`
+}
+
+/**
+ * Die kurze Form für den Balken selbst: `2.8×`, nachgestellt wie in einer
+ * Rechnung. Sie steht auf engem Raum und gibt deshalb eine Stelle her, wo die
+ * lange Form im Kärtchen zwei zeigt.
+ *
+ * Ein Abzug trägt hier seinen VERLUST (`−12 %`) und nicht seinen Faktor — im
+ * Balken nebeneinander gelesen ergäbe `0.88×` sonst den Eindruck, auch dieses
+ * Segment trüge etwas bei.
+ */
+function barText(factor: number, drains: boolean): string {
+  if (drains) return drainText(factor)
+  return `${factor < 10 ? factor.toFixed(1) : Math.round(factor)}×`
 }
 
 /**
@@ -138,8 +165,11 @@ export function yieldBandSegments(factors: readonly CpsFactor[]): YieldBandSegme
       title: g.def.title,
       color: g.def.color,
       pct: gainWeight === 0 ? 0 : (g.weight / gainWeight) * gainShare * 100,
+      center: 0,
       drains: false,
+      value: barText(g.factor, false),
       detail: gainText(g.factor),
+      hint: g.def.hint,
     })),
     ...drains.map((d) => ({
       id: d.def.id,
@@ -147,8 +177,11 @@ export function yieldBandSegments(factors: readonly CpsFactor[]): YieldBandSegme
       title: d.def.title,
       color: d.def.color,
       pct: drainWeight === 0 ? 0 : (d.weight / drainWeight) * drainShare * 100,
+      center: 0,
       drains: true,
+      value: barText(d.factor, true),
       detail: drainText(d.factor),
+      hint: d.def.hint,
     })),
   ]
 
@@ -157,5 +190,44 @@ export function yieldBandSegments(factors: readonly CpsFactor[]): YieldBandSegme
   // keines mehr — ohne diesen Filter hoebe ihn die Mindestbreite unten wieder
   // ins Bild und naehme dem Verlust einen Teil seiner Laenge, obwohl der gerade
   // alles frisst.
-  return liftThinSegments(raw.filter((s) => s.pct > 0))
+  return withCenters(liftThinSegments(raw.filter((s) => s.pct > 0)))
+}
+
+/**
+ * Setzt jedem Segment seine Mitte — kumulierte Breite der Vorgänger plus die
+ * halbe eigene.
+ *
+ * Läuft ZULETZT, nach dem Anheben der schmalen Segmente. Vorher gebildet zeigte
+ * die Mitte auf die rechnerische Breite statt auf die tatsächlich gezeichnete,
+ * und das Kärtchen stünde genau bei den Segmenten daneben, die angehoben wurden.
+ */
+function withCenters(segments: YieldBandSegment[]): YieldBandSegment[] {
+  let run = 0
+  return segments.map((s) => {
+    const center = run + s.pct / 2
+    run += s.pct
+    return { ...s, center }
+  })
+}
+
+/**
+ * Die Herkünfte, die beim Spieler noch GAR NICHTS bewirken — Faktor exakt 1.
+ *
+ * Sie sind der Grund, warum das Band mehr ist als eine Anzeige: „Meeps, Codex,
+ * Items und Traits tragen bei dir nichts bei" ist die Auskunft, auf die man
+ * handeln kann. Im Band stehen sie deshalb als gedämpfte Zone am Ende.
+ *
+ * Bewusst KEIN Segment und damit kein Teil der 100-%-Rechnung: im frischen
+ * Spielstand sind sieben von zehn Herkünften neutral, anteilig gezeichnet wäre
+ * das Ungenutzte das größte Element des Bandes. Es hängt stattdessen mit fester
+ * Breite rechts daneben.
+ */
+export function unusedYieldSources(factors: readonly CpsFactor[]): ForgeYieldSourceDef[] {
+  const byId = new Map(factors.map((entry) => [entry.id, entry.factor]))
+  return FORGE_YIELD_SOURCES.filter((def) => {
+    const factor = byId.get(def.id) ?? 1
+    // Ein kaputter Wert zaehlt als ungenutzt: das Band zeigt ihn ohnehin nicht,
+    // und stillschweigend verschwinden soll er nicht.
+    return !Number.isFinite(factor) || factor <= 0 || factor === 1
+  })
 }

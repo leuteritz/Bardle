@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { yieldBandSegments } from '@/utils/ui/yieldBand'
+import { yieldBandSegments, unusedYieldSources } from '@/utils/ui/yieldBand'
 import { FORGE_YIELD_SOURCES, FORGE_YIELD_MIN_SEGMENT_PCT } from '@/config/constants'
 import type { CpsFactor } from '@/types'
 
@@ -152,5 +152,119 @@ describe('yieldBandSegments', () => {
     const segs = yieldBandSegments(f({ forge: 1.42, void: 0.88 }))
     expect(segs.find((s) => s.id === 'forge')!.detail).toBe('×1.42')
     expect(segs.find((s) => s.id === 'void')!.detail).toBe('−12 %')
+  })
+
+  /**
+   * Der Balken hat weniger Platz als das Kaertchen: dort steht die kurze Form
+   * mit einer Nachkommastelle, hier die lange mit zweien.
+   */
+  it('haelt die kurze Balkenform von der langen Kaertchenform getrennt', () => {
+    const segs = yieldBandSegments(f({ forge: 2.773 }))
+    expect(segs[0].value).toBe('2.8×')
+    expect(segs[0].detail).toBe('×2.77')
+  })
+
+  it('setzt am Abzug auch im Balken den Verlust, nicht den Faktor', () => {
+    // `0.88×` im Balken laese sich neben `2.8×` wie ein weiterer Beitrag.
+    const segs = yieldBandSegments(f({ forge: 4, void: 0.88 }))
+    expect(segs.find((s) => s.drains)!.value).toBe('−12 %')
+  })
+
+  it('traegt an jedem Segment den Hinweis seiner Herkunft', () => {
+    for (const seg of yieldBandSegments(f({ forge: 2, meeps: 2, void: 0.8 }))) {
+      expect(seg.hint.length, `${seg.id} ohne Hinweis`).toBeGreaterThan(0)
+    }
+  })
+
+  // ─── Mitte des Segments (Position des Kaertchens) ───────────────────────────
+
+  /**
+   * Das Kaertchen steht ueber dem Segment, auf das der Zeiger zeigt — `center`
+   * ist diese Stelle. Vorher stand es unveraenderlich links, egal welches
+   * Segment gemeint war.
+   */
+  it('setzt die Mitte auf die kumulierte Breite plus die halbe eigene', () => {
+    const segs = yieldBandSegments(f({ forge: 4, meeps: 4 }))
+    expect(segs[0].center).toBeCloseTo(25, 6)
+    expect(segs[1].center).toBeCloseTo(75, 6)
+  })
+
+  it('haelt jede Mitte innerhalb des Bandes und in Leserichtung', () => {
+    for (const entries of [
+      { forge: 2 },
+      { forge: 8, meeps: 2, codex: 1.5 },
+      { forge: 80, solar: 1.05, void: 0.88 },
+      { forge: 3, solar: 1.2, meeps: 1.9, codex: 1.4, void: 0.7 },
+    ]) {
+      const segs = yieldBandSegments(f(entries))
+      let prev = -1
+      for (const s of segs) {
+        expect(s.center).toBeGreaterThan(0)
+        expect(s.center).toBeLessThan(100)
+        expect(s.center, 'Mitten muessen aufsteigen').toBeGreaterThan(prev)
+        prev = s.center
+      }
+    }
+  })
+
+  /**
+   * Die Mitte wird NACH dem Anheben der schmalen Segmente gebildet. Vorher
+   * gebildet zeigte sie auf die rechnerische statt auf die gezeichnete Breite,
+   * und das Kaertchen stuende genau bei den angehobenen Segmenten daneben.
+   */
+  it('rechnet die Mitte aus den ANGEHOBENEN Breiten', () => {
+    const segs = yieldBandSegments(f({ forge: 1e6, solar: 1.001 }))
+    let run = 0
+    for (const s of segs) {
+      expect(s.center).toBeCloseTo(run + s.pct / 2, 6)
+      run += s.pct
+    }
+    expect(run).toBeCloseTo(100, 6)
+  })
+})
+
+describe('unusedYieldSources', () => {
+  const f = (entries: Record<string, number>): CpsFactor[] =>
+    FORGE_YIELD_SOURCES.map((s) => ({ id: s.id, factor: entries[s.id] ?? 1 }))
+
+  it('nennt im frischen Spielstand jede Herkunft', () => {
+    expect(unusedYieldSources(f({}))).toHaveLength(FORGE_YIELD_SOURCES.length)
+  })
+
+  it('laesst weg, was wirkt — auch einen Abzug', () => {
+    const rest = unusedYieldSources(f({ forge: 2, void: 0.8 }))
+    const ids = rest.map((d) => d.id)
+    expect(ids).not.toContain('forge')
+    expect(ids).not.toContain('void')
+    expect(rest).toHaveLength(FORGE_YIELD_SOURCES.length - 2)
+  })
+
+  it('ist leer, wenn jede Herkunft beitraegt', () => {
+    const all = Object.fromEntries(FORGE_YIELD_SOURCES.map((s) => [s.id, 2]))
+    expect(unusedYieldSources(f(all))).toEqual([])
+  })
+
+  it('zaehlt einen kaputten Faktor als ungenutzt', () => {
+    const rest = unusedYieldSources([
+      { id: 'forge', factor: Number.NaN },
+      { id: 'meeps', factor: 0 },
+      { id: 'solar', factor: 2 },
+    ])
+    const ids = rest.map((d) => d.id)
+    expect(ids).toContain('forge')
+    expect(ids).toContain('meeps')
+    expect(ids).not.toContain('solar')
+  })
+
+  /**
+   * Die Zone erklaert im Kaertchen, WO man das jeweilige System startet. Ohne
+   * Hinweis stuende dort ein Name und sonst nichts — und genau daran hing die
+   * Rueckmeldung „verstehe ich nicht".
+   */
+  it('traegt an jeder Herkunft einen Hinweis und einen Namen', () => {
+    for (const def of unusedYieldSources(f({}))) {
+      expect(def.title.length, `${def.id} ohne Namen`).toBeGreaterThan(0)
+      expect(def.hint.length, `${def.id} ohne Hinweis`).toBeGreaterThan(0)
+    }
   })
 })
