@@ -557,8 +557,20 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
 
 export const FORGE_NODES: ForgeNodeDef[] = [...FORGE_BRANCHES, ...FORGE_LEAVES, ...FORGE_BOUGHS]
 
+/**
+ * Nachschlagen über eine Map statt über `find`.
+ *
+ * Der Katalog hat 40 Knoten, und `starForgeStore.canAffordNode` fragt für EINEN
+ * Knoten fünfmal hier nach (freigeschaltet, Höchststufe, Chime-Preis,
+ * Materialpreis, Elternstufe). Seit das Shop-Abzeichen an der Header-Ecktaste
+ * hängt, läuft diese Prüfung für alle 40 Knoten bei jeder Chime-Änderung —
+ * ab Programmstart, nicht erst nach dem ersten Öffnen des Shop-Tabs. Als
+ * lineare Suche wären das rund 8000 Zeichenkettenvergleiche je Runde.
+ */
+const FORGE_NODE_BY_ID = new Map(FORGE_NODES.map((n) => [n.id, n]))
+
 export function getForgeNode(id: string): ForgeNodeDef | undefined {
-  return FORGE_NODES.find((n) => n.id === id)
+  return FORGE_NODE_BY_ID.get(id)
 }
 
 // ── Crafted Relics — fuse a grown branch with materials, leveled Lv 1–3 ──────

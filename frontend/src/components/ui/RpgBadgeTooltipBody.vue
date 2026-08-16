@@ -7,6 +7,7 @@ import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { usePlanetShopStore, PLANET_ROLES } from '@/stores/world/planetShopStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useActionToast } from '@/composables/ui/useActionToast'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
@@ -15,6 +16,7 @@ import {
   ROLE_BY_KEY,
   STAR_PHASE_DATA,
   CHIMES_COST_ICON,
+  FORGE_PANEL_SECTIONS,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
@@ -24,7 +26,7 @@ import type { ChampionRole } from '@/types'
    (expedition/champions) close the surrounding tooltip via the `close` prop
    handed down from RpgBadgeTooltip's #tip slot. */
 const props = defineProps<{
-  kind: 'level' | 'expedition' | 'forge' | 'champions' | 'skill' | 'planet'
+  kind: 'level' | 'expedition' | 'forge' | 'champions' | 'skill' | 'planet' | 'shop'
   /** close callback from RpgBadgeTooltip's #tip slot — lets interactive
       tooltips dismiss themselves after an action */
   close?: () => void
@@ -36,6 +38,7 @@ const expeditionStore = useExpeditionStore()
 const solarStore = useSolarUpgradeStore()
 const battleStore = useBattleStore()
 const planetShopStore = usePlanetShopStore()
+const starForgeStore = useStarForgeStore()
 const uiStore = useUiStore()
 const { showToast } = useActionToast()
 
@@ -132,6 +135,27 @@ function openPlanetSlot(id: string) {
   uiStore.requestOpenPlanetsTab(id)
   props.close?.()
 }
+
+/* ── shop ───────────────────────────────────────────────────────────── */
+/**
+ * Die Aufschlüsselung hinter der einen Zahl an der Shop-Ecktaste: welche der
+ * vier Abteilungen der Star Forge gerade etwas hergibt.
+ *
+ * Nur Zeilen mit `count > 0` — eine Abteilung mit einer Null sagt nichts, was
+ * das Abzeichen nicht schon gesagt hätte. Gespeist aus demselben Store-Getter,
+ * den auch die Schienen-Marken im Shop-Tab lesen; Label, Glyph und Akzent
+ * kommen aus `FORGE_PANEL_SECTIONS`, damit hier keine zweite Namensquelle
+ * entsteht.
+ */
+const shopReadySections = computed(() =>
+  FORGE_PANEL_SECTIONS.map((sec) => ({
+    id: sec.id,
+    label: sec.label,
+    icon: sec.icon,
+    accent: sec.accent,
+    count: starForgeStore.shopReadyCounts[sec.id],
+  })).filter((row) => row.count > 0),
+)
 
 // Buy all possible upgrades across every slot, spending chimes greedily in slot
 // order until the budget runs dry.
@@ -300,6 +324,31 @@ function buyAllUpgrades() {
         {{ $formatNumber(gameStore.chimes) }} Chimes available
       </div>
     </template>
+
+    <!-- ══════════ SHOP ══════════ -->
+    <!-- „Ready to Forge" und nicht „Shop Ready": „Shop" heißt im Projekt auch
+         der Champion-Shop im Team-Tab. Die Zeilen sind bewusst NICHT klickbar —
+         die Abteilung wählt der Shop-Tab in einem lokalen Zustand, es gibt
+         keinen Weg, ihn von außen vorzuwählen. -->
+    <template v-else-if="kind === 'shop'">
+      <div class="bt__title">Ready to Forge</div>
+      <ul class="sh-tt__list">
+        <li
+          v-for="sec in shopReadySections"
+          :key="sec.id"
+          class="sh-tt__item"
+          :style="{ '--sc': sec.accent }"
+        >
+          <Icon :icon="sec.icon" width="18" height="18" class="sh-tt__ico" />
+          <span class="sh-tt__name">{{ sec.label }}</span>
+          <span class="sh-tt__count">{{ sec.count }}</span>
+        </li>
+      </ul>
+      <div class="bt__hint">
+        <Icon :icon="CHIMES_COST_ICON" width="12" height="12" class="pu-tt__cost-ico" />
+        {{ $formatNumber(gameStore.chimes) }} Chimes available
+      </div>
+    </template>
   </div>
 </template>
 
@@ -335,6 +384,11 @@ function buyAllUpgrades() {
 /* planet badge uses an emerald accent instead of gold */
 .bt--planet .bt__title {
   color: #34d399;
+}
+
+/* shop badge uses the azure of its own badge instead of gold */
+.bt--shop .bt__title {
+  color: #60a5fa;
 }
 
 .bt__hint {
@@ -814,5 +868,67 @@ function buyAllUpgrades() {
   font-size: 0.7rem;
   font-weight: 900;
   line-height: 1;
+}
+
+/* ── shop ───────────────────────────────────────────────────────────── */
+.bt--shop {
+  min-width: 200px;
+}
+
+.sh-tt__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 8px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Jede Zeile trägt ihren Abteilungsakzent als `--sc` (aus
+   FORGE_PANEL_SECTIONS) — Glyph, Zählerrand und Kantenstrich lesen ihn, damit
+   die Zeile dieselbe Farbe hat wie ihre Zelle in der Shop-Schiene. */
+.sh-tt__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: #1c1c18;
+  border: 1px solid #2e2a20;
+  border-left: 3px solid var(--sc);
+}
+
+.sh-tt__ico {
+  flex-shrink: 0;
+  color: var(--sc);
+}
+
+.sh-tt__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: rgba(235, 230, 215, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sh-tt__count {
+  flex-shrink: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--sc);
+  color: var(--sc);
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 </style>

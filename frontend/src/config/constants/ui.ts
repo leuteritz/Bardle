@@ -608,6 +608,19 @@ export const HEADER_NOTIF_BADGE_MAX_PX = 36
 // Edge gap between neighbouring badges as a fraction of the badge diameter.
 export const HEADER_BADGE_EDGE_GAP_FRAC = 0.5
 
+/**
+ * Standzeit des einmaligen Aufblitzens am Shop-Abzeichen, in Millisekunden.
+ *
+ * Das Abzeichen für „im Shop ist etwas kaufbar" pulst NICHT dauerhaft: die
+ * Solar-Kernstrahlen sind fast durchgehend bezahlbar, ein Dauertakt wäre dort
+ * Rauschen statt Nachricht. Es meldet sich nur, wenn die Zahl STEIGT — also
+ * genau dann, wenn etwas Neues erschwinglich geworden ist. Muss zur Dauer der
+ * `badge-flare`-Keyframes passen (BardProfileMenu.vue, AppHeaderComponent.vue);
+ * der Wert räumt die Klasse wieder ab, damit das nächste Anwachsen erneut
+ * zünden kann.
+ */
+export const BADGE_FLARE_MS = 550
+
 // Header universe block — icon of the "Universe" stat tile (left of Galaxy).
 export const HEADER_UNIVERSE_ICON = 'game-icons:over-infinity'
 

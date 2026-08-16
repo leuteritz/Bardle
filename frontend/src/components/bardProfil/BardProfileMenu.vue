@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, computed, ref, reactive, onUnmounted } from 'vue'
+import { watch, computed, ref, reactive, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/core/uiStore'
@@ -12,10 +12,13 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import type { BardTabId } from '@/stores/core/uiStore'
 import type { KeybindId } from '@/types'
 import { formatBadgeCount } from '@/utils/ui/format'
-import { HEADER_GEM_ICONS } from '@/config/constants'
+import { BADGE_FLARE_MS, HEADER_GEM_ICONS } from '@/config/constants'
+import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
+import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
@@ -35,12 +38,15 @@ const solarStore = useSolarUpgradeStore()
 const meepTreeStore = useMeepTreeStore()
 const planetShopStore = usePlanetShopStore()
 const achievementStore = useAchievementStore()
+const forgeStore = useStarForgeStore()
 const { newlyUnlockedChampions } = storeToRefs(battleStore)
 
 const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
 )
-const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
+// Team tab: champions unlocked in battle that the player has not picked up yet
+// (same number the middle-header badge shows, same name it uses there).
+const championBadgeCount = computed(() => newlyUnlockedChampions.value.length)
 const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
 const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
 // Chronicle: Bahnen mit einer Stufe, die der Spieler noch nicht gesehen hat.
@@ -53,6 +59,69 @@ const chronicleBadgeCount = computed(() => achievementStore.unseen.length)
 const planetBadgeCount = computed(() => planetShopStore.affordableLevelCount)
 // Compact label — the total can climb high, so cap the glyph.
 const planetBadgeLabel = computed(() => formatBadgeCount(planetBadgeCount.value))
+
+/**
+ * Shop: alles, was der Spieler in der Star Forge JETZT kaufen kann — Strahlen,
+ * Knoten, Relikte, Konstellationen und der laufende Handel zusammen, Chimes UND
+ * Material geprüft. Die Zahl kommt aus dem Store, damit sie mit den
+ * Schienen-Marken im Shop-Tab dieselbe Quelle hat; das Maximum ist 59, also
+ * greift `formatBadgeCount` hier nie und die rohe Zahl genügt.
+ *
+ * Sie trägt BEIDE Abzeichen: das an der Ecktaste oben im Template und das am
+ * Shop-Tab in der Leiste.
+ */
+const shopReadyCount = computed(() => forgeStore.shopReadyTotal)
+
+/**
+ * Das Shop-Abzeichen steht ruhig und blitzt nur EINMAL auf, wenn die Zahl
+ * steigt.
+ *
+ * Grund: die fünf Solar-Kernstrahlen sind im frühen und mittleren Spiel fast
+ * durchgehend bezahlbar — das Abzeichen steht damit praktisch immer. Ein
+ * Dauerpuls neben den echten Ereignis-Abzeichen wäre Rauschen; das Aufblitzen
+ * trägt dagegen eine Nachricht („etwas Neues ist gerade erschwinglich
+ * geworden") und kostet im Ruhezustand keinen Frame.
+ */
+const shopFlare = ref(false)
+/**
+ * Scharf erst nach dem Eintreffen des Spielstands.
+ *
+ * `main.ts` ruft `loadGame()` unmittelbar hinter `app.mount()` — der 0 → N-Sprung
+ * daraus ist kein Zuwachs, den der Spieler erarbeitet hat, und darf nicht
+ * blitzen. Das Scharfstellen liegt deshalb in einem MAKROTASK: der läuft sicher
+ * hinter der Flush-Runde, in der die Wächter des Ladevorgangs feuern. `nextTick`
+ * täte es nicht — es ist ein Mikrotask und liefe je nach Reihenfolge davor.
+ *
+ * Nicht an das erste Feuern des Wächters gebunden: startet der Spieler bei null
+ * Chimes, feuert beim Laden gar nichts, und der erste echte Anstieg wäre dann
+ * fälschlich als Ladesprung geschluckt.
+ */
+let shopFlareArmed = false
+let shopFlareTimer: ReturnType<typeof setTimeout> | null = null
+
+onMounted(() => {
+  setTimeout(() => {
+    shopFlareArmed = true
+  }, 0)
+})
+
+watch(shopReadyCount, (now, before) => {
+  if (!shopFlareArmed) return
+  if (now <= before) return
+  // Klasse abräumen und im nächsten Frame neu setzen, sonst läuft eine bereits
+  // laufende Keyframe einfach weiter statt neu zu zünden.
+  shopFlare.value = false
+  requestAnimationFrame(() => {
+    shopFlare.value = true
+  })
+  if (shopFlareTimer !== null) clearTimeout(shopFlareTimer)
+  // `setTimeout` und nicht `gameTimeout()`: die Verzögerung ist rein visuell und
+  // ändert keinen Spielzustand — sie darf nicht mit dem Zeitraffer skalieren.
+  shopFlareTimer = setTimeout(() => {
+    shopFlare.value = false
+    shopFlareTimer = null
+  }, BADGE_FLARE_MS)
+})
 
 /**
  * Rechter Rand, den der Action-Toast dem aktiven Tab überlässt. Er steht über
@@ -238,6 +307,7 @@ watch(
 onUnmounted(() => {
   window.removeEventListener('keydown', onEscape)
   if (escapeTimer !== null) clearTimeout(escapeTimer)
+  if (shopFlareTimer !== null) clearTimeout(shopFlareTimer)
 })
 </script>
 
@@ -247,6 +317,23 @@ onUnmounted(() => {
   <button class="btn-gem btn-gem--corner-left" title="Open Shop" @click="uiStore.setBardTab('shop')">
     <Icon :icon="HEADER_GEM_ICONS.shop" width="48" height="48" class="btn-gem-icon" aria-hidden="true" />
     <span class="btn-gem-label">Shop</span>
+    <!-- Ein `span`, kein zweiter Button: verschachtelte Buttons sind ungültiges
+         HTML, und ein eigener Klickweg wäre hier auch überflüssig — die Ecktaste
+         darunter führt bereits in den Shop.
+         `clear-ancestor` räumt die Unterkante der ganzen PLATTE statt der des
+         Abzeichens; ohne das läge das Tooltip-Feld mitten auf der Taste. -->
+    <RpgBadgeTooltip clear-ancestor=".btn-gem">
+      <span
+        v-if="shopReadyCount > 0"
+        class="btn-gem-badge"
+        :class="{ 'btn-gem-badge--flare': shopFlare }"
+        :aria-label="`${shopReadyCount} Star Forge purchases affordable`"
+        >{{ shopReadyCount }}</span
+      >
+      <template #tip>
+        <RpgBadgeTooltipBody kind="shop" />
+      </template>
+    </RpgBadgeTooltip>
   </button>
 
   <!-- ══ Backdrop + Modal ══ -->
@@ -295,7 +382,7 @@ onUnmounted(() => {
                   />
                   <div v-if="item.id === 'team'" class="team-badge-row">
                     <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
-                    <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
+                    <span v-if="championBadgeCount > 0" class="mini-badge mini-badge--champion">{{ championBadgeCount }}</span>
                   </div>
                   <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
                     <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
@@ -317,6 +404,16 @@ onUnmounted(() => {
                       class="mini-badge mini-badge--chronicle"
                       :title="`${chronicleBadgeCount} Astral Codex ${chronicleBadgeCount === 1 ? 'track has' : 'tracks have'} a new stage`"
                     >{{ chronicleBadgeCount }}</span>
+                  </div>
+                  <!-- Shop: was in der Star Forge JETZT kaufbar ist. Ruhig, mit
+                       einmaligem Aufblitzen, wenn die Zahl steigt — siehe
+                       `shopFlare` im Skript. -->
+                  <div v-if="item.id === 'shop' && shopReadyCount > 0" class="team-badge-row">
+                    <span
+                      class="mini-badge mini-badge--shopready"
+                      :class="{ 'mini-badge--flare': shopFlare }"
+                      :title="`${shopReadyCount} Star Forge ${shopReadyCount === 1 ? 'purchase is' : 'purchases are'} affordable right now`"
+                    >{{ shopReadyCount }}</span>
                   </div>
                   <div v-if="item.id === 'planets' && planetBadgeCount > 0" class="team-badge-row">
                     <span
@@ -410,6 +507,9 @@ onUnmounted(() => {
 }
 
 .mini-badge {
+  /* Anker für die Schein-Ebene unten — ohne das hinge ihr `inset: 0` am
+     Tab-Button und legte sich über dessen ganze Fläche. */
+  position: relative;
   pointer-events: auto;
   min-width: 16px;
   height: 16px;
@@ -422,7 +522,28 @@ onUnmounted(() => {
   font-weight: 900;
   color: #fff;
   line-height: 1;
-  animation: team-badge-pulse 1.8s ease-in-out infinite;
+  /* Der Ruhe-Schein steht STATISCH; die Keyframe fährt nur noch `transform`. */
+  box-shadow: 0 0 4px var(--tb-glow-a);
+  animation: team-badge-beat 1.8s ease-in-out infinite;
+}
+
+/* Der helle Schein als eigene Ebene, statisch gerastert — animiert wird nur
+   seine `opacity` (Compositor, kein Repaint). Vorher lag der Verlauf des
+   Scheins in der Keyframe selbst: eine `box-shadow`-Animation rastert jede
+   Frame die Box samt Schatten neu, und in der Leiste stehen bis zu fünf davon
+   nebeneinander. Dieselbe Mechanik wie `.header-notif-badge::after`, dort steht
+   die Herleitung. */
+.mini-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    0 0 10px var(--tb-glow-b),
+    0 0 18px var(--tb-glow-c);
+  opacity: 0;
+  animation: team-badge-glow 1.8s ease-in-out infinite;
 }
 
 .mini-badge--expedition {
@@ -451,12 +572,41 @@ onUnmounted(() => {
   --tb-glow-c: rgba(190, 24, 93, 0.4);
 }
 
-.mini-badge--shop {
+.mini-badge--champion {
   background: linear-gradient(135deg, #06b6d4, #0891b2);
   border: 1.5px solid #38bdf8;
   --tb-glow-a: rgba(6, 182, 212, 0.5);
   --tb-glow-b: rgba(6, 182, 212, 0.9);
   --tb-glow-c: rgba(8, 145, 178, 0.4);
+}
+
+/* Azur, die letzte freie Grundfarbe der Reihe — Violett, Gold, Cyan, Pink,
+   Smaragd und Kupfer sind vergeben. Tiefes Blau steht neben dem türkisen Cyan
+   des Champion-Abzeichens noch bei 16px erkennbar getrennt. */
+.mini-badge--shopready {
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  border: 1.5px solid #bae6fd;
+  --tb-glow-a: rgba(59, 130, 246, 0.5);
+  --tb-glow-b: rgba(59, 130, 246, 0.9);
+  --tb-glow-c: rgba(37, 99, 235, 0.4);
+  /* Kein Dauertakt: im Shop ist fast immer etwas kaufbar, ein ewiger Puls wäre
+     Rauschen. Es meldet sich nur beim Anwachsen (`.mini-badge--flare`). */
+  animation: none;
+}
+
+.mini-badge--shopready::after {
+  animation: none;
+  opacity: 0;
+}
+
+/* Einmaliges Aufblitzen — nur `transform` bzw. `opacity`, die Dauer steht als
+   BADGE_FLARE_MS in config/constants/ui.ts und muss zu diesen 0,55s passen. */
+.mini-badge--flare {
+  animation: badge-flare 0.55s ease-out 1;
+}
+
+.mini-badge--flare::after {
+  animation: badge-flare-glow 0.55s ease-out 1;
 }
 
 .mini-badge--planet {
@@ -477,17 +627,47 @@ onUnmounted(() => {
   --tb-glow-c: rgba(194, 65, 12, 0.45);
 }
 
-@keyframes team-badge-pulse {
+@keyframes team-badge-beat {
   0%,
   100% {
     transform: scale(1);
-    box-shadow: 0 0 4px var(--tb-glow-a);
   }
   50% {
     transform: scale(1.15);
-    box-shadow:
-      0 0 10px var(--tb-glow-b),
-      0 0 18px var(--tb-glow-c);
+  }
+}
+
+@keyframes team-badge-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes badge-flare {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes badge-flare-glow {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 

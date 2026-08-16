@@ -18,7 +18,13 @@ import {
 } from '@/config/constants'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
-import { getForgeNode, FORGE_RELICS, FORGE_CONSTELLATIONS } from '@/config/progression/starForge'
+import {
+  getForgeNode,
+  FORGE_NODES,
+  FORGE_RELICS,
+  FORGE_CONSTELLATIONS,
+} from '@/config/progression/starForge'
+import { SOLAR_BRANCHES } from '@/config/constants'
 
 /** Puts the game into a state where `solarSails` (branch of flightSpeed) is buyable. */
 function unlockBranchPrereqs(nodeId = 'solarSails') {
@@ -396,6 +402,51 @@ describe('starForgeStore', () => {
       const before = achievements.metricValue('forgeLevels')
       store.buyNode(def.id)
       expect(achievements.metricValue('forgeLevels')).toBe(before)
+    })
+  })
+
+  // ─── Shop-Bereitschaft ───────────────────────────────────────────────────────
+
+  /**
+   * Die Zahl, die an drei Stellen dasselbe sagen muss: an den Marken der
+   * Shop-Schiene, am Abzeichen der Shop-Ecktaste im Header und am Shop-Tab der
+   * Profil-Leiste. Solange alle drei denselben Getter lesen, kann sie nicht
+   * auseinanderlaufen — diese Specs binden genau das.
+   */
+  describe('shopReadyCounts', () => {
+    it('meldet ohne Chimes in keiner Abteilung etwas', () => {
+      const store = useStarForgeStore()
+      const game = useGameStore()
+      game.chimes = 0
+      const counts = store.shopReadyCounts
+      expect(counts.upgrades).toBe(0)
+      expect(counts.relics).toBe(0)
+      expect(counts.constellations).toBe(0)
+      expect(counts.bargain).toBe(0)
+      expect(store.shopReadyTotal).toBe(0)
+    })
+
+    it('zählt bei voller Kasse Strahlen UND Knoten in die Abteilung upgrades', () => {
+      unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      const solar = useSolarUpgradeStore()
+      const rays = SOLAR_BRANCHES.filter((b) => solar.canAfford(b.id)).length
+      const nodes = FORGE_NODES.filter((n) => store.canAffordNode(n.id)).length
+      // Beide Quellen müssen wirklich beitragen — würde eine fehlen, fiele es
+      // an der Summe unten nicht auf.
+      expect(rays).toBeGreaterThan(0)
+      expect(nodes).toBeGreaterThan(0)
+      expect(store.shopReadyCounts.upgrades).toBe(rays + nodes)
+    })
+
+    it('shopReadyTotal ist die Summe der vier Abteilungen', () => {
+      unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      const counts = store.shopReadyCounts
+      expect(store.shopReadyTotal).toBe(
+        counts.upgrades + counts.relics + counts.constellations + counts.bargain,
+      )
+      expect(store.shopReadyTotal).toBeGreaterThan(0)
     })
   })
 })

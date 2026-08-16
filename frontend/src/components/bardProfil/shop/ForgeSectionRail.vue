@@ -65,16 +65,13 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { formatCompactDuration } from '@/utils/ui/format'
-import { FORGE_NODES, FORGE_RELICS, FORGE_CONSTELLATIONS } from '@/config/progression/starForge'
 import type { ForgeSectionId } from '@/types'
 import {
   FORGE_PANEL_SECTIONS,
   FORGE_RAIL_ICON_SIZE,
   FORGE_RAIL_BARGAIN_LABEL,
-  SOLAR_BRANCHES,
 } from '@/config/constants'
 
 defineProps<{ active: ForgeSectionId }>()
@@ -84,7 +81,6 @@ defineProps<{ active: ForgeSectionId }>()
    wie ein Icon aus einem unbekannten Set. */
 defineEmits<{ (e: 'select', id: ForgeSectionId): void }>()
 
-const solarStore = useSolarUpgradeStore()
 const forgeStore = useStarForgeStore()
 
 const BARGAIN_ID: ForgeSectionId = 'bargain'
@@ -98,22 +94,12 @@ const bargainSection = computed(
  * Nur, was JETZT getan werden kann — eine geschlossene Abteilung sagt damit
  * trotzdem „hier wartet etwas".
  *
- * Gefragt werden die Stores DIREKT und nicht `useForgeUpgrades()`. Der Grund ist
- * der Lebenszyklus: der Shop-Tab wird einmal gemountet und danach nur noch per
- * `v-show` umgeschaltet, die Rail rechnet also auch bei geschlossenem Tab
- * weiter. Über das Ansichtsmodell liefe dabei jede Sekunde der volle Aufbau
- * aller Einträge samt Materiallisten mit; hier bleiben es Getter-Aufrufe.
+ * Die Rechnung stand einmal hier und liegt jetzt als `shopReadyCounts` im
+ * `starForgeStore`: dieselben vier Zahlen tragen inzwischen auch die Abzeichen
+ * an der Shop-Ecktaste und am Shop-Tab. Ein Store-Getter rechnet für alle drei
+ * Leser genau einmal je Änderung, drei lokale `computed` täten es dreimal.
  */
-const readyCounts = computed<Record<ForgeSectionId, number>>(() => ({
-  upgrades:
-    SOLAR_BRANCHES.filter((branch) => solarStore.canAfford(branch.id)).length +
-    FORGE_NODES.filter((node) => forgeStore.canAffordNode(node.id)).length,
-  relics: FORGE_RELICS.filter((relic) => forgeStore.canForgeRelic(relic.id)).length,
-  constellations: FORGE_CONSTELLATIONS.filter((con) =>
-    forgeStore.canForgeConstellation(con.id),
-  ).length,
-  bargain: forgeStore.canBuyBargain ? 1 : 0,
-}))
+const readyCounts = computed<Record<ForgeSectionId, number>>(() => forgeStore.shopReadyCounts)
 </script>
 
 <style scoped>

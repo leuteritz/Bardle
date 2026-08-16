@@ -6,7 +6,7 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
-import type { ForgeActiveBuff, ForgeBargainDef, ForgeNodeDef } from '@/types'
+import type { ForgeActiveBuff, ForgeBargainDef, ForgeNodeDef, ForgeSectionId } from '@/types'
 import {
   FORGE_NODES,
   FORGE_LEAVES,
@@ -395,6 +395,57 @@ export const useStarForgeStore = defineStore('starForge', {
     buffActive(state): (buffId: 'cpcX2' | 'cpsX2') => boolean {
       return (buffId) =>
         state.activeBuffs.some((b) => b.id === buffId && b.expiresAt > state.forgeNow)
+    },
+
+    /**
+     * Was der Shop JETZT hergibt, je Abteilung — die EINE Quelle für alle drei
+     * Anzeigen: die Schienen-Marken im Tab, das Abzeichen an der Shop-Ecktaste
+     * im Header und das an der Tab-Leiste des Profils.
+     *
+     * **Warum ein Store-Getter und keine drei lokalen `computed`.** Ein
+     * argumentloser Pinia-Getter ist intern EIN `computed` am Store — eine
+     * Instanz, geteilt von allen Lesern, die genau einmal je Änderung rechnet.
+     * Drei lokale `computed` wären drei unabhängige Effects und liefen alle drei
+     * bei jeder Chime-Änderung. Eine Runde sind 59 Prüfungen (5 Strahlen, 40
+     * Knoten, 6 Relikte, 7 Konstellationen, 1 Handel), jede mit mehreren
+     * Katalog-Zugriffen.
+     *
+     * **Warum die Kernstrahlen mit im Topf sind**, obwohl sie dem
+     * `solarUpgradeStore` gehören: derselbe Grund wie bei `rayMaterialCostAt` —
+     * der Strahl ist die Wurzel desselben Baums, und der Spieler liest
+     * „Upgrades" als EINE Abteilung.
+     *
+     * **Warum die Stores direkt gefragt werden und nicht `useForgeUpgrades()`:**
+     * das Ansichtsmodell baut alle Einträge samt Materiallisten neu auf. Der
+     * Shop-Tab bleibt nach dem ersten Öffnen per `v-show` gemountet und die
+     * Ecktaste steht ab Programmstart — über das Ansichtsmodell liefe der volle
+     * Aufbau damit jede Sekunde mit. Hier bleiben es Getter-Aufrufe.
+     */
+    shopReadyCounts(): Record<ForgeSectionId, number> {
+      const solar = useSolarUpgradeStore()
+      return {
+        upgrades:
+          SOLAR_BRANCHES.filter((branch) => solar.canAfford(branch.id)).length +
+          FORGE_NODES.filter((node) => this.canAffordNode(node.id)).length,
+        relics: FORGE_RELICS.filter((relic) => this.canForgeRelic(relic.id)).length,
+        constellations: FORGE_CONSTELLATIONS.filter((con) => this.canForgeConstellation(con.id))
+          .length,
+        bargain: this.canBuyBargain ? 1 : 0,
+      }
+    },
+
+    /**
+     * Die Summe als EIGENER Getter, nicht als fünftes Feld im Objekt darüber.
+     *
+     * `shopReadyCounts` gibt jedes Mal ein NEUES Objekt zurück — wer es liest,
+     * rendert bei jeder Chime-Änderung neu, auch wenn die vier Zahlen gleich
+     * blieben. Ein Getter auf einer ZAHL stößt seine Abhängigen dagegen nur an,
+     * wenn sich der Wert wirklich ändert. Die Abzeichen hängen damit an der
+     * Zahl und nicht am Klicktakt.
+     */
+    shopReadyTotal(): number {
+      const counts = this.shopReadyCounts
+      return counts.upgrades + counts.relics + counts.constellations + counts.bargain
     },
 
     // ── Effect getters (one per integration point) ────────────────────────────
