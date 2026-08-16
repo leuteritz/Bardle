@@ -14,7 +14,7 @@ import {
   HP_BAR_SEGMENTS,
 } from '@/config/constants'
 import { usePlanetTabOrbit } from '@/composables/orbit/usePlanetTabOrbit'
-import { useHerald } from '@/composables/ui/useHerald'
+import { useOrbitSlotHerald } from '@/composables/ui/useOrbitSlotHerald'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import PlanetRailSlot from './PlanetRailSlot.vue'
@@ -38,7 +38,7 @@ const railOuterWidthCss = `calc(${PLANET_TAB_RAIL_WIDTH_CSS} + ${PLANET_TAB_RAIL
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
-const { announceReceipt } = useHerald()
+const { buyOrbitSlot } = useOrbitSlotHerald()
 
 /** Sichtbar = dieser Tab ist der offene. Steuert Uhr und Orbit-Schleife, die
  *  beide früher an der Lebensdauer der Komponente hingen. */
@@ -134,13 +134,7 @@ const jungleBuffSecsLeft = computed(() => {
 })
 
 function buySlot(slotId: string) {
-  store.buySlot(slotId)
-  announceReceipt({
-    kind: 'unlock',
-    eyebrow: 'ORBIT',
-    headline: 'Orbit slot',
-    subline: 'A new planet can be settled',
-  })
+  buyOrbitSlot(slotId)
 }
 
 // Current Sun-Phase colors for the stage backdrop sun (mirrors SunComponent vars).
@@ -338,8 +332,8 @@ const sunPhaseStyle = computed(() => {
   padding: clamp(8px, 1vh, 14px);
   background: var(--rpg-bg-deep, #111008);
   /* The seam every side panel of the profile carries (.sdp-panel, .tsps-panel,
-     .sf-panel, .msd-root). Its width is PLANET_TAB_RAIL_SEAM_WIDTH — the toast
-     inset adds the same number, so the two cannot drift apart. */
+     .sf-panel, .msd-root). Its width is PLANET_TAB_RAIL_SEAM_WIDTH so all four
+     line up on the same edge. */
   border-left: v-bind(railSeamWidthPx) solid #5c3310;
   overflow-y: auto;
   scrollbar-width: thin;

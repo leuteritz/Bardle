@@ -54,7 +54,10 @@ const activeSection = ref<ForgeSectionId>('upgrades')
 function maxOutForge(): void {
   forgeStore.adminMaxAll()
   announceReceipt({
-    kind: 'forge',
+    // `forged`, nicht `forge`: jeder echte Forge-Kauf meldet sich unter dieser
+    // Art. Mit `forge` trug ausgerechnet der Admin-Knopf ein anderes Label und
+    // eine andere Farbe als alles, was er auslöst.
+    kind: 'forged',
     eyebrow: 'ADMIN',
     headline: 'Forge maxed out',
     subline: 'For this star phase',

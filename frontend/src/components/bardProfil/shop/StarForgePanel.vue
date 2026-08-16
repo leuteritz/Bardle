@@ -337,7 +337,8 @@ defineProps<{ activeSection: ForgeSectionId }>()
 const inventoryStore = useInventoryStore()
 const gameStore = useGameStore()
 const forgeStore = useStarForgeStore()
-// Käufe quittiert der Herold; der Toast bleibt nur für den Reroll, der nichts kauft.
+// Käufe laufen über useForgeHerald (EIN Wortlaut für alle vier Kaufwege); der
+// Reroll ruft direkt, weil er nichts kauft und deshalb keine Kaufquittung ist.
 const { announceReceipt } = useHerald()
 const { heraldRelic, heraldConstellation, heraldBargain } = useForgeHerald()
 

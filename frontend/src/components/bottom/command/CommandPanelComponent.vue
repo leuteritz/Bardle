@@ -10,6 +10,7 @@ import {
 } from '@/stores/world/planetShopStore'
 import type { PlanetRoleType, PlanetSlot } from '@/stores/world/planetShopStore'
 import { useUiStore } from '@/stores/core/uiStore'
+import { useOrbitSlotHerald } from '@/composables/ui/useOrbitSlotHerald'
 import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
@@ -25,6 +26,7 @@ import { gameNow } from '@/utils/game/gameClock'
 
 const planetStore = usePlanetShopStore()
 const uiStore = useUiStore()
+const { buyOrbitSlot } = useOrbitSlotHerald()
 const roleBehaviorStore = useRoleBehaviorStore()
 const { slots } = storeToRefs(planetStore)
 
@@ -137,7 +139,7 @@ const markedSlotId = computed(
 function handleSlotClick(slot: (typeof slots.value)[number]) {
   uiStore.requestOpenPlanetsTab(slot.id)
   if (!slot.purchased) {
-    planetStore.buySlot(slot.id)
+    buyOrbitSlot(slot.id)
   }
 }
 </script>

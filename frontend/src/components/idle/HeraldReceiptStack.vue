@@ -21,10 +21,13 @@ const { receipts } = useHerald()
 </template>
 
 <style scoped>
+/* Großzügiger als früher: seit die Karten die Bannerform tragen, haben sie
+   keine Rahmenkante mehr, die zwei gestapelte optisch trennt — der Abstand
+   allein leistet das jetzt. */
 .hr-stack {
   display: flex;
   flex-direction: column;
-  gap: clamp(6px, 0.7vh, 10px);
+  gap: clamp(8px, 0.9vh, 14px);
   align-items: center;
 }
 

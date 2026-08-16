@@ -218,6 +218,7 @@ import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
 import { Icon } from '@iconify/vue'
 import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
 import { useUiStore } from '@/stores/core/uiStore'
+import { useOrbitSlotHerald } from '@/composables/ui/useOrbitSlotHerald'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { formatNumber } from '@/config/ui/numberFormat'
 import {
@@ -251,6 +252,7 @@ const bossStore = usePlanetBossStore()
 const planetShopStore = usePlanetShopStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const uiStore = useUiStore()
+const { buyOrbitSlot } = useOrbitSlotHerald()
 
 const VACANT_COLOR = '#8a8070'
 
@@ -266,7 +268,7 @@ function onSlotClick(t: SlotEntry) {
   starGroupStore.closeStarFightModal()
   uiStore.requestOpenPlanetsTab(t.slotId)
   if (!t.purchased) {
-    planetShopStore.buySlot(t.slotId)
+    buyOrbitSlot(t.slotId)
   }
 }
 

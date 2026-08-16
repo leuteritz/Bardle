@@ -1951,7 +1951,11 @@ const shopChampionNames = computed(() =>
         kind: 'purchase',
         headline: item.name,
         subline: item.description,
-        icon: item.icon,
+        // `item.icon` ist ein BILDPFAD, kein Iconify-Name — als `icon`
+        // übergeben rendert er eine leere Fläche. Und ein Schwert wird
+        // eingepasst, nicht rund beschnitten.
+        portraitSrc: item.icon,
+        imageRound: false,
         delta: { value: -item.price, unit: 'chimes' },
         // Sechs Käufe in Folge ergeben EINE Karte mit der Gesamtausgabe — die
         // war früher nirgends abzulesen.

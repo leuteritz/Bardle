@@ -615,8 +615,8 @@ watch(
 
 /* ── admin strip — muted red-brown so it never competes with the gold game
    actions. Parked directly above the Shop button rather than at the top of the
-   board: the action toast drops in as a full-width bar up there and would bury
-   the very button the player just pressed. ── */
+   board: the top edge is where announcements land, and a strip up there would
+   sit under the very banner its own button triggers. ── */
 .sigil-admin {
   position: absolute;
   bottom: 82px;

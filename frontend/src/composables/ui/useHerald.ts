@@ -56,8 +56,14 @@ export interface HeraldReceiptPayload {
   /** Überschreibt das Label der Art ('BRANCH · LV 3' statt 'Forged'). */
   eyebrow?: string
   subline?: string
-  /** Rundes Portrait STATT Sigil (Champion, Skin). */
+  /** Bild STATT Sigil (Champion-Portrait, Skin, Item-Kunst). */
   portraitSrc?: string
+  /**
+   * Bild rund beschneiden. Default `true` — die meisten Bilder hier sind
+   * Championgesichter. Ein Item, ein Relikt oder ein Emblem setzt `false` und
+   * wird eingepasst statt beschnitten, sonst fehlen ihm die Ecken.
+   */
+  imageRound?: boolean
   /** Eigenes Glyph statt des Sigils der Art (Item, Drifter, Forge-Knoten). */
   icon?: string
   /** Eigene Farbe als "r, g, b" statt des Akzents der Art. */
@@ -194,6 +200,7 @@ function announceReceipt(payload: HeraldReceiptPayload) {
     if (payload.icon !== undefined) hit.icon = payload.icon
     if (payload.accent !== undefined) hit.accent = payload.accent
     if (payload.portraitSrc !== undefined) hit.portraitSrc = payload.portraitSrc
+    if (payload.imageRound !== undefined) hit.imageRound = payload.imageRound
     hit.delta = mergeDelta(hit.delta, payload.delta)
     armReceipt(hit)
     return

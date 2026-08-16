@@ -20,6 +20,7 @@ import {
   TEAM_EQUIPMENT_PANEL_WIDTH,
 } from '@/config/constants'
 import { getChampionRoles } from '@/config/champions/championData'
+import { getItemById } from '@/config/economy/items'
 import { allySlotLabel } from '@/utils/ui/format'
 import type { ChampionRole, ItemCategory } from '@/types'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
@@ -461,12 +462,27 @@ function clearAlly(subSlot: number) {
   battleStore.clearSecondarySlot(roleIndex.value, subSlot)
 }
 
+/** Anlegen und Ablegen quittieren beide — ein Skin tat es längst, ein Item
+ *  nicht, und es ist dieselbe Handlung am selben Champion. Gemeinsamer
+ *  `mergeKey` mit den Skins: wer sein Team ausrüstet, bekommt EINE Karte. */
 function handleEquipFromPicker(itemId: string, category: ItemCategory) {
-  if (currentEquipment.value[category] === itemId) {
+  const item = getItemById(itemId)
+  if (!item) return
+  const unequipping = currentEquipment.value[category] === itemId
+  if (unequipping) {
     itemStore.unequipItem(roleIndex.value, category)
-  } else {
-    itemStore.equipItem(roleIndex.value, itemId)
+  } else if (!itemStore.equipItem(roleIndex.value, itemId)) {
+    return
   }
+  announceReceipt({
+    kind: 'equip',
+    eyebrow: unequipping ? 'UNEQUIPPED' : undefined,
+    headline: item.name,
+    subline: roleDef.value.label,
+    portraitSrc: item.icon,
+    imageRound: false,
+    mergeKey: 'equip',
+  })
 }
 
 function handleShopRoleChange(role: ChampionRole | 'all') {
