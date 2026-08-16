@@ -960,6 +960,10 @@ export const useGameStore = defineStore('game', {
       // Skill-tree notifications: drop stale acknowledgements so a node that
       // became unaffordable re-notifies once the player can afford it again.
       useMeepTreeStore().syncAcknowledged()
+      // Dasselbe für den Shop: ein Eintrag, der wieder zu teuer geworden ist,
+      // verliert seine Quittung und meldet sich als neu, sobald er erneut
+      // bezahlbar wird.
+      useStarForgeStore().syncShopAcknowledged()
       // Omens directly before the chronicle, for the same reason and with the
       // same requirement: the running omen measures a DIFFERENCE against the
       // counters above, so it has to see them at their final value for this

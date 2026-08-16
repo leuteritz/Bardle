@@ -23,9 +23,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useHerald } from '@/composables/ui/useHerald'
 import type { ForgeSectionId } from '@/types'
 import {
@@ -50,6 +51,23 @@ const { announceReceipt } = useHerald()
  * zeigen, was aus ihm FOLGT.
  */
 const activeSection = ref<ForgeSectionId>('upgrades')
+
+/**
+ * Was der Zeiger berührt hat, ist gesehen — und der azurne „NEW"-Rahmen daran
+ * erledigt.
+ *
+ * EIN Wächter für BEIDE Spalten: `spotlightId` ist `listHoverId ?? treeHoverId`,
+ * ein Knoten im Baum und seine Zeile in der Liste melden sich also über dieselbe
+ * Ref. Er hängt hier und nicht in einer der beiden Spalten, weil dies die
+ * einzige Komponente ist, die beide überspannt — in `ForgeUpgradesSection`
+ * verschwände er beim Abteilungswechsel mitsamt seinem `v-if`, obwohl der Baum
+ * daneben weiterhin bedienbar ist.
+ */
+const { spotlightId } = useForgeSpotlight()
+
+watch(spotlightId, (id) => {
+  if (id) forgeStore.acknowledgeShopEntry(id)
+})
 
 function maxOutForge(): void {
   forgeStore.adminMaxAll()

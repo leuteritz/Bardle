@@ -213,6 +213,7 @@
             `node-circle--${node.sizeClass}`,
             `node-circle--${entryOf(node).state}`,
             {
+              'node-circle--fresh': freshIds.has(node.id),
               'node-circle--spot': spotlightId === node.id,
               'node-circle--dim': spotlightId !== null && spotlightId !== node.id,
               'node-circle--sifted': siftedIds.has(node.id) && spotlightId !== node.id,
@@ -365,7 +366,7 @@ import {
 const solarStore = useSolarUpgradeStore()
 const forgeStore = useStarForgeStore()
 const playerStore = usePlayerStore()
-const { entryById, bestBuyId, buyUpgrade } = useForgeUpgrades()
+const { entryById, bestBuyId, freshIds, buyUpgrade } = useForgeUpgrades()
 const { spotlightId, treeHoverId, setTreeHover, resetForgeSpotlight } = useForgeSpotlight()
 const { activeTier, hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
 
@@ -1313,6 +1314,26 @@ const nextPhasePreviewStyle = computed(() => ({
 .node-circle--affordable:hover .node-glow {
   animation: none;
   opacity: 1;
+}
+
+/* ── NEU SEIT DEM LETZTEN BLICK ──────────────────────────────────
+   Frisch ist immer auch kaufbar — die atmende Ebene steht also schon. Sie wird
+   deshalb UMGEFÄRBT statt eine zweite darüberzulegen: der Baum zeichnet bis zu
+   49 Knoten, und eine zweite Keyframe je Knoten wäre der teuerste Weg zur
+   gleichen Aussage. Der Ring selbst bleibt statisch azurn.
+
+   Steht NACH `--affordable`, damit die spätere Regel bei gleicher Spezifität
+   gewinnt. */
+.node-circle--fresh {
+  border-color: #60a5fa;
+}
+
+.node-circle--fresh .node-glow {
+  box-shadow: 0 0 22px rgba(96, 165, 250, 0.9);
+}
+
+.node-circle--fresh:hover {
+  border-color: #bae6fd;
 }
 
 .node-circle--capped {

@@ -123,6 +123,19 @@ export const useStarForgeStore = defineStore('starForge', {
     /** Relic levels, keyed by ForgeRelicDef id (0/absent = not forged). */
     relicLevels: {} as Record<string, number>,
     forgedConstellations: [] as string[],
+    /**
+     * Eintrags-IDs, die der Spieler angesehen hat, WÄHREND sie kaufbar waren —
+     * Strahlen, Baumknoten, Relikte, Konstellationen und das laufende Angebot in
+     * EINER Liste. Sie tragen damit keinen „neu"-Rahmen mehr, bis sie den
+     * kaufbaren Zustand einmal verlassen haben.
+     *
+     * Eine FLACHE Liste und kein Beutel je Abteilung: die IDs sind über alle
+     * vier Kataloge hinweg eindeutig (`shopIdsAreUnique` in der Spec bindet
+     * das), und `migratedIds()` beim Laden braucht genau eine Liste.
+     *
+     * Wortgleiches Gegenstück zu `meepTreeStore.acknowledged`.
+     */
+    acknowledgedShop: [] as string[],
     /** Cosmic Bargain — current deal, restock timestamp, bought-this-cycle flag. */
     bargainDealId: '' as string,
     bargainRestockAt: 0 as number,
@@ -499,17 +512,62 @@ export const useStarForgeStore = defineStore('starForge', {
      * Ecktaste steht ab Programmstart — über das Ansichtsmodell liefe der volle
      * Aufbau damit jede Sekunde mit. Hier bleiben es Getter-Aufrufe.
      */
-    shopReadyCounts(): Record<ForgeSectionId, number> {
+    shopReadyIds(): Record<ForgeSectionId, string[]> {
       const solar = useSolarUpgradeStore()
       return {
-        upgrades:
-          SOLAR_BRANCHES.filter((branch) => solar.canAfford(branch.id)).length +
-          FORGE_NODES.filter((node) => this.canAffordNode(node.id)).length,
-        relics: FORGE_RELICS.filter((relic) => this.canForgeRelic(relic.id)).length,
-        constellations: FORGE_CONSTELLATIONS.filter((con) => this.canForgeConstellation(con.id))
-          .length,
-        bargain: this.canBuyBargain ? 1 : 0,
+        upgrades: [
+          ...SOLAR_BRANCHES.filter((branch) => solar.canAfford(branch.id)).map(
+            (branch) => branch.id as string,
+          ),
+          ...FORGE_NODES.filter((node) => this.canAffordNode(node.id)).map((node) => node.id),
+        ],
+        relics: FORGE_RELICS.filter((relic) => this.canForgeRelic(relic.id)).map(
+          (relic) => relic.id,
+        ),
+        constellations: FORGE_CONSTELLATIONS.filter((con) =>
+          this.canForgeConstellation(con.id),
+        ).map((con) => con.id),
+        // Das Angebot wechselt; seine ID ist die des GERADE ausliegenden Handels,
+        // damit ein neuer Bestand wieder als neu gilt statt die Quittung des
+        // vorigen zu erben.
+        bargain: this.canBuyBargain ? [this.bargainDealId] : [],
       }
+    },
+
+    /**
+     * Dieselben vier Zahlen wie bisher — jetzt als Längen der Listen darüber.
+     *
+     * Der Umweg kostet nichts: `shopReadyIds` ist EIN Pinia-Getter und damit ein
+     * `computed`, das je Änderung genau einmal läuft. Zwei getrennte
+     * Traversierungen (einmal zählen, einmal sammeln) wären dagegen zwei.
+     */
+    shopReadyCounts(): Record<ForgeSectionId, number> {
+      const ids = this.shopReadyIds
+      return {
+        upgrades: ids.upgrades.length,
+        relics: ids.relics.length,
+        constellations: ids.constellations.length,
+        bargain: ids.bargain.length,
+      }
+    },
+
+    /**
+     * Was gerade kaufbar ist UND noch nicht angesehen wurde — die Quelle für
+     * jeden azurnen „NEW"-Rahmen im Shop-Tab.
+     *
+     * Azur, weil es dieselbe Aussage ist, die den Spieler überhaupt erst
+     * hergeführt hat: die Marke am Header (`ShopReadyBadge`) und die
+     * `ready`-Quittung des Herolds tragen dieselbe Farbe. Der Rahmen führt die
+     * Spur bis zum Eintrag zu Ende.
+     */
+    shopFreshIds(): string[] {
+      const ids = this.shopReadyIds
+      const acknowledged = new Set(this.acknowledgedShop)
+      const fresh: string[] = []
+      for (const list of [ids.upgrades, ids.relics, ids.constellations, ids.bargain]) {
+        for (const id of list) if (!acknowledged.has(id)) fresh.push(id)
+      }
+      return fresh
     },
 
     /**
@@ -889,6 +947,44 @@ export const useStarForgeStore = defineStore('starForge', {
       this.bargainDealId = pick.id
       this.bargainPurchased = false
       this.bargainRestockAt = gameNow() + FORGE_BARGAIN_RESTOCK_MS
+    },
+
+    // ── Der „NEW"-Rahmen: was der Spieler schon gesehen hat ───────────────────
+    /**
+     * Angesehen → der azurne Rahmen ist erledigt.
+     *
+     * Die Prüfung auf „steht gerade in `shopReadyIds`" ist der Kern und keine
+     * Vorsichtsmaßnahme: quittierte man eine ID, die gar nicht kaufbar ist,
+     * läge sie beim Erschwinglichwerden schon als gesehen vor und der Rahmen
+     * erschiene nie. Genau diese Reihenfolge trägt `acknowledgeNode` im
+     * Meep-Baum.
+     */
+    acknowledgeShopEntry(id: string): void {
+      if (!id) return
+      if (this.acknowledgedShop.includes(id)) return
+      const ids = this.shopReadyIds
+      const ready =
+        ids.upgrades.includes(id) ||
+        ids.relics.includes(id) ||
+        ids.constellations.includes(id) ||
+        ids.bargain.includes(id)
+      if (!ready) return
+      this.acknowledgedShop.push(id)
+    },
+
+    /**
+     * Quittungen für nicht mehr Kaufbares verwerfen, damit derselbe Eintrag
+     * beim nächsten Mal wieder als neu gilt. Aus `gameStore.tick()`.
+     *
+     * Kostet nichts Zusätzliches: `shopReadyIds` ist derselbe gecachte Getter,
+     * den die Abzeichen ohnehin jede Sekunde lesen.
+     */
+    syncShopAcknowledged(): void {
+      if (this.acknowledgedShop.length === 0) return
+      const ids = this.shopReadyIds
+      const ready = new Set([...ids.upgrades, ...ids.relics, ...ids.constellations, ...ids.bargain])
+      const next = this.acknowledgedShop.filter((id) => ready.has(id))
+      if (next.length !== this.acknowledgedShop.length) this.acknowledgedShop = next
     },
 
     buyNode(id: string): boolean {

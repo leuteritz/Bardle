@@ -369,6 +369,7 @@ export function usePersistence() {
         crownLevels: { ...starForgeStore.crownLevels },
         relicLevels: { ...starForgeStore.relicLevels },
         forgedConstellations: [...starForgeStore.forgedConstellations],
+        acknowledgedShop: [...starForgeStore.acknowledgedShop],
         bargainDealId: starForgeStore.bargainDealId,
         bargainRestockAt: starForgeStore.bargainRestockAt,
         bargainPurchased: starForgeStore.bargainPurchased,
@@ -980,6 +981,10 @@ export function usePersistence() {
         starForgeStore.crownLevels = migratedIdMap(saved.starForge.crownLevels)
         starForgeStore.relicLevels = migratedIdMap(saved.starForge.relicLevels)
         starForgeStore.forgedConstellations = migratedIds(saved.starForge.forgedConstellations)
+        // Gesehen bleibt gesehen — und das ist keine Kosmetik: der Offline-Ertrag
+        // wird beim Laden gutgeschrieben, und ohne diese Liste stünde nach jeder
+        // Pause der halbe Shop als „neu" da.
+        starForgeStore.acknowledgedShop = migratedIds(saved.starForge.acknowledgedShop)
         starForgeStore.bargainDealId = migratedId(saved.starForge.bargainDealId ?? '')
         starForgeStore.bargainRestockAt = saved.starForge.bargainRestockAt ?? 0
         starForgeStore.bargainPurchased = saved.starForge.bargainPurchased ?? false

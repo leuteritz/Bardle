@@ -5,15 +5,23 @@
       `fq-row--${entry.state}`,
       {
         'fq-row--ready': entry.canBuy,
+        'fq-row--fresh': fresh,
         'fq-spot': spotlightId === entry.id,
         'fq-dimmed': spotlightId !== null && spotlightId !== entry.id,
       },
     ]"
     :style="{ '--node-c': entry.color }"
     :data-forge-id="entry.id"
+    :title="fresh ? FORGE_FRESH_TITLE : undefined"
     @mouseenter="setListHover(entry.id)"
   >
     <div class="fq-flash" :class="{ 'fq-flash--on': flashed }" aria-hidden="true" />
+
+    <!-- Der azurne Rahmen. Eigene Ebene mit STATISCHEM Schein, animiert wird nur
+         ihre Deckkraft (Performance-Regel 2/11) — und auf `inset: 0`, weil die
+         Zeile `overflow: hidden` trägt und ein negativer Einzug abgeschnitten
+         würde. Genau derselbe Sitz wie beim Quittungsblitz darüber. -->
+    <div v-if="fresh" class="fq-fresh" aria-hidden="true" />
 
     <Icon :icon="entry.icon" width="26" height="26" class="fq-ico" :style="{ color: entry.color }" />
 
@@ -21,6 +29,12 @@
       <span class="fq-name" :style="{ color: entry.color }">{{ entry.name }}</span>
       <span class="fq-gain">{{ gainLine }}</span>
     </div>
+
+    <!-- Steht VOR dem Preis, nicht hinter ihm: der Blick läuft die Zeile von
+         links nach rechts, und „neu" ist die Auskunft, die zuerst greift.
+         Ein `v-if` genügt ohne Zustandsprüfung — frisch kann nur sein, was
+         kaufbar ist. -->
+    <span v-if="fresh" class="fq-new" :aria-label="FORGE_FRESH_TITLE">{{ FORGE_FRESH_LABEL }}</span>
 
     <!-- Gesperrt: der Weg zur Freischaltung statt eines Preises, den man
          ohnehin nicht zahlen könnte. -->
@@ -80,14 +94,25 @@ import { Icon } from '@iconify/vue'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { formatNumber } from '@/config/ui/numberFormat'
 import type { ForgeUpgradeEntry } from '@/types'
-import { FORGE_CHIME_IMAGE, FORGE_CARD_FLASH_MS } from '@/config/constants'
+import {
+  FORGE_CHIME_IMAGE,
+  FORGE_CARD_FLASH_MS,
+  FORGE_FRESH_LABEL,
+  FORGE_FRESH_TITLE,
+} from '@/config/constants'
 
 /* Muster `SigilRoleNode.vue`: die Dauer steht in den Konstanten und wird von
    CSS und dem Timer in `ForgeUpgradesSection` aus derselben Quelle gelesen —
    den KEYFRAME-Namen setzt weiterhin die CSS-Klasse, nie JavaScript. */
 const flashDuration = `${FORGE_CARD_FLASH_MS}ms`
 
-const props = defineProps<{ entry: ForgeUpgradeEntry; flashed: boolean }>()
+const props = defineProps<{
+  entry: ForgeUpgradeEntry
+  flashed: boolean
+  /** Seit dem letzten Blick des Spielers bezahlbar geworden — trägt den azurnen
+   *  Rahmen, bis der Zeiger die Zeile einmal berührt hat. */
+  fresh: boolean
+}>()
 defineEmits<{ (e: 'buy', id: string): void }>()
 
 const { spotlightId, setListHover } = useForgeSpotlight()
@@ -141,6 +166,18 @@ const shortMaterials = computed(() => props.entry.materials.filter((mat) => !mat
 
 .fq-row--ready:hover {
   border-color: #6ec040;
+}
+
+/* ── NEU SEIT DEM LETZTEN BLICK ──────────────────────────────────
+   Azur, und zwar dasselbe Azur wie `ShopReadyBadge`: die Marke am Header, am
+   Profil-Reiter und an der Abteilungs-Schiene hat den Spieler hergeführt, der
+   Rahmen führt die Spur bis zum Eintrag zu Ende. Grün ist hier schon „kaufbar"
+   (.fq-row--ready), Gold auf den Karten dasselbe — beide wären doppelt belegt.
+
+   Steht NACH `--ready`: frisch ist immer auch kaufbar, und die spätere Regel
+   gewinnt bei gleicher Spezifität. */
+.fq-row--fresh {
+  border-color: #60a5fa;
 }
 
 .fq-row--locked {
@@ -293,6 +330,58 @@ const shortMaterials = computed(() => props.entry.materials.filter((mat) => !mat
   letter-spacing: 0.06em;
 }
 
+/* ── „NEW"-Schein und Chip ───────────────────────────────────── */
+/* Eigene Ebene mit STATISCHEM Schein, animiert wird allein die Deckkraft
+   (Performance-Regel 2/11) — dasselbe Rezept wie `.fc-glow` und `.best-buy-ring`.
+   `inset: 0` statt `-1px`, weil die Zeile `overflow: hidden` trägt; der Schein
+   liegt deshalb nach INNEN. */
+.fq-fresh {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  border: 1px solid #bae6fd;
+  box-shadow: inset 0 0 14px rgba(59, 130, 246, 0.45);
+  pointer-events: none;
+  animation: fq-fresh-breathe 2.2s ease-in-out infinite;
+}
+
+@keyframes fq-fresh-breathe {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Ruhig stellen, sobald der Blick ohnehin auf der Zeile liegt oder sie
+   zurückgetreten ist — sonst atmen bei einem Schwenk über die Liste ein Dutzend
+   Ebenen gleichzeitig gegen den Spotlight an. Muster `MeepSkillCard.vue`. */
+.fq-spot .fq-fresh {
+  animation: none;
+  opacity: 1;
+}
+
+.fq-dimmed .fq-fresh {
+  animation: none;
+  opacity: 0.3;
+}
+
+.fq-new {
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border-radius: 3px;
+  border: 1px solid #bae6fd;
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
 /* ── Kaufquittung ────────────────────────────────────────────── */
 /* Eine eigene Ebene, deren DECKKRAFT animiert wird — kein `filter` und kein
    `box-shadow` im Lauf (Performance-Regel 2). */
@@ -323,6 +412,12 @@ const shortMaterials = computed(() => props.entry.materials.filter((mat) => !mat
 @media (prefers-reduced-motion: reduce) {
   .fq-flash--on {
     animation: none;
+  }
+
+  /* Der Rahmen bleibt — nur sein Atmen fällt weg. */
+  .fq-fresh {
+    animation: none;
+    opacity: 1;
   }
 }
 

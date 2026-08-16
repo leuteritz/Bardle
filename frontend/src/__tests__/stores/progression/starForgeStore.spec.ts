@@ -448,5 +448,88 @@ describe('starForgeStore', () => {
       )
       expect(store.shopReadyTotal).toBeGreaterThan(0)
     })
+
+    it('die Zahlen sind die Längen der ID-Listen', () => {
+      unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      const ids = store.shopReadyIds
+      const counts = store.shopReadyCounts
+      expect(counts.upgrades).toBe(ids.upgrades.length)
+      expect(counts.relics).toBe(ids.relics.length)
+      expect(counts.constellations).toBe(ids.constellations.length)
+      expect(counts.bargain).toBe(ids.bargain.length)
+    })
+  })
+
+  // ─── Der „NEW"-Rahmen ────────────────────────────────────────────────────────
+
+  /**
+   * Der azurne Rahmen im Shop-Tab hängt an genau einer Frage: „stand das schon
+   * da, als der Spieler zuletzt hingesehen hat?". Diese Specs binden die
+   * Reihenfolge der Prüfungen — sie ist der ganze Mechanismus, nicht Beiwerk.
+   */
+  describe('shopFreshIds / acknowledgeShopEntry', () => {
+    it('was kaufbar wird, ist zuerst frisch', () => {
+      const nodeId = unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      expect(store.canAffordNode(nodeId)).toBe(true)
+      expect(store.shopFreshIds).toContain(nodeId)
+    })
+
+    it('angesehen heisst nicht mehr frisch — die Kaufbarkeit bleibt', () => {
+      const nodeId = unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      store.acknowledgeShopEntry(nodeId)
+      expect(store.shopFreshIds).not.toContain(nodeId)
+      // Der Rahmen fällt weg, der Eintrag bleibt kaufbar: die Marke an der
+      // Schiene darf davon nicht sinken.
+      expect(store.canAffordNode(nodeId)).toBe(true)
+      expect(store.shopReadyIds.upgrades).toContain(nodeId)
+    })
+
+    it('quittiert nichts, was gerade gar nicht kaufbar ist', () => {
+      const store = useStarForgeStore()
+      const game = useGameStore()
+      game.chimes = 0
+      store.acknowledgeShopEntry('solarSails')
+      // Sonst läge die Quittung vor, BEVOR der Eintrag je bezahlbar war — der
+      // Rahmen erschiene dann nie.
+      expect(store.acknowledgedShop).not.toContain('solarSails')
+    })
+
+    it('zweimal ansehen legt keine zweite Quittung an', () => {
+      const nodeId = unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      store.acknowledgeShopEntry(nodeId)
+      store.acknowledgeShopEntry(nodeId)
+      expect(store.acknowledgedShop.filter((id) => id === nodeId)).toHaveLength(1)
+    })
+
+    it('wird der Eintrag wieder zu teuer, verfällt seine Quittung — und er meldet sich erneut', () => {
+      const nodeId = unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      const game = useGameStore()
+      store.acknowledgeShopEntry(nodeId)
+      expect(store.acknowledgedShop).toContain(nodeId)
+
+      game.chimes = 0
+      store.syncShopAcknowledged()
+      expect(store.acknowledgedShop).not.toContain(nodeId)
+
+      game.chimes = 1_000_000
+      expect(store.shopFreshIds).toContain(nodeId)
+    })
+
+    it('IDs sind über alle vier Abteilungen eindeutig', () => {
+      // Trägt die FLACHE `acknowledgedShop`-Liste: zwei gleichnamige Einträge
+      // in verschiedenen Abteilungen quittierten sich sonst gegenseitig.
+      const all = [
+        ...SOLAR_BRANCHES.map((b) => b.id as string),
+        ...FORGE_NODES.map((n) => n.id),
+        ...FORGE_RELICS.map((r) => r.id),
+        ...FORGE_CONSTELLATIONS.map((c) => c.id),
+      ]
+      expect(new Set(all).size).toBe(all.length)
+    })
   })
 })

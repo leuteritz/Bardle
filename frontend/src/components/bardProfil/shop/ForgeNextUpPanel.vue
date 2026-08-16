@@ -5,10 +5,19 @@
   <section v-if="shown" class="nu-panel" :style="{ '--node-c': entry?.color ?? '#52b830' }">
     <div class="nu-flash" :class="{ 'nu-flash--on': flashed }" aria-hidden="true" />
 
+    <!-- Der azurne Rahmen, wenn die Empfehlung zugleich das Neueste ist. Eigene
+         Ebene mit statischem Schein auf `inset: 0` — das Panel trägt
+         `overflow: hidden`, und die Goldlinie an seiner Oberkante bleibt so
+         unangetastet. -->
+    <div v-if="entryIsFresh" class="nu-fresh" aria-hidden="true" />
+
     <header class="nu-head">
       <span class="nu-badge">
         <Icon :icon="FORGE_NEXT_UP_ICON" width="13" height="13" />
         {{ FORGE_NEXT_UP_TITLE }}
+      </span>
+      <span v-if="entryIsFresh" class="nu-new" :aria-label="FORGE_FRESH_TITLE">
+        {{ FORGE_FRESH_LABEL }}
       </span>
       <span v-if="entry" class="nu-hint">{{ FORGE_NEXT_UP_HINT }}</span>
     </header>
@@ -123,6 +132,8 @@ import {
   FORGE_DETAIL_PANEL_MIN_PX,
   FORGE_DETAIL_PANEL_FRACTION,
   FORGE_DETAIL_PANEL_MAX_PX,
+  FORGE_FRESH_LABEL,
+  FORGE_FRESH_TITLE,
 } from '@/config/constants'
 
 /* Die Dauer steht in den Konstanten und wird von CSS und Timer aus derselben
@@ -133,12 +144,22 @@ const flashDuration = `${FORGE_CARD_FLASH_MS}ms`
    statt dreier `v-bind`, damit die Regel unten in EINEM Stück lesbar bleibt. */
 const panelHeight = `clamp(${FORGE_DETAIL_PANEL_MIN_PX}px, ${FORGE_DETAIL_PANEL_FRACTION * 100}%, ${FORGE_DETAIL_PANEL_MAX_PX}px)`
 
-const { entryById, bestBuyId, buyUpgrade, affordableLevels, buyMany } = useForgeUpgrades()
+const { entryById, bestBuyId, freshIds, buyUpgrade, affordableLevels, buyMany } =
+  useForgeUpgrades()
 const { listHovering } = useForgeSpotlight()
 
 const entry = computed<ForgeUpgradeEntry | null>(() =>
   bestBuyId.value === null ? null : (entryById.value.get(bestBuyId.value) ?? null),
 )
+
+/**
+ * Ist die Empfehlung zugleich das Neueste?
+ *
+ * Beides kann zusammenfallen, muss aber nicht: BEST BUY zeigt auf das billigste
+ * Kaufbare, der azurne Rahmen auf das seit dem letzten Blick Dazugekommene. Nur
+ * wenn beides derselbe Eintrag ist, trägt der Kopf die Marke.
+ */
+const entryIsFresh = computed(() => entry.value !== null && freshIds.value.has(entry.value.id))
 
 /**
  * Ob das Panel überhaupt da ist.
@@ -287,9 +308,54 @@ function growMany(): void {
   }
 }
 
+/* ── NEU SEIT DEM LETZTEN BLICK ──────────────────────────────────
+   Genau EINE Ebene, weil es genau EINE Empfehlung gibt — sie darf deshalb
+   deutlich sein. Statischer Schein, animiert wird allein die Deckkraft
+   (Performance-Regel 2/11); `inset: 0`, weil das Panel klippt.
+   Unter dem Quittungsblitz (z-index 4), damit ein Kauf weiterhin oben liegt. */
+.nu-fresh {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #60a5fa;
+  box-shadow: inset 0 0 26px rgba(59, 130, 246, 0.4);
+  pointer-events: none;
+  z-index: 3;
+  animation: nu-fresh-breathe 2.2s ease-in-out infinite;
+}
+
+@keyframes nu-fresh-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.nu-new {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid #bae6fd;
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nu-flash--on {
     animation: none;
+  }
+
+  .nu-fresh {
+    animation: none;
+    opacity: 1;
   }
 }
 

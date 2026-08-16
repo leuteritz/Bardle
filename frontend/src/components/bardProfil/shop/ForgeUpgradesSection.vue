@@ -48,6 +48,7 @@
           :key="entry.id"
           :entry="entry"
           :flashed="flashedId === entry.id"
+          :fresh="freshIds.has(entry.id)"
           @buy="grow"
         />
       </template>
@@ -108,7 +109,7 @@ import {
   FORGE_SEARCH_ICON,
 } from '@/config/constants'
 
-const { upgradeEntries, entryById, buyUpgrade } = useForgeUpgrades()
+const { upgradeEntries, entryById, freshIds, buyUpgrade } = useForgeUpgrades()
 const { treeHoverId, listHoverId, setListHover } = useForgeSpotlight()
 const { hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
 

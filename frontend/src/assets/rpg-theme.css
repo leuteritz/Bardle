@@ -890,6 +890,13 @@
 .fc-card--locked {
   opacity: 0.72;
 }
+/* Neu seit dem letzten Blick des Spielers. Azur ist dieselbe Farbe, die ihn
+   hergeführt hat — `ShopReadyBadge` am Header, am Profil-Reiter und an der
+   Abteilungs-Schiene. Steht NACH `--ready`, weil frisch immer auch kaufbar ist
+   und die spätere Regel bei gleicher Spezifität gewinnt. */
+.fc-card--fresh {
+  border-color: #60a5fa;
+}
 
 /* Kaufbereit atmet auf EIGENER Ebene: der Schein ist statisches CSS, animiert
    wird nur seine Deckkraft. Der Vorgänger pulste box-shadow und border-color
@@ -902,6 +909,28 @@
   box-shadow: 0 0 20px 1px rgba(232, 192, 64, 0.55);
   pointer-events: none;
   animation: fc-breathe 2.2s ease-in-out infinite;
+}
+
+/* Dasselbe Rezept in Azur für „neu": eigene Ebene, statischer Schein, animiert
+   wird allein die Deckkraft. Sie ersetzt `.fc-glow` NICHT, sondern liegt daneben
+   — eine frische Karte ist auch eine kaufbare, und beide Ebenen zusammen sind
+   genau zwei statt vier Regeln mit Sonderfällen. */
+.fc-fresh {
+  position: absolute;
+  inset: -1px;
+  border-radius: 5px;
+  border: 1px solid #bae6fd;
+  box-shadow: 0 0 20px 1px rgba(59, 130, 246, 0.55);
+  pointer-events: none;
+  animation: fc-breathe 2.2s ease-in-out infinite;
+}
+
+/* Die Handelskarte klippt (`overflow: hidden` wegen ihres Laufbands) — dort legt
+   sich der Schein nach innen, sonst wäre er ganz abgeschnitten. */
+.bg-card > .fc-fresh {
+  inset: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 22px rgba(59, 130, 246, 0.45);
 }
 
 /* Der einmalige Quittungsblitz nach dem Kauf — eine Transition, kein
@@ -1316,6 +1345,11 @@
   .fc-glow {
     animation: none;
     opacity: 0.6;
+  }
+  /* Der Rahmen bleibt sichtbar — nur sein Atmen fällt weg. */
+  .fc-fresh {
+    animation: none;
+    opacity: 1;
   }
   .fc-flash,
   .fc-card {

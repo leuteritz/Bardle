@@ -142,6 +142,7 @@ export function useForgeUpgrades(): {
   upgradeEntries: ComputedRef<ForgeUpgradeEntry[]>
   entryById: ComputedRef<Map<string, ForgeUpgradeEntry>>
   bestBuyId: ComputedRef<string | null>
+  freshIds: ComputedRef<Set<string>>
   buyUpgrade: (id: string, opts?: { silent?: boolean }) => boolean
   affordableLevels: (id: string) => number
   buyMany: (id: string, count: number) => number
@@ -353,6 +354,16 @@ export function useForgeUpgrades(): {
   })
 
   /**
+   * Was seit dem letzten Blick des Spielers dazugekommen ist — als Menge, damit
+   * Baum und Liste dieselbe Antwort geben und keine von beiden über eine Liste
+   * mit bis zu fünfzig Einträgen sucht.
+   *
+   * Die Wahrheit dahinter liegt im Store (`shopFreshIds`), weil sie den Reload
+   * überleben muss; hier steht nur die Umformung fürs Nachschlagen.
+   */
+  const freshIds = computed(() => new Set(forgeStore.shopFreshIds))
+
+  /**
    * Kauft eine Stufe und meldet, ob es geklappt hat. Die Rückmeldung im Bild —
    * Sonnenblitz im Baum, Kartenblitz in der Liste — bleibt beim Aufrufer; nur
    * der Wortlaut der Meldung steht hier, damit beide Wege gleich sprechen.
@@ -367,6 +378,12 @@ export function useForgeUpgrades(): {
   function buyUpgrade(id: string, opts: { silent?: boolean } = {}): boolean {
     const entry = entryById.value.get(id)
     if (!entry) return false
+
+    /* Gekauft heißt gesehen — VOR dem Kauf quittiert, weil `acknowledgeShopEntry`
+       nur greift, solange der Eintrag noch als kaufbar gilt. Für Zeile und Baum
+       erledigt das der Hover ohnehin; hier hängt es an `buyAllReady()` aus der
+       Kopfleiste, bei dem der Zeiger nichts berührt. */
+    forgeStore.acknowledgeShopEntry(id)
 
     if (entry.tier === 'root') {
       const branchId = id as SolarBranchId
@@ -510,6 +527,7 @@ export function useForgeUpgrades(): {
     upgradeEntries,
     entryById,
     bestBuyId,
+    freshIds,
     buyUpgrade,
     affordableLevels,
     buyMany,

@@ -53,10 +53,16 @@
           <article
             v-else
             class="fc-card"
-            :class="{ 'fc-card--ready': view.ready, 'fc-card--owned': view.level > 0 && !view.ready }"
+            :class="{
+              'fc-card--ready': view.ready,
+              'fc-card--owned': view.level > 0 && !view.ready,
+              'fc-card--fresh': isFresh(view.def.id),
+            }"
             :style="{ '--node-c': view.def.color }"
+            @mouseenter="forgeStore.acknowledgeShopEntry(view.def.id)"
           >
             <div v-if="view.ready" class="fc-glow" aria-hidden="true" />
+            <div v-if="isFresh(view.def.id)" class="fc-fresh" aria-hidden="true" />
 
             <header class="fc-card-head">
               <div class="fc-ico">
@@ -123,10 +129,16 @@
           <article
             v-else
             class="fc-card"
-            :class="{ 'fc-card--ready': view.ready, 'fc-card--locked': !view.reqMet }"
+            :class="{
+              'fc-card--ready': view.ready,
+              'fc-card--locked': !view.reqMet,
+              'fc-card--fresh': isFresh(view.def.id),
+            }"
             :style="{ '--node-c': view.def.color }"
+            @mouseenter="forgeStore.acknowledgeShopEntry(view.def.id)"
           >
             <div v-if="view.ready" class="fc-glow" aria-hidden="true" />
+            <div v-if="isFresh(view.def.id)" class="fc-fresh" aria-hidden="true" />
 
             <header class="cc-head">
               <Icon :icon="view.def.icon" width="30" height="30" :style="{ color: view.def.color }" />
@@ -169,8 +181,14 @@
           <i :style="{ transform: `scaleX(${restockProgress})` }" />
         </div>
 
-        <article v-if="deal" class="fc-card bg-card">
+        <article
+          v-if="deal"
+          class="fc-card bg-card"
+          :class="{ 'fc-card--fresh': isFresh(deal.id) }"
+          @mouseenter="forgeStore.acknowledgeShopEntry(deal.id)"
+        >
           <div class="bg-shine" aria-hidden="true" />
+          <div v-if="isFresh(deal.id)" class="fc-fresh" aria-hidden="true" />
 
           <header class="bg-head">
             <div class="bg-ico">
@@ -341,6 +359,23 @@ const forgeStore = useStarForgeStore()
 // Reroll ruft direkt, weil er nichts kauft und deshalb keine Kaufquittung ist.
 const { announceReceipt } = useHerald()
 const { heraldRelic, heraldConstellation, heraldBargain } = useForgeHerald()
+
+// ── „NEW" — seit dem letzten Blick des Spielers erschwinglich ────────────────
+/**
+ * Der azurne Rahmen an Relikt-, Konstellations- und Handelskarte.
+ *
+ * Als MENGE und nicht als `includes()` je Karte: die Liste steht bei einem
+ * offenen Abschnitt neben bis zu sieben Karten, und ein Aufbau je Änderung ist
+ * billiger als sieben lineare Suchen je Rendervorgang.
+ *
+ * Die Karten hier hängen NICHT am Spotlight (`useForgeSpotlight` trägt nur Baum
+ * und Upgrade-Liste), sie quittieren deshalb mit einem eigenen `mouseenter`.
+ */
+const freshIds = computed(() => new Set(forgeStore.shopFreshIds))
+
+function isFresh(id: string): boolean {
+  return freshIds.value.has(id)
+}
 
 // ── Active blessings (running bargain buffs) ─────────────────────────────────
 const activeBuffs = computed(() =>

@@ -1277,6 +1277,23 @@ export const FORGE_BUY_ALL_HERALD_NAME_CAP = 3
  */
 export const FORGE_BEST_BUY_LABEL = 'BEST BUY'
 
+/**
+ * Die Marke an einem gerade erst bezahlbar gewordenen Eintrag.
+ *
+ * Sie beantwortet eine ANDERE Frage als BEST BUY und steht deshalb daneben statt
+ * an ihrer Stelle: BEST BUY sagt „das Billigste", NEW sagt „das, was seit deinem
+ * letzten Blick dazugekommen ist". Beide können auf denselben Eintrag zeigen.
+ *
+ * Azur ist die Farbe dazu, und zwar dieselbe, die den Spieler hergeführt hat —
+ * `ShopReadyBadge` am Header, am Profil-Reiter und an der Abteilungs-Schiene,
+ * sowie der `ready`-Herold (`BADGE_HERALD_ACCENT_SHOP`). Grün und Gold sind im
+ * Shop bereits mit „kaufbar" belegt (`.fq-row--ready`, `.fc-card--ready`).
+ */
+export const FORGE_FRESH_LABEL = 'NEW'
+
+/** Klartext derselben Marke — `title` an der Zeile, `aria-label` am Chip. */
+export const FORGE_FRESH_TITLE = 'Newly affordable'
+
 // ── Stapelkauf ───────────────────────────────────────────────────────────────
 /**
  * Wie viele Stufen ein einzelner „Buy ×N" höchstens auf einmal nimmt.
