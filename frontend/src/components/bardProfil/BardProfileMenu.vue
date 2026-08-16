@@ -62,16 +62,20 @@ const planetBadgeCount = computed(() => planetShopStore.affordableLevelCount)
 const planetBadgeLabel = computed(() => formatBadgeCount(planetBadgeCount.value))
 
 /**
- * Shop: alles, was der Spieler in der Star Forge JETZT kaufen kann — Strahlen,
- * Knoten, Relikte, Konstellationen und der laufende Handel zusammen, Chimes UND
- * Material geprüft. Die Zahl kommt aus dem Store, damit sie mit den
- * Schienen-Marken im Shop-Tab dieselbe Quelle hat; das Maximum ist 59, also
- * greift `formatBadgeCount` hier nie und die rohe Zahl genügt.
+ * Shop: was in der Star Forge kaufbar ist UND der Spieler noch nicht angesehen
+ * hat — Strahlen, Knoten, Relikte, Konstellationen und der laufende Handel
+ * zusammen, Chimes UND Material geprüft.
  *
- * Sie trägt BEIDE Abzeichen: das an der Ecktaste oben im Template und das am
- * Shop-Tab in der Leiste.
+ * NICHT `shopReadyTotal`: kaufbar ist ab dem mittleren Spiel dauernd etwas, und
+ * eine Marke, die nie ausgeht, meldet nichts mehr. Fährt der Spieler im Shop
+ * über einen frisch markierten Eintrag, fällt dessen Rahmen — und diese Zahl
+ * mit ihm. Herleitung an `shopFreshBySection` im Store.
+ *
+ * Das Maximum ist 59, also greift `formatBadgeCount` hier nie und die rohe Zahl
+ * genügt. Sie trägt BEIDE Abzeichen: das an der Ecktaste oben im Template und
+ * das am Shop-Tab in der Leiste.
  */
-const shopReadyCount = computed(() => forgeStore.shopReadyTotal)
+const shopFreshCount = computed(() => forgeStore.shopFreshTotal)
 
 /**
  * Das Shop-Abzeichen steht ruhig und blitzt nur EINMAL auf, wenn die Zahl
@@ -79,7 +83,7 @@ const shopReadyCount = computed(() => forgeStore.shopReadyTotal)
  * Ecktaste und Tab-Reiter, hängen an DIESEM einen Merker: sie zeigen dieselbe
  * Zahl und dürfen nicht versetzt blitzen.
  */
-const shopFlare = useBadgeFlare(shopReadyCount)
+const shopFlare = useBadgeFlare(shopFreshCount)
 
 /**
  * Ein Glyph je Tab statt eines Artworks.
@@ -261,9 +265,9 @@ onUnmounted(() => {
          Abzeichens; ohne das läge das Tooltip-Feld mitten auf der Taste. -->
     <RpgBadgeTooltip clear-ancestor=".btn-gem">
       <ShopReadyBadge
-        :count="shopReadyCount"
+        :count="shopFreshCount"
         :flare="shopFlare"
-        :label="`${shopReadyCount} Star Forge purchases affordable`"
+        :label="`${shopFreshCount} new Star Forge purchases within reach`"
       />
       <template #tip>
         <RpgBadgeTooltipBody kind="shop" />
@@ -340,16 +344,17 @@ onUnmounted(() => {
                       :title="`${chronicleBadgeCount} Astral Codex ${chronicleBadgeCount === 1 ? 'track has' : 'tracks have'} a new stage`"
                     >{{ chronicleBadgeCount }}</span>
                   </div>
-                  <!-- Shop: was in der Star Forge JETZT kaufbar ist. Dieselbe
-                       Marke wie an der Ecktaste und in der Schiene des Tabs —
-                       ruhig, mit einmaligem Aufblitzen, wenn die Zahl steigt. -->
-                  <div v-if="item.id === 'shop' && shopReadyCount > 0" class="team-badge-row">
+                  <!-- Shop: was in der Star Forge neu erreichbar ist und noch
+                       nicht angesehen wurde. Dieselbe Marke wie an der Ecktaste
+                       und in der Schiene des Tabs — ruhig, mit einmaligem
+                       Aufblitzen, wenn die Zahl steigt. -->
+                  <div v-if="item.id === 'shop' && shopFreshCount > 0" class="team-badge-row">
                     <ShopReadyBadge
                       place="inline"
-                      :count="shopReadyCount"
+                      :count="shopFreshCount"
                       :flare="shopFlare"
-                      :title="`${shopReadyCount} Star Forge ${shopReadyCount === 1 ? 'purchase is' : 'purchases are'} affordable right now`"
-                      :label="`${shopReadyCount} Star Forge purchases affordable`"
+                      :title="`${shopFreshCount} new Star Forge ${shopFreshCount === 1 ? 'purchase is' : 'purchases are'} within reach`"
+                      :label="`${shopFreshCount} new Star Forge purchases within reach`"
                     />
                   </div>
                   <div v-if="item.id === 'planets' && planetBadgeCount > 0" class="team-badge-row">

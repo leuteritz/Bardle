@@ -36,7 +36,8 @@ describe('shouldHeraldBadge — nur das Auftauchen', () => {
   })
 
   it('schweigt bei jedem weiteren Zuwachs (3 → 4)', () => {
-    // Der Kern der Regel: `shopReadyTotal` klettert mit jedem Chime-Zufluss.
+    // Der Kern der Regel: `shopFreshTotal` klettert weiter, solange der Spieler
+    // den Shop nicht öffnet — nur das Auftauchen ist die Nachricht.
     expect(shouldHeraldBadge({ ...OPEN, wasOpen: true, count: 4 })).toBe(false)
   })
 

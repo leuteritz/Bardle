@@ -489,9 +489,13 @@ export const useStarForgeStore = defineStore('starForge', {
     },
 
     /**
-     * Was der Shop JETZT hergibt, je Abteilung — die EINE Quelle für alle drei
-     * Anzeigen: die Schienen-Marken im Tab, das Abzeichen an der Shop-Ecktaste
-     * im Header und das an der Tab-Leiste des Profils.
+     * Was der Shop JETZT hergibt, je Abteilung — die Grundlage von allem
+     * darunter: `shopFreshBySection` siebt daraus das Ungesehene, und
+     * `acknowledgeShopEntry` wie `syncShopAcknowledged` prüfen gegen genau diese
+     * Listen, ob eine Quittung überhaupt gilt.
+     *
+     * Die Abzeichen lesen sie NICHT mehr direkt — sie hängen an den
+     * `shopFresh*`-Gettern; die Begründung dafür steht dort.
      *
      * **Warum ein Store-Getter und keine drei lokalen `computed`.** Ein
      * argumentloser Pinia-Getter ist intern EIN `computed` am Store — eine
@@ -552,35 +556,83 @@ export const useStarForgeStore = defineStore('starForge', {
     },
 
     /**
-     * Was gerade kaufbar ist UND noch nicht angesehen wurde — die Quelle für
-     * jeden azurnen „NEW"-Rahmen im Shop-Tab.
-     *
-     * Azur, weil es dieselbe Aussage ist, die den Spieler überhaupt erst
-     * hergeführt hat: die Marke am Header (`ShopReadyBadge`) und die
-     * `ready`-Quittung des Herolds tragen dieselbe Farbe. Der Rahmen führt die
-     * Spur bis zum Eintrag zu Ende.
-     */
-    shopFreshIds(): string[] {
-      const ids = this.shopReadyIds
-      const acknowledged = new Set(this.acknowledgedShop)
-      const fresh: string[] = []
-      for (const list of [ids.upgrades, ids.relics, ids.constellations, ids.bargain]) {
-        for (const id of list) if (!acknowledged.has(id)) fresh.push(id)
-      }
-      return fresh
-    },
-
-    /**
      * Die Summe als EIGENER Getter, nicht als fünftes Feld im Objekt darüber.
      *
      * `shopReadyCounts` gibt jedes Mal ein NEUES Objekt zurück — wer es liest,
      * rendert bei jeder Chime-Änderung neu, auch wenn die vier Zahlen gleich
      * blieben. Ein Getter auf einer ZAHL stößt seine Abhängigen dagegen nur an,
-     * wenn sich der Wert wirklich ändert. Die Abzeichen hängen damit an der
-     * Zahl und nicht am Klicktakt.
+     * wenn sich der Wert wirklich ändert.
+     *
+     * Sein einziger Leser ist die Fußzeile des Shop-Tooltips („N affordable in
+     * total") — die Abzeichen selbst hängen seit der Umstellung an
+     * `shopFreshTotal`. Er bleibt, weil er genau die Frage beantwortet, die die
+     * Umstellung sonst offenließe: „warum steht da 3, wo ich doch reich bin?".
      */
     shopReadyTotal(): number {
       const counts = this.shopReadyCounts
+      return counts.upgrades + counts.relics + counts.constellations + counts.bargain
+    },
+
+    // ── Was NEU ist: kaufbar und noch nicht angesehen ─────────────────────────
+    /**
+     * Dieselben vier Abteilungen, aber nur mit dem, was der Spieler noch nicht
+     * gesehen hat — die EINE Quelle für den azurnen „NEW"-Rahmen UND für jede
+     * Notify-Marke der Star Forge.
+     *
+     * **Warum die Marke „ungesehen" zählt und nicht „kaufbar".** Kaufbar ist ab
+     * dem mittleren Spiel praktisch dauernd etwas — die fünf Kernstrahlen allein
+     * halten `shopReadyTotal` für immer über null. Eine Marke, die nie ausgeht,
+     * meldet nichts mehr; sie ist dann Teil des Hintergrunds. Schlimmer: sowohl
+     * das Aufblitzen (`useBadgeFlare`) als auch der `ready`-Herold sind auf die
+     * Kante 0 → N gebaut, die damit nach dem frühen Spiel nie wieder eintritt —
+     * beide feuerten faktisch einmal pro Spielstand.
+     *
+     * An „ungesehen" gehängt fällt die Zahl auf null, sobald der Spieler
+     * durchgesehen hat, und die Kante steht für das nächste Mal wieder bereit.
+     * Es ist zugleich die Bedeutung, die der Meep-Baum längst trägt
+     * (`meepTreeStore.unseenBuyableCount`).
+     *
+     * Je Abteilung und nicht flach, damit Schienen-Marken, Ecktaste, Tooltip und
+     * Rahmen alle aus DIESEM einen `computed` lesen statt aus vieren.
+     */
+    shopFreshBySection(): Record<ForgeSectionId, string[]> {
+      const ids = this.shopReadyIds
+      const acknowledged = new Set(this.acknowledgedShop)
+      const unseen = (list: string[]) => list.filter((id) => !acknowledged.has(id))
+      return {
+        upgrades: unseen(ids.upgrades),
+        relics: unseen(ids.relics),
+        constellations: unseen(ids.constellations),
+        bargain: unseen(ids.bargain),
+      }
+    },
+
+    /** Flach, fürs Nachschlagen an Zeile, Karte und Baumknoten. */
+    shopFreshIds(): string[] {
+      const fresh = this.shopFreshBySection
+      return [...fresh.upgrades, ...fresh.relics, ...fresh.constellations, ...fresh.bargain]
+    },
+
+    /** Die vier Zahlen der Schienen-Marken und der Tooltip-Zeilen. */
+    shopFreshCounts(): Record<ForgeSectionId, number> {
+      const fresh = this.shopFreshBySection
+      return {
+        upgrades: fresh.upgrades.length,
+        relics: fresh.relics.length,
+        constellations: fresh.constellations.length,
+        bargain: fresh.bargain.length,
+      }
+    },
+
+    /**
+     * Die eine Zahl an der Shop-Ecktaste und am Profil-Reiter.
+     *
+     * Eigener Getter auf einer ZAHL, aus demselben Grund wie `shopReadyTotal`:
+     * ein Objekt-Getter stieße seine Leser bei jedem Chime-Tick an, auch wenn
+     * die Zahlen gleich blieben.
+     */
+    shopFreshTotal(): number {
+      const counts = this.shopFreshCounts
       return counts.upgrades + counts.relics + counts.constellations + counts.bargain
     },
 

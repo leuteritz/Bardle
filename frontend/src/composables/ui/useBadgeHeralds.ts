@@ -78,8 +78,8 @@ export interface BadgeHeraldGate {
  *
  * Vier Sperren, jede gegen einen eigenen Fehlerfall:
  * 1. `armed` — der 0→N-Sprung aus `loadGame()` ist kein Auftauchen.
- * 2. `wasOpen` — nur das AUFTAUCHEN zählt. `shopReadyTotal` klettert mit jedem
- *    Chime-Zufluss; 3 → 4 ist keine Nachricht, 0 → 1 ist eine.
+ * 2. `wasOpen` — nur das AUFTAUCHEN zählt. `shopFreshTotal` klettert weiter,
+ *    solange der Spieler nicht hinsieht; 3 → 4 ist keine Nachricht, 0 → 1 ist eine.
  * 3. Sperrfrist — ein Zähler, der um die Null pendelt, bannert sonst dauernd.
  * 4. Sicht — verdeckte Seite: läuft ins Leere. Offener Ziel-Tab: die Marke
  *    steht dem Spieler schon vor Augen, das Banner wäre nur Lärm.
@@ -111,8 +111,13 @@ export function useBadgeHeralds() {
       // Dasselbe Zeichen wie die Ecktaste, an der die Marke hängt — der Blick
       // findet vom Banner zum Ziel, ohne dass er es erst suchen muss.
       icon: HEADER_GEM_ICONS.shop,
-      count: () => forgeStore.shopReadyTotal,
-      subline: (n) => `${plural(n, 'purchase')} within reach`,
+      // `shopFreshTotal` und nicht `shopReadyTotal`: an „kaufbar" gehängt fiel
+      // die Zahl nach dem frühen Spiel nie wieder auf null — die fünf
+      // Kernstrahlen halten sie oben —, und die Kante unten feuerte damit genau
+      // EINMAL je Spielstand. An „ungesehen" gehängt geht sie aus, sobald der
+      // Spieler durchgesehen hat, und steht fürs nächste Mal wieder bereit.
+      count: () => forgeStore.shopFreshTotal,
+      subline: (n) => `${plural(n, 'new purchase')} within reach`,
     },
     {
       kind: 'forge',

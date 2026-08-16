@@ -717,10 +717,14 @@ export const HEADER_BADGE_EDGE_GAP_FRAC = 0.5
 /**
  * Standzeit des einmaligen Aufblitzens am Shop-Abzeichen, in Millisekunden.
  *
- * Das Abzeichen für „im Shop ist etwas kaufbar" pulst NICHT dauerhaft: die
- * Solar-Kernstrahlen sind fast durchgehend bezahlbar, ein Dauertakt wäre dort
- * Rauschen statt Nachricht. Es meldet sich nur, wenn die Zahl STEIGT — also
- * genau dann, wenn etwas Neues erschwinglich geworden ist. Muss zur Dauer der
+ * Das Shop-Abzeichen pulst NICHT dauerhaft, es meldet sich nur, wenn die Zahl
+ * STEIGT — also genau dann, wenn etwas Neues erreichbar geworden ist. Ein
+ * Dauertakt neben den echten Ereignis-Abzeichen wäre Rauschen statt Nachricht.
+ *
+ * Die Zahl dahinter zählt inzwischen das UNGESEHENE (`shopFreshTotal`) und
+ * nicht mehr das Kaufbare — an letzterem hing das Aufblitzen faktisch tot, weil
+ * die fünf Solar-Kernstrahlen fast durchgehend bezahlbar sind und die Zahl
+ * damit nie wieder auf null fiel. Muss zur Dauer der
  * `sbadge-flare`-Keyframes passen — beide stehen in `components/ui/
  * ShopReadyBadge.vue`, gesetzt wird die Klasse von `composables/ui/
  * useBadgeFlare.ts`. Der Wert räumt sie wieder ab, damit das nächste Anwachsen

@@ -1294,6 +1294,16 @@ export const FORGE_FRESH_LABEL = 'NEW'
 /** Klartext derselben Marke — `title` an der Zeile, `aria-label` am Chip. */
 export const FORGE_FRESH_TITLE = 'Newly affordable'
 
+/**
+ * Glyph vor der Tooltip-Fußzeile „N affordable in total".
+ *
+ * Dasselbe Blitzzeichen, das der READY-Topf der Liste trägt
+ * (`FORGE_UPGRADE_BUCKETS`, „Chimes and materials are there") — eine Bedeutung,
+ * ein Glyph. Eigener Name statt eines Verweises auf den Topf, weil die Zeile
+ * kein Topf ist und ein Index in eine Liste beim nächsten Umbau still kippt.
+ */
+export const FORGE_AFFORDABLE_TOTAL_ICON = 'ph:lightning-fill'
+
 // ── Stapelkauf ───────────────────────────────────────────────────────────────
 /**
  * Wie viele Stufen ein einzelner „Buy ×N" höchstens auf einmal nimmt.

@@ -19,9 +19,9 @@
           class="fr-ico"
         />
         <ShopReadyBadge
-          :count="readyCounts[sec.id]"
+          :count="freshCounts[sec.id]"
           :flare="flares[sec.id].value"
-          :label="readyLabel(sec.label, readyCounts[sec.id])"
+          :label="freshLabel(sec.label, freshCounts[sec.id])"
         />
       </span>
       <span class="fr-label">{{ sec.wrapLabel ?? sec.label }}</span>
@@ -54,9 +54,9 @@
           class="fr-ico fr-ico--deal"
         />
         <ShopReadyBadge
-          :count="readyCounts.bargain"
+          :count="freshCounts.bargain"
           :flare="flares.bargain.value"
-          :label="readyLabel(bargainSection.label, readyCounts.bargain)"
+          :label="freshLabel(bargainSection.label, freshCounts.bargain)"
         />
       </span>
       <span class="fr-clock">{{ formatCompactDuration(forgeStore.bargainRestockRemainingMs) }}</span>
@@ -105,18 +105,23 @@ const bargainSection = computed(
 )
 
 /**
- * Nur, was JETZT getan werden kann — eine geschlossene Abteilung sagt damit
- * trotzdem „hier wartet etwas".
+ * Was in dieser Abteilung NEU erreichbar ist — kaufbar und noch nicht
+ * angesehen. Eine geschlossene Abteilung sagt damit trotzdem „hier wartet
+ * etwas", und die Marke geht wieder aus, sobald der Spieler durchgesehen hat.
  *
- * Die Rechnung stand einmal hier und liegt jetzt als `shopReadyCounts` im
- * `starForgeStore`: dieselben vier Zahlen tragen inzwischen auch die Abzeichen
- * an der Shop-Ecktaste und am Shop-Tab. Ein Store-Getter rechnet für alle drei
- * Leser genau einmal je Änderung, drei lokale `computed` täten es dreimal.
+ * Nicht „kaufbar" (`shopReadyCounts`): das ist ab dem mittleren Spiel dauernd
+ * etwas, und eine Marke, die nie ausgeht, meldet nichts mehr. Die volle
+ * Herleitung steht an `shopFreshBySection` im Store.
+ *
+ * Die Rechnung stand einmal hier und liegt jetzt im `starForgeStore`: dieselben
+ * vier Zahlen tragen inzwischen auch die Abzeichen an der Shop-Ecktaste und am
+ * Shop-Tab. Ein Store-Getter rechnet für alle drei Leser genau einmal je
+ * Änderung, drei lokale `computed` täten es dreimal.
  *
  * Gezeigt wird die Zahl in DERSELBEN Marke wie dort (`ShopReadyBadge`) — der
  * Spieler folgt dem azurnen Abzeichen vom Header bis in diese Schiene.
  */
-const readyCounts = computed<Record<ForgeSectionId, number>>(() => forgeStore.shopReadyCounts)
+const freshCounts = computed<Record<ForgeSectionId, number>>(() => forgeStore.shopFreshCounts)
 
 /**
  * Ein Aufblitzen je Abteilung: die Marke meldet sich, wenn IHRE Zahl steigt —
@@ -126,16 +131,20 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => forgeStore.sh
  * Composable-Aufrufe liegen damit fest, wie es sich gehört. Die Refs bleiben
  * Refs (kein `reactive`-Umweg, der beim Entpacken seinen Typ verliert) — im
  * Template steht deshalb `.value`.
+ *
+ * Dieselbe Zahl wie die Marke, und das ist der Punkt: an „kaufbar" gehängt
+ * blitzte es faktisch nur EINMAL je Spielstand, weil die Zahl danach nie wieder
+ * auf null fällt.
  */
 const flares = Object.fromEntries(
   FORGE_PANEL_SECTIONS.map((sec) => [
     sec.id,
-    useBadgeFlare(() => forgeStore.shopReadyCounts[sec.id]),
+    useBadgeFlare(() => forgeStore.shopFreshCounts[sec.id]),
   ]),
 ) as Record<ForgeSectionId, Ref<boolean>>
 
-const readyLabel = (label: string, count: number) =>
-  `${count} ${label} ${count === 1 ? 'purchase is' : 'purchases are'} affordable`
+const freshLabel = (label: string, count: number) =>
+  `${count} new ${label} ${count === 1 ? 'purchase is' : 'purchases are'} within reach`
 </script>
 
 <style scoped>

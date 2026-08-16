@@ -408,10 +408,10 @@ describe('starForgeStore', () => {
   // ─── Shop-Bereitschaft ───────────────────────────────────────────────────────
 
   /**
-   * Die Zahl, die an drei Stellen dasselbe sagen muss: an den Marken der
-   * Shop-Schiene, am Abzeichen der Shop-Ecktaste im Header und am Shop-Tab der
-   * Profil-Leiste. Solange alle drei denselben Getter lesen, kann sie nicht
-   * auseinanderlaufen — diese Specs binden genau das.
+   * Die Grundlage: was der Shop überhaupt hergibt. Die Abzeichen zeigen davon
+   * nur noch das Ungesehene (siehe `shopFreshCounts` weiter unten), aber jede
+   * Quittung und jeder Rahmen prüft gegen genau diese Listen — läuft die
+   * Kaufbarkeit schief, ist alles darüber wertlos.
    */
   describe('shopReadyCounts', () => {
     it('meldet ohne Chimes in keiner Abteilung etwas', () => {
@@ -530,6 +530,79 @@ describe('starForgeStore', () => {
         ...FORGE_CONSTELLATIONS.map((c) => c.id),
       ]
       expect(new Set(all).size).toBe(all.length)
+    })
+  })
+
+  // ─── Die Zahl der Abzeichen ──────────────────────────────────────────────────
+
+  /**
+   * Die Marken der Star Forge zählen das UNGESEHENE, nicht das Kaufbare — die
+   * eine Aussage, an der Ecktaste, Profil-Reiter, Schiene, Tooltip und der
+   * `ready`-Herold gemeinsam hängen.
+   *
+   * Der Unterschied bricht still: an „kaufbar" gehängt fällt die Zahl nach dem
+   * frühen Spiel nie wieder auf null (die fünf Kernstrahlen halten sie oben),
+   * und damit feuern das Aufblitzen und der Herold — beide auf die Kante 0 → N
+   * gebaut — faktisch einmal je Spielstand.
+   */
+  describe('shopFreshCounts / shopFreshTotal', () => {
+    it('die Zahlen sind die Längen der frischen Listen', () => {
+      unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      const fresh = store.shopFreshBySection
+      const counts = store.shopFreshCounts
+      expect(counts.upgrades).toBe(fresh.upgrades.length)
+      expect(counts.relics).toBe(fresh.relics.length)
+      expect(counts.constellations).toBe(fresh.constellations.length)
+      expect(counts.bargain).toBe(fresh.bargain.length)
+    })
+
+    it('shopFreshTotal ist die Summe der vier Abteilungen', () => {
+      unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      const counts = store.shopFreshCounts
+      expect(store.shopFreshTotal).toBe(
+        counts.upgrades + counts.relics + counts.constellations + counts.bargain,
+      )
+      expect(store.shopFreshTotal).toBeGreaterThan(0)
+    })
+
+    it('shopFreshIds ist die Verkettung der vier Abteilungslisten', () => {
+      // Bindet die flache Liste (Rahmen) an die je Abteilung (Marken) — liefen
+      // sie auseinander, zeigte die Marke eine andere Zahl als die Rahmen.
+      unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      const fresh = store.shopFreshBySection
+      expect(store.shopFreshIds).toEqual([
+        ...fresh.upgrades,
+        ...fresh.relics,
+        ...fresh.constellations,
+        ...fresh.bargain,
+      ])
+    })
+
+    it('ein Ansehen senkt die Marke um eins — die Kaufbarkeit bleibt unberührt', () => {
+      // Die ganze Aussage dieser Zählweise in einem Test: der Spieler fährt über
+      // einen Eintrag, die Marke zählt herunter, kaufen kann er ihn weiterhin.
+      const nodeId = unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      const freshBefore = store.shopFreshTotal
+      const readyBefore = store.shopReadyTotal
+
+      store.acknowledgeShopEntry(nodeId)
+
+      expect(store.shopFreshTotal).toBe(freshBefore - 1)
+      expect(store.shopReadyTotal).toBe(readyBefore)
+    })
+
+    it('alles angesehen → die Marke ist weg, obwohl noch alles kaufbar ist', () => {
+      unlockBranchPrereqs()
+      const store = useStarForgeStore()
+      // Der Zustand nach einem vollständigen Durchgang durch den Shop-Tab.
+      for (const id of [...store.shopFreshIds]) store.acknowledgeShopEntry(id)
+
+      expect(store.shopFreshTotal).toBe(0)
+      expect(store.shopReadyTotal).toBeGreaterThan(0)
     })
   })
 })

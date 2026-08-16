@@ -16,6 +16,7 @@ import {
   ROLE_BY_KEY,
   STAR_PHASE_DATA,
   CHIMES_COST_ICON,
+  FORGE_AFFORDABLE_TOTAL_ICON,
   FORGE_PANEL_SECTIONS,
   NOTIFY_BADGE_TITLE,
   type NotifyBadgeKind,
@@ -149,8 +150,12 @@ function openPlanetSlot(id: string) {
 
 /* ── shop ───────────────────────────────────────────────────────────── */
 /**
- * Die Aufschlüsselung hinter der einen Zahl an der Shop-Ecktaste: welche der
- * vier Abteilungen der Star Forge gerade etwas hergibt.
+ * Die Aufschlüsselung hinter der einen Zahl an der Shop-Ecktaste: in welcher der
+ * vier Abteilungen der Star Forge gerade etwas NEUES wartet.
+ *
+ * Die FRISCHEN Zahlen und nicht die kaufbaren — der Tooltip erklärt das
+ * Abzeichen, und zwei verschiedene Zahlen für dieselbe Marke wären schlimmer als
+ * gar keine Aufschlüsselung. Was insgesamt bezahlbar ist, sagt die Fußzeile.
  *
  * Nur Zeilen mit `count > 0` — eine Abteilung mit einer Null sagt nichts, was
  * das Abzeichen nicht schon gesagt hätte. Gespeist aus demselben Store-Getter,
@@ -158,14 +163,29 @@ function openPlanetSlot(id: string) {
  * kommen aus `FORGE_PANEL_SECTIONS`, damit hier keine zweite Namensquelle
  * entsteht.
  */
-const shopReadySections = computed(() =>
+const shopFreshSections = computed(() =>
   FORGE_PANEL_SECTIONS.map((sec) => ({
     id: sec.id,
     label: sec.label,
     icon: sec.icon,
     accent: sec.accent,
-    count: starForgeStore.shopReadyCounts[sec.id],
+    count: starForgeStore.shopFreshCounts[sec.id],
   })).filter((row) => row.count > 0),
+)
+
+/**
+ * „21 affordable in total" — die Auskunft, die das Abzeichen bis zur Umstellung
+ * selbst trug.
+ *
+ * Sie beantwortet genau die Frage, die die neue Zählweise sonst offenließe:
+ * warum dort `3` steht, obwohl die Kasse für zwanzig Käufe reicht. Nur, wenn
+ * sie mehr sagt als die Zeilen darüber — bei Gleichstand wäre sie eine
+ * Wiederholung.
+ */
+const shopAffordableTotal = computed(() => starForgeStore.shopReadyTotal)
+
+const shopShowAffordableTotal = computed(
+  () => shopAffordableTotal.value > starForgeStore.shopFreshTotal,
 )
 
 // Buy all possible upgrades across every slot, spending chimes greedily in slot
@@ -342,7 +362,7 @@ function buyAllUpgrades() {
     <template v-else-if="kind === 'shop'">
       <ul class="sh-tt__list">
         <li
-          v-for="sec in shopReadySections"
+          v-for="sec in shopFreshSections"
           :key="sec.id"
           class="sh-tt__item"
           :style="{ '--sc': sec.accent }"
@@ -352,6 +372,12 @@ function buyAllUpgrades() {
           <span class="sh-tt__count">{{ sec.count }}</span>
         </li>
       </ul>
+      <!-- Steht ÜBER der Kasse: „wie viel geht überhaupt" gehört näher an die
+           Zeilen als „wie viel habe ich". -->
+      <div v-if="shopShowAffordableTotal" class="bt__hint">
+        <Icon :icon="FORGE_AFFORDABLE_TOTAL_ICON" width="12" height="12" class="pu-tt__cost-ico" />
+        {{ shopAffordableTotal }} affordable in total
+      </div>
       <div class="bt__hint">
         <Icon :icon="CHIMES_COST_ICON" width="12" height="12" class="pu-tt__cost-ico" />
         {{ $formatNumber(gameStore.chimes) }} Chimes available

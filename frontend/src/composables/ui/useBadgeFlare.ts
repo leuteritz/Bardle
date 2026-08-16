@@ -4,12 +4,16 @@ import { BADGE_FLARE_MS } from '@/config/constants'
 /**
  * Ein Abzeichen, das RUHIG steht und nur EINMAL aufblitzt, wenn seine Zahl steigt.
  *
- * Grund für das Aufblitzen statt eines Dauertakts: Zahlen wie „im Shop bezahlbar"
- * stehen im frühen und mittleren Spiel praktisch durchgehend — die fünf
- * Solar-Kernstrahlen allein halten sie über null. Ein Dauerpuls neben den echten
- * Ereignis-Abzeichen wäre Rauschen; das Aufblitzen trägt dagegen eine Nachricht
- * („etwas Neues ist gerade erschwinglich geworden") und kostet im Ruhezustand
- * keinen Frame.
+ * Grund für das Aufblitzen statt eines Dauertakts: eine Marke, die dauerhaft
+ * steht, wird zum Hintergrund. Ein Dauerpuls neben den echten Ereignis-Abzeichen
+ * wäre Rauschen; das Aufblitzen trägt dagegen eine Nachricht („etwas Neues ist
+ * gerade dazugekommen") und kostet im Ruhezustand keinen Frame.
+ *
+ * Damit das trägt, muss die übergebene Zahl auch WIEDER FALLEN. Beim Shop war
+ * das lange nicht so — an „bezahlbar" gehängt hielten die fünf Solar-Kernstrahlen
+ * sie für immer über null, und das Aufblitzen feuerte genau einmal je
+ * Spielstand. Seit die Marke das Ungesehene zählt (`shopFreshTotal`), geht sie
+ * aus, sobald der Spieler durchgesehen hat.
  *
  * Die Rückgabe ist als Klasse am Abzeichen gedacht; die Keyframes dazu stehen in
  * `components/ui/ShopReadyBadge.vue` und müssen zu BADGE_FLARE_MS passen.
