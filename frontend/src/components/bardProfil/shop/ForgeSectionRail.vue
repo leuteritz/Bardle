@@ -18,7 +18,11 @@
           :height="FORGE_RAIL_ICON_SIZE"
           class="fr-ico"
         />
-        <span v-if="readyCounts[sec.id] > 0" class="fr-badge">{{ readyCounts[sec.id] }}</span>
+        <ShopReadyBadge
+          :count="readyCounts[sec.id]"
+          :flare="flares[sec.id].value"
+          :label="readyLabel(sec.label, readyCounts[sec.id])"
+        />
       </span>
       <span class="fr-label">{{ sec.wrapLabel ?? sec.label }}</span>
     </button>
@@ -37,7 +41,11 @@
       :aria-selected="active === bargainSection.id"
       @click="$emit('select', bargainSection.id)"
     >
-      <span class="fr-shine" aria-hidden="true" />
+      <!-- Das Laufband bringt seine eigene Maske mit: läge das `overflow` an der
+           Kachel, schnitte sie den Schein der Marke daneben ab. -->
+      <span class="fr-shine-mask" aria-hidden="true">
+        <span class="fr-shine" />
+      </span>
       <span class="fr-ico-wrap">
         <Icon
           :icon="bargainSection.icon"
@@ -45,7 +53,11 @@
           height="25"
           class="fr-ico fr-ico--deal"
         />
-        <span v-if="readyCounts.bargain > 0" class="fr-badge">{{ readyCounts.bargain }}</span>
+        <ShopReadyBadge
+          :count="readyCounts.bargain"
+          :flare="flares.bargain.value"
+          :label="readyLabel(bargainSection.label, readyCounts.bargain)"
+        />
       </span>
       <span class="fr-clock">{{ formatCompactDuration(forgeStore.bargainRestockRemainingMs) }}</span>
       <span class="fr-deal-label">{{ FORGE_RAIL_BARGAIN_LABEL }}</span>
@@ -63,9 +75,11 @@
  * nicht (zwei Container-Queries nur dafür). Senkrecht kosten sie 78px BREITE —
  * und Breite ist in diesem Layout billig, seit der Baum die freie Fläche füllt.
  */
-import { computed } from 'vue'
+import { computed, type Ref } from 'vue'
 import { Icon } from '@iconify/vue'
+import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useBadgeFlare } from '@/composables/ui/useBadgeFlare'
 import { formatCompactDuration } from '@/utils/ui/format'
 import type { ForgeSectionId } from '@/types'
 import {
@@ -98,8 +112,30 @@ const bargainSection = computed(
  * `starForgeStore`: dieselben vier Zahlen tragen inzwischen auch die Abzeichen
  * an der Shop-Ecktaste und am Shop-Tab. Ein Store-Getter rechnet für alle drei
  * Leser genau einmal je Änderung, drei lokale `computed` täten es dreimal.
+ *
+ * Gezeigt wird die Zahl in DERSELBEN Marke wie dort (`ShopReadyBadge`) — der
+ * Spieler folgt dem azurnen Abzeichen vom Header bis in diese Schiene.
  */
 const readyCounts = computed<Record<ForgeSectionId, number>>(() => forgeStore.shopReadyCounts)
+
+/**
+ * Ein Aufblitzen je Abteilung: die Marke meldet sich, wenn IHRE Zahl steigt —
+ * nicht, wenn irgendwo im Shop etwas erschwinglich wird.
+ *
+ * Ein Aufruf je Abteilung über die STATISCHE Liste: Zahl und Reihenfolge der
+ * Composable-Aufrufe liegen damit fest, wie es sich gehört. Die Refs bleiben
+ * Refs (kein `reactive`-Umweg, der beim Entpacken seinen Typ verliert) — im
+ * Template steht deshalb `.value`.
+ */
+const flares = Object.fromEntries(
+  FORGE_PANEL_SECTIONS.map((sec) => [
+    sec.id,
+    useBadgeFlare(() => forgeStore.shopReadyCounts[sec.id]),
+  ]),
+) as Record<ForgeSectionId, Ref<boolean>>
+
+const readyLabel = (label: string, count: number) =>
+  `${count} ${label} ${count === 1 ? 'purchase is' : 'purchases are'} affordable`
 </script>
 
 <style scoped>
@@ -161,6 +197,17 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => forgeStore.sh
 .fr-ico-wrap {
   position: relative;
   display: flex;
+  /* Sitz und Maß der azurnen Marke (`ShopReadyBadge`).
+
+     Rechts -8px und nicht mehr: die klippende Kante ist `.shop-frame`
+     (`overflow: hidden`) und fällt mit der Außenkante der Schiene zusammen.
+     Gemessen bleiben der Marke dort 16,5px auf Full HD — genug für sie selbst,
+     der äußerste Rand ihres 20px-Scheins wird um 3,5px beschnitten. Der ist beim
+     Aufblitzen ohnehin fast durchsichtig; bei -10px wären es 5,5px, und weiter
+     nach innen liefe die Marke auf das 27px-Glyph. */
+  --sbadge-d: 18px;
+  --sbadge-top: -7px;
+  --sbadge-right: -8px;
 }
 
 .fr-ico {
@@ -185,26 +232,6 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => forgeStore.sh
   overflow-wrap: break-word;
 }
 
-.fr-badge {
-  position: absolute;
-  top: -7px;
-  right: -10px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  background: #52b830;
-  border: 1px solid #6ec040;
-  color: #08130a;
-  font-size: 11.5px;
-  font-weight: 900;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ══════════════════════════════════════════════════
    HANDEL — Fußkachel mit laufender Uhr
 ══════════════════════════════════════════════════ */
@@ -222,12 +249,21 @@ const readyCounts = computed<Record<ForgeSectionId, number>>(() => forgeStore.sh
   color: #e8c040;
   font-family: inherit;
   cursor: pointer;
-  overflow: hidden;
+  /* Sichtbar, damit die Marke samt Schein über die Kachelkante ragen darf. Das
+     Laufband bringt seine eigene Maske mit. */
+  overflow: visible;
   transition: box-shadow 0.18s ease;
 }
 
 .fr-deal--on {
   box-shadow: inset 3px 0 0 #e8c040;
+}
+
+.fr-shine-mask {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 /* Ein wanderndes Band, keine animierte `background-position` — der Lauf bleibt

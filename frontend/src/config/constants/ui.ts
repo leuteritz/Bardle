@@ -615,9 +615,10 @@ export const HEADER_BADGE_EDGE_GAP_FRAC = 0.5
  * Solar-Kernstrahlen sind fast durchgehend bezahlbar, ein Dauertakt wäre dort
  * Rauschen statt Nachricht. Es meldet sich nur, wenn die Zahl STEIGT — also
  * genau dann, wenn etwas Neues erschwinglich geworden ist. Muss zur Dauer der
- * `badge-flare`-Keyframes passen (BardProfileMenu.vue, AppHeaderComponent.vue);
- * der Wert räumt die Klasse wieder ab, damit das nächste Anwachsen erneut
- * zünden kann.
+ * `sbadge-flare`-Keyframes passen — beide stehen in `components/ui/
+ * ShopReadyBadge.vue`, gesetzt wird die Klasse von `composables/ui/
+ * useBadgeFlare.ts`. Der Wert räumt sie wieder ab, damit das nächste Anwachsen
+ * erneut zünden kann.
  */
 export const BADGE_FLARE_MS = 550
 

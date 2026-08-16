@@ -939,10 +939,18 @@ onUnmounted(() => {
   --gem-plate-h: calc(var(--header-height) - 2 * var(--header-corner-gap));
   --gem-plate-w: min(var(--gem-plate-h), 72px);
   --gem-label-fs: clamp(9px, calc(var(--header-height) * 0.125), 13px);
-  /* Durchmesser des Shop-Abzeichens — mit der Platte wachsend, aber gedeckelt:
-     17,6px auf Full HD, 20,9px ab 2K. Darunter zerfällt die Ziffer, darüber
-     drängt es das 33-51px-Glyph. */
-  --gem-badge-d: clamp(15px, calc(var(--gem-plate-w) * 0.29), 21px);
+  /* Maß und Sitz des Shop-Abzeichens (`components/ui/ShopReadyBadge.vue`, von
+     BardProfileMenu in diese Platte gerendert). Der Durchmesser wächst mit der
+     Platte, bleibt aber gedeckelt: 17,6px auf Full HD, 20,9px ab 2K. Darunter
+     zerfällt die Ziffer, darüber drängt es das 33-51px-Glyph.
+
+     Es sitzt INNERHALB der Platte, nicht überhängend: `.header-side` klippt
+     (`overflow: hidden`), und über der Platte liegen auf Full HD nur 12,5px bis
+     zu dieser Kante — ein `top: -8px` verlöre dort die obere Hälfte samt Schein.
+     Bei 3px Einzug bleiben dem Schein 3 + 12,5 = 15,5px Luft nach oben. */
+  --sbadge-d: clamp(15px, calc(var(--gem-plate-w) * 0.29), 21px);
+  --sbadge-top: 3px;
+  --sbadge-right: 3px;
   width: var(--gem-plate-w);
   height: var(--gem-plate-h);
   /* Zentriert in der 2px-Innenzeile → Abstand oben = unten = Corner-Gap, und
@@ -1041,99 +1049,14 @@ onUnmounted(() => {
   color: #e8c040;
 }
 
-/* ────────────────────────────────────────────────────────────────
-   Shop-Abzeichen auf der linken Ecktaste
-   (gerendert von BardProfileMenu, deshalb hier im globalen Block)
-
-   Es sitzt INNERHALB der Platte, nicht überhängend: `.header-side` klippt
-   (`overflow: hidden`), und über der Platte liegen auf Full HD nur 12,5px bis
-   zu dieser Kante — ein `top: -8px` verlöre dort die obere Hälfte samt Schein.
-   Bei 3px Einzug bleiben dem Schein 3 + 12,5 = 15,5px Luft nach oben.
+/* Das Shop-Abzeichen der linken Ecktaste stand hier einmal als eigenes CSS
+   (`.btn-gem-badge`) — es ist jetzt `components/ui/ShopReadyBadge.vue` und
+   trägt seine Optik selbst mit. Von der Platte kommen nur noch Maß und Sitz als
+   `--sbadge-*` (oben bei `.btn-gem`).
 
    Bewusst ein echtes Element und kein `.btn-gem::after`: dessen `::after`
    brauchen wir für die Schein-Ebene, und `.btn-gem::before` (der Lichtstreifen)
-   liegt unter dem Abzeichen, weil Pseudo vor Kind malt.
-   ──────────────────────────────────────────────────────────────── */
-.btn-gem-badge {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  z-index: 2;
-  min-width: var(--gem-badge-d);
-  height: var(--gem-badge-d);
-  padding: 0 4px;
-  border-radius: calc(var(--gem-badge-d) / 2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(var(--gem-badge-d) * 0.6);
-  font-weight: 900;
-  line-height: 1;
-  /* Der Zähler springt zwischen 1 und 59 — gleich breite Ziffern halten das
-     Abzeichen ruhig, statt es bei jedem Wechsel atmen zu lassen. */
-  font-variant-numeric: tabular-nums;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  pointer-events: auto;
-  /* Azur — die letzte freie Grundfarbe im Abzeichen-Kanon (Violett, Gold, Cyan,
-     Pink, Smaragd und Kupfer sind vergeben). */
-  background: linear-gradient(to bottom, #60a5fa, #2563eb);
-  border: 1.5px solid #bae6fd;
-  box-shadow:
-    0 0 6px rgba(59, 130, 246, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
-}
-
-/* Schein-Ebene, statisch gerastert und im Ruhezustand unsichtbar. Sie atmet
-   NICHT — im Shop ist fast immer etwas kaufbar, ein Dauertakt wäre Rauschen
-   statt Nachricht. Sie zündet nur beim Anwachsen des Zählers, zusammen mit
-   `--flare`. */
-.btn-gem-badge::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow:
-    0 0 12px rgba(59, 130, 246, 0.9),
-    0 0 20px rgba(37, 99, 235, 0.45);
-  opacity: 0;
-}
-
-/* Einmaliges Aufblitzen bei steigendem Zähler — nur `transform` bzw. `opacity`.
-   Die Dauer steht als BADGE_FLARE_MS in config/constants/ui.ts; wer sie hier
-   ändert, muss dort mitziehen, sonst bleibt die Klasse zu kurz oder zu lange
-   stehen. */
-.btn-gem-badge--flare {
-  animation: gem-badge-flare 0.55s ease-out 1;
-}
-.btn-gem-badge--flare::after {
-  animation: gem-badge-flare-glow 0.55s ease-out 1;
-}
-
-@keyframes gem-badge-flare {
-  0% {
-    transform: scale(1);
-  }
-  35% {
-    transform: scale(1.35);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes gem-badge-flare-glow {
-  0% {
-    opacity: 0;
-  }
-  35% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
+   liegt unter dem Abzeichen, weil Pseudo vor Kind malt. */
 
 /* ================================================================
    LEGACY
