@@ -3,7 +3,7 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useForgeHerald } from '@/composables/ui/useForgeHerald'
 import { FORGE_NODES } from '@/config/progression/starForge'
 import { MATERIALS } from '@/config/economy/materials'
 import type {
@@ -25,8 +25,6 @@ import {
   FORGE_UPGRADE_CAPPED_REASON,
   FORGE_UPGRADE_TIER_LABELS,
   FORGE_BULK_BUY_CAP,
-  FORGE_BUY_ALL_TOAST,
-  FORGE_COUNT_TOKEN,
 } from '@/config/constants'
 
 /**
@@ -151,7 +149,7 @@ export function useForgeUpgrades(): {
   const inventoryStore = useInventoryStore()
   const solarStore = useSolarUpgradeStore()
   const forgeStore = useStarForgeStore()
-  const { showToast } = useActionToast()
+  const { heraldUpgrade, heraldUpgradeBulk, heraldBuyAll } = useForgeHerald()
 
   function costItems(cost: Record<string, number>): ForgeCostItem[] {
     return Object.entries(cost).map(([matId, need]) => {
@@ -349,8 +347,11 @@ export function useForgeUpgrades(): {
    * der Wortlaut der Meldung steht hier, damit beide Wege gleich sprechen.
    *
    * `silent` gibt es für die Stapelkäufe: acht Stufen am Stück wären acht
-   * Meldungen übereinander. Unterdrückt wird ausschliesslich der Toast — der
+   * Banner hintereinander. Unterdrückt wird ausschliesslich die Quittung — der
    * Kaufweg bleibt derselbe, damit kein Gate umgangen werden kann.
+   *
+   * Der Eintrag wird für die Quittung NACH dem Kauf neu gelesen: `entry` oben ist
+   * der Stand von vorher, sein `desc` nennt noch die alte Wirkung.
    */
   function buyUpgrade(id: string, opts: { silent?: boolean } = {}): boolean {
     const entry = entryById.value.get(id)
@@ -361,13 +362,19 @@ export function useForgeUpgrades(): {
       const before = solarStore.branchLevel(branchId)
       solarStore.buyBranch(branchId)
       if (solarStore.branchLevel(branchId) === before) return false
-      if (!opts.silent) showToast(`${entry.name} upgraded!`, 'forge')
+      if (!opts.silent) announceBought(id, solarStore.branchLevel(branchId))
       return true
     }
 
     if (!forgeStore.buyNode(id)) return false
-    if (!opts.silent) showToast(`${entry.name} grown to Lv ${forgeStore.nodeLevel(id)}!`, 'forge')
+    if (!opts.silent) announceBought(id, forgeStore.nodeLevel(id))
     return true
+  }
+
+  /** Die Quittung zu einem eben gekauften Eintrag — mit dem FRISCHEN Stand. */
+  function announceBought(id: string, level: number): void {
+    const after = entryById.value.get(id)
+    if (after) heraldUpgrade(after, level)
   }
 
   /** Die erreichte Stufe eines Eintrags — Strahlen und Baumknoten liegen in
@@ -442,10 +449,13 @@ export function useForgeUpgrades(): {
     const entry = entryById.value.get(id)
     if (!entry || count <= 0) return 0
 
+    const before = currentLevel(entry)
     let bought = 0
     while (bought < count && buyUpgrade(id, { silent: true })) bought++
     if (bought > 0) {
-      showToast(`${entry.name} grown to Lv ${currentLevel(entry)}!`, 'forge')
+      // Frisch gelesen, damit die Quittung die neue Wirkung nennt.
+      const after = entryById.value.get(id) ?? entry
+      heraldUpgradeBulk(after, before, currentLevel(after))
     }
     return bought
   }
@@ -467,16 +477,21 @@ export function useForgeUpgrades(): {
       .map((entry) => entry.id)
 
     let bought = 0
+    // Die Namen fallen hier ohnehin an — die Quittung zählt sie auf, statt nur
+    // eine Zahl zu nennen. Reihenfolge ist die Kaufreihenfolge, günstigster zuerst.
+    const grown: string[] = []
     for (const id of queue) {
       // Der vorige Kauf hat Chimes und Lager gesenkt — was eben noch ging, geht
       // jetzt vielleicht nicht mehr.
-      if (!entryById.value.get(id)?.canBuy) continue
-      if (buyUpgrade(id, { silent: true })) bought++
+      const entry = entryById.value.get(id)
+      if (!entry?.canBuy) continue
+      if (buyUpgrade(id, { silent: true })) {
+        bought++
+        grown.push(entry.name)
+      }
     }
 
-    if (bought > 0) {
-      showToast(FORGE_BUY_ALL_TOAST.replace(FORGE_COUNT_TOKEN, String(bought)), 'forge')
-    }
+    if (bought > 0) heraldBuyAll(bought, grown)
     return bought
   }
 

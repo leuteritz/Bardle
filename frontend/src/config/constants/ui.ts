@@ -418,6 +418,15 @@ export const HERALD_ACCENT_CHAMPION = '232, 192, 64'
 export const HERALD_AMBIENT_DISPLAY_MS = 1_400
 
 /**
+ * Standzeit der `forged`-Herolde — der Quittung für einen Kauf in der Star Forge.
+ *
+ * Etwas länger als ein ambienter Hinweis, weil hier eine Wirkungszeile mitgelesen
+ * werden will, und deutlich kürzer als ein Meilenstein: wer acht Stufen am Stück
+ * kauft, soll nicht acht mal zwei Sekunden warten, bis das Bild wieder frei ist.
+ */
+export const HERALD_ACTION_DISPLAY_MS = 1_600
+
+/**
  * Sperrfrist je Badge-Quelle zwischen zwei `ready`-Herolden, in ECHTEN
  * Millisekunden.
  *

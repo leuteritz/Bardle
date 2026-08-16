@@ -317,6 +317,7 @@ import {
 } from '@/config/constants'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { useActionToast } from '@/composables/ui/useActionToast'
+import { useForgeHerald } from '@/composables/ui/useForgeHerald'
 import type {
   ForgeRelicDef,
   ForgeConstellationDef,
@@ -336,7 +337,9 @@ defineProps<{ activeSection: ForgeSectionId }>()
 const inventoryStore = useInventoryStore()
 const gameStore = useGameStore()
 const forgeStore = useStarForgeStore()
+// Käufe quittiert der Herold; der Toast bleibt nur für den Reroll, der nichts kauft.
 const { showToast } = useActionToast()
+const { heraldRelic, heraldConstellation, heraldBargain } = useForgeHerald()
 
 // ── Active blessings (running bargain buffs) ─────────────────────────────────
 const activeBuffs = computed(() =>
@@ -428,9 +431,11 @@ const relicViews = computed<RelicView[]>(() => {
 })
 
 function handleForgeRelic(relic: ForgeRelicDef): void {
-  if (forgeStore.forgeRelic(relic.id)) {
-    showToast(`${relic.name} forged — Lv ${forgeStore.relicLevel(relic.id)}!`, 'forge')
-  }
+  if (!forgeStore.forgeRelic(relic.id)) return
+  // Den gefüllten Wirkungssatz liefert `relicViews` — es ersetzt den Platzhalter
+  // ohnehin schon und rechnet nach dem Kauf mit der neuen Stufe neu.
+  const view = relicViews.value.find((v) => v.def.id === relic.id)
+  heraldRelic(relic, forgeStore.relicLevel(relic.id), view?.desc ?? relic.desc)
 }
 
 // ── Constellations ────────────────────────────────────────────────────────────
@@ -481,7 +486,7 @@ const constellationViews = computed<ConstellationView[]>(() => {
 
 function handleForgeConstellation(constellation: ForgeConstellationDef): void {
   if (forgeStore.forgeConstellation(constellation.id)) {
-    showToast(`Constellation forged: ${constellation.name}!`, 'forge')
+    heraldConstellation(constellation)
   }
 }
 
@@ -545,10 +550,12 @@ const rerollMatHave = computed(
 )
 
 function handleBuyBargain(): void {
-  const name = deal.value?.name ?? 'Bargain'
-  if (forgeStore.buyBargain()) {
-    showToast(`${name} purchased!`, 'purchase')
-  }
+  const def = deal.value
+  if (!def) return
+  // Zeichen VOR dem Kauf greifen: danach gilt der Handel als gekauft, und der
+  // Getter würfelt beim nächsten Restock ein anderes.
+  const icon = forgeStore.activeDealIcon
+  if (forgeStore.buyBargain()) heraldBargain(def, icon)
 }
 
 function handleReroll(): void {

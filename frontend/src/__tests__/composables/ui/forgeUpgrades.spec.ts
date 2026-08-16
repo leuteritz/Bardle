@@ -5,7 +5,7 @@ import {
   forgeUpgradeBucket,
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
@@ -40,6 +40,13 @@ import {
  * welcher Sperrgrund dazu gehört, und dass die Vorschau „nach dem Kauf" mit
  * derselben Formel rechnet wie der Kauf selbst.
  */
+
+/* Die Kaufquittung liegt seit dem Umbau beim Herold, nicht mehr beim Toast — und
+   sein Zustand ist ein Modul-Singleton. Ohne dieses Aufräumen trüge ein Test die
+   Meldung des vorigen mit sich, und eine ausgefallene Quittung fiele nicht auf. */
+beforeEach(() => {
+  useHerald().reset()
+})
 
 const ROOT_IDS = SOLAR_BRANCHES.map((b) => b.id)
 const BRANCH_ID = 'solarSails'
@@ -301,7 +308,7 @@ describe('useForgeUpgrades — buyUpgrade', () => {
     expect(buyUpgrade(ROOT_IDS[0])).toBe(true)
     expect(solar.branchLevel(ROOT_IDS[0])).toBe(1)
     expect(game.chimes).toBe(purse - cost)
-    expect(useActionToast().message.value).toContain(SOLAR_BRANCHES[0].name)
+    expect(useHerald().current.value?.headline).toBe(SOLAR_BRANCHES[0].name)
   })
 
   it('refuses a ray it cannot pay for and leaves the level alone', () => {
@@ -328,7 +335,7 @@ describe('useForgeUpgrades — buyUpgrade', () => {
     const { buyUpgrade } = useForgeUpgrades()
     expect(buyUpgrade(BRANCH_ID)).toBe(true)
     expect(forge.nodeLevel(BRANCH_ID)).toBe(1)
-    expect(useActionToast().message.value).toContain(getForgeNode(BRANCH_ID)!.name)
+    expect(useHerald().current.value?.headline).toBe(getForgeNode(BRANCH_ID)!.name)
   })
 
   it('refuses a locked node and an id that does not exist', () => {
@@ -660,11 +667,13 @@ describe('useForgeUpgrades — Stapelkauf', () => {
     expect(game.chimes).toBeGreaterThanOrEqual(0)
   })
 
-  it('buyMany meldet EINMAL, nicht je Stufe', () => {
+  it('buyMany meldet EINMAL mit der Spanne, nicht je Stufe', () => {
     unlockBoughs()
     useGameStore().chimes = chimesFor(BOUGH_ID, 3)
     useForgeUpgrades().buyMany(BOUGH_ID, 3)
-    expect(useActionToast().message.value).toContain('Lv 3')
+    // Eine Quittung, die von 0 auf 3 zeigt — und nichts wartet dahinter.
+    expect(useHerald().current.value?.eyebrow).toContain('LV 0 → 3')
+    expect(useHerald().current.value?.headline).toBe(getForgeNode(BOUGH_ID)!.name)
   })
 
   it('buyMany tut bei 0 oder weniger gar nichts', () => {

@@ -1,10 +1,11 @@
 import { ref, readonly } from 'vue'
 import { HERALD_DISPLAY_MS, HERALD_QUEUE_MAX } from '@/config/constants'
 
-/** The milestone moments worth a large centered announcement — plus `ready`,
- *  the one ambient kind: a notify badge has just appeared somewhere in the
- *  chrome and says so once, compactly. */
-export type HeraldKind = 'warp' | 'champion' | 'rankup' | 'chronicle' | 'omen' | 'ready'
+/** The milestone moments worth a large centered announcement — plus the two
+ *  small kinds: `ready` is ambient (a notify badge has just appeared and says so
+ *  once), `forged` is a receipt (the player bought something in the Star Forge).
+ *  Each has its own arrival rule, see announceAmbient / announceAction. */
+export type HeraldKind = 'warp' | 'champion' | 'rankup' | 'chronicle' | 'omen' | 'ready' | 'forged'
 
 /** Fully-resolved presentation payload — the composable stays purely mechanical
  *  (queue + preempt + timer); the caller supplies everything the banner shows. */
@@ -70,6 +71,39 @@ function announceAmbient(payload: HeraldPayload) {
   announce(payload)
 }
 
+/**
+ * A receipt for something the player just did — a Star Forge purchase.
+ *
+ * It behaves like `useActionToast`: only the LATEST one matters. A second
+ * receipt replaces the one on screen instead of queueing behind it, because a
+ * queue would trail behind a player clicking through eight levels and still be
+ * naming the first one when they stop.
+ *
+ * Against a MILESTONE it steps aside rather than over: it jumps to the head of
+ * the queue and plays the moment the ceremony ends. Never dropped — the player
+ * spent something and has to see what for.
+ */
+function announceAction(payload: HeraldPayload) {
+  // At most one receipt anywhere: an older one is worthless the moment a newer
+  // purchase happens.
+  queue.value = queue.value.filter((i) => i.kind !== payload.kind)
+  const busyWithOther = !!current.value && current.value.kind !== payload.kind
+  const item = { ...payload, id: ++idCounter }
+  if (busyWithOther) {
+    queue.value.unshift(item)
+  } else {
+    // Take the screen now. The timer lives only in pump(), so it is cleared
+    // here and set there — never in two places.
+    if (displayTimer) {
+      clearTimeout(displayTimer)
+      displayTimer = null
+    }
+    current.value = null
+    queue.value.unshift(item)
+  }
+  pump()
+}
+
 function reset() {
   queue.value = []
   current.value = null
@@ -80,5 +114,5 @@ function reset() {
 }
 
 export function useHerald() {
-  return { current: readonly(current), announce, announceAmbient, reset }
+  return { current: readonly(current), announce, announceAmbient, announceAction, reset }
 }

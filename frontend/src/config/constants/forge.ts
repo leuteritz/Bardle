@@ -950,8 +950,21 @@ export const FORGE_SEARCH_PLACEHOLDER = `Search ${FORGE_COUNT_TOKEN} upgrades…
 export const FORGE_SEARCH_CLEAR_ICON = 'lucide:x'
 export const FORGE_BUY_ALL_LABEL = 'Buy all ready'
 export const FORGE_BUY_ALL_ICON = 'ph:lightning-fill'
-/** Sammelmeldung des Stapelkaufs — die Marke trägt die Zahl der gewachsenen Knoten. */
-export const FORGE_BUY_ALL_TOAST = `Grew ${FORGE_COUNT_TOKEN} upgrades`
+/**
+ * Schlagzeile des Sammelkaufs im Herold-Banner — die Marke trägt die Zahl der
+ * gewachsenen Knoten.
+ *
+ * Als Schlagzeile gesetzt und nicht als Satz („Grew {n} upgrades"): sie steht im
+ * Banner an derselben Stelle wie der Name eines einzelnen Upgrades, und ein Name
+ * fängt nicht mit einem Verb an.
+ */
+export const FORGE_BUY_ALL_HERALD = `${FORGE_COUNT_TOKEN} Upgrades Grown`
+/**
+ * Wie viele Namen die Zeile unter der Sammelmeldung aufzählt, bevor sie auf
+ * „+k more" umschaltet. Drei, weil die Zeile im Banner einzeilig bleibt und ein
+ * vierter Name sie schon bei mittleren Längen über die Bannerbreite trägt.
+ */
+export const FORGE_BUY_ALL_HERALD_NAME_CAP = 3
 
 /**
  * Die Marke am günstigsten kaufbaren Knoten.
