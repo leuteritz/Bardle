@@ -17,6 +17,8 @@ import {
   STAR_PHASE_DATA,
   CHIMES_COST_ICON,
   FORGE_PANEL_SECTIONS,
+  NOTIFY_BADGE_TITLE,
+  type NotifyBadgeKind,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
@@ -26,7 +28,7 @@ import type { ChampionRole } from '@/types'
    (expedition/champions) close the surrounding tooltip via the `close` prop
    handed down from RpgBadgeTooltip's #tip slot. */
 const props = defineProps<{
-  kind: 'level' | 'expedition' | 'forge' | 'champions' | 'skill' | 'planet' | 'shop'
+  kind: NotifyBadgeKind
   /** close callback from RpgBadgeTooltip's #tip slot — lets interactive
       tooltips dismiss themselves after an action */
   close?: () => void
@@ -170,9 +172,12 @@ function buyAllUpgrades() {
 
 <template>
   <div class="bt" :class="`bt--${kind}`">
+    <!-- Eine Überschriftenzeile für alle Arten: derselbe Wortlaut, den auch der
+         `ready`-Herold als Schlagzeile trägt (NOTIFY_BADGE_TITLE). -->
+    <div class="bt__title">{{ NOTIFY_BADGE_TITLE[kind] }}</div>
+
     <!-- ══════════ LEVEL ══════════ -->
     <template v-if="kind === 'level'">
-      <div class="bt__title">Next Level</div>
       <div class="lv-tt__body">
         <div class="lv-tt__row">
           <span class="lv-tt__current">{{
@@ -193,7 +198,6 @@ function buyAllUpgrades() {
 
     <!-- ══════════ EXPEDITION ══════════ -->
     <template v-else-if="kind === 'expedition'">
-      <div class="bt__title">Expeditions Ready</div>
       <ul class="ex-tt__list">
         <li v-for="exp in readyExpeditions" :key="exp.id" class="ex-tt__item">
           <Icon
@@ -219,7 +223,6 @@ function buyAllUpgrades() {
 
     <!-- ══════════ FORGE ══════════ -->
     <template v-else-if="kind === 'forge'">
-      <div class="bt__title">Sun Evolution Ready</div>
       <div class="fg-tt__body">
         <span class="fg-tt__spark">✦</span>
         <div class="fg-tt__lines">
@@ -235,7 +238,6 @@ function buyAllUpgrades() {
 
     <!-- ══════════ CHAMPIONS ══════════ -->
     <template v-else-if="kind === 'champions'">
-      <div class="bt__title">New Champions</div>
       <ul class="nc-tt__list">
         <li
           v-for="name in newChampions"
@@ -261,7 +263,6 @@ function buyAllUpgrades() {
 
     <!-- ══════════ SKILL ══════════ -->
     <template v-else-if="kind === 'skill'">
-      <div class="bt__title">Skill Ready</div>
       <div class="sk-tt__body">
         <img
           src="/img/BardAbilities/BardMeep-64.png"
@@ -281,7 +282,6 @@ function buyAllUpgrades() {
 
     <!-- ══════════ PLANET ══════════ -->
     <template v-else-if="kind === 'planet'">
-      <div class="bt__title">Orbit Upgrades</div>
       <button class="pu-tt__buyall" @click.stop="buyAllUpgrades">
         <Icon icon="ph:arrow-fat-up-fill" width="15" height="15" />
         Buy All
@@ -331,7 +331,6 @@ function buyAllUpgrades() {
          die Abteilung wählt der Shop-Tab in einem lokalen Zustand, es gibt
          keinen Weg, ihn von außen vorzuwählen. -->
     <template v-else-if="kind === 'shop'">
-      <div class="bt__title">Ready to Forge</div>
       <ul class="sh-tt__list">
         <li
           v-for="sec in shopReadySections"

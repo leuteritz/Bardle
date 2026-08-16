@@ -44,6 +44,7 @@
 import { computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useHerald } from '@/composables/ui/useHerald'
+import { useBadgeHeralds } from '@/composables/ui/useBadgeHeralds'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
@@ -60,6 +61,10 @@ import {
 const { current, announce, reset } = useHerald()
 const galaxyStore = useGalaxyStore()
 const battleStore = useBattleStore()
+
+// Die Notify-Marken melden sich über die kompakte `ready`-Fassung. Eigene Datei,
+// aber derselbe Ort der Anmeldung wie die Meilensteine unten.
+useBadgeHeralds()
 
 // ── Arming ──
 // loadGame() replays the whole save into the stores right after mount, jumping
@@ -339,6 +344,62 @@ function hexToRgbTriple(hex: string): string {
   text-overflow: ellipsis;
 }
 
+/* ── `ready`: die eine AMBIENTE Fassung ──
+   Eine aufgetauchte Notify-Marke ist ein Hinweis, kein Ereignis. Sie trägt
+   dieselbe Kontur wie ein Meilenstein — damit der Spieler sie sofort als
+   dieselbe Stimme liest — aber durchweg eine Stufe kleiner und mit halbem
+   Seitenschein, sodass ein bezahlbares Upgrade neben einem Galaxienwechsel
+   nicht gleich schwer wiegt.
+   Alle Werte sind STATISCH: der Schein steht, animiert bleiben nur die
+   vorhandenen transform/opacity-Keyframes (Performance-Regel 2). */
+.herald--ready {
+  gap: clamp(10px, 1.1vw, 18px);
+  min-width: clamp(240px, 21vw, 380px);
+  max-width: min(460px, 34vw);
+  padding: clamp(8px, 0.9vh, 14px) clamp(18px, 1.6vw, 34px);
+  box-shadow:
+    -52px 0 58px -40px rgba(var(--ac), 0.45),
+    52px 0 58px -40px rgba(var(--ac), 0.45);
+}
+.herald--ready .herald-img,
+.herald--ready .herald-medallion {
+  width: clamp(34px, 2.8vw, 46px);
+  height: clamp(34px, 2.8vw, 46px);
+}
+.herald--ready .herald-medallion {
+  border-width: 1px;
+  box-shadow:
+    0 0 11px rgba(var(--ac), 0.45),
+    inset 0 0 9px rgba(var(--ac), 0.28);
+}
+/* Das Glyph trägt im Template feste 40px für das große Medaillon — hier zieht
+   die Regel es auf das kleinere mit (CSS schlägt das Attribut). */
+.herald--ready .herald-icon {
+  width: clamp(24px, 2.1vw, 34px);
+  height: clamp(24px, 2.1vw, 34px);
+}
+.herald--ready .herald-eyebrow {
+  font-size: clamp(9px, 0.68vw, 11px);
+  letter-spacing: 3px;
+  margin-bottom: 2px;
+}
+.herald--ready .herald-headline {
+  font-size: clamp(17px, 1.6vw, 26px);
+  letter-spacing: 1.5px;
+  text-shadow:
+    0 0 13px rgba(var(--ac), 0.42),
+    0 2px 5px rgba(0, 0, 0, 0.85);
+}
+.herald--ready .herald-sub {
+  font-size: clamp(11px, 0.82vw, 14px);
+  letter-spacing: 1.5px;
+  margin-top: 3px;
+}
+/* Der Streiflichtdurchlauf gehört zur Zeremonie — hier bleibt er weg. */
+.herald--ready .herald-sweep {
+  display: none;
+}
+
 /* ── Enter / leave: spawn in place, pure fade + scale ── */
 .herald-enter-active {
   transition:
@@ -412,6 +473,36 @@ function hexToRgbTriple(hex: string): string {
   }
   .herald-eyebrow {
     font-size: clamp(9px, 0.7vw, 12px);
+  }
+
+  /* Muss hier stehen: die `.herald`-Zeilen dieses Blocks stehen SPÄTER in der
+     Datei als der ready-Modifier und haben dieselbe Spezifität — ohne diese
+     Wiederholung fiele die kompakte Fassung auf Full HD auf die Meilenstein-
+     Maße zurück. Die verschachtelten Zeilen (Kopf, Medaillon …) gewinnen von
+     allein, sie sind zweistufig. */
+  .herald--ready {
+    gap: clamp(8px, 0.9vw, 14px);
+    min-width: clamp(210px, 18vw, 320px);
+    max-width: min(380px, 30vw);
+    padding: clamp(7px, 0.8vh, 11px) clamp(15px, 1.4vw, 26px);
+  }
+  .herald--ready .herald-img,
+  .herald--ready .herald-medallion {
+    width: clamp(30px, 2.4vw, 40px);
+    height: clamp(30px, 2.4vw, 40px);
+  }
+  .herald--ready .herald-icon {
+    width: clamp(24px, 1.8vw, 29px);
+    height: clamp(24px, 1.8vw, 29px);
+  }
+  .herald--ready .herald-headline {
+    font-size: clamp(15px, 1.35vw, 21px);
+  }
+  .herald--ready .herald-sub {
+    font-size: clamp(10px, 0.7vw, 12px);
+  }
+  .herald--ready .herald-eyebrow {
+    font-size: clamp(8px, 0.58vw, 10px);
   }
 }
 

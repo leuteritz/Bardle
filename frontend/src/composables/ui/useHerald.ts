@@ -1,8 +1,10 @@
 import { ref, readonly } from 'vue'
 import { HERALD_DISPLAY_MS, HERALD_QUEUE_MAX } from '@/config/constants'
 
-/** The milestone moments worth a large centered announcement. */
-export type HeraldKind = 'warp' | 'champion' | 'rankup' | 'chronicle' | 'omen'
+/** The milestone moments worth a large centered announcement — plus `ready`,
+ *  the one ambient kind: a notify badge has just appeared somewhere in the
+ *  chrome and says so once, compactly. */
+export type HeraldKind = 'warp' | 'champion' | 'rankup' | 'chronicle' | 'omen' | 'ready'
 
 /** Fully-resolved presentation payload — the composable stays purely mechanical
  *  (queue + preempt + timer); the caller supplies everything the banner shows. */
@@ -22,6 +24,9 @@ export interface HeraldPayload {
   accent: string
   /** Round the image (champion portrait) vs. contain it (rank emblem). */
   round?: boolean
+  /** How long this banner holds, in ms. Defaults to HERALD_DISPLAY_MS — only
+   *  the ambient `ready` kind shortens it. */
+  holdMs?: number
 }
 
 interface HeraldItem extends HeraldPayload {
@@ -43,7 +48,7 @@ function pump() {
     current.value = null
     displayTimer = null
     pump()
-  }, HERALD_DISPLAY_MS)
+  }, current.value.holdMs ?? HERALD_DISPLAY_MS)
 }
 
 function announce(payload: HeraldPayload) {
@@ -56,6 +61,15 @@ function announce(payload: HeraldPayload) {
   pump()
 }
 
+/** A nudge, not a ceremony. An ambient herald never queues behind a milestone
+ *  and never pushes one out of the buffer — is anything playing or waiting, it
+ *  simply does not happen. The badge it speaks for stays on screen either way,
+ *  so nothing is lost; a dropped WARP COMPLETE would be. */
+function announceAmbient(payload: HeraldPayload) {
+  if (current.value || queue.value.length > 0) return
+  announce(payload)
+}
+
 function reset() {
   queue.value = []
   current.value = null
@@ -66,5 +80,5 @@ function reset() {
 }
 
 export function useHerald() {
-  return { current: readonly(current), announce, reset }
+  return { current: readonly(current), announce, announceAmbient, reset }
 }

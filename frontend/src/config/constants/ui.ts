@@ -407,6 +407,67 @@ export const HERALD_ARM_DELAY_MS = 1_500
 export const HERALD_ACCENT_WARP = '150, 120, 255'
 export const HERALD_ACCENT_CHAMPION = '232, 192, 64'
 
+/**
+ * Standzeit der `ready`-Herolde — der kompakten Fassung, mit der sich eine neu
+ * aufgetauchte Notify-Marke einmal kurz meldet.
+ *
+ * Kürzer als `HERALD_DISPLAY_MS`, weil der Anlass ein anderer ist: ein Warp ist
+ * ein Ereignis, ein erschwinglich gewordenes Upgrade nur ein Hinweis. Er soll
+ * gelesen, nicht gefeiert werden.
+ */
+export const HERALD_AMBIENT_DISPLAY_MS = 1_400
+
+/**
+ * Sperrfrist je Badge-Quelle zwischen zwei `ready`-Herolden, in ECHTEN
+ * Millisekunden.
+ *
+ * Bewusst Wanduhr und nicht `gameNow()`: die Frist schützt die Aufmerksamkeit
+ * des Spielers, und die vergeht real. Unter Zeitraffer pendeln genau die Zähler
+ * am schnellsten um die Null, deren Marke sich gerade meldet — ein
+ * spielzeit-skaliertes Fenster würde dort mitschrumpfen und die Bremse genau
+ * dann lösen, wenn sie gebraucht wird. Dieselbe Begründung wie beim Aufblitzen
+ * in `composables/ui/useBadgeFlare.ts`.
+ */
+export const BADGE_HERALD_COOLDOWN_MS = 90_000
+
+/**
+ * Akzent (r,g,b) je Badge-Quelle für den `ready`-Herold.
+ *
+ * Dieselben Farben, die die Marken selbst tragen — violett/gold/pink/grün aus
+ * den `.header-notif-badge--*`-Verläufen in `AppHeaderComponent.vue`, azurn aus
+ * `.bt--shop` bzw. `ShopReadyBadge.vue`. Der Herold erscheint in der Farbe der
+ * Marke, die ihn ausgelöst hat, damit der Blick vom Banner zur Marke findet.
+ */
+export const BADGE_HERALD_ACCENT_EXPEDITION = '168, 85, 247'
+export const BADGE_HERALD_ACCENT_SUN = '240, 208, 96'
+export const BADGE_HERALD_ACCENT_SKILL = '236, 72, 153'
+export const BADGE_HERALD_ACCENT_PLANET = '52, 211, 153'
+export const BADGE_HERALD_ACCENT_SHOP = '96, 165, 250'
+
+/**
+ * Die Überschrift je Notify-Marke.
+ *
+ * Zwei Stellen zeigen denselben Wortlaut: der Kopf des Hover-Tooltips
+ * (`RpgBadgeTooltipBody.vue`) und die Schlagzeile des `ready`-Herolds
+ * (`composables/ui/useBadgeHeralds.ts`). Stünde er zweimal im Code, hieße
+ * dieselbe Marke nach der nächsten Umbenennung an einer Stelle anders.
+ *
+ * `level` und `champions` tragen keinen Herold — sie stehen hier trotzdem,
+ * weil eine halbe Tabelle schlechter ist als eine ganze: der Tooltip hat sie.
+ */
+export const NOTIFY_BADGE_TITLE = {
+  level: 'Next Level',
+  expedition: 'Expeditions Ready',
+  forge: 'Sun Evolution Ready',
+  champions: 'New Champions',
+  skill: 'Skill Ready',
+  planet: 'Orbit Upgrades',
+  shop: 'Ready to Forge',
+} as const
+
+/** Die Marken-Art, die `RpgBadgeTooltipBody` und der Herold gemeinsam kennen. */
+export type NotifyBadgeKind = keyof typeof NOTIFY_BADGE_TITLE
+
 // Offline progress
 export const OFFLINE_CPS_RATE = 0.6
 export const OFFLINE_MAX_HOURS = 10
