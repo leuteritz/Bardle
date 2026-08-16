@@ -4,7 +4,7 @@ import { useCpsStore } from '@/stores/core/cpsStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
-import type { ShopUpgrade, BuildingStat } from '@/types'
+import type { ShopUpgrade, BuildingStat, CpsFactor } from '@/types'
 import { logger } from '@/utils/logger'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useSynergyStore } from '@/stores/champions/synergyStore'
@@ -124,6 +124,58 @@ export const useShopStore = defineStore('shop', {
     topProducer() {
       const top = this.buildingStats[0]
       return top || { name: 'None', icon: '/img/BardAbilities/BardChime.png' }
+    },
+
+    /**
+     * Die Multiplikatorkette aus `calculateTotalCPS()`, aufgeschlüsselt nach
+     * Herkunft — die Grundlage des Herkunftsbands im Shop-Sockel
+     * (`ForgeYieldPlinth`).
+     *
+     * **Warum das hier steht und nicht in einem Composable.** Es ist keine
+     * UI-Hilfe, sondern eine zweite Lesart derselben Rechnung: wer der Kette
+     * unten einen Faktor hinzufügt, muss ihn hier einordnen, sonst zeigt das
+     * Band eine Zahl, die es im Spiel nicht gibt. Im Nachbarordner liefe das
+     * still auseinander. Gehalten wird es trotzdem nicht von der Nähe, sondern
+     * von `__tests__/stores/cpsFactorBreakdown.spec.ts`: das Produkt dieser
+     * Faktoren muss dem Multiplikator-Anteil von `calculateTotalCPS()` gleichen.
+     *
+     * Die Reihenfolge ist die von `FORGE_YIELD_SOURCES`, nicht die der Kette —
+     * dort steht die Lesereihenfolge des Bandes, und zwei Reihenfolgen für
+     * dieselbe Liste wären eine zweite Quelle.
+     *
+     * **`mvpBuffMultiplier` fehlt mit Absicht.** Er steht nicht in der Kette,
+     * sondern wird erst bei der ANZEIGE daraufmultipliziert (Kopfzeile wie
+     * Sockel). Hier aufgenommen wiche das Produkt von der echten CpS ab.
+     *
+     * Roh, ungefiltert, ungewichtet: was neutral ist (exakt 1), fliegt erst in
+     * der Darstellung heraus, und die Prozentrechnung des Bandes ebenso.
+     */
+    cpsFactorBreakdown(): CpsFactor[] {
+      const gameStore = useGameStore()
+      const mod = gameStore.activeModifier
+
+      return [
+        { id: 'solar', factor: useSolarUpgradeStore().flightSpeedMultiplier },
+        { id: 'forge', factor: useStarForgeStore().cpsMult },
+        { id: 'meeps', factor: useMeepTreeStore().fx.cpsMult },
+        { id: 'codex', factor: useAchievementStore().cpsMult },
+        { id: 'items', factor: useItemStore().totalCPSMultiplier },
+        { id: 'traits', factor: useSynergyStore().cpsSynergyMultiplier },
+        { id: 'universe', factor: mod.cpsMultiplier ?? 1 },
+        {
+          // Alles, was von selbst wieder abläuft — Zeit-Augments, eingesammelte
+          // Drifter, ein erfülltes Omen, Bards W und die Fähigkeits-Fenster.
+          id: 'boons',
+          factor:
+            useAugmentStore().temporaryCPSMultiplier *
+            useDrifterStore().cpsMult *
+            useOmenStore().cpsMult *
+            useBardAbilityStore().cpsMult *
+            gameStore.abilityCPSMultiplier,
+        },
+        { id: 'void', factor: useVoidStore().cpsMult },
+        { id: 'bosses', factor: usePlanetBossStore().cpsPenaltyMultiplier },
+      ]
     },
   },
 
@@ -264,6 +316,13 @@ export const useShopStore = defineStore('shop', {
       return typeof amount === 'number' ? Math.max(0, amount) : 0
     },
 
+    /**
+     * ⚠ Wer dieser Kette einen FAKTOR hinzufügt, ordnet ihn auch im Getter
+     * `cpsFactorBreakdown` einer Herkunft zu — sonst zeigt das Herkunftsband im
+     * Shop-Sockel einen Ertrag, den es nicht gibt. `cpsFactorBreakdown.spec.ts`
+     * bricht in dem Fall, und das ist beabsichtigt. Für einen neuen Summanden
+     * (wie `solarCPS`) gilt das nicht — das Band zerlegt nur die Multiplikatoren.
+     */
     calculateTotalCPS(): number {
       const gameStore = useGameStore()
       const augmentStore = useAugmentStore()

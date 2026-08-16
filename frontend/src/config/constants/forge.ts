@@ -1211,23 +1211,110 @@ export const FORGE_UPGRADE_CAPPED_REASON = 'Raise the other rays to match'
  *    unten zentrierte Karte läge. Ein Knoten hinter dem Sockel liefe weiter,
  *    wäre aber nicht mehr anklickbar.
  *
- * Der Preis ist, dass die Bühne diese Höhe verliert und bei Einpasszoom rund
- * ein Zehntel kleiner rendert. Das ist der ehrliche Preis für eine Anzeige, die
- * nie etwas verdeckt.
+ * Der Preis ist, dass die Bühne diese Höhe verliert und bei Einpasszoom kleiner
+ * rendert. Das ist der ehrliche Preis für eine Anzeige, die nie etwas verdeckt.
+ *
+ * **Von 72 auf 48 gefallen** (kompakt 60 → 40), als der Sockel aufhörte, vier
+ * Zahlen zu zeigen. Drei davon — Chime-Bestand, Chimes/Sek, Chimes/Klick —
+ * standen wörtlich in der Kopfzeile des Spiels, und die ist sichtbar, während
+ * das Profil offen steht: das Modal beginnt UNTER ihr (`BardProfileMenu`,
+ * `top: calc(var(--level-badge-bottom, …) + 8px)`). Der alte Kopfkommentar
+ * begründete den Sockel mit „die Kopfzeile steht außerhalb des Profil-Fensters"
+ * — außerhalb heißt aber nicht verdeckt.
+ *
+ * Was blieb, ist die einzige Zahl, die es sonst nirgends gab: WOHER der Ertrag
+ * kommt. `FORGE_YIELD_SOURCES` unten trägt die Herkünfte, `shopStore
+ * .cpsFactorBreakdown` die Werte. Die niedrigere Höhe fällt von selbst an den
+ * Baum-Viewport (`flex: 1`), und `fitScale` nimmt `min(width, height)` — auf
+ * flachen Viewports ist die Höhe das Knappe, der Zugewinn also echt.
  */
-export const FORGE_YIELD_PLINTH_HEIGHT_PX = 72
-export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 60
+export const FORGE_YIELD_PLINTH_HEIGHT_PX = 48
+export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 40
+
 /**
- * Glyphen der Felder. Sanduhr und Goldklumpen sind KEINE freie Wahl — sie
- * stehen in `SOLAR_BRANCHES` bereits für „Chimes/Sek" und „Chimes/Klick", und
- * genau diese beiden Zahlen zeigt der Sockel. Der Chime-Bestand selbst trägt
- * kein Iconify-Zeichen, sondern dasselbe Bild wie jede Kostenzeile.
+ * Die Herkünfte des Chime-Ertrags — eine Zeile je Segment des Bandes,
+ * Reihenfolge = Lesereihenfolge von links.
+ *
+ * Zusammen decken sie JEDEN Faktor aus `shopStore.calculateTotalCPS()` ab, und
+ * eine Spec bindet das (`__tests__/stores/cpsFactorBreakdown.spec.ts`): das
+ * Produkt aller Faktoren muss dem Multiplikator-Anteil der Kette entsprechen.
+ * Wer der Kette einen Faktor hinzufügt, ohne ihn hier einzuordnen, bricht sie —
+ * und das ist ihr Zweck.
+ *
+ * **Gruppiert nach dem System, das der SPIELER kennt, nicht nach Store-Grenze.**
+ * Die Trennlinie ist dabei nicht die Herkunft, sondern die Dauer:
+ *
+ *   • Dauerhaft Erworbenes steht EINZELN — jedes ist eine Kaufentscheidung, und
+ *     „dein Meep-Baum trägt nichts bei" ist eine Auskunft, auf die man handeln
+ *     kann.
+ *   • Befristetes steht ZUSAMMEN als `boons`. Vier Quellen, die im Sekundentakt
+ *     kommen und gehen, wären vier zappelnde Mini-Segmente; als eine Aussage
+ *     („gerade läuft etwas") ist es lesbar. Dass Augments hier stehen und nicht
+ *     bei den gekauften Systemen, liegt am Getter: `temporaryCPSMultiplier`
+ *     zählt ausschließlich laufende Zeit-Buffs.
+ *
+ * **Kein Glyph je Zeile.** Bei 48px Sockelhöhe bleiben einem Segment rund 14px
+ * für seine Beschriftung; ein Icon davor halbiert die Textbreite und ist in
+ * dieser Größe ohnehin nur noch ein grauer Fleck (Icon-Regel: unter 18px tragen
+ * nur gefüllte, geometrische Formen). Farbe und Wort tragen die Aussage. Einzig
+ * der Void-Abzug führt im Kärtchen sein kanonisches `VOID_CARD_ICON`.
+ *
+ * **Die Farben.** Wo das Projekt eine Systemfarbe kennt, steht sie hier und wird
+ * nicht neu erfunden: Gold und Grün sind die Ringfarben aus
+ * `FORGE_UPGRADE_GROUPS`, Eisblau die der Konstellationen, Violett das „episch"
+ * der Boughs, Magenta `VOID_SEVERITY_COLOR.abyssal`, Rot das Projekt-Rot für
+ * Fehlendes. Für Meeps, Items, Traits und Universum gibt es keine — sie sind
+ * hier festgelegt, mit Abstand zu ihren Nachbarn im Band. `boons` trägt als
+ * einziges einen entsättigten, kühlen Ton — es ist das einzige Segment, das
+ * von selbst wieder verschwindet, und soll sich von den warmen Kauffarben
+ * abheben, ohne sie zu übertönen.
+ *
+ * **Nicht heller als seine Nachbarn.** Im ersten Anlauf stand hier ein fast
+ * weißes `#f2f0e0`, mit der Begründung „hell heißt flüchtig". Im Bild gemessen
+ * war es der lauteste Punkt des ganzen Sockels: das Auge landete auf dem
+ * Segment, das in dreißig Sekunden weg ist, während Strahlen und Baum daneben
+ * verblassten. Was bleibt, darf nicht leiser sein als was vergeht.
  */
-export const FORGE_YIELD_ICONS = {
-  perSecond: 'game-icons:hourglass',
-  perClick: 'game-icons:gold-nuggets',
-  forgeShare: 'game-icons:anvil-impact',
-} as const
+export interface ForgeYieldSourceDef {
+  id: string
+  /** Was unter dem Segment steht. Kurz — mehr als ein Wort passt nicht. */
+  label: string
+  /** Der ausgeschriebene Name im Kärtchen. */
+  title: string
+  color: string
+}
+
+export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
+  { id: 'solar', label: 'Solar', title: 'Solar rays', color: '#e8c040' },
+  { id: 'forge', label: 'Forge', title: 'Star Forge', color: '#7fd048' },
+  { id: 'meeps', label: 'Meeps', title: 'Meep skill tree', color: '#40c8b0' },
+  { id: 'codex', label: 'Codex', title: 'Astral Codex', color: '#86d0ff' },
+  { id: 'items', label: 'Items', title: 'Equipped items', color: '#d07a30' },
+  { id: 'traits', label: 'Traits', title: 'Origin traits', color: '#c9a0ff' },
+  { id: 'universe', label: 'Cosmos', title: 'Universe and providences', color: '#6a80d8' },
+  { id: 'boons', label: 'Boons', title: 'Running boons', color: '#a9b6c4' },
+  { id: 'void', label: 'Void', title: 'The Void', color: '#e0409f' },
+  { id: 'bosses', label: 'Bosses', title: 'Planet bosses', color: '#cc6050' },
+]
+
+/** Kopfzeile links vom Band und der Leerzustand, solange nichts wirkt. */
+export const FORGE_YIELD_TITLE = 'Chime yield'
+export const FORGE_YIELD_EMPTY = 'Nothing multiplies your yield yet — grow the tree.'
+/**
+ * Mindestbreite eines Segments in Prozent der Bandbreite. Ein Faktor von ×1,002
+ * ergäbe sonst einen Strich von unter einem Pixel: unsichtbar, aber mit
+ * Kärtchen — man kann ihn nicht treffen und weiß nicht, dass er da ist. Die
+ * fehlende Breite nehmen die übrigen Segmente anteilig auf.
+ */
+export const FORGE_YIELD_MIN_SEGMENT_PCT = 2.5
+/**
+ * Ab welcher Breite ein Segment sein Wort trägt. Darunter bleibt es stumm und
+ * spricht nur im Kärtchen: „Universe" braucht bei 10px Schrift rund 55px, und
+ * ein auf drei Buchstaben abgeschnittenes Wort sagt weniger als keins. Der Wert
+ * ist ein Anteil der BAUMSPALTE, die je nach Auflösung 700 bis 3200px misst —
+ * auf 4K trägt damit fast jedes Segment sein Wort, auf Full HD nur die breiten.
+ */
+export const FORGE_YIELD_LABEL_MIN_PCT = 9
 /**
  * Chime-Bild der Kostenzeilen — dasselbe Artwork, das Header, Command Panel,
  * Sigil-Panel und Champion-Shop zeigen. Die Forge trug hier lange die

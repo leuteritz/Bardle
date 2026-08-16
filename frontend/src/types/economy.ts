@@ -150,6 +150,21 @@ export interface BuildingStat {
   productionPercentage: number
 }
 
+/**
+ * Ein Glied der CpS-Multiplikatorkette, so wie `shopStore.cpsFactorBreakdown`
+ * es liefert: roh, ungefiltert, ungewichtet.
+ *
+ * Die Prozentrechnung, das Ausblenden neutraler Glieder und die Trennung in
+ * Beitrag und Abzug sind DARSTELLUNG und stehen bewusst nicht hier — sie
+ * gehören in die Komponente, die das Band zeichnet.
+ */
+export interface CpsFactor {
+  /** Schlüssel in `FORGE_YIELD_SOURCES` — dort stehen Label und Farbe. */
+  id: string
+  /** Das Produkt aller Faktoren dieser Herkunft. Neutral ist exakt 1. */
+  factor: number
+}
+
 export interface TimePeriod {
   key: string
   label: string
