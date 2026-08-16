@@ -9,7 +9,7 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { usePlanetShopStore, PLANET_ROLES } from '@/stores/world/planetShopStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useUiStore } from '@/stores/core/uiStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import {
   CHAMP_TOOLTIP_MAX_VISIBLE,
@@ -42,7 +42,7 @@ const battleStore = useBattleStore()
 const planetShopStore = usePlanetShopStore()
 const starForgeStore = useStarForgeStore()
 const uiStore = useUiStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 /* ── level ──────────────────────────────────────────────────────────── */
 const levelProgress = computed(() =>
@@ -57,8 +57,17 @@ const readyExpeditions = computed(() =>
 function collectAll() {
   const ready = [...readyExpeditions.value]
   if (ready.length === 0) return
+  const reward = ready.reduce((sum, exp) => sum + (exp.reward ?? 0), 0)
   for (const exp of ready) expeditionStore.collectExpedition(exp.id)
-  showToast('Expedition rewards collected!', 'expedition')
+  announceReceipt({
+    kind: 'expedition',
+    headline: 'Rewards collected',
+    subline: `${ready.length} crew${ready.length === 1 ? '' : 's'} home`,
+    delta: reward > 0 ? { value: reward, unit: 'chimes' } : undefined,
+    // Derselbe Schlüssel wie im Expeditions-Tab — dieselbe Handlung, zwei Wege
+    // dorthin.
+    mergeKey: 'expedition/collect',
+  })
   props.close?.()
 }
 

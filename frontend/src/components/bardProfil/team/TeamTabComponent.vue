@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { useUiStore } from '@/stores/core/uiStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import {
   ROLES,
   TEAM_TAB_MOUNT_STAGE_BOARD,
@@ -51,7 +51,7 @@ const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partia
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
 const uiStore = useUiStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 // ── Gestaffelter Aufbau ──────────────────────────────────────────────────────
 // Siehe TEAM_TAB_MOUNT_STAGE_*: der Tab baut sich über drei Frames auf, damit
@@ -317,29 +317,6 @@ const sidePanelWidth = computed(() => {
   return synergiesOpen.value ? TEAM_SIGIL_SYNERGIES_PANEL_WIDTH : 0
 })
 
-/**
- * Der Action-Toast steht über allen Tabs (eine Instanz in .rp-modal-content) und
- * zentriert deshalb im ganzen Modal. Hier gehört er über das SIGIL-BOARD, also
- * meldet der Tab die Breite seiner rechten Schiene und die Menü-Ebene rückt die
- * Karte darum ein.
- *
- * Als CSS-Ausdruck statt als Zahl: die Schienen tragen `zoom:
- * var(--team-ui-scale)` (siehe .sdp-panel, .rpg-side-shell), ihre fixen px sind
- * also erst nach der Skalierung das, was sie im Layout einnehmen — und die
- * Skala ist eine CSS-Variable, die hier niemand auflösen muss.
- *
- * Gemeldet wird der ZIELWERT, nicht die gemessene Breite: die Schiene gleitet
- * herein, ein ResizeObserver darauf feuerte pro Frame und schickte jedes Mal
- * einen Render durch das Menü.
- */
-const emit = defineEmits<{ 'toast-inset': [css: string] }>()
-
-watch(
-  sidePanelWidth,
-  (w) => emit('toast-inset', w > 0 ? `calc(${w}px * var(--team-ui-scale, 1))` : '0px'),
-  { immediate: true },
-)
-
 const roleIndex = computed(() => selectedRole.value ?? uiStore.rolesActiveSlot)
 const roleDef = computed(() => ROLES[roleIndex.value])
 const currentEquipment = computed(() => itemStore.slotEquipment[roleIndex.value])
@@ -468,11 +445,16 @@ function closeDestination() {
 function assignChampion(subSlot: number, champion: string) {
   if (subSlot === -1) {
     battleStore.setHeaderSlot(roleIndex.value, champion)
-    showToast(`${champion} set as ${roleDef.value.label}!`, 'assign')
   } else {
     battleStore.setSecondarySlot(roleIndex.value, subSlot, champion)
-    showToast(`${champion} assigned as ${allySlotLabel(subSlot)}!`, 'assign')
   }
+  announceReceipt({
+    kind: 'assign',
+    headline: champion,
+    subline: subSlot === -1 ? roleDef.value.label : allySlotLabel(subSlot),
+    portraitSrc: battleStore.getChampionImage(champion, { size: 'md' }),
+    mergeKey: 'assign',
+  })
 }
 
 function clearAlly(subSlot: number) {

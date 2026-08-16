@@ -18,7 +18,7 @@ import {
   STAR_PHASE_FINAL_INDEX,
 } from '@/config/constants'
 import { hpTier, hpPercentOf, planetBonusTextFor } from '@/utils/orbit/planetStatus'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import PlanetTargetPickerModal from './PlanetTargetPickerModal.vue'
@@ -38,7 +38,7 @@ const props = defineProps<{
 const store = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
 const shopStore = useShopStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 /** Orbit-Wrapper — der Tab-Loop setzt hier pro Frame `--orbit-delay`. */
 const orbitEl = ref<HTMLElement | null>(null)
@@ -144,15 +144,19 @@ function attune(count: number) {
   // Hinter der Sonne oder zerstört ist der Planet außer Reichweite — der Button
   // ist dann deaktiviert, dieser Guard fängt Tastatur-/Programmauslösung mit ab.
   if (levelUpBlocked.value) return
-  const before = props.planet.level
   const gained = store.levelUpPlanetTimes(props.planet.id, count)
   if (gained > 0) {
-    showToast(
-      gained === 1
-        ? `Planet reached Lvl ${props.planet.level}!`
-        : `+${gained} Levels → Lvl ${props.planet.level} (was ${before})`,
-      'levelup',
-    )
+    announceReceipt({
+      kind: 'levelup',
+      eyebrow: 'ORBIT',
+      headline: roleName.value,
+      subline: `Lv ${props.planet.level}`,
+      portraitSrc: roleImage.value,
+      delta: { value: gained, unit: 'levels', unitOne: 'level' },
+      // Je Slot ein eigener Schlüssel: zwei verschiedene Planeten stehen
+      // nebeneinander, statt sich zu einer Karte mit fremdem Bild zu verrechnen.
+      mergeKey: `levelup/planet/${props.planet.id}`,
+    })
   }
 }
 

@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import {
   SUPERNOVA_DURATION_MS,
   SUPERNOVA_FLASH_FRACTION,
@@ -33,7 +33,7 @@ import {
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const solarStore = useSolarUpgradeStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 const canvasEl = ref<HTMLCanvasElement | null>(null)
 
 interface Shard {
@@ -225,7 +225,15 @@ watch(
   () => solarStore.supernovaTrigger,
   (value) => {
     if (!value) return
-    showToast('The star has collapsed — a black hole remains', 'event')
+    // Bewusst QUITTUNG, nicht Zeremonie: der Kollaps hat bereits einen
+    // bildschirmfüllenden Canvas-Effekt: ein großes Banner obendrauf wäre zu
+    // viel. Die Karte sagt nur, was gerade geschehen ist.
+    announceReceipt({
+      kind: 'event',
+      eyebrow: 'SUPERNOVA',
+      headline: 'The star has collapsed',
+      subline: 'A black hole remains',
+    })
     if (prefersReducedMotion) return
     shards = buildShards()
     startedAt = performance.now()

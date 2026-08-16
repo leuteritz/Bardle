@@ -10,7 +10,6 @@ import {
   STAR_PHASE_DATA,
   HEADER_GEM_ICONS,
   HERALD_ARM_DELAY_MS,
-  HERALD_AMBIENT_DISPLAY_MS,
   BADGE_HERALD_COOLDOWN_MS,
   BADGE_HERALD_ACCENT_EXPEDITION,
   BADGE_HERALD_ACCENT_SUN,
@@ -28,8 +27,8 @@ import {
  * Shop-Ecktaste. Wer nicht gerade dorthin sieht, verpasst sie; ein gerade
  * bezahlbar gewordenes Star-Forge-Upgrade meldete sich bisher gar nicht. Der
  * `ready`-Herold schließt die Lücke, ohne den Meilensteinen ihr Gewicht zu
- * nehmen: er ist kompakter, steht kürzer und weicht ihnen immer aus
- * (`announceAmbient`, siehe `useHerald.ts`).
+ * nehmen: er läuft in der kompakten Quittungsspur und weicht einer laufenden
+ * Zeremonie immer aus (`announceAmbient`, siehe `useHerald.ts`).
  *
  * EIN Aufruf, aus `HeraldOverlay.vue` heraus — dort liegen die übrigen
  * Herold-Auslöser bereits. Eigene Datei, weil das Overlay lang genug ist und
@@ -218,10 +217,12 @@ export function useBadgeHeralds() {
           headline: NOTIFY_BADGE_TITLE[src.kind],
           subline: src.subline(now),
           icon: src.icon,
-          imageSrc: src.imageSrc,
+          portraitSrc: src.imageSrc,
           accent: src.accent,
-          round: false,
-          holdMs: HERALD_AMBIENT_DISPLAY_MS,
+          // Je Marke ein eigener Schlüssel: zwei verschiedene Hinweise stehen
+          // nebeneinander, statt sich zu einem `×2` zu verrechnen — sie
+          // erzählen verschiedene Dinge.
+          mergeKey: `ready/${src.kind}`,
         })
       },
     )

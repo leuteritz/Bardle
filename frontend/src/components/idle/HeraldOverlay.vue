@@ -1,42 +1,50 @@
 <template>
-  <div class="herald-layer" aria-hidden="true">
-    <!-- out-in: the leaving banner is fully gone before the next enters, so a
-         preempting replacement can never sit beside it and shove it sideways -->
-    <Transition name="herald" mode="out-in">
-      <div
-        v-if="current"
-        :key="current.id"
-        class="herald"
-        :class="`herald--${current.kind}`"
-        :style="{ '--ac': current.accent }"
-      >
-        <div class="herald-goldline herald-goldline--top" />
-        <div class="herald-sweep" />
+  <!-- ZWEI Spuren in EINER Flex-Achse: oben die Zeremonie, darunter der
+       Quittungsstapel. Dass die beiden sich nie überlappen, ist deshalb keine
+       Rechnung, sondern Layout — ohne Zeremonie nimmt die obere Zeile keine
+       Höhe ein und der Stapel rückt hoch. -->
+  <div class="herald-layer">
+    <div class="herald-ceremony" aria-hidden="true">
+      <!-- out-in: the leaving banner is fully gone before the next enters, so a
+           preempting replacement can never sit beside it and shove it sideways -->
+      <Transition name="herald" mode="out-in">
+        <div
+          v-if="current"
+          :key="current.id"
+          class="herald"
+          :class="`herald--${current.kind}`"
+          :style="{ '--ac': current.accent }"
+        >
+          <div class="herald-goldline herald-goldline--top" />
+          <div class="herald-sweep" />
 
-        <!-- Visual: image (champion portrait / rank emblem) or icon medallion -->
-        <div class="herald-visual">
-          <img
-            v-if="current.imageSrc"
-            :src="current.imageSrc"
-            alt=""
-            class="herald-img"
-            :class="current.round ? 'herald-img--round' : 'herald-img--emblem'"
-          />
-          <span v-else-if="current.icon" class="herald-medallion">
-            <Icon :icon="current.icon" width="40" height="40" class="herald-icon" />
-          </span>
+          <!-- Visual: image (champion portrait / rank emblem) or icon medallion -->
+          <div class="herald-visual">
+            <img
+              v-if="current.imageSrc"
+              :src="current.imageSrc"
+              alt=""
+              class="herald-img"
+              :class="current.round ? 'herald-img--round' : 'herald-img--emblem'"
+            />
+            <span v-else-if="current.icon" class="herald-medallion">
+              <Icon :icon="current.icon" width="40" height="40" class="herald-icon" />
+            </span>
+          </div>
+
+          <!-- Text -->
+          <div class="herald-text">
+            <div class="herald-eyebrow">{{ current.eyebrow }}</div>
+            <div class="herald-headline">{{ current.headline }}</div>
+            <div v-if="current.subline" class="herald-sub">{{ current.subline }}</div>
+          </div>
+
+          <div class="herald-goldline herald-goldline--bottom" />
         </div>
+      </Transition>
+    </div>
 
-        <!-- Text -->
-        <div class="herald-text">
-          <div class="herald-eyebrow">{{ current.eyebrow }}</div>
-          <div class="herald-headline">{{ current.headline }}</div>
-          <div v-if="current.subline" class="herald-sub">{{ current.subline }}</div>
-        </div>
-
-        <div class="herald-goldline herald-goldline--bottom" />
-      </div>
-    </Transition>
+    <HeraldReceiptStack />
   </div>
 </template>
 
@@ -45,6 +53,7 @@ import { computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useHerald } from '@/composables/ui/useHerald'
 import { useBadgeHeralds } from '@/composables/ui/useBadgeHeralds'
+import HeraldReceiptStack from './HeraldReceiptStack.vue'
 import { hexToRgbTriple } from '@/utils/ui/format'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
@@ -204,17 +213,27 @@ watch(rankOrdinal, (now, prev) => {
 <style scoped>
 /* Fixed, viewport-centered so warp/champion (idle board) and rank-ups (during
    an auto-battle, any tab) all land in the same upper-middle spot. Never blocks
-   input — purely celebratory. Sits below the bottom bar (z-10000) but above the
-   idle scene and profile modals. */
+   input — purely celebratory.
+ *
+ * Die Achse trägt BEIDE Spuren: Zeremonie oben, Quittungsstapel darunter. Der
+ * Anker sitzt bei 22 % statt wie früher bei 32 %, weil unter ihm jetzt bis zu
+ * drei Karten Platz brauchen.
+ *
+ * z-index 9700, nicht 9500: die Supernova-Überblendung liegt auf 9600, und
+ * genau während sie läuft, meldet sich der Sternkollaps als Quittung — auf 9500
+ * läge sie darunter. Weiterhin UNTER Pause-Overlay (9998) und Bottom-Bar
+ * (10000): der Herold darf das Chrome nicht überdecken. */
 .herald-layer {
   position: fixed;
-  top: 32%;
+  top: 22%;
   left: 0;
   right: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(10px, 1.2vh, 18px);
   pointer-events: none;
-  z-index: 9500;
+  z-index: 9700;
 }
 
 /* ── Banner shell ── */
@@ -336,100 +355,6 @@ watch(rankOrdinal, (now, prev) => {
   text-overflow: ellipsis;
 }
 
-/* ── Die zwei KLEINEN Fassungen: `ready` und `forged` ──
-   `ready` ist ein Hinweis (eine Notify-Marke ist aufgetaucht), `forged` eine
-   Quittung (der Spieler hat in der Star Forge gekauft). Beide tragen dieselbe
-   Kontur wie ein Meilenstein — damit der Spieler sie als dieselbe Stimme liest —
-   aber durchweg eine Stufe kleiner und mit halbem Seitenschein, sodass ein
-   bezahlbares Upgrade neben einem Galaxienwechsel nicht gleich schwer wiegt.
-   Alle Werte sind STATISCH: der Schein steht, animiert bleiben nur die
-   vorhandenen transform/opacity-Keyframes (Performance-Regel 2). */
-.herald--ready,
-.herald--forged {
-  gap: clamp(10px, 1.1vw, 18px);
-  min-width: clamp(240px, 21vw, 380px);
-  max-width: min(460px, 34vw);
-  padding: clamp(8px, 0.9vh, 14px) clamp(18px, 1.6vw, 34px);
-  box-shadow:
-    -52px 0 58px -40px rgba(var(--ac), 0.45),
-    52px 0 58px -40px rgba(var(--ac), 0.45);
-}
-.herald--ready .herald-img,
-.herald--ready .herald-medallion,
-.herald--forged .herald-img,
-.herald--forged .herald-medallion {
-  width: clamp(34px, 2.8vw, 46px);
-  height: clamp(34px, 2.8vw, 46px);
-}
-.herald--ready .herald-medallion,
-.herald--forged .herald-medallion {
-  border-width: 1px;
-  box-shadow:
-    0 0 11px rgba(var(--ac), 0.45),
-    inset 0 0 9px rgba(var(--ac), 0.28);
-}
-/* Das Glyph trägt im Template feste 40px für das große Medaillon — hier zieht
-   die Regel es auf das kleinere mit (CSS schlägt das Attribut). */
-.herald--ready .herald-icon,
-.herald--forged .herald-icon {
-  width: clamp(24px, 2.1vw, 34px);
-  height: clamp(24px, 2.1vw, 34px);
-}
-.herald--ready .herald-eyebrow,
-.herald--forged .herald-eyebrow {
-  font-size: clamp(9px, 0.68vw, 11px);
-  letter-spacing: 3px;
-  margin-bottom: 2px;
-}
-.herald--ready .herald-headline,
-.herald--forged .herald-headline {
-  font-size: clamp(17px, 1.6vw, 26px);
-  letter-spacing: 1.5px;
-  text-shadow:
-    0 0 13px rgba(var(--ac), 0.42),
-    0 2px 5px rgba(0, 0, 0, 0.85);
-}
-.herald--ready .herald-sub,
-.herald--forged .herald-sub {
-  font-size: clamp(11px, 0.82vw, 14px);
-  letter-spacing: 1.5px;
-  margin-top: 3px;
-}
-/* Der Streiflichtdurchlauf gehört zur Zeremonie — beim blossen Hinweis bleibt er
-   weg. Die Quittung behält ihn: ein Kauf ist eine Handlung und darf aufblitzen. */
-.herald--ready .herald-sweep {
-  display: none;
-}
-
-/* ── nur `forged` ──
-   Die Wirkungszeile ist ein ganzer Satz („Offline earnings +20% and extends the
-   offline cap by 4 hours.") und keine Kurzangabe. Einzeilig mit Ellipse endete
-   sie mitten im Wort, deshalb hier etwas mehr Breite und ZWEI erlaubte Zeilen —
-   die Schlagzeile bleibt einzeilig, sie trägt nur einen Namen. */
-.herald--forged {
-  max-width: min(560px, 40vw);
-  /* Diese Fassung erscheint IMMER über dem geöffneten Shop-Modal, nicht über dem
-     dunklen Sternenfeld, für das der weiche Auslauf gedacht war. Über den hellen
-     Panelflächen franste er aus und nahm der Zeile den Grund weg — der Körper
-     bleibt deshalb länger deckend und die Blende kürzer. */
-  background: linear-gradient(
-    to right,
-    rgba(17, 16, 8, 0),
-    rgba(11, 10, 6, 0.97) 9%,
-    rgba(11, 10, 6, 0.97) 91%,
-    rgba(17, 16, 8, 0)
-  );
-}
-.herald--forged .herald-sub {
-  white-space: normal;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  text-overflow: clip;
-  line-height: 1.28;
-}
-
 /* ── Enter / leave: spawn in place, pure fade + scale ── */
 .herald-enter-active {
   transition:
@@ -503,48 +428,6 @@ watch(rankOrdinal, (now, prev) => {
   }
   .herald-eyebrow {
     font-size: clamp(9px, 0.7vw, 12px);
-  }
-
-  /* Muss hier stehen: die `.herald`-Zeilen dieses Blocks stehen SPÄTER in der
-     Datei als die kleinen Modifier und haben dieselbe Spezifität — ohne diese
-     Wiederholung fielen die kompakten Fassungen auf Full HD auf die Meilenstein-
-     Maße zurück. Die verschachtelten Zeilen (Kopf, Medaillon …) gewinnen von
-     allein, sie sind zweistufig. */
-  .herald--ready,
-  .herald--forged {
-    gap: clamp(8px, 0.9vw, 14px);
-    min-width: clamp(210px, 18vw, 320px);
-    max-width: min(380px, 30vw);
-    padding: clamp(7px, 0.8vh, 11px) clamp(15px, 1.4vw, 26px);
-  }
-  /* Die Wirkungszeile braucht auch auf dem flachsten Viewport ihre Breite —
-     sonst rutscht sie in die zweite Zeile und schiebt das Banner in die Höhe. */
-  .herald--forged {
-    max-width: min(480px, 36vw);
-  }
-  .herald--ready .herald-img,
-  .herald--ready .herald-medallion,
-  .herald--forged .herald-img,
-  .herald--forged .herald-medallion {
-    width: clamp(30px, 2.4vw, 40px);
-    height: clamp(30px, 2.4vw, 40px);
-  }
-  .herald--ready .herald-icon,
-  .herald--forged .herald-icon {
-    width: clamp(24px, 1.8vw, 29px);
-    height: clamp(24px, 1.8vw, 29px);
-  }
-  .herald--ready .herald-headline,
-  .herald--forged .herald-headline {
-    font-size: clamp(15px, 1.35vw, 21px);
-  }
-  .herald--ready .herald-sub,
-  .herald--forged .herald-sub {
-    font-size: clamp(10px, 0.7vw, 12px);
-  }
-  .herald--ready .herald-eyebrow,
-  .herald--forged .herald-eyebrow {
-    font-size: clamp(8px, 0.58vw, 10px);
   }
 }
 

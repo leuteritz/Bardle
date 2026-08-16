@@ -43,7 +43,7 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import {
   ascensionRank,
   perkChoicesFor,
@@ -266,7 +266,7 @@ const inventoryStore = useInventoryStore()
 const itemStore = useItemStore()
 const skinStore = useSkinStore()
 const levelStore = useChampionLevelStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 
@@ -504,7 +504,13 @@ function equipSkin(id: string, label: string) {
   const name = champion.value
   if (!name || id === equippedSkin.value) return
   skinStore.setSkin(name, id)
-  showToast(`${name}: ${label} equipped!`, 'equip')
+  announceReceipt({
+    kind: 'equip',
+    headline: label,
+    subline: name,
+    portraitSrc: battleStore.getChampionImage(name, { size: 'md' }),
+    mergeKey: 'equip',
+  })
 }
 
 // ── Progression ──────────────────────────────────────────────────────────────
@@ -543,7 +549,16 @@ function doLevelUp() {
   const name = champion.value
   if (!name) return
   if (!levelStore.levelUp(name)) return
-  showToast(`${name} reached level ${levelStore.levelOf(name)}!`, 'levelup')
+  announceReceipt({
+    kind: 'levelup',
+    headline: name,
+    subline: `Level ${levelStore.levelOf(name)}`,
+    portraitSrc: battleStore.getChampionImage(name, { size: 'md' }),
+    delta: { value: 1, unit: 'levels', unitOne: 'level' },
+    // Je Champion ein eigener Schlüssel — sonst trüge die Karte den Namen des
+    // einen und das Portrait des anderen.
+    mergeKey: `levelup/champ/${name}`,
+  })
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
@@ -658,7 +673,13 @@ function pickPerk(perkId: string) {
   const name = champion.value
   if (!name) return
   if (!levelStore.choosePerk(name, perkId)) return
-  showToast(`${name} learned ${PERK_BY_ID[perkId]?.name ?? perkId}!`, 'perk')
+  announceReceipt({
+    kind: 'perk',
+    headline: PERK_BY_ID[perkId]?.name ?? perkId,
+    subline: name,
+    portraitSrc: battleStore.getChampionImage(name, { size: 'md' }),
+    mergeKey: 'perk/champ',
+  })
 }
 
 // ── Role scope: abilities + equipment belong to the slot, not the champion ───

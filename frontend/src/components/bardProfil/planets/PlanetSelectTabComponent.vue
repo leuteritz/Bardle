@@ -14,7 +14,7 @@ import {
   HP_BAR_SEGMENTS,
 } from '@/config/constants'
 import { usePlanetTabOrbit } from '@/composables/orbit/usePlanetTabOrbit'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import PlanetRailSlot from './PlanetRailSlot.vue'
@@ -23,16 +23,7 @@ import PlanetRoleChoicePanel from './PlanetRoleChoicePanel.vue'
 import PlanetStagePanel from './PlanetStagePanel.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
-/**
- * Der Action-Toast steht über allen Tabs und zentriert deshalb im ganzen Modal.
- * Hier soll er in der BÜHNE stehen, nicht neben ihr — also meldet der Tab, wie
- * breit seine rechte Schiene ist, und die Menü-Ebene rückt die Karte darum ein.
- * Der Wert ändert sich nie, ein einziges Mal beim Aufbau genügt.
- */
-const emit = defineEmits<{ 'toast-inset': [css: string] }>()
-
-/** Schienenbreite und Naht kommen aus der Konstante — dieselben Werte gehen an
- *  den Toast, damit die beiden nicht auseinanderlaufen können. */
+/** Schienenbreite und Naht kommen aus der Konstante, nicht aus dem CSS. */
 const railSeamWidthPx = `${PLANET_TAB_RAIL_SEAM_WIDTH}px`
 
 /**
@@ -41,18 +32,13 @@ const railSeamWidthPx = `${PLANET_TAB_RAIL_SEAM_WIDTH}px`
  * daneben. Die Rechnung ist nötig, weil `box-sizing: border-box` den Rahmen
  * sonst von der Innenbreite abzöge — die Kacheln würden schmaler, obwohl sich
  * an der Schiene nichts geändert hat.
- *
- * Derselbe Ausdruck geht an den Toast: er ist genau das, was rechts von der
- * Bühne belegt ist, und zwei getrennte Rechnungen dafür liefen auseinander.
  */
 const railOuterWidthCss = `calc(${PLANET_TAB_RAIL_WIDTH_CSS} + ${PLANET_TAB_RAIL_SEAM_WIDTH}px)`
-
-onMounted(() => emit('toast-inset', railOuterWidthCss))
 
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 /** Sichtbar = dieser Tab ist der offene. Steuert Uhr und Orbit-Schleife, die
  *  beide früher an der Lebensdauer der Komponente hingen. */
@@ -149,7 +135,12 @@ const jungleBuffSecsLeft = computed(() => {
 
 function buySlot(slotId: string) {
   store.buySlot(slotId)
-  showToast('Planet orbit slot unlocked!', 'unlock')
+  announceReceipt({
+    kind: 'unlock',
+    eyebrow: 'ORBIT',
+    headline: 'Orbit slot',
+    subline: 'A new planet can be settled',
+  })
 }
 
 // Current Sun-Phase colors for the stage backdrop sun (mirrors SunComponent vars).

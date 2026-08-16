@@ -26,7 +26,7 @@
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import type { ForgeSectionId } from '@/types'
 import {
   BARD_PROFILE_RAIL_MAX_PX,
@@ -41,7 +41,7 @@ import StarForgePanel from './StarForgePanel.vue'
 import ForgeSectionRail from './ForgeSectionRail.vue'
 
 const forgeStore = useStarForgeStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 /**
  * Welche Abteilung offen ist, liegt HIER und nicht mehr in `StarForgePanel`:
@@ -53,7 +53,14 @@ const activeSection = ref<ForgeSectionId>('upgrades')
 
 function maxOutForge(): void {
   forgeStore.adminMaxAll()
-  showToast('Forge maxed out for this star phase', 'forge')
+  announceReceipt({
+    kind: 'forge',
+    eyebrow: 'ADMIN',
+    headline: 'Forge maxed out',
+    subline: 'For this star phase',
+    // Ein Zustand, kein Vorgang: ein `×3` daran zählte nur die Klicks.
+    countable: false,
+  })
 }
 
 const railWidth = `${FORGE_RAIL_WIDTH_PX}px`

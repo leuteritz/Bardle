@@ -7,7 +7,7 @@ import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useSynergyStore } from '@/stores/champions/synergyStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useTeamSigil } from '@/composables/ui/useTeamSigil'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import { championArtSizeFor } from '@/utils/game/champions'
 import type { ChampionArtSize } from '@/types'
 import {
@@ -75,7 +75,7 @@ const battleStore = useBattleStore()
 const expeditionStore = useExpeditionStore()
 const synergyStore = useSynergyStore()
 const levelStore = useChampionLevelStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 const { newlyUnlockedChampions, secondarySlots } = storeToRefs(battleStore)
 const { autoLevelEnabled } = storeToRefs(levelStore)
 
@@ -92,12 +92,18 @@ const { autoLevelEnabled } = storeToRefs(levelStore)
 // board is open — the same reason needsAttention() stays affordability-blind.
 function toggleAutoLevel() {
   levelStore.setAutoLevel(!autoLevelEnabled.value)
-  showToast(
-    autoLevelEnabled.value
-      ? 'Auto level-up on — champions level as soon as you can pay for it.'
-      : 'Auto level-up off — levels are bought by hand again.',
-    'info',
-  )
+  announceReceipt({
+    kind: 'info',
+    eyebrow: 'AUTO LEVEL-UP',
+    headline: autoLevelEnabled.value ? 'On' : 'Off',
+    subline: autoLevelEnabled.value
+      ? 'Champions level as soon as you can pay for it'
+      : 'Levels are bought by hand again',
+    // Ein Umschalter, kein Vorgang: ein `×4` zählte nur die Klicks auf denselben
+    // Knopf, nicht vier verschiedene Ergebnisse.
+    countable: false,
+    mergeKey: 'autolevel',
+  })
 }
 
 // ── Admin: level the whole team ──────────────────────────────────────────────
@@ -118,10 +124,21 @@ const adminLevelableCount = computed(() => {
 function adminLevelTeam(steps: number) {
   const granted = levelStore.adminLevelUpTeam(steps)
   if (granted === 0) {
-    showToast('Whole team is already at the level cap.', 'warning')
+    announceReceipt({
+      kind: 'warning',
+      headline: 'Level cap reached',
+      subline: 'The whole team is at the cap',
+      countable: false,
+    })
     return
   }
-  showToast(`+${granted} champion level${granted === 1 ? '' : 's'} granted.`, 'levelup')
+  announceReceipt({
+    kind: 'levelup',
+    eyebrow: 'ADMIN',
+    headline: 'Team levelled',
+    delta: { value: granted, unit: 'levels', unitOne: 'level' },
+    mergeKey: 'levelup/team',
+  })
 }
 
 /** Satelliten und Deko erscheinen erst, wenn das Board selbst steht. */

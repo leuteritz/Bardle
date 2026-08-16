@@ -19,7 +19,7 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { meepSkillBucket, useMeepSkills } from '@/composables/ui/useMeepSkills'
 import { useMeepSpotlight } from '@/composables/ui/useMeepSpotlight'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import MeepSkillCard from './MeepSkillCard.vue'
 import MeepSkillTooltip from './MeepSkillTooltip.vue'
 import type { MeepSkillBucketId, MeepSkillEntry, MeepSkillTipAnchor } from '@/types'
@@ -42,7 +42,7 @@ const emit = defineEmits<{ select: [id: string] }>()
 
 const { skillEntries, entryById, buySkill } = useMeepSkills()
 const { orbitHoverId, listHoverId, setListHover } = useMeepSpotlight()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 /** Die beiden Zustände, an denen nichts mehr zu entscheiden ist. */
 const ARCHIVE_BUCKETS: readonly MeepSkillBucketId[] = ['learned', 'sealed']
@@ -152,7 +152,18 @@ function learn(id: string): void {
   const entry = entryById.value.get(id)
   if (!buySkill(id)) return
   flashedId.value = id
-  if (entry) showToast(`${entry.name} learned!`, 'perk')
+  if (entry) {
+    announceReceipt({
+      kind: 'perk',
+      eyebrow: 'MEEP PATH',
+      headline: entry.name,
+      subline: entry.branchName,
+      icon: entry.icon,
+      delta: { value: -entry.cost, unit: 'meeps' },
+      // Derselbe Schlüssel wie im Best-Buy-Panel: dieselbe Handlung, zwei Wege.
+      mergeKey: 'perk/meep',
+    })
+  }
   setTimeout(() => {
     if (flashedId.value === id) flashedId.value = null
   }, MEEP_SKILL_FLASH_MS)

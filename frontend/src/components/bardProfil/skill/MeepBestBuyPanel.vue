@@ -23,7 +23,7 @@ import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useMeepSkills } from '@/composables/ui/useMeepSkills'
 import { useMeepSpotlight } from '@/composables/ui/useMeepSpotlight'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import { MEEP_TREE_BADGE_ICON, MEEP_TREE_TIERS_PER_BRANCH } from '@/config/progression/meepTree'
 import {
   MEEP_BEST_BUY_ACT_LABEL,
@@ -52,7 +52,7 @@ const panelHeight = `clamp(${MEEP_BEST_BUY_PANEL_MIN_PX}px, ${MEEP_BEST_BUY_PANE
 const gameStore = useGameStore()
 const { entryById, bestBuyId, detailFor, buySkill } = useMeepSkills()
 const { listHovering } = useMeepSpotlight()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 /**
  * Was gezeigt wird — LIVE, ohne jedes Einfrieren.
@@ -109,7 +109,15 @@ function learn(): void {
   const e = entry.value
   if (!e || !e.canBuy) return
   if (!buySkill(e.id)) return
-  showToast(`${e.name} learned!`, 'perk')
+  announceReceipt({
+    kind: 'perk',
+    eyebrow: 'MEEP PATH',
+    headline: e.name,
+    subline: metaLine.value,
+    icon: e.icon,
+    delta: { value: -e.cost, unit: 'meeps' },
+    mergeKey: 'perk/meep',
+  })
   flashed.value = true
   if (flashTimer !== null) clearTimeout(flashTimer)
   flashTimer = setTimeout(() => {

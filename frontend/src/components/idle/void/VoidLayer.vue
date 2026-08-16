@@ -59,7 +59,6 @@ import { storeToRefs } from 'pinia'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
-import { useActionToast } from '@/composables/ui/useActionToast'
 import { useHerald } from '@/composables/ui/useHerald'
 import { logVoidRiftSealed, logVoidRiftCollapsed } from '@/config/ui/eventLog'
 import { getVoidRift } from '@/config/world/void'
@@ -86,8 +85,7 @@ const { isIdleRenderingPaused } = useRenderingPaused()
 // Der Header veröffentlicht die Kurve seines Mittelovals — die Wesen reissen
 // entlang dieser Kontur auf, nicht auf einer geraden Linie darunter.
 const { headerCenterArc } = useHeaderCenterArc()
-const { showToast } = useActionToast()
-const { announce } = useHerald()
+const { announce, announceReceipt } = useHerald()
 
 const canvasEl = ref<HTMLCanvasElement>()
 const hasActive = computed(() => active.value.length > 0)
@@ -357,20 +355,47 @@ watch(
     const def = getVoidRift(result.defId)
     if (!def) return
 
-    // Einmal gebaut, dreimal gelesen: Toast, Herald und die Marke am
-    // Einschlagsort tragen denselben Satzteil — drei Anzeigen desselben
-    // Ereignisses dürfen nicht in drei Fassungen sprechen. Leer, wenn der Lauf
+    // Einmal gebaut, zweimal gelesen: die Herold-Meldung und die Marke am
+    // Einschlagsort tragen denselben Satzteil — zwei Anzeigen desselben
+    // Ereignisses dürfen nicht in zwei Fassungen sprechen. Leer, wenn der Lauf
     // nichts gesammelt hatte: dann gab es auch nichts zu holen.
     const meepClause =
       result.meepsLost > 0
         ? ` · −${result.meepsLost} meep${result.meepsLost === 1 ? '' : 's'}`
         : ''
 
+    // Das schwerste Wesen bekommt die ZEREMONIE (unten), alle anderen eine
+    // Quittung. Beides zu feuern hieße, dasselbe Ereignis zweimal in dieselbe
+    // Spalte zu schreiben — früher fiel das nicht auf, weil der Toast im
+    // Profil-Modal saß und das Banner mitten im Bild.
+    const ceremonial = def.severity === 'abyssal'
+
     if (result.sealed) {
-      showToast(`${def.name} slain — ${def.boonLine}`, 'event')
+      if (!ceremonial) {
+        announceReceipt({
+          kind: 'event',
+          eyebrow: 'VOID SEALED',
+          headline: def.name,
+          subline: def.boonLine,
+          icon: def.icon,
+          accent: hexToRgbTriple(def.color),
+          mergeKey: 'void',
+        })
+      }
       logVoidRiftSealed(def.name, def.boonLine)
     } else {
-      showToast(`${def.name} reached the sun — ${result.hpLost} HP lost${meepClause}`, 'warning')
+      if (!ceremonial) {
+        announceReceipt({
+          kind: 'warning',
+          eyebrow: 'VOID',
+          headline: def.name,
+          subline: `Reached the sun${meepClause}`,
+          icon: def.icon,
+          accent: hexToRgbTriple(def.color),
+          delta: { value: -result.hpLost, unit: 'HP' },
+          mergeKey: 'void',
+        })
+      }
       logVoidRiftCollapsed(def.name, result.hpLost, result.meepsLost)
       impactWave.value = {
         seq: result.seq,
@@ -386,7 +411,7 @@ watch(
 
     // Nur das schwerste Wesen verdient ein Banner. Ein Herald für jedes kleine
     // würde die Meldung entwerten, die für den Warp reserviert ist.
-    if (def.severity === 'abyssal') {
+    if (ceremonial) {
       announce({
         kind: 'champion',
         eyebrow: result.sealed ? 'VOID SLAIN' : 'THE VOID BROKE THROUGH',

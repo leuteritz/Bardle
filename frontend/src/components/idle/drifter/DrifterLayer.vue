@@ -59,7 +59,6 @@ import { computed, ref, watch, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
-import { useActionToast } from '@/composables/ui/useActionToast'
 import { useHerald } from '@/composables/ui/useHerald'
 import { logDrifterCollected } from '@/config/ui/eventLog'
 import { getDrifter } from '@/config/world/drifters'
@@ -80,8 +79,7 @@ import { gameNow } from '@/utils/game/gameClock'
 const drifterStore = useDrifterStore()
 const { active, lastCollect } = storeToRefs(drifterStore)
 const { isIdleRenderingPaused } = useRenderingPaused()
-const { showToast } = useActionToast()
-const { announce } = useHerald()
+const { announce, announceReceipt } = useHerald()
 
 const activeDrifter = computed(() => active.value[0] ?? null)
 const activeDef = computed(() =>
@@ -165,9 +163,11 @@ watch(
     const def = getDrifter(lastCollect.value.defId)
     if (!def) return
 
-    showToast(`${def.name} — ${def.effectLine}`, 'event')
     logDrifterCollected(def.name, def.effectLine)
 
+    // Entweder Zeremonie ODER Quittung, nie beides: beide Spuren stehen jetzt
+    // übereinander in derselben Spalte, und derselbe Satz zweimal untereinander
+    // liest sich als Fehler.
     if (def.rarity === 'legendary') {
       announce({
         kind: 'champion',
@@ -176,6 +176,16 @@ watch(
         subline: def.effectLine,
         icon: def.icon,
         accent: hexToRgbTriple(def.color),
+      })
+    } else {
+      announceReceipt({
+        kind: 'event',
+        eyebrow: 'DRIFTER',
+        headline: def.name,
+        subline: def.effectLine,
+        icon: def.icon,
+        accent: hexToRgbTriple(def.color),
+        mergeKey: 'drifter',
       })
     }
 

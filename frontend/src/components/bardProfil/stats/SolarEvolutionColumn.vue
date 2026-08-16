@@ -6,7 +6,7 @@ import {
   useSolarUpgradeStore,
   type SolarBranchId,
 } from '@/stores/progression/solarUpgradeStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
@@ -46,7 +46,7 @@ import { gameNow } from '@/utils/game/gameClock'
  * the header's sun badge (`StarEvolutionTooltip`), which has the room for it.
  */
 const solarStore = useSolarUpgradeStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 const totalPhases = STAR_PHASE_DATA.length
 const isComet = computed(() => solarStore.isCometState)
@@ -266,10 +266,13 @@ function handleEvolve(): void {
   const wasComet = isComet.value
   const targetName = nextStage.value.name
   solarStore.upgradeStar()
-  showToast(
-    wasComet ? `The comet ignites into ${targetName}…` : `Star evolving to ${targetName}…`,
-    'event',
-  )
+  announceReceipt({
+    kind: 'event',
+    eyebrow: 'SOLAR ASCENT',
+    headline: targetName,
+    subline: wasComet ? 'The comet ignites' : 'The star is evolving',
+    icon: 'game-icons:heraldic-sun',
+  })
 }
 
 </script>

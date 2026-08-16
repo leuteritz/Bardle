@@ -621,7 +621,7 @@ import {
   SHOP_SCROLL_SETTLE_MS,
   CHAMPION_NEW_BADGE_DISMISS_MS,
 } from '@/config/constants'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import type {
   ChampionRole,
   ShopChampionDetail,
@@ -652,7 +652,7 @@ export default defineComponent({
     const gameStore = useGameStore()
     const uiStore = useUiStore()
     const galaxyStore = useGalaxyStore()
-    const { showToast } = useActionToast()
+    const { announceReceipt } = useHerald()
     const itemStore = useItemStore()
     const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
@@ -858,8 +858,17 @@ export default defineComponent({
     function handleBuy(name: string) {
       if (!canClickBuy(name)) return
       const idx = visibleChampionList.value.indexOf(name)
+      const price = getChimesPrice(name)
       battleStore.recruitChampion(name)
-      showToast(`${name} recruited!`, 'recruit')
+      announceReceipt({
+        kind: 'recruit',
+        headline: name,
+        subline: getChampionTier(name).name,
+        // `md` (256 px) wie die Zeremonie: dasselbe Portrait zweimal in
+        // derselben Stufe ist ein Cache-Treffer, keine zweite Ladung.
+        portraitSrc: battleStore.getChampionImage(name, { size: 'md' }),
+        delta: { value: -price, unit: 'chimes' },
+      })
       // Keep the detail panel in place: jump to the champion that now occupies
       // the recruited champion's list position (or the last one).
       const list = visibleChampionList.value
@@ -1938,7 +1947,16 @@ const shopChampionNames = computed(() =>
       const item = SHOP_ITEMS.find((i) => i.id === id)
       if (!item) return
       itemStore.buyItem(id)
-      showToast(`${item.name} purchased!`, 'purchase')
+      announceReceipt({
+        kind: 'purchase',
+        headline: item.name,
+        subline: item.description,
+        icon: item.icon,
+        delta: { value: -item.price, unit: 'chimes' },
+        // Sechs Käufe in Folge ergeben EINE Karte mit der Gesamtausgabe — die
+        // war früher nirgends abzulesen.
+        mergeKey: 'purchase/item',
+      })
     }
 
     return {

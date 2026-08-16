@@ -5,12 +5,12 @@ import { usePlanetShopStore, PLANET_ROLES, PLANET_ROLES_LIST } from '@/stores/wo
 import type { PlanetRoleType } from '@/stores/world/planetShopStore'
 import { planetBonusText } from '@/utils/orbit/planetStatus'
 import { toRoman } from '@/utils/ui/format'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 
 const props = defineProps<{ slotId: string }>()
 
 const store = usePlanetShopStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 const roles = PLANET_ROLES_LIST
 const orbitNumber = computed(() => Number(props.slotId.replace('slot_', '')))
@@ -40,7 +40,12 @@ function confirmRole() {
   const roleId = pendingRoleId.value
   store.assignRole(props.slotId, roleId)
   pendingRoleId.value = null
-  showToast(`${PLANET_ROLES[roleId]?.name ?? roleId} locked in — this choice is permanent!`, 'assign')
+  announceReceipt({
+    kind: 'assign',
+    eyebrow: 'ORBIT CALLING',
+    headline: PLANET_ROLES[roleId]?.name ?? roleId,
+    subline: 'Locked in — this choice is permanent',
+  })
 }
 </script>
 

@@ -15,7 +15,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import { toRoman } from '@/utils/ui/format'
 import {
   EXPEDITION_COLLECT_FLASH_MS,
@@ -30,7 +30,7 @@ import ExpeditionRoster from './ExpeditionRoster.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
 const expeditionStore = useExpeditionStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 const now = ref(gameNow())
 const isDev = import.meta.env.DEV
@@ -114,10 +114,19 @@ function sendExpedition(offer: AvailableExpeditionSlot) {
     role: offer.requiredRoles[i],
   }))
   if (expeditionStore.startExpedition(offer.id, assigned)) {
-    showToast(`${offer.name} started!`, 'expedition')
+    announceReceipt({
+      kind: 'expedition',
+      eyebrow: 'DEPARTED',
+      headline: offer.name,
+      subline: assigned.map((a) => a.name).join(' · '),
+      mergeKey: 'expedition/start',
+    })
   }
 }
 
+// Fünf Starts in einer Schleife ergeben EINE Karte mit `×5` — die Verdichtung
+// im Herold macht den früheren Unterdrückungs-Schalter überflüssig, den
+// `collectMission` noch als zweiten Parameter trug.
 function sendAll() {
   for (const offer of [...expeditionStore.availableExpeditions]) {
     if (!expeditionStore.canStartExpedition) break
@@ -125,23 +134,26 @@ function sendAll() {
   }
 }
 
-function collectMission(id: string, toast = true) {
+function collectMission(id: string) {
   const mission = expeditionStore.activeExpeditions.find((e) => e.id === id)
   const status = mission?.status
   const reward = mission?.reward ?? 0
   expeditionStore.collectExpedition(id)
   if (reward > 0) spawnChimePop(reward)
-  if (toast) {
-    showToast(
-      status === 'success' ? 'Expedition rewards collected!' : 'Expedition completed.',
-      'expedition',
-    )
-  }
+  announceReceipt({
+    kind: 'expedition',
+    headline: status === 'success' ? 'Rewards collected' : 'Expedition completed',
+    subline: mission?.name,
+    delta: reward > 0 ? { value: reward, unit: 'chimes' } : undefined,
+    // Derselbe Schlüssel wie im Badge-Tooltip: dieselbe Handlung an zwei
+    // Oberflächen darf nicht zwei gleichlautende Karten ergeben.
+    mergeKey: 'expedition/collect',
+  })
 }
 
 function collectAll() {
   if (readyCount.value === 0) return
-  for (const mission of [...readyMissions.value]) collectMission(mission.id, false)
+  for (const mission of [...readyMissions.value]) collectMission(mission.id)
   collectFlashing.value = true
   setTimeout(() => {
     collectFlashing.value = false

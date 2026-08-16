@@ -19,7 +19,7 @@ import { computed, readonly, ref, type ComputedRef, type Ref } from 'vue'
  * Empfehlungspanel, das mit diesem Zustand nichts zu tun hat und ihn nur
  * durchreichen müsste. Ein Hover-Id ist reine Anzeige (kein Store, keine
  * Balance-Zahl, kein Spielstand) und damit genau das, was ein Composable halten
- * darf; dasselbe Muster trägt `useActionToast` und `useEventLog`.
+ * darf; dasselbe Muster trägt `useHerald` und `useEventLog`.
  */
 const listHoverId = ref<string | null>(null)
 const orbitHoverId = ref<string | null>(null)

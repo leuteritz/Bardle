@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useSkinStore } from '@/stores/champions/skinStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import { SKIN_ORIGINAL, SKIN_CARD_ASPECT_RATIO, SKIN_CARD_MIN_WIDTH } from '@/config/constants'
 import {
   getChampionSkins,
@@ -17,7 +17,7 @@ const props = defineProps<{
 }>()
 
 const skinStore = useSkinStore()
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 const cardAspect = SKIN_CARD_ASPECT_RATIO
 const cardMinWidth = `${SKIN_CARD_MIN_WIDTH}px`
@@ -50,7 +50,13 @@ const selected = computed(() => skinStore.getSelectedSkin(props.champion))
 function equip(entry: SkinEntry) {
   if (entry.id === selected.value) return
   skinStore.setSkin(props.champion, entry.id)
-  showToast(`${props.champion}: ${entry.label} equipped!`, 'equip')
+  announceReceipt({
+    kind: 'equip',
+    headline: entry.label,
+    subline: props.champion,
+    portraitSrc: entry.image,
+    mergeKey: 'equip',
+  })
 }
 </script>
 

@@ -28,7 +28,6 @@ import BattleResultComponent from '@/components/bardProfil/battle/BattleResultCo
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
-import ActionToast from '@/components/bardProfil/ActionToast.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 
 const uiStore = useUiStore()
@@ -81,26 +80,6 @@ const shopReadyCount = computed(() => forgeStore.shopReadyTotal)
  * Zahl und dürfen nicht versetzt blitzen.
  */
 const shopFlare = useBadgeFlare(shopReadyCount)
-
-/**
- * Rechter Rand, den der Action-Toast dem aktiven Tab überlässt. Er steht über
- * ALLEN Tabs (eine Instanz, siehe .rp-modal-content) und zentrierte deshalb im
- * ganzen Modal — in Planet- und Team-Tab landete die Karte damit neben dem
- * Inhalt, auf den sie sich bezieht, weil rechts eine Schiene liegt.
- *
- * Diese Ebene ist die einzige, die Toast UND aktiven Tab kennt: der Toast ist
- * ein Geschwister der Tab-Layer, eine CSS-Variable aus einem Tab heraus erreicht
- * ihn also nicht. Die Geometrie bleibt trotzdem beim Tab — jeder meldet seine
- * eigene Schienenbreite als CSS-Länge, hier wird nur die des sichtbaren Tabs
- * durchgereicht. Tabs, die nichts melden, bleiben bei 0 und damit bei der Mitte.
- */
-const tabToastInset = reactive<Partial<Record<BardTabId, string>>>({})
-
-function setTabToastInset(tab: BardTabId, css: string) {
-  tabToastInset[tab] = css
-}
-
-const toastInsetRight = computed(() => tabToastInset[uiStore.bardActiveTab] ?? '0px')
 
 /**
  * Ein Glyph je Tab statt eines Artworks.
@@ -389,11 +368,7 @@ onUnmounted(() => {
                  Transition-Phasen samt `forceReflow`, und ein Kreuzblende
                  zwischen zwei bereits stehenden Layern bringt nichts, was den
                  Preis wert wäre. -->
-            <div
-              class="relative flex-1 min-h-0 overflow-hidden rp-modal-content"
-              :style="{ '--toast-inset-right': toastInsetRight }"
-            >
-              <ActionToast />
+            <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
               <!-- Battle-Tab: von Anfang an gemountet, Watch + Simulation laufen -->
               <div v-show="uiStore.bardActiveTab === 'battle'" class="tab-layer tab-layer--scroll">
                 <BattleResultComponent />
@@ -424,7 +399,7 @@ onUnmounted(() => {
                 v-show="uiStore.bardActiveTab === 'team'"
                 class="tab-layer"
               >
-                <TeamTabComponent @toast-inset="setTabToastInset('team', $event)" />
+                <TeamTabComponent />
               </div>
 
               <div
@@ -432,7 +407,7 @@ onUnmounted(() => {
                 v-show="uiStore.bardActiveTab === 'planets'"
                 class="tab-layer"
               >
-                <PlanetSelectTabComponent @toast-inset="setTabToastInset('planets', $event)" />
+                <PlanetSelectTabComponent />
               </div>
 
               <div

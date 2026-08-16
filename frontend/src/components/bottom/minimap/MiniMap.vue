@@ -124,7 +124,7 @@
 import { defineComponent, computed, watch } from 'vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import {
   HUD_PANEL_ARC_R,
   SKIP_DURATION_SECONDS,
@@ -145,14 +145,18 @@ export default defineComponent({
   setup() {
     const galaxyStore = useGalaxyStore()
     const starGroupStore = useStarGroupStore()
-    const { showToast } = useActionToast()
+    const { announceReceipt } = useHerald()
 
-    // Celebrate a tier unlock: toast + on-screen flash, then clear the flag.
+    // Celebrate a tier unlock: herald receipt + on-screen flash, then clear the flag.
     watch(
       () => galaxyStore.tierJustUnlocked,
       (justUnlocked) => {
         if (!justUnlocked) return
-        showToast(`Tier ${galaxyStore.unlockedTier} unlocked!`, 'unlock')
+        announceReceipt({
+          kind: 'unlock',
+          headline: `Tier ${galaxyStore.unlockedTier}`,
+          subline: 'A new star tier is within reach',
+        })
         setTimeout(() => {
           galaxyStore.tierJustUnlocked = false
         }, TIER_FLASH_MS)

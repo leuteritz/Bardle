@@ -316,7 +316,7 @@ import {
   SECONDS_PER_HOUR,
 } from '@/config/constants'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import { useForgeHerald } from '@/composables/ui/useForgeHerald'
 import type {
   ForgeRelicDef,
@@ -338,7 +338,7 @@ const inventoryStore = useInventoryStore()
 const gameStore = useGameStore()
 const forgeStore = useStarForgeStore()
 // Käufe quittiert der Herold; der Toast bleibt nur für den Reroll, der nichts kauft.
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 const { heraldRelic, heraldConstellation, heraldBargain } = useForgeHerald()
 
 // ── Active blessings (running bargain buffs) ─────────────────────────────────
@@ -560,7 +560,13 @@ function handleBuyBargain(): void {
 
 function handleReroll(): void {
   if (forgeStore.rerollBargain()) {
-    showToast('Bargain rerolled!', 'info')
+    announceReceipt({
+      kind: 'info',
+      eyebrow: 'COSMIC BARGAIN',
+      headline: 'Bargain rerolled',
+      subline: deal.value?.name,
+      mergeKey: 'bargain/reroll',
+    })
   }
 }
 </script>

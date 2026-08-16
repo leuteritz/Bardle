@@ -263,13 +263,14 @@ export interface KeybindDef {
   inHud: boolean
 }
 
-// ── Action-Toast ─────────────────────────────────────────────────────────────
-// Die Registry liegt als TOAST_KINDS in config/constants/ui.ts. Jede
-// showToast-Stelle nennt die Art ihres Ereignisses, daraus holt sich die Karte
-// Sigil, Kopfzeile und Akzentfarbe — der Spieler erkennt so schon am Rand der
-// Karte, WORUM es geht, bevor er den Satz gelesen hat.
+// ── Herold-Quittungen ────────────────────────────────────────────────────────
+// Die Nebenspur des Herolds (HeraldReceiptStack / useHerald). Die Registry liegt
+// als HERALD_RECEIPT_KINDS in config/constants/ui.ts. Jede announceReceipt-Stelle
+// nennt die Art ihres Ereignisses, daraus holt sich die Karte Sigil, Kopfzeile
+// und Akzentfarbe — der Spieler erkennt so schon am Rand der Karte, WORUM es
+// geht, bevor er die Zeile gelesen hat.
 
-export type ToastKind =
+export type HeraldReceiptKind =
   | 'levelup'
   | 'recruit'
   | 'assign'
@@ -282,12 +283,39 @@ export type ToastKind =
   | 'event'
   | 'warning'
   | 'info'
+  /** Kaufquittung der Star Forge — bringt Glyph und Farbe des Objekts selbst mit. */
+  | 'forged'
+  /** Hinweis, dass eine Notify-Marke aufgetaucht ist (siehe useBadgeHeralds). */
+  | 'ready'
 
-export interface ToastKindDef {
+export interface HeraldReceiptKindDef {
   /** Kopfzeile über der Meldung — sagt in einem Wort, was passiert ist. */
   label: string
   /** Iconify-Name des Sigils links (Spielinhalt → game-icons). */
   icon: string
-  /** Akzent für Sigil, Kopfzeile, Randleiste und Laufbalken. */
+  /** Akzent für Sigil, Kopfzeile, Randleiste und Restzeitleiste, als "r, g, b". */
   accent: string
+}
+
+/**
+ * Das getrennte Zahlenfeld einer Quittung — Kosten oder Ertrag.
+ *
+ * Das VORZEICHEN entscheidet über die Farbe, nicht der Aufrufer; sonst steht
+ * irgendwann ein grünes Minus auf der Karte.
+ */
+export interface HeraldDelta {
+  value: number
+  /**
+   * Kurze Einheit hinter der Zahl: 'chimes' | 'levels' | 'meeps' | 'HP'.
+   *
+   * Immer dieselbe Form je Quelle — sie ist zugleich der Schlüssel, an dem die
+   * Verdichtung entscheidet, ob zwei Deltas summiert werden dürfen. Wer hier
+   * zwischen 'level' und 'levels' wechselt, bekommt statt einer Summe eine
+   * Ersetzung.
+   */
+  unit?: string
+  /** Form bei genau 1 ('level' zu 'levels'). Zählt NICHT für die Verdichtung. */
+  unitOne?: string
+  /** false = beim Verdichten ersetzen statt aufsummieren. Default true. */
+  sum?: boolean
 }

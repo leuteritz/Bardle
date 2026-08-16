@@ -14,7 +14,7 @@ import { computed, readonly, ref, type ComputedRef, type Ref } from 'vue'
  * Reitern, das mit diesem Zustand nichts zu tun hat und ihn nur durchreichen
  * müsste. Ein Hover-Id ist reine Anzeige (kein Store, keine Balance-Zahl, kein
  * Spielstand) und damit genau das, was ein Composable halten darf; dasselbe
- * Muster trägt `useActionToast` und `useEventLog`.
+ * Muster trägt `useHerald` und `useEventLog`.
  *
  * Eine ANHEFTUNG gab es hier einmal: ein Klick hielt einen Knoten im Detailkopf
  * fest. Sie ist mit dem Detailkopf gegangen — der zeigt seit dem Umbau nicht

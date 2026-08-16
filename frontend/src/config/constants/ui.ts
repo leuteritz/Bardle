@@ -2,7 +2,7 @@
 // Pause- und Offline-Overlay, Tooltips, Ton und die Timings, mit denen das
 // alles ein- und ausblendet.
 
-import type { ToastKind, ToastKindDef } from '@/types'
+import type { HeraldReceiptKind, HeraldReceiptKindDef } from '@/types'
 
 // ── Idle-Layer hinter einem Overlay: Anhalten und Wiederanlaufen ───────────
 /**
@@ -407,24 +407,81 @@ export const HERALD_ARM_DELAY_MS = 1_500
 export const HERALD_ACCENT_WARP = '150, 120, 255'
 export const HERALD_ACCENT_CHAMPION = '232, 192, 64'
 
-/**
- * Standzeit der `ready`-Herolde — der kompakten Fassung, mit der sich eine neu
- * aufgetauchte Notify-Marke einmal kurz meldet.
- *
- * Kürzer als `HERALD_DISPLAY_MS`, weil der Anlass ein anderer ist: ein Warp ist
- * ein Ereignis, ein erschwinglich gewordenes Upgrade nur ein Hinweis. Er soll
- * gelesen, nicht gefeiert werden.
- */
-export const HERALD_AMBIENT_DISPLAY_MS = 1_400
+// ── Herold-Quittungen: die Nebenspur ──────────────────────────────────────────
+// Alles, was der Spieler AUSGELÖST hat, statt es erreicht zu haben. Kompakte
+// Karten unter der Zeremonie, gestapelt statt einander verdrängend.
+//
+// Es gibt bewusst nur EINE Standzeit für den ganzen Stapel. Früher standen hier
+// drei (1400 ambient · 1600 Quittung · 2600 Toast) — der Vergleich, der sie
+// rechtfertigte, war der GEGEN die Zeremonie, und den gibt es in der Nebenspur
+// nicht mehr. Drei Karten nebeneinander, jede zu einem anderen Zeitpunkt
+// ausblendend, liest sich als Fehler.
 
 /**
- * Standzeit der `forged`-Herolde — der Quittung für einen Kauf in der Star Forge.
+ * Standzeit einer Quittung, gemessen ab ihrer LETZTEN Aktualisierung.
  *
- * Etwas länger als ein ambienter Hinweis, weil hier eine Wirkungszeile mitgelesen
- * werden will, und deutlich kürzer als ein Meilenstein: wer acht Stufen am Stück
- * kauft, soll nicht acht mal zwei Sekunden warten, bis das Bild wieder frei ist.
+ * Bewusst lang genug, um eine ganze Zeile zu lesen — die Karte trägt Kopfzeile,
+ * Schlagzeile und oft eine Nebenzeile. Solange verdichtet wird, steht sie.
  */
-export const HERALD_ACTION_DISPLAY_MS = 1_600
+export const HERALD_RECEIPT_HOLD_MS = 2_600
+
+/**
+ * Wie viele UNGLEICHARTIGE Quittungen nebeneinander stehen.
+ *
+ * Die vierte verdrängt die älteste. Drei sind die Grenze des Erfassbaren, und
+ * der Vorgang selbst steht ohnehin im Eventlog — der Stapel ist der Blitz, nicht
+ * die Aufzeichnung.
+ */
+export const HERALD_RECEIPT_STACK_MAX = 3
+
+/**
+ * Ab der GEBURT einer Karte: so lange saugt sie Gleichartiges auf.
+ *
+ * Das zweite Zeitfenster neben `HERALD_RECEIPT_HOLD_MS`, und es hat einen
+ * anderen Job. Die Standzeit misst ab der letzten Fütterung — ohne diesen
+ * Deckel würde ein Dauerklick dieselbe Karte auf ×200 treiben und sie nie
+ * verschwinden lassen. Danach übernimmt eine frische bei ×1.
+ */
+export const HERALD_RECEIPT_MERGE_WINDOW_MS = 8_000
+
+/** Vorsatz des Zähler-Chips. Dekoratives Zeichen, kein Icon. */
+export const HERALD_RECEIPT_COUNT_PREFIX = '×'
+
+/** Farben des Zahlenfelds — Kosten und Ertrag, beide aus der Hauspalette. */
+export const HERALD_DELTA_COLOR_COST = '#cc6050'
+export const HERALD_DELTA_COLOR_GAIN = '#7ddc4a'
+
+/**
+ * Ein Eintrag je Quittungsart — Kopfzeile, Sigil und Akzent.
+ *
+ * Die Akzente sind paarweise unterscheidbar gewählt: zwei Meldungen kurz
+ * hintereinander (Champion gekauft → Champion zugewiesen) sollen sich schon an
+ * der Farbe auseinanderhalten lassen, ohne dass man den Text vergleicht.
+ *
+ * Als "r, g, b" hinterlegt, nicht als Hex: die Karte setzt den Wert in `--ac`
+ * und bildet daraus `rgba()` für Schein und Randleiste. Eine Umrechnung zur
+ * Laufzeit wäre vierzehnmal dieselbe. Der Hexwert steht als Kommentar daneben,
+ * damit die Farbe im Editor auffindbar bleibt.
+ *
+ * `forged` und `ready` bringen Glyph und Farbe fast immer selbst mit — ihre
+ * Einträge sind der Rückfall, nicht die Regel.
+ */
+export const HERALD_RECEIPT_KINDS: Record<HeraldReceiptKind, HeraldReceiptKindDef> = {
+  levelup: { label: 'Level Up', icon: 'game-icons:progression', accent: '125, 220, 74' }, // #7ddc4a
+  recruit: { label: 'Recruited', icon: 'game-icons:contract', accent: '201, 160, 255' }, // #c9a0ff
+  assign: { label: 'Assigned', icon: 'game-icons:rank-3', accent: '216, 112, 154' }, // #d8709a
+  purchase: { label: 'Purchased', icon: 'game-icons:two-coins', accent: '232, 192, 64' }, // #e8c040
+  unlock: { label: 'Unlocked', icon: 'game-icons:unlocking', accent: '95, 212, 200' }, // #5fd4c8
+  equip: { label: 'Equipped', icon: 'game-icons:shirt', accent: '224, 138, 74' }, // #e08a4a
+  perk: { label: 'Learned', icon: 'game-icons:brain', accent: '143, 184, 255' }, // #8fb8ff
+  forge: { label: 'Forged', icon: 'game-icons:anvil-impact', accent: '255, 138, 61' }, // #ff8a3d
+  expedition: { label: 'Expedition', icon: 'game-icons:caravel', accent: '79, 184, 232' }, // #4fb8e8
+  event: { label: 'Cosmic Event', icon: 'game-icons:star-formation', accent: '168, 180, 255' }, // #a8b4ff
+  warning: { label: 'Heads Up', icon: 'game-icons:hazard-sign', accent: '204, 96, 80' }, // #cc6050
+  info: { label: 'Notice', icon: 'game-icons:sparkles', accent: '200, 184, 154' }, // #c8b89a
+  forged: { label: 'Star Forge', icon: 'game-icons:anvil-impact', accent: '232, 192, 64' }, // #e8c040
+  ready: { label: 'Ready', icon: 'game-icons:sparkles', accent: '232, 192, 64' }, // #e8c040
+}
 
 /**
  * Sperrfrist je Badge-Quelle zwischen zwei `ready`-Herolden, in ECHTEN
@@ -548,37 +605,6 @@ export const STATS_TAB_GAUGE = {
 // ── Admin ─────────────────────────────────────────────────────────────────────
 /** Max augment selections queued by a single admin level grant (keeps a "+500 levels" from queueing 500 modals) */
 export const ADMIN_LEVEL_AUGMENT_QUEUE_MAX = 10
-
-// ── Action-Toast ──────────────────────────────────────────────────────────────
-/**
- * Standzeit einer Meldung. Bewusst lang genug, um einen ganzen Satz zu lesen —
- * die Karte trägt Kopfzeile UND Meldung, und die längsten Sätze (Auto-Level-Up,
- * Planeten-Rolle) sind über 60 Zeichen lang.
- */
-export const TOAST_DURATION_MS = 2600
-
-/**
- * Ein Eintrag je Ereignisart im Bard-Profil — Kopfzeile, Sigil und Akzent.
- * Jede showToast-Stelle nennt ihre Art; ohne Angabe greift `info`.
- *
- * Die Akzente sind paarweise unterscheidbar gewählt: zwei Meldungen kurz
- * hintereinander (Champion gekauft → Champion zugewiesen) sollen sich schon an
- * der Farbe auseinanderhalten lassen, ohne dass man den Text vergleicht.
- */
-export const TOAST_KINDS: Record<ToastKind, ToastKindDef> = {
-  levelup: { label: 'Level Up', icon: 'game-icons:progression', accent: '#7ddc4a' },
-  recruit: { label: 'Recruited', icon: 'game-icons:contract', accent: '#c9a0ff' },
-  assign: { label: 'Assigned', icon: 'game-icons:rank-3', accent: '#d8709a' },
-  purchase: { label: 'Purchased', icon: 'game-icons:two-coins', accent: '#e8c040' },
-  unlock: { label: 'Unlocked', icon: 'game-icons:unlocking', accent: '#5fd4c8' },
-  equip: { label: 'Equipped', icon: 'game-icons:shirt', accent: '#e08a4a' },
-  perk: { label: 'Learned', icon: 'game-icons:brain', accent: '#8fb8ff' },
-  forge: { label: 'Forged', icon: 'game-icons:anvil-impact', accent: '#ff8a3d' },
-  expedition: { label: 'Expedition', icon: 'game-icons:caravel', accent: '#4fb8e8' },
-  event: { label: 'Cosmic Event', icon: 'game-icons:star-formation', accent: '#a8b4ff' },
-  warning: { label: 'Heads Up', icon: 'game-icons:hazard-sign', accent: '#cc6050' },
-  info: { label: 'Notice', icon: 'game-icons:sparkles', accent: '#c8b89a' },
-}
 
 // ── Music ─────────────────────────────────────────────────────────────────────
 export const MUSIC_DEFAULT_VOLUME = 0.1

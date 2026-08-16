@@ -2,10 +2,10 @@
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { maxEverything } from '@/utils/game/maxEverything'
-import { useActionToast } from '@/composables/ui/useActionToast'
+import { useHerald } from '@/composables/ui/useHerald'
 import { ADMIN_MAX_GALAXY, ADMIN_MAX_UNIVERSE, ADMIN_FIELD_FLASH_MS } from '@/config/constants'
 
-const { showToast } = useActionToast()
+const { announceReceipt } = useHerald()
 
 /** Kurzes Aufleuchten nach dem Druck — der Vorgang ist synchron und sonst
  *  unsichtbar; ohne Rückmeldung wirkt der Knopf, als hätte er nichts getan. */
@@ -17,10 +17,12 @@ function onMaxEverything() {
   setTimeout(() => {
     flashing.value = false
   }, ADMIN_FIELD_FLASH_MS)
-  showToast(
-    `${result.champions} champions maxed · ${result.rank} · Galaxy ${result.galaxy}`,
-    'unlock',
-  )
+  announceReceipt({
+    kind: 'unlock',
+    eyebrow: 'ADMIN',
+    headline: 'Max Everything',
+    subline: `${result.champions} champions maxed · ${result.rank} · Galaxy ${result.galaxy}`,
+  })
 }
 </script>
 
