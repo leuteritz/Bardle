@@ -320,7 +320,10 @@ const tipHalf = `${FORGE_YIELD_TIP_WIDTH_PX / 2}px`
   overflow: hidden;
   background: var(--seg-c, #c89040);
   box-shadow: inset -1px 0 0 rgba(13, 12, 6, 0.85);
-  cursor: help;
+  /* `default`, nicht `help` oder `pointer`: hier ist nichts anzuklicken, und
+     weder ein Fragezeichen noch eine Hand sollen etwas anderes versprechen. Das
+     Kärtchen hängt am `mouseenter` und erscheint davon unabhängig. */
+  cursor: default;
 }
 
 /* Dunkel auf hell: jede Segmentfarbe der Tabelle ist ein heller Ton, ein weisser
@@ -390,7 +393,7 @@ const tipHalf = `${FORGE_YIELD_TIP_WIDTH_PX / 2}px`
     radial-gradient(circle at center, #4a4038 1px, transparent 1.2px) 0 0 / 7px 7px,
     #100e08;
   box-shadow: inset 1px 0 0 rgba(90, 74, 52, 0.5);
-  cursor: help;
+  cursor: default;
 }
 
 /* ══════════════════════════════════════════════════
