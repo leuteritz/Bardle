@@ -660,6 +660,16 @@ export const ADMIN_RANK_PROMOTE_GUARD = 60
 /** Schleifen-Abbruch beim Auflösen offener Perk-Wahlen — choosePerk() gibt bei
  *  ungültiger Wahl `false` zurück, ohne den Eintrag zu entfernen. */
 export const ADMIN_PERK_RESOLVE_GUARD = 2000
+/**
+ * Schleifen-Abbruch bei der Suche nach einer Vorsehung mit CpS-Buff.
+ *
+ * `rollProvidence('economy')` wählt die Buff-Achse zufällig aus den Achsen
+ * dieser Domäne; die gesuchte kann beliebig oft ausbleiben. 200 Versuche sind
+ * weit jenseits jeder realistischen Pechsträhne (die Domäne führt eine
+ * einstellige Zahl von Achsen) und laufen in Mikrosekunden durch — bleibt die
+ * Karte trotzdem aus, steht der Endzustand ohne Vorsehung da statt gar nicht.
+ */
+export const ADMIN_PROVIDENCE_ROLL_GUARD = 200
 
 /** Kantenlänge der Drifter-Silhouette auf den Spawn-Kacheln des Admin-Panels.
  *  Groß genug, dass Splitter, Sonde und Leviathan auseinanderzuhalten sind,

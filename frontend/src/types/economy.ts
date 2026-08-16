@@ -303,6 +303,8 @@ export type MaterialSourceId =
   | 'bargain'
   | 'expedition'
   | 'void'
+  /** Caretaker's Ledger (constellation): a doubled click shook something loose. */
+  | 'click'
 
 /** What a unit of material was spent on. Labels: MATERIAL_SINK_LABELS. */
 export type MaterialSinkId =

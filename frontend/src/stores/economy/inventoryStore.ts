@@ -4,6 +4,7 @@ import type { Material, MaterialSinkId, MaterialSourceId } from '@/types'
 import { logger } from '@/utils/logger'
 import {
   MATERIAL_DROP_BASE_CHANCE,
+  MATERIAL_DROP_OVERFLOW_MAX_EXTRA,
   MATERIAL_RATE_BUCKET_COUNT,
   MATERIAL_RATE_BUCKET_MS,
 } from '@/config/constants'
@@ -15,6 +16,35 @@ import { useOmenStore } from '@/stores/progression/omenStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { gameNow } from '@/utils/game/gameClock'
+
+/**
+ * Zusätzliche Stücke aus einer Drop-Chance ÜBER 100 %.
+ *
+ * Der Wurf darunter ist `Math.random() > chance` — oberhalb von 1 ist er
+ * ausnahmslos falsch, und jeder weitere Punkt Drop-Chance verfiel damit
+ * lautlos. Betroffen ist nicht nur der Comet-Miner-Zweig: sieben Quellen
+ * multiplizieren sich in diese Zahl (Forge, Meep-Baum, Drifter, Omen, Chronik,
+ * Vorsehung, Void), und im Spätspiel steht ihr Produkt regelmässig über 1.
+ *
+ * Der Überschuss wird stattdessen zu MENGE: der ganzzahlige Teil sind sichere
+ * Extrastücke, der Rest ist die Chance auf eines mehr. Ein Beispiel — Chance
+ * 2,4 gibt das gefallene Stück plus eines sicher plus 40 % auf ein drittes.
+ *
+ * **Der Deckel ist Pflicht.** Ohne ihn skaliert die Ausbeute linear mit einem
+ * PRODUKT aus sieben Faktoren, und Material ist der Taktgeber der ganzen
+ * Forge — die späten Blätter und jedes Relikt hängen daran. Drei Extrastücke
+ * sind reichlich und bleiben eine Zahl, die man im Kopf behält.
+ *
+ * Der Void-Abzug wirkt hier mit und zieht den Überlauf zuerst weg — richtig so:
+ * er ist der einzige Faktor, der nach unten zeigt, und soll auch dort greifen,
+ * wo der Spieler bereits im Überfluss steht.
+ */
+function overflowExtra(dropChance: number): number {
+  const overflow = Math.max(0, dropChance - 1)
+  const guaranteed = Math.floor(overflow)
+  const fractional = Math.random() < overflow - guaranteed ? 1 : 0
+  return Math.min(MATERIAL_DROP_OVERFLOW_MAX_EXTRA, guaranteed + fractional)
+}
 
 export const useInventoryStore = defineStore('inventory', {
   state: () => ({
@@ -179,19 +209,16 @@ export const useInventoryStore = defineStore('inventory', {
       const providenceDropMult = useProvidenceStore().materialDropMult
       // Starving Maw (void tide): zieht nach unten, solange der Riss steht
       const voidDropMult = useVoidStore().materialDropMult
-      if (
-        Math.random() >
+      const dropChance =
         baseDropChance *
-          forge.materialDropMult *
-          treeDropMult *
-          drifterDropMult *
-          omenDropMult *
-          chronicleDropMult *
-          providenceDropMult *
-          voidDropMult
-      ) {
-        return null
-      }
+        forge.materialDropMult *
+        treeDropMult *
+        drifterDropMult *
+        omenDropMult *
+        chronicleDropMult *
+        providenceDropMult *
+        voidDropMult
+      if (Math.random() > dropChance) return null
 
       const total = MATERIALS.reduce((sum, m) => sum + m.dropChance, 0)
       let roll = Math.random() * total
@@ -206,7 +233,7 @@ export const useInventoryStore = defineStore('inventory', {
       // Fallback: last material
       if (!dropped) dropped = MATERIALS[MATERIALS.length - 1]
       // Prospector's Charm (Star Forge): every drop grants extra materials
-      this.addMaterial(dropped.id, source, 1 + forge.extraDropCount)
+      this.addMaterial(dropped.id, source, 1 + forge.extraDropCount + overflowExtra(dropChance))
       return dropped
     },
   },

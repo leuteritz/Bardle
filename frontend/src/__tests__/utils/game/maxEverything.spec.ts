@@ -4,6 +4,7 @@ import { maxEverything } from '@/utils/game/maxEverything'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useSectionStore } from '@/stores/core/sectionStore'
 import { useItemStore } from '@/stores/economy/itemStore'
+import { useShopStore } from '@/stores/economy/shopStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
@@ -14,13 +15,17 @@ import { useStarForgeStore, FORGE_NODES } from '@/stores/progression/starForgeSt
 import { FORGE_BOUGHS } from '@/config/progression/starForge'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { unusedYieldSources } from '@/utils/ui/yieldBand'
 import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import { SHOP_ITEMS } from '@/config/economy/items'
 import {
   ADMIN_MAX_BOUGH_LEVEL,
+  FORGE_CROWN_MAX_LEVEL,
   ADMIN_MAX_GALAXY,
   ADMIN_MAX_PLANET_LEVEL,
   ADMIN_MAX_UNIVERSE,
+  FORGE_YIELD_SOURCES,
   ITEM_SLOT_COUNT,
   STAR_PHASE_FINAL_INDEX,
   TOTAL_SECTIONS,
@@ -62,6 +67,12 @@ describe('maxEverything', () => {
         expect(forge.branchLevels[def.id], def.id).toBe(forge.nodeMaxLevel(def.id))
       } else if (def.tier === 'leaf') {
         expect(forge.leafLevels[def.id], def.id).toBe(forge.nodeMaxLevel(def.id))
+      } else if (def.tier === 'crown') {
+        // Ring 5 hängt nicht an der Sonne, sondern am Aufbruch. Er steht hier
+        // trotzdem: `maxEverything` setzt den Prestige-Zähler passend zum
+        // Universum, und ohne diese Zeile fehlte ausgerechnet der Ring, den es
+        // nur ganz am Ende gibt, im „alles gemaxt".
+        expect(forge.crownLevels[def.id], def.id).toBe(FORGE_CROWN_MAX_LEVEL)
       } else {
         // Ring 4 hat kein Maximum — `adminMaxAll` setzt dort die gewählte
         // Testhöhe. Ein `toBe(nodeMaxLevel(...))` verlangte hier `Infinity`.
@@ -177,6 +188,44 @@ describe('maxEverything', () => {
     maxEverything()
     const player = usePlayerStore()
     expect(player.currentHP).toBe(player.maxHP)
+  })
+
+  /**
+   * Der Befund, der diese ganze Arbeit ausgelöst hat: nach „Max Everything"
+   * stand im Ertragsband des Shops weiterhin eine „N unused"-Zone.
+   *
+   * Drei Ursachen lagen darunter, und alle drei fängt diese Spec ab:
+   *   • `boons`, `void` und `bosses` galten als „ungenutzt", obwohl das eine
+   *     befristet und die anderen ZÖLLE sind (nature-Feld, siehe
+   *     `unusedYieldSources`).
+   *   • Der Endzustand stand auf Universum 10 ohne einen einzigen Aufbruch —
+   *     und damit ohne Vorsehung, weshalb die Zeile „Cosmos" leer blieb.
+   *   • Die Kronen (Ring 5) hängen am Prestige-Zähler und blieben deshalb zu.
+   *
+   * Was hier zählt, ist die ERWORBENE Natur: eine Zeile, die der Spieler
+   * erspielen kann, muss im Endzustand auch tragen. Zölle und Befristetes sind
+   * ausdrücklich ausgenommen — dass sie neutral sind, ist der Bestfall.
+   */
+  it('lässt keine erworbene Ertragsquelle mehr auf neutral stehen', () => {
+    maxEverything()
+    const factors = new Map(useShopStore().cpsFactorBreakdown.map((f) => [f.id, f.factor]))
+
+    for (const def of FORGE_YIELD_SOURCES) {
+      if (def.nature !== 'earned') continue
+      expect(factors.get(def.id), `${def.id} traegt im Endzustand nichts bei`).toBeGreaterThan(1)
+    }
+    // Und damit ist die Geisterzone im Sockel leer — die eigentliche Beschwerde.
+    expect(unusedYieldSources(useShopStore().cpsFactorBreakdown)).toEqual([])
+  })
+
+  it('zieht eine Vorsehung, statt neun Aufbrüche ohne eine einzige Karte zu behaupten', () => {
+    maxEverything()
+    const game = useGameStore()
+    const providence = useProvidenceStore()
+
+    expect(game.totalPrestiges).toBeGreaterThanOrEqual(ADMIN_MAX_UNIVERSE - 1)
+    expect(providence.active, 'keine Vorsehung gezogen').not.toBeNull()
+    expect(providence.activeEffects.cpsMultiplier ?? 1).toBeGreaterThan(1)
   })
 
   it('ist idempotent: ein zweiter Druck verändert den Endzustand nicht mehr', () => {

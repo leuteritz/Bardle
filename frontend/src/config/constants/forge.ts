@@ -1,7 +1,7 @@
 // Star Forge (Sonnen-Baum aus Roots, Branches und Leaves samt Relikten,
 // Konstellationen und Schnäppchen) und der Meep Skill Tree.
 
-import type { ForgeRelicRarity, ForgeSectionDef } from '@/types'
+import type { ForgeBargainKind, ForgeRelicRarity, ForgeSectionDef } from '@/types'
 
 // ── Meep Skill Tree: die Orbit-Bühne (SkillTreeComponent / MeepOrbitStage) ──
 //
@@ -279,6 +279,17 @@ export const FORGE_ICON_SIZE_ROOT = 28
 export const FORGE_ICON_SIZE_BRANCH = 22
 export const FORGE_ICON_SIZE_LEAF = 18
 export const FORGE_ICON_SIZE_BOUGH = 20
+/**
+ * Ring 5 trägt das GRÖSSTE Glyph nach dem Kern — grösser als der Zweig darunter
+ * und fast so gross wie ein Strahl.
+ *
+ * Das ist keine Zierde: es sind fünf Knoten auf dem weitesten Ring, jeder nur
+ * einmal zu haben und jeder mit einer Regel dahinter. In Bough-Grösse (20)
+ * verschwänden sie am äussersten Rand einer Bühne, die `useFitScale` auf Full HD
+ * ohnehin auf rund 60 % herunterzieht — und ausgerechnet der seltenste Ring wäre
+ * der unscheinbarste.
+ */
+export const FORGE_ICON_SIZE_CROWN = 26
 /**
  * Luft an JEDER Seite beim Einpassen des Baums.
  *
@@ -630,11 +641,53 @@ export const MEEP_SPOTLIGHT_PING_MS = 450
  * NUR hier — `ForgeTreePanel` setzt sie als CSS-Variable an die Bühne, statt
  * sie im scoped CSS ein zweites Mal auszuschreiben.
  */
+/**
+ * Gewachsen von 820, als der Bough-Ring dazukam. Bei 1040 GEBLIEBEN, als Ring 5
+ * dazukam — und das ist der eigentliche Inhalt dieses Kommentars.
+ *
+ * ── Warum die Bühne für Ring 5 NICHT gewachsen ist ──────────────────────────
+ * Der erste Anlauf setzte sie auf 1180 und Ring 5 auf Radius 570. Gemessen
+ * (Playwright, Full HD, voll ausgebauter Baum) war das Ergebnis eindeutig
+ * schlechter: die Skalierung ist `(min(w,h) − 2·PAD) / FORGE_STAGE_SIZE`, jeder
+ * Pixel Bühne verkleinert also JEDEN Knoten. Auf Full HD fiel der Blattknoten
+ * von 35,4 auf 31,3 Bildschirmpixel und sein Glyph von 16,8 auf 14,8 — unter
+ * die 18px-Grenze, ab der verschnörkelte `game-icons` zu Grau zerfallen
+ * (CLAUDE.md, „Icons"). Ein neuer Ring, der die vier bestehenden unleserlich
+ * macht, ist kein Zugewinn.
+ *
+ * Ring 5 passt stattdessen in die BESTEHENDE Bühne, weil die Ringe darunter
+ * zusammenrücken. Die Abstände waren grosszügiger als nötig; gemessen an den
+ * Knotengrössen bleibt überall Luft (Rechnung an `FORGE_RING_CROWN_R`).
+ */
 export const FORGE_STAGE_SIZE = 1040
-export const FORGE_RING_ROOT_R = 165
-export const FORGE_RING_BRANCH_R = 285
-export const FORGE_RING_LEAF_R = 385
-export const FORGE_RING_BOUGH_R = 490
+/**
+ * Die fünf Ringe. **Von aussen nach innen zusammengerückt**, als Ring 5
+ * dazukam — die Bühne blieb, die Abstände gaben nach.
+ *
+ * Die Rechnung, die das absichert: kein Ringabstand darf kleiner sein als die
+ * halben Knoten beider Ringe zusammen, sonst berühren sie sich.
+ *
+ *   Ring              Radius   Δ zum inneren   Knoten ⌀   nötig   Luft
+ *   ───────────────────────────────────────────────────────────────────
+ *   1 Rays              158          —            56        —      —
+ *   2 Branches          265         107           46        51     56
+ *   3 Leaves            348          83           38        42     41
+ *   4 Boughs            425          77           42        40     37
+ *   5 Crowns            492          67           50        46     21
+ *
+ * Ring 1 sitzt bei 158 und nicht enger: die Sonne misst in der Endphase
+ * `SHOP_SUN_MAX_DIAMETER` (240), ihr Rand liegt also bei 120, und die
+ * Innenkante des Wurzelknotens bei 158 − 28 = 130. Zehn Pixel Luft zum Körper.
+ *
+ * Nach aussen ist 492 + halber Kronenknoten (25) = 517 gegen die Bühnenhälfte
+ * von 520 — drei Pixel, und die reichen, weil `FORGE_TREE_FIT_PADDING_PX` (48)
+ * ohnehin auf jeder Seite freibleibt.
+ */
+export const FORGE_RING_ROOT_R = 158
+export const FORGE_RING_BRANCH_R = 265
+export const FORGE_RING_LEAF_R = 348
+export const FORGE_RING_BOUGH_R = 425
+export const FORGE_RING_CROWN_R = 492
 
 // Ring unlock gating (starPhase index)
 export const FORGE_BRANCH_UNLOCK_PHASE = 2
@@ -684,6 +737,67 @@ export const FORGE_LEAF_PARENT_MIN_LEVEL = 2
 export const FORGE_BOUGH_PARENT_MIN_LEVEL = 3
 
 /**
+ * ── Ring 5: Astral Crowns ────────────────────────────────────────────────────
+ *
+ * Fünf Knoten, einer je Wurzelachse, und jeder nur EINMAL zu haben. Sie sind
+ * die Antwort auf ein Loch, das die Boughs offengelassen haben: der endlose
+ * Ring gibt dem Spätspiel eine Senke, aber keine ÜBERRASCHUNG mehr — Stufe 24
+ * fühlt sich an wie Stufe 23, nur teurer. Was ab hier fehlte, war nicht mehr
+ * Zahl, sondern eine neue Regel.
+ *
+ * **Warum das Tor am Prestige hängt und nicht an der Sonne.** Phase 5 ist
+ * bereits das Tor der Boughs — die Sonnenrampe hat nichts mehr zu vergeben.
+ * Das Prestige dagegen war für den Shop bisher gar kein Ereignis: es räumt
+ * Chimes, Level, Augments und Gebäude ab, den Sternbaum aber ausdrücklich NICHT
+ * (`gameStore.executePrestigeReset`, „Der Meep-Baum bleibt STEHEN" — für Forge
+ * und Sonne gilt dasselbe, sie werden dort schlicht nicht angefasst). Die Krone
+ * ist damit genau das, was den Aufbruch überdauert hat, und der erste Grund,
+ * aus dem der Shop einen Prestige-Zähler überhaupt liest.
+ *
+ * **Warum EINE Stufe.** Ein Crown verschiebt eine Regel („der Boss-Zoll kippt",
+ * „die Sonne kommt einmal je Phase zurück"). Eine Regel, die man ein zweites
+ * Mal kaufen kann, ist keine Regel mehr, sondern ein Prozentwert mit
+ * Zwischenschritten. Der endlose Ring darunter deckt die andere Hälfte ab —
+ * beides am selben Knoten ginge nicht.
+ */
+export const FORGE_CROWN_UNLOCK_PRESTIGES = 1
+export const FORGE_CROWN_MAX_LEVEL = 1
+/**
+ * Der Bough darunter muss auf dieser Stufe stehen. Deutlich mehr als die 3, die
+ * ein Bough von seinem Zweig verlangt: Ring 4 wächst ohne Ende, und eine Hürde
+ * von 3 wäre auf einer Achse ohne Obergrenze keine. Fünf Stufen sind rund
+ * `1,35⁵ ≈ 4,5`-fache Kosten der ersten — eine Strecke, die man gegangen sein
+ * muss, aber keine, die den Ring auf Jahre verschliesst.
+ */
+export const FORGE_CROWN_PARENT_MIN_LEVEL = 5
+/**
+ * Einheitlicher Chime-Preis einer Krone.
+ *
+ * Eine Zehnerpotenz über dem Einstieg der Boughs (2e9), und für alle fünf
+ * gleich: der Ring stellt keine Preisfrage, sondern eine Reihenfolgefrage. Wer
+ * hier steht, hat ein Universum hinter sich und einen Bough auf Stufe 5 — die
+ * Entscheidung soll lauten „welche Regel zuerst", nicht „welche ist billig".
+ * Die Materialrezepturen unterscheiden sich dagegen sehr wohl; sie sind der
+ * echte Taktgeber (dieselbe Rolle wie bei den späten Blättern).
+ */
+export const FORGE_CROWN_BASE_COST = 2.5e10
+/**
+ * Was am Kronen-Ring steht. Nennt die eigene Bedingung und nicht eine
+ * Sonnenphase — Ring 5 ist der einzige, der nicht an der Sonne hängt, und ein
+ * Etikett aus `ringPhases` behauptete, er sei offen, sobald Ring 4 es ist.
+ */
+export const FORGE_CROWN_RING_LABEL_LOCKED = 'Prestige once → locked'
+export const FORGE_CROWN_RING_LABEL_OPEN = 'Beyond the sun · open'
+/**
+ * Was in der Upgrade-Liste dort steht, wo jeder andere Ring seinen Wert zeigt.
+ *
+ * Eine Krone hat keinen Wert je Stufe — sie verschiebt eine Regel. Ein
+ * Zahlenpaar „jetzt → danach" wäre hier „0 → 0"; der Zustand ist die Auskunft.
+ */
+export const FORGE_CROWN_STATE_OPEN = 'Not yet'
+export const FORGE_CROWN_STATE_FORGED = 'Forged'
+
+/**
  * Ring 4 kennt keine Obergrenze. Das ist der Punkt: die Sonnenrampe endet nach
  * rund 44 Spielstunden, danach steht im ganzen Baum nur noch „✦ MAX" — und
  * Chimes haben im Spätspiel ausser den Planeten-Leveln keine Senke.
@@ -715,7 +829,10 @@ export const FORGE_BOUGH_PARENT_MIN_LEVEL = 3
  * drei Achsen, die STILL sättigen und deshalb genauso ein bezahltes Nichts
  * wären:
  *   • `materialDropMult` — `inventoryStore.tryDropMaterial` vergleicht
- *     `Math.random() > chance`; oberhalb 1 wirkt keine Stufe mehr.
+ *     `Math.random() > chance`. Seit dem Überlauf dort (siehe
+ *     `MATERIAL_DROP_OVERFLOW_MAX_EXTRA`) verfällt der Teil über 1 nicht mehr,
+ *     aber er ist auf drei Extrastücke gedeckelt — die Achse sättigt damit
+ *     weiterhin, nur später und sichtbar statt lautlos.
  *   • `championDpsMult` — steckt über `combatStore.fullOrbitDps()` in
  *     `otherDps` und hebt damit die Boss-HP gleich mit (docs/balance.md). Für
  *     KLICKschaden gilt das seit der Zwei-Kanal-Rechnung nicht mehr — er steht
@@ -740,12 +857,183 @@ export const FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT = FORGE_LEAF_AMPLIFY_PER_LEVEL * 1
 export const FORGE_CONSTELLATION_BULWARK_DAMAGE_MULT = 0.9
 export const FORGE_CONSTELLATION_STELLAR_WIND_CPS_MULT = 1.18
 export const FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT = 1.12
+/**
+ * Chance, dass ein VERDOPPELTER Klick zusätzlich Material lockert
+ * (Caretaker's Ledger).
+ *
+ * Der Wurf hängt am Treffer des Doppelklicks und nicht am Klick selbst: sonst
+ * hinge die Ausbeute an der Klickrate des Spielers statt am Ausbau seines
+ * Baums, und ein Autoclicker wäre die beste Materialquelle im Spiel. So steht
+ * eine Obergrenze darüber, die er nicht überschreiten kann — die
+ * Doppelklick-Chance selbst.
+ *
+ * 8 % auf einen Treffer, der bei Vollausbau in 80 % der Klicks fällt: rund
+ * jeder fünfzehnte Klick. Neben einem Ressourcenstern, der ein Vielfaches auf
+ * einmal abwirft, ist das ein stetiger Bodensatz und keine zweite Ernte.
+ */
+export const FORGE_LEDGER_CLICK_DROP_CHANCE = 0.08
+/**
+ * Wie viel des Void-Zolls das Riftwarden's Seal höchstens abkauft.
+ *
+ * Der Void ist das einzige System, das GEGEN den Spieler drängt (CLAUDE.md);
+ * ein Zoll, den man vollständig abkaufen kann, ist keiner mehr. Bei 60 % bleibt
+ * von einer Drossel auf ×0,5 immer noch ×0,8 stehen — spürbar genug, dass das
+ * Schliessen des Risses die Handlung bleibt, und mild genug, dass fünf
+ * Relikt-Stufen sich lohnen.
+ *
+ * Das Siegel erreicht die Kappe bei Vollausbau (5 × 12 = 60 %) exakt. Das ist
+ * Absicht und keine tote Stufe: die fünfte ist die, die sie erreicht.
+ */
+export const FORGE_VOID_RELIEF_CAP = 0.6
+/**
+ * Untergrenze des Meep-Anforderungsfaktors (Meep Shrine).
+ *
+ * Die Ausbeute steht als WURZEL auf der Anforderung — halbiert man sie, steigt
+ * die Ernte um √2. Der Boden hält das Relikt in einem Bereich, in dem es
+ * spürbar ist (5 × 4 % → ×0,8 → +12 % Meeps), ohne die Prestige-Achse zu
+ * verschieben, an der die ganze Meep-Wirtschaft hängt (docs/balance.md).
+ */
+export const FORGE_MEEP_COST_FLOOR = 0.7
+/** Stunden, die „Echo of the Void" an die Offline-Obergrenze hängt. */
+export const FORGE_RELIC_OFFLINE_HOURS = 4
+/** Stunden, die „Starfarer's Compact" zusätzlich anhängt. */
+export const FORGE_COMPACT_OFFLINE_HOURS = 8
+
+/**
+ * Die Handelsarten, bei denen `materials` der PREIS ist und nicht die Ware.
+ *
+ * Das Feld trägt zwei Bedeutungen: bei `materials` und `gold` steht dort, was
+ * der Spieler BEKOMMT bzw. HERGIBT. Solange nur der Gold-Handel bezahlte, stand
+ * die Unterscheidung als `def.kind === 'gold'` an zwei Stellen im Store
+ * (`canBuyBargain` und `buyBargain`) — mit `voidPurge` als drittem Fall wäre
+ * daraus an beiden Stellen eine wachsende Oder-Kette geworden, und ein
+ * vergessenes Glied hiesse: der Handel prüft die Kosten, zieht sie aber nie ab.
+ *
+ * Als Satz an EINER Stelle ist die Frage „zahlt dieser Handel mit Material?"
+ * einmal beantwortet.
+ */
+export const FORGE_BARGAIN_KINDS_PAYING_MATERIALS: readonly ForgeBargainKind[] = [
+  'gold',
+  'voidPurge',
+]
+
+/**
+ * ── Was die fünf Kronen tun ──────────────────────────────────────────────────
+ * Keine davon ist ein Multiplikator. Jede beantwortet eine Frage, auf die der
+ * Spieler bis dahin keine Antwort kaufen konnte.
+ */
+/**
+ * Tideless Watch: der Void-Zoll wirkt nur noch zu diesem Anteil.
+ *
+ * Multipliziert sich MIT dem Riftwarden's Seal, statt sich zu addieren — und
+ * bleibt zusammen mit ihm unter `FORGE_VOID_RELIEF_CAP`. Zwei Quellen, die sich
+ * zu 100 % Milderung summieren könnten, hätten den Void abgeschafft; so
+ * schieben sie ihn gemeinsam an denselben Boden.
+ */
+export const FORGE_CROWN_VOID_RELIEF = 0.5
+/**
+ * Tideless Watch, zweite Hälfte: Faktor auf die Chime-Ausschüttung eines
+ * erlegten Void-Wesens. Der Riss nimmt weniger UND was man ihm abnimmt, zahlt
+ * mehr — dieselbe Aussage von beiden Seiten.
+ */
+export const FORGE_CROWN_VOID_SLAY_REWARD_MULT = 2
+/**
+ * Warden's Reprieve: auf diesen Anteil der Höchst-HP kehrt die Sonne zurück,
+ * wenn sie fällt — einmal je Sonnenphase.
+ *
+ * Die Hälfte und nicht voll: der Aufschub soll den Einschlag überstehen lassen,
+ * nicht ihn löschen. Zurück auf 100 % hiesse, dass die zweite Welle denselben
+ * Weg noch einmal von vorn gehen müsste.
+ */
+export const FORGE_CROWN_REPRIEVE_FRACTION = 0.5
+/**
+ * Sunderer's Mark: unterhalb dieses Anteils seiner HP kippt der Zoll eines
+ * Bosses — aus `1 − BOSS_CPS_PENALTY_FRACTION` wird `1 + …`.
+ *
+ * Die Hälfte ist der Punkt, an dem ein Boss-Kampf entschieden aussieht, aber
+ * noch dauert. Höher angesetzt wäre der Zoll faktisch abgeschafft (er zündete
+ * fast sofort), tiefer wäre er ein Trostpreis für die letzten Sekunden.
+ */
+export const FORGE_CROWN_BOSS_FLIP_HP_FRACTION = 0.5
+/**
+ * Midas Overflow: Anteil des Chime-Bestands, der je Sekunde in Stardust
+ * umschlägt — und die harte Obergrenze dafür.
+ *
+ * Der Handel greift erst über `FORGE_CROWN_OVERFLOW_MIN_CHIMES`. Das ist keine
+ * Bequemlichkeit, sondern die Bedingung, unter der er nicht die Wirtschaft
+ * ersetzt: unterhalb dieser Marke sind Chimes noch die knappe Grösse, und ein
+ * Abfluss dorthin nähme dem Baum sein Wachstum. Darüber sind sie im Spätspiel
+ * das, was sie sind — ein Berg ohne Senke.
+ *
+ * Der Stück-Deckel je Sekunde ist Pflicht: Material ist der Taktgeber der
+ * späten Forge, und ein Zufluss, der mit dem Bestand skaliert, wäre die
+ * exponentielle Kurve der Chimes auf einer linearen Achse.
+ */
+export const FORGE_CROWN_OVERFLOW_FRACTION_PER_SEC = 2e-9
+export const FORGE_CROWN_OVERFLOW_MIN_CHIMES = 1e9
+export const FORGE_CROWN_OVERFLOW_MAX_PER_SEC = 2
+/** Welches Material der Überlauf ausschüttet — das gewöhnlichste, mit Absicht. */
+export const FORGE_CROWN_OVERFLOW_MATERIAL = 'stardust'
 
 /** Obergrenzen, damit gestapelte Forge-Effekte den Spielablauf nicht brechen. */
 export const FORGE_MIN_DAMAGE_TAKEN_MULT = 0.25
 export const FORGE_MIN_DWELL_MULT = 0.5
 export const FORGE_MIN_EXPEDITION_MULT = 0.4
 export const FORGE_MAX_DOUBLE_CLICK_CHANCE = 0.8
+
+/**
+ * ── Der ÜBERLAUF: was eine Kappe schluckt, fließt woandershin ────────────────
+ *
+ * Die vier Kappen darüber sind richtig — ohne sie brechen Expeditionsdauer,
+ * Sonnenrampe und Klickwert. Falsch war, was DAHINTER geschah: nichts. Wer eine
+ * gekappte Achse weiter hochzog, zahlte für ein Nichts, und im Endzustand
+ * gemessen ist das keine Randerscheinung:
+ *
+ *   Achse            Rohwert bei Vollausbau      Kappe lässt durch    geschluckt
+ *   ───────────────────────────────────────────────────────────────────────────
+ *   Solar Sails      97 % (Zweig 72 + Relikt 25)   60 %                 37 Pkt
+ *   Golden Echo      96 %                          80 %                 16 Pkt
+ *   Quickening       60 %                          50 %                 10 Pkt
+ *   Aegis            60 %                          75 %                  0 Pkt
+ *
+ * (Gerechnet wird jeweils der Rohwert, der in den Kappen-Getter EINGEHT — bei
+ * Aegis also der Zweig allein; die Bulwark-Konstellation multipliziert danach
+ * und steht nicht in Prozentpunkten.)
+ *
+ * Aegis erreicht seine Kappe heute NICHT — sein Überlauf steht trotzdem, und
+ * zwar aus demselben Grund, aus dem die Boughs vor Phase 5 leer sind: er ist
+ * nicht tot, er ist noch leer. Ein späterer Aegis-Verstärker verpufft damit
+ * nicht still, sondern taucht als Regeneration wieder auf.
+ *
+ * **Die Kappen-Getter selbst bleiben unverändert.** Der Überlauf ist je ein
+ * ZWEITER Getter neben dem bestehenden, der denselben Rohwert liest — so ändert
+ * keine vorhandene Rechnung ihr Verhalten, und die Herleitungen an den
+ * `FORGE_MIN_*` oben behalten ihre Gültigkeit.
+ *
+ * **Die Sätze unten sind Umrechnungen zwischen VERSCHIEDENEN Größen und darum
+ * nicht 1:1.** Ein Prozentpunkt Expeditionstempo ist nicht ein Prozentpunkt
+ * Beute; wo die Zielachse dieselbe Größe misst wie die Quelle, steht 1.
+ */
+/**
+ * Expeditionstempo → Beute. Auf die Hälfte gesetzt: 37 geschluckte Punkte
+ * ergeben +18,5 % Beute, gegen die 144 %, die `wayfindersCache` bei Vollausbau
+ * ohnehin liefert. Der Überlauf soll den eigenen Zweig retten, nicht den
+ * fremden überholen.
+ */
+export const FORGE_OVERFLOW_EXPEDITION_REWARD_RATE = 0.5
+/**
+ * Verweildauer → Sternlebensdauer. 1:1, weil beides eine ZEIT in Prozent misst
+ * und die 10 geschluckten Punkte neben den 72 % aus `wardensVigil` klein sind.
+ * Thematisch dieselbe Aussage von der anderen Seite: die Sonne kann nicht
+ * schneller reifen, also stehen ihre Sterne länger.
+ */
+export const FORGE_OVERFLOW_STAR_LIFETIME_RATE = 1
+/**
+ * Schadensminderung → HP-Regeneration, in HP pro Sekunde je geschlucktem
+ * Prozentpunkt. Angesetzt an `regeneration`: dessen Zweig liefert bei
+ * Vollausbau 6 HP/s, ein Punkt Überlauf ist damit rund ein Hundertstel davon.
+ */
+export const FORGE_OVERFLOW_HP_REGEN_PER_PCT = 0.05
 
 // ── Detailspalte des Shop-Tabs (StarForgePanel) ───────────────────────────────
 /**
@@ -833,6 +1121,17 @@ export const FORGE_UPGRADE_GROUPS = [
     hint: 'No final level — the tree keeps growing',
     accent: '#c9a0ff',
   },
+  {
+    // Gold schliesst den Kreis nach aussen: der innerste Ring (Rays) trägt es
+    // ebenfalls, und die Krone ist das, was aus ihm geworden ist. Der Verlauf
+    // Gold → Grün → Eisblau → Violett bleibt dazwischen unberührt.
+    tier: 'crown' as const,
+    title: 'Astral Crowns',
+    shortTitle: 'Crowns',
+    icon: 'game-icons:crown',
+    hint: 'One each, and every one changes a rule',
+    accent: '#ffd76a',
+  },
 ]
 
 /**
@@ -852,6 +1151,7 @@ export const FORGE_UPGRADE_TIER_LABELS = {
   branch: 'BRANCH',
   leaf: 'LEAF',
   bough: 'BOUGH',
+  crown: 'CROWN',
 } as const
 
 /**
@@ -1289,6 +1589,27 @@ export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 60
  * Segment, das in dreißig Sekunden weg ist, während Strahlen und Baum daneben
  * verblassten. Was bleibt, darf nicht leiser sein als was vergeht.
  */
+/**
+ * Was für eine Art Herkunft das ist — und damit die Antwort auf die einzige
+ * Frage, die der Sockel sonst falsch beantwortet: **ist „Faktor 1" hier ein
+ * Mangel?**
+ *
+ * Vor diesem Feld prüfte `unusedYieldSources()` allein `factor === 1` und warf
+ * drei grundverschiedene Zustände in eine Zone. Gemessen im Endzustand (Admin →
+ * Max Everything) stand dort „3 unused", und alle drei waren richtig so:
+ *
+ *   • `earned`    — dauerhaft erworben. Neutral heißt: hier ist noch Luft. Das
+ *                   ist die EINZIGE Natur, für die „ungenutzt" etwas aussagt.
+ *   • `transient` — läuft von selbst ab (Drifter, Omen, Zeit-Augments, Bard-W).
+ *                   Neutral heißt: gerade läuft nichts. Kein Versäumnis, ein
+ *                   Zeitpunkt.
+ *   • `toll`      — ein ABZUG (Void, Planetenboss). Neutral heißt: du zahlst
+ *                   gerade nichts. Das ist der BESTFALL und stand als Mangel im
+ *                   Bild — der Sockel forderte den Spieler auf, sich eine Strafe
+ *                   zu besorgen.
+ */
+export type ForgeYieldNature = 'earned' | 'transient' | 'toll'
+
 export interface ForgeYieldSourceDef {
   id: string
   /** Was unter dem Segment steht. Kurz — mehr als ein Wort passt nicht. */
@@ -1296,6 +1617,8 @@ export interface ForgeYieldSourceDef {
   /** Der ausgeschriebene Name im Kärtchen. */
   title: string
   color: string
+  /** Ob „neutral" hier ein Mangel ist — siehe `ForgeYieldNature`. */
+  nature: ForgeYieldNature
   /**
    * WO man dieses System größer macht — ein Satz, der im Kärtchen unter dem
    * Faktor steht.
@@ -1317,6 +1640,7 @@ export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
     label: 'Solar',
     title: 'Solar rays',
     color: '#e8c040',
+    nature: 'earned',
     hint: 'Raise the five rays at the heart of the tree.',
   },
   {
@@ -1324,6 +1648,7 @@ export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
     label: 'Forge',
     title: 'Star Forge',
     color: '#7fd048',
+    nature: 'earned',
     hint: 'Grow branches, leaves and boughs in the tree.',
   },
   {
@@ -1331,6 +1656,7 @@ export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
     label: 'Meeps',
     title: 'Meep skill tree',
     color: '#40c8b0',
+    nature: 'earned',
     hint: 'Spend meeps in the Skill tab. It survives prestige.',
   },
   {
@@ -1338,6 +1664,7 @@ export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
     label: 'Codex',
     title: 'Astral Codex',
     color: '#86d0ff',
+    nature: 'earned',
     hint: 'Reach the Chime Keeper stages in the Stats tab.',
   },
   {
@@ -1345,6 +1672,7 @@ export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
     label: 'Items',
     title: 'Equipped items',
     color: '#d07a30',
+    nature: 'earned',
     hint: 'Equip items on your champions in the Team tab.',
   },
   {
@@ -1352,20 +1680,46 @@ export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
     label: 'Traits',
     title: 'Origin traits',
     color: '#c9a0ff',
+    nature: 'earned',
     hint: 'Field champions that share an origin.',
   },
   {
     id: 'universe',
     label: 'Cosmos',
-    title: 'Universe and providences',
+    title: 'Providences',
     color: '#6a80d8',
-    hint: 'Set by your universe and the providences you rolled.',
+    nature: 'earned',
+    hint: 'Rolled when you leave a universe behind.',
+  },
+  {
+    // Steht als EIGENE Zeile und nicht mehr in `universe` mit drin. Der Getter
+    // `gameStore.activeModifier` ist das Produkt aus Vorsehung UND allen
+    // dauerhaften Augment-Effekten; im Endzustand gemessen kamen daraus rund
+    // ×50, die vollständig unter „Universe and providences" liefen — obwohl gar
+    // kein Aufbruch stattgefunden hatte. Zehn Augments tragen einen
+    // `cpsMultiplier`, und keiner davon war im Band als solcher zu sehen.
+    //
+    // NICHT zu verwechseln mit `boons`: dort stehen die BEFRISTETEN
+    // Augment-Buffs (`augmentStore.temporaryCPSMultiplier`). Hier steht, was ein
+    // angenommenes Augment dauerhaft trägt — bis zum nächsten Aufbruch.
+    //
+    // Die Farbe ist die des Projekts für Augments (`AUGMENT_RARITY_COLOR.epic`)
+    // und nicht neu erfunden. Sie steht zwei Segmente von `traits` (#c9a0ff)
+    // entfernt, dem einzigen anderen Violett — direkt daneben wären die beiden
+    // in Bandbreite nicht auseinanderzuhalten.
+    id: 'augments',
+    label: 'Augments',
+    title: 'Active augments',
+    color: '#a855f7',
+    nature: 'earned',
+    hint: 'Picked on level-up. They reset when you prestige.',
   },
   {
     id: 'boons',
     label: 'Boons',
     title: 'Running boons',
     color: '#a9b6c4',
+    nature: 'transient',
     hint: 'Temporary — drifters, omens, augments and abilities.',
   },
   {
@@ -1373,6 +1727,7 @@ export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
     label: 'Void',
     title: 'The Void',
     color: '#e0409f',
+    nature: 'toll',
     hint: 'Close the rift. It grows the longer it stands.',
   },
   {
@@ -1380,6 +1735,7 @@ export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
     label: 'Bosses',
     title: 'Planet bosses',
     color: '#cc6050',
+    nature: 'toll',
     hint: 'Defeat the planet boss to lift its toll.',
   },
 ]

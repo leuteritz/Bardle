@@ -71,6 +71,16 @@
           stroke-width="1.5" stroke-dasharray="3 9"
           :opacity="ringOpacity('bough', boughsUnlocked)"
         />
+        <!-- Ring 5 schliesst den Kreis zurück zum Gold des Kerns — und trägt
+             als einziger eine DURCHGEZOGENE Linie. Die Strichelung wurde nach
+             aussen hin immer lückenhafter (5-5 · 4-7 · 3-9); die Krone kehrt das
+             um, weil sie kein „noch mehr davon" ist, sondern ein Abschluss. -->
+        <circle
+          :cx="C" :cy="C" :r="FORGE_RING_CROWN_R" fill="none"
+          :stroke="ringStroke('crown', crownsUnlocked, '#6a5020')"
+          stroke-width="1.5"
+          :opacity="ringOpacity('crown', crownsUnlocked)"
+        />
 
         <!-- Limbs: sun → root, root → branch, branch → leaf (dim base).
              Ein Ast, der zu einem ausgefilterten Knoten führt, tritt mit ihm
@@ -150,6 +160,16 @@
         :style="ringLabelStyle(FORGE_RING_BOUGH_R)"
       >
         {{ boughRingLabel }}
+      </div>
+      <div
+        class="ring-label"
+        :class="[
+          crownsUnlocked ? 'ring-label--crown' : 'ring-label--locked',
+          { 'ring-label--sifted': ringSifted('crown') },
+        ]"
+        :style="ringLabelStyle(FORGE_RING_CROWN_R)"
+      >
+        {{ crownRingLabel }}
       </div>
 
       <!-- Sun -->
@@ -284,6 +304,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { FORGE_NODES } from '@/config/progression/starForge'
 import { formatNumber } from '@/config/ui/numberFormat'
 import {
@@ -309,6 +330,7 @@ import {
   FORGE_RING_BRANCH_R,
   FORGE_RING_LEAF_R,
   FORGE_RING_BOUGH_R,
+  FORGE_RING_CROWN_R,
   FORGE_TREE_ZOOM_MIN,
   FORGE_TREE_ZOOM_MAX,
   FORGE_TREE_ZOOM_STEP,
@@ -319,6 +341,9 @@ import {
   FORGE_ICON_SIZE_BRANCH,
   FORGE_ICON_SIZE_LEAF,
   FORGE_ICON_SIZE_BOUGH,
+  FORGE_ICON_SIZE_CROWN,
+  FORGE_CROWN_RING_LABEL_LOCKED,
+  FORGE_CROWN_RING_LABEL_OPEN,
   FORGE_ENDLESS_SYMBOL,
   SUN_PHASE_DISPLAY_OFFSET,
   FORGE_TREE_FIT_PADDING_PX,
@@ -338,6 +363,7 @@ import {
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
+const forgeStore = useStarForgeStore()
 const playerStore = usePlayerStore()
 const { entryById, bestBuyId, buyUpgrade } = useForgeUpgrades()
 const { spotlightId, treeHoverId, setTreeHover, resetForgeSpotlight } = useForgeSpotlight()
@@ -423,11 +449,13 @@ const RING_RADIUS: Record<ForgeNodeTier, number> = {
   branch: FORGE_RING_BRANCH_R,
   leaf: FORGE_RING_LEAF_R,
   bough: FORGE_RING_BOUGH_R,
+  crown: FORGE_RING_CROWN_R,
 }
 const RING_ICON_SIZE: Record<ForgeNodeTier, number> = {
   branch: FORGE_ICON_SIZE_BRANCH,
   leaf: FORGE_ICON_SIZE_LEAF,
   bough: FORGE_ICON_SIZE_BOUGH,
+  crown: FORGE_ICON_SIZE_CROWN,
 }
 
 /* Name, Glyph und Farbe der fünf Strahlen stehen als SOLAR_BRANCHES in
@@ -696,10 +724,25 @@ const leavesUnlocked = computed(
 const boughsUnlocked = computed(
   () => solarStore.starPhase >= (ringPhases.value.bough?.min ?? Infinity),
 )
+/**
+ * Ring 5 hängt als einziger NICHT an der Sonne, sondern am Aufbruch — die
+ * Sonnenrampe endet mit Ring 4. Der Store beantwortet das, damit der
+ * Prestige-Zähler nicht an zwei Stellen gelesen wird.
+ */
+const crownsUnlocked = computed(() => forgeStore.crownsUnlocked)
 
 const branchRingLabel = computed(() => ringLabelFor('branch'))
 const leafRingLabel = computed(() => ringLabelFor('leaf'))
 const boughRingLabel = computed(() => ringLabelFor('bough'))
+/**
+ * Die Beschriftung von Ring 5 nennt seine eigene Bedingung, nicht eine
+ * Sonnenphase. `ringLabelFor` liest `ringPhases` — für die Krone stünde dort
+ * dieselbe Phase wie für die Boughs, und das Etikett behauptete, der Ring sei
+ * offen, während er es nicht ist.
+ */
+const crownRingLabel = computed(() =>
+  crownsUnlocked.value ? FORGE_CROWN_RING_LABEL_OPEN : FORGE_CROWN_RING_LABEL_LOCKED,
+)
 
 /**
  * Stufe, Kosten, Wirkung und Sperrgrund eines Knotens kommen aus
@@ -981,6 +1024,13 @@ const nextPhasePreviewStyle = computed(() => ({
   background: #150c1a;
 }
 
+/* Ring 5 kehrt zum Gold des Kerns zurück — der äusserste Ring ist das, was aus
+   dem innersten geworden ist. Statischer Zustand, keine laufende Animation. */
+.ring-label--crown {
+  color: rgba(255, 215, 106, 0.85);
+  background: #1a1408;
+}
+
 .ring-label--now {
   color: rgba(139, 224, 96, 0.8);
   background: #12160c;
@@ -1176,6 +1226,17 @@ const nextPhasePreviewStyle = computed(() => ({
   width: 42px;
   height: 42px;
   border: 2px solid #4a2a6a;
+}
+
+/* Ring 5 ist der GRÖSSTE nach dem Kern — grösser als ein Zweig, kleiner als ein
+   Strahl. Fünf Knoten auf dem weitesten Ring, jeder nur einmal zu haben: in
+   Bough-Grösse verschwänden sie am Rand einer Bühne, die `useFitScale` auf
+   Full HD auf rund 60 % zieht. Der goldene Rand ist derselbe Ton wie sein Ring
+   und sein Listenabschnitt. */
+.node-circle--crown {
+  width: 50px;
+  height: 50px;
+  border: 3px solid #6a5020;
 }
 
 .node-level {

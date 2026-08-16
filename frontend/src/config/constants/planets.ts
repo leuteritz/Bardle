@@ -640,6 +640,21 @@ export const BOSS_DAMAGE_REDUCTION_CAP = 0.8
 // Inventory
 /** Default base probability for a material drop from a rescue planet */
 export const MATERIAL_DROP_BASE_CHANCE = 0.3
+/**
+ * Wie viele Extrastücke eine Drop-Chance über 100 % höchstens einbringt.
+ *
+ * Sieben Quellen multiplizieren sich in die Chance (`tryDropMaterial`), und
+ * jenseits von 1 verfiel jeder weitere Punkt lautlos — der Wurf dort ist
+ * `Math.random() > chance`. Seit der Überschuss zu MENGE wird, braucht er einen
+ * Deckel: die Ausbeute skalierte sonst linear mit einem Produkt aus sieben
+ * Faktoren, und Material ist der Taktgeber der ganzen Star Forge (die späten
+ * Blätter und jedes Relikt hängen daran, `FORGE_LEAVES` in
+ * config/progression/starForge.ts).
+ *
+ * Drei ist reichlich und bleibt eine Zahl, die man im Kopf behält: mit einem
+ * Prospector's Charm daneben liegt das Maximum bei fünf Stück je Fall.
+ */
+export const MATERIAL_DROP_OVERFLOW_MAX_EXTRA = 3
 
 /** Striker-Geschoss schlägt auf dem Bossplaneten ein. */
 export const STRIKER_DAMAGE_FLOAT_X_SPREAD = 36

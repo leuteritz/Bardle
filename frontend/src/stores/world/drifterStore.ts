@@ -28,6 +28,7 @@ import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 
 let uidCounter = 0
 
@@ -390,7 +391,11 @@ export const useDrifterStore = defineStore('drifter', {
         def.buff.durationMs *
           useAchievementStore().drifterBuffDurationMult *
           // Hollow Tide (providence): häufiger, dafür kürzer
-          useProvidenceStore().drifterBuffDurationMult,
+          useProvidenceStore().drifterBuffDurationMult *
+          // Pilgrim's Reliquary (Star Forge): der einzige KAUF, der auf die
+          // Bandzeile `boons` zahlt — sie trägt sonst nur, was der Zufall
+          // gerade vorbeischickt.
+          useStarForgeStore().boonDurationMult,
       )
       this.buffs.push({
         sourceId: def.id,

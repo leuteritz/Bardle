@@ -8,6 +8,7 @@ import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { FORGE_YIELD_SOURCES } from '@/config/constants'
 import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
+import { AUGMENTS } from '@/config/economy/augments'
 
 /**
  * Die Spec, die das Herkunftsband an die Wirtschaft bindet.
@@ -157,6 +158,31 @@ describe('cpsFactorBreakdown', () => {
     const active = shop.cpsFactorBreakdown.filter((entry) => entry.factor !== 1)
     expect(active.map((entry) => entry.id)).toEqual(['boons'])
     expect(active[0].factor).toBeCloseTo(2, 6)
+  })
+
+  /**
+   * `universe` und `augments` sind die zwei Haelften von
+   * `gameStore.activeModifier.cpsMultiplier`. Sie standen einmal zusammen in
+   * EINER Zeile, und im Endzustand kamen daraus rund ×50 unter der Ueberschrift
+   * „Universe and providences" — obwohl gar kein Aufbruch stattgefunden hatte.
+   *
+   * Diese Spec haelt beides fest: dass ein dauerhaftes Augment unter `augments`
+   * landet UND dass das Produkt der beiden weiterhin exakt der Kettenfaktor ist.
+   */
+  it('ordnet einen dauerhaften Augment-Effekt unter augments ein, nicht unter universe', () => {
+    const shop = useShopStore()
+    const game = useGameStore()
+
+    const cpsAugment = AUGMENTS.find((a) => (a.effects.cpsMultiplier ?? 1) !== 1)
+    expect(cpsAugment, 'kein Augment traegt cpsMultiplier').toBeDefined()
+    game.activeAugments = [cpsAugment!.id]
+
+    const byId = Object.fromEntries(shop.cpsFactorBreakdown.map((e) => [e.id, e.factor]))
+    expect(byId.augments).toBeCloseTo(cpsAugment!.effects.cpsMultiplier!, 10)
+    expect(byId.universe).toBe(1)
+    // Die Identitaet mit dem Getter, den `calculateTotalCPS()` liest.
+    expect(byId.universe * byId.augments).toBeCloseTo(game.activeModifier.cpsMultiplier ?? 1, 10)
+    expect(shop.calculateTotalCPS()).toBe(Math.floor(baseSum() * bandProduct()))
   })
 
   it('ordnet den Flugtempo-Strahl unter solar ein', () => {

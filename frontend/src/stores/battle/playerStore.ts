@@ -5,9 +5,11 @@ import {
   PLAYER_HP_LOSS_ON_ENRAGE,
   PLAYER_LOW_HP_THRESHOLD_PCT,
   DAMAGE_FLOAT_DURATION_MS,
+  FORGE_CROWN_REPRIEVE_FRACTION,
 } from '@/config/constants'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 
 export const usePlayerStore = defineStore('player', {
   state: () => ({
@@ -22,6 +24,20 @@ export const usePlayerStore = defineStore('player', {
     totalHpRegenerated: 0,
     /** How often the sun was driven down to 0 HP. */
     timesDowned: 0,
+    /**
+     * Sonnenphase, in der Warden's Reprieve (Star-Forge-Krone) zuletzt gegriffen
+     * hat. `-1` heisst „noch nie".
+     *
+     * Der Aufschub gilt EINMAL JE PHASE, und die Phase ist der richtige Takt
+     * dafür: sie ist die einzige Uhr im Spiel, die von selbst weiterläuft, ohne
+     * dass der Spieler etwas tut, und sie überlebt das Prestige — genau wie die
+     * Krone. Ein Timer stattdessen hätte an `onGameSpeedChange` hängen müssen
+     * und wäre eine zweite Zeitachse neben einer, die es schon gibt.
+     *
+     * Liegt im Spielstand: ohne Persistenz gäbe ein Neuladen den Aufschub in
+     * derselben Phase ein zweites Mal her.
+     */
+    reprieveUsedInPhase: -1,
   }),
 
   getters: {
@@ -59,7 +75,18 @@ export const usePlayerStore = defineStore('player', {
       const wasUp = this.currentHP > 0
       this.currentHP = Math.max(0, this.currentHP - reduced)
       this.totalDamageTaken += reduced
-      if (wasUp && this.currentHP === 0) this.timesDowned += 1
+      if (wasUp && this.currentHP === 0) {
+        this.timesDowned += 1
+        // Warden's Reprieve (Star-Forge-Krone): die gefallene Sonne kehrt
+        // einmal je Sonnenphase auf einen Teil ihrer Höchst-HP zurück.
+        //
+        // NACH dem Zähler und nach der Buchung des Schadens: der Einschlag hat
+        // stattgefunden, `timesDowned` und `totalDamageTaken` sind die
+        // Lebenszeit-Wahrheit darüber. Der Aufschub ist eine Antwort darauf,
+        // keine Verhinderung — und alles, was am Fall hängt (Void-Meepzoll,
+        // Boss-Enrage), ist zu diesem Zeitpunkt bereits gelaufen.
+        this._tryReprieve()
+      }
       this.damageFloats.push({
         id: this._nextFloatId++,
         value: reduced,
@@ -70,6 +97,21 @@ export const usePlayerStore = defineStore('player', {
         expiresAt: Date.now() + DAMAGE_FLOAT_DURATION_MS,
       })
       return reduced
+    },
+    /**
+     * Holt die gefallene Sonne zurück — höchstens einmal je Sonnenphase.
+     *
+     * Eigene Action und keine Zeilen in `takeDamage`, weil sie einen dritten
+     * Store liest (die laufende Phase) und `takeDamage` sonst drei fremde
+     * Stores in einer Rechnung hätte, von denen nur zwei etwas mit Schaden zu
+     * tun haben.
+     */
+    _tryReprieve(): void {
+      if (!useStarForgeStore().sunReprieveOwned) return
+      const phase = useSolarUpgradeStore().starPhase
+      if (this.reprieveUsedInPhase === phase) return
+      this.reprieveUsedInPhase = phase
+      this.currentHP = Math.round(this.maxHP * FORGE_CROWN_REPRIEVE_FRACTION)
     },
     pruneFloats() {
       // eslint-disable-next-line no-restricted-syntax -- Wanduhr, siehe takeDamage

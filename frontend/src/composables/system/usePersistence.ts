@@ -33,6 +33,7 @@ import type {
   VoidAftermath,
   BardAbilityBuff,
   BardAbilityId,
+  ForgeActiveBuff,
   UniverseRunRecord,
 } from '@/types'
 import {
@@ -323,6 +324,9 @@ export function usePersistence() {
         totalDamageTaken: playerStore.totalDamageTaken,
         totalHpRegenerated: playerStore.totalHpRegenerated,
         timesDowned: playerStore.timesDowned,
+        // Ohne diese Zeile gäbe ein Neuladen den Aufschub der Warden's-Reprieve-
+        // Krone in derselben Sonnenphase ein zweites Mal her.
+        reprieveUsedInPhase: playerStore.reprieveUsedInPhase,
       },
       // Lifetime-only blocks: the live boss/star state itself is never persisted,
       // but its career counters must survive a reload.
@@ -362,6 +366,7 @@ export function usePersistence() {
         branchLevels: { ...starForgeStore.branchLevels },
         leafLevels: { ...starForgeStore.leafLevels },
         boughLevels: { ...starForgeStore.boughLevels },
+        crownLevels: { ...starForgeStore.crownLevels },
         relicLevels: { ...starForgeStore.relicLevels },
         forgedConstellations: [...starForgeStore.forgedConstellations],
         bargainDealId: starForgeStore.bargainDealId,
@@ -900,6 +905,7 @@ export function usePersistence() {
         playerStore.totalDamageTaken = saved.player.totalDamageTaken ?? 0
         playerStore.totalHpRegenerated = saved.player.totalHpRegenerated ?? 0
         playerStore.timesDowned = saved.player.timesDowned ?? 0
+        playerStore.reprieveUsedInPhase = saved.player.reprieveUsedInPhase ?? -1
       }
 
       // Restore the lifetime-only counters of the boss / star systems
@@ -967,17 +973,18 @@ export function usePersistence() {
       if (saved.starForge) {
         starForgeStore.branchLevels = migratedIdMap(saved.starForge.branchLevels)
         starForgeStore.leafLevels = migratedIdMap(saved.starForge.leafLevels)
-        // Ältere Spielstände kennen den vierten Ring nicht — `migratedIdMap`
-        // gibt für ein fehlendes Feld einen leeren Beutel zurück, und das ist
-        // der richtige Startwert.
+        // Ältere Spielstände kennen den vierten und fünften Ring nicht —
+        // `migratedIdMap` gibt für ein fehlendes Feld einen leeren Beutel
+        // zurück, und das ist der richtige Startwert.
         starForgeStore.boughLevels = migratedIdMap(saved.starForge.boughLevels)
+        starForgeStore.crownLevels = migratedIdMap(saved.starForge.crownLevels)
         starForgeStore.relicLevels = migratedIdMap(saved.starForge.relicLevels)
         starForgeStore.forgedConstellations = migratedIds(saved.starForge.forgedConstellations)
         starForgeStore.bargainDealId = migratedId(saved.starForge.bargainDealId ?? '')
         starForgeStore.bargainRestockAt = saved.starForge.bargainRestockAt ?? 0
         starForgeStore.bargainPurchased = saved.starForge.bargainPurchased ?? false
         starForgeStore.activeBuffs = (saved.starForge.activeBuffs ?? []).map(
-          (b: { id: 'cpcX2' | 'cpsX2'; expiresAt: number }) => ({ ...b }),
+          (b: ForgeActiveBuff) => ({ ...b }),
         )
       }
 

@@ -62,6 +62,7 @@ import {
   HONOR_MVP_BUFF_DURATION_S,
   HONOR_MVP_BUFF_MULT,
   UNIVERSE_RUN_HISTORY_LIMIT,
+  FORGE_CROWN_OVERFLOW_MATERIAL,
 } from '@/config/constants'
 import type {
   UniverseRunBaseline,
@@ -313,17 +314,35 @@ export const useGameStore = defineStore('game', {
 
     // Adds Chimes and updates all dependent values
     addChime() {
-      // Golden Echo (Star Forge) + Twin Echo (Meep Tree): chance that a click counts twice
-      const doubleChance =
-        useStarForgeStore().doubleClickChance + useMeepTreeStore().fx.doubleClickChance
-      const doubled = Math.random() < doubleChance
+      // Golden Echo (Star Forge) + Twin Echo (Meep Tree): chance that a click
+      // counts twice. Läuft Golden Echo über `FORGE_MAX_DOUBLE_CLICK_CHANCE`
+      // hinaus, wird der überschüssige Teil zum DREIFACH-Klick — bei
+      // Vollausbau 16 der 96 Punkte, die der Zweig roh trägt.
+      //
+      // EIN Wurf entscheidet über beide Stufen, und die Bereiche liegen
+      // nebeneinander statt übereinander: mit zwei Würfen könnte ein Klick
+      // beides sein und käme auf das Sechsfache.
+      const forge = useStarForgeStore()
+      const tripleChance = forge.tripleClickChance
+      const doubleChance = forge.doubleClickChance + useMeepTreeStore().fx.doubleClickChance
+      const roll = Math.random()
+      const clickMultiplier = roll < tripleChance ? 3 : roll < tripleChance + doubleChance ? 2 : 1
       const clickValue = this.chimesPerClick * this.mvpBuffMultiplier
-      const gain = doubled ? clickValue * 2 : clickValue
+      const gain = clickValue * clickMultiplier
       this.chimes += gain
       this.chimesForNextUniverse += gain
       this.totalChimesEarned += gain
       this.chimesEarnedForLevel += gain
       this.totalClicks += 1
+      // Caretaker's Ledger (Star Forge): ein Klick, der wenigstens verdoppelt
+      // hat, kann zusätzlich Material lockern. Der Wurf hängt am TREFFER und
+      // nicht am Klick — sonst hinge die Ausbeute an der Klickrate statt am
+      // Ausbau des Baums, und ein Autoclicker wäre die beste Materialquelle im
+      // Spiel. `tryDropMaterial` würfelt danach seine eigene Chance, das hier
+      // ist nur das Tor davor.
+      if (clickMultiplier > 1 && Math.random() < forge.clickMaterialChance) {
+        useInventoryStore().tryDropMaterial(undefined, 'click')
+      }
       // Traveler's Call (bard passive): the click builds resonance and takes a
       // slice off every running ability cooldown.
       useBardAbilityStore().registerClick()
@@ -928,6 +947,16 @@ export const useGameStore = defineStore('game', {
       combatStore.tick()
       const playerStore = usePlayerStore()
       playerStore.regenTick()
+      // Midas Overflow (Star-Forge-Krone): der Chime-Berg setzt Stardust ab.
+      //
+      // Steht NACH der Produktion und vor Omen und Chronik: der Getter liest
+      // `this.chimes`, und gelesen vor der Gutschrift dieser Sekunde hinge die
+      // Ausschüttung am Stand der vorigen. Er kostet nichts, solange die Krone
+      // nicht steht — dann ist er ein Vergleich gegen `false`.
+      const overflow = useStarForgeStore().chimeOverflowPerSec
+      if (overflow > 0) {
+        useInventoryStore().addMaterial(FORGE_CROWN_OVERFLOW_MATERIAL, 'drop', overflow)
+      }
       // Skill-tree notifications: drop stale acknowledgements so a node that
       // became unaffordable re-notifies once the player can afford it again.
       useMeepTreeStore().syncAcknowledged()
@@ -1290,7 +1319,15 @@ export const useGameStore = defineStore('game', {
         this.activeModifier.meepCostMultiplier ?? 1,
       )
       const treeMult = useMeepTreeStore().fx.meepCostMult
-      return Math.max(1, anchor * this.abilityMeepCostMultiplier * modifierMult * treeMult)
+      // Meep Shrine (Star Forge): senkt die ANFORDERUNG, nicht die Ausbeute —
+      // die steht als Wurzel darauf. Braucht keinen Eintrag in
+      // `runMeepCostFloor`: ein Relikt-Level kann nur steigen, der Faktor also
+      // nur fallen, und die Monotonie der Anforderung bleibt von selbst heil.
+      const forgeMult = useStarForgeStore().meepCostMult
+      return Math.max(
+        1,
+        anchor * this.abilityMeepCostMultiplier * modifierMult * treeMult * forgeMult,
+      )
     },
 
     /**

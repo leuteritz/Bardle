@@ -563,6 +563,12 @@ export const useExpeditionStore = defineStore('expedition', {
           expedition.spoils = success
             ? this._rollSpoils(expedition.tier ?? 'common')
             : { materials: [], meep: 0 }
+          // Wanderer's Gate (Star-Forge-Krone): die zurückkehrende Expedition
+          // öffnet die nächste Passage sofort, statt die Spawn-Wartezeit
+          // abzusitzen. Es wird nur die UHR zurückgesetzt — der Deckel
+          // `maxAvailableOffers` in `checkAvailability` bleibt unangetastet,
+          // sonst füllte das Tor die Liste über ihre eigene Grenze hinaus.
+          if (useStarForgeStore().expeditionInstantRespawn) this.nextSpawnAt = 0
           logger.info(
             'Expedition',
             `Resolved: ${expedition.name} - ${expedition.status.toUpperCase()}`,

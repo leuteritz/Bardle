@@ -54,6 +54,7 @@ export const MATERIAL_SOURCE_LABELS: Record<string, string> = {
   bargain: 'Forge Deals',
   expedition: 'Expeditions',
   void: 'Sealed Rifts',
+  click: 'Shaken Loose',
 }
 export const MATERIAL_SOURCE_ICONS: Record<string, string> = {
   drop: 'game-icons:falling-rocks',
@@ -63,6 +64,7 @@ export const MATERIAL_SOURCE_ICONS: Record<string, string> = {
   bargain: 'game-icons:gems',
   expedition: 'game-icons:caravan',
   void: 'game-icons:vortex',
+  click: 'game-icons:click',
 }
 export const MATERIAL_SINK_LABELS: Record<string, string> = {
   recruit: 'Champion Recruits',

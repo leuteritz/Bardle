@@ -5,6 +5,7 @@ import {
   FORGE_LEAF_UNLOCK_PHASE,
   FORGE_BOUGH_UNLOCK_PHASE,
   FORGE_BOUGH_COST_MULTIPLIER,
+  FORGE_CROWN_BASE_COST,
 } from '@/config/constants'
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -555,7 +556,125 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   ),
 ]
 
-export const FORGE_NODES: ForgeNodeDef[] = [...FORGE_BRANCHES, ...FORGE_LEAVES, ...FORGE_BOUGHS]
+// ── Crowns (ring 5) — der einzige Ring, der eine REGEL kauft ─────────────────
+/**
+ * Fünf Knoten, einer je Wurzelachse, jeder genau EINMAL zu haben.
+ *
+ * Sie schliessen das Loch, das die Boughs offengelassen haben. Der endlose Ring
+ * gibt dem Spätspiel eine Chime-Senke, aber keine Überraschung mehr: Stufe 24
+ * fühlt sich an wie Stufe 23, nur teurer. Was ab dort fehlte, war keine Zahl,
+ * sondern eine neue Regel.
+ *
+ * Deshalb trägt kein Crown ein `effectPerLevel`, das etwas bedeutet — die
+ * Wirkung steht als Konstante in `constants/forge.ts` und wird von genau EINEM
+ * Getter im Store gelesen. `desc` sagt sie im Klartext, ohne `{v}`.
+ *
+ * Zwei von ihnen sind der eigentliche Grund für diesen Ring: **Tideless Watch**
+ * und **Sunderer's Mark** greifen in die zwei Herkünfte des Ertragsbandes, die
+ * nach UNTEN zeigen (`FORGE_YIELD_SOURCES`, nature `toll`). Gegen Void-Zoll und
+ * Boss-Zoll hatte der Spieler bis hierhin kein einziges Kaufangebot — nur
+ * Warten. Ein Zoll, den man verhandeln kann, ist eine Entscheidung.
+ *
+ * Der Preis ist einheitlich und liegt eine Grössenordnung über dem Einstieg der
+ * Boughs (2e9): wer hier steht, hat ein Universum hinter sich und einen Bough
+ * auf Stufe 5 — die Kosten sollen die Entscheidung sein, welche Krone ZUERST.
+ */
+function crown(
+  id: string,
+  name: string,
+  parentId: string,
+  icon: string,
+  color: string,
+  angleDeg: number,
+  materialCost: Record<string, number>,
+  desc: string,
+): ForgeNodeDef {
+  return {
+    id,
+    name,
+    parentId,
+    tier: 'crown',
+    // Dieselbe Phase wie die Boughs: das eigentliche Tor ist der Prestige-Zähler
+    // (`FORGE_CROWN_UNLOCK_PRESTIGES`), und die Phase steht daneben, damit ein
+    // Crown nicht vor seinem Elternring auftaucht.
+    phase: FORGE_BOUGH_UNLOCK_PHASE,
+    icon,
+    color,
+    angleDeg,
+    baseCost: FORGE_CROWN_BASE_COST,
+    // Ohne Bedeutung — ein Crown hat genau eine Stufe, es gibt keine zweite,
+    // deren Preis sich vervielfachen könnte.
+    costMultiplier: 1,
+    materialCost,
+    desc,
+    effectPerLevel: 0,
+  }
+}
+
+export const FORGE_CROWNS: ForgeNodeDef[] = [
+  crown(
+    'wanderersGate',
+    "Wanderer's Gate",
+    'wayfarersHoard',
+    'game-icons:portal',
+    '#ffe9a8',
+    270,
+    { solar_essence: 8, dark_matter: 3 },
+    'A returning expedition opens the next passage at once.',
+  ),
+  crown(
+    'wardensReprieve',
+    "Warden's Reprieve",
+    'adamantCore',
+    'game-icons:heart-tower',
+    '#ffb0b0',
+    318,
+    { moon_crystal: 40, dark_matter: 3 },
+    'Once per star phase, a fallen sun returns at half health.',
+  ),
+  crown(
+    'midasOverflow',
+    'Midas Overflow',
+    'gildedCascade',
+    'game-icons:gold-nuggets',
+    '#b0f090',
+    54,
+    { nebula_quartz: 30, solar_essence: 6 },
+    'Chimes past your hoard settle into stardust.',
+  ),
+  crown(
+    'tidelessWatch',
+    'Tideless Watch',
+    'endlessTide',
+    'game-icons:eclipse',
+    '#ffd0a0',
+    126,
+    { void_shard: 10, dark_matter: 4 },
+    // Zwei Sätze, ein Gedanke: der Riss nimmt weniger, und was man ihm abnimmt,
+    // zahlt mehr. Die Rückzahlung hängt am BOON eines erlegten Wesens und nicht
+    // an einer nachgerechneten Drossel-Bilanz — die müsste Rampe, Milderung und
+    // alle gleichzeitig stehenden Wesen auseinanderhalten und wäre eine Zahl,
+    // die niemand nachprüfen kann.
+    'The Void takes half as much, and every creature you slay pays double.',
+  ),
+  crown(
+    'sunderersMark',
+    "Sunderer's Mark",
+    'rendingArc',
+    'game-icons:broken-shield',
+    '#f0b8e0',
+    198,
+    { void_shard: 8, dark_matter: 4 },
+    'A boss below half health pays you its toll instead of taking it.',
+  ),
+]
+
+export const FORGE_NODES: ForgeNodeDef[] = [
+  ...FORGE_BRANCHES,
+  ...FORGE_LEAVES,
+  ...FORGE_BOUGHS,
+  ...FORGE_CROWNS,
+]
 
 /**
  * Nachschlagen über eine Map statt über `find`.
@@ -671,6 +790,77 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     effectPerLevel: 12,
     sourceLabel: 'Shatter branch + Solar Essence',
   },
+
+  // ── Die drei Relikte, die auf FREMDE Systeme zahlen ────────────────────────
+  // Die sechs darüber verstärken alle eine Achse, die ihr Zweig ohnehin schon
+  // trägt — mehr Beute, mehr Schaden, mehr Offline-Ertrag. Diese drei greifen
+  // dorthin, wo der Baum bisher gar nichts zu sagen hatte: in den Void-Zoll,
+  // in die Laufzeit eingesammelter Gaben und in die Meep-Ernte.
+  //
+  // Das ist keine Kosmetik. Void und Boss sind die zwei einzigen Herkünfte des
+  // Ertragsbandes, die nach UNTEN zeigen (`FORGE_YIELD_SOURCES`, nature `toll`),
+  // und der Spieler hatte gegen sie bis hierhin kein einziges Kaufangebot —
+  // nur Warten. Ein Zoll, den man abkaufen kann, ist eine Entscheidung; einer,
+  // den man nur aussitzt, ist eine Wartezeit.
+  {
+    id: 'riftwardensSeal',
+    name: "Riftwarden's Seal",
+    rarity: 'epic',
+    icon: 'game-icons:wax-seal',
+    color: '#e0409f',
+    requiresNode: 'aegis',
+    requiresLevel: 3,
+    maxLevel: 5,
+    goldCost: 9_000,
+    goldMultiplier: 3,
+    materialCost: { void_shard: 4, nebula_quartz: 8 },
+    // Wirkt auf JEDEN Void-Faktor, nicht nur den auf die Chimes: der Riss
+    // drosselt Klicks, Kampf-DPS und Materialfall gleich mit, und ein Siegel,
+    // das nur eine der vier Fesseln löst, wäre schwer zu erklären.
+    desc: 'The Void takes {v}% less from you while a rift stands.',
+    effectPerLevel: 12,
+    sourceLabel: 'Aegis branch + Void Shards',
+  },
+  {
+    id: 'pilgrimsReliquary',
+    name: "Pilgrim's Reliquary",
+    rarity: 'rare',
+    icon: 'game-icons:relic-blade',
+    color: '#a9b6c4',
+    requiresNode: 'moonOrbit',
+    requiresLevel: 3,
+    maxLevel: 5,
+    goldCost: 5_000,
+    goldMultiplier: 3,
+    materialCost: { dark_matter: 1, moon_crystal: 12 },
+    // Die Gegenrichtung zu allem anderen im Baum: nicht STÄRKER, sondern
+    // LÄNGER. Es ist der einzige Kauf, der auf die Bandzeile `boons` zahlt —
+    // die trägt sonst nur, was der Zufall gerade vorbeischickt.
+    desc: 'Collected drifter boons last {v}% longer.',
+    effectPerLevel: 15,
+    sourceLabel: 'Moon Orbit branch + Dark Matter',
+  },
+  {
+    id: 'meepShrine',
+    name: 'Meep Shrine',
+    rarity: 'epic',
+    icon: 'game-icons:stone-tablet',
+    color: '#40c8b0',
+    requiresNode: 'gildedHarvest',
+    requiresLevel: 3,
+    maxLevel: 5,
+    goldCost: 12_000,
+    goldMultiplier: 3,
+    materialCost: { solar_essence: 4, dark_matter: 1 },
+    // Senkt die ANFORDERUNG, nicht die Ausbeute — die steht als Wurzel darauf
+    // (`gameStore.exactPendingMeeps`), und ein Faktor auf die Ernte selbst
+    // hätte die Kurve verlassen. Ein Relikt-Level kann nur steigen, die
+    // Anforderung also nur fallen: die Monotonie, an der `runMeepCostFloor`
+    // hängt, bleibt unangetastet.
+    desc: 'Each pending meep needs {v}% fewer chimes.',
+    effectPerLevel: 4,
+    sourceLabel: 'Gilded Harvest branch + Solar Essence',
+  },
 ]
 
 export function getForgeRelic(id: string): ForgeRelicDef | undefined {
@@ -763,6 +953,58 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
     desc: 'Orbiting champions deal an additional +10% DPS.',
     pairLabel: 'Warcry + Shatter · +10% champion DPS',
   },
+
+  // ── Drei Fusionen, die eine REGEL setzen statt eine Zahl ───────────────────
+  // Von den sieben darüber tragen fünf einen Prozentwert; die zwei, an die man
+  // sich erinnert, sind Prospector's Charm („+1 Material je Fall") und
+  // Shattering Nova („Klicks splashen"). Diese drei folgen ihnen: jede sagt
+  // einen Satz, der vorher nicht galt.
+  {
+    id: 'voidboundPact',
+    name: 'Voidbound Pact',
+    icon: 'game-icons:evil-hand',
+    color: '#e0409f',
+    nodeA: 'aegis',
+    nodeB: 'sunderingWake',
+    goldCost: 24_000,
+    materialCost: { void_shard: 5, dark_matter: 2 },
+    // Der Riss war bis hierhin reiner Verlust — er kostet Chimes, Meeps und
+    // Sonnen-HP und gibt nichts zurück. Mit dem Pakt wird das Aufräumen zur
+    // Quelle des Materials, das die Forge am dringendsten braucht.
+    desc: 'Void creatures your orbit destroys leave a Void Shard behind.',
+    pairLabel: 'Aegis + Sundering Wake · shards from kills',
+  },
+  {
+    id: 'caretakersLedger',
+    name: "Caretaker's Ledger",
+    icon: 'game-icons:scroll-quill',
+    color: '#e8c040',
+    nodeA: 'goldenEcho',
+    nodeB: 'cometMiner',
+    goldCost: 21_000,
+    materialCost: { stardust: 30, nebula_quartz: 6 },
+    // Bindet die Klick-Achse an die Material-Achse: wer auf Doppelklicks
+    // gespielt hat, erntet damit auch ohne Sternenfall. Der Wurf hängt am
+    // TREFFER, nicht am Klick — sonst hinge die Ausbeute an der Klickrate
+    // statt am Ausbau.
+    desc: 'Every doubled click has a chance to shake a material loose.',
+    pairLabel: 'Golden Echo + Comet Miner · materials from clicks',
+  },
+  {
+    id: 'starfarersCompact',
+    name: "Starfarer's Compact",
+    icon: 'game-icons:portal',
+    color: '#7bb8ff',
+    nodeA: 'wayfindersCache',
+    nodeB: 'moonOrbit',
+    goldCost: 26_000,
+    materialCost: { solar_essence: 5, void_shard: 3 },
+    // Nicht „mehr Offline-Ertrag" — das trägt der Moon-Orbit-Zweig bereits
+    // dreifach. Die Fusion verschiebt die GRENZE, gegen die er läuft: acht
+    // Stunden mehr, die überhaupt erst gezählt werden.
+    desc: 'Offline progress counts 8 hours longer.',
+    pairLabel: "Wayfinder's Cache + Moon Orbit · +8h offline cap",
+  },
 ]
 
 export function getForgeConstellation(id: string): ForgeConstellationDef | undefined {
@@ -842,6 +1084,48 @@ export const FORGE_BARGAINS: ForgeBargainDef[] = [
     discountPct: 0.35,
     kind: 'materials',
     materials: { void_shard: 2, dark_matter: 1, nebula_quartz: 3 },
+  },
+
+  // ── Drei Handel, die einen ZUSTAND kaufen ──────────────────────────────────
+  // Die sieben darüber geben Ware, Rate oder Zeit. Diese drei greifen in die
+  // Lage ein, in der der Spieler gerade steckt — und genau deshalb sind sie
+  // nicht immer etwas wert: wer keinen Riss stehen hat, kauft die Maut nicht.
+  // Ein Angebot, das man ausschlagen kann, ist mehr wert als eines, das man
+  // immer nimmt.
+  {
+    id: 'wanderersToll',
+    name: "Wanderer's Toll",
+    iconPool: 'arcane',
+    desc: 'Pay the passage and the rift closes at once.',
+    basePrice: 30_000,
+    discountPct: 0.3,
+    kind: 'voidPurge',
+    materials: { void_shard: 2 },
+  },
+  {
+    id: 'meepCaravan',
+    name: 'Meep Caravan',
+    iconPool: 'fortune',
+    // Der einzige Weg, Meeps zu bekommen, ohne den Aufbruch abzuwarten —
+    // neben dem Drifter „Lost Meep" und der Expeditionsbeute, die beide nicht
+    // planbar sind. Die Menge ist FEST und klein: an `exactPendingMeeps`
+    // gekoppelt wäre sie im Spätspiel eine zweite Ernte neben der eigentlichen.
+    desc: 'A caravan of meeps joins you on the spot.',
+    basePrice: 40_000,
+    discountPct: 0.25,
+    kind: 'meeps',
+    meepReward: 3,
+  },
+  {
+    id: 'phaseLantern',
+    name: 'Phase Lantern',
+    iconPool: 'cosmos',
+    desc: 'Doubles the material drop chance for 45 minutes.',
+    basePrice: 18_000,
+    discountPct: 0.3,
+    kind: 'buff',
+    buffId: 'dropX2',
+    durationMs: 45 * 60_000,
   },
 ]
 

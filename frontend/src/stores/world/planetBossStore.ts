@@ -105,8 +105,29 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       return Math.max(0, (boss.currentHP / boss.maxHP) * 100)
     },
 
+    /**
+     * Der Zoll, den ein laufender Bossplanet auf die Chime-Produktion legt.
+     *
+     * **Sunderer's Mark (Star-Forge-Krone) KIPPT ihn.** Steht der Boss unter
+     * `bossTollFlipsBelowPct` seiner HP, wird aus `1 − BRUCH` ein `1 + BRUCH`:
+     * derselbe Betrag, andere Richtung. Das ist die einzige Stelle im Spiel, an
+     * der eine Strafe zu einem Bonus wird, und sie ist der Grund für die Krone —
+     * gegen den Boss-Zoll gab es bis dahin kein Kaufangebot, nur Warten.
+     *
+     * Gemessen wird am STÄRKSTEN noch lebenden Boss, nicht am ausgewählten:
+     * `activeBoss` folgt der Anzeige (`selectedBossId`), und ein Zoll, der davon
+     * abhinge, welche Karte der Spieler gerade offen hat, wäre nicht zu
+     * erklären. Solange auch nur EIN Boss über der Schwelle steht, gilt der Zoll.
+     */
     cpsPenaltyMultiplier(): number {
-      return this.cpsPenaltyActive ? 1 - BOSS_CPS_PENALTY_FRACTION : 1
+      if (!this.cpsPenaltyActive) return 1
+      const flipBelow = useStarForgeStore().bossTollFlipsBelowPct
+      if (flipBelow > 0) {
+        const living = this.activeBosses.filter((b) => !b.defeated && !b.expired)
+        const allBelow = living.length > 0 && living.every((b) => b.currentHP / b.maxHP < flipBelow)
+        if (allBelow) return 1 + BOSS_CPS_PENALTY_FRACTION
+      }
+      return 1 - BOSS_CPS_PENALTY_FRACTION
     },
 
     /**

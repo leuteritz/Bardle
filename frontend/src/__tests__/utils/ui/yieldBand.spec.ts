@@ -116,7 +116,7 @@ describe('yieldBandSegments', () => {
     expect(sumPct(segs)).toBeCloseTo(100, 6)
   })
 
-  it('traegt alle zehn Herkuenfte gleichzeitig', () => {
+  it('traegt jede Herkunft der Tabelle gleichzeitig', () => {
     const segs = yieldBandSegments(FORGE_YIELD_SOURCES.map((s) => ({ id: s.id, factor: 2 })))
     expect(segs).toHaveLength(FORGE_YIELD_SOURCES.length)
     expect(sumPct(segs)).toBeCloseTo(100, 6)
@@ -227,21 +227,60 @@ describe('unusedYieldSources', () => {
   const f = (entries: Record<string, number>): CpsFactor[] =>
     FORGE_YIELD_SOURCES.map((s) => ({ id: s.id, factor: entries[s.id] ?? 1 }))
 
-  it('nennt im frischen Spielstand jede Herkunft', () => {
-    expect(unusedYieldSources(f({}))).toHaveLength(FORGE_YIELD_SOURCES.length)
+  const earned = FORGE_YIELD_SOURCES.filter((s) => s.nature === 'earned')
+
+  it('nennt im frischen Spielstand jede ERWORBENE Herkunft', () => {
+    expect(unusedYieldSources(f({})).map((d) => d.id)).toEqual(earned.map((s) => s.id))
   })
 
-  it('laesst weg, was wirkt — auch einen Abzug', () => {
-    const rest = unusedYieldSources(f({ forge: 2, void: 0.8 }))
-    const ids = rest.map((d) => d.id)
+  it('laesst weg, was wirkt', () => {
+    const ids = unusedYieldSources(f({ forge: 2 })).map((d) => d.id)
     expect(ids).not.toContain('forge')
-    expect(ids).not.toContain('void')
-    expect(rest).toHaveLength(FORGE_YIELD_SOURCES.length - 2)
+    expect(ids).toHaveLength(earned.length - 1)
   })
 
-  it('ist leer, wenn jede Herkunft beitraegt', () => {
-    const all = Object.fromEntries(FORGE_YIELD_SOURCES.map((s) => [s.id, 2]))
+  it('ist leer, wenn jede erworbene Herkunft beitraegt', () => {
+    const all = Object.fromEntries(earned.map((s) => [s.id, 2]))
     expect(unusedYieldSources(f(all))).toEqual([])
+  })
+
+  // ─── Die NATUR entscheidet, ob „neutral" ein Mangel ist ─────────────────────
+
+  /**
+   * Der Befund, der diese Unterscheidung ausgeloest hat: nach „Max Everything"
+   * im Admin-Panel stand im Sockel „3 unused", und alle drei waren richtig so.
+   * Der Zustand hier ist genau dieser — jede erworbene Quelle traegt, kein
+   * Zeit-Buff laeuft, kein Zoll wird gezahlt.
+   */
+  it('meldet im Endzustand GAR NICHTS als ungenutzt', () => {
+    const maxed = Object.fromEntries(earned.map((s) => [s.id, 2]))
+    expect(unusedYieldSources(f({ ...maxed, boons: 1, void: 1, bosses: 1 }))).toEqual([])
+  })
+
+  /** `boons` ist befristet — ein Faktor von 1 heisst „gerade laeuft nichts". */
+  it('zaehlt eine befristete Quelle nie als ungenutzt', () => {
+    const ids = unusedYieldSources(f({})).map((d) => d.id)
+    expect(ids).not.toContain('boons')
+  })
+
+  /**
+   * Void und Boss ZIEHEN AB. Als „ungenutzt" gelistet forderte der Sockel den
+   * Spieler auf, sich eine Strafe zu besorgen.
+   */
+  it('zaehlt einen Zoll nie als ungenutzt — weder neutral noch wirkend', () => {
+    for (const factors of [f({}), f({ void: 0.7, bosses: 0.75 })]) {
+      const ids = unusedYieldSources(factors).map((d) => d.id)
+      expect(ids).not.toContain('void')
+      expect(ids).not.toContain('bosses')
+    }
+  })
+
+  it('traegt an jeder Herkunft der Tabelle eine Natur', () => {
+    for (const def of FORGE_YIELD_SOURCES) {
+      expect(['earned', 'transient', 'toll'], `${def.id}`).toContain(def.nature)
+    }
+    // Waeren alle `earned`, ginge die Unterscheidung lautlos verloren.
+    expect(earned.length).toBeLessThan(FORGE_YIELD_SOURCES.length)
   })
 
   it('zaehlt einen kaputten Faktor als ungenutzt', () => {

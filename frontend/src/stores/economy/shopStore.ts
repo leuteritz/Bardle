@@ -16,6 +16,7 @@ import { useVoidStore } from '@/stores/world/voidStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import {
   SECONDS_PER_HOUR,
   EFFICIENCY_STARS_DIVISOR,
@@ -152,7 +153,6 @@ export const useShopStore = defineStore('shop', {
      */
     cpsFactorBreakdown(): CpsFactor[] {
       const gameStore = useGameStore()
-      const mod = gameStore.activeModifier
 
       return [
         { id: 'solar', factor: useSolarUpgradeStore().flightSpeedMultiplier },
@@ -161,7 +161,18 @@ export const useShopStore = defineStore('shop', {
         { id: 'codex', factor: useAchievementStore().cpsMult },
         { id: 'items', factor: useItemStore().totalCPSMultiplier },
         { id: 'traits', factor: useSynergyStore().cpsSynergyMultiplier },
-        { id: 'universe', factor: mod.cpsMultiplier ?? 1 },
+        // ── `activeModifier.cpsMultiplier`, aufgetrennt in seine zwei Hälften ──
+        // Der Getter ist wörtlich `(providence ?? 1) * (augment ?? 1)`; die
+        // beiden Zeilen hier ergeben also weiterhin exakt denselben Wert wie
+        // die eine Zeile davor — `cpsFactorBreakdown.spec.ts` hält das fest.
+        //
+        // Getrennt, weil sie ZUSAMMEN eine falsche Auskunft gaben: im
+        // Endzustand gemessen kamen rund ×50 aus den Augments und liefen unter
+        // „Universe and providences", obwohl gar kein Aufbruch stattgefunden
+        // hatte. Wer daraufhin sein Universum wechselte, verlor genau den
+        // Faktor, den das Band ihm dort zugeschrieben hatte.
+        { id: 'universe', factor: useProvidenceStore().activeEffects.cpsMultiplier ?? 1 },
+        { id: 'augments', factor: gameStore.combinedAugmentEffects.cpsMultiplier ?? 1 },
         {
           // Alles, was von selbst wieder abläuft — Zeit-Augments, eingesammelte
           // Drifter, ein erfülltes Omen, Bards W und die Fähigkeits-Fenster.

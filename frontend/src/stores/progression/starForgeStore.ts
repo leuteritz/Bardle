@@ -6,7 +6,18 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
-import type { ForgeActiveBuff, ForgeBargainDef, ForgeNodeDef, ForgeSectionId } from '@/types'
+// Gegenseitig: `voidStore` liest `voidTollRelief` von hier. Beide Richtungen
+// laufen ausschliesslich über lazy `useXStore()`-Aufrufe INNERHALB von Gettern
+// und Actions — auf Modulebene berühren sich die beiden nicht. Dasselbe Muster
+// trägt bereits `voidStore ↔ inventoryStore`.
+import { useVoidStore } from '@/stores/world/voidStore'
+import type {
+  ForgeActiveBuff,
+  ForgeBargainDef,
+  ForgeBuffId,
+  ForgeNodeDef,
+  ForgeSectionId,
+} from '@/types'
 import {
   FORGE_NODES,
   FORGE_LEAVES,
@@ -39,6 +50,24 @@ import {
   FORGE_CONSTELLATION_BULWARK_DAMAGE_MULT,
   FORGE_CONSTELLATION_STELLAR_WIND_CPS_MULT,
   FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT,
+  FORGE_OVERFLOW_EXPEDITION_REWARD_RATE,
+  FORGE_OVERFLOW_STAR_LIFETIME_RATE,
+  FORGE_OVERFLOW_HP_REGEN_PER_PCT,
+  FORGE_LEDGER_CLICK_DROP_CHANCE,
+  FORGE_VOID_RELIEF_CAP,
+  FORGE_MEEP_COST_FLOOR,
+  FORGE_RELIC_OFFLINE_HOURS,
+  FORGE_COMPACT_OFFLINE_HOURS,
+  FORGE_BARGAIN_KINDS_PAYING_MATERIALS,
+  FORGE_CROWN_MAX_LEVEL,
+  FORGE_CROWN_PARENT_MIN_LEVEL,
+  FORGE_CROWN_UNLOCK_PRESTIGES,
+  FORGE_CROWN_VOID_RELIEF,
+  FORGE_CROWN_VOID_SLAY_REWARD_MULT,
+  FORGE_CROWN_BOSS_FLIP_HP_FRACTION,
+  FORGE_CROWN_OVERFLOW_FRACTION_PER_SEC,
+  FORGE_CROWN_OVERFLOW_MIN_CHIMES,
+  FORGE_CROWN_OVERFLOW_MAX_PER_SEC,
   SOLAR_BRANCHES,
   SOLAR_MATERIAL_FROM_LEVEL,
 } from '@/config/constants'
@@ -76,6 +105,21 @@ export const useStarForgeStore = defineStore('starForge', {
      * des Baums, wäre also ein geschlossener Kreis.
      */
     boughLevels: {} as Record<string, number>,
+    /**
+     * Ring-5 node levels, keyed by ForgeNodeDef id — Werte sind 0 oder 1.
+     *
+     * Eine MAP und keine Liste geschmiedeter IDs, obwohl die Kronen wie
+     * Konstellationen einmalig sind: `nodeLevel`, `nodeUnlocked`, `buyNode` und
+     * das Zeichnen des Baums arbeiten allesamt auf Stufen. Als Liste bräuchte
+     * jeder dieser vier Wege einen Sonderfall, und der Ring wäre im Baum ein
+     * Fremdkörper statt der äusserste Kreis.
+     *
+     * Wie `boughLevels` ein eigener Beutel: die Codex-Bahn „Sunsmith" summiert
+     * `branchLevels + leafLevels + relicLevels`, und ein Ring mit fünf Einsen
+     * darin verschöbe ihre Schwellen um einen Betrag, der nichts mit Schmieden
+     * zu tun hat.
+     */
+    crownLevels: {} as Record<string, number>,
     /** Relic levels, keyed by ForgeRelicDef id (0/absent = not forged). */
     relicLevels: {} as Record<string, number>,
     forgedConstellations: [] as string[],
@@ -91,7 +135,12 @@ export const useStarForgeStore = defineStore('starForge', {
   getters: {
     // ── Tree nodes ────────────────────────────────────────────────────────────
     nodeLevel(state): (id: string) => number {
-      return (id) => state.branchLevels[id] ?? state.leafLevels[id] ?? state.boughLevels[id] ?? 0
+      return (id) =>
+        state.branchLevels[id] ??
+        state.leafLevels[id] ??
+        state.boughLevels[id] ??
+        state.crownLevels[id] ??
+        0
     },
 
     nodeMaxLevel(): (id: string) => number {
@@ -102,6 +151,8 @@ export const useStarForgeStore = defineStore('starForge', {
         // dauerhaft falsch, er wird also nie `maxed`. Wer die Zahl ANZEIGT oder
         // über sie iteriert, muss sie mit `Number.isFinite` abfangen.
         if (def.tier === 'bough') return Infinity
+        // Ring 5 ist die Gegenfigur dazu: genau eine Stufe, dafür eine Regel.
+        if (def.tier === 'crown') return FORGE_CROWN_MAX_LEVEL
         if (def.tier === 'leaf') return FORGE_LEAF_MAX_LEVEL
         // „+1 je Phase über der eigenen Freischaltphase". Der Bezug ist
         // `def.phase` und NICHT die globale Freischaltkonstante: für die zehn
@@ -129,8 +180,21 @@ export const useStarForgeStore = defineStore('starForge', {
       return (def) => {
         if (def.tier === 'branch') return FORGE_BRANCH_PARENT_MIN_LEVEL
         if (def.tier === 'leaf') return FORGE_LEAF_PARENT_MIN_LEVEL
+        if (def.tier === 'crown') return FORGE_CROWN_PARENT_MIN_LEVEL
         return FORGE_BOUGH_PARENT_MIN_LEVEL
       }
+    },
+
+    /**
+     * Hat der Spieler die Schwelle erreicht, ab der Ring 5 überhaupt existiert?
+     *
+     * Eigener Getter statt einer Zeile in `nodeUnlocked`, weil der Baum ihn
+     * auch für das RING-LABEL braucht: „Astral Crowns" steht dort grau, solange
+     * dies falsch ist, und ohne den Getter läse die Komponente den
+     * Prestige-Zähler ein zweites Mal.
+     */
+    crownsUnlocked(): boolean {
+      return useGameStore().totalPrestiges >= FORGE_CROWN_UNLOCK_PRESTIGES
     },
 
     nodeUnlocked(): (id: string) => boolean {
@@ -138,8 +202,18 @@ export const useStarForgeStore = defineStore('starForge', {
         const def = getForgeNode(id)
         if (!def) return false
         if (useSolarUpgradeStore().starPhase < def.phase) return false
+        // Das eigentliche Tor von Ring 5. Es steht NEBEN dem Phasen-Gate und
+        // nicht statt seiner: die Phase hält den Ring hinter seinem Elternring,
+        // der Aufbruch macht ihn zur Belohnung dafür, ein Universum
+        // zurückgelassen zu haben.
+        if (def.tier === 'crown' && !this.crownsUnlocked) return false
         return this.nodeParentLevel(def) >= this.nodeParentRequirement(def)
       }
+    },
+
+    /** Ist diese Krone geschmiedet? Dasselbe Muster wie `constellationForged`. */
+    crownForged(state): (id: string) => boolean {
+      return (id) => (state.crownLevels[id] ?? 0) > 0
     },
 
     /**
@@ -378,7 +452,11 @@ export const useStarForgeStore = defineStore('starForge', {
       const def = this.activeDeal
       if (!def || this.bargainPurchased) return false
       if (useGameStore().chimes < this.bargainPrice(def)) return false
-      if (def.kind === 'gold' && def.materials) {
+      // Eine Maut auf eine Passage, die offen steht, ist bezahltes Nichts —
+      // und der Handel ist teuer. Er wird deshalb gar nicht erst kaufbar,
+      // solange kein Wesen im Feld ist und kein Nachbeben nachzieht.
+      if (def.kind === 'voidPurge' && !useVoidStore().hasVoidPresence) return false
+      if (FORGE_BARGAIN_KINDS_PAYING_MATERIALS.includes(def.kind) && def.materials) {
         return useInventoryStore().hasMaterials(def.materials)
       }
       return true
@@ -392,7 +470,7 @@ export const useStarForgeStore = defineStore('starForge', {
       )
     },
 
-    buffActive(state): (buffId: 'cpcX2' | 'cpsX2') => boolean {
+    buffActive(state): (buffId: ForgeBuffId) => boolean {
       return (buffId) =>
         state.activeBuffs.some((b) => b.id === buffId && b.expiresAt > state.forgeNow)
     },
@@ -448,6 +526,34 @@ export const useStarForgeStore = defineStore('starForge', {
       return counts.upgrades + counts.relics + counts.constellations + counts.bargain
     },
 
+    // ── Der Überlauf: was eine Kappe schluckt ─────────────────────────────────
+    /**
+     * Drei Getter, die messen, was die harten Kappen abschneiden — in
+     * Prozentpunkten derselben Achse. Sie stehen NEBEN den Kappen-Gettern und
+     * nicht in ihnen: so ändert keine vorhandene Rechnung ihr Verhalten.
+     *
+     * Wohin der Überlauf jeweils fließt und warum die Umrechnungssätze nicht
+     * 1:1 sind, steht samt Messwerten an `FORGE_OVERFLOW_*` in
+     * `constants/forge.ts`. Der vierte Überlauf — die gesättigte Drop-Chance —
+     * liegt nicht hier, sondern in `inventoryStore.tryDropMaterial`: dort ist
+     * die Sättigung, nicht am Zweig (der Forge-Faktor allein erreicht sie nie).
+     */
+    /** Prozentpunkte des Expeditionstempos, die `MIN_EXPEDITION_MULT` schluckt. */
+    expeditionSpeedOverflowPct(): number {
+      const raw = this.branchEffect('solarSails') + this.relicEffect('stellarCompass')
+      return Math.max(0, raw - (1 - MIN_EXPEDITION_MULT) * 100)
+    },
+
+    /** Prozentpunkte der Verweildauer-Kürzung, die `MIN_DWELL_MULT` schluckt. */
+    dwellOverflowPct(): number {
+      return Math.max(0, this.branchEffect('quickening') - (1 - MIN_DWELL_MULT) * 100)
+    },
+
+    /** Prozentpunkte der Schadensminderung, die `MIN_DAMAGE_TAKEN_MULT` schluckt. */
+    damageTakenOverflowPct(): number {
+      return Math.max(0, this.branchEffect('aegis') - (1 - MIN_DAMAGE_TAKEN_MULT) * 100)
+    },
+
     // ── Effect getters (one per integration point) ────────────────────────────
     /** Multiplier on expedition durations (< 1 = faster). */
     expeditionSpeedMult(): number {
@@ -477,7 +583,16 @@ export const useStarForgeStore = defineStore('starForge', {
      * trägt der endlose Ring die Beute und nicht das Tempo.
      */
     expeditionRewardMult(): number {
-      return 1 + (this.branchEffect('wayfindersCache') + this.boughEffect('wayfarersHoard')) / 100
+      return (
+        1 +
+        (this.branchEffect('wayfindersCache') +
+          this.boughEffect('wayfarersHoard') +
+          // Was `MIN_EXPEDITION_MULT` am Tempo abschneidet, kommt hier als
+          // Beute wieder heraus — bei Vollausbau die grösste der vier
+          // Überlaufmengen (37 Punkte).
+          this.expeditionSpeedOverflowPct * FORGE_OVERFLOW_EXPEDITION_REWARD_RATE) /
+          100
+      )
     },
 
     /** Multiplier on champion experience gains (Eternal Host). */
@@ -492,7 +607,16 @@ export const useStarForgeStore = defineStore('starForge', {
      * nichts mehr hinzufügt — mehr ZEIT am Stern sättigt nicht.
      */
     starLifetimeMult(): number {
-      return 1 + (this.branchEffect('wardensVigil') + this.boughEffect('kindledVigil')) / 100
+      return (
+        1 +
+        (this.branchEffect('wardensVigil') +
+          this.boughEffect('kindledVigil') +
+          // Quickening-Überlauf: die Sonne kann nicht schneller reifen, also
+          // stehen ihre Sterne länger. Dieselbe Grösse (Zeit in Prozent),
+          // deshalb 1:1.
+          this.dwellOverflowPct * FORGE_OVERFLOW_STAR_LIFETIME_RATE) /
+          100
+      )
     },
 
     /** Flat max-HP granted by the Adamant Core bough, in total. */
@@ -500,15 +624,135 @@ export const useStarForgeStore = defineStore('starForge', {
       return this.boughEffect('adamantCore')
     },
 
-    /** Extra hours added to the offline-progress cap (Echo of the Void). */
+    /** Extra hours added to the offline-progress cap (Echo of the Void +
+     *  Starfarer's Compact). Beide verschieben dieselbe GRENZE und addieren
+     *  sich deshalb, statt sich zu überschreiben. */
     offlineMaxHoursBonus(): number {
-      return this.relicLevel('echoOfTheVoid') > 0 ? 4 : 0
+      return (
+        (this.relicLevel('echoOfTheVoid') > 0 ? FORGE_RELIC_OFFLINE_HOURS : 0) +
+        (this.constellationForged('starfarersCompact') ? FORGE_COMPACT_OFFLINE_HOURS : 0)
+      )
+    },
+
+    /**
+     * Wie stark der Void-Zoll gemildert wird, 0..1 — 1 hiesse „er greift gar
+     * nicht mehr".
+     *
+     * Das erste Kaufangebot im ganzen Spiel, das GEGEN den Void zeigt. Der Riss
+     * war bis hierhin die einzige Kraft, gegen die man nichts tun konnte ausser
+     * ihn zu schliessen und zu warten — und die Bandzeile `void` blieb damit
+     * eine Zeile, auf die der Spieler keinen Zugriff hatte.
+     *
+     * Gedeckelt bei `FORGE_VOID_RELIEF_CAP`: der Void ist das einzige System,
+     * das gegen den Spieler drängt (CLAUDE.md), und ein Zoll, den man
+     * vollständig abkaufen kann, ist keiner mehr. Was bleibt, ist ein spürbarer
+     * Rest — die Milderung verschiebt die Dringlichkeit, sie hebt sie nicht auf.
+     */
+    voidTollRelief(): number {
+      // Siegel und Krone MULTIPLIZIEREN sich auf dem verbleibenden Rest, statt
+      // sich zu addieren: 60 % plus 50 % wären 110 % und hätten den Void
+      // abgeschafft. So schieben beide gemeinsam an denselben Boden, und die
+      // Krone ist auch neben einem vollen Siegel noch etwas wert.
+      const seal = this.relicEffect('riftwardensSeal') / 100
+      const crown = this.crownForged('tidelessWatch') ? FORGE_CROWN_VOID_RELIEF : 0
+      const combined = 1 - (1 - seal) * (1 - crown)
+      return Math.min(FORGE_VOID_RELIEF_CAP, combined)
+    },
+
+    // ── Ring 5: je ein Getter pro Krone ───────────────────────────────────────
+    /**
+     * Wanderer's Gate — öffnet eine zurückkehrende Expedition sofort die
+     * nächste Passage, statt auf `EXPEDITION_SPAWN_INTERVAL_MS` zu warten?
+     */
+    expeditionInstantRespawn(): boolean {
+      return this.crownForged('wanderersGate')
+    },
+
+    /**
+     * Tideless Watch, zweite Hälfte — Faktor auf die Chime-Ausschüttung eines
+     * erlegten Void-Wesens.
+     *
+     * Die „Rückzahlung" hängt am BOON und nicht an einer nachgerechneten
+     * Drossel-Bilanz: die müsste Rampe, Milderung und alle gleichzeitig
+     * stehenden Wesen auseinanderhalten und wäre eine Zahl, die der Spieler
+     * nicht nachprüfen kann. Ein verdoppelter Lohn sagt dasselbe und ist im
+     * Moment des Abschusses ablesbar.
+     */
+    voidSlayRewardMult(): number {
+      return this.crownForged('tidelessWatch') ? FORGE_CROWN_VOID_SLAY_REWARD_MULT : 1
+    },
+
+    /**
+     * Warden's Reprieve — kehrt eine gefallene Sonne einmal je Sonnenphase
+     * zurück? Der Getter sagt nur, ob die Krone steht; ob der Aufschub in
+     * DIESER Phase schon verbraucht ist, weiss `playerStore`.
+     */
+    sunReprieveOwned(): boolean {
+      return this.crownForged('wardensReprieve')
+    },
+
+    /**
+     * Sunderer's Mark — unterhalb welchen HP-Anteils der Boss-Zoll kippt.
+     * `0` heisst „die Krone steht nicht", der Zoll bleibt also ein Zoll.
+     */
+    bossTollFlipsBelowPct(): number {
+      return this.crownForged('sunderersMark') ? FORGE_CROWN_BOSS_FLIP_HP_FRACTION : 0
+    },
+
+    /**
+     * Midas Overflow — wie viel Stardust der Chime-Berg in dieser Sekunde
+     * abwirft.
+     *
+     * Gerundet und gedeckelt HIER und nicht beim Verbraucher: die Zahl ist eine
+     * Wirkung des Baums, und der Tick soll sie buchen, nicht ausrechnen. Unter
+     * `FORGE_CROWN_OVERFLOW_MIN_CHIMES` liefert er 0 — dort sind Chimes noch
+     * die knappe Grösse, und ein Abfluss nähme dem Baum sein Wachstum.
+     */
+    chimeOverflowPerSec(): number {
+      if (!this.crownForged('midasOverflow')) return 0
+      const chimes = useGameStore().chimes
+      if (chimes < FORGE_CROWN_OVERFLOW_MIN_CHIMES) return 0
+      const raw = chimes * FORGE_CROWN_OVERFLOW_FRACTION_PER_SEC
+      return Math.min(FORGE_CROWN_OVERFLOW_MAX_PER_SEC, Math.floor(raw))
+    },
+
+    /** Multiplier on how long a collected drifter boon runs (Pilgrim's Reliquary). */
+    boonDurationMult(): number {
+      return 1 + this.relicEffect('pilgrimsReliquary') / 100
+    },
+
+    /**
+     * Faktor auf die Chime-ANFORDERUNG je anstehendem Meep (Meep Shrine) —
+     * kleiner als 1 heisst „günstiger".
+     *
+     * Er greift an der Anforderung und nicht an der Ausbeute, weil die als
+     * WURZEL darauf steht (`gameStore.exactPendingMeeps`): ein Faktor auf die
+     * Ernte selbst hätte die Kurve verlassen, dieser bleibt darin. Ein
+     * Relikt-Level kann nur steigen, der Faktor also nur fallen — die
+     * Monotonie, für die `gameStore.runMeepCostFloor` existiert, bleibt heil.
+     */
+    meepCostMult(): number {
+      return Math.max(FORGE_MEEP_COST_FLOOR, 1 - this.relicEffect('meepShrine') / 100)
+    },
+
+    /** Chance (0–1), dass ein verdoppelter Klick Material lockert (Caretaker's Ledger). */
+    clickMaterialChance(): number {
+      return this.constellationForged('caretakersLedger') ? FORGE_LEDGER_CLICK_DROP_CHANCE : 0
+    },
+
+    /** Lässt ein zerstörtes Void-Wesen einen Splitter fallen (Voidbound Pact)? */
+    voidKillDropsShard(): boolean {
+      return this.constellationForged('voidboundPact')
     },
 
     /** HP restored to the sun per second. */
     hpRegenPerSec(): number {
       const regen = this.branchEffect('regeneration')
-      return this.constellationForged('eternalOrbit') ? regen * 2 : regen
+      const doubled = this.constellationForged('eternalOrbit') ? regen * 2 : regen
+      // Aegis-Überlauf: was die Schadenskappe abschneidet, kommt als
+      // Regeneration wieder. Steht AUSSERHALB der Verdopplung — Eternal Orbit
+      // ist ein Bonus auf den Regenerations-Zweig, nicht auf fremde Achsen.
+      return doubled + this.damageTakenOverflowPct * FORGE_OVERFLOW_HP_REGEN_PER_PCT
     },
 
     /** Multiplier on incoming damage (< 1 = less damage). */
@@ -524,6 +768,26 @@ export const useStarForgeStore = defineStore('starForge', {
       return Math.min(MAX_DOUBLE_CLICK_CHANCE, this.branchEffect('goldenEcho') / 100)
     },
 
+    /**
+     * Chance (0–1), dass ein Klick DREIFACH zählt — der Golden-Echo-Überlauf.
+     *
+     * Als einziger der vier Überläufe braucht er keinen Umrechnungssatz: er
+     * misst dieselbe Grösse wie seine Quelle (Klickchance) und ist schlicht
+     * deren nächste Stufe. Bei Vollausbau sind das 16 Punkte über der Kappe,
+     * also 16 % Dreifachklick — ein Erwartungswert-Zuwachs von 16 % auf den
+     * Klickwert, gegen die 80 %, die der gekappte Doppelklick schon trägt.
+     *
+     * Der Verbraucher (`gameStore.addChime`) legt die beiden Bereiche NEBEN-
+     * einander auf EINEN Wurf, statt zweimal zu würfeln — sonst könnte ein
+     * Klick beides sein und der Wert wäre sechsfach. Die Trefferchance
+     * insgesamt ist damit wieder der volle Rohwert des Zweiges: es geht nichts
+     * mehr verloren, und die Kappe begrenzt nur noch, wie viel davon bloss
+     * doppelt zählt.
+     */
+    tripleClickChance(): number {
+      return Math.max(0, this.branchEffect('goldenEcho') / 100 - MAX_DOUBLE_CLICK_CHANCE)
+    },
+
     /** Fraction of CpS added to every click (Resonance + Midas Bell + Deep Resonance). */
     cpcFromCpsPct(): number {
       return (
@@ -534,9 +798,10 @@ export const useStarForgeStore = defineStore('starForge', {
       )
     },
 
-    /** Multiplier on the material drop chance. */
+    /** Multiplier on the material drop chance (Comet Miner + Phase Lantern buff). */
     materialDropMult(): number {
-      return 1 + this.branchEffect('cometMiner') / 100
+      const lantern = this.buffActive('dropX2') ? 2 : 1
+      return (1 + this.branchEffect('cometMiner') / 100) * lantern
     },
 
     /** Extra materials per successful drop (Prospector's Charm). */
@@ -639,6 +904,8 @@ export const useStarForgeStore = defineStore('starForge', {
         this.branchLevels[id] = (this.branchLevels[id] ?? 0) + 1
       } else if (def.tier === 'leaf') {
         this.leafLevels[id] = (this.leafLevels[id] ?? 0) + 1
+      } else if (def.tier === 'crown') {
+        this.crownLevels[id] = 1
       } else {
         this.boughLevels[id] = (this.boughLevels[id] ?? 0) + 1
         // Max HP ist ein State-Feld und kein Faktor — es wird beim Kauf
@@ -689,7 +956,7 @@ export const useStarForgeStore = defineStore('starForge', {
       const inventory = useInventoryStore()
       const price = this.bargainPrice(def)
       if (
-        def.kind === 'gold' &&
+        FORGE_BARGAIN_KINDS_PAYING_MATERIALS.includes(def.kind) &&
         def.materials &&
         !inventory.removeMaterials(def.materials, 'bargain')
       ) {
@@ -726,6 +993,21 @@ export const useStarForgeStore = defineStore('starForge', {
           player.currentHP = player.maxHP
           break
         }
+        case 'voidPurge': {
+          // `clearAll()` und nicht ein Wesen nach dem anderen: die Maut kauft
+          // die PASSAGE, nicht einzelne Kreaturen — und derselbe Aufruf räumt
+          // die Nachbeben mit, die den Zoll sonst noch Sekunden lang weiter
+          // eintrieben. Die Raten hängen daran, `recalcRates()` unten fasst es.
+          useVoidStore().clearAll()
+          break
+        }
+        case 'meeps':
+          // Der Karawanen-Lohn geht über `grantMeeps` und damit denselben Weg
+          // wie der Drifter „Lost Meep": als FUND, der die Wartezeit umgeht.
+          // Direkt auf `meeps` gebucht fehlte er in `totalMeepsEarned` und
+          // damit in jeder Statistik und jeder Codex-Bahn, die ihn zählt.
+          gameStore.grantMeeps(def.meepReward ?? 0)
+          break
       }
 
       this.bargainPurchased = true
@@ -776,6 +1058,12 @@ export const useStarForgeStore = defineStore('starForge', {
           this.branchLevels[def.id] = this.nodeMaxLevel(def.id)
         } else if (def.tier === 'leaf') {
           this.leafLevels[def.id] = this.nodeMaxLevel(def.id)
+        } else if (def.tier === 'crown') {
+          // Das PRESTIGE-Gate bleibt stehen, genau wie das Phasen-Gate darüber:
+          // ohne einen Aufbruch im Rücken gibt es Ring 5 im Spiel nicht, und
+          // ein Admin-Knopf, der ihn trotzdem setzt, prüfte einen Zustand, den
+          // kein Spieler je erreicht.
+          if (this.crownsUnlocked) this.crownLevels[def.id] = FORGE_CROWN_MAX_LEVEL
         } else {
           // `nodeMaxLevel` gibt für einen Bough `Infinity` — eine gewählte
           // Testhöhe muss her, sonst stünde im Baum eine Stufe, die es im Spiel

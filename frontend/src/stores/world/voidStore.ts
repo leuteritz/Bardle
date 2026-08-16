@@ -38,6 +38,7 @@ import {
   VOID_DRAIN_RAMP_MIN,
   VOID_DRAIN_FLOOR,
   VOID_IMPACT_HP_LOSS,
+  VOID_PACT_SHARD_MATERIAL,
   VOID_IMPACT_AFTERMATH_MS,
   VOID_IMPACT_MEEP_LOSS_PCT,
   VOID_IMPACT_MEEP_LOSS_MIN,
@@ -81,6 +82,10 @@ import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useCombatStore } from '@/stores/battle/combatStore'
+// Gegenseitig: die Forge räumt mit dem Handel „Wanderer's Toll" den Riss und
+// liest hier nichts auf Modulebene. Beide Richtungen laufen über lazy
+// `useXStore()`-Aufrufe in Gettern und Actions.
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 
 let uidCounter = 0
 
@@ -93,6 +98,24 @@ const SEVERITIES = [...VOID_RIFT_SEVERITIES].sort(
 function rollRange(range: [number, number] | undefined, fallback: number): number {
   if (!range) return fallback
   return range[0] + Math.random() * (range[1] - range[0])
+}
+
+/**
+ * Ein Void-Faktor, gemildert um den Anteil, den der Spieler sich abgekauft hat
+ * (Riftwarden's Seal, Star Forge).
+ *
+ * Gerechnet wird auf dem VERLUST, nicht auf dem Faktor: ×0,5 bei 60 % Milderung
+ * wird zu `1 − 0,5 · 0,4 = 0,8`. Ein Faktor `f / (1 − relief)` hätte dieselbe
+ * Zahl für eine Drossel und für einen Schub bedeutet und wäre bei relief = 1
+ * durch null gelaufen.
+ *
+ * Faktoren ab 1 bleiben unberührt: der Void zieht ausschliesslich nach unten,
+ * aber `VoidEffects` schliesst einen Wert über 1 nicht aus — ein „gemilderter
+ * Schub" wäre eine stille Abschwächung.
+ */
+function relieved(factor: number, relief: number): number {
+  if (relief <= 0 || factor >= 1) return factor
+  return 1 - (1 - factor) * (1 - relief)
 }
 
 /** Gestaffelte Startverzögerungen, eine Uhr je Schwere. */
@@ -216,6 +239,20 @@ export const useVoidStore = defineStore('void', {
     },
 
     /**
+     * Ist der Void gerade überhaupt anwesend — als Wesen im Feld ODER als
+     * nachziehendes Beben?
+     *
+     * Breiter als `hasActive`, und das ist der Punkt: der Handel „Wanderer's
+     * Toll" räumt beides (`clearAll`), und ein Nachbeben allein zieht ebenso an
+     * den Raten wie ein Wesen. Mit `hasActive` als Bedingung wäre die Maut in
+     * genau dem Moment nicht kaufbar, in dem man das letzte Wesen erlegt hat
+     * und sein Beben noch zwei Minuten weiterdrosselt.
+     */
+    hasVoidPresence(): boolean {
+      return this.hasActive || this.liveAftermaths.length > 0
+    },
+
+    /**
      * Wie weit jedes Wesen auf seinem Weg ist, 0..1. Einmal gerechnet, weil
      * gleich drei Dinge daran hängen: Drossel, Zielwahl des Orbits und die
      * HUD-Karte.
@@ -290,26 +327,59 @@ export const useVoidStore = defineStore('void', {
       return [this.drainEffects, ...this.liveAftermaths.map((a) => a.effects)]
     },
 
+    /**
+     * Wie viel des Zolls der Spieler sich abgekauft hat, 0..1 — das
+     * Riftwarden's Seal aus der Star Forge.
+     *
+     * Steht als eigener Getter und wird nicht in den fünf Effekt-Gettern
+     * unten je einzeln aus der Forge geholt: ein argumentloser Pinia-Getter ist
+     * intern EIN `computed`, das seine Abhängigen nur bei echter Änderung
+     * anstösst — fünf Einzelabfragen wären fünf Ketten in einen fremden Store,
+     * und der Void-Tick läuft jede Sekunde.
+     *
+     * Die Milderung greift auf ALLE fünf Achsen, nicht nur auf die Chimes: der
+     * Riss drosselt Klicks, Kampf-DPS, Materialfall und Erfahrung gleich mit,
+     * und ein Siegel, das nur eine der Fesseln löst, wäre nicht zu erklären.
+     */
+    tollRelief(): number {
+      return useStarForgeStore().voidTollRelief
+    },
+
     // ── Effekt-Getter (je einer pro Einbaustelle) ─────────────────────────────
     /** Faktor auf die gesamten Chimes pro Sekunde. */
     cpsMult(): number {
-      return this.activeEffects.reduce((m, e) => m * (e.cpsMult ?? 1), 1)
+      return relieved(
+        this.activeEffects.reduce((m, e) => m * (e.cpsMult ?? 1), 1),
+        this.tollRelief,
+      )
     },
     /** Faktor auf die gesamten Chimes pro Klick. */
     cpcMult(): number {
-      return this.activeEffects.reduce((m, e) => m * (e.cpcMult ?? 1), 1)
+      return relieved(
+        this.activeEffects.reduce((m, e) => m * (e.cpcMult ?? 1), 1),
+        this.tollRelief,
+      )
     },
     /** Faktor auf Champion-DPS im Orbit und Turret-Salven. */
     combatDpsMult(): number {
-      return this.activeEffects.reduce((m, e) => m * (e.combatDpsMult ?? 1), 1)
+      return relieved(
+        this.activeEffects.reduce((m, e) => m * (e.combatDpsMult ?? 1), 1),
+        this.tollRelief,
+      )
     },
     /** Faktor auf die Material-Dropchance. */
     materialDropMult(): number {
-      return this.activeEffects.reduce((m, e) => m * (e.materialDropMult ?? 1), 1)
+      return relieved(
+        this.activeEffects.reduce((m, e) => m * (e.materialDropMult ?? 1), 1),
+        this.tollRelief,
+      )
     },
     /** Faktor auf den Champion-XP-Gewinn. */
     xpMult(): number {
-      return this.activeEffects.reduce((m, e) => m * (e.xpMult ?? 1), 1)
+      return relieved(
+        this.activeEffects.reduce((m, e) => m * (e.xpMult ?? 1), 1),
+        this.tollRelief,
+      )
     },
 
     /**
@@ -878,6 +948,14 @@ export const useVoidStore = defineStore('void', {
       if (!def) return
 
       this._applyBoon(def)
+      // Voidbound Pact (Star-Forge-Konstellation): das erlegte Wesen lässt
+      // einen Splitter zurück. GARANTIERT und nicht über `tryDropMaterial` —
+      // der würfelt aus der ganzen Tabelle, und der Pakt verspricht wörtlich
+      // einen Void Shard. Als Chance wäre er ausserdem der einzige Kauf im
+      // Baum, dessen Wirkung man einzeln nicht sehen kann.
+      if (useStarForgeStore().voidKillDropsShard) {
+        useInventoryStore().addMaterial(VOID_PACT_SHARD_MATERIAL, 'void')
+      }
       this._recordOutcome(monster, def, true, 0, 0)
       logger.info('Void', `${def.name} slain`, { boon: def.boonLine })
     },
@@ -943,7 +1021,11 @@ export const useVoidStore = defineStore('void', {
         const fromCps = gameStore.chimesPerSecond * def.boon.chimesFromCpsSeconds
         const capped = Math.min(fromCps, gameStore.chimesPerSecond * VOID_BOON_CHIME_CAP_SEC)
         const floor = gameStore.chimesPerClick * VOID_BOON_CHIME_MIN_CLICKS
-        const gain = Math.max(capped, floor)
+        // Tideless Watch (Star-Forge-Krone): der Riss nimmt weniger UND was man
+        // ihm abnimmt, zahlt mehr. Der Faktor steht NACH beiden Böden, damit er
+        // auch die Frühphasen-Untergrenze mitzieht — sonst wäre die Krone
+        // ausgerechnet dort wirkungslos, wo `floor` gewinnt.
+        const gain = Math.max(capped, floor) * useStarForgeStore().voidSlayRewardMult
         gameStore.chimes += gain
         gameStore.chimesForNextUniverse += gain
         gameStore.totalChimesEarned += gain

@@ -38,6 +38,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 
 import { MATERIALS } from '@/config/economy/materials'
 import { AUGMENTS } from '@/config/economy/augments'
@@ -46,6 +47,7 @@ import { SECTIONS } from '@/config/progression/sections'
 import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import { perkChoicesFor } from '@/config/champions/championLevels'
+import { rollProvidence } from '@/config/progression/providences'
 import { getChampionSkins } from '@/utils/game/champions'
 import {
   ADMIN_MAX_BARD_LEVEL,
@@ -57,6 +59,7 @@ import {
   ADMIN_MAX_SKILL_POINTS,
   ADMIN_MAX_UNIVERSE,
   ADMIN_PERK_RESOLVE_GUARD,
+  ADMIN_PROVIDENCE_ROLL_GUARD,
   ADMIN_RANK_PROMOTE_GUARD,
   ALLIES_PER_ROLE,
   CHAMPION_PERK_INTERVAL,
@@ -259,7 +262,38 @@ export function maxEverything(): MaxEverythingResult {
   // ⑤ Welt: Universum, Galaxie, Sections. KEIN executePrestigeReset — das würde
   //    alles zurücksetzen.
   gameStore.currentUniverse = ADMIN_MAX_UNIVERSE
+  // Der Zähler muss zum Universum passen. Universum 10 ohne einen einzigen
+  // Aufbruch war schon vorher ein Zustand, den kein Spielverlauf hergibt — seit
+  // der Kronen-Ring der Forge (`FORGE_CROWN_UNLOCK_PRESTIGES`) daran hängt, ist
+  // es zusätzlich ein Loch im Endzustand: Ring 5 bliebe zu, und ausgerechnet
+  // der Ring, den es nur ganz am Ende gibt, fehlte im „alles gemaxt".
+  //
+  // `ADMIN_MAX_UNIVERSE - 1` und nicht die Zahl selbst: der erste Lauf steht in
+  // Universum 1, ohne dass irgendetwas zurückgelassen wurde.
+  gameStore.totalPrestiges = Math.max(gameStore.totalPrestiges, ADMIN_MAX_UNIVERSE - 1)
   gameStore.prestigeAvailable = true
+  // …und die Vorsehung, unter der dieser Lauf steht. Neun Aufbrüche ohne eine
+  // einzige gezogene Karte gibt es im Spiel nicht — und im Ertragsband des
+  // Shops blieb die Zeile „Cosmos" dadurch als einzige der acht erworbenen
+  // Herkünfte auf 1 stehen (gemessen: „1 unused" nach diesem Knopf).
+  //
+  // Gewürfelt wird mit der ECHTEN Ziehung, nicht mit einer erfundenen Karte:
+  // die Höhen kommen aus `PROVIDENCE_AXES` und sollen es auch hier. Gesucht
+  // wird die Ziehung, deren BUFF auf der CpS-Achse liegt — nur dann trägt die
+  // Zeile im Band, und ein Endzustand, in dem eine Herkunft nichts beiträgt,
+  // ist genau das, was dieser Knopf herstellen soll. Der Abbruchzähler ist
+  // Pflicht: `rollProvidence` wählt die Achse zufällig und kann die gesuchte
+  // beliebig oft verfehlen.
+  const providenceStore = useProvidenceStore()
+  if (!providenceStore.active) {
+    for (let tries = 0; tries < ADMIN_PROVIDENCE_ROLL_GUARD; tries++) {
+      const rolled = rollProvidence('economy')
+      if ((rolled.effects.cpsMultiplier ?? 1) > 1) {
+        providenceStore.active = rolled
+        break
+      }
+    }
+  }
   galaxyStore.adminJumpToGalaxy(ADMIN_MAX_GALAXY)
   // Der Sprung endet in `commitAdvance()` mit einer offenen Rollenwahl, die das
   // Spiel anhält. Für einen Endzustand, der sofort spielbar sein soll, wird sie

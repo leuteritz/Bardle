@@ -5,10 +5,15 @@ import type { IconPoolKey } from './ui'
 // ── Star Forge (Shop tab) ────────────────────────────────────────────────────
 
 /**
- * Welcher Ring. `bough` ist der äusserste und der einzige OHNE Obergrenze —
- * seine Stufen laufen weiter, wenn alles andere im Baum auf MAX steht.
+ * Welcher Ring.
+ *
+ * `bough` ist der einzige OHNE Obergrenze — seine Stufen laufen weiter, wenn
+ * alles andere im Baum auf MAX steht. `crown` ist der äusserste und die
+ * Gegenfigur dazu: EINE Stufe, und dafür verschiebt jeder Knoten eine Regel
+ * statt eine Zahl. Beides zusammen ginge nicht — eine Regel, die man mehrfach
+ * kaufen kann, ist wieder eine Zahl.
  */
-export type ForgeNodeTier = 'branch' | 'leaf' | 'bough'
+export type ForgeNodeTier = 'branch' | 'leaf' | 'bough' | 'crown'
 
 /** A purchasable node on the Forge Tree (rings 2–4 around the sun).
  *  Ring 1 (roots) stays in solarUpgradeStore. */
@@ -75,7 +80,28 @@ export interface ForgeConstellationDef {
   pairLabel: string
 }
 
-export type ForgeBargainKind = 'buff' | 'materials' | 'gold' | 'dwellSkip' | 'heal'
+/**
+ * `voidPurge` und `meeps` sind die zwei Handel, die nicht mit Zahlen bezahlen,
+ * sondern mit dem Zustand der Welt: der eine räumt den offenen Riss, der andere
+ * kauft anstehende Ausbeute vorzeitig frei. Beide brauchen deshalb einen
+ * eigenen Zweig in `starForgeStore.buyBargain()` — ein `materials`-Handel mit
+ * Sonderfall wäre eine zweite Bedeutung für dasselbe Wort.
+ */
+export type ForgeBargainKind =
+  | 'buff'
+  | 'materials'
+  | 'gold'
+  | 'dwellSkip'
+  | 'heal'
+  | 'voidPurge'
+  | 'meeps'
+
+/**
+ * Die befristeten Handels-Buffs. `dropX2` kam mit der Phase Lantern dazu und
+ * ist der erste, der nicht auf die Chime-Rate zielt — er wirkt in
+ * `inventoryStore.tryDropMaterial`.
+ */
+export type ForgeBuffId = 'cpcX2' | 'cpsX2' | 'dropX2'
 
 export interface ForgeBargainDef {
   id: string
@@ -91,16 +117,18 @@ export interface ForgeBargainDef {
   /** 0–1 fraction knocked off basePrice. */
   discountPct: number
   kind: ForgeBargainKind
-  buffId?: 'cpcX2' | 'cpsX2'
+  buffId?: ForgeBuffId
   durationMs?: number
   materials?: Record<string, number>
   goldReward?: number
   /** Fraction of the remaining phase dwell time skipped. */
   dwellSkipPct?: number
+  /** `meeps`: how many pending meeps the caravan hands over at once. */
+  meepReward?: number
 }
 
 export interface ForgeActiveBuff {
-  id: 'cpcX2' | 'cpsX2'
+  id: ForgeBuffId
   expiresAt: number
 }
 

@@ -24,6 +24,8 @@ import {
   FORGE_DESC_PERCENT_TOKEN,
   FORGE_UPGRADE_CAPPED_REASON,
   FORGE_UPGRADE_TIER_LABELS,
+  FORGE_CROWN_STATE_OPEN,
+  FORGE_CROWN_STATE_FORGED,
   FORGE_BULK_BUY_CAP,
 } from '@/config/constants'
 
@@ -270,6 +272,15 @@ export function useForgeUpgrades(): {
       nextDesc = def.desc.replace('{p}', parent).replace(FORGE_DESC_VALUE_TOKEN, String(nextPct))
       nowText = `+${nowPct}%`
       nextText = `+${nextPct}%`
+    } else if (def.tier === 'crown') {
+      // Eine Krone hat KEINEN Wert je Stufe — sie verschiebt eine Regel, und
+      // ihr `desc` sagt die im Klartext, ohne `{v}`. Ein Zahlenpaar „jetzt →
+      // danach" wäre hier bestenfalls „0 → 0"; was die Zeile stattdessen zeigt,
+      // ist der Zustand: noch zu haben oder geschmiedet.
+      desc = def.desc
+      nextDesc = def.desc
+      nowText = level > 0 ? FORGE_CROWN_STATE_FORGED : FORGE_CROWN_STATE_OPEN
+      nextText = FORGE_CROWN_STATE_FORGED
     } else if (def.tier === 'bough') {
       // Kein Blatt-Verstärker: ein Bough trägt schlicht Stufe × Wert je Stufe.
       // Genau diese Additivität hält den endlosen Ring sicher — die Vorschau

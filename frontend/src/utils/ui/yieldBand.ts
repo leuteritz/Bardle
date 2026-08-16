@@ -211,20 +211,35 @@ function withCenters(segments: YieldBandSegment[]): YieldBandSegment[] {
 }
 
 /**
- * Die Herkünfte, die beim Spieler noch GAR NICHTS bewirken — Faktor exakt 1.
+ * Die Herkünfte, bei denen der Spieler noch etwas HOLEN kann — erworbene
+ * Systeme, die bei ihm auf Faktor 1 stehen.
  *
  * Sie sind der Grund, warum das Band mehr ist als eine Anzeige: „Meeps, Codex,
  * Items und Traits tragen bei dir nichts bei" ist die Auskunft, auf die man
  * handeln kann. Im Band stehen sie deshalb als gedämpfte Zone am Ende.
  *
+ * ── Warum die NATUR mitzählt und nicht nur der Wert ──────────────────────────
+ * Bis hierher stand allein `factor === 1` in der Bedingung, und damit log die
+ * Zone. Im Endzustand (Admin → Max Everything) zeigte sie „3 unused", obwohl
+ * nichts mehr zu holen war:
+ *
+ *   • `boons` ist `transient` — ein Faktor von 1 heißt „gerade läuft kein
+ *     Drifter, kein Omen, kein Zeit-Augment". Ein Zeitpunkt, kein Versäumnis.
+ *   • `void` und `bosses` sind `toll` — sie ZIEHEN AB. Neutral heißt dort: du
+ *     zahlst gerade nichts. Als „ungenutzt" gelistet forderte der Sockel den
+ *     Spieler auf, sich eine Strafe zu besorgen.
+ *
+ * Nur `earned` kann fehlen. Die Trennung steht an `ForgeYieldNature`.
+ *
  * Bewusst KEIN Segment und damit kein Teil der 100-%-Rechnung: im frischen
- * Spielstand sind sieben von zehn Herkünften neutral, anteilig gezeichnet wäre
- * das Ungenutzte das größte Element des Bandes. Es hängt stattdessen mit fester
- * Breite rechts daneben.
+ * Spielstand sind acht von acht erworbenen Herkünften neutral, anteilig
+ * gezeichnet wäre das Ungenutzte das größte Element des Bandes. Es hängt
+ * stattdessen mit fester Breite rechts daneben.
  */
 export function unusedYieldSources(factors: readonly CpsFactor[]): ForgeYieldSourceDef[] {
   const byId = new Map(factors.map((entry) => [entry.id, entry.factor]))
   return FORGE_YIELD_SOURCES.filter((def) => {
+    if (def.nature !== 'earned') return false
     const factor = byId.get(def.id) ?? 1
     // Ein kaputter Wert zaehlt als ungenutzt: das Band zeigt ihn ohnehin nicht,
     // und stillschweigend verschwinden soll er nicht.

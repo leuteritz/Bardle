@@ -525,6 +525,22 @@ export const VOID_IMPACT_HP_LOSS: Record<VoidRiftSeverity, number> = {
   abyssal: 32,
 }
 
+/**
+ * Was der Voidbound Pact (Star-Forge-Konstellation) an einem erlegten Wesen
+ * hinterlässt.
+ *
+ * Fest und nicht gewürfelt: der Pakt verspricht wörtlich einen Void Shard, und
+ * das Material ist der Taktgeber der späten Forge — die Blätter an den späten
+ * Zweigen und drei Relikte hängen daran. Der Riss war bis zu dieser Fusion
+ * reiner Verlust; mit ihr wird das Aufräumen zur Quelle genau des Stoffs, den
+ * man braucht, um sich gegen ihn zu wappnen.
+ *
+ * Steht als ID hier und nicht als Zeichenkette im Store: `material.id` ist ein
+ * Vertrag mit dem Spielstand (`SAVE_ID_RENAMES`), und ein zweites Vorkommen
+ * liefe beim nächsten Umbenennen still auseinander.
+ */
+export const VOID_PACT_SHARD_MATERIAL = 'void_shard'
+
 /** Wie lange das Nachbeben eines Einschlags nachzieht — je Schwere. Der
  *  eigentliche Preis des abyssalen Wesens steht hier, nicht in den HP. */
 export const VOID_IMPACT_AFTERMATH_MS: Record<VoidRiftSeverity, number> = {
