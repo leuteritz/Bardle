@@ -308,7 +308,7 @@ onUnmounted(() => {
                 <ProfileVitalsCluster />
               </div>
 
-              <div class="flex items-center justify-center gap-1.5 px-2 py-2">
+              <div class="flex items-center justify-center gap-1.5 px-2 py-2 rp-tab-strip">
                 <button
                   v-for="item in menuItems"
                   :key="item.id"
@@ -651,6 +651,68 @@ onUnmounted(() => {
 
 .rp-header-side--right {
   justify-content: flex-end;
+}
+
+/* ── Trennklingen zwischen Live-Clustern und Reiterleiste ─────────────────
+   Der Kopf trägt drei Blöcke mit verschiedenen Rollen — Zustand · Navigation ·
+   Bereitschaft —, und bis hierher trennte sie nur Weissraum, der je nach
+   Auflösung zwischen 11 und 131px schwankt.
+
+   Das Rezept ist WORTGLEICH `.header-divider` aus `AppHeaderComponent.vue`:
+   derselbe #1e1006-Untergrund, dieselbe Aufgabe, ein Kopfstreifen höher. Zwei
+   Kopfzeilen übereinander mit verschiedenen Klingen wären ein sichtbarer Bruch.
+
+   Sie hängen am REITER-STREIFEN, nicht an den Seitenspalten — und das ist der
+   Punkt, an dem der erste Versuch scheiterte: die Spalten stehen auf
+   `overflow: hidden`, weil die Zahlenzeile des HP-Clusters auf schmalen
+   Fenstern breiter wird als ihre Spalte. Eine Klinge an der Spaltenkante wäre
+   dort mit abgeschnitten worden. Der Streifen hat diese Grenze nicht, und seine
+   Kanten SIND die Spaltengrenzen.
+
+   ABSOLUT positioniert, und das ist keine Stilfrage: bei 1366 CSS-Pixeln liegen
+   zwischen Cluster und Reitern nur 11px. Ein Element im Flex-Fluss (2px plus
+   Ränder ≈ 10px) hätte die Cluster schrumpfen lassen — also genau das
+   zurückgenommen, wofür ihre Grössenstaffel gebaut wurde. So verdrängt die
+   Klinge nichts und darf auf JEDER Breite stehenbleiben. */
+.rp-tab-strip {
+  position: relative;
+}
+
+.rp-tab-strip::before,
+.rp-tab-strip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: clamp(28px, 2.6vw, 55px);
+  border-radius: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(124, 79, 26, 0.12) 8%,
+    rgba(160, 110, 15, 0.38) 20%,
+    rgba(180, 125, 35, 0.52) 50%,
+    rgba(160, 110, 15, 0.38) 80%,
+    rgba(124, 79, 26, 0.12) 92%,
+    transparent 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 200, 80, 0.08),
+    0 0 8px rgba(160, 110, 15, 0.06);
+}
+
+/* Vier Pixel INNERHALB des Streifens: die Spaltengrenze ist nicht die optische
+   Kante — der Streifen bringt `px-2` mit, der erste Reiter nochmal
+   `clamp(10px, 1.2vw, 16px)`. So steht die Klinge ungefähr mittig zwischen
+   Cluster und erstem Glyph, statt an einem von beiden zu kleben. */
+.rp-tab-strip::before {
+  left: 4px;
+}
+
+.rp-tab-strip::after {
+  right: 4px;
 }
 
 /* ═══════════════════════════════════════════

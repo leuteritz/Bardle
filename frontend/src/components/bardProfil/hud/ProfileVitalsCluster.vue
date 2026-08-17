@@ -352,14 +352,31 @@ onUnmounted(() => {
        1920     |  293   | 278   ← Full HD @ 100 %
        2300     |  409   | 372
        3400     |  759   | 460 */
+/* Zur Breite unterhalb von 1700: die Zahlenzeile („5,3K / 12,48K +1/s") ist bei
+   kleiner Schrift breiter, als man schätzt — gemessen lief sie bis 1707 aus der
+   Spalte und wurde von deren `overflow: hidden` abgeschnitten, um bis zu 29px,
+   die der Spieler nie zu sehen bekam.
+
+   Die Spalte einfach auszureizen löst es nicht: dann bleibt der Trennklinge
+   daneben 1px Luft und sie klebt am Balken. Stattdessen weicht der DRITTE Wert
+   (siehe `.pv-regen` unten) — Breite ist hier das knappe Gut, nicht Inhalt. */
 .pv-cluster {
-  --pv-w: 96px;
+  --pv-w: 100px;
   --pv-track-h: 7px;
   --pv-gap: 5px;
   --pv-cur-size: 15px;
   --pv-sub-size: 10px;
   --pv-regen-size: 9px;
   padding: 0 4px 0 8px;
+}
+
+/* Unter 1700 passt die Regeneration nicht mehr in die Zeile, ohne dass entweder
+   der Text abgeschnitten würde oder die Trennklinge daneben ihre Luft verlöre.
+   Sie ist der dritte Wert und weicht deshalb zuerst — was sie sagt, steht im
+   Hover-Kasten; die beiden Zahlen und der Balken sind das, was der Kopf
+   tragen MUSS. */
+.pv-regen {
+  display: none;
 }
 
 @media (min-width: 1366px) {
@@ -399,14 +416,18 @@ onUnmounted(() => {
 }
 
 @media (min-width: 1700px) {
+  /* Ab hier trägt die Zeile ihren dritten Wert wieder. */
   .pv-cluster {
-    --pv-w: 194px;
+    --pv-w: 197px;
     --pv-track-h: 17px;
     --pv-gap: 7px;
     --pv-cur-size: 28px;
     --pv-sub-size: 15px;
     --pv-regen-size: 13px;
     padding: 0 4px 0 12px;
+  }
+  .pv-regen {
+    display: inline;
   }
 }
 
