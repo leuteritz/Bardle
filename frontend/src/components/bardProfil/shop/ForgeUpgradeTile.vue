@@ -5,6 +5,8 @@
       `fut-row--${entry.state}`,
       {
         'fut-row--ready': entry.canBuy,
+        'fut-row--short': short,
+        'fut-row--best': showBest,
         'fut-row--fresh': fresh,
         'fc-spot': spotlightId === entry.id,
         'fc-dimmed': spotlightId !== null && spotlightId !== entry.id,
@@ -16,11 +18,24 @@
   >
     <div class="fut-flash" :class="{ 'fut-flash--on': flashed }" aria-hidden="true" />
 
-    <!-- Der azurne Rahmen. Eigene Ebene mit STATISCHEM Schein, animiert wird nur
+    <!-- Die EINE atmende Ebene der Zeile. Statischer Schein, animiert wird allein
          ihre Deckkraft (Performance-Regel 2/11) — und auf `inset: 0`, weil die
          Zeile `overflow: hidden` trägt und ein negativer Einzug abgeschnitten
-         würde. Genau derselbe Sitz wie beim Quittungsblitz darüber. -->
-    <div v-if="fresh" class="fut-fresh" aria-hidden="true" />
+         würde. Genau derselbe Sitz wie beim Quittungsblitz darüber.
+
+         Zwei Anlässe, EINE Ebene: „seit dem letzten Blick bezahlbar" (azur) und
+         „das Günstigste, was gerade geht" (grün). Sie wird UMGEFÄRBT statt eine
+         zweite darüberzulegen — dasselbe Rezept, das `ForgeTreePanel` für
+         `.node-circle--fresh .node-glow` schon begründet: zwei Keyframes auf
+         einer Ebene überlagern sich nicht, und zwei Ebenen kosten das Doppelte
+         für dieselbe Aussage. Azur gewinnt, weil „neu" die seltenere und
+         flüchtigere Auskunft ist. -->
+    <div
+      v-if="fresh || showBest"
+      class="fut-halo"
+      :class="fresh ? 'fut-halo--fresh' : 'fut-halo--best'"
+      aria-hidden="true"
+    />
 
     <!-- Nackt, ohne Sockel: der gerahmte Kasten davor kostete Breite, die die
          Zeile für Stufe, Wirkung und Knopf braucht. Die Knotenfarbe trägt das
@@ -65,12 +80,7 @@
             <span class="fut-lvl">
               {{ levelParts.big }}<span class="fut-lvl-max">{{ levelParts.max }}</span>
             </span>
-            <span class="fut-name-row">
-              <span class="fut-name" :style="{ color: entry.color }">{{ entry.name }}</span>
-              <span v-if="fresh" class="fut-tag" :aria-label="FORGE_FRESH_TITLE">
-                {{ FORGE_FRESH_LABEL }}
-              </span>
-            </span>
+            <span class="fut-name" :style="{ color: entry.color }">{{ entry.name }}</span>
           </span>
 
           <!-- Ein gedeckelter Strahl hat einen Sprung, den er nicht nehmen
@@ -84,22 +94,49 @@
           </span>
         </div>
 
-        <!-- Was das Lager kostet — rahmenlos (`flat`), also nur Bild und Zahl.
-             Der Chime-Preis steht NICHT hier, sondern im Knopf (`:gold="0"`
-             lässt ihn weg): er ist die eine Zahl, die jeder Eintrag hat, und
-             gehört an die Stelle, an der geklickt wird. Die Materialien kann
-             der Knopf nicht mittragen — zwei Positionen messen auch ohne
-             Rahmen ~150px und machten ihn breiter als den Namen daneben. -->
-        <ForgeCostRow
-          v-if="entry.materials.length > 0"
-          class="fut-mats"
-          inline
-          flat
-          :label="false"
-          :gold="0"
-          :gold-ok="true"
-          :materials="entry.materials"
-        />
+        <!-- Zweite Zeile: links das Lager, rechts die Marke.
+             Die Marke stand einmal oben neben dem NAMEN und ist von dort
+             gewichen — gemessen ist die Kopfzeile nur 234px (Full HD) bzw. 263px
+             breit, und mit der Pille daneben verlor der längste Name 13 bis 19
+             Pixel an die Auslassungspunkte. Ausgerechnet die Zeile, auf die die
+             Marke zeigt, war damit die einzige mit beschnittenem Namen. Hier
+             unten ist die Breite frei: das Materialband ist kurz und darf
+             schrumpfen, der Name oben bekommt seine ~146px zurück. -->
+        <div class="fut-foot">
+          <!-- Was das Lager kostet — rahmenlos (`flat`), also nur Bild und Zahl.
+               Der Chime-Preis steht NICHT hier, sondern im Knopf (`:gold="0"`
+               lässt ihn weg): er ist die eine Zahl, die jeder Eintrag hat, und
+               gehört an die Stelle, an der geklickt wird. Die Materialien kann
+               der Knopf nicht mittragen — zwei Positionen messen auch ohne
+               Rahmen ~150px und machten ihn breiter als den Namen daneben. -->
+          <ForgeCostRow
+            v-if="entry.materials.length > 0"
+            class="fut-mats"
+            inline
+            flat
+            :label="false"
+            :gold="0"
+            :gold-ok="true"
+            :materials="entry.materials"
+          />
+
+          <!-- Höchstens EINE, und „NEW" gewinnt — aus demselben Grund wie beim
+               Schein darüber: „neu" ist die seltenere und flüchtigere Auskunft. -->
+          <span v-if="fresh" class="fut-tag" :aria-label="FORGE_FRESH_TITLE">
+            {{ FORGE_FRESH_LABEL }}
+          </span>
+          <!-- Zwei Wortlaute, einer davon je Viewport ausgeblendet — Muster
+               `.ft-buy-all-label` in der Kopfleiste. -->
+          <span
+            v-else-if="showBest"
+            class="fut-tag fut-tag--best"
+            :aria-label="bestTitle"
+            :title="bestTitle"
+          >
+            <span class="fut-tag-long">{{ FORGE_BEST_BUY_LABEL }}</span>
+            <span class="fut-tag-short">{{ FORGE_BEST_BUY_SHORT_LABEL }}</span>
+          </span>
+        </div>
       </div>
 
       <!-- Die Kauffläche. Feste Gesamtbreite über die volle Zeilenhöhe: die
@@ -172,6 +209,21 @@
  * Mangel steht allein in der roten Zahl. Der rote Knopf ist die zweite
  * Kodierung dazu — wer ihn entfärbt, muss die Zeichen zurückholen.
  *
+ * Der Knopf allein trug es aber NICHT. Eine Runde lang war er der einzige
+ * verlässliche Unterschied zwischen kaufbar und nicht kaufbar — die Zeile
+ * darunter unterschied sich nur in einer 1px-Rahmenfarbe —, und weil Rot die
+ * Warnfarbe ist, die der Blick zuerst sucht, las sich eine Liste mit zwanzig
+ * roten und fünf grünen Knöpfen als zwanzig Treffer und fünf Nebensachen. Die
+ * Aussage liegt deshalb jetzt auf der GANZEN Zeile, in beide Richtungen:
+ * kaufbar tritt hervor (`--ready`: grüner Grund, Waschung zum Knopf, statisches
+ * Innenlicht), „reicht nicht" tritt zurück (`--short`: dunklerer Grund,
+ * gedimmtes Glyph, flach-dunkelroter Knopf statt leuchtendem Verlauf).
+ *
+ * BEWEGT ist davon nichts. Genau eine Zeile der Liste atmet — die mit der
+ * BEST-BUY-Marke, also der günstigste kaufbare Eintrag. Bei zwanzig kaufbaren
+ * Einträgen atmeten sonst zwanzig Ebenen gegeneinander, und die Marke hätte
+ * keinen Vorrang mehr zu zeigen.
+ *
  * Was sie NICHT ist: eine volle Karte mit Beschreibungssatz und beschriftetem
  * Now/After-Kasten. Die stand hier schon einmal und wurde zurückgenommen. Der
  * Beschreibungssatz, der Rang und der Elternknoten bleiben deshalb im
@@ -189,6 +241,8 @@ import { forgeGrowLabel, forgeLevelParts } from '@/composables/ui/useForgeUpgrad
 import ForgeCostRow from './ForgeCostRow.vue'
 import type { ForgeUpgradeEntry } from '@/types'
 import {
+  FORGE_BEST_BUY_LABEL,
+  FORGE_BEST_BUY_SHORT_LABEL,
   FORGE_CARD_FLASH_MS,
   FORGE_CHIME_IMAGE,
   FORGE_COUNT_TOKEN,
@@ -223,17 +277,46 @@ const props = withDefaults(
      *  Rahmen, bis der Zeiger die Zeile einmal berührt hat. */
     fresh: boolean
     /**
+     * Das Günstigste, was Chimes UND Lager gerade decken — dieselbe Marke, die
+     * der Baum links als Ring um seinen Knoten legt. Kommt von der Liste, weil
+     * `bestBuyId` dort ohnehin gegen die tickenden Chimes eingefroren wird; die
+     * Zeile selbst kann das nicht entscheiden, sie kennt nur sich.
+     */
+    best?: boolean
+    /**
      * Wie viele Stufen Vorrat UND Lager gerade hergeben. Kommt von der Liste,
      * nicht aus `useForgeUpgrades()`: das Composable hier je Zeile aufzurufen
      * hiesse fünfundvierzig Kopien von `upgradeEntries` über fünfzig Knoten.
      */
     bulkCount?: number
   }>(),
-  { bulkCount: 0 },
+  { best: false, bulkCount: 0 },
 )
 defineEmits<{ (e: 'buy', id: string): void; (e: 'buyMany', id: string): void }>()
 
 const { spotlightId, setListHover } = useForgeSpotlight()
+
+/**
+ * „Offen, aber es reicht nicht" — der Zustand, der ZURÜCKTRITT.
+ *
+ * Wörtlich dieselbe Weiche wie am Kaufknopf (`fut-buy--short`), und mit Absicht
+ * nicht aus `entry.state` allein abgeleitet: `affordable` sagt nur, dass die
+ * Chimes da sind — fehlt Material, ist die Zeile trotzdem nicht kaufbar. Die
+ * einzige verlässliche Auskunft dazu ist `canBuy`.
+ */
+const short = computed(
+  () => props.entry.state !== 'capped' && props.entry.state !== 'locked' && !props.entry.canBuy,
+)
+
+/**
+ * Die BEST-BUY-Marke wird gezeigt — aber nicht neben „NEW": beide Auskünfte
+ * hängen an derselben atmenden Ebene und derselben Pillenposition, und eine
+ * frische Zeile ist ohnehin schon die auffälligste der Liste.
+ */
+const showBest = computed(() => props.best && !props.fresh)
+
+/** Warum diese Zeile die Marke trägt. Wortlaut wie an `MeepSkillNode`. */
+const bestTitle = `${FORGE_BEST_BUY_LABEL} — cheapest you can afford`
 
 /** Stufe 0 hat kein Vorher — ein „+0%" behauptete eine Wirkung, die es nicht gibt. */
 const nowText = computed(() => (props.entry.level === 0 ? '—' : props.entry.nowText))
@@ -320,12 +403,82 @@ const buyTitle = computed(() => {
   border-color: #7a4e20;
 }
 
+/* ── KAUFBAR ─────────────────────────────────────────────────
+   Eine Runde lang war das hier EINE Zeile — `border-color: #4a8a28`. Beide Töne
+   sind dunkel, auf 1px gegen `#32210c` kaum zu trennen, und der rote
+   „reicht nicht"-Knopf der Nachbarzeile zog den Blick sogar zuerst an: die
+   Warnfarbe schlug die Zusagefarbe, und eine Liste mit fünf kaufbaren unter
+   zwanzig nicht kaufbaren Zeilen las sich als zwanzig rote Blöcke.
+
+   Jetzt tragen es DREI Ebenen, und alle drei sind ZUSTAND — kein Dauerläufer,
+   nichts davon wird pro Frame gerastert (Performance-Regel 2). Bei zwanzig
+   gleichzeitig kaufbaren Zeilen ist das der ganze Preis:
+     • der Grund wird grün getönt und HELLER als der neutrale (`#1c1c18`) —
+       kaufbar soll „angeschaltet" wirken, nicht dunkler;
+     • als zweite Schicht desselben `background` eine Waschung, die zum
+       Kaufknopf hin aufleuchtet. Bewusst im `background` und nicht als
+       `::after`: `.fut-row` ist `position: relative` OHNE `z-index` und damit
+       kein Stapelkontext — eine Ebene mit `z-index: -1` fiele hinter den Grund
+       der Zeile, eine ohne läge über der Schrift;
+     • ein statisches Innenlicht, das die Kante von innen stützt.
+   Der Rahmen geht auf `#6ec040`, dieselbe Kante wie Kaufknopf und Hover. */
 .fut-row--ready {
-  border-color: #4a8a28;
+  border-color: #6ec040;
+  background:
+    linear-gradient(to left, rgba(82, 184, 48, 0.16), transparent 58%),
+    #1e2a14;
+  box-shadow:
+    inset 0 0 0 1px rgba(110, 192, 64, 0.22),
+    inset 0 0 26px -6px rgba(82, 184, 48, 0.22);
 }
 
 .fut-row--ready:hover {
-  border-color: #6ec040;
+  border-color: #9fe062;
+}
+
+/* Die Knotenkante wird mitgehoben. Sie ergibt über die Liste hinweg eine Leiter,
+   und die ist der eigentliche Wert: `--short 0.28 · Basis 0.5 · --ready 0.8 ·
+   fc-spot 1`. */
+.fut-row--ready::before {
+  opacity: 0.8;
+}
+
+/* Die Zahl, wegen der man überhaupt auf den Knopf sieht — auf einer kaufbaren
+   Zeile darf sie das hellere Grün tragen. */
+.fut-row--ready .fut-delta-next {
+  color: #9fe062;
+}
+
+/* ── OFFEN, ABER ES REICHT NICHT ─────────────────────────────
+   Die Gegenseite, und der Grund, warum die Unterscheidung überhaupt trägt:
+   hervorheben allein genügt nicht, solange die Mehrheit gleich laut bleibt.
+
+   Gedimmt wird, was KEINE Zahl ist — Grund, Knotenkante und das 56px-Glyph, das
+   grösste Element der Zeile. Die Kosten, der Wirkungssprung und der Name bleiben
+   voll deckend: wer spart, liest hier genau die Zahlen, auf die er wartet. Nur
+   die Stufe tritt leicht zurück, sie ist die einzige Zahl ohne Bezug zum
+   Warten. */
+.fut-row--short {
+  background: #191713;
+}
+
+.fut-row--short::before {
+  opacity: 0.28;
+}
+
+.fut-row--short .fut-ico {
+  opacity: 0.5;
+}
+
+.fut-row--short .fut-lvl {
+  color: rgba(232, 220, 192, 0.72);
+}
+
+/* ── DAS GÜNSTIGSTE, WAS GERADE GEHT ────────────────────────
+   Die stärkste Kante der Liste, dazu die eine atmende Ebene. Steht NACH
+   `--ready`, weil best immer auch kaufbar ist. */
+.fut-row--best {
+  border-color: #9fe062;
 }
 
 /* ── NEU SEIT DEM LETZTEN BLICK ──────────────────────────────────
@@ -334,10 +487,16 @@ const buyTitle = computed(() => {
    Rahmen führt die Spur bis zum Eintrag zu Ende. Grün ist hier schon „kaufbar",
    Gold auf den Karten dasselbe — beide wären doppelt belegt.
 
-   Steht NACH `--ready`: frisch ist immer auch kaufbar, und die spätere Regel
-   gewinnt bei gleicher Spezifität. */
+   Steht NACH `--ready` und `--best`: frisch ist immer auch kaufbar, und die
+   spätere Regel gewinnt bei gleicher Spezifität. Das Innenlicht wird mit
+   umgefärbt — ein azurner Rahmen über grünem Innenlicht wären zwei Aussagen an
+   derselben Kante. Der grün getönte GRUND bleibt: frisch heisst „neu bezahlbar",
+   die Zeile ist also beides und soll auch beides zeigen. */
 .fut-row--fresh {
   border-color: #60a5fa;
+  box-shadow:
+    inset 0 0 0 1px rgba(96, 165, 250, 0.24),
+    inset 0 0 26px -6px rgba(59, 130, 246, 0.24);
 }
 
 .fut-row--locked {
@@ -354,10 +513,15 @@ const buyTitle = computed(() => {
    Doppelt geschrieben, mit Absicht: `.fut-row--ready:hover` wiegt eine Stufe
    mehr und färbte den Rahmen sonst grün, sobald der Zeiger wirklich auf der
    Zeile steht — auf den Knoten zeigen und auf seine Zeile zeigen sind EINE
-   Geste und dürfen nicht zwei Farben ergeben. */
+   Geste und dürfen nicht zwei Farben ergeben.
+
+   `background` und `box-shadow` müssen mit zurückgesetzt werden: eine kaufbare
+   Zeile brächte sonst ihren grünen Grund samt Waschung und Innenlicht mit unter
+   den Zeiger, und die Leitfarbe des Knotens hätte nichts, worauf sie sich legt. */
 .fut-row.fc-spot.fc-spot {
   background: #241a10;
   border-color: var(--node-c, #e8c040);
+  box-shadow: none;
 }
 
 .fut-row.fc-spot::before {
@@ -444,11 +608,18 @@ const buyTitle = computed(() => {
   color: rgba(232, 220, 192, 0.4);
 }
 
-.fut-name-row {
+/* Die zweite Zeile: Lager links, Marke rechts an die Kante. `margin-left: auto`
+   an der Pille und nicht `justify-content: space-between`, weil das Band ganz
+   fehlen kann — die Marke soll dann trotzdem rechts stehen, nicht allein links. */
+.fut-foot {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   min-width: 0;
+}
+
+.fut-foot > .fut-tag {
+  margin-left: auto;
 }
 
 .fut-name {
@@ -480,6 +651,21 @@ const buyTitle = computed(() => {
   letter-spacing: 0.08em;
   line-height: 1.3;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Dieselbe Pille in Grün. Sie ersetzt „NEW", sie steht nie daneben — die Weiche
+   sitzt im Template, nicht hier. Verlauf und Tinte im Rezept des Kaufknopfes,
+   damit Marke und Handlung dieselbe Farbe sprechen. */
+.fut-tag--best {
+  border-color: #9fe062;
+  background: linear-gradient(135deg, #52b830, #2e7a1a);
+  color: #08130a;
+  text-shadow: none;
+}
+
+/* Die Kurzform tritt erst im Kompakt-Block an ihre Stelle. */
+.fut-tag-short {
+  display: none;
 }
 
 /* ══════════════════════════════════════════════════
@@ -604,11 +790,21 @@ const buyTitle = computed(() => {
    Rot, und zwar der ganze Knopf. Es ist die zweite Kodierung zu der roten Zahl
    im Materialband, seit dort das ✕ fehlt — und die einzige Stelle, an der das
    Fehlen überhaupt eine Form hat. Kein `filter: grayscale`: ein ausgegrauter
-   Verlauf trägt seine fast schwarze Schrift nicht mehr (Rezept `.fc-act`). */
+   Verlauf trägt seine fast schwarze Schrift nicht mehr (Rezept `.fc-act`).
+
+   FLACH und dunkel, nicht mehr als leuchtender Verlauf
+   (`linear-gradient(#a83c2c, #6e1e12)`). Der Grund ist die Rangfolge im Bild:
+   Rot ist die Warnfarbe, die der Blick zuerst sucht, und zwanzig leuchtend rote
+   Knöpfe schlugen fünf grüne — genau umgekehrt zu dem, was die Liste sagen soll.
+   „Noch nicht" ist ohnehin kein Fehler.
+
+   Rot BLEIBT es, in Rahmen, Grund und Schrift: `.fc-cost--flat` in
+   `rpg-theme.css` verzichtet auf das ✕ ausdrücklich nur deshalb, weil dieser
+   Knopf komplett umschlägt. Wer ihn entfärbt, muss die Zeichen zurückholen. */
 .fut-buy--short {
-  border-color: #cc6050;
-  background: linear-gradient(to bottom, #a83c2c, #6e1e12);
-  color: #ffe0d6;
+  border-color: #a04838;
+  background: #2a1512;
+  color: #e89a8c;
   cursor: not-allowed;
 }
 
@@ -685,23 +881,41 @@ const buyTitle = computed(() => {
 }
 
 /* ══════════════════════════════════════════════════
-   „NEU"-SCHEIN UND KAUFQUITTUNG
+   DIE ATMENDE EBENE UND DIE KAUFQUITTUNG
    Je eine eigene Ebene mit STATISCHEM Schein, animiert wird allein die
    Deckkraft (Performance-Regel 2/11) — dasselbe Rezept wie `.fc-glow` und
    `.msc-glow`. `inset: 0` statt `-1px`, weil die Zeile `overflow: hidden`
    trägt; der Schein liegt deshalb nach INNEN.
+
+   HÖCHSTENS EINE je Zeile, und über die ganze Liste hinweg höchstens eine grüne:
+   die Marke sitzt am günstigsten kaufbaren Eintrag, und den gibt es einmal. Das
+   ist der Grund, warum die kaufbare Zeile ihren Auftritt sonst rein statisch
+   bestreitet — bei zwanzig kaufbaren Einträgen atmeten sonst zwanzig Ebenen
+   gegeneinander, und die Marke hätte keinen Vorrang mehr, den sie zeigen könnte.
 ══════════════════════════════════════════════════ */
-.fut-fresh {
+.fut-halo {
   position: absolute;
   inset: 0;
   border-radius: 4px;
-  border: 1px solid #bae6fd;
-  box-shadow: inset 0 0 16px rgba(59, 130, 246, 0.42);
   pointer-events: none;
-  animation: fut-fresh-breathe 2.2s ease-in-out infinite;
+  animation: fut-halo-breathe 2.2s ease-in-out infinite;
 }
 
-@keyframes fut-fresh-breathe {
+/* Neu seit dem letzten Blick — azur, wie `ShopReadyBadge` am Header und am
+   Profil-Reiter, die den Spieler hergeführt haben. */
+.fut-halo--fresh {
+  border: 1px solid #bae6fd;
+  box-shadow: inset 0 0 16px rgba(59, 130, 246, 0.42);
+}
+
+/* Das Günstigste, was gerade geht — grün, wie der `.best-buy-ring` am Knoten im
+   Baum. Beide zeigen auf denselben Eintrag und müssen dieselbe Farbe sprechen. */
+.fut-halo--best {
+  border: 1px solid #9fe062;
+  box-shadow: inset 0 0 16px rgba(82, 184, 48, 0.42);
+}
+
+@keyframes fut-halo-breathe {
   0%,
   100% {
     opacity: 0.4;
@@ -712,14 +926,14 @@ const buyTitle = computed(() => {
 }
 
 /* Ruhig stellen, sobald der Blick ohnehin auf der Zeile liegt oder sie
-   zurückgetreten ist — sonst atmen bei einem Schwenk über die Liste ein Dutzend
-   Ebenen gleichzeitig gegen den Spotlight an. */
-.fut-row.fc-spot .fut-fresh {
+   zurückgetreten ist — sonst atmt sie beim Schwenk über die Liste gegen den
+   Spotlight an. */
+.fut-row.fc-spot .fut-halo {
   animation: none;
   opacity: 1;
 }
 
-.fut-row.fc-dimmed .fut-fresh {
+.fut-row.fc-dimmed .fut-halo {
   animation: none;
   opacity: 0.3;
 }
@@ -755,7 +969,7 @@ const buyTitle = computed(() => {
   }
 
   /* Der Rahmen bleibt — nur sein Atmen fällt weg. */
-  .fut-fresh {
+  .fut-halo {
     animation: none;
     opacity: 1;
   }
@@ -797,6 +1011,16 @@ const buyTitle = computed(() => {
 
   .fut-name--lead {
     font-size: 16px;
+  }
+
+  /* Die Marke gibt dem Namen 28px zurück — Herleitung an
+     `FORGE_BEST_BUY_SHORT_LABEL`. */
+  .fut-tag-long {
+    display: none;
+  }
+
+  .fut-tag-short {
+    display: inline;
   }
 
   .fut-delta {

@@ -1184,19 +1184,29 @@ export const FORGE_GROWN_ICON_SIZE = 32
 export const FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED = '▸'
 export const FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN = '▾'
 
-// ── Trenner vor dem Gesperrten (ForgeUpgradesSection) ────────────────────────
+// ── Trenner über den Töpfen (ForgeUpgradesSection) ───────────────────────────
 /**
- * Die Liste trägt keine Abschnittsköpfe mehr — was ein Eintrag kann, sagt sein
- * Knopf in Farbe. Für das GESPERRTE stimmt das nicht: es hat gar keinen Knopf,
- * und wo das Kaufbare aufhört, musste man sich bislang aus dessen Fehlen
- * erschliessen. Dort steht deshalb ein Trenner — eine Linie mit Etikett, kein
- * Balken und keine Fläche.
+ * Jeder der vier Töpfe trägt einen Trenner — eine Linie mit Etikett, kein Balken
+ * und keine Fläche.
  *
- * Es sind ZWEI, weil es zwei Sperrgründe gibt und die für den Spieler nicht
- * dasselbe sind: gegen die Sonnenphase kann er nichts tun ausser warten, den
- * Elternknoten kann er sofort wachsen lassen. Ein gemeinsamer Trenner müsste
- * generisch bleiben und sagte nichts — bei Sonnenphase 5 waren gemessen ALLE
- * dreissig gesperrten Zeilen Elternsperren, kein einziger Phasenlock.
+ * EINE Runde lief ohne Kopf über dem Kaufbaren: „was ein Eintrag kann, sagt sein
+ * Knopf in Farbe" war die Begründung, und sie hat nicht getragen. Eine kaufbare
+ * Zeile unterschied sich dauerhaft allein durch eine 1px-Rahmenfarbe
+ * (`#4a8a28` gegen `#32210c`) von einer nicht kaufbaren, und der rote
+ * „reicht nicht"-Knopf zog den Blick sogar zuerst an — die Warnfarbe schlug die
+ * Zusagefarbe. Die Zeile ist inzwischen umgebaut (siehe `ForgeUpgradeTile`), und
+ * die Köpfe sind mit zurückgekommen.
+ *
+ * Der Trenner über `reach` ist dabei KEINE Zugabe, sondern Bedingung: stünde nur
+ * über `ready` einer, läsen sich die Zeilen darunter als Teil derselben Gruppe.
+ * Ein Kopf, der die falsche Grenze zieht, ist schlimmer als keiner.
+ *
+ * Das GESPERRTE trägt derer ZWEI, weil es zwei Sperrgründe gibt und die für den
+ * Spieler nicht dasselbe sind: gegen die Sonnenphase kann er nichts tun ausser
+ * warten, den Elternknoten kann er sofort wachsen lassen. Ein gemeinsamer
+ * Trenner müsste generisch bleiben und sagte nichts — bei Sonnenphase 5 waren
+ * gemessen ALLE dreissig gesperrten Zeilen Elternsperren, kein einziger
+ * Phasenlock.
  */
 export const FORGE_DIVIDER_PARENT_LABEL = 'Needs a deeper tree'
 /**
@@ -1220,6 +1230,32 @@ export const FORGE_DIVIDER_PHASE_MANY_LABEL = 'Waiting on the sun'
  */
 export const FORGE_DIVIDER_PHASE_ICON = 'ph:sun-fill'
 export const FORGE_DIVIDER_PARENT_ICON = 'material-symbols:account-tree-rounded'
+
+/**
+ * Die beiden Trenner über dem Kaufbaren.
+ *
+ * Wortlaut, Glyph und Farbe sind NICHT neu erfunden: der Meep-Baum gliedert
+ * seine Liste nach genau derselben Frage („was kann ich damit anfangen") und hat
+ * die Antwort schon benannt — `MEEP_SKILL_BUCKETS` trägt für `ready`
+ * `ph:lightning-fill` auf `#52b830` und für `reach` `ph:hourglass-medium-fill`
+ * auf `#c89040`, mit dem Etikett „Saving up". Dieselbe Bedeutung bekommt
+ * dasselbe Glyph, über Feature-Grenzen hinweg; der Blitz heisst im Projekt
+ * ausserdem schon „alles, was gerade geht" (`FORGE_BUY_ALL_ICON`).
+ *
+ * Eigene Konstanten und nicht `MEEP_SKILL_BUCKETS` importiert, weil die Namen
+ * sonst lügen würden — der Forge-Trenner ist kein Meep-Topf. Die Werte sind die
+ * Kopie, die Herleitung steht dort.
+ *
+ * „Ready to grow" statt bloss „Ready": das Verb der Spalte ist FORGE/grow
+ * (`FORGE_GROW_LABEL`), und die Trenner daneben sind ebenfalls Sätze („Needs a
+ * deeper tree", „Waiting on the sun") — ein nacktes Wort fiele aus der Reihe.
+ */
+export const FORGE_DIVIDER_READY_LABEL = 'Ready to grow'
+export const FORGE_DIVIDER_READY_ICON = 'ph:lightning-fill'
+export const FORGE_DIVIDER_READY_COLOR = '#52b830'
+export const FORGE_DIVIDER_SAVING_LABEL = 'Saving up'
+export const FORGE_DIVIDER_SAVING_ICON = 'ph:hourglass-medium-fill'
+export const FORGE_DIVIDER_SAVING_COLOR = '#c89040'
 
 /** Der Chip, der die Ringfilterung aufhebt. */
 export const FORGE_UPGRADE_FILTER_ALL_LABEL = 'All'
@@ -1287,6 +1323,19 @@ export const FORGE_BUY_ALL_HERALD_NAME_CAP = 3
  * Frage, die der Spieler vor dem Baum hat.
  */
 export const FORGE_BEST_BUY_LABEL = 'BEST BUY'
+/**
+ * Dieselbe Marke, gekürzt — für die Upgrade-ZEILE bei Full HD.
+ *
+ * Gemessen: die volle Pille misst 68px und steht im engsten Platz der Zeile,
+ * neben dem Namen. Bei 1920×1080 blieben dem Namen dadurch 61px und er wurde
+ * abgeschnitten — ausgerechnet an der Zeile, auf die die Marke zeigen soll. Die
+ * Kurzform misst rund 40px und gibt ihm 28 zurück.
+ *
+ * Gekürzt wird die MARKE und nicht der Wirkungssprung daneben: dessen Zahl ist
+ * der Grund, überhaupt zu kaufen, während „BEST" dasselbe sagt wie „BEST BUY".
+ * Der volle Wortlaut bleibt im `title` der Pille.
+ */
+export const FORGE_BEST_BUY_SHORT_LABEL = 'BEST'
 
 /**
  * Die Marke an einem gerade erst bezahlbar gewordenen Eintrag.

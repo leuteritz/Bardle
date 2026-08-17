@@ -12,10 +12,11 @@
          Kopfleiste über dem Baum (`ForgeToolbar`) — dort hat er die doppelte
          Breite und Platz für einen Fortschrittsring je Ring. -->
     <section v-for="section in sections" :key="section.id" class="fu-group">
-      <!-- Der Trenner. Nur das GESPERRTE trägt einen: was ein kaufbarer Eintrag
-           kann, sagt sein Knopf in Farbe, ein gesperrter hat gar keinen. Zwei
-           davon, weil die beiden Sperrgründe zwei verschiedene Aufgaben sind —
-           Herleitung an `FORGE_DIVIDER_PARENT_LABEL`. -->
+      <!-- Der Trenner. JEDER Topf trägt einen — auch die beiden kaufbaren: dass
+           der Knopf in Farbe schon alles sage, hat als Begründung fürs Weglassen
+           nicht getragen. Vier davon, weil „kaufbar", „am Sparen" und die beiden
+           Sperrgründe vier verschiedene Aufgaben sind; Herleitung an
+           `FORGE_DIVIDER_PARENT_LABEL`. -->
       <div
         v-if="section.divider"
         class="fu-div"
@@ -27,10 +28,10 @@
         <span class="fu-div-num">{{ section.entries.length }}</span>
       </div>
 
-      <!-- Das Archiv trägt eine Schaltzeile — es ist das Einzige hier, was der
-           Spieler zumachen kann. Ein KOPF ist sie nicht: die Abschnittsköpfe
-           („Ready", „Saving up", „Next up") sind gestrichen, weil der Knopf
-           jeder Zeile dasselbe schon in Farbe sagt. -->
+      <!-- Das Archiv trägt eine Schaltzeile statt eines Trenners — es ist das
+           Einzige hier, was der Spieler zumachen kann, und eine Linie kann man
+           nicht anklicken. Der Zähler steht deshalb IN der Schaltzeile, wo die
+           anderen Töpfe ihn im Trenner tragen. -->
       <button
         v-if="section.id === 'grown'"
         class="fu-archive-toggle"
@@ -54,6 +55,7 @@
           :entry="entry"
           :flashed="flashedId === entry.id"
           :fresh="freshIds.has(entry.id)"
+          :best="bestOf(entry.id)"
           :bulk-count="bulkOf(entry.id)"
           @buy="grow"
           @buy-many="growMany"
@@ -134,13 +136,19 @@ import {
   FORGE_DIVIDER_PHASE_ICON,
   FORGE_DIVIDER_PHASE_LABEL,
   FORGE_DIVIDER_PHASE_MANY_LABEL,
+  FORGE_DIVIDER_READY_COLOR,
+  FORGE_DIVIDER_READY_ICON,
+  FORGE_DIVIDER_READY_LABEL,
+  FORGE_DIVIDER_SAVING_COLOR,
+  FORGE_DIVIDER_SAVING_ICON,
+  FORGE_DIVIDER_SAVING_LABEL,
   FORGE_PHASE_TOKEN,
   FORGE_SPOTLIGHT_SCROLL_DELAY_MS,
   FORGE_SEARCH_ICON,
   STAR_PHASE_DATA,
 } from '@/config/constants'
 
-const { upgradeEntries, entryById, freshIds, buyUpgrade, affordableLevels, buyMany } =
+const { upgradeEntries, entryById, bestBuyId, freshIds, buyUpgrade, affordableLevels, buyMany } =
   useForgeUpgrades()
 const { treeHoverId, listHoverId, setListHover } = useForgeSpotlight()
 const { hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
@@ -171,6 +179,21 @@ const frozenBuckets = ref<Map<string, ForgeUpgradeBucketId> | null>(null)
 const frozenBulk = ref<Map<string, number> | null>(null)
 
 /**
+ * Und dieselbe Klammer um die BEST-BUY-Marke.
+ *
+ * Sie zeigt auf den GÜNSTIGSTEN kaufbaren Eintrag und hängt damit doppelt an den
+ * tickenden Chimes: sobald ein billigerer Eintrag bezahlbar wird, springt die
+ * Marke samt ihrer atmenden Ebene auf eine andere Zeile. Ohne die Klammer
+ * passierte genau das, während der Zeiger auf einem Knopf steht — dieselbe
+ * Unruhe, gegen die schon die eingefrorene Reihenfolge steht.
+ *
+ * Als Kästchen und nicht als blanker String, damit `null` dasselbe heisst wie
+ * bei den beiden Karten daneben — „nicht eingefroren". „Eingefroren, und es gibt
+ * gerade keinen" ist ein eigener Zustand und muss unterscheidbar bleiben.
+ */
+const frozenBest = ref<{ id: string | null } | null>(null)
+
+/**
  * Wie viele Stufen je Eintrag gerade auf einmal gingen.
  *
  * NUR für das gerade Kaufbare: die Schleife hinter `affordableLevels()` läuft
@@ -191,11 +214,13 @@ function freezeOrder(): void {
     upgradeEntries.value.map((entry) => [entry.id, forgeUpgradeBucket(entry)]),
   )
   frozenBulk.value = new Map(bulkCounts.value)
+  frozenBest.value = { id: bestBuyId.value }
 }
 
 function leaveList(): void {
   frozenBuckets.value = null
   frozenBulk.value = null
+  frozenBest.value = null
   setListHover(null)
 }
 
@@ -205,6 +230,11 @@ function bucketOf(entry: ForgeUpgradeEntry): ForgeUpgradeBucketId {
 
 function bulkOf(id: string): number {
   return (frozenBulk.value ?? bulkCounts.value).get(id) ?? 0
+}
+
+/** Trägt diese Zeile die BEST-BUY-Marke — die eine bewegte Ebene der Liste? */
+function bestOf(id: string): boolean {
+  return (frozenBest.value ? frozenBest.value.id : bestBuyId.value) === id
 }
 
 // ── Die Abschnitte ───────────────────────────────────────────────────────────
@@ -285,8 +315,24 @@ const sections = computed<UpgradeSection[]>(() => {
   phaseLocked.sort((a, b) => a.lockPhase - b.lockPhase)
 
   const out: UpgradeSection[] = [
-    { id: 'ready', entries: pots.ready },
-    { id: 'reach', entries: pots.reach },
+    {
+      id: 'ready',
+      entries: pots.ready,
+      divider: {
+        icon: FORGE_DIVIDER_READY_ICON,
+        label: FORGE_DIVIDER_READY_LABEL,
+        color: FORGE_DIVIDER_READY_COLOR,
+      },
+    },
+    {
+      id: 'reach',
+      entries: pots.reach,
+      divider: {
+        icon: FORGE_DIVIDER_SAVING_ICON,
+        label: FORGE_DIVIDER_SAVING_LABEL,
+        color: FORGE_DIVIDER_SAVING_COLOR,
+      },
+    },
     {
       id: 'lockedParent',
       entries: parentLocked,
@@ -518,9 +564,9 @@ onUnmounted(() => {
 
 /* ══════════════════════════════════════════════════
    ARCHIV
-   Die einzige Schaltzeile der Liste. Abschnittsköpfe gibt es keine mehr —
-   „Ready", „Saving up" und „Next up" standen als Überschrift über dem, was der
-   Knopf jeder Zeile in Farbe schon sagt, und kosteten je Gruppe eine Zeile.
+   Die einzige Schaltzeile der Liste — und deshalb die einzige Gruppe ohne
+   Trenner: eine Linie kann man nicht aufklappen. Sie trägt dafür dieselben
+   Bausteine wie er (Glyph, Zähler, Versalien-Etikett), nur auf einer Fläche.
 ══════════════════════════════════════════════════ */
 .fu-archive-toggle {
   display: flex;
