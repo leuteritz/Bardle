@@ -846,6 +846,52 @@
   background: rgba(82, 184, 48, 0.12);
 }
 
+/* ── Das Schloss AM MOTIV ──────────────────────────────────────────────────
+   Ein gesperrtes Upgrade trägt sein Zeichen an der Ecke seines eigenen Glyphs —
+   im Forge-Baum am Knotenkreis, in der Upgrade-Zeile am 56px-Motiv. Die Klasse
+   steht deshalb HIER und nicht zweimal in scoped CSS: dieselbe Sperre soll in
+   beiden Spalten dasselbe Zeichen an derselben Stelle tragen, sonst erkennt der
+   Spieler die Zeile im Baum nicht wieder.
+
+   Das Maß ist ein ANTEIL des Motivs, keine Pixelzahl: dieselbe Marke sitzt auf
+   38px (Blattknoten) wie auf 56px (Zeilen-Glyph) — fest gesetzt läge sie auf dem
+   kleinsten fast auf halber Breite. Der Träger braucht nur `position: relative`.
+
+   Statisch, ohne Schatten und ohne Animation: früh im Spiel stehen bis zu
+   fünfundvierzig gesperrte Knoten gleichzeitig im Bild (Performance-Regel 2/7).
+   Geometrie übernommen von `.msn-check` (MeepSkillNode), Farbton von `.ab-lock`
+   (BardAbilityTile) — dort steht das Schloss schon für „noch nicht deins". */
+.fc-lock-badge {
+  position: absolute;
+  right: -3%;
+  bottom: -3%;
+  width: 44%;
+  height: 44%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #12100a;
+  border: 1.5px solid #3a2a12;
+  color: #b09a68;
+  pointer-events: none;
+}
+/* Die Luft um das Glyph kommt aus SEINER Größe, nicht aus einem `padding`: ein
+   Innenabstand in Prozent rechnet in ALLE vier Richtungen gegen die BREITE — auf
+   einer 18px-Marke blieb damit eine Inhaltsfläche von null, und das Schloss war
+   ein leerer dunkler Punkt (gemessen). */
+.fc-lock-badge svg {
+  width: 66%;
+  height: 66%;
+  display: block;
+}
+/* Der Bügel des Schlosses steht auf zehn Pixeln sonst als Haarlinie. Statischer
+   Zustand, keine Animation — und am Kind gesetzt, weil `lucide` seine Strichdicke
+   als Attribut am `<g>` trägt und ein geerbter Wert vom `<svg>` dagegen verlöre. */
+.fc-lock-badge svg * {
+  stroke-width: 2.4;
+}
+
 /* Der Fortschritt zur Freischaltung läuft an der Unterkante der Zeile selbst. */
 .fc-track {
   position: absolute;

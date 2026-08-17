@@ -110,51 +110,48 @@
         </g>
       </svg>
 
-      <!-- Ring labels — sie tragen die Auswahl mit: die Beschriftung einer nicht
-           gewählten Ebene ist genauso wenig gemeint wie ihr Band. -->
+      <!-- Ring labels. Eine Pille steht NUR über einer offenen Ebene — eine, die
+           auftaucht, ist damit selbst die Nachricht „ab hier kannst du wachsen".
+           Solange die Ebene zu ist, sagt das jeder betroffene Knoten für sich,
+           mit dem Schloss an seinem Motiv; ein Satz über der ganzen Ebene sagte
+           dasselbe gröber und stand dabei ständig im Bild.
+           Sie tragen die Auswahl mit: die Beschriftung einer nicht gewählten
+           Ebene ist genauso wenig gemeint wie ihr Band. -->
       <div
         class="ring-label ring-label--root"
         :class="{ 'ring-label--sifted': ringSifted('root') }"
-        :style="ringLabelStyle(FORGE_RING_ROOT_R)"
+        :style="ringLabelStyle(FORGE_RING_ROOT_R, true)"
       >
         Phase 1–2
       </div>
       <div
-        class="ring-label"
-        :class="[
-          branchesUnlocked ? 'ring-label--now' : 'ring-label--locked',
-          { 'ring-label--sifted': ringSifted('branch') },
-        ]"
+        v-if="branchRingLabel"
+        class="ring-label ring-label--now"
+        :class="{ 'ring-label--sifted': ringSifted('branch') }"
         :style="ringLabelStyle(FORGE_RING_BRANCH_R)"
       >
         {{ branchRingLabel }}
       </div>
       <div
-        class="ring-label"
-        :class="[
-          leavesUnlocked ? 'ring-label--now' : 'ring-label--locked',
-          { 'ring-label--sifted': ringSifted('leaf') },
-        ]"
+        v-if="leafRingLabel"
+        class="ring-label ring-label--now"
+        :class="{ 'ring-label--sifted': ringSifted('leaf') }"
         :style="ringLabelStyle(FORGE_RING_LEAF_R)"
       >
         {{ leafRingLabel }}
       </div>
       <div
-        class="ring-label"
-        :class="[
-          boughsUnlocked ? 'ring-label--endless' : 'ring-label--locked',
-          { 'ring-label--sifted': ringSifted('bough') },
-        ]"
+        v-if="boughRingLabel"
+        class="ring-label ring-label--endless"
+        :class="{ 'ring-label--sifted': ringSifted('bough') }"
         :style="ringLabelStyle(FORGE_RING_BOUGH_R)"
       >
         {{ boughRingLabel }}
       </div>
       <div
-        class="ring-label"
-        :class="[
-          crownsUnlocked ? 'ring-label--crown' : 'ring-label--locked',
-          { 'ring-label--sifted': ringSifted('crown') },
-        ]"
+        v-if="crownRingLabel"
+        class="ring-label ring-label--crown"
+        :class="{ 'ring-label--sifted': ringSifted('crown') }"
         :style="ringLabelStyle(FORGE_RING_CROWN_R)"
       >
         {{ crownRingLabel }}
@@ -217,9 +214,28 @@
                EINE statt fünfundzwanzig, und der Ping fängt bei jedem neuen
                Ziel von vorn an, weil das Element selbst neu ist. -->
           <span v-if="spotlightId === node.id" class="node-spot" aria-hidden="true" />
-          <Icon :icon="node.icon" :width="node.iconSize" :height="node.iconSize" :style="{ color: node.color }" />
+          <Icon
+            :icon="node.icon"
+            :width="node.iconSize"
+            :height="node.iconSize"
+            class="node-glyph"
+            :style="{ color: node.color }"
+          />
           <span v-if="entryOf(node).level > 0 || entryOf(node).state !== 'locked'" class="node-level">
             {{ levelChip(entryOf(node)) }}
+          </span>
+          <!-- Das Schloss steht genau dort, wo der Stufen-Chip NICHT steht: die
+               Bedingung darüber schliesst den gesperrten Knoten aus, und bis
+               hierher war das eine Leerstelle. Dieselbe Marke trägt die Zeile in
+               der Liste (`.fc-lock-badge` in rpg-theme.css) — daran erkennt man
+               beide als dasselbe Upgrade wieder.
+               `capped` bekommt keins: ein Deckel ist keine Sperre. -->
+          <span
+            v-if="entryOf(node).state === 'locked'"
+            class="fc-lock-badge"
+            aria-hidden="true"
+          >
+            <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
           </span>
         </div>
 
@@ -320,6 +336,7 @@ import {
   FORGE_RING_LEAF_R,
   FORGE_RING_BOUGH_R,
   FORGE_RING_CROWN_R,
+  FORGE_RING_LABEL_GAP,
   FORGE_DEPTH_CREST_SPREAD,
   FORGE_DEPTH_CREST_ALPHA,
   FORGE_DEPTH_CREST_LOCKED,
@@ -337,8 +354,8 @@ import {
   FORGE_ICON_SIZE_LEAF,
   FORGE_ICON_SIZE_BOUGH,
   FORGE_ICON_SIZE_CROWN,
-  FORGE_CROWN_RING_LABEL_LOCKED,
   FORGE_CROWN_RING_LABEL_OPEN,
+  FORGE_LOCK_ICON,
   FORGE_ENDLESS_SYMBOL,
   SUN_PHASE_DISPLAY_OFFSET,
   FORGE_TREE_FIT_PADDING_PX,
@@ -639,11 +656,18 @@ const siftLimbOpacity = String(FORGE_SIFT_LIMB_OPACITY)
 const siftRingOpacity = String(FORGE_SIFT_RING_OPACITY)
 const depthFadeMs = `${FORGE_DEPTH_ACCENT_FADE_MS}ms`
 
-function ringLabelStyle(r: number): Record<string, string> {
+/**
+ * Die Pille sitzt in der SENKE neben ihrem Ring, nicht auf ihm — auf dem Ring
+ * steht bei 12 Uhr ein Knoten und verdeckte sie (Herleitung an
+ * `FORGE_RING_LABEL_GAP`). `outward` gilt nur für den Wurzelring: nach innen
+ * läge er auf der Sonne.
+ */
+function ringLabelStyle(r: number, outward = false): Record<string, string> {
+  const y = outward ? r + FORGE_RING_LABEL_GAP : r - FORGE_RING_LABEL_GAP
   return {
     left: `${C}px`,
     top: `${C}px`,
-    transform: `translate(-50%, ${-(r + 3)}px)`,
+    transform: `translate(-50%, ${-y}px)`,
   }
 }
 
@@ -682,13 +706,23 @@ function phaseName(phase: number): string {
   return STAR_PHASE_DATA[phase]?.name ?? `Phase ${phase + SUN_PHASE_DISPLAY_OFFSET}`
 }
 
-function ringLabelFor(tier: ForgeNodeTier): string {
+/**
+ * `null`, solange die Ebene nicht VOLL offen ist — die Pille erscheint erst mit
+ * ihrem letzten Tor.
+ *
+ * Vorher standen hier zwei weitere Fassungen, „<Phase> → locked" und
+ * „<Phase> · <Phase> → locked". Beide sind entfallen: die Sperre sagt jetzt jeder
+ * betroffene Knoten selbst, mit dem Schloss an seinem Motiv, und zwar
+ * knotengenau. Ein Satz über der ganzen Ebene konnte das nie — Ring 2 trägt zwei
+ * Freischaltphasen, „Zenith · Swell → locked" stand also auch dann noch da, wenn
+ * die Hälfte des Rings längst kaufbar war.
+ *
+ * Deshalb `span.max` und nicht `span.min`: was halb offen ist, bekommt keine
+ * Pille, die „offen" behauptet.
+ */
+function ringLabelFor(tier: ForgeNodeTier): string | null {
   const span = ringPhases.value[tier]
-  if (!span) return ''
-  if (solarStore.starPhase < span.min) return `${phaseName(span.min)} → locked`
-  if (solarStore.starPhase < span.max) {
-    return `${phaseName(span.min)} · ${phaseName(span.max)} → locked`
-  }
+  if (!span || solarStore.starPhase < span.max) return null
   return `${phaseName(span.max)} · open`
 }
 
@@ -712,13 +746,13 @@ const branchRingLabel = computed(() => ringLabelFor('branch'))
 const leafRingLabel = computed(() => ringLabelFor('leaf'))
 const boughRingLabel = computed(() => ringLabelFor('bough'))
 /**
- * Die Beschriftung von Ring 5 nennt seine eigene Bedingung, nicht eine
- * Sonnenphase. `ringLabelFor` liest `ringPhases` — für die Krone stünde dort
- * dieselbe Phase wie für die Boughs, und das Etikett behauptete, der Ring sei
- * offen, während er es nicht ist.
+ * Ring 5 nennt seine eigene Bedingung, nicht eine Sonnenphase — `ringLabelFor`
+ * läse `ringPhases`, und dort stünde für die Krone dieselbe Phase wie für die
+ * Boughs. Solange der Aufbruch aussteht, trägt er wie die übrigen Ringe gar
+ * keine Pille; das Schloss steht an seinen fünf Knoten.
  */
 const crownRingLabel = computed(() =>
-  crownsUnlocked.value ? FORGE_CROWN_RING_LABEL_OPEN : FORGE_CROWN_RING_LABEL_LOCKED,
+  crownsUnlocked.value ? FORGE_CROWN_RING_LABEL_OPEN : null,
 )
 
 // ── Das Tiefenfeld — die Ebenen als weiche Bänder ─────────────────────────────
@@ -1126,10 +1160,8 @@ const nextPhasePreviewStyle = computed(() => ({
   background: #12160c;
 }
 
-.ring-label--locked {
-  color: rgba(255, 255, 255, 0.35);
-  background: #12100a;
-}
+/* Eine gesperrte Fassung gibt es nicht mehr: über einer Ebene, die noch zu ist,
+   steht keine Pille. Das Zeichen dafür hängt am einzelnen Knoten. */
 
 /* ══════════════════════════════════════════════════
    SUN — mirror of PlanetSelectTabComponent .ps-stage-sun
@@ -1338,11 +1370,20 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 /* States */
+/* Gesperrt: es tritt das MOTIV zurück, nicht der ganze Kreis. Eine `opacity` am
+   Kreis vererbt sich multiplikativ auf jedes Kind — das Schloss an seiner Kante
+   stünde dann bei 0,5, und ein halb sichtbares Schloss sagt nichts. Rand, Grund
+   und Abzeichen bleiben deshalb klar; zurück tritt genau das, was noch nicht
+   gilt. Die Spotlight- und Filter-Dämpfung (`--dim`, `--sifted`) bleibt am
+   Kreis: die meinen den ganzen Knoten. */
 .node-circle--locked {
   border-color: #4a3010;
-  opacity: 0.5;
-  filter: grayscale(55%);
   cursor: not-allowed;
+}
+
+.node-circle--locked .node-glyph {
+  opacity: 0.42;
+  filter: grayscale(60%);
 }
 
 .node-circle--empty {

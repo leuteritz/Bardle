@@ -42,13 +42,22 @@
          Glyph selbst. Es steht VOR der Weiche und damit in jedem Zustand — eine
          gesperrte Zeile ist sonst die einzige ohne Bild, und ausgerechnet sie
          hat am wenigsten sonst, woran man sie erkennt. -->
-    <Icon
-      :icon="entry.icon"
-      :width="FORGE_ROW_ICON_SIZE"
-      :height="FORGE_ROW_ICON_SIZE"
-      class="fut-ico"
-      :style="{ color: entry.color }"
-    />
+    <span class="fut-glyph">
+      <Icon
+        :icon="entry.icon"
+        :width="FORGE_ROW_ICON_SIZE"
+        :height="FORGE_ROW_ICON_SIZE"
+        class="fut-ico"
+        :style="{ color: entry.color }"
+      />
+      <!-- Dieselbe Marke wie am Knoten im Baum (`.fc-lock-badge`, rpg-theme.css):
+           die Sperre sitzt in beiden Spalten an derselben Ecke desselben Motivs.
+           Der Träger ist nur dafür da — er hat die Maße des Glyphs, keinen
+           Rahmen und keinen Innenabstand, kostet die Zeile also keine Breite. -->
+      <span v-if="entry.state === 'locked'" class="fc-lock-badge" aria-hidden="true">
+        <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
+      </span>
+    </span>
 
     <!-- ══ GESPERRT ══════════════════════════════════════════════
          Der Weg zur Freischaltung statt eines Preises, den man ohnehin nicht
@@ -61,8 +70,13 @@
         <span class="fut-name fut-name--lead" :style="{ color: entry.color }">
           {{ entry.name }}
         </span>
+        <!-- Vor dem Sperrsatz steht das WARUM, nicht noch einmal das „zu": das
+             Schloss trägt jetzt das Motiv links. Sonne bei einer Phasensperre,
+             Astwerk bei einer Elternsperre — dieselben zwei Glyphen, mit denen
+             der Trenner die Zeile eingeordnet hat, und dieselbe Weiche
+             (`entry.lockKind`). -->
         <span class="fut-lock">
-          <Icon :icon="FORGE_LOCK_ICON" width="15" height="15" class="fut-lock-ico" />
+          <Icon :icon="lockWhyIcon" width="15" height="15" class="fut-lock-why" />
           {{ entry.lockReason }}
         </span>
       </div>
@@ -246,6 +260,8 @@ import {
   FORGE_CARD_FLASH_MS,
   FORGE_CHIME_IMAGE,
   FORGE_COUNT_TOKEN,
+  FORGE_DIVIDER_PARENT_ICON,
+  FORGE_DIVIDER_PHASE_ICON,
   FORGE_FRESH_LABEL,
   FORGE_FRESH_TITLE,
   FORGE_GROW_LABEL,
@@ -306,6 +322,19 @@ const { spotlightId, setListHover } = useForgeSpotlight()
  */
 const short = computed(
   () => props.entry.state !== 'capped' && props.entry.state !== 'locked' && !props.entry.canBuy,
+)
+
+/**
+ * Das Glyph vor dem Sperrsatz sagt das WARUM — das „zu" trägt das Schloss am
+ * Motiv. Beide Fälle kommen aus `lockKind` und nicht aus dem Satz daneben, und
+ * es sind dieselben zwei Glyphen, die der Trenner über der Zeile führt: die
+ * Zeile wiederholt damit, wo sie einsortiert wurde.
+ *
+ * `lockKind` ist bei einem gesperrten Knoten immer gesetzt (`lockedFor()` gibt
+ * nur `'phase'` oder `'parent'` zurück); die Elternsperre ist der Rückfall.
+ */
+const lockWhyIcon = computed(() =>
+  props.entry.lockKind === 'phase' ? FORGE_DIVIDER_PHASE_ICON : FORGE_DIVIDER_PARENT_ICON,
 )
 
 /**
@@ -540,6 +569,18 @@ const buyTitle = computed(() => {
 ══════════════════════════════════════════════════ */
 /* `align-self: center` ist Pflicht: die Zeile trägt `align-items: stretch`, und
    ohne sie zöge das SVG auf die volle Zeilenhöhe. */
+/* Der Träger des Schloss-Abzeichens — sonst hinge es an der ZEILE und läge in
+   deren Ecke. Er hat die Maße des Glyphs, keinen Rahmen und keinen Innenabstand:
+   der gerahmte Sockel, den es hier einmal gab, kostete Breite, die die Zeile für
+   Stufe, Wirkung und Knopf braucht. `line-height: 0` hält ihn exakt auf
+   Icon-Höhe, damit die Zeilenmitte nicht wandert. */
+.fut-glyph {
+  position: relative;
+  flex-shrink: 0;
+  align-self: center;
+  line-height: 0;
+}
+
 .fut-ico {
   flex-shrink: 0;
   align-self: center;
@@ -867,7 +908,9 @@ const buyTitle = computed(() => {
   text-overflow: ellipsis;
 }
 
-.fut-lock-ico {
+/* Trägt seit dem Schloss-Abzeichen am Motiv das WARUM (Sonne oder Astwerk) und
+   heißt deshalb nicht mehr `--lock-ico`. */
+.fut-lock-why {
   flex-shrink: 0;
   color: rgba(200, 144, 64, 0.7);
 }

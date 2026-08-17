@@ -689,6 +689,25 @@ export const FORGE_RING_LEAF_R = 348
 export const FORGE_RING_BOUGH_R = 425
 export const FORGE_RING_CROWN_R = 492
 
+/**
+ * Wie weit die Ring-Pille von ihrem eigenen Radius wegrückt — in die SENKE
+ * zwischen zwei Ebenen.
+ *
+ * Sie sass bis hierher direkt auf dem Ring, und dort sitzen die Knoten: bei 12
+ * Uhr steht auf jedem Ring einer (der Strahl `flightSpeed` zeigt mit 270° nach
+ * oben und zieht seine Kinder mit), die Pille lag also hinter ihm. „Phase 1–2"
+ * war dadurch überhaupt nie zu sehen.
+ *
+ * 34 px trägt jede der vier Senken: nach innen bleibt der Abstand zum
+ * Nachbarring überall grösser als dessen halber Knoten plus Zeilenhöhe (eng
+ * wird es nur zwischen Boughs und Crowns, 67 − 34 = 33 gegen nötige 29), und die
+ * Pille selbst hält vom eigenen Knoten (halbe Höhe max. 28) noch Luft.
+ *
+ * Der WURZELRING weicht als einziger nach aussen aus: nach innen läge er auf der
+ * Sonne, die in der Endphase bis Radius 120 reicht.
+ */
+export const FORGE_RING_LABEL_GAP = 34
+
 /* ── Das TIEFENFELD — die Ebenen ohne eine einzige Kreiskante ─────────────────
  *
  * Die fünf Ringe waren bis hierher gezeichnete Linien, nach aussen immer
@@ -843,11 +862,16 @@ export const FORGE_CROWN_PARENT_MIN_LEVEL = 5
  */
 export const FORGE_CROWN_BASE_COST = 2.5e10
 /**
- * Was am Kronen-Ring steht. Nennt die eigene Bedingung und nicht eine
- * Sonnenphase — Ring 5 ist der einzige, der nicht an der Sonne hängt, und ein
- * Etikett aus `ringPhases` behauptete, er sei offen, sobald Ring 4 es ist.
+ * Was am Kronen-Ring steht, sobald er OFFEN ist. Nennt die eigene Bedingung und
+ * nicht eine Sonnenphase — Ring 5 ist der einzige, der nicht an der Sonne hängt,
+ * und ein Etikett aus `ringPhases` behauptete, er sei offen, sobald Ring 4 es
+ * ist.
+ *
+ * Die gesperrte Fassung („Prestige once → locked") ist entfallen: über einer
+ * Ebene, die noch zu ist, steht keine Pille mehr. Das Zeichen dafür hängt am
+ * einzelnen Knoten (`FORGE_LOCK_ICON`), und dort sagt es zugleich, WELCHER
+ * Knoten gemeint ist.
  */
-export const FORGE_CROWN_RING_LABEL_LOCKED = 'Prestige once → locked'
 export const FORGE_CROWN_RING_LABEL_OPEN = 'Beyond the sun · open'
 /**
  * Was in der Upgrade-Liste dort steht, wo jeder andere Ring seinen Wert zeigt.
@@ -1286,8 +1310,11 @@ export const FORGE_DIVIDER_PHASE_MANY_LABEL = 'Waiting on the sun'
  *   • `material-symbols:account-tree` heisst „verzweigte Knoten" und trägt
  *     schon den Skill-Tree-Reiter; Phosphors `tree-structure` ist bei dieser
  *     Größe zu fein (Herleitung in `BardProfileMenu.vue`).
- * Das Schloss (`FORGE_LOCK_ICON`) bleibt an der ZEILE: es heisst „zu", die
- * Glyphen hier heissen „warum".
+ * Das Schloss (`FORGE_LOCK_ICON`) heisst „zu", die Glyphen hier heissen „warum".
+ * Beide stehen inzwischen zweimal: das Schloss am MOTIV — am Knoten im Baum wie
+ * am Glyph der Zeile —, und das Warum-Glyph sowohl im Trenner als auch vor dem
+ * Sperrsatz der Zeile. Die Zeile wiederholt damit, unter welchem Trenner sie
+ * einsortiert ist, und die Weiche dafür ist beide Male `entry.lockKind`.
  */
 export const FORGE_DIVIDER_PHASE_ICON = 'ph:sun-fill'
 export const FORGE_DIVIDER_PARENT_ICON = 'material-symbols:account-tree-rounded'
@@ -1579,8 +1606,15 @@ export const FORGE_ROW_BULK_LABEL = `×${FORGE_COUNT_TOKEN}`
  */
 export const FORGE_TILE_CAPPED_LABEL = 'CAPPED'
 /**
- * Das Schloss an einer gesperrten Zeile. Eine Bedeutung, ein Glyph: dasselbe
+ * Das Schloss an einem gesperrten Upgrade. Eine Bedeutung, ein Glyph: dasselbe
  * Icon trägt die gesperrte Relikt-Zeile in `StarForgePanel`.
+ *
+ * Es sitzt als Abzeichen an der Ecke des MOTIVS — am Knotenkreis im Forge-Baum
+ * und am Glyph der Upgrade-Zeile, beide Male über die geteilte Klasse
+ * `.fc-lock-badge` (`assets/rpg-theme.css`). Dieselbe Sperre trägt damit in
+ * beiden Spalten dasselbe Zeichen an derselben Stelle; vorher stand sie im Baum
+ * gar nicht und in der Liste nur als 15px-Glyph vor dem Sperrsatz, wo jetzt das
+ * WARUM steht.
  */
 export const FORGE_LOCK_ICON = 'lucide:lock'
 
