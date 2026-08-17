@@ -23,18 +23,23 @@
     </header>
 
     <template v-if="entry">
+      <!-- Nacktes Icon, grosse Stufe: dieselbe Formensprache wie die Zeilen
+           darunter (`ForgeUpgradeTile`). Zwei Stilrichtungen übereinander in
+           derselben Spalte lasen sich wie zwei verschiedene Bauteile. -->
       <div class="nu-id">
-        <div class="nu-ico">
-          <Icon
-            :icon="entry.icon"
-            :width="FORGE_DETAIL_ICON_SIZE"
-            :height="FORGE_DETAIL_ICON_SIZE"
-            :style="{ color: entry.color }"
-          />
-        </div>
+        <Icon
+          :icon="entry.icon"
+          :width="FORGE_DETAIL_ICON_SIZE"
+          :height="FORGE_DETAIL_ICON_SIZE"
+          class="nu-ico"
+          :style="{ color: entry.color }"
+        />
         <div class="nu-id-text">
           <div class="nu-name" :style="{ color: entry.color }">{{ entry.name }}</div>
           <div class="nu-meta">{{ metaLine }}</div>
+        </div>
+        <div class="nu-lvl">
+          {{ levelParts.big }}<span class="nu-lvl-max">{{ levelParts.max }}</span>
         </div>
       </div>
 
@@ -55,20 +60,30 @@
           </div>
         </div>
 
-        <!-- Preis und Knopf kleben an der Unterkante: ein Kaufknopf ohne den
-             Preis daneben ist die schlechtere Hälfte der Auskunft. -->
+        <!-- Der Kaufblock klebt an der Unterkante, und der Preis steht IM
+             Knopf: ein Kaufknopf ohne den Preis daneben ist die schlechtere
+             Hälfte der Auskunft, und daneben braucht er eine eigene Zeile, die
+             die reservierte Fläche nicht hergibt. Verb oben auf Grün, Kasse
+             darunter auf Dunkel — dasselbe Rezept wie in der Zeile, samt
+             Begründung, warum die Kasse nicht auf dem Grün liegt. -->
         <div class="nu-foot">
-          <ForgeCostRow
-            :gold="entry.goldCost"
-            :gold-ok="entry.goldOk"
-            :materials="entry.materials"
-          />
           <div v-if="bulkCount > 1" class="nu-bulk-note">
             {{ bulkCount }}{{ FORGE_AFFORDABLE_SUFFIX }}
           </div>
 
           <div class="nu-actions">
-            <button class="nu-act" @click="growOne">{{ buttonLabel }}</button>
+            <button class="nu-act" @click="growOne">
+              <span class="nu-act-verb">{{ buttonLabel }}</span>
+              <ForgeCostRow
+                class="nu-act-cost"
+                inline
+                chips
+                :label="false"
+                :gold="entry.goldCost"
+                :gold-ok="entry.goldOk"
+                :materials="entry.materials"
+              />
+            </button>
             <button v-if="bulkCount > 1" class="nu-act nu-act--bulk" @click="growMany">
               {{ bulkLabel }}
             </button>
@@ -110,7 +125,7 @@
  */
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
+import { forgeGrowLabel, forgeLevelParts, useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import ForgeCostRow from './ForgeCostRow.vue'
 import type { ForgeUpgradeEntry } from '@/types'
@@ -126,8 +141,6 @@ import {
   FORGE_AFFORDABLE_SUFFIX,
   FORGE_BUY_MANY_LABEL,
   FORGE_COUNT_TOKEN,
-  FORGE_GROW_LABEL,
-  FORGE_GROW_NEXT_PREFIX,
   FORGE_CARD_FLASH_MS,
   FORGE_DETAIL_PANEL_MIN_PX,
   FORGE_DETAIL_PANEL_FRACTION,
@@ -183,22 +196,26 @@ watch(
   { immediate: true },
 )
 
-// ── Metazeile ────────────────────────────────────────────────────────────────
+// ── Stufe und Metazeile ──────────────────────────────────────────────────────
+/** Die grosse Zahl rechts im Identitätsblock — dieselbe Quelle wie in der
+ *  Zeile darunter und im Archiv. */
+const levelParts = computed(() =>
+  entry.value ? forgeLevelParts(entry.value.level, entry.value.maxLevel) : { big: '', max: '' },
+)
+
 /**
- * „ROOT · Lv 3 / 6 · hangs on Wayfinder's Cache".
+ * „ROOT · hangs on Wayfinder's Cache".
  *
- * Ein Bough trägt `Infinity` als Höchststufe — ein gerendertes „Lv 25 / Infinity"
- * wäre der rohe JavaScript-Wert, deshalb der Satz statt der Zahl.
+ * Die Stufe stand hier einmal mit (`Lv 3 / 6`); sie steht jetzt gross daneben,
+ * und zweimal dieselbe Zahl in einem Block ist eine zu viel. Ein Bough behält
+ * seinen Zusatz: seine Endlosigkeit ist eine Eigenschaft des Knotens, keine
+ * Stufenangabe — die grosse Zahl daneben zeigt dafür `/ ∞`.
  */
 const metaLine = computed(() => {
   const e = entry.value
   if (!e) return ''
-  const parts = [
-    e.tierLabel,
-    Number.isFinite(e.maxLevel)
-      ? `Lv ${e.level} / ${e.maxLevel}`
-      : `Lv ${e.level} · ${FORGE_DETAIL_ENDLESS_META}`,
-  ]
+  const parts = [e.tierLabel]
+  if (!Number.isFinite(e.maxLevel)) parts.push(FORGE_DETAIL_ENDLESS_META)
   if (e.parentName !== '') parts.push(`${FORGE_DETAIL_PARENT_PREFIX}${e.parentName}`)
   return parts.join(' · ')
 })
@@ -222,11 +239,7 @@ const bulkLabel = computed(() =>
  * NICHT geht, stehen dort, wo das Nicht-Gehende steht — in der Zeile und in
  * ihrem Kärtchen.
  */
-const buttonLabel = computed(() => {
-  const e = entry.value
-  if (!e) return ''
-  return e.level === 0 ? FORGE_GROW_LABEL : `${FORGE_GROW_NEXT_PREFIX}${e.level + 1}`
-})
+const buttonLabel = computed(() => (entry.value ? forgeGrowLabel(entry.value.level) : ''))
 
 /** Quittung des Kaufs. Rein visuell, daher reale Zeit. */
 const flashed = ref(false)
@@ -412,24 +425,36 @@ function growMany(): void {
   border-bottom: 2px solid #3e200a;
 }
 
+/* Nackt, ohne Sockel — der gerahmte Kasten ist mit der Kachel darunter
+   weggefallen; die Knotenfarbe trägt das Glyph selbst. */
 .nu-ico {
   flex-shrink: 0;
-  width: 60px;
-  height: 60px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(
-    circle at 50% 38%,
-    color-mix(in srgb, var(--node-c, #c89040) 18%, #14120c),
-    #100e08 74%
-  );
-  border: 1px solid color-mix(in srgb, var(--node-c, #c89040) 45%, #5c3310);
 }
 
 .nu-id-text {
+  flex: 1;
   min-width: 0;
+}
+
+/* Die grosse Zahl, wie in jeder Zeile darunter. `tabular-nums`, damit sie beim
+   Wechsel der Empfehlung nicht springt. */
+.nu-lvl {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  color: #e8dcc0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.nu-lvl-max {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(232, 220, 192, 0.4);
 }
 
 .nu-name {
@@ -557,26 +582,73 @@ function growMany(): void {
   gap: 10px;
 }
 
+/* Verb oben, Kasse darunter — ein Knopf aus zwei Zonen. Der Grünverlauf sitzt
+   an der Verb-Zeile, nicht am Knopf: die Kasse müsste ihn sonst wieder
+   überdecken. */
 .nu-act {
   flex: 1;
-  padding: 14px 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid #6ec040;
   border-radius: 4px;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  color: #08130a;
+  background: #14120b;
   font-family: inherit;
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
   cursor: pointer;
 }
 
+.nu-act-verb {
+  flex: 0 0 auto;
+  padding: 12px 0;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  color: #08130a;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+}
+
+.nu-act:hover .nu-act-verb {
+  filter: brightness(1.12);
+}
+
+.nu-act-cost {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.55);
+}
+
+.nu-act-cost :deep(.fc-cost-row) {
+  justify-content: center;
+}
+
+.nu-act-cost :deep(.fc-cost-img),
+.nu-act-cost :deep(.fc-cost-ph) {
+  height: 26px;
+}
+
+.nu-act-cost :deep(.fc-cost-ph) {
+  width: 26px;
+}
+
+/* Der Stapelknopf trägt nur ein Wort — er bekommt seinen Innenabstand selbst,
+   und `align-self: stretch` hält ihn auf der Höhe des zweizonigen Nachbarn. */
 .nu-act--bulk {
   flex: 0 0 136px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
   border-color: #4a8a28;
   background: #16210c;
   color: #9fe062;
   font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
 }
 
 .nu-act--bulk:hover {
@@ -623,13 +695,22 @@ function growMany(): void {
     padding: 10px 15px 11px;
   }
 
+  /* Die Icon-Grösse steht als Attribut am `<Icon>`; CSS schlägt es. */
   .nu-ico {
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
   }
 
   .nu-name {
     font-size: 20px;
+  }
+
+  .nu-lvl {
+    font-size: 25px;
+  }
+
+  .nu-lvl-max {
+    font-size: 13px;
   }
 
   .nu-body {
@@ -658,9 +739,26 @@ function growMany(): void {
     font-size: 19px;
   }
 
-  .nu-act {
-    padding: 12px 0;
+  .nu-act-verb {
+    padding: 10px 0;
     font-size: 15px;
+  }
+
+  .nu-act-cost {
+    padding: 6px 10px;
+  }
+
+  .nu-act-cost :deep(.fc-cost-img),
+  .nu-act-cost :deep(.fc-cost-ph) {
+    height: 24px;
+  }
+
+  .nu-act-cost :deep(.fc-cost-ph) {
+    width: 24px;
+  }
+
+  .nu-act--bulk {
+    padding: 10px 0;
   }
 }
 </style>

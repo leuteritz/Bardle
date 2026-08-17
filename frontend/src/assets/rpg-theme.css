@@ -1245,6 +1245,26 @@
 .fc-cost-pair--missing .fc-cost-state {
   color: #cc6050;
 }
+/* ── Chip-Variante (`chips`-Prop) ────────────────────────────
+   Jede Position bekommt einen eigenen Rahmen. Gebraucht wird sie dort, wo die
+   Zeile auf einem dunklen Träger INNERHALB einer anderen Fläche liegt — in der
+   Kaufleiste der Upgrade-Kachel etwa, wo der Abstand allein die Positionen
+   nicht mehr gegen den Knopf abgrenzt, auf dem sie stehen.
+   Der Rahmen ist die DRITTE Kodierung des Mangels, nicht die einzige: die rote
+   Zahl und das ✕ daneben bleiben unangetastet. Muster: `.tier-cost-badge`. */
+.fc-cost--chips .fc-cost-row {
+  gap: 8px;
+}
+.fc-cost--chips .fc-cost-pair {
+  padding: 5px 9px;
+  border-radius: 4px;
+  border: 1px solid #32210c;
+  background: rgba(0, 0, 0, 0.3);
+}
+.fc-cost--chips .fc-cost-pair--missing {
+  border-color: #cc6050;
+  background: rgba(140, 40, 40, 0.18);
+}
 
 /* ── Aktionsknopf — volle Breite, eine Entscheidung je Karte ── */
 .fc-act {
@@ -1335,6 +1355,12 @@
   }
   .fc-cost-qty {
     font-size: 15px;
+  }
+  .fc-cost--chips .fc-cost-row {
+    gap: 6px;
+  }
+  .fc-cost--chips .fc-cost-pair {
+    padding: 4px 7px;
   }
   .fc-act {
     padding: 11px 15px;

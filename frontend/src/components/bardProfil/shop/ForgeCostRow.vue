@@ -1,8 +1,16 @@
 <template>
-  <div class="fc-cost" :class="{ 'fc-cost--short': short, 'fc-cost--bare': !label }">
+  <component
+    :is="wrapperTag"
+    class="fc-cost"
+    :class="{
+      'fc-cost--short': short,
+      'fc-cost--bare': !label,
+      'fc-cost--chips': chips,
+    }"
+  >
     <span v-if="label" class="fc-cost-label">{{ FORGE_COST_LABEL }}</span>
 
-    <div class="fc-cost-row">
+    <component :is="wrapperTag" class="fc-cost-row">
       <span v-if="gold > 0" class="fc-cost-pair" :class="{ 'fc-cost-pair--missing': !goldOk }">
         <img
           :src="FORGE_CHIME_IMAGE"
@@ -34,8 +42,8 @@
         >
         <span class="fc-cost-state" aria-hidden="true">{{ mat.ok ? '✓' : '✕' }}</span>
       </span>
-    </div>
-  </div>
+    </component>
+  </component>
 </template>
 
 <script setup lang="ts">
@@ -72,9 +80,24 @@ const props = withDefaults(
     big?: boolean
     /** Überschrift und Rahmen. Aus, wo schon eine Beschriftung davorsteht (Handel). */
     label?: boolean
+    /**
+     * `<span>` statt `<div>` für beide Rahmen. Pflicht, wo der Block INNERHALB
+     * eines `<button>` steht (Kaufleiste der Upgrade-Kachel) — ein `<div>` ist
+     * dort kein gültiger Inhalt. Die Optik ändert sich nicht: `.fc-cost` und
+     * `.fc-cost-row` sind ohnehin `display: flex`.
+     */
+    inline?: boolean
+    /**
+     * Jede Position als umrandeter Chip statt als freistehendes Paar. Gedacht
+     * für dunkle Träger, auf denen die nackten Paare zerfließen — dort trägt
+     * der Rahmen die Gruppierung, die sonst der Abstand allein leistet.
+     */
+    chips?: boolean
   }>(),
-  { materials: () => [], big: false, label: true },
+  { materials: () => [], big: false, label: true, inline: false, chips: false },
 )
+
+const wrapperTag = computed(() => (props.inline ? 'span' : 'div'))
 
 /** Fehlt irgendetwas, kippt die ganze Kante auf Rot — nicht nur die eine Zahl. */
 const short = computed(

@@ -11,8 +11,8 @@
   >
     <Icon
       :icon="entry.icon"
-      width="26"
-      height="26"
+      :width="FORGE_GROWN_ICON_SIZE"
+      :height="FORGE_GROWN_ICON_SIZE"
       class="fgr-ico"
       :style="{ color: entry.color }"
     />
@@ -22,6 +22,10 @@
       <span class="fgr-effect">{{ entry.desc }}</span>
     </div>
 
+    <!-- Die erreichte Stufe steht auch hier, nur klein: im Archiv ist sie kein
+         Fortschritt mehr, sondern das Ergebnis. Dieselbe Quelle wie die grosse
+         Zahl der Upgrade-Zeile. -->
+    <span class="fgr-lvl">{{ levelParts.big }}</span>
     <span class="fgr-badge">{{ FORGE_GROWN_BADGE }}</span>
   </div>
 </template>
@@ -30,28 +34,36 @@
 /**
  * Ein ausgewachsener Eintrag — die Zeile im zugeklappten Archiv.
  *
- * Sie bleibt bewusst eine ZEILE, während alles Kaufbare daneben zur Kachel
- * geworden ist: hier ist nichts mehr zu entscheiden, es gibt keinen Preis und
- * keinen Knopf, und bei Vollausbau stellt genau dieser Topf den Löwenanteil der
- * Liste. Fünfundvierzig volle Karten untereinander sind hier schon einmal
- * gebaut und wieder zurückgenommen worden (Herleitung in
+ * Sie bleibt die KOMPAKTESTE Form der Spalte — halb so hoch wie die
+ * Upgrade-Zeile daneben: hier ist nichts mehr zu entscheiden, es gibt keinen
+ * Preis und keinen Knopf, und bei Vollausbau stellt genau dieser Topf den
+ * Löwenanteil der Liste. Fünfundvierzig volle Karten untereinander sind hier
+ * schon einmal gebaut und wieder zurückgenommen worden (Herleitung in
  * `ForgeUpgradesSection.vue`) — das Archiv ist der Ort, an dem diese Rechnung
  * wirklich aufgeht.
  *
- * Was sie zeigt, ist deshalb nur, WAS erreicht ist und WAS es tut. Rang,
- * Elternknoten und der volle Wortlaut stehen im schwebenden Kärtchen
- * (`ForgeRowTooltip`), an dem die Zeile über `data-forge-id` und ihren
- * `mouseenter` weiterhin teilnimmt — ein Knoten im Baum leuchtet auch dann
- * mit, wenn seine Zeile im Archiv liegt.
+ * Ihre Formensprache ist trotzdem dieselbe: nacktes Icon in der Knotenfarbe,
+ * kein gerahmter Sockel, und die erreichte Stufe aus derselben Quelle wie die
+ * grosse Zahl der Upgrade-Zeile (`forgeLevelParts`).
+ *
+ * Was sie zeigt, ist nur, WAS erreicht ist und WAS es tut. Rang, Elternknoten
+ * und der volle Wortlaut stehen im schwebenden Kärtchen (`ForgeRowTooltip`), an
+ * dem die Zeile über `data-forge-id` und ihren `mouseenter` weiterhin
+ * teilnimmt — ein Knoten im Baum leuchtet auch dann mit, wenn seine Zeile im
+ * Archiv liegt.
  */
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { forgeLevelParts } from '@/composables/ui/useForgeUpgrades'
 import type { ForgeUpgradeEntry } from '@/types'
-import { FORGE_GROWN_BADGE } from '@/config/constants'
+import { FORGE_GROWN_BADGE, FORGE_GROWN_ICON_SIZE } from '@/config/constants'
 
-defineProps<{ entry: ForgeUpgradeEntry }>()
+const props = defineProps<{ entry: ForgeUpgradeEntry }>()
 
 const { spotlightId, setListHover } = useForgeSpotlight()
+
+const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry.maxLevel))
 </script>
 
 <style scoped>
@@ -101,7 +113,7 @@ const { spotlightId, setListHover } = useForgeSpotlight()
 }
 
 .fgr-name {
-  font-size: 14.5px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
   white-space: nowrap;
@@ -110,13 +122,23 @@ const { spotlightId, setListHover } = useForgeSpotlight()
 }
 
 .fgr-effect {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.15;
   color: rgba(232, 220, 192, 0.5);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.fgr-lvl {
+  flex-shrink: 0;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  color: rgba(232, 220, 192, 0.7);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .fgr-badge {

@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   useForgeUpgrades,
   forgeUpgradeBucket,
+  forgeLevelParts,
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useHerald } from '@/composables/ui/useHerald'
@@ -28,6 +29,7 @@ import {
   FORGE_BOUGH_UNLOCK_PHASE,
   FORGE_BOUGH_PARENT_MIN_LEVEL,
   FORGE_BULK_BUY_CAP,
+  FORGE_ENDLESS_SYMBOL,
 } from '@/config/constants'
 
 /**
@@ -392,6 +394,32 @@ describe('useForgeUpgrades — Invarianten', () => {
       // Ein Grund steht nur dort, wo es etwas zu erklären gibt.
       if (e.state !== 'locked' && e.state !== 'capped') expect(e.lockReason).toBe('')
     }
+  })
+})
+
+/**
+ * Die Stufenanzeige.
+ *
+ * Sie steht seit dem Zeilen-Umbau an DREI Stellen gleichzeitig — Upgrade-Zeile,
+ * Empfehlungskopf, Archiv-Chip — und wird deshalb hier zusammengesetzt statt in
+ * jeder Komponente einzeln. Der Fall, der das trägt, ist der Astral Bough:
+ * seine Höchststufe ist `Infinity`, und die roh gerendert stünde als
+ * „Lv 25 / Infinity" im Bild.
+ */
+describe('forgeLevelParts — die grosse Zahl', () => {
+  it('nennt Stufe und Obergrenze getrennt', () => {
+    expect(forgeLevelParts(12, 40)).toEqual({ big: 'Lv 12', max: '/ 40' })
+  })
+
+  it('endlose Ringe zeigen das Zeichen statt des rohen Infinity', () => {
+    expect(forgeLevelParts(25, Infinity)).toEqual({
+      big: 'Lv 25',
+      max: `/ ${FORGE_ENDLESS_SYMBOL}`,
+    })
+  })
+
+  it('Stufe 0 bleibt eine Stufe — kein Sonderfall', () => {
+    expect(forgeLevelParts(0, 6).big).toBe('Lv 0')
   })
 })
 
