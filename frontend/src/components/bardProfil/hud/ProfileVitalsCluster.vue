@@ -252,6 +252,25 @@ onUnmounted(() => {
   overflow: hidden;
   background: rgba(0, 0, 0, 0.58);
   border-radius: 2px;
+  /* Die obere linke Ecke folgt der RUNDUNG DES MODALS, an dessen Kante sie sitzt.
+     Eine scharfe Ecke steht dort gegen den Bogen des Holzrahmens statt mit ihm zu
+     laufen — die Leiste ist das einzige Element des Kopfes, das nah genug daran
+     liegt, dass man es sieht.
+
+     Formel wortgleich aus `StarFightModal.vue` (dort viermal, für dasselbe
+     Modal): Aussenradius `--bottom-notch-r × --hud-scale` minus 4px, der
+     sichtbaren Stärke des Holzrahmens — `RpgFrame` versetzt seine Kontur um
+     BOTTOM_BAR_EDGE_INSET (2) nach innen und zieht darauf einen 3,5px-Strich.
+     Gedeckelt über die eigene Höhe, damit die Kurve auf schmalen Stufen nicht
+     den halben Balken auffrisst; welcher der beiden Werte führt, wechselt je
+     nach Auflösung.
+
+     Die anderen drei Ecken bleiben bei 2px. Sie stehen an keiner Rahmenkante,
+     und rundum gerundet wäre die Leiste eine Pille. */
+  border-top-left-radius: min(
+    calc(var(--pv-h) * 0.36),
+    calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1) - 4px)
+  );
   box-shadow:
     inset 0 0 0 1px rgba(122, 78, 32, 0.55),
     inset 0 2px 7px rgba(0, 0, 0, 0.78);
@@ -566,12 +585,14 @@ onUnmounted(() => {
    daneben 1px Luft und sie klebt am Balken. Stattdessen weicht der DRITTE Wert
    (siehe `.pv-regen` unten) — Breite ist hier das knappe Gut, nicht Inhalt.
 
-   `--pv-h` ist die alte Summe aus Zahlenzeile, Abstand und Balken: die Kopfhöhe
-   bleibt damit auf jeder Stufe, wo sie war — der Cluster tauscht nur Stapelung
-   gegen Fläche. */
+   `--pv-h` ist der EINZIGE Wert, der die Grösse der Leiste steuert: Schriftgrade,
+   Label-Padding und Eckradius hängen per `calc()` daran. Die Staffel entstand als
+   Summe der alten Zweizeiligkeit (Zahlenzeile + Abstand + Balken) und wurde davon
+   ausgehend um ein Siebtel zurückgenommen — die Leiste trug zu hoch und drängte
+   sich an die obere Modalkante. */
 .pv-cluster {
   --pv-w: 100px;
-  --pv-h: 28px;
+  --pv-h: 24px;
   padding: 0 4px 0 8px;
 }
 
@@ -587,7 +608,7 @@ onUnmounted(() => {
 @media (min-width: 1366px) {
   .pv-cluster {
     --pv-w: 120px;
-    --pv-h: 32px;
+    --pv-h: 28px;
     padding: 0 4px 0 8px;
   }
 }
@@ -595,7 +616,7 @@ onUnmounted(() => {
 @media (min-width: 1536px) {
   .pv-cluster {
     --pv-w: 152px;
-    --pv-h: 42px;
+    --pv-h: 36px;
     padding: 0 4px 0 10px;
   }
 }
@@ -603,7 +624,7 @@ onUnmounted(() => {
 @media (min-width: 1600px) {
   .pv-cluster {
     --pv-w: 168px;
-    --pv-h: 46px;
+    --pv-h: 40px;
     padding: 0 4px 0 10px;
   }
 }
@@ -612,7 +633,7 @@ onUnmounted(() => {
   /* Ab hier trägt die Leiste ihren dritten Wert wieder. */
   .pv-cluster {
     --pv-w: 197px;
-    --pv-h: 52px;
+    --pv-h: 45px;
     padding: 0 4px 0 12px;
   }
   .pv-regen {
@@ -623,17 +644,17 @@ onUnmounted(() => {
 @media (min-width: 1800px) {
   .pv-cluster {
     --pv-w: 224px;
-    --pv-h: 58px;
+    --pv-h: 50px;
     padding: 0 4px 0 14px;
   }
 }
 
 @media (min-width: 1920px) {
-  /* Die Höhe bleibt hier stehen: 58px sind die Marke, unter der die Leiste
-     neben den 64px hohen Pips gegenüber steht statt gegen sie. */
+  /* Die Höhe bleibt hier stehen: sie soll unter den 64px hohen Pips gegenüber
+     bleiben, damit die Leiste neben ihnen steht statt gegen sie. */
   .pv-cluster {
     --pv-w: 254px;
-    --pv-h: 58px;
+    --pv-h: 50px;
     padding: 0 6px 0 18px;
   }
 }
@@ -641,7 +662,7 @@ onUnmounted(() => {
 @media (min-width: 2300px) {
   .pv-cluster {
     --pv-w: 348px;
-    --pv-h: 66px;
+    --pv-h: 57px;
   }
   .pv-tip {
     padding: 13px 16px 15px;
@@ -660,7 +681,7 @@ onUnmounted(() => {
 @media (min-width: 3400px) {
   .pv-cluster {
     --pv-w: 436px;
-    --pv-h: 76px;
+    --pv-h: 66px;
   }
   .pv-tip {
     padding: 15px 18px 17px;
