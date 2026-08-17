@@ -124,6 +124,22 @@ export const HUD_PANEL_ARC_R = 60
 // Canonical border-radius for bardProfil cards, containers, and buttons
 export const BARD_PROFILE_RADIUS = 4
 
+/* ── Live-Cluster im Kopf des Bard-Profils ────────────────────────────────────
+ * Das Profil pausiert das Spiel nicht, verdeckt aber alles, was den Weiterlauf
+ * zeigt: die HP-Leiste liegt im Idle-Layer unter dem Modal, die
+ * Fähigkeitenleiste hängt an `bardActiveTab === null`. Links im Kopf steht
+ * deshalb der Zustand (HP), rechts die Handlungsfähigkeit (Q/W/E/R).
+ */
+/**
+ * Radius des Resonanz-Rings im viewBox `0 0 24 24`. Der Ring läuft über
+ * `stroke-dashoffset` einer SVG-Kreislinie, nie über `conic-gradient`
+ * (Performance-Regel 11, Muster `ABILITY_RING_CIRCUMFERENCE` und
+ * `FORGE_CHIP_RING_R`) — sein Umfang steht als `stroke-dasharray` daneben.
+ */
+export const PROFILE_HUD_RING_R = 9
+/** 2·π·PROFILE_HUD_RING_R — der volle Umfang, also der leere Ring. */
+export const PROFILE_HUD_RING_CIRCUMFERENCE = 56.55
+
 /* ── Detail-Schiene des Bard-Profils ──────────────────────────────────────────
  * Die rechte Spalte, in die ein Reiter seine Einzelheiten legt: im Shop die
  * Forge-Spalte (`ShopComponent.vue`), im Skill-Tree das Detail-Blatt
@@ -249,11 +265,16 @@ export const FPS_POOR_THRESHOLD = 30
 export const PAUSE_MATERIAL_COLUMNS = 5
 export const PAUSE_MATERIAL_ROWS = 2
 
-// ── Pause-Overlay: Vitalitäts-Leiste ───────────────────────────────────────
+// ── HP-Stufen ──────────────────────────────────────────────────────────────
+// Zwei Leisten lesen dieselbe Skala: der Vitalitäts-Strip des Pause-Overlays
+// und der Vitals-Cluster im Kopf des Bard-Profils. Sie hiessen einmal
+// PAUSE_HP_*, solange das Overlay die einzige Stelle war — zwei Anzeigen
+// desselben Werts dürfen ihre Umschlagpunkte aber nicht getrennt führen,
+// sonst ist die Sonne im Profil noch gelb und in der Pause schon rot.
 /** Ab diesem Anteil gilt die Sonne als unversehrt (grün). */
-export const PAUSE_HP_HEALTHY_PERCENT = 50
+export const HP_HEALTHY_PERCENT = 50
 /** Darunter wird die Leiste rot und pulst. */
-export const PAUSE_HP_CRIT_PERCENT = 25
+export const HP_CRIT_PERCENT = 25
 // Breitenreserve der HP-Zahl: Anteile des Maximums, die als unsichtbare
 // Messmuster mitgerendert werden. Aus dem Maximum allein lässt sich die Breite
 // nicht ableiten — formatNumber wechselt innerhalb einer Einheitenstufe die

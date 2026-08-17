@@ -47,18 +47,27 @@ export const usePlayerStore = defineStore('player', {
     isLow(): boolean {
       return this.hpPercent < PLAYER_LOW_HP_THRESHOLD_PCT
     },
+    /**
+     * HP je Spielsekunde: Grundwert + Regeneration branch / Eternal Orbit
+     * (Star Forge) + Meep-Baum.
+     *
+     * Getter und nicht bloss eine Zeile in `regenTick()`, weil der Vitals-Cluster
+     * im Kopf des Bard-Profils denselben Wert ANZEIGT. Zweimal ausgeschrieben
+     * liefe die Anzeige beim nächsten Regen-Zugang still von der Rechnung weg.
+     */
+    regenPerSec(): number {
+      return (
+        PLAYER_HP_REGEN_PER_SEC +
+        useStarForgeStore().hpRegenPerSec +
+        useMeepTreeStore().fx.hpRegenPerSec
+      )
+    },
   },
 
   actions: {
     regenTick() {
-      // Base regen + Regeneration branch / Eternal Orbit (Star Forge)
-      const forgeRegen = useStarForgeStore().hpRegenPerSec
-      const treeRegen = useMeepTreeStore().fx.hpRegenPerSec
       const before = this.currentHP
-      this.currentHP = Math.min(
-        this.maxHP,
-        this.currentHP + PLAYER_HP_REGEN_PER_SEC + forgeRegen + treeRegen,
-      )
+      this.currentHP = Math.min(this.maxHP, this.currentHP + this.regenPerSec)
       this.totalHpRegenerated += this.currentHP - before
     },
     /** Applies damage after mitigation and returns the amount actually dealt —

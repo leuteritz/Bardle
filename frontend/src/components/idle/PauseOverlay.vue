@@ -432,8 +432,8 @@ import {
   PAUSE_PANEL_MAX_SCALE,
   PAUSE_MATERIAL_COLUMNS,
   PAUSE_MATERIAL_ROWS,
-  PAUSE_HP_HEALTHY_PERCENT,
-  PAUSE_HP_CRIT_PERCENT,
+  HP_HEALTHY_PERCENT,
+  HP_CRIT_PERCENT,
   PAUSE_HP_WIDTH_PROBES,
   PAUSE_LEDGER_MAX_POPS,
   DAMAGE_FLOAT_DURATION_MS,
@@ -535,13 +535,13 @@ const hpPercent = computed(() => playerStore.hpPercent)
 const hpRatio = computed(() => Math.min(1, Math.max(0, hpPercent.value / 100)))
 
 const hpColor = computed(() => {
-  if (hpPercent.value > PAUSE_HP_HEALTHY_PERCENT) return 'hp--green'
-  if (hpPercent.value > PAUSE_HP_CRIT_PERCENT) return 'hp--yellow'
+  if (hpPercent.value > HP_HEALTHY_PERCENT) return 'hp--green'
+  if (hpPercent.value > HP_CRIT_PERCENT) return 'hp--yellow'
   return 'hp--red'
 })
 
 /** Kritisch: Balken pulst, das Herz-Siegel schlägt. */
-const isCrit = computed(() => hpPercent.value <= PAUSE_HP_CRIT_PERCENT)
+const isCrit = computed(() => hpPercent.value <= HP_CRIT_PERCENT)
 
 /**
  * Unsichtbare Messmuster, die die Breite der Wertspalte festlegen: derselbe

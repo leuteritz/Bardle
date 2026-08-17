@@ -29,6 +29,8 @@ import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
+import ProfileVitalsCluster from '@/components/bardProfil/hud/ProfileVitalsCluster.vue'
+import ProfileReadinessCluster from '@/components/bardProfil/hud/ProfileReadinessCluster.vue'
 
 const uiStore = useUiStore()
 const galaxyStore = useGalaxyStore()
@@ -295,8 +297,18 @@ onUnmounted(() => {
             <RpgFrame />
             <div class="rp-accent-bar" />
 
-            <div class="flex items-center flex-shrink-0 rp-modal-header">
-              <div class="flex items-center justify-center flex-1 gap-1.5 px-2 py-2">
+            <!-- Drei Spalten, nicht ein zentriertes Flex-Kind: die Reiter
+                 bleiben dadurch MATHEMATISCH mittig, egal wie breit die beiden
+                 Live-Cluster gerade ausfallen. Als Geschwister eines `flex-1`
+                 hätten sie die Mitte je nach HP-Zahl verschoben. -->
+            <div class="flex-shrink-0 rp-modal-header">
+              <!-- Der Zustand der Sonne. Er steht hier, weil das Profil das
+                   Spiel nicht anhält, die HP-Leiste des Orbits aber verdeckt. -->
+              <div class="rp-header-side rp-header-side--left">
+                <ProfileVitalsCluster />
+              </div>
+
+              <div class="flex items-center justify-center gap-1.5 px-2 py-2">
                 <button
                   v-for="item in menuItems"
                   :key="item.id"
@@ -364,6 +376,13 @@ onUnmounted(() => {
                     >{{ planetBadgeLabel }}</span>
                   </div>
                 </button>
+              </div>
+
+              <!-- Die Handlungsfähigkeit: Resonanz und Q W E R. Die Leiste im
+                   Orbit hängt an `bardActiveTab === null` und ist hier weg —
+                   ihre Abklingzeiten laufen trotzdem weiter. -->
+              <div class="rp-header-side rp-header-side--right">
+                <ProfileReadinessCluster />
               </div>
             </div>
 
@@ -600,11 +619,38 @@ onUnmounted(() => {
 /* ═══════════════════════════════════════════
    MODAL HEADER
    ═══════════════════════════════════════════ */
+/* Drei Spalten: Zustand · Reiter · Bereitschaft.
+   `minmax(0, 1fr)` an beiden Rändern — die Spalten sind damit GLEICH breit,
+   die Reiterleiste in der Mitte steht also exakt in der Mitte des Kopfes und
+   wandert nicht, wenn links aus „12.4K" ein „9.8K" wird. Die `0` als Minimum
+   ist Pflicht: ohne sie hätte jede Spalte `min-content` als Untergrenze und
+   die Reiter würden auf schmalen Fenstern aus der Mitte gedrückt. */
 .rp-modal-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
   flex-shrink: 0;
+}
+
+/* Die beiden Live-Cluster. `overflow: hidden` ist die letzte Reissleine: läuft
+   ein Cluster auf einem sehr schmalen Fenster über, beschneidet er sich selbst,
+   statt die Reiter zu schieben. */
+.rp-header-side {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.rp-header-side--left {
+  justify-content: flex-start;
+}
+
+.rp-header-side--right {
+  justify-content: flex-end;
 }
 
 /* ═══════════════════════════════════════════
