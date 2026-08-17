@@ -140,22 +140,20 @@ onUnmounted(() => {
    dreifach. Die Breite gehört seitdem der Leiste.
 
    `--pv-w` ist die Breite des Körpers: Zahlenzeile UND Leiste teilen sie sich,
-   damit die Leiste nicht bei jeder Stellenzahl eine andere Länge bekommt. */
+   damit die Leiste nicht bei jeder Stellenzahl eine andere Länge bekommt.
+   Alle Masse stehen in der Auflösungsstaffel am Ende der Datei — hier nur die
+   Struktur. */
 .pv-cluster {
-  --pv-w: 254px;
-  --pv-track-h: 20px;
   display: flex;
   align-items: center;
   min-width: 0;
-  /* Abstand zur Holzecke des RpgFrame, die über dem Kopf liegt. */
-  padding: 0 6px 0 18px;
   cursor: default;
 }
 
 .pv-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--pv-gap, 8px);
   width: var(--pv-w);
   min-width: 0;
 }
@@ -173,7 +171,7 @@ onUnmounted(() => {
    neben den Reitern ist genau das das Störende. */
 .pv-cur {
   min-width: 5.4ch;
-  font-size: 32px;
+  font-size: var(--pv-cur-size);
   font-weight: 900;
   color: #f2ead2;
   font-variant-numeric: tabular-nums;
@@ -188,13 +186,13 @@ onUnmounted(() => {
 }
 
 .pv-sep {
-  font-size: 16px;
+  font-size: var(--pv-sub-size);
   font-weight: 400;
   color: #7a5820;
 }
 
 .pv-max {
-  font-size: 16px;
+  font-size: var(--pv-sub-size);
   font-weight: 800;
   color: #8a7a52;
   font-variant-numeric: tabular-nums;
@@ -204,7 +202,7 @@ onUnmounted(() => {
    in welche Richtung sich der Wert davor bewegt, wenn nichts trifft. */
 .pv-regen {
   margin-left: 4px;
-  font-size: 14px;
+  font-size: var(--pv-regen-size);
   font-weight: 800;
   color: #6e9a54;
   font-variant-numeric: tabular-nums;
@@ -336,48 +334,113 @@ onUnmounted(() => {
 }
 
 /* ── Auflösungsstufen ─────────────────────────────────────────────────────
-   Gestaffelt nach BREITE, nicht nach Höhe: der Kopfstreifen ist auf jeder
-   Zielauflösung 84px hoch (die clamp()-Werte der Reiter sind ab 1000px
-   Viewporthöhe am Anschlag), die Seitenspalte daneben aber nicht — 292px bei
-   1920×1080, 502px bei 2560×1440, über 1100px auf 4K.
+   Gestaffelt nach der GEMESSENEN Seitenspalte, nicht nach der Monitorklasse —
+   dieselben Schwellen wie im Bereitschafts-Cluster gegenüber, damit beide Seiten
+   des Kopfes immer zusammen wachsen. Der Grund steht dort ausführlich: ein
+   Full-HD-Schirm unter Windows-Skalierung 125 % liefert dem Browser 1536 CSS-
+   Pixel, nicht 1920, und eine Staffel nach Monitorklasse zeigt dort die
+   Notgrössen.
 
-   Gesamtbreite gegen verfügbare Spalte:
-     Grundstufe  278 von 292 px */
-@media (max-width: 1919px) {
-  /* Keine Zielauflösung — die Reissleine für schmalere Fenster (1440×810 lässt
-     nur 135px Spalte). */
+     CSS-Breite | Spalte | Cluster gesamt
+     ---------- | ------ | --------------
+       1280     |  119   | 108
+       1366     |  143   | 132
+       1536     |  183   | 166   ← Full HD @ 125 %
+       1600     |  197   | 182
+       1700     |  223   | 210   ← Full HD @ 112 %
+       1800     |  250   | 240
+       1920     |  293   | 278   ← Full HD @ 100 %
+       2300     |  409   | 372
+       3400     |  759   | 460 */
+.pv-cluster {
+  --pv-w: 96px;
+  --pv-track-h: 7px;
+  --pv-gap: 5px;
+  --pv-cur-size: 15px;
+  --pv-sub-size: 10px;
+  --pv-regen-size: 9px;
+  padding: 0 4px 0 8px;
+}
+
+@media (min-width: 1366px) {
   .pv-cluster {
-    --pv-w: 126px;
-    --pv-track-h: 8px;
-    padding: 0 4px 0 10px;
-  }
-  .pv-body {
-    gap: 4px;
-  }
-  .pv-cur {
-    font-size: 16px;
-  }
-  .pv-sep,
-  .pv-max,
-  .pv-regen {
-    font-size: 11px;
+    --pv-w: 120px;
+    --pv-track-h: 9px;
+    --pv-gap: 5px;
+    --pv-cur-size: 18px;
+    --pv-sub-size: 11px;
+    --pv-regen-size: 10px;
+    padding: 0 4px 0 8px;
   }
 }
 
-@media (min-width: 2400px) {
+@media (min-width: 1536px) {
+  .pv-cluster {
+    --pv-w: 152px;
+    --pv-track-h: 13px;
+    --pv-gap: 6px;
+    --pv-cur-size: 23px;
+    --pv-sub-size: 13px;
+    --pv-regen-size: 11px;
+    padding: 0 4px 0 10px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .pv-cluster {
+    --pv-w: 168px;
+    --pv-track-h: 15px;
+    --pv-gap: 6px;
+    --pv-cur-size: 25px;
+    --pv-sub-size: 14px;
+    --pv-regen-size: 12px;
+    padding: 0 4px 0 10px;
+  }
+}
+
+@media (min-width: 1700px) {
+  .pv-cluster {
+    --pv-w: 194px;
+    --pv-track-h: 17px;
+    --pv-gap: 7px;
+    --pv-cur-size: 28px;
+    --pv-sub-size: 15px;
+    --pv-regen-size: 13px;
+    padding: 0 4px 0 12px;
+  }
+}
+
+@media (min-width: 1800px) {
+  .pv-cluster {
+    --pv-w: 224px;
+    --pv-track-h: 19px;
+    --pv-gap: 8px;
+    --pv-cur-size: 31px;
+    --pv-sub-size: 16px;
+    --pv-regen-size: 14px;
+    padding: 0 4px 0 14px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .pv-cluster {
+    --pv-w: 254px;
+    --pv-track-h: 20px;
+    --pv-gap: 8px;
+    --pv-cur-size: 32px;
+    --pv-sub-size: 16px;
+    --pv-regen-size: 14px;
+    padding: 0 6px 0 18px;
+  }
+}
+
+@media (min-width: 2300px) {
   .pv-cluster {
     --pv-w: 348px;
     --pv-track-h: 22px;
-  }
-  .pv-cur {
-    font-size: 38px;
-  }
-  .pv-sep,
-  .pv-max {
-    font-size: 18px;
-  }
-  .pv-regen {
-    font-size: 15px;
+    --pv-cur-size: 38px;
+    --pv-sub-size: 18px;
+    --pv-regen-size: 15px;
   }
   .pv-tip {
     padding: 13px 16px 15px;
@@ -397,16 +460,9 @@ onUnmounted(() => {
   .pv-cluster {
     --pv-w: 436px;
     --pv-track-h: 26px;
-  }
-  .pv-cur {
-    font-size: 44px;
-  }
-  .pv-sep,
-  .pv-max {
-    font-size: 21px;
-  }
-  .pv-regen {
-    font-size: 17px;
+    --pv-cur-size: 44px;
+    --pv-sub-size: 21px;
+    --pv-regen-size: 17px;
   }
   .pv-tip {
     padding: 15px 18px 17px;

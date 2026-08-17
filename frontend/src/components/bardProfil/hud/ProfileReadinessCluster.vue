@@ -329,16 +329,13 @@ function ariaLabelOf(id: BardAbilityId): string {
    aber nur 292px breit — Höhe ist im Überfluss da, Breite ist der Engpass.
    Hochkant bekommen Taste und Sekundenzahl je eine eigene Zeile, statt sich
    einen Kasten zu teilen, in dem beide zu klein bleiben. */
+/* Nur die Struktur — alle Masse stehen in der Auflösungsstaffel am Ende der
+   Datei, damit es für sie EINE Quelle gibt. `padding` ist dort mit dabei: der
+   Abstand zur Holzecke des RpgFrame wächst mit der Kachel mit. */
 .pr-cluster {
-  --pr-pip-w: 48px;
-  --pr-pip-h: 64px;
-  --pr-ring: 40px;
   display: flex;
   align-items: center;
-  gap: 4px;
   min-width: 0;
-  /* Abstand zur Holzecke des RpgFrame, die über dem Kopf liegt. */
-  padding: 0 18px 0 6px;
 }
 
 /* ── Resonanz ─────────────────────────────────────────────────────────────
@@ -632,39 +629,123 @@ function ariaLabelOf(id: BardAbilityId): string {
 }
 
 /* ── Auflösungsstufen ─────────────────────────────────────────────────────
-   Gestaffelt nach BREITE, nicht nach Höhe: der Kopfstreifen ist überall gleich
-   hoch, die Seitenspalte daneben aber nicht. Dasselbe Raster (2400 / 3400),
-   das die Fähigkeitenleiste und die Buff-Reihe im Orbit benutzen.
+   Gestaffelt nach der GEMESSENEN Seitenspalte, nicht nach der Monitorklasse.
+   Der Unterschied ist der Grund, aus dem diese Staffel einmal falsch lag: ein
+   Full-HD-Monitor unter Windows-Skalierung 125 % liefert dem Browser 1536 CSS-
+   Pixel, nicht 1920. Eine Regel bei `max-width: 1919px` erwischte damit genau
+   die Auflösung, für die die Grundstufe gedacht war, und zeigte dort die
+   Notgrössen — auf einem 2K-Schirm (2048 CSS-Pixel bei 125 %) passte es.
+   Gemessen wird deshalb, was WIRKLICH da ist:
 
-   Reihe gesamt gegen verfügbare Spalte:
-     Grundstufe  279 von 292 px (1920×1080)
-     ≥ 2400      350 von 502 px (2560×1440)
-     ≥ 3400      403 von 1142 px (4K)
+     CSS-Breite | Spalte je Seite   (Modalbreite − Reiterleiste) / 2
+     ---------- | --------------
+       1280     |  119 px
+       1366     |  143 px
+       1536     |  183 px   ← Full HD @ 125 %
+       1707     |  223 px   ← Full HD @ 112 %
+       1920     |  293 px   ← Full HD @ 100 %
+       2048     |  335 px   ← 2K @ 125 %
+       2560     |  503 px
+       3840     | 1143 px
 
-   Nur die Grundstufe ist knapp. Wächst dort etwas — eine fünfte Fähigkeit, ein
-   achter Reiter —, geht die Reserve zuerst an Ring und Abstände, nicht an die
-   Kachelbreite: die Kachel ist die Bedienung, der Ring nur Zustand. */
-@media (max-width: 1919px) {
-  /* Keine Zielauflösung — die Reissleine für schmalere Fenster (1440×810 lässt
-     nur 135px Spalte). Ring und Trennstrich weichen zuerst: sie sind Zustand,
-     die Kacheln sind Bedienung. */
+   Die Reihe misst `Ring + Trennstrich + 4·Kachel + 5·gap + Polster`; darunter
+   je Stufe, was sie braucht und was da ist. Ring und Trennstrich kommen erst
+   dazu, wenn die Kachel dabei nicht unter 40px fällt — sie sind Zustand, die
+   Kachel ist Bedienung. */
+.pr-cluster {
+  --pr-pip-w: 22px;
+  --pr-pip-h: 32px;
+  /* Steht auch dort, wo der Ring ausgeblendet ist: `var()` ohne Definition
+     würde die Regel an `.pr-res` ungültig machen, sobald jemand ihn wieder
+     einschaltet. */
+  --pr-ring: 34px;
+  gap: 2px;
+  padding: 0 8px 0 4px;
+}
+
+/* Bis 1365 gibt es weder Ring noch Trennstrich — dort reicht die Spalte für
+   nichts als die vier Kacheln (106 von 119 px). */
+.pr-res,
+.pr-divider {
+  display: none;
+}
+
+@media (min-width: 1366px) {
+  /* 133 von 143 px */
   .pr-cluster {
-    --pr-pip-w: 30px;
-    --pr-pip-h: 42px;
+    --pr-pip-w: 28px;
+    --pr-pip-h: 40px;
     gap: 3px;
-    padding: 0 10px 0 4px;
-  }
-  .pr-res,
-  .pr-divider {
-    display: none;
+    padding: 0 8px 0 4px;
   }
 }
 
-@media (min-width: 2400px) {
+@media (min-width: 1536px) {
+  /* 170 von 183 px — Full HD @ 125 % */
+  .pr-cluster {
+    --pr-pip-w: 36px;
+    --pr-pip-h: 50px;
+    gap: 4px;
+    padding: 0 10px 0 4px;
+  }
+}
+
+@media (min-width: 1600px) {
+  /* 182 von 197 px */
+  .pr-cluster {
+    --pr-pip-w: 39px;
+    --pr-pip-h: 54px;
+    gap: 4px;
+    padding: 0 10px 0 4px;
+  }
+}
+
+@media (min-width: 1700px) {
+  /* 212 von 223 px — Full HD @ 112 % */
+  .pr-cluster {
+    --pr-pip-w: 46px;
+    --pr-pip-h: 62px;
+    gap: 4px;
+    padding: 0 12px 0 4px;
+  }
+}
+
+@media (min-width: 1800px) {
+  /* 223 von ~250 px. Die Kachel hat hier schon ihre volle Grösse — ab 1920
+     kommt nur der Ring dazu, sie selbst bleibt. Anders herum (grössere Kachel
+     ohne Ring, dann kleinere mit) schrumpfte sie beim Aufziehen des Fensters. */
+  .pr-cluster {
+    --pr-pip-w: 48px;
+    --pr-pip-h: 64px;
+    gap: 5px;
+    padding: 0 14px 0 4px;
+  }
+}
+
+@media (min-width: 1920px) {
+  /* 281 von 293 px — Full HD @ 100 %. Ab hier trägt die Spalte den Ring, ohne
+     dass die Kachel dafür schrumpfen müsste. */
+  .pr-cluster {
+    --pr-pip-w: 48px;
+    --pr-pip-h: 64px;
+    --pr-ring: 40px;
+    gap: 4px;
+    padding: 0 18px 0 6px;
+  }
+  .pr-res {
+    display: flex;
+  }
+  .pr-divider {
+    display: block;
+  }
+}
+
+@media (min-width: 2300px) {
+  /* 346 von 409 px */
   .pr-cluster {
     --pr-pip-w: 58px;
     --pr-pip-h: 70px;
-    --pr-ring: 54px;
+    --pr-ring: 50px;
     gap: 7px;
   }
   .pr-tip {
@@ -685,10 +766,13 @@ function ariaLabelOf(id: BardAbilityId): string {
 }
 
 @media (min-width: 3400px) {
+  /* 399 von 1143 px — hier deckelt der Geschmack, nicht der Platz: eine Kachel,
+     die die Reitericons (48px) deutlich überragt, verdrehte die Rangfolge im
+     Kopf. */
   .pr-cluster {
     --pr-pip-w: 68px;
     --pr-pip-h: 80px;
-    --pr-ring: 62px;
+    --pr-ring: 58px;
     gap: 8px;
   }
   .pr-tip {
