@@ -14,7 +14,7 @@
   -->
   <RpgBadgeTooltip clear-ancestor=".pv-cluster">
     <div class="pv-cluster" :class="stateClass" role="status" :aria-label="ariaLabel">
-      <Icon icon="ph:heart-fill" width="18" height="18" class="pv-heart" aria-hidden="true" />
+      <Icon icon="ph:heart-fill" width="30" height="30" class="pv-heart" aria-hidden="true" />
 
       <div class="pv-body">
         <div class="pv-line">
@@ -44,32 +44,21 @@
       </div>
     </div>
 
+    <!--
+      Der Kasten sagt genau das, was die Leiste NICHT sagen kann: die exakten
+      Zahlen (dort steht „5,3K") und wie schnell sie sich von selbst füllt.
+      Schaden, Heilung und Zusammenbrüche der Lebenszeit standen hier einmal —
+      sie gehören in den Stats-Reiter, nicht in einen Kasten, der über einem
+      Menü aufgeht, das der Spieler gerade bedient.
+    -->
     <template #tip>
-      <div class="pv-tip">
-        <header class="pv-tip-head">
-          <span class="pv-tip-title">Sun Vitality</span>
-          <span class="pv-tip-pct">{{ Math.round(playerStore.hpPercent) }}%</span>
-        </header>
-        <p class="pv-tip-note">
-          The cosmos keeps turning while this menu is open — damage lands and the sun mends
-          whether or not you are watching.
-        </p>
-        <dl class="pv-tip-lines">
-          <dt>Regeneration</dt>
-          <dd>{{ $formatNumber(regen) }} / s</dd>
-          <dt>Damage taken</dt>
-          <dd>{{ $formatNumber(playerStore.totalDamageTaken) }}</dd>
-          <dt>Restored</dt>
-          <dd>{{ $formatNumber(Math.round(playerStore.totalHpRegenerated)) }}</dd>
-          <dt>Times burned out</dt>
-          <dd>{{ playerStore.timesDowned }}</dd>
-          <template v-if="forgeStore.sunReprieveOwned">
-            <dt>Warden's Reprieve</dt>
-            <dd :class="reprieveReady ? 'pv-tip-ok' : 'pv-tip-spent'">
-              {{ reprieveReady ? 'Ready' : 'Spent this phase' }}
-            </dd>
-          </template>
-        </dl>
+      <div class="pv-tip" :class="stateClass">
+        <span class="pv-tip-cap">Sun Vitality</span>
+        <span class="pv-tip-lead">{{ exactHp }} / {{ exactMax }}</span>
+        <span class="pv-tip-sub">
+          <span class="pv-tip-sub-label">Regen</span>
+          <span class="pv-tip-sub-value">+{{ $formatNumber(regen) }} / s</span>
+        </span>
       </div>
     </template>
   </RpgBadgeTooltip>
@@ -80,19 +69,20 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import { usePlayerStore } from '@/stores/battle/playerStore'
-import { useStarForgeStore } from '@/stores/progression/starForgeStore'
-import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { HP_CRIT_PERCENT, HP_HEALTHY_PERCENT, PLAYER_HP_HIT_FLASH_MS } from '@/config/constants'
 
 const playerStore = usePlayerStore()
-const forgeStore = useStarForgeStore()
-const solarStore = useSolarUpgradeStore()
 
 /** Kein eigener Ticker: `currentHP` ändert sich im Sekundentakt des Spiels und
  *  ist reaktiv — Vue rendert die Zeile von selbst. */
 const hpRatio = computed(() => Math.min(1, Math.max(0, playerStore.hpPercent / 100)))
 
 const regen = computed(() => Math.round(playerStore.regenPerSec * 10) / 10)
+
+/** Ungekürzt und mit Tausendertrennung — der einzige Grund, den Kasten
+ *  überhaupt zu öffnen. Die Kachel selbst zeigt die gerundete Kurzform. */
+const exactHp = computed(() => Math.ceil(playerStore.currentHP).toLocaleString())
+const exactMax = computed(() => Math.round(playerStore.maxHP).toLocaleString())
 
 /** Dieselben Umschlagpunkte wie der Vitalitäts-Strip des Pause-Overlays —
  *  zwei Anzeigen desselben Werts dürfen nicht bei verschiedenen Anteilen
@@ -102,8 +92,6 @@ const stateClass = computed(() => {
   if (playerStore.hpPercent > HP_CRIT_PERCENT) return 'pv--yellow'
   return 'pv--red'
 })
-
-const reprieveReady = computed(() => playerStore.reprieveUsedInPhase !== solarStore.starPhase)
 
 const ariaLabel = computed(
   () => `Sun health ${Math.ceil(playerStore.currentHP)} of ${playerStore.maxHP}`,
@@ -147,11 +135,16 @@ onUnmounted(() => {
 /* ── Der Cluster ──────────────────────────────────────────────────────────
    Keine Karte, keine Kante: er sitzt IM Kopfstreifen des Modals und würde als
    umrandete Platte gegen die Reiter daneben stehen. Zusammengehalten wird er
-   vom Herzen links und der gemeinsamen Grundlinie. */
+   vom Herzen links und der gemeinsamen Grundlinie.
+
+   `--pv-w` ist die Breite des Körpers: Zahlenzeile UND Leiste teilen sie sich,
+   damit die Leiste nicht bei jeder Stellenzahl eine andere Länge bekommt. */
 .pv-cluster {
+  --pv-w: 214px;
+  --pv-track-h: 20px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
   /* Abstand zur Holzecke des RpgFrame, die über dem Kopf liegt. */
   padding: 0 6px 0 18px;
@@ -160,9 +153,11 @@ onUnmounted(() => {
 
 .pv-heart {
   flex-shrink: 0;
+  width: 30px;
+  height: 30px;
   color: #cc2010;
   /* Statisch, kein Dauerläufer — der Schein rastert genau einmal. */
-  filter: drop-shadow(0 0 6px rgba(220, 40, 18, 0.55));
+  filter: drop-shadow(0 0 7px rgba(220, 40, 18, 0.55));
 }
 
 .pv--yellow .pv-heart {
@@ -175,15 +170,17 @@ onUnmounted(() => {
 .pv-body {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 8px;
+  width: var(--pv-w);
   min-width: 0;
 }
 
 .pv-line {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 5px;
   line-height: 1;
+  white-space: nowrap;
 }
 
 /* Der laufende Wert bekommt eine Breitenreserve: ohne sie rückt die ganze
@@ -191,7 +188,7 @@ onUnmounted(() => {
    neben den Reitern ist genau das das Störende. */
 .pv-cur {
   min-width: 5.4ch;
-  font-size: 15px;
+  font-size: 32px;
   font-weight: 900;
   color: #f2ead2;
   font-variant-numeric: tabular-nums;
@@ -206,13 +203,13 @@ onUnmounted(() => {
 }
 
 .pv-sep {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 400;
   color: #7a5820;
 }
 
 .pv-max {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   color: #8a7a52;
   font-variant-numeric: tabular-nums;
@@ -221,12 +218,11 @@ onUnmounted(() => {
 /* Die Regeneration ist die zweite Aussage der Zeile und tritt zurück: sie sagt,
    in welche Richtung sich der Wert davor bewegt, wenn nichts trifft. */
 .pv-regen {
-  margin-left: 3px;
-  font-size: 11px;
+  margin-left: 4px;
+  font-size: 14px;
   font-weight: 800;
   color: #6e9a54;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 /* ── Die Leiste ───────────────────────────────────────────────────────────
@@ -234,8 +230,8 @@ onUnmounted(() => {
    derselben Zahl auch gleich gelesen werden. */
 .pv-track {
   position: relative;
-  width: 148px;
-  height: 6px;
+  width: 100%;
+  height: var(--pv-track-h);
   overflow: hidden;
   background: rgba(0, 0, 0, 0.55);
   border-radius: 1px;
@@ -300,95 +296,162 @@ onUnmounted(() => {
   }
 }
 
-/* ── Tooltip ──────────────────────────────────────────────────────────── */
+/* ── Tooltip ──────────────────────────────────────────────────────────────
+   Überschrift · die exakten Zahlen · eine Zeile. Mehr nicht. */
 .pv-tip {
-  padding: 9px 12px 11px;
-}
-
-.pv-tip-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
+  flex-direction: column;
+  gap: 5px;
+  padding: 11px 14px 13px;
 }
 
-.pv-tip-title {
-  font-size: 0.95rem;
-  font-weight: 900;
-  color: #e8c040;
+.pv-tip-cap {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a7a52;
 }
 
-.pv-tip-pct {
-  font-size: 0.85rem;
+.pv-tip-lead {
+  font-size: 1.5rem;
   font-weight: 900;
-  color: #b89b5a;
+  line-height: 1.05;
+  color: #f2ead2;
   font-variant-numeric: tabular-nums;
 }
 
-.pv-tip-note {
-  margin: 0 0 8px;
-  font-size: 0.78rem;
-  font-weight: 400;
-  line-height: 1.35;
-  color: #a89a74;
+.pv--yellow .pv-tip-lead {
+  color: #e8c040;
+}
+.pv--red .pv-tip-lead {
+  color: #ff7a62;
 }
 
-.pv-tip-lines {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 3px 12px;
-  margin: 0;
+.pv-tip-sub {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
   padding-top: 7px;
   border-top: 1px solid #2e2416;
 }
 
-.pv-tip-lines dt {
-  font-size: 0.76rem;
+.pv-tip-sub-label {
+  font-size: 0.85rem;
   font-weight: 700;
   color: #8a7a52;
-  white-space: nowrap;
 }
 
-.pv-tip-lines dd {
-  margin: 0;
-  font-size: 0.76rem;
+.pv-tip-sub-value {
+  font-size: 0.95rem;
   font-weight: 800;
-  color: #ded0a6;
-  text-align: right;
+  color: #6e9a54;
   font-variant-numeric: tabular-nums;
 }
 
-.pv-tip-ok {
-  color: #7a9a6a;
-}
-.pv-tip-spent {
-  color: #8a7a52;
-}
-
 /* ── Auflösungsstufen ─────────────────────────────────────────────────────
-   Full HD ist der flachste Viewport: dort ist der Kopfstreifen am engsten und
-   die Leiste gibt Breite ab, bevor der Cluster die Reiter drängt. */
-@media (max-height: 1100px) {
-  .pv-track {
-    width: 118px;
+   Gestaffelt nach BREITE, nicht nach Höhe: der Kopfstreifen ist auf jeder
+   Zielauflösung 84px hoch (die clamp()-Werte der Reiter sind ab 1000px
+   Viewporthöhe am Anschlag), die Seitenspalte daneben aber nicht — 292px bei
+   1920×1080, 502px bei 2560×1440, über 1100px auf 4K.
+
+   Gesamtbreite gegen verfügbare Spalte:
+     Grundstufe  278 von 292 px */
+@media (max-width: 1919px) {
+  /* Keine Zielauflösung — die Reissleine für schmalere Fenster (1440×810 lässt
+     nur 135px Spalte). */
+  .pv-cluster {
+    --pv-w: 100px;
+    --pv-track-h: 8px;
+    gap: 6px;
+    padding: 0 4px 0 10px;
+  }
+  .pv-heart {
+    width: 20px;
+    height: 20px;
+  }
+  .pv-body {
+    gap: 4px;
   }
   .pv-cur {
-    font-size: 14px;
+    font-size: 16px;
+  }
+  .pv-sep,
+  .pv-max,
+  .pv-regen {
+    font-size: 11px;
   }
 }
 
 @media (min-width: 2400px) {
-  .pv-track {
-    width: 176px;
-    height: 7px;
+  .pv-cluster {
+    --pv-w: 300px;
+    --pv-track-h: 22px;
+    gap: 12px;
+  }
+  .pv-heart {
+    width: 36px;
+    height: 36px;
   }
   .pv-cur {
+    font-size: 38px;
+  }
+  .pv-sep,
+  .pv-max {
+    font-size: 18px;
+  }
+  .pv-regen {
+    font-size: 15px;
+  }
+  .pv-tip {
+    padding: 13px 16px 15px;
+  }
+  .pv-tip-lead {
+    font-size: 1.7rem;
+  }
+  .pv-tip-sub-label {
+    font-size: 0.95rem;
+  }
+  .pv-tip-sub-value {
+    font-size: 1.05rem;
+  }
+}
+
+@media (min-width: 3400px) {
+  .pv-cluster {
+    --pv-w: 380px;
+    --pv-track-h: 26px;
+    gap: 14px;
+  }
+  .pv-heart {
+    width: 42px;
+    height: 42px;
+  }
+  .pv-cur {
+    font-size: 44px;
+  }
+  .pv-sep,
+  .pv-max {
+    font-size: 21px;
+  }
+  .pv-regen {
     font-size: 17px;
   }
-  .pv-max,
-  .pv-regen {
-    font-size: 13px;
+  .pv-tip {
+    padding: 15px 18px 17px;
+  }
+  .pv-tip-cap {
+    font-size: 0.88rem;
+  }
+  .pv-tip-lead {
+    font-size: 1.95rem;
+  }
+  .pv-tip-sub-label {
+    font-size: 1.08rem;
+  }
+  .pv-tip-sub-value {
+    font-size: 1.18rem;
   }
 }
 

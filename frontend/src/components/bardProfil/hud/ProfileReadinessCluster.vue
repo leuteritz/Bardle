@@ -28,21 +28,19 @@
         <span class="pr-res-val">{{ store.resonance }}</span>
       </div>
 
+      <!-- Der Kasten sagt, was die Kachel NICHT schon zeigt: den Stand am
+           Maximum und die beiden Wirkungen. Der Klartextsatz der Passive steht
+           im Orbit — hier geht der Kasten über einem Menü auf, das der Spieler
+           gerade bedient, und alles, was er beim Überfliegen nicht in eine
+           Entscheidung übersetzt, kostet ihn nur die Zeile. -->
       <template #tip>
-        <div class="pr-tip">
-          <header class="pr-tip-head" :style="{ '--pr-color': BARD_PASSIVE.color }">
-            <span class="pr-tip-name">{{ BARD_PASSIVE.name }}</span>
-            <span class="pr-tip-rank">{{ resonanceMaxed ? 'Maxed' : 'Passive' }}</span>
-          </header>
-          <p class="pr-tip-note">{{ BARD_PASSIVE.description }}</p>
-          <dl class="pr-tip-lines">
-            <dt>Stacks</dt>
-            <dd>{{ store.resonance }} / {{ RESONANCE_MAX_STACKS }}</dd>
-            <dt>Ability power</dt>
-            <dd>+{{ ((store.resonancePowerMult - 1) * 100).toFixed(0) }}%</dd>
-            <dt>Cooldowns</dt>
-            <dd>−{{ (store.resonanceCdr * 100).toFixed(1) }}%</dd>
-          </dl>
+        <div class="pr-tip" :style="{ '--pr-color': BARD_PASSIVE.color }">
+          <span class="pr-tip-cap">{{ BARD_PASSIVE.name }}</span>
+          <span class="pr-tip-lead">{{ store.resonance }} / {{ RESONANCE_MAX_STACKS }}</span>
+          <span class="pr-tip-sub">
+            +{{ ((store.resonancePowerMult - 1) * 100).toFixed(0) }}% power ·
+            −{{ (store.resonanceCdr * 100).toFixed(1) }}% cooldowns
+          </span>
         </div>
       </template>
     </RpgBadgeTooltip>
@@ -50,6 +48,13 @@
     <span class="pr-divider" aria-hidden="true" />
 
     <RpgBadgeTooltip v-for="def in BARD_ABILITIES" :key="def.id" clear-ancestor=".pr-cluster">
+      <!--
+        Taste und Uhr sind Flow-Kinder einer Flex-Spalte, keine absolut
+        gesetzten Ebenen. Das löst den Platzstreit ohne Sonderfall: kühlt die
+        Kachel, steht die Taste oben und die Zahl darunter; kühlt sie nicht,
+        ist die Uhr `display: none` und Flex zentriert die Taste von selbst.
+        Kein Positionswechsel im CSS, kein Sprung aus einer Animation.
+      -->
       <button
         :ref="(el: unknown) => setPipRef(def.id, el)"
         type="button"
@@ -60,7 +65,6 @@
         :aria-label="ariaLabelOf(def.id)"
         @click="castAbility(def.id)"
       >
-        <span class="pr-pip-key">{{ def.key }}</span>
         <!-- Bereitschaftsschein auf eigener Ebene: der Schein steht statisch im
              CSS, animiert wird allein seine Deckkraft. Vier davon stehen
              nebeneinander (Performance-Regel 2/11). -->
@@ -68,23 +72,19 @@
         <!-- Abklingzeit: `scaleY` wird pro Frame DIREKT an dieses Element
              geschrieben, am Vue-Rendering vorbei (Performance-Regel 3). -->
         <span class="pr-pip-sweep" aria-hidden="true" />
+        <span class="pr-pip-key">{{ def.key }}</span>
         <span class="pr-pip-clock" aria-hidden="true" />
       </button>
 
       <template #tip>
-        <div class="pr-tip">
-          <header class="pr-tip-head" :style="{ '--pr-color': def.color }">
+        <div class="pr-tip" :style="{ '--pr-color': def.color }">
+          <span class="pr-tip-cap">
             <span class="pr-tip-key">{{ def.key }}</span>
-            <span class="pr-tip-name">{{ def.name }}</span>
-            <span class="pr-tip-rank">{{ rankLabelOf(def.id) }}</span>
-          </header>
-          <p class="pr-tip-note">{{ def.description }}</p>
-          <dl class="pr-tip-lines">
-            <dt>Cooldown</dt>
-            <dd>{{ formatCooldownSeconds(store.cooldownMsOf(def.id)) }}s</dd>
-            <dt>Status</dt>
-            <dd :class="statusClassOf(def.id)">{{ statusLabelOf(def.id) }}</dd>
-          </dl>
+            {{ def.name }}
+          </span>
+          <span class="pr-tip-lead" :class="{ 'pr-tip-lead--ready': store.isReady(def.id) }">
+            {{ leadOf(def.id) }}
+          </span>
         </div>
       </template>
     </RpgBadgeTooltip>
@@ -100,7 +100,6 @@ import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { BARD_ABILITIES, BARD_PASSIVE } from '@/config/progression/bardAbilities'
 import {
   ABILITY_CAST_FLASH_MS,
-  ABILITY_MAX_RANK,
   PROFILE_HUD_RING_CIRCUMFERENCE,
   PROFILE_HUD_RING_R,
   RESONANCE_MAX_STACKS,
@@ -298,30 +297,23 @@ onUnmounted(() => {
   if (flashTimer) clearTimeout(flashTimer)
 })
 
-// ── Tooltip-Texte ──────────────────────────────────────────────────────────
-// Sie hängen an `abilityNow` (Sekundentakt) und nicht am Frame-Lauf: ein
-// Kasten, der nur beim Überfahren steht, braucht keine 60 Hz.
-function rankLabelOf(id: BardAbilityId): string {
-  const rank = store.rankOf(id)
-  if (rank === 0) return `Locked · Lv ${store.nextRankLevelOf(id)}`
-  return `Rank ${rank}/${ABILITY_MAX_RANK}`
-}
-
-function statusLabelOf(id: BardAbilityId): string {
-  if (!store.isUnlocked(id)) return 'Locked'
+// ── Tooltip ────────────────────────────────────────────────────────────────
+// Der Kasten trägt GENAU eine Aussage unter dem Namen: darf ich jetzt drücken?
+// Rang, Klartextsatz und der volle Abklingwert stehen im ausführlichen Kasten
+// der Leiste im Orbit — hier wären sie drei Zeilen, die niemand liest, während
+// er im Menü etwas anderes tut.
+function leadOf(id: BardAbilityId): string {
+  const def = BARD_ABILITIES.find((d) => d.id === id)
+  if (!store.isUnlocked(id)) return `Unlocks at Lv ${def?.unlockLevel ?? '?'}`
   const leftMs = store.cooldownLeftMsOf(id)
   return leftMs > 0 ? `${formatCooldownSeconds(leftMs)}s` : 'Ready'
-}
-
-function statusClassOf(id: BardAbilityId): string {
-  return store.isReady(id) ? 'pr-tip-ok' : ''
 }
 
 function ariaLabelOf(id: BardAbilityId): string {
   const def = BARD_ABILITIES.find((d) => d.id === id)
   if (!def) return ''
   return store.isUnlocked(id)
-    ? `Cast ${def.name} (${def.key}) — ${statusLabelOf(id)}`
+    ? `Cast ${def.name} (${def.key}) — ${leadOf(id)}`
     : `${def.name} — unlocks at level ${def.unlockLevel}`
 }
 </script>
@@ -329,12 +321,21 @@ function ariaLabelOf(id: BardAbilityId): string {
 <style scoped>
 /* ── Der Cluster ──────────────────────────────────────────────────────────
    Wie der Vitals-Cluster gegenüber: keine Karte, keine Kante. Er sitzt im
-   Kopfstreifen und wird von der Reihe selbst zusammengehalten. */
+   Kopfstreifen und wird von der Reihe selbst zusammengehalten.
+
+   Die Kacheln stehen im HOCHFORMAT, und das ist keine Stilfrage: der
+   Kopfstreifen ist auf JEDER Zielauflösung 84px hoch (die clamp()-Werte der
+   Reiter sind ab 1000px Viewporthöhe am Anschlag), die Seitenspalte daneben
+   aber nur 292px breit — Höhe ist im Überfluss da, Breite ist der Engpass.
+   Hochkant bekommen Taste und Sekundenzahl je eine eigene Zeile, statt sich
+   einen Kasten zu teilen, in dem beide zu klein bleiben. */
 .pr-cluster {
-  --pr-pip: 36px;
+  --pr-pip-w: 48px;
+  --pr-pip-h: 64px;
+  --pr-ring: 40px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
   /* Abstand zur Holzecke des RpgFrame, die über dem Kopf liegt. */
   padding: 0 18px 0 6px;
@@ -349,8 +350,8 @@ function ariaLabelOf(id: BardAbilityId): string {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: var(--pr-pip);
-  height: var(--pr-pip);
+  width: var(--pr-ring);
+  height: var(--pr-ring);
   cursor: default;
 }
 
@@ -386,7 +387,7 @@ function ariaLabelOf(id: BardAbilityId): string {
 
 .pr-res-val {
   position: relative;
-  font-size: 12px;
+  font-size: calc(var(--pr-ring) * 0.34);
   font-weight: 900;
   line-height: 1;
   color: #cfe4ec;
@@ -401,20 +402,25 @@ function ariaLabelOf(id: BardAbilityId): string {
 .pr-divider {
   flex-shrink: 0;
   width: 1px;
-  height: calc(var(--pr-pip) * 0.6);
-  margin: 0 2px;
+  height: calc(var(--pr-pip-h) * 0.58);
+  margin: 0 1px;
   background: linear-gradient(to bottom, transparent, #4a2a0e 28%, #4a2a0e 72%, transparent);
 }
 
 /* ── Die Kacheln ──────────────────────────────────────────────────────────
-   Buchstabe statt Motiv: auf 34px trägt ein Fähigkeitsbild nichts mehr, was
-   man erkennen könnte — die Taste dagegen schon (Performance-Regel 7). Das
-   volle Motiv samt Rangkerben bleibt der Leiste im Orbit. */
+   Buchstabe statt Motiv: ein Fähigkeitsbild in dieser Grösse trüge nichts,
+   was man erkennen könnte — die Taste dagegen schon (Performance-Regel 7).
+   Das volle Motiv samt Rangkerben bleibt der Leiste im Orbit. */
 .pr-pip {
   position: relative;
+  display: flex;
   flex-shrink: 0;
-  width: var(--pr-pip);
-  height: var(--pr-pip);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--pr-pip-h) * 0.04);
+  width: var(--pr-pip-w);
+  height: var(--pr-pip-h);
   padding: 0;
   overflow: hidden;
   background: #111008;
@@ -429,30 +435,23 @@ function ariaLabelOf(id: BardAbilityId): string {
 }
 
 .pr-pip:hover:not(:disabled) {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: #6b431a;
 }
 
 .pr-pip:active:not(:disabled) {
-  transform: translateY(0) scale(0.94);
+  transform: translateY(0) scale(0.95);
 }
 
-/* Die Taste sitzt in der Ecke, nicht in der Mitte — genau wie auf der grossen
-   Kachel im Orbit. Der Grund ist hier zwingend: die Mitte gehört der Uhr, und
-   eine Kachel, deren Buchstabe unter der Sekundenzahl verschwindet, verliert
-   beim Kühlen ihre Identität. Sie liegt ÜBER dem Schleier (z-index 5), damit
-   sie auch dann lesbar bleibt.
-
-   Statisch, kein Zustandswechsel der Position: ein Buchstabe, der beim Kühlen
-   die Ecke wechselt, wäre Bewegung ohne Aussage. */
+/* Taste und Uhr liegen ÜBER dem Schleier — eine Kachel, deren Buchstabe unter
+   dem Abklingschleier verschwindet, verliert genau dann ihre Identität, wenn
+   der Spieler auf sie wartet. */
 .pr-pip-key {
-  position: absolute;
-  top: calc(var(--pr-pip) * 0.04);
-  left: calc(var(--pr-pip) * 0.11);
+  position: relative;
   z-index: 5;
-  font-size: calc(var(--pr-pip) * 0.34);
+  font-size: calc(var(--pr-pip-w) * 0.4);
   font-weight: 900;
-  line-height: 1.2;
+  line-height: 1;
   color: #ded0a6;
   opacity: 0.82;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
@@ -464,7 +463,7 @@ function ariaLabelOf(id: BardAbilityId): string {
 
 /* Bereit trägt die Taste die Leitfarbe — sonst steht dort eine Kachel, in der
    ausser dem Schein nichts zu sehen ist. Beim Kühlen bleibt sie im Elfenbein
-   des Bestands: dann führt die Zahl, und zwei Farbflächen auf 32px stritten. */
+   des Bestands: dann führt die Zahl, und zwei Farbflächen stritten. */
 .pr-pip--ready .pr-pip-key {
   color: color-mix(in srgb, var(--pr-color, #e8c040) 62%, #f2ead2);
   opacity: 1;
@@ -473,6 +472,33 @@ function ariaLabelOf(id: BardAbilityId): string {
 .pr-pip:hover:not(:disabled) .pr-pip-key {
   color: var(--pr-color, #e8c040);
   opacity: 1;
+}
+
+/* Steht keine Zahl an, ist sie aus dem Fluss — und Flex zentriert die Taste
+   von selbst. Das ist der Grund für die Flex-Spalte: keine zweite Regel, die
+   die Taste beim Zustandswechsel woanders hinsetzt. */
+.pr-pip-clock {
+  position: relative;
+  z-index: 4;
+  display: none;
+  font-size: calc(var(--pr-pip-w) * 0.42);
+  font-weight: 800;
+  line-height: 1;
+  color: #e6dcbe;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.pr-pip--cooling .pr-pip-clock,
+.pr-pip--stasis .pr-pip-clock {
+  display: block;
+}
+
+/* Die Stase hält die Welt an — ihre Zahl gehört nicht in dieselbe Farbe wie
+   eine gewöhnliche Abklingzeit. */
+.pr-pip--stasis .pr-pip-clock {
+  color: #d8b4f0;
 }
 
 /* Bereit: Innenlinie und ein Hauch Innenschein, statisch im CSS — animiert
@@ -486,7 +512,7 @@ function ariaLabelOf(id: BardAbilityId): string {
   opacity: 0;
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--pr-color, #e8c040) 72%, transparent),
-    inset 0 0 8px color-mix(in srgb, var(--pr-color, #e8c040) 22%, transparent);
+    inset 0 0 10px color-mix(in srgb, var(--pr-color, #e8c040) 22%, transparent);
 }
 
 .pr-pip--ready .pr-pip-glow {
@@ -539,36 +565,6 @@ function ariaLabelOf(id: BardAbilityId): string {
   will-change: transform;
 }
 
-.pr-pip-clock {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  /* Etwas nach unten gerückt: oben links sitzt die Taste, und zwei Zeichen
-     sollen sich auf 32px nicht ins Gehege kommen. */
-  padding-top: calc(var(--pr-pip) * 0.14);
-  font-size: calc(var(--pr-pip) * 0.36);
-  font-weight: 800;
-  line-height: 1;
-  color: #e6dcbe;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-  pointer-events: none;
-}
-
-.pr-pip--cooling .pr-pip-clock,
-.pr-pip--stasis .pr-pip-clock {
-  display: flex;
-}
-
-/* Die Stase hält die Welt an — ihre Zahl gehört nicht in dieselbe Farbe wie
-   eine gewöhnliche Abklingzeit. */
-.pr-pip--stasis .pr-pip-clock {
-  color: #d8b4f0;
-}
-
 .pr-pip--locked {
   cursor: not-allowed;
   opacity: 0.5;
@@ -579,100 +575,136 @@ function ariaLabelOf(id: BardAbilityId): string {
   color: #7a6d4c;
 }
 
-/* ── Tooltip ──────────────────────────────────────────────────────────── */
+/* ── Tooltip ──────────────────────────────────────────────────────────────
+   Überschrift · eine grosse Zahl · höchstens eine Zeile darunter. Der Kasten
+   geht über einem Menü auf, das der Spieler gerade bedient — was er dabei
+   nicht in eine Entscheidung übersetzen kann, kostet ihn nur die Zeile, in der
+   es steht. Der ausführliche Kasten bleibt der Leiste im Orbit. */
 .pr-tip {
-  padding: 9px 12px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 14px 13px;
 }
 
-.pr-tip-head {
+.pr-tip-cap {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin-bottom: 6px;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--pr-color, #e8c040);
 }
 
 .pr-tip-key {
   flex-shrink: 0;
-  min-width: 1.45em;
-  padding: 2px 4px;
+  min-width: 1.5em;
+  padding: 3px 5px;
   background: var(--pr-color, #e8c040);
   border-radius: 3px;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 900;
   line-height: 1;
   color: #12100a;
   text-align: center;
 }
 
-.pr-tip-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.95rem;
+.pr-tip-lead {
+  font-size: 1.55rem;
   font-weight: 900;
-  color: var(--pr-color, #e8c040);
-}
-
-.pr-tip-rank {
-  flex-shrink: 0;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #8a7a52;
-}
-
-.pr-tip-note {
-  margin: 0 0 8px;
-  font-size: 0.78rem;
-  font-weight: 400;
-  line-height: 1.35;
-  color: #c6b68c;
-}
-
-.pr-tip-lines {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 3px 12px;
-  margin: 0;
-  padding-top: 7px;
-  border-top: 1px solid #2e2416;
-}
-
-.pr-tip-lines dt {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #8a7a52;
-  white-space: nowrap;
-}
-
-.pr-tip-lines dd {
-  margin: 0;
-  font-size: 0.76rem;
-  font-weight: 800;
+  line-height: 1.05;
   color: #ded0a6;
-  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-.pr-tip-ok {
-  color: #7a9a6a;
+/* Bereit ist der einzige Zustand, der eine Farbe verdient — er ist die
+   Aufforderung, die Kachel zu drücken. */
+.pr-tip-lead--ready {
+  color: var(--pr-color, #e8c040);
 }
 
-/* ── Auflösungsstufen ─────────────────────────────────────────────────── */
-@media (max-height: 1100px) {
+.pr-tip-sub {
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #8a7a52;
+}
+
+/* ── Auflösungsstufen ─────────────────────────────────────────────────────
+   Gestaffelt nach BREITE, nicht nach Höhe: der Kopfstreifen ist überall gleich
+   hoch, die Seitenspalte daneben aber nicht. Dasselbe Raster (2400 / 3400),
+   das die Fähigkeitenleiste und die Buff-Reihe im Orbit benutzen.
+
+   Reihe gesamt gegen verfügbare Spalte:
+     Grundstufe  279 von 292 px (1920×1080)
+     ≥ 2400      350 von 502 px (2560×1440)
+     ≥ 3400      403 von 1142 px (4K)
+
+   Nur die Grundstufe ist knapp. Wächst dort etwas — eine fünfte Fähigkeit, ein
+   achter Reiter —, geht die Reserve zuerst an Ring und Abstände, nicht an die
+   Kachelbreite: die Kachel ist die Bedienung, der Ring nur Zustand. */
+@media (max-width: 1919px) {
+  /* Keine Zielauflösung — die Reissleine für schmalere Fenster (1440×810 lässt
+     nur 135px Spalte). Ring und Trennstrich weichen zuerst: sie sind Zustand,
+     die Kacheln sind Bedienung. */
   .pr-cluster {
-    --pr-pip: 32px;
-    gap: 4px;
+    --pr-pip-w: 30px;
+    --pr-pip-h: 42px;
+    gap: 3px;
+    padding: 0 10px 0 4px;
+  }
+  .pr-res,
+  .pr-divider {
+    display: none;
   }
 }
 
 @media (min-width: 2400px) {
   .pr-cluster {
-    --pr-pip: 42px;
-    gap: 6px;
+    --pr-pip-w: 58px;
+    --pr-pip-h: 70px;
+    --pr-ring: 54px;
+    gap: 7px;
   }
-  .pr-res-val {
-    font-size: 14px;
+  .pr-tip {
+    padding: 13px 16px 15px;
+  }
+  .pr-tip-cap {
+    font-size: 1.2rem;
+  }
+  .pr-tip-key {
+    font-size: 0.88rem;
+  }
+  .pr-tip-lead {
+    font-size: 1.75rem;
+  }
+  .pr-tip-sub {
+    font-size: 0.95rem;
+  }
+}
+
+@media (min-width: 3400px) {
+  .pr-cluster {
+    --pr-pip-w: 68px;
+    --pr-pip-h: 80px;
+    --pr-ring: 62px;
+    gap: 8px;
+  }
+  .pr-tip {
+    padding: 15px 18px 17px;
+  }
+  .pr-tip-cap {
+    font-size: 1.4rem;
+  }
+  .pr-tip-key {
+    font-size: 1rem;
+  }
+  .pr-tip-lead {
+    font-size: 2rem;
+  }
+  .pr-tip-sub {
+    font-size: 1.08rem;
   }
 }
 
