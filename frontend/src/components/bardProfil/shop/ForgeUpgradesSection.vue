@@ -12,7 +12,7 @@
          Kopfleiste über dem Baum (`ForgeToolbar`) — dort hat er die doppelte
          Breite und Platz für einen Fortschrittsring je Ring. -->
     <section
-      v-for="(section, sectionIndex) in sections"
+      v-for="section in sections"
       :key="section.id"
       class="fu-group"
       :style="{ '--group-c': section.accent }"
@@ -30,20 +30,19 @@
         <Icon :icon="FORGE_UPGRADE_ARCHIVE_ICON" width="17" height="17" class="fu-archive-ico" />
         <span class="fu-archive-num">{{ section.entries.length }}</span>
         <span class="fu-archive-label">{{ FORGE_UPGRADE_ARCHIVE_LABEL }}</span>
-        <span class="fu-archive-hint">{{ section.hint }}</span>
       </button>
 
       <header v-else class="fu-head">
         <Icon :icon="section.icon" width="20" height="20" class="fu-head-ico" />
         <span class="fu-head-title">{{ section.title }}</span>
         <span class="fu-head-num">{{ section.entries.length }}</span>
-        <span class="fu-head-hint">{{ section.hint }}</span>
-        <!-- Die Bedienungsanleitung steht genau EINMAL, am obersten Kopf. -->
-        <span v-if="sectionIndex === 0" class="fu-head-tip">{{ FORGE_QUEUE_HEAD_HINT }}</span>
       </header>
 
-      <template v-if="section.id !== 'grown' || archiveOpen">
-        <ForgeQueueRow
+      <!-- Ausgewachsenes bleibt eine Zeile, alles Kaufbare ist eine Kachel: im
+           Archiv ist nichts zu entscheiden, und bei Vollausbau stellt es den
+           Löwenanteil der Liste. -->
+      <template v-if="section.id !== 'grown'">
+        <ForgeUpgradeTile
           v-for="entry in section.entries"
           :key="entry.id"
           :entry="entry"
@@ -51,6 +50,10 @@
           :fresh="freshIds.has(entry.id)"
           @buy="grow"
         />
+      </template>
+
+      <template v-else-if="archiveOpen">
+        <ForgeGrownRow v-for="entry in section.entries" :key="entry.id" :entry="entry" />
       </template>
     </section>
 
@@ -84,28 +87,40 @@
  * Was ein Eintrag AUSFÜHRLICH zeigt, steht seit dem Umbau nicht mehr in der
  * Liste: fünfundvierzig volle Karten untereinander waren dieselbe Fläche
  * fünfundvierzig Mal, und keine davon gross genug, um auf einem 4K-Schirm etwas
- * herzumachen. Hier bleibt, was man beim Überfliegen braucht — eine Zeile je
- * Eintrag; die volle Auskunft schwebt daneben (`ForgeRowTooltip`), und der Kopf
- * darüber zeigt die Empfehlung (`ForgeNextUpPanel`).
+ * herzumachen.
+ *
+ * Was daraus wurde, sind ZWEI Formen statt einer — nach dem, was der Eintrag
+ * vom Spieler will:
+ *
+ *   • `ForgeUpgradeTile` für alles Kaufbare und Gesperrte. Eine Kachel mit
+ *     Icon-Sockel, Stufe, Wirkungssprung, grosser Kostenleiste und einem
+ *     beschrifteten Knopf. Die 44px-Zeile davor trug ihre beiden wichtigsten
+ *     Zahlen als die kleinsten Elemente der Spalte und die Stufe gar nicht.
+ *   • `ForgeGrownRow` für das Archiv. Dort ist nichts zu entscheiden, und genau
+ *     dieser Topf stellt bei Vollausbau den Löwenanteil — hier zahlt sich die
+ *     alte Rechnung wirklich aus.
+ *
+ * Der Beschreibungssatz, der Rang und der Elternknoten bleiben im schwebenden
+ * Kärtchen (`ForgeRowTooltip`), der Kopf darüber zeigt die Empfehlung
+ * (`ForgeNextUpPanel`).
  */
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { forgeUpgradeBucket, useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeFilter } from '@/composables/ui/useForgeFilter'
-import ForgeQueueRow from './ForgeQueueRow.vue'
+import ForgeUpgradeTile from './ForgeUpgradeTile.vue'
+import ForgeGrownRow from './ForgeGrownRow.vue'
 import ForgeRowTooltip from './ForgeRowTooltip.vue'
 import type { ForgeUpgradeBucketId, ForgeUpgradeEntry, ForgeRowTipAnchor } from '@/types'
 import {
   FORGE_UPGRADE_BUCKETS,
   FORGE_UPGRADE_ARCHIVE_LABEL,
-  FORGE_UPGRADE_ARCHIVE_HINT,
   FORGE_UPGRADE_ARCHIVE_ICON,
   FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
   FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN,
   FORGE_CARD_FLASH_MS,
   FORGE_SPOTLIGHT_SCROLL_DELAY_MS,
-  FORGE_QUEUE_HEAD_HINT,
   FORGE_SEARCH_ICON,
 } from '@/config/constants'
 
@@ -147,7 +162,6 @@ function bucketOf(entry: ForgeUpgradeEntry): ForgeUpgradeBucketId {
 interface UpgradeSection {
   id: ForgeUpgradeBucketId
   title: string
-  hint: string
   icon: string
   accent: string
   entries: ForgeUpgradeEntry[]
@@ -156,7 +170,6 @@ interface UpgradeSection {
 const ARCHIVE_SECTION = {
   id: 'grown' as const,
   title: FORGE_UPGRADE_ARCHIVE_LABEL,
-  hint: FORGE_UPGRADE_ARCHIVE_HINT,
   icon: FORGE_UPGRADE_ARCHIVE_ICON,
   accent: '#4a8a28',
 }
@@ -374,31 +387,6 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.fu-head-hint {
-  flex: 1;
-  min-width: 0;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.34);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Steht ganz rechts und gibt als Erstes nach, wenn die Spalte eng wird — die
-   Zahl links davon ist wichtiger als der Hinweis. */
-.fu-head-tip {
-  flex-shrink: 1;
-  min-width: 0;
-  font-size: 11.5px;
-  font-weight: 700;
-  text-align: right;
-  color: rgba(255, 255, 255, 0.24);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* ══════════════════════════════════════════════════
    ARCHIV
 ══════════════════════════════════════════════════ */
@@ -450,24 +438,13 @@ onUnmounted(() => {
 }
 
 .fu-archive-label {
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   font-size: 12.5px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(200, 144, 64, 0.6);
-}
-
-.fu-archive-hint {
-  flex: 1;
-  min-width: 0;
-  text-align: right;
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.26);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ══════════════════════════════════════════════════

@@ -513,13 +513,13 @@ export const MEEP_SKILL_FORK_ICON = 'game-icons:path-distance'
 export const MEEP_SKILL_ALL_DONE = 'Every skill learned.'
 export const MEEP_SKILL_ALL_DONE_ICON = 'game-icons:laurels'
 /*
- * Eine Bedienzeile wie `FORGE_QUEUE_HEAD_HINT` steht hier bewusst NICHT.
- * Im Shop ist sie nötig, weil die Zeile dort auf einen Klick nichts tut und
- * ihre Auskunft nur am Zeiger hängt. Eine Skill-Karte trägt Icon, Namen,
- * Wirkung, Preis und einen beschrifteten Knopf — sie erklärt sich selbst. In
- * der 499px-Schiene stand die Zeile ausserdem neben dem Topf-Hinweis und
- * schnitt ihn ab (gemessen auf Full HD): zwei Sätze um denselben Platz, von
- * denen der eine nichts sagt.
+ * Eine Bedienzeile über der Liste steht hier bewusst NICHT — und seit dem
+ * Kachel-Umbau im Shop dort ebenso wenig. Eine Karte, die Icon, Namen, Wirkung,
+ * Preis und einen BESCHRIFTETEN Knopf trägt, erklärt sich selbst; nötig war die
+ * Zeile nur, solange der Eintrag ein nacktes `＋` zeigte und seine Auskunft
+ * allein am Zeiger hing. In der 499px-Schiene stand sie ausserdem neben dem
+ * Topf-Hinweis und schnitt ihn ab (gemessen auf Full HD): zwei Sätze um
+ * denselben Platz, von denen der eine nichts sagt.
  */
 
 // ── Skill-Tab: das Empfehlungs-Panel (MeepBestBuyPanel) ──────────────────────
@@ -1177,26 +1177,28 @@ export const FORGE_ENDLESS_SYMBOL = '∞'
  *
  * Grün für `ready` ist keine freie Wahl — im Projekt trägt Grün durchgehend
  * „kaufbar/aktiv" (die Knopf-Verläufe in CLAUDE.md).
+ *
+ * Ein `hint` je Topf stand hier einmal und ist mit dem Kachel-Umbau gegangen:
+ * „Chimes and materials are there" neben der Überschrift „Ready" sagte in
+ * zwanzig grauen Zeichen dasselbe wie der Titel daneben — und die Kachel
+ * darunter beantwortet die Frage seither ohnehin mit ✓/✕ an jeder Position.
  */
 export const FORGE_UPGRADE_BUCKETS = [
   {
     id: 'ready' as const,
     title: 'Ready',
-    hint: 'Chimes and materials are there',
     icon: 'ph:lightning-fill',
     accent: '#52b830',
   },
   {
     id: 'reach' as const,
     title: 'Saving up',
-    hint: 'Open, but out of reach',
     icon: 'ph:hourglass-medium-fill',
     accent: '#c89040',
   },
   {
     id: 'next' as const,
     title: 'Next up',
-    hint: 'What the star opens next',
     icon: 'lucide:lock',
     accent: '#7a4e20',
   },
@@ -1204,8 +1206,9 @@ export const FORGE_UPGRADE_BUCKETS = [
 
 /** Beschriftung der Archiv-Schaltzeile: „▸ 21 grown". */
 export const FORGE_UPGRADE_ARCHIVE_LABEL = 'grown'
-export const FORGE_UPGRADE_ARCHIVE_HINT = 'Fully grown — nothing left to buy'
 export const FORGE_UPGRADE_ARCHIVE_ICON = 'ph:check-circle-fill'
+/** Die Marke an einer ausgewachsenen Zeile. `✦` ist ein Schriftzeichen, kein Emoji. */
+export const FORGE_GROWN_BADGE = '✦ MAX'
 /** Chevron der Schaltzeile. Schriftzeichen wie `✦` und `→`, kein Emoji. */
 export const FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED = '▸'
 export const FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN = '▾'
@@ -1424,12 +1427,42 @@ export const FORGE_RAIL_WIDTH_WIDE_PX = 92
 export const FORGE_RAIL_ICON_SIZE = 27
 export const FORGE_RAIL_BARGAIN_LABEL = 'restock'
 
+// ── Upgrade-Kachel der Liste (ForgeUpgradeTile) ──────────────────────────────
 /**
- * Kopfzeile der kompakten Liste. Sagte „click a row to inspect", solange ein
- * Klick die Zeile im Detailkopf anheftete — sie tut es nicht mehr, und ein
- * Hinweis auf eine Geste, die nichts bewirkt, ist schlimmer als keiner.
+ * Ein Eintrag der Liste ist eine KACHEL, keine Zeile mehr.
+ *
+ * Die Zeile davor war 44px hoch und trug ihre beiden wichtigsten Zahlen —
+ * Preis und Wirkungssprung — als die kleinsten Elemente der ganzen Spalte:
+ * Chime-Bild 18px, Zahl 13.5px, der Sprung als 11.5px-Graustreifen bei 42%
+ * Deckkraft. Die Stufe stand überhaupt nicht darin. Alles, was einordnet, hing
+ * am schwebenden Kärtchen, und der Kaufknopf war ein unbeschriftetes `＋`.
+ *
+ * Die Kachel nimmt dieselben Bausteine, die Relikte, Konstellationen und das
+ * Empfehlungs-Panel schon tragen: Icon-Sockel, Name in Knotenfarbe, die
+ * geteilte Kostenleiste (`ForgeCostRow`, 26px Bild / 17px Zahl) und einen
+ * beschrifteten Knopf daneben — dieselbe Fußzeilen-Anordnung wie
+ * `MeepBestBuyPanel`, wo Preis NEBEN Knopf gemessen 72 statt 135 Pixel kostet.
+ *
+ * Was sie bewusst NICHT ist: eine volle `.fc-card` mit Beschreibungssatz und
+ * beschriftetem Now/After-Kasten. Genau die stand hier schon einmal und wurde
+ * zurückgenommen — bei Vollausbau fünfundvierzig Stück (Herleitung in
+ * `ForgeUpgradesSection.vue`). Der Beschreibungssatz bleibt deshalb im
+ * Kärtchen, und das Archiv behält seine Einzeiler.
  */
-export const FORGE_QUEUE_HEAD_HINT = 'point at a row to inspect · ＋ to grow'
+export const FORGE_TILE_ICON_SIZE = 26
+/**
+ * Der Knopf eines gedeckelten Kernstrahls. Er nennt den ZUSTAND; warum der
+ * Deckel liegt, steht als Grund in der Kachel darüber
+ * (`FORGE_UPGRADE_CAPPED_REASON`) — auf dem Knopf stünde derselbe Satz ein
+ * zweites Mal und passte in 92px ohnehin nicht.
+ */
+export const FORGE_TILE_CAPPED_LABEL = 'Capped'
+/**
+ * Das Schloss an einer gesperrten Kachel. Eine Bedeutung, ein Glyph: dasselbe
+ * Icon trägt der Topf „Next up" (`FORGE_UPGRADE_BUCKETS`) und die gesperrte
+ * Relikt-Zeile in `StarForgePanel`.
+ */
+export const FORGE_LOCK_ICON = 'lucide:lock'
 
 /** Wie lange die gekaufte Karte aufleuchtet. Rein visuell, daher reale Zeit. */
 export const FORGE_CARD_FLASH_MS = 420

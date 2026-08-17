@@ -8,43 +8,22 @@
 
     <div class="frt-meta">{{ metaLine }}</div>
     <div class="frt-desc">{{ entry.desc }}</div>
-
-    <template v-if="entry.state === 'locked' || entry.state === 'capped'">
-      <div class="frt-lock">{{ entry.lockReason }}</div>
-      <div v-if="entry.state === 'locked'" class="frt-track">
-        <i :style="{ transform: `scaleX(${entry.unlockProgress})` }" />
-      </div>
-    </template>
-
-    <div v-else-if="entry.state === 'maxed'" class="frt-maxed">✦ MAXED</div>
-
-    <template v-else>
-      <div class="frt-next"><span class="frt-arrow">→</span> {{ entry.nextDesc }}</div>
-      <div class="frt-cost-row">
-        <span class="frt-cost" :class="{ 'frt-cost--cant': !entry.goldOk }">
-          <img :src="FORGE_CHIME_IMAGE" class="frt-cost-img" alt="Chimes" />
-          {{ formatNumber(entry.goldCost) }}
-        </span>
-        <span
-          v-for="mat in entry.materials"
-          :key="mat.id"
-          class="frt-mat"
-          :class="{ 'frt-mat--missing': !mat.ok }"
-        >
-          <img v-if="mat.image" :src="mat.image" class="frt-mat-img" :alt="mat.name" />
-          {{ mat.have }}/{{ mat.need }}
-        </span>
-      </div>
-    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 /**
- * Was der Zeiger in der Liste streift, in voller Auskunft.
+ * Was der Zeiger in der Liste streift — und zwar genau das, was die Kachel
+ * darunter NICHT zeigt.
  *
  * Der Kopf der Spalte folgte dem Zeiger einmal selbst; seit er die EMPFEHLUNG
  * zeigt, hat die Liste ihren eigenen Weg gebraucht. Dieses Kärtchen ist er.
+ *
+ * Es trug bis zum Kachel-Umbau vier Zweige: Preis, Wirkungssprung, Sperrgrund
+ * samt Balken und die MAX-Marke. Alle vier stehen jetzt gross in der Kachel
+ * selbst — hier wären sie dieselbe Zahl in kleinerer Schrift, direkt neben
+ * ihrem Original. Übrig bleibt, was in eine Zeile nie gepasst hat: der volle
+ * Wortlaut der Wirkung, der Rang und der Knoten, an dem der Eintrag hängt.
  *
  * Zwei Regeln tragen es:
  *
@@ -63,10 +42,8 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { formatNumber } from '@/config/ui/numberFormat'
 import type { ForgeUpgradeEntry, ForgeRowTipAnchor } from '@/types'
 import {
-  FORGE_CHIME_IMAGE,
   FORGE_ROW_TIP_WIDTH_PX,
   FORGE_ROW_TIP_GAP_PX,
   FORGE_DETAIL_ENDLESS_META,
@@ -156,101 +133,8 @@ const tipWidth = `${FORGE_ROW_TIP_WIDTH_PX}px`
 }
 
 .frt-desc {
-  font-size: 12px;
+  font-size: 12.5px;
   line-height: 1.45;
   color: rgba(255, 255, 255, 0.68);
-}
-
-.frt-lock {
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(255, 200, 80, 0.65);
-}
-
-.frt-track {
-  height: 6px;
-  border-radius: 4px;
-  background: #241708;
-  overflow: hidden;
-}
-
-.frt-track i {
-  display: block;
-  height: 100%;
-  width: 100%;
-  transform-origin: left center;
-  background: linear-gradient(to right, #8a5a1c, #e8a020);
-}
-
-.frt-maxed {
-  font-size: 12px;
-  font-weight: 900;
-  color: #e8c040;
-  text-align: center;
-  letter-spacing: 1px;
-}
-
-.frt-next {
-  font-size: 12px;
-  font-weight: 900;
-  color: #6ecc44;
-}
-
-.frt-arrow {
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 10px;
-}
-
-.frt-cost-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.frt-cost {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(82, 184, 48, 0.15);
-  border: 1px solid rgba(82, 184, 48, 0.3);
-  color: #a0ffa0;
-  font-size: 12px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-}
-
-.frt-cost--cant {
-  color: #cc6050;
-  background: rgba(180, 40, 40, 0.12);
-  border-color: rgba(140, 40, 40, 0.3);
-}
-
-.frt-cost-img {
-  height: 13px;
-  width: auto;
-  object-fit: contain;
-}
-
-.frt-mat {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  font-weight: 900;
-  color: #e8d8b0;
-  font-variant-numeric: tabular-nums;
-}
-
-.frt-mat--missing {
-  color: #cc6050;
-}
-
-.frt-mat-img {
-  height: 15px;
-  width: auto;
-  object-fit: contain;
 }
 </style>

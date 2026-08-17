@@ -2,11 +2,15 @@
 /**
  * Ein Eintrag der Skill-Liste.
  *
- * Bewusst grösser als die Zeile der Forge-Liste (`ForgeQueueRow`): dort stehen
- * bei Vollausbau fünfundvierzig Einträge untereinander und jede Zierde kostet
- * fünfundvierzigmal — hier sind es rund zehn offene, weil je Zweig immer nur
- * der nächste Rang aufgeht. Der Knopf trägt deshalb ein Wort statt des `＋`,
- * und Name, Preis und Wirkung stehen in lesbarer Grösse nebeneinander.
+ * Dieselbe Anatomie wie die Kachel der Forge-Liste (`ForgeUpgradeTile`): Sockel,
+ * Name in Knotenfarbe, Wirkung, Preis und ein Knopf mit einem WORT darauf statt
+ * eines `＋`. Sie kommt hier nur mit einer Zeile weniger aus — ein Skill kostet
+ * allein Meeps, während ein Forge-Knoten Chimes UND bis zu zwei Materialien
+ * verlangt und dafür eine eigene Kostenleiste braucht.
+ *
+ * Offen sind hier ausserdem nur rund zehn Einträge, weil je Zweig immer nur der
+ * nächste Rang aufgeht; drüben sind es bei Vollausbau fünfundvierzig, und deren
+ * ausgewachsene Mehrheit bleibt deshalb eine Zeile (`ForgeGrownRow`).
  *
  * Die KARTE selbst tut nichts — gelernt wird über ihren Knopf. Eine breite
  * Kauffläche, die man beim Scrollen streift, wäre teuer bezahlt (dieselbe
@@ -30,7 +34,7 @@ import {
 } from '@/config/constants'
 import type { MeepSkillBucketId, MeepSkillEntry } from '@/types'
 
-/* Muster `ForgeQueueRow`: die Dauer steht in den Konstanten und wird von CSS
+/* Muster `ForgeUpgradeTile`: die Dauer steht in den Konstanten und wird von CSS
    und dem Timer in `MeepSkillList` aus derselben Quelle gelesen — den
    KEYFRAME-Namen setzt weiterhin die CSS-Klasse, nie JavaScript. */
 const flashDuration = `${MEEP_SKILL_FLASH_MS}ms`
