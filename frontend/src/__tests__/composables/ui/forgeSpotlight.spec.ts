@@ -73,10 +73,12 @@ describe('useForgeSpotlight', () => {
   })
 
   /**
-   * Die Halte-Geste. Das Empfehlungs-Panel über der Liste hängt an einem Wert,
-   * der auch ohne Zutun kippt — die Chimes ticken jede Sekunde. Erschiene es,
-   * während der Zeiger in der Liste steht, schöbe es sie um dreihundert Pixel
-   * unter ihm weg. Es fragt deshalb hier, ob es warten muss.
+   * Die Halte-Geste: hält der Zeiger die Liste gerade?
+   *
+   * Alles, was in dieser Spalte an einem Wert hängt, der auch ohne Zutun kippt
+   * — die Chimes ticken jede Sekunde —, darf sich nicht bewegen, solange der
+   * Zeiger darauf zielt. Die Reihenfolge und die Stapelzahl lösen das mit einer
+   * eigenen Momentaufnahme; für ein blosses Ja/Nein steht diese Ableitung.
    */
   describe('listHovering', () => {
     it('ist im Ruhezustand falsch', () => {

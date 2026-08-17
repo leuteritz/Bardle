@@ -22,17 +22,6 @@
          würde. Genau derselbe Sitz wie beim Quittungsblitz darüber. -->
     <div v-if="fresh" class="fut-fresh" aria-hidden="true" />
 
-    <!-- Nackt, ohne Sockel: der gerahmte Kasten davor kostete Breite, die die
-         Zeile jetzt für Stufe, Wirkung und Knopf braucht. Die Knotenfarbe trägt
-         das Glyph selbst. -->
-    <Icon
-      :icon="entry.icon"
-      :width="FORGE_ROW_ICON_SIZE"
-      :height="FORGE_ROW_ICON_SIZE"
-      class="fut-ico"
-      :style="{ color: entry.color }"
-    />
-
     <!-- ══ GESPERRT ══════════════════════════════════════════════
          Der Weg zur Freischaltung statt eines Preises, den man ohnehin nicht
          zahlen könnte. Hier führt der NAME, nicht die Stufe: ein „Lv 0" gross
@@ -82,17 +71,17 @@
           </span>
         </div>
 
-        <!-- Was das Lager kostet. Der Chime-Preis steht NICHT hier, sondern im
-             Knopf (`:gold="0"` lässt ihn weg) — er ist die eine Zahl, die jeder
-             Eintrag hat, und gehört an die Stelle, an der geklickt wird. Die
-             Materialien kann der Knopf nicht mittragen: zwei Chips „habe /
-             brauche" samt ✓ brauchen gemessen ~180px, und so breit darf er
-             nicht werden, ohne dem Namen daneben die Hälfte zu nehmen. -->
+        <!-- Was das Lager kostet — rahmenlos (`flat`), also nur Bild und Zahl.
+             Der Chime-Preis steht NICHT hier, sondern im Knopf (`:gold="0"`
+             lässt ihn weg): er ist die eine Zahl, die jeder Eintrag hat, und
+             gehört an die Stelle, an der geklickt wird. Die Materialien kann
+             der Knopf nicht mittragen — zwei Positionen messen auch ohne
+             Rahmen ~150px und machten ihn breiter als den Namen daneben. -->
         <ForgeCostRow
           v-if="entry.materials.length > 0"
           class="fut-mats"
           inline
-          chips
+          flat
           :label="false"
           :gold="0"
           :gold-ok="true"
@@ -100,31 +89,43 @@
         />
       </div>
 
-      <!-- Die Kauffläche: Verb oben, Preis darunter — die Form aus der
-           Vorlage. Feste Breite über die volle Zeilenhöhe, damit die grünen
-           Kanten über die ganze Liste hinweg fluchten und der Knopf die
-           grösste Fläche der Zeile ist statt ihres kleinsten Elements. Ein
-           gedeckelter Strahl trägt keinen Preis: bei ihm ist nichts zu
-           bezahlen, sondern zu warten. -->
-      <button
-        class="fut-buy"
-        :class="{ 'fut-buy--capped': entry.state === 'capped' }"
-        :disabled="!entry.canBuy"
-        :aria-label="`Grow ${entry.name}`"
-        :title="entry.canBuy ? `Grow ${entry.name}` : entry.lockReason || 'Not affordable yet'"
-        @click="$emit('buy', entry.id)"
-      >
-        <span class="fut-buy-verb">{{ buyLabel }}</span>
-        <ForgeCostRow
-          v-if="entry.state !== 'capped'"
-          class="fut-buy-cost"
-          inline
-          chips
-          :label="false"
-          :gold="entry.goldCost"
-          :gold-ok="entry.goldOk"
-        />
-      </button>
+      <!-- Die Kauffläche. Feste Gesamtbreite über die volle Zeilenhöhe: die
+           Kanten fluchten damit über die ganze Liste, und der Stapelknopf nimmt
+           seine Breite dem Verb ab, nicht der Zeile — sonst rückte die Kante
+           jedes Mal, wenn die tickenden Chimes eine Schwelle überschreiten. -->
+      <div class="fut-buy-group">
+        <button
+          class="fut-buy"
+          :class="{
+            'fut-buy--capped': entry.state === 'capped',
+            'fut-buy--short': entry.state !== 'capped' && !entry.canBuy,
+          }"
+          :disabled="!entry.canBuy"
+          :aria-label="`${FORGE_GROW_LABEL} ${entry.name}`"
+          :title="buyTitle"
+          @click="$emit('buy', entry.id)"
+        >
+          <span class="fut-buy-verb">{{ buyLabel }}</span>
+          <span v-if="entry.state !== 'capped'" class="fut-buy-price">
+            <img :src="FORGE_CHIME_IMAGE" class="fut-buy-chime" alt="Chimes" />
+            {{ $formatNumber(entry.goldCost) }}
+          </span>
+        </button>
+
+        <!-- Nur, wenn mehr als eine Stufe auf einmal geht. Die Zahl kommt aus
+             der Liste (`ForgeUpgradesSection`) und ist dort eingefroren,
+             solange der Zeiger über der Liste steht — dieselbe Regel wie bei
+             der Reihenfolge, und aus demselben Grund. -->
+        <button
+          v-if="bulkCount > 1"
+          class="fut-bulk"
+          :aria-label="`${FORGE_GROW_LABEL} ${entry.name} ${bulkCount} times`"
+          :title="`${entry.name} → ${FORGE_LEVEL_PREFIX}${entry.level + bulkCount}`"
+          @click="$emit('buyMany', entry.id)"
+        >
+          {{ bulkLabel }}
+        </button>
+      </div>
     </template>
   </div>
 </template>
@@ -133,39 +134,27 @@
 /**
  * Ein Eintrag der Upgrade-Liste als ZEILE.
  *
- * Eine waagerechte Achse: nacktes Icon · Stufe gross mit dem Namen klein
- * darunter · Wirkungssprung · Kaufknopf, und unter Stufe und Name ein schmales
- * Band mit dem Materialbedarf. Gemessen 101px auf Full HD, 114px ab 2K — und
- * zwar für JEDEN Zustand gleich, auch für die gesperrte Zeile ohne Knopf.
+ * Eine waagerechte Achse: Stufe gross mit dem Namen klein darunter ·
+ * Wirkungssprung rechts · Kauffläche ganz rechts, und unter Stufe und Name ein
+ * schmales Band mit dem Materialbedarf. Gemessen rund 95px, und zwar für JEDEN
+ * Zustand gleich — auch für die gesperrte Zeile ohne Knopf und Band.
  *
- * Zwei Fassungen davor, beide aus demselben Grund verworfen (Herleitung samt
- * Messwerten an `FORGE_ROW_ICON_SIZE`):
+ * Drei Fassungen davor, alle drei aus demselben Grund zurückgenommen: sie
+ * kosteten Fläche, ohne dafür etwas zu sagen (Herleitung samt Messwerten an
+ * `FORGE_ROW_BUY_WIDTH_PX`). Zuletzt gefallen sind das nackte 44px-Knotenglyph
+ * vorn und die gerahmten Chips um jede Kostenposition.
  *
- *   • die 44px-Zeile, in der Preis und Wirkungssprung die KLEINSTEN Elemente
- *     der Spalte waren, die Stufe gar nicht vorkam und ein unbeschriftetes `＋`
- *     kaufte;
- *   • die zweistöckige Kachel danach, die das löste, aber ~150px je Eintrag
- *     kostete — bei Vollausbau fünfundvierzig Stück, von denen drei gleichzeitig
- *     zu sehen waren.
+ * Was das Glyph ersetzt, ist die 3px-KANTE links in der Knotenfarbe. Sie
+ * unterscheidet einen Eintrag genauso gut vom Nachbarn und kostet ein Zwölftel
+ * der Breite; derselbe Streifen wird beim Spotlight einfach voll deckend, statt
+ * dass ein zweiter danebentritt.
  *
- * Die Zeile hat beides: zwei Drittel der Höhe und trotzdem 26px-Stufe,
- * 15px-Wirkung und einen Knopf, der Verb UND Preis trägt. Bezahlt wird das mit
- * BREITE statt mit Höhe — der Icon-Sockel ist weggefallen, und Verb und Preis
- * stapeln im Knopf, statt sich die Zeile zu teilen.
- *
- * Was der Knopf NICHT trägt, ist das Material. Die Fassung mit allem darin ist
- * gebaut und wieder zurückgenommen worden: zwei Chips „habe / brauche" samt ✓
- * messen ~180px, der Knopf brach damit auf zwei Kostenzeilen um (gemessen 136px
- * Zeilenhöhe gegen 98px bei den Nachbarn) und nahm dem Namen so viel Breite,
- * dass Name UND Wirkungswert abgeschnitten wurden. Das Material steht deshalb
- * als eigenes Band unter Stufe und Name; im Knopf bleibt der Chime-Preis — die
- * eine Zahl, die jeder Eintrag hat.
- *
- * Die Preiszeile liegt auf einem DUNKLEN Streifen im grünen Knopf und nicht
- * direkt auf dem Grün: ein fehlender Betrag ist rot mit ✕, und Rot auf Grün
- * wäre die einzige Stelle im Spiel, an der die Zweitkodierung des Mangels
- * kippt. Ein Knopf bleibt es trotzdem — ein Rahmen, ein `<button>`, ein
- * Klickziel.
+ * Der Knopf ist EINE flache Fläche ohne innere Trennlinie: Wort oben, Preis
+ * darunter. Seine FARBE ist die Aussage — grün heisst kaufbar, rot heisst „das
+ * reicht nicht", bernstein heisst gedeckelt. Daran hängt mehr als die Optik:
+ * die Kostenzeile darunter trägt seit dem `flat`-Umbau kein ✓/✕ mehr, ihr
+ * Mangel steht allein in der roten Zahl. Der rote Knopf ist die zweite
+ * Kodierung dazu — wer ihn entfärbt, muss die Zeichen zurückholen.
  *
  * Was sie NICHT ist: eine volle Karte mit Beschreibungssatz und beschriftetem
  * Now/After-Kasten. Die stand hier schon einmal und wurde zurückgenommen. Der
@@ -173,7 +162,7 @@
  * schwebenden Kärtchen (`ForgeRowTooltip`); das Archiv behält seine Einzeiler
  * (`ForgeGrownRow`).
  *
- * Die ZEILE selbst tut nichts — gekauft wird über ihren Knopf. Eine breite
+ * Die ZEILE selbst tut nichts — gekauft wird über ihre Knöpfe. Eine breite
  * Kauffläche, die man beim Scrollen streift, wäre teuer bezahlt (dieselbe
  * Entscheidung wie an der Skill-Karte).
  */
@@ -185,12 +174,19 @@ import ForgeCostRow from './ForgeCostRow.vue'
 import type { ForgeUpgradeEntry } from '@/types'
 import {
   FORGE_CARD_FLASH_MS,
+  FORGE_CHIME_IMAGE,
+  FORGE_COUNT_TOKEN,
   FORGE_FRESH_LABEL,
   FORGE_FRESH_TITLE,
+  FORGE_GROW_LABEL,
+  FORGE_LEVEL_PREFIX,
   FORGE_LOCK_ICON,
+  FORGE_ROW_BULK_LABEL,
+  FORGE_ROW_BULK_WIDTH_PX,
   FORGE_ROW_BUY_WIDTH_PX,
   FORGE_ROW_BUY_WIDTH_COMPACT_PX,
-  FORGE_ROW_ICON_SIZE,
+  FORGE_SHORT_CHIMES_LABEL,
+  FORGE_SHORT_MATERIAL_PREFIX,
   FORGE_TILE_CAPPED_LABEL,
 } from '@/config/constants'
 
@@ -200,32 +196,59 @@ import {
 const flashDuration = `${FORGE_CARD_FLASH_MS}ms`
 const buyWidth = `${FORGE_ROW_BUY_WIDTH_PX}px`
 const buyWidthCompact = `${FORGE_ROW_BUY_WIDTH_COMPACT_PX}px`
+const bulkWidth = `${FORGE_ROW_BULK_WIDTH_PX}px`
 
-const props = defineProps<{
-  entry: ForgeUpgradeEntry
-  flashed: boolean
-  /** Seit dem letzten Blick des Spielers bezahlbar geworden — trägt den azurnen
-   *  Rahmen, bis der Zeiger die Zeile einmal berührt hat. */
-  fresh: boolean
-}>()
-defineEmits<{ (e: 'buy', id: string): void }>()
+const props = withDefaults(
+  defineProps<{
+    entry: ForgeUpgradeEntry
+    flashed: boolean
+    /** Seit dem letzten Blick des Spielers bezahlbar geworden — trägt den azurnen
+     *  Rahmen, bis der Zeiger die Zeile einmal berührt hat. */
+    fresh: boolean
+    /**
+     * Wie viele Stufen Vorrat UND Lager gerade hergeben. Kommt von der Liste,
+     * nicht aus `useForgeUpgrades()`: das Composable hier je Zeile aufzurufen
+     * hiesse fünfundvierzig Kopien von `upgradeEntries` über fünfzig Knoten.
+     */
+    bulkCount?: number
+  }>(),
+  { bulkCount: 0 },
+)
+defineEmits<{ (e: 'buy', id: string): void; (e: 'buyMany', id: string): void }>()
 
 const { spotlightId, setListHover } = useForgeSpotlight()
 
 /** Stufe 0 hat kein Vorher — ein „+0%" behauptete eine Wirkung, die es nicht gibt. */
 const nowText = computed(() => (props.entry.level === 0 ? '—' : props.entry.nowText))
 
-/** Die grosse Zahl und ihre Obergrenze. Zerlegt in `useForgeUpgrades`, weil
- *  Empfehlungskopf und Archivzeile dieselbe Angabe zeigen. */
+/** Die grosse Zahl und ihre Obergrenze. Zerlegt in `useForgeUpgrades`, weil die
+ *  Archivzeile dieselbe Angabe zeigt. */
 const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry.maxLevel))
 
-/**
- * Die Beschriftung der Verb-Zeile — einzeilig, weil der Knopf seine Breite
- * nicht mehr mit dem Preis teilt, sondern über ihm steht.
- */
 const buyLabel = computed(() =>
-  props.entry.state === 'capped' ? FORGE_TILE_CAPPED_LABEL : forgeGrowLabel(props.entry.level),
+  props.entry.state === 'capped' ? FORGE_TILE_CAPPED_LABEL : forgeGrowLabel(),
 )
+
+const bulkLabel = computed(() =>
+  FORGE_ROW_BULK_LABEL.replace(FORGE_COUNT_TOKEN, String(props.bulkCount)),
+)
+
+/**
+ * Der Satz beim Verweilen — die Auskunft, die der Knopf selbst nicht mehr
+ * trägt.
+ *
+ * Kaufbar nennt er die ZIELSTUFE (sie stand einmal auf dem Knopf), sonst
+ * WORAN es liegt. Das ist mehr als vorher: ein blankes „Not affordable yet"
+ * liess offen, ob die Kasse oder das Lager leer ist.
+ */
+const buyTitle = computed(() => {
+  const e = props.entry
+  if (e.state === 'capped') return e.lockReason
+  if (e.canBuy) return `${e.name} → ${FORGE_LEVEL_PREFIX}${e.level + 1}`
+  if (!e.goldOk) return FORGE_SHORT_CHIMES_LABEL
+  const missing = e.materials.find((mat) => !mat.ok)
+  return missing ? `${FORGE_SHORT_MATERIAL_PREFIX}${missing.name}` : e.lockReason
+})
 </script>
 
 <style scoped>
@@ -234,21 +257,17 @@ const buyLabel = computed(() =>
    Fläche und Rand im Rezept der geteilten `.fc-card` (rpg-theme.css) — die
    Liste soll nicht wie ein zweites Bauteil neben Relikten und Konstellationen
    aussehen.
-
-   Die Mindesthöhe ist die Höhe des Knopfes samt Innenabstand. Sie steht hier,
-   damit eine GESPERRTE Zeile — die keinen Knopf hat — nicht aus der Reihe
-   fällt.
 ══════════════════════════════════════════════════ */
 .fut-row {
   position: relative;
   display: flex;
   align-items: stretch;
   gap: 11px;
-  /* Gemessen an der vollen Zeile (Kopfzeile + Materialband). Sie steht hier,
-     damit eine GESPERRTE Zeile — die weder Band noch Knopf hat — nicht aus der
-     Reihe fällt. */
-  min-height: 114px;
-  padding: 11px 13px;
+  /* Gemessen an der HÖCHSTEN Fassung: Kopfzeile mit „NEW"-Fähnchen plus
+     Materialband. Sie steht hier, damit die anderen — eine gesperrte Zeile ohne
+     beides, eine ohne Fähnchen — nicht aus der Reihe fallen. */
+  min-height: 103px;
+  padding: 11px 13px 11px 16px;
   background: #1c1c18;
   border: 1px solid #32210c;
   border-radius: 4px;
@@ -257,6 +276,25 @@ const buyLabel = computed(() =>
     border-color 0.12s ease,
     background-color 0.12s ease,
     opacity 0.12s ease;
+}
+
+/* ── Die Knotenkante ─────────────────────────────────────────
+   Sie ersetzt das Icon, das hier stand: dasselbe Erkennungsmerkmal in einem
+   Zwölftel der Breite. Zurückgenommen in der Deckkraft, damit fünfundvierzig
+   Streifen untereinander keine Leiter bilden — der Spotlight hebt genau diesen
+   Streifen auf voll, statt einen zweiten danebenzusetzen. */
+.fut-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--node-c, #7a4e20);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.12s ease;
 }
 
 .fut-row:hover {
@@ -303,19 +341,9 @@ const buyLabel = computed(() =>
   border-color: var(--node-c, #e8c040);
 }
 
-/* Die Leitkante. Kommt der Zeiger vom Baum, ist die Liste gerade hierher
-   gerollt, und ein Rahmen allein sagt bei mehreren gleich hohen Zeilen zu
-   wenig. Muster `MeepSkillCard`. */
 .fut-row.fc-spot::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--node-c, #e8c040);
-  pointer-events: none;
-  z-index: 1;
+  width: 4px;
+  opacity: 1;
 }
 
 /* Klasse je Zeile, NICHT als geerbte Variable am Listenrahmen
@@ -325,18 +353,9 @@ const buyLabel = computed(() =>
 }
 
 /* ══════════════════════════════════════════════════
-   ICON · STUFE · NAME
+   STUFE · NAME · MATERIAL
 ══════════════════════════════════════════════════ */
-.fut-ico {
-  flex-shrink: 0;
-  align-self: center;
-}
-
-/* Zwei Zeilen: oben Stufe/Name/Wirkung, darunter das Lager. Die Materialien
-   stehen hier und nicht im Knopf — zwei Chips „habe / brauche" samt ✓ brauchen
-   gemessen ~180px, und ein so breiter Knopf nähme dem Namen die Hälfte. Der
-   Chime-Preis bleibt trotzdem im Knopf: er ist die eine Zahl, die jeder
-   Eintrag hat. */
+/* Zwei Zeilen: oben Stufe/Name/Wirkung, darunter das Lager. */
 .fut-main {
   flex: 1 1 auto;
   min-width: 0;
@@ -361,8 +380,6 @@ const buyLabel = computed(() =>
   gap: 3px;
 }
 
-/* Die Chips sind hier etwas kleiner als in einer Karte: die Zeile trägt sie
-   als NEBENauskunft unter dem Namen, nicht als ihren Hauptinhalt. */
 /* `padding: 0` ausdrücklich: `.fc-cost--bare` nimmt dem Block seinen
    Innenabstand, aber der Kompakt-Block von `rpg-theme.css` setzt `.fc-cost`
    danach noch einmal — bei gleicher Spezifität gewinnt die spätere Regel. */
@@ -378,10 +395,6 @@ const buyLabel = computed(() =>
 
 .fut-mats :deep(.fc-cost-ph) {
   width: 22px;
-}
-
-.fut-mats :deep(.fc-cost-pair) {
-  padding: 4px 8px;
 }
 
 /* Die grösste Zahl der Zeile. `tabular-nums`, damit die Ziffern über die Liste
@@ -500,88 +513,119 @@ const buyLabel = computed(() =>
 
 /* ══════════════════════════════════════════════════
    DIE KAUFFLÄCHE
-   Verb oben auf Grün, Chime-Preis darunter auf Dunkel — die Form aus der
-   Vorlage. Feste Breite über die volle Zeilenhöhe: alle grünen Kanten der
-   Liste fluchten damit, und der Preis steht immer an derselben Stelle.
-
-   Warum die Preiszeile DUNKEL ist und nicht direkt auf dem Grün liegt: fehlt
-   der Betrag, wird er rot mit ✕ ausgewiesen, und Rot auf Grün wäre die einzige
-   Stelle im Spiel, an der die Zweitkodierung des Mangels kippt.
+   Feste Gesamtbreite, volle Zeilenhöhe. Der Stapelknopf nimmt seine Breite dem
+   Verb ab, nicht der Zeile — Herleitung an `FORGE_ROW_BULK_WIDTH_PX`.
 ══════════════════════════════════════════════════ */
-.fut-buy {
+.fut-buy-group {
   flex: 0 0 v-bind(buyWidth);
   align-self: stretch;
   display: flex;
-  flex-direction: column;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid #6ec040;
-  border-radius: 4px;
-  /* Der Grund der PREISZEILE — der Grünverlauf sitzt an der Verb-Zeile, sonst
-     müsste sie ihn wieder überdecken. */
-  background: #14120b;
-  font-family: inherit;
-  cursor: pointer;
+  gap: 4px;
+  min-width: 0;
 }
 
-.fut-buy-verb {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 9px 8px;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  color: #08130a;
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: 0.03em;
-  line-height: 1.15;
-  white-space: nowrap;
-}
-
-/* Ein gedeckelter Strahl hat keine Preiszeile — das Verb nimmt den ganzen
-   Knopf. */
-.fut-buy--capped .fut-buy-verb {
-  flex: 1;
-}
-
-.fut-buy-cost {
+/* EINE flache Fläche, keine innere Trennlinie: Wort oben, Preis darunter.
+   Die Farbe trägt die Aussage — siehe Kopfkommentar. */
+.fut-buy {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 7px 8px;
-  border-top: 1px solid rgba(0, 0, 0, 0.55);
+  gap: 5px;
+  padding: 8px 6px;
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  color: #08130a;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    filter 0.12s ease,
+    border-color 0.12s ease;
 }
 
-.fut-buy-cost :deep(.fc-cost-row) {
-  justify-content: center;
+.fut-buy-verb {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-/* Grösser als in einer Karte — der Preis ist hier die zweite Hälfte des
-   Knopfes, und ein 26px-Bild sähe darin nicht verloren, sondern richtig aus. */
-.fut-buy-cost :deep(.fc-cost-img) {
-  height: 26px;
+.fut-buy-price {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  /* Dieselbe Tinte, nur zurückgenommen: eine zweite Farbe auf der Fläche wäre
+     entweder unlesbar oder ein zweiter Akzent, wo nur ein Zusatz steht. */
+  opacity: 0.82;
 }
 
-.fut-buy:hover:not(:disabled) .fut-buy-verb {
-  filter: brightness(1.12);
+.fut-buy-chime {
+  height: 22px;
+  width: auto;
+  object-fit: contain;
 }
 
-/* Gesperrt wird flach und heller beschriftet statt gedimmt — ein ausgegrauter
-   Grünverlauf trägt seine fast schwarze Schrift nicht mehr. Rezept `.fc-act`.
-   Die Kasse bleibt, wie sie ist: WAS fehlt, steht dort ohnehin rot mit ✕, und
-   ausgerechnet das ist die Auskunft, wegen der man auf einen toten Knopf
-   sieht. */
-.fut-buy:disabled {
-  border-color: #4a3a1c;
+/* ── Reicht nicht ────────────────────────────────────────────
+   Rot, und zwar der ganze Knopf. Es ist die zweite Kodierung zu der roten Zahl
+   im Materialband, seit dort das ✕ fehlt — und die einzige Stelle, an der das
+   Fehlen überhaupt eine Form hat. Kein `filter: grayscale`: ein ausgegrauter
+   Verlauf trägt seine fast schwarze Schrift nicht mehr (Rezept `.fc-act`). */
+.fut-buy--short {
+  border-color: #cc6050;
+  background: linear-gradient(to bottom, #a83c2c, #6e1e12);
+  color: #ffe0d6;
   cursor: not-allowed;
 }
 
-.fut-buy:disabled .fut-buy-verb {
-  background: #241a0c;
-  color: rgba(232, 216, 176, 0.55);
+/* Gedeckelt: kein Preis, kein Rot. Es fehlt nichts — es ist nur noch nicht so
+   weit. Bernstein wie jeder andere Wartezustand der Spalte. */
+.fut-buy--capped {
+  border-color: #7a4e20;
+  background: #3a2a10;
+  color: #e8c040;
+  cursor: not-allowed;
+}
+
+.fut-buy:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+/* ── Stapelkauf ──────────────────────────────────────────────
+   Dunkleres Grün als der Hauptknopf: dieselbe Handlung, nur mehrfach — kein
+   zweiter Akzent daneben. */
+.fut-bulk {
+  flex: 0 0 v-bind(bulkWidth);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #4a8a28;
+  border-radius: 4px;
+  background: #16210c;
+  color: #9fe062;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.fut-bulk:hover {
+  border-color: #6ec040;
+  background: #1c2e10;
 }
 
 /* ══════════════════════════════════════════════════
@@ -607,7 +651,7 @@ const buyLabel = computed(() =>
 }
 
 /* `.fc-track` liegt ohnehin absolut an der Unterkante — hier bekommt sie nur
-   mehr Stärke, weil sie in einer 84px-Zeile sonst verschwindet. Absolut ist
+   mehr Stärke, weil sie in einer 96px-Zeile sonst verschwindet. Absolut ist
    sie richtig: eine gesperrte Zeile hat keinen Knopf, und im Fluss stünde sie
    in einer Spalte, die es nicht mehr gibt. */
 .fut-track {
@@ -693,16 +737,14 @@ const buyLabel = computed(() =>
 
 /* ══════════════════════════════════════════════════
    COMPACT DESKTOPS — Full HD ist der flachste UND schmalste Viewport
-   Die Spalte misst dort 499px statt 560; Icon, Stufe, Wirkung und Knopf teilen
-   sich 61 Pixel weniger. Die Icon-Grösse steht als Attribut am `<Icon>` und
-   wird hier per CSS überschrieben — bei Iconify schlägt CSS das Attribut, und
-   eine zweite Konstante für dieselbe Sache liefe still auseinander.
+   Die Spalte misst dort 499px statt 560; Stufe, Wirkung und Knopf teilen sich
+   61 Pixel weniger.
 ══════════════════════════════════════════════════ */
 @media (max-height: 1100px) {
   .fut-row {
     gap: 9px;
-    min-height: 101px;
-    padding: 9px 11px;
+    min-height: 93px;
+    padding: 9px 11px 9px 14px;
   }
 
   .fut-main {
@@ -711,11 +753,6 @@ const buyLabel = computed(() =>
 
   .fut-head {
     gap: 8px;
-  }
-
-  .fut-ico {
-    width: 38px;
-    height: 38px;
   }
 
   .fut-lvl {
@@ -740,11 +777,7 @@ const buyLabel = computed(() =>
   }
 
   .fut-mats :deep(.fc-cost-row) {
-    gap: 8px;
-  }
-
-  .fut-mats :deep(.fc-cost-pair) {
-    padding: 3px 7px;
+    gap: 12px;
   }
 
   .fut-mats :deep(.fc-cost-img),
@@ -756,21 +789,20 @@ const buyLabel = computed(() =>
     width: 20px;
   }
 
-  .fut-buy {
+  .fut-buy-group {
     flex-basis: v-bind(buyWidthCompact);
   }
 
   .fut-buy-verb {
-    padding: 8px 6px;
+    font-size: 15px;
+  }
+
+  .fut-buy-price {
     font-size: 14px;
   }
 
-  .fut-buy-cost {
-    padding: 6px;
-  }
-
-  .fut-buy-cost :deep(.fc-cost-img) {
-    height: 24px;
+  .fut-buy-chime {
+    height: 20px;
   }
 }
 </style>

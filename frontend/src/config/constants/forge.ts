@@ -438,7 +438,7 @@ export const MEEP_TREE_EFFECT_ROWS: readonly MeepTreeEffectRowDef[] = [
 /**
  * Wonach die Skill-Liste gegliedert ist: nach dem, was der Spieler mit einem
  * Knoten ANFANGEN kann — nicht nach Zweig. Dieselbe Entscheidung wie
- * `FORGE_UPGRADE_BUCKETS`, aus demselben Grund: nach Zweig gegliedert stünde
+ * `FORGE_UPGRADE_BUCKET_ORDER`, aus demselben Grund: nach Zweig gegliedert stünde
  * das Kaufbare über fünf Überschriften verstreut, und der Spieler suchte es
  * unter dreißig Einträgen selbst.
  *
@@ -1082,7 +1082,7 @@ export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
  * trägt (`FORGE_RELIC_RARITY_COLOR.epic`), und der endlose Ring ist das
  * Seltenste, was der Baum hergibt.
  *
- * Seit die Liste nach Kaufbarkeit gliedert (`FORGE_UPGRADE_BUCKETS`), sind die
+ * Seit die Liste nach Kaufbarkeit ordnet (`FORGE_UPGRADE_BUCKET_ORDER`), sind die
  * vier Ringe dort kein Abschnitt mehr, sondern die Filterleiste — daher
  * `shortTitle`. Der lange Name bleibt trotzdem: eine Kopfzeile mit „Rays"
  * stünde im Widerspruch zum Lexikon, ein Chip mit „Solar Rays" passt zu fünft
@@ -1162,8 +1162,8 @@ export const FORGE_UPGRADE_TIER_LABELS = {
 export const FORGE_ENDLESS_SYMBOL = '∞'
 
 /**
- * Die Abschnitte der Upgrade-Liste — nicht mehr die vier Ringe, sondern das,
- * was der Spieler mit einem Eintrag anfangen KANN.
+ * Die REIHENFOLGE der Upgrade-Liste — nicht die vier Ringe, sondern das, was
+ * der Spieler mit einem Eintrag anfangen KANN.
  *
  * Vorher gliederte die Liste nach Ring und sortierte darin nach Zustand. Das
  * folgte dem BAUM, nicht dem Spieler: wer im Spätspiel etwas kaufen wollte,
@@ -1172,50 +1172,22 @@ export const FORGE_ENDLESS_SYMBOL = '∞'
  * standen als vierte Gruppe ganz unten. Jetzt steht Kaufbares oben, gleich aus
  * welchem Ring; der Ring bleibt als Chip auf der Karte und als Filter darüber.
  *
- * Was hier NICHT steht: das Fertige. Es trägt keinen solchen Kopf, sondern
- * eine eingeklappte Schaltzeile am Listenende.
+ * Was hier NICHT steht: das Fertige. Es hängt an einer eingeklappten
+ * Schaltzeile am Listenende.
  *
- * Grün für `ready` ist keine freie Wahl — im Projekt trägt Grün durchgehend
- * „kaufbar/aktiv" (die Knopf-Verläufe in CLAUDE.md).
- *
- * Ein `hint` je Topf stand hier einmal und ist mit dem Kachel-Umbau gegangen:
- * „Chimes and materials are there" neben der Überschrift „Ready" sagte in
- * zwanzig grauen Zeichen dasselbe wie der Titel daneben — und die Kachel
- * darunter beantwortet die Frage seither ohnehin mit ✓/✕ an jeder Position.
+ * Es sind nur noch Ids. Titel („Ready"), Glyph und Akzentfarbe hingen
+ * ausschliesslich an den Abschnittsköpfen, und die sind gestrichen: was ein
+ * Eintrag kann, sagt seit dem Umbau sein KNOPF — grün kaufbar, rot zu teuer,
+ * gar keiner bei gesperrt. Eine Überschrift darüber sagte dasselbe ein zweites
+ * Mal und kostete je Gruppe eine Zeile Höhe.
  */
-export const FORGE_UPGRADE_BUCKETS = [
-  {
-    id: 'ready' as const,
-    title: 'Ready',
-    icon: 'ph:lightning-fill',
-    accent: '#52b830',
-  },
-  {
-    id: 'reach' as const,
-    title: 'Saving up',
-    icon: 'ph:hourglass-medium-fill',
-    accent: '#c89040',
-  },
-  {
-    id: 'next' as const,
-    title: 'Next up',
-    icon: 'lucide:lock',
-    accent: '#7a4e20',
-  },
-]
+export const FORGE_UPGRADE_BUCKET_ORDER = ['ready', 'reach', 'next'] as const
 
 /** Beschriftung der Archiv-Schaltzeile: „▸ 21 grown". */
 export const FORGE_UPGRADE_ARCHIVE_LABEL = 'grown'
 export const FORGE_UPGRADE_ARCHIVE_ICON = 'ph:check-circle-fill'
 /** Die Marke an einer ausgewachsenen Zeile. `✦` ist ein Schriftzeichen, kein Emoji. */
 export const FORGE_GROWN_BADGE = '✦ MAX'
-/**
- * Das Icon der Archivzeile. Nackt wie in der Upgrade-Zeile darüber — es gibt in
- * dieser Spalte keinen gerahmten Icon-Sockel mehr. Kleiner als die 44px dort,
- * weil das Archiv die kompakte Form BLEIBT: bei Vollausbau stellt genau dieser
- * Topf den Löwenanteil der Liste.
- */
-export const FORGE_GROWN_ICON_SIZE = 32
 /** Chevron der Schaltzeile. Schriftzeichen wie `✦` und `→`, kein Emoji. */
 export const FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED = '▸'
 export const FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN = '▾'
@@ -1307,10 +1279,10 @@ export const FORGE_FRESH_TITLE = 'Newly affordable'
 /**
  * Glyph vor der Tooltip-Fußzeile „N affordable in total".
  *
- * Dasselbe Blitzzeichen, das der READY-Topf der Liste trägt
- * (`FORGE_UPGRADE_BUCKETS`, „Chimes and materials are there") — eine Bedeutung,
- * ein Glyph. Eigener Name statt eines Verweises auf den Topf, weil die Zeile
- * kein Topf ist und ein Index in eine Liste beim nächsten Umbau still kippt.
+ * Dasselbe Blitzzeichen, das im Spiel überall „kaufbar" heisst. Eigener Name
+ * statt eines Verweises auf einen anderen Eintrag, weil ein Index in eine Liste
+ * beim nächsten Umbau still kippt — was auch genau so passiert ist: die
+ * Abschnittsköpfe der Liste, die dieses Glyph trugen, gibt es nicht mehr.
  */
 export const FORGE_AFFORDABLE_TOTAL_ICON = 'ph:lightning-fill'
 
@@ -1329,40 +1301,16 @@ export const FORGE_AFFORDABLE_TOTAL_ICON = 'ph:lightning-fill'
  * kein Knopf mehr, sondern eine Falle.
  */
 export const FORGE_BULK_BUY_CAP = 25
-/** Beschriftung des Stapelknopfs — die Marke trägt die Zahl der Stufen. */
-export const FORGE_BUY_MANY_LABEL = `Buy ×${FORGE_COUNT_TOKEN}`
-/** Die Zeile neben dem Preis: „8× affordable right now". */
-export const FORGE_AFFORDABLE_SUFFIX = '× affordable right now'
 
-// ── Empfehlungs-Panel der rechten Spalte (ForgeNextUpPanel) ──────────────────
-/**
- * Was als Nächstes zu wachsen lohnt — EIN Knoten groß, und zwar immer derselbe,
- * den der Baum links als BEST BUY umringt.
- *
- * Der Kopf war einmal ein Hover-Detail mit Anheftung: er zeigte, worauf der
- * Zeiger zeigte. Das war ein zweiter Weg zu denselben Zahlen, die die Zeile
- * darunter schon trägt — und er stand auch dann da, wenn es gar nichts zu
- * kaufen gab. Jetzt beantwortet er genau eine Frage („was jetzt?") und
- * verschwindet, sobald sie keine Antwort mehr hat: `bestBuyId === null`.
- *
- * Was der Zeiger streift, sagt seitdem das schwebende Kärtchen an der Zeile
- * (`ForgeRowTooltip`) — es liegt außerhalb des Flusses und kann die Liste
- * deshalb nicht verschieben.
- *
- * Das Icon steht nackt, ohne den 60px-Sockel, den es einmal hatte — dieselbe
- * Entscheidung wie an der Zeile darunter (`FORGE_ROW_ICON_SIZE`). Es ist
- * größer als dort, weil es hier EINMAL vorkommt und nicht fünfundvierzigmal.
- */
-export const FORGE_DETAIL_ICON_SIZE = 52
-export const FORGE_NEXT_UP_TITLE = 'Next to grow'
-export const FORGE_NEXT_UP_HINT = 'cheapest you can afford'
-/**
- * Dieselben zwei Glyphen wie die Töpfe der Liste (`FORGE_UPGRADE_BUCKETS`):
- * „kaufbar" ist überall der Blitz, „noch nicht" überall die Sanduhr. Eine
- * Bedeutung, ein Zeichen — auch über Komponentengrenzen hinweg.
- */
-export const FORGE_NEXT_UP_ICON = 'ph:lightning-fill'
-export const FORGE_NEXT_UP_IDLE_ICON = 'ph:hourglass-medium-fill'
+/* Ein Empfehlungs-Panel („Next to grow") stand einmal über dieser Liste: EIN
+   Knoten gross, immer der billigste bezahlbare, mit Beschreibungssatz,
+   Now/After-Kasten, Preisblock und zwei Kaufknöpfen — auf 384px reservierter
+   Höhe. Es ist gestrichen, und mit ihm ein Dutzend Konstanten
+   (`FORGE_NEXT_UP_*`, `FORGE_DETAIL_PANEL_*`, `FORGE_BUY_MANY_LABEL`).
+   Grund: jede seiner Angaben stand zugleich in der Zeile darunter oder im
+   schwebenden Kärtchen, und die Liste zeigte dafür drei Einträge weniger. Was
+   nur dort lebte, war der Stapelkauf — der sitzt jetzt als schmaler `×N` IM
+   Kaufknopf jeder Zeile (`FORGE_ROW_BULK_WIDTH_PX`). */
 
 // ── Schwebendes Kärtchen an der Zeile (ForgeRowTooltip) ──────────────────────
 /**
@@ -1390,38 +1338,6 @@ export const FORGE_NEXT_UP_IDLE = 'Nothing ready right now'
 export const FORGE_DETAIL_ENDLESS_META = 'no final level'
 export const FORGE_DETAIL_PARENT_PREFIX = 'hangs on '
 
-/**
- * Die Fläche, die das Panel IMMER belegt, SOLANGE es da ist.
- *
- * Ohne diese Klammer war der Kopf inhaltshoch, und jeder Hover schob die Liste
- * darunter um rund 300px. Der Zeiger fiel dabei aus der Liste, der Hover ging
- * aus, der Kopf schrumpfte, die Liste kam zurück unter den Zeiger — ein
- * selbsttragendes Flackern, das erst aufhörte, wenn man die Maus wegnahm. Die
- * Klammer bleibt auch ohne diese Kopplung nötig: der Stapelknopf („Buy ×8")
- * hängt an den Chimes und käme sonst sekündlich dazu und wieder weg.
- *
- * Die Zahlen sind GEMESSEN, nicht geschätzt. Nötig für Kopf, Identität,
- * einzeilige Beschreibung, Now-→-After und den klebenden Kaufblock: 355px auf
- * Full HD (mit der Kompakt-Media-Query), 408px ab 2K. Darauf kommen rund 28px
- * für die Stapelzeile („8× affordable right now" plus zweiter Knopf), die mit
- * den Chimes dazukommt und wieder geht. Bei 300px deckte der Kaufblock auf
- * Full HD die Now-→-After-Zeile ab — also genau die Zahl, wegen der man
- * hinsieht.
- *
- * Was darüber hinausgeht — eine drei Zeilen lange Beschreibung — scrollt im
- * Körper. Das ist der Preis dafür, dass die Liste darunter nie wandert, und er
- * trifft nur Zierrat: Preis und Knopf kleben.
- *
- * `clamp` statt einer festen Zahl, weil Full HD (~950px Bühne) und 4K (~2030px)
- * dieselbe Spalte teilen: auf dem flachsten Viewport bliebe von der Liste sonst
- * nichts übrig, auf dem größten stünde der Kopf verloren. Der Prozentanteil
- * greift, weil `.sf-panel` `height: 100%` trägt und der Elternteil damit eine
- * definite Höhe hat.
- */
-export const FORGE_DETAIL_PANEL_MIN_PX = 384
-export const FORGE_DETAIL_PANEL_FRACTION = 0.45
-export const FORGE_DETAIL_PANEL_MAX_PX = 440
-
 // ── Abteilungs-Rail ganz rechts (ForgeSectionRail) ───────────────────────────
 /**
  * Die vier Abteilungen standen als waagerechte Reiterleiste über der Spalte und
@@ -1440,74 +1356,69 @@ export const FORGE_RAIL_BARGAIN_LABEL = 'restock'
 
 // ── Upgrade-Zeile der Liste (ForgeUpgradeTile) ───────────────────────────────
 /**
- * Ein Eintrag der Liste ist EINE waagerechte Zeile: nacktes Icon · Stufe groß
- * mit dem Namen klein darunter · Wirkungssprung · Kaufknopf, und unter Stufe
- * und Name ein schmales Band mit dem Materialbedarf.
+ * Ein Eintrag der Liste ist EINE waagerechte Zeile: Stufe groß mit dem Namen
+ * klein darunter · Wirkungssprung rechts · Kaufknopf ganz rechts, und unter
+ * Stufe und Name ein schmales Band mit dem Materialbedarf.
  *
- * Zwei Fassungen davor, beide aus demselben Grund verworfen:
+ * Drei Fassungen davor:
  *
  *   • Die 44px-Zeile trug ihre beiden wichtigsten Zahlen — Preis und
  *     Wirkungssprung — als die KLEINSTEN Elemente der ganzen Spalte
  *     (Chime-Bild 18px, Zahl 13.5px, der Sprung als 11.5px-Graustreifen bei 42%
  *     Deckkraft), die Stufe fehlte ganz, gekauft wurde über ein
  *     unbeschriftetes `＋`.
- *   • Die zweistöckige Kachel danach löste das, kostete aber ~150px je Eintrag:
- *     Kopfzeile mit Icon-Sockel plus eine eigene Kaufleiste darunter. Bei
- *     Vollausbau sind das fünfundvierzig Stück, und die Liste zeigte drei
+ *   • Die zweistöckige Kachel danach löste das, kostete aber ~150px je Eintrag.
+ *     Bei Vollausbau sind das fünfundvierzig Stück, und die Liste zeigte drei
  *     davon gleichzeitig.
+ *   • Die erste Zeilenfassung hatte noch ein nacktes 44px-Knotenglyph vorn und
+ *     gerahmte Chips um jede Kostenposition. Beides ist gestrichen: das Glyph
+ *     ersetzt eine 3px-Kante in der Knotenfarbe am linken Rand — sie
+ *     unterscheidet genauso gut und kostet ein Zwölftel der Breite.
  *
- * Die Zeile hat beides: gemessen 101px auf Full HD und 114px ab 2K — und
- * trotzdem 26px-Stufe, 15px-Wirkung und einen Knopf, der Verb UND Preis trägt.
- * Bezahlt wird das mit der Breite statt mit der Höhe: der Icon-Sockel
- * (Radialverlauf + Rahmen) ist weggefallen, das Glyph steht nackt in der
- * Knotenfarbe und darf dafür größer sein.
- *
- * Die Höhe ist für JEDEN Zustand dieselbe (`min-height`), auch für eine
- * gesperrte Zeile ohne Knopf und Materialband. Eine Zeile, die aus der Liste
- * ragt, weil sie teurer ist, sagt mit ihrer Höhe etwas aus, das nicht gemeint
- * ist — die Fassung mit ALLEM im Knopf maß gemessen 136px gegen 98px bei den
- * Nachbarn und kürzte obendrein Name und Wirkungswert.
+ * Die Höhe ist für JEDEN Zustand dieselbe (`min-height` in der Komponente),
+ * auch für eine gesperrte Zeile ohne Knopf und Materialband. Eine Zeile, die
+ * aus der Liste ragt, weil sie teurer ist, sagt mit ihrer Höhe etwas aus, das
+ * nicht gemeint ist — die Fassung mit ALLEM im Knopf maß gemessen 136px gegen
+ * 98px bei den Nachbarn und kürzte obendrein Name und Wirkungswert.
  *
  * Was sie bewusst NICHT ist: eine volle `.fc-card` mit Beschreibungssatz und
  * beschriftetem Now/After-Kasten. Genau die stand hier schon einmal und wurde
  * zurückgenommen (Herleitung in `ForgeUpgradesSection.vue`). Der
  * Beschreibungssatz bleibt im schwebenden Kärtchen.
  *
- * Die KOMPAKTGRÖSSE für Full HD steht nicht als zweite Konstante daneben,
- * sondern als CSS-Regel im `@media (max-height: 1100px)`-Block der Komponente:
- * bei Iconify schlägt CSS das `width`-Attribut, und zwei Zahlen für dieselbe
- * Sache liefen still auseinander.
- */
-export const FORGE_ROW_ICON_SIZE = 44
-/**
- * Die Breite der Kauffläche — FEST, nicht inhaltsabhängig.
- *
- * Damit fluchten die grünen Kanten über die ganze Liste hinweg und der Preis
- * steht immer an derselben Stelle. Die Zahl ist am längsten Verb gemessen
- * („✦ Grow → Lv 101", ~130px bei 15px Schrift) plus Innenabstand; der
- * Chime-Preis darunter braucht weniger.
- *
- * Der Knopf trägt deshalb NUR den Chime-Preis, nicht das Material: zwei Chips
- * „habe / brauche" samt ✓ messen ~180px und machten den Knopf breiter als den
- * Namen daneben. Sie stehen als zweite Zeile der Zeile selbst — gemessen war
- * die Fassung mit allem im Knopf 136px hoch statt 106 und kürzte Name UND
- * Wirkungswert.
+ * Die Breite der Kauffläche ist FEST und nicht inhaltsabhängig: damit fluchten
+ * die Kanten über die ganze Liste hinweg und der Preis steht immer an derselben
+ * Stelle. Der Knopf trägt deshalb nur den Chime-Preis, nicht das Material —
+ * zwei Materialpositionen messen auch rahmenlos ~150px und machten ihn breiter
+ * als den Namen daneben.
  */
 export const FORGE_ROW_BUY_WIDTH_PX = 150
 /** Full HD ist zugleich der schmalste Desktop — dort sind 61 Pixel weniger da. */
 export const FORGE_ROW_BUY_WIDTH_COMPACT_PX = 140
 /**
- * Der Knopf eines gedeckelten Kernstrahls. Er nennt den ZUSTAND; warum der
- * Deckel liegt, steht als Grund in der Kachel darüber
- * (`FORGE_UPGRADE_CAPPED_REASON`) — auf dem Knopf stünde derselbe Satz ein
- * zweites Mal. Ein gedeckelter Knopf trägt als einziger KEINE Kassenzone: es
- * ist nichts zu bezahlen, solange der Deckel liegt.
+ * Der Anteil des Stapelknopfes an dieser Breite.
+ *
+ * Er nimmt sie dem `FORGE`-Knopf ab und NICHT der Zeile: der Block ist immer
+ * gleich breit, gleich ob eine Stufe bezahlbar ist oder acht. Sonst rückte die
+ * Kante jedes Mal, wenn die tickenden Chimes eine Schwelle überschreiten —
+ * genau der Sprung, gegen den in `ForgeUpgradesSection` schon die eingefrorene
+ * Reihenfolge steht.
  */
-export const FORGE_TILE_CAPPED_LABEL = 'Capped'
+export const FORGE_ROW_BULK_WIDTH_PX = 42
+/** Was darauf steht. Nur die Zahl — „Buy ×8" passt in 42px nicht und stünde
+ *  neben einem Knopf, der das Verb schon nennt. */
+export const FORGE_ROW_BULK_LABEL = `×${FORGE_COUNT_TOKEN}`
 /**
- * Das Schloss an einer gesperrten Kachel. Eine Bedeutung, ein Glyph: dasselbe
- * Icon trägt der Topf „Next up" (`FORGE_UPGRADE_BUCKETS`) und die gesperrte
- * Relikt-Zeile in `StarForgePanel`.
+ * Der Knopf eines gedeckelten Kernstrahls. Er nennt den ZUSTAND; warum der
+ * Deckel liegt, steht als Grund in derselben Zeile
+ * (`FORGE_UPGRADE_CAPPED_REASON`) — auf dem Knopf stünde derselbe Satz ein
+ * zweites Mal. Ein gedeckelter Knopf trägt als einziger KEINEN Preis: es ist
+ * nichts zu bezahlen, solange der Deckel liegt.
+ */
+export const FORGE_TILE_CAPPED_LABEL = 'CAPPED'
+/**
+ * Das Schloss an einer gesperrten Zeile. Eine Bedeutung, ein Glyph: dasselbe
+ * Icon trägt die gesperrte Relikt-Zeile in `StarForgePanel`.
  */
 export const FORGE_LOCK_ICON = 'lucide:lock'
 
@@ -1917,21 +1828,24 @@ export const FORGE_CHIME_IMAGE = '/img/BardAbilities/BardChime-128.png'
 export const FORGE_COST_LABEL = 'Cost'
 export const FORGE_SHORT_CHIMES_LABEL = 'Not enough Chimes'
 export const FORGE_SHORT_MATERIAL_PREFIX = 'Need '
-export const FORGE_GROW_LABEL = '✦ Grow'
 /**
- * Die Stufe, die der Kauf bringt — der zweite Teil derselben Beschriftung.
+ * Das Wort auf dem Kaufknopf.
  *
- * Beide Kaufknöpfe des Shops schreiben sie inzwischen in EINE Zeile: seit der
- * Knopf Verb und Preis ÜBEREINANDER stapelt, hat die Verb-Zeile ihre Breite für
- * sich allein. Zusammengesetzt wird an genau einer Stelle — `forgeGrowLabel()`
- * in `useForgeUpgrades.ts`.
+ * „✦ Grow" stand hier lange. Das Glyph ist weg, weil der Knopf jetzt Wort UND
+ * Preis trägt und ein Zierstern zwischen beiden nur Höhe kostete; das Wort ist
+ * FORGE, weil der Reiter Star Forge heisst, die Kaufquittung sich als `forged`
+ * meldet und der Admin-Knopf „Max Forge". Eine Handlung, ein Wort.
+ *
+ * Die ZIELSTUFE („→ Lv 13") stand einmal dahinter und ist gestrichen: die
+ * grosse `Lv 12` links in derselben Zeile und der Wirkungssprung daneben sagen
+ * sie zweimal. Im `title` des Knopfes steht sie weiter.
  */
-export const FORGE_GROW_TARGET_PREFIX = '→ Lv '
+export const FORGE_GROW_LABEL = 'FORGE'
 /**
  * Wie eine erreichte Stufe anfängt. Steht hier, weil sie seit dem
- * Zeilen-Umbau die dominante Angabe eines Eintrags ist und an drei Stellen
- * gleichzeitig erscheint (Zeile, Empfehlungskopf, Archiv-Chip); gesetzt wird
- * sie ausschließlich über `forgeLevelParts()`.
+ * Zeilen-Umbau die dominante Angabe eines Eintrags ist und an zwei Stellen
+ * gleichzeitig erscheint (Zeile und Archiv-Chip); gesetzt wird sie
+ * ausschließlich über `forgeLevelParts()`.
  */
 export const FORGE_LEVEL_PREFIX = 'Lv '
 

@@ -29,7 +29,6 @@ import {
   FORGE_BULK_BUY_CAP,
   FORGE_ENDLESS_SYMBOL,
   FORGE_GROW_LABEL,
-  FORGE_GROW_TARGET_PREFIX,
   FORGE_LEVEL_PREFIX,
 } from '@/config/constants'
 
@@ -120,38 +119,28 @@ export function forgeUpgradeBucket(entry: ForgeUpgradeEntry): ForgeUpgradeBucket
 }
 
 /**
- * Was auf dem Kaufknopf steht — das Verb und die Stufe, die der Klick BRINGT.
+ * Was auf dem Kaufknopf steht.
  *
- * Steht hier und nicht in einer der beiden Komponenten, weil zwei Knöpfe
- * gleichzeitig sichtbar sind: der im Empfehlungskopf (`ForgeNextUpPanel`) und
- * der auf der Zeile derselben Sache (`ForgeUpgradeTile`) direkt darunter. Zwei
- * Fassungen derselben Beschriftung liefen genau dort auseinander, wo der
- * Unterschied am meisten auffiele.
+ * Nur noch das Verb — die Zielstufe („→ Lv 13") stand einmal dahinter und ist
+ * gestrichen: die grosse `Lv 12` links in derselben Zeile und der
+ * Wirkungssprung daneben sagen sie zweimal. Der volle Satz bleibt im `title`
+ * des Knopfes, und zusammengesetzt wird er dort, wo der Name ohnehin steht.
  *
- * Stufe 0 nennt keine Zielstufe: „Grow → Lv 1" behauptete einen Sprung, wo in
- * Wahrheit erst etwas ANFÄNGT.
+ * Die Funktion bleibt trotzdem, statt die Konstante direkt zu lesen: sie ist
+ * die Stelle, an der eine zustandsabhängige Beschriftung wieder einzöge, und
+ * ihr Aufrufer soll dafür nicht umgebaut werden müssen.
  */
-function forgeGrowParts(level: number): { verb: string; target: string } {
-  return {
-    verb: FORGE_GROW_LABEL,
-    target: level === 0 ? '' : `${FORGE_GROW_TARGET_PREFIX}${level + 1}`,
-  }
-}
-
-/** Dieselbe Beschriftung in einer Zeile — für Knöpfe, die die Breite haben. */
-export function forgeGrowLabel(level: number): string {
-  const { verb, target } = forgeGrowParts(level)
-  return target ? `${verb} ${target}` : verb
+export function forgeGrowLabel(): string {
+  return FORGE_GROW_LABEL
 }
 
 /**
  * Die erreichte Stufe, zerlegt in die GROSSE Zahl und ihre Obergrenze.
  *
  * Sie ist seit dem Zeilen-Umbau die dominante Angabe eines Eintrags und steht
- * an drei Stellen gleichzeitig: in der Upgrade-Zeile, im Empfehlungskopf
- * darüber und als Chip in der Archivzeile. Dieselbe Begründung wie bei
- * `forgeGrowParts()` — drei Fassungen derselben Zahl liefen genau dort
- * auseinander, wo sie nebeneinander zu sehen sind.
+ * an zwei Stellen gleichzeitig: in der Upgrade-Zeile und als Chip in der
+ * Archivzeile darunter. Zwei Fassungen derselben Zahl liefen genau dort
+ * auseinander, wo sie in einer Liste untereinander zu sehen sind.
  *
  * Zerlegt und nicht als fertiger Satz, weil die Teile verschieden GROSS
  * gesetzt werden: die Stufe trägt die Zeile, ihre Obergrenze ist nur der

@@ -400,9 +400,9 @@ describe('useForgeUpgrades — Invarianten', () => {
 /**
  * Die Stufenanzeige.
  *
- * Sie steht seit dem Zeilen-Umbau an DREI Stellen gleichzeitig — Upgrade-Zeile,
- * Empfehlungskopf, Archiv-Chip — und wird deshalb hier zusammengesetzt statt in
- * jeder Komponente einzeln. Der Fall, der das trägt, ist der Astral Bough:
+ * Sie steht seit dem Zeilen-Umbau an ZWEI Stellen gleichzeitig — Upgrade-Zeile
+ * und Archiv-Chip — und wird deshalb hier zusammengesetzt statt in jeder
+ * Komponente einzeln. Der Fall, der das trägt, ist der Astral Bough:
  * seine Höchststufe ist `Infinity`, und die roh gerendert stünde als
  * „Lv 25 / Infinity" im Bild.
  */

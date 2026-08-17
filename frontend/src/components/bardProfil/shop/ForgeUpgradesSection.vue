@@ -11,14 +11,11 @@
          Der Ringfilter, der bis zum Umbau hier oben klebte, steht jetzt in der
          Kopfleiste über dem Baum (`ForgeToolbar`) — dort hat er die doppelte
          Breite und Platz für einen Fortschrittsring je Ring. -->
-    <section
-      v-for="section in sections"
-      :key="section.id"
-      class="fu-group"
-      :style="{ '--group-c': section.accent }"
-    >
-      <!-- Das Archiv trägt eine Schaltzeile statt einer Überschrift — es ist
-           das Einzige hier, was der Spieler zumachen kann. -->
+    <section v-for="section in sections" :key="section.id" class="fu-group">
+      <!-- Das Archiv trägt eine Schaltzeile — es ist das Einzige hier, was der
+           Spieler zumachen kann. Ein KOPF ist sie nicht: die Abschnittsköpfe
+           („Ready", „Saving up", „Next up") sind gestrichen, weil der Knopf
+           jeder Zeile dasselbe schon in Farbe sagt. -->
       <button
         v-if="section.id === 'grown'"
         class="fu-archive-toggle"
@@ -32,13 +29,7 @@
         <span class="fu-archive-label">{{ FORGE_UPGRADE_ARCHIVE_LABEL }}</span>
       </button>
 
-      <header v-else class="fu-head">
-        <Icon :icon="section.icon" width="20" height="20" class="fu-head-ico" />
-        <span class="fu-head-title">{{ section.title }}</span>
-        <span class="fu-head-num">{{ section.entries.length }}</span>
-      </header>
-
-      <!-- Ausgewachsenes bleibt eine Zeile, alles Kaufbare ist eine Kachel: im
+      <!-- Ausgewachsenes bleibt eine Kompaktzeile, alles Kaufbare die volle: im
            Archiv ist nichts zu entscheiden, und bei Vollausbau stellt es den
            Löwenanteil der Liste. -->
       <template v-if="section.id !== 'grown'">
@@ -48,7 +39,9 @@
           :entry="entry"
           :flashed="flashedId === entry.id"
           :fresh="freshIds.has(entry.id)"
+          :bulk-count="bulkOf(entry.id)"
           @buy="grow"
+          @buy-many="growMany"
         />
       </template>
 
@@ -92,17 +85,19 @@
  * Was daraus wurde, sind ZWEI Formen statt einer — nach dem, was der Eintrag
  * vom Spieler will:
  *
- *   • `ForgeUpgradeTile` für alles Kaufbare und Gesperrte. Eine Kachel mit
- *     Icon-Sockel, Stufe, Wirkungssprung, grosser Kostenleiste und einem
- *     beschrifteten Knopf. Die 44px-Zeile davor trug ihre beiden wichtigsten
- *     Zahlen als die kleinsten Elemente der Spalte und die Stufe gar nicht.
+ *   • `ForgeUpgradeTile` für alles Kaufbare und Gesperrte. Eine Zeile mit
+ *     grosser Stufe, Name, Wirkungssprung, Materialband und einer Kauffläche,
+ *     deren FARBE die Aussage trägt. Die 44px-Zeile davor trug ihre beiden
+ *     wichtigsten Zahlen als die kleinsten Elemente der Spalte und die Stufe
+ *     gar nicht.
  *   • `ForgeGrownRow` für das Archiv. Dort ist nichts zu entscheiden, und genau
  *     dieser Topf stellt bei Vollausbau den Löwenanteil — hier zahlt sich die
  *     alte Rechnung wirklich aus.
  *
  * Der Beschreibungssatz, der Rang und der Elternknoten bleiben im schwebenden
- * Kärtchen (`ForgeRowTooltip`), der Kopf darüber zeigt die Empfehlung
- * (`ForgeNextUpPanel`).
+ * Kärtchen (`ForgeRowTooltip`). Ein Empfehlungs-Panel über der Liste gab es
+ * einmal; es ist gestrichen, seine einzige eigene Fähigkeit — der Stapelkauf —
+ * sitzt jetzt als `×N` im Kaufknopf jeder Zeile.
  */
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -114,7 +109,7 @@ import ForgeGrownRow from './ForgeGrownRow.vue'
 import ForgeRowTooltip from './ForgeRowTooltip.vue'
 import type { ForgeUpgradeBucketId, ForgeUpgradeEntry, ForgeRowTipAnchor } from '@/types'
 import {
-  FORGE_UPGRADE_BUCKETS,
+  FORGE_UPGRADE_BUCKET_ORDER,
   FORGE_UPGRADE_ARCHIVE_LABEL,
   FORGE_UPGRADE_ARCHIVE_ICON,
   FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
@@ -124,7 +119,8 @@ import {
   FORGE_SEARCH_ICON,
 } from '@/config/constants'
 
-const { upgradeEntries, entryById, freshIds, buyUpgrade } = useForgeUpgrades()
+const { upgradeEntries, entryById, freshIds, buyUpgrade, affordableLevels, buyMany } =
+  useForgeUpgrades()
 const { treeHoverId, listHoverId, setListHover } = useForgeSpotlight()
 const { hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
 
@@ -143,14 +139,42 @@ const { hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
  */
 const frozenBuckets = ref<Map<string, ForgeUpgradeBucketId> | null>(null)
 
+/**
+ * Und dieselbe Klammer um die STAPELZAHL.
+ *
+ * Sie hängt genauso an den Chimes: sobald der Vorrat eine Schwelle
+ * überschreitet, wird aus „×3" ein „×4" — oder der Stapelknopf tritt überhaupt
+ * erst neben das Verb und macht es schmaler. Beides passiert dann, wenn man
+ * gerade auf den Knopf zielt.
+ */
+const frozenBulk = ref<Map<string, number> | null>(null)
+
+/**
+ * Wie viele Stufen je Eintrag gerade auf einmal gingen.
+ *
+ * NUR für das gerade Kaufbare: die Schleife hinter `affordableLevels()` läuft
+ * je Knoten bis `FORGE_BULK_BUY_CAP`, und über alle fünfundvierzig gerechnet
+ * liefe sie bei jedem Chime-Tick. Was nicht kaufbar ist, hat ohnehin keinen
+ * Stapelknopf.
+ */
+const bulkCounts = computed(() => {
+  const counts = new Map<string, number>()
+  for (const entry of upgradeEntries.value) {
+    if (entry.canBuy) counts.set(entry.id, affordableLevels(entry.id))
+  }
+  return counts
+})
+
 function freezeOrder(): void {
   frozenBuckets.value = new Map(
     upgradeEntries.value.map((entry) => [entry.id, forgeUpgradeBucket(entry)]),
   )
+  frozenBulk.value = new Map(bulkCounts.value)
 }
 
 function leaveList(): void {
   frozenBuckets.value = null
+  frozenBulk.value = null
   setListHover(null)
 }
 
@@ -158,20 +182,14 @@ function bucketOf(entry: ForgeUpgradeEntry): ForgeUpgradeBucketId {
   return frozenBuckets.value?.get(entry.id) ?? forgeUpgradeBucket(entry)
 }
 
+function bulkOf(id: string): number {
+  return (frozenBulk.value ?? bulkCounts.value).get(id) ?? 0
+}
+
 // ── Die Abschnitte ───────────────────────────────────────────────────────────
 interface UpgradeSection {
   id: ForgeUpgradeBucketId
-  title: string
-  icon: string
-  accent: string
   entries: ForgeUpgradeEntry[]
-}
-
-const ARCHIVE_SECTION = {
-  id: 'grown' as const,
-  title: FORGE_UPGRADE_ARCHIVE_LABEL,
-  icon: FORGE_UPGRADE_ARCHIVE_ICON,
-  accent: '#4a8a28',
 }
 
 const archiveOpen = ref(false)
@@ -198,8 +216,8 @@ const sections = computed<UpgradeSection[]>(() => {
   // (Ray → Branch → Leaf → Bough), damit innerhalb eines Topfes nichts wandert.
   pots.next.sort((a, b) => b.unlockProgress - a.unlockProgress)
 
-  return [...FORGE_UPGRADE_BUCKETS, ARCHIVE_SECTION]
-    .map((section) => ({ ...section, entries: pots[section.id] }))
+  return [...FORGE_UPGRADE_BUCKET_ORDER, 'grown' as const]
+    .map((id) => ({ id, entries: pots[id] }))
     .filter((section) => section.entries.length > 0)
 })
 
@@ -208,6 +226,24 @@ const flashedId = ref<string | null>(null)
 
 function grow(id: string): void {
   if (!buyUpgrade(id)) return
+  flash(id)
+}
+
+/**
+ * Alles, was Vorrat und Lager gerade hergeben — der `×N` neben dem Verb.
+ *
+ * Die Zahl kommt aus der EINGEFRORENEN Karte, nicht frisch aus dem Store: der
+ * Spieler hat auf das geklickt, was er gesehen hat. `buyMany` prüft ohnehin
+ * jede Stufe einzeln und hält beim ersten Nein an — zu viel verlangen kann der
+ * Klick also nicht.
+ */
+function growMany(id: string): void {
+  const count = bulkOf(id)
+  if (count < 1 || buyMany(id, count) === 0) return
+  flash(id)
+}
+
+function flash(id: string): void {
   flashedId.value = id
   setTimeout(() => {
     if (flashedId.value === id) flashedId.value = null
@@ -326,69 +362,10 @@ onUnmounted(() => {
 }
 
 /* ══════════════════════════════════════════════════
-   ABSCHNITTSKOPF
-   Derselbe Strich wie die Tier-Köpfe im Champion-Shop: getönt an der Kante,
-   nach rechts auslaufend. Er trägt den Topf, nicht den Ring.
-══════════════════════════════════════════════════ */
-.fu-head {
-  position: relative;
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  padding: 8px 2px 9px;
-  margin-top: 5px;
-}
-
-.fu-head::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(
-    to right,
-    var(--group-c, #c89040),
-    color-mix(in srgb, var(--group-c, #c89040) 35%, transparent) 55%,
-    transparent
-  );
-}
-
-.fu-group:first-of-type .fu-head {
-  margin-top: 0;
-  padding-top: 0;
-}
-
-.fu-head-ico {
-  align-self: center;
-  flex-shrink: 0;
-  color: var(--group-c, #c89040);
-}
-
-.fu-head-title {
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--group-c, #c89040);
-  white-space: nowrap;
-}
-
-.fu-head-num {
-  flex-shrink: 0;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.4);
-  color: var(--group-c, #c89040);
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ══════════════════════════════════════════════════
    ARCHIV
+   Die einzige Schaltzeile der Liste. Abschnittsköpfe gibt es keine mehr —
+   „Ready", „Saving up" und „Next up" standen als Überschrift über dem, was der
+   Knopf jeder Zeile in Farbe schon sagt, und kosteten je Gruppe eine Zeile.
 ══════════════════════════════════════════════════ */
 .fu-archive-toggle {
   display: flex;
@@ -426,7 +403,7 @@ onUnmounted(() => {
 
 .fu-archive-ico {
   flex-shrink: 0;
-  color: var(--group-c, #4a8a28);
+  color: #4a8a28;
 }
 
 .fu-archive-num {
@@ -500,16 +477,6 @@ onUnmounted(() => {
 
   .fu-group {
     gap: 7px;
-  }
-
-  .fu-head {
-    padding: 6px 2px 7px;
-    margin-top: 3px;
-  }
-
-  .fu-group:first-of-type .fu-head {
-    margin-top: 0;
-    padding-top: 0;
   }
 
   .fu-archive-toggle {

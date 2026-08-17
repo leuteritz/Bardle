@@ -6,6 +6,7 @@
       'fc-cost--short': short,
       'fc-cost--bare': !label,
       'fc-cost--chips': chips,
+      'fc-cost--flat': flat,
     }"
   >
     <span v-if="label" class="fc-cost-label">{{ FORGE_COST_LABEL }}</span>
@@ -93,8 +94,16 @@ const props = withDefaults(
      * der Rahmen die Gruppierung, die sonst der Abstand allein leistet.
      */
     chips?: boolean
+    /**
+     * Das Gegenteil: kein Rahmen, kein Grund, kein Innenabstand — und KEIN
+     * ✓/✕. Gedacht für Träger, die schon genug Kanten haben, und für Stellen,
+     * an denen ein anderes Element den Mangel mitträgt (die Upgrade-Zeile des
+     * Shops: dort schlägt der Kaufknopf daneben auf Rot um). Herleitung samt
+     * Warnung an der `.fc-cost--flat`-Regel in `rpg-theme.css`.
+     */
+    flat?: boolean
   }>(),
-  { materials: () => [], big: false, label: true, inline: false, chips: false },
+  { materials: () => [], big: false, label: true, inline: false, chips: false, flat: false },
 )
 
 const wrapperTag = computed(() => (props.inline ? 'span' : 'div'))

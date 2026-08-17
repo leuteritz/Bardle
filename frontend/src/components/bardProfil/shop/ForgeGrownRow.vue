@@ -9,14 +9,6 @@
     :data-forge-id="entry.id"
     @mouseenter="setListHover(entry.id)"
   >
-    <Icon
-      :icon="entry.icon"
-      :width="FORGE_GROWN_ICON_SIZE"
-      :height="FORGE_GROWN_ICON_SIZE"
-      class="fgr-ico"
-      :style="{ color: entry.color }"
-    />
-
     <div class="fgr-text">
       <span class="fgr-name" :style="{ color: entry.color }">{{ entry.name }}</span>
       <span class="fgr-effect">{{ entry.desc }}</span>
@@ -42,9 +34,10 @@
  * `ForgeUpgradesSection.vue`) — das Archiv ist der Ort, an dem diese Rechnung
  * wirklich aufgeht.
  *
- * Ihre Formensprache ist trotzdem dieselbe: nacktes Icon in der Knotenfarbe,
- * kein gerahmter Sockel, und die erreichte Stufe aus derselben Quelle wie die
- * grosse Zahl der Upgrade-Zeile (`forgeLevelParts`).
+ * Ihre Formensprache ist trotzdem dieselbe: kein Icon, sondern eine Kante in
+ * der Knotenfarbe am linken Rand, und die erreichte Stufe aus derselben Quelle
+ * wie die grosse Zahl der Upgrade-Zeile (`forgeLevelParts`). Zwei
+ * Formensprachen in EINER Liste wären der Fehler.
  *
  * Was sie zeigt, ist nur, WAS erreicht ist und WAS es tut. Rang, Elternknoten
  * und der volle Wortlaut stehen im schwebenden Kärtchen (`ForgeRowTooltip`), an
@@ -53,11 +46,10 @@
  * Archiv liegt.
  */
 import { computed } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { forgeLevelParts } from '@/composables/ui/useForgeUpgrades'
 import type { ForgeUpgradeEntry } from '@/types'
-import { FORGE_GROWN_BADGE, FORGE_GROWN_ICON_SIZE } from '@/config/constants'
+import { FORGE_GROWN_BADGE } from '@/config/constants'
 
 const props = defineProps<{ entry: ForgeUpgradeEntry }>()
 
@@ -74,7 +66,7 @@ const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 10px 12px;
+  padding: 10px 12px 10px 16px;
   background: #17170f;
   border: 1px solid #32210c;
   border-radius: 4px;
@@ -83,6 +75,26 @@ const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry
     border-color 0.12s ease,
     background-color 0.12s ease,
     opacity 0.12s ease;
+}
+
+/* Dieselbe Knotenkante wie an der Upgrade-Zeile — sie ersetzt dort wie hier das
+   Icon, das einmal vorn stand. */
+.fgr-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--node-c, #7a4e20);
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.fgr-row.fc-spot::before {
+  width: 4px;
+  opacity: 1;
 }
 
 .fgr-row:hover {
@@ -98,10 +110,6 @@ const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry
 
 .fgr-row.fc-dimmed {
   opacity: 0.42;
-}
-
-.fgr-ico {
-  flex-shrink: 0;
 }
 
 .fgr-text {

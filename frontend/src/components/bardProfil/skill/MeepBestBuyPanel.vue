@@ -71,7 +71,10 @@ const entry = computed<MeepSkillEntry | null>(() =>
  *
  * Es gibt es nur, solange etwas zu empfehlen ist: ist nichts bezahlbar, fällt
  * es ganz weg und die Liste bekommt seine 316 Pixel (380 ab 2K) — rund vier
- * Karten mehr. Dieselbe Regel trägt `ForgeNextUpPanel` im Shop.
+ * Karten mehr. Dieselbe Regel trug einmal das Empfehlungs-Panel im Shop — dort
+ * ist sie mit dem Panel selbst gegangen: jede seiner Angaben stand zugleich in
+ * der Zeile darunter, und die Liste zeigte dafür drei Einträge weniger. Hier
+ * gilt das nicht, der Baum darunter hat kein zweites Bild derselben Zahlen.
  *
  * Eingefroren wird die SICHTBARKEIT, nicht der Inhalt, und zwar solange der
  * Zeiger die Liste hält: ein Erscheinen in genau dem Moment schöbe sie um

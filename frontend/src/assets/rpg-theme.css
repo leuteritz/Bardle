@@ -1266,6 +1266,29 @@
   background: rgba(140, 40, 40, 0.18);
 }
 
+/* ── Flache Variante (`flat`-Prop) ───────────────────────────
+   Das Gegenteil der Chips: kein Rahmen, kein Grund, kein Innenabstand — nur
+   Bild und Zahl, gruppiert allein durch den Abstand. Gebraucht wird sie in der
+   Upgrade-Zeile des Shops, wo drei gerahmte Kästchen unter dem Namen mehr
+   Kanten setzten als die Zeile Inhalt hat.
+
+   ACHTUNG, bewusst und auf Wunsch so: `flat` nimmt auch das ✓/✕ weg. Damit
+   trägt INNERHALB der Zeile allein die rote Zahl die Aussage „fehlt" — die
+   Zweitkodierung liegt hier nicht mehr am Zeichen, sondern am Kaufknopf
+   daneben, der komplett auf Rot umschlägt, sobald irgendetwas fehlt. Wer die
+   Farbe des Knopfes ändert, nimmt diesem Verzicht seine Grundlage. */
+.fc-cost--flat .fc-cost-row {
+  gap: 14px;
+}
+.fc-cost--flat .fc-cost-pair {
+  padding: 0;
+  border: none;
+  background: none;
+}
+.fc-cost--flat .fc-cost-state {
+  display: none;
+}
+
 /* ── Aktionsknopf — volle Breite, eine Entscheidung je Karte ── */
 .fc-act {
   width: 100%;

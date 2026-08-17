@@ -17,10 +17,9 @@ import { computed, readonly, ref, type ComputedRef, type Ref } from 'vue'
  * Muster trägt `useHerald` und `useEventLog`.
  *
  * Eine ANHEFTUNG gab es hier einmal: ein Klick hielt einen Knoten im Detailkopf
- * fest. Sie ist mit dem Detailkopf gegangen — der zeigt seit dem Umbau nicht
- * mehr, worauf man zeigt, sondern was als Nächstes zu wachsen lohnt
- * (`ForgeNextUpPanel`). Was der Zeiger streift, sagt jetzt das schwebende
- * Kärtchen an der Zeile.
+ * fest. Sie ist mit dem Detailkopf gegangen, und der Detailkopf inzwischen
+ * selbst. Was der Zeiger streift, sagt jetzt das schwebende Kärtchen an der
+ * Zeile.
  */
 const listHoverId = ref<string | null>(null)
 const treeHoverId = ref<string | null>(null)
@@ -38,7 +37,13 @@ const spotlightId = computed(() => listHoverId.value ?? treeHoverId.value)
  * Reine Ableitung, kein zweiter Zustand. Wer sein Erscheinen an einen Wert
  * hängt, der auch ohne Zutun kippt (die Chimes ticken jede Sekunde), fragt
  * hier, ob er warten muss: was der Zeiger hält, darf nicht unter ihm
- * wegrutschen. Dasselbe Motiv wie `frozenBuckets` in `ForgeUpgradesSection`.
+ * wegrutschen.
+ *
+ * Sie hatte genau einen Leser, das Empfehlungs-Panel, und das ist gestrichen.
+ * Sie bleibt trotzdem: dieselbe Frage stellt sich in dieser Spalte an mehreren
+ * Stellen (`frozenBuckets` und `frozenBulk` in `ForgeUpgradesSection` lösen sie
+ * über ihr eigenes `mouseenter`, weil sie beim Betreten eine Momentaufnahme
+ * brauchen und nicht nur ein Ja/Nein).
  */
 const listHovering = computed(() => listHoverId.value !== null)
 

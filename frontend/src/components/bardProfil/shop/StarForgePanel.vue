@@ -1,10 +1,11 @@
 <template>
   <div class="sf-panel">
-    <!-- ══ Empfehlung ════════════════════════════════════════════
-         Was als Nächstes zu wachsen lohnt, gross. Es entscheidet SELBST, ob es
-         da ist — nämlich nur, solange es etwas zu empfehlen hat. Es trägt
-         zugleich die Goldlinie, die im Projekt an jeder Modalkante steht. -->
-    <ForgeNextUpPanel v-if="activeSection === 'upgrades'" />
+    <!-- Ein Empfehlungs-Panel („Next to grow") stand hier: EIN Knoten gross,
+         immer der billigste bezahlbare, auf 384px reservierter Höhe. Es ist
+         gestrichen — jede seiner Angaben stand zugleich in der Zeile darunter
+         oder im schwebenden Kärtchen, und die Liste zeigte dafür drei Einträge
+         weniger. Der Stapelkauf, der nur dort lebte, sitzt jetzt als schmaler
+         `×N` im Kaufknopf jeder Zeile. -->
 
     <!-- Running bargain buffs stay above the fold whatever tab is open — they
          are the only thing on this panel with a clock on it. -->
@@ -317,7 +318,6 @@ import {
   getForgeNode,
 } from '@/config/progression/starForge'
 import ForgeUpgradesSection from './ForgeUpgradesSection.vue'
-import ForgeNextUpPanel from './ForgeNextUpPanel.vue'
 import ForgeCostRow from './ForgeCostRow.vue'
 import {
   FORGE_CONSTELLATION_REQUIRED_LEVEL,
