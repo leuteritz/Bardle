@@ -650,8 +650,9 @@ onUnmounted(() => {
 }
 
 @media (min-width: 1920px) {
-  /* Die Höhe bleibt hier stehen: sie soll unter den 64px hohen Pips gegenüber
-     bleiben, damit die Leiste neben ihnen steht statt gegen sie. */
+  /* Die Höhe bleibt hier stehen — und mit ihr die der Kacheln gegenüber, die
+     dieser Staffel folgen. 50px ist damit die Marke, auf der beide Seiten des
+     Kopfes stehen. */
   .pv-cluster {
     --pv-w: 254px;
     --pv-h: 50px;

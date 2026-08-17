@@ -66,7 +66,11 @@
 
     <span class="pr-divider" aria-hidden="true" />
 
-    <RpgBadgeTooltip v-for="def in BARD_ABILITIES" :key="def.id" clear-ancestor=".pr-cluster">
+    <RpgBadgeTooltip
+      v-for="(def, i) in BARD_ABILITIES"
+      :key="def.id"
+      clear-ancestor=".pr-cluster"
+    >
       <!--
         Taste und Uhr sind Flow-Kinder einer Flex-Spalte, keine absolut
         gesetzten Ebenen. Das löst den Platzstreit ohne Sonderfall: kühlt die
@@ -78,7 +82,14 @@
         :ref="(el: unknown) => setPipRef(def.id, el)"
         type="button"
         class="pr-pip"
-        :class="{ 'pr-pip--locked': !store.isUnlocked(def.id) }"
+        :class="{
+          'pr-pip--locked': !store.isUnlocked(def.id),
+          // Die letzte Kachel klebt an der Modalkante und rundet dort mit —
+          // nicht per `:last-child`: der Anker von RpgBadgeTooltip steht auf
+          // `display: contents`, die Kachel ist also Flex-Kind des Clusters,
+          // im DOM aber ein Enkel, und der Selektor träfe den Anker.
+          'pr-pip--edge': i === BARD_ABILITIES.length - 1,
+        }"
         :style="{ '--pr-color': def.color }"
         :disabled="!store.isUnlocked(def.id)"
         :aria-label="ariaLabelOf(def.id)"
@@ -516,6 +527,26 @@ function ariaLabelOf(id: BardAbilityId): string {
     border-color 160ms ease;
 }
 
+/* Die äusserste Kachel sitzt an der Modalkante und nimmt deren Rundung auf —
+   dieselbe Kurve, die die HP-Leiste gegenüber oben LINKS trägt, gespiegelt. Die
+   Polster beider Cluster laufen über die ganze Staffel gleich (8 · 8 · 10 · 10 ·
+   12 · 14 · 18 px), also ergibt dieselbe Formel auch denselben Radius; die
+   Herleitung steht in `ProfileVitalsCluster.vue`.
+
+   Der Wert liegt als Variable am Cluster, weil ihn ZWEI Ebenen brauchen: die
+   Kachel selbst und ihr Bereitschaftsschein. Statisch je Auflösungsstufe, kein
+   Wert aus einer Frame-Schleife — Performance-Regel 3 ist nicht berührt. */
+.pr-cluster {
+  --pr-edge-r: min(
+    calc(var(--pr-pip-h) * 0.36),
+    calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1) - 4px)
+  );
+}
+
+.pr-pip--edge {
+  border-top-right-radius: var(--pr-edge-r);
+}
+
 .pr-pip:hover:not(:disabled) {
   transform: translateY(-2px);
   border-color: #6b431a;
@@ -595,6 +626,14 @@ function ariaLabelOf(id: BardAbilityId): string {
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--pr-color, #e8c040) 72%, transparent),
     inset 0 0 10px color-mix(in srgb, var(--pr-color, #e8c040) 22%, transparent);
+}
+
+/* An der grossen Ecke muss der Schein mitziehen: seine 1px-Innenlinie folgt dem
+   EIGENEN Radius, liefe dort also weiter mit 3px um die Kurve herum und würde vom
+   `overflow: hidden` der Kachel angeschnitten — ein eckiger Saum in einer runden
+   Ecke. Minus 1px, weil er innerhalb der Kante der Kachel liegt. */
+.pr-pip--edge .pr-pip-glow {
+  border-top-right-radius: calc(var(--pr-edge-r) - 1px);
 }
 
 .pr-pip--ready .pr-pip-glow {
@@ -736,10 +775,17 @@ function ariaLabelOf(id: BardAbilityId): string {
    Die Reihe misst `Ring + Trennstrich + 4·Kachel + 5·gap + Polster`; darunter
    je Stufe, was sie braucht und was da ist. Ring und Trennstrich kommen erst
    dazu, wenn die Kachel dabei nicht unter 40px fällt — sie sind Zustand, die
-   Kachel ist Bedienung. */
+   Kachel ist Bedienung.
+
+   Diese Rechnung ist eine BREITENrechnung. Die HÖHE der Kachel steht nicht darin:
+   sie ist auf jeder Stufe die der HP-Leiste gegenüber (`--pv-h` in
+   `ProfileVitalsCluster.vue`), damit beide Seiten des Kopfes auf einer Linie
+   stehen. Die Kachel war einmal 64px hoch neben einer 50px-Leiste — der Kopf trug
+   damit zwei Höhen. Die BREITE bleibt davon unberührt, und mit ihr die Schriftgrade:
+   Taste und Uhr hängen an `--pr-pip-w`. */
 .pr-cluster {
   --pr-pip-w: 22px;
-  --pr-pip-h: 32px;
+  --pr-pip-h: 24px;
   /* Steht auch dort, wo der Ring ausgeblendet ist: `var()` ohne Definition
      würde die Regel an `.pr-meep` ungültig machen, sobald jemand ihn wieder
      einschaltet. */
@@ -759,7 +805,7 @@ function ariaLabelOf(id: BardAbilityId): string {
   /* 133 von 143 px */
   .pr-cluster {
     --pr-pip-w: 28px;
-    --pr-pip-h: 40px;
+    --pr-pip-h: 28px;
     gap: 3px;
     padding: 0 8px 0 4px;
   }
@@ -769,7 +815,7 @@ function ariaLabelOf(id: BardAbilityId): string {
   /* 170 von 183 px — Full HD @ 125 % */
   .pr-cluster {
     --pr-pip-w: 36px;
-    --pr-pip-h: 50px;
+    --pr-pip-h: 36px;
     gap: 4px;
     padding: 0 10px 0 4px;
   }
@@ -779,7 +825,7 @@ function ariaLabelOf(id: BardAbilityId): string {
   /* 182 von 197 px */
   .pr-cluster {
     --pr-pip-w: 39px;
-    --pr-pip-h: 54px;
+    --pr-pip-h: 40px;
     gap: 4px;
     padding: 0 10px 0 4px;
   }
@@ -789,7 +835,7 @@ function ariaLabelOf(id: BardAbilityId): string {
   /* 212 von 223 px — Full HD @ 112 % */
   .pr-cluster {
     --pr-pip-w: 46px;
-    --pr-pip-h: 62px;
+    --pr-pip-h: 45px;
     gap: 4px;
     padding: 0 12px 0 4px;
   }
@@ -801,7 +847,7 @@ function ariaLabelOf(id: BardAbilityId): string {
      ohne Ring, dann kleinere mit) schrumpfte sie beim Aufziehen des Fensters. */
   .pr-cluster {
     --pr-pip-w: 48px;
-    --pr-pip-h: 64px;
+    --pr-pip-h: 50px;
     gap: 5px;
     padding: 0 14px 0 4px;
   }
@@ -812,7 +858,7 @@ function ariaLabelOf(id: BardAbilityId): string {
      dass die Kachel dafür schrumpfen müsste. */
   .pr-cluster {
     --pr-pip-w: 48px;
-    --pr-pip-h: 64px;
+    --pr-pip-h: 50px;
     --pr-ring: 40px;
     gap: 4px;
     padding: 0 18px 0 6px;
@@ -829,7 +875,7 @@ function ariaLabelOf(id: BardAbilityId): string {
   /* 346 von 409 px */
   .pr-cluster {
     --pr-pip-w: 58px;
-    --pr-pip-h: 70px;
+    --pr-pip-h: 57px;
     --pr-ring: 50px;
     gap: 7px;
   }
@@ -856,7 +902,7 @@ function ariaLabelOf(id: BardAbilityId): string {
      Kopf. */
   .pr-cluster {
     --pr-pip-w: 68px;
-    --pr-pip-h: 80px;
+    --pr-pip-h: 66px;
     --pr-ring: 58px;
     gap: 8px;
   }
