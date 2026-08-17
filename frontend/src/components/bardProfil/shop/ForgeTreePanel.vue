@@ -37,51 +37,39 @@
         '--forge-stage-size': `${FORGE_STAGE_SIZE}px`,
       }"
     >
+      <!-- DAS TIEFENFELD. Wo bis hierher fünf gestrichelte Kreise lagen, liegt
+           jetzt EIN statischer Verlauf: jeder Ringradius ist ein weicher Kamm in
+           der Leitfarbe seiner Ebene, der nach beiden Seiten ausläuft. Fünf
+           konzentrische Umrisse lasen sich als Zifferblatt und behaupteten eine
+           Grenze, die es nicht gibt — was eine Ebene ausmacht, ist ihr ABSTAND
+           zur Sonne. Dieselbe Auflösung wie im Meep-Baum, dem die Rang-Ellipsen
+           aus dem gleichen Grund abgenommen wurden (`constants/forge.ts`).
+
+           Steht VOR dem `<svg>` und liegt damit darunter: bei gleichem Rang
+           (z-index 0 gegen `auto`) entscheidet die Dokumentordnung. -->
+      <div
+        class="depth-field"
+        :class="{ 'depth-field--sifted': ringChosen }"
+        :style="depthFieldStyle"
+        aria-hidden="true"
+      />
+      <!-- Die Zone des gewählten Chips. Sie trägt die Auswahl, die vorher die
+           Ringfarbe trug — als Fläche und nicht als hellere Linie. Eigene Ebene,
+           damit das Ruhefeld sein Verlaufsbild behält und nur zurücktritt. -->
+      <Transition name="depth-accent">
+        <div
+          v-if="depthAccentStyle"
+          class="depth-accent"
+          :style="depthAccentStyle"
+          aria-hidden="true"
+        />
+      </Transition>
+
       <svg
         class="tree-svg"
         :viewBox="`0 0 ${FORGE_STAGE_SIZE} ${FORGE_STAGE_SIZE}`"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <!-- Phase-band rings. Ein gewählter Chip färbt SEIN Band in der Chipfarbe
-             und schickt die drei anderen zurück — damit trägt die Ebene ihre
-             Auswahl als Ganzes, nicht nur Knoten für Knoten. Ein bloßes Suchwort
-             tut das nicht (`ringSifted`): es sagt nichts über Ringe aus. -->
-        <circle
-          :cx="C" :cy="C" :r="FORGE_RING_ROOT_R" fill="none" stroke-width="1.5"
-          :stroke="ringStroke('root', true, '#3a2a12')"
-          :opacity="ringOpacity('root', true)"
-        />
-        <circle
-          :cx="C" :cy="C" :r="FORGE_RING_BRANCH_R" fill="none"
-          :stroke="ringStroke('branch', branchesUnlocked, '#4a6a2a')"
-          stroke-width="1.5" stroke-dasharray="5 5"
-          :opacity="ringOpacity('branch', branchesUnlocked)"
-        />
-        <circle
-          :cx="C" :cy="C" :r="FORGE_RING_LEAF_R" fill="none"
-          :stroke="ringStroke('leaf', leavesUnlocked, '#4a6a2a')"
-          stroke-width="1.5" stroke-dasharray="4 7"
-          :opacity="ringOpacity('leaf', leavesUnlocked)"
-        />
-        <!-- Ring 4 trägt Violett statt Grün: er ist der einzige ohne Ende, und
-             Violett steht im Projekt für „episch". -->
-        <circle
-          :cx="C" :cy="C" :r="FORGE_RING_BOUGH_R" fill="none"
-          :stroke="ringStroke('bough', boughsUnlocked, '#5a3a7a')"
-          stroke-width="1.5" stroke-dasharray="3 9"
-          :opacity="ringOpacity('bough', boughsUnlocked)"
-        />
-        <!-- Ring 5 schliesst den Kreis zurück zum Gold des Kerns — und trägt
-             als einziger eine DURCHGEZOGENE Linie. Die Strichelung wurde nach
-             aussen hin immer lückenhafter (5-5 · 4-7 · 3-9); die Krone kehrt das
-             um, weil sie kein „noch mehr davon" ist, sondern ein Abschluss. -->
-        <circle
-          :cx="C" :cy="C" :r="FORGE_RING_CROWN_R" fill="none"
-          :stroke="ringStroke('crown', crownsUnlocked, '#6a5020')"
-          stroke-width="1.5"
-          :opacity="ringOpacity('crown', crownsUnlocked)"
-        />
-
         <!-- Limbs: sun → root, root → branch, branch → leaf (dim base).
              Ein Ast, der zu einem ausgefilterten Knoten führt, tritt mit ihm
              zurück — sonst bliebe ein helles Astgerüst um dunkle Kreise stehen
@@ -332,6 +320,12 @@ import {
   FORGE_RING_LEAF_R,
   FORGE_RING_BOUGH_R,
   FORGE_RING_CROWN_R,
+  FORGE_DEPTH_CREST_SPREAD,
+  FORGE_DEPTH_CREST_ALPHA,
+  FORGE_DEPTH_CREST_LOCKED,
+  FORGE_DEPTH_ACCENT_SPREAD,
+  FORGE_DEPTH_ACCENT_ALPHA,
+  FORGE_DEPTH_ACCENT_FADE_MS,
   FORGE_TREE_ZOOM_MIN,
   FORGE_TREE_ZOOM_MAX,
   FORGE_TREE_ZOOM_STEP,
@@ -531,37 +525,18 @@ function ringSifted(tier: ForgeUpgradeTier): boolean {
 }
 
 /**
- * Die Leitfarbe des gewählten Rings kommt aus derselben Tabelle, aus der
- * `ForgeToolbar` seine Chips färbt — sonst stünde die Ebene oben in einem Ton
- * und unten in einem zweiten. Die gedeckten Ruhefarben bleiben die des Baums:
- * sie sagen „offen / gesperrt", nicht „gewählt".
+ * Die Leitfarbe einer Ebene kommt aus derselben Tabelle, aus der `ForgeToolbar`
+ * seine Chips färbt — sonst stünde die Ebene oben in einem Ton und im
+ * Tiefenfeld in einem zweiten. Sie färbt beides: den Ruhekamm der Ebene und die
+ * Zone, sobald ihr Chip gewählt ist.
  */
 const RING_ACCENT: Record<ForgeUpgradeTier, string> = Object.fromEntries(
   FORGE_UPGRADE_GROUPS.map((group) => [group.tier, group.accent]),
 ) as Record<ForgeUpgradeTier, string>
 
-function ringStroke(tier: ForgeUpgradeTier, unlocked: boolean, restColor: string): string {
-  if (activeTier.value === tier) return RING_ACCENT[tier]
-  return unlocked ? restColor : '#2a1a08'
-}
-
-/**
- * Ausgerechnet und nicht per CSS-Klasse überschrieben: ein `opacity` am
- * `<circle>` ist ein PRÄSENTATIONSATTRIBUT, und dass CSS es schlägt, ist zwar
- * richtig, aber nichts, worauf der nächste Leser von selbst kommt. Ein Wert,
- * eine Stelle.
- *
- * Der gewählte Ring geht auf VOLL — 0,6 ist die Ruhelage eines offenen Rings,
- * und die reichte nicht, um ihn neben drei zurückgetretenen als „gewählt" zu
- * lesen.
- */
-function ringOpacity(tier: ForgeUpgradeTier, unlocked: boolean): number {
-  if (activeTier.value === tier) return 1
-  if (ringSifted(tier)) return FORGE_SIFT_RING_OPACITY
-  // Der Wurzelring ist immer offen und stand deshalb noch nie gedämpft da.
-  if (tier === 'root') return 1
-  return unlocked ? 0.6 : 0.9
-}
+/** Ein Ring ist GEWÄHLT — nicht bloß ein Suchwort getippt. Nur dann tritt das
+ *  Ruhefeld zurück und die Akzentzone übernimmt. */
+const ringChosen = computed(() => activeTier.value !== 'all')
 
 // ── Geometry ──────────────────────────────────────────────────────────────────
 function rad(deg: number): number {
@@ -662,6 +637,7 @@ const siftDimOpacity = String(FORGE_SIFT_DIM_OPACITY)
 const siftSaturate = String(FORGE_SIFT_SATURATE)
 const siftLimbOpacity = String(FORGE_SIFT_LIMB_OPACITY)
 const siftRingOpacity = String(FORGE_SIFT_RING_OPACITY)
+const depthFadeMs = `${FORGE_DEPTH_ACCENT_FADE_MS}ms`
 
 function ringLabelStyle(r: number): Record<string, string> {
   return {
@@ -744,6 +720,82 @@ const boughRingLabel = computed(() => ringLabelFor('bough'))
 const crownRingLabel = computed(() =>
   crownsUnlocked.value ? FORGE_CROWN_RING_LABEL_OPEN : FORGE_CROWN_RING_LABEL_LOCKED,
 )
+
+// ── Das Tiefenfeld — die Ebenen als weiche Bänder ─────────────────────────────
+/* Steht NACH den Freischalt-Flags, weil jeder Kamm seine Farbe von ihnen
+   bekommt: eine offene Ebene trägt ihre Leitfarbe, eine gesperrte den kalten
+   Rest. Die Ordnung im Feld ist die des Baums, von innen nach aussen. */
+const depthBands = computed(() => [
+  { tier: 'root' as ForgeUpgradeTier, r: FORGE_RING_ROOT_R, unlocked: true },
+  { tier: 'branch' as ForgeUpgradeTier, r: FORGE_RING_BRANCH_R, unlocked: branchesUnlocked.value },
+  { tier: 'leaf' as ForgeUpgradeTier, r: FORGE_RING_LEAF_R, unlocked: leavesUnlocked.value },
+  { tier: 'bough' as ForgeUpgradeTier, r: FORGE_RING_BOUGH_R, unlocked: boughsUnlocked.value },
+  { tier: 'crown' as ForgeUpgradeTier, r: FORGE_RING_CROWN_R, unlocked: crownsUnlocked.value },
+])
+
+/** Die Leitfarbe mit Deckkraft — als `color-mix`, damit die Farbe selbst nur an
+ *  EINER Stelle steht (`FORGE_UPGRADE_GROUPS`) und hier bloß ihr Anteil. */
+function tinted(tier: ForgeUpgradeTier, alpha: number): string {
+  return `color-mix(in srgb, ${RING_ACCENT[tier]} ${alpha * 100}%, transparent)`
+}
+
+/**
+ * EIN Kamm: transparent → Farbe genau auf dem Ringradius → transparent.
+ *
+ * Gerechnet in Prozent des BÜHNENRADIUS, denn `circle closest-side` macht ihn
+ * bei einer quadratischen Bühne zur 100 %-Marke. Damit hängen Kamm und Knoten
+ * an derselben Zahl (`FORGE_RING_*_R`) — eine zweite Prozentangabe im CSS liefe
+ * beim nächsten Ring auseinander.
+ */
+function crestStops(r: number, color: string, spread: number): string {
+  const p = (r / C) * 100
+  const s = spread * 100
+  return [
+    `transparent ${(p - s).toFixed(2)}%`,
+    `${color} ${p.toFixed(2)}%`,
+    `transparent ${(p + s).toFixed(2)}%`,
+  ].join(', ')
+}
+
+/**
+ * Das ruhende Feld: fünf Kämme in EINEM Verlauf. Einmal beim Rendern gesetzt und
+ * nur bei einem Phasenwechsel neu — kein Wert pro Frame, keine Animation auf
+ * `background` (Performance-Regel 2).
+ *
+ * Bewusst OHNE zweite Verlaufsschicht: eine Vignette darüber machte die
+ * quadratische Ebene selbst sichtbar (Herleitung in `constants/forge.ts`).
+ */
+const depthFieldStyle = computed(() => {
+  const crests = depthBands.value
+    .map((band) =>
+      crestStops(
+        band.r,
+        band.unlocked
+          ? tinted(band.tier, FORGE_DEPTH_CREST_ALPHA)
+          : FORGE_DEPTH_CREST_LOCKED,
+        FORGE_DEPTH_CREST_SPREAD,
+      ),
+    )
+    .join(', ')
+  return { background: `radial-gradient(circle closest-side at 50% 50%, ${crests})` }
+})
+
+/**
+ * Die Zone des gewählten Chips — ein einzelner, breiterer Kamm in seiner
+ * Leitfarbe. `null`, solange kein Ring gewählt ist: das `v-if` im Template
+ * hängt daran und braucht so keine zweite Bedingung neben `activeTier`.
+ */
+const depthAccentStyle = computed<Record<string, string> | null>(() => {
+  const band = depthBands.value.find((b) => b.tier === activeTier.value)
+  if (!band) return null
+  return {
+    background: `radial-gradient(circle closest-side at 50% 50%, ${crestStops(
+      band.r,
+      tinted(band.tier, FORGE_DEPTH_ACCENT_ALPHA),
+      FORGE_DEPTH_ACCENT_SPREAD,
+    )})`,
+  }
+})
 
 /**
  * Stufe, Kosten, Wirkung und Sperrgrund eines Knotens kommen aus
@@ -1000,6 +1052,43 @@ const nextPhasePreviewStyle = computed(() => ({
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════
+   TIEFENFELD — die Ebenen ohne Kreiskante
+══════════════════════════════════════════════════ */
+/* Zwei Ebenen ersetzen fünf SVG-Kreise. Beide tragen einen STATISCHEN Verlauf,
+   der nur bei einem Phasenwechsel oder einer Chipwahl neu gesetzt wird; animiert
+   wird ausschliesslich `opacity` (Performance-Regel 2/11). `z-index: 0` gegen
+   das `auto` des `<svg>`: bei gleichem Rang gewinnt die Dokumentordnung, und
+   beide stehen im Template davor. */
+.depth-field,
+.depth-accent {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.depth-field {
+  transition: opacity v-bind(depthFadeMs) ease;
+}
+
+/* Ein gewählter Chip schickt das ganze Ruhefeld zurück; die Auswahl trägt danach
+   die Akzentzone allein. EIN Wert an EINER Ebene — vorher wurden dafür fünf
+   Ringe einzeln umgefärbt und einzeln gedämpft. */
+.depth-field--sifted {
+  opacity: v-bind(siftRingOpacity);
+}
+
+.depth-accent-enter-active,
+.depth-accent-leave-active {
+  transition: opacity v-bind(depthFadeMs) ease;
+}
+
+.depth-accent-enter-from,
+.depth-accent-leave-to {
+  opacity: 0;
 }
 
 .ring-label {
@@ -1699,6 +1788,13 @@ const nextPhasePreviewStyle = computed(() => ({
 
   .node-spot {
     opacity: 1;
+  }
+
+  /* Tiefenfeld und Akzentzone springen dann — wie der Chip, der sie auslöst. */
+  .depth-field,
+  .depth-accent-enter-active,
+  .depth-accent-leave-active {
+    transition: none;
   }
 }
 </style>

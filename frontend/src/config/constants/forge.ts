@@ -689,6 +689,67 @@ export const FORGE_RING_LEAF_R = 348
 export const FORGE_RING_BOUGH_R = 425
 export const FORGE_RING_CROWN_R = 492
 
+/* ── Das TIEFENFELD — die Ebenen ohne eine einzige Kreiskante ─────────────────
+ *
+ * Die fünf Ringe waren bis hierher gezeichnete Linien, nach aussen immer
+ * lückenhafter gestrichelt (5-5 · 4-7 · 3-9). Fünf konzentrische Umrisse lasen
+ * sich als Zielscheibe und behaupteten eine Grenze, die es nicht gibt: was eine
+ * Ebene ausmacht, ist ihr ABSTAND zur Sonne, nicht ein Rand.
+ *
+ * Stattdessen liegt unter dem Baum EIN statischer `radial-gradient`, in dem
+ * jeder Ringradius als weicher Kamm sitzt — ein Hauch der Leitfarbe der Ebene,
+ * der nach beiden Seiten ausläuft. Die Ordnung bleibt lesbar, eine Kante
+ * entsteht nirgends.
+ *
+ * Der Bühnenradius (`FORGE_STAGE_SIZE / 2` = 520) ist dabei die 100 %-Marke
+ * eines `circle closest-side`; die Kämme liegen also bei 30,4 % (Rays), 51,0 %,
+ * 66,9 %, 81,7 % und 94,6 % (Crowns). Gerechnet wird das in `ForgeTreePanel`
+ * aus den Radien oben — hier steht keine dieser Prozentzahlen ein zweites Mal.
+ */
+/**
+ * Halbe Bandbreite, als Anteil des Bühnenradius.
+ *
+ * Der ENGSTE Kammabstand ist Boughs → Crowns mit 12,9 Prozentpunkten (81,7 auf
+ * 94,6). Bei 0,055 ist ein Band 11 pp breit, zwei Bänder berühren sich also
+ * nirgends. Das ist die eigentliche Grenze dieser Zahl: überlappen zwei
+ * ausklingende Kämme, addieren sich ihre Deckkräfte zu einem dritten, hellen
+ * Streifen dazwischen — und der liest sich wieder als Linie, also als genau das,
+ * was hier verschwinden sollte.
+ */
+export const FORGE_DEPTH_CREST_SPREAD = 0.055
+/** Deckkraft des Kamms einer OFFENEN Ebene, in ihrer Leitfarbe
+ *  (`FORGE_UPGRADE_GROUPS[].accent` — eine Quelle für Chip, Liste und Feld). */
+export const FORGE_DEPTH_CREST_ALPHA = 0.09
+/**
+ * Eine noch GESPERRTE Ebene: kalt und fast nichts. Trägt die Aussage der alten
+ * gesperrten Ringfarbe (`#2a1a08`) weiter — sie ist da, aber sie gehört noch
+ * nicht dem Spieler.
+ */
+export const FORGE_DEPTH_CREST_LOCKED = 'rgba(150, 165, 190, 0.03)'
+/* ── Was hier NICHT steht: eine Vignette ──────────────────────────────────────
+ * Der erste Anlauf legte über die Kämme einen zweiten Verlauf, der die Bühne
+ * nach aussen abdunkelte (`transparent 46 % → rgba(4,3,0,0.42) 100 %`). Gemessen
+ * (Playwright, 2560 × 1440, Zoom am unteren Anschlag) war das Ergebnis genau der
+ * Fehler, der hier abgeschafft werden sollte: die Ebene ist QUADRATISCH und
+ * trägt an ihrer Kante noch Farbe — das Feld stand als sichtbares Rechteck im
+ * Sternenfeld. Aus der Kreiskante war eine Rechteckkante geworden.
+ *
+ * Ein `border-radius: 50 %` hätte daraus wieder einen Kreisumriss gemacht, ein
+ * weiches Auslaufen vor dem Rand einen dunklen Ring genau dort, wo der
+ * Kronen-Kamm liegt (94,6 %). Die Tiefe tragen die Kämme allein.
+ */
+/**
+ * Die Zone des GEWÄHLTEN Ringfilter-Chips ist breiter als der Ruhekamm — eine
+ * Wahl soll als Fläche lesen und nicht als hellerer Kamm unter vier gleich
+ * geformten. Sie liegt allein auf ihrer Ebene, ein Überlappen wie oben kann
+ * also nicht vorkommen.
+ */
+export const FORGE_DEPTH_ACCENT_SPREAD = 0.085
+export const FORGE_DEPTH_ACCENT_ALPHA = 0.2
+/** Ein- und Ausblenden der Akzentzone. Ausschliesslich `opacity` — der Verlauf
+ *  selbst wird bei der Chipwahl einmal gesetzt, nie über Zeit gerechnet. */
+export const FORGE_DEPTH_ACCENT_FADE_MS = 180
+
 // Ring unlock gating (starPhase index)
 export const FORGE_BRANCH_UNLOCK_PHASE = 2
 export const FORGE_LEAF_UNLOCK_PHASE = 4
