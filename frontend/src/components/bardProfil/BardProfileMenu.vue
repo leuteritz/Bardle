@@ -130,9 +130,13 @@ const shopFlare = useBadgeFlare(shopFreshCount)
  * zugänglichen Namen; wer die Ikonografie nicht auswendig kennt, musste raten.
  *
  * Die Wörter kommen aus Bards Kosmos, nicht aus der Ordnerstruktur: `Journey`
- * für die Chronik des Wandering Caretaker, `Rift` für den Auto-Kampf. `Shop`
- * und `Skills` stehen wortgleich in `KEYBINDINGS` — dieselbe Sache trägt nicht
- * zwei Namen, je nachdem wo man sie liest.
+ * für die Chronik des Wandering Caretaker, `Rift` für den Auto-Kampf.
+ *
+ * `Shop` und `Tree` sind gebunden, nicht gewählt: die beiden Ecktasten im
+ * App-Header führen an dieselben zwei Orte und zeigen dasselbe Glyph aus
+ * `HEADER_GEM_ICONS`. Ein zweites Wort für dieselbe Sache stünde dem Spieler
+ * gleichzeitig auf dem Schirm. Aus demselben Grund tragen die Tastenkürzel in
+ * `KEYBINDINGS` diese Namen ebenfalls.
  */
 const menuItems: {
   id: BardTabId
@@ -142,7 +146,7 @@ const menuItems: {
 }[] = [
   { id: 'bard', name: 'Journey', icon: 'ph:compass-rose-fill' },
   { id: 'shop', name: 'Shop', icon: HEADER_GEM_ICONS.shop },
-  { id: 'tree', name: 'Skills', icon: HEADER_GEM_ICONS.tree, boost: true },
+  { id: 'tree', name: 'Tree', icon: HEADER_GEM_ICONS.tree, boost: true },
   { id: 'team', name: 'Team', icon: 'ph:users-three-fill' },
   { id: 'battle', name: 'Rift', icon: 'ri:sword-fill', boost: true },
   { id: 'planets', name: 'Planets', icon: 'ph:planet-fill' },
