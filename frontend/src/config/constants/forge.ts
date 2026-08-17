@@ -438,7 +438,7 @@ export const MEEP_TREE_EFFECT_ROWS: readonly MeepTreeEffectRowDef[] = [
 /**
  * Wonach die Skill-Liste gegliedert ist: nach dem, was der Spieler mit einem
  * Knoten ANFANGEN kann — nicht nach Zweig. Dieselbe Entscheidung wie
- * `FORGE_UPGRADE_BUCKET_ORDER`, aus demselben Grund: nach Zweig gegliedert stünde
+ * `forgeUpgradeBucket()` im Shop, aus demselben Grund: nach Zweig gegliedert stünde
  * das Kaufbare über fünf Überschriften verstreut, und der Spieler suchte es
  * unter dreißig Einträgen selbst.
  *
@@ -1082,7 +1082,7 @@ export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
  * trägt (`FORGE_RELIC_RARITY_COLOR.epic`), und der endlose Ring ist das
  * Seltenste, was der Baum hergibt.
  *
- * Seit die Liste nach Kaufbarkeit ordnet (`FORGE_UPGRADE_BUCKET_ORDER`), sind die
+ * Seit die Liste nach Kaufbarkeit ordnet (`forgeUpgradeBucket()`), sind die
  * vier Ringe dort kein Abschnitt mehr, sondern die Filterleiste — daher
  * `shortTitle`. Der lange Name bleibt trotzdem: eine Kopfzeile mit „Rays"
  * stünde im Widerspruch zum Lexikon, ein Chip mit „Solar Rays" passt zu fünft
@@ -1161,27 +1161,12 @@ export const FORGE_UPGRADE_TIER_LABELS = {
  */
 export const FORGE_ENDLESS_SYMBOL = '∞'
 
-/**
- * Die REIHENFOLGE der Upgrade-Liste — nicht die vier Ringe, sondern das, was
- * der Spieler mit einem Eintrag anfangen KANN.
- *
- * Vorher gliederte die Liste nach Ring und sortierte darin nach Zustand. Das
- * folgte dem BAUM, nicht dem Spieler: wer im Spätspiel etwas kaufen wollte,
- * kam an vier Überschriften und dutzenden „✦ MAX"-Zeilen vorbei, und
- * ausgerechnet die Astral Boughs — der einzige Ring, der nie fertig wird —
- * standen als vierte Gruppe ganz unten. Jetzt steht Kaufbares oben, gleich aus
- * welchem Ring; der Ring bleibt als Chip auf der Karte und als Filter darüber.
- *
- * Was hier NICHT steht: das Fertige. Es hängt an einer eingeklappten
- * Schaltzeile am Listenende.
- *
- * Es sind nur noch Ids. Titel („Ready"), Glyph und Akzentfarbe hingen
- * ausschliesslich an den Abschnittsköpfen, und die sind gestrichen: was ein
- * Eintrag kann, sagt seit dem Umbau sein KNOPF — grün kaufbar, rot zu teuer,
- * gar keiner bei gesperrt. Eine Überschrift darüber sagte dasselbe ein zweites
- * Mal und kostete je Gruppe eine Zeile Höhe.
- */
-export const FORGE_UPGRADE_BUCKET_ORDER = ['ready', 'reach', 'next'] as const
+/* Eine Liste der Topf-Ids stand hier („ready, reach, next") und ist gestrichen:
+   die Reihenfolge der Abschnitte steht jetzt in `ForgeUpgradesSection`, weil
+   „Next up" dort in ZWEI Abschnitte zerfällt (Eltern- und Phasensperre) und
+   eine Id-Liste das nicht mehr abbildet. Wonach die Liste überhaupt gliedert
+   und warum nicht nach Ring, steht bei `forgeUpgradeBucket()` in
+   `useForgeUpgrades.ts`. */
 
 /** Beschriftung der Archiv-Schaltzeile: „▸ 21 grown". */
 export const FORGE_UPGRADE_ARCHIVE_LABEL = 'grown'
@@ -1198,6 +1183,43 @@ export const FORGE_GROWN_ICON_SIZE = 32
 /** Chevron der Schaltzeile. Schriftzeichen wie `✦` und `→`, kein Emoji. */
 export const FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED = '▸'
 export const FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN = '▾'
+
+// ── Trenner vor dem Gesperrten (ForgeUpgradesSection) ────────────────────────
+/**
+ * Die Liste trägt keine Abschnittsköpfe mehr — was ein Eintrag kann, sagt sein
+ * Knopf in Farbe. Für das GESPERRTE stimmt das nicht: es hat gar keinen Knopf,
+ * und wo das Kaufbare aufhört, musste man sich bislang aus dessen Fehlen
+ * erschliessen. Dort steht deshalb ein Trenner — eine Linie mit Etikett, kein
+ * Balken und keine Fläche.
+ *
+ * Es sind ZWEI, weil es zwei Sperrgründe gibt und die für den Spieler nicht
+ * dasselbe sind: gegen die Sonnenphase kann er nichts tun ausser warten, den
+ * Elternknoten kann er sofort wachsen lassen. Ein gemeinsamer Trenner müsste
+ * generisch bleiben und sagte nichts — bei Sonnenphase 5 waren gemessen ALLE
+ * dreissig gesperrten Zeilen Elternsperren, kein einziger Phasenlock.
+ */
+export const FORGE_DIVIDER_PARENT_LABEL = 'Needs a deeper tree'
+/**
+ * Das Etikett der Phasensperre nennt die Phase NUR, wenn darunter wirklich nur
+ * eine wartet. Die Knoten öffnen bei vier verschiedenen Phasen (2, 3, 4, 5) —
+ * „Waiting on Dawn · 18" wäre für zwölf der achtzehn schlicht falsch.
+ */
+export const FORGE_PHASE_TOKEN = '{phase}'
+export const FORGE_DIVIDER_PHASE_LABEL = `Waiting on ${FORGE_PHASE_TOKEN}`
+export const FORGE_DIVIDER_PHASE_MANY_LABEL = 'Waiting on the sun'
+/**
+ * Die beiden Glyphen. Keiner davon ist frei gewählt — beide tragen ihre
+ * Bedeutung im Projekt schon:
+ *   • `ph:sun-fill` heisst überall „Sonnenphase als Voraussetzung"
+ *     (`PlanetLockedPanel`, `PlanetRailSlot`, `PlanetStagePanel`).
+ *   • `material-symbols:account-tree` heisst „verzweigte Knoten" und trägt
+ *     schon den Skill-Tree-Reiter; Phosphors `tree-structure` ist bei dieser
+ *     Größe zu fein (Herleitung in `BardProfileMenu.vue`).
+ * Das Schloss (`FORGE_LOCK_ICON`) bleibt an der ZEILE: es heisst „zu", die
+ * Glyphen hier heissen „warum".
+ */
+export const FORGE_DIVIDER_PHASE_ICON = 'ph:sun-fill'
+export const FORGE_DIVIDER_PARENT_ICON = 'material-symbols:account-tree-rounded'
 
 /** Der Chip, der die Ringfilterung aufhebt. */
 export const FORGE_UPGRADE_FILTER_ALL_LABEL = 'All'

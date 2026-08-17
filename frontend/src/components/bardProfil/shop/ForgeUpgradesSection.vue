@@ -12,6 +12,21 @@
          Kopfleiste über dem Baum (`ForgeToolbar`) — dort hat er die doppelte
          Breite und Platz für einen Fortschrittsring je Ring. -->
     <section v-for="section in sections" :key="section.id" class="fu-group">
+      <!-- Der Trenner. Nur das GESPERRTE trägt einen: was ein kaufbarer Eintrag
+           kann, sagt sein Knopf in Farbe, ein gesperrter hat gar keinen. Zwei
+           davon, weil die beiden Sperrgründe zwei verschiedene Aufgaben sind —
+           Herleitung an `FORGE_DIVIDER_PARENT_LABEL`. -->
+      <div
+        v-if="section.divider"
+        class="fu-div"
+        :style="{ '--div-c': section.divider.color }"
+        role="separator"
+      >
+        <Icon :icon="section.divider.icon" width="17" height="17" class="fu-div-ico" />
+        <span class="fu-div-label">{{ section.divider.label }}</span>
+        <span class="fu-div-num">{{ section.entries.length }}</span>
+      </div>
+
       <!-- Das Archiv trägt eine Schaltzeile — es ist das Einzige hier, was der
            Spieler zumachen kann. Ein KOPF ist sie nicht: die Abschnittsköpfe
            („Ready", „Saving up", „Next up") sind gestrichen, weil der Knopf
@@ -109,14 +124,20 @@ import ForgeGrownRow from './ForgeGrownRow.vue'
 import ForgeRowTooltip from './ForgeRowTooltip.vue'
 import type { ForgeUpgradeBucketId, ForgeUpgradeEntry, ForgeRowTipAnchor } from '@/types'
 import {
-  FORGE_UPGRADE_BUCKET_ORDER,
   FORGE_UPGRADE_ARCHIVE_LABEL,
   FORGE_UPGRADE_ARCHIVE_ICON,
   FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
   FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN,
   FORGE_CARD_FLASH_MS,
+  FORGE_DIVIDER_PARENT_ICON,
+  FORGE_DIVIDER_PARENT_LABEL,
+  FORGE_DIVIDER_PHASE_ICON,
+  FORGE_DIVIDER_PHASE_LABEL,
+  FORGE_DIVIDER_PHASE_MANY_LABEL,
+  FORGE_PHASE_TOKEN,
   FORGE_SPOTLIGHT_SCROLL_DELAY_MS,
   FORGE_SEARCH_ICON,
+  STAR_PHASE_DATA,
 } from '@/config/constants'
 
 const { upgradeEntries, entryById, freshIds, buyUpgrade, affordableLevels, buyMany } =
@@ -187,9 +208,22 @@ function bulkOf(id: string): number {
 }
 
 // ── Die Abschnitte ───────────────────────────────────────────────────────────
+/** Die Linie mit Etikett über einer Gruppe — nur die gesperrten tragen eine. */
+interface UpgradeDivider {
+  icon: string
+  label: string
+  color: string
+}
+
 interface UpgradeSection {
-  id: ForgeUpgradeBucketId
+  /**
+   * Der `v-for`-Schlüssel, nicht der Topf: „Next up" erscheint als ZWEI
+   * Abschnitte (Eltern- und Phasensperre), und zwei gleiche Schlüssel
+   * nebeneinander sind ein Vue-Fehler, kein Schönheitsfehler.
+   */
+  id: 'ready' | 'reach' | 'lockedParent' | 'lockedPhase' | 'grown'
   entries: ForgeUpgradeEntry[]
+  divider?: UpgradeDivider
 }
 
 const archiveOpen = ref(false)
@@ -197,6 +231,28 @@ const archiveOpen = ref(false)
 const archiveChevron = computed(() =>
   archiveOpen.value ? FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN : FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
 )
+
+/**
+ * Das Etikett über den phasengesperrten Einträgen.
+ *
+ * Es nennt die Phase nur, wenn darunter wirklich NUR eine wartet: die Knoten
+ * öffnen bei vier verschiedenen Phasen, und „Waiting on Dawn · 18" wäre für
+ * zwölf der achtzehn schlicht falsch. Die Tönung nimmt in beiden Fällen die
+ * nächste — das Tor, das als erstes aufgeht.
+ */
+function phaseDivider(entries: ForgeUpgradeEntry[]): UpgradeDivider {
+  const phases = new Set(entries.map((entry) => entry.lockPhase))
+  const nearest = Math.min(...phases)
+  const data = STAR_PHASE_DATA[nearest]
+  return {
+    icon: FORGE_DIVIDER_PHASE_ICON,
+    color: data?.phasePrimary ?? '#c89040',
+    label:
+      phases.size === 1 && data
+        ? FORGE_DIVIDER_PHASE_LABEL.replace(FORGE_PHASE_TOKEN, data.name)
+        : FORGE_DIVIDER_PHASE_MANY_LABEL,
+  }
+}
 
 const sections = computed<UpgradeSection[]>(() => {
   const pots: Record<ForgeUpgradeBucketId, ForgeUpgradeEntry[]> = {
@@ -211,14 +267,40 @@ const sections = computed<UpgradeSection[]>(() => {
     pots[bucketOf(entry)].push(entry)
   }
 
-  // Nur „Next up" wird umsortiert — dort ist die Nähe zur Freischaltung die
-  // Aussage. Die anderen drei behalten die Katalogreihenfolge des Baums
-  // (Ray → Branch → Leaf → Bough), damit innerhalb eines Topfes nichts wandert.
-  pots.next.sort((a, b) => b.unlockProgress - a.unlockProgress)
+  /* Der Topf „Next up" zerfällt beim ANZEIGEN in zwei, je Sperrgrund einen.
+     Die Weiche steht am Eintrag (`lockKind`) und nicht hier, damit sie nicht
+     am fertigen Sperrsatz hängt; `forgeUpgradeBucket()` bleibt unangetastet
+     und damit auch die eingefrorene Reihenfolge.
 
-  return [...FORGE_UPGRADE_BUCKET_ORDER, 'grown' as const]
-    .map((id) => ({ id, entries: pots[id] }))
-    .filter((section) => section.entries.length > 0)
+     Elternsperren zuerst: die Liste ordnet durchgehend nach „was kann ich
+     tun" — kaufen, sparen, den Elternknoten wachsen lassen, und ganz zuletzt
+     das, wogegen nur Warten hilft. */
+  const parentLocked = pots.next.filter((entry) => entry.lockKind === 'parent')
+  const phaseLocked = pots.next.filter((entry) => entry.lockKind === 'phase')
+
+  // Innerhalb der Elternsperren zählt die Nähe zur Freischaltung, innerhalb der
+  // Phasensperren das nächste Tor. Die übrigen Töpfe behalten die
+  // Katalogreihenfolge des Baums (Ray → Branch → Leaf → Bough).
+  parentLocked.sort((a, b) => b.unlockProgress - a.unlockProgress)
+  phaseLocked.sort((a, b) => a.lockPhase - b.lockPhase)
+
+  const out: UpgradeSection[] = [
+    { id: 'ready', entries: pots.ready },
+    { id: 'reach', entries: pots.reach },
+    {
+      id: 'lockedParent',
+      entries: parentLocked,
+      divider: {
+        icon: FORGE_DIVIDER_PARENT_ICON,
+        label: FORGE_DIVIDER_PARENT_LABEL,
+        color: '#c89040',
+      },
+    },
+    { id: 'lockedPhase', entries: phaseLocked, divider: phaseDivider(phaseLocked) },
+    { id: 'grown', entries: pots.grown },
+  ]
+
+  return out.filter((section) => section.entries.length > 0)
 })
 
 /** Welche Zeile gerade quittiert. Rein visuell, daher reale Zeit. */
@@ -362,6 +444,79 @@ onUnmounted(() => {
 }
 
 /* ══════════════════════════════════════════════════
+   TRENNER
+   Rezept der geteilten `.filter-divider` (rpg-theme.css) — Linie, Etikett,
+   Linie —, nur grösser: 13px statt 11, gesperrt in Versalien, und die Linien
+   in der Farbe des Grundes statt in Braun. Eigene Klassen und nicht die
+   geteilte Regel erweitert, weil dort eine 11px-Zeile in einem Filterfenster
+   hängt und beide sonst aneinandergekoppelt wären.
+
+   Es bleibt eine LINIE: kein Balken, keine Fläche, keine Animation. Ein
+   Trenner, der so schwer wiegt wie eine Zeile, wird selbst zum Eintrag.
+══════════════════════════════════════════════════ */
+.fu-div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 7px 2px 3px;
+}
+
+.fu-div::before,
+.fu-div::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+}
+
+/* Zur Mitte hin kräftig, nach aussen auslaufend — das Etikett bekommt damit
+   sein Gewicht aus der Linie, ohne dass die ganze Breite leuchtet. */
+.fu-div::before {
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--div-c, #c89040) 55%, transparent)
+  );
+}
+
+.fu-div::after {
+  background: linear-gradient(
+    to left,
+    transparent,
+    color-mix(in srgb, var(--div-c, #c89040) 55%, transparent)
+  );
+}
+
+.fu-div-ico {
+  flex-shrink: 0;
+  color: var(--div-c, #c89040);
+}
+
+.fu-div-label {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--div-c, #c89040);
+}
+
+.fu-div-num {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid color-mix(in srgb, var(--div-c, #c89040) 35%, #32210c);
+  color: var(--div-c, #c89040);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══════════════════════════════════════════════════
    ARCHIV
    Die einzige Schaltzeile der Liste. Abschnittsköpfe gibt es keine mehr —
    „Ready", „Saving up" und „Next up" standen als Überschrift über dem, was der
@@ -477,6 +632,15 @@ onUnmounted(() => {
 
   .fu-group {
     gap: 7px;
+  }
+
+  .fu-div {
+    margin: 5px 2px 2px;
+    gap: 8px;
+  }
+
+  .fu-div-label {
+    font-size: 12px;
   }
 
   .fu-archive-toggle {

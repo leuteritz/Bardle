@@ -221,6 +221,16 @@ export type ForgeUpgradeState = 'locked' | 'empty' | 'partial' | 'affordable' | 
 export type ForgeUpgradeBucketId = 'ready' | 'reach' | 'next' | 'grown'
 
 /**
+ * Warum ein Knoten zu ist — die beiden Gründe, die `lockedFor()` unterscheidet.
+ *
+ * Sie sind für den Spieler NICHT dasselbe: gegen eine Phasensperre kann er
+ * nichts tun ausser warten, eine Elternsperre kann er sofort angehen. Die
+ * Upgrade-Liste trennt sie deshalb mit je einem eigenen Trenner. `''` heisst
+ * offen.
+ */
+export type ForgeLockKind = 'phase' | 'parent' | ''
+
+/**
  * Ein kaufbarer Knoten, fertig zum Anzeigen — ohne jede Geometrie.
  *
  * Der Baum hängt seine Polarkoordinaten daneben, die Liste nicht. Beide lesen
@@ -257,6 +267,22 @@ export interface ForgeUpgradeEntry {
   nextText: string
   /** Klartext, warum gerade nicht gekauft werden kann — leer, wenn offen. */
   lockReason: string
+  /**
+   * WORAN die Sperre hängt, als Wert statt als Satz.
+   *
+   * `lockReason` daneben ist ein fertiger Satz für das Auge; wer danach
+   * GRUPPIERT, müsste ihn beschnüffeln. Die Upgrade-Liste tut genau das: sie
+   * setzt je Sperrgrund einen eigenen Trenner, weil „warte auf die Sonne" und
+   * „lass erst den Elternknoten wachsen" zwei verschiedene Aufgaben sind — die
+   * eine kann man nur abwarten, die andere sofort angehen.
+   */
+  lockKind: ForgeLockKind
+  /**
+   * Die Sonnenphase, die den Knoten öffnet — `-1`, wenn keine wartet (also bei
+   * `lockKind` ≠ `'phase'`). Der Trenner nimmt daraus Name und Tönung; die Zahl
+   * ist der INDEX in `STAR_PHASE_DATA`, nicht die angezeigte Phasennummer.
+   */
+  lockPhase: number
   /** Name des Elternknotens (Wurzel bei Branches, Branch bei Leaves). */
   parentName: string
   /** Fortschritt zur Freischaltung, 0–1 — nur bei `locked` aussagekräftig. */

@@ -213,6 +213,46 @@ describe('useForgeUpgrades — Sperren an Zweigen und Blättern', () => {
     expect(e.unlockProgress).toBe(0)
   })
 
+  /**
+   * Der Sperrgrund als WERT, nicht als Satz.
+   *
+   * Daran hängt die Gliederung der Liste: sie setzt je Grund einen eigenen
+   * Trenner, weil „warte auf die Sonne" und „lass den Elternknoten wachsen"
+   * zwei verschiedene Aufgaben sind. Beide Fälle enden auf `unlockProgress: 0`
+   * und einen Satz, der mit „…" anfängt — aus dem Zustand allein sind sie
+   * NICHT zu unterscheiden, und genau deshalb steht die Weiche hier.
+   */
+  it('trennt Phasensperre und Elternsperre als Wert', () => {
+    const solar = useSolarUpgradeStore()
+
+    solar.starPhase = FORGE_BRANCH_UNLOCK_PHASE - 1
+    setAllRoots(SOLAR_MAX_LEVELS)
+    const byPhase = entry(BRANCH_ID)
+    expect(byPhase.lockKind).toBe('phase')
+    expect(byPhase.lockPhase).toBe(FORGE_BRANCH_UNLOCK_PHASE)
+
+    solar.starPhase = FORGE_BRANCH_UNLOCK_PHASE
+    setAllRoots(0)
+    const byParent = entry(BRANCH_ID)
+    expect(byParent.lockKind).toBe('parent')
+    expect(byParent.lockPhase).toBe(-1)
+  })
+
+  it('ein offener Knoten trägt gar keine Sperrart', () => {
+    unlockBranches()
+    const e = entry(BRANCH_ID)
+    expect(e.state).not.toBe('locked')
+    expect(e.lockKind).toBe('')
+    expect(e.lockPhase).toBe(-1)
+  })
+
+  /** Ein Kernstrahl kennt diese Sperren nicht — seine Bremse ist `capped`. */
+  it('Kernstrahlen tragen nie eine Sperrart', () => {
+    useSolarUpgradeStore().starPhase = 0
+    expect(entry(ROOT_IDS[0]).lockKind).toBe('')
+    expect(entry(ROOT_IDS[0]).lockPhase).toBe(-1)
+  })
+
   it('reports partial progress toward a leaf and never overshoots', () => {
     unlockLeaves(FORGE_LEAF_PARENT_MIN_LEVEL - 1)
     const half = entry(LEAF_ID)

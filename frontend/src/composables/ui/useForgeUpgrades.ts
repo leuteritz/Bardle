@@ -8,6 +8,7 @@ import { FORGE_NODES } from '@/config/progression/starForge'
 import { MATERIALS } from '@/config/economy/materials'
 import type {
   ForgeCostItem,
+  ForgeLockKind,
   ForgeNodeDef,
   ForgeUpgradeBucketId,
   ForgeUpgradeEntry,
@@ -92,6 +93,8 @@ export const FORGE_EMPTY_UPGRADE_ENTRY: ForgeUpgradeEntry = {
   nowText: '',
   nextText: '',
   lockReason: '',
+  lockKind: '',
+  lockPhase: -1,
   parentName: '',
   unlockProgress: 0,
   canBuy: false,
@@ -100,10 +103,21 @@ export const FORGE_EMPTY_UPGRADE_ENTRY: ForgeUpgradeEntry = {
 /**
  * In welchen Abschnitt der Liste ein Eintrag fällt.
  *
+ * Gegliedert wird nach dem, was der Spieler mit einem Eintrag ANFANGEN kann —
+ * nicht nach Ring. Vorher folgte die Liste dem BAUM: wer im Spätspiel etwas
+ * kaufen wollte, kam an vier Überschriften und dutzenden „✦ MAX"-Zeilen vorbei,
+ * und ausgerechnet die Astral Boughs — der einzige Ring, der nie fertig wird —
+ * standen als vierte Gruppe ganz unten. Jetzt steht Kaufbares oben, gleich aus
+ * welchem Ring; der Ring bleibt als Chip an der Zeile und als Filter darüber.
+ *
  * Steht hier und nicht in `ForgeUpgradesSection.vue`, weil sie die eine Regel
- * ist, an der die neue Gliederung hängt — und damit die Fassung, die beim
- * nächsten Umbau still kippen könnte. Als Funktion neben den Einträgen ist sie
- * prüfbar; im `computed` einer Komponente wäre sie es nicht.
+ * ist, an der die Gliederung hängt — und damit die Fassung, die beim nächsten
+ * Umbau still kippen könnte. Als Funktion neben den Einträgen ist sie prüfbar;
+ * im `computed` einer Komponente wäre sie es nicht.
+ *
+ * Was sie NICHT entscheidet: dass `next` beim Anzeigen noch einmal zerfällt,
+ * je Sperrgrund einer. Das ist reine Darstellung und hängt am `lockKind` des
+ * Eintrags; der Topf bleibt einer.
  *
  * Zwei Feinheiten, die sich aus dem Zustand allein NICHT ergeben:
  *   - `ready` hängt an `canBuy`, nicht an `state === 'affordable'`. Der Zustand
@@ -256,18 +270,34 @@ export function useForgeUpgrades(): {
       nowText,
       nextText,
       lockReason: capped ? FORGE_UPGRADE_CAPPED_REASON : '',
+      // Ein Kernstrahl kennt weder Phasen- noch Elternsperre — seine einzige
+      // Bremse ist der Gleichwuchs-Deckel, und der ist `capped`, nicht `locked`.
+      lockKind: '',
+      lockPhase: -1,
       parentName: '',
       unlockProgress: 1,
       canBuy: solarStore.canAfford(root.id),
     }
   }
 
-  /** Warum ein Knoten zu ist — Phase zuerst, dann die Elternstufe. */
-  function lockedFor(def: ForgeNodeDef): { reason: string; progress: number } {
+  /**
+   * Warum ein Knoten zu ist — Phase zuerst, dann die Elternstufe.
+   *
+   * Neben dem Satz fällt hier die ART an, und zwar als Wert: die Liste
+   * gruppiert danach (je Sperrgrund ein eigener Trenner), und sie darf dafür
+   * nicht den fertigen Satz beschnüffeln müssen. `phase` ist der INDEX in
+   * `STAR_PHASE_DATA`, nicht die angezeigte Nummer.
+   */
+  function lockedFor(def: ForgeNodeDef): {
+    reason: string
+    progress: number
+    kind: ForgeLockKind
+    phase: number
+  } {
     if (solarStore.starPhase < def.phase) {
       const phaseName =
         STAR_PHASE_DATA[def.phase]?.name ?? `Phase ${def.phase + SUN_PHASE_DISPLAY_OFFSET}`
-      return { reason: `Unlocks at ${phaseName}`, progress: 0 }
+      return { reason: `Unlocks at ${phaseName}`, progress: 0, kind: 'phase', phase: def.phase }
     }
     // Welche Elternstufe welcher Ring verlangt, weiss der Store — hier stünde
     // sonst eine zweite Fassung derselben Weiche.
@@ -276,6 +306,8 @@ export function useForgeUpgrades(): {
     return {
       reason: `Requires ${nodeName(def.parentId)} Lv ${required}`,
       progress: Math.min(1, have / required),
+      kind: 'parent',
+      phase: -1,
     }
   }
 
@@ -294,7 +326,9 @@ export function useForgeUpgrades(): {
     else if (level > 0) state = 'partial'
     else state = 'empty'
 
-    const lock = unlocked ? { reason: '', progress: 1 } : lockedFor(def)
+    const lock = unlocked
+      ? { reason: '', progress: 1, kind: '' as ForgeLockKind, phase: -1 }
+      : lockedFor(def)
 
     // Blätter verstärken ihren Zweig um einen festen Anteil je Stufe; Zweige
     // tragen ihren eigenen Wert und den Verstärker des Blattes darüber schon in
@@ -363,6 +397,8 @@ export function useForgeUpgrades(): {
       nowText,
       nextText,
       lockReason: lock.reason,
+      lockKind: lock.kind,
+      lockPhase: lock.phase,
       parentName: nodeName(def.parentId),
       unlockProgress: lock.progress,
       canBuy: forgeStore.canAffordNode(def.id),
