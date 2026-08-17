@@ -474,8 +474,12 @@ export const useVoidStore = defineStore('void', {
         }
         const def = rollOfSeverity(severity)
         const spawned = def ? this.spawnMonster(def.id) : null
+        // Rift Anchor (Ward) streckt den Abstand zum nächsten Riss. Nur den
+        // ERFOLGSFALL: die Wiedervorlage nach einem vollen Feld ist keine
+        // Spawnrate, sondern ein zweiter Anlauf.
         this.spawnCooldowns[severity] = spawned
-          ? rollRange(VOID_SPAWN_INTERVAL_SEC[severity], VOID_SPAWN_RETRY_SEC)
+          ? rollRange(VOID_SPAWN_INTERVAL_SEC[severity], VOID_SPAWN_RETRY_SEC) *
+            useStarForgeStore().voidSpawnIntervalMult
           : VOID_SPAWN_RETRY_SEC
       }
     },
@@ -913,7 +917,10 @@ export const useVoidStore = defineStore('void', {
         angle: approach.angle,
         drift: approach.drift,
         spawnedAt: now,
-        travelMs: VOID_TRAVEL_MS[def.severity],
+        // Gravity Well (Ward) verlängert den Anflug — beim SPAWN gebucht, weil
+        // `voidPath` den Bruchteil aus `(now − spawnedAt) / travelMs` rechnet
+        // und ein wachsender Nenner ein Wesen sonst zurückspringen liesse.
+        travelMs: VOID_TRAVEL_MS[def.severity] * useStarForgeStore().voidTravelMult,
         maxHp,
         currentHp: maxHp,
         hitsLanded: 0,
@@ -986,12 +993,18 @@ export const useVoidStore = defineStore('void', {
 
       // Nur was der Lauf schon gesammelt hat — `devourMeeps` klemmt auf
       // `pendingMeeps` und gibt 0 zurück, wenn nichts anstand.
+      // Hollow Pact senkt BEIDE Enden des Zolls — der Anteil allein liesse den
+      // Mindestverlust stehen, und der ist im Frühspiel der ganze Zoll.
+      const meepRelief = useStarForgeStore().voidMeepLossMult
       const meepsLost = useGameStore().devourMeeps(
-        VOID_IMPACT_MEEP_LOSS_PCT[def.severity],
-        VOID_IMPACT_MEEP_LOSS_MIN[def.severity],
+        VOID_IMPACT_MEEP_LOSS_PCT[def.severity] * meepRelief,
+        Math.max(1, Math.round(VOID_IMPACT_MEEP_LOSS_MIN[def.severity] * meepRelief)),
       )
 
-      const durationMs = VOID_IMPACT_AFTERMATH_MS[def.severity]
+      // Unbroken Pact kürzt die Nachwirkung. Beim EINSCHLAG gebucht: `durationMs`
+      // steht im Eintrag und trägt die Fortschrittsanzeige der Bandzeile.
+      const durationMs =
+        VOID_IMPACT_AFTERMATH_MS[def.severity] * useStarForgeStore().voidAftermathMult
       this.aftermaths = this.aftermaths.filter((a) => a.sourceId !== def.id)
       this.aftermaths.push({
         sourceId: def.id,

@@ -110,52 +110,10 @@
         </g>
       </svg>
 
-      <!-- Ring labels. Eine Pille steht NUR über einer offenen Ebene — eine, die
-           auftaucht, ist damit selbst die Nachricht „ab hier kannst du wachsen".
-           Solange die Ebene zu ist, sagt das jeder betroffene Knoten für sich,
-           mit dem Schloss an seinem Motiv; ein Satz über der ganzen Ebene sagte
-           dasselbe gröber und stand dabei ständig im Bild.
-           Sie tragen die Auswahl mit: die Beschriftung einer nicht gewählten
-           Ebene ist genauso wenig gemeint wie ihr Band. -->
-      <div
-        class="ring-label ring-label--root"
-        :class="{ 'ring-label--sifted': ringSifted('root') }"
-        :style="ringLabelStyle(FORGE_RING_ROOT_R, true)"
-      >
-        Phase 1–2
-      </div>
-      <div
-        v-if="branchRingLabel"
-        class="ring-label ring-label--now"
-        :class="{ 'ring-label--sifted': ringSifted('branch') }"
-        :style="ringLabelStyle(FORGE_RING_BRANCH_R)"
-      >
-        {{ branchRingLabel }}
-      </div>
-      <div
-        v-if="leafRingLabel"
-        class="ring-label ring-label--now"
-        :class="{ 'ring-label--sifted': ringSifted('leaf') }"
-        :style="ringLabelStyle(FORGE_RING_LEAF_R)"
-      >
-        {{ leafRingLabel }}
-      </div>
-      <div
-        v-if="boughRingLabel"
-        class="ring-label ring-label--endless"
-        :class="{ 'ring-label--sifted': ringSifted('bough') }"
-        :style="ringLabelStyle(FORGE_RING_BOUGH_R)"
-      >
-        {{ boughRingLabel }}
-      </div>
-      <div
-        v-if="crownRingLabel"
-        class="ring-label ring-label--crown"
-        :class="{ 'ring-label--sifted': ringSifted('crown') }"
-        :style="ringLabelStyle(FORGE_RING_CROWN_R)"
-      >
-        {{ crownRingLabel }}
-      </div>
+      <!-- Die Bühne ist WORTLOS. Hier standen fünf Pillen, je eine über einer
+           Ebene („Phase 1–2", „Swell · open" …). Was sie sagten, sagen inzwischen
+           die Zeichen selbst: das Schloss am Motiv, DASS ein Knoten zu ist, und
+           Tooltip wie Detailspalte, WELCHE Phase ihn aufschliesst. -->
 
       <!-- Sun -->
       <div class="sun-wrapper" :class="{ 'sun-flash': purchaseFlash }">
@@ -334,9 +292,10 @@ import {
   FORGE_RING_ROOT_R,
   FORGE_RING_BRANCH_R,
   FORGE_RING_LEAF_R,
-  FORGE_RING_BOUGH_R,
+  FORGE_RING_WARD_R,
+  FORGE_RING_PACT_R,
   FORGE_RING_CROWN_R,
-  FORGE_RING_LABEL_GAP,
+  FORGE_RING_BOUGH_R,
   FORGE_DEPTH_CREST_SPREAD,
   FORGE_DEPTH_CREST_ALPHA,
   FORGE_DEPTH_CREST_LOCKED,
@@ -352,12 +311,12 @@ import {
   FORGE_ICON_SIZE_ROOT,
   FORGE_ICON_SIZE_BRANCH,
   FORGE_ICON_SIZE_LEAF,
-  FORGE_ICON_SIZE_BOUGH,
+  FORGE_ICON_SIZE_WARD,
+  FORGE_ICON_SIZE_PACT,
   FORGE_ICON_SIZE_CROWN,
-  FORGE_CROWN_RING_LABEL_OPEN,
+  FORGE_ICON_SIZE_BOUGH,
   FORGE_LOCK_ICON,
   FORGE_ENDLESS_SYMBOL,
-  SUN_PHASE_DISPLAY_OFFSET,
   FORGE_TREE_FIT_PADDING_PX,
   FORGE_BODY_EDGE_FRACTION,
   FORGE_SUN_EDGE_GAP,
@@ -455,19 +414,25 @@ interface RootDef {
 }
 
 /* Ring und Knotengrösse hängen am `tier` und an nichts sonst. Als Tabelle statt
-   als Kette von Ternären: mit vier Ringen wäre die Kette eine Stelle, an der
-   ein neuer Ring stillschweigend auf dem falschen Radius landet. */
+   als Kette von Ternären: bei sieben Ringen wäre die Kette eine Stelle, an der
+   ein neuer Ring stillschweigend auf dem falschen Radius landet. Ein
+   `Record<ForgeNodeTier, …>` ohne `Partial` erzwingt beim nächsten Ring einen
+   Typfehler statt eines stummen Fehlverhaltens — genau das ist hier der Zweck. */
 const RING_RADIUS: Record<ForgeNodeTier, number> = {
   branch: FORGE_RING_BRANCH_R,
   leaf: FORGE_RING_LEAF_R,
-  bough: FORGE_RING_BOUGH_R,
+  ward: FORGE_RING_WARD_R,
+  pact: FORGE_RING_PACT_R,
   crown: FORGE_RING_CROWN_R,
+  bough: FORGE_RING_BOUGH_R,
 }
 const RING_ICON_SIZE: Record<ForgeNodeTier, number> = {
   branch: FORGE_ICON_SIZE_BRANCH,
   leaf: FORGE_ICON_SIZE_LEAF,
-  bough: FORGE_ICON_SIZE_BOUGH,
+  ward: FORGE_ICON_SIZE_WARD,
+  pact: FORGE_ICON_SIZE_PACT,
   crown: FORGE_ICON_SIZE_CROWN,
+  bough: FORGE_ICON_SIZE_BOUGH,
 }
 
 /* Name, Glyph und Farbe der fünf Strahlen stehen als SOLAR_BRANCHES in
@@ -531,15 +496,6 @@ const siftedIds = computed<Set<string>>(() => {
     allNodes.value.filter((node) => !matchesForgeFilter(entryOf(node))).map((node) => node.id),
   )
 })
-
-/**
- * Ein RING ist gewählt — nicht bloß irgendein Filter. Ein Suchwort sagt nichts
- * über Ebenen aus und darf die Bänder deshalb nicht umfärben; nur die Chips
- * tun das.
- */
-function ringSifted(tier: ForgeUpgradeTier): boolean {
-  return activeTier.value !== 'all' && activeTier.value !== tier
-}
 
 /**
  * Die Leitfarbe einer Ebene kommt aus derselben Tabelle, aus der `ForgeToolbar`
@@ -656,30 +612,16 @@ const siftLimbOpacity = String(FORGE_SIFT_LIMB_OPACITY)
 const siftRingOpacity = String(FORGE_SIFT_RING_OPACITY)
 const depthFadeMs = `${FORGE_DEPTH_ACCENT_FADE_MS}ms`
 
-/**
- * Die Pille sitzt in der SENKE neben ihrem Ring, nicht auf ihm — auf dem Ring
- * steht bei 12 Uhr ein Knoten und verdeckte sie (Herleitung an
- * `FORGE_RING_LABEL_GAP`). `outward` gilt nur für den Wurzelring: nach innen
- * läge er auf der Sonne.
- */
-function ringLabelStyle(r: number, outward = false): Record<string, string> {
-  const y = outward ? r + FORGE_RING_LABEL_GAP : r - FORGE_RING_LABEL_GAP
-  return {
-    left: `${C}px`,
-    top: `${C}px`,
-    transform: `translate(-50%, ${-y}px)`,
-  }
-}
-
 // ── Ring unlock state ─────────────────────────────────────────────────────────
 /**
- * Die Beschriftung eines Rings kommt aus den KNOTEN, die auf ihm liegen, nicht
- * aus einer festen Zahl. Seit der dritte Zweig je Wurzel eine Phase später
- * aufgeht, trägt Ring 2 zwei Freischaltphasen — ein hartes „Phase 3+ · open"
- * wäre schlicht falsch, sobald die Hälfte des Rings noch zu ist.
+ * Ab welcher Sonnenphase eine Ebene aufgeht, steht in den KNOTEN, die auf ihr
+ * liegen, und nicht in einer festen Zahl daneben. Seit die Ringe eine Leiter
+ * bilden, trägt jeder Ring genau EINE Freischaltphase — `min` und `max` sind
+ * gleich. Das Paar bleibt trotzdem stehen: es ist die Stelle, an der eine
+ * spätere Ausnahme sichtbar würde, statt sich zu verstecken.
  *
- * Der Ring gilt als offen, sobald sein ERSTER Knoten kaufbar wird; solange noch
- * ein späterer aussteht, nennt das Label auch dessen Phase.
+ * Der Ring gilt als offen, sobald sein ERSTER Knoten kaufbar wird — das färbt
+ * seinen Kamm im Tiefenfeld.
  */
 const ringPhases = computed(() => {
   const out = {} as Record<ForgeNodeTier, { min: number; max: number }>
@@ -694,77 +636,31 @@ const ringPhases = computed(() => {
   return out
 })
 
-/**
- * Der NAME der Phase, nicht ihre Nummer. Die Karten in der Liste sagen „Unlocks
- * at Zenith" (`lockedFor` in useForgeUpgrades), und hier stand bislang eine
- * Nummer, die um eins danebenlag: gerechnet wurde `phase + 1`, während der Rest
- * des Spiels `SUN_PHASE_DISPLAY_OFFSET` (2) verwendet — der Komet zählt als
- * Anzeigephase 1. Mit dem Namen kann die Rechnung gar nicht erst auseinander-
- * laufen, und Ring und Karte sprechen dieselbe Sprache.
- */
-function phaseName(phase: number): string {
-  return STAR_PHASE_DATA[phase]?.name ?? `Phase ${phase + SUN_PHASE_DISPLAY_OFFSET}`
+/** Steht die Sonne weit genug für diese Ebene? */
+function ringOpenAt(tier: ForgeNodeTier): boolean {
+  return solarStore.starPhase >= (ringPhases.value[tier]?.min ?? Infinity)
 }
 
 /**
- * `null`, solange die Ebene nicht VOLL offen ist — die Pille erscheint erst mit
- * ihrem letzten Tor.
- *
- * Vorher standen hier zwei weitere Fassungen, „<Phase> → locked" und
- * „<Phase> · <Phase> → locked". Beide sind entfallen: die Sperre sagt jetzt jeder
- * betroffene Knoten selbst, mit dem Schloss an seinem Motiv, und zwar
- * knotengenau. Ein Satz über der ganzen Ebene konnte das nie — Ring 2 trägt zwei
- * Freischaltphasen, „Zenith · Swell → locked" stand also auch dann noch da, wenn
- * die Hälfte des Rings längst kaufbar war.
- *
- * Deshalb `span.max` und nicht `span.min`: was halb offen ist, bekommt keine
- * Pille, die „offen" behauptet.
+ * Der Kronen-Ring trägt als einziger ein ZWEITES Tor (der Aufbruch). Der Store
+ * beantwortet es, damit der Prestige-Zähler nicht an zwei Stellen gelesen wird;
+ * die Phase daneben ist dieselbe Bedingung wie bei jedem anderen Ring.
  */
-function ringLabelFor(tier: ForgeNodeTier): string | null {
-  const span = ringPhases.value[tier]
-  if (!span || solarStore.starPhase < span.max) return null
-  return `${phaseName(span.max)} · open`
-}
-
-const branchesUnlocked = computed(
-  () => solarStore.starPhase >= (ringPhases.value.branch?.min ?? Infinity),
-)
-const leavesUnlocked = computed(
-  () => solarStore.starPhase >= (ringPhases.value.leaf?.min ?? Infinity),
-)
-const boughsUnlocked = computed(
-  () => solarStore.starPhase >= (ringPhases.value.bough?.min ?? Infinity),
-)
-/**
- * Ring 5 hängt als einziger NICHT an der Sonne, sondern am Aufbruch — die
- * Sonnenrampe endet mit Ring 4. Der Store beantwortet das, damit der
- * Prestige-Zähler nicht an zwei Stellen gelesen wird.
- */
-const crownsUnlocked = computed(() => forgeStore.crownsUnlocked)
-
-const branchRingLabel = computed(() => ringLabelFor('branch'))
-const leafRingLabel = computed(() => ringLabelFor('leaf'))
-const boughRingLabel = computed(() => ringLabelFor('bough'))
-/**
- * Ring 5 nennt seine eigene Bedingung, nicht eine Sonnenphase — `ringLabelFor`
- * läse `ringPhases`, und dort stünde für die Krone dieselbe Phase wie für die
- * Boughs. Solange der Aufbruch aussteht, trägt er wie die übrigen Ringe gar
- * keine Pille; das Schloss steht an seinen fünf Knoten.
- */
-const crownRingLabel = computed(() =>
-  crownsUnlocked.value ? FORGE_CROWN_RING_LABEL_OPEN : null,
-)
+const crownsUnlocked = computed(() => ringOpenAt('crown') && forgeStore.crownsUnlocked)
 
 // ── Das Tiefenfeld — die Ebenen als weiche Bänder ─────────────────────────────
 /* Steht NACH den Freischalt-Flags, weil jeder Kamm seine Farbe von ihnen
    bekommt: eine offene Ebene trägt ihre Leitfarbe, eine gesperrte den kalten
-   Rest. Die Ordnung im Feld ist die des Baums, von innen nach aussen. */
+   Rest. Die Ordnung im Feld ist die des Baums, von innen nach aussen — und
+   damit zugleich die der Sonnenphasen. */
 const depthBands = computed(() => [
   { tier: 'root' as ForgeUpgradeTier, r: FORGE_RING_ROOT_R, unlocked: true },
-  { tier: 'branch' as ForgeUpgradeTier, r: FORGE_RING_BRANCH_R, unlocked: branchesUnlocked.value },
-  { tier: 'leaf' as ForgeUpgradeTier, r: FORGE_RING_LEAF_R, unlocked: leavesUnlocked.value },
-  { tier: 'bough' as ForgeUpgradeTier, r: FORGE_RING_BOUGH_R, unlocked: boughsUnlocked.value },
+  { tier: 'branch' as ForgeUpgradeTier, r: FORGE_RING_BRANCH_R, unlocked: ringOpenAt('branch') },
+  { tier: 'leaf' as ForgeUpgradeTier, r: FORGE_RING_LEAF_R, unlocked: ringOpenAt('leaf') },
+  { tier: 'ward' as ForgeUpgradeTier, r: FORGE_RING_WARD_R, unlocked: ringOpenAt('ward') },
+  { tier: 'pact' as ForgeUpgradeTier, r: FORGE_RING_PACT_R, unlocked: ringOpenAt('pact') },
   { tier: 'crown' as ForgeUpgradeTier, r: FORGE_RING_CROWN_R, unlocked: crownsUnlocked.value },
+  { tier: 'bough' as ForgeUpgradeTier, r: FORGE_RING_BOUGH_R, unlocked: ringOpenAt('bough') },
 ])
 
 /** Die Leitfarbe mit Deckkraft — als `color-mix`, damit die Farbe selbst nur an
@@ -1125,43 +1021,9 @@ const nextPhasePreviewStyle = computed(() => ({
   opacity: 0;
 }
 
-.ring-label {
-  position: absolute;
-  z-index: 2;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 1px 7px;
-  border-radius: 3px;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.ring-label--root {
-  color: rgba(232, 192, 64, 0.55);
-  background: #12100a;
-}
-
-.ring-label--endless {
-  color: rgba(201, 160, 255, 0.8);
-  background: #150c1a;
-}
-
-/* Ring 5 kehrt zum Gold des Kerns zurück — der äusserste Ring ist das, was aus
-   dem innersten geworden ist. Statischer Zustand, keine laufende Animation. */
-.ring-label--crown {
-  color: rgba(255, 215, 106, 0.85);
-  background: #1a1408;
-}
-
-.ring-label--now {
-  color: rgba(139, 224, 96, 0.8);
-  background: #12160c;
-}
-
-/* Eine gesperrte Fassung gibt es nicht mehr: über einer Ebene, die noch zu ist,
-   steht keine Pille. Das Zeichen dafür hängt am einzelnen Knoten. */
+/* Ring-Pillen gibt es NICHT MEHR — hier standen fünf Klassen für die
+   Beschriftung je Ebene. Die Bühne ist wortlos; welche Phase eine Ebene
+   aufschliesst, steht im Tooltip am Knoten und in der Detailspalte. */
 
 /* ══════════════════════════════════════════════════
    SUN — mirror of PlanetSelectTabComponent .ps-stage-sun
@@ -1341,20 +1203,36 @@ const nextPhasePreviewStyle = computed(() => ({
   border: 2px solid #2a1a08;
 }
 
-/* Ring 4 sitzt zwischen Zweig und Blatt: er ist kein Beiwerk wie ein Blatt,
-   aber auch kein Hauptast. Der violette Rand ist das einzige, was ihn optisch
-   vom Rest trennt — dieselbe Farbe wie sein Ring und sein Listenabschnitt. */
+/* Die zwei mittleren Ringe stehen mit 40 px eine Spur ÜBER dem Blatt und unter
+   dem Zweig — sie tragen eigene Achsen, sind aber keine Hauptäste. Der farbige
+   Rand ist das einzige, was sie optisch trennt: dieselben Töne wie ihr Kamm im
+   Tiefenfeld und ihr Chip in der Leiste (Türkis, Blauviolett). */
+.node-circle--ward {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #1e5a50;
+}
+
+.node-circle--pact {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #3a4a80;
+}
+
+/* Ring 7 ist der äusserste: der endlose. Der violette Rand ist dieselbe Farbe
+   wie sein Kamm und sein Listenabschnitt — und im Projekt der Ton für
+   „episch/selten" (`FORGE_RELIC_RARITY_COLOR.epic`). */
 .node-circle--bough {
   width: 42px;
   height: 42px;
   border: 2px solid #4a2a6a;
 }
 
-/* Ring 5 ist der GRÖSSTE nach dem Kern — grösser als ein Zweig, kleiner als ein
-   Strahl. Fünf Knoten auf dem weitesten Ring, jeder nur einmal zu haben: in
-   Bough-Grösse verschwänden sie am Rand einer Bühne, die `useFitScale` auf
-   Full HD auf rund 60 % zieht. Der goldene Rand ist derselbe Ton wie sein Ring
-   und sein Listenabschnitt. */
+/* Ring 6 ist der GRÖSSTE nach dem Kern — grösser als ein Zweig, kleiner als ein
+   Strahl. Fünf Knoten weit aussen, jeder nur einmal zu haben: in Bough-Grösse
+   verschwänden sie am Rand einer Bühne, die `useFitScale` auf Full HD auf rund
+   60 % zieht. Der goldene Rand ist derselbe Ton wie sein Kamm und sein
+   Listenabschnitt. */
 .node-circle--crown {
   width: 50px;
   height: 50px;
@@ -1641,10 +1519,6 @@ const nextPhasePreviewStyle = computed(() => ({
 
 .limb--sifted {
   opacity: v-bind(siftLimbOpacity);
-}
-
-.ring-label--sifted {
-  opacity: v-bind(siftRingOpacity);
 }
 
 /* Die Treffer-Marke zu diesem Sieb steht in `ForgeToolbar` — im FLUSS über dem

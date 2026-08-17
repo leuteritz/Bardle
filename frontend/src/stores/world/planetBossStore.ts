@@ -185,6 +185,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
       const galaxyMult = 1 + (galaxyStore.currentGalaxy - 1) * BOSS_HP_PER_GALAXY
       const providence = useProvidenceStore()
+      const forge = useStarForgeStore()
 
       // Der Kampf hat seine EIGENE Klickzahl (`gameStore.dmgPerClick`), nicht den
       // Chime-Klickwert. Beides an einem Wert hiess: eine Änderung an der
@@ -230,7 +231,13 @@ export const usePlanetBossStore = defineStore('planetBoss', {
             hpSectionMult *
             galaxyMult *
             // Warden's Toll (providence): schwerer zu fällen, dafür ergiebiger
-            providence.bossHpMult,
+            providence.bossHpMult *
+            // Hollow Core (Ward): der EINZIGE Weg, an dieser Formel zu drehen,
+            // ohne sie zu brechen. Ein Knoten auf den SCHADEN kürzt sich weg,
+            // weil `otherDps` oben in derselben Gleichung steht
+            // (docs/balance.md); ein Faktor auf das ERGEBNIS verschiebt die
+            // entworfene Klickzahl sauber um seinen eigenen Betrag.
+            forge.bossHpMult,
         ),
       )
 
@@ -242,7 +249,10 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       )
       const enrageSec = Math.max(
         BOSS_ENRAGE_MIN_SECONDS,
-        Math.floor(baseEnrageSec * enrageSectionMult),
+        // Pact of Patience streckt die Frist. Sie wird wie die HP beim SPAWN
+        // festgeschrieben — eine Uhr, die mitten im Kampf länger wird, wäre für
+        // den Spieler nicht dieselbe Uhr.
+        Math.floor(baseEnrageSec * enrageSectionMult * forge.bossEnrageMult),
       )
       const enrageTimerMs = enrageSec * 1000
 
@@ -252,7 +262,13 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const randomChimes = () =>
         Math.max(
           1,
-          Math.floor((Math.random() * BOSS_REWARD_CHIMES_MAX + 1) * providence.bossRewardMult),
+          Math.floor(
+            (Math.random() * BOSS_REWARD_CHIMES_MAX + 1) *
+              providence.bossRewardMult *
+              // Siege Reckoning (Ward) — beim SPAWN, aus demselben Grund wie die
+              // Vorsehung daneben: die Belohnungsleiste zeigt diese Zahl.
+              forge.bossRewardMult,
+          ),
         )
       const randomSlot = (): PlanetBossRewardSlot =>
         Math.random() < BOSS_REWARD_MATERIAL_CHANCE
@@ -568,13 +584,23 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       // FORTUNE (champion levels) lifts the chime payout and gives every material
       // slot a chance at a second unit — the fractional part of the multiplier.
       const fortune = levelStore.teamFortuneMult
-      const extraMaterialChance = fortune - 1
+      // Prospector's Pact zahlt auf DIESELBE Bruchzahl ein wie das Team-Fortune:
+      // der Nachkommateil ist die Chance auf ein zweites Stück je Fach. Über 1
+      // hinaus wäre er verschenkt, deshalb bucht die Schleife unten zusätzlich
+      // die ganzen Stücke — anders als die Fallchance sättigt diese Achse damit
+      // nicht (docs/balance.md).
+      const materialBonus = (fortune - 1 + 1) * useStarForgeStore().bossMaterialMult - 1
+      const extraMaterialUnits = Math.floor(materialBonus)
+      const extraMaterialChance = materialBonus - extraMaterialUnits
       let totalChimes = 0
       for (const slot of boss.rewardSlots) {
         if (slot.type === 'chimes') {
           totalChimes += slot.amount ?? 0
         } else if (slot.type === 'material' && slot.materialId) {
           inventoryStore.addMaterial(slot.materialId, 'boss')
+          for (let i = 0; i < extraMaterialUnits; i++) {
+            inventoryStore.addMaterial(slot.materialId, 'boss')
+          }
           if (extraMaterialChance > 0 && Math.random() < extraMaterialChance) {
             inventoryStore.addMaterial(slot.materialId, 'boss')
           }

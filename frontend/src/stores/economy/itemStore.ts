@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useShopStore } from '@/stores/economy/shopStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { SHOP_ITEMS, getItemById, ITEM_SETS } from '@/config/economy/items'
 import { ITEM_SLOT_COUNT } from '@/config/constants'
 import type { SlotEquipment, ItemCategory, ItemSetBonus } from '@/types'
@@ -23,6 +24,23 @@ export const useItemStore = defineStore('item', {
   }),
 
   getters: {
+    /**
+     * Was ein Item WIRKLICH kostet — Katalogpreis mal Merchant's Favor
+     * (Star Forge).
+     *
+     * Ein Getter und keine drei Ausdrücke: der Preis wird an drei Stellen
+     * gebraucht (Anzeige in der Kostenzeile, „kann ich das", Abbuchung). Bis
+     * hierhin war er dort dreimal `item.price` — der Katalogwert eben, der nur
+     * deshalb überall gleich war, weil ihn nichts veränderte.
+     */
+    itemPrice: () => {
+      return (itemId: string): number => {
+        const item = getItemById(itemId)
+        if (!item) return Infinity
+        return Math.max(1, Math.ceil(item.price * useStarForgeStore().itemCostMult))
+      }
+    },
+
     availableCount: (state) => {
       return (itemId: string): number => {
         const owned = state.ownedItems[itemId] ?? 0
@@ -88,10 +106,11 @@ export const useItemStore = defineStore('item', {
       const gameStore = useGameStore()
       const inventoryStore = useInventoryStore()
 
-      if (gameStore.chimes < item.price) return false
+      const price = this.itemPrice(itemId)
+      if (gameStore.chimes < price) return false
       if (item.materialCost && !inventoryStore.hasMaterials(item.materialCost)) return false
 
-      gameStore.chimes -= item.price
+      gameStore.chimes -= price
       if (item.materialCost) inventoryStore.removeMaterials(item.materialCost, 'equipment')
       this.ownedItems[itemId] = (this.ownedItems[itemId] ?? 0) + 1
       return true

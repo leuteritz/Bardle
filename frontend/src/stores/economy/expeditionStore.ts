@@ -10,6 +10,7 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { getChampionRoles } from '@/config/champions/championData'
 import { getChampionOrigin } from '@/config/champions/championOrigins'
 import { pickMaterial } from '@/config/economy/materials'
+import { getForgeNode } from '@/config/progression/starForge'
 import { useEventLog, type GameEventType } from '@/composables/ui/useEventLog'
 import { formatNumber } from '@/config/ui/numberFormat'
 import {
@@ -294,6 +295,25 @@ export const useExpeditionStore = defineStore('expedition', {
         })
       }
 
+      // ── Star Forge: Pathfinder's Oath ───────────────────────────────────────
+      // Als eigene Zeile und nicht still auf `base`: die Aufschlüsselung ist die
+      // einzige Stelle, an der der Spieler sieht, WOHER seine Chance kommt, und
+      // ein Ward, der dort nicht auftaucht, wäre ein Geschenk ohne Absender.
+      const oath = useStarForgeStore().expeditionSuccessBonusPct
+      if (oath > 0) {
+        // Name und Motiv kommen aus dem Katalog statt aus einer zweiten
+        // Konstante — steht der Knoten eines Tages anders da, steht er hier
+        // gleich mit.
+        const oathDef = getForgeNode('pathfindersOath')
+        entries.push({
+          id: 'forgeOath',
+          label: oathDef?.name ?? 'Star Forge',
+          icon: oathDef?.icon ?? '',
+          value: oath / 100,
+          detail: 'Star Forge ward',
+        })
+      }
+
       const sum = entries.reduce((acc, e) => acc + e.value, EXPEDITION_BASE_SUCCESS_CHANCE)
       const total = Math.max(
         EXPEDITION_SUCCESS_CHANCE_MIN,
@@ -402,7 +422,9 @@ export const useExpeditionStore = defineStore('expedition', {
         now >= this.nextSpawnAt
       ) {
         this._spawnOneExpedition(now)
-        this.nextSpawnAt = now + EXPEDITION_SPAWN_INTERVAL_MS
+        // Cartographer's Pact verkürzt das Fenster zwischen zwei Angeboten.
+        this.nextSpawnAt =
+          now + EXPEDITION_SPAWN_INTERVAL_MS * useStarForgeStore().expeditionSpawnMult
       }
     },
 

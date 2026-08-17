@@ -259,7 +259,12 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitRy: tier.ry,
         orbitTilt: tier.tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
-        planetSlots: this._buildResourcePlanetSlots(RESOURCE_STAR_PLANET_COUNT),
+        // Warden's Pact (Star Forge) hängt zusätzliche Planeten an den Stern.
+        // Beim SPAWN, wie die Frist darunter: die Slots stehen im Stern und
+        // werden von seinem Boss-Store einzeln bestückt.
+        planetSlots: this._buildResourcePlanetSlots(
+          RESOURCE_STAR_PLANET_COUNT + useStarForgeStore().resourceStarPlanetBonus,
+        ),
         spawnedAt: gameNow(),
         // Long Vigil / Culling Light (providence): die Frist wird beim Spawn
         // festgeschrieben, nicht beim Ablesen angewandt — `starDeadlineAt`

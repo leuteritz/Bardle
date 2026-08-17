@@ -1,8 +1,10 @@
 import type { ForgeNodeDef, ForgeRelicDef, ForgeConstellationDef, ForgeBargainDef } from '@/types'
 import {
   FORGE_BRANCH_UNLOCK_PHASE,
-  FORGE_BRANCH_LATE_UNLOCK_PHASE,
   FORGE_LEAF_UNLOCK_PHASE,
+  FORGE_WARD_UNLOCK_PHASE,
+  FORGE_PACT_UNLOCK_PHASE,
+  FORGE_CROWN_UNLOCK_PHASE,
   FORGE_BOUGH_UNLOCK_PHASE,
   FORGE_BOUGH_COST_MULTIPLIER,
   FORGE_CROWN_BASE_COST,
@@ -10,16 +12,27 @@ import {
 
 // ═════════════════════════════════════════════════════════════════════════════
 // STAR FORGE — static catalog
-// Ring 1 (roots) = the 5 solar branches in solarUpgradeStore (unchanged).
-// Ring 2 (branches), ring 3 (leaves) und ring 4 (boughs) stehen hier und leben
-// im starForgeStore. Root angles: flightSpeed 270°, maxHp 342°,
-// chimesPerClick 54°, chimesPerSecond 126°, dmgPerClick 198°.
+//
+// Sieben Ringe, einer je Sonnenphase. Ring 1 (roots) = die fünf Solar Rays im
+// solarUpgradeStore; alles darüber steht hier und lebt im starForgeStore:
+//
+//   Ring 2 Branches (Spark) · 3 Leaves (Dawn) · 4 Wards (Zenith) ·
+//   5 Covenants (Swell) · 6 Crowns (Pyre) · 7 Boughs ∞ (Collapse)
+//
+// Fünfzehn Winkel tragen den Baum, jeweils 24° auseinander, abgeleitet aus den
+// Wurzelwinkeln: flightSpeed 270°, maxHp 342°, chimesPerClick 54°,
+// chimesPerSecond 126°, dmgPerClick 198°. **Jeder Knoten hängt am Knoten
+// DESSELBEN Winkels auf dem Ring direkt innen** — die Kette überspringt keinen
+// Ring, und die Verbindungslinie ist damit überall radial.
 // ═════════════════════════════════════════════════════════════════════════════
 
 // ── Branches (ring 2) — three per root: root angle − 24°, + 24° and 0° ───────
-// Die beiden ersten gehen in Phase 2 auf, der dritte (auf dem Wurzelwinkel)
-// eine Phase später. Damit stehen die fünfzehn Zweige exakt gleichmässig mit
-// 24° über den ganzen Ring, ohne dass sich der Ring auf einen Schlag füllt.
+// Alle fünfzehn gehen gemeinsam in Spark auf. Vorher kamen die letzten fünf
+// eine Phase später, damit sich der Ring nicht auf einen Schlag füllt — seit
+// jede Phase einen eigenen Ring öffnet, ist das nicht mehr nötig und wäre eine
+// Ausnahme in einer Leiter, die keine verträgt. Die Staffelung liegt jetzt in
+// der Höchststufe (Stufe 1 bei Freischaltung, +1 je Phase) und im Preis: die
+// fünf auf dem Wurzelwinkel bleiben die teuren.
 export const FORGE_BRANCHES: ForgeNodeDef[] = [
   // flightSpeed root (270°)
   {
@@ -177,9 +190,11 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     effectPerLevel: 8,
   },
 
-  // ── Der dritte Zweig je Wurzel, ab Phase 3 ────────────────────────────────
+  // ── Der dritte Zweig je Wurzel ────────────────────────────────────────────
   // Jeder sitzt auf dem Winkel seiner Wurzel und eröffnet eine Achse, die es in
   // der Forge bisher nur als einmalige Konstellation oder gar nicht gab.
+  // Er geht mit den anderen zehn auf, kostet aber rund das Dreifache — der
+  // Preis ist seither das, was ihn zum späten Zweig macht.
   //
   // Warum ausgerechnet diese fünf: von den zehn Zweigen darüber laufen fünf
   // gegen einen Boden (Solar Sails 0,4 · Aegis 0,25 · Golden Echo 0,8 ·
@@ -192,7 +207,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     name: "Wayfinder's Cache",
     parentId: 'flightSpeed',
     tier: 'branch',
-    phase: FORGE_BRANCH_LATE_UNLOCK_PHASE,
+    phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:knapsack',
     color: '#ffe9a8',
     angleDeg: 270,
@@ -213,7 +228,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     name: "Warden's Vigil",
     parentId: 'maxHp',
     tier: 'branch',
-    phase: FORGE_BRANCH_LATE_UNLOCK_PHASE,
+    phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:heart-tower',
     color: '#ffb0b0',
     angleDeg: 342,
@@ -228,7 +243,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     name: 'Gilded Harvest',
     parentId: 'chimesPerClick',
     tier: 'branch',
-    phase: FORGE_BRANCH_LATE_UNLOCK_PHASE,
+    phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:gold-stack',
     color: '#b0f090',
     angleDeg: 54,
@@ -243,7 +258,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     name: 'Tidal Drift',
     parentId: 'chimesPerSecond',
     tier: 'branch',
-    phase: FORGE_BRANCH_LATE_UNLOCK_PHASE,
+    phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:big-wave',
     color: '#ffd0a0',
     angleDeg: 126,
@@ -258,7 +273,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     name: 'Sundering Wake',
     parentId: 'dmgPerClick',
     tier: 'branch',
-    phase: FORGE_BRANCH_LATE_UNLOCK_PHASE,
+    phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:impact-point',
     color: '#f0b8e0',
     angleDeg: 198,
@@ -341,11 +356,13 @@ export const FORGE_LEAVES: ForgeNodeDef[] = [
     dark_matter: 1,
   }),
 
-  // ── Die Blätter an den späten Zweigen ─────────────────────────────────────
-  // Sie gehen mit dem regulären Blätter-Ring auf (Phase 4), sind aber die
-  // ersten Knoten des Baums, deren Rezeptur durchgehend Dark Matter oder Void
-  // Shards verlangt — der Chime-Preis ist zu diesem Zeitpunkt Nebensache, das
-  // seltene Material ist der Taktgeber.
+  // ── Die Blätter an den teuren Zweigen ─────────────────────────────────────
+  // Sie gehen mit dem ganzen Blätter-Ring auf (Dawn), sind aber die ersten
+  // Knoten des Baums, deren Rezeptur durchgehend Dark Matter oder Void Shards
+  // verlangt. Das ist seit der Ring-Leiter ihre eigentliche Sperre: in Dawn
+  // liegt von beidem praktisch nichts im Lager, der Knoten steht also sichtbar
+  // („Saving up") und trotzdem unerreichbar da — Material ist der Taktgeber,
+  // nicht mehr die Sonne.
   leaf(
     'wanderersCrest',
     "Wanderer's Crest",
@@ -398,14 +415,463 @@ export const FORGE_LEAVES: ForgeNodeDef[] = [
   ),
 ]
 
-// ── Boughs (ring 4) — der einzige Ring OHNE Obergrenze ───────────────────────
+// ── Wards (ring 4) — wo der Baum über sich hinausgreift ─────────────────────
+/**
+ * Fünfzehn Knoten, einer je Winkel, offen ab Zenith.
+ *
+ * **Ihre Klammer ist nicht eine Zahl, sondern eine GRENZE.** Jeder Ward sitzt
+ * auf einem Wert, zu dem die Forge bis hierhin gar nichts zu sagen hatte: der
+ * Takt des Void, die Frequenz der Drifter und Vorzeichen, die Preise der
+ * Gebäude, Items und Champion-Level, die Abklingzeit der Bard-Fähigkeiten, das
+ * LP eines Sieges, die HP eines Bosses. Die drei Ringe darunter haben den Baum
+ * verstärkt; dieser greift heraus.
+ *
+ * Zwei Klassen bleiben ausgeschlossen, und beide aus `docs/balance.md`:
+ *   • Alles, was `otherDps` hebt (Champion-DPS, Turret-DPS, passiver
+ *     Boss-Schaden) — es steckt im Boss-HP-Schätzer und kürzt sich weg.
+ *   • Alles, was still sättigt (`materialDropMult`, `extraDropCount`).
+ * Deshalb senkt `hollowCore` die Boss-HP DIREKT statt den Schaden zu heben, und
+ * deshalb steht auf der Material-Achse der Erntetakt statt der Fallchance.
+ *
+ * Jede Achse, die eine Dauer oder einen Preis kürzt, läuft gegen einen Boden aus
+ * `constants/forge.ts` — und jeder dieser Böden ist so gesetzt, dass die vierte
+ * Stufe ihn ERREICHT. Es gibt hier also weder eine tote Stufe noch einen
+ * Überlauf: der Bodensatz ist der Entwurf.
+ */
+function ward(
+  id: string,
+  name: string,
+  parentId: string,
+  icon: string,
+  color: string,
+  angleDeg: number,
+  materialCost: Record<string, number>,
+  desc: string,
+  effectPerLevel: number,
+  opts: { baseCost?: number; costMultiplier?: number } = {},
+): ForgeNodeDef {
+  return {
+    id,
+    name,
+    parentId,
+    tier: 'ward',
+    phase: FORGE_WARD_UNLOCK_PHASE,
+    icon,
+    color,
+    angleDeg,
+    baseCost: opts.baseCost ?? 120_000,
+    costMultiplier: opts.costMultiplier ?? 2.6,
+    materialCost,
+    desc,
+    effectPerLevel,
+  }
+}
+
+export const FORGE_WARDS: ForgeNodeDef[] = [
+  // flightSpeed-Achse — Reisen, Expeditionen, alles was von aussen hereinkommt
+  ward(
+    'pathfindersOath',
+    "Pathfinder's Oath",
+    'auroraWake',
+    'game-icons:sextant',
+    '#e8c040',
+    246,
+    { solar_essence: 3 },
+    'Expeditions succeed {v}% more often.',
+    3,
+  ),
+  ward(
+    'dreamersDraw',
+    "Dreamer's Draw",
+    'midnightTide',
+    'game-icons:card-random',
+    '#f0d878',
+    294,
+    { void_shard: 3 },
+    'Augment offers are {v}% more likely to be rare or better.',
+    8,
+  ),
+  ward(
+    'wanderersBeacon',
+    "Wanderer's Beacon",
+    'wanderersCrest',
+    'game-icons:lighthouse',
+    '#ffe9a8',
+    270,
+    { solar_essence: 4, void_shard: 2 },
+    'Drifters cross your sky {v}% more often.',
+    6,
+    { baseCost: 200_000, costMultiplier: 2.8 },
+  ),
+
+  // maxHp-Achse — was die Sonne bewahrt und was gegen sie drängt
+  ward(
+    'gravityWell',
+    'Gravity Well',
+    'vitalBloom',
+    'game-icons:vortex',
+    '#e05050',
+    318,
+    { solar_essence: 3 },
+    'Void creatures crawl {v}% slower.',
+    10,
+  ),
+  ward(
+    'starwardensLantern',
+    "Starwarden's Lantern",
+    'starboundCore',
+    'game-icons:lantern-flame',
+    '#ffb0b0',
+    342,
+    { solar_essence: 4, dark_matter: 1 },
+    'Resource stars appear {v}% more often.',
+    7,
+    { baseCost: 200_000, costMultiplier: 2.8 },
+  ),
+  ward(
+    'riftAnchor',
+    'Rift Anchor',
+    'echoingBulwark',
+    'game-icons:anchor',
+    '#ff8080',
+    6,
+    { void_shard: 3 },
+    'Rifts tear open {v}% less often.',
+    8,
+  ),
+
+  // chimesPerClick-Achse — Preise, Handel, was ein Chime kaufen kann
+  ward(
+    'merchantsFavor',
+    "Merchant's Favor",
+    'coinCascade',
+    'game-icons:trade',
+    '#52b830',
+    30,
+    { nebula_quartz: 6 },
+    'Item prices are {v}% lower.',
+    6,
+  ),
+  ward(
+    'almsOfTheKeeper',
+    'Alms of the Keeper',
+    'sunlitTrove',
+    'game-icons:take-my-money',
+    '#b0f090',
+    54,
+    { nebula_quartz: 8, dark_matter: 1 },
+    'Champion level-ups cost {v}% less.',
+    5,
+    { baseCost: 200_000, costMultiplier: 2.8 },
+  ),
+  ward(
+    'chimeConduit',
+    'Chime Conduit',
+    'echoChamber',
+    'game-icons:lightning-arc',
+    '#8fe060',
+    78,
+    { void_shard: 3 },
+    "Bard's abilities come back {v}% sooner.",
+    5,
+  ),
+
+  // chimesPerSecond-Achse — Material, Gebäude, der Takt der Zeit
+  ward(
+    'quarrymastersEye',
+    "Quarrymaster's Eye",
+    'deepVein',
+    'game-icons:foundry-bucket',
+    '#e89840',
+    102,
+    { solar_essence: 3 },
+    'Planet harvesters gather {v}% faster.',
+    6,
+  ),
+  ward(
+    'kilnSubsidy',
+    'Kiln Subsidy',
+    'tidewake',
+    'game-icons:brick-pile',
+    '#ffd0a0',
+    126,
+    { nebula_quartz: 8, void_shard: 2 },
+    'Building upgrades cost {v}% less.',
+    4,
+    { baseCost: 200_000, costMultiplier: 2.8 },
+  ),
+  ward(
+    'omenReader',
+    'Omen-Reader',
+    'timeWeaver',
+    'game-icons:crystal-ball',
+    '#ffb860',
+    150,
+    { dark_matter: 1 },
+    'Omens are offered {v}% more often.',
+    6,
+  ),
+
+  // dmgPerClick-Achse — Kampf, Ladder, Bosse
+  ward(
+    'heraldsFavor',
+    "Herald's Favor",
+    'warhost',
+    'game-icons:podium',
+    '#c060a0',
+    174,
+    { void_shard: 3 },
+    'A won match grants {v}% more LP.',
+    6,
+  ),
+  ward(
+    'hollowCore',
+    'Hollow Core',
+    'riftshard',
+    'game-icons:mineral-heart',
+    '#f0b8e0',
+    198,
+    { void_shard: 4, dark_matter: 1 },
+    'Planet bosses rise with {v}% less health.',
+    5,
+    { baseCost: 200_000, costMultiplier: 2.8 },
+  ),
+  ward(
+    'siegeReckoning',
+    'Siege Reckoning',
+    'starquake',
+    'game-icons:cash',
+    '#e08cc8',
+    222,
+    { dark_matter: 1 },
+    'Planet bosses pay {v}% more Chimes.',
+    9,
+  ),
+]
+
+// ── Covenants (ring 5) — was die Gefährten zurückgeben ──────────────────────
+/**
+ * Fünfzehn Knoten, offen ab Swell, drei Stufen tief.
+ *
+ * Der Ward darunter greift in ein fremdes System hinein; der Covenant handelt
+ * mit ihm. Jeder sitzt auf derselben Achse wie sein Ward und dreht an einer
+ * ANDEREN Schraube desselben Systems: der Ward lässt Vorzeichen häufiger
+ * kommen, der Covenant lässt sie weniger verlangen; der Ward verlangsamt die
+ * Void-Wesen, der Covenant senkt, was ihr Einschlag kostet.
+ *
+ * **Material ist hier der Taktgeber, nicht der Chime-Preis** — dieselbe Rolle
+ * wie bei den späten Blättern. Jede Rezeptur verlangt `void_shard` oder
+ * `dark_matter`, beides Dinge, die man nicht ersparen, sondern nur finden kann.
+ */
+function pact(
+  id: string,
+  name: string,
+  parentId: string,
+  icon: string,
+  color: string,
+  angleDeg: number,
+  materialCost: Record<string, number>,
+  desc: string,
+  effectPerLevel: number,
+): ForgeNodeDef {
+  return {
+    id,
+    name,
+    parentId,
+    tier: 'pact',
+    phase: FORGE_PACT_UNLOCK_PHASE,
+    icon,
+    color,
+    angleDeg,
+    baseCost: 2_000_000,
+    costMultiplier: 3,
+    materialCost,
+    desc,
+    effectPerLevel,
+  }
+}
+
+export const FORGE_PACTS: ForgeNodeDef[] = [
+  pact(
+    'cartographersPact',
+    "Cartographer's Pact",
+    'pathfindersOath',
+    'game-icons:treasure-map',
+    '#e8c040',
+    246,
+    { void_shard: 4, dark_matter: 1 },
+    'New expedition offers appear {v}% sooner.',
+    8,
+  ),
+  pact(
+    'longVigilPact',
+    'Pact of the Long Vigil',
+    'dreamersDraw',
+    'game-icons:sundial',
+    '#f0d878',
+    294,
+    { void_shard: 5, dark_matter: 1 },
+    'Offline progress counts {v} hours longer.',
+    2,
+  ),
+  pact(
+    'starroadPact',
+    'Starroad Pact',
+    'wanderersBeacon',
+    'game-icons:star-gate',
+    '#ffe9a8',
+    270,
+    { dark_matter: 3 },
+    'Champions cross to the next galaxy {v}% sooner.',
+    8,
+  ),
+  pact(
+    'hollowPact',
+    'Hollow Pact',
+    'gravityWell',
+    'game-icons:mighty-force',
+    '#e05050',
+    318,
+    { void_shard: 5, dark_matter: 1 },
+    'A rift that lands takes {v}% fewer meeps.',
+    12,
+  ),
+  pact(
+    'wardensPact',
+    "Warden's Pact",
+    'starwardensLantern',
+    'game-icons:arena',
+    '#ffb0b0',
+    342,
+    { solar_essence: 6, dark_matter: 2 },
+    'Resource stars carry {v} more planets.',
+    1,
+  ),
+  pact(
+    'unbrokenPact',
+    'Unbroken Pact',
+    'riftAnchor',
+    'game-icons:defensive-wall',
+    '#ff8080',
+    6,
+    { void_shard: 6, dark_matter: 1 },
+    "A rift's aftermath fades {v}% sooner.",
+    10,
+  ),
+  pact(
+    'hagglersPact',
+    "Haggler's Pact",
+    'merchantsFavor',
+    'game-icons:shop',
+    '#52b830',
+    30,
+    { nebula_quartz: 12, dark_matter: 1 },
+    'Cosmic Bargains cost {v}% less.',
+    10,
+  ),
+  pact(
+    'merchantsPact',
+    "Merchant's Pact",
+    'almsOfTheKeeper',
+    'game-icons:ascending-block',
+    '#b0f090',
+    54,
+    { solar_essence: 6, dark_matter: 2 },
+    'The Cosmic Bargain restocks {v}% sooner.',
+    8,
+  ),
+  pact(
+    'resonantPact',
+    'Resonant Pact',
+    'chimeConduit',
+    'game-icons:magic-swirl',
+    '#8fe060',
+    78,
+    { void_shard: 5, dark_matter: 2 },
+    "Bard's abilities strike {v}% harder.",
+    8,
+  ),
+  pact(
+    'prospectorsPact',
+    "Prospector's Pact",
+    'quarrymastersEye',
+    'game-icons:stone-block',
+    '#e89840',
+    102,
+    { solar_essence: 6, void_shard: 3 },
+    'Planet bosses leave {v}% more material behind.',
+    12,
+  ),
+  pact(
+    'foundersPact',
+    "Founder's Pact",
+    'kilnSubsidy',
+    'game-icons:brick-wall',
+    '#ffd0a0',
+    126,
+    { nebula_quartz: 14, dark_matter: 2 },
+    'Building milestones arrive {v} levels sooner.',
+    2,
+  ),
+  pact(
+    'augursPact',
+    "Augur's Pact",
+    'omenReader',
+    'game-icons:third-eye',
+    '#ffb860',
+    150,
+    { dark_matter: 3 },
+    'Omens ask {v}% less of you.',
+    7,
+  ),
+  pact(
+    'honoredPact',
+    'Pact of Honor',
+    'heraldsFavor',
+    'game-icons:medallist',
+    '#c060a0',
+    174,
+    { void_shard: 5, dark_matter: 1 },
+    'Honor tribute pays {v}% more.',
+    12,
+  ),
+  pact(
+    'patientPact',
+    'Pact of Patience',
+    'hollowCore',
+    'game-icons:extra-time',
+    '#f0b8e0',
+    198,
+    { solar_essence: 6, dark_matter: 2 },
+    "A boss's enrage clock runs {v}% longer.",
+    10,
+  ),
+  pact(
+    'arbitersPact',
+    "Arbiter's Pact",
+    'siegeReckoning',
+    'game-icons:scales',
+    '#e08cc8',
+    222,
+    { void_shard: 6, dark_matter: 2 },
+    'A defeat costs {v}% less LP.',
+    10,
+  ),
+]
+
+// ── Boughs (ring 7) — der einzige Ring OHNE Obergrenze ───────────────────────
 /**
  * Zehn Knoten, die in der Endphase aufgehen und danach nie fertig werden.
  *
  * Sie sind die Antwort auf zwei Löcher im Spätspiel: der Baum stand ab Phase 5
  * vollständig auf „✦ MAX", und Chimes hatten ausser den Planeten-Leveln keine
- * Senke mehr. Jeder hängt an dem Zweig, dessen Achse er fortsetzt — vier davon
- * an Zweigen mit harter Kappe, deren Idee er ungedeckelt weiterträgt.
+ * Senke mehr. Jeder trägt die Achse eines Zweiges ungedeckelt weiter — vier
+ * davon eine mit harter Kappe.
+ *
+ * **Sein Elternknoten ist trotzdem der Covenant desselben Winkels**, nicht der
+ * Zweig, dessen Idee er fortführt: seit die Ringe eine Leiter bilden, hängt
+ * jeder Knoten am Ring direkt innen. Die Verbindungslinie bleibt dabei radial —
+ * alle Knoten eines Winkels stehen auf derselben Geraden.
  *
  * Drei Eigenschaften machen sie sicher, und keine davon ist Geschmack (die
  * ganze Herleitung steht an `FORGE_BOUGH_COST_MULTIPLIER`):
@@ -447,7 +913,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   bough(
     'wayfarersHoard',
     "Wayfarer's Hoard",
-    'wayfindersCache',
+    'starroadPact',
     'game-icons:swap-bag',
     '#ffe9a8',
     270,
@@ -458,7 +924,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   bough(
     'sleeplessOrbit',
     'Sleepless Orbit',
-    'moonOrbit',
+    'longVigilPact',
     'game-icons:orbital',
     '#f0d878',
     294,
@@ -469,7 +935,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   bough(
     'kindledVigil',
     'Kindled Vigil',
-    'wardensVigil',
+    'wardensPact',
     'game-icons:round-star',
     '#ffb0b0',
     342,
@@ -480,7 +946,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   bough(
     'adamantCore',
     'Adamant Core',
-    'regeneration',
+    'hollowPact',
     'game-icons:stone-sphere',
     '#e05050',
     318,
@@ -491,7 +957,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   bough(
     'gildedCascade',
     'Gilded Cascade',
-    'gildedHarvest',
+    'merchantsPact',
     'game-icons:coins',
     '#b0f090',
     54,
@@ -502,7 +968,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   bough(
     'deepResonance',
     'Deep Resonance',
-    'resonance',
+    'resonantPact',
     'game-icons:concentric-crescents',
     '#8fe060',
     78,
@@ -513,7 +979,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   bough(
     'endlessTide',
     'Endless Tide',
-    'tidalDrift',
+    'foundersPact',
     'game-icons:sands-of-time',
     '#ffd0a0',
     126,
@@ -524,7 +990,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   bough(
     'eternalHost',
     'Eternal Host',
-    'warcry',
+    'honoredPact',
     'game-icons:winged-sword',
     '#c060a0',
     174,
@@ -535,7 +1001,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   bough(
     'rendingArc',
     'Rending Arc',
-    'sunderingWake',
+    'patientPact',
     'game-icons:explosion-rays',
     '#f0b8e0',
     198,
@@ -546,7 +1012,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   bough(
     'undyingWrath',
     'Undying Wrath',
-    'shatter',
+    'arbitersPact',
     'game-icons:burning-embers',
     '#e08cc8',
     222,
@@ -556,7 +1022,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
   ),
 ]
 
-// ── Crowns (ring 5) — der einzige Ring, der eine REGEL kauft ─────────────────
+// ── Crowns (ring 6) — der einzige Ring, der eine REGEL kauft ─────────────────
 /**
  * Fünf Knoten, einer je Wurzelachse, jeder genau EINMAL zu haben.
  *
@@ -576,8 +1042,9 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
  * Warten. Ein Zoll, den man verhandeln kann, ist eine Entscheidung.
  *
  * Der Preis ist einheitlich und liegt eine Grössenordnung über dem Einstieg der
- * Boughs (2e9): wer hier steht, hat ein Universum hinter sich und einen Bough
- * auf Stufe 5 — die Kosten sollen die Entscheidung sein, welche Krone ZUERST.
+ * Boughs (2e9): wer hier steht, hat ein Universum hinter sich und einen
+ * ausgewachsenen Covenant-Ring — die Kosten sollen die Entscheidung sein, welche
+ * Krone ZUERST.
  */
 function crown(
   id: string,
@@ -594,10 +1061,9 @@ function crown(
     name,
     parentId,
     tier: 'crown',
-    // Dieselbe Phase wie die Boughs: das eigentliche Tor ist der Prestige-Zähler
-    // (`FORGE_CROWN_UNLOCK_PRESTIGES`), und die Phase steht daneben, damit ein
-    // Crown nicht vor seinem Elternring auftaucht.
-    phase: FORGE_BOUGH_UNLOCK_PHASE,
+    // Pyre — die eigene Sprosse der Ring-Leiter. Das Prestige-Tor
+    // (`FORGE_CROWN_UNLOCK_PRESTIGES`) steht DANEBEN und ersetzt sie nicht.
+    phase: FORGE_CROWN_UNLOCK_PHASE,
     icon,
     color,
     angleDeg,
@@ -615,7 +1081,7 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
   crown(
     'wanderersGate',
     "Wanderer's Gate",
-    'wayfarersHoard',
+    'starroadPact',
     'game-icons:portal',
     '#ffe9a8',
     270,
@@ -625,7 +1091,7 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
   crown(
     'wardensReprieve',
     "Warden's Reprieve",
-    'adamantCore',
+    'hollowPact',
     'game-icons:heart-tower',
     '#ffb0b0',
     318,
@@ -635,7 +1101,7 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
   crown(
     'midasOverflow',
     'Midas Overflow',
-    'gildedCascade',
+    'merchantsPact',
     'game-icons:gold-nuggets',
     '#b0f090',
     54,
@@ -645,7 +1111,7 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
   crown(
     'tidelessWatch',
     'Tideless Watch',
-    'endlessTide',
+    'foundersPact',
     'game-icons:eclipse',
     '#ffd0a0',
     126,
@@ -660,7 +1126,7 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
   crown(
     'sunderersMark',
     "Sunderer's Mark",
-    'rendingArc',
+    'patientPact',
     'game-icons:broken-shield',
     '#f0b8e0',
     198,
@@ -669,22 +1135,27 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
   ),
 ]
 
+/** Alle 75 Knoten der Ringe 2–7, in Ringreihenfolge von innen nach aussen. */
 export const FORGE_NODES: ForgeNodeDef[] = [
   ...FORGE_BRANCHES,
   ...FORGE_LEAVES,
-  ...FORGE_BOUGHS,
+  ...FORGE_WARDS,
+  ...FORGE_PACTS,
   ...FORGE_CROWNS,
+  ...FORGE_BOUGHS,
 ]
 
 /**
  * Nachschlagen über eine Map statt über `find`.
  *
- * Der Katalog hat 40 Knoten, und `starForgeStore.canAffordNode` fragt für EINEN
+ * Der Katalog hat 75 Knoten, und `starForgeStore.canAffordNode` fragt für EINEN
  * Knoten fünfmal hier nach (freigeschaltet, Höchststufe, Chime-Preis,
  * Materialpreis, Elternstufe). Seit das Shop-Abzeichen an der Header-Ecktaste
- * hängt, läuft diese Prüfung für alle 40 Knoten bei jeder Chime-Änderung —
+ * hängt, läuft diese Prüfung für alle 75 Knoten bei jeder Chime-Änderung —
  * ab Programmstart, nicht erst nach dem ersten Öffnen des Shop-Tabs. Als
- * lineare Suche wären das rund 8000 Zeichenkettenvergleiche je Runde.
+ * lineare Suche wären das rund 28.000 Zeichenkettenvergleiche je Runde; die
+ * Map macht daraus 75 Hash-Zugriffe. Mit zwei neuen Ringen ist das kein
+ * Feinschliff mehr, sondern die Bedingung, unter der das Abzeichen bleiben darf.
  */
 const FORGE_NODE_BY_ID = new Map(FORGE_NODES.map((n) => [n.id, n]))
 

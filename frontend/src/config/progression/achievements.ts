@@ -108,19 +108,25 @@ export const CHRONICLE_TRACKS: ChronicleTrackDef[] = [
     effect: 'Forge node & relic material costs −{v}%',
     // Die letzte Stufe stand einmal auf 200 und war damit UNERREICHBAR: das
     // theoretische Maximum lag bei 10 Branches x 5 + 10 Leaves x 3 + 6 Relikte
-    // x 3 = 98. Mit den angehobenen Caps waren es 130, die Endstufe 125.
+    // x 3 = 98. Mit den angehobenen Caps waren es 130, die Endstufe 125; mit
+    // dem Bough-Ring 175 und 160.
     //
-    // Der vierte Ring hat das Maximum erneut verschoben — 10 fruehe Branches
-    // x 6 + 5 spaete x 5 + 15 Leaves x 4 + 6 Relikte x 5 = 175 (die BOUGHS
-    // zaehlen bewusst NICHT mit, siehe achievementStore). 125 waeren davon nur
-    // noch 71 %, die Bahn haette sich also nebenbei selbst verschenkt; 160
-    // haelt denselben Abstand zum Maximum wie vorher.
+    // Die Ring-Leiter hat es erneut verschoben. Gezaehlt werden die GEDECKELTEN
+    // Ringe plus Relikte (Boughs und Crowns bleiben draussen, siehe
+    // achievementStore), und jeder Ring erreicht seinen Deckel in der Endphase:
+    //
+    //   15 Branches x 6 + 15 Leaves x 5 + 15 Wards x 4 + 15 Covenants x 3
+    //   + 9 Relikte x 5 = 90 + 75 + 60 + 45 + 45 = 315
+    //
+    // Die Endstufe haelt denselben Anteil daran wie zuvor (160/175 = 91 %),
+    // also 285; die Zwischenstufen sind im selben Verhaeltnis mitgewandert.
+    // Ohne das haette sich die Bahn nebenbei selbst verschenkt.
     stages: [
-      { threshold: 5, value: 4 },
-      { threshold: 25, value: 8 },
-      { threshold: 60, value: 12 },
-      { threshold: 110, value: 16 },
-      { threshold: 160, value: 20 },
+      { threshold: 10, value: 4 },
+      { threshold: 45, value: 8 },
+      { threshold: 110, value: 12 },
+      { threshold: 200, value: 16 },
+      { threshold: 285, value: 20 },
     ],
   },
   {

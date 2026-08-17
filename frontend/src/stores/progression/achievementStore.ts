@@ -108,15 +108,26 @@ export const useAchievementStore = defineStore('achievement', {
           case 'driftersCollected':
             return useDrifterStore().totalDriftersCollected
           case 'forgeLevels': {
-            // `boughLevels` zählt hier ABSICHTLICH nicht mit: Ring 4 kennt
-            // keine Obergrenze, und eine unbegrenzte Zahl in dieser Summe
-            // machte jede Schwelle der Bahn „Sunsmith" trivial. Schlimmer, sie
-            // wäre ein geschlossener Kreis — der Lohn der Bahn ist
+            // Gezählt werden die GEDECKELTEN Ringe plus die Relikte.
+            //
+            // `boughLevels` fehlt ABSICHTLICH: Ring 7 kennt keine Obergrenze,
+            // und eine unbegrenzte Zahl in dieser Summe machte jede Schwelle
+            // der Bahn „Sunsmith" trivial. Schlimmer, sie wäre ein
+            // geschlossener Kreis — der Lohn der Bahn ist
             // `forgeMaterialCostMult`, also billigere Baumknoten.
+            //
+            // `crownLevels` fehlt aus dem anderen Grund: fünf Einsen sind keine
+            // geschmiedete Tiefe, sondern fünf Entscheidungen.
             const forge = useStarForgeStore()
             const sum = (levels: Record<string, number>) =>
               Object.values(levels).reduce((total, l) => total + l, 0)
-            return sum(forge.branchLevels) + sum(forge.leafLevels) + sum(forge.relicLevels)
+            return (
+              sum(forge.branchLevels) +
+              sum(forge.leafLevels) +
+              sum(forge.wardLevels) +
+              sum(forge.pactLevels) +
+              sum(forge.relicLevels)
+            )
           }
           case 'planetLevels':
             return usePlanetShopStore().purchasedSlots.reduce((sum, slot) => sum + slot.level, 0)

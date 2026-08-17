@@ -5,11 +5,15 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import {
-  FORGE_BRANCH_BASE_MAX_LEVEL,
+  FORGE_TIER_BASE_MAX_LEVEL,
   FORGE_BRANCH_MAX_LEVEL_CAP,
   FORGE_BRANCH_UNLOCK_PHASE,
   FORGE_LEAF_UNLOCK_PHASE,
   FORGE_LEAF_MAX_LEVEL,
+  FORGE_WARD_UNLOCK_PHASE,
+  FORGE_WARD_MAX_LEVEL,
+  FORGE_PACT_UNLOCK_PHASE,
+  FORGE_PACT_MAX_LEVEL,
   FORGE_LEAF_AMPLIFY_PER_LEVEL,
   FORGE_BARGAIN_RESTOCK_MS,
   FORGE_BOUGH_PARENT_MIN_LEVEL,
@@ -119,16 +123,27 @@ describe('starForgeStore', () => {
       const store = useStarForgeStore()
       const solar = useSolarUpgradeStore()
       solar.starPhase = FORGE_BRANCH_UNLOCK_PHASE
-      expect(store.nodeMaxLevel('solarSails')).toBe(FORGE_BRANCH_BASE_MAX_LEVEL)
+      expect(store.nodeMaxLevel('solarSails')).toBe(FORGE_TIER_BASE_MAX_LEVEL)
       solar.starPhase = FORGE_BRANCH_UNLOCK_PHASE + 1
-      expect(store.nodeMaxLevel('solarSails')).toBe(FORGE_BRANCH_BASE_MAX_LEVEL + 1)
-      solar.starPhase = 5 // Finale — last phase index
+      expect(store.nodeMaxLevel('solarSails')).toBe(FORGE_TIER_BASE_MAX_LEVEL + 1)
+      solar.starPhase = STAR_PHASE_FINAL_INDEX
       expect(store.nodeMaxLevel('solarSails')).toBe(FORGE_BRANCH_MAX_LEVEL_CAP)
     })
 
-    it('leaf max level is constant', () => {
+    // Dieselbe Regel für JEDEN gedeckelten Ring — und der Deckel fällt genau in
+    // der Endphase. Das ist die Zusage der Ring-Leiter: jede Sonnenevolution
+    // öffnet einen neuen Ring UND vertieft jeden schon offenen um eine Stufe.
+    it.each([
+      ['auroraWake', FORGE_LEAF_UNLOCK_PHASE, FORGE_LEAF_MAX_LEVEL],
+      ['pathfindersOath', FORGE_WARD_UNLOCK_PHASE, FORGE_WARD_MAX_LEVEL],
+      ['cartographersPact', FORGE_PACT_UNLOCK_PHASE, FORGE_PACT_MAX_LEVEL],
+    ])('%s: eine Stufe bei Freischaltung, Deckel in der Endphase', (id, phase, cap) => {
       const store = useStarForgeStore()
-      expect(store.nodeMaxLevel('auroraWake')).toBe(FORGE_LEAF_MAX_LEVEL)
+      const solar = useSolarUpgradeStore()
+      solar.starPhase = phase as number
+      expect(store.nodeMaxLevel(id as string)).toBe(FORGE_TIER_BASE_MAX_LEVEL)
+      solar.starPhase = STAR_PHASE_FINAL_INDEX
+      expect(store.nodeMaxLevel(id as string)).toBe(cap)
     })
   })
 
@@ -159,7 +174,7 @@ describe('starForgeStore', () => {
     it('refuses past max level', () => {
       const store = useStarForgeStore()
       unlockBranchPrereqs()
-      store.branchLevels.solarSails = FORGE_BRANCH_BASE_MAX_LEVEL
+      store.branchLevels.solarSails = store.nodeMaxLevel('solarSails')
       expect(store.buyNode('solarSails')).toBe(false)
     })
   })

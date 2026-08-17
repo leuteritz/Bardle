@@ -3,14 +3,20 @@ import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import {
   FORGE_BRANCHES,
   FORGE_LEAVES,
+  FORGE_WARDS,
+  FORGE_PACTS,
+  FORGE_CROWNS,
   FORGE_BOUGHS,
   FORGE_RELICS,
+  getForgeNode,
 } from '@/config/progression/starForge'
 import {
   FORGE_BRANCH_MAX_LEVEL_CAP,
-  FORGE_BRANCH_BASE_MAX_LEVEL,
+  FORGE_TIER_BASE_MAX_LEVEL,
   FORGE_BOUGH_PARENT_MIN_LEVEL,
   FORGE_LEAF_MAX_LEVEL,
+  FORGE_WARD_MAX_LEVEL,
+  FORGE_PACT_MAX_LEVEL,
   STAR_PHASE_FINAL_INDEX,
   ADMIN_MAX_PLANET_LEVEL,
   PLANET_SLOT_CONFIG,
@@ -41,50 +47,85 @@ const finalThreshold = (id: string) => {
 
 describe('Astral Codex — jede letzte Stufe muss erreichbar sein', () => {
   it('Sunsmith: forgeLevels bleibt unter dem Maximum des Baums', () => {
-    // Genau die Summe, die achievementStore als `forgeLevels` zählt:
-    // Branch- plus Leaf- plus Relikt-Stufen. Die BOUGHS sind absichtlich nicht
-    // dabei — sie haben keine Obergrenze, und eine unbegrenzte Zahl in dieser
-    // Summe machte die Prüfung sinnlos.
+    // Genau die Summe, die achievementStore als `forgeLevels` zählt: die vier
+    // GEDECKELTEN Ringe plus die Relikte. Boughs fehlen, weil sie keine
+    // Obergrenze haben und eine unbegrenzte Zahl die Prüfung sinnlos machte;
+    // Crowns, weil fünf Einsen keine geschmiedete Tiefe sind.
     //
-    // Ein Zweig erreicht `BASE + (Endphase − seiner eigenen Freischaltphase)`,
-    // gedeckelt: die späten Zweige kommen deshalb nur auf 5, nicht auf 6, und
-    // eine pauschale Multiplikation mit dem Cap überschätzte das Maximum.
-    const maxBranches = FORGE_BRANCHES.reduce(
-      (sum, branch) =>
-        sum +
-        Math.min(
-          FORGE_BRANCH_MAX_LEVEL_CAP,
-          FORGE_BRANCH_BASE_MAX_LEVEL + Math.max(0, STAR_PHASE_FINAL_INDEX - branch.phase),
-        ),
-      0,
-    )
-    const maxLeaves = FORGE_LEAVES.length * FORGE_LEAF_MAX_LEVEL
-    const maxRelics = FORGE_RELICS.reduce((sum, r) => sum + r.maxLevel, 0)
-    const reachable = maxBranches + maxLeaves + maxRelics
+    // Jeder gedeckelte Ring erreicht `BASE + (Endphase − eigene Phase)`,
+    // gedeckelt je Ring. Ein pauschales „Knotenzahl × Deckel" überschätzte das
+    // Maximum, sobald ein Knoten später aufginge als sein Ring.
+    const capped = (nodes: typeof FORGE_BRANCHES, cap: number) =>
+      nodes.reduce(
+        (sum, def) =>
+          sum +
+          Math.min(
+            cap,
+            FORGE_TIER_BASE_MAX_LEVEL + Math.max(0, STAR_PHASE_FINAL_INDEX - def.phase),
+          ),
+        0,
+      )
+
+    const reachable =
+      capped(FORGE_BRANCHES, FORGE_BRANCH_MAX_LEVEL_CAP) +
+      capped(FORGE_LEAVES, FORGE_LEAF_MAX_LEVEL) +
+      capped(FORGE_WARDS, FORGE_WARD_MAX_LEVEL) +
+      capped(FORGE_PACTS, FORGE_PACT_MAX_LEVEL) +
+      FORGE_RELICS.reduce((sum, r) => sum + r.maxLevel, 0)
 
     expect(finalThreshold('forge')).toBeLessThanOrEqual(reachable)
   })
 
-  it('jeder Bough hängt an einem Zweig, der in der Endphase erreichbar ist', () => {
+  it('jeder gedeckelte Ring erreicht seinen Deckel GENAU in der Endphase', () => {
+    // Die Bedingung, die die ganze Ring-Leiter zusammenhält: kein Ring steht
+    // vorher still, keiner ist danach unfertig. Fällt sie, ist entweder eine
+    // Freischaltphase oder ein Deckel verrutscht — und beides sieht man den
+    // beiden Konstanten einzeln nicht an.
+    const rings: [typeof FORGE_BRANCHES, number][] = [
+      [FORGE_BRANCHES, FORGE_BRANCH_MAX_LEVEL_CAP],
+      [FORGE_LEAVES, FORGE_LEAF_MAX_LEVEL],
+      [FORGE_WARDS, FORGE_WARD_MAX_LEVEL],
+      [FORGE_PACTS, FORGE_PACT_MAX_LEVEL],
+    ]
+    for (const [nodes, cap] of rings) {
+      for (const def of nodes) {
+        const atEnd = FORGE_TIER_BASE_MAX_LEVEL + (STAR_PHASE_FINAL_INDEX - def.phase)
+        expect(atEnd, `${def.id}: erreicht seinen Deckel nicht`).toBe(cap)
+      }
+    }
+  })
+
+  it('jeder Knoten hängt weiter innen und geht NACH seinem Elternknoten auf', () => {
     // Ein Ring, den man nicht aufschliessen kann, ist dieselbe Fehlerklasse wie
-    // eine Bahn, die man nicht abschliessen kann: `nodeUnlocked` verlangt einen
-    // Elternzweig auf `FORGE_BOUGH_PARENT_MIN_LEVEL`, und ein spät
-    // freigeschalteter Zweig erreicht in der Endphase nur noch fünf Stufen.
-    for (const bough of FORGE_BOUGHS) {
-      const parent = FORGE_BRANCHES.find((branch) => branch.id === bough.parentId)
-      expect(parent, `${bough.id} hängt an keinem Zweig`).toBeDefined()
-      const parentMax = Math.min(
-        FORGE_BRANCH_MAX_LEVEL_CAP,
-        FORGE_BRANCH_BASE_MAX_LEVEL + Math.max(0, STAR_PHASE_FINAL_INDEX - parent!.phase),
-      )
-      expect(parentMax, `${bough.id}: Elternzweig bleibt zu klein`).toBeGreaterThanOrEqual(
-        FORGE_BOUGH_PARENT_MIN_LEVEL,
-      )
-      // Und der Bough darf nicht vor seinem Elternzweig aufgehen.
-      expect(bough.phase, `${bough.id} geht vor seinem Zweig auf`).toBeGreaterThanOrEqual(
+    // eine Bahn, die man nicht abschliessen kann. Seit die Ringe eine Leiter
+    // bilden, prüft das eine Regel für alle: der Elternknoten sitzt auf
+    // DEMSELBEN Winkel und geht FRÜHER auf.
+    //
+    // „Genau eine Phase früher" gilt dabei NICHT durchgehend, und das ist kein
+    // Versehen: Ring 6 (Crowns) trägt nur fünf Knoten, die zehn Boughs von
+    // Ring 7 können also gar nicht alle an einer Krone hängen. Sie hängen
+    // stattdessen am Covenant zwei Ringe weiter innen — die Verbindungslinie
+    // bleibt radial, weil der Winkel derselbe ist.
+    const outer = [
+      ...FORGE_LEAVES,
+      ...FORGE_WARDS,
+      ...FORGE_PACTS,
+      ...FORGE_CROWNS,
+      ...FORGE_BOUGHS,
+    ]
+    for (const node of outer) {
+      const parent = getForgeNode(node.parentId)
+      expect(parent, `${node.id} hängt an keinem Knoten`).toBeDefined()
+      expect(node.phase, `${node.id} geht vor seinem Elternknoten auf`).toBeGreaterThan(
         parent!.phase,
       )
+      expect(node.angleDeg, `${node.id} sitzt nicht über seinem Elternknoten`).toBe(
+        parent!.angleDeg,
+      )
     }
+    // Crown und Bough verlangen Stufen von ihrem Covenant — die muss es in
+    // ihrer jeweiligen Phase schon geben.
+    expect(FORGE_PACT_MAX_LEVEL).toBeGreaterThanOrEqual(FORGE_BOUGH_PARENT_MIN_LEVEL)
   })
 
   it('Warden of Worlds: planetLevels bleibt im ausgebauten Orbit', () => {

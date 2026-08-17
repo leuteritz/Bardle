@@ -51,6 +51,7 @@ import {
 } from '@/config/constants'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useShopStore } from '@/stores/economy/shopStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
@@ -160,10 +161,22 @@ export const useBardAbilityStore = defineStore('bardAbility', {
       }
     },
 
-    /** Gesamter Wirkungsfaktor einer Fähigkeit: Rang × Resonance. */
+    /**
+     * Gesamter Wirkungsfaktor einer Fähigkeit: Rang × Resonance × Resonant Pact.
+     *
+     * Der Pakt (Star Forge, Ring 5) ist der erste Dauerbonus, den dieser Store
+     * überhaupt nach INNEN liest. Er greift ausschliesslich auf diesem Weg —
+     * dem multiplikativen. Die vier Getter darunter (`bindingTargets`,
+     * `shrineBuffMs`, `journeyBuffMs`, `stasisMs`) bleiben unberührt: hinge ein
+     * FENSTER an einem kaufbaren Faktor, verlängerte der Ausbau das Fenster, in
+     * dem der Ausbau dreifach zählt — derselbe geschlossene Kreis wie beim
+     * Overclock-Stapel (docs/balance.md).
+     */
     powerMultOf() {
       return (id: BardAbilityId): number =>
-        bardRankPowerMult(this.rankOf(id)) * this.resonancePowerMult
+        bardRankPowerMult(this.rankOf(id)) *
+        this.resonancePowerMult *
+        useStarForgeStore().bardPowerMult
     },
 
     // ── Der zweite Skalierungsweg: Rang OHNE Resonance ──────────────────────
@@ -198,7 +211,11 @@ export const useBardAbilityStore = defineStore('bardAbility', {
           ABILITY_CDR_CAP,
           (rank - 1) * ABILITY_RANK_CDR_STEP + this.resonanceCdr,
         )
-        return Math.round(def.baseCooldownSec * 1000 * (1 - cdr))
+        // Chime Conduit (Star Forge) als eigener Faktor NEBEN der CDR-Kappe:
+        // in die Kappe hineingerechnet wäre er ab `ABILITY_CDR_CAP` wirkungslos,
+        // und der Ward wäre auf einem ausgebauten Bard ein bezahltes Nichts.
+        const conduit = useStarForgeStore().bardCooldownMult
+        return Math.round(def.baseCooldownSec * 1000 * (1 - cdr) * conduit)
       }
     },
 

@@ -1371,7 +1371,7 @@ const shopChampionNames = computed(() =>
     function canAffordItem(itemId: string): boolean {
       const item = SHOP_ITEMS.find((i) => i.id === itemId)
       if (!item) return false
-      if (gameStore.chimes < item.price) return false
+      if (gameStore.chimes < itemStore.itemPrice(itemId)) return false
       if (item.materialCost && !inventoryStore.hasMaterials(item.materialCost)) return false
       return true
     }
@@ -1934,9 +1934,9 @@ const shopChampionNames = computed(() =>
           : null,
         materials,
         chimes: {
-          need: item.price,
+          need: itemStore.itemPrice(item.id),
           have: gameStore.chimes,
-          ok: gameStore.chimes >= item.price,
+          ok: gameStore.chimes >= itemStore.itemPrice(item.id),
         },
         canBuy: canAffordItem(item.id),
       }
@@ -1956,7 +1956,7 @@ const shopChampionNames = computed(() =>
         // eingepasst, nicht rund beschnitten.
         portraitSrc: item.icon,
         imageRound: false,
-        delta: { value: -item.price, unit: 'chimes' },
+        delta: { value: -itemStore.itemPrice(id), unit: 'chimes' },
         // Sechs Käufe in Folge ergeben EINE Karte mit der Gesamtausgabe — die
         // war früher nirgends abzulesen.
         mergeKey: 'purchase/item',

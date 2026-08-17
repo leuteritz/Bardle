@@ -76,6 +76,17 @@
             :transform="`rotate(-90 ${FORGE_CHIP_RING_R + 2} ${FORGE_CHIP_RING_R + 2})`"
           />
         </svg>
+        <!-- Das Glyph tritt an die Stelle des Namens, sobald die Leiste eng
+             wird. Es steht IMMER im Markup und wird nur ein- und ausgeblendet:
+             sieben Motive beim Umschalten nachzuladen wäre ein sichtbares
+             Aufflackern genau in dem Moment, in dem die Spalte ohnehin
+             umbricht. -->
+        <Icon
+          class="ft-chip-glyph"
+          :icon="chip.icon"
+          :width="FORGE_CHIP_ICON_SIZE"
+          :height="FORGE_CHIP_ICON_SIZE"
+        />
         <span class="ft-chip-text">
           <span class="ft-chip-label">{{ chip.label }}</span>
           <span class="ft-chip-sub">{{ chip.sub }}</span>
@@ -116,6 +127,8 @@ import type { ForgeUpgradeTier } from '@/types'
 import {
   FORGE_UPGRADE_GROUPS,
   FORGE_UPGRADE_FILTER_ALL_LABEL,
+  FORGE_UPGRADE_FILTER_ALL_ICON,
+  FORGE_CHIP_ICON_SIZE,
   FORGE_CHIP_RING_R,
   FORGE_CHIP_RING_CIRCUMFERENCE,
   FORGE_SEARCH_ICON,
@@ -152,10 +165,12 @@ function ringOffset(progress: number): number {
   return FORGE_CHIP_RING_CIRCUMFERENCE * (1 - Math.min(1, Math.max(0, progress)))
 }
 
-// ── Die fünf Chips ───────────────────────────────────────────────────────────
+// ── Die acht Chips ───────────────────────────────────────────────────────────
 interface RingChip {
   tier: ForgeUpgradeTier | 'all'
   label: string
+  /** Motiv für die enge Leiste, in der der Name zurücktritt. */
+  icon: string
   sub: string
   title: string
   accent: string
@@ -179,6 +194,7 @@ const chips = computed<RingChip[]>(() => {
   const all: RingChip = {
     tier: 'all',
     label: FORGE_UPGRADE_FILTER_ALL_LABEL,
+    icon: FORGE_UPGRADE_FILTER_ALL_ICON,
     sub: `${grownTotal.value} grown`,
     title: 'Every ring',
     accent: '#e8c040',
@@ -194,6 +210,7 @@ const chips = computed<RingChip[]>(() => {
     return {
       tier: group.tier as ForgeUpgradeTier,
       label: group.shortTitle,
+      icon: group.icon,
       sub: endless ? `${done} ${FORGE_ENDLESS_SYMBOL}` : `${done} / ${own.length}`,
       title: `${group.title} — ${group.hint}`,
       accent: group.accent,
@@ -374,6 +391,20 @@ function handleBuyAll(): void {
   flex-shrink: 0;
 }
 
+/* Ruhezustand: der Name trägt den Chip, das Glyph ist aus dem Fluss genommen.
+   `display: none` statt `opacity: 0` — eine unsichtbare Fläche zählte in der
+   Breitenrechnung mit, und genau die ist hier die knappe Grösse. */
+.ft-chip-glyph {
+  display: none;
+  flex-shrink: 0;
+  color: var(--chip-c, #c89040);
+  opacity: 0.75;
+}
+
+.ft-chip--on .ft-chip-glyph {
+  opacity: 1;
+}
+
 .ft-chip-text {
   display: flex;
   flex-direction: column;
@@ -486,7 +517,16 @@ function handleBuyAll(): void {
    1. Die Suche wird kürzer — ihr Platzhalter ist ohnehin nur eine Einladung.
    2. Die Zweitzeile der Chips fällt weg — der Fortschrittsring sagt dasselbe
       ohne Zahl, und die Zahl steht im `title`.
-   3. Der Wortlaut des Sammelkaufs fällt weg — Blitz und Zahl bleiben. */
+   3. Der Wortlaut des Sammelkaufs fällt weg — Blitz und Zahl bleiben.
+   4. Der NAME der Chips fällt weg und ihr Motiv tritt an seine Stelle.
+
+   Stufe 4 kam mit dem sechsten und siebten Ring dazu. Vorher standen sechs
+   Chips in der Leiste, jetzt sind es acht, und acht Namen passen auf Full HD
+   nicht mehr neben Suche und Sammelkauf. Ein Umbruch wäre die falsche Antwort:
+   die zweite Zeile kostet 29px, und die fehlen dem Baum darunter auf genau dem
+   Viewport, auf dem er ohnehin am flachsten steht. Ein Glyph in der Grösse
+   seines Fortschrittsrings sagt dasselbe auf einem Fünftel der Breite, und der
+   Name bleibt im `title`. */
 /* Ab hier nimmt die Suche den RESTPLATZ statt einer festen Breite: bei einer
    festen 132px stand „Search 45 upgr" mitten im Wort abgeschnitten da. Der
    Zwischenraum tritt dafür auf eine reine Lücke zurück — er hat nichts zu
@@ -529,11 +569,12 @@ function handleBuyAll(): void {
     display: none;
   }
 
-  /* Statisches Verkleinern des Rings — kein Wert pro Frame, kein Neuzeichnen
-     der Linie: das SVG skaliert über seinen viewBox mit. */
+  /* Der Ring gibt noch einmal nach — aber nur so weit, dass das Motiv darin
+     Platz behält (`FORGE_CHIP_ICON_SIZE` plus Strichstärke). Auf 16px, wie es
+     hier vor der Icon-Stufe stand, liefe das Glyph über seine eigene Linie. */
   .ft-chip-ring {
-    width: 16px;
-    height: 16px;
+    width: 27px;
+    height: 27px;
   }
 
   .ft-chip-label {
@@ -544,7 +585,43 @@ function handleBuyAll(): void {
   .ft-buy-all-label {
     display: none;
   }
+}
 
+/* Stufe 4 — der Name tritt zurück, und das Motiv rückt IN den Fortschrittsring.
+   Die Schwelle liegt über der von Stufe 3, weil die Namen zuerst ausgehen.
+
+   Gemessen (Playwright, Full HD, acht Chips): nebeneinander gestellt brauchen
+   Ring und Motiv zusammen 435px und brechen damit um. Ineinander gelegt sind es
+   364 — und der Chip liest sich zugleich besser, weil der Ring dann zeigt, was
+   er misst, statt danebenzustehen. */
+@container (max-width: 1180px) {
+  .ft-chip {
+    position: relative;
+    gap: 0;
+    padding: 4px 6px;
+  }
+
+  .ft-chip-text {
+    display: none;
+  }
+
+  /* Der Ring wächst, damit das Motiv hineinpasst — statisch, kein Wert pro
+     Frame: das SVG skaliert über seinen viewBox mit. */
+  .ft-chip-ring {
+    width: 30px;
+    height: 30px;
+  }
+
+  .ft-chip-glyph {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@container (max-width: 900px) {
   .ft-buy-all {
     gap: 6px;
     padding: 8px 10px;

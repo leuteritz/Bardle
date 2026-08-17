@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useUiStore } from '@/stores/core/uiStore'
@@ -319,7 +320,13 @@ export const useGalaxyStore = defineStore('galaxy', {
         this.championTravelBaseDurationMs > 0
           ? this.championTravelBaseDurationMs
           : this.championTravelDurationMs
-      return Math.max(1000, Math.round(base / useSolarUpgradeStore().flightSpeedMultiplier))
+      // Starroad Pact als eigener Faktor NEBEN dem Strahl: der Strahl teilt
+      // (ein Tempo), der Pakt multipliziert (eine Dauer). Zusammengefasst wäre
+      // die eine Zahl ein Tempo und die andere keins — und die Reisedauer ist
+      // im Spätspiel der Taktgeber der Galaxie-Achse (docs/balance.md), also
+      // die Stelle, an der eine unklare Rechnung am teuersten wäre.
+      const flight = base / useSolarUpgradeStore().flightSpeedMultiplier
+      return Math.max(1000, Math.round(flight * useStarForgeStore().championTravelMult))
     },
 
     travelProgressPercent(): number {
@@ -421,9 +428,13 @@ export const useGalaxyStore = defineStore('galaxy', {
     },
 
     _rollResourceStarInterval(): number {
+      // Starwarden's Lantern kürzt den Abstand. Er ist der ehrliche Weg zu mehr
+      // Material: die FALLCHANCE sättigt (`tryDropMaterial` vergleicht gegen
+      // `Math.random()`), die Zahl der Gelegenheiten nicht (docs/balance.md).
       return (
-        RESOURCE_STAR_INTERVAL_MIN_MS +
-        Math.random() * (RESOURCE_STAR_INTERVAL_MAX_MS - RESOURCE_STAR_INTERVAL_MIN_MS)
+        (RESOURCE_STAR_INTERVAL_MIN_MS +
+          Math.random() * (RESOURCE_STAR_INTERVAL_MAX_MS - RESOURCE_STAR_INTERVAL_MIN_MS)) *
+        useStarForgeStore().resourceStarIntervalMult
       )
     },
 

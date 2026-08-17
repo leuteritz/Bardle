@@ -5,22 +5,36 @@ import type { IconPoolKey } from './ui'
 // ── Star Forge (Shop tab) ────────────────────────────────────────────────────
 
 /**
- * Welcher Ring.
+ * Welcher Ring — von innen nach aussen, und die Reihenfolge IST die Leiter der
+ * Sonnenphasen: `branch` in Spark, `leaf` in Dawn, `ward` in Zenith, `pact` in
+ * Swell, `crown` in Pyre, `bough` in Collapse. Ring 1 (`root`) liegt im
+ * solarUpgradeStore und gehört dem Kometen.
  *
  * `bough` ist der einzige OHNE Obergrenze — seine Stufen laufen weiter, wenn
- * alles andere im Baum auf MAX steht. `crown` ist der äusserste und die
- * Gegenfigur dazu: EINE Stufe, und dafür verschiebt jeder Knoten eine Regel
- * statt eine Zahl. Beides zusammen ginge nicht — eine Regel, die man mehrfach
- * kaufen kann, ist wieder eine Zahl.
+ * alles andere im Baum auf MAX steht, und er sitzt deshalb GANZ aussen: er ist
+ * das, was übrig bleibt, wenn die Sonne fertig ist. `crown` ist die Gegenfigur
+ * dazu: EINE Stufe, und dafür verschiebt jeder Knoten eine Regel statt eine
+ * Zahl. Beides zusammen ginge nicht — eine Regel, die man mehrfach kaufen kann,
+ * ist wieder eine Zahl.
+ *
+ * `ward` und `pact` sind die zwei Ringe dazwischen. Sie greifen als einzige aus
+ * dem Baum HERAUS: jeder ihrer Knoten sitzt auf einer Zahl, zu der die Forge
+ * bisher nichts zu sagen hatte (Void-Takt, Drifter, Vorzeichen, Ladder, Bosse,
+ * Gebäudepreise, Bard-Fähigkeiten).
  */
-export type ForgeNodeTier = 'branch' | 'leaf' | 'bough' | 'crown'
+export type ForgeNodeTier = 'branch' | 'leaf' | 'ward' | 'pact' | 'bough' | 'crown'
 
-/** A purchasable node on the Forge Tree (rings 2–4 around the sun).
+/** A purchasable node on the Forge Tree (rings 2–7 around the sun).
  *  Ring 1 (roots) stays in solarUpgradeStore. */
 export interface ForgeNodeDef {
   id: string
   name: string
-  /** Root SolarBranchId for branches; branch node id for leaves. */
+  /**
+   * Der Knoten desselben Winkels auf dem Ring DIREKT INNEN — für Branches also
+   * eine `SolarBranchId` aus dem solarUpgradeStore, sonst eine Knoten-Id.
+   * Die Kette überspringt keinen Ring mehr: ray → branch → leaf → ward → pact →
+   * crown/bough.
+   */
   parentId: string
   tier: ForgeNodeTier
   /** Minimum starPhase at which the node becomes purchasable. */
@@ -40,7 +54,8 @@ export interface ForgeNodeDef {
   materialCost: Record<string, number>
   /** Effect description template — `{v}` is replaced with the level value. */
   desc: string
-  /** Branches und Boughs: Wirkung je Stufe. Leaves: ungenutzt (fester Verstärker). */
+  /** Branches, Wards, Pacts und Boughs: Wirkung je Stufe. Leaves: ungenutzt
+   *  (fester Verstärker), Crowns: ungenutzt (die Regel steht als Konstante). */
   effectPerLevel: number
 }
 
@@ -201,8 +216,8 @@ export type ForgeUpgradeTier = 'root' | ForgeNodeTier
  * Zustand eines Knotens, wie ihn Baum und Liste gleichermaßen lesen.
  *
  * `capped` und `locked` schließen sich gegenseitig aus und gehören je einem
- * Ring: nur Wurzeln kennen die Gleichwuchs-Sperre (`maxAllowedLevel`), nur
- * Branches und Leaves kennen eine Freischaltung über Phase und Elternstufe.
+ * Ring: nur Wurzeln kennen die Gleichwuchs-Sperre (`maxAllowedLevel`), nur die
+ * Ringe darüber kennen eine Freischaltung über Phase und Elternstufe.
  */
 export type ForgeUpgradeState = 'locked' | 'empty' | 'partial' | 'affordable' | 'capped' | 'maxed'
 

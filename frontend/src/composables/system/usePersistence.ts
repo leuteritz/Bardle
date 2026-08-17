@@ -365,6 +365,8 @@ export function usePersistence() {
       starForge: {
         branchLevels: { ...starForgeStore.branchLevels },
         leafLevels: { ...starForgeStore.leafLevels },
+        wardLevels: { ...starForgeStore.wardLevels },
+        pactLevels: { ...starForgeStore.pactLevels },
         boughLevels: { ...starForgeStore.boughLevels },
         crownLevels: { ...starForgeStore.crownLevels },
         relicLevels: { ...starForgeStore.relicLevels },
@@ -974,9 +976,11 @@ export function usePersistence() {
       if (saved.starForge) {
         starForgeStore.branchLevels = migratedIdMap(saved.starForge.branchLevels)
         starForgeStore.leafLevels = migratedIdMap(saved.starForge.leafLevels)
-        // Ältere Spielstände kennen den vierten und fünften Ring nicht —
+        // Ältere Spielstände kennen die äusseren Ringe nicht —
         // `migratedIdMap` gibt für ein fehlendes Feld einen leeren Beutel
         // zurück, und das ist der richtige Startwert.
+        starForgeStore.wardLevels = migratedIdMap(saved.starForge.wardLevels)
+        starForgeStore.pactLevels = migratedIdMap(saved.starForge.pactLevels)
         starForgeStore.boughLevels = migratedIdMap(saved.starForge.boughLevels)
         starForgeStore.crownLevels = migratedIdMap(saved.starForge.crownLevels)
         starForgeStore.relicLevels = migratedIdMap(saved.starForge.relicLevels)

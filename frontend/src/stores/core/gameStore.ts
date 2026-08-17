@@ -389,15 +389,22 @@ export const useGameStore = defineStore('game', {
       const remaining = [...AUGMENT_POOL]
       const picked: AugmentDefinition[] = []
 
+      // Dreamer's Draw (Star Forge) hebt das Gewicht von allem ÜBER `common` —
+      // die gewürfelten Karten bleiben dieselben, nur ihre Chancen verschieben
+      // sich. Ein Ward, der stattdessen Commons aus dem Topf nähme, veränderte
+      // den Katalog; einer, der die Gewichte dreht, verändert nur den Wurf.
+      const luck = useStarForgeStore().augmentLuckMult
+      const weightOf = (a: AugmentDefinition): number => {
+        const raw = RARITY_WEIGHTS[a.rarity as AugmentRarity] ?? RARITY_WEIGHT_FALLBACK
+        return a.rarity === 'common' ? raw : raw * luck
+      }
+
       for (let i = 0; i < AUGMENT_CHOICE_COUNT && remaining.length > 0; i++) {
-        const totalWeight = remaining.reduce(
-          (sum, a) => sum + (RARITY_WEIGHTS[a.rarity as AugmentRarity] ?? RARITY_WEIGHT_FALLBACK),
-          0,
-        )
+        const totalWeight = remaining.reduce((sum, a) => sum + weightOf(a), 0)
         let roll = Math.random() * totalWeight
         let chosen = remaining[remaining.length - 1]
         for (const aug of remaining) {
-          roll -= RARITY_WEIGHTS[aug.rarity as AugmentRarity] ?? RARITY_WEIGHT_FALLBACK
+          roll -= weightOf(aug)
           if (roll <= 0) {
             chosen = aug
             break

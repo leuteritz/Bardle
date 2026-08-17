@@ -27,6 +27,7 @@ import {
   FORGE_UPGRADE_TIER_LABELS,
   FORGE_CROWN_STATE_OPEN,
   FORGE_CROWN_STATE_FORGED,
+  FORGE_CROWN_LOCK_REASON,
   FORGE_BULK_BUY_CAP,
   FORGE_ENDLESS_SYMBOL,
   FORGE_GROW_LABEL,
@@ -299,6 +300,13 @@ export function useForgeUpgrades(): {
         STAR_PHASE_DATA[def.phase]?.name ?? `Phase ${def.phase + SUN_PHASE_DISPLAY_OFFSET}`
       return { reason: `Unlocks at ${phaseName}`, progress: 0, kind: 'phase', phase: def.phase }
     }
+    // Das zweite Tor des Kronen-Rings. Es steht VOR der Elternprüfung, weil es
+    // die Bedingung ist, die dann noch offen steht: die Phase ist erreicht, der
+    // Elternknoten meist auch, und ohne diesen Zweig nennte die Karte eine
+    // Hürde, die längst genommen ist.
+    if (def.tier === 'crown' && !forgeStore.crownsUnlocked) {
+      return { reason: FORGE_CROWN_LOCK_REASON, progress: 0, kind: 'parent', phase: -1 }
+    }
     // Welche Elternstufe welcher Ring verlangt, weiss der Store — hier stünde
     // sonst eine zweite Fassung derselben Weiche.
     const required = forgeStore.nodeParentRequirement(def)
@@ -357,11 +365,12 @@ export function useForgeUpgrades(): {
       nextDesc = def.desc
       nowText = level > 0 ? FORGE_CROWN_STATE_FORGED : FORGE_CROWN_STATE_OPEN
       nextText = FORGE_CROWN_STATE_FORGED
-    } else if (def.tier === 'bough') {
-      // Kein Blatt-Verstärker: ein Bough trägt schlicht Stufe × Wert je Stufe.
-      // Genau diese Additivität hält den endlosen Ring sicher — die Vorschau
-      // muss sie deshalb auch zeigen und darf nicht durch `branchEffect`.
-      const now = forgeStore.boughEffect(def.id)
+    } else if (def.tier === 'bough' || def.tier === 'ward' || def.tier === 'pact') {
+      // Drei Ringe ohne Blatt-Verstärker: sie tragen schlicht Stufe × Wert je
+      // Stufe. Beim Bough hält genau diese Additivität den endlosen Ring sicher,
+      // bei Ward und Covenant gibt es kein Blatt, das sie verstärken könnte —
+      // die Vorschau darf in keinem der drei Fälle durch `branchEffect`.
+      const now = level * def.effectPerLevel
       const next = (level + 1) * def.effectPerLevel
       desc = def.desc.replace(FORGE_DESC_VALUE_TOKEN, trimNumber(now))
       nextDesc = def.desc.replace(FORGE_DESC_VALUE_TOKEN, trimNumber(next))

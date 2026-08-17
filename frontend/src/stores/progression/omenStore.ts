@@ -9,6 +9,7 @@ import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useShopStore } from '@/stores/economy/shopStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { logOmenCompleted } from '@/config/ui/eventLog'
 import { omenIcon } from '@/utils/game/rolledIcons'
@@ -91,6 +92,18 @@ export const useOmenStore = defineStore('omen', {
     /** Buffs, die gerade wirklich laufen. */
     liveBuffs(state): OmenActiveBuff[] {
       return state.buffs.filter((b) => b.expiresAt > state.omenNow)
+    },
+
+    /**
+     * Sekunden bis zum nächsten Angebot — EINE Quelle für die drei Stellen, die
+     * die Uhr neu stellen (abgelaufen, angenommen, ausgeschlagen).
+     *
+     * `OMEN_FIRST_OFFER_DELAY_SEC` läuft bewusst NICHT hierüber: das ist die
+     * Ruhe zu Beginn eines Laufs, kein Angebotstakt, und ein Ward dürfte den
+     * ersten Vorzeichen-Anflug nicht in die ersten Sekunden ziehen.
+     */
+    nextOfferDelaySec(): number {
+      return OMEN_OFFER_DELAY_SEC * useStarForgeStore().omenIntervalMult
     },
 
     /**
@@ -315,9 +328,14 @@ export const useOmenStore = defineStore('omen', {
      * frischer Spielstand ohne Produktion kein Ziel von null bekommt.
      */
     resolveTarget(def: OmenDef): number {
-      if (!def.targetFromCpsSeconds) return def.target
-      const fromCps = useGameStore().chimesPerSecond * def.targetFromCpsSeconds
-      return Math.max(def.target, Math.ceil(fromCps))
+      // Augur's Pact senkt, was das Vorzeichen verlangt — auf BEIDEN Wegen, sonst
+      // bliebe die Definitionszahl als Boden stehen und der Pakt wirkte
+      // ausgerechnet dort nicht, wo das Ziel ohnehin klein ist.
+      const ease = useStarForgeStore().omenTargetMult
+      const floor = Math.max(1, Math.ceil(def.target * ease))
+      if (!def.targetFromCpsSeconds) return floor
+      const fromCps = useGameStore().chimesPerSecond * def.targetFromCpsSeconds * ease
+      return Math.max(floor, Math.ceil(fromCps))
     },
 
     /**
@@ -335,7 +353,7 @@ export const useOmenStore = defineStore('omen', {
         // Definition verschwunden (Katalog geändert, alter Spielstand): das
         // Vorzeichen stillschweigend fallen lassen statt ewig offen zu halten.
         this.active = null
-        this.offerCooldownSec = OMEN_OFFER_DELAY_SEC
+        this.offerCooldownSec = this.nextOfferDelaySec
         return
       }
 
@@ -368,7 +386,7 @@ export const useOmenStore = defineStore('omen', {
         seq: this.lastCompleted.seq + 1,
       }
       this.active = null
-      this.offerCooldownSec = OMEN_OFFER_DELAY_SEC
+      this.offerCooldownSec = this.nextOfferDelaySec
 
       const minutes = Math.round(
         (def.reward.durationSec * (swift ? OMEN_SWIFT_DURATION_MULT : 1)) / 60,
@@ -419,7 +437,7 @@ export const useOmenStore = defineStore('omen', {
       if (!this.active) return
       logger.info('Omen', `Abandoned ${this.active.defId}`)
       this.active = null
-      this.offerCooldownSec = OMEN_OFFER_DELAY_SEC
+      this.offerCooldownSec = this.nextOfferDelaySec
     },
 
     /** Admin/Testing: sofort ein Angebot auslegen. */

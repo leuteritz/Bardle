@@ -174,8 +174,23 @@ export const useChampionLevelStore = defineStore('championLevel', {
       }
     },
 
+    /**
+     * Preis der nächsten Stufe. Alms of the Keeper (Star Forge) greift HIER an
+     * und an keiner der sechs Aufrufstellen: die zeigen den Preis an, prüfen ihn
+     * und buchen ihn ab — läuft der Rabatt nur durch eine davon, sieht der
+     * Spieler eine Zahl und bezahlt eine andere.
+     *
+     * Nur die Chime-Seite. Die Materialseite bleibt roh: sie ist der Taktgeber
+     * der Champion-Achse, und ein Rabatt darauf ginge über `Math.round` zu
+     * Positionen mit Nachkommastellen.
+     */
     costOf(): (name: string) => ChampionLevelCost {
-      return (name: string) => levelUpCost(name, this.levelOf(name))
+      return (name: string) => {
+        const cost = levelUpCost(name, this.levelOf(name))
+        const mult = useStarForgeStore().championLevelCostMult
+        if (mult >= 1) return cost
+        return { ...cost, chimes: Math.max(1, Math.ceil(cost.chimes * mult)) }
+      }
     },
 
     /** Enough XP banked to buy the next level (ignores chimes and materials). */

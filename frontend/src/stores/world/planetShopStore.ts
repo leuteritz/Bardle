@@ -30,6 +30,7 @@ import {
 // weitergereicht, damit die bestehenden Importpfade gültig bleiben.
 export { PLANET_ROLES, PLANET_ROLES_LIST, JUNGLE_BUFF_DEFS } from '@/config/constants'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
@@ -135,9 +136,9 @@ export function planetLevelRequiredPhase(nextLevel: number): number {
  * Tier. Und weil ein Slot entweder erntet oder Bosse beschiesst, ist es eine
  * echte Entscheidung.
  */
-export function harvestIntervalTicks(level: number): number {
+export function harvestIntervalTicks(level: number, forgeMult = 1): number {
   const rate = 1 + Math.max(0, level - 1) * PLANET_LEVEL_BONUS_PCT
-  return Math.max(1, Math.ceil(PLANET_HARVEST_INTERVAL_TICKS / rate))
+  return Math.max(1, Math.ceil((PLANET_HARVEST_INTERVAL_TICKS / rate) * forgeMult))
 }
 
 const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
@@ -279,7 +280,11 @@ export const usePlanetShopStore = defineStore('planetShop', {
         )
         .map((s) => ({
           materialId: s.slotConfig!.materialId!,
-          intervalTicks: harvestIntervalTicks(s.level),
+          // Quarrymaster's Eye (Star Forge) beschleunigt jeden Harvester —
+          // dieselbe Zahl wie das Planeten-Level, nur aus dem Baum. Der Faktor
+          // kommt vom AUFRUFER und steht nicht in der Funktion: `harvestIntervalTicks`
+          // ist eine reine Funktion und wird als solche in einer Spec geprüft.
+          intervalTicks: harvestIntervalTicks(s.level, useStarForgeStore().harvestIntervalMult),
         }))
     },
 

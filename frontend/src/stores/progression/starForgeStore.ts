@@ -30,11 +30,15 @@ import {
   getForgeBargain,
 } from '@/config/progression/starForge'
 import {
-  FORGE_BRANCH_BASE_MAX_LEVEL,
+  FORGE_TIER_BASE_MAX_LEVEL,
   FORGE_BRANCH_MAX_LEVEL_CAP,
   FORGE_BRANCH_PARENT_MIN_LEVEL,
   FORGE_LEAF_MAX_LEVEL,
   FORGE_LEAF_PARENT_MIN_LEVEL,
+  FORGE_WARD_MAX_LEVEL,
+  FORGE_WARD_PARENT_MIN_LEVEL,
+  FORGE_PACT_MAX_LEVEL,
+  FORGE_PACT_PARENT_MIN_LEVEL,
   FORGE_BOUGH_PARENT_MIN_LEVEL,
   ADMIN_MAX_BOUGH_LEVEL,
   FORGE_LEAF_AMPLIFY_PER_LEVEL,
@@ -68,6 +72,28 @@ import {
   FORGE_CROWN_OVERFLOW_FRACTION_PER_SEC,
   FORGE_CROWN_OVERFLOW_MIN_CHIMES,
   FORGE_CROWN_OVERFLOW_MAX_PER_SEC,
+  FORGE_MIN_BARD_COOLDOWN_MULT,
+  FORGE_MIN_BUILDING_COST_MULT,
+  FORGE_MIN_ITEM_COST_MULT,
+  FORGE_MIN_CHAMPION_LEVEL_COST_MULT,
+  FORGE_MAX_VOID_SPAWN_INTERVAL_MULT,
+  FORGE_MAX_VOID_TRAVEL_MULT,
+  FORGE_MIN_VOID_MEEP_LOSS_MULT,
+  FORGE_MIN_VOID_AFTERMATH_MULT,
+  FORGE_MIN_DRIFTER_INTERVAL_MULT,
+  FORGE_MIN_OMEN_INTERVAL_MULT,
+  FORGE_MIN_OMEN_TARGET_MULT,
+  FORGE_MIN_RESOURCE_STAR_INTERVAL_MULT,
+  FORGE_MIN_HARVEST_INTERVAL_MULT,
+  FORGE_MIN_CHAMPION_TRAVEL_MULT,
+  FORGE_MIN_BOSS_HP_MULT,
+  FORGE_MIN_EXPEDITION_SPAWN_MULT,
+  FORGE_MIN_BARGAIN_PRICE_MULT,
+  FORGE_MIN_BARGAIN_RESTOCK_MULT,
+  FORGE_MIN_LP_LOSS_MULT,
+  FORGE_MIN_BUILDING_MILESTONE_INTERVAL,
+  FORGE_MAX_AUGMENT_LUCK_MULT,
+  BUILDING_MILESTONE_INTERVAL,
   SOLAR_BRANCHES,
   SOLAR_MATERIAL_FROM_LEVEL,
 } from '@/config/constants'
@@ -90,34 +116,69 @@ const MIN_DWELL_MULT = FORGE_MIN_DWELL_MULT
 const MIN_EXPEDITION_MULT = FORGE_MIN_EXPEDITION_MULT
 const MAX_DOUBLE_CLICK_CHANCE = FORGE_MAX_DOUBLE_CLICK_CHANCE
 
+/**
+ * Höchststufe je gedeckeltem Ring. Steht als Tabelle und nicht als
+ * `if`-Leiter in `nodeMaxLevel`: die vier Zahlen gehören zusammen, weil sie
+ * gemeinsam die Bedingung erfüllen, dass jeder Ring seinen Deckel exakt in der
+ * Endphase erreicht (`FORGE_TIER_BASE_MAX_LEVEL` + 5 − `phase`).
+ *
+ * `bough` und `crown` fehlen absichtlich — der eine hat keinen Deckel, der
+ * andere genau eine Stufe; beide werden in `nodeMaxLevel` vorher beantwortet.
+ */
+const TIER_MAX_LEVEL_CAP: Partial<Record<ForgeNodeDef['tier'], number>> = {
+  branch: FORGE_BRANCH_MAX_LEVEL_CAP,
+  leaf: FORGE_LEAF_MAX_LEVEL,
+  ward: FORGE_WARD_MAX_LEVEL,
+  pact: FORGE_PACT_MAX_LEVEL,
+}
+
+/**
+ * Elternstufe, die ein Ring von dem Ring direkt innen verlangt. Dieselbe Form
+ * wie die Deckel-Tabelle darüber und aus demselben Grund: die Zahlen hängen
+ * aneinander. Der Elternring steht in der Phase, in der ein Ring aufgeht, auf
+ * genau `FORGE_TIER_BASE_MAX_LEVEL + 1` = 2 — eine höhere Hürde verschöbe die
+ * Freischaltung still um eine ganze Sonnenphase.
+ */
+const TIER_PARENT_MIN_LEVEL: Record<ForgeNodeDef['tier'], number> = {
+  branch: FORGE_BRANCH_PARENT_MIN_LEVEL,
+  leaf: FORGE_LEAF_PARENT_MIN_LEVEL,
+  ward: FORGE_WARD_PARENT_MIN_LEVEL,
+  pact: FORGE_PACT_PARENT_MIN_LEVEL,
+  crown: FORGE_CROWN_PARENT_MIN_LEVEL,
+  bough: FORGE_BOUGH_PARENT_MIN_LEVEL,
+}
+
 export const useStarForgeStore = defineStore('starForge', {
   state: () => ({
     /** Ring-2 node levels, keyed by ForgeNodeDef id. */
     branchLevels: {} as Record<string, number>,
     /** Ring-3 node levels, keyed by ForgeNodeDef id. */
     leafLevels: {} as Record<string, number>,
+    /** Ring-4 node levels, keyed by ForgeNodeDef id. */
+    wardLevels: {} as Record<string, number>,
+    /** Ring-5 node levels, keyed by ForgeNodeDef id. */
+    pactLevels: {} as Record<string, number>,
     /**
-     * Ring-4 node levels, keyed by ForgeNodeDef id. Eigener Beutel und nicht
+     * Ring-7 node levels, keyed by ForgeNodeDef id. Eigener Beutel und nicht
      * mit den Zweigen zusammengelegt: `achievementStore` summiert für die
-     * Codex-Bahn „Sunsmith" genau `branchLevels + leafLevels + relicLevels`.
+     * Codex-Bahn „Sunsmith" nur die GEDECKELTEN Ringe plus Relikte.
      * Eine Zahl OHNE Obergrenze in dieser Summe machte jede Bahn-Schwelle
      * trivial — und der Sunsmith-Rabatt senkt seinerseits die Materialkosten
      * des Baums, wäre also ein geschlossener Kreis.
      */
     boughLevels: {} as Record<string, number>,
     /**
-     * Ring-5 node levels, keyed by ForgeNodeDef id — Werte sind 0 oder 1.
+     * Ring-6 node levels, keyed by ForgeNodeDef id — Werte sind 0 oder 1.
      *
      * Eine MAP und keine Liste geschmiedeter IDs, obwohl die Kronen wie
      * Konstellationen einmalig sind: `nodeLevel`, `nodeUnlocked`, `buyNode` und
      * das Zeichnen des Baums arbeiten allesamt auf Stufen. Als Liste bräuchte
      * jeder dieser vier Wege einen Sonderfall, und der Ring wäre im Baum ein
-     * Fremdkörper statt der äusserste Kreis.
+     * Fremdkörper statt einer seiner Kreise.
      *
-     * Wie `boughLevels` ein eigener Beutel: die Codex-Bahn „Sunsmith" summiert
-     * `branchLevels + leafLevels + relicLevels`, und ein Ring mit fünf Einsen
-     * darin verschöbe ihre Schwellen um einen Betrag, der nichts mit Schmieden
-     * zu tun hat.
+     * Wie `boughLevels` ein eigener Beutel: die Sunsmith-Summe zählt Stufen, die
+     * man SCHMIEDET, und ein Ring mit fünf Einsen darin verschöbe ihre Schwellen
+     * um einen Betrag, der mit Schmieden nichts zu tun hat.
      */
     crownLevels: {} as Record<string, number>,
     /** Relic levels, keyed by ForgeRelicDef id (0/absent = not forged). */
@@ -151,6 +212,8 @@ export const useStarForgeStore = defineStore('starForge', {
       return (id) =>
         state.branchLevels[id] ??
         state.leafLevels[id] ??
+        state.wardLevels[id] ??
+        state.pactLevels[id] ??
         state.boughLevels[id] ??
         state.crownLevels[id] ??
         0
@@ -160,21 +223,24 @@ export const useStarForgeStore = defineStore('starForge', {
       return (id) => {
         const def = getForgeNode(id)
         if (!def) return 0
-        // Ring 4 kennt keine Obergrenze — `level >= maxLevel` ist damit für ihn
+        // Ring 7 kennt keine Obergrenze — `level >= maxLevel` ist damit für ihn
         // dauerhaft falsch, er wird also nie `maxed`. Wer die Zahl ANZEIGT oder
         // über sie iteriert, muss sie mit `Number.isFinite` abfangen.
         if (def.tier === 'bough') return Infinity
-        // Ring 5 ist die Gegenfigur dazu: genau eine Stufe, dafür eine Regel.
+        // Ring 6 ist die Gegenfigur dazu: genau eine Stufe, dafür eine Regel.
         if (def.tier === 'crown') return FORGE_CROWN_MAX_LEVEL
-        if (def.tier === 'leaf') return FORGE_LEAF_MAX_LEVEL
-        // „+1 je Phase über der eigenen Freischaltphase". Der Bezug ist
-        // `def.phase` und NICHT die globale Freischaltkonstante: für die zehn
-        // frühen Zweige ist beides dasselbe (ihr `phase` IST 2), aber ein
-        // Zweig, der erst in Phase 3 aufgeht, stünde sonst am Tag seiner
-        // Freischaltung schon auf Stufe 4 von 6.
+        // Alle gedeckelten Ringe folgen DERSELBEN Regel: eine Stufe bei der
+        // Freischaltung, +1 je Sonnenphase darüber, gedeckelt je Ring. Die vier
+        // Deckel sind so gewählt, dass jeder Ring den seinen GENAU in der
+        // Endphase erreicht (Tabelle an `FORGE_TIER_BASE_MAX_LEVEL`).
+        //
+        // Der Bezug ist `def.phase` und NICHT die globale Freischaltkonstante:
+        // ein Knoten, der ausnahmsweise später aufginge, stünde sonst am Tag
+        // seiner Freischaltung schon auf halber Höhe.
+        const cap = TIER_MAX_LEVEL_CAP[def.tier] ?? FORGE_BRANCH_MAX_LEVEL_CAP
         const phase = useSolarUpgradeStore().starPhase
         const extra = Math.max(0, phase - def.phase)
-        return Math.min(FORGE_BRANCH_MAX_LEVEL_CAP, FORGE_BRANCH_BASE_MAX_LEVEL + extra)
+        return Math.min(cap, FORGE_TIER_BASE_MAX_LEVEL + extra)
       }
     },
 
@@ -190,16 +256,11 @@ export const useStarForgeStore = defineStore('starForge', {
 
     /** Elternstufe, die ein Knoten seines Rings verlangt, bevor er aufgeht. */
     nodeParentRequirement(): (def: ForgeNodeDef) => number {
-      return (def) => {
-        if (def.tier === 'branch') return FORGE_BRANCH_PARENT_MIN_LEVEL
-        if (def.tier === 'leaf') return FORGE_LEAF_PARENT_MIN_LEVEL
-        if (def.tier === 'crown') return FORGE_CROWN_PARENT_MIN_LEVEL
-        return FORGE_BOUGH_PARENT_MIN_LEVEL
-      }
+      return (def) => TIER_PARENT_MIN_LEVEL[def.tier]
     },
 
     /**
-     * Hat der Spieler die Schwelle erreicht, ab der Ring 5 überhaupt existiert?
+     * Hat der Spieler die Schwelle erreicht, ab der Ring 6 überhaupt existiert?
      *
      * Eigener Getter statt einer Zeile in `nodeUnlocked`, weil der Baum ihn
      * auch für das RING-LABEL braucht: „Astral Crowns" steht dort grau, solange
@@ -215,8 +276,8 @@ export const useStarForgeStore = defineStore('starForge', {
         const def = getForgeNode(id)
         if (!def) return false
         if (useSolarUpgradeStore().starPhase < def.phase) return false
-        // Das eigentliche Tor von Ring 5. Es steht NEBEN dem Phasen-Gate und
-        // nicht statt seiner: die Phase hält den Ring hinter seinem Elternring,
+        // Das ZWEITE Tor von Ring 6. Es steht NEBEN dem Phasen-Gate und nicht
+        // statt seiner: die Phase gibt dem Ring seine Sprosse auf der Leiter,
         // der Aufbruch macht ihn zur Belohnung dafür, ein Universum
         // zurückgelassen zu haben.
         if (def.tier === 'crown' && !this.crownsUnlocked) return false
@@ -351,6 +412,23 @@ export const useStarForgeStore = defineStore('starForge', {
       }
     },
 
+    /**
+     * Wirkung eines Wards oder Covenants: Stufe × Wert je Stufe.
+     *
+     * EIN Getter für beide Ringe, obwohl sie zwei Beutel haben — die Rechnung
+     * ist dieselbe, und der Beutel steht bereits in `nodeLevel`. Auch hier
+     * KEIN Blatt-Verstärker: er gehört zum Paar Zweig/Blatt und zu keinem
+     * anderen. Die dreissig Getter unten lesen ausnahmslos hierüber, damit die
+     * Wirkung eines Knotens an genau einer Stelle entsteht.
+     */
+    ringEffect(): (nodeId: string) => number {
+      return (nodeId) => {
+        const def = getForgeNode(nodeId)
+        if (!def || (def.tier !== 'ward' && def.tier !== 'pact')) return 0
+        return this.nodeLevel(nodeId) * def.effectPerLevel
+      }
+    },
+
     // ── Relics & constellations ───────────────────────────────────────────────
     relicLevel(state): (id: string) => number {
       return (id) => state.relicLevels[id] ?? 0
@@ -453,8 +531,11 @@ export const useStarForgeStore = defineStore('starForge', {
       return pickPooledIcon(def.iconPool, `${def.id}#${state.bargainRestockAt}`)
     },
 
+    /** Der Rabatt des Handels UND der des Baums (Haggler's Pact) — beide auf
+     *  demselben Grundpreis, und beide hier, damit Anzeige und Abbuchung nie
+     *  auseinanderlaufen können. */
     bargainPrice(): (def: ForgeBargainDef) => number {
-      return (def) => Math.round(def.basePrice * (1 - def.discountPct))
+      return (def) => Math.round(def.basePrice * (1 - def.discountPct) * this.bargainPriceMult)
     },
 
     bargainRestockRemainingMs(state): number {
@@ -740,7 +821,11 @@ export const useStarForgeStore = defineStore('starForge', {
     offlineMaxHoursBonus(): number {
       return (
         (this.relicLevel('echoOfTheVoid') > 0 ? FORGE_RELIC_OFFLINE_HOURS : 0) +
-        (this.constellationForged('starfarersCompact') ? FORGE_COMPACT_OFFLINE_HOURS : 0)
+        (this.constellationForged('starfarersCompact') ? FORGE_COMPACT_OFFLINE_HOURS : 0) +
+        // Pact of the Long Vigil zahlt auf DIESELBE Grenze und wird deshalb hier
+        // addiert statt beim Aufrufer: `usePersistence` liest genau einen
+        // Forge-Wert, und die Statistik-Zeile daneben ebenso.
+        this.pactOfflineHoursBonus
       )
     },
 
@@ -976,6 +1061,219 @@ export const useStarForgeStore = defineStore('starForge', {
         1 + (this.branchEffect('gildedHarvest') + this.boughEffect('gildedCascade')) / 100
       return tempest * (this.buffActive('cpcX2') ? 2 : 1) * tree
     },
+
+    /* ══ Ring 4 & 5 — die Getter, die aus dem Baum HERAUSGREIFEN ══════════════
+     *
+     * Dreissig Getter, je einer für eine Einbaustelle in einem fremden Store.
+     * Sie folgen alle demselben Bauplan wie die Getter darüber: die Wirkung
+     * kommt aus `ringEffect(id)`, Kappe und Boden stehen HIER und nicht beim
+     * Aufrufer, und keiner von ihnen berührt CpS oder CpC.
+     *
+     * **Dass keiner davon die Chime-Rate multipliziert, ist Absicht.** Die drei
+     * inneren Ringe tragen die Wirtschaft bereits vierfach; ein weiterer Faktor
+     * dort wäre kein neuer Inhalt, sondern eine grössere Zahl. Nebenbei bleibt
+     * damit `shopStore.cpsFactorBreakdown` unangetastet — und ebenso die
+     * Boss-HP-Formel, denn kein Knoten hier hebt `otherDps`.
+     */
+
+    // ── flightSpeed-Achse ────────────────────────────────────────────────────
+    /** Prozentpunkte, die auf die Erfolgschance einer Expedition addiert werden
+     *  (Pathfinder's Oath). Die Summe deckelt `EXPEDITION_SUCCESS_CHANCE_MAX`
+     *  bereits beim Aufrufer — hier steht deshalb kein zweiter Deckel. */
+    expeditionSuccessBonusPct(): number {
+      return this.ringEffect('pathfindersOath')
+    },
+
+    /**
+     * Faktor auf das GEWICHT der Augmente oberhalb von `common`
+     * (Dreamer's Draw). 1 heisst „unverändert gewürfelt".
+     */
+    augmentLuckMult(): number {
+      return Math.min(FORGE_MAX_AUGMENT_LUCK_MULT, 1 + this.ringEffect('dreamersDraw') / 100)
+    },
+
+    /** Faktor auf den Abstand zweier Drifter (< 1 = häufiger). */
+    drifterIntervalMult(): number {
+      return Math.max(FORGE_MIN_DRIFTER_INTERVAL_MULT, 1 - this.ringEffect('wanderersBeacon') / 100)
+    },
+
+    /** Faktor auf den Abstand zweier Expeditions-Angebote (< 1 = schneller). */
+    expeditionSpawnMult(): number {
+      return Math.max(
+        FORGE_MIN_EXPEDITION_SPAWN_MULT,
+        1 - this.ringEffect('cartographersPact') / 100,
+      )
+    },
+
+    /** Zusätzliche Stunden am Offline-Fenster (Pact of the Long Vigil). Additiv
+     *  und ohne Deckel — dieselbe Grösse wie `offlineMaxHoursBonus`, nur aus dem
+     *  Baum statt aus Relikt und Konstellation. */
+    pactOfflineHoursBonus(): number {
+      return this.ringEffect('longVigilPact')
+    },
+
+    /** Faktor auf die Reisedauer eines Champions (< 1 = kürzer). Greift NACH
+     *  `CHAMPION_TRAVEL_MAX_MS` — der Deckel bleibt der Deckel. */
+    championTravelMult(): number {
+      return Math.max(FORGE_MIN_CHAMPION_TRAVEL_MULT, 1 - this.ringEffect('starroadPact') / 100)
+    },
+
+    // ── maxHp-Achse ──────────────────────────────────────────────────────────
+    /** Faktor auf die Anflugdauer eines Void-Wesens (> 1 = langsamer). */
+    voidTravelMult(): number {
+      return Math.min(FORGE_MAX_VOID_TRAVEL_MULT, 1 + this.ringEffect('gravityWell') / 100)
+    },
+
+    /** Faktor auf den Abstand zweier Ressourcensterne (< 1 = häufiger). */
+    resourceStarIntervalMult(): number {
+      return Math.max(
+        FORGE_MIN_RESOURCE_STAR_INTERVAL_MULT,
+        1 - this.ringEffect('starwardensLantern') / 100,
+      )
+    },
+
+    /** Faktor auf den Spawnabstand des Void (> 1 = seltener). */
+    voidSpawnIntervalMult(): number {
+      return Math.min(FORGE_MAX_VOID_SPAWN_INTERVAL_MULT, 1 + this.ringEffect('riftAnchor') / 100)
+    },
+
+    /** Faktor auf den Meep-Verlust eines Einschlags (< 1 = weniger). */
+    voidMeepLossMult(): number {
+      return Math.max(FORGE_MIN_VOID_MEEP_LOSS_MULT, 1 - this.ringEffect('hollowPact') / 100)
+    },
+
+    /**
+     * Wie viele Planeten ein Ressourcenstern ZUSÄTZLICH trägt (Warden's Pact).
+     *
+     * Eine ganze Zahl, kein Faktor: `_buildResourcePlanetSlots` verteilt die
+     * Planeten gleichmässig über den Orbit (`(i / count) · 2π`), eine
+     * Bruchzahl gäbe es dort nicht. Und es ist der zweite ehrliche Material-Weg
+     * neben `starLifetimeMult`: mehr ZIELE je Vorbeiflug sättigen so wenig wie
+     * mehr Zeit, während eine höhere Fallchance es täte (docs/balance.md).
+     */
+    resourceStarPlanetBonus(): number {
+      return Math.round(this.ringEffect('wardensPact'))
+    },
+
+    /** Faktor auf die Laufzeit einer Void-Nachwirkung (< 1 = kürzer). */
+    voidAftermathMult(): number {
+      return Math.max(FORGE_MIN_VOID_AFTERMATH_MULT, 1 - this.ringEffect('unbrokenPact') / 100)
+    },
+
+    // ── chimesPerClick-Achse ─────────────────────────────────────────────────
+    /** Faktor auf den Preis eines Items im Laden (< 1 = billiger). */
+    itemCostMult(): number {
+      return Math.max(FORGE_MIN_ITEM_COST_MULT, 1 - this.ringEffect('merchantsFavor') / 100)
+    },
+
+    /** Faktor auf die Chime-Kosten eines Champion-Levels (< 1 = billiger). */
+    championLevelCostMult(): number {
+      return Math.max(
+        FORGE_MIN_CHAMPION_LEVEL_COST_MULT,
+        1 - this.ringEffect('almsOfTheKeeper') / 100,
+      )
+    },
+
+    /** Faktor auf die Abklingzeit einer Bard-Fähigkeit (< 1 = kürzer). */
+    bardCooldownMult(): number {
+      return Math.max(FORGE_MIN_BARD_COOLDOWN_MULT, 1 - this.ringEffect('chimeConduit') / 100)
+    },
+
+    /** Faktor auf den Preis des Cosmic Bargain (< 1 = billiger). */
+    bargainPriceMult(): number {
+      return Math.max(FORGE_MIN_BARGAIN_PRICE_MULT, 1 - this.ringEffect('hagglersPact') / 100)
+    },
+
+    /** Faktor auf den Restock-Abstand des Cosmic Bargain (< 1 = schneller). */
+    bargainRestockMult(): number {
+      return Math.max(FORGE_MIN_BARGAIN_RESTOCK_MULT, 1 - this.ringEffect('merchantsPact') / 100)
+    },
+
+    /**
+     * Faktor auf die WIRKUNG einer Bard-Fähigkeit (Resonant Pact).
+     *
+     * Greift ausschliesslich am multiplikativen Weg (`powerMultOf`) an, nie an
+     * einer Fensterlänge: hinge ein Buff-FENSTER hier, verlängerte Klicken das
+     * Fenster, in dem Klicken zählt — derselbe geschlossene Kreis wie beim
+     * Overclock-Stapel (docs/balance.md).
+     */
+    bardPowerMult(): number {
+      return 1 + this.ringEffect('resonantPact') / 100
+    },
+
+    // ── chimesPerSecond-Achse ────────────────────────────────────────────────
+    /** Faktor auf den Erntetakt der Planeten-Harvester (< 1 = schneller). */
+    harvestIntervalMult(): number {
+      return Math.max(
+        FORGE_MIN_HARVEST_INTERVAL_MULT,
+        1 - this.ringEffect('quarrymastersEye') / 100,
+      )
+    },
+
+    /** Faktor auf den Preis einer Gebäudestufe (< 1 = billiger). */
+    buildingCostMult(): number {
+      return Math.max(FORGE_MIN_BUILDING_COST_MULT, 1 - this.ringEffect('kilnSubsidy') / 100)
+    },
+
+    /** Faktor auf den Abstand zweier Vorzeichen-Angebote (< 1 = häufiger). */
+    omenIntervalMult(): number {
+      return Math.max(FORGE_MIN_OMEN_INTERVAL_MULT, 1 - this.ringEffect('omenReader') / 100)
+    },
+
+    /** Faktor auf die Materialbeute eines Planeten-Bosses. */
+    bossMaterialMult(): number {
+      return 1 + this.ringEffect('prospectorsPact') / 100
+    },
+
+    /**
+     * Abstand zweier Gebäude-Meilensteine in Stufen (Founder's Pact).
+     *
+     * Gibt die ZAHL zurück und nicht einen Faktor: `buildingMilestoneMultiplier`
+     * teilt die Stufe durch dieses Intervall, und ein gebrochenes Intervall
+     * verschöbe die Schwellen um Bruchteile einer Stufe.
+     */
+    buildingMilestoneInterval(): number {
+      return Math.max(
+        FORGE_MIN_BUILDING_MILESTONE_INTERVAL,
+        BUILDING_MILESTONE_INTERVAL - Math.round(this.ringEffect('foundersPact')),
+      )
+    },
+
+    /** Faktor auf die Zielgrösse eines Vorzeichens (< 1 = leichter). */
+    omenTargetMult(): number {
+      return Math.max(FORGE_MIN_OMEN_TARGET_MULT, 1 - this.ringEffect('augursPact') / 100)
+    },
+
+    // ── dmgPerClick-Achse ────────────────────────────────────────────────────
+    /** Faktor auf den LP-Gewinn eines Sieges. */
+    lpGainMult(): number {
+      return 1 + this.ringEffect('heraldsFavor') / 100
+    },
+
+    /** Faktor auf die maximale HP eines Planeten-Bosses beim Erscheinen. */
+    bossHpMult(): number {
+      return Math.max(FORGE_MIN_BOSS_HP_MULT, 1 - this.ringEffect('hollowCore') / 100)
+    },
+
+    /** Faktor auf die Chime-Beute eines Planeten-Bosses. */
+    bossRewardMult(): number {
+      return 1 + this.ringEffect('siegeReckoning') / 100
+    },
+
+    /** Faktor auf die Frist bis zum Enrage eines Bosses (> 1 = mehr Zeit). */
+    bossEnrageMult(): number {
+      return 1 + this.ringEffect('patientPact') / 100
+    },
+
+    /** Faktor auf den LP-Verlust einer Niederlage (< 1 = weniger). */
+    lpLossMult(): number {
+      return Math.max(FORGE_MIN_LP_LOSS_MULT, 1 - this.ringEffect('arbitersPact') / 100)
+    },
+
+    /** Faktor auf den Honor-Tribut nach einem Kampf. */
+    honorTributeMult(): number {
+      return 1 + this.ringEffect('honoredPact') / 100
+    },
   },
 
   actions: {
@@ -998,7 +1296,11 @@ export const useStarForgeStore = defineStore('starForge', {
       const pick = pool[Math.floor(Math.random() * pool.length)] ?? FORGE_BARGAINS[0]
       this.bargainDealId = pick.id
       this.bargainPurchased = false
-      this.bargainRestockAt = gameNow() + FORGE_BARGAIN_RESTOCK_MS
+      // Der Merchant's Pact verkürzt das Fenster. Er greift beim SETZEN und
+      // nicht beim Ablesen: `bargainRestockAt` steht im Spielstand, und ein
+      // Faktor auf einem gespeicherten Zeitpunkt zöge einen laufenden Handel
+      // rückwirkend zusammen, sobald der Knoten gekauft wird.
+      this.bargainRestockAt = gameNow() + FORGE_BARGAIN_RESTOCK_MS * this.bargainRestockMult
     },
 
     // ── Der „NEW"-Rahmen: was der Spieler schon gesehen hat ───────────────────
@@ -1052,6 +1354,10 @@ export const useStarForgeStore = defineStore('starForge', {
         this.branchLevels[id] = (this.branchLevels[id] ?? 0) + 1
       } else if (def.tier === 'leaf') {
         this.leafLevels[id] = (this.leafLevels[id] ?? 0) + 1
+      } else if (def.tier === 'ward') {
+        this.wardLevels[id] = (this.wardLevels[id] ?? 0) + 1
+      } else if (def.tier === 'pact') {
+        this.pactLevels[id] = (this.pactLevels[id] ?? 0) + 1
       } else if (def.tier === 'crown') {
         this.crownLevels[id] = 1
       } else {
@@ -1188,9 +1494,12 @@ export const useStarForgeStore = defineStore('starForge', {
      * LAUFENDE Phase gilt (`nodeMaxLevel`). Sonst stünden im Baum Stufen, die
      * es im Spiel gar nicht gibt, und die Testlage wäre keine.
      *
-     * Reihenfolge ist Absicht: Strahlen schalten die Zweige frei, Zweige die
-     * Blätter, und erst gewachsene Zweige erfüllen die Relikt- und
-     * Konstellations-Bedingungen.
+     * Reihenfolge ist Absicht — und seit die Ringe eine Leiter bilden, ist sie
+     * es doppelt: jeder Ring schaltet den nächsten frei, und `FORGE_NODES` steht
+     * bereits in dieser Reihenfolge (Branches → Leaves → Wards → Covenants →
+     * Crowns → Boughs). Ein Lauf in anderer Ordnung liesse die äusseren Ringe
+     * stehen, weil ihre Elternstufe noch nicht gebucht wäre. Erst gewachsene
+     * Zweige erfüllen danach die Relikt- und Konstellations-Bedingungen.
      *
      * Remove together with the "DEV · Max Forge" button in ShopComponent.vue.
      */
@@ -1206,9 +1515,13 @@ export const useStarForgeStore = defineStore('starForge', {
           this.branchLevels[def.id] = this.nodeMaxLevel(def.id)
         } else if (def.tier === 'leaf') {
           this.leafLevels[def.id] = this.nodeMaxLevel(def.id)
+        } else if (def.tier === 'ward') {
+          this.wardLevels[def.id] = this.nodeMaxLevel(def.id)
+        } else if (def.tier === 'pact') {
+          this.pactLevels[def.id] = this.nodeMaxLevel(def.id)
         } else if (def.tier === 'crown') {
           // Das PRESTIGE-Gate bleibt stehen, genau wie das Phasen-Gate darüber:
-          // ohne einen Aufbruch im Rücken gibt es Ring 5 im Spiel nicht, und
+          // ohne einen Aufbruch im Rücken gibt es Ring 6 im Spiel nicht, und
           // ein Admin-Knopf, der ihn trotzdem setzt, prüfte einen Zustand, den
           // kein Spieler je erreicht.
           if (this.crownsUnlocked) this.crownLevels[def.id] = FORGE_CROWN_MAX_LEVEL

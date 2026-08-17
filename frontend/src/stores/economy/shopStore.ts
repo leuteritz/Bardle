@@ -45,8 +45,11 @@ import {
  * ändert, ist nicht die Höhe — sondern dass es wieder ein Ziel gibt, auf das
  * man zusparen kann.
  */
-export function buildingMilestoneMultiplier(level: number): number {
-  return Math.pow(BUILDING_MILESTONE_MULT, Math.floor(level / BUILDING_MILESTONE_INTERVAL))
+export function buildingMilestoneMultiplier(
+  level: number,
+  interval: number = BUILDING_MILESTONE_INTERVAL,
+): number {
+  return Math.pow(BUILDING_MILESTONE_MULT, Math.floor(level / interval))
 }
 
 export const useShopStore = defineStore('shop', {
@@ -125,6 +128,21 @@ export const useShopStore = defineStore('shop', {
     topProducer() {
       const top = this.buildingStats[0]
       return top || { name: 'None', icon: '/img/BardAbilities/BardChime.png' }
+    },
+
+    /**
+     * Faktor auf den Preis JEDER Gebäudestufe — Universum/Augment aus dem
+     * `activeModifier` und Kiln Subsidy aus der Forge.
+     *
+     * Steht als EIN Getter, weil die Kurve an drei Stellen ausgewertet wird
+     * (Einzelpreis, Stapelpreis, „wie viel kann ich mir leisten"). Als
+     * ausgeschriebener Ausdruck an jeder von ihnen war schon der erste Faktor
+     * dreifach da; ein zweiter hätte die Wahrscheinlichkeit verdreifacht, dass
+     * angezeigter und abgebuchter Preis auseinanderlaufen.
+     */
+    buildingCostMultiplier(): number {
+      const modMul = useGameStore().activeModifier.buildingCostMultiplier ?? 1
+      return modMul * useStarForgeStore().buildingCostMult
     },
 
     /**
@@ -223,7 +241,7 @@ export const useShopStore = defineStore('shop', {
 
     getMaxAffordableAmount(upgrade: ShopUpgrade): number {
       const gameStore = useGameStore()
-      const costMul = gameStore.activeModifier.buildingCostMultiplier ?? 1
+      const costMul = this.buildingCostMultiplier
       let maxAmount = 0
       let totalCost = 0
       let currentLevel = upgrade.level
@@ -255,8 +273,7 @@ export const useShopStore = defineStore('shop', {
       let totalCost = 0
       let currentLevel = upgrade.level
 
-      const gameStore = useGameStore()
-      const costMul = gameStore.activeModifier.buildingCostMultiplier ?? 1
+      const costMul = this.buildingCostMultiplier
 
       for (let i = 0; i < amount; i++) {
         const cost = Math.ceil(
@@ -308,8 +325,7 @@ export const useShopStore = defineStore('shop', {
     },
 
     getUpgradeCost(upgrade: ShopUpgrade): number {
-      const gameStore = useGameStore()
-      const costMul = gameStore.activeModifier.buildingCostMultiplier ?? 1
+      const costMul = this.buildingCostMultiplier
       return Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.level) * costMul)
     },
 
@@ -340,6 +356,11 @@ export const useShopStore = defineStore('shop', {
       const planetShopStore = usePlanetShopStore()
       const mod = gameStore.activeModifier
       const resonanceMuls = planetShopStore.resonanceTowerBuildingMultipliers
+      // Founder's Pact rückt die Meilensteine näher zusammen. Er greift am
+      // INTERVALL und nicht am Faktor: die Verdopplung ist die Belohnung, ihr
+      // Abstand die Schraube — ein Faktor auf `BUILDING_MILESTONE_MULT` wäre
+      // eine Potenz auf einer Potenz.
+      const milestoneInterval = useStarForgeStore().buildingMilestoneInterval
       const baseCPS = this.shopUpgrades.reduce((total, upgrade) => {
         const universeMul = mod.buildingMultipliers?.[upgrade.id] ?? 1
         const resonanceMul = resonanceMuls[upgrade.id] ?? 1
@@ -347,7 +368,7 @@ export const useShopStore = defineStore('shop', {
           total +
           (upgrade.baseCPS || 0) *
             upgrade.level *
-            buildingMilestoneMultiplier(upgrade.level) *
+            buildingMilestoneMultiplier(upgrade.level, milestoneInterval) *
             universeMul *
             resonanceMul
         )

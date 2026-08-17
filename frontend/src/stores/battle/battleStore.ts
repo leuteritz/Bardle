@@ -6,6 +6,7 @@ import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import {
   createEmptyAllyRows,
   ELO_K_FACTOR,
@@ -1656,7 +1657,9 @@ export const useBattleStore = defineStore('battle', {
       if (this.lastAutoBattleResult?.won === false) {
         tribute = Math.floor(tribute * HONOR_LOSS_TRIBUTE_MULT)
       }
-      return tribute
+      // Pact of Honor zuletzt, auf dem fertigen Betrag: MVP-Bonus und
+      // Niederlagen-Abschlag sind Anteile DIESES Tributs, kein Kanal daneben.
+      return Math.floor(tribute * useStarForgeStore().honorTributeMult)
     },
 
     /**
@@ -1892,10 +1895,18 @@ export const useBattleStore = defineStore('battle', {
             // Die Leiter wird nach oben hin zäher — steht in derselben Klammer
             // und aus demselben Grund wie die beiden Faktoren darüber: was den
             // Aufstieg bremst, darf den Abstieg nicht verbilligen.
-            (LP_TIER_GAIN_MULT[this.currentRank.tier] ?? 1),
+            (LP_TIER_GAIN_MULT[this.currentRank.tier] ?? 1) *
+            // Herald's Favor (Star Forge) — in derselben Klammer, aus demselben
+            // Grund: er zahlt auf den Aufstieg, nicht auf den Abstieg.
+            useStarForgeStore().lpGainMult,
         )
       // Baron's Aegis (Baron Nashor): a defeat despite the baron costs only a fraction of the LP
       if (!won && this.hasBaronBuff) lp = Math.round(lp * BARON_LP_LOSS_SHIELD_MULT)
+      // Arbiter's Pact federt den Abstieg — die Gegenfigur zu Herald's Favor und
+      // die einzige Stelle im Spiel, die eine NIEDERLAGE billiger macht. Sie hat
+      // deshalb einen eigenen Boden (`FORGE_MIN_LP_LOSS_MULT`): eine Leiter, auf
+      // der man nichts mehr verliert, ist keine.
+      if (!won) lp = Math.round(lp * useStarForgeStore().lpLossMult)
       return lp
     },
 

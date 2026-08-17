@@ -278,16 +278,23 @@ export const FORGE_ROOT_ANGLES_DEG = {
 export const FORGE_ICON_SIZE_ROOT = 28
 export const FORGE_ICON_SIZE_BRANCH = 22
 export const FORGE_ICON_SIZE_LEAF = 18
+/**
+ * Die zwei mittleren Ringe liegen mit 20 px eine Stufe ÜBER dem Blatt und
+ * gleichauf mit dem Bough. 18 wäre die Untergrenze, ab der `game-icons` zu Grau
+ * zerfallen — dort steht schon das Blatt, und zwei Ringe auf der Kante wären
+ * einer zu viel. Ihre Knoten sind mit ⌀ 40 auch grösser als das Blatt (38).
+ */
+export const FORGE_ICON_SIZE_WARD = 20
+export const FORGE_ICON_SIZE_PACT = 20
 export const FORGE_ICON_SIZE_BOUGH = 20
 /**
- * Ring 5 trägt das GRÖSSTE Glyph nach dem Kern — grösser als der Zweig darunter
+ * Ring 6 trägt das GRÖSSTE Glyph nach dem Kern — grösser als der Zweig darunter
  * und fast so gross wie ein Strahl.
  *
- * Das ist keine Zierde: es sind fünf Knoten auf dem weitesten Ring, jeder nur
- * einmal zu haben und jeder mit einer Regel dahinter. In Bough-Grösse (20)
- * verschwänden sie am äussersten Rand einer Bühne, die `useFitScale` auf Full HD
- * ohnehin auf rund 60 % herunterzieht — und ausgerechnet der seltenste Ring wäre
- * der unscheinbarste.
+ * Das ist keine Zierde: es sind fünf Knoten weit aussen, jeder nur einmal zu
+ * haben und jeder mit einer Regel dahinter. In Bough-Grösse (20) verschwänden
+ * sie am Rand einer Bühne, die `useFitScale` auf Full HD ohnehin auf rund 60 %
+ * herunterzieht — und ausgerechnet der seltenste Ring wäre der unscheinbarste.
  */
 export const FORGE_ICON_SIZE_CROWN = 26
 /**
@@ -634,84 +641,90 @@ export const MEEP_SPOTLIGHT_DIM_OPACITY = 0.3
 export const MEEP_SPOTLIGHT_PING_MS = 450
 
 // ── Star Forge (Shop tab) ─────────────────────────────────────────────────────
-// Tree geometry — the tree lives on a square stage, nodes placed on 4 polar rings.
-/**
- * Gewachsen von 820, als der Bough-Ring dazukam: 490 (Ring 4) plus den halben
- * Knoten (17) sind 507, und 1040/2 = 520 lässt den Rand frei. Die Zahl steht
- * NUR hier — `ForgeTreePanel` setzt sie als CSS-Variable an die Bühne, statt
- * sie im scoped CSS ein zweites Mal auszuschreiben.
- */
+// Tree geometry — the tree lives on a square stage, nodes placed on 7 polar rings.
 /**
  * Gewachsen von 820, als der Bough-Ring dazukam. Bei 1040 GEBLIEBEN, als Ring 5
- * dazukam — und das ist der eigentliche Inhalt dieses Kommentars.
+ * dazukam — und ein zweites Mal geblieben, als Ring 6 und 7 dazukamen. Das ist
+ * der eigentliche Inhalt dieses Kommentars.
  *
- * ── Warum die Bühne für Ring 5 NICHT gewachsen ist ──────────────────────────
- * Der erste Anlauf setzte sie auf 1180 und Ring 5 auf Radius 570. Gemessen
- * (Playwright, Full HD, voll ausgebauter Baum) war das Ergebnis eindeutig
- * schlechter: die Skalierung ist `(min(w,h) − 2·PAD) / FORGE_STAGE_SIZE`, jeder
- * Pixel Bühne verkleinert also JEDEN Knoten. Auf Full HD fiel der Blattknoten
- * von 35,4 auf 31,3 Bildschirmpixel und sein Glyph von 16,8 auf 14,8 — unter
- * die 18px-Grenze, ab der verschnörkelte `game-icons` zu Grau zerfallen
- * (CLAUDE.md, „Icons"). Ein neuer Ring, der die vier bestehenden unleserlich
- * macht, ist kein Zugewinn.
+ * ── Warum die Bühne für neue Ringe NICHT wächst ─────────────────────────────
+ * Der erste Anlauf (Ring 5) setzte sie auf 1180 und den neuen Ring auf Radius
+ * 570. Gemessen (Playwright, Full HD, voll ausgebauter Baum) war das Ergebnis
+ * eindeutig schlechter: die Skalierung ist `(min(w,h) − 2·PAD) /
+ * FORGE_STAGE_SIZE`, jeder Pixel Bühne verkleinert also JEDEN Knoten. Auf Full
+ * HD fiel der Blattknoten von 35,4 auf 31,3 Bildschirmpixel und sein Glyph von
+ * 16,8 auf 14,8 — unter die 18px-Grenze, ab der verschnörkelte `game-icons` zu
+ * Grau zerfallen (CLAUDE.md, „Icons"). Ein neuer Ring, der die bestehenden
+ * unleserlich macht, ist kein Zugewinn.
  *
- * Ring 5 passt stattdessen in die BESTEHENDE Bühne, weil die Ringe darunter
+ * Neue Ringe passen stattdessen in die BESTEHENDE Bühne, weil die Ringe darunter
  * zusammenrücken. Die Abstände waren grosszügiger als nötig; gemessen an den
- * Knotengrössen bleibt überall Luft (Rechnung an `FORGE_RING_CROWN_R`).
+ * Knotengrössen bleibt überall Luft (Rechnung an `FORGE_RING_BOUGH_R`).
  */
 export const FORGE_STAGE_SIZE = 1040
 /**
- * Die fünf Ringe. **Von aussen nach innen zusammengerückt**, als Ring 5
- * dazukam — die Bühne blieb, die Abstände gaben nach.
+ * Die SIEBEN Ringe — einer je Sonnenphase, von innen nach aussen in der
+ * Reihenfolge, in der die Sonne sie aufschliesst:
+ *
+ *   Komet → Rays · Spark → Branches · Dawn → Leaves · Zenith → Wards ·
+ *   Swell → Covenants · Pyre → Crowns · Collapse → Boughs ∞
+ *
+ * **Von aussen nach innen zusammengerückt**, jedes Mal, wenn ein Ring dazukam —
+ * die Bühne blieb, die Abstände gaben nach.
  *
  * Die Rechnung, die das absichert: kein Ringabstand darf kleiner sein als die
  * halben Knoten beider Ringe zusammen, sonst berühren sie sich.
+ * `__tests__/config/forgeGeometry.spec.ts` rechnet sie bei jedem Lauf nach —
+ * diese Tabelle ist die Herleitung, die Spec der Wächter.
  *
  *   Ring              Radius   Δ zum inneren   Knoten ⌀   nötig   Luft
  *   ───────────────────────────────────────────────────────────────────
  *   1 Rays              158          —            56        —      —
- *   2 Branches          265         107           46        51     56
- *   3 Leaves            348          83           38        42     41
- *   4 Boughs            425          77           42        40     37
- *   5 Crowns            492          67           50        46     21
+ *   2 Branches          221         63            46        51     12
+ *   3 Leaves            276         55            38        42     13
+ *   4 Wards             328         52            40        39     13
+ *   5 Covenants         380         52            40        40     12
+ *   6 Crowns            438         58            50        45     13
+ *   7 Boughs            496         58            42        46     12
  *
  * Ring 1 sitzt bei 158 und nicht enger: die Sonne misst in der Endphase
  * `SHOP_SUN_MAX_DIAMETER` (240), ihr Rand liegt also bei 120, und die
  * Innenkante des Wurzelknotens bei 158 − 28 = 130. Zehn Pixel Luft zum Körper.
  *
- * Nach aussen ist 492 + halber Kronenknoten (25) = 517 gegen die Bühnenhälfte
- * von 520 — drei Pixel, und die reichen, weil `FORGE_TREE_FIT_PADDING_PX` (48)
- * ohnehin auf jeder Seite freibleibt.
+ * Nach aussen ist 496 + halber Bough-Knoten (21) = 517 gegen die Bühnenhälfte
+ * von 520 — drei Pixel, GENAU derselbe Randabstand wie zuvor mit fünf Ringen
+ * (492 + 25). Zwei Ringe mehr haben den Baum also nicht an die Kante gedrückt;
+ * sie haben nur die Luft aufgebraucht, die zwischen den alten Ringen stand.
  */
 export const FORGE_RING_ROOT_R = 158
-export const FORGE_RING_BRANCH_R = 265
-export const FORGE_RING_LEAF_R = 348
-export const FORGE_RING_BOUGH_R = 425
-export const FORGE_RING_CROWN_R = 492
+export const FORGE_RING_BRANCH_R = 221
+export const FORGE_RING_LEAF_R = 276
+export const FORGE_RING_WARD_R = 328
+export const FORGE_RING_PACT_R = 380
+export const FORGE_RING_CROWN_R = 438
+export const FORGE_RING_BOUGH_R = 496
 
-/**
- * Wie weit die Ring-Pille von ihrem eigenen Radius wegrückt — in die SENKE
- * zwischen zwei Ebenen.
+/* ── Die Bühne trägt KEINE Ring-Beschriftungen ────────────────────────────────
+ * Über jeder Ebene stand eine Pille mit ihrer Sonnenphase („Phase 1–2",
+ * „Swell · open"). Sie sind ersatzlos entfallen, und zwar in zwei Schritten:
+ * erst die Fassungen, die „→ locked" sagten, dann auch die der offenen Ebenen.
  *
- * Sie sass bis hierher direkt auf dem Ring, und dort sitzen die Knoten: bei 12
- * Uhr steht auf jedem Ring einer (der Strahl `flightSpeed` zeigt mit 270° nach
- * oben und zieht seine Kinder mit), die Pille lag also hinter ihm. „Phase 1–2"
- * war dadurch überhaupt nie zu sehen.
+ * Wer sie wieder einführen will, sollte zweierlei wissen. Erstens: sie stören im
+ * Bild — der Baum hat achtzig Knoten, und sieben Textmarken dazwischen sind Lärm.
+ * Zweitens: sie lagen hinter den Knoten. Bei 12 Uhr steht auf jedem Ring einer
+ * (der Strahl `flightSpeed` zeigt mit 270° nach oben und zieht seine Kinder mit);
+ * ein Versatz von 34 px in die Senke zwischen zwei Ringen hat das behoben, aber
+ * die Marken blieben trotzdem Lärm.
  *
- * 34 px trägt jede der vier Senken: nach innen bleibt der Abstand zum
- * Nachbarring überall grösser als dessen halber Knoten plus Zeilenhöhe (eng
- * wird es nur zwischen Boughs und Crowns, 67 − 34 = 33 gegen nötige 29), und die
- * Pille selbst hält vom eigenen Knoten (halbe Höhe max. 28) noch Luft.
- *
- * Der WURZELRING weicht als einziger nach aussen aus: nach innen läge er auf der
- * Sonne, die in der Endphase bis Radius 120 reicht.
+ * Die Auskunft steht seither dort, wo nach ihr gefragt wird: DASS ein Knoten zu
+ * ist, sagt das Schloss an seinem Motiv (`FORGE_LOCK_ICON`); WELCHE Phase ihn
+ * aufschliesst, sagen sein Tooltip und die Zeile in der Detailspalte.
  */
-export const FORGE_RING_LABEL_GAP = 34
 
 /* ── Das TIEFENFELD — die Ebenen ohne eine einzige Kreiskante ─────────────────
  *
- * Die fünf Ringe waren bis hierher gezeichnete Linien, nach aussen immer
- * lückenhafter gestrichelt (5-5 · 4-7 · 3-9). Fünf konzentrische Umrisse lasen
+ * Die Ringe waren bis hierher gezeichnete Linien, nach aussen immer
+ * lückenhafter gestrichelt (5-5 · 4-7 · 3-9). Konzentrische Umrisse lasen
  * sich als Zielscheibe und behaupteten eine Grenze, die es nicht gibt: was eine
  * Ebene ausmacht, ist ihr ABSTAND zur Sonne, nicht ein Rand.
  *
@@ -721,21 +734,26 @@ export const FORGE_RING_LABEL_GAP = 34
  * entsteht nirgends.
  *
  * Der Bühnenradius (`FORGE_STAGE_SIZE / 2` = 520) ist dabei die 100 %-Marke
- * eines `circle closest-side`; die Kämme liegen also bei 30,4 % (Rays), 51,0 %,
- * 66,9 %, 81,7 % und 94,6 % (Crowns). Gerechnet wird das in `ForgeTreePanel`
- * aus den Radien oben — hier steht keine dieser Prozentzahlen ein zweites Mal.
+ * eines `circle closest-side`; die Kämme liegen also bei 30,4 % (Rays), 42,5 %,
+ * 53,1 %, 63,1 %, 73,1 %, 84,2 % und 95,4 % (Boughs). Gerechnet wird das in
+ * `ForgeTreePanel` aus den Radien oben — hier steht keine dieser Prozentzahlen
+ * ein zweites Mal.
  */
 /**
  * Halbe Bandbreite, als Anteil des Bühnenradius.
  *
- * Der ENGSTE Kammabstand ist Boughs → Crowns mit 12,9 Prozentpunkten (81,7 auf
- * 94,6). Bei 0,055 ist ein Band 11 pp breit, zwei Bänder berühren sich also
- * nirgends. Das ist die eigentliche Grenze dieser Zahl: überlappen zwei
- * ausklingende Kämme, addieren sich ihre Deckkräfte zu einem dritten, hellen
- * Streifen dazwischen — und der liest sich wieder als Linie, also als genau das,
- * was hier verschwinden sollte.
+ * **Von 0,055 auf 0,045 gesenkt, als aus fünf Ringen sieben wurden.** Der
+ * ENGSTE Kammabstand ist seither Leaves → Wards (und Wards → Covenants) mit
+ * 10,0 Prozentpunkten statt der vorherigen 12,9. Bei 0,045 ist ein Band 9 pp
+ * breit, zwischen zwei Bändern bleibt also 1 pp frei.
+ *
+ * Das ist die eigentliche Grenze dieser Zahl: überlappen zwei ausklingende
+ * Kämme, addieren sich ihre Deckkräfte zu einem dritten, hellen Streifen
+ * dazwischen — und der liest sich wieder als Linie, also als genau das, was hier
+ * verschwinden sollte. Wer einen weiteren Ring einzieht, muss sie erneut senken;
+ * `forgeGeometry.spec.ts` prüft die Bedingung.
  */
-export const FORGE_DEPTH_CREST_SPREAD = 0.055
+export const FORGE_DEPTH_CREST_SPREAD = 0.045
 /** Deckkraft des Kamms einer OFFENEN Ebene, in ihrer Leitfarbe
  *  (`FORGE_UPGRADE_GROUPS[].accent` — eine Quelle für Chip, Liste und Feld). */
 export const FORGE_DEPTH_CREST_ALPHA = 0.09
@@ -755,11 +773,11 @@ export const FORGE_DEPTH_CREST_LOCKED = 'rgba(150, 165, 190, 0.03)'
  *
  * Ein `border-radius: 50 %` hätte daraus wieder einen Kreisumriss gemacht, ein
  * weiches Auslaufen vor dem Rand einen dunklen Ring genau dort, wo der
- * Kronen-Kamm liegt (94,6 %). Die Tiefe tragen die Kämme allein.
+ * äusserste Kamm liegt (95,4 %). Die Tiefe tragen die Kämme allein.
  */
 /**
  * Die Zone des GEWÄHLTEN Ringfilter-Chips ist breiter als der Ruhekamm — eine
- * Wahl soll als Fläche lesen und nicht als hellerer Kamm unter vier gleich
+ * Wahl soll als Fläche lesen und nicht als hellerer Kamm unter sechs gleich
  * geformten. Sie liegt allein auf ihrer Ebene, ein Überlappen wie oben kann
  * also nicht vorkommen.
  */
@@ -769,55 +787,113 @@ export const FORGE_DEPTH_ACCENT_ALPHA = 0.2
  *  selbst wird bei der Chipwahl einmal gesetzt, nie über Zeit gerechnet. */
 export const FORGE_DEPTH_ACCENT_FADE_MS = 180
 
-// Ring unlock gating (starPhase index)
-export const FORGE_BRANCH_UNLOCK_PHASE = 2
-export const FORGE_LEAF_UNLOCK_PHASE = 4
-/**
- * Der dritte Zweig je Wurzel geht eine Phase später auf als die beiden ersten —
- * er ist stärker und teurer, und die Ringe sollen sich nicht auf einen Schlag
- * füllen.
+/* ── Die Ring-Leiter: EINE Sonnenphase, EIN Ring ──────────────────────────────
+ *
+ * Die Sonne hat sieben Anzeige-Phasen (Komet · Spark · Dawn · Zenith · Swell ·
+ * Pyre · Collapse), der Baum hat sieben Ringe, und die Zuordnung ist eins zu
+ * eins. Vorher war sie es nicht: Branches gingen in Zenith auf, der dritte
+ * Zweig je Wurzel in Swell, die Blätter erst in Pyre — **Spark und Dawn
+ * schalteten im ganzen Baum nichts frei**, und in der Endphase kamen zwei Ringe
+ * auf einmal.
+ *
+ *   Komet    → Ring 1  Solar Rays        (immer offen, `solarUpgradeStore`)
+ *   Spark  0 → Ring 2  Forge Branches
+ *   Dawn   1 → Ring 3  Forge Leaves
+ *   Zenith 2 → Ring 4  Astral Wards
+ *   Swell  3 → Ring 5  Astral Covenants
+ *   Pyre   4 → Ring 6  Astral Crowns     (+ `FORGE_CROWN_UNLOCK_PRESTIGES`)
+ *   Collap.5 → Ring 7  Astral Boughs ∞
+ *
+ * Der endlose Ring bleibt der LETZTE: er ist das, was übrig ist, wenn die Sonne
+ * fertig ist (Herleitung an `FORGE_BOUGH_COST_MULTIPLIER`).
+ *
+ * **Was die Freischaltung ersetzt, ist die Wirtschaft.** Ein Ring geht damit
+ * deutlich früher auf als zuvor (Blätter ~18 min statt ~16,5 h). Getaktet wird
+ * er trotzdem, nur nicht mehr von der Sonne: er gibt bei Freischaltung genau
+ * EINE Stufe her (`FORGE_TIER_BASE_MAX_LEVEL`), und seine Rezeptur verlangt
+ * Material, das es zu diesem Zeitpunkt kaum gibt. „Material ist der Taktgeber"
+ * (docs/balance.md) gilt hier zum ersten Mal für den ganzen Baum.
  */
-export const FORGE_BRANCH_LATE_UNLOCK_PHASE = 3
-/** Die Blätter an den späten Zweigen kommen mit dem regulären Blätter-Ring. */
-export const FORGE_LEAF_LATE_UNLOCK_PHASE = 4
-/**
- * Ring 4 geht in der ENDPHASE auf — genau dann, wenn die Sonnenrampe endet und
- * jeder andere Knoten des Baums seine Obergrenze erreichen kann. Vorher hätte
- * ein Knoten ohne Deckel keine Aufgabe; danach ist er die einzige, die bleibt.
- */
+export const FORGE_BRANCH_UNLOCK_PHASE = 0
+export const FORGE_LEAF_UNLOCK_PHASE = 1
+export const FORGE_WARD_UNLOCK_PHASE = 2
+export const FORGE_PACT_UNLOCK_PHASE = 3
+export const FORGE_CROWN_UNLOCK_PHASE = 4
 export const FORGE_BOUGH_UNLOCK_PHASE = 5
-/** Branch max level at unlock; +1 per phase past the unlock phase, up to the cap
- *  → "old upgrades gain new tiers" with every sun evolution. */
-export const FORGE_BRANCH_BASE_MAX_LEVEL = 3
+
 /**
- * Von 5 auf 6 gehoben, und die Blätter von 3 auf 4.
+ * ── Höchststufen: eine Regel für alle gedeckelten Ringe ──────────────────────
  *
- * Zwei Gründe, die dasselbe verlangen. Erstens war die Codex-Bahn „Sunsmith"
- * dadurch UNERREICHBAR: ihre letzte Stufe verlangt 200 `forgeLevels`, das
- * theoretische Maximum lag bei 10 Branches × 5 + 10 Leaves × 3 + 6 Relikte × 3
- * = 98. Zweitens braucht die verlängerte Sonnenrampe Inhalt: `nodeMaxLevel`
- * staffelt „+1 je Phase über der Freischaltphase", die letzte Branch-Stufe
- * existiert damit erst in der Schlussphase.
+ * `nodeMaxLevel` staffelte bisher nur die Zweige („3 + Phasen über der eigenen
+ * Freischaltung"), die Blätter standen mit fest 4 daneben. Seit jede Phase einen
+ * Ring öffnet, gilt für alle dasselbe:
  *
- * Neues Maximum: 60 + 40 + 30 = 130. Die Materialkosten skalieren bereits mit
- * der Stufe (`qty × nextLevel`) und ziehen damit am selben Strang wie die
- * Tier-Tore — eine Quelle, mehrere Verbraucher, sechs Slots, eine Entscheidung.
+ *     maxLevel = min(cap[tier], BASE + (starPhase − def.phase))
+ *
+ * mit BASE = 1. Die Deckel sind so gewählt, dass **jeder Ring seinen Deckel
+ * GENAU in der Endphase erreicht** — keiner steht vorher still, keiner ist
+ * danach unfertig:
+ *
+ *   Ring        phase   Deckel   bei Freischaltung   in Collapse
+ *   ──────────────────────────────────────────────────────────────
+ *   Branches      0        6            1                6
+ *   Leaves        1        5            1                5
+ *   Wards         2        4            1                4
+ *   Covenants     3        3            1                3
+ *
+ * Der Bezug ist `def.phase` und NICHT die globale Konstante — ein Knoten, der
+ * ausnahmsweise später aufgeht, stünde sonst am Tag seiner Freischaltung schon
+ * auf halber Höhe.
+ *
+ * **Warum BASE 1 und nicht 3 wie zuvor.** Mit 3 stünde ein Zweig schon in Spark
+ * auf drei von sechs Stufen und wäre in Zenith fertig — die drei Phasen danach
+ * hätten ihm nichts mehr zu geben. Mit 1 ist jede Sonnenevolution ZWEI
+ * Ereignisse zugleich: ein neuer Ring **und** eine neue Stufe auf jedem Ring,
+ * der schon offen ist.
+ */
+export const FORGE_TIER_BASE_MAX_LEVEL = 1
+/**
+ * Von 5 auf 6 gehoben, als die Codex-Bahn „Sunsmith" unerreichbar war (ihr
+ * Maximum lag bei 10 Branches × 5 + 10 Leaves × 3 + 6 Relikte × 3 = 98). Seither
+ * unverändert — und jetzt zugleich die Zahl, die die Leiter oben schliesst:
+ * Freischaltung in Phase 0, Deckel in Phase 5.
+ *
+ * Die Materialkosten skalieren mit der Stufe (`qty × nextLevel`) und ziehen
+ * damit am selben Strang wie die Tier-Tore — eine Quelle, mehrere Verbraucher,
+ * sechs Slots, eine Entscheidung.
  */
 export const FORGE_BRANCH_MAX_LEVEL_CAP = 6
-export const FORGE_LEAF_MAX_LEVEL = 4
+export const FORGE_LEAF_MAX_LEVEL = 5
+export const FORGE_WARD_MAX_LEVEL = 4
+export const FORGE_PACT_MAX_LEVEL = 3
 /** Parent level required before a child node can be bought. */
 export const FORGE_BRANCH_PARENT_MIN_LEVEL = 1
 export const FORGE_LEAF_PARENT_MIN_LEVEL = 2
 /**
- * Ein Bough verlangt einen AUSGEWACHSENEN Zweig unter sich — mehr als das Blatt
- * daneben. Er ist der letzte Knoten der Kette, und wer ihn erreicht, hat den
- * Zweig ohnehin längst hochgezogen; die Hürde sorgt nur dafür, dass Ring 4
- * nicht neben einem halb gewachsenen Ring 2 aufgeht.
+ * Ward und Covenant verlangen je zwei Stufen des Rings direkt innen.
+ *
+ * Nicht mehr: in der Phase, in der ein Ring aufgeht, steht sein Elternring auf
+ * genau zwei (`FORGE_TIER_BASE_MAX_LEVEL` + 1). Eine Hürde von 3 wäre also nicht
+ * streng, sondern schlicht unerfüllbar, und der Ring ginge eine Phase zu spät
+ * auf — die Leiter wäre kaputt, ohne dass es an ihrer Tabelle zu sehen wäre.
  */
-export const FORGE_BOUGH_PARENT_MIN_LEVEL = 3
+export const FORGE_WARD_PARENT_MIN_LEVEL = 2
+export const FORGE_PACT_PARENT_MIN_LEVEL = 2
+/**
+ * Der Bough hängt am COVENANT darunter, nicht an der Krone daneben.
+ *
+ * Die Krone kostet 2,5e10 Chimes und einen Aufbruch; der endlose Ring ist die
+ * einzige Chime-Senke, die dem Spätspiel bleibt. Läge er hinter einem
+ * Einmalkauf, hätte ein Spieler ohne Prestige in der Endphase gar nichts mehr
+ * zu kaufen — genau das Loch, das der Ring stopfen sollte.
+ *
+ * Zwei Stufen, wie bei Ward und Covenant: der Covenant-Ring steht in der
+ * Endphase auf drei, die Hürde ist also spürbar und trotzdem erreichbar.
+ */
+export const FORGE_BOUGH_PARENT_MIN_LEVEL = 2
 
 /**
- * ── Ring 5: Astral Crowns ────────────────────────────────────────────────────
+ * ── Ring 6: Astral Crowns ────────────────────────────────────────────────────
  *
  * Fünf Knoten, einer je Wurzelachse, und jeder nur EINMAL zu haben. Sie sind
  * die Antwort auf ein Loch, das die Boughs offengelassen haben: der endlose
@@ -825,54 +901,48 @@ export const FORGE_BOUGH_PARENT_MIN_LEVEL = 3
  * fühlt sich an wie Stufe 23, nur teurer. Was ab hier fehlte, war nicht mehr
  * Zahl, sondern eine neue Regel.
  *
- * **Warum das Tor am Prestige hängt und nicht an der Sonne.** Phase 5 ist
- * bereits das Tor der Boughs — die Sonnenrampe hat nichts mehr zu vergeben.
- * Das Prestige dagegen war für den Shop bisher gar kein Ereignis: es räumt
- * Chimes, Level, Augments und Gebäude ab, den Sternbaum aber ausdrücklich NICHT
+ * **Warum das Prestige-Tor NEBEN dem Phasen-Tor stehen bleibt.** Seit die Ringe
+ * eine Leiter bilden, hat der Kronen-Ring eine eigene Sonnenphase (Pyre,
+ * `FORGE_CROWN_UNLOCK_PHASE`) — die Bedingung hier ersetzt sie nicht, sie kommt
+ * dazu. Das Prestige war für den Shop sonst gar kein Ereignis: es räumt Chimes,
+ * Level, Augments und Gebäude ab, den Sternbaum aber ausdrücklich NICHT
  * (`gameStore.executePrestigeReset`, „Der Meep-Baum bleibt STEHEN" — für Forge
  * und Sonne gilt dasselbe, sie werden dort schlicht nicht angefasst). Die Krone
- * ist damit genau das, was den Aufbruch überdauert hat, und der erste Grund,
+ * ist damit genau das, was den Aufbruch überdauert hat, und der einzige Grund,
  * aus dem der Shop einen Prestige-Zähler überhaupt liest.
  *
  * **Warum EINE Stufe.** Ein Crown verschiebt eine Regel („der Boss-Zoll kippt",
  * „die Sonne kommt einmal je Phase zurück"). Eine Regel, die man ein zweites
  * Mal kaufen kann, ist keine Regel mehr, sondern ein Prozentwert mit
- * Zwischenschritten. Der endlose Ring darunter deckt die andere Hälfte ab —
+ * Zwischenschritten. Der endlose Ring daneben deckt die andere Hälfte ab —
  * beides am selben Knoten ginge nicht.
  */
 export const FORGE_CROWN_UNLOCK_PRESTIGES = 1
 export const FORGE_CROWN_MAX_LEVEL = 1
 /**
- * Der Bough darunter muss auf dieser Stufe stehen. Deutlich mehr als die 3, die
- * ein Bough von seinem Zweig verlangt: Ring 4 wächst ohne Ende, und eine Hürde
- * von 3 wäre auf einer Achse ohne Obergrenze keine. Fünf Stufen sind rund
- * `1,35⁵ ≈ 4,5`-fache Kosten der ersten — eine Strecke, die man gegangen sein
- * muss, aber keine, die den Ring auf Jahre verschliesst.
+ * Der Covenant darunter muss auf dieser Stufe stehen — dem Deckel, den Ring 5 in
+ * Pyre erreicht (`FORGE_TIER_BASE_MAX_LEVEL` + (4 − 3) = 2). Mehr zu verlangen
+ * hiesse, den Kronen-Ring eine Phase später aufgehen zu lassen, als seine Zeile
+ * in der Leiter behauptet.
  */
-export const FORGE_CROWN_PARENT_MIN_LEVEL = 5
+export const FORGE_CROWN_PARENT_MIN_LEVEL = 2
 /**
  * Einheitlicher Chime-Preis einer Krone.
  *
  * Eine Zehnerpotenz über dem Einstieg der Boughs (2e9), und für alle fünf
  * gleich: der Ring stellt keine Preisfrage, sondern eine Reihenfolgefrage. Wer
- * hier steht, hat ein Universum hinter sich und einen Bough auf Stufe 5 — die
- * Entscheidung soll lauten „welche Regel zuerst", nicht „welche ist billig".
- * Die Materialrezepturen unterscheiden sich dagegen sehr wohl; sie sind der
- * echte Taktgeber (dieselbe Rolle wie bei den späten Blättern).
+ * hier steht, hat ein Universum hinter sich — die Entscheidung soll lauten
+ * „welche Regel zuerst", nicht „welche ist billig". Die Materialrezepturen
+ * unterscheiden sich dagegen sehr wohl; sie sind der echte Taktgeber (dieselbe
+ * Rolle wie bei den späten Blättern).
  */
 export const FORGE_CROWN_BASE_COST = 2.5e10
-/**
- * Was am Kronen-Ring steht, sobald er OFFEN ist. Nennt die eigene Bedingung und
- * nicht eine Sonnenphase — Ring 5 ist der einzige, der nicht an der Sonne hängt,
- * und ein Etikett aus `ringPhases` behauptete, er sei offen, sobald Ring 4 es
- * ist.
- *
- * Die gesperrte Fassung („Prestige once → locked") ist entfallen: über einer
- * Ebene, die noch zu ist, steht keine Pille mehr. Das Zeichen dafür hängt am
- * einzelnen Knoten (`FORGE_LOCK_ICON`), und dort sagt es zugleich, WELCHER
- * Knoten gemeint ist.
- */
-export const FORGE_CROWN_RING_LABEL_OPEN = 'Beyond the sun · open'
+/* Der Kronen-Ring trug als einziger ein Etikett aus eigener Bedingung statt aus
+ * einer Sonnenphase („Beyond the sun · open"). Das ist mit den übrigen
+ * Ring-Pillen entfallen — und seit die Ringe eine Leiter bilden, hätte es auch
+ * keinen Sonderfall mehr zu beschreiben: der Ring hat seine Phase wie jeder
+ * andere. Ob sein zweites Tor offen ist, beantwortet
+ * `starForgeStore.crownsUnlocked`. */
 /**
  * Was in der Upgrade-Liste dort steht, wo jeder andere Ring seinen Wert zeigt.
  *
@@ -881,9 +951,19 @@ export const FORGE_CROWN_RING_LABEL_OPEN = 'Beyond the sun · open'
  */
 export const FORGE_CROWN_STATE_OPEN = 'Not yet'
 export const FORGE_CROWN_STATE_FORGED = 'Forged'
+/**
+ * Warum eine Krone zu ist, wenn die Sonne schon weit genug steht.
+ *
+ * Vorher gab es diesen Satz nicht, und der Ring nannte in diesem Fall die
+ * Elternstufe — also eine Bedingung, die längst erfüllt war. Das fiel kaum auf,
+ * solange das Phasen-Tor in der ENDPHASE lag: wer dort steht, hat meist längst
+ * ein Universum hinter sich. Seit der Ring in Pyre aufgeht, ist der Zustand
+ * „Phase reicht, Aufbruch fehlt" der Normalfall und braucht seinen eigenen Satz.
+ */
+export const FORGE_CROWN_LOCK_REASON = 'Leave a universe behind first'
 
 /**
- * Ring 4 kennt keine Obergrenze. Das ist der Punkt: die Sonnenrampe endet nach
+ * Ring 7 kennt keine Obergrenze. Das ist der Punkt: die Sonnenrampe endet nach
  * rund 44 Spielstunden, danach steht im ganzen Baum nur noch „✦ MAX" — und
  * Chimes haben im Spätspiel ausser den Planeten-Leveln keine Senke.
  *
@@ -1066,6 +1146,100 @@ export const FORGE_MIN_DWELL_MULT = 0.5
 export const FORGE_MIN_EXPEDITION_MULT = 0.4
 export const FORGE_MAX_DOUBLE_CLICK_CHANCE = 0.8
 
+/* ── Ring 4 & 5: die Böden der neuen Achsen ───────────────────────────────────
+ *
+ * Jede Achse, die eine DAUER oder einen PREIS kürzt, bekommt einen Boden — aus
+ * demselben Grund wie die vier Kappen darüber: eine Zeit, die gegen null läuft,
+ * ist kein Ausbau mehr, sondern das Abschalten eines Systems.
+ *
+ * Alle Böden unten sind so gewählt, dass der VOLLAUSBAU des jeweiligen Knotens
+ * sie **erreicht, aber nicht überschreitet** — ein Ward hat vier Stufen, ein
+ * Covenant drei, und die letzte davon ist die, die den Boden berührt. Anders als
+ * bei Solar Sails oder Golden Echo gibt es hier also nichts zu schlucken und
+ * damit auch keinen Überlauf: der Bodensatz ist der Entwurf, nicht ein Rest.
+ */
+/** Bard-Abklingzeiten (Chime Conduit, 4 × 5 % = 20 %). */
+export const FORGE_MIN_BARD_COOLDOWN_MULT = 0.8
+/** Gebäudepreise (Kiln Subsidy, 4 × 4 % = 16 %). Bewusst klein: die Gebäude sind
+ *  eine der wenigen Chime-Senken, und ihre Kurve ist geometrisch — ein tiefer
+ *  Rabatt verschöbe sie nur um wenige Stufen, ein flacher tut dasselbe billiger. */
+export const FORGE_MIN_BUILDING_COST_MULT = 0.84
+/** Item-Preise (Merchant's Favor, 4 × 6 % = 24 %). */
+export const FORGE_MIN_ITEM_COST_MULT = 0.76
+/** Champion-Levelkosten (Alms of the Keeper, 4 × 5 % = 20 %). */
+export const FORGE_MIN_CHAMPION_LEVEL_COST_MULT = 0.8
+/**
+ * ── Die vier Void-Achsen ─────────────────────────────────────────────────────
+ *
+ * Der Void ist das EINZIGE System, das gegen den Spieler drängt (CLAUDE.md).
+ * Alle vier mildern ihn, keine schaltet ihn ab: ein Riss reisst weiterhin auf,
+ * kriecht weiterhin zur Sonne, kostet weiterhin Meeps und hinterlässt weiterhin
+ * seine Drossel — er lässt nur jeweils mehr Luft.
+ *
+ * Zwei davon sind Multiplikatoren NACH OBEN (längerer Abstand, längerer Anflug),
+ * zwei nach unten. Die Grenzen liegen jeweils dort, wo der Vollausbau des
+ * Knotens ankommt — keine tote Stufe, aber auch keine Reserve für einen
+ * späteren Verstärker.
+ */
+/** Spawnabstand (Rift Anchor, 4 × 8 % = 32 %; Reserve bis 40 %). */
+export const FORGE_MAX_VOID_SPAWN_INTERVAL_MULT = 1.4
+/** Anflugdauer (Gravity Well, 4 × 10 % = 40 %; Reserve bis 60 %). */
+export const FORGE_MAX_VOID_TRAVEL_MULT = 1.6
+/** Meep-Verlust beim Einschlag (Hollow Pact, 3 × 12 % = 36 %). Ein Einschlag
+ *  muss WEHTUN — der Zoll wird verhandelt, nicht erlassen. */
+export const FORGE_MIN_VOID_MEEP_LOSS_MULT = 0.64
+/** Laufzeit der Nachwirkung (Unbroken Pact, 3 × 10 % = 30 %). */
+export const FORGE_MIN_VOID_AFTERMATH_MULT = 0.7
+/** Drifter-Abstand (Wanderer's Beacon, 4 × 6 % = 24 %) und Vorzeichen-Abstand
+ *  (Omen-Reader, 4 × 6 % = 24 %). Beides sind Angebote, die der Spieler ANNEHMEN
+ *  muss; häufiger heisst mehr Entscheidungen, nicht automatisch mehr Ertrag. */
+export const FORGE_MIN_DRIFTER_INTERVAL_MULT = 0.76
+export const FORGE_MIN_OMEN_INTERVAL_MULT = 0.76
+/** Vorzeichen-Zielgrösse (Augur's Pact, 3 × 7 % = 21 %). */
+export const FORGE_MIN_OMEN_TARGET_MULT = 0.79
+/** Abstand zweier Ressourcensterne (Starwarden's Lantern, 4 × 7 % = 28 %). */
+export const FORGE_MIN_RESOURCE_STAR_INTERVAL_MULT = 0.72
+/** Erntetakt der Planeten-Harvester (Quarrymaster's Eye, 4 × 6 % = 24 %). */
+export const FORGE_MIN_HARVEST_INTERVAL_MULT = 0.76
+/** Reisedauer eines Champions (Starroad Pact, 3 × 8 % = 24 %). Greift NACH
+ *  `CHAMPION_TRAVEL_MAX_MS` — der Deckel bleibt der Deckel, dies kürzt darunter. */
+export const FORGE_MIN_CHAMPION_TRAVEL_MULT = 0.76
+/** Boss-HP beim Erscheinen (Hollow Core, 4 × 5 % = 20 %). Die Boss-HP folgt
+ *  dem SCHADEN (docs/balance.md); dieser Faktor liegt als letzter darauf und
+ *  verschiebt die entworfene Klickzahl um denselben Anteil — mehr wäre kein
+ *  leichterer Kampf mehr, sondern gar keiner. */
+export const FORGE_MIN_BOSS_HP_MULT = 0.8
+/** Abstand zweier Expeditions-Angebote (Cartographer's Pact, 3 × 8 % = 24 %). */
+export const FORGE_MIN_EXPEDITION_SPAWN_MULT = 0.76
+/** Preis (Haggler's Pact, 3 × 10 % = 30 %) und Restock-Abstand (Merchant's Pact,
+ *  3 × 8 % = 24 %) des Cosmic Bargain. */
+export const FORGE_MIN_BARGAIN_PRICE_MULT = 0.7
+export const FORGE_MIN_BARGAIN_RESTOCK_MULT = 0.76
+/** LP-Verlust bei einer Niederlage (Arbiter's Pact, 3 × 10 % = 30 %). Eine
+ *  Niederlage muss LP kosten, sonst ist die Ladder keine Leiter mehr. */
+export const FORGE_MIN_LP_LOSS_MULT = 0.7
+/**
+ * Wie viele Stufen früher ein Gebäude-Meilenstein fällt (Founder's Pact, 3 × 2).
+ *
+ * `BUILDING_MILESTONE_INTERVAL` steht auf 25 und ist gewählt, weil der erste
+ * Meilenstein damit in den ersten 20 Minuten liegt (docs/balance.md). Sechs
+ * Stufen früher heisst 19 — derselbe Gedanke, nur enger. Der Boden ist keine
+ * Kosmetik: unter etwa 15 kippt die Achse, weil die Verdopplung dann schneller
+ * kommt als die geometrischen Kosten steigen.
+ */
+export const FORGE_MIN_BUILDING_MILESTONE_INTERVAL = 15
+/**
+ * Wie stark ein Ward das GEWICHT der seltenen Augmente hebt (Dreamer's Draw).
+ *
+ * `RARITY_WEIGHTS` steht bei common 60 gegen rare+epic+legendary zusammen 40.
+ * Bei Vollausbau (4 × 8 %) wiegt die obere Hälfte ×1,32, also 52,8 gegen 60 —
+ * die Wahl wird spürbar besser, ohne dass Common verschwindet. Weiter zu gehen
+ * wäre riskant: bessere Augmente heissen mehr CpS heissen schnellere Level
+ * heissen mehr Augmente. Zu bleibt der Kreis nur, weil `AUGMENT_ACTIVE_CAP` (10)
+ * den Stapel deckelt (docs/balance.md) — dieser Faktor darf ihn nicht anspannen.
+ */
+export const FORGE_MAX_AUGMENT_LUCK_MULT = 1.32
+
 /**
  * ── Der ÜBERLAUF: was eine Kappe schluckt, fließt woandershin ────────────────
  *
@@ -1152,26 +1326,36 @@ export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
 ]
 
 /**
- * Die vier Ringe als Abschnitte der Upgrade-Liste — Lesereihenfolge von innen
- * nach außen, dieselbe, in der sie freigeschaltet werden.
+ * Die sieben Ringe als Abschnitte der Upgrade-Liste — Lesereihenfolge von innen
+ * nach außen, dieselbe, in der die Sonne sie freischaltet.
  *
  * Namen und Glyphen sind KEINE freie Wahl: „Solar Rays", „Forge Branches",
  * „Forge Leaves" und „Astral Boughs" stehen samt ihren Zeichen auch im Lexikon
  * (config/encyclopedia/sunAndForge.ts). Derselbe Baum darf nicht an zwei
  * Stellen anders heißen.
  *
+ * **Die Reihenfolge dieses Feldes IST die Ring-Reihenfolge von innen nach
+ * aussen** — Chipleiste, Tiefenfeld und Filter lesen sie alle hier ab.
+ *
  * Die Farben sind nicht die der Knoten (die tragen ihre eigene aus dem
- * Katalog), sondern die des Abschnittsstrichs: Gold für den Kern, Grün für die
- * Zweige, Eisblau für die Blätter, Violett für die Boughs — je weiter außen,
- * desto kühler. Violett ist zugleich die Farbe, die im Projekt „episch/selten"
- * trägt (`FORGE_RELIC_RARITY_COLOR.epic`), und der endlose Ring ist das
- * Seltenste, was der Baum hergibt.
+ * Katalog), sondern die des Abschnittsstrichs. Der Verlauf läuft von warm nach
+ * kalt und kippt am Ende zurück: Gold (Kern) → Grün (Zweige) → Eisblau
+ * (Blätter) → Türkis (Wards) → Blauviolett (Covenants) → Gold (Crowns) →
+ * Violett (Boughs).
+ *
+ * Zwei Stellen daran sind Absicht. **Gold auf den Crowns** schliesst den Kreis
+ * zum innersten Ring: die Krone ist das, was aus einem Strahl geworden ist.
+ * **Violett ganz aussen** ist die Farbe, die im Projekt „episch/selten" trägt
+ * (`FORGE_RELIC_RARITY_COLOR.epic`) — und der endlose Ring ist das Seltenste,
+ * was der Baum hergibt.
  *
  * Seit die Liste nach Kaufbarkeit ordnet (`forgeUpgradeBucket()`), sind die
- * vier Ringe dort kein Abschnitt mehr, sondern die Filterleiste — daher
+ * Ringe dort kein Abschnitt mehr, sondern die Filterleiste — daher
  * `shortTitle`. Der lange Name bleibt trotzdem: eine Kopfzeile mit „Rays"
- * stünde im Widerspruch zum Lexikon, ein Chip mit „Solar Rays" passt zu fünft
- * nicht in eine 470px-Spalte.
+ * stünde im Widerspruch zum Lexikon, ein Chip mit „Solar Rays" passt zu siebt
+ * nicht in eine 470px-Spalte. (Zu SIEBT passt auch der kurze Name dort nicht
+ * mehr überall — unterhalb einer gemessenen Breite treten die Chips deshalb auf
+ * ihr `icon` zurück, siehe `ForgeToolbar`.)
  */
 export const FORGE_UPGRADE_GROUPS = [
   {
@@ -1199,23 +1383,36 @@ export const FORGE_UPGRADE_GROUPS = [
     accent: '#86d0ff',
   },
   {
-    tier: 'bough' as const,
-    title: 'Astral Boughs',
-    shortTitle: 'Boughs',
-    icon: 'game-icons:infinity',
-    hint: 'No final level — the tree keeps growing',
-    accent: '#c9a0ff',
+    tier: 'ward' as const,
+    title: 'Astral Wards',
+    shortTitle: 'Wards',
+    icon: 'game-icons:star-swirl',
+    hint: 'Where the tree reaches past itself',
+    accent: '#40c8b0',
   },
   {
-    // Gold schliesst den Kreis nach aussen: der innerste Ring (Rays) trägt es
-    // ebenfalls, und die Krone ist das, was aus ihm geworden ist. Der Verlauf
-    // Gold → Grün → Eisblau → Violett bleibt dazwischen unberührt.
+    tier: 'pact' as const,
+    title: 'Astral Covenants',
+    shortTitle: 'Pacts',
+    icon: 'game-icons:linked-rings',
+    hint: 'What the company gives back',
+    accent: '#8fa8ff',
+  },
+  {
     tier: 'crown' as const,
     title: 'Astral Crowns',
     shortTitle: 'Crowns',
     icon: 'game-icons:crown',
     hint: 'One each, and every one changes a rule',
     accent: '#ffd76a',
+  },
+  {
+    tier: 'bough' as const,
+    title: 'Astral Boughs',
+    shortTitle: 'Boughs',
+    icon: 'game-icons:infinity',
+    hint: 'No final level — the tree keeps growing',
+    accent: '#c9a0ff',
   },
 ]
 
@@ -1235,6 +1432,8 @@ export const FORGE_UPGRADE_TIER_LABELS = {
   root: 'SOLAR RAY',
   branch: 'BRANCH',
   leaf: 'LEAF',
+  ward: 'WARD',
+  pact: 'COVENANT',
   bough: 'BOUGH',
   crown: 'CROWN',
 } as const
@@ -1347,6 +1546,22 @@ export const FORGE_DIVIDER_SAVING_COLOR = '#c89040'
 
 /** Der Chip, der die Ringfilterung aufhebt. */
 export const FORGE_UPGRADE_FILTER_ALL_LABEL = 'All'
+/**
+ * Sein Motiv für die enge Leiste, in der die Chips auf ihr Glyph zurücktreten.
+ *
+ * Aus `ph` und nicht aus `game-icons`: es wird bei rund 20 px gezeigt, und dort
+ * zerfallen verschnörkelte Glyphen (CLAUDE.md, „Icons"). Die sieben Ringmotive
+ * daneben stehen in `FORGE_UPGRADE_GROUPS[].icon` und sind aus `game-icons` —
+ * sie sind schon vergeben und tragen ihre Bedeutung ausserhalb der Leiste
+ * ebenfalls; hier wird nur der Neuzugang gewählt.
+ */
+export const FORGE_UPGRADE_FILTER_ALL_ICON = 'ph:circles-three-fill'
+/**
+ * Kantenlänge des Chip-Glyphs. 20 statt 18: die 18er-Grenze ist die, ab der
+ * `game-icons` zu Grau zerfallen, und ein Bedienelement soll nicht auf ihr
+ * stehen.
+ */
+export const FORGE_CHIP_ICON_SIZE = 20
 
 // ── Kopfleiste der Baumspalte (ForgeToolbar) ─────────────────────────────────
 /**
@@ -1456,7 +1671,7 @@ export const FORGE_AFFORDABLE_TOTAL_ICON = 'ph:lightning-fill'
 /**
  * Wie viele Stufen ein einzelner „Buy ×N" höchstens auf einmal nimmt.
  *
- * Nötig ist der Deckel nur wegen Ring 4: ein Bough hat keine Höchststufe, die
+ * Nötig ist der Deckel nur wegen Ring 7: ein Bough hat keine Höchststufe, die
  * Vorschau-Schleife liefe also bei genug Chimes ohne Ende weiter. Für alle
  * anderen Ringe greift ihre eigene Obergrenze längst vorher.
  *
@@ -1638,11 +1853,15 @@ export const FORGE_SPOTLIGHT_NODE_SCALE = 1.22
 export const FORGE_SPOTLIGHT_DIM_OPACITY = 0.3
 export const FORGE_SPOTLIGHT_PING_MS = 450
 /**
- * Sonne → Wurzel → Zweig → Blatt/Bough: vier Glieder trennen den äußersten
- * Knoten vom Sternenrand, seit Ring 4 dazugekommen ist. Zugleich die
+ * Sonne → Strahl → Zweig → Blatt → Ward → Covenant → Krone/Bough: **sieben**
+ * Glieder trennen den äussersten Knoten vom Sternenrand, seit die Ringe eine
+ * Leiter bilden und die Elternkette keinen Ring mehr überspringt. Zugleich die
  * Abbruchbremse beim Hochlaufen der `parentId`-Kette.
+ *
+ * Die Zahl MUSS mit der Ringzahl mitwachsen: stünde sie zu tief, bräche die
+ * hervorgehobene Kette mitten im Baum ab und die Sonne wäre nicht mehr ihr Ende.
  */
-export const FORGE_SPOTLIGHT_MAX_LIMBS = 4
+export const FORGE_SPOTLIGHT_MAX_LIMBS = 7
 /**
  * Wartezeit, bevor ein Hover am Baum die zugehörige Karte ins Bild rollt. Ein
  * Schwenk über den Baum soll EINEN Rollbefehl absetzen, nicht fünfundzwanzig.

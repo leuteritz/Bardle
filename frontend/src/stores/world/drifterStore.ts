@@ -54,7 +54,11 @@ function rollRange(range: [number, number] | undefined, fallback: number): numbe
  */
 function rollIntervalSec(rarity: DrifterRarity): number {
   const base = rollRange(DRIFTER_SPAWN_INTERVAL_SEC[rarity], DRIFTER_SPAWN_RETRY_SEC)
-  return base * useProvidenceStore().drifterSpawnIntervalMult
+  // Wanderer's Beacon (Star Forge) steht neben Hollow Tide und aus demselben
+  // Grund an derselben Stelle: eine Multiplikation, alle Aufrufer erben sie.
+  return (
+    base * useProvidenceStore().drifterSpawnIntervalMult * useStarForgeStore().drifterIntervalMult
+  )
 }
 
 /** Staggered opening delays, one clock per rarity. */

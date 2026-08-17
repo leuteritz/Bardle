@@ -529,7 +529,7 @@ describe('forgeUpgradeBucket — welcher Abschnitt', () => {
     const forge = useStarForgeStore()
     const boughDef = FORGE_NODES.find((node) => node.tier === 'bough')!
     useSolarUpgradeStore().starPhase = FORGE_BOUGH_UNLOCK_PHASE
-    forge.branchLevels[boughDef.parentId] = FORGE_BOUGH_PARENT_MIN_LEVEL
+    forge.pactLevels[boughDef.parentId] = FORGE_BOUGH_PARENT_MIN_LEVEL
 
     for (const level of [0, 1, 25, 500]) {
       forge.boughLevels[boughDef.id] = level
@@ -638,7 +638,9 @@ describe('useForgeUpgrades — Material der Kernstrahlen', () => {
  */
 describe('useForgeUpgrades — Stapelkauf', () => {
   const BOUGH_ID = 'wayfarersHoard'
-  const BOUGH_PARENT = 'wayfindersCache'
+  /** Der Covenant desselben Winkels — seit die Ringe eine Leiter bilden, hängt
+   *  ein Bough dort und nicht mehr am Zweig zwei Ringe weiter innen. */
+  const BOUGH_PARENT = 'starroadPact'
 
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -648,7 +650,7 @@ describe('useForgeUpgrades — Stapelkauf', () => {
   function unlockBoughs(): void {
     unlockBranches()
     useSolarUpgradeStore().starPhase = FORGE_BOUGH_UNLOCK_PHASE
-    useStarForgeStore().branchLevels[BOUGH_PARENT] = FORGE_BOUGH_PARENT_MIN_LEVEL
+    useStarForgeStore().pactLevels[BOUGH_PARENT] = FORGE_BOUGH_PARENT_MIN_LEVEL
   }
 
   /** Was die nächsten `count` Stufen zusammen kosten — aus dem Store gelesen,
