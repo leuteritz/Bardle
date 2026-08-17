@@ -1294,21 +1294,23 @@ export const FORGE_OVERFLOW_STAR_LIFETIME_RATE = 1
  */
 export const FORGE_OVERFLOW_HP_REGEN_PER_PCT = 0.05
 
-// ── Detailspalte des Shop-Tabs (StarForgePanel) ───────────────────────────────
+// ── Die vier Abteilungen der Star Forge ──────────────────────────────────────
 /**
- * Die Abteilungen der rechten Spalte, Reihenfolge = Reiterfolge.
- * Gestapelt waren sie ein Endlos-Scroll in einer 440px-Spalte; als Reiter
- * bekommt jede die volle Höhe, und darum darf die Schrift so groß sein, dass
- * man sie liest.
+ * Sie waren einmal die Reiter der rechten Spalte. Seit dem Streifen-Umbau gibt
+ * es diese Reiter nicht mehr — der Spieler sieht alle vier Abteilungen
+ * gleichzeitig, den Baum als Liste und den Rest als Zeilen darüber.
  *
- * `upgrades` steht vorn und ist die Startansicht: Relikte, Konstellationen und
- * der Handel zeigen, was aus dem Baum FOLGT — der Baum selbst war vorher nur
- * als Kreisfeld auf der Leinwand erreichbar, ein Knoten je Tooltip.
+ * Die Gliederung selbst bleibt trotzdem, und zwar dort, wo sie ohnehin schon
+ * lag: im Store (`shopReadyIds`, `shopFreshBySection` — die Marken zählen je
+ * Abteilung) und im Herold (`useForgeHerald` nimmt den `accent` für die Dinge
+ * ohne eigene Farbe). Der einzige Leser, der sie noch ZEIGT, ist die
+ * Aufschlüsselung im Tooltip der Shop-Ecktaste (`RpgBadgeTooltipBody`).
  *
- * Sein Glyph ist absichtlich dasselbe wie `STAR_EVOLUTION_ICONS.gateRays`: dort
- * steht es für die Bedingung „alle Strahlen auf Stufe n", hier für die Strahlen
- * selbst — eine Bedeutung, ein Zeichen. Grün, weil Grün im Projekt „kaufbar"
- * heißt; die drei anderen tragen Bernstein, Eisblau und Gold.
+ * Das Glyph von `upgrades` ist absichtlich dasselbe wie
+ * `STAR_EVOLUTION_ICONS.gateRays`: dort steht es für die Bedingung „alle
+ * Strahlen auf Stufe n", hier für die Strahlen selbst — eine Bedeutung, ein
+ * Zeichen. Grün, weil Grün im Projekt „kaufbar" heißt; die drei anderen tragen
+ * Bernstein, Eisblau und Gold.
  */
 export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
   { id: 'upgrades', label: 'Upgrades', icon: 'game-icons:sun-radiations', accent: '#7fd048' },
@@ -1316,9 +1318,6 @@ export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
   {
     id: 'constellations',
     label: 'Constellations',
-    // Das einzige Label, das in keine Rail-Zelle passt — die Trennstelle ist
-    // markiert, der Name bleibt derselbe. Siehe `wrapLabel` in types/forge.ts.
-    wrapLabel: 'Constel­lations',
     icon: 'game-icons:barbed-star',
     accent: '#86d0ff',
   },
@@ -1719,21 +1718,124 @@ export const FORGE_NEXT_UP_IDLE = 'Nothing ready right now'
 export const FORGE_DETAIL_ENDLESS_META = 'no final level'
 export const FORGE_DETAIL_PARENT_PREFIX = 'hangs on '
 
-// ── Abteilungs-Rail ganz rechts (ForgeSectionRail) ───────────────────────────
+// ── Der Angebots-Streifen über der Liste (ForgeOfferStrip) ───────────────────
 /**
- * Die vier Abteilungen standen als waagerechte Reiterleiste über der Spalte und
- * kosteten dort die volle Breite mal 46px Höhe — auf dem flachsten Viewport
- * (Full HD) der teuerste Platz, den es gibt. Senkrecht kosten sie 78px BREITE,
- * und Breite ist in diesem Layout billig.
+ * Relikte, Konstellationen und der Handel — was der Baum NICHT hergibt.
  *
- * Der Handel bekommt dabei die Fußkachel statt eines gleichrangigen Reiters: er
- * ist der einzige Abschnitt mit einer laufenden Uhr, und die soll man sehen,
- * ohne ihn zu öffnen.
+ * Sie lagen bis zum Umbau hinter je einem Reiter einer 78px breiten
+ * Abteilungs-Rail ganz rechts (`ForgeSectionRail`, gestrichen). Das kostete
+ * nicht die Breite, sondern die Aufmerksamkeit: drei der vier Abteilungen waren
+ * die meiste Zeit leer, und ob eine davon gerade etwas hergab, stand allein an
+ * einer 18px-Marke an einem Reiter, den der Spieler nicht offen hatte. Vier
+ * Klicks, um dreimal nichts zu finden.
+ *
+ * Jetzt steht alles Erreichbare als Zeile ganz oben in derselben Spalte wie die
+ * Upgrades. Die Sichtbarkeit hängt an der FREISCHALTUNG, nie am Chime-Bestand —
+ * sonst verschwände eine Zeile unter dem Zeiger, während die Chimes ticken.
+ * Kaufbar oder nicht trägt allein die Optik.
+ *
+ * Der Wortlaut ist nicht neu: „within reach" steht seit jeher in den
+ * Badge-Labels der Forge (Header-Ecktaste, Profil-Reiter). Der Streifen greift
+ * damit genau den Satz auf, dem der Spieler hierher gefolgt ist.
  */
-export const FORGE_RAIL_WIDTH_PX = 78
-export const FORGE_RAIL_WIDTH_WIDE_PX = 92
-export const FORGE_RAIL_ICON_SIZE = 27
-export const FORGE_RAIL_BARGAIN_LABEL = 'restock'
+export const FORGE_OFFER_TITLE = 'Within reach'
+export const FORGE_OFFER_ICON = 'game-icons:anvil-impact'
+export const FORGE_OFFER_COLOR = '#e8a020'
+/** Die Verben der drei Arten — je Art eines, nie zwei Wörter für dieselbe Tat. */
+export const FORGE_OFFER_VERB_RELIC = 'Forge'
+export const FORGE_OFFER_VERB_UPGRADE = 'Upgrade'
+export const FORGE_OFFER_VERB_CONSTELLATION = 'Fuse'
+export const FORGE_OFFER_VERB_BARGAIN = 'Buy'
+/** Der Chip neben dem Namen einer Konstellation — Relikte tragen dort ihre Rarität. */
+export const FORGE_OFFER_TAG_CONSTELLATION = 'FUSION'
+/**
+ * Das Aufpoppen. Nur `opacity` und `transform` (Performance-Regel 1); der Wert
+ * steht hier, weil ihn die Komponente per `v-bind` in ihre Transition schreibt
+ * und `FORGE_CARD_FLASH_MS` daneben eine andere Frage beantwortet.
+ */
+export const FORGE_OFFER_POP_MS = 180
+/**
+ * Das Zeichen einer Zeile. Kleiner als das der Upgrade-Zeile (36) — der
+ * Streifen steht über der Liste und darf sie nicht überstimmen.
+ */
+export const FORGE_OFFER_GLYPH_SIZE = 30
+/**
+ * Das Materialbild IN einer Angebotszeile. Kleiner als die geteilten 26px
+ * (`.fc-cost-img`): gemessen trug das Kostenband damit allein 38 der 78 Pixel
+ * Zeilenhöhe, und bei acht offenen Angeboten belegte der Streifen 89 % der
+ * Spalte — die Upgrade-Liste darunter war auf Full HD nicht mehr im Bild.
+ */
+export const FORGE_OFFER_COST_IMAGE_PX = 17
+/**
+ * Der Deckel über dem Streifen.
+ *
+ * Er WÄCHST mit dem Spielstand: fünf Relikte, sieben Konstellationen und der
+ * Handel sind im Spätspiel dreizehn Zeilen, und jede davon ist eine, die der
+ * Spieler kaufen KANN — keine darf verschwinden. Ungedeckelt schöbe er aber
+ * genau das aus dem Bild, wofür die Spalte da ist.
+ *
+ * Gemessen passen bei 252px gut dreieinhalb Zeilen: die angeschnittene vierte
+ * sagt von selbst, dass es weitergeht. Darunter bleiben auf dem flachsten
+ * Viewport (Full HD) fünf Upgrade-Zeilen im Bild.
+ */
+export const FORGE_OFFER_LIST_MAX_PX = 300
+export const FORGE_OFFER_LIST_MAX_COMPACT_PX = 252
+/** Der Lauf des Händlerbands — derselbe Takt wie auf seiner alten Karte. */
+export const FORGE_OFFER_SHINE_MS = 5000
+export const FORGE_OFFER_CLOCK_ICON = 'ph:hourglass-medium-fill'
+export const FORGE_OFFER_FREE_LABEL = 'Free'
+/** Warum der Knopf nicht geht — die rote Zahl daneben sagt, WAS fehlt. */
+export const FORGE_OFFER_SHORT_TITLE = 'Not enough yet'
+/** Ein Handel, der noch nicht wieder ausliegt. */
+export const FORGE_OFFER_SOLD_LABEL = '✦ SOLD'
+export const FORGE_OFFER_RESTOCK_LABEL = 'restock'
+export const FORGE_OFFER_REROLL_ICON = 'ph:arrows-clockwise-bold'
+export const FORGE_OFFER_REROLL_TITLE = 'Draw a different bargain'
+/** Die Zeile des Handels nennt sein Sortiment im Kärtchen. */
+export const FORGE_OFFER_WARES_LABEL = 'Also in his cart'
+export const FORGE_OFFER_GET_LABEL = 'You get'
+export const FORGE_OFFER_PAY_LABEL = 'You pay'
+export const FORGE_OFFER_NOTE =
+  'One bargain lies out at a time. It is gone once bought and the merchant returns with another; a Dark Matter shard sends him back to his cart right away.'
+/** Der Wirkungssprung im Kärtchen — dieselben zwei Wörter wie in der Upgrade-Zeile. */
+export const FORGE_OFFER_NOW_LABEL = 'Now'
+export const FORGE_OFFER_NEXT_LABEL = 'After forging'
+/** Beide Tore einer Konstellation, ausgeschrieben. */
+export const FORGE_OFFER_REQS_LABEL = 'Both branches'
+/**
+ * Wie weit das Kärtchen von der Zeile absteht und wie breit es ist.
+ *
+ * Breiter als das der Upgrade-Zeile (250): der Handel zeigt darin sein halbes
+ * Sortiment, und eine Konstellation zwei Fortschrittsbalken mit Namen davor.
+ */
+export const FORGE_OFFER_TIP_WIDTH_PX = 288
+export const FORGE_OFFER_TIP_GAP_PX = 26
+
+// ── Das Archiv darunter (ForgeVaultSection) ──────────────────────────────────
+/**
+ * Gesperrte Relikte, ausgebaute (`✦ MAX`) und fusionierte Konstellationen.
+ *
+ * Sie standen bis zum Umbau als Kompaktzeilen mit in ihrer Abteilung. Ganz
+ * wegzulassen ging nicht: ein Relikt, das aus dem Nichts auftaucht, sobald sein
+ * Knoten hoch genug ist, nimmt dem Spieler die Möglichkeit, darauf HINZUARBEITEN
+ * — und der Fortschrittsbalken „Moon Orbit 2/3" ist genau diese Auskunft.
+ *
+ * Zugeklappt als Vorgabe, dieselbe Schaltzeile wie das Upgrade-Archiv darüber:
+ * zwei verschiedene Archivknöpfe in einer Spalte wären zwei Bedienmuster für
+ * dieselbe Geste.
+ */
+export const FORGE_VAULT_LABEL = 'locked & finished'
+export const FORGE_VAULT_ICON = 'game-icons:locked-chest'
+/**
+ * Bernstein statt des Grüns der Upgrade-Schublade: dort liegt Erledigtes, hier
+ * liegt überwiegend das, worauf der Spieler noch hinarbeitet.
+ */
+export const FORGE_VAULT_COLOR = '#c89040'
+export const FORGE_VAULT_MAX_BADGE = '✦ MAX'
+export const FORGE_VAULT_FUSED_BADGE = '✦ FUSED'
+/** „Grow Moon Orbit to Lv 3" — der Weg zur Freischaltung eines Relikts. */
+export const FORGE_VAULT_LOCK_PREFIX = 'Grow'
+export const FORGE_VAULT_LOCK_INFIX = 'to Lv'
 
 // ── Upgrade-Zeile der Liste (ForgeUpgradeTile) ───────────────────────────────
 /**

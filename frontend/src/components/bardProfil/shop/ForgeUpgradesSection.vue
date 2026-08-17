@@ -34,15 +34,15 @@
            anderen Töpfe ihn im Trenner tragen. -->
       <button
         v-if="section.id === 'grown'"
-        class="fu-archive-toggle"
-        :class="{ 'fu-archive-toggle--open': archiveOpen }"
+        class="fc-archive"
+        :class="{ 'fc-archive--open': archiveOpen }"
         :aria-expanded="archiveOpen"
         @click="archiveOpen = !archiveOpen"
       >
-        <span class="fu-archive-chevron">{{ archiveChevron }}</span>
-        <Icon :icon="FORGE_UPGRADE_ARCHIVE_ICON" width="17" height="17" class="fu-archive-ico" />
-        <span class="fu-archive-num">{{ section.entries.length }}</span>
-        <span class="fu-archive-label">{{ FORGE_UPGRADE_ARCHIVE_LABEL }}</span>
+        <span class="fc-archive-chevron">{{ archiveChevron }}</span>
+        <Icon :icon="FORGE_UPGRADE_ARCHIVE_ICON" width="17" height="17" class="fc-archive-ico" />
+        <span class="fc-archive-num">{{ section.entries.length }}</span>
+        <span class="fc-archive-label">{{ FORGE_UPGRADE_ARCHIVE_LABEL }}</span>
       </button>
 
       <!-- Ausgewachsenes bleibt eine Kompaktzeile, alles Kaufbare die volle: im
@@ -567,63 +567,12 @@ onUnmounted(() => {
    Die einzige Schaltzeile der Liste — und deshalb die einzige Gruppe ohne
    Trenner: eine Linie kann man nicht aufklappen. Sie trägt dafür dieselben
    Bausteine wie er (Glyph, Zähler, Versalien-Etikett), nur auf einer Fläche.
+
+   Die Optik liegt als `.fc-archive*` global in `rpg-theme.css`: die Spalte hat
+   seit dem Streifen-Umbau eine ZWEITE Schublade darunter (`ForgeVaultSection`),
+   und zwei scoped Kopien derselben Geste liefen bei der nächsten Änderung
+   auseinander.
 ══════════════════════════════════════════════════ */
-.fu-archive-toggle {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  width: 100%;
-  margin-top: 5px;
-  padding: 10px 13px;
-  border: 1px solid #2a1a08;
-  border-radius: 4px;
-  background: #16140e;
-  cursor: pointer;
-  text-align: left;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.fu-archive-toggle:hover {
-  border-color: #3e200a;
-  background: #1a1710;
-}
-
-.fu-archive-toggle--open {
-  border-color: #3e200a;
-}
-
-.fu-archive-chevron {
-  flex-shrink: 0;
-  width: 11px;
-  color: rgba(200, 144, 64, 0.55);
-  font-size: 13px;
-  line-height: 1;
-}
-
-.fu-archive-ico {
-  flex-shrink: 0;
-  color: #4a8a28;
-}
-
-.fu-archive-num {
-  flex-shrink: 0;
-  color: rgba(232, 220, 192, 0.75);
-  font-size: 14px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-}
-
-.fu-archive-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 12.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.6);
-}
 
 /* ══════════════════════════════════════════════════
    LEERE LISTE
@@ -687,11 +636,6 @@ onUnmounted(() => {
 
   .fu-div-label {
     font-size: 12px;
-  }
-
-  .fu-archive-toggle {
-    margin-top: 3px;
-    padding: 8px 12px;
   }
 }
 </style>

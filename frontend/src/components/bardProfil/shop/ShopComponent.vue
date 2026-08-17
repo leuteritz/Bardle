@@ -1,14 +1,12 @@
 <template>
   <div class="shop-frame">
-    <!-- Star Forge — links der wachsende Sonnenbaum, in der Mitte das Detail
-         samt Liste, rechts aussen die Abteilungs-Rail. -->
+    <!-- Star Forge — links der wachsende Sonnenbaum, rechts die Spalte mit
+         allem Kaufbaren: erreichbare Angebote oben, die Upgrade-Liste darunter,
+         zuletzt die Schublade mit Gesperrtem. Eine Abteilungs-Rail stand
+         einmal rechts daneben; sie ist gestrichen (Herleitung an
+         `FORGE_OFFER_TITLE` in `constants/forge.ts`). -->
     <ForgeTreePanel class="shop-tree-col" />
-    <StarForgePanel class="shop-forge-col" :active-section="activeSection" />
-    <ForgeSectionRail
-      class="shop-rail-col"
-      :active="activeSection"
-      @select="activeSection = $event"
-    />
+    <StarForgePanel class="shop-forge-col" />
 
     <!-- TEMP: admin shortcut — buys every ray, branch, leaf, relic and
          constellation the CURRENT star phase allows, free of charge. Floated
@@ -23,34 +21,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useHerald } from '@/composables/ui/useHerald'
-import type { ForgeSectionId } from '@/types'
 import {
   BARD_PROFILE_RAIL_MAX_PX,
   BARD_PROFILE_RAIL_MIN_PX,
   BARD_PROFILE_RAIL_VW,
   FORGE_YIELD_PLINTH_HEIGHT_PX,
-  FORGE_RAIL_WIDTH_PX,
-  FORGE_RAIL_WIDTH_WIDE_PX,
 } from '@/config/constants'
 import ForgeTreePanel from './ForgeTreePanel.vue'
 import StarForgePanel from './StarForgePanel.vue'
-import ForgeSectionRail from './ForgeSectionRail.vue'
 
 const forgeStore = useStarForgeStore()
 const { announceReceipt } = useHerald()
-
-/**
- * Welche Abteilung offen ist, liegt HIER und nicht mehr in `StarForgePanel`:
- * die Rail steht seit dem Umbau als eigene Spalte daneben, die beiden sind also
- * Geschwister. Der Baum steht vorn — Relikte, Konstellationen und der Handel
- * zeigen, was aus ihm FOLGT.
- */
-const activeSection = ref<ForgeSectionId>('upgrades')
 
 /**
  * Was der Zeiger berührt hat, ist gesehen — und der azurne „NEW"-Rahmen daran
@@ -84,9 +70,6 @@ function maxOutForge(): void {
   })
 }
 
-const railWidth = `${FORGE_RAIL_WIDTH_PX}px`
-const railWidthWide = `${FORGE_RAIL_WIDTH_WIDE_PX}px`
-
 /** Die Detailspalte — dieselbe Breite wie die Schiene im Skill-Tree-Tab. */
 const detailWidth = `clamp(${BARD_PROFILE_RAIL_MIN_PX}px, ${BARD_PROFILE_RAIL_VW}vw, ${BARD_PROFILE_RAIL_MAX_PX}px)`
 </script>
@@ -115,23 +98,6 @@ const detailWidth = `clamp(${BARD_PROFILE_RAIL_MIN_PX}px, ${BARD_PROFILE_RAIL_VW
 .shop-forge-col {
   flex: 0 0 v-bind(detailWidth);
   min-width: 0;
-}
-
-/* `min-width: 0` ist hier nicht kosmetisch: ohne es gilt `min-width: auto`, und
-   das längste Label der Rail („Constellations") drückte die Spalte gemessen auf
-   96px statt der deklarierten 78 — die Breite stünde dann in Wahrheit im
-   Textumbruch statt in der Konstante. */
-.shop-rail-col {
-  flex: 0 0 v-bind(railWidth);
-  min-width: 0;
-}
-
-/* Ab 2K ist Breite reichlich da: „Constellations" steht dann zweizeilig statt
-   dreizeilig, und die Zelle wirkt nicht mehr wie ein Notbehelf. */
-@media (min-width: 2560px) {
-  .shop-rail-col {
-    flex-basis: v-bind(railWidthWide);
-  }
 }
 
 /* ── TEMP admin button ─────────────────────────────────────────── */
@@ -176,11 +142,6 @@ const detailWidth = `clamp(${BARD_PROFILE_RAIL_MIN_PX}px, ${BARD_PROFILE_RAIL_VW
   .shop-tree-col {
     flex: 0 0 420px;
     border-bottom: 2px solid #5c3310;
-  }
-
-  .shop-rail-col {
-    flex: 0 0 auto;
-    order: -1;
   }
 
   .shop-forge-col {

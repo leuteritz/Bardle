@@ -161,19 +161,8 @@ export type ForgeSectionId = 'upgrades' | 'relics' | 'constellations' | 'bargain
 export interface ForgeSectionDef {
   id: ForgeSectionId
   label: string
-  /**
-   * DERSELBE Name, nur mit markierten Trennstellen (U+00AD, weiches
-   * Trennzeichen) — für die 78px-Zelle der Rail. Kein zweiter Name und damit
-   * keine zweite Quelle für die Bedeutung; dasselbe Zugeständnis an eine enge
-   * Fläche wie `shortTitle` bei den Ring-Gruppen.
-   *
-   * Nötig, weil Chrome die automatische Silbentrennung (`hyphens: auto`) hier
-   * nicht anwendet: „Constellations" brach gemessen als „CONSTELLATIO / NS".
-   * Fehlt das Feld, steht der `label` unverändert da.
-   */
-  wrapLabel?: string
   icon: string
-  /** Leitfarbe des Reiters und seiner Überschrift. */
+  /** Leitfarbe der Abteilung — Herold-Akzent und Tooltipzeile lesen sie. */
   accent: string
 }
 
@@ -303,4 +292,106 @@ export interface ForgeUpgradeEntry {
   /** Fortschritt zur Freischaltung, 0–1 — nur bei `locked` aussagekräftig. */
   unlockProgress: number
   canBuy: boolean
+}
+
+// ── Was AUSSERHALB des Baums kaufbar ist: Relikt, Konstellation, Handel ──────
+/**
+ * Die drei Arten, die es neben dem Sternbaum noch gibt.
+ *
+ * Sie standen bis zum Umbau hinter je einem Reiter der Abteilungs-Rail und
+ * teilen sich seitdem EINEN Streifen über der Upgrade-Liste. Die Art bleibt
+ * trotzdem am Eintrag: sie entscheidet über das Verb im Kaufknopf, über den Chip
+ * neben dem Namen und darüber, welchen Block das schwebende Kärtchen zeigt.
+ */
+export type ForgeOfferKind = 'relic' | 'constellation' | 'bargain'
+
+/**
+ * Eine Freischaltbedingung mit Fortschritt — „Moon Orbit 2/3".
+ *
+ * Nur Konstellationen tragen zwei davon; ein Relikt hat genau eine und zeigt sie
+ * erst im Archiv, weil es im Streifen ohnehin nur erscheint, wenn sie erfüllt
+ * ist.
+ */
+export interface ForgeOfferReq {
+  id: string
+  name: string
+  have: number
+  need: number
+  met: boolean
+  /** 0–1, für den Balken. */
+  progress: number
+}
+
+/**
+ * Ein Angebot, fertig zum Anzeigen — dieselbe Rolle wie `ForgeUpgradeEntry` für
+ * den Baum.
+ *
+ * Drei Kataloge mit drei verschiedenen Formen werden hier auf EINE gebracht,
+ * damit Streifen, Zeile und Kärtchen je einmal existieren statt dreimal. Was
+ * eine Art nicht kennt, bleibt leer (`reqs`) oder `null` (`restockMs`) — keine
+ * optionalen Felder, deren Fehlen man an drei Stellen abfangen müsste.
+ */
+export interface ForgeOffer {
+  /**
+   * Beim Handel die ID des GERADE ausliegenden Angebots, nicht die der
+   * Abteilung: sie ist zugleich der Schlüssel, unter dem `acknowledgedShop` sich
+   * merkt, dass der Spieler ihn gesehen hat, und ein neuer Bestand soll wieder
+   * als neu gelten.
+   */
+  id: string
+  kind: ForgeOfferKind
+  name: string
+  icon: string
+  color: string
+  /** `RARE` · `FUSION` · `Timed blessing · 2 h` — der Chip neben dem Namen. */
+  tag: string
+  /** `Forge` · `Fuse` · `Buy` — das Verb auf dem Kaufknopf. */
+  verb: string
+  /** Der volle Wirkungssatz, mit eingesetztem Wert. */
+  desc: string
+  level: number
+  /** `0` bei allem Einmaligen (Konstellation, Handel) — dann gibt es keine Pips. */
+  maxLevel: number
+  /** Wirkung jetzt und nach dem Kauf; leer, wo es keine Stufen gibt. */
+  nowText: string
+  nextText: string
+  gold: number
+  goldOk: boolean
+  materials: ForgeCostItem[]
+  /** Alles bezahlt und alle Bedingungen erfüllt — DIE kaufbare Optik. */
+  ready: boolean
+  /** Leer außer bei Konstellationen. */
+  reqs: ForgeOfferReq[]
+  /** Nur der Handel hat eine Uhr; sonst `null`. */
+  restockMs: number | null
+  /** Nur der Handel: bereits gekauft, wartet auf den nächsten Bestand. */
+  sold: boolean
+  /** Nur der Handel: `0`, wenn es nichts abzuziehen gibt. */
+  discountPct: number
+}
+
+/**
+ * Was ins Archiv sinkt — gesperrt, ausgebaut oder fusioniert.
+ *
+ * Eine eigene, flachere Form als `ForgeOffer`: hier ist nichts zu entscheiden,
+ * also braucht es weder Kosten noch Verb. Übrig bleibt, warum der Eintrag NICHT
+ * im Streifen steht.
+ */
+export interface ForgeVaultEntry {
+  id: string
+  kind: ForgeOfferKind
+  name: string
+  icon: string
+  color: string
+  desc: string
+  /** `locked` trägt einen Weg, `done` eine Marke. */
+  state: 'locked' | 'done'
+  /** Die Marke bei `done`: `✦ MAX` oder `✦ FUSED`. */
+  badge: string
+  /** Der Weg bei `locked`: „Grow Moon Orbit to Lv 3". */
+  lockReason: string
+  have: number
+  need: number
+  /** 0–1, für den Balken unter einer gesperrten Zeile. */
+  progress: number
 }

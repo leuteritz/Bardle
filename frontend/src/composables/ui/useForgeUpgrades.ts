@@ -5,7 +5,7 @@ import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/s
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useForgeHerald } from '@/composables/ui/useForgeHerald'
 import { FORGE_NODES } from '@/config/progression/starForge'
-import { MATERIALS } from '@/config/economy/materials'
+import { forgeCostItems } from '@/utils/game/forgeCost'
 import type {
   ForgeCostItem,
   ForgeLockKind,
@@ -176,14 +176,6 @@ function trimNumber(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1)
 }
 
-function materialImage(matId: string): string | undefined {
-  return MATERIALS.find((mat) => mat.id === matId)?.image
-}
-
-function materialName(matId: string): string {
-  return MATERIALS.find((mat) => mat.id === matId)?.name ?? matId
-}
-
 /** Trägt die Beschreibung ihren Wert als Prozentzahl? Steht im Text, nicht im Feld. */
 function isPercentDesc(def: ForgeNodeDef): boolean {
   return def.desc.includes(FORGE_DESC_PERCENT_TOKEN)
@@ -211,17 +203,7 @@ export function useForgeUpgrades(): {
   const { heraldUpgrade, heraldUpgradeBulk, heraldBuyAll } = useForgeHerald()
 
   function costItems(cost: Record<string, number>): ForgeCostItem[] {
-    return Object.entries(cost).map(([matId, need]) => {
-      const have = inventoryStore.collectedMaterials[matId] ?? 0
-      return {
-        id: matId,
-        name: materialName(matId),
-        image: materialImage(matId),
-        need,
-        have,
-        ok: have >= need,
-      }
-    })
+    return forgeCostItems(cost, inventoryStore.collectedMaterials)
   }
 
   function nodeName(id: string): string {
