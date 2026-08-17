@@ -126,13 +126,6 @@
           class="next-phase-preview"
           :style="nextPhasePreviewStyle"
         />
-        <div class="sun-hp-text">
-          <span class="hp-label">HP</span>
-          <span class="hp-value" :class="{ 'hp-value--low': playerStore.isLow }">
-            {{ Math.ceil(playerStore.currentHP) }}
-          </span>
-          <span class="hp-max">/ {{ playerStore.maxHP }}</span>
-        </div>
       </div>
 
       <!-- Nodes -->
@@ -266,7 +259,6 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
-import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { FORGE_NODES } from '@/config/progression/starForge'
 import { formatNumber } from '@/config/ui/numberFormat'
@@ -335,7 +327,6 @@ import {
 
 const solarStore = useSolarUpgradeStore()
 const forgeStore = useStarForgeStore()
-const playerStore = usePlayerStore()
 const { entryById, bestBuyId, freshIds, buyUpgrade } = useForgeUpgrades()
 const { spotlightId, treeHoverId, setTreeHover, resetForgeSpotlight } = useForgeSpotlight()
 const { activeTier, hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
@@ -841,7 +832,6 @@ const stageStyle = computed(() => {
       '--phase-glow': COMET_PHASE_DATA.glow,
       '--pulse-speed': COMET_PHASE_DATA.pulseSpeed,
       '--shop-sun-d': `${bodyDiameter.value}px`,
-      '--sun-edge': COMET_PHASE_DATA.edge,
     }
   }
   const s = currentStage.value
@@ -853,11 +843,6 @@ const stageStyle = computed(() => {
     '--phase-glow': s.phaseGlow,
     '--pulse-speed': s.pulseSpeed,
     '--shop-sun-d': `${bodyDiameter.value}px`,
-    // --sun-edge färbt ausschließlich die HP-Zahl auf der Sonne. Bei den
-    // Plasmaphasen ist der dunkle Saum darauf gut lesbar — auf dem schwarzen
-    // Ereignishorizont der Endphase verschwände er, dort trägt der helle
-    // Scheibenton.
-    '--sun-edge': isCollapsed.value ? s.phasePrimary : s.edge,
   }
 })
 
@@ -1077,9 +1062,9 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 /* Kaufblitz: ein heller Schleier, der nur seine Deckkraft ändert. Ein
-   `filter: brightness()` auf dem Wrapper hätte für seine 0,45 s Sonne,
-   Phasenvorschau und HP-Zahl gemeinsam auf eine eigene Rendering-Surface
-   gezwungen — dieselbe Aufhellung leistet die Ebene ohne Neurasterung
+   `filter: brightness()` auf dem Wrapper hätte für seine 0,45 s Sonne und
+   Phasenvorschau gemeinsam auf eine eigene Rendering-Surface gezwungen —
+   dieselbe Aufhellung leistet die Ebene ohne Neurasterung
    (Muster: ChampionOrbit.vue). */
 .sun-flash-veil {
   position: absolute;
@@ -1116,43 +1101,6 @@ const nextPhasePreviewStyle = computed(() => ({
 @keyframes tree-phase-preview-pulse {
   0%, 100% { opacity: 0.12; transform: scale(1); }
   50%       { opacity: 0.35; transform: scale(1.06); }
-}
-
-.sun-hp-text {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: 4px;
-  pointer-events: none;
-}
-
-.hp-label {
-  font-size: 10px;
-  font-weight: 900;
-  color: color-mix(in srgb, var(--sun-edge) 70%, transparent);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.hp-value {
-  font-size: 28px;
-  font-weight: 900;
-  color: var(--sun-edge);
-  line-height: 1;
-  text-shadow: 0 0 8px color-mix(in srgb, var(--sun-edge) 35%, transparent);
-}
-
-.hp-value--low {
-  color: #990000;
-  text-shadow: none;
-}
-
-.hp-max {
-  font-size: 11px;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--sun-edge) 50%, transparent);
 }
 
 /* ══════════════════════════════════════════════════
