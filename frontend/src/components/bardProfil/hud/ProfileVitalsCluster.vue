@@ -14,8 +14,6 @@
   -->
   <RpgBadgeTooltip clear-ancestor=".pv-cluster">
     <div class="pv-cluster" :class="stateClass" role="status" :aria-label="ariaLabel">
-      <Icon icon="ph:heart-fill" width="30" height="30" class="pv-heart" aria-hidden="true" />
-
       <div class="pv-body">
         <div class="pv-line">
           <span class="pv-cur">{{ $formatNumber(Math.ceil(playerStore.currentHP)) }}</span>
@@ -66,7 +64,6 @@
 
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { Icon } from '@iconify/vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { HP_CRIT_PERCENT, HP_HEALTHY_PERCENT, PLAYER_HP_HIT_FLASH_MS } from '@/config/constants'
@@ -135,36 +132,24 @@ onUnmounted(() => {
 /* ── Der Cluster ──────────────────────────────────────────────────────────
    Keine Karte, keine Kante: er sitzt IM Kopfstreifen des Modals und würde als
    umrandete Platte gegen die Reiter daneben stehen. Zusammengehalten wird er
-   vom Herzen links und der gemeinsamen Grundlinie.
+   von der gemeinsamen Kante seiner beiden Zeilen.
+
+   Ein Herz-Glyph stand hier einmal davor. Es nahm auf Full HD 40 der 292px
+   breiten Seitenspalte — und sagte nichts, was nicht schon dastand: die
+   eingefärbte Leiste, die Zahl und der Kopf des Tooltips benennen den Wert
+   dreifach. Die Breite gehört seitdem der Leiste.
 
    `--pv-w` ist die Breite des Körpers: Zahlenzeile UND Leiste teilen sie sich,
    damit die Leiste nicht bei jeder Stellenzahl eine andere Länge bekommt. */
 .pv-cluster {
-  --pv-w: 214px;
+  --pv-w: 254px;
   --pv-track-h: 20px;
   display: flex;
   align-items: center;
-  gap: 10px;
   min-width: 0;
   /* Abstand zur Holzecke des RpgFrame, die über dem Kopf liegt. */
   padding: 0 6px 0 18px;
   cursor: default;
-}
-
-.pv-heart {
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  color: #cc2010;
-  /* Statisch, kein Dauerläufer — der Schein rastert genau einmal. */
-  filter: drop-shadow(0 0 7px rgba(220, 40, 18, 0.55));
-}
-
-.pv--yellow .pv-heart {
-  color: #d8901c;
-}
-.pv--green .pv-heart {
-  color: #cc4030;
 }
 
 .pv-body {
@@ -362,14 +347,9 @@ onUnmounted(() => {
   /* Keine Zielauflösung — die Reissleine für schmalere Fenster (1440×810 lässt
      nur 135px Spalte). */
   .pv-cluster {
-    --pv-w: 100px;
+    --pv-w: 126px;
     --pv-track-h: 8px;
-    gap: 6px;
     padding: 0 4px 0 10px;
-  }
-  .pv-heart {
-    width: 20px;
-    height: 20px;
   }
   .pv-body {
     gap: 4px;
@@ -386,13 +366,8 @@ onUnmounted(() => {
 
 @media (min-width: 2400px) {
   .pv-cluster {
-    --pv-w: 300px;
+    --pv-w: 348px;
     --pv-track-h: 22px;
-    gap: 12px;
-  }
-  .pv-heart {
-    width: 36px;
-    height: 36px;
   }
   .pv-cur {
     font-size: 38px;
@@ -420,13 +395,8 @@ onUnmounted(() => {
 
 @media (min-width: 3400px) {
   .pv-cluster {
-    --pv-w: 380px;
+    --pv-w: 436px;
     --pv-track-h: 26px;
-    gap: 14px;
-  }
-  .pv-heart {
-    width: 42px;
-    height: 42px;
   }
   .pv-cur {
     font-size: 44px;
