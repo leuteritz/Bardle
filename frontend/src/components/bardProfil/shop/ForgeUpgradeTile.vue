@@ -22,6 +22,19 @@
          würde. Genau derselbe Sitz wie beim Quittungsblitz darüber. -->
     <div v-if="fresh" class="fut-fresh" aria-hidden="true" />
 
+    <!-- Nackt, ohne Sockel: der gerahmte Kasten davor kostete Breite, die die
+         Zeile für Stufe, Wirkung und Knopf braucht. Die Knotenfarbe trägt das
+         Glyph selbst. Es steht VOR der Weiche und damit in jedem Zustand — eine
+         gesperrte Zeile ist sonst die einzige ohne Bild, und ausgerechnet sie
+         hat am wenigsten sonst, woran man sie erkennt. -->
+    <Icon
+      :icon="entry.icon"
+      :width="FORGE_ROW_ICON_SIZE"
+      :height="FORGE_ROW_ICON_SIZE"
+      class="fut-ico"
+      :style="{ color: entry.color }"
+    />
+
     <!-- ══ GESPERRT ══════════════════════════════════════════════
          Der Weg zur Freischaltung statt eines Preises, den man ohnehin nicht
          zahlen könnte. Hier führt der NAME, nicht die Stufe: ein „Lv 0" gross
@@ -134,20 +147,23 @@
 /**
  * Ein Eintrag der Upgrade-Liste als ZEILE.
  *
- * Eine waagerechte Achse: Stufe gross mit dem Namen klein darunter ·
- * Wirkungssprung rechts · Kauffläche ganz rechts, und unter Stufe und Name ein
- * schmales Band mit dem Materialbedarf. Gemessen rund 95px, und zwar für JEDEN
- * Zustand gleich — auch für die gesperrte Zeile ohne Knopf und Band.
+ * Eine waagerechte Achse: nacktes Knoten-Glyph gross vorn · Stufe gross mit dem
+ * Namen klein darunter · Wirkungssprung rechts · Kauffläche ganz rechts, und
+ * unter Stufe und Name ein schmales Band mit dem Materialbedarf. Gemessen rund
+ * 95px, und zwar für JEDEN Zustand gleich — auch für die gesperrte Zeile ohne
+ * Knopf und Band.
  *
  * Drei Fassungen davor, alle drei aus demselben Grund zurückgenommen: sie
  * kosteten Fläche, ohne dafür etwas zu sagen (Herleitung samt Messwerten an
- * `FORGE_ROW_BUY_WIDTH_PX`). Zuletzt gefallen sind das nackte 44px-Knotenglyph
- * vorn und die gerahmten Chips um jede Kostenposition.
+ * `FORGE_ROW_ICON_SIZE`). Zuletzt gefallen sind die gerahmten Chips um jede
+ * Kostenposition.
  *
- * Was das Glyph ersetzt, ist die 3px-KANTE links in der Knotenfarbe. Sie
- * unterscheidet einen Eintrag genauso gut vom Nachbarn und kostet ein Zwölftel
- * der Breite; derselbe Streifen wird beim Spotlight einfach voll deckend, statt
- * dass ein zweiter danebentritt.
+ * EINE Runde lief ganz ohne Glyph: die 3px-KANTE links in der Knotenfarbe
+ * sollte es ersetzen — sie unterscheidet einen Eintrag ja auch und kostet ein
+ * Zwölftel der Breite. Im fertigen Bild war die Liste damit eine Wand aus Text.
+ * Das Glyph ist zurück und grösser als vorher; die Kante bleibt als leisere
+ * Zweitstimme und wird beim Spotlight voll deckend, statt dass ein zweiter
+ * Streifen danebentritt.
  *
  * Der Knopf ist EINE flache Fläche ohne innere Trennlinie: Wort oben, Preis
  * darunter. Seine FARBE ist die Aussage — grün heisst kaufbar, rot heisst „das
@@ -185,6 +201,7 @@ import {
   FORGE_ROW_BULK_WIDTH_PX,
   FORGE_ROW_BUY_WIDTH_PX,
   FORGE_ROW_BUY_WIDTH_COMPACT_PX,
+  FORGE_ROW_ICON_SIZE,
   FORGE_SHORT_CHIMES_LABEL,
   FORGE_SHORT_MATERIAL_PREFIX,
   FORGE_TILE_CAPPED_LABEL,
@@ -279,10 +296,12 @@ const buyTitle = computed(() => {
 }
 
 /* ── Die Knotenkante ─────────────────────────────────────────
-   Sie ersetzt das Icon, das hier stand: dasselbe Erkennungsmerkmal in einem
-   Zwölftel der Breite. Zurückgenommen in der Deckkraft, damit fünfundvierzig
-   Streifen untereinander keine Leiter bilden — der Spotlight hebt genau diesen
-   Streifen auf voll, statt einen zweiten danebenzusetzen. */
+   Dieselbe Farbe wie das Glyph daneben, nur leiser: sie war einmal sein Ersatz
+   und ist jetzt seine Wiederholung. Bleiben darf sie, weil sie auch dort trägt,
+   wo das Glyph gedimmt ist — an den gesperrten Zeilen. Zurückgenommen in der
+   Deckkraft, damit fünfundvierzig Streifen untereinander keine Leiter bilden;
+   der Spotlight hebt genau diesen Streifen auf voll, statt einen zweiten
+   danebenzusetzen. */
 .fut-row::before {
   content: '';
   position: absolute;
@@ -353,8 +372,15 @@ const buyTitle = computed(() => {
 }
 
 /* ══════════════════════════════════════════════════
-   STUFE · NAME · MATERIAL
+   ICON · STUFE · NAME · MATERIAL
 ══════════════════════════════════════════════════ */
+/* `align-self: center` ist Pflicht: die Zeile trägt `align-items: stretch`, und
+   ohne sie zöge das SVG auf die volle Zeilenhöhe. */
+.fut-ico {
+  flex-shrink: 0;
+  align-self: center;
+}
+
 /* Zwei Zeilen: oben Stufe/Name/Wirkung, darunter das Lager. */
 .fut-main {
   flex: 1 1 auto;
@@ -753,6 +779,12 @@ const buyTitle = computed(() => {
 
   .fut-head {
     gap: 8px;
+  }
+
+  /* Die Grösse steht als Attribut am `<Icon>`; CSS schlägt es. */
+  .fut-ico {
+    width: 48px;
+    height: 48px;
   }
 
   .fut-lvl {

@@ -9,6 +9,14 @@
     :data-forge-id="entry.id"
     @mouseenter="setListHover(entry.id)"
   >
+    <Icon
+      :icon="entry.icon"
+      :width="FORGE_GROWN_ICON_SIZE"
+      :height="FORGE_GROWN_ICON_SIZE"
+      class="fgr-ico"
+      :style="{ color: entry.color }"
+    />
+
     <div class="fgr-text">
       <span class="fgr-name" :style="{ color: entry.color }">{{ entry.name }}</span>
       <span class="fgr-effect">{{ entry.desc }}</span>
@@ -34,10 +42,11 @@
  * `ForgeUpgradesSection.vue`) — das Archiv ist der Ort, an dem diese Rechnung
  * wirklich aufgeht.
  *
- * Ihre Formensprache ist trotzdem dieselbe: kein Icon, sondern eine Kante in
- * der Knotenfarbe am linken Rand, und die erreichte Stufe aus derselben Quelle
- * wie die grosse Zahl der Upgrade-Zeile (`forgeLevelParts`). Zwei
- * Formensprachen in EINER Liste wären der Fehler.
+ * Ihre Formensprache ist trotzdem dieselbe: nacktes Knoten-Glyph vorn (nur halb
+ * so gross, die Zeile ist es auch), eine Kante in der Knotenfarbe am linken
+ * Rand und die erreichte Stufe aus derselben Quelle wie die grosse Zahl der
+ * Upgrade-Zeile (`forgeLevelParts`). Zwei Formensprachen in EINER Liste wären
+ * der Fehler.
  *
  * Was sie zeigt, ist nur, WAS erreicht ist und WAS es tut. Rang, Elternknoten
  * und der volle Wortlaut stehen im schwebenden Kärtchen (`ForgeRowTooltip`), an
@@ -46,10 +55,11 @@
  * Archiv liegt.
  */
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { forgeLevelParts } from '@/composables/ui/useForgeUpgrades'
 import type { ForgeUpgradeEntry } from '@/types'
-import { FORGE_GROWN_BADGE } from '@/config/constants'
+import { FORGE_GROWN_BADGE, FORGE_GROWN_ICON_SIZE } from '@/config/constants'
 
 const props = defineProps<{ entry: ForgeUpgradeEntry }>()
 
@@ -77,8 +87,8 @@ const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry
     opacity 0.12s ease;
 }
 
-/* Dieselbe Knotenkante wie an der Upgrade-Zeile — sie ersetzt dort wie hier das
-   Icon, das einmal vorn stand. */
+/* Dieselbe Knotenkante wie an der Upgrade-Zeile: leisere Wiederholung der Farbe,
+   die das Glyph daneben schon trägt. */
 .fgr-row::before {
   content: '';
   position: absolute;
@@ -110,6 +120,10 @@ const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry
 
 .fgr-row.fc-dimmed {
   opacity: 0.42;
+}
+
+.fgr-ico {
+  flex-shrink: 0;
 }
 
 .fgr-text {

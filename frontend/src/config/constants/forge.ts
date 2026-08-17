@@ -1188,6 +1188,13 @@ export const FORGE_UPGRADE_ARCHIVE_LABEL = 'grown'
 export const FORGE_UPGRADE_ARCHIVE_ICON = 'ph:check-circle-fill'
 /** Die Marke an einer ausgewachsenen Zeile. `✦` ist ein Schriftzeichen, kein Emoji. */
 export const FORGE_GROWN_BADGE = '✦ MAX'
+/**
+ * Das Knoten-Glyph der Archivzeile. Nackt wie in der Upgrade-Zeile darüber —
+ * zwei Formensprachen in EINER Liste wären der Fehler. Nur halb so gross: das
+ * Archiv bleibt die kompakte Form (53px Zeilenhöhe), weil es bei Vollausbau den
+ * Löwenanteil der Liste stellt und dort nichts mehr zu entscheiden ist.
+ */
+export const FORGE_GROWN_ICON_SIZE = 32
 /** Chevron der Schaltzeile. Schriftzeichen wie `✦` und `→`, kein Emoji. */
 export const FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED = '▸'
 export const FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN = '▾'
@@ -1356,9 +1363,10 @@ export const FORGE_RAIL_BARGAIN_LABEL = 'restock'
 
 // ── Upgrade-Zeile der Liste (ForgeUpgradeTile) ───────────────────────────────
 /**
- * Ein Eintrag der Liste ist EINE waagerechte Zeile: Stufe groß mit dem Namen
- * klein darunter · Wirkungssprung rechts · Kaufknopf ganz rechts, und unter
- * Stufe und Name ein schmales Band mit dem Materialbedarf.
+ * Ein Eintrag der Liste ist EINE waagerechte Zeile: Knoten-Glyph groß vorn ·
+ * Stufe groß mit dem Namen klein darunter · Wirkungssprung rechts · Kaufknopf
+ * ganz rechts, und unter Stufe und Name ein schmales Band mit dem
+ * Materialbedarf.
  *
  * Drei Fassungen davor:
  *
@@ -1370,10 +1378,15 @@ export const FORGE_RAIL_BARGAIN_LABEL = 'restock'
  *   • Die zweistöckige Kachel danach löste das, kostete aber ~150px je Eintrag.
  *     Bei Vollausbau sind das fünfundvierzig Stück, und die Liste zeigte drei
  *     davon gleichzeitig.
- *   • Die erste Zeilenfassung hatte noch ein nacktes 44px-Knotenglyph vorn und
- *     gerahmte Chips um jede Kostenposition. Beides ist gestrichen: das Glyph
- *     ersetzt eine 3px-Kante in der Knotenfarbe am linken Rand — sie
- *     unterscheidet genauso gut und kostet ein Zwölftel der Breite.
+ *   • Die erste Zeilenfassung hatte gerahmte Chips um jede Kostenposition. Die
+ *     sind gestrichen; die Kosten stehen nackt.
+ *
+ * EINE Runde ohne Glyph gab es dazwischen: es stand die Vermutung im Raum, die
+ * 3px-Kante in der Knotenfarbe am linken Rand könne es ersetzen — sie
+ * unterscheidet einen Eintrag ja auch und kostet ein Zwölftel der Breite. Im
+ * fertigen Bild war die Liste damit eine Wand aus Text. Das Glyph ist zurück
+ * und GRÖSSER als vorher; die Kante bleibt als leisere Zweitstimme daneben,
+ * denn sie trägt die gesperrten Zeilen, deren Glyph gedimmt ist.
  *
  * Die Höhe ist für JEDEN Zustand dieselbe (`min-height` in der Komponente),
  * auch für eine gesperrte Zeile ohne Knopf und Materialband. Eine Zeile, die
@@ -1386,8 +1399,25 @@ export const FORGE_RAIL_BARGAIN_LABEL = 'restock'
  * zurückgenommen (Herleitung in `ForgeUpgradesSection.vue`). Der
  * Beschreibungssatz bleibt im schwebenden Kärtchen.
  *
- * Die Breite der Kauffläche ist FEST und nicht inhaltsabhängig: damit fluchten
- * die Kanten über die ganze Liste hinweg und der Preis steht immer an derselben
+ * Das Knoten-Glyph vorn steht NACKT, ohne den gerahmten Sockel (Radialverlauf
+ * plus Border), den die Kachel-Fassung hatte. Die Knotenfarbe trägt es selbst;
+ * ein Kasten drumherum kostete Breite, die die Zeile für Stufe, Wirkung und
+ * Knopf braucht.
+ *
+ * 56px sind rund drei Viertel der Zeilenhöhe und machen es zum grössten
+ * Element links. Das Budget trägt es: bei Full HD (Spalte 499px) bleiben dem
+ * Namen daneben ~166px, und der längste Knotenname („Host of Champions") misst
+ * gemessen 117px.
+ *
+ * Die KOMPAKTGRÖSSE für Full HD (48px) steht nicht als zweite Konstante
+ * daneben, sondern als CSS-Regel im `@media (max-height: 1100px)`-Block der
+ * Komponente: bei Iconify schlägt CSS das `width`-Attribut, und zwei Zahlen für
+ * dieselbe Sache liefen still auseinander.
+ */
+export const FORGE_ROW_ICON_SIZE = 56
+/**
+ * Die Breite der Kauffläche — FEST, nicht inhaltsabhängig: damit fluchten die
+ * Kanten über die ganze Liste hinweg und der Preis steht immer an derselben
  * Stelle. Der Knopf trägt deshalb nur den Chime-Preis, nicht das Material —
  * zwei Materialpositionen messen auch rahmenlos ~150px und machten ihn breiter
  * als den Namen daneben.
