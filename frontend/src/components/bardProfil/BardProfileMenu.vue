@@ -400,9 +400,10 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <!-- Die Handlungsfähigkeit: Resonanz und Q W E R. Die Leiste im
-                   Orbit hängt an `bardActiveTab === null` und ist hier weg —
-                   ihre Abklingzeiten laufen trotzdem weiter. -->
+              <!-- Die Handlungsfähigkeit: der Weg zum nächsten Meep und
+                   Q W E R. Die Leiste im Orbit hängt an
+                   `bardActiveTab === null` und ist hier weg — ihre
+                   Abklingzeiten laufen trotzdem weiter. -->
               <div class="rp-header-side rp-header-side--right">
                 <ProfileReadinessCluster />
               </div>

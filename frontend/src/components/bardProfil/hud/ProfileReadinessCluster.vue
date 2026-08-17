@@ -12,31 +12,50 @@
   -->
   <div class="pr-cluster" role="toolbar" aria-label="Bard abilities">
     <RpgBadgeTooltip clear-ancestor=".pr-cluster">
-      <div class="pr-res" :class="{ 'pr-res--max': resonanceMaxed }">
+      <!--
+        Die Passive führt den Weg zum nächsten Meep, nicht den Resonanz-Stapel
+        — dieselbe Aussage wie die Kachel im Orbit. Der Stapel stand hier
+        einmal und ist bewusst weg: er ist die HERKUNFT der beiden Prozentwerte
+        im Kasten, nicht ihre Aussage, und zwang zum Umrechnen. Die Frage, die
+        der Spieler beim Klicken stellt, ist „wie oft noch?".
+      -->
+      <div
+        class="pr-meep"
+        :class="{ 'pr-meep--due': clicksToMeep === 0, 'pr-meep--warp': warping }"
+        :aria-label="meepAria"
+      >
         <!-- Fortschrittsring über `stroke-dashoffset` einer SVG-Kreislinie,
              nie über `conic-gradient` (Performance-Regel 11). -->
-        <svg class="pr-res-svg" viewBox="0 0 24 24" aria-hidden="true">
-          <circle class="pr-res-track" cx="12" cy="12" :r="PROFILE_HUD_RING_R" />
+        <svg class="pr-meep-svg" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="pr-meep-track" cx="12" cy="12" :r="PROFILE_HUD_RING_R" />
           <circle
-            class="pr-res-fill"
+            class="pr-meep-fill"
             cx="12"
             cy="12"
             :r="PROFILE_HUD_RING_R"
             :style="{ strokeDashoffset: ringOffset }"
           />
         </svg>
-        <span class="pr-res-val">{{ store.resonance }}</span>
+        <!-- Ist nichts mehr offen, steht hier NICHTS — den Zustand trägt der
+             volle Ring. Dasselbe Verhalten wie an der Kachel im Orbit. -->
+        <span v-if="clicksToMeep > 0" class="pr-meep-val" aria-hidden="true">{{
+          formatNumberCompact(clicksToMeep)
+        }}</span>
       </div>
 
-      <!-- Der Kasten sagt, was die Kachel NICHT schon zeigt: den Stand am
-           Maximum und die beiden Wirkungen. Der Klartextsatz der Passive steht
-           im Orbit — hier geht der Kasten über einem Menü auf, das der Spieler
-           gerade bedient, und alles, was er beim Überfliegen nicht in eine
-           Entscheidung übersetzt, kostet ihn nur die Zeile. -->
+      <!-- Der Kasten sagt, was die Kachel NICHT schon zeigt: die volle Zahl
+           statt der Kurzform, wofür sie steht, und was die Passive gerade gibt.
+           Der Klartextsatz der Passive steht im Orbit — hier geht der Kasten
+           über einem Menü auf, das der Spieler gerade bedient, und alles, was
+           er beim Überfliegen nicht in eine Entscheidung übersetzt, kostet ihn
+           nur die Zeile. -->
       <template #tip>
         <div class="pr-tip" :style="{ '--pr-color': BARD_PASSIVE.color }">
           <span class="pr-tip-cap">{{ BARD_PASSIVE.name }}</span>
-          <span class="pr-tip-lead">{{ store.resonance }} / {{ RESONANCE_MAX_STACKS }}</span>
+          <span class="pr-tip-lead" :class="{ 'pr-tip-lead--ready': clicksToMeep === 0 }">
+            {{ meepLead }}
+          </span>
+          <span class="pr-tip-sub">Next meep</span>
           <span class="pr-tip-sub">
             +{{ ((store.resonancePowerMult - 1) * 100).toFixed(0) }}% power ·
             −{{ (store.resonanceCdr * 100).toFixed(1) }}% cooldowns
@@ -92,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGameStore } from '@/stores/core/gameStore'
@@ -102,8 +121,8 @@ import {
   ABILITY_CAST_FLASH_MS,
   PROFILE_HUD_RING_CIRCUMFERENCE,
   PROFILE_HUD_RING_R,
-  RESONANCE_MAX_STACKS,
 } from '@/config/constants'
+import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import type { BardAbilityId } from '@/types'
 import { gameNow } from '@/utils/game/gameClock'
 import { formatCooldownSeconds } from '@/utils/ui/format'
@@ -112,13 +131,55 @@ const uiStore = useUiStore()
 const gameStore = useGameStore()
 const store = useBardAbilityStore()
 
-// ── Passive ────────────────────────────────────────────────────────────────
-const resonanceMaxed = computed(() => store.resonance >= RESONANCE_MAX_STACKS)
+// ── Passive: der Weg zum nächsten Meep ─────────────────────────────────────
+// Beide Zahlen kommen aus dem gameStore, damit HUD und Profil nie zwei Stände
+// zeigen — `clicksToNextMeep` rechnet linear in Klicks, `pendingMeepFill` misst
+// dieselbe Strecke als Anteil.
+
+/** Klicks, die bis zum nächsten Meep noch fehlen; 0, wenn er fällig ist. */
+const clicksToMeep = computed(() => gameStore.clicksToNextMeep)
 
 /** Voller Umfang = leerer Ring, 0 = voll. Der Wert ändert sich nur beim Klicken
  *  auf die Sonne — im offenen Profil also praktisch nie; er braucht deshalb
  *  keinen Frame-Lauf, ein computed genügt. */
-const ringOffset = computed(() => PROFILE_HUD_RING_CIRCUMFERENCE * (1 - store.resonanceFill))
+const ringOffset = computed(
+  () => PROFILE_HUD_RING_CIRCUMFERENCE * (1 - gameStore.pendingMeepFill),
+)
+
+/** Die volle Zahl im Kasten — die Kachel selbst trägt nur die Kurzform. */
+const meepLead = computed(() =>
+  clicksToMeep.value === 0 ? 'Arriving' : `${formatNumber(clicksToMeep.value)} clicks`,
+)
+
+const meepAria = computed(() =>
+  clicksToMeep.value > 0
+    ? `${BARD_PASSIVE.name} — ${clicksToMeep.value} clicks to the next meep`
+    : `${BARD_PASSIVE.name} — next meep ready`,
+)
+
+/**
+ * Der Schrittwechsel — dasselbe Muster wie an der Kachel im Orbit
+ * (`BardPassiveTile.vue`) und aus demselben Grund: ist ein Meep erreicht, fällt
+ * der Füllstand von ~1 auf ~0, und der Nachlauf des Rings führe den ganzen
+ * Kreis RÜCKWÄRTS — eine Bewegung, die das Gegenteil dessen erzählt, was
+ * gerade passiert ist. Für einen Frame fällt der Übergang deshalb weg.
+ *
+ * Zwei verschachtelte rAF sind nötig, kein einzelnes: das erste feuert noch
+ * bevor der Browser die neue Position gerechnet hat.
+ */
+const meepStepKey = computed(() => gameStore.pendingMeeps + gameStore.meepsDevoured)
+const warping = ref(false)
+let warpRaf = 0
+
+watch(meepStepKey, () => {
+  warping.value = true
+  cancelAnimationFrame(warpRaf)
+  warpRaf = requestAnimationFrame(() => {
+    warpRaf = requestAnimationFrame(() => {
+      warping.value = false
+    })
+  })
+})
 
 // ── Kachel-Elemente für den Frame-Lauf ─────────────────────────────────────
 // Ein Register statt eines reaktiven Arrays: was pro Frame geschrieben wird,
@@ -294,6 +355,7 @@ watch(
 
 onUnmounted(() => {
   stopLoop()
+  cancelAnimationFrame(warpRaf)
   if (flashTimer) clearTimeout(flashTimer)
 })
 
@@ -338,10 +400,14 @@ function ariaLabelOf(id: BardAbilityId): string {
   min-width: 0;
 }
 
-/* ── Resonanz ─────────────────────────────────────────────────────────────
+/* ── Passive ──────────────────────────────────────────────────────────────
    Der Zustand vor den Knöpfen — dieselbe Reihenfolge wie in der Leiste im
-   Orbit, wo die Passive links vor Q W E R steht. */
-.pr-res {
+   Orbit, wo die Passive links vor Q W E R steht.
+
+   Kein Meep-Motiv in der Kachel: auf 40–58 px trüge ein Bild nichts, was man
+   erkennen könnte (Performance-Regel 7). Ring und Zahl beantworten die Frage
+   bereits vollständig — der Ring als Anteil, die Zahl in Klicks. */
+.pr-meep {
   position: relative;
   display: flex;
   flex-shrink: 0;
@@ -352,7 +418,7 @@ function ariaLabelOf(id: BardAbilityId): string {
   cursor: default;
 }
 
-.pr-res-svg {
+.pr-meep-svg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -361,15 +427,17 @@ function ariaLabelOf(id: BardAbilityId): string {
   transform: rotate(-90deg);
 }
 
-.pr-res-track {
+.pr-meep-track {
   fill: none;
   stroke: rgba(232, 224, 196, 0.14);
   stroke-width: 2;
 }
 
-.pr-res-fill {
+/* Meep-Orange wie an der Kachel im Orbit, im Header und in der Materialleiste
+   — dieselbe Sache trägt im ganzen Spiel dieselbe Farbe. */
+.pr-meep-fill {
   fill: none;
-  stroke: #8ec5d8;
+  stroke: #fb923c;
   stroke-width: 2;
   stroke-linecap: round;
   /* Umfang bei r = 9 im viewBox 0 0 24 24 — dieselbe Zahl wie
@@ -378,22 +446,39 @@ function ariaLabelOf(id: BardAbilityId): string {
   transition: stroke-dashoffset 0.35s ease;
 }
 
-.pr-res--max .pr-res-fill {
-  stroke: #e8c040;
+/* Ist der Meep fällig, steht der Ring voll — dann trägt er die hellere Stufe
+   derselben Familie: voll ist voll. Ein einmaliger Umschlag der Malfarbe,
+   keine laufende Animation. */
+.pr-meep--due .pr-meep-fill {
+  stroke: #fdba74;
 }
 
-.pr-res-val {
+/* Der eine Frame beim Schrittwechsel: ohne Nachlauf springt der Ring auf 0,
+   statt rückwärts um den Kreis zu fahren. */
+.pr-meep--warp .pr-meep-fill {
+  transition: none;
+}
+
+/* Kleiner als der Resonanz-Zähler, der hier einmal stand: aus zwei Ziffern
+   wird die Kurzform, und die trägt im Alltag vier Zeichen ("1.2K", "3.9M").
+
+   Die Bezugsgröße ist nicht die Kachel, sondern die INNENFLÄCHE des Rings —
+   bei `--pr-ring: 40px` sind das 26,7 px (r = 9 bei Strichbreite 2 im viewBox
+   0 0 24 24), also zwei Drittel der Kante. Gemessen bei 1920: "3.9M" belegt
+   24,2 px, es bleiben 2,5 px. Die Stufe ist gegen BEIDE Seiten gesetzt —
+   grösser streift die vierstellige Form die Ringflanken, kleiner fällt die
+   Zahl auf Full HD unter 10 px und ist nicht mehr zu lesen. */
+.pr-meep-val {
   position: relative;
-  font-size: calc(var(--pr-ring) * 0.34);
-  font-weight: 900;
+  max-width: 100%;
+  font-size: calc(var(--pr-ring) * 0.25);
+  font-weight: 800;
   line-height: 1;
-  color: #cfe4ec;
+  letter-spacing: 0.01em;
+  color: #fed7aa;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
-.pr-res--max .pr-res-val {
-  color: #e8c040;
+  white-space: nowrap;
 }
 
 .pr-divider {
@@ -656,7 +741,7 @@ function ariaLabelOf(id: BardAbilityId): string {
   --pr-pip-w: 22px;
   --pr-pip-h: 32px;
   /* Steht auch dort, wo der Ring ausgeblendet ist: `var()` ohne Definition
-     würde die Regel an `.pr-res` ungültig machen, sobald jemand ihn wieder
+     würde die Regel an `.pr-meep` ungültig machen, sobald jemand ihn wieder
      einschaltet. */
   --pr-ring: 34px;
   gap: 2px;
@@ -665,7 +750,7 @@ function ariaLabelOf(id: BardAbilityId): string {
 
 /* Bis 1365 gibt es weder Ring noch Trennstrich — dort reicht die Spalte für
    nichts als die vier Kacheln (106 von 119 px). */
-.pr-res,
+.pr-meep,
 .pr-divider {
   display: none;
 }
@@ -732,7 +817,7 @@ function ariaLabelOf(id: BardAbilityId): string {
     gap: 4px;
     padding: 0 18px 0 6px;
   }
-  .pr-res {
+  .pr-meep {
     display: flex;
   }
   .pr-divider {
@@ -803,7 +888,7 @@ function ariaLabelOf(id: BardAbilityId): string {
   .pr-pip:hover:not(:disabled) {
     transform: none;
   }
-  .pr-res-fill {
+  .pr-meep-fill {
     transition: none;
   }
 }

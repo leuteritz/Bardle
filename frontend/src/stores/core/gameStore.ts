@@ -1396,6 +1396,26 @@ export const useGameStore = defineStore('game', {
       const needed = Math.pow(next / MEEP_RUN_FACTOR, 2) * this.meepChimeRequirement
       return Math.max(0, Math.ceil(needed - this.chimesForNextUniverse))
     },
+
+    /**
+     * Klicks, die bis zum nächsten Meep noch fehlen; 0, wenn er fällig ist.
+     *
+     * Bewusst NUR über den Klickwert gerechnet, obwohl die laufende Produktion
+     * ebenfalls einzahlt: die Zahl beantwortet „wie oft muss ich noch drücken?",
+     * und dafür ist die Produktion eine Zugabe, keine Größe der Rechnung.
+     *
+     * Sie steht an zwei Stellen — an der Passiv-Kachel im Orbit und im
+     * Passive-Slot des Profil-Kopfs — und gehört deshalb hierher: zwei
+     * Komponenten, die dieselbe Strecke aus je eigener Rechnung zeigen, laufen
+     * über kurz oder lang auseinander.
+     */
+    clicksToNextMeep(): number {
+      const remaining = this.chimesToNextMeep
+      if (remaining <= 0) return 0
+      const perClick = Math.max(1, this.chimesPerClick * this.mvpBuffMultiplier)
+      return Math.ceil(remaining / perClick)
+    },
+
     isExpeditionComplete(): boolean {
       if (!this.activeExpedition) return false
       return gameNow() >= this.activeExpedition.startTime + this.activeExpedition.durationMs

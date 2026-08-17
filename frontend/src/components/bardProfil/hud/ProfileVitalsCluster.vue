@@ -51,7 +51,6 @@
     -->
     <template #tip>
       <div class="pv-tip" :class="stateClass">
-        <span class="pv-tip-cap">Sun Vitality</span>
         <span class="pv-tip-lead">{{ exactHp }} / {{ exactMax }}</span>
         <span class="pv-tip-sub">
           <span class="pv-tip-sub-label">Regen</span>
@@ -280,20 +279,12 @@ onUnmounted(() => {
 }
 
 /* ── Tooltip ──────────────────────────────────────────────────────────────
-   Überschrift · die exakten Zahlen · eine Zeile. Mehr nicht. */
+   Die exakten Zahlen · eine Zeile. Mehr nicht. */
 .pv-tip {
   display: flex;
   flex-direction: column;
   gap: 5px;
   padding: 11px 14px 13px;
-}
-
-.pv-tip-cap {
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #8a7a52;
 }
 
 .pv-tip-lead {
@@ -487,9 +478,6 @@ onUnmounted(() => {
   }
   .pv-tip {
     padding: 15px 18px 17px;
-  }
-  .pv-tip-cap {
-    font-size: 0.88rem;
   }
   .pv-tip-lead {
     font-size: 1.95rem;

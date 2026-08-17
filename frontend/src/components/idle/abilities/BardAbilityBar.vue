@@ -206,9 +206,6 @@ const KEYBIND_BY_ABILITY: Record<BardAbilityId, KeybindId> = {
 // und was der laufende Durchlauf bis jetzt eingebracht hat, wächst mit jedem
 // Chime weiter.
 
-/** Offene Chimes bis zum nächsten anstehenden Meep. */
-const meepRemaining = computed(() => gameStore.chimesToNextMeep)
-
 /**
  * 0..1 — Füllstand des Rings.
  *
@@ -232,15 +229,11 @@ const meepStepKey = computed(() => gameStore.pendingMeeps + gameStore.meepsDevou
 /**
  * Klicks, die noch fehlen — die Zahl unter der Figur.
  *
- * Bewusst NUR über den Klickwert gerechnet, obwohl die laufende Produktion
- * ebenfalls einzahlt: die Zahl beantwortet „wie oft muss ich noch drücken?",
- * und dafür ist die Produktion eine Zugabe, keine Größe der Rechnung.
+ * Die Rechnung steht im Store (`clicksToNextMeep`), nicht hier: der
+ * Passive-Slot im Kopf des Profils zeigt dieselbe Strecke, und zwei eigene
+ * Rechnungen dafür liefen über kurz oder lang auseinander.
  */
-const clicksToMeep = computed(() => {
-  if (meepRemaining.value <= 0) return 0
-  const perClick = Math.max(1, gameStore.chimesPerClick * gameStore.mvpBuffMultiplier)
-  return Math.ceil(meepRemaining.value / perClick)
-})
+const clicksToMeep = computed(() => gameStore.clicksToNextMeep)
 
 // ── Der Gewinn ──────────────────────────────────────────────────────────────
 // Die Kachel zeigt die offene Strecke; erreicht sie ihr Ziel, meldet ein Float
