@@ -116,19 +116,27 @@
     </div>
   </Teleport>
 
-  <!-- ④ Belohnungskarten — EIGENE Ebene, siehe `.star-summary-layer` -->
+  <!-- ④ Belohnungskarten — EIGENE Ebene, siehe `.star-summary-layer`.
+       Die Blenden-Dauer kommt EINMAL als Variable an die Ebene: dieselbe
+       Konstante treibt den Timer im Script und die Animation im CSS, und ein
+       statischer Wert am Container ist kein pro Frame geschriebener (siehe
+       Performance-Regel 3). -->
   <Teleport to="body">
-    <div class="star-summary-layer" aria-hidden="true">
+    <div
+      class="star-summary-layer"
+      :style="{ '--summary-fade-ms': STAR_SUMMARY_REVEAL_FADE_MS + 'ms' }"
+      aria-hidden="true"
+    >
       <template v-for="star in frontStars" :key="'summary-' + star.id">
         <div
-          v-if="
-            getStarRewardSummary(star).planets.length > 0 ||
-            getStarRewardSummary(star).champion ||
-            targetedStarId === star.id
-          "
+          v-if="summaryVisible(star)"
           :class="[
             'star-reward-summary',
             {
+              'star-reward-summary--revealing':
+                revealedStarId === star.id && !revealFading && !isSummaryPersistent(star.id),
+              'star-reward-summary--revealing-out':
+                revealedStarId === star.id && revealFading && !isSummaryPersistent(star.id),
               'star-reward-summary--star-hovered':
                 hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
               'star-reward-summary--hover-dimmed': isStarHoverDimmed(star.id),
@@ -286,6 +294,7 @@
             :key="star.remainingCount"
             class="star-planet-count"
             :class="{
+              'star-planet-count--hovered': starGroupStore.hoveredTimerStarId === star.id,
               'star-planet-count--targeted': targetedStarId === star.id,
               'star-planet-count--cursed': isCursedStar(star.id),
               'star-planet-count--raging': ragingStarId === star.id,
@@ -358,6 +367,8 @@ import {
   STAR_SUMMARY_FLIP_STACK_PX,
   STAR_SUMMARY_STACK_GAP_PX,
   STAR_SUMMARY_FLIP_TOP_MARGIN_PX,
+  STAR_SUMMARY_REVEAL_GRACE_MS,
+  STAR_SUMMARY_REVEAL_FADE_MS,
   STAR_SUMMARY_PLANET_GLYPH_PX,
   STAR_COUNT_GAP_PX,
   STAR_COUNT_HEIGHT_PX,
@@ -677,11 +688,6 @@ function applyFrames() {
 
 const { starRenders } = useStarSystem(effectiveHoveredStarId, applyFrames)
 
-// Die Kartenmaße ändern sich GENAU dann, wenn Vue die Karten neu rendert — eine
-// Welt wird befreit, ein Champion kommt dazu, ein Stern wechselt die Ebene. Auf
-// den Sweep zu warten hiesse, bis zu fünf Sekunden mit falschen Maßen zu
-// rechnen; `flush: 'post'` misst nach dem DOM-Update.
-watch(starRenders, () => summarySizes.clear(), { flush: 'post' })
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
 // Kurve des Header-Ovals — die Anhängsel weichen der KONTUR aus, nicht einer
@@ -922,6 +928,117 @@ const targetHpClass = computed(() =>
       ? 'summary-planet__pct--low'
       : '',
 )
+
+// ── Aufklappen der Belohnungskarte ───────────────────────────────────────────
+// Dauerhaft steht nur die Karte des ZIELSTERNS — sie trägt die HP-Zahl und
+// benennt damit, wo gerade gekämpft wird. Alle übrigen klappen erst auf, wenn
+// der Zeiger auf ihrem Stern liegt. Vorher hing an jedem Vordergrundstern eine,
+// bis zu sieben gleichzeitig, jede bis STAR_SUMMARY_MAX_HEIGHT_PX hoch — der
+// Ausweichlauf löste ihre Überlappung, aber nicht ihre MENGE, und die eine
+// Karte, auf die es ankam, ging in den übrigen unter.
+//
+// Zwei Refs statt eines: `revealedStarId` entscheidet über das MOUNTEN,
+// `revealFading` nur über die Blende. Die Karte muss während des Ausblendens
+// noch im DOM stehen, sonst bliebe sie auf ihrer letzten Position liegen,
+// während ihr Stern weiterwandert.
+const revealedStarId = ref<string | null>(null)
+const revealFading = ref(false)
+let revealGraceTimer: ReturnType<typeof setTimeout> | null = null
+let revealFadeTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearRevealTimers() {
+  if (revealGraceTimer !== null) clearTimeout(revealGraceTimer)
+  if (revealFadeTimer !== null) clearTimeout(revealFadeTimer)
+  revealGraceTimer = null
+  revealFadeTimer = null
+}
+
+// `starGroupStore.hoveredTimerStarId` ist die EINE Hover-Quelle: Sternkörper,
+// Karte, Header-Timer-Leiste und Minimap schreiben alle dorthin (siehe
+// `setStarHover`/`setSummaryHover`). Ein eigener Kanal wäre eine zweite Quelle
+// für dieselbe Frage.
+//
+// Reale Zeit statt `gameTimeout`: die Rückrufe ändern keinen Spielzustand,
+// sondern nur, was der Zeiger gerade zeigt (siehe „Spielzeit" in CLAUDE.md).
+watch(
+  () => starGroupStore.hoveredTimerStarId,
+  (id) => {
+    clearRevealTimers()
+    if (id !== null) {
+      // Auch beim Wechsel von Stern A auf B: A fällt sofort weg. Ein Nachlauf
+      // zwischen zwei Sternen liesse zwei Karten für nichts stehen.
+      revealFading.value = false
+      revealedStarId.value = id
+      return
+    }
+    revealGraceTimer = setTimeout(() => {
+      revealGraceTimer = null
+      revealFading.value = true
+      revealFadeTimer = setTimeout(() => {
+        revealFadeTimer = null
+        revealedStarId.value = null
+        revealFading.value = false
+      }, STAR_SUMMARY_REVEAL_FADE_MS)
+    }, STAR_SUMMARY_REVEAL_GRACE_MS)
+  },
+)
+
+/**
+ * Steht die Karte dieses Sterns dauerhaft? Nur die des Zielsterns.
+ *
+ * Sie bekommt deshalb auch KEINE Aufklapp-Animation: sie ist schon da, wenn der
+ * Zeiger sie erreicht, und eine Klasse mitten im Leben nachzureichen liesse die
+ * Animation neu anlaufen.
+ */
+function isSummaryPersistent(starId: string): boolean {
+  return targetedStarId.value === starId
+}
+
+/**
+ * Klappt die Karte dieses Sterns auf? Der Zielstern immer, ein gezeigter für
+ * die Dauer des Zeigens plus Nachlauf, ein verfluchter oder wütender für die
+ * Dauer seiner Frist — beide laufen in Sekunden ab und schliessen sich selbst.
+ *
+ * Fluch und Rage hängen heute am selben Boss wie der Zielstern, wären also
+ * schon durch ihn abgedeckt. Sie stehen trotzdem hier: `ragingStarId` kommt aus
+ * einem EIGENEN Store-Feld, und eine Frist, die noch läuft, während das Ziel
+ * schon gewechselt hat, soll ihre Restsekunden zu Ende zeigen.
+ */
+function isSummaryRevealed(starId: string): boolean {
+  if (isSummaryPersistent(starId)) return true
+  if (revealedStarId.value === starId) return true
+  // Dieselbe Bedingung wie die Marke selbst — sonst stünde bei abgelaufener
+  // Frist eine leere Karte.
+  if (isCursedStar(starId) && curseSecsLeft.value > 0) return true
+  return ragingStarId.value === starId
+}
+
+/** Aufgeklappt UND mit Inhalt — die Bedingung des `v-if` der Karte. */
+function summaryVisible(star: StarRenderEntry): boolean {
+  if (!isSummaryRevealed(star.id)) return false
+  if (isSummaryPersistent(star.id)) return true
+  if (isCursedStar(star.id) || ragingStarId.value === star.id) return true
+  const summary = getStarRewardSummary(star)
+  return summary.planets.length > 0 || summary.champion !== null
+}
+
+// Die Kartenmaße ändern sich GENAU dann, wenn Vue die Karten neu rendert — eine
+// Welt wird befreit, ein Champion kommt dazu, ein Stern wechselt die Ebene, und
+// seit dem Aufklappen: eine Karte geht neu auf und hat womöglich noch einen
+// Eintrag von ihrem letzten Auftritt, mit anderer Beute. Auf den Sweep zu warten
+// hiesse, bis zu fünf Sekunden mit falschen Maßen zu rechnen; `flush: 'post'`
+// misst nach dem DOM-Update.
+//
+// Steht hier und nicht bei `starRenders` oben: eine Array-Quelle wertet sofort
+// bei der Anlage aus, und die beiden Refs sind dort noch nicht initialisiert.
+// Zweite Quelle seit dem Aufklappen: eine Karte, die neu aufgeht, hat womöglich
+// einen Eintrag von ihrem letzten Auftritt — mit anderer Beute.
+watch(
+  [starRenders, () => `${revealedStarId.value}|${targetedStarId.value}`],
+  () => summarySizes.clear(),
+  { flush: 'post' },
+)
+// ─────────────────────────────────────────────────────────────────────────────
 
 const NOVA_TRAIL_COLOR = '#ff4400'
 const NOVA_HEAD_COLOR = '#ffd080'
@@ -1369,6 +1486,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   window.removeEventListener('resize', onResize)
+  clearRevealTimers()
   cancelAnimationFrame(enemyAnimFrame)
   cancelAnimationFrame(hintResumeFrame)
   // Das FX-Canvas hängt direkt am body — ohne die Sternebene hat es nichts mehr
@@ -2313,6 +2431,103 @@ function starCountStyle(star: StarRenderEntry) {
   );
 }
 
+/* Aufklappen und Ausblenden — an der INNEREN Box, nicht an der Karte selbst.
+   Die äussere bekommt in `applyFrames` pro Frame ein neues `transform` UND eine
+   neue Inline-Opacity; jede Animation dort wäre nach einem Frame überschrieben
+   (der Kommentar an `.star-reward-summary` hält genau das schon fest).
+
+   Nur `transform` und `opacity` (Performance-Regel 1), und beides läuft EINMAL
+   je Aufklappen statt dauerhaft. `backwards` statt `both`: die Auffahrt darf
+   ihren Endzustand NICHT festhalten, sonst überschriebe sie den Hub der
+   :hover-Regel darunter. Die Abfahrt hält ihn (`forwards`) — sie endet ohnehin
+   mit dem Unmount. */
+.star-reward-summary--revealing .summary-inner {
+  animation: summary-reveal-in var(--summary-fade-ms, 150ms) cubic-bezier(0.22, 1, 0.36, 1)
+    backwards;
+}
+
+.star-reward-summary--revealing-out .summary-inner {
+  animation: summary-reveal-out var(--summary-fade-ms, 150ms) ease-in forwards;
+}
+
+/* Umgeklappt sitzt die Karte ÜBER dem Stern — dann geht sie aus der
+   Gegenrichtung auf, damit sie in BEIDEN Lagen aus Richtung ihres Sterns wächst
+   und die Leine mit ihr. Volle Kurzschreibweise statt `animation-name`: der
+   Keyframe-Name gehört ins CSS, nie in JavaScript (Performance-Regel 10) —
+   Vue hängt ihm in <style scoped> einen Scope-Suffix an. */
+.star-reward-summary--flipped.star-reward-summary--revealing .summary-inner {
+  animation: summary-reveal-in-flipped var(--summary-fade-ms, 150ms)
+    cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.star-reward-summary--flipped.star-reward-summary--revealing-out .summary-inner {
+  animation: summary-reveal-out-flipped var(--summary-fade-ms, 150ms) ease-in forwards;
+}
+
+@keyframes summary-reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes summary-reveal-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+}
+
+@keyframes summary-reveal-in-flipped {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes summary-reveal-out-flipped {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+/* Reine Blende ohne Versatz — Opacity ist keine Bewegung, das Verrutschen war
+   der Teil, der stört. Ganz abschalten liesse die Karte hart aufpoppen. */
+@keyframes summary-reveal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes summary-reveal-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 .star-reward-summary:hover .summary-inner {
   transform: translateY(-3px);
   border-color: rgba(232, 192, 64, 0.85);
@@ -2850,6 +3065,21 @@ function starCountStyle(star: StarRenderEntry) {
     animation: none;
   }
 
+  /* Aufklappen ohne Versatz: die Blende bleibt, die Bewegung fällt weg. */
+  .star-reward-summary--revealing .summary-inner,
+  .star-reward-summary--flipped.star-reward-summary--revealing .summary-inner {
+    animation: summary-reveal-fade-in var(--summary-fade-ms, 150ms) linear backwards;
+  }
+
+  .star-reward-summary--revealing-out .summary-inner,
+  .star-reward-summary--flipped.star-reward-summary--revealing-out .summary-inner {
+    animation: summary-reveal-fade-out var(--summary-fade-ms, 150ms) linear forwards;
+  }
+
+  .star-planet-count--hovered .star-planet-count__current {
+    transform: none;
+  }
+
   /* Puls aus, Ring an: ohne die Animation stünde das Overlay auf opacity 0 und
      Rage bzw. Fluch verlören ausgerechnet ihr auffälligstes Signal. */
   .star-reward-summary--raging .summary-inner::after,
@@ -2946,7 +3176,25 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
+/* Der Zähler antwortet mit, sobald der Zeiger auf seinem Stern liegt — Stern,
+   Zähler und die darunter aufklappende Karte lesen sich damit als EIN Körper
+   statt als drei Marken. Bewusst VOR den Zustandsfassungen: Ziel, Fluch und
+   Rage behalten ihre Farbe, der Hover hebt nur den gewöhnlichen Chip an.
+   Rahmen und Hintergrund liegen bereits in der Transition oben, es kommt keine
+   neue Animation dazu. */
+.star-planet-count--hovered {
+  background: rgba(20, 13, 34, 0.92);
+  border-color: rgba(255, 220, 96, 0.95);
+}
+
+/* Der Hub sitzt an der ZAHL, nicht am Chip: dessen `transform` schreibt
+   `applyFrames` jeden Frame neu, eine Regel dort wäre wirkungslos. */
+.star-planet-count--hovered .star-planet-count__current {
+  transform: scale(1.12);
+}
+
 .star-planet-count__current {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   font-size: 1.45em;
   font-weight: 700;
   color: #e8c040;

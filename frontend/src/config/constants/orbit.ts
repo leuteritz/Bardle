@@ -372,6 +372,34 @@ export const STAR_SUMMARY_FLIP_TOP_MARGIN_PX = 6
  * auflösen soll.
  */
 export const STAR_SUMMARY_STACK_GAP_PX = 6
+/**
+ * Wie lange die aufgeklappte Karte nach dem Verlassen des Sterns noch VOLL
+ * sichtbar stehen bleibt.
+ *
+ * Sie ist keine reine Anzeige, sondern eine Schaltfläche — ein Klick auf sie
+ * öffnet den Star-Fight. Zwischen Sternkörper und Karte liegen aber
+ * `STAR_SUMMARY_GAP_PX` leerer Raum: ohne diese Frist räumte das `mouseleave`
+ * am Körper die Karte ab, bevor ihr eigenes `mouseenter` je feuern kann, und
+ * sie wäre schlicht unerreichbar.
+ *
+ * Gemessen an der Strecke, nicht geraten: 58 px sind bei gewöhnlicher
+ * Zeigergeschwindigkeit in deutlich unter 100 ms überbrückt; die 180 lassen
+ * Luft für einen Bogen um den Sternkörper herum, ohne dass eine liegen
+ * gebliebene Karte auffiele.
+ */
+export const STAR_SUMMARY_REVEAL_GRACE_MS = 180
+/**
+ * Dauer der Aufklapp- UND der Ausblende-Bewegung der Karte.
+ *
+ * EIN Wert für beides und für den zugehörigen Timer: die Konstante wird per
+ * `--summary-fade-ms` an die Kartenebene gehängt, das CSS liest sie von dort.
+ * Zwei getrennte Zahlen liefen sonst früher oder später auseinander und die
+ * Karte fiele mitten in ihrer eigenen Blende aus dem DOM.
+ *
+ * Kurz gehalten, weil die Bewegung bei JEDEM Zeigen läuft — alles über ~200 ms
+ * liest sich an einem Element, das man im Vorbeifahren streift, als Trägheit.
+ */
+export const STAR_SUMMARY_REVEAL_FADE_MS = 150
 /** Abstand der Planetenzahl über der Oberkante des Sternkörpers. */
 export const STAR_COUNT_GAP_PX = 25
 /** Höhe der Planetenzahl — sie hält sich damit unter der Header-Kante. */
