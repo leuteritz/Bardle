@@ -237,38 +237,37 @@
                     <span class="summary-count">×{{ mat.count }}</span>
                   </span>
                 </span>
-              </div>
-            </div>
 
-            <!-- Unter Beschuss: die EINE Stelle, an der steht, welche Welt
-                 gerade von Champions und Turret-Planeten bearbeitet wird. Als
-                 LETZTER Block im Fluss — die Leiste gehört zu EINER der
-                 Beutezeilen darüber, nicht über sie; welcher, sagt deren cyane
-                 Hinterlegung. Der Balken zeigt BOSS-HP und fällt — dieselbe
-                 Lesart wie Star-Fight-HUD und Header-Zeile.
+                <!-- Der Lebensbalken der Welt, an der gerade gearbeitet wird —
+                     in IHRER Zeile, unter ihrer Beute. Als eigene Leiste am
+                     Kartenende stand er vorher unter allen Zeilen und zeigte das
+                     Planetenbild ein zweites Mal; die Zuordnung musste eine
+                     Farbbrücke leisten, die hier der gemeinsame Kasten erledigt.
 
-                 BEWUSST OHNE Beschriftung: ein Wort davor wäre entweder
-                 militärischer Jargon („Under Fire“) oder ein Begriff, den das
-                 Spiel schon anders belegt. Nötig ist auch keines — das Bild
-                 neben der Leiste BENENNT das Ziel, indem es die Welt zeigt. -->
-            <template v-if="targetedStarId === star.id">
-              <div class="summary-divider" />
-              <div class="summary-assault">
-                <span v-if="targetPlanetType" class="summary-assault__world">
-                  <PlanetGlyph :type="targetPlanetType" :size="STAR_SUMMARY_PLANET_GLYPH_PX" />
-                </span>
-                <span class="summary-assault__meter">
-                  <span class="summary-assault__pct">{{ targetHpPct }}%</span>
-                  <span class="summary-assault__track">
+                     BEWUSST OHNE Beschriftung: ein Wort davor wäre entweder
+                     militärischer Jargon („Under Fire“) oder ein Begriff, den
+                     das Spiel schon anders belegt. Nötig ist auch keines — das
+                     Bild links BENENNT das Ziel, indem es die Welt zeigt.
+
+                     Die Werte kommen aus den ungetrackten Refs der
+                     Frame-Schleife, NICHT aus `rewardSummaries`: dort dürfen
+                     `currentHP`/`maxHP` nicht hinein, sonst hinge die ganze
+                     Karte an jedem Treffer (siehe der Kommentar an
+                     `targetHpRatio`). Genau deshalb trägt auch nur die EINE
+                     Zielzeile einen Balken und nicht jede Zeile ihren eigenen. -->
+                <span v-if="row.planetId === targetPlanetId" class="summary-planet__meter">
+                  <span class="summary-planet__pct">{{ targetHpPct }}%</span>
+                  <span class="summary-planet__track">
                     <span
-                      class="summary-assault__fill"
+                      class="summary-planet__fill"
                       :class="targetHpClass"
                       :style="{ transform: `scaleX(${targetHpRatio})` }"
                     />
                   </span>
                 </span>
               </div>
-            </template>
+            </div>
+
           </div>
         </div>
       </template>
@@ -872,29 +871,16 @@ const targetedStarId = computed(() => starGroupStore.targetedStarId)
  * der exakte Wert, der Balken nur die Silhouette.
  */
 /**
- * Der Planet, auf den gerade geschossen wird — das Bild neben der HP-Leiste.
- *
- * Direkt vom Boss statt über `starGroupStore.activeStars[…].planetSlots`: der
- * Typ steht dort ohnehin (beide kommen beim Spawn aus derselben Quelle). Der
- * Umweg über die Slots war nur nötig, solange die Zeile ALLE Planeten des
- * Sterns zeigte — befreite fallen aus der Render-Liste heraus, aus den Slots
- * nicht, und die Reihe wäre sonst kürzer geworden als der Zähler über dem
- * Stern behauptet.
+ * Welche Beutezeile den Balken trägt.
  *
  * Ein `computed` ist zulässig, anders als bei `targetHpPct` darunter:
- * `activeBoss` liest `defeated` und `expired`, aber NICHT `currentHP` — der
- * Dauerbeschuss invalidiert den Getter also nicht (siehe den Kommentar an
- * `starGroupStore.targetedStarId`).
- */
-const targetPlanetType = computed<PlanetType | null>(
-  () => bossStore.activeBoss?.planetType ?? null,
-)
-
-/**
- * Welche Beutezeile die Leiste am Kartenende meint. Aus demselben Grund
- * zulässig wie `targetPlanetType` darüber: gelesen wird `planetId` samt
- * `defeated`/`expired`, NICHT `currentHP` — der Dauerbeschuss invalidiert den
- * Getter also nicht.
+ * `activeBoss` liest `planetId`, `defeated` und `expired`, aber NICHT
+ * `currentHP` — der Dauerbeschuss invalidiert den Getter also nicht (siehe den
+ * Kommentar an `starGroupStore.targetedStarId`).
+ *
+ * Die GESTALT des Planeten braucht es dafür nicht mehr: sie steht ohnehin in
+ * der Zeile, seit der Balken dort sitzt statt in einer eigenen Leiste mit
+ * eigenem Bild.
  */
 const targetPlanetId = computed<string | null>(() => bossStore.activeBoss?.planetId ?? null)
 
@@ -903,9 +889,9 @@ const targetHpPct = ref(100)
 /** Ampel des Balkens — dieselben Schwellen wie im Star-Fight-HUD. */
 const targetHpClass = computed(() =>
   targetHpPct.value <= HP_CRIT_PERCENT
-    ? 'summary-assault__fill--critical'
+    ? 'summary-planet__fill--critical'
     : targetHpPct.value <= HP_HEALTHY_PERCENT
-      ? 'summary-assault__fill--low'
+      ? 'summary-planet__fill--low'
       : '',
 )
 
@@ -2423,7 +2409,14 @@ function starCountStyle(star: StarRenderEntry) {
   transform: translateY(4px);
 }
 
-/* Der Stapel der Beutezeilen — je Welt eine. */
+/* Der Stapel der Beutezeilen — je Welt eine.
+
+   Eine WAAGERECHTE Reihe über alle Planeten des Sterns, alle Bilder
+   nebeneinander über EINEM gemeinsamen Balken, stand hier zwischenzeitlich und
+   machte die Karte 230 px breit, ohne zu sagen, welche Beute und welches Leben
+   zu welcher Welt gehören. Was jetzt hier steht, ist der andere Schnitt
+   derselben Idee: SENKRECHT, Bild und Beute in einer Zeile, und der Balken in
+   der Zeile, die er meint. Bezahlt wird in Höhe statt in Breite. */
 .summary-loot-row {
   display: flex;
   flex-direction: column;
@@ -2467,16 +2460,35 @@ function starCountStyle(star: StarRenderEntry) {
   min-width: 0;
 }
 
-/* Die Zeile, zu der die Leiste ganz unten gehört — sie ist die Verbindung
-   zwischen beiden. Cyan wie jede andere Ziel-Signatur (Header-Zeile,
-   Kartenkontur), und statisch: hier bewegt sich nichts. */
+/* Die Zeile der Welt, an der gerade gearbeitet wird: zweizeilig statt
+   einzeilig — Bild links über BEIDE Zeilen, oben die Beute, darunter der
+   Messblock. Cyan wie jede andere Ziel-Signatur (Header-Zeile, Kartenkontur),
+   und statisch: hier bewegt sich nichts ausser dem Balken selbst. */
 .summary-planet--target {
+  grid-template-rows: auto auto;
+  row-gap: 0.25em;
   background: rgba(40, 200, 235, 0.1);
   box-shadow: inset 0 0 0 1px rgba(95, 240, 255, 0.22);
 }
 
 .summary-planet--target .summary-planet__world {
+  grid-row: 1 / span 2;
   background: radial-gradient(circle, rgba(95, 240, 255, 0.32) 0%, transparent 64%);
+}
+
+/* Prozentzahl links, Balken rechts daneben — die Zahl ist der exakte Wert, der
+   Balken nur die Silhouette (dieselbe Arbeitsteilung wie in den Header-Bars).
+
+   Die Spalte steht explizit da und wird nicht der Auto-Platzierung überlassen:
+   ohne sie rutscht der Block unter das Bild, sobald dessen Zeilenspanne einmal
+   wegfällt. `min-width: 0` ist Pflicht — eine Grid-Spalte ist sonst mindestens
+   so breit wie ihr Inhalt, und der Balken schöbe die Zeile auseinander. */
+.summary-planet__meter {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  min-width: 0;
 }
 
 .summary-item {
@@ -2527,61 +2539,13 @@ function starCountStyle(star: StarRenderEntry) {
   );
 }
 
-/* ── Angriffszeile ─────────────────────────────────────────────────────
-   Aufbau wie `.vhc-seal` in der Void-Karte: Label und Prozentzahl in einer
-   Zeile, der Balken darunter über die volle Breite. Kein Icon — die Rage-Marke
-   trägt auch keines, Label und Zahl allein tragen die Aussage.
-
+/* ── Der Balken in der Zielzeile ────────────────────────────────────────
    Gefüllt wird per `transform: scaleX()`, NIE über `width`: eine Breitenänderung
    ist Layout, ein `transform` reine Compositor-Arbeit — und dieser Balken
    bewegt sich, solange der Boss steht. Ohne Transition: der Wert kommt schon
    gestuft aus dem rAF-Loop, eine Interpolation liefe zwischen zwei Stufen
    dauerhaft und nähme dem Balken genau die Ruhe, die die Stufung herstellt. */
-.summary-assault {
-  display: grid;
-  /* Die Reihe nimmt, was sie braucht; der Messblock den Rest. Andersherum
-     (`1fr auto`) würde der Balken die Glyphen stauchen, sobald sechs Planeten
-     stehen — die SVGs skalieren nicht mit ihrer Zelle.
-     Das `minmax` hält den Balken davon ab, auf die Breite der Prozentzahl
-     zusammenzufallen; es ersetzt die frühere `min-width` am Container. */
-  grid-template-columns: auto minmax(3.4em, 1fr);
-  align-items: center;
-  gap: 0.5em;
-  width: 100%;
-}
-
-/* Prozentzahl über ihrem Balken, beide als ein Block neben der Planetenreihe.
-   `min-width: 0` ist Pflicht: eine Grid-Spalte ist sonst mindestens so breit
-   wie ihr Inhalt, und der Balken könnte die Reihe nach links drücken. */
-.summary-assault__meter {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.22em;
-  min-width: 0;
-}
-
-/* Das Bild des bekämpften Planeten, linke Spalte.
-   Es steht doppelt in der Karte — einmal hier, einmal in der Beutezeile
-   derselben Welt darüber. Das ist gewollt: die Leiste bleibt damit für sich
-   lesbar, und `.summary-planet--target` stellt die Verbindung nach oben her.
-   Eine WAAGERECHTE Reihe über alle Planeten des Sterns stand hier
-   zwischenzeitlich und machte die Karte 230 px breit, ohne die Zuordnung zu
-   verbessern; die senkrechten Beutezeilen darüber leisten heute genau das.
-
-   Der Schein dahinter ist STATISCH und in der Zielfarbe, nach demselben Muster,
-   mit dem `.planet-cell__body` in der Pause-Karte den Sternfarbhauch setzt.
-   Kein Puls — die Karte trägt den Rage-/Fluch-Puls bereits auf `::after`. */
-.summary-assault__world {
-  display: flex;
-  justify-content: center;
-  line-height: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(95, 240, 255, 0.32) 0%, transparent 64%);
-}
-
-.summary-assault__pct {
-  text-align: center;
+.summary-planet__pct {
   font-size: 0.95em;
   font-weight: 800;
   line-height: 1;
@@ -2593,7 +2557,7 @@ function starCountStyle(star: StarRenderEntry) {
     0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-.summary-assault__track {
+.summary-planet__track {
   position: relative;
   width: 100%;
   min-width: 0;
@@ -2604,7 +2568,7 @@ function starCountStyle(star: StarRenderEntry) {
   overflow: hidden;
 }
 
-.summary-assault__fill {
+.summary-planet__fill {
   position: absolute;
   inset: 0;
   transform-origin: left center;
@@ -2615,11 +2579,11 @@ function starCountStyle(star: StarRenderEntry) {
 /* Ampel — dieselben Schwellen, die das Star-Fight-HUD für Boss-HP benutzt
    (HP_HEALTHY_PERCENT / HP_CRIT_PERCENT). Ein statischer Farbwechsel, keine
    Animation: er sagt etwas über den Stand, nicht über den Takt. */
-.summary-assault__fill--low {
+.summary-planet__fill--low {
   background: linear-gradient(to bottom, #ffd280, #e0902a);
 }
 
-.summary-assault__fill--critical {
+.summary-planet__fill--critical {
   background: linear-gradient(to bottom, #ff9a86, #d8452a);
 }
 

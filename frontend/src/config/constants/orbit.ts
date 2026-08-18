@@ -275,7 +275,11 @@ export const STAR_SUMMARY_GAP_PX = 58
  * zusammengefasst ist, sondern eine Zeile je Planet trägt. GEMESSEN am
  * schlimmsten Fall, der sich bauen lässt — Ressourcenstern mit sechs Planeten
  * (Warden's Pact hebt die drei an), Champion-Block und laufendem Kampf:
- * 344 px bei 1920×1080, 364 px bei 2560×1440. Die 380 sind der Rest Luft.
+ * 314 px bei 1920×1080, 337 px bei 2560×1440. Die 355 sind der Rest Luft.
+ *
+ * Rund 27 px niedriger als noch mit der eigenen Angriffsleiste am Kartenende:
+ * die kostete Leiste, Trennstrich und eine Kartenlücke, während der Balken in
+ * der Zielzeile nur DIESE eine Zeile zweizeilig macht.
  *
  * Zu groß geschätzt heisst nur, dass die Karte im schlanken Fall etwas zu früh
  * nach oben klappt, was niemand bemerkt — zu klein hieße, sie stünde halb in
@@ -283,7 +287,7 @@ export const STAR_SUMMARY_GAP_PX = 58
  * erledigt `translateY(-100%)` ohne Layout-Read; gebraucht wird er für die
  * Klappentscheidung und für die Kopf-Klemmung darunter.
  */
-export const STAR_SUMMARY_MAX_HEIGHT_PX = 380
+export const STAR_SUMMARY_MAX_HEIGHT_PX = 355
 /**
  * Halbe Breite der Karte, für die Frage „passt sie an dieser Stelle?". Die
  * HUD-Kontur springt in der Kehle zwischen Seitenpanel und Mittelstreifen auf
@@ -293,9 +297,12 @@ export const STAR_SUMMARY_MAX_HEIGHT_PX = 380
  * Wie die Höhe darüber der GRÖSSTE Fall, nicht der übliche — und GEMESSEN,
  * nicht gerechnet: derselbe Vollausbau wie dort, mit dem längsten Kadernamen
  * („Nunu & Willump“) und dem teuersten Beutebesatz je Zeile (grosser
- * Chime-Betrag plus zwei verschiedene Materialien), ergibt 247 px bei
+ * Chime-Betrag plus zwei verschiedene Materialien), ergibt 252 px bei
  * 1920×1080 und 279 px bei 2560×1440. Halb 140, aufgerundet 146 — der
  * Aufschlag ist Reserve, keine Messung.
+ *
+ * Der HP-Balken der bekämpften Welt treibt die Breite NICHT: er sitzt unter
+ * der Beute seiner Zeile, nicht neben ihr.
  *
  * Die Rechnung dahinter zu Fuß nachzuvollziehen führt in die Irre:
  * MedievalSharp hat keinen eigenen Fettschnitt, `font-weight: 700` wird
@@ -313,9 +320,9 @@ export const STAR_SUMMARY_MAX_HEIGHT_PX = 380
  */
 export const STAR_SUMMARY_HALF_WIDTH_PX = 146
 /**
- * Höhe des Planetenbildes in der Sternkarte — in jeder Beutezeile UND in der
- * Angriffsleiste darunter. Bewusst ein Wert für beide: es ist dieselbe Welt in
- * derselben Karte, zwei Größen ließen sie wie zwei Dinge aussehen.
+ * Höhe des Planetenbildes in einer Beutezeile der Sternkarte. In der Zeile der
+ * bekämpften Welt spannt es über beide Zeilen — Beute oben, Lebensbalken
+ * darunter — und bleibt trotzdem gleich groß: es ist dieselbe Art Bild.
  *
  * Der Glyph-Körper füllt nur `2 · PLANET_GLYPH_RADIUS / PLANET_GLYPH_VIEW_H`
  * ≈ 62 % dieser Höhe — der viewBox ist bewusst breiter als hoch, weil die
@@ -323,8 +330,9 @@ export const STAR_SUMMARY_HALF_WIDTH_PX = 146
  * 30 px ergeben damit rund 19 px Planet; bei den zuvor gesetzten 18 px waren es
  * 11 px, und darauf war ein Eisplanet von einem Lavaplaneten nicht mehr zu
  * unterscheiden — der Grund, warum hier nichts schrumpft, obwohl der Glyph
- * jetzt bis zu fünfmal in einer Karte steht. Die stehen UNTEREINANDER: das
- * kostet Höhe (siehe `STAR_SUMMARY_MAX_HEIGHT_PX`), nicht Breite.
+ * jetzt einmal je gehaltener Welt in der Karte steht, also bis zu sechsmal.
+ * Die stehen UNTEREINANDER: das kostet Höhe (siehe
+ * `STAR_SUMMARY_MAX_HEIGHT_PX`), nicht Breite.
  */
 export const STAR_SUMMARY_PLANET_GLYPH_PX = 30
 /**
