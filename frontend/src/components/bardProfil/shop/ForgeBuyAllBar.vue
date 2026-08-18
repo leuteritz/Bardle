@@ -1,14 +1,21 @@
 <template>
-  <!-- Der Streifen liegt AUSSERHALB des Scrollfelds und ist deshalb kein
+  <!-- Kein Knopf, solange es nichts zu holen gibt — und kein abgeschalteter
+       an seiner Stelle: 58px, die nichts anbieten, sind der teuerste Platz der
+       Spalte für die geringste Auskunft. Die Bedingung ist DIESELBE, an der der
+       `READY TO GROW`-Trenner in der Liste darunter hängt (`plan.count === 0`
+       gilt genau dann, wenn kein Eintrag `canBuy` ist, siehe
+       `forgeUpgrades.spec.ts`) — die Leiste kommt und geht also im selben Frame
+       wie ein Listenblock, der ohnehin auf- und zuklappt.
+
+       Der Streifen liegt AUSSERHALB des Scrollfelds und ist deshalb kein
        `position: sticky`: eine klebende Leiste im Scrollfeld braucht einen
        deckenden Grund über durchlaufendem Inhalt und verschiebt beim ersten
        Rollen alles um ihre eigene Höhe. Als eigenes Kind der Spalte steht sie
        einfach — und `.sf-body` daneben behält sein `flex: 1`. -->
-  <div class="fba-shell">
+  <div v-if="plan.count > 0" class="fba-shell">
     <button
       class="fba"
-      :class="{ 'fba--empty': plan.count === 0, 'fba--flash': flashing }"
-      :disabled="plan.count === 0"
+      :class="{ 'fba--flash': flashing }"
       :title="title"
       @mouseenter="freeze"
       @mouseleave="thaw"
@@ -24,15 +31,12 @@
         :height="FORGE_BUY_ALL_ICON_SIZE"
         class="fba-glyph"
       />
-      <span class="fba-label">{{ plan.count > 0 ? FORGE_BUY_ALL_LABEL : FORGE_BUY_ALL_EMPTY_LABEL }}</span>
-
-      <template v-if="plan.count > 0">
-        <span class="fba-count">{{ plan.count }}</span>
-        <span class="fba-cost">
-          <img :src="FORGE_CHIME_IMAGE" class="fba-cost-img" alt="Chimes" />
-          <span class="fba-cost-num">{{ formatNumber(plan.chimeCost) }}</span>
-        </span>
-      </template>
+      <span class="fba-label">{{ FORGE_BUY_ALL_LABEL }}</span>
+      <span class="fba-count">{{ plan.count }}</span>
+      <span class="fba-cost">
+        <img :src="FORGE_CHIME_IMAGE" class="fba-cost-img" alt="Chimes" />
+        <span class="fba-cost-num">{{ formatNumber(plan.chimeCost) }}</span>
+      </span>
     </button>
   </div>
 </template>
@@ -57,7 +61,7 @@
  * (`useForgeUpgrades` / `useForgeHerald`) — hier steht nur, wie aus einer Zahl
  * ein Knopf wird.
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { useForgeUpgrades, type ForgeBuyAllPlan } from '@/composables/ui/useForgeUpgrades'
@@ -65,7 +69,6 @@ import {
   FORGE_BUY_ALL_ICON,
   FORGE_BUY_ALL_ICON_SIZE,
   FORGE_BUY_ALL_LABEL,
-  FORGE_BUY_ALL_EMPTY_LABEL,
   FORGE_BUY_ALL_TITLE,
   FORGE_BUY_ALL_COST_TOKEN,
   FORGE_COUNT_TOKEN,
@@ -88,6 +91,25 @@ const frozenPlan = ref<ForgeBuyAllPlan | null>(null)
 
 const plan = computed<ForgeBuyAllPlan>(() => frozenPlan.value ?? buyAllPlan.value)
 
+/**
+ * EIN Frost überlebt niemals einen leeren Plan — die Invariante der ganzen
+ * Leiste, und sie steht deshalb hier an einer Stelle statt als Bedingung an
+ * jedem Schreiber.
+ *
+ * Der Grund ist `mouseleave`: es feuert NICHT, wenn ein Element unter dem Zeiger
+ * aus dem DOM genommen wird. Genau das passiert, sobald ein Sammelkauf alles
+ * abräumt — der Knopf verschwindet unter der Maus, `thaw()` läuft nie, und ein
+ * eingefrorenes `{ count: 0 }` bliebe stehen. Kämen später wieder Chimes herein,
+ * läse `plan` weiter die alte Null: die Liste zeigte ihren `READY TO GROW`-Block,
+ * die Leiste darüber bliebe weg. Gemessen aufgetreten, nicht befürchtet.
+ *
+ * `flush: 'pre'` (die Vorgabe) räumt den Frost ab, BEVOR die Komponente neu
+ * zeichnet — es gibt also keinen Frame mit der alten Zahl.
+ */
+watch(buyAllPlan, (fresh) => {
+  if (fresh.count === 0) frozenPlan.value = null
+})
+
 function freeze(): void {
   frozenPlan.value = buyAllPlan.value
 }
@@ -97,12 +119,10 @@ function thaw(): void {
 }
 
 const title = computed(() =>
-  plan.value.count === 0
-    ? FORGE_BUY_ALL_EMPTY_LABEL
-    : FORGE_BUY_ALL_TITLE.replace(FORGE_COUNT_TOKEN, String(plan.value.count)).replace(
-        FORGE_BUY_ALL_COST_TOKEN,
-        formatNumber(plan.value.chimeCost),
-      ),
+  FORGE_BUY_ALL_TITLE.replace(FORGE_COUNT_TOKEN, String(plan.value.count)).replace(
+    FORGE_BUY_ALL_COST_TOKEN,
+    formatNumber(plan.value.chimeCost),
+  ),
 )
 
 // ── Quittung im Knopf ────────────────────────────────────────────────────────
@@ -115,7 +135,8 @@ function handleClick(): void {
 
   /* Neu einfrieren statt auftauen: der Zeiger liegt nach dem Klick noch auf dem
      Knopf, und der eingefrorene Stand ist jetzt der von VOR dem Kauf. Ohne das
-     zeigte die Leiste eine Anzahl an, die sie eben verbraucht hat. */
+     zeigte die Leiste eine Anzahl an, die sie eben verbraucht hat. Räumt der Kauf
+     alles ab, nimmt der Wächter oben diesen Frost sofort wieder weg. */
   frozenPlan.value = buyAllPlan.value
 
   flashing.value = true
@@ -170,11 +191,13 @@ function handleClick(): void {
     transform 0.15s ease;
 }
 
-.fba:hover:not(:disabled) {
+/* Kein `:not(:disabled)` mehr an Hover und Druckpunkt: der Knopf ist nur da,
+   wenn er auch geht. */
+.fba:hover {
   filter: brightness(1.12);
 }
 
-.fba:active:not(:disabled) {
+.fba:active {
   transform: translateY(1px);
 }
 
@@ -230,21 +253,6 @@ function handleClick(): void {
   font-size: 13.5px;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
-}
-
-/* ── Leerzustand ─────────────────────────────────────────────────────────────
-   Flach und bernsteinfarben, NICHT `grayscale` auf dem Verlauf: ein
-   ausgegrautes Grün trägt seine fast schwarze Schrift nicht mehr (Herleitung an
-   `.fc-act:disabled` in rpg-theme.css). */
-.fba--empty {
-  border-color: #4a3a1c;
-  background: #241a0c;
-  color: rgba(232, 216, 176, 0.55);
-  cursor: not-allowed;
-}
-
-.fba--empty .fba-glyph {
-  opacity: 0.5;
 }
 
 /* ── Kaufquittung ───────────────────────────────────────────────────────────── */

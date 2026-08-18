@@ -1,15 +1,7 @@
 <template>
   <div class="sf-panel">
-    <!-- Der Sammelkauf steht ganz oben, und zwar ÜBER den Segen: er ist das
-         einzige Element dieser Spalte, das immer da ist. Läge er darunter,
-         spränge die Primäraktion jedes Mal um die Höhe der Chipreihe, sobald ein
-         Segen anläuft oder ausläuft — und getroffen würde dann, was gerade
-         nachgerutscht ist. -->
-    <ForgeBuyAllBar />
-
-    <!-- Laufende Segen des Händlers: das Einzige in dieser Spalte mit einer Uhr,
-         die abläuft, ohne dass man etwas tut — deshalb vor dem Scrollfeld und
-         nicht darin. -->
+    <!-- Laufende Segen des Händlers stehen über allem: sie sind das Einzige in
+         dieser Spalte mit einer Uhr, die abläuft, ohne dass man etwas tut. -->
     <div v-if="activeBuffs.length > 0" class="sf-buffs">
       <div v-for="buff in activeBuffs" :key="buff.id" class="blessing-chip">
         <Icon icon="ph:sparkle-fill" width="17" height="17" class="blessing-icon" />
@@ -17,6 +9,16 @@
         <span class="blessing-time">{{ formatClock(buff.expiresAt - forgeStore.forgeNow) }}</span>
       </div>
     </div>
+
+    <!-- Der Sammelkauf steht UNTER den Segen, und das ist kein Zufall: seit er
+         nur noch erscheint, wenn wirklich etwas kaufbar ist, sind beide bedingt,
+         und dann entscheidet, wie oft etwas umschaltet. Ein Segen läuft eine
+         Stunde. Die Leiste kommt und geht, sooft die Chimes eine Kaufschwelle
+         kreuzen — also ständig. Das Häufige gehört nach unten: von dort schiebt
+         es nur die Liste, die im selben Frame ohnehin ihren `READY TO GROW`-Block
+         auf- oder zumacht. Stünde es oben, ruckte die Segensreihe bei jeder
+         Schwelle mit. -->
+    <ForgeBuyAllBar />
 
     <!-- ══ Scrolling body ════════════════════════════════════════
          Drei Blöcke, in der Reihenfolge, in der der Spieler sie braucht: was
@@ -34,8 +36,9 @@
 /**
  * Die Detailspalte des Shop-Tabs.
  *
- * Ganz oben der Sammelkauf (`ForgeBuyAllBar`) — er ist mit der Kopfleiste über
- * dem Baum hierher gezogen, weil das Kaufbare in dieser Spalte steht.
+ * Über dem Scrollfeld der Sammelkauf (`ForgeBuyAllBar`) — er ist mit der
+ * Kopfleiste über dem Baum hierher gezogen, weil das Kaufbare in dieser Spalte
+ * steht.
  *
  * Sie zeigte bis zum Umbau EINE von vier Abteilungen, ausgewählt an einer
  * Reiter-Schiene ganz rechts (`ForgeSectionRail`, gestrichen). Drei dieser vier

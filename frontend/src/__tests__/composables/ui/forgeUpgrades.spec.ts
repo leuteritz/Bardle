@@ -875,6 +875,33 @@ describe('useForgeUpgrades — Vorschau des Sammelkaufs', () => {
     expect(buyAllReady()).toBe(0)
     expect(useHerald().receipts.value).toHaveLength(0)
   })
+
+  /**
+   * Die Leiste am Kopf der Spalte ist NUR DA, wenn `count > 0` — kein
+   * abgeschalteter Knopf, sondern gar keiner. Damit hängt ihre Sichtbarkeit an
+   * derselben Frage wie der `READY TO GROW`-Trenner in der Liste darunter, und
+   * beide dürfen nie auseinanderfallen: ein Block voller Kaufknöpfe ohne die
+   * Sammelaktion darüber wäre so falsch wie eine Sammelaktion über einer leeren
+   * Liste.
+   *
+   * Dass die Äquivalenz gilt, ist keine Absprache, sondern folgt aus der
+   * Simulation: der GÜNSTIGSTE kaufbare Eintrag steht in der Reihe vorn und
+   * passt per Definition — `canBuy` heisst „Vorrat und Lager decken ihn". Ist
+   * einer kaufbar, zählt der Plan also mindestens ihn.
+   */
+  it('ist genau dann leer, wenn kein Eintrag kaufbar ist', () => {
+    const { upgradeEntries, buyAllPlan } = useForgeUpgrades()
+
+    // Leerer Beutel: kein `canBuy`, kein Plan.
+    useGameStore().chimes = 0
+    expect(upgradeEntries.value.some((e) => e.canBuy)).toBe(false)
+    expect(buyAllPlan.value.count).toBe(0)
+
+    // Voller Beutel: beides kippt gemeinsam.
+    unlockBranches()
+    expect(upgradeEntries.value.some((e) => e.canBuy)).toBe(true)
+    expect(buyAllPlan.value.count).toBeGreaterThan(0)
+  })
 })
 
 /**

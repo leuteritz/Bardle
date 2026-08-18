@@ -1577,21 +1577,21 @@ export const FORGE_BUY_ALL_COST_TOKEN = '{c}'
  * `FORGE_GROW_LABEL` („FORGE"), und die Sammelaktion ist dieselbe Handlung en
  * bloc. Zwei Verben für einen Vorgang lasen sich wie zwei Vorgänge.
  *
+ * Es gibt KEINEN Leerzustand und deshalb auch keinen Wortlaut dafür: die Leiste
+ * verschwindet, solange nichts kaufbar ist, statt abgeschaltet dazustehen. Ein
+ * toter Knopf mit „Nothing ready to grow" belegte 58px am teuersten Platz der
+ * Spalte für die geringste Auskunft — und die steht ohnehin schon darunter, wo
+ * dann kein `READY TO GROW`-Trenner ist. Beide hängen an derselben Frage:
+ * `buyAllPlan.count === 0` gilt genau dann, wenn kein Eintrag `canBuy` ist
+ * (gebunden in `forgeUpgrades.spec.ts`), Leiste und Listenblock kommen und gehen
+ * also gemeinsam.
+ *
  * Eine HÖHE steht hier bewusst nicht: die Leiste bemisst sich an ihrem Inhalt,
  * und das Scrollfeld darunter nimmt den Rest. Eine Konstante wäre eine zweite
  * Quelle für eine Zahl, die das Layout ohnehin kennt.
  */
 export const FORGE_BUY_ALL_LABEL = 'Forge all ready'
 export const FORGE_BUY_ALL_ICON = 'ph:lightning-fill'
-/**
- * Was dort steht, solange nichts kaufbar ist.
- *
- * Ein eigener Satz und nicht der ausgegraute Wortlaut: „Forge all ready" auf
- * einem toten Knopf behauptet, es gäbe etwas zu holen. Der Leerzustand ist eine
- * Auskunft, kein abgeschaltetes Angebot — dieselbe Trennung wie zwischen
- * „nichts gefunden" und „nichts kaufbar" in der Liste darunter.
- */
-export const FORGE_BUY_ALL_EMPTY_LABEL = 'Nothing ready to grow'
 /**
  * Der volle Satz im `title` des Knopfes. Er nennt beides — Anzahl UND Preis —,
  * weil die Leiste ihre Zahlen als Pille und Preisblock zeigt und ein Screenreader
