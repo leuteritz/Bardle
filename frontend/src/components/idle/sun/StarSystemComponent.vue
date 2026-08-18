@@ -59,13 +59,15 @@
           <!-- Zielmarke: hinter der Sonne gibt es keinen Wrap, sie sitzt deshalb
                IM Körper. Dessen Box ist dieselbe wie die des Wraps im
                Front-Layer (starBodyBackStyle spreizt starWrapStyle), die
-               Prozent-Insets treffen also dieselbe Geometrie. `.star-sys-back`
-               legt ihre Takte still, der Behind-Blur nimmt sie mit — Ziel ja,
-               Beschuss gerade nicht. -->
-          <div v-if="targetedStarId === star.id" class="star-target-lock">
-            <span class="star-target-lock__halo" />
-            <span class="star-target-lock__reticle" />
-            <span class="star-target-lock__ping" />
+               Prozentmaße der Bahn treffen also dieselbe Geometrie.
+               `.star-sys-back` legt ihre Takte still, der Behind-Blur nimmt sie
+               mit — Ziel ja, Beschuss gerade nicht. -->
+          <div v-if="targetedStarId === star.id" class="star-target-escort">
+            <div class="star-target-escort__orbit">
+              <span class="star-target-escort__arm star-target-escort__arm--a" />
+              <span class="star-target-escort__arm star-target-escort__arm--b" />
+              <span class="star-target-escort__arm star-target-escort__arm--c" />
+            </div>
           </div>
         </div>
       </template>
@@ -109,13 +111,15 @@
           <!-- Zielmarke NEBEN dem Körper, nicht darin: `.star-body` bekommt beim
                Hover `filter: drop-shadow(#ffe066) … brightness(1.3)` und
                `star-hover-pulse` (scale 1 → 1.35). Ein `filter` und ein
-               `transform` gelten für den ganzen Teilbaum — die Marke würde beim
+               `transform` gelten für den ganzen Teilbaum — die Funken würden beim
                Überfahren golden werden und pumpen, also genau das, was sie nicht
-               sein soll. Nach dem Körper, damit sie über dessen Schein liegt. -->
-          <div v-if="targetedStarId === star.id" class="star-target-lock">
-            <span class="star-target-lock__halo" />
-            <span class="star-target-lock__reticle" />
-            <span class="star-target-lock__ping" />
+               sein sollen. Nach dem Körper, damit sie über dessen Schein liegen. -->
+          <div v-if="targetedStarId === star.id" class="star-target-escort">
+            <div class="star-target-escort__orbit">
+              <span class="star-target-escort__arm star-target-escort__arm--a" />
+              <span class="star-target-escort__arm star-target-escort__arm--b" />
+              <span class="star-target-escort__arm star-target-escort__arm--c" />
+            </div>
           </div>
         </div>
       </template>
@@ -1519,9 +1523,9 @@ function starCountStyle(star: StarRenderEntry) {
 .star-sys-back .star-pulse-overlay,
 .star-sys-back .star-body::before,
 .star-sys-back .star-body::after,
-.star-sys-back .star-target-lock__halo,
-.star-sys-back .star-target-lock__reticle,
-.star-sys-back .star-target-lock__ping {
+.star-sys-back .star-target-escort,
+.star-sys-back .star-target-escort__orbit,
+.star-sys-back .star-target-escort__arm::before {
   animation: none;
 }
 
@@ -1892,101 +1896,158 @@ function starCountStyle(star: StarRenderEntry) {
    `starGroupStore.targetedStarId` an einer Stelle, aus der auch die
    Header-Zeile liest.
 
+   „Chime Escort“ — drei Funken auf einer geneigten, flachen Ellipsenbahn.
+   KEIN Ring, kein Halo, kein Saum am Sternrand: die Vorgängerfassung legte drei
+   konzentrische Kreise (Halo 22 %, Ping 22 %, Reticle 27 %) zwischen den Typring
+   (16 %) und den Nova-Cooldown-Ring auf dem Canvas ((s/2+9)·scale). Sieben Kreise
+   um einen 30–70 px großen Körper lesen sich als Ringplanet, und der cyane Halo
+   überstrich den warmen Sternglanz mit einem kalten Saum — der Zielstern sah
+   nicht mehr wie ein Stern aus. Ein PUNKT, der einen Bogen kreuzt, liest sich
+   dagegen als Tiefe; deshalb darf die Bahn den Nova-Ring seitlich schneiden.
+
    Gebaut nach Performance-Regel 11: der Schein steht STATISCH im Stil, animiert
    werden nur `opacity` und `transform`. Kein `will-change` — für eine laufende
    Animation legt Chrome die Ebene ohnehin an, und das Compositing-Budget ist
-   die knappe Ressource (siehe Kommentar über `.star-body`). Drei Ebenen mehr
-   kosten hier nichts, weil es immer bei EINEM Stern bleibt; gewarnt war der
-   Fall „eine Ebene je Stern".
+   die knappe Ressource (siehe Kommentar über `.star-body`). Fünf Ebenen kosten
+   hier nichts, weil es immer bei EINEM Stern bleibt; gewarnt war der Fall
+   „eine Ebene je Stern“.
 
    Farbe: Cyan. Gold gehört dem Hover, Crimson der Rage, Violett dem Fluch, Glut
    den Cooldown-Ringen, Rot der Zielscheibe auf der Sonne — Cyan ist der einzige
-   Ton, der am Stern noch frei ist, und als Komplement zu den gelb-cremefarbenen
-   Sternkörpern steht er am weitesten von ihnen ab. */
-.star-target-lock {
+   Ton, der am Stern noch frei ist, und dieselbe Signatur trägt die Header-Zeile
+   (`.timer-bar-row--targeted`). */
+
+/* ① Bahnebene — statisch geneigt und gestaucht, trägt selbst keinen Dauerlauf.
+   270 % der Sternbox → Bahn-rx = 1,35·s, mit `scaleY(0.53)` wird ry = 0,72·s.
+   Damit liegt die Bahn oben und unten ÜBER dem Sternrand (0,5·s) und UNTER der
+   Unterkante des Planetenzählers (0,5·s + STAR_COUNT_GAP_PX) — geprüft für alle
+   drei Sterngrößen (68 / 58 / 20 px). Prozentmaße statt `--ring-inset`: die
+   Custom Property steht nur am `.star-body`, im Front-Layer hängt die Marke aber
+   am WRAP und fiele dort still auf ihren Fallback zurück. */
+.star-target-escort {
   position: absolute;
-  /* Prozent statt `--ring-inset`: die Marke hängt im Front-Layer am WRAP und im
-     Back-Layer am KÖRPER. Beide Boxen sind exakt das Sternquadrat, ein
-     Prozentwert trifft deshalb in beiden dieselbe Geometrie — die Custom
-     Property steht dagegen nur am Körper und fiele am Wrap still auf ihren
-     Fallback zurück, womit die Marke nicht mehr mit dem Stern skalierte.
-     22 % liegen ausserhalb von Typring (16 %) und Cooldown-Ring. */
-  inset: -22%;
-  border-radius: 50%;
-  /* Pflicht, kein Feinschliff: die Marke ragt über den Wrap hinaus, und der
+  left: 50%;
+  top: 50%;
+  width: 270%;
+  height: 270%;
+  margin: -135% 0 0 -135%;
+  /* Pflicht, kein Feinschliff: die Bahn ragt weit über den Wrap hinaus, und der
      trägt `pointer-events: auto`. Ohne das bekäme ausgerechnet der Zielstern
      eine größere Klick- und Hoverfläche als jeder andere. */
   pointer-events: none;
+  /* Die Neigung ist eine DEKLARATION, keine Keyframe-Stufe: `.star-sys-back`
+     setzt hier `animation: none`, und stünde die Neigung nur in den Keyframes,
+     wäre die Bahn hinter der Sonne ein Kreis statt einer Ellipse. Der Einflug
+     rührt deshalb allein die Deckkraft an — ein zweites `transform` am selben
+     Element würde die Neigung überschreiben. */
+  transform: rotate(-12deg) scaleY(0.53);
+  animation: star-escort-in 0.45s ease-out both;
 }
 
-/* ① Halo — statischer Ringverlauf, nur die Deckkraft atmet. Mit ausgespartem
-   Kern: der Sternkörper behält seine Farbe, die Marke legt sich nicht als
-   Schleier darüber. `closest-side` ist Pflicht — der Default `farthest-corner`
-   rechnet 100 % auf die Halbdiagonale, alles unter ~71 % wäre unsichtbar. */
-.star-target-lock__halo {
+/* ② Die EINE laufende Drehung — sie liegt über der gestauchten Ebene, läuft in
+   deren Koordinaten und wird dadurch zur Ellipse. Umgekehrt (Stauchung innen)
+   drehte sich die Ellipse selbst mit, statt eine feste Bahn zu bleiben. */
+.star-target-escort__orbit {
   position: absolute;
   inset: 0;
+  animation: star-escort-spin 11s linear infinite;
+}
+
+/* ③ Ein Arm = die volle Bahnbox mit statischem Winkel; der Funke sitzt als
+   `::before` an ihrem rechten Rand (`left: 100%`) und damit exakt auf dem
+   Bahnradius — ein `translateX` in Prozent bezöge sich auf den Funken selbst. */
+.star-target-escort__arm {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.star-target-escort__arm--a {
+  transform: rotate(0deg);
+}
+
+.star-target-escort__arm--b {
+  transform: rotate(120deg);
+}
+
+.star-target-escort__arm--c {
+  transform: rotate(240deg);
+}
+
+.star-target-escort__arm::before {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  /* `clamp`, weil eine reine Prozentgröße den kleinsten Stern (s = 20) auf
+     3 px drückte und den größten auf 11 px aufblähte. Gemessen mussten die
+     Funken kräftiger ausfallen als zuerst gebaut: das Sternenfeld im Hintergrund
+     führt Punkte derselben Größe, bei 6,5 px las sich die Marke als Deko. */
+  width: clamp(3.5px, 5.5%, 9px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(
-    circle closest-side,
-    transparent 58%,
-    rgba(95, 240, 255, 0.5) 76%,
-    rgba(60, 210, 240, 0.3) 88%,
-    rgba(40, 180, 225, 0.08) 97%,
-    transparent 100%
+    circle,
+    #f2feff 0%,
+    rgba(120, 245, 255, 0.98) 42%,
+    rgba(40, 190, 225, 0) 72%
   );
-  opacity: 0.7;
-  animation: star-target-breathe 2.6s ease-in-out infinite;
-  pointer-events: none;
+  /* STATISCH — ein Schein im Ruhezustand ist erlaubt, animiert wird allein die
+     Deckkraft (Performance-Regel 11, Muster `orbit-glow-breathe`). */
+  box-shadow:
+    0 0 8px rgba(95, 240, 255, 0.9),
+    0 0 18px rgba(60, 210, 240, 0.55);
+  animation: star-escort-glimmer 2.4s ease-in-out infinite;
 }
 
-/* ② Reticle — vier Klammern statt eines geschlossenen Rings: ein voller Ring
-   wäre der dritte am selben Stern (Typring, Cooldown-Ring) und ginge in ihnen
-   unter. Der Ring ist ein echter `border`, die Lücken schneidet eine STATISCHE
-   `repeating-conic-gradient`-Maske; animiert wird allein `transform: rotate` —
-   dasselbe Muster wie die Galaxieboss-Corona. */
-.star-target-lock__reticle {
+/* Bewegungsschweif — er allein trennt den Funken vom Deko-Sternenfeld: ein
+   Punkt MIT Schweif ist eindeutig ein umlaufender Körper. Bewusst OHNE eigene
+   Animation, das hält die Zahl der Takte bei vier.
+
+   Die Ausrichtung stimmt von selbst: bei `left: 100%` steht die Tangente der
+   Kreisbahn senkrecht auf dem Radius, also im Arm-System vertikal — und die
+   Stauchung der Bahnebene verzerrt den Schweif in genau dem Maß mit, in dem
+   sie auch die Bahn verzerrt. Symmetrisch auslaufend, damit die Laufrichtung
+   keine Rolle spielt. */
+.star-target-escort__arm::after {
+  content: '';
   position: absolute;
-  /* Ein Stück weiter aussen als der Rest der Marke: der Cooldown-Ring des
-     Zielsterns liegt bei `(size/2 + 9) · scale` und damit dicht daneben. Zwei
-     Ringe auf fast demselben Radius lesen sich als ein unruhiges Bündel statt
-     als zwei Aussagen — die Klammern brauchen den Abstand. */
-  inset: -5%;
+  left: 100%;
+  top: 50%;
+  width: clamp(1.5px, 1.8%, 3.5px);
+  height: clamp(13px, 9%, 30px);
+  transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 2.5px solid rgba(150, 250, 255, 0.95);
-  -webkit-mask-image: repeating-conic-gradient(
-    from 32deg,
-    #000 0deg 34deg,
-    transparent 34deg 90deg
+  background: linear-gradient(
+    to bottom,
+    rgba(95, 240, 255, 0) 0%,
+    rgba(95, 240, 255, 0.5) 50%,
+    rgba(95, 240, 255, 0) 100%
   );
-  mask-image: repeating-conic-gradient(from 32deg, #000 0deg 34deg, transparent 34deg 90deg);
-  animation: star-target-spin 16s linear infinite;
   pointer-events: none;
 }
 
-/* ③ Ping — eine einzelne Front, die vom Rand des Körpers nach aussen läuft.
-   Langsam getaktet: die Marke soll melden, nicht blinken. */
-.star-target-lock__ping {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1.5px solid rgba(140, 248, 255, 0.75);
-  opacity: 0;
-  animation: star-target-ping 3.2s ease-out infinite;
-  pointer-events: none;
+/* Versetzt statt gleichzeitig: drei Funken im Gleichtakt lesen sich als ein
+   blinkender Ring, versetzt als ein Zug. */
+.star-target-escort__arm--b::before {
+  animation-delay: 0.8s;
 }
 
-@keyframes star-target-breathe {
-  0%,
-  100% {
-    opacity: 0.5;
+.star-target-escort__arm--c::before {
+  animation-delay: 1.6s;
+}
+
+@keyframes star-escort-in {
+  from {
+    opacity: 0;
   }
-  50% {
+  to {
     opacity: 1;
   }
 }
 
-@keyframes star-target-spin {
+@keyframes star-escort-spin {
   from {
     transform: rotate(0deg);
   }
@@ -1995,36 +2056,27 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
-@keyframes star-target-ping {
-  0% {
-    transform: scale(0.72);
-    opacity: 0;
-  }
-  12% {
-    opacity: 0.6;
-  }
-  70%,
+@keyframes star-escort-glimmer {
+  0%,
   100% {
-    transform: scale(1.06);
-    opacity: 0;
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Halo und Reticle bleiben STEHEN — ohne Keyframes fiele der Halo sonst je
-     nach Position mal voll und mal unsichtbar aus. Der Ping fällt ganz weg:
-     eine eingefrorene Druckwelle sagt nichts. */
-  .star-target-lock__halo,
-  .star-target-lock__reticle {
+  /* Drei stehende Funken auf der Bahn sind weiterhin eine vollständige Marke —
+     anders als beim abgelösten Ping, der ohne Takt nichts mehr sagte und
+     deshalb ganz entfiel. Der Einflug bleibt: er läuft einmal, nicht dauernd. */
+  .star-target-escort__orbit,
+  .star-target-escort__arm::before {
     animation: none;
   }
 
-  .star-target-lock__halo {
-    opacity: 0.7;
-  }
-
-  .star-target-lock__ping {
-    display: none;
+  .star-target-escort__arm::before {
+    opacity: 1;
   }
 }
 
