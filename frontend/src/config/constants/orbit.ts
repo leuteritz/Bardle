@@ -286,23 +286,29 @@ export const STAR_SUMMARY_MAX_HEIGHT_PX = 250
  * Karte dort mit einer Ecke ins Panel.
  *
  * Wie die Höhe darunter der GRÖSSTE gemessene Fall, nicht der übliche: eine
- * Karte ohne Angriffszeile misst rund 95 px (halb: 48), mit der Planetenreihe
- * eines sechsfach besetzten Sterns 170 px (halb: 85). Zu groß geschätzt heisst
- * nur, dass schmale Karten etwas früher ausweichen; zu klein hieße, dass eine
- * breite mit der Ecke im Panel hängt.
+ * Karte ohne Angriffszeile misst rund 95 px (halb: 48), mit ihr 125 px
+ * (halb: 62). Die Zeile zeigt nur noch das Bild des bekämpften Planeten neben
+ * der HP-Leiste, deshalb ist die Breite unabhängig davon, wie viele Planeten
+ * der Stern trägt — eine Reihe über alle sechs stand hier zwischenzeitlich und
+ * kostete 230 px. Zu groß geschätzt heisst nur, dass schmale Karten etwas
+ * früher ausweichen; zu klein hieße, dass eine breite mit der Ecke im Panel
+ * hängt.
  */
-export const STAR_SUMMARY_HALF_WIDTH_PX = 88
+export const STAR_SUMMARY_HALF_WIDTH_PX = 64
 /**
- * Höhe eines Planetenbildes in der Angriffszeile der Sternkarte.
+ * Höhe des Planetenbildes in der Angriffszeile der Sternkarte.
  *
  * Der Glyph-Körper füllt nur `2 · PLANET_GLYPH_RADIUS / PLANET_GLYPH_VIEW_H`
  * ≈ 62 % dieser Höhe — der viewBox ist bewusst breiter als hoch, weil die
  * Ringe eines `ringed`-Planeten seitlich über seinen Radius hinausreichen.
- * 18 px ergeben damit gut 11 px Planet und liegen knapp über den 9–13 px, mit
- * denen die Planeten-Kugeln der Header-Zeile auskommen. Größer geht nicht
- * folgenlos: jedes Pixel hier verbreitert die Karte um die Zahl der Planeten.
+ * 30 px ergeben damit rund 19 px Planet; bei den zuvor gesetzten 18 px waren es
+ * 11 px, und darauf war ein Eisplanet von einem Lavaplaneten nicht mehr zu
+ * unterscheiden. Bezahlbar ist die Größe erst, seit die Zeile nur noch EIN
+ * Bild zeigt — das des bekämpften Planeten — statt aller Planeten des Sterns.
+ * Die Zeilenhöhe treibt sie nicht: die bestimmt der Messblock daneben
+ * (Prozentzahl über Balken, gemessen ~43 px).
  */
-export const STAR_SUMMARY_PLANET_GLYPH_PX = 18
+export const STAR_SUMMARY_PLANET_GLYPH_PX = 30
 /**
  * Wie viel Luft nach dem Umklappen wieder da sein muss, bevor die Karte
  * zurückfällt. Ohne diese Schwelle sitzt ein Stern, der genau auf der Grenze

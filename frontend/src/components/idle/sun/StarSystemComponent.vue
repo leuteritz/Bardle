@@ -156,26 +156,18 @@
                  Bild je Planet des Sterns, befreite ausgegraut, der bekämpfte
                  hell. Die Leiste darunter gehört sichtbar zum hellen. -->
             <div v-if="targetedStarId === star.id" class="summary-assault">
-              <span class="summary-assault__worlds">
-                <span
-                  v-for="cell in targetPlanetCells"
-                  :key="cell.id"
-                  class="summary-assault__world"
-                  :class="{
-                    'summary-assault__world--cleared': cell.cleared,
-                    'summary-assault__world--active': cell.active,
-                  }"
-                >
-                  <PlanetGlyph :type="cell.type" :size="STAR_SUMMARY_PLANET_GLYPH_PX" />
-                </span>
+              <span v-if="targetPlanetType" class="summary-assault__world">
+                <PlanetGlyph :type="targetPlanetType" :size="STAR_SUMMARY_PLANET_GLYPH_PX" />
               </span>
-              <span class="summary-assault__pct">{{ targetHpPct }}%</span>
-              <span class="summary-assault__track">
-                <span
-                  class="summary-assault__fill"
-                  :class="targetHpClass"
-                  :style="{ transform: `scaleX(${targetHpRatio})` }"
-                />
+              <span class="summary-assault__meter">
+                <span class="summary-assault__pct">{{ targetHpPct }}%</span>
+                <span class="summary-assault__track">
+                  <span
+                    class="summary-assault__fill"
+                    :class="targetHpClass"
+                    :style="{ transform: `scaleX(${targetHpRatio})` }"
+                  />
+                </span>
               </span>
             </div>
 
@@ -353,7 +345,7 @@ import { hudFieldMetrics, hudFreeBandOver, type HudFieldMetrics } from '@/utils/
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import { activeChampionBehindState, activePlayerPlanetPositions, activeStarCombatState } from '@/utils/orbit/liveState'
-import type { ChampionRole, StarType } from '@/types'
+import type { ChampionRole, PlanetType, StarType } from '@/types'
 import { starBodySize } from '@/utils/orbit/geometry'
 import { clearStarVanishFx } from '@/utils/fx/starVanishFx'
 import { gameNow, getGameSpeed } from '@/utils/game/gameClock'
@@ -855,32 +847,23 @@ const targetedStarId = computed(() => starGroupStore.targetedStarId)
  * der exakte Wert, der Balken nur die Silhouette.
  */
 /**
- * Die Planeten des Zielsterns, für die Reihe über der HP-Leiste.
+ * Der Planet, auf den gerade geschossen wird — das Bild neben der HP-Leiste.
  *
- * Quelle sind die SLOTS, nicht `StarRenderEntry.planets`: aus der Render-Liste
- * fallen befreite Planeten nach `STAR_PLANET_SAVED_LINGER_MS` ganz heraus
- * (`useStarSystem`), die Reihe verlöre dann Zellen und würde kürzer, während
- * der Zähler über dem Stern weiter `x / gesamt` zeigt.
+ * Direkt vom Boss statt über `starGroupStore.activeStars[…].planetSlots`: der
+ * Typ steht dort ohnehin (beide kommen beim Spawn aus derselben Quelle). Der
+ * Umweg über die Slots war nur nötig, solange die Zeile ALLE Planeten des
+ * Sterns zeigte — befreite fallen aus der Render-Liste heraus, aus den Slots
+ * nicht, und die Reihe wäre sonst kürzer geworden als der Zähler über dem
+ * Stern behauptet.
  *
- * Ein `computed` ist hier zulässig, anders als bei `targetHpPct` darunter:
+ * Ein `computed` ist zulässig, anders als bei `targetHpPct` darunter:
  * `activeBoss` liest `defeated` und `expired`, aber NICHT `currentHP` — der
  * Dauerbeschuss invalidiert den Getter also nicht (siehe den Kommentar an
- * `starGroupStore.targetedStarId`). Neu gerechnet wird nur, wenn ein Planet
- * fällt oder das Ziel wechselt.
+ * `starGroupStore.targetedStarId`).
  */
-const targetPlanetCells = computed(() => {
-  const starId = targetedStarId.value
-  if (!starId) return []
-  const star = starGroupStore.activeStars.find((s) => s.id === starId)
-  if (!star) return []
-  const activeId = bossStore.activeBoss?.planetId ?? null
-  return star.planetSlots.map((s) => ({
-    id: s.planetId,
-    type: s.type,
-    cleared: s.cleared,
-    active: s.planetId === activeId,
-  }))
-})
+const targetPlanetType = computed<PlanetType | null>(
+  () => bossStore.activeBoss?.planetType ?? null,
+)
 
 const targetHpRatio = ref(1)
 const targetHpPct = ref(100)
@@ -2415,55 +2398,49 @@ function starCountStyle(star: StarRenderEntry) {
    gestuft aus dem rAF-Loop, eine Interpolation liefe zwischen zwei Stufen
    dauerhaft und nähme dem Balken genau die Ruhe, die die Stufung herstellt. */
 .summary-assault {
+  display: grid;
+  /* Die Reihe nimmt, was sie braucht; der Messblock den Rest. Andersherum
+     (`1fr auto`) würde der Balken die Glyphen stauchen, sobald sechs Planeten
+     stehen — die SVGs skalieren nicht mit ihrer Zelle.
+     Das `minmax` hält den Balken davon ab, auf die Breite der Prozentzahl
+     zusammenzufallen; es ersetzt die frühere `min-width` am Container. */
+  grid-template-columns: auto minmax(3.4em, 1fr);
+  align-items: center;
+  gap: 0.5em;
+  width: 100%;
+}
+
+/* Prozentzahl über ihrem Balken, beide als ein Block neben der Planetenreihe.
+   `min-width: 0` ist Pflicht: eine Grid-Spalte ist sonst mindestens so breit
+   wie ihr Inhalt, und der Balken könnte die Reihe nach links drücken. */
+.summary-assault__meter {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.3em;
-  width: 100%;
-  /* Mindestbreite, damit der Balken bei magerer Beute nicht auf die Breite der
-     Prozentzahl zusammenschrumpft — die Karte darf ihre Breite nicht am
-     Beschuss ändern, sie hängt an einer festen halben Breite
-     (STAR_SUMMARY_HALF_WIDTH_PX). */
-  min-width: 4.5em;
+  align-items: stretch;
+  gap: 0.22em;
+  min-width: 0;
 }
 
-/* Die Planetenreihe. Eigene Zeile statt neben der Prozentzahl: bei sechs
-   Planeten stünden Reihe und Zahl zusammen bei rund 140 px und die Karte würde
-   deutlich breiter als der Beute-Block darunter. */
-.summary-assault__worlds {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.15em;
-  line-height: 0;
-}
+/* Das Bild des bekämpften Planeten, linke Spalte.
+   Gezeigt wird genau EINER — der, zu dem die Leiste daneben gehört. Eine Reihe
+   über alle Planeten des Sterns stand hier zwischenzeitlich und machte die
+   Karte bei sechs Slots 230 px breit; die Zuordnung „dieser Balken gehört zu
+   diesem Planeten“ war darin schwächer, nicht stärker. Wie viele Planeten der
+   Stern noch trägt, steht ohnehin im Zähler über ihm.
 
+   Der Schein dahinter ist STATISCH und in der Zielfarbe, nach demselben Muster,
+   mit dem `.planet-cell__body` in der Pause-Karte den Sternfarbhauch setzt.
+   Kein Puls — die Karte trägt den Rage-/Fluch-Puls bereits auf `::after`. */
 .summary-assault__world {
   display: flex;
   justify-content: center;
   line-height: 0;
   border-radius: 50%;
-  /* Wartend: farbig, aber gedämpft — nur EINER wird gerade bearbeitet. */
-  opacity: 0.55;
-}
-
-/* Der bekämpfte: volle Deckkraft plus ein STATISCHER Schein in der Zielfarbe,
-   nach demselben Muster, mit dem `.planet-cell__body` in der Pause-Karte den
-   Sternfarbhauch setzt. Kein Puls — die Zeile ist winzig, und die Karte trägt
-   den Rage-/Fluch-Puls bereits auf `::after`. */
-.summary-assault__world--active {
-  opacity: 1;
   background: radial-gradient(circle, rgba(95, 240, 255, 0.32) 0%, transparent 64%);
 }
 
-/* Befreit: bleibt stehen, damit die Reihe ihre Breite über die Lebensdauer des
-   Sterns behält — dieselbe Entscheidung wie in `PauseStarCard`. */
-.summary-assault__world--cleared {
-  opacity: 0.26;
-  filter: grayscale(80%);
-}
-
 .summary-assault__pct {
+  text-align: center;
   font-size: 0.95em;
   font-weight: 800;
   line-height: 1;
@@ -2478,6 +2455,7 @@ function starCountStyle(star: StarRenderEntry) {
 .summary-assault__track {
   position: relative;
   width: 100%;
+  min-width: 0;
   height: 4px;
   background: #0a0d10;
   border: 1px solid rgba(40, 200, 235, 0.32);
