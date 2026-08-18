@@ -1,19 +1,17 @@
 <template>
-  <div class="hp-bar-container" :class="{ 'hp-bar-container--hit': wasHit }" :style="sunRVar">
-    <div class="hp-header">
-      <Icon icon="ph:heart-fill" width="16" height="16" class="hp-icon" style="color: #cc6050" />
-      <span class="hp-value">
-        {{ Math.ceil(playerStore.currentHP) }}<span class="hp-sep"> / </span>{{ playerStore.maxHP }}
-      </span>
-    </div>
-
-    <div class="hp-track">
-      <div
-        class="hp-fill"
-        :class="{ 'hp-fill--low': playerStore.isLow }"
-        :style="{ width: playerStore.hpPercent + '%' }"
-      />
-    </div>
+  <div class="hp-bar-container" :style="sunRVar">
+    <!--
+      Die Leiste selbst ist das gemeinsame Bauteil; dieser Container besitzt nur
+      noch, was zur BÜHNE gehört: die Lage über der Sonnenscheibe, die mit dem
+      Sonnenradius mitwächst, und die beiden Ebenen im Teleport darunter.
+    -->
+    <VitalityBar
+      :current="playerStore.currentHP"
+      :max="playerStore.maxHP"
+      label-placement="above"
+      lead-icon="ph:heart-fill"
+      :aria-label="`Sun health ${Math.ceil(playerStore.currentHP)} of ${playerStore.maxHP}`"
+    />
 
     <Teleport to="body">
       <div v-if="playerStore.isLow" class="hp-vignette" aria-hidden="true" />
@@ -26,48 +24,27 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Icon } from '@iconify/vue'
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted } from 'vue'
+import VitalityBar from '@/components/ui/VitalityBar.vue'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
-import { PLAYER_HP_HIT_FLASH_MS } from '@/config/constants'
 
-export default defineComponent({
-  name: 'PlayerHPBar',
-  components: { Icon },
-  setup() {
-    const playerStore = usePlayerStore()
-    const planetShopStore = usePlanetShopStore()
-    const sunRVar = computed(() => ({ '--sun-r': `${planetShopStore.currentSunRadius}px` }))
-    const wasHit = ref(false)
-    let hitTimer: ReturnType<typeof setTimeout> | null = null
-    let pruneInterval: ReturnType<typeof setInterval> | null = null
+const playerStore = usePlayerStore()
+const planetShopStore = usePlanetShopStore()
 
-    watch(
-      () => playerStore.currentHP,
-      (newVal, oldVal) => {
-        if (newVal < oldVal) {
-          wasHit.value = true
-          if (hitTimer) clearTimeout(hitTimer)
-          hitTimer = setTimeout(() => {
-            wasHit.value = false
-          }, PLAYER_HP_HIT_FLASH_MS)
-        }
-      },
-    )
+const sunRVar = computed(() => ({ '--sun-r': `${planetShopStore.currentSunRadius}px` }))
 
-    onMounted(() => {
-      pruneInterval = setInterval(() => playerStore.pruneFloats(), 500)
-    })
+/** Die Schadenszahlen gehören der Bühne, nicht der Leiste — sie steigen über der
+ *  Sonne auf, nicht über dem Balken. Das Aufräumen bleibt deshalb hier. */
+let pruneInterval: ReturnType<typeof setInterval> | null = null
 
-    onUnmounted(() => {
-      if (pruneInterval) clearInterval(pruneInterval)
-      if (hitTimer) clearTimeout(hitTimer)
-    })
+onMounted(() => {
+  pruneInterval = setInterval(() => playerStore.pruneFloats(), 500)
+})
 
-    return { playerStore, wasHit, Math, sunRVar }
-  },
+onUnmounted(() => {
+  if (pruneInterval) clearInterval(pruneInterval)
 })
 </script>
 
@@ -81,110 +58,22 @@ export default defineComponent({
   z-index: 20;
   pointer-events: none;
   width: clamp(200px, calc(var(--sun-r) * 3.5), 500px);
-  transition: top 1.5s ease, width 1.5s ease;
-}
+  transition:
+    top 1.5s ease,
+    width 1.5s ease;
 
-/* ── Header ── */
-.hp-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 5px;
-}
-
-.hp-icon {
-  font-size: 0.85rem;
-  color: #cc2010;
-  line-height: 1;
-  flex-shrink: 0;
-  text-shadow:
-    0 0 8px rgba(220, 40, 18, 0.9),
-    0 0 20px rgba(200, 30, 10, 0.5);
-}
-
-.hp-value {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.06em;
-  text-shadow:
-    0 0 12px rgba(220, 175, 40, 0.7),
-    0 1px 2px rgba(0, 0, 0, 0.9);
-}
-
-.hp-sep {
-  color: #7a5820;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-
-/* ── Bar Track ── */
-.hp-track {
-  position: relative;
-  width: 100%;
-  height: 10px;
-  background: rgba(0, 0, 0, 0.55);
-  border-radius: 1px;
-  box-shadow:
-    inset 0 1px 4px rgba(0, 0, 0, 0.8),
-    0 0 0 1px rgba(80, 40, 8, 0.45);
-  overflow: hidden;
-}
-
-/* Segmentlinien bei 25 / 50 / 75 % */
-.hp-track::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0,
-    transparent calc(25% - 0.5px),
-    rgba(0, 0, 0, 0.45) calc(25% - 0.5px),
-    rgba(0, 0, 0, 0.45) 25%
-  );
-  z-index: 2;
-  pointer-events: none;
-}
-
-/* ── Bar Fill ── */
-.hp-fill {
-  position: relative;
-  height: 100%;
-  background: linear-gradient(90deg, #620b05 0%, #a81206 30%, #d41e0e 68%, #f83820 100%);
-  transition: width 0.5s ease;
-  box-shadow: 0 0 10px rgba(240, 52, 18, 0.65);
-}
-
-/* Sheen */
-.hp-fill::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 45%;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.12) 0%, transparent 100%);
-  pointer-events: none;
-}
-
-/* Low-HP-Puls */
-.hp-fill--low {
-  animation: hp-pulse 0.75s ease-in-out infinite alternate;
-}
-
-@keyframes hp-pulse {
-  from {
-    box-shadow: 0 0 6px rgba(255, 48, 18, 0.5);
-  }
-  to {
-    box-shadow:
-      0 0 24px rgba(255, 48, 18, 1),
-      0 0 8px rgba(255, 85, 20, 0.85),
-      inset 0 0 5px rgba(255, 110, 50, 0.3);
-  }
+  /* Maße der Leiste. Sie ist schmal, deshalb steht die Zahl ÜBER ihr und nicht
+     darin — und deshalb bekommt sie keinen Dauerglanz: eine Welle über 18 % von
+     10 px liest sich nicht als Welle, kostet aber einen Dauerläufer über der
+     Bühne, auf die der Spieler die ganze Zeit schaut. */
+  --vb-h: 10px;
+  --vb-radius: 2px;
+  --vb-label-size: 0.9rem;
+  --vb-label-sub-size: 0.9rem;
+  --vb-label-gap: 5px;
+  --vb-icon-size: 16px;
+  --vb-num-gap: 4px;
+  --vb-cur-reserve: 0;
 }
 
 /* ── Vignette ── */
@@ -209,15 +98,6 @@ export default defineComponent({
   to {
     opacity: 1;
   }
-}
-
-/* ── Hit Flash ── */
-.hp-bar-container--hit .hp-track {
-  box-shadow:
-    inset 0 1px 4px rgba(0, 0, 0, 0.8),
-    0 0 0 1px rgba(255, 40, 10, 0.7),
-    0 0 14px rgba(255, 40, 10, 0.5);
-  transition: box-shadow 0.35s ease-out;
 }
 
 /* ── Damage Floats ── */
@@ -264,9 +144,6 @@ export default defineComponent({
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hp-fill--low {
-    animation: none;
-  }
   .hp-vignette {
     animation: none;
   }

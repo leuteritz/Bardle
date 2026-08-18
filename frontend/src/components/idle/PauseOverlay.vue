@@ -101,69 +101,21 @@
 
           <!-- Vitalität der Sonne — ohne Beschriftung und ohne Emblem: der
                Balken läuft über die volle Panelbreite, die Zahl steht
-               unmittelbar an seiner Kante. Fünf Ebenen, alle
-               compositor-freundlich (nur transform/opacity bewegen sich):
-               Nachlaufspur, Füllung mit durchlaufendem Energiepuls, wandernde
-               Kante mit Flare, statische Skala, Krit-Puls. -->
-          <div
-            class="vital-strip"
-            :class="hpColor"
-            role="img"
-            :aria-label="`Health ${Math.round(playerStore.currentHP)} of ${playerStore.maxHP}`"
-          >
-            <div class="vital-bar" :class="{ 'vital-bar--crit': isCrit }">
-              <!-- Pro-Wert gesetzte Transforms stehen inline am jeweiligen
-                   Element, nicht als Variable am Balken — sonst rechnet der
-                   ganze Subtree bei jeder HP-Änderung neu. -->
-              <span
-                class="vital-bar__ghost"
-                :style="{ transform: `scaleX(${hpRatio})` }"
-                aria-hidden="true"
-              />
-              <span
-                class="vital-bar__fill"
-                :style="{ transform: `scaleX(${hpRatio})` }"
-                aria-hidden="true"
-              >
-                <!-- Der Puls läuft INNERHALB der Füllung: sie ist der einzige
-                     Container, der ohne zweite Maske exakt am Füllstand endet.
-                     Er wird mit scaleX der Füllung schmaler — bei wenig HP
-                     bleibt ein hektisches Zucken statt einer breiten Welle. -->
-                <span class="vital-bar__spark" />
-              </span>
-              <!-- Vollbreite Ebene, nach links geschoben: ihr rechter Rand ist
-                   die Kante. Als border-right am Fill wüchse der Strich mit
-                   1/scaleX auf, je leerer der Balken wird. -->
-              <span
-                class="vital-bar__edge"
-                :style="{ transform: `translateX(${(hpRatio - 1) * 100}%)` }"
-                aria-hidden="true"
-              />
-              <span class="vital-bar__ticks" aria-hidden="true" />
-              <span class="vital-bar__pulse" aria-hidden="true" />
-            </div>
+               unmittelbar an seiner Kante.
 
-            <!-- Schrägstrich und Maximum stehen fest: der aktuelle Wert sitzt
-                 rechtsbündig in einer Spalte, deren Breite die Messmuster
-                 vorgeben — nicht der Wert selbst. Alle Muster und der Wert
-                 liegen in DERSELBEN Rasterzelle, die Spalte nimmt also die
-                 breiteste Darstellung, die hier je auftreten kann. Damit
-                 wandert nichts mehr, wenn HP eine Stelle gewinnt oder
-                 verliert. -->
-            <span class="vital-strip__value">
-              <span class="vital-strip__cur">
-                <span
-                  v-for="(probe, i) in hpWidthProbes"
-                  :key="i"
-                  class="vital-strip__probe"
-                  aria-hidden="true"
-                  >{{ probe }}</span
-                >
-                <span class="vital-strip__now">{{
-                  formatNumber(Math.round(playerStore.currentHP))
-                }}</span> </span
-              ><span class="vital-strip__max">/{{ formatNumber(playerStore.maxHP) }}</span>
-            </span>
+               Der Streifen bleibt ein eigenes Element dieser Datei, obwohl die
+               Leiste darin ein fremdes Bauteil ist: seine HÖHE geht in die
+               Panelhöhe und damit in den Fit-Scale des GANZEN Overlays ein.
+               Was hier steht, muss hier stehen bleiben. -->
+          <div class="vital-strip">
+            <VitalityBar
+              :current="playerStore.currentHP"
+              :max="playerStore.maxHP"
+              label-placement="right"
+              width-probes
+              spark
+              :aria-label="`Health ${Math.round(playerStore.currentHP)} of ${playerStore.maxHP}`"
+            />
           </div>
 
           <div class="chime-readout">
@@ -432,9 +384,6 @@ import {
   PAUSE_PANEL_MAX_SCALE,
   PAUSE_MATERIAL_COLUMNS,
   PAUSE_MATERIAL_ROWS,
-  HP_HEALTHY_PERCENT,
-  HP_CRIT_PERCENT,
-  PAUSE_HP_WIDTH_PROBES,
   PAUSE_LEDGER_MAX_POPS,
   DAMAGE_FLOAT_DURATION_MS,
   MATERIAL_RARITY_COLOR,
@@ -464,6 +413,7 @@ import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
+import VitalityBar from '@/components/ui/VitalityBar.vue'
 import KeyCap from '@/components/keybinds/KeyCap.vue'
 import PauseChampionCard from './PauseChampionCard.vue'
 import PauseStarCard from './PauseStarCard.vue'
@@ -528,32 +478,6 @@ const sunPhaseLabelColor = computed(() => {
   const p = sunPhase.value
   return 'phasePrimary' in p ? p.phasePrimary : p.accent
 })
-
-const hpPercent = computed(() => playerStore.hpPercent)
-
-/** Füllanteil der Vitality-Leiste als scaleX-Faktor (0–1). */
-const hpRatio = computed(() => Math.min(1, Math.max(0, hpPercent.value / 100)))
-
-const hpColor = computed(() => {
-  if (hpPercent.value > HP_HEALTHY_PERCENT) return 'hp--green'
-  if (hpPercent.value > HP_CRIT_PERCENT) return 'hp--yellow'
-  return 'hp--red'
-})
-
-/** Kritisch: Balken pulst, das Herz-Siegel schlägt. */
-const isCrit = computed(() => hpPercent.value <= HP_CRIT_PERCENT)
-
-/**
- * Unsichtbare Messmuster, die die Breite der Wertspalte festlegen: derselbe
- * Zahlenformatierer über den ganzen Wertebereich. Sie liegen im Raster auf
- * derselben Zelle wie der Live-Wert, die Spalte nimmt also die breiteste
- * Darstellung — gemessen in echten Pixeln statt in geschätzten Zeichenbreiten.
- * Dadurch stehen Schrägstrich und Maximum fest, egal wie viele Stellen der
- * aktuelle Wert gerade hat.
- */
-const hpWidthProbes = computed(() =>
-  PAUSE_HP_WIDTH_PROBES.map((f) => formatNumber(Math.round(playerStore.maxHP * f))),
-)
 
 const pauseStartChimes = ref(0)
 const pauseTick = ref(0)
@@ -1372,266 +1296,36 @@ function particleStyle(i: number): Record<string, string> {
    daneben. Der Platz gehört jetzt dem Balken, der dafür fast doppelt so hoch
    ist wie zuvor und über die volle Panelbreite läuft.
 
-   Der Balken besteht aus gestapelten Ebenen, damit nichts außer transform und
-   opacity animiert wird: Nachlaufspur, Füllung (mit Puls darin), Kante,
-   Gravur, Krit-Puls. */
+   Der Streifen besitzt nur noch die Maße — die gestapelten Ebenen stehen in
+   `components/ui/VitalityBar.vue`, wo sie sich alle vier Spieler-Leisten teilen.
+
+   Die 38px sind der Grund, warum dieses Element überhaupt noch existiert: sie
+   gehen in die Panelhöhe und damit in den Fit-Scale des GANZEN Overlays ein
+   (siehe `docs/hud-and-layout.md` — Breite ist billig, Höhe teuer). Die Zahl ist
+   absichtlich höher gesetzt als der Balken (28px): sie ist die einzige exakte
+   Ablesung der Vitalität im Overlay, und das Panel läuft skaliert (~0,64 auf
+   Full HD) — kleiner gesetzt bliebe davon real kaum mehr als ein Chip-Text. */
 .vital-strip {
   display: flex;
   align-items: center;
-  /* Eng: die Zahl soll unmittelbar an der Balkenkante beginnen, nicht am
-     rechten Panelrand kleben. */
-  gap: clamp(8px, 1.1vw, 12px);
   width: 100%;
   height: 38px;
   /* Die Leiste gehört optisch zur Sonne darüber, nicht zur Kachelreihe
      darunter — der halbe Panel-Gap rückt sie näher an das Phasen-Label. */
   margin-top: calc(-1 * clamp(6px, 1vh, 10px));
   padding: 0 2px;
-}
 
-
-/* Zustandsfarben liegen am Streifen, nicht am Balken: Füllung, Kante und
-   Zahlenwert ziehen dieselben drei Werte. */
-.vital-strip.hp--green {
-  --hp-hi: #74d448;
-  --hp-lo: #2e7a1a;
-  --hp-txt: #9ae86a;
-}
-.vital-strip.hp--yellow {
-  --hp-hi: #f5d84a;
-  --hp-lo: #a8760e;
-  --hp-txt: #f0d060;
-}
-.vital-strip.hp--red {
-  --hp-hi: #ff7a6a;
-  --hp-lo: #8e2a20;
-  --hp-txt: #ff8a7a;
-}
-
-/* Leerer Teil des Balkens ist nicht einfach schwarz: eine feine Schraffur
-   liegt darin, damit die Fehlmenge als beschädigter Rumpf liest statt als
-   Loch. Rein statisch. */
-.vital-bar {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  height: 28px;
-  overflow: hidden;
-  border-radius: 5px;
-  background:
-    repeating-linear-gradient(
-      135deg,
-      rgba(255, 224, 170, 0.028) 0 5px,
-      transparent 5px 11px
-    ),
-    #0b0906;
-  box-shadow:
-    inset 0 0 0 1px rgba(122, 78, 32, 0.8),
-    inset 0 2px 8px rgba(0, 0, 0, 0.9),
-    0 0 18px color-mix(in srgb, var(--hp-hi) 13%, transparent);
-}
-/* Fassung über allen Ebenen: der eingelassene Rand bleibt sichtbar, auch wenn
-   die Füllung bis an die Kante läuft. */
-.vital-bar::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 5px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 224, 170, 0.14),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.65),
-    inset 0 0 0 1px rgba(122, 78, 32, 0.55);
-  pointer-events: none;
-}
-.vital-bar__fill,
-.vital-bar__ghost {
-  position: absolute;
-  inset: 0;
-  transform-origin: left center;
-}
-/* Der Verlauf läuft SENKRECHT — waagerecht würde ihn scaleX mitstauchen und
-   die Farbe hinge am Füllstand statt am Zustand. */
-.vital-bar__fill {
-  overflow: hidden;
-  background:
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.05) 44%, transparent 54%),
-    linear-gradient(to bottom, var(--hp-hi), var(--hp-lo));
-  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-/* Energiepuls, der durch die verbliebene Vitalität läuft — der einzige
-   Dauerlauf im Balken und reines transform/opacity. */
-.vital-bar__spark {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 18%;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 255, 255, 0.5) 50%,
-    transparent
-  );
-  animation: vital-spark 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-  pointer-events: none;
-}
-@keyframes vital-spark {
-  0% {
-    transform: translateX(-110%);
-    opacity: 0;
-  }
-  14% {
-    opacity: 1;
-  }
-  62% {
-    opacity: 1;
-  }
-  74%,
-  100% {
-    transform: translateX(560%);
-    opacity: 0;
-  }
-}
-/* Nachlaufspur unter der Füllung: sie bleibt beim Treffer kurz stehen und zieht
-   dann nach — der Verlust ist einen Moment lang als heller Streifen sichtbar,
-   statt einfach zu fehlen. */
-.vital-bar__ghost {
-  background: rgba(255, 186, 160, 0.32);
-  transition: transform 900ms cubic-bezier(0.4, 0, 0.2, 1) 380ms;
-}
-/* Helle Kante am Füllstand — sitzt am rechten Rand einer vollbreiten, nach
-   links geschobenen Ebene und bleibt dadurch bei jedem Füllstand 2px breit. */
-.vital-bar__edge {
-  position: absolute;
-  inset: 0;
-  border-right: 2px solid rgba(255, 255, 255, 0.85);
-  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
-  pointer-events: none;
-}
-/* Flare hinter der Kante: der Übergang von Füllung zu Leere ist damit kein
-   harter Schnitt mehr, sondern eine glühende Bruchstelle. Liegt innerhalb der
-   Kanten-Ebene und wandert mit ihr — kein zweiter gebundener Wert. */
-.vital-bar__edge::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 30px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    color-mix(in srgb, var(--hp-hi) 60%, transparent)
-  );
-  pointer-events: none;
-}
-/* Skala statt Segmentraster. Zehn gleichrangige Striche über die Breite
-   ergaben im transform-skalierten Panel (useFitScale, ~0.64 auf Full HD)
-   gebrochene Pixelpositionen: jeder Strich landete anders im Rastergitter und
-   die Reihe las sich unregelmäßig — obwohl sie exakt gleich verteilt war.
-
-   Drei Marken mit klarer Hierarchie lösen das: Viertel als kurze Kerben von
-   Ober- und Unterkante, die Hälfte zusätzlich mit durchgehender Linie. Wenige,
-   erkennbar gesetzte Marken lesen als Skala; das Ablesen auf den Prozentpunkt
-   übernimmt die Zahl daneben. Jede Marke ist eine eigene Hintergrundebene mit
-   fester Pixelbreite und prozentualer Position — nichts wiederholt sich, also
-   kann sich auch nichts aufschaukeln. Statisch, nichts bewegt sich. */
-.vital-bar__ticks {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.55) 0 8px,
-      transparent 8px calc(100% - 8px),
-      rgba(0, 0, 0, 0.55) calc(100% - 8px) 100%
-    ),
-    linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.62) 0 10px,
-      rgba(255, 228, 176, 0.1) 10px calc(100% - 10px),
-      rgba(0, 0, 0, 0.62) calc(100% - 10px) 100%
-    ),
-    linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.55) 0 8px,
-      transparent 8px calc(100% - 8px),
-      rgba(0, 0, 0, 0.55) calc(100% - 8px) 100%
-    );
-  background-size: 2px 100%;
-  background-position:
-    25% 0,
-    50% 0,
-    75% 0;
-  background-repeat: no-repeat;
-  pointer-events: none;
-}
-/* Kritisch: eine rote Ebene pulst über dem Balken — animiert wird allein die
-   Opazität, nicht Farbe oder Schatten. */
-.vital-bar__pulse {
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 95, 95, 0.32);
-  opacity: 0;
-  pointer-events: none;
-}
-.vital-bar--crit .vital-bar__pulse {
-  animation: vital-pulse 1.1s ease-in-out infinite;
-}
-@keyframes vital-pulse {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* Die Zahl beginnt unmittelbar an der Balkenkante — der gesamte Block hat eine
-   feste Breite, damit weder er noch die Balkenkante wandert.
-
-   Sie ist absichtlich HÖHER gesetzt als der Balken (28px): der Wert ist die
-   einzige exakte Ablesung der Vitalität im Overlay, und das Panel läuft durch
-   useFitScale skaliert (~0.64 auf Full HD) — kleiner gesetzt bliebe davon real
-   kaum mehr als ein Chip-Text. Die Streifenhöhe (38px) bleibt davon unberührt
-   und muss es auch: sie ginge sonst in die Panelhöhe und damit in den
-   Fit-Scale des ganzen Overlays ein. */
-.vital-strip__value {
-  display: inline-flex;
-  align-items: baseline;
-  flex-shrink: 0;
-  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
-  font-weight: 800;
-  line-height: 1;
-  color: var(--hp-txt, #ece0c0);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  text-shadow: 0 0 16px color-mix(in srgb, var(--hp-txt) 45%, transparent);
-}
-/* Ein-Zellen-Raster: Messmuster und Live-Wert liegen übereinander, die Spalte
-   nimmt die breiteste Darstellung. Damit steht der Schrägstrich fest, ohne
-   dass irgendwo eine Zeichenbreite geschätzt werden müsste — der Browser misst
-   die echten Glyphen der Schrift. Rechtsbündig, damit der Wert am
-   Schrägstrich klebt statt von ihm wegzurücken. */
-.vital-strip__cur {
-  display: grid;
-  grid-template-areas: 'hp';
-  justify-items: end;
-}
-.vital-strip__cur > * {
-  grid-area: hp;
-}
-/* Nur zur Breitenmessung da: nimmt Platz ein, wird aber nicht gezeichnet. */
-.vital-strip__probe {
-  visibility: hidden;
-  pointer-events: none;
-}
-.vital-strip__max {
-  font-size: 0.66em;
-  font-weight: 600;
-  color: rgba(216, 200, 160, 0.5);
-  text-shadow: none;
+  --vb-h: 28px;
+  --vb-radius: 5px;
+  /* Eng: die Zahl soll unmittelbar an der Balkenkante beginnen, nicht am
+     rechten Panelrand kleben. */
+  --vb-label-gap: clamp(8px, 1.1vw, 12px);
+  --vb-label-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  --vb-label-sub-size: 0.66em;
+  --vb-num-gap: 0px;
+  /* Die Messmuster geben die Spaltenbreite vor, eine zusätzliche Reserve würde
+     den Wert nur von seinem Schrägstrich wegrücken. */
+  --vb-cur-reserve: 0;
 }
 
 /* ── Chime readout ────────────────────────────────────── */
@@ -2272,15 +1966,11 @@ function particleStyle(i: number): Record<string, string> {
      deshalb dort, und zwar auf ihrem ruhigen Ende (opacity 0). */
   .particle,
   .chime-orb__halo,
-  .pause-timer__glow,
-  .vital-bar--crit .vital-bar__pulse {
+  .pause-timer__glow {
     animation: none;
   }
-  .vital-bar__fill,
-  .vital-bar__ghost,
-  .vital-bar__edge {
-    transition: none;
-  }
+  /* Die Vitalitätsleiste hält sich selbst an — sie ist ein eigenes Bauteil und
+     bringt ihren `prefers-reduced-motion`-Block mit. */
   .callout-pop-enter-active,
   .callout-pop-leave-active,
   .callout-pop-move,

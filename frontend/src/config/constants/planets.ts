@@ -630,8 +630,10 @@ export const BOSS_REMOVAL_LONG_DELAY_MS = 900
 export const BOSS_UNIVERSE_PROGRESS_FRACTION = 0.3
 
 // Player state
-/** HP percentage below which the "low HP" warning state activates */
-export const PLAYER_LOW_HP_THRESHOLD_PCT = 25
+// Die Schwelle des Low-HP-Zustands steht NICHT mehr hier: sie ist dieselbe, ab
+// der jede Vitalitätsleiste rot wird, und liegt als HP_CRIT_PERCENT in `ui.ts`.
+// Zwei Zahlen für eine Schwelle wurden mit verschiedenen Operatoren gelesen —
+// gefragt wird jetzt über `sunVitalStage()` aus `utils/ui/format.ts`.
 
 // Planet shop — damage reduction
 /** Maximum fraction of boss damage that can be absorbed by shield-barrier planets */

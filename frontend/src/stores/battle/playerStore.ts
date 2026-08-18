@@ -3,10 +3,10 @@ import {
   PLAYER_MAX_HP_BASE,
   PLAYER_HP_REGEN_PER_SEC,
   PLAYER_HP_LOSS_ON_ENRAGE,
-  PLAYER_LOW_HP_THRESHOLD_PCT,
   DAMAGE_FLOAT_DURATION_MS,
   FORGE_CROWN_REPRIEVE_FRACTION,
 } from '@/config/constants'
+import { sunVitalStage } from '@/utils/ui/format'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
@@ -44,8 +44,16 @@ export const usePlayerStore = defineStore('player', {
     hpPercent(): number {
       return (this.currentHP / this.maxHP) * 100
     },
+    /**
+     * Der Warnzustand der Sonne — dieselbe Entscheidung, die jede
+     * Vitalitätsleiste rot färbt, gestellt über dieselbe Funktion.
+     *
+     * Sie stand hier einmal als eigener Vergleich gegen eine eigene Konstante,
+     * und zwar mit `<` gegen die `<=` des Pause-Overlays: bei exakt 25,0 %
+     * pulste die Leiste, die Vignette über der Bühne aber nicht.
+     */
     isLow(): boolean {
-      return this.hpPercent < PLAYER_LOW_HP_THRESHOLD_PCT
+      return sunVitalStage(this.hpPercent) === 'red'
     },
     /**
      * HP je Spielsekunde: Grundwert + Regeneration branch / Eternal Orbit

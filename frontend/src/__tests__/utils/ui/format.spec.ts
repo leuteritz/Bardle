@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { durationSegments, formatPercentValue } from '@/utils/ui/format'
+import { durationSegments, formatPercentValue, sunVitalStage } from '@/utils/ui/format'
+import { HP_HEALTHY_PERCENT, HP_CRIT_PERCENT } from '@/config/constants'
 
 const S = 1000
 const M = 60 * S
@@ -86,5 +87,37 @@ describe('formatPercentValue', () => {
   it('rounds to a single decimal instead of trailing digits', () => {
     expect(formatPercentValue(22 * 1.3)).toBe('28.6')
     expect(formatPercentValue(16 * 1.15)).toBe('18.4')
+  })
+})
+
+describe('sunVitalStage', () => {
+  it('names the three bands', () => {
+    expect(sunVitalStage(100)).toBe('green')
+    expect(sunVitalStage(70)).toBe('green')
+    expect(sunVitalStage(40)).toBe('yellow')
+    expect(sunVitalStage(30)).toBe('yellow')
+    expect(sunVitalStage(10)).toBe('red')
+    expect(sunVitalStage(0)).toBe('red')
+  })
+
+  /**
+   * Der eigentliche Zweck der Funktion. Die Schwellen wurden vorher an zwei
+   * Stellen mit VERSCHIEDENEN Operatoren gelesen — `< 25` im Store gegen
+   * `<= 25` im Pause-Overlay. Genau auf dem Punkt pulste die Leiste rot,
+   * während die Sonne nicht als „low" galt und die Vignette ausblieb.
+   *
+   * Beide Kanten gehören deshalb der TIEFEREN Stufe: der Wert selbst ist schon
+   * kein „unversehrt" bzw. kein „angeschlagen" mehr.
+   */
+  it('puts both thresholds themselves into the lower band', () => {
+    expect(sunVitalStage(HP_HEALTHY_PERCENT)).toBe('yellow')
+    expect(sunVitalStage(HP_HEALTHY_PERCENT + 0.01)).toBe('green')
+    expect(sunVitalStage(HP_CRIT_PERCENT)).toBe('red')
+    expect(sunVitalStage(HP_CRIT_PERCENT + 0.01)).toBe('yellow')
+  })
+
+  it('stays in the outer bands past the ends of the scale', () => {
+    expect(sunVitalStage(140)).toBe('green')
+    expect(sunVitalStage(-20)).toBe('red')
   })
 })

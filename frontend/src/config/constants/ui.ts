@@ -266,21 +266,41 @@ export const PAUSE_MATERIAL_COLUMNS = 5
 export const PAUSE_MATERIAL_ROWS = 2
 
 // ── HP-Stufen ──────────────────────────────────────────────────────────────
-// Zwei Leisten lesen dieselbe Skala: der Vitalitäts-Strip des Pause-Overlays
-// und der Vitals-Cluster im Kopf des Bard-Profils. Sie hiessen einmal
-// PAUSE_HP_*, solange das Overlay die einzige Stelle war — zwei Anzeigen
-// desselben Werts dürfen ihre Umschlagpunkte aber nicht getrennt führen,
-// sonst ist die Sonne im Profil noch gelb und in der Pause schon rot.
+// Die EINE Skala der Spieler-Sonne. Sie hiess einmal PAUSE_HP_*, solange das
+// Pause-Overlay die einzige Stelle war; heute lesen sie VIER Leisten — Orbit,
+// Star-Fight-Arena, Pause-Overlay und der Vitals-Cluster im Kopf des Profils —
+// dazu der Store-Getter `playerStore.isLow`. Anzeigen desselben Werts dürfen
+// ihre Umschlagpunkte nicht getrennt führen, sonst ist die Sonne im Profil noch
+// gelb und im Orbit schon rot.
+//
+// Gelesen wird sie ausschliesslich über `sunVitalStage()` in
+// `utils/ui/format.ts` — die Funktion hält auch den Vergleichsoperator fest. Er
+// stand einmal zweimal verschieden im Code (`< 25` im Store, `<= 25` im
+// Overlay), und bei exakt 25,0 % pulste die Leiste rot, während die Vignette
+// ausblieb.
 /** Ab diesem Anteil gilt die Sonne als unversehrt (grün). */
 export const HP_HEALTHY_PERCENT = 50
-/** Darunter wird die Leiste rot und pulst. */
+/** Darunter wird die Leiste rot und pulst — zugleich die Low-HP-Schwelle. */
 export const HP_CRIT_PERCENT = 25
 // Breitenreserve der HP-Zahl: Anteile des Maximums, die als unsichtbare
 // Messmuster mitgerendert werden. Aus dem Maximum allein lässt sich die Breite
 // nicht ableiten — formatNumber wechselt innerhalb einer Einheitenstufe die
 // Länge („2.6K" gegen „2.34K") und unterhalb davon nochmals („999"). Die
 // Stützstellen decken beide Fälle ab; die Spalte nimmt die breiteste.
-export const PAUSE_HP_WIDTH_PROBES = [1, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1]
+//
+// Ohne PAUSE_-Präfix: die Messmuster sind eine Eigenschaft der `VitalityBar`
+// (Prop `widthProbes`), nicht des Overlays, das sie zuerst gebraucht hat.
+export const HP_WIDTH_PROBES = [1, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1]
+
+// Geisterspur der Vitalitätsleisten: der helle Streifen, den die
+// zurückschnellende Füllung freigibt, ist genau der Schaden dieses Treffers.
+// Sie läuft NUR beim Sinken nach — steigt der Wert, springt sie ohne Übergang
+// mit, sonst liefe wegen der Regeneration jede Spielsekunde eine Transition auf
+// einer Ebene, die in dieser Richtung ohnehin von der Füllung verdeckt ist.
+/** Wie lange die Geisterspur der Füllung hinterherzieht. */
+export const VITALITY_GHOST_FALL_MS = 900
+/** Wie lange sie vorher stehen bleibt, damit der Verlust ablesbar wird. */
+export const VITALITY_GHOST_FALL_DELAY_MS = 380
 
 // ── Pause-Overlay: Bilanz neben der Sonnenscheibe ──────────────────────────
 // Rechts der Schaden, links die Regeneration der laufenden Pause. Die Treffer

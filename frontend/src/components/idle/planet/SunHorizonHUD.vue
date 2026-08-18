@@ -32,22 +32,12 @@
 
     <!-- HP direkt über dem Kamm — nur xx / yy, mittig über der Kuppel -->
     <div class="sfsun-hp">
-      <div class="sfsun-hp-head">
-        <Icon icon="ph:heart-fill" width="15" height="15" class="sfsun-hp-icon" />
-        <span class="sfsun-hp-value">
-          {{ formatNumber(Math.ceil(playerStore.currentHP)) }}
-          <span class="sfsun-hp-sep">/</span>
-          {{ formatNumber(playerStore.maxHP) }}
-        </span>
-      </div>
-      <div class="sfsun-hp-track">
-        <div
-          class="sfsun-hp-fill"
-          :class="{ 'sfsun-hp-fill--low': playerStore.isLow }"
-          :style="{ width: hpPct + '%' }"
-        />
-        <div class="sfsun-hp-ticks" />
-      </div>
+      <VitalityBar
+        :current="playerStore.currentHP"
+        :max="playerStore.maxHP"
+        label-placement="above"
+        lead-icon="ph:heart-fill"
+      />
     </div>
 
     <!-- Zielmarkierung: der Boss hat die Sonne im Visier (Aim-Phase des
@@ -80,10 +70,10 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import VitalityBar from '@/components/ui/VitalityBar.vue'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
-import { formatNumber } from '@/config/ui/numberFormat'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
@@ -123,8 +113,6 @@ import {
 const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const solarStore = useSolarUpgradeStore()
-
-const hpPct = computed(() => Math.max(0, Math.min(100, playerStore.hpPercent)))
 
 // ── Phase: Comet ist die Vorstufe und liegt bewusst NICHT in STAR_PHASE_DATA ──
 const phaseData = computed(() => STAR_PHASE_DATA[solarStore.starPhase] ?? STAR_PHASE_DATA[0])
@@ -662,88 +650,18 @@ onUnmounted(() => {
   transform: translateX(-50%);
   width: var(--sfsun-hp-w, 200px);
   z-index: 5;
-}
 
-.sfsun-hp-head {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 5px;
-}
-
-.sfsun-hp-icon {
-  color: #cc6050;
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 8px rgba(220, 40, 18, 0.9));
-}
-
-.sfsun-hp-value {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-  text-shadow:
-    0 0 12px rgba(220, 175, 40, 0.7),
-    0 1px 2px rgba(0, 0, 0, 0.9);
-}
-
-.sfsun-hp-sep {
-  color: #7a5820;
-  font-weight: 400;
-  letter-spacing: 0;
-  margin: 0 2px;
-}
-
-.sfsun-hp-track {
-  position: relative;
-  width: 100%;
-  height: 11px;
-  border-radius: 2px;
-  background: rgba(0, 0, 0, 0.55);
-  box-shadow:
-    inset 0 1px 4px rgba(0, 0, 0, 0.8),
-    0 0 0 1px rgba(80, 40, 8, 0.45);
-  overflow: hidden;
-}
-
-.sfsun-hp-fill {
-  position: relative;
-  height: 100%;
-  background: linear-gradient(90deg, #620b05 0%, #a81206 30%, #d41e0e 68%, #f83820 100%);
-  box-shadow: 0 0 10px rgba(240, 52, 18, 0.65);
-  transition: width 0.4s ease;
-}
-
-/* Low-HP-Puls über opacity statt animiertem box-shadow (kein Repaint/Frame) */
-.sfsun-hp-fill--low {
-  animation: sfsun-hp-low 0.75s ease-in-out infinite alternate;
-}
-
-@keyframes sfsun-hp-low {
-  from {
-    opacity: 0.65;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Segmentlinien bei 25 / 50 / 75 % — gleiche Lesart wie die PlayerHPBar */
-.sfsun-hp-ticks {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0,
-    transparent calc(25% - 0.5px),
-    rgba(0, 0, 0, 0.45) calc(25% - 0.5px),
-    rgba(0, 0, 0, 0.45) 25%
-  );
-  z-index: 2;
-  pointer-events: none;
+  /* Maße der Leiste. Sie ist so schmal wie die im Orbit und trägt aus demselben
+     Grund keinen Dauerglanz; die drei Höhenstufen weiter unten setzen nur noch
+     Variablen. */
+  --vb-h: 11px;
+  --vb-radius: 2px;
+  --vb-label-size: 0.88rem;
+  --vb-label-sub-size: 0.88rem;
+  --vb-label-gap: 5px;
+  --vb-icon-size: 15px;
+  --vb-num-gap: 4px;
+  --vb-cur-reserve: 0;
 }
 
 /* ── Zielmarkierung des Strikes ─────────────────────────────────────────────
@@ -944,16 +862,12 @@ onUnmounted(() => {
    selbst; hier schrumpfen nur die Schriftgrößen, damit der Streifen der
    flacheren Arena nicht in die Champion-Row läuft. */
 @media (max-height: 1100px) {
-  .sfsun-hp-head {
-    margin-bottom: 4px;
-  }
-
-  .sfsun-hp-value {
-    font-size: 0.8rem;
-  }
-
-  .sfsun-hp-track {
-    height: 9px;
+  .sfsun-hp {
+    --vb-h: 9px;
+    --vb-label-size: 0.8rem;
+    --vb-label-sub-size: 0.8rem;
+    --vb-label-gap: 4px;
+    --vb-icon-size: 13px;
   }
 
   .sfsun-float {
@@ -968,19 +882,13 @@ onUnmounted(() => {
      tragen, auch wenn die Comet-Kuppe kaum breiter ist */
   .sfsun-hp {
     min-width: 210px;
-  }
 
-  .sfsun-hp-head {
-    gap: 8px;
-    margin-bottom: 7px;
-  }
-
-  .sfsun-hp-value {
-    font-size: 1.1rem;
-  }
-
-  .sfsun-hp-track {
-    height: 14px;
+    --vb-h: 14px;
+    --vb-label-size: 1.1rem;
+    --vb-label-sub-size: 1.1rem;
+    --vb-label-gap: 7px;
+    --vb-icon-size: 19px;
+    --vb-num-gap: 6px;
   }
 
   .sfsun-float {
@@ -992,7 +900,6 @@ onUnmounted(() => {
   .sfsun-dome,
   .sfsun-glow,
   .sfsun-crest--hit,
-  .sfsun-hp-fill--low,
   .sfsun-aim-cap,
   .sfsun-aim-lock,
   .sfsun-aim-lock-icon,

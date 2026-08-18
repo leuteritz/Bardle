@@ -16,6 +16,8 @@ import {
   BADGE_COUNT_CAP,
   HP_STAGE_HIGH_PCT,
   HP_STAGE_MID_PCT,
+  HP_HEALTHY_PERCENT,
+  HP_CRIT_PERCENT,
 } from '@/config/constants'
 
 /** Eine Dauer in ihre vier Einheiten zerlegt. */
@@ -177,6 +179,32 @@ export function hpStageClass(percent: number): string {
   if (percent > HP_STAGE_HIGH_PCT) return 'hp--high'
   if (percent > HP_STAGE_MID_PCT) return 'hp--mid'
   return 'hp--low'
+}
+
+/** Die drei Zustände der eigenen Sonne. */
+export type SunVitalStage = 'green' | 'yellow' | 'red'
+
+/**
+ * Stufe der SPIELER-Sonne zu einem Prozentwert.
+ *
+ * Steht bewusst NEBEN `hpStageClass` und ist nicht darin aufgegangen: das dort
+ * ist die Skala der Kämpfer (Champions, Bosse, Objectives) mit 60/35, hier
+ * steht die des Spielers mit 50/25. Zwei Skalen, weil zwei Dinge gemeint sind —
+ * die Schwellen müssen sich getrennt bewegen können.
+ *
+ * Gibt den STUFENNAMEN zurück, nicht die CSS-Klasse: vier Leisten, der Tooltip
+ * im Profilkopf und der Store-Getter `isLow` lesen dieselbe Entscheidung, aber
+ * mit drei verschiedenen Klassenpräfixen bzw. gar keinem.
+ *
+ * Die Vergleiche sind `>`, nicht `>=`. Das ist der Grund, warum es die Funktion
+ * gibt: `isLow` prüfte einmal `< 25`, das Pause-Overlay `<= 25` — bei exakt
+ * 25,0 % pulste die Leiste rot, während der Store die Sonne nicht als „low"
+ * führte und die Vignette ausblieb.
+ */
+export function sunVitalStage(percent: number): SunVitalStage {
+  if (percent > HP_HEALTHY_PERCENT) return 'green'
+  if (percent > HP_CRIT_PERCENT) return 'yellow'
+  return 'red'
 }
 
 /**
