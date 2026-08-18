@@ -42,6 +42,9 @@ const METRICS: HudFieldMetrics = {
   headerCenterBottom: 133,
   centerArc: { cx: 695, rx: 134, ry: 106, topOffset: 84 },
   keycapBar: 30,
+  // Ohne Fähigkeitenleiste — die Zusicherungen unten gelten der BAR-Kontur.
+  abilityBarTop: 0,
+  abilityBarHalfW: 0,
 }
 
 const UP = -Math.PI / 2
@@ -100,6 +103,32 @@ describe('voidPath', () => {
       // pauschale Rechnung arbeiten müsste.
       const rectTop = H - 443 * METRICS.hudScale
       expect(mid.y).toBeGreaterThan(rectTop + 200)
+    })
+
+    // Die Fähigkeitenleiste steht als eigenes Rechteck über dem Mittelstreifen
+    // und war der Kontur lange unbekannt — ein Wesen riss dahinter auf, wo es
+    // niemand sehen und niemand anklicken konnte.
+    it('bleibt über der Fähigkeitenleiste, wo eine steht', () => {
+      const barTop = H - 200
+      const withBar: HudFieldMetrics = { ...METRICS, abilityBarTop: barTop, abilityBarHalfW: 230 }
+
+      const mid = voidPositionAt(monster(DOWN), SIZE, SUN, SPAWNED_AT, W, H, withBar)
+      expect(Math.abs(mid.x - W / 2)).toBeLessThanOrEqual(230)
+      expect(mid.y).toBeLessThanOrEqual(barTop)
+      // … und ohne Leiste stünde es tiefer: die Kante wirkt wirklich.
+      const bare = voidPositionAt(monster(DOWN), SIZE, SUN, SPAWNED_AT, W, H, METRICS)
+      expect(bare.y).toBeGreaterThan(mid.y)
+    })
+
+    // Seitlich der Leiste gilt sie nicht — sie hört dort einfach auf, statt
+    // eine Kontur zu haben.
+    it('lässt neben der Fähigkeitenleiste die Bar-Kante gelten', () => {
+      const withBar: HudFieldMetrics = { ...METRICS, abilityBarTop: H - 200, abilityBarHalfW: 100 }
+      for (const angle of [2.9, 0.25]) {
+        const p = voidPositionAt(monster(angle), SIZE, SUN, SPAWNED_AT, W, H, withBar)
+        const same = voidPositionAt(monster(angle), SIZE, SUN, SPAWNED_AT, W, H, METRICS)
+        expect(p.y).toBeCloseTo(same.y, 6)
+      }
     })
 
     // Über den erhöhten Enden gilt dagegen die Panel-Kante, und die liegt weit

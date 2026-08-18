@@ -167,6 +167,7 @@ import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { onKeybinding, triggerKeybind } from '@/composables/system/useKeybindings'
 import { formatNumber } from '@/config/ui/numberFormat'
+import { invalidateHudField } from '@/utils/ui/hudField'
 import {
   BARD_ABILITIES,
   BARD_PASSIVE,
@@ -775,6 +776,35 @@ function publishHeight(px: number): void {
   )
 }
 
+/**
+ * Die KANTEN der Kachelreihe — für die HUD-Kontur, nicht fürs Stapeln.
+ *
+ * `--ability-bar-h` taugt dafür nicht: es trägt den Stapelabstand der Buff-Reihe
+ * mit und sagt nichts darüber, WO oben ist. Die Kontur braucht genau zwei
+ * Zahlen, und beide kommen aus demselben Rect, das `measureRow` ohnehin liest —
+ * keine zweite Messung, keine Rechnung über `--hud-scale`, kein zweites Mal
+ * dieselbe Geometrie beschrieben.
+ *
+ * Steht keine Leiste im Feld (angedockt oder abgebaut), werden beide entfernt;
+ * `hudField.ts` liest das als „kein Band".
+ */
+function publishEdges(rect: DOMRect | null): void {
+  const root = document.documentElement.style
+  if (!rect) {
+    root.removeProperty('--ability-bar-top')
+    root.removeProperty('--ability-bar-w')
+  } else {
+    root.setProperty('--ability-bar-top', `${Math.round(rect.top)}px`)
+    root.setProperty('--ability-bar-w', `${Math.round(rect.width)}px`)
+  }
+  // Der Cache-Schlüssel der Kontur kennt nur Fenstermaß und Header-Bogen. Die
+  // Leiste verschwindet aber auch OHNE Resize — sobald ein Profil-Tab öffnet
+  // oder sie ins Star-Fight-Modal andockt. Die gefährliche Richtung ist das
+  // Zurückkommen: ohne diesen Ruf hielte die Kontur das Band bis zum nächsten
+  // Resize für frei.
+  invalidateHudField()
+}
+
 /** Nur die Kachelreihe zählt — Tooltip und Meldung schweben darüber und
  *  dürfen die Buff-Reihe nicht bei jedem Überfahren verschieben.
  *
@@ -785,11 +815,28 @@ function publishHeight(px: number): void {
 function measureRow(): void {
   if (props.docked) {
     publishHeight(-ABILITY_BAR_STACK_GAP_PX)
+    publishEdges(null)
     return
   }
   const row = barEl.value?.querySelector('.ab-row')
-  if (row) publishHeight(row.getBoundingClientRect().height)
+  if (row) {
+    const rect = row.getBoundingClientRect()
+    publishHeight(rect.height)
+    publishEdges(rect)
+  }
 }
+
+/** Nur der Weg selbst zählt; Deckkraft und Filter verschieben keine Kante. */
+function onBarTransitionEnd(e: TransitionEvent): void {
+  if (e.propertyName === 'transform') measureRow()
+}
+
+// Ohne Bewegung (prefers-reduced-motion) gibt es kein `transitionend` — dann
+// steht die Endlage schon im Frame nach dem Klassenwechsel.
+watch(revealed, async () => {
+  await nextTick()
+  measureRow()
+})
 
 // Beim An- und Abdocken wechseln Form und Anker — beide Maße stehen erst nach
 // dem nächsten Rendern fest.
@@ -814,10 +861,19 @@ onMounted(() => {
     sizeObserver = new ResizeObserver(measureRow)
     sizeObserver.observe(row)
   }
+  // Beim Einblenden fährt die Leiste 12 px nach oben (`.ability-bar--in`). Die
+  // erste Messung oben läuft VOR diesem Weg, ihre Oberkante steht also 12 px zu
+  // tief — die Kontur liesse genau diesen Streifen frei. Der ResizeObserver
+  // sieht es nicht: die Reihe behält dabei ihre Größe.
+  barEl.value?.addEventListener('transitionend', onBarTransitionEnd)
   // Die Leiste ist zentriert: ein Breitenwechsel verschiebt jede Kachel, und
   // damit den Anker eines offenen Kastens. `placeTip` steigt sofort aus, wenn
   // keiner offen ist.
   window.addEventListener('resize', placeTip)
+  // Und die Oberkante wandert schon, wenn nur die HÖHE des Fensters wechselt —
+  // die Leiste hängt an der unteren Bildkante. Der ResizeObserver auf `.ab-row`
+  // sieht das nicht, weil die Reihe dabei ihre Größe behält.
+  window.addEventListener('resize', measureRow)
   ensureLoop()
 })
 
@@ -830,8 +886,13 @@ onUnmounted(() => {
   if (meepGainCoalesceTimer) clearTimeout(meepGainCoalesceTimer)
   if (meepGainClearTimer) clearTimeout(meepGainClearTimer)
   window.removeEventListener('resize', placeTip)
+  window.removeEventListener('resize', measureRow)
+  barEl.value?.removeEventListener('transitionend', onBarTransitionEnd)
   sizeObserver?.disconnect()
   document.documentElement.style.removeProperty('--ability-bar-h')
+  // Abgebaut heisst: kein Band im Feld. Die Kontur muss das SOFORT sehen —
+  // ein Profil-Tab schliesst sich ohne jeden Resize wieder.
+  publishEdges(null)
 })
 </script>
 

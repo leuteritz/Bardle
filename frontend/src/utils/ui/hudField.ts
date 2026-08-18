@@ -50,6 +50,14 @@ export interface HudFieldMetrics {
    * genauso undurchsichtig. Sie zählt zur Panel-Zone, nicht zum Streifen.
    */
   keycapBar: number
+  /**
+   * Oberkante der Fähigkeitenleiste als Bildkoordinate — 0, wenn keine im Feld
+   * steht (angedockt im Star Fight, oder abgebaut, weil ein Profil-Tab offen
+   * ist). Die Leiste veröffentlicht sie selbst als `--ability-bar-top`.
+   */
+  abilityBarTop: number
+  /** Halbe Breite derselben Leiste; sie steht mittig. 0 = keine Leiste. */
+  abilityBarHalfW: number
 }
 
 /**
@@ -124,9 +132,37 @@ export function hudHeaderBottomAt(x: number, m: HudFieldMetrics): number {
   return m.headerBottom + depth * stretch
 }
 
+/**
+ * Oberkante der FÄHIGKEITENLEISTE an der Stelle `x`, oder die Bildunterkante,
+ * wo keine steht.
+ *
+ * Sie liegt als eigene Kante neben `hudBarTopAt` und nicht darin: jene Funktion
+ * bildet `BottomBarComponent.framePath` nach — einen Bogen mit Panel, Kehle und
+ * Mittelstreifen — und wird in `voidPath.spec.ts` als genau dieser Pfad geprüft.
+ * Die Leiste ist dagegen ein schlichtes Rechteck, mittig über dem
+ * Mittelstreifen und um 14 px davon abgesetzt. Zwei Formen in einer Funktion
+ * nähmen der Spec ihre Aussage.
+ *
+ * Beide Zahlen kommen aus der Leiste selbst (`--ability-bar-top`,
+ * `--ability-bar-w`), nicht aus einer nachgebauten Rechnung: ihre Kachelgröße
+ * springt an zwei Breiten-Breakpoints (84/104/128 px), und sie verschwindet
+ * ganz, sobald sie ins Star-Fight-Modal andockt oder ein Profil-Tab sie abbaut.
+ * Eine Konstante hier wäre auf Full HD richtig und auf 4K falsch.
+ */
+export function hudAbilityBarTopAt(x: number, m: HudFieldMetrics): number {
+  if (m.abilityBarHalfW <= 0 || m.abilityBarTop <= 0) return m.viewportH
+  return Math.abs(x - m.viewportW / 2) <= m.abilityBarHalfW ? m.abilityBarTop : m.viewportH
+}
+
 /** Die freie senkrechte Spanne an der Stelle `x`. */
 export function hudFreeBandAt(x: number, m: HudFieldMetrics): { top: number; bottom: number } {
-  return { top: hudHeaderBottomAt(x, m), bottom: hudBarTopAt(x, m) }
+  return {
+    top: hudHeaderBottomAt(x, m),
+    // Die tiefere der beiden Unterkanten gewinnt. Über dem Mittelstreifen ist
+    // das die Leiste, an den Seiten die Bar — und zwischen beiden liegt kein
+    // Übergang, sondern eine Stufe: die Leiste hört seitlich einfach auf.
+    bottom: Math.min(hudBarTopAt(x, m), hudAbilityBarTopAt(x, m)),
+  }
 }
 
 /**
@@ -180,6 +216,8 @@ export function readHudFieldMetrics(centerArc: HeaderCenterArc | null): HudField
       headerCenterBottom: 0,
       centerArc: null,
       keycapBar: 0,
+      abilityBarTop: 0,
+      abilityBarHalfW: 0,
     }
   }
   const style = getComputedStyle(document.documentElement)
@@ -200,6 +238,8 @@ export function readHudFieldMetrics(centerArc: HeaderCenterArc | null): HudField
     headerCenterBottom: Math.max(headerBottom, read('--level-badge-bottom', headerBottom)),
     centerArc,
     keycapBar: Math.max(0, read('--kb-hud-h', 0)),
+    abilityBarTop: Math.max(0, read('--ability-bar-top', 0)),
+    abilityBarHalfW: Math.max(0, read('--ability-bar-w', 0)) / 2,
   }
 }
 

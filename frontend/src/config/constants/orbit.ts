@@ -275,11 +275,11 @@ export const STAR_SUMMARY_GAP_PX = 58
  * zusammengefasst ist, sondern eine Zeile je Planet trägt. GEMESSEN am
  * schlimmsten Fall, der sich bauen lässt — Ressourcenstern mit sechs Planeten
  * (Warden's Pact hebt die drei an), Champion-Block und laufendem Kampf:
- * 314 px bei 1920×1080, 337 px bei 2560×1440. Die 355 sind der Rest Luft.
+ * 301 px bei 1920×1080, 319 px bei 2560×1440. Die 340 sind der Rest Luft.
  *
- * Rund 27 px niedriger als noch mit der eigenen Angriffsleiste am Kartenende:
- * die kostete Leiste, Trennstrich und eine Kartenlücke, während der Balken in
- * der Zielzeile nur DIESE eine Zeile zweizeilig macht.
+ * Der Zustand der bekämpften Welt steht als blosse Zahl NEBEN ihrem Bild. Ein
+ * Balken darunter machte diese Zeile zwischenzeitlich zweizeilig und die Karte
+ * damit rund 45 px höher — er zeigte dasselbe wie die Zahl, nur ungenauer.
  *
  * Zu groß geschätzt heisst nur, dass die Karte im schlanken Fall etwas zu früh
  * nach oben klappt, was niemand bemerkt — zu klein hieße, sie stünde halb in
@@ -287,7 +287,7 @@ export const STAR_SUMMARY_GAP_PX = 58
  * erledigt `translateY(-100%)` ohne Layout-Read; gebraucht wird er für die
  * Klappentscheidung und für die Kopf-Klemmung darunter.
  */
-export const STAR_SUMMARY_MAX_HEIGHT_PX = 355
+export const STAR_SUMMARY_MAX_HEIGHT_PX = 340
 /**
  * Halbe Breite der Karte, für die Frage „passt sie an dieser Stelle?". Die
  * HUD-Kontur springt in der Kehle zwischen Seitenpanel und Mittelstreifen auf
@@ -297,12 +297,13 @@ export const STAR_SUMMARY_MAX_HEIGHT_PX = 355
  * Wie die Höhe darüber der GRÖSSTE Fall, nicht der übliche — und GEMESSEN,
  * nicht gerechnet: derselbe Vollausbau wie dort, mit dem längsten Kadernamen
  * („Nunu & Willump“) und dem teuersten Beutebesatz je Zeile (grosser
- * Chime-Betrag plus zwei verschiedene Materialien), ergibt 252 px bei
- * 1920×1080 und 279 px bei 2560×1440. Halb 140, aufgerundet 146 — der
+ * Chime-Betrag plus zwei verschiedene Materialien), ergibt 291 px bei
+ * 1920×1080 und 325 px bei 2560×1440. Halb 163, aufgerundet 170 — der
  * Aufschlag ist Reserve, keine Messung.
  *
- * Der HP-Balken der bekämpften Welt treibt die Breite NICHT: er sitzt unter
- * der Beute seiner Zeile, nicht neben ihr.
+ * Die BREITESTE Zeile ist dabei die der bekämpften Welt: sie trägt zwischen
+ * Bild und Beute zusätzlich den Prozentwert. Nur sie — die übrigen Zeilen
+ * halten keine Spalte frei, die bei ihnen leer bliebe.
  *
  * Die Rechnung dahinter zu Fuß nachzuvollziehen führt in die Irre:
  * MedievalSharp hat keinen eigenen Fettschnitt, `font-weight: 700` wird
@@ -318,7 +319,7 @@ export const STAR_SUMMARY_MAX_HEIGHT_PX = 355
  * Breite gegen das ein, was jener Reihe fehlte: die Zuordnung „diese Beute
  * liegt auf dieser Welt“.
  */
-export const STAR_SUMMARY_HALF_WIDTH_PX = 146
+export const STAR_SUMMARY_HALF_WIDTH_PX = 170
 /**
  * Höhe des Planetenbildes in einer Beutezeile der Sternkarte. In der Zeile der
  * bekämpften Welt spannt es über beide Zeilen — Beute oben, Lebensbalken
@@ -363,6 +364,14 @@ export const STAR_SUMMARY_FLIP_STACK_PX = 8
  * zu hoch schon.
  */
 export const STAR_SUMMARY_FLIP_TOP_MARGIN_PX = 6
+/**
+ * Luft zwischen zwei Belohnungskarten, die einander ausweichen mussten.
+ *
+ * Ohne den Abstand stehen sie nach dem Ausweichen Kante an Kante und lesen sich
+ * wie EIN Kasten mit einer Trennlinie — genau der Zustand, den das Ausweichen
+ * auflösen soll.
+ */
+export const STAR_SUMMARY_STACK_GAP_PX = 6
 /** Abstand der Planetenzahl über der Oberkante des Sternkörpers. */
 export const STAR_COUNT_GAP_PX = 25
 /** Höhe der Planetenzahl — sie hält sich damit unter der Header-Kante. */

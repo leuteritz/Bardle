@@ -113,7 +113,12 @@
         <span class="sun-aim-ring sun-aim-ring--inner" />
       </span>
 
-      <!-- ④ Stern-Gesamt-Belohnung -->
+    </div>
+  </Teleport>
+
+  <!-- ④ Belohnungskarten — EIGENE Ebene, siehe `.star-summary-layer` -->
+  <Teleport to="body">
+    <div class="star-summary-layer" aria-hidden="true">
       <template v-for="star in frontStars" :key="'summary-' + star.id">
         <div
           v-if="
@@ -127,6 +132,7 @@
               'star-reward-summary--star-hovered':
                 hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
               'star-reward-summary--hover-dimmed': isStarHoverDimmed(star.id),
+              'star-reward-summary--summary-hovered': hoveredSummaryStarId === star.id,
               'star-reward-summary--targeted': targetedStarId === star.id,
               'star-reward-summary--raging': ragingStarId === star.id,
               'star-reward-summary--cursed': isCursedStar(star.id),
@@ -212,6 +218,31 @@
                 <span class="summary-planet__world">
                   <PlanetGlyph :type="row.planetType" :size="STAR_SUMMARY_PLANET_GLYPH_PX" />
                 </span>
+
+                <!-- Der Zustand der Welt, an der gerade gearbeitet wird: nur die
+                     Zahl, direkt neben ihrem Bild. Ein Balken stand hier
+                     zwischenzeitlich unter der Beute und machte die Zeile
+                     zweizeilig — er zeigte dasselbe wie die Zahl, nur ungenauer,
+                     und kostete dafür die Kartenhöhe.
+
+                     BEWUSST OHNE Beschriftung: ein Wort davor wäre entweder
+                     militärischer Jargon („Under Fire“) oder ein Begriff, den
+                     das Spiel schon anders belegt. Nötig ist auch keines — das
+                     Bild daneben BENENNT das Ziel, indem es die Welt zeigt.
+
+                     Der Wert kommt aus einem ungetrackten Ref der
+                     Frame-Schleife, NICHT aus `rewardSummaries`: dort dürfen
+                     `currentHP`/`maxHP` nicht hinein, sonst hinge die ganze
+                     Karte an jedem Treffer (siehe der Kommentar an
+                     `targetHpPct`). Genau deshalb trägt auch nur die EINE
+                     Zielzeile eine Zahl und nicht jede Zeile ihre eigene. -->
+                <span
+                  v-if="row.planetId === targetPlanetId"
+                  class="summary-planet__pct"
+                  :class="targetHpClass"
+                  >{{ targetHpPct }}%</span
+                >
+
                 <span class="summary-planet__loot">
                   <span v-if="row.chimes > 0" class="summary-item">
                     <img
@@ -237,37 +268,8 @@
                     <span class="summary-count">×{{ mat.count }}</span>
                   </span>
                 </span>
-
-                <!-- Der Lebensbalken der Welt, an der gerade gearbeitet wird —
-                     in IHRER Zeile, unter ihrer Beute. Als eigene Leiste am
-                     Kartenende stand er vorher unter allen Zeilen und zeigte das
-                     Planetenbild ein zweites Mal; die Zuordnung musste eine
-                     Farbbrücke leisten, die hier der gemeinsame Kasten erledigt.
-
-                     BEWUSST OHNE Beschriftung: ein Wort davor wäre entweder
-                     militärischer Jargon („Under Fire“) oder ein Begriff, den
-                     das Spiel schon anders belegt. Nötig ist auch keines — das
-                     Bild links BENENNT das Ziel, indem es die Welt zeigt.
-
-                     Die Werte kommen aus den ungetrackten Refs der
-                     Frame-Schleife, NICHT aus `rewardSummaries`: dort dürfen
-                     `currentHP`/`maxHP` nicht hinein, sonst hinge die ganze
-                     Karte an jedem Treffer (siehe der Kommentar an
-                     `targetHpRatio`). Genau deshalb trägt auch nur die EINE
-                     Zielzeile einen Balken und nicht jede Zeile ihren eigenen. -->
-                <span v-if="row.planetId === targetPlanetId" class="summary-planet__meter">
-                  <span class="summary-planet__pct">{{ targetHpPct }}%</span>
-                  <span class="summary-planet__track">
-                    <span
-                      class="summary-planet__fill"
-                      :class="targetHpClass"
-                      :style="{ transform: `scaleX(${targetHpRatio})` }"
-                    />
-                  </span>
-                </span>
               </div>
             </div>
-
           </div>
         </div>
       </template>
@@ -354,11 +356,11 @@ import {
   STAR_SUMMARY_HALF_WIDTH_PX,
   STAR_SUMMARY_FLIP_HYSTERESIS_PX,
   STAR_SUMMARY_FLIP_STACK_PX,
+  STAR_SUMMARY_STACK_GAP_PX,
   STAR_SUMMARY_FLIP_TOP_MARGIN_PX,
   STAR_SUMMARY_PLANET_GLYPH_PX,
   STAR_COUNT_GAP_PX,
   STAR_COUNT_HEIGHT_PX,
-  STAR_TIMER_HP_STEPS,
   STAR_TIMER_HP_PCT_STEPS,
   STAR_TIMER_HP_MIN_PCT,
   HP_HEALTHY_PERCENT,
@@ -596,10 +598,15 @@ function applyFrames() {
     for (const id of summaryFlipped.keys()) {
       if (!alive.has(id)) summaryFlipped.delete(id)
     }
+    // Kartenmaße verfallen lassen und beim nächsten Zugriff neu messen: sie
+    // ändern sich, wenn eine Welt befreit wird oder ein Champion dazukommt.
+    // Der Layout-Read steckt damit im Sweep (alle 300 Frames), nicht im Frame.
+    summarySizes.clear()
   }
 
   // Einmal je Frame für alle Sterne, nicht je Stern.
   refreshFieldEdges()
+  summaryPlacements.length = 0
 
   const nowTs = performance.now()
   const dt = lastDimTs === 0 ? 16 : Math.min(nowTs - lastDimTs, 50)
@@ -633,15 +640,23 @@ function applyFrames() {
       }
       const summary = summaryEls.get(star.id)
       if (summary) {
-        summary.style.transform = summaryTransform(star, half)
+        // Der Anker wird jetzt gerechnet, das `transform` erst nach dem
+        // Ausweichlauf geschrieben — der braucht ALLE Karten dieses Frames.
+        const anchor = summaryAnchor(star, half)
+        summaryPlacements.push({
+          el: summary,
+          id: star.id,
+          x: anchor.x,
+          y: anchor.y,
+          flipped: anchor.flipped,
+          w: summarySizeOf(star.id, summary).w,
+          h: summarySizeOf(star.id, summary).h,
+        })
         summary.style.opacity = dimFactor.toFixed(3)
-        // Dreht die Leine mit. `summaryTransform` hat den Zustand gerade
-        // gestellt, also steht hier der Wert dieses Frames; classList.toggle
-        // schreibt von sich aus nur bei echtem Wechsel.
-        summary.classList.toggle(
-          'star-reward-summary--flipped',
-          summaryFlipped.get(star.id) ?? false,
-        )
+        // Dreht die Leine mit. `summaryAnchor` hat den Zustand gerade gestellt,
+        // also steht hier der Wert dieses Frames; classList.toggle schreibt von
+        // sich aus nur bei echtem Wechsel.
+        summary.classList.toggle('star-reward-summary--flipped', anchor.flipped)
       }
     }
 
@@ -655,11 +670,18 @@ function applyFrames() {
     }
   }
 
+  resolveSummaryPlacements()
   drawHintCanvases()
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
 const { starRenders } = useStarSystem(effectiveHoveredStarId, applyFrames)
+
+// Die Kartenmaße ändern sich GENAU dann, wenn Vue die Karten neu rendert — eine
+// Welt wird befreit, ein Champion kommt dazu, ein Stern wechselt die Ebene. Auf
+// den Sweep zu warten hiesse, bis zu fünf Sekunden mit falschen Maßen zu
+// rechnen; `flush: 'post'` misst nach dem DOM-Update.
+watch(starRenders, () => summarySizes.clear(), { flush: 'post' })
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
 // Kurve des Header-Ovals — die Anhängsel weichen der KONTUR aus, nicht einer
@@ -865,10 +887,10 @@ const targetedStarId = computed(() => starGroupStore.targetedStarId)
  *
  * Deshalb dasselbe Muster wie bei `curseSecsLeft` und `rageSecsLeft`: die Werte
  * werden im ohnehin laufenden rAF-Loop ungetrackt nachgezogen und nur bei
- * echter Änderung des ANGEZEIGTEN Werts geschrieben. Der Balken läuft dabei
- * gröber als die Zahl (STAR_TIMER_HP_STEPS gegen STAR_TIMER_HP_PCT_STEPS) —
- * dieselbe Staffelung wie in den Header-Bars, aus demselben Grund: die Zahl ist
- * der exakte Wert, der Balken nur die Silhouette.
+ * echter Änderung des ANGEZEIGTEN Werts geschrieben. Gestuft wird auf ganze
+ * Prozent (STAR_TIMER_HP_PCT_STEPS), wie in den Header-Bars: feiner als das
+ * kann eine zweistellige Zahl gar nichts sagen, und jede Zwischenstufe wäre ein
+ * Schreibzugriff mehr je Frame.
  */
 /**
  * Welche Beutezeile den Balken trägt.
@@ -884,14 +906,20 @@ const targetedStarId = computed(() => starGroupStore.targetedStarId)
  */
 const targetPlanetId = computed<string | null>(() => bossStore.activeBoss?.planetId ?? null)
 
-const targetHpRatio = ref(1)
 const targetHpPct = ref(100)
-/** Ampel des Balkens — dieselben Schwellen wie im Star-Fight-HUD. */
+/**
+ * Ampel der ZAHL — dieselben Schwellen wie im Star-Fight-HUD.
+ *
+ * Sie sass zuvor auf einem Balken. Der ist weg, die Ampel nicht: sonst hätte
+ * das Entfernen des Balkens still auch die Dringlichkeit mitgenommen. Gesund
+ * bleibt die Ziffer cyan — die Ziel-Signatur der Karte —, darunter wechselt sie
+ * die Farbe, so wie der Balken es tat.
+ */
 const targetHpClass = computed(() =>
   targetHpPct.value <= HP_CRIT_PERCENT
-    ? 'summary-planet__fill--critical'
+    ? 'summary-planet__pct--critical'
     : targetHpPct.value <= HP_HEALTHY_PERCENT
-      ? 'summary-planet__fill--low'
+      ? 'summary-planet__pct--low'
       : '',
 )
 
@@ -1286,12 +1314,10 @@ function enemyAttackLoop(ts: number) {
     const targetBoss = bossStore.activeBoss
     if (targetBoss && !targetBoss.defeated && !targetBoss.expired && targetBoss.maxHP > 0) {
       const ratio = Math.max(0, Math.min(1, targetBoss.currentHP / targetBoss.maxHP))
-      const steppedRatio = Math.round(ratio * STAR_TIMER_HP_STEPS) / STAR_TIMER_HP_STEPS
       // Ein LEBENDER Boss zeigt nie „0 %“ — sonst liest sich die Zahl wie
       // „besiegt“, während der Stern noch steht.
       const pct =
         ratio > 0 ? Math.max(STAR_TIMER_HP_MIN_PCT, Math.round(ratio * STAR_TIMER_HP_PCT_STEPS)) : 0
-      if (steppedRatio !== targetHpRatio.value) targetHpRatio.value = steppedRatio
       if (pct !== targetHpPct.value) targetHpPct.value = pct
     }
     // ──────────────────────────────────────────────────────────────────────────────
@@ -1593,7 +1619,22 @@ function countAnchorY(star: StarRenderEntry, half: number): number {
   return Math.min(Math.max(wanted, band.top + STAR_COUNT_HEIGHT_PX), band.bottom)
 }
 
-function summaryTransform(star: StarRenderEntry, half: number): string {
+/**
+ * Wo die Karte dieses Sterns hin WILL — vor dem Ausweichen voreinander.
+ *
+ * Getrennt vom Transform-String, weil `isSummaryFlipped` den Hysterese-Zustand
+ * SCHREIBT: die Ausweichrechnung braucht die Anker aller Karten, bevor sie eine
+ * einzige schreiben kann, und ein zweiter Aufruf je Stern und Frame würde die
+ * Hysterese ein zweites Mal fortschreiben. Diese Funktion läuft genau einmal je
+ * Stern und Frame, der String entsteht danach aus ihrem Ergebnis.
+ *
+ * `y` ist die verankerte Kante: unten die OBERkante der Karte, oben (geklappt)
+ * ihre UNTERkante — daher das `translateY(-100%)` im String.
+ */
+function summaryAnchor(
+  star: StarRenderEntry,
+  half: number,
+): { x: number; y: number; flipped: boolean } {
   if (isSummaryFlipped(star, half)) {
     // Über den Stern, und zwar über die Planetenzahl — an DEREN ausgewichener
     // Position, nicht an einer eigenen Rechnung, sonst legen sich die beiden
@@ -1610,9 +1651,149 @@ function summaryTransform(star: StarRenderEntry, half: number): string {
       wanted,
       freeBandAt(star.x).top + STAR_SUMMARY_MAX_HEIGHT_PX + STAR_SUMMARY_FLIP_TOP_MARGIN_PX,
     )
-    return `translate(${star.x}px, ${y}px) translateX(-50%) translateY(-100%)`
+    return { x: star.x, y, flipped: true }
   }
-  return `translate(${star.x}px, ${star.y + half + STAR_SUMMARY_GAP_PX}px) translateX(-50%)`
+  return { x: star.x, y: star.y + half + STAR_SUMMARY_GAP_PX, flipped: false }
+}
+
+function summaryTransformFor(a: { x: number; y: number; flipped: boolean }): string {
+  return a.flipped
+    ? `translate(${a.x}px, ${a.y}px) translateX(-50%) translateY(-100%)`
+    : `translate(${a.x}px, ${a.y}px) translateX(-50%)`
+}
+
+function summaryTransform(star: StarRenderEntry, half: number): string {
+  return summaryTransformFor(summaryAnchor(star, half))
+}
+
+// ── Karten weichen EINANDER aus ─────────────────────────────────────────────
+// Zwei nah beieinander stehende Sterne legten ihre Karten übereinander; seit
+// eine Karte bis 280 px breit ist, passiert das regelmässig. Beide bleiben dann
+// lesbar-unlesbar: Beute über Beute.
+//
+// Gerechnet wird REIN aus Zahlen, ohne einen einzigen Layout-Read im Frame —
+// nach dem Vorbild von `hudField.ts`. Die Höhe ist der einzige Wert, den die
+// Rechnung nicht selbst kennt; sie kommt aus einem Cache, der im ohnehin
+// laufenden Sweep aufgefrischt wird.
+//
+// Verschoben wird nur in Y und nur innerhalb des freien Feldes. Findet eine
+// Karte dort keinen Platz, bleibt sie liegen: eine Karte IM HUD ist schlimmer
+// als zwei, die sich überlappen — sie wäre gar nicht mehr bedienbar. Für genau
+// diesen Rest holt `--summary-hovered` die Karte unter dem Zeiger nach vorn.
+
+/**
+ * Gemessene Kartenmaße, je Stern. Ein Layout-Read, aber nur beim ersten Zugriff
+ * und nach jedem Sweep — nie im laufenden Frame.
+ *
+ * Die BREITE steht mit drin, obwohl `STAR_SUMMARY_HALF_WIDTH_PX` sie schätzt:
+ * jene Konstante ist bewusst der grösste Fall und damit für die
+ * Kollisionsprüfung zu grob. Zwei Karten 250 px auseinander gälten damit als
+ * überlappend, würden übereinander gestapelt und nähmen den senkrechten Platz
+ * weg, den zwei WIRKLICH überlappende dann nicht mehr fanden.
+ */
+const summarySizes = new Map<string, { w: number; h: number }>()
+
+/** Die Anker dieses Frames — modulweit, damit je Frame kein Array entsteht. */
+const summaryPlacements: {
+  el: HTMLElement
+  id: string
+  x: number
+  y: number
+  flipped: boolean
+  w: number
+  h: number
+}[] = []
+
+function summarySizeOf(id: string, el: HTMLElement): { w: number; h: number } {
+  const known = summarySizes.get(id)
+  if (known !== undefined) return known
+  const size = {
+    w: el.offsetWidth || STAR_SUMMARY_HALF_WIDTH_PX * 2,
+    h: el.offsetHeight || STAR_SUMMARY_MAX_HEIGHT_PX,
+  }
+  summarySizes.set(id, size)
+  return size
+}
+
+/** Oberkante der Karte aus ihrem Anker — geklappte hängen an der Unterkante. */
+function summaryTopOf(p: { y: number; flipped: boolean; h: number }): number {
+  return p.flipped ? p.y - p.h : p.y
+}
+
+/**
+ * Schiebt überlappende Karten auseinander und schreibt danach ihr `transform`.
+ *
+ * Die Reihenfolge ist die Sammelreihenfolge und damit stabil (sie folgt
+ * `starRenders`, das seine Einträge nur bei strukturellen Änderungen neu baut).
+ * NICHT nach `x` sortieren: die Sterne wandern, und eine wechselnde Ordnung
+ * liesse Karten die Plätze tauschen, während man auf sie zielt.
+ */
+function resolveSummaryPlacements(): void {
+  // Gestapelt statt gegeneinander geschoben: Karte 0 bleibt liegen, jede
+  // weitere weicht nur den BEREITS gesetzten aus. Damit ist die Auflösung in
+  // einem Durchgang fertig und kann nicht pendeln.
+  //
+  // Ein Lauf, der jede Karte gegen jede prüft und zur näheren Seite auswich,
+  // stand hier zwischenzeitlich und tat genau das: A schob B weg, B schob C
+  // weg, C schob A zurück. Frameweise gemessen lag in bis zu jedem Frame noch
+  // eine Überlappung — mehr Durchgänge halfen nicht, sie verschoben nur, in
+  // welchem Zustand der Zyklus endete.
+  for (let i = 1; i < summaryPlacements.length; i++) {
+    const p = summaryPlacements[i]
+    const band = freeBandAt(p.x)
+
+    // Höchstens so viele Anläufe, wie schon Karten stehen: jeder schiebt an
+    // mindestens einer endgültig vorbei.
+    for (let guard = 0; guard < i; guard++) {
+      const pTop = summaryTopOf(p)
+      let lowestEdge = 0
+      let highestEdge = 0
+      let blocked = false
+
+      for (let j = 0; j < i; j++) {
+        const q = summaryPlacements[j]
+        // Waagerecht auseinander? Dann kann nichts kollidieren. Gerechnet mit
+        // den ECHTEN Breiten — beide Karten hängen mit `translateX(-50%)` an
+        // ihrem Stern, ihre Ränder liegen also je halbe Breite daneben.
+        if (Math.abs(p.x - q.x) >= (p.w + q.w) / 2) continue
+        const qTop = summaryTopOf(q)
+        if (pTop + p.h <= qTop || qTop + q.h <= pTop) continue
+        // Die TIEFSTE Unterkante gewinnt: wer an ihr vorbei ist, ist an allen
+        // vorbei, die er in diesem Anlauf gefunden hat.
+        if (!blocked || qTop + q.h > lowestEdge) lowestEdge = qTop + q.h
+        if (!blocked || qTop < highestEdge) highestEdge = qTop
+        blocked = true
+      }
+
+      if (!blocked) break
+
+      let wantTop = lowestEdge + STAR_SUMMARY_STACK_GAP_PX
+      let partial = false
+      if (wantTop + p.h > band.bottom) {
+        // Unten ist Schluss — dann nach OBEN an derselben Kante vorbei.
+        wantTop = highestEdge - STAR_SUMMARY_STACK_GAP_PX - p.h
+        if (wantTop < band.top) {
+          // Auch das nicht. Dann so weit wie möglich statt gar nicht: eine um
+          // zwei Drittel entzerrte Karte ist lesbar, eine deckungsgleiche
+          // nicht. Ganz aufzugeben war die erste Fassung und liess bei drei
+          // dicht stehenden Sternen volle Überdeckungen stehen.
+          wantTop = Math.min(
+            Math.max(lowestEdge + STAR_SUMMARY_STACK_GAP_PX, band.top),
+            band.bottom - p.h,
+          )
+          partial = true
+        }
+      }
+      p.y += wantTop - pTop
+      // Ein Teilzug bringt nichts Weiteres — der nächste Anlauf käme auf
+      // dieselbe geklemmte Stelle und liefe leer.
+      if (partial) break
+    }
+  }
+
+  for (const p of summaryPlacements) {
+    p.el.style.transform = summaryTransformFor(p)
+  }
 }
 
 function countTransform(star: StarRenderEntry, half: number): string {
@@ -2024,6 +2205,31 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
+/* Die Belohnungskarten liegen in einer EIGENEN Ebene, nicht in `.star-sys-front`.
+   Der Grund ist ein Stapelkontext: `.star-sys-front` trägt selbst `z-index: 7`,
+   die 8 an der Karte ordnet sie also nur gegen ihre Geschwister INNERHALB der
+   Ebene. Global malte sie damit auf 7 — und die Chime-Klickfläche liegt auf 10
+   und misst bei Sonnenphase 5 volle 560×560 px um die Sonne. Eine Karte in
+   Sonnennähe war dadurch zu 100 % nicht anklickbar, und die Karte ist eine
+   SCHALTFLÄCHE (siehe „HUD-Freiraum" in CLAUDE.md).
+
+   Die ganze Vorderseite anzuheben wäre der falsche Weg: über ihr liegen das
+   Turret-Ring-Canvas (16), die SPIELER-HP-LEISTE (20/30) und das MVP-Overlay
+   (40) — die würde ein Vordergrundstern dann verdecken. Deshalb wandert nur
+   das Bedienelement, nicht die Bühne.
+
+   42 ist der Streifen, in dem Drifter und Void-Risse schon heute klickbar über
+   der Sonne liegen (`.drifter-layer`): über der Klickfläche, unter Header
+   (120) und Bottom-Bar (10000). Die Ebene selbst fängt keinen Klick ab — nur
+   die Karte, nach demselben Muster wie `.star-sys-layer` und
+   `.planet-orbit-layer`. */
+.star-summary-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 42;
+  pointer-events: none;
+}
+
 .star-reward-summary {
   position: absolute;
   top: 0;
@@ -2041,6 +2247,14 @@ function starCountStyle(star: StarRenderEntry) {
 
 .star-reward-summary--hover-dimmed {
   pointer-events: none;
+}
+
+/* Die Karte unter dem Zeiger kommt nach vorn. Der Ausweichlauf schiebt Karten
+   nur so weit auseinander, wie das freie Feld es hergibt — bleibt am Ende doch
+   eine Überlappung, ist wenigstens die gemeint, auf die man zeigt. Eine
+   statische Regel, nichts pro Frame. */
+.star-reward-summary--summary-hovered {
+  z-index: 9;
 }
 
 .summary-inner {
@@ -2460,35 +2674,22 @@ function starCountStyle(star: StarRenderEntry) {
   min-width: 0;
 }
 
-/* Die Zeile der Welt, an der gerade gearbeitet wird: zweizeilig statt
-   einzeilig — Bild links über BEIDE Zeilen, oben die Beute, darunter der
-   Messblock. Cyan wie jede andere Ziel-Signatur (Header-Zeile, Kartenkontur),
-   und statisch: hier bewegt sich nichts ausser dem Balken selbst. */
+/* Die Zeile der Welt, an der gerade gearbeitet wird. Eine Spalte mehr als die
+   übrigen: Bild, Zustand, Beute. Nur DIESE Zeile trägt sie, ihre Beute beginnt
+   damit etwas weiter rechts als in den anderen — die Einrückung markiert sie
+   zusätzlich, und die übrigen Zeilen zahlen keine Breite für eine Spalte, die
+   bei ihnen leer bliebe.
+
+   Cyan wie jede andere Ziel-Signatur (Header-Zeile, Kartenkontur), und
+   statisch: hier bewegt sich nichts. */
 .summary-planet--target {
-  grid-template-rows: auto auto;
-  row-gap: 0.25em;
+  grid-template-columns: auto auto 1fr;
   background: rgba(40, 200, 235, 0.1);
   box-shadow: inset 0 0 0 1px rgba(95, 240, 255, 0.22);
 }
 
 .summary-planet--target .summary-planet__world {
-  grid-row: 1 / span 2;
   background: radial-gradient(circle, rgba(95, 240, 255, 0.32) 0%, transparent 64%);
-}
-
-/* Prozentzahl links, Balken rechts daneben — die Zahl ist der exakte Wert, der
-   Balken nur die Silhouette (dieselbe Arbeitsteilung wie in den Header-Bars).
-
-   Die Spalte steht explizit da und wird nicht der Auto-Platzierung überlassen:
-   ohne sie rutscht der Block unter das Bild, sobald dessen Zeilenspanne einmal
-   wegfällt. `min-width: 0` ist Pflicht — eine Grid-Spalte ist sonst mindestens
-   so breit wie ihr Inhalt, und der Balken schöbe die Zeile auseinander. */
-.summary-planet__meter {
-  grid-column: 2;
-  display: flex;
-  align-items: center;
-  gap: 0.4em;
-  min-width: 0;
 }
 
 .summary-item {
@@ -2539,17 +2740,15 @@ function starCountStyle(star: StarRenderEntry) {
   );
 }
 
-/* ── Der Balken in der Zielzeile ────────────────────────────────────────
-   Gefüllt wird per `transform: scaleX()`, NIE über `width`: eine Breitenänderung
-   ist Layout, ein `transform` reine Compositor-Arbeit — und dieser Balken
-   bewegt sich, solange der Boss steht. Ohne Transition: der Wert kommt schon
-   gestuft aus dem rAF-Loop, eine Interpolation liefe zwischen zwei Stufen
-   dauerhaft und nähme dem Balken genau die Ruhe, die die Stufung herstellt. */
+/* Der Zustand der bekämpften Welt, als Zahl neben ihrem Bild.
+   Tabellenziffern, damit die Zeile beim Fallen nicht zappelt, und eine feste
+   Mindestbreite, damit der Sprung von 100 auf 99 die Beute nicht verschiebt. */
 .summary-planet__pct {
+  min-width: 2.6em;
+  text-align: right;
   font-size: 0.95em;
   font-weight: 800;
   line-height: 1;
-  /* Tabellenziffern: die Zeile darf beim Fallen nicht zappeln. */
   font-variant-numeric: tabular-nums;
   color: #5ff0ff;
   text-shadow:
@@ -2557,34 +2756,23 @@ function starCountStyle(star: StarRenderEntry) {
     0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-.summary-planet__track {
-  position: relative;
-  width: 100%;
-  min-width: 0;
-  height: 4px;
-  background: #0a0d10;
-  border: 1px solid rgba(40, 200, 235, 0.32);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.summary-planet__fill {
-  position: absolute;
-  inset: 0;
-  transform-origin: left center;
-  border-radius: 3px;
-  background: linear-gradient(to bottom, #7ff2ff, #23a8cc);
-}
-
 /* Ampel — dieselben Schwellen, die das Star-Fight-HUD für Boss-HP benutzt
    (HP_HEALTHY_PERCENT / HP_CRIT_PERCENT). Ein statischer Farbwechsel, keine
-   Animation: er sagt etwas über den Stand, nicht über den Takt. */
-.summary-planet__fill--low {
-  background: linear-gradient(to bottom, #ffd280, #e0902a);
+   Animation: er sagt etwas über den Stand, nicht über den Takt. Sie sass zuvor
+   auf einem Balken; der ist weg, sie bleibt — sonst wäre mit dem Balken auch
+   die Dringlichkeit verschwunden. */
+.summary-planet__pct--low {
+  color: #ffd280;
+  text-shadow:
+    0 0 8px rgba(224, 144, 42, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-.summary-planet__fill--critical {
-  background: linear-gradient(to bottom, #ff9a86, #d8452a);
+.summary-planet__pct--critical {
+  color: #ff9a86;
+  text-shadow:
+    0 0 8px rgba(216, 69, 42, 0.75),
+    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 .summary-champion {
