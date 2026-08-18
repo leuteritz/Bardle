@@ -443,9 +443,15 @@ onUnmounted(() => {
 /* ── Zustandsfarben ───────────────────────────────────────────────────────
    Sie liegen an der Wurzel, nicht an der Füllung: Füllung, Glutkeil und
    Zahlenwert ziehen dieselben drei Werte. */
+/* Der Verlauf ist wortgleich der der Level-Badge im Header-Bogen
+   (`.arc-level-badge` in `AppHeaderComponent.vue`) — beide sagen „alles in
+   Ordnung", und zwei Grüntöne dafür standen im selben Bild nebeneinander.
+   `--vb-txt` bleibt dagegen hell: die Zahl steht in Orbit, Arena und Pause auf
+   der schwarzen Bühne, nicht auf der Füllung. Die Badge trägt aus demselben
+   Grund weisse Schrift und kein Grün. */
 .vb--green {
-  --vb-hi: #74d448;
-  --vb-lo: #2e7a1a;
+  --vb-hi: #4a8a28;
+  --vb-lo: #2e6018;
   --vb-txt: #9ae86a;
 }
 .vb--yellow {
@@ -686,8 +692,21 @@ onUnmounted(() => {
 }
 
 /* ── Die dunkle Zwillingsebene ────────────────────────────────────────────
-   Sie liegt auf der Füllung. In Rot ist deren Mitte dunkel genug, dass Tinte
-   darauf nicht mehr trägt — dort kehrt die Ebene zurück auf helle Schrift. */
+   Sie liegt auf der Füllung — dunkle Tinte auf leuchtendem Grund.
+
+   Die Regel dahinter gilt je Stufe und nicht pauschal: **eine Füllung, deren
+   Mitte selbst dunkel ist, kehrt auf helle Schrift zurück.** Gemessen als
+   WCAG-Kontrast gegen die Mitte des jeweiligen Verlaufs:
+
+     gelb  #cfa72c   dunkle Tinte 8,0:1   → sie bleibt
+     grün  #3c751e   dunkle Tinte 3,3:1   → helle Tinte 5,2:1
+     rot   #c65245   dunkle Tinte unlesbar → helle Tinte 4,2:1
+
+   Grün stand einmal auf der hellen Fassung #74d448 und trug die Tinte mit
+   6,0:1 mühelos; mit dem Umzug auf den Verlauf der Level-Badge fiel es unter
+   die Schwelle. Der dunkle Textschatten gehört zwingend dazu — über die
+   Balkenhöhe schwankt der Kontrast (oben 3,9:1, unten 7,0:1), und er hebt die
+   Glyphen gegen die helle obere Kante ab. */
 .vb-label--on-fill .vb-now,
 .vb-label--on-fill .vb-sep,
 .vb-label--on-fill .vb-max,
@@ -698,13 +717,26 @@ onUnmounted(() => {
 }
 
 .vb--red .vb-label--on-fill .vb-now,
-.vb--red .vb-label--on-fill .vb-max {
+.vb--red .vb-label--on-fill .vb-max,
+.vb--green .vb-label--on-fill .vb-now,
+.vb--green .vb-label--on-fill .vb-max {
   color: #fff6e2;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
-.vb--red .vb-label--on-fill .vb-sep {
+.vb--red .vb-label--on-fill .vb-sep,
+.vb--green .vb-label--on-fill .vb-sep {
   color: rgba(255, 246, 226, 0.55);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+/* Der Regen-Wert steht ganz rechts im Balken und liegt deshalb GENAU DANN auf
+   der Füllung, wenn die Sonne gesund ist — bei Rot ist der Balken kurz und er
+   fällt auf den leeren Track, weshalb die dunkle Tinte dort nie störte. Er
+   bleibt grün statt cremeweiss zu werden: auf dem Track ist er es auch, und die
+   Farbe ist das, was ihn als Regeneration und nicht als zweite HP-Zahl liest. */
+.vb--green .vb-label--on-fill .vb-regen {
+  color: #d6f0b8;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
