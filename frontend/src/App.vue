@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { GAME_SPEED_DEFAULT } from '@/config/constants'
 import { useGameStore } from '@/stores/core/gameStore'
@@ -34,12 +34,59 @@ import ActiveBuffBar from '@/components/idle/drifter/ActiveBuffBar.vue'
 import OmenHudCard from '@/components/idle/omen/OmenHudCard.vue'
 import OmenChoiceOverlay from '@/components/idle/omen/OmenChoiceOverlay.vue'
 import BardAbilityBar from '@/components/idle/abilities/BardAbilityBar.vue'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import TemperedFateOverlay from '@/components/idle/abilities/TemperedFateOverlay.vue'
 import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 import KeybindHud from '@/components/keybinds/KeybindHud.vue'
 import KeybindPanel from '@/components/keybinds/KeybindPanel.vue'
 
 const gameStore = useGameStore()
+const starGroupStore = useStarGroupStore()
+
+/**
+ * Fähigkeitenleiste und Buff-Reihe stehen im Star Fight in der Schiene des
+ * Modals statt unten am Bild — dort lagen sie über Sonnen-Horizont und
+ * Spieler-HP.
+ *
+ * `<Teleport>` SETZT die Komponente UM, es erzeugt sie nicht neu: die
+ * Tastenanmeldung der Leiste, ihr rAF-Lauf für alle Cooldowns und das
+ * nicht-reaktive Kachelregister überleben den Wechsel unverändert. Genau
+ * deshalb ist es hier ein Teleport und keine zweite Instanz.
+ *
+ * ZWEI echte Docks statt `:disabled`, und `defer` dazu — beides kein
+ * Geschmack, sondern zwei verschiedene Fallstricke:
+ *
+ * • Vue löst das Teleport-Ziel nur neu auf, wenn sich `to` ÄNDERT; ein
+ *   deaktivierter Teleport schreibt sein altes `to` sogar ausdrücklich
+ *   zurück. Mit `:disabled` bliebe das Ziel für immer `null`, und das
+ *   Einschalten stürbe an `insertBefore` auf `null` — samt dem restlichen
+ *   Patch von App, sodass danach nicht einmal mehr das Modal erschien.
+ * • `defer` deckt den AUFBAU ab: Vue hängt das Wurzelelement einer Komponente
+ *   erst ein, NACHDEM es seine Kinder gemountet hat. Beim ersten Durchlauf
+ *   steht `#orbit-ability-dock` also noch nicht im Dokument, und ohne `defer`
+ *   fände der Teleport auch dieses Ziel nicht.
+ *
+ * Warum zusätzlich ein eigenes Flag statt `computed(() => …ModalOpen)`:
+ * dieselbe Zustandsänderung stößt App.vue UND das Modal zum Neurendern an, und
+ * App ist das ältere Bauteil — es kommt in der Warteschlange ZUERST dran.
+ * Angedockt wird deshalb erst, wenn das Dock nachweislich steht.
+ *
+ * Der Rückweg braucht kein `nextTick`: der Watcher läuft vor dem Rendern, die
+ * Leisten ziehen also zurück, solange das Dock noch im DOM steht.
+ */
+const abilitiesDocked = ref(false)
+
+watch(
+  () => starGroupStore.starFightModalOpen,
+  async (open) => {
+    if (!open) {
+      abilitiesDocked.value = false
+      return
+    }
+    await nextTick()
+    abilitiesDocked.value = document.getElementById('sf-ability-dock') !== null
+  },
+)
 useGalaxyTheme()
 useSpaceMusic()
 
@@ -101,7 +148,10 @@ watch(
          long; the buff bar above the scoreboard collects every timed effect. -->
     <DrifterLayer />
     <DrifterInfoCard />
-    <ActiveBuffBar />
+    <div id="orbit-buff-dock" class="bard-dock" />
+    <Teleport defer :to="abilitiesDocked ? '#sf-buff-dock' : '#orbit-buff-dock'">
+      <ActiveBuffBar :docked="abilitiesDocked" />
+    </Teleport>
 
     <!-- The Void: der Riss steht im Orbit auf derselben Ebene wie die Drifter,
          seine Karte an der SPITZE des Stapels oben links — sie meldet als
@@ -121,7 +171,10 @@ watch(
     <!-- Bard-Fähigkeiten: die Leiste sitzt über dem Scoreboard und schiebt die
          Buff-Reihe über sich; der Stase-Schleier liegt über dem Orbit, aber
          unter jedem Modal. -->
-    <BardAbilityBar />
+    <div id="orbit-ability-dock" class="bard-dock" />
+    <Teleport defer :to="abilitiesDocked ? '#sf-ability-dock' : '#orbit-ability-dock'">
+      <BardAbilityBar :docked="abilitiesDocked" />
+    </Teleport>
     <TemperedFateOverlay />
 
     <MusicControlWidget />
@@ -164,6 +217,14 @@ watch(
 </template>
 
 <style>
+/* Die Orbit-Docks sind reine Teleport-Ziele: `display: contents` gibt ihnen
+   keine eigene Box, die Leisten stehen darin genau so wie vorher direkt hier
+   im Baum. Ihre Stelle im Template ist Absicht — sie hält die DOM-Reihenfolge
+   von Buff-Reihe und Fähigkeitenleiste, die sich einen z-index teilen. */
+.bard-dock {
+  display: contents;
+}
+
 :root {
   --galaxy-accent: #0a1a3e;
   --star-base-size: 2px;

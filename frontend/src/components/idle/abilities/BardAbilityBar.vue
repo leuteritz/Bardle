@@ -5,12 +5,17 @@
     liegt ein Profil-Tab darüber, verschwindet mit der Leiste auch ihre
     Tastenanmeldung, damit ein „e" im Champion-Filter keine Fähigkeit zündet,
     die niemand sieht (useKeybindings meldet beim Unmount selbst ab).
+
+    Im Star Fight steht sie ANGEDOCKT in der Schiene des Modals (`docked`): dort
+    läge sie unten über Sonnen-Horizont und Spieler-HP. App.vue setzt sie per
+    `<Teleport>` um — dieselbe Instanz, also dieselbe Tastenanmeldung und
+    derselbe rAF-Lauf; nur Form und Anker wechseln.
   -->
   <div
     v-if="uiStore.bardActiveTab === null"
     ref="barEl"
     class="ability-bar"
-    :class="{ 'ability-bar--in': revealed }"
+    :class="{ 'ability-bar--in': revealed, 'ability-bar--docked': props.docked }"
     role="toolbar"
     aria-label="Bard abilities"
   >
@@ -182,6 +187,14 @@ import {
 import type { BardAbilityId, BardEffectLine, KeybindId } from '@/types'
 import { gameNow } from '@/utils/game/gameClock'
 import { formatCooldownSeconds } from '@/utils/ui/format'
+
+/**
+ * `docked` — die Leiste steht senkrecht in der Schiene des Star-Fight-Modals
+ * statt waagerecht unten am Bild. Die Entscheidung gehört zu der Stelle, die
+ * auch teleportiert (App.vue); stünde sie hier als Store-Zugriff, gäbe es sie
+ * zweimal.
+ */
+const props = withDefaults(defineProps<{ docked?: boolean }>(), { docked: false })
 
 const uiStore = useUiStore()
 const store = useBardAbilityStore()
@@ -499,6 +512,7 @@ function hoveredTileEl(): HTMLElement | null {
 
 /**
  * Den Kasten über SEINE Kachel schieben — waagerecht, und sonst nichts.
+ * (Angedockt: NEBEN seine Kachel, dann senkrecht — siehe Zweig unten.)
  *
  * Er bleibt Flex-Kind der Spalte. Damit fällt seine HÖHE weiterhin in den Fluss,
  * die Cast-Meldung stapelt sich unverändert darüber, und die Spalte bleibt
@@ -523,6 +537,42 @@ function placeTip(): void {
   if (!tip || !tile) return
 
   const rect = tile.getBoundingClientRect()
+
+  // Angedockt steht die Spalte senkrecht und der Kasten daneben: ausgerichtet
+  // wird dann in der HÖHE, und der Zeiger sitzt an der linken Kante. Der
+  // Anker ist die Leiste selbst — sie steht in der Schiene, nicht in der
+  // Bildmitte, ihre Lage lässt sich also nicht ausrechnen.
+  if (props.docked) {
+    const bar = barEl.value
+    if (!bar) return
+    const barTop = bar.getBoundingClientRect().top
+    const tipH = tip.offsetHeight
+    const margin = ABILITY_TIP_VIEWPORT_MARGIN_PX
+
+    // Geklemmt wird gegen die SCHIENE, nicht gegen den Viewport: das Modal
+    // schneidet ab (`overflow: hidden`), und die Schiene ist genau so hoch wie
+    // sein Innenraum. Gefunden wird sie ohne jedes Wissen über das Modal —
+    // angedockt steht die Leiste `relative`, ihr `offsetParent` IST die Schiene.
+    const box = (bar.offsetParent as HTMLElement | null)?.getBoundingClientRect()
+    const boundTop = Math.max(box?.top ?? 0, 0) + margin
+    const boundBottom = Math.min(box?.bottom ?? window.innerHeight, window.innerHeight) - margin
+
+    const centerY = rect.top + rect.height / 2 - barTop
+    const wantedTop = centerY - tipH / 2
+    const top = Math.min(
+      Math.max(wantedTop, boundTop - barTop),
+      boundBottom - tipH - barTop,
+    )
+
+    // `left` kommt angedockt aus dem CSS — ein Inline-Wert aus dem waagerechten
+    // Zweig würde ihn überschreiben und bliebe beim Wechsel stehen.
+    tip.style.left = ''
+    tip.style.top = `${Math.round(top)}px`
+    tip.style.setProperty('--ab-caret-dy', `${Math.round(centerY - (top + tipH / 2))}px`)
+    return
+  }
+
+  tip.style.top = ''
   // Die Leiste ist `fixed; left: 50%` und um ihre halbe Breite zurückgeschoben:
   // ihre Mitte IST die Bildmitte und muss nicht gemessen werden.
   const barCenter = window.innerWidth / 2
@@ -726,11 +776,31 @@ function publishHeight(px: number): void {
 }
 
 /** Nur die Kachelreihe zählt — Tooltip und Meldung schweben darüber und
- *  dürfen die Buff-Reihe nicht bei jedem Überfahren verschieben. */
+ *  dürfen die Buff-Reihe nicht bei jedem Überfahren verschieben.
+ *
+ *  Angedockt wird 0 veröffentlicht: `--ability-bar-h` ist die Ankerlinie UNTEN
+ *  am Bild, und die ist im Star Fight leer — die Buff-Reihe steht dann selbst
+ *  in der Schiene. Würde hier die Säulenhöhe (≈460 px) landen, schöbe sie
+ *  jeden anderen Verbraucher dieser Variablen ins Nichts. */
 function measureRow(): void {
+  if (props.docked) {
+    publishHeight(-ABILITY_BAR_STACK_GAP_PX)
+    return
+  }
   const row = barEl.value?.querySelector('.ab-row')
   if (row) publishHeight(row.getBoundingClientRect().height)
 }
+
+// Beim An- und Abdocken wechseln Form und Anker — beide Maße stehen erst nach
+// dem nächsten Rendern fest.
+watch(
+  () => props.docked,
+  async () => {
+    await nextTick()
+    measureRow()
+    placeTip()
+  },
+)
 
 onMounted(() => {
   revealTimer = setTimeout(() => {
@@ -794,6 +864,67 @@ onUnmounted(() => {
 .ability-bar--in {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* ── Angedockt: Bard’s Rail im Star-Fight-Modal ────────────────────────
+   Dieselbe Instanz, andere Form: aus der waagerechten Reihe am Bildrand wird
+   eine senkrechte Säule im Fluss der Schiene. Alles hier hängt hinter der
+   Klasse — der Orbit-Pfad darüber bleibt unberührt.
+
+   Kein Transform-Übergang: zwischen zwei völlig verschiedenen Ankern wäre er
+   ein Sprung, und die Einblendung des Modals deckt den Wechsel ohnehin. */
+.ability-bar--docked {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  z-index: auto;
+  transform: none;
+  transition: opacity 320ms ease;
+}
+
+.ability-bar--docked.ability-bar--in {
+  transform: none;
+}
+
+.ability-bar--docked .ab-row {
+  flex-direction: column;
+}
+
+/* Der Strich trennt weiter Zustand von Knöpfen — nur eben quer. */
+.ability-bar--docked .ab-divider {
+  width: calc(var(--ab-size) * 0.54);
+  height: 1px;
+  background: linear-gradient(to right, transparent, #4a2a0e 28%, #4a2a0e 72%, transparent);
+}
+
+/* Meldung und Tooltip dürfen die Säule nicht aufreißen: beide sind breiter als
+   eine Kachel und stehen deshalb daneben statt darin. Die Meldung über der
+   Schiene, der Tooltip auf Höhe seiner Kachel (placeTip schreibt `top`). */
+.ability-bar--docked .ab-toast {
+  position: absolute;
+  left: calc(100% + 14px);
+  bottom: calc(100% + 10px);
+  margin-bottom: 0;
+}
+
+.ability-bar--docked .ab-tip {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 0;
+  margin-bottom: 0;
+}
+
+/* Der Zeiger wandert von der Unterkante an die linke — er zeigt jetzt
+   waagerecht auf die Kachel, nicht mehr senkrecht. */
+.ability-bar--docked .ab-tip::after {
+  bottom: auto;
+  left: -9px;
+  top: calc(50% + var(--ab-caret-dy, 0px));
+  transform: translateY(-50%);
+  border-left: none;
+  border-right: 7px solid #5c3310;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
 }
 
 .ab-row {
@@ -1264,11 +1395,31 @@ onUnmounted(() => {
   transform: translateY(6px);
 }
 
+/* Angedockt kommen beide von der Schiene her, also von LINKS. */
+.ability-bar--docked .ab-toast-enter-from,
+.ability-bar--docked .ab-tip-enter-from,
+.ability-bar--docked .ab-toast-leave-to,
+.ability-bar--docked .ab-tip-leave-to {
+  transform: translateX(-6px);
+}
+
 /* ── Auflösungsstufen ─────────────────────────────────────────────────────
    Full HD ist der flachste Viewport und bekommt die Grundgröße; darüber
    wachsen die Kacheln mit, damit sie auf 2K und 4K nicht verloren wirken.
    Die Reihe misst dabei nie mehr als 5 Kacheln plus Lücken — sie passt damit
    auf jeder Referenz zwischen die beiden erhöhten HUD-Panels. */
+/* Flacher Viewport (Full HD, WUXGA): die Säule teilt sich die Modalhöhe mit
+   den Buff-Chips darunter. Dieselbe Schwelle wie der Kompakt-Block des
+   Star-Fight-Modals. Nur angedockt — die waagerechte Leiste im Orbit hängt
+   nicht an der Höhe. */
+@media (max-height: 1100px) {
+  .ability-bar--docked {
+    --ab-size: 72px;
+    --ab-passive-size: 62px;
+    --ab-gap: 8px;
+  }
+}
+
 @media (min-width: 2400px) {
   .ability-bar {
     --ab-size: 104px;

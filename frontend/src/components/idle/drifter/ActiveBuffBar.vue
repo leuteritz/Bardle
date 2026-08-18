@@ -1,12 +1,18 @@
 <template>
   <!-- Every temporary effect the player currently carries, in one row right
        above the bottom scoreboard strip. Hidden while a bard profile tab
-       covers the screen — nothing under there can be read anyway. -->
+       covers the screen — nothing under there can be read anyway.
+
+       During a star fight the row is docked into the modal's rail instead
+       (`docked`): at the bottom of the screen it sat on top of the sun horizon
+       and the player's own health bar. App.vue teleports the same instance —
+       only the shape changes, from a wide row to a narrow column. -->
   <TransitionGroup
     v-if="uiStore.bardActiveTab === null"
     name="buff-chip"
     tag="div"
     class="buff-bar"
+    :class="{ 'buff-bar--docked': props.docked }"
     role="status"
   >
     <div
@@ -70,6 +76,13 @@ import {
   HONOR_MVP_BUFF_MULT,
   HONOR_MVP_BUFF_DURATION_S,
 } from '@/config/constants'
+
+/**
+ * `docked` — the row stands as a narrow column in the star fight modal's rail
+ * instead of across the bottom of the screen. Decided by App.vue, which also
+ * does the teleporting; reading it from a store here would state it twice.
+ */
+const props = withDefaults(defineProps<{ docked?: boolean }>(), { docked: false })
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
@@ -437,6 +450,145 @@ const chips = computed<BuffChip[]>(() => {
   }
   .chip-progress {
     transition: none;
+  }
+}
+
+/* ── Docked: the rail of the star fight modal ───────────────────────────
+   Same instance, different shape: a column of narrow plates under the ability
+   tiles. Everything a chip says stays — icon, multiplier, what it lifts and how
+   long — only the plate is cut down to the width of the rail.
+
+   `--chip-w: 100%` deliberately: the rail declares ONE width (`--sf-rail-w`),
+   and the plates take it. A width of their own here would be a second source
+   for the same measure, and the arena would jump sideways the moment the first
+   buff appeared. */
+.buff-bar--docked {
+  --chip-h: 50px;
+  position: static;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  max-width: none;
+  transform: none;
+  z-index: auto;
+}
+
+.buff-bar--docked .buff-chip {
+  width: 100%;
+  flex: 0 0 auto;
+  height: var(--chip-h);
+  gap: 7px;
+  padding: 0 8px 0 7px;
+}
+
+.buff-bar--docked .buff-chip::before {
+  height: 2px;
+}
+
+.buff-bar--docked .chip-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.buff-bar--docked .chip-icon__glyph {
+  width: 15px;
+  height: 15px;
+}
+
+.buff-bar--docked .chip-text {
+  gap: 3px;
+}
+
+.buff-bar--docked .chip-head {
+  gap: 4px;
+}
+
+.buff-bar--docked .chip-mult {
+  font-size: 15px;
+}
+
+.buff-bar--docked .chip-seconds {
+  font-size: 13px;
+}
+
+.buff-bar--docked .chip-unit {
+  font-size: 9px;
+}
+
+.buff-bar--docked .chip-label {
+  font-size: 9px;
+  letter-spacing: 0.9px;
+}
+
+.buff-bar--docked .chip-track {
+  height: 3px;
+}
+
+/* Größere Schienen tragen größere Plaketten — dieselben Schwellen wie die
+   Kachelleiter der Fähigkeitenleiste. */
+@media (min-width: 2400px) {
+  .buff-bar--docked {
+    --chip-h: 58px;
+  }
+
+  .buff-bar--docked .chip-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .buff-bar--docked .chip-icon__glyph {
+    width: 19px;
+    height: 19px;
+  }
+
+  .buff-bar--docked .chip-mult {
+    font-size: 18px;
+  }
+
+  .buff-bar--docked .chip-seconds {
+    font-size: 16px;
+  }
+
+  .buff-bar--docked .chip-unit {
+    font-size: 11px;
+  }
+
+  .buff-bar--docked .chip-label {
+    font-size: 11px;
+  }
+}
+
+@media (min-width: 3400px) {
+  .buff-bar--docked {
+    --chip-h: 68px;
+  }
+
+  .buff-bar--docked .chip-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .buff-bar--docked .chip-icon__glyph {
+    width: 23px;
+    height: 23px;
+  }
+
+  .buff-bar--docked .chip-mult {
+    font-size: 22px;
+  }
+
+  .buff-bar--docked .chip-seconds {
+    font-size: 19px;
+  }
+
+  .buff-bar--docked .chip-unit {
+    font-size: 13px;
+  }
+
+  .buff-bar--docked .chip-label {
+    font-size: 13px;
   }
 }
 </style>

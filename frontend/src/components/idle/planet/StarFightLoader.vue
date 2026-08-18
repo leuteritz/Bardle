@@ -64,11 +64,12 @@ const LOOT_TILES = 4
 </template>
 
 <style scoped>
-/* Deckend über der ganzen Arena — der Inhalt mountet darunter. Eine 1 genügt,
+/* Deckend über der ganzen Bühne — der Inhalt mountet darunter. Eine 1 genügt,
    weil die Arena daneben einen eigenen Stapelkontext aufmacht (.sf-arena-wrap).
    Über den Ecksteuerelementen des Modals liegt der Schleier bewusst NICHT: die
    sitzen außerhalb von .sf-main, der Schließen-Button bleibt also auch während
-   des Ladens erreichbar. */
+   des Ladens erreichbar. Dasselbe gilt für Bard’s Rail: sie steht neben der
+   Bühne, nicht darin — die Fähigkeiten bleiben während des Ladens bedienbar. */
 .sfl {
   position: absolute;
   inset: 0;

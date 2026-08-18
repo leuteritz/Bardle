@@ -59,88 +59,109 @@
 
         <!-- ── Main Layout ──────────────────────────────────────────────── -->
         <div class="sf-main">
-          <!-- Section 1: Planet + Boss zentriert (größter Bereich) -->
-          <div
-            class="sf-arena-wrap"
-            :class="{
-              'sf-arena-wrap--strike': bossStrikeActive,
-              'sf-arena-wrap--jab': bossJabActive && !bossStrikeActive,
-              'sf-arena-wrap--hit': bossHitActive && !bossStrikeActive && !bossJabActive,
-              'sf-arena-wrap--eclipsed': bossBehindSun,
-            }"
-          >
-            <!-- Planet-Hintergrund — zentriert im Arena-Bereich, Boss steht mittig darauf -->
+          <!-- ── Bard’s Rail: Passive → Q/W/E/R → laufende Buffs ─────────
+               Eine EIGENE Spalte, kein Overlay. Die Leiste hing früher als
+               `position: fixed` am Bildrand und lag damit 4 px innerhalb der
+               Modal-Unterkante — also genau auf dem Sonnen-Horizont samt
+               Spieler-HP. Als Flex-Spalte rechnet die Arena ihre
+               Prozentgeometrie in den verbleibenden Raum: überlappungsfrei
+               per Konstruktion statt per nachgemessener Lücke.
+
+               Breite ist hier die billige Achse — der Boss bemisst sich an
+               der HÖHE (`.boss-wrapper { height: 38% }`) und schrumpft mit
+               einer schmaleren Arena gar nicht. ────────────────────── -->
+          <aside class="sf-rail" aria-label="Bard abilities and active effects">
+            <div id="sf-ability-dock" class="sf-rail-slot" />
+            <div id="sf-buff-dock" class="sf-rail-slot sf-rail-slot--buffs" />
+          </aside>
+
+          <!-- Die Bühne: Arena + Ladeschleier. Eigener Kasten, damit der
+               Schleier NUR die Arena deckt — die Schiene baut sich nicht auf
+               und braucht keinen. -->
+          <div class="sf-stage">
+            <!-- Section 1: Planet + Boss zentriert (größter Bereich) -->
             <div
-              ref="modalPlanetBgRef"
-              class="sf-modal-planet-bg"
-              :class="{ 'sf-modal-planet-bg--galaxy': isGalaxyBoss }"
-            />
+              class="sf-arena-wrap"
+              :class="{
+                'sf-arena-wrap--strike': bossStrikeActive,
+                'sf-arena-wrap--jab': bossJabActive && !bossStrikeActive,
+                'sf-arena-wrap--hit': bossHitActive && !bossStrikeActive && !bossJabActive,
+                'sf-arena-wrap--eclipsed': bossBehindSun,
+              }"
+            >
+              <!-- Planet-Hintergrund — zentriert im Arena-Bereich, Boss steht mittig darauf -->
+              <div
+                ref="modalPlanetBgRef"
+                class="sf-modal-planet-bg"
+                :class="{ 'sf-modal-planet-bg--galaxy': isGalaxyBoss }"
+              />
 
-            <!-- ── Eigene Sonne als Horizont am unteren Arena-Rand: aktuelle
-                 Phase + Spieler-HP. Steht VOR BossArenaSection im DOM, damit
-                 Boss und Planet über der Kuppel liegen; HP-Leiste, Zielscheibe
-                 und Strike-Bolt heben sich intern per z-index wieder darüber ── -->
-            <SunHorizonHUD v-if="activeBoss && contentReady" />
+              <!-- ── Eigene Sonne als Horizont am unteren Arena-Rand: aktuelle
+                   Phase + Spieler-HP. Steht VOR BossArenaSection im DOM, damit
+                   Boss und Planet über der Kuppel liegen; HP-Leiste, Zielscheibe
+                   und Strike-Bolt heben sich intern per z-index wieder darüber ── -->
+              <SunHorizonHUD v-if="activeBoss && contentReady" />
 
-            <BossArenaSection
-              v-if="activeBoss && contentReady"
-              disable-arc-attacks
-              @shake="handleShake"
-            />
+              <BossArenaSection
+                v-if="activeBoss && contentReady"
+                disable-arc-attacks
+                @shake="handleShake"
+              />
 
-            <!-- ── Eclipse-Schleier: Boss hinter der Sonne — gleißende Korona
-                 legt sich über die Arena, der Boss wird zur Silhouette ────── -->
-            <Transition name="sf-eclipse-fade">
-              <div v-if="bossBehindSun" class="sf-eclipse-veil" aria-hidden="true">
-                <span class="sf-eclipse-scrim" />
-                <span class="sf-eclipse-corona" />
-                <!-- Großes Eclipse-Medaillon auf dem Boss — gleiches Icon wie
-                     bei Champions (rsq-eclipse) und Planeten (tbh-eclipse) -->
-                <span class="sf-eclipse-medal" title="Behind the Sun — combat paused">
-                  <Icon icon="game-icons:eclipse-flare" width="56" height="56" />
-                </span>
+              <!-- ── Eclipse-Schleier: Boss hinter der Sonne — gleißende Korona
+                   legt sich über die Arena, der Boss wird zur Silhouette ────── -->
+              <Transition name="sf-eclipse-fade">
+                <div v-if="bossBehindSun" class="sf-eclipse-veil" aria-hidden="true">
+                  <span class="sf-eclipse-scrim" />
+                  <span class="sf-eclipse-corona" />
+                  <!-- Großes Eclipse-Medaillon auf dem Boss — gleiches Icon wie
+                       bei Champions (rsq-eclipse) und Planeten (tbh-eclipse) -->
+                  <span class="sf-eclipse-medal" title="Behind the Sun — combat paused">
+                    <Icon icon="game-icons:eclipse-flare" width="56" height="56" />
+                  </span>
+                </div>
+              </Transition>
+
+              <!-- ── Planet Battery: alle 6 Planet-Slots auf dem Bogen — nur
+                   Turrets feuern Salven (geteilter Takt mit dem Idle-Orbit) ── -->
+              <PlanetBatteryHUD v-if="activeBoss && contentReady" />
+
+              <!-- Boss-Angriff: Abschuss-Blitz + Doppel-Schockwelle, die sichtbar
+                   bis über Champions und Turret-Planeten hinausläuft -->
+              <template v-if="bossStrikeActive">
+                <span class="sf-boss-flare" />
+                <span class="sf-boss-wave" />
+                <span class="sf-boss-wave sf-boss-wave--echo" />
+              </template>
+
+              <!-- ── Ziel-HUD: Bossname + HP-Datenstreifen (rahmenlos, oben) ── -->
+              <StarFightBossHud v-if="contentReady" :now="now" :boss-behind-sun="bossBehindSun" />
+
+              <!-- ── Loot des aktuellen Bosses — episch unter dem Boss-Bild ── -->
+              <div v-if="activeBoss && contentReady" class="sf-loot">
+                <BossRewardSection />
               </div>
+
+              <!-- ── Attacker Squad: Rollen mit Boss-Fähigkeit + Cooldown ── -->
+              <div v-if="activeBoss && contentReady" class="sf-squad">
+                <RoleStrikerSquad />
+              </div>
+            </div>
+
+            <!-- ── Ladeschleier ──
+                 Deckt die Arena, solange sie entsteht, und blendet danach über
+                 der fertigen weg. Er steht IN .sf-stage, liegt also unter den
+                 Ecksteuerelementen (z-index 6) — der Schließen-Button bleibt
+                 während des Ladens erreichbar. -->
+            <Transition name="sfl-reveal">
+              <StarFightLoader
+                v-if="loaderVisible"
+                :boss-name="activeBoss?.bossName ?? 'Unknown Boss'"
+                :is-galaxy-boss="isGalaxyBoss"
+                :started-at="loaderStartedAt"
+              />
             </Transition>
-
-            <!-- ── Planet Battery: alle 6 Planet-Slots auf dem Bogen — nur
-                 Turrets feuern Salven (geteilter Takt mit dem Idle-Orbit) ── -->
-            <PlanetBatteryHUD v-if="activeBoss && contentReady" />
-
-            <!-- Boss-Angriff: Abschuss-Blitz + Doppel-Schockwelle, die sichtbar
-                 bis über Champions und Turret-Planeten hinausläuft -->
-            <template v-if="bossStrikeActive">
-              <span class="sf-boss-flare" />
-              <span class="sf-boss-wave" />
-              <span class="sf-boss-wave sf-boss-wave--echo" />
-            </template>
-
-            <!-- ── Ziel-HUD: Bossname + HP-Datenstreifen (rahmenlos, oben) ── -->
-            <StarFightBossHud v-if="contentReady" :now="now" :boss-behind-sun="bossBehindSun" />
-
-            <!-- ── Loot des aktuellen Bosses — episch unter dem Boss-Bild ── -->
-            <div v-if="activeBoss && contentReady" class="sf-loot">
-              <BossRewardSection />
-            </div>
-
-            <!-- ── Attacker Squad: Rollen mit Boss-Fähigkeit + Cooldown ── -->
-            <div v-if="activeBoss && contentReady" class="sf-squad">
-              <RoleStrikerSquad />
-            </div>
           </div>
-
-          <!-- ── Ladeschleier ──
-               Deckt die Arena, solange sie entsteht, und blendet danach über
-               der fertigen weg. Er steht IN .sf-main, liegt also unter den
-               Ecksteuerelementen (z-index 6) — der Schließen-Button bleibt
-               während des Ladens erreichbar. -->
-          <Transition name="sfl-reveal">
-            <StarFightLoader
-              v-if="loaderVisible"
-              :boss-name="activeBoss?.bossName ?? 'Unknown Boss'"
-              :is-galaxy-boss="isGalaxyBoss"
-              :started-at="loaderStartedAt"
-            />
-          </Transition>
         </div>
       </div>
     </div>
@@ -713,13 +734,127 @@ function emberStyle(i: number): Record<string, string> {
    geteilte Komponente BossTimerRing.vue — Styles leben dort. */
 
 /* ── Main Layout ──────────────────────────────────────────────────────────── */
+/* Zwei Spalten: Bard’s Rail links, Bühne rechts. `overflow: hidden` steht
+   NICHT mehr hier, sondern an `.sf-stage` — der Tooltip der Fähigkeitenleiste
+   fährt aus der Schiene nach rechts über die Bühne aus und würde hier
+   abgeschnitten. */
 .sf-main {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: stretch;
   gap: 0;
   padding: 0;
   min-height: 0;
   flex: 1;
+}
+
+/* ── Bard’s Rail ─────────────────────────────────────────────────
+   KEINE feste Breite. Sie ergibt sich aus dem, was eingehängt wird — also aus
+   `--ab-size` der Leiste. Eine Zahl hier wäre eine zweite Quelle für ein Maß,
+   das schon woanders steht, und liefe beim ersten Nachjustieren auseinander.
+
+   z-index 5: über der Bühne (eigener Stapelkontext, z-index 0), unter den
+   Ecksteuerelementen (6) und unter dem RpgFrame (30). Der Tooltip ist Kind der
+   Schiene und liegt damit ebenfalls über der Arena. ──────────────────── */
+.sf-rail {
+  /* EINE Zahl für die Spaltenbreite. Sie steht hier und nicht in den beiden
+     Leisten — sonst bestünde sie zweimal, und die Arena spränge in der Breite
+     genau dann, wenn der erste Buff auftaucht und die Spalte breiter macht.
+     Die Fähigkeitskacheln stehen mittig darin, die Buff-Plaketten füllen sie. */
+  --sf-rail-w: 104px;
+  box-sizing: content-box;
+  position: relative;
+  z-index: 5;
+  flex: 0 0 auto;
+  width: var(--sf-rail-w);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  /* Links großzügiger: dort räumt der Inset die abgerundete Modal-Ecke frei,
+     wie es .sf-corner-controls auf der Gegenseite tut. */
+  padding: 16px 12px 16px 16px;
+  /* Ausdrücklich NICHT `hidden` — Tooltip und Cast-Meldung fahren heraus. */
+  overflow: visible;
+}
+
+/* Dieselben Schwellen, an denen die Fähigkeitskacheln wachsen
+   (BardAbilityBar.vue) — die Schiene muss die größere Kachel fassen. */
+@media (min-width: 2400px) {
+  .sf-rail {
+    --sf-rail-w: 132px;
+  }
+}
+
+@media (min-width: 3400px) {
+  .sf-rail {
+    --sf-rail-w: 160px;
+  }
+}
+
+/* Trennlinie zur Bühne — das Echo der Goldlinie oben, senkrecht gestellt.
+   Statisch, kein Keyframe: eine laufende Animation auf einem Verlauf rastert
+   jede Frame neu (Performance-Regel 2). */
+.sf-rail::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  right: 0;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    #5c3310 16%,
+    #c89040 50%,
+    #5c3310 84%,
+    transparent
+  );
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.sf-rail-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Die Buff-Spalte spannt auf die Schienenbreite, damit die Chips exakt so
+     breit werden wie die Kacheln darüber. */
+  align-self: stretch;
+  /* Die Kacheln geben nie nach — sie sind das Bedienelement. */
+  flex: 0 0 auto;
+}
+
+/* Die Buff-Spalte dagegen schon: wie viele Effekte gleichzeitig laufen, ist
+   nach oben offen (MVP + Drifter + Vorzeichen). Statt aus der Schiene über die
+   Arena zu ragen, schrumpft sie und rollt — auf dem flachsten Viewport bleiben
+   sonst nur wenige Pixel Luft. */
+.sf-rail-slot--buffs {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+
+/* Solange kein Buff läuft, darf die Spalte auch keine Lücke aufreißen — sonst
+   verschiebt der Zeilenabstand die mittig stehende Schiene um ein paar Pixel.
+   Geprüft wird auf die CHIPS, nicht auf `:empty`: die Reihe rendert ihren
+   Rahmen auch dann, wenn sie nichts zu zeigen hat. */
+.sf-rail-slot--buffs:not(:has(.buff-chip)) {
+  display: none;
+}
+
+/* ── Bühne — Arena + Ladeschleier ─────────────────────────────────── */
+.sf-stage {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
