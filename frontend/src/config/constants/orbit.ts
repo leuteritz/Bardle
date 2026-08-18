@@ -271,12 +271,13 @@ export const STAR_SUMMARY_GAP_PX = 58
 /**
  * Womit gerechnet wird, wenn gefragt ist, ob die Karte unten noch passt.
  * Bewusst der GRÖSSTE gemessene Wert (107–138 px je nach Beute und
- * Statusmarken): dann klappt sie im schlanken Fall etwas zu früh nach oben,
- * was niemand bemerkt — umgekehrt stünde sie halb in der Bar. Für die
- * Platzierung selbst wird sie nicht gebraucht, die erledigt
- * `translateY(-100%)` ohne einen einzigen Layout-Read.
+ * Statusmarken, plus rund 22 px für die Angriffszeile am Zielstern): dann
+ * klappt sie im schlanken Fall etwas zu früh nach oben, was niemand bemerkt —
+ * umgekehrt stünde sie halb in der Bar. Für die Platzierung selbst wird sie
+ * nicht gebraucht, die erledigt `translateY(-100%)` ohne einen einzigen
+ * Layout-Read.
  */
-export const STAR_SUMMARY_MAX_HEIGHT_PX = 140
+export const STAR_SUMMARY_MAX_HEIGHT_PX = 165
 /**
  * Halbe Breite der Karte, für die Frage „passt sie an dieser Stelle?". Die
  * HUD-Kontur springt in der Kehle zwischen Seitenpanel und Mittelstreifen auf

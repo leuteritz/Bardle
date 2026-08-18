@@ -56,19 +56,6 @@
           :ref="(el) => setMapEl(starBackEls, star.id, el)"
         >
           <div class="star-pulse-overlay" />
-          <!-- Zielmarke: hinter der Sonne gibt es keinen Wrap, sie sitzt deshalb
-               IM Körper. Dessen Box ist dieselbe wie die des Wraps im
-               Front-Layer (starBodyBackStyle spreizt starWrapStyle), die
-               Prozentmaße der Bahn treffen also dieselbe Geometrie.
-               `.star-sys-back` legt ihre Takte still, der Behind-Blur nimmt sie
-               mit — Ziel ja, Beschuss gerade nicht. -->
-          <div v-if="targetedStarId === star.id" class="star-target-escort">
-            <div class="star-target-escort__orbit">
-              <span class="star-target-escort__arm star-target-escort__arm--a" />
-              <span class="star-target-escort__arm star-target-escort__arm--b" />
-              <span class="star-target-escort__arm star-target-escort__arm--c" />
-            </div>
-          </div>
         </div>
       </template>
     </div>
@@ -108,19 +95,6 @@
           >
             <div class="star-pulse-overlay" />
           </div>
-          <!-- Zielmarke NEBEN dem Körper, nicht darin: `.star-body` bekommt beim
-               Hover `filter: drop-shadow(#ffe066) … brightness(1.3)` und
-               `star-hover-pulse` (scale 1 → 1.35). Ein `filter` und ein
-               `transform` gelten für den ganzen Teilbaum — die Funken würden beim
-               Überfahren golden werden und pumpen, also genau das, was sie nicht
-               sein sollen. Nach dem Körper, damit sie über dessen Schein liegen. -->
-          <div v-if="targetedStarId === star.id" class="star-target-escort">
-            <div class="star-target-escort__orbit">
-              <span class="star-target-escort__arm star-target-escort__arm--a" />
-              <span class="star-target-escort__arm star-target-escort__arm--b" />
-              <span class="star-target-escort__arm star-target-escort__arm--c" />
-            </div>
-          </div>
         </div>
       </template>
 
@@ -145,7 +119,8 @@
           v-if="
             getStarRewardSummary(star).totalChimes > 0 ||
             getStarRewardSummary(star).materials.length > 0 ||
-            getStarRewardSummary(star).champion
+            getStarRewardSummary(star).champion ||
+            targetedStarId === star.id
           "
           :class="[
             'star-reward-summary',
@@ -153,6 +128,7 @@
               'star-reward-summary--star-hovered':
                 hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id,
               'star-reward-summary--hover-dimmed': isStarHoverDimmed(star.id),
+              'star-reward-summary--targeted': targetedStarId === star.id,
               'star-reward-summary--raging': ragingStarId === star.id,
               'star-reward-summary--cursed': isCursedStar(star.id),
             },
@@ -164,6 +140,26 @@
           @mouseleave="setSummaryHover(null)"
         >
           <div class="summary-inner">
+            <!-- Unter Beschuss: die EINE Stelle, an der steht, welcher Stern
+                 gerade von Champions und Turret-Planeten bearbeitet wird. Als
+                 erster Block im Fluss — beide Pseudo-Ebenen der Karte sind
+                 belegt (`::before` ist die Leine zum Stern, `::after` der
+                 Rage-/Fluch-Pulsring), und der Badge-Stapel darüber hängt IN
+                 der 52 px langen Leine, von der Fluch und Rage schon ~46 px
+                 einnehmen. Der Balken zeigt BOSS-HP und fällt — dieselbe
+                 Lesart wie Star-Fight-HUD und Header-Zeile. -->
+            <div v-if="targetedStarId === star.id" class="summary-assault">
+              <span class="summary-assault__lbl">Under Fire</span>
+              <span class="summary-assault__pct">{{ targetHpPct }}%</span>
+              <span class="summary-assault__track">
+                <span
+                  class="summary-assault__fill"
+                  :class="targetHpClass"
+                  :style="{ transform: `scaleX(${targetHpRatio})` }"
+                />
+              </span>
+            </div>
+
             <!-- Statusmarken: die einzigen Zusätze am Stern selbst. Sie sitzen
                  über der Beute, weil sie sie qualifizieren — Fluch (unser
                  Debuff AUF dem Stern) oben, Rage (sein Buff) unten direkt an
@@ -255,6 +251,7 @@
             :key="star.remainingCount"
             class="star-planet-count"
             :class="{
+              'star-planet-count--targeted': targetedStarId === star.id,
               'star-planet-count--cursed': isCursedStar(star.id),
               'star-planet-count--raging': ragingStarId === star.id,
             }"
@@ -324,6 +321,11 @@ import {
   STAR_SUMMARY_FLIP_STACK_PX,
   STAR_COUNT_GAP_PX,
   STAR_COUNT_HEIGHT_PX,
+  STAR_TIMER_HP_STEPS,
+  STAR_TIMER_HP_PCT_STEPS,
+  STAR_TIMER_HP_MIN_PCT,
+  HP_HEALTHY_PERCENT,
+  HP_CRIT_PERCENT,
 } from '@/config/constants'
 import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
 import { hudFieldMetrics, hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
@@ -816,6 +818,32 @@ const starBurstStates = new Map<string, StarBurstState>()
 // Die Herleitung steht im Store, damit Orbit und Header denselben Stern meinen.
 const targetedStarId = computed(() => starGroupStore.targetedStarId)
 
+/**
+ * Boss-HP für die Angriffszeile in der Belohnungskarte.
+ *
+ * Der Zielboss wird PERMANENT getroffen — `bossHPPercent` direkt ins Template
+ * zu binden rächte sich sofort: die Karte hängt in einer Frame-Schleife, die
+ * ihr pro Frame ein neues `transform` schreibt, und ein reaktiver Zugriff auf
+ * `activeBoss` liesse sie bei JEDEM Schadensereignis neu rendern.
+ *
+ * Deshalb dasselbe Muster wie bei `curseSecsLeft` und `rageSecsLeft`: die Werte
+ * werden im ohnehin laufenden rAF-Loop ungetrackt nachgezogen und nur bei
+ * echter Änderung des ANGEZEIGTEN Werts geschrieben. Der Balken läuft dabei
+ * gröber als die Zahl (STAR_TIMER_HP_STEPS gegen STAR_TIMER_HP_PCT_STEPS) —
+ * dieselbe Staffelung wie in den Header-Bars, aus demselben Grund: die Zahl ist
+ * der exakte Wert, der Balken nur die Silhouette.
+ */
+const targetHpRatio = ref(1)
+const targetHpPct = ref(100)
+/** Ampel des Balkens — dieselben Schwellen wie im Star-Fight-HUD. */
+const targetHpClass = computed(() =>
+  targetHpPct.value <= HP_CRIT_PERCENT
+    ? 'summary-assault__fill--critical'
+    : targetHpPct.value <= HP_HEALTHY_PERCENT
+      ? 'summary-assault__fill--low'
+      : '',
+)
+
 const NOVA_TRAIL_COLOR = '#ff4400'
 const NOVA_HEAD_COLOR = '#ffd080'
 
@@ -1201,6 +1229,22 @@ function enemyAttackLoop(ts: number) {
     if (ragingId !== ragingStarId.value) ragingStarId.value = ragingId
     // ─────────────────────────────────────────────────────────────────────────
 
+    // ── Boss-HP der Angriffszeile (siehe Kommentar an den Refs) ────────────
+    // Ungetrackt gelesen: ein reaktiver Zugriff auf `activeBoss` würde die
+    // Karte an jedes einzelne Schadensereignis hängen.
+    const targetBoss = bossStore.activeBoss
+    if (targetBoss && !targetBoss.defeated && !targetBoss.expired && targetBoss.maxHP > 0) {
+      const ratio = Math.max(0, Math.min(1, targetBoss.currentHP / targetBoss.maxHP))
+      const steppedRatio = Math.round(ratio * STAR_TIMER_HP_STEPS) / STAR_TIMER_HP_STEPS
+      // Ein LEBENDER Boss zeigt nie „0 %“ — sonst liest sich die Zahl wie
+      // „besiegt“, während der Stern noch steht.
+      const pct =
+        ratio > 0 ? Math.max(STAR_TIMER_HP_MIN_PCT, Math.round(ratio * STAR_TIMER_HP_PCT_STEPS)) : 0
+      if (steppedRatio !== targetHpRatio.value) targetHpRatio.value = steppedRatio
+      if (pct !== targetHpPct.value) targetHpPct.value = pct
+    }
+    // ──────────────────────────────────────────────────────────────────────────────
+
     drawCooldownRings()
   }
 
@@ -1522,10 +1566,7 @@ function starCountStyle(star: StarRenderEntry) {
    nicht sieht, soll auch nichts kosten. */
 .star-sys-back .star-pulse-overlay,
 .star-sys-back .star-body::before,
-.star-sys-back .star-body::after,
-.star-sys-back .star-target-escort,
-.star-sys-back .star-target-escort__orbit,
-.star-sys-back .star-target-escort__arm::before {
+.star-sys-back .star-body::after {
   animation: none;
 }
 
@@ -1889,197 +1930,6 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
-/* ── Zielmarke: DIESER Stern ist das Ziel des laufenden Beschusses ────────────
-   Immer genau EINER trägt sie. Champions (`combatStore.tick`) und
-   Turret-Planeten (`gameStore`-Tick) schlagen beide auf denselben
-   `planetBossStore.activeBoss` ein; der Stern dazu steht als
-   `starGroupStore.targetedStarId` an einer Stelle, aus der auch die
-   Header-Zeile liest.
-
-   „Chime Escort“ — drei Funken auf einer geneigten, flachen Ellipsenbahn.
-   KEIN Ring, kein Halo, kein Saum am Sternrand: die Vorgängerfassung legte drei
-   konzentrische Kreise (Halo 22 %, Ping 22 %, Reticle 27 %) zwischen den Typring
-   (16 %) und den Nova-Cooldown-Ring auf dem Canvas ((s/2+9)·scale). Sieben Kreise
-   um einen 30–70 px großen Körper lesen sich als Ringplanet, und der cyane Halo
-   überstrich den warmen Sternglanz mit einem kalten Saum — der Zielstern sah
-   nicht mehr wie ein Stern aus. Ein PUNKT, der einen Bogen kreuzt, liest sich
-   dagegen als Tiefe; deshalb darf die Bahn den Nova-Ring seitlich schneiden.
-
-   Gebaut nach Performance-Regel 11: der Schein steht STATISCH im Stil, animiert
-   werden nur `opacity` und `transform`. Kein `will-change` — für eine laufende
-   Animation legt Chrome die Ebene ohnehin an, und das Compositing-Budget ist
-   die knappe Ressource (siehe Kommentar über `.star-body`). Fünf Ebenen kosten
-   hier nichts, weil es immer bei EINEM Stern bleibt; gewarnt war der Fall
-   „eine Ebene je Stern“.
-
-   Farbe: Cyan. Gold gehört dem Hover, Crimson der Rage, Violett dem Fluch, Glut
-   den Cooldown-Ringen, Rot der Zielscheibe auf der Sonne — Cyan ist der einzige
-   Ton, der am Stern noch frei ist, und dieselbe Signatur trägt die Header-Zeile
-   (`.timer-bar-row--targeted`). */
-
-/* ① Bahnebene — statisch geneigt und gestaucht, trägt selbst keinen Dauerlauf.
-   270 % der Sternbox → Bahn-rx = 1,35·s, mit `scaleY(0.53)` wird ry = 0,72·s.
-   Damit liegt die Bahn oben und unten ÜBER dem Sternrand (0,5·s) und UNTER der
-   Unterkante des Planetenzählers (0,5·s + STAR_COUNT_GAP_PX) — geprüft für alle
-   drei Sterngrößen (68 / 58 / 20 px). Prozentmaße statt `--ring-inset`: die
-   Custom Property steht nur am `.star-body`, im Front-Layer hängt die Marke aber
-   am WRAP und fiele dort still auf ihren Fallback zurück. */
-.star-target-escort {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 270%;
-  height: 270%;
-  margin: -135% 0 0 -135%;
-  /* Pflicht, kein Feinschliff: die Bahn ragt weit über den Wrap hinaus, und der
-     trägt `pointer-events: auto`. Ohne das bekäme ausgerechnet der Zielstern
-     eine größere Klick- und Hoverfläche als jeder andere. */
-  pointer-events: none;
-  /* Die Neigung ist eine DEKLARATION, keine Keyframe-Stufe: `.star-sys-back`
-     setzt hier `animation: none`, und stünde die Neigung nur in den Keyframes,
-     wäre die Bahn hinter der Sonne ein Kreis statt einer Ellipse. Der Einflug
-     rührt deshalb allein die Deckkraft an — ein zweites `transform` am selben
-     Element würde die Neigung überschreiben. */
-  transform: rotate(-12deg) scaleY(0.53);
-  animation: star-escort-in 0.45s ease-out both;
-}
-
-/* ② Die EINE laufende Drehung — sie liegt über der gestauchten Ebene, läuft in
-   deren Koordinaten und wird dadurch zur Ellipse. Umgekehrt (Stauchung innen)
-   drehte sich die Ellipse selbst mit, statt eine feste Bahn zu bleiben. */
-.star-target-escort__orbit {
-  position: absolute;
-  inset: 0;
-  animation: star-escort-spin 11s linear infinite;
-}
-
-/* ③ Ein Arm = die volle Bahnbox mit statischem Winkel; der Funke sitzt als
-   `::before` an ihrem rechten Rand (`left: 100%`) und damit exakt auf dem
-   Bahnradius — ein `translateX` in Prozent bezöge sich auf den Funken selbst. */
-.star-target-escort__arm {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.star-target-escort__arm--a {
-  transform: rotate(0deg);
-}
-
-.star-target-escort__arm--b {
-  transform: rotate(120deg);
-}
-
-.star-target-escort__arm--c {
-  transform: rotate(240deg);
-}
-
-.star-target-escort__arm::before {
-  content: '';
-  position: absolute;
-  left: 100%;
-  top: 50%;
-  /* `clamp`, weil eine reine Prozentgröße den kleinsten Stern (s = 20) auf
-     3 px drückte und den größten auf 11 px aufblähte. Gemessen mussten die
-     Funken kräftiger ausfallen als zuerst gebaut: das Sternenfeld im Hintergrund
-     führt Punkte derselben Größe, bei 6,5 px las sich die Marke als Deko. */
-  width: clamp(3.5px, 5.5%, 9px);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    #f2feff 0%,
-    rgba(120, 245, 255, 0.98) 42%,
-    rgba(40, 190, 225, 0) 72%
-  );
-  /* STATISCH — ein Schein im Ruhezustand ist erlaubt, animiert wird allein die
-     Deckkraft (Performance-Regel 11, Muster `orbit-glow-breathe`). */
-  box-shadow:
-    0 0 8px rgba(95, 240, 255, 0.9),
-    0 0 18px rgba(60, 210, 240, 0.55);
-  animation: star-escort-glimmer 2.4s ease-in-out infinite;
-}
-
-/* Bewegungsschweif — er allein trennt den Funken vom Deko-Sternenfeld: ein
-   Punkt MIT Schweif ist eindeutig ein umlaufender Körper. Bewusst OHNE eigene
-   Animation, das hält die Zahl der Takte bei vier.
-
-   Die Ausrichtung stimmt von selbst: bei `left: 100%` steht die Tangente der
-   Kreisbahn senkrecht auf dem Radius, also im Arm-System vertikal — und die
-   Stauchung der Bahnebene verzerrt den Schweif in genau dem Maß mit, in dem
-   sie auch die Bahn verzerrt. Symmetrisch auslaufend, damit die Laufrichtung
-   keine Rolle spielt. */
-.star-target-escort__arm::after {
-  content: '';
-  position: absolute;
-  left: 100%;
-  top: 50%;
-  width: clamp(1.5px, 1.8%, 3.5px);
-  height: clamp(13px, 9%, 30px);
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: linear-gradient(
-    to bottom,
-    rgba(95, 240, 255, 0) 0%,
-    rgba(95, 240, 255, 0.5) 50%,
-    rgba(95, 240, 255, 0) 100%
-  );
-  pointer-events: none;
-}
-
-/* Versetzt statt gleichzeitig: drei Funken im Gleichtakt lesen sich als ein
-   blinkender Ring, versetzt als ein Zug. */
-.star-target-escort__arm--b::before {
-  animation-delay: 0.8s;
-}
-
-.star-target-escort__arm--c::before {
-  animation-delay: 1.6s;
-}
-
-@keyframes star-escort-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes star-escort-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes star-escort-glimmer {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Drei stehende Funken auf der Bahn sind weiterhin eine vollständige Marke —
-     anders als beim abgelösten Ping, der ohne Takt nichts mehr sagte und
-     deshalb ganz entfiel. Der Einflug bleibt: er läuft einmal, nicht dauernd. */
-  .star-target-escort__orbit,
-  .star-target-escort__arm::before {
-    animation: none;
-  }
-
-  .star-target-escort__arm::before {
-    opacity: 1;
-  }
-}
-
 .star-reward-summary {
   position: absolute;
   top: 0;
@@ -2176,20 +2026,29 @@ function starCountStyle(star: StarRenderEntry) {
     inset 0 0 0 1px rgba(232, 192, 64, 0.2);
 }
 
-/* ── Statuszustände am Stern: Boss-Rage & Fluch ──────────────────────────────
+/* ── Statuszustände am Stern: Beschuss, Boss-Rage & Fluch ──────────────────────────────
    Der Sternkörper bleibt bewusst unberührt: er trägt bereits Eigenfarbe, Glow
    und Typ-Puls — ein zweites Signal darauf macht beide unlesbar. Getragen wird
    der Zustand von den zwei Elementen, die ohnehin schon Text zeigen: Beute-
    Block und Planetenzähler.
 
-   Zwei Zustände, eine Grammatik, zwei Farben — das Vorzeichen steckt allein in
+   Drei Zustände, eine Grammatik, drei Farben — das Vorzeichen steckt allein in
    der Farbe:
+     Ziel  = WIR beschießen ihn → Cyan (95, 240, 255), dieselbe Signatur wie
+             `.timer-bar-row--targeted` in der Header-Zeile
      Rage  = Buff DES Sterns  → Crimson (#ff2e63 / #ff5c85 / #ffb0c4), wie der
              Rage-Ring im Star-Fight
      Fluch = unser Debuff AUF dem Stern → Violett (#c060ff / #d9a0ff), wie das
              Curse-Panel im Rescue-Overlay
-   Beide sprechen damit die Sprache, die der Spieler an anderer Stelle für
+   Alle drei sprechen damit die Sprache, die der Spieler an anderer Stelle für
    dieselbe Mechanik schon kennt.
+
+   Die REIHENFOLGE in dieser Datei ist die Aussage: `--targeted` steht vor
+   `--raging` und `--cursed`, weil der Zielstern regelmässig auch der rasende
+   oder verfluchte ist — und dann gewinnt die Gefahr die ruhige Fläche (siehe
+   den Block „Beides gleichzeitig“ weiter unten). Verloren geht dabei
+   nichts: die Angriffszeile IM Karteninneren bleibt in jeder Kombination cyan
+   und sichtbar, sie ist die eigentliche Aussage, die Kontur nur die Zugabe.
 
    Bewegt wird ausschließlich die Opazität eines Overlays. Weder border-color
    noch box-shadow werden je animiert: beide zwingen den Browser, die Box samt
@@ -2198,6 +2057,22 @@ function starCountStyle(star: StarRenderEntry) {
    bleibt es eine reine Compositor-Aufgabe, unabhängig von der Sternzahl. Der
    einmalige Farbwechsel darf dagegen weich sein: eine Transition läuft nur
    beim Umschalten, nicht dauerhaft. */
+.star-reward-summary--targeted .summary-inner {
+  border-color: rgba(95, 240, 255, 0.6);
+  box-shadow:
+    0 0 14px rgba(40, 200, 235, 0.26),
+    inset 0 0 0 1px rgba(95, 240, 255, 0.12);
+}
+
+.star-reward-summary--targeted .summary-inner::before {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(40, 200, 235, 0.28) 40%,
+    rgba(95, 240, 255, 0.65) 100%
+  );
+}
+
 .star-reward-summary--raging .summary-inner {
   border-color: rgba(255, 46, 99, 0.72);
   box-shadow:
@@ -2480,6 +2355,88 @@ function starCountStyle(star: StarRenderEntry) {
   );
 }
 
+/* ── Angriffszeile ─────────────────────────────────────────────────────
+   Aufbau wie `.vhc-seal` in der Void-Karte: Label und Prozentzahl in einer
+   Zeile, der Balken darunter über die volle Breite. Kein Icon — die Rage-Marke
+   trägt auch keines, Label und Zahl allein tragen die Aussage.
+
+   Gefüllt wird per `transform: scaleX()`, NIE über `width`: eine Breitenänderung
+   ist Layout, ein `transform` reine Compositor-Arbeit — und dieser Balken
+   bewegt sich, solange der Boss steht. Ohne Transition: der Wert kommt schon
+   gestuft aus dem rAF-Loop, eine Interpolation liefe zwischen zwei Stufen
+   dauerhaft und nähme dem Balken genau die Ruhe, die die Stufung herstellt. */
+.summary-assault {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas:
+    'lbl pct'
+    'track track';
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3em 0.6em;
+  width: 100%;
+  /* Mindestbreite, damit die Zeile bei magerer Beute nicht schmaler ausfällt
+     als ihr eigener Text — die Karte darf ihre Breite nicht am Beschuss
+     ändern, sie hängt an einer festen halben Breite (STAR_SUMMARY_HALF_WIDTH_PX). */
+  min-width: 5.6em;
+}
+
+.summary-assault__lbl {
+  grid-area: lbl;
+  font-size: 0.72em;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #9fe8ff;
+  text-shadow:
+    0 0 8px rgba(40, 200, 235, 0.75),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.summary-assault__pct {
+  grid-area: pct;
+  justify-self: end;
+  font-size: 0.95em;
+  font-weight: 800;
+  line-height: 1;
+  /* Tabellenziffern: die Zeile darf beim Fallen nicht zappeln. */
+  font-variant-numeric: tabular-nums;
+  color: #5ff0ff;
+  text-shadow:
+    0 0 8px rgba(40, 200, 235, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.summary-assault__track {
+  grid-area: track;
+  position: relative;
+  height: 4px;
+  background: #0a0d10;
+  border: 1px solid rgba(40, 200, 235, 0.32);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.summary-assault__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  border-radius: 3px;
+  background: linear-gradient(to bottom, #7ff2ff, #23a8cc);
+}
+
+/* Ampel — dieselben Schwellen, die das Star-Fight-HUD für Boss-HP benutzt
+   (HP_HEALTHY_PERCENT / HP_CRIT_PERCENT). Ein statischer Farbwechsel, keine
+   Animation: er sagt etwas über den Stand, nicht über den Takt. */
+.summary-assault__fill--low {
+  background: linear-gradient(to bottom, #ffd280, #e0902a);
+}
+
+.summary-assault__fill--critical {
+  background: linear-gradient(to bottom, #ff9a86, #d8452a);
+}
+
 .summary-champion {
   display: flex;
   align-items: center;
@@ -2559,6 +2516,7 @@ function starCountStyle(star: StarRenderEntry) {
      Rage bzw. Fluch verlören ausgerechnet ihr auffälligstes Signal. */
   .star-reward-summary--raging .summary-inner::after,
   .star-reward-summary--cursed .summary-inner::after,
+  .star-planet-count--targeted::after,
   .star-planet-count--raging::after,
   .star-planet-count--cursed::after {
     animation: none;
@@ -2625,9 +2583,19 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
+/* Der Puls läuft nur, wo er etwas AUSSAGT — auf einem beschossenen,
+   verfluchten oder wütenden Stern. Der Zielstern-Takt ist der langsamste der
+   drei: Beschuss ist ein Dauerzustand, keine Frist, und darf am wenigsten
+   drängen. Steht der Stern hinter der Sonne, legt `--behind` ihn ohnehin still
+   (weiter oben) — dort fließt auch kein Schaden. */
+.star-planet-count--targeted::after,
 .star-planet-count--cursed::after,
 .star-planet-count--raging::after {
   animation: star-count-pulse-fade 2.2s ease-in-out infinite;
+}
+
+.star-planet-count--targeted::after {
+  animation-duration: 3s;
 }
 
 @keyframes star-count-pulse-fade {
@@ -2679,6 +2647,27 @@ function starCountStyle(star: StarRenderEntry) {
    Steht gleichzeitig Rage an, gewinnen deren Regeln (sie stehen danach) — auf
    dieser Fläche ist für zwei Farben kein Platz, und die Warnung wiegt schwerer
    als die Chance. Der Fluch bleibt über Marke und Block-Rahmen präsent. */
+.star-planet-count--targeted {
+  background: rgba(4, 14, 20, 0.86);
+  border-color: rgba(95, 240, 255, 0.6);
+}
+
+.star-planet-count--targeted::after {
+  border-color: rgba(95, 240, 255, 0.9);
+}
+
+.star-planet-count--targeted .star-planet-count__current {
+  color: #5ff0ff;
+  text-shadow:
+    0 0 4px rgba(40, 200, 235, 0.8),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.star-planet-count--targeted .star-planet-count__sep,
+.star-planet-count--targeted .star-planet-count__total {
+  color: #9fe8ff;
+}
+
 .star-planet-count--cursed {
   background: rgba(16, 4, 30, 0.86);
   border-color: rgba(160, 40, 255, 0.75);
