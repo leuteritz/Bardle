@@ -1,4 +1,4 @@
-import type { DrifterBuffEffects, DrifterDef, DrifterRarity } from '@/types'
+import type { DrifterBuffEffects, DrifterDef, DrifterFxStage, DrifterRarity } from '@/types'
 
 /**
  * Drifters — objects that pass through the idle orbit view and pay out when
@@ -22,6 +22,7 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 30,
     icon: 'game-icons:ringing-bell',
     body: 'chime',
+    wake: 'antisolar',
     image: '/img/BardAbilities/BardChime-128.png',
     color: '#e8c040',
     flightMs: 12_000,
@@ -37,6 +38,7 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 22,
     icon: 'game-icons:burning-embers',
     body: 'shard',
+    wake: 'antisolar',
     color: '#ff8a3c',
     flightMs: 11_000,
     sizePx: 44,
@@ -51,6 +53,7 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 14,
     icon: 'game-icons:meeple',
     body: 'meep',
+    wake: 'none',
     image: '/img/BardAbilities/BardMeep-64.png',
     color: '#9fd4ff',
     // Tumbles along slowly — it is lost, after all, and the extra seconds make
@@ -72,6 +75,7 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 12,
     icon: 'game-icons:delivery-drone',
     body: 'probe',
+    wake: 'thrust',
     color: '#52b830',
     flightMs: 13_000,
     sizePx: 48,
@@ -87,6 +91,7 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 8,
     icon: 'game-icons:sun-radiations',
     body: 'surge',
+    wake: 'antisolar',
     color: '#ffe28a',
     // A pressure wave running ahead of the sun — fast, and gone if missed.
     flightMs: 9_500,
@@ -103,6 +108,7 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 8,
     icon: 'game-icons:vortex',
     body: 'vortex',
+    wake: 'antisolar',
     color: '#b45cff',
     flightMs: 12_000,
     sizePx: 52,
@@ -117,6 +123,7 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 7,
     icon: 'game-icons:resonance',
     body: 'pulse',
+    wake: 'antisolar',
     color: '#ff4f8b',
     // The one drifter that is not a payout but a weapon: catching it fires a
     // shockwave through the whole orbit and hits every planet at once. Short,
@@ -136,6 +143,7 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 5,
     icon: 'game-icons:lighthouse',
     body: 'beacon',
+    wake: 'antisolar',
     color: '#e04a4a',
     flightMs: 14_000,
     sizePx: 50,
@@ -150,6 +158,7 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 2,
     icon: 'game-icons:whale-tail',
     body: 'leviathan',
+    wake: 'antisolar',
     color: '#46d6c0',
     // Vast and unhurried: four strikes along a long, slow passage. Missing one
     // is not fatal — the passage lasts long enough to come back to it.
@@ -178,12 +187,38 @@ export function getDrifter(id: string): DrifterDef | undefined {
   return DRIFTER_INDEX[id]
 }
 
-/** Chip/aura treatment per rarity — legendary gets the loudest frame. */
-export const DRIFTER_RARITY_GLOW: Record<DrifterRarity, number> = {
-  common: 0.35,
-  uncommon: 0.45,
-  rare: 0.6,
-  legendary: 0.85,
+/**
+ * How much ornament each rarity band earns in flight — the RANK axis.
+ *
+ * Modelled on `CHAMPION_REGALIA_STAGES`: numbers that keep climbing plus
+ * boolean flags, and every step adds exactly ONE new layer rather than saying
+ * the previous one again. Reading down a column tells you what a band is worth;
+ * reading across a row tells you what it costs.
+ *
+ * Why this replaced a single alpha value: before it, the only rarity-dependent
+ * thing about a flying drifter was the opacity of its aura. Escalation ran
+ * along the TYPE axis instead, and it ran backwards — the rare Coronal Surge
+ * carried seven running animations, the legendary Star Leviathan five.
+ *
+ * Every flag here is read together with `DRIFTER_ORNAMENT_MIN_SIZE`, never on
+ * its own. That is performance rule 7 and it is not optional: a layer too small
+ * to see is still rastered, still composited and still paid for.
+ *
+ * The cost lands where it belongs. A common drifter comes every 20–30 s and is
+ * the CHEAPEST body in the set; the legendary comes every 10–15 minutes and is
+ * the only one carrying a debris belt and a mote swarm.
+ */
+/* prettier-ignore */
+export const DRIFTER_FX_STAGES: Record<DrifterRarity, DrifterFxStage> = {
+  common:    { rarity: 'common',    auraAlpha: 0.30, auraLayers: 1, motion: 0.35, motes: 0, rim: true, pulse: false, dust: false, ring: false, herald: false },
+  uncommon:  { rarity: 'uncommon',  auraAlpha: 0.40, auraLayers: 1, motion: 0.50, motes: 2, rim: true, pulse: true,  dust: false, ring: false, herald: false },
+  rare:      { rarity: 'rare',      auraAlpha: 0.55, auraLayers: 2, motion: 0.70, motes: 4, rim: true, pulse: true,  dust: true,  ring: false, herald: false },
+  legendary: { rarity: 'legendary', auraAlpha: 0.75, auraLayers: 3, motion: 1.00, motes: 7, rim: true, pulse: true,  dust: true,  ring: true,  herald: true  },
+}
+
+/** The stage a drifter flies at. */
+export function drifterFxStage(rarity: DrifterRarity): DrifterFxStage {
+  return DRIFTER_FX_STAGES[rarity]
 }
 
 /** Total spawn weight across the pool — cached, the pool is static. */

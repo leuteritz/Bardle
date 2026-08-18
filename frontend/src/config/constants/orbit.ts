@@ -547,6 +547,18 @@ export const DRIFTER_CHIME_REWARD_MIN_CLICKS = 25
  *  Flugrichtung, damit ein Drifter nicht unbemerkt durchrutscht. */
 export const DRIFTER_EDGE_PING_LEAD_MS = 1400
 
+/** Faktor auf den Vorlauf für Stufen mit `herald` (legendary): der Leviathan
+ *  meldet sich länger an, weil man für ihn quer über den Schirm will. */
+export const DRIFTER_EDGE_PING_HERALD_MULT = 2.2
+
+/** Maße des Sensorkeils am Bildrand: Länge in Flugrichtung und Breite quer
+ *  dazu, beides in px. Der Keil ZEIGT, wohin der Drifter zieht — ein
+ *  konzentrischer Ring sagte nur, DASS dort etwas ist. */
+export const DRIFTER_PING_REACH_PX = 74
+export const DRIFTER_PING_SPREAD_PX = 30
+/** Takt des Keils in ms; die Herald-Stufe legt einen zweiten, versetzten dazu. */
+export const DRIFTER_PING_SWEEP_MS = 1250
+
 /** Anteil der Flugzeit, über den der Drifter ein- bzw. ausblendet. */
 export const DRIFTER_FADE_IN_FRAC = 0.08
 export const DRIFTER_FADE_OUT_FRAC = 0.14
@@ -554,8 +566,31 @@ export const DRIFTER_FADE_OUT_FRAC = 0.14
 /** Nachlaufzeit der Einsammel-Animation, bevor der Knoten entfernt wird. */
 export const DRIFTER_COLLECT_FX_MS = 620
 
-/** Anzahl der Funken beim Einsammeln (Stern-Explosion am Klickpunkt). */
+/** Grundzahl der Funken beim Einsammeln. Die tatsächliche Zahl steigt mit der
+ *  Rangstufe (`DRIFTER_BURST_PER_STAGE`) — ein Errant Chime soll nicht dasselbe
+ *  Feuerwerk werfen wie der Leviathan. */
 export const DRIFTER_BURST_PARTICLES = 10
+
+/** Zuschlag je Rangstufe (common = 0). Zusammen mit der Grundzahl ergibt das
+ *  10 / 14 / 18 / 24 Funken. */
+export const DRIFTER_BURST_PER_STAGE = 4
+
+/** Die Funken sind Streifen, keine Kugeln: Materie, die auseinanderfährt, zieht
+ *  sich in Fluchtrichtung. Länge und Dicke in px am Anfang der Flugbahn. */
+export const DRIFTER_BURST_STREAK_LEN_PX = 16
+export const DRIFTER_BURST_STREAK_THICK_PX = 3
+
+/** Reichweite des Druckrings als Vielfaches von `sizePx`, und seine Laufzeit.
+ *  Radialer Verlauf statt Border — aus demselben Grund, der in
+ *  `OrbitStrikeWave` steht: eine hochskalierte Border ist genau dann hauchdünn,
+ *  wenn der Ring noch im Bild steht. */
+export const DRIFTER_BURST_RING_SCALE = 3.4
+export const DRIFTER_BURST_RING_MS = 520
+
+/** Lichtsäule beim Einsammeln eines legendary Drifters — Höhe als Vielfaches
+ *  von `sizePx`, Laufzeit in ms. */
+export const DRIFTER_BURST_PILLAR_SCALE = 7
+export const DRIFTER_BURST_PILLAR_MS = 620
 
 /** Flugbahnen in normierten Feldkoordinaten (0..1 der Spielfläche zwischen
  *  Header und Bottom-Bar). Start- und Endpunkt liegen absichtlich außerhalb
@@ -633,15 +668,89 @@ export const DRIFTER_BUFF_EXPIRY_WARN_SEC = 5
  *  so bleibt ein 44px-Splitter proportional zum 128px-Leviathan. */
 export const DRIFTER_AURA_SCALE = 2.1
 export const DRIFTER_TRAIL_LENGTH_SCALE = 2.8
-export const DRIFTER_TRAIL_WIDTH_SCALE = 0.14
+/** Breite der Spur, Anteil von `sizePx`. Im Browser nachgemessen und von 0,14
+ *  angehoben: 6 px Breite auf 129 px Länge lasen sich als Zahnstocher, nicht
+ *  als Schweif — ein Schweif ist am Ansatz breit und franst aus. */
+export const DRIFTER_TRAIL_WIDTH_SCALE = 0.21
 /** Obergrenze der Schweifbreite: ohne sie zieht der Leviathan einen Balken
  *  statt einer Spur hinter sich her. */
-export const DRIFTER_TRAIL_WIDTH_MAX_PX = 13
-export const DRIFTER_TRAIL_WIDTH_MIN_PX = 3
+export const DRIFTER_TRAIL_WIDTH_MAX_PX = 19
+export const DRIFTER_TRAIL_WIDTH_MIN_PX = 5
 
 /** Sicherheitsabstand zur Oberkante der erhobenen HUD-Panels (Minimap links,
  *  Command rechts). Ein Drifter dahinter wäre unsichtbar UND unklickbar. */
 export const DRIFTER_HUD_PANEL_MARGIN_PX = 24
+
+// ── Licht und Zierrat ───────────────────────────────────────────────────
+// Ein Drifter ist ein Körper im Licht der Sonne, kein Zeichen auf dem Himmel.
+// Die Sonne steht in der Bildmitte — dieselbe Annahme, auf der `OrbitStrikeWave`
+// seine ganze Inszenierung aufbaut. Aus dieser EINEN Lichtquelle folgt der
+// Terminator auf jedem Körper und die Richtung jedes Schweifs.
+
+/** Rasterung des Lichtwinkels in Grad. Der Winkel ändert sich mit jedem Frame,
+ *  und jede RotationsÄNDERUNG kann eine Neurasterung auslösen — dieselbe
+ *  Überlegung, aus der `ORBIT_SCALE_QUANTIZE_STEPS` entstanden ist. Bei 5°
+ *  wandert der Terminator in Stufen, die unter der Wahrnehmungsschwelle liegen:
+ *  ein Drifter durchquert das Bild in 10–26 s und dreht sich dabei um deutlich
+ *  weniger als eine halbe Umdrehung. */
+export const DRIFTER_LIGHT_QUANTIZE_DEG = 5
+
+/** Unterhalb dieser Anzeigekante trägt ein Drifter nur Kern, Terminator und
+ *  Saum — keine Aura-Staffel, keine Moten, keinen Gürtel, keine Staubfahne.
+ *
+ *  Vorbild ist `CHAMPION_REGALIA_ORNAMENT_MIN_SIZE`, und der Grund ist derselbe
+ *  (Performance-Regel 7): eine Zierebene, die keine zwei Pixel breit ausfällt,
+ *  ist unsichtbar und wird trotzdem voll bezahlt. Die Schwelle liegt bewusst
+ *  ÜBER `ADMIN_DRIFTER_PREVIEW_PX` (34) — die Vorschauen im Admin-Panel und in
+ *  der Infokarte zeigen damit die reine Silhouette, was dort genau richtig ist:
+ *  sie sollen den TYP zeigen, nicht seinen Rang. */
+export const DRIFTER_ORNAMENT_MIN_SIZE = 40
+
+/** Radien der gestaffelten Aura-Schalen, Vielfache von `sizePx`. Die innerste
+ *  ist `DRIFTER_AURA_SCALE`; jede weitere greift weiter aus und wird schwächer,
+ *  sodass drei Schalen als EIN weicher Abfall lesen statt als drei Ringe. */
+export const DRIFTER_AURA_SHELL_SCALES: readonly number[] = [2.1, 2.9, 3.8]
+
+/** Deckkraft je Schale, relativ zur `auraAlpha` der Rangstufe. */
+export const DRIFTER_AURA_SHELL_ALPHAS: readonly number[] = [1, 0.42, 0.2]
+
+/** Grundtakt der Aura-Atmung in ms. Jede weitere Schale läuft langsamer und
+ *  versetzt — gleicher Takt auf allen dreien liest sich als Blinken. */
+export const DRIFTER_AURA_BREATHE_MS = 2600
+export const DRIFTER_AURA_SHELL_BREATHE_STEP = 1.45
+
+/** Bahnradius der Trichter-Moten als Vielfaches von `sizePx`, und wie weit die
+ *  äußeren darüber hinausstreuen. Aus dem Index abgeleitet, nie gewürfelt. */
+export const DRIFTER_MOTE_ORBIT_SCALE = 0.82
+export const DRIFTER_MOTE_ORBIT_SPREAD = 0.46
+/** Größe einer Mote als Anteil von `sizePx`, kleinste und größte Stufe. */
+export const DRIFTER_MOTE_SIZE_MIN = 0.045
+export const DRIFTER_MOTE_SIZE_MAX = 0.1
+/** Umlaufdauer der Moten-Bahn in ms, langsamste und schnellste Stufe. */
+export const DRIFTER_MOTE_SPIN_MS_MIN = 5200
+export const DRIFTER_MOTE_SPIN_MS_MAX = 11_000
+
+/** Trümmergürtel (nur legendary): Durchmesser als Vielfaches von `sizePx`,
+ *  Neigung der Gurtebene und Umlaufdauer. Die Neigung ist ein STATISCHES
+ *  `scaleY` — die Ellipse entsteht durch perspektivische Verkürzung, animiert
+ *  wird allein die Drehung darin. */
+export const DRIFTER_RING_SCALE = 1.72
+export const DRIFTER_RING_TILT = 0.3
+export const DRIFTER_RING_SPIN_MS = 9000
+
+/** Staubfahne im Schweif: Länge und Breite relativ zum Schweif selbst. Sie
+ *  liegt IN ihm, nicht daneben — sonst zieht der Körper zwei Spuren. */
+export const DRIFTER_DUST_LENGTH_SCALE = 1.5
+export const DRIFTER_DUST_WIDTH_SCALE = 2.4
+
+/** Grundtakt der Eigendrehung eines Körpers in ms, bei `motion` = 1. Kleinere
+ *  Rangstufen drehen langsamer: die Dauer wird durch `motion` geteilt. */
+export const DRIFTER_TUMBLE_MS = 14_000
+
+/** Neigung der Taumelachse als statisches `scaleY` am Elternteil. Ein Körper,
+ *  der sich um die Bildachse dreht, sieht aus wie ein Zeiger; erst die
+ *  Verkürzung macht daraus eine Achse, die schräg im Raum steht. */
+export const DRIFTER_TUMBLE_TILT = 0.78
 
 /** Infokarte oben links: wie lange die Meldung nach dem Einsammeln bzw. nach
  *  einem verpassten Drifter noch stehen bleibt, bevor sie ausblendet. */

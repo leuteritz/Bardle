@@ -87,6 +87,53 @@ export interface DrifterInstantReward {
   orbitStrikeMaxHpPct?: number
 }
 
+/**
+ * Where a drifter's wake points.
+ *
+ * `antisolar` is the physical answer and the default: a comet's tail is blown
+ * away from the sun, not backwards along its path. The sun sits at the centre
+ * of the stage, so the angle is free — the frame loop already rotates the wake,
+ * only the angle fed into it changes. `thrust` is for the one body that has an
+ * engine, and points against the flight heading. `none` is for what hangs in
+ * the vacuum without shedding anything.
+ */
+export type DrifterWake = 'antisolar' | 'thrust' | 'none'
+
+/**
+ * How much ornament a rarity band earns — the rank axis of the flying body.
+ *
+ * Modelled on `CHAMPION_REGALIA_STAGES`: continuous values that keep climbing
+ * plus boolean feature flags, so every step adds exactly ONE new layer instead
+ * of restating the one before it. Before this table the only rarity-dependent
+ * value in flight was an aura alpha, and escalation ran along the TYPE axis
+ * instead — a rare Coronal Surge carried more motion than the legendary.
+ *
+ * Every flag is read together with `DRIFTER_ORNAMENT_MIN_SIZE`, never on its
+ * own (performance rule 7): a layer that measures under two pixels is invisible
+ * and still paid for in full.
+ */
+export interface DrifterFxStage {
+  rarity: DrifterRarity
+  /** Opacity of the innermost aura shell. */
+  auraAlpha: number
+  /** Stacked aura shells, 1–3 — each one breathes on its own offset. */
+  auraLayers: number
+  /** Amplitude of the body's own motion, 0..1. Scales durations and travel. */
+  motion: number
+  /** Debris motes orbiting the body. */
+  motes: number
+  /** Grazing highlight along the sunlit limb. */
+  rim: boolean
+  /** Second, offset aura beat — the shell stops reading as one flat ring. */
+  pulse: boolean
+  /** Dust plume trailing inside the wake. */
+  dust: boolean
+  /** Debris belt around the body. */
+  ring: boolean
+  /** Announces itself at the screen edge earlier, and with a second beat. */
+  herald: boolean
+}
+
 /** Which CSS body `DrifterBody.vue` builds for a drifter in flight. Every type
  *  has its own silhouette — the flying object is drawn entirely in CSS, the
  *  icon/artwork only ever shows up in the HUD (info card, buff chip, herald). */
@@ -113,6 +160,8 @@ export interface DrifterDef {
   icon: string
   /** CSS silhouette drawn while the drifter crosses the orbit view. */
   body: DrifterBodyKind
+  /** Where the wake points — away from the sun unless the body has an engine. */
+  wake: DrifterWake
   /** Optional image shown instead of the icon in the HUD (chime / meep art). */
   image?: string
   /** Signature color: aura, trail, edge ping and buff chip. */

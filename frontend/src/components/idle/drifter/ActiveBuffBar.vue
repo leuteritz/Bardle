@@ -19,8 +19,11 @@
       v-for="chip in chips"
       :key="chip.key"
       class="buff-chip"
-      :class="{ 'buff-chip--expiring': chip.secondsLeft <= DRIFTER_BUFF_EXPIRY_WARN_SEC }"
-      :style="{ '--chip-color': chip.color }"
+      :class="{
+        'buff-chip--expiring': chip.secondsLeft <= DRIFTER_BUFF_EXPIRY_WARN_SEC,
+        'buff-chip--ranked': !!chip.rankColor,
+      }"
+      :style="{ '--chip-color': chip.color, '--chip-rank': chip.rankColor }"
     >
       <!-- The icon carries the identity (every drifter has its own), so the
            text can stay down to what the buff DOES and how long it lasts.
@@ -73,6 +76,7 @@ import {
 import type { DrifterBuffEffects, TimedBuffEffects } from '@/types'
 import {
   DRIFTER_BUFF_EXPIRY_WARN_SEC,
+  DRIFTER_RARITY_COLOR,
   HONOR_MVP_BUFF_MULT,
   HONOR_MVP_BUFF_DURATION_S,
 } from '@/config/constants'
@@ -99,6 +103,14 @@ interface BuffChip {
   secondsLeft: number
   /** 0..1 — remaining share of the buff's full duration. */
   progress: number
+  /**
+   * Rank colour of the drifter this came from, if it came from one.
+   *
+   * Undefined for the MVP honour buff and for omen rewards — neither has a
+   * rarity, and inventing one for them would say something untrue. A chip
+   * without a rank simply has no rank edge.
+   */
+  rankColor?: string
 }
 
 /**
@@ -137,6 +149,7 @@ const chips = computed<BuffChip[]>(() => {
       multiplier: Math.max(...keys.map((k) => buff.effects[k] ?? 1)),
       secondsLeft: Math.ceil(remainingMs / 1000),
       progress: buff.durationMs > 0 ? Math.min(1, remainingMs / buff.durationMs) : 0,
+      rankColor: DRIFTER_RARITY_COLOR[def.rarity],
     })
   }
 
@@ -232,6 +245,23 @@ const chips = computed<BuffChip[]>(() => {
   right: 0;
   height: 3px;
   background: var(--chip-color, #e8c040);
+}
+
+/* Rank edge down the left side. Two different statements, so two different
+   edges: the hairline above is the drifter's OWN colour (which buff is this),
+   this one is its rarity (what was it worth). The same split the info card
+   makes with its top stripe and its left border.
+   No beat of its own — a chip is HUD, not an effect. */
+.buff-chip--ranked::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--chip-rank);
+  opacity: 0.85;
+  pointer-events: none;
 }
 
 /* Round stage in the buff's colour — the same treatment the drifter info card

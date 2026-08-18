@@ -1,11 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { drifterField, drifterPointAt, drifterEntryEdge } from '@/utils/orbit/drifterPath'
+import {
+  drifterField,
+  drifterPointAt,
+  drifterEntryEdge,
+  drifterLightAngleDeg,
+} from '@/utils/orbit/drifterPath'
 import {
   DRIFTER_ROUTES,
   DRIFTER_CENTER_CLEARANCE,
   DRIFTER_FIELD_TOP_PX,
   DRIFTER_FIELD_BOTTOM_PX,
   DRIFTER_HUD_PANEL_MARGIN_PX,
+  DRIFTER_LIGHT_QUANTIZE_DEG,
 } from '@/config/constants'
 import { DRIFTERS } from '@/config/world/drifters'
 
@@ -209,5 +215,83 @@ describe('drifterEntryEdge', () => {
     // Route 0 starts left of the field; mirrored it has to come from the right.
     expect(drifterEntryEdge(0, false).side).toBe('left')
     expect(drifterEntryEdge(0, true).side).toBe('right')
+  })
+})
+
+
+describe('drifterLightAngleDeg', () => {
+  // The sun sits at the centre of the stage, so this angle is what makes the
+  // terminator face inward and the tail blow outward. It is the only geometry
+  // in the drifter that has a physical claim behind it, which is exactly why
+  // it is worth pinning down.
+  const W = 1920
+  const H = 950
+  const CX = W / 2
+  const CY = H / 2
+
+  it('points from the centre out towards the body', () => {
+    // Screen coordinates: +x is right, +y is DOWN, so atan2 grows clockwise.
+    expect(drifterLightAngleDeg(CX + 400, CY, W, H)).toBe(0)
+    expect(drifterLightAngleDeg(CX, CY + 400, W, H)).toBe(90)
+    expect(Math.abs(drifterLightAngleDeg(CX - 400, CY, W, H))).toBe(180)
+    expect(drifterLightAngleDeg(CX, CY - 400, W, H)).toBe(-90)
+  })
+
+  it('lands in the right quadrant for a diagonal', () => {
+    expect(drifterLightAngleDeg(CX + 300, CY + 300, W, H)).toBe(45)
+    expect(drifterLightAngleDeg(CX - 300, CY + 300, W, H)).toBe(135)
+    expect(drifterLightAngleDeg(CX + 300, CY - 300, W, H)).toBe(-45)
+    expect(drifterLightAngleDeg(CX - 300, CY - 300, W, H)).toBe(-135)
+  })
+
+  it('quantises every result to the configured step', () => {
+    // Walk a full circle at a radius a drifter actually flies at: no matter
+    // where it stands, the angle must land on a step boundary — that is what
+    // keeps the compositor from re-rastering on sub-degree changes.
+    for (let deg = 0; deg < 360; deg += 3) {
+      const rad = (deg * Math.PI) / 180
+      const angle = drifterLightAngleDeg(
+        CX + Math.cos(rad) * 420,
+        CY + Math.sin(rad) * 420,
+        W,
+        H,
+      )
+      // Math.abs, because -0 % 5 is -0 and Object.is separates it from +0.
+      expect(Math.abs(angle % DRIFTER_LIGHT_QUANTIZE_DEG)).toBe(0)
+    }
+  })
+
+  it('never moves more than half a step away from the true angle', () => {
+    for (let deg = -175; deg <= 180; deg += 1) {
+      const rad = (deg * Math.PI) / 180
+      const angle = drifterLightAngleDeg(
+        CX + Math.cos(rad) * 300,
+        CY + Math.sin(rad) * 300,
+        W,
+        H,
+      )
+      // Compare on the circle, so 179.6° -> 180° is not read as a 359° jump.
+      const diff = Math.abs(((angle - deg + 540) % 360) - 180)
+      expect(diff).toBeLessThanOrEqual(DRIFTER_LIGHT_QUANTIZE_DEG / 2 + 0.001)
+    }
+  })
+
+  it('returns a finite angle at the exact centre instead of flipping', () => {
+    // A body drifting across the middle must not have its lighting swing
+    // around on a rounding error.
+    expect(drifterLightAngleDeg(CX, CY, W, H)).toBe(0)
+    expect(Number.isFinite(drifterLightAngleDeg(CX, CY, W, H))).toBe(true)
+  })
+
+  it('stays finite everywhere along every route', () => {
+    for (const [w, h] of VIEWPORTS) {
+      const field = drifterField(w, h)
+      for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
+        for (let i = 0; i <= 20; i++) {
+          const p = drifterPointAt(route, false, i / 20, field, 24)
+          expect(Number.isFinite(drifterLightAngleDeg(p.x, p.y, w, h))).toBe(true)
+        }
+      }
+    }
   })
 })

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useUiStore } from '@/stores/core/uiStore'
-import { DRIFTERS, getDrifter } from '@/config/world/drifters'
+import { DRIFTERS, getDrifter, drifterFxStage } from '@/config/world/drifters'
 import { DRIFTER_RARITY_COLOR, ADMIN_DRIFTER_PREVIEW_PX } from '@/config/constants'
 import DrifterBody from '@/components/idle/drifter/DrifterBody.vue'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
@@ -64,7 +64,7 @@ function clearField(): void {
         @click="spawn(def.id)"
       >
         <span class="dr-preview" :style="{ '--drifter-size': `${ADMIN_DRIFTER_PREVIEW_PX}px` }">
-          <DrifterBody :kind="def.body" :color="def.color" />
+          <DrifterBody :kind="def.body" :color="def.color" :motion="drifterFxStage(def.rarity).motion" />
         </span>
         <span class="dr-name">{{ def.name }}</span>
         <span class="dr-rarity" :style="{ color: DRIFTER_RARITY_COLOR[def.rarity] }">

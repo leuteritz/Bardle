@@ -3,7 +3,13 @@ import { computed, ref, watch, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useDrifterStore } from '@/stores/world/drifterStore'
-import { getDrifter, DRIFTER_BUFF_EFFECT_LABELS, DRIFTER_BUFF_LABEL_ALL } from '@/config/world/drifters'
+import {
+  getDrifter,
+  drifterFxStage,
+  DRIFTER_BUFF_EFFECT_LABELS,
+  DRIFTER_BUFF_LABEL_ALL,
+} from '@/config/world/drifters'
+import DrifterBody from './DrifterBody.vue'
 import type { DrifterBuffEffects, DrifterDef } from '@/types'
 import {
   DRIFTER_CARD_ICON,
@@ -177,16 +183,20 @@ onUnmounted(clearTimers)
       </div>
 
       <div class="dic-main">
+        <!-- Die Bühne zeigt den Körper, nicht das Glyph. Das ist der Zweck der
+             Karte: sie soll sagen, WONACH man am Himmel sucht, und dafür taugt
+             nur die Silhouette, die dort auch wirklich fliegt. Das Icon bleibt
+             dem Buff-Chip — dort geht es um die Wirkung, nicht um das Objekt.
+             Unter `DRIFTER_ORNAMENT_MIN_SIZE` zeigt der Körper von sich aus nur
+             Kern, Terminator und Saum; genau dafür ist die Schwelle da. -->
         <span class="dic-stage">
-          <img
-            v-if="shownDef.image"
-            :src="shownDef.image"
-            class="dic-stage__img"
-            alt=""
-            draggable="false"
-            @dragstart.prevent
-          />
-          <Icon v-else :icon="shownDef.icon" class="dic-stage__icon" width="30" height="30" />
+          <span class="dic-stage__body">
+            <DrifterBody
+              :kind="shownDef.body"
+              :color="shownDef.color"
+              :motion="drifterFxStage(shownDef.rarity).motion"
+            />
+          </span>
         </span>
 
         <span class="dic-body">
@@ -255,6 +265,30 @@ onUnmounted(clearTimers)
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
   overflow: hidden;
   transition: top 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Rangstreifen über der Karte — dieselbe Rolle wie die Goldlinie an jedem
+   Modal, nur in der Farbe der Seltenheitsstufe. Bis hierher stand der Rang als
+   Wort in der Fußzeile und war damit das Letzte, was man liest; als Streifen
+   ist er das Erste, was man sieht, und kostet keine Zeile Höhe. Der linke
+   Rahmen bleibt die EIGENfarbe des Drifters — zwei verschiedene Aussagen,
+   deshalb zwei verschiedene Kanten. */
+.dic-root::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--rarity) 22%,
+    var(--rarity) 78%,
+    transparent 100%
+  );
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 /* Ergebniszustände: der Rahmen quittiert, der Inhalt bleibt lesbar. */
@@ -358,6 +392,7 @@ onUnmounted(clearTimers)
 }
 
 .dic-stage {
+  --drifter-size: 34px;
   flex-shrink: 0;
   width: 48px;
   height: 48px;
@@ -373,15 +408,12 @@ onUnmounted(clearTimers)
   );
 }
 
-.dic-stage__icon {
-  color: var(--accent);
-}
-
-.dic-stage__img {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
-  user-select: none;
+/* Der Körper braucht eine Box mit Maßen — `DrifterBody` legt sich mit
+   `inset: 0` hinein und rechnet sein `--u` aus `--drifter-size`. */
+.dic-stage__body {
+  position: relative;
+  width: var(--drifter-size);
+  height: var(--drifter-size);
 }
 
 .dic-body {
@@ -515,6 +547,7 @@ onUnmounted(clearTimers)
     padding: 9px 11px 11px;
   }
   .dic-stage {
+    --drifter-size: 31px;
     width: 44px;
     height: 44px;
   }
@@ -543,13 +576,9 @@ onUnmounted(clearTimers)
     font-size: 18px;
   }
   .dic-stage {
+    --drifter-size: 41px;
     width: 58px;
     height: 58px;
-  }
-  .dic-stage__icon,
-  .dic-stage__img {
-    width: 36px;
-    height: 36px;
   }
   .dic-name {
     font-size: 17px;
@@ -584,13 +613,9 @@ onUnmounted(clearTimers)
     font-size: 21px;
   }
   .dic-stage {
+    --drifter-size: 48px;
     width: 68px;
     height: 68px;
-  }
-  .dic-stage__icon,
-  .dic-stage__img {
-    width: 42px;
-    height: 42px;
   }
   .dic-name {
     font-size: 20px;

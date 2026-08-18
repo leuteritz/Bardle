@@ -9,6 +9,7 @@ import {
   HUD_SCALE_REF_WIDTH_PX,
   HUD_SCALE_REF_HEIGHT_PX,
   DRIFTER_TANGENT_PROBE_STEP,
+  DRIFTER_LIGHT_QUANTIZE_DEG,
 } from '@/config/constants'
 import { hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
 
@@ -275,6 +276,39 @@ export function drifterPointAt(
     Math.abs(dx) < 0.0001 && Math.abs(dy) < 0.0001 ? 0 : (Math.atan2(dy, dx) * 180) / Math.PI
 
   return { x: here.x, y: here.y, angleDeg }
+}
+
+/**
+ * The angle, in degrees, at which sunlight strikes a body standing at (x, y).
+ *
+ * The sun sits at the centre of the stage — the same assumption `OrbitStrikeWave`
+ * builds its whole shockwave on, and the reason every route in `DRIFTER_ROUTES`
+ * keeps its distance from the middle. So the lit side of a drifter always faces
+ * inward, and this one number drives both the terminator across its body and
+ * the direction its wake is blown.
+ *
+ * Quantised to `DRIFTER_LIGHT_QUANTIZE_DEG`, for the same reason
+ * `ORBIT_SCALE_QUANTIZE_STEPS` exists: the compositor moves an element for
+ * free, but a CHANGED transform can cost a re-raster. A drifter crosses the
+ * screen in 10–26 s and turns through well under half a revolution while doing
+ * it, so 5° steps are invisible.
+ *
+ * At the exact centre there is no direction to speak of; the function returns 0
+ * there rather than whatever `atan2(0, 0)` happens to be, so a body that drifts
+ * across the middle cannot flip its lighting on a rounding error.
+ */
+export function drifterLightAngleDeg(
+  x: number,
+  y: number,
+  viewportW: number,
+  viewportH: number,
+): number {
+  const dx = x - viewportW / 2
+  const dy = y - viewportH / 2
+  if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return 0
+  const deg = (Math.atan2(dy, dx) * 180) / Math.PI
+  const step = DRIFTER_LIGHT_QUANTIZE_DEG
+  return Math.round(deg / step) * step
 }
 
 /** Which viewport edge the drifter enters from — drives the pre-spawn edge ping.
