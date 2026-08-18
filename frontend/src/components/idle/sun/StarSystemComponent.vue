@@ -147,9 +147,14 @@
                  Rage-/Fluch-Pulsring), und der Badge-Stapel darüber hängt IN
                  der 52 px langen Leine, von der Fluch und Rage schon ~46 px
                  einnehmen. Der Balken zeigt BOSS-HP und fällt — dieselbe
-                 Lesart wie Star-Fight-HUD und Header-Zeile. -->
+                 Lesart wie Star-Fight-HUD und Header-Zeile.
+
+                 BEWUSST OHNE Beschriftung: ein Wort davor wäre entweder
+                 militärischer Jargon („Under Fire“) oder ein Begriff, den das
+                 Spiel schon anders belegt. Die Aussage tragen die Cyan-Signatur
+                 — dieselbe, die `.timer-bar-row--targeted` in der Header-Zeile
+                 führt — und der fallende Balken allein. -->
             <div v-if="targetedStarId === star.id" class="summary-assault">
-              <span class="summary-assault__lbl">Under Fire</span>
               <span class="summary-assault__pct">{{ targetHpPct }}%</span>
               <span class="summary-assault__track">
                 <span
@@ -2366,37 +2371,19 @@ function starCountStyle(star: StarRenderEntry) {
    gestuft aus dem rAF-Loop, eine Interpolation liefe zwischen zwei Stufen
    dauerhaft und nähme dem Balken genau die Ruhe, die die Stufung herstellt. */
 .summary-assault {
-  display: grid;
-  grid-template-columns: auto auto;
-  grid-template-areas:
-    'lbl pct'
-    'track track';
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.3em 0.6em;
+  gap: 0.3em;
   width: 100%;
-  /* Mindestbreite, damit die Zeile bei magerer Beute nicht schmaler ausfällt
-     als ihr eigener Text — die Karte darf ihre Breite nicht am Beschuss
-     ändern, sie hängt an einer festen halben Breite (STAR_SUMMARY_HALF_WIDTH_PX). */
-  min-width: 5.6em;
-}
-
-.summary-assault__lbl {
-  grid-area: lbl;
-  font-size: 0.72em;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #9fe8ff;
-  text-shadow:
-    0 0 8px rgba(40, 200, 235, 0.75),
-    0 1px 3px rgba(0, 0, 0, 0.95);
+  /* Mindestbreite, damit der Balken bei magerer Beute nicht auf die Breite der
+     Prozentzahl zusammenschrumpft — die Karte darf ihre Breite nicht am
+     Beschuss ändern, sie hängt an einer festen halben Breite
+     (STAR_SUMMARY_HALF_WIDTH_PX). */
+  min-width: 4.5em;
 }
 
 .summary-assault__pct {
-  grid-area: pct;
-  justify-self: end;
   font-size: 0.95em;
   font-weight: 800;
   line-height: 1;
@@ -2409,8 +2396,8 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 .summary-assault__track {
-  grid-area: track;
   position: relative;
+  width: 100%;
   height: 4px;
   background: #0a0d10;
   border: 1px solid rgba(40, 200, 235, 0.32);
