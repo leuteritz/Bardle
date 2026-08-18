@@ -117,8 +117,7 @@
       <template v-for="star in frontStars" :key="'summary-' + star.id">
         <div
           v-if="
-            getStarRewardSummary(star).totalChimes > 0 ||
-            getStarRewardSummary(star).materials.length > 0 ||
+            getStarRewardSummary(star).planets.length > 0 ||
             getStarRewardSummary(star).champion ||
             targetedStarId === star.id
           "
@@ -140,37 +139,6 @@
           @mouseleave="setSummaryHover(null)"
         >
           <div class="summary-inner">
-            <!-- Unter Beschuss: die EINE Stelle, an der steht, welcher Stern
-                 gerade von Champions und Turret-Planeten bearbeitet wird. Als
-                 erster Block im Fluss — beide Pseudo-Ebenen der Karte sind
-                 belegt (`::before` ist die Leine zum Stern, `::after` der
-                 Rage-/Fluch-Pulsring), und der Badge-Stapel darüber hängt IN
-                 der 52 px langen Leine, von der Fluch und Rage schon ~46 px
-                 einnehmen. Der Balken zeigt BOSS-HP und fällt — dieselbe
-                 Lesart wie Star-Fight-HUD und Header-Zeile.
-
-                 BEWUSST OHNE Beschriftung: ein Wort davor wäre entweder
-                 militärischer Jargon („Under Fire“) oder ein Begriff, den das
-                 Spiel schon anders belegt. Nötig ist auch keines — die
-                 Planetenreihe darüber BENENNT das Ziel, indem sie es zeigt: ein
-                 Bild je Planet des Sterns, befreite ausgegraut, der bekämpfte
-                 hell. Die Leiste darunter gehört sichtbar zum hellen. -->
-            <div v-if="targetedStarId === star.id" class="summary-assault">
-              <span v-if="targetPlanetType" class="summary-assault__world">
-                <PlanetGlyph :type="targetPlanetType" :size="STAR_SUMMARY_PLANET_GLYPH_PX" />
-              </span>
-              <span class="summary-assault__meter">
-                <span class="summary-assault__pct">{{ targetHpPct }}%</span>
-                <span class="summary-assault__track">
-                  <span
-                    class="summary-assault__fill"
-                    :class="targetHpClass"
-                    :style="{ transform: `scaleX(${targetHpRatio})` }"
-                  />
-                </span>
-              </span>
-            </div>
-
             <!-- Statusmarken: die einzigen Zusätze am Stern selbst. Sie sitzen
                  über der Beute, weil sie sie qualifizieren — Fluch (unser
                  Debuff AUF dem Stern) oben, Rage (sein Buff) unten direkt an
@@ -223,29 +191,77 @@
 
             <div
               v-if="
-                getStarRewardSummary(star).champion &&
-                (getStarRewardSummary(star).totalChimes > 0 ||
-                  getStarRewardSummary(star).materials.length > 0)
+                getStarRewardSummary(star).champion && getStarRewardSummary(star).planets.length > 0
               "
               class="summary-divider"
             />
 
+            <!-- Die Beute, aufgeschlüsselt nach WELT. Zusammengefasst stand hier
+                 eine Summe über alle Planeten des Sterns; sie sagte, was der
+                 Stern insgesamt hergibt, aber nicht, welche Welt wofür befreit
+                 werden muss — und genau das ist die Frage, die der Spieler vor
+                 dem Klick hat. Jetzt eine Zeile je Planet: sein Bild links,
+                 genau seine Chimes und Materialien rechts. -->
             <div class="summary-loot-row">
-              <div v-if="getStarRewardSummary(star).totalChimes > 0" class="summary-item">
-                <img src="/img/BardAbilities/BardChime-128.png" alt="Chimes" class="summary-icon" />
-                <span class="summary-count"
-                  >×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span
-                >
-              </div>
               <div
-                v-for="mat in getStarRewardSummary(star).materials"
-                :key="mat.name"
-                class="summary-item"
+                v-for="row in getStarRewardSummary(star).planets"
+                :key="row.planetId"
+                class="summary-planet"
+                :class="{ 'summary-planet--target': row.planetId === targetPlanetId }"
               >
-                <img :src="mat.image" :alt="mat.name" class="summary-icon" />
-                <span class="summary-count">×{{ mat.count }}</span>
+                <span class="summary-planet__world">
+                  <PlanetGlyph :type="row.planetType" :size="STAR_SUMMARY_PLANET_GLYPH_PX" />
+                </span>
+                <span class="summary-planet__loot">
+                  <span v-if="row.chimes > 0" class="summary-item">
+                    <img
+                      src="/img/BardAbilities/BardChime-128.png"
+                      alt="Chimes"
+                      class="summary-icon"
+                    />
+                    <span class="summary-count">×{{ formatNumber(row.chimes) }}</span>
+                  </span>
+                  <span v-for="mat in row.materials" :key="mat.name" class="summary-item">
+                    <!-- Vier Materialien tragen in den Stammdaten gar kein Bild.
+                         In der Sammelzeile fiel die Lücke kaum auf, in einer
+                         Planetenzeile steht sie als Loch — ohne Bild bleibt
+                         die Menge allein stehen. -->
+                    <img v-if="mat.image" :src="mat.image" :alt="mat.name" class="summary-icon" />
+                    <span class="summary-count">×{{ mat.count }}</span>
+                  </span>
+                </span>
               </div>
             </div>
+
+            <!-- Unter Beschuss: die EINE Stelle, an der steht, welche Welt
+                 gerade von Champions und Turret-Planeten bearbeitet wird. Als
+                 LETZTER Block im Fluss — die Leiste gehört zu EINER der
+                 Beutezeilen darüber, nicht über sie; welcher, sagt deren cyane
+                 Hinterlegung. Der Balken zeigt BOSS-HP und fällt — dieselbe
+                 Lesart wie Star-Fight-HUD und Header-Zeile.
+
+                 BEWUSST OHNE Beschriftung: ein Wort davor wäre entweder
+                 militärischer Jargon („Under Fire“) oder ein Begriff, den das
+                 Spiel schon anders belegt. Nötig ist auch keines — das Bild
+                 neben der Leiste BENENNT das Ziel, indem es die Welt zeigt. -->
+            <template v-if="targetedStarId === star.id">
+              <div class="summary-divider" />
+              <div class="summary-assault">
+                <span v-if="targetPlanetType" class="summary-assault__world">
+                  <PlanetGlyph :type="targetPlanetType" :size="STAR_SUMMARY_PLANET_GLYPH_PX" />
+                </span>
+                <span class="summary-assault__meter">
+                  <span class="summary-assault__pct">{{ targetHpPct }}%</span>
+                  <span class="summary-assault__track">
+                    <span
+                      class="summary-assault__fill"
+                      :class="targetHpClass"
+                      :style="{ transform: `scaleX(${targetHpRatio})` }"
+                    />
+                  </span>
+                </span>
+              </div>
+            </template>
           </div>
         </div>
       </template>
@@ -331,6 +347,7 @@ import {
   STAR_SUMMARY_HALF_WIDTH_PX,
   STAR_SUMMARY_FLIP_HYSTERESIS_PX,
   STAR_SUMMARY_FLIP_STACK_PX,
+  STAR_SUMMARY_FLIP_TOP_MARGIN_PX,
   STAR_SUMMARY_PLANET_GLYPH_PX,
   STAR_COUNT_GAP_PX,
   STAR_COUNT_HEIGHT_PX,
@@ -864,6 +881,14 @@ const targetedStarId = computed(() => starGroupStore.targetedStarId)
 const targetPlanetType = computed<PlanetType | null>(
   () => bossStore.activeBoss?.planetType ?? null,
 )
+
+/**
+ * Welche Beutezeile die Leiste am Kartenende meint. Aus demselben Grund
+ * zulässig wie `targetPlanetType` darüber: gelesen wird `planetId` samt
+ * `defeated`/`expired`, NICHT `currentHP` — der Dauerbeschuss invalidiert den
+ * Getter also nicht.
+ */
+const targetPlanetId = computed<string | null>(() => bossStore.activeBoss?.planetId ?? null)
 
 const targetHpRatio = ref(1)
 const targetHpPct = ref(100)
@@ -1408,51 +1433,73 @@ function getChampionRoleStyles(name: string): Record<string, string> {
   }
 }
 
-interface StarRewardSummary {
-  totalChimes: number
+/** Eine Beutezeile der Sternkarte: EIN Planet und genau das, was ER trägt. */
+interface StarPlanetLoot {
+  planetId: string
+  planetType: PlanetType
+  chimes: number
   materials: { image: string; name: string; count: number }[]
+}
+
+interface StarRewardSummary {
+  planets: StarPlanetLoot[]
   champion: { name: string; image: string } | null
 }
 
-const EMPTY_REWARD_SUMMARY: StarRewardSummary = { totalChimes: 0, materials: [], champion: null }
+const EMPTY_REWARD_SUMMARY: StarRewardSummary = { planets: [], champion: null }
 
 // Memoized pro Stern: rechnet nur bei Boss-/Slot-Änderungen neu, nicht pro Frame.
 // Vorher lief das bis zu 8× pro Stern pro Frame mit find() über alle Bosses (O(n²)).
+//
+// Was hier bewusst NICHT gelesen wird: `currentHP`/`maxHP`. Die Karte bekommt pro
+// Frame ein neues `transform`, und ein reaktiver Zugriff auf den Schadensstand
+// hinge sie an jedes einzelne Treffer-Ereignis. Die HP der bekämpften Welt
+// kommen deshalb ungetrackt aus dem rAF-Loop (`targetHpRatio`/`targetHpPct`).
 const rewardSummaries = computed(() => {
   const bossByPlanet = new Map(bossStore.activeBosses.map((b) => [b.planetId, b]))
   const map = new Map<string, StarRewardSummary>()
 
   for (const star of starGroupStore.activeStars) {
-    let totalChimes = 0
-    const materialMap = new Map<string, { image: string; name: string; count: number }>()
+    const planets: StarPlanetLoot[] = []
     let champion: { name: string; image: string } | null = null
 
+    // Reihenfolge der Slots, nicht sortiert: der Champion- bzw. Galaxy-Boss-
+    // Planet steht dort schon zuerst, und eine zweite Sortierung würde die
+    // Zeilen umspringen lassen, sobald eine Welt befreit ist.
     for (const slot of star.planetSlots) {
       if (slot.cleared) continue
       const boss = bossByPlanet.get(slot.planetId)
       if (!boss || boss.defeated || boss.expired) continue
 
-      totalChimes += boss.rewardSlots
+      const chimes = boss.rewardSlots
         .filter((s) => s.type === 'chimes')
         .reduce((sum, s) => sum + (s.amount ?? 0), 0)
 
+      // Verdichtet wird NUR innerhalb dieser Welt. Über die Planeten hinweg zu
+      // verschmelzen war genau das, was die Herkunft verschluckt hat.
+      const materialMap = new Map<string, { image: string; name: string; count: number }>()
       for (const rewardSlot of boss.rewardSlots.filter((s) => s.type === 'material')) {
-        if (rewardSlot.materialId) {
-          const mat = MATERIALS.find((m) => m.id === rewardSlot.materialId)
-          if (mat) {
-            const existing = materialMap.get(rewardSlot.materialId)
-            if (existing) {
-              existing.count += 1
-            } else {
-              materialMap.set(rewardSlot.materialId, {
-                image: mat.image ?? '',
-                name: mat.name,
-                count: 1,
-              })
-            }
-          }
+        if (!rewardSlot.materialId) continue
+        const mat = MATERIALS.find((m) => m.id === rewardSlot.materialId)
+        if (!mat) continue
+        const existing = materialMap.get(rewardSlot.materialId)
+        if (existing) {
+          existing.count += 1
+        } else {
+          materialMap.set(rewardSlot.materialId, {
+            image: mat.image ?? '',
+            name: mat.name,
+            count: 1,
+          })
         }
       }
+
+      planets.push({
+        planetId: slot.planetId,
+        planetType: boss.planetType,
+        chimes,
+        materials: [...materialMap.values()],
+      })
 
       if (!champion && boss.isChampionPlanet && boss.homePlanetChampion) {
         champion = {
@@ -1462,7 +1509,7 @@ const rewardSummaries = computed(() => {
       }
     }
 
-    map.set(star.id, { totalChimes, materials: [...materialMap.values()], champion })
+    map.set(star.id, { planets, champion })
   }
 
   return map
@@ -1547,7 +1594,16 @@ function summaryTransform(star: StarRenderEntry, half: number): string {
     // Ausweichwege irgendwann übereinander. `translateY(-100%)` verankert die
     // Unterkante, damit die Platzierung die Kartenhöhe nicht kennen muss und
     // ohne Layout-Read auskommt.
-    const y = countAnchorY(star, half) - STAR_COUNT_HEIGHT_PX - STAR_SUMMARY_FLIP_STACK_PX
+    //
+    // Die Unterkante wird zusätzlich nach UNTEN geklemmt: von ihr aus wächst die
+    // Karte nach oben, und seit die Beute zeilenweise steht, läge ihr Kopf sonst
+    // im Header. Gerechnet mit der Maximalhöhe, ohne Layout-Read — siehe
+    // `STAR_SUMMARY_FLIP_TOP_MARGIN_PX`.
+    const wanted = countAnchorY(star, half) - STAR_COUNT_HEIGHT_PX - STAR_SUMMARY_FLIP_STACK_PX
+    const y = Math.max(
+      wanted,
+      freeBandAt(star.x).top + STAR_SUMMARY_MAX_HEIGHT_PX + STAR_SUMMARY_FLIP_TOP_MARGIN_PX,
+    )
     return `translate(${star.x}px, ${y}px) translateX(-50%) translateY(-100%)`
   }
   return `translate(${star.x}px, ${star.y + half + STAR_SUMMARY_GAP_PX}px) translateX(-50%)`
@@ -2347,11 +2403,60 @@ function starCountStyle(star: StarRenderEntry) {
   transform: translateY(4px);
 }
 
+/* Der Stapel der Beutezeilen — je Welt eine. */
 .summary-loot-row {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  gap: 0.4em;
+}
+
+/* Eine Welt und ihre Beute. Zwei Spalten wie die Angriffsleiste am Kartenende,
+   und aus demselben Grund `auto 1fr` statt `1fr auto`: die Glyph-SVGs skalieren
+   nicht mit ihrer Zelle und würden sonst gestaucht, sobald eine Zeile viel
+   Beute trägt. */
+.summary-planet {
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 0.35em;
+  gap: 0.5em;
+  width: 100%;
+  padding: 0.1em 0.15em;
+  border-radius: 3px;
+}
+
+/* Der Schein hinter dem Körper ist STATISCH, nach demselben Muster, mit dem
+   `.planet-cell__body` in der Pause-Karte den Sternfarbhauch setzt. Kein Puls —
+   die Karte trägt den Rage-/Fluch-Puls bereits auf `::after`. */
+.summary-planet__world {
+  display: flex;
+  justify-content: center;
+  line-height: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 192, 64, 0.18) 0%, transparent 64%);
+}
+
+/* `min-width: 0` ist Pflicht: eine Grid-Spalte ist sonst mindestens so breit
+   wie ihr Inhalt, und eine dreiteilige Beute schöbe die Glyphspalte nach links.
+   Umbrechen darf sie stattdessen. */
+.summary-planet__loot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25em 0.5em;
+  min-width: 0;
+}
+
+/* Die Zeile, zu der die Leiste ganz unten gehört — sie ist die Verbindung
+   zwischen beiden. Cyan wie jede andere Ziel-Signatur (Header-Zeile,
+   Kartenkontur), und statisch: hier bewegt sich nichts. */
+.summary-planet--target {
+  background: rgba(40, 200, 235, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(95, 240, 255, 0.22);
+}
+
+.summary-planet--target .summary-planet__world {
+  background: radial-gradient(circle, rgba(95, 240, 255, 0.32) 0%, transparent 64%);
 }
 
 .summary-item {
@@ -2422,11 +2527,12 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 /* Das Bild des bekämpften Planeten, linke Spalte.
-   Gezeigt wird genau EINER — der, zu dem die Leiste daneben gehört. Eine Reihe
-   über alle Planeten des Sterns stand hier zwischenzeitlich und machte die
-   Karte bei sechs Slots 230 px breit; die Zuordnung „dieser Balken gehört zu
-   diesem Planeten“ war darin schwächer, nicht stärker. Wie viele Planeten der
-   Stern noch trägt, steht ohnehin im Zähler über ihm.
+   Es steht doppelt in der Karte — einmal hier, einmal in der Beutezeile
+   derselben Welt darüber. Das ist gewollt: die Leiste bleibt damit für sich
+   lesbar, und `.summary-planet--target` stellt die Verbindung nach oben her.
+   Eine WAAGERECHTE Reihe über alle Planeten des Sterns stand hier
+   zwischenzeitlich und machte die Karte 230 px breit, ohne die Zuordnung zu
+   verbessern; die senkrechten Beutezeilen darüber leisten heute genau das.
 
    Der Schein dahinter ist STATISCH und in der Zielfarbe, nach demselben Muster,
    mit dem `.planet-cell__body` in der Pause-Karte den Sternfarbhauch setzt.

@@ -271,42 +271,49 @@ export const STAR_SUMMARY_GAP_PX = 58
 /**
  * Womit gerechnet wird, wenn gefragt ist, ob die Karte unten noch passt.
  * Bewusst der GRÖSSTE gemessene Wert, nicht der übliche: 75 px bei magerer
- * Beute, bis 244 px mit Champion-Block und voller Materialliste. Die
- * Angriffszeile am Zielstern (Planetenreihe + Prozentzahl + Balken) steuert
- * davon gemessene 49 px bei. Zu groß geschätzt heisst nur, dass die Karte im
+ * Beute. Der Vollausbau steht höher, seit die Beute NICHT mehr zusammengefasst
+ * ist, sondern eine Zeile je Planet trägt: vier Zeilen à ~34 px, Champion-Block
+ * ~52 px, zwei Trennstriche, die Angriffsleiste ~49 px, dazu Lücken und
+ * Polster — rund 300 px. Zu groß geschätzt heisst nur, dass die Karte im
  * schlanken Fall etwas zu früh nach oben klappt, was niemand bemerkt — zu
  * klein hieße, sie stünde halb in der Bar. Für die Platzierung selbst wird der
  * Wert nicht gebraucht, die erledigt `translateY(-100%)` ohne Layout-Read.
  */
-export const STAR_SUMMARY_MAX_HEIGHT_PX = 250
+export const STAR_SUMMARY_MAX_HEIGHT_PX = 320
 /**
  * Halbe Breite der Karte, für die Frage „passt sie an dieser Stelle?". Die
  * HUD-Kontur springt in der Kehle zwischen Seitenpanel und Mittelstreifen auf
  * wenigen Pixeln um mehrere hundert — nur ihren Mittelpunkt zu prüfen hängt die
  * Karte dort mit einer Ecke ins Panel.
  *
- * Wie die Höhe darunter der GRÖSSTE gemessene Fall, nicht der übliche: eine
- * Karte ohne Angriffszeile misst rund 95 px (halb: 48), mit ihr 125 px
- * (halb: 62). Die Zeile zeigt nur noch das Bild des bekämpften Planeten neben
- * der HP-Leiste, deshalb ist die Breite unabhängig davon, wie viele Planeten
- * der Stern trägt — eine Reihe über alle sechs stand hier zwischenzeitlich und
- * kostete 230 px. Zu groß geschätzt heisst nur, dass schmale Karten etwas
- * früher ausweichen; zu klein hieße, dass eine breite mit der Ecke im Panel
- * hängt.
+ * Wie die Höhe darüber der GRÖSSTE Fall, nicht der übliche. Breitestes Element
+ * ist seit der Aufschlüsselung eine Beutezeile bei 0,95 rem Basis (~15 px):
+ * Planetenbild 30 px + Lücke 8 + Chime-Kachel ~88 (Icon 30, dazu „×12.4M“) +
+ * zwei Materialkacheln à ~49 + Lücken ≈ 205, dazu 27 px Polster — rund 232 px,
+ * halb 116. Zu groß geschätzt heisst nur, dass schmale Karten etwas früher
+ * ausweichen; zu klein hieße, dass eine breite mit der Ecke im Panel hängt.
+ *
+ * Eine WAAGERECHTE Reihe über alle Planeten des Sterns kostete hier
+ * zwischenzeitlich 230 px und wurde zurückgenommen, weil sie die Breite nicht
+ * bezahlte — sie zeigte, WIE VIELE Welten der Stern trägt, und das steht schon
+ * im Zähler über ihm. Die heutigen Zeilen stehen SENKRECHT und kaufen die
+ * Breite gegen das ein, was jener Reihe fehlte: die Zuordnung „diese Beute
+ * liegt auf dieser Welt“.
  */
-export const STAR_SUMMARY_HALF_WIDTH_PX = 64
+export const STAR_SUMMARY_HALF_WIDTH_PX = 116
 /**
- * Höhe des Planetenbildes in der Angriffszeile der Sternkarte.
+ * Höhe des Planetenbildes in der Sternkarte — in jeder Beutezeile UND in der
+ * Angriffsleiste darunter. Bewusst ein Wert für beide: es ist dieselbe Welt in
+ * derselben Karte, zwei Größen ließen sie wie zwei Dinge aussehen.
  *
  * Der Glyph-Körper füllt nur `2 · PLANET_GLYPH_RADIUS / PLANET_GLYPH_VIEW_H`
  * ≈ 62 % dieser Höhe — der viewBox ist bewusst breiter als hoch, weil die
  * Ringe eines `ringed`-Planeten seitlich über seinen Radius hinausreichen.
  * 30 px ergeben damit rund 19 px Planet; bei den zuvor gesetzten 18 px waren es
  * 11 px, und darauf war ein Eisplanet von einem Lavaplaneten nicht mehr zu
- * unterscheiden. Bezahlbar ist die Größe erst, seit die Zeile nur noch EIN
- * Bild zeigt — das des bekämpften Planeten — statt aller Planeten des Sterns.
- * Die Zeilenhöhe treibt sie nicht: die bestimmt der Messblock daneben
- * (Prozentzahl über Balken, gemessen ~43 px).
+ * unterscheiden — der Grund, warum hier nichts schrumpft, obwohl der Glyph
+ * jetzt bis zu fünfmal in einer Karte steht. Die stehen UNTEREINANDER: das
+ * kostet Höhe (siehe `STAR_SUMMARY_MAX_HEIGHT_PX`), nicht Breite.
  */
 export const STAR_SUMMARY_PLANET_GLYPH_PX = 30
 /**
@@ -322,6 +329,21 @@ export const STAR_SUMMARY_FLIP_HYSTERESIS_PX = 16
  * sich früher oder später übereinander.
  */
 export const STAR_SUMMARY_FLIP_STACK_PX = 8
+/**
+ * Sicherheitsabstand der UMGEKLAPPTEN Karte zur Oberkante des freien Felds.
+ *
+ * `summaryTransform` hängt die umgeklappte Karte per `translateY(-100%)` an die
+ * Planetenzahl — sie wächst von dort nach OBEN, geprüft wurde bisher aber nur
+ * ihre Unterkante. Solange sie 250 px hoch war, ging das auf; mit der
+ * zeilenweisen Beute verschwindet ihr Kopf sonst unter dem Header, und dort ist
+ * er für den Spieler nicht vorhanden (siehe „HUD-Freiraum" in CLAUDE.md).
+ *
+ * Geklemmt wird mit `STAR_SUMMARY_MAX_HEIGHT_PX`, also dem GRÖSSTEN Fall: eine
+ * schlanke Karte sitzt dadurch etwas tiefer, als sie müsste. Das ist dieselbe
+ * Richtung, die die Schätzungen darüber schon wählen — zu tief verdeckt nichts,
+ * zu hoch schon.
+ */
+export const STAR_SUMMARY_FLIP_TOP_MARGIN_PX = 6
 /** Abstand der Planetenzahl über der Oberkante des Sternkörpers. */
 export const STAR_COUNT_GAP_PX = 25
 /** Höhe der Planetenzahl — sie hält sich damit unter der Header-Kante. */
@@ -668,14 +690,50 @@ export const DRIFTER_BUFF_EXPIRY_WARN_SEC = 5
  *  so bleibt ein 44px-Splitter proportional zum 128px-Leviathan. */
 export const DRIFTER_AURA_SCALE = 2.1
 export const DRIFTER_TRAIL_LENGTH_SCALE = 2.8
-/** Breite der Spur, Anteil von `sizePx`. Im Browser nachgemessen und von 0,14
- *  angehoben: 6 px Breite auf 129 px Länge lasen sich als Zahnstocher, nicht
- *  als Schweif — ein Schweif ist am Ansatz breit und franst aus. */
-export const DRIFTER_TRAIL_WIDTH_SCALE = 0.21
+/** Breite der Spur, Anteil von `sizePx`. Zweimal im Browser nachgemessen und
+ *  von 0,14 über 0,21 auf diesen Wert angehoben: bei 11 px Höhe auf 145 px
+ *  Länge blieb vom verjüngten Kern ein 5 px schmaler Strich übrig, der als
+ *  Laserstrahl las statt als Spur — und die Verjüngung selbst war gar nicht zu
+ *  sehen. Eine Spur braucht HÖHE, damit ihre Form überhaupt Form sein kann. */
+export const DRIFTER_TRAIL_WIDTH_SCALE = 0.46
+
+// ── Aufbau der Spur ────────────────────────────────────────────────
+// Der Schweif zieht HINTER dem Körper her, entgegen der Flugrichtung. Eine
+// frühere Fassung ließ ihn von der Sonne wegzeigen — physikalisch der echte
+// Kometenschweif, im Bild aber falsch: flog der Drifter auf die Sonne zu, stand
+// seine Spur VOR ihm. Lesbarkeit schlägt Physik.
+//
+// Er besteht aus zwei gestaffelten Ebenen statt aus einem Band: ein einzelner
+// Verlauf liest sich flach, zwei ineinander lesen sich als Volumen.
+
+/** Der helle Kern der Spur — Länge und Breite als Anteil der vollen Spur. */
+export const DRIFTER_TRAIL_CORE_LENGTH = 0.72
+export const DRIFTER_TRAIL_CORE_WIDTH = 0.5
+
+/** Der weiche Dunst darum — er greift weiter aus als die Spur selbst. */
+export const DRIFTER_TRAIL_HAZE_LENGTH = 1
+export const DRIFTER_TRAIL_HAZE_WIDTH = 1.7
+
+/** Umlaufzeit einer Schliere, die durch den Schweif nach hinten treibt, bei
+ *  `motion` = 1. Kleinere Rangstufen strömen langsamer: die Dauer wird durch
+ *  `motion` geteilt. */
+export const DRIFTER_TRAIL_FLOW_MS = 1150
+
+/** Maße einer Schliere, Anteil der Spur. Lang gezogen statt rund: eine runde
+ *  Schliere las sich als Perle auf einer Schnur, eine gestreckte als Materie,
+ *  die mitgerissen wird. */
+export const DRIFTER_TRAIL_FLOW_LENGTH = 0.42
+export const DRIFTER_TRAIL_FLOW_WIDTH = 0.62
+
+/** Totzone für die Blickrichtung eines gerichteten Körpers: erst ab dieser
+ *  Waagrechtkomponente (|cos| der Flugrichtung) wird umgeschaltet. Ohne sie
+ *  klappt ein fast senkrecht fliegender Körper um die Nulllinie herum hin und
+ *  her, weil das Vorzeichen dort mit jedem Frame kippen kann. */
+export const HEADING_FLIP_DEADZONE = 0.22
 /** Obergrenze der Schweifbreite: ohne sie zieht der Leviathan einen Balken
  *  statt einer Spur hinter sich her. */
-export const DRIFTER_TRAIL_WIDTH_MAX_PX = 19
-export const DRIFTER_TRAIL_WIDTH_MIN_PX = 5
+export const DRIFTER_TRAIL_WIDTH_MAX_PX = 40
+export const DRIFTER_TRAIL_WIDTH_MIN_PX = 14
 
 /** Sicherheitsabstand zur Oberkante der erhobenen HUD-Panels (Minimap links,
  *  Command rechts). Ein Drifter dahinter wäre unsichtbar UND unklickbar. */

@@ -9,22 +9,33 @@
       :aria-label="`Collect ${def.name}`"
       @click.stop="onHit"
     >
-      <!-- Wake. Turned once per frame together with the position — either away
-           from the SUN (a tail is blown outward, it does not trail the path) or
-           against the flight heading for the one body with an engine. Pure
-           gradient, no blur: it scrolls across the screen every frame and must
-           stay compositor-only.
+      <!-- The wake, turned once per frame together with the position: it trails
+           BEHIND the body, against the flight heading. An earlier version had it
+           point away from the sun — which is what a real comet tail does, and
+           which was wrong here: a drifter heading towards the sun wore its tail
+           in FRONT of it. Legibility beats physics.
 
-           The dust plume lives INSIDE the wake rather than beside it, so it
-           costs no second frame-write and can never drift out of alignment
-           with the tail it belongs to. -->
-      <span
-        v-if="def.wake !== 'none'"
-        ref="trail"
-        class="drifter-trail"
-        :style="trailStyle"
-        aria-hidden="true"
-      >
+           Everything below is a child of the one rotating element, so the whole
+           wake stays a single frame-write and can never come apart from itself.
+           Pure gradients, no blur: this crosses the screen every frame and has
+           to stay compositor-only. -->
+      <span ref="trail" class="drifter-trail" :style="trailStyle" aria-hidden="true">
+        <!-- Two layers, not one band: a single gradient reads flat, a soft haze
+             with a bright core inside it reads as volume. -->
+        <i class="dt-haze" :style="hazeStyle"></i>
+        <i class="dt-core" :style="coreStyle"></i>
+
+        <!-- Matter caught in the wake, drifting backwards and fading out. The
+             one motion that pays off on these routes — lag and curvature would
+             both be invisible over 130px of a shallow arc. Staggered by negative
+             delays so they never travel in lockstep. -->
+        <i
+          v-for="f in flowStreaks"
+          :key="f.i"
+          class="dt-flow"
+          :style="f.style"
+        ></i>
+
         <i v-if="showDust" class="drifter-dust" :style="dustStyle"></i>
       </span>
 
@@ -52,7 +63,7 @@
       <!-- The silhouette is pure CSS, one shape per drifter type — see
            DrifterBody.vue. Nothing in here paints per frame; the body carries
            its own idle motion while the shell does the travelling. -->
-      <span class="drifter-body" :style="bodyStyle">
+      <span ref="bodyBox" class="drifter-body" :style="bodyStyle">
         <DrifterBody :kind="def.body" :color="def.color" :motion="stage.motion" />
       </span>
 
@@ -97,7 +108,7 @@ import {
 } from '@/utils/orbit/drifterPath'
 import type { HudFieldMetrics } from '@/utils/ui/hudField'
 import { hexToRgba } from '@/utils/ui/format'
-import { drifterFxStage } from '@/config/world/drifters'
+import { drifterFxStage, DRIFTER_DIRECTIONAL_BODIES } from '@/config/world/drifters'
 import DrifterBody from './DrifterBody.vue'
 import {
   DRIFTER_FADE_IN_FRAC,
@@ -107,6 +118,13 @@ import {
   DRIFTER_TRAIL_WIDTH_SCALE,
   DRIFTER_TRAIL_WIDTH_MAX_PX,
   DRIFTER_TRAIL_WIDTH_MIN_PX,
+  DRIFTER_TRAIL_CORE_LENGTH,
+  DRIFTER_TRAIL_CORE_WIDTH,
+  DRIFTER_TRAIL_HAZE_LENGTH,
+  DRIFTER_TRAIL_HAZE_WIDTH,
+  DRIFTER_TRAIL_FLOW_MS,
+  DRIFTER_TRAIL_FLOW_LENGTH,
+  DRIFTER_TRAIL_FLOW_WIDTH,
   DRIFTER_ORNAMENT_MIN_SIZE,
   DRIFTER_AURA_SHELL_SCALES,
   DRIFTER_AURA_SHELL_ALPHAS,
@@ -123,6 +141,7 @@ import {
   DRIFTER_RING_SPIN_MS,
   DRIFTER_DUST_LENGTH_SCALE,
   DRIFTER_DUST_WIDTH_SCALE,
+  HEADING_FLIP_DEADZONE,
 } from '@/config/constants'
 
 const props = defineProps<{
@@ -134,6 +153,11 @@ const emit = defineEmits<{ hit: [x: number, y: number] }>()
 
 const shell = ref<HTMLElement>()
 const trail = ref<HTMLElement>()
+const bodyBox = ref<HTMLElement>()
+
+/** Hat dieser Körper ein Vorn? Nur der Leviathan — siehe die Begründung an
+ *  `DRIFTER_DIRECTIONAL_BODIES`. */
+const directional = computed(() => DRIFTER_DIRECTIONAL_BODIES.has(props.def.body))
 
 /** The rarity stage — how much ornament this drifter has earned. */
 const stage = computed(() => drifterFxStage(props.def.rarity))
@@ -265,18 +289,66 @@ const trailWidthPx = computed(() =>
   ),
 )
 
+/** Die Bühne der Spur — sie trägt nur noch Maße und Drehpunkt, gezeichnet
+ *  wird in den Kindern. */
 const trailStyle = computed(() => ({
   width: `${props.def.sizePx * DRIFTER_TRAIL_LENGTH_SCALE}px`,
   height: `${trailWidthPx.value}px`,
-  // Radial, nicht linear. Ein linearer Verlauf fällt nur LÄNGS ab — quer dazu
-  // bleibt er voll deckend, und genau das stand im Bild: ein Band mit harten
-  // Längskanten. Die Ellipse am rechten Rand (dort sitzt der Körper) lässt ihn
-  // in BEIDE Richtungen auslaufen, was ein Schweif auch tut.
+}))
+
+/** Der weiche Dunst: greift über die Spur hinaus und fällt in BEIDE Richtungen
+ *  ab. Ein linearer Verlauf fällt nur längs ab und bleibt quer voll deckend —
+ *  genau das stand früher als Band mit harten Längskanten im Bild. */
+const hazeStyle = computed(() => ({
+  width: `${DRIFTER_TRAIL_HAZE_LENGTH * 100}%`,
+  height: `${DRIFTER_TRAIL_HAZE_WIDTH * 100}%`,
   background: `radial-gradient(ellipse at right center, ${hexToRgba(
     props.def.color,
-    0.62,
-  )} 0%, ${hexToRgba(props.def.color, 0.26)} 34%, ${hexToRgba(props.def.color, 0)} 100%)`,
+    0.46,
+  )} 0%, ${hexToRgba(props.def.color, 0.2)} 40%, ${hexToRgba(props.def.color, 0)} 100%)`,
 }))
+
+/** Der Kern: kürzer, schmaler, heller — er sitzt direkt am Körper und gibt der
+ *  Spur ihren Ansatz. Weiß am Anfang, damit der Übergang zur Silhouette keine
+ *  Kante hat. */
+const coreStyle = computed(() => ({
+  width: `${DRIFTER_TRAIL_CORE_LENGTH * 100}%`,
+  height: `${DRIFTER_TRAIL_CORE_WIDTH * 100}%`,
+  background: `radial-gradient(ellipse at right center, ${hexToRgba(
+    props.def.color,
+    0.9,
+  )} 0%, ${hexToRgba(props.def.color, 0.55)} 28%, ${hexToRgba(
+    props.def.color,
+    0.2,
+  )} 58%, ${hexToRgba(props.def.color, 0)} 100%)`,
+}))
+
+/**
+ * Die Schlieren, die durch den Schweif nach hinten treiben.
+ *
+ * Ihre Zahl kommt aus der Rangstufe und wird — wie jede Zierebene — mit
+ * `ornate` verundet, nie allein gelesen. Die Startphasen sind gleichmäßig über
+ * den Takt verteilt (negatives `animation-delay`), sonst laufen sie im
+ * Gleichschritt und lesen sich als ein einzelner blinkender Block.
+ */
+const flowStreaks = computed(() => {
+  const count = ornate.value ? stage.value.flow : 0
+  if (count === 0) return []
+  const ms = Math.round(DRIFTER_TRAIL_FLOW_MS / Math.max(0.2, stage.value.motion))
+  return Array.from({ length: count }, (_, i) => ({
+    i,
+    style: {
+      width: `${DRIFTER_TRAIL_FLOW_LENGTH * 100}%`,
+      height: `${DRIFTER_TRAIL_FLOW_WIDTH * 100}%`,
+      background: `radial-gradient(ellipse at right center, ${hexToRgba(
+        props.def.color,
+        0.85,
+      )} 0%, ${hexToRgba(props.def.color, 0.42)} 40%, ${hexToRgba(props.def.color, 0)} 100%)`,
+      animationDuration: `${ms}ms`,
+      animationDelay: `${Math.round((-ms * i) / count)}ms`,
+    } as Record<string, string>,
+  }))
+})
 
 /** Wider and longer than the tail it sits in, and much fainter — dust spreads,
  *  ions do not. */
@@ -305,6 +377,11 @@ const dustStyle = computed(() => ({
  * simpler than threading refs up through DrifterBody.
  */
 let litEls: HTMLElement[] = []
+
+/** Zeigt der Körper gerade nach links? Wird nur ausserhalb der Totzone neu
+ *  gesetzt, damit ein fast senkrechter Flug ihn nicht flattern lässt. Die
+ *  Silhouetten sind nach LINKS gezeichnet (Kopf links), das ist der Ruhestand. */
+let faceLeft = true
 
 function renderFrame(
   now: number,
@@ -339,14 +416,36 @@ function renderFrame(
   // terminator across the body and the direction the tail is blown.
   const light = drifterLightAngleDeg(point.x, point.y, viewportW, viewportH)
 
-  for (const lit of litEls) lit.style.transform = `rotate(${light}deg)`
+  // Der Körper zeigt in Flugrichtung — aber nur der, der ein Vorn hat.
+  //
+  // Gespiegelt statt gedreht: eine Drehung auf die Bahntangente stünde das
+  // Wesen auf den steilen Abschnitten einer Route auf die Nase, während die
+  // Spiegelung es waagrecht lässt und genau die eine Frage beantwortet, die
+  // seine Silhouette stellt. Umgeschaltet wird erst ab einer deutlichen
+  // Waagrechtkomponente: bei fast senkrechtem Flug würde der Körper sonst um
+  // die Nulllinie herum hin- und herklappen.
+  if (directional.value && bodyBox.value) {
+    const cos = Math.cos((point.angleDeg * Math.PI) / 180)
+    if (Math.abs(cos) > HEADING_FLIP_DEADZONE) faceLeft = cos < 0
+    bodyBox.value.style.transform = faceLeft ? '' : 'scaleX(-1)'
+  }
+
+  // Die Spiegelung nimmt den Terminator mit, also muss der Lichtwinkel sie
+  // ausgleichen: an der senkrechten Achse gespiegelt wird aus θ der Winkel
+  // 180 − θ. Ohne das fällt der Schatten auf der falschen Seite, sobald das
+  // Wesen die Richtung wechselt.
+  const litDeg = directional.value && !faceLeft ? 180 - light : light
+  for (const lit of litEls) lit.style.transform = `rotate(${litDeg}deg)`
 
   if (trail.value) {
-    // A comet's tail points AWAY FROM THE SUN, not backwards along the path —
-    // the wake rides the light angle. Only the probe, which has an engine,
-    // pushes against its own heading.
-    const wakeDeg = props.def.wake === 'thrust' ? point.angleDeg : light + 180
-    trail.value.style.transform = `translate(-100%, -50%) rotate(${wakeDeg.toFixed(1)}deg)`
+    // The wake follows the HEADING, so it always lies behind the body. The
+    // element is anchored at its right edge and extends left, so a heading of 0
+    // (flying right) puts the tail to the left — no correction term needed.
+    //
+    // It deliberately does NOT use the light angle: that is the sun's business
+    // and drives the terminator above, but a tail blown outward from the sun
+    // ends up in front of a body that is flying inward.
+    trail.value.style.transform = `translate(-100%, -50%) rotate(${point.angleDeg.toFixed(1)}deg)`
   }
 }
 
@@ -396,11 +495,10 @@ defineExpose({ renderFrame })
   transform: translate(-50%, -50%) scale(0.92);
 }
 
-/* No border-radius: the SHAPE is the gradient.
-   A 50% radius clipped this element into a lens with a hard edge, and against
-   the dark sky that edge read as a stick rather than a tail — visible in every
-   screenshot of the set. Letting the radial gradient fall off on its own gives
-   an outline that fades instead of ending, which is what a wake looks like. */
+/* The wake is a STAGE, not a shape: it carries the measurements and the pivot,
+   its children do the drawing. Anchored at its right edge (where the body sits)
+   and extending left, so a heading of 0 puts the tail behind a body flying
+   right — the rotation needs no correction term. */
 .drifter-trail {
   position: absolute;
   top: 50%;
@@ -409,12 +507,77 @@ defineExpose({ renderFrame })
   pointer-events: none;
 }
 
-/* Inside the wake, centred on it: no second frame-write, and it can never come
-   apart from the tail it belongs to. */
-.drifter-dust {
+.drifter-trail > * {
   position: absolute;
   top: 50%;
   right: 0;
+}
+
+/* Both layers taper: full height where they meet the body, running out to a
+   point behind it. The polygon is concave on purpose — it narrows quickly and
+   then draws out a long thin thread, which is how a wake actually thins. A
+   straight triangle reads as a pennant. Static, so it is rastered once.
+
+   No border-radius anywhere: a 50% radius clips this into a lens with a HARD
+   edge, and against the dark sky that edge read as a stick rather than a tail.
+   Letting the gradient fall off on its own gives an outline that fades instead
+   of ending. */
+.dt-haze,
+.dt-core {
+  transform: translateY(-50%);
+  clip-path: polygon(
+    100% 4%,
+    100% 96%,
+    64% 78%,
+    34% 64%,
+    12% 55%,
+    0% 50%,
+    12% 45%,
+    34% 36%,
+    64% 22%
+  );
+}
+
+/* Matter caught in the wake, drifting backwards and fading as it goes. Pure
+   transform and opacity, and it lives INSIDE the rotating stage — so it aligns
+   itself with the flight direction and costs no second frame write.
+
+   This is the only motion in the tail, and deliberately so: a lagging angle or
+   a curve built from past positions would both be invisible here. The routes
+   are shallow arcs and a wake is about 130px long; over that stretch there is
+   no curvature to show. Movement ALONG the tail is what reads. */
+.dt-flow {
+  border-radius: 50%;
+  animation-name: dt-flow;
+  animation-timing-function: cubic-bezier(0.32, 0.5, 0.52, 1);
+  animation-iteration-count: infinite;
+}
+
+/* Sie ZIEHEN SICH MIT: `scaleY` fällt über den Lauf, weil die Spur, durch die
+   sie treiben, nach hinten hin schmaler wird. Ohne das behalten sie ihre Höhe,
+   ragen aus der Verjüngung heraus und lesen sich als zwei Körper, die neben
+   dem Schweif herfliegen — genau so stand es im Bild. Gleichzeitig streckt
+   `scaleX` sie, denn was mitgerissen wird, wird lang gezogen. */
+@keyframes dt-flow {
+  0% {
+    transform: translate(-4%, -50%) scale(0.45, 1);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.6;
+  }
+  70% {
+    opacity: 0.32;
+  }
+  100% {
+    transform: translate(-250%, -50%) scale(1.5, 0.3);
+    opacity: 0;
+  }
+}
+
+/* Inside the wake, centred on it: no second frame-write, and it can never come
+   apart from the tail it belongs to. */
+.drifter-dust {
   transform: translateY(-50%);
   pointer-events: none;
 }
@@ -556,8 +719,13 @@ defineExpose({ renderFrame })
 @media (prefers-reduced-motion: reduce) {
   .drifter-aura,
   .drifter-motes,
-  .drifter-ring {
+  .drifter-ring,
+  .dt-flow {
     animation: none;
+  }
+  /* Ohne den Takt bliebe die Schliere als heller Klecks am Körper stehen. */
+  .dt-flow {
+    display: none;
   }
   .drifter-hit {
     transition: none;

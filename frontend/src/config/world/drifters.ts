@@ -22,7 +22,6 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 30,
     icon: 'game-icons:ringing-bell',
     body: 'chime',
-    wake: 'antisolar',
     image: '/img/BardAbilities/BardChime-128.png',
     color: '#e8c040',
     flightMs: 12_000,
@@ -38,7 +37,6 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 22,
     icon: 'game-icons:burning-embers',
     body: 'shard',
-    wake: 'antisolar',
     color: '#ff8a3c',
     flightMs: 11_000,
     sizePx: 44,
@@ -53,7 +51,6 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 14,
     icon: 'game-icons:meeple',
     body: 'meep',
-    wake: 'none',
     image: '/img/BardAbilities/BardMeep-64.png',
     color: '#9fd4ff',
     // Tumbles along slowly — it is lost, after all, and the extra seconds make
@@ -75,7 +72,6 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 12,
     icon: 'game-icons:delivery-drone',
     body: 'probe',
-    wake: 'thrust',
     color: '#52b830',
     flightMs: 13_000,
     sizePx: 48,
@@ -91,7 +87,6 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 8,
     icon: 'game-icons:sun-radiations',
     body: 'surge',
-    wake: 'antisolar',
     color: '#ffe28a',
     // A pressure wave running ahead of the sun — fast, and gone if missed.
     flightMs: 9_500,
@@ -108,7 +103,6 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 8,
     icon: 'game-icons:vortex',
     body: 'vortex',
-    wake: 'antisolar',
     color: '#b45cff',
     flightMs: 12_000,
     sizePx: 52,
@@ -123,7 +117,6 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 7,
     icon: 'game-icons:resonance',
     body: 'pulse',
-    wake: 'antisolar',
     color: '#ff4f8b',
     // The one drifter that is not a payout but a weapon: catching it fires a
     // shockwave through the whole orbit and hits every planet at once. Short,
@@ -143,7 +136,6 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 5,
     icon: 'game-icons:lighthouse',
     body: 'beacon',
-    wake: 'antisolar',
     color: '#e04a4a',
     flightMs: 14_000,
     sizePx: 50,
@@ -158,7 +150,6 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 2,
     icon: 'game-icons:whale-tail',
     body: 'leviathan',
-    wake: 'antisolar',
     color: '#46d6c0',
     // Vast and unhurried: four strikes along a long, slow passage. Missing one
     // is not fatal — the passage lasts long enough to come back to it.
@@ -210,16 +201,33 @@ export function getDrifter(id: string): DrifterDef | undefined {
  */
 /* prettier-ignore */
 export const DRIFTER_FX_STAGES: Record<DrifterRarity, DrifterFxStage> = {
-  common:    { rarity: 'common',    auraAlpha: 0.30, auraLayers: 1, motion: 0.35, motes: 0, rim: true, pulse: false, dust: false, ring: false, herald: false },
-  uncommon:  { rarity: 'uncommon',  auraAlpha: 0.40, auraLayers: 1, motion: 0.50, motes: 2, rim: true, pulse: true,  dust: false, ring: false, herald: false },
-  rare:      { rarity: 'rare',      auraAlpha: 0.55, auraLayers: 2, motion: 0.70, motes: 4, rim: true, pulse: true,  dust: true,  ring: false, herald: false },
-  legendary: { rarity: 'legendary', auraAlpha: 0.75, auraLayers: 3, motion: 1.00, motes: 7, rim: true, pulse: true,  dust: true,  ring: true,  herald: true  },
+  common:    { rarity: 'common',    auraAlpha: 0.30, auraLayers: 1, motion: 0.35, motes: 0, flow: 0, rim: true, pulse: false, dust: false, ring: false, herald: false },
+  uncommon:  { rarity: 'uncommon',  auraAlpha: 0.40, auraLayers: 1, motion: 0.50, motes: 2, flow: 1, rim: true, pulse: true,  dust: false, ring: false, herald: false },
+  rare:      { rarity: 'rare',      auraAlpha: 0.55, auraLayers: 2, motion: 0.70, motes: 4, flow: 2, rim: true, pulse: true,  dust: true,  ring: false, herald: false },
+  legendary: { rarity: 'legendary', auraAlpha: 0.75, auraLayers: 3, motion: 1.00, motes: 7, flow: 3, rim: true, pulse: true,  dust: true,  ring: true,  herald: true  },
 }
 
 /** The stage a drifter flies at. */
 export function drifterFxStage(rarity: DrifterRarity): DrifterFxStage {
   return DRIFTER_FX_STAGES[rarity]
 }
+
+/**
+ * Bodies whose silhouette has a FRONT, and which therefore have to be flipped
+ * to match the direction of travel.
+ *
+ * Almost every drifter is radially symmetric — a crystal, a rock, a lens, a
+ * pulsar look the same whichever way they go, and turning them would only make
+ * their own animation wobble. The leviathan does not: it has an eye at one end
+ * and fins at the other, and once the wake was corrected to trail BEHIND the
+ * body, it became obvious that it was swimming backwards.
+ *
+ * Flipped with `scaleX(-1)` rather than rotated to the heading: a rotation
+ * would stand the creature on its nose during the steep parts of a route,
+ * while a mirror keeps it level and only ever answers the one question the
+ * silhouette actually asks — which way is forward.
+ */
+export const DRIFTER_DIRECTIONAL_BODIES: ReadonlySet<string> = new Set(['leviathan'])
 
 /** Total spawn weight across the pool — cached, the pool is static. */
 export const DRIFTER_TOTAL_WEIGHT = DRIFTERS.reduce((sum, d) => sum + d.weight, 0)

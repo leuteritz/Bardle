@@ -88,18 +88,6 @@ export interface DrifterInstantReward {
 }
 
 /**
- * Where a drifter's wake points.
- *
- * `antisolar` is the physical answer and the default: a comet's tail is blown
- * away from the sun, not backwards along its path. The sun sits at the centre
- * of the stage, so the angle is free — the frame loop already rotates the wake,
- * only the angle fed into it changes. `thrust` is for the one body that has an
- * engine, and points against the flight heading. `none` is for what hangs in
- * the vacuum without shedding anything.
- */
-export type DrifterWake = 'antisolar' | 'thrust' | 'none'
-
-/**
  * How much ornament a rarity band earns — the rank axis of the flying body.
  *
  * Modelled on `CHAMPION_REGALIA_STAGES`: continuous values that keep climbing
@@ -128,6 +116,15 @@ export interface DrifterFxStage {
   pulse: boolean
   /** Dust plume trailing inside the wake. */
   dust: boolean
+  /**
+   * Streaks drifting backwards through the wake.
+   *
+   * The one thing that makes a trail read as MOVING rather than as a line
+   * stuck to the body — and the only motion that pays off here, because the
+   * flight routes are shallow enough that a curved or lagging tail would be
+   * invisible. Pure CSS, inside the rotating wake, so it costs no frame write.
+   */
+  flow: number
   /** Debris belt around the body. */
   ring: boolean
   /** Announces itself at the screen edge earlier, and with a second beat. */
@@ -160,8 +157,6 @@ export interface DrifterDef {
   icon: string
   /** CSS silhouette drawn while the drifter crosses the orbit view. */
   body: DrifterBodyKind
-  /** Where the wake points — away from the sun unless the body has an engine. */
-  wake: DrifterWake
   /** Optional image shown instead of the icon in the HUD (chime / meep art). */
   image?: string
   /** Signature color: aura, trail, edge ping and buff chip. */

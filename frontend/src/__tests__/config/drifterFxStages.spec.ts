@@ -47,7 +47,7 @@ describe('DRIFTER_FX_STAGES', () => {
     // The whole point of the table: common is plain, legendary is loud. Every
     // continuous value climbs monotonically, and none of them may stall the
     // whole way — a column of identical numbers is a column that says nothing.
-    const columns = ['auraAlpha', 'auraLayers', 'motion', 'motes'] as const
+    const columns = ['auraAlpha', 'auraLayers', 'motion', 'motes', 'flow'] as const
     for (const key of columns) {
       const values = BY_RANK.map((r) => DRIFTER_FX_STAGES[r][key])
       for (let i = 1; i < values.length; i++) {
@@ -82,7 +82,8 @@ describe('DRIFTER_FX_STAGES', () => {
       const newFlag = flags.some((k) => cur[k] && !prev[k])
       const newShell = cur.auraLayers > prev.auraLayers
       const newMotes = cur.motes > prev.motes
-      expect(newFlag || newShell || newMotes).toBe(true)
+      const newFlow = cur.flow > prev.flow
+      expect(newFlag || newShell || newMotes || newFlow).toBe(true)
     }
   })
 
@@ -127,7 +128,8 @@ describe('ornament threshold', () => {
     // accident, and it should have to be made here.
     for (const def of DRIFTERS) {
       const stage = drifterFxStage(def.rarity)
-      const wantsOrnament = stage.ring || stage.dust || stage.motes > 0 || stage.auraLayers > 1
+      const wantsOrnament =
+        stage.ring || stage.dust || stage.motes > 0 || stage.flow > 0 || stage.auraLayers > 1
       if (!wantsOrnament) continue
       expect(
         def.sizePx,
