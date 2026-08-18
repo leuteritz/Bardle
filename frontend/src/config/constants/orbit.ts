@@ -271,27 +271,38 @@ export const STAR_SUMMARY_GAP_PX = 58
 /**
  * Womit gerechnet wird, wenn gefragt ist, ob die Karte unten noch passt.
  * Bewusst der GRÖSSTE gemessene Wert, nicht der übliche: 75 px bei magerer
- * Beute. Der Vollausbau steht höher, seit die Beute NICHT mehr zusammengefasst
- * ist, sondern eine Zeile je Planet trägt: vier Zeilen à ~34 px, Champion-Block
- * ~52 px, zwei Trennstriche, die Angriffsleiste ~49 px, dazu Lücken und
- * Polster — rund 300 px. Zu groß geschätzt heisst nur, dass die Karte im
- * schlanken Fall etwas zu früh nach oben klappt, was niemand bemerkt — zu
- * klein hieße, sie stünde halb in der Bar. Für die Platzierung selbst wird der
- * Wert nicht gebraucht, die erledigt `translateY(-100%)` ohne Layout-Read.
+ * Beute. Der Vollausbau steht deutlich höher, seit die Beute NICHT mehr
+ * zusammengefasst ist, sondern eine Zeile je Planet trägt. GEMESSEN am
+ * schlimmsten Fall, der sich bauen lässt — Ressourcenstern mit sechs Planeten
+ * (Warden's Pact hebt die drei an), Champion-Block und laufendem Kampf:
+ * 344 px bei 1920×1080, 364 px bei 2560×1440. Die 380 sind der Rest Luft.
+ *
+ * Zu groß geschätzt heisst nur, dass die Karte im schlanken Fall etwas zu früh
+ * nach oben klappt, was niemand bemerkt — zu klein hieße, sie stünde halb in
+ * der Bar. Für die Platzierung selbst wird der Wert nicht gebraucht, die
+ * erledigt `translateY(-100%)` ohne Layout-Read; gebraucht wird er für die
+ * Klappentscheidung und für die Kopf-Klemmung darunter.
  */
-export const STAR_SUMMARY_MAX_HEIGHT_PX = 320
+export const STAR_SUMMARY_MAX_HEIGHT_PX = 380
 /**
  * Halbe Breite der Karte, für die Frage „passt sie an dieser Stelle?". Die
  * HUD-Kontur springt in der Kehle zwischen Seitenpanel und Mittelstreifen auf
  * wenigen Pixeln um mehrere hundert — nur ihren Mittelpunkt zu prüfen hängt die
  * Karte dort mit einer Ecke ins Panel.
  *
- * Wie die Höhe darüber der GRÖSSTE Fall, nicht der übliche. Breitestes Element
- * ist seit der Aufschlüsselung eine Beutezeile bei 0,95 rem Basis (~15 px):
- * Planetenbild 30 px + Lücke 8 + Chime-Kachel ~88 (Icon 30, dazu „×12.4M“) +
- * zwei Materialkacheln à ~49 + Lücken ≈ 205, dazu 27 px Polster — rund 232 px,
- * halb 116. Zu groß geschätzt heisst nur, dass schmale Karten etwas früher
- * ausweichen; zu klein hieße, dass eine breite mit der Ecke im Panel hängt.
+ * Wie die Höhe darüber der GRÖSSTE Fall, nicht der übliche — und GEMESSEN,
+ * nicht gerechnet: derselbe Vollausbau wie dort, mit dem längsten Kadernamen
+ * („Nunu & Willump“) und dem teuersten Beutebesatz je Zeile (grosser
+ * Chime-Betrag plus zwei verschiedene Materialien), ergibt 247 px bei
+ * 1920×1080 und 279 px bei 2560×1440. Halb 140, aufgerundet 146 — der
+ * Aufschlag ist Reserve, keine Messung.
+ *
+ * Die Rechnung dahinter zu Fuß nachzuvollziehen führt in die Irre:
+ * MedievalSharp hat keinen eigenen Fettschnitt, `font-weight: 700` wird
+ * synthetisch gestreckt, und der Champion-Schriftzug ist je nach Name mal
+ * breiter als die breiteste Beutezeile, mal schmaler. Zu groß geschätzt heisst
+ * nur, dass schmale Karten etwas früher ausweichen; zu klein hieße, dass eine
+ * breite mit der Ecke im Panel hängt.
  *
  * Eine WAAGERECHTE Reihe über alle Planeten des Sterns kostete hier
  * zwischenzeitlich 230 px und wurde zurückgenommen, weil sie die Breite nicht
@@ -300,7 +311,7 @@ export const STAR_SUMMARY_MAX_HEIGHT_PX = 320
  * Breite gegen das ein, was jener Reihe fehlte: die Zuordnung „diese Beute
  * liegt auf dieser Welt“.
  */
-export const STAR_SUMMARY_HALF_WIDTH_PX = 116
+export const STAR_SUMMARY_HALF_WIDTH_PX = 146
 /**
  * Höhe des Planetenbildes in der Sternkarte — in jeder Beutezeile UND in der
  * Angriffsleiste darunter. Bewusst ein Wert für beide: es ist dieselbe Welt in

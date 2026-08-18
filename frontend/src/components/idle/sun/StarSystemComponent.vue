@@ -221,12 +221,19 @@
                     />
                     <span class="summary-count">×{{ formatNumber(row.chimes) }}</span>
                   </span>
-                  <span v-for="mat in row.materials" :key="mat.name" class="summary-item">
+                  <span
+                    v-for="mat in row.materials"
+                    :key="mat.name"
+                    class="summary-item"
+                    :title="mat.name"
+                  >
                     <!-- Vier Materialien tragen in den Stammdaten gar kein Bild.
                          In der Sammelzeile fiel die Lücke kaum auf, in einer
-                         Planetenzeile steht sie als Loch — ohne Bild bleibt
-                         die Menge allein stehen. -->
+                         Planetenzeile stünde sonst eine nackte Menge, die
+                         nichts benennt — dort tritt das Monogramm ein, gleiche
+                         Lösung wie im Loot-Banner des Star-Fight-Modals. -->
                     <img v-if="mat.image" :src="mat.image" :alt="mat.name" class="summary-icon" />
+                    <span v-else v-ink-center.x.y class="summary-mono">{{ mat.mono }}</span>
                     <span class="summary-count">×{{ mat.count }}</span>
                   </span>
                 </span>
@@ -316,6 +323,7 @@ import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
 import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
 import { MATERIALS } from '@/config/economy/materials'
+import { LOOT_MONOGRAM_MAX_CHARS } from '@/config/constants'
 import { formatNumber } from '@/config/ui/numberFormat'
 import {
   ORBIT_TIERS,
@@ -1438,7 +1446,7 @@ interface StarPlanetLoot {
   planetId: string
   planetType: PlanetType
   chimes: number
-  materials: { image: string; name: string; count: number }[]
+  materials: { image: string; name: string; count: number; mono: string }[]
 }
 
 interface StarRewardSummary {
@@ -1477,7 +1485,10 @@ const rewardSummaries = computed(() => {
 
       // Verdichtet wird NUR innerhalb dieser Welt. Über die Planeten hinweg zu
       // verschmelzen war genau das, was die Herkunft verschluckt hat.
-      const materialMap = new Map<string, { image: string; name: string; count: number }>()
+      const materialMap = new Map<
+        string,
+        { image: string; name: string; count: number; mono: string }
+      >()
       for (const rewardSlot of boss.rewardSlots.filter((s) => s.type === 'material')) {
         if (!rewardSlot.materialId) continue
         const mat = MATERIALS.find((m) => m.id === rewardSlot.materialId)
@@ -1490,6 +1501,15 @@ const rewardSummaries = computed(() => {
             image: mat.image ?? '',
             name: mat.name,
             count: 1,
+            // Vier Materialien tragen in den Stammdaten kein Bild. Dasselbe
+            // Monogramm wie im Loot-Banner des Star-Fight-Modals, damit die
+            // Zeile nicht bei einer nackten Menge endet, die nichts benennt.
+            mono: mat.name
+              .split(/\s+/)
+              .map((word) => word[0] ?? '')
+              .join('')
+              .slice(0, LOOT_MONOGRAM_MAX_CHARS)
+              .toUpperCase(),
           })
         }
       }
@@ -2470,6 +2490,21 @@ function starCountStyle(star: StarRenderEntry) {
   height: 2em;
   object-fit: contain;
   filter: drop-shadow(0 0 4px rgba(232, 192, 64, 0.6));
+}
+
+/* Steht anstelle des Icons und belegt dessen Kasten, damit die Menge daneben
+   auf derselben Grundlinie sitzt wie in jeder anderen Kachel. */
+.summary-mono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2em;
+  height: 2em;
+  font-size: 0.85em;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #f0e6cc;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .summary-count {
