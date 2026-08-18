@@ -270,21 +270,39 @@ export const STAR_VIEWPORT_MARGIN_PX = 20
 export const STAR_SUMMARY_GAP_PX = 58
 /**
  * Womit gerechnet wird, wenn gefragt ist, ob die Karte unten noch passt.
- * Bewusst der GRÖSSTE gemessene Wert (107–138 px je nach Beute und
- * Statusmarken, plus rund 22 px für die Angriffszeile am Zielstern): dann
- * klappt sie im schlanken Fall etwas zu früh nach oben, was niemand bemerkt —
- * umgekehrt stünde sie halb in der Bar. Für die Platzierung selbst wird sie
- * nicht gebraucht, die erledigt `translateY(-100%)` ohne einen einzigen
- * Layout-Read.
+ * Bewusst der GRÖSSTE gemessene Wert, nicht der übliche: 75 px bei magerer
+ * Beute, bis 244 px mit Champion-Block und voller Materialliste. Die
+ * Angriffszeile am Zielstern (Planetenreihe + Prozentzahl + Balken) steuert
+ * davon gemessene 49 px bei. Zu groß geschätzt heisst nur, dass die Karte im
+ * schlanken Fall etwas zu früh nach oben klappt, was niemand bemerkt — zu
+ * klein hieße, sie stünde halb in der Bar. Für die Platzierung selbst wird der
+ * Wert nicht gebraucht, die erledigt `translateY(-100%)` ohne Layout-Read.
  */
-export const STAR_SUMMARY_MAX_HEIGHT_PX = 165
+export const STAR_SUMMARY_MAX_HEIGHT_PX = 250
 /**
  * Halbe Breite der Karte, für die Frage „passt sie an dieser Stelle?". Die
  * HUD-Kontur springt in der Kehle zwischen Seitenpanel und Mittelstreifen auf
  * wenigen Pixeln um mehrere hundert — nur ihren Mittelpunkt zu prüfen hängt die
  * Karte dort mit einer Ecke ins Panel.
+ *
+ * Wie die Höhe darunter der GRÖSSTE gemessene Fall, nicht der übliche: eine
+ * Karte ohne Angriffszeile misst rund 95 px (halb: 48), mit der Planetenreihe
+ * eines sechsfach besetzten Sterns 170 px (halb: 85). Zu groß geschätzt heisst
+ * nur, dass schmale Karten etwas früher ausweichen; zu klein hieße, dass eine
+ * breite mit der Ecke im Panel hängt.
  */
-export const STAR_SUMMARY_HALF_WIDTH_PX = 42
+export const STAR_SUMMARY_HALF_WIDTH_PX = 88
+/**
+ * Höhe eines Planetenbildes in der Angriffszeile der Sternkarte.
+ *
+ * Der Glyph-Körper füllt nur `2 · PLANET_GLYPH_RADIUS / PLANET_GLYPH_VIEW_H`
+ * ≈ 62 % dieser Höhe — der viewBox ist bewusst breiter als hoch, weil die
+ * Ringe eines `ringed`-Planeten seitlich über seinen Radius hinausreichen.
+ * 18 px ergeben damit gut 11 px Planet und liegen knapp über den 9–13 px, mit
+ * denen die Planeten-Kugeln der Header-Zeile auskommen. Größer geht nicht
+ * folgenlos: jedes Pixel hier verbreitert die Karte um die Zahl der Planeten.
+ */
+export const STAR_SUMMARY_PLANET_GLYPH_PX = 18
 /**
  * Wie viel Luft nach dem Umklappen wieder da sein muss, bevor die Karte
  * zurückfällt. Ohne diese Schwelle sitzt ein Stern, der genau auf der Grenze
