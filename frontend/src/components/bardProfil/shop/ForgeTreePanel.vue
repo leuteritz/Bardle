@@ -3,13 +3,6 @@
     <!-- shared cosmic backdrop (same starfield as Team / Planets / Skill Tree) -->
     <CosmicStageBackground />
 
-    <!-- Suche, Ringfilter und Sammelkauf — IM FLUSS über dem Viewport, nicht
-         schwebend darauf. Ein Knoten unter einer schwebenden Leiste liefe
-         weiter, wäre aber nicht mehr anklickbar; derselbe Grund, aus dem der
-         Ertrags-Sockel unten im Fluss steht. `fitScale` misst den Viewport und
-         zieht deshalb ohne Zutun mit. -->
-    <ForgeToolbar />
-
     <!-- Alles Skalierte lebt im Viewport, der Ertrags-Sockel darunter NICHT.
          Die Bühne ragt bei Standardzoom weit über ihre Zelle hinaus; eine
          schwebende Sockelkarte läge damit über anklickbaren Knoten. -->
@@ -47,51 +40,29 @@
 
            Steht VOR dem `<svg>` und liegt damit darunter: bei gleichem Rang
            (z-index 0 gegen `auto`) entscheidet die Dokumentordnung. -->
-      <div
-        class="depth-field"
-        :class="{ 'depth-field--sifted': ringChosen }"
-        :style="depthFieldStyle"
-        aria-hidden="true"
-      />
-      <!-- Die Zone des gewählten Chips. Sie trägt die Auswahl, die vorher die
-           Ringfarbe trug — als Fläche und nicht als hellere Linie. Eigene Ebene,
-           damit das Ruhefeld sein Verlaufsbild behält und nur zurücktritt. -->
-      <Transition name="depth-accent">
-        <div
-          v-if="depthAccentStyle"
-          class="depth-accent"
-          :style="depthAccentStyle"
-          aria-hidden="true"
-        />
-      </Transition>
+      <div class="depth-field" :style="depthFieldStyle" aria-hidden="true" />
 
       <svg
         class="tree-svg"
         :viewBox="`0 0 ${FORGE_STAGE_SIZE} ${FORGE_STAGE_SIZE}`"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <!-- Limbs: sun → root, root → branch, branch → leaf (dim base).
-             Ein Ast, der zu einem ausgefilterten Knoten führt, tritt mit ihm
-             zurück — sonst bliebe ein helles Astgerüst um dunkle Kreise stehen
-             und zeichnete weiter genau die Form, die gerade nicht gemeint ist. -->
+        <!-- Limbs: sun → root, root → branch, branch → leaf (dim base). -->
         <g stroke="#4a3418" stroke-width="4" stroke-linecap="round" fill="none">
           <line
             v-for="limb in limbs" :key="limb.key + '-base'"
             :x1="limb.x1" :y1="limb.y1" :x2="limb.x2" :y2="limb.y2"
-            :class="{ 'limb--sifted': siftedIds.has(limb.targetId) }"
           />
         </g>
         <!-- Active limbs (target node has levels). Die Grunddeckkraft steht als
-             KLASSE und nicht mehr als `opacity`-Attribut: nur so kann
-             `.limb--sifted` sie überschreiben, ohne sich darauf zu verlassen,
-             dass CSS ein Präsentationsattribut schlägt. -->
+             KLASSE und nicht als `opacity`-Attribut — ein Präsentationsattribut
+             wäre von keiner Regel mehr zu überschreiben. -->
         <g stroke-width="2.5" stroke-linecap="round" fill="none">
           <line
             v-for="limb in activeLimbs" :key="limb.key + '-lit'"
             :x1="limb.x1" :y1="limb.y1" :x2="limb.x2" :y2="limb.y2"
             :stroke="limb.color"
             class="limb--lit"
-            :class="{ 'limb--sifted': siftedIds.has(limb.targetId) }"
           />
         </g>
 
@@ -136,13 +107,6 @@
         :class="{ 'tree-node--spot': spotlightId === node.id }"
         :style="nodePos(node)"
       >
-        <!-- `--sifted` greift ausdrücklich NICHT, solange der Zeiger auf dem
-             Knoten steht. Das ist der ganze Mechanismus hinter „dunkel, aber
-             bedienbar": ein Hover setzt `treeHoverId` und damit `spotlightId`,
-             die Klasse fällt im selben Frame weg, und der bestehende
-             Spotlight-Pfad hebt den Knoten heraus. Kein zweiter Hover-Fall,
-             keine zweite Zahl für „wie hell beim Zeigen", keine
-             Spezifitätskette gegen `.node-circle.node-circle--spot`. -->
         <div
           class="node-circle"
           :class="[
@@ -152,7 +116,6 @@
               'node-circle--fresh': freshIds.has(node.id),
               'node-circle--spot': spotlightId === node.id,
               'node-circle--dim': spotlightId !== null && spotlightId !== node.id,
-              'node-circle--sifted': siftedIds.has(node.id) && spotlightId !== node.id,
             },
           ]"
           :style="{ '--node-color': node.color }"
@@ -195,17 +158,8 @@
              2/11). „Günstigster kaufbarer" und nicht „stärkster": die Wirkungen
              des Baums stehen in Prozent, HP, Sekunden und Chimes nebeneinander
              und sind nicht vergleichbar — der Preis ist die einzige Zahl, die
-             alle teilen.
-
-             Ist ihr Knoten weggefiltert, verschwindet sie mit ihm: eine grün
-             atmende Marke an einem fast unsichtbaren Kreis wäre der lauteste
-             Punkt im Bild und zeigte auf genau das, was der Spieler gerade
-             beiseitegeschoben hat. -->
-        <div
-          v-if="bestBuyId === node.id && !siftedIds.has(node.id)"
-          class="best-buy"
-          aria-hidden="true"
-        >
+             alle teilen. -->
+        <div v-if="bestBuyId === node.id" class="best-buy" aria-hidden="true">
           <span class="best-buy-ring" />
           <span class="best-buy-label">{{ FORGE_BEST_BUY_LABEL }}</span>
         </div>
@@ -267,13 +221,11 @@ import {
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
-import { useForgeFilter } from '@/composables/ui/useForgeFilter'
 import type { ForgeNodeDef, ForgeNodeTier, ForgeUpgradeEntry, ForgeUpgradeTier } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import ForgeYieldPlinth from './ForgeYieldPlinth.vue'
-import ForgeToolbar from './ForgeToolbar.vue'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
@@ -291,9 +243,6 @@ import {
   FORGE_DEPTH_CREST_SPREAD,
   FORGE_DEPTH_CREST_ALPHA,
   FORGE_DEPTH_CREST_LOCKED,
-  FORGE_DEPTH_ACCENT_SPREAD,
-  FORGE_DEPTH_ACCENT_ALPHA,
-  FORGE_DEPTH_ACCENT_FADE_MS,
   FORGE_TREE_ZOOM_MIN,
   FORGE_TREE_ZOOM_MAX,
   FORGE_TREE_ZOOM_STEP,
@@ -319,17 +268,12 @@ import {
   FORGE_SPOTLIGHT_MAX_LIMBS,
   FORGE_BEST_BUY_LABEL,
   FORGE_UPGRADE_GROUPS,
-  FORGE_SIFT_DIM_OPACITY,
-  FORGE_SIFT_SATURATE,
-  FORGE_SIFT_LIMB_OPACITY,
-  FORGE_SIFT_RING_OPACITY,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
 const forgeStore = useStarForgeStore()
 const { entryById, bestBuyId, freshIds, buyUpgrade } = useForgeUpgrades()
 const { spotlightId, treeHoverId, setTreeHover, resetForgeSpotlight } = useForgeSpotlight()
-const { activeTier, hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
 
 const C = FORGE_STAGE_SIZE / 2
 
@@ -468,39 +412,14 @@ const allNodes = computed<TreeNode[]>(() => {
   return [...roots, ...forge]
 })
 
-// ── Was der Ringfilter durchlässt ────────────────────────────────────────────
 /**
- * Baum und Liste zeigen denselben Bestand — dann muss die Leiste über dem Baum
- * auch den Baum sieben und nicht nur die Spalte daneben. Ein Klick auf „Leaves"
- * hat hier bislang nichts bewirkt, obwohl der Ring, den der Chip meint, direkt
- * darunter liegt.
- *
- * Ein SET und nicht ein Aufruf je Knoten im Template: Knoten, Äste, Ringbänder
- * und die Best-Buy-Marke fragen alle dieselbe Frage, und `matchesForgeFilter`
- * ginge sonst gut hundertmal je Render über denselben Eintrag. Im `computed`
- * gelesen sind `activeTier` und `searchQuery` voll reaktiv, obwohl die Funktion
- * selbst kein Ref ist.
- */
-const siftedIds = computed<Set<string>>(() => {
-  if (!hasFilter.value) return new Set()
-  return new Set(
-    allNodes.value.filter((node) => !matchesForgeFilter(entryOf(node))).map((node) => node.id),
-  )
-})
-
-/**
- * Die Leitfarbe einer Ebene kommt aus derselben Tabelle, aus der `ForgeToolbar`
- * seine Chips färbt — sonst stünde die Ebene oben in einem Ton und im
- * Tiefenfeld in einem zweiten. Sie färbt beides: den Ruhekamm der Ebene und die
- * Zone, sobald ihr Chip gewählt ist.
+ * Die Leitfarbe einer Ebene — sie färbt den Ruhekamm der Ebene im Tiefenfeld
+ * und den Ring-Chip an der Zeile drüben aus derselben Tabelle. Zwei eigene Töne
+ * für dieselbe Ebene liefen beim nächsten Ring auseinander.
  */
 const RING_ACCENT: Record<ForgeUpgradeTier, string> = Object.fromEntries(
   FORGE_UPGRADE_GROUPS.map((group) => [group.tier, group.accent]),
 ) as Record<ForgeUpgradeTier, string>
-
-/** Ein Ring ist GEWÄHLT — nicht bloß ein Suchwort getippt. Nur dann tritt das
- *  Ruhefeld zurück und die Akzentzone übernimmt. */
-const ringChosen = computed(() => activeTier.value !== 'all')
 
 // ── Geometry ──────────────────────────────────────────────────────────────────
 function rad(deg: number): number {
@@ -597,11 +516,6 @@ const spotlightColor = computed(
 const spotScale = String(FORGE_SPOTLIGHT_NODE_SCALE)
 const spotDimOpacity = String(FORGE_SPOTLIGHT_DIM_OPACITY)
 const spotPingMs = `${FORGE_SPOTLIGHT_PING_MS}ms`
-const siftDimOpacity = String(FORGE_SIFT_DIM_OPACITY)
-const siftSaturate = String(FORGE_SIFT_SATURATE)
-const siftLimbOpacity = String(FORGE_SIFT_LIMB_OPACITY)
-const siftRingOpacity = String(FORGE_SIFT_RING_OPACITY)
-const depthFadeMs = `${FORGE_DEPTH_ACCENT_FADE_MS}ms`
 
 // ── Ring unlock state ─────────────────────────────────────────────────────────
 /**
@@ -702,23 +616,6 @@ const depthFieldStyle = computed(() => {
 })
 
 /**
- * Die Zone des gewählten Chips — ein einzelner, breiterer Kamm in seiner
- * Leitfarbe. `null`, solange kein Ring gewählt ist: das `v-if` im Template
- * hängt daran und braucht so keine zweite Bedingung neben `activeTier`.
- */
-const depthAccentStyle = computed<Record<string, string> | null>(() => {
-  const band = depthBands.value.find((b) => b.tier === activeTier.value)
-  if (!band) return null
-  return {
-    background: `radial-gradient(circle closest-side at 50% 50%, ${crestStops(
-      band.r,
-      tinted(band.tier, FORGE_DEPTH_ACCENT_ALPHA),
-      FORGE_DEPTH_ACCENT_SPREAD,
-    )})`,
-  }
-})
-
-/**
  * Stufe, Kosten, Wirkung und Sperrgrund eines Knotens kommen aus
  * `useForgeUpgrades()` — dieselbe Quelle, aus der die Upgrade-Liste in der
  * rechten Spalte liest. Hier bleibt nur, was Geometrie ist.
@@ -796,11 +693,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
-  // Spotlight und Filter leben auf Modulebene und überlebten diese Komponente
-  // sonst — ein Suchwort von letzter Sitzung zeigte beim nächsten Öffnen eine
-  // fast leere Liste, ohne dass ersichtlich wäre, warum.
+  // Der Spotlight lebt auf Modulebene und überlebte diese Komponente sonst — ein
+  // Knoten aus der letzten Sitzung stünde beim nächsten Öffnen hell da, ohne
+  // dass der Zeiger irgendwo läge.
   resetForgeSpotlight()
-  resetForgeFilter()
 })
 
 const totalScale = computed(() => fitScale.value * zoom.value)
@@ -972,38 +868,19 @@ const nextPhasePreviewStyle = computed(() => ({
 /* ══════════════════════════════════════════════════
    TIEFENFELD — die Ebenen ohne Kreiskante
 ══════════════════════════════════════════════════ */
-/* Zwei Ebenen ersetzen fünf SVG-Kreise. Beide tragen einen STATISCHEN Verlauf,
-   der nur bei einem Phasenwechsel oder einer Chipwahl neu gesetzt wird; animiert
-   wird ausschliesslich `opacity` (Performance-Regel 2/11). `z-index: 0` gegen
-   das `auto` des `<svg>`: bei gleichem Rang gewinnt die Dokumentordnung, und
-   beide stehen im Template davor. */
-.depth-field,
-.depth-accent {
+/* EINE Ebene ersetzt fünf SVG-Kreise. Sie trägt einen STATISCHEN Verlauf, der
+   nur bei einem Phasenwechsel neu gesetzt wird — kein Wert pro Frame, keine
+   Animation auf `background` (Performance-Regel 2). `z-index: 0` gegen das
+   `auto` des `<svg>`: bei gleichem Rang gewinnt die Dokumentordnung, und sie
+   steht im Template davor.
+
+   Eine zweite Ebene lag hier einmal darüber und hob den Ring hervor, dessen
+   Filterchip gewählt war; sie ist mit der Kopfleiste gestrichen. */
+.depth-field {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-}
-
-.depth-field {
-  transition: opacity v-bind(depthFadeMs) ease;
-}
-
-/* Ein gewählter Chip schickt das ganze Ruhefeld zurück; die Auswahl trägt danach
-   die Akzentzone allein. EIN Wert an EINER Ebene — vorher wurden dafür fünf
-   Ringe einzeln umgefärbt und einzeln gedämpft. */
-.depth-field--sifted {
-  opacity: v-bind(siftRingOpacity);
-}
-
-.depth-accent-enter-active,
-.depth-accent-leave-active {
-  transition: opacity v-bind(depthFadeMs) ease;
-}
-
-.depth-accent-enter-from,
-.depth-accent-leave-to {
-  opacity: 0;
 }
 
 /* Ring-Pillen gibt es NICHT MEHR — hier standen fünf Klassen für die
@@ -1200,8 +1077,8 @@ const nextPhasePreviewStyle = computed(() => ({
    Kreis vererbt sich multiplikativ auf jedes Kind — das Schloss an seiner Kante
    stünde dann bei 0,5, und ein halb sichtbares Schloss sagt nichts. Rand, Grund
    und Abzeichen bleiben deshalb klar; zurück tritt genau das, was noch nicht
-   gilt. Die Spotlight- und Filter-Dämpfung (`--dim`, `--sifted`) bleibt am
-   Kreis: die meinen den ganzen Knoten. */
+   gilt. Die Spotlight-Dämpfung (`--dim`) bleibt am Kreis: sie meint den ganzen
+   Knoten. */
 .node-circle--locked {
   border-color: #4a3010;
   cursor: not-allowed;
@@ -1433,46 +1310,12 @@ const nextPhasePreviewStyle = computed(() => ({
 /* ══════════════════════════════════════════════════
    RINGFILTER — was der Chip oben nicht durchlässt
 ══════════════════════════════════════════════════ */
-/* Steht NACH `--dim` und gewinnt damit über die Quellreihenfolge, wenn beides
-   zutrifft: „weggefiltert" wiegt schwerer als „ich zeige woandershin". Der
-   Abstand der beiden Zahlen (0,14 gegen 0,3) trägt genau diesen Unterschied und
-   ist an der Konstante hergeleitet.
-
-   `saturate()` ist ein STATISCHER Zustand und steht bewusst nicht in der
-   Transition von `.node-circle` — ein `filter` über Zeit rasterte bis zu
-   fünfundvierzig Kreise samt Schatten in jedem Frame neu (Performance-Regel 2).
-   Es springt daher hart, während die Deckkraft weich läuft; sichtbar ist davon
-   nichts, weil bei 0,14 ohnehin kaum Farbe übrig ist. */
-.node-circle--sifted {
-  opacity: v-bind(siftDimOpacity);
-  filter: saturate(v-bind(siftSaturate));
-  transition-duration: 0.12s;
-}
-
-/* Der Schein geht ganz aus, nicht nur zurück. Bei gewähltem Ring stehen damit
-   im ganzen Knotenfeld nur noch die Kreise DIESES Rings mit einer laufenden
-   Animation da — derselbe Nebengewinn wie beim Spotlight-Dim, nur für weit
-   mehr Knoten. */
-.node-circle--sifted .node-glow {
-  animation: none;
-  opacity: 0;
-}
-
-/* Äste. Die Grunddeckkraft der gewachsenen Verbindungen lag bis hierher als
-   `opacity`-Attribut am `<line>`; als Klasse kann `--sifted` sie überschreiben,
-   ohne auf „CSS schlägt Präsentationsattribut" zu bauen. */
+/* Äste. Die Grunddeckkraft der gewachsenen Verbindungen steht als KLASSE und
+   nicht als `opacity`-Attribut am `<line>` — ein Präsentationsattribut wäre von
+   keiner Regel mehr zu überschreiben. */
 .limb--lit {
   opacity: 0.55;
 }
-
-.limb--sifted {
-  opacity: v-bind(siftLimbOpacity);
-}
-
-/* Die Treffer-Marke zu diesem Sieb steht in `ForgeToolbar` — im FLUSS über dem
-   Viewport und nicht darin: hier sind beide freien Ecken vergeben (Zoomkasten
-   rechts, Dev-Knopf links), und eine dritte schwebende Karte machte den Knoten
-   unter sich unklickbar. */
 
 /* `scale()` am Kreis öffnet einen Stapelkontext INNERHALB des Wrappers — ohne
    dieses Anheben läge der vergrößerte Knoten im gedrängten Blattring unter
@@ -1653,11 +1496,5 @@ const nextPhasePreviewStyle = computed(() => ({
     opacity: 1;
   }
 
-  /* Tiefenfeld und Akzentzone springen dann — wie der Chip, der sie auslöst. */
-  .depth-field,
-  .depth-accent-enter-active,
-  .depth-accent-leave-active {
-    transition: none;
-  }
 }
 </style>

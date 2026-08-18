@@ -186,6 +186,20 @@ function valueText(def: ForgeNodeDef, value: number): string {
   return isPercentDesc(def) ? `+${body}%` : `+${body}`
 }
 
+/**
+ * Was ein Klick auf den Sammelkauf ausrichten WÜRDE — ohne ihn auszuführen.
+ *
+ * Die Leiste am Kopf der Forge-Spalte zeigt beides an, bevor der Spieler klickt:
+ * ein blosses „Buy all" liess ihn den Preis der Sammelaktion erst am Chime-Stand
+ * danach ablesen.
+ */
+export interface ForgeBuyAllPlan {
+  /** Wie viele Einträge je EINE Stufe bekämen. */
+  count: number
+  /** Was das zusammen an Chimes kostet. */
+  chimeCost: number
+}
+
 export function useForgeUpgrades(): {
   upgradeEntries: ComputedRef<ForgeUpgradeEntry[]>
   entryById: ComputedRef<Map<string, ForgeUpgradeEntry>>
@@ -195,6 +209,7 @@ export function useForgeUpgrades(): {
   affordableLevels: (id: string) => number
   buyMany: (id: string, count: number) => number
   buyAllReady: () => number
+  buyAllPlan: ComputedRef<ForgeBuyAllPlan>
 } {
   const gameStore = useGameStore()
   const inventoryStore = useInventoryStore()
@@ -557,20 +572,71 @@ export function useForgeUpgrades(): {
   }
 
   /**
-   * Je eine Stufe von allem, was Chimes UND Lager gerade decken — der Knopf in
-   * der Kopfleiste.
+   * Alles gerade Kaufbare, günstigster zuerst — die Rangfolge des Sammelkaufs
+   * UND seiner Vorschau.
    *
    * Günstigster zuerst, aus zwei Gründen: derselbe Vorrat deckt so die meisten
    * Stufen, und es ist dieselbe Rangfolge, nach der die BEST-BUY-Marke im Baum
-   * zeigt. Die Reihenfolge steht als Id-Liste fest, bevor der erste Kauf läuft —
+   * zeigt.
+   *
+   * EINE Funktion für beide Aufrufer, und das ist kein Aufräumen: `buyAllPlan`
+   * sagt dem Spieler voraus, was `buyAllReady()` tun wird. Zwei Fassungen
+   * derselben Rangfolge liefen beim nächsten Eingriff auseinander, und die
+   * Vorschau wäre dann still falsch statt sichtbar kaputt.
+   *
+   * `.filter()` gibt eine neue Liste zurück — das `.sort()` darauf rührt
+   * `upgradeEntries` nicht an.
+   */
+  function readyQueue(): ForgeUpgradeEntry[] {
+    return upgradeEntries.value
+      .filter((entry) => entry.canBuy)
+      .sort((a, b) => a.goldCost - b.goldCost)
+  }
+
+  /**
+   * Was der Sammelkauf ausrichten würde — gerechnet, nicht gekauft.
+   *
+   * Dasselbe Muster wie `affordableLevels()`: lokale Kopien von Vorrat und
+   * Lager, ein Durchlauf, kein Zugriff auf einen Store-Setter.
+   *
+   * Warum die Zahl stimmt: `canBuy` deckt Sperre, Deckel und Gleichwuchs bereits
+   * ab, und ein Kauf kann keinen anderen Eintrag SPERREN — nur unbezahlbar
+   * machen. Die einzige Grösse, die sich während des Laufs ändert, sind Chimes
+   * und Materialien, und genau die führt die Schleife mit.
+   *
+   * Übersprungen wird, nicht abgebrochen (`continue`, kein `break`) — dieselbe
+   * Entscheidung wie in `buyAllReady()`: ein teurer Knoten in der Mitte der
+   * Reihe darf die billigen dahinter nicht mitnehmen.
+   */
+  const buyAllPlan = computed<ForgeBuyAllPlan>(() => {
+    let chimes = gameStore.chimes
+    const stock: Record<string, number> = { ...inventoryStore.collectedMaterials }
+    let count = 0
+    let chimeCost = 0
+
+    for (const entry of readyQueue()) {
+      if (chimes < entry.goldCost) continue
+      if (entry.materials.some((mat) => (stock[mat.id] ?? 0) < mat.need)) continue
+
+      chimes -= entry.goldCost
+      chimeCost += entry.goldCost
+      for (const mat of entry.materials) stock[mat.id] = (stock[mat.id] ?? 0) - mat.need
+      count++
+    }
+
+    return { count, chimeCost }
+  })
+
+  /**
+   * Je eine Stufe von allem, was Chimes UND Lager gerade decken — der Knopf am
+   * Kopf der Forge-Spalte.
+   *
+   * Die Reihenfolge steht als Id-Liste fest, bevor der erste Kauf läuft —
    * `upgradeEntries` ist ein computed und sortierte sich sonst mitten in der
    * Schleife um.
    */
   function buyAllReady(): number {
-    const queue = upgradeEntries.value
-      .filter((entry) => entry.canBuy)
-      .sort((a, b) => a.goldCost - b.goldCost)
-      .map((entry) => entry.id)
+    const queue = readyQueue().map((entry) => entry.id)
 
     let bought = 0
     // Die Namen fallen hier ohnehin an — die Quittung zählt sie auf, statt nur
@@ -600,5 +666,6 @@ export function useForgeUpgrades(): {
     affordableLevels,
     buyMany,
     buyAllReady,
+    buyAllPlan,
   }
 }

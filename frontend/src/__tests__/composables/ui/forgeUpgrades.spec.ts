@@ -783,6 +783,101 @@ describe('useForgeUpgrades — Stapelkauf', () => {
 })
 
 /**
+ * Die Leiste am Kopf der Forge-Spalte SAGT VORAUS, was ihr Klick tut — Anzahl
+ * und Chime-Preis stehen darauf, bevor gekauft wird.
+ *
+ * Genau das ist die Stelle, die still falsch werden kann: eine Vorschau, die
+ * nicht mehr zum Kauf passt, sieht aus wie eine Vorschau. `buyAllPlan` und
+ * `buyAllReady()` teilen sich deshalb `readyQueue()`, und die erste Spec hier
+ * bindet beide aneinander — sie ist der Grund, aus dem dieser Block existiert.
+ */
+describe('useForgeUpgrades — Vorschau des Sammelkaufs', () => {
+  /** Vier kaufbare Zweige verlangen ihn, zwei davon in derselben Menge. */
+  const SHARED_MAT = 'stardust'
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('buyAllPlan sagt genau voraus, was buyAllReady() tut', () => {
+    unlockBranches()
+    const game = useGameStore()
+    const { buyAllPlan, buyAllReady } = useForgeUpgrades()
+
+    const plan = { ...buyAllPlan.value }
+    expect(plan.count).toBeGreaterThan(1)
+    expect(plan.chimeCost).toBeGreaterThan(0)
+
+    const before = game.chimes
+    expect(buyAllReady()).toBe(plan.count)
+    expect(before - game.chimes).toBe(plan.chimeCost)
+  })
+
+  it('nimmt bei knappem Vorrat die günstigsten und lässt den Rest stehen', () => {
+    unlockBranches()
+    const game = useGameStore()
+    const { upgradeEntries, buyAllPlan, buyAllReady } = useForgeUpgrades()
+
+    const costs = upgradeEntries.value
+      .filter((e) => e.canBuy)
+      .map((e) => e.goldCost)
+      .sort((a, b) => a - b)
+    expect(costs.length).toBeGreaterThan(3)
+
+    // Genau so viel, wie die drei billigsten zusammen kosten.
+    game.chimes = costs[0] + costs[1] + costs[2]
+
+    expect(buyAllPlan.value.count).toBe(3)
+    expect(buyAllPlan.value.chimeCost).toBe(game.chimes)
+    expect(buyAllReady()).toBe(3)
+    expect(game.chimes).toBe(0)
+  })
+
+  /**
+   * Der Fall, an dem sich `continue` von `break` unterscheidet: beim Gold ist
+   * die Reihe aufsteigend sortiert, ein Abbruch fiele dort nicht auf. Beim
+   * MATERIAL kann ein früherer Kauf einem späteren die Portion wegnehmen, ohne
+   * dass alles dahinter unbezahlbar wäre.
+   */
+  it('teilt ein knappes Material zu und überspringt, wer leer ausgeht', () => {
+    unlockBranches()
+    const inventory = useInventoryStore()
+    const forge = useStarForgeStore()
+    const { upgradeEntries, buyAllPlan, buyAllReady } = useForgeUpgrades()
+
+    const claimants = upgradeEntries.value
+      .filter((e) => e.canBuy && e.materials.length === 1 && e.materials[0].id === SHARED_MAT)
+      .sort((a, b) => a.goldCost - b.goldCost)
+    expect(claimants.length).toBeGreaterThan(1)
+
+    const portion = claimants[0].materials[0].need
+    expect(claimants[1].materials[0].need).toBe(portion)
+
+    // Genau EINE Portion im Lager — alles andere bleibt reichlich.
+    inventory.collectedMaterials = { ...inventory.collectedMaterials, [SHARED_MAT]: portion }
+
+    const plan = { ...buyAllPlan.value }
+    const bought = buyAllReady()
+
+    expect(bought).toBe(plan.count)
+    // Der günstigere bekommt sie, der andere geht leer aus …
+    expect(forge.nodeLevel(claimants[0].id)).toBe(1)
+    expect(forge.nodeLevel(claimants[1].id)).toBe(0)
+    // … und die Zweige mit anderem Material sind trotzdem gewachsen.
+    expect(bought).toBeGreaterThan(1)
+  })
+
+  it('ist leer, solange nichts bereit ist — und meldet dann auch nichts', () => {
+    useGameStore().chimes = 0
+    const { buyAllPlan, buyAllReady } = useForgeUpgrades()
+
+    expect(buyAllPlan.value).toEqual({ count: 0, chimeCost: 0 })
+    expect(buyAllReady()).toBe(0)
+    expect(useHerald().receipts.value).toHaveLength(0)
+  })
+})
+
+/**
  * Die BEST-BUY-Marke im Baum und die Vorgabe des Detailkopfs lesen denselben
  * Wert. „Günstigster kaufbarer" ist dabei keine Bequemlichkeit: die Wirkungen
  * des Baums stehen in Prozent, HP, Sekunden und Chimes nebeneinander und sind

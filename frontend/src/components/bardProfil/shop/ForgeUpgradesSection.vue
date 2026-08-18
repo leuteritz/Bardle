@@ -6,11 +6,7 @@
   <div ref="wrapEl" class="fu-wrap" @mouseenter="freezeOrder" @mouseleave="leaveList">
     <!-- ══ Die Töpfe ════════════════════════════════════════════════
          Ready · Saving up · Next up · und zuletzt das eingeklappte Archiv. Ein
-         leerer Topf fällt ganz weg.
-
-         Der Ringfilter, der bis zum Umbau hier oben klebte, steht jetzt in der
-         Kopfleiste über dem Baum (`ForgeToolbar`) — dort hat er die doppelte
-         Breite und Platz für einen Fortschrittsring je Ring. -->
+         leerer Topf fällt ganz weg. -->
     <section v-for="section in sections" :key="section.id" class="fu-group">
       <!-- Der Trenner. JEDER Topf trägt einen — auch die beiden kaufbaren: dass
            der Knopf in Farbe schon alles sage, hat als Begründung fürs Weglassen
@@ -67,12 +63,11 @@
       </template>
     </section>
 
-    <!-- Sucht der Spieler etwas, das es nicht gibt, sagt eine leere Liste sonst
-         „nichts kaufbar" statt „nichts gefunden". -->
+    <!-- Alle vier Töpfe leer — im frischen Spielstand der einzige Fall, und
+         später keiner mehr. -->
     <div v-if="sections.length === 0" class="fu-none">
-      <Icon :icon="FORGE_SEARCH_ICON" width="26" height="26" class="fu-none-ico" />
-      <span class="fu-none-text">{{ hasFilter ? 'Nothing matches that filter.' : 'Nothing to grow yet.' }}</span>
-      <button v-if="hasFilter" class="fu-none-reset" @click="resetForgeFilter">Clear filter</button>
+      <Icon :icon="FORGE_UPGRADE_EMPTY_ICON" width="26" height="26" class="fu-none-ico" />
+      <span class="fu-none-text">Nothing to grow yet.</span>
     </div>
   </div>
 
@@ -120,7 +115,6 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { forgeUpgradeBucket, useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
-import { useForgeFilter } from '@/composables/ui/useForgeFilter'
 import ForgeUpgradeTile from './ForgeUpgradeTile.vue'
 import ForgeGrownRow from './ForgeGrownRow.vue'
 import ForgeRowTooltip from './ForgeRowTooltip.vue'
@@ -144,14 +138,13 @@ import {
   FORGE_DIVIDER_SAVING_LABEL,
   FORGE_PHASE_TOKEN,
   FORGE_SPOTLIGHT_SCROLL_DELAY_MS,
-  FORGE_SEARCH_ICON,
+  FORGE_UPGRADE_EMPTY_ICON,
   STAR_PHASE_DATA,
 } from '@/config/constants'
 
 const { upgradeEntries, entryById, bestBuyId, freshIds, buyUpgrade, affordableLevels, buyMany } =
   useForgeUpgrades()
 const { treeHoverId, listHoverId, setListHover } = useForgeSpotlight()
-const { hasFilter, matchesForgeFilter, resetForgeFilter } = useForgeFilter()
 
 // ── Eingefrorene Reihenfolge ─────────────────────────────────────────────────
 /**
@@ -293,7 +286,6 @@ const sections = computed<UpgradeSection[]>(() => {
   }
 
   for (const entry of upgradeEntries.value) {
-    if (!matchesForgeFilter(entry)) continue
     pots[bucketOf(entry)].push(entry)
   }
 
@@ -383,21 +375,11 @@ let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
  * Ein Knoten, auf den der Spieler LINKS zeigt, muss rechts auch auffindbar
- * sein — soweit er überhaupt gemeint ist.
+ * sein.
  *
- * Ring und Suchwort nahm diese Funktion früher mit zurück. Das ging, solange
- * der Filter nur die Liste betraf; seit der Baum ihn mitträgt
- * (`siftedIds` in `ForgeTreePanel`), wäre es eine Rückkopplung, die sich selbst
- * frisst: Maus über einen fremden Ring → Filter springt auf „All" → der ganze
- * Baum hellt auf → die Auswahl, die der Spieler eben getroffen hat, ist weg,
- * ohne dass er etwas angeklickt hätte.
- *
- * Die Auskunft, die dabei verlorenging, gibt jetzt der Baum selbst: ein
- * ausgefilterter Knoten steht sichtbar zurück, und dass zu ihm rechts keine
- * Zeile erscheint, ist damit schon beantwortet, bevor die Frage aufkommt.
- *
- * Das ARCHIV bleibt: es ist keine Auswahl des Spielers, sondern nur eine
- * zugeklappte Schublade, und was darin liegt, ist vom Filter durchgelassen.
+ * Aufzuklappen ist dafür genau eines: das ARCHIV. Es ist keine Auswahl des
+ * Spielers, sondern eine zugeklappte Schublade — und ein ausgewachsener Knoten
+ * im Baum hat seine Zeile darin.
  */
 function revealForSpotlight(id: string): void {
   const entry = entryById.value.get(id)
@@ -419,11 +401,6 @@ function revealForSpotlight(id: string): void {
  * fünfundvierzig. Die Wartezeit deckt zugleich das Aufklappen des Archivs ab,
  * das `revealForSpotlight()` ausgelöst haben kann. Rein visuell, daher reale
  * Zeit.
- *
- * Steht der Knoten hinter dem Filter, findet `querySelector` seine Zeile nicht
- * und es passiert nichts — das ist die richtige Antwort, nicht bloß eine
- * harmlose: der Knoten drüben ist sichtbar zurückgetreten und sagt damit selbst,
- * dass er gerade nicht gemeint ist.
  */
 watch(treeHoverId, (id) => {
   if (scrollTimer !== null) clearTimeout(scrollTimer)
@@ -598,23 +575,6 @@ onUnmounted(() => {
   font-size: 13.5px;
   font-weight: 700;
   color: rgba(232, 220, 192, 0.45);
-}
-
-.fu-none-reset {
-  flex-shrink: 0;
-  padding: 6px 11px;
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-  background: #1e1006;
-  color: #e8c040;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.fu-none-reset:hover {
-  border-color: #c89040;
 }
 
 /* ══════════════════════════════════════════════════

@@ -626,8 +626,7 @@ export const MEEP_SPOTLIGHT_NODE_SCALE = 1.22
  * Wie weit die übrigen neunundzwanzig zurücktreten, solange ein Spotlight liegt.
  *
  * Steht bewusst NEBEN `SKILL_TREE_NODE_OPACITY.dimmed` (0,2) und bedeutet etwas
- * anderes — dieselbe Trennung wie `FORGE_SPOTLIGHT_DIM_OPACITY` gegen
- * `FORGE_SIFT_DIM_OPACITY`:
+ * anderes:
  *
  *   • 0,3 hier — „ich zeige gerade woandershin". Der Zeiger wandert weiter, die
  *     anderen bleiben lesbar.
@@ -1349,12 +1348,14 @@ export const FORGE_PANEL_SECTIONS: ForgeSectionDef[] = [
  * was der Baum hergibt.
  *
  * Seit die Liste nach Kaufbarkeit ordnet (`forgeUpgradeBucket()`), sind die
- * Ringe dort kein Abschnitt mehr, sondern die Filterleiste — daher
- * `shortTitle`. Der lange Name bleibt trotzdem: eine Kopfzeile mit „Rays"
- * stünde im Widerspruch zum Lexikon, ein Chip mit „Solar Rays" passt zu siebt
- * nicht in eine 470px-Spalte. (Zu SIEBT passt auch der kurze Name dort nicht
- * mehr überall — unterhalb einer gemessenen Breite treten die Chips deshalb auf
- * ihr `icon` zurück, siehe `ForgeToolbar`.)
+ * Ringe dort kein Abschnitt mehr — sie stehen als Chip an der einzelnen Zeile,
+ * daher `shortTitle`. Der lange Name bleibt trotzdem: eine Kopfzeile mit „Rays"
+ * stünde im Widerspruch zum Lexikon, ein Chip mit „Solar Rays" sprengt die
+ * Zeile.
+ *
+ * Eine Ringfilter-Leiste über dem Baum las diese Tabelle einmal mit; sie ist
+ * gestrichen (Herleitung an `FORGE_BUY_ALL_LABEL`). `accent` und `icon` bleiben
+ * in Gebrauch — das Tiefenfeld des Baums und die Zeilen-Chips lesen sie.
  */
 export const FORGE_UPGRADE_GROUPS = [
   {
@@ -1543,62 +1544,66 @@ export const FORGE_DIVIDER_SAVING_LABEL = 'Saving up'
 export const FORGE_DIVIDER_SAVING_ICON = 'ph:hourglass-medium-fill'
 export const FORGE_DIVIDER_SAVING_COLOR = '#c89040'
 
-/** Der Chip, der die Ringfilterung aufhebt. */
-export const FORGE_UPGRADE_FILTER_ALL_LABEL = 'All'
 /**
- * Sein Motiv für die enge Leiste, in der die Chips auf ihr Glyph zurücktreten.
+ * Der Leerzustand der Upgrade-Liste.
  *
- * Aus `ph` und nicht aus `game-icons`: es wird bei rund 20 px gezeigt, und dort
- * zerfallen verschnörkelte Glyphen (CLAUDE.md, „Icons"). Die sieben Ringmotive
- * daneben stehen in `FORGE_UPGRADE_GROUPS[].icon` und sind aus `game-icons` —
- * sie sind schon vergeben und tragen ihre Bedeutung ausserhalb der Leiste
- * ebenfalls; hier wird nur der Neuzugang gewählt.
+ * Ein Trieb und keine Lupe: hier stand bis zum Umbau `FORGE_SEARCH_ICON`, weil
+ * derselbe Kasten zwei Sätze tragen musste — „nichts gefunden" (Suchwort ohne
+ * Treffer) und „nichts kaufbar". Mit der Kopfleiste ist der erste Fall weg, und
+ * ein Suchglyph über „Nothing to grow yet." zeigte auf eine Bedienung, die es
+ * nicht mehr gibt. Das Verb der Spalte ist FORGE/grow (`FORGE_GROW_LABEL`) —
+ * das Motiv folgt ihm.
  */
-export const FORGE_UPGRADE_FILTER_ALL_ICON = 'ph:circles-three-fill'
-/**
- * Kantenlänge des Chip-Glyphs. 20 statt 18: die 18er-Grenze ist die, ab der
- * `game-icons` zu Grau zerfallen, und ein Bedienelement soll nicht auf ihr
- * stehen.
- */
-export const FORGE_CHIP_ICON_SIZE = 20
+export const FORGE_UPGRADE_EMPTY_ICON = 'game-icons:sprout'
 
-// ── Kopfleiste der Baumspalte (ForgeToolbar) ─────────────────────────────────
+// ── Sammelkauf (ForgeBuyAllBar) ──────────────────────────────────────────────
 /**
- * Suchzeile und Ring-Chips stehen seit dem Umbau ÜBER dem Baum, nicht mehr über
- * der Liste. Zwei Gründe: die Chips hatten in der 470px-Spalte nur 438px und
- * mussten auf 11px Schrift heruntergezogen werden, und der Fortschrittsring je
- * Ring braucht Platz, den es dort nicht gab. Über dem Baum steht das Doppelte
- * zur Verfügung.
- *
- * Die Leiste liegt IM FLUSS, nicht schwebend über der Bühne — dieselbe
- * Entscheidung wie beim Ertrags-Sockel (`FORGE_YIELD_PLINTH_HEIGHT_PX`): ein
- * Knoten unter einer schwebenden Karte läuft weiter, ist aber nicht mehr
- * anklickbar. `fitScale` misst den Viewport darunter und zieht von selbst mit.
- *
- * Eine HÖHE steht hier bewusst nicht: die Leiste bemisst sich an ihrem Inhalt
- * (gemessen 51px bei Full HD, 55px ab 2K), und der Viewport darunter nimmt den
- * Rest. Eine Konstante wäre eine zweite Quelle für eine Zahl, die das Layout
- * ohnehin schon kennt.
- */
-/**
- * Radius der Fortschrittslinie auf einem Ring-Chip. Der Umfang steht daneben,
- * weil `stroke-dasharray` ihn braucht — Fortschrittsringe laufen über
- * `stroke-dashoffset` einer SVG-Kreislinie und NIE über `conic-gradient`
- * (Performance-Regel 11, Muster `ABILITY_RING_CIRCUMFERENCE`).
- */
-export const FORGE_CHIP_RING_R = 8
-export const FORGE_CHIP_RING_CIRCUMFERENCE = 2 * Math.PI * FORGE_CHIP_RING_R
-export const FORGE_SEARCH_ICON = 'lucide:search'
-/**
- * Platzhalter je einer Zahl in einer Beschriftung — Suchfeld, Sammelkauf-Toast
- * und der Stapelknopf setzen dieselbe Marke ein. Eine Konstante je Text hätte
- * drei Fassungen desselben Zeichens ergeben.
+ * Platzhalter je einer Zahl in einer Beschriftung — Sammelkauf-Quittung und
+ * Stapelknopf setzen dieselbe Marke ein. Eine Konstante je Text hätte mehrere
+ * Fassungen desselben Zeichens ergeben.
  */
 export const FORGE_COUNT_TOKEN = '{n}'
-export const FORGE_SEARCH_PLACEHOLDER = `Search ${FORGE_COUNT_TOKEN} upgrades…`
-export const FORGE_SEARCH_CLEAR_ICON = 'lucide:x'
-export const FORGE_BUY_ALL_LABEL = 'Buy all ready'
+/** Und derselbe Gedanke für den Preis, der in `FORGE_BUY_ALL_TITLE` danebensteht. */
+export const FORGE_BUY_ALL_COST_TOKEN = '{c}'
+/**
+ * Der Sammelkauf sass bis zum Umbau in der Kopfleiste ÜBER DEM BAUM, zusammen
+ * mit Suchfeld und Ringfiltern. Er steht jetzt am Kopf der DETAILSPALTE —
+ * derselben Spalte, in der das Kaufbare als Liste steht und in der jede einzelne
+ * Zeile ihren eigenen Kaufknopf trägt. Die Leiste ist damit die Sammelfassung
+ * dessen, was direkt darunter liegt, statt einer Bedienung auf der anderen Seite
+ * des Tabs.
+ *
+ * „Forge all ready" und nicht „Buy all ready": der Kaufknopf jeder Zeile trägt
+ * `FORGE_GROW_LABEL` („FORGE"), und die Sammelaktion ist dieselbe Handlung en
+ * bloc. Zwei Verben für einen Vorgang lasen sich wie zwei Vorgänge.
+ *
+ * Eine HÖHE steht hier bewusst nicht: die Leiste bemisst sich an ihrem Inhalt,
+ * und das Scrollfeld darunter nimmt den Rest. Eine Konstante wäre eine zweite
+ * Quelle für eine Zahl, die das Layout ohnehin kennt.
+ */
+export const FORGE_BUY_ALL_LABEL = 'Forge all ready'
 export const FORGE_BUY_ALL_ICON = 'ph:lightning-fill'
+/**
+ * Was dort steht, solange nichts kaufbar ist.
+ *
+ * Ein eigener Satz und nicht der ausgegraute Wortlaut: „Forge all ready" auf
+ * einem toten Knopf behauptet, es gäbe etwas zu holen. Der Leerzustand ist eine
+ * Auskunft, kein abgeschaltetes Angebot — dieselbe Trennung wie zwischen
+ * „nichts gefunden" und „nichts kaufbar" in der Liste darunter.
+ */
+export const FORGE_BUY_ALL_EMPTY_LABEL = 'Nothing ready to grow'
+/**
+ * Der volle Satz im `title` des Knopfes. Er nennt beides — Anzahl UND Preis —,
+ * weil die Leiste ihre Zahlen als Pille und Preisblock zeigt und ein Screenreader
+ * (oder ein sehr schmaler Viewport) sonst nur die nackten Ziffern bekäme.
+ */
+export const FORGE_BUY_ALL_TITLE = `${FORGE_BUY_ALL_LABEL} · ${FORGE_COUNT_TOKEN} upgrades · ${FORGE_BUY_ALL_COST_TOKEN} chimes`
+/**
+ * Kantenlänge des Blitz-Glyphs auf der Leiste. 20 statt 18: die 18er-Grenze ist
+ * die, ab der gefüllte Glyphen zu Grau zerfallen, und die eine Primäraktion der
+ * Spalte soll nicht auf ihr stehen.
+ */
+export const FORGE_BUY_ALL_ICON_SIZE = 20
 /**
  * Schlagzeile des Sammelkaufs im Herold-Banner — die Marke trägt die Zahl der
  * gewachsenen Knoten.
@@ -1970,61 +1975,6 @@ export const FORGE_SPOTLIGHT_MAX_LIMBS = 7
  * Rein visuell, daher reale Zeit.
  */
 export const FORGE_SPOTLIGHT_SCROLL_DELAY_MS = 160
-
-// ── Der Ringfilter siebt auch den Baum ───────────────────────────────────────
-/**
- * Zwei Dämpfungsstufen stehen hier bewusst nebeneinander, und sie bedeuten
- * VERSCHIEDENES:
- *
- *   • `FORGE_SPOTLIGHT_DIM_OPACITY` (0,3) — „ich zeige gerade woandershin".
- *     Die vierundvierzig anderen bleiben lesbar; der Zeiger wandert weiter.
- *   • `FORGE_SIFT_DIM_OPACITY` (0,14) — „das habe ich weggefiltert".
- *     Eine ABSICHT des Spielers, die stehen bleibt, bis er sie zurücknimmt.
- *
- * Der Abstand zwischen beiden muss deutlich sein: läge das Sieb bei 0,25, wäre
- * ein gefilterter Baum von einem Spotlight nicht zu unterscheiden, und die
- * Chipwahl sähe aus wie ein Hover, der hängengeblieben ist. Gemessen auf Full HD
- * bei Standardzoom — bei 0,2 trägt der Blattring noch erkennbar Farbe.
- *
- * Ausgefiltert heißt NICHT gesperrt: der Knoten bleibt anklickbar, und ein
- * Zeiger darauf nimmt ihm die Klasse wieder ab (`ForgeTreePanel`). Der Filter
- * ist ein Blickfilter.
- */
-export const FORGE_SIFT_DIM_OPACITY = 0.14
-/**
- * Zusätzlich die Farbe herausnehmen. STATISCHER Zustand, ausdrücklich NICHT in
- * der Transition von `.node-circle` — ein `filter` über Zeit rasterte bis zu
- * fünfundvierzig Kreise samt Schatten in jedem Frame neu (Performance-Regel 2).
- */
-export const FORGE_SIFT_SATURATE = 0.35
-/** Äste zu einem ausgefilterten Ziel. Tiefer als der Knoten selbst — ein Strich
- *  trägt keine Form, die man wiedererkennt, nur Helligkeit. */
-export const FORGE_SIFT_LIMB_OPACITY = 0.12
-/** Ringband und Ring-Beschriftung der nicht gewählten Ebenen. */
-export const FORGE_SIFT_RING_OPACITY = 0.15
-
-/**
- * Der Trefferzähler IM SUCHFELD.
- *
- * Ohne ihn liest sich ein Baum, in dem kein einziger Knoten hell steht, wie ein
- * Fehler statt wie ein Suchwort ohne Treffer — dieselbe Lücke, die der
- * Leerzustand der Liste mit „Nothing matches that filter" schließt.
- *
- * Warum INNEN im Feld und nicht als eigene Marke daneben: eine Marke von 81px
- * (2K: 159px) hat die Chipreihe der Leiste auf Full HD, WUXGA und 2K in eine
- * zweite Zeile gedrückt und dem Baum darunter 19 bis 41px genommen — gemessen,
- * nicht befürchtet. Bei 663px Spaltenbreite ist die Leiste randvoll; im Feld
- * kostet die Zahl gar nichts, weil sie den Platz des Platzhalters nimmt, der
- * bei getipptem Wort ohnehin weg ist.
- *
- * Warum nur beim SUCHWORT und nicht bei jedem Filter: ein gewählter Ring ist am
- * markierten Chip abzulesen, und dessen Zweitzeile trägt seine Knotenzahl
- * bereits. Die Suche ist der einzige Filter ohne eigene Rückmeldung — und damit
- * der einzige, bei dem ein dunkler Baum unerklärt bliebe.
- */
-export const FORGE_SIFT_TOTAL_TOKEN = '{t}'
-export const FORGE_SIFT_HITS_TITLE = `${FORGE_COUNT_TOKEN} of ${FORGE_SIFT_TOTAL_TOKEN} nodes match`
-export const FORGE_SIFT_NO_HITS_TITLE = 'No node matches'
 
 /**
  * Grund, warum ein Kernstrahl gerade nicht weitergeht: `maxAllowedLevel` lässt

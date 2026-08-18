@@ -1,7 +1,15 @@
 <template>
   <div class="sf-panel">
-    <!-- Laufende Segen des Händlers stehen über allem: sie sind das Einzige in
-         dieser Spalte mit einer Uhr, die abläuft, ohne dass man etwas tut. -->
+    <!-- Der Sammelkauf steht ganz oben, und zwar ÜBER den Segen: er ist das
+         einzige Element dieser Spalte, das immer da ist. Läge er darunter,
+         spränge die Primäraktion jedes Mal um die Höhe der Chipreihe, sobald ein
+         Segen anläuft oder ausläuft — und getroffen würde dann, was gerade
+         nachgerutscht ist. -->
+    <ForgeBuyAllBar />
+
+    <!-- Laufende Segen des Händlers: das Einzige in dieser Spalte mit einer Uhr,
+         die abläuft, ohne dass man etwas tut — deshalb vor dem Scrollfeld und
+         nicht darin. -->
     <div v-if="activeBuffs.length > 0" class="sf-buffs">
       <div v-for="buff in activeBuffs" :key="buff.id" class="blessing-chip">
         <Icon icon="ph:sparkle-fill" width="17" height="17" class="blessing-icon" />
@@ -26,6 +34,9 @@
 /**
  * Die Detailspalte des Shop-Tabs.
  *
+ * Ganz oben der Sammelkauf (`ForgeBuyAllBar`) — er ist mit der Kopfleiste über
+ * dem Baum hierher gezogen, weil das Kaufbare in dieser Spalte steht.
+ *
  * Sie zeigte bis zum Umbau EINE von vier Abteilungen, ausgewählt an einer
  * Reiter-Schiene ganz rechts (`ForgeSectionRail`, gestrichen). Drei dieser vier
  * Abteilungen — Relikte, Konstellationen, Handel — sind zusammen ein knappes
@@ -41,6 +52,7 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { formatClock } from '@/utils/ui/format'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import ForgeBuyAllBar from './ForgeBuyAllBar.vue'
 import ForgeOfferStrip from './ForgeOfferStrip.vue'
 import ForgeUpgradesSection from './ForgeUpgradesSection.vue'
 import ForgeVaultSection from './ForgeVaultSection.vue'

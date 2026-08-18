@@ -133,8 +133,8 @@ export const BARD_PROFILE_RADIUS = 4
 /**
  * Radius des Resonanz-Rings im viewBox `0 0 24 24`. Der Ring läuft über
  * `stroke-dashoffset` einer SVG-Kreislinie, nie über `conic-gradient`
- * (Performance-Regel 11, Muster `ABILITY_RING_CIRCUMFERENCE` und
- * `FORGE_CHIP_RING_R`) — sein Umfang steht als `stroke-dasharray` daneben.
+ * (Performance-Regel 11, Muster `ABILITY_RING_CIRCUMFERENCE`) — sein Umfang
+ * steht als `stroke-dasharray` daneben.
  */
 export const PROFILE_HUD_RING_R = 9
 /** 2·π·PROFILE_HUD_RING_R — der volle Umfang, also der leere Ring. */
