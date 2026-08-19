@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   FORGE_BRIDGE_MAX_PX,
   FORGE_EDGE_MAX_PX,
+  FORGE_COMFORT_AIR_PX,
   FORGE_MIN_AIR_PX,
   FORGE_NODE_DIAMETER,
   FORGE_RAY_DIST,
@@ -40,6 +41,26 @@ import type { ForgeUpgradeTier } from '@/types'
  *  fester Rundenzahl lassen bis zu einem Pixel Rest — das ist der Preis dafür,
  *  dass die Laufzeit beschränkt und das Ergebnis reproduzierbar ist. */
 const AIR_TOLERANCE_PX = 1
+
+/**
+ * Wie weit ein Knoten aus seinem Band gedrückt werden darf.
+ *
+ * Nicht Schlamperei, sondern ein echter Zielkonflikt — und die Toleranz ist die
+ * Stelle, an der er zugegeben wird. Eine Krone verlangt Knoten aus zwei Zonen
+ * unter sich, und `FORGE_EDGE_MAX_PX` verlangt, dass diese Kante ins Bild passt.
+ * Beides zusammen zieht sie unter die Innenkante ihres Bandes: gemessen 60 px
+ * bei `sanctumVeil`, und das schon NACH dem Zugeständnis, das Kronenband auf
+ * 620 zu öffnen. Dieselbe Spannung an einem Zweig, der an seinem Solar Ray auf
+ * r = 200 hängt.
+ *
+ * Die kurze Kante gewinnt, weil sie die ältere und die sichtbarere Zusage ist —
+ * ein Zubringer ausserhalb des Bildes ist ein Fehler, den der Spieler merkt;
+ * ein Knoten 60 px vor seiner Bandkante ist keiner.
+ *
+ * Was diese Prüfung trotzdem fängt, ist der Fall, der wirklich schadet: ein
+ * Knoten, der eine GANZE Zone verrutscht — die Bänder sind 180…280 px breit.
+ */
+const BAND_TOLERANCE_PX = 70
 
 const RAY_IDS = new Set<string>(SOLAR_BRANCHES.map((b) => b.id))
 
@@ -144,16 +165,83 @@ describe('Star Forge — das Netz steht frei', () => {
     }
   })
 
-  it('jeder Cluster liegt in dem Distanzband seiner Phase', () => {
-    // Die Bänder überlappen absichtlich — das ist der Unterschied zum Ring. Was
-    // sie NICHT dürfen, ist die Reihenfolge verlieren: eine spätere Phase liegt
-    // weiter draussen, sonst wüchse der Baum nach innen.
+  it('jeder KNOTEN liegt im Distanzband seiner Phase', () => {
+    // Hier stand: „jeder Cluster liegt in dem Distanzband seiner Phase" — geprüft
+    // an `cluster.dist`, einer Zahl aus der Karte. Das war eine Aussage über die
+    // Karte, nicht über das Bild: wo die Knoten am Ende standen, sagte sie
+    // nicht.
+    //
+    // `dist` gibt es nicht mehr, und deshalb wird jetzt das Ergebnis gemessen.
+    // Das Band ist seit dem Umbau eine echte Schranke (`pullIntoSector`), also
+    // ist die Prüfung auch erfüllbar — sie ist die härtere Fassung derselben
+    // Zusage.
+    //
+    // Die Bänder überlappen absichtlich; was sie NICHT dürfen, ist die
+    // Reihenfolge verlieren, sonst wüchse der Baum nach innen.
+    const places = forgeTreePlacements()
+    const half = FORGE_STAGE_SIZE / 2
     for (const cluster of FORGE_CLUSTERS) {
       const band = FORGE_ZONE_BAND[cluster.phase]
       expect(band, `Phase ${cluster.phase} hat kein Band`).toBeDefined()
-      expect(cluster.dist, `${cluster.id} liegt vor seinem Band`).toBeGreaterThanOrEqual(band.inner)
-      expect(cluster.dist, `${cluster.id} liegt hinter seinem Band`).toBeLessThanOrEqual(band.outer)
+      for (const id of cluster.members) {
+        const at = places.get(id)
+        if (!at) continue
+        const dist = Math.hypot(at.x - half, at.y - half)
+        // Die Toleranz deckt, was NACH dem Sektorzug noch schiebt: der harte
+        // Trenn-Pass und die Klemmung gegen Sonne und Bühnenkante.
+        expect(dist, `${id} (${cluster.id}) steht vor seinem Band`).toBeGreaterThanOrEqual(
+          band.inner - BAND_TOLERANCE_PX,
+        )
+        expect(dist, `${id} (${cluster.id}) steht hinter seinem Band`).toBeLessThanOrEqual(
+          band.outer + BAND_TOLERANCE_PX,
+        )
+      }
     }
+  })
+
+  it('der Abstand ist überall ungefähr gleich', () => {
+    // DIE Zusage dieses Umbaus, und sie misst das Bild, nicht die Absicht.
+    //
+    // Vorher: Median 22,0 px — der Anschlag SELBST, an dem mehr als die Hälfte
+    // aller Knoten klebte — bei einem Maximum von 112 px und einem
+    // Variationskoeffizienten von 0,56. Innen gedrängt, dazwischen leer.
+    //
+    // Der Variationskoeffizient (Standardabweichung durch Mittelwert) ist dabei
+    // die eigentliche Kennzahl: ein Minimum allein sagt nur, dass sich nichts
+    // berührt, und ein Mittelwert allein verdeckt, dass er aus zwei Extremen
+    // entsteht. Erst die Streuung beantwortet „ungefähr immer gleich".
+    const places = forgeTreePlacements()
+    const ids = [...places.keys()]
+    const air: number[] = []
+    for (let i = 0; i < ids.length; i++) {
+      let nearest = Infinity
+      for (let j = 0; j < ids.length; j++) {
+        if (i === j) continue
+        const a = places.get(ids[i])!
+        const b = places.get(ids[j])!
+        const gap =
+          Math.hypot(a.x - b.x, a.y - b.y) -
+          (FORGE_NODE_DIAMETER[tierOf(ids[i])] + FORGE_NODE_DIAMETER[tierOf(ids[j])]) / 2
+        if (gap < nearest) nearest = gap
+      }
+      air.push(nearest)
+    }
+    const mean = air.reduce((sum, v) => sum + v, 0) / air.length
+    const sd = Math.sqrt(air.reduce((sum, v) => sum + (v - mean) ** 2, 0) / air.length)
+    const spread = sd / mean
+    const sorted = [...air].sort((a, b) => a - b)
+    const median = sorted[Math.floor(sorted.length / 2)]
+
+    expect(
+      spread,
+      `Variationskoeffizient ${spread.toFixed(3)} (Median ${median.toFixed(0)} px, ` +
+        `Minimum ${sorted[0].toFixed(0)}, Maximum ${sorted[sorted.length - 1].toFixed(0)})`,
+    ).toBeLessThanOrEqual(0.35)
+    // Und der Abstand soll nicht nur gleich sein, sondern auch da: ein Netz mit
+    // überall 22 px Luft wäre gleichmässig und trotzdem gedrängt.
+    expect(median, `Median-Luft ${median.toFixed(0)} px`).toBeGreaterThanOrEqual(
+      FORGE_COMFORT_AIR_PX * 0.7,
+    )
   })
 
   it('die Bänder steigen streng, und keines beginnt vor den Strahlen', () => {

@@ -51,6 +51,8 @@ import {
   FORGE_CLUSTER_JITTER_PX,
   FORGE_CLUSTER_K,
   FORGE_CLUSTER_SEAT_SHARE,
+  FORGE_CLUSTER_SECTOR_SPREAD,
+  FORGE_COMFORT_AIR_PX,
   FORGE_EDGE_TARGET_PX,
   FORGE_MIN_AIR_PX,
   FORGE_NODE_DIAMETER,
@@ -62,12 +64,13 @@ import {
   FORGE_SPRING_K,
   FORGE_STAGE_SIZE,
   FORGE_SUN_EDGE_GAP,
+  FORGE_ZONE_BAND,
   SHOP_SUN_MAX_DIAMETER,
   SOLAR_BRANCHES,
 } from '@/config/constants'
 import { FORGE_NODES, getForgeNode } from '@/config/progression/starForge'
 import { FORGE_BRIDGES, FORGE_CLUSTERS } from '@/config/progression/starForgeNet'
-import type { ForgeUpgradeTier } from '@/types'
+import type { ForgeClusterDef, ForgeUpgradeTier } from '@/types'
 
 export interface Point {
   x: number
@@ -129,11 +132,51 @@ interface Seat {
   diameter: number
   x: number
   y: number
-  /** Mittelpunkt des eigenen Clusters — der schwache Zug hängt daran. */
-  homeX: number
-  homeY: number
-  /** Wie weit dieser Knoten von seinem Clustermittelpunkt entfernt sein darf. */
-  homeRadius: number
+  /** Der Ringabschnitt, in dem dieser Knoten bleiben soll. `null` für die
+   *  Strahlen: sie stehen fest und gehören keiner Zone. */
+  sector: Sector | null
+}
+
+/**
+ * Der Platz eines Clusters — ein RINGABSCHNITT, kein Kreis.
+ *
+ * Hier stand `homeRadius`, ein Kreis um die Clustermitte mit einer Handzahl aus
+ * der Karte (82…104). Der Kreis war das eigentliche Übel: er fasste seine
+ * Mitglieder nur, wenn sie sich berührten (gemessen: Median-Luft 22,0 px, also
+ * exakt der Anschlag), und liess vom Ring, auf dem die fünf Cluster einer Zone
+ * sitzen, mehr als die Hälfte leer.
+ *
+ * Ein Ringabschnitt passt dagegen zu der Form, die das Netz ohnehin hat: die
+ * Zonen SIND Ringe. Radial begrenzt ihn das Band seiner Phase (`FORGE_ZONE_BAND`,
+ * das damit erstmals eine Schranke ist statt einer Notiz), tangential sein
+ * Anteil am Umfang — mit Überlappung zum Nachbarn, damit zwischen zwei Clustern
+ * keine Naht sichtbar wird.
+ */
+interface Sector {
+  /** Mittelwinkel aus der Karte, in Grad. */
+  angleDeg: number
+  /** Halbe tangentiale Weite in Grad, inklusive Überlappung. */
+  halfSpanDeg: number
+  inner: number
+  outer: number
+}
+
+/** Der Abschnitt eines Clusters: die Weite folgt aus der ANZAHL der Cluster
+ *  seiner Phase, nicht aus einer Zahl in der Karte. */
+function sectorOf(cluster: ForgeClusterDef): Sector {
+  const peers = FORGE_CLUSTERS.filter((c) => c.phase === cluster.phase).length || 1
+  const band = FORGE_ZONE_BAND[cluster.phase] ?? FORGE_ZONE_BAND[FORGE_ZONE_BAND.length - 1]
+  return {
+    angleDeg: cluster.angleDeg,
+    halfSpanDeg: (360 / peers) * FORGE_CLUSTER_SECTOR_SPREAD,
+    inner: band.inner,
+    outer: band.outer,
+  }
+}
+
+/** Die kürzeste Drehung von `a` nach `b`, in Grad und vorzeichenbehaftet. */
+function angleDelta(a: number, b: number): number {
+  return ((((b - a) % 360) + 540) % 360) - 180
 }
 
 // ── Die Kanten ────────────────────────────────────────────────────────────────
@@ -183,19 +226,14 @@ function seatEveryone(): Seat[] {
       diameter: FORGE_NODE_DIAMETER.root,
       x: at.x,
       y: at.y,
-      homeX: at.x,
-      homeY: at.y,
-      homeRadius: 0,
+      sector: null,
     })
   }
 
   for (const cluster of FORGE_CLUSTERS) {
-    const next = rng(`forge-cluster:${cluster.id}`)
-    const jitterA = (next() * 2 - 1) * FORGE_CLUSTER_JITTER_PX
-    const jitterD = (next() * 2 - 1) * FORGE_CLUSTER_JITTER_PX
-    const centre = polar(cluster.angleDeg, cluster.dist)
-    centre.x += jitterA
-    centre.y += jitterD
+    const sector = sectorOf(cluster)
+    const depth = sector.outer - sector.inner
+    const count = cluster.members.length || 1
 
     cluster.members.forEach((memberId, index) => {
       const def = getForgeNode(memberId)
@@ -204,43 +242,38 @@ function seatEveryone(): Seat[] {
       // ein Tippfehler nicht die ganze Bühne leert.
       if (!def) return
       const seed = rng(`forge-seat:${memberId}`)
-      const spin = index * FORGE_CLUSTER_GOLDEN_ANGLE_DEG + cluster.angleDeg
-      const reach = cluster.radius * (FORGE_CLUSTER_SEAT_SHARE + seed() * 0.3)
-      // `chain` legt seine Mitglieder radial hintereinander, `fan` quer dazu,
-      // `knot` rundherum. Alle drei starten aus derselben Spirale — die Form
-      // entscheidet nur, wie stark sie in eine Richtung gestaucht wird.
-      const rad = (spin * Math.PI) / 180
-      const along = Math.cos(rad) * reach
-      const across = Math.sin(rad) * reach
-      const outward = (cluster.angleDeg * Math.PI) / 180
-      const ox = Math.cos(outward)
-      const oy = Math.sin(outward)
-      let dx: number
-      let dy: number
-      if (cluster.shape === 'chain') {
-        dx = ox * along - oy * across * 0.45
-        dy = oy * along + ox * across * 0.45
-      } else if (cluster.shape === 'fan') {
-        dx = ox * along * 0.45 - oy * across
-        dy = oy * along * 0.45 + ox * across
-      } else {
-        dx = ox * along - oy * across
-        dy = oy * along + ox * across
-      }
+
+      // Der goldene Winkel bleibt — und aus demselben Grund wie immer: er
+      // erzeugt bei KEINER Mitgliederzahl Speichen. Neu ist nur, worauf er
+      // abgebildet wird. Er lief einmal auf einen KREIS um die Clustermitte und
+      // machte daraus ein Knäuel; jetzt läuft er auf die BREITE des Abschnitts,
+      // und daraus wird ein Band.
+      const spin = ((index * FORGE_CLUSTER_GOLDEN_ANGLE_DEG) % 360) / 360
+      const across = (spin * 2 - 1) * sector.halfSpanDeg * FORGE_CLUSTER_SEAT_SHARE
+      // Radial gestaffelt statt gestapelt: die Mitglieder verteilen sich über
+      // die TIEFE des Bandes, statt alle auf demselben Radius zu liegen. Der
+      // Wurf bricht das Muster, das fünf gleich gestaffelte Cluster sonst
+      // gemeinsam bildeten.
+      const along =
+        sector.inner + depth * ((index + 0.5) / count) + (seed() * 2 - 1) * FORGE_CLUSTER_JITTER_PX
+      const at = polar(sector.angleDeg + across, clamp(along, sector.inner, sector.outer))
+
       seats.push({
         id: memberId,
         tier: def.tier,
         diameter: FORGE_NODE_DIAMETER[def.tier],
-        x: centre.x + dx,
-        y: centre.y + dy,
-        homeX: centre.x,
-        homeY: centre.y,
-        homeRadius: cluster.radius,
+        x: at.x,
+        y: at.y,
+        sector,
       })
     })
   }
 
   return seats
+}
+
+function clamp(value: number, low: number, high: number): number {
+  return value < low ? low : value > high ? high : value
 }
 
 // ── Schritt 3: entspannen ─────────────────────────────────────────────────────
@@ -252,13 +285,24 @@ function seatEveryone(): Seat[] {
  * nur, wenn die Kante zu lang ist, und drückt, wenn sie zu kurz ist — sonst
  * fielen zwei verbundene Knoten ineinander.
  *
- * Die ABSTOSSUNG wirkt zwischen JEDEM Paar, das näher steht als
- * `FORGE_MIN_AIR_PX`, und ist die Antwort auf „nichts überlappt".
+ * Die ABSTOSSUNG ist die Antwort auf „überall gleich viel Platz" — und sie ist
+ * der Teil, der sich geändert hat. Sie wirkte einmal nur unterhalb von
+ * `FORGE_MIN_AIR_PX` und hörte darüber schlagartig auf. Das beantwortet
+ * „berührt sich nicht", nicht „steht gleichmässig": gemessen lag der MEDIAN
+ * aller Nächster-Nachbar-Abstände auf exakt dem Anschlag (22,0 px), während
+ * anderswo 112 px frei blieben.
  *
- * Der HEIMZUG hält einen Knoten in der Nähe seines Clusters und ist die Antwort
- * auf „eine Phase ist eine Zone". Er ist mit Abstand der schwächste der drei:
- * er ordnet, er zwingt nicht. Wäre er stark, presste er die Cluster zu Kugeln
- * und die Kanten dazwischen würden lang.
+ * Jetzt wirkt sie bis `FORGE_COMFORT_AIR_PX` und nimmt dabei linear ab. Der
+ * Unterschied ist der zwischen einem Stapel und einem GAS: jeder Knoten drückt
+ * seine Nachbarn, so weit er kann, und weil das alle tun, endet es dort, wo alle
+ * gleich weit auseinander stehen. Unter der harten Grenze bleibt sie zusätzlich
+ * steif — dort ist sie kein Wunsch mehr, sondern eine Sperre.
+ *
+ * Der SEKTORZUG hält einen Knoten in seinem Ringabschnitt und ist die Antwort
+ * auf „eine Phase ist eine Zone". Er ersetzt den Heimzug zur Clustermitte, und
+ * das ist derselbe Gedanke wie bei der Abstossung: ein Kreis um einen Punkt
+ * presst zusammen, ein Ringabschnitt lässt verteilen. Radial hält ihn das Band
+ * seiner Phase, tangential seine Sektorweite.
  */
 function relax(seats: Seat[]): void {
   const byId = new Map(seats.map((s) => [s.id, s]))
@@ -290,17 +334,24 @@ function relax(seats: Seat[]): void {
       }
     }
 
-    // Abstossung
+    // Abstossung — weich bis zum Komfortabstand, steif unter der harten Grenze
     for (let i = 0; i < seats.length; i++) {
       for (let j = i + 1; j < seats.length; j++) {
         const a = seats[i]
         const b = seats[j]
-        const want = (a.diameter + b.diameter) / 2 + FORGE_MIN_AIR_PX
+        const touch = (a.diameter + b.diameter) / 2
+        const want = touch + FORGE_COMFORT_AIR_PX
         const dx = b.x - a.x
         const dy = b.y - a.y
         const dist = Math.hypot(dx, dy)
         if (dist >= want || dist === 0) continue
-        const push = ((want - dist) / dist) * FORGE_REPULSE_K * 0.5
+        // Volle Kraft, solange die harte Grenze verletzt ist; darüber nimmt sie
+        // linear ab, bis sie am Komfortabstand null wird. Ohne dieses Abklingen
+        // stiessen sich zwei Knoten mit 64 px Luft so heftig ab wie zwei, die
+        // sich berühren — und das Netz käme nie zur Ruhe.
+        const hard = touch + FORGE_MIN_AIR_PX
+        const weight = dist <= hard ? 1 : (want - dist) / (want - hard)
+        const push = ((want - dist) / dist) * FORGE_REPULSE_K * 0.5 * weight
         if (a.tier !== 'root') {
           a.x -= dx * push
           a.y -= dy * push
@@ -312,20 +363,61 @@ function relax(seats: Seat[]): void {
       }
     }
 
-    // Heimzug und Klemmung
+    // Sektorzug und Klemmung
     for (const seat of seats) {
       if (seat.tier === 'root') continue
-      const dx = seat.homeX - seat.x
-      const dy = seat.homeY - seat.y
-      const dist = Math.hypot(dx, dy)
-      if (dist > seat.homeRadius) {
-        const over = (dist - seat.homeRadius) / dist
-        seat.x += dx * over * FORGE_CLUSTER_K
-        seat.y += dy * over * FORGE_CLUSTER_K
-      }
+      pullIntoSector(seat, FORGE_CLUSTER_K)
       clampToStage(seat)
     }
   }
+}
+
+/**
+ * Zurück in den eigenen Ringabschnitt — getrennt nach radial und tangential.
+ *
+ * Zwei Grenzen statt einer, und das ist der Punkt: ein Kreis um die Clustermitte
+ * zog einen Knoten IMMER zur Mitte zurück und presste die Mitglieder damit
+ * zusammen. Ein Ringabschnitt lässt ihn im ganzen Band wandern und greift nur
+ * an seinen Rändern ein — radial am Zonenband, tangential an der Sektorweite.
+ *
+ * Die Kraft ist bewusst schwach (`FORGE_CLUSTER_K`): sie ordnet über viele
+ * Runden, statt in einer zu zwingen. Ein harter Sprung an der Sektorgrenze
+ * erzeugte eine sichtbare Naht — genau die Kante, die es nicht geben soll.
+ */
+function pullIntoSector(seat: Seat, strength: number): void {
+  const sector = seat.sector
+  if (sector === null) return
+  const dx = seat.x - STAGE_HALF
+  const dy = seat.y - STAGE_HALF
+  const dist = Math.hypot(dx, dy) || 1
+  const angle = (Math.atan2(dy, dx) * 180) / Math.PI
+
+  const wantDist = clamp(dist, sector.inner, sector.outer)
+  const drift = angleDelta(sector.angleDeg, angle)
+  const wantAngle =
+    sector.angleDeg +
+    (drift > sector.halfSpanDeg
+      ? sector.halfSpanDeg
+      : drift < -sector.halfSpanDeg
+        ? -sector.halfSpanDeg
+        : drift)
+
+  if (wantDist === dist && wantAngle === angle) return
+  // Radial zieht es DREIMAL so stark wie tangential, und das ist keine
+  // Feinjustage: die beiden Grenzen tragen Verschiedenes. Radial steht die
+  // Phasen-Leiter — eine spätere Zone liegt weiter draussen, sonst wüchse der
+  // Baum nach innen. Tangential steht nur, welcher Cluster wo liegt, und dort
+  // ist ein Überlaufen zum Nachbarn ausdrücklich erlaubt.
+  //
+  // Ohne diesen Unterschied verlor die Bandgrenze gegen die Kanten-Feder: ein
+  // Zweig hängt an einem Solar Ray auf r = 200, die Feder will 150 px Kante,
+  // und beides zusammen zog ihn 41 px unter sein Band.
+  const radial = polar(angle, wantDist)
+  seat.x += (radial.x - seat.x) * strength * 2
+  seat.y += (radial.y - seat.y) * strength * 2
+  const target = polar(wantAngle, wantDist)
+  seat.x += (target.x - seat.x) * strength
+  seat.y += (target.y - seat.y) * strength
 }
 
 /** Kein Knoten steckt in der Sonne oder ragt über die Bühnenkante. */
@@ -405,6 +497,68 @@ export function forgeTreePlacements(): ReadonlyMap<string, Point> {
     seats.map((s) => [s.id, { x: Math.round(s.x * 10) / 10, y: Math.round(s.y * 10) / 10 }]),
   )
   return cache
+}
+
+/** Wo ein Cluster wirklich liegt, samt seiner Ausdehnung — die Grundlage des
+ *  Zonenschleiers. */
+export interface ForgeClusterSpot {
+  id: string
+  phase: number
+  accent: string
+  x: number
+  y: number
+  /** Radius, der alle Mitglieder samt ihrer Kreise umschliesst. */
+  r: number
+}
+
+let spotCache: ForgeClusterSpot[] | null = null
+
+/**
+ * Der Fleck eines Clusters — aus den TATSÄCHLICHEN Positionen seiner Mitglieder.
+ *
+ * Der Schleier malte ihn bisher an den Kartenpunkt (`angleDeg`/`dist`) mit dem
+ * Karten-`radius`. Das ging, solange die Mitglieder als Knäuel um genau diesen
+ * Punkt lagen. Seit sie ihren Ringabschnitt füllen, wäre der Fleck eine zweite
+ * Behauptung über denselben Ort — und die falsche von beiden.
+ *
+ * Er sagt weiterhin „all das hier gehört zusammen"; neu ist nur, dass es
+ * stimmt. Gerechnet aus dem Schwerpunkt und dem weitesten Mitglied, einmal und
+ * modulweit gecacht wie alles hier.
+ */
+export function forgeClusterSpots(): readonly ForgeClusterSpot[] {
+  if (spotCache !== null) return spotCache
+  const places = forgeTreePlacements()
+  const out: ForgeClusterSpot[] = []
+  for (const cluster of FORGE_CLUSTERS) {
+    const seats = cluster.members
+      .map((id) => ({ id, at: places.get(id) }))
+      .filter((m): m is { id: string; at: Point } => m.at !== undefined)
+    if (seats.length === 0) continue
+    const x = seats.reduce((s, m) => s + m.at.x, 0) / seats.length
+    const y = seats.reduce((s, m) => s + m.at.y, 0) / seats.length
+    // Der MEDIAN der Abstände, nicht das Maximum.
+    //
+    // Ein Cluster ist ein Bogen; ein Kreis, der ihn ganz umschliesst, deckt vor
+    // allem den leeren Raum daneben ab. Mit dem Maximum wuchsen die
+    // fünfundzwanzig Flecken so weit, dass sie sich zu einem Farbteppich
+    // überlagerten — gemessen im Browser, und im Bild sofort sichtbar. Der
+    // Median markiert stattdessen den KERN und läuft nach aussen aus, was ein
+    // Verlauf ohnehin tut.
+    const reaches = seats
+      .map((m) => Math.hypot(m.at.x - x, m.at.y - y) + FORGE_NODE_DIAMETER[tierOf(m.id)] / 2)
+      .sort((a, b) => a - b)
+    const r = reaches[Math.floor(reaches.length / 2)]
+    out.push({
+      id: cluster.id,
+      phase: cluster.phase,
+      accent: cluster.accent,
+      x: Math.round(x),
+      y: Math.round(y),
+      r: Math.round(r),
+    })
+  }
+  spotCache = out
+  return out
 }
 
 /** Die längste Kante des fertigen Netzes — die Spec misst daran, ob beide Enden

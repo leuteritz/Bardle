@@ -353,7 +353,7 @@ import {
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
-import { forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import { forgeClusterSpots, forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
 import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
 import {
   forgeCompassAt,
@@ -361,7 +361,6 @@ import {
   forgeNodeScreenPoint,
   type ForgeCamera,
 } from '@/utils/ui/forgeSpotlightView'
-import { FORGE_CLUSTERS } from '@/config/progression/starForgeNet'
 import type { ForgeNodeDef, ForgeNodeTier, ForgeUpgradeEntry, ForgeUpgradeTier } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
@@ -875,17 +874,21 @@ function tinted(color: string, alpha: number): string {
  * Cluster auseinander. Ausserhalb der Flecken bleibt alles durchsichtig —
  * deshalb entsteht nirgends eine Kante, und der Fehler der alten Vignette (die
  * quadratische Ebene wurde als Rechteck sichtbar) wiederholt sich nicht.
+ *
+ * Ort und Grösse kommen aus `forgeClusterSpots()`, also aus den TATSÄCHLICHEN
+ * Positionen der Mitglieder. Hier standen einmal `cluster.angleDeg`,
+ * `cluster.dist` und `cluster.radius` — der Kartenpunkt und eine Handzahl. Das
+ * ging, solange die Mitglieder als Knäuel um genau diesen Punkt lagen; seit sie
+ * ihren Ringabschnitt füllen, wäre der Fleck eine zweite Behauptung über
+ * denselben Ort, und zwar die falsche von beiden.
  */
 const zoneHazeStyle = computed(() => {
-  const layers = FORGE_CLUSTERS.map((cluster) => {
-    const rad = (cluster.angleDeg * Math.PI) / 180
-    const x = Math.round(C + Math.cos(rad) * cluster.dist)
-    const y = Math.round(C + Math.sin(rad) * cluster.dist)
-    const r = Math.round(cluster.radius * FORGE_ZONE_HAZE_SCALE)
-    const color = zoneOpen(cluster.phase)
-      ? tinted(cluster.accent, FORGE_ZONE_HAZE_ALPHA)
+  const layers = forgeClusterSpots().map((spot) => {
+    const r = Math.round(spot.r * FORGE_ZONE_HAZE_SCALE)
+    const color = zoneOpen(spot.phase)
+      ? tinted(spot.accent, FORGE_ZONE_HAZE_ALPHA)
       : FORGE_ZONE_HAZE_LOCKED
-    return `radial-gradient(circle ${r}px at ${x}px ${y}px, ${color} 0%, transparent 100%)`
+    return `radial-gradient(circle ${r}px at ${spot.x}px ${spot.y}px, ${color} 0%, transparent 100%)`
   })
   return { background: layers.join(', ') }
 })

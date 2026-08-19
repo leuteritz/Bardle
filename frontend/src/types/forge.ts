@@ -22,14 +22,7 @@ import type { IconPoolKey } from './ui'
  * bisher nichts zu sagen hatte (Void-Takt, Drifter, Vorzeichen, Ladder, Bosse,
  * Gebäudepreise, Bard-Fähigkeiten).
  */
-export type ForgeNodeTier =
-  | 'branch'
-  | 'leaf'
-  | 'ward'
-  | 'pact'
-  | 'bough'
-  | 'crown'
-  | 'glimmer'
+export type ForgeNodeTier = 'branch' | 'leaf' | 'ward' | 'pact' | 'bough' | 'crown' | 'glimmer'
 
 /**
  * Die fuenf Achsen des Baums — dieselben Ids wie die Solar Rays im
@@ -79,14 +72,16 @@ export type ForgeEffectFamily =
   | 'fortune'
   | 'ability'
 
-/**
- * Wie ein Cluster seine Mitglieder auslegt.
+/* Hier stand `ForgeClusterShape` — `knot`, `chain`, `fan`: wie ein Cluster
+ * seine Mitglieder um seinen Mittelpunkt auslegt, ein Ring oder eine Kette
+ * oder ein Faecher.
  *
- * `knot`   — ein Ring um den Mittelpunkt, das Schwergewicht in der Mitte
- * `chain`  — eine Kette nach aussen, fuer Wege statt Ziele
- * `fan`    — ein Faecher quer zur Radialrichtung, wo mehrere Wege abzweigen
+ * Drei Formen fuer einen KREIS, und der Kreis ist weg. Ein Cluster ist ein
+ * RINGABSCHNITT geworden, und darin gibt es nur eine sinnvolle Auslage: ueber
+ * die Breite verteilt, ueber die Tiefe gestaffelt. Was die drei Formen
+ * unterschieden — wie stark ein Knaeuel in eine Richtung gestaucht wird — ist
+ * damit gegenstandslos.
  */
-export type ForgeClusterShape = 'knot' | 'chain' | 'fan'
 
 /**
  * Eine Zone des Netzes — die Form, die an die Stelle des Rings getreten ist.
@@ -107,12 +102,19 @@ export interface ForgeClusterDef {
   title: string
   /** Sonnenphase, die die Mitte dieses Clusters oeffnet. */
   phase: number
-  /** Mittelpunkt in Buehnen-Polarkoordinaten (Grad ab 3 Uhr, im Uhrzeigersinn). */
+  /**
+   * Die RICHTUNG des Clusters, in Grad ab 3 Uhr im Uhrzeigersinn — und das
+   * einzige, was die Karte noch ueber seinen Ort sagt.
+   *
+   * Hier stand daneben `dist`, die Entfernung vom Mittelpunkt. Sie ist mit
+   * `radius` gefallen und aus demselben Grund: seit ein Cluster ein
+   * RINGABSCHNITT ist, kommt seine Entfernung aus dem Band seiner Phase
+   * (`FORGE_ZONE_BAND`) und seine Weite aus der Anzahl der Cluster dieser
+   * Phase. Beides sind Zahlen, die es ohnehin gibt. Eine dritte danebenzulegen
+   * hiesse, zwei Quellen fuer denselben Ort zu fuehren — und die zweite
+   * entschied nichts mehr.
+   */
   angleDeg: number
-  dist: number
-  /** Wie weit die Mitglieder um den Mittelpunkt streuen duerfen. */
-  radius: number
-  shape: ForgeClusterShape
   /** Leitfarbe des Zonenscheins. */
   accent: string
   /** Mitglieder in Auslege-Reihenfolge: Knoten-Ids aus `FORGE_NODES`. */

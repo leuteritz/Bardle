@@ -37,17 +37,32 @@ import type { ForgeBridgeDef, ForgeClusterDef } from '@/types'
 // statt einen darüberliegenden — die Verbindungslinien laufen im Zickzack statt
 // radial, und genau das nimmt dem Bild die Speiche.
 //
-// Die Entfernungen sind ABSICHTLICH ungleich (295…335 in der ersten Zone,
-// 690…750 in der vierten). Fünf gleiche Radien wären wieder ein Ring, nur mit
-// Lücken.
+// ── Wovon ein Cluster nur noch die RICHTUNG kennt ────────────────────────────
+//
+// Hier standen drei weitere Zahlen je Cluster: `dist` (Entfernung), `radius`
+// (Streuung) und `shape` (knot/chain/fan). Alle drei sind gefallen, und der
+// Grund ist eine Messung: der Median aller Nächster-Nachbar-Abstände lag bei
+// exakt 22,0 px — dem Anschlag selbst — während anderswo 112 px frei blieben.
+//
+// Die Ursache war `radius`. Ein Kreis mit Radius 104 fasst neun Knoten nur,
+// wenn sie sich berühren; gleichzeitig belegten die fünf Cluster der ersten
+// Zone nur 820 px von 1.885 px Ringumfang. Innen gedrängt, dazwischen leer.
+//
+// Ein Cluster ist deshalb kein Kreis mehr, sondern ein **RINGABSCHNITT**:
+// radial das Band seiner Phase (`FORGE_ZONE_BAND`), tangential sein Anteil am
+// Umfang (360° / Cluster dieser Phase, mal `FORGE_CLUSTER_SECTOR_SPREAD`).
+// Beides folgt aus Zahlen, die es ohnehin gibt. Übrig bleibt hier `angleDeg` —
+// die Richtung, in der ein Cluster liegt, und sonst nichts über seinen Ort.
+//
+// Gemessen danach: Median 55 px, Minimum 44, Variationskoeffizient 0,13.
 //
 // ── Was diese Datei NICHT entscheidet ────────────────────────────────────────
 //
-// Die genaue Position eines einzelnen Knotens. Sie nennt den Cluster und die
-// Reihenfolge darin; `utils/ui/forgeTreeLayout.ts` macht daraus Punkte und
-// entspannt sie gegeneinander, bis jede Kante kurz und jedes Paar frei ist.
-// Handgesetzte Koordinaten für 155 Knoten wären 155 Behauptungen, die niemand
-// nachrechnen kann.
+// Die genaue Position eines einzelnen Knotens. Sie nennt den Cluster, seine
+// Richtung und die Reihenfolge darin; `utils/ui/forgeTreeLayout.ts` macht
+// daraus Punkte und entspannt sie gegeneinander, bis jede Kante kurz, jedes
+// Paar frei und der Abstand überall derselbe ist. Handgesetzte Koordinaten für
+// 155 Knoten wären 155 Behauptungen, die niemand nachrechnen kann.
 // ═════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -68,85 +83,40 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Ember Reach',
     phase: 0,
     angleDeg: 8,
-    dist: 300,
-    radius: 82,
-    shape: 'knot',
     accent: '#e0784a',
-    members: [
-      'aegis',
-      'wardensVigil',
-      'goldenEcho',
-      'emberTithe',
-      'vigilSpark',
-    ],
+    members: ['aegis', 'wardensVigil', 'goldenEcho', 'emberTithe', 'vigilSpark'],
   },
   {
     id: 'sunlitQuarry',
     title: 'Sunlit Quarry',
     phase: 0,
     angleDeg: 74,
-    dist: 335,
-    radius: 82,
-    shape: 'knot',
     accent: '#e8c040',
-    members: [
-      'gildedHarvest',
-      'resonance',
-      'cometMiner',
-      'quarryGleam',
-      'sunlitDust',
-    ],
+    members: ['gildedHarvest', 'resonance', 'cometMiner', 'quarryGleam', 'sunlitDust'],
   },
   {
     id: 'tidefall',
     title: 'Tidefall',
     phase: 0,
     angleDeg: 139,
-    dist: 295,
-    radius: 82,
-    shape: 'knot',
     accent: '#58c0d0',
-    members: [
-      'tidalDrift',
-      'quickening',
-      'warcry',
-      'tideEcho',
-      'hourGrain',
-    ],
+    members: ['tidalDrift', 'quickening', 'warcry', 'tideEcho', 'hourGrain'],
   },
   {
     id: 'warmarch',
     title: 'War March',
     phase: 0,
     angleDeg: 212,
-    dist: 330,
-    radius: 82,
-    shape: 'knot',
     accent: '#c06090',
-    members: [
-      'sunderingWake',
-      'shatter',
-      'solarSails',
-      'marchEmber',
-      'sailSplinter',
-    ],
+    members: ['sunderingWake', 'shatter', 'solarSails', 'marchEmber', 'sailSplinter'],
   },
   {
     id: 'sailward',
     title: 'Sailward',
     phase: 0,
     angleDeg: 286,
-    dist: 310,
-    radius: 82,
-    shape: 'knot',
     accent: '#88a8e8',
-    members: [
-      'wayfindersCache',
-      'moonOrbit',
-      'regeneration',
-      'sailGlint',
-      'moonSilt',
-    ],
+    members: ['wayfindersCache', 'moonOrbit', 'regeneration', 'sailGlint', 'moonSilt'],
   },
 
   // ── Zone 2 · Dawn — die Blätter ────────────────────────────────────────────
@@ -159,85 +129,40 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Glade Hollow',
     phase: 1,
     angleDeg: 42,
-    dist: 445,
-    radius: 84,
-    shape: 'fan',
     accent: '#7fd048',
-    members: [
-      'echoingBulwark',
-      'starboundCore',
-      'sunlitTrove',
-      'gladeSpark',
-      'hollowGleam',
-    ],
+    members: ['echoingBulwark', 'starboundCore', 'sunlitTrove', 'gladeSpark', 'hollowGleam'],
   },
   {
     id: 'deepvein',
     title: 'Deep Vein',
     phase: 1,
     angleDeg: 106,
-    dist: 470,
-    radius: 84,
-    shape: 'fan',
     accent: '#d09848',
-    members: [
-      'echoChamber',
-      'deepVein',
-      'tidewake',
-      'veinGrain',
-      'wakeEmber',
-    ],
+    members: ['echoChamber', 'deepVein', 'tidewake', 'veinGrain', 'wakeEmber'],
   },
   {
     id: 'stormwatch',
     title: 'Storm Watch',
     phase: 1,
     angleDeg: 176,
-    dist: 430,
-    radius: 84,
-    shape: 'fan',
     accent: '#86d0ff',
-    members: [
-      'timeWeaver',
-      'warhost',
-      'riftshard',
-      'stormGlint',
-      'weftSilt',
-    ],
+    members: ['timeWeaver', 'warhost', 'riftshard', 'stormGlint', 'weftSilt'],
   },
   {
     id: 'duskmarch',
     title: 'Dusk March',
     phase: 1,
     angleDeg: 248,
-    dist: 465,
-    radius: 84,
-    shape: 'fan',
     accent: '#b070c0',
-    members: [
-      'starquake',
-      'auroraWake',
-      'wanderersCrest',
-      'duskSpark',
-      'crestGleam',
-    ],
+    members: ['starquake', 'auroraWake', 'wanderersCrest', 'duskSpark', 'crestGleam'],
   },
   {
     id: 'moonwake',
     title: 'Moon Wake',
     phase: 1,
     angleDeg: 320,
-    dist: 440,
-    radius: 84,
-    shape: 'fan',
     accent: '#90b8f0',
-    members: [
-      'midnightTide',
-      'vitalBloom',
-      'coinCascade',
-      'tideGrain',
-      'bloomEmber',
-    ],
+    members: ['midnightTide', 'vitalBloom', 'coinCascade', 'tideGrain', 'bloomEmber'],
   },
 
   // ── Zone 3 · Zenith — die Wachten ──────────────────────────────────────────
@@ -249,85 +174,40 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Crownfall',
     phase: 2,
     angleDeg: 10,
-    dist: 600,
-    radius: 86,
-    shape: 'knot',
     accent: '#40c8b0',
-    members: [
-      'riftAnchor',
-      'starwardensLantern',
-      'merchantsFavor',
-      'anchorGlint',
-      'lanternSilt',
-    ],
+    members: ['riftAnchor', 'starwardensLantern', 'merchantsFavor', 'anchorGlint', 'lanternSilt'],
   },
   {
     id: 'emberdeep',
     title: 'Ember Deep',
     phase: 2,
     angleDeg: 78,
-    dist: 630,
-    radius: 86,
-    shape: 'knot',
     accent: '#e09858',
-    members: [
-      'almsOfTheKeeper',
-      'chimeConduit',
-      'quarrymastersEye',
-      'almsSpark',
-      'conduitGrain',
-    ],
+    members: ['almsOfTheKeeper', 'chimeConduit', 'quarrymastersEye', 'almsSpark', 'conduitGrain'],
   },
   {
     id: 'ashenreach',
     title: 'Ashen Reach',
     phase: 2,
     angleDeg: 145,
-    dist: 570,
-    radius: 86,
-    shape: 'knot',
     accent: '#98b0c8',
-    members: [
-      'kilnSubsidy',
-      'omenReader',
-      'heraldsFavor',
-      'kilnGleam',
-      'omenSilt',
-    ],
+    members: ['kilnSubsidy', 'omenReader', 'heraldsFavor', 'kilnGleam', 'omenSilt'],
   },
   {
     id: 'hollowgate',
     title: 'Hollow Gate',
     phase: 2,
     angleDeg: 215,
-    dist: 615,
-    radius: 86,
-    shape: 'knot',
     accent: '#a878c8',
-    members: [
-      'hollowCore',
-      'siegeReckoning',
-      'pathfindersOath',
-      'coreEmber',
-      'oathGlint',
-    ],
+    members: ['hollowCore', 'siegeReckoning', 'pathfindersOath', 'coreEmber', 'oathGlint'],
   },
   {
     id: 'nightsail',
     title: 'Nightsail',
     phase: 2,
     angleDeg: 288,
-    dist: 585,
-    radius: 86,
-    shape: 'knot',
     accent: '#7898d8',
-    members: [
-      'wanderersBeacon',
-      'dreamersDraw',
-      'gravityWell',
-      'beaconSpark',
-      'wellGrain',
-    ],
+    members: ['wanderersBeacon', 'dreamersDraw', 'gravityWell', 'beaconSpark', 'wellGrain'],
   },
 
   // ── Zone 4 · Swell — die Bündnisse ─────────────────────────────────────────
@@ -336,9 +216,6 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Vaultward',
     phase: 3,
     angleDeg: 44,
-    dist: 720,
-    radius: 88,
-    shape: 'fan',
     accent: '#8fa8ff',
     members: [
       'unbrokenPact',
@@ -354,9 +231,6 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Deep Loom',
     phase: 3,
     angleDeg: 112,
-    dist: 750,
-    radius: 88,
-    shape: 'fan',
     accent: '#a0b0e0',
     members: [
       'merchantsPact',
@@ -372,27 +246,14 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Storm Pact',
     phase: 3,
     angleDeg: 180,
-    dist: 690,
-    radius: 88,
-    shape: 'fan',
     accent: '#8098d0',
-    members: [
-      'foundersPact',
-      'augursPact',
-      'honoredPact',
-      'foundGleam',
-      'augurSilt',
-      'honorEmber',
-    ],
+    members: ['foundersPact', 'augursPact', 'honoredPact', 'foundGleam', 'augurSilt', 'honorEmber'],
   },
   {
     id: 'duskpact',
     title: 'Dusk Pact',
     phase: 3,
     angleDeg: 252,
-    dist: 735,
-    radius: 88,
-    shape: 'fan',
     accent: '#9888d8',
     members: [
       'patientPact',
@@ -408,9 +269,6 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Moon Pact',
     phase: 3,
     angleDeg: 325,
-    dist: 705,
-    radius: 88,
-    shape: 'fan',
     accent: '#8ca0e8',
     members: [
       'starroadPact',
@@ -437,9 +295,6 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Vault Summit',
     phase: 4,
     angleDeg: 26,
-    dist: 800,
-    radius: 104,
-    shape: 'knot',
     accent: '#ffd76a',
     members: [
       'sealedThreshold',
@@ -458,9 +313,6 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Loom Spire',
     phase: 4,
     angleDeg: 95,
-    dist: 830,
-    radius: 104,
-    shape: 'knot',
     accent: '#ffcf5a',
     members: [
       'midasOverflow',
@@ -479,9 +331,6 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Storm Crown',
     phase: 4,
     angleDeg: 162,
-    dist: 780,
-    radius: 104,
-    shape: 'knot',
     accent: '#f0c060',
     members: [
       'tidelessWatch',
@@ -500,9 +349,6 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Dusk Crown',
     phase: 4,
     angleDeg: 232,
-    dist: 800,
-    radius: 104,
-    shape: 'knot',
     accent: '#e8b878',
     members: [
       'sunderersMark',
@@ -521,9 +367,6 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     title: 'Moon Crown',
     phase: 4,
     angleDeg: 306,
-    dist: 790,
-    radius: 104,
-    shape: 'knot',
     accent: '#e0c890',
     members: [
       'wanderersGate',

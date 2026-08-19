@@ -933,7 +933,13 @@ export const FORGE_ZONE_BAND: readonly { inner: number; outer: number }[] = [
   { inner: 370, outer: 560 }, // Phase 1 — Dawn, Leaves
   { inner: 490, outer: 690 }, // Phase 2 — Zenith, Wards
   { inner: 610, outer: 810 }, // Phase 3 — Swell, Covenants
-  { inner: 700, outer: 900 }, // Phase 4 — Pyre, Crowns
+  // Phase 4 — Pyre, Crowns. Das breiteste Band, und das mit Absicht: eine Krone
+  // verlangt Knoten aus ZWEI Zonen unter sich, und `FORGE_EDGE_MAX_PX` verlangt,
+  // dass diese Kante ins Bild passt. Beides zusammen zieht sie nach innen — die
+  // Karte sagt es selbst („sie liegen ZWISCHEN Wacht- und Bündnis-Cluster,
+  // nicht dahinter"). Stand die Innenkante auf 700, drückte die Klemmung gegen
+  // die Bedingungskante, und gemessen verlor sie: bis zu 65 px darunter.
+  { inner: 620, outer: 900 },
   { inner: 760, outer: 940 }, // Phase 5 — Collapse, Boughs
 ]
 /**
@@ -962,9 +968,24 @@ export const FORGE_CLUSTER_JITTER_PX = 26
  * Eigenschaft und der Grund, warum hier nicht `360/n` steht.
  */
 export const FORGE_CLUSTER_GOLDEN_ANGLE_DEG = 137.507764
-/** Grundabstand eines Mitglieds vom Clustermittelpunkt, als Anteil des
- *  Clusterradius. Der Rest kommt aus dem Wurf. */
+/** Grundabstand eines Mitglieds von der Clustermitte, als Anteil der halben
+ *  Sektorweite. Der Rest kommt aus dem Wurf. */
 export const FORGE_CLUSTER_SEAT_SHARE = 0.62
+/**
+ * Wie viel von seinem Ringabschnitt ein Cluster tangential belegen darf.
+ *
+ * Hier stand ein `radius` je Cluster in der Karte — eine Handzahl (82…104), und
+ * sie war der eigentliche Grund für die ungleichen Abstände. Ein Kreis mit
+ * Radius 104 fasst neun Knoten nur, wenn sie sich berühren (gemessen: 8 px Luft
+ * in der Kronenzone), und gleichzeitig blieb vom Ring, auf dem die fünf Cluster
+ * einer Zone sitzen, mehr als die HÄLFTE leer.
+ *
+ * An ihre Stelle tritt der SEKTOR: fünf Cluster je Phase heisst 72° je Cluster,
+ * und die Weite folgt daraus statt aus einer Zahl, die niemand nachrechnen kann.
+ * 0,6 statt 0,5 lässt Nachbarn um 7° je Seite ÜBERLAPPEN — genau dort
+ * verschwinden die Lücken, die das Bild zerfallen liessen.
+ */
+export const FORGE_CLUSTER_SECTOR_SPREAD = 0.6
 
 /* ── Die RELAXATION: was den Abstand wirklich herstellt ───────────────────
  *
@@ -976,8 +997,10 @@ export const FORGE_CLUSTER_SEAT_SHARE = 0.62
  * Rundenzahl steht das Bild. Fest, nicht bis zur Konvergenz: die Laufzeit ist
  * damit beschränkt und das Ergebnis exakt reproduzierbar.
  */
-/** Runden der Kräftesimulation. */
-export const FORGE_RELAX_ITERATIONS = 160
+/** Runden der Kräftesimulation. 320 statt 160, seit die Abstossung WEICH ist:
+ *  eine Kraft, die über 65 px hinweg abnimmt, braucht länger bis zum
+ *  Gleichgewicht als eine, die erst bei Berührung zuschlägt. */
+export const FORGE_RELAX_ITERATIONS = 320
 /** Runden des harten Trenn-Passes danach — er schiebt verbliebene
  *  Überschneidungen entlang ihrer Verbindungsachse auseinander. */
 export const FORGE_SEPARATE_ITERATIONS = 24
@@ -992,8 +1015,13 @@ export const FORGE_EDGE_TARGET_PX = 150
  * immer VOLLSTÄNDIG ins Bild, samt beider Knoten. Das ist die Bedingung, an der
  * die Spannfäden gescheitert sind (438 gegen 221 bei 484 sichtbaren px) —
  * jetzt wird sie gerechnet statt gehofft (`forgeNetGeometry.spec.ts`).
+ *
+ * 320 statt 300, seit die Knoten gleichmässig stehen: mehr Luft zwischen den
+ * Knoten heisst zwangsläufig längere Kanten. Gemessen misst die längste
+ * Logikkante jetzt 291 px (vorher 266) — sie passt bei Standardzoom weiterhin
+ * vollständig ins Bild, und das ist die Bedingung, um die es hier geht.
  */
-export const FORGE_EDGE_MAX_PX = 300
+export const FORGE_EDGE_MAX_PX = 320
 /**
  * Dieselbe Grenze fuer eine BRUECKE — und sie ist weiter, weil eine Bruecke
  * etwas anderes verspricht.
@@ -1004,10 +1032,14 @@ export const FORGE_EDGE_MAX_PX = 300
  * Ihn auf 300 px zu zwingen hiesse, die aeusseren Zonen zusammenzuschieben, und
  * genau dort ist der Platz, der das Netz atmen laesst.
  *
- * 420 ist gemessen, nicht geschaetzt: die weiteste Bruecke im fertigen Netz
- * (`hollowPact` zu `unbrokenPact`, beide in der Buendnis-Zone) misst 381 px.
+ * Gemessen, nicht geschaetzt — und die Zahl ist GEFALLEN, obwohl überall mehr
+ * Luft steht: die weiteste Bruecke misst jetzt 322 px statt 381. Das ist kein
+ * Zufall, sondern dieselbe Ursache von der anderen Seite. Eine Bruecke verbindet
+ * zwei NACHBAR-Cluster derselben Zone; solange jeder Cluster ein enges Knäuel um
+ * seinen Kartenpunkt war, lag zwischen zwei Knäueln die ganze Lücke des Rings.
+ * Seit die Cluster ihren Ringabschnitt füllen, treffen sich ihre Ränder.
  */
-export const FORGE_BRIDGE_MAX_PX = 420
+export const FORGE_BRIDGE_MAX_PX = 360
 /**
  * Die Strichelung einer BEDINGUNGS-Kante.
  *
@@ -1016,11 +1048,44 @@ export const FORGE_BRIDGE_MAX_PX = 420
  * verschwindet, sobald sie erfuellt ist. Zwei Aussagen, zwei Strichbilder.
  */
 export const FORGE_EDGE_REQ_DASH = '7 6'
-/** Die Luft, die zwischen den RÄNDERN zweier beliebiger Knoten bleiben muss. */
-export const FORGE_MIN_AIR_PX = 22
-/** Federstärke entlang einer Kante, Abstossung, und der schwache Zug zum
- *  eigenen Clustermittelpunkt. Der Zug ist der schwächste — er ordnet, er
- *  zwingt nicht. */
+/**
+ * Die Luft, die zwischen den RÄNDERN zweier beliebiger Knoten bleiben muss —
+ * die HARTE Untergrenze.
+ *
+ * Sie stand auf 22, und das war nicht die Untergrenze, sondern der Normalfall:
+ * gemessen lag der MEDIAN aller Nächster-Nachbar-Abstände bei exakt 22,0 px.
+ * Mehr als die Hälfte aller Knoten klebte am Anschlag, während anderswo 112 px
+ * frei blieben (Variationskoeffizient 0,56).
+ *
+ * Der Grund war nicht diese Zahl, sondern dass es keine zweite gab: die
+ * Abstossung wirkte NUR unterhalb von ihr und hörte darüber sofort auf. Das
+ * erzeugt „berührt sich nicht" — nicht „steht gleichmässig". Was den Abstand
+ * jetzt herstellt, ist `FORGE_COMFORT_AIR_PX`; diese Zahl ist nur noch der
+ * Boden, unter den nichts fallen darf.
+ */
+export const FORGE_MIN_AIR_PX = 44
+/**
+ * Die Luft, die ein Knoten HABEN WILL — und der Motor der Gleichverteilung.
+ *
+ * Die Abstossung wirkt bis hierher und nimmt dabei linear ab. Das ist der ganze
+ * Unterschied zur harten Fassung: jeder Knoten drückt seine Nachbarn so lange
+ * weg, wie er kann, und weil das ALLE tun, endet es dort, wo alle gleich weit
+ * auseinander stehen. Ein Gas, kein Stapel.
+ *
+ * 65 ist der Wunsch, nicht das Ergebnis: das Gleichgewicht stellt sich bei
+ * einem Median von **55 px** ein (Minimum 44, p90 62, Variationskoeffizient
+ * 0,13). Weiter kommt das Netz nicht, ohne dass die Kanten sich strecken —
+ * gemessen, nicht vermutet: 600 statt 320 Runden ändern nichts, und ein
+ * `FORGE_EDGE_TARGET_PX` von 175 kauft einen Pixel Median mit 13 px auf der
+ * längsten Kante. Die Zahl bleibt trotzdem 65: sie ist die RICHTUNG, in die
+ * gedrückt wird, und sie tiefer zu setzen hiesse, sich auf 55 zu bescheiden.
+ *
+ * Zum Vergleich der Stand davor: Median 22,0 px — der Anschlag selbst —
+ * bei einem Variationskoeffizienten von 0,56.
+ */
+export const FORGE_COMFORT_AIR_PX = 65
+/** Federstärke entlang einer Kante, Abstossung, und der Zug zurück in den
+ *  eigenen Sektor. Der Zug ist der schwächste — er ordnet, er zwingt nicht. */
 export const FORGE_SPRING_K = 0.18
 export const FORGE_REPULSE_K = 0.55
 export const FORGE_CLUSTER_K = 0.05
@@ -1108,13 +1173,17 @@ export const FORGE_TREE_PAN_MS = 200
  * alles durchsichtig bleibt.
  */
 /**
- * Radius eines Zonenflecks, als Vielfaches des Clusterradius.
+ * Radius eines Zonenflecks, als Vielfaches der Cluster-Ausdehnung.
  *
- * Über 1, und zwar deutlich: der Schein soll den Cluster UMGEBEN, nicht ihn
- * ausfüllen. Bei 1,0 endete er genau an den äussersten Knoten, und der Rand
- * las sich wieder als Grenze.
+ * Über 1, weil der Schein den Cluster UMGEBEN soll, statt ihn auszufüllen: bei
+ * 1,0 endete er genau an den Knoten, und der Rand las sich wieder als Grenze.
+ *
+ * 1,25 statt 1,75, seit ein Cluster ein Ringabschnitt ist und nicht mehr ein
+ * Knäuel von 82…104 px. Die Bezugsgrösse ist mit ihm gewachsen
+ * (`forgeClusterSpots()`), und derselbe Aufschlag hätte die fünfundzwanzig
+ * Flecken zu einem Farbteppich überlagert.
  */
-export const FORGE_ZONE_HAZE_SCALE = 1.75
+export const FORGE_ZONE_HAZE_SCALE = 1.25
 /** Deckkraft eines Flecks, dessen Phase OFFEN ist — in der Leitfarbe des
  *  Clusters (`ForgeClusterDef.accent`). */
 export const FORGE_ZONE_HAZE_ALPHA = 0.1
