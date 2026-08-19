@@ -29,22 +29,23 @@
          erklärt werden; daran ist die erste Fassung des Ertrags-Sockels
          gescheitert.
 
+         Und sie zeigt NUR, wofür gerade mindestens eine Kante steht. Alle sechs
+         Zeilen dauerhaft zu führen hiess, im frischen Spielstand „grown" und
+         „maxed" zu erklären, obwohl beide Striche nirgends im Bild sind — eine
+         Legende, die mehr behauptet als die Bühne hergibt, ist als Auskunft
+         schlechter als keine.
+
          Sie hängt im VIEWPORT und nicht in der Bühne. „Die Bühne ist wortlos"
          gilt für das, was mit ihr skaliert und über den Knoten liegt — die
          Zoom-Leiste, der Kompass und der Sockel tragen sehr wohl Wörter.
          Der Viewport endet bereits über dem Ertrags-Sockel; `bottom: 14px`
          braucht deshalb keine Rechnung mit dessen Höhe.
 
-         `.stop` aus demselben Grund wie an der Zoom-Leiste: ein Klick auf die
-         Kopfzeile darf die Anheftung nicht abräumen. -->
-    <div class="tree-legend" :class="{ 'tree-legend--open': legendOpen }" @click.stop>
-      <!-- Die Zeilen stehen ÜBER der Schaltzeile, und das ist keine Kosmetik:
-           die Kartusche hängt an ihrer UNTEREN Kante und wächst nach oben auf.
-           Stünde der Knopf oben, spränge er bei jedem Klick um die Höhe der
-           Liste weg — man drückte „zuklappen" und träfe ins Leere. So bleibt er
-           stehen, und die Liste wächst über ihm. -->
-      <ul v-if="legendOpen" class="fl-rows">
-        <li v-for="row in FORGE_EDGE_LEGEND_ROWS" :key="row.id" class="fl-row">
+         `.stop` aus demselben Grund wie an der Zoom-Leiste: ein Klick darf die
+         Anheftung nicht abräumen. -->
+    <div class="tree-legend" @click.stop>
+      <ul class="fl-rows">
+        <li v-for="row in visibleLegendRows" :key="row.id" class="fl-row">
           <svg
             class="fl-swatch"
             :class="`fl-swatch--${row.id}`"
@@ -62,15 +63,6 @@
           <span class="fl-label">{{ row.label }}</span>
         </li>
       </ul>
-      <button
-        class="fl-head"
-        :aria-expanded="legendOpen"
-        @click="toggleLegend"
-      >
-        <span class="fl-chevron">{{ legendChevron }}</span>
-        <Icon :icon="FORGE_EDGE_LEGEND_ICON" width="14" height="14" class="fl-head-ico" />
-        <span class="fl-title">{{ FORGE_EDGE_LEGEND_TITLE }}</span>
-      </button>
     </div>
 
     <!-- Zoom control -->
@@ -526,13 +518,8 @@ import {
   FORGE_SPOTLIGHT_COMPASS_SIZE_PX,
   FORGE_TREE_PAN_MS,
   FORGE_BEST_BUY_LABEL,
-  FORGE_EDGE_LEGEND_TITLE,
-  FORGE_EDGE_LEGEND_ICON,
   FORGE_EDGE_LEGEND_ROWS,
   FORGE_EDGE_LEGEND_SWATCH_W,
-  FORGE_EDGE_LEGEND_STORAGE_KEY,
-  FORGE_EDGE_LEGEND_CHEVRON_OPEN,
-  FORGE_EDGE_LEGEND_CHEVRON_CLOSED,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -1063,35 +1050,37 @@ const limbDimOpacity = String(FORGE_LIMB_DIM_OPACITY)
 
 // ── Die Legende zur Kantensprache ─────────────────────────────────────────────
 /**
- * Aufgeklappt als Vorgabe — und das ist der ganze Zweck: eine Legende, die man
- * erst finden muss, erklärt niemandem etwas. Wer die Sprache kennt, klappt sie
- * einmal weg, und sie bleibt weg.
+ * Nur die Zeilen, für die auf der Bühne gerade mindestens eine Kante steht.
  *
- * Der Zustand liegt in einem EIGENEN Eintrag und nicht im Spielstand: die IDs
- * dort sind ein Vertrag (`SAVE_ID_RENAMES`), und eine Anzeigevorliebe gehört
- * nicht hinein. Muster ist `bard-music-settings` in `useSpaceMusic`, samt der
- * beiden stummen `catch` — ein gesperrter Speicher darf die Bühne nicht
- * mitreissen, die Legende steht dann eben jedes Mal offen.
+ * „Zu sehen" heisst hier: im NETZ vorhanden — nicht: im gerade sichtbaren
+ * Ausschnitt. Die zweite Lesart müsste bei jedem Zug an der Bühne und bei jedem
+ * Zoomschritt neu gerechnet werden, und eine Legende, deren Zeilen beim
+ * Scrollen kommen und gehen, ist unruhiger als eine Zeile zu viel.
+ *
+ * Die Zähler stehen alle schon da und ändern sich nur bei einem Kauf oder
+ * Phasenwechsel, nie pro Frame — dieselbe Eigenschaft, auf der `reqWreaths`
+ * beruht.
+ *
+ * Die Zeilen-IDs und die Topfnamen heissen absichtlich verschieden: `sealed`
+ * und `maxed` benennen, was der Spieler liest, `gate` und `full`, was der Code
+ * sortiert. Die Zuordnung steht deshalb hier an EINER Stelle, statt sie durch
+ * gleiche Namen zu erzwingen.
+ *
+ * Leer werden kann die Liste nicht — die 155 Struktur-Kanten liegen immer in
+ * mindestens einem der fünf Töpfe.
  */
-const legendOpen = ref(true)
-try {
-  if (localStorage.getItem(FORGE_EDGE_LEGEND_STORAGE_KEY) === 'closed') legendOpen.value = false
-} catch {
-  // ignore storage errors
-}
-
-function toggleLegend(): void {
-  legendOpen.value = !legendOpen.value
-  try {
-    localStorage.setItem(FORGE_EDGE_LEGEND_STORAGE_KEY, legendOpen.value ? 'open' : 'closed')
-  } catch {
-    // ignore storage errors
+const visibleLegendRows = computed(() => {
+  const g = veinGroups.value
+  const counts: Record<string, number> = {
+    sealed: g.gate.length,
+    blocked: g.blocked.length,
+    open: g.open.length,
+    grown: g.grown.length,
+    maxed: g.full.length,
+    bridge: openBridges.value.length,
   }
-}
-
-const legendChevron = computed(() =>
-  legendOpen.value ? FORGE_EDGE_LEGEND_CHEVRON_OPEN : FORGE_EDGE_LEGEND_CHEVRON_CLOSED,
-)
+  return FORGE_EDGE_LEGEND_ROWS.filter((row) => (counts[row.id] ?? 0) > 0)
+})
 
 // ── Zonen-Freischaltung ───────────────────────────────────────────────────────
 /**
@@ -1897,55 +1886,9 @@ const nextPhasePreviewStyle = computed(() => ({
   user-select: none;
 }
 
-.fl-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 5px 9px;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  font-family: inherit;
-  transition: color 0.15s ease;
-}
-
-.fl-chevron {
-  flex-shrink: 0;
-  width: 9px;
-  color: rgba(200, 144, 64, 0.55);
-  font-size: 11px;
-  line-height: 1;
-}
-
-.fl-head-ico {
-  flex-shrink: 0;
-  color: rgba(200, 144, 64, 0.6);
-}
-
-.fl-title {
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.6);
-}
-
-.fl-head:hover .fl-chevron,
-.fl-head:hover .fl-head-ico,
-.fl-head:hover .fl-title {
-  color: #c89040;
-}
-
-/* Die Trennlinie hängt an der LISTE und nicht an der Schaltzeile darunter.
-   An der Schaltzeile machte sie diese im offenen Zustand einen Pixel höher —
-   und weil die Kartusche an ihrer unteren Kante hängt, wanderte der Knopf bei
-   jedem Klick um genau diesen Pixel. An der Liste fällt sie mit ihr zusammen
-   weg, und die Schaltzeile ist in beiden Zuständen gleich hoch. */
 .fl-rows {
   margin: 0;
-  padding: 7px 9px 6px;
-  border-bottom: 1px solid #2a1a08;
+  padding: 7px 9px;
   list-style: none;
 }
 
@@ -2008,7 +1951,7 @@ const nextPhasePreviewStyle = computed(() => ({
   }
 
   .fl-rows {
-    padding: 5px 9px 4px;
+    padding: 5px 9px;
   }
 }
 

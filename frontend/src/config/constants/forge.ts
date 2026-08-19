@@ -560,34 +560,13 @@ export const FORGE_LIMB_DIM_OPACITY = 0.3
  *
  * Die Rinne unter jeder Ader bekommt KEINE Zeile: sie ist der Untergrund, kein
  * Zustand — und eine Legende, die den Untergrund erklärt, erklärt nichts.
- */
-export const FORGE_EDGE_LEGEND_TITLE = 'edges'
-/**
- * Ein Outline-Set und nicht `game-icons`: das Glyph steht bei 14 px in der
- * Kartusche, und dort zerfällt ein verschnörkeltes Fantasy-Motiv zu einem
- * grauen Fleck. `route` ist ausserdem das wörtliche Motiv — die Legende erklärt
- * Wege.
- */
-export const FORGE_EDGE_LEGEND_ICON = 'lucide:route'
-/**
- * Der Schlüssel für die aufgeklappt/zugeklappt-Vorgabe.
  *
- * Ein eigener Eintrag statt eines Feldes im Spielstand: die Inhalts-IDs im Save
- * sind ein Vertrag (`SAVE_ID_RENAMES`), und eine Anzeigevorliebe gehört nicht
- * hinein. Muster ist `bard-music-settings` in `useSpaceMusic`.
+ * Sie trägt WEDER Titel NOCH Schaltzeile. Beides stand einmal hier: eine
+ * Kopfzeile „edges" mit einem Pfeil zum Wegklappen. Sie ist gefallen, als die
+ * Legende anfing, sich auf das Vorhandene zu kürzen — im frischen Spielstand
+ * sind es vier Zeilen, und ein Bedienelement für sechzig Pixel ist mehr
+ * Bedienung als Auskunft. Was bleibt, sind Striche und Namen.
  */
-export const FORGE_EDGE_LEGEND_STORAGE_KEY = 'bard-forge-legend'
-/**
- * Der Pfeil der Schaltzeile — und er zeigt in die andere Richtung als der der
- * Schubladen.
- *
- * Die Legende steht an der UNTEREN Kante und wächst deshalb nach OBEN auf; die
- * Upgrade- und Vault-Schubladen in der Spalte daneben wachsen nach unten. Die
- * Geste ist dieselbe, die Richtung ist die umgekehrte, und ein geliehenes
- * `FORGE_UPGRADE_ARCHIVE_CHEVRON_*` zeigte hier genau verkehrt herum.
- */
-export const FORGE_EDGE_LEGEND_CHEVRON_CLOSED = '▴'
-export const FORGE_EDGE_LEGEND_CHEVRON_OPEN = '▾'
 /**
  * Die Länge einer Probe in px.
  *
@@ -609,6 +588,15 @@ export interface ForgeEdgeLegendRow {
   width: number
 }
 
+/**
+ * Der VOLLE Katalog — gezeigt wird davon nur, wofür auf der Bühne gerade
+ * mindestens eine Kante steht (`visibleLegendRows` in `ForgeTreePanel.vue`).
+ *
+ * Die Reihenfolge bleibt dabei stehen, es fallen nur einzelne Zeilen aus. Sie
+ * ist die Aussage: erst die zwei Arten von „zu", dann der offene Weg, dann die
+ * zwei Stufen des Fortschritts — sortierte man die übrigen um, wäre die Leiter
+ * beim nächsten Kauf eine andere.
+ */
 export const FORGE_EDGE_LEGEND_ROWS: readonly ForgeEdgeLegendRow[] = [
   { id: 'sealed', label: 'sealed', cls: 'limb-bed limb-bed--gate', width: 3 },
   { id: 'blocked', label: 'blocked', cls: 'limb-vein limb-vein--blocked', width: 2.4 },
