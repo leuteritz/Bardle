@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   forgeEdges,
-  forgeLimb,
   forgeLongestEdge,
   forgeTightestPair,
   forgeTreePlacements,
@@ -118,19 +117,16 @@ describe('Star Forge — der Platzierer', () => {
     )
   })
 
-  it('zeichnet jede Kante als geschwungene Bézier, nicht als Strecke', () => {
-    const a = { x: 100, y: 100 }
-    const b = { x: 400, y: 260 }
-    const limb = forgeLimb(a, b, 'probe', 'branch')
-    expect(limb.d).toMatch(/^M [\d.]+ [\d.]+ Q [\d.]+ [\d.]+ [\d.]+ [\d.]+$/)
-    expect(limb.width).toBe(FORGE_LIMB_WIDTH.branch)
-    // Der Kontrollpunkt liegt NEBEN der Sehnenmitte — sonst wäre es eine
-    // Strecke mit Umweg über drei Zahlen.
-    const [, cx, cy] = limb.d.match(/Q ([\d.]+) ([\d.]+)/)!.map(Number)
-    const midX = (a.x + b.x) / 2
-    const midY = (a.y + b.y) / 2
-    expect(Math.hypot(cx - midX, cy - midY)).toBeGreaterThan(10)
-  })
+  /*
+   * Hier stand: „zeichnet jede Kante als geschwungene Bézier, nicht als
+   * Strecke" — der Nachweis, dass `forgeLimb()` einen Kontrollpunkt NEBEN die
+   * Sehnenmitte legt.
+   *
+   * Er prüfte damit genau das, was heute falsch wäre. Die Wege sind
+   * rechtwinklig, und was von ihnen zu beweisen ist, steht in
+   * `forgeEdgeRoute.spec.ts`: jedes Segment achsparallel, keines durch einen
+   * fremden Knoten.
+   */
 
   it('verjüngt die Kanten nach aussen', () => {
     // Die Strichstärke kommt aus dem ZIEL, nicht aus dem Ursprung: jede Kante

@@ -391,17 +391,94 @@ export const FORGE_NODE_DIAMETER: Record<ForgeUpgradeTier, number> = {
   glimmer: 34,
 }
 
-/* ── Die ÄSTE: gekrümmt und nach aussen dünner ────────────────────────────────
- * Zwei gerade Striche zwischen zwei Knoten derselben Speiche waren nur die
- * zweite Hälfte desselben Problems. Jeder Ast ist jetzt eine quadratische
- * Bézier mit seitlichem Schwung — dasselbe Mittel, mit dem der Meep-Baum seine
- * Spiralarme verbindet (`utils/ui/skillTreeLayout.ts`, `arcPath`).
+/* ── Die WEGE: rechtwinklig, und keiner läuft durch einen Knoten ──────────────
+ *
+ * Hier stand die KRÜMMUNG: jeder Ast war eine quadratische Bézier, deren
+ * Kontrollpunkt seitlich neben der Sehnenmitte lag — Vorzeichen und Stärke aus
+ * dem Seed. Zwei Zahlen (`FORGE_LIMB_BOW` 0,16 und `FORGE_LIMB_BOW_MIN` 0,35)
+ * regelten den Schwung.
+ *
+ * Sie sind gefallen, und zwar an zwei Zahlen, die grösser sind: rund 205 Kanten
+ * über 155 Knoten. Bei dieser Dichte war der gewürfelte Bogen kein Schwung mehr,
+ * sondern Rauschen — kein Strich fluchtete mit einem anderen. Schwerer wog, was
+ * die Bézier gar nicht konnte: sie kannte die anderen Knoten NICHT und lief
+ * daher quer durch fremde Kreise.
+ *
+ * An ihre Stelle tritt das MANHATTAN-ROUTING (`utils/ui/forgeEdgeRoute.ts`):
+ * nur achsparallele Segmente, jeder Richtungswechsel exakt 90°, und kein Segment
+ * berührt einen Knoten, der nicht zu ihm gehört.
+ *
+ * Die Knoten selbst rasten dabei NICHT ein — die Kräftesimulation bleibt, wie
+ * sie ist. Was einrastet, sind die LINIEN: die Querachse eines Z-Wegs wird auf
+ * `FORGE_ROUTE_CHANNEL_PX` quantisiert, und dadurch fluchten parallele Striche,
+ * ohne dass eine einzige Position sich ändert.
  */
-/** Seitlicher Versatz des Kontrollpunkts, als Anteil der Sehnenlänge. */
-export const FORGE_LIMB_BOW = 0.16
-/** Mindestanteil davon. Ohne ihn würfelte der Seed gelegentlich fast null und
- *  ein einzelner Ast bliebe schnurgerade zwischen lauter geschwungenen. */
-export const FORGE_LIMB_BOW_MIN = 0.35
+/**
+ * Der Eckradius an einem Knick.
+ *
+ * Der Weg bleibt rechtwinklig — verrundet wird nur die Ecke selbst, und zwar
+ * über eine quadratische Bézier DURCH den Eckpunkt. 8 px sind bei den
+ * Strichstärken 2,4…6 gross genug, um weich zu wirken, und klein genug, dass
+ * der Winkel als 90° liest und nicht als Bogen.
+ *
+ * Er wird auf die Hälfte des kürzeren Nachbarsegments geklemmt: sonst frässe
+ * eine Ecke die nächste an, wo zwei Knicke dicht aufeinander folgen.
+ */
+export const FORGE_ROUTE_CORNER_R = 8
+/**
+ * Die Luft, die ein Strich um einen fremden Knoten herum halten muss.
+ *
+ * Gegen `FORGE_MIN_AIR_PX` (22) gerechnet: zwei Knoten lassen 22 px zwischen
+ * ihren Rändern, ein Durchlass braucht 2 × 5 + die stärkste Strichbreite (6) =
+ * 16. Es passt, und der Rest ist der Spielraum, der einen Kanalversatz erlaubt.
+ *
+ * Wird die Luft je zu knapp, ist der Hebel `FORGE_MIN_AIR_PX` — NICHT diese
+ * Zahl. Sie kleiner zu machen hiesse, den Strich am Knoten kleben zu lassen.
+ */
+export const FORGE_ROUTE_CLEARANCE_PX = 5
+/**
+ * Die Kanalweite — das Raster, auf dem die LINIEN sitzen.
+ *
+ * Das ist der Ersatz dafür, dass die Knoten frei stehen. Ohne Quantisierung
+ * läge die Querachse jedes Z-Wegs auf einem eigenen Subpixel und keine zwei
+ * Striche fluchteten; mit ihr teilen sich benachbarte Wege dieselbe Achse und
+ * das Bild wird ruhig, obwohl sich nichts bewegt hat.
+ */
+export const FORGE_ROUTE_CHANNEL_PX = 8
+/**
+ * Bis hierhin gilt eine Kante als achsparallel und wird GERADE gezogen.
+ *
+ * Zwei Knoten, die 9 px gegeneinander versetzt stehen, bekämen sonst zwei
+ * Knicke für nichts. Der Ausgleich passiert am Port: er wandert um bis zu
+ * 12 px auf dem Knotenrand, und das sieht bei einem Kreis von 34…64 px
+ * Durchmesser niemand.
+ */
+export const FORGE_ROUTE_STRAIGHT_TOL_PX = 12
+/**
+ * Der Abstand zweier Ports an derselben Knotenseite.
+ *
+ * Ein Knoten mit fünf Kanten liess sie früher alle in seinem Mittelpunkt
+ * zusammenlaufen — ein Stern unter dem Kreis. Jetzt tritt jede an ihrer eigenen
+ * Stelle des Randes aus. 9 px trennen zwei Striche von 4 px sichtbar, ohne dass
+ * der äusserste Port vom Rand rutscht.
+ */
+export const FORGE_ROUTE_PORT_PITCH_PX = 9
+/**
+ * Der AUSWEICHWEG, und wann er überhaupt gebraucht wird.
+ *
+ * Für die grosse Mehrheit der Kanten genügt einer der vorgerechneten Wege
+ * (gerade, ein Knick, zwei Knicke). Bleibt keiner frei, sucht ein A* auf einem
+ * groben Raster — orthogonale Züge, ein hoher Aufschlag je Richtungswechsel,
+ * damit wenige Knicke herauskommen statt einer Treppe.
+ *
+ * `MAX_CELLS` ist die Reissleine: das Netz wird EINMAL gerechnet, aber eine
+ * unbegrenzte Suche über 2000 × 2000 px wäre trotzdem der falsche Preis.
+ */
+export const FORGE_ROUTE_GRID_PX = 20
+export const FORGE_ROUTE_TURN_COST = 200
+export const FORGE_ROUTE_MARGIN_PX = 120
+export const FORGE_ROUTE_MAX_CELLS = 20000
+
 /**
  * Strichstärke des Grundastes je Ebene — innen kräftig, aussen fein. Der Baum
  * verjüngt sich damit nach aussen, statt siebenmal denselben 4-px-Strich zu

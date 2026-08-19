@@ -87,16 +87,22 @@
         <!-- Die WEGE zwischen zwei Zonen. Sie schalten nichts frei und liegen
              deshalb ganz unten und am blassesten: sie halten das Bild zusammen,
              ohne etwas zu behaupten. -->
-        <g class="bridge-limbs" stroke="#3a2c16" stroke-linecap="round" fill="none">
+        <g
+          class="bridge-limbs"
+          stroke="#3a2c16"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"
+        >
           <path
             v-for="limb in bridgeLimbs" :key="limb.key + '-bridge'"
             :d="limb.d" :stroke-width="limb.width"
           />
         </g>
-        <!-- Die STRUKTUR: woran ein Knoten haengt. Geschwungen, nicht gerade,
-             und je Ebene duenner — die Strichstaerke sitzt deshalb am Pfad und
-             nicht an der Gruppe. -->
-        <g stroke="#4a3418" stroke-linecap="round" fill="none">
+        <!-- Die STRUKTUR: woran ein Knoten haengt. Rechtwinklig gefuehrt und je
+             Ebene duenner — die Strichstaerke sitzt deshalb am Pfad und nicht
+             an der Gruppe. Der Weg selbst kommt aus `forgeEdgeRoute.ts`: nur
+             achsparallele Segmente, jeder Knick 90 Grad, und keiner laeuft
+             durch einen fremden Knoten. -->
+        <g stroke="#4a3418" stroke-linecap="round" stroke-linejoin="round" fill="none">
           <path
             v-for="limb in structureLimbs" :key="limb.key + '-base'"
             :d="limb.d" :stroke-width="limb.width"
@@ -105,7 +111,7 @@
         <!-- Active limbs (target node has levels). Die Grunddeckkraft steht als
              KLASSE und nicht als `opacity`-Attribut — ein Präsentationsattribut
              wäre von keiner Regel mehr zu überschreiben. -->
-        <g stroke-linecap="round" fill="none">
+        <g stroke-linecap="round" stroke-linejoin="round" fill="none">
           <path
             v-for="limb in activeLimbs" :key="limb.key + '-lit'"
             :d="limb.d" :stroke-width="limb.width * FORGE_LIMB_LIT_FACTOR"
@@ -114,13 +120,15 @@
           />
         </g>
 
-        <!-- Die BEDINGUNGEN eines gesperrten Knotens, gestrichelt und in der
-             Farbe des Zustands. Sie sind KEINE Rueckkehr der alten Spannfaeden:
-             die zeigten aus dem Bild heraus, weil eine Krone auf r = 438 stand
-             und ihr Zweig auf r = 221. Im Netz ist jede dieser Kanten hoechstens
-             `FORGE_EDGE_MAX_PX` lang — beide Enden stehen im selben Bild, und
-             eine Spec rechnet es nach. -->
-        <g class="req-limbs" stroke-linecap="round" fill="none">
+        <!-- Die BEDINGUNGEN des GEZEIGTEN Knotens, gestrichelt und in der Farbe
+             des Zustands. Sie lagen einmal an jedem gesperrten Ziel und damit
+             im frischen Spielstand fast ueberall — rund fuenfzig Linien, die
+             niemand erfragt hatte. Jetzt haengen sie am Zeiger.
+             Sie sind KEINE Rueckkehr der alten Spannfaeden: die zeigten aus dem
+             Bild heraus, weil eine Krone auf r = 438 stand und ihr Zweig auf
+             r = 221. Im Netz ist jede dieser Kanten hoechstens
+             `FORGE_EDGE_MAX_PX` lang — beide Enden stehen im selben Bild. -->
+        <g class="req-limbs" stroke-linecap="round" stroke-linejoin="round" fill="none">
           <path
             v-for="limb in requireLimbs" :key="limb.key + '-req'"
             :d="limb.d" :stroke-width="limb.width"
@@ -133,7 +141,7 @@
         <g
           v-if="spotlightLimbs.length > 0"
           class="spot-limbs"
-          stroke-linecap="round" fill="none"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"
         >
           <path
             v-for="limb in spotlightLimbs" :key="limb.key + '-spot'"
@@ -345,7 +353,8 @@ import {
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
-import { forgeEdges, forgeLimb, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import { forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
 import {
   forgeCompassAt,
   forgeNodeInView,
@@ -603,18 +612,10 @@ function nodePos(node: TreeNode): Record<string, string> {
   return { left: `${Math.round(node.x)}px`, top: `${Math.round(node.y)}px` }
 }
 
-/** Wo eine Wurzel-Verbindung am Rand des Körpers ansetzt — auf der Geraden vom
- *  Mittelpunkt zum Strahl, damit der Stummel unter jeder Sonnengrösse sitzt. */
-function sunEdgePoint(toward: TreeNode): { x: number; y: number } {
-  const dx = toward.x - C
-  const dy = toward.y - C
-  const len = Math.hypot(dx, dy) || 1
-  return { x: C + (dx / len) * sunEdgeR.value, y: C + (dy / len) * sunEdgeR.value }
-}
-
 interface Limb {
   key: string
-  /** Quadratische Bézier statt Strecke — der Schwung kommt aus `forgeLimb()`. */
+  /** Ein rechtwinkliger Streckenzug mit verrundeten Ecken — gerechnet in
+   *  `forgeEdgeRoute.ts`, nicht hier. */
   d: string
   /** Grundstärke; innen kräftig, aussen fein (`FORGE_LIMB_WIDTH`). */
   width: number
@@ -628,40 +629,48 @@ const nodeById = computed(() => new Map(allNodes.value.map((n) => [n.id, n])))
 /**
  * Jede Verbindung des Netzes — Struktur, Bedingung und Weg.
  *
- * Die Bedingungslinie ist neu, und sie ist keine Rückkehr der alten
- * Spannfäden: die scheiterten daran, dass ihre beiden Enden bei Standardzoom
- * gar nicht gleichzeitig ins Bild passten (eine Krone auf r = 438, ihr Zweig
- * auf r = 221, sichtbar rund 484 Bühnen-px). Im Netz ist jede
- * Bedingungskante höchstens `FORGE_EDGE_MAX_PX` lang, und eine Spec rechnet das
- * nach. Was damals aus dem Bild zeigte, liegt jetzt daneben.
+ * Die Wege selbst kommen fertig aus `forgeRoutes()`: rechtwinklig, an jedem
+ * Knick um 90° und an keiner Stelle durch einen fremden Knoten. Sie hängen
+ * ausschliesslich an der Platzierung, sind also modulweit gecacht — dieses
+ * `computed` setzt nur noch Farbe und Art dazu, und die ändern sich mit dem
+ * Spielstand.
+ *
+ * Die Bedingungslinie ist keine Rückkehr der alten Spannfäden: die scheiterten
+ * daran, dass ihre beiden Enden bei Standardzoom gar nicht gleichzeitig ins Bild
+ * passten (eine Krone auf r = 438, ihr Zweig auf r = 221, sichtbar rund 484
+ * Bühnen-px). Im Netz ist jede Bedingungskante höchstens `FORGE_EDGE_MAX_PX`
+ * lang, und eine Spec rechnet das nach.
  */
 const limbs = computed<Limb[]>(() => {
   const result: Limb[] = []
   const nodes = nodeById.value
+  const routes = forgeRoutes()
   for (const edge of forgeEdges()) {
     const to = nodes.get(edge.to)
     if (!to) continue
-    const fromNode = nodes.get(edge.from)
-    if (!fromNode) continue
-    const limb = forgeLimb(fromNode, to, `${edge.from}>${edge.to}`, to.tier)
+    if (!nodes.has(edge.from)) continue
+    const key = forgeRouteKey(edge.from, edge.to)
+    const route = routes.get(key)
+    if (!route) continue
     result.push({
-      key: `${edge.from}>${edge.to}`,
-      d: limb.d,
-      width: limb.width,
+      key,
+      d: route.d,
+      width: route.width,
       color: to.color,
       targetId: to.id,
       kind: edge.kind,
     })
   }
   // Die fünf Stummel von der Sonne zu ihren Strahlen. Sie stehen in keiner
-  // Kantenliste, weil die Sonne kein Knoten ist.
+  // Kantenliste, weil die Sonne kein Knoten ist — und sie werden hier gerechnet
+  // statt gecacht, weil ihr Ansatz am Körperrand mit der Sonnenphase wandert.
   for (const root of allNodes.value) {
     if (root.tier !== 'root') continue
-    const limb = forgeLimb(sunEdgePoint(root), root, `sun>${root.id}`, 'root')
+    const route = forgeSunRoute({ x: C, y: C }, sunEdgeR.value, root.id, { x: root.x, y: root.y })
     result.push({
       key: `sun>${root.id}`,
-      d: limb.d,
-      width: limb.width,
+      d: route.d,
+      width: route.width,
       color: root.color,
       targetId: root.id,
       kind: 'parent',
@@ -675,14 +684,23 @@ const limbs = computed<Limb[]>(() => {
 const structureLimbs = computed(() => limbs.value.filter((l) => l.kind === 'parent'))
 const bridgeLimbs = computed(() => limbs.value.filter((l) => l.kind === 'bridge'))
 /**
- * Die Bedingungskanten, und zwar NUR die eines gesperrten Ziels.
+ * Die Bedingungskanten — und zwar nur die des GEZEIGTEN Knotens.
  *
- * Eine erfüllte Bedingung ist keine Auskunft mehr — sie stünde als zwanzigste
- * Linie im Bild und sägte nichts. Sichtbar ist sie, solange sie fehlt.
+ * Hier stand `state === 'locked'`, und das war im frischen Spielstand fast
+ * jeder Knoten: rund fünfzig gestrichelte Linien lagen dauerhaft über der
+ * Bühne und beantworteten eine Frage, die niemand gestellt hatte. Die Auskunft
+ * ist deshalb nicht gestrichen, sondern an den Zeiger gebunden — wie die
+ * Scheinwerferkette darüber.
+ *
+ * Was im Ruhezustand bleibt, ist der Bedingungs-KRANZ am Knoten selbst
+ * (`reqWreaths`): dieselbe Aussage, ohne eine einzige Linie.
+ *
+ * `spotlightId` deckt das Anheften mit ab — es ist `pinnedId ?? listHoverId ??
+ * treeHoverId`, also genau das, worauf der Spieler gerade zeigt.
  */
 const requireLimbs = computed(() =>
   limbs.value
-    .filter((l) => l.kind === 'require' && entryById.value.get(l.targetId)?.state === 'locked')
+    .filter((l) => l.kind === 'require' && l.targetId === spotlightId.value)
     // Eine Spur dünner als der Ast, an dem sie hängt: die Bedingung ist die
     // Auskunft, nicht das Gerüst.
     .map((l) => ({ ...l, width: Math.max(2, l.width - 1) })),

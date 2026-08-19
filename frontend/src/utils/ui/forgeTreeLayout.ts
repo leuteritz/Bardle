@@ -43,7 +43,8 @@
  * und die Specs müssen von DERSELBEN Rechnung kommen. Stünde sie in der
  * Komponente, hinge der einzige Wächter gegen Überlappung an einem
  * Vue-Renderlauf. Schwesterdatei ist `skillTreeLayout.ts`, die dasselbe für den
- * Meep-Baum tut — auch dort verbindet eine quadratische Bézier zwei Knoten.
+ * Meep-Baum tut. WIE eine Linie von hier nach dort kommt, steht nicht mehr in
+ * dieser Datei — das beantwortet `forgeEdgeRoute.ts`, siehe unten.
  */
 import {
   FORGE_CLUSTER_GOLDEN_ANGLE_DEG,
@@ -51,9 +52,6 @@ import {
   FORGE_CLUSTER_K,
   FORGE_CLUSTER_SEAT_SHARE,
   FORGE_EDGE_TARGET_PX,
-  FORGE_LIMB_BOW,
-  FORGE_LIMB_BOW_MIN,
-  FORGE_LIMB_WIDTH,
   FORGE_MIN_AIR_PX,
   FORGE_NODE_DIAMETER,
   FORGE_RAY_DIST,
@@ -83,13 +81,6 @@ export interface ForgeEdge {
   from: string
   to: string
   kind: ForgeEdgeKind
-}
-
-export interface ForgeLimb {
-  /** Fertiges `d`-Attribut einer quadratischen Bézier. */
-  d: string
-  /** Strichstärke des Grundastes. */
-  width: number
 }
 
 const STAGE_HALF = FORGE_STAGE_SIZE / 2
@@ -454,48 +445,20 @@ function tierOf(id: string): ForgeUpgradeTier {
 }
 
 // ── Die Äste ──────────────────────────────────────────────────────────────────
-/**
- * Der geschwungene Weg von einem Punkt zum nächsten.
+/* Hier stand `forgeLimb()` samt `bowPath()`: eine quadratische Bézier zwischen
+ * zwei MITTELPUNKTEN, deren Kontrollpunkt seitlich neben der Sehnenmitte lag —
+ * Vorzeichen und Anteil aus dem Seed gewürfelt.
  *
- * Eine quadratische Bézier, deren Kontrollpunkt seitlich neben der Sehnenmitte
- * liegt: Betrag `FORGE_LIMB_BOW` mal Sehnenlänge, Vorzeichen und Anteil aus dem
- * Seed. `FORGE_LIMB_BOW_MIN` verhindert den Wurf nahe null — ein einzelner
- * schnurgerader Ast zwischen lauter geschwungenen fällt sofort auf.
+ * Sie ist gefallen, und nicht aus Geschmack. Bei rund 205 Kanten über 155 frei
+ * stehenden Knoten war der gewürfelte Bogen kein Schwung mehr, sondern Rauschen:
+ * zwei benachbarte Kanten beulten in entgegengesetzte Richtungen, kein Strich
+ * fluchtete mit einem anderen. Schwerer wog, was sie GAR NICHT konnte — sie
+ * kannte die übrigen Knoten nicht und lief daher quer durch fremde Kreise.
  *
- * Die Strichstärke kommt aus der Ebene des ZIELS, nicht des Ursprungs: das Netz
- * verjüngt sich damit nach aussen, jede Kante ist so dick wie das, woran sie
- * hängt.
+ * Ihre Aufgabe hat `utils/ui/forgeEdgeRoute.ts` übernommen: nur achsparallele
+ * Segmente, jeder Richtungswechsel exakt 90°, und jeder Kandidat gegen jeden
+ * fremden Knoten gerechnet, bevor er genommen wird.
+ *
+ * Diese Datei sagt weiterhin, WO ein Knoten steht — und nur das. Die
+ * Hindernisliste, die das Routing braucht, geht den Platzierer nichts an.
  */
-export function forgeLimb(from: Point, to: Point, seed: string, tier: ForgeUpgradeTier): ForgeLimb {
-  return {
-    d: bowPath(from, to, `forge-limb:${seed}`, FORGE_LIMB_BOW),
-    width: FORGE_LIMB_WIDTH[tier],
-  }
-}
-
-/**
- * Eine quadratische Bézier, deren Kontrollpunkt seitlich neben der Sehnenmitte
- * liegt: Betrag `bow` mal Sehnenlänge, Vorzeichen und Anteil aus dem Seed.
- */
-function bowPath(from: Point, to: Point, seed: string, bowFraction: number): string {
-  const next = rng(seed)
-  const dx = to.x - from.x
-  const dy = to.y - from.y
-  const chord = Math.hypot(dx, dy) || 1
-
-  const sign = next() < 0.5 ? -1 : 1
-  const share = FORGE_LIMB_BOW_MIN + next() * (1 - FORGE_LIMB_BOW_MIN)
-  const bow = sign * share * bowFraction * chord
-
-  // Normale auf der Sehne, auf Einheitslänge gebracht.
-  const nx = -dy / chord
-  const ny = dx / chord
-  const cx = (from.x + to.x) / 2 + nx * bow
-  const cy = (from.y + to.y) / 2 + ny * bow
-
-  return `M ${round(from.x)} ${round(from.y)} Q ${round(cx)} ${round(cy)} ${round(to.x)} ${round(to.y)}`
-}
-
-function round(value: number): number {
-  return Math.round(value * 10) / 10
-}
