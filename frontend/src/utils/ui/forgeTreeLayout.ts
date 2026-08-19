@@ -594,6 +594,88 @@ export function forgeTightestPair(): { a: string; b: string; air: number } | nul
   return worst
 }
 
+/** Wie weit das Netz WIRKLICH reicht — die Hülle um alle Knotenränder. */
+export interface ForgeContentBounds {
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+  /** Die Mitte dieser Hülle — der Punkt, um den das Netz tatsächlich liegt. */
+  centerX: number
+  centerY: number
+  /** Halbe Breite und Höhe der Hülle. */
+  halfW: number
+  halfH: number
+  /** Der weiteste Knotenrand, von der Hüllenmitte aus gemessen. */
+  radius: number
+}
+
+let boundsCache: ForgeContentBounds | null = null
+
+/**
+ * Wie weit das Netz reicht — gemessen an den KNOTENRÄNDERN, nicht an der
+ * Bühnenkante.
+ *
+ * Die Bühne ist 2000 px im Quadrat, die Knoten liegen darin als SCHEIBE: das
+ * äusserste belegte Band (`FORGE_ZONE_BAND[4].outer`) endet bei 900, die
+ * Bühnenecke liegt bei 1414. Der Unterschied ist kein Rundungsfehler, sondern
+ * eine halbe Bildbreite Leere, in die die Kamera bis hierher fahren durfte.
+ * Wer die Klemmung gegen diese Hülle rechnet statt gegen `FORGE_STAGE_SIZE`,
+ * bekommt genau das zurück.
+ *
+ * Die Mitte ist die der HÜLLE und nicht die der Bühne, und das ist gemessen
+ * entschieden: das Netz sitzt tiefer, als die Sonne steht (`minY` 241 gegen
+ * `2000 − maxY` 176). Wer um die Bühnenmitte klemmt, muss die grössere der
+ * beiden Hälften nehmen und handelt sich oben ein leeres Band von 64 px ein —
+ * im Browser nachgemessen 109 px statt 46. Um die Hüllenmitte ist der Rand auf
+ * allen vier Seiten derselbe. Der Preis ist ein Versatz der Sonne aus der
+ * Bildmitte von 32 Bühnen-Pixeln, am Zoomboden also zwölf auf dem Schirm.
+ *
+ * `radius` misst von derselben Mitte — EIN Bezugspunkt für Rechteck und
+ * Scheibe, sonst klemmten die beiden Fassungen in `forgeCameraBounds.ts`
+ * gegeneinander.
+ *
+ * Knotenrein, ohne die WEGE: `forgeEdgeRoute.ts` importiert diese Datei, der
+ * umgekehrte Weg wäre ein Zyklus. Was ein Weg darüber hinaus ausholt, trägt
+ * `FORGE_CONTENT_SEAM_PX` — gemessen und in `forgeEdgeRoute.spec.ts` gebunden.
+ *
+ * Einmal gerechnet und modulweit gecacht wie alles hier.
+ */
+export function forgeContentBounds(): ForgeContentBounds {
+  if (boundsCache !== null) return boundsCache
+  const places = forgeTreePlacements()
+  let minX = Infinity
+  let maxX = -Infinity
+  let minY = Infinity
+  let maxY = -Infinity
+  for (const [id, at] of places) {
+    const r = FORGE_NODE_DIAMETER[tierOf(id)] / 2
+    minX = Math.min(minX, at.x - r)
+    maxX = Math.max(maxX, at.x + r)
+    minY = Math.min(minY, at.y - r)
+    maxY = Math.max(maxY, at.y + r)
+  }
+  const centerX = (minX + maxX) / 2
+  const centerY = (minY + maxY) / 2
+  let radius = 0
+  for (const [id, at] of places) {
+    const r = FORGE_NODE_DIAMETER[tierOf(id)] / 2
+    radius = Math.max(radius, Math.hypot(at.x - centerX, at.y - centerY) + r)
+  }
+  boundsCache = {
+    minX,
+    maxX,
+    minY,
+    maxY,
+    centerX,
+    centerY,
+    halfW: (maxX - minX) / 2,
+    halfH: (maxY - minY) / 2,
+    radius,
+  }
+  return boundsCache
+}
+
 function tierOf(id: string): ForgeUpgradeTier {
   return getForgeNode(id)?.tier ?? 'root'
 }

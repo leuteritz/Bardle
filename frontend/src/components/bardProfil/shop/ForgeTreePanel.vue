@@ -361,6 +361,12 @@ import {
   forgeNodeScreenPoint,
   type ForgeCamera,
 } from '@/utils/ui/forgeSpotlightView'
+import {
+  forgeClampPan,
+  forgeContentCenter,
+  forgeFitScale,
+  forgeNodeScreenRadius,
+} from '@/utils/ui/forgeCameraBounds'
 import type { ForgeNodeDef, ForgeNodeTier, ForgeUpgradeEntry, ForgeUpgradeTier } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
@@ -402,7 +408,6 @@ import {
   FORGE_LOCK_ICON,
   FORGE_PIN_ICON,
   FORGE_ENDLESS_SYMBOL,
-  FORGE_TREE_FIT_PADDING_PX,
   FORGE_BODY_EDGE_FRACTION,
   FORGE_SUN_EDGE_GAP,
   FORGE_SUN_FLASH_MS,
@@ -1002,8 +1007,12 @@ const viewportSize = ref({ w: 0, h: 0 })
  * Punkt dadurch von selbst stehen. In Bildschirm-Pixeln müsste jeder
  * Zoomschritt den Versatz umrechnen, und es gäbe zwei Zahlen für dieselbe
  * Stelle.
+ *
+ * Er startet auf der Mitte des NETZES, nicht der Bühne. Die beiden liegen
+ * 32 px auseinander, und das ist gemessen: um die Bühnenmitte geklemmt bliebe
+ * am oberen Anschlag ein leeres Band, das unten fehlt.
  */
-const pan = ref({ x: FORGE_STAGE_SIZE / 2, y: FORGE_STAGE_SIZE / 2 })
+const pan = ref(forgeContentCenter())
 
 let resizeObserver: ResizeObserver | null = null
 
@@ -1015,8 +1024,7 @@ onMounted(() => {
     viewportSize.value = { w: rect.width, h: rect.height }
     // Gemessen wird der VIEWPORT, nicht das Panel: der Ertrags-Sockel darunter
     // gehört nicht zur Fläche, in der der Baum liegt.
-    fitScale.value =
-      (Math.min(rect.width, rect.height) - FORGE_TREE_FIT_PADDING_PX * 2) / FORGE_STAGE_SIZE
+    fitScale.value = forgeFitScale(viewportSize.value)
     zoom.value = clampZoom(zoom.value)
     clampPan()
   })
@@ -1049,32 +1057,21 @@ function clampZoom(value: number): number {
 }
 
 /**
- * Wie weit der Bildmittelpunkt von der Bühnenmitte weg darf.
+ * Die Klemmung — HART, kein Gummiband.
  *
- * Eine HARTE Klemmung, kein Gummiband — und das ist die zweite bewusste
- * Abweichung vom Sigil-Board. Dort ist die Bühne kleiner als der Viewport, das
- * Gummiband ist die richtige Antwort auf „da ist nichts mehr". Hier ist sie
- * grösser, es gibt echten Inhalt zu erreichen, und eine Sättigung machte
- * ausgerechnet die äussersten Knoten schwammig.
+ * Das ist die zweite bewusste Abweichung vom Sigil-Board. Dort ist die Bühne
+ * kleiner als der Viewport, das Gummiband ist die richtige Antwort auf „da ist
+ * nichts mehr". Hier ist sie grösser, es gibt echten Inhalt zu erreichen, und
+ * eine Sättigung machte ausgerechnet die äussersten Knoten schwammig.
  *
- * Passt die Bühne ganz ins Bild, ist die Grenze null: der Baum steht zentriert
- * und lässt sich nicht verschieben. Genau richtig — es gibt nichts zu suchen.
+ * WOGEGEN geklemmt wird, steht in `utils/ui/forgeCameraBounds.ts` und nicht
+ * mehr hier: gegen die gemessene Hülle der Knoten statt gegen die Bühnenkante,
+ * und zusätzlich radial gegen ihre Scheibe. Ausgelagert, weil es die einzige
+ * Rechnung dieser Komponente ist, die man prüfen können muss — und für eine
+ * `.vue` gibt es in diesem Projekt keine Tests.
  */
-function panLimit(): { x: number; y: number } {
-  const s = totalScale.value || 1
-  return {
-    x: Math.max(0, FORGE_STAGE_SIZE / 2 - viewportSize.value.w / 2 / s),
-    y: Math.max(0, FORGE_STAGE_SIZE / 2 - viewportSize.value.h / 2 / s),
-  }
-}
-
 function clampPan(): void {
-  const limit = panLimit()
-  const half = FORGE_STAGE_SIZE / 2
-  pan.value = {
-    x: Math.min(half + limit.x, Math.max(half - limit.x, pan.value.x)),
-    y: Math.min(half + limit.y, Math.max(half - limit.y, pan.value.y)),
-  }
+  pan.value = forgeClampPan(pan.value, viewportSize.value, totalScale.value)
 }
 
 /**
@@ -1260,8 +1257,7 @@ function clearTravel(): void {
  * 1,22 — genau er soll ja ganz zu sehen sein) und der Ringüberstand.
  */
 function nodeRadiusOnScreen(node: TreeNode): number {
-  const half = FORGE_NODE_DIAMETER[node.sizeClass] / 2 + FORGE_SPOTLIGHT_RING_INSET_PX
-  return half * FORGE_SPOTLIGHT_NODE_SCALE * totalScale.value
+  return forgeNodeScreenRadius(node.sizeClass, totalScale.value)
 }
 
 function camera(): ForgeCamera {

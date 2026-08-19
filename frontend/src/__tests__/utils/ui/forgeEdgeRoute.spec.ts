@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
-import { forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import { forgeContentBounds, forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
 import { getForgeNode } from '@/config/progression/starForge'
 import {
+  FORGE_CONTENT_SEAM_PX,
   FORGE_NODE_DIAMETER,
   FORGE_ROUTE_CLEARANCE_PX,
   FORGE_ROUTE_CORNER_R,
@@ -266,5 +267,54 @@ describe('Star Forge — das Routing', () => {
         radius + FORGE_ROUTE_CLEARANCE_PX,
       )
     }
+  })
+})
+
+describe('Star Forge — die Wege bleiben im Netz', () => {
+  it('kein Weg verlaesst die Inhalts-Huelle um mehr als den Saum', () => {
+    /*
+     * Die Kamera klemmt seit dem Umbau gegen `forgeContentBounds()`, also gegen
+     * die äussersten KNOTEN. Ein Weg, der weiter ausholt als der dort
+     * zugeschlagene `FORGE_CONTENT_SEAM_PX`, würde am Anschlag angeschnitten.
+     *
+     * Ausholen KÖNNTE er: Kanalversatz bis 4 · `FORGE_ROUTE_CHANNEL_PX`,
+     * Stummel `FORGE_MIN_AIR_PX / 2`, und der Ausweichweg sucht bis
+     * `FORGE_ROUTE_MARGIN_PX` über die Endpunkt-Box hinaus. Gemessen tut er es
+     * nicht — über alle 205 Wege 0,0 px, null Ausweichwege. Genau deshalb steht
+     * die Prüfung hier und nicht als Annahme im Kommentar der Konstante: sie
+     * ist die einzige Stelle, an der auffällt, wenn ein umgehängter Knoten das
+     * Routing nach aussen drückt.
+     */
+    const bounds = forgeContentBounds()
+    let worst = 0
+    let worstKey = ''
+    let fallbacks = 0
+    for (const [key, route] of forgeRoutes()) {
+      if (route.viaFallback) fallbacks++
+      for (const leg of legsOf(route.d).legs) {
+        for (const p of [
+          { x: leg.ax, y: leg.ay },
+          { x: leg.bx, y: leg.by },
+        ]) {
+          const over = Math.max(
+            bounds.minX - p.x,
+            p.x - bounds.maxX,
+            bounds.minY - p.y,
+            p.y - bounds.maxY,
+          )
+          if (over > worst) {
+            worst = over
+            worstKey = key
+          }
+        }
+      }
+    }
+    expect(
+      worst,
+      `${worstKey} steht ${worst.toFixed(1)} px ueber der Knoten-Huelle`,
+    ).toBeLessThanOrEqual(FORGE_CONTENT_SEAM_PX)
+    // Kein Beiwerk: eine Häufung von Ausweichwegen heisst, die Knoten stehen zu
+    // dicht — und der Hebel dafür ist `FORGE_MIN_AIR_PX`, nicht der Saum.
+    expect(fallbacks, `${fallbacks} Ausweichwege`).toBeLessThanOrEqual(5)
   })
 })

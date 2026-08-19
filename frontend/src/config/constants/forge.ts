@@ -321,6 +321,13 @@ export const FORGE_ICON_SIZE_GLIMMER = 18
  * bleibt exakt so groß wie zuvor (auf jedem Desktop-Format begrenzt die Höhe,
  * und 780 − 2·48 ist dasselbe wie 780 − 96). Der Baum wird durch den Umzug
  * also weder größer noch kleiner, nur zentriert.
+ *
+ * **Diese Zahl darf `FORGE_SPOTLIGHT_EDGE_MARGIN_PX` (24) nicht unterschreiten.**
+ * Beim untersten Zoom soll die Bühne stillstehen, und die Pan-Grenze wird dort
+ * genau dann null, wenn der Einpass-Rand mindestens so gross ist wie der
+ * Kantensaum, den `forgePanLimit()` zuschlägt. Fiele sie darunter, liesse sich
+ * der vollständig sichtbare Baum noch verschieben —
+ * `forgeCameraBounds.spec.ts` rechnet die Relation nach.
  */
 export const FORGE_TREE_FIT_PADDING_PX = 48
 /**
@@ -1136,6 +1143,38 @@ export const FORGE_TREE_DRAG_THRESHOLD_PX = 5
  * das CSS holt sie sich deshalb per `v-bind` von hier.
  */
 export const FORGE_TREE_PAN_MS = 200
+/**
+ * Der SAUM um die Inhalts-Hülle — was ausser den Knotenrändern noch ins Bild
+ * gehört.
+ *
+ * Die Kamera klemmt seit dem Umbau gegen `forgeContentBounds()`, also gegen die
+ * äussersten KNOTEN statt gegen die Bühnenkante. Gemessen reicht das Netz nur
+ * bis r = 833, die Bühnenkante liegt bei 1000 und ihre Ecke bei 1414 —
+ * dazwischen lag bis hierher erreichbare Leere.
+ *
+ * Drei Beiträge, und der dritte ist der, den man beim Rechnen vergisst:
+ *
+ *   • Der SPOTLIGHT-Ring. Der gemeinte Knoten wächst auf
+ *     `FORGE_SPOTLIGHT_NODE_SCALE` und trägt `FORGE_SPOTLIGHT_RING_INSET_PX`
+ *     Überstand: bei der grössten Klasse (Wurzel, 64) sind das
+ *     `(32 + 4) · 1,22 − 32 = 11,9` px.
+ *   • Die WEGE. `forgeEdgeRoute.ts` KÖNNTE ausholen — Kanalversatz bis 4 · 8,
+ *     Stummel 22, Ausweichweg bis `FORGE_ROUTE_MARGIN_PX`. Gemessen tut es das
+ *     nicht: über alle 205 Wege **0,0 px** Überstand, **null** Ausweichwege.
+ *     `forgeEdgeRoute.spec.ts` hält das fest — steigt die Zahl dort, ist diese
+ *     hier zu klein.
+ *   • **Reserve.** Der Saum ist zugleich die Luft, mit der ein Knoten am
+ *     Anschlag noch VOLLSTÄNDIG im Bild steht: gebraucht werden dafür
+ *     `0,22 · d/2 + 4,88` px, bei der grössten Klasse also die 11,9 von oben.
+ *     Elf reichten rechnerisch und liessen 1,8 px übrig — zu wenig, um eine
+ *     Layoutverschiebung zu überleben. Verdoppelt bleiben gemessen 13,8 px, und
+ *     genau diese Zahl weist `forgeCameraBounds.spec.ts` aus.
+ *
+ * NICHT enthalten ist der Zonenschleier: er reicht bis 958, läuft aber aussen
+ * auf transparent aus. Ihn zu decken hiesse 130 px Leere zurückzuholen, die der
+ * Umbau gerade entfernt — für einen Anschnitt, den man nicht sieht.
+ */
+export const FORGE_CONTENT_SEAM_PX = 24
 
 /* ── Die Bühne trägt KEINE Ring-Beschriftungen ────────────────────────────────
  * Über jeder Ebene stand eine Pille mit ihrer Sonnenphase („Phase 1–2",
