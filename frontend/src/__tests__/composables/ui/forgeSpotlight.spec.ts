@@ -15,9 +15,13 @@ describe('useForgeSpotlight', () => {
     spotlightId,
     listHoverId,
     treeHoverId,
+    pinnedId,
     listHovering,
+    pinned,
     setListHover,
     setTreeHover,
+    togglePin,
+    clearPin,
     resetForgeSpotlight,
   } = useForgeSpotlight()
 
@@ -103,6 +107,84 @@ describe('useForgeSpotlight', () => {
       setListHover('list_node')
       resetForgeSpotlight()
       expect(listHovering.value).toBe(false)
+    })
+  })
+
+  /**
+   * Die ANHEFTUNG — die dritte Quelle.
+   *
+   * Sie ist die einzige, die eine ABSICHT trägt: ein Klick, kein Vorbeifahren.
+   * Genau deshalb steht sie vor beiden Zeigern, und genau deshalb muss sie sich
+   * ausdrücklich lösen lassen — eine Anheftung, die der nächste Zeigerweg
+   * abräumt, wäre keine.
+   */
+  describe('pinnedId', () => {
+    it('schlägt beide Zeiger', () => {
+      setTreeHover('tree_node')
+      setListHover('list_node')
+      togglePin('pinned_node')
+      expect(spotlightId.value).toBe('pinned_node')
+      expect(pinned.value).toBe(true)
+      expect(pinnedId.value).toBe('pinned_node')
+    })
+
+    it('lässt den Zeiger darunter weiterlaufen', () => {
+      // Der Tooltip im Baum hängt an `treeHoverId`, NICHT am Spotlight — genau
+      // das ist der Sinn der Anheftung: der Zeiger wird frei, um die
+      // Voraussetzungen abzufahren, und jede zeigt dabei ihre eigene Karte.
+      togglePin('pinned_node')
+      setTreeHover('other_node')
+      expect(spotlightId.value).toBe('pinned_node')
+      expect(treeHoverId.value).toBe('other_node')
+    })
+
+    it('löst, wenn derselbe Knoten noch einmal kommt', () => {
+      setListHover('list_node')
+      togglePin('pinned_node')
+      togglePin('pinned_node')
+      expect(pinned.value).toBe(false)
+      // Und fällt auf die Quelle darunter zurück, statt ins Leere.
+      expect(spotlightId.value).toBe('list_node')
+    })
+
+    it('versetzt, wenn ein anderer Knoten kommt', () => {
+      togglePin('first')
+      togglePin('second')
+      expect(spotlightId.value).toBe('second')
+    })
+
+    it('löst mit clearPin', () => {
+      togglePin('pinned_node')
+      clearPin()
+      expect(pinned.value).toBe(false)
+      expect(spotlightId.value).toBeNull()
+    })
+
+    it('fällt mit resetForgeSpotlight zurück', () => {
+      // DER Tabwechsel-Fall: der Shop-Tab bleibt gemountet, das
+      // `onBeforeUnmount` des Baums feuert also gar nicht. Ohne diesen Weg
+      // stünde die Anheftung der letzten Sitzung beim nächsten Öffnen noch da.
+      togglePin('pinned_node')
+      resetForgeSpotlight()
+      expect(pinned.value).toBe(false)
+      expect(pinnedId.value).toBeNull()
+      expect(spotlightId.value).toBeNull()
+    })
+
+    it('meldet den Zustand über `pinned`', () => {
+      // Daran hängt der Escape-Verbrauch im Shop-Tab — und damit die Frage, ob
+      // dieselbe Taste das ganze Profil schliesst.
+      expect(pinned.value).toBe(false)
+      togglePin('pinned_node')
+      expect(pinned.value).toBe(true)
+    })
+
+    it('teilt die Anheftung über getrennte Aufrufe hinweg', () => {
+      const tree = useForgeSpotlight()
+      const shop = useForgeSpotlight()
+      tree.togglePin('shared_pin')
+      expect(shop.pinned.value).toBe(true)
+      expect(shop.spotlightId.value).toBe('shared_pin')
     })
   })
 

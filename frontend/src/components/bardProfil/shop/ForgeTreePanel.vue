@@ -11,9 +11,13 @@
       class="tree-viewport"
       @wheel.prevent="onWheel"
       @mouseleave="setTreeHover(null)"
+      @click="clearPin()"
     >
     <!-- Zoom control -->
-    <div class="tree-zoom">
+    <!-- `.stop`, damit ein Zoomschritt die Anheftung nicht abräumt: die
+         Zoom-Leiste liegt im Viewport, und genau beim Anheften will der Spieler
+         herauszoomen, um seine Voraussetzungen ins Bild zu holen. -->
+    <div class="tree-zoom" @click.stop>
       <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
       <div class="zoom-track">
         <div class="zoom-knob" :style="{ left: zoomKnobLeft }" />
@@ -47,40 +51,6 @@
         :viewBox="`0 0 ${FORGE_STAGE_SIZE} ${FORGE_STAGE_SIZE}`"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <!-- Spannfäden: was ein Knoten AUSSERDEM verlangt. Sie liegen ZUERST
-             und damit unter allen Ästen — ein Faden ist die schwächere Aussage
-             und darf einen Ast nirgends überzeichnen. Gestrichelt und dünner
-             als der dünnste Ast, damit beide Arten nie verwechselbar sind.
-             Das Strichmuster steht STILL: ein wanderndes `stroke-dashoffset`
-             wären zehn Dauerläufer auf einer Bühne, die schon Orbit, Kampf und
-             Hintergrund trägt (Performance-Regel 2). -->
-        <g
-          :stroke="FORGE_TETHER_COLOR"
-          :stroke-width="FORGE_TETHER_WIDTH"
-          :stroke-dasharray="FORGE_TETHER_DASH"
-          :opacity="FORGE_TETHER_OPACITY"
-          stroke-linecap="round"
-          fill="none"
-        >
-          <path v-for="tether in tethers" :key="tether.key + '-base'" :d="tether.d" />
-        </g>
-        <!-- Und dieselben Fäden hell, sobald der Zeiger auf ihrem Knoten liegt:
-             grün, was steht, rot, was fehlt. Erst hier wird aus „da hängt noch
-             etwas dran" ein „DAS hier fehlt dir noch". -->
-        <g
-          v-if="spotlightTethers.length > 0"
-          :stroke-width="FORGE_TETHER_SPOT_WIDTH"
-          :stroke-dasharray="FORGE_TETHER_DASH"
-          stroke-linecap="round"
-          fill="none"
-        >
-          <path
-            v-for="tether in spotlightTethers" :key="tether.key + '-spot'"
-            :d="tether.d"
-            :stroke="tether.met ? FORGE_TETHER_MET_COLOR : FORGE_TETHER_OPEN_COLOR"
-          />
-        </g>
-
         <!-- Limbs: sun → root, root → branch, branch → leaf (dim base).
              Geschwungen, nicht gerade, und je Ebene dünner: die Strichstärke
              sitzt deshalb am Pfad und nicht mehr an der Gruppe. -->
@@ -151,11 +121,17 @@
             {
               'node-circle--fresh': freshIds.has(node.id),
               'node-circle--spot': spotlightId === node.id,
-              'node-circle--dim': spotlightId !== null && spotlightId !== node.id,
+              'node-circle--pinned': pinnedId === node.id,
+              // Was Voraussetzung IST, dämpft nicht — dieselbe Vorfahrt wie
+              // `onChain()` im Meep-Baum. Eine Antwort, die auf gedimmten
+              // Kreisen steht, sieht nach einem Fehler aus.
+              'node-circle--req': spotReqs.has(node.id),
+              'node-circle--dim':
+                spotlightId !== null && spotlightId !== node.id && !spotReqs.has(node.id),
             },
           ]"
           :style="{ '--node-color': node.color }"
-          @click="handleNodeClick(node)"
+          @click.stop="handleNodeClick(node)"
           @mouseenter="setTreeHover(node.id)"
           @mouseleave="setTreeHover(null)"
         >
@@ -164,6 +140,16 @@
                EINE statt fünfundzwanzig, und der Ping fängt bei jedem neuen
                Ziel von vorn an, weil das Element selbst neu ist. -->
           <span v-if="spotlightId === node.id" class="node-spot" aria-hidden="true" />
+          <!-- Der VORAUSSETZUNGS-RING. Grün steht, rot fehlt — dieselben zwei
+               Töne wie die Punkte des Kranzes und die Häkchen im Tooltip. Eigene
+               Ebene neben `.node-spot`, aber nie gleichzeitig mit ihr: ein
+               Knoten kann nicht seine eigene Voraussetzung sein. -->
+          <span
+            v-if="spotReqs.has(node.id)"
+            class="node-req"
+            :class="spotReqs.get(node.id) ? 'node-req--met' : 'node-req--open'"
+            aria-hidden="true"
+          />
           <Icon
             :icon="node.icon"
             :width="node.iconSize"
@@ -186,6 +172,28 @@
             aria-hidden="true"
           >
             <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
+          </span>
+
+          <!-- DER BEDINGUNGS-KRANZ. Er steht auf dem OBEREN Bogen, weil das
+               Schloss immer unten rechts sitzt (Sektor 105°…165°) und der
+               Fächer bei ±39° endet — die beiden Marken können sich bei keiner
+               Knotenrichtung treffen, weil beide am Kreis kleben und nicht an
+               der Bühne. -->
+          <span v-if="reqWreaths.has(node.id)" class="node-wreath" aria-hidden="true">
+            <i
+              v-for="dot in reqWreaths.get(node.id)"
+              :key="dot.key"
+              class="wreath-dot"
+              :class="dot.met ? 'wreath-dot--met' : 'wreath-dot--open'"
+              :style="dot.style"
+            />
+          </span>
+
+          <!-- Die ANHEFTUNG. Unten LINKS, also genau gegenüber dem Schloss: ein
+               angehefteter Knoten ist immer auch ein gesperrter, beide Marken
+               stehen damit gleichzeitig im Bild, ohne sich zu berühren. -->
+          <span v-if="pinnedId === node.id" class="node-pin-badge" aria-hidden="true">
+            <Icon :icon="FORGE_PIN_ICON" width="100%" height="100%" />
           </span>
         </div>
 
@@ -269,7 +277,7 @@ import {
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
-import { forgeLimb, forgeTether, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import { forgeLimb, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
 import type { ForgeNodeDef, ForgeNodeTier, ForgeUpgradeEntry, ForgeUpgradeTier } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
@@ -285,14 +293,9 @@ import {
   FORGE_RING_RADIUS,
   FORGE_NODE_DIAMETER,
   FORGE_LIMB_LIT_FACTOR,
-  FORGE_TETHER_COLOR,
-  FORGE_TETHER_WIDTH,
-  FORGE_TETHER_DASH,
-  FORGE_TETHER_OPACITY,
-  FORGE_TETHER_MET_COLOR,
-  FORGE_TETHER_OPEN_COLOR,
-  FORGE_TETHER_SPOT_WIDTH,
   FORGE_REQ_HEADING,
+  FORGE_REQ_DOT_SIZE,
+  FORGE_REQ_DOT_PITCH_DEG,
   FORGE_REQ_MET_MARK,
   FORGE_REQ_OPEN_MARK,
   FORGE_DEPTH_CREST_SPREAD,
@@ -312,6 +315,7 @@ import {
   FORGE_ICON_SIZE_CROWN,
   FORGE_ICON_SIZE_BOUGH,
   FORGE_LOCK_ICON,
+  FORGE_PIN_ICON,
   FORGE_ENDLESS_SYMBOL,
   FORGE_TREE_FIT_PADDING_PX,
   FORGE_BODY_EDGE_FRACTION,
@@ -328,7 +332,8 @@ import {
 const solarStore = useSolarUpgradeStore()
 const forgeStore = useStarForgeStore()
 const { entryById, bestBuyId, freshIds, buyUpgrade } = useForgeUpgrades()
-const { spotlightId, treeHoverId, setTreeHover, resetForgeSpotlight } = useForgeSpotlight()
+const { spotlightId, treeHoverId, pinnedId, setTreeHover, togglePin, clearPin, resetForgeSpotlight } =
+  useForgeSpotlight()
 
 const C = FORGE_STAGE_SIZE / 2
 
@@ -413,6 +418,20 @@ interface RootDef {
 const nodePx = Object.fromEntries(
   Object.entries(FORGE_NODE_DIAMETER).map(([tier, d]) => [tier, `${d}px`]),
 ) as Record<ForgeUpgradeTier, string>
+
+/* Der RADIUS desselben Kreises, negativ. Der Kranz schiebt seine Punkte damit
+   aus der Mitte auf den Rand hinaus: `translateY` zeigt nach oben, die Drehung
+   davor setzt jeden an seinen Platz.
+
+   Aus DERSELBEN Tabelle wie `nodePx` und nicht als eigene Zahlenreihe — zwei
+   Quellen für einen Kreis liefen beim ersten geänderten Ring auseinander, und
+   genau dagegen steht `nodePx` selbst schon da. */
+const nodeRadiusPx = Object.fromEntries(
+  Object.entries(FORGE_NODE_DIAMETER).map(([tier, d]) => [tier, `${-d / 2}px`]),
+) as Record<ForgeUpgradeTier, string>
+
+const reqDotPx = `${FORGE_REQ_DOT_SIZE}px`
+const reqDotInsetPx = `${-FORGE_REQ_DOT_SIZE / 2}px`
 
 /* Das GLYPH im Knoten hängt am `tier` und an nichts sonst. Als Tabelle statt
    als Kette von Ternären: bei sieben Ringen wäre die Kette eine Stelle, an der
@@ -557,52 +576,78 @@ const activeLimbs = computed(() =>
 )
 
 /**
- * Die SPANNFÄDEN — die zweite Art von Verbindung im Baum.
+ * Der BEDINGUNGS-KRANZ — ein Punkt am Rand je Bedingung, gefüllt für erfüllt.
  *
- * Ein Ast sagt „hier hängt der Knoten", ein Faden sagt „das hier verlangt er
- * ausserdem" (`ForgeNodeDef.requires`). Der Ast folgt der Geometrie, der Faden
- * springt über fremde Speichen; verwechselbar sein dürfen sie deshalb nicht, und
- * keine ihrer Eigenschaften ist geteilt (dünner, gestrichelt, stärker gebogen,
- * eigene Ebene darunter).
+ * Er tritt an die Stelle der Spannfäden, und der Tausch ist keine Kosmetik: ein
+ * Faden beantwortete „woher kommt das“ mit einer Linie durch das halbe Bild, die
+ * bei Standardzoom gar nicht ganz hineinpasste (eine Krone steht auf r = 438,
+ * ihr Zweig auf r = 221, sichtbar sind rund 484 Bühnen-px). Die Frage am
+ * gesperrten Knoten ist aber „wie viel fehlt noch“ — und die beantwortet eine
+ * ZAHL am Knoten selbst, ohne Zeigen und ohne Klick.
  *
- * Nur ZEHN Stück im ganzen Baum, alle statisch gerechnet — der Aufwand ist ein
- * `computed`, das sich nur ändert, wenn sich der Katalog ändert.
+ * EINE Rechnung über alle Einträge statt einer Funktion je Knoten im Template:
+ * `entryById` ändert sich nur bei einem Kauf oder Phasenwechsel, nie pro Frame.
  */
-interface Tether {
+interface ReqDot {
   key: string
-  d: string
-  /** Der Knoten, dessen Bedingung dieser Faden zeigt. */
-  targetId: string
   met: boolean
+  style: Record<string, string>
 }
 
-const tethers = computed<Tether[]>(() => {
-  const result: Tether[] = []
-  for (const node of allNodes.value) {
-    const reqs = node.def?.requires
-    if (!reqs?.length) continue
-    const to = pt(node.angleDeg, node.dist)
-    for (const req of reqs) {
-      const source = nodeById.value.get(req.id)
-      if (!source) continue
-      const from = pt(source.angleDeg, source.dist)
-      result.push({
-        key: `${node.id}<-${req.id}`,
-        d: forgeTether(from, to, `${node.id}<-${req.id}`),
-        targetId: node.id,
-        met: (entryById.value.get(req.id)?.level ?? 0) >= req.level,
-      })
-    }
+const reqWreaths = computed<Map<string, ReqDot[]>>(() => {
+  const out = new Map<string, ReqDot[]>()
+  for (const entry of entryById.value.values()) {
+    if (entry.state !== 'locked') continue
+    // Dieselbe Weiche wie im Tooltip: gegen eine Phasen- oder Prestige-Sperre
+    // hilft kein Vorgänger, und beim Prestige-Tor stünde der Kranz sogar
+    // vollständig GEFÜLLT an einem Knoten, der trotzdem zu ist.
+    if (entry.lockKind === 'phase' || entry.lockKind === 'prestige') continue
+    // Ab ZWEI: einen Ein-Punkt-Kranz trüge sonst jeder der siebzig übrigen
+    // gesperrten Knoten, und ein einzelner Punkt sagt nichts, was das Schloss
+    // daneben nicht schon sagt.
+    if (entry.reqs.length < 2) continue
+    const count = entry.reqs.length
+    out.set(
+      entry.id,
+      entry.reqs.map((req, i) => ({
+        key: req.id,
+        met: req.met,
+        style: {
+          '--wa': `${((i - (count - 1) / 2) * FORGE_REQ_DOT_PITCH_DEG).toFixed(1)}deg`,
+        },
+      })),
+    )
   }
-  return result
+  return out
 })
 
-/** Nur die Fäden des Knotens unter dem Zeiger — höchstens drei. */
-const spotlightTethers = computed(() =>
-  spotlightId.value === null
-    ? []
-    : tethers.value.filter((tether) => tether.targetId === spotlightId.value),
-)
+/**
+ * Die Voraussetzungen des GEZEIGTEN Knotens — Id → erfüllt. Höchstens vier.
+ *
+ * Das Forge-Gegenstück zu `onChain()` im Meep-Baum („was auf der Kette liegt,
+ * dämpft nichts“), aber ohne dessen Breitensuche: dort hat Rang 5 zwei eingehende
+ * Kanten, hier steht die vollständige Antwort in einer Liste. `entry.reqs` führt
+ * den Elternknoten als ERSTEN Eintrag — `parentId` braucht deshalb keinen zweiten
+ * Weg neben den `requires`, und Bild und Tooltip nennen endlich dieselben Dinge.
+ *
+ * Ohne diese Menge dämpfte `--dim` ausgerechnet die Knoten mit weg, um die es
+ * geht. Genau daran ist die gestrichelte Fassung gescheitert: die Linie leuchtete
+ * rot und endete auf einem Kreis bei Deckkraft 0,3.
+ */
+const spotReqs = computed<Map<string, boolean>>(() => {
+  const out = new Map<string, boolean>()
+  const id = spotlightId.value
+  if (id === null) return out
+  const entry = entryById.value.get(id)
+  if (!entry || entry.state !== 'locked') return out
+  if (entry.lockKind === 'phase' || entry.lockKind === 'prestige') return out
+  for (const req of entry.reqs) {
+    // Der Katalog darf auf einen Strahl zeigen, der nicht als Baumknoten auf der
+    // Bühne steht; ohne diese Prüfung stünde ein Ring an keinem Kreis.
+    if (nodeById.value.has(req.id)) out.set(req.id, req.met)
+  }
+  return out
+})
 
 const limbByTarget = computed(() => new Map(limbs.value.map((limb) => [limb.targetId, limb])))
 
@@ -766,21 +811,15 @@ function levelChip(entry: ForgeUpgradeEntry): string {
 /**
  * Zeigt der Tooltip die Bedingungen als LISTE statt als Satz?
  *
- * Dieselbe Weiche wie in `ForgeUpgradeTile` — erst ab zwei, und nie bei einer
- * Phasensperre: gegen die hilft nur Warten, und eine Vorgängerliste daneben
- * legte eine Aufgabe nahe, die es gerade nicht gibt.
+ * Die Frage ist wortgleich mit „trägt dieser Knoten einen Kranz“ — beide meinen
+ * „hier ist eine Liste die Antwort, kein Satz“. Sie wird deshalb an EINER Stelle
+ * beantwortet (`reqWreaths`) statt an zweien, die beim nächsten Sonderfall
+ * auseinanderlaufen: erst ab zwei Bedingungen, und nie bei einer Phasen- oder
+ * Prestige-Sperre — gegen die hilft kein Vorgänger, und beim Prestige-Tor stünde
+ * die Liste sogar vollständig auf Häkchen.
  */
 function showTreeReqs(node: TreeNode): boolean {
-  const entry = entryOf(node)
-  // Weder Phasen- noch Prestige-Sperre: bei beiden ist die Vorgaengerliste
-  // keine Antwort auf „was fehlt mir“ — beim Prestige-Tor steht sie sogar
-  // vollstaendig auf Haekchen. Dort gehoert der Satz hin.
-  return (
-    entry.state === 'locked' &&
-    entry.lockKind !== 'phase' &&
-    entry.lockKind !== 'prestige' &&
-    entry.reqs.length > 1
-  )
+  return reqWreaths.value.has(node.id)
 }
 
 function isTooltipBelow(angleDeg: number): boolean {
@@ -803,15 +842,29 @@ function flashSun(): void {
 }
 
 /**
- * Kauf und Meldung liegen im Composable, damit der Baum und die Upgrade-Liste
- * denselben Weg nehmen. Hier bleibt nur, was der Baum eigenes tut.
+ * Zwei Gesten auf einer Taste, und sie überschneiden sich nicht: was KAUFBAR ist,
+ * wird gekauft; was GESPERRT ist, wird angeheftet.
  *
- * Der Klick heftete den Knoten früher zusätzlich im Detailkopf an — das war der
- * einzige Weg zu erfahren, WARUM ein gesperrter Knoten nicht reagiert. Diese
- * Auskunft gibt inzwischen der Tooltip direkt am Kreis; der Kopf zeigt seither
- * die Empfehlung und nicht mehr, worauf man zeigt.
+ * Der Klick auf einen gesperrten Knoten hatte bis hierher überhaupt keine
+ * Wirkung — `buyUpgrade` gab `false` zurück, und der Zeiger blieb die einzige
+ * Auskunft. Wer drei Voraussetzungen quer über den Baum ablesen will, musste die
+ * Maus stillhalten; die Anheftung gibt sie frei.
+ *
+ * `capped` und `maxed` bleiben aussen vor: ein Deckel ist keine Sperre, dort gibt
+ * es keine Voraussetzungsliste zu zeigen.
+ *
+ * Der Kauf LÖST die Anheftung mit — er ändert genau die Bedingungen, deren Bild
+ * gerade festgehalten wird.
+ *
+ * Kauf und Meldung liegen im Composable, damit Baum und Upgrade-Liste denselben
+ * Weg nehmen. Hier bleibt nur, was der Baum eigenes tut.
  */
 function handleNodeClick(node: TreeNode): void {
+  if (entryOf(node).state === 'locked') {
+    togglePin(node.id)
+    return
+  }
+  clearPin()
   if (buyUpgrade(node.id)) flashSun()
 }
 
@@ -841,9 +894,13 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
-  // Der Spotlight lebt auf Modulebene und überlebte diese Komponente sonst — ein
-  // Knoten aus der letzten Sitzung stünde beim nächsten Öffnen hell da, ohne
-  // dass der Zeiger irgendwo läge.
+  // Der Spotlight lebt auf Modulebene und überlebte diese Komponente sonst.
+  //
+  // Beim TABWECHSEL greift das hier allerdings nicht: der Shop-Tab bleibt nach
+  // dem ersten Öffnen gemountet (`BardProfileMenu` rendert ihn als
+  // `v-if="mountedTabs.has('shop')"` plus `v-show`), dieser Haken feuert also nur
+  // beim echten Abriss. Den Wechselfall räumt `ShopComponent` an der
+  // Sichtbarkeit ab — dort hängt aus demselben Grund auch der Escape-Handler.
   resetForgeSpotlight()
 })
 
@@ -1220,6 +1277,109 @@ const nextPhasePreviewStyle = computed(() => ({
   pointer-events: none;
 }
 
+/* ══════════════════════════════════════════════════
+   BEDINGUNGS-KRANZ — was dem gesperrten Knoten noch fehlt
+══════════════════════════════════════════════════ */
+/* Punkte AUF dem Rand, nicht davor. Die Herleitung steht an `FORGE_REQ_DOT_SIZE`:
+   `.node-circle--spot` skaliert den Kreis samt Kindern auf 1,22, der Tooltip bei
+   `calc(100% + 10px)` skaliert NICHT mit — weiter aussen schlüge der Kranz beim
+   Zeigen gegen seine eigene Karte.
+
+   KEIN `--inv-scale`. Der Kranz ist Randgeometrie und skaliert mit dem Kreis, wie
+   das Schloss (in %) und der Stufen-Chip. Gegengerechnet wird im Projekt nur, was
+   frei SCHWEBT (Tooltip, Best-Buy-Beschriftung); ein gegenskalierter Punkt behielte
+   seinen Bahnradius in Bühnen-px und liefe bei kleinem Zoom über den Rand hinaus.
+
+   Beide Zustände sind STATISCH — hier läuft nie ein Keyframe. */
+.node-wreath {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.wreath-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: v-bind(reqDotPx);
+  height: v-bind(reqDotPx);
+  margin: v-bind(reqDotInsetPx) 0 0 v-bind(reqDotInsetPx);
+  border-radius: 50%;
+  /* Erst drehen, dann auf den Radius hinausschieben. Ein Kreis ist
+     drehsymmetrisch — die Drehung des Punktes selbst kostet nichts. */
+  transform: rotate(var(--wa)) translateY(var(--wr, -21px));
+}
+
+/* Der Bahnradius kommt aus der EBENE, nicht aus einer Variablen am Knoten: eine
+   geerbte Custom Property an fünfundneunzig Containern wäre genau das, wogegen
+   Performance-Regel 3 steht. Sie ändert sich ausserdem nie — anders als ein
+   Frame-Wert ist sie einmal gesetzt und dann Geometrie.
+
+   Heute tragen nur Kronen und Boughs `requires`; die übrigen fünf Regeln stehen
+   für den nächsten Ring, der welche bekommt, und kosten nichts. */
+.node-circle--root .wreath-dot {
+  --wr: v-bind("nodeRadiusPx.root");
+}
+.node-circle--branch .wreath-dot {
+  --wr: v-bind("nodeRadiusPx.branch");
+}
+.node-circle--leaf .wreath-dot {
+  --wr: v-bind("nodeRadiusPx.leaf");
+}
+.node-circle--ward .wreath-dot {
+  --wr: v-bind("nodeRadiusPx.ward");
+}
+.node-circle--pact .wreath-dot {
+  --wr: v-bind("nodeRadiusPx.pact");
+}
+.node-circle--crown .wreath-dot {
+  --wr: v-bind("nodeRadiusPx.crown");
+}
+.node-circle--bough .wreath-dot {
+  --wr: v-bind("nodeRadiusPx.bough");
+}
+
+/* Gefüllt = erfüllt. Der dunkle Rand hält den Punkt bei kleinem Zoom vom
+   Kreisrand getrennt — statisch, also erlaubt. */
+.wreath-dot--met {
+  background: #52b830;
+  border: 1px solid #0d0b05;
+}
+
+/* Hohl = offen. Dunkel gefüllt statt durchsichtig: auf dem Rand eines gesperrten
+   Knotens (#4a3010) verschwände ein transparenter Punkt, und genau dort steht er
+   immer. */
+.wreath-dot--open {
+  background: #241708;
+  border: 1.5px solid #cc6050;
+}
+
+/* Die ANHEFTUNGS-Marke. Gespiegelte `.fc-lock-badge` (rpg-theme.css) — dieselben
+   Maße, andere Seite, und die Leitfarbe der Forge statt des matten Schlossgolds.
+   Unten links, weil das Schloss unten rechts steht und beide gleichzeitig
+   sichtbar sein müssen. */
+.node-pin-badge {
+  position: absolute;
+  left: -3%;
+  bottom: -3%;
+  width: 44%;
+  height: 44%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #16110a;
+  border: 1.5px solid #5c3310;
+  color: #e8c040;
+  pointer-events: none;
+}
+
+.node-pin-badge svg {
+  width: 66%;
+  height: 66%;
+  display: block;
+}
+
 /* States */
 /* Gesperrt: es tritt das MOTIV zurück, nicht der ganze Kreis. Eine `opacity` am
    Kreis vererbt sich multiplikativ auf jedes Kind — das Schloss an seiner Kante
@@ -1419,6 +1579,52 @@ const nextPhasePreviewStyle = computed(() => ({
 @keyframes node-spot-ping {
   from { opacity: 0.7; transform: scale(1); }
   to   { opacity: 0; transform: scale(1.9); }
+}
+
+/* Der VORAUSSETZUNGS-RING. Gleiche Ebene und gleicher `inset` wie `.node-spot` —
+   beide sagen „dieser Kreis ist gerade gemeint", nur in verschiedener Rolle.
+
+   Er ATMET NICHT, und das ist kein Sparen: atmeten Ziel und Voraussetzungen im
+   selben Takt, wäre nicht mehr erkennbar, WORAUF der Spieler zeigt — die einzige
+   Aufgabe des Spotlights. „Eines bewegt sich, drei stehen" ist die stärkste
+   verfügbare Rangordnung und kostet nichts. Auch kein Ping: der heisst „hier bist
+   du gerade angekommen", und vier gleichzeitige hiessen gar nichts.
+
+   Der Schein ist statisch und damit von Regel 2 ausdrücklich gedeckt. */
+.node-req {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid #cc6050;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.node-req--met {
+  border-color: #52b830;
+  box-shadow: 0 0 14px rgba(82, 184, 48, 0.55);
+}
+
+.node-req--open {
+  border-color: #cc6050;
+  box-shadow: 0 0 14px rgba(204, 96, 80, 0.5);
+}
+
+/* Und ihr Schein hört trotzdem auf zu atmen — genau wie bei `--dim`.
+   Ein Voraussetzungsknoten ist MEISTENS kaufbar (das ist ja der Punkt), und ohne
+   diese Regel liefe für jeden von ihnen wieder `node-glow-breathe`. Bis zu vier
+   zusätzliche Dauerläufer, ohne dass ein einziger Ring animiert wäre — die
+   Zusage über `.node-circle--dim .node-glow` bliebe nur noch auf dem Papier. */
+.node-circle--req .node-glow {
+  animation: none;
+  opacity: 1;
+}
+
+/* ANGEHEFTET heisst: die Ansicht steht still — und der Ring auch. Im
+   angehefteten Zustand läuft im ganzen Knotenfeld keine einzige Animation. */
+.node-circle--pinned .node-spot {
+  animation: none;
+  opacity: 1;
 }
 
 /* Doppelt geschrieben, mit Absicht: `.node-circle--affordable:hover` wiegt

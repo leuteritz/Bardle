@@ -45,7 +45,6 @@ import {
   FORGE_SCATTER_TARGET_AIR_PX,
   FORGE_SCATTER_TRIES,
   FORGE_SPOKE_PITCH_DEG,
-  FORGE_TETHER_BOW,
   FORGE_STAGE_SIZE,
   FORGE_SUN_EDGE_GAP,
   SHOP_SUN_MAX_DIAMETER,
@@ -286,23 +285,6 @@ export function forgeLimb(from: Point, to: Point, seed: string, tier: ForgeUpgra
     d: bowPath(from, to, `forge-limb:${seed}`, FORGE_LIMB_BOW),
     width: FORGE_LIMB_WIDTH[tier],
   }
-}
-
-/**
- * Der SPANNFADEN zu einer zusätzlichen Voraussetzung (`ForgeNodeDef.requires`).
- *
- * Dieselbe Kurve, aber deutlich stärker gebogen (`FORGE_TETHER_BOW` gegen
- * `FORGE_LIMB_BOW`), und das ist kein Geschmack: ein Ast verbindet zwei Knoten
- * benachbarter Ringe auf fast derselben Speiche, ein Faden dagegen zwei Knoten
- * auf FREMDEN Speichen — als Sehne schnitte er quer durch das halbe Bild.
- * Mit dem Schwung liest er sich als Bogen, der um die Knoten dazwischen
- * herumführt.
- *
- * Eigener Seed-Vorsatz, damit ein Faden nicht zufällig genau so liegt wie der
- * Ast desselben Knotens.
- */
-export function forgeTether(from: Point, to: Point, seed: string): string {
-  return bowPath(from, to, `forge-tether:${seed}`, FORGE_TETHER_BOW)
 }
 
 /**

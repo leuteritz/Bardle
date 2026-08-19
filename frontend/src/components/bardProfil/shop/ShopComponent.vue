@@ -21,9 +21,10 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue'
+import { computed, onUnmounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useHerald } from '@/composables/ui/useHerald'
 import {
@@ -36,6 +37,7 @@ import ForgeTreePanel from './ForgeTreePanel.vue'
 import StarForgePanel from './StarForgePanel.vue'
 
 const forgeStore = useStarForgeStore()
+const uiStore = useUiStore()
 const { announceReceipt } = useHerald()
 
 /**
@@ -49,11 +51,54 @@ const { announceReceipt } = useHerald()
  * verschwände er beim Abteilungswechsel mitsamt seinem `v-if`, obwohl der Baum
  * daneben weiterhin bedienbar ist.
  */
-const { spotlightId } = useForgeSpotlight()
+const { spotlightId, pinned, clearPin, resetForgeSpotlight } = useForgeSpotlight()
 
 watch(spotlightId, (id) => {
   if (id) forgeStore.acknowledgeShopEntry(id)
 })
+
+/**
+ * Escape löst die ANHEFTUNG im Sternbaum — und meldet das, sonst schlösse
+ * dieselbe Taste gleich das ganze Profil.
+ *
+ * `BardProfileMenu` entscheidet erst NACH dem Ereignisdurchlauf, ob es zumacht,
+ * und liest dafür `defaultPrevented`; eine innere Ebene beansprucht die Taste
+ * also mit `preventDefault()`. Dasselbe Protokoll bedient `TeamTabComponent`.
+ *
+ * Steht hier und nicht im Baum, aus zwei Gründen. Erstens ist dies die einzige
+ * Komponente, die beide Spalten überspannt. Zweitens — und das ist der harte
+ * Grund — **wird der Shop-Tab nach dem ersten Öffnen nie mehr abgerissen**:
+ * `BardProfileMenu` rendert ihn als `v-if="mountedTabs.has('shop')"` plus
+ * `v-show`, und `mountedTabs` wird nur befüllt. Ein `onMounted`-Listener bliebe
+ * dauerhaft am Fenster hängen und verbrauchte die Taste auch im Idle-Orbit.
+ */
+const isVisible = computed(() => uiStore.bardActiveTab === 'shop')
+
+function onEsc(event: KeyboardEvent): void {
+  if (event.key !== 'Escape') return
+  if (!pinned.value) return
+  clearPin()
+  // Verbraucht: das Modal darüber prüft `defaultPrevented` und bleibt stehen.
+  event.preventDefault()
+}
+
+watch(
+  isVisible,
+  (visible) => {
+    if (visible) {
+      window.addEventListener('keydown', onEsc)
+      return
+    }
+    window.removeEventListener('keydown', onEsc)
+    // Aus demselben Grund wie oben: das `onBeforeUnmount` des Baums feuert beim
+    // Tabwechsel gar nicht, weil er gemountet bleibt. Ohne diese Zeile stünde
+    // die Anheftung der letzten Sitzung beim nächsten Öffnen noch da.
+    resetForgeSpotlight()
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => window.removeEventListener('keydown', onEsc))
 
 function maxOutForge(): void {
   forgeStore.adminMaxAll()

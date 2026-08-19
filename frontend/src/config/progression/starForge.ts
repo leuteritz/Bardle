@@ -1160,7 +1160,8 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
  * Ringradius, gezeichneter Ast und Scheinwerferkette, und
  * `chronicleReachable.spec.ts` verlangt dafür Winkelgleichheit. Was ein Knoten
  * ZUSÄTZLICH braucht, steht in `requires` und ist von der Geometrie frei; im
- * Baum zeigt es sich als gestrichelter Spannfaden.
+ * Baum zeigt es sich als Punkt am Bedingungs-Kranz des Knotens und, sobald der
+ * Zeiger darauf liegt, als eigener Ring am Voraussetzungsknoten.
  *
  * Die Stufen in `requires` sind an der ERREICHBARKEIT geeicht, nicht am Gefühl —
  * die Rechnung steht an `FORGE_CONJUNCTION_BRANCH_LEVEL`, und

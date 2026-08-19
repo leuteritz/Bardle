@@ -475,36 +475,71 @@ export const FORGE_LIMB_WIDTH: Record<ForgeUpgradeTier, number> = {
 /** Der gefärbte Ast über dem Grundast. 2,5 zu 4 war das bisherige Verhältnis. */
 export const FORGE_LIMB_LIT_FACTOR = 0.62
 
-/* ── Die SPANNFÄDEN: die zweite Art von Verbindung ────────────────────────────
+/* ── Der BEDINGUNGS-KRANZ am gesperrten Knoten ─────────────────────────
  *
- * Ein Ast sagt „hier hängt der Knoten"; ein Spannfaden sagt „das hier verlangt
- * er ausserdem". Beide dürfen nicht verwechselbar sein, und deshalb ist keine
- * ihrer Eigenschaften geteilt: der Faden ist DÜNNER als der dünnste Ast (2,4),
- * GESTRICHELT statt durchgezogen, und er läuft in einer eigenen Ebene UNTER den
- * Ästen.
+ * Hier standen einmal die SPANNFÄDEN — gestrichelte Bögen von einem gesperrten
+ * Knoten zu jedem seiner Vorgänger. Sie sind gestrichen, und der Grund ist nicht
+ * Geschmack, sondern eine Zahl: bei Standardzoom (`FORGE_TREE_ZOOM_DEFAULT` 2,15)
+ * ist das sichtbare Fenster `FORGE_STAGE_SIZE / 2,15 ≈ 484` Bühnen-px breit. Eine
+ * Krone steht auf r = 438, ihre Zweig-Voraussetzung auf r = 221 — **die können
+ * gar nicht gleichzeitig im Bild sein.** Der Faden zeigte auf etwas, das der
+ * Spieler nicht sah.
  *
- * Er ist ausserdem stärker gebogen. Das ist nicht Zierde: ein Faden verbindet
- * zwei Knoten auf VERSCHIEDENEN Speichen und würde als Sehne quer durch das
- * halbe Bild schneiden — mit dem stärkeren Schwung liest er sich als Bogen, der
- * um die Knoten dazwischen herumführt.
+ * Dazu kamen drei Dinge, die er nie einlöste: er trug DIESELBE Farbe wie ein Ast
+ * (`#4a3418`), seine Krümmungsrichtung war gewürfelt (`bowPath` zog das
+ * Vorzeichen aus dem Seed), und beim Zeigen leuchtete er grün/rot auf einen
+ * Knoten, den `.node-circle--dim` im selben Moment auf 0,3 setzte.
  *
- * **Keine Laufanimation auf dem Strichmuster.** Ein wanderndes
- * `stroke-dashoffset` wären zehn dauerlaufende Elemente auf einer Bühne, die
- * ohnehin Orbit, Kampf und Hintergrund gleichzeitig trägt (Performance-Regel 2).
- * Das Muster steht still; bewegt wird nichts.
+ * **Eine Linie war das falsche Mittel.** Ein Ast ist eine Linie, weil er STRUKTUR
+ * ist — er sagt, wo ein Knoten hängt, und das ändert sich nie. Eine Voraussetzung
+ * ist kein Ort, sondern ein ZUSTAND: „hiervon fehlen dir noch zwei“. Zustand
+ * gehört an das Objekt, nicht zwischen zwei davon.
+ *
+ * Der Kranz ist die Antwort: ein Punkt je Bedingung auf dem Rand des Kreises,
+ * gefüllt für erfüllt, hohl für offen. Er steht immer da, wo die Frage gestellt
+ * wird, und braucht weder Zeiger noch Klick.
  */
-export const FORGE_TETHER_WIDTH = 1.6
-export const FORGE_TETHER_DASH = '5 7'
-export const FORGE_TETHER_COLOR = '#4a3418'
-export const FORGE_TETHER_OPACITY = 0.5
-/** Der Schwung eines Fadens, als Anteil der Sehnenlänge — deutlich über
- *  `FORGE_LIMB_BOW` (0,16), siehe oben. */
-export const FORGE_TETHER_BOW = 0.3
-/** Beim Zeigen auf den Knoten: erfüllt in Grün, offen in Rot — dieselben zwei
- *  Töne, die im ganzen Projekt „kaufbar" und „fehlt" heissen. */
-export const FORGE_TETHER_MET_COLOR = '#52b830'
-export const FORGE_TETHER_OPEN_COLOR = '#cc6050'
-export const FORGE_TETHER_SPOT_WIDTH = 2.6
+/**
+ * Durchmesser eines Kranzpunktes, in Bühnen-px.
+ *
+ * Die Punktmitte liegt AUF dem Kreisradius, nicht davor — und das ist die eine
+ * Zahl, die die Fassung entscheidet: `.node-circle--spot` skaliert den Kreis samt
+ * Kindern auf `FORGE_SPOTLIGHT_NODE_SCALE` (1,22), der Tooltip bei
+ * `calc(100% + 10px)` skaliert NICHT mit. Auf dem Rand bleibt die Krone (R 25)
+ * damit bei 1,22 · 27,5 = 33,6 gegen die Tooltip-Kante bei 35. Weiter aussen
+ * schlüge der Kranz beim Zeigen gegen seine eigene Karte.
+ *
+ * Bei Standardzoom sind das rund 6,5 Bildschirm-px — Parität mit dem Stufen-Chip
+ * daneben. `forgeReqWreath.spec.ts` rechnet alle Abstände nach.
+ */
+export const FORGE_REQ_DOT_SIZE = 5
+/**
+ * Winkelabstand zweier Punkte, symmetrisch um 12 Uhr gefächert.
+ *
+ * Bei vier Punkten — dem Maximum, Elternteil plus drei `requires` — reicht der
+ * Fächer bis ±39°, mit dem Punkthalbwinkel bis 44,7°. Der Schloss-Sektor
+ * (`.fc-lock-badge`, unten rechts) beginnt bei 105°: **60° Luft**, und zwar bei
+ * jeder Knotenrichtung, weil beide Marken am Kreis kleben und nicht an der Bühne.
+ */
+export const FORGE_REQ_DOT_PITCH_DEG = 26
+/**
+ * Die Füllung eines OFFENEN Punktes.
+ *
+ * Dunkel und nicht durchsichtig: ein transparenter Punkt verschwände auf dem
+ * Rand eines gesperrten Knotens (`#4a3010`), und genau dort steht er immer.
+ */
+export const FORGE_REQ_DOT_OPEN_FILL = '#241708'
+/**
+ * Erfüllt in Grün, offen in Rot — dieselben zwei Töne, die im ganzen Projekt
+ * „steht“ und „fehlt“ heissen.
+ *
+ * Hiessen `FORGE_TETHER_MET/OPEN_COLOR`, solange sie einen Faden färbten. Sie
+ * tragen jetzt ZWEI Marken — die Punkte des Kranzes und den Ring, den ein
+ * Voraussetzungsknoten im Fokus bekommt — und heissen deshalb nach der Sache
+ * statt nach dem Strich.
+ */
+export const FORGE_REQ_MET_COLOR = '#52b830'
+export const FORGE_REQ_OPEN_COLOR = '#cc6050'
 
 /** Überschrift der Voraussetzungsliste in Zeile und Tooltip. */
 export const FORGE_REQ_HEADING = 'REQUIRES'
@@ -2321,6 +2356,15 @@ export const FORGE_TILE_CAPPED_LABEL = 'CAPPED'
  * WARUM steht.
  */
 export const FORGE_LOCK_ICON = 'lucide:lock'
+/**
+ * Die ANHEFTUNGS-Marke am festgehaltenen Knoten.
+ *
+ * `lucide` wie das Schloss daneben, und das ist keine Bequemlichkeit: beide
+ * stehen gleichzeitig an DEMSELBEN Kreis — ein angehefteter Knoten ist immer
+ * auch ein gesperrter. Zwei Sets nebeneinander hiesse zwei Strichstärken auf
+ * 44 % eines 50-px-Kreises, und dort trägt der Unterschied nicht mehr.
+ */
+export const FORGE_PIN_ICON = 'lucide:pin'
 
 /** Wie lange die gekaufte Karte aufleuchtet. Rein visuell, daher reale Zeit. */
 export const FORGE_CARD_FLASH_MS = 420
