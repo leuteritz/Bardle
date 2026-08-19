@@ -599,14 +599,14 @@ export interface ForgeEdgeLegendRow {
  */
 export const FORGE_EDGE_LEGEND_ROWS: readonly ForgeEdgeLegendRow[] = [
   { id: 'sealed', label: 'sealed', cls: 'limb-bed limb-bed--gate', width: 3 },
-  { id: 'blocked', label: 'blocked', cls: 'limb-vein limb-vein--blocked', width: 2.4 },
-  { id: 'open', label: 'open', cls: 'limb-vein limb-vein--open', width: 2.4 },
+  { id: 'blocked', label: 'blocked', cls: 'limb-vein--blocked', width: 2.4 },
+  { id: 'open', label: 'open', cls: 'limb-vein--open', width: 2.4 },
   // Diese zwei tragen denselben Ton und sagen ihren Unterschied allein über die
   // Breite. 2,8 zu 4 war zu wenig, um ihn auf 44 px zu sehen — das Verhältnis
   // ist jetzt fast das doppelte und entspricht damit dem der Bühne, wo zur
   // vollen Ader noch der Schein darunter kommt.
-  { id: 'grown', label: 'grown', cls: 'limb-vein limb-vein--grown', width: 2.4 },
-  { id: 'maxed', label: 'maxed', cls: 'limb-vein limb-vein--full', width: 4.6 },
+  { id: 'grown', label: 'grown', cls: 'limb-vein--grown', width: 2.4 },
+  { id: 'maxed', label: 'maxed', cls: 'limb-vein--full', width: 4.6 },
   { id: 'bridge', label: 'zone link', cls: 'limb-bridge limb-bridge--open', width: 3 },
 ] as const
 

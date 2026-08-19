@@ -23,47 +23,20 @@
       @click.capture="onClickCapture"
       @click="onBackgroundClick"
     >
-    <!-- DIE LEGENDE zur Kantensprache.
-         Sie zeigt die Striche SELBST — jede Probe trägt dieselbe Klasse wie die
-         Kante, die sie erklärt. Eine Reihe Farbquadrate müsste selbst erst
-         erklärt werden; daran ist die erste Fassung des Ertrags-Sockels
-         gescheitert.
+    <!-- DIE LEGENDE zur Kantensprache. Eigene Komponente; ihre Optik liegt
+         global in `rpg-theme.css`, weil ihre Proben DIESELBEN Klassen tragen
+         wie die Kanten hier im SVG.
 
-         Und sie zeigt NUR, wofür gerade mindestens eine Kante steht. Alle sechs
-         Zeilen dauerhaft zu führen hiess, im frischen Spielstand „grown" und
-         „maxed" zu erklären, obwohl beide Striche nirgends im Bild sind — eine
-         Legende, die mehr behauptet als die Bühne hergibt, ist als Auskunft
-         schlechter als keine.
+         GEFILTERT wird hier und nicht dort: gezeigt wird nur, wofür gerade
+         mindestens eine Kante steht. Alle sechs Zeilen dauerhaft zu führen
+         hiess, im frischen Spielstand „grown" und „maxed" zu erklären, obwohl
+         beide Striche nirgends im Bild sind — eine Legende, die mehr behauptet
+         als die Bühne hergibt, ist als Auskunft schlechter als keine.
 
          Sie hängt im VIEWPORT und nicht in der Bühne. „Die Bühne ist wortlos"
          gilt für das, was mit ihr skaliert und über den Knoten liegt — die
-         Zoom-Leiste, der Kompass und der Sockel tragen sehr wohl Wörter.
-         Der Viewport endet bereits über dem Ertrags-Sockel; `bottom: 14px`
-         braucht deshalb keine Rechnung mit dessen Höhe.
-
-         `.stop` aus demselben Grund wie an der Zoom-Leiste: ein Klick darf die
-         Anheftung nicht abräumen. -->
-    <div class="tree-legend" @click.stop>
-      <ul class="fl-rows">
-        <li v-for="row in visibleLegendRows" :key="row.id" class="fl-row">
-          <svg
-            class="fl-swatch"
-            :class="`fl-swatch--${row.id}`"
-            :viewBox="`0 0 ${FORGE_EDGE_LEGEND_SWATCH_W} 6`"
-            :width="FORGE_EDGE_LEGEND_SWATCH_W"
-            height="6"
-            aria-hidden="true"
-          >
-            <line
-              x1="1" y1="3" :x2="FORGE_EDGE_LEGEND_SWATCH_W - 1" y2="3"
-              :class="row.cls" :stroke-width="row.width"
-              stroke-linecap="round"
-            />
-          </svg>
-          <span class="fl-label">{{ row.label }}</span>
-        </li>
-      </ul>
-    </div>
+         Zoom-Leiste, der Kompass und der Sockel tragen sehr wohl Wörter. -->
+    <ForgeEdgeLegend :rows="visibleLegendRows" />
 
     <!-- Zoom control -->
     <!-- `.stop`, damit ein Zoomschritt die Anheftung nicht abräumt: die
@@ -203,7 +176,7 @@
                Rinne füllt er aus. Farbe und Strichbild stehen in der Klasse,
                die Breite am Pfad: sie folgt der Ebene des Ziels. -->
           <g
-            class="limb-vein limb-vein--blocked"
+            class="limb-vein--blocked"
             stroke-linecap="round" stroke-linejoin="round" fill="none"
           >
             <path
@@ -212,7 +185,7 @@
             />
           </g>
           <g
-            class="limb-vein limb-vein--open"
+            class="limb-vein--open"
             stroke-linecap="round" stroke-linejoin="round" fill="none"
           >
             <path
@@ -221,7 +194,7 @@
             />
           </g>
           <g
-            class="limb-vein limb-vein--grown"
+            class="limb-vein--grown"
             stroke-linecap="round" stroke-linejoin="round" fill="none"
           >
             <path
@@ -231,7 +204,7 @@
             />
           </g>
           <g
-            class="limb-vein limb-vein--full"
+            class="limb-vein--full"
             stroke-linecap="round" stroke-linejoin="round" fill="none"
           >
             <path
@@ -464,6 +437,7 @@ import type {
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
+import ForgeEdgeLegend from './ForgeEdgeLegend.vue'
 import ForgeNodeTooltip from './ForgeNodeTooltip.vue'
 import ForgeYieldPlinth from './ForgeYieldPlinth.vue'
 import {
@@ -519,7 +493,6 @@ import {
   FORGE_TREE_PAN_MS,
   FORGE_BEST_BUY_LABEL,
   FORGE_EDGE_LEGEND_ROWS,
-  FORGE_EDGE_LEGEND_SWATCH_W,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -1758,21 +1731,19 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 /* ══════════════════════════════════════════════════
-   DIE KANTEN
+   DIE KANTEN — was davon HIER steht
    ══════════════════════════════════════════════════
 
-   Eine Kante beantwortet EINE Frage: wie weit ist dieser Weg? Sie hat dafür
-   drei Strichbilder und eine Reihenfolge in der Breite.
+   Die Kantensprache selbst (`.limb-bed*`, `.limb-vein--*`, `.limb-bridge*`,
+   `.limb-halo`) liegt GLOBAL in `assets/rpg-theme.css`, Abschnitt „die
+   KANTENSPRACHE". Sie steht dort, weil die Legende (`ForgeEdgeLegend.vue`)
+   dieselben Klassen an ihre Proben hängt — sie zeigt die Striche selbst, nicht
+   Ersatzsymbole, und eine eigene Komponente erbt fremde scoped-Regeln nicht.
+   Wer eine Kantenfarbe ändern will, ändert sie dort, und die Legende geht mit.
 
-     fein gepunktet   versperrt        · · · · ·
-     durchgezogen     begehbar         ─────────
-     lang gestrichelt Weg zwischen Zonen  ─  ─  ─
-
-   Alles hier ist STATISCH. Kein `filter`, keine Animation, keine
-   Custom Property am Container — bei 155 dauerhaften Pfaden ist jede dieser
-   drei Sachen eine dreistellige Rechnung pro Frame (Performance-Regeln 2, 3
-   und 11). Die einzige laufende Kanten-Animation bleibt der Lichtlauf auf der
-   Scheinwerferkette, und die ist höchstens sieben Glieder lang. */
+   Hier bleibt nur, was ALLEIN die Bühne betrifft: die Fokus-Dämpfung (sie
+   braucht `v-bind()` und damit einen Komponenten-Style) und die
+   Bedingungslinien des gezeigten Knotens. */
 
 /* Das Kantenfeld tritt zurück, sobald auf einen Knoten gezeigt wird — EIN Wert
    auf EINER Ebene, also Compositor-Arbeit (Regel 1). Vorher dimmten nur die
@@ -1784,70 +1755,6 @@ const nextPhasePreviewStyle = computed(() => ({
 
 .tree-svg--focus .limb-field {
   opacity: v-bind(limbDimOpacity);
-}
-
-/* DIE RINNE — die Struktur selbst. Sie trägt die Ader und darf ihr deshalb
-   nicht die Schau stehlen: hier stand #4a3418, und neben diesem Ton war eine
-   gefärbte Ader bei 0,55 Deckkraft kaum als etwas anderes zu erkennen. */
-.limb-bed {
-  stroke: #241d12;
-}
-
-/* Hinter einem Tor. Der Weg existiert, aber er ist noch nicht einmal Thema —
-   und ohne Ader darauf ist das die einzige Ebene, die von dieser Kante
-   bleibt. */
-.limb-bed--gate {
-  stroke: #1c1810;
-  opacity: 0.28;
-}
-
-/* Der Schein unter der vollen Ader. So blass, dass er nur als Dicke wirkt. */
-.limb-halo {
-  opacity: 0.12;
-}
-
-/* Die Wege zwischen zwei Zonen. Sie schalten nichts frei — die lange
-   Strichelung sagt „es geht weiter", ohne etwas zu behaupten. Ist die Zone
-   offen, trägt der Weg ihre Leitfarbe (per `stroke` am Pfad, aus der Karte). */
-.limb-bridge {
-  stroke-dasharray: 18 14;
-}
-
-.limb-bridge--closed {
-  stroke: #39424a;
-  opacity: 0.3;
-}
-
-.limb-bridge--open {
-  opacity: 0.45;
-}
-
-/* Versperrt: die Voraussetzung fehlt. Gepunktet und in gedämpftem Rot — Rot
-   ist im Projekt durchgehend „fehlt" (`FORGE_REQ_OPEN_COLOR`), gedämpft, weil
-   im frischen Spielstand fast jede Kante so aussieht und ein sattes Rot über
-   die halbe Bühne eine Warnung wäre statt einer Auskunft. */
-.limb-vein--blocked {
-  stroke: #9a5342;
-  stroke-dasharray: 2.5 7;
-  opacity: 0.62;
-}
-
-/* Frei, aber noch bei Stufe null. Dasselbe Eisblau wie der Rand eines
-   `empty`-Kreises — Kante und Knoten sagen dasselbe, in derselben Farbe. */
-.limb-vein--open {
-  stroke: #7bb8ff;
-  opacity: 0.45;
-}
-
-/* Gewachsen und ausgewachsen tragen beide die Farbe des ZIELS. Sie
-   unterscheiden sich in Deckkraft und Breite, nicht im Ton: es ist derselbe
-   Weg, nur weiter gegangen. */
-.limb-vein--grown {
-  opacity: 0.7;
-}
-
-.limb-vein--full {
-  opacity: 0.95;
 }
 
 /* Die Bedingung eines gesperrten Knotens, gestrichelt und nur solange auf ihn
@@ -1864,95 +1771,6 @@ const nextPhasePreviewStyle = computed(() => ({
 
 .req-limb--open {
   stroke: #cc6050;
-}
-
-/* ── DIE LEGENDE ──────────────────────────────────────────────────────
-   Dieselbe Kartusche wie Zoom-Leiste und Kompass — es ist dasselbe Chrome und
-   soll als dasselbe gelesen werden.
-
-   `z-index: 12` liegt bewusst UNTER dem Kompass (15). Der weicht nur der
-   Zoom-Ecke aus (`forgeSpotlightView.ts`) und kann jederzeit hier oben stehen.
-   Statt eine zweite Sperrfläche samt Spec zu bauen, gilt die Rangfolge: der
-   Zeiger ist die Antwort auf eine gerade gestellte Frage, die Legende ist
-   Dauerauskunft. Er läuft über sie, nicht dahinter. */
-.tree-legend {
-  position: absolute;
-  bottom: 14px;
-  left: 14px;
-  z-index: 12;
-  border: 1px solid #4a3010;
-  border-radius: 4px;
-  background: #16110a;
-  user-select: none;
-}
-
-.fl-rows {
-  margin: 0;
-  padding: 7px 9px;
-  list-style: none;
-}
-
-.fl-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 1.5px 0;
-}
-
-.fl-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: rgba(232, 220, 192, 0.62);
-}
-
-/* Die PROBE. Farbe und Strichbild erbt sie von der Klasse der Kante selbst —
-   deshalb steht hier nichts davon, und deshalb können Bühne und Legende nicht
-   auseinanderlaufen.
-
-   Die DECKKRAFT erbt sie bewusst nicht: 155 Linien über der ganzen Bühne
-   brauchen Zurückhaltung, eine 44-px-Probe in einer Kartusche nicht. Bei 0,28
-   wäre die `sealed`-Zeile schlicht leer. */
-.fl-swatch {
-  flex-shrink: 0;
-  display: block;
-  overflow: visible;
-}
-
-.fl-swatch line {
-  opacity: 1;
-}
-
-/* Die zwei Zustände, die auf der Bühne die KNOTENfarbe tragen, haben hier
-   keinen Ton zu erben — sie stehen stellvertretend in Forge-Gold. Ihre Aussage
-   ist ohnehin die Breite: derselbe Weg, nur weiter gegangen. Dasselbe gilt für
-   die Brücke, die dort die Farbe ihrer Zielzone trägt. */
-.fl-swatch--grown line,
-.fl-swatch--maxed line {
-  stroke: #c89040;
-}
-
-.fl-swatch--bridge line {
-  stroke: #8fa8ff;
-}
-
-/* Die Rinne ist der dunkelste Ton des Netzes und stünde auf der Kartusche fast
-   unsichtbar. Sie wird hier eine Spur aufgehellt — die Zeile soll zeigen, DASS
-   dort eine Verbindung liegt, und genau das ist ihre Aussage. */
-.fl-swatch--sealed line {
-  stroke: #4a3f2c;
-}
-
-@media (max-height: 1100px) {
-  .fl-row {
-    padding: 0.5px 0;
-  }
-
-  .fl-rows {
-    padding: 5px 9px;
-  }
 }
 
 /* ══════════════════════════════════════════════════

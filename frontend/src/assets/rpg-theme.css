@@ -1519,3 +1519,100 @@
     transition: none;
   }
 }
+
+/* ── Star Forge: die KANTENSPRACHE (.limb-*) ─────────────────────────────────
+   Wie weit ist dieser Weg? Jede Kante der Baum-Bühne beantwortet diese eine
+   Frage, und sie hat dafür drei Strichbilder:
+
+     fein gepunktet     versperrt              · · · · ·
+     durchgezogen       begehbar               ─────────
+     lang gestrichelt   Weg zwischen zwei Zonen  ─  ─  ─
+
+   Warum global und nicht scoped: die LEGENDE (ForgeEdgeLegend.vue) zeigt keine
+   Ersatzsymbole, sondern die Striche selbst — jede ihrer Proben trägt dieselbe
+   Klasse wie die Kante, die sie erklärt. Sie ist eine eigene Komponente neben
+   ForgeTreePanel und erbt dessen scoped-Regeln nicht; die Werte dort ein
+   zweites Mal zu führen wäre die zweite Quelle für genau die Form, die beide
+   zusammenhält. Dieselbe Lösung wie beim .fc-* System darüber.
+
+   Der Name durfte bleiben, obwohl `limb` für ein globales Blatt kurz wirkt:
+   geprüft, im ganzen Projekt gibt es keine zweite `.limb`-Klasse (die übrigen
+   Treffer sind Prosa in Kommentaren). Anders als die Kürzel .rc/.cc/.rr, vor
+   denen der fc-Abschnitt warnt, ist es ein ausgeschriebenes Wort mit Modifier.
+
+   Performance: hier ist ALLES statisch. Kein `filter`, keine Animation, keine
+   Custom Property — auf der Bühne stehen 155 Struktur-Pfade dauerhaft im DOM,
+   und jede dieser drei Sachen wäre dort eine dreistellige Rechnung pro Frame
+   (Performance-Regeln 2, 3 und 11 in CLAUDE.md). Die einzige laufende
+   Kanten-Animation ist der Lichtlauf auf der Scheinwerferkette, und die ist
+   höchstens sieben Glieder lang.
+
+   Was NICHT hier steht: `.limb-field` (die Fokus-Dämpfung, sie braucht
+   `v-bind()` und damit einen Komponenten-Style) und die `.req-limb-*` der
+   Bedingungslinien — beide gehören allein der Bühne.
+════════════════════════════════════════════════════════════════════════════ */
+
+/* DIE RINNE — die Struktur selbst. Sie trägt die Ader und darf ihr deshalb
+   nicht die Schau stehlen: hier stand #4a3418, und neben diesem Ton war eine
+   gefärbte Ader bei 0,55 Deckkraft kaum als etwas anderes zu erkennen. */
+.limb-bed {
+  stroke: #241d12;
+}
+
+/* Hinter einem Tor. Der Weg existiert, aber er ist noch nicht einmal Thema —
+   und ohne Ader darauf ist das die einzige Ebene, die von dieser Kante
+   bleibt. */
+.limb-bed--gate {
+  stroke: #1c1810;
+  opacity: 0.28;
+}
+
+/* Der Schein unter der vollen Ader. So blass, dass er nur als Dicke wirkt. */
+.limb-halo {
+  opacity: 0.12;
+}
+
+/* Die Wege zwischen zwei Zonen. Sie schalten nichts frei — die lange
+   Strichelung sagt „es geht weiter", ohne etwas zu behaupten. Ist die Zone
+   offen, trägt der Weg ihre Leitfarbe (per `stroke` am Pfad, aus der Karte). */
+.limb-bridge {
+  stroke-dasharray: 18 14;
+}
+
+.limb-bridge--closed {
+  stroke: #39424a;
+  opacity: 0.3;
+}
+
+.limb-bridge--open {
+  opacity: 0.45;
+}
+
+/* Versperrt: die Voraussetzung fehlt. Gepunktet und in gedämpftem Rot — Rot
+   ist im Projekt durchgehend „fehlt" (`FORGE_REQ_OPEN_COLOR`), gedämpft, weil
+   im frischen Spielstand fast jede Kante so aussieht und ein sattes Rot über
+   die halbe Bühne eine Warnung wäre statt einer Auskunft. */
+.limb-vein--blocked {
+  stroke: #9a5342;
+  stroke-dasharray: 2.5 7;
+  opacity: 0.62;
+}
+
+/* Frei, aber noch bei Stufe null. Dasselbe Eisblau wie der Rand eines
+   `empty`-Kreises — Kante und Knoten sagen dasselbe, in derselben Farbe. */
+.limb-vein--open {
+  stroke: #7bb8ff;
+  opacity: 0.45;
+}
+
+/* Gewachsen und ausgewachsen tragen beide die Farbe des ZIELS — auf der Bühne
+   per `stroke` am Pfad, in der Legende stellvertretend in Forge-Gold. Sie
+   unterscheiden sich in Deckkraft und Breite, nicht im Ton: es ist derselbe
+   Weg, nur weiter gegangen. */
+.limb-vein--grown {
+  opacity: 0.7;
+}
+
+.limb-vein--full {
+  opacity: 0.95;
+}
