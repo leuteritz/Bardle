@@ -3,7 +3,7 @@
     <!-- ══════════════════════════════════════════════════
          DER RING — ein Bogen je Herkunft, die Leitzahl darin
     ══════════════════════════════════════════════════ -->
-    <div class="yl-ring">
+    <div class="yl-ring" :class="{ 'yl-ring--focus': hoveredId !== null }">
       <svg class="yl-ring-svg" viewBox="0 0 100 100" aria-hidden="true">
         <!-- Der Track trägt zwei Aussagen zugleich: er schliesst den Ring
              optisch, und wo die Geister-Zone sitzt, ist er das, was man sieht.
@@ -338,14 +338,23 @@ const capFontCompact = px(FORGE_YIELD_RING_SIZE_COMPACT_PX, FORGE_YIELD_CAPTION_
   overflow: visible;
 }
 
-/* Punktraster im Track: wo kein Bogen liegt, steht die Geister-Zone, und die
-   liest sich damit als „noch leer" statt als Loch. Dasselbe Zeichen, das die
-   Zone im alten Band trug. */
+/* Die leere Rinne: sie zeigt, WO etwas hinkommt, und wie viel davon noch frei
+   ist. Zwei Messungen stecken in diesen zwei Zeilen.
+
+   **Die Farbe.** Zuerst stand hier das Fast-Schwarz des Bandhintergrunds. Auf
+   dem `#131009` des Kopfes war es unsichtbar, und der frische Spielstand zeigte
+   eine schwebende `×1.00` ohne alles darum — ausgerechnet der Zustand, in dem
+   jeder Spieler anfängt. `#241d12` ist sichtbar und bleibt leiser als jeder
+   Bogen.
+
+   **Durchgezogen, nicht gestrichelt.** Ein `stroke-dasharray` darauf sollte das
+   Punktraster der alten Geister-Zone aufnehmen. Bei 8 Einheiten Strichbreite
+   werden aus den Punkten aber RADIALE BALKEN, und der leere Ring las sich als
+   Strahlenkranz — unruhiger als alles andere im Kopf, und das im Leerzustand.
+   Was noch nichts beiträgt, sagt ohnehin der Geister-Chip in Worten. */
 .yl-track {
   fill: none;
-  stroke: #100e08;
-  stroke-dasharray: 1.6 4.2;
-  opacity: 0.9;
+  stroke: #241d12;
 }
 
 .yl-arc {
@@ -363,14 +372,23 @@ const capFontCompact = px(FORGE_YIELD_RING_SIZE_COMPACT_PX, FORGE_YIELD_CAPTION_
   stroke: #14080f;
 }
 
-/* Welcher Bogen zum Chip unter dem Zeiger gehört. Ein statischer Umschlag mit
-   Transition NUR auf `opacity` — `filter` oder `stroke-width` in einer laufenden
-   Animation rasterten die Box je Frame neu (Performance-Regel 2). */
-.yl-arc:not(.yl-arc--lit) {
-  opacity: 0.92;
+/* Welcher Bogen zum Chip unter dem Zeiger gehört.
+
+   Die ZUORDNUNG ist der Zweck des Rings: ohne sie sind Chip und Bogen zwei
+   Anzeigen desselben Werts, die einander nichts sagen. Gemessen im Bild reichte
+   ein Unterschied von 0,92 zu 1,0 dafür nicht — man sah ihn schlicht nicht.
+   Solange der Zeiger irgendwo liegt, treten deshalb ALLE anderen Bögen zurück.
+
+   Nur `opacity`, nichts sonst: `filter` oder `stroke-width` rasterten die Box
+   je Frame neu (Performance-Regel 2). Der Umschlag ist statisch, die Transition
+   läuft einmal beim Ein- und einmal beim Austritt. */
+.yl-ring--focus .yl-arc {
+  opacity: 0.22;
+  transition: opacity 0.12s ease;
 }
 
-.yl-arc--lit {
+.yl-ring--focus .yl-arc--lit,
+.yl-ring--focus .yl-arc--drain-bed {
   opacity: 1;
 }
 
@@ -455,10 +473,14 @@ const capFontCompact = px(FORGE_YIELD_RING_SIZE_COMPACT_PX, FORGE_YIELD_CAPTION_
   white-space: nowrap;
 }
 
+/* Versalien wie der Titel, den er ersetzt: ohne sie sprang die Zeile beim Hover
+   sichtbar in eine andere Schriftlage, obwohl sie dieselbe Zeile bleibt. */
 .yl-hint-name {
   flex-shrink: 0;
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .yl-hint-value {

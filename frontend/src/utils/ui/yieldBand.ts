@@ -260,13 +260,22 @@ export function yieldRingArcs(
   const usable = Math.max(FORGE_YIELD_RING_CIRCUMFERENCE - gapCount * FORGE_YIELD_RING_GAP, 0)
   const scale = hasGhost ? (100 - FORGE_YIELD_UNUSED_WIDTH_PCT) / 100 : 1
 
-  return segments.map((s, index) => ({
-    id: s.id,
-    color: s.color,
-    dash: `${Math.max((s.pct / 100) * scale * usable, FORGE_YIELD_RING_MIN_ARC).toFixed(2)} ${FORGE_YIELD_RING_CIRCUMFERENCE.toFixed(2)}`,
-    offset: -((s.start / 100) * scale * usable + index * FORGE_YIELD_RING_GAP),
-    drains: s.drains,
-  }))
+  return segments.map((s, index) => {
+    const exact = Math.max((s.pct / 100) * scale * usable, FORGE_YIELD_RING_MIN_ARC)
+    // ABGERUNDET auf die zwei Stellen, die im Attribut landen — nicht kaufmännisch
+    // gerundet. Bei elf Bögen hebt `toFixed` im Mittel jeden zweiten um bis zu
+    // 0,005 an, und die Summe lief damit gemessen 0,02 Einheiten über den
+    // Umfang: der letzte Bogen legte sich um diesen Betrag über den ersten.
+    // Unsichtbar im Bild, aber es ist die eine Invariante, die dieser Ring hat.
+    const length = Math.floor(exact * 100) / 100
+    return {
+      id: s.id,
+      color: s.color,
+      dash: `${length.toFixed(2)} ${FORGE_YIELD_RING_CIRCUMFERENCE.toFixed(2)}`,
+      offset: -((s.start / 100) * scale * usable + index * FORGE_YIELD_RING_GAP),
+      drains: s.drains,
+    }
+  })
 }
 
 /**
