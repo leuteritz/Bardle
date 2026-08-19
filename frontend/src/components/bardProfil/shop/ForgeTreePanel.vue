@@ -23,6 +23,49 @@
       @click.capture="onClickCapture"
       @click="onBackgroundClick"
     >
+    <!-- DIE LEGENDE zur Kantensprache.
+         Sie zeigt die Striche SELBST — jede Probe trägt dieselbe Klasse wie die
+         Kante, die sie erklärt. Eine Reihe Farbquadrate müsste selbst erst
+         erklärt werden; daran ist die erste Fassung des Ertrags-Sockels
+         gescheitert.
+
+         Sie hängt im VIEWPORT und nicht in der Bühne. „Die Bühne ist wortlos"
+         gilt für das, was mit ihr skaliert und über den Knoten liegt — die
+         Zoom-Leiste, der Kompass und der Sockel tragen sehr wohl Wörter.
+
+         `.stop` aus demselben Grund wie an der Zoom-Leiste: ein Klick auf die
+         Kopfzeile darf die Anheftung nicht abräumen. -->
+    <div class="tree-legend" :class="{ 'tree-legend--open': legendOpen }" @click.stop>
+      <button
+        class="fl-head"
+        :aria-expanded="legendOpen"
+        @click="toggleLegend"
+      >
+        <span class="fl-chevron">{{ legendChevron }}</span>
+        <Icon :icon="FORGE_EDGE_LEGEND_ICON" width="14" height="14" class="fl-head-ico" />
+        <span class="fl-title">{{ FORGE_EDGE_LEGEND_TITLE }}</span>
+      </button>
+      <ul v-if="legendOpen" class="fl-rows">
+        <li v-for="row in FORGE_EDGE_LEGEND_ROWS" :key="row.id" class="fl-row">
+          <svg
+            class="fl-swatch"
+            :class="`fl-swatch--${row.id}`"
+            :viewBox="`0 0 ${FORGE_EDGE_LEGEND_SWATCH_W} 6`"
+            :width="FORGE_EDGE_LEGEND_SWATCH_W"
+            height="6"
+            aria-hidden="true"
+          >
+            <line
+              x1="1" y1="3" :x2="FORGE_EDGE_LEGEND_SWATCH_W - 1" y2="3"
+              :class="row.cls" :stroke-width="row.width"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span class="fl-label">{{ row.label }}</span>
+        </li>
+      </ul>
+    </div>
+
     <!-- Zoom control -->
     <!-- `.stop`, damit ein Zoomschritt die Anheftung nicht abräumt: die
          Zoom-Leiste liegt im Viewport, und genau beim Anheften will der Spieler
@@ -476,6 +519,13 @@ import {
   FORGE_SPOTLIGHT_COMPASS_SIZE_PX,
   FORGE_TREE_PAN_MS,
   FORGE_BEST_BUY_LABEL,
+  FORGE_EDGE_LEGEND_TITLE,
+  FORGE_EDGE_LEGEND_ICON,
+  FORGE_EDGE_LEGEND_ROWS,
+  FORGE_EDGE_LEGEND_SWATCH_W,
+  FORGE_EDGE_LEGEND_STORAGE_KEY,
+  FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN,
+  FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -1003,6 +1053,38 @@ const spotScale = String(FORGE_SPOTLIGHT_NODE_SCALE)
 const spotDimOpacity = String(FORGE_SPOTLIGHT_DIM_OPACITY)
 const spotPingMs = `${FORGE_SPOTLIGHT_PING_MS}ms`
 const limbDimOpacity = String(FORGE_LIMB_DIM_OPACITY)
+
+// ── Die Legende zur Kantensprache ─────────────────────────────────────────────
+/**
+ * Aufgeklappt als Vorgabe — und das ist der ganze Zweck: eine Legende, die man
+ * erst finden muss, erklärt niemandem etwas. Wer die Sprache kennt, klappt sie
+ * einmal weg, und sie bleibt weg.
+ *
+ * Der Zustand liegt in einem EIGENEN Eintrag und nicht im Spielstand: die IDs
+ * dort sind ein Vertrag (`SAVE_ID_RENAMES`), und eine Anzeigevorliebe gehört
+ * nicht hinein. Muster ist `bard-music-settings` in `useSpaceMusic`, samt der
+ * beiden stummen `catch` — ein gesperrter Speicher darf die Bühne nicht
+ * mitreissen, die Legende steht dann eben jedes Mal offen.
+ */
+const legendOpen = ref(true)
+try {
+  if (localStorage.getItem(FORGE_EDGE_LEGEND_STORAGE_KEY) === 'closed') legendOpen.value = false
+} catch {
+  // ignore storage errors
+}
+
+function toggleLegend(): void {
+  legendOpen.value = !legendOpen.value
+  try {
+    localStorage.setItem(FORGE_EDGE_LEGEND_STORAGE_KEY, legendOpen.value ? 'open' : 'closed')
+  } catch {
+    // ignore storage errors
+  }
+}
+
+const legendChevron = computed(() =>
+  legendOpen.value ? FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN : FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
+)
 
 // ── Zonen-Freischaltung ───────────────────────────────────────────────────────
 /**
@@ -1786,6 +1868,141 @@ const nextPhasePreviewStyle = computed(() => ({
 
 .req-limb--open {
   stroke: #cc6050;
+}
+
+/* ── DIE LEGENDE ──────────────────────────────────────────────────────
+   Dieselbe Kartusche wie Zoom-Leiste und Kompass — es ist dasselbe Chrome und
+   soll als dasselbe gelesen werden.
+
+   `z-index: 12` liegt bewusst UNTER dem Kompass (15). Der weicht nur der
+   Zoom-Ecke aus (`forgeSpotlightView.ts`) und kann jederzeit hier oben stehen.
+   Statt eine zweite Sperrfläche samt Spec zu bauen, gilt die Rangfolge: der
+   Zeiger ist die Antwort auf eine gerade gestellte Frage, die Legende ist
+   Dauerauskunft. Er läuft über sie, nicht dahinter. */
+.tree-legend {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 12;
+  border: 1px solid #4a3010;
+  border-radius: 4px;
+  background: #16110a;
+  user-select: none;
+}
+
+.fl-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 9px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s ease;
+}
+
+.fl-chevron {
+  flex-shrink: 0;
+  width: 9px;
+  color: rgba(200, 144, 64, 0.55);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.fl-head-ico {
+  flex-shrink: 0;
+  color: rgba(200, 144, 64, 0.6);
+}
+
+.fl-title {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.6);
+}
+
+.fl-head:hover .fl-chevron,
+.fl-head:hover .fl-head-ico,
+.fl-head:hover .fl-title {
+  color: #c89040;
+}
+
+/* Die Trennlinie steht nur, wenn darunter etwas liegt — zugeklappt wäre sie
+   eine Kante ohne zweite Seite. */
+.tree-legend--open .fl-head {
+  border-bottom: 1px solid #2a1a08;
+}
+
+.fl-rows {
+  margin: 0;
+  padding: 6px 9px 7px;
+  list-style: none;
+}
+
+.fl-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 1.5px 0;
+}
+
+.fl-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(232, 220, 192, 0.62);
+}
+
+/* Die PROBE. Farbe und Strichbild erbt sie von der Klasse der Kante selbst —
+   deshalb steht hier nichts davon, und deshalb können Bühne und Legende nicht
+   auseinanderlaufen.
+
+   Die DECKKRAFT erbt sie bewusst nicht: 155 Linien über der ganzen Bühne
+   brauchen Zurückhaltung, eine 44-px-Probe in einer Kartusche nicht. Bei 0,28
+   wäre die `sealed`-Zeile schlicht leer. */
+.fl-swatch {
+  flex-shrink: 0;
+  display: block;
+  overflow: visible;
+}
+
+.fl-swatch line {
+  opacity: 1;
+}
+
+/* Die zwei Zustände, die auf der Bühne die KNOTENfarbe tragen, haben hier
+   keinen Ton zu erben — sie stehen stellvertretend in Forge-Gold. Ihre Aussage
+   ist ohnehin die Breite: derselbe Weg, nur weiter gegangen. Dasselbe gilt für
+   die Brücke, die dort die Farbe ihrer Zielzone trägt. */
+.fl-swatch--grown line,
+.fl-swatch--maxed line {
+  stroke: #c89040;
+}
+
+.fl-swatch--bridge line {
+  stroke: #8fa8ff;
+}
+
+/* Die Rinne ist der dunkelste Ton des Netzes und stünde auf der Kartusche fast
+   unsichtbar. Sie wird hier eine Spur aufgehellt — die Zeile soll zeigen, DASS
+   dort eine Verbindung liegt, und genau das ist ihre Aussage. */
+.fl-swatch--sealed line {
+  stroke: #4a3f2c;
+}
+
+@media (max-height: 1100px) {
+  .fl-row {
+    padding: 0.5px 0;
+  }
+
+  .fl-rows {
+    padding: 4px 9px 5px;
+  }
 }
 
 /* ══════════════════════════════════════════════════

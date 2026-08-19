@@ -544,6 +544,73 @@ export const FORGE_LIMB_MIN_WIDTH = 2
  */
 export const FORGE_LIMB_DIM_OPACITY = 0.3
 
+/* ── Die LEGENDE zur Kantensprache ─────────────────────────────────────
+ *
+ * Sie zeigt keine Farbquadrate mit Namen daneben. Genau daran ist die erste
+ * Fassung des Ertrags-Sockels gescheitert (`ForgeYieldPlinth.vue`): eine Probe,
+ * die anders aussieht als die Sache, die sie erklärt, muss selbst erst erklärt
+ * werden. Jede Zeile hier trägt deshalb DIESELBE CSS-Klasse wie die Kante auf
+ * der Bühne — wer die Zeile ansieht, hat das Bild schon gesehen, und beide
+ * können nicht auseinanderlaufen.
+ *
+ * Die Reihenfolge ist eine Aussage: erst die zwei Arten von „zu" (die Zone
+ * fehlt, der Vorgänger fehlt), dann der offene Weg, dann die zwei Stufen des
+ * Fortschritts. Die Brücke steht am Ende, weil sie als einzige nichts über
+ * einen Knoten sagt.
+ *
+ * Die Rinne unter jeder Ader bekommt KEINE Zeile: sie ist der Untergrund, kein
+ * Zustand — und eine Legende, die den Untergrund erklärt, erklärt nichts.
+ */
+export const FORGE_EDGE_LEGEND_TITLE = 'edges'
+/**
+ * Ein Outline-Set und nicht `game-icons`: das Glyph steht bei 14 px in der
+ * Kartusche, und dort zerfällt ein verschnörkeltes Fantasy-Motiv zu einem
+ * grauen Fleck. `route` ist ausserdem das wörtliche Motiv — die Legende erklärt
+ * Wege.
+ */
+export const FORGE_EDGE_LEGEND_ICON = 'lucide:route'
+/**
+ * Der Schlüssel für die aufgeklappt/zugeklappt-Vorgabe.
+ *
+ * Ein eigener Eintrag statt eines Feldes im Spielstand: die Inhalts-IDs im Save
+ * sind ein Vertrag (`SAVE_ID_RENAMES`), und eine Anzeigevorliebe gehört nicht
+ * hinein. Muster ist `bard-music-settings` in `useSpaceMusic`.
+ */
+export const FORGE_EDGE_LEGEND_STORAGE_KEY = 'bard-forge-legend'
+/**
+ * Die Länge einer Probe in px.
+ *
+ * Sie hängt an der LÄNGSTEN Strichelung, nicht am Platz: die Brücke trägt
+ * `18 14`, und auf 26 px wäre davon ein einziger Strich zu sehen — die Zeile
+ * sagte dann „durchgezogen" und damit das Gegenteil dessen, was sie meint. Bei
+ * 44 px stehen zwei Striche, und „lang gestrichelt" ist als Muster lesbar.
+ */
+export const FORGE_EDGE_LEGEND_SWATCH_W = 44
+
+/** Eine Zeile der Legende. `cls` nennt die Klasse, die auch die Kante trägt. */
+export interface ForgeEdgeLegendRow {
+  id: string
+  label: string
+  cls: string
+  /** Strichstärke der Probe. Sie folgt der Aussage, nicht der Bühne: `grown`
+   *  und `full` unterscheiden sich dort in der Breite, und genau das ist es,
+   *  was diese zwei Zeilen zeigen müssen. */
+  width: number
+}
+
+export const FORGE_EDGE_LEGEND_ROWS: readonly ForgeEdgeLegendRow[] = [
+  { id: 'sealed', label: 'sealed', cls: 'limb-bed limb-bed--gate', width: 3 },
+  { id: 'blocked', label: 'blocked', cls: 'limb-vein limb-vein--blocked', width: 2.4 },
+  { id: 'open', label: 'open', cls: 'limb-vein limb-vein--open', width: 2.4 },
+  // Diese zwei tragen denselben Ton und sagen ihren Unterschied allein über die
+  // Breite. 2,8 zu 4 war zu wenig, um ihn auf 44 px zu sehen — das Verhältnis
+  // ist jetzt fast das doppelte und entspricht damit dem der Bühne, wo zur
+  // vollen Ader noch der Schein darunter kommt.
+  { id: 'grown', label: 'grown', cls: 'limb-vein limb-vein--grown', width: 2.4 },
+  { id: 'maxed', label: 'maxed', cls: 'limb-vein limb-vein--full', width: 4.6 },
+  { id: 'bridge', label: 'zone link', cls: 'limb-bridge limb-bridge--open', width: 3 },
+] as const
+
 /* ── Der BEDINGUNGS-KRANZ am gesperrten Knoten ─────────────────────────
  *
  * Hier standen einmal die SPANNFÄDEN — gestrichelte Bögen von einem gesperrten
