@@ -2490,6 +2490,18 @@ export const FORGE_NEXT_UP_IDLE = 'Nothing ready right now'
 export const FORGE_DETAIL_ENDLESS_META = 'no final level'
 export const FORGE_DETAIL_PARENT_PREFIX = 'hangs on '
 
+// ── Karte am Knoten im Baum (ForgeTreePanel) ─────────────────────────────────
+/**
+ * Wie nah die Knoten-Karte an die Kante des Baumfensters heran darf, bevor sie
+ * zurückgeschoben wird.
+ *
+ * `.tree-viewport` schneidet mit `overflow: hidden` ab, und die Karte hängt am
+ * KNOTEN, nicht am Bild — steht der am Rand, ragte sie ohne dieses Nachführen
+ * halb hinaus. Gemessen wird EINMAL je Hover-Wechsel (Muster wie `tipAnchor` in
+ * `ForgeUpgradesSection`), nie pro Frame.
+ */
+export const FORGE_NODE_TIP_EDGE_PAD_PX = 10
+
 // ── Der Angebots-Streifen über der Liste (ForgeOfferStrip) ───────────────────
 /**
  * Relikte, Konstellationen und der Handel — was der Baum NICHT hergibt.
