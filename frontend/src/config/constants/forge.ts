@@ -504,6 +504,46 @@ export const FORGE_LIMB_WIDTH: Record<ForgeUpgradeTier, number> = {
 /** Der gefärbte Ast über dem Grundast. 2,5 zu 4 war das bisherige Verhältnis. */
 export const FORGE_LIMB_LIT_FACTOR = 0.62
 
+/* ── Die ADER auf dem Ast ──────────────────────────────────────────────
+ *
+ * Der Grundast ist die RINNE, die Ader darauf sagt den Zustand des Ziels. Die
+ * Faktoren sind eine Reihenfolge, keine Geschmacksfrage: je weiter ein Weg
+ * gegangen ist, desto mehr der Rinne füllt er aus. Versperrt und leer bleiben
+ * bei der halben Breite, gewachsen nimmt `FORGE_LIMB_LIT_FACTOR`, ausgewachsen
+ * füllt fast ganz. Man liest den Fortschritt damit auch dann, wenn die Farbe
+ * beim Herauszoomen zu einem Punkt zerfällt.
+ *
+ * Ein eigener Zustand für „kaufbar" steht bewusst NICHT hier. Im Spätspiel sind
+ * bis zu neunzig Knoten gleichzeitig kaufbar; neunzig hervorgehobene Adern
+ * wären kein Signal mehr, sondern der Normalzustand. Das beantwortet der Knoten
+ * selbst mit Goldrand und Schein.
+ */
+/** Ader eines versperrten oder freien, aber leeren Ziels. */
+export const FORGE_LIMB_VEIN_FACTOR = 0.5
+/** Ader eines ausgewachsenen Ziels — sie füllt die Rinne fast ganz. */
+export const FORGE_LIMB_FULL_FACTOR = 0.8
+/**
+ * Der SCHEIN unter der vollen Ader. Ein zweiter, sehr blasser Strich statt eines
+ * `drop-shadow`: ein Filter rastert die Box jedes Pfades neu, und im Spätspiel
+ * sind das dreistellig viele (Performance-Regel 2).
+ */
+export const FORGE_LIMB_HALO_FACTOR = 1.3
+/**
+ * Der Boden jeder Ader in Bühnen-px. Bei `FORGE_TREE_ZOOM_FLOOR` (0,3) wird aus
+ * der feinsten Glimmer-Ader (2,4 × 0,5 = 1,2) sonst 0,36 Geräte-px — sie
+ * verschwindet, und mit ihr der Zustand. Gegengerechnet wird NICHT: ein
+ * `vector-effect: non-scaling-stroke` bräche die Verjüngung nach aussen aus
+ * `FORGE_LIMB_WIDTH`.
+ */
+export const FORGE_LIMB_MIN_WIDTH = 2
+/**
+ * Wie weit das Kantenfeld zurücktritt, solange auf einen Knoten gezeigt wird.
+ * Das Gegenstück zu `FORGE_SPOTLIGHT_DIM_OPACITY` an den Kreisen — die Kanten
+ * blieben bisher als einzige stehen, und ein gedimmtes Netz aus vollen Linien
+ * las sich nicht als Antwort, sondern als Gitter darüber.
+ */
+export const FORGE_LIMB_DIM_OPACITY = 0.3
+
 /* ── Der BEDINGUNGS-KRANZ am gesperrten Knoten ─────────────────────────
  *
  * Hier standen einmal die SPANNFÄDEN — gestrichelte Bögen von einem gesperrten

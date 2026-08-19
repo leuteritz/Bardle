@@ -81,43 +81,123 @@
 
       <svg
         class="tree-svg"
+        :class="{ 'tree-svg--focus': spotlightId !== null }"
         :viewBox="`0 0 ${FORGE_STAGE_SIZE} ${FORGE_STAGE_SIZE}`"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <!-- Die WEGE zwischen zwei Zonen. Sie schalten nichts frei und liegen
-             deshalb ganz unten und am blassesten: sie halten das Bild zusammen,
-             ohne etwas zu behaupten. -->
-        <g
-          class="bridge-limbs"
-          stroke="#3a2c16"
-          stroke-linecap="round" stroke-linejoin="round" fill="none"
-        >
-          <path
-            v-for="limb in bridgeLimbs" :key="limb.key + '-bridge'"
-            :d="limb.d" :stroke-width="limb.width"
-          />
-        </g>
-        <!-- Die STRUKTUR: woran ein Knoten haengt. Rechtwinklig gefuehrt und je
-             Ebene duenner — die Strichstaerke sitzt deshalb am Pfad und nicht
-             an der Gruppe. Der Weg selbst kommt aus `forgeEdgeRoute.ts`: nur
-             achsparallele Segmente, jeder Knick 90 Grad, und keiner laeuft
-             durch einen fremden Knoten. -->
-        <g stroke="#4a3418" stroke-linecap="round" stroke-linejoin="round" fill="none">
-          <path
-            v-for="limb in structureLimbs" :key="limb.key + '-base'"
-            :d="limb.d" :stroke-width="limb.width"
-          />
-        </g>
-        <!-- Active limbs (target node has levels). Die Grunddeckkraft steht als
-             KLASSE und nicht als `opacity`-Attribut — ein Präsentationsattribut
-             wäre von keiner Regel mehr zu überschreiben. -->
-        <g stroke-linecap="round" stroke-linejoin="round" fill="none">
-          <path
-            v-for="limb in activeLimbs" :key="limb.key + '-lit'"
-            :d="limb.d" :stroke-width="limb.width * FORGE_LIMB_LIT_FACTOR"
-            :stroke="limb.color"
-            class="limb--lit"
-          />
+        <!-- DAS KANTENFELD. Alles, was die Bühne dauerhaft trägt, liegt in
+             EINER Gruppe — damit das Zurücktreten beim Zeigen ein einziger
+             `opacity`-Wert auf einer Ebene ist und nicht 175 einzelne
+             Umschaltungen. Bedingung und Scheinwerferkette stehen bewusst
+             DARAUSSEN: sie sind die Antwort auf das Zeigen und dürfen nie
+             mitgedimmt werden. -->
+        <g class="limb-field">
+          <!-- Die Rinnen der Kanten hinter einem TOR. Gegen eine Phasen- oder
+               Prestige-Sperre hilft kein Vorgänger; der Weg ist noch nicht
+               einmal Thema, und die blasse Rinne sagt genau das — sie hält die
+               Form des Netzes, ohne etwas zu versprechen. -->
+          <g
+            class="limb-bed limb-bed--gate"
+            stroke-linecap="round" stroke-linejoin="round" fill="none"
+          >
+            <path
+              v-for="limb in veinGroups.gate" :key="limb.key + '-gate'"
+              :d="limb.d" :stroke-width="limb.width"
+            />
+          </g>
+          <!-- Die RINNE. Sie ist die Struktur: woran ein Knoten hängt.
+               Rechtwinklig geführt und je Ebene dünner — die Strichstärke sitzt
+               deshalb am Pfad und nicht an der Gruppe. Der Weg selbst kommt aus
+               `forgeEdgeRoute.ts`: nur achsparallele Segmente, jeder Knick 90
+               Grad, und keiner läuft durch einen fremden Knoten.
+
+               Sie ist dunkler als früher (#4a3418). Das ist der Kern des
+               Umbaus: ein Grundstrich, der mit den Adern darauf um
+               Aufmerksamkeit konkurriert, macht aus fünf Zuständen einen. -->
+          <g class="limb-bed" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path
+              v-for="limb in bedLimbs" :key="limb.key + '-bed'"
+              :d="limb.d" :stroke-width="limb.width"
+            />
+          </g>
+          <!-- Der SCHEIN unter den ausgewachsenen Adern — ein zweiter, sehr
+               blasser Strich in der Knotenfarbe. Kein `drop-shadow`: ein Filter
+               rastert die Box jedes Pfades neu, und im Spätspiel sind das
+               dreistellig viele (Performance-Regel 2). Dasselbe Rezept wie die
+               Unterlage der Lanes in `RiftMinimap`. -->
+          <g class="limb-halo" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path
+              v-for="limb in veinGroups.full" :key="limb.key + '-halo'"
+              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_HALO_FACTOR)"
+              :stroke="limb.color"
+            />
+          </g>
+          <!-- Die WEGE zwischen zwei Zonen. Sie schalten nichts frei und tragen
+               deshalb als einzige die lange Strichelung — drei Strichbilder,
+               drei Bedeutungen. Ist die Zone offen, nehmen sie ihre Leitfarbe
+               an; sonst bleiben sie schiefergrau. -->
+          <g
+            class="limb-bridge limb-bridge--closed"
+            stroke-linecap="round" stroke-linejoin="round" fill="none"
+          >
+            <path
+              v-for="limb in closedBridges" :key="limb.key + '-bridge'"
+              :d="limb.d" :stroke-width="limb.width"
+            />
+          </g>
+          <g
+            class="limb-bridge limb-bridge--open"
+            stroke-linecap="round" stroke-linejoin="round" fill="none"
+          >
+            <path
+              v-for="limb in openBridges" :key="limb.key + '-bridge-open'"
+              :d="limb.d" :stroke-width="limb.width"
+              :stroke="limb.accent"
+            />
+          </g>
+          <!-- DIE ADERN. Eine Kante beantwortet genau eine Frage — wie weit ist
+               dieser Weg? Fein gepunktet heisst versperrt, durchgezogen heisst
+               begehbar, und je weiter der Weg gegangen ist, desto mehr der
+               Rinne füllt er aus. Farbe und Strichbild stehen in der Klasse,
+               die Breite am Pfad: sie folgt der Ebene des Ziels. -->
+          <g
+            class="limb-vein limb-vein--blocked"
+            stroke-linecap="round" stroke-linejoin="round" fill="none"
+          >
+            <path
+              v-for="limb in veinGroups.blocked" :key="limb.key + '-blocked'"
+              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_VEIN_FACTOR)"
+            />
+          </g>
+          <g
+            class="limb-vein limb-vein--open"
+            stroke-linecap="round" stroke-linejoin="round" fill="none"
+          >
+            <path
+              v-for="limb in veinGroups.open" :key="limb.key + '-open'"
+              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_VEIN_FACTOR)"
+            />
+          </g>
+          <g
+            class="limb-vein limb-vein--grown"
+            stroke-linecap="round" stroke-linejoin="round" fill="none"
+          >
+            <path
+              v-for="limb in veinGroups.grown" :key="limb.key + '-grown'"
+              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_LIT_FACTOR)"
+              :stroke="limb.color"
+            />
+          </g>
+          <g
+            class="limb-vein limb-vein--full"
+            stroke-linecap="round" stroke-linejoin="round" fill="none"
+          >
+            <path
+              v-for="limb in veinGroups.full" :key="limb.key + '-full'"
+              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_FULL_FACTOR)"
+              :stroke="limb.color"
+            />
+          </g>
         </g>
 
         <!-- Die BEDINGUNGEN des GEZEIGTEN Knotens, gestrichelt und in der Farbe
@@ -128,11 +208,15 @@
              Bild heraus, weil eine Krone auf r = 438 stand und ihr Zweig auf
              r = 221. Im Netz ist jede dieser Kanten hoechstens
              `FORGE_EDGE_MAX_PX` lang — beide Enden stehen im selben Bild. -->
-        <g class="req-limbs" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <g
+          class="req-limbs"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"
+          :stroke-dasharray="FORGE_EDGE_REQ_DASH"
+        >
           <path
             v-for="limb in requireLimbs" :key="limb.key + '-req'"
             :d="limb.d" :stroke-width="limb.width"
-            :stroke-dasharray="FORGE_EDGE_REQ_DASH"
+            :class="limb.met ? 'req-limb--met' : 'req-limb--open'"
           />
         </g>
 
@@ -315,6 +399,7 @@ import {
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { forgeClusterSpots, forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import { forgeClusterOf } from '@/config/progression/starForgeNet'
 import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
 import {
   forgeCompassAt,
@@ -356,6 +441,11 @@ import {
   FORGE_EDGE_REQ_DASH,
   FORGE_NODE_DIAMETER,
   FORGE_LIMB_LIT_FACTOR,
+  FORGE_LIMB_VEIN_FACTOR,
+  FORGE_LIMB_FULL_FACTOR,
+  FORGE_LIMB_HALO_FACTOR,
+  FORGE_LIMB_MIN_WIDTH,
+  FORGE_LIMB_DIM_OPACITY,
   FORGE_REQ_DOT_SIZE,
   FORGE_REQ_DOT_PITCH_DEG,
   FORGE_TREE_ZOOM_MAX,
@@ -580,6 +670,21 @@ function nodePos(node: TreeNode): Record<string, string> {
   return { left: `${Math.round(node.x)}px`, top: `${Math.round(node.y)}px` }
 }
 
+/**
+ * Was eine Struktur-Kante über ihr ZIEL sagt — und damit, wie sie aussieht.
+ *
+ * Eine Kante beantwortet genau eine Frage: wie weit ist dieser Weg? Fünf
+ * Antworten, drei Strichbilder — fein gepunktet heisst versperrt, durchgezogen
+ * heisst begehbar, und die Brücken zwischen den Zonen tragen als einzige die
+ * lange Strichelung. Wer die drei einmal gesehen hat, verwechselt sie nicht.
+ *
+ * `gate` bekommt als einzige gar keine Ader: gegen ein Phasen- oder
+ * Prestige-Tor hilft kein Vorgänger, der Weg ist noch nicht einmal Thema.
+ * Übrig bleibt die blasse Rinne — das Netz behält seine Form, ohne etwas zu
+ * versprechen.
+ */
+type LimbVein = 'gate' | 'blocked' | 'open' | 'grown' | 'full'
+
 interface Limb {
   key: string
   /** Ein rechtwinkliger Streckenzug mit verrundeten Ecken — gerechnet in
@@ -588,8 +693,20 @@ interface Limb {
   /** Grundstärke; innen kräftig, aussen fein (`FORGE_LIMB_WIDTH`). */
   width: number
   color: string
+  /** Woher die Kante kommt. Bei einer Bedingung ist das der VORGÄNGER — und
+   *  damit der Knoten, dessen Erfüllt-Stand sie einfärbt. */
+  sourceId: string
   targetId: string
   kind: 'parent' | 'require' | 'bridge'
+}
+
+/** Eine Brücke kennt zusätzlich die ZONE, in die sie führt. */
+interface BridgeLimb extends Limb {
+  /** Die Leitfarbe des Ziel-Clusters. Sie lag bisher nur im Zonenschleier — und
+   *  eine Farbe, die ein Gebiet benennt, gehört auch an den Weg dorthin. */
+  accent: string
+  /** Steht die Sonne weit genug für diese Zone? */
+  open: boolean
 }
 
 const nodeById = computed(() => new Map(allNodes.value.map((n) => [n.id, n])))
@@ -625,6 +742,7 @@ const limbs = computed<Limb[]>(() => {
       d: route.d,
       width: route.width,
       color: to.color,
+      sourceId: edge.from,
       targetId: to.id,
       kind: edge.kind,
     })
@@ -640,6 +758,7 @@ const limbs = computed<Limb[]>(() => {
       d: route.d,
       width: route.width,
       color: root.color,
+      sourceId: 'sun',
       targetId: root.id,
       kind: 'parent',
     })
@@ -650,7 +769,92 @@ const limbs = computed<Limb[]>(() => {
 /** Nur die Struktur — sie trägt den Grundstrich. Bedingungen und Wege haben
  *  ihre eigene Ebene, weil sie etwas anderes sagen. */
 const structureLimbs = computed(() => limbs.value.filter((l) => l.kind === 'parent'))
-const bridgeLimbs = computed(() => limbs.value.filter((l) => l.kind === 'bridge'))
+
+/**
+ * Die Wege zwischen zwei Zonen — und die Zone, in die sie führen.
+ *
+ * Beide Bausteine lagen schon da: `forgeClusterOf()` ist eine O(1)-Nachschlage
+ * in der Karte, `zoneOpen()` beantwortet die Freischaltung inklusive des
+ * zweiten Kronen-Tors. Neu ist nur, dass eine Brücke jetzt SAGT, wohin sie
+ * führt: geschlossen bleibt sie schiefergrau, offen nimmt sie die Leitfarbe
+ * ihres Ziel-Clusters an. Zwanzig Kanten tragen damit die Farben von fünf
+ * Zonen — und die 155 Struktur-Kanten bleiben frei für den Zustand.
+ */
+const bridgeLimbs = computed<BridgeLimb[]>(() =>
+  limbs.value
+    .filter((l) => l.kind === 'bridge')
+    .map((l) => {
+      const cluster = forgeClusterOf(l.targetId)
+      return {
+        ...l,
+        accent: cluster?.accent ?? l.color,
+        open: cluster ? zoneOpen(cluster.phase) : true,
+      }
+    }),
+)
+
+const openBridges = computed(() => bridgeLimbs.value.filter((b) => b.open))
+const closedBridges = computed(() => bridgeLimbs.value.filter((b) => !b.open))
+
+/**
+ * Die Struktur-Kanten, sortiert nach dem Zustand ihres Ziels.
+ *
+ * Hier stand `activeLimbs` — ein einziger Filter auf „Level > 0". Alles andere
+ * sah gleich aus: die Kante zu einem gesperrten Knoten war nicht von der zu
+ * einem freien, leeren zu unterscheiden, und beide trugen dieselbe Farbe wie
+ * die zu einem ausgewachsenen. Die Bühne zeigte damit ihre FORM, aber nicht
+ * ihren STAND.
+ *
+ * EINE Schleife über 155 Kanten statt fünf `filter`-Läufe — dieselbe Rechnung
+ * wie in `reqWreaths`, und aus demselben Grund: `entryById` ändert sich bei
+ * einem Kauf oder Phasenwechsel, nie pro Frame.
+ *
+ * Die Weiche folgt der Zustandsleiter aus `useForgeUpgrades()` und ordnet nur
+ * zwei Fälle bewusst anders ein: `capped` fällt bei Level > 0 zu `grown` und
+ * sonst zu `open` — ein Deckel ist keine Sperre, das sagt schon das fehlende
+ * Schloss am Kreis. Und `affordable` bekommt keinen eigenen Topf, weil im
+ * Spätspiel bis zu neunzig Knoten gleichzeitig kaufbar sind.
+ */
+const veinGroups = computed<Record<LimbVein, Limb[]>>(() => {
+  const out: Record<LimbVein, Limb[]> = {
+    gate: [],
+    blocked: [],
+    open: [],
+    grown: [],
+    full: [],
+  }
+  const entries = entryById.value
+  for (const limb of structureLimbs.value) {
+    const entry = entries.get(limb.targetId)
+    let vein: LimbVein
+    if (!entry || entry.state === 'locked') {
+      // Dieselbe Weiche wie in `reqWreaths` und im Tooltip: gegen ein Phasen-
+      // oder Prestige-Tor hilft kein Vorgänger.
+      vein =
+        entry?.lockKind === 'phase' || entry?.lockKind === 'prestige' ? 'gate' : 'blocked'
+    } else if (entry.state === 'maxed') vein = 'full'
+    else if (entry.level > 0) vein = 'grown'
+    else vein = 'open'
+    out[vein].push(limb)
+  }
+  return out
+})
+
+/** Die Rinne unter allem — ausser unter den Tor-Kanten, die ihre eigene, blasse
+ *  Ebene haben. Zwei Gruppen statt einer Deckkraft je Pfad: ein
+ *  Präsentationsattribut wäre von keiner Regel mehr zu überschreiben. Die Töpfe
+ *  liegen schon sortiert vor — ein zweiter Durchlauf über die Kanten wäre eine
+ *  Rechnung für eine Antwort, die daneben steht. */
+const bedLimbs = computed(() => {
+  const g = veinGroups.value
+  return [...g.blocked, ...g.open, ...g.grown, ...g.full]
+})
+
+/** Die Breite einer Ader. Der Boden verhindert, dass die feinste beim
+ *  Herauszoomen unter einen halben Geräte-Pixel fällt und mit ihr der Zustand. */
+function veinWidth(limb: Limb, factor: number): number {
+  return Math.max(FORGE_LIMB_MIN_WIDTH, limb.width * factor)
+}
 /**
  * Die Bedingungskanten — und zwar nur die des GEZEIGTEN Knotens.
  *
@@ -671,14 +875,16 @@ const requireLimbs = computed(() =>
     .filter((l) => l.kind === 'require' && l.targetId === spotlightId.value)
     // Eine Spur dünner als der Ast, an dem sie hängt: die Bedingung ist die
     // Auskunft, nicht das Gerüst.
-    .map((l) => ({ ...l, width: Math.max(2, l.width - 1) })),
-)
-
-/** Der gefärbte Strich über dem Grundstrich: das Ziel ist gewachsen. Nur über
- *  STRUKTUR-Kanten — eine leuchtende Brücke behauptete einen Fortschritt, den
- *  sie nicht vermittelt. */
-const activeLimbs = computed(() =>
-  structureLimbs.value.filter((limb) => (entryById.value.get(limb.targetId)?.level ?? 0) > 0),
+    //
+    // `met` kommt aus derselben Menge, aus der auch der Ring am Kreis liest.
+    // Die Linien waren einmal ALLE rot — daneben stand ein grüner Ring an
+    // einem erfüllten Vorgänger, und die Kante dazwischen behauptete das
+    // Gegenteil. Grün steht, rot fehlt, überall.
+    .map((l) => ({
+      ...l,
+      width: Math.max(FORGE_LIMB_MIN_WIDTH, l.width - 1),
+      met: spotReqs.value.get(l.sourceId) ?? false,
+    })),
 )
 
 /**
@@ -796,6 +1002,7 @@ const spotlightColor = computed(
 const spotScale = String(FORGE_SPOTLIGHT_NODE_SCALE)
 const spotDimOpacity = String(FORGE_SPOTLIGHT_DIM_OPACITY)
 const spotPingMs = `${FORGE_SPOTLIGHT_PING_MS}ms`
+const limbDimOpacity = String(FORGE_LIMB_DIM_OPACITY)
 
 // ── Zonen-Freischaltung ───────────────────────────────────────────────────────
 /**
@@ -1472,18 +1679,113 @@ const nextPhasePreviewStyle = computed(() => ({
   pointer-events: none;
 }
 
-/* Die Wege zwischen zwei Zonen — am blassesten von allen. Sie schalten nichts
-   frei; sie sagen nur, dass es weitergeht. */
-.bridge-limbs {
-  opacity: 0.5;
+/* ══════════════════════════════════════════════════
+   DIE KANTEN
+   ══════════════════════════════════════════════════
+
+   Eine Kante beantwortet EINE Frage: wie weit ist dieser Weg? Sie hat dafür
+   drei Strichbilder und eine Reihenfolge in der Breite.
+
+     fein gepunktet   versperrt        · · · · ·
+     durchgezogen     begehbar         ─────────
+     lang gestrichelt Weg zwischen Zonen  ─  ─  ─
+
+   Alles hier ist STATISCH. Kein `filter`, keine Animation, keine
+   Custom Property am Container — bei 155 dauerhaften Pfaden ist jede dieser
+   drei Sachen eine dreistellige Rechnung pro Frame (Performance-Regeln 2, 3
+   und 11). Die einzige laufende Kanten-Animation bleibt der Lichtlauf auf der
+   Scheinwerferkette, und die ist höchstens sieben Glieder lang. */
+
+/* Das Kantenfeld tritt zurück, sobald auf einen Knoten gezeigt wird — EIN Wert
+   auf EINER Ebene, also Compositor-Arbeit (Regel 1). Vorher dimmten nur die
+   Kreise, und das volle Liniennetz darüber las sich nicht als Antwort, sondern
+   als Gitter. Kette und Bedingung liegen ausserhalb dieser Gruppe. */
+.limb-field {
+  transition: opacity 160ms ease;
 }
 
-/* Die Bedingung eines gesperrten Knotens: rot, gestrichelt, und nur solange
-   sie fehlt. Rot ist im Projekt durchgehend „fehlt" (`FORGE_REQ_OPEN_COLOR`) —
-   dieselbe Farbe tragen die hohlen Punkte des Kranzes am Knoten selbst. */
-.req-limbs {
-  stroke: #cc6050;
+.tree-svg--focus .limb-field {
+  opacity: v-bind(limbDimOpacity);
+}
+
+/* DIE RINNE — die Struktur selbst. Sie trägt die Ader und darf ihr deshalb
+   nicht die Schau stehlen: hier stand #4a3418, und neben diesem Ton war eine
+   gefärbte Ader bei 0,55 Deckkraft kaum als etwas anderes zu erkennen. */
+.limb-bed {
+  stroke: #241d12;
+}
+
+/* Hinter einem Tor. Der Weg existiert, aber er ist noch nicht einmal Thema —
+   und ohne Ader darauf ist das die einzige Ebene, die von dieser Kante
+   bleibt. */
+.limb-bed--gate {
+  stroke: #1c1810;
+  opacity: 0.28;
+}
+
+/* Der Schein unter der vollen Ader. So blass, dass er nur als Dicke wirkt. */
+.limb-halo {
+  opacity: 0.12;
+}
+
+/* Die Wege zwischen zwei Zonen. Sie schalten nichts frei — die lange
+   Strichelung sagt „es geht weiter", ohne etwas zu behaupten. Ist die Zone
+   offen, trägt der Weg ihre Leitfarbe (per `stroke` am Pfad, aus der Karte). */
+.limb-bridge {
+  stroke-dasharray: 18 14;
+}
+
+.limb-bridge--closed {
+  stroke: #39424a;
+  opacity: 0.3;
+}
+
+.limb-bridge--open {
+  opacity: 0.45;
+}
+
+/* Versperrt: die Voraussetzung fehlt. Gepunktet und in gedämpftem Rot — Rot
+   ist im Projekt durchgehend „fehlt" (`FORGE_REQ_OPEN_COLOR`), gedämpft, weil
+   im frischen Spielstand fast jede Kante so aussieht und ein sattes Rot über
+   die halbe Bühne eine Warnung wäre statt einer Auskunft. */
+.limb-vein--blocked {
+  stroke: #9a5342;
+  stroke-dasharray: 2.5 7;
   opacity: 0.62;
+}
+
+/* Frei, aber noch bei Stufe null. Dasselbe Eisblau wie der Rand eines
+   `empty`-Kreises — Kante und Knoten sagen dasselbe, in derselben Farbe. */
+.limb-vein--open {
+  stroke: #7bb8ff;
+  opacity: 0.45;
+}
+
+/* Gewachsen und ausgewachsen tragen beide die Farbe des ZIELS. Sie
+   unterscheiden sich in Deckkraft und Breite, nicht im Ton: es ist derselbe
+   Weg, nur weiter gegangen. */
+.limb-vein--grown {
+  opacity: 0.7;
+}
+
+.limb-vein--full {
+  opacity: 0.95;
+}
+
+/* Die Bedingung eines gesperrten Knotens, gestrichelt und nur solange auf ihn
+   gezeigt wird. Grün steht, rot fehlt — dieselben zwei Töne wie die Punkte des
+   Kranzes und die Häkchen im Tooltip. Sie waren hier einmal ALLE rot, und
+   damit widersprach die Linie dem grünen Ring, auf dem sie endete. */
+.req-limbs {
+  opacity: 0.62;
+}
+
+.req-limb--met {
+  stroke: #52b830;
+}
+
+.req-limb--open {
+  stroke: #cc6050;
 }
 
 /* ══════════════════════════════════════════════════
@@ -2154,13 +2456,6 @@ const nextPhasePreviewStyle = computed(() => ({
 /* ══════════════════════════════════════════════════
    RINGFILTER — was der Chip oben nicht durchlässt
 ══════════════════════════════════════════════════ */
-/* Äste. Die Grunddeckkraft der gewachsenen Verbindungen steht als KLASSE und
-   nicht als `opacity`-Attribut am `<line>` — ein Präsentationsattribut wäre von
-   keiner Regel mehr zu überschreiben. */
-.limb--lit {
-  opacity: 0.55;
-}
-
 /* `scale()` am Kreis öffnet einen Stapelkontext INNERHALB des Wrappers — ohne
    dieses Anheben läge der vergrößerte Knoten im gedrängten Blattring unter
    seinem nächsten Geschwister. */
@@ -2202,6 +2497,12 @@ const nextPhasePreviewStyle = computed(() => ({
   .node-spot::after,
   .spot-limbs path {
     animation: none;
+  }
+
+  /* Das Kantenfeld tritt weiter zurück, nur ohne Überblendung — der Zustand
+     ist die Auskunft, die Bewegung dorthin war nur die Höflichkeit. */
+  .limb-field {
+    transition: none;
   }
 
   /* Und dieselbe Falle beim Kompass: seine Einblendung startet bei Deckkraft 0
