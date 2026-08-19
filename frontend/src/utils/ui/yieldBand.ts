@@ -31,6 +31,10 @@ import type { CpsFactor } from '@/types'
 import {
   FORGE_YIELD_SOURCES,
   FORGE_YIELD_MIN_SEGMENT_PCT,
+  FORGE_YIELD_UNUSED_WIDTH_PCT,
+  FORGE_YIELD_RING_CIRCUMFERENCE,
+  FORGE_YIELD_RING_GAP,
+  FORGE_YIELD_RING_MIN_ARC,
   type ForgeYieldSourceDef,
 } from '@/config/constants'
 
@@ -42,14 +46,15 @@ export interface YieldBandSegment {
   /** Breite in Prozent der Bandbreite. Alle Segmente zusammen ergeben 100. */
   pct: number
   /**
-   * Die MITTE des Segments in Prozent der Bandbreite — daraus positioniert sich
-   * das Kärtchen über dem Segment, auf das der Zeiger zeigt.
+   * Der ANFANG des Segments in Prozent der Bandbreite — die kumulierte Breite
+   * aller Vorgänger. Aus ihm setzt `yieldRingArcs()` den Bogen an seine Stelle
+   * im Ring.
    *
    * Steht hier und nicht in der Komponente: es ist dieselbe Darstellungsrechnung
    * wie `pct`, und sie erst nach dem Anheben der schmalen Segmente zu bilden ist
    * der einzige Weg, auf dem sie zu den TATSÄCHLICHEN Breiten passt.
    */
-  center: number
+  start: number
   /** Zieht dieser Eintrag ab, statt beizutragen? */
   drains: boolean
   /** Die kurze Form IM Balken — `2.8×`. Muss in ein schmales Segment passen. */
@@ -165,7 +170,7 @@ export function yieldBandSegments(factors: readonly CpsFactor[]): YieldBandSegme
       title: g.def.title,
       color: g.def.color,
       pct: gainWeight === 0 ? 0 : (g.weight / gainWeight) * gainShare * 100,
-      center: 0,
+      start: 0,
       drains: false,
       value: barText(g.factor, false),
       detail: gainText(g.factor),
@@ -177,7 +182,7 @@ export function yieldBandSegments(factors: readonly CpsFactor[]): YieldBandSegme
       title: d.def.title,
       color: d.def.color,
       pct: drainWeight === 0 ? 0 : (d.weight / drainWeight) * drainShare * 100,
-      center: 0,
+      start: 0,
       drains: true,
       value: barText(d.factor, true),
       detail: drainText(d.factor),
@@ -190,24 +195,78 @@ export function yieldBandSegments(factors: readonly CpsFactor[]): YieldBandSegme
   // keines mehr — ohne diesen Filter hoebe ihn die Mindestbreite unten wieder
   // ins Bild und naehme dem Verlust einen Teil seiner Laenge, obwohl der gerade
   // alles frisst.
-  return withCenters(liftThinSegments(raw.filter((s) => s.pct > 0)))
+  return withStarts(liftThinSegments(raw.filter((s) => s.pct > 0)))
 }
 
 /**
- * Setzt jedem Segment seine Mitte — kumulierte Breite der Vorgänger plus die
- * halbe eigene.
+ * Setzt jedem Segment seinen Anfang — die kumulierte Breite der Vorgänger.
  *
  * Läuft ZULETZT, nach dem Anheben der schmalen Segmente. Vorher gebildet zeigte
- * die Mitte auf die rechnerische Breite statt auf die tatsächlich gezeichnete,
- * und das Kärtchen stünde genau bei den Segmenten daneben, die angehoben wurden.
+ * der Anfang auf die rechnerische Breite statt auf die tatsächlich gezeichnete,
+ * und jeder Bogen hinter einem angehobenen Segment säße daneben.
  */
-function withCenters(segments: YieldBandSegment[]): YieldBandSegment[] {
+function withStarts(segments: YieldBandSegment[]): YieldBandSegment[] {
   let run = 0
   return segments.map((s) => {
-    const center = run + s.pct / 2
+    const start = run
     run += s.pct
-    return { ...s, center }
+    return { ...s, start }
   })
+}
+
+/** Ein Bogen des Ertrags-Rings — fertig für ein `<circle>`, ohne Nachrechnen. */
+export interface YieldRingArc {
+  id: string
+  color: string
+  /** `stroke-dasharray`: sichtbare Bogenlänge, dann der ganze Rest. */
+  dash: string
+  /** `stroke-dashoffset` — negativ, weil der Bogen nach VORNE geschoben wird. */
+  offset: number
+  drains: boolean
+}
+
+/**
+ * Das Band als RING — dieselben Anteile, nur auf einen Umfang gelegt.
+ *
+ * Steht hier und nicht in der Komponente, aus demselben Grund wie der Rest der
+ * Datei: die Randfälle („ein einziges Segment", „elf Segmente, deren Lücken
+ * zusammen mehr fressen als der Umfang hergibt") sind im Bild kaum herstellbar
+ * und in einer reinen Funktion in drei Zeilen geprüft.
+ *
+ * ── Warum die Lücken vom Umfang ABGEZOGEN werden ────────────────────────────
+ * Zwischen zwei Bögen liegt eine Lücke, sonst verschmelzen zwei benachbarte
+ * Farben zu einer Fläche. Zöge man sie erst am Ende ab, liefe der letzte Bogen
+ * über den Anfang des ersten. Deshalb wird der Platz für ALLE Lücken vorweg
+ * einbehalten (`usable`) und die Anteile teilen sich nur den Rest — dasselbe
+ * Muster wie `SigilPowerCore.vue`.
+ *
+ * ── Warum der Ring nicht ganz gefüllt wird ──────────────────────────────────
+ * Der Geister-Bogen für die ungenutzten Herkünfte nimmt seinen festen Anteil
+ * (`FORGE_YIELD_UNUSED_WIDTH_PCT`), und die Segmente werden auf den Rest
+ * gestaucht. Er ist bewusst KEIN Teil der 100-%-Rechnung: im frischen
+ * Spielstand sind acht von acht erworbenen Herkünften neutral, anteilig
+ * gezeichnet wäre „ungenutzt" der größte Bogen im Ring.
+ */
+export function yieldRingArcs(
+  segments: readonly YieldBandSegment[],
+  unusedCount: number,
+): YieldRingArc[] {
+  if (segments.length === 0) return []
+
+  const hasGhost = unusedCount > 0
+  // Eine Lücke je Bogen — die letzte schliesst den Kreis zurück auf den ersten,
+  // damit ein einzelnes Segment als Bogen und nicht als voller Ring liest.
+  const gapCount = segments.length + (hasGhost ? 1 : 0)
+  const usable = Math.max(FORGE_YIELD_RING_CIRCUMFERENCE - gapCount * FORGE_YIELD_RING_GAP, 0)
+  const scale = hasGhost ? (100 - FORGE_YIELD_UNUSED_WIDTH_PCT) / 100 : 1
+
+  return segments.map((s, index) => ({
+    id: s.id,
+    color: s.color,
+    dash: `${Math.max((s.pct / 100) * scale * usable, FORGE_YIELD_RING_MIN_ARC).toFixed(2)} ${FORGE_YIELD_RING_CIRCUMFERENCE.toFixed(2)}`,
+    offset: -((s.start / 100) * scale * usable + index * FORGE_YIELD_RING_GAP),
+    drains: s.drains,
+  }))
 }
 
 /**

@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { yieldBandSegments, unusedYieldSources } from '@/utils/ui/yieldBand'
-import { FORGE_YIELD_SOURCES, FORGE_YIELD_MIN_SEGMENT_PCT } from '@/config/constants'
+import { yieldBandSegments, unusedYieldSources, yieldRingArcs } from '@/utils/ui/yieldBand'
+import {
+  FORGE_YIELD_SOURCES,
+  FORGE_YIELD_MIN_SEGMENT_PCT,
+  FORGE_YIELD_UNUSED_WIDTH_PCT,
+  FORGE_YIELD_RING_CIRCUMFERENCE,
+  FORGE_YIELD_RING_GAP,
+  FORGE_YIELD_RING_MIN_ARC,
+} from '@/config/constants'
 import type { CpsFactor } from '@/types'
 
 /**
@@ -179,17 +186,17 @@ describe('yieldBandSegments', () => {
   // ─── Mitte des Segments (Position des Kaertchens) ───────────────────────────
 
   /**
-   * Das Kaertchen steht ueber dem Segment, auf das der Zeiger zeigt — `center`
-   * ist diese Stelle. Vorher stand es unveraenderlich links, egal welches
-   * Segment gemeint war.
+   * Aus dem Anfang setzt `yieldRingArcs()` den Bogen an seine Stelle im Ring.
+   * Vorher stand hier die MITTE — sie trug das Kaertchen des alten Balkens, und
+   * der Ring braucht statt ihrer den Ansatzpunkt.
    */
-  it('setzt die Mitte auf die kumulierte Breite plus die halbe eigene', () => {
+  it('setzt den Anfang auf die kumulierte Breite der Vorgaenger', () => {
     const segs = yieldBandSegments(f({ forge: 4, meeps: 4 }))
-    expect(segs[0].center).toBeCloseTo(25, 6)
-    expect(segs[1].center).toBeCloseTo(75, 6)
+    expect(segs[0].start).toBeCloseTo(0, 6)
+    expect(segs[1].start).toBeCloseTo(50, 6)
   })
 
-  it('haelt jede Mitte innerhalb des Bandes und in Leserichtung', () => {
+  it('haelt jeden Anfang innerhalb des Bandes und in Leserichtung', () => {
     for (const entries of [
       { forge: 2 },
       { forge: 8, meeps: 2, codex: 1.5 },
@@ -199,24 +206,24 @@ describe('yieldBandSegments', () => {
       const segs = yieldBandSegments(f(entries))
       let prev = -1
       for (const s of segs) {
-        expect(s.center).toBeGreaterThan(0)
-        expect(s.center).toBeLessThan(100)
-        expect(s.center, 'Mitten muessen aufsteigen').toBeGreaterThan(prev)
-        prev = s.center
+        expect(s.start).toBeGreaterThanOrEqual(0)
+        expect(s.start).toBeLessThan(100)
+        expect(s.start, 'Anfaenge muessen aufsteigen').toBeGreaterThan(prev)
+        prev = s.start
       }
     }
   })
 
   /**
-   * Die Mitte wird NACH dem Anheben der schmalen Segmente gebildet. Vorher
-   * gebildet zeigte sie auf die rechnerische statt auf die gezeichnete Breite,
-   * und das Kaertchen stuende genau bei den angehobenen Segmenten daneben.
+   * Der Anfang wird NACH dem Anheben der schmalen Segmente gebildet. Vorher
+   * gebildet zeigte er auf die rechnerische statt auf die gezeichnete Breite,
+   * und jeder Bogen hinter einem angehobenen Segment saesse daneben.
    */
-  it('rechnet die Mitte aus den ANGEHOBENEN Breiten', () => {
+  it('rechnet den Anfang aus den ANGEHOBENEN Breiten', () => {
     const segs = yieldBandSegments(f({ forge: 1e6, solar: 1.001 }))
     let run = 0
     for (const s of segs) {
-      expect(s.center).toBeCloseTo(run + s.pct / 2, 6)
+      expect(s.start).toBeCloseTo(run, 6)
       run += s.pct
     }
     expect(run).toBeCloseTo(100, 6)
@@ -304,6 +311,119 @@ describe('unusedYieldSources', () => {
     for (const def of unusedYieldSources(f({}))) {
       expect(def.title.length, `${def.id} ohne Namen`).toBeGreaterThan(0)
       expect(def.hint.length, `${def.id} ohne Hinweis`).toBeGreaterThan(0)
+    }
+  })
+})
+
+/**
+ * Das Band als RING.
+ *
+ * Geprueft wird die GEOMETRIE, nicht die Farbe: dass die Boegen samt ihren
+ * Luecken nie ueber den Umfang laufen (sonst legt sich der letzte ueber den
+ * ersten), dass die Geister-Zone ihren festen Anteil bekommt, und dass ein
+ * winziger Anteil sichtbar bleibt statt zu verschwinden. Alle drei sind
+ * Zustaende, die man im Bild kaum herstellt.
+ */
+describe('yieldRingArcs', () => {
+  const f = (entries: Record<string, number>): CpsFactor[] =>
+    FORGE_YIELD_SOURCES.map((s) => ({ id: s.id, factor: entries[s.id] ?? 1 }))
+
+  /** Die sichtbare Bogenlaenge — der erste Wert der `stroke-dasharray`. */
+  const arcLen = (dash: string) => Number(dash.split(' ')[0])
+
+  it('gibt nichts zurueck, wenn es keine Segmente gibt', () => {
+    expect(yieldRingArcs([], 0)).toEqual([])
+    expect(yieldRingArcs([], 4)).toEqual([])
+  })
+
+  it('traegt je Segment genau einen Bogen, in derselben Reihenfolge', () => {
+    const segs = yieldBandSegments(f({ forge: 4, meeps: 2, void: 0.8 }))
+    const arcs = yieldRingArcs(segs, 0)
+    expect(arcs.map((a) => a.id)).toEqual(segs.map((s) => s.id))
+    expect(arcs.map((a) => a.color)).toEqual(segs.map((s) => s.color))
+  })
+
+  /**
+   * Der harte Fall: elf Herkuenfte gleichzeitig. Boegen plus Luecken duerfen den
+   * Umfang nicht ueberschreiten — sonst laege der letzte Bogen ueber dem ersten
+   * und der Ring zeigte eine Aufteilung, die es nicht gibt.
+   */
+  it('bleibt mitsamt Luecken innerhalb des Umfangs', () => {
+    for (const [entries, unusedCount] of [
+      [{ forge: 2 }, 0],
+      [{ forge: 8, meeps: 2, codex: 1.5 }, 4],
+      [{ forge: 80, solar: 1.05, void: 0.88 }, 0],
+      [
+        {
+          solar: 1.5,
+          forge: 3,
+          meeps: 1.4,
+          codex: 1.2,
+          items: 1.9,
+          traits: 1.1,
+          universe: 2.2,
+          augments: 4,
+          boons: 1.3,
+          void: 0.7,
+          bosses: 0.9,
+        },
+        0,
+      ],
+    ] as [Record<string, number>, number][]) {
+      const arcs = yieldRingArcs(yieldBandSegments(f(entries)), unusedCount)
+      const gapCount = arcs.length + (unusedCount > 0 ? 1 : 0)
+      const spent = arcs.reduce((sum, a) => sum + arcLen(a.dash), 0)
+      expect(spent + gapCount * FORGE_YIELD_RING_GAP).toBeLessThanOrEqual(
+        FORGE_YIELD_RING_CIRCUMFERENCE + 1e-6,
+      )
+      // Kein Bogen darf hinter dem Kreisanfang ansetzen oder ueber ihn hinaus.
+      for (const a of arcs) {
+        expect(a.offset).toBeLessThanOrEqual(0)
+        expect(-a.offset).toBeLessThan(FORGE_YIELD_RING_CIRCUMFERENCE)
+      }
+    }
+  })
+
+  /**
+   * Die Geister-Zone ist KEIN Bogen, sondern der Platz, den die anderen ihr
+   * lassen. Sie taucht deshalb nicht im Ergebnis auf — sie verkuerzt es.
+   */
+  it('staucht die Boegen um den Anteil der Geister-Zone', () => {
+    const segs = yieldBandSegments(f({ forge: 4, meeps: 2 }))
+    const full = yieldRingArcs(segs, 0)
+    const withGhost = yieldRingArcs(segs, 5)
+
+    expect(withGhost).toHaveLength(full.length)
+    const fullLen = full.reduce((sum, a) => sum + arcLen(a.dash), 0)
+    const ghostLen = withGhost.reduce((sum, a) => sum + arcLen(a.dash), 0)
+    expect(ghostLen).toBeLessThan(fullLen)
+    // Der Anteil ist der der Zone, bis auf den Platz der zusaetzlichen Luecke.
+    const expected = fullLen * ((100 - FORGE_YIELD_UNUSED_WIDTH_PCT) / 100)
+    expect(ghostLen).toBeLessThanOrEqual(expected + 1e-6)
+  })
+
+  it('markiert einen Abzug, damit er zweilagig gezeichnet werden kann', () => {
+    const arcs = yieldRingArcs(yieldBandSegments(f({ forge: 4, void: 0.8 })), 0)
+    expect(arcs.find((a) => a.id === 'forge')?.drains).toBe(false)
+    expect(arcs.find((a) => a.id === 'void')?.drains).toBe(true)
+  })
+
+  /**
+   * Ein Anteil, den die Stauchung unter die Sichtbarkeit drueckt, wird
+   * angehoben. Ohne das waere er ein Strich von unter einem Pixel — der Chip
+   * daneben spraeche von etwas, das im Ring nicht zu finden ist.
+   */
+  it('haelt jeden Bogen auf der Mindestlaenge', () => {
+    const arcs = yieldRingArcs(yieldBandSegments(f({ forge: 1e6, solar: 1.001 })), 8)
+    for (const a of arcs) {
+      expect(arcLen(a.dash)).toBeGreaterThanOrEqual(FORGE_YIELD_RING_MIN_ARC)
+    }
+  })
+
+  it('nennt im zweiten Wert der dasharray immer den vollen Umfang', () => {
+    const arcs = yieldRingArcs(yieldBandSegments(f({ forge: 4, meeps: 2 })), 0)
+    for (const a of arcs) {
+      expect(Number(a.dash.split(' ')[1])).toBeCloseTo(FORGE_YIELD_RING_CIRCUMFERENCE, 1)
     }
   })
 })

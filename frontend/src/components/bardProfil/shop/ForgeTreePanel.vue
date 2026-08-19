@@ -3,9 +3,14 @@
     <!-- shared cosmic backdrop (same starfield as Team / Planets / Skill Tree) -->
     <CosmicStageBackground />
 
-    <!-- Alles Skalierte lebt im Viewport, der Ertrags-Sockel darunter NICHT.
+    <!-- Alles Skalierte lebt im Viewport, der Ertrags-Kopf darüber NICHT.
          Die Bühne ragt bei Standardzoom weit über ihre Zelle hinaus; eine
-         schwebende Sockelkarte läge damit über anklickbaren Knoten. -->
+         schwebende Kopfkarte läge damit über anklickbaren Knoten.
+
+         Er steht OBEN und nicht mehr am Fuß: es ist die wichtigste Auskunft der
+         Spalte, und am Fuß lag sie dort, wo der Blick zuletzt hinkommt. -->
+    <ForgeYieldPlinth />
+
     <!-- Die Buehne ist groesser als ihr Fenster, also wird gezogen. Muster und
          Reihenfolge wie im Sigil-Board: `setPointerCapture` erst NACH der
          Schwelle, `@click.capture` verschluckt den Klick nach echtem Zug. -->
@@ -396,8 +401,6 @@
       </div>
     </div>
     </div>
-
-    <ForgeYieldPlinth />
   </div>
 </template>
 
@@ -1607,9 +1610,9 @@ const nextPhasePreviewStyle = computed(() => ({
 /* ══════════════════════════════════════════════════
    PANEL
 ══════════════════════════════════════════════════ */
-/* Spalte statt Fläche: oben der Viewport mit der skalierten Bühne, darunter der
-   Ertrags-Sockel im Fluss. Der Sockel liegt damit garantiert neben und nie über
-   einem Knoten — bei jedem Zoom. */
+/* Spalte statt Fläche: oben der Ertrags-Kopf im Fluss, darunter der Viewport mit
+   der skalierten Bühne. Der Kopf liegt damit garantiert neben und nie über einem
+   Knoten — bei jedem Zoom. */
 .tree-panel {
   position: relative;
   overflow: hidden;

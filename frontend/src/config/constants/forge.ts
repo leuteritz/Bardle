@@ -2999,16 +2999,16 @@ export const FORGE_SPOTLIGHT_COMPASS_KEEPOUT = { w: 152, h: 58 } as const
  */
 export const FORGE_UPGRADE_CAPPED_REASON = 'Raise the other rays to match'
 
-// ── Ertrags-Sockel unter der Sonne (ForgeYieldPlinth) ─────────────────────────
+// ── Ertrags-Kopf über der Sonne (ForgeYieldPlinth) ────────────────────────────
 /**
- * Der Sockel steht IM FLUSS unter der Baumbühne, nicht als schwebende Karte
+ * Der Kopf steht IM FLUSS über der Baumbühne, nicht als schwebende Karte
  * darauf. Zwei Gründe, beide zwingend:
  *
  * 1. Die Bühne trägt `transform: scale()` mit Zoom 0,55–2,2. Alles darin
  *    skaliert mit, und eine Ertragszeile in halber Größe ist keine Anzeige mehr.
  * 2. Bei Standardzoom (1,7) ragt die Bühne weit über das Panel hinaus — der
  *    Zweigring liegt dann bei rund 500px vom Zentrum, also genau dort, wo eine
- *    unten zentrierte Karte läge. Ein Knoten hinter dem Sockel liefe weiter,
+ *    am Rand zentrierte Karte läge. Ein Knoten hinter dem Kopf liefe weiter,
  *    wäre aber nicht mehr anklickbar.
  *
  * Der Preis ist, dass die Bühne diese Höhe verliert und bei Einpasszoom kleiner
@@ -3031,19 +3031,36 @@ export const FORGE_UPGRADE_CAPPED_REASON = 'Raise the other rays to match'
  * **Von 48 auf 64 gewachsen** (kompakt 40 → 56), als das Band aufhörte, nur aus
  * Farbflächen zu bestehen. Es trägt seitdem drei Zeilen statt einer: die
  * Kopfzeile mit dem Ergebnis, den Balken mit dem Faktor JE Herkunft, und die
- * Namen darunter. Die Rechnung für 64: Polster 6 · Kopfzeile 10 · Lücke 5 ·
- * Balken 20 · Lücke 3 · Namen 10 · Polster 6 = 60, der Rest ist Luft.
+ * Namen darunter.
  *
- * Die sechzehn Pixel sind der Preis dafür, dass man nicht mehr hovern MUSS, um
- * überhaupt eine Zahl zu sehen — vorher stand im Sockel keine einzige.
+ * **Von 64 auf 100 gewachsen** (kompakt 60 → 86), als aus dem Balken ein RING
+ * wurde und der Kopf von unten nach oben zog. Die Rechnung für 100: Polster 8 ·
+ * Ring 84 · Polster 8 = 100. Die Höhe ist damit die des Rings, und der Ring ist
+ * so groß, wie die Leitzahl in seiner Mitte lesbar sein muss — im ersten Anlauf
+ * stand er auf 76/66, und gemessen lief `×950K` dort über den Bogen hinaus.
+ *
+ * Die achtundzwanzig Pixel kaufen drei Dinge, die der Balken nicht konnte:
+ *
+ *   1. **Die Leitzahl steht zentral und groß.** Im Balken war `×17,7` in 17px
+ *      am rechten Rand das KLEINSTE Element des Sockels — ausgerechnet die
+ *      Zahl, um derentwillen er existiert.
+ *   2. **Jede Herkunft trägt ihren Namen UND ihren Wert.** Im Balken hingen
+ *      beide an Breiten-Schwellen: unter 9 % kein Wort, unter 5,5 % keine Zahl.
+ *      Wer wenig hatte, sah am wenigsten — genau verkehrt herum.
+ *   3. **Die Kopfzeile steht NEBEN dem Ring, nicht über ihm.** Als eigene Zeile
+ *      hätte sie weitere 28px gekostet; neben dem Ring ist sie umsonst, weil
+ *      dessen Durchmesser die Höhe ohnehin vorgibt.
  */
-export const FORGE_YIELD_PLINTH_HEIGHT_PX = 64
+export const FORGE_YIELD_PLINTH_HEIGHT_PX = 100
 /**
- * 60 und nicht 56: bei 56 blieben der Namenszeile gemessen 2px bis zur
- * Sockelkante. Abgeschnitten war nichts, aber die Reihe stand gedrängt, und
- * die Namen sind das, was die Farben überhaupt erst zuordenbar macht.
+ * 86 und nicht 84: der Ring misst kompakt 72, dazu zweimal 6 Polster sind 84.
+ * Die zwei Pixel darüber sind der Puffer, mit dem die letzte Chip-Zeile rechts
+ * nicht an der Kante klebt — auf Full HD ist die Höhe das Knappe, aber gedrängt
+ * gestellte Namen sind das, was die Farben unzuordenbar macht. Gemessen tragen
+ * die 86 auch den Ernstfall: elf Herkünfte plus Geister-Zone brechen dort auf
+ * drei Reihen um und bleiben vollständig im Kopf.
  */
-export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 60
+export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 86
 
 /**
  * Die Herkünfte des Chime-Ertrags — eine Zeile je Segment des Bandes,
@@ -3270,29 +3287,93 @@ export const FORGE_YIELD_UNUSED_WIDTH_PCT = 14
  */
 export const FORGE_YIELD_MIN_SEGMENT_PCT = 2.5
 /**
- * Ab welcher Breite ein Segment sein Wort trägt. Darunter bleibt es stumm und
- * spricht nur im Kärtchen: „Universe" braucht bei 10px Schrift rund 55px, und
- * ein auf drei Buchstaben abgeschnittenes Wort sagt weniger als keins. Der Wert
- * ist ein Anteil der BAUMSPALTE, die je nach Auflösung 700 bis 3200px misst —
- * auf 4K trägt damit fast jedes Segment sein Wort, auf Full HD nur die breiten.
- */
-export const FORGE_YIELD_LABEL_MIN_PCT = 9
-/**
- * Ab welcher Breite der FAKTOR im Balken selbst steht. Deutlich niedriger als
- * die Schwelle für das Wort darunter: `2.8×` sind vier Zeichen, `Cosmos` sechs
- * bis acht — und der Faktor ist die Zahl, um derentwillen das Band da ist. Wo
- * er nicht passt, bleibt der Balken leer und die Zahl steht im Kärtchen.
- */
-export const FORGE_YIELD_VALUE_MIN_PCT = 5.5
-/**
- * Feste Breite des Kärtchens.
+ * ── Der Ring ─────────────────────────────────────────────────────────────────
  *
- * Fest, weil die Klemmung sie braucht: das Kärtchen steht über dem Segment, auf
- * das der Zeiger zeigt, und `.tree-panel` schneidet ab (`overflow: hidden`). Mit
- * `clamp(halbeBreite, mitte, 100% − halbeBreite)` bleibt es ohne jede Messung im
- * Bild — ein `ResizeObserver` für ein Hover-Element wäre der teurere Weg.
+ * Ein Bogen je Herkunft auf einem gemeinsamen Umfang, die Leitzahl in der Mitte.
+ * Die Geometrie folgt `SIGIL_CORE_GAUGE_*` in `constants/sigil.ts` — dort steht
+ * derselbe Multi-Segment-Donut, und zwei Rechenwege für dieselbe Form wären eine
+ * zweite Quelle.
+ *
+ * Der viewBox ist 0 0 100 100, ein Radius in viewBox-Einheiten IST also ein
+ * Prozentsatz der Ringbox — es gibt keine zweite Einheit, die mitgeführt werden
+ * müsste. 44 und Strichbreite 8 lassen aussen 2 Einheiten Luft, damit der Strich
+ * an keiner Stelle von der Box abgeschnitten wird.
+ *
+ * **Von 42/11 auf 44/8 gegangen**, weil der ZWECK des Rings sein Loch ist: dort
+ * steht die Leitzahl. Innen bleiben `2r − Strich` Einheiten, also 80 % der
+ * Breite statt vorher 73 — gemessen lief `×720K` im alten Verhältnis auf 2K um
+ * 3px über den Bogen hinaus, und die Antwort darauf war sonst eine kleinere
+ * Zahl gewesen. Ein dünnerer Strich trägt elf Bögen ebenso gut: bei 84px Ring
+ * sind 8 Einheiten immer noch 6,7 Pixel.
  */
-export const FORGE_YIELD_TIP_WIDTH_PX = 250
+export const FORGE_YIELD_RING_RADIUS = 44
+export const FORGE_YIELD_RING_CIRCUMFERENCE = 2 * Math.PI * FORGE_YIELD_RING_RADIUS
+export const FORGE_YIELD_RING_STROKE = 8
+/**
+ * Die Lücke zwischen zwei Bögen, in Umfangseinheiten. Ohne sie verschmelzen
+ * benachbarte Farben zu einer Fläche, und der Ring zeigt statt elf Herkünften
+ * einen Farbverlauf. 3 von 264 Umfang sind rund 1,1 % — bei elf Bögen gehen
+ * damit gut 12 % an Lücken, was der Ring gerade noch trägt.
+ */
+export const FORGE_YIELD_RING_GAP = 3
+/**
+ * Mindestlänge eines Bogens. Dieselbe Not wie `FORGE_YIELD_MIN_SEGMENT_PCT` beim
+ * Balken, nur eine Ebene später: die Prozente sind dort schon angehoben, aber
+ * die Stauchung durch die Geister-Zone kann einen Bogen erneut unter die
+ * Sichtbarkeit drücken.
+ */
+export const FORGE_YIELD_RING_MIN_ARC = 5
+/** Kantenlänge der Ringbox. Die Kopfhöhe ist diese Zahl plus zweimal Polster. */
+export const FORGE_YIELD_RING_SIZE_PX = 84
+export const FORGE_YIELD_RING_SIZE_COMPACT_PX = 72
+/**
+ * Was unter der Leitzahl steht. „Chime yield" stand hier zuerst und war der Kern
+ * der Rückmeldung „verstehe ich nicht": ein Name über einer Zahl erklärt nichts.
+ * `Chime boost` sagt, was die Zahl TUT.
+ */
+export const FORGE_YIELD_TOTAL_CAPTION = 'Chime boost'
+/**
+ * Wie viele Zeichen die Leitzahl bei VOLLER Größe tragen darf, das `×`
+ * mitgezählt. Darüber greift die kleinere Stufe.
+ *
+ * Fünf, weil `formatNumberCompact` genau so weit geht: `×1.00`, `×17.7`,
+ * `×950K`, `×1.1M`. Sechs werden es nur bei `×999.9` und `×1.04M` — und dort
+ * ist die kleinere Stufe richtig.
+ *
+ * Die Schwelle hängt an der ZEICHENZAHL und nicht an einer Messung: ein
+ * `ResizeObserver` für eine Zahl, die sich bei jedem Kauf ändert, wäre der
+ * teurere Weg für dieselbe Auskunft.
+ */
+export const FORGE_YIELD_TOTAL_LONG_CHARS = 5
+/**
+ * Schriftgröße der Leitzahl als ANTEIL der Ringbreite — nicht als Pixelzahl.
+ *
+ * Der Ring ist auf flachen Viewports kleiner, sein Loch also auch. Zwei feste
+ * Pixelgrößen dafür liefen bei der nächsten Änderung an der Ringgröße
+ * auseinander; gemessen lief `×950K` bei 21px im 66er Ring 6,5px über den Bogen
+ * hinaus, während dieselbe Zahl im 76er Ring hineinpasste.
+ *
+ * Die Rechnung: innen bleiben `(2r − Strich) / 100` der Breite, bei r 44 und
+ * Strich 8 also 80 %. Fünf Zeichen der Projektschrift messen im ungünstigsten
+ * Fall knapp das Dreifache der Schriftgröße — gemessen 0,59 em je Zeichen bei
+ * `×720K`, das keinen schmalen Punkt enthält. 0,25 · Breite füllt davon rund
+ * 92 % des Lochs, und der Rest ist die Luft, die eine Zahl darin braucht.
+ *
+ * Die 0,59 sind gemessen und nicht geschätzt: mit der naheliegenden Annahme
+ * 0,52 (aus `×1.6M`, das einen Punkt trägt) lief dieselbe Zahl über.
+ */
+export const FORGE_YIELD_TOTAL_FONT_RATIO = 0.25
+/** Dieselbe Rechnung für die kleinere Stufe, gerechnet auf sechs Zeichen. */
+export const FORGE_YIELD_TOTAL_FONT_RATIO_LONG = 0.185
+/** Das Etikett unter der Zahl. Es benennt, es misst nicht — es bleibt klein. */
+export const FORGE_YIELD_CAPTION_FONT_RATIO = 0.095
+/**
+ * Abstand des TEMP-Admin-Knopfs zur Kante — links zum Panelrand, oben zur
+ * Unterkante des Ertrags-Kopfs. 14 ist derselbe Wert, den Zoom-Leiste und
+ * Kantenlegende an ihren Ecken tragen; drei eigene Zahlen für denselben Rand
+ * liefen bei der ersten Änderung auseinander. Fällt mit dem Knopf zusammen weg.
+ */
+export const SHOP_ADMIN_MAX_INSET_PX = 14
 /**
  * Chime-Bild der Kostenzeilen — dasselbe Artwork, das Header, Command Panel,
  * Sigil-Panel und Champion-Shop zeigen. Die Forge trug hier lange die
