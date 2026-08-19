@@ -32,19 +32,17 @@
          Sie hängt im VIEWPORT und nicht in der Bühne. „Die Bühne ist wortlos"
          gilt für das, was mit ihr skaliert und über den Knoten liegt — die
          Zoom-Leiste, der Kompass und der Sockel tragen sehr wohl Wörter.
+         Der Viewport endet bereits über dem Ertrags-Sockel; `bottom: 14px`
+         braucht deshalb keine Rechnung mit dessen Höhe.
 
          `.stop` aus demselben Grund wie an der Zoom-Leiste: ein Klick auf die
          Kopfzeile darf die Anheftung nicht abräumen. -->
     <div class="tree-legend" :class="{ 'tree-legend--open': legendOpen }" @click.stop>
-      <button
-        class="fl-head"
-        :aria-expanded="legendOpen"
-        @click="toggleLegend"
-      >
-        <span class="fl-chevron">{{ legendChevron }}</span>
-        <Icon :icon="FORGE_EDGE_LEGEND_ICON" width="14" height="14" class="fl-head-ico" />
-        <span class="fl-title">{{ FORGE_EDGE_LEGEND_TITLE }}</span>
-      </button>
+      <!-- Die Zeilen stehen ÜBER der Schaltzeile, und das ist keine Kosmetik:
+           die Kartusche hängt an ihrer UNTEREN Kante und wächst nach oben auf.
+           Stünde der Knopf oben, spränge er bei jedem Klick um die Höhe der
+           Liste weg — man drückte „zuklappen" und träfe ins Leere. So bleibt er
+           stehen, und die Liste wächst über ihm. -->
       <ul v-if="legendOpen" class="fl-rows">
         <li v-for="row in FORGE_EDGE_LEGEND_ROWS" :key="row.id" class="fl-row">
           <svg
@@ -64,6 +62,15 @@
           <span class="fl-label">{{ row.label }}</span>
         </li>
       </ul>
+      <button
+        class="fl-head"
+        :aria-expanded="legendOpen"
+        @click="toggleLegend"
+      >
+        <span class="fl-chevron">{{ legendChevron }}</span>
+        <Icon :icon="FORGE_EDGE_LEGEND_ICON" width="14" height="14" class="fl-head-ico" />
+        <span class="fl-title">{{ FORGE_EDGE_LEGEND_TITLE }}</span>
+      </button>
     </div>
 
     <!-- Zoom control -->
@@ -524,8 +531,8 @@ import {
   FORGE_EDGE_LEGEND_ROWS,
   FORGE_EDGE_LEGEND_SWATCH_W,
   FORGE_EDGE_LEGEND_STORAGE_KEY,
-  FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN,
-  FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
+  FORGE_EDGE_LEGEND_CHEVRON_OPEN,
+  FORGE_EDGE_LEGEND_CHEVRON_CLOSED,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -1083,7 +1090,7 @@ function toggleLegend(): void {
 }
 
 const legendChevron = computed(() =>
-  legendOpen.value ? FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN : FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
+  legendOpen.value ? FORGE_EDGE_LEGEND_CHEVRON_OPEN : FORGE_EDGE_LEGEND_CHEVRON_CLOSED,
 )
 
 // ── Zonen-Freischaltung ───────────────────────────────────────────────────────
@@ -1881,7 +1888,7 @@ const nextPhasePreviewStyle = computed(() => ({
    Dauerauskunft. Er läuft über sie, nicht dahinter. */
 .tree-legend {
   position: absolute;
-  top: 14px;
+  bottom: 14px;
   left: 14px;
   z-index: 12;
   border: 1px solid #4a3010;
@@ -1930,15 +1937,15 @@ const nextPhasePreviewStyle = computed(() => ({
   color: #c89040;
 }
 
-/* Die Trennlinie steht nur, wenn darunter etwas liegt — zugeklappt wäre sie
-   eine Kante ohne zweite Seite. */
-.tree-legend--open .fl-head {
-  border-bottom: 1px solid #2a1a08;
-}
-
+/* Die Trennlinie hängt an der LISTE und nicht an der Schaltzeile darunter.
+   An der Schaltzeile machte sie diese im offenen Zustand einen Pixel höher —
+   und weil die Kartusche an ihrer unteren Kante hängt, wanderte der Knopf bei
+   jedem Klick um genau diesen Pixel. An der Liste fällt sie mit ihr zusammen
+   weg, und die Schaltzeile ist in beiden Zuständen gleich hoch. */
 .fl-rows {
   margin: 0;
-  padding: 6px 9px 7px;
+  padding: 7px 9px 6px;
+  border-bottom: 1px solid #2a1a08;
   list-style: none;
 }
 
@@ -2001,7 +2008,7 @@ const nextPhasePreviewStyle = computed(() => ({
   }
 
   .fl-rows {
-    padding: 4px 9px 5px;
+    padding: 5px 9px 4px;
   }
 }
 

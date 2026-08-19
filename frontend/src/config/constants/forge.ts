@@ -578,6 +578,17 @@ export const FORGE_EDGE_LEGEND_ICON = 'lucide:route'
  */
 export const FORGE_EDGE_LEGEND_STORAGE_KEY = 'bard-forge-legend'
 /**
+ * Der Pfeil der Schaltzeile — und er zeigt in die andere Richtung als der der
+ * Schubladen.
+ *
+ * Die Legende steht an der UNTEREN Kante und wächst deshalb nach OBEN auf; die
+ * Upgrade- und Vault-Schubladen in der Spalte daneben wachsen nach unten. Die
+ * Geste ist dieselbe, die Richtung ist die umgekehrte, und ein geliehenes
+ * `FORGE_UPGRADE_ARCHIVE_CHEVRON_*` zeigte hier genau verkehrt herum.
+ */
+export const FORGE_EDGE_LEGEND_CHEVRON_CLOSED = '▴'
+export const FORGE_EDGE_LEGEND_CHEVRON_OPEN = '▾'
+/**
  * Die Länge einer Probe in px.
  *
  * Sie hängt an der LÄNGSTEN Strichelung, nicht am Platz: die Brücke trägt

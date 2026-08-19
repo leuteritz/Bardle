@@ -10,8 +10,8 @@
 
     <!-- TEMP: admin shortcut — buys every ray, branch, leaf, relic and
          constellation the CURRENT star phase allows, free of charge. Floated
-         into the tree's free corner (the zoom control owns the other one) so it
-         never takes part in the layout.
+         into the tree's top corner so it never takes part in the layout: the
+         two bottom ones are taken, by the zoom control and the edge legend.
          Remove together with `starForgeStore.adminMaxAll()`. -->
     <button class="shop-admin-max" title="Admin: buy every forge upgrade at once" @click="maxOutForge">
       <Icon icon="game-icons:anvil-impact" width="16" height="16" />
@@ -31,7 +31,6 @@ import {
   BARD_PROFILE_RAIL_MAX_PX,
   BARD_PROFILE_RAIL_MIN_PX,
   BARD_PROFILE_RAIL_VW,
-  FORGE_YIELD_PLINTH_HEIGHT_PX,
 } from '@/config/constants'
 import ForgeTreePanel from './ForgeTreePanel.vue'
 import StarForgePanel from './StarForgePanel.vue'
@@ -146,11 +145,13 @@ const detailWidth = `clamp(${BARD_PROFILE_RAIL_MIN_PX}px, ${BARD_PROFILE_RAIL_VW
 }
 
 /* ── TEMP admin button ─────────────────────────────────────────── */
-/* Sitzt ÜBER dem Ertrags-Sockel, nicht darauf: der Sockel belegt seit dem
-   Umbau die untere Kante der Baumspalte. Fällt mit dem Knopf zusammen weg. */
+/* Oben links. Die untere Kante der Baumspalte gehört inzwischen dem
+   Ertrags-Sockel, die untere linke Ecke der Kantenlegende und die untere rechte
+   der Zoom-Leiste — hier oben ist er am wenigsten im Weg, und die Rechnung mit
+   der Sockelhöhe entfällt gleich mit. Fällt mit dem Knopf zusammen weg. */
 .shop-admin-max {
   position: absolute;
-  bottom: v-bind('`${FORGE_YIELD_PLINTH_HEIGHT_PX + 14}px`');
+  top: 14px;
   left: 14px;
   z-index: 20;
   display: inline-flex;
