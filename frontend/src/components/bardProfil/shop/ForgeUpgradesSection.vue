@@ -297,8 +297,13 @@ const sections = computed<UpgradeSection[]>(() => {
      Elternsperren zuerst: die Liste ordnet durchgehend nach „was kann ich
      tun" — kaufen, sparen, den Elternknoten wachsen lassen, und ganz zuletzt
      das, wogegen nur Warten hilft. */
-  const parentLocked = pots.next.filter((entry) => entry.lockKind === 'parent')
   const phaseLocked = pots.next.filter((entry) => entry.lockKind === 'phase')
+  // Die RESTMENGE und kein zweiter Gleichheitstest: zwei Filter auf feste Werte
+  // sind zusammen nur so lange vollstaendig, wie niemand einen dritten Grund
+  // ergaenzt — und der Kronen-Ring hat mit `'prestige'` genau das getan. Ein
+  // Eintrag, der durch beide faellt, verschwindet aus der Liste, statt falsch
+  // einsortiert zu werden; das ist der teurere Fehler.
+  const parentLocked = pots.next.filter((entry) => entry.lockKind !== 'phase')
 
   // Innerhalb der Elternsperren zählt die Nähe zur Freischaltung, innerhalb der
   // Phasensperren das nächste Tor. Die übrigen Töpfe behalten die

@@ -116,17 +116,30 @@ export const CHRONICLE_TRACKS: ChronicleTrackDef[] = [
     // achievementStore), und jeder Ring erreicht seinen Deckel in der Endphase:
     //
     //   15 Branches x 6 + 15 Leaves x 5 + 15 Wards x 4 + 15 Covenants x 3
-    //   + 9 Relikte x 5 = 90 + 75 + 60 + 45 + 45 = 315
+    //   + 12 Relikte x 5 = 90 + 75 + 60 + 45 + 60 = 330
     //
-    // Die Endstufe haelt denselben Anteil daran wie zuvor (160/175 = 91 %),
-    // also 285; die Zwischenstufen sind im selben Verhaeltnis mitgewandert.
-    // Ohne das haette sich die Bahn nebenbei selbst verschenkt.
+    // Der Zusammenlauf hat GENAU EINEN Summanden bewegt: die Relikte, 9 -> 12.
+    // Ring 6 und 7 sind zwar von 10 auf 15 Knoten gewachsen, stehen aber
+    // ausserhalb dieser Summe -- fuenf Einsen sind keine geschmiedete Tiefe,
+    // und eine unbegrenzte Zahl machte jede Schwelle trivial, deren Lohn die
+    // Baumkosten senkt. Genau deshalb durften diese zwei Ringe wachsen und ein
+    // neuer Ward oder Covenant nicht.
+    //
+    // Die Endstufe haelt denselben Anteil wie zuvor (285/315 = 90,5 %), also
+    // 299; die Zwischenstufen sind im selben Verhaeltnis mitgewandert
+    // (Faktor 330/315 = 1,0476). Ohne das haette sich die Bahn nebenbei selbst
+    // verschenkt -- `chronicleReachable.spec.ts` prueft nur `<=`, nicht das
+    // Verhaeltnis.
+    //
+    // Stufe I bleibt bei 10: sie markiert "der erste Ring steht" und ist keine
+    // Quote. Die value-Spalte ruehrt sich nicht -- der Lohn ist derselbe, nur
+    // der Weg dorthin ist so lang wie vorher.
     stages: [
       { threshold: 10, value: 4 },
-      { threshold: 45, value: 8 },
-      { threshold: 110, value: 12 },
-      { threshold: 200, value: 16 },
-      { threshold: 285, value: 20 },
+      { threshold: 47, value: 8 },
+      { threshold: 115, value: 12 },
+      { threshold: 210, value: 16 },
+      { threshold: 299, value: 20 },
     ],
   },
   {

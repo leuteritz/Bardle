@@ -19,7 +19,7 @@
         :key="entry.id"
         class="fc-row fv-row"
         :class="entry.state === 'locked' ? 'fc-row--locked' : 'fc-row--done'"
-        :title="entry.desc"
+        :title="rowTitle(entry)"
       >
         <Icon :icon="entry.icon" width="27" height="27" :style="{ color: entry.color }" />
 
@@ -73,6 +73,7 @@
 import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useForgeOffers } from '@/composables/ui/useForgeOffers'
+import type { ForgeVaultEntry } from '@/types'
 import {
   FORGE_LOCK_ICON,
   FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
@@ -89,6 +90,22 @@ const open = ref(false)
 const chevron = computed(() =>
   open.value ? FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN : FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
 )
+
+/**
+ * Was am Zeiger steht — bei einer GESPERRTEN Zeile auch die Bedingungen.
+ *
+ * Die Zeile selbst zeigt nur die schwaechste (ein Balken, eine Zahl); bei einem
+ * Eintrag mit drei Vorgaengern blieben zwei sonst voellig unsichtbar. Der
+ * `title` kostet keine Zeilenhoehe und ist deshalb der Ort dafuer — eine
+ * zweite Liste im Markup waere die Karte, gegen die diese Zeile gebaut ist.
+ *
+ * Als Funktion und nicht als Ausdruck im Attribut: ein mehrteiliger
+ * Inline-Ausdruck mit Zeilenumbruch ueberlebt den Formatierer nicht.
+ */
+function rowTitle(entry: ForgeVaultEntry): string {
+  return entry.state === 'locked' ? `${entry.desc}
+${entry.reqLine}` : entry.desc
+}
 </script>
 
 <style scoped>

@@ -8,6 +8,7 @@ import {
 } from '@/config/constants'
 import { sunVitalStage } from '@/utils/ui/format'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useOmenStore } from '@/stores/progression/omenStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 
@@ -90,7 +91,21 @@ export const usePlayerStore = defineStore('player', {
         ),
       )
       const wasUp = this.currentHP > 0
-      this.currentHP = Math.max(0, this.currentHP - reduced)
+      /* Unfailing Sign (Star-Forge-Krone): solange ein Vorzeichen-Lohn läuft,
+         kann die Sonne nicht unter einen Anteil ihrer Höchst-HP fallen.
+
+         Die Klemme sitzt HIER und nicht bei den Schadensquellen: VIER buchen
+         Schaden (Void-Einschlag, Boss-Enrage, Rift-Nachwirkung, Kampf), und
+         eine Klemme je Quelle wären vier Wahrheiten über denselben Boden.
+
+         Gebucht wird trotzdem der VOLLE Schaden — `totalDamageTaken` ist die
+         Lebenszeit-Wahrheit darüber, was auf die Sonne eingeschlagen hat, und
+         nicht darueber, was davon durchkam. Dieselbe Trennung wie beim
+         Aufschub darunter. */
+      const floor = useOmenStore().liveBuffs.length > 0
+        ? Math.floor(this.maxHP * useStarForgeStore().omenHpFloorFraction)
+        : 0
+      this.currentHP = Math.max(floor, this.currentHP - reduced)
       this.totalDamageTaken += reduced
       if (wasUp && this.currentHP === 0) {
         this.timesDowned += 1

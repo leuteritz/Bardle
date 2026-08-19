@@ -1,4 +1,10 @@
-import type { ForgeNodeDef, ForgeRelicDef, ForgeConstellationDef, ForgeBargainDef } from '@/types'
+import type {
+  ForgeNodeDef,
+  ForgeNodeRequirement,
+  ForgeRelicDef,
+  ForgeConstellationDef,
+  ForgeBargainDef,
+} from '@/types'
 import {
   FORGE_BRANCH_UNLOCK_PHASE,
   FORGE_LEAF_UNLOCK_PHASE,
@@ -8,6 +14,13 @@ import {
   FORGE_BOUGH_UNLOCK_PHASE,
   FORGE_BOUGH_COST_MULTIPLIER,
   FORGE_CROWN_BASE_COST,
+  FORGE_CONJUNCTION_BRANCH_LEVEL,
+  FORGE_CONJUNCTION_LEAF_LEVEL,
+  FORGE_CONJUNCTION_WARD_LEVEL,
+  FORGE_CROWN_OWN_WARD_LEVEL,
+  FORGE_CROWN_MAX_LEVEL,
+  FORGE_VAULT_REQUIRED_LEVEL,
+  SOLAR_BRANCHES,
 } from '@/config/constants'
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -880,6 +893,14 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
  *      bezahltes Nichts.
  *   3. KEIN Material: `nodeMaterialCost` skaliert `qty × nextLevel`, und ohne
  *      Obergrenze liefe der Bedarf ohne Ende linear davon.
+ *
+ * **Und seit dem Zusammenlauf kann ein Bough ein TOR tragen** (`requires`). Die
+ * fünf neuen verlangen je eine KRONE — nicht als Hürde, sondern als Erklaerung:
+ * eine Krone kauft eine Regel und ist danach fertig, der Bough dahinter macht
+ * aus dieser Regel eine Achse, an der man weiterbauen kann. Ring 6 liegt weiter
+ * innen als Ring 7, `forgeRequirements.spec.ts` prueft es. Die zehn ALTEN tragen
+ * kein Tor und sollen auch keins bekommen: sie sind die Chime-Senke, die
+ * verfuegbar sein muss, sobald die Sonne fertig ist.
  */
 function bough(
   id: string,
@@ -891,11 +912,13 @@ function bough(
   baseCost: number,
   desc: string,
   effectPerLevel: number,
+  requires?: readonly ForgeNodeRequirement[],
 ): ForgeNodeDef {
   return {
     id,
     name,
     parentId,
+    requires,
     tier: 'bough',
     phase: FORGE_BOUGH_UNLOCK_PHASE,
     icon,
@@ -1020,11 +1043,88 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'Damage against bosses +{v}%.',
     10,
   ),
+
+  /* ── Die fünf mit TOR: was eine Regel eroeffnet hat, waechst weiter ───────
+     Jeder verlangt genau die Krone, deren Regel er ins Endlose fortsetzt — die
+     Bedingung ist damit keine Huerde, sondern der Satz, der den Knoten
+     erklaert. Tideless Watch verdoppelt den Lohn eines erlegten Wesens, Dark
+     Tithe multipliziert genau diese Zahl weiter.
+
+     Alle fünf halten die drei Bedingungen des endlosen Rings: additive Wirkung,
+     geometrische Kosten, kein Material — und ausschliesslich Achsen, die weder
+     `otherDps` heben noch STILL saettigen. Es sind Faktoren auf eine
+     AUSZAHLUNG, keine Wahrscheinlichkeitswuerfe: es gibt keinen Wert, ab dem
+     eine weitere Stufe nichts mehr hinzufuegt. Getaktet sind sie durch
+     Ereignisse (Void-Spawn, Boss-Kill, Drifter-Uhr, Handelsfenster, Erntetakt),
+     deren Frequenz je gegen einen eigenen Boden laeuft. */
+  bough(
+    'darkTithe',
+    'Dark Tithe',
+    'unbrokenPact',
+    'game-icons:black-hole-bolas',
+    '#ff8080',
+    6,
+    1.6e9,
+    'Void creatures you put down pay an additional {v}% more.',
+    12,
+    [{ id: 'tidelessWatch', level: FORGE_CROWN_MAX_LEVEL }],
+  ),
+  bough(
+    'brimmingCart',
+    'Brimming Cart',
+    'hagglersPact',
+    'game-icons:cornucopia',
+    '#52b830',
+    30,
+    1.2e9,
+    'Cosmic Bargain buffs last {v}% longer.',
+    6,
+    [{ id: 'reclaimedBargain', level: FORGE_CROWN_MAX_LEVEL }],
+  ),
+  bough(
+    'rivenLode',
+    'Riven Lode',
+    'prospectorsPact',
+    'game-icons:ore',
+    '#e89840',
+    102,
+    2.4e9,
+    'Planet bosses leave an additional {v}% more material behind.',
+    7,
+    [{ id: 'rememberedWound', level: FORGE_CROWN_MAX_LEVEL }],
+  ),
+  bough(
+    'worldsBounty',
+    "World's Bounty",
+    'augursPact',
+    'game-icons:planet-core',
+    '#ffb860',
+    150,
+    3.0e9,
+    'Planet harvesters bring up {v}% more.',
+    5,
+    [{ id: 'tirelessQuarry', level: FORGE_CROWN_MAX_LEVEL }],
+  ),
+  bough(
+    'driftersDue',
+    "Drifter's Due",
+    'cartographersPact',
+    'game-icons:falling-star',
+    '#e8c040',
+    246,
+    1.8e9,
+    'A drifter you catch pays an additional {v}% more.',
+    10,
+    // Der LOHN und nicht die Boon-Dauer: die haeufigen Drifter kommen alle
+    // 20–30 s bei 20–90 s Laufzeit, eine endlose Dauer liefe dort in volle
+    // Abdeckung und waere ab da ein bezahltes Nichts. Der Lohn saettigt nicht.
+    [{ id: 'homewardSky', level: FORGE_CROWN_MAX_LEVEL }],
+  ),
 ]
 
 // ── Crowns (ring 6) — der einzige Ring, der eine REGEL kauft ─────────────────
 /**
- * Fünf Knoten, einer je Wurzelachse, jeder genau EINMAL zu haben.
+ * ZEHN Knoten, zwei je Wurzelachse, jeder genau EINMAL zu haben.
  *
  * Sie schliessen das Loch, das die Boughs offengelassen haben. Der endlose Ring
  * gibt dem Spätspiel eine Chime-Senke, aber keine Überraschung mehr: Stufe 24
@@ -1044,7 +1144,27 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
  * Der Preis ist einheitlich und liegt eine Grössenordnung über dem Einstieg der
  * Boughs (2e9): wer hier steht, hat ein Universum hinter sich und einen
  * ausgewachsenen Covenant-Ring — die Kosten sollen die Entscheidung sein, welche
- * Krone ZUERST.
+ * Krone ZUERST. **Auch die fünf neuen kosten dasselbe**: bei ihnen sind die
+ * Voraussetzungen der Preis.
+ *
+ * ── Der ZUSAMMENLAUF ────────────────────────────────────────────────────────
+ * Der Ring trägt seit der Erweiterung ZWEI Fassungen derselben Idee, und der
+ * Kontrast ist der Inhalt:
+ *
+ *   die fünf ALTEN verlangen ihre EIGENE Achse bis nach unten
+ *     — den Ward derselben Speiche auf `FORGE_CROWN_OWN_WARD_LEVEL`
+ *   die fünf NEUEN verlangen den Zusammenlauf zweier FREMDER Achsen
+ *     — je zwei Knoten von zwei anderen Wurzelachsen, jeder mit eigener Stufe
+ *
+ * `parentId` bleibt bei allen zehn der Covenant DERSELBEN Speiche — daran hängen
+ * Ringradius, gezeichneter Ast und Scheinwerferkette, und
+ * `chronicleReachable.spec.ts` verlangt dafür Winkelgleichheit. Was ein Knoten
+ * ZUSÄTZLICH braucht, steht in `requires` und ist von der Geometrie frei; im
+ * Baum zeigt es sich als gestrichelter Spannfaden.
+ *
+ * Die Stufen in `requires` sind an der ERREICHBARKEIT geeicht, nicht am Gefühl —
+ * die Rechnung steht an `FORGE_CONJUNCTION_BRANCH_LEVEL`, und
+ * `forgeRequirements.spec.ts` prüft sie nach.
  */
 function crown(
   id: string,
@@ -1055,11 +1175,13 @@ function crown(
   angleDeg: number,
   materialCost: Record<string, number>,
   desc: string,
+  requires: readonly ForgeNodeRequirement[],
 ): ForgeNodeDef {
   return {
     id,
     name,
     parentId,
+    requires,
     tier: 'crown',
     // Pyre — die eigene Sprosse der Ring-Leiter. Das Prestige-Tor
     // (`FORGE_CROWN_UNLOCK_PRESTIGES`) steht DANEBEN und ersetzt sie nicht.
@@ -1077,7 +1199,15 @@ function crown(
   }
 }
 
+/** Der Ward derselben Speiche, auf seinem Pyre-Deckel — die Zusatzbedingung der
+ *  fünf ALTEN Kronen. Eine Stelle, fünf Nutzer. */
+const ownWard = (id: string): ForgeNodeRequirement[] => [{ id, level: FORGE_CROWN_OWN_WARD_LEVEL }]
+
 export const FORGE_CROWNS: ForgeNodeDef[] = [
+  /* ── Die fünf ALTEN: die eigene Achse bis nach unten ───────────────────────
+     Jede verlangt zusätzlich den Ward IHRER Speiche auf dessen Pyre-Deckel. Der
+     Covenant darüber hat ihn bereits auf 2 gefordert; die dritte Stufe ist das,
+     was die Krone darüber hinaus verlangt. */
   crown(
     'wanderersGate',
     "Wanderer's Gate",
@@ -1087,6 +1217,7 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     270,
     { solar_essence: 8, dark_matter: 3 },
     'A returning expedition opens the next passage at once.',
+    ownWard('wanderersBeacon'),
   ),
   crown(
     'wardensReprieve',
@@ -1097,6 +1228,7 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     318,
     { moon_crystal: 40, dark_matter: 3 },
     'Once per star phase, a fallen sun returns at half health.',
+    ownWard('gravityWell'),
   ),
   crown(
     'midasOverflow',
@@ -1107,6 +1239,7 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     54,
     { nebula_quartz: 30, solar_essence: 6 },
     'Chimes past your hoard settle into stardust.',
+    ownWard('almsOfTheKeeper'),
   ),
   crown(
     'tidelessWatch',
@@ -1122,6 +1255,7 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     // alle gleichzeitig stehenden Wesen auseinanderhalten und wäre eine Zahl,
     // die niemand nachprüfen kann.
     'The Void takes half as much, and every creature you slay pays double.',
+    ownWard('kilnSubsidy'),
   ),
   crown(
     'sunderersMark',
@@ -1132,10 +1266,189 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     198,
     { void_shard: 8, dark_matter: 4 },
     'A boss below half health pays you its toll instead of taking it.',
+    ownWard('hollowCore'),
+  ),
+
+  /* ── Die fünf NEUEN: der Zusammenlauf zweier fremder Achsen ────────────────
+     Jede sitzt auf der zweiten freien Speiche ihrer Wurzelachse und verlangt
+     zwei Knoten von zwei ANDEREN Achsen. Das ist der ganze Inhalt des Rings:
+     eine Regel über die Reise kauft nur, wer auch Material und Bewahrung
+     ausgebaut hat.
+
+     Die Materialrezepturen sind zugleich die erste Senke für `comet_ice`,
+     `star_iron`, `plasma_core` und `aether_dust` — vier Materialien, die seit
+     ihrer Einführung fallen (17,3 % des Ziehungsgewichts) und in KEINER
+     Rezeptur des Spiels verlangt wurden. Die Mengen sind an dem geeicht, was
+     eine alte Krone kostet (`moon_crystal: 40` ≈ 190 Drops): comet_ice 16 ·
+     star_iron 8 · plasma_core 2 · aether_dust 1 entsprechen je rund 185 Drops.
+     Je ein neues Material plus ein etabliertes, damit die fünf in der Liste als
+     Signatur lesbar bleiben — dasselbe Prinzip wie bei den Solar Rays. */
+  crown(
+    'pilgrimsAccord',
+    "Pilgrim's Accord",
+    'cartographersPact',
+    'game-icons:tied-scroll',
+    '#ffe9a8',
+    246,
+    { comet_ice: 16, dark_matter: 3 },
+    'A failed expedition brings its materials home anyway.',
+    [
+      // Material und Bewahrung: wer Fehlschläge bergen will, muss erst wissen,
+      // woher Material kommt — beide Vorgänger stehen auf fremden Achsen.
+      { id: 'cometMiner', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
+      { id: 'starwardensLantern', level: FORGE_CONJUNCTION_WARD_LEVEL },
+    ],
+  ),
+  crown(
+    'stillpoint',
+    'Stillpoint',
+    'wardensPact',
+    'game-icons:anchor',
+    '#ffb0b0',
+    342,
+    { star_iron: 8, solar_essence: 8 },
+    'A resource star cannot fade while you are fighting on it.',
+    [
+      { id: 'solarSails', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
+      { id: 'quarrymastersEye', level: FORGE_CONJUNCTION_WARD_LEVEL },
+    ],
+  ),
+  crown(
+    'reclaimedBargain',
+    'Reclaimed Bargain',
+    'hagglersPact',
+    // Kein zweites Wagen-Motiv neben `mine-wagon` unten — innerhalb einer Liste
+    // gilt „jedes Icon genau einmal", und das schliesst ähnliche Varianten
+    // desselben Motivs ein. „Reclaimed" ist wörtlich ein Zurückkommen.
+    'game-icons:cycle',
+    '#b0f090',
+    30,
+    { aether_dust: 1, nebula_quartz: 30 },
+    'A Cosmic Bargain you let expire returns once, at half price.',
+    [
+      { id: 'tidalDrift', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
+      { id: 'pathfindersOath', level: FORGE_CONJUNCTION_WARD_LEVEL },
+    ],
+  ),
+  crown(
+    'tirelessQuarry',
+    'Tireless Quarry',
+    'prospectorsPact',
+    'game-icons:mine-wagon',
+    '#8fe060',
+    102,
+    { plasma_core: 2, void_shard: 10 },
+    'Harvesters keep gathering for the first hour you are away.',
+    [
+      { id: 'moonOrbit', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
+      { id: 'starboundCore', level: FORGE_CONJUNCTION_LEAF_LEVEL },
+    ],
+  ),
+  crown(
+    'steadfastTribute',
+    'Steadfast Tribute',
+    'honoredPact',
+    'game-icons:laurel-crown',
+    '#c060a0',
+    174,
+    { star_iron: 8, plasma_core: 2 },
+    'A lost match pays its honor tribute in full.',
+    [
+      { id: 'goldenEcho', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
+      { id: 'gravityWell', level: FORGE_CONJUNCTION_WARD_LEVEL },
+    ],
+  ),
+
+  /* ── Die fünf DRITTEN: das Zusammentreffen dreier Achsen ────────────────
+     Die Reihe des Rings ist damit vollstaendig und liest sich als Steigerung:
+     eine Achse bis nach unten → zwei fremde Achsen → drei fremde Achsen. Jede
+     der fünf hier holt einen ZWEIG, ein BLATT und einen WARD, jeden von einer
+     anderen Wurzel — drei Ringe und drei Achsen in einer Bedingung.
+
+     Die Stufen bleiben `FORGE_CONJUNCTION_*` und damit an der Erreichbarkeit
+     geeicht: in Pyre steht ein Zweig auf höchstens 5, ein Blatt auf 4, ein Ward
+     auf 3, und jede Forderung liegt genau eine Stufe darunter. Keine neue
+     Konstante — was eine dritte Bedingung teurer macht, ist ihre ZAHL, nicht
+     ihre Höhe. */
+  crown(
+    'homewardSky',
+    'Homeward Sky',
+    'longVigilPact',
+    'game-icons:polar-star',
+    '#f0d878',
+    294,
+    { comet_ice: 16, void_shard: 10 },
+    'A drifter that crossed while you were away waits in the sky for your return.',
+    [
+      // Was laenger steht, was die Zeit zaehlt, was zurueckkommt.
+      { id: 'wardensVigil', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
+      { id: 'timeWeaver', level: FORGE_CONJUNCTION_LEAF_LEVEL },
+      { id: 'chimeConduit', level: FORGE_CONJUNCTION_WARD_LEVEL },
+    ],
+  ),
+  crown(
+    'sealedThreshold',
+    'Sealed Threshold',
+    'unbrokenPact',
+    'game-icons:closed-doors',
+    '#ff8080',
+    6,
+    { star_iron: 8, moon_crystal: 40 },
+    "A rift that lands while another rift's aftermath still runs takes nothing from you.",
+    [
+      { id: 'shatter', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
+      { id: 'echoChamber', level: FORGE_CONJUNCTION_LEAF_LEVEL },
+      { id: 'omenReader', level: FORGE_CONJUNCTION_WARD_LEVEL },
+    ],
+  ),
+  crown(
+    'sanctumVeil',
+    'Sanctum Veil',
+    'resonantPact',
+    'game-icons:aura',
+    '#8fe060',
+    78,
+    { plasma_core: 2, nebula_quartz: 30 },
+    "While a Bard ability's effect still runs, the Void cannot tear a rift.",
+    [
+      { id: 'quickening', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
+      { id: 'auroraWake', level: FORGE_CONJUNCTION_LEAF_LEVEL },
+      { id: 'riftAnchor', level: FORGE_CONJUNCTION_WARD_LEVEL },
+    ],
+  ),
+  crown(
+    'unfailingSign',
+    'Unfailing Sign',
+    'augursPact',
+    'game-icons:sunbeams',
+    '#ffb860',
+    150,
+    { aether_dust: 1, solar_essence: 8 },
+    'While an omen reward runs, the sun cannot fall below half its health.',
+    [
+      { id: 'regeneration', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
+      { id: 'wanderersCrest', level: FORGE_CONJUNCTION_LEAF_LEVEL },
+      { id: 'heraldsFavor', level: FORGE_CONJUNCTION_WARD_LEVEL },
+    ],
+  ),
+  crown(
+    'rememberedWound',
+    'Remembered Wound',
+    'arbitersPact',
+    'game-icons:scar-wound',
+    '#e08cc8',
+    222,
+    { comet_ice: 16, star_iron: 8 },
+    'A planet boss that escapes you rises again already wounded.',
+    [
+      { id: 'resonance', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
+      { id: 'deepVein', level: FORGE_CONJUNCTION_LEAF_LEVEL },
+      { id: 'dreamersDraw', level: FORGE_CONJUNCTION_WARD_LEVEL },
+    ],
   ),
 ]
 
-/** Alle 75 Knoten der Ringe 2–7, in Ringreihenfolge von innen nach aussen. */
+/** Alle 90 Knoten der Ringe 2–7, in Ringreihenfolge von innen nach aussen. */
 export const FORGE_NODES: ForgeNodeDef[] = [
   ...FORGE_BRANCHES,
   ...FORGE_LEAVES,
@@ -1148,13 +1461,13 @@ export const FORGE_NODES: ForgeNodeDef[] = [
 /**
  * Nachschlagen über eine Map statt über `find`.
  *
- * Der Katalog hat 75 Knoten, und `starForgeStore.canAffordNode` fragt für EINEN
+ * Der Katalog hat 90 Knoten, und `starForgeStore.canAffordNode` fragt für EINEN
  * Knoten fünfmal hier nach (freigeschaltet, Höchststufe, Chime-Preis,
  * Materialpreis, Elternstufe). Seit das Shop-Abzeichen an der Header-Ecktaste
- * hängt, läuft diese Prüfung für alle 75 Knoten bei jeder Chime-Änderung —
+ * hängt, läuft diese Prüfung für alle 90 Knoten bei jeder Chime-Änderung —
  * ab Programmstart, nicht erst nach dem ersten Öffnen des Shop-Tabs. Als
- * lineare Suche wären das rund 28.000 Zeichenkettenvergleiche je Runde; die
- * Map macht daraus 75 Hash-Zugriffe. Mit zwei neuen Ringen ist das kein
+ * lineare Suche wären das rund 40.000 Zeichenkettenvergleiche je Runde; die
+ * Map macht daraus 90 Hash-Zugriffe. Mit zwei neuen Ringen ist das kein
  * Feinschliff mehr, sondern die Bedingung, unter der das Abzeichen bleiben darf.
  */
 const FORGE_NODE_BY_ID = new Map(FORGE_NODES.map((n) => [n.id, n]))
@@ -1162,6 +1475,36 @@ const FORGE_NODE_BY_ID = new Map(FORGE_NODES.map((n) => [n.id, n]))
 export function getForgeNode(id: string): ForgeNodeDef | undefined {
   return FORGE_NODE_BY_ID.get(id)
 }
+
+/**
+ * Der Anzeigename hinter einer Vorgänger-Id — Ring 1 oder Ring 2–7.
+ *
+ * Steht hier und nicht bei einem der beiden Aufrufer: seit `requires` existiert,
+ * braucht ihn der Store (für die Bedingungsliste) UND das Ansichtsmodell (für
+ * den Sperrsatz). Zwei Fassungen liefen auseinander, sobald ein Ring dazukommt.
+ * Eine unbekannte Id ergibt einen leeren Namen und keinen Fehler — die
+ * Erreichbarkeit prüft `forgeRequirements.spec.ts`, nicht die Anzeige.
+ */
+export function forgeNodeName(id: string): string {
+  return FORGE_NODE_BY_ID.get(id)?.name ?? SOLAR_BRANCHES.find((ray) => ray.id === id)?.name ?? ''
+}
+
+/* ── Der Vault spricht dieselbe Sprache wie der Baum ────────────────────────
+ * Relikte trugen `requiresNode` + `requiresLevel` (genau EINE Bedingung),
+ * Konstellationen `nodeA` + `nodeB` (genau ZWEI). Drei Vokabulare fuer dieselbe
+ * Sache, und keines davon konnte, was das dritte konnte: ein Relikt mit zwei
+ * Vorgaengern war nicht schreibbar, eine Konstellation aus drei Knoten auch
+ * nicht. Seit beide `requires: ForgeNodeRequirement[]` fuehren, gilt im ganzen
+ * Forge-System EIN Wort — und `forgeRequirements.spec.ts` prueft sie alle mit
+ * derselben Schleife.
+ *
+ * Die zwei Helfer halten die Umstellung kurz: neunzehn Eintraege sollen nicht
+ * neunzehn Mal dieselbe Drei ausschreiben.
+ */
+/** Ein Vorgaenger auf der Vault-Vorgabestufe. */
+const vaultReq = (id: string): ForgeNodeRequirement => ({ id, level: FORGE_VAULT_REQUIRED_LEVEL })
+/** Das klassische Konstellations-PAAR — zwei Knoten auf derselben Stufe. */
+const pair = (a: string, b: string): ForgeNodeRequirement[] => [vaultReq(a), vaultReq(b)]
 
 // ── Crafted Relics — fuse a grown branch with materials, leveled Lv 1–3 ──────
 export const FORGE_RELICS: ForgeRelicDef[] = [
@@ -1171,8 +1514,7 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     rarity: 'epic',
     icon: 'game-icons:evil-moon',
     color: '#c9a0ff',
-    requiresNode: 'moonOrbit',
-    requiresLevel: 3,
+    requires: [vaultReq('moonOrbit'), { id: 'midnightTide', level: 2 }],
     maxLevel: 5,
     goldCost: 6_000,
     goldMultiplier: 3,
@@ -1187,8 +1529,7 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     rarity: 'rare',
     icon: 'game-icons:swords-emblem',
     color: '#e8c040',
-    requiresNode: 'warcry',
-    requiresLevel: 3,
+    requires: [vaultReq('warcry'), { id: 'warhost', level: 2 }],
     maxLevel: 5,
     goldCost: 3_200,
     goldMultiplier: 3,
@@ -1203,8 +1544,7 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     rarity: 'rare',
     icon: 'game-icons:shining-heart',
     color: '#ff8080',
-    requiresNode: 'regeneration',
-    requiresLevel: 3,
+    requires: [vaultReq('regeneration'), { id: 'vitalBloom', level: 2 }],
     maxLevel: 5,
     goldCost: 3_600,
     goldMultiplier: 3,
@@ -1219,8 +1559,7 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     rarity: 'epic',
     icon: 'game-icons:bell-shield',
     color: '#ffdf80',
-    requiresNode: 'resonance',
-    requiresLevel: 3,
+    requires: [vaultReq('resonance'), { id: 'echoChamber', level: 2 }],
     maxLevel: 5,
     goldCost: 7_500,
     goldMultiplier: 3,
@@ -1235,8 +1574,7 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     rarity: 'rare',
     icon: 'game-icons:compass',
     color: '#86d0ff',
-    requiresNode: 'solarSails',
-    requiresLevel: 3,
+    requires: [vaultReq('solarSails'), { id: 'auroraWake', level: 2 }],
     maxLevel: 5,
     goldCost: 3_400,
     goldMultiplier: 3,
@@ -1251,8 +1589,7 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     rarity: 'epic',
     icon: 'game-icons:crown-coin',
     color: '#ff9a5c',
-    requiresNode: 'shatter',
-    requiresLevel: 3,
+    requires: [vaultReq('shatter'), { id: 'starquake', level: 2 }],
     maxLevel: 5,
     goldCost: 6_500,
     goldMultiplier: 3,
@@ -1279,8 +1616,7 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     rarity: 'epic',
     icon: 'game-icons:wax-seal',
     color: '#e0409f',
-    requiresNode: 'aegis',
-    requiresLevel: 3,
+    requires: [vaultReq('aegis'), { id: 'riftAnchor', level: 2 }],
     maxLevel: 5,
     goldCost: 9_000,
     goldMultiplier: 3,
@@ -1298,8 +1634,7 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     rarity: 'rare',
     icon: 'game-icons:relic-blade',
     color: '#a9b6c4',
-    requiresNode: 'moonOrbit',
-    requiresLevel: 3,
+    requires: [vaultReq('moonOrbit'), { id: 'wanderersBeacon', level: 2 }],
     maxLevel: 5,
     goldCost: 5_000,
     goldMultiplier: 3,
@@ -1317,8 +1652,7 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     rarity: 'epic',
     icon: 'game-icons:stone-tablet',
     color: '#40c8b0',
-    requiresNode: 'gildedHarvest',
-    requiresLevel: 3,
+    requires: [vaultReq('gildedHarvest'), { id: 'sunlitTrove', level: 2 }],
     maxLevel: 5,
     goldCost: 12_000,
     goldMultiplier: 3,
@@ -1331,6 +1665,68 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
     desc: 'Each pending meep needs {v}% fewer chimes.',
     effectPerLevel: 4,
     sourceLabel: 'Gilded Harvest branch + Solar Essence',
+  },
+
+  /* ── Drei Relikte, die MEHR als einen Knoten verlangen ──────────────────
+     Was `requiresNode` + `requiresLevel` strukturell nicht konnte. Keins
+     wartet dabei laenger als noetig: ein Zweig auf 3 und ein Blatt auf 2 sind
+     BEIDE erstmals in Zenith erreichbar (`min(cap, 1 + Phase − Ringphase)`), ein
+     Ward auf 2 in Swell.
+
+     Alle drei bleiben von `otherDps` weg. `championXpMult` ist dabei der in
+     docs/balance.md benannte ehrliche Ersatz für Champion-DPS: er laeuft neben
+     der Ladder her, statt sich gegen die Boss-Formel wegzukuerzen. */
+  {
+    id: 'skyboundAltar',
+    name: 'Skybound Altar',
+    rarity: 'epic',
+    icon: 'game-icons:star-altar',
+    color: '#8fe060',
+    requires: [vaultReq('resonance'), { id: 'chimeConduit', level: 2 }],
+    maxLevel: 5,
+    goldCost: 8_000,
+    goldMultiplier: 3,
+    materialCost: { void_shard: 3, comet_ice: 6 },
+    // Die WIRKUNG der Faehigkeiten, nicht ihre Abklingzeit: die laeuft gegen
+    // `FORGE_MIN_BARD_COOLDOWN_MULT`, an dem der Ward in der Bedingung schon
+    // zieht. Zwei Kaeufe auf dieselbe Kappe waeren einer zu viel.
+    desc: "The Bard's abilities strike an additional {v}% harder.",
+    effectPerLevel: 6,
+    sourceLabel: 'Resonance branch + Chime Conduit',
+  },
+  {
+    id: 'chaliceOfTheFallen',
+    name: 'Chalice of the Fallen',
+    rarity: 'epic',
+    icon: 'game-icons:jeweled-chalice',
+    color: '#e08cc8',
+    requires: [
+      vaultReq('shatter'),
+      { id: 'starquake', level: 2 },
+      { id: 'siegeReckoning', level: 2 },
+    ],
+    maxLevel: 5,
+    goldCost: 11_000,
+    goldMultiplier: 3,
+    materialCost: { star_iron: 3, dark_matter: 1 },
+    desc: 'Planet bosses pay an additional {v}% more chimes.',
+    effectPerLevel: 10,
+    sourceLabel: 'Shatter branch + Starquake + Siege Reckoning',
+  },
+  {
+    id: 'heraldsTrophy',
+    name: "Herald's Trophy",
+    rarity: 'rare',
+    icon: 'game-icons:trophy',
+    color: '#c060a0',
+    requires: [vaultReq('warcry'), { id: 'warhost', level: 2 }],
+    maxLevel: 5,
+    goldCost: 5_500,
+    goldMultiplier: 3,
+    materialCost: { moon_crystal: 12, nebula_quartz: 5 },
+    desc: 'Champions gain an additional {v}% experience.',
+    effectPerLevel: 10,
+    sourceLabel: 'Warcry branch + Warhost',
   },
 ]
 
@@ -1345,84 +1741,77 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
     name: 'Stellar Wind',
     icon: 'game-icons:wind-hole',
     color: '#86d0ff',
-    nodeA: 'solarSails',
-    nodeB: 'quickening',
+    requires: pair('solarSails', 'quickening'),
     goldCost: 12_000,
     materialCost: { stardust: 15, nebula_quartz: 5 },
     desc: '+18% Chimes/Sec.',
-    pairLabel: 'Solar Sails + Quickening · +18% idle',
+    sourceLabel: 'Solar Sails + Quickening · +18% idle',
   },
   {
     id: 'shatteringNova',
     name: 'Shattering Nova',
     icon: 'game-icons:beams-aura',
     color: '#ff9a5c',
-    nodeA: 'goldenEcho',
-    nodeB: 'shatter',
+    requires: pair('goldenEcho', 'shatter'),
     goldCost: 15_000,
     materialCost: { solar_essence: 4, moon_crystal: 10 },
     desc: 'Clicks splash 10% of their damage to all enemies.',
-    pairLabel: 'Golden Echo + Shatter · click AoE',
+    sourceLabel: 'Golden Echo + Shatter · click AoE',
   },
   {
     id: 'bulwarkPact',
     name: 'Bulwark Pact',
     icon: 'game-icons:temporary-shield',
     color: '#7bb8ff',
-    nodeA: 'aegis',
-    nodeB: 'warcry',
+    requires: pair('aegis', 'warcry'),
     goldCost: 15_000,
     materialCost: { moon_crystal: 12, void_shard: 2 },
     desc: 'All damage taken reduced by an additional 10%.',
-    pairLabel: 'Aegis + Warcry · −10% damage taken',
+    sourceLabel: 'Aegis + Warcry · −10% damage taken',
   },
   {
     id: 'prospectorsCharm',
     name: "Prospector's Charm",
     icon: 'game-icons:mine-wagon',
     color: '#e8c040',
-    nodeA: 'cometMiner',
-    nodeB: 'resonance',
+    requires: [...pair('cometMiner', 'resonance'), { id: 'quarrymastersEye', level: 2 }],
     goldCost: 18_000,
     materialCost: { stardust: 25, solar_essence: 3 },
     desc: 'Every material drop grants +1 extra material.',
-    pairLabel: 'Comet Miner + Resonance · +1 drop',
+    sourceLabel: 'Comet Miner + Resonance · +1 drop',
   },
   {
     id: 'eternalOrbit',
     name: 'Eternal Orbit',
     icon: 'game-icons:ouroboros',
     color: '#c9a0ff',
-    nodeA: 'moonOrbit',
-    nodeB: 'regeneration',
+    requires: [...pair('moonOrbit', 'regeneration'), { id: 'vitalBloom', level: 2 }],
     goldCost: 20_000,
     materialCost: { void_shard: 3, dark_matter: 1 },
     desc: '+15% offline earnings and HP regeneration is doubled.',
-    pairLabel: 'Moon Orbit + Regeneration · offline & regen',
+    sourceLabel: 'Moon Orbit + Regeneration · offline & regen',
   },
   {
     id: 'goldenTempest',
     name: 'Golden Tempest',
     icon: 'game-icons:tornado',
     color: '#ffd76a',
-    nodeA: 'goldenEcho',
-    nodeB: 'quickening',
+    requires: pair('goldenEcho', 'quickening'),
     goldCost: 16_000,
     materialCost: { stardust: 20, solar_essence: 2 },
     desc: '+12% Chimes/Click.',
-    pairLabel: 'Golden Echo + Quickening · +12% clicks',
+    sourceLabel: 'Golden Echo + Quickening · +12% clicks',
   },
   {
     id: 'huntersVigil',
     name: "Hunter's Vigil",
     icon: 'game-icons:night-vision',
     color: '#e08cc8',
-    nodeA: 'warcry',
-    nodeB: 'shatter',
+    requires: pair('warcry', 'shatter'),
     goldCost: 17_000,
     materialCost: { moon_crystal: 10, dark_matter: 1 },
     desc: 'Orbiting champions deal an additional +10% DPS.',
-    pairLabel: 'Warcry + Shatter · +10% champion DPS',
+    sourceLabel: 'Warcry + Shatter · +10% champion DPS',
   },
 
   // ── Drei Fusionen, die eine REGEL setzen statt eine Zahl ───────────────────
@@ -1435,23 +1824,21 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
     name: 'Voidbound Pact',
     icon: 'game-icons:evil-hand',
     color: '#e0409f',
-    nodeA: 'aegis',
-    nodeB: 'sunderingWake',
+    requires: [...pair('aegis', 'sunderingWake'), { id: 'riftAnchor', level: 2 }],
     goldCost: 24_000,
     materialCost: { void_shard: 5, dark_matter: 2 },
     // Der Riss war bis hierhin reiner Verlust — er kostet Chimes, Meeps und
     // Sonnen-HP und gibt nichts zurück. Mit dem Pakt wird das Aufräumen zur
     // Quelle des Materials, das die Forge am dringendsten braucht.
     desc: 'Void creatures your orbit destroys leave a Void Shard behind.',
-    pairLabel: 'Aegis + Sundering Wake · shards from kills',
+    sourceLabel: 'Aegis + Sundering Wake · shards from kills',
   },
   {
     id: 'caretakersLedger',
     name: "Caretaker's Ledger",
     icon: 'game-icons:scroll-quill',
     color: '#e8c040',
-    nodeA: 'goldenEcho',
-    nodeB: 'cometMiner',
+    requires: [...pair('goldenEcho', 'cometMiner'), { id: 'coinCascade', level: 2 }],
     goldCost: 21_000,
     materialCost: { stardust: 30, nebula_quartz: 6 },
     // Bindet die Klick-Achse an die Material-Achse: wer auf Doppelklicks
@@ -1459,22 +1846,84 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
     // TREFFER, nicht am Klick — sonst hinge die Ausbeute an der Klickrate
     // statt am Ausbau.
     desc: 'Every doubled click has a chance to shake a material loose.',
-    pairLabel: 'Golden Echo + Comet Miner · materials from clicks',
+    sourceLabel: 'Golden Echo + Comet Miner · materials from clicks',
   },
   {
     id: 'starfarersCompact',
     name: "Starfarer's Compact",
     icon: 'game-icons:portal',
     color: '#7bb8ff',
-    nodeA: 'wayfindersCache',
-    nodeB: 'moonOrbit',
+    requires: [...pair('wayfindersCache', 'moonOrbit'), { id: 'midnightTide', level: 2 }],
     goldCost: 26_000,
     materialCost: { solar_essence: 5, void_shard: 3 },
     // Nicht „mehr Offline-Ertrag" — das trägt der Moon-Orbit-Zweig bereits
     // dreifach. Die Fusion verschiebt die GRENZE, gegen die er läuft: acht
     // Stunden mehr, die überhaupt erst gezählt werden.
     desc: 'Offline progress counts 8 hours longer.',
-    pairLabel: "Wayfinder's Cache + Moon Orbit · +8h offline cap",
+    sourceLabel: "Wayfinder's Cache + Moon Orbit · +8h offline cap",
+  },
+
+  /* ── Drei Konstellationen aus DREI Knoten ────────────────────────────
+     Genau das, was `nodeA`/`nodeB` strukturell nie konnten — der eigentliche
+     Grund fuer die Vokabular-Umstellung.
+
+     Alle drei setzen eine REGEL statt einer Zahl, die Linie, die
+     `voidboundPact`, `caretakersLedger` und `starfarersCompact` eroeffnet
+     haben. Eine Konstellation ist ein EINMALKAUF ohne Stufe; eine Regel passt
+     dazu, ein Prozentwert mit Zwischenschritten nicht — dasselbe Argument wie
+     beim Kronen-Ring. Sie zaehlen nicht in die Codex-Bahn „Sunsmith“ und
+     verschieben deren Maximum daher nicht. */
+  {
+    id: 'waitingRoad',
+    name: 'The Waiting Road',
+    icon: 'game-icons:interstellar-path',
+    color: '#e8c040',
+    requires: [
+      vaultReq('solarSails'),
+      vaultReq('wayfindersCache'),
+      { id: 'pathfindersOath', level: 2 },
+    ],
+    goldCost: 30_000,
+    materialCost: { comet_ice: 6, solar_essence: 4 },
+    // Die Uhr des ANGEBOTS, nicht die der Reise: das Tempo traegt
+    // `stellarCompass` und laeuft gegen `FORGE_MIN_EXPEDITION_MULT`. Ein
+    // Angebot, das wartet, nimmt dem Spieler nur die Strafe dafür, dass er
+    // gerade woanders war.
+    desc: 'An expedition offer no longer expires — it waits until you answer it.',
+    sourceLabel: "Solar Sails + Wayfinder's Cache + Pathfinder's Oath",
+  },
+  {
+    id: 'standingVein',
+    name: 'The Standing Vein',
+    icon: 'game-icons:ringed-planet',
+    color: '#e89840',
+    requires: [
+      vaultReq('cometMiner'),
+      { id: 'deepVein', level: 2 },
+      { id: 'quarrymastersEye', level: 2 },
+    ],
+    goldCost: 28_000,
+    materialCost: { star_iron: 3, nebula_quartz: 8 },
+    desc: 'A planet knocked down keeps its harvesters at work.',
+    sourceLabel: "Comet Miner + Deep Vein + Quarrymaster's Eye",
+  },
+  {
+    id: 'twinnedSky',
+    name: 'Twinned Sky',
+    icon: 'game-icons:star-satellites',
+    color: '#f0d878',
+    requires: [
+      vaultReq('moonOrbit'),
+      { id: 'midnightTide', level: 2 },
+      { id: 'wanderersBeacon', level: 2 },
+    ],
+    goldCost: 32_000,
+    materialCost: { aether_dust: 1, void_shard: 4 },
+    // Ein Platz mehr am Himmel, keine schnellere Uhr: der Abstand laeuft gegen
+    // `FORGE_MIN_DRIFTER_INTERVAL_MULT`, an dem der Ward in der Bedingung schon
+    // zieht.
+    desc: 'Two drifters may cross your sky at once.',
+    sourceLabel: "Moon Orbit + Midnight Tide + Wanderer's Beacon",
   },
 ]
 

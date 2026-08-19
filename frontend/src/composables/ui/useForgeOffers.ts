@@ -9,17 +9,18 @@ import {
   FORGE_RELICS,
   FORGE_CONSTELLATIONS,
   FORGE_BARGAINS,
-  getForgeNode,
+  forgeNodeName,
 } from '@/config/progression/starForge'
 import type {
   ForgeBargainDef,
   ForgeCostItem,
   ForgeOffer,
   ForgeOfferReq,
+  ForgeNodeRequirement,
   ForgeVaultEntry,
 } from '@/types'
 import {
-  FORGE_CONSTELLATION_REQUIRED_LEVEL,
+  FORGE_VAULT_REQ_SEPARATOR,
   FORGE_DESC_PERCENT_TOKEN,
   FORGE_DESC_VALUE_TOKEN,
   FORGE_OFFER_TAG_CONSTELLATION,
@@ -190,18 +191,56 @@ export function useForgeOffers(): {
     }),
   )
 
-  // ── Konstellationen ────────────────────────────────────────────────────────
-  function constellationReq(nodeId: string): ForgeOfferReq {
-    const have = forgeStore.nodeLevel(nodeId)
-    const need = FORGE_CONSTELLATION_REQUIRED_LEVEL
+  // ── Der Vault — Relikte und Konstellationen ─────────────────────────
+  /**
+   * Eine Vault-Bedingung mit Fortschritt.
+   *
+   * Hiess `constellationReq(nodeId)` und las die Stufe aus einer globalen
+   * Konstante — damals war sie fuer alle zehn Konstellationen dieselbe. Seit
+   * Relikt und Konstellation dieselbe `requires`-Liste fuehren, kommt sie vom
+   * Eintrag, und beide Arten teilen sich diese eine Fassung.
+   *
+   * `forgeNodeName` statt `getForgeNode(id)?.name`: die Liste darf einen
+   * Strahl (Ring 1) nennen, und der steht nicht in `FORGE_NODES`.
+   */
+  function vaultReq(req: ForgeNodeRequirement): ForgeOfferReq {
+    const have = forgeStore.anyNodeLevel(req.id)
+    const need = req.level
     return {
-      id: nodeId,
-      name: getForgeNode(nodeId)?.name ?? nodeId,
+      id: req.id,
+      name: forgeNodeName(req.id) || req.id,
       have,
       need,
       met: have >= need,
-      progress: Math.min(1, have / need),
+      progress: need <= 0 ? 1 : Math.min(1, have / need),
     }
+  }
+
+  /**
+   * Die Bedingung, die ENTSCHEIDET, wann ein Eintrag aufgeht — die mit dem
+   * geringsten Fortschritt.
+   *
+   * Stand einmal als `reqs[0].progress <= reqs[1].progress ? reqs[0] : reqs[1]`
+   * da und las damit genau zwei. Bei drei Bedingungen zeigte diese Fassung
+   * still den falschen Balken: nicht die schwaechste, sondern die schwaechere
+   * der ersten beiden.
+   */
+  function weakestReq(reqs: ForgeOfferReq[]): ForgeOfferReq {
+    return reqs.reduce((worst, req) => (req.progress < worst.progress ? req : worst), reqs[0])
+  }
+
+  /**
+   * ALLE Bedingungen als EINE Zeile — fuer das `title` der Kompaktzeile.
+   *
+   * Die Vault-Zeile zeigt nur die schwaechste; bei dreien blieben zwei
+   * unsichtbar. Ein `title` kostet keine Zeilenhoehe und ist deshalb der Ort
+   * dafuer — eine zweite Liste im Markup waere die Karte, gegen die die Zeile
+   * gebaut ist.
+   */
+  function reqLineOf(reqs: ForgeOfferReq[]): string {
+    return reqs
+      .map((req) => `${req.name} ${Math.min(req.have, req.need)}/${req.need}`)
+      .join(FORGE_VAULT_REQ_SEPARATOR)
   }
 
   const constellationOffers = computed<ForgeOffer[]>(() =>
@@ -230,7 +269,7 @@ export function useForgeOffers(): {
       // Beide Tore stehen am Eintrag, obwohl er nur erscheint, wenn sie erfüllt
       // sind: das Kärtchen zeigt sie als bestandene Bedingung, und dieselbe
       // Rechnung trägt die gesperrte Zeile im Archiv.
-      reqs: [constellationReq(def.nodeA), constellationReq(def.nodeB)],
+      reqs: def.requires.map(vaultReq),
       restockMs: null,
       sold: false,
       discountPct: 0,
@@ -322,12 +361,30 @@ export function useForgeOffers(): {
   const vaultEntries = computed<ForgeVaultEntry[]>(() => {
     const out: ForgeVaultEntry[] = []
 
+    /* Relikt und Konstellation bauen ihre Zeile seit der Vokabular-Umstellung
+       GLEICH: dieselbe `requires`-Liste, dieselbe schwaechste Bedingung, derselbe
+       Balken. Vorher las der Relikt-Zweig zwei Felder direkt am Katalogeintrag
+       und der Konstellations-Zweig zwei feste Knoten — zwei Fassungen fuer
+       dieselbe Zeile. */
+    const vaultRow = (reqs: ForgeOfferReq[]): Pick<
+      ForgeVaultEntry,
+      'lockReason' | 'reqLine' | 'have' | 'need' | 'progress'
+    > => {
+      const weakest = weakestReq(reqs)
+      return {
+        lockReason: `${FORGE_VAULT_LOCK_PREFIX} ${weakest.name} ${FORGE_VAULT_LOCK_INFIX} ${weakest.need}`,
+        reqLine: reqLineOf(reqs),
+        have: weakest.have,
+        need: weakest.need,
+        progress: weakest.progress,
+      }
+    }
+
     for (const def of FORGE_RELICS) {
       const level = forgeStore.relicLevel(def.id)
       const reqMet = forgeStore.relicRequirementMet(def.id)
       if (reqMet && level < def.maxLevel) continue
 
-      const have = forgeStore.nodeLevel(def.requiresNode)
       out.push({
         id: def.id,
         kind: 'relic',
@@ -337,10 +394,7 @@ export function useForgeOffers(): {
         desc: relicDesc(def.id),
         state: reqMet ? 'done' : 'locked',
         badge: FORGE_VAULT_MAX_BADGE,
-        lockReason: `${FORGE_VAULT_LOCK_PREFIX} ${getForgeNode(def.requiresNode)?.name ?? def.requiresNode} ${FORGE_VAULT_LOCK_INFIX} ${def.requiresLevel}`,
-        have,
-        need: def.requiresLevel,
-        progress: Math.min(1, have / def.requiresLevel),
+        ...vaultRow(def.requires.map(vaultReq)),
       })
     }
 
@@ -348,11 +402,6 @@ export function useForgeOffers(): {
       const forged = forgeStore.constellationForged(def.id)
       if (!forged && forgeStore.constellationRequirementMet(def.id)) continue
 
-      const reqs = [constellationReq(def.nodeA), constellationReq(def.nodeB)]
-      // Der Balken zeigt das SCHWÄCHERE der beiden Tore: es entscheidet, wann
-      // die Konstellation aufgeht, und zwei Balken in einer Kompaktzeile wären
-      // eine Karte.
-      const weakest = reqs[0].progress <= reqs[1].progress ? reqs[0] : reqs[1]
       out.push({
         id: def.id,
         kind: 'constellation',
@@ -362,10 +411,7 @@ export function useForgeOffers(): {
         desc: def.desc,
         state: forged ? 'done' : 'locked',
         badge: FORGE_VAULT_FUSED_BADGE,
-        lockReason: `${FORGE_VAULT_LOCK_PREFIX} ${weakest.name} ${FORGE_VAULT_LOCK_INFIX} ${weakest.need}`,
-        have: weakest.have,
-        need: weakest.need,
-        progress: weakest.progress,
+        ...vaultRow(def.requires.map(vaultReq)),
       })
     }
 

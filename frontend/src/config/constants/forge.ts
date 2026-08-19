@@ -1,7 +1,7 @@
 // Star Forge (Sonnen-Baum aus Roots, Branches und Leaves samt Relikten,
 // Konstellationen und Schnäppchen) und der Meep Skill Tree.
 
-import type { ForgeBargainKind, ForgeRelicRarity, ForgeSectionDef } from '@/types'
+import type { ForgeBargainKind, ForgeRelicRarity, ForgeSectionDef, ForgeUpgradeTier } from '@/types'
 
 // ── Meep Skill Tree: die Orbit-Bühne (SkillTreeComponent / MeepOrbitStage) ──
 //
@@ -334,6 +334,184 @@ export const FORGE_BODY_EDGE_FRACTION = { star: 1, comet: 0.76, blackHole: 1 } a
  * einen sichtbaren Stummel stehen.
  */
 export const FORGE_SUN_EDGE_GAP = 8
+
+/* ── Die STREUUNG: warum der Baum kein Zifferblatt mehr ist ───────────────────
+ *
+ * Bis hierher sass jeder Knoten auf einer von fünfzehn Speichen im 24°-Raster —
+ * in `config/progression/starForge.ts` erbt jedes Kind den `angleDeg` seines
+ * Elternteils, und die Winkelmenge war über alle sieben Ebenen dieselbe. Sieben
+ * Ringe mal fünfzehn Speichen lasen sich als Zielscheibe, nicht als Baum.
+ *
+ * Gemessen war der Baum dabei RADIAL eng und TANGENTIAL verschwenderisch:
+ *
+ *   entlang einer Speiche (Ring → Ring)   12–13 px Luft zwischen zwei Rändern
+ *   zum Nachbarn auf demselben Ring       46–164 px
+ *
+ * Die Ringradien sind am Anschlag (siehe die Tabelle an `FORGE_RING_BOUGH_R`:
+ * der äusserste Knoten steht bei 517 gegen die Bühnenhälfte 520). Mehr Platz
+ * kann also NICHT aus grösseren Radien kommen — er muss aus der tangentialen
+ * Reserve kommen. Genau das leistet ein Winkelversatz: er löst das Raster auf
+ * UND verlängert den Weg von einem Knoten zu seinem Kind, in einem Zug.
+ *
+ * Gerechnet wird das alles in `utils/ui/forgeTreeLayout.ts`, einmal beim ersten
+ * Aufruf, geseedet aus Ebenennamen und Knoten-ID. Die Basiswinkel im Katalog
+ * bleiben unverändert — sie sind der Ausgangspunkt, nicht das Ergebnis.
+ *
+ * Es sind ZWEI Schritte, und der erste trägt den Zugewinn:
+ *
+ *   1. jeder RING wird als Ganzes verdreht, gegen seinen Nachbarn
+ *   2. jeder KNOTEN wird darin einzeln versetzt
+ *
+ * Nur Schritt 2 hätte den Abstand bloss erhalten, nicht vergrössert: wer sich
+ * von einem Nachbarn entfernt, nähert sich dem nächsten. Erst Schritt 1 nimmt
+ * das Kind aus der radialen Deckung seines Elternteils.
+ */
+/**
+ * Wie weit ein ganzer Ring gegen die Katalogwinkel verdreht werden darf.
+ * Ein halber Speichenabstand — mehr wäre dieselbe Stellung mit anderem Namen.
+ */
+export const FORGE_RING_ROTATE_MAX_DEG = 12
+/**
+ * Wie weit zwei BENACHBARTE Ringe mindestens gegeneinander stehen müssen.
+ *
+ * Das ist die Zahl, die den Platz schafft. Gemessen als Luft zwischen den
+ * Rändern des engsten Paares (Wurzel ⌀ 56 auf 158, Zweig ⌀ 46 auf 221):
+ *
+ *   deckungsgleich (heute)   12,0 px      ← Wurzel/Zweig, Hut/Ast, Wacht/Pakt
+ *   8° versetzt              17,2 px
+ *   12° versetzt             23,1 px
+ *
+ * Bei 8 bleibt der Differenz noch ein Drittel des Speichenabstands als Spiel
+ * (8…16 statt fest 12) — der Versatz ist gefordert, aber nicht vorgeschrieben,
+ * und zwei Ringe stehen nie in derselben Beziehung wie zwei andere.
+ */
+export const FORGE_RING_DEALIGN_MIN_DEG = 8
+/**
+ * Wie weit ein Knoten von der Speiche seines Rings abweichen darf.
+ *
+ * Der halbe Speichenabstand ist 12°. Bei 9 behält der Ring seine REIHENFOLGE:
+ * ein Knoten wandert nie an seinem Nachbarn vorbei, und die Zuordnung Kind →
+ * Elternteil bleibt auch ohne die Linie erkennbar. Bei 12 wären zwei Nachbarn
+ * deckungsgleich, bei mehr überholten sie sich.
+ */
+export const FORGE_SCATTER_ANGLE_DEG = 9
+/**
+ * Wie weit ein Knoten seinen Ring nach innen oder aussen verlassen darf.
+ *
+ * Obergrenze ist das Kammband des Tiefenfelds: `FORGE_DEPTH_CREST_SPREAD`
+ * (0,045) mal Bühnenradius (520) sind ±23,4 px. Mit 12 bleibt jeder Knoten in
+ * der Farbe seiner Ebene — verliesse er sie, stünde er auf dem Kamm der
+ * Nachbarebene und der Ring-Filter-Chip zeigte auf die falsche Zone.
+ */
+export const FORGE_SCATTER_RADIUS_PX = 12
+/**
+ * Die Luft, die ein Kandidat zu ALLEN schon gesetzten Knoten halten soll.
+ *
+ * Angestrebt, nicht garantiert: genommen wird der ERSTE Kandidat, der sie
+ * erreicht. Erreicht keiner sie, gewinnt der beste, der wenigstens
+ * `FORGE_SCATTER_MIN_AIR_PX` hält.
+ */
+export const FORGE_SCATTER_TARGET_AIR_PX = 24
+/**
+ * Die HARTE Untergrenze — kein Kandidat, der sie verletzt, wird je genommen.
+ *
+ * Sie liegt unter der Luft, die die Ringverdrehung allein schon liefert (17,2
+ * px im engsten Paar). Damit ist der ungestreute Platz IMMER ein gültiger
+ * Kandidat, und der Baum kann durch die Streuung nicht enger werden, als er
+ * ohne sie wäre — geprüft in `forgeTreeLayout.spec.ts`.
+ */
+export const FORGE_SCATTER_MIN_AIR_PX = 15
+/**
+ * Kandidaten je Knoten. Genommen wird der ERSTE brauchbare, nicht der beste:
+ * eine Maximierung verteilte die Knoten wieder gleichmässig und schüfe damit
+ * ein neues Muster — genau das, was hier verschwinden soll.
+ */
+export const FORGE_SCATTER_TRIES = 24
+/**
+ * Der Durchmesser eines Knotens je Ebene.
+ *
+ * Stand bis hierher zweimal: als Literal im scoped CSS von `ForgeTreePanel.vue`
+ * und als abgeschriebene Tabelle in `__tests__/config/forgeGeometry.spec.ts`.
+ * Die Doppelung war begründet, solange die Grösse reine Darstellung war — mit
+ * der Streuung ist sie es nicht mehr: der Platzierer BRAUCHT sie, um zu
+ * entscheiden, ob zwei Knoten sich berühren. Also steht sie hier, das CSS
+ * bindet sie per `v-bind`, und die Spec importiert sie.
+ */
+export const FORGE_NODE_DIAMETER: Record<ForgeUpgradeTier, number> = {
+  root: 56,
+  branch: 46,
+  leaf: 38,
+  ward: 40,
+  pact: 40,
+  crown: 50,
+  bough: 42,
+}
+
+/* ── Die ÄSTE: gekrümmt und nach aussen dünner ────────────────────────────────
+ * Zwei gerade Striche zwischen zwei Knoten derselben Speiche waren nur die
+ * zweite Hälfte desselben Problems. Jeder Ast ist jetzt eine quadratische
+ * Bézier mit seitlichem Schwung — dasselbe Mittel, mit dem der Meep-Baum seine
+ * Spiralarme verbindet (`utils/ui/skillTreeLayout.ts`, `arcPath`).
+ */
+/** Seitlicher Versatz des Kontrollpunkts, als Anteil der Sehnenlänge. */
+export const FORGE_LIMB_BOW = 0.16
+/** Mindestanteil davon. Ohne ihn würfelte der Seed gelegentlich fast null und
+ *  ein einzelner Ast bliebe schnurgerade zwischen lauter geschwungenen. */
+export const FORGE_LIMB_BOW_MIN = 0.35
+/**
+ * Strichstärke des Grundastes je Ebene — innen kräftig, aussen fein. Der Baum
+ * verjüngt sich damit nach aussen, statt siebenmal denselben 4-px-Strich zu
+ * zeigen.
+ */
+export const FORGE_LIMB_WIDTH: Record<ForgeUpgradeTier, number> = {
+  root: 5,
+  branch: 4.2,
+  leaf: 3.4,
+  ward: 3,
+  pact: 2.7,
+  crown: 2.7,
+  bough: 2.4,
+}
+/** Der gefärbte Ast über dem Grundast. 2,5 zu 4 war das bisherige Verhältnis. */
+export const FORGE_LIMB_LIT_FACTOR = 0.62
+
+/* ── Die SPANNFÄDEN: die zweite Art von Verbindung ────────────────────────────
+ *
+ * Ein Ast sagt „hier hängt der Knoten"; ein Spannfaden sagt „das hier verlangt
+ * er ausserdem". Beide dürfen nicht verwechselbar sein, und deshalb ist keine
+ * ihrer Eigenschaften geteilt: der Faden ist DÜNNER als der dünnste Ast (2,4),
+ * GESTRICHELT statt durchgezogen, und er läuft in einer eigenen Ebene UNTER den
+ * Ästen.
+ *
+ * Er ist ausserdem stärker gebogen. Das ist nicht Zierde: ein Faden verbindet
+ * zwei Knoten auf VERSCHIEDENEN Speichen und würde als Sehne quer durch das
+ * halbe Bild schneiden — mit dem stärkeren Schwung liest er sich als Bogen, der
+ * um die Knoten dazwischen herumführt.
+ *
+ * **Keine Laufanimation auf dem Strichmuster.** Ein wanderndes
+ * `stroke-dashoffset` wären zehn dauerlaufende Elemente auf einer Bühne, die
+ * ohnehin Orbit, Kampf und Hintergrund gleichzeitig trägt (Performance-Regel 2).
+ * Das Muster steht still; bewegt wird nichts.
+ */
+export const FORGE_TETHER_WIDTH = 1.6
+export const FORGE_TETHER_DASH = '5 7'
+export const FORGE_TETHER_COLOR = '#4a3418'
+export const FORGE_TETHER_OPACITY = 0.5
+/** Der Schwung eines Fadens, als Anteil der Sehnenlänge — deutlich über
+ *  `FORGE_LIMB_BOW` (0,16), siehe oben. */
+export const FORGE_TETHER_BOW = 0.3
+/** Beim Zeigen auf den Knoten: erfüllt in Grün, offen in Rot — dieselben zwei
+ *  Töne, die im ganzen Projekt „kaufbar" und „fehlt" heissen. */
+export const FORGE_TETHER_MET_COLOR = '#52b830'
+export const FORGE_TETHER_OPEN_COLOR = '#cc6050'
+export const FORGE_TETHER_SPOT_WIDTH = 2.6
+
+/** Überschrift der Voraussetzungsliste in Zeile und Tooltip. */
+export const FORGE_REQ_HEADING = 'REQUIRES'
+/** Die zwei Zeichen davor. Dekorative Glyphen, ausdrücklich erlaubt (CLAUDE.md
+ *  „Icons", Punkt 8) — ein Iconify-Motiv in 11 px zerfiele hier zu Grau. */
+export const FORGE_REQ_MET_MARK = '✓'
+export const FORGE_REQ_OPEN_MARK = '✕'
 
 /**
  * Battle Power je gehaltenem Meep. Der Meep-Term dominiert `totalPower` —
@@ -703,6 +881,32 @@ export const FORGE_RING_PACT_R = 380
 export const FORGE_RING_CROWN_R = 438
 export const FORGE_RING_BOUGH_R = 496
 
+/**
+ * Dieselben sieben Radien als Tabelle über der Ebene.
+ *
+ * Stand bis hierher als lokales `RING_RADIUS` in `ForgeTreePanel.vue`. Seit die
+ * Streuung (`utils/ui/forgeTreeLayout.ts`) und ihre Spec dieselbe Zuordnung
+ * brauchen, wäre das eine zweite Quelle gewesen — ein `Record` ohne `Partial`
+ * erzwingt beim nächsten Ring ausserdem einen Typfehler statt eines stummen
+ * Fehlverhaltens.
+ */
+export const FORGE_RING_RADIUS: Record<ForgeUpgradeTier, number> = {
+  root: FORGE_RING_ROOT_R,
+  branch: FORGE_RING_BRANCH_R,
+  leaf: FORGE_RING_LEAF_R,
+  ward: FORGE_RING_WARD_R,
+  pact: FORGE_RING_PACT_R,
+  crown: FORGE_RING_CROWN_R,
+  bough: FORGE_RING_BOUGH_R,
+}
+
+/**
+ * Der Speichenabstand des Katalogs: fünfzehn Winkel, alle 24° einer. Er ist die
+ * Bezugsgrösse der Ringverdrehung — zwei Ringe liegen alle 24° wieder
+ * deckungsgleich, gemessen wird deshalb modulo dieser Zahl.
+ */
+export const FORGE_SPOKE_PITCH_DEG = 24
+
 /* ── Die Bühne trägt KEINE Ring-Beschriftungen ────────────────────────────────
  * Über jeder Ebene stand eine Pille mit ihrer Sonnenphase („Phase 1–2",
  * „Swell · open"). Sie sind ersatzlos entfallen, und zwar in zwei Schritten:
@@ -894,7 +1098,7 @@ export const FORGE_BOUGH_PARENT_MIN_LEVEL = 2
 /**
  * ── Ring 6: Astral Crowns ────────────────────────────────────────────────────
  *
- * Fünf Knoten, einer je Wurzelachse, und jeder nur EINMAL zu haben. Sie sind
+ * Fünfzehn Knoten, drei je Wurzelachse, und jeder nur EINMAL zu haben. Sie sind
  * die Antwort auf ein Loch, das die Boughs offengelassen haben: der endlose
  * Ring gibt dem Spätspiel eine Senke, aber keine ÜBERRASCHUNG mehr — Stufe 24
  * fühlt sich an wie Stufe 23, nur teurer. Was ab hier fehlte, war nicht mehr
@@ -1009,7 +1213,22 @@ export const FORGE_BOUGH_COST_MULTIPLIER = 1.35
 /** Each leaf level amplifies its parent branch's effect by this fraction. */
 export const FORGE_LEAF_AMPLIFY_PER_LEVEL = 0.25
 
-export const FORGE_CONSTELLATION_REQUIRED_LEVEL = 3
+/**
+ * Die Stufe, auf der ein Vorgaenger stehen muss, damit ein VAULT-Eintrag
+ * ausliegt — Relikte und Konstellationen gemeinsam.
+ *
+ * Hiess einmal `FORGE_CONSTELLATION_REQUIRED_LEVEL` und wurde nur von einem
+ * Getter gelesen; die Relikte trugen dieselbe Drei stattdessen neun Mal von
+ * Hand im Katalog (`requiresLevel: 3`). Zwei Fassungen derselben Zahl, und
+ * eine davon unsichtbar — seit beide Vault-Arten dieselbe `requires`-Liste
+ * fuehren, steht sie einmal hier und einmal sichtbar im Katalog (`vaultReq`).
+ *
+ * **Sie ist eine VORGABE, keine Regel.** Ein Eintrag darf eine andere Stufe
+ * nennen, und die neuen tun es auch: ein Blatt oder Ward auf 2 ist zum selben
+ * Zeitpunkt erreichbar wie ein Zweig auf 3 (`min(cap, 1 + Phase − Ringphase)`),
+ * und genau deshalb kostet die zweite Bedingung dort keinen einzigen Tag.
+ */
+export const FORGE_VAULT_REQUIRED_LEVEL = 3
 /** Dieselbe Verstärkung in Prozent — für die Beschreibungstexte im Baum. */
 export const FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT = FORGE_LEAF_AMPLIFY_PER_LEVEL * 100
 
@@ -1138,6 +1357,154 @@ export const FORGE_CROWN_OVERFLOW_MIN_CHIMES = 1e9
 export const FORGE_CROWN_OVERFLOW_MAX_PER_SEC = 2
 /** Welches Material der Überlauf ausschüttet — das gewöhnlichste, mit Absicht. */
 export const FORGE_CROWN_OVERFLOW_MATERIAL = 'stardust'
+
+/* ── Der ZUSAMMENLAUF: Kronen, die mehrere Vorgänger verlangen ────────────────
+ *
+ * Bis hierher hatte jeder Knoten des Baums GENAU einen Vorgänger, und die
+ * Freischaltung war eine einzige Zahl. Der Baum war damit eine reine Kette:
+ * Strahl → Zweig → Blatt → Ward → Covenant → Krone. Es gab keine Stelle, an der
+ * zwei Entwicklungslinien zusammenkommen mussten.
+ *
+ * Der Kronen-Ring ist der Ort dafür, und das ist keine Geschmacksfrage:
+ *
+ *   • Er kauft als einziger keine ZAHL, sondern eine REGEL. Ein Zusammenlauf
+ *     mehrerer Bedingungen ist eine Regel, kein Prozentwert mit Zwischenschritten.
+ *   • Er hat als einziger Platz: fünf von fünfzehn Speichen waren belegt. Die
+ *     Ringe 2–5 stehen auf 15/15, und `forgeRingLadder.spec.ts` verbietet einen
+ *     zweiten Knoten je Ring und Speiche.
+ *   • Kronen zählen NICHT in die Codex-Bahn „Sunsmith" (`achievementStore`
+ *     überspringt `crownLevels`). Neue Kronen verschieben deshalb weder das
+ *     erreichbare Maximum noch die Endstufe — die Bahn bleibt unberührt. Ein
+ *     neuer Zweig oder Ward hätte sie still verschenkt.
+ *
+ * Die zehn Kronen tragen jetzt ZWEI Fassungen derselben Idee, und der Kontrast
+ * ist der Inhalt: die fünf alten verlangen ihre EIGENE Achse bis nach unten
+ * (`FORGE_CROWN_OWN_WARD_LEVEL`), die fünf neuen den Zusammenlauf zweier
+ * FREMDER Achsen.
+ */
+/**
+ * Was ein Zusammenlauf von einem fremden Zweig, Blatt oder Ward verlangt.
+ *
+ * Die Zahlen sind an der Erreichbarkeit geeicht, nicht am Gefühl. In Pyre — der
+ * Phase, in der der Kronen-Ring aufgeht — gilt `min(cap, 1 + 4 − phase)`:
+ *
+ *   Zweig 5 · Blatt 4 · Ward 3 · Covenant 2
+ *
+ * Jede Forderung unten liegt genau EINE Stufe darunter: spürbar, aber nie
+ * unerfüllbar. Eine Krone, die man nicht aufschliessen kann, wäre dieselbe
+ * Fehlerklasse wie eine Codex-Bahn, die man nicht abschliessen kann —
+ * `forgeRequirements.spec.ts` rechnet es bei jedem Lauf nach, statt es zu
+ * glauben.
+ */
+export const FORGE_CONJUNCTION_BRANCH_LEVEL = 4
+export const FORGE_CONJUNCTION_LEAF_LEVEL = 3
+export const FORGE_CONJUNCTION_WARD_LEVEL = 2
+/**
+ * Was eine der fünf ALTEN Kronen zusätzlich von dem Ward ihrer eigenen Speiche
+ * verlangt.
+ *
+ * Drei und nicht zwei: der Covenant darüber verlangt bereits Ward Lv 2
+ * (`FORGE_PACT_PARENT_MIN_LEVEL`), und wer die Krone erreicht, hat den Covenant.
+ * Eine Zwei wäre also beim Kauf automatisch erfüllt und damit reine Zierde. Drei
+ * ist der Pyre-Deckel des Ward-Rings — die Forderung lautet „diese Achse ganz
+ * nach unten", und mehr gibt es dort nicht.
+ */
+export const FORGE_CROWN_OWN_WARD_LEVEL = 3
+
+/* ── Was die fünf neuen Kronen bewirken ───────────────────────────────────────
+ * Wie bei den fünf alten: die Regel steht als Konstante hier und wird von genau
+ * EINEM Getter im Store gelesen; `desc` sagt sie im Klartext, ohne `{v}`.
+ *
+ * Geprüft gegen `docs/balance.md`: keine hebt `otherDps` (das kürzt sich gegen
+ * die Boss-HP weg), keine sättigt still (keine Chance-Achse), keine
+ * multipliziert die CpS, mit der sie bezahlt wird. Jede ist durch ein EREIGNIS
+ * begrenzt — ein Fehlschlag, ein Planet, ein Angebot, eine Stunde, ein Match.
+ */
+/** Pilgrim's Accord: Anteil der Rezeptur, den eine GESCHEITERTE Expedition
+ *  trotzdem heimbringt. Eins — der Fehlschlag kostet weiterhin die Zeit und den
+ *  Chime-Lohn, nur das Material bleibt. */
+export const FORGE_CROWN_FAILED_EXPEDITION_MATERIAL_SHARE = 1
+/* Stillpoint braucht keine Zahl — die Regel ist ein Ja/Nein, wie bei Warden's
+ * Reprieve. Sie hält die Despawn-Frist eines Ressourcensterns an, SOLANGE auf
+ * ihm gekämpft wird.
+ *
+ * Warum diese Fassung und nicht „der letzte Planet bleibt stehen": ein Planet,
+ * der ohne Kampf gutgeschrieben wird, müsste die Boss-Beute ohne Boss-Kill
+ * buchen — eine zweite Auszahlungsstelle neben `planetBossStore`, und damit
+ * genau die Art zweiter Wahrheit, die der Baum sonst überall vermeidet. Diese
+ * Fassung fügt keine Auszahlung hinzu; sie nimmt nur die Uhr aus dem Spiel,
+ * solange der Spieler wirklich davorsteht. Begrenzt ist sie durch die
+ * Enrage-Uhr der Bosse, die weiterläuft — der Stern wartet, der Boss nicht. */
+/** Reclaimed Bargain: Preisanteil, zu dem ein verfallenes Angebot ein zweites
+ *  Mal ausliegt. Halb, und nur EINMAL je Angebot — danach rotiert es normal. */
+export const FORGE_CROWN_RECLAIMED_PRICE_MULT = 0.5
+/** Tireless Quarry: wie lange die Harvester nach dem Schliessen des Tabs
+ *  weiterarbeiten. Eine Stunde ist ein FENSTER und keine Rate — die Achse kann
+ *  damit nicht davonlaufen, egal wie lange jemand fortbleibt. */
+export const FORGE_CROWN_OFFLINE_HARVEST_HOURS = 1
+/* Steadfast Tribute ist ebenfalls ein Ja/Nein: es nimmt dem Honor-Tribut den
+ * Niederlagen-Abschlag (`HONOR_LOSS_TRIBUTE_MULT`, 0,5). Die Zahl steht dort und
+ * nicht hier — eine zweite Konstante daneben wäre eine zweite Wahrheit über
+ * denselben Abschlag, und der LP-Verlust einer Niederlage bleibt ohnehin. */
+
+/* ── Was die fünf DRITTEN Kronen bewirken ───────────────────────────────
+ * Der Ring trägt jetzt DREI Fassungen desselben Gedankens, und die Reihe ist
+ * der Inhalt: die eigene Achse bis nach unten (ein Vorgaenger), der
+ * Zusammenlauf zweier fremder Achsen (zwei), das Zusammentreffen dreier
+ * (`FORGE_CONJUNCTION_*` unveraendert — ein Zweig, ein Blatt, ein Ward, jeder
+ * von einer anderen Wurzel).
+ *
+ * Geprüft gegen `docs/balance.md` wie die zehn davor: keine hebt `otherDps`,
+ * keine sättigt still, keine multipliziert die CpS, mit der sie bezahlt wird.
+ * Jede ist durch ein EREIGNIS begrenzt — eine Rueckkehr, ein zweiter Riss, ein
+ * Faehigkeitsfenster, ein laufendes Vorzeichen, ein entkommener Boss.
+ */
+/** Homeward Sky: wie viele Drifter auf die Rueckkehr warten. EINER — ein
+ *  FENSTER wie bei Tireless Quarry und keine Rate. Wer drei Tage fortbleibt,
+ *  findet denselben einen vor wie nach zwei Stunden; die Achse kann damit
+ *  nicht davonlaufen. */
+export const FORGE_CROWN_OFFLINE_DRIFTER_COUNT = 1
+/** Sealed Threshold: welchen Anteil seines Zolls ein Riss noch nimmt, der
+ *  einschlaegt, während die Nachwirkung eines anderen noch laeuft. NULL —
+ *  dieselbe Form wie `FORGE_CROWN_FAILED_EXPEDITION_MATERIAL_SHARE`.
+ *
+ *  Es ist der erste Kauf gegen die eigentliche Todesspirale des Void: nicht
+ *  gegen den einzelnen Riss, sondern gegen Risse, die sich STAPELN. Die
+ *  Nachwirkung selbst wird trotzdem gebucht — der Riss bleibt sichtbar, nur
+ *  seine Rechnung ist bezahlt. */
+export const FORGE_CROWN_STACKED_RIFT_TOLL_SHARE = 0
+/* Sanctum Veil braucht keine Zahl — die Regel ist das Fenster selbst: solange
+ * eine Bard-Faehigkeit noch wirkt, reisst der Void keinen Riss auf. Kein
+ * Dauerzustand: Q wirkt augenblicklich, W/E/R haengen an Abklingzeiten, deren
+ * Boden `FORGE_MIN_BARD_COOLDOWN_MULT` (0,8) sichert. Der faellige Spawn wird
+ * nicht verschluckt, sondern auf den Wiederholungstakt gestellt — dasselbe
+ * Idiom, das der Store schon nutzt, wenn keine Definition gezogen werden
+ * konnte. */
+/** Unfailing Sign: unter diesen Anteil ihrer Höchst-HP kann die Sonne nicht
+ *  fallen, solange ein Vorzeichen-Lohn laeuft. Das Vorzeichen wird damit zum
+ *  Schutzschirm — wer liest, was der Kosmos ankündigt, überlebt es.
+ *
+ *  Die Klemme sitzt in `playerStore.takeDamage()` und nicht beim Void: VIER
+ *  Quellen buchen Schaden (Void-Einschlag, Boss-Enrage, Rift-Nachwirkung,
+ *  Kampf), und eine Klemme je Quelle waeren vier Wahrheiten über denselben
+ *  Boden. */
+export const FORGE_CROWN_OMEN_HP_FLOOR_FRACTION = 0.5
+/** Remembered Wound: mit höchstens diesem Anteil seiner HP steht ein
+ *  entkommener Planeten-Boss wieder auf.
+ *
+ *  Ein BODEN und keine Zusage: ohne ihn erschiene ein Boss, den man bis auf
+ *  einen Splitter heruntergeprügelt hat, praktisch tot — und ein Gegner mit
+ *  null HP ist kein Kampf mehr, sondern ein Klick.
+ *
+ *  **`maxHP` bleibt unangetastet.** Verschoben wird nur der STARTWERT; die
+ *  Boss-HP-Formel mit `otherDps` wird nicht angefasst — dieselbe Trennung wie
+ *  bei `hollowCore`, das am Ergebnis dreht und nicht am Schaden. */
+export const FORGE_CROWN_BOSS_WOUND_FLOOR = 0.15
+
+/** Twinned Sky (Konstellation): wie viele Drifter ZUSÄTZLICH am Himmel stehen
+ *  dürfen. Einer — aus zwei auf einmal wird eine Wahl, aus fünf ein Teppich,
+ *  auf dem kein einzelner mehr etwas bedeutet. */
+export const FORGE_TWINNED_SKY_EXTRA_DRIFTERS = 1
 
 /** Obergrenzen, damit gestapelte Forge-Effekte den Spielablauf nicht brechen. */
 export const FORGE_MIN_DAMAGE_TAKEN_MULT = 0.25
@@ -1805,8 +2172,23 @@ export const FORGE_OFFER_NOTE =
 /** Der Wirkungssprung im Kärtchen — dieselben zwei Wörter wie in der Upgrade-Zeile. */
 export const FORGE_OFFER_NOW_LABEL = 'Now'
 export const FORGE_OFFER_NEXT_LABEL = 'After forging'
-/** Beide Tore einer Konstellation, ausgeschrieben. */
-export const FORGE_OFFER_REQS_LABEL = 'Both branches'
+/**
+ * Die Ueberschrift ueber den Toren eines Vault-Angebots.
+ *
+ * Hiess 'Both branches', solange eine Konstellation genau zwei Zweige
+ * verschmolz. Seit der Vault dieselbe `requires`-Liste fuehrt wie der Baum,
+ * koennen es drei sein und muessen keine Zweige sein — der alte Text haette
+ * dann zweimal gelogen. Dasselbe Wort wie im Baum (`FORGE_REQ_HEADING`), damit
+ * dieselbe Auskunft ueberall gleich heisst.
+ */
+export const FORGE_OFFER_REQS_LABEL = 'Requires'
+/**
+ * Was die Bedingungen in der EINEN Zeile des `title` trennt.
+ *
+ * Ein Mittelpunkt und kein Komma: die Zeile besteht aus Paaren „Name Zahl/Zahl“,
+ * und ein Komma sieht darin wie ein Teil der Zahl aus.
+ */
+export const FORGE_VAULT_REQ_SEPARATOR = ' · '
 /**
  * Wie weit das Kärtchen von der Zeile absteht und wie breit es ist.
  *

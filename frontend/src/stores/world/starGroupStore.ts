@@ -565,7 +565,17 @@ export const useStarGroupStore = defineStore('starGroup', {
         if (star.starType !== 'resource') continue
         if (resourceDespawnScheduled.has(star.id)) continue
         const allCleared = star.planetSlots.every((s) => s.cleared)
+        // Stillpoint (Star-Forge-Krone): die eigene Frist des Sterns steht
+        // still, solange sein Kampf offen ist.
+        //
+        // Nur DIESE Uhr. Die Enrage-Uhr der Bosse darauf läuft weiter, und ihr
+        // Ablauf meldet sich über `onBossResult(..., false)` — der Stern wartet
+        // also auf den Spieler, nicht der Boss. Ohne diese Grenze wäre aus einer
+        // angehaltenen Frist ein abgeschaltetes System geworden.
+        const held =
+          this.activeFightStarId === star.id && useStarForgeStore().resourceStarHoldsInFight
         const expired =
+          !held &&
           star.spawnedAt !== undefined &&
           star.durationMs !== undefined &&
           now >= star.spawnedAt + star.durationMs

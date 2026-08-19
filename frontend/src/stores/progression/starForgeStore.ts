@@ -16,6 +16,7 @@ import type {
   ForgeBargainDef,
   ForgeBuffId,
   ForgeNodeDef,
+  ForgeOfferReq,
   ForgeSectionId,
 } from '@/types'
 import {
@@ -25,6 +26,7 @@ import {
   FORGE_CONSTELLATIONS,
   FORGE_BARGAINS,
   getForgeNode,
+  forgeNodeName,
   getForgeRelic,
   getForgeConstellation,
   getForgeBargain,
@@ -42,7 +44,6 @@ import {
   FORGE_BOUGH_PARENT_MIN_LEVEL,
   ADMIN_MAX_BOUGH_LEVEL,
   FORGE_LEAF_AMPLIFY_PER_LEVEL,
-  FORGE_CONSTELLATION_REQUIRED_LEVEL,
   FORGE_BARGAIN_RESTOCK_MS,
   FORGE_BARGAIN_EMPTY_ICON,
   FORGE_BARGAIN_REROLL_MATERIAL,
@@ -72,6 +73,12 @@ import {
   FORGE_CROWN_OVERFLOW_FRACTION_PER_SEC,
   FORGE_CROWN_OVERFLOW_MIN_CHIMES,
   FORGE_CROWN_OVERFLOW_MAX_PER_SEC,
+  FORGE_CROWN_RECLAIMED_PRICE_MULT,
+  FORGE_CROWN_OFFLINE_HARVEST_HOURS,
+  FORGE_CROWN_OFFLINE_DRIFTER_COUNT,
+  FORGE_CROWN_STACKED_RIFT_TOLL_SHARE,
+  FORGE_CROWN_OMEN_HP_FLOOR_FRACTION,
+  FORGE_TWINNED_SKY_EXTRA_DRIFTERS,
   FORGE_MIN_BARD_COOLDOWN_MULT,
   FORGE_MIN_BUILDING_COST_MULT,
   FORGE_MIN_ITEM_COST_MULT,
@@ -201,6 +208,11 @@ export const useStarForgeStore = defineStore('starForge', {
     bargainDealId: '' as string,
     bargainRestockAt: 0 as number,
     bargainPurchased: false as boolean,
+    /** Liegt das laufende Angebot als ZWEITE Chance aus (Reclaimed Bargain)?
+     *  Steht im Spielstand, weil `bargainDealId` und `bargainRestockAt` es auch
+     *  tun — ohne das käme ein halbierter Preis nach dem Neuladen zum vollen
+     *  zurück, mitten im laufenden Fenster. */
+    bargainReclaimed: false as boolean,
     activeBuffs: [] as ForgeActiveBuff[],
     /** Reactive clock — advanced by gameStore.tick() once per second. */
     forgeNow: gameNow() as number,
@@ -260,6 +272,79 @@ export const useStarForgeStore = defineStore('starForge', {
     },
 
     /**
+     * Die Stufe eines beliebigen Vorgängers — Ring 1 oder Ring 2–7.
+     *
+     * `requires` darf auf einen Solar Ray zeigen, `nodeLevel` kennt aber nur die
+     * sechs Forge-Beutel. Die Weiche steht hier und nicht bei jedem Aufrufer.
+     */
+    anyNodeLevel(): (id: string) => number {
+      return (id) => {
+        if (getForgeNode(id)) return this.nodeLevel(id)
+        const solar = useSolarUpgradeStore()
+        return SOLAR_BRANCHES.some((ray) => ray.id === id)
+          ? solar.branchLevel(id as SolarBranchId)
+          : 0
+      }
+    },
+
+    /**
+     * ALLE Vorgänger eines Knotens mit Fortschritt — der Elternteil zuerst, dann
+     * seine `requires`.
+     *
+     * **Die eine Quelle für „was fehlt noch".** Stünde die Elternprüfung an
+     * einer und die Zusatzprüfung an einer anderen Stelle, könnten Sperre und
+     * Sperrgrund auseinanderlaufen — genau der Fehler, den der Kronen-Ring
+     * schon einmal hatte, als er in diesem Fall die längst erfüllte Elternstufe
+     * nannte (`FORGE_CROWN_LOCK_REASON`).
+     *
+     * Der Typ ist derselbe wie bei den Konstellationen: „Moon Orbit 2/3" ist
+     * dieselbe Auskunft, egal woran sie hängt, und `ForgeVaultSection` zeigt sie
+     * längst so.
+     *
+     * **Nicht im heissen Pfad benutzen** — dafür steht `nodeRequirementsMet`
+     * daneben, siehe dort.
+     */
+    nodeRequirements(): (def: ForgeNodeDef) => ForgeOfferReq[] {
+      return (def) => {
+        const out: ForgeOfferReq[] = []
+        const push = (id: string, need: number, have: number): void => {
+          out.push({
+            id,
+            name: forgeNodeName(id),
+            have,
+            need,
+            met: have >= need,
+            progress: need <= 0 ? 1 : Math.min(1, have / need),
+          })
+        }
+        push(def.parentId, this.nodeParentRequirement(def), this.nodeParentLevel(def))
+        for (const req of def.requires ?? []) {
+          push(req.id, req.level, this.anyNodeLevel(req.id))
+        }
+        return out
+      }
+    },
+
+    /**
+     * Dasselbe als blosses Ja/Nein — OHNE eine einzige Objekt-Allokation.
+     *
+     * `shopReadyIds` prüft `canAffordNode` für JEDEN Knoten bei jeder
+     * Chime-Änderung, ab Programmstart und unabhängig vom geöffneten Tab (die
+     * Herleitung steht dort). Achtzig Listen mit je zwei bis drei frisch
+     * gebauten Objekten je Sekunde wären genau die Art Müll, gegen die die
+     * Lookup-Map in `starForge.ts` überhaupt erst angelegt wurde.
+     */
+    nodeRequirementsMet(): (def: ForgeNodeDef) => boolean {
+      return (def) => {
+        if (this.nodeParentLevel(def) < this.nodeParentRequirement(def)) return false
+        for (const req of def.requires ?? []) {
+          if (this.anyNodeLevel(req.id) < req.level) return false
+        }
+        return true
+      }
+    },
+
+    /**
      * Hat der Spieler die Schwelle erreicht, ab der Ring 6 überhaupt existiert?
      *
      * Eigener Getter statt einer Zeile in `nodeUnlocked`, weil der Baum ihn
@@ -281,7 +366,7 @@ export const useStarForgeStore = defineStore('starForge', {
         // der Aufbruch macht ihn zur Belohnung dafür, ein Universum
         // zurückgelassen zu haben.
         if (def.tier === 'crown' && !this.crownsUnlocked) return false
-        return this.nodeParentLevel(def) >= this.nodeParentRequirement(def)
+        return this.nodeRequirementsMet(def)
       }
     },
 
@@ -468,12 +553,22 @@ export const useStarForgeStore = defineStore('starForge', {
       }
     },
 
-    /** Branch requirement met (independent of cost) — lets the UI explain locks. */
+    /**
+     * Stehen ALLE Vorgaenger eines Relikts hoch genug? — unabhaengig vom Preis,
+     * damit die Anzeige die Sperre erklaeren kann.
+     *
+     * `anyNodeLevel` statt `nodeLevel`: seit der Vault dieselbe `requires`-Liste
+     * fuehrt wie der Baum, darf ein Eintrag auch einen Strahl (Ring 1) nennen.
+     * Eine zweite Weiche dafuer gaebe es sonst hier UND bei den Knoten.
+     */
     relicRequirementMet(): (id: string) => boolean {
       return (id) => {
         const def = getForgeRelic(id)
         if (!def) return false
-        return this.nodeLevel(def.requiresNode) >= def.requiresLevel
+        for (const req of def.requires) {
+          if (this.anyNodeLevel(req.id) < req.level) return false
+        }
+        return true
       }
     },
 
@@ -492,14 +587,22 @@ export const useStarForgeStore = defineStore('starForge', {
       return (id) => state.forgedConstellations.includes(id)
     },
 
+    /**
+     * Dieselbe Pruefung wie beim Relikt — und das ist der Punkt.
+     *
+     * Vorher las sie genau ZWEI feste Felder gegen EINE globale Konstante; eine
+     * Konstellation aus drei Knoten war damit nicht schreibbar. Jetzt zaehlt
+     * die Liste, und die Stufe steht am Eintrag statt in einer Konstante, die
+     * fuer alle zehn dieselbe war.
+     */
     constellationRequirementMet(): (id: string) => boolean {
       return (id) => {
         const def = getForgeConstellation(id)
         if (!def) return false
-        return (
-          this.nodeLevel(def.nodeA) >= FORGE_CONSTELLATION_REQUIRED_LEVEL &&
-          this.nodeLevel(def.nodeB) >= FORGE_CONSTELLATION_REQUIRED_LEVEL
-        )
+        for (const req of def.requires) {
+          if (this.anyNodeLevel(req.id) < req.level) return false
+        }
+        return true
       }
     },
 
@@ -533,9 +636,19 @@ export const useStarForgeStore = defineStore('starForge', {
 
     /** Der Rabatt des Handels UND der des Baums (Haggler's Pact) — beide auf
      *  demselben Grundpreis, und beide hier, damit Anzeige und Abbuchung nie
-     *  auseinanderlaufen können. */
-    bargainPrice(): (def: ForgeBargainDef) => number {
-      return (def) => Math.round(def.basePrice * (1 - def.discountPct) * this.bargainPriceMult)
+     *  auseinanderlaufen können.
+     *
+     *  Der Nachlass des zurückgekommenen Angebots (Reclaimed Bargain) gilt nur
+     *  für das Angebot, das WIRKLICH ausliegt: `bargainReclaimed` ist ein
+     *  Zustand des Handels, keine Eigenschaft seiner Definition. */
+    bargainPrice(state): (def: ForgeBargainDef) => number {
+      return (def) => {
+        const reclaimed =
+          state.bargainReclaimed && def.id === state.bargainDealId
+            ? this.reclaimedBargainPriceMult
+            : 1
+        return Math.round(def.basePrice * (1 - def.discountPct) * this.bargainPriceMult * reclaimed)
+      }
     },
 
     bargainRestockRemainingMs(state): number {
@@ -788,7 +901,7 @@ export const useStarForgeStore = defineStore('starForge', {
 
     /** Multiplier on champion experience gains (Eternal Host). */
     championXpMult(): number {
-      return 1 + this.boughEffect('eternalHost') / 100
+      return 1 + (this.boughEffect('eternalHost') + this.relicEffect('heraldsTrophy')) / 100
     },
 
     /**
@@ -874,7 +987,11 @@ export const useStarForgeStore = defineStore('starForge', {
      * Moment des Abschusses ablesbar.
      */
     voidSlayRewardMult(): number {
-      return this.crownForged('tidelessWatch') ? FORGE_CROWN_VOID_SLAY_REWARD_MULT : 1
+      // Die Krone verdoppelt, der Bough dahinter multipliziert weiter — er
+      // steht als eigener Faktor und nicht in der Klammer, weil er ohne die
+      // Krone gar nicht kaufbar ist und ohne sie folglich auch nichts tut.
+      const crown = this.crownForged('tidelessWatch') ? FORGE_CROWN_VOID_SLAY_REWARD_MULT : 1
+      return crown * (1 + this.boughEffect('darkTithe') / 100)
     },
 
     /**
@@ -909,6 +1026,175 @@ export const useStarForgeStore = defineStore('starForge', {
       if (chimes < FORGE_CROWN_OVERFLOW_MIN_CHIMES) return 0
       const raw = chimes * FORGE_CROWN_OVERFLOW_FRACTION_PER_SEC
       return Math.min(FORGE_CROWN_OVERFLOW_MAX_PER_SEC, Math.floor(raw))
+    },
+
+    /* ══ Die fünf ZUSAMMENLAUF-Kronen ═══════════════════════════════════════
+     * Dasselbe Muster wie die fünf darüber: der Getter sagt, ob die Regel gilt,
+     * die Zahl dahinter steht als Konstante, und genau EIN fremder Store liest
+     * ihn. Keiner von ihnen hebt `otherDps` (das kürzt sich gegen die Boss-HP
+     * weg) und keiner multipliziert die CpS, mit der er bezahlt wird — die
+     * Prüfung dazu steht in `docs/balance.md`.
+     */
+    /**
+     * Pilgrim's Accord — behält eine GESCHEITERTE Expedition ihre Materialien?
+     *
+     * Der Fehlschlag bleibt einer: Zeit und Chime-Lohn sind weiterhin weg. Nur
+     * die Rezeptur kommt zurück, und damit ist die Achse an die Expeditionstakt
+     * gebunden statt an eine Wahrscheinlichkeit — sie kann nicht davonlaufen.
+     */
+    failedExpeditionKeepsMaterials(): boolean {
+      return this.crownForged('pilgrimsAccord')
+    },
+
+    /**
+     * Stillpoint — hält ein Ressourcenstern seine Despawn-Frist an, solange auf
+     * ihm gekämpft wird?
+     *
+     * Nur die EIGENE Frist des Sterns. Die Enrage-Uhr der Bosse darauf läuft
+     * weiter: der Stern wartet, der Boss nicht.
+     */
+    resourceStarHoldsInFight(): boolean {
+      return this.crownForged('stillpoint')
+    },
+
+    /**
+     * Reclaimed Bargain — zu welchem Preisanteil ein VERFALLENES Angebot ein
+     * zweites Mal ausliegt. `1` heisst „zum vollen Preis", also wie bisher.
+     */
+    reclaimedBargainPriceMult(): number {
+      return this.crownForged('reclaimedBargain') ? FORGE_CROWN_RECLAIMED_PRICE_MULT : 1
+    },
+
+    /**
+     * Tireless Quarry — wie viele Stunden die Harvester nach dem Schliessen des
+     * Tabs weiterarbeiten.
+     *
+     * Ein FENSTER und keine Rate: wer drei Tage fortbleibt, bekommt dieselbe
+     * Stunde wie jemand, der zwei bekommt. Eine Rate wäre hier die geschlossene
+     * Rückkopplung, ein Fenster ist es nicht.
+     */
+    offlineHarvestHours(): number {
+      return this.crownForged('tirelessQuarry') ? FORGE_CROWN_OFFLINE_HARVEST_HOURS : 0
+    },
+
+    /**
+     * Steadfast Tribute — zahlt auch eine NIEDERLAGE ihren Honor-Tribut ganz?
+     *
+     * Der Abschlag (`HONOR_LOSS_TRIBUTE_MULT`) entfällt, sonst ändert sich
+     * nichts: der LP-Verlust bleibt, und ein verlorenes Match bleibt ein
+     * verlorenes.
+     */
+    lossTributeFull(): boolean {
+      return this.crownForged('steadfastTribute')
+    },
+
+    /* ══ Die fünf DREIFACH-Kronen ═══════════════════════════════════
+     * Dritte Fassung des Zusammenlaufs, gleiches Muster: der Getter sagt, ob die
+     * Regel gilt, die Zahl steht als Konstante, genau EIN fremder Store liest
+     * ihn.
+     */
+    /**
+     * Homeward Sky — wartet ein Drifter, der während der Abwesenheit
+     * hinübergezogen ist?
+     *
+     * Die Zahl ist eine ANZAHL und keine Rate: einer, egal wie lange jemand
+     * fortbleibt. Dasselbe Muster wie `offlineHarvestHours` — ein Fenster kann
+     * nicht davonlaufen, eine Rate schon.
+     */
+    offlineDrifterCount(): number {
+      return this.crownForged('homewardSky') ? FORGE_CROWN_OFFLINE_DRIFTER_COUNT : 0
+    },
+
+    /**
+     * Sealed Threshold — welchen Anteil seines Zolls ein Riss noch nimmt, der
+     * einschlägt, während die Nachwirkung eines anderen läuft. `1` heisst
+     * „den vollen“, also wie bisher.
+     *
+     * Es geht NICHT gegen den einzelnen Riss, sondern gegen Risse, die sich
+     * STAPELN — die einzige Lage, in der der Void den Spieler wirklich abräumt.
+     */
+    stackedRiftTollShare(): number {
+      return this.crownForged('sealedThreshold') ? FORGE_CROWN_STACKED_RIFT_TOLL_SHARE : 1
+    },
+
+    /**
+     * Sanctum Veil — hält eine laufende Bard-Fähigkeit den Void davon ab, einen
+     * Riss aufzureissen?
+     *
+     * Ein FENSTER und kein Dauerzustand: die Abklingzeiten laufen gegen
+     * `FORGE_MIN_BARD_COOLDOWN_MULT`, es gibt also keinen Ausbau, der den Void
+     * dauerhaft stillstellt. Der fällige Spawn wird nicht verschluckt, sondern
+     * auf den Wiederholungstakt gestellt.
+     */
+    riftsHeldWhileAbilityRuns(): boolean {
+      return this.crownForged('sanctumVeil')
+    },
+
+    /**
+     * Unfailing Sign — unter welchen Anteil ihrer Höchst-HP die Sonne nicht
+     * fallen kann, solange ein Vorzeichen-Lohn läuft. `0` heisst „kein Boden“.
+     */
+    omenHpFloorFraction(): number {
+      return this.crownForged('unfailingSign') ? FORGE_CROWN_OMEN_HP_FLOOR_FRACTION : 0
+    },
+
+    /**
+     * Remembered Wound — steht ein entkommener Planeten-Boss verwundet wieder
+     * auf?
+     *
+     * Die Wunde verschiebt nur den STARTWERT. `maxHP` bleibt, wie die Formel sie
+     * rechnet — dieselbe Trennung wie bei `hollowCore`.
+     */
+    bossKeepsWounds(): boolean {
+      return this.crownForged('rememberedWound')
+    },
+
+    /* ══ Die fünf Boughs MIT TOR ════════════════════════════════════
+     * Jeder setzt die Regel seiner Krone ins Endlose fort. Additiv je Stufe,
+     * ohne Deckel — und ausschliesslich auf Achsen, die eine AUSZAHLUNG oder
+     * eine MENGE skalieren. Ein Wahrscheinlichkeitswurf hat hier nichts zu
+     * suchen: er sättigt still, sobald er 1 erreicht.
+     */
+    /** Faktor auf die Länge eines Cosmic-Bargain-Buffs (Brimming Cart). */
+    bargainBuffDurationMult(): number {
+      return 1 + this.boughEffect('brimmingCart') / 100
+    },
+
+    /**
+     * Faktor auf die MENGE, die ein Harvester je Takt einbringt (World's Bounty).
+     *
+     * Die Menge und nicht der Takt: der Takt läuft gegen
+     * `FORGE_MIN_HARVEST_INTERVAL_MULT` und wäre ab dessen Boden ein bezahltes
+     * Nichts. Gebucht wird wie bei der Boss-Beute — ganze Einheiten plus den
+     * Nachkommateil als Chance, damit über 1 hinaus nichts verfällt.
+     */
+    harvestYieldMult(): number {
+      return 1 + this.boughEffect('worldsBounty') / 100
+    },
+
+    /** Faktor auf den Chime-Lohn eines eingesammelten Drifters (Drifter's Due). */
+    drifterRewardMult(): number {
+      return 1 + this.boughEffect('driftersDue') / 100
+    },
+
+    /* ══ Die drei DREIFACH-Konstellationen ════════════════════════════
+     * Einmalkaeufe ohne Stufe, deshalb je ein Ja/Nein und keine Zahl —
+     * dieselbe Form wie bei den Kronen und aus demselben Grund: eine Regel, die
+     * man ein zweites Mal kaufen kann, ist keine Regel mehr.
+     */
+    /** The Waiting Road — wartet ein Expeditions-Angebot, statt zu verfallen? */
+    expeditionOffersWait(): boolean {
+      return this.constellationForged('waitingRoad')
+    },
+
+    /** The Standing Vein — ernten die Harvester eines gefallenen Planeten weiter? */
+    harvestersSurviveDowntime(): boolean {
+      return this.constellationForged('standingVein')
+    },
+
+    /** Twinned Sky — wie viele Drifter zusätzlich am Himmel stehen dürfen. */
+    extraDrifterSlots(): number {
+      return this.constellationForged('twinnedSky') ? FORGE_TWINNED_SKY_EXTRA_DRIFTERS : 0
     },
 
     /** Multiplier on how long a collected drifter boon runs (Pilgrim's Reliquary). */
@@ -1198,7 +1484,7 @@ export const useStarForgeStore = defineStore('starForge', {
      * Overclock-Stapel (docs/balance.md).
      */
     bardPowerMult(): number {
-      return 1 + this.ringEffect('resonantPact') / 100
+      return 1 + (this.ringEffect('resonantPact') + this.relicEffect('skyboundAltar')) / 100
     },
 
     // ── chimesPerSecond-Achse ────────────────────────────────────────────────
@@ -1222,7 +1508,7 @@ export const useStarForgeStore = defineStore('starForge', {
 
     /** Faktor auf die Materialbeute eines Planeten-Bosses. */
     bossMaterialMult(): number {
-      return 1 + this.ringEffect('prospectorsPact') / 100
+      return 1 + (this.ringEffect('prospectorsPact') + this.boughEffect('rivenLode')) / 100
     },
 
     /**
@@ -1257,7 +1543,7 @@ export const useStarForgeStore = defineStore('starForge', {
 
     /** Faktor auf die Chime-Beute eines Planeten-Bosses. */
     bossRewardMult(): number {
-      return 1 + this.ringEffect('siegeReckoning') / 100
+      return 1 + (this.ringEffect('siegeReckoning') + this.relicEffect('chaliceOfTheFallen')) / 100
     },
 
     /** Faktor auf die Frist bis zum Enrage eines Bosses (> 1 = mehr Zeit). */
@@ -1292,6 +1578,19 @@ export const useStarForgeStore = defineStore('starForge', {
     },
 
     restockBargain(): void {
+      /* Reclaimed Bargain (Star-Forge-Krone): ein Angebot, das der Spieler
+         VERFALLEN liess, liegt noch einmal aus — zum halben Preis.
+         `bargainReclaimed` sorgt dafür, dass es bei EINEM zweiten Mal bleibt;
+         danach rotiert der Handel wie immer. Ein gekauftes Angebot kommt nicht
+         zurück, sonst wäre die Krone ein Dauerrabatt statt einer zweiten
+         Chance. */
+      const missed = this.bargainDealId !== '' && !this.bargainPurchased && !this.bargainReclaimed
+      if (missed && this.reclaimedBargainPriceMult < 1) {
+        this.bargainReclaimed = true
+        this.bargainRestockAt = gameNow() + FORGE_BARGAIN_RESTOCK_MS * this.bargainRestockMult
+        return
+      }
+      this.bargainReclaimed = false
       const pool = FORGE_BARGAINS.filter((b) => b.id !== this.bargainDealId)
       const pick = pool[Math.floor(Math.random() * pool.length)] ?? FORGE_BARGAINS[0]
       this.bargainDealId = pick.id
@@ -1421,8 +1720,12 @@ export const useStarForgeStore = defineStore('starForge', {
       switch (def.kind) {
         case 'buff':
           if (def.buffId && def.durationMs) {
+            // Brimming Cart (Bough) streckt die Laufzeit. ERNEUERN statt
+            // stapeln — dieselbe Regel wie beim Overclock-Stapel: der Filter
+            // darueber wirft den laufenden Buff weg, bevor der neue kommt.
+            const durationMs = def.durationMs * this.bargainBuffDurationMult
             this.activeBuffs = this.activeBuffs.filter((b) => b.id !== def.buffId)
-            this.activeBuffs.push({ id: def.buffId, expiresAt: gameNow() + def.durationMs })
+            this.activeBuffs.push({ id: def.buffId, expiresAt: gameNow() + durationMs })
           }
           break
         case 'materials': {

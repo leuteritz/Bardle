@@ -24,6 +24,25 @@ import type { IconPoolKey } from './ui'
  */
 export type ForgeNodeTier = 'branch' | 'leaf' | 'ward' | 'pact' | 'bough' | 'crown'
 
+/**
+ * Ein Vorgänger, den ein Knoten NEBEN seinem Elternteil verlangt.
+ *
+ * Die Trennung ist inhaltlich und nicht technisch: `parentId` sagt, WO ein
+ * Knoten hängt — daran hängen der Ringradius, der gezeichnete Ast und die
+ * Scheinwerferkette, und `chronicleReachable.spec.ts` verlangt dafür denselben
+ * Winkel wie beim Elternteil. `requires` sagt, WAS er verlangt, und ist von der
+ * Geometrie frei: ein Zusammenlauf zieht gerade Knoten von ANDEREN Speichen
+ * heran.
+ *
+ * Genutzt wird es heute nur vom Kronen-Ring (siehe `FORGE_CROWNS`).
+ */
+export interface ForgeNodeRequirement {
+  /** Knoten-Id aus `FORGE_NODES` oder eine `SolarBranchId` (Ring 1). */
+  id: string
+  /** Mindeststufe dieses Vorgängers. */
+  level: number
+}
+
 /** A purchasable node on the Forge Tree (rings 2–7 around the sun).
  *  Ring 1 (roots) stays in solarUpgradeStore. */
 export interface ForgeNodeDef {
@@ -36,6 +55,12 @@ export interface ForgeNodeDef {
    * crown/bough.
    */
   parentId: string
+  /**
+   * WEITERE Vorgänger, jeder mit eigener Mindeststufe — der Elternteil oben
+   * bleibt davon unberührt und wird nicht wiederholt. Fehlt das Feld, ist der
+   * Elternteil die einzige Bedingung.
+   */
+  requires?: readonly ForgeNodeRequirement[]
   tier: ForgeNodeTier
   /** Minimum starPhase at which the node becomes purchasable. */
   phase: number
@@ -67,9 +92,17 @@ export interface ForgeRelicDef {
   rarity: ForgeRelicRarity
   icon: string
   color: string
-  /** Branch node that must be grown before this relic can be forged. */
-  requiresNode: string
-  requiresLevel: number
+  /**
+   * ALLE Knoten, die gewachsen sein muessen, bevor das Relikt geschmiedet
+   * werden kann — dieselbe Form wie `ForgeNodeDef.requires`.
+   *
+   * **Ohne `?`, anders als beim Baumknoten.** Dort traegt `parentId` die
+   * Grundbedingung und `requires` kommt hinzu; ein Relikt hat keinen
+   * Elternteil, seine Liste IST die Bedingung. Ein leeres Array waere ein
+   * Relikt, das von Anfang an ausliegt — das soll man schreiben muessen,
+   * nicht vergessen koennen.
+   */
+  requires: readonly ForgeNodeRequirement[]
   maxLevel: number
   goldCost: number
   goldMultiplier: number
@@ -85,14 +118,27 @@ export interface ForgeConstellationDef {
   name: string
   icon: string
   color: string
-  /** The two branch nodes fused by this constellation. */
-  nodeA: string
-  nodeB: string
+  /**
+   * Die Knoten, die diese Konstellation verschmilzt — dieselbe Form wie beim
+   * Relikt und beim Baumknoten.
+   *
+   * Vorher standen hier `nodeA` und `nodeB`, und genau ZWEI passten hinein.
+   * Eine Konstellation aus drei Knoten war damit nicht schreibbar, sondern
+   * nur durch ein drittes Feld daneben — und drei Felder fuer dieselbe Sache
+   * sind drei Stellen, an denen sie auseinanderlaufen kann.
+   */
+  requires: readonly ForgeNodeRequirement[]
   goldCost: number
   materialCost: Record<string, number>
   desc: string
-  /** Compact pair line, e.g. "Flight + Chimes/Sec · +18% idle". */
-  pairLabel: string
+  /**
+   * Kurze Herkunftszeile, z. B. "Solar Sails + Quickening · +18% idle".
+   *
+   * Hiess einmal `pairLabel`, solange es immer genau zwei Knoten waren. Bei
+   * dreien ist es kein Paar mehr; der Name sagt jetzt dasselbe wie beim
+   * Relikt, und beide Vault-Arten fuehren damit dasselbe Feld.
+   */
+  sourceLabel: string
 }
 
 /**
@@ -225,14 +271,26 @@ export type ForgeUpgradeState = 'locked' | 'empty' | 'partial' | 'affordable' | 
 export type ForgeUpgradeBucketId = 'ready' | 'reach' | 'next' | 'grown'
 
 /**
- * Warum ein Knoten zu ist — die beiden Gründe, die `lockedFor()` unterscheidet.
+ * Warum ein Knoten zu ist — die drei Gründe, die `lockedFor()` unterscheidet.
  *
  * Sie sind für den Spieler NICHT dasselbe: gegen eine Phasensperre kann er
  * nichts tun ausser warten, eine Elternsperre kann er sofort angehen. Die
  * Upgrade-Liste trennt sie deshalb mit je einem eigenen Trenner. `''` heisst
  * offen.
+ *
+ * **`'prestige'` steht getrennt, weil die REQ-LISTE sonst luegt.** Ein
+ * Kronen-Knoten ohne Aufbruch im Ruecken trägt eine vollständig ERFÜLLTE
+ * Vorgaengerliste — und die Weiche „ab zwei Bedingungen zeigt die Liste statt
+ * des Satzes“ griff bisher trotzdem. Der Spieler sah lauter Häkchen und
+ * erfuhr nie, dass ihm ein Universum fehlt. Der dritte Wert schliesst die
+ * Liste aus, genau wie `'phase'` es tut.
+ *
+ * **Wer hier einen vierten Wert ergänzt, prueft `ForgeUpgradesSection.vue`**:
+ * die Gliederung filtert `pots.next` einmal auf `'phase'` und nimmt den REST
+ * — zwei Filter, die zusammen nicht vollständig sind, liessen einen neuen
+ * Grund aus der Liste verschwinden statt ihn falsch einzuordnen.
  */
-export type ForgeLockKind = 'phase' | 'parent' | ''
+export type ForgeLockKind = 'phase' | 'parent' | 'prestige' | ''
 
 /**
  * Ein kaufbarer Knoten, fertig zum Anzeigen — ohne jede Geometrie.
@@ -289,6 +347,16 @@ export interface ForgeUpgradeEntry {
   lockPhase: number
   /** Name des Elternknotens (Wurzel bei Branches, Branch bei Leaves). */
   parentName: string
+  /**
+   * ALLE Vorgänger dieses Knotens mit Fortschritt — der Elternteil zuerst, dann
+   * seine `requires`. Ein Knoten mit nur einer Bedingung trägt hier genau einen
+   * Eintrag; erst ab zwei zeigt die Zeile statt des Sperrsatzes eine Liste.
+   *
+   * Derselbe Typ wie bei den Konstellationen, und das mit Absicht: „Moon Orbit
+   * 2/3" ist dieselbe Auskunft, egal ob sie an einem Angebot oder an einer Krone
+   * hängt — `ForgeVaultSection` zeigt sie längst so.
+   */
+  reqs: ForgeOfferReq[]
   /** Fortschritt zur Freischaltung, 0–1 — nur bei `locked` aussagekräftig. */
   unlockProgress: number
   canBuy: boolean
@@ -388,8 +456,20 @@ export interface ForgeVaultEntry {
   state: 'locked' | 'done'
   /** Die Marke bei `done`: `✦ MAX` oder `✦ FUSED`. */
   badge: string
-  /** Der Weg bei `locked`: „Grow Moon Orbit to Lv 3". */
+  /** Der Weg bei `locked`, aus der SCHWÄCHSTEN Bedingung: „Grow Moon Orbit to Lv 3“. */
   lockReason: string
+  /**
+   * ALLE Bedingungen als EINE Zeile, z. B. „Comet Miner 3/3 · Deep Vein 1/2“.
+   *
+   * Die Vault-Zeile ist eine KOMPAKTZEILE mit genau einem Balken — zwei
+   * Balken wären eine Karte, und mit drei Bedingungen wird dieses Argument
+   * stärker, nicht schwächer. Sichtbar bleibt deshalb die schwächste; was der
+   * Spieler sonst gar nicht sähe, hängt im `title` der Zeile.
+   *
+   * Ein vorgerechneter String und keine zweite Liste: die Zeile rendert ihn nie
+   * einzeln, sie reicht ihn nur an das Attribut durch.
+   */
+  reqLine: string
   have: number
   need: number
   /** 0–1, für den Balken unter einer gesperrten Zeile. */

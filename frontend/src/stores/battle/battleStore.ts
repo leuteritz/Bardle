@@ -1654,7 +1654,11 @@ export const useBattleStore = defineStore('battle', {
       if (!this.team1.some((c) => c.name === name)) return 0
       let tribute = this.honorBaseTribute()
       if (this.lastAutoBattleResult?.mvpName === name) tribute *= HONOR_MVP_TRIBUTE_MULT
-      if (this.lastAutoBattleResult?.won === false) {
+      // Steadfast Tribute (Star-Forge-Krone) nimmt der Niederlage ihren
+      // Abschlag — und nur den. Der LP-Verlust daneben bleibt unangetastet,
+      // sonst wäre aus „die Ehre bleibt" ein „Niederlagen kosten nichts"
+      // geworden.
+      if (this.lastAutoBattleResult?.won === false && !useStarForgeStore().lossTributeFull) {
         tribute = Math.floor(tribute * HONOR_LOSS_TRIBUTE_MULT)
       }
       // Pact of Honor zuletzt, auf dem fertigen Betrag: MVP-Bonus und

@@ -147,6 +147,22 @@ export const useDrifterStore = defineStore('drifter', {
       return state.active.length > 0
     },
 
+    /**
+     * Wie viele Drifter gleichzeitig am Himmel stehen dürfen.
+     *
+     * Twinned Sky (Konstellation) hebt die Zahl auf zwei. Ein PLATZ und keine
+     * schnellere Uhr: der Spawn-Abstand laeuft gegen
+     * `FORGE_MIN_DRIFTER_INTERVAL_MULT`, und ein zweiter Kauf auf dieselbe
+     * Kappe waere einer zu viel.
+     *
+     * Als Getter und nicht als Konstante an zwei Stellen: `tickSpawnClocks` und
+     * `spawnDrifter` pruefen beide dagegen, und zwei Fassungen liefen
+     * auseinander, sobald jemand eine anfasst.
+     */
+    maxConcurrent(): number {
+      return DRIFTER_MAX_CONCURRENT + useStarForgeStore().extraDrifterSlots
+    },
+
     // ── Effect getters (one per integration point) ────────────────────────────
     /** Multiplier on total chimes per second. */
     cpsMult(): number {
@@ -203,7 +219,7 @@ export const useDrifterStore = defineStore('drifter', {
       }
       // RARITIES is already ordered rarest first, so `due` inherits that order.
       for (const rarity of due) {
-        if (this.active.length >= DRIFTER_MAX_CONCURRENT) {
+        if (this.active.length >= this.maxConcurrent) {
           this.spawnCooldowns[rarity] = DRIFTER_SPAWN_RETRY_SEC
           continue
         }
@@ -230,7 +246,7 @@ export const useDrifterStore = defineStore('drifter', {
 
     /** Roll a type and send it on its way. Respects the concurrency cap. */
     spawnDrifter(defId?: string): ActiveDrifter | null {
-      if (this.active.length >= DRIFTER_MAX_CONCURRENT) return null
+      if (this.active.length >= this.maxConcurrent) return null
       const def = defId ? getDrifter(defId) : rollAnyDrifter()
       if (!def) return null
 
@@ -247,6 +263,34 @@ export const useDrifterStore = defineStore('drifter', {
       this.totalDriftersSpawned++
       logger.debug('Drifter', `Spawned ${def.name}`, { uid: drifter.uid })
       return drifter
+    },
+
+    /**
+     * Homeward Sky (Star-Forge-Krone): ein Drifter, der während der Abwesenheit
+     * hinübergezogen ist, wartet auf die Rückkehr.
+     *
+     * Ein FENSTER und keine Rate — die Krone nennt eine ANZAHL
+     * (`FORGE_CROWN_OFFLINE_DRIFTER_COUNT`), nicht eine Zahl je Stunde. Wer
+     * drei Tage fortbleibt, findet denselben einen vor wie nach zwei Stunden;
+     * die Achse kann damit nicht davonlaufen. Dasselbe Muster wie
+     * `planetShopStore.catchUpHarvest`, das eine Zeile daneben aufgerufen wird.
+     *
+     * Er wird ganz normal GESPAWNT und nicht gutgeschrieben: der Spieler muss
+     * ihn anklicken wie jeden anderen. Eine Auszahlung ohne Klick wäre eine
+     * zweite Auszahlungsstelle neben `_applyReward` — genau die Art zweiter
+     * Wahrheit, die der Baum sonst überall vermeidet.
+     *
+     * @param awaySeconds wie lange der Tab zu war.
+     * @returns wie viele Drifter warten.
+     */
+    catchUpDrifter(awaySeconds: number): number {
+      const wanted = useStarForgeStore().offlineDrifterCount
+      if (wanted <= 0 || awaySeconds <= 0) return 0
+      let spawned = 0
+      for (let i = 0; i < wanted; i++) {
+        if (this.spawnDrifter()) spawned++
+      }
+      return spawned
     },
 
     /**
@@ -289,7 +333,10 @@ export const useDrifterStore = defineStore('drifter', {
         const fromCps = gameStore.chimesPerSecond * def.reward.chimesFromCpsSeconds
         const capped = Math.min(fromCps, gameStore.chimesPerSecond * DRIFTER_CHIME_REWARD_CAP_SEC)
         const floor = gameStore.chimesPerClick * DRIFTER_CHIME_REWARD_MIN_CLICKS
-        const gain = Math.max(capped, floor)
+        // Drifter's Due (Bough): Faktor auf die AUSZAHLUNG. Er steht nach den
+        // beiden Böden und nicht davor — die Böden sorgen dafür, dass ein
+        // Fang nie ein toter Klick ist, und sollen nicht selbst mitwachsen.
+        const gain = Math.max(capped, floor) * useStarForgeStore().drifterRewardMult
         gameStore.chimes += gain
         gameStore.chimesForNextUniverse += gain
         gameStore.totalChimesEarned += gain

@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useForgeOffers } from '@/composables/ui/useForgeOffers'
 import { useHerald } from '@/composables/ui/useHerald'
 import { useGameStore } from '@/stores/core/gameStore'
+import { meetForgeRequirements, setForgeLevel } from '@/__tests__/forgeTestUtils'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import {
@@ -11,7 +12,6 @@ import {
   FORGE_BARGAINS,
 } from '@/config/progression/starForge'
 import {
-  FORGE_CONSTELLATION_REQUIRED_LEVEL,
   FORGE_VAULT_FUSED_BADGE,
   FORGE_VAULT_MAX_BADGE,
 } from '@/config/constants'
@@ -59,15 +59,19 @@ function emptyPurse(): void {
   useInventoryStore().collectedMaterials = {}
 }
 
-/** Das Tor eines Relikts öffnen, ohne etwas zu bezahlen. */
+/**
+ * Das Tor eines Relikts öffnen, ohne etwas zu bezahlen.
+ *
+ * Über `meetForgeRequirements` und nicht über `branchLevels`: seit ein Relikt
+ * auch ein Blatt oder einen Ward verlangen darf, läge die Stufe sonst im
+ * falschen Beutel und das Tor bliebe zu.
+ */
 function unlockRelic(relic = RELIC): void {
-  useStarForgeStore().branchLevels[relic.requiresNode] = relic.requiresLevel
+  meetForgeRequirements(relic.requires)
 }
 
 function unlockConstellation(con = CONSTELLATION): void {
-  const forge = useStarForgeStore()
-  forge.branchLevels[con.nodeA] = FORGE_CONSTELLATION_REQUIRED_LEVEL
-  forge.branchLevels[con.nodeB] = FORGE_CONSTELLATION_REQUIRED_LEVEL
+  meetForgeRequirements(con.requires)
 }
 
 /** Ein Handel liegt aus — im frischen Stand ist die Auslage leer. */
@@ -125,17 +129,45 @@ describe('useForgeOffers — Erscheinen hängt an der Freischaltung', () => {
     expect(offers.value.map((o) => o.id)).not.toContain(RELIC.id)
     const vault = vaultEntries.value.find((v) => v.id === RELIC.id)
     expect(vault?.state).toBe('locked')
-    expect(vault?.need).toBe(RELIC.requiresLevel)
+    expect(vault?.need).toBe(RELIC.requires[0].level)
     expect(vault?.progress).toBe(0)
   })
 
   it('der Fortschritt zum Tor steht am Archiveintrag', () => {
-    useStarForgeStore().branchLevels[RELIC.requiresNode] = RELIC.requiresLevel - 1
+    // ALLE Bedingungen bis auf eine erfuellen, damit die eine uebrige die
+    // schwaechste ist. Nur die erste zu setzen reichte, solange ein Relikt
+    // genau einen Vorgaenger hatte; seit es mehrere sein duerfen, zeigte der
+    // Balken sonst die noch unberuehrte zweite und der Test pruefte, dass 0
+    // gleich 2/3 ist.
+    meetForgeRequirements(RELIC.requires)
+    const gate = RELIC.requires[0]
+    setForgeLevel(gate.id, gate.level - 1)
     const { vaultEntries } = useForgeOffers()
 
     const vault = vaultEntries.value.find((v) => v.id === RELIC.id)
-    expect(vault?.have).toBe(RELIC.requiresLevel - 1)
-    expect(vault?.progress).toBeCloseTo((RELIC.requiresLevel - 1) / RELIC.requiresLevel)
+    expect(vault?.have).toBe(gate.level - 1)
+    expect(vault?.progress).toBeCloseTo((gate.level - 1) / gate.level)
+  })
+
+  it('der Balken zeigt die SCHWAECHSTE Bedingung, nicht die erste', () => {
+    // Die Regressionsprobe fuer die `weakest`-Rechnung: sie las einmal genau
+    // zwei Eintraege (`reqs[0].progress <= reqs[1].progress ? ... : ...`) und
+    // haette ab drei Bedingungen still die schwaechere der ERSTEN BEIDEN
+    // gezeigt statt der schwaechsten von allen.
+    const many = FORGE_RELICS.find((r) => r.requires.length >= 2)!
+    meetForgeRequirements(many.requires)
+    const last = many.requires[many.requires.length - 1]
+    setForgeLevel(last.id, 0)
+    const { vaultEntries } = useForgeOffers()
+
+    const vault = vaultEntries.value.find((v) => v.id === many.id)
+    expect(vault?.have).toBe(0)
+    expect(vault?.need).toBe(last.level)
+    expect(vault?.progress).toBe(0)
+    // Und die Zeile am Zeiger nennt trotzdem ALLE.
+    for (const req of many.requires) {
+      expect(vault?.reqLine).toContain(`/${req.level}`)
+    }
   })
 
   it('ein freigeschaltetes Relikt steht im Streifen, auch wenn der Beutel leer ist', () => {
@@ -192,7 +224,9 @@ describe('useForgeOffers — Erscheinen hängt an der Freischaltung', () => {
     const offer = offers.value.find((o) => o.id === CONSTELLATION.id)
     expect(offer?.reqs).toHaveLength(2)
     expect(offer?.reqs.every((req) => req.met)).toBe(true)
-    expect(offer?.reqs.map((req) => req.id)).toEqual([CONSTELLATION.nodeA, CONSTELLATION.nodeB])
+    expect(offer?.reqs.map((req) => req.id)).toEqual(
+      CONSTELLATION.requires.map((req) => req.id),
+    )
   })
 })
 

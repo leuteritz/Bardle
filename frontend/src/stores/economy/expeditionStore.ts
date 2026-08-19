@@ -413,9 +413,15 @@ export const useExpeditionStore = defineStore('expedition', {
 
     checkAvailability() {
       const now = gameNow()
-      const expired = this.availableExpeditions.filter((s) => s.availableUntil <= now)
-      for (const slot of expired) delete this.draftCrews[slot.id]
-      this.availableExpeditions = this.availableExpeditions.filter((s) => s.availableUntil > now)
+      /* The Waiting Road (Konstellation): ein Angebot verfaellt nicht mehr, es
+         wartet. Nur die Verfallspruefung entfaellt — die Nachschub-Schleife
+         darunter bleibt unangetastet, `maxAvailableOffers` deckelt die Auslage
+         weiterhin, und der Spieler sitzt nicht auf einem wachsenden Berg. */
+      if (!useStarForgeStore().expeditionOffersWait) {
+        const expired = this.availableExpeditions.filter((s) => s.availableUntil <= now)
+        for (const slot of expired) delete this.draftCrews[slot.id]
+        this.availableExpeditions = this.availableExpeditions.filter((s) => s.availableUntil > now)
+      }
 
       while (
         this.availableExpeditions.length < this.maxAvailableOffers &&
@@ -493,7 +499,10 @@ export const useExpeditionStore = defineStore('expedition', {
       if (slotIdx === -1) return false
 
       const slot = this.availableExpeditions[slotIdx]
-      if (slot.availableUntil < gameNow()) return false
+      // Dieselbe Regel wie in `checkAvailability`: waehrend die Konstellation
+      // steht, ist das Zeitfenster kein Tor mehr. Ohne diese Zeile laege ein
+      // Angebot ewig aus und liesse sich trotzdem nicht annehmen.
+      if (!useStarForgeStore().expeditionOffersWait && slot.availableUntil < gameNow()) return false
 
       if (assignedChampions.length !== slot.requiredRoles.length) return false
 
@@ -582,9 +591,25 @@ export const useExpeditionStore = defineStore('expedition', {
           // Spoils are rolled HERE, not at collect time, so the result card can
           // show what came back before the player touches it — and so a save
           // reloaded between resolve and collect hands over the same haul.
-          expedition.spoils = success
-            ? this._rollSpoils(expedition.tier ?? 'common')
-            : { materials: [], meep: 0 }
+          // Pilgrim's Accord (Star-Forge-Krone): eine GESCHEITERTE Expedition
+          // bringt ihre Materialien trotzdem heim.
+          //
+          // Der Fehlschlag bleibt einer — Zeit, Chime-Lohn und Champion-XP sind
+          // weiterhin gekürzt; nur die Rezeptur kommt zurück. Die Meeps bleiben
+          // ausdrücklich draussen: sie sind der Lohn des AUFBRUCHS und die
+          // Währung des Skill-Trees, und ein Fehlschlag, der sie voll zahlt,
+          // machte den Unterschied zwischen Erfolg und Misserfolg zur Nebensache.
+          const salvage = !success && useStarForgeStore().failedExpeditionKeepsMaterials
+          if (success) {
+            expedition.spoils = this._rollSpoils(expedition.tier ?? 'common')
+          } else if (salvage) {
+            expedition.spoils = {
+              materials: this._rollSpoils(expedition.tier ?? 'common').materials,
+              meep: 0,
+            }
+          } else {
+            expedition.spoils = { materials: [], meep: 0 }
+          }
           // Wanderer's Gate (Star-Forge-Krone): die zurückkehrende Expedition
           // öffnet die nächste Passage sofort, statt die Spawn-Wartezeit
           // abzusitzen. Es wird nur die UHR zurückgesetzt — der Deckel

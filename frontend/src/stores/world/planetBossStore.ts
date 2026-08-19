@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { PlanetBossEvent, PlanetBossRewardSlot, PlanetType } from '@/types'
 import {
   BOSS_BASE_HP,
+  FORGE_CROWN_BOSS_WOUND_FLOOR,
   BOSS_TARGET_KILL_SECONDS,
   BOSS_HP_PER_GALAXY,
   BOSS_ENRAGE_BASE_SECONDS,
@@ -61,6 +62,20 @@ import { logger } from '@/utils/logger'
 export const usePlanetBossStore = defineStore('planetBoss', {
   state: () => ({
     activeBosses: [] as PlanetBossEvent[],
+    /**
+     * Remembered Wound (Star-Forge-Krone): welchen Anteil seiner HP ein
+     * ENTKOMMENER Boss behalten hat, je Planet.
+     *
+     * Ein Anteil und keine absolute Zahl: die Höchst-HP hängen an
+     * `totalBossesDefeated` und am Schaden des Spielers, sind beim nächsten
+     * Erscheinen also andere. Eine gespeicherte HP-Zahl wäre dann entweder
+     * lächerlich klein oder grösser als das neue Maximum.
+     *
+     * Der Eintrag wird beim nächsten Spawn desselben Planeten VERBRAUCHT — die
+     * Wunde ist eine Erinnerung an genau einen entkommenen Kampf, kein
+     * Dauerzustand.
+     */
+    woundedPlanets: {} as Record<string, number>,
     selectedBossId: null as string | null,
     bossModalOpen: false,
     lastBossResult: null as 'victory' | 'defeat' | null,
@@ -241,6 +256,24 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         ),
       )
 
+      /* Remembered Wound: ein Boss, der beim letzten Mal entkommen ist, steht
+         mit der Wunde wieder auf, die er davongetragen hat.
+
+         Verschoben wird NUR der Startwert. `maxHP` bleibt, wie die Formel oben
+         sie rechnet — dieselbe Trennung wie bei `hollowCore`, das am Ergebnis
+         dreht und nicht am Schaden. Würde die Wunde stattdessen `maxHP`
+         senken, sänke die Beute mit, und ein knapp entkommener Boss wäre beim
+         zweiten Mal weniger wert als beim ersten.
+
+         Der Boden verhindert den Gegner, der praktisch tot erscheint: das ist
+         kein Kampf mehr, sondern ein Klick. */
+      const wound = this.woundedPlanets[planetId]
+      delete this.woundedPlanets[planetId]
+      const startHP =
+        wound === undefined
+          ? maxHP
+          : Math.max(Math.ceil(maxHP * FORGE_CROWN_BOSS_WOUND_FLOOR), Math.ceil(maxHP * wound))
+
       const bonusSeconds =
         Math.floor(level / BOSS_ENRAGE_LEVEL_STEP) * BOSS_ENRAGE_BONUS_SECONDS_PER_STEP
       const baseEnrageSec = Math.min(
@@ -372,7 +405,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         startTime: gameNow(),
         enrageTimerMs,
         maxHP,
-        currentHP: maxHP,
+        currentHP: startHP,
         clickDamagePerHit,
         passiveDPS,
         totalDamageDealt: 0,
@@ -538,6 +571,16 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
         const elapsed = gameNow() - boss.startTime
         if (elapsed < boss.enrageTimerMs) continue
+
+        /* Remembered Wound: was der Spieler diesem Boss abgerungen hat, bleibt
+           ihm — als ANTEIL, weil die Höchst-HP beim nächsten Erscheinen andere
+           sind. Gebucht an EINER Stelle, obwohl zwei Zweige darunter `expired`
+           setzen: beide meinen dasselbe Ereignis (die Frist ist abgelaufen,
+           der Boss entkommt), und zwei Buchungen wären zwei Wahrheiten über
+           dieselbe Wunde. */
+        if (useStarForgeStore().bossKeepsWounds) {
+          this.woundedPlanets[boss.planetId] = boss.currentHP / boss.maxHP
+        }
 
         if (boss.noEnrage) {
           boss.expired = true

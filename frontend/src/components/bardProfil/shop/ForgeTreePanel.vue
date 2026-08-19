@@ -47,35 +47,71 @@
         :viewBox="`0 0 ${FORGE_STAGE_SIZE} ${FORGE_STAGE_SIZE}`"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <!-- Limbs: sun → root, root → branch, branch → leaf (dim base). -->
-        <g stroke="#4a3418" stroke-width="4" stroke-linecap="round" fill="none">
-          <line
+        <!-- Spannfäden: was ein Knoten AUSSERDEM verlangt. Sie liegen ZUERST
+             und damit unter allen Ästen — ein Faden ist die schwächere Aussage
+             und darf einen Ast nirgends überzeichnen. Gestrichelt und dünner
+             als der dünnste Ast, damit beide Arten nie verwechselbar sind.
+             Das Strichmuster steht STILL: ein wanderndes `stroke-dashoffset`
+             wären zehn Dauerläufer auf einer Bühne, die schon Orbit, Kampf und
+             Hintergrund trägt (Performance-Regel 2). -->
+        <g
+          :stroke="FORGE_TETHER_COLOR"
+          :stroke-width="FORGE_TETHER_WIDTH"
+          :stroke-dasharray="FORGE_TETHER_DASH"
+          :opacity="FORGE_TETHER_OPACITY"
+          stroke-linecap="round"
+          fill="none"
+        >
+          <path v-for="tether in tethers" :key="tether.key + '-base'" :d="tether.d" />
+        </g>
+        <!-- Und dieselben Fäden hell, sobald der Zeiger auf ihrem Knoten liegt:
+             grün, was steht, rot, was fehlt. Erst hier wird aus „da hängt noch
+             etwas dran" ein „DAS hier fehlt dir noch". -->
+        <g
+          v-if="spotlightTethers.length > 0"
+          :stroke-width="FORGE_TETHER_SPOT_WIDTH"
+          :stroke-dasharray="FORGE_TETHER_DASH"
+          stroke-linecap="round"
+          fill="none"
+        >
+          <path
+            v-for="tether in spotlightTethers" :key="tether.key + '-spot'"
+            :d="tether.d"
+            :stroke="tether.met ? FORGE_TETHER_MET_COLOR : FORGE_TETHER_OPEN_COLOR"
+          />
+        </g>
+
+        <!-- Limbs: sun → root, root → branch, branch → leaf (dim base).
+             Geschwungen, nicht gerade, und je Ebene dünner: die Strichstärke
+             sitzt deshalb am Pfad und nicht mehr an der Gruppe. -->
+        <g stroke="#4a3418" stroke-linecap="round" fill="none">
+          <path
             v-for="limb in limbs" :key="limb.key + '-base'"
-            :x1="limb.x1" :y1="limb.y1" :x2="limb.x2" :y2="limb.y2"
+            :d="limb.d" :stroke-width="limb.width"
           />
         </g>
         <!-- Active limbs (target node has levels). Die Grunddeckkraft steht als
              KLASSE und nicht als `opacity`-Attribut — ein Präsentationsattribut
              wäre von keiner Regel mehr zu überschreiben. -->
-        <g stroke-width="2.5" stroke-linecap="round" fill="none">
-          <line
+        <g stroke-linecap="round" fill="none">
+          <path
             v-for="limb in activeLimbs" :key="limb.key + '-lit'"
-            :x1="limb.x1" :y1="limb.y1" :x2="limb.x2" :y2="limb.y2"
+            :d="limb.d" :stroke-width="limb.width * FORGE_LIMB_LIT_FACTOR"
             :stroke="limb.color"
             class="limb--lit"
           />
         </g>
 
         <!-- Spotlight chain: star edge → … → the node being pointed at. Exists
-             only while something is hovered, three lines at most. -->
+             only while something is hovered, seven links at most. -->
         <g
           v-if="spotlightLimbs.length > 0"
           class="spot-limbs"
-          stroke-width="4" stroke-linecap="round" fill="none"
+          stroke-linecap="round" fill="none"
         >
-          <line
+          <path
             v-for="limb in spotlightLimbs" :key="limb.key + '-spot'"
-            :x1="limb.x1" :y1="limb.y1" :x2="limb.x2" :y2="limb.y2"
+            :d="limb.d" :stroke-width="limb.width + 1"
             :stroke="spotlightColor"
           />
         </g>
@@ -178,7 +214,19 @@
           </div>
           <div class="tt-desc">{{ entryOf(node).desc }}</div>
           <template v-if="entryOf(node).state === 'locked' || entryOf(node).state === 'capped'">
-            <div class="tt-lock">{{ entryOf(node).lockReason }}</div>
+            <!-- Ein Knoten mit mehreren Vorgängern zeigt sie ALLE. Der Satz
+                 daneben könnte nur den ersten offenen nennen — und wer im Baum
+                 auf eine Krone zeigt, will genau wissen, was ihm noch fehlt,
+                 nicht was als nächstes dran wäre. -->
+            <div v-if="showTreeReqs(node)" class="tt-reqs-head">{{ FORGE_REQ_HEADING }}</div>
+            <ul v-if="showTreeReqs(node)" class="tt-reqs">
+              <li v-for="req in entryOf(node).reqs" :key="req.id" :class="{ 'tt-req--met': req.met }">
+                <span class="tt-req-mark">{{ req.met ? FORGE_REQ_MET_MARK : FORGE_REQ_OPEN_MARK }}</span>
+                <span class="tt-req-name">{{ req.name }}</span>
+                <span class="tt-req-num">{{ req.have }}/{{ req.need }}</span>
+              </li>
+            </ul>
+            <div v-else class="tt-lock">{{ entryOf(node).lockReason }}</div>
           </template>
           <template v-else-if="entryOf(node).state === 'maxed'">
             <div class="tt-maxed">✦ MAXED</div>
@@ -221,6 +269,7 @@ import {
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { forgeLimb, forgeTether, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
 import type { ForgeNodeDef, ForgeNodeTier, ForgeUpgradeEntry, ForgeUpgradeTier } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
@@ -233,13 +282,19 @@ import {
   SHOP_SUN_MIN_DIAMETER,
   SHOP_SUN_MAX_DIAMETER,
   FORGE_STAGE_SIZE,
-  FORGE_RING_ROOT_R,
-  FORGE_RING_BRANCH_R,
-  FORGE_RING_LEAF_R,
-  FORGE_RING_WARD_R,
-  FORGE_RING_PACT_R,
-  FORGE_RING_CROWN_R,
-  FORGE_RING_BOUGH_R,
+  FORGE_RING_RADIUS,
+  FORGE_NODE_DIAMETER,
+  FORGE_LIMB_LIT_FACTOR,
+  FORGE_TETHER_COLOR,
+  FORGE_TETHER_WIDTH,
+  FORGE_TETHER_DASH,
+  FORGE_TETHER_OPACITY,
+  FORGE_TETHER_MET_COLOR,
+  FORGE_TETHER_OPEN_COLOR,
+  FORGE_TETHER_SPOT_WIDTH,
+  FORGE_REQ_HEADING,
+  FORGE_REQ_MET_MARK,
+  FORGE_REQ_OPEN_MARK,
   FORGE_DEPTH_CREST_SPREAD,
   FORGE_DEPTH_CREST_ALPHA,
   FORGE_DEPTH_CREST_LOCKED,
@@ -348,19 +403,26 @@ interface RootDef {
   statLabel: string
 }
 
-/* Ring und Knotengrösse hängen am `tier` und an nichts sonst. Als Tabelle statt
+/* Der KREIS eines Knotens, als px-Zeichenkette fürs scoped CSS darunter.
+
+   Die Durchmesser standen dort als Literale, bis die Streuung sie brauchte:
+   `forgeTreeLayout.ts` entscheidet damit, ob sich zwei Knoten berühren, und
+   zwei Quellen für dieselbe Grösse liefen beim ersten geänderten Ring
+   auseinander. Gesetzt wird EINMAL beim Mount — kein Wert, den je ein Frame
+   neu schriebe. */
+const nodePx = Object.fromEntries(
+  Object.entries(FORGE_NODE_DIAMETER).map(([tier, d]) => [tier, `${d}px`]),
+) as Record<ForgeUpgradeTier, string>
+
+/* Das GLYPH im Knoten hängt am `tier` und an nichts sonst. Als Tabelle statt
    als Kette von Ternären: bei sieben Ringen wäre die Kette eine Stelle, an der
-   ein neuer Ring stillschweigend auf dem falschen Radius landet. Ein
+   ein neuer Ring stillschweigend die falsche Grösse bekommt. Ein
    `Record<ForgeNodeTier, …>` ohne `Partial` erzwingt beim nächsten Ring einen
-   Typfehler statt eines stummen Fehlverhaltens — genau das ist hier der Zweck. */
-const RING_RADIUS: Record<ForgeNodeTier, number> = {
-  branch: FORGE_RING_BRANCH_R,
-  leaf: FORGE_RING_LEAF_R,
-  ward: FORGE_RING_WARD_R,
-  pact: FORGE_RING_PACT_R,
-  crown: FORGE_RING_CROWN_R,
-  bough: FORGE_RING_BOUGH_R,
-}
+   Typfehler statt eines stummen Fehlverhaltens — genau das ist hier der Zweck.
+
+   Der RADIUS stand hier einmal daneben; er ist mit der Streuung nach
+   `FORGE_RING_RADIUS` gewandert, weil `utils/ui/forgeTreeLayout.ts` und seine
+   Spec dieselbe Zuordnung brauchen. */
 const RING_ICON_SIZE: Record<ForgeNodeTier, number> = {
   branch: FORGE_ICON_SIZE_BRANCH,
   leaf: FORGE_ICON_SIZE_LEAF,
@@ -383,14 +445,29 @@ const ROOTS: RootDef[] = SOLAR_BRANCHES.map((b) => ({
   angleDeg: FORGE_ROOT_ANGLES_DEG[b.id],
 }))
 
+/**
+ * WO die Knoten stehen, entscheidet diese Komponente nicht mehr.
+ *
+ * Die Katalogwinkel sind nur noch der Ausgangspunkt: `forgeTreePlacements()`
+ * verdreht jeden Ring gegen seinen Nachbarn und versetzt darin jeden Knoten
+ * einzeln — deterministisch aus der ID, einmal gerechnet, danach gecacht. Der
+ * Baum stand vorher auf fünfzehn schnurgeraden Speichen im 24°-Raster und las
+ * sich als Zielscheibe; die Herleitung samt Messwerten steht am Block
+ * „Die STREUUNG" in `constants/forge.ts`.
+ *
+ * Alles Nachgelagerte — `nodePos()`, die Tooltip-Seite, die Äste, die
+ * Scheinwerferkette — liest `angleDeg` und `dist` von HIER und braucht deshalb
+ * nichts davon zu wissen.
+ */
 const allNodes = computed<TreeNode[]>(() => {
+  const places = forgeTreePlacements()
   const roots: TreeNode[] = ROOTS.map((r) => ({
     id: r.id,
     name: r.name,
     icon: r.icon,
     color: r.color,
-    angleDeg: r.angleDeg,
-    dist: FORGE_RING_ROOT_R,
+    angleDeg: places.get(r.id)?.angleDeg ?? r.angleDeg,
+    dist: places.get(r.id)?.dist ?? FORGE_RING_RADIUS.root,
     tier: 'root',
     sizeClass: 'root',
     iconSize: FORGE_ICON_SIZE_ROOT,
@@ -401,8 +478,8 @@ const allNodes = computed<TreeNode[]>(() => {
     name: def.name,
     icon: def.icon,
     color: def.color,
-    angleDeg: def.angleDeg,
-    dist: RING_RADIUS[def.tier],
+    angleDeg: places.get(def.id)?.angleDeg ?? def.angleDeg,
+    dist: places.get(def.id)?.dist ?? FORGE_RING_RADIUS[def.tier],
     tier: def.tier,
     sizeClass: def.tier,
     iconSize: RING_ICON_SIZE[def.tier],
@@ -441,10 +518,10 @@ function nodePos(node: TreeNode): Record<string, string> {
 
 interface Limb {
   key: string
-  x1: number
-  y1: number
-  x2: number
-  y2: number
+  /** Quadratische Bézier statt Strecke — der Schwung kommt aus `forgeLimb()`. */
+  d: string
+  /** Grundstärke; innen kräftig, aussen fein (`FORGE_LIMB_WIDTH`). */
+  width: number
   color: string
   targetId: string
 }
@@ -463,12 +540,11 @@ const limbs = computed<Limb[]>(() => {
       from = pt(parent.angleDeg, parent.dist)
     }
     const to = pt(node.angleDeg, node.dist)
+    const limb = forgeLimb(from, to, node.id, node.tier)
     result.push({
       key: node.id,
-      x1: from.x,
-      y1: from.y,
-      x2: to.x,
-      y2: to.y,
+      d: limb.d,
+      width: limb.width,
       color: node.color,
       targetId: node.id,
     })
@@ -478,6 +554,54 @@ const limbs = computed<Limb[]>(() => {
 
 const activeLimbs = computed(() =>
   limbs.value.filter((limb) => (entryById.value.get(limb.targetId)?.level ?? 0) > 0),
+)
+
+/**
+ * Die SPANNFÄDEN — die zweite Art von Verbindung im Baum.
+ *
+ * Ein Ast sagt „hier hängt der Knoten", ein Faden sagt „das hier verlangt er
+ * ausserdem" (`ForgeNodeDef.requires`). Der Ast folgt der Geometrie, der Faden
+ * springt über fremde Speichen; verwechselbar sein dürfen sie deshalb nicht, und
+ * keine ihrer Eigenschaften ist geteilt (dünner, gestrichelt, stärker gebogen,
+ * eigene Ebene darunter).
+ *
+ * Nur ZEHN Stück im ganzen Baum, alle statisch gerechnet — der Aufwand ist ein
+ * `computed`, das sich nur ändert, wenn sich der Katalog ändert.
+ */
+interface Tether {
+  key: string
+  d: string
+  /** Der Knoten, dessen Bedingung dieser Faden zeigt. */
+  targetId: string
+  met: boolean
+}
+
+const tethers = computed<Tether[]>(() => {
+  const result: Tether[] = []
+  for (const node of allNodes.value) {
+    const reqs = node.def?.requires
+    if (!reqs?.length) continue
+    const to = pt(node.angleDeg, node.dist)
+    for (const req of reqs) {
+      const source = nodeById.value.get(req.id)
+      if (!source) continue
+      const from = pt(source.angleDeg, source.dist)
+      result.push({
+        key: `${node.id}<-${req.id}`,
+        d: forgeTether(from, to, `${node.id}<-${req.id}`),
+        targetId: node.id,
+        met: (entryById.value.get(req.id)?.level ?? 0) >= req.level,
+      })
+    }
+  }
+  return result
+})
+
+/** Nur die Fäden des Knotens unter dem Zeiger — höchstens drei. */
+const spotlightTethers = computed(() =>
+  spotlightId.value === null
+    ? []
+    : tethers.value.filter((tether) => tether.targetId === spotlightId.value),
 )
 
 const limbByTarget = computed(() => new Map(limbs.value.map((limb) => [limb.targetId, limb])))
@@ -558,15 +682,19 @@ const crownsUnlocked = computed(() => ringOpenAt('crown') && forgeStore.crownsUn
    bekommt: eine offene Ebene trägt ihre Leitfarbe, eine gesperrte den kalten
    Rest. Die Ordnung im Feld ist die des Baums, von innen nach aussen — und
    damit zugleich die der Sonnenphasen. */
-const depthBands = computed(() => [
-  { tier: 'root' as ForgeUpgradeTier, r: FORGE_RING_ROOT_R, unlocked: true },
-  { tier: 'branch' as ForgeUpgradeTier, r: FORGE_RING_BRANCH_R, unlocked: ringOpenAt('branch') },
-  { tier: 'leaf' as ForgeUpgradeTier, r: FORGE_RING_LEAF_R, unlocked: ringOpenAt('leaf') },
-  { tier: 'ward' as ForgeUpgradeTier, r: FORGE_RING_WARD_R, unlocked: ringOpenAt('ward') },
-  { tier: 'pact' as ForgeUpgradeTier, r: FORGE_RING_PACT_R, unlocked: ringOpenAt('pact') },
-  { tier: 'crown' as ForgeUpgradeTier, r: FORGE_RING_CROWN_R, unlocked: crownsUnlocked.value },
-  { tier: 'bough' as ForgeUpgradeTier, r: FORGE_RING_BOUGH_R, unlocked: ringOpenAt('bough') },
-])
+const depthBands = computed(() =>
+  (
+    [
+      { tier: 'root', unlocked: true },
+      { tier: 'branch', unlocked: ringOpenAt('branch') },
+      { tier: 'leaf', unlocked: ringOpenAt('leaf') },
+      { tier: 'ward', unlocked: ringOpenAt('ward') },
+      { tier: 'pact', unlocked: ringOpenAt('pact') },
+      { tier: 'crown', unlocked: crownsUnlocked.value },
+      { tier: 'bough', unlocked: ringOpenAt('bough') },
+    ] as { tier: ForgeUpgradeTier; unlocked: boolean }[]
+  ).map((band) => ({ ...band, r: FORGE_RING_RADIUS[band.tier] })),
+)
 
 /** Die Leitfarbe mit Deckkraft — als `color-mix`, damit die Farbe selbst nur an
  *  EINER Stelle steht (`FORGE_UPGRADE_GROUPS`) und hier bloß ihr Anteil. */
@@ -633,6 +761,26 @@ function levelChip(entry: ForgeUpgradeEntry): string {
   return Number.isFinite(entry.maxLevel)
     ? `${entry.level}/${entry.maxLevel}`
     : `${entry.level} ${FORGE_ENDLESS_SYMBOL}`
+}
+
+/**
+ * Zeigt der Tooltip die Bedingungen als LISTE statt als Satz?
+ *
+ * Dieselbe Weiche wie in `ForgeUpgradeTile` — erst ab zwei, und nie bei einer
+ * Phasensperre: gegen die hilft nur Warten, und eine Vorgängerliste daneben
+ * legte eine Aufgabe nahe, die es gerade nicht gibt.
+ */
+function showTreeReqs(node: TreeNode): boolean {
+  const entry = entryOf(node)
+  // Weder Phasen- noch Prestige-Sperre: bei beiden ist die Vorgaengerliste
+  // keine Antwort auf „was fehlt mir“ — beim Prestige-Tor steht sie sogar
+  // vollstaendig auf Haekchen. Dort gehoert der Satz hin.
+  return (
+    entry.state === 'locked' &&
+    entry.lockKind !== 'phase' &&
+    entry.lockKind !== 'prestige' &&
+    entry.reqs.length > 1
+  )
 }
 
 function isTooltipBelow(angleDeg: number): boolean {
@@ -1011,20 +1159,20 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 .node-circle--root {
-  width: 56px;
-  height: 56px;
+  width: v-bind("nodePx.root");
+  height: v-bind("nodePx.root");
   border: 3px solid #2a1a08;
 }
 
 .node-circle--branch {
-  width: 46px;
-  height: 46px;
+  width: v-bind("nodePx.branch");
+  height: v-bind("nodePx.branch");
   border: 2px solid #2a1a08;
 }
 
 .node-circle--leaf {
-  width: 38px;
-  height: 38px;
+  width: v-bind("nodePx.leaf");
+  height: v-bind("nodePx.leaf");
   border: 2px solid #2a1a08;
 }
 
@@ -1033,14 +1181,14 @@ const nextPhasePreviewStyle = computed(() => ({
    Rand ist das einzige, was sie optisch trennt: dieselben Töne wie ihr Kamm im
    Tiefenfeld und ihr Chip in der Leiste (Türkis, Blauviolett). */
 .node-circle--ward {
-  width: 40px;
-  height: 40px;
+  width: v-bind("nodePx.ward");
+  height: v-bind("nodePx.ward");
   border: 2px solid #1e5a50;
 }
 
 .node-circle--pact {
-  width: 40px;
-  height: 40px;
+  width: v-bind("nodePx.pact");
+  height: v-bind("nodePx.pact");
   border: 2px solid #3a4a80;
 }
 
@@ -1048,8 +1196,8 @@ const nextPhasePreviewStyle = computed(() => ({
    wie sein Kamm und sein Listenabschnitt — und im Projekt der Ton für
    „episch/selten" (`FORGE_RELIC_RARITY_COLOR.epic`). */
 .node-circle--bough {
-  width: 42px;
-  height: 42px;
+  width: v-bind("nodePx.bough");
+  height: v-bind("nodePx.bough");
   border: 2px solid #4a2a6a;
 }
 
@@ -1059,8 +1207,8 @@ const nextPhasePreviewStyle = computed(() => ({
    60 % zieht. Der goldene Rand ist derselbe Ton wie sein Kamm und sein
    Listenabschnitt. */
 .node-circle--crown {
-  width: 50px;
-  height: 50px;
+  width: v-bind("nodePx.crown");
+  height: v-bind("nodePx.crown");
   border: 3px solid #6a5020;
 }
 
@@ -1327,7 +1475,7 @@ const nextPhasePreviewStyle = computed(() => ({
 /* Der Lichtlauf auf der Astkette. `stroke-dashoffset` ist der von
    Performance-Regel 11 ausdrücklich erlaubte Weg; der Offset ist Strich plus
    Lücke, damit die Schleife nahtlos schließt. Höchstens drei Linien. */
-.spot-limbs line {
+.spot-limbs path {
   opacity: 0.95;
   stroke-dasharray: 14 10;
   animation: forge-spot-flow 0.9s linear infinite;
@@ -1399,6 +1547,64 @@ const nextPhasePreviewStyle = computed(() => ({
   font-size: 12px;
   font-weight: 700;
   color: rgba(255, 200, 80, 0.65);
+}
+
+/* Die Bedingungsliste im Knoten-Tooltip — dieselbe Form wie in der Zeile
+   rechts (`.fut-reqs`), damit ein Knoten und seine Zeile dieselbe Auskunft in
+   derselben Gestalt geben. Sie ist hier nur einen Tick kleiner: der Tooltip
+   steht auf einer skalierten Bühne und trägt seine Schriftgrade über
+   `--inv-scale` zurück. */
+/* Der Kopf ueber der Bedingungsliste. Bei EINER Bedingung steht dort der Satz
+   und kein Kopf; ab zweien braucht die Liste eine Ansage, sonst haengt sie ohne
+   Zusammenhang unter der Beschreibung — und bei dreien erst recht. */
+.tt-reqs-head {
+  margin-bottom: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8a7550;
+}
+
+.tt-reqs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tt-reqs li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 15px;
+  color: rgba(255, 200, 80, 0.62);
+}
+
+.tt-req--met {
+  color: rgba(110, 192, 64, 0.85);
+}
+
+.tt-req-mark {
+  flex-shrink: 0;
+  width: 10px;
+  text-align: center;
+}
+
+.tt-req-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tt-req-num {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
 }
 
 .tt-maxed {
@@ -1481,7 +1687,7 @@ const nextPhasePreviewStyle = computed(() => ({
      Deckkraft 0 — ohne das Zurücksetzen verschwände der ganze Spotlight-Ring. */
   .node-spot,
   .node-spot::after,
-  .spot-limbs line {
+  .spot-limbs path {
     animation: none;
   }
 

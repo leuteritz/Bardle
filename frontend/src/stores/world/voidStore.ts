@@ -467,8 +467,21 @@ export const useVoidStore = defineStore('void', {
         this.spawnCooldowns[severity] = (this.spawnCooldowns[severity] ?? 0) - delta
         if (this.spawnCooldowns[severity] <= 0) due.push(severity)
       }
+      /* Sanctum Veil: solange eine Bard-Fähigkeit noch wirkt, reisst der Void
+         keinen Riss auf.
+
+         Genau dasselbe Idiom wie beim vollen Feld darunter — der fällige Spawn
+         wird nicht VERSCHLUCKT, sondern auf die kurze Wiedervorlage gestellt.
+         Ein verschluckter Spawn wäre ein Riss weniger je Fähigkeit und damit
+         eine Rate; ein aufgeschobener ist ein Fenster, und ein Fenster kann
+         nicht davonlaufen. Die Abklingzeiten laufen ohnehin gegen
+         `FORGE_MIN_BARD_COOLDOWN_MULT` — es gibt keinen Ausbau, der den Void
+         dauerhaft stillstellt. */
+      const veiled =
+        useStarForgeStore().riftsHeldWhileAbilityRuns && useBardAbilityStore().liveBuffs.length > 0
+
       for (const severity of due) {
-        if (this.active.length >= VOID_MAX_CONCURRENT) {
+        if (veiled || this.active.length >= VOID_MAX_CONCURRENT) {
           this.spawnCooldowns[severity] = VOID_SPAWN_RETRY_SEC
           continue
         }
@@ -988,18 +1001,44 @@ export const useVoidStore = defineStore('void', {
       this.totalRiftsCollapsed++
       if (!def) return
 
-      const hpLost = usePlayerStore().takeDamage(VOID_IMPACT_HP_LOSS[def.severity])
+      /* Sealed Threshold: schlägt dieser Riss ein, während die Nachwirkung eines
+         ANDEREN noch läuft, entfällt sein Zoll.
+
+         Die Bedingung wird VOR dem Buchen gelesen — gleich darunter legt dieser
+         Einschlag seine eigene Nachwirkung ab und wäre sonst sein eigener
+         Vorgänger. Der `sourceId`-Vergleich schliesst ausserdem den Fall aus,
+         dass dieselbe Rissart zweimal hintereinander kommt und die erste
+         Nachwirkung nur ersetzt statt gestapelt wird.
+
+         Die Krone kämpft nicht gegen den einzelnen Riss, sondern gegen Risse,
+         die sich STAPELN — die einzige Lage, in der der Void wirklich abräumt.
+         Die Nachwirkung selbst wird trotzdem gebucht: der Riss bleibt sichtbar,
+         nur seine Rechnung ist bezahlt. */
+      const stacked = this.liveAftermaths.some((a) => a.sourceId !== def.id)
+      const tollShare = stacked ? useStarForgeStore().stackedRiftTollShare : 1
+
+      // `takeDamage` erzwingt einen Mindestschaden von 1 — ein Anteil von 0
+      // käme dort als 1 wieder heraus. Bei erlassenem Zoll wird deshalb gar
+      // nicht erst gebucht, statt eine 0 durch eine Klemme zu schicken, die
+      // Nullen nicht kennt.
+      const hpLost =
+        tollShare <= 0
+          ? 0
+          : usePlayerStore().takeDamage(VOID_IMPACT_HP_LOSS[def.severity] * tollShare)
       this.totalVoidHpLost += hpLost
 
       // Nur was der Lauf schon gesammelt hat — `devourMeeps` klemmt auf
       // `pendingMeeps` und gibt 0 zurück, wenn nichts anstand.
       // Hollow Pact senkt BEIDE Enden des Zolls — der Anteil allein liesse den
       // Mindestverlust stehen, und der ist im Frühspiel der ganze Zoll.
-      const meepRelief = useStarForgeStore().voidMeepLossMult
-      const meepsLost = useGameStore().devourMeeps(
-        VOID_IMPACT_MEEP_LOSS_PCT[def.severity] * meepRelief,
-        Math.max(1, Math.round(VOID_IMPACT_MEEP_LOSS_MIN[def.severity] * meepRelief)),
-      )
+      const meepRelief = useStarForgeStore().voidMeepLossMult * tollShare
+      const meepsLost =
+        tollShare <= 0
+          ? 0
+          : useGameStore().devourMeeps(
+              VOID_IMPACT_MEEP_LOSS_PCT[def.severity] * meepRelief,
+              Math.max(1, Math.round(VOID_IMPACT_MEEP_LOSS_MIN[def.severity] * meepRelief)),
+            )
 
       // Unbroken Pact kürzt die Nachwirkung. Beim EINSCHLAG gebucht: `durationMs`
       // steht im Eintrag und trägt die Fortschrittsanzeige der Bandzeile.

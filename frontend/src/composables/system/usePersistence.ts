@@ -375,6 +375,7 @@ export function usePersistence() {
         bargainDealId: starForgeStore.bargainDealId,
         bargainRestockAt: starForgeStore.bargainRestockAt,
         bargainPurchased: starForgeStore.bargainPurchased,
+        bargainReclaimed: starForgeStore.bargainReclaimed,
         activeBuffs: starForgeStore.activeBuffs.map((b) => ({ ...b })),
       },
       meepTree: {
@@ -992,6 +993,7 @@ export function usePersistence() {
         starForgeStore.bargainDealId = migratedId(saved.starForge.bargainDealId ?? '')
         starForgeStore.bargainRestockAt = saved.starForge.bargainRestockAt ?? 0
         starForgeStore.bargainPurchased = saved.starForge.bargainPurchased ?? false
+        starForgeStore.bargainReclaimed = saved.starForge.bargainReclaimed ?? false
         starForgeStore.activeBuffs = (saved.starForge.activeBuffs ?? []).map(
           (b: ForgeActiveBuff) => ({ ...b }),
         )
@@ -1122,6 +1124,15 @@ export function usePersistence() {
           gameStore.totalOfflineSeconds += cappedSeconds
           gameStore.showOfflineModal = true
         }
+        // Tireless Quarry (Star-Forge-Krone): die Harvester holen ihr eigenes
+        // Fenster nach. Es hängt NICHT an `cappedSeconds` — der Chime-Deckel
+        // ist eine andere Zahl mit einer anderen Herleitung, und der Getter
+        // liefert 0, solange die Krone nicht steht.
+        planetShopStore.catchUpHarvest(rawSeconds)
+        // Homeward Sky (Star-Forge-Krone): derselbe Gedanke, andere Waehrung —
+        // ein Drifter wartet am Himmel. Ebenfalls `rawSeconds` und ebenfalls
+        // ein Fenster: der Getter liefert 0, solange die Krone nicht steht.
+        drifterStore.catchUpDrifter(rawSeconds)
       }
 
       // Nach Page-Reload: Visibility-Listener und Simulation für laufenden Kampf wiederherstellen

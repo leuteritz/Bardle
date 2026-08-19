@@ -4,7 +4,7 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useForgeHerald } from '@/composables/ui/useForgeHerald'
-import { FORGE_NODES } from '@/config/progression/starForge'
+import { FORGE_NODES, forgeNodeName } from '@/config/progression/starForge'
 import { forgeCostItems } from '@/utils/game/forgeCost'
 import type {
   ForgeCostItem,
@@ -97,6 +97,7 @@ export const FORGE_EMPTY_UPGRADE_ENTRY: ForgeUpgradeEntry = {
   lockKind: '',
   lockPhase: -1,
   parentName: '',
+  reqs: [],
   unlockProgress: 0,
   canBuy: false,
 }
@@ -221,13 +222,9 @@ export function useForgeUpgrades(): {
     return forgeCostItems(cost, inventoryStore.collectedMaterials)
   }
 
-  function nodeName(id: string): string {
-    return (
-      ROOTS.find((root) => root.id === id)?.name ??
-      FORGE_NODES.find((node) => node.id === id)?.name ??
-      ''
-    )
-  }
+  /* Der Namensauflöser liegt im Katalog (`forgeNodeName`) und nicht mehr hier:
+     seit `requires` existiert, braucht ihn auch der Store für seine
+     Bedingungsliste, und zwei Fassungen liefen beim nächsten Ring auseinander. */
 
   /** Die fünf Kernstrahlen. Sie kennen keine Sperre durch einen Elternknoten —
    *  dafür die Gleichwuchs-Regel über `maxAllowedLevel`. Material verlangen sie
@@ -273,6 +270,8 @@ export function useForgeUpgrades(): {
       lockKind: '',
       lockPhase: -1,
       parentName: '',
+      // Und er hat auch keinen Vorgänger: der Wurzelring IST der Anfang.
+      reqs: [],
       unlockProgress: 1,
       canBuy: solarStore.canAfford(root.id),
     }
@@ -302,15 +301,29 @@ export function useForgeUpgrades(): {
     // Elternknoten meist auch, und ohne diesen Zweig nennte die Karte eine
     // Hürde, die längst genommen ist.
     if (def.tier === 'crown' && !forgeStore.crownsUnlocked) {
-      return { reason: FORGE_CROWN_LOCK_REASON, progress: 0, kind: 'parent', phase: -1 }
+      // `'prestige'` und nicht `'parent'`: die Vorgaengerliste eines
+      // Kronen-Knotens ist an dieser Stelle oft VOLLSTAENDIG erfuellt, und die
+      // Weiche „ab zwei Bedingungen zeigt die Liste statt des Satzes“ griff
+      // trotzdem. Der Spieler sah lauter Haekchen und erfuhr nie, dass ihm ein
+      // Universum fehlt — der Sperrsatz daneben wurde NIE gezeigt.
+      return { reason: FORGE_CROWN_LOCK_REASON, progress: 0, kind: 'prestige', phase: -1 }
     }
-    // Welche Elternstufe welcher Ring verlangt, weiss der Store — hier stünde
-    // sonst eine zweite Fassung derselben Weiche.
-    const required = forgeStore.nodeParentRequirement(def)
-    const have = forgeStore.nodeParentLevel(def)
+    // WELCHE Vorgänger ein Knoten verlangt, weiss der Store — hier stünde sonst
+    // eine zweite Fassung derselben Weiche. Genannt wird die ERSTE offene
+    // Bedingung: der Satz hat Platz für genau eine, und die Liste rechts
+    // sortiert danach, was als nächstes zu tun ist. Die vollständige Aufzählung
+    // trägt `entry.reqs`, sobald es mehr als eine gibt.
+    const reqs = forgeStore.nodeRequirements(def)
+    const open = reqs.find((req) => !req.met) ?? reqs[0]
+    // Der MITTELWERT der Einzelfortschritte, nicht der Anteil der erfüllten:
+    // bei genau einer Bedingung ist das exakt die alte Rechnung („Stufe 1 von
+    // 2" → halber Balken), bei mehreren wächst er weiter stetig. Eine Quote
+    // erfüllt/gesamt spränge dagegen in Stufen und stünde bei einem Knoten mit
+    // einer einzigen Bedingung immer auf 0 oder 1.
+    const progress = reqs.reduce((sum, req) => sum + req.progress, 0) / (reqs.length || 1)
     return {
-      reason: `Requires ${nodeName(def.parentId)} Lv ${required}`,
-      progress: Math.min(1, have / required),
+      reason: open ? `Requires ${open.name} Lv ${open.need}` : '',
+      progress: reqs.length === 0 ? 1 : progress,
       kind: 'parent',
       phase: -1,
     }
@@ -348,7 +361,7 @@ export function useForgeUpgrades(): {
     if (def.tier === 'leaf') {
       const nowPct = level * FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT
       const nextPct = (level + 1) * FORGE_LEAF_AMPLIFY_PER_LEVEL_PCT
-      const parent = nodeName(def.parentId) || 'its branch'
+      const parent = forgeNodeName(def.parentId) || 'its branch'
       desc = def.desc.replace('{p}', parent).replace(FORGE_DESC_VALUE_TOKEN, String(nowPct))
       nextDesc = def.desc.replace('{p}', parent).replace(FORGE_DESC_VALUE_TOKEN, String(nextPct))
       nowText = `+${nowPct}%`
@@ -405,7 +418,8 @@ export function useForgeUpgrades(): {
       lockReason: lock.reason,
       lockKind: lock.kind,
       lockPhase: lock.phase,
-      parentName: nodeName(def.parentId),
+      parentName: forgeNodeName(def.parentId),
+      reqs: forgeStore.nodeRequirements(def),
       unlockProgress: lock.progress,
       canBuy: forgeStore.canAffordNode(def.id),
     }

@@ -25,6 +25,7 @@ import {
   PLANET_RESPAWN_MS,
   PLANET_SLOT_CONFIG as SLOT_CONFIG,
   PLANET_ROLES,
+  SECONDS_PER_HOUR,
 } from '@/config/constants'
 // Rollen- und Buff-Tabellen leben in config/constants.ts; hier nur noch
 // weitergereicht, damit die bestehenden Importpfade gültig bleiben.
@@ -275,7 +276,11 @@ export const usePlanetShopStore = defineStore('planetShop', {
           (s) =>
             s.purchased &&
             s.role === 'harvest_node' &&
-            !isPlanetDown(s) &&
+            // The Standing Vein (Konstellation): ein niedergeschlagener Planet
+            // behaelt seine Harvester. Der Planet bleibt trotzdem gefallen —
+            // seine Turrets schweigen, sein Level zahlt nichts; nur die Ader
+            // laeuft weiter.
+            (!isPlanetDown(s) || useStarForgeStore().harvestersSurviveDowntime) &&
             s.slotConfig?.materialId,
         )
         .map((s) => ({
@@ -594,15 +599,65 @@ export const usePlanetShopStore = defineStore('planetShop', {
       // Jeder Slot hat seinen EIGENEN Takt (siehe harvestIntervalTicks) — der
       // gemeinsame Modulo-Test von früher konnte das nicht abbilden.
       const inventoryStore = useInventoryStore()
+      /* World's Bounty (Bough): Faktor auf die MENGE je Takt, nicht auf den Takt.
+         Der Takt läuft gegen `FORGE_MIN_HARVEST_INTERVAL_MULT` und wäre ab
+         dessen Boden ein bezahltes Nichts; die Menge hat keinen Boden.
+
+         Gebucht wie die Boss-Beute: die GANZEN Einheiten sicher, der
+         Nachkommateil als Chance. Nur den Bruchteil zu würfeln sättigte bei 1;
+         nur zu runden verschenkte alles darunter. So verfällt über 1 hinaus
+         nichts, und `addMaterial` bekommt nie eine Bruchzahl. */
+      const yieldMult = useStarForgeStore().harvestYieldMult
+      const whole = Math.floor(yieldMult)
+      const chance = yieldMult - whole
       let harvested = 0
       for (const { materialId, intervalTicks } of harvestSlots) {
         if (inGameTime % intervalTicks !== 0) continue
-        inventoryStore.addMaterial(materialId, 'harvest')
-        harvested++
+        const qty = whole + (chance > 0 && Math.random() < chance ? 1 : 0)
+        if (qty <= 0) continue
+        inventoryStore.addMaterial(materialId, 'harvest', qty)
+        harvested += qty
       }
       if (harvested > 0) {
         logger.info('Planet', `Harvest-Tick: ${harvested} Materialien geerntet`)
       }
+    },
+
+    /**
+     * Tireless Quarry (Star-Forge-Krone): was die Harvester geerntet haben,
+     * während der Tab zu war.
+     *
+     * **Ein FENSTER und keine Rate.** Wer drei Tage fortbleibt, bekommt dieselbe
+     * Stunde wie jemand, der zwei bekommt (`offlineHarvestHours`). Eine Rate
+     * wäre hier die geschlossene Rückkopplung — Material senkt über den
+     * Sunsmith-Rabatt die Baumkosten, und der Baum beschleunigt die Harvester.
+     *
+     * Gezählt wird je Slot über seinen EIGENEN Takt, genau wie im Sekundentakt
+     * oben; ein gemeinsamer Mittelwert läge bei ungleich ausgebauten Planeten
+     * daneben. Aufgerufen wird das aus `loadGame`, nachdem die Slots stehen.
+     */
+    catchUpHarvest(awaySeconds: number): number {
+      const hours = useStarForgeStore().offlineHarvestHours
+      if (hours <= 0) return 0
+      const slots = this.activeHarvestSlots
+      if (slots.length === 0) return 0
+      const seconds = Math.min(awaySeconds, hours * SECONDS_PER_HOUR)
+      const inventoryStore = useInventoryStore()
+      let harvested = 0
+      // Hier reicht die glatte Multiplikation: die Mengen sind gross, und ein
+      // Wurf je Slot hätte auf ein Fenster von einer Stunde keinen sichtbaren
+      // Anteil mehr.
+      const yieldMult = useStarForgeStore().harvestYieldMult
+      for (const { materialId, intervalTicks } of slots) {
+        const qty = Math.floor((seconds / intervalTicks) * yieldMult)
+        if (qty <= 0) continue
+        inventoryStore.addMaterial(materialId, 'harvest', qty)
+        harvested += qty
+      }
+      if (harvested > 0) {
+        logger.info('Planet', `Offline-Ernte: ${harvested} Materialien nachgeholt`)
+      }
+      return harvested
     },
 
     openRoleModal(slotId: string): void {

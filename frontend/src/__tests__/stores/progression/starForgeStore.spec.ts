@@ -1,4 +1,5 @@
 import { setActivePinia, createPinia } from 'pinia'
+import { meetForgeRequirements, setForgeLevel } from '@/__tests__/forgeTestUtils'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
@@ -225,21 +226,34 @@ describe('starForgeStore', () => {
       const store = useStarForgeStore()
       unlockBranchPrereqs()
       const relic = FORGE_RELICS.find((r) => r.id === 'hostOfChampions')!
-      store.branchLevels[relic.requiresNode] = relic.requiresLevel - 1
+      meetForgeRequirements(relic.requires)
+      setForgeLevel(relic.requires[0].id, relic.requires[0].level - 1)
       expect(store.canForgeRelic('hostOfChampions')).toBe(false)
-      store.branchLevels[relic.requiresNode] = relic.requiresLevel
+      meetForgeRequirements(relic.requires)
       expect(store.canForgeRelic('hostOfChampions')).toBe(true)
       expect(store.forgeRelic('hostOfChampions')).toBe(true)
       expect(store.relicLevel('hostOfChampions')).toBe(1)
-      // championDpsMult: warcry 3×5% + relic 15% = 1.30
-      expect(store.championDpsMult).toBeCloseTo(1.3)
+      // championDpsMult: warcry 3 × 5 % ist nicht mehr die ganze Rechnung — seit
+      // das Relikt zusätzlich sein eigenes BLATT verlangt (`warhost` Lv 2),
+      // steht dieses Blatt beim Schmieden zwangsläufig, und ein Blatt
+      // verstärkt seinen Zweig um `FORGE_LEAF_AMPLIFY_PER_LEVEL` je Stufe:
+      //
+      //   Zweig  3 × 5 % × (1 + 2 × 0,25) = 22,5 %
+      //   Relikt                            15,0 %
+      //                                   ────────
+      //                                     37,5 %  →  1,375
+      //
+      // Genau das war der Grund für die zweite Bedingung: das Relikt verstärkte
+      // eine Achse, deren Blatt dieselbe Achse verstärkt, und wusste nichts
+      // davon.
+      expect(store.championDpsMult).toBeCloseTo(1.375)
     })
 
     it('stops at maxLevel', () => {
       const store = useStarForgeStore()
       unlockBranchPrereqs()
       const relic = FORGE_RELICS.find((r) => r.id === 'hostOfChampions')!
-      store.branchLevels[relic.requiresNode] = relic.requiresLevel
+      meetForgeRequirements(relic.requires)
       store.relicLevels.hostOfChampions = relic.maxLevel
       expect(store.canForgeRelic('hostOfChampions')).toBe(false)
     })
@@ -252,10 +266,10 @@ describe('starForgeStore', () => {
       const store = useStarForgeStore()
       unlockBranchPrereqs()
       const def = FORGE_CONSTELLATIONS.find((c) => c.id === 'stellarWind')!
-      store.branchLevels[def.nodeA] = 3
-      store.branchLevels[def.nodeB] = 2
+      meetForgeRequirements(def.requires)
+      setForgeLevel(def.requires[1].id, def.requires[1].level - 1)
       expect(store.canForgeConstellation('stellarWind')).toBe(false)
-      store.branchLevels[def.nodeB] = 3
+      meetForgeRequirements(def.requires)
       expect(store.canForgeConstellation('stellarWind')).toBe(true)
       expect(store.forgeConstellation('stellarWind')).toBe(true)
       expect(store.cpsMult).toBeCloseTo(1.18)

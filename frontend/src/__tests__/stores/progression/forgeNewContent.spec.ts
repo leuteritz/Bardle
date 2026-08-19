@@ -5,6 +5,9 @@ import { useVoidStore } from '@/stores/world/voidStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useGameStore } from '@/stores/core/gameStore'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { gameNow } from '@/utils/game/gameClock'
 import {
   FORGE_VOID_RELIEF_CAP,
   FORGE_MEEP_COST_FLOOR,
@@ -12,8 +15,15 @@ import {
   FORGE_COMPACT_OFFLINE_HOURS,
   VOID_PACT_SHARD_MATERIAL,
   VOID_UNLOCK_LEVEL,
+  FORGE_TWINNED_SKY_EXTRA_DRIFTERS,
+  FORGE_BOUGH_PARENT_MIN_LEVEL,
+  STAR_PHASE_FINAL_INDEX,
 } from '@/config/constants'
-import { FORGE_RELICS, FORGE_BARGAINS, getForgeRelic } from '@/config/progression/starForge'
+import {
+  FORGE_BARGAINS,
+  FORGE_BOUGHS,
+  getForgeRelic,
+} from '@/config/progression/starForge'
 import { DRIFTERS } from '@/config/world/drifters'
 
 /**
@@ -268,15 +278,129 @@ describe('Neue Forge-Inhalte', () => {
   // ── Katalog-Struktur ───────────────────────────────────────────────────────
 
   /**
-   * Ein Relikt, dessen `requiresNode` es nicht gibt, ist unschmiedbar und fällt
-   * im Bild nur als Zeile auf, die nie freischaltet.
+   * Was hier NICHT mehr steht: „hängt jedes Relikt an einen Knoten, den es
+   * gibt“.
+   *
+   * Die Prüfung las `def.requiresNode` und `def.requiresLevel` direkt am
+   * Katalogeintrag — zwei Felder, die es nicht mehr gibt. Seit Relikte,
+   * Konstellationen und Baumknoten dieselbe `requires`-Liste führen, ist sie
+   * ein Sonderfall dessen, was `__tests__/config/forgeRequirements.spec.ts`
+   * generisch kann: Id existiert, Stufe > 0, Stufe zum Freischaltzeitpunkt
+   * erreichbar, keine Dublette. Sie steht dort und deshalb hier nicht mehr —
+   * zwei Fassungen derselben Zusage laufen auseinander, sobald jemand eine
+   * anfasst.
    */
-  it('hängt jedes Relikt an einen Knoten, den es gibt', () => {
+
+  // ── Die drei Relikte mit mehreren Vorgängern ───────────────────────────────
+
+  it('hebt Bard-Wirkung, Boss-Beute und Champion-XP je auf ihrer eigenen Achse', () => {
     const forge = useStarForgeStore()
-    for (const def of FORGE_RELICS) {
-      expect(forge.relicRequirementMet(def.id), `${def.id}`).toBe(false)
-      expect(def.requiresLevel).toBeGreaterThan(0)
-      expect(def.maxLevel).toBeGreaterThanOrEqual(def.requiresLevel)
+    expect(forge.bardPowerMult).toBe(1)
+    expect(forge.bossRewardMult).toBe(1)
+    expect(forge.championXpMult).toBe(1)
+
+    relic('skyboundAltar', 2)
+    relic('chaliceOfTheFallen', 2)
+    relic('heraldsTrophy', 2)
+
+    expect(forge.bardPowerMult).toBeGreaterThan(1)
+    expect(forge.bossRewardMult).toBeGreaterThan(1)
+    expect(forge.championXpMult).toBeGreaterThan(1)
+  })
+
+  it('bleibt bei Champion-XP und nicht bei Champion-DPS', () => {
+    // `championDpsMult` steckt über `fullOrbitDps()` in `otherDps` und hebt die
+    // Boss-HP gleich mit — es kürzt sich weg (docs/balance.md). `championXpMult`
+    // läuft neben der Ladder her und ist deshalb der ehrliche Ersatz.
+    const forge = useStarForgeStore()
+    relic('heraldsTrophy', 5)
+    expect(forge.championDpsMult, 'das Relikt greift auf die falsche Achse').toBe(1)
+    expect(forge.championXpMult).toBeGreaterThan(1)
+  })
+
+  // ── Die drei Konstellationen aus DREI Knoten ───────────────────────────────
+
+  it('lässt ein Expeditions-Angebot warten, statt es verfallen zu lassen', () => {
+    const forge = useStarForgeStore()
+    const expedition = useExpeditionStore()
+    expect(forge.expeditionOffersWait).toBe(false)
+
+    expedition.forceSpawn()
+    const slot = expedition.availableExpeditions[0]
+    expect(slot).toBeDefined()
+    // Die Frist ist abgelaufen.
+    slot.availableUntil = gameNow() - 1
+
+    expedition.checkAvailability()
+    expect(expedition.availableExpeditions.some((e) => e.id === slot.id)).toBe(false)
+
+    // Mit der Konstellation bleibt dasselbe Angebot liegen.
+    forge.forgedConstellations.push('waitingRoad')
+    expect(forge.expeditionOffersWait).toBe(true)
+    expedition.forceSpawn()
+    const kept = expedition.availableExpeditions[0]
+    kept.availableUntil = gameNow() - 1
+    expedition.checkAvailability()
+    expect(expedition.availableExpeditions.some((e) => e.id === kept.id)).toBe(true)
+  })
+
+  it('lässt die Harvester eines gefallenen Planeten weiterarbeiten', () => {
+    const forge = useStarForgeStore()
+    expect(forge.harvestersSurviveDowntime).toBe(false)
+    forge.forgedConstellations.push('standingVein')
+    expect(forge.harvestersSurviveDowntime).toBe(true)
+  })
+
+  it('gibt dem Himmel einen zweiten Drifter-Platz', () => {
+    const forge = useStarForgeStore()
+    const drifter = useDrifterStore()
+    const before = drifter.maxConcurrent
+    expect(forge.extraDrifterSlots).toBe(0)
+
+    forge.forgedConstellations.push('twinnedSky')
+    expect(forge.extraDrifterSlots).toBe(FORGE_TWINNED_SKY_EXTRA_DRIFTERS)
+    expect(drifter.maxConcurrent).toBe(before + FORGE_TWINNED_SKY_EXTRA_DRIFTERS)
+
+    // Und der Platz wird auch wirklich belegt.
+    expect(drifter.spawnDrifter()).not.toBeNull()
+    expect(drifter.spawnDrifter()).not.toBeNull()
+    expect(drifter.spawnDrifter(), 'ein dritter Drifter kam durch').toBeNull()
+  })
+
+  // ── Die fünf Boughs mit Tor ────────────────────────────────────────────────
+
+  it('lässt jeden neuen Bough erst hinter seiner Krone aufgehen', () => {
+    const forge = useStarForgeStore()
+    useSolarUpgradeStore().starPhase = STAR_PHASE_FINAL_INDEX
+    const gated = FORGE_BOUGHS.filter((def) => (def.requires ?? []).length > 0)
+    expect(gated.length).toBeGreaterThan(0)
+
+    for (const def of gated) {
+      forge.pactLevels[def.parentId] = FORGE_BOUGH_PARENT_MIN_LEVEL
+      expect(forge.nodeUnlocked(def.id), `${def.id} geht ohne seine Krone auf`).toBe(false)
+      for (const req of def.requires ?? []) forge.crownLevels[req.id] = req.level
+      expect(forge.nodeUnlocked(def.id), `${def.id} geht mit seiner Krone nicht auf`).toBe(true)
     }
+  })
+
+  it('setzt jeder neue Bough die Regel seiner Krone additiv fort', () => {
+    const forge = useStarForgeStore()
+    expect(forge.bargainBuffDurationMult).toBe(1)
+    expect(forge.harvestYieldMult).toBe(1)
+    expect(forge.drifterRewardMult).toBe(1)
+
+    forge.boughLevels.brimmingCart = 3
+    forge.boughLevels.worldsBounty = 3
+    forge.boughLevels.driftersDue = 3
+    forge.boughLevels.darkTithe = 3
+    forge.boughLevels.rivenLode = 3
+
+    expect(forge.bargainBuffDurationMult).toBeGreaterThan(1)
+    expect(forge.harvestYieldMult).toBeGreaterThan(1)
+    expect(forge.drifterRewardMult).toBeGreaterThan(1)
+    expect(forge.bossMaterialMult).toBeGreaterThan(1)
+    // Dark Tithe wirkt auch OHNE die Krone auf den Getter — kaufbar ist er ohne
+    // sie trotzdem nicht. Beide Wahrheiten stehen an getrennten Stellen.
+    expect(forge.voidSlayRewardMult).toBeGreaterThan(1)
   })
 })

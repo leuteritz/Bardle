@@ -75,10 +75,30 @@
              Astwerk bei einer Elternsperre — dieselben zwei Glyphen, mit denen
              der Trenner die Zeile eingeordnet hat, und dieselbe Weiche
              (`entry.lockKind`). -->
-        <span class="fut-lock">
+        <span v-if="!showReqList" class="fut-lock">
           <Icon :icon="lockWhyIcon" width="15" height="15" class="fut-lock-why" />
           {{ entry.lockReason }}
         </span>
+
+        <!-- Ab ZWEI Bedingungen tritt der Satz zurück und die Liste übernimmt.
+             Ein Satz kann nur die erste offene nennen — bei einer Krone, die
+             drei Knoten verlangt, sähe der Spieler nach jedem erfüllten
+             Vorgänger einen neuen Satz und wüsste nie, wie viele noch kommen.
+             Die Zahlenpaare sind dieselbe Form wie im Archiv nebenan
+             (`ForgeVaultSection`), damit „Moon Orbit 2/3" überall gleich
+             aussieht. -->
+        <template v-else>
+          <div class="fut-reqs-head">{{ FORGE_REQ_HEADING }}</div>
+          <ul class="fut-reqs">
+            <li v-for="req in entry.reqs" :key="req.id" :class="{ 'fut-req--met': req.met }">
+              <span class="fut-req-mark">{{
+                req.met ? FORGE_REQ_MET_MARK : FORGE_REQ_OPEN_MARK
+              }}</span>
+              <span class="fut-req-name">{{ req.name }}</span>
+              <span class="fut-req-num">{{ req.have }}/{{ req.need }}</span>
+            </li>
+          </ul>
+        </template>
       </div>
 
       <div v-if="entry.unlockProgress > 0" class="fc-track fut-track">
@@ -261,6 +281,9 @@ import {
   FORGE_CHIME_IMAGE,
   FORGE_COUNT_TOKEN,
   FORGE_DIVIDER_PARENT_ICON,
+  FORGE_REQ_HEADING,
+  FORGE_REQ_MET_MARK,
+  FORGE_REQ_OPEN_MARK,
   FORGE_DIVIDER_PHASE_ICON,
   FORGE_FRESH_LABEL,
   FORGE_FRESH_TITLE,
@@ -335,6 +358,26 @@ const short = computed(
  */
 const lockWhyIcon = computed(() =>
   props.entry.lockKind === 'phase' ? FORGE_DIVIDER_PHASE_ICON : FORGE_DIVIDER_PARENT_ICON,
+)
+
+/**
+ * Zeigt die Zeile ihre Bedingungen als LISTE statt als Satz?
+ *
+ * Erst ab zwei. Eine einzelne Bedingung als Liste zu setzen wäre eine
+ * Aufzählung mit einem Punkt — der Satz sagt dasselbe kürzer und steht seit
+ * jeher dort.
+ *
+ * Eine PHASENSPERRE behält den Satz in jedem Fall: gegen sie hilft nur Warten,
+ * und die Vorgänger daneben aufzuzählen legte eine Aufgabe nahe, die es gerade
+ * nicht gibt.
+ */
+const showReqList = computed(
+  () =>
+    props.entry.lockKind !== 'phase' &&
+    // Ein Prestige-Tor ebenso wenig: die Vorgaengerliste ist dann meist
+    // vollstaendig erfuellt, und lauter Haekchen sagen nicht, was fehlt.
+    props.entry.lockKind !== 'prestige' &&
+    props.entry.reqs.length > 1,
 )
 
 /**
@@ -913,6 +956,75 @@ const buyTitle = computed(() => {
 .fut-lock-why {
   flex-shrink: 0;
   color: rgba(200, 144, 64, 0.7);
+}
+
+/* Die Bedingungsliste eines Knotens, der MEHRERE Vorgänger verlangt.
+
+   Eine Zeile je Bedingung, und sie sind bewusst schmaler gesetzt als der
+   Sperrsatz, den sie ersetzen: drei davon müssen in dieselbe Zeilenhöhe passen
+   wie ein einzelner Satz, sonst spränge die Liste rechts bei jedem gesperrten
+   Zusammenlauf auseinander. Gemessen an der Kronen-Zeile mit drei Bedingungen:
+   3 × 16px + 2 × 3px Abstand = 54px gegen die 52px, die der Satz plus sein
+   Abstand belegen. */
+/* Kopf ueber der Bedingungsliste — wortgleich mit dem im Baum. Bei EINER
+   Bedingung steht dort der Satz und kein Kopf. */
+.fut-reqs-head {
+  margin-bottom: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8a7550;
+}
+
+.fut-reqs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fut-reqs li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 16px;
+  color: rgba(255, 200, 80, 0.62);
+}
+
+/* Erfüllt: dasselbe Grün, das im ganzen Projekt „kaufbar" heißt. Die Farbe
+   trägt die Auskunft, nicht das Zeichen allein — drei Häkchen untereinander
+   sind auf einen Blick nicht von drei Kreuzen zu unterscheiden. */
+.fut-req--met {
+  color: rgba(110, 192, 64, 0.85);
+}
+
+.fut-req-mark {
+  flex-shrink: 0;
+  width: 11px;
+  text-align: center;
+}
+
+.fut-req-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Die Zahl steht rechts und in Tabellenziffern: untereinander sollen die
+   Schrägstriche eine Spalte bilden. */
+.fut-req-num {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  opacity: 0.85;
 }
 
 /* `.fc-track` liegt ohnehin absolut an der Unterkante — hier bekommt sie nur
