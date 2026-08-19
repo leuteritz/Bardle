@@ -135,6 +135,34 @@ export function forgeUpgradeBucket(entry: ForgeUpgradeEntry): ForgeUpgradeBucket
 }
 
 /**
+ * Darf der Zeiger auf diesem Eintrag die ANSICHT bewegen?
+ *
+ * Baum und Liste holen sich seit dem Hover-Ausbau gegenseitig ins Bild: wer
+ * links auf einen Knoten zeigt, rollt rechts dessen Zeile heran, und wer rechts
+ * auf einer Zeile steht, schwenkt links die Bühne zum Knoten. Für GESPERRTES
+ * gilt das nicht — und der Grund ist nicht Sparsamkeit, sondern Bedeutung: an
+ * einem Knoten, den man nicht kaufen kann, ist nichts zu erledigen. Eine
+ * Bühne, die beim Überstreichen der Sperrliste durch den halben Baum fährt,
+ * zeigt viel und meint nichts.
+ *
+ * Was sie ausdrücklich NICHT entscheidet: ob der Knoten LEUCHTET. Hervorhebung,
+ * Abdunkeln der anderen, Bedingungskranz und Bedingungslinien bleiben für
+ * Gesperrtes vollständig erhalten — sie beantworten „was fehlt hier", und das
+ * ist bei einer Sperre die interessanteste Frage überhaupt. Deshalb steht der
+ * Filter in den beiden Wächtern und nicht an `setListHover`/`setTreeHover`.
+ *
+ * Alles andere darf fahren, auch `maxed` und `capped`: ausgewachsen ist nicht
+ * gesperrt, und wer eine MAX-Zeile sucht, will den Knoten genauso sehen.
+ *
+ * Steht hier neben `forgeUpgradeBucket` und nicht zweimal als
+ * `state !== 'locked'` in zwei Komponenten. Die Regel gilt in BEIDE Richtungen,
+ * und zwei Kopien beantworten den nächsten Zustand verschieden.
+ */
+export function forgeUpgradeMayTravel(entry: ForgeUpgradeEntry | undefined): boolean {
+  return entry !== undefined && entry.state !== 'locked'
+}
+
+/**
  * Was auf dem Kaufknopf steht.
  *
  * Nur noch das Verb — die Zielstufe („→ Lv 13") stand einmal dahinter und ist
@@ -375,11 +403,17 @@ export function useForgeUpgrades(): {
       nextDesc = def.desc
       nowText = level > 0 ? FORGE_CROWN_STATE_FORGED : FORGE_CROWN_STATE_OPEN
       nextText = FORGE_CROWN_STATE_FORGED
-    } else if (def.tier === 'bough' || def.tier === 'ward' || def.tier === 'pact') {
-      // Drei Ringe ohne Blatt-Verstärker: sie tragen schlicht Stufe × Wert je
+    } else if (
+      def.tier === 'bough' ||
+      def.tier === 'ward' ||
+      def.tier === 'pact' ||
+      def.tier === 'glimmer'
+    ) {
+      // Vier Ränge ohne Blatt-Verstärker: sie tragen schlicht Stufe × Wert je
       // Stufe. Beim Bough hält genau diese Additivität den endlosen Ring sicher,
-      // bei Ward und Covenant gibt es kein Blatt, das sie verstärken könnte —
-      // die Vorschau darf in keinem der drei Fälle durch `branchEffect`.
+      // bei Wacht und Bündnis gibt es kein Blatt, das sie verstärken könnte, und
+      // ein Glimmer ist selbst der Verstärker eines anderen Knotens — die
+      // Vorschau darf in keinem der vier Fälle durch `branchEffect`.
       const now = level * def.effectPerLevel
       const next = (level + 1) * def.effectPerLevel
       desc = def.desc.replace(FORGE_DESC_VALUE_TOKEN, trimNumber(now))

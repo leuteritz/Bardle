@@ -32,6 +32,8 @@ import {
   getForgeBargain,
 } from '@/config/progression/starForge'
 import {
+  FORGE_GLIMMER_MAX_LEVEL,
+  FORGE_GLIMMER_PARENT_MIN_LEVEL,
   FORGE_TIER_BASE_MAX_LEVEL,
   FORGE_BRANCH_MAX_LEVEL_CAP,
   FORGE_BRANCH_PARENT_MIN_LEVEL,
@@ -132,6 +134,22 @@ const MAX_DOUBLE_CLICK_CHANCE = FORGE_MAX_DOUBLE_CLICK_CHANCE
  * `bough` und `crown` fehlen absichtlich — der eine hat keinen Deckel, der
  * andere genau eine Stufe; beide werden in `nodeMaxLevel` vorher beantwortet.
  */
+/**
+ * Welcher Glimmer auf welchen Knoten zahlt — Zielknoten-Id auf die Glimmers,
+ * die ihn heben.
+ *
+ * Gerechnet EINMAL beim Laden des Moduls. `glimmerBoost` liegt im heissen Pfad
+ * von `recalcRates()`, und ein `FORGE_NODES.filter(...)` je Aufruf hiesse
+ * fünfzehnhundert Durchläufe pro Ratenberechnung.
+ */
+const GLIMMERS_BY_TARGET = new Map<string, ForgeNodeDef[]>()
+for (const def of FORGE_NODES) {
+  if (def.tier !== 'glimmer' || !def.boosts) continue
+  const list = GLIMMERS_BY_TARGET.get(def.boosts)
+  if (list) list.push(def)
+  else GLIMMERS_BY_TARGET.set(def.boosts, [def])
+}
+
 const TIER_MAX_LEVEL_CAP: Partial<Record<ForgeNodeDef['tier'], number>> = {
   branch: FORGE_BRANCH_MAX_LEVEL_CAP,
   leaf: FORGE_LEAF_MAX_LEVEL,
@@ -153,6 +171,14 @@ const TIER_PARENT_MIN_LEVEL: Record<ForgeNodeDef['tier'], number> = {
   pact: FORGE_PACT_PARENT_MIN_LEVEL,
   crown: FORGE_CROWN_PARENT_MIN_LEVEL,
   bough: FORGE_BOUGH_PARENT_MIN_LEVEL,
+  /*
+   * Ein Glimmer verlangt von seinem Anker die ERSTE Stufe und keine zweite.
+   *
+   * Er ist ein Weg, kein Ziel: wer den grossen Knoten daneben angefangen hat,
+   * soll den kleinen sofort mitnehmen koennen. Eine Zwei machte aus jedem Weg
+   * ein eigenes Vorhaben, und das Netz waere wieder eine Kette von Toren.
+   */
+  glimmer: FORGE_GLIMMER_PARENT_MIN_LEVEL,
 }
 
 export const useStarForgeStore = defineStore('starForge', {
@@ -188,6 +214,19 @@ export const useStarForgeStore = defineStore('starForge', {
      * um einen Betrag, der mit Schmieden nichts zu tun hat.
      */
     crownLevels: {} as Record<string, number>,
+    /**
+     * Die Stufen der sechzig GLIMMERS - der kleinen Knoten, die das Netz
+     * zwischen den grossen tragen.
+     *
+     * Eigener Beutel, und zwar zwingend. `achievementStore.metricValue`
+     * summiert fuer die Codex-Bahn "Sunsmith" die Beutel `branchLevels`,
+     * `leafLevels`, `wardLevels`, `pactLevels` und `relicLevels`. Sechzig
+     * zusaetzliche Knoten in dieser Summe machten jede Schwelle der Bahn
+     * trivial - und ihr Lohn ist `forgeMaterialCostMult`, also billigere
+     * Baumknoten: ein geschlossener Kreis, denselben, den `boughLevels` und
+     * `crownLevels` schon aus dem gleichen Grund meiden.
+     */
+    glimmerLevels: {} as Record<string, number>,
     /** Relic levels, keyed by ForgeRelicDef id (0/absent = not forged). */
     relicLevels: {} as Record<string, number>,
     forgedConstellations: [] as string[],
@@ -228,6 +267,7 @@ export const useStarForgeStore = defineStore('starForge', {
         state.pactLevels[id] ??
         state.boughLevels[id] ??
         state.crownLevels[id] ??
+        state.glimmerLevels[id] ??
         0
     },
 
@@ -241,6 +281,10 @@ export const useStarForgeStore = defineStore('starForge', {
         if (def.tier === 'bough') return Infinity
         // Ring 6 ist die Gegenfigur dazu: genau eine Stufe, dafür eine Regel.
         if (def.tier === 'crown') return FORGE_CROWN_MAX_LEVEL
+        // Ein Glimmer steht NEBEN der Leiter, nicht auf ihr: seine Höchststufe
+        // ist fest und wächst nicht mit der Sonne. Die Staffelung „+1 je Phase"
+        // ist die Zusage der grossen Knoten; ein Weg soll sofort begehbar sein.
+        if (def.tier === 'glimmer') return FORGE_GLIMMER_MAX_LEVEL
         // Alle gedeckelten Ringe folgen DERSELBEN Regel: eine Stufe bei der
         // Freischaltung, +1 je Sonnenphase darüber, gedeckelt je Ring. Die vier
         // Deckel sind so gewählt, dass jeder Ring den seinen GENAU in der
@@ -465,6 +509,37 @@ export const useStarForgeStore = defineStore('starForge', {
       return (branchId) => FORGE_LEAVES.find((l) => l.parentId === branchId)
     },
 
+    /**
+     * Was die GLIMMERS zu einem Knoten beitragen — Summe über alle, die per
+     * `boosts` auf ihn zeigen, je Stufe.
+     *
+     * Das ist die EINE Stelle, an der die sechzig kleinen Knoten in die
+     * Wirkungsrechnung eintreten. Die drei Effekt-Getter darunter addieren sie,
+     * und die rund dreissig Getter, die auf DIESEN dreien aufsitzen, merken
+     * davon nichts — kein Glimmer braucht eine eigene Verdrahtung, kein
+     * bestehender Getter eine Änderung.
+     *
+     * Der Beitrag steht in derselben Einheit wie das Ziel: `effectPerLevel`
+     * eines Glimmers sind Prozentpunkte, wenn das Ziel in Prozentpunkten
+     * rechnet, und HP, wenn es HP zählt. Eine Umrechnung gibt es nicht, weil es
+     * keine zweite Einheit gibt.
+     *
+     * Gerechnet über eine Tabelle, die EINMAL beim Modulstart entsteht — der
+     * Katalog ist statisch, und dieser Getter liegt im heissen Pfad jeder
+     * Ratenberechnung.
+     */
+    glimmerBoost(state): (nodeId: string) => number {
+      return (nodeId) => {
+        const feeders = GLIMMERS_BY_TARGET.get(nodeId)
+        if (!feeders) return 0
+        let sum = 0
+        for (const def of feeders) {
+          sum += (state.glimmerLevels[def.id] ?? 0) * def.effectPerLevel
+        }
+        return sum
+      }
+    },
+
     /** Branch effect value incl. its leaf amplifier: level × perLevel × (1 + leaf × 25%). */
     branchEffect(state): (branchId: string) => number {
       return (branchId) => {
@@ -475,7 +550,11 @@ export const useStarForgeStore = defineStore('starForge', {
         const leafDef = this.leafOfBranch(branchId)
         const leafLevel = leafDef ? (state.leafLevels[leafDef.id] ?? 0) : 0
         const amp = 1 + leafLevel * FORGE_LEAF_AMPLIFY_PER_LEVEL
-        return level * def.effectPerLevel * amp
+        // Der Glimmer-Beitrag steht NEBEN dem Verstärker, nicht darin: das
+        // Blatt verstärkt seinen Zweig, nicht die Wege ringsum. Multiplizierte
+        // es beides, hinge der Deckel `FORGE_GLIMMER_AXIS_SHARE` an einer Zahl,
+        // die selbst mit dem Blatt wächst.
+        return level * def.effectPerLevel * amp + this.glimmerBoost(branchId)
       }
     },
 
@@ -493,7 +572,7 @@ export const useStarForgeStore = defineStore('starForge', {
       return (boughId) => {
         const def = getForgeNode(boughId)
         if (!def || def.tier !== 'bough') return 0
-        return (state.boughLevels[boughId] ?? 0) * def.effectPerLevel
+        return (state.boughLevels[boughId] ?? 0) * def.effectPerLevel + this.glimmerBoost(boughId)
       }
     },
 
@@ -510,7 +589,7 @@ export const useStarForgeStore = defineStore('starForge', {
       return (nodeId) => {
         const def = getForgeNode(nodeId)
         if (!def || (def.tier !== 'ward' && def.tier !== 'pact')) return 0
-        return this.nodeLevel(nodeId) * def.effectPerLevel
+        return this.nodeLevel(nodeId) * def.effectPerLevel + this.glimmerBoost(nodeId)
       }
     },
 
@@ -1659,6 +1738,8 @@ export const useStarForgeStore = defineStore('starForge', {
         this.pactLevels[id] = (this.pactLevels[id] ?? 0) + 1
       } else if (def.tier === 'crown') {
         this.crownLevels[id] = 1
+      } else if (def.tier === 'glimmer') {
+        this.glimmerLevels[id] = (this.glimmerLevels[id] ?? 0) + 1
       } else {
         this.boughLevels[id] = (this.boughLevels[id] ?? 0) + 1
         // Max HP ist ein State-Feld und kein Faktor — es wird beim Kauf
@@ -1828,6 +1909,8 @@ export const useStarForgeStore = defineStore('starForge', {
           // ein Admin-Knopf, der ihn trotzdem setzt, prüfte einen Zustand, den
           // kein Spieler je erreicht.
           if (this.crownsUnlocked) this.crownLevels[def.id] = FORGE_CROWN_MAX_LEVEL
+        } else if (def.tier === 'glimmer') {
+          this.glimmerLevels[def.id] = FORGE_GLIMMER_MAX_LEVEL
         } else {
           // `nodeMaxLevel` gibt für einen Bough `Infinity` — eine gewählte
           // Testhöhe muss her, sonst stünde im Baum eine Stufe, die es im Spiel

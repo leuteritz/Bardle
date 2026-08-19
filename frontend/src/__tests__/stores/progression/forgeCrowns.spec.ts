@@ -29,7 +29,7 @@ import {
   BOSS_CPS_PENALTY_FRACTION,
   STAR_PHASE_FINAL_INDEX,
 } from '@/config/constants'
-import { FORGE_CROWNS } from '@/config/progression/starForge'
+import { getForgeNode, FORGE_CROWNS } from '@/config/progression/starForge'
 import { setForgeLevel } from '@/__tests__/forgeTestUtils'
 import { useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
 import { VOID_RIFTS, getVoidRift } from '@/config/world/void'
@@ -178,11 +178,15 @@ describe('Astral Crowns (Ring 6)', () => {
     }
   })
 
-  it('legt jede Krone an einen eigenen Covenant, auf einem eigenen Winkel', () => {
+  it('legt jede Krone an einen eigenen Covenant', () => {
+    // Der Winkel stand hier einmal daneben: fünfzehn Kronen auf fünfzehn
+    // Speichen. Er ist mit dem Raster gefallen — was die Kronen unterscheidet,
+    // ist ihr Bündnis, und das ist auch die Bedingung, die etwas bewirkt.
     const parents = FORGE_CROWNS.map((c) => c.parentId)
-    const angles = FORGE_CROWNS.map((c) => c.angleDeg)
     expect(new Set(parents).size).toBe(FORGE_CROWNS.length)
-    expect(new Set(angles).size).toBe(FORGE_CROWNS.length)
+    for (const crown of FORGE_CROWNS) {
+      expect(getForgeNode(crown.parentId)?.tier, `${crown.id} hängt an keinem Bündnis`).toBe('pact')
+    }
   })
 
   // ── Tideless Watch → Void ──────────────────────────────────────────────────

@@ -24,7 +24,13 @@
          Drei Blöcke, in der Reihenfolge, in der der Spieler sie braucht: was
          gerade erreichbar ist, dann der Baum als Liste, zuletzt die Schublade
          mit Gesperrtem und Fertigem. -->
-    <div class="sf-body">
+    <!-- `data-forge-scroll` markiert den EINEN Rollkasten dieser Spalte.
+         `ForgeUpgradesSection` muss ihn finden, um zu messen, ob eine Zeile
+         schon im Bild stand, bevor sie hereingerollt wird — ein
+         `closest('.sf-body')` täte dasselbe, koppelte die Liste aber an eine
+         CSS-Klasse, die hier jederzeit umbenannt werden dürfte. Ein Attribut
+         ist eine Zusage, ein Klassenname ist es nicht. -->
+    <div class="sf-body" data-forge-scroll>
       <ForgeOfferStrip />
       <ForgeUpgradesSection />
       <ForgeVaultSection />

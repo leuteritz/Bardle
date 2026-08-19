@@ -53,6 +53,7 @@
           :fresh="freshIds.has(entry.id)"
           :best="bestOf(entry.id)"
           :bulk-count="bulkOf(entry.id)"
+          :arrived="arrivedId === entry.id"
           @buy="grow"
           @buy-many="growMany"
         />
@@ -113,8 +114,13 @@
  */
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { forgeUpgradeBucket, useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
+import {
+  forgeUpgradeBucket,
+  forgeUpgradeMayTravel,
+  useForgeUpgrades,
+} from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { forgeRowInView } from '@/utils/ui/forgeSpotlightView'
 import ForgeUpgradeTile from './ForgeUpgradeTile.vue'
 import ForgeGrownRow from './ForgeGrownRow.vue'
 import ForgeRowTooltip from './ForgeRowTooltip.vue'
@@ -137,6 +143,7 @@ import {
   FORGE_DIVIDER_SAVING_ICON,
   FORGE_DIVIDER_SAVING_LABEL,
   FORGE_PHASE_TOKEN,
+  FORGE_SPOTLIGHT_ARRIVAL_MS,
   FORGE_SPOTLIGHT_SCROLL_DELAY_MS,
   FORGE_UPGRADE_EMPTY_ICON,
   STAR_PHASE_DATA,
@@ -144,7 +151,7 @@ import {
 
 const { upgradeEntries, entryById, bestBuyId, freshIds, buyUpgrade, affordableLevels, buyMany } =
   useForgeUpgrades()
-const { treeHoverId, listHoverId, setListHover } = useForgeSpotlight()
+const { treeHoverId, listHoverId, pinnedId, setListHover } = useForgeSpotlight()
 
 // ── Eingefrorene Reihenfolge ─────────────────────────────────────────────────
 /**
@@ -407,14 +414,58 @@ function revealForSpotlight(id: string): void {
  * das `revealForSpotlight()` ausgelöst haben kann. Rein visuell, daher reale
  * Zeit.
  */
+/**
+ * Welche Zeile gerade EINGETROFFEN ist.
+ *
+ * Nicht dasselbe wie „hervorgehoben": hervorgehoben ist die Zeile, solange der
+ * Zeiger drüben auf ihrem Knoten steht; eingetroffen ist sie nur in den
+ * Sekundenbruchteilen, in denen sie von ausserhalb hereingerollt kam. Das eine
+ * ist ein Zustand, das andere ein Ereignis — und ein Ereignis braucht einen
+ * eigenen Merker, weil es von selbst wieder vergeht.
+ */
+const arrivedId = ref<string | null>(null)
+let arrivalTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearArrival(): void {
+  if (arrivalTimer !== null) {
+    clearTimeout(arrivalTimer)
+    arrivalTimer = null
+  }
+  arrivedId.value = null
+}
+
 watch(treeHoverId, (id) => {
   if (scrollTimer !== null) clearTimeout(scrollTimer)
+  clearArrival()
   if (id === null) return
+  // Gesperrt heisst leuchten, nicht rollen. Der Filter steht HIER und nicht an
+  // `setTreeHover` — der trägt auch Hervorhebung, Kranz und Bedingungskette,
+  // und die sind bei einer Sperre gerade die interessanteste Auskunft.
+  if (!forgeUpgradeMayTravel(entryById.value.get(id))) return
+  // Eine Anheftung HÄLT die Ansicht fest, das ist ihre einzige Aufgabe. Rollte
+  // die Liste darunter weiter, führe sie zu einer Zeile, die gar nicht
+  // hervorgehoben ist — der Spotlight steht ja beim angehefteten Knoten.
+  if (pinnedId.value !== null) return
   revealForSpotlight(id)
   scrollTimer = setTimeout(() => {
-    wrapEl.value
-      ?.querySelector<HTMLElement>(`[data-forge-id="${id}"]`)
-      ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    scrollTimer = null
+    const row = wrapEl.value?.querySelector<HTMLElement>(`[data-forge-id="${id}"]`)
+    const box = wrapEl.value?.closest<HTMLElement>('[data-forge-scroll]')
+    if (!row || !box) return
+    // VORHER messen, nicht nachher: `block: 'nearest'` tut nichts, wenn die
+    // Zeile schon ganz im Kasten steht — und dann ist auch nichts eingetroffen,
+    // was sich zu markieren lohnte. Zwei Rechtecke je Hover-Wechsel, nie pro
+    // Frame; dieselbe Rechnung macht das schwebende Kärtchen darunter schon.
+    const r = row.getBoundingClientRect()
+    const b = box.getBoundingClientRect()
+    const wasOut = !forgeRowInView(r.top, r.bottom, b.top, b.bottom)
+    row.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    if (!wasOut) return
+    arrivedId.value = id
+    arrivalTimer = setTimeout(() => {
+      arrivalTimer = null
+      if (arrivedId.value === id) arrivedId.value = null
+    }, FORGE_SPOTLIGHT_ARRIVAL_MS)
   }, FORGE_SPOTLIGHT_SCROLL_DELAY_MS)
 })
 
@@ -453,6 +504,7 @@ watch(listHoverId, (id) => {
    und die eingefrorene Reihenfolge überlebte den Wechsel. */
 onUnmounted(() => {
   if (scrollTimer !== null) clearTimeout(scrollTimer)
+  clearArrival()
   frozenBuckets.value = null
   setListHover(null)
 })

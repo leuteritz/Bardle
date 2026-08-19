@@ -3,9 +3,11 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   useForgeUpgrades,
   forgeUpgradeBucket,
+  forgeUpgradeMayTravel,
   forgeLevelParts,
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
+import type { ForgeUpgradeState } from '@/types'
 import { useHerald } from '@/composables/ui/useHerald'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
@@ -931,5 +933,47 @@ describe('useForgeUpgrades — bestBuyId', () => {
     for (const e of upgradeEntries.value) {
       if (e.canBuy) expect(best.goldCost).toBeLessThanOrEqual(e.goldCost)
     }
+  })
+})
+
+/**
+ * Die Regel, die entscheidet, ob ein Zeiger die ANSICHT bewegen darf.
+ *
+ * Als Tabelle über ALLE sechs Zustände, und das ist der Zweck: kommt ein
+ * siebter dazu, ohne dass hier jemand entscheidet, was er soll, bricht diese
+ * Spec. Ein stiller Durchfall wäre schlimmer als ein roter Test — er hiesse,
+ * dass die Bühne bei einem neuen Zustand irgendwohin fährt.
+ */
+describe('forgeUpgradeMayTravel — wer die Ansicht bewegen darf', () => {
+  const CASES: Array<[ForgeUpgradeState, boolean]> = [
+    ['locked', false],
+    ['empty', true],
+    ['partial', true],
+    ['affordable', true],
+    ['capped', true],
+    ['maxed', true],
+  ]
+
+  it('deckt jeden Zustand des Typs ab', () => {
+    const covered = CASES.map(([state]) => state).sort()
+    const all: ForgeUpgradeState[] = [
+      'locked',
+      'empty',
+      'partial',
+      'affordable',
+      'capped',
+      'maxed',
+    ]
+    expect(covered).toEqual([...all].sort())
+  })
+
+  for (const [state, expected] of CASES) {
+    it(`${state} ${expected ? 'darf' : 'darf NICHT'} fahren`, () => {
+      expect(forgeUpgradeMayTravel({ ...FORGE_EMPTY_UPGRADE_ENTRY, state })).toBe(expected)
+    })
+  }
+
+  it('lässt einen fehlenden Eintrag nicht fahren', () => {
+    expect(forgeUpgradeMayTravel(undefined)).toBe(false)
   })
 })

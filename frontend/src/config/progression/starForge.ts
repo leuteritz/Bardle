@@ -1,4 +1,5 @@
 import type {
+  ForgeEffectFamily,
   ForgeNodeDef,
   ForgeNodeRequirement,
   ForgeRelicDef,
@@ -14,8 +15,10 @@ import {
   FORGE_BOUGH_UNLOCK_PHASE,
   FORGE_BOUGH_COST_MULTIPLIER,
   FORGE_CROWN_BASE_COST,
-  FORGE_CONJUNCTION_BRANCH_LEVEL,
-  FORGE_CONJUNCTION_LEAF_LEVEL,
+  FORGE_CONJUNCTION_PACT_LEVEL,
+  FORGE_GLIMMER_BASE_COST_SHARE,
+  FORGE_GLIMMER_COST_MULTIPLIER,
+  FORGE_GLIMMER_FAMILY_ICON,
   FORGE_CONJUNCTION_WARD_LEVEL,
   FORGE_CROWN_OWN_WARD_LEVEL,
   FORGE_CROWN_MAX_LEVEL,
@@ -56,7 +59,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:caravel',
     color: '#e8c040',
-    angleDeg: 246,
+    family: 'travel',
     baseCost: 1_500,
     costMultiplier: 2.2,
     materialCost: { stardust: 4 },
@@ -71,7 +74,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:moon',
     color: '#f0d878',
-    angleDeg: 294,
+    family: 'idle',
     baseCost: 2_000,
     costMultiplier: 2.2,
     materialCost: { moon_crystal: 4 },
@@ -87,7 +90,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:remedy',
     color: '#e05050',
-    angleDeg: 318,
+    family: 'guard',
     baseCost: 1_500,
     costMultiplier: 2.1,
     materialCost: { moon_crystal: 4 },
@@ -102,7 +105,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:bolt-shield',
     color: '#ff8080',
-    angleDeg: 6,
+    family: 'guard',
     baseCost: 2_200,
     costMultiplier: 2.2,
     materialCost: { nebula_quartz: 3 },
@@ -118,7 +121,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:two-coins',
     color: '#52b830',
-    angleDeg: 30,
+    family: 'click',
     baseCost: 1_200,
     costMultiplier: 2.1,
     materialCost: { stardust: 4 },
@@ -133,7 +136,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:sound-waves',
     color: '#8fe060',
-    angleDeg: 78,
+    family: 'click',
     baseCost: 1_800,
     costMultiplier: 2.2,
     materialCost: { nebula_quartz: 3 },
@@ -149,7 +152,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:mining',
     color: '#e89840',
-    angleDeg: 102,
+    family: 'harvest',
     baseCost: 1_600,
     costMultiplier: 2.2,
     materialCost: { stardust: 5 },
@@ -164,7 +167,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:hourglass',
     color: '#ffb860',
-    angleDeg: 150,
+    family: 'idle',
     baseCost: 2_400,
     costMultiplier: 2.3,
     materialCost: { nebula_quartz: 3 },
@@ -180,7 +183,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:sonic-shout',
     color: '#c060a0',
-    angleDeg: 174,
+    family: 'combat',
     baseCost: 1_800,
     costMultiplier: 2.2,
     materialCost: { moon_crystal: 4 },
@@ -195,7 +198,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:shattered-glass',
     color: '#e08cc8',
-    angleDeg: 222,
+    family: 'combat',
     baseCost: 2_000,
     costMultiplier: 2.2,
     materialCost: { nebula_quartz: 3 },
@@ -223,7 +226,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:knapsack',
     color: '#ffe9a8',
-    angleDeg: 270,
+    family: 'travel',
     baseCost: 5_000,
     costMultiplier: 2.4,
     materialCost: { stardust: 6, solar_essence: 1 },
@@ -244,7 +247,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:heart-tower',
     color: '#ffb0b0',
-    angleDeg: 342,
+    family: 'star',
     baseCost: 5_000,
     costMultiplier: 2.4,
     materialCost: { moon_crystal: 6, solar_essence: 1 },
@@ -259,7 +262,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:gold-stack',
     color: '#b0f090',
-    angleDeg: 54,
+    family: 'click',
     baseCost: 7_000,
     costMultiplier: 2.5,
     materialCost: { nebula_quartz: 5, void_shard: 1 },
@@ -274,7 +277,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:big-wave',
     color: '#ffd0a0',
-    angleDeg: 126,
+    family: 'income',
     baseCost: 8_000,
     costMultiplier: 2.5,
     materialCost: { nebula_quartz: 5, solar_essence: 2 },
@@ -289,7 +292,7 @@ export const FORGE_BRANCHES: ForgeNodeDef[] = [
     phase: FORGE_BRANCH_UNLOCK_PHASE,
     icon: 'game-icons:impact-point',
     color: '#f0b8e0',
-    angleDeg: 198,
+    family: 'combat',
     baseCost: 6_000,
     costMultiplier: 2.4,
     materialCost: { moon_crystal: 5, void_shard: 2 },
@@ -313,7 +316,7 @@ function leaf(
   parentId: string,
   icon: string,
   color: string,
-  angleDeg: number,
+  family: ForgeEffectFamily,
   materialCost: Record<string, number>,
   opts: { baseCost?: number; costMultiplier?: number } = {},
 ): ForgeNodeDef {
@@ -325,7 +328,7 @@ function leaf(
     phase: FORGE_LEAF_UNLOCK_PHASE,
     icon,
     color,
-    angleDeg,
+    family,
     baseCost: opts.baseCost ?? 25_000,
     costMultiplier: opts.costMultiplier ?? 2.5,
     materialCost,
@@ -338,34 +341,34 @@ function leaf(
 const LATE_LEAF_COST = { baseCost: 250_000, costMultiplier: 2.8 }
 
 export const FORGE_LEAVES: ForgeNodeDef[] = [
-  leaf('auroraWake', 'Aurora Wake', 'solarSails', 'game-icons:sunrise', '#e8c040', 246, {
+  leaf('auroraWake', 'Aurora Wake', 'solarSails', 'game-icons:sunrise', '#e8c040', 'travel', {
     solar_essence: 2,
   }),
-  leaf('midnightTide', 'Midnight Tide', 'moonOrbit', 'game-icons:night-sky', '#f0d878', 294, {
+  leaf('midnightTide', 'Midnight Tide', 'moonOrbit', 'game-icons:night-sky', '#f0d878', 'idle', {
     void_shard: 2,
   }),
-  leaf('vitalBloom', 'Vital Bloom', 'regeneration', 'game-icons:heart-plus', '#e05050', 318, {
+  leaf('vitalBloom', 'Vital Bloom', 'regeneration', 'game-icons:heart-plus', '#e05050', 'guard', {
     solar_essence: 2,
   }),
-  leaf('echoingBulwark', 'Echoing Bulwark', 'aegis', 'game-icons:shield-echoes', '#ff8080', 6, {
+  leaf('echoingBulwark', 'Echoing Bulwark', 'aegis', 'game-icons:shield-echoes', '#ff8080', 'guard', {
     void_shard: 2,
   }),
-  leaf('coinCascade', 'Coin Cascade', 'goldenEcho', 'game-icons:coins-pile', '#52b830', 30, {
+  leaf('coinCascade', 'Coin Cascade', 'goldenEcho', 'game-icons:coins-pile', '#52b830', 'click', {
     solar_essence: 2,
   }),
-  leaf('echoChamber', 'Echo Chamber', 'resonance', 'game-icons:echo-ripples', '#8fe060', 78, {
+  leaf('echoChamber', 'Echo Chamber', 'resonance', 'game-icons:echo-ripples', '#8fe060', 'click', {
     void_shard: 2,
   }),
-  leaf('deepVein', 'Deep Vein', 'cometMiner', 'game-icons:gold-mine', '#e89840', 102, {
+  leaf('deepVein', 'Deep Vein', 'cometMiner', 'game-icons:gold-mine', '#e89840', 'harvest', {
     solar_essence: 2,
   }),
-  leaf('timeWeaver', 'Time Weaver', 'quickening', 'game-icons:clockwork', '#ffb860', 150, {
+  leaf('timeWeaver', 'Time Weaver', 'quickening', 'game-icons:clockwork', '#ffb860', 'idle', {
     dark_matter: 1,
   }),
-  leaf('warhost', 'Warhost', 'warcry', 'game-icons:swords-power', '#c060a0', 174, {
+  leaf('warhost', 'Warhost', 'warcry', 'game-icons:swords-power', '#c060a0', 'combat', {
     void_shard: 2,
   }),
-  leaf('starquake', 'Starquake', 'shatter', 'game-icons:implosion', '#e08cc8', 222, {
+  leaf('starquake', 'Starquake', 'shatter', 'game-icons:implosion', '#e08cc8', 'combat', {
     dark_matter: 1,
   }),
 
@@ -382,7 +385,7 @@ export const FORGE_LEAVES: ForgeNodeDef[] = [
     'wayfindersCache',
     'game-icons:laurel-crown',
     '#ffe9a8',
-    270,
+    'travel',
     { void_shard: 2, dark_matter: 1 },
     LATE_LEAF_COST,
   ),
@@ -392,7 +395,7 @@ export const FORGE_LEAVES: ForgeNodeDef[] = [
     'wardensVigil',
     'game-icons:crystal-cluster',
     '#ffb0b0',
-    342,
+    'star',
     { solar_essence: 3, dark_matter: 1 },
     LATE_LEAF_COST,
   ),
@@ -402,7 +405,7 @@ export const FORGE_LEAVES: ForgeNodeDef[] = [
     'gildedHarvest',
     'game-icons:open-chest',
     '#b0f090',
-    54,
+    'click',
     { void_shard: 3, dark_matter: 1 },
     LATE_LEAF_COST,
   ),
@@ -412,7 +415,7 @@ export const FORGE_LEAVES: ForgeNodeDef[] = [
     'tidalDrift',
     'game-icons:wave-crest',
     '#ffd0a0',
-    126,
+    'income',
     { void_shard: 2, dark_matter: 2 },
     LATE_LEAF_COST,
   ),
@@ -422,7 +425,7 @@ export const FORGE_LEAVES: ForgeNodeDef[] = [
     'sunderingWake',
     'game-icons:crystal-shine',
     '#f0b8e0',
-    198,
+    'combat',
     { solar_essence: 3, void_shard: 2 },
     LATE_LEAF_COST,
   ),
@@ -457,7 +460,7 @@ function ward(
   parentId: string,
   icon: string,
   color: string,
-  angleDeg: number,
+  family: ForgeEffectFamily,
   materialCost: Record<string, number>,
   desc: string,
   effectPerLevel: number,
@@ -471,7 +474,7 @@ function ward(
     phase: FORGE_WARD_UNLOCK_PHASE,
     icon,
     color,
-    angleDeg,
+    family,
     baseCost: opts.baseCost ?? 120_000,
     costMultiplier: opts.costMultiplier ?? 2.6,
     materialCost,
@@ -488,7 +491,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'auroraWake',
     'game-icons:sextant',
     '#e8c040',
-    246,
+    'travel',
     { solar_essence: 3 },
     'Expeditions succeed {v}% more often.',
     3,
@@ -499,7 +502,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'midnightTide',
     'game-icons:card-random',
     '#f0d878',
-    294,
+    'fortune',
     { void_shard: 3 },
     'Augment offers are {v}% more likely to be rare or better.',
     8,
@@ -510,7 +513,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'wanderersCrest',
     'game-icons:lighthouse',
     '#ffe9a8',
-    270,
+    'drifter',
     { solar_essence: 4, void_shard: 2 },
     'Drifters cross your sky {v}% more often.',
     6,
@@ -524,7 +527,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'vitalBloom',
     'game-icons:vortex',
     '#e05050',
-    318,
+    'void',
     { solar_essence: 3 },
     'Void creatures crawl {v}% slower.',
     10,
@@ -535,7 +538,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'starboundCore',
     'game-icons:lantern-flame',
     '#ffb0b0',
-    342,
+    'star',
     { solar_essence: 4, dark_matter: 1 },
     'Resource stars appear {v}% more often.',
     7,
@@ -547,7 +550,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'echoingBulwark',
     'game-icons:anchor',
     '#ff8080',
-    6,
+    'void',
     { void_shard: 3 },
     'Rifts tear open {v}% less often.',
     8,
@@ -560,7 +563,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'coinCascade',
     'game-icons:trade',
     '#52b830',
-    30,
+    'market',
     { nebula_quartz: 6 },
     'Item prices are {v}% lower.',
     6,
@@ -571,7 +574,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'sunlitTrove',
     'game-icons:take-my-money',
     '#b0f090',
-    54,
+    'market',
     { nebula_quartz: 8, dark_matter: 1 },
     'Champion level-ups cost {v}% less.',
     5,
@@ -583,7 +586,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'echoChamber',
     'game-icons:lightning-arc',
     '#8fe060',
-    78,
+    'ability',
     { void_shard: 3 },
     "Bard's abilities come back {v}% sooner.",
     5,
@@ -596,7 +599,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'deepVein',
     'game-icons:foundry-bucket',
     '#e89840',
-    102,
+    'harvest',
     { solar_essence: 3 },
     'Planet harvesters gather {v}% faster.',
     6,
@@ -607,7 +610,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'tidewake',
     'game-icons:brick-pile',
     '#ffd0a0',
-    126,
+    'market',
     { nebula_quartz: 8, void_shard: 2 },
     'Building upgrades cost {v}% less.',
     4,
@@ -619,7 +622,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'timeWeaver',
     'game-icons:crystal-ball',
     '#ffb860',
-    150,
+    'fortune',
     { dark_matter: 1 },
     'Omens are offered {v}% more often.',
     6,
@@ -632,7 +635,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'warhost',
     'game-icons:podium',
     '#c060a0',
-    174,
+    'ladder',
     { void_shard: 3 },
     'A won match grants {v}% more LP.',
     6,
@@ -643,7 +646,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'riftshard',
     'game-icons:mineral-heart',
     '#f0b8e0',
-    198,
+    'boss',
     { void_shard: 4, dark_matter: 1 },
     'Planet bosses rise with {v}% less health.',
     5,
@@ -655,7 +658,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     'starquake',
     'game-icons:cash',
     '#e08cc8',
-    222,
+    'boss',
     { dark_matter: 1 },
     'Planet bosses pay {v}% more Chimes.',
     9,
@@ -682,7 +685,7 @@ function pact(
   parentId: string,
   icon: string,
   color: string,
-  angleDeg: number,
+  family: ForgeEffectFamily,
   materialCost: Record<string, number>,
   desc: string,
   effectPerLevel: number,
@@ -695,7 +698,7 @@ function pact(
     phase: FORGE_PACT_UNLOCK_PHASE,
     icon,
     color,
-    angleDeg,
+    family,
     baseCost: 2_000_000,
     costMultiplier: 3,
     materialCost,
@@ -711,7 +714,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'pathfindersOath',
     'game-icons:treasure-map',
     '#e8c040',
-    246,
+    'travel',
     { void_shard: 4, dark_matter: 1 },
     'New expedition offers appear {v}% sooner.',
     8,
@@ -722,7 +725,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'dreamersDraw',
     'game-icons:sundial',
     '#f0d878',
-    294,
+    'idle',
     { void_shard: 5, dark_matter: 1 },
     'Offline progress counts {v} hours longer.',
     2,
@@ -733,7 +736,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'wanderersBeacon',
     'game-icons:star-gate',
     '#ffe9a8',
-    270,
+    'travel',
     { dark_matter: 3 },
     'Champions cross to the next galaxy {v}% sooner.',
     8,
@@ -744,7 +747,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'gravityWell',
     'game-icons:mighty-force',
     '#e05050',
-    318,
+    'void',
     { void_shard: 5, dark_matter: 1 },
     'A rift that lands takes {v}% fewer meeps.',
     12,
@@ -755,7 +758,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'starwardensLantern',
     'game-icons:arena',
     '#ffb0b0',
-    342,
+    'star',
     { solar_essence: 6, dark_matter: 2 },
     'Resource stars carry {v} more planets.',
     1,
@@ -766,7 +769,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'riftAnchor',
     'game-icons:defensive-wall',
     '#ff8080',
-    6,
+    'void',
     { void_shard: 6, dark_matter: 1 },
     "A rift's aftermath fades {v}% sooner.",
     10,
@@ -777,7 +780,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'merchantsFavor',
     'game-icons:shop',
     '#52b830',
-    30,
+    'market',
     { nebula_quartz: 12, dark_matter: 1 },
     'Cosmic Bargains cost {v}% less.',
     10,
@@ -788,7 +791,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'almsOfTheKeeper',
     'game-icons:ascending-block',
     '#b0f090',
-    54,
+    'market',
     { solar_essence: 6, dark_matter: 2 },
     'The Cosmic Bargain restocks {v}% sooner.',
     8,
@@ -799,7 +802,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'chimeConduit',
     'game-icons:magic-swirl',
     '#8fe060',
-    78,
+    'ability',
     { void_shard: 5, dark_matter: 2 },
     "Bard's abilities strike {v}% harder.",
     8,
@@ -810,7 +813,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'quarrymastersEye',
     'game-icons:stone-block',
     '#e89840',
-    102,
+    'harvest',
     { solar_essence: 6, void_shard: 3 },
     'Planet bosses leave {v}% more material behind.',
     12,
@@ -821,7 +824,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'kilnSubsidy',
     'game-icons:brick-wall',
     '#ffd0a0',
-    126,
+    'market',
     { nebula_quartz: 14, dark_matter: 2 },
     'Building milestones arrive {v} levels sooner.',
     2,
@@ -832,7 +835,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'omenReader',
     'game-icons:third-eye',
     '#ffb860',
-    150,
+    'fortune',
     { dark_matter: 3 },
     'Omens ask {v}% less of you.',
     7,
@@ -843,7 +846,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'heraldsFavor',
     'game-icons:medallist',
     '#c060a0',
-    174,
+    'ladder',
     { void_shard: 5, dark_matter: 1 },
     'Honor tribute pays {v}% more.',
     12,
@@ -854,7 +857,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'hollowCore',
     'game-icons:extra-time',
     '#f0b8e0',
-    198,
+    'boss',
     { solar_essence: 6, dark_matter: 2 },
     "A boss's enrage clock runs {v}% longer.",
     10,
@@ -865,7 +868,7 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     'siegeReckoning',
     'game-icons:scales',
     '#e08cc8',
-    222,
+    'ladder',
     { void_shard: 6, dark_matter: 2 },
     'A defeat costs {v}% less LP.',
     10,
@@ -908,7 +911,7 @@ function bough(
   parentId: string,
   icon: string,
   color: string,
-  angleDeg: number,
+  family: ForgeEffectFamily,
   baseCost: number,
   desc: string,
   effectPerLevel: number,
@@ -923,7 +926,7 @@ function bough(
     phase: FORGE_BOUGH_UNLOCK_PHASE,
     icon,
     color,
-    angleDeg,
+    family,
     baseCost,
     costMultiplier: FORGE_BOUGH_COST_MULTIPLIER,
     materialCost: {},
@@ -939,7 +942,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'starroadPact',
     'game-icons:swap-bag',
     '#ffe9a8',
-    270,
+    'travel',
     2.0e9,
     'Expeditions pay an additional {v}% more.',
     9,
@@ -950,7 +953,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'longVigilPact',
     'game-icons:orbital',
     '#f0d878',
-    294,
+    'idle',
     1.5e9,
     'Offline earnings +{v}%.',
     8,
@@ -961,7 +964,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'wardensPact',
     'game-icons:round-star',
     '#ffb0b0',
-    342,
+    'star',
     2.2e9,
     'Resource stars linger an additional {v}% longer.',
     4,
@@ -972,7 +975,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'hollowPact',
     'game-icons:stone-sphere',
     '#e05050',
-    318,
+    'guard',
     1.8e9,
     'Maximum HP of the sun +{v}.',
     90,
@@ -983,7 +986,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'merchantsPact',
     'game-icons:coins',
     '#b0f090',
-    54,
+    'click',
     2.0e9,
     'Chimes per click +{v}%.',
     5,
@@ -994,7 +997,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'resonantPact',
     'game-icons:concentric-crescents',
     '#8fe060',
-    78,
+    'click',
     5.0e9,
     'Clicks gain +{v}% of your Chimes/Sec.',
     1,
@@ -1005,7 +1008,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'foundersPact',
     'game-icons:sands-of-time',
     '#ffd0a0',
-    126,
+    'income',
     4.0e9,
     'Chimes per second +{v}%.',
     3,
@@ -1016,7 +1019,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'honoredPact',
     'game-icons:winged-sword',
     '#c060a0',
-    174,
+    'combat',
     1.8e9,
     'Champions gain +{v}% experience.',
     8,
@@ -1027,7 +1030,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'patientPact',
     'game-icons:explosion-rays',
     '#f0b8e0',
-    198,
+    'combat',
     2.0e9,
     'Clicks splash an additional {v}% of their damage.',
     1.5,
@@ -1038,7 +1041,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'arbitersPact',
     'game-icons:burning-embers',
     '#e08cc8',
-    222,
+    'combat',
     2.5e9,
     'Damage against bosses +{v}%.',
     10,
@@ -1063,11 +1066,15 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'unbrokenPact',
     'game-icons:black-hole-bolas',
     '#ff8080',
-    6,
+    'void',
     1.6e9,
     'Void creatures you put down pay an additional {v}% more.',
     12,
-    [{ id: 'tidelessWatch', level: FORGE_CROWN_MAX_LEVEL }],
+    [
+      // Die Krone DERSELBEN Kette, gleich nebenan: was ihre Regel eröffnet
+      // hat, setzt dieser Ast ins Endlose fort.
+      { id: 'sealedThreshold', level: FORGE_CROWN_MAX_LEVEL },
+    ],
   ),
   bough(
     'brimmingCart',
@@ -1075,11 +1082,15 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'hagglersPact',
     'game-icons:cornucopia',
     '#52b830',
-    30,
+    'market',
     1.2e9,
     'Cosmic Bargain buffs last {v}% longer.',
     6,
-    [{ id: 'reclaimedBargain', level: FORGE_CROWN_MAX_LEVEL }],
+    [
+      // Die Krone DERSELBEN Kette, gleich nebenan: was ihre Regel eröffnet
+      // hat, setzt dieser Ast ins Endlose fort.
+      { id: 'reclaimedBargain', level: FORGE_CROWN_MAX_LEVEL },
+    ],
   ),
   bough(
     'rivenLode',
@@ -1087,11 +1098,15 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'prospectorsPact',
     'game-icons:ore',
     '#e89840',
-    102,
+    'harvest',
     2.4e9,
     'Planet bosses leave an additional {v}% more material behind.',
     7,
-    [{ id: 'rememberedWound', level: FORGE_CROWN_MAX_LEVEL }],
+    [
+      // Die Krone DERSELBEN Kette, gleich nebenan: was ihre Regel eröffnet
+      // hat, setzt dieser Ast ins Endlose fort.
+      { id: 'tirelessQuarry', level: FORGE_CROWN_MAX_LEVEL },
+    ],
   ),
   bough(
     'worldsBounty',
@@ -1099,11 +1114,15 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'augursPact',
     'game-icons:planet-core',
     '#ffb860',
-    150,
+    'harvest',
     3.0e9,
     'Planet harvesters bring up {v}% more.',
     5,
-    [{ id: 'tirelessQuarry', level: FORGE_CROWN_MAX_LEVEL }],
+    [
+      // Die Krone DERSELBEN Kette, gleich nebenan: was ihre Regel eröffnet
+      // hat, setzt dieser Ast ins Endlose fort.
+      { id: 'unfailingSign', level: FORGE_CROWN_MAX_LEVEL },
+    ],
   ),
   bough(
     'driftersDue',
@@ -1111,14 +1130,18 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
     'cartographersPact',
     'game-icons:falling-star',
     '#e8c040',
-    246,
+    'drifter',
     1.8e9,
     'A drifter you catch pays an additional {v}% more.',
     10,
     // Der LOHN und nicht die Boon-Dauer: die haeufigen Drifter kommen alle
     // 20–30 s bei 20–90 s Laufzeit, eine endlose Dauer liefe dort in volle
     // Abdeckung und waere ab da ein bezahltes Nichts. Der Lohn saettigt nicht.
-    [{ id: 'homewardSky', level: FORGE_CROWN_MAX_LEVEL }],
+    [
+      // Die Krone DERSELBEN Kette, gleich nebenan: was ihre Regel eröffnet
+      // hat, setzt dieser Ast ins Endlose fort.
+      { id: 'pilgrimsAccord', level: FORGE_CROWN_MAX_LEVEL },
+    ],
   ),
 ]
 
@@ -1173,7 +1196,7 @@ function crown(
   parentId: string,
   icon: string,
   color: string,
-  angleDeg: number,
+  family: ForgeEffectFamily,
   materialCost: Record<string, number>,
   desc: string,
   requires: readonly ForgeNodeRequirement[],
@@ -1189,7 +1212,7 @@ function crown(
     phase: FORGE_CROWN_UNLOCK_PHASE,
     icon,
     color,
-    angleDeg,
+    family,
     baseCost: FORGE_CROWN_BASE_COST,
     // Ohne Bedeutung — ein Crown hat genau eine Stufe, es gibt keine zweite,
     // deren Preis sich vervielfachen könnte.
@@ -1199,10 +1222,6 @@ function crown(
     effectPerLevel: 0,
   }
 }
-
-/** Der Ward derselben Speiche, auf seinem Pyre-Deckel — die Zusatzbedingung der
- *  fünf ALTEN Kronen. Eine Stelle, fünf Nutzer. */
-const ownWard = (id: string): ForgeNodeRequirement[] => [{ id, level: FORGE_CROWN_OWN_WARD_LEVEL }]
 
 export const FORGE_CROWNS: ForgeNodeDef[] = [
   /* ── Die fünf ALTEN: die eigene Achse bis nach unten ───────────────────────
@@ -1215,10 +1234,13 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'starroadPact',
     'game-icons:portal',
     '#ffe9a8',
-    270,
+    'travel',
     { solar_essence: 8, dark_matter: 3 },
     'A returning expedition opens the next passage at once.',
-    ownWard('wanderersBeacon'),
+    [
+      // EINE Wacht, die der eigenen Kette.
+      { id: 'wanderersBeacon', level: FORGE_CROWN_OWN_WARD_LEVEL },
+    ],
   ),
   crown(
     'wardensReprieve',
@@ -1226,10 +1248,14 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'hollowPact',
     'game-icons:heart-tower',
     '#ffb0b0',
-    318,
+    'guard',
     { moon_crystal: 40, dark_matter: 3 },
     'Once per star phase, a fallen sun returns at half health.',
-    ownWard('gravityWell'),
+    [
+      // ZWEI fremde Ketten — die lange Wacht und das Leuchtfeuer der Wanderer.
+      { id: 'longVigilPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'wanderersBeacon', level: FORGE_CONJUNCTION_WARD_LEVEL },
+    ],
   ),
   crown(
     'midasOverflow',
@@ -1237,10 +1263,13 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'merchantsPact',
     'game-icons:gold-nuggets',
     '#b0f090',
-    54,
+    'market',
     { nebula_quartz: 30, solar_essence: 6 },
     'Chimes past your hoard settle into stardust.',
-    ownWard('almsOfTheKeeper'),
+    [
+      // EINE Wacht, die der eigenen Kette.
+      { id: 'almsOfTheKeeper', level: FORGE_CROWN_OWN_WARD_LEVEL },
+    ],
   ),
   crown(
     'tidelessWatch',
@@ -1248,7 +1277,7 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'foundersPact',
     'game-icons:eclipse',
     '#ffd0a0',
-    126,
+    'void',
     { void_shard: 10, dark_matter: 4 },
     // Zwei Sätze, ein Gedanke: der Riss nimmt weniger, und was man ihm abnimmt,
     // zahlt mehr. Die Rückzahlung hängt am BOON eines erlegten Wesens und nicht
@@ -1256,7 +1285,10 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     // alle gleichzeitig stehenden Wesen auseinanderhalten und wäre eine Zahl,
     // die niemand nachprüfen kann.
     'The Void takes half as much, and every creature you slay pays double.',
-    ownWard('kilnSubsidy'),
+    [
+      // EINE Wacht, die der eigenen Kette.
+      { id: 'kilnSubsidy', level: FORGE_CROWN_OWN_WARD_LEVEL },
+    ],
   ),
   crown(
     'sunderersMark',
@@ -1264,10 +1296,13 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'patientPact',
     'game-icons:broken-shield',
     '#f0b8e0',
-    198,
+    'boss',
     { void_shard: 8, dark_matter: 4 },
     'A boss below half health pays you its toll instead of taking it.',
-    ownWard('hollowCore'),
+    [
+      // EINE Wacht, die der eigenen Kette.
+      { id: 'hollowCore', level: FORGE_CROWN_OWN_WARD_LEVEL },
+    ],
   ),
 
   /* ── Die fünf NEUEN: der Zusammenlauf zweier fremder Achsen ────────────────
@@ -1290,14 +1325,13 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'cartographersPact',
     'game-icons:tied-scroll',
     '#ffe9a8',
-    246,
+    'travel',
     { comet_ice: 16, dark_matter: 3 },
     'A failed expedition brings its materials home anyway.',
     [
-      // Material und Bewahrung: wer Fehlschläge bergen will, muss erst wissen,
-      // woher Material kommt — beide Vorgänger stehen auf fremden Achsen.
-      { id: 'cometMiner', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
-      { id: 'starwardensLantern', level: FORGE_CONJUNCTION_WARD_LEVEL },
+      // ZWEI fremde Ketten — das Urteil und der hohle Kern.
+      { id: 'arbitersPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'hollowCore', level: FORGE_CONJUNCTION_WARD_LEVEL },
     ],
   ),
   crown(
@@ -1306,12 +1340,14 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'wardensPact',
     'game-icons:anchor',
     '#ffb0b0',
-    342,
+    'star',
     { star_iron: 8, solar_essence: 8 },
     'A resource star cannot fade while you are fighting on it.',
     [
-      { id: 'solarSails', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
-      { id: 'quarrymastersEye', level: FORGE_CONJUNCTION_WARD_LEVEL },
+      // ZWEI fremde Ketten — der Handel und der Riss. Wer den Ort festhält,
+      // muss ihn erst bezahlt und dann gesichert haben.
+      { id: 'hagglersPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'riftAnchor', level: FORGE_CONJUNCTION_WARD_LEVEL },
     ],
   ),
   crown(
@@ -1323,12 +1359,15 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     // desselben Motivs ein. „Reclaimed" ist wörtlich ein Zurückkommen.
     'game-icons:cycle',
     '#b0f090',
-    30,
+    'market',
     { aether_dust: 1, nebula_quartz: 30 },
     'A Cosmic Bargain you let expire returns once, at half price.',
     [
-      { id: 'tidalDrift', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
-      { id: 'pathfindersOath', level: FORGE_CONJUNCTION_WARD_LEVEL },
+      // ALLE DREI Ketten dieses Clusters — Riss, Sternenwacht und der eigene
+      // Handel. Die dritte Fassung nimmt nicht mehr Stufen, sondern mehr Wege.
+      { id: 'unbrokenPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'wardensPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'merchantsFavor', level: FORGE_CONJUNCTION_WARD_LEVEL },
     ],
   ),
   crown(
@@ -1337,12 +1376,13 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'prospectorsPact',
     'game-icons:mine-wagon',
     '#8fe060',
-    102,
+    'harvest',
     { plasma_core: 2, void_shard: 10 },
     'Harvesters keep gathering for the first hour you are away.',
     [
-      { id: 'moonOrbit', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
-      { id: 'starboundCore', level: FORGE_CONJUNCTION_LEAF_LEVEL },
+      // ZWEI fremde Ketten — das Bündnis der Leitung und die Wacht des Handels.
+      { id: 'resonantPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'almsOfTheKeeper', level: FORGE_CONJUNCTION_WARD_LEVEL },
     ],
   ),
   crown(
@@ -1351,12 +1391,13 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'honoredPact',
     'game-icons:laurel-crown',
     '#c060a0',
-    174,
+    'ladder',
     { star_iron: 8, plasma_core: 2 },
     'A lost match pays its honor tribute in full.',
     [
-      { id: 'goldenEcho', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
-      { id: 'gravityWell', level: FORGE_CONJUNCTION_WARD_LEVEL },
+      // ZWEI fremde Ketten — das Omen-Bündnis und die Wacht der Flut.
+      { id: 'augursPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'kilnSubsidy', level: FORGE_CONJUNCTION_WARD_LEVEL },
     ],
   ),
 
@@ -1377,14 +1418,14 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'longVigilPact',
     'game-icons:polar-star',
     '#f0d878',
-    294,
+    'drifter',
     { comet_ice: 16, void_shard: 10 },
     'A drifter that crossed while you were away waits in the sky for your return.',
     [
-      // Was laenger steht, was die Zeit zaehlt, was zurueckkommt.
-      { id: 'wardensVigil', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
-      { id: 'timeWeaver', level: FORGE_CONJUNCTION_LEAF_LEVEL },
-      { id: 'chimeConduit', level: FORGE_CONJUNCTION_WARD_LEVEL },
+      // ALLE DREI Ketten — Sternenstraße, Hohlpakt und der eigene Traumzug.
+      { id: 'starroadPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'hollowPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'dreamersDraw', level: FORGE_CONJUNCTION_WARD_LEVEL },
     ],
   ),
   crown(
@@ -1393,13 +1434,12 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'unbrokenPact',
     'game-icons:closed-doors',
     '#ff8080',
-    6,
+    'void',
     { star_iron: 8, moon_crystal: 40 },
     "A rift that lands while another rift's aftermath still runs takes nothing from you.",
     [
-      { id: 'shatter', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
-      { id: 'echoChamber', level: FORGE_CONJUNCTION_LEAF_LEVEL },
-      { id: 'omenReader', level: FORGE_CONJUNCTION_WARD_LEVEL },
+      // EINE Wacht, und zwar die der eigenen Kette: dieser Weg ganz nach unten.
+      { id: 'riftAnchor', level: FORGE_CROWN_OWN_WARD_LEVEL },
     ],
   ),
   crown(
@@ -1408,13 +1448,14 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'resonantPact',
     'game-icons:aura',
     '#8fe060',
-    78,
+    'ability',
     { plasma_core: 2, nebula_quartz: 30 },
     "While a Bard ability's effect still runs, the Void cannot tear a rift.",
     [
-      { id: 'quickening', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
-      { id: 'auroraWake', level: FORGE_CONJUNCTION_LEAF_LEVEL },
-      { id: 'riftAnchor', level: FORGE_CONJUNCTION_WARD_LEVEL },
+      // ALLE DREI Ketten — Handel, Steinbruch und die eigene Leitung.
+      { id: 'merchantsPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'prospectorsPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'chimeConduit', level: FORGE_CONJUNCTION_WARD_LEVEL },
     ],
   ),
   crown(
@@ -1423,13 +1464,14 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'augursPact',
     'game-icons:sunbeams',
     '#ffb860',
-    150,
+    'fortune',
     { aether_dust: 1, solar_essence: 8 },
     'While an omen reward runs, the sun cannot fall below half its health.',
     [
-      { id: 'regeneration', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
-      { id: 'wanderersCrest', level: FORGE_CONJUNCTION_LEAF_LEVEL },
-      { id: 'heraldsFavor', level: FORGE_CONJUNCTION_WARD_LEVEL },
+      // ALLE DREI Ketten — Bauwerk, Ehre und der eigene Omen-Leser.
+      { id: 'foundersPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'honoredPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'omenReader', level: FORGE_CONJUNCTION_WARD_LEVEL },
     ],
   ),
   crown(
@@ -1438,18 +1480,168 @@ export const FORGE_CROWNS: ForgeNodeDef[] = [
     'arbitersPact',
     'game-icons:scar-wound',
     '#e08cc8',
-    222,
+    'boss',
     { comet_ice: 16, star_iron: 8 },
     'A planet boss that escapes you rises again already wounded.',
     [
-      { id: 'resonance', level: FORGE_CONJUNCTION_BRANCH_LEVEL },
-      { id: 'deepVein', level: FORGE_CONJUNCTION_LEAF_LEVEL },
-      { id: 'dreamersDraw', level: FORGE_CONJUNCTION_WARD_LEVEL },
+      // ALLE DREI Ketten — Geduld, Kartenwerk und die eigene Belagerung.
+      { id: 'patientPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'cartographersPact', level: FORGE_CONJUNCTION_PACT_LEVEL },
+      { id: 'siegeReckoning', level: FORGE_CONJUNCTION_WARD_LEVEL },
     ],
   ),
 ]
 
 /** Alle 90 Knoten der Ringe 2–7, in Ringreihenfolge von innen nach aussen. */
+
+/* ══ GLIMMERS — die kleinen Knoten zwischen den grossen ═════════════════════
+ *
+ * Sechzig Stück, und sie tun drei Dinge auf einmal, die der Baum vorher nicht
+ * konnte:
+ *
+ *   1. **Sie füllen die Fläche.** Auf einer Bühne von 2000 px standen
+ *      fünfundneunzig Knoten verloren; mit hundertfünfundfünfzig ist sie ein
+ *      Netz.
+ *   2. **Sie mischen die Wirkungen.** Ein Glimmer hängt an dem einen Knoten und
+ *      zahlt auf einen ANDEREN — `parentId` sagt, was ihn aufschliesst,
+ *      `boosts` sagt, worauf er wirkt, und dass beides auseinanderfällt, ist
+ *      der Punkt. Der kleine Knoten am Kampfast zahlt auf die Wirtschaft.
+ *   3. **Sie sind sofort fertig.** Drei Stufen, kein Material, ein Zehntel des
+ *      Preises daneben. Ein Weg soll begehbar sein, nicht selbst ein Vorhaben.
+ *
+ * **Sie erfinden keine einzige neue Achse.** Jeder zahlt auf eine Zahl, die es
+ * schon gibt, in derselben Einheit — `starForgeStore.glimmerBoost()` addiert
+ * ihn dort, wo die Wirkung ohnehin entsteht. Sechzig neue Getter wären sechzig
+ * neue Verdrahtungen und ebenso viele Stellen, an denen etwas nicht ankommt.
+ *
+ * **Worauf keiner zeigen darf:** eine Achse mit `FORGE_MIN_*`-Boden.
+ * `forgeRingReach.spec.ts` bindet, dass jeder dieser Böden bei Vollausbau GENAU
+ * erreicht wird — ein Glimmer darüber wäre eine tote Stufe, die aussieht wie
+ * eine lebendige. `forgeMixing.spec.ts` rechnet die Liste nach.
+ */
+/**
+ * Nachschlagetabelle NUR fuer die Fabrik unten.
+ *
+ * `getForgeNode()` geht nicht: es liest `FORGE_NODE_BY_ID`, und das entsteht
+ * erst aus `FORGE_NODES` — also nach diesem Block. Ein Glimmer braucht sein
+ * Ziel aber schon beim Bauen (Farbe und Beschreibungssatz kommen von dort).
+ * Die sechs Raenge darueber sind zu diesem Zeitpunkt vollstaendig; mehr braucht
+ * es nicht, weil ein Glimmer nie auf einen anderen Glimmer zeigt.
+ */
+const GLIMMER_TARGETS = new Map<string, ForgeNodeDef>(
+  [
+    ...FORGE_BRANCHES,
+    ...FORGE_LEAVES,
+    ...FORGE_WARDS,
+    ...FORGE_PACTS,
+    ...FORGE_BOUGHS,
+    ...FORGE_CROWNS,
+  ].map((def) => [def.id, def]),
+)
+
+function glimmer(
+  id: string,
+  name: string,
+  parentId: string,
+  boosts: string,
+  family: ForgeEffectFamily,
+  effectPerLevel: number,
+  phase: number,
+  parentBaseCost: number,
+): ForgeNodeDef {
+  const target = GLIMMER_TARGETS.get(boosts)
+  return {
+    id,
+    name,
+    parentId,
+    tier: 'glimmer',
+    // Die Phase seiner ZONE, nicht eine eigene Sprosse der Leiter. Ein Glimmer
+    // geht auf, wenn der Ort aufgeht, an dem er liegt.
+    phase,
+    // Ein Glyph je FAMILIE statt eines je Knoten: was einen Weg interessant
+    // macht, ist nicht seine Identität, sondern wohin er zahlt.
+    icon: FORGE_GLIMMER_FAMILY_ICON[family],
+    // Die Farbe des ZIELS — man sieht dem kleinen Knoten an, welchen grossen er
+    // speist, noch bevor man auf ihn zeigt.
+    color: target?.color ?? '#9fb4c8',
+    family,
+    // Kein eigenes Preisliteral: ein Anteil am Preis des Knotens, an dem er
+    // hängt. Wird eine Phase später neu geeicht, wandern die sechzig von selbst
+    // mit.
+    baseCost: Math.round(parentBaseCost * FORGE_GLIMMER_BASE_COST_SHARE),
+    costMultiplier: FORGE_GLIMMER_COST_MULTIPLIER,
+    // Ausdrücklich LEER. Material ist der Taktgeber der grossen Ringe; ein Weg,
+    // für den man erst sammeln muss, ist kein Weg.
+    materialCost: {},
+    desc: target ? `Adds {v} to ${target.name}.` : 'Adds {v}.',
+    effectPerLevel,
+    boosts,
+  }
+}
+
+export const FORGE_GLIMMERS: ForgeNodeDef[] = [
+  glimmer('emberTithe', 'Ember Tithe', 'aegis', 'gildedHarvest', 'click', 2, 0, 2200),
+  glimmer('vigilSpark', 'Vigil Spark', 'wardensVigil', 'regeneration', 'guard', 0.15, 0, 5000),
+  glimmer('quarryGleam', 'Quarry Gleam', 'cometMiner', 'tidalDrift', 'income', 2, 0, 1600),
+  glimmer('sunlitDust', 'Sunlit Dust', 'gildedHarvest', 'wardensVigil', 'star', 2, 0, 7000),
+  glimmer('tideEcho', 'Tide Echo', 'tidalDrift', 'sunderingWake', 'combat', 1, 0, 8000),
+  glimmer('hourGrain', 'Hour Grain', 'quickening', 'moonOrbit', 'idle', 3, 0, 2400),
+  glimmer('marchEmber', 'March Ember', 'shatter', 'wayfindersCache', 'travel', 4, 0, 2000),
+  glimmer('sailSplinter', 'Sail Splinter', 'solarSails', 'shatter', 'combat', 2.5, 0, 1500),
+  glimmer('sailGlint', 'Sail Glint', 'wayfindersCache', 'resonance', 'click', 0.6, 0, 5000),
+  glimmer('moonSilt', 'Moon Silt', 'moonOrbit', 'resonance', 'click', 0.6, 0, 2000),
+  glimmer('gladeSpark', 'Glade Spark', 'echoingBulwark', 'wardensVigil', 'star', 2, 1, 25000),
+  glimmer('hollowGleam', 'Hollow Gleam', 'sunlitTrove', 'moonOrbit', 'idle', 3, 1, 250000),
+  glimmer('veinGrain', 'Vein Grain', 'deepVein', 'gildedHarvest', 'click', 2, 1, 25000),
+  glimmer('wakeEmber', 'Wake Ember', 'tidewake', 'shatter', 'combat', 2.5, 1, 250000),
+  glimmer('stormGlint', 'Storm Glint', 'warhost', 'wayfindersCache', 'travel', 4, 1, 25000),
+  glimmer('weftSilt', 'Weft Silt', 'timeWeaver', 'tidalDrift', 'income', 2, 1, 25000),
+  glimmer('duskSpark', 'Dusk Spark', 'auroraWake', 'sunderingWake', 'combat', 1, 1, 25000),
+  glimmer('crestGleam', 'Crest Gleam', 'wanderersCrest', 'regeneration', 'guard', 0.15, 1, 250000),
+  glimmer('tideGrain', 'Tide Grain', 'midnightTide', 'resonance', 'click', 0.6, 1, 25000),
+  glimmer('bloomEmber', 'Bloom Ember', 'vitalBloom', 'moonOrbit', 'idle', 3, 1, 25000),
+  glimmer('anchorGlint', 'Anchor Glint', 'riftAnchor', 'wardensVigil', 'star', 2, 2, 120000),
+  glimmer('lanternSilt', 'Lantern Silt', 'merchantsFavor', 'gildedHarvest', 'click', 2, 2, 120000),
+  glimmer('almsSpark', 'Alms Spark', 'almsOfTheKeeper', 'heraldsFavor', 'ladder', 0.5, 2, 200000),
+  glimmer('conduitGrain', 'Conduit Grain', 'chimeConduit', 'tidalDrift', 'income', 2, 2, 120000),
+  glimmer('kilnGleam', 'Kiln Gleam', 'kilnSubsidy', 'siegeReckoning', 'boss', 0.8, 2, 200000),
+  glimmer('omenSilt', 'Omen Silt', 'omenReader', 'sunderingWake', 'combat', 1, 2, 120000),
+  glimmer('coreEmber', 'Core Ember', 'hollowCore', 'heraldsFavor', 'ladder', 0.5, 2, 200000),
+  glimmer('oathGlint', 'Oath Glint', 'pathfindersOath', 'wayfindersCache', 'travel', 4, 2, 120000),
+  glimmer('beaconSpark', 'Beacon Spark', 'wanderersBeacon', 'siegeReckoning', 'boss', 0.8, 2, 200000),
+  glimmer('wellGrain', 'Well Grain', 'gravityWell', 'regeneration', 'guard', 0.15, 2, 120000),
+  glimmer('vaultGleam', 'Vault Gleam', 'unbrokenPact', 'resonantPact', 'ability', 0.5, 3, 2000000),
+  glimmer('wardSilt', 'Ward Silt', 'wardensPact', 'prospectorsPact', 'harvest', 0.8, 3, 2000000),
+  glimmer('haggleEmber', 'Haggle Ember', 'hagglersPact', 'honoredPact', 'ladder', 0.8, 3, 2000000),
+  glimmer('loomGlint', 'Loom Glint', 'merchantsPact', 'longVigilPact', 'idle', 0.1, 3, 2000000),
+  glimmer('chordSpark', 'Chord Spark', 'resonantPact', 'siegeReckoning', 'boss', 0.8, 3, 2000000),
+  glimmer('lodeGrain', 'Lode Grain', 'prospectorsPact', 'shatter', 'combat', 2.5, 3, 2000000),
+  glimmer('foundGleam', 'Found Gleam', 'foundersPact', 'prospectorsPact', 'harvest', 0.8, 3, 2000000),
+  glimmer('augurSilt', 'Augur Silt', 'augursPact', 'heraldsFavor', 'ladder', 0.5, 3, 2000000),
+  glimmer('honorEmber', 'Honor Ember', 'honoredPact', 'resonantPact', 'ability', 0.5, 3, 2000000),
+  glimmer('patientGlint', 'Patient Glint', 'patientPact', 'honoredPact', 'ladder', 0.8, 3, 2000000),
+  glimmer('arbiterSpark', 'Arbiter Spark', 'arbitersPact', 'longVigilPact', 'idle', 0.1, 3, 2000000),
+  glimmer('chartGrain', 'Chart Grain', 'cartographersPact', 'honoredPact', 'ladder', 0.8, 3, 2000000),
+  glimmer('roadGleam', 'Road Gleam', 'starroadPact', 'longVigilPact', 'idle', 0.1, 3, 2000000),
+  glimmer('vigilSilt', 'Vigil Silt', 'longVigilPact', 'prospectorsPact', 'harvest', 0.8, 3, 2000000),
+  glimmer('hollowEmber', 'Hollow Ember', 'hollowPact', 'resonantPact', 'ability', 0.5, 3, 2000000),
+  glimmer('summitSpark', 'Summit Spark', 'sealedThreshold', 'darkTithe', 'void', 3.0, 4, 25000000000),
+  glimmer('stillGrain', 'Still Grain', 'stillpoint', 'kindledVigil', 'star', 1.0, 4, 25000000000),
+  glimmer('cartGlint', 'Cart Glint', 'reclaimedBargain', 'brimmingCart', 'market', 1.5, 4, 25000000000),
+  glimmer('spireGleam', 'Spire Gleam', 'midasOverflow', 'gildedCascade', 'click', 1.25, 4, 25000000000),
+  glimmer('veilSilt', 'Veil Silt', 'sanctumVeil', 'deepResonance', 'click', 0.25, 4, 25000000000),
+  glimmer('quarryEmber', 'Quarry Ember', 'tirelessQuarry', 'rivenLode', 'harvest', 1.75, 4, 25000000000),
+  glimmer('watchGlint', 'Watch Glint', 'tidelessWatch', 'endlessTide', 'income', 0.75, 4, 25000000000),
+  glimmer('signSpark', 'Sign Spark', 'unfailingSign', 'worldsBounty', 'harvest', 1.25, 4, 25000000000),
+  glimmer('tributeGrain', 'Tribute Grain', 'steadfastTribute', 'eternalHost', 'combat', 2.0, 4, 25000000000),
+  glimmer('markGleam', 'Mark Gleam', 'sunderersMark', 'rendingArc', 'combat', 0.38, 4, 25000000000),
+  glimmer('woundSilt', 'Wound Silt', 'rememberedWound', 'undyingWrath', 'combat', 2.5, 4, 25000000000),
+  glimmer('accordEmber', 'Accord Ember', 'pilgrimsAccord', 'driftersDue', 'drifter', 2.5, 4, 25000000000),
+  glimmer('gateGlint', 'Gate Glint', 'wanderersGate', 'wayfarersHoard', 'travel', 2.25, 4, 25000000000),
+  glimmer('skySpark', 'Sky Spark', 'homewardSky', 'sleeplessOrbit', 'idle', 2.0, 4, 25000000000),
+  glimmer('repriveGrain', 'Reprieve Grain', 'wardensReprieve', 'adamantCore', 'guard', 22.5, 4, 25000000000),
+]
+
 export const FORGE_NODES: ForgeNodeDef[] = [
   ...FORGE_BRANCHES,
   ...FORGE_LEAVES,
@@ -1457,6 +1649,14 @@ export const FORGE_NODES: ForgeNodeDef[] = [
   ...FORGE_PACTS,
   ...FORGE_CROWNS,
   ...FORGE_BOUGHS,
+  /*
+   * Die Glimmers stehen ZULETZT, und das ist Spiellogik, keine Ordnungsliebe.
+   * `starForgeStore.adminMaxAll()` arbeitet dieses Array in Reihenfolge ab und
+   * prueft `nodeUnlocked` gar nicht — es verlaesst sich darauf, dass jeder
+   * Vorgaenger vorher dran war. Ein Glimmer haengt an einem grossen Knoten und
+   * muss deshalb nach ihm kommen; `forgeMixing.spec.ts` bindet die Ordnung.
+   */
+  ...FORGE_GLIMMERS,
 ]
 
 /**

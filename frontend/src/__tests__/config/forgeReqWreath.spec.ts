@@ -6,7 +6,7 @@ import {
   FORGE_REQ_DOT_SIZE,
   FORGE_REQ_DOT_PITCH_DEG,
   FORGE_SPOTLIGHT_NODE_SCALE,
-  FORGE_SCATTER_MIN_AIR_PX,
+  FORGE_MIN_AIR_PX,
 } from '@/config/constants'
 import { FORGE_NODES } from '@/config/progression/starForge'
 import type { ForgeNodeTier } from '@/types'
@@ -125,8 +125,8 @@ describe('Star Forge — der Bedingungs-Kranz stösst nirgends an', () => {
   })
 
   it('frisst die Luft zwischen zwei Knoten nicht auf', () => {
-    // Die Streuung garantiert `FORGE_SCATTER_MIN_AIR_PX` zwischen zwei Kreisen.
+    // Der Platzierer garantiert `FORGE_MIN_AIR_PX` zwischen zwei Kreisen.
     // Zwei benachbarte Kränze zehren von beiden Seiten davon.
-    expect(2 * DOT_HALF).toBeLessThan(FORGE_SCATTER_MIN_AIR_PX)
+    expect(2 * DOT_HALF).toBeLessThan(FORGE_MIN_AIR_PX)
   })
 })

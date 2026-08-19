@@ -368,6 +368,7 @@ export function usePersistence() {
         wardLevels: { ...starForgeStore.wardLevels },
         pactLevels: { ...starForgeStore.pactLevels },
         boughLevels: { ...starForgeStore.boughLevels },
+        glimmerLevels: { ...starForgeStore.glimmerLevels },
         crownLevels: { ...starForgeStore.crownLevels },
         relicLevels: { ...starForgeStore.relicLevels },
         forgedConstellations: [...starForgeStore.forgedConstellations],
@@ -983,6 +984,10 @@ export function usePersistence() {
         starForgeStore.wardLevels = migratedIdMap(saved.starForge.wardLevels)
         starForgeStore.pactLevels = migratedIdMap(saved.starForge.pactLevels)
         starForgeStore.boughLevels = migratedIdMap(saved.starForge.boughLevels)
+        // Fehlt der Schluessel in einem alten Stand, bleibt der Beutel leer —
+        // kein Sonderfall noetig, `migratedIdMap` gibt fuer `undefined` ein
+        // leeres Objekt zurueck.
+        starForgeStore.glimmerLevels = migratedIdMap(saved.starForge.glimmerLevels)
         starForgeStore.crownLevels = migratedIdMap(saved.starForge.crownLevels)
         starForgeStore.relicLevels = migratedIdMap(saved.starForge.relicLevels)
         starForgeStore.forgedConstellations = migratedIds(saved.starForge.forgedConstellations)

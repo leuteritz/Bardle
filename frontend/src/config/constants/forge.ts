@@ -1,7 +1,13 @@
 // Star Forge (Sonnen-Baum aus Roots, Branches und Leaves samt Relikten,
 // Konstellationen und Schnäppchen) und der Meep Skill Tree.
 
-import type { ForgeBargainKind, ForgeRelicRarity, ForgeSectionDef, ForgeUpgradeTier } from '@/types'
+import type {
+  ForgeBargainKind,
+  ForgeEffectFamily,
+  ForgeRelicRarity,
+  ForgeSectionDef,
+  ForgeUpgradeTier,
+} from '@/types'
 
 // ── Meep Skill Tree: die Orbit-Bühne (SkillTreeComponent / MeepOrbitStage) ──
 //
@@ -274,29 +280,37 @@ export const FORGE_ROOT_ANGLES_DEG = {
   chimesPerSecond: 126,
   dmgPerClick: 198,
 } as const
-/** Icon-Kantenlänge je Knotenstufe. */
-export const FORGE_ICON_SIZE_ROOT = 28
-export const FORGE_ICON_SIZE_BRANCH = 22
-export const FORGE_ICON_SIZE_LEAF = 18
-/**
- * Die zwei mittleren Ringe liegen mit 20 px eine Stufe ÜBER dem Blatt und
- * gleichauf mit dem Bough. 18 wäre die Untergrenze, ab der `game-icons` zu Grau
- * zerfallen — dort steht schon das Blatt, und zwei Ringe auf der Kante wären
- * einer zu viel. Ihre Knoten sind mit ⌀ 40 auch grösser als das Blatt (38).
- */
-export const FORGE_ICON_SIZE_WARD = 20
-export const FORGE_ICON_SIZE_PACT = 20
-export const FORGE_ICON_SIZE_BOUGH = 20
-/**
- * Ring 6 trägt das GRÖSSTE Glyph nach dem Kern — grösser als der Zweig darunter
- * und fast so gross wie ein Strahl.
+/* ── Icon-Kantenlänge je Knotenstufe ───────────────────────────────
  *
- * Das ist keine Zierde: es sind fünf Knoten weit aussen, jeder nur einmal zu
- * haben und jeder mit einer Regel dahinter. In Bough-Grösse (20) verschwänden
- * sie am Rand einer Bühne, die `useFitScale` auf Full HD ohnehin auf rund 60 %
- * herunterzieht — und ausgerechnet der seltenste Ring wäre der unscheinbarste.
+ * Alle sieben sind mit dem Netz GEWACHSEN, und zwar aus einem Grund, der keine
+ * Geschmacksfrage ist: die Bühne wird nicht mehr in die Spalte eingepasst, ein
+ * Bühnenpixel ist bei Standardzoom ein Bildschirmpixel. Vorher zog `fitScale`
+ * auf Full HD alles auf rund 60 % herunter — ein 22-px-Glyph kam als 13 px an
+ * und lag damit unter der 18-px-Grenze, ab der `game-icons` zu Grau zerfallen.
+ * Jetzt kommt an, was hier steht, und die Zahlen sind entsprechend die ECHTEN
+ * Anzeigegrössen.
  */
-export const FORGE_ICON_SIZE_CROWN = 26
+export const FORGE_ICON_SIZE_ROOT = 32
+export const FORGE_ICON_SIZE_BRANCH = 28
+export const FORGE_ICON_SIZE_LEAF = 24
+export const FORGE_ICON_SIZE_WARD = 26
+export const FORGE_ICON_SIZE_PACT = 26
+export const FORGE_ICON_SIZE_BOUGH = 26
+/**
+ * Ring 6 trägt das GRÖSSTE Glyph nach dem Kern. Fünf Knoten, jeder nur einmal
+ * zu haben, jeder mit einer Regel dahinter — sie sollen als Ziel lesbar sein,
+ * nicht als weiterer Punkt am Weg.
+ */
+export const FORGE_ICON_SIZE_CROWN = 34
+/**
+ * Das Glyph eines Glimmers — 18 px, und das ist eine GRENZE, keine Wahl.
+ *
+ * Bei genau 18 zerfallen verschnörkelte `game-icons` zu Grau (CLAUDE.md,
+ * „Icons"). Die sechzig Glimmers tragen deshalb ausschliesslich gefüllte,
+ * geometrische Sets (`ph`, `material-symbols`, `ri`) — nicht als Notlösung,
+ * sondern weil das die Regel für diese Grösse ist.
+ */
+export const FORGE_ICON_SIZE_GLIMMER = 18
 /**
  * Luft an JEDER Seite beim Einpassen des Baums.
  *
@@ -335,116 +349,46 @@ export const FORGE_BODY_EDGE_FRACTION = { star: 1, comet: 0.76, blackHole: 1 } a
  */
 export const FORGE_SUN_EDGE_GAP = 8
 
-/* ── Die STREUUNG: warum der Baum kein Zifferblatt mehr ist ───────────────────
+/* ── Was hier stand: die STREUUNG ──────────────────────────────────
  *
- * Bis hierher sass jeder Knoten auf einer von fünfzehn Speichen im 24°-Raster —
- * in `config/progression/starForge.ts` erbt jedes Kind den `angleDeg` seines
- * Elternteils, und die Winkelmenge war über alle sieben Ebenen dieselbe. Sieben
- * Ringe mal fünfzehn Speichen lasen sich als Zielscheibe, nicht als Baum.
+ * Fünf Konstanten verdrehten jeden Ring gegen seinen Nachbarn und versetzten
+ * darin jeden Knoten einzeln — ein Mittel gegen ein Raster, das es gab. Sie
+ * sind mit dem Raster gefallen. Was ihre Aufgabe übernommen hat, steht oben
+ * unter „Die RELAXATION": Federn entlang der Kanten, Abstossung zwischen zu
+ * nahen Knoten, feste Rundenzahl.
  *
- * Gemessen war der Baum dabei RADIAL eng und TANGENTIAL verschwenderisch:
- *
- *   entlang einer Speiche (Ring → Ring)   12–13 px Luft zwischen zwei Rändern
- *   zum Nachbarn auf demselben Ring       46–164 px
- *
- * Die Ringradien sind am Anschlag (siehe die Tabelle an `FORGE_RING_BOUGH_R`:
- * der äusserste Knoten steht bei 517 gegen die Bühnenhälfte 520). Mehr Platz
- * kann also NICHT aus grösseren Radien kommen — er muss aus der tangentialen
- * Reserve kommen. Genau das leistet ein Winkelversatz: er löst das Raster auf
- * UND verlängert den Weg von einem Knoten zu seinem Kind, in einem Zug.
- *
- * Gerechnet wird das alles in `utils/ui/forgeTreeLayout.ts`, einmal beim ersten
- * Aufruf, geseedet aus Ebenennamen und Knoten-ID. Die Basiswinkel im Katalog
- * bleiben unverändert — sie sind der Ausgangspunkt, nicht das Ergebnis.
- *
- * Es sind ZWEI Schritte, und der erste trägt den Zugewinn:
- *
- *   1. jeder RING wird als Ganzes verdreht, gegen seinen Nachbarn
- *   2. jeder KNOTEN wird darin einzeln versetzt
- *
- * Nur Schritt 2 hätte den Abstand bloss erhalten, nicht vergrössert: wer sich
- * von einem Nachbarn entfernt, nähert sich dem nächsten. Erst Schritt 1 nimmt
- * das Kind aus der radialen Deckung seines Elternteils.
+ * Der Unterschied ist nicht die Technik, sondern was gemessen wird. Die
+ * Streuung fragte „liegt dieser Knoten weit genug von seiner Speiche?" — eine
+ * Frage über das Raster. Die Relaxation fragt „hält dieses Paar seine Luft, und
+ * ist diese Kante kurz genug?" — eine Frage über das Bild.
  */
 /**
- * Wie weit ein ganzer Ring gegen die Katalogwinkel verdreht werden darf.
- * Ein halber Speichenabstand — mehr wäre dieselbe Stellung mit anderem Namen.
- */
-export const FORGE_RING_ROTATE_MAX_DEG = 12
-/**
- * Wie weit zwei BENACHBARTE Ringe mindestens gegeneinander stehen müssen.
+ * Der Durchmesser eines Knotens je Ebene — in ECHTEN Bildschirmpixeln bei
+ * Standardzoom, seit die Bühne nicht mehr eingepasst wird.
  *
- * Das ist die Zahl, die den Platz schafft. Gemessen als Luft zwischen den
- * Rändern des engsten Paares (Wurzel ⌀ 56 auf 158, Zweig ⌀ 46 auf 221):
+ * Alle sieben sind gewachsen (46 → 54 beim Zweig, 38 → 46 beim Blatt), und zwar
+ * genau um den Faktor, den `fitScale` vorher wieder abgezogen hat. Der Knoten
+ * ist damit auf dem Schirm so gross wie eh und je — nur steht die Zahl jetzt
+ * hier statt in einer Skalierung, die vom Fenster abhing.
  *
- *   deckungsgleich (heute)   12,0 px      ← Wurzel/Zweig, Hut/Ast, Wacht/Pakt
- *   8° versetzt              17,2 px
- *   12° versetzt             23,1 px
+ * `glimmer` ist der einzige, der klein sein SOLL: er ist ein Weg, kein Ziel.
+ * 34 px gegen 46–64 der übrigen — gross genug für sein 18-px-Glyph, klein
+ * genug, dass eine Kette aus fünf davon als Linie liest und nicht als Reihe
+ * von Zielen.
  *
- * Bei 8 bleibt der Differenz noch ein Drittel des Speichenabstands als Spiel
- * (8…16 statt fest 12) — der Versatz ist gefordert, aber nicht vorgeschrieben,
- * und zwei Ringe stehen nie in derselben Beziehung wie zwei andere.
- */
-export const FORGE_RING_DEALIGN_MIN_DEG = 8
-/**
- * Wie weit ein Knoten von der Speiche seines Rings abweichen darf.
- *
- * Der halbe Speichenabstand ist 12°. Bei 9 behält der Ring seine REIHENFOLGE:
- * ein Knoten wandert nie an seinem Nachbarn vorbei, und die Zuordnung Kind →
- * Elternteil bleibt auch ohne die Linie erkennbar. Bei 12 wären zwei Nachbarn
- * deckungsgleich, bei mehr überholten sie sich.
- */
-export const FORGE_SCATTER_ANGLE_DEG = 9
-/**
- * Wie weit ein Knoten seinen Ring nach innen oder aussen verlassen darf.
- *
- * Obergrenze ist das Kammband des Tiefenfelds: `FORGE_DEPTH_CREST_SPREAD`
- * (0,045) mal Bühnenradius (520) sind ±23,4 px. Mit 12 bleibt jeder Knoten in
- * der Farbe seiner Ebene — verliesse er sie, stünde er auf dem Kamm der
- * Nachbarebene und der Ring-Filter-Chip zeigte auf die falsche Zone.
- */
-export const FORGE_SCATTER_RADIUS_PX = 12
-/**
- * Die Luft, die ein Kandidat zu ALLEN schon gesetzten Knoten halten soll.
- *
- * Angestrebt, nicht garantiert: genommen wird der ERSTE Kandidat, der sie
- * erreicht. Erreicht keiner sie, gewinnt der beste, der wenigstens
- * `FORGE_SCATTER_MIN_AIR_PX` hält.
- */
-export const FORGE_SCATTER_TARGET_AIR_PX = 24
-/**
- * Die HARTE Untergrenze — kein Kandidat, der sie verletzt, wird je genommen.
- *
- * Sie liegt unter der Luft, die die Ringverdrehung allein schon liefert (17,2
- * px im engsten Paar). Damit ist der ungestreute Platz IMMER ein gültiger
- * Kandidat, und der Baum kann durch die Streuung nicht enger werden, als er
- * ohne sie wäre — geprüft in `forgeTreeLayout.spec.ts`.
- */
-export const FORGE_SCATTER_MIN_AIR_PX = 15
-/**
- * Kandidaten je Knoten. Genommen wird der ERSTE brauchbare, nicht der beste:
- * eine Maximierung verteilte die Knoten wieder gleichmässig und schüfe damit
- * ein neues Muster — genau das, was hier verschwinden soll.
- */
-export const FORGE_SCATTER_TRIES = 24
-/**
- * Der Durchmesser eines Knotens je Ebene.
- *
- * Stand bis hierher zweimal: als Literal im scoped CSS von `ForgeTreePanel.vue`
- * und als abgeschriebene Tabelle in `__tests__/config/forgeGeometry.spec.ts`.
- * Die Doppelung war begründet, solange die Grösse reine Darstellung war — mit
- * der Streuung ist sie es nicht mehr: der Platzierer BRAUCHT sie, um zu
- * entscheiden, ob zwei Knoten sich berühren. Also steht sie hier, das CSS
- * bindet sie per `v-bind`, und die Spec importiert sie.
+ * Die Tabelle ist zugleich die Rechengrundlage des Platzierers: er entscheidet
+ * damit, ob zwei Knoten sich berühren. Das CSS bindet sie per `v-bind`, die
+ * Specs importieren sie — eine Quelle, drei Nutzer.
  */
 export const FORGE_NODE_DIAMETER: Record<ForgeUpgradeTier, number> = {
-  root: 56,
-  branch: 46,
-  leaf: 38,
-  ward: 40,
-  pact: 40,
-  crown: 50,
-  bough: 42,
+  root: 64,
+  branch: 54,
+  leaf: 46,
+  ward: 48,
+  pact: 48,
+  crown: 60,
+  bough: 48,
+  glimmer: 34,
 }
 
 /* ── Die ÄSTE: gekrümmt und nach aussen dünner ────────────────────────────────
@@ -464,13 +408,14 @@ export const FORGE_LIMB_BOW_MIN = 0.35
  * zeigen.
  */
 export const FORGE_LIMB_WIDTH: Record<ForgeUpgradeTier, number> = {
-  root: 5,
-  branch: 4.2,
-  leaf: 3.4,
-  ward: 3,
-  pact: 2.7,
-  crown: 2.7,
-  bough: 2.4,
+  root: 6,
+  branch: 5,
+  leaf: 4.2,
+  ward: 3.8,
+  pact: 3.4,
+  crown: 3.4,
+  bough: 3,
+  glimmer: 2.4,
 }
 /** Der gefärbte Ast über dem Grundast. 2,5 zu 4 war das bisherige Verhältnis. */
 export const FORGE_LIMB_LIT_FACTOR = 0.62
@@ -852,95 +797,203 @@ export const MEEP_SPOTLIGHT_DIM_OPACITY = 0.3
 /** Dauer des einmaligen Rings, der beim Erscheinen der Marke aufgeht und vergeht. */
 export const MEEP_SPOTLIGHT_PING_MS = 450
 
-// ── Star Forge (Shop tab) ─────────────────────────────────────────────────────
-// Tree geometry — the tree lives on a square stage, nodes placed on 7 polar rings.
-/**
- * Gewachsen von 820, als der Bough-Ring dazukam. Bei 1040 GEBLIEBEN, als Ring 5
- * dazukam — und ein zweites Mal geblieben, als Ring 6 und 7 dazukamen. Das ist
- * der eigentliche Inhalt dieses Kommentars.
+// ── Star Forge (Shop tab): das NETZ ────────────────────────────────
+/*
+ * Hier standen sieben Ringradien und ein Speichenabstand — fünfzehn Winkel im
+ * 24°-Raster, sieben konzentrische Kreise, und jeder Knoten auf einem
+ * Kreuzungspunkt. Das las sich als Zielscheibe, nicht als Baum, und es hatte
+ * drei Folgen, die einzeln erträglich und zusammen der Grund für den Umbau
+ * waren:
  *
- * ── Warum die Bühne für neue Ringe NICHT wächst ─────────────────────────────
- * Der erste Anlauf (Ring 5) setzte sie auf 1180 und den neuen Ring auf Radius
- * 570. Gemessen (Playwright, Full HD, voll ausgebauter Baum) war das Ergebnis
- * eindeutig schlechter: die Skalierung ist `(min(w,h) − 2·PAD) /
- * FORGE_STAGE_SIZE`, jeder Pixel Bühne verkleinert also JEDEN Knoten. Auf Full
- * HD fiel der Blattknoten von 35,4 auf 31,3 Bildschirmpixel und sein Glyph von
- * 16,8 auf 14,8 — unter die 18px-Grenze, ab der verschnörkelte `game-icons` zu
- * Grau zerfallen (CLAUDE.md, „Icons"). Ein neuer Ring, der die bestehenden
- * unleserlich macht, ist kein Zugewinn.
+ *   1. Zwischen zwei Ringen blieben 12–13 px Luft, und mehr war nicht zu holen:
+ *      die Bühne wurde per `fitScale` GANZ in die Spalte eingepasst, jeder
+ *      zusätzliche Bühnenpixel verkleinerte also jeden Knoten. Der äusserste
+ *      stand bei 517 gegen die Bühnenhälfte 520.
+ *   2. Drei Speichen je Achse lagen nebeneinander — ein 72°-Sektor der Bühne
+ *      trug damit über alle sechs Ringe genau EINE Aussage. Bei `dmgPerClick`
+ *      waren das 18 Knoten Kampf, Boss und Ladder ohne einen einzigen fremden
+ *      Ton dazwischen.
+ *   3. Eine Krone stand auf r = 438, ihre Voraussetzung auf r = 221, und das
+ *      sichtbare Fenster war rund 484 Bühnen-px breit — die beiden konnten gar
+ *      nicht gleichzeitig im Bild sein. Daran sind schon die Spannfäden
+ *      gescheitert.
  *
- * Neue Ringe passen stattdessen in die BESTEHENDE Bühne, weil die Ringe darunter
- * zusammenrücken. Die Abstände waren grosszügiger als nötig; gemessen an den
- * Knotengrössen bleibt überall Luft (Rechnung an `FORGE_RING_BOUGH_R`).
+ * Alle drei löst dieselbe Entscheidung: die Bühne wird GROSS und nicht mehr
+ * eingepasst, man sieht einen AUSSCHNITT und zieht ihn mit der Maus. Damit
+ * kostet Fläche nichts mehr, und die Knoten behalten ihre echte Grösse.
  */
-export const FORGE_STAGE_SIZE = 1040
 /**
- * Die SIEBEN Ringe — einer je Sonnenphase, von innen nach aussen in der
- * Reihenfolge, in der die Sonne sie aufschliesst:
+ * Kantenlänge der Bühne — 1040 → 2000.
  *
- *   Komet → Rays · Spark → Branches · Dawn → Leaves · Zenith → Wards ·
- *   Swell → Covenants · Pyre → Crowns · Collapse → Boughs ∞
+ * Das war bis hierher ausdrücklich VERBOTEN, und der Verbotsgrund ist mit dem
+ * Pan weggefallen: `fitScale` skalierte die ganze Bühne in die Spalte, ein
+ * grösseres Feld hiess also kleinere Knoten (gemessen: Blattglyph 16,8 → 14,8 px
+ * bei Bühne 1180, unter die 18-px-Grenze). Jetzt ist `fitScale` nur noch der
+ * UNTERE Zoom-Anschlag — „ganz herausgezoomt zeigt den ganzen Baum" — und bei
+ * Standardzoom gilt ein Bühnenpixel gleich ein Bildschirmpixel.
  *
- * **Von aussen nach innen zusammengerückt**, jedes Mal, wenn ein Ring dazukam —
- * die Bühne blieb, die Abstände gaben nach.
- *
- * Die Rechnung, die das absichert: kein Ringabstand darf kleiner sein als die
- * halben Knoten beider Ringe zusammen, sonst berühren sie sich.
- * `__tests__/config/forgeGeometry.spec.ts` rechnet sie bei jedem Lauf nach —
- * diese Tabelle ist die Herleitung, die Spec der Wächter.
- *
- *   Ring              Radius   Δ zum inneren   Knoten ⌀   nötig   Luft
- *   ───────────────────────────────────────────────────────────────────
- *   1 Rays              158          —            56        —      —
- *   2 Branches          221         63            46        51     12
- *   3 Leaves            276         55            38        42     13
- *   4 Wards             328         52            40        39     13
- *   5 Covenants         380         52            40        40     12
- *   6 Crowns            438         58            50        45     13
- *   7 Boughs            496         58            42        46     12
- *
- * Ring 1 sitzt bei 158 und nicht enger: die Sonne misst in der Endphase
- * `SHOP_SUN_MAX_DIAMETER` (240), ihr Rand liegt also bei 120, und die
- * Innenkante des Wurzelknotens bei 158 − 28 = 130. Zehn Pixel Luft zum Körper.
- *
- * Nach aussen ist 496 + halber Bough-Knoten (21) = 517 gegen die Bühnenhälfte
- * von 520 — drei Pixel, GENAU derselbe Randabstand wie zuvor mit fünf Ringen
- * (492 + 25). Zwei Ringe mehr haben den Baum also nicht an die Kante gedrückt;
- * sie haben nur die Luft aufgebraucht, die zwischen den alten Ringen stand.
+ * 2000 × 2000 sind 4 Mio px² für rund 155 Knoten, also ein mittlerer Abstand
+ * von 160 px. Ein Viewport von rund 1000 × 900 zeigt davon ein knappes Viertel,
+ * also 30–40 Knoten — der Ausschnitt, den das Vorbild hat.
  */
-export const FORGE_RING_ROOT_R = 158
-export const FORGE_RING_BRANCH_R = 221
-export const FORGE_RING_LEAF_R = 276
-export const FORGE_RING_WARD_R = 328
-export const FORGE_RING_PACT_R = 380
-export const FORGE_RING_CROWN_R = 438
-export const FORGE_RING_BOUGH_R = 496
+export const FORGE_STAGE_SIZE = 2000
+/**
+ * Wo eine Sonnenphase ihre Knoten ablegt — ein BAND, kein Kreis.
+ *
+ * Das ist der Unterschied, der den Umbau trägt. Ein Ring ist ein Radius: alle
+ * Knoten einer Phase sassen auf derselben Linie, und die Linie war sichtbar.
+ * Ein Band ist ein Bereich, und es ÜBERLAPPT mit dem nächsten — zwischen
+ * Phase 2 (490…690) und Phase 3 (610…810) liegen 80 px gemeinsamer Raum. Genau
+ * dort können ein Ward und ein Covenant nebeneinander stehen, ohne dass eine
+ * Grenze dazwischen sichtbar würde.
+ *
+ * Die Leiter bleibt trotzdem: jede Phase öffnet genau eine Zonenmenge, und die
+ * Bänder steigen streng monoton. Was fällt, ist nur der Kreis.
+ * `__tests__/config/forgePhaseZones.spec.ts` rechnet beides nach.
+ */
+export const FORGE_ZONE_BAND: readonly { inner: number; outer: number }[] = [
+  { inner: 250, outer: 430 }, // Phase 0 — Spark, Branches
+  { inner: 370, outer: 560 }, // Phase 1 — Dawn, Leaves
+  { inner: 490, outer: 690 }, // Phase 2 — Zenith, Wards
+  { inner: 610, outer: 810 }, // Phase 3 — Swell, Covenants
+  { inner: 700, outer: 900 }, // Phase 4 — Pyre, Crowns
+  { inner: 760, outer: 940 }, // Phase 5 — Collapse, Boughs
+]
+/**
+ * Abstand der fünf Solar Rays vom Mittelpunkt. Sie liegen VOR dem ersten Band
+ * und gehören keiner Phase — sie sind der Kometenzustand, der Anfang.
+ *
+ * 200 und nicht enger: die Sonne misst in der Endphase `SHOP_SUN_MAX_DIAMETER`
+ * (240), ihr Rand liegt bei 120, die Innenkante eines Ray-Knotens bei
+ * 200 − 32 = 168. Achtundvierzig Pixel Luft — der Komet darf pulsieren.
+ */
+export const FORGE_RAY_DIST = 200
 
-/**
- * Dieselben sieben Radien als Tabelle über der Ebene.
+/* ── Die CLUSTER: Ort und Thema statt Radius und Speiche ───────────────────
  *
- * Stand bis hierher als lokales `RING_RADIUS` in `ForgeTreePanel.vue`. Seit die
- * Streuung (`utils/ui/forgeTreeLayout.ts`) und ihre Spec dieselbe Zuordnung
- * brauchen, wäre das eine zweite Quelle gewesen — ein `Record` ohne `Partial`
- * erzwingt beim nächsten Ring ausserdem einen Typfehler statt eines stummen
- * Fehlverhaltens.
+ * Ein Cluster ist ein ORT mit einem Thema. Die Ketten des Baums laufen
+ * HINDURCH, nicht darauf entlang — das ist der ganze Unterschied zum Ring, auf
+ * dem sie entlangliefen. Wo die Karte steht und wie sie aussieht:
+ * `config/progression/starForgeNet.ts`.
  */
-export const FORGE_RING_RADIUS: Record<ForgeUpgradeTier, number> = {
-  root: FORGE_RING_ROOT_R,
-  branch: FORGE_RING_BRANCH_R,
-  leaf: FORGE_RING_LEAF_R,
-  ward: FORGE_RING_WARD_R,
-  pact: FORGE_RING_PACT_R,
-  crown: FORGE_RING_CROWN_R,
-  bough: FORGE_RING_BOUGH_R,
-}
-
+/** Wie weit ein Clustermittelpunkt deterministisch von seinem Kartenwert
+ *  abweichen darf. Ohne ihn bildeten die Mittelpunkte selbst ein Muster. */
+export const FORGE_CLUSTER_JITTER_PX = 26
 /**
- * Der Speichenabstand des Katalogs: fünfzehn Winkel, alle 24° einer. Er ist die
- * Bezugsgrösse der Ringverdrehung — zwei Ringe liegen alle 24° wieder
- * deckungsgleich, gemessen wird deshalb modulo dieser Zahl.
+ * Der goldene Winkel. Er verteilt die Mitglieder eines `knot` so, dass bei
+ * KEINER Mitgliederzahl Speichen entstehen — das ist seine definierende
+ * Eigenschaft und der Grund, warum hier nicht `360/n` steht.
  */
-export const FORGE_SPOKE_PITCH_DEG = 24
+export const FORGE_CLUSTER_GOLDEN_ANGLE_DEG = 137.507764
+/** Grundabstand eines Mitglieds vom Clustermittelpunkt, als Anteil des
+ *  Clusterradius. Der Rest kommt aus dem Wurf. */
+export const FORGE_CLUSTER_SEAT_SHARE = 0.62
+
+/* ── Die RELAXATION: was den Abstand wirklich herstellt ───────────────────
+ *
+ * Der alte Platzierer nahm den ERSTEN Kandidaten, der genug Luft hatte. Das
+ * ging, solange jeder Knoten seinen Ring hatte und nur ein paar Grad wackeln
+ * durfte. Im Netz gibt es keinen Ring mehr, an dem er sich halten könnte, und
+ * ein Cluster muss als GANZES behandelt werden — also zieht jetzt jede Kante
+ * wie eine Feder, jedes zu nahe Paar stösst sich ab, und nach fester
+ * Rundenzahl steht das Bild. Fest, nicht bis zur Konvergenz: die Laufzeit ist
+ * damit beschränkt und das Ergebnis exakt reproduzierbar.
+ */
+/** Runden der Kräftesimulation. */
+export const FORGE_RELAX_ITERATIONS = 160
+/** Runden des harten Trenn-Passes danach — er schiebt verbliebene
+ *  Überschneidungen entlang ihrer Verbindungsachse auseinander. */
+export const FORGE_SEPARATE_ITERATIONS = 24
+/** Ziel-Länge einer Logikkante (Mitte zu Mitte). */
+export const FORGE_EDGE_TARGET_PX = 150
+/**
+ * Die HARTE Obergrenze einer Logikkante — und damit die eigentliche Zusage
+ * dieses Umbaus.
+ *
+ * Bei Standardzoom (1 Bühnenpixel = 1 Bildschirmpixel) ist der Viewport in der
+ * Baumspalte rund 1000 px breit und 800 hoch. Eine Kante von 300 px passt damit
+ * immer VOLLSTÄNDIG ins Bild, samt beider Knoten. Das ist die Bedingung, an der
+ * die Spannfäden gescheitert sind (438 gegen 221 bei 484 sichtbaren px) —
+ * jetzt wird sie gerechnet statt gehofft (`forgeNetGeometry.spec.ts`).
+ */
+export const FORGE_EDGE_MAX_PX = 300
+/**
+ * Dieselbe Grenze fuer eine BRUECKE — und sie ist weiter, weil eine Bruecke
+ * etwas anderes verspricht.
+ *
+ * Eine Bedingungskante muss ganz ins Bild passen: der Spieler soll sehen, was
+ * ihm noch fehlt, ohne die Ansicht zu bewegen. Eine Bruecke schaltet dagegen
+ * nichts frei — sie ist ein WEG zwischen zwei Zonen, und einem Weg folgt man.
+ * Ihn auf 300 px zu zwingen hiesse, die aeusseren Zonen zusammenzuschieben, und
+ * genau dort ist der Platz, der das Netz atmen laesst.
+ *
+ * 420 ist gemessen, nicht geschaetzt: die weiteste Bruecke im fertigen Netz
+ * (`hollowPact` zu `unbrokenPact`, beide in der Buendnis-Zone) misst 381 px.
+ */
+export const FORGE_BRIDGE_MAX_PX = 420
+/**
+ * Die Strichelung einer BEDINGUNGS-Kante.
+ *
+ * Gestrichelt und nicht durchgezogen, weil sie etwas anderes sagt als ein Ast:
+ * ein Ast ist STRUKTUR und aendert sich nie, eine Bedingung ist ein ZUSTAND und
+ * verschwindet, sobald sie erfuellt ist. Zwei Aussagen, zwei Strichbilder.
+ */
+export const FORGE_EDGE_REQ_DASH = '7 6'
+/** Die Luft, die zwischen den RÄNDERN zweier beliebiger Knoten bleiben muss. */
+export const FORGE_MIN_AIR_PX = 22
+/** Federstärke entlang einer Kante, Abstossung, und der schwache Zug zum
+ *  eigenen Clustermittelpunkt. Der Zug ist der schwächste — er ordnet, er
+ *  zwingt nicht. */
+export const FORGE_SPRING_K = 0.18
+export const FORGE_REPULSE_K = 0.55
+export const FORGE_CLUSTER_K = 0.05
+
+/* ── ZOOM und PAN ──────────────────────────────────────────────
+ *
+ * Der Zoom bedeutet jetzt etwas: bei 1,0 ist ein Bühnenpixel ein
+ * Bildschirmpixel, ganz unten passt die ganze Bühne in die Spalte. Dazwischen
+ * liegt der Weg vom Ausschnitt zur Übersicht.
+ */
+/** Standard — Knoten in ihrer Entwurfsgrösse, also ein Zweig mit 54 px. */
+export const FORGE_TREE_ZOOM_DEFAULT = 1
+/**
+ * Obergrenze. Weiter heranzugehen bringt nichts: schon bei 1,6 füllt ein
+ * Kronenknoten fast 100 px, und der Tooltip daneben ist dann breiter als das
+ * halbe Fenster.
+ */
+export const FORGE_TREE_ZOOM_MAX = 1.6
+/**
+ * Absolute Untergrenze, unabhängig vom Fenster. Der tatsächliche Boden ist
+ * `min(dieser Wert, fitScale)` — auf einem grossen Schirm passt die Bühne
+ * schon bei 0,45 ganz hinein, auf einem kleinen erst bei 0,32, und in beiden
+ * Fällen soll „ganz herausgezoomt" den GANZEN Baum zeigen.
+ */
+export const FORGE_TREE_ZOOM_FLOOR = 0.3
+/** Ein Schritt am Rad oder an den Knöpfen. Feiner als früher (0,19), weil der
+ *  Bereich schmaler ist und ein Schritt sonst ein Sprung wäre. */
+export const FORGE_TREE_ZOOM_STEP = 0.08
+/**
+ * Wie weit die Maus wandern darf, bevor aus einem Klick ein Zug wird.
+ *
+ * Dieselbe Zahl und derselbe Grund wie `TEAM_SIGIL_DRAG_THRESHOLD_PX` im
+ * Sigil-Board: `setPointerCapture` darf erst NACH dieser Schwelle gerufen
+ * werden, sonst wird der folgende Klick umgeleitet und der Knotenkauf stirbt.
+ */
+export const FORGE_TREE_DRAG_THRESHOLD_PX = 5
+/**
+ * Wie lange die Kamerafahrt der Bühne dauert.
+ *
+ * Sie stand als Literal `transition: transform 0.2s ease` im scoped CSS von
+ * `.tree-stage`, und dort allein hätte sie bleiben können, solange nur das
+ * Anheften die Bühne bewegte. Seit der Zeiger auf der Upgrade-Liste dasselbe
+ * tut, muss JavaScript die Zahl KENNEN: der Ping am Zielknoten darf erst
+ * zünden, wenn die Fahrt fertig ist — feuerte er sofort, platzte er noch
+ * ausserhalb des Bildes, und der Spieler sähe von der Ankunft genau nichts.
+ *
+ * Zwei Zahlen für eine Bewegung laufen beim ersten Feinschliff auseinander;
+ * das CSS holt sie sich deshalb per `v-bind` von hier.
+ */
+export const FORGE_TREE_PAN_MS = 200
 
 /* ── Die Bühne trägt KEINE Ring-Beschriftungen ────────────────────────────────
  * Über jeder Ebene stand eine Pille mit ihrer Sonnenphase („Phase 1–2",
@@ -959,48 +1012,41 @@ export const FORGE_SPOKE_PITCH_DEG = 24
  * aufschliesst, sagen sein Tooltip und die Zeile in der Detailspalte.
  */
 
-/* ── Das TIEFENFELD — die Ebenen ohne eine einzige Kreiskante ─────────────────
+/* ── Der ZONENSCHLEIER — was aus dem Tiefenfeld wurde ────────────────────
  *
- * Die Ringe waren bis hierher gezeichnete Linien, nach aussen immer
- * lückenhafter gestrichelt (5-5 · 4-7 · 3-9). Konzentrische Umrisse lasen
- * sich als Zielscheibe und behaupteten eine Grenze, die es nicht gibt: was eine
- * Ebene ausmacht, ist ihr ABSTAND zur Sonne, nicht ein Rand.
+ * Hier lagen sieben KAEMME: ein `radial-gradient`, in dem jeder Ringradius als
+ * weiches Band sass. Das war die richtige Antwort auf gezeichnete Ringlinien —
+ * und es ist die falsche auf ein Netz, denn ein Kamm um den Mittelpunkt IST ein
+ * Ring, nur unscharf. Sieben davon sind ein Zifferblatt mit weichen Zeigern.
  *
- * Stattdessen liegt unter dem Baum EIN statischer `radial-gradient`, in dem
- * jeder Ringradius als weicher Kamm sitzt — ein Hauch der Leitfarbe der Ebene,
- * der nach beiden Seiten ausläuft. Die Ordnung bleibt lesbar, eine Kante
- * entsteht nirgends.
+ * An ihre Stelle treten FLECKEN: je Cluster ein weicher Schein in der Farbe
+ * seiner Phase. Technisch dieselbe Lösung wie zuvor — EINE Ebene, deren
+ * `background` mehrere `radial-gradient`-Schichten trägt, statisch gesetzt und
+ * nur bei einem Phasenwechsel neu. Kein Wert pro Frame, keine Animation auf
+ * `background`, kein Filter (Performance-Regel 2).
  *
- * Der Bühnenradius (`FORGE_STAGE_SIZE / 2` = 520) ist dabei die 100 %-Marke
- * eines `circle closest-side`; die Kämme liegen also bei 30,4 % (Rays), 42,5 %,
- * 53,1 %, 63,1 %, 73,1 %, 84,2 % und 95,4 % (Boughs). Gerechnet wird das in
- * `ForgeTreePanel` aus den Radien oben — hier steht keine dieser Prozentzahlen
- * ein zweites Mal.
+ * Der Unterschied im Bild: ein Kamm sagt „all das hier ist gleich weit weg", ein
+ * Fleck sagt „all das hier gehört zusammen". Die zweite Aussage ist die, die
+ * das Netz braucht — und sie erzeugt keine Kante, weil ausserhalb der Flecken
+ * alles durchsichtig bleibt.
  */
 /**
- * Halbe Bandbreite, als Anteil des Bühnenradius.
+ * Radius eines Zonenflecks, als Vielfaches des Clusterradius.
  *
- * **Von 0,055 auf 0,045 gesenkt, als aus fünf Ringen sieben wurden.** Der
- * ENGSTE Kammabstand ist seither Leaves → Wards (und Wards → Covenants) mit
- * 10,0 Prozentpunkten statt der vorherigen 12,9. Bei 0,045 ist ein Band 9 pp
- * breit, zwischen zwei Bändern bleibt also 1 pp frei.
- *
- * Das ist die eigentliche Grenze dieser Zahl: überlappen zwei ausklingende
- * Kämme, addieren sich ihre Deckkräfte zu einem dritten, hellen Streifen
- * dazwischen — und der liest sich wieder als Linie, also als genau das, was hier
- * verschwinden sollte. Wer einen weiteren Ring einzieht, muss sie erneut senken;
- * `forgeGeometry.spec.ts` prüft die Bedingung.
+ * Über 1, und zwar deutlich: der Schein soll den Cluster UMGEBEN, nicht ihn
+ * ausfüllen. Bei 1,0 endete er genau an den äussersten Knoten, und der Rand
+ * las sich wieder als Grenze.
  */
-export const FORGE_DEPTH_CREST_SPREAD = 0.045
-/** Deckkraft des Kamms einer OFFENEN Ebene, in ihrer Leitfarbe
- *  (`FORGE_UPGRADE_GROUPS[].accent` — eine Quelle für Chip, Liste und Feld). */
-export const FORGE_DEPTH_CREST_ALPHA = 0.09
+export const FORGE_ZONE_HAZE_SCALE = 1.75
+/** Deckkraft eines Flecks, dessen Phase OFFEN ist — in der Leitfarbe des
+ *  Clusters (`ForgeClusterDef.accent`). */
+export const FORGE_ZONE_HAZE_ALPHA = 0.1
 /**
- * Eine noch GESPERRTE Ebene: kalt und fast nichts. Trägt die Aussage der alten
- * gesperrten Ringfarbe (`#2a1a08`) weiter — sie ist da, aber sie gehört noch
+ * Eine noch GESPERRTE Zone: kalt und fast nichts. Trägt dieselbe Aussage
+ * weiter wie zuvor die gesperrte Ringfarbe — sie ist da, aber sie gehört noch
  * nicht dem Spieler.
  */
-export const FORGE_DEPTH_CREST_LOCKED = 'rgba(150, 165, 190, 0.03)'
+export const FORGE_ZONE_HAZE_LOCKED = 'rgba(150, 165, 190, 0.028)'
 /* ── Was hier NICHT steht: eine Vignette ──────────────────────────────────────
  * Der erste Anlauf legte über die Kämme einen zweiten Verlauf, der die Bühne
  * nach aussen abdunkelte (`transparent 46 % → rgba(4,3,0,0.42) 100 %`). Gemessen
@@ -1157,6 +1203,104 @@ export const FORGE_BOUGH_PARENT_MIN_LEVEL = 2
  */
 export const FORGE_CROWN_UNLOCK_PRESTIGES = 1
 export const FORGE_CROWN_MAX_LEVEL = 1
+
+/* ── Die GLIMMERS: Fläche ohne Gewicht ────────────────────────────────
+ *
+ * Sechzig kleine Knoten, die das Netz tragen: sie füllen die Fläche zwischen
+ * den grossen, verbinden Ketten fremder Achsen und mischen die Wirkungen
+ * durcheinander. Ein Glimmer ist ein WEG, kein Ziel — daher klein, billig,
+ * schnell fertig.
+ *
+ * Vier Dinge dürfen sie deshalb nicht, und alle vier stehen in `docs/balance.md`:
+ *
+ *   1. nichts, was `otherDps` hebt — es kürzt sich gegen die Boss-HP-Schätzung
+ *      weg und wäre eine Wirkung, die niemand spürt
+ *   2. nichts, was still sättigt (`materialDropMult`, `extraDropCount`)
+ *   3. nichts auf `forgeMaterialCostMult` oder die Baumkosten — der Lohn der
+ *      Codex-Bahn „Sunsmith" macht Baumknoten billiger, das wäre ein Kreis
+ *   4. **nichts auf einer Achse mit `FORGE_MIN_*`-Boden.** `forgeRingReach.spec.ts`
+ *      bindet, dass jeder dieser Böden bei Vollausbau GENAU erreicht wird — ein
+ *      Glimmer darüber wäre eine tote Stufe, die aussieht wie eine lebendige.
+ *
+ * Und sie zählen nicht in `achievementStore.forgeLevels`: sechzig Knoten in der
+ * Sunsmith-Summe machten jede Schwelle der Bahn trivial. Aus demselben Grund
+ * liegen schon Boughs und Kronen in eigenen Beuteln.
+ */
+/**
+ * Höchststufe eines Glimmers — FEST, nicht nach Phase gestaffelt.
+ *
+ * Die Staffelung „eine Stufe bei der Freischaltung, +1 je Sonnenphase" ist die
+ * Zusage der Phasen-Leiter und gehört den grossen Knoten. Ein Glimmer steht
+ * daneben: er ist sofort fertigzukaufen, und genau das ist sein Zweck — ein Weg
+ * soll begehbar sein, nicht selbst ein Vorhaben.
+ */
+export const FORGE_GLIMMER_MAX_LEVEL = 3
+/**
+ * Was ein Glimmer von seinem Anker verlangt: die ERSTE Stufe.
+ *
+ * Jeder andere Rang fordert zwei (`FORGE_*_PARENT_MIN_LEVEL`), damit eine
+ * Freischaltung nicht sofort auf die naechste durchschlaegt. Beim Glimmer ist
+ * genau das erwuenscht: er ist der Weg zum naechsten grossen Knoten, und ein
+ * Weg, der selbst ein Tor hat, ist keiner.
+ */
+export const FORGE_GLIMMER_PARENT_MIN_LEVEL = 1
+/**
+ * Der Preis eines Glimmers als ANTEIL am Preis eines grossen Knotens derselben
+ * Phase — keine eigene Zahlenreihe.
+ *
+ * Das ist der Punkt: wird eine Phase später neu geeicht, wandern die sechzig
+ * Glimmers von selbst mit. Sechzig eigene `baseCost`-Literale wären sechzig
+ * Stellen, die beim ersten Balance-Durchgang zurückbleiben.
+ */
+export const FORGE_GLIMMER_BASE_COST_SHARE = 0.12
+/** Wie schnell der Preis je Stufe steigt. Flacher als bei den grossen Knoten
+ *  (2,2–2,8): drei Stufen sollen zusammen bezahlbar bleiben. */
+export const FORGE_GLIMMER_COST_MULTIPLIER = 1.6
+/**
+ * Der DECKEL gegen das Überholen: die Glimmers einer Achse dürfen zusammen
+ * höchstens diesen Anteil dessen beitragen, was die grossen Knoten derselben
+ * Achse beitragen.
+ *
+ * Ohne ihn wäre die Rechnung 60 Knoten × 3 Stufen × bis zu 3 Prozentpunkten =
+ * 540 Prozentpunkte, und die Füllung wäre stärker als der Baum. Eine Spec
+ * rechnet die Summe nach.
+ */
+export const FORGE_GLIMMER_AXIS_SHARE = 0.25
+/**
+ * Das Glyph eines Glimmers - eines je EFFEKTFAMILIE, nicht eines je Knoten.
+ *
+ * Die Icon-Regel "innerhalb einer Liste jedes Icon genau einmal" (CLAUDE.md)
+ * gilt fuer Listen, in denen der Spieler einzelne Eintraege wiedererkennen
+ * muss - Perks, Relikte, Materialien. Ein Glimmer ist kein solcher Eintrag: er
+ * ist ein WEG, und was ihn interessant macht, ist nicht seine Identitaet,
+ * sondern wohin er zahlt. Sechzig eigene Motive waeren sechzig Zeichen, die
+ * alle dasselbe sagen muessten und es in 18 px nicht koennten.
+ *
+ * Deshalb greift hier die staerkere Regel: EINE Bedeutung, EIN Glyph. Wer einen
+ * kleinen Knoten sieht, liest an seinem Zeichen sofort ab, welches System er
+ * hebt - und findet dasselbe Zeichen an jedem anderen Glimmer derselben
+ * Familie wieder.
+ *
+ * Ausschliesslich gefuellte, geometrische `ph`-Motive: bei 18 px
+ * (`FORGE_ICON_SIZE_GLIMMER`) zerfallen verschnoerkelte `game-icons` zu Grau.
+ */
+export const FORGE_GLIMMER_FAMILY_ICON: Record<ForgeEffectFamily, string> = {
+  travel: 'ph:compass-fill',
+  drifter: 'ph:paper-plane-tilt-fill',
+  idle: 'ph:moon-fill',
+  guard: 'ph:shield-fill',
+  void: 'ph:spiral-fill',
+  star: 'ph:star-four-fill',
+  click: 'ph:cursor-fill',
+  market: 'ph:coins-fill',
+  harvest: 'ph:hammer-fill',
+  income: 'ph:trend-up-fill',
+  combat: 'ph:sword-fill',
+  boss: 'ph:skull-fill',
+  ladder: 'ph:trophy-fill',
+  fortune: 'ph:sparkle-fill',
+  ability: 'ph:lightning-fill',
+}
 /**
  * Der Covenant darunter muss auf dieser Stufe stehen — dem Deckel, den Ring 5 in
  * Pyre erreicht (`FORGE_TIER_BASE_MAX_LEVEL` + (4 − 3) = 2). Mehr zu verlangen
@@ -1417,32 +1561,53 @@ export const FORGE_CROWN_OVERFLOW_MATERIAL = 'stardust'
  * (`FORGE_CROWN_OWN_WARD_LEVEL`), die fünf neuen den Zusammenlauf zweier
  * FREMDER Achsen.
  */
+/* ── Der ZUSAMMENLAUF: was eine Krone ausser ihrem Elternteil verlangt ──────
+ *
+ * Drei Fassungen, und die Reihe ist der Inhalt: ein Zubringer, zwei, drei. Jede
+ * Krone steht damit sichtbar dort, wo mehrere Wege sich treffen — und weil die
+ * drei Ketten eines Clusters aus verschiedenen Familien kommen, ist der
+ * Zusammenlauf immer einer über Themen hinweg.
+ *
+ * ** Was sich mit dem Netz geändert hat.** Vorher verlangten zehn der fünfzehn
+ * Kronen Zweige, Blätter und Wachten FREMDER Achsen — inhaltlich richtig,
+ * räumlich unmöglich: eine Krone stand auf r = 438, ihr Zweig auf r = 221, und
+ * das sichtbare Fenster war 484 Bühnen-px breit. Der Spieler las eine Liste
+ * ferner Namen und musste sie sich merken.
+ *
+ * Jetzt kommt jeder Zubringer aus dem eigenen oder einem angrenzenden Cluster,
+ * und die Bedingung ist als LINIE gezeichnet. Was dabei verloren geht, ist der
+ * Griff über drei Ringe — Zweige und Blätter liegen im Netz zu weit innen. Was
+ * an seine Stelle tritt, ist der Griff über drei KETTEN, und im Netz ist die
+ * Kette die Einheit, nicht der Ring.
+ */
 /**
- * Was ein Zusammenlauf von einem fremden Zweig, Blatt oder Ward verlangt.
+ * Was ein Zusammenlauf von einer fremden Wacht verlangt.
  *
- * Die Zahlen sind an der Erreichbarkeit geeicht, nicht am Gefühl. In Pyre — der
- * Phase, in der der Kronen-Ring aufgeht — gilt `min(cap, 1 + 4 − phase)`:
+ * Geeicht an der Erreichbarkeit, nicht am Gefühl. In Pyre — der Phase, in der
+ * der Kronen-Ring aufgeht — gilt `min(cap, 1 + 4 − phase)`:
  *
- *   Zweig 5 · Blatt 4 · Ward 3 · Covenant 2
+ *   Zweig 5 · Blatt 4 · Wacht 3 · Bündnis 2
  *
- * Jede Forderung unten liegt genau EINE Stufe darunter: spürbar, aber nie
- * unerfüllbar. Eine Krone, die man nicht aufschliessen kann, wäre dieselbe
- * Fehlerklasse wie eine Codex-Bahn, die man nicht abschliessen kann —
+ * Drei ist damit der Pyre-Deckel des Wacht-Rings: die Forderung lautet „diese
+ * Kette ganz nach unten", und mehr gibt es dort nicht.
  * `forgeRequirements.spec.ts` rechnet es bei jedem Lauf nach, statt es zu
  * glauben.
  */
-export const FORGE_CONJUNCTION_BRANCH_LEVEL = 4
-export const FORGE_CONJUNCTION_LEAF_LEVEL = 3
-export const FORGE_CONJUNCTION_WARD_LEVEL = 2
+export const FORGE_CONJUNCTION_WARD_LEVEL = 3
 /**
- * Was eine der fünf ALTEN Kronen zusätzlich von dem Ward ihrer eigenen Speiche
- * verlangt.
+ * Und was es von einem fremden Bündnis verlangt — dessen Pyre-Deckel.
  *
- * Drei und nicht zwei: der Covenant darüber verlangt bereits Ward Lv 2
- * (`FORGE_PACT_PARENT_MIN_LEVEL`), und wer die Krone erreicht, hat den Covenant.
- * Eine Zwei wäre also beim Kauf automatisch erfüllt und damit reine Zierde. Drei
- * ist der Pyre-Deckel des Ward-Rings — die Forderung lautet „diese Achse ganz
- * nach unten", und mehr gibt es dort nicht.
+ * Zwei ist hier das Maximum, nicht eine milde Wahl: ein Bündnis geht erst in
+ * Swell auf und steht in Pyre auf `1 + (4 − 3)`. Eine Drei wäre eine Krone, die
+ * man in ihrer eigenen Phase nicht aufschliessen kann.
+ */
+export const FORGE_CONJUNCTION_PACT_LEVEL = 2
+/**
+ * Was die einfachste Fassung von der Wacht IHRER EIGENEN Kette verlangt.
+ *
+ * Derselbe Wert wie beim fremden Zusammenlauf, und das ist Absicht: was die
+ * Fassungen unterscheidet, ist die ZAHL der Zubringer, nicht ihre Höhe. Eine
+ * Staffelung in beiden Achsen zugleich wäre zweimal dieselbe Aussage.
  */
 export const FORGE_CROWN_OWN_WARD_LEVEL = 3
 
@@ -1816,6 +1981,20 @@ export const FORGE_UPGRADE_GROUPS = [
     hint: 'No final level — the tree keeps growing',
     accent: '#c9a0ff',
   },
+  /*
+   * Der Glimmer-Rang steht ZULETZT, obwohl seine Knoten überall im Netz liegen.
+   * Die Reihenfolge dieser Tabelle ist die Leiter der Sonnenphasen, und ein
+   * Glimmer gehört keiner eigenen Sprosse an — er trägt die Phase der Zone, in
+   * der er liegt. Er steht deshalb hinter der Leiter statt in ihr.
+   */
+  {
+    tier: 'glimmer' as const,
+    title: 'Astral Glimmers',
+    shortTitle: 'Glimmers',
+    icon: 'ph:sparkle-fill',
+    hint: 'The paths between the greater nodes',
+    accent: '#9fb4c8',
+  },
 ]
 
 /**
@@ -1838,6 +2017,7 @@ export const FORGE_UPGRADE_TIER_LABELS = {
   pact: 'COVENANT',
   bough: 'BOUGH',
   crown: 'CROWN',
+  glimmer: 'GLIMMER',
 } as const
 
 /**
@@ -2403,6 +2583,112 @@ export const FORGE_SPOTLIGHT_MAX_LIMBS = 7
 export const FORGE_SPOTLIGHT_SCROLL_DELAY_MS = 160
 
 /**
+ * Wartezeit, bevor ein Hover auf der LISTE die Bühne zum Knoten schwenkt.
+ *
+ * Länger als die 160 ms der Gegenrichtung, und das ist kein Feinschliff: die
+ * Liste rollt einen Kasten, die Bühne bewegt das ganze Bild samt achtzig
+ * Knoten. Ein Zeiger, der die Liste hinunterfährt, kreuzt rund acht Zeilen je
+ * Sekunde — also eine alle 125 ms; bei 160 ms führe die Kamera mit und der
+ * Baum flöge unter dem Blick weg. Bei 260 ms setzt derselbe Weg NULL Fahrten
+ * ab, und wer stehenbleibt, wartet ein Sechstel einer Sekunde.
+ *
+ * Dieselbe Spanne braucht der Rand-Kompass, um gelesen zu werden: er erscheint
+ * sofort und zeigt die Richtung an, in die gleich gefahren wird.
+ *
+ * Rein visuell, daher reale Zeit.
+ */
+export const FORGE_SPOTLIGHT_PAN_DELAY_MS = 260
+/**
+ * Der Saum, ab dem ein Knoten als „nicht im Bild" gilt.
+ *
+ * REINE LUFT — der Radius des Knotens steht getrennt in der Rechnung und wird
+ * dazugezählt. Ein Ring, der 24 px vor der Viewport-Kante endet, liest sich als
+ * gesehen; darunter liest er sich als angeschnitten, und angeschnitten heisst
+ * suchen. Die Zahl ist deshalb kein Sicherheitsabstand, sondern die Grenze
+ * zwischen „steht da" und „ragt herein".
+ */
+export const FORGE_SPOTLIGHT_EDGE_MARGIN_PX = 24
+/**
+ * Der Überstand von `.node-spot` und `.node-req` über den Knotenkreis hinaus.
+ *
+ * Stand zweimal als `inset: -4px` im scoped CSS. Die Sichtbarkeitsrechnung
+ * braucht dieselbe Zahl — der Ring ist das Äusserste am hervorgehobenen Knoten
+ * und entscheidet mit, ob er noch ganz im Bild liegt. Zwei Quellen für einen
+ * Ring laufen beim ersten Nachjustieren auseinander, deshalb steht sie hier und
+ * kommt per `v-bind` ins CSS zurück.
+ */
+export const FORGE_SPOTLIGHT_RING_INSET_PX = 4
+/**
+ * Wie lange die Zeile rechts ihre Ankunftsmarke trägt.
+ *
+ * Über `FORGE_CARD_FLASH_MS` (420), und der Unterschied hat einen Grund: der
+ * Kaufblitz quittiert etwas, worauf der Blick ohnehin schon liegt — man hat
+ * gerade den Knopf gedrückt. Die Ankunft muss zuerst GEFUNDEN werden, die Zeile
+ * ist eben erst hereingerollt und stand vorher ausserhalb.
+ *
+ * Rein visuell, daher reale Zeit.
+ */
+export const FORGE_SPOTLIGHT_ARRIVAL_MS = 520
+
+/*
+ * ── Der RAND-KOMPASS ────────────────────────────────────────────────────────
+ *
+ * Die Bühne misst 2000 px und das Fenster darauf rund 700 — der gemeinte Knoten
+ * liegt also im Regelfall DRAUSSEN. Der Kompass beantwortet in dem Moment die
+ * einzige Frage, die dann zählt: in welcher Richtung. Er zeigt in den 260 ms
+ * vor der Fahrt hin und bleibt stehen, solange eine Anheftung aus dem Bild
+ * gezogen ist; sobald der Knoten drin liegt, verschwindet er.
+ */
+/** Ein Bedienzeichen, kein Motiv — `lucide` wie Schloss und Anheftung daneben.
+ *  Das Dreieck zeigt nach oben, die Drehung rechnet deshalb mit +90°. */
+export const FORGE_SPOTLIGHT_COMPASS_ICON = 'lucide:navigation'
+/** Explizite Grösse (Icon-Regel 6), zugleich die Untergrenze des Projekts. */
+export const FORGE_SPOTLIGHT_COMPASS_ICON_PX = 24
+/**
+ * Die Kantenlänge des Kompass-Kästchens.
+ *
+ * Sie stand als `width`/`height: 30px` im scoped CSS, und dort allein war sie
+ * falsch aufgehoben: die Rechnung, die ihn von der Zoom-Leiste wegschiebt,
+ * braucht dieselbe Zahl. Der Kompass sitzt per `translate(-50%, -50%)` auf
+ * seinem Punkt — wer nur den PUNKT aus der Sperrfläche schiebt, lässt seine
+ * halbe Breite darin stehen. Genau das ist beim Nachmessen aufgefallen (zwei
+ * von sieben Zielen), und es war im Bild nicht zu sehen, nur zu rechnen.
+ *
+ * Die ÄUSSERE Kantenlänge, Rahmen eingerechnet — das CSS setzt dafür
+ * `box-sizing: border-box`. 24 Glyph, zweimal 3 Polster, zweimal 1 Rahmen.
+ *
+ * Und sie wird als DIAGONALE gebraucht, nicht als Kante: der Kompass ist
+ * gedreht, seine Ecken stehen um den Faktor √2/2 statt 1/2 vom Mittelpunkt ab.
+ * Wer mit der halben Kante klemmt, lässt bei schrägen Winkeln bis zu 7 px Ecke
+ * über der Sperrfläche stehen — nachgemessen, im Bild nicht zu sehen.
+ */
+export const FORGE_SPOTLIGHT_COMPASS_SIZE_PX = 32
+/**
+ * Wie weit der Kompass von der Viewport-Kante einrückt.
+ *
+ * Mindestens seine halbe DIAGONALE (32 · √2/2 ≈ 22,6), sonst ragt eine Ecke bei
+ * schräger Drehung über den Rand. 24 gibt dazu gut einen Pixel Luft.
+ */
+export const FORGE_SPOTLIGHT_COMPASS_INSET_PX = 24
+/**
+ * Die Sperrfläche unten rechts — dort sitzt die Zoom-Leiste (`.tree-zoom`).
+ *
+ * Sie hat zwei Leser, und beide meinen dasselbe: der Kompass darf nicht dorthin
+ * ausweichen, und ein Knoten, der dahinter liegt, gilt als NICHT im Bild — was
+ * verdeckt ist, ist für den Spieler nicht vorhanden (dieselbe Regel wie beim
+ * HUD-Freiraum).
+ *
+ * Gerechnet aus der Leiste: zweimal 18 Knöpfe, 56 Bahn, zweimal 6 Lücke,
+ * zweimal 10 Polster ergibt 124 breit; 18 plus zweimal 6 ergibt 30 hoch. Dazu
+ * die 14 px Abstand zur Kante und noch einmal so viel Luft.
+ *
+ * Sie ist ausdrücklich eine SPERRFLÄCHE und nicht das Mass der Leiste — sie
+ * darf grosszügiger sein, und genau deshalb ist sie keine zweite Quelle für
+ * deren Grösse.
+ */
+export const FORGE_SPOTLIGHT_COMPASS_KEEPOUT = { w: 152, h: 58 } as const
+
+/**
  * Grund, warum ein Kernstrahl gerade nicht weitergeht: `maxAllowedLevel` lässt
  * ihn nur eine Stufe über den niedrigsten der fünf steigen. Der Zustand hat
  * nichts mit Kosten zu tun, deshalb braucht er einen eigenen Satz statt eines
@@ -2753,30 +3039,6 @@ export const FORGE_BARGAIN_RESTOCK_MS = 8 * 3_600_000
 export const FORGE_BARGAIN_EMPTY_ICON = 'game-icons:night-sky'
 export const FORGE_BARGAIN_REROLL_MATERIAL = 'dark_matter'
 export const FORGE_BARGAIN_REROLL_COST = 1
-
-// Tree zoom (wheel + buttons). The default starts zoomed-in on the sun and
-// its five core rays; zooming out reveals the branch, leaf and bough rings.
-/**
- * Alle vier Werte sind mit der Bühne mitgewachsen (820 → 1040, Faktor 1,268).
- *
- * Die Rechnung dahinter ist nicht die naheliegende. Dargestellt wird
- * `FORGE_STAGE_SIZE × fitScale × zoom`, und weil `fitScale` selbst durch
- * `FORGE_STAGE_SIZE` teilt, kürzt sich die Bühnengröße heraus: die gezeigte
- * Fläche ist schlicht `(Viewport − 2 × Padding) × zoom`. Was durch den vierten
- * Ring KLEINER wird, sind die inneren Ringe im Verhältnis zur Bühne — der
- * Blätterring fällt von 385/820 auf 385/1040. Genau um dieses Verhältnis
- * (Faktor 1,268) muss jeder Zoomwert steigen, das Minimum eingeschlossen.
- *
- * Erst falsch gemacht und im Bild gesehen: das Minimum war stattdessen auf 0,45
- * gesenkt worden, in der Annahme, der grössere Baum brauche mehr Luft. Er stand
- * dann als Briefmarke in der Mitte einer leeren Fläche. Bei 0,70 ist die
- * gezeigte Bühne kleiner als der Viewport, es passt also weiterhin alles ins
- * Bild — nur eben lesbar.
- */
-export const FORGE_TREE_ZOOM_MIN = 0.7
-export const FORGE_TREE_ZOOM_MAX = 2.8
-export const FORGE_TREE_ZOOM_STEP = 0.19
-export const FORGE_TREE_ZOOM_DEFAULT = 2.15
 
 // Header universe block — meep counter count-up tween (steps × interval ≈ 320ms)
 export const MEEP_COUNTUP_STEPS = 20

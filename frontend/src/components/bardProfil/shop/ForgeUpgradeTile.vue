@@ -31,9 +31,9 @@
          für dieselbe Aussage. Azur gewinnt, weil „neu" die seltenere und
          flüchtigere Auskunft ist. -->
     <div
-      v-if="fresh || showBest"
+      v-if="fresh || showBest || arrived"
       class="fut-halo"
-      :class="fresh ? 'fut-halo--fresh' : 'fut-halo--best'"
+      :class="arrived ? 'fut-halo--arrived' : fresh ? 'fut-halo--fresh' : 'fut-halo--best'"
       aria-hidden="true"
     />
 
@@ -278,6 +278,7 @@ import {
   FORGE_BEST_BUY_LABEL,
   FORGE_BEST_BUY_SHORT_LABEL,
   FORGE_CARD_FLASH_MS,
+  FORGE_SPOTLIGHT_ARRIVAL_MS,
   FORGE_CHIME_IMAGE,
   FORGE_COUNT_TOKEN,
   FORGE_DIVIDER_PARENT_ICON,
@@ -304,6 +305,7 @@ import {
    und dem Timer in `ForgeUpgradesSection` aus derselben Quelle gelesen — den
    KEYFRAME-Namen setzt weiterhin die CSS-Klasse, nie JavaScript. */
 const flashDuration = `${FORGE_CARD_FLASH_MS}ms`
+const arriveMs = `${FORGE_SPOTLIGHT_ARRIVAL_MS}ms`
 const buyWidth = `${FORGE_ROW_BUY_WIDTH_PX}px`
 const buyWidthCompact = `${FORGE_ROW_BUY_WIDTH_COMPACT_PX}px`
 const bulkWidth = `${FORGE_ROW_BULK_WIDTH_PX}px`
@@ -328,8 +330,15 @@ const props = withDefaults(
      * hiesse fünfundvierzig Kopien von `upgradeEntries` über fünfzig Knoten.
      */
     bulkCount?: number
+    /**
+     * Gerade von ausserhalb hereingerollt, weil der Zeiger drüben auf dem
+     * zugehörigen Knoten steht. Ein EREIGNIS, kein Zustand — es vergeht von
+     * selbst, und deshalb entscheidet die Liste darüber und nicht die Zeile:
+     * nur sie weiss, ob die Zeile vorher überhaupt ausserhalb ihres Kastens lag.
+     */
+    arrived?: boolean
   }>(),
-  { best: false, bulkCount: 0 },
+  { best: false, bulkCount: 0, arrived: false },
 )
 defineEmits<{ (e: 'buy', id: string): void; (e: 'buyMany', id: string): void }>()
 
@@ -1070,6 +1079,31 @@ const buyTitle = computed(() => {
   box-shadow: inset 0 0 16px rgba(82, 184, 48, 0.42);
 }
 
+/* Der DRITTE Anlass derselben Ebene: die Zeile ist eben hereingerollt, weil der
+   Zeiger drüben auf ihrem Knoten steht.
+
+   In der KNOTENFARBE und nicht in Azur oder Grün — die beiden sagen, WAS diese
+   Zeile ist (neu bezahlbar, das Günstigste). Diese hier sagt, WOHER der Blick
+   kommt, und das ist der Knoten links. Einmalig und mit `forwards`: ein Atmen
+   hiesse „Zustand", und eingetroffen ist man genau einmal. */
+.fut-halo--arrived {
+  border: 1px solid var(--node-c, #c89040);
+  box-shadow: inset 0 0 16px color-mix(in srgb, var(--node-c, #c89040) 42%, transparent);
+  animation: fut-halo-arrive v-bind(arriveMs) ease-out 1 forwards;
+}
+
+@keyframes fut-halo-arrive {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @keyframes fut-halo-breathe {
   0%,
   100% {
@@ -1091,6 +1125,17 @@ const buyTitle = computed(() => {
 .fut-row.fc-dimmed .fut-halo {
   animation: none;
   opacity: 0.3;
+}
+
+/* …aber NICHT die Ankunft. Sie ist ein Ereignis und kein Zustand, und die
+   eintreffende Zeile IST immer der Spotlight — die Regel darüber stellte
+   ausgerechnet die Marke stumm, die den Weg erklärt. Ein Fallstrick, der ohne
+   diese vier Zeilen als „Effekt funktioniert nicht" ankommt und keinen Grund
+   mitliefert. */
+.fut-row.fc-spot .fut-halo--arrived,
+.fut-row.fc-dimmed .fut-halo--arrived {
+  animation: fut-halo-arrive v-bind(arriveMs) ease-out 1 forwards;
+  opacity: 0;
 }
 
 .fut-flash {
@@ -1125,6 +1170,17 @@ const buyTitle = computed(() => {
 
   /* Der Rahmen bleibt — nur sein Atmen fällt weg. */
   .fut-halo {
+    animation: none;
+    opacity: 1;
+  }
+
+  /* Auch hier: die Ankunftskurve endet bei `opacity: 0` und trägt `forwards`.
+     Bliebe sie nur abgeschaltet, wäre die Marke unsichtbar statt ruhig — sie
+     muss ausdrücklich zurückgesetzt werden. Derselbe Fallstrick wie bei
+     `.node-spot` im Baum. */
+  .fut-row.fc-spot .fut-halo--arrived,
+  .fut-row.fc-dimmed .fut-halo--arrived,
+  .fut-halo--arrived {
     animation: none;
     opacity: 1;
   }

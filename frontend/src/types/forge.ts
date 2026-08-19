@@ -22,7 +22,115 @@ import type { IconPoolKey } from './ui'
  * bisher nichts zu sagen hatte (Void-Takt, Drifter, Vorzeichen, Ladder, Bosse,
  * Gebäudepreise, Bard-Fähigkeiten).
  */
-export type ForgeNodeTier = 'branch' | 'leaf' | 'ward' | 'pact' | 'bough' | 'crown'
+export type ForgeNodeTier =
+  | 'branch'
+  | 'leaf'
+  | 'ward'
+  | 'pact'
+  | 'bough'
+  | 'crown'
+  | 'glimmer'
+
+/**
+ * Die fuenf Achsen des Baums — dieselben Ids wie die Solar Rays im
+ * `solarUpgradeStore`, aber als eigener Union hier im Typmodul.
+ *
+ * **Warum nicht `SolarBranchId` importiert:** `types/` haengt an keinem Store,
+ * und die Richtung `types/ -> stores/` waere eine neue Kopplung fuer eine
+ * Zeichenkette. Dass beide Mengen deckungsgleich bleiben, bindet eine Spec —
+ * dasselbe Muster wie bei `SAVE_ID_RENAMES`, das auch beidseitig geprueft wird.
+ *
+ * Ein Knoten NENNT seine Achse nicht: sie folgt aus `parentId`, indem man die
+ * Kette bis zu einem Ray zurueckgeht (`forgeNodeAxis()` im Katalog). Ein Feld
+ * daneben waere eine zweite Wahrheit, die beim ersten Umhaengen still falsch
+ * wird.
+ */
+export type ForgeAxisId =
+  | 'flightSpeed'
+  | 'maxHp'
+  | 'chimesPerClick'
+  | 'chimesPerSecond'
+  | 'dmgPerClick'
+
+/**
+ * WORAUF ein Knoten wirkt — nicht, an welcher Achse er haengt.
+ *
+ * Das ist der Unterschied, an dem der alte Baum gescheitert ist: dort trugen
+ * die drei Speichen der `dmgPerClick`-Achse ueber alle sechs Ringe
+ * ausschliesslich Kampf, Boss und Ladder, und ein ganzer Sektor der Buehne war
+ * damit eine einzige Aussage. Die Achse sagt, WO ein Knoten haengt; die Familie
+ * sagt, WAS er tut, und erst damit wird „kein Cluster ist monothematisch"
+ * ueberhaupt pruefbar (`__tests__/config/forgeMixing.spec.ts`).
+ */
+export type ForgeEffectFamily =
+  | 'travel'
+  | 'drifter'
+  | 'idle'
+  | 'guard'
+  | 'void'
+  | 'star'
+  | 'click'
+  | 'market'
+  | 'harvest'
+  | 'income'
+  | 'combat'
+  | 'boss'
+  | 'ladder'
+  | 'fortune'
+  | 'ability'
+
+/**
+ * Wie ein Cluster seine Mitglieder auslegt.
+ *
+ * `knot`   — ein Ring um den Mittelpunkt, das Schwergewicht in der Mitte
+ * `chain`  — eine Kette nach aussen, fuer Wege statt Ziele
+ * `fan`    — ein Faecher quer zur Radialrichtung, wo mehrere Wege abzweigen
+ */
+export type ForgeClusterShape = 'knot' | 'chain' | 'fan'
+
+/**
+ * Eine Zone des Netzes — die Form, die an die Stelle des Rings getreten ist.
+ *
+ * Der Ring war ein Kreis und damit ein Raster: sieben Radien, fuenfzehn
+ * Speichen, und jeder Knoten sass auf einem Kreuzungspunkt. Ein Cluster ist
+ * dagegen ein ORT mit einem Thema, und die Ketten des Baums laufen HINDURCH
+ * statt darauf entlang. Deshalb traegt er eine Phase (die Sonnenphase, die
+ * seine Mitte oeffnet), aber seine Mitglieder duerfen aus zwei benachbarten
+ * Phasen kommen — sonst waere er wieder ein Ringabschnitt.
+ *
+ * Die Mitgliedsliste ist die EINE Stelle, an der die Zuordnung Knoten -> Ort
+ * steht. Sie im Knoten zu fuehren waere dieselbe Angabe an 155 Stellen.
+ */
+export interface ForgeClusterDef {
+  id: string
+  /** Anzeigename — Bards Kosmos, nie musikalisch. */
+  title: string
+  /** Sonnenphase, die die Mitte dieses Clusters oeffnet. */
+  phase: number
+  /** Mittelpunkt in Buehnen-Polarkoordinaten (Grad ab 3 Uhr, im Uhrzeigersinn). */
+  angleDeg: number
+  dist: number
+  /** Wie weit die Mitglieder um den Mittelpunkt streuen duerfen. */
+  radius: number
+  shape: ForgeClusterShape
+  /** Leitfarbe des Zonenscheins. */
+  accent: string
+  /** Mitglieder in Auslege-Reihenfolge: Knoten-Ids aus `FORGE_NODES`. */
+  members: readonly string[]
+}
+
+/**
+ * Eine Kante OHNE Spiellogik — ein Weg, der zwei Cluster verbindet, damit das
+ * Netz zusammenhaengt, wo `parentId` und `requires` nichts zu sagen haben.
+ *
+ * Sie wird gezeichnet und zieht im Layout wie jede andere Kante, schaltet aber
+ * nichts frei. Ohne sie zerfiele das Bild in fuenfzehn Ketten, die einander nie
+ * beruehren — genau der Eindruck, den das Speichenraster hinterliess.
+ */
+export interface ForgeBridgeDef {
+  from: string
+  to: string
+}
 
 /**
  * Ein Vorgänger, den ein Knoten NEBEN seinem Elternteil verlangt.
@@ -66,8 +174,17 @@ export interface ForgeNodeDef {
   phase: number
   icon: string
   color: string
-  /** Polar angle on the tree stage (degrees, 0 = right, clockwise). */
-  angleDeg: number
+  /**
+   * Worauf der Knoten wirkt. Traegt die Durchmischung des Netzes: eine Spec
+   * verlangt, dass kein Cluster nur eine Familie fuehrt.
+   *
+   * Hier stand einmal `angleDeg`, der Polarwinkel auf der Buehne. Er ist mit
+   * dem Speichenraster gefallen — wo ein Knoten STEHT, sagt jetzt allein die
+   * Karte (`config/progression/starForgeNet.ts`), und der Katalog sagt nur
+   * noch, was er TUT. Save-neutral war der Ausbau ohnehin: der Winkel stand in
+   * keinem Spielstand.
+   */
+  family: ForgeEffectFamily
   baseCost: number
   costMultiplier: number
   /**
@@ -82,6 +199,24 @@ export interface ForgeNodeDef {
   /** Branches, Wards, Pacts und Boughs: Wirkung je Stufe. Leaves: ungenutzt
    *  (fester Verstärker), Crowns: ungenutzt (die Regel steht als Konstante). */
   effectPerLevel: number
+  /**
+   * NUR bei Glimmers: der Knoten, dessen Wirkung dieser hier hebt.
+   *
+   * Das ist der Grund, warum sechzig neue Knoten keine sechzig neuen Achsen
+   * bedeuten. Ein Glimmer erfindet nichts — er zahlt auf eine Zahl ein, die es
+   * schon gibt, und zwar in derselben Einheit. `starForgeStore` addiert ihn
+   * dort, wo die Wirkung ohnehin entsteht (`branchEffect`, `ringEffect`,
+   * `boughEffect`); die dreissig Getter darüber merken davon nichts.
+   *
+   * **Das Ziel ist bewusst NICHT der Elternteil.** `parentId` sagt, was den
+   * Glimmer aufschliesst, `boosts` sagt, worauf er zahlt — und dass beides
+   * auseinanderfällt, ist die Durchmischung: der kleine Knoten hängt am
+   * Kampfast und zahlt auf die Wirtschaft.
+   *
+   * Worauf er NICHT zeigen darf, steht an `FORGE_GLIMMER_MAX_LEVEL`: nichts
+   * mit `FORGE_MIN_*`-Boden, sonst wäre seine Stufe tot.
+   */
+  boosts?: string
 }
 
 export type ForgeRelicRarity = 'rare' | 'epic'

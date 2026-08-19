@@ -6,12 +6,22 @@
     <!-- Alles Skalierte lebt im Viewport, der Ertrags-Sockel darunter NICHT.
          Die Bühne ragt bei Standardzoom weit über ihre Zelle hinaus; eine
          schwebende Sockelkarte läge damit über anklickbaren Knoten. -->
+    <!-- Die Buehne ist groesser als ihr Fenster, also wird gezogen. Muster und
+         Reihenfolge wie im Sigil-Board: `setPointerCapture` erst NACH der
+         Schwelle, `@click.capture` verschluckt den Klick nach echtem Zug. -->
     <div
       ref="viewportEl"
       class="tree-viewport"
+      :class="{ 'tree-viewport--dragging': isDragging }"
       @wheel.prevent="onWheel"
       @mouseleave="setTreeHover(null)"
-      @click="clearPin()"
+      @pointerdown="onPointerDown"
+      @pointermove="onPointerMove"
+      @pointerup="onPointerEnd"
+      @pointercancel="onPointerEnd"
+      @dragstart.prevent
+      @click.capture="onClickCapture"
+      @click="onBackgroundClick"
     >
     <!-- Zoom control -->
     <!-- `.stop`, damit ein Zoomschritt die Anheftung nicht abräumt: die
@@ -25,38 +35,70 @@
       <button class="zoom-btn" aria-label="Zoom in" @click="zoomBy(1)">＋</button>
     </div>
 
+    <!-- DER RAND-KOMPASS. Zeigt an der Viewport-Kante in die Richtung des
+         gemeinten Knotens, solange er ausserhalb liegt, und verschwindet in dem
+         Moment, in dem die Fahrt ihn hereinholt.
+
+         Er hängt im VIEWPORT und NICHT in der Bühne. In der Bühne trüge er
+         deren `scale()` und wäre am unteren Zoomanschlag ein Drittel gross —
+         ausgerechnet dann, wenn man die Übersicht sucht.
+
+         Zwei Ebenen, und das mit Absicht: die äussere trägt die Lage (ein
+         `transform`, inline, weil es sich mit `pan` ändert), die innere nur
+         ihre Deckkraft. Ein einziges Element könnte nicht beides tragen — die
+         Einblendung überschriebe die Lage. -->
+    <div v-if="compassAt" class="tree-compass" :style="compassStyle" aria-hidden="true">
+      <span class="tree-compass-arrow">
+        <Icon
+          :icon="FORGE_SPOTLIGHT_COMPASS_ICON"
+          :width="compassIconPx"
+          :height="compassIconPx"
+        />
+      </span>
+    </div>
+
     <!-- Scaled tree stage -->
     <div
       class="tree-stage"
+      :class="{ 'tree-stage--dragging': isDragging }"
       :style="{
-        transform: `translate(-50%, -50%) scale(${totalScale})`,
+        transform: stageTransform,
         '--inv-scale': (1 / totalScale).toFixed(4),
         '--forge-stage-size': `${FORGE_STAGE_SIZE}px`,
       }"
     >
-      <!-- DAS TIEFENFELD. Wo bis hierher fünf gestrichelte Kreise lagen, liegt
-           jetzt EIN statischer Verlauf: jeder Ringradius ist ein weicher Kamm in
-           der Leitfarbe seiner Ebene, der nach beiden Seiten ausläuft. Fünf
-           konzentrische Umrisse lasen sich als Zifferblatt und behaupteten eine
-           Grenze, die es nicht gibt — was eine Ebene ausmacht, ist ihr ABSTAND
-           zur Sonne. Dieselbe Auflösung wie im Meep-Baum, dem die Rang-Ellipsen
-           aus dem gleichen Grund abgenommen wurden (`constants/forge.ts`).
+      <!-- DER ZONENSCHLEIER. Hier lagen sieben KAEMME auf den Ringradien — ein
+           Kamm um den Mittelpunkt ist ein Ring, nur unscharf, und sieben davon
+           waren ein Zifferblatt mit weichen Zeigern. Jetzt liegt je Cluster ein
+           weicher Fleck in der Farbe seiner Phase, alle auf DERSELBEN einen
+           Ebene und in EINEM statischen `background`. Ein Kamm sagte „all das
+           hier ist gleich weit weg"; ein Fleck sagt „all das hier gehoert
+           zusammen".
 
            Steht VOR dem `<svg>` und liegt damit darunter: bei gleichem Rang
            (z-index 0 gegen `auto`) entscheidet die Dokumentordnung. -->
-      <div class="depth-field" :style="depthFieldStyle" aria-hidden="true" />
+      <div class="zone-haze" :style="zoneHazeStyle" aria-hidden="true" />
 
       <svg
         class="tree-svg"
         :viewBox="`0 0 ${FORGE_STAGE_SIZE} ${FORGE_STAGE_SIZE}`"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <!-- Limbs: sun → root, root → branch, branch → leaf (dim base).
-             Geschwungen, nicht gerade, und je Ebene dünner: die Strichstärke
-             sitzt deshalb am Pfad und nicht mehr an der Gruppe. -->
+        <!-- Die WEGE zwischen zwei Zonen. Sie schalten nichts frei und liegen
+             deshalb ganz unten und am blassesten: sie halten das Bild zusammen,
+             ohne etwas zu behaupten. -->
+        <g class="bridge-limbs" stroke="#3a2c16" stroke-linecap="round" fill="none">
+          <path
+            v-for="limb in bridgeLimbs" :key="limb.key + '-bridge'"
+            :d="limb.d" :stroke-width="limb.width"
+          />
+        </g>
+        <!-- Die STRUKTUR: woran ein Knoten haengt. Geschwungen, nicht gerade,
+             und je Ebene duenner — die Strichstaerke sitzt deshalb am Pfad und
+             nicht an der Gruppe. -->
         <g stroke="#4a3418" stroke-linecap="round" fill="none">
           <path
-            v-for="limb in limbs" :key="limb.key + '-base'"
+            v-for="limb in structureLimbs" :key="limb.key + '-base'"
             :d="limb.d" :stroke-width="limb.width"
           />
         </g>
@@ -69,6 +111,20 @@
             :d="limb.d" :stroke-width="limb.width * FORGE_LIMB_LIT_FACTOR"
             :stroke="limb.color"
             class="limb--lit"
+          />
+        </g>
+
+        <!-- Die BEDINGUNGEN eines gesperrten Knotens, gestrichelt und in der
+             Farbe des Zustands. Sie sind KEINE Rueckkehr der alten Spannfaeden:
+             die zeigten aus dem Bild heraus, weil eine Krone auf r = 438 stand
+             und ihr Zweig auf r = 221. Im Netz ist jede dieser Kanten hoechstens
+             `FORGE_EDGE_MAX_PX` lang — beide Enden stehen im selben Bild, und
+             eine Spec rechnet es nach. -->
+        <g class="req-limbs" stroke-linecap="round" fill="none">
+          <path
+            v-for="limb in requireLimbs" :key="limb.key + '-req'"
+            :d="limb.d" :stroke-width="limb.width"
+            :stroke-dasharray="FORGE_EDGE_REQ_DASH"
           />
         </g>
 
@@ -138,8 +194,19 @@
           <span class="node-glow" aria-hidden="true" />
           <!-- Eine Ebene je Spotlight, nicht eine je Knoten: so existiert genau
                EINE statt fünfundzwanzig, und der Ping fängt bei jedem neuen
-               Ziel von vorn an, weil das Element selbst neu ist. -->
-          <span v-if="spotlightId === node.id" class="node-spot" aria-hidden="true" />
+               Ziel von vorn an, weil das Element selbst neu ist.
+
+               Der Schlüssel setzt genau dieses Rezept fort. Kommt der Knoten
+               durch eine KAMERAFAHRT ins Bild, hat der Spotlight längst
+               gewechselt — das Element stünde da und hätte seinen Ping
+               ausserhalb des Bildes verpulvert. Ein neuer Schlüssel lässt es
+               neu entstehen, und der Ping fällt mit der Ankunft zusammen. -->
+          <span
+            v-if="spotlightId === node.id"
+            :key="`spot-${node.id}-${arrivalTick}`"
+            class="node-spot"
+            aria-hidden="true"
+          />
           <!-- Der VORAUSSETZUNGS-RING. Grün steht, rot fehlt — dieselben zwei
                Töne wie die Punkte des Kranzes und die Häkchen im Tooltip. Eigene
                Ebene neben `.node-spot`, aber nie gleichzeitig mit ihr: ein
@@ -214,7 +281,7 @@
         <div
           v-if="treeHoverId === node.id"
           class="node-tooltip"
-          :class="isTooltipBelow(node.angleDeg) ? 'node-tooltip--below' : 'node-tooltip--above'"
+          :class="isTooltipBelow(node) ? 'node-tooltip--below' : 'node-tooltip--above'"
         >
           <div class="tt-head">
             <span class="tt-name" :style="{ color: node.color }">{{ node.name }}</span>
@@ -266,7 +333,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
@@ -274,10 +341,18 @@ import { FORGE_NODES } from '@/config/progression/starForge'
 import { formatNumber } from '@/config/ui/numberFormat'
 import {
   useForgeUpgrades,
+  forgeUpgradeMayTravel,
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
-import { forgeLimb, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import { forgeEdges, forgeLimb, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import {
+  forgeCompassAt,
+  forgeNodeInView,
+  forgeNodeScreenPoint,
+  type ForgeCamera,
+} from '@/utils/ui/forgeSpotlightView'
+import { FORGE_CLUSTERS } from '@/config/progression/starForgeNet'
 import type { ForgeNodeDef, ForgeNodeTier, ForgeUpgradeEntry, ForgeUpgradeTier } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
@@ -290,7 +365,14 @@ import {
   SHOP_SUN_MIN_DIAMETER,
   SHOP_SUN_MAX_DIAMETER,
   FORGE_STAGE_SIZE,
-  FORGE_RING_RADIUS,
+  FORGE_CROWN_UNLOCK_PHASE,
+  FORGE_ZONE_HAZE_SCALE,
+  FORGE_ZONE_HAZE_ALPHA,
+  FORGE_ZONE_HAZE_LOCKED,
+  FORGE_TREE_ZOOM_FLOOR,
+  FORGE_TREE_DRAG_THRESHOLD_PX,
+  FORGE_ICON_SIZE_GLIMMER,
+  FORGE_EDGE_REQ_DASH,
   FORGE_NODE_DIAMETER,
   FORGE_LIMB_LIT_FACTOR,
   FORGE_REQ_HEADING,
@@ -298,14 +380,9 @@ import {
   FORGE_REQ_DOT_PITCH_DEG,
   FORGE_REQ_MET_MARK,
   FORGE_REQ_OPEN_MARK,
-  FORGE_DEPTH_CREST_SPREAD,
-  FORGE_DEPTH_CREST_ALPHA,
-  FORGE_DEPTH_CREST_LOCKED,
-  FORGE_TREE_ZOOM_MIN,
   FORGE_TREE_ZOOM_MAX,
   FORGE_TREE_ZOOM_STEP,
   FORGE_TREE_ZOOM_DEFAULT,
-  FORGE_ROOT_ANGLES_DEG,
   SOLAR_BRANCHES,
   FORGE_ICON_SIZE_ROOT,
   FORGE_ICON_SIZE_BRANCH,
@@ -325,15 +402,28 @@ import {
   FORGE_SPOTLIGHT_DIM_OPACITY,
   FORGE_SPOTLIGHT_PING_MS,
   FORGE_SPOTLIGHT_MAX_LIMBS,
+  FORGE_SPOTLIGHT_PAN_DELAY_MS,
+  FORGE_SPOTLIGHT_RING_INSET_PX,
+  FORGE_SPOTLIGHT_COMPASS_ICON,
+  FORGE_SPOTLIGHT_COMPASS_ICON_PX,
+  FORGE_SPOTLIGHT_COMPASS_SIZE_PX,
+  FORGE_TREE_PAN_MS,
   FORGE_BEST_BUY_LABEL,
-  FORGE_UPGRADE_GROUPS,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
 const forgeStore = useStarForgeStore()
 const { entryById, bestBuyId, freshIds, buyUpgrade } = useForgeUpgrades()
-const { spotlightId, treeHoverId, pinnedId, setTreeHover, togglePin, clearPin, resetForgeSpotlight } =
-  useForgeSpotlight()
+const {
+  spotlightId,
+  treeHoverId,
+  listHoverId,
+  pinnedId,
+  setTreeHover,
+  togglePin,
+  clearPin,
+  resetForgeSpotlight,
+} = useForgeSpotlight()
 
 const C = FORGE_STAGE_SIZE / 2
 
@@ -390,8 +480,9 @@ interface TreeNode {
   name: string
   icon: string
   color: string
-  angleDeg: number
-  dist: number
+  /** Platz auf der Bühne, in Bühnen-Pixeln — kartesisch, nicht mehr polar. */
+  x: number
+  y: number
   tier: ForgeUpgradeTier
   sizeClass: ForgeUpgradeTier
   iconSize: number
@@ -403,7 +494,6 @@ interface RootDef {
   id: SolarBranchId
   name: string
   icon: string
-  angleDeg: number
   color: string
   statLabel: string
 }
@@ -449,6 +539,7 @@ const RING_ICON_SIZE: Record<ForgeNodeTier, number> = {
   pact: FORGE_ICON_SIZE_PACT,
   crown: FORGE_ICON_SIZE_CROWN,
   bough: FORGE_ICON_SIZE_BOUGH,
+  glimmer: FORGE_ICON_SIZE_GLIMMER,
 }
 
 /* Name, Glyph und Farbe der fünf Strahlen stehen als SOLAR_BRANCHES in
@@ -461,34 +552,34 @@ const ROOTS: RootDef[] = SOLAR_BRANCHES.map((b) => ({
   icon: b.icon,
   color: b.color,
   statLabel: b.statLabel,
-  angleDeg: FORGE_ROOT_ANGLES_DEG[b.id],
 }))
 
 /**
- * WO die Knoten stehen, entscheidet diese Komponente nicht mehr.
+ * WO die Knoten stehen, entscheidet diese Komponente nicht.
  *
- * Die Katalogwinkel sind nur noch der Ausgangspunkt: `forgeTreePlacements()`
- * verdreht jeden Ring gegen seinen Nachbarn und versetzt darin jeden Knoten
- * einzeln — deterministisch aus der ID, einmal gerechnet, danach gecacht. Der
- * Baum stand vorher auf fünfzehn schnurgeraden Speichen im 24°-Raster und las
- * sich als Zielscheibe; die Herleitung samt Messwerten steht am Block
- * „Die STREUUNG" in `constants/forge.ts`.
+ * `forgeTreePlacements()` legt die Cluster der Karte
+ * (`config/progression/starForgeNet.ts`) aus, entspannt sie gegeneinander und
+ * liefert je Id einen Punkt in Bühnen-Pixeln — deterministisch aus der Id,
+ * einmal gerechnet, danach gecacht. Der Baum stand vorher auf fünfzehn
+ * Speichen im 24°-Raster und las sich als Zielscheibe; die Herleitung steht am
+ * Kopf von `utils/ui/forgeTreeLayout.ts` und im Block „das NETZ" in
+ * `constants/forge.ts`.
  *
- * Alles Nachgelagerte — `nodePos()`, die Tooltip-Seite, die Äste, die
- * Scheinwerferkette — liest `angleDeg` und `dist` von HIER und braucht deshalb
- * nichts davon zu wissen.
+ * Alles Nachgelagerte — `nodePos()`, die Tooltip-Seite, die Kanten, die
+ * Scheinwerferkette — liest `x` und `y` von HIER und braucht von der Karte
+ * nichts zu wissen.
  */
 const allNodes = computed<TreeNode[]>(() => {
   const places = forgeTreePlacements()
+  const fallback = { x: C, y: C }
   const roots: TreeNode[] = ROOTS.map((r) => ({
     id: r.id,
     name: r.name,
     icon: r.icon,
     color: r.color,
-    angleDeg: places.get(r.id)?.angleDeg ?? r.angleDeg,
-    dist: places.get(r.id)?.dist ?? FORGE_RING_RADIUS.root,
-    tier: 'root',
-    sizeClass: 'root',
+    ...(places.get(r.id) ?? fallback),
+    tier: 'root' as const,
+    sizeClass: 'root' as const,
     iconSize: FORGE_ICON_SIZE_ROOT,
     parentId: null,
   }))
@@ -497,8 +588,7 @@ const allNodes = computed<TreeNode[]>(() => {
     name: def.name,
     icon: def.icon,
     color: def.color,
-    angleDeg: places.get(def.id)?.angleDeg ?? def.angleDeg,
-    dist: places.get(def.id)?.dist ?? FORGE_RING_RADIUS[def.tier],
+    ...(places.get(def.id) ?? fallback),
     tier: def.tier,
     sizeClass: def.tier,
     iconSize: RING_ICON_SIZE[def.tier],
@@ -508,31 +598,18 @@ const allNodes = computed<TreeNode[]>(() => {
   return [...roots, ...forge]
 })
 
-/**
- * Die Leitfarbe einer Ebene — sie färbt den Ruhekamm der Ebene im Tiefenfeld
- * und den Ring-Chip an der Zeile drüben aus derselben Tabelle. Zwei eigene Töne
- * für dieselbe Ebene liefen beim nächsten Ring auseinander.
- */
-const RING_ACCENT: Record<ForgeUpgradeTier, string> = Object.fromEntries(
-  FORGE_UPGRADE_GROUPS.map((group) => [group.tier, group.accent]),
-) as Record<ForgeUpgradeTier, string>
-
-// ── Geometry ──────────────────────────────────────────────────────────────────
-function rad(deg: number): number {
-  return (deg * Math.PI) / 180
-}
-
-function pt(angleDeg: number, dist: number): { x: number; y: number } {
-  return { x: C + Math.cos(rad(angleDeg)) * dist, y: C + Math.sin(rad(angleDeg)) * dist }
-}
-
+// ── Geometry ─────────────────────────────────────────────────────
 function nodePos(node: TreeNode): Record<string, string> {
-  const x = Math.cos(rad(node.angleDeg)) * node.dist
-  const y = Math.sin(rad(node.angleDeg)) * node.dist
-  return {
-    left: `calc(50% + ${Math.round(x)}px)`,
-    top: `calc(50% + ${Math.round(y)}px)`,
-  }
+  return { left: `${Math.round(node.x)}px`, top: `${Math.round(node.y)}px` }
+}
+
+/** Wo eine Wurzel-Verbindung am Rand des Körpers ansetzt — auf der Geraden vom
+ *  Mittelpunkt zum Strahl, damit der Stummel unter jeder Sonnengrösse sitzt. */
+function sunEdgePoint(toward: TreeNode): { x: number; y: number } {
+  const dx = toward.x - C
+  const dy = toward.y - C
+  const len = Math.hypot(dx, dy) || 1
+  return { x: C + (dx / len) * sunEdgeR.value, y: C + (dy / len) * sunEdgeR.value }
 }
 
 interface Limb {
@@ -543,36 +620,79 @@ interface Limb {
   width: number
   color: string
   targetId: string
+  kind: 'parent' | 'require' | 'bridge'
 }
 
 const nodeById = computed(() => new Map(allNodes.value.map((n) => [n.id, n])))
 
+/**
+ * Jede Verbindung des Netzes — Struktur, Bedingung und Weg.
+ *
+ * Die Bedingungslinie ist neu, und sie ist keine Rückkehr der alten
+ * Spannfäden: die scheiterten daran, dass ihre beiden Enden bei Standardzoom
+ * gar nicht gleichzeitig ins Bild passten (eine Krone auf r = 438, ihr Zweig
+ * auf r = 221, sichtbar rund 484 Bühnen-px). Im Netz ist jede
+ * Bedingungskante höchstens `FORGE_EDGE_MAX_PX` lang, und eine Spec rechnet das
+ * nach. Was damals aus dem Bild zeigte, liegt jetzt daneben.
+ */
 const limbs = computed<Limb[]>(() => {
   const result: Limb[] = []
-  for (const node of allNodes.value) {
-    let from: { x: number; y: number }
-    if (node.tier === 'root') {
-      from = pt(node.angleDeg, sunEdgeR.value)
-    } else {
-      const parent = nodeById.value.get(node.parentId ?? '')
-      if (!parent) continue
-      from = pt(parent.angleDeg, parent.dist)
-    }
-    const to = pt(node.angleDeg, node.dist)
-    const limb = forgeLimb(from, to, node.id, node.tier)
+  const nodes = nodeById.value
+  for (const edge of forgeEdges()) {
+    const to = nodes.get(edge.to)
+    if (!to) continue
+    const fromNode = nodes.get(edge.from)
+    if (!fromNode) continue
+    const limb = forgeLimb(fromNode, to, `${edge.from}>${edge.to}`, to.tier)
     result.push({
-      key: node.id,
+      key: `${edge.from}>${edge.to}`,
       d: limb.d,
       width: limb.width,
-      color: node.color,
-      targetId: node.id,
+      color: to.color,
+      targetId: to.id,
+      kind: edge.kind,
+    })
+  }
+  // Die fünf Stummel von der Sonne zu ihren Strahlen. Sie stehen in keiner
+  // Kantenliste, weil die Sonne kein Knoten ist.
+  for (const root of allNodes.value) {
+    if (root.tier !== 'root') continue
+    const limb = forgeLimb(sunEdgePoint(root), root, `sun>${root.id}`, 'root')
+    result.push({
+      key: `sun>${root.id}`,
+      d: limb.d,
+      width: limb.width,
+      color: root.color,
+      targetId: root.id,
+      kind: 'parent',
     })
   }
   return result
 })
 
+/** Nur die Struktur — sie trägt den Grundstrich. Bedingungen und Wege haben
+ *  ihre eigene Ebene, weil sie etwas anderes sagen. */
+const structureLimbs = computed(() => limbs.value.filter((l) => l.kind === 'parent'))
+const bridgeLimbs = computed(() => limbs.value.filter((l) => l.kind === 'bridge'))
+/**
+ * Die Bedingungskanten, und zwar NUR die eines gesperrten Ziels.
+ *
+ * Eine erfüllte Bedingung ist keine Auskunft mehr — sie stünde als zwanzigste
+ * Linie im Bild und sägte nichts. Sichtbar ist sie, solange sie fehlt.
+ */
+const requireLimbs = computed(() =>
+  limbs.value
+    .filter((l) => l.kind === 'require' && entryById.value.get(l.targetId)?.state === 'locked')
+    // Eine Spur dünner als der Ast, an dem sie hängt: die Bedingung ist die
+    // Auskunft, nicht das Gerüst.
+    .map((l) => ({ ...l, width: Math.max(2, l.width - 1) })),
+)
+
+/** Der gefärbte Strich über dem Grundstrich: das Ziel ist gewachsen. Nur über
+ *  STRUKTUR-Kanten — eine leuchtende Brücke behauptete einen Fortschritt, den
+ *  sie nicht vermittelt. */
 const activeLimbs = computed(() =>
-  limbs.value.filter((limb) => (entryById.value.get(limb.targetId)?.level ?? 0) > 0),
+  structureLimbs.value.filter((limb) => (entryById.value.get(limb.targetId)?.level ?? 0) > 0),
 )
 
 /**
@@ -649,7 +769,12 @@ const spotReqs = computed<Map<string, boolean>>(() => {
   return out
 })
 
-const limbByTarget = computed(() => new Map(limbs.value.map((limb) => [limb.targetId, limb])))
+/** Nur die STRUKTUR-Kante je Ziel. Ein Knoten kann mehrere eingehende Kanten
+ *  haben (Bedingungen, Brücken) — die Scheinwerferkette läuft aber am Baum
+ *  entlang, und der Baum ist `parentId`. */
+const limbByTarget = computed(
+  () => new Map(structureLimbs.value.map((limb) => [limb.targetId, limb])),
+)
 
 /**
  * Der Weg vom Sternenrand bis zum gezeigten Knoten, Glied für Glied: ein Blatt
@@ -686,106 +811,65 @@ const spotScale = String(FORGE_SPOTLIGHT_NODE_SCALE)
 const spotDimOpacity = String(FORGE_SPOTLIGHT_DIM_OPACITY)
 const spotPingMs = `${FORGE_SPOTLIGHT_PING_MS}ms`
 
-// ── Ring unlock state ─────────────────────────────────────────────────────────
+// ── Zonen-Freischaltung ───────────────────────────────────────────────────────
 /**
- * Ab welcher Sonnenphase eine Ebene aufgeht, steht in den KNOTEN, die auf ihr
- * liegen, und nicht in einer festen Zahl daneben. Seit die Ringe eine Leiter
- * bilden, trägt jeder Ring genau EINE Freischaltphase — `min` und `max` sind
- * gleich. Das Paar bleibt trotzdem stehen: es ist die Stelle, an der eine
- * spätere Ausnahme sichtbar würde, statt sich zu verstecken.
+ * Der Kronen-Cluster trägt als einziger ein ZWEITES Tor (der Aufbruch). Der
+ * Store beantwortet es, damit der Prestige-Zähler nicht an zwei Stellen gelesen
+ * wird; die Phase daneben ist dieselbe Bedingung wie bei jeder anderen Zone.
  *
- * Der Ring gilt als offen, sobald sein ERSTER Knoten kaufbar wird — das färbt
- * seinen Kamm im Tiefenfeld.
+ * Was hier stand, war eine Tabelle `Ring → Freischaltphase`. Sie ist mit den
+ * Ringen gefallen: eine Zone NENNT ihre Phase in der Karte, es gibt nichts mehr
+ * aus den Knoten zu erschliessen.
  */
-const ringPhases = computed(() => {
-  const out = {} as Record<ForgeNodeTier, { min: number; max: number }>
-  for (const def of FORGE_NODES) {
-    const seen = out[def.tier]
-    if (!seen) out[def.tier] = { min: def.phase, max: def.phase }
-    else {
-      seen.min = Math.min(seen.min, def.phase)
-      seen.max = Math.max(seen.max, def.phase)
-    }
-  }
-  return out
-})
-
-/** Steht die Sonne weit genug für diese Ebene? */
-function ringOpenAt(tier: ForgeNodeTier): boolean {
-  return solarStore.starPhase >= (ringPhases.value[tier]?.min ?? Infinity)
-}
-
-/**
- * Der Kronen-Ring trägt als einziger ein ZWEITES Tor (der Aufbruch). Der Store
- * beantwortet es, damit der Prestige-Zähler nicht an zwei Stellen gelesen wird;
- * die Phase daneben ist dieselbe Bedingung wie bei jedem anderen Ring.
- */
-const crownsUnlocked = computed(() => ringOpenAt('crown') && forgeStore.crownsUnlocked)
-
-// ── Das Tiefenfeld — die Ebenen als weiche Bänder ─────────────────────────────
-/* Steht NACH den Freischalt-Flags, weil jeder Kamm seine Farbe von ihnen
-   bekommt: eine offene Ebene trägt ihre Leitfarbe, eine gesperrte den kalten
-   Rest. Die Ordnung im Feld ist die des Baums, von innen nach aussen — und
-   damit zugleich die der Sonnenphasen. */
-const depthBands = computed(() =>
-  (
-    [
-      { tier: 'root', unlocked: true },
-      { tier: 'branch', unlocked: ringOpenAt('branch') },
-      { tier: 'leaf', unlocked: ringOpenAt('leaf') },
-      { tier: 'ward', unlocked: ringOpenAt('ward') },
-      { tier: 'pact', unlocked: ringOpenAt('pact') },
-      { tier: 'crown', unlocked: crownsUnlocked.value },
-      { tier: 'bough', unlocked: ringOpenAt('bough') },
-    ] as { tier: ForgeUpgradeTier; unlocked: boolean }[]
-  ).map((band) => ({ ...band, r: FORGE_RING_RADIUS[band.tier] })),
+const crownsUnlocked = computed(
+  () => solarStore.starPhase >= FORGE_CROWN_UNLOCK_PHASE && forgeStore.crownsUnlocked,
 )
 
+// ── Der Zonenschleier ────────────────────────────────────────────
+/* Hier lagen sieben KAEMME auf den Ringradien. Ein Kamm um den Mittelpunkt ist
+   ein Ring, nur unscharf — sieben davon waren ein Zifferblatt mit weichen
+   Zeigern. An ihre Stelle treten FLECKEN: je Cluster ein weicher Schein in der
+   Farbe seiner Phase, gesetzt auf DERSELBEN einen Ebene und mit demselben
+   statischen `background`. Kein Wert pro Frame, keine Animation (Regel 2).
+
+   Ein Kamm sagte „all das hier ist gleich weit weg". Ein Fleck sagt „all das
+   hier gehört zusammen" — und das ist die Aussage, die ein Netz braucht. */
+/** Steht die Sonne weit genug für diese Zone? */
+function zoneOpen(phase: number): boolean {
+  // Der Kronen-Cluster trägt als einziger ein ZWEITES Tor (der Aufbruch); der
+  // Store beantwortet es, damit der Prestige-Zähler nicht an zwei Stellen
+  // gelesen wird.
+  if (phase >= FORGE_CROWN_UNLOCK_PHASE) return crownsUnlocked.value
+  return solarStore.starPhase >= phase
+}
+
 /** Die Leitfarbe mit Deckkraft — als `color-mix`, damit die Farbe selbst nur an
- *  EINER Stelle steht (`FORGE_UPGRADE_GROUPS`) und hier bloß ihr Anteil. */
-function tinted(tier: ForgeUpgradeTier, alpha: number): string {
-  return `color-mix(in srgb, ${RING_ACCENT[tier]} ${alpha * 100}%, transparent)`
+ *  EINER Stelle steht (die Karte) und hier bloss ihr Anteil. */
+function tinted(color: string, alpha: number): string {
+  return `color-mix(in srgb, ${color} ${alpha * 100}%, transparent)`
 }
 
 /**
- * EIN Kamm: transparent → Farbe genau auf dem Ringradius → transparent.
+ * EIN Fleck je Cluster, alle in EINER Ebene.
  *
- * Gerechnet in Prozent des BÜHNENRADIUS, denn `circle closest-side` macht ihn
- * bei einer quadratischen Bühne zur 100 %-Marke. Damit hängen Kamm und Knoten
- * an derselben Zahl (`FORGE_RING_*_R`) — eine zweite Prozentangabe im CSS liefe
- * beim nächsten Ring auseinander.
+ * Gerechnet in Bühnen-Pixeln, nicht in Prozent: die Cluster stehen in Pixeln in
+ * der Karte, und eine zweite Einheit dazwischen liefe beim ersten verschobenen
+ * Cluster auseinander. Ausserhalb der Flecken bleibt alles durchsichtig —
+ * deshalb entsteht nirgends eine Kante, und der Fehler der alten Vignette (die
+ * quadratische Ebene wurde als Rechteck sichtbar) wiederholt sich nicht.
  */
-function crestStops(r: number, color: string, spread: number): string {
-  const p = (r / C) * 100
-  const s = spread * 100
-  return [
-    `transparent ${(p - s).toFixed(2)}%`,
-    `${color} ${p.toFixed(2)}%`,
-    `transparent ${(p + s).toFixed(2)}%`,
-  ].join(', ')
-}
-
-/**
- * Das ruhende Feld: fünf Kämme in EINEM Verlauf. Einmal beim Rendern gesetzt und
- * nur bei einem Phasenwechsel neu — kein Wert pro Frame, keine Animation auf
- * `background` (Performance-Regel 2).
- *
- * Bewusst OHNE zweite Verlaufsschicht: eine Vignette darüber machte die
- * quadratische Ebene selbst sichtbar (Herleitung in `constants/forge.ts`).
- */
-const depthFieldStyle = computed(() => {
-  const crests = depthBands.value
-    .map((band) =>
-      crestStops(
-        band.r,
-        band.unlocked
-          ? tinted(band.tier, FORGE_DEPTH_CREST_ALPHA)
-          : FORGE_DEPTH_CREST_LOCKED,
-        FORGE_DEPTH_CREST_SPREAD,
-      ),
-    )
-    .join(', ')
-  return { background: `radial-gradient(circle closest-side at 50% 50%, ${crests})` }
+const zoneHazeStyle = computed(() => {
+  const layers = FORGE_CLUSTERS.map((cluster) => {
+    const rad = (cluster.angleDeg * Math.PI) / 180
+    const x = Math.round(C + Math.cos(rad) * cluster.dist)
+    const y = Math.round(C + Math.sin(rad) * cluster.dist)
+    const r = Math.round(cluster.radius * FORGE_ZONE_HAZE_SCALE)
+    const color = zoneOpen(cluster.phase)
+      ? tinted(cluster.accent, FORGE_ZONE_HAZE_ALPHA)
+      : FORGE_ZONE_HAZE_LOCKED
+    return `radial-gradient(circle ${r}px at ${x}px ${y}px, ${color} 0%, transparent 100%)`
+  })
+  return { background: layers.join(', ') }
 })
 
 /**
@@ -822,12 +906,12 @@ function showTreeReqs(node: TreeNode): boolean {
   return reqWreaths.value.has(node.id)
 }
 
-function isTooltipBelow(angleDeg: number): boolean {
-  // Open tooltips toward the stage center: top-half nodes open downward,
-  // bottom-half nodes upward — so they never clip the panel edge or the
-  // phase dock, even at high zoom.
-  const n = ((angleDeg % 360) + 360) % 360
-  return n >= 180
+function isTooltipBelow(node: TreeNode): boolean {
+  // Zur Bühnenmitte hin öffnen: was oben liegt, klappt nach unten auf, und
+  // umgekehrt — so schneidet keine Karte die Panelkante, bei keinem Zoom.
+  // Früher entschied das der Polarwinkel; im Netz gibt es keinen mehr, und die
+  // y-Lage sagt dasselbe direkter.
+  return node.y >= C
 }
 
 // ── Interaction ───────────────────────────────────────────────────────────────
@@ -868,10 +952,37 @@ function handleNodeClick(node: TreeNode): void {
   if (buyUpgrade(node.id)) flashSun()
 }
 
-// ── Zoom (buttons + wheel) with container fit ─────────────────────────────────
+// ── Ausschnitt: Zoom, Pan und der Boden dazwischen ───────────────────────
+/*
+ * **`fitScale` ist nicht mehr der Skalierer, sondern der BODEN.**
+ *
+ * Bis zum Umbau war `totalScale = fitScale × zoom`, und `fitScale` passte die
+ * ganze Bühne in die Spalte. Das hatte eine Folge, die den Baum jahrelang klein
+ * gehalten hat: jeder zusätzliche Bühnenpixel verkleinerte JEDEN Knoten
+ * (gemessen — Blattglyph 16,8 → 14,8 px bei Bühne 1180). Eine grössere Bühne war
+ * damit nicht bezahlbar, und deshalb standen sieben Ringe auf 1040 px.
+ *
+ * Jetzt ist ein Bühnenpixel bei Standardzoom ein Bildschirmpixel, man sieht
+ * einen AUSSCHNITT, und `fitScale` beantwortet nur noch eine Frage: ab welchem
+ * Zoom passt alles ins Bild? Das ist der untere Anschlag — „ganz
+ * herausgezoomt" zeigt damit garantiert den ganzen Baum, auf jedem Fenster.
+ */
 const viewportEl = ref<HTMLElement | null>(null)
 const zoom = ref(FORGE_TREE_ZOOM_DEFAULT)
-const fitScale = ref(1)
+/** Der Zoom, bei dem die Bühne gerade noch ganz in den Viewport passt. */
+const fitScale = ref(FORGE_TREE_ZOOM_FLOOR)
+const viewportSize = ref({ w: 0, h: 0 })
+
+/**
+ * Der Bildmittelpunkt, in Bühnen-Koordinaten.
+ *
+ * Bühnen-Pixel und NICHT Bildschirm-Pixel — das ist der Unterschied zum
+ * Sigil-Board, und er ist bewusst: beim Zoomwechsel bleibt der betrachtete
+ * Punkt dadurch von selbst stehen. In Bildschirm-Pixeln müsste jeder
+ * Zoomschritt den Versatz umrechnen, und es gäbe zwei Zahlen für dieselbe
+ * Stelle.
+ */
+const pan = ref({ x: FORGE_STAGE_SIZE / 2, y: FORGE_STAGE_SIZE / 2 })
 
 let resizeObserver: ResizeObserver | null = null
 
@@ -880,14 +991,13 @@ onMounted(() => {
   resizeObserver = new ResizeObserver((entries) => {
     const rect = entries[0]?.contentRect
     if (!rect) return
+    viewportSize.value = { w: rect.width, h: rect.height }
     // Gemessen wird der VIEWPORT, nicht das Panel: der Ertrags-Sockel darunter
-    // gehört nicht zur Fläche, in die der Baum passen muss.
-    // The phase dock moved into the forge sidebar, so the air it needed at the
-    // top now sits on all four sides instead — same fit as before, centred.
-    fitScale.value = Math.max(
-      0.3,
-      (Math.min(rect.width, rect.height) - FORGE_TREE_FIT_PADDING_PX * 2) / FORGE_STAGE_SIZE,
-    )
+    // gehört nicht zur Fläche, in der der Baum liegt.
+    fitScale.value =
+      (Math.min(rect.width, rect.height) - FORGE_TREE_FIT_PADDING_PX * 2) / FORGE_STAGE_SIZE
+    zoom.value = clampZoom(zoom.value)
+    clampPan()
   })
   resizeObserver.observe(viewportEl.value)
 })
@@ -902,25 +1012,329 @@ onBeforeUnmount(() => {
   // beim echten Abriss. Den Wechselfall räumt `ShopComponent` an der
   // Sichtbarkeit ab — dort hängt aus demselben Grund auch der Escape-Handler.
   resetForgeSpotlight()
+  // Der Tabwechsel läuft schon über den `null`-Zweig des Kamerawächters
+  // (`ShopComponent` ruft `resetForgeSpotlight()` an der Sichtbarkeit); dies
+  // hier ist der echte Abriss.
+  clearTravel()
 })
 
-const totalScale = computed(() => fitScale.value * zoom.value)
+const totalScale = computed(() => zoom.value)
+/** Der tatsächliche untere Anschlag: nie über dem Fit, nie unter dem festen
+ *  Boden — auf einem winzigen Fenster wäre der Fit sonst unlesbar klein. */
+const zoomFloor = computed(() => Math.max(FORGE_TREE_ZOOM_FLOOR, Math.min(1, fitScale.value)))
+
+function clampZoom(value: number): number {
+  return Math.min(FORGE_TREE_ZOOM_MAX, Math.max(zoomFloor.value, value))
+}
+
+/**
+ * Wie weit der Bildmittelpunkt von der Bühnenmitte weg darf.
+ *
+ * Eine HARTE Klemmung, kein Gummiband — und das ist die zweite bewusste
+ * Abweichung vom Sigil-Board. Dort ist die Bühne kleiner als der Viewport, das
+ * Gummiband ist die richtige Antwort auf „da ist nichts mehr". Hier ist sie
+ * grösser, es gibt echten Inhalt zu erreichen, und eine Sättigung machte
+ * ausgerechnet die äussersten Knoten schwammig.
+ *
+ * Passt die Bühne ganz ins Bild, ist die Grenze null: der Baum steht zentriert
+ * und lässt sich nicht verschieben. Genau richtig — es gibt nichts zu suchen.
+ */
+function panLimit(): { x: number; y: number } {
+  const s = totalScale.value || 1
+  return {
+    x: Math.max(0, FORGE_STAGE_SIZE / 2 - viewportSize.value.w / 2 / s),
+    y: Math.max(0, FORGE_STAGE_SIZE / 2 - viewportSize.value.h / 2 / s),
+  }
+}
+
+function clampPan(): void {
+  const limit = panLimit()
+  const half = FORGE_STAGE_SIZE / 2
+  pan.value = {
+    x: Math.min(half + limit.x, Math.max(half - limit.x, pan.value.x)),
+    y: Math.min(half + limit.y, Math.max(half - limit.y, pan.value.y)),
+  }
+}
+
+/**
+ * Pan und Zoom in EINEM `transform`.
+ *
+ * Die Reihenfolge ist der ganze Trick: die Verschiebung steht VOR `scale`, also
+ * in Bildschirm-Pixeln — stünde sie dahinter, würde sie mitskaliert und der
+ * Zug an der Maus liefe bei jedem Zoom anders schnell.
+ */
+const stageTransform = computed(() => {
+  const s = totalScale.value
+  const dx = (FORGE_STAGE_SIZE / 2 - pan.value.x) * s
+  const dy = (FORGE_STAGE_SIZE / 2 - pan.value.y) * s
+  return `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) translate(-50%, -50%) scale(${s})`
+})
 
 const zoomKnobLeft = computed(() => {
-  const t = (zoom.value - FORGE_TREE_ZOOM_MIN) / (FORGE_TREE_ZOOM_MAX - FORGE_TREE_ZOOM_MIN)
-  return `${Math.round(t * 100)}%`
+  const span = FORGE_TREE_ZOOM_MAX - zoomFloor.value || 1
+  const t = (zoom.value - zoomFloor.value) / span
+  return `${Math.round(Math.min(1, Math.max(0, t)) * 100)}%`
 })
 
+/** Ein Schritt an den Knöpfen oder an der Leiste — Fixpunkt ist die Bildmitte,
+ *  dort ändert sich `pan` nicht. */
 function zoomBy(direction: number): void {
-  zoom.value = Math.min(
-    FORGE_TREE_ZOOM_MAX,
-    Math.max(FORGE_TREE_ZOOM_MIN, zoom.value + direction * FORGE_TREE_ZOOM_STEP),
-  )
+  zoom.value = clampZoom(zoom.value + direction * FORGE_TREE_ZOOM_STEP)
+  clampPan()
 }
 
+/**
+ * Das Rad zoomt auf den Punkt UNTER dem Zeiger, nicht auf die Bildmitte.
+ *
+ * Bei einer Bühne von 2000 px ist das keine Feinheit: ohne den Fixpunkt
+ * wanderte der betrachtete Bereich bei jedem Radschritt sichtbar weg, und man
+ * müsste nach jedem Zoom neu suchen.
+ *
+ * Die KLEMMUNG kommt zuletzt. Umgekehrt zöge sie den Fixpunkt weg, und das Bild
+ * verschöbe sich doppelt.
+ */
 function onWheel(event: WheelEvent): void {
-  zoomBy(event.deltaY < 0 ? 1 : -1)
+  const el = viewportEl.value
+  if (!el) return
+  const before = clampZoom(zoom.value)
+  const after = clampZoom(before + (event.deltaY < 0 ? 1 : -1) * FORGE_TREE_ZOOM_STEP)
+  if (after === before) return
+  const rect = el.getBoundingClientRect()
+  const offX = event.clientX - rect.left - rect.width / 2
+  const offY = event.clientY - rect.top - rect.height / 2
+  // Der Bühnenpunkt unter dem Zeiger — vor und nach dem Schritt derselbe.
+  const stageX = pan.value.x + offX / before
+  const stageY = pan.value.y + offY / before
+  zoom.value = after
+  pan.value = { x: stageX - offX / after, y: stageY - offY / after }
+  clampPan()
 }
+
+// ── Ziehen ─────────────────────────────────────────────────────
+/*
+ * Muster: `SigilBoardComponent.vue`. PointerEvents, und `setPointerCapture`
+ * ERST nach der Schwelle — wer beim `pointerdown` captured, leitet den
+ * folgenden Klick um, und der Knotenkauf stirbt. Die Zahl ist dieselbe wie dort
+ * (`FORGE_TREE_DRAG_THRESHOLD_PX`), weil es dieselbe Geste ist.
+ */
+const isDragging = ref(false)
+let didDrag = false
+let dragPointerId: number | null = null
+let dragStart = { x: 0, y: 0 }
+let dragStartPan = { x: 0, y: 0 }
+
+function onPointerDown(event: PointerEvent): void {
+  if (event.button !== 0) return
+  dragPointerId = event.pointerId
+  didDrag = false
+  dragStart = { x: event.clientX, y: event.clientY }
+  dragStartPan = { ...pan.value }
+}
+
+function onPointerMove(event: PointerEvent): void {
+  if (dragPointerId !== event.pointerId) return
+  const dx = event.clientX - dragStart.x
+  const dy = event.clientY - dragStart.y
+  if (!isDragging.value) {
+    if (Math.hypot(dx, dy) < FORGE_TREE_DRAG_THRESHOLD_PX) return
+    isDragging.value = true
+    didDrag = true
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+  }
+  const s = totalScale.value || 1
+  pan.value = { x: dragStartPan.x - dx / s, y: dragStartPan.y - dy / s }
+  clampPan()
+}
+
+function onPointerEnd(event: PointerEvent): void {
+  if (dragPointerId !== event.pointerId) return
+  dragPointerId = null
+  isDragging.value = false
+  clampPan()
+}
+
+/** Nach einem echten Zug wird der Klick verschluckt — sonst könnte man einen
+ *  Knoten kaufen, indem man über ihn hinwegzieht. */
+function onClickCapture(event: MouseEvent): void {
+  if (!didDrag) return
+  event.stopPropagation()
+  event.preventDefault()
+  didDrag = false
+}
+
+/** Klick auf den freien Grund löst die Anheftung — aber nur, wenn es wirklich
+ *  ein Klick war. */
+function onBackgroundClick(): void {
+  if (didDrag) return
+  clearPin()
+}
+
+/**
+ * Die Kamera folgt der Anheftung.
+ *
+ * Der Baum ist zu gross, um ihn mit einer Liste von 155 Zeilen daneben ohne
+ * diese Brücke zu bedienen: wer rechts eine Zeile anheftet, will sie links
+ * SEHEN. Einmalig gesetzt, die vorhandene Transition auf `.tree-stage` trägt
+ * die Bewegung — keine Frame-Schleife, kein `requestAnimationFrame`.
+ */
+watch(pinnedId, (id) => {
+  if (!id) return
+  const node = nodeById.value.get(id)
+  if (!node) return
+  pan.value = { x: node.x, y: node.y }
+  clampPan()
+})
+
+// ── Die Kamera folgt auch dem Zeiger DRÜBEN ──────────────────────────────────
+/*
+ * Die Anheftung war bisher der einzige Weg, einen Knoten ins Bild zu holen — und
+ * sie kostet einen Klick auf einen Knoten, den man dafür erst finden muss. Der
+ * Zeiger auf der Upgrade-Liste kann dasselbe leisten, und zwar für JEDE der
+ * hundertfünfundfünfzig Zeilen: er sagt schon heute, welcher Knoten gemeint ist
+ * (`listHoverId` → `spotlightId` → der Kreis leuchtet). Was fehlte, war der
+ * Fall, dass der leuchtende Kreis gar nicht im Bild steht — bei einer Bühne von
+ * 2000 px und einem Fenster von rund 700 ist das der Regelfall, und dann sieht
+ * der Spieler von der ganzen Hervorhebung nichts.
+ *
+ * Warum die Rechnung HIER steht und nicht in `useForgeSpotlight`: sie braucht
+ * `pan`, `zoom` und `viewportSize`, und die gibt es nur in dieser Komponente.
+ * Das Composable hält bewusst reinen Anzeige-Zustand; ein Kamerastand gehörte
+ * dort so wenig hin wie eine Scrollposition. Die Liste rechts könnte mit der
+ * Antwort ohnehin nichts anfangen — sie kann links nichts bewegen. Der Baum ist
+ * der Einzige, der beides hat: die Frage und die Handlung.
+ */
+
+/** Wohin gefahren werden soll, solange die Kamera noch nicht dort ist. Nur
+ *  während dieses Fensters zeigt der Rand-Kompass auf das Ziel. */
+const travelId = ref<string | null>(null)
+/**
+ * Zählt vollendete Fahrten.
+ *
+ * Einziger Zweck: den Ping am Zielknoten neu zu zünden. Die Ebene, die ihn
+ * trägt (`.node-spot`), entsteht sonst nur beim WECHSEL des Spotlights — und
+ * der hat hier längst stattgefunden, bevor die Bühne losfährt.
+ */
+const arrivalTick = ref(0)
+
+let panTimer: ReturnType<typeof setTimeout> | null = null
+let arrivalTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearTravel(): void {
+  if (panTimer !== null) {
+    clearTimeout(panTimer)
+    panTimer = null
+  }
+  if (arrivalTimer !== null) {
+    clearTimeout(arrivalTimer)
+    arrivalTimer = null
+  }
+  travelId.value = null
+}
+
+/**
+ * Der halbe Durchmesser des Knotens auf dem SCHIRM.
+ *
+ * Drei Faktoren, und alle drei sind nötig: seine Grössenklasse (ein Glimmer
+ * misst 34, eine Wurzel 64), der Spotlight-Sprung (der gemeinte Knoten wächst um
+ * 1,22 — genau er soll ja ganz zu sehen sein) und der Ringüberstand.
+ */
+function nodeRadiusOnScreen(node: TreeNode): number {
+  const half = FORGE_NODE_DIAMETER[node.sizeClass] / 2 + FORGE_SPOTLIGHT_RING_INSET_PX
+  return half * FORGE_SPOTLIGHT_NODE_SCALE * totalScale.value
+}
+
+function camera(): ForgeCamera {
+  return { panX: pan.value.x, panY: pan.value.y, scale: totalScale.value }
+}
+
+watch(listHoverId, (id) => {
+  clearTravel()
+  if (id === null) return
+  // Gesperrt: leuchten ja, fahren nein. Derselbe Filter wie drüben in der
+  // Liste, dieselbe Funktion — und wieder im Wächter statt am Setter, weil
+  // `setListHover` auch Hervorhebung, Kranz und Bedingungskette trägt.
+  if (!forgeUpgradeMayTravel(entryById.value.get(id))) return
+  // Eine Anheftung hält die Ansicht fest; das ist ihre ganze Aufgabe. Führe die
+  // Kamera dabei mit, hübe sie genau das auf — und liefe ausserdem von dem
+  // Knoten weg, der gerade leuchtet (der Pin schlägt den Zeiger im Spotlight).
+  if (pinnedId.value !== null) return
+  const node = nodeById.value.get(id)
+  if (!node) return
+  // Steht er schon im Bild, bleibt die Bühne stehen. Das Gegenstück zu
+  // `block: 'nearest'` drüben — und der Grund, dass ein Schwenk über die Liste
+  // nicht das halbe Panel in Bewegung setzt.
+  if (forgeNodeInView(node, nodeRadiusOnScreen(node), camera(), viewportSize.value)) return
+
+  travelId.value = id
+  panTimer = setTimeout(() => {
+    panTimer = null
+    // Der Zeiger ist weitergezogen, während wir gewartet haben.
+    if (listHoverId.value !== id) return
+    pan.value = { x: node.x, y: node.y }
+    clampPan()
+    travelId.value = null
+    // Der Ping erst NACH der Fahrt: gezündet man ihn sofort, platzte er noch
+    // ausserhalb des Bildes, und von der Ankunft bliebe nichts zu sehen.
+    arrivalTimer = setTimeout(() => {
+      arrivalTimer = null
+      if (listHoverId.value === id) arrivalTick.value += 1
+    }, FORGE_TREE_PAN_MS)
+  }, FORGE_SPOTLIGHT_PAN_DELAY_MS)
+})
+
+// ── Der RAND-KOMPASS ─────────────────────────────────────────────────────────
+/**
+ * Auf welchen Knoten der Kompass zeigt — oder auf keinen.
+ *
+ * ZWEI Anlässe, ein Zeiger. Der erste ist das Fahrtziel: in den 260 ms vor dem
+ * Schwenk sagt er, wohin es gleich geht, und nimmt der Bewegung damit das
+ * Ruckartige. Der zweite ist der ANGEHEFTETE Knoten, solange man ihn aus dem
+ * Bild gezogen oder herausgezoomt hat — und der ist der eigentliche Grund, dass
+ * es den Kompass gibt: eine Anheftung, die man aus den Augen verliert, war bis
+ * hierher nur durch Suchen wiederzufinden.
+ *
+ * `null`, sobald der Knoten im Bild liegt. Der Kompass beantwortet genau eine
+ * Frage, und sie stellt sich dann nicht mehr.
+ */
+const compassAt = computed(() => {
+  const id = travelId.value ?? pinnedId.value
+  if (id === null) return null
+  const node = nodeById.value.get(id)
+  if (!node) return null
+  const cam = camera()
+  const view = viewportSize.value
+  if (forgeNodeInView(node, nodeRadiusOnScreen(node), cam, view)) return null
+  const mark = forgeCompassAt(forgeNodeScreenPoint(node, cam, view), view)
+  if (!mark) return null
+  return { ...mark, color: node.color }
+})
+
+/**
+ * Lage UND Drehung in EINEM `transform`, inline am Element.
+ *
+ * Nicht als Custom Property an den Viewport: die vererbte Variable liesse den
+ * ganzen Knotenteppich darunter neu rechnen (Performance-Regel 3), und der hat
+ * bei Vollausbau hundertfünfundfünfzig Kinder. Das `+ 90` dreht das nach oben
+ * zeigende Glyph in die mathematische Winkelzählung.
+ */
+const compassStyle = computed(() => {
+  const at = compassAt.value
+  if (!at) return undefined
+  return {
+    transform:
+      `translate3d(${at.x.toFixed(1)}px, ${at.y.toFixed(1)}px, 0)` +
+      ` translate(-50%, -50%) rotate(${(at.angleDeg + 90).toFixed(1)}deg)`,
+    '--node-color': at.color,
+  }
+})
+
+/** Die Fahrtdauer und der Ringüberstand gehen per `v-bind` ins scoped CSS
+ *  zurück — dort standen sie einmal als Literale, und JavaScript braucht sie
+ *  jetzt beide. */
+const panMs = `${FORGE_TREE_PAN_MS}ms`
+const ringInset = `${-FORGE_SPOTLIGHT_RING_INSET_PX}px`
+const compassIconPx = FORGE_SPOTLIGHT_COMPASS_ICON_PX
+const compassSize = `${FORGE_SPOTLIGHT_COMPASS_SIZE_PX}px`
 
 // ── Phase-colored stage vars (mirrors PlanetSelectTabComponent sunPhaseStyle) ─
 const stageStyle = computed(() => {
@@ -985,6 +1399,14 @@ const nextPhasePreviewStyle = computed(() => ({
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  /* Die Bühne ist grösser als ihr Fenster — die Hand sagt, dass man sie ziehen
+     kann, bevor man es versucht. */
+  cursor: grab;
+  touch-action: none;
+}
+
+.tree-viewport--dragging {
+  cursor: grabbing;
 }
 
 /* ══════════════════════════════════════════════════
@@ -1058,8 +1480,21 @@ const nextPhasePreviewStyle = computed(() => ({
   left: 50%;
   width: var(--forge-stage-size);
   height: var(--forge-stage-size);
-  transition: transform 0.2s ease;
+  /* Die Transition trägt Zoomschritte, die Kamerafahrt zur Anheftung UND die
+     zum Zeiger auf der Upgrade-Liste. Die Dauer steht in einer Konstante, weil
+     JavaScript sie kennen muss: der Ping am Ziel zündet erst, wenn sie
+     abgelaufen ist. */
+  transition: transform v-bind(panMs) ease;
   z-index: 1;
+}
+
+/* Beim Ziehen MUSS sie aus sein — sonst hängt der Baum der Maus um 200 ms
+   hinterher, und das fühlt sich an wie ein Fehler. `will-change` steht nur
+   hier und nicht dauerhaft: es gehört an Elemente, deren `transform`
+   WIRKLICH gerade pro Frame geschrieben wird (Performance-Regel 12). */
+.tree-stage--dragging {
+  transition: none;
+  will-change: transform;
 }
 
 .tree-svg {
@@ -1070,18 +1505,30 @@ const nextPhasePreviewStyle = computed(() => ({
   pointer-events: none;
 }
 
-/* ══════════════════════════════════════════════════
-   TIEFENFELD — die Ebenen ohne Kreiskante
-══════════════════════════════════════════════════ */
-/* EINE Ebene ersetzt fünf SVG-Kreise. Sie trägt einen STATISCHEN Verlauf, der
-   nur bei einem Phasenwechsel neu gesetzt wird — kein Wert pro Frame, keine
-   Animation auf `background` (Performance-Regel 2). `z-index: 0` gegen das
-   `auto` des `<svg>`: bei gleichem Rang gewinnt die Dokumentordnung, und sie
-   steht im Template davor.
+/* Die Wege zwischen zwei Zonen — am blassesten von allen. Sie schalten nichts
+   frei; sie sagen nur, dass es weitergeht. */
+.bridge-limbs {
+  opacity: 0.5;
+}
 
-   Eine zweite Ebene lag hier einmal darüber und hob den Ring hervor, dessen
-   Filterchip gewählt war; sie ist mit der Kopfleiste gestrichen. */
-.depth-field {
+/* Die Bedingung eines gesperrten Knotens: rot, gestrichelt, und nur solange
+   sie fehlt. Rot ist im Projekt durchgehend „fehlt" (`FORGE_REQ_OPEN_COLOR`) —
+   dieselbe Farbe tragen die hohlen Punkte des Kranzes am Knoten selbst. */
+.req-limbs {
+  stroke: #cc6050;
+  opacity: 0.62;
+}
+
+/* ══════════════════════════════════════════════════
+   ZONENSCHLEIER — die Zonen ohne eine einzige Kreiskante
+══════════════════════════════════════════════════ */
+/* EINE Ebene trägt fünfundzwanzig Flecken — vorher waren es sieben Kämme auf
+   den Ringradien. Der `background` ist STATISCH und wird nur bei einem
+   Phasenwechsel neu gesetzt: kein Wert pro Frame, keine Animation auf
+   `background` (Performance-Regel 2). `z-index: 0` gegen das `auto` des
+   `<svg>`: bei gleichem Rang gewinnt die Dokumentordnung, und sie steht im
+   Template davor. */
+.zone-haze {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -1106,6 +1553,11 @@ const nextPhasePreviewStyle = computed(() => ({
   align-items: center;
   justify-content: center;
   z-index: 3;
+  /* Sie ist Deko und kein Ziel — durchlässig für den Zeiger, damit man die
+     Bühne auch dort greifen kann, wo sie liegt. Gemessen: ein Zug, der in der
+     Bühnenmitte begann, bewegte nichts, weil die Scheibe den `pointerdown`
+     abfing. */
+  pointer-events: none;
 }
 
 .tree-stage-sun {
@@ -1256,6 +1708,15 @@ const nextPhasePreviewStyle = computed(() => ({
   width: v-bind("nodePx.bough");
   height: v-bind("nodePx.bough");
   border: 2px solid #4a2a6a;
+}
+
+/* Der GLIMMER ist der kleinste Kreis des Netzes — ein Weg, kein Ziel.
+   Sein Rand ist blasser als jeder andere: eine Kette aus fünf davon soll als
+   Linie lesen und nicht als Reihe von Zielen. */
+.node-circle--glimmer {
+  width: v-bind("nodePx.glimmer");
+  height: v-bind("nodePx.glimmer");
+  border: 2px solid #3a4048;
 }
 
 /* Ring 6 ist der GRÖSSTE nach dem Kern — grösser als ein Zweig, kleiner als ein
@@ -1435,8 +1896,23 @@ const nextPhasePreviewStyle = computed(() => ({
   border-color: #c89040;
 }
 
+/* Der Schein eines kaufbaren Knotens steht STILL.
+ *
+ * Er hat einmal geatmet, und bei 95 Knoten ging das noch. Im Netz sind es 155,
+ * im Spaetspiel sind davon bis zu 90 gleichzeitig kaufbar — und 90 laufende
+ * Keyframes waren im Orbit schon einmal die gemessene Ursache eines Rucklers
+ * (`docs/performance.md`, Regel: „und wenn es viele sind?").
+ *
+ * Der Verzicht kostet nichts, er gewinnt sogar: was ueberall blinkt, hebt
+ * nichts hervor. Es atmen nur noch die zwei Zeichen, die WIRKLICH etwas
+ * auszeichnen — der frisch aufgegangene Knoten und der eine Best-Buy-Ring. */
 .node-circle--affordable .node-glow {
   box-shadow: 0 0 22px rgba(232, 200, 80, 0.85);
+  opacity: 0.72;
+}
+
+/* Frisch aufgegangen: DAS atmet, und es sind nie viele. */
+.node-circle--fresh .node-glow {
   animation: node-glow-breathe 2s ease-in-out infinite alternate;
 }
 
@@ -1552,7 +2028,7 @@ const nextPhasePreviewStyle = computed(() => ({
    `node-glow-breathe`, zwei Keyframes auf einer Ebene überlagern sich nicht. */
 .node-spot {
   position: absolute;
-  inset: -4px;
+  inset: v-bind(ringInset);
   border-radius: 50%;
   border: 2px solid var(--node-color, #c89040);
   box-shadow: 0 0 18px color-mix(in srgb, var(--node-color, #c89040) 80%, transparent);
@@ -1593,11 +2069,58 @@ const nextPhasePreviewStyle = computed(() => ({
    Der Schein ist statisch und damit von Regel 2 ausdrücklich gedeckt. */
 .node-req {
   position: absolute;
-  inset: -4px;
+  inset: v-bind(ringInset);
   border-radius: 50%;
   border: 2px solid #cc6050;
   pointer-events: none;
   z-index: -1;
+}
+
+/* ══ DER RAND-KOMPASS ══════════════════════════════════════════════════════
+   Er liegt über der Bühne (z-index 1) und unter der Zoom-Leiste (20): die
+   Leiste ist bedienbar, der Kompass nur Auskunft, und ausweichen tut er ihr
+   schon in der Rechnung.
+
+   Sein Schein ist STATISCH und damit von Regel 2 gedeckt — animiert wird
+   allein die Deckkraft der inneren Ebene, und die genau einmal. Ein
+   Dauerläufer wäre hier falsch: der Zeiger steht selten und kurz im Bild, und
+   was blinkt, während man ohnehin schon hinsieht, ist nur noch Lärm. */
+.tree-compass {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* `border-box`, damit die Konstante die ÄUSSERE Kante meint — die Rechnung,
+     die ihn von der Zoom-Leiste wegschiebt, misst genau die. */
+  box-sizing: border-box;
+  width: v-bind(compassSize);
+  height: v-bind(compassSize);
+  border-radius: 4px;
+  background: #16110a;
+  border: 1px solid #4a3010;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.7);
+  color: var(--node-color, #e8c040);
+  pointer-events: none;
+}
+
+.tree-compass-arrow {
+  display: flex;
+  opacity: 0;
+  animation: tree-compass-in 180ms ease-out 1 forwards;
+}
+
+@keyframes tree-compass-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .node-req--met {
@@ -1895,6 +2418,14 @@ const nextPhasePreviewStyle = computed(() => ({
   .node-spot::after,
   .spot-limbs path {
     animation: none;
+  }
+
+  /* Und dieselbe Falle beim Kompass: seine Einblendung startet bei Deckkraft 0
+     und trägt `forwards` — bliebe sie nur abgeschaltet, wäre der Zeiger
+     unsichtbar statt ruhig. */
+  .tree-compass-arrow {
+    animation: none;
+    opacity: 1;
   }
 
   /* Dieselbe Falle wie beim Kaufbar-Schein: ohne die Deckkraft mitzusetzen

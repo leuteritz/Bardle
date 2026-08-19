@@ -1,0 +1,208 @@
+import { describe, it, expect } from 'vitest'
+import {
+  FORGE_BRIDGE_MAX_PX,
+  FORGE_EDGE_MAX_PX,
+  FORGE_MIN_AIR_PX,
+  FORGE_NODE_DIAMETER,
+  FORGE_RAY_DIST,
+  FORGE_STAGE_SIZE,
+  FORGE_SUN_EDGE_GAP,
+  FORGE_ZONE_BAND,
+  SHOP_SUN_MAX_DIAMETER,
+  SOLAR_BRANCHES,
+} from '@/config/constants'
+import { FORGE_NODES, getForgeNode } from '@/config/progression/starForge'
+import { FORGE_BRIDGES, FORGE_CLUSTERS } from '@/config/progression/starForgeNet'
+import { forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import type { ForgeUpgradeTier } from '@/types'
+
+/**
+ * Die Geometrie des NETZES — Nachfolgerin von `forgeGeometry.spec.ts`.
+ *
+ * Die alte Datei prüfte eine Ringleiter: Radien streng steigend, Ringabstand
+ * grösser als die halben Knoten beider Ringe, Kammbänder ohne Überlappung. Alle
+ * drei sind Aussagen über ein Raster, das es nicht mehr gibt.
+ *
+ * Was an ihre Stelle tritt, sind die drei Zusagen des Umbaus, und zwar als
+ * Rechnung statt als Absicht:
+ *
+ *   1. **Nichts überlappt.** Zwischen den Rändern zweier beliebiger Knoten
+ *      liegen mindestens `FORGE_MIN_AIR_PX`.
+ *   2. **Jede Bedingung ist ein sichtbarer Nachbar.** Keine Struktur- oder
+ *      Bedingungskante ist länger als `FORGE_EDGE_MAX_PX` — die Zahl ist so
+ *      gewählt, dass beide Enden bei Standardzoom zugleich ins Bild passen.
+ *      Genau daran sind die alten Spannfäden gescheitert (438 gegen 221
+ *      Bühnen-px bei 484 sichtbaren), und genau das wird hier nachgerechnet.
+ *   3. **Kein Knoten steckt in der Sonne oder ragt über die Kante.**
+ */
+
+/** Die Rundung der Platzierung auf 0,1 px und der Abbruch des Trenn-Passes nach
+ *  fester Rundenzahl lassen bis zu einem Pixel Rest — das ist der Preis dafür,
+ *  dass die Laufzeit beschränkt und das Ergebnis reproduzierbar ist. */
+const AIR_TOLERANCE_PX = 1
+
+const RAY_IDS = new Set<string>(SOLAR_BRANCHES.map((b) => b.id))
+
+function tierOf(id: string): ForgeUpgradeTier {
+  return getForgeNode(id)?.tier ?? 'root'
+}
+
+describe('Star Forge — das Netz steht frei', () => {
+  it('jeder Knoten hat genau einen Platz', () => {
+    const places = forgeTreePlacements()
+    expect(places.size).toBe(FORGE_NODES.length + SOLAR_BRANCHES.length)
+    for (const def of FORGE_NODES) {
+      expect(places.get(def.id), `${def.id} steht nirgends`).toBeDefined()
+    }
+    for (const ray of SOLAR_BRANCHES) {
+      expect(places.get(ray.id), `${ray.id} steht nirgends`).toBeDefined()
+    }
+  })
+
+  it('kein Knotenpaar unterschreitet die Mindestluft', () => {
+    // DIE Prüfung dieser Datei. Sie ersetzt „Ringabstand > halbe Knotensumme":
+    // dort genügte es, sieben Radien gegeneinander zu rechnen, weil jeder Knoten
+    // auf einem Ring sass. Im Netz gibt es keine Klasse mehr, die man
+    // stellvertretend prüfen könnte — also wird jedes Paar gemessen.
+    const places = forgeTreePlacements()
+    const ids = [...places.keys()]
+    let worst = { a: '', b: '', air: Infinity }
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const pa = places.get(ids[i])!
+        const pb = places.get(ids[j])!
+        const air =
+          Math.hypot(pa.x - pb.x, pa.y - pb.y) -
+          (FORGE_NODE_DIAMETER[tierOf(ids[i])] + FORGE_NODE_DIAMETER[tierOf(ids[j])]) / 2
+        if (air < worst.air) worst = { a: ids[i], b: ids[j], air }
+      }
+    }
+    expect(
+      worst.air,
+      `engste Stelle: ${worst.a} und ${worst.b} halten ${worst.air.toFixed(1)} px`,
+    ).toBeGreaterThanOrEqual(FORGE_MIN_AIR_PX - AIR_TOLERANCE_PX)
+  })
+
+  it('jede Struktur- und Bedingungskante bleibt kurz genug fürs Bild', () => {
+    // Die Zusage, die den ganzen Umbau trägt. Eine Bedingung, deren Zubringer
+    // ausserhalb des Bildes steht, ist keine Auskunft, sondern eine Aufgabe:
+    // der Spieler musste sich Namen merken und selbst suchen gehen.
+    const places = forgeTreePlacements()
+    for (const edge of forgeEdges()) {
+      if (edge.kind === 'bridge') continue
+      const a = places.get(edge.from)
+      const b = places.get(edge.to)
+      expect(a && b, `${edge.from} → ${edge.to} hängt im Nichts`).toBeTruthy()
+      const length = Math.hypot(a!.x - b!.x, a!.y - b!.y)
+      expect(
+        length,
+        `${edge.kind}-Kante ${edge.from} → ${edge.to} misst ${length.toFixed(0)} px`,
+      ).toBeLessThanOrEqual(FORGE_EDGE_MAX_PX)
+    }
+  })
+
+  it('auch die Wege zwischen zwei Zonen bleiben in ihrer weiteren Grenze', () => {
+    // Eine Brücke darf weiter sein als eine Bedingung, weil sie etwas anderes
+    // verspricht: ihr folgt man, sie muss nicht als Ganzes im Bild stehen.
+    // Grenzenlos ist sie deshalb nicht — sonst zöge das Netz an einer Stelle
+    // auseinander, an der es zusammenhalten soll.
+    const places = forgeTreePlacements()
+    for (const bridge of FORGE_BRIDGES) {
+      const a = places.get(bridge.from)
+      const b = places.get(bridge.to)
+      expect(a && b, `Brücke ${bridge.from} → ${bridge.to} hängt im Nichts`).toBeTruthy()
+      const length = Math.hypot(a!.x - b!.x, a!.y - b!.y)
+      expect(
+        length,
+        `Brücke ${bridge.from} → ${bridge.to} misst ${length.toFixed(0)} px`,
+      ).toBeLessThanOrEqual(FORGE_BRIDGE_MAX_PX)
+    }
+  })
+
+  it('kein Knoten steckt in der Sonne oder ragt über die Bühnenkante', () => {
+    const places = forgeTreePlacements()
+    const half = FORGE_STAGE_SIZE / 2
+    const sunEdge = SHOP_SUN_MAX_DIAMETER / 2 + FORGE_SUN_EDGE_GAP
+    for (const [id, at] of places) {
+      const r = FORGE_NODE_DIAMETER[tierOf(id)] / 2
+      const dist = Math.hypot(at.x - half, at.y - half)
+      expect(dist - r, `${id} steckt in der Sonne`).toBeGreaterThanOrEqual(sunEdge - 1)
+      expect(dist + r, `${id} ragt über die Bühnenkante`).toBeLessThanOrEqual(half + 1)
+    }
+  })
+
+  it('die fünf Strahlen stehen dort, wo die Karte sie hinsetzt', () => {
+    // Sie sind die einzigen Knoten mit fester Position: der Anfang, an dem alles
+    // hängt. Zöge die Relaxation sie mit, wanderte der ganze Baum bei der
+    // nächsten Katalogänderung.
+    const places = forgeTreePlacements()
+    const half = FORGE_STAGE_SIZE / 2
+    for (const ray of SOLAR_BRANCHES) {
+      const at = places.get(ray.id)!
+      const dist = Math.hypot(at.x - half, at.y - half)
+      expect(dist, `${ray.id} ist gewandert`).toBeCloseTo(FORGE_RAY_DIST, 0)
+    }
+  })
+
+  it('jeder Cluster liegt in dem Distanzband seiner Phase', () => {
+    // Die Bänder überlappen absichtlich — das ist der Unterschied zum Ring. Was
+    // sie NICHT dürfen, ist die Reihenfolge verlieren: eine spätere Phase liegt
+    // weiter draussen, sonst wüchse der Baum nach innen.
+    for (const cluster of FORGE_CLUSTERS) {
+      const band = FORGE_ZONE_BAND[cluster.phase]
+      expect(band, `Phase ${cluster.phase} hat kein Band`).toBeDefined()
+      expect(cluster.dist, `${cluster.id} liegt vor seinem Band`).toBeGreaterThanOrEqual(band.inner)
+      expect(cluster.dist, `${cluster.id} liegt hinter seinem Band`).toBeLessThanOrEqual(band.outer)
+    }
+  })
+
+  it('die Bänder steigen streng, und keines beginnt vor den Strahlen', () => {
+    for (let i = 1; i < FORGE_ZONE_BAND.length; i++) {
+      expect(
+        FORGE_ZONE_BAND[i].inner,
+        `Band ${i} beginnt nicht nach Band ${i - 1}`,
+      ).toBeGreaterThan(FORGE_ZONE_BAND[i - 1].inner)
+      expect(FORGE_ZONE_BAND[i].outer).toBeGreaterThan(FORGE_ZONE_BAND[i - 1].outer)
+    }
+    expect(FORGE_ZONE_BAND[0].inner).toBeGreaterThan(FORGE_RAY_DIST)
+  })
+
+  it('die Karte und der Katalog kennen dieselben Knoten', () => {
+    // Ein Name in der Karte, den der Katalog nicht führt, wäre ein Ort ohne
+    // Knoten; ein Katalogknoten ohne Karteneintrag stünde nirgends und wäre für
+    // den Spieler nicht vorhanden. Beides fällt sonst niemandem auf.
+    const mapped = FORGE_CLUSTERS.flatMap((c) => c.members)
+    expect(new Set(mapped).size, 'ein Knoten steht in zwei Clustern').toBe(mapped.length)
+    const mappedSet = new Set(mapped)
+    for (const def of FORGE_NODES) {
+      expect(mappedSet.has(def.id), `${def.id} liegt in keinem Cluster`).toBe(true)
+    }
+    for (const id of mapped) {
+      expect(getForgeNode(id), `die Karte kennt ${id}, der Katalog nicht`).toBeDefined()
+    }
+    // Die Strahlen gehören keinem Cluster — sie sind der Anfang, kein Ort.
+    for (const rayId of RAY_IDS) {
+      expect(mappedSet.has(rayId), `${rayId} liegt in einem Cluster`).toBe(false)
+    }
+  })
+
+  it('jede Brücke verbindet zwei Knoten, die es gibt', () => {
+    for (const bridge of FORGE_BRIDGES) {
+      expect(getForgeNode(bridge.from), `Brücke von ${bridge.from}`).toBeDefined()
+      expect(getForgeNode(bridge.to), `Brücke nach ${bridge.to}`).toBeDefined()
+      expect(bridge.from, 'eine Brücke auf sich selbst').not.toBe(bridge.to)
+    }
+  })
+
+  it('die Platzierung ist deterministisch und würfelt nicht', () => {
+    // Härter als ein Gleichheitsvergleich zweier Aufrufe: der liefe auch bei
+    // einem Modul-Cache über `Math.random()` durch. Hier wird bewiesen, dass
+    // gar nicht gewürfelt wird — das Netz muss in jeder Sitzung, jedem
+    // Spielstand und jedem Testlauf dasselbe sein, ohne gespeichert zu werden.
+    const first = forgeTreePlacements()
+    const second = forgeTreePlacements()
+    for (const [id, at] of first) {
+      expect(second.get(id)).toEqual(at)
+    }
+  })
+})

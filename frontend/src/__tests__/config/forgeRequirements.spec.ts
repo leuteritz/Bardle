@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
 import {
   FORGE_NODES,
   FORGE_CROWNS,
@@ -10,14 +11,13 @@ import {
   SOLAR_BRANCHES,
   SOLAR_MAX_LEVELS,
   SAVE_ID_RENAMES,
-  FORGE_ROOT_ANGLES_DEG,
   FORGE_TIER_BASE_MAX_LEVEL,
   FORGE_BRANCH_MAX_LEVEL_CAP,
   FORGE_LEAF_MAX_LEVEL,
   FORGE_WARD_MAX_LEVEL,
   FORGE_PACT_MAX_LEVEL,
   FORGE_CROWN_MAX_LEVEL,
-  FORGE_UPGRADE_GROUPS,
+  FORGE_EDGE_MAX_PX,
 } from '@/config/constants'
 import type { ForgeNodeDef, ForgeNodeTier } from '@/types'
 
@@ -61,18 +61,29 @@ function maxLevelAtPhase(def: ForgeNodeDef, phase: number): number {
   return Math.min(TIER_CAP[def.tier], FORGE_TIER_BASE_MAX_LEVEL + Math.max(0, phase - def.phase))
 }
 
-/** Die Ringfolge von innen nach aussen — dieselbe Quelle wie Chipleiste und Tiefenfeld. */
-const RING_ORDER = FORGE_UPGRADE_GROUPS.map((group) => group.tier)
-const ringIndex = (tier: string): number => RING_ORDER.indexOf(tier as never)
+const NODE_BY_ID = new Map(FORGE_NODES.map((def) => [def.id, def]))
 
-/** Auf welcher Wurzelachse eine Speiche liegt — jede Wurzel hält drei. */
-function axisOf(angleDeg: number): string {
-  for (const [axis, root] of Object.entries(FORGE_ROOT_ANGLES_DEG)) {
-    for (const delta of [-24, 0, 24]) {
-      if ((root + delta + 360) % 360 === angleDeg) return axis
-    }
+const RAY_ID_SET = new Set<string>(SOLAR_BRANCHES.map((ray) => ray.id))
+
+/**
+ * Die KETTE, auf der ein Knoten liegt — benannt nach ihrem Zweig, dem
+ * innersten Katalogknoten des Weges.
+ *
+ * Sie tritt an die Stelle der Speiche. Eine Speiche war ein Winkel, eine Kette
+ * ist ein Weg: `parentId` zurück bis knapp vor den Strahl. Zwei Knoten liegen
+ * genau dann auf derselben Kette, wenn sie denselben Zweig über sich haben —
+ * und das ist die Frage, die „aus einer fremden Achse" wirklich stellt.
+ */
+function chainOf(nodeId: string): string {
+  let cursor = nodeId
+  const seen = new Set<string>()
+  while (NODE_BY_ID.has(cursor) && !seen.has(cursor)) {
+    const def = NODE_BY_ID.get(cursor)!
+    if (RAY_ID_SET.has(def.parentId)) return def.id
+    seen.add(cursor)
+    cursor = def.parentId
   }
-  return ''
+  return cursor
 }
 
 const RAY_IDS = new Set<string>(SOLAR_BRANCHES.map((ray) => ray.id))
@@ -99,25 +110,53 @@ describe('Star Forge — die Zusatz-Voraussetzungen', () => {
     }
   })
 
-  it('jede Voraussetzung liegt weiter INNEN', () => {
+  it('jede Voraussetzung geht FRÜHER auf', () => {
     // Zwei Gründe, und beide sind hart.
     //
-    // Erstens Zyklen: zwei Knoten desselben Rings könnten sich gegenseitig
+    // Erstens Zyklen: zwei Knoten derselben Phase könnten sich gegenseitig
     // verlangen, und keiner ginge je auf.
     //
     // Zweitens `adminMaxAll()`. Es arbeitet `FORGE_NODES` in ARRAY-Reihenfolge
-    // ab (Branches → Leaves → Wards → Covenants → Crowns → Boughs) und prüft
-    // `nodeUnlocked` gar nicht — es verlässt sich darauf, dass jeder Vorgänger
-    // vorher dran war. Eine Bedingung auf denselben oder einen äusseren Ring
-    // liefe dort still ins Leere.
+    // ab und prüft `nodeUnlocked` gar nicht — es verlässt sich darauf, dass
+    // jeder Vorgänger vorher dran war. Die Array-Ordnung selbst bindet
+    // `forgeMixing.spec.ts`; hier steht die inhaltliche Hälfte derselben
+    // Bedingung.
+    //
+    // Geprüft wird die PHASE und nicht mehr der Ringindex: im Netz gibt es kein
+    // Innen und Aussen mehr, aber sehr wohl ein Früher und Später.
     for (const def of WITH_REQUIRES) {
       for (const req of def.requires ?? []) {
         const inner = getForgeNode(req.id)
-        const innerRing = inner ? ringIndex(inner.tier) : ringIndex('root')
+        const innerPhase = inner ? inner.phase : -1
         expect(
-          innerRing,
-          `${def.id} (${def.tier}) verlangt ${req.id} — das liegt nicht weiter innen`,
-        ).toBeLessThan(ringIndex(def.tier))
+          innerPhase,
+          `${def.id} (Phase ${def.phase}) verlangt ${req.id} — das geht nicht früher auf`,
+        ).toBeLessThan(def.phase)
+      }
+    }
+  })
+
+  it('jede Voraussetzung liegt im eigenen oder einem angrenzenden Cluster', () => {
+    // DIE Zusage des Netz-Umbaus, und die Antwort auf das, woran die alten
+    // Spannfäden gescheitert sind: eine Krone stand auf r = 438, ihr Zweig auf
+    // r = 221, und das sichtbare Fenster war 484 Bühnen-px breit — der Spieler
+    // las eine Liste ferner Namen und musste sie sich merken.
+    //
+    // Gemessen wird in Bühnen-Pixeln und nicht in Cluster-Namen: was zählt, ist
+    // nicht die Zugehörigkeit, sondern der Abstand im Bild. Dieselbe Zahl prüft
+    // `forgeNetGeometry.spec.ts` über ALLE Kanten; hier steht sie noch einmal
+    // für die Bedingungen allein, weil sie für die den Ausschlag gibt.
+    const places = forgeTreePlacements()
+    for (const def of WITH_REQUIRES) {
+      for (const req of def.requires ?? []) {
+        const a = places.get(def.id)
+        const b = places.get(req.id)
+        expect(a && b, `${def.id} oder ${req.id} steht nirgends`).toBeTruthy()
+        const dist = Math.hypot(a!.x - b!.x, a!.y - b!.y)
+        expect(
+          dist,
+          `${def.id} verlangt ${req.id} über ${dist.toFixed(0)} px — das passt nicht ins Bild`,
+        ).toBeLessThanOrEqual(FORGE_EDGE_MAX_PX)
       }
     }
   })
@@ -171,51 +210,99 @@ describe('Star Forge — die Kronen laufen zusammen', () => {
     }
   })
 
-  it('die Kronen mit ZWEI Zusatzbedingungen holen sie von zwei FREMDEN Achsen', () => {
-    // Das ist die Design-Zusage des Rings und nicht bloss eine hübsche Anordnung:
-    // eine Regel über die Reise soll erst kaufen können, wer auch Material und
-    // Bewahrung ausgebaut hat. Kämen beide Vorgänger von derselben Achse — oder
-    // gar von der eigenen —, wäre es wieder eine Kette, nur mit zwei Gliedern.
+  it('die Kronen mit ZWEI Zubringern holen sie von zwei FREMDEN Ketten', () => {
+    // Die Design-Zusage des Rangs, und sie ist keine blosse Anordnung: eine
+    // Regel über die Reise soll erst kaufen können, wer auch Material und
+    // Bewahrung ausgebaut hat. Kämen beide Zubringer aus derselben Kette — oder
+    // gar aus der eigenen —, wäre es wieder eine Kette, nur mit zwei Gliedern.
     //
-    // Die Kronen mit EINER Zusatzbedingung sind die andere Fassung derselben
-    // Idee: sie verlangen die EIGENE Achse bis nach unten. Sie sind hier
-    // ausgenommen, und die Prüfung darunter hält sie fest.
+    // Die KETTE ist im Netz die Einheit, nicht mehr die Speiche: gemeint ist der
+    // Weg vom Strahl bis zu diesem Knoten, und zwei Zubringer dürfen nicht
+    // beide auf demselben liegen.
     const conjunctions = FORGE_CROWNS.filter((def) => (def.requires ?? []).length >= 2)
     expect(conjunctions.length).toBeGreaterThan(0)
     for (const def of conjunctions) {
-      const own = axisOf(def.angleDeg)
-      const axes = (def.requires ?? []).map((req) => axisOf(getForgeNode(req.id)!.angleDeg))
-      expect(own, `${def.id} sitzt auf keiner Wurzelachse`).not.toBe('')
-      expect(axes, `${def.id} holt einen Vorgänger von seiner eigenen Achse`).not.toContain(own)
-      expect(new Set(axes).size, `${def.id} holt zwei Vorgänger von derselben Achse`).toBe(
-        axes.length,
+      const ownChain = chainOf(def.parentId)
+      const chains = (def.requires ?? []).map((req) => chainOf(req.id))
+      // Nur die ZWEIFACHE Fassung schliesst die eigene Kette aus. Die dreifache
+      // nimmt sie ausdrücklich mit — sie ist der Zusammenlauf ALLER Wege dieses
+      // Clusters, und ohne die eigene wäre das keiner.
+      if (chains.length === 2) {
+        expect(chains, `${def.id} holt einen Zubringer aus seiner eigenen Kette`).not.toContain(
+          ownChain,
+        )
+      }
+      expect(new Set(chains).size, `${def.id} holt zwei Zubringer aus derselben Kette`).toBe(
+        chains.length,
       )
     }
   })
 
-  it('die DREIFACH-Kronen holen je einen Zweig, ein Blatt und einen Ward', () => {
-    // Die dritte Fassung ist nicht einfach „eine Bedingung mehr": sie greift in
-    // drei RINGE zugleich. Zwei Wards und ein Blatt wären wieder dieselbe
-    // Tiefe, nur breiter — und der Ring hätte drei Fassungen, von denen zwei
-    // dasselbe sagen.
+  it('die DREIFACH-Kronen greifen tiefer als die zweifachen', () => {
+    // Die dritte Fassung ist nicht einfach „eine Bedingung mehr". Sie griff
+    // früher in drei RINGE zugleich (Zweig, Blatt, Ward); im Netz liegen Zweige
+    // und Blätter zu weit innen, um von einer Krone aus sichtbar zu sein.
+    //
+    // An ihre Stelle tritt der Griff über drei KETTEN — und die Steigerung
+    // bleibt messbar: mehr Zubringer, mehr verschiedene Ketten, und mindestens
+    // zwei Ränge darunter beteiligt. Zwei Bündnisse und eine Wacht sind damit
+    // etwas anderes als drei Bündnisse.
     const triples = FORGE_CROWNS.filter((def) => (def.requires ?? []).length === 3)
     expect(triples.length).toBeGreaterThan(0)
     for (const def of triples) {
-      const tiers = (def.requires ?? []).map((req) => getForgeNode(req.id)!.tier)
-      expect([...tiers].sort(), `${def.id} greift nicht in drei verschiedene Ringe`).toEqual([
-        'branch',
-        'leaf',
-        'ward',
-      ])
+      const chains = (def.requires ?? []).map((req) => chainOf(req.id))
+      // ALLE DREI Ketten des Clusters, die eigene eingeschlossen — das ist die
+      // Steigerung gegenüber der zweiten Fassung, die nur die zwei fremden
+      // nimmt. Ein Cluster hat genau drei Ketten; mehr Wege gibt es an dieser
+      // Stelle des Netzes nicht, und ein vierter käme aus einem Bild, das der
+      // Spieler beim Kauf nicht sieht.
+      expect(new Set(chains).size, `${def.id} greift nicht in drei Ketten`).toBe(3)
+      expect(chains, `${def.id} lässt die eigene Kette aus`).toContain(chainOf(def.parentId))
+      const tiers = new Set((def.requires ?? []).map((req) => getForgeNode(req.id)!.tier))
+      expect(tiers.size, `${def.id} greift nur in einen Rang`).toBeGreaterThanOrEqual(2)
     }
   })
 
-  it('die Kronen mit EINER Zusatzbedingung verlangen die eigene Speiche', () => {
+  it('die Kronen mit EINEM Zubringer verlangen die Wacht ihrer eigenen Kette', () => {
     const single = FORGE_CROWNS.filter((def) => (def.requires ?? []).length === 1)
     expect(single.length).toBeGreaterThan(0)
     for (const def of single) {
       const inner = getForgeNode(def.requires![0].id)!
-      expect(inner.angleDeg, `${def.id} verlangt einen Knoten fremder Speiche`).toBe(def.angleDeg)
+      expect(inner.tier, `${def.id} verlangt keine Wacht`).toBe('ward')
+      expect(chainOf(def.parentId), `${def.id} verlangt eine fremde Kette`).toBe(chainOf(inner.id))
+    }
+  })
+
+  it('alle drei Fassungen kommen vor, und keine dominiert', () => {
+    // Der Kontrast IST der Inhalt des Rangs. Fällt eine Fassung weg, trägt er
+    // nur noch eine Aussage — und dann bräuchte es die drei Gruppen nicht.
+    const byCount = new Map<number, number>()
+    for (const def of FORGE_CROWNS) {
+      const n = (def.requires ?? []).length
+      byCount.set(n, (byCount.get(n) ?? 0) + 1)
+    }
+    expect([...byCount.keys()].sort(), 'es gibt nicht drei Fassungen').toEqual([1, 2, 3])
+    for (const [count, n] of byCount) {
+      expect(n, `Fassung mit ${count} Zubringern kommt ${n}× vor`).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('ein endloser Ast verlangt die Krone SEINER EIGENEN Kette', () => {
+    // „Was die Regel eröffnet hat, wächst jetzt weiter." Früher zeigten diese
+    // fünf quer über den Baum — `darkTithe` (maxHp) auf `tidelessWatch`
+    // (chimesPerSecond) —, und der Satz stimmte inhaltlich, war aber im Bild
+    // nicht zu sehen. Jetzt hängen beide am selben Bündnis und stehen
+    // nebeneinander.
+    const gated = FORGE_NODES.filter((def) => def.tier === 'bough' && (def.requires ?? []).length)
+    expect(gated.length).toBeGreaterThan(0)
+    for (const def of gated) {
+      for (const req of def.requires ?? []) {
+        const crown = getForgeNode(req.id)!
+        expect(crown.tier, `${def.id} verlangt keine Krone`).toBe('crown')
+        expect(crown.parentId, `${def.id} und ${crown.id} hängen nicht am selben Bündnis`).toBe(
+          def.parentId,
+        )
+      }
     }
   })
 })

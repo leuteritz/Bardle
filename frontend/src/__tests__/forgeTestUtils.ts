@@ -25,6 +25,7 @@ export function setForgeLevel(id: string, level: number): void {
     pact: forge.pactLevels,
     crown: forge.crownLevels,
     bough: forge.boughLevels,
+    glimmer: forge.glimmerLevels,
   }
   const tier = getForgeNode(id)?.tier
   if (tier) bags[tier][id] = level
