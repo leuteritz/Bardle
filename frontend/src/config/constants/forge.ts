@@ -350,11 +350,15 @@ export const FORGE_BODY_EDGE_FRACTION = { star: 1, comet: 0.76, blackHole: 1 } a
  *
  * Muss den Atem der Scheibe überbieten, sonst leckt sie im Scheitel der
  * Pulsanimation an den Strichen: der stärkste ist `tree-sun-pulse` mit
- * `scale(1.05)`, bei Höchstradius 120 also 6 px. Nach oben begrenzt der
- * Wurzelring: 165 − 28 (halber Knoten) − 128 lässt bei größtem Körper noch
- * einen sichtbaren Stummel stehen.
+ * `scale(1.05)`, bei Höchstradius 160 also 8 px. **Von 8 auf 11 gewachsen**,
+ * als der Körper von 240 auf 320 ging — die alte Zahl war für Radius 120
+ * gerechnet und hätte den neuen Atem nicht mehr gedeckt.
+ *
+ * Nach oben begrenzt der Wurzelring: `FORGE_RAY_DIST` (245) − 32 (halber
+ * Ray-Knoten) − 171 (Körperrand plus diese Luft) lässt 42 px Stummel stehen,
+ * genau so viel wie vor dem Wachstum.
  */
-export const FORGE_SUN_EDGE_GAP = 8
+export const FORGE_SUN_EDGE_GAP = 11
 
 /* ── Was hier stand: die STREUUNG ──────────────────────────────────
  *
@@ -547,7 +551,8 @@ export const FORGE_LIMB_DIM_OPACITY = 0.3
 /* ── Die LEGENDE zur Kantensprache ─────────────────────────────────────
  *
  * Sie zeigt keine Farbquadrate mit Namen daneben. Genau daran ist die erste
- * Fassung des Ertrags-Sockels gescheitert (`ForgeYieldPlinth.vue`): eine Probe,
+ * Fassung des Ertrags-Kopfs gescheitert (er ist inzwischen ganz gefallen): eine
+ * Probe,
  * die anders aussieht als die Sache, die sie erklärt, muss selbst erst erklärt
  * werden. Jede Zeile hier trägt deshalb DIESELBE CSS-Klasse wie die Kante auf
  * der Bühne — wer die Zeile ansieht, hat das Bild schon gesehen, und beide
@@ -1040,30 +1045,54 @@ export const FORGE_STAGE_SIZE = 2000
  * Die Leiter bleibt trotzdem: jede Phase öffnet genau eine Zonenmenge, und die
  * Bänder steigen streng monoton. Was fällt, ist nur der Kreis.
  * `__tests__/config/forgePhaseZones.spec.ts` rechnet beides nach.
+ *
+ * **Alle sechs um +20 nach außen gerückt**, als die Sonne von 240 auf 320 ging
+ * und `FORGE_RAY_DIST` ihr folgen musste (das erste Band darf nicht vor den
+ * Strahlen beginnen). ADDITIV und nicht skaliert, und das ist keine Feinheit:
+ * eine Brücke verbindet zwei Nachbar-Cluster DERSELBEN Zone, ihre Länge ist
+ * tangential und wächst damit linear mit dem Radius. Gemessen liegt die längste
+ * bei 322 px gegen `FORGE_BRIDGE_MAX_PX` (360) — ein Faktor 1,15 machte daraus
+ * 370 und risse sofort, ein Zuschlag von 20 px lässt sie fast unverändert.
+ *
+ * Nach oben begrenzt sie die Bühnenkante: `clampToStage()` hält einen Bough
+ * (d 48) bei `FORGE_STAGE_SIZE/2 − 24` = 976, das äußerste Band endet auf 960.
+ * Mehr Zuschlag hieße die Bühne selbst vergrößern, und daran hängen die
+ * gemessenen Werte in `forgeCameraBounds.spec.ts`.
  */
 export const FORGE_ZONE_BAND: readonly { inner: number; outer: number }[] = [
-  { inner: 250, outer: 430 }, // Phase 0 — Spark, Branches
-  { inner: 370, outer: 560 }, // Phase 1 — Dawn, Leaves
-  { inner: 490, outer: 690 }, // Phase 2 — Zenith, Wards
-  { inner: 610, outer: 810 }, // Phase 3 — Swell, Covenants
+  { inner: 270, outer: 450 }, // Phase 0 — Spark, Branches
+  { inner: 390, outer: 580 }, // Phase 1 — Dawn, Leaves
+  { inner: 510, outer: 710 }, // Phase 2 — Zenith, Wards
+  { inner: 630, outer: 830 }, // Phase 3 — Swell, Covenants
   // Phase 4 — Pyre, Crowns. Das breiteste Band, und das mit Absicht: eine Krone
   // verlangt Knoten aus ZWEI Zonen unter sich, und `FORGE_EDGE_MAX_PX` verlangt,
   // dass diese Kante ins Bild passt. Beides zusammen zieht sie nach innen — die
   // Karte sagt es selbst („sie liegen ZWISCHEN Wacht- und Bündnis-Cluster,
   // nicht dahinter"). Stand die Innenkante auf 700, drückte die Klemmung gegen
   // die Bedingungskante, und gemessen verlor sie: bis zu 65 px darunter.
-  { inner: 620, outer: 900 },
-  { inner: 760, outer: 940 }, // Phase 5 — Collapse, Boughs
+  { inner: 640, outer: 920 },
+  { inner: 780, outer: 960 }, // Phase 5 — Collapse, Boughs
 ]
 /**
  * Abstand der fünf Solar Rays vom Mittelpunkt. Sie liegen VOR dem ersten Band
  * und gehören keiner Phase — sie sind der Kometenzustand, der Anfang.
  *
- * 200 und nicht enger: die Sonne misst in der Endphase `SHOP_SUN_MAX_DIAMETER`
- * (240), ihr Rand liegt bei 120, die Innenkante eines Ray-Knotens bei
- * 200 − 32 = 168. Achtundvierzig Pixel Luft — der Komet darf pulsieren.
+ * **Sie sind die einzigen Knoten, die `clampToStage()` NICHT anfasst**
+ * (`forgeTreeLayout.ts`, `if (seat.tier === 'root') continue`) — sie stehen
+ * fest, damit die Relaxation den ganzen Baum nicht bei der nächsten
+ * Katalogänderung mitzieht. Der Preis ist, dass sie beim Wachsen der Sonne von
+ * Hand mitwandern müssen: `forgeNetGeometry.spec.ts` prüft auch für SIE, dass
+ * kein Knoten in der Sonne steckt, und sie sind der engste Fall im ganzen Netz.
+ *
+ * **Von 200 auf 245 gewachsen**, als der Körper von 240 auf 320 ging. Die
+ * Rechnung: Rand bei 160, plus `FORGE_SUN_EDGE_GAP` 11 sind 171; die Innenkante
+ * eines Ray-Knotens liegt bei 245 − 32 = 213. Zweiundvierzig Pixel Luft — der
+ * Komet darf pulsieren, und dieselbe Zahl stand vorher da.
+ *
+ * Nach oben begrenzt sie `FORGE_ZONE_BAND[0].inner` (270): kein Band darf vor
+ * den Strahlen beginnen, sonst stünde ein Zweig auf seiner eigenen Wurzel.
  */
-export const FORGE_RAY_DIST = 200
+export const FORGE_RAY_DIST = 245
 
 /* ── Die CLUSTER: Ort und Thema statt Radius und Speiche ───────────────────
  *
@@ -1131,8 +1160,13 @@ export const FORGE_EDGE_TARGET_PX = 150
  *
  * 320 statt 300, seit die Knoten gleichmässig stehen: mehr Luft zwischen den
  * Knoten heisst zwangsläufig längere Kanten. Gemessen misst die längste
- * Logikkante jetzt 291 px (vorher 266) — sie passt bei Standardzoom weiterhin
- * vollständig ins Bild, und das ist die Bedingung, um die es hier geht.
+ * Logikkante 292 px (`almsOfTheKeeper → tirelessQuarry`; vor der gleichmässigen
+ * Verteilung 266) — sie passt bei Standardzoom weiterhin vollständig ins Bild,
+ * und das ist die Bedingung, um die es hier geht.
+ *
+ * Die 28 px Reserve sind der Grund, warum das Wachsen der Sonne die Zonenbänder
+ * ADDITIV verschoben hat und nicht skaliert: ein Faktor darauf zöge die äusseren
+ * Ketten auseinander und ässe sie in einem Zug auf.
  */
 export const FORGE_EDGE_MAX_PX = 320
 /**
@@ -1146,7 +1180,7 @@ export const FORGE_EDGE_MAX_PX = 320
  * genau dort ist der Platz, der das Netz atmen laesst.
  *
  * Gemessen, nicht geschaetzt — und die Zahl ist GEFALLEN, obwohl überall mehr
- * Luft steht: die weiteste Bruecke misst jetzt 322 px statt 381. Das ist kein
+ * Luft steht: die weiteste Bruecke misst jetzt 314 px statt 381. Das ist kein
  * Zufall, sondern dieselbe Ursache von der anderen Seite. Eine Bruecke verbindet
  * zwei NACHBAR-Cluster derselben Zone; solange jeder Cluster ein enges Knäuel um
  * seinen Kartenpunkt war, lag zwischen zwei Knäueln die ganze Lücke des Rings.
@@ -2999,72 +3033,41 @@ export const FORGE_SPOTLIGHT_COMPASS_KEEPOUT = { w: 152, h: 58 } as const
  */
 export const FORGE_UPGRADE_CAPPED_REASON = 'Raise the other rays to match'
 
-// ── Ertrags-Kopf über der Sonne (ForgeYieldPlinth) ────────────────────────────
+// ── Die Herkünfte des Chime-Ertrags ───────────────────────────────────────────
 /**
- * Der Kopf steht IM FLUSS über der Baumbühne, nicht als schwebende Karte
- * darauf. Zwei Gründe, beide zwingend:
+ * Hier stand einmal die Maßtabelle eines ERTRAGS-KOPFS — einer Leiste im Fluss
+ * über der Baumbühne, 100px hoch (kompakt 86), mit einem 84px-Ring links und
+ * einer Chip-Reihe je Herkunft rechts. Sie ist gefallen, und mit ihr `yieldBand
+ * .ts`: die Leitzahl, um derentwillen sie existierte, steht jetzt im KERN DER
+ * SONNE (`components/bardProfil/shop/SunChimeBoost.vue`), also in der Mitte
+ * dessen, was sie ergibt. Der Baum-Viewport bekommt die hundert Pixel zurück,
+ * und `fitScale` nimmt `min(width, height)` — auf flachen Viewports ist die
+ * Höhe das Knappe, der Zugewinn also echt.
  *
- * 1. Die Bühne trägt `transform: scale()` mit Zoom 0,55–2,2. Alles darin
- *    skaliert mit, und eine Ertragszeile in halber Größe ist keine Anzeige mehr.
- * 2. Bei Standardzoom (1,7) ragt die Bühne weit über das Panel hinaus — der
- *    Zweigring liegt dann bei rund 500px vom Zentrum, also genau dort, wo eine
- *    am Rand zentrierte Karte läge. Ein Knoten hinter dem Kopf liefe weiter,
- *    wäre aber nicht mehr anklickbar.
+ * Was NICHT gefallen ist, ist diese Tabelle. Sie ist der Katalog der Herkünfte
+ * geblieben, und zwei lebende Specs hängen an ihr:
+ * `__tests__/stores/cpsFactorBreakdown.spec.ts` prüft, dass
+ * `shopStore.cpsFactorBreakdown` genau diese Ids nennt und ihr Produkt dem
+ * Multiplikator-Anteil von `calculateTotalCPS()` gleicht;
+ * `__tests__/utils/game/maxEverything.spec.ts` prüft über `nature`, dass im
+ * Endzustand jede ERWORBENE Quelle auch trägt.
  *
- * Der Preis ist, dass die Bühne diese Höhe verliert und bei Einpasszoom kleiner
- * rendert. Das ist der ehrliche Preis für eine Anzeige, die nie etwas verdeckt.
- *
- * **Von 72 auf 48 gefallen** (kompakt 60 → 40), als der Sockel aufhörte, vier
- * Zahlen zu zeigen. Drei davon — Chime-Bestand, Chimes/Sek, Chimes/Klick —
- * standen wörtlich in der Kopfzeile des Spiels, und die ist sichtbar, während
- * das Profil offen steht: das Modal beginnt UNTER ihr (`BardProfileMenu`,
- * `top: calc(var(--level-badge-bottom, …) + 8px)`). Der alte Kopfkommentar
- * begründete den Sockel mit „die Kopfzeile steht außerhalb des Profil-Fensters"
- * — außerhalb heißt aber nicht verdeckt.
- *
- * Was blieb, ist die einzige Zahl, die es sonst nirgends gab: WOHER der Ertrag
- * kommt. `FORGE_YIELD_SOURCES` unten trägt die Herkünfte, `shopStore
- * .cpsFactorBreakdown` die Werte. Die niedrigere Höhe fällt von selbst an den
- * Baum-Viewport (`flex: 1`), und `fitScale` nimmt `min(width, height)` — auf
- * flachen Viewports ist die Höhe das Knappe, der Zugewinn also echt.
- *
- * **Von 48 auf 64 gewachsen** (kompakt 40 → 56), als das Band aufhörte, nur aus
- * Farbflächen zu bestehen. Es trägt seitdem drei Zeilen statt einer: die
- * Kopfzeile mit dem Ergebnis, den Balken mit dem Faktor JE Herkunft, und die
- * Namen darunter.
- *
- * **Von 64 auf 100 gewachsen** (kompakt 60 → 86), als aus dem Balken ein RING
- * wurde und der Kopf von unten nach oben zog. Die Rechnung für 100: Polster 8 ·
- * Ring 84 · Polster 8 = 100. Die Höhe ist damit die des Rings, und der Ring ist
- * so groß, wie die Leitzahl in seiner Mitte lesbar sein muss — im ersten Anlauf
- * stand er auf 76/66, und gemessen lief `×950K` dort über den Bogen hinaus.
- *
- * Die achtundzwanzig Pixel kaufen drei Dinge, die der Balken nicht konnte:
- *
- *   1. **Die Leitzahl steht zentral und groß.** Im Balken war `×17,7` in 17px
- *      am rechten Rand das KLEINSTE Element des Sockels — ausgerechnet die
- *      Zahl, um derentwillen er existiert.
- *   2. **Jede Herkunft trägt ihren Namen UND ihren Wert.** Im Balken hingen
- *      beide an Breiten-Schwellen: unter 9 % kein Wort, unter 5,5 % keine Zahl.
- *      Wer wenig hatte, sah am wenigsten — genau verkehrt herum.
- *   3. **Die Kopfzeile steht NEBEN dem Ring, nicht über ihm.** Als eigene Zeile
- *      hätte sie weitere 28px gekostet; neben dem Ring ist sie umsonst, weil
- *      dessen Durchmesser die Höhe ohnehin vorgibt.
+ * Die Reihenfolge war einmal die Lesereihenfolge eines Bandes von links. Sie ist
+ * geblieben, weil der Store sie liest — zwei Reihenfolgen für dieselbe Liste
+ * wären eine zweite Quelle.
  */
-export const FORGE_YIELD_PLINTH_HEIGHT_PX = 100
-/**
- * 86 und nicht 84: der Ring misst kompakt 72, dazu zweimal 6 Polster sind 84.
- * Die zwei Pixel darüber sind der Puffer, mit dem die letzte Chip-Zeile rechts
- * nicht an der Kante klebt — auf Full HD ist die Höhe das Knappe, aber gedrängt
- * gestellte Namen sind das, was die Farben unzuordenbar macht. Gemessen tragen
- * die 86 auch den Ernstfall: elf Herkünfte plus Geister-Zone brechen dort auf
- * drei Reihen um und bleiben vollständig im Kopf.
- */
-export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 86
 
 /**
- * Die Herkünfte des Chime-Ertrags — eine Zeile je Segment des Bandes,
- * Reihenfolge = Lesereihenfolge von links.
+ * Die Herkünfte des Chime-Ertrags, in der Reihenfolge, in der `shopStore
+ * .cpsFactorBreakdown` sie nennt.
+ *
+ * **Gerendert wird davon derzeit nichts.** Mit dem Ertrags-Kopf ist die
+ * Aufschlüsselung gefallen; was der Spieler sieht, ist das PRODUKT dieser
+ * Faktoren im Kern der Sonne. Gelesen werden hier nur noch `id` (der
+ * Strukturvertrag zum Store) und `nature` (die Endzustands-Spec). `label`,
+ * `title`, `color` und `hint` beschreiben den Katalog weiter — sie sind das,
+ * was eine Aufschlüsselung wieder bräuchte, und stehen deshalb hier statt in
+ * einer Komponente, die es gerade nicht gibt.
  *
  * Zusammen decken sie JEDEN Faktor aus `shopStore.calculateTotalCPS()` ab, und
  * eine Spec bindet das (`__tests__/stores/cpsFactorBreakdown.spec.ts`): das
@@ -3084,11 +3087,10 @@ export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 86
  *     bei den gekauften Systemen, liegt am Getter: `temporaryCPSMultiplier`
  *     zählt ausschließlich laufende Zeit-Buffs.
  *
- * **Kein Glyph je Zeile.** Bei 48px Sockelhöhe bleiben einem Segment rund 14px
- * für seine Beschriftung; ein Icon davor halbiert die Textbreite und ist in
- * dieser Größe ohnehin nur noch ein grauer Fleck (Icon-Regel: unter 18px tragen
- * nur gefüllte, geometrische Formen). Farbe und Wort tragen die Aussage. Einzig
- * der Void-Abzug führt im Kärtchen sein kanonisches `VOID_CARD_ICON`.
+ * **Kein Glyph je Zeile**, und deshalb trägt der Typ auch kein Icon-Feld: eine
+ * Aufschlüsselung dieser elf steht zwangsläufig klein, und unter 18px tragen nur
+ * gefüllte, geometrische Formen (Icon-Regel). Farbe und Wort tragen die Aussage.
+ * Einzig der Void-Abzug führt sein kanonisches `VOID_CARD_ICON`.
  *
  * **Die Farben.** Wo das Projekt eine Systemfarbe kennt, steht sie hier und wird
  * nicht neu erfunden: Gold und Grün sind die Ringfarben aus
@@ -3102,17 +3104,17 @@ export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 86
  *
  * **Nicht heller als seine Nachbarn.** Im ersten Anlauf stand hier ein fast
  * weißes `#f2f0e0`, mit der Begründung „hell heißt flüchtig". Im Bild gemessen
- * war es der lauteste Punkt des ganzen Sockels: das Auge landete auf dem
+ * war es der lauteste Punkt des ganzen Kopfs: das Auge landete auf dem
  * Segment, das in dreißig Sekunden weg ist, während Strahlen und Baum daneben
  * verblassten. Was bleibt, darf nicht leiser sein als was vergeht.
  */
 /**
  * Was für eine Art Herkunft das ist — und damit die Antwort auf die einzige
- * Frage, die der Sockel sonst falsch beantwortet: **ist „Faktor 1" hier ein
+ * Frage, die eine Aufschlüsselung sonst falsch beantwortet: **ist „Faktor 1" hier ein
  * Mangel?**
  *
- * Vor diesem Feld prüfte `unusedYieldSources()` allein `factor === 1` und warf
- * drei grundverschiedene Zustände in eine Zone. Gemessen im Endzustand (Admin →
+ * Vor diesem Feld galt allein `factor === 1`, und das warf drei
+ * grundverschiedene Zustände in eine Zone. Gemessen im Endzustand (Admin →
  * Max Everything) stand dort „3 unused", und alle drei waren richtig so:
  *
  *   • `earned`    — dauerhaft erworben. Neutral heißt: hier ist noch Luft. Das
@@ -3122,7 +3124,7 @@ export const FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX = 86
  *                   Zeitpunkt.
  *   • `toll`      — ein ABZUG (Void, Planetenboss). Neutral heißt: du zahlst
  *                   gerade nichts. Das ist der BESTFALL und stand als Mangel im
- *                   Bild — der Sockel forderte den Spieler auf, sich eine Strafe
+ *                   Bild — der Kopf forderte den Spieler auf, sich eine Strafe
  *                   zu besorgen.
  */
 export type ForgeYieldNature = 'earned' | 'transient' | 'toll'
@@ -3257,123 +3259,130 @@ export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
   },
 ]
 
-/**
- * Die Kopfzeile über dem Band und der Leerzustand.
+/* ── Die Leitzahl im KERN der Sonne (SunChimeBoost) ───────────────────────────
  *
- * Der Titel SAGT, was das Band ist, statt es zu benennen. „Chime yield" stand
- * hier zuerst und war der Kern der Rückmeldung „verstehe ich nicht": ein Name
- * über drei Farbflächen erklärt nichts, ein Satz schon. Zusammen mit dem `=`
- * vor der Leitzahl liest sich die Reihe als das, was sie ist — eine Rechnung.
- */
-export const FORGE_YIELD_TITLE = 'What multiplies your chimes'
-export const FORGE_YIELD_EMPTY = 'Nothing multiplies your chimes yet — grow the tree.'
-/** Die Zone am Bandende für alles, was noch nichts beiträgt: „4 unused". */
-export const FORGE_YIELD_UNUSED_LABEL = 'unused'
-export const FORGE_YIELD_UNUSED_TITLE = 'Not contributing yet'
-/**
- * Breite der Geister-Zone in Prozent der Bandbreite — FEST, nicht anteilig.
+ * Hier stand die Maßtabelle eines Rings am Panelrand: Radius, Strichbreite,
+ * Bogenlücken, zwei Ringgrößen und drei Schriftanteile darauf. Der Ring ist weg,
+ * und der Grund ist derselbe, aus dem er einst den Balken ablöste — nur eine
+ * Stufe weiter gedacht: die Leitzahl gehört in die Mitte dessen, was sie ergibt.
+ * Das war beim Ring sein Loch. Es ist jetzt die Sonne selbst.
  *
- * Im frischen Spielstand sind sieben von zehn Herkünften neutral; anteilig
- * gezeichnet wäre das Ungenutzte das größte Element des Bandes und drängte
- * genau das an den Rand, was der Spieler bereits erreicht hat. Als schmaler
- * Anhang sagt sie dasselbe, ohne die Aussage zu kippen.
- */
-export const FORGE_YIELD_UNUSED_WIDTH_PCT = 14
-/**
- * Mindestbreite eines Segments in Prozent der Bandbreite. Ein Faktor von ×1,002
- * ergäbe sonst einen Strich von unter einem Pixel: unsichtbar, aber mit
- * Kärtchen — man kann ihn nicht treffen und weiß nicht, dass er da ist. Die
- * fehlende Breite nehmen die übrigen Segmente anteilig auf.
- */
-export const FORGE_YIELD_MIN_SEGMENT_PCT = 2.5
-/**
- * ── Der Ring ─────────────────────────────────────────────────────────────────
+ * **Warum es eine LINSE braucht.** Der Sternkern ist in JEDER Phase sehr hell
+ * (`STAR_PHASE_DATA[i].core` läuft von `#fff0e0` bis `#ffffff`, und der Gradient
+ * mischt zusätzlich `white 92%` hinein), der Komet ist dunkelbraun (`#8a7a68`),
+ * das Schwarze Loch reines `#000`. Es gibt keine Textfarbe, die auf allen dreien
+ * liest. Eine Farbweiche je Körper wären drei Sonderfälle für eine Aussage —
+ * eine dunkle, weich auslaufende Scheibe unter der Zahl ist EINE Ebene für alle
+ * drei, und sie liest sich als das, was sie darstellt: der Kern.
  *
- * Ein Bogen je Herkunft auf einem gemeinsamen Umfang, die Leitzahl in der Mitte.
- * Die Geometrie folgt `SIGIL_CORE_GAUGE_*` in `constants/sigil.ts` — dort steht
- * derselbe Multi-Segment-Donut, und zwei Rechenwege für dieselbe Form wären eine
- * zweite Quelle.
- *
- * Der viewBox ist 0 0 100 100, ein Radius in viewBox-Einheiten IST also ein
- * Prozentsatz der Ringbox — es gibt keine zweite Einheit, die mitgeführt werden
- * müsste. 44 und Strichbreite 8 lassen aussen 2 Einheiten Luft, damit der Strich
- * an keiner Stelle von der Box abgeschnitten wird.
- *
- * **Von 42/11 auf 44/8 gegangen**, weil der ZWECK des Rings sein Loch ist: dort
- * steht die Leitzahl. Innen bleiben `2r − Strich` Einheiten, also 80 % der
- * Breite statt vorher 73 — gemessen lief `×720K` im alten Verhältnis auf 2K um
- * 3px über den Bogen hinaus, und die Antwort darauf war sonst eine kleinere
- * Zahl gewesen. Ein dünnerer Strich trägt elf Bögen ebenso gut: bei 84px Ring
- * sind 8 Einheiten immer noch 6,7 Pixel.
+ * Alle Maße sind ANTEILE des Körpers, keine Pixelzahlen. Der Körper wächst mit
+ * der Sonnenphase (`SHOP_SUN_MIN_DIAMETER`…`SHOP_SUN_MAX_DIAMETER`), und feste
+ * Pixel dafür liefen bei der ersten Änderung daran auseinander — derselbe
+ * Fehler, den der alte Ring mit seinen zwei Größen schon einmal gemacht hat.
  */
-export const FORGE_YIELD_RING_RADIUS = 44
-export const FORGE_YIELD_RING_CIRCUMFERENCE = 2 * Math.PI * FORGE_YIELD_RING_RADIUS
-export const FORGE_YIELD_RING_STROKE = 8
 /**
- * Die Lücke zwischen zwei Bögen, in Umfangseinheiten. Ohne sie verschmelzen
- * benachbarte Farben zu einer Fläche, und der Ring zeigt statt elf Herkünften
- * einen Farbverlauf. 3 von 264 Umfang sind rund 1,1 % — bei elf Bögen gehen
- * damit gut 12 % an Lücken, was der Ring gerade noch trägt.
- */
-export const FORGE_YIELD_RING_GAP = 3
-/**
- * Mindestlänge eines Bogens. Dieselbe Not wie `FORGE_YIELD_MIN_SEGMENT_PCT` beim
- * Balken, nur eine Ebene später: die Prozente sind dort schon angehoben, aber
- * die Stauchung durch die Geister-Zone kann einen Bogen erneut unter die
- * Sichtbarkeit drücken.
- */
-export const FORGE_YIELD_RING_MIN_ARC = 5
-/** Kantenlänge der Ringbox. Die Kopfhöhe ist diese Zahl plus zweimal Polster. */
-export const FORGE_YIELD_RING_SIZE_PX = 84
-export const FORGE_YIELD_RING_SIZE_COMPACT_PX = 72
-/**
- * Was unter der Leitzahl steht. „Chime yield" stand hier zuerst und war der Kern
- * der Rückmeldung „verstehe ich nicht": ein Name über einer Zahl erklärt nichts.
+ * Was unter der Zahl steht. „Chime yield" stand hier zuerst und war der Kern der
+ * Rückmeldung „verstehe ich nicht": ein Name über einer Zahl erklärt nichts.
  * `Chime boost` sagt, was die Zahl TUT.
  */
-export const FORGE_YIELD_TOTAL_CAPTION = 'Chime boost'
+export const FORGE_SUN_BOOST_CAPTION = 'Chime boost'
 /**
- * Wie viele Zeichen die Leitzahl bei VOLLER Größe tragen darf, das `×`
- * mitgezählt. Darüber greift die kleinere Stufe.
+ * Wie viele Zeichen die Zahl bei VOLLER Größe tragen darf, das `×` mitgezählt.
+ * Darüber greift die kleinere Stufe.
  *
  * Fünf, weil `formatNumberCompact` genau so weit geht: `×1.00`, `×17.7`,
- * `×950K`, `×1.1M`. Sechs werden es nur bei `×999.9` und `×1.04M` — und dort
- * ist die kleinere Stufe richtig.
+ * `×950K`, `×1.1M`. Sechs werden es nur bei `×999.9` und `×1.04M` — und dort ist
+ * die kleinere Stufe richtig.
  *
  * Die Schwelle hängt an der ZEICHENZAHL und nicht an einer Messung: ein
  * `ResizeObserver` für eine Zahl, die sich bei jedem Kauf ändert, wäre der
  * teurere Weg für dieselbe Auskunft.
  */
-export const FORGE_YIELD_TOTAL_LONG_CHARS = 5
+export const FORGE_SUN_BOOST_LONG_CHARS = 5
 /**
- * Schriftgröße der Leitzahl als ANTEIL der Ringbreite — nicht als Pixelzahl.
+ * Durchmesser der Kernlinse als Anteil des Körpers.
  *
- * Der Ring ist auf flachen Viewports kleiner, sein Loch also auch. Zwei feste
- * Pixelgrößen dafür liefen bei der nächsten Änderung an der Ringgröße
- * auseinander; gemessen lief `×950K` bei 21px im 66er Ring 6,5px über den Bogen
- * hinaus, während dieselbe Zahl im 76er Ring hineinpasste.
+ * 0,74 der Breite — großzügiger, als der Text braucht (der breiteste Fall füllt
+ * davon 82 %, Messung an `FORGE_SUN_BOOST_FONT_RATIO`). Der Überschuss ist der
+ * WEG, auf dem der Verlauf auslaufen kann: eine knapp geschnittene Linse muss
+ * steil abfallen und zeigt dabei genau die Kante, die sie nicht haben darf.
+ * Bei der Endphase liegt sie über dem Ereignishorizont des Schwarzen Lochs
+ * (0,4 · 320 = 128px) und geht dort in dessen eigenes Schwarz über, ohne eine
+ * Kante zu zeigen — der Verlauf läuft ohnehin weich aus.
  *
- * Die Rechnung: innen bleiben `(2r − Strich) / 100` der Breite, bei r 44 und
- * Strich 8 also 80 %. Fünf Zeichen der Projektschrift messen im ungünstigsten
- * Fall knapp das Dreifache der Schriftgröße — gemessen 0,59 em je Zeichen bei
- * `×720K`, das keinen schmalen Punkt enthält. 0,25 · Breite füllt davon rund
- * 92 % des Lochs, und der Rest ist die Luft, die eine Zahl darin braucht.
- *
- * Die 0,59 sind gemessen und nicht geschätzt: mit der naheliegenden Annahme
- * 0,52 (aus `×1.6M`, das einen Punkt trägt) lief dieselbe Zahl über.
+ * **Von 0,62 über 0,66 auf 0,74 gegangen**, in zwei Schritten aus zwei Gründen:
+ * im Browser gemessen lief `×950K` bei 0,62/0,22 sieben Prozent über die Linse
+ * hinaus (dort trägt sie nur noch die halbe Deckkraft), und die knapp
+ * geschnittene Fassung las sich im Bild als aufgeklebter Balken statt als
+ * Schatten im Plasma.
  */
-export const FORGE_YIELD_TOTAL_FONT_RATIO = 0.25
-/** Dieselbe Rechnung für die kleinere Stufe, gerechnet auf sechs Zeichen. */
-export const FORGE_YIELD_TOTAL_FONT_RATIO_LONG = 0.185
+export const FORGE_SUN_BOOST_LENS_FRACTION = 0.74
+/**
+ * Höhe der Linse, als Anteil ihrer BREITE. Sie ist eine Ellipse, kein Kreis.
+ *
+ * Das ist der Unterschied zwischen „die Zahl liegt in der Sonne" und „die Sonne
+ * ist verdeckt". Der Textblock ist breit und flach — bei Körper 320 misst er
+ * 159 × 90 px. Eine kreisrunde Trägerfläche, die ihn in der Breite fasst, deckt
+ * oben und unten je sechzig Pixel Plasma ab, die niemand braucht; im Browser
+ * gemessen sah die Sonne in Phase 0 dadurch aus wie ein dunkler Ring mit
+ * orangem Saum statt wie ein glühender Stern.
+ *
+ * 0,54 fasst den Block mit Rand (128 px gegen 90) und lässt über und unter ihm
+ * die Kuppen des Körpers frei stehen. Der Verlauf läuft ohnehin weich aus, es
+ * entsteht also nirgends eine sichtbare Ellipsenkante.
+ */
+export const FORGE_SUN_BOOST_LENS_ASPECT = 0.54
+/**
+ * Schriftgröße der Zahl als Anteil des Körpers.
+ *
+ * Maßgeblich ist der BREITESTE Fünfzeichner, nicht der häufigste. Im Browser
+ * gemessen (Körper 320, Klon des echten Elements, also mit jeder scoped-Regel):
+ *
+ *   `×17.7`  2,17 em — schmale `1`, schmaler Punkt
+ *   `×1.00`  2,48 em
+ *   `×950K`  3,04 em — vier breite Glyphen hintereinander
+ *
+ * Die Spanne von 40 % zwischen erster und letzter Zeile ist der Grund, warum
+ * hier nicht mit einem Mittelwert gerechnet wird: `×950K` ist kein Sonderfall,
+ * sondern jeder Spielstand ab einer Million Chimes pro Sekunde. 0,20 · Körper
+ * füllt damit 92 % der Linse, und der Rest ist die Luft, die eine Zahl braucht.
+ *
+ * **Von 0,22 auf 0,20 gefallen**, weil `×950K` bei 0,22 sieben Prozent über die
+ * Linse hinauslief — dort trägt sie nur noch die halbe Deckkraft, und genau die
+ * Randzeichen standen damit auf blankem Plasma.
+ */
+export const FORGE_SUN_BOOST_FONT_RATIO = 0.2
+/**
+ * Dieselbe Rechnung für die kleinere Stufe. Sie trägt sechs Zeichen — mehr gibt
+ * `formatNumberCompact` nicht her, seine längste Ausgabe ist `999No`. Gemessen
+ * misst `×999.9` dort 3,34 em und `×1.04M` 3,21 em; bei 0,155 · Körper füllt
+ * der breitere davon 79 % der Linse.
+ */
+export const FORGE_SUN_BOOST_FONT_RATIO_LONG = 0.155
 /** Das Etikett unter der Zahl. Es benennt, es misst nicht — es bleibt klein. */
-export const FORGE_YIELD_CAPTION_FONT_RATIO = 0.095
+export const FORGE_SUN_BOOST_CAPTION_RATIO = 0.062
 /**
- * Abstand des TEMP-Admin-Knopfs zur Kante — links zum Panelrand, oben zur
- * Unterkante des Ertrags-Kopfs. 14 ist derselbe Wert, den Zoom-Leiste und
- * Kantenlegende an ihren Ecken tragen; drei eigene Zahlen für denselben Rand
- * liefen bei der ersten Änderung auseinander. Fällt mit dem Knopf zusammen weg.
+ * Die Zahl ZOOMT MIT, aber nicht unter diese Bildschirmgröße.
+ *
+ * Sie sitzt in der Bühne und trägt damit deren `scale()` (`FORGE_TREE_ZOOM_FLOOR`
+ * 0,3 bis `FORGE_TREE_ZOOM_MAX` 1,6). Das ist richtig so — sie gehört der Sonne
+ * und nicht dem Bildschirm. Am unteren Anschlag fiele sie aber auf 16px, und der
+ * Zustand „ganz herausgezoomt" ist genau der, in dem man die Übersicht sucht:
+ * die Zahl soll dort noch sagen, wo man steht.
+ *
+ * 26px ist die Grenze, unter der die Projektschrift bei `font-weight: 900` auf
+ * dunklem Grund zu verschmelzen beginnt. Gegengesteuert wird über ein
+ * `transform: scale()` auf der GANZEN Gruppe, Linse mit — skalierte man nur den
+ * Text, ragte er über seine Trägerfläche hinaus.
  */
-export const SHOP_ADMIN_MAX_INSET_PX = 14
+export const FORGE_SUN_BOOST_MIN_SCREEN_PX = 26
+/**
+ * Der Deckel dafür. Ohne ihn wüchse die Gruppe am unteren Anschlag über die
+ * geschrumpfte Sonne hinaus: bei kleinstem Körper (240) und Zoom 0,3 verlangte
+ * die Untergrenze allein den Faktor 1,63, und die Linse (149px) stünde damit
+ * breiter da als der Körper selbst. 1,6 hält sie knapp darunter.
+ */
+export const FORGE_SUN_BOOST_MAX_READ_SCALE = 1.6
 /**
  * Chime-Bild der Kostenzeilen — dasselbe Artwork, das Header, Command Panel,
  * Sigil-Panel und Champion-Shop zeigen. Die Forge trug hier lange die

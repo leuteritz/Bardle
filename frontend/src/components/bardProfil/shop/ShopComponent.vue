@@ -31,9 +31,6 @@ import {
   BARD_PROFILE_RAIL_MAX_PX,
   BARD_PROFILE_RAIL_MIN_PX,
   BARD_PROFILE_RAIL_VW,
-  FORGE_YIELD_PLINTH_HEIGHT_PX,
-  FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX,
-  SHOP_ADMIN_MAX_INSET_PX,
 } from '@/config/constants'
 import ForgeTreePanel from './ForgeTreePanel.vue'
 import StarForgePanel from './StarForgePanel.vue'
@@ -119,11 +116,6 @@ function maxOutForge(): void {
 
 /** Die Detailspalte — dieselbe Breite wie die Schiene im Skill-Tree-Tab. */
 const detailWidth = `clamp(${BARD_PROFILE_RAIL_MIN_PX}px, ${BARD_PROFILE_RAIL_VW}vw, ${BARD_PROFILE_RAIL_MAX_PX}px)`
-
-// Der TEMP-Admin-Knopf beginnt unter dem Ertrags-Kopf. Beide Höhen kommen aus
-// der Konstante, die der Kopf selbst nimmt — Begründung am Style unten.
-const adminMaxTop = `${FORGE_YIELD_PLINTH_HEIGHT_PX + SHOP_ADMIN_MAX_INSET_PX}px`
-const adminMaxTopCompact = `${FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX + SHOP_ADMIN_MAX_INSET_PX}px`
 </script>
 
 <style scoped>
@@ -153,22 +145,17 @@ const adminMaxTopCompact = `${FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX + SHOP_ADMIN_
 }
 
 /* ── TEMP admin button ─────────────────────────────────────────── */
-/* Oben links, aber UNTER dem Ertrags-Kopf. Die untere linke Ecke der Baumspalte
-   gehört der Kantenlegende, die untere rechte der Zoom-Leiste, und die obere
-   Kante seit dem Umzug dem Ertrags-Kopf — im Viewport darunter ist er am
-   wenigsten im Weg.
+/* Oben links in der Baumspalte. Die untere linke Ecke gehört der Kantenlegende,
+   die untere rechte der Zoom-Leiste — die obere Kante ist die einzige, die frei
+   ist.
 
-   Gemessen liegt er sonst mitten auf dem Ring: `document.elementFromPoint` traf
-   in der Ringmitte diesen Knopf, und Hover wie Klick der Herkunfts-Chips gingen
-   an ihn statt an den Kopf. Die Rechnung mit der Kopfhöhe ist damit keine
-   Kosmetik, sondern das, was den Kopf überhaupt bedienbar hält.
-
-   Die Höhe kommt aus DERSELBEN Konstante, die der Kopf für sich selbst nimmt —
-   eine eigene Pixelzahl hier wäre eine zweite Quelle für dieselbe Kante.
-   Fällt mit dem Knopf zusammen weg. */
+   `top` und `left` tragen DIESELBE Zahl, und das ist jetzt die ganze Regel. Hier
+   stand eine Rechnung aus der Höhe des Ertrags-Kopfs, unter den der Knopf
+   ausweichen musste; der Kopf ist weg, und mit ihm die zweite Quelle für diese
+   Kante. Fällt mit dem Knopf zusammen weg. */
 .shop-admin-max {
   position: absolute;
-  top: v-bind(adminMaxTop);
+  top: 14px;
   left: 14px;
   z-index: 20;
   display: inline-flex;
@@ -191,13 +178,6 @@ const adminMaxTopCompact = `${FORGE_YIELD_PLINTH_HEIGHT_COMPACT_PX + SHOP_ADMIN_
 .shop-admin-max:hover {
   border-color: #c89040;
   color: #e8c040;
-}
-
-/* Der Kopf ist auf flachen Viewports niedriger — der Knopf rückt mit. */
-@media (max-height: 1100px) {
-  .shop-admin-max {
-    top: v-bind(adminMaxTopCompact);
-  }
 }
 
 /* Narrow layouts: stack tree above the forge panel, rail becomes a strip. */

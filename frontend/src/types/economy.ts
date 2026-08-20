@@ -154,12 +154,13 @@ export interface BuildingStat {
  * Ein Glied der CpS-Multiplikatorkette, so wie `shopStore.cpsFactorBreakdown`
  * es liefert: roh, ungefiltert, ungewichtet.
  *
- * Die Prozentrechnung, das Ausblenden neutraler Glieder und die Trennung in
- * Beitrag und Abzug sind DARSTELLUNG und stehen bewusst nicht hier — sie
- * gehören in die Komponente, die das Band zeichnet.
+ * Was daraus gezeigt wird, ist DARSTELLUNG und steht bewusst nicht hier: die
+ * Sonne im Shop bildet das Produkt aller Glieder
+ * (`components/bardProfil/shop/SunChimeBoost.vue`), eine Aufschlüsselung nach
+ * Herkunft gibt es derzeit nirgends.
  */
 export interface CpsFactor {
-  /** Schlüssel in `FORGE_YIELD_SOURCES` — dort stehen Label und Farbe. */
+  /** Schlüssel in `FORGE_YIELD_SOURCES` — dort steht der Katalog der Herkünfte. */
   id: string
   /** Das Produkt aller Faktoren dieser Herkunft. Neutral ist exakt 1. */
   factor: number

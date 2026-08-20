@@ -1159,7 +1159,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
  * Getter im Store gelesen. `desc` sagt sie im Klartext, ohne `{v}`.
  *
  * Zwei von ihnen sind der eigentliche Grund für diesen Ring: **Tideless Watch**
- * und **Sunderer's Mark** greifen in die zwei Herkünfte des Ertragsbandes, die
+ * und **Sunderer's Mark** greifen in die zwei Herkünfte des Chime-Ertrags, die
  * nach UNTEN zeigen (`FORGE_YIELD_SOURCES`, nature `toll`). Gegen Void-Zoll und
  * Boss-Zoll hatte der Spieler bis hierhin kein einziges Kaufangebot — nur
  * Warten. Ein Zoll, den man verhandeln kann, ist eine Entscheidung.
@@ -1807,7 +1807,7 @@ export const FORGE_RELICS: ForgeRelicDef[] = [
   // in die Laufzeit eingesammelter Gaben und in die Meep-Ernte.
   //
   // Das ist keine Kosmetik. Void und Boss sind die zwei einzigen Herkünfte des
-  // Ertragsbandes, die nach UNTEN zeigen (`FORGE_YIELD_SOURCES`, nature `toll`),
+  // Chime-Ertrags, die nach UNTEN zeigen (`FORGE_YIELD_SOURCES`, nature `toll`),
   // und der Spieler hatte gegen sie bis hierhin kein einziges Kaufangebot —
   // nur Warten. Ein Zoll, den man abkaufen kann, ist eine Entscheidung; einer,
   // den man nur aussitzt, ist eine Wartezeit.

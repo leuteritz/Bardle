@@ -624,12 +624,12 @@ let boundsCache: ForgeContentBounds | null = null
  * bekommt genau das zurück.
  *
  * Die Mitte ist die der HÜLLE und nicht die der Bühne, und das ist gemessen
- * entschieden: das Netz sitzt tiefer, als die Sonne steht (`minY` 241 gegen
- * `2000 − maxY` 176). Wer um die Bühnenmitte klemmt, muss die grössere der
- * beiden Hälften nehmen und handelt sich oben ein leeres Band von 64 px ein —
- * im Browser nachgemessen 109 px statt 46. Um die Hüllenmitte ist der Rand auf
- * allen vier Seiten derselbe. Der Preis ist ein Versatz der Sonne aus der
- * Bildmitte von 32 Bühnen-Pixeln, am Zoomboden also zwölf auf dem Schirm.
+ * entschieden: das Netz sitzt tiefer, als die Sonne steht. Wer um die
+ * Bühnenmitte klemmt, muss die grössere der beiden Hälften nehmen und handelt
+ * sich oben ein leeres Band ein — im Browser nachgemessen 109 px statt 46. Um
+ * die Hüllenmitte ist der Rand auf allen vier Seiten derselbe. Der Preis ist
+ * ein Versatz der Sonne aus der Bildmitte von 26 Bühnen-Pixeln (vor dem
+ * Wachstum der Sonne 32), am Zoomboden also acht auf dem Schirm.
  *
  * `radius` misst von derselben Mitte — EIN Bezugspunkt für Rechteck und
  * Scheibe, sonst klemmten die beiden Fassungen in `forgeCameraBounds.ts`

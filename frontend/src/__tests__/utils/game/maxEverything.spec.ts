@@ -16,7 +16,6 @@ import { FORGE_BOUGHS } from '@/config/progression/starForge'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
-import { unusedYieldSources } from '@/utils/ui/yieldBand'
 import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import { SHOP_ITEMS } from '@/config/economy/items'
 import {
@@ -191,20 +190,21 @@ describe('maxEverything', () => {
   })
 
   /**
-   * Der Befund, der diese ganze Arbeit ausgelöst hat: nach „Max Everything"
-   * stand im Ertragsband des Shops weiterhin eine „N unused"-Zone.
+   * Der Befund, der diese Spec ausgelöst hat: nach „Max Everything" stand im
+   * Ertragsband des Shops weiterhin eine „N unused"-Zone. Das Band gibt es
+   * nicht mehr — die Aussage darunter schon, und sie ist die eigentliche:
+   * **im Endzustand darf keine erspielbare Quelle mehr neutral stehen.**
    *
    * Drei Ursachen lagen darunter, und alle drei fängt diese Spec ab:
    *   • `boons`, `void` und `bosses` galten als „ungenutzt", obwohl das eine
-   *     befristet und die anderen ZÖLLE sind (nature-Feld, siehe
-   *     `unusedYieldSources`).
+   *     befristet und die anderen ZÖLLE sind — daher das `nature`-Feld.
    *   • Der Endzustand stand auf Universum 10 ohne einen einzigen Aufbruch —
-   *     und damit ohne Vorsehung, weshalb die Zeile „Cosmos" leer blieb.
+   *     und damit ohne Vorsehung, weshalb `universe` leer blieb.
    *   • Die Kronen (Ring 5) hängen am Prestige-Zähler und blieben deshalb zu.
    *
-   * Was hier zählt, ist die ERWORBENE Natur: eine Zeile, die der Spieler
-   * erspielen kann, muss im Endzustand auch tragen. Zölle und Befristetes sind
-   * ausdrücklich ausgenommen — dass sie neutral sind, ist der Bestfall.
+   * Was hier zählt, ist die ERWORBENE Natur: was der Spieler erspielen kann,
+   * muss im Endzustand auch tragen. Zölle und Befristetes sind ausdrücklich
+   * ausgenommen — dass sie neutral sind, ist der Bestfall.
    */
   it('lässt keine erworbene Ertragsquelle mehr auf neutral stehen', () => {
     maxEverything()
@@ -214,8 +214,6 @@ describe('maxEverything', () => {
       if (def.nature !== 'earned') continue
       expect(factors.get(def.id), `${def.id} traegt im Endzustand nichts bei`).toBeGreaterThan(1)
     }
-    // Und damit ist die Geisterzone im Sockel leer — die eigentliche Beschwerde.
-    expect(unusedYieldSources(useShopStore().cpsFactorBreakdown)).toEqual([])
   })
 
   it('zieht eine Vorsehung, statt neun Aufbrüche ohne eine einzige Karte zu behaupten', () => {

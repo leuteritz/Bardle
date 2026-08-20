@@ -147,27 +147,29 @@ export const useShopStore = defineStore('shop', {
 
     /**
      * Die Multiplikatorkette aus `calculateTotalCPS()`, aufgeschlüsselt nach
-     * Herkunft — die Grundlage des Herkunftsbands im Shop-Sockel
-     * (`ForgeYieldPlinth`).
+     * Herkunft. Ihr PRODUKT ist die Zahl im Kern der Sonne
+     * (`components/bardProfil/shop/SunChimeBoost.vue`); die Aufschlüsselung
+     * selbst wird derzeit nirgends gezeigt, ist aber die Rechnung, an der die
+     * Spec hängt.
      *
      * **Warum das hier steht und nicht in einem Composable.** Es ist keine
      * UI-Hilfe, sondern eine zweite Lesart derselben Rechnung: wer der Kette
-     * unten einen Faktor hinzufügt, muss ihn hier einordnen, sonst zeigt das
-     * Band eine Zahl, die es im Spiel nicht gibt. Im Nachbarordner liefe das
+     * unten einen Faktor hinzufügt, muss ihn hier einordnen, sonst zeigt die
+     * Sonne eine Zahl, die es im Spiel nicht gibt. Im Nachbarordner liefe das
      * still auseinander. Gehalten wird es trotzdem nicht von der Nähe, sondern
      * von `__tests__/stores/cpsFactorBreakdown.spec.ts`: das Produkt dieser
      * Faktoren muss dem Multiplikator-Anteil von `calculateTotalCPS()` gleichen.
      *
      * Die Reihenfolge ist die von `FORGE_YIELD_SOURCES`, nicht die der Kette —
-     * dort steht die Lesereihenfolge des Bandes, und zwei Reihenfolgen für
-     * dieselbe Liste wären eine zweite Quelle.
+     * dort steht der Katalog der Herkünfte, und zwei Reihenfolgen für dieselbe
+     * Liste wären eine zweite Quelle.
      *
      * **`mvpBuffMultiplier` fehlt mit Absicht.** Er steht nicht in der Kette,
-     * sondern wird erst bei der ANZEIGE daraufmultipliziert (Kopfzeile wie
-     * Sockel). Hier aufgenommen wiche das Produkt von der echten CpS ab.
+     * sondern wird erst bei der ANZEIGE daraufmultipliziert. Hier aufgenommen
+     * wiche das Produkt von der echten CpS ab.
      *
-     * Roh, ungefiltert, ungewichtet: was neutral ist (exakt 1), fliegt erst in
-     * der Darstellung heraus, und die Prozentrechnung des Bandes ebenso.
+     * Roh, ungefiltert, ungewichtet: ein Faktor von exakt 1 steht mit drin und
+     * ändert am Produkt nichts.
      */
     cpsFactorBreakdown(): CpsFactor[] {
       const gameStore = useGameStore()
@@ -345,10 +347,10 @@ export const useShopStore = defineStore('shop', {
 
     /**
      * ⚠ Wer dieser Kette einen FAKTOR hinzufügt, ordnet ihn auch im Getter
-     * `cpsFactorBreakdown` einer Herkunft zu — sonst zeigt das Herkunftsband im
-     * Shop-Sockel einen Ertrag, den es nicht gibt. `cpsFactorBreakdown.spec.ts`
-     * bricht in dem Fall, und das ist beabsichtigt. Für einen neuen Summanden
-     * (wie `solarCPS`) gilt das nicht — das Band zerlegt nur die Multiplikatoren.
+     * `cpsFactorBreakdown` einer Herkunft zu — sonst zeigt die Sonne im Shop
+     * einen Ertrag, den es nicht gibt. `cpsFactorBreakdown.spec.ts` bricht in
+     * dem Fall, und das ist beabsichtigt. Für einen neuen Summanden (wie
+     * `solarCPS`) gilt das nicht — zerlegt werden nur die Multiplikatoren.
      */
     calculateTotalCPS(): number {
       const gameStore = useGameStore()

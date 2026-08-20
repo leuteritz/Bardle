@@ -11,11 +11,11 @@ import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import { AUGMENTS } from '@/config/economy/augments'
 
 /**
- * Die Spec, die das Herkunftsband an die Wirtschaft bindet.
+ * Die Spec, die den Herkunftskatalog an die Wirtschaft bindet.
  *
  * `shopStore.cpsFactorBreakdown` ist eine zweite Lesart von
  * `calculateTotalCPS()`: dieselben Faktoren, nur nach Herkunft sortiert. Laufen
- * die beiden auseinander, zeigt der Shop-Sockel einen Ertrag, den es im Spiel
+ * die beiden auseinander, zeigt die Sonne im Shop einen Ertrag, den es im Spiel
  * nicht gibt — und zwar lautlos, weil beide Zahlen fuer sich plausibel
  * aussehen.
  *

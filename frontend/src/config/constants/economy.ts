@@ -123,11 +123,34 @@ export const EXPEDITION_ID_RANDOM_MAX = 9999 // random suffix range for expediti
 // Item Equipment
 export const ITEM_SLOT_COUNT = 5 // champion team slots that can hold weapon/armor/artefact
 
-/** Shop sun disc diameter band (px), mapped from the current phase radius (STAR_PHASE_DATA, 30…140).
- *  Mirrors the Planets-tab sun style but a smaller band so it stays inside the branch-icon ring
- *  (ICON_DIST = 285). Grows with phase. */
-export const SHOP_SUN_MIN_DIAMETER = 170
-export const SHOP_SUN_MAX_DIAMETER = 240
+/**
+ * Durchmesserband des Sternkörpers im Shop-Tab (px), abgebildet auf den Radius
+ * der laufenden Phase (`STAR_PHASE_DATA`, 38…140). Bei Standardzoom ist ein
+ * Bühnenpixel ein Bildschirmpixel — das hier sind also echte Pixel.
+ *
+ * **Von 170/240 auf 240/320 gewachsen**, als die Leitzahl des Chime-Ertrags in
+ * den KERN der Sonne zog (`SunChimeBoost.vue`). Der Körper trägt seitdem eine
+ * Auskunft und ist nicht mehr nur Zierat; 170px hätten für sechs Zeichen plus
+ * Etikett nicht gereicht, und ausgerechnet die kleinste Phase ist die, in der
+ * jeder Spieler anfängt. Deshalb wächst die UNTERE Kante stärker als die obere.
+ *
+ * `SHOP_SUN_MAX_DIAMETER` ist zugleich GEOMETRIE und nicht nur Optik — drei
+ * Rechnungen lesen sie:
+ *
+ *   • `forgeTreeLayout.ts` klemmt jeden Knoten außerhalb von
+ *     `MAX/2 + FORGE_SUN_EDGE_GAP` (`clampToStage`) — ausgenommen die fünf
+ *     Solar Rays, die deshalb über `FORGE_RAY_DIST` von Hand mitwandern müssen.
+ *   • `forgeEdgeRoute.ts` setzt denselben Kreis als Hindernis, um das jeder Weg
+ *     herumgeführt wird.
+ *   • `ForgeTreePanel.vue` leitet daraus `--shop-sun-d`, den Ansatzpunkt der
+ *     Wurzelstummel und den Kaufblitz ab.
+ *
+ * Die Obergrenze steht deshalb nicht frei: `forgeNetGeometry.spec.ts` rechnet
+ * nach, dass kein Knoten in der Sonne steckt, und der engste ist der Ray-Knoten
+ * (`FORGE_RAY_DIST − 32`). Wer hier hochgeht, geht dort mit.
+ */
+export const SHOP_SUN_MIN_DIAMETER = 240
+export const SHOP_SUN_MAX_DIAMETER = 320
 
 /**
  * Alle wie viel Stufen ein Gebäude seinen Ertrag verdoppelt.

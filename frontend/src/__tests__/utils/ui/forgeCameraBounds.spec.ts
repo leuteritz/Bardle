@@ -78,7 +78,9 @@ describe('Star Forge — die Grenzen der Kamera', () => {
       ).toBeLessThanOrEqual(b.radius + 0.01)
     }
 
-    // Gemessen: halfW 775,3 · halfH 791,5 · radius 832,5 gegen 1000 Buehnenhalb.
+    // Gemessen: halfW 788,3 · halfH 816,8 · radius 847,6 gegen 1000 Buehnenhalb
+    // (davor 775,3 · 791,5 · 832,5 — die groessere Sonne hat die inneren Knoten
+    // nach aussen gedrueckt und die Zonenbaender sind ihr um 20 px gefolgt).
     // Bricht das hier, ist der Baum gewachsen — dann sind die Zahlen in den
     // Kommentaren von `FORGE_CONTENT_SEAM_PX` und `forgeCameraBounds.ts` fällig.
     expect(b.radius, `Inhaltsradius ${b.radius.toFixed(1)}`).toBeLessThan(HALF)

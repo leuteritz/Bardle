@@ -3,14 +3,6 @@
     <!-- shared cosmic backdrop (same starfield as Team / Planets / Skill Tree) -->
     <CosmicStageBackground />
 
-    <!-- Alles Skalierte lebt im Viewport, der Ertrags-Kopf darüber NICHT.
-         Die Bühne ragt bei Standardzoom weit über ihre Zelle hinaus; eine
-         schwebende Kopfkarte läge damit über anklickbaren Knoten.
-
-         Er steht OBEN und nicht mehr am Fuß: es ist die wichtigste Auskunft der
-         Spalte, und am Fuß lag sie dort, wo der Blick zuletzt hinkommt. -->
-    <ForgeYieldPlinth />
-
     <!-- Die Buehne ist groesser als ihr Fenster, also wird gezogen. Muster und
          Reihenfolge wie im Sigil-Board: `setPointerCapture` erst NACH der
          Schwelle, `@click.capture` verschluckt den Klick nach echtem Zug. -->
@@ -40,7 +32,7 @@
 
          Sie hängt im VIEWPORT und nicht in der Bühne. „Die Bühne ist wortlos"
          gilt für das, was mit ihr skaliert und über den Knoten liegt — die
-         Zoom-Leiste, der Kompass und der Sockel tragen sehr wohl Wörter. -->
+         Zoom-Leiste, der Kompass und die Legende tragen sehr wohl Wörter. -->
     <ForgeEdgeLegend :rows="visibleLegendRows" />
 
     <!-- Zoom control -->
@@ -260,7 +252,12 @@
            die Zeichen selbst: das Schloss am Motiv, DASS ein Knoten zu ist, und
            Tooltip wie Detailspalte, WELCHE Phase ihn aufschliesst. -->
 
-      <!-- Sun -->
+      <!-- DIE SONNE, und in ihrem Kern die Leitzahl.
+
+           `SunChimeBoost` steht NEBEN den drei Körpern und nicht in ihnen: der
+           Komet taumelt, die Plasmascheibe atmet, und eine Zahl, die mitdreht
+           oder mitpulst, ist keine Anzeige mehr. Alle vier sind absolut in der
+           Mitte des Wrappers verankert und tragen ihre Größe selbst. -->
       <div class="sun-wrapper" :class="{ 'sun-flash': purchaseFlash }">
         <CometDisc v-if="solarStore.isCometState" :diameter="bodyDiameter" />
         <BlackHoleDisc v-else-if="isCollapsed" :diameter="bodyDiameter" />
@@ -271,6 +268,7 @@
           class="next-phase-preview"
           :style="nextPhasePreviewStyle"
         />
+        <SunChimeBoost :diameter="bodyDiameter" :scale="totalScale" />
       </div>
 
       <!-- Nodes -->
@@ -442,7 +440,7 @@ import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import ForgeEdgeLegend from './ForgeEdgeLegend.vue'
 import ForgeNodeTooltip from './ForgeNodeTooltip.vue'
-import ForgeYieldPlinth from './ForgeYieldPlinth.vue'
+import SunChimeBoost from './SunChimeBoost.vue'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
@@ -1233,8 +1231,9 @@ onMounted(() => {
     const rect = entries[0]?.contentRect
     if (!rect) return
     viewportSize.value = { w: rect.width, h: rect.height }
-    // Gemessen wird der VIEWPORT, nicht das Panel: der Ertrags-Sockel darunter
-    // gehört nicht zur Fläche, in der der Baum liegt.
+    // Gemessen wird der VIEWPORT und nicht das Panel. Beide sind seit dem Fall
+    // des Ertrags-Kopfs gleich hoch — aber die Fläche, in der der Baum liegt,
+    // IST der Viewport, und daran soll die Rechnung hängen.
     fitScale.value = forgeFitScale(viewportSize.value)
     zoom.value = clampZoom(zoom.value)
     clampPan()
@@ -1610,9 +1609,11 @@ const nextPhasePreviewStyle = computed(() => ({
 /* ══════════════════════════════════════════════════
    PANEL
 ══════════════════════════════════════════════════ */
-/* Spalte statt Fläche: oben der Ertrags-Kopf im Fluss, darunter der Viewport mit
-   der skalierten Bühne. Der Kopf liegt damit garantiert neben und nie über einem
-   Knoten — bei jedem Zoom. */
+/* Hier stand einmal ein Ertrags-Kopf im Fluss über dem Viewport, und die Spalte
+   war für ihn da. Er ist weg: die Leitzahl, um derentwillen er existierte, steht
+   jetzt im Kern der Sonne (`SunChimeBoost`), also mitten in dem, was sie ergibt.
+   Der Viewport bekommt seine hundert Pixel damit zurück — und `fitScale` nimmt
+   `min(width, height)`, jeder davon ist also auch Zoom. */
 .tree-panel {
   position: relative;
   overflow: hidden;
@@ -1804,8 +1805,13 @@ const nextPhasePreviewStyle = computed(() => ({
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 210px;
-  height: 210px;
+  /* Er misst, was er hält. Hier stand `210px` als Literal, und das war schon vor
+     dem Wachstum der Sonne kleiner als sie selbst — folgenlos für Komet, Plasma
+     und Schwarzes Loch, die alle absolut zentriert sitzen, aber NICHT für
+     `.next-phase-preview`: die nimmt `inset: 0` und stand damit als zu kleiner
+     Kreis mitten in der Scheibe. Mit `--shop-sun-d` stimmt sie von selbst. */
+  width: var(--shop-sun-d, 200px);
+  height: var(--shop-sun-d, 200px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1840,9 +1846,16 @@ const nextPhasePreviewStyle = computed(() => ({
       color-mix(in srgb, var(--phase-edge, #cc5500) 45%, transparent) 70%,
       transparent 86%
     );
+  /* Die Korona wächst MIT dem Körper. Hier standen 90px und 180px absolut, und
+     bei 320px Scheibe las sich der Rand dadurch hart abgeschnitten — der Schein
+     ist das, was eine Sonne zur Sonne macht, und er muss im Verhältnis bleiben.
+     Beides ist ein STATISCHER Schatten; animiert sind an dieser Ebene nur
+     `transform` und `opacity` (Performance-Regel 2). */
   box-shadow:
-    0 0 90px color-mix(in srgb, var(--phase-glow, #ff8c42) 55%, transparent),
-    0 0 180px color-mix(in srgb, var(--phase-glow, #ff8c42) 28%, transparent);
+    0 0 calc(var(--shop-sun-d, 200px) * 0.38)
+      color-mix(in srgb, var(--phase-glow, #ff8c42) 55%, transparent),
+    0 0 calc(var(--shop-sun-d, 200px) * 0.75)
+      color-mix(in srgb, var(--phase-glow, #ff8c42) 28%, transparent);
   z-index: 1;
   animation: tree-sun-pulse var(--pulse-speed, 5s) ease-in-out infinite;
 }

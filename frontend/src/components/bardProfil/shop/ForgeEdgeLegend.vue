@@ -33,7 +33,8 @@
  * Sie zeigt keine Farbquadrate mit Namen daneben, sondern die STRICHE SELBST:
  * jede Probe ist eine SVG-Linie, die dieselbe CSS-Klasse trägt wie die Kante,
  * die sie erklärt. Wer die Zeile ansieht, hat das Bild schon gesehen. Genau
- * daran ist die erste Fassung des Ertrags-Sockels gescheitert — eine Probe, die
+ * daran ist die erste Fassung des Ertrags-Kopfs gescheitert (er ist inzwischen
+ * ganz gefallen) — eine Probe, die
  * anders aussieht als die Sache, die sie erklärt, muss selbst erst erklärt
  * werden.
  *
@@ -76,8 +77,8 @@ defineProps<{
    Zeiger ist die Antwort auf eine gerade gestellte Frage, die Legende ist
    Dauerauskunft. Er läuft über sie, nicht dahinter.
 
-   Der Viewport der Bühne endet bereits über dem Ertrags-Sockel; `bottom: 14px`
-   braucht deshalb keine Rechnung mit dessen Höhe. */
+   `bottom: 14px` ist dieselbe Zahl, die Zoom-Leiste und Admin-Knopf an ihren
+   Ecken tragen — eine eigene wäre eine zweite Quelle für denselben Rand. */
 .tree-legend {
   position: absolute;
   bottom: 14px;

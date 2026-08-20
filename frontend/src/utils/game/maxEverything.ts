@@ -273,9 +273,9 @@ export function maxEverything(): MaxEverythingResult {
   gameStore.totalPrestiges = Math.max(gameStore.totalPrestiges, ADMIN_MAX_UNIVERSE - 1)
   gameStore.prestigeAvailable = true
   // …und die Vorsehung, unter der dieser Lauf steht. Neun Aufbrüche ohne eine
-  // einzige gezogene Karte gibt es im Spiel nicht — und im Ertragsband des
-  // Shops blieb die Zeile „Cosmos" dadurch als einzige der acht erworbenen
-  // Herkünfte auf 1 stehen (gemessen: „1 unused" nach diesem Knopf).
+  // einzige gezogene Karte gibt es im Spiel nicht — und `universe` blieb
+  // dadurch als einzige der acht erworbenen Herkünfte auf 1 stehen (gemessen
+  // am Ertrags-Kopf, den es damals noch gab: „1 unused" nach diesem Knopf).
   //
   // Gewürfelt wird mit der ECHTEN Ziehung, nicht mit einer erfundenen Karte:
   // die Höhen kommen aus `PROVIDENCE_AXES` und sollen es auch hier. Gesucht
