@@ -119,8 +119,9 @@ export function useMeepSkills(): {
    * Wirkungen des Baums stehen in Prozent, HP, Stunden und Chimes nebeneinander
    * — es gibt keine Einheit, in der `+6 % Expeditionsertrag` und `+1 HP Regen/s`
    * vergleichbar wären. Der Preis ist die einzige Zahl, die alle dreißig Knoten
-   * teilen. Dieselbe Regel trägt `useForgeUpgrades.bestBuyId`, und der Store
-   * schreibt sie seit jeher an `suggestedNodeIds()`.
+   * teilen. Der Store schreibt die Regel seit jeher an `suggestedNodeIds()`.
+   * Der Shop hatte sie einmal ebenfalls, als BEST-BUY-Marke am Forge-Baum —
+   * dort ist sie gefallen, hier trägt sie ein eigenes Panel und bleibt.
    *
    * Bei Preisgleichstand gewinnt der niedrigere Rang: an einer Gabel kosten
    * beide Seiten gleich (das bindet `meepEconomy.spec.ts`), und ohne das

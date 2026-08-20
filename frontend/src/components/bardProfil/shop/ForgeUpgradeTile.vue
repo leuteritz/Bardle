@@ -6,7 +6,6 @@
       {
         'fut-row--ready': entry.canBuy,
         'fut-row--short': short,
-        'fut-row--best': showBest,
         'fc-spot': isSpot,
         'fut-row--focus': isFocused,
         'fc-dimmed': isDimmed,
@@ -58,25 +57,17 @@
 
     <div class="fut-flash" :class="{ 'fut-flash--on': flashed }" aria-hidden="true" />
 
-    <!-- Die EINE atmende Ebene der Zeile. Statischer Schein, animiert wird allein
-         ihre Deckkraft (Performance-Regel 2/11) — und auf `inset: 0`, weil die
-         Zeile `overflow: hidden` trägt und ein negativer Einzug abgeschnitten
-         würde. Genau derselbe Sitz wie beim Quittungsblitz darüber.
+    <!-- Die Ankunftsebene. Statischer Schein, animiert wird allein ihre
+         Deckkraft (Performance-Regel 2/11) — und auf `inset: 0`, weil die Zeile
+         `overflow: hidden` trägt und ein negativer Einzug abgeschnitten würde.
+         Genau derselbe Sitz wie beim Quittungsblitz darüber.
 
-         ZWEI Anlässe, EINE Ebene: „das Günstigste, was gerade geht" (grün) und
-         „eben hereingerollt" (Knotenfarbe). Sie wird UMGEFÄRBT statt verdoppelt —
-         zwei Ebenen kosten das Doppelte für dieselbe Aussage, und zwei Keyframes
-         auf einer Ebene überlagern sich ohnehin nicht.
-
-         Der DRITTE Anlass war „seit dem letzten Blick bezahlbar", in Azur. Er ist
-         gefallen: ein frischer Eintrag sieht jetzt aus wie ein kaufbarer, und was
-         ihn auszeichnet, steht als Marke in seiner Ecke. -->
-    <div
-      v-if="showBest || arrived"
-      class="fut-halo"
-      :class="arrived ? 'fut-halo--arrived' : 'fut-halo--best'"
-      aria-hidden="true"
-    />
+         Sie hatte einmal zwei weitere Anlässe, und beide sind gefallen: „seit
+         dem letzten Blick bezahlbar" (Azur) ist zur Marke in der Ecke geworden,
+         „das Günstigste, was gerade geht" (grün) ersatzlos. Übrig bleibt ein
+         EREIGNIS — die Zeile ist eben hereingerollt —, und damit atmet in der
+         ganzen Liste nichts mehr dauerhaft. -->
+    <div v-if="arrived" class="fut-halo fut-halo--arrived" aria-hidden="true" />
 
     <!-- Nackt, ohne Sockel: der gerahmte Kasten davor kostete Breite, die die
          Zeile für Stufe, Wirkung und Knopf braucht. Die Knotenfarbe trägt das
@@ -179,23 +170,22 @@
           </span>
         </div>
 
-        <!-- Zweite Zeile: links das Lager, rechts die Marke.
-             Die Marke stand einmal oben neben dem NAMEN und ist von dort
-             gewichen — gemessen ist die Kopfzeile nur 234px (Full HD) bzw. 263px
-             breit, und mit der Pille daneben verlor der längste Name 13 bis 19
-             Pixel an die Auslassungspunkte. Ausgerechnet die Zeile, auf die die
-             Marke zeigt, war damit die einzige mit beschnittenem Namen. Hier
-             unten ist die Breite frei: das Materialband ist kurz und darf
-             schrumpfen, der Name oben bekommt seine ~146px zurück. -->
-        <div class="fut-foot">
-          <!-- Was das Lager kostet — rahmenlos (`flat`), also nur Bild und Zahl.
-               Der Chime-Preis steht NICHT hier, sondern im Knopf (`:gold="0"`
-               lässt ihn weg): er ist die eine Zahl, die jeder Eintrag hat, und
-               gehört an die Stelle, an der geklickt wird. Die Materialien kann
-               der Knopf nicht mittragen — zwei Positionen messen auch ohne
-               Rahmen ~150px und machten ihn breiter als den Namen daneben. -->
+        <!-- Zweite Zeile: das Lager, und sonst nichts mehr.
+             Rechts sass hier einmal die BEST-BUY-Pille; mit ihr ist der letzte
+             Grund gefallen, den Fuß auch ohne Materialien zu stellen. Die
+             Bedingung sitzt deshalb am FUSS und nicht mehr am Band darin: ein
+             leerer Flex-Kasten wäre unsichtbar, aber `.fut-main` trägt
+             `gap: 6px` — die Lücke darunter bliebe und wäre die einzige Zeile
+             der Liste, die tiefer sitzt als ihre Nachbarn.
+
+             Was das Lager kostet, steht rahmenlos (`flat`), also nur Bild und
+             Zahl. Der Chime-Preis steht NICHT hier, sondern im Knopf
+             (`:gold="0"` lässt ihn weg): er ist die eine Zahl, die jeder Eintrag
+             hat, und gehört an die Stelle, an der geklickt wird. Die Materialien
+             kann der Knopf nicht mittragen — zwei Positionen messen auch ohne
+             Rahmen ~150px und machten ihn breiter als den Namen daneben. -->
+        <div v-if="entry.materials.length > 0" class="fut-foot">
           <ForgeCostRow
-            v-if="entry.materials.length > 0"
             class="fut-mats"
             inline
             flat
@@ -204,24 +194,6 @@
             :gold-ok="true"
             :materials="entry.materials"
           />
-
-          <!-- Hier stand die „NEW"-Pille, bis sie in die Ecke oben rechts
-               gewandert ist (`ShopReadyBadge`, ganz oben in dieser Datei). Der
-               Fuß trägt seitdem nur noch die eine Marke, die eine ZEILEN-Frage
-               beantwortet — welcher Eintrag der billigste kaufbare ist. Der
-               `v-else-if` von damals ist mit der Pille gefallen: die zwei
-               standen um denselben Platz, jetzt tut es keine mehr. -->
-          <!-- Zwei Wortlaute, einer davon je Viewport ausgeblendet — Muster
-               `.ft-buy-all-label` in der Kopfleiste. -->
-          <span
-            v-if="showBest"
-            class="fut-tag fut-tag--best"
-            :aria-label="bestTitle"
-            :title="bestTitle"
-          >
-            <span class="fut-tag-long">{{ FORGE_BEST_BUY_LABEL }}</span>
-            <span class="fut-tag-short">{{ FORGE_BEST_BUY_SHORT_LABEL }}</span>
-          </span>
         </div>
       </div>
 
@@ -305,10 +277,10 @@
  * Innenlicht), „reicht nicht" tritt zurück (`--short`: dunklerer Grund,
  * gedimmtes Glyph, flach-dunkelroter Knopf statt leuchtendem Verlauf).
  *
- * BEWEGT ist davon nichts. Genau eine Zeile der Liste atmet — die mit der
- * BEST-BUY-Marke, also der günstigste kaufbare Eintrag. Bei zwanzig kaufbaren
- * Einträgen atmeten sonst zwanzig Ebenen gegeneinander, und die Marke hätte
- * keinen Vorrang mehr zu zeigen.
+ * BEWEGT ist davon nichts, und inzwischen gilt das für die ganze Liste: die
+ * eine atmende Zeile war die mit der BEST-BUY-Marke, und die ist gefallen. Bei
+ * zwanzig kaufbaren Einträgen hätten sonst zwanzig Ebenen gegeneinander geatmet
+ * — der Grund, warum es je nur eine geben durfte.
  *
  * Was sie NICHT ist: eine volle Karte mit Beschreibungssatz und beschriftetem
  * Now/After-Kasten. Die stand hier schon einmal und wurde zurückgenommen. Der
@@ -328,8 +300,6 @@ import ForgeCostRow from './ForgeCostRow.vue'
 import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
 import type { ForgeUpgradeEntry } from '@/types'
 import {
-  FORGE_BEST_BUY_LABEL,
-  FORGE_BEST_BUY_SHORT_LABEL,
   FORGE_CARD_FLASH_MS,
   FORGE_SPOTLIGHT_ARRIVAL_MS,
   FORGE_CHIME_IMAGE,
@@ -375,13 +345,6 @@ const props = withDefaults(
      *  Rahmen, bis der Zeiger die Zeile einmal berührt hat. */
     fresh: boolean
     /**
-     * Das Günstigste, was Chimes UND Lager gerade decken — dieselbe Marke, die
-     * der Baum links als Ring um seinen Knoten legt. Kommt von der Liste, weil
-     * `bestBuyId` dort ohnehin gegen die tickenden Chimes eingefroren wird; die
-     * Zeile selbst kann das nicht entscheiden, sie kennt nur sich.
-     */
-    best?: boolean
-    /**
      * Wie viele Stufen Vorrat UND Lager gerade hergeben. Kommt von der Liste,
      * nicht aus `useForgeUpgrades()`: das Composable hier je Zeile aufzurufen
      * hiesse fünfundvierzig Kopien von `upgradeEntries` über fünfzig Knoten.
@@ -395,7 +358,7 @@ const props = withDefaults(
      */
     arrived?: boolean
   }>(),
-  { best: false, bulkCount: 0, arrived: false },
+  { bulkCount: 0, arrived: false },
 )
 defineEmits<{ (e: 'buy', id: string): void; (e: 'buyMany', id: string): void }>()
 
@@ -473,18 +436,6 @@ const showReqList = computed(
 )
 
 /**
- * Die BEST-BUY-Marke wird gezeigt.
- *
- * Hier stand `props.best && !props.fresh`: „neu" hatte Vorrang, weil beide
- * dieselbe atmende Ebene und dieselbe Pillenposition wollten. Beides ist weg —
- * „neu" ist zur Marke in der Ecke geworden und hat weder Ebene noch Pille. Die
- * zwei Auskünfte können deshalb nebeneinander stehen, und sie sollen es: „das
- * hier ist neu" und „das hier ist das Billigste" sind verschiedene Sätze, und
- * ein Eintrag, auf den beide zutreffen, ist der interessanteste der Liste.
- */
-const showBest = computed(() => props.best)
-
-/**
  * Was in der NEU-Marke steht.
  *
  * `bulkCount` ist der eingefrorene Stand aus der Liste und fällt dort auf 0,
@@ -494,9 +445,6 @@ const showBest = computed(() => props.best)
  */
 const freshCount = computed(() => (props.bulkCount > 1 ? props.bulkCount : 1))
 
-
-/** Warum diese Zeile die Marke trägt. Wortlaut wie an `MeepSkillNode`. */
-const bestTitle = `${FORGE_BEST_BUY_LABEL} — cheapest you can afford`
 
 /** Stufe 0 hat kein Vorher — ein „+0%" behauptete eine Wirkung, die es nicht gibt. */
 const nowText = computed(() => (props.entry.level === 0 ? '—' : props.entry.nowText))
@@ -673,13 +621,6 @@ const buyTitle = computed(() => {
 
 .fut-row--short .fut-lvl {
   color: rgba(232, 220, 192, 0.72);
-}
-
-/* ── DAS GÜNSTIGSTE, WAS GERADE GEHT ────────────────────────
-   Die stärkste Kante der Liste, dazu die eine atmende Ebene. Steht NACH
-   `--ready`, weil best immer auch kaufbar ist. */
-.fut-row--best {
-  border-color: #9fe062;
 }
 
 .fut-row--locked {
@@ -859,18 +800,15 @@ const buyTitle = computed(() => {
   color: rgba(232, 220, 192, 0.4);
 }
 
-/* Die zweite Zeile: Lager links, Marke rechts an die Kante. `margin-left: auto`
-   an der Pille und nicht `justify-content: space-between`, weil das Band ganz
-   fehlen kann — die Marke soll dann trotzdem rechts stehen, nicht allein links. */
+/* Die zweite Zeile: nur noch das Materialband. Rechts stand hier die
+   BEST-BUY-Pille, die den Kasten auch dann füllte, wenn ein Eintrag ohne
+   Materialien auskommt — deshalb hängt der Fuß jetzt selbst am `v-if` und nicht
+   mehr das Band darin. */
 .fut-foot {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
-}
-
-.fut-foot > .fut-tag {
-  margin-left: auto;
 }
 
 .fut-name {
@@ -888,35 +826,6 @@ const buyTitle = computed(() => {
 .fut-name--lead {
   font-size: 17px;
   line-height: 1.15;
-}
-
-/* Nur noch FORM, keine Farbe: die Pille gibt es seit dem Umbau ausschliesslich
-   als BEST-BUY, und die bringt Rand, Grund und Tinte selbst mit. Hier standen
-   die azurnen Werte von „NEW" — jede einzelne davon wurde von `--best`
-   überschrieben, sobald die Weiche im Template nur noch einen Ausgang hatte. */
-.fut-tag {
-  flex-shrink: 0;
-  padding: 2px 6px;
-  border-radius: 3px;
-  border: 1px solid transparent;
-  font-size: 10.5px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  line-height: 1.3;
-}
-
-/* Verlauf und Tinte im Rezept des Kaufknopfes, damit Marke und Handlung
-   dieselbe Farbe sprechen. */
-.fut-tag--best {
-  border-color: #9fe062;
-  background: linear-gradient(135deg, #52b830, #2e7a1a);
-  color: #08130a;
-  text-shadow: none;
-}
-
-/* Die Kurzform tritt erst im Kompakt-Block an ihre Stelle. */
-.fut-tag-short {
-  display: none;
 }
 
 /* ══════════════════════════════════════════════════
@@ -1203,40 +1112,33 @@ const buyTitle = computed(() => {
 }
 
 /* ══════════════════════════════════════════════════
-   DIE ATMENDE EBENE UND DIE KAUFQUITTUNG
+   DIE ANKUNFTSEBENE UND DIE KAUFQUITTUNG
    Je eine eigene Ebene mit STATISCHEM Schein, animiert wird allein die
    Deckkraft (Performance-Regel 2/11) — dasselbe Rezept wie `.fc-glow` und
    `.msc-glow`. `inset: 0` statt `-1px`, weil die Zeile `overflow: hidden`
    trägt; der Schein liegt deshalb nach INNEN.
 
-   HÖCHSTENS EINE je Zeile, und über die ganze Liste hinweg höchstens eine grüne:
-   die Marke sitzt am günstigsten kaufbaren Eintrag, und den gibt es einmal. Das
-   ist der Grund, warum die kaufbare Zeile ihren Auftritt sonst rein statisch
-   bestreitet — bei zwanzig kaufbaren Einträgen atmeten sonst zwanzig Ebenen
-   gegeneinander, und die Marke hätte keinen Vorrang mehr, den sie zeigen könnte.
+   In der LISTE ATMET NICHTS MEHR. Die Ebene trug einmal auch die BEST-BUY-Marke
+   in Grün — eine dauerhafte Animation, die es je Liste genau einmal geben
+   durfte, damit sie Vorrang zeigen konnte. Die Marke ist gefallen, und mit ihr
+   der Dauerläufer: übrig ist ein EREIGNIS, das genau einmal abläuft und dann
+   verschwindet. Das ist auch der Grund, warum die kaufbare Zeile ihren Auftritt
+   rein statisch bestreitet — daran ändert sich nichts.
 ══════════════════════════════════════════════════ */
 .fut-halo {
   position: absolute;
   inset: 0;
   border-radius: 4px;
   pointer-events: none;
-  animation: fut-halo-breathe 2.2s ease-in-out infinite;
 }
 
-/* Das Günstigste, was gerade geht — grün, wie der `.best-buy-ring` am Knoten im
-   Baum. Beide zeigen auf denselben Eintrag und müssen dieselbe Farbe sprechen. */
-.fut-halo--best {
-  border: 1px solid #9fe062;
-  box-shadow: inset 0 0 16px rgba(82, 184, 48, 0.42);
-}
+/* Die Zeile ist eben hereingerollt, weil der Zeiger drüben auf ihrem Knoten
+   steht.
 
-/* Der DRITTE Anlass derselben Ebene: die Zeile ist eben hereingerollt, weil der
-   Zeiger drüben auf ihrem Knoten steht.
-
-   In der KNOTENFARBE und nicht in Azur oder Grün — die beiden sagen, WAS diese
-   Zeile ist (neu bezahlbar, das Günstigste). Diese hier sagt, WOHER der Blick
-   kommt, und das ist der Knoten links. Einmalig und mit `forwards`: ein Atmen
-   hiesse „Zustand", und eingetroffen ist man genau einmal. */
+   In der KNOTENFARBE: sie sagt nicht, WAS diese Zeile ist — das trägt die Zeile
+   selbst —, sondern WOHER der Blick kommt, und das ist der Knoten links.
+   Einmalig und mit `forwards`: ein Atmen hiesse „Zustand", und eingetroffen ist
+   man genau einmal. */
 .fut-halo--arrived {
   border: 1px solid var(--node-c, #c89040);
   box-shadow: inset 0 0 16px color-mix(in srgb, var(--node-c, #c89040) 42%, transparent);
@@ -1253,40 +1155,6 @@ const buyTitle = computed(() => {
   100% {
     opacity: 0;
   }
-}
-
-@keyframes fut-halo-breathe {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* Ruhig stellen, sobald der Blick ohnehin auf der Zeile liegt oder sie
-   zurückgetreten ist — sonst atmt sie beim Schwenk über die Liste gegen den
-   Spotlight an. */
-.fut-row.fc-spot .fut-halo {
-  animation: none;
-  opacity: 1;
-}
-
-.fut-row.fc-dimmed .fut-halo {
-  animation: none;
-  opacity: 0.3;
-}
-
-/* …aber NICHT die Ankunft. Sie ist ein Ereignis und kein Zustand, und die
-   eintreffende Zeile IST immer der Spotlight — die Regel darüber stellte
-   ausgerechnet die Marke stumm, die den Weg erklärt. Ein Fallstrick, der ohne
-   diese vier Zeilen als „Effekt funktioniert nicht" ankommt und keinen Grund
-   mitliefert. */
-.fut-row.fc-spot .fut-halo--arrived,
-.fut-row.fc-dimmed .fut-halo--arrived {
-  animation: fut-halo-arrive v-bind(arriveMs) ease-out 1 forwards;
-  opacity: 0;
 }
 
 .fut-flash {
@@ -1319,18 +1187,10 @@ const buyTitle = computed(() => {
     animation: none;
   }
 
-  /* Der Rahmen bleibt — nur sein Atmen fällt weg. */
-  .fut-halo {
-    animation: none;
-    opacity: 1;
-  }
-
-  /* Auch hier: die Ankunftskurve endet bei `opacity: 0` und trägt `forwards`.
-     Bliebe sie nur abgeschaltet, wäre die Marke unsichtbar statt ruhig — sie
+  /* Die Ankunftskurve endet bei `opacity: 0` und trägt `forwards`. Bliebe sie
+     nur abgeschaltet, wäre der Rahmen unsichtbar statt ruhig — die Deckkraft
      muss ausdrücklich zurückgesetzt werden. Derselbe Fallstrick wie bei
      `.node-spot` im Baum. */
-  .fut-row.fc-spot .fut-halo--arrived,
-  .fut-row.fc-dimmed .fut-halo--arrived,
   .fut-halo--arrived {
     animation: none;
     opacity: 1;
@@ -1373,16 +1233,6 @@ const buyTitle = computed(() => {
 
   .fut-name--lead {
     font-size: 16px;
-  }
-
-  /* Die Marke gibt dem Namen 28px zurück — Herleitung an
-     `FORGE_BEST_BUY_SHORT_LABEL`. */
-  .fut-tag-long {
-    display: none;
-  }
-
-  .fut-tag-short {
-    display: inline;
   }
 
   .fut-delta {

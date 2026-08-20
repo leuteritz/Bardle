@@ -437,17 +437,6 @@
           </span>
         </div>
 
-        <!-- Die BEST-BUY-Marke. Genau EINE im ganzen Bild, und sie animiert nur
-             Deckkraft auf einer Ebene mit statischem Schein (Performance-Regel
-             2/11). „Günstigster kaufbarer" und nicht „stärkster": die Wirkungen
-             des Baums stehen in Prozent, HP, Sekunden und Chimes nebeneinander
-             und sind nicht vergleichbar — der Preis ist die einzige Zahl, die
-             alle teilen. -->
-        <div v-if="bestBuyId === node.id" class="best-buy" aria-hidden="true">
-          <span class="best-buy-ring" />
-          <span class="best-buy-label">{{ FORGE_BEST_BUY_LABEL }}</span>
-        </div>
-
         <!-- Die Karte am Knoten. Sie hängt am Hover DIESER Spalte, nicht am
              Spotlight: ein Zeiger auf der Karte rechts darf hier keinen zweiten
              Abzug derselben Zahlen aufklappen.
@@ -561,13 +550,12 @@ import {
   FORGE_SPOTLIGHT_COMPASS_ICON_PX,
   FORGE_SPOTLIGHT_COMPASS_SIZE_PX,
   FORGE_TREE_PAN_MS,
-  FORGE_BEST_BUY_LABEL,
   FORGE_EDGE_LEGEND_ROWS,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
 const forgeStore = useStarForgeStore()
-const { entryById, bestBuyId, freshIds, buyUpgrade, affordableLevels } = useForgeUpgrades()
+const { entryById, freshIds, buyUpgrade, affordableLevels } = useForgeUpgrades()
 const {
   spotlightId,
   hoverId,
@@ -2341,7 +2329,7 @@ const nextPhasePreviewStyle = computed(() => ({
 
    KEIN `--inv-scale`. Der Kranz ist Randgeometrie und skaliert mit dem Kreis, wie
    das Schloss (in %) und der Stufen-Chip. Gegengerechnet wird im Projekt nur, was
-   frei SCHWEBT (Tooltip, Best-Buy-Beschriftung); ein gegenskalierter Punkt behielte
+   frei SCHWEBT (der Tooltip); ein gegenskalierter Punkt behielte
    seinen Bahnradius in Bühnen-px und liefe bei kleinem Zoom über den Rand hinaus.
 
    Beide Zustände sind STATISCH — hier läuft nie ein Keyframe. */
@@ -2442,8 +2430,8 @@ const nextPhasePreviewStyle = computed(() => ({
    Schloss, in der Mitte Glyph und Stufe — oben rechts ist die einzige Ecke, die
    an einem kaufbaren Knoten nie belegt ist. Der Bedingungskranz steht zwar auf
    dem oberen Bogen, aber nur an GESPERRTEN Knoten, und die tragen nie eine
-   NEU-Marke. Der Best-Buy-Ring liegt bei `inset: -7px` und damit ausserhalb der
-   zwei Prozent, um die die Marke übersteht.
+   NEU-Marke. Ausserhalb des Kreises lag einmal der Best-Buy-Ring (`inset: -7px`);
+   er ist gefallen, und damit ist die Ecke ganz frei.
 
    Der SITZ ist prozentual: `.node-circle--spot` skaliert den Kreis samt Kindern
    auf 1,22, und eine Pixelzahl liefe dabei aus der Geometrie. Das MASS dagegen
@@ -2594,11 +2582,11 @@ const nextPhasePreviewStyle = computed(() => ({
    hinweg, ein einzelner Farbton tut das nie.
 
    „Kaufbar" bleibt trotzdem eindeutig: die Sättigung trägt es über alle
-   fünfzehn Knotenfarben, und die Best-Buy-Marke ist die einzige grüne Fläche im
-   Feld. Zwei Zeichen standen hier einmal daneben und sind gefallen — das grüne
-   Blitz-Abzeichen und der azurne Rand der frischen Knoten. Beide besetzten die
-   Ecke, die jetzt der NEU-Marke gehört, und der Rand übermalte obendrein die
-   Farbe, an der man den Knoten überhaupt erkennt.
+   fünfzehn Knotenfarben. Drei Zeichen standen hier einmal daneben und sind
+   gefallen — das grüne Blitz-Abzeichen, der azurne Rand der frischen Knoten und
+   zuletzt der grüne Best-Buy-Ring. Die ersten beiden besetzten die Ecke, die
+   jetzt der NEU-Marke gehört, und der Rand übermalte obendrein die Farbe, an
+   der man den Knoten überhaupt erkennt.
 
    Die Anteile — 38 % im Schimmer, 16 % und 7 % im Grund — sind gemessen, nicht
    geschätzt: das Glyph in der Mitte trägt DIESELBE Farbe bei voller Sättigung.
@@ -2630,8 +2618,8 @@ const nextPhasePreviewStyle = computed(() => ({
  * (`docs/performance.md`, Regel: „und wenn es viele sind?").
  *
  * Der Verzicht kostet nichts, er gewinnt sogar: was ueberall blinkt, hebt
- * nichts hervor. Es atmen nur noch die zwei Zeichen, die WIRKLICH etwas
- * auszeichnen — der frisch aufgegangene Knoten und der eine Best-Buy-Ring. */
+ * nichts hervor. Im Knotenfeld atmet seitdem nur noch der Spotlight-Ring — der
+ * Best-Buy-Ring stand einmal daneben und ist ersatzlos gefallen. */
 .node-circle--ready .node-glow {
   box-shadow: 0 0 22px color-mix(in srgb, var(--node-color, #6ec040) 78%, transparent);
   opacity: 0.72;
@@ -2703,60 +2691,6 @@ const nextPhasePreviewStyle = computed(() => ({
   border-color: #c89040;
   box-shadow: 0 0 10px rgba(232, 192, 64, 0.5), 0 0 20px rgba(232, 192, 64, 0.2);
   cursor: default;
-}
-
-/* ══════════════════════════════════════════════════
-   BEST BUY
-   Genau EINE Marke im ganzen Bild — deshalb darf sie auffällig sein. Der Ring
-   ist eine eigene Ebene mit STATISCHEM Schein, animiert wird nur seine
-   Deckkraft (Performance-Regel 2/11); die Beschriftung rechnet den Zoom heraus,
-   damit sie bei jedem Maßstab dieselbe Größe hat wie der Tooltip daneben.
-══════════════════════════════════════════════════ */
-.best-buy {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 5;
-}
-
-/* Heller als das Grün der kaufbaren Knoten (`#6ec040`), seit die überhaupt grün
-   sind: der Ring stand auf `#52b830` und wäre sonst nur noch ein zweiter Kreis
-   in derselben Farbe. Er bleibt unterscheidbar durch dreierlei — er liegt
-   AUSSERHALB des Kreises, er trägt eine Beschriftung, und er ist das einzige
-   Zeichen im Knotenfeld, das noch atmet. */
-.best-buy-ring {
-  position: absolute;
-  inset: -7px;
-  border-radius: 50%;
-  border: 2px solid #9fe062;
-  box-shadow: 0 0 16px rgba(159, 224, 98, 0.85);
-  animation: best-buy-breathe 1.8s ease-in-out infinite alternate;
-}
-
-@keyframes best-buy-breathe {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.best-buy-label {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 12px);
-  transform: translateX(-50%) scale(var(--inv-scale, 1));
-  transform-origin: top center;
-  white-space: nowrap;
-  padding: 3px 8px;
-  border-radius: 3px;
-  background: #1e2e12;
-  border: 1px solid #4a8a28;
-  color: #9fe062;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.05em;
 }
 
 /* ══════════════════════════════════════════════════
@@ -2981,13 +2915,6 @@ const nextPhasePreviewStyle = computed(() => ({
      und trägt `forwards` — bliebe sie nur abgeschaltet, wäre der Zeiger
      unsichtbar statt ruhig. */
   .tree-compass-arrow {
-    animation: none;
-    opacity: 1;
-  }
-
-  /* Dieselbe Falle wie beim Kaufbar-Schein: ohne die Deckkraft mitzusetzen
-     bliebe die Marke bei 0,45 stehen statt voll zu leuchten. */
-  .best-buy-ring {
     animation: none;
     opacity: 1;
   }

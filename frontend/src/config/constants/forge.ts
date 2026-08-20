@@ -910,11 +910,10 @@ export const MEEP_SKILL_ALL_DONE_ICON = 'game-icons:laurels'
  * Was als Nächstes zu lernen lohnt — EIN Knoten groß, und zwar derselbe, den
  * die Orbit-Bühne links als BEST BUY umringt.
  *
- * „Günstigster" und nicht „stärkster", genau wie im Shop
- * (`FORGE_BEST_BUY_LABEL`): die Wirkungen des Baums stehen in Prozent, HP,
- * Stunden und Chimes nebeneinander — es gibt keine Einheit, in der `+6 %
- * Expeditionsertrag` und `+1 HP Regen/s` vergleichbar wären. Der Preis ist die
- * einzige Zahl, die alle dreißig Knoten teilen. Der Store sagt dasselbe schon
+ * „Günstigster" und nicht „stärkster": die Wirkungen des Baums stehen in
+ * Prozent, HP, Stunden und Chimes nebeneinander — es gibt keine Einheit, in der
+ * `+6 % Expeditionsertrag` und `+1 HP Regen/s` vergleichbar wären. Der Preis ist
+ * die einzige Zahl, die alle dreißig Knoten teilen. Der Store sagt dasselbe schon
  * seit jeher an `suggestedNodeIds()`; die Regel ist also nicht neu, sie wird
  * nur sichtbar.
  */
@@ -2551,35 +2550,12 @@ export const FORGE_BUY_ALL_HERALD = `${FORGE_COUNT_TOKEN} Upgrades Grown`
 export const FORGE_BUY_ALL_HERALD_NAME_CAP = 3
 
 /**
- * Die Marke am günstigsten kaufbaren Knoten.
- *
- * „Günstigster" und nicht „stärkster": die Wirkungen des Baums stehen in
- * Prozent, HP, Sekunden und Chimes nebeneinander — es gibt keine gemeinsame
- * Einheit, in der man sie rangieren könnte. Der Preis ist die einzige Zahl, die
- * alle Knoten teilen, und „was kann ich als Nächstes mitnehmen" ist ohnehin die
- * Frage, die der Spieler vor dem Baum hat.
- */
-export const FORGE_BEST_BUY_LABEL = 'BEST BUY'
-/**
- * Dieselbe Marke, gekürzt — für die Upgrade-ZEILE bei Full HD.
- *
- * Gemessen: die volle Pille misst 68px und steht im engsten Platz der Zeile,
- * neben dem Namen. Bei 1920×1080 blieben dem Namen dadurch 61px und er wurde
- * abgeschnitten — ausgerechnet an der Zeile, auf die die Marke zeigen soll. Die
- * Kurzform misst rund 40px und gibt ihm 28 zurück.
- *
- * Gekürzt wird die MARKE und nicht der Wirkungssprung daneben: dessen Zahl ist
- * der Grund, überhaupt zu kaufen, während „BEST" dasselbe sagt wie „BEST BUY".
- * Der volle Wortlaut bleibt im `title` der Pille.
- */
-export const FORGE_BEST_BUY_SHORT_LABEL = 'BEST'
-
-/**
  * Die Marke an einem gerade erst bezahlbar gewordenen Eintrag.
  *
- * Sie beantwortet eine ANDERE Frage als BEST BUY: BEST BUY sagt „das Billigste",
- * diese hier sagt „das, was seit deinem letzten Blick dazugekommen ist". Beide
- * können auf denselben Eintrag zeigen.
+ * Sie beantwortet genau eine Frage: „was ist seit deinem letzten Blick
+ * dazugekommen". Keine Rangfolge — der Shop hatte daneben einmal eine
+ * BEST-BUY-Marke, die auf den billigsten kaufbaren Eintrag zeigte, und die ist
+ * gefallen: der Preis steht an jedem Eintrag und ordnet sich selbst.
  *
  * Azur ist die Farbe dazu, und zwar dieselbe, die den Spieler hergeführt hat —
  * `ShopReadyBadge` am Header und am Profil-Reiter, sowie der `ready`-Herold

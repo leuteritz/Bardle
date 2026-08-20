@@ -298,7 +298,6 @@ export interface ForgeBuyAllPlan {
 export function useForgeUpgrades(): {
   upgradeEntries: ComputedRef<ForgeUpgradeEntry[]>
   entryById: ComputedRef<Map<string, ForgeUpgradeEntry>>
-  bestBuyId: ComputedRef<string | null>
   freshIds: ComputedRef<Set<string>>
   buyUpgrade: (id: string, opts?: { silent?: boolean }) => boolean
   affordableLevels: (id: string) => number
@@ -545,24 +544,6 @@ export function useForgeUpgrades(): {
   const entryById = computed(() => new Map(upgradeEntries.value.map((entry) => [entry.id, entry])))
 
   /**
-   * Der günstigste Eintrag, den Chimes UND Lager gerade decken — die Marke im
-   * Baum und die Vorgabe des Detailkopfs.
-   *
-   * „Günstigster" und nicht „stärkster", und das ist keine Bequemlichkeit: die
-   * Wirkungen des Baums stehen in Prozent, HP, Sekunden und Chimes nebeneinander.
-   * Es gibt keine Einheit, in der `+6% Expeditionsertrag` und `+90 max HP`
-   * vergleichbar wären. Der Preis ist die einzige Zahl, die alle Knoten teilen.
-   */
-  const bestBuyId = computed<string | null>(() => {
-    let best: ForgeUpgradeEntry | null = null
-    for (const entry of upgradeEntries.value) {
-      if (!entry.canBuy) continue
-      if (best === null || entry.goldCost < best.goldCost) best = entry
-    }
-    return best?.id ?? null
-  })
-
-  /**
    * Was seit dem letzten Blick des Spielers dazugekommen ist — als Menge, damit
    * Baum und Liste dieselbe Antwort geben und keine von beiden über eine Liste
    * mit bis zu fünfzig Einträgen sucht.
@@ -701,9 +682,10 @@ export function useForgeUpgrades(): {
    * Alles gerade Kaufbare, günstigster zuerst — die Rangfolge des Sammelkaufs
    * UND seiner Vorschau.
    *
-   * Günstigster zuerst, aus zwei Gründen: derselbe Vorrat deckt so die meisten
-   * Stufen, und es ist dieselbe Rangfolge, nach der die BEST-BUY-Marke im Baum
-   * zeigt.
+   * Günstigster zuerst, und nicht stärkster zuerst: derselbe Vorrat deckt so die
+   * meisten Stufen. Nach Wirkung liesse sich ohnehin nicht ordnen — die stehen
+   * in Prozent, HP, Sekunden und Chimes nebeneinander, der Preis ist die einzige
+   * Zahl, die alle Knoten teilen.
    *
    * EINE Funktion für beide Aufrufer, und das ist kein Aufräumen: `buyAllPlan`
    * sagt dem Spieler voraus, was `buyAllReady()` tun wird. Zwei Fassungen
@@ -786,7 +768,6 @@ export function useForgeUpgrades(): {
   return {
     upgradeEntries,
     entryById,
-    bestBuyId,
     freshIds,
     buyUpgrade,
     affordableLevels,

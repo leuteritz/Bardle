@@ -938,36 +938,6 @@ describe('useForgeUpgrades — Vorschau des Sammelkaufs', () => {
 })
 
 /**
- * Die BEST-BUY-Marke im Baum und die Vorgabe des Detailkopfs lesen denselben
- * Wert. „Günstigster kaufbarer" ist dabei keine Bequemlichkeit: die Wirkungen
- * des Baums stehen in Prozent, HP, Sekunden und Chimes nebeneinander und sind
- * nicht vergleichbar — der Preis ist die einzige Zahl, die alle Knoten teilen.
- */
-describe('useForgeUpgrades — bestBuyId', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-  })
-
-  it('ist null, solange nichts kaufbar ist', () => {
-    useGameStore().chimes = 0
-    expect(useForgeUpgrades().bestBuyId.value).toBeNull()
-  })
-
-  it('zeigt auf den günstigsten kaufbaren Eintrag', () => {
-    unlockBranches()
-    const { upgradeEntries, entryById, bestBuyId } = useForgeUpgrades()
-
-    const id = bestBuyId.value
-    expect(id).not.toBeNull()
-    const best = entryById.value.get(id!)!
-    expect(best.canBuy).toBe(true)
-    for (const e of upgradeEntries.value) {
-      if (e.canBuy) expect(best.goldCost).toBeLessThanOrEqual(e.goldCost)
-    }
-  })
-})
-
-/**
  * Die Regel, die entscheidet, ob ein Zeiger die ANSICHT bewegen darf.
  *
  * Als Tabelle über ALLE sechs Zustände, und das ist der Zweck: kommt ein

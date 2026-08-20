@@ -51,7 +51,6 @@
           :entry="entry"
           :flashed="flashedId === entry.id"
           :fresh="freshIds.has(entry.id)"
-          :best="bestOf(entry.id)"
           :bulk-count="bulkOf(entry.id)"
           :arrived="arrivedId === entry.id"
           @buy="grow"
@@ -150,7 +149,7 @@ import {
   STAR_PHASE_DATA,
 } from '@/config/constants'
 
-const { upgradeEntries, entryById, bestBuyId, freshIds, buyUpgrade, affordableLevels, buyMany } =
+const { upgradeEntries, entryById, freshIds, buyUpgrade, affordableLevels, buyMany } =
   useForgeUpgrades()
 const { treeHoverId, listHoverId, pinnedId, focusTick, setListHover, clearPin } =
   useForgeSpotlight()
@@ -182,21 +181,6 @@ const frozenBuckets = ref<Map<string, ForgeUpgradeBucketId> | null>(null)
 const frozenBulk = ref<Map<string, number> | null>(null)
 
 /**
- * Und dieselbe Klammer um die BEST-BUY-Marke.
- *
- * Sie zeigt auf den GÜNSTIGSTEN kaufbaren Eintrag und hängt damit doppelt an den
- * tickenden Chimes: sobald ein billigerer Eintrag bezahlbar wird, springt die
- * Marke samt ihrer atmenden Ebene auf eine andere Zeile. Ohne die Klammer
- * passierte genau das, während der Zeiger auf einem Knopf steht — dieselbe
- * Unruhe, gegen die schon die eingefrorene Reihenfolge steht.
- *
- * Als Kästchen und nicht als blanker String, damit `null` dasselbe heisst wie
- * bei den beiden Karten daneben — „nicht eingefroren". „Eingefroren, und es gibt
- * gerade keinen" ist ein eigener Zustand und muss unterscheidbar bleiben.
- */
-const frozenBest = ref<{ id: string | null } | null>(null)
-
-/**
  * Wie viele Stufen je Eintrag gerade auf einmal gingen.
  *
  * NUR für das gerade Kaufbare: die Schleife hinter `affordableLevels()` läuft
@@ -217,13 +201,11 @@ function freezeOrder(): void {
     upgradeEntries.value.map((entry) => [entry.id, forgeUpgradeBucket(entry)]),
   )
   frozenBulk.value = new Map(bulkCounts.value)
-  frozenBest.value = { id: bestBuyId.value }
 }
 
 function leaveList(): void {
   frozenBuckets.value = null
   frozenBulk.value = null
-  frozenBest.value = null
   setListHover(null)
 }
 
@@ -233,11 +215,6 @@ function bucketOf(entry: ForgeUpgradeEntry): ForgeUpgradeBucketId {
 
 function bulkOf(id: string): number {
   return (frozenBulk.value ?? bulkCounts.value).get(id) ?? 0
-}
-
-/** Trägt diese Zeile die BEST-BUY-Marke — die eine bewegte Ebene der Liste? */
-function bestOf(id: string): boolean {
-  return (frozenBest.value ? frozenBest.value.id : bestBuyId.value) === id
 }
 
 // ── Die Abschnitte ───────────────────────────────────────────────────────────
