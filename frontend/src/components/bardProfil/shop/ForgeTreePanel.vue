@@ -72,7 +72,7 @@
     <!-- Scaled tree stage -->
     <div
       class="tree-stage"
-      :class="{ 'tree-stage--dragging': isDragging }"
+      :class="{ 'tree-stage--dragging': isDragging, 'tree-stage--instant': panInstant }"
       :style="{
         transform: stageTransform,
         '--inv-scale': (1 / totalScale).toFixed(4),
@@ -414,6 +414,7 @@ import {
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { forgeClusterSpots, forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
 import { forgeClusterOf } from '@/config/progression/starForgeNet'
 import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
@@ -509,6 +510,7 @@ const {
   clearPin,
   resetForgeSpotlight,
 } = useForgeSpotlight()
+const { detailsOpen, openDetails } = useForgeDetailsPane()
 
 const C = FORGE_STAGE_SIZE / 2
 
@@ -1177,8 +1179,36 @@ function flashSun(): void {
  *
  * Kauf und Meldung liegen im Composable, damit Baum und Upgrade-Liste denselben
  * Weg nehmen. Hier bleibt nur, was der Baum eigenes tut.
+ *
+ * DAVOR steht seit dem Einklappen der Detailspalte eine dritte Geste, und sie
+ * hebt die beiden anderen auf, solange die Spalte zu ist: **solange die Spalte
+ * zu ist, kauft der Baum nicht.** Ein Klick klappt dann auf, heftet an und holt
+ * die Zeile heran — erst der zweite, jetzt mit sichtbarer Liste, kauft.
+ *
+ * Ohne das gäbe ein Klick auf einen Knoten Chimes für etwas aus, dessen Preis,
+ * Stufe und Wirkungssprung gerade hinter der Kante stehen. Der Baum zeigt einen
+ * Ring, keine Rechnung.
+ *
+ * Die Bedingung ist bewusst NUR `!detailsOpen` und nicht zusätzlich
+ * `pinnedId !== node.id`: sonst hinge die Wirkung eines Klicks an einer
+ * Anheftung, die noch von VOR dem Zuklappen stammt — derselbe Knoten würde
+ * gekauft, während sein Nachbar daneben nur aufklappt. Eine Geste, die je nach
+ * unsichtbarem Vorzustand kauft oder zeigt, ist die schlechteste von beiden.
+ *
+ * Gesperrte Knoten nehmen denselben Weg: der Sperrgrund samt vollständiger
+ * Bedingungsliste steht in der Zeile drüben, und bei zugeklappter Spalte ginge
+ * die Anheftung ins Leere.
  */
 function handleNodeClick(node: TreeNode): void {
+  if (!detailsOpen.value) {
+    openDetails()
+    // Setzen, nie lösen: `togglePin` ist der einzige Weg dorthin, und in diesem
+    // Zweig soll ein zweiter Klick auf denselben Knoten die Anheftung HALTEN —
+    // die Zeile, die gerade herangerollt kommt, darf nicht mit ihr verschwinden.
+    if (pinnedId.value !== node.id) togglePin(node.id)
+    return
+  }
+
   if (entryOf(node).state === 'locked') {
     togglePin(node.id)
     return
@@ -1225,24 +1255,77 @@ const pan = ref(forgeContentCenter())
 
 let resizeObserver: ResizeObserver | null = null
 
+/* ── Der Breitensprung der Detailspalte ────────────────────────────────────
+ *
+ * Klappt die Spalte rechts ein oder aus, wechselt die Breite dieses Viewports
+ * in EINEM Frame — so gebaut, damit hier nicht pro Frame `fitScale` neu
+ * gerechnet wird (siehe `.shop-forge-col` in `ShopComponent`).
+ *
+ * Nur: `.tree-stage` hängt an `top/left: 50 %`, und das ist LAYOUT. Der
+ * Bühnenanker springt mit der halben Breitendifferenz mit — auf Full HD rund
+ * 230 px — und die `transition: transform` der Bühne fängt davon nichts auf,
+ * weil sie den Anker gar nicht sieht. Ohne Ausgleich rutscht der ganze Baum
+ * seitwärts, obwohl der Spieler nur eine Spalte zugezogen hat.
+ *
+ * Ausgeglichen wird deshalb im `pan`, im SELBEN Frame und ohne Transition:
+ * `screenX(P) = W/2 + (P.x − pan.x) · s`, also hält `pan.x + Δ/(2s)` jeden
+ * Punkt an seiner Bildschirmstelle. Auf dem Schirm bewegt sich nichts, es wird
+ * nur mehr Fläche sichtbar — und das ist genau, was das Zuklappen verspricht.
+ */
+let lastViewportW = 0
+/** Steht ein Spaltenwechsel an? Ein echtes Fensterresize klemmt weiterhin
+ *  schlicht neu — dort IST das Nachrücken die richtige Antwort. */
+let paneShift = false
+/** Ein einziger Frame ohne Transition: der Ausgleich darf nicht selbst fahren. */
+const panInstant = ref(false)
+let settleFrame = 0
+
+watch(detailsOpen, () => {
+  paneShift = true
+})
+
 onMounted(() => {
   if (!viewportEl.value) return
   resizeObserver = new ResizeObserver((entries) => {
     const rect = entries[0]?.contentRect
     if (!rect) return
+    const prevW = lastViewportW
+    lastViewportW = rect.width
     viewportSize.value = { w: rect.width, h: rect.height }
     // Gemessen wird der VIEWPORT und nicht das Panel. Beide sind seit dem Fall
     // des Ertrags-Kopfs gleich hoch — aber die Fläche, in der der Baum liegt,
     // IST der Viewport, und daran soll die Rechnung hängen.
     fitScale.value = forgeFitScale(viewportSize.value)
-    zoom.value = clampZoom(zoom.value)
-    clampPan()
+
+    if (!paneShift || prevW === 0) {
+      zoom.value = clampZoom(zoom.value)
+      clampPan()
+      return
+    }
+    paneShift = false
+
+    panInstant.value = true
+    pan.value = {
+      x: pan.value.x + (rect.width - prevW) / 2 / (totalScale.value || 1),
+      y: pan.value.y,
+    }
+
+    /* Erst im NÄCHSTEN Frame Transition zurück und klemmen. Was `forgePanLimit`
+       und `zoomFloor` danach noch verschieben — bei breiterem Bild zieht der
+       Anschlag zur Hüllenmitte, bei schmalerem hebt sich ggf. der Zoomboden —
+       gleitet dann über die vorhandene Transition der Bühne. */
+    settleFrame = requestAnimationFrame(() => {
+      panInstant.value = false
+      zoom.value = clampZoom(zoom.value)
+      clampPan()
+    })
   })
   resizeObserver.observe(viewportEl.value)
 })
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
+  cancelAnimationFrame(settleFrame)
   // Der Spotlight lebt auf Modulebene und überlebte diese Komponente sonst.
   //
   // Beim TABWECHSEL greift das hier allerdings nicht: der Shop-Tab bleibt nach
@@ -1724,6 +1807,15 @@ const nextPhasePreviewStyle = computed(() => ({
 .tree-stage--dragging {
   transition: none;
   will-change: transform;
+}
+
+/* Der Ausgleich des Breitensprungs beim Ein- und Ausklappen der Detailspalte:
+   EIN Frame ohne Transition, sonst führe die Bühne die Kompensation als
+   sichtbare Fahrt aus — und der Sprung wäre durch ein Schwenken ersetzt statt
+   aufgehoben. Kein `will-change`: das hier ist ein einzelner Frame, keine
+   laufende Bewegung (Performance-Regel 12). */
+.tree-stage--instant {
+  transition: none;
 }
 
 .tree-svg {

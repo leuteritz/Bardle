@@ -3442,3 +3442,109 @@ export const MEEP_RISING_HOLD_MS = 300
 // pulse. Long enough to catch the eye, short enough that it is over before the
 // next whole meep can accrue.
 export const MEEP_GAIN_PULSE_MS = 520
+
+// ── Detailspalte: Griffleiste, Fahrt und Ladeschleier ──────────────────────
+//
+// Die rechte Spalte des Shop-Tabs fährt seitlich ein und aus. Sie startet
+// EINGEKLAPPT — der Sternbaum ist das, weshalb der Tab geöffnet wird, und ihm
+// fehlten auf Full HD dauerhaft rund fünfhundert Pixel für eine Spalte, die
+// niemand ansah. Stehen bleibt die Griffleiste.
+
+/**
+ * Breite der Griffleiste, die eingeklappt stehen bleibt.
+ *
+ * 36 px, und die Zahl kommt von ihrem Inhalt, nicht vom Gefühl: das Chevron
+ * misst 18, die Zahl darunter braucht zwei Ziffern bei 12 px Schriftgrad —
+ * beides passt mit je 9 px Luft an den Seiten. Schmaler wäre die Trefferfläche
+ * kleiner als die 32 px, unter denen ein Klickziel unangenehm wird; breiter
+ * begänne sie, wie eine eigene Spalte auszusehen, und genau das ist sie nicht.
+ */
+export const FORGE_DETAILS_RAIL_PX = 36
+
+/**
+ * Wie lange die Spalte fährt.
+ *
+ * Bewegt wird ausschließlich `transform` — die Breite der Spalte wechselt in
+ * EINEM Frame (siehe `.shop-forge-col`), sonst rechnete der ResizeObserver des
+ * Baums pro Frame neu. 220 ms liegen im selben Band wie die 280 ms der
+ * Höhen-Klappen (`AdminCollapsiblePanel`), sind aber kürzer: eine seitliche
+ * Fahrt über fünfhundert Pixel liest sich träge, wenn sie so lange braucht wie
+ * ein aufklappender Abschnitt.
+ */
+export const FORGE_DETAILS_SLIDE_MS = 220
+
+/**
+ * EIN Glyph für beide Richtungen, im offenen Zustand um 180° gedreht.
+ *
+ * Zwei Icons (links/rechts) wären zwei Wahrheiten über dieselbe Taste, und der
+ * Wechsel zwischen ihnen springt, während eine Drehung die Richtung zeigt.
+ */
+export const FORGE_DETAILS_TOGGLE_ICON = 'lucide:chevron-left'
+export const FORGE_DETAILS_TOGGLE_ICON_PX = 18
+
+/** Was der Zeiger auf der Griffleiste meldet — je nach Richtung. */
+export const FORGE_DETAILS_OPEN_TITLE = 'Show forge details'
+export const FORGE_DETAILS_CLOSE_TITLE = 'Hide forge details'
+/**
+ * Die zwei Signale, die eingeklappt stehen bleiben.
+ *
+ * Sie sind der ganze Grund, warum die Leiste keine blosse Kante ist: eine
+ * zugeklappte Spalte, die nicht mehr meldet, dass etwas zu holen wäre, wird
+ * vergessen. Die Zahl ist dieselbe wie auf der Sammelkauf-Leiste im Panel, der
+ * Punkt derselbe Vorrat wie im Angebotsstreifen — je EINE Rechnung, sonst
+ * liefen sie auseinander.
+ */
+export const FORGE_DETAILS_READY_TITLE = 'ready to forge'
+export const FORGE_DETAILS_OFFER_TITLE = 'an offer is within reach'
+
+/**
+ * Mindeststandzeit des Shop-Schleiers.
+ *
+ * Zwischen `SIGIL_BOARD_LOADER_MIN_MS` (340) und `SIGIL_DETAILS_LOADER_MIN_MS`
+ * (480): der Shop baut EINE Bühne auf, nicht Bühne plus Detailseite, aber sein
+ * Kantenfeld ist teurer als ein Sigil-Brett. Nach der Messung am
+ * Produktionsbuild nachziehen.
+ */
+export const FORGE_SHOP_LOADER_MIN_MS = 380
+/**
+ * Wie viele gezeichnete Frames der Schleier abwartet, bevor er aufdeckt —
+ * dieselbe Zahl wie `BATTLE_TAB_LOADER_SETTLE_FRAMES`. Ein einzelner rAF käme
+ * zurück, während der Baum noch seine Kanten legt.
+ */
+export const FORGE_SHOP_LOADER_SETTLE_FRAMES = 4
+/** Amboss wie am Angebotsstreifen — dieselbe Bedeutung, dasselbe Glyph. */
+export const FORGE_SHOP_LOADER_ICON = FORGE_OFFER_ICON
+export const FORGE_SHOP_LOADER_ACCENT = '#e8c040'
+export const FORGE_SHOP_LOADER_TITLE = 'Star Forge'
+export const FORGE_SHOP_LOADER_CAPTION = 'Kindling the star tree'
+
+/**
+ * Das Baum-Skelett des Schleiers: drei Ringe um die Sonnenscheibe, Radius in
+ * Prozent der kürzeren Bühnenkante.
+ *
+ * Prozent und nicht Pixel, damit dasselbe Skelett auf Full HD wie auf 4K
+ * mittig steht. Die Zahlen bilden den echten Baum grob nach (innen wenige
+ * Strahlen, aussen die Blätter) — genau genug, dass die Fläche belegt aussieht,
+ * ohne eine Anordnung zu versprechen, die danach anders ausfällt.
+ *
+ * `d` ist der Punktdurchmesser, ebenfalls in Prozent, und er nimmt nach aussen
+ * ab: im echten Baum sitzen die grossen Knoten innen. Er steht als eigene Zahl
+ * und wird nicht aus dem Ringindex gerechnet — eine Formel für drei Werte ist
+ * schwerer zu lesen als die drei Werte.
+ */
+export const FORGE_SHOP_SKELETON_RINGS = [
+  { r: 20, n: 6, d: 4.2 },
+  { r: 33, n: 10, d: 3.4 },
+  { r: 45, n: 14, d: 2.6 },
+] as const
+/** Durchmesser der Sonnenscheibe in der Skelettmitte, in Prozent. */
+export const FORGE_SHOP_SKELETON_SUN_PCT = 11
+/**
+ * Das gekippte Wort am Fuss der Griffleiste.
+ *
+ * Ohne es ist die Leiste eine Kante mit einem Pfeil darauf — sie sagt, dass
+ * sich etwas öffnen lässt, aber nicht was. „FORGE" und nicht „DETAILS", weil
+ * der Reiter Star Forge heisst, die Kaufquittung sich als `forged` meldet und
+ * der Sammelkauf dasselbe Wort trägt: eine Sache, ein Name.
+ */
+export const FORGE_DETAILS_RAIL_LABEL = 'FORGE'

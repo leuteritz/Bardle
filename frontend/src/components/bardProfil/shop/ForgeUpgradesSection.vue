@@ -434,18 +434,14 @@ function clearArrival(): void {
   arrivedId.value = null
 }
 
-watch(treeHoverId, (id) => {
-  if (scrollTimer !== null) clearTimeout(scrollTimer)
-  clearArrival()
-  if (id === null) return
-  // Gesperrt heisst leuchten, nicht rollen. Der Filter steht HIER und nicht an
-  // `setTreeHover` — der trägt auch Hervorhebung, Kranz und Bedingungskette,
-  // und die sind bei einer Sperre gerade die interessanteste Auskunft.
-  if (!forgeUpgradeMayTravel(entryById.value.get(id))) return
-  // Eine Anheftung HÄLT die Ansicht fest, das ist ihre einzige Aufgabe. Rollte
-  // die Liste darunter weiter, führe sie zu einer Zeile, die gar nicht
-  // hervorgehoben ist — der Spotlight steht ja beim angehefteten Knoten.
-  if (pinnedId.value !== null) return
+/**
+ * Eine Zeile heranrollen — der gemeinsame Weg der beiden Anlässe darunter.
+ *
+ * Die Verzögerung deckt alles ab, was gleichzeitig noch in Bewegung sein kann:
+ * ein Archiv, das für diese Zeile aufklappt, und die Detailspalte selbst, wenn
+ * der Klick am Baum sie gerade ausgefahren hat.
+ */
+function scrollToRow(id: string): void {
   revealForSpotlight(id)
   scrollTimer = setTimeout(() => {
     scrollTimer = null
@@ -467,6 +463,41 @@ watch(treeHoverId, (id) => {
       if (arrivedId.value === id) arrivedId.value = null
     }, FORGE_SPOTLIGHT_ARRIVAL_MS)
   }, FORGE_SPOTLIGHT_SCROLL_DELAY_MS)
+}
+
+watch(treeHoverId, (id) => {
+  if (scrollTimer !== null) clearTimeout(scrollTimer)
+  clearArrival()
+  if (id === null) return
+  // Gesperrt heisst leuchten, nicht rollen. Der Filter steht HIER und nicht an
+  // `setTreeHover` — der trägt auch Hervorhebung, Kranz und Bedingungskette,
+  // und die sind bei einer Sperre gerade die interessanteste Auskunft.
+  if (!forgeUpgradeMayTravel(entryById.value.get(id))) return
+  // Eine Anheftung HÄLT die Ansicht fest, das ist ihre einzige Aufgabe. Rollte
+  // die Liste darunter weiter, führe sie zu einer Zeile, die gar nicht
+  // hervorgehoben ist — der Spotlight steht ja beim angehefteten Knoten.
+  if (pinnedId.value !== null) return
+  scrollToRow(id)
+})
+
+/**
+ * Die ANHEFTUNG rollt ebenfalls — und zwar ohne den `mayTravel`-Filter.
+ *
+ * Der Filter gehört dem ZEIGER: ein Schwenk über die Sperrliste soll die
+ * Ansicht nicht durch den halben Baum fahren. Eine Anheftung ist die
+ * absichtliche Geste, und bei einem gesperrten Knoten ist die Zeile drüben
+ * genau das, wonach gesucht wird — dort steht der Sperrgrund samt
+ * vollständiger Bedingungsliste.
+ *
+ * Nötig wurde das mit der einklappbaren Detailspalte: ein Klick im Baum fährt
+ * sie aus und heftet an, und die Zeile dazu muss dann im Bild stehen. Vorher
+ * war eine Anheftung immer eine Geste VOR einer bereits sichtbaren Liste.
+ */
+watch(pinnedId, (id) => {
+  if (scrollTimer !== null) clearTimeout(scrollTimer)
+  clearArrival()
+  if (id === null) return
+  scrollToRow(id)
 })
 
 // ── Das schwebende Kärtchen ──────────────────────────────────────────────────
