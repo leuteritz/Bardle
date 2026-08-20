@@ -2,13 +2,17 @@
   <div
     class="fgr-row"
     :class="{
-      'fc-spot': spotlightId === entry.id,
-      'fc-dimmed': spotlightId !== null && spotlightId !== entry.id,
+      'fc-spot': isSpot,
+      'fgr-row--focus': isFocused,
+      'fc-dimmed': isDimmed,
     }"
     :style="{ '--node-c': entry.color }"
     :data-forge-id="entry.id"
+    :aria-current="isFocused ? 'true' : undefined"
     @mouseenter="setListHover(entry.id)"
+    @click="focusNode(entry.id)"
   >
+
     <Icon
       :icon="entry.icon"
       :width="FORGE_GROWN_ICON_SIZE"
@@ -63,7 +67,18 @@ import { FORGE_GROWN_BADGE, FORGE_GROWN_ICON_SIZE } from '@/config/constants'
 
 const props = defineProps<{ entry: ForgeUpgradeEntry }>()
 
-const { spotlightId, setListHover } = useForgeSpotlight()
+const { hoverId, pinnedId, setListHover, focusNode } = useForgeSpotlight()
+
+/* Dieselben drei Zustände wie an der Upgrade-Zeile, mit derselben Begründung —
+   sie stehen dort ausformuliert. Auch ein ausgewachsener Knoten wird
+   fokussiert: sein Kreis im Baum ist genauso schwer zu finden wie jeder andere. */
+const isFocused = computed(() => pinnedId.value === props.entry.id)
+
+const isSpot = computed(() => hoverId.value === props.entry.id || isFocused.value)
+
+const isDimmed = computed(
+  () => hoverId.value !== null && hoverId.value !== props.entry.id && !isFocused.value,
+)
 
 const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry.maxLevel))
 </script>
@@ -81,6 +96,9 @@ const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry
   border: 1px solid #32210c;
   border-radius: 4px;
   overflow: hidden;
+  /* Auch das Archiv ist wählbar — der Kreis im Baum ist zu einem
+     ausgewachsenen Knoten genauso schwer zu finden. */
+  cursor: pointer;
   transition:
     border-color 0.12s ease,
     background-color 0.12s ease,
@@ -120,6 +138,19 @@ const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry
 
 .fgr-row.fc-dimmed {
   opacity: 0.42;
+}
+
+/* Die FESTGEHALTENE Auswahl — derselbe statische Innenring wie an der
+   Upgrade-Zeile, und aus demselben Grund: der Zeiger geht weiter, der Fokus
+   bleibt, und beides muss ohne Mausbewegung unterscheidbar sein.
+
+   OHNE die Pin-Marke, die die Upgrade-Zeile trägt: diese Zeile ist halb so hoch,
+   und jede ihrer vier Ecken ist belegt — links das Glyph, rechts Stufe und
+   `GROWN`-Plakette. Eine Marke dazwischen verschöbe entweder den Fluss oder
+   läge auf einer der beiden. Der Ring sagt dasselbe und kostet keine Fläche. */
+.fgr-row.fgr-row--focus {
+  border-color: var(--node-c, #e8c040);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--node-c, #e8c040) 45%, transparent);
 }
 
 .fgr-ico {

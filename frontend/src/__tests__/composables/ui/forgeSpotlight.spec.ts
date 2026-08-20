@@ -13,14 +13,18 @@ import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 describe('useForgeSpotlight', () => {
   const {
     spotlightId,
+    hoverId,
     listHoverId,
     treeHoverId,
     pinnedId,
+    focusTick,
     listHovering,
     pinned,
     setListHover,
     setTreeHover,
-    togglePin,
+    setPin,
+    refocus,
+    focusNode,
     clearPin,
     resetForgeSpotlight,
   } = useForgeSpotlight()
@@ -122,7 +126,7 @@ describe('useForgeSpotlight', () => {
     it('schlägt beide Zeiger', () => {
       setTreeHover('tree_node')
       setListHover('list_node')
-      togglePin('pinned_node')
+      setPin('pinned_node')
       expect(spotlightId.value).toBe('pinned_node')
       expect(pinned.value).toBe(true)
       expect(pinnedId.value).toBe('pinned_node')
@@ -130,31 +134,33 @@ describe('useForgeSpotlight', () => {
 
     it('lässt den Zeiger darunter weiterlaufen', () => {
       // Der Tooltip im Baum hängt an `treeHoverId`, NICHT am Spotlight — genau
-      // das ist der Sinn der Anheftung: der Zeiger wird frei, um die
+      // das ist der Sinn des Fokus: der Zeiger wird frei, um die
       // Voraussetzungen abzufahren, und jede zeigt dabei ihre eigene Karte.
-      togglePin('pinned_node')
+      setPin('pinned_node')
       setTreeHover('other_node')
       expect(spotlightId.value).toBe('pinned_node')
       expect(treeHoverId.value).toBe('other_node')
     })
 
-    it('löst, wenn derselbe Knoten noch einmal kommt', () => {
+    it('HÄLT, wenn derselbe Knoten noch einmal kommt', () => {
+      // Die Umkehrung des alten `togglePin`. Seit ein Klick immer fokussiert,
+      // verlöre der Spieler seine Auswahl sonst durch genau die Geste, mit der
+      // er sie bestätigt — und im Baum ist der zweite Klick der KAUF.
       setListHover('list_node')
-      togglePin('pinned_node')
-      togglePin('pinned_node')
-      expect(pinned.value).toBe(false)
-      // Und fällt auf die Quelle darunter zurück, statt ins Leere.
-      expect(spotlightId.value).toBe('list_node')
+      setPin('pinned_node')
+      setPin('pinned_node')
+      expect(pinned.value).toBe(true)
+      expect(spotlightId.value).toBe('pinned_node')
     })
 
     it('versetzt, wenn ein anderer Knoten kommt', () => {
-      togglePin('first')
-      togglePin('second')
+      setPin('first')
+      setPin('second')
       expect(spotlightId.value).toBe('second')
     })
 
     it('löst mit clearPin', () => {
-      togglePin('pinned_node')
+      setPin('pinned_node')
       clearPin()
       expect(pinned.value).toBe(false)
       expect(spotlightId.value).toBeNull()
@@ -163,8 +169,8 @@ describe('useForgeSpotlight', () => {
     it('fällt mit resetForgeSpotlight zurück', () => {
       // DER Tabwechsel-Fall: der Shop-Tab bleibt gemountet, das
       // `onBeforeUnmount` des Baums feuert also gar nicht. Ohne diesen Weg
-      // stünde die Anheftung der letzten Sitzung beim nächsten Öffnen noch da.
-      togglePin('pinned_node')
+      // stünde der Fokus der letzten Sitzung beim nächsten Öffnen noch da.
+      setPin('pinned_node')
       resetForgeSpotlight()
       expect(pinned.value).toBe(false)
       expect(pinnedId.value).toBeNull()
@@ -175,16 +181,101 @@ describe('useForgeSpotlight', () => {
       // Daran hängt der Escape-Verbrauch im Shop-Tab — und damit die Frage, ob
       // dieselbe Taste das ganze Profil schliesst.
       expect(pinned.value).toBe(false)
-      togglePin('pinned_node')
+      setPin('pinned_node')
       expect(pinned.value).toBe(true)
     })
 
-    it('teilt die Anheftung über getrennte Aufrufe hinweg', () => {
+    it('teilt den Fokus über getrennte Aufrufe hinweg', () => {
       const tree = useForgeSpotlight()
       const shop = useForgeSpotlight()
-      tree.togglePin('shared_pin')
+      tree.setPin('shared_pin')
       expect(shop.pinned.value).toBe(true)
       expect(shop.spotlightId.value).toBe('shared_pin')
+    })
+  })
+
+  /**
+   * Der IMPULS — „zeig ihn mir nochmal".
+   *
+   * Er trägt keinen Wert, nur ein Ereignis: Baum und Liste holen den
+   * fokussierten Knoten ins Bild, wenn er sich meldet. Nötig, weil ein zweiter
+   * Klick auf dieselbe Zeile den Fokus gerade NICHT ändert — ohne ihn bliebe
+   * die Geste wirkungslos.
+   */
+  describe('focusTick', () => {
+    it('zählt bei refocus hoch, ohne den Fokus anzufassen', () => {
+      setPin('pinned_node')
+      const before = focusTick.value
+      refocus()
+      expect(focusTick.value).toBe(before + 1)
+      expect(pinnedId.value).toBe('pinned_node')
+    })
+
+    it('bleibt bei setPin unberührt — dort meldet sich schon `pinnedId`', () => {
+      const before = focusTick.value
+      setPin('pinned_node')
+      expect(focusTick.value).toBe(before)
+    })
+
+    it('überlebt resetForgeSpotlight', () => {
+      // Ihn zurückzusetzen zündete bei jedem Tabwechsel einen Impuls, auf den
+      // beide Spalten mit einer Fahrt antworten würden.
+      refocus()
+      const before = focusTick.value
+      resetForgeSpotlight()
+      expect(focusTick.value).toBe(before)
+    })
+  })
+
+  /**
+   * Die Geste der beiden Zeilen: ein anderer versetzt, derselbe holt heran.
+   */
+  describe('focusNode', () => {
+    it('setzt den Fokus auf einen neuen Knoten', () => {
+      const before = focusTick.value
+      focusNode('first')
+      expect(pinnedId.value).toBe('first')
+      expect(focusTick.value).toBe(before)
+    })
+
+    it('versetzt ihn auf einen anderen', () => {
+      focusNode('first')
+      focusNode('second')
+      expect(pinnedId.value).toBe('second')
+    })
+
+    it('holt denselben heran, statt ihn zu lösen', () => {
+      focusNode('first')
+      const before = focusTick.value
+      focusNode('first')
+      expect(pinnedId.value).toBe('first')
+      expect(focusTick.value).toBe(before + 1)
+    })
+  })
+
+  /**
+   * `hoverId` beantwortet, worauf der Zeiger GERADE zeigt — ohne den Fokus
+   * davor. Daran hängen Hervorhebung und Dämpfung: liefen sie weiter über
+   * `spotlightId`, schluckte ein stehender Fokus jede Rückmeldung auf allen
+   * anderen Zeilen.
+   */
+  describe('hoverId', () => {
+    it('ignoriert den Fokus', () => {
+      setPin('pinned_node')
+      setTreeHover('tree_node')
+      expect(spotlightId.value).toBe('pinned_node')
+      expect(hoverId.value).toBe('tree_node')
+    })
+
+    it('gibt der Liste denselben Vorrang wie `spotlightId`', () => {
+      setTreeHover('tree_node')
+      setListHover('list_node')
+      expect(hoverId.value).toBe('list_node')
+    })
+
+    it('ist null, solange nur ein Fokus steht', () => {
+      setPin('pinned_node')
+      expect(hoverId.value).toBeNull()
     })
   })
 

@@ -15,26 +15,37 @@ import { computed, readonly, ref, type ComputedRef, type Ref } from 'vue'
  * müsste. Ein Hover-Id ist reine Anzeige (kein Store, keine Balance-Zahl, kein
  * Spielstand) und damit genau das, was ein Composable halten darf; dasselbe
  * Muster trägt `useHerald` und `useEventLog`.
- *
- * Eine ANHEFTUNG gab es hier einmal: ein Klick hielt einen Knoten im Detailkopf
- * fest. Sie ist mit dem Detailkopf gegangen — und mit dem Bedingungs-Kranz
- * zurückgekommen, für eine andere Aufgabe (siehe `pinnedId`).
  */
 const listHoverId = ref<string | null>(null)
 const treeHoverId = ref<string | null>(null)
 
 /**
- * Der ANGEHEFTETE Knoten — die dritte Quelle, und die stärkste.
+ * Der FOKUSSIERTE Knoten — die dritte Quelle, und die stärkste.
  *
- * Ein Klick auf einen GESPERRTEN Knoten war im Baum bisher wirkungslos:
- * `buyUpgrade` gibt `false` zurück und nichts geschieht. Er hält jetzt die
- * Ansicht fest, damit der Zeiger die Voraussetzungen abfahren kann, ohne den
- * Fokus mitzunehmen — genau das, was ein Zeige-Fokus prinzipiell nicht kann.
+ * Er war einmal der Sonderfall: ein Klick auf einen GESPERRTEN Knoten war im
+ * Baum wirkungslos (`buyUpgrade` gibt `false` zurück), und die Anheftung gab ihm
+ * eine Wirkung. Inzwischen ist er die REGEL — ein Klick fokussiert, gleich ob im
+ * Baum oder auf einer Zeile der Detailspalte, und gleich in welchem Zustand der
+ * Knoten steht. Erst der zweite Klick auf denselben Knoten kauft.
  *
- * Aufgelöst wird sie ausdrücklich: derselbe Knoten noch einmal, ein anderer,
- * ein Kauf, ein Klick auf die leere Bühne, Escape, ein Tabwechsel.
+ * Damit ändert sich sein Charakter: er ist kein flüchtiger Griff mehr, sondern
+ * die Auswahl, mit der der Spieler arbeitet. Gelöst wird sie deshalb nur noch
+ * AUSDRÜCKLICH — Escape, ein Klick auf die leere Bühne, das Kreuz der
+ * Fokusleiste oder ein geglückter Kauf. Ein zweiter Klick auf dasselbe Upgrade
+ * löst NICHT; er holt es nur zurück ins Bild (siehe `focusNode`).
  */
 const pinnedId = ref<string | null>(null)
+
+/**
+ * „Zeig ihn mir nochmal" — als Impuls, nicht als Zustand.
+ *
+ * Baum und Liste holen den fokussierten Knoten ins Bild, wenn `pinnedId`
+ * WECHSELT. Genau das tut es aber nicht, wenn der Spieler dieselbe Zeile noch
+ * einmal anklickt oder das Fadenkreuz der Fokusleiste drückt — und beides heißt
+ * „hol ihn her". Ein Zähler ist die kleinste Form dafür: er trägt keinen Wert,
+ * nur ein Ereignis, und jeder Leser entscheidet selbst, was er damit tut.
+ */
+const focusTick = ref(0)
 
 /**
  * Anheftung schlägt Liste schlägt Baum — von der absichtlichsten Geste zur
@@ -47,10 +58,23 @@ const pinnedId = ref<string | null>(null)
  * Die mittlere Regel ist die alte, dieselbe wie `spotlightAlly` im Team-Tab:
  * die Liste ist die absichtlichere Geste und die, die noch steht, während der
  * Zeiger vom Baum auf eine Karte wandert.
+ *
+ * Wer daran hängt, beantwortet die Frage „wessen Bedingungskette wird gezeigt" —
+ * die Voraussetzungen abzufahren ist der Grund, aus dem es den Fokus gibt. Wer
+ * dagegen „worauf zeigt der Spieler GERADE" meint, nimmt `hoverId`.
  */
-const spotlightId = computed(
-  () => pinnedId.value ?? listHoverId.value ?? treeHoverId.value,
-)
+const spotlightId = computed(() => pinnedId.value ?? listHoverId.value ?? treeHoverId.value)
+
+/**
+ * Was der ZEIGER meint — ohne den Fokus davor.
+ *
+ * Nötig geworden, als der Fokus von der Ausnahme zur Regel wurde: er steht
+ * seitdem dauerhaft, und `spotlightId` schluckte damit jede Hover-Rückmeldung
+ * auf den hundertvierundfünfzig anderen Zeilen — ausgerechnet auf denen, die
+ * als Nächstes geklickt werden. Hervorhebung und Dämpfung fragen deshalb hier,
+ * Bedingungskette und Kamera weiterhin bei `spotlightId`.
+ */
+const hoverId = computed(() => listHoverId.value ?? treeHoverId.value)
 
 /**
  * Hängt die Ansicht fest?
@@ -79,14 +103,18 @@ const listHovering = computed(() => listHoverId.value !== null)
 
 export function useForgeSpotlight(): {
   spotlightId: ComputedRef<string | null>
+  hoverId: ComputedRef<string | null>
   listHoverId: Readonly<Ref<string | null>>
   treeHoverId: Readonly<Ref<string | null>>
   pinnedId: Readonly<Ref<string | null>>
+  focusTick: Readonly<Ref<number>>
   listHovering: ComputedRef<boolean>
   pinned: ComputedRef<boolean>
   setListHover: (id: string | null) => void
   setTreeHover: (id: string | null) => void
-  togglePin: (id: string) => void
+  setPin: (id: string) => void
+  refocus: () => void
+  focusNode: (id: string) => void
   clearPin: () => void
   resetForgeSpotlight: () => void
 } {
@@ -99,13 +127,32 @@ export function useForgeSpotlight(): {
   }
 
   /**
-   * Derselbe Knoten löst, ein anderer versetzt.
+   * Setzen, nie lösen.
    *
-   * Ein reines `setPin` bräuchte den Vergleich an jeder Aufrufstelle — und es
-   * gibt genau eine Geste, die hier ankommt.
+   * Hier stand `togglePin`, und der zweite Klick auf denselben Knoten räumte den
+   * Fokus ab. Das trug, solange Anheften die seltene Geste für gesperrte Knoten
+   * war. Seit ein Klick IMMER fokussiert, ist es die falsche Regel: der Spieler
+   * verlöre seine Auswahl durch genau die Geste, mit der er sie bestätigt.
    */
-  function togglePin(id: string): void {
-    pinnedId.value = pinnedId.value === id ? null : id
+  function setPin(id: string): void {
+    pinnedId.value = id
+  }
+
+  /** Denselben Knoten noch einmal ins Bild holen, ohne den Fokus anzufassen. */
+  function refocus(): void {
+    focusTick.value += 1
+  }
+
+  /**
+   * Die Geste der beiden Zeilen: ein anderer versetzt den Fokus, derselbe holt
+   * ihn heran.
+   *
+   * Steht hier und nicht je Komponente — es ist EINE Regel, und Zeile wie
+   * Archivzeile müssen sie gleich beantworten.
+   */
+  function focusNode(id: string): void {
+    if (pinnedId.value === id) refocus()
+    else setPin(id)
   }
 
   function clearPin(): void {
@@ -114,10 +161,14 @@ export function useForgeSpotlight(): {
 
   /**
    * Alle drei Quellen löschen. Der Shop-Tab bleibt nach dem ersten Öffnen
-   * GEMOUNTET (`BardProfileMenu` rendert ihn als `v-if="mountedTabs.has(…)"`
-   * plus `v-show`, und `mountedTabs` wird nie geleert) — ohne diesen Weg
-   * überlebte eine Anheftung den Tabwechsel garantiert. Ein Zeiger tut es heute
-   * nur deshalb nicht, weil sein `mouseleave` ihn zufällig aufräumt.
+   * GEMOUNTET (`BardProfileMenu` rendert ihn als `v-if` auf `mountedTabs` plus
+   * `v-show`, und `mountedTabs` wird nie geleert) — ohne diesen Weg überlebte
+   * eine Anheftung den Tabwechsel garantiert. Ein Zeiger tut es heute nur
+   * deshalb nicht, weil sein `mouseleave` ihn zufällig aufräumt.
+   *
+   * `focusTick` bleibt stehen: er ist ein Zähler ohne Bedeutung, und ihn
+   * zurückzusetzen zündete bei jedem Tabwechsel einen Impuls, auf den beide
+   * Spalten mit einer Fahrt antworten würden.
    */
   function resetForgeSpotlight(): void {
     listHoverId.value = null
@@ -127,14 +178,18 @@ export function useForgeSpotlight(): {
 
   return {
     spotlightId,
+    hoverId,
     listHoverId: readonly(listHoverId),
     treeHoverId: readonly(treeHoverId),
     pinnedId: readonly(pinnedId),
+    focusTick: readonly(focusTick),
     listHovering,
     pinned,
     setListHover,
     setTreeHover,
-    togglePin,
+    setPin,
+    refocus,
+    focusNode,
     clearPin,
     resetForgeSpotlight,
   }

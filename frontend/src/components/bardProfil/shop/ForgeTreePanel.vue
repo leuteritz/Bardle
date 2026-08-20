@@ -276,7 +276,7 @@
         v-for="node in allNodes"
         :key="node.id"
         class="tree-node"
-        :class="{ 'tree-node--spot': spotlightId === node.id }"
+        :class="{ 'tree-node--spot': isSpot(node.id) }"
         :style="nodePos(node)"
       >
         <div
@@ -286,14 +286,13 @@
             `node-circle--${entryOf(node).state}`,
             {
               'node-circle--fresh': freshIds.has(node.id),
-              'node-circle--spot': spotlightId === node.id,
+              'node-circle--spot': isSpot(node.id),
               'node-circle--pinned': pinnedId === node.id,
               // Was Voraussetzung IST, dämpft nicht — dieselbe Vorfahrt wie
               // `onChain()` im Meep-Baum. Eine Antwort, die auf gedimmten
               // Kreisen steht, sieht nach einem Fehler aus.
               'node-circle--req': spotReqs.has(node.id),
-              'node-circle--dim':
-                spotlightId !== null && spotlightId !== node.id && !spotReqs.has(node.id),
+              'node-circle--dim': isDimmed(node.id),
             },
           ]"
           :style="{ '--node-color': node.color }"
@@ -312,7 +311,7 @@
                ausserhalb des Bildes verpulvert. Ein neuer Schlüssel lässt es
                neu entstehen, und der Ping fällt mit der Ankunft zusammen. -->
           <span
-            v-if="spotlightId === node.id"
+            v-if="isSpot(node.id)"
             :key="`spot-${node.id}-${arrivalTick}`"
             class="node-spot"
             aria-hidden="true"
@@ -502,11 +501,14 @@ const forgeStore = useStarForgeStore()
 const { entryById, bestBuyId, freshIds, buyUpgrade } = useForgeUpgrades()
 const {
   spotlightId,
+  hoverId,
   treeHoverId,
   listHoverId,
   pinnedId,
+  focusTick,
   setTreeHover,
-  togglePin,
+  setPin,
+  refocus,
   clearPin,
   resetForgeSpotlight,
 } = useForgeSpotlight()
@@ -981,6 +983,35 @@ const spotReqs = computed<Map<string, boolean>>(() => {
   return out
 })
 
+/**
+ * Der Kreis, den der Spieler MEINT — sein Zeiger ODER sein Fokus.
+ *
+ * Zwei Quellen, kein Vorrang, und das ist der Unterschied zu `spotlightId`.
+ * Seit ein Klick immer fokussiert, steht der Fokus dauerhaft; ginge die
+ * Hervorhebung weiter allein über `spotlightId`, schluckte er jede Rückmeldung
+ * auf den Knoten, über die der Zeiger als Nächstes fährt — man sähe beim
+ * Schwenk über den Baum gar nichts mehr.
+ *
+ * Beide gleichzeitig hervorzuheben ist kein Widerspruch: der fokussierte Kreis
+ * trägt zusätzlich seine Pin-Marke, der überfahrene nicht.
+ */
+function isSpot(id: string): boolean {
+  return hoverId.value === id || pinnedId.value === id
+}
+
+/**
+ * Zurücktreten tut ein Knoten, sobald überhaupt einer gezeigt wird — und er
+ * weder gemeint noch Voraussetzung des Gemeinten ist.
+ *
+ * Hier hängt es weiterhin an `spotlightId` und nicht am blossen Zeiger: im Baum
+ * TRÄGT die Dämpfung Auskunft, weil die Voraussetzungsknoten hell durch sie
+ * hindurchstehen. In der Liste drüben ist das anders — dort dämpft nur der
+ * Zeiger, sonst läge sie unter einem stehenden Fokus dauerhaft grau.
+ */
+function isDimmed(id: string): boolean {
+  return spotlightId.value !== null && !isSpot(id) && !spotReqs.value.has(id)
+}
+
 /** Nur die STRUKTUR-Kante je Ziel. Ein Knoten kann mehrere eingehende Kanten
  *  haben (Bedingungen, Brücken) — die Scheinwerferkette läuft aber am Baum
  *  entlang, und der Baum ist `parentId`. */
@@ -1163,58 +1194,64 @@ function flashSun(): void {
 }
 
 /**
- * Zwei Gesten auf einer Taste, und sie überschneiden sich nicht: was KAUFBAR ist,
- * wird gekauft; was GESPERRT ist, wird angeheftet.
+ * EINE Geste, EINE Bedeutung: **ein Klick fokussiert.** Gekauft wird erst mit
+ * dem zweiten Klick auf denselben, bereits fokussierten Knoten.
  *
- * Der Klick auf einen gesperrten Knoten hatte bis hierher überhaupt keine
- * Wirkung — `buyUpgrade` gab `false` zurück, und der Zeiger blieb die einzige
- * Auskunft. Wer drei Voraussetzungen quer über den Baum ablesen will, musste die
- * Maus stillhalten; die Anheftung gibt sie frei.
+ * Hier standen einmal zwei Gesten auf einer Taste — was kaufbar war, wurde
+ * gekauft, was gesperrt war, angeheftet. Das las sich als saubere Trennung und
+ * war in Wahrheit die schlechteste Eigenschaft der Fläche: dieselbe Bewegung
+ * gab je nach Zustand des Ziels entweder Chimes aus oder zeigte nur etwas an,
+ * und welcher der beiden Fälle vorlag, musste man am Kreis ablesen, BEVOR man
+ * klickte. Ein Fokus entstand ausserdem nur im Sonderfall, wanderte also nie
+ * von Knoten zu Knoten — und die Detailspalte konnte gar nicht fokussieren.
  *
- * `capped` und `maxed` bleiben aussen vor: ein Deckel ist keine Sperre, dort gibt
- * es keine Voraussetzungsliste zu zeigen.
+ * Jetzt gilt in beiden Spalten dasselbe: der erste Klick wählt, der zweite
+ * bestätigt. Kaufen ist damit ein bewusster zweiter Schritt vor einer sichtbaren
+ * Rechnung — Preis, Stufe und Wirkungssprung stehen zu diesem Zeitpunkt drüben
+ * in der Zeile, die der erste Klick herangerollt hat.
  *
- * Der Kauf LÖST die Anheftung mit — er ändert genau die Bedingungen, deren Bild
- * gerade festgehalten wird.
+ * Was davon UNBERÜHRT bleibt: solange die Detailspalte zu ist, kauft der Baum
+ * überhaupt nicht. Ein Klick klappt auf und fokussiert; ohne das gäbe er Chimes
+ * für etwas aus, dessen Preis gerade hinter der Kante steht.
+ *
+ * Ein GESPERRTER Knoten hat keinen zweiten Schritt — dort gibt es nichts zu
+ * kaufen. Sein zweiter Klick holt ihn stattdessen zurück ins Bild; der
+ * Sperrgrund samt vollständiger Bedingungsliste steht in der Zeile drüben, und
+ * der Fokus hält den Kranz still, während der Zeiger die Voraussetzungen abfährt.
  *
  * Kauf und Meldung liegen im Composable, damit Baum und Upgrade-Liste denselben
  * Weg nehmen. Hier bleibt nur, was der Baum eigenes tut.
- *
- * DAVOR steht seit dem Einklappen der Detailspalte eine dritte Geste, und sie
- * hebt die beiden anderen auf, solange die Spalte zu ist: **solange die Spalte
- * zu ist, kauft der Baum nicht.** Ein Klick klappt dann auf, heftet an und holt
- * die Zeile heran — erst der zweite, jetzt mit sichtbarer Liste, kauft.
- *
- * Ohne das gäbe ein Klick auf einen Knoten Chimes für etwas aus, dessen Preis,
- * Stufe und Wirkungssprung gerade hinter der Kante stehen. Der Baum zeigt einen
- * Ring, keine Rechnung.
- *
- * Die Bedingung ist bewusst NUR `!detailsOpen` und nicht zusätzlich
- * `pinnedId !== node.id`: sonst hinge die Wirkung eines Klicks an einer
- * Anheftung, die noch von VOR dem Zuklappen stammt — derselbe Knoten würde
- * gekauft, während sein Nachbar daneben nur aufklappt. Eine Geste, die je nach
- * unsichtbarem Vorzustand kauft oder zeigt, ist die schlechteste von beiden.
- *
- * Gesperrte Knoten nehmen denselben Weg: der Sperrgrund samt vollständiger
- * Bedingungsliste steht in der Zeile drüben, und bei zugeklappter Spalte ginge
- * die Anheftung ins Leere.
  */
 function handleNodeClick(node: TreeNode): void {
+  // Spalte zu: aufklappen und fokussieren. Gekauft wird hier nicht — der Baum
+  // zeigt einen Ring, keine Rechnung.
   if (!detailsOpen.value) {
     openDetails()
-    // Setzen, nie lösen: `togglePin` ist der einzige Weg dorthin, und in diesem
-    // Zweig soll ein zweiter Klick auf denselben Knoten die Anheftung HALTEN —
-    // die Zeile, die gerade herangerollt kommt, darf nicht mit ihr verschwinden.
-    if (pinnedId.value !== node.id) togglePin(node.id)
+    setPin(node.id)
     return
   }
 
-  if (entryOf(node).state === 'locked') {
-    togglePin(node.id)
+  // Ein ANDERER Knoten: der Fokus wandert, und das ist alles. Bis hierher kaufte
+  // dieser Zweig sofort, und ein Fokus entstand nur bei gesperrten Knoten — eine
+  // Geste, die je nach Zustand des Ziels zeigte oder Chimes ausgab.
+  if (pinnedId.value !== node.id) {
+    setPin(node.id)
     return
   }
-  clearPin()
-  if (buyUpgrade(node.id)) flashSun()
+
+  // Derselbe, schon fokussierte Knoten. Gesperrt gibt es nichts zu kaufen; dann
+  // holt der Klick ihn nur zurück ins Bild, statt wirkungslos zu verpuffen.
+  if (entryOf(node).state === 'locked') {
+    refocus()
+    return
+  }
+
+  // Gelöst wird erst NACH dem geglückten Kauf: ein Kauf, der an fehlenden Chimes
+  // oder leerem Lager scheitert, ist keiner und darf den Fokus nicht mitnehmen.
+  if (buyUpgrade(node.id)) {
+    clearPin()
+    flashSun()
+  }
 }
 
 // ── Ausschnitt: Zoom, Pan und der Boden dazwischen ───────────────────────
@@ -1481,19 +1518,49 @@ function onBackgroundClick(): void {
 }
 
 /**
- * Die Kamera folgt der Anheftung.
+ * Die Kamera folgt dem Fokus.
  *
  * Der Baum ist zu gross, um ihn mit einer Liste von 155 Zeilen daneben ohne
- * diese Brücke zu bedienen: wer rechts eine Zeile anheftet, will sie links
+ * diese Brücke zu bedienen: wer rechts eine Zeile anklickt, will sie links
  * SEHEN. Einmalig gesetzt, die vorhandene Transition auf `.tree-stage` trägt
  * die Bewegung — keine Frame-Schleife, kein `requestAnimationFrame`.
  */
-watch(pinnedId, (id) => {
-  if (!id) return
+function panToFocus(): void {
+  const id = pinnedId.value
+  if (id === null) return
   const node = nodeById.value.get(id)
   if (!node) return
   pan.value = { x: node.x, y: node.y }
   clampPan()
+}
+
+/**
+ * Beim WECHSEL des Fokus fährt sie nur, wenn nötig.
+ *
+ * Bedingungslos war das richtig, solange Anheften die seltene Geste war. Seit
+ * jeder Klick fokussiert, wäre es eine Bühne, die bei jedem Klick unter dem
+ * Zeiger wegzieht — auch dann, wenn der getroffene Kreis längst mitten im Bild
+ * steht. Dieselbe Zurückhaltung wie `block: 'nearest'` drüben in der Liste, und
+ * dieselben vier Werte, mit denen `watch(listHoverId)` weiter unten rechnet.
+ */
+watch(pinnedId, (id) => {
+  if (id === null) return
+  const node = nodeById.value.get(id)
+  if (!node) return
+  if (forgeNodeInView(node, nodeRadiusOnScreen(node), camera(), viewportSize.value)) return
+  panToFocus()
+})
+
+/**
+ * Der Impuls dagegen fährt IMMER.
+ *
+ * `refocus()` ist die ausdrückliche Bitte — das Fadenkreuz der Fokusleiste, ein
+ * zweiter Klick auf dieselbe Zeile. Wer sie ausspricht, hat den Knoten gerade
+ * nicht vor Augen, und „steht doch schon im Bild" wäre auf sie die falsche
+ * Antwort: gemeint ist die MITTE, nicht der Rand.
+ */
+watch(focusTick, () => {
+  panToFocus()
 })
 
 // ── Die Kamera folgt auch dem Zeiger DRÜBEN ──────────────────────────────────

@@ -2874,12 +2874,13 @@ export const FORGE_TILE_CAPPED_LABEL = 'CAPPED'
  */
 export const FORGE_LOCK_ICON = 'lucide:lock'
 /**
- * Die ANHEFTUNGS-Marke am festgehaltenen Knoten.
+ * Die FOKUS-Marke am festgehaltenen Knoten — und an seiner Zeile drüben.
  *
  * `lucide` wie das Schloss daneben, und das ist keine Bequemlichkeit: beide
- * stehen gleichzeitig an DEMSELBEN Kreis — ein angehefteter Knoten ist immer
- * auch ein gesperrter. Zwei Sets nebeneinander hiesse zwei Strichstärken auf
- * 44 % eines 50-px-Kreises, und dort trägt der Unterschied nicht mehr.
+ * können gleichzeitig an DEMSELBEN Kreis stehen, denn ein gesperrter Knoten
+ * lässt sich fokussieren wie jeder andere. Zwei Sets nebeneinander hiesse zwei
+ * Strichstärken auf 44 % eines 50-px-Kreises, und dort trägt der Unterschied
+ * nicht mehr.
  */
 export const FORGE_PIN_ICON = 'lucide:pin'
 
@@ -3548,3 +3549,60 @@ export const FORGE_SHOP_SKELETON_SUN_PCT = 11
  * der Sammelkauf dasselbe Wort trägt: eine Sache, ein Name.
  */
 export const FORGE_DETAILS_RAIL_LABEL = 'FORGE'
+
+// ── Die Fokusleiste über dem Rollfeld ──────────────────────────────────────
+//
+// Ein Klick fokussiert — im Baum wie auf einer Zeile —, und der Fokus BLEIBT,
+// bis ihn jemand ausdrücklich löst. Damit stellt sich eine Frage, die es vorher
+// nicht gab: was ist gerade festgehalten, wenn die zugehörige Zeile weit
+// weggerollt ist? Die Leiste beantwortet sie und trägt gleich beide Wege
+// zurück — das Fadenkreuz holt die Auswahl ins Bild, das Kreuz löst sie.
+
+/**
+ * Höhe der Leiste — FEST, und das ist ihr eigentlicher Entwurf.
+ *
+ * Sie steht immer da, auch ohne Auswahl. Eine, die mit dem Fokus erschiene und
+ * verschwände, schöbe die Liste bei JEDEM Klick um ihre eigene Höhe — also
+ * genau die Zeile, die der Spieler eben getroffen hat, unter seinem Zeiger weg.
+ * Reservierte Fläche ist hier billiger als eine Bewegung; dasselbe Muster wie
+ * die fest reservierten zwei Zeilen der Callout-Reihe im Pause-Overlay.
+ *
+ * 44 px: das 20-px-Glyph plus zwei 12-px-Zeilen (Name über Rang) ergeben 40,
+ * dazu 1 px Rahmen je Seite und 1 px Luft. Auf dem flachsten Viewport (Full HD)
+ * fällt sie auf 38 — dort ist Höhe das knappe Gut, und die Leiste darf keine
+ * Listenzeile kosten, die vorher da war.
+ */
+export const FORGE_FOCUS_BAR_HEIGHT_PX = 44
+export const FORGE_FOCUS_BAR_HEIGHT_COMPACT_PX = 38
+
+/** Grösse des Knoten-Glyphs in der Leiste. */
+export const FORGE_FOCUS_ICON_PX = 20
+
+/**
+ * Der Leer-Zustand — die einzige Stelle, an der die Geste erklärt wird.
+ *
+ * Klicken ist im Shop-Tab neu die Hauptgeste, und nichts sonst sagt das. Ein
+ * Tooltip käme zu spät (man muss schon wissen, wo man verweilt); eine
+ * Einführung wäre für einen Satz zu viel. Die Leiste steht ohnehin da und ist
+ * ohne Auswahl leer — der Satz kostet also nichts, was nicht schon reserviert
+ * wäre.
+ */
+export const FORGE_FOCUS_EMPTY_LABEL = 'Click an upgrade to focus it'
+
+/**
+ * Zurück ins Bild — dieselbe Frage, die der Rand-Kompass im Baum stellt, nur
+ * als HANDLUNG. Der Kompass zeigt hin, das Fadenkreuz fährt hin.
+ *
+ * `lucide` wie Schloss, Pin und Chevron der Nachbarschaft: die Leiste steht
+ * zwischen ihnen und darf keine zweite Strichstärke einführen.
+ */
+export const FORGE_FOCUS_RECENTER_ICON = 'lucide:crosshair'
+export const FORGE_FOCUS_RECENTER_TITLE = 'Bring the focused upgrade into view'
+
+/** Das dritte Lösemittel neben Escape und einem Klick auf die leere Bühne — und
+ *  das einzige, das man SIEHT. */
+export const FORGE_FOCUS_CLEAR_ICON = 'lucide:x'
+export const FORGE_FOCUS_CLEAR_TITLE = 'Release focus'
+
+/** Die Überschrift der Leiste. Versalien wie die Trenner der Liste darunter. */
+export const FORGE_FOCUS_BAR_LABEL = 'FOCUS'

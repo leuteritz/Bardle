@@ -152,7 +152,8 @@ import {
 
 const { upgradeEntries, entryById, bestBuyId, freshIds, buyUpgrade, affordableLevels, buyMany } =
   useForgeUpgrades()
-const { treeHoverId, listHoverId, pinnedId, setListHover } = useForgeSpotlight()
+const { treeHoverId, listHoverId, pinnedId, focusTick, setListHover, clearPin } =
+  useForgeSpotlight()
 const { detailsOpen } = useForgeDetailsPane()
 
 // ── Eingefrorene Reihenfolge ─────────────────────────────────────────────────
@@ -360,7 +361,20 @@ const flashedId = ref<string | null>(null)
 
 function grow(id: string): void {
   if (!buyUpgrade(id)) return
+  releaseFocus(id)
   flash(id)
+}
+
+/**
+ * Der Kauf löst den Fokus — aber nur den auf dem GEKAUFTEN Eintrag.
+ *
+ * Dieselbe Regel wie im Baum (`handleNodeClick`), damit beide Kaufwege gleich
+ * enden: was gekauft wurde, ist entschieden, und die Auswahl darf weiterziehen.
+ * Ein Kauf auf einer ANDEREN Zeile lässt den Fokus stehen — er war nicht
+ * gemeint, und ihn mitzunehmen risse dem Spieler die Auswahl unter der Hand weg.
+ */
+function releaseFocus(id: string): void {
+  if (pinnedId.value === id) clearPin()
 }
 
 /**
@@ -374,6 +388,7 @@ function grow(id: string): void {
 function growMany(id: string): void {
   const count = bulkOf(id)
   if (count < 1 || buyMany(id, count) === 0) return
+  releaseFocus(id)
   flash(id)
 }
 
@@ -508,29 +523,40 @@ watch(treeHoverId, (id) => {
 })
 
 /**
- * Die ANHEFTUNG rollt ebenfalls — und zwar ohne den `mayTravel`-Filter.
+ * Der FOKUS rollt ebenfalls — und zwar ohne den `mayTravel`-Filter.
  *
  * Der Filter gehört dem ZEIGER: ein Schwenk über die Sperrliste soll die
- * Ansicht nicht durch den halben Baum fahren. Eine Anheftung ist die
- * absichtliche Geste, und bei einem gesperrten Knoten ist die Zeile drüben
- * genau das, wonach gesucht wird — dort steht der Sperrgrund samt
- * vollständiger Bedingungsliste.
+ * Ansicht nicht durch den halben Baum fahren. Ein Fokus ist die absichtliche
+ * Geste, und bei einem gesperrten Knoten ist die Zeile drüben genau das, wonach
+ * gesucht wird — dort steht der Sperrgrund samt vollständiger Bedingungsliste.
  *
  * Nötig wurde das mit der einklappbaren Detailspalte: ein Klick im Baum fährt
- * sie aus und heftet an, und die Zeile dazu muss dann im Bild stehen. Vorher
- * war eine Anheftung immer eine Geste VOR einer bereits sichtbaren Liste.
+ * sie aus und fokussiert, und die Zeile dazu muss dann im Bild stehen. Vorher
+ * war ein Fokus immer eine Geste VOR einer bereits sichtbaren Liste.
  */
-watch(pinnedId, (id) => {
+function scrollToFocus(): void {
   if (scrollTimer !== null) clearTimeout(scrollTimer)
   clearArrival()
+  const id = pinnedId.value
   if (id === null) return
   // Dieselbe Bedingung wie beim Zeiger — sie greift hier nur nie: der Klick im
-  // Baum ruft `openDetails()` VOR `togglePin()`, die Spalte ist beim Eintreffen
-  // dieses Wächters also schon ausgefahren. Sie steht trotzdem da, weil eine
-  // Anheftung auch aus einer anderen Geste kommen kann.
+  // Baum ruft `openDetails()` VOR `setPin()`, die Spalte ist beim Eintreffen
+  // dieses Wächters also schon ausgefahren. Sie steht trotzdem da, weil ein
+  // Fokus auch aus einer anderen Geste kommen kann.
   if (!detailsOpen.value) return
   scrollToRow(id)
-})
+}
+
+/** Der Fokus hat gewechselt. */
+watch(pinnedId, scrollToFocus)
+
+/**
+ * „Zeig ihn mir nochmal" — dasselbe Rollen, ohne dass sich der Fokus geändert
+ * hat. Ein zweiter Klick auf dieselbe Zeile oder das Fadenkreuz der Fokusleiste
+ * kommen hier an; im Baum drüben hört derselbe Impuls auf die Kamera.
+ */
+watch(focusTick, scrollToFocus)
+
 
 // ── Das schwebende Kärtchen ──────────────────────────────────────────────────
 /**

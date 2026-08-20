@@ -8,14 +8,25 @@
         'fut-row--short': short,
         'fut-row--best': showBest,
         'fut-row--fresh': fresh,
-        'fc-spot': spotlightId === entry.id,
-        'fc-dimmed': spotlightId !== null && spotlightId !== entry.id,
+        'fc-spot': isSpot,
+        'fut-row--focus': isFocused,
+        'fc-dimmed': isDimmed,
       },
     ]"
     :style="{ '--node-c': entry.color }"
     :data-forge-id="entry.id"
+    :aria-current="isFocused ? 'true' : undefined"
     @mouseenter="setListHover(entry.id)"
+    @click="focusNode(entry.id)"
   >
+    <!-- Die Fokus-Marke. Dasselbe Glyph, das der Kreis im Baum trägt — daran
+         erkennt man beide Seiten als DIESELBE Auswahl wieder. Sie ist der
+         einzige Unterschied zwischen „der Zeiger steht hier" und „das hier ist
+         festgehalten"; ohne sie wüsste niemand, ob die Hervorhebung hält. -->
+    <span v-if="isFocused" class="fut-pin" aria-hidden="true">
+      <Icon :icon="FORGE_PIN_ICON" width="100%" height="100%" />
+    </span>
+
     <div class="fut-flash" :class="{ 'fut-flash--on': flashed }" aria-hidden="true" />
 
     <!-- Die EINE atmende Ebene der Zeile. Statischer Schein, animiert wird allein
@@ -187,7 +198,7 @@
           :disabled="!entry.canBuy"
           :aria-label="`${FORGE_GROW_LABEL} ${entry.name}`"
           :title="buyTitle"
-          @click="$emit('buy', entry.id)"
+          @click.stop="$emit('buy', entry.id)"
         >
           <span class="fut-buy-verb">{{ buyLabel }}</span>
           <span v-if="entry.state !== 'capped'" class="fut-buy-price">
@@ -205,7 +216,7 @@
           class="fut-bulk"
           :aria-label="`${FORGE_GROW_LABEL} ${entry.name} ${bulkCount} times`"
           :title="`${entry.name} → ${FORGE_LEVEL_PREFIX}${entry.level + bulkCount}`"
-          @click="$emit('buyMany', entry.id)"
+          @click.stop="$emit('buyMany', entry.id)"
         >
           {{ bulkLabel }}
         </button>
@@ -291,6 +302,7 @@ import {
   FORGE_GROW_LABEL,
   FORGE_LEVEL_PREFIX,
   FORGE_LOCK_ICON,
+  FORGE_PIN_ICON,
   FORGE_ROW_BULK_LABEL,
   FORGE_ROW_BULK_WIDTH_PX,
   FORGE_ROW_BUY_WIDTH_PX,
@@ -342,7 +354,33 @@ const props = withDefaults(
 )
 defineEmits<{ (e: 'buy', id: string): void; (e: 'buyMany', id: string): void }>()
 
-const { spotlightId, setListHover } = useForgeSpotlight()
+const { hoverId, pinnedId, setListHover, focusNode } = useForgeSpotlight()
+
+/** Diese Zeile ist die festgehaltene Auswahl. */
+const isFocused = computed(() => pinnedId.value === props.entry.id)
+
+/**
+ * Der Zeiger meint diese Zeile — hier oder drüben auf ihrem Knoten.
+ *
+ * Der FOKUS zählt mit dazu: er ist die stärkere Form derselben Aussage. Beide
+ * dürfen gleichzeitig gelten, und dann sieht die Zeile aus wie eine fokussierte,
+ * über der zusätzlich der Zeiger steht.
+ */
+const isSpot = computed(() => hoverId.value === props.entry.id || isFocused.value)
+
+/**
+ * Zurücktreten tut die Zeile nur, solange ein ZEIGER unterwegs ist — nicht,
+ * solange bloss ein Fokus steht.
+ *
+ * Das ist der Unterschied zum Baum, und er ist beabsichtigt. Dort trägt die
+ * Dämpfung Auskunft: die Voraussetzungsknoten stehen hell in ihr. Hier trägt sie
+ * keine — hundertvierundfünfzig dauerhaft auf 0,42 gesetzte Zeilen lesen sich
+ * als abgeschaltete Liste, und zwar genau seit ein Klick die Hauptgeste ist. Der
+ * Spieler soll die nächste Zeile lesen können, die er anklickt.
+ */
+const isDimmed = computed(
+  () => hoverId.value !== null && hoverId.value !== props.entry.id && !isFocused.value,
+)
 
 /**
  * „Offen, aber es reicht nicht" — der Zustand, der ZURÜCKTRITT.
@@ -453,6 +491,9 @@ const buyTitle = computed(() => {
   border: 1px solid #32210c;
   border-radius: 4px;
   overflow: hidden;
+  /* Die ganze Zeile ist die Wählfläche — gekauft wird weiterhin nur über ihre
+     Knöpfe, und die tragen `@click.stop`. */
+  cursor: pointer;
   transition:
     border-color 0.12s ease,
     background-color 0.12s ease,
@@ -614,6 +655,40 @@ const buyTitle = computed(() => {
    (Performance-Regel 3). */
 .fut-row.fc-dimmed {
   opacity: 0.42;
+}
+
+/* ── Die FESTGEHALTENE Auswahl ───────────────────────────────
+   Der Zeiger geht weiter, der Fokus bleibt — und man muss den Unterschied
+   sehen können, ohne die Maus zu bewegen. `fc-spot` gilt für beide und liefert
+   Rahmen und volle Kante; hier kommt DRAUF, was nur der Fokus hat: ein
+   statischer Innenring in der Knotenfarbe und die Pin-Marke oben rechts.
+
+   Statischer ZUSTAND, kein Dauerläufer — der Ring ist ein `box-shadow`, der
+   genau einmal umschlägt (Performance-Regel 2). Bei fünfundvierzig sichtbaren
+   Zeilen trägt ihn immer nur EINE.
+
+   Doppelt geschrieben wie `.fc-spot` darüber, und aus demselben Grund:
+   `.fut-row--ready:hover` wiegt eine Stufe mehr und färbte den Rahmen sonst
+   grün, sobald der Zeiger auf der fokussierten Zeile steht. */
+.fut-row.fut-row--focus.fut-row--focus {
+  border-color: var(--node-c, #e8c040);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--node-c, #e8c040) 45%, transparent);
+}
+
+/* Die Marke sitzt oben LINKS, über der Knotenkante — nicht rechts: dort steht
+   über die volle Zeilenhöhe die Kauffläche, und eine Marke darüber läge auf dem
+   Knopf. Links ist die Ecke frei, weil das Glyph darunter mittig sitzt; das
+   Schloss am Glyph klebt an dessen unterer Ecke und trifft sie nie. */
+.fut-pin {
+  position: absolute;
+  top: 6px;
+  left: 7px;
+  width: 15px;
+  height: 15px;
+  line-height: 0;
+  color: var(--node-c, #e8c040);
+  pointer-events: none;
+  z-index: 3;
 }
 
 /* ══════════════════════════════════════════════════

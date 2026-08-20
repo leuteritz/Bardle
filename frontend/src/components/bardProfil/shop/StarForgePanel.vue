@@ -20,6 +20,13 @@
          Schwelle mit. -->
     <ForgeBuyAllBar />
 
+    <!-- Was gerade festgehalten ist. Sie steht ÜBER dem Rollfeld und rollt
+         nicht mit: die Frage „was habe ich gewählt" stellt sich gerade dann,
+         wenn die zugehörige Zeile weggerollt ist. Feste Höhe, auch ohne
+         Auswahl — sonst schöbe jeder Klick die Liste um ihre Höhe, also genau
+         die Zeile, die der Spieler eben getroffen hat. -->
+    <ForgeFocusBar />
+
     <!-- ══ Scrolling body ════════════════════════════════════════
          Drei Blöcke, in der Reihenfolge, in der der Spieler sie braucht: was
          gerade erreichbar ist, dann der Baum als Liste, zuletzt die Schublade
@@ -62,6 +69,7 @@ import { Icon } from '@iconify/vue'
 import { formatClock } from '@/utils/ui/format'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import ForgeBuyAllBar from './ForgeBuyAllBar.vue'
+import ForgeFocusBar from './ForgeFocusBar.vue'
 import ForgeOfferStrip from './ForgeOfferStrip.vue'
 import ForgeUpgradesSection from './ForgeUpgradesSection.vue'
 import ForgeVaultSection from './ForgeVaultSection.vue'
