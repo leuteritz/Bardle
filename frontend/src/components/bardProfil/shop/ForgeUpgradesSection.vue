@@ -120,6 +120,7 @@ import {
   useForgeUpgrades,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { forgeRowInView } from '@/utils/ui/forgeSpotlightView'
 import ForgeUpgradeTile from './ForgeUpgradeTile.vue'
 import ForgeGrownRow from './ForgeGrownRow.vue'
@@ -152,6 +153,7 @@ import {
 const { upgradeEntries, entryById, bestBuyId, freshIds, buyUpgrade, affordableLevels, buyMany } =
   useForgeUpgrades()
 const { treeHoverId, listHoverId, pinnedId, setListHover } = useForgeSpotlight()
+const { detailsOpen } = useForgeDetailsPane()
 
 // ── Eingefrorene Reihenfolge ─────────────────────────────────────────────────
 /**
@@ -455,7 +457,26 @@ function scrollToRow(id: string): void {
     const r = row.getBoundingClientRect()
     const b = box.getBoundingClientRect()
     const wasOut = !forgeRowInView(r.top, r.bottom, b.top, b.bottom)
-    row.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+
+    /* Gerollt wird das SCROLLFELD, nicht die Zeile.
+     *
+     * `row.scrollIntoView()` stand hier und rollte JEDEN scrollbaren Vorfahren
+     * mit — `.shop-frame` ist wegen seines `overflow` einer davon. Seit die
+     * Detailspalte einklappt, steht ihre Liste im geparkten Zustand ausserhalb
+     * des Rahmens; ein Hover über den Baum zog deshalb den ganzen Shop-Tab
+     * seitwärts, bis die Zeile im Bild war. Gemessen: der Baum rutschte um
+     * 448 px nach links aus dem Bild, und das geparkte Panel erschien, als
+     * wäre es aufgeklappt — bei unverändertem `detailsOpen`.
+     *
+     * `block: 'nearest'` ist hier eins zu eins nachgebaut: nichts tun, solange
+     * die Zeile ganz im Kasten steht, sonst den kürzeren der beiden Wege.
+     * Dieselben zwei Rechtecke, die `wasOut` schon gemessen hat.
+     */
+    const above = r.top - b.top
+    const below = r.bottom - b.bottom
+    const delta = above < 0 ? above : below > 0 ? below : 0
+    if (delta !== 0) box.scrollTo({ top: box.scrollTop + delta, behavior: 'smooth' })
+
     if (!wasOut) return
     arrivedId.value = id
     arrivalTimer = setTimeout(() => {
@@ -469,6 +490,12 @@ watch(treeHoverId, (id) => {
   if (scrollTimer !== null) clearTimeout(scrollTimer)
   clearArrival()
   if (id === null) return
+  // Hinter einer GEPARKTEN Spalte wird nicht gerollt. Dort sieht es niemand —
+  // und ein Archiv, das `revealForSpotlight()` dabei aufklappt, stünde beim
+  // nächsten Ausfahren unerklärt offen. Die Zeilen liegen dann ausserdem
+  // ausserhalb des Rahmens, und genau daraus wurde der seitwärts rutschende
+  // Shop-Tab (siehe die Herleitung in `scrollToRow`).
+  if (!detailsOpen.value) return
   // Gesperrt heisst leuchten, nicht rollen. Der Filter steht HIER und nicht an
   // `setTreeHover` — der trägt auch Hervorhebung, Kranz und Bedingungskette,
   // und die sind bei einer Sperre gerade die interessanteste Auskunft.
@@ -497,6 +524,11 @@ watch(pinnedId, (id) => {
   if (scrollTimer !== null) clearTimeout(scrollTimer)
   clearArrival()
   if (id === null) return
+  // Dieselbe Bedingung wie beim Zeiger — sie greift hier nur nie: der Klick im
+  // Baum ruft `openDetails()` VOR `togglePin()`, die Spalte ist beim Eintreffen
+  // dieses Wächters also schon ausgefahren. Sie steht trotzdem da, weil eine
+  // Anheftung auch aus einer anderen Geste kommen kann.
+  if (!detailsOpen.value) return
   scrollToRow(id)
 })
 

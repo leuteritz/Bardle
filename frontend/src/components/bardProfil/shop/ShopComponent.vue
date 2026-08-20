@@ -289,12 +289,22 @@ const slideMs = `${FORGE_DETAILS_SLIDE_MS}ms`
 </script>
 
 <style scoped>
+/* `clip` und nicht `hidden`, und das ist keine Kosmetik: `hidden` macht den
+   Rahmen zu einem SCROLLPORT: er schneidet nicht nur ab, er lässt sich auch
+   scrollen — nur eben ohne Leiste. Seit die Detailspalte einklappt, steht ihre
+   Liste im geparkten Zustand ausserhalb dieses Rahmens, und ein
+   `scrollIntoView()` darin zog prompt den ganzen Shop-Tab seitwärts (gemessen:
+   448 px, der Baum halb aus dem Bild). `clip` schneidet genauso ab, erzeugt
+   aber keinen Scrollport — damit ist die Fehlerklasse ausgeschlossen und nicht
+   bloss ihr erster Fall. Der Kompakt-Breakpoint unten setzt bewusst wieder
+   `overflow-y: auto`: dort SOLL der Rahmen scrollen, und dort ist die Spalte
+   nie geparkt. */
 .shop-frame {
   position: relative;
   display: flex;
   height: 100%;
   background: #111008;
-  overflow: hidden;
+  overflow: clip;
 }
 
 /* Der Baum bekommt jeden freien Pixel; die Forge-Spalte bleibt in einer
