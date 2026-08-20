@@ -2,7 +2,15 @@
 /**
  * Die azurne Marke „Star Forge ready" — EINE Quelle für alle Stellen, an denen
  * sie erscheint: die Shop-Ecktaste im Header, der Shop-Reiter der Profil-Leiste
- * und die vier Abteilungs-Marken der Schiene im Shop-Tab.
+ * und im Shop-Tab jeder einzelne Eintrag, der seit dem letzten Blick bezahlbar
+ * geworden ist — Upgrade-Zeile, Baumknoten, Angebot.
+ *
+ * **Sie trägt IMMER eine Zahl.** Eine Fassung ohne Ziffer stand hier einmal (ein
+ * reiner Punkt, für die Stellen, an denen die Zahl stets eine Eins gewesen wäre)
+ * und ist gefallen: eine „1" ist die ehrliche Auskunft — genau ein Kauf ist
+ * möglich —, während der Punkt den Blick erst zum Knopf zwingt, um dasselbe zu
+ * erfahren. `count` entscheidet allein über das Erscheinen; bei null gibt es
+ * nichts zu melden.
  *
  * **Warum eine Komponente und keine dritte CSS-Kopie.** Die Optik stand vorher
  * zweimal ausgeschrieben (`.btn-gem-badge` im globalen Block von
@@ -72,11 +80,25 @@ withDefaults(
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   pointer-events: auto;
-  background: linear-gradient(135deg, #60a5fa, #2563eb);
-  border: 1.5px solid #bae6fd;
+  background: linear-gradient(160deg, #7cc0ff, #2563eb);
+  /* ── KEIN RAND, eine AUSSPARUNG ──────────────────────────────
+     Hier stand `1.5px solid #bae6fd`, und eine helle Kontur um eine helle
+     Fläche liest sich als Aufkleber: sie umreisst die Marke, statt sie
+     abzusetzen.
+
+     Der erste Schatten tut dasselbe von aussen und besser — ein fast schwarzer
+     Ring, der die Marke von JEDEM Untergrund trennt. Das ist der Punkt: seit
+     sie im Shop in der Ecke eines GRÜNEN Kaufknopfs sitzt, muss sie sich nicht
+     mehr nur gegen dunkles Holz behaupten. Eine helle Kontur wäre dort der
+     hellste Fleck der Zeile gewesen.
+
+     Der zweite hebt sie an, die Glanzkante innen gibt der randlosen Fläche
+     wieder einen Körper. ALLE drei stehen still — animiert wird ausschliesslich
+     die Deckkraft von `::after` (Performance-Regel 2). */
   box-shadow:
-    0 0 6px rgba(59, 130, 246, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    0 0 0 1.5px rgba(10, 12, 16, 0.85),
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .sbadge--corner {

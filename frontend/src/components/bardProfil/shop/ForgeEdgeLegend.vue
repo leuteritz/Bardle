@@ -131,11 +131,17 @@ defineProps<{
   opacity: 1;
 }
 
-/* Die zwei Zustände, die auf der Bühne die KNOTENfarbe tragen, haben hier
+/* Die drei Zustände, die auf der Bühne die KNOTENfarbe tragen, haben hier
    keinen Ton zu erben — sie stehen stellvertretend in Forge-Gold. Ihre Aussage
    ist ohnehin die Breite: derselbe Weg, nur weiter gegangen. Dasselbe gilt für
-   die Brücke, die dort die Farbe ihrer Zielzone trägt. */
+   die Brücke, die dort die Farbe ihrer Zielzone trägt.
+
+   `ready` ist der dritte davon. Ihn hier in Grün zu zeigen wäre bequem und
+   falsch: auf der Bühne ist keine einzige Kaufbar-Ader grün, und eine Legende,
+   die eine Farbe nennt, die nirgends vorkommt, führt genau dorthin, wo man
+   nicht suchen muss. */
 .fl-swatch--grown line,
+.fl-swatch--ready line,
 .fl-swatch--maxed line {
   stroke: #c89040;
 }

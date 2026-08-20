@@ -210,6 +210,33 @@
               :stroke="limb.color"
             />
           </g>
+          <!-- DIE KANTE ZU ETWAS, DAS MAN KAUFEN KANN. Zuletzt gezeichnet und
+               damit über allen anderen Adern: sie ist die einzige, die zum
+               Handeln auffordert, und sie überpinselt genau die Ader desselben
+               Weges (`open` oder `grown`), deren Aussage sie fortschreibt.
+
+               Zwei Ebenen wie beim ausgewachsenen Ziel — erst der breite,
+               blasse Schein, dann die Ader darauf. Kein `drop-shadow`: ein
+               Filter rastert die Box jedes Pfades neu (Performance-Regel 2).
+
+               Sie liegt INNERHALB von `.limb-field` und tritt beim Zeigen mit
+               zurück. Das ist Absicht: Kaufbarkeit ist ein Dauerzustand, keine
+               Antwort auf den Zeiger — anders als Bedingungskante und
+               Scheinwerferkette, die deshalb draussen stehen. -->
+          <g class="limb-ready-halo" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path
+              v-for="limb in readyLimbs" :key="limb.key + '-ready-halo'"
+              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_HALO_FACTOR)"
+              :stroke="limb.color"
+            />
+          </g>
+          <g class="limb-vein--ready" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path
+              v-for="limb in readyLimbs" :key="limb.key + '-ready'"
+              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_READY_FACTOR)"
+              :stroke="limb.color"
+            />
+          </g>
         </g>
 
         <!-- Die BEDINGUNGEN des GEZEIGTEN Knotens, gestrichelt und in der Farbe
@@ -292,7 +319,6 @@
               // dieselbe Frage gleich beantworten.
               'node-circle--ready': entryOf(node).canBuy,
               'node-circle--short': isShort(node),
-              'node-circle--fresh': freshIds.has(node.id),
               'node-circle--spot': isSpot(node.id),
               'node-circle--pinned': pinnedId === node.id,
               // Was Voraussetzung IST, dämpft nicht — dieselbe Vorfahrt wie
@@ -357,32 +383,36 @@
             <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
           </span>
 
-          <!-- DAS GEGENSTÜCK ZUM SCHLOSS. Die beiden können sich nie treffen —
-               gesperrt heisst `canBuy === false` —, stehen aber trotzdem in
-               verschiedenen Ecken: unten in der Mitte hängt der Stufen-Chip,
-               und den schneidet nur der Blitz, weil ein gesperrter Knoten auf
-               Stufe 0 gar keinen zeigt. Gemessen, nicht geschätzt; die
-               Herleitung steht an `.node-ready-badge`.
 
-               Warum überhaupt ein Zeichen, wo der Kreis doch schon grün ist:
-               Farbe allein ist eine Auskunft, die bei Rot-Grün-Schwäche und
-               beim schnellen Überfliegen als erstes ausfällt. Das Glyph ist
-               dasselbe `ph:lightning-fill`, das im Spiel überall „kaufbar"
-               heisst.
+          <!-- Hier stand DAS GEGENSTÜCK ZUM SCHLOSS: ein grüner Kreis mit
+               Blitz, „kaufbar", oben rechts. Er ist gefallen, weil die Ecke
+               inzwischen der NEU-Marke gehört und die beiden sich zwangsläufig
+               trafen — frisch heisst immer auch kaufbar. Ein Zeichen, das nur
+               dann sichtbar ist, wenn das andere gerade nicht steht, meldet
+               nichts; es blinkt beim Hover einmal auf und ist sonst Grundrauschen.
 
-               Ab `FORGE_READY_BADGE_MIN_DIAMETER` — auf einem Glimmer wäre es
-               ein Fleck (Performance-Regel 7). -->
-          <span
-            v-if="entryOf(node).canBuy && showReadyBadge(node)"
-            class="node-ready-badge"
-            :title="FORGE_READY_BADGE_TITLE"
-          >
-            <Icon
-              :icon="FORGE_AFFORDABLE_TOTAL_ICON"
-              :width="FORGE_READY_BADGE_ICON_PX"
-              :height="FORGE_READY_BADGE_ICON_PX"
-            />
-          </span>
+               Was „kaufbar" jetzt trägt: der Kreis selbst — volle Leitfarbe,
+               heller Rand, statischer Schein (`--ready`) — und drüben in der
+               Liste der grüne Knopf mit dem Preis darauf. -->
+
+          <!-- NEU SEIT DEM LETZTEN BLICK — und zwar STATT des Blitzes darüber,
+               nicht neben ihm.
+
+               Dieselbe Marke wie an der Zeile, am Profil-Reiter und an der
+               Ecktaste im Header (`ShopReadyBadge`) — die einzige Bewohnerin
+               dieser Ecke, seit der Blitz gefallen ist.
+
+               Ihre Zahl ist die des Stapelkaufs: wie viele Stufen dieser Knoten
+               jetzt auf einmal hergäbe. Hier ist sie die EINZIGE Quelle dafür —
+               der Baum hat keinen Stapelknopf, der es sonst sagen würde. -->
+          <ShopReadyBadge
+            v-if="freshIds.has(node.id) && showCornerBadge(node)"
+            class="node-fresh-badge"
+            :style="{ '--sbadge-d': freshBadgePx[node.sizeClass] }"
+            :count="freshCountOf(node)"
+            :title="FORGE_FRESH_TITLE"
+            :label="FORGE_FRESH_TITLE"
+          />
 
           <!-- DER BEDINGUNGS-KRANZ. Er steht auf dem OBEREN Bogen, weil das
                Schloss immer unten rechts sitzt (Sektor 105°…165°) und der
@@ -472,6 +502,7 @@ import type {
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
+import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
 import ForgeEdgeLegend from './ForgeEdgeLegend.vue'
 import ForgeNodeTooltip from './ForgeNodeTooltip.vue'
 import SunChimeBoost from './SunChimeBoost.vue'
@@ -491,9 +522,12 @@ import {
   FORGE_ICON_SIZE_GLIMMER,
   FORGE_EDGE_REQ_DASH,
   FORGE_NODE_DIAMETER,
+  FORGE_FRESH_BADGE_NODE_PCT,
+  FORGE_FRESH_TITLE,
   FORGE_LIMB_LIT_FACTOR,
   FORGE_LIMB_VEIN_FACTOR,
   FORGE_LIMB_FULL_FACTOR,
+  FORGE_LIMB_READY_FACTOR,
   FORGE_LIMB_HALO_FACTOR,
   FORGE_LIMB_MIN_WIDTH,
   FORGE_LIMB_DIM_OPACITY,
@@ -512,10 +546,7 @@ import {
   FORGE_ICON_SIZE_BOUGH,
   FORGE_LOCK_ICON,
   FORGE_PIN_ICON,
-  FORGE_AFFORDABLE_TOTAL_ICON,
-  FORGE_READY_BADGE_MIN_DIAMETER,
-  FORGE_READY_BADGE_ICON_PX,
-  FORGE_READY_BADGE_TITLE,
+  FORGE_CORNER_BADGE_MIN_DIAMETER,
   FORGE_ENDLESS_SYMBOL,
   FORGE_BODY_EDGE_FRACTION,
   FORGE_SUN_EDGE_GAP,
@@ -536,7 +567,7 @@ import {
 
 const solarStore = useSolarUpgradeStore()
 const forgeStore = useStarForgeStore()
-const { entryById, bestBuyId, freshIds, buyUpgrade } = useForgeUpgrades()
+const { entryById, bestBuyId, freshIds, buyUpgrade, affordableLevels } = useForgeUpgrades()
 const {
   spotlightId,
   hoverId,
@@ -645,6 +676,18 @@ const nodePx = Object.fromEntries(
    genau dagegen steht `nodePx` selbst schon da. */
 const nodeRadiusPx = Object.fromEntries(
   Object.entries(FORGE_NODE_DIAMETER).map(([tier, d]) => [tier, `${-d / 2}px`]),
+) as Record<ForgeUpgradeTier, string>
+
+/* Das MASS der NEU-Marke, je Rang — aus derselben Tabelle wie `nodePx`, aus
+   demselben Grund: zwei Zahlenreihen für einen Kreis liefen beim ersten
+   geänderten Rang auseinander. Der Anteil steht in
+   `FORGE_FRESH_BADGE_NODE_PCT`; gerundet wird auf Hundertstel, damit aus 46 px
+   glatte 18,4 werden statt 18,400000000000002. */
+const freshBadgePx = Object.fromEntries(
+  Object.entries(FORGE_NODE_DIAMETER).map(([tier, d]) => [
+    tier,
+    `${Math.round(d * FORGE_FRESH_BADGE_NODE_PCT) / 100}px`,
+  ]),
 ) as Record<ForgeUpgradeTier, string>
 
 const reqDotPx = `${FORGE_REQ_DOT_SIZE}px`
@@ -872,11 +915,18 @@ const closedBridges = computed(() => bridgeLimbs.value.filter((b) => !b.open))
  * Die Weiche folgt der Zustandsleiter aus `useForgeUpgrades()` und ordnet nur
  * zwei Fälle bewusst anders ein: `capped` fällt bei Level > 0 zu `grown` und
  * sonst zu `open` — ein Deckel ist keine Sperre, das sagt schon das fehlende
- * Schloss am Kreis. Und `affordable` bekommt keinen eigenen Topf, weil im
- * Spätspiel bis zu neunzig Knoten gleichzeitig kaufbar sind — grüne Adern über
- * das halbe Netz heben nichts hervor, sie färben es nur um. Die Kaufbarkeit
- * steht am KNOTEN (`--ready`/`--short` samt Blitz-Abzeichen); die Kante sagt,
- * wie das Netz gewachsen ist, und das ist eine andere Frage.
+ * Schloss am Kreis. Und `affordable` bekommt weiterhin keinen eigenen Topf —
+ * aber aus einem anderen Grund, als hier einmal stand.
+ *
+ * Der alte Grund war: neunzig hervorgehobene Adern seien kein Signal mehr. Das
+ * galt der Ausführung, nicht der Sache — gemeint waren neunzig Adern in EINEM
+ * Grün. Die Kaufbar-Ader trägt stattdessen die Farbe ihres Ziels und ist damit
+ * eine Karte statt einer Übertünchung; sie liegt in `readyLimbs`.
+ *
+ * Was sie hier heraushält, ist der TAKT: diese fünf Töpfe hängen an `state`,
+ * `level` und `lockKind` und ändern sich beim KAUF. `canBuy` hängt an den
+ * tickenden Chimes, und ein sechster Topf hätte alle Struktur-Pfade sekündlich
+ * neu einsortiert.
  */
 const veinGroups = computed<Record<LimbVein, Limb[]>>(() => {
   const out: Record<LimbVein, Limb[]> = {
@@ -908,6 +958,25 @@ const veinGroups = computed<Record<LimbVein, Limb[]>>(() => {
  *  Präsentationsattribut wäre von keiner Regel mehr zu überschreiben. Die Töpfe
  *  liegen schon sortiert vor — ein zweiter Durchlauf über die Kanten wäre eine
  *  Rechnung für eine Antwort, die daneben steht. */
+/**
+ * Die Kanten, an deren Ende etwas zu holen ist — je EINE je kaufbarem Knoten,
+ * das letzte Stück vom Elternknoten.
+ *
+ * Eigene Auswahl statt eines sechsten Topfes in `veinGroups`, und das ist keine
+ * Formsache: `veinGroups` liest `state`, `level` und `lockKind` — Größen, die
+ * sich beim KAUF ändern und sonst nie. `canBuy` hängt an den tickenden Chimes.
+ * Ein `ready`-Topf dort hätte alle Struktur-Pfade sekündlich zwischen Gruppen
+ * umgehängt; so bleibt es bei EINER Liste, die Vue nach `key` patcht, während
+ * die fünf Töpfe darunter unberührt stehen.
+ *
+ * Nur `structureLimbs`: ein Knoten kann mehrere eingehende Kanten haben
+ * (Bedingungen, Brücken), aber nur eine sagt, woran er HÄNGT — dieselbe Wahl
+ * wie in `limbByTarget`.
+ */
+const readyLimbs = computed(() =>
+  structureLimbs.value.filter((limb) => entryById.value.get(limb.targetId)?.canBuy),
+)
+
 const bedLimbs = computed(() => {
   const g = veinGroups.value
   return [...g.blocked, ...g.open, ...g.grown, ...g.full]
@@ -1124,6 +1193,9 @@ const visibleLegendRows = computed(() => {
     blocked: g.blocked.length,
     open: g.open.length,
     grown: g.grown.length,
+    // Als einzige NICHT aus `veinGroups` — die Kaufbar-Ader ist eine eigene
+    // Auswahl (siehe `readyLimbs`) und keine sechste Sprosse der Zustandsleiter.
+    ready: readyLimbs.value.length,
     maxed: g.full.length,
     bridge: openBridges.value.length,
   }
@@ -1229,10 +1301,33 @@ function isShort(node: TreeNode): boolean {
   )
 }
 
-/** Trägt dieser Kreis das Blitz-Abzeichen? Herleitung der Schwelle steht an
- *  `FORGE_READY_BADGE_MIN_DIAMETER`. */
-function showReadyBadge(node: TreeNode): boolean {
-  return FORGE_NODE_DIAMETER[node.sizeClass] >= FORGE_READY_BADGE_MIN_DIAMETER
+/** Trägt dieser Kreis überhaupt ein Eck-Abzeichen? Herleitung der Schwelle steht
+ *  an `FORGE_CORNER_BADGE_MIN_DIAMETER`. */
+function showCornerBadge(node: TreeNode): boolean {
+  return FORGE_NODE_DIAMETER[node.sizeClass] >= FORGE_CORNER_BADGE_MIN_DIAMETER
+}
+
+/**
+ * Wie viele Stufen an einem FRISCHEN Knoten gerade auf einmal gingen — die Zahl
+ * in seiner NEU-Marke.
+ *
+ * Über `freshIds` gerechnet und nicht über `allNodes`: `affordableLevels()`
+ * läuft je Eintrag eine Schleife über bis zu `FORGE_BULK_BUY_CAP` Stufen, und
+ * das Netz hat hundertfünfundfünfzig Knoten, von denen im Spätspiel bis zu
+ * neunzig gleichzeitig kaufbar sind. Frisch sind nie viele — das ist der ganze
+ * Sinn der Marke —, und die Karte wird bei jedem Chime-Tick neu gebaut.
+ *
+ * Die Untergrenze ist eine Eins, aus demselben Grund wie an der Zeile: bei
+ * `count === 0` erschiene die Marke gar nicht, und frisch heisst immer kaufbar.
+ */
+const freshBulk = computed<Map<string, number>>(() => {
+  const out = new Map<string, number>()
+  for (const id of freshIds.value) out.set(id, Math.max(1, affordableLevels(id)))
+  return out
+})
+
+function freshCountOf(node: TreeNode): number {
+  return freshBulk.value.get(node.id) ?? 1
 }
 
 /** „3/6" für alles Gedeckelte, „3 ∞" für einen Bough — ein gerendertes
@@ -2339,47 +2434,33 @@ const nextPhasePreviewStyle = computed(() => ({
   display: block;
 }
 
-/* DAS KAUFBAR-ABZEICHEN. Maße von `.fc-lock-badge` (rpg-theme.css) übernommen,
-   damit die Marken an einem Kreis eine Familie bleiben — aber oben RECHTS statt
-   unten rechts, und das ist gemessen und nicht geschätzt: unten in der Mitte
-   sitzt `.node-level` als Flex-Kind, und ein Abzeichen in der Ecke des
-   Schlosses schnitt dessen rechtes Ende. Das Schloss trifft den Chip nie, weil
-   ein gesperrter Knoten auf Stufe 0 gar keinen zeigt.
+/* ── DIE NEU-MARKE, oben rechts am Kreis ─────────────────────
+   Die Ecke ist gemessen und nicht gewählt, und die Herleitung stammt vom
+   Blitz-Abzeichen, das hier bis zum Umbau sass: unten in der Mitte sitzt
+   `.node-level` als Flex-Kind, und eine Marke in der Ecke des Schlosses schnitt
+   dessen rechtes Ende. Unten links sitzt die Anheftung, unten rechts das
+   Schloss, in der Mitte Glyph und Stufe — oben rechts ist die einzige Ecke, die
+   an einem kaufbaren Knoten nie belegt ist. Der Bedingungskranz steht zwar auf
+   dem oberen Bogen, aber nur an GESPERRTEN Knoten, und die tragen nie eine
+   NEU-Marke. Der Best-Buy-Ring liegt bei `inset: -7px` und damit ausserhalb der
+   zwei Prozent, um die die Marke übersteht.
 
-   Oben rechts ist die einzige Ecke, die an einem KAUFBAREN Knoten nie belegt
-   ist: der Bedingungskranz steht zwar auf dem oberen Bogen, aber nur an
-   gesperrten Knoten — dieselbe gegenseitige Ausschliessung wie beim Schloss.
-   Unten links sitzt die Anheftung, unten rechts das Schloss, in der Mitte
-   Glyph und Stufe.
+   Der SITZ ist prozentual: `.node-circle--spot` skaliert den Kreis samt Kindern
+   auf 1,22, und eine Pixelzahl liefe dabei aus der Geometrie. Das MASS dagegen
+   MUSS eine Pixelzahl sein — `ShopReadyBadge` rechnet daraus Rundung und
+   Schriftgrad, und ein Prozentwert wäre in `border-radius` und `font-size`
+   jedes Mal etwas anderes. Es kommt deshalb inline vom Element
+   (`freshBadgePx`, aus derselben Tabelle wie `nodePx`) und skaliert über den
+   Kreis mit, nicht über sich selbst.
 
-   Der Best-Buy-Ring liegt bei `inset: -7px` und damit AUSSERHALB der zwei
-   Prozent, um die das Abzeichen übersteht — die beiden berühren sich nicht.
-
-   Eigene Regeln statt der geteilten Klasse, weil `.fc-lock-badge` global ist
-   und auch die Zeile in der Liste bedient. */
-.node-ready-badge {
-  position: absolute;
-  right: -3%;
-  top: -3%;
-  width: 44%;
-  height: 44%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #14200c;
-  border: 1.5px solid #4a8a28;
-  color: #9fe062;
+   `pointer-events: none` überschreibt das `auto` der Komponente: der Kreis ist
+   die Klickfläche, und ein totes Loch in seiner Ecke wäre der teuerste
+   Fehlklick des Baums. Doppelter Selektor, weil die Komponente ihr `auto` mit
+   gleicher Spezifität setzt. */
+.node-fresh-badge.node-fresh-badge {
+  --sbadge-top: -3%;
+  --sbadge-right: -3%;
   pointer-events: none;
-}
-
-/* Prozentual, nicht in Pixeln: der Kreis skaliert beim Spotlight auf 1,22 und
-   beim Zoom mit der Bühne — ein festes Maß liefe dabei aus seinem Rund heraus.
-   Die Zahl am `<Icon>` ist nur die Vorgabe, die `@iconify/vue` verlangt. */
-.node-ready-badge svg {
-  width: 66%;
-  height: 66%;
-  display: block;
 }
 
 /* States */
@@ -2405,9 +2486,9 @@ const nextPhasePreviewStyle = computed(() => ({
    der Knoten, und die Mehrheit leuchtete lauter als das, was man kaufen kann.
    Hervorheben trägt nicht, solange die Gegenseite gleich laut bleibt.
 
-   Azur ist ausserdem die Farbe von `--fresh` und darf nicht zweimal etwas
-   bedeuten. Was ein leerer Knoten von einem angefangenen unterscheidet, sagt
-   weiterhin der Stufen-Chip: `0/6` gegen `3/6`. */
+   Azur ist ausserdem die Farbe der NEU-Marke in der Ecke und darf nicht zweimal
+   etwas bedeuten. Was ein leerer Knoten von einem angefangenen unterscheidet,
+   sagt weiterhin der Stufen-Chip: `0/6` gegen `3/6`. */
 .node-circle--empty {
   border-color: #5c4520;
 }
@@ -2500,18 +2581,45 @@ const nextPhasePreviewStyle = computed(() => ({
    Transition auf `box-shadow`, die den einmaligen Umschlag trägt.
    `background` steht ABSICHTLICH nicht in dieser Transition: ein überblendeter
    Verlauf rasterte jeden Frame neu (Performance-Regel 2). */
+/* EIN KÖRPER, EINE FARBE. Der Rahmen stand auf Grün, der Grund schimmerte in
+   der Farbe des Upgrades — zwei Farben an einem Kreis, die nichts miteinander
+   zu tun hatten. Jetzt tragen Rand, Grund, Schein und die hineinführende Kante
+   alle `--node-color`; der Grund ist buchstäblich derselbe Ton wie der Rahmen,
+   nur bis nahe an Schwarz heruntergemischt.
+
+   Was dadurch VERSCHWINDET, ist Grün als Aussage am Kreis — und das ist kein
+   Verlust, sondern der eigentliche Gewinn: der Unterschied zwischen kaufbar und
+   zu teuer liegt nicht mehr im Farbton (grün gegen braun), sondern in der
+   SÄTTIGUNG. Lebendig gegen ausgeblichen trägt über alle fünfzehn Knotenfarben
+   hinweg, ein einzelner Farbton tut das nie.
+
+   „Kaufbar" bleibt trotzdem eindeutig: die Sättigung trägt es über alle
+   fünfzehn Knotenfarben, und die Best-Buy-Marke ist die einzige grüne Fläche im
+   Feld. Zwei Zeichen standen hier einmal daneben und sind gefallen — das grüne
+   Blitz-Abzeichen und der azurne Rand der frischen Knoten. Beide besetzten die
+   Ecke, die jetzt der NEU-Marke gehört, und der Rand übermalte obendrein die
+   Farbe, an der man den Knoten überhaupt erkennt.
+
+   Die Anteile — 38 % im Schimmer, 16 % und 7 % im Grund — sind gemessen, nicht
+   geschätzt: das Glyph in der Mitte trägt DIESELBE Farbe bei voller Sättigung.
+   Der Schimmer sitzt deshalb weiter oben links und läuft bei 70 % aus; wo das
+   Motiv steht, ist der Grund fast schwarz. */
 .node-circle--ready {
-  border-color: #6ec040;
+  border-color: var(--node-color, #6ec040);
   background:
     radial-gradient(
       circle at 30% 24%,
-      color-mix(in srgb, var(--node-color, #6ec040) 30%, transparent) 0%,
-      transparent 68%
+      color-mix(in srgb, var(--node-color, #6ec040) 38%, transparent) 0%,
+      transparent 70%
     ),
-    linear-gradient(158deg, #1e2a14 0%, #141c0d 72%);
+    linear-gradient(
+      158deg,
+      color-mix(in srgb, var(--node-color, #6ec040) 16%, #14120a) 0%,
+      color-mix(in srgb, var(--node-color, #6ec040) 7%, #100e07) 74%
+    );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    inset 0 0 0 1px rgba(159, 224, 98, 0.16);
+    inset 0 0 0 1px color-mix(in srgb, var(--node-color, #6ec040) 30%, transparent);
 }
 
 /* Der Schein eines kaufbaren Knotens steht STILL.
@@ -2525,61 +2633,50 @@ const nextPhasePreviewStyle = computed(() => ({
  * nichts hervor. Es atmen nur noch die zwei Zeichen, die WIRKLICH etwas
  * auszeichnen — der frisch aufgegangene Knoten und der eine Best-Buy-Ring. */
 .node-circle--ready .node-glow {
-  box-shadow: 0 0 22px rgba(82, 184, 48, 0.85);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--node-color, #6ec040) 78%, transparent);
   opacity: 0.72;
 }
 
-/* Frisch aufgegangen: DAS atmet, und es sind nie viele. */
-.node-circle--fresh .node-glow {
-  animation: node-glow-breathe 2s ease-in-out infinite alternate;
-}
+/* Hier atmete zuletzt der FRISCH aufgegangene Knoten, in Azur. Beides ist
+   gefallen — die Atmung und die Farbe —, weil ein frischer Knoten kein eigenes
+   Aussehen mehr hat: er sieht aus wie ein kaufbarer, und was ihn auszeichnet,
+   steht als Marke in seiner Ecke (`ShopReadyBadge`).
+   Der Grund stand im Bild: das Motiv eines Knotens ist seine Farbe — pink,
+   bernstein, grün —, und ein azurner Rand darum überschrieb genau die eine
+   Auskunft, an der man ihn im Netz wiedererkennt. Eine Zustandsmeldung darf
+   nicht die Identität übermalen.
 
-@keyframes node-glow-breathe {
-  from { opacity: 0.45; }
-  to   { opacity: 1; }
-}
+   Im Knotenfeld läuft damit gar kein `node-glow` mehr; die Ebene trägt nur noch
+   den statischen Ready-Schein darüber. Die einzige atmende Ebene des Baums ist
+   der Spotlight-Ring (`node-spot-breathe`) — eine, nie mehr. */
 
 /* Beim Zeigen hebt der ganze Kreis an, nicht nur sein Rand: derselbe Aufbau,
    eine Stufe heller. Der Schimmer darf hier weiter aufdrehen (42 statt 30) —
    unter dem Zeiger steht immer nur EIN Knoten, und der Tooltip daneben nennt
    das Motiv ohnehin im Klartext. */
+/* Unter dem Zeiger steht immer nur EIN Knoten — der darf weiter aufdrehen.
+   Der Rand wird zu Weiss hin aufgehellt statt in eine andere Farbe zu kippen:
+   heller ist dieselbe Farbe, ein anderer Ton wäre eine andere Aussage. */
 .node-circle--ready:hover {
   transform: scale(1.12);
-  border-color: #9fe062;
+  border-color: color-mix(in srgb, var(--node-color, #6ec040) 72%, #ffffff);
   background:
     radial-gradient(
       circle at 30% 24%,
-      color-mix(in srgb, var(--node-color, #6ec040) 42%, transparent) 0%,
-      transparent 70%
+      color-mix(in srgb, var(--node-color, #6ec040) 50%, transparent) 0%,
+      transparent 72%
     ),
-    linear-gradient(158deg, #24331a 0%, #18220f 72%);
+    linear-gradient(
+      158deg,
+      color-mix(in srgb, var(--node-color, #6ec040) 24%, #17150c) 0%,
+      color-mix(in srgb, var(--node-color, #6ec040) 11%, #131108) 74%
+    );
 }
 
-/* Beim Zeigen steht der Schein still und voll — `animation-play-state: paused`
-   käme hier zu spät, der laufende Keyframe schriebe die Deckkraft weiter. */
+/* Beim Zeigen steht der Schein voll. (Hier stand zusätzlich `animation: none` —
+   gegen den Atem der frischen Knoten, den es nicht mehr gibt.) */
 .node-circle--ready:hover .node-glow {
-  animation: none;
   opacity: 1;
-}
-
-/* ── NEU SEIT DEM LETZTEN BLICK ──────────────────────────────────
-   Frisch ist immer auch kaufbar — die atmende Ebene steht also schon. Sie wird
-   deshalb UMGEFÄRBT statt eine zweite darüberzulegen: der Baum zeichnet bis zu
-   49 Knoten, und eine zweite Keyframe je Knoten wäre der teuerste Weg zur
-   gleichen Aussage. Der Ring selbst bleibt statisch azurn.
-
-   Steht NACH `--ready`, damit die spätere Regel bei gleicher Spezifität
-   gewinnt. */
-.node-circle--fresh {
-  border-color: #60a5fa;
-}
-
-.node-circle--fresh .node-glow {
-  box-shadow: 0 0 22px rgba(96, 165, 250, 0.9);
-}
-
-.node-circle--fresh:hover {
-  border-color: #bae6fd;
 }
 
 /* Gedeckelt — wartet auf seine vier Geschwister, ist also nicht gesperrt und
@@ -2671,9 +2768,11 @@ const nextPhasePreviewStyle = computed(() => ({
 
    Der Ring ist eine EIGENE Ebene mit STATISCHEM Schein, animiert werden nur
    `opacity` und `transform` (Performance-Regel 11). Ein pulsender `box-shadow`
-   am Kreis rasterte ihn samt Schatten in jedem Frame neu. Und er kann NICHT auf
-   `.node-glow` liegen: dort läuft bei kaufbaren Knoten schon
-   `node-glow-breathe`, zwei Keyframes auf einer Ebene überlagern sich nicht. */
+   am Kreis rasterte ihn samt Schatten in jedem Frame neu. Eine eigene Ebene
+   bleibt er auch, seit auf `.node-glow` nichts mehr läuft: dort hängt die
+   Ruhe-Deckkraft des Kaufbar-Scheins, und ein Keyframe darauf schriebe sie in
+   jedem Frame neu — die Zustände `--spot`, `--req` und `--dim` könnten sie dann
+   nicht mehr setzen. */
 .node-spot {
   position: absolute;
   inset: v-bind(ringInset);
@@ -2781,13 +2880,10 @@ const nextPhasePreviewStyle = computed(() => ({
   box-shadow: 0 0 14px rgba(204, 96, 80, 0.5);
 }
 
-/* Und ihr Schein hört trotzdem auf zu atmen — genau wie bei `--dim`.
-   Ein Voraussetzungsknoten ist MEISTENS kaufbar (das ist ja der Punkt), und ohne
-   diese Regel liefe für jeden von ihnen wieder `node-glow-breathe`. Bis zu vier
-   zusätzliche Dauerläufer, ohne dass ein einziger Ring animiert wäre — die
-   Zusage über `.node-circle--dim .node-glow` bliebe nur noch auf dem Papier. */
+/* Und ihr Schein steht voll — genau wie bei `--spot`. Ein Voraussetzungsknoten
+   ist MEISTENS kaufbar (das ist ja der Punkt) und soll dabei nicht auf den
+   0,72 des Ruhezustands hängenbleiben. */
 .node-circle--req .node-glow {
-  animation: none;
   opacity: 1;
 }
 
@@ -2807,12 +2903,10 @@ const nextPhasePreviewStyle = computed(() => ({
   transition-duration: 0.12s;
 }
 
-/* Beim Spotlight steht der Kaufbar-Schein still und voll — sonst schwebten zwei
-   atmende Ringe mit verschiedenem Takt übereinander. Dieselbe Auflösung wie in
-   `.node-circle--ready:hover .node-glow`, nur greift sie jetzt auch, wenn
-   der Zeiger drüben auf der Karte steht. */
+/* Beim Spotlight steht der Kaufbar-Schein voll. Dieselbe Auflösung wie in
+   `.node-circle--ready:hover .node-glow`, nur greift sie auch, wenn der Zeiger
+   drüben auf der Karte steht. */
 .node-circle--spot .node-glow {
-  animation: none;
   opacity: 1;
 }
 
@@ -2824,11 +2918,10 @@ const nextPhasePreviewStyle = computed(() => ({
   transition-duration: 0.12s;
 }
 
-/* Und ihr Schein hört auf zu atmen. Das ist der eigentliche Gewinn: statt bis
-   zu fünfundzwanzig laufender `node-glow-breathe` läuft während eines
-   Spotlights genau eine Animation im Knotenfeld. */
+/* Und ihr Schein tritt mit zurück. Er ATMETE hier einmal, und diese Regel war
+   die Bremse dagegen; seit im Knotenfeld überhaupt kein Schein mehr atmet, ist
+   sie nur noch das, was ihr Name sagt — Dämpfung. */
 .node-circle--dim .node-glow {
-  animation: none;
   opacity: 0.25;
 }
 

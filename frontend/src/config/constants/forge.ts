@@ -517,15 +517,34 @@ export const FORGE_LIMB_LIT_FACTOR = 0.62
  * füllt fast ganz. Man liest den Fortschritt damit auch dann, wenn die Farbe
  * beim Herauszoomen zu einem Punkt zerfällt.
  *
- * Ein eigener Zustand für „kaufbar" steht bewusst NICHT hier. Im Spätspiel sind
- * bis zu neunzig Knoten gleichzeitig kaufbar; neunzig hervorgehobene Adern
- * wären kein Signal mehr, sondern der Normalzustand. Das beantwortet der Knoten
- * selbst mit Goldrand und Schein.
+ * „Kaufbar" stand hier einmal ausdrücklich NICHT — mit dem Argument, im
+ * Spätspiel seien bis zu neunzig Knoten gleichzeitig kaufbar und neunzig
+ * hervorgehobene Adern wären kein Signal mehr, sondern der Normalzustand.
+ *
+ * Das Argument galt der damaligen Ausführung, nicht der Sache: gemeint waren
+ * neunzig Adern in EINEM einheitlichen Grün, und die wären tatsächlich nur eine
+ * Umfärbung gewesen. `FORGE_LIMB_READY_FACTOR` trägt stattdessen die Farbe des
+ * ZIELS — dieselbe, die dessen Rahmen und Grund tragen. Neunzig verschieden
+ * gefärbte Adern sind keine Übertünchung, sondern eine Karte: man sieht, WO
+ * etwas zu holen ist und WELCHES Upgrade dort wartet.
  */
 /** Ader eines versperrten oder freien, aber leeren Ziels. */
 export const FORGE_LIMB_VEIN_FACTOR = 0.5
 /** Ader eines ausgewachsenen Ziels — sie füllt die Rinne fast ganz. */
 export const FORGE_LIMB_FULL_FACTOR = 0.8
+/**
+ * Ader zu einem KAUFBAREN Ziel.
+ *
+ * Sie sitzt zwischen `LIT` (0,62, gewachsen) und `FULL` (0,8, ausgewachsen),
+ * und die Ordnung ist Absicht: ein Weg, an dessen Ende man handeln kann, wiegt
+ * mehr als ein begonnener und weniger als ein vollendeter. Was sie wirklich
+ * heraushebt, ist ohnehin nicht die Breite, sondern volle Deckkraft plus der
+ * Schein darunter — die Breite allein wäre auf einem Blatt nicht zu sehen.
+ *
+ * `__tests__/config/forgeEdgeLegend.spec.ts` hält die Leiter fest: wer einen
+ * der beiden Nachbarn verschiebt, kehrt sonst still die Aussage um.
+ */
+export const FORGE_LIMB_READY_FACTOR = 0.72
 /**
  * Der SCHEIN unter der vollen Ader. Ein zweiter, sehr blasser Strich statt eines
  * `drop-shadow`: ein Filter rastert die Box jedes Pfades neu, und im Spätspiel
@@ -611,6 +630,10 @@ export const FORGE_EDGE_LEGEND_ROWS: readonly ForgeEdgeLegendRow[] = [
   // ist jetzt fast das doppelte und entspricht damit dem der Bühne, wo zur
   // vollen Ader noch der Schein darunter kommt.
   { id: 'grown', label: 'grown', cls: 'limb-vein--grown', width: 2.4 },
+  // Vor `maxed`, damit die Legende der Breiten-Leiter der Bühne folgt. Ihr
+  // Tupfer trägt — wie die zwei Nachbarn — stellvertretend Forge-Gold: auf der
+  // Bühne ist es die Farbe des jeweiligen Ziels, und die kennt die Legende nicht.
+  { id: 'ready', label: 'ready', cls: 'limb-vein--ready', width: 3.4 },
   { id: 'maxed', label: 'maxed', cls: 'limb-vein--full', width: 4.6 },
   { id: 'bridge', label: 'zone link', cls: 'limb-bridge limb-bridge--open', width: 3 },
 ] as const
@@ -2554,19 +2577,69 @@ export const FORGE_BEST_BUY_SHORT_LABEL = 'BEST'
 /**
  * Die Marke an einem gerade erst bezahlbar gewordenen Eintrag.
  *
- * Sie beantwortet eine ANDERE Frage als BEST BUY und steht deshalb daneben statt
- * an ihrer Stelle: BEST BUY sagt „das Billigste", NEW sagt „das, was seit deinem
- * letzten Blick dazugekommen ist". Beide können auf denselben Eintrag zeigen.
+ * Sie beantwortet eine ANDERE Frage als BEST BUY: BEST BUY sagt „das Billigste",
+ * diese hier sagt „das, was seit deinem letzten Blick dazugekommen ist". Beide
+ * können auf denselben Eintrag zeigen.
  *
  * Azur ist die Farbe dazu, und zwar dieselbe, die den Spieler hergeführt hat —
- * `ShopReadyBadge` am Header, am Profil-Reiter und an der Abteilungs-Schiene,
- * sowie der `ready`-Herold (`BADGE_HERALD_ACCENT_SHOP`). Grün und Gold sind im
- * Shop bereits mit „kaufbar" belegt (`.fq-row--ready`, `.fc-card--ready`).
+ * `ShopReadyBadge` am Header und am Profil-Reiter, sowie der `ready`-Herold
+ * (`BADGE_HERALD_ACCENT_SHOP`). Grün und Gold sind im Shop bereits mit „kaufbar"
+ * belegt (`.fut-row--ready`, `.fo-row--ready`).
+ *
+ * ── Hier stand einmal ein Wort ──────────────────────────────────────────────
+ * `FORGE_FRESH_LABEL = 'NEW'`, gesetzt als Pille im FUSS der Zeile, neben dem
+ * Materialband. Das war das schwächste der drei Zeichen, mit denen die Zeile
+ * dasselbe sagte: es sass an der Stelle, an der der Blick zuletzt ankommt, nahm
+ * dem Materialband Breite — und hatte mit der Marke, die den Spieler überhaupt
+ * in den Shop geführt hat, keine Form gemeinsam. Die Spur brach genau dort ab,
+ * wo sie ans Ziel führte.
+ *
+ * An seiner Stelle steht jetzt `ShopReadyBadge` selbst, in der Ecke oben rechts:
+ * dieselbe Komponente, dieselbe Farbe, dieselbe Ecke wie am Header. Der Wortlaut
+ * unten bleibt als `title`/`aria-label` — sichtbar ist die Marke ohne Text.
  */
-export const FORGE_FRESH_LABEL = 'NEW'
-
-/** Klartext derselben Marke — `title` an der Zeile, `aria-label` am Chip. */
 export const FORGE_FRESH_TITLE = 'Newly affordable'
+
+// ── Die NEU-Marke am einzelnen Eintrag ───────────────────────────────────────
+/**
+ * Durchmesser der Ecken-Marke an der Upgrade-ZEILE.
+ *
+ * 18 ist die Untergrenze für eine LESBARE Ziffer, und die ist hier der ganze
+ * Zweck: 62 % davon sind gut elf Pixel Schriftgrad. Eine Runde stand die Marke
+ * auf 16 — die Zahl darin fiel auf knapp zehn Pixel und las sich im fertigen
+ * Bild als Punkt mit Schmutz darin, also als genau das, was sie ersetzen sollte.
+ *
+ * Was sie NICHT begrenzt, ist der Stapelknopf darunter. Die Marke liegt auf
+ * dessen oberer Ecke — gemessen rund 120 px² Boxüberlappung —, aber sein „×N"
+ * steht mittig auf 81 px Höhe, und die Marke endet nach 23. Sie trifft die
+ * Rundung, nie die Zahl. Fünf Pixel Einzug statt vier halten sie dabei von der
+ * Kante fort; die Zeile trägt `overflow: hidden`, überstehen kann sie nicht.
+ */
+export const FORGE_FRESH_BADGE_ROW_PX = 18
+
+/**
+ * Dasselbe an der ANGEBOTS-Zeile (Relikt, Konstellation).
+ *
+ * Zwei Pixel kleiner als an der Upgrade-Zeile, weil die Zeile es auch ist: rund
+ * halb so hoch, mit `padding: 8px` statt 11. Die Ziffer hält den Boden trotzdem
+ * — 62 % von 16 sind knapp zehn Pixel, und mehr als eine EINS steht hier nie:
+ * ein Relikt kauft man Stufe für Stufe, einen Stapel gibt es nicht.
+ */
+export const FORGE_FRESH_BADGE_OFFER_PX = 16
+
+/**
+ * Der Anteil des KNOTEN-Durchmessers, den die Marke im Baum einnimmt.
+ *
+ * Prozentual und nicht in Pixeln: `.node-circle--spot` skaliert den Kreis samt
+ * Kindern auf 1,22, und ein festes Pixelmass liefe dabei aus der Geometrie.
+ *
+ * 40 % — das Blitz-Abzeichen, das hier bis zum Umbau sass, nahm 44 %. Die vier
+ * Prozentpunkte sind der Unterschied zwischen einem Glyph in einem Ring und
+ * einer vollen Fläche mit Ziffer: bei gleichem Mass wöge die Marke schwerer als
+ * das Motiv des Knotens, auf das sie zeigt.
+ */
+export const FORGE_FRESH_BADGE_NODE_PCT = 40
+
 
 /**
  * Glyph vor der Tooltip-Fußzeile „N affordable in total".
@@ -2578,29 +2651,27 @@ export const FORGE_FRESH_TITLE = 'Newly affordable'
  */
 export const FORGE_AFFORDABLE_TOTAL_ICON = 'ph:lightning-fill'
 
-// ── Das Kaufbar-Abzeichen am Baumknoten ──────────────────────────────────────
+// ── Das Eck-Abzeichen am Baumknoten ──────────────────────────────────────────
 /**
- * Ab welchem Knotendurchmesser der Kreis das Blitz-Abzeichen überhaupt trägt.
+ * Ab welchem Knotendurchmesser der Kreis überhaupt eine Marke in der Ecke trägt.
  *
- * Das Abzeichen ist 44 % der Kante (dieselbe Geometrie wie das Schloss), das
- * Glyph darin 66 % davon — bei einem Glimmer mit 34 px sind das rund zehn
- * Pixel, und ein Blitz auf zehn Pixeln ist ein Fleck. Performance-Regel 7: was
- * klein gezeigt wird, trägt keinen Zierrat, und ein Fleck ist Zierrat.
+ * Die Schwelle ist älter als ihr heutiger Zweck: sie stand am BLITZ-Abzeichen
+ * („kaufbar", ein grüner Kreis mit `ph:lightning-fill`), das oben rechts sass,
+ * bis die NEU-Marke dieselbe Ecke bekam. Beide gleichzeitig gab es nie — frisch
+ * heisst immer auch kaufbar —, und ein Zeichen, das nur sichtbar ist, solange
+ * das andere gerade nicht steht, meldet nichts. Der Blitz ist deshalb gefallen;
+ * „kaufbar" trägt jetzt der Kreis selbst (`--ready`) und drüben der grüne Knopf.
  *
- * Die Schwelle trennt `glimmer` (34) von `leaf` (46) — der einzige Rang, der
- * herausfällt. Er verliert dadurch nichts an Auskunft: Farbe und Dämpfung
- * tragen dort dieselbe Aussage, nur ohne das zweite Zeichen. Gepinnt in
- * `__tests__/config/forgeReqWreath.spec.ts` gegen `FORGE_NODE_DIAMETER`.
+ * Die ZAHL blieb, weil ihre Begründung nicht am Motiv hängt, sondern an der
+ * Grösse: bei `FORGE_FRESH_BADGE_NODE_PCT` misst die Marke auf einem `glimmer`
+ * (34 px) rund vierzehn Pixel und die Ziffer darin knapp neun — an der Grenze
+ * dessen, was noch eine Ziffer ist statt eines Flecks (Performance-Regel 7).
+ *
+ * 40 trennt `glimmer` (34) von `leaf` (46) — der einzige Rang, der herausfällt.
+ * Er verliert dadurch nichts: der azurne RAND sagt „neu" auch ohne Marke.
+ * Gepinnt in `__tests__/config/forgeReqWreath.spec.ts` gegen `FORGE_NODE_DIAMETER`.
  */
-export const FORGE_READY_BADGE_MIN_DIAMETER = 40
-
-/** Kantenlänge des Blitz-Glyphs im Abzeichen. Der Kreis darum kommt aus
- *  Prozentwerten am Knoten — dieses Maß ist die Vorgabe für `@iconify/vue`,
- *  das eine Zahl verlangt; die Regel darunter skaliert es auf 66 %. */
-export const FORGE_READY_BADGE_ICON_PX = 12
-
-/** Was am Abzeichen steht, wenn der Zeiger darauf ruht. */
-export const FORGE_READY_BADGE_TITLE = 'Ready to grow'
+export const FORGE_CORNER_BADGE_MIN_DIAMETER = 40
 
 // ── Stapelkauf ───────────────────────────────────────────────────────────────
 /**

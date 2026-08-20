@@ -7,7 +7,6 @@
         'fut-row--ready': entry.canBuy,
         'fut-row--short': short,
         'fut-row--best': showBest,
-        'fut-row--fresh': fresh,
         'fc-spot': isSpot,
         'fut-row--focus': isFocused,
         'fc-dimmed': isDimmed,
@@ -27,6 +26,36 @@
       <Icon :icon="FORGE_PIN_ICON" width="100%" height="100%" />
     </span>
 
+    <!-- NEU SEIT DEM LETZTEN BLICK — dieselbe Marke, dieselbe Ecke wie am
+         Header und am Profil-Reiter (`ShopReadyBadge`). Der Spieler folgt ihr
+         von der Ecktaste bis hierher, ohne dass die Form unterwegs wechselt;
+         genau das konnte die „NEW"-Pille im Fuß nicht, an deren Stelle sie
+         steht.
+
+         Die ZAHL ist dieselbe, die der Stapelknopf trägt: wie viele Stufen jetzt
+         auf einmal gehen — und bei einer einzigen steht dort eine „1". Sie
+         wiederholt sich damit bewusst; der Knopf ist die HANDLUNG („kauf sechs"),
+         die Marke die MELDUNG („hier sind sechs dazugekommen"), und wer nur
+         überfliegt, liest die Meldung zuerst.
+
+         Eine Fassung ohne Ziffer stand hier einmal, weil die beiden sich
+         gemessen überlappten (143 px² bei Full HD). Das war ein Sitz-Problem und
+         keines der Aussage: die Marke ist seitdem kleiner, randlos und rückt
+         fünf statt vier Pixel ein — sie streift die Rundung des Knopfs, statt
+         auf ihm zu liegen.
+
+         Innerhalb der Zeile und nicht überstehend, weil die Zeile
+         `overflow: hidden` trägt — dieselbe Auflage wie an der Ecktaste im
+         Header, wo `.header-side` sie stellt. Klickbar bleibt der Knopf: die
+         Marke nimmt keine Zeiger an (Regel unten). -->
+    <ShopReadyBadge
+      v-if="fresh"
+      class="fut-fresh-badge"
+      :count="freshCount"
+      :title="FORGE_FRESH_TITLE"
+      :label="FORGE_FRESH_TITLE"
+    />
+
     <div class="fut-flash" :class="{ 'fut-flash--on': flashed }" aria-hidden="true" />
 
     <!-- Die EINE atmende Ebene der Zeile. Statischer Schein, animiert wird allein
@@ -34,17 +63,18 @@
          Zeile `overflow: hidden` trägt und ein negativer Einzug abgeschnitten
          würde. Genau derselbe Sitz wie beim Quittungsblitz darüber.
 
-         Zwei Anlässe, EINE Ebene: „seit dem letzten Blick bezahlbar" (azur) und
-         „das Günstigste, was gerade geht" (grün). Sie wird UMGEFÄRBT statt eine
-         zweite darüberzulegen — dasselbe Rezept, das `ForgeTreePanel` für
-         `.node-circle--fresh .node-glow` schon begründet: zwei Keyframes auf
-         einer Ebene überlagern sich nicht, und zwei Ebenen kosten das Doppelte
-         für dieselbe Aussage. Azur gewinnt, weil „neu" die seltenere und
-         flüchtigere Auskunft ist. -->
+         ZWEI Anlässe, EINE Ebene: „das Günstigste, was gerade geht" (grün) und
+         „eben hereingerollt" (Knotenfarbe). Sie wird UMGEFÄRBT statt verdoppelt —
+         zwei Ebenen kosten das Doppelte für dieselbe Aussage, und zwei Keyframes
+         auf einer Ebene überlagern sich ohnehin nicht.
+
+         Der DRITTE Anlass war „seit dem letzten Blick bezahlbar", in Azur. Er ist
+         gefallen: ein frischer Eintrag sieht jetzt aus wie ein kaufbarer, und was
+         ihn auszeichnet, steht als Marke in seiner Ecke. -->
     <div
-      v-if="fresh || showBest || arrived"
+      v-if="showBest || arrived"
       class="fut-halo"
-      :class="arrived ? 'fut-halo--arrived' : fresh ? 'fut-halo--fresh' : 'fut-halo--best'"
+      :class="arrived ? 'fut-halo--arrived' : 'fut-halo--best'"
       aria-hidden="true"
     />
 
@@ -69,23 +99,15 @@
         <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
       </span>
 
-      <!-- Und das Gegenstück, in derselben Ecke desselben Motivs wie drüben am
-           Knoten: Schloss heisst nein, Blitz heisst ja, beide können nie
-           zugleich stehen. Die Zeile sagt es zwar schon in Grün — aber der
-           Baum hat für dieselbe Aussage nur den Kreis, und ein Zeichen, das
-           man in beiden Spalten wiedererkennt, ist mehr wert als eines, das
-           nur an einer Stelle nötig wäre. -->
-      <span
-        v-if="entry.canBuy"
-        class="fut-ready-badge"
-        :title="FORGE_READY_BADGE_TITLE"
-      >
-        <Icon
-          :icon="FORGE_AFFORDABLE_TOTAL_ICON"
-          :width="FORGE_READY_BADGE_ICON_PX"
-          :height="FORGE_READY_BADGE_ICON_PX"
-        />
-      </span>
+      <!-- Hier hing das GEGENSTÜCK zum Schloss: ein grüner Kreis mit Blitz,
+           „kaufbar", in der anderen Ecke desselben Glyphs. Er ist gefallen, weil
+           er das dritte Zeichen für dieselbe Sache war — die Zeile trägt bei
+           `canBuy` grünen Grund, Waschung und einen grünen Knopf mit Preis, und
+           in der Ecke oben rechts sitzt jetzt die NEU-Marke. Zwei runde
+           Abzeichen an einem Eintrag lesen sich als zwei Meldungen.
+
+           Was das Schloss betrifft, ändert sich nichts: es bleibt der einzige
+           Bewohner dieses Trägers und sagt weiterhin nein. -->
     </span>
 
     <!-- ══ GESPERRT ══════════════════════════════════════════════
@@ -183,15 +205,16 @@
             :materials="entry.materials"
           />
 
-          <!-- Höchstens EINE, und „NEW" gewinnt — aus demselben Grund wie beim
-               Schein darüber: „neu" ist die seltenere und flüchtigere Auskunft. -->
-          <span v-if="fresh" class="fut-tag" :aria-label="FORGE_FRESH_TITLE">
-            {{ FORGE_FRESH_LABEL }}
-          </span>
+          <!-- Hier stand die „NEW"-Pille, bis sie in die Ecke oben rechts
+               gewandert ist (`ShopReadyBadge`, ganz oben in dieser Datei). Der
+               Fuß trägt seitdem nur noch die eine Marke, die eine ZEILEN-Frage
+               beantwortet — welcher Eintrag der billigste kaufbare ist. Der
+               `v-else-if` von damals ist mit der Pille gefallen: die zwei
+               standen um denselben Platz, jetzt tut es keine mehr. -->
           <!-- Zwei Wortlaute, einer davon je Viewport ausgeblendet — Muster
                `.ft-buy-all-label` in der Kopfleiste. -->
           <span
-            v-else-if="showBest"
+            v-if="showBest"
             class="fut-tag fut-tag--best"
             :aria-label="bestTitle"
             :title="bestTitle"
@@ -302,6 +325,7 @@ import { Icon } from '@iconify/vue'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { forgeGrowLabel, forgeLevelParts } from '@/composables/ui/useForgeUpgrades'
 import ForgeCostRow from './ForgeCostRow.vue'
+import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
 import type { ForgeUpgradeEntry } from '@/types'
 import {
   FORGE_BEST_BUY_LABEL,
@@ -315,14 +339,11 @@ import {
   FORGE_REQ_MET_MARK,
   FORGE_REQ_OPEN_MARK,
   FORGE_DIVIDER_PHASE_ICON,
-  FORGE_FRESH_LABEL,
+  FORGE_FRESH_BADGE_ROW_PX,
   FORGE_FRESH_TITLE,
   FORGE_GROW_LABEL,
   FORGE_LEVEL_PREFIX,
   FORGE_LOCK_ICON,
-  FORGE_AFFORDABLE_TOTAL_ICON,
-  FORGE_READY_BADGE_ICON_PX,
-  FORGE_READY_BADGE_TITLE,
   FORGE_PIN_ICON,
   FORGE_ROW_BULK_LABEL,
   FORGE_ROW_BULK_WIDTH_PX,
@@ -342,6 +363,9 @@ const arriveMs = `${FORGE_SPOTLIGHT_ARRIVAL_MS}ms`
 const buyWidth = `${FORGE_ROW_BUY_WIDTH_PX}px`
 const buyWidthCompact = `${FORGE_ROW_BUY_WIDTH_COMPACT_PX}px`
 const bulkWidth = `${FORGE_ROW_BULK_WIDTH_PX}px`
+/* Statischer Wert, einmal je Zeile gesetzt — kein Frame-Wert (Performance-Regel
+   3). Dasselbe Muster wie `bulkWidth` darüber. */
+const freshBadgeSize = `${FORGE_FRESH_BADGE_ROW_PX}px`
 
 const props = withDefaults(
   defineProps<{
@@ -449,11 +473,27 @@ const showReqList = computed(
 )
 
 /**
- * Die BEST-BUY-Marke wird gezeigt — aber nicht neben „NEW": beide Auskünfte
- * hängen an derselben atmenden Ebene und derselben Pillenposition, und eine
- * frische Zeile ist ohnehin schon die auffälligste der Liste.
+ * Die BEST-BUY-Marke wird gezeigt.
+ *
+ * Hier stand `props.best && !props.fresh`: „neu" hatte Vorrang, weil beide
+ * dieselbe atmende Ebene und dieselbe Pillenposition wollten. Beides ist weg —
+ * „neu" ist zur Marke in der Ecke geworden und hat weder Ebene noch Pille. Die
+ * zwei Auskünfte können deshalb nebeneinander stehen, und sie sollen es: „das
+ * hier ist neu" und „das hier ist das Billigste" sind verschiedene Sätze, und
+ * ein Eintrag, auf den beide zutreffen, ist der interessanteste der Liste.
  */
-const showBest = computed(() => props.best && !props.fresh)
+const showBest = computed(() => props.best)
+
+/**
+ * Was in der NEU-Marke steht.
+ *
+ * `bulkCount` ist der eingefrorene Stand aus der Liste und fällt dort auf 0,
+ * sobald ein Eintrag nicht mehr kaufbar ist — die Marke verschwände dann trotz
+ * `fresh`, weil `ShopReadyBadge` bei `count === 0` gar nicht erscheint. Frisch
+ * heisst immer auch kaufbar, also ist die Untergrenze eine Eins.
+ */
+const freshCount = computed(() => (props.bulkCount > 1 ? props.bulkCount : 1))
+
 
 /** Warum diese Zeile die Marke trägt. Wortlaut wie an `MeepSkillNode`. */
 const bestTitle = `${FORGE_BEST_BUY_LABEL} — cheapest you can afford`
@@ -503,9 +543,13 @@ const buyTitle = computed(() => {
   display: flex;
   align-items: stretch;
   gap: 11px;
-  /* Gemessen an der HÖCHSTEN Fassung: Kopfzeile mit „NEW"-Fähnchen plus
-     Materialband. Sie steht hier, damit die anderen — eine gesperrte Zeile ohne
-     beides, eine ohne Fähnchen — nicht aus der Reihe fallen. */
+  /* Gemessen an der HÖCHSTEN Fassung: Kopfzeile, Materialband und Pille im Fuß.
+     Sie steht hier, damit die anderen — eine gesperrte Zeile ohne beides, eine
+     ohne Pille — nicht aus der Reihe fallen.
+
+     Das „NEW"-Fähnchen war einmal Teil dieser Messung und ist in die Ecke oben
+     rechts gewandert. Die Zahl bleibt: es stand NEBEN dem Materialband, nicht
+     darüber, und trug die Höhe deshalb nie. */
   min-height: 103px;
   padding: 11px 13px 11px 16px;
   background: #1c1c18;
@@ -638,24 +682,6 @@ const buyTitle = computed(() => {
   border-color: #9fe062;
 }
 
-/* ── NEU SEIT DEM LETZTEN BLICK ──────────────────────────────────
-   Azur, und zwar dasselbe Azur wie `ShopReadyBadge`: die Marke am Header, am
-   Profil-Reiter und an der Abteilungs-Schiene hat den Spieler hergeführt, der
-   Rahmen führt die Spur bis zum Eintrag zu Ende. Grün ist hier schon „kaufbar",
-   Gold auf den Karten dasselbe — beide wären doppelt belegt.
-
-   Steht NACH `--ready` und `--best`: frisch ist immer auch kaufbar, und die
-   spätere Regel gewinnt bei gleicher Spezifität. Das Innenlicht wird mit
-   umgefärbt — ein azurner Rahmen über grünem Innenlicht wären zwei Aussagen an
-   derselben Kante. Der grün getönte GRUND bleibt: frisch heisst „neu bezahlbar",
-   die Zeile ist also beides und soll auch beides zeigen. */
-.fut-row--fresh {
-  border-color: #60a5fa;
-  box-shadow:
-    inset 0 0 0 1px rgba(96, 165, 250, 0.24),
-    inset 0 0 26px -6px rgba(59, 130, 246, 0.24);
-}
-
 .fut-row--locked {
   opacity: 0.72;
 }
@@ -726,6 +752,28 @@ const buyTitle = computed(() => {
   z-index: 3;
 }
 
+/* ── DIE NEU-MARKE ───────────────────────────────────────────
+   Sitz und Mass für `ShopReadyBadge`; die Marke selbst bringt Farbe, Rundung
+   und Schein mit (Custom Properties vererben über die Scope-Grenze).
+
+   5px und nicht negativ: die Zeile trägt `overflow: hidden`, ein überstehendes
+   Eck wäre abgeschnitten — dieselbe Auflage, unter der die Marke an der
+   Header-Ecktaste innerhalb ihrer Platte sitzt. Der fünfte Pixel ist gemessen:
+   bei vier lag die Marke auf der Ecke des Stapelknopfs, bei fünf streift sie
+   nur noch dessen Rundung.
+
+   `pointer-events: none` überschreibt das `auto` der Komponente, das dort für
+   die Tooltips am Header steht. Hier liegt die Marke über der oberen rechten
+   Ecke des KAUFKNOPFS, und ein Klick, der 18px daneben ins Leere ginge, wäre
+   der teuerste Fehlklick der Spalte. */
+.fut-fresh-badge.fut-fresh-badge {
+  --sbadge-d: v-bind(freshBadgeSize);
+  --sbadge-top: 5px;
+  --sbadge-right: 5px;
+  z-index: 4;
+  pointer-events: none;
+}
+
 /* ══════════════════════════════════════════════════
    ICON · STUFE · NAME · MATERIAL
 ══════════════════════════════════════════════════ */
@@ -746,37 +794,6 @@ const buyTitle = computed(() => {
 .fut-ico {
   flex-shrink: 0;
   align-self: center;
-}
-
-/* Dieselben Maße wie `.fc-lock-badge` (rpg-theme.css), nur in Grün — die beiden
-   lösen sich in derselben Ecke ab und dürfen dabei nicht springen. Der Träger
-   `.fut-glyph` ist `position: relative` und hat die Maße des 56px-Glyphs; das
-   Abzeichen kostet die Zeile deshalb keine Breite.
-
-   Im BAUM sitzt dasselbe Abzeichen oben rechts, nicht unten — dort steht unter
-   dem Glyph der Stufen-Chip im Kreis, hier trägt die Zeile ihre Stufe daneben.
-   Wiedererkannt wird es am Glyph und an der Farbe, nicht an der Ecke; jede
-   Spalte legt es dorthin, wo ihre eigene Geometrie Platz hat. */
-.fut-ready-badge {
-  position: absolute;
-  right: -3%;
-  bottom: -3%;
-  width: 44%;
-  height: 44%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #14200c;
-  border: 1.5px solid #4a8a28;
-  color: #9fe062;
-  pointer-events: none;
-}
-
-.fut-ready-badge svg {
-  width: 66%;
-  height: 66%;
-  display: block;
 }
 
 /* Zwei Zeilen: oben Stufe/Name/Wirkung, darunter das Lager. */
@@ -873,23 +890,23 @@ const buyTitle = computed(() => {
   line-height: 1.15;
 }
 
+/* Nur noch FORM, keine Farbe: die Pille gibt es seit dem Umbau ausschliesslich
+   als BEST-BUY, und die bringt Rand, Grund und Tinte selbst mit. Hier standen
+   die azurnen Werte von „NEW" — jede einzelne davon wurde von `--best`
+   überschrieben, sobald die Weiche im Template nur noch einen Ausgang hatte. */
 .fut-tag {
   flex-shrink: 0;
   padding: 2px 6px;
   border-radius: 3px;
-  border: 1px solid #bae6fd;
-  background: linear-gradient(135deg, #60a5fa, #2563eb);
-  color: #fff;
+  border: 1px solid transparent;
   font-size: 10.5px;
   font-weight: 900;
   letter-spacing: 0.08em;
   line-height: 1.3;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
-/* Dieselbe Pille in Grün. Sie ersetzt „NEW", sie steht nie daneben — die Weiche
-   sitzt im Template, nicht hier. Verlauf und Tinte im Rezept des Kaufknopfes,
-   damit Marke und Handlung dieselbe Farbe sprechen. */
+/* Verlauf und Tinte im Rezept des Kaufknopfes, damit Marke und Handlung
+   dieselbe Farbe sprechen. */
 .fut-tag--best {
   border-color: #9fe062;
   background: linear-gradient(135deg, #52b830, #2e7a1a);
@@ -1204,13 +1221,6 @@ const buyTitle = computed(() => {
   border-radius: 4px;
   pointer-events: none;
   animation: fut-halo-breathe 2.2s ease-in-out infinite;
-}
-
-/* Neu seit dem letzten Blick — azur, wie `ShopReadyBadge` am Header und am
-   Profil-Reiter, die den Spieler hergeführt haben. */
-.fut-halo--fresh {
-  border: 1px solid #bae6fd;
-  box-shadow: inset 0 0 16px rgba(59, 130, 246, 0.42);
 }
 
 /* Das Günstigste, was gerade geht — grün, wie der `.best-buy-ring` am Knoten im

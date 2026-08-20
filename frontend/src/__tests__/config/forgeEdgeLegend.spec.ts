@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { FORGE_EDGE_LEGEND_ROWS, FORGE_EDGE_LEGEND_SWATCH_W } from '@/config/constants'
+import {
+  FORGE_EDGE_LEGEND_ROWS,
+  FORGE_EDGE_LEGEND_SWATCH_W,
+  FORGE_LIMB_VEIN_FACTOR,
+  FORGE_LIMB_LIT_FACTOR,
+  FORGE_LIMB_READY_FACTOR,
+  FORGE_LIMB_FULL_FACTOR,
+  FORGE_LIMB_HALO_FACTOR,
+} from '@/config/constants'
 
 /**
  * Die LEGENDE zur Kantensprache — und die eine Naht, die still reissen kann.
@@ -77,5 +85,27 @@ describe('Kanten-Legende', () => {
       expect(row.width).toBeGreaterThan(0)
       expect(row.width).toBeLessThan(FORGE_EDGE_LEGEND_SWATCH_W / 4)
     }
+  })
+
+  /**
+   * Die Breiten-LEITER der Bühne — dieselbe Ordnung, die die Legende abbildet.
+   *
+   * „Je weiter ein Weg gegangen ist, desto mehr der Rinne füllt er aus", und
+   * dazwischen steht seit der Kaufbar-Ader eine vierte Sprosse: ein Weg, an
+   * dessen Ende man HANDELN kann, wiegt mehr als ein begonnener und weniger als
+   * ein vollendeter.
+   *
+   * Geprüft wird sie hier, weil die Reihenfolge sonst still kippt: die vier
+   * Faktoren stehen als einzelne Zahlen nebeneinander, und wer einen davon
+   * nachjustiert, sieht die drei anderen nicht. Eine kaufbare Ader, die breiter
+   * als eine ausgewachsene ist, kehrt die Aussage um — und nichts fiele auf.
+   */
+  it('hält die Breiten-Leiter der Adern in ihrer Reihenfolge', () => {
+    expect(FORGE_LIMB_VEIN_FACTOR).toBeLessThan(FORGE_LIMB_LIT_FACTOR)
+    expect(FORGE_LIMB_LIT_FACTOR).toBeLessThan(FORGE_LIMB_READY_FACTOR)
+    expect(FORGE_LIMB_READY_FACTOR).toBeLessThan(FORGE_LIMB_FULL_FACTOR)
+    // Und der Schein bleibt breiter als jede Ader, sonst schaute er nicht mehr
+    // unter ihr hervor.
+    expect(FORGE_LIMB_FULL_FACTOR).toBeLessThan(FORGE_LIMB_HALO_FACTOR)
   })
 })

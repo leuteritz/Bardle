@@ -76,10 +76,28 @@ const { announceReceipt } = useHerald()
  * verschwände er beim Abteilungswechsel mitsamt seinem `v-if`, obwohl der Baum
  * daneben weiterhin bedienbar ist.
  */
-const { spotlightId, pinned, clearPin, resetForgeSpotlight } = useForgeSpotlight()
+const { spotlightId, hoverId, pinned, clearPin, resetForgeSpotlight } = useForgeSpotlight()
 const { detailsOpen, closeDetails } = useForgeDetailsPane()
 
 watch(spotlightId, (id) => {
+  if (id) forgeStore.acknowledgeShopEntry(id)
+})
+
+/**
+ * Und derselbe Wächter noch einmal am ZEIGER allein.
+ *
+ * `spotlightId` ist `pinnedId ?? listHoverId ?? treeHoverId`, und seit der Fokus
+ * dauerhaft steht (Herleitung an `hoverId` in `useForgeSpotlight`), bewegt er
+ * sich beim Überfahren anderer Einträge nicht mehr. Quittiert wurde damit
+ * ausgerechnet das, was der Spieler gerade NICHT ansieht — der angeheftete
+ * Eintrag —, während die Marke an jeder überfahrenen Zeile stehenblieb.
+ *
+ * Zwei Wächter und keine Zusammenfassung: beide Fragen sind verschieden
+ * („worauf zeigt er gerade" und „was hält er fest"), und beide sollen
+ * quittieren. `acknowledgeShopEntry` ist idempotent, doppelte Meldungen kosten
+ * also nichts.
+ */
+watch(hoverId, (id) => {
   if (id) forgeStore.acknowledgeShopEntry(id)
 })
 

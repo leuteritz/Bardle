@@ -1600,9 +1600,16 @@
 
 /* Frei, aber noch bei Stufe null. Dasselbe Eisblau wie der Rand eines
    `empty`-Kreises — Kante und Knoten sagen dasselbe, in derselben Farbe. */
+/* Frei, aber noch bei Stufe null UND nicht bezahlbar — sonst läge die
+   Ready-Ader darüber. Hier stand Eisblau `#7bb8ff` mit der Begründung, es sei
+   „dasselbe Eisblau wie der Rand eines `empty`-Kreises". Diesen Rand gibt es
+   nicht mehr: er war der lauteste NICHT kaufbare Zustand des Baums und ist
+   gefallen, als die Kaufbarkeit die Hervorhebung übernahm. Die Kante behauptete
+   seitdem eine Übereinstimmung, die es nicht gibt — und leuchtete ausgerechnet
+   dort am hellsten, wo am Ende nichts zu holen ist. */
 .limb-vein--open {
-  stroke: #7bb8ff;
-  opacity: 0.45;
+  stroke: #5c6470;
+  opacity: 0.34;
 }
 
 /* Gewachsen und ausgewachsen tragen beide die Farbe des ZIELS — auf der Bühne
@@ -1615,4 +1622,28 @@
 
 .limb-vein--full {
   opacity: 0.95;
+}
+
+/* AM ENDE DIESER KANTE STEHT ETWAS, DAS MAN KAUFEN KANN.
+ *
+ * Volle Deckkraft und die Farbe des Ziels — dieselbe, die dessen Rahmen und
+ * Grund tragen. Kante, Rand und Füllung sind damit EIN Körper: das Auge folgt
+ * dem Faden bis zum Kreis, ohne unterwegs die Farbe zu wechseln.
+ *
+ * Sie liegt über allen anderen Adern, weil sie die einzige ist, die zum Handeln
+ * auffordert. Und sie steht hier unten, damit sie bei gleicher Spezifität
+ * gewinnt.
+ *
+ * Statisch wie alles in diesem Abschnitt: `stroke` kommt als Attribut vom Pfad,
+ * hier steht nur Deckkraft. Kein Filter, keine Animation, keine Custom Property
+ * — die Zusage weiter oben gilt unverändert. */
+.limb-vein--ready {
+  opacity: 1;
+}
+
+/* Der Schein darunter. Dasselbe Rezept wie `.limb-halo` unter der vollen Ader —
+   ein zweiter, breiter Strich statt eines `drop-shadow` —, nur gut doppelt so
+   kräftig: hier soll er nicht nur als Dicke wirken, sondern als Leuchten. */
+.limb-ready-halo {
+  opacity: 0.26;
 }

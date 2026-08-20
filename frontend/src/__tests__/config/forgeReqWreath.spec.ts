@@ -7,7 +7,8 @@ import {
   FORGE_REQ_DOT_PITCH_DEG,
   FORGE_SPOTLIGHT_NODE_SCALE,
   FORGE_MIN_AIR_PX,
-  FORGE_READY_BADGE_MIN_DIAMETER,
+  FORGE_CORNER_BADGE_MIN_DIAMETER,
+  FORGE_FRESH_BADGE_NODE_PCT,
 } from '@/config/constants'
 import { FORGE_NODES } from '@/config/progression/starForge'
 import type { ForgeNodeTier } from '@/types'
@@ -149,18 +150,20 @@ describe('Star Forge — der Bedingungs-Kranz stösst nirgends an', () => {
  * die Kantenlänge des Kreises. Was seine Schwelle verschiebt, verschiebt auch
  * die Zusagen darüber.
  */
-describe('Kaufbar-Abzeichen — wo es steht und wo nicht', () => {
+describe('Eck-Abzeichen am Knoten — wo es steht und wo nicht', () => {
+  // Die Ecke oben rechts trug bis zum Umbau das BLITZ-Abzeichen („kaufbar") und
+  // trägt jetzt die NEU-Marke. Der Blitz ist gefallen, weil beide sich
+  // zwangsläufig trafen — frisch heisst immer auch kaufbar. Die Schwelle blieb:
+  // ihre Begründung hängt an der GRÖSSE, nicht am Motiv.
   it('fällt genau auf dem kleinsten Rang aus', () => {
-    // Performance-Regel 7: 44 % von 34 px sind rund fünfzehn, das Glyph darin
-    // 66 % davon — zehn Pixel. Ein Blitz auf zehn Pixeln ist ein Fleck, und ein
-    // Fleck ist Zierrat. Die Schwelle muss deshalb ECHT zwischen `glimmer` und
-    // dem nächstgrösseren Rang liegen; steht sie auf einer der beiden Zahlen,
-    // kippt die Zusage beim nächsten Durchmesser-Eingriff still.
+    // Die Schwelle muss ECHT zwischen `glimmer` und dem nächstgrösseren Rang
+    // liegen; steht sie auf einer der beiden Zahlen, kippt die Zusage beim
+    // nächsten Durchmesser-Eingriff still.
     const withBadge = Object.entries(FORGE_NODE_DIAMETER).filter(
-      ([, d]) => d >= FORGE_READY_BADGE_MIN_DIAMETER,
+      ([, d]) => d >= FORGE_CORNER_BADGE_MIN_DIAMETER,
     )
     const withoutBadge = Object.entries(FORGE_NODE_DIAMETER).filter(
-      ([, d]) => d < FORGE_READY_BADGE_MIN_DIAMETER,
+      ([, d]) => d < FORGE_CORNER_BADGE_MIN_DIAMETER,
     )
 
     expect(withoutBadge.map(([tier]) => tier)).toEqual(['glimmer'])
@@ -168,20 +171,26 @@ describe('Kaufbar-Abzeichen — wo es steht und wo nicht', () => {
 
     const largestWithout = Math.max(...withoutBadge.map(([, d]) => d))
     const smallestWith = Math.min(...withBadge.map(([, d]) => d))
-    expect(largestWithout).toBeLessThan(FORGE_READY_BADGE_MIN_DIAMETER)
-    expect(smallestWith).toBeGreaterThan(FORGE_READY_BADGE_MIN_DIAMETER)
+    expect(largestWithout).toBeLessThan(FORGE_CORNER_BADGE_MIN_DIAMETER)
+    expect(smallestWith).toBeGreaterThan(FORGE_CORNER_BADGE_MIN_DIAMETER)
   })
 
-  it('bleibt auf jedem Rang, der es trägt, lesbar', () => {
-    // Das Glyph im Abzeichen misst 44 % × 66 % der Kreiskante. Unter acht Pixeln
-    // ist auch ein GEFÜLLTES Motiv nicht mehr als ein Punkt — die Schwelle oben
-    // muss diesen Boden für jeden tragenden Rang halten.
-    const MIN_READABLE_GLYPH_PX = 8
+  it('trägt auf jedem Rang, der es zeigt, eine lesbare ZIFFER', () => {
+    // Die Marke misst `FORGE_FRESH_BADGE_NODE_PCT` der Kreiskante, ihre Ziffer
+    // 62 % davon (`ShopReadyBadge`: `font-size: calc(var(--d) * 0.62)`). Unter
+    // acht Pixeln ist eine Ziffer kein Zeichen mehr, sondern ein Fleck —
+    // Performance-Regel 7. Die Schwelle oben muss diesen Boden für jeden
+    // tragenden Rang halten.
+    //
+    // Hier stand dieselbe Rechnung für das Blitz-GLYPH (44 % × 66 %). Sie ist
+    // mit ihm gefallen, die Zusage nicht.
+    const MIN_READABLE_DIGIT_PX = 8
     for (const [tier, diameter] of Object.entries(FORGE_NODE_DIAMETER)) {
-      if (diameter < FORGE_READY_BADGE_MIN_DIAMETER) continue
-      expect(diameter * 0.44 * 0.66, `${tier}: der Blitz zerfällt`).toBeGreaterThan(
-        MIN_READABLE_GLYPH_PX,
-      )
+      if (diameter < FORGE_CORNER_BADGE_MIN_DIAMETER) continue
+      expect(
+        (diameter * FORGE_FRESH_BADGE_NODE_PCT) / 100 * 0.62,
+        `${tier}: die Ziffer der NEU-Marke zerfällt`,
+      ).toBeGreaterThan(MIN_READABLE_DIGIT_PX)
     }
   })
 })

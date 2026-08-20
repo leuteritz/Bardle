@@ -3,7 +3,6 @@
     class="fo-row"
     :class="{
       'fo-row--ready': offer.ready,
-      'fo-row--fresh': fresh,
       'fo-row--deal': offer.kind === 'bargain',
       'fo-row--sold': offer.sold,
     }"
@@ -11,16 +10,36 @@
     :data-offer-id="offer.id"
     @mouseenter="$emit('hover', offer.id)"
   >
-    <!-- Die EINE atmende Ebene der Zeile. Statischer Schein, animiert wird allein
-         ihre Deckkraft (Performance-Regel 2/11) — und sie wird UMGEFÄRBT statt
-         verdoppelt: dasselbe Rezept wie `.fut-halo` in der Upgrade-Zeile
-         nebenan. Azur gewinnt, weil „neu" die seltenere Auskunft ist. -->
-    <div
-      v-if="fresh || offer.ready"
-      class="fo-halo"
-      :class="fresh ? 'fo-halo--fresh' : 'fo-halo--ready'"
-      aria-hidden="true"
+    <!-- NEU SEIT DEM LETZTEN BLICK — dieselbe Marke, dieselbe Ecke wie an der
+         Upgrade-Zeile darunter, am Knoten im Baum und an der Ecktaste im Header
+         (`ShopReadyBadge`). Vier Orte, eine Form: der Spieler folgt ihr vom
+         Header bis zu dem einen Eintrag, der gemeint ist.
+
+         Ihre Zahl ist hier IMMER eine Eins, und das ist keine Verlegenheit: ein
+         Relikt und eine Konstellation kauft man Stufe für Stufe über denselben
+         Knopf, einen Stapel gibt es nicht. „1" heisst also genau das, was der
+         Fall ist — ein Kauf steht offen.
+
+         Der HANDEL bekommt keine. Seine Zeile trägt bereits ein Laufband, eine
+         Uhr und einen Rabattstempel; eine vierte Meldung in derselben Ecke wäre
+         kein Zeichen mehr, sondern Lärm — und „neu" sagt beim Händler ohnehin
+         die Uhr, die nur er hat. -->
+    <ShopReadyBadge
+      v-if="fresh && offer.kind !== 'bargain'"
+      class="fo-fresh-badge"
+      :count="1"
+      :title="FORGE_FRESH_TITLE"
+      :label="FORGE_FRESH_TITLE"
     />
+
+    <!-- Die EINE atmende Ebene der Zeile. Statischer Schein, animiert wird allein
+         ihre Deckkraft (Performance-Regel 2/11) — dasselbe Rezept wie `.fut-halo`
+         in der Upgrade-Zeile nebenan.
+
+         Sie hatte einen zweiten Anlass: „neu seit dem letzten Blick", in Azur.
+         Der ist gefallen — ein frisches Angebot sieht aus wie ein kaufbares, und
+         was es auszeichnet, steht als Marke in seiner Ecke. -->
+    <div v-if="offer.ready" class="fo-halo fo-halo--ready" aria-hidden="true" />
 
     <!-- Der Handel bringt sein Laufband mit — das einzige Angebot, das eine
          Uhr hat, sagt es auch ohne Zahlen. Eigene Maske, damit das `overflow`
@@ -127,9 +146,12 @@
  */
 import { Icon } from '@iconify/vue'
 import ForgeCostRow from './ForgeCostRow.vue'
+import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
 import { formatCompactDuration } from '@/utils/ui/format'
 import type { ForgeOffer } from '@/types'
 import {
+  FORGE_FRESH_BADGE_OFFER_PX,
+  FORGE_FRESH_TITLE,
   FORGE_LEVEL_PREFIX,
   FORGE_OFFER_CLOCK_ICON,
   FORGE_OFFER_COST_IMAGE_PX,
@@ -156,6 +178,8 @@ defineEmits<{
 }>()
 
 const shineDuration = `${FORGE_OFFER_SHINE_MS}ms`
+/* Statisch, einmal je Zeile — kein Frame-Wert (Performance-Regel 3). */
+const freshBadgeSize = `${FORGE_FRESH_BADGE_OFFER_PX}px`
 const costImageSize = `${FORGE_OFFER_COST_IMAGE_PX}px`
 </script>
 
@@ -197,12 +221,6 @@ const costImageSize = `${FORGE_OFFER_COST_IMAGE_PX}px`
   border-color: #c89040;
 }
 
-/* Steht NACH `--ready`, weil frisch immer auch kaufbar ist und die spätere
-   Regel bei gleicher Spezifität gewinnt — dieselbe Ordnung wie bei `.fc-card`. */
-.fo-row--fresh {
-  border-color: #60a5fa;
-}
-
 .fo-row--deal {
   border-color: #7a4e20;
   background: linear-gradient(120deg, #1c130a, #241608);
@@ -210,6 +228,26 @@ const costImageSize = `${FORGE_OFFER_COST_IMAGE_PX}px`
 
 .fo-row--sold {
   opacity: 0.72;
+}
+
+/* ── DIE NEU-MARKE ───────────────────────────────────────────
+   Sitz und Mass für `ShopReadyBadge`; Farbe, Rundung und Schein bringt sie
+   selbst mit.
+
+   Diese Zeile trägt KEIN `overflow`, die Marke dürfte also überstehen — sie tut
+   es trotzdem nicht: drüben an der Upgrade-Zeile muss sie innen bleiben, und
+   zwei Marken, die je nach Zeilenart anders an der Kante sitzen, läsen sich als
+   zwei verschiedene Zeichen.
+
+   `pointer-events: none` überschreibt das `auto` der Komponente — unter der
+   Ecke liegt der Kaufknopf. Doppelter Selektor, weil die Komponente ihr `auto`
+   mit gleicher Spezifität setzt. */
+.fo-fresh-badge.fo-fresh-badge {
+  --sbadge-d: v-bind(freshBadgeSize);
+  --sbadge-top: 3px;
+  --sbadge-right: 3px;
+  z-index: 3;
+  pointer-events: none;
 }
 
 /* ══════════════════════════════════════════════════
@@ -226,13 +264,6 @@ const costImageSize = `${FORGE_OFFER_COST_IMAGE_PX}px`
 .fo-halo--ready {
   border: 1px solid #e8c060;
   box-shadow: inset 0 0 16px rgba(232, 192, 64, 0.38);
-}
-
-/* Azur, wie `ShopReadyBadge` am Header und am Profil-Reiter — die Marke, die
-   den Spieler hergeführt hat. */
-.fo-halo--fresh {
-  border: 1px solid #bae6fd;
-  box-shadow: inset 0 0 16px rgba(59, 130, 246, 0.42);
 }
 
 @keyframes fo-breathe {
