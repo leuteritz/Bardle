@@ -122,8 +122,13 @@ export const FORGE_EMPTY_UPGRADE_ENTRY: ForgeUpgradeEntry = {
  * Eintrags; der Topf bleibt einer.
  *
  * Zwei Feinheiten, die sich aus dem Zustand allein NICHT ergeben:
- *   - `ready` hängt an `canBuy`, nicht an `state === 'affordable'`. Der Zustand
- *     kennt nur die Chimes, `canBuy` auch das Materiallager.
+ *   - `ready` hängt an `canBuy`, nicht an `state === 'affordable'`. Die beiden
+ *     sagen seit der Korrektur in `rootEntry()` dasselbe — und genau deshalb
+ *     bleibt es bei `canBuy`: es ist das Feld, das die Frage BEANTWORTET,
+ *     während `affordable` nur eine Stufe auf der Zustandsleiter ist. Wer die
+ *     Leiter das nächste Mal umbaut, soll dabei nicht versehentlich die
+ *     Kaufbarkeit mit umbauen. `__tests__/composables/ui/forgeUpgrades.spec.ts`
+ *     hält die Gleichheit fest, damit sie nicht wieder still auseinanderläuft.
  *   - `capped` fällt zu `reach`, nicht zu `next`. Ein gedeckelter Strahl ist
  *     nicht gesperrt — er wartet auf seine vier Geschwister und muss seine
  *     Kosten weiter zeigen.
@@ -325,11 +330,19 @@ export function useForgeUpgrades(): {
     const goldOk = gameStore.chimes >= goldCost
     const maxed = level >= SOLAR_MAX_LEVELS
     const capped = !maxed && level >= solarStore.maxAllowedLevel
+    /* Hier stand `goldOk`, und das war eine stille Abweichung: ein Kernstrahl
+       galt als `affordable`, sobald die CHIMES reichten — auch wenn das
+       Materiallager leer war. Die Liste las daneben `canBuy` und sagte korrekt
+       „reicht nicht", der Baum leuchtete. Seit der Baum die Kaufbarkeit
+       HERVORHEBT, ist aus der Abweichung ein sichtbarer Fehler geworden.
+       `goldOk` bleibt als Feld — die Kostenzeile färbt damit den Chime-Preis
+       getrennt vom Materialband. */
+    const buyable = solarStore.canAfford(root.id)
 
     let state: ForgeUpgradeState
     if (maxed) state = 'maxed'
     else if (capped) state = 'capped'
-    else if (goldOk) state = 'affordable'
+    else if (buyable) state = 'affordable'
     else if (level > 0) state = 'partial'
     else state = 'empty'
 
@@ -362,7 +375,7 @@ export function useForgeUpgrades(): {
       // Und er hat auch keinen Vorgänger: der Wurzelring IST der Anfang.
       reqs: [],
       unlockProgress: 1,
-      canBuy: solarStore.canAfford(root.id),
+      canBuy: buyable,
     }
   }
 
@@ -425,11 +438,15 @@ export function useForgeUpgrades(): {
     const goldCost = forgeStore.nodeGoldCost(def.id)
     const goldOk = gameStore.chimes >= goldCost
     const materials = costItems(forgeStore.nodeMaterialCost(def.id))
+    /* Einmal gelesen, zweimal gebraucht — hier und unten am Feld. `canAffordNode`
+       geht durch das ganze Materiallager; bei hundertfünfzig Knoten mal vier
+       Instanzen dieses Composables lief dieselbe Prüfung sekündlich doppelt. */
+    const buyable = forgeStore.canAffordNode(def.id)
 
     let state: ForgeUpgradeState
     if (!unlocked) state = 'locked'
     else if (level >= maxLevel) state = 'maxed'
-    else if (forgeStore.canAffordNode(def.id)) state = 'affordable'
+    else if (buyable) state = 'affordable'
     else if (level > 0) state = 'partial'
     else state = 'empty'
 
@@ -516,7 +533,7 @@ export function useForgeUpgrades(): {
       parentName: forgeNodeName(def.parentId),
       reqs: forgeStore.nodeRequirements(def),
       unlockProgress: lock.progress,
-      canBuy: forgeStore.canAffordNode(def.id),
+      canBuy: buyable,
     }
   }
 

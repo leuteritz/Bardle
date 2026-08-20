@@ -68,6 +68,24 @@
       <span v-if="entry.state === 'locked'" class="fc-lock-badge" aria-hidden="true">
         <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
       </span>
+
+      <!-- Und das Gegenstück, in derselben Ecke desselben Motivs wie drüben am
+           Knoten: Schloss heisst nein, Blitz heisst ja, beide können nie
+           zugleich stehen. Die Zeile sagt es zwar schon in Grün — aber der
+           Baum hat für dieselbe Aussage nur den Kreis, und ein Zeichen, das
+           man in beiden Spalten wiedererkennt, ist mehr wert als eines, das
+           nur an einer Stelle nötig wäre. -->
+      <span
+        v-if="entry.canBuy"
+        class="fut-ready-badge"
+        :title="FORGE_READY_BADGE_TITLE"
+      >
+        <Icon
+          :icon="FORGE_AFFORDABLE_TOTAL_ICON"
+          :width="FORGE_READY_BADGE_ICON_PX"
+          :height="FORGE_READY_BADGE_ICON_PX"
+        />
+      </span>
     </span>
 
     <!-- ══ GESPERRT ══════════════════════════════════════════════
@@ -302,6 +320,9 @@ import {
   FORGE_GROW_LABEL,
   FORGE_LEVEL_PREFIX,
   FORGE_LOCK_ICON,
+  FORGE_AFFORDABLE_TOTAL_ICON,
+  FORGE_READY_BADGE_ICON_PX,
+  FORGE_READY_BADGE_TITLE,
   FORGE_PIN_ICON,
   FORGE_ROW_BULK_LABEL,
   FORGE_ROW_BULK_WIDTH_PX,
@@ -711,6 +732,37 @@ const buyTitle = computed(() => {
 .fut-ico {
   flex-shrink: 0;
   align-self: center;
+}
+
+/* Dieselben Maße wie `.fc-lock-badge` (rpg-theme.css), nur in Grün — die beiden
+   lösen sich in derselben Ecke ab und dürfen dabei nicht springen. Der Träger
+   `.fut-glyph` ist `position: relative` und hat die Maße des 56px-Glyphs; das
+   Abzeichen kostet die Zeile deshalb keine Breite.
+
+   Im BAUM sitzt dasselbe Abzeichen oben rechts, nicht unten — dort steht unter
+   dem Glyph der Stufen-Chip im Kreis, hier trägt die Zeile ihre Stufe daneben.
+   Wiedererkannt wird es am Glyph und an der Farbe, nicht an der Ecke; jede
+   Spalte legt es dorthin, wo ihre eigene Geometrie Platz hat. */
+.fut-ready-badge {
+  position: absolute;
+  right: -3%;
+  bottom: -3%;
+  width: 44%;
+  height: 44%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #14200c;
+  border: 1.5px solid #4a8a28;
+  color: #9fe062;
+  pointer-events: none;
+}
+
+.fut-ready-badge svg {
+  width: 66%;
+  height: 66%;
+  display: block;
 }
 
 /* Zwei Zeilen: oben Stufe/Name/Wirkung, darunter das Lager. */

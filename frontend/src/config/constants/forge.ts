@@ -2578,6 +2578,30 @@ export const FORGE_FRESH_TITLE = 'Newly affordable'
  */
 export const FORGE_AFFORDABLE_TOTAL_ICON = 'ph:lightning-fill'
 
+// ── Das Kaufbar-Abzeichen am Baumknoten ──────────────────────────────────────
+/**
+ * Ab welchem Knotendurchmesser der Kreis das Blitz-Abzeichen überhaupt trägt.
+ *
+ * Das Abzeichen ist 44 % der Kante (dieselbe Geometrie wie das Schloss), das
+ * Glyph darin 66 % davon — bei einem Glimmer mit 34 px sind das rund zehn
+ * Pixel, und ein Blitz auf zehn Pixeln ist ein Fleck. Performance-Regel 7: was
+ * klein gezeigt wird, trägt keinen Zierrat, und ein Fleck ist Zierrat.
+ *
+ * Die Schwelle trennt `glimmer` (34) von `leaf` (46) — der einzige Rang, der
+ * herausfällt. Er verliert dadurch nichts an Auskunft: Farbe und Dämpfung
+ * tragen dort dieselbe Aussage, nur ohne das zweite Zeichen. Gepinnt in
+ * `__tests__/config/forgeReqWreath.spec.ts` gegen `FORGE_NODE_DIAMETER`.
+ */
+export const FORGE_READY_BADGE_MIN_DIAMETER = 40
+
+/** Kantenlänge des Blitz-Glyphs im Abzeichen. Der Kreis darum kommt aus
+ *  Prozentwerten am Knoten — dieses Maß ist die Vorgabe für `@iconify/vue`,
+ *  das eine Zahl verlangt; die Regel darunter skaliert es auf 66 %. */
+export const FORGE_READY_BADGE_ICON_PX = 12
+
+/** Was am Abzeichen steht, wenn der Zeiger darauf ruht. */
+export const FORGE_READY_BADGE_TITLE = 'Ready to grow'
+
 // ── Stapelkauf ───────────────────────────────────────────────────────────────
 /**
  * Wie viele Stufen ein einzelner „Buy ×N" höchstens auf einmal nimmt.

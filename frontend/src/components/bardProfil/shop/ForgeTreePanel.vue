@@ -285,6 +285,13 @@
             `node-circle--${node.sizeClass}`,
             `node-circle--${entryOf(node).state}`,
             {
+              // Die zwei Klassen, die den Baum beim Öffnen lesbar machen:
+              // kaufbar leuchtet, offen-aber-zu-teuer tritt zurück. Sie hängen
+              // an `canBuy` und NICHT an `state === 'affordable'` — dieselbe
+              // Wahl wie in `ForgeUpgradeTile.vue`, damit Baum und Liste
+              // dieselbe Frage gleich beantworten.
+              'node-circle--ready': entryOf(node).canBuy,
+              'node-circle--short': isShort(node),
               'node-circle--fresh': freshIds.has(node.id),
               'node-circle--spot': isSpot(node.id),
               'node-circle--pinned': pinnedId === node.id,
@@ -348,6 +355,33 @@
             aria-hidden="true"
           >
             <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
+          </span>
+
+          <!-- DAS GEGENSTÜCK ZUM SCHLOSS. Die beiden können sich nie treffen —
+               gesperrt heisst `canBuy === false` —, stehen aber trotzdem in
+               verschiedenen Ecken: unten in der Mitte hängt der Stufen-Chip,
+               und den schneidet nur der Blitz, weil ein gesperrter Knoten auf
+               Stufe 0 gar keinen zeigt. Gemessen, nicht geschätzt; die
+               Herleitung steht an `.node-ready-badge`.
+
+               Warum überhaupt ein Zeichen, wo der Kreis doch schon grün ist:
+               Farbe allein ist eine Auskunft, die bei Rot-Grün-Schwäche und
+               beim schnellen Überfliegen als erstes ausfällt. Das Glyph ist
+               dasselbe `ph:lightning-fill`, das im Spiel überall „kaufbar"
+               heisst.
+
+               Ab `FORGE_READY_BADGE_MIN_DIAMETER` — auf einem Glimmer wäre es
+               ein Fleck (Performance-Regel 7). -->
+          <span
+            v-if="entryOf(node).canBuy && showReadyBadge(node)"
+            class="node-ready-badge"
+            :title="FORGE_READY_BADGE_TITLE"
+          >
+            <Icon
+              :icon="FORGE_AFFORDABLE_TOTAL_ICON"
+              :width="FORGE_READY_BADGE_ICON_PX"
+              :height="FORGE_READY_BADGE_ICON_PX"
+            />
           </span>
 
           <!-- DER BEDINGUNGS-KRANZ. Er steht auf dem OBEREN Bogen, weil das
@@ -478,6 +512,10 @@ import {
   FORGE_ICON_SIZE_BOUGH,
   FORGE_LOCK_ICON,
   FORGE_PIN_ICON,
+  FORGE_AFFORDABLE_TOTAL_ICON,
+  FORGE_READY_BADGE_MIN_DIAMETER,
+  FORGE_READY_BADGE_ICON_PX,
+  FORGE_READY_BADGE_TITLE,
   FORGE_ENDLESS_SYMBOL,
   FORGE_BODY_EDGE_FRACTION,
   FORGE_SUN_EDGE_GAP,
@@ -835,7 +873,10 @@ const closedBridges = computed(() => bridgeLimbs.value.filter((b) => !b.open))
  * zwei Fälle bewusst anders ein: `capped` fällt bei Level > 0 zu `grown` und
  * sonst zu `open` — ein Deckel ist keine Sperre, das sagt schon das fehlende
  * Schloss am Kreis. Und `affordable` bekommt keinen eigenen Topf, weil im
- * Spätspiel bis zu neunzig Knoten gleichzeitig kaufbar sind.
+ * Spätspiel bis zu neunzig Knoten gleichzeitig kaufbar sind — grüne Adern über
+ * das halbe Netz heben nichts hervor, sie färben es nur um. Die Kaufbarkeit
+ * steht am KNOTEN (`--ready`/`--short` samt Blitz-Abzeichen); die Kante sagt,
+ * wie das Netz gewachsen ist, und das ist eine andere Frage.
  */
 const veinGroups = computed<Record<LimbVein, Limb[]>>(() => {
   const out: Record<LimbVein, Limb[]> = {
@@ -1164,6 +1205,34 @@ const zoneHazeStyle = computed(() => {
  */
 function entryOf(node: TreeNode): ForgeUpgradeEntry {
   return entryById.value.get(node.id) ?? FORGE_EMPTY_UPGRADE_ENTRY
+}
+
+/**
+ * Offen, aber der Vorrat reicht nicht — die Gegenseite zu `canBuy`.
+ *
+ * Warum das nicht schlicht `!canBuy` ist: gesperrt, gedeckelt und ausgewachsen
+ * tragen ihre EIGENE Aussage am Kreis (Schloss, matter Rand, Goldring). Würden
+ * sie hier mitgedämpft, läge über ihnen eine zweite Aussage, die etwas anderes
+ * behauptet — „dir fehlen Chimes" steht an einem MAX-Knoten schlicht falsch.
+ *
+ * Wortgleich mit `short` in `ForgeUpgradeTile.vue`. Zwei Fassungen derselben
+ * Weiche liefen beim nächsten Zustand auseinander, und Baum und Liste stehen im
+ * Shop-Tab nebeneinander im Bild — man sähe es sofort.
+ */
+function isShort(node: TreeNode): boolean {
+  const entry = entryOf(node)
+  return (
+    entry.state !== 'locked' &&
+    entry.state !== 'capped' &&
+    entry.state !== 'maxed' &&
+    !entry.canBuy
+  )
+}
+
+/** Trägt dieser Kreis das Blitz-Abzeichen? Herleitung der Schwelle steht an
+ *  `FORGE_READY_BADGE_MIN_DIAMETER`. */
+function showReadyBadge(node: TreeNode): boolean {
+  return FORGE_NODE_DIAMETER[node.sizeClass] >= FORGE_READY_BADGE_MIN_DIAMETER
 }
 
 /** „3/6" für alles Gedeckelte, „3 ∞" für einen Bough — ein gerendertes
@@ -2270,6 +2339,49 @@ const nextPhasePreviewStyle = computed(() => ({
   display: block;
 }
 
+/* DAS KAUFBAR-ABZEICHEN. Maße von `.fc-lock-badge` (rpg-theme.css) übernommen,
+   damit die Marken an einem Kreis eine Familie bleiben — aber oben RECHTS statt
+   unten rechts, und das ist gemessen und nicht geschätzt: unten in der Mitte
+   sitzt `.node-level` als Flex-Kind, und ein Abzeichen in der Ecke des
+   Schlosses schnitt dessen rechtes Ende. Das Schloss trifft den Chip nie, weil
+   ein gesperrter Knoten auf Stufe 0 gar keinen zeigt.
+
+   Oben rechts ist die einzige Ecke, die an einem KAUFBAREN Knoten nie belegt
+   ist: der Bedingungskranz steht zwar auf dem oberen Bogen, aber nur an
+   gesperrten Knoten — dieselbe gegenseitige Ausschliessung wie beim Schloss.
+   Unten links sitzt die Anheftung, unten rechts das Schloss, in der Mitte
+   Glyph und Stufe.
+
+   Der Best-Buy-Ring liegt bei `inset: -7px` und damit AUSSERHALB der zwei
+   Prozent, um die das Abzeichen übersteht — die beiden berühren sich nicht.
+
+   Eigene Regeln statt der geteilten Klasse, weil `.fc-lock-badge` global ist
+   und auch die Zeile in der Liste bedient. */
+.node-ready-badge {
+  position: absolute;
+  right: -3%;
+  top: -3%;
+  width: 44%;
+  height: 44%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #14200c;
+  border: 1.5px solid #4a8a28;
+  color: #9fe062;
+  pointer-events: none;
+}
+
+/* Prozentual, nicht in Pixeln: der Kreis skaliert beim Spotlight auf 1,22 und
+   beim Zoom mit der Bühne — ein festes Maß liefe dabei aus seinem Rund heraus.
+   Die Zahl am `<Icon>` ist nur die Vorgabe, die `@iconify/vue` verlangt. */
+.node-ready-badge svg {
+  width: 66%;
+  height: 66%;
+  display: block;
+}
+
 /* States */
 /* Gesperrt: es tritt das MOTIV zurück, nicht der ganze Kreis. Eine `opacity` am
    Kreis vererbt sich multiplikativ auf jedes Kind — das Schloss an seiner Kante
@@ -2287,10 +2399,17 @@ const nextPhasePreviewStyle = computed(() => ({
   filter: grayscale(60%);
 }
 
+/* Freigeschaltet, nie gekauft. Hier stand ein azurner Rand mit Schein bei
+   Deckkraft 0,85 — und das war der eigentliche Grund, warum der Baum beim
+   Öffnen nicht zu lesen war: im frischen Spielstand ist `empty` die MEHRHEIT
+   der Knoten, und die Mehrheit leuchtete lauter als das, was man kaufen kann.
+   Hervorheben trägt nicht, solange die Gegenseite gleich laut bleibt.
+
+   Azur ist ausserdem die Farbe von `--fresh` und darf nicht zweimal etwas
+   bedeuten. Was ein leerer Knoten von einem angefangenen unterscheidet, sagt
+   weiterhin der Stufen-Chip: `0/6` gegen `3/6`. */
 .node-circle--empty {
-  border-color: #7bb8ff;
-  box-shadow: 0 0 9px rgba(123, 184, 255, 0.45);
-  opacity: 0.85;
+  border-color: #5c4520;
 }
 
 .node-circle--empty:hover {
@@ -2321,8 +2440,45 @@ const nextPhasePreviewStyle = computed(() => ({
   z-index: -1;
 }
 
-.node-circle--affordable {
-  border-color: #c89040;
+/* ── OFFEN, ABER ES REICHT NICHT ──────────────────────────────────
+   Die Gegenseite, und der Grund, warum die Unterscheidung überhaupt trägt.
+   Dieselbe Aussage wie `.fut-row--short` an der Zeile drüben.
+
+   KEIN `opacity` am Kreis, und das ist hier kein Feinschliff: sie vererbt sich
+   multiplikativ auf jedes Kind (siehe `--locked` weiter oben), UND `--dim`
+   setzt beim Spotlight bereits eine am selben Element. Beide zusammen stünden
+   bei 0,45 × 0,3 — der Knoten wäre praktisch weg, statt nur zurückgetreten.
+
+   Zurück tritt deshalb genau das, was keine Auskunft trägt: das Glyph als
+   grösstes Element des Kreises, der Stufen-Chip eine Spur, und der Schein ganz.
+   Der RAND bleibt sichtbar — er ist die Form des Netzes, und die soll man beim
+   Planen weiter ablesen können. `filter: grayscale()` ist ein statischer
+   Zustand, keine laufende Animation (Performance-Regel 2). */
+.node-circle--short {
+  border-color: #3e3020;
+}
+
+.node-circle--short .node-glyph {
+  opacity: 0.38;
+  filter: grayscale(70%);
+}
+
+.node-circle--short .node-level {
+  opacity: 0.45;
+}
+
+.node-circle--short .node-glow {
+  opacity: 0;
+}
+
+/* ── BEREIT ───────────────────────────────────────────────────────
+   Grün, nicht mehr Gold. Zwei Gründe: „Kaufbar / Aktiv → Grün" ist die
+   Hausfarbe, und die Liste rechts sagt es seit jeher so (`.fut-row--ready`) —
+   im Shop-Tab stehen beide gleichzeitig im Bild. Gold gehört damit allein
+   `--maxed`, was den Baum ein zweites Mal entzerrt: bis dahin hiess dieselbe
+   Farbe „kannst du kaufen" und „ist fertig". */
+.node-circle--ready {
+  border-color: #6ec040;
 }
 
 /* Der Schein eines kaufbaren Knotens steht STILL.
@@ -2335,8 +2491,8 @@ const nextPhasePreviewStyle = computed(() => ({
  * Der Verzicht kostet nichts, er gewinnt sogar: was ueberall blinkt, hebt
  * nichts hervor. Es atmen nur noch die zwei Zeichen, die WIRKLICH etwas
  * auszeichnen — der frisch aufgegangene Knoten und der eine Best-Buy-Ring. */
-.node-circle--affordable .node-glow {
-  box-shadow: 0 0 22px rgba(232, 200, 80, 0.85);
+.node-circle--ready .node-glow {
+  box-shadow: 0 0 22px rgba(82, 184, 48, 0.85);
   opacity: 0.72;
 }
 
@@ -2350,14 +2506,14 @@ const nextPhasePreviewStyle = computed(() => ({
   to   { opacity: 1; }
 }
 
-.node-circle--affordable:hover {
+.node-circle--ready:hover {
   transform: scale(1.12);
-  border-color: #e8c060;
+  border-color: #9fe062;
 }
 
 /* Beim Zeigen steht der Schein still und voll — `animation-play-state: paused`
    käme hier zu spät, der laufende Keyframe schriebe die Deckkraft weiter. */
-.node-circle--affordable:hover .node-glow {
+.node-circle--ready:hover .node-glow {
   animation: none;
   opacity: 1;
 }
@@ -2368,7 +2524,7 @@ const nextPhasePreviewStyle = computed(() => ({
    49 Knoten, und eine zweite Keyframe je Knoten wäre der teuerste Weg zur
    gleichen Aussage. Der Ring selbst bleibt statisch azurn.
 
-   Steht NACH `--affordable`, damit die spätere Regel bei gleicher Spezifität
+   Steht NACH `--ready`, damit die spätere Regel bei gleicher Spezifität
    gewinnt. */
 .node-circle--fresh {
   border-color: #60a5fa;
@@ -2382,10 +2538,24 @@ const nextPhasePreviewStyle = computed(() => ({
   border-color: #bae6fd;
 }
 
+/* Gedeckelt — wartet auf seine vier Geschwister, ist also nicht gesperrt und
+   trägt kein Schloss. Er tritt zurück wie ein `--short`, und aus demselben
+   Grund an den KINDERN: hier stand `opacity: 0.6` am Kreis, und die traf beim
+   Spotlight ein zweites Mal auf `--dim` (0,3). Zusammen 0,18 — ein gedeckelter
+   Kernstrahl war praktisch weg, sobald der Zeiger irgendwo im Baum stand.
+   `--dim` ist jetzt die einzige Deckkraft am Kreis. */
 .node-circle--capped {
   border-color: #4a3010;
-  opacity: 0.6;
   cursor: not-allowed;
+}
+
+.node-circle--capped .node-glyph {
+  opacity: 0.42;
+  filter: grayscale(60%);
+}
+
+.node-circle--capped .node-level {
+  opacity: 0.5;
 }
 
 .node-circle--maxed {
@@ -2408,12 +2578,17 @@ const nextPhasePreviewStyle = computed(() => ({
   z-index: 5;
 }
 
+/* Heller als das Grün der kaufbaren Knoten (`#6ec040`), seit die überhaupt grün
+   sind: der Ring stand auf `#52b830` und wäre sonst nur noch ein zweiter Kreis
+   in derselben Farbe. Er bleibt unterscheidbar durch dreierlei — er liegt
+   AUSSERHALB des Kreises, er trägt eine Beschriftung, und er ist das einzige
+   Zeichen im Knotenfeld, das noch atmet. */
 .best-buy-ring {
   position: absolute;
   inset: -7px;
   border-radius: 50%;
-  border: 2px solid #52b830;
-  box-shadow: 0 0 16px rgba(82, 184, 48, 0.8);
+  border: 2px solid #9fe062;
+  box-shadow: 0 0 16px rgba(159, 224, 98, 0.85);
   animation: best-buy-breathe 1.8s ease-in-out infinite alternate;
 }
 
@@ -2579,7 +2754,7 @@ const nextPhasePreviewStyle = computed(() => ({
   opacity: 1;
 }
 
-/* Doppelt geschrieben, mit Absicht: `.node-circle--affordable:hover` wiegt
+/* Doppelt geschrieben, mit Absicht: `.node-circle--ready:hover` wiegt
    0,2,0 und hielte den Knoten sonst auf seinen 1,12 fest. Auf den Knoten zeigen
    und auf seine Karte zeigen sind EINE Geste — sie dürfen nicht zwei Größen
    ergeben. */
@@ -2590,7 +2765,7 @@ const nextPhasePreviewStyle = computed(() => ({
 
 /* Beim Spotlight steht der Kaufbar-Schein still und voll — sonst schwebten zwei
    atmende Ringe mit verschiedenem Takt übereinander. Dieselbe Auflösung wie in
-   `.node-circle--affordable:hover .node-glow`, nur greift sie jetzt auch, wenn
+   `.node-circle--ready:hover .node-glow`, nur greift sie jetzt auch, wenn
    der Zeiger drüben auf der Karte steht. */
 .node-circle--spot .node-glow {
   animation: none;
@@ -2642,7 +2817,7 @@ const nextPhasePreviewStyle = computed(() => ({
 @media (prefers-reduced-motion: reduce) {
   /* Der Schein bleibt stehen — ohne die Deckkraft mitzusetzen bliebe er
      unsichtbar, und der Knoten verlöre sein „bereit"-Zeichen. */
-  .node-circle--affordable .node-glow {
+  .node-circle--ready .node-glow {
     animation: none;
     opacity: 1;
   }

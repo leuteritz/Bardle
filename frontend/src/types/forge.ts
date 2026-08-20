@@ -402,8 +402,11 @@ export type ForgeUpgradeState = 'locked' | 'empty' | 'partial' | 'affordable' | 
  * `capped` landen gemeinsam in `reach` — alle drei zeigen eine volle Karte samt
  * Kosten, keiner von ihnen ist kaufbar.
  *
- * `ready` hängt an `canBuy`, nicht an `state === 'affordable'`: der Zustand
- * kennt nur die Chimes, `canBuy` auch das Materiallager.
+ * `ready` hängt an `canBuy`, nicht an `state === 'affordable'`. Hier stand, der
+ * Zustand kenne nur die Chimes — das galt für die fünf Kernstrahlen und war ein
+ * Fehler, kein Entwurf; er ist in `rootEntry()` behoben, und beide sagen jetzt
+ * dasselbe. `canBuy` bleibt trotzdem der Träger: es ist das Feld, das die Frage
+ * BEANTWORTET, während `affordable` nur eine Sprosse der Zustandsleiter ist.
  */
 export type ForgeUpgradeBucketId = 'ready' | 'reach' | 'next' | 'grown'
 

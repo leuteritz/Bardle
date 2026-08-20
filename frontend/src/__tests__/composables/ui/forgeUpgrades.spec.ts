@@ -151,6 +151,23 @@ describe('useForgeUpgrades — Zustand der Kernstrahlen', () => {
     expect(entry(ROOT_IDS[0]).canBuy).toBe(true)
   })
 
+  /* DER Fall, wegen dem `rootEntry()` nicht mehr auf `goldOk` schaut.
+     Der Zustand hing an den Chimes allein — ein Kernstrahl mit voller Börse und
+     leerem Lager galt als `affordable`, während `canBuy` daneben korrekt `false`
+     sagte. Solange nur die Liste den Zustand las, fiel es nicht auf; seit der
+     Baum die Kaufbarkeit HERVORHEBT, leuchtete dort ein Knoten, den der Knopf
+     nicht einlöst. `partial`, nicht `empty`: der Strahl ist gewachsen. */
+  it('is not affordable when only the chimes are there', () => {
+    fillPurse()
+    useInventoryStore().collectedMaterials = {}
+    setAllRoots(SOLAR_MATERIAL_FROM_LEVEL - 1)
+    const e = entry(ROOT_IDS[0])
+    expect(e.goldOk).toBe(true)
+    expect(e.materials.length).toBeGreaterThan(0)
+    expect(e.canBuy).toBe(false)
+    expect(e.state).toBe('partial')
+  })
+
   it('partial once grown but out of reach', () => {
     setAllRoots(1)
     useGameStore().chimes = 0
@@ -421,6 +438,20 @@ describe('useForgeUpgrades — Invarianten', () => {
         fillPurse()
         useSolarUpgradeStore().starPhase = FORGE_LEAF_UNLOCK_PHASE
         setAllRoots(SOLAR_MAX_LEVELS)
+      },
+    ],
+    /* Die Anordnung, die die Zusage überhaupt scharf stellt. In allen anderen
+       oben liegen Börse und Lager gemeinsam voll oder gemeinsam leer — die
+       beiden Auskünfte könnten dort auseinanderlaufen, ohne dass es auffiele.
+       Hier reichen die Chimes und das Material fehlt, und genau in dieser Lücke
+       hat der Zustand der Kernstrahlen einmal gelogen. */
+    [
+      'a full purse but an empty store',
+      () => {
+        fillPurse()
+        useInventoryStore().collectedMaterials = {}
+        useSolarUpgradeStore().starPhase = FORGE_LEAF_UNLOCK_PHASE
+        setAllRoots(SOLAR_MATERIAL_FROM_LEVEL - 1)
       },
     ],
   ])('canBuy means affordable and nothing else — %s', (_label, arrange) => {
@@ -956,14 +987,7 @@ describe('forgeUpgradeMayTravel — wer die Ansicht bewegen darf', () => {
 
   it('deckt jeden Zustand des Typs ab', () => {
     const covered = CASES.map(([state]) => state).sort()
-    const all: ForgeUpgradeState[] = [
-      'locked',
-      'empty',
-      'partial',
-      'affordable',
-      'capped',
-      'maxed',
-    ]
+    const all: ForgeUpgradeState[] = ['locked', 'empty', 'partial', 'affordable', 'capped', 'maxed']
     expect(covered).toEqual([...all].sort())
   })
 
