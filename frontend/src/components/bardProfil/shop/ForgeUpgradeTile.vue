@@ -565,9 +565,23 @@ const buyTitle = computed(() => {
        der Zeile, eine ohne läge über der Schrift;
      • ein statisches Innenlicht, das die Kante von innen stützt.
    Der Rahmen geht auf `#6ec040`, dieselbe Kante wie Kaufknopf und Hover. */
+/* Die oberste Ebene ist neu: derselbe Schimmer in der eigenen Farbe des
+   Upgrades, den drüben der Kreis im Baum trägt. Verankert LINKS, wo die
+   Knotenkante (`::before`) und das Glyph stehen — die Farbe wächst damit in die
+   Zeile hinein, statt als Strich an ihrem Rand zu kleben.
+
+   Schwächer als am Kreis (20 statt 30) und bei 44 % ausgelaufen: die Zeile ist
+   breit, und alles rechts davon sind ZAHLEN — Kosten, Wirkungssprung, Preis am
+   Knopf. Auf die wartet, wer spart, und sie stehen auf dem grünen Grund
+   unverändert klar. */
 .fut-row--ready {
   border-color: #6ec040;
   background:
+    radial-gradient(
+      120% 150% at 4% 50%,
+      color-mix(in srgb, var(--node-c, #6ec040) 20%, transparent) 0%,
+      transparent 44%
+    ),
     linear-gradient(to left, rgba(82, 184, 48, 0.16), transparent 58%),
     #1e2a14;
   box-shadow:

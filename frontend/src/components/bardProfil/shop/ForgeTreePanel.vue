@@ -2477,8 +2477,41 @@ const nextPhasePreviewStyle = computed(() => ({
    im Shop-Tab stehen beide gleichzeitig im Bild. Gold gehört damit allein
    `--maxed`, was den Baum ein zweites Mal entzerrt: bis dahin hiess dieselbe
    Farbe „kannst du kaufen" und „ist fertig". */
+/* Und der GRUND wechselt mit. Hier lag `#111008` wie unter jedem anderen
+   Zustand auch — kaufbar und zu teuer unterschieden sich allein am Rand, das
+   Innere war bei beiden dasselbe dunkle Loch. Ein Kreis, der bereitsteht, sah
+   aus wie ein umrandetes Nichts.
+
+   ZWEI Ebenen in EINEM statischen `background`, und die Reihenfolge trägt die
+   Aussage: unten der grüne Verlauf — dieselbe Farbe, mit der `.fut-row--ready`
+   drüben in der Liste „kaufbar" sagt —, darüber ein Schimmer in der EIGENEN
+   Farbe des Upgrades. Die Gruppe hebt sich als Ganzes ab, und der einzelne
+   Knoten sieht trotzdem nach sich selbst aus.
+
+   Warum der Schimmer bei 30 %/24 % sitzt und bei 68 % ausgelaufen ist, und
+   nicht flächig liegt: das Glyph in der Mitte trägt DIESELBE Farbe
+   (`:style="{ color: node.color }"`), und die Knotenfarben sind hell und
+   gesättigt — `#e8c040`, `#7bb8ff`, `#ff9a5c`. Ein flächiger Ton schluckte das
+   Motiv. Der versetzte Mittelpunkt löst das über die GEOMETRIE statt über eine
+   dünnere Farbe: wo das Glyph steht, ist der Grund wieder dunkelgrün.
+
+   Die Innenkante gibt dem Kreis Körper — der obere Lichtsaum als Bogen, der
+   Ring als Abschluss. Beides statisch; `.node-circle` hat bereits eine
+   Transition auf `box-shadow`, die den einmaligen Umschlag trägt.
+   `background` steht ABSICHTLICH nicht in dieser Transition: ein überblendeter
+   Verlauf rasterte jeden Frame neu (Performance-Regel 2). */
 .node-circle--ready {
   border-color: #6ec040;
+  background:
+    radial-gradient(
+      circle at 30% 24%,
+      color-mix(in srgb, var(--node-color, #6ec040) 30%, transparent) 0%,
+      transparent 68%
+    ),
+    linear-gradient(158deg, #1e2a14 0%, #141c0d 72%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 0 0 1px rgba(159, 224, 98, 0.16);
 }
 
 /* Der Schein eines kaufbaren Knotens steht STILL.
@@ -2506,9 +2539,20 @@ const nextPhasePreviewStyle = computed(() => ({
   to   { opacity: 1; }
 }
 
+/* Beim Zeigen hebt der ganze Kreis an, nicht nur sein Rand: derselbe Aufbau,
+   eine Stufe heller. Der Schimmer darf hier weiter aufdrehen (42 statt 30) —
+   unter dem Zeiger steht immer nur EIN Knoten, und der Tooltip daneben nennt
+   das Motiv ohnehin im Klartext. */
 .node-circle--ready:hover {
   transform: scale(1.12);
   border-color: #9fe062;
+  background:
+    radial-gradient(
+      circle at 30% 24%,
+      color-mix(in srgb, var(--node-color, #6ec040) 42%, transparent) 0%,
+      transparent 70%
+    ),
+    linear-gradient(158deg, #24331a 0%, #18220f 72%);
 }
 
 /* Beim Zeigen steht der Schein still und voll — `animation-play-state: paused`
