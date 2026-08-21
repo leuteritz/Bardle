@@ -175,7 +175,8 @@ const ariaLabel = computed(
 
    Die Spalte einfach auszureizen löst es nicht: dann bleibt der Trennklinge
    daneben 1px Luft und sie klebt am Balken. Stattdessen weicht der DRITTE Wert
-   (siehe `.pv-regen` unten) — Breite ist hier das knappe Gut, nicht Inhalt.
+   (siehe `--vb-regen-display` unten) — Breite ist hier das knappe Gut, nicht
+   Inhalt.
 
    `--vb-h` ist der EINZIGE Wert, der die Grösse der Leiste steuert: Schriftgrade,
    Label-Padding und Eckradius leitet sie per `calc()` daraus ab — deshalb führt
@@ -213,7 +214,19 @@ const ariaLabel = computed(
     calc(var(--vb-h) * 0.36),
     calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1) - 4px)
   );
-  --vb-cur-reserve: 4.8ch;
+  /* KEINE Breitenreserve für den laufenden Wert — sie verträgt sich nicht mit
+     dem mittigen Satz, den `label-placement="inside"` trägt. Die Reserve zählt
+     zur Breite des Satzes, seine Box sitzt damit zwar mittig, die sichtbaren
+     Ziffern darin klebten aber rechts in ihrer Zelle und stünden neben der
+     Achse. Was sie verhindern sollte — ein bei jedem Tick wandernder Satz —
+     verhindert `font-variant-numeric: tabular-nums` in der Leiste ohnehin: die
+     Breite ändert sich nur beim Wechsel der Stellenzahl. Ausgemessen an der
+     Orbit-Leiste, die Herleitung steht in `PlayerHPBar.vue`.
+
+     Für die Breite dieser Spalte ist das ein Gewinn: ohne Reserve wird der Satz
+     schmaler, nicht breiter — der Überlauf, um den es im Block darüber geht,
+     rückt weiter weg. */
+  --vb-cur-reserve: 0;
 
   /* Unter 1700 passt die Regeneration nicht mehr in die Leiste, ohne dass
      entweder der Text abgeschnitten würde oder die Trennklinge daneben ihre Luft

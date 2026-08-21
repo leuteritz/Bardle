@@ -10,7 +10,6 @@
       :max="playerStore.maxHP"
       :regen-per-sec="regen"
       label-placement="inside"
-      label-align="center"
       spark
       :aria-label="`Sun health ${Math.ceil(playerStore.currentHP)} of ${playerStore.maxHP}`"
     />
@@ -112,14 +111,17 @@ onUnmounted(() => {
      Welle, und die Zahl hatte darin keinen Platz. Genau diese Höhe ist jetzt da,
      die Leiste trägt ihre Zahlen selbst.
 
-     In der ANORDNUNG folgt sie dem Profilkopf allerdings NICHT: dort steht der
-     Satz an der linken Kante, weil die Leiste in einer schmalen Spalte an einer
-     Modalkante sitzt und eine Mitte darin kaum auszumachen wäre. Hier hängt sie
-     breit und frei über der Sonne, und die ist die optische Achse des ganzen
-     Bildes — der Satz steht deshalb mittig (`label-align="center"`), der
-     Regen-Wert als dritter an der rechten Kante. Ein Herz-Emblem stand einmal
-     davor; es sagte nichts, was die eingefärbte Füllung und die Zahl nicht schon
-     doppelt sagen, und im Profilkopf ist es aus demselben Grund gefallen.
+     In der ANORDNUNG folgt sie dem Profilkopf, und der ihr: der Satz steht
+     mittig im Balken, der Regen-Wert als dritter an der rechten Kante. Hier
+     trägt die Mitte sich von selbst — die Leiste hängt breit und frei über der
+     Sonne, und die ist die optische Achse des ganzen Bildes. Eine linksbündige
+     Fassung stand einmal daneben; sie war auf schmale Leisten gerechnet, wie der
+     Profilkopf sie hatte, bevor der Balken dort die volle Kopfhöhe bekam. Beide
+     Anzeigen desselben Werts stehen jetzt gleich, und `label-placement="inside"`
+     bringt das mit — eine Angabe zur Ausrichtung gibt es nicht mehr.
+     Ein Herz-Emblem stand einmal davor; es sagte nichts, was die eingefärbte
+     Füllung und die Zahl nicht schon doppelt sagen, und im Profilkopf ist es aus
+     demselben Grund gefallen.
 
      Die Position bleibt von alledem unberührt: der Container hängt an
      `translate(-50%, -100%)` und wächst nach OBEN, weg von der Scheibe. Deren
@@ -161,7 +163,9 @@ onUnmounted(() => {
      jedem Tick. Dafür lohnt sich ein dauerhafter Versatz nicht.
 
      Im Pause-Overlay bleiben die Muster: dort steht die Zahl neben dem Balken
-     und der Wert soll seine Kante halten, nicht eine Mitte treffen. */
+     und der Wert soll seine Kante halten, nicht eine Mitte treffen. Der
+     Profilkopf dagegen setzt die Reserve aus genau demselben Grund wie hier auf
+     null — er trägt seinen Satz seit demselben Umbau mittig. */
   --vb-cur-reserve: 0;
 }
 

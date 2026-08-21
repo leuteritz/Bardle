@@ -142,20 +142,11 @@ const props = withDefaults(
     max: number
     /**
      * Wo die Zahlen stehen.
-     * `inside` — zwei geclippte Ebenen IM Balken (braucht Höhe)
+     * `inside` — zwei geclippte Ebenen IM Balken, Satz mittig (braucht Höhe)
      * `above`  — mittig darüber, optional mit Emblem (schmale Leisten)
      * `right`  — rechts daneben in fester Spaltenbreite
      */
     labelPlacement?: 'inside' | 'above' | 'right' | 'none'
-    /**
-     * Wie der Satz IM Balken steht — nur für `inside` von Bedeutung; bei
-     * `above` steht die Zeile ohnehin mittig, bei `right` in eigener Spalte.
-     * `start`  — an der linken Kante: schmale Spalte mit fester Kante daneben
-     *            (Profilkopf), wo eine Mitte nur schwer auszumachen wäre
-     * `center` — mittig: breite Leiste, frei auf der Bühne, mit der Sonne
-     *            darunter als optischer Achse (Orbit)
-     */
-    labelAlign?: 'start' | 'center'
     /** > 0 hängt „+x/s" an — nur bei `inside`, sonst fehlt der Platz. */
     regenPerSec?: number
     /** Unsichtbare Messmuster hinter dem Wert; die Spalte nimmt die breiteste
@@ -176,7 +167,6 @@ const props = withDefaults(
   }>(),
   {
     labelPlacement: 'none',
-    labelAlign: 'start',
     regenPerSec: 0,
     widthProbes: false,
     leadIcon: undefined,
@@ -200,7 +190,6 @@ const stage = computed(() => sunVitalStage(hpRatio.value * 100))
 const rootClass = computed(() => [
   `vb--${stage.value}`,
   `vb--label-${props.labelPlacement}`,
-  `vb--align-${props.labelAlign}`,
   { 'vb--crit': stage.value === 'red' },
 ])
 
@@ -624,6 +613,14 @@ onUnmounted(() => {
   inset: 0;
   z-index: 5;
   padding: 0 var(--vb-label-pad, calc(var(--vb-hh) * 0.22));
+  /* Der Satz steht auf der MITTE des Balkens. Beide Stellen, die ihn `inside`
+     tragen, haben eine optische Achse, an der er sich ausrichten kann: im Orbit
+     die Sonnenscheibe darunter, im Profilkopf die Leiste selbst, die dort die
+     volle Kopfhöhe einnimmt. Eine linksbündige Fassung stand hier einmal
+     daneben — sie war auf schmale Leisten gerechnet, die es nicht mehr gibt.
+     Wer sie wieder braucht, braucht auch `--vb-cur-reserve` zurück: die beiden
+     hängen zusammen (siehe `.vb-cur`). */
+  justify-content: center;
   /* Synchron mit der Füllung: der Farbwechsel läuft mit der Kante, nicht hinter
      ihr her. Der einzige Wert dieser Datei, der nicht `transform` ist — auf
      zwei Elementen, höchstens einmal je Spielsekunde. */
@@ -636,7 +633,17 @@ onUnmounted(() => {
 
 /* Der laufende Wert bekommt eine Breitenreserve: ohne sie rückt der Trenner
    dahinter jedes Mal seitwärts, wenn aus „12.4K" ein „9.8K" wird. Bei bestellten
-   Messmustern übernimmt deren Rasterzelle diese Aufgabe genauer. */
+   Messmustern übernimmt deren Rasterzelle diese Aufgabe genauer.
+
+   Die Zelle klebt ihren Inhalt RECHTS an, die Reserve bleibt also links davon
+   stehen. Für die Anordnungen neben und über dem Balken ist das genau richtig —
+   der Wert hält seine Kante zum Schrägstrich. Ein mittiger Satz verträgt sie
+   dagegen NICHT: die leere Reserve zählt zur Breite des Satzes, seine Box sitzt
+   mittig, die sichtbaren Zeichen darin stehen aber rechts der Achse. Beide
+   `inside`-Aufrufer setzen sie deshalb auf `0` und verlassen sich stattdessen
+   auf `tabular-nums` unten — gleich breite Ziffern, der Satz wandert nur beim
+   Wechsel der STELLENZAHL. Gemessen wurde das an der Orbit-Leiste; die
+   Herleitung steht in `PlayerHPBar.vue`. */
 .vb-cur {
   display: grid;
   grid-template-areas: 'hp';
@@ -648,34 +655,12 @@ onUnmounted(() => {
   grid-area: hp;
 }
 
-/* Bei `inside` steht der Wert links vom Trenner und wächst nach rechts; bei den
-   anderen Anordnungen klebt er rechtsbündig am Schrägstrich. */
-.vb--label-inside .vb-cur {
-  justify-items: start;
-}
-
-/* ── Zentrierter Satz ─────────────────────────────────────────────────────
-   Drei Regeln, weil drei Dinge zusammen die Mitte ergeben. Alle verlangen
-   `.vb--align-center`; der linksbündige Default-Pfad bleibt unberührt. */
-.vb--align-center .vb-label {
-  justify-content: center;
-}
-
-/* Die Zelle des laufenden Werts gibt ihre Messmuster-Reserve nach LINKS ab
-   statt nach rechts. Sonst stünde zwischen Wert und Schrägstrich dauerhaft eine
-   Lücke in Breite der längsten je auftretenden Zahl — der Satz wäre mittig, aber
-   auseinandergezogen. Doppelte Klasse, damit die Regel die `inside`-Fassung
-   darüber unabhängig von der Reihenfolge im Stylesheet schlägt. */
-.vb--label-inside.vb--align-center .vb-cur {
-  justify-items: end;
-}
-
-/* Der dritte Wert klebt weiter an der rechten Kante. Bei linksbündigem Satz
-   genügt ihm dafür sein auto-Margin; bei zentriertem NICHT — der absorbiert den
-   freien Raum und zöge die Zahlen wieder nach links, die Zentrierung liefe ins
-   Leere. Absolut positioniert nimmt er gar keinen Platz im Fluss ein, und die
-   Mitte ist die echte Mitte des Balkens statt der Mitte des Rests. */
-.vb--align-center .vb-regen {
+/* Der dritte Wert klebt an der rechten Kante. Sein auto-Margin weiter unten
+   genügt dafür nur bei linksbündigem Satz; bei mittigem NICHT — er absorbiert
+   den freien Raum und zöge die Zahlen wieder nach links, die Zentrierung liefe
+   ins Leere. Absolut positioniert nimmt er gar keinen Platz im Fluss ein, und
+   die Mitte ist die echte Mitte des Balkens statt der Mitte des Rests. */
+.vb--label-inside .vb-regen {
   position: absolute;
   right: var(--vb-label-pad, calc(var(--vb-hh) * 0.22));
   top: 50%;
