@@ -85,24 +85,15 @@
       >
         <!-- DAS KANTENFELD. Alles, was die Bühne dauerhaft trägt, liegt in
              EINER Gruppe — damit das Zurücktreten beim Zeigen ein einziger
-             `opacity`-Wert auf einer Ebene ist und nicht 175 einzelne
-             Umschaltungen. Bedingung und Scheinwerferkette stehen bewusst
-             DARAUSSEN: sie sind die Antwort auf das Zeigen und dürfen nie
-             mitgedimmt werden. -->
+             `opacity`-Wert auf einer Ebene ist und nicht eine Umschaltung je
+             Pfad. Bedingung und Scheinwerferkette stehen bewusst DARAUSSEN: sie
+             sind die Antwort auf das Zeigen und dürfen nie mitgedimmt werden. -->
         <g class="limb-field">
-          <!-- EIN Strichbild, ZWEI Zustände. Die Breite sagt die Ebene, die
-               Farbe sagt den Zustand — mehr trägt eine Kante nicht. Offen liegt
-               über geschlossen, damit an einer Kreuzung der begehbare Weg
-               gewinnt. -->
-          <g class="limb-closed" stroke-linecap="round" stroke-linejoin="round" fill="none">
-            <path
-              v-for="limb in limbGroups.closed" :key="limb.key + '-c'"
-              :d="limb.d" :stroke-width="limbWidth(limb)"
-            />
-          </g>
+          <!-- Gezeichnet wird nur, was OFFEN ist. Die Breite sagt die Ebene,
+               die Farbe das Ziel. -->
           <g class="limb-open" stroke-linecap="round" stroke-linejoin="round" fill="none">
             <path
-              v-for="limb in limbGroups.open" :key="limb.key + '-o'"
+              v-for="limb in openLimbs" :key="limb.key + '-o'"
               :d="limb.d" :stroke-width="limbWidth(limb)" :stroke="limb.tint"
             />
           </g>
@@ -673,8 +664,6 @@ interface BridgeLimb extends Limb {
   /** Die Leitfarbe des Ziel-Clusters. Sie lag bisher nur im Zonenschleier — und
    *  eine Farbe, die ein Gebiet benennt, gehört auch an den Weg dorthin. */
   accent: string
-  /** Steht die Sonne weit genug für diese Zone? */
-  open: boolean
 }
 
 const nodeById = computed(() => new Map(allNodes.value.map((n) => [n.id, n])))
@@ -737,52 +726,55 @@ const limbs = computed<Limb[]>(() => {
 /** Nur die Struktur. Bedingungen hängen am Zeiger und haben ihre eigene Ebene. */
 const structureLimbs = computed(() => limbs.value.filter((l) => l.kind === 'parent'))
 
-/** Die Wege zwischen zwei Zonen. Offen tragen sie die Leitfarbe ihres Ziels. */
+/** Die Wege zwischen zwei Zonen. Sie tragen die Leitfarbe ihres Ziels. */
 const bridgeLimbs = computed<BridgeLimb[]>(() =>
   limbs.value
     .filter((l) => l.kind === 'bridge')
-    .map((l) => {
-      const cluster = forgeClusterOf(l.targetId)
-      return {
-        ...l,
-        accent: cluster?.accent ?? l.color,
-        open: cluster ? zoneOpen(cluster.phase) : true,
-      }
-    }),
+    .map((l) => ({ ...l, accent: forgeClusterOf(l.targetId)?.accent ?? l.color })),
 )
 
 /**
- * Jede Kante der Bühne, sortiert in die einzigen zwei Töpfe, die es gibt: der
- * Weg ist zu, oder er ist offen.
+ * Die Kanten, die die Bühne trägt — und das sind nur die OFFENEN.
  *
- * Hier standen fünf Töpfe plus eine sechste Auswahl für „kaufbar", und die
- * Bühne trug dafür elf Ebenen in drei Strichbildern. Sie brauchte eine Legende,
- * um lesbar zu sein — und eine Bildsprache, die eine Legende braucht, hat zu
- * viele Wörter.
+ * Hier standen zwei Töpfe: der geschlossene Weg lag als dunkler Strich mit auf
+ * der Bühne und hielt die Form des Netzes. Im frischen Spielstand waren das
+ * rund zweihundert Linien um fünf begehbare herum — ein volles Netz als Antwort
+ * auf eine Frage, die niemand gestellt hatte. Davor standen fünf Töpfe plus
+ * eine sechste Auswahl für „kaufbar", elf Ebenen und eine Legende; eine
+ * Bildsprache, die eine Legende braucht, hat zu viele Wörter.
  *
- * Kaufbarkeit ist bewusst KEIN Zustand mehr: sie hängt an den tickenden Chimes
- * und hätte die Pfade sekündlich umsortiert. Sie steht am Knoten — Rand, Grund
- * und Ready-Badge sagen sie längst.
+ * Eine Kante existiert jetzt genau dann, wenn ihr ZIEL freigeschaltet ist. Kein
+ * Ausblick nach vorn: die Linie kommt mit dem Knoten, den sie erschliesst. Was
+ * die Struktur trotzdem beantwortet, hängt am Zeiger — Scheinwerferkette und
+ * Bedingungslinien liegen ausserhalb dieser Ebene und zeigen auch Wege zu
+ * gesperrten Zielen.
+ *
+ * Die Brücken hingen einmal an der SONNENPHASE (`zoneOpen`) statt am
+ * Knotenzustand und standen deshalb farbig da, während ihr Ziel noch zu war.
+ * Sie lesen dieselbe Frage wie jede andere Kante.
+ *
+ * Kaufbarkeit ist bewusst KEIN Zustand: sie hängt an den tickenden Chimes und
+ * hätte die Pfade sekündlich umsortiert. Sie steht am Knoten — Rand, Grund und
+ * Ready-Badge sagen sie längst.
  */
 interface DrawnLimb extends Limb {
   tint: string
 }
 
-const limbGroups = computed<{ open: DrawnLimb[]; closed: DrawnLimb[] }>(() => {
-  const open: DrawnLimb[] = []
-  const closed: DrawnLimb[] = []
+const openLimbs = computed<DrawnLimb[]>(() => {
   const entries = entryById.value
+  const isOpen = (id: string): boolean => {
+    const entry = entries.get(id)
+    return entry !== undefined && entry.state !== 'locked'
+  }
+  const out: DrawnLimb[] = []
   for (const limb of structureLimbs.value) {
-    const entry = entries.get(limb.targetId)
-    const drawn = { ...limb, tint: limb.color }
-    if (!entry || entry.state === 'locked') closed.push(drawn)
-    else open.push(drawn)
+    if (isOpen(limb.targetId)) out.push({ ...limb, tint: limb.color })
   }
   for (const bridge of bridgeLimbs.value) {
-    const drawn = { ...bridge, tint: bridge.accent }
-    ;(bridge.open ? open : closed).push(drawn)
+    if (isOpen(bridge.targetId)) out.push({ ...bridge, tint: bridge.accent })
   }
-  return { open, closed }
+  return out
 })
 
 /** Der Boden verhindert, dass die feinste Kante beim Herauszoomen verschwindet. */
@@ -2025,26 +2017,21 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 /* ══════════════════════════════════════════════════
-   DIE KANTENSPRACHE — ein Strich, zwei Zustände
+   DIE KANTENSPRACHE — ein Strich, ein Zustand
    ══════════════════════════════════════════════════
 
    Sie lag global in `rpg-theme.css`, solange die Legende dieselben Klassen an
    ihre Proben hängte. Ohne Legende gibt es nur noch diesen einen Verwender.
 
    Alles hier ist STATISCH: kein `filter`, keine Animation, keine Custom
-   Property. Auf der Bühne stehen 175 Pfade dauerhaft im DOM, und jede dieser
-   drei Sachen wäre dort eine dreistellige Rechnung pro Frame
+   Property. Im Spätspiel stehen dreistellig viele Pfade dauerhaft im DOM, und
+   jede dieser drei Sachen wäre dort eine Rechnung pro Frame
    (Performance-Regeln 2, 3 und 11). */
 
-/* Der Weg ist zu — er hält die Form des Netzes, ohne etwas zu versprechen. */
-.limb-closed {
-  stroke: #241d12;
-}
-
-/* Der Weg ist offen. `stroke` kommt als Attribut vom Pfad: die Farbe des Ziels,
-   dieselbe, die dessen Rahmen und Grund tragen. Nicht volle Deckkraft — im
-   Spätspiel sind das rund neunzig gefärbte Linien, und die Kreise darauf sollen
-   lauter bleiben als die Fäden dazwischen. */
+/* `stroke` kommt als Attribut vom Pfad: die Farbe des Ziels, dieselbe, die
+   dessen Rahmen und Grund tragen. Nicht volle Deckkraft — im Spätspiel sind das
+   rund neunzig gefärbte Linien, und die Kreise darauf sollen lauter bleiben als
+   die Fäden dazwischen. */
 .limb-open {
   opacity: 0.75;
 }
