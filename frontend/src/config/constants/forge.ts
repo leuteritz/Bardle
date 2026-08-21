@@ -3115,50 +3115,43 @@ export const FORGE_SPOTLIGHT_COMPASS_SIZE_PX = 32
  */
 export const FORGE_SPOTLIGHT_COMPASS_INSET_PX = 24
 /*
- * ── Das KAMERA-DOCK unten rechts ────────────────────────────────────────────
+ * ── Die zwei belegten ECKEN des Baum-Viewports ───────────────────────────────
  *
- * Zoom-Leiste und Recenter-Beacon stehen dort übereinander in EINEM Container
- * (`.tree-camera-dock`). Zwei absolut gesetzte Ecken wären zwei Quellen für
- * dieselbe Geometrie — und die Sperrfläche darunter muss beide umschliessen.
+ * Unten rechts die Zoom-Leiste, unten links die Kürzel-Zeile (`[C] CENTER`).
+ * Beide rücken gleich weit ein, und beide tragen eine Sperrfläche: was dahinter
+ * liegt, ist für den Spieler nicht vorhanden — dieselbe Regel wie beim
+ * HUD-Freiraum.
  */
-/** Abstand des Docks zur Viewport-Kante. */
-export const FORGE_CAMERA_DOCK_INSET_PX = 14
-/** Luft zwischen Beacon und Zoom-Leiste. */
-export const FORGE_CAMERA_DOCK_GAP_PX = 8
-/** Aussenmass des Recenter-Beacons; das scoped CSS holt es sich per `v-bind`. */
-export const FORGE_RECENTER_BEACON = { w: 168, h: 52 } as const
-/** Radius des Auslenkungs-Rings im viewBox `0 0 36 36`. Er liegt um den Zeiger,
- *  und der trägt die 24 px Untergrenze des Projekts (Icon-Regel 6) — enger
- *  gefasst berührt die Zeigerspitze bei schräger Drehung die Linie. */
-export const FORGE_RECENTER_RING_R = 16
-/** 2·π·FORGE_RECENTER_RING_R — der volle Umfang, also der leere Ring. */
-export const FORGE_RECENTER_RING_CIRCUMFERENCE = 100.53
+/** Abstand beider Ecken zur Viewport-Kante. */
+export const FORGE_VIEWPORT_INSET_PX = 14
+/** Aussenmass der Zoom-Leiste; das scoped CSS holt sich die Breite per `v-bind`.
+ *  Höhe: 18 Knopf, zweimal 6 Polster, zweimal 1 Rahmen. */
+export const FORGE_ZOOM_BAR = { w: 168, h: 32 } as const
+/** Aussenmass der Kürzel-Zeile — grosszügig gegen die gemessenen rund 100×26,
+ *  und zugleich das Platzhaltermass im Ladeschleier. */
+export const FORGE_KEY_HINT_ROW = { w: 132, h: 30 } as const
 /** Bis hierher gilt die Kamera als zentriert — Klemmung und Rundung lassen
  *  `pan` nie exakt auf dem Mittelpunkt liegen. */
 export const FORGE_RECENTER_AT_REST_PX = 1.5
 
 /**
- * Höhe der Zoom-Leiste im Dock: 18 Knöpfe plus zweimal 6 Polster ergibt 30.
- * Dazu Kantenabstand und noch einmal so viel Luft. Ihre BREITE steht hier
- * nicht mehr — sie teilt die des Docks, und das gibt das Beacon vor.
- */
-const FORGE_ZOOM_BAR_H = 58
-
-/**
- * Die Sperrfläche unten rechts — das ganze Dock, nicht nur die Zoom-Leiste.
+ * Die beiden SPERRFLÄCHEN. Drei Leser, und alle meinen dasselbe: der Kompass
+ * darf nicht dorthin ausweichen, und ein Knoten, der dahinter liegt, gilt als
+ * NICHT im Bild.
  *
- * Sie hat drei Leser, und alle meinen dasselbe: der Kompass darf nicht dorthin
- * ausweichen, und ein Knoten, der dahinter liegt, gilt als NICHT im Bild — was
- * verdeckt ist, ist für den Spieler nicht vorhanden (dieselbe Regel wie beim
- * HUD-Freiraum).
- *
- * ABGELEITET und nicht neu gezählt: kommt ein Element ins Dock, wächst die
- * Fläche mit. Sie ist ausdrücklich eine SPERRFLÄCHE und darf grosszügiger sein
- * als das Dock — deshalb der doppelte Kantenabstand.
+ * ABGELEITET und nicht neu gezählt: wächst ein Bedienfeld, wächst seine Fläche
+ * mit. Sie darf grosszügiger sein als das, was dort steht — deshalb der
+ * doppelte Kantenabstand.
  */
-export const FORGE_SPOTLIGHT_COMPASS_KEEPOUT = {
-  w: FORGE_RECENTER_BEACON.w + FORGE_CAMERA_DOCK_INSET_PX * 2,
-  h: FORGE_ZOOM_BAR_H + FORGE_CAMERA_DOCK_GAP_PX + FORGE_RECENTER_BEACON.h,
+export const FORGE_VIEWPORT_KEEPOUTS = {
+  bottomRight: {
+    w: FORGE_ZOOM_BAR.w + FORGE_VIEWPORT_INSET_PX * 2,
+    h: FORGE_ZOOM_BAR.h + FORGE_VIEWPORT_INSET_PX * 2,
+  },
+  bottomLeft: {
+    w: FORGE_KEY_HINT_ROW.w + FORGE_VIEWPORT_INSET_PX * 2,
+    h: FORGE_KEY_HINT_ROW.h + FORGE_VIEWPORT_INSET_PX * 2,
+  },
 } as const
 
 /**

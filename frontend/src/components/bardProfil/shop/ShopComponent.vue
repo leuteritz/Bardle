@@ -24,7 +24,7 @@
     <!-- TEMP: admin shortcut — buys every ray, branch, leaf, relic and
          constellation the CURRENT star phase allows, free of charge. Floated
          into the tree's top corner so it never takes part in the layout: the
-         two bottom ones are taken, by the zoom control and the edge legend.
+         two bottom ones are taken, by the zoom control and the shortcut row.
          Remove together with `starForgeStore.adminMaxAll()`. -->
     <button class="shop-admin-max" title="Admin: buy every forge upgrade at once" @click="maxOutForge">
       <Icon icon="game-icons:anvil-impact" width="16" height="16" />
@@ -433,7 +433,7 @@ const slideMs = `${FORGE_DETAILS_SLIDE_MS}ms`
 }
 
 /* ── TEMP admin button ─────────────────────────────────────────── */
-/* Oben links in der Baumspalte. Die untere linke Ecke gehört der Kantenlegende,
+/* Oben links in der Baumspalte. Die untere linke Ecke gehört der Kürzel-Zeile,
    die untere rechte der Zoom-Leiste — die obere Kante ist die einzige, die frei
    ist.
 

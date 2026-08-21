@@ -15,39 +15,27 @@
 
     <span class="kb-hud__rule" aria-hidden="true" />
 
-    <button
+    <KeybindChip
       v-for="bind in hudBindings"
+      :id="bind.id"
       :key="bind.id"
-      type="button"
-      class="kb-chip"
-      :class="{ 'kb-chip--active': isActive(bind.id) }"
-      :aria-label="`${labelFor(bind)} (${bind.cap})`"
-      @click="triggerKeybind(bind.id)"
-    >
-      <KeyCap :cap="bind.cap" size="sm" :pressed="flashing === bind.id" :lit="isActive(bind.id)" />
-      <span class="kb-chip__label">{{ labelFor(bind) }}</span>
-    </button>
+      :label="labelFor(bind)"
+      :lit="isActive(bind.id)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import KeyCap from './KeyCap.vue'
-import { useKeybindings, triggerKeybind } from '@/composables/system/useKeybindings'
+import KeybindChip from './KeybindChip.vue'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { useUiStore } from '@/stores/core/uiStore'
-import {
-  KEYBINDINGS,
-  KEYBIND_FLASH_MS,
-  KEYBIND_HUD_REVEAL_MS,
-  KEYBIND_RESUME_LABEL,
-} from '@/config/constants'
+import { KEYBINDINGS, KEYBIND_HUD_REVEAL_MS, KEYBIND_RESUME_LABEL } from '@/config/constants'
 import type { KeybindDef, KeybindId } from '@/types'
 
 const uiStore = useUiStore()
 const { isPaused } = useGamePause()
-const { lastTriggered } = useKeybindings()
 
 const hudBindings = computed(() => KEYBINDINGS.filter((b) => b.inHud))
 const controlsCap = computed(() => KEYBINDINGS.find((b) => b.id === 'controls')?.cap ?? '?')
@@ -63,21 +51,6 @@ function isActive(id: KeybindId): boolean {
 function labelFor(bind: KeybindDef): string {
   return bind.id === 'pause' && isPaused.value ? KEYBIND_RESUME_LABEL : bind.label
 }
-
-// Ausgelöstes Kürzel lässt seine Keycap kurz einsinken — dieselbe Rückmeldung
-// für Tastendruck und Mausklick, weil beide über triggerKeybind laufen.
-const flashing = ref<KeybindId | null>(null)
-let flashTimer: ReturnType<typeof setTimeout> | null = null
-
-watch(lastTriggered, (hit) => {
-  if (!hit) return
-  flashing.value = hit.id
-  if (flashTimer !== null) clearTimeout(flashTimer)
-  flashTimer = setTimeout(() => {
-    flashing.value = null
-    flashTimer = null
-  }, KEYBIND_FLASH_MS)
-})
 
 // Die Leiste fährt erst herein, wenn der Spieler angekommen ist — beim Laden
 // liegt ohnehin die Rollenwahl über dem Spiel.
@@ -116,7 +89,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (flashTimer !== null) clearTimeout(flashTimer)
   if (revealTimer !== null) clearTimeout(revealTimer)
   sizeObserver?.disconnect()
   document.documentElement.style.removeProperty('--kb-hud-h')
@@ -134,6 +106,9 @@ function openControls() {
    keine Goldlinie. Die Leiste steht frei über dem Command Panel und tritt erst
    beim Darüberfahren nach vorn; ein zweiter gerahmter Block direkt über der
    Bar-Silhouette hätte wie ein weiteres Panel gelesen.
+
+   Der Chip selbst steht in `KeybindChip.vue` — dieselbe Darstellung trägt die
+   Kürzel-Zeile unten links im Forge-Graphen.
 
    z-index 45 wie Musik-Widget und Enzyklopädie-Reiter: jedes Modal legt sich
    darüber, ohne dass die Leiste sie einzeln kennen muss. */
@@ -189,46 +164,11 @@ function openControls() {
   background: rgba(122, 78, 32, 0.6);
 }
 
-/* ── Kürzel-Chip ──────────────────────────────────────── */
-.kb-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 2px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.kb-chip:hover {
-  transform: translateY(-1px);
-}
-/* Ohne Kasten dahinter trägt der Text seinen Kontrast selbst — ein statischer
-   Schatten, damit die Zeile auch über einem hellen Nebel lesbar bleibt. */
-.kb-chip__label {
-  font-size: 0.86rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  line-height: 1;
-  color: #b8a878;
-  white-space: nowrap;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  transition: color 160ms ease;
-}
-.kb-chip:hover .kb-chip__label,
-.kb-chip--active .kb-chip__label {
-  color: #e8c040;
-}
-
-/* Full HD ist der flachste Viewport — dort rückt die Leiste enger zusammen,
-   bleibt aber lesbar (nur Abstände und Schriftgrad geben nach). */
+/* Full HD ist der flachste Viewport — dort rückt die Leiste enger zusammen
+   (der Schriftgrad der Chips gibt in `KeybindChip.vue` nach). */
 @media (max-height: 1100px) {
   .kb-hud {
     gap: 8px;
-  }
-  .kb-chip__label {
-    font-size: 0.8rem;
   }
 }
 </style>

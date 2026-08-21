@@ -25,12 +25,15 @@ import { computed } from 'vue'
 import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 import {
   FORGE_DETAILS_RAIL_PX,
+  FORGE_KEY_HINT_ROW,
   FORGE_SHOP_LOADER_ACCENT,
   FORGE_SHOP_LOADER_CAPTION,
   FORGE_SHOP_LOADER_ICON,
   FORGE_SHOP_LOADER_TITLE,
   FORGE_SHOP_SKELETON_RINGS,
   FORGE_SHOP_SKELETON_SUN_PCT,
+  FORGE_VIEWPORT_INSET_PX,
+  FORGE_ZOOM_BAR,
 } from '@/config/constants'
 
 defineProps<{
@@ -65,6 +68,14 @@ const skeletonNodes = computed(() =>
 
 const railWidth = `${FORGE_DETAILS_RAIL_PX}px`
 const sunSize = `${FORGE_SHOP_SKELETON_SUN_PCT}%`
+
+// Die beiden Ecken-Platzhalter tragen die Masse dessen, was dort gleich steht
+// (Performance-Regel 9) — geraten wären sie ein Sprung beim Aufdecken.
+const cornerInset = `${FORGE_VIEWPORT_INSET_PX}px`
+const keysW = `${FORGE_KEY_HINT_ROW.w}px`
+const keysH = `${FORGE_KEY_HINT_ROW.h}px`
+const zoomW = `${FORGE_ZOOM_BAR.w}px`
+const zoomH = `${FORGE_ZOOM_BAR.h}px`
 </script>
 
 <template>
@@ -80,8 +91,8 @@ const sunSize = `${FORGE_SHOP_SKELETON_SUN_PCT}%`
       </div>
 
       <!-- Die beiden belegten Ecken der Baumspalte: unten links die
-           Kantenlegende, unten rechts die Zoom-Leiste. -->
-      <span class="stl-mark stl-mark--legend" aria-hidden="true" />
+           Kürzel-Zeile, unten rechts die Zoom-Leiste. -->
+      <span class="stl-mark stl-mark--keys" aria-hidden="true" />
       <span class="stl-mark stl-mark--zoom" aria-hidden="true" />
 
       <!-- Ein einziger wandernder Glanz: eine Fläche, die verschoben wird —
@@ -164,21 +175,22 @@ const sunSize = `${FORGE_SHOP_SKELETON_SUN_PCT}%`
 
 .stl-mark {
   position: absolute;
-  bottom: 16px;
-  height: 30px;
+  bottom: v-bind(cornerInset);
   border-radius: 4px;
   background: #16110a;
   border: 1px solid #2a1a08;
 }
 
-.stl-mark--legend {
-  left: 14px;
-  width: 132px;
+.stl-mark--keys {
+  left: v-bind(cornerInset);
+  width: v-bind(keysW);
+  height: v-bind(keysH);
 }
 
 .stl-mark--zoom {
-  right: 14px;
-  width: 108px;
+  right: v-bind(cornerInset);
+  width: v-bind(zoomW);
+  height: v-bind(zoomH);
 }
 
 .stl-sheen {

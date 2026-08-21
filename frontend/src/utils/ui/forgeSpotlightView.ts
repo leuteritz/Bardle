@@ -2,8 +2,8 @@ import {
   FORGE_CAMERA_COMFORT_H,
   FORGE_CAMERA_COMFORT_W,
   FORGE_SPOTLIGHT_COMPASS_INSET_PX,
-  FORGE_SPOTLIGHT_COMPASS_KEEPOUT,
   FORGE_SPOTLIGHT_COMPASS_SIZE_PX,
+  FORGE_VIEWPORT_KEEPOUTS,
   FORGE_SPOTLIGHT_EDGE_MARGIN_PX,
 } from '@/config/constants'
 
@@ -109,10 +109,38 @@ export function forgeNodeInView(
     p.y + radiusPx <= view.h - m
   if (!inBox) return false
 
-  const underBar =
-    p.x + radiusPx > view.w - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.w &&
-    p.y + radiusPx > view.h - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.h
-  return !underBar
+  const e = chromeEdges(view)
+  const underZoomBar = p.x + radiusPx > e.rx && p.y + radiusPx > e.ry
+  const underKeyHints = p.x - radiusPx < e.lx && p.y + radiusPx > e.ly
+  return !underZoomBar && !underKeyHints
+}
+
+/** Die Kanten der beiden Sperrflächen. */
+interface ForgeChromeEdges {
+  /** Rechts davon liegt die Zoom-Leiste, unterhalb von `ry`. */
+  rx: number
+  ry: number
+  /** Links davon liegt die Kürzel-Zeile, unterhalb von `ly`. */
+  lx: number
+  ly: number
+}
+
+/**
+ * Die belegten unteren Ecken als Kanten in Viewport-Koordinaten — eine Quelle
+ * für alle drei Leser (Sichtbarkeit, Nachführung, Rand-Kompass).
+ *
+ * `pad` weitet beide um denselben Betrag: der Kompass sitzt mit seiner MITTE
+ * auf dem gelieferten Punkt und braucht seine halbe Diagonale dazu.
+ */
+function chromeEdges(view: ForgeViewBox, pad = 0): ForgeChromeEdges {
+  const right = FORGE_VIEWPORT_KEEPOUTS.bottomRight
+  const left = FORGE_VIEWPORT_KEEPOUTS.bottomLeft
+  return {
+    rx: view.w - (right.w + pad),
+    ry: view.h - (right.h + pad),
+    lx: left.w + pad,
+    ly: view.h - (left.h + pad),
+  }
 }
 
 /** Die Kanten der Komfortzone in Viewport-Koordinaten. */
@@ -198,17 +226,26 @@ export function forgeComfortPan(
   let dx = comfortShift(p.x, radiusPx, zone.left, zone.right, view.w / 2)
   let dy = comfortShift(p.y, radiusPx, zone.top, zone.bottom, view.h / 2)
 
-  // Die Sperrfläche der Zoom-Leiste schlägt die Zone. Landete der Knoten nach
-  // der Nachführung dahinter, wäre er verdeckt — und verdeckt ist für den
-  // Spieler nicht vorhanden, während „knapp neben der Zone" nur weniger bequem
-  // ist. Ausgewichen wird über die Achse mit dem KÜRZEREN Weg, damit die
-  // Bewegung so wenig wie möglich von dem abweicht, was die Zone wollte;
-  // dasselbe Muster wie beim Rand-Kompass.
-  const barX = view.w - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.w
-  const barY = view.h - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.h
-  if (p.x + dx + radiusPx > barX && p.y + dy + radiusPx > barY) {
-    const outX = barX - (p.x + dx + radiusPx)
-    const outY = barY - (p.y + dy + radiusPx)
+  // Die beiden Sperrflächen schlagen die Zone. Landete der Knoten nach der
+  // Nachführung dahinter, wäre er verdeckt — und verdeckt ist für den Spieler
+  // nicht vorhanden, während „knapp neben der Zone" nur weniger bequem ist.
+  // Ausgewichen wird über die Achse mit dem KÜRZEREN Weg, damit die Bewegung so
+  // wenig wie möglich von dem abweicht, was die Zone wollte; dasselbe Muster
+  // wie beim Rand-Kompass.
+  //
+  // Beide Ecken nacheinander, und das genügt: sie berührten sich erst auf einem
+  // Viewport, der schmaler wäre als die Summe ihrer Breiten (356 px) — dort ist
+  // ohnehin nichts mehr frei.
+  const e = chromeEdges(view)
+  if (p.x + dx + radiusPx > e.rx && p.y + dy + radiusPx > e.ry) {
+    const outX = e.rx - (p.x + dx + radiusPx)
+    const outY = e.ry - (p.y + dy + radiusPx)
+    if (Math.abs(outX) < Math.abs(outY)) dx += outX
+    else dy += outY
+  }
+  if (p.x + dx - radiusPx < e.lx && p.y + dy + radiusPx > e.ly) {
+    const outX = e.lx - (p.x + dx - radiusPx)
+    const outY = e.ly - (p.y + dy + radiusPx)
     if (Math.abs(outX) < Math.abs(outY)) dx += outX
     else dy += outY
   }
@@ -275,12 +312,17 @@ export function forgeCompassAt(at: ForgeStagePoint, view: ForgeViewBox): ForgeCo
   // Ecken um 22,6 statt 16 px ab. Beides zusammen (Mittelpunkt statt Kante,
   // Kante statt Diagonale) liess ihn beim Nachmessen 6 px über der Zoom-Leiste
   // stehen, und im Bild war davon nichts zu sehen.
-  const reach = forgeCompassReach()
-  const kw = FORGE_SPOTLIGHT_COMPASS_KEEPOUT.w + reach
-  const kh = FORGE_SPOTLIGHT_COMPASS_KEEPOUT.h + reach
-  if (x > view.w - kw && y > view.h - kh) {
-    if (view.w - x < view.h - y) y = view.h - kh
-    else x = view.w - kw
+  //
+  // Er weicht ENTLANG der Kante aus, auf der er gerade sitzt: die kürzere der
+  // beiden Randabstände sagt, welche das ist.
+  const e = chromeEdges(view, forgeCompassReach())
+  if (x > e.rx && y > e.ry) {
+    if (view.w - x < view.h - y) y = e.ry
+    else x = e.rx
+  }
+  if (x < e.lx && y > e.ly) {
+    if (x < view.h - y) y = e.ly
+    else x = e.lx
   }
 
   return { x, y, angleDeg: (Math.atan2(dy, dx) * 180) / Math.PI }

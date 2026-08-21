@@ -12,7 +12,7 @@ import {
 } from '@/utils/ui/forgeSpotlightView'
 import {
   FORGE_SPOTLIGHT_COMPASS_INSET_PX,
-  FORGE_SPOTLIGHT_COMPASS_KEEPOUT,
+  FORGE_VIEWPORT_KEEPOUTS,
   FORGE_SPOTLIGHT_EDGE_MARGIN_PX,
   FORGE_STAGE_SIZE,
 } from '@/config/constants'
@@ -26,6 +26,10 @@ import {
 
 const VIEW: ForgeViewBox = { w: 800, h: 600 }
 const CENTER = FORGE_STAGE_SIZE / 2
+
+/** Die beiden belegten unteren Ecken: Zoom-Leiste rechts, Kürzel-Zeile links. */
+const KEEP_RIGHT = FORGE_VIEWPORT_KEEPOUTS.bottomRight
+const KEEP_LEFT = FORGE_VIEWPORT_KEEPOUTS.bottomLeft
 
 function cam(panX: number, panY: number, scale = 1): ForgeCamera {
   return { panX, panY, scale }
@@ -94,8 +98,20 @@ describe('forgeNodeInView', () => {
     expect(p.x + r).toBeLessThanOrEqual(VIEW.w - FORGE_SPOTLIGHT_EDGE_MARGIN_PX)
     expect(p.y + r).toBeLessThanOrEqual(VIEW.h - FORGE_SPOTLIGHT_EDGE_MARGIN_PX)
     // Vorbedingung: er liegt in der Sperrfläche.
-    expect(p.x + r).toBeGreaterThan(VIEW.w - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.w)
-    expect(p.y + r).toBeGreaterThan(VIEW.h - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.h)
+    expect(p.x + r).toBeGreaterThan(VIEW.w - KEEP_RIGHT.w)
+    expect(p.y + r).toBeGreaterThan(VIEW.h - KEEP_RIGHT.h)
+    expect(forgeNodeInView(node, r, cam(CENTER, CENTER), VIEW)).toBe(false)
+  })
+
+  it('führt einen Knoten hinter der Kürzel-Zeile ebenso als NICHT im Bild', () => {
+    // Dieselbe Regel in der anderen Ecke: unten links steht `[C] CENTER`.
+    const r = 10
+    const node = { x: CENTER - 300, y: CENTER + 260 }
+    const p = forgeNodeScreenPoint(node, cam(CENTER, CENTER), VIEW)
+    expect(p.x - r).toBeGreaterThanOrEqual(FORGE_SPOTLIGHT_EDGE_MARGIN_PX)
+    expect(p.y + r).toBeLessThanOrEqual(VIEW.h - FORGE_SPOTLIGHT_EDGE_MARGIN_PX)
+    expect(p.x - r).toBeLessThan(KEEP_LEFT.w)
+    expect(p.y + r).toBeGreaterThan(VIEW.h - KEEP_LEFT.h)
     expect(forgeNodeInView(node, r, cam(CENTER, CENTER), VIEW)).toBe(false)
   })
 })
@@ -193,14 +209,34 @@ describe('forgeComfortPan', () => {
     // Leiste sitzt. Verdeckt ist schlimmer als unbequem, also gewinnt sie.
     const small: ForgeViewBox = { w: 400, h: 260 }
     const zone = forgeComfortZone(small)
-    expect(zone.right).toBeGreaterThan(small.w - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.w)
+    expect(zone.right).toBeGreaterThan(small.w - KEEP_RIGHT.w)
 
     const r = 10
     const node = { x: CENTER + 100, y: CENTER + 65 }
     const before = forgeNodeScreenPoint(node, cam(CENTER, CENTER), small)
     // Vorbedingung: er liegt in der Sperrfläche.
-    expect(before.x + r).toBeGreaterThan(small.w - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.w)
-    expect(before.y + r).toBeGreaterThan(small.h - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.h)
+    expect(before.x + r).toBeGreaterThan(small.w - KEEP_RIGHT.w)
+    expect(before.y + r).toBeGreaterThan(small.h - KEEP_RIGHT.h)
+
+    const pan = forgeComfortPan(node, r, cam(CENTER, CENTER), small)
+    expect(pan).not.toBeNull()
+    expect(forgeNodeInView(node, r, cam(pan!.x, pan!.y), small)).toBe(true)
+  })
+
+  it('schiebt ihn ebenso aus der Sperrfläche der Kürzel-Zeile heraus', () => {
+    // Gespiegelt: heraus geht es hier nach RECHTS oder nach OBEN, und wieder
+    // gewinnt die kürzere Achse.
+    const small: ForgeViewBox = { w: 400, h: 200 }
+    const zone = forgeComfortZone(small)
+    expect(zone.left).toBeLessThan(KEEP_LEFT.w)
+    expect(zone.bottom).toBeGreaterThan(small.h - KEEP_LEFT.h)
+
+    const r = 8
+    const node = { x: CENTER - 90, y: CENTER + 50 }
+    const before = forgeNodeScreenPoint(node, cam(CENTER, CENTER), small)
+    // Vorbedingung: er liegt in der Sperrfläche.
+    expect(before.x - r).toBeLessThan(KEEP_LEFT.w)
+    expect(before.y + r).toBeGreaterThan(small.h - KEEP_LEFT.h)
 
     const pan = forgeComfortPan(node, r, cam(CENTER, CENTER), small)
     expect(pan).not.toBeNull()
@@ -246,10 +282,12 @@ describe('forgeCompassAt', () => {
   })
 
   it('setzt den Zeiger immer auf den eingerückten Rahmen', () => {
+    // Alle vier zeigen an eine FREIE Kante — was in den beiden unteren Ecken
+    // passiert, prüfen die zwei Tests darunter.
     const targets = [
       { x: -500, y: -900 },
       { x: 2000, y: -300 },
-      { x: -800, y: 1400 },
+      { x: -800, y: 100 },
       { x: 1200, y: 40 },
     ]
     for (const t of targets) {
@@ -284,9 +322,23 @@ describe('forgeCompassAt', () => {
       expect(mark).not.toBeNull()
       const right = mark!.x + half
       const bottom = mark!.y + half
-      const inKeepout =
-        right > VIEW.w - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.w &&
-        bottom > VIEW.h - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.h
+      const inKeepout = right > VIEW.w - KEEP_RIGHT.w && bottom > VIEW.h - KEEP_RIGHT.h
+      expect(inKeepout).toBe(false)
+    }
+  })
+
+  it('hält sie ebenso aus der Kürzel-Zeile heraus', () => {
+    const half = forgeCompassReach()
+    const diagonals = [
+      { x: -600, y: VIEW.h + 600 },
+      { x: -200, y: VIEW.h + 900 },
+      { x: -900, y: VIEW.h + 200 },
+      { x: -40, y: VIEW.h + 40 },
+    ]
+    for (const d of diagonals) {
+      const mark = forgeCompassAt(d, VIEW)
+      expect(mark).not.toBeNull()
+      const inKeepout = mark!.x - half < KEEP_LEFT.w && mark!.y + half > VIEW.h - KEEP_LEFT.h
       expect(inKeepout).toBe(false)
     }
   })

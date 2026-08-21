@@ -94,13 +94,13 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     category: 'interface',
     inHud: true,
   },
-  // `inHud: false` aus demselben Grund wie bei den Fähigkeiten: das Kürzel hat
-  // im Forge-Graphen sein eigenes, weit größeres Zeichen (`ForgeRecenterBeacon`).
+  // `inHud: false`: das Kürzel wirkt nur im Shop-Tab und steht dort in seiner
+  // eigenen Zeile unten links im Graphen.
   {
     id: 'forgeRecenter',
     keys: ['c'],
     cap: 'C',
-    label: 'Recenter',
+    label: 'Center',
     description:
       'Brings the Star Forge camera back to the heart of the net and returns the zoom to its default. Works while the shop tab is open; a pinned node stays pinned — Escape releases it.',
     icon: 'lucide:crosshair',
