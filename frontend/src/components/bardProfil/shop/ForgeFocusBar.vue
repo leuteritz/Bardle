@@ -4,26 +4,16 @@
        die Klasse darunter behält ihr Braun — eine Kante, die kommt und geht,
        wäre eine Bewegung mehr. -->
   <div class="ffb" :style="{ borderLeftColor: meta?.color }">
-    <!-- ══ NICHTS FOKUSSIERT ═══════════════════════════════════
-         Der einzige Ort, an dem die Geste erklärt wird. Sie ist im Shop-Tab
-         neu die wichtigste, und ein Tooltip käme zu spät — man müsste schon
-         wissen, wo man verweilt. -->
-    <template v-if="meta === null">
-      <Icon
-        :icon="FORGE_PIN_ICON"
-        :width="FORGE_FOCUS_ICON_PX"
-        :height="FORGE_FOCUS_ICON_PX"
-        class="ffb-hint-ico"
-      />
-      <span class="ffb-hint">{{ FORGE_FOCUS_EMPTY_LABEL }}</span>
-    </template>
-
     <!-- ══ EINE AUSWAHL STEHT ══════════════════════════════════
-         Dieselben vier Angaben, an denen man die Zeile drüben und den Kreis im
-         Baum wiedererkennt: Glyph, Farbe, Name, Stufe. Kein Preis und kein
+         Ohne Auswahl bleibt die Leiste LEER — ihre Höhe ist trotzdem
+         reserviert, sonst schöbe der erste Klick die Liste unter dem Zeiger
+         weg (Herleitung an `FORGE_FOCUS_BAR_HEIGHT_PX`).
+
+         Steht eine, dann mit denselben vier Angaben, an denen man die Zeile
+         drüben und den Kreis im Baum wiedererkennt: Glyph, Farbe, Name, Stufe. Kein Preis und kein
          Kaufknopf — die Zeile darunter hat beides, und die wichtigste Handlung
          zweimal anzubieten macht keine von beiden schneller. -->
-    <template v-else>
+    <template v-if="meta !== null">
       <Icon
         :icon="meta.icon"
         :width="FORGE_FOCUS_ICON_PX"
@@ -94,13 +84,11 @@ import { forgeFocusMeta, forgeLevelParts } from '@/composables/ui/useForgeUpgrad
 import {
   FORGE_FOCUS_CLEAR_ICON,
   FORGE_FOCUS_CLEAR_TITLE,
-  FORGE_FOCUS_EMPTY_LABEL,
   FORGE_FOCUS_ICON_PX,
   FORGE_FOCUS_RECENTER_ICON,
   FORGE_FOCUS_RECENTER_TITLE,
   FORGE_FOCUS_BAR_HEIGHT_PX,
   FORGE_FOCUS_BAR_HEIGHT_COMPACT_PX,
-  FORGE_PIN_ICON,
 } from '@/config/constants'
 
 const { pinnedId, refocus, clearPin } = useForgeSpotlight()
@@ -135,25 +123,6 @@ const levelParts = computed(() =>
   border-bottom: 1px solid #2a1a08;
   border-left: 3px solid #3a2a10;
   transition: border-left-color 0.12s ease;
-}
-
-/* ══════════════════════════════════════════════════
-   LEER
-══════════════════════════════════════════════════ */
-.ffb-hint-ico {
-  flex-shrink: 0;
-  color: rgba(200, 144, 64, 0.3);
-}
-
-.ffb-hint {
-  min-width: 0;
-  font-size: 12.5px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: rgba(232, 220, 192, 0.35);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ══════════════════════════════════════════════════

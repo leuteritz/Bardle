@@ -3733,17 +3733,6 @@ export const FORGE_FOCUS_BAR_HEIGHT_COMPACT_PX = 38
 export const FORGE_FOCUS_ICON_PX = 20
 
 /**
- * Der Leer-Zustand — die einzige Stelle, an der die Geste erklärt wird.
- *
- * Klicken ist im Shop-Tab neu die Hauptgeste, und nichts sonst sagt das. Ein
- * Tooltip käme zu spät (man muss schon wissen, wo man verweilt); eine
- * Einführung wäre für einen Satz zu viel. Die Leiste steht ohnehin da und ist
- * ohne Auswahl leer — der Satz kostet also nichts, was nicht schon reserviert
- * wäre.
- */
-export const FORGE_FOCUS_EMPTY_LABEL = 'Click an upgrade to focus it'
-
-/**
  * Zurück ins Bild — dieselbe Frage, die der Rand-Kompass im Baum stellt, nur
  * als HANDLUNG. Der Kompass zeigt hin, das Fadenkreuz fährt hin.
  *
