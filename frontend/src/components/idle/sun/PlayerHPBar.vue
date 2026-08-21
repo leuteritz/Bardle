@@ -130,19 +130,25 @@ onUnmounted(() => {
 
      `--vb-h` ist der einzige Maßgeber: Innenabstand, Kerbentiefe und Eckradius
      leitet die Leiste per `calc()` daraus ab, die Staffel unten führt deshalb je
-     Stufe nur eine Zahl. Die drei Schriftgrade tragen eigene Anteile statt der
-     Vorgaben der Leiste (0,5 / 0,3 / 0,25): auf einem flachen Balken müssen die
-     Zahlen mehr von der Höhe tragen, sonst schrumpft mit ihr die Aussage. Der
-     Hauptwert bleibt so auf jeder Stufe rund das 1,4-fache des Maximums — mit
-     den Vorgaben wären es auf 26 px nur noch das 1,17-fache, und die Hierarchie
-     zwischen „wie viel habe ich" und „wovon" wäre verschwunden. Jeder Grad hat
-     einen Pixelboden für die unterste Stufe. */
-  --vb-h: 22px;
-  --vb-label-size: max(14px, calc(var(--vb-h) * 0.62));
-  --vb-label-sub-size: max(11px, calc(var(--vb-h) * 0.42));
-  /* Die Vorgabe 0,25 × h ergab hier 8,5 px und war auf der Bühne nicht mehr zu
-     lesen. */
-  --vb-regen-size: max(10px, calc(var(--vb-h) * 0.34));
+     Stufe nur eine Zahl. Vier ihrer Vorgaben passen hier allerdings nicht, weil
+     sie auf einen HOHEN Balken gerechnet sind:
+
+     Die drei Schriftgrade (0,5 / 0,3 / 0,25) liessen die Zahlen mit der Höhe
+     mitschrumpfen, bis von der Aussage nichts mehr übrig ist. Sie tragen deshalb
+     grössere Anteile und behalten damit auf jeder Stufe ihre Hierarchie — der
+     Hauptwert bleibt rund das 1,4-fache des Maximums; mit den Vorgaben wäre er
+     auf 20 px nur noch das 1,17-fache, und der Unterschied zwischen „wie viel
+     habe ich" und „wovon" wäre verschwunden. Jeder Grad hat einen Pixelboden für
+     die unteren Stufen, auf denen der Anteil allein zu klein würde.
+
+     Die Kerbentiefe (0,28) belegte auf einem 18-px-Balken mit ihren drei Marken
+     über zwei Drittel der Höhe — die Skala frässe den Balken auf, statt ihn zu
+     gliedern. */
+  --vb-h: 18px;
+  --vb-label-size: max(13px, calc(var(--vb-h) * 0.64));
+  --vb-label-sub-size: max(10px, calc(var(--vb-h) * 0.44));
+  --vb-regen-size: max(9px, calc(var(--vb-h) * 0.34));
+  --vb-tick-inset: max(2px, calc(var(--vb-h) * 0.2));
   /* Die Messmuster (`width-probes`) geben die Spaltenbreite vor; eine
      zusätzliche Reserve rückte den Wert nur von seinem Schrägstrich weg. Bei
      mittigem Satz halten sie zusätzlich den ganzen Satz ruhig, der sonst bei
@@ -159,25 +165,25 @@ onUnmounted(() => {
    Windows-Skalierung 125 % liefert dem Browser 1536 CSS-Pixel, nicht 1920. */
 @media (min-width: 1536px) {
   .hp-bar-container {
-    --vb-h: 24px;
+    --vb-h: 19px;
   }
 }
 
 @media (min-width: 1920px) {
   .hp-bar-container {
-    --vb-h: 26px;
+    --vb-h: 20px;
   }
 }
 
 @media (min-width: 2300px) {
   .hp-bar-container {
-    --vb-h: 30px;
+    --vb-h: 22px;
   }
 }
 
 @media (min-width: 3400px) {
   .hp-bar-container {
-    --vb-h: 34px;
+    --vb-h: 25px;
   }
 }
 
