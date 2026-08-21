@@ -3142,6 +3142,30 @@ export const FORGE_SPOTLIGHT_EDGE_MARGIN_PX = 24
  */
 export const FORGE_SPOTLIGHT_RING_INSET_PX = 4
 /**
+ * Der WEG — die Knoten zwischen Sternenrand und gemeintem Knoten.
+ *
+ * Die Kantenkette (`.spot-limbs`) lief bisher über Kreise hinweg, die
+ * `FORGE_SPOTLIGHT_DIM_OPACITY` gleichzeitig auf 0,3 zog. Der Wegring hebt sie
+ * zurück ins Bild, ohne die Rangordnung anzutasten: das Ziel atmet, der Weg
+ * steht.
+ *
+ * ENGER als `FORGE_SPOTLIGHT_RING_INSET_PX` (4), und das ist keine Kosmetik —
+ * damit bleibt der Spotlight-Ring das Äusserste am Knoten und die
+ * Sichtbarkeitsrechnung in `forgeSpotlightView.ts` unberührt.
+ */
+export const FORGE_TRAIL_RING_INSET_PX = 2
+/** Die Zwischenstufe zwischen `FORGE_SPOTLIGHT_DIM_OPACITY` (0,3) und voll. */
+export const FORGE_TRAIL_DIM_OPACITY = 0.82
+/**
+ * Die Laufwelle über die Kette, von der Sonne nach aussen — EINMALIG.
+ *
+ * Kein Dauerläufer: im Knotenfeld atmet allein der Spotlight-Ring, eine, nie
+ * mehr. Bei `FORGE_SPOTLIGHT_MAX_LIMBS` (7) Gliedern ist sie in 320 + 6 · 40
+ * Millisekunden durch.
+ */
+export const FORGE_TRAIL_WAVE_MS = 320
+export const FORGE_TRAIL_WAVE_STEP_MS = 40
+/**
  * Wie lange die Zeile rechts ihre Ankunftsmarke trägt.
  *
  * Über `FORGE_CARD_FLASH_MS` (420), und der Unterschied hat einen Grund: der

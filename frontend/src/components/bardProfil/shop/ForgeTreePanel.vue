@@ -326,6 +326,8 @@
               // `onChain()` im Meep-Baum. Eine Antwort, die auf gedimmten
               // Kreisen steht, sieht nach einem Fehler aus.
               'node-circle--req': spotReqs.has(node.id),
+              // Und was auf dem WEG dorthin liegt, ebenso wenig.
+              'node-circle--trail': spotTrail.has(node.id),
               'node-circle--dim': isDimmed(node.id),
             },
           ]"
@@ -358,6 +360,20 @@
             v-if="spotReqs.has(node.id)"
             class="node-req"
             :class="spotReqs.get(node.id) ? 'node-req--met' : 'node-req--open'"
+            aria-hidden="true"
+          />
+          <!-- Der WEG-RING. Dritte Rolle neben Ziel und Voraussetzung, und die
+               leiseste: enger, dünner, in der Farbe des ZIELS — er gehört zur
+               Kante unter ihm, nicht zum Kreis, auf dem er sitzt.
+
+               Der Schlüssel hängt am Spotlight, nicht am Knoten: dasselbe Rezept
+               wie beim Ping darüber, damit die Welle bei jedem Fokuswechsel von
+               vorn anläuft statt einmal pro Sitzung. -->
+          <span
+            v-if="spotTrail.has(node.id)"
+            :key="`trail-${node.id}-${spotlightId}`"
+            class="node-trail"
+            :style="spotTrailStyles.get(node.id)"
             aria-hidden="true"
           />
           <Icon
@@ -553,6 +569,10 @@ import {
   FORGE_SPOTLIGHT_MAX_LIMBS,
   FORGE_SPOTLIGHT_PAN_DELAY_MS,
   FORGE_SPOTLIGHT_RING_INSET_PX,
+  FORGE_TRAIL_RING_INSET_PX,
+  FORGE_TRAIL_DIM_OPACITY,
+  FORGE_TRAIL_WAVE_MS,
+  FORGE_TRAIL_WAVE_STEP_MS,
   FORGE_SPOTLIGHT_COMPASS_ICON,
   FORGE_SPOTLIGHT_COMPASS_ICON_PX,
   FORGE_SPOTLIGHT_COMPASS_SIZE_PX,
@@ -1112,12 +1132,17 @@ function isSpot(id: string): boolean {
  * weder gemeint noch Voraussetzung des Gemeinten ist.
  *
  * Hier hängt es weiterhin an `spotlightId` und nicht am blossen Zeiger: im Baum
- * TRÄGT die Dämpfung Auskunft, weil die Voraussetzungsknoten hell durch sie
- * hindurchstehen. In der Liste drüben ist das anders — dort dämpft nur der
+ * TRÄGT die Dämpfung Auskunft, weil Voraussetzungs- und Wegknoten hell durch
+ * sie hindurchstehen. In der Liste drüben ist das anders — dort dämpft nur der
  * Zeiger, sonst läge sie unter einem stehenden Fokus dauerhaft grau.
  */
 function isDimmed(id: string): boolean {
-  return spotlightId.value !== null && !isSpot(id) && !spotReqs.value.has(id)
+  return (
+    spotlightId.value !== null &&
+    !isSpot(id) &&
+    !spotReqs.value.has(id) &&
+    !spotTrail.value.has(id)
+  )
 }
 
 /** Nur die STRUKTUR-Kante je Ziel. Ein Knoten kann mehrere eingehende Kanten
@@ -1155,6 +1180,51 @@ const spotlightLimbs = computed<Limb[]>(() => {
 const spotlightColor = computed(
   () => (spotlightId.value ? nodeById.value.get(spotlightId.value)?.color : null) ?? '#e8c040',
 )
+
+/**
+ * Die Knoten, über die der Weg LÄUFT — Id → Platz in der Welle.
+ *
+ * Abgeleitet aus `spotlightLimbs`, nicht aus einem zweiten Gang durch den Baum:
+ * Kante und Kreis müssen dieselbe Kette meinen, sonst leuchtet ein Strahl über
+ * Knoten, die er selbst ausblendet — genau der Widerspruch, den `spotReqs`
+ * für die Voraussetzungen schon einmal aufgelöst hat.
+ *
+ * Rückwärts gezählt, weil das letzte Glied am Sternenrand hängt: der Index IST
+ * damit die Leserichtung der Welle, Sonne zuerst.
+ */
+const spotTrail = computed<Map<string, number>>(() => {
+  const out = new Map<string, number>()
+  const chain = spotlightLimbs.value
+  for (let i = chain.length - 1; i >= 0; i--) {
+    const id = chain[i].sourceId
+    // 'sun' ist Quelle der Wurzelkanten, aber kein Knoten auf der Bühne.
+    if (!nodeById.value.has(id)) continue
+    if (id === spotlightId.value) continue
+    // Grün steht, rot fehlt — das trägt mehr als „liegt auf dem Weg“.
+    if (spotReqs.value.has(id)) continue
+    if (!out.has(id)) out.set(id, out.size)
+  }
+  return out
+})
+
+/**
+ * EINE Rechnung über die ganze Kette statt einer Funktion je Knoten im Template
+ * — dasselbe Muster wie `reqWreaths`.
+ *
+ * Die Farbe ist die des ZIELS, nicht die des Wegknotens: gliedweise eigene
+ * Farben liessen die Kette als drei Striche lesen, nicht als einen. Der Ring
+ * trägt damit genau den Ton der Kante, die unter ihm durchläuft.
+ */
+const spotTrailStyles = computed<Map<string, Record<string, string>>>(() => {
+  const out = new Map<string, Record<string, string>>()
+  for (const [id, step] of spotTrail.value) {
+    out.set(id, {
+      '--trail-color': spotlightColor.value,
+      '--trail-delay': `${step * FORGE_TRAIL_WAVE_STEP_MS}ms`,
+    })
+  }
+  return out
+})
 
 // Für das scoped CSS unten — Muster `SigilRoleNode.vue`: die Zahl steht in den
 // Konstanten, den Keyframe-Namen trägt die CSS-Klasse.
@@ -2017,6 +2087,9 @@ const compassStyle = computed(() => {
  *  Komfortzone mit jeder Fahrt und hängt deshalb inline am Bühnenelement
  *  (`panDurationMs`), nicht als Custom Property am Komponentenrahmen. */
 const ringInset = `${-FORGE_SPOTLIGHT_RING_INSET_PX}px`
+const trailInset = `${-FORGE_TRAIL_RING_INSET_PX}px`
+const trailOpacity = String(FORGE_TRAIL_DIM_OPACITY)
+const trailWaveMs = `${FORGE_TRAIL_WAVE_MS}ms`
 const compassIconPx = FORGE_SPOTLIGHT_COMPASS_ICON_PX
 const compassSize = `${FORGE_SPOTLIGHT_COMPASS_SIZE_PX}px`
 
@@ -2915,6 +2988,57 @@ const nextPhasePreviewStyle = computed(() => ({
   z-index: -1;
 }
 
+/* Der WEG — die dritte und leiseste Rolle im Spotlight.
+
+   KEINE Ringlinie, und das ist die eine Entscheidung, die hier trägt: eine
+   Linie am Kreis heisst im Baum entweder „das ist gemeint“ (`.node-spot`,
+   Eigenfarbe, atmet) oder „das ist Voraussetzung“ (`.node-req`, grün oder
+   rot). Ein dritter Ring in der Zielfarbe stand daneben — und bei einem grünen
+   Ziel behauptete er „erfüllt“ an einem Knoten, der damit nichts zu tun hat.
+   Der Weg ist deshalb LICHT: derselbe Ton wie die Kante, die durch ihn
+   hindurchläuft, nur als Nimbus.
+
+   Die Welle läuft GENAU EINMAL je Fokus, von der Sonne nach aussen: höchstens
+   sieben Ebenen (`FORGE_SPOTLIGHT_MAX_LIMBS`), animiert werden nur `opacity` und
+   `transform`, die Scheine sind statisch (Performance-Regel 2 und 11). Ein
+   Dauerläufer bräche die Zusage, dass im Knotenfeld nur der Spotlight-Ring
+   atmet. */
+.node-trail {
+  position: absolute;
+  inset: v-bind(trailInset);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--trail-color, #e8c040) 30%, transparent) 0%,
+    transparent 70%
+  );
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--trail-color, #e8c040) 70%, transparent),
+    0 0 18px color-mix(in srgb, var(--trail-color, #e8c040) 40%, transparent);
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+  animation: node-trail-wave v-bind(trailWaveMs) ease-out var(--trail-delay, 0ms) 1 forwards;
+}
+
+@keyframes node-trail-wave {
+  from { opacity: 0; transform: scale(0.72); }
+  55%  { opacity: 1; transform: scale(1.14); }
+  to   { opacity: 0.85; transform: scale(1); }
+}
+
+/* Zwischen `--dim` (0,3) und voll: der Weg ist beteiligt, aber nicht gemeint.
+   Steht vor `--dim` und trifft nie mit ihm zusammen — `isDimmed()` schliesst
+   die Kette aus. */
+.node-circle--trail {
+  opacity: v-bind(trailOpacity);
+  transition-duration: 0.12s;
+}
+
+.node-circle--trail .node-glow {
+  opacity: 0.55;
+}
+
 /* ══ DER RAND-KOMPASS ══════════════════════════════════════════════════════
    Er liegt über der Bühne (z-index 1) und unter der Zoom-Leiste (20): die
    Leiste ist bedienbar, der Kompass nur Auskunft, und ausweichen tut er ihr
@@ -3061,6 +3185,13 @@ const nextPhasePreviewStyle = computed(() => ({
   .node-spot::after,
   .spot-limbs path {
     animation: none;
+  }
+
+  /* Dieselbe Falle beim Weg-Ring: seine Welle startet bei Deckkraft 0 und
+     trägt `forwards`. */
+  .node-trail {
+    animation: none;
+    opacity: 0.85;
   }
 
   /* Das Kantenfeld tritt weiter zurück, nur ohne Überblendung — der Zustand
