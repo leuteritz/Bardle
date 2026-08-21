@@ -782,9 +782,6 @@
     opacity 0.12s ease,
     border-color 0.12s ease;
 }
-.fc-row--locked {
-  opacity: 0.68;
-}
 .fc-row--max {
   border-color: #7a5a1c;
   background: #1a1408;
@@ -1011,7 +1008,8 @@
    bedeuten, haengt am Eintrag, nicht an seiner Renderform. Doppelt geschrieben
    (`.fc-card.fc-spot`), weil `.fc-card:hover` oben 0,2,0 wiegt und die Karte
    unter dem Zeiger sonst braun faerbte statt in der Leitfarbe ihres Knotens —
-   und weil `.fc-row--locked`/`--max` ihre eigene Deckkraft mitbringen. */
+   und weil die Zustandsklassen der Zeile (`.fc-row--max`, `--done`) ihren
+   eigenen Grund und Rand mitbringen. */
 .fc-card.fc-spot,
 .fc-row.fc-spot {
   border-color: var(--node-c, #e8c040);

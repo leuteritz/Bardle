@@ -704,10 +704,14 @@ export const FORGE_REQ_DOT_OPEN_FILL = '#241708'
 export const FORGE_REQ_MET_COLOR = '#52b830'
 export const FORGE_REQ_OPEN_COLOR = '#cc6050'
 
-/** Überschrift der Voraussetzungsliste in Zeile und Tooltip. */
-export const FORGE_REQ_HEADING = 'REQUIRES'
-/** Die zwei Zeichen davor. Dekorative Glyphen, ausdrücklich erlaubt (CLAUDE.md
- *  „Icons", Punkt 8) — ein Iconify-Motiv in 11 px zerfiele hier zu Grau. */
+/* Eine Überschrift `FORGE_REQ_HEADING` („REQUIRES") stand hier, solange die
+   Upgrade-ZEILE ihre Bedingungen selbst auflistete. Seit die Liste nur noch
+   Freigeschaltetes führt, ist die einzige Bedingungsliste die im Kärtchen am
+   Knoten — und die trägt bewusst keine Überschrift, weil das Schloss daneben
+   dasselbe ohne ein Wort sagt. */
+/** Die zwei Zeichen vor einer Bedingung. Dekorative Glyphen, ausdrücklich
+ *  erlaubt (CLAUDE.md „Icons", Punkt 8) — ein Iconify-Motiv in 11 px zerfiele
+ *  hier zu Grau. */
 export const FORGE_REQ_MET_MARK = '✓'
 export const FORGE_REQ_OPEN_MARK = '✕'
 
@@ -2426,9 +2430,9 @@ export const FORGE_UPGRADE_TIER_LABELS = {
 export const FORGE_ENDLESS_SYMBOL = '∞'
 
 /* Eine Liste der Topf-Ids stand hier („ready, reach, next") und ist gestrichen:
-   die Reihenfolge der Abschnitte steht jetzt in `ForgeUpgradesSection`, weil
-   „Next up" dort in ZWEI Abschnitte zerfällt (Eltern- und Phasensperre) und
-   eine Id-Liste das nicht mehr abbildet. Wonach die Liste überhaupt gliedert
+   die Reihenfolge der Abschnitte steht jetzt in `ForgeUpgradesSection`, und
+   „next" kommt dort gar nicht mehr vor — der Topf bleibt als Aussage über den
+   Eintrag gültig, die Liste zeigt ihn nur nicht. Wonach sie überhaupt gliedert
    und warum nicht nach Ring, steht bei `forgeUpgradeBucket()` in
    `useForgeUpgrades.ts`. */
 
@@ -2450,8 +2454,9 @@ export const FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN = '▾'
 
 // ── Trenner über den Töpfen (ForgeUpgradesSection) ───────────────────────────
 /**
- * Jeder der vier Töpfe trägt einen Trenner — eine Linie mit Etikett, kein Balken
- * und keine Fläche.
+ * Beide kaufbaren Töpfe tragen einen Trenner — eine Linie mit Etikett, kein
+ * Balken und keine Fläche. Nur das Archiv trägt statt seiner eine Schaltzeile,
+ * weil man es zuklappen kann und eine Linie sich nicht anklicken lässt.
  *
  * EINE Runde lief ohne Kopf über dem Kaufbaren: „was ein Eintrag kann, sagt sein
  * Knopf in Farbe" war die Begründung, und sie hat nicht getragen. Eine kaufbare
@@ -2465,38 +2470,12 @@ export const FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN = '▾'
  * über `ready` einer, läsen sich die Zeilen darunter als Teil derselben Gruppe.
  * Ein Kopf, der die falsche Grenze zieht, ist schlimmer als keiner.
  *
- * Das GESPERRTE trägt derer ZWEI, weil es zwei Sperrgründe gibt und die für den
- * Spieler nicht dasselbe sind: gegen die Sonnenphase kann er nichts tun ausser
- * warten, den Elternknoten kann er sofort wachsen lassen. Ein gemeinsamer
- * Trenner müsste generisch bleiben und sagte nichts — bei Sonnenphase 5 waren
- * gemessen ALLE dreissig gesperrten Zeilen Elternsperren, kein einziger
- * Phasenlock.
+ * Zwei Trenner und nicht vier: das GESPERRTE trug hier einmal derer zwei, je
+ * Sperrgrund einen („Needs a deeper tree" gegen „Waiting on <Phase>"). Beide
+ * sind mit den gesperrten Zeilen selbst gefallen — die Liste zeigt nur noch,
+ * was freigeschaltet ist, und wonach der Spieler dort noch fragen kann, ist
+ * allein „reicht es schon".
  */
-export const FORGE_DIVIDER_PARENT_LABEL = 'Needs a deeper tree'
-/**
- * Das Etikett der Phasensperre nennt die Phase NUR, wenn darunter wirklich nur
- * eine wartet. Die Knoten öffnen bei vier verschiedenen Phasen (2, 3, 4, 5) —
- * „Waiting on Dawn · 18" wäre für zwölf der achtzehn schlicht falsch.
- */
-export const FORGE_PHASE_TOKEN = '{phase}'
-export const FORGE_DIVIDER_PHASE_LABEL = `Waiting on ${FORGE_PHASE_TOKEN}`
-export const FORGE_DIVIDER_PHASE_MANY_LABEL = 'Waiting on the sun'
-/**
- * Die beiden Glyphen. Keiner davon ist frei gewählt — beide tragen ihre
- * Bedeutung im Projekt schon:
- *   • `ph:sun-fill` heisst überall „Sonnenphase als Voraussetzung"
- *     (`PlanetLockedPanel`, `PlanetRailSlot`, `PlanetStagePanel`).
- *   • `material-symbols:account-tree` heisst „verzweigte Knoten" und trägt
- *     schon den Skill-Tree-Reiter; Phosphors `tree-structure` ist bei dieser
- *     Größe zu fein (Herleitung in `BardProfileMenu.vue`).
- * Das Schloss (`FORGE_LOCK_ICON`) heisst „zu", die Glyphen hier heissen „warum".
- * Beide stehen inzwischen zweimal: das Schloss am MOTIV — am Knoten im Baum wie
- * am Glyph der Zeile —, und das Warum-Glyph sowohl im Trenner als auch vor dem
- * Sperrsatz der Zeile. Die Zeile wiederholt damit, unter welchem Trenner sie
- * einsortiert ist, und die Weiche dafür ist beide Male `entry.lockKind`.
- */
-export const FORGE_DIVIDER_PHASE_ICON = 'ph:sun-fill'
-export const FORGE_DIVIDER_PARENT_ICON = 'material-symbols:account-tree-rounded'
 
 /**
  * Die beiden Trenner über dem Kaufbaren.
@@ -2514,8 +2493,8 @@ export const FORGE_DIVIDER_PARENT_ICON = 'material-symbols:account-tree-rounded'
  * Kopie, die Herleitung steht dort.
  *
  * „Ready to grow" statt bloss „Ready": das Verb der Spalte ist FORGE/grow
- * (`FORGE_GROW_LABEL`), und die Trenner daneben sind ebenfalls Sätze („Needs a
- * deeper tree", „Waiting on the sun") — ein nacktes Wort fiele aus der Reihe.
+ * (`FORGE_GROW_LABEL`), und der Trenner daneben ist ebenfalls ein Satz
+ * („Saving up") — ein nacktes Wort fiele aus der Reihe.
  */
 export const FORGE_DIVIDER_READY_LABEL = 'Ready to grow'
 export const FORGE_DIVIDER_READY_ICON = 'ph:lightning-fill'
@@ -2884,17 +2863,9 @@ export const FORGE_OFFER_NEXT_LABEL = 'After forging'
  * Hiess 'Both branches', solange eine Konstellation genau zwei Zweige
  * verschmolz. Seit der Vault dieselbe `requires`-Liste fuehrt wie der Baum,
  * koennen es drei sein und muessen keine Zweige sein — der alte Text haette
- * dann zweimal gelogen. Dasselbe Wort wie im Baum (`FORGE_REQ_HEADING`), damit
- * dieselbe Auskunft ueberall gleich heisst.
+ * dann zweimal gelogen.
  */
 export const FORGE_OFFER_REQS_LABEL = 'Requires'
-/**
- * Was die Bedingungen in der EINEN Zeile des `title` trennt.
- *
- * Ein Mittelpunkt und kein Komma: die Zeile besteht aus Paaren „Name Zahl/Zahl“,
- * und ein Komma sieht darin wie ein Teil der Zahl aus.
- */
-export const FORGE_VAULT_REQ_SEPARATOR = ' · '
 /**
  * Wie weit das Kärtchen von der Zeile absteht und wie breit es ist.
  *
@@ -2906,29 +2877,30 @@ export const FORGE_OFFER_TIP_GAP_PX = 26
 
 // ── Das Archiv darunter (ForgeVaultSection) ──────────────────────────────────
 /**
- * Gesperrte Relikte, ausgebaute (`✦ MAX`) und fusionierte Konstellationen.
+ * Ausgebaute Relikte (`✦ MAX`) und fusionierte Konstellationen (`✦ FUSED`).
  *
- * Sie standen bis zum Umbau als Kompaktzeilen mit in ihrer Abteilung. Ganz
- * wegzulassen ging nicht: ein Relikt, das aus dem Nichts auftaucht, sobald sein
- * Knoten hoch genug ist, nimmt dem Spieler die Möglichkeit, darauf HINZUARBEITEN
- * — und der Fortschrittsbalken „Moon Orbit 2/3" ist genau diese Auskunft.
+ * Sie standen bis zum Umbau als Kompaktzeilen mit in ihrer Abteilung. Die
+ * Schublade führte damals auch GESPERRTE Einträge samt Fortschrittsbalken
+ * („Moon Orbit 2/3"), mit der Begründung, ein Relikt dürfe nicht aus dem Nichts
+ * auftauchen. Das ist zurückgenommen: die Detailspalte zeigt ausschliesslich
+ * Freigeschaltetes, und der Weg zu einem gesperrten Relikt steht am Baum, wo
+ * sein Knoten die Bedingungen ohnehin trägt.
  *
  * Zugeklappt als Vorgabe, dieselbe Schaltzeile wie das Upgrade-Archiv darüber:
  * zwei verschiedene Archivknöpfe in einer Spalte wären zwei Bedienmuster für
  * dieselbe Geste.
  */
-export const FORGE_VAULT_LABEL = 'locked & finished'
+export const FORGE_VAULT_LABEL = 'finished'
 export const FORGE_VAULT_ICON = 'game-icons:locked-chest'
 /**
- * Bernstein statt des Grüns der Upgrade-Schublade: dort liegt Erledigtes, hier
- * liegt überwiegend das, worauf der Spieler noch hinarbeitet.
+ * Bernstein statt des Grüns der Upgrade-Schublade. Beide führen inzwischen nur
+ * noch Erledigtes — die Farbe trennt jetzt, WAS darin liegt: Sternbaum-Stufen
+ * oben, Relikte und Konstellationen hier. Zwei grüne Schaltzeilen
+ * untereinander läsen sich als eine Liste mit einem Knick.
  */
 export const FORGE_VAULT_COLOR = '#c89040'
 export const FORGE_VAULT_MAX_BADGE = '✦ MAX'
 export const FORGE_VAULT_FUSED_BADGE = '✦ FUSED'
-/** „Grow Moon Orbit to Lv 3" — der Weg zur Freischaltung eines Relikts. */
-export const FORGE_VAULT_LOCK_PREFIX = 'Grow'
-export const FORGE_VAULT_LOCK_INFIX = 'to Lv'
 
 // ── Upgrade-Zeile der Liste (ForgeUpgradeTile) ───────────────────────────────
 /**

@@ -20,7 +20,6 @@ import type {
   ForgeVaultEntry,
 } from '@/types'
 import {
-  FORGE_VAULT_REQ_SEPARATOR,
   FORGE_DESC_PERCENT_TOKEN,
   FORGE_DESC_VALUE_TOKEN,
   FORGE_OFFER_TAG_CONSTELLATION,
@@ -30,8 +29,6 @@ import {
   FORGE_OFFER_VERB_UPGRADE,
   FORGE_PANEL_SECTIONS,
   FORGE_VAULT_FUSED_BADGE,
-  FORGE_VAULT_LOCK_INFIX,
-  FORGE_VAULT_LOCK_PREFIX,
   FORGE_VAULT_MAX_BADGE,
   MS_PER_SECOND,
   SECONDS_PER_HOUR,
@@ -196,12 +193,12 @@ export function useForgeOffers(): {
 
   // ── Der Vault — Relikte und Konstellationen ─────────────────────────
   /**
-   * Eine Vault-Bedingung mit Fortschritt.
+   * Eine Bedingung mit Fortschritt, für das Kärtchen am Zeiger.
    *
    * Hiess `constellationReq(nodeId)` und las die Stufe aus einer globalen
    * Konstante — damals war sie fuer alle zehn Konstellationen dieselbe. Seit
    * Relikt und Konstellation dieselbe `requires`-Liste fuehren, kommt sie vom
-   * Eintrag, und beide Arten teilen sich diese eine Fassung.
+   * Eintrag.
    *
    * `forgeNodeName` statt `getForgeNode(id)?.name`: die Liste darf einen
    * Strahl (Ring 1) nennen, und der steht nicht in `FORGE_NODES`.
@@ -217,33 +214,6 @@ export function useForgeOffers(): {
       met: have >= need,
       progress: need <= 0 ? 1 : Math.min(1, have / need),
     }
-  }
-
-  /**
-   * Die Bedingung, die ENTSCHEIDET, wann ein Eintrag aufgeht — die mit dem
-   * geringsten Fortschritt.
-   *
-   * Stand einmal als `reqs[0].progress <= reqs[1].progress ? reqs[0] : reqs[1]`
-   * da und las damit genau zwei. Bei drei Bedingungen zeigte diese Fassung
-   * still den falschen Balken: nicht die schwaechste, sondern die schwaechere
-   * der ersten beiden.
-   */
-  function weakestReq(reqs: ForgeOfferReq[]): ForgeOfferReq {
-    return reqs.reduce((worst, req) => (req.progress < worst.progress ? req : worst), reqs[0])
-  }
-
-  /**
-   * ALLE Bedingungen als EINE Zeile — fuer das `title` der Kompaktzeile.
-   *
-   * Die Vault-Zeile zeigt nur die schwaechste; bei dreien blieben zwei
-   * unsichtbar. Ein `title` kostet keine Zeilenhoehe und ist deshalb der Ort
-   * dafuer — eine zweite Liste im Markup waere die Karte, gegen die die Zeile
-   * gebaut ist.
-   */
-  function reqLineOf(reqs: ForgeOfferReq[]): string {
-    return reqs
-      .map((req) => `${req.name} ${Math.min(req.have, req.need)}/${req.need}`)
-      .join(FORGE_VAULT_REQ_SEPARATOR)
   }
 
   const constellationOffers = computed<ForgeOffer[]>(() =>
@@ -270,8 +240,8 @@ export function useForgeOffers(): {
       materials: costItems(def.materialCost),
       ready: forgeStore.canForgeConstellation(def.id),
       // Beide Tore stehen am Eintrag, obwohl er nur erscheint, wenn sie erfüllt
-      // sind: das Kärtchen zeigt sie als bestandene Bedingung, und dieselbe
-      // Rechnung trägt die gesperrte Zeile im Archiv.
+      // sind: das Kärtchen zeigt sie als bestandene Bedingung — der Beleg
+      // dafür, dass diese Zeile wirklich freigeschaltet ist.
       reqs: def.requires.map(vaultReq),
       restockMs: null,
       sold: false,
@@ -366,36 +336,22 @@ export function useForgeOffers(): {
 
   // ── Das Archiv ─────────────────────────────────────────────────────────────
   /**
-   * Was NICHT im Streifen steht: gesperrte Relikte samt Weg dorthin,
-   * ausgebaute und fusionierte.
+   * Was aus dem Streifen HERAUSGEWACHSEN ist: voll ausgebaute Relikte und
+   * fusionierte Konstellationen. Ein Beleg, kein Ausblick.
    *
-   * Gesperrtes zuerst — dort ist noch etwas zu holen; Fertiges ist ein Beleg.
+   * Gesperrtes stand hier einmal mit daneben — mit Sperrsatz, Zahlenpaar und
+   * Fortschrittsbalken, damit der Spieler darauf hinarbeiten konnte. Das ist
+   * gefallen: die Detailspalte zeigt nur noch, was freigeschaltet ist, und ein
+   * Relikt, dessen Knoten noch fehlt, taucht jetzt wirklich erst auf, wenn es
+   * so weit ist. Wer den Weg dorthin sehen will, liest ihn am Baum ab — dort
+   * trägt jeder gesperrte Knoten seine Bedingungen weiterhin.
    */
   const vaultEntries = computed<ForgeVaultEntry[]>(() => {
     const out: ForgeVaultEntry[] = []
 
-    /* Relikt und Konstellation bauen ihre Zeile seit der Vokabular-Umstellung
-       GLEICH: dieselbe `requires`-Liste, dieselbe schwaechste Bedingung, derselbe
-       Balken. Vorher las der Relikt-Zweig zwei Felder direkt am Katalogeintrag
-       und der Konstellations-Zweig zwei feste Knoten — zwei Fassungen fuer
-       dieselbe Zeile. */
-    const vaultRow = (
-      reqs: ForgeOfferReq[],
-    ): Pick<ForgeVaultEntry, 'lockReason' | 'reqLine' | 'have' | 'need' | 'progress'> => {
-      const weakest = weakestReq(reqs)
-      return {
-        lockReason: `${FORGE_VAULT_LOCK_PREFIX} ${weakest.name} ${FORGE_VAULT_LOCK_INFIX} ${weakest.need}`,
-        reqLine: reqLineOf(reqs),
-        have: weakest.have,
-        need: weakest.need,
-        progress: weakest.progress,
-      }
-    }
-
     for (const def of FORGE_RELICS) {
-      const level = forgeStore.relicLevel(def.id)
-      const reqMet = forgeStore.relicRequirementMet(def.id)
-      if (reqMet && level < def.maxLevel) continue
+      if (!forgeStore.relicRequirementMet(def.id)) continue
+      if (forgeStore.relicLevel(def.id) < def.maxLevel) continue
 
       out.push({
         id: def.id,
@@ -404,15 +360,12 @@ export function useForgeOffers(): {
         icon: def.icon,
         color: def.color,
         desc: relicDesc(def.id),
-        state: reqMet ? 'done' : 'locked',
         badge: FORGE_VAULT_MAX_BADGE,
-        ...vaultRow(def.requires.map(vaultReq)),
       })
     }
 
     for (const def of FORGE_CONSTELLATIONS) {
-      const forged = forgeStore.constellationForged(def.id)
-      if (!forged && forgeStore.constellationRequirementMet(def.id)) continue
+      if (!forgeStore.constellationForged(def.id)) continue
 
       out.push({
         id: def.id,
@@ -421,13 +374,11 @@ export function useForgeOffers(): {
         icon: def.icon,
         color: def.color,
         desc: def.desc,
-        state: forged ? 'done' : 'locked',
         badge: FORGE_VAULT_FUSED_BADGE,
-        ...vaultRow(def.requires.map(vaultReq)),
       })
     }
 
-    return out.sort((a, b) => Number(a.state === 'done') - Number(b.state === 'done'))
+    return out
   })
 
   /**

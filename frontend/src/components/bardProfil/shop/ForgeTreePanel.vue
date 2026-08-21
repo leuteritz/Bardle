@@ -1285,9 +1285,10 @@ function entryOf(node: TreeNode): ForgeUpgradeEntry {
  * sie hier mitgedämpft, läge über ihnen eine zweite Aussage, die etwas anderes
  * behauptet — „dir fehlen Chimes" steht an einem MAX-Knoten schlicht falsch.
  *
- * Wortgleich mit `short` in `ForgeUpgradeTile.vue`. Zwei Fassungen derselben
- * Weiche liefen beim nächsten Zustand auseinander, und Baum und Liste stehen im
- * Shop-Tab nebeneinander im Bild — man sähe es sofort.
+ * Bis auf einen Term dasselbe wie `short` in `ForgeUpgradeTile.vue`, und die
+ * Ausnahme ist gewollt: die Liste bekommt gar keinen gesperrten Eintrag mehr zu
+ * sehen und braucht den `'locked'`-Term deshalb nicht. Der Baum bekommt sie
+ * alle — er ist seit dem Umbau der EINZIGE Ort, an dem Gesperrtes steht.
  */
 function isShort(node: TreeNode): boolean {
   const entry = entryOf(node)

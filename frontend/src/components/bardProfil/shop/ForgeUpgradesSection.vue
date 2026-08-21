@@ -5,14 +5,14 @@
        Reihenfolge dabei jedes Mal auftauen. -->
   <div ref="wrapEl" class="fu-wrap" @mouseenter="freezeOrder" @mouseleave="leaveList">
     <!-- ══ Die Töpfe ════════════════════════════════════════════════
-         Ready · Saving up · Next up · und zuletzt das eingeklappte Archiv. Ein
-         leerer Topf fällt ganz weg. -->
+         Ready · Saving up · und zuletzt das eingeklappte Archiv. Ein leerer
+         Topf fällt ganz weg — Gesperrtes steht hier gar nicht erst, siehe
+         `sections`. -->
     <section v-for="section in sections" :key="section.id" class="fu-group">
       <!-- Der Trenner. JEDER Topf trägt einen — auch die beiden kaufbaren: dass
            der Knopf in Farbe schon alles sage, hat als Begründung fürs Weglassen
-           nicht getragen. Vier davon, weil „kaufbar", „am Sparen" und die beiden
-           Sperrgründe vier verschiedene Aufgaben sind; Herleitung an
-           `FORGE_DIVIDER_PARENT_LABEL`. -->
+           nicht getragen. Zwei davon, weil „kaufbar" und „am Sparen" zwei
+           verschiedene Aufgaben sind. -->
       <div
         v-if="section.divider"
         class="fu-div"
@@ -89,6 +89,11 @@
  * Gegliedert wird nach dem, was der Spieler TUN kann (`FORGE_UPGRADE_BUCKETS`),
  * nicht nach dem Ring — die Herleitung steht dort.
  *
+ * Und gezeigt wird nur, was FREIGESCHALTET ist: kaufbar, am Sparen,
+ * ausgewachsen. Gesperrtes fällt vor dem Einsortieren heraus (`sections`); wer
+ * wissen will, was als Nächstes aufgeht, liest es am Baum links ab, wo der
+ * Knoten sein Schloss und seinen Sperrsatz behält.
+ *
  * Was ein Eintrag AUSFÜHRLICH zeigt, steht seit dem Umbau nicht mehr in der
  * Liste: fünfundvierzig volle Karten untereinander waren dieselbe Fläche
  * fünfundvierzig Mal, und keine davon gross genug, um auf einem 4K-Schirm etwas
@@ -97,7 +102,7 @@
  * Was daraus wurde, sind ZWEI Formen statt einer — nach dem, was der Eintrag
  * vom Spieler will:
  *
- *   • `ForgeUpgradeTile` für alles Kaufbare und Gesperrte. Eine Zeile mit
+ *   • `ForgeUpgradeTile` für alles Kaufbare. Eine Zeile mit
  *     grosser Stufe, Name, Wirkungssprung, Materialband und einer Kauffläche,
  *     deren FARBE die Aussage trägt. Die 44px-Zeile davor trug ihre beiden
  *     wichtigsten Zahlen als die kleinsten Elemente der Spalte und die Stufe
@@ -131,22 +136,15 @@ import {
   FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
   FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN,
   FORGE_CARD_FLASH_MS,
-  FORGE_DIVIDER_PARENT_ICON,
-  FORGE_DIVIDER_PARENT_LABEL,
-  FORGE_DIVIDER_PHASE_ICON,
-  FORGE_DIVIDER_PHASE_LABEL,
-  FORGE_DIVIDER_PHASE_MANY_LABEL,
   FORGE_DIVIDER_READY_COLOR,
   FORGE_DIVIDER_READY_ICON,
   FORGE_DIVIDER_READY_LABEL,
   FORGE_DIVIDER_SAVING_COLOR,
   FORGE_DIVIDER_SAVING_ICON,
   FORGE_DIVIDER_SAVING_LABEL,
-  FORGE_PHASE_TOKEN,
   FORGE_SPOTLIGHT_ARRIVAL_MS,
   FORGE_SPOTLIGHT_SCROLL_DELAY_MS,
   FORGE_UPGRADE_EMPTY_ICON,
-  STAR_PHASE_DATA,
 } from '@/config/constants'
 
 const { upgradeEntries, entryById, freshIds, buyUpgrade, affordableLevels, buyMany } =
@@ -218,7 +216,7 @@ function bulkOf(id: string): number {
 }
 
 // ── Die Abschnitte ───────────────────────────────────────────────────────────
-/** Die Linie mit Etikett über einer Gruppe — nur die gesperrten tragen eine. */
+/** Die Linie mit Etikett über einer Gruppe — nur das Archiv trägt keine. */
 interface UpgradeDivider {
   icon: string
   label: string
@@ -227,11 +225,12 @@ interface UpgradeDivider {
 
 interface UpgradeSection {
   /**
-   * Der `v-for`-Schlüssel, nicht der Topf: „Next up" erscheint als ZWEI
-   * Abschnitte (Eltern- und Phasensperre), und zwei gleiche Schlüssel
-   * nebeneinander sind ein Vue-Fehler, kein Schönheitsfehler.
+   * Der `v-for`-Schlüssel, und seit dem Wegfall der gesperrten Abschnitte
+   * deckungsgleich mit dem Topf. Er bleibt trotzdem ein eigenes Feld: die
+   * Vorlage fragt an zwei Stellen nach `'grown'`, und ein Schlüssel, der
+   * zufällig gleich heisst, ist keine Zusage, dass er es bleibt.
    */
-  id: 'ready' | 'reach' | 'lockedParent' | 'lockedPhase' | 'grown'
+  id: 'ready' | 'reach' | 'grown'
   entries: ForgeUpgradeEntry[]
   divider?: UpgradeDivider
 }
@@ -242,28 +241,6 @@ const archiveChevron = computed(() =>
   archiveOpen.value ? FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN : FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
 )
 
-/**
- * Das Etikett über den phasengesperrten Einträgen.
- *
- * Es nennt die Phase nur, wenn darunter wirklich NUR eine wartet: die Knoten
- * öffnen bei vier verschiedenen Phasen, und „Waiting on Dawn · 18" wäre für
- * zwölf der achtzehn schlicht falsch. Die Tönung nimmt in beiden Fällen die
- * nächste — das Tor, das als erstes aufgeht.
- */
-function phaseDivider(entries: ForgeUpgradeEntry[]): UpgradeDivider {
-  const phases = new Set(entries.map((entry) => entry.lockPhase))
-  const nearest = Math.min(...phases)
-  const data = STAR_PHASE_DATA[nearest]
-  return {
-    icon: FORGE_DIVIDER_PHASE_ICON,
-    color: data?.phasePrimary ?? '#c89040',
-    label:
-      phases.size === 1 && data
-        ? FORGE_DIVIDER_PHASE_LABEL.replace(FORGE_PHASE_TOKEN, data.name)
-        : FORGE_DIVIDER_PHASE_MANY_LABEL,
-  }
-}
-
 const sections = computed<UpgradeSection[]>(() => {
   const pots: Record<ForgeUpgradeBucketId, ForgeUpgradeEntry[]> = {
     ready: [],
@@ -273,30 +250,21 @@ const sections = computed<UpgradeSection[]>(() => {
   }
 
   for (const entry of upgradeEntries.value) {
-    pots[bucketOf(entry)].push(entry)
+    const bucket = bucketOf(entry)
+    /* Gesperrtes gehört nicht in diese Spalte. Sie beantwortet „was kann ich
+       JETZT kaufen" — und ein Knoten, dessen Elternteil noch fehlt oder dessen
+       Sonnenphase noch nicht angebrochen ist, beantwortet sie mit nichts. Im
+       frühen Spielstand stellte er trotzdem den Löwenanteil der Liste.
+
+       Der Ausblick darauf, was als Nächstes aufgeht, bleibt vollständig
+       erhalten — er steht im Baum links, wo der gesperrte Knoten sein Schloss,
+       seinen Sperrsatz und seinen Fortschrittsbalken behält. Das ist auch der
+       Grund, warum hier gefiltert wird und nicht in `forgeUpgradeBucket()`:
+       der Topf `'next'` bleibt eine gültige Aussage über den Eintrag, diese
+       Liste zeigt ihn nur nicht mehr an. */
+    if (bucket === 'next') continue
+    pots[bucket].push(entry)
   }
-
-  /* Der Topf „Next up" zerfällt beim ANZEIGEN in zwei, je Sperrgrund einen.
-     Die Weiche steht am Eintrag (`lockKind`) und nicht hier, damit sie nicht
-     am fertigen Sperrsatz hängt; `forgeUpgradeBucket()` bleibt unangetastet
-     und damit auch die eingefrorene Reihenfolge.
-
-     Elternsperren zuerst: die Liste ordnet durchgehend nach „was kann ich
-     tun" — kaufen, sparen, den Elternknoten wachsen lassen, und ganz zuletzt
-     das, wogegen nur Warten hilft. */
-  const phaseLocked = pots.next.filter((entry) => entry.lockKind === 'phase')
-  // Die RESTMENGE und kein zweiter Gleichheitstest: zwei Filter auf feste Werte
-  // sind zusammen nur so lange vollstaendig, wie niemand einen dritten Grund
-  // ergaenzt — und der Kronen-Ring hat mit `'prestige'` genau das getan. Ein
-  // Eintrag, der durch beide faellt, verschwindet aus der Liste, statt falsch
-  // einsortiert zu werden; das ist der teurere Fehler.
-  const parentLocked = pots.next.filter((entry) => entry.lockKind !== 'phase')
-
-  // Innerhalb der Elternsperren zählt die Nähe zur Freischaltung, innerhalb der
-  // Phasensperren das nächste Tor. Die übrigen Töpfe behalten die
-  // Katalogreihenfolge des Baums (Ray → Branch → Leaf → Bough).
-  parentLocked.sort((a, b) => b.unlockProgress - a.unlockProgress)
-  phaseLocked.sort((a, b) => a.lockPhase - b.lockPhase)
 
   const out: UpgradeSection[] = [
     {
@@ -317,16 +285,6 @@ const sections = computed<UpgradeSection[]>(() => {
         color: FORGE_DIVIDER_SAVING_COLOR,
       },
     },
-    {
-      id: 'lockedParent',
-      entries: parentLocked,
-      divider: {
-        icon: FORGE_DIVIDER_PARENT_ICON,
-        label: FORGE_DIVIDER_PARENT_LABEL,
-        color: '#c89040',
-      },
-    },
-    { id: 'lockedPhase', entries: phaseLocked, divider: phaseDivider(phaseLocked) },
     { id: 'grown', entries: pots.grown },
   ]
 

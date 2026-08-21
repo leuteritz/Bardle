@@ -16,8 +16,11 @@ import { FORGE_VAULT_FUSED_BADGE, FORGE_VAULT_MAX_BADGE } from '@/config/constan
  * Eintrag noch auftauchen würde. Ein Fehler hier LÖSCHT Inhalt aus dem Spiel,
  * ohne dass irgendwo eine Ausnahme fliegt.
  *
- * Geprüft wird deshalb vor allem die VOLLSTÄNDIGKEIT: Streifen und Archiv
- * zusammen müssen jeden Katalogeintrag genau einmal führen, in jedem Zustand.
+ * Geprüft wird deshalb vor allem die VOLLSTÄNDIGKEIT — aber gemessen am
+ * FREIGESCHALTETEN Katalog, nicht am ganzen: die Spalte zeigt nur, was der
+ * Spieler auch erreichen kann. Ein gesperrtes Relikt steht seit dem Umbau
+ * nirgends, und das ist die Zusage, die diese Spec bindet. Was noch fehlt,
+ * liest der Spieler am Baum ab.
  *
  * Die zweite Weiche ist die Trennung, die den ganzen Umbau trägt: ERSCHEINEN
  * hängt an der Freischaltung, KAUFBAR AUSSEHEN am Geldbeutel. Fielen die beiden
@@ -73,16 +76,33 @@ function stockBargain(): void {
 }
 
 describe('useForgeOffers — Vollständigkeit', () => {
-  it('führt jeden Katalogeintrag genau einmal, im frischen Spielstand', () => {
+  it('führt im frischen Spielstand nichts Gesperrtes — weder im Streifen noch im Archiv', () => {
     stockBargain()
     const { offers, vaultEntries } = useForgeOffers()
+    const forge = useStarForgeStore()
 
     const ids = [...offers.value.map((o) => o.id), ...vaultEntries.value.map((v) => v.id)]
     expect(new Set(ids).size, 'ein Eintrag steht doppelt').toBe(ids.length)
 
-    for (const relic of FORGE_RELICS) expect(ids, `Relikt ${relic.id} fehlt`).toContain(relic.id)
-    for (const con of FORGE_CONSTELLATIONS)
-      expect(ids, `Konstellation ${con.id} fehlt`).toContain(con.id)
+    /* Die Gegenprobe zur Vollständigkeit, seit die Spalte filtert: JEDER
+       Eintrag, der hier steht, muss sein Tor auch offen haben. Ein blankes
+       `toHaveLength(0)` täte es nicht — es bliebe grün, wenn `vaultEntries`
+       eines Tages gar nichts mehr lieferte. */
+    for (const relic of FORGE_RELICS) {
+      if (ids.includes(relic.id)) {
+        expect(forge.relicRequirementMet(relic.id), `${relic.id} steht gesperrt in der Liste`).toBe(
+          true,
+        )
+      }
+    }
+    for (const con of FORGE_CONSTELLATIONS) {
+      if (ids.includes(con.id)) {
+        expect(
+          forge.constellationRequirementMet(con.id),
+          `${con.id} steht gesperrt in der Liste`,
+        ).toBe(true)
+      }
+    }
   })
 
   it('führt jeden Katalogeintrag genau einmal, wenn alles offen und bezahlt ist', () => {
@@ -121,53 +141,48 @@ describe('useForgeOffers — Vollständigkeit', () => {
 })
 
 describe('useForgeOffers — Erscheinen hängt an der Freischaltung', () => {
-  it('ein gesperrtes Relikt steht im Archiv, nicht im Streifen — auch mit vollem Beutel', () => {
+  it('ein gesperrtes Relikt steht NIRGENDS — auch nicht mit vollem Beutel', () => {
     fillPurse()
     stockBargain()
     const { offers, vaultEntries } = useForgeOffers()
 
     expect(offers.value.map((o) => o.id)).not.toContain(RELIC.id)
-    const vault = vaultEntries.value.find((v) => v.id === RELIC.id)
-    expect(vault?.state).toBe('locked')
-    expect(vault?.need).toBe(RELIC.requires[0].level)
-    expect(vault?.progress).toBe(0)
+    // Und auch nicht im Archiv, wo es bis zum Umbau mit Sperrsatz und Balken
+    // lag. Der volle Beutel ist der Kern der Probe: Kaufkraft darf ein
+    // geschlossenes Tor nicht aufwiegen.
+    expect(vaultEntries.value.map((v) => v.id)).not.toContain(RELIC.id)
   })
 
-  it('der Fortschritt zum Tor steht am Archiveintrag', () => {
-    // ALLE Bedingungen bis auf eine erfuellen, damit die eine uebrige die
-    // schwaechste ist. Nur die erste zu setzen reichte, solange ein Relikt
-    // genau einen Vorgaenger hatte; seit es mehrere sein duerfen, zeigte der
-    // Balken sonst die noch unberuehrte zweite und der Test pruefte, dass 0
-    // gleich 2/3 ist.
+  it('erst das offene Tor lässt ein Relikt überhaupt erscheinen', () => {
+    // Die Gegenrichtung zur Probe davor: ein Vorgänger EINE Stufe unter dem
+    // Tor genügt noch nicht. Alle Bedingungen bis auf eine erfüllen, damit
+    // wirklich diese eine die Zeile zurückhält.
     meetForgeRequirements(RELIC.requires)
     const gate = RELIC.requires[0]
     setForgeLevel(gate.id, gate.level - 1)
-    const { vaultEntries } = useForgeOffers()
+    const { offers, vaultEntries } = useForgeOffers()
 
-    const vault = vaultEntries.value.find((v) => v.id === RELIC.id)
-    expect(vault?.have).toBe(gate.level - 1)
-    expect(vault?.progress).toBeCloseTo((gate.level - 1) / gate.level)
+    expect(offers.value.map((o) => o.id)).not.toContain(RELIC.id)
+    expect(vaultEntries.value.map((v) => v.id)).not.toContain(RELIC.id)
+
+    // Die letzte Stufe holt es herein.
+    setForgeLevel(gate.id, gate.level)
+    expect(offers.value.map((o) => o.id)).toContain(RELIC.id)
   })
 
-  it('der Balken zeigt die SCHWAECHSTE Bedingung, nicht die erste', () => {
-    // Die Regressionsprobe fuer die `weakest`-Rechnung: sie las einmal genau
-    // zwei Eintraege (`reqs[0].progress <= reqs[1].progress ? ... : ...`) und
-    // haette ab drei Bedingungen still die schwaechere der ERSTEN BEIDEN
-    // gezeigt statt der schwaechsten von allen.
+  it('EINE offene Bedingung von mehreren hält den Eintrag zurück', () => {
+    // Ein Relikt mit mehreren Vorgängern: die LETZTE offen zu lassen ist die
+    // Regressionsprobe dafür, dass die Freischaltung wirklich alle prüft und
+    // nicht bei der ersten erfüllten aufhört.
     const many = FORGE_RELICS.find((r) => r.requires.length >= 2)!
     meetForgeRequirements(many.requires)
     const last = many.requires[many.requires.length - 1]
     setForgeLevel(last.id, 0)
-    const { vaultEntries } = useForgeOffers()
+    fillPurse()
+    const { offers, vaultEntries } = useForgeOffers()
 
-    const vault = vaultEntries.value.find((v) => v.id === many.id)
-    expect(vault?.have).toBe(0)
-    expect(vault?.need).toBe(last.level)
-    expect(vault?.progress).toBe(0)
-    // Und die Zeile am Zeiger nennt trotzdem ALLE.
-    for (const req of many.requires) {
-      expect(vault?.reqLine).toContain(`/${req.level}`)
-    }
+    expect(offers.value.map((o) => o.id)).not.toContain(many.id)
+    expect(vaultEntries.value.map((v) => v.id)).not.toContain(many.id)
   })
 
   it('ein freigeschaltetes Relikt steht im Streifen, auch wenn der Beutel leer ist', () => {
@@ -201,7 +216,7 @@ describe('useForgeOffers — Erscheinen hängt an der Freischaltung', () => {
 
     expect(offers.value.map((o) => o.id)).not.toContain(RELIC.id)
     const vault = vaultEntries.value.find((v) => v.id === RELIC.id)
-    expect(vault?.state).toBe('done')
+    expect(vault, 'ein ausgebautes Relikt gehört ins Archiv').toBeDefined()
     expect(vault?.badge).toBe(FORGE_VAULT_MAX_BADGE)
   })
 
@@ -213,7 +228,7 @@ describe('useForgeOffers — Erscheinen hängt an der Freischaltung', () => {
 
     expect(offers.value.map((o) => o.id)).not.toContain(CONSTELLATION.id)
     const vault = vaultEntries.value.find((v) => v.id === CONSTELLATION.id)
-    expect(vault?.state).toBe('done')
+    expect(vault, 'eine fusionierte Konstellation gehört ins Archiv').toBeDefined()
     expect(vault?.badge).toBe(FORGE_VAULT_FUSED_BADGE)
   })
 

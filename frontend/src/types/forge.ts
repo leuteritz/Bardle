@@ -579,11 +579,17 @@ export interface ForgeOffer {
 }
 
 /**
- * Was ins Archiv sinkt — gesperrt, ausgebaut oder fusioniert.
+ * Was ins Archiv sinkt — ausgebaut oder fusioniert.
  *
  * Eine eigene, flachere Form als `ForgeOffer`: hier ist nichts zu entscheiden,
- * also braucht es weder Kosten noch Verb. Übrig bleibt, warum der Eintrag NICHT
- * im Streifen steht.
+ * also braucht es weder Kosten noch Verb noch Bedingungen. Übrig bleibt der
+ * BELEG — Name, Motiv, Wirkung und die Marke dafür.
+ *
+ * Sie trug einmal einen zweiten Zustand `'locked'` samt Sperrsatz, Zahlenpaar
+ * und Balken: das Archiv führte auch, was der Spieler noch nicht freischalten
+ * konnte. Seit die Detailspalte ausschliesslich Freigeschaltetes zeigt, ist
+ * dieser Zustand gefallen — der Weg zu einem gesperrten Relikt steht am Baum,
+ * wo sein Knoten die Bedingungen ohnehin führt.
  */
 export interface ForgeVaultEntry {
   id: string
@@ -592,26 +598,6 @@ export interface ForgeVaultEntry {
   icon: string
   color: string
   desc: string
-  /** `locked` trägt einen Weg, `done` eine Marke. */
-  state: 'locked' | 'done'
-  /** Die Marke bei `done`: `✦ MAX` oder `✦ FUSED`. */
+  /** `✦ MAX` oder `✦ FUSED`. */
   badge: string
-  /** Der Weg bei `locked`, aus der SCHWÄCHSTEN Bedingung: „Grow Moon Orbit to Lv 3“. */
-  lockReason: string
-  /**
-   * ALLE Bedingungen als EINE Zeile, z. B. „Comet Miner 3/3 · Deep Vein 1/2“.
-   *
-   * Die Vault-Zeile ist eine KOMPAKTZEILE mit genau einem Balken — zwei
-   * Balken wären eine Karte, und mit drei Bedingungen wird dieses Argument
-   * stärker, nicht schwächer. Sichtbar bleibt deshalb die schwächste; was der
-   * Spieler sonst gar nicht sähe, hängt im `title` der Zeile.
-   *
-   * Ein vorgerechneter String und keine zweite Liste: die Zeile rendert ihn nie
-   * einzeln, sie reicht ihn nur an das Attribut durch.
-   */
-  reqLine: string
-  have: number
-  need: number
-  /** 0–1, für den Balken unter einer gesperrten Zeile. */
-  progress: number
 }

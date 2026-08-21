@@ -17,36 +17,19 @@
       <div
         v-for="entry in vaultEntries"
         :key="entry.id"
-        class="fc-row fv-row"
-        :class="entry.state === 'locked' ? 'fc-row--locked' : 'fc-row--done'"
-        :title="rowTitle(entry)"
+        class="fc-row fv-row fc-row--done"
+        :title="entry.desc"
       >
         <Icon :icon="entry.icon" width="27" height="27" :style="{ color: entry.color }" />
 
         <div class="fc-row-body">
-          <span class="fc-row-name" :style="entry.state === 'done' ? { color: entry.color } : {}">
-            {{ entry.name }}
-          </span>
-          <span v-if="entry.state === 'locked'" class="fc-row-meta">
-            <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" />
-            {{ entry.lockReason }}
-          </span>
-          <span v-else class="fc-row-meta fc-row-meta--gain">{{ entry.desc }}</span>
+          <span class="fc-row-name" :style="{ color: entry.color }">{{ entry.name }}</span>
+          <span class="fc-row-meta fc-row-meta--gain">{{ entry.desc }}</span>
         </div>
 
-        <span v-if="entry.state === 'locked'" class="fc-row-num">
-          {{ entry.have }}/{{ entry.need }}
-        </span>
-        <span v-else class="fc-badge" :class="{ 'fc-badge--forged': entry.kind === 'constellation' }">
+        <span class="fc-badge" :class="{ 'fc-badge--forged': entry.kind === 'constellation' }">
           {{ entry.badge }}
         </span>
-
-        <!-- Der Balken liegt an der Unterkante der Zeile, damit sie so hoch
-             bleibt wie ihre Nachbarn — dasselbe Muster wie bei einer gesperrten
-             Upgrade-Zeile. -->
-        <div v-if="entry.state === 'locked'" class="fc-track fv-track">
-          <i :style="{ transform: `scaleX(${entry.progress})` }" />
-        </div>
       </div>
     </template>
   </section>
@@ -54,17 +37,20 @@
 
 <script setup lang="ts">
 /**
- * Die zweite Schublade der Shop-Spalte: was NICHT im Streifen darüber steht.
+ * Die zweite Schublade der Shop-Spalte: was aus dem Streifen darüber
+ * HERAUSGEWACHSEN ist — voll ausgebaute Relikte (`✦ MAX`) und fusionierte
+ * Konstellationen (`✦ FUSED`). Sie standen bis zum Umbau als Kompaktzeilen in
+ * ihrer jeweiligen Abteilung; mit der Rail wäre auch dieser Ort verschwunden.
  *
- * Gesperrte Relikte samt dem Weg dorthin („Grow Moon Orbit to Lv 3"),
- * ausgebaute (`✦ MAX`) und fusionierte Konstellationen (`✦ FUSED`). Sie standen
- * bis zum Umbau als Kompaktzeilen in ihrer jeweiligen Abteilung; mit der Rail
- * wäre auch dieser Ort verschwunden.
+ * Zugeklappt als Vorgabe, weil hier nichts zu entscheiden ist — die Schublade
+ * ist ein Beleg, keine Auslage.
  *
- * Ganz wegzulassen ging nicht: dass ein Relikt AUS DEM NICHTS auftaucht, sobald
- * sein Knoten hoch genug ist, nimmt dem Spieler die Möglichkeit, darauf
- * hinzuarbeiten — und der Fortschrittsbalken ist genau diese Auskunft. Zugeklappt
- * als Vorgabe, weil hier nichts zu entscheiden ist.
+ * Sie führte einmal auch GESPERRTE Einträge, mit Sperrsatz und
+ * Fortschrittsbalken. Die Begründung dafür war, dass ein Relikt sonst aus dem
+ * Nichts auftauche, sobald sein Knoten hoch genug sei. Genau das ist jetzt so
+ * gewollt: die Detailspalte beantwortet „was kann ich kaufen", und der Weg zu
+ * einem noch gesperrten Relikt steht vollständig am Baum, wo sein Knoten die
+ * Bedingungen ohnehin trägt.
  *
  * Die Zeilenoptik ist die geteilte `.fc-row`-Familie aus `rpg-theme.css`, die
  * Schaltzeile die geteilte `.fc-archive` — beide dieselben, die die Upgrade-Liste
@@ -73,9 +59,7 @@
 import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useForgeOffers } from '@/composables/ui/useForgeOffers'
-import type { ForgeVaultEntry } from '@/types'
 import {
-  FORGE_LOCK_ICON,
   FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
   FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN,
   FORGE_VAULT_COLOR,
@@ -91,21 +75,9 @@ const chevron = computed(() =>
   open.value ? FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN : FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
 )
 
-/**
- * Was am Zeiger steht — bei einer GESPERRTEN Zeile auch die Bedingungen.
- *
- * Die Zeile selbst zeigt nur die schwaechste (ein Balken, eine Zahl); bei einem
- * Eintrag mit drei Vorgaengern blieben zwei sonst voellig unsichtbar. Der
- * `title` kostet keine Zeilenhoehe und ist deshalb der Ort dafuer — eine
- * zweite Liste im Markup waere die Karte, gegen die diese Zeile gebaut ist.
- *
- * Als Funktion und nicht als Ausdruck im Attribut: ein mehrteiliger
- * Inline-Ausdruck mit Zeilenumbruch ueberlebt den Formatierer nicht.
- */
-function rowTitle(entry: ForgeVaultEntry): string {
-  return entry.state === 'locked' ? `${entry.desc}
-${entry.reqLine}` : entry.desc
-}
+/* Was am Zeiger steht, ist der Wirkungssatz selbst (`:title="entry.desc"`).
+   Hier stand dafuer eine Funktion, solange eine gesperrte Zeile zusaetzlich
+   ihre Bedingungen ins Attribut haengte — mit ihnen ist sie gefallen. */
 </script>
 
 <style scoped>
@@ -120,13 +92,6 @@ ${entry.reqLine}` : entry.desc
 .fv-row {
   position: relative;
   padding-bottom: 13px;
-}
-
-.fv-track {
-  position: absolute;
-  left: 13px;
-  right: 13px;
-  bottom: 7px;
 }
 
 @media (max-height: 1100px) {

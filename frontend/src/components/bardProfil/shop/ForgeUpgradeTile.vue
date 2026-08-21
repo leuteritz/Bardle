@@ -71,9 +71,7 @@
 
     <!-- Nackt, ohne Sockel: der gerahmte Kasten davor kostete Breite, die die
          Zeile für Stufe, Wirkung und Knopf braucht. Die Knotenfarbe trägt das
-         Glyph selbst. Es steht VOR der Weiche und damit in jedem Zustand — eine
-         gesperrte Zeile ist sonst die einzige ohne Bild, und ausgerechnet sie
-         hat am wenigsten sonst, woran man sie erkennt. -->
+         Glyph selbst. -->
     <span class="fut-glyph">
       <Icon
         :icon="entry.icon"
@@ -82,159 +80,108 @@
         class="fut-ico"
         :style="{ color: entry.color }"
       />
-      <!-- Dieselbe Marke wie am Knoten im Baum (`.fc-lock-badge`, rpg-theme.css):
-           die Sperre sitzt in beiden Spalten an derselben Ecke desselben Motivs.
-           Der Träger ist nur dafür da — er hat die Maße des Glyphs, keinen
-           Rahmen und keinen Innenabstand, kostet die Zeile also keine Breite. -->
-      <span v-if="entry.state === 'locked'" class="fc-lock-badge" aria-hidden="true">
-        <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
-      </span>
+      <!-- Hier hingen einmal ZWEI Abzeichen an diesem Glyph: ein Schloss für
+           „gesperrt" und ein grüner Kreis mit Blitz für „kaufbar". Der grüne
+           fiel zuerst, weil er das dritte Zeichen für dieselbe Sache war — die
+           Zeile trägt bei `canBuy` grünen Grund, Waschung und einen grünen Knopf
+           mit Preis, und in der Ecke oben rechts sitzt die NEU-Marke.
 
-      <!-- Hier hing das GEGENSTÜCK zum Schloss: ein grüner Kreis mit Blitz,
-           „kaufbar", in der anderen Ecke desselben Glyphs. Er ist gefallen, weil
-           er das dritte Zeichen für dieselbe Sache war — die Zeile trägt bei
-           `canBuy` grünen Grund, Waschung und einen grünen Knopf mit Preis, und
-           in der Ecke oben rechts sitzt jetzt die NEU-Marke. Zwei runde
-           Abzeichen an einem Eintrag lesen sich als zwei Meldungen.
-
-           Was das Schloss betrifft, ändert sich nichts: es bleibt der einzige
-           Bewohner dieses Trägers und sagt weiterhin nein. -->
+           Das Schloss ist mit den gesperrten Einträgen selbst gegangen: diese
+           Liste zeigt nur noch Freigeschaltetes. Am Knoten im Baum hängt es
+           weiter (`.fc-lock-badge` in rpg-theme.css) — dort ist es die
+           Auskunft, die diese Spalte nicht mehr geben muss. -->
     </span>
 
-    <!-- ══ GESPERRT ══════════════════════════════════════════════
-         Der Weg zur Freischaltung statt eines Preises, den man ohnehin nicht
-         zahlen könnte. Hier führt der NAME, nicht die Stufe: ein „Lv 0" gross
-         gesetzt wäre die einzige Zahl der Zeile — und sie sagte nichts. Der
-         Balken liegt an der Unterkante, damit die Zeile so hoch bleibt wie
-         ihre Nachbarn. -->
-    <template v-if="entry.state === 'locked'">
-      <div class="fut-main">
-        <span class="fut-name fut-name--lead" :style="{ color: entry.color }">
-          {{ entry.name }}
-        </span>
-        <!-- Vor dem Sperrsatz steht das WARUM, nicht noch einmal das „zu": das
-             Schloss trägt jetzt das Motiv links. Sonne bei einer Phasensperre,
-             Astwerk bei einer Elternsperre — dieselben zwei Glyphen, mit denen
-             der Trenner die Zeile eingeordnet hat, und dieselbe Weiche
-             (`entry.lockKind`). -->
-        <span v-if="!showReqList" class="fut-lock">
-          <Icon :icon="lockWhyIcon" width="15" height="15" class="fut-lock-why" />
-          {{ entry.lockReason }}
+    <!-- ══ KAUFBAR, IM SPAREN, GEDECKELT ═════════════════════════
+         Die drei Zustände, die diese Liste noch führt. Hier stand einmal eine
+         Weiche mit einem zweiten Zweig für GESPERRT — Sperrsatz statt Preis,
+         Bedingungsliste statt Materialband, Name statt Stufe. Der ist mit den
+         gesperrten Einträgen gegangen; was er zeigte, zeigt jetzt der Knoten
+         im Baum. -->
+    <div class="fut-main">
+      <div class="fut-head">
+        <span class="fut-text">
+          <span class="fut-lvl">
+            {{ levelParts.big }}<span class="fut-lvl-max">{{ levelParts.max }}</span>
+          </span>
+          <span class="fut-name" :style="{ color: entry.color }">{{ entry.name }}</span>
         </span>
 
-        <!-- Ab ZWEI Bedingungen tritt der Satz zurück und die Liste übernimmt.
-             Ein Satz kann nur die erste offene nennen — bei einer Krone, die
-             drei Knoten verlangt, sähe der Spieler nach jedem erfüllten
-             Vorgänger einen neuen Satz und wüsste nie, wie viele noch kommen.
-             Die Zahlenpaare sind dieselbe Form wie im Archiv nebenan
-             (`ForgeVaultSection`), damit „Moon Orbit 2/3" überall gleich
-             aussieht. -->
-        <template v-else>
-          <div class="fut-reqs-head">{{ FORGE_REQ_HEADING }}</div>
-          <ul class="fut-reqs">
-            <li v-for="req in entry.reqs" :key="req.id" :class="{ 'fut-req--met': req.met }">
-              <span class="fut-req-mark">{{
-                req.met ? FORGE_REQ_MET_MARK : FORGE_REQ_OPEN_MARK
-              }}</span>
-              <span class="fut-req-name">{{ req.name }}</span>
-              <span class="fut-req-num">{{ req.have }}/{{ req.need }}</span>
-            </li>
-          </ul>
-        </template>
+        <!-- Ein gedeckelter Strahl hat einen Sprung, den er nicht nehmen
+             darf — der Grund ist hier die nützlichere Auskunft als das
+             Zahlenpaar. -->
+        <span v-if="entry.state === 'capped'" class="fut-capped">{{ entry.lockReason }}</span>
+        <span v-else class="fut-delta">
+          <span class="fut-delta-now">{{ nowText }}</span>
+          <span class="fut-delta-arrow">→</span>
+          <span class="fut-delta-next">{{ entry.nextText }}</span>
+        </span>
       </div>
 
-      <div v-if="entry.unlockProgress > 0" class="fc-track fut-track">
-        <i :style="{ transform: `scaleX(${entry.unlockProgress})` }" />
+      <!-- Zweite Zeile: das Lager, und sonst nichts mehr.
+           Rechts sass hier einmal die BEST-BUY-Pille; mit ihr ist der letzte
+           Grund gefallen, den Fuß auch ohne Materialien zu stellen. Die
+           Bedingung sitzt deshalb am FUSS und nicht mehr am Band darin: ein
+           leerer Flex-Kasten wäre unsichtbar, aber `.fut-main` trägt
+           `gap: 6px` — die Lücke darunter bliebe und wäre die einzige Zeile
+           der Liste, die tiefer sitzt als ihre Nachbarn.
+
+           Was das Lager kostet, steht rahmenlos (`flat`), also nur Bild und
+           Zahl. Der Chime-Preis steht NICHT hier, sondern im Knopf
+           (`:gold="0"` lässt ihn weg): er ist die eine Zahl, die jeder Eintrag
+           hat, und gehört an die Stelle, an der geklickt wird. Die Materialien
+           kann der Knopf nicht mittragen — zwei Positionen messen auch ohne
+           Rahmen ~150px und machten ihn breiter als den Namen daneben. -->
+      <div v-if="entry.materials.length > 0" class="fut-foot">
+        <ForgeCostRow
+          class="fut-mats"
+          inline
+          flat
+          :label="false"
+          :gold="0"
+          :gold-ok="true"
+          :materials="entry.materials"
+        />
       </div>
-    </template>
+    </div>
 
-    <!-- ══ KAUFBAR, IM SPAREN, GEDECKELT ═════════════════════════ -->
-    <template v-else>
-      <div class="fut-main">
-        <div class="fut-head">
-          <span class="fut-text">
-            <span class="fut-lvl">
-              {{ levelParts.big }}<span class="fut-lvl-max">{{ levelParts.max }}</span>
-            </span>
-            <span class="fut-name" :style="{ color: entry.color }">{{ entry.name }}</span>
-          </span>
+    <!-- Die Kauffläche. Feste Gesamtbreite über die volle Zeilenhöhe: die
+         Kanten fluchten damit über die ganze Liste, und der Stapelknopf nimmt
+         seine Breite dem Verb ab, nicht der Zeile — sonst rückte die Kante
+         jedes Mal, wenn die tickenden Chimes eine Schwelle überschreiten. -->
+    <div class="fut-buy-group">
+      <button
+        class="fut-buy"
+        :class="{
+          'fut-buy--capped': entry.state === 'capped',
+          'fut-buy--short': entry.state !== 'capped' && !entry.canBuy,
+        }"
+        :disabled="!entry.canBuy"
+        :aria-label="`${FORGE_GROW_LABEL} ${entry.name}`"
+        :title="buyTitle"
+        @click.stop="$emit('buy', entry.id)"
+      >
+        <span class="fut-buy-verb">{{ buyLabel }}</span>
+        <span v-if="entry.state !== 'capped'" class="fut-buy-price">
+          <img :src="FORGE_CHIME_IMAGE" class="fut-buy-chime" alt="Chimes" />
+          {{ $formatNumber(entry.goldCost) }}
+        </span>
+      </button>
 
-          <!-- Ein gedeckelter Strahl hat einen Sprung, den er nicht nehmen
-               darf — der Grund ist hier die nützlichere Auskunft als das
-               Zahlenpaar. -->
-          <span v-if="entry.state === 'capped'" class="fut-capped">{{ entry.lockReason }}</span>
-          <span v-else class="fut-delta">
-            <span class="fut-delta-now">{{ nowText }}</span>
-            <span class="fut-delta-arrow">→</span>
-            <span class="fut-delta-next">{{ entry.nextText }}</span>
-          </span>
-        </div>
-
-        <!-- Zweite Zeile: das Lager, und sonst nichts mehr.
-             Rechts sass hier einmal die BEST-BUY-Pille; mit ihr ist der letzte
-             Grund gefallen, den Fuß auch ohne Materialien zu stellen. Die
-             Bedingung sitzt deshalb am FUSS und nicht mehr am Band darin: ein
-             leerer Flex-Kasten wäre unsichtbar, aber `.fut-main` trägt
-             `gap: 6px` — die Lücke darunter bliebe und wäre die einzige Zeile
-             der Liste, die tiefer sitzt als ihre Nachbarn.
-
-             Was das Lager kostet, steht rahmenlos (`flat`), also nur Bild und
-             Zahl. Der Chime-Preis steht NICHT hier, sondern im Knopf
-             (`:gold="0"` lässt ihn weg): er ist die eine Zahl, die jeder Eintrag
-             hat, und gehört an die Stelle, an der geklickt wird. Die Materialien
-             kann der Knopf nicht mittragen — zwei Positionen messen auch ohne
-             Rahmen ~150px und machten ihn breiter als den Namen daneben. -->
-        <div v-if="entry.materials.length > 0" class="fut-foot">
-          <ForgeCostRow
-            class="fut-mats"
-            inline
-            flat
-            :label="false"
-            :gold="0"
-            :gold-ok="true"
-            :materials="entry.materials"
-          />
-        </div>
-      </div>
-
-      <!-- Die Kauffläche. Feste Gesamtbreite über die volle Zeilenhöhe: die
-           Kanten fluchten damit über die ganze Liste, und der Stapelknopf nimmt
-           seine Breite dem Verb ab, nicht der Zeile — sonst rückte die Kante
-           jedes Mal, wenn die tickenden Chimes eine Schwelle überschreiten. -->
-      <div class="fut-buy-group">
-        <button
-          class="fut-buy"
-          :class="{
-            'fut-buy--capped': entry.state === 'capped',
-            'fut-buy--short': entry.state !== 'capped' && !entry.canBuy,
-          }"
-          :disabled="!entry.canBuy"
-          :aria-label="`${FORGE_GROW_LABEL} ${entry.name}`"
-          :title="buyTitle"
-          @click.stop="$emit('buy', entry.id)"
-        >
-          <span class="fut-buy-verb">{{ buyLabel }}</span>
-          <span v-if="entry.state !== 'capped'" class="fut-buy-price">
-            <img :src="FORGE_CHIME_IMAGE" class="fut-buy-chime" alt="Chimes" />
-            {{ $formatNumber(entry.goldCost) }}
-          </span>
-        </button>
-
-        <!-- Nur, wenn mehr als eine Stufe auf einmal geht. Die Zahl kommt aus
-             der Liste (`ForgeUpgradesSection`) und ist dort eingefroren,
-             solange der Zeiger über der Liste steht — dieselbe Regel wie bei
-             der Reihenfolge, und aus demselben Grund. -->
-        <button
-          v-if="bulkCount > 1"
-          class="fut-bulk"
-          :aria-label="`${FORGE_GROW_LABEL} ${entry.name} ${bulkCount} times`"
-          :title="`${entry.name} → ${FORGE_LEVEL_PREFIX}${entry.level + bulkCount}`"
-          @click.stop="$emit('buyMany', entry.id)"
-        >
-          {{ bulkLabel }}
-        </button>
-      </div>
-    </template>
+      <!-- Nur, wenn mehr als eine Stufe auf einmal geht. Die Zahl kommt aus
+           der Liste (`ForgeUpgradesSection`) und ist dort eingefroren,
+           solange der Zeiger über der Liste steht — dieselbe Regel wie bei
+           der Reihenfolge, und aus demselben Grund. -->
+      <button
+        v-if="bulkCount > 1"
+        class="fut-bulk"
+        :aria-label="`${FORGE_GROW_LABEL} ${entry.name} ${bulkCount} times`"
+        :title="`${entry.name} → ${FORGE_LEVEL_PREFIX}${entry.level + bulkCount}`"
+        @click.stop="$emit('buyMany', entry.id)"
+      >
+        {{ bulkLabel }}
+      </button>
+    </div>
   </div>
 </template>
 
@@ -304,16 +251,10 @@ import {
   FORGE_SPOTLIGHT_ARRIVAL_MS,
   FORGE_CHIME_IMAGE,
   FORGE_COUNT_TOKEN,
-  FORGE_DIVIDER_PARENT_ICON,
-  FORGE_REQ_HEADING,
-  FORGE_REQ_MET_MARK,
-  FORGE_REQ_OPEN_MARK,
-  FORGE_DIVIDER_PHASE_ICON,
   FORGE_FRESH_BADGE_ROW_PX,
   FORGE_FRESH_TITLE,
   FORGE_GROW_LABEL,
   FORGE_LEVEL_PREFIX,
-  FORGE_LOCK_ICON,
   FORGE_PIN_ICON,
   FORGE_ROW_BULK_LABEL,
   FORGE_ROW_BULK_WIDTH_PX,
@@ -398,42 +339,7 @@ const isDimmed = computed(
  * Chimes da sind — fehlt Material, ist die Zeile trotzdem nicht kaufbar. Die
  * einzige verlässliche Auskunft dazu ist `canBuy`.
  */
-const short = computed(
-  () => props.entry.state !== 'capped' && props.entry.state !== 'locked' && !props.entry.canBuy,
-)
-
-/**
- * Das Glyph vor dem Sperrsatz sagt das WARUM — das „zu" trägt das Schloss am
- * Motiv. Beide Fälle kommen aus `lockKind` und nicht aus dem Satz daneben, und
- * es sind dieselben zwei Glyphen, die der Trenner über der Zeile führt: die
- * Zeile wiederholt damit, wo sie einsortiert wurde.
- *
- * `lockKind` ist bei einem gesperrten Knoten immer gesetzt (`lockedFor()` gibt
- * nur `'phase'` oder `'parent'` zurück); die Elternsperre ist der Rückfall.
- */
-const lockWhyIcon = computed(() =>
-  props.entry.lockKind === 'phase' ? FORGE_DIVIDER_PHASE_ICON : FORGE_DIVIDER_PARENT_ICON,
-)
-
-/**
- * Zeigt die Zeile ihre Bedingungen als LISTE statt als Satz?
- *
- * Erst ab zwei. Eine einzelne Bedingung als Liste zu setzen wäre eine
- * Aufzählung mit einem Punkt — der Satz sagt dasselbe kürzer und steht seit
- * jeher dort.
- *
- * Eine PHASENSPERRE behält den Satz in jedem Fall: gegen sie hilft nur Warten,
- * und die Vorgänger daneben aufzuzählen legte eine Aufgabe nahe, die es gerade
- * nicht gibt.
- */
-const showReqList = computed(
-  () =>
-    props.entry.lockKind !== 'phase' &&
-    // Ein Prestige-Tor ebenso wenig: die Vorgaengerliste ist dann meist
-    // vollstaendig erfuellt, und lauter Haekchen sagen nicht, was fehlt.
-    props.entry.lockKind !== 'prestige' &&
-    props.entry.reqs.length > 1,
-)
+const short = computed(() => props.entry.state !== 'capped' && !props.entry.canBuy)
 
 /**
  * Was in der NEU-Marke steht.
@@ -621,10 +527,6 @@ const buyTitle = computed(() => {
 
 .fut-row--short .fut-lvl {
   color: rgba(232, 220, 192, 0.72);
-}
-
-.fut-row--locked {
-  opacity: 0.72;
 }
 
 /* ── Der Zeiger meint diese Zeile ────────────────────────────
@@ -821,13 +723,6 @@ const buyTitle = computed(() => {
   text-overflow: ellipsis;
 }
 
-/* Gesperrt führt der Name — er ist dort die einzige Auskunft, die etwas
-   unterscheidet. */
-.fut-name--lead {
-  font-size: 17px;
-  line-height: 1.15;
-}
-
 /* ══════════════════════════════════════════════════
    WAS DIE NÄCHSTE STUFE BRINGT
    Das Danach trägt die Farbe, nicht das Jetzt — es ist die Zahl, wegen der man
@@ -1011,107 +906,6 @@ const buyTitle = computed(() => {
 }
 
 /* ══════════════════════════════════════════════════
-   GESPERRT
-══════════════════════════════════════════════════ */
-.fut-lock {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-  font-size: 13.5px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: rgba(255, 200, 80, 0.7);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Trägt seit dem Schloss-Abzeichen am Motiv das WARUM (Sonne oder Astwerk) und
-   heißt deshalb nicht mehr `--lock-ico`. */
-.fut-lock-why {
-  flex-shrink: 0;
-  color: rgba(200, 144, 64, 0.7);
-}
-
-/* Die Bedingungsliste eines Knotens, der MEHRERE Vorgänger verlangt.
-
-   Eine Zeile je Bedingung, und sie sind bewusst schmaler gesetzt als der
-   Sperrsatz, den sie ersetzen: drei davon müssen in dieselbe Zeilenhöhe passen
-   wie ein einzelner Satz, sonst spränge die Liste rechts bei jedem gesperrten
-   Zusammenlauf auseinander. Gemessen an der Kronen-Zeile mit drei Bedingungen:
-   3 × 16px + 2 × 3px Abstand = 54px gegen die 52px, die der Satz plus sein
-   Abstand belegen. */
-/* Kopf ueber der Bedingungsliste — wortgleich mit dem im Baum. Bei EINER
-   Bedingung steht dort der Satz und kein Kopf. */
-.fut-reqs-head {
-  margin-bottom: 2px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #8a7550;
-}
-
-.fut-reqs {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.fut-reqs li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  font-size: 12.5px;
-  font-weight: 700;
-  line-height: 16px;
-  color: rgba(255, 200, 80, 0.62);
-}
-
-/* Erfüllt: dasselbe Grün, das im ganzen Projekt „kaufbar" heißt. Die Farbe
-   trägt die Auskunft, nicht das Zeichen allein — drei Häkchen untereinander
-   sind auf einen Blick nicht von drei Kreuzen zu unterscheiden. */
-.fut-req--met {
-  color: rgba(110, 192, 64, 0.85);
-}
-
-.fut-req-mark {
-  flex-shrink: 0;
-  width: 11px;
-  text-align: center;
-}
-
-.fut-req-name {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* Die Zahl steht rechts und in Tabellenziffern: untereinander sollen die
-   Schrägstriche eine Spalte bilden. */
-.fut-req-num {
-  flex-shrink: 0;
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-  color: inherit;
-  opacity: 0.85;
-}
-
-/* `.fc-track` liegt ohnehin absolut an der Unterkante — hier bekommt sie nur
-   mehr Stärke, weil sie in einer 96px-Zeile sonst verschwindet. Absolut ist
-   sie richtig: eine gesperrte Zeile hat keinen Knopf, und im Fluss stünde sie
-   in einer Spalte, die es nicht mehr gibt. */
-.fut-track {
-  height: 4px;
-}
-
-/* ══════════════════════════════════════════════════
    DIE ANKUNFTSEBENE UND DIE KAUFQUITTUNG
    Je eine eigene Ebene mit STATISCHEM Schein, animiert wird allein die
    Deckkraft (Performance-Regel 2/11) — dasselbe Rezept wie `.fc-glow` und
@@ -1231,16 +1025,11 @@ const buyTitle = computed(() => {
     font-size: 12px;
   }
 
-  .fut-name--lead {
-    font-size: 16px;
-  }
-
   .fut-delta {
     font-size: 13.5px;
   }
 
-  .fut-capped,
-  .fut-lock {
+  .fut-capped {
     font-size: 12.5px;
   }
 
