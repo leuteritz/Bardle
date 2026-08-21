@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battle/battleStore'
-import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { useSynergyStore } from '@/stores/champions/synergyStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useTeamSigil } from '@/composables/ui/useTeamSigil'
@@ -72,11 +72,10 @@ const emit = defineEmits<{
 }>()
 
 const battleStore = useBattleStore()
-const expeditionStore = useExpeditionStore()
 const synergyStore = useSynergyStore()
 const levelStore = useChampionLevelStore()
 const { announceReceipt } = useHerald()
-const { newlyUnlockedChampions, secondarySlots } = storeToRefs(battleStore)
+const { secondarySlots } = storeToRefs(battleStore)
 const { autoLevelEnabled } = storeToRefs(levelStore)
 
 // ── Auto level-up ────────────────────────────────────────────────────────────
@@ -151,10 +150,8 @@ const allyFilled = computed(() =>
   ROLES.map((_, i) => (secondarySlots.value[i] ?? []).map((s) => s !== null)),
 )
 
-const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
-const expeditionBadgeCount = computed(
-  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
-)
+const shopBadgeCount = useNotifyBadgeCount('champions')
+const expeditionBadgeCount = useNotifyBadgeCount('expedition')
 const activeSynergyCount = computed(
   () =>
     synergyStore.activeTraits.length +

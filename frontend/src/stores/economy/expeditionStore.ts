@@ -18,6 +18,8 @@ import {
   EXPEDITION_POWER_BONUS_SCALE,
   EXPEDITION_BASE_SUCCESS_CHANCE,
   EXPEDITION_FAILURE_REWARD_FRACTION,
+  BADGE_LAB_EXPEDITION_DURATION_S,
+  BADGE_LAB_EXPEDITION_ID_PREFIX,
   EXPEDITION_COLORS,
   EXPEDITION_AVAILABILITY_DURATION_MS,
   EXPEDITION_SPAWN_INTERVAL_MS,
@@ -135,6 +137,16 @@ export const useExpeditionStore = defineStore('expedition', {
   }),
 
   getters: {
+    /** Missionen, die zurück sind und auf das Einsammeln warten — die Zahl hinter
+     *  jeder Expeditions-Marke. Stand früher wortgleich an sechs Stellen. */
+    readyExpeditions(): ExpeditionMission[] {
+      return this.activeExpeditions.filter((e) => e.status !== 'active')
+    },
+
+    readyExpeditionCount(): number {
+      return this.readyExpeditions.length
+    },
+
     championsOnExpedition(): string[] {
       return this.activeExpeditions.flatMap((e) => e.assignedChampions.map((c) => c.name))
     },
@@ -336,6 +348,60 @@ export const useExpeditionStore = defineStore('expedition', {
         hazards,
         hazardThreshold,
       }).total
+    },
+
+    /**
+     * Badge Lab: n abgeschlossene Missionen einhängen.
+     *
+     * `assignedChampions` bleibt LEER, und zwar nicht aus Bequemlichkeit:
+     * `championsOnExpedition` liest daraus, und `eligibleChampions` sperrt jeden
+     * dort genannten Namen — eine erfundene Crew nähme dem Spieler echte
+     * Champions weg. Leer ist beim Einsammeln ein reiner No-Op.
+     *
+     * Name, Glyph und Farbe kommen aus denselben Pools wie eine echte Mission,
+     * damit sie im Feld nicht anders aussieht. Der ID-Präfix ist der einzige
+     * Unterschied — sie landet im Spielstand und muss sich wiederfinden lassen.
+     */
+    adminSeedResolved(n: number): number {
+      const now = gameNow()
+      let added = 0
+      for (let i = 0; i < Math.max(0, n); i++) {
+        const adj = pickRandom(EXPEDITION_NAME_ADJECTIVES)
+        const target = pickRandom(EXPEDITION_NAME_TARGETS)
+        const action = pickRandom(EXPEDITION_NAME_ACTIONS)
+        const colorDef = pickRandom(EXPEDITION_COLORS)
+        const reward = EXPEDITION_TIERS.common.rewardMin
+        this.activeExpeditions.push({
+          id: `${BADGE_LAB_EXPEDITION_ID_PREFIX}-${now}-${i}`,
+          configId: '',
+          name: `${adj} ${target} ${action}`,
+          description: 'Badge Lab test mission',
+          icon: pickRandom(ICON_POOLS.journey as string[]),
+          requiredRoles: [],
+          assignedChampions: [],
+          durationSeconds: BADGE_LAB_EXPEDITION_DURATION_S,
+          startTime: now - BADGE_LAB_EXPEDITION_DURATION_S * 1000,
+          baseReward: reward,
+          successChance: 100,
+          status: 'success',
+          reward,
+          colorKey: colorDef.key,
+          tier: 'common',
+          hazards: [],
+          spoils: { materials: [], meep: 0 },
+        })
+        added++
+      }
+      return added
+    },
+
+    /** Gegenstück — nimmt NUR die Missionen mit dem Präfix, echte bleiben. */
+    adminClearSeeded(): number {
+      const before = this.activeExpeditions.length
+      this.activeExpeditions = this.activeExpeditions.filter(
+        (e) => !e.id.startsWith(BADGE_LAB_EXPEDITION_ID_PREFIX),
+      )
+      return before - this.activeExpeditions.length
     },
 
     _spawnOneExpedition(now: number) {

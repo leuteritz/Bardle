@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { ChampionRole } from '@/types'
+import type { BardTabId, ChampionRole } from '@/types'
 
-export type BardTabId = 'bard' | 'shop' | 'tree' | 'team' | 'battle' | 'admin' | 'planets'
+// Der Typ wohnt in types/ui.ts, damit die Badge-Registry ihn nennen kann, ohne
+// an den Store zu ziehen. Re-Export, weil drei Stellen ihn von hier importieren.
+export type { BardTabId }
 
 export const useUiStore = defineStore('ui', () => {
   const bardActiveTab = ref<BardTabId | null>(null)

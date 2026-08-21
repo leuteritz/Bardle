@@ -772,6 +772,34 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
+    /**
+     * Badge Lab: n echte Katalog-Champions rekrutierbar machen.
+     *
+     * Über die reguläre Action, damit der Champion nicht nur im Abzeichen steht,
+     * sondern auch als Karte im Champion-Shop — ein erfundener Name ränderte
+     * dort eine leere Kachel. Gibt die tatsächlich hinzugefügten Namen zurück;
+     * auf vollem Roster ist das eine leere Liste.
+     */
+    adminSeedNewChampions(n: number): string[] {
+      const added: string[] = []
+      for (const config of CHAMPION_HOME_PLANETS) {
+        if (added.length >= n) break
+        const before = this.newlyUnlockedChampions.length
+        this.addRecruitableChampion(config.championName, config.materialCost, config.chimesPrice)
+        if (this.newlyUnlockedChampions.length > before) added.push(config.championName)
+      }
+      return added
+    },
+
+    /** Gegenstück dazu — nimmt NUR die genannten Namen zurück, damit erspielte
+     *  Rekrutierbare stehen bleiben. */
+    adminClearSeededNewChampions(names: readonly string[]): void {
+      for (const name of names) {
+        this.dismissNewChampion(name)
+        this.recruitableChampions = this.recruitableChampions.filter((c) => c.name !== name)
+      }
+    },
+
     addAllRecruitableChampions() {
       for (const config of CHAMPION_HOME_PLANETS) {
         this.addRecruitableChampion(config.championName, config.materialCost, config.chimesPrice)

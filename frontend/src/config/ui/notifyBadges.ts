@@ -1,0 +1,298 @@
+// Die eine Beschreibung aller Notify-Marken.
+//
+// Vorher lag jede Marke dreifach im Code: ihre Zahl in der Komponente, ihr Titel
+// in NOTIFY_BADGE_TITLE, ihre Farbe im Herold. Der Expeditions-Zähler stand
+// wortgleich an sechs Stellen. Hier steht jede Marke einmal — Farbe, Ziel,
+// Fundstellen; die Zahl liefert `composables/ui/useNotifyBadges.ts`.
+//
+// `sites` ist der Vertrag der Guard-Spec (`__tests__/config/notifyBadges.spec.ts`):
+// kein Markup ohne Eintrag, kein Eintrag ohne Markup. Wer eine neue Marke baut,
+// wird von ihr hierher geschickt — und ist damit im Badge Lab.
+
+import {
+  BADGE_ACCENT_CHAMPIONS,
+  BADGE_ACCENT_CHRONICLE,
+  BADGE_ACCENT_LEVEL,
+  BADGE_HERALD_ACCENT_EXPEDITION,
+  BADGE_HERALD_ACCENT_PLANET,
+  BADGE_HERALD_ACCENT_SHOP,
+  BADGE_HERALD_ACCENT_SKILL,
+  BADGE_HERALD_ACCENT_SUN,
+  CHRONICLE_RANK_ICON,
+  HEADER_GEM_ICONS,
+  NOTIFY_BADGE_TITLE,
+} from '@/config/constants'
+import type { NotifyBadgeDef, NotifyBadgeKind } from '@/types'
+
+const HEADER_ARC = 'Header arc'
+const PROFILE_TABS = 'Profile tab strip'
+
+export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
+  {
+    id: 'shop',
+    title: NOTIFY_BADGE_TITLE.shop,
+    short: 'Ready to Forge',
+    accent: BADGE_HERALD_ACCENT_SHOP,
+    icon: HEADER_GEM_ICONS.shop,
+    tab: 'shop',
+    hasBadge: true,
+    heralds: true,
+    heraldEyebrow: 'STAR FORGE',
+    heraldNoun: 'new purchase',
+    sites: [
+      {
+        file: 'components/bardProfil/BardProfileMenu.vue',
+        marker: '<ShopReadyBadge',
+        where: 'Shop corner gem + profile tab strip',
+      },
+      {
+        file: 'components/bardProfil/shop/ForgeUpgradeTile.vue',
+        marker: '<ShopReadyBadge',
+        where: 'Upgrade row in the shop tab',
+      },
+      {
+        file: 'components/bardProfil/shop/ForgeOfferRow.vue',
+        marker: '<ShopReadyBadge',
+        where: 'Offer strip',
+      },
+      {
+        file: 'components/bardProfil/shop/ForgeTreePanel.vue',
+        marker: '<ShopReadyBadge',
+        where: 'Node corner in the forge net',
+      },
+    ],
+    seedability: 'exact',
+    reversible: 'full',
+    seedNote: 'Leert die Quittungen bis auf n. Hebt vorher Chimes und Material an.',
+  },
+  {
+    id: 'skill',
+    title: NOTIFY_BADGE_TITLE.skill,
+    short: 'Skill Ready',
+    accent: BADGE_HERALD_ACCENT_SKILL,
+    imageSrc: '/img/BardAbilities/BardMeep-128.png',
+    tab: 'tree',
+    hasBadge: true,
+    heralds: true,
+    heraldEyebrow: 'MEEP PATH',
+    heraldNoun: 'skill',
+    sites: [
+      {
+        file: 'components/header/AppHeaderComponent.vue',
+        marker: 'header-notif-badge--skill',
+        where: HEADER_ARC,
+      },
+      {
+        file: 'components/bardProfil/BardProfileMenu.vue',
+        marker: 'mini-badge--skill',
+        where: PROFILE_TABS,
+      },
+      {
+        file: 'components/bardProfil/skill/MeepSkillNode.vue',
+        marker: 'msn-notify',
+        where: 'Node in the meep tree',
+      },
+      {
+        file: 'components/bardProfil/skill/MeepSkillCard.vue',
+        marker: 'msc-tag--new',
+        where: 'Card in the skill sheet',
+      },
+    ],
+    // Fällt aus allen Suchmustern der Guard-Spec — die Plakette heißt weder
+    // „notify“ noch „mini-badge“. Genau dafür gibt es dieses Feld.
+    extraMarkers: ['msc-tag--new'],
+    seedability: 'capped',
+    reversible: 'full',
+    // Fünf Zweige mit je einem Tier-1-Knoten — das ist die Decke auf frischem Stand.
+    seedNote:
+      'Hebt Meeps an, lässt n lernbare Knoten unquittiert. Frisch sind höchstens 5 lernbar.',
+  },
+  {
+    id: 'expedition',
+    title: NOTIFY_BADGE_TITLE.expedition,
+    short: 'Expeditions Ready',
+    accent: BADGE_HERALD_ACCENT_EXPEDITION,
+    icon: 'game-icons:caravel',
+    tab: 'team',
+    hasBadge: true,
+    heralds: true,
+    heraldEyebrow: 'EXPEDITION',
+    heraldNoun: 'crew',
+    sites: [
+      {
+        file: 'components/header/AppHeaderComponent.vue',
+        marker: 'header-notif-badge--expedition',
+        where: HEADER_ARC,
+      },
+      {
+        file: 'components/bardProfil/BardProfileMenu.vue',
+        marker: 'mini-badge--expedition',
+        where: PROFILE_TABS,
+      },
+      {
+        file: 'components/bardProfil/team/sigil/SigilBoardComponent.vue',
+        marker: '<RpgNotifyBadge',
+        where: 'Expedition button on the sigil board',
+      },
+      {
+        file: 'components/bardProfil/team/expedition/ExpeditionComponent.vue',
+        marker: '<RpgNotifyBadge',
+        where: 'Expedition panel header',
+      },
+    ],
+    seedability: 'exact',
+    reversible: 'full',
+    seedNote: 'Legt n abgeschlossene Missionen an, erkennbar am ID-Präfix. Clear nimmt genau die.',
+  },
+  {
+    id: 'planet',
+    title: NOTIFY_BADGE_TITLE.planet,
+    short: 'Orbit Upgrades',
+    accent: BADGE_HERALD_ACCENT_PLANET,
+    icon: 'game-icons:ringed-planet',
+    tab: 'planets',
+    hasBadge: true,
+    heralds: true,
+    heraldEyebrow: 'ORBIT',
+    heraldNoun: 'level-up',
+    sites: [
+      {
+        file: 'components/header/AppHeaderComponent.vue',
+        marker: 'header-notif-badge--planet',
+        where: HEADER_ARC,
+      },
+      {
+        file: 'components/bardProfil/BardProfileMenu.vue',
+        marker: 'mini-badge--planet',
+        where: PROFILE_TABS,
+      },
+      {
+        file: 'components/bardProfil/planets/PlanetRailSlot.vue',
+        marker: 'ps-slot-notify',
+        where: 'Slot in the planet rail',
+      },
+      {
+        file: 'components/bardProfil/planets/PlanetStagePanel.vue',
+        marker: 'ps-buy-badge',
+        where: 'Level-up button on the planet stage',
+      },
+    ],
+    extraMarkers: ['ps-buy-badge'],
+    seedability: 'derived',
+    reversible: 'partial',
+    seedNote:
+      'Reine Chimes-Ableitung: setzt Chimes auf die n-te Kostenschwelle. Trifft nicht immer genau n und geht nur aus, wenn der Stand vorher ärmer war.',
+  },
+  {
+    id: 'forge',
+    title: NOTIFY_BADGE_TITLE.forge,
+    short: 'Sun Evolution',
+    accent: BADGE_HERALD_ACCENT_SUN,
+    icon: 'game-icons:heraldic-sun',
+    tab: 'bard',
+    hasBadge: true,
+    heralds: true,
+    heraldEyebrow: 'SOLAR ASCENT',
+    sites: [
+      {
+        file: 'components/header/AppHeaderComponent.vue',
+        marker: 'header-notif-badge--forge',
+        where: HEADER_ARC,
+      },
+      {
+        file: 'components/bardProfil/BardProfileMenu.vue',
+        marker: 'mini-badge--forge',
+        where: PROFILE_TABS,
+      },
+    ],
+    seedability: 'exact',
+    reversible: 'partial',
+    seedNote:
+      'Ja/Nein statt Zahl. Hebt die Kernstrahlen auf Phase+1 und überspringt die Verweildauer — clear sperrt nur die Verweildauer wieder, die Strahlen bleiben.',
+  },
+  {
+    id: 'champions',
+    title: NOTIFY_BADGE_TITLE.champions,
+    short: 'New Champions',
+    accent: BADGE_ACCENT_CHAMPIONS,
+    icon: 'game-icons:crested-helmet',
+    tab: 'team',
+    hasBadge: true,
+    heralds: false,
+    sites: [
+      {
+        file: 'components/header/AppHeaderComponent.vue',
+        marker: 'header-notif-badge--champion',
+        where: HEADER_ARC,
+      },
+      {
+        file: 'components/bardProfil/BardProfileMenu.vue',
+        marker: 'mini-badge--champion',
+        where: PROFILE_TABS,
+      },
+      {
+        file: 'components/bardProfil/team/sigil/SigilBoardComponent.vue',
+        marker: '<RpgNotifyBadge',
+        where: 'Champion shop button on the sigil board',
+      },
+      {
+        file: 'components/bardProfil/team/championShop/ChampionShopCard.vue',
+        marker: '<RpgNotifyBadge',
+        where: 'Card in the champion shop',
+      },
+    ],
+    seedability: 'capped',
+    reversible: 'full',
+    seedNote: 'Macht n echte Champions rekrutierbar. Auf vollem Roster bleibt nichts übrig.',
+  },
+  {
+    id: 'chronicle',
+    title: NOTIFY_BADGE_TITLE.chronicle,
+    short: 'Codex Stages',
+    accent: BADGE_ACCENT_CHRONICLE,
+    icon: CHRONICLE_RANK_ICON,
+    tab: 'bard',
+    hasBadge: true,
+    heralds: false,
+    sites: [
+      {
+        file: 'components/bardProfil/BardProfileMenu.vue',
+        marker: 'mini-badge--chronicle',
+        where: PROFILE_TABS,
+      },
+    ],
+    seedability: 'exact',
+    reversible: 'full',
+    seedNote: 'Markiert n Codex-Bahnen als ungesehen. Clear ist markSeen().',
+  },
+  {
+    id: 'level',
+    title: NOTIFY_BADGE_TITLE.level,
+    short: 'Next Level',
+    accent: BADGE_ACCENT_LEVEL,
+    icon: 'ph:arrow-fat-up-fill',
+    tab: null,
+    // Kein Abzeichen, nur ein Tooltip-Kind. Steht hier aus demselben Grund, aus
+    // dem es in NOTIFY_BADGE_TITLE steht: eine halbe Tabelle ist schlechter.
+    hasBadge: false,
+    heralds: false,
+    sites: [],
+    seedability: 'none',
+    reversible: 'none',
+    seedNote: 'Dauer-Anzeige des Bard-Levels, keine Marke — nichts zu befüllen.',
+  },
+]
+
+export const NOTIFY_BADGE_BY_KIND = Object.fromEntries(
+  NOTIFY_BADGES.map((b) => [b.id, b]),
+) as Record<NotifyBadgeKind, NotifyBadgeDef>
+
+/** Die Marken, für die der Herold sich meldet — Reihenfolge wie oben. */
+export const HERALDING_BADGE_KINDS: readonly NotifyBadgeKind[] = NOTIFY_BADGES.filter(
+  (b) => b.heralds,
+).map((b) => b.id)
+
+/** Was das Badge Lab anfassen kann. */
+export const SEEDABLE_BADGE_KINDS: readonly NotifyBadgeKind[] = NOTIFY_BADGES.filter(
+  (b) => b.seedability !== 'none',
+).map((b) => b.id)

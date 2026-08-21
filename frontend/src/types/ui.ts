@@ -360,3 +360,88 @@ export interface PauseChampionCallout {
   escortTotal: number
   escortCleared: number
 }
+
+// ── Notify-Marken ────────────────────────────────────────────────────────────
+// Die Typen liegen HIER und nicht in config/, weil sowohl `config/ui/notifyBadges.ts`
+// (die Registry) als auch der uiStore sie brauchen — läge `BardTabId` weiter im
+// Store, zöge die Registry an `stores/` und damit config an Pinia.
+
+/** Ein Reiter des Bard-Profils. Wohnt hier, weil die Badge-Registry ihn nennt. */
+export type BardTabId = 'bard' | 'shop' | 'tree' | 'team' | 'battle' | 'admin' | 'planets'
+
+/** Die Marken-Art, die Tooltip, Herold und Badge Lab gemeinsam kennen. */
+export type NotifyBadgeKind =
+  | 'level'
+  | 'expedition'
+  | 'forge'
+  | 'champions'
+  | 'skill'
+  | 'planet'
+  | 'shop'
+  | 'chronicle'
+
+/** Eine Stelle im Markup, an der diese Marke auftaucht. Die Guard-Spec
+ *  (`__tests__/config/notifyBadges.spec.ts`) prüft beide Richtungen gegen diese
+ *  Liste: kein Markup ohne Eintrag, kein Eintrag ohne Markup. */
+export interface NotifyBadgeSite {
+  /** Pfad ab `src/`, mit Schrägstrichen. */
+  file: string
+  /** Zeichenfolge, an der die Spec die Marke in der Datei wiederfindet. */
+  marker: string
+  /** Klartext für den Menschen: wo im Bild das ist. */
+  where: string
+}
+
+/** Wie genau sich die Marke auf eine Wunschzahl setzen lässt. */
+export type NotifyBadgeSeedability =
+  /** Trifft die Zahl exakt (Quittungs-Marken). */
+  | 'exact'
+  /** Trifft sie bis zu einer Decke, die der Spielstand vorgibt. */
+  | 'capped'
+  /** Reine canAfford-Ableitung — nur ungefähr steuerbar. */
+  | 'derived'
+  /** Gar nicht (Tooltip-Kind ohne Marke). */
+  | 'none'
+
+/** Ob „clear" den Zustand von vorher wiederherstellt. */
+export type NotifyBadgeReversibility = 'full' | 'partial' | 'none'
+
+export interface NotifyBadgeDef {
+  id: NotifyBadgeKind
+  /** Überschrift im Tooltip und in der Herold-Schlagzeile. */
+  title: string
+  /** Kurzname für die Zeile im Badge Lab. */
+  short: string
+  /** Akzent als "r, g, b" — dieselbe Farbe, die die Marke im Spiel trägt. */
+  accent: string
+  /** Iconify-Name. Entfällt, wo `imageSrc` steht. */
+  icon?: string
+  /** Bild statt Glyph — der Meep zeigt sich selbst, kein Symbol für sich. */
+  imageSrc?: string
+  /** Reiter, den die Marke meint. `null` = kein eigener. */
+  tab: BardTabId | null
+  /** false = nur ein Tooltip-Kind, nie eine Marke. */
+  hasBadge: boolean
+  /** Meldet der `ready`-Herold diese Marke? */
+  heralds: boolean
+  /** Kopfzeile des Herolds über der Meldung. */
+  heraldEyebrow?: string
+  /** Substantiv der Herold-Unterzeile: „3 skills ready to learn". */
+  heraldNoun?: string
+  sites: readonly NotifyBadgeSite[]
+  seedability: NotifyBadgeSeedability
+  reversible: NotifyBadgeReversibility
+  /** Klartext für die Panel-Zeile — was das Befüllen anfasst. */
+  seedNote: string
+  /** Klassentoken, die aus den Suchmustern der Guard-Spec fallen. */
+  extraMarkers?: readonly string[]
+}
+
+/** Was ein Seed- oder Clear-Lauf erreicht hat. Die Zahl ist die ERREICHTE, nicht
+ *  die gewünschte — Decken werden gemeldet, nicht verschwiegen. */
+export interface BadgeSeedResult {
+  kind: NotifyBadgeKind
+  requested: number
+  achieved: number
+  notes: string[]
+}

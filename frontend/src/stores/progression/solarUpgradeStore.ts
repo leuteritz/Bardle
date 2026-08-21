@@ -296,6 +296,38 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       useShopStore().refreshRates()
     },
 
+    /**
+     * Badge Lab: die ✦-Marke an- oder ausschalten.
+     *
+     * Hebt die fünf Kernstrahlen nur auf `starPhase + 1` — die Schwelle, ab der
+     * `branchesReadyForEvolve` greift. Bewusst NICHT `adminMaxBranches()`: die
+     * springt auf die Endstufe und addiert dabei auf `playerStore.maxHP`, was
+     * ein späteres Ausschalten nicht mehr zurücknehmen kann.
+     *
+     * Ausschalten sperrt nur die Verweildauer wieder; die Strahlen bleiben, wo
+     * sie stehen. In der Endphase lässt sich die Marke gar nicht anschalten,
+     * dort gibt es nichts mehr zu entwickeln — der Rückgabewert sagt es.
+     */
+    adminSetEvolveReady(ready: boolean): boolean {
+      if (ready) {
+        const need = this.starPhase + 1
+        const hpSteps = Math.max(0, need - this.maxHpLevel)
+        if (hpSteps > 0) usePlayerStore().maxHP += hpSteps * SOLAR_HP_PER_LEVEL
+        this.flightSpeedLevel = Math.max(this.flightSpeedLevel, need)
+        this.maxHpLevel = Math.max(this.maxHpLevel, need)
+        this.chimesPerClickLevel = Math.max(this.chimesPerClickLevel, need)
+        this.chimesPerSecondLevel = Math.max(this.chimesPerSecondLevel, need)
+        this.dmgPerClickLevel = Math.max(this.dmgPerClickLevel, need)
+        useShopStore().refreshRates()
+        this.adminSkipDwellTime()
+      } else {
+        this.phaseEnteredAt = gameNow()
+        this.phaseDwellSkippedMs = 0
+        this.tickDwell()
+      }
+      return this.canUpgradeStar
+    },
+
     buyBranch(id: SolarBranchId): void {
       const gameStore = useGameStore()
       const level = this.branchLevel(id)

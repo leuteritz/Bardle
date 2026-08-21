@@ -1,56 +1,35 @@
-import { watch, onMounted, onScopeDispose } from 'vue'
-import { useHerald } from '@/composables/ui/useHerald'
-import { useUiStore, type BardTabId } from '@/stores/core/uiStore'
-import { useStarForgeStore } from '@/stores/progression/starForgeStore'
-import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
-import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
-import { usePlanetShopStore } from '@/stores/world/planetShopStore'
-import { useExpeditionStore } from '@/stores/economy/expeditionStore'
-import {
-  STAR_PHASE_DATA,
-  HEADER_GEM_ICONS,
-  HERALD_ARM_DELAY_MS,
-  BADGE_HERALD_COOLDOWN_MS,
-  BADGE_HERALD_ACCENT_EXPEDITION,
-  BADGE_HERALD_ACCENT_SUN,
-  BADGE_HERALD_ACCENT_SKILL,
-  BADGE_HERALD_ACCENT_PLANET,
-  BADGE_HERALD_ACCENT_SHOP,
-  NOTIFY_BADGE_TITLE,
-  type NotifyBadgeKind,
-} from '@/config/constants'
-
 /**
  * Taucht eine Notify-Marke auf, sagt der Herold es einmal kurz an.
  *
  * Die Marken selbst erscheinen stumm — fünf am Header-Bogen, eine an der
  * Shop-Ecktaste. Wer nicht gerade dorthin sieht, verpasst sie; ein gerade
  * bezahlbar gewordenes Star-Forge-Upgrade meldete sich bisher gar nicht. Der
- * `ready`-Herold schließt die Lücke, ohne den Meilensteinen ihr Gewicht zu
+ * `ready`-Herold schliesst die Lücke, ohne den Meilensteinen ihr Gewicht zu
  * nehmen: er läuft in der kompakten Quittungsspur und weicht einer laufenden
  * Zeremonie immer aus (`announceAmbient`, siehe `useHerald.ts`).
  *
- * EIN Aufruf, aus `HeraldOverlay.vue` heraus — dort liegen die übrigen
- * Herold-Auslöser bereits. Eigene Datei, weil das Overlay lang genug ist und
- * diese Tabelle für sich steht.
+ * EIN Aufruf, aus `HeraldOverlay.vue` heraus. WELCHE Marken sich melden, steht
+ * in `config/ui/notifyBadges.ts` (`heralds: true`) — hier steht nur noch, WIE.
  *
- * Das Champion-Abzeichen fehlt bewusst: neue Champions haben in
- * `HeraldOverlay.vue` schon ihr eigenes `NEW CHAMPION`-Banner beim Anflug. Es
- * hier zu wiederholen hieße, denselben Champion zweimal anzukündigen.
+ * Champions und Codex melden sich bewusst nicht: neue Champions haben in
+ * `HeraldOverlay.vue` schon ihr eigenes `NEW CHAMPION`-Banner beim Anflug, und
+ * der Codex bannert seine Stufen selbst. Beides hier zu wiederholen hiesse,
+ * dasselbe Ereignis zweimal anzukündigen.
  */
-interface BadgeHeraldSource {
-  /** Zugleich Schlüssel in NOTIFY_BADGE_TITLE und Merker für die Sperrfrist. */
-  kind: NotifyBadgeKind
-  /** Der Tab, der diese Marke zeigt — ist er offen, entfällt der Herold. */
-  tab: BardTabId
-  eyebrow: string
-  accent: string
-  icon?: string
-  imageSrc?: string
-  /** Genau der Getter, den auch die Marke liest — keine zweite Zählquelle. */
-  count: () => number
-  subline: (n: number) => string
-}
+
+import { watch, onMounted, onScopeDispose } from 'vue'
+import { useHerald } from '@/composables/ui/useHerald'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { HERALDING_BADGE_KINDS, NOTIFY_BADGE_BY_KIND } from '@/config/ui/notifyBadges'
+import { notifyBadgeCounters } from '@/composables/ui/useNotifyBadges'
+import { badgeHeraldSuppressedUntil } from '@/utils/game/badgeSeed'
+import {
+  STAR_PHASE_DATA,
+  HERALD_ARM_DELAY_MS,
+  BADGE_HERALD_COOLDOWN_MS,
+  type NotifyBadgeKind,
+} from '@/config/constants'
 
 /** „1 skill" / „2 skills" — die Marken zeigen echte Zahlen, der Text muss mit. */
 function plural(n: number, word: string): string {
@@ -59,6 +38,8 @@ function plural(n: number, word: string): string {
 
 /** Alles, was über das Feuern einer einzelnen Kante entscheidet. */
 export interface BadgeHeraldGate {
+  /** Füllt das Badge Lab gerade? Dann gehört die Kante ihm, nicht dem Spieler. */
+  suppressed: boolean
   /** Gnadenfrist nach dem Laden abgelaufen? */
   armed: boolean
   /** Stand die Marke vor dieser Kante schon offen? */
@@ -76,7 +57,9 @@ export interface BadgeHeraldGate {
  * Die Regel, nach der eine Marke sich melden darf — als reine Funktion, damit
  * sie einzeln geprüft werden kann statt nur im Zusammenspiel von fünf Stores.
  *
- * Vier Sperren, jede gegen einen eigenen Fehlerfall:
+ * Fünf Sperren, jede gegen einen eigenen Fehlerfall, die gröbste zuerst:
+ * 0. `suppressed` — das Badge Lab füllt gerade; fünf Kanten in einer Flush-Runde
+ *    stünden sonst als fünf Banner übereinander.
  * 1. `armed` — der 0→N-Sprung aus `loadGame()` ist kein Auftauchen.
  * 2. `wasOpen` — nur das AUFTAUCHEN zählt. `shopFreshTotal` klettert weiter,
  *    solange der Spieler nicht hinsieht; 3 → 4 ist keine Nachricht, 0 → 1 ist eine.
@@ -85,6 +68,7 @@ export interface BadgeHeraldGate {
  *    steht dem Spieler schon vor Augen, das Banner wäre nur Lärm.
  */
 export function shouldHeraldBadge(gate: BadgeHeraldGate): boolean {
+  if (gate.suppressed) return false
   if (!gate.armed) return false
   if (gate.wasOpen || gate.count <= 0) return false
   if (gate.nowMs - gate.lastHeraldAtMs < BADGE_HERALD_COOLDOWN_MS) return false
@@ -96,78 +80,34 @@ export function shouldHeraldBadge(gate: BadgeHeraldGate): boolean {
 export function useBadgeHeralds() {
   const { announceAmbient } = useHerald()
   const uiStore = useUiStore()
-  const forgeStore = useStarForgeStore()
   const solarStore = useSolarUpgradeStore()
-  const meepTreeStore = useMeepTreeStore()
-  const planetShopStore = usePlanetShopStore()
-  const expeditionStore = useExpeditionStore()
+  const counters = notifyBadgeCounters()
 
-  const sources: BadgeHeraldSource[] = [
-    {
-      kind: 'shop',
-      tab: 'shop',
-      eyebrow: 'STAR FORGE',
-      accent: BADGE_HERALD_ACCENT_SHOP,
-      // Dasselbe Zeichen wie die Ecktaste, an der die Marke hängt — der Blick
-      // findet vom Banner zum Ziel, ohne dass er es erst suchen muss.
-      icon: HEADER_GEM_ICONS.shop,
-      // `shopFreshTotal` und nicht `shopReadyTotal`: an „kaufbar" gehängt fiel
-      // die Zahl nach dem frühen Spiel nie wieder auf null — die fünf
-      // Kernstrahlen halten sie oben —, und die Kante unten feuerte damit genau
-      // EINMAL je Spielstand. An „ungesehen" gehängt geht sie aus, sobald der
-      // Spieler durchgesehen hat, und steht fürs nächste Mal wieder bereit.
-      count: () => forgeStore.shopFreshTotal,
-      subline: (n) => `${plural(n, 'new purchase')} within reach`,
+  /**
+   * Die Unterzeile je Marke — das Einzige, was NICHT in der Registry steht.
+   *
+   * Sie ist Text mit Logik (die Sonne nennt ihre nächste Phase statt einer
+   * Zahl), kein Stammdatum. Alles übrige — Titel, Kopfzeile, Farbe, Sinnbild,
+   * Ziel-Reiter — kommt aus `config/ui/notifyBadges.ts`, und die Zahl aus
+   * derselben Quelle wie die Marke selbst.
+   */
+  const sublines: Record<NotifyBadgeKind, (n: number) => string> = {
+    shop: (n) => `${plural(n, 'new purchase')} within reach`,
+    skill: (n) => `${plural(n, 'skill')} ready to learn`,
+    planet: (n) => `${plural(n, 'level-up')} affordable`,
+    expedition: (n) => `${plural(n, 'crew')} returned`,
+    forge: () => {
+      // Gleiche Herleitung wie im Hover-Tooltip: aus dem Kometen führt der Weg
+      // zurück auf die erste Phase, sonst eine Stufe weiter.
+      const next = solarStore.isCometState
+        ? STAR_PHASE_DATA[0]
+        : STAR_PHASE_DATA[solarStore.starPhase + 1]
+      return next ? `Next phase: ${next.name}` : 'The final phase awaits'
     },
-    {
-      kind: 'forge',
-      tab: 'bard',
-      eyebrow: 'SOLAR ASCENT',
-      accent: BADGE_HERALD_ACCENT_SUN,
-      icon: 'game-icons:heraldic-sun',
-      // Die ✦-Marke ist ein Ja/Nein, kein Zähler — 1 oder 0 genügt der Kante.
-      count: () => (solarStore.canUpgradeStar ? 1 : 0),
-      subline: () => {
-        // Gleiche Herleitung wie im Hover-Tooltip: aus dem Kometen führt der
-        // Weg zurück auf die erste Phase, sonst eine Stufe weiter.
-        const next = solarStore.isCometState
-          ? STAR_PHASE_DATA[0]
-          : STAR_PHASE_DATA[solarStore.starPhase + 1]
-        return next ? `Next phase: ${next.name}` : 'The final phase awaits'
-      },
-    },
-    {
-      kind: 'skill',
-      tab: 'tree',
-      eyebrow: 'MEEP PATH',
-      accent: BADGE_HERALD_ACCENT_SKILL,
-      // Der Meep selbst statt eines Glyphs, wie im Tooltip der Marke. 128er
-      // Stufe: das Medaillon zeigt ihn bis 46px (Regel 35–110 → nächstgrößere
-      // vorhandene Variante), das Original wäre unnötiger Decode.
-      imageSrc: '/img/BardAbilities/BardMeep-128.png',
-      count: () => meepTreeStore.unseenBuyableCount,
-      subline: (n) => `${plural(n, 'skill')} ready to learn`,
-    },
-    {
-      kind: 'planet',
-      tab: 'planets',
-      eyebrow: 'ORBIT',
-      accent: BADGE_HERALD_ACCENT_PLANET,
-      icon: 'game-icons:ringed-planet',
-      count: () => planetShopStore.affordableLevelCount,
-      subline: (n) => `${plural(n, 'level-up')} affordable`,
-    },
-    {
-      kind: 'expedition',
-      tab: 'team',
-      eyebrow: 'EXPEDITION',
-      accent: BADGE_HERALD_ACCENT_EXPEDITION,
-      // Dasselbe Segel wie der Expeditions-Toast und die Expeditions-Providence.
-      icon: 'game-icons:caravel',
-      count: () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
-      subline: (n) => `${plural(n, 'crew')} returned`,
-    },
-  ]
+    champions: (n) => plural(n, 'champion'),
+    chronicle: (n) => `${plural(n, 'track')} advanced`,
+    level: () => '',
+  }
 
   /**
    * Scharf erst nach dem Eintreffen des Spielstands.
@@ -185,49 +125,51 @@ export function useBadgeHeralds() {
 
   onMounted(() => {
     armTimer = setTimeout(() => {
-      for (const src of sources) wasOpen.set(src.kind, src.count() > 0)
+      for (const kind of HERALDING_BADGE_KINDS) wasOpen.set(kind, counters[kind]() > 0)
       armed = true
       armTimer = null
     }, HERALD_ARM_DELAY_MS)
   })
 
-  for (const src of sources) {
+  for (const kind of HERALDING_BADGE_KINDS) {
+    const def = NOTIFY_BADGE_BY_KIND[kind]
     watch(
-      () => src.count(),
+      () => counters[kind](),
       (now) => {
-        const before = wasOpen.get(src.kind) ?? false
+        const before = wasOpen.get(kind) ?? false
         // Die Kante zuerst fortschreiben, damit ein unterdrückter Herold die
         // Marke trotzdem als „gesehen" verbucht: sonst gälte sie beim nächsten
         // Zählerzucken erneut als frisch aufgetaucht und feuerte verspätet.
-        wasOpen.set(src.kind, now > 0)
+        wasOpen.set(kind, now > 0)
         // Wanduhr, nicht `gameNow()` — Begründung an BADGE_HERALD_COOLDOWN_MS.
         // (Die `app/game-clock`-Regel greift hier nicht, sie deckt Stores und
         // utils/orbit ab; die Wahl ist trotzdem eine bewusste.)
         const nowMs = Date.now()
         const pass = shouldHeraldBadge({
+          suppressed: nowMs < badgeHeraldSuppressedUntil(),
           armed,
           wasOpen: before,
           count: now,
           nowMs,
-          lastHeraldAtMs: lastHeraldAt.get(src.kind) ?? -Infinity,
-          tabOpen: uiStore.bardActiveTab === src.tab,
+          lastHeraldAtMs: lastHeraldAt.get(kind) ?? -Infinity,
+          tabOpen: uiStore.bardActiveTab === def.tab,
           pageVisible: document.visibilityState === 'visible',
         })
         if (!pass) return
 
-        lastHeraldAt.set(src.kind, nowMs)
+        lastHeraldAt.set(kind, nowMs)
         announceAmbient({
           kind: 'ready',
-          eyebrow: src.eyebrow,
-          headline: NOTIFY_BADGE_TITLE[src.kind],
-          subline: src.subline(now),
-          icon: src.icon,
-          portraitSrc: src.imageSrc,
-          accent: src.accent,
+          eyebrow: def.heraldEyebrow,
+          headline: def.title,
+          subline: sublines[kind](now),
+          icon: def.icon,
+          portraitSrc: def.imageSrc,
+          accent: def.accent,
           // Je Marke ein eigener Schlüssel: zwei verschiedene Hinweise stehen
           // nebeneinander, statt sich zu einem `×2` zu verrechnen — sie
           // erzählen verschiedene Dinge.
-          mergeKey: `ready/${src.kind}`,
+          mergeKey: `ready/${kind}`,
         })
       },
     )

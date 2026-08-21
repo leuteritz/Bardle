@@ -6,6 +6,7 @@ import AdminDrifterPanel from './AdminDrifterPanel.vue'
 import AdminVoidPanel from './AdminVoidPanel.vue'
 import AdminMaxEverythingPanel from './AdminMaxEverythingPanel.vue'
 import AdminGameSpeedPanel from './AdminGameSpeedPanel.vue'
+import AdminBadgeLabPanel from './AdminBadgeLabPanel.vue'
 </script>
 
 <template>
@@ -33,7 +34,9 @@ import AdminGameSpeedPanel from './AdminGameSpeedPanel.vue'
            ALLE darunter — und weil man ihn beim Messen zuerst sucht. -->
       <AdminGameSpeedPanel />
       <AdminGalaxyJumpPanel dashboard />
-      <AdminStarPhasePanel dashboard class="admin-dash-grow" />
+      <AdminStarPhasePanel dashboard />
+      <!-- Das Prüfwerkzeug für die Notify-Marken. -->
+      <AdminBadgeLabPanel />
       <!-- Der Endzustand-Knopf steht unten über die volle Spaltenbreite: er tut,
            was die neun Quick Actions zusammen tun, und wäre als zehnte Kachel im
            3er-Raster eine vierte Zeile mit zwei Lücken.
@@ -94,11 +97,23 @@ import AdminGameSpeedPanel from './AdminGameSpeedPanel.vue'
    geschrieben galt die Regel nur, solange genau zwei Panels in der Spalte
    standen — mit dem dritten hätte `:last-child` still den Endzustand-Knopf
    gestreckt statt die Sternphasen-Karte. Wer wächst, sagt es selbst. */
+/* Die rechte Spalte ROLLT, seit sie fünf Panels trägt, und darum trägt jedes
+   Panel darin seine Inhaltshöhe — es gibt kein „wer füllt den Rest" mehr.
+   Gemessen auf Full HD: 741 px Spaltenhöhe, 1012 px Inhalt, also 271 px Rollweg;
+   ab 2K ist der Platz da und die Leiste erscheint gar nicht erst.
+
+   Der Weg dahin steht hier, weil beide Sackgassen plausibel aussehen: die
+   Sternphasen-Karte streckt ihr `fill`-Prop (`height: 100%`), NICHT die alte
+   Klasse `admin-dash-grow` — sie behalten hiess, das Badge Lab auf gemessene
+   2 px zu drücken. Und `flex: 1` an das Badge Lab zu hängen kehrte das nur um:
+   in einer überfüllten Spalte schrumpft `flex: 1` bis auf `min-height: 0`. */
+.admin-dash-right {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+
 .admin-dash-right > * {
   flex: 0 0 auto;
-}
-.admin-dash-right > .admin-dash-grow {
-  flex: 1;
-  min-height: 0;
 }
 </style>

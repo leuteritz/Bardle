@@ -15,6 +15,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { useHerald } from '@/composables/ui/useHerald'
 import { toRoman } from '@/utils/ui/format'
 import {
@@ -47,13 +48,11 @@ onUnmounted(() => {
 })
 
 // ── Field ───────────────────────────────────────────────────────────────────
-const readyMissions = computed(() =>
-  expeditionStore.activeExpeditions.filter((e) => e.status !== 'active'),
-)
+const readyMissions = computed(() => expeditionStore.readyExpeditions)
 const runningMissions = computed(() =>
   expeditionStore.activeExpeditions.filter((e) => e.status === 'active'),
 )
-const readyCount = computed(() => readyMissions.value.length)
+const readyCount = useNotifyBadgeCount('expedition')
 const activeCount = computed(() => expeditionStore.activeExpeditions.length)
 
 // ── Ledger ──────────────────────────────────────────────────────────────────

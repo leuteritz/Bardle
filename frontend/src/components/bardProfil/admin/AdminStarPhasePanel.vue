@@ -46,7 +46,6 @@ function setCometState() {
     title="Star Phase Override"
     icon="game-icons:sun-radiations"
     :collapsible="!dashboard"
-    :fill="dashboard"
   >
     <template #meta>
       Current:
@@ -89,12 +88,13 @@ function setCometState() {
   gap: 6px;
 }
 
-/* Dashboard: 7 Phasen als 4×2-Raster, Buttons strecken sich in die Resthöhe */
+/* Dashboard: 7 Phasen als 4×2-Raster. Ohne `fill` steht die Karte auf ihrer
+   Inhaltshöhe — zwei Reihen à 52 px — statt die Spalte zu füllen; den Platz
+   darunter braucht das Badge Lab. */
 .star-phase-btns--dashboard {
   grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: minmax(52px, 1fr);
+  grid-auto-rows: 52px;
   gap: 8px;
-  height: 100%;
 }
 .star-phase-btns--dashboard .star-phase-btn {
   justify-content: center;

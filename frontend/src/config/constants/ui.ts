@@ -2,7 +2,7 @@
 // Pause- und Offline-Overlay, Tooltips, Ton und die Timings, mit denen das
 // alles ein- und ausblendet.
 
-import type { HeraldReceiptKind, HeraldReceiptKindDef } from '@/types'
+import type { HeraldReceiptKind, HeraldReceiptKindDef, NotifyBadgeKind } from '@/types'
 
 // ── Idle-Layer hinter einem Overlay: Anhalten und Wiederanlaufen ───────────
 /**
@@ -550,6 +550,12 @@ export const BADGE_HERALD_ACCENT_SKILL = '236, 72, 153'
 export const BADGE_HERALD_ACCENT_PLANET = '52, 211, 153'
 export const BADGE_HERALD_ACCENT_SHOP = '96, 165, 250'
 
+/* Dasselbe für die drei Marken ohne Herold. Champions ist cyan statt des Golds
+   von HERALD_ACCENT_CHAMPION: gemeint ist `.header-notif-badge--champion`. */
+export const BADGE_ACCENT_CHAMPIONS = '6, 182, 212'
+export const BADGE_ACCENT_CHRONICLE = '249, 115, 22'
+export const BADGE_ACCENT_LEVEL = '232, 192, 64'
+
 /**
  * Die Überschrift je Notify-Marke.
  *
@@ -558,10 +564,10 @@ export const BADGE_HERALD_ACCENT_SHOP = '96, 165, 250'
  * (`composables/ui/useBadgeHeralds.ts`). Stünde er zweimal im Code, hieße
  * dieselbe Marke nach der nächsten Umbenennung an einer Stelle anders.
  *
- * `level` und `champions` tragen keinen Herold — sie stehen hier trotzdem,
+ * `level`, `champions` und `chronicle` tragen keinen Herold — sie stehen hier trotzdem,
  * weil eine halbe Tabelle schlechter ist als eine ganze: der Tooltip hat sie.
  */
-export const NOTIFY_BADGE_TITLE = {
+export const NOTIFY_BADGE_TITLE: Record<NotifyBadgeKind, string> = {
   level: 'Next Level',
   expedition: 'Expeditions Ready',
   forge: 'Sun Evolution Ready',
@@ -569,10 +575,13 @@ export const NOTIFY_BADGE_TITLE = {
   skill: 'Skill Ready',
   planet: 'Orbit Upgrades',
   shop: 'Ready to Forge',
-} as const
+  chronicle: 'Codex Stages',
+}
 
-/** Die Marken-Art, die `RpgBadgeTooltipBody` und der Herold gemeinsam kennen. */
-export type NotifyBadgeKind = keyof typeof NOTIFY_BADGE_TITLE
+/* Der Typ wohnt in `types/ui.ts`, sonst hängt die Registry an `config/constants`
+   und der Import läuft im Kreis. Dass Tabelle und Typ nicht auseinanderlaufen,
+   garantiert statt `keyof typeof` jetzt die Record-Annotation darüber. */
+export type { NotifyBadgeKind }
 
 // Offline progress
 export const OFFLINE_CPS_RATE = 0.6
@@ -667,6 +676,29 @@ export const SFX_CHIME_SUB_DECAY_S = 0.22
 
 // ── Admin / Debug ─────────────────────────────────────────────────────────────
 export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000
+
+// ── Admin: Badge Lab (utils/game/badgeSeed.ts) ──────────────────────────────────
+export const BADGE_LAB_DEFAULT_COUNT = 3
+export const BADGE_LAB_MIN_COUNT = 1
+/** Über 9 zeigt `formatBadgeCount` ohnehin „9+“. */
+export const BADGE_LAB_MAX_COUNT = 9
+/**
+ * Wie lange der `ready`-Herold nach einem Seed schweigt. „Fill All“ reisst bis
+ * zu fünf 0-nach-N-Kanten in derselben Flush-Runde — ohne Sperre stapeln sich
+ * fünf Banner. Gleich lang wie HERALD_ARM_DELAY_MS, damit der nächste Tick
+ * mitfällt: dort rühren `syncAcknowledged` und der Chime-Tick nochmal an
+ * denselben Zählern. Wanduhr wie bei BADGE_HERALD_COOLDOWN_MS.
+ */
+export const BADGE_LAB_HERALD_SUPPRESS_MS = 1500
+/** Budget für die Marken, die an Erschwinglichkeit hängen (shop, planet).
+ *  Kleiner als ADMIN_MAX_CHIMES, damit der Spielstand danach noch messbar ist. */
+export const BADGE_LAB_SEED_CHIMES = 1e12
+export const BADGE_LAB_SEED_MEEPS = 100_000
+/** Woran `clearBadge('expedition')` seine eigenen Missionen wiedererkennt — sie
+ *  landen im Spielstand und müssen sich von echten unterscheiden lassen. */
+export const BADGE_LAB_EXPEDITION_ID_PREFIX = 'badgelab'
+export const BADGE_LAB_EXPEDITION_DURATION_S = 60
+export const BADGE_LAB_ICON = 'game-icons:bell-shield'
 
 // ── Admin: "Max Everything" (utils/game/maxEverything.ts) ─────────────────────
 // Endzustand-Knopf im Admin-Tab. Die Beträge sind bewusst gross genug, dass

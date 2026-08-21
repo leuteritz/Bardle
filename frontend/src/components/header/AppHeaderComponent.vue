@@ -2,14 +2,10 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useUiStore } from '@/stores/core/uiStore'
-import { useBattleStore } from '@/stores/battle/battleStore'
-import { useExpeditionStore } from '@/stores/economy/expeditionStore'
-import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
-import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
-import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import { usePersistence } from '@/composables/system/usePersistence'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
+import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import {
   BOTTOM_FRAME_STROKE_SHADOW,
   BOTTOM_FRAME_STROKE_WOOD,
@@ -42,21 +38,17 @@ import SunPhaseIndicator from './SunPhaseIndicator.vue'
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
-const battleStore = useBattleStore()
-const expeditionStore = useExpeditionStore()
-const solarStore = useSolarUpgradeStore()
-const meepTreeStore = useMeepTreeStore()
-const planetShopStore = usePlanetShopStore()
 const { resetGame } = usePersistence()
 
-const championBadgeCount = computed(() => battleStore.newlyUnlockedChampions.length)
-const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
-const expeditionBadgeCount = computed(
-  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
-)
-const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
+// Dieselben Zähler wie Reiterleiste, Tooltip und Herold — config/ui/notifyBadges.ts.
+const championBadgeCount = useNotifyBadgeCount('champions')
+const skillBadgeCount = useNotifyBadgeCount('skill')
+const expeditionBadgeCount = useNotifyBadgeCount('expedition')
 // Planet tab: TOTAL affordable level-ups across all six orbit slots right now.
-const planetBadgeCount = computed(() => planetShopStore.affordableLevelCount)
+const planetBadgeCount = useNotifyBadgeCount('planet')
+// Die ✦-Marke ist ein Ja/Nein, kein Zähler.
+const forgeBadgeCount = useNotifyBadgeCount('forge')
+const forgeBadgeReady = computed(() => forgeBadgeCount.value > 0)
 // Compact badge label — the total can climb high, so cap the glyph.
 const planetBadgeLabel = computed(() => formatBadgeCount(planetBadgeCount.value))
 

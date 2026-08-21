@@ -1,22 +1,15 @@
 <script setup lang="ts">
 import { watch, computed, ref, reactive, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { onKeybinding } from '@/composables/system/useKeybindings'
-import { useExpeditionStore } from '@/stores/economy/expeditionStore'
-import { useBattleStore } from '@/stores/battle/battleStore'
-import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
-import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
-import { usePlanetShopStore } from '@/stores/world/planetShopStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
-import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import type { BardTabId } from '@/stores/core/uiStore'
 import type { KeybindId } from '@/types'
 import { formatBadgeCount } from '@/utils/ui/format'
 import { useBadgeFlare } from '@/composables/ui/useBadgeFlare'
+import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { HEADER_GEM_ICONS } from '@/config/constants'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
@@ -35,49 +28,22 @@ import ProfileReadinessCluster from '@/components/bardProfil/hud/ProfileReadines
 const uiStore = useUiStore()
 const galaxyStore = useGalaxyStore()
 const { isPaused } = useGamePause()
-const expeditionStore = useExpeditionStore()
-const battleStore = useBattleStore()
-const solarStore = useSolarUpgradeStore()
-const meepTreeStore = useMeepTreeStore()
-const planetShopStore = usePlanetShopStore()
-const achievementStore = useAchievementStore()
-const forgeStore = useStarForgeStore()
-const { newlyUnlockedChampions } = storeToRefs(battleStore)
-
-const expeditionBadgeCount = computed(
-  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
-)
-// Team tab: champions unlocked in battle that the player has not picked up yet
-// (same number the middle-header badge shows, same name it uses there).
-const championBadgeCount = computed(() => newlyUnlockedChampions.value.length)
-const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
-const skillBadgeCount = computed(() => meepTreeStore.unseenBuyableCount)
-// Chronicle: Bahnen mit einer Stufe, die der Spieler noch nicht gesehen hat.
-// Das Banner ist längst verklungen, wenn er das Profil öffnet — das Abzeichen
-// ist der Hinweis, dass dort etwas Neues steht. Es hängt am Bard-Tab, weil das
-// Chronicle dort unter der Sonne wohnt.
-const chronicleBadgeCount = computed(() => achievementStore.unseen.length)
-// Planet tab: TOTAL affordable level-ups across all six orbit slots right now
-// (matches the middle-header planet badge).
-const planetBadgeCount = computed(() => planetShopStore.affordableLevelCount)
+// Alle Marken-Zahlen aus derselben Quelle wie Header-Bogen, Tooltip und Herold
+// — config/ui/notifyBadges.ts. Chronicle hängt am Bard-Tab, weil der Codex dort
+// unter der Sonne wohnt.
+const expeditionBadgeCount = useNotifyBadgeCount('expedition')
+const championBadgeCount = useNotifyBadgeCount('champions')
+const skillBadgeCount = useNotifyBadgeCount('skill')
+const chronicleBadgeCount = useNotifyBadgeCount('chronicle')
+const planetBadgeCount = useNotifyBadgeCount('planet')
+const forgeBadgeCount = useNotifyBadgeCount('forge')
+const forgeBadgeReady = computed(() => forgeBadgeCount.value > 0)
 // Compact label — the total can climb high, so cap the glyph.
 const planetBadgeLabel = computed(() => formatBadgeCount(planetBadgeCount.value))
 
-/**
- * Shop: was in der Star Forge kaufbar ist UND der Spieler noch nicht angesehen
- * hat — Strahlen, Knoten, Relikte, Konstellationen und der laufende Handel
- * zusammen, Chimes UND Material geprüft.
- *
- * NICHT `shopReadyTotal`: kaufbar ist ab dem mittleren Spiel dauernd etwas, und
- * eine Marke, die nie ausgeht, meldet nichts mehr. Fährt der Spieler im Shop
- * über einen frisch markierten Eintrag, fällt dessen Rahmen — und diese Zahl
- * mit ihm. Herleitung an `shopFreshBySection` im Store.
- *
- * Das Maximum ist 59, also greift `formatBadgeCount` hier nie und die rohe Zahl
- * genügt. Sie trägt BEIDE Abzeichen: das an der Ecktaste oben im Template und
- * das am Shop-Tab in der Leiste.
- */
-const shopFreshCount = computed(() => forgeStore.shopFreshTotal)
+/** Trägt BEIDE Abzeichen: das an der Ecktaste und das am Shop-Reiter. Das
+ *  Maximum ist 59, `formatBadgeCount` greift hier also nie. */
+const shopFreshCount = useNotifyBadgeCount('shop')
 
 /**
  * Das Shop-Abzeichen steht ruhig und blitzt nur EINMAL auf, wenn die Zahl

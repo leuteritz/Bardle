@@ -1719,6 +1719,21 @@ export const useStarForgeStore = defineStore('starForge', {
       if (next.length !== this.acknowledgedShop.length) this.acknowledgedShop = next
     },
 
+    /**
+     * Badge Lab: genau n Einträge unquittiert lassen.
+     *
+     * Direkte Zuweisung statt n Aufrufe von `acknowledgeShopEntry` — die prüft
+     * jede ID einzeln gegen `shopReadyIds` und käme auf dasselbe Ergebnis zu
+     * n-fachem Preis. Was hier geschrieben wird, IST ready, `syncShopAcknowledged()`
+     * im Tick lässt es also stehen.
+     */
+    adminSetShopFresh(n: number): number {
+      const ids = this.shopReadyIds
+      const ready = [...ids.upgrades, ...ids.relics, ...ids.constellations, ...ids.bargain]
+      this.acknowledgedShop = ready.slice(Math.max(0, n))
+      return Math.min(Math.max(0, n), ready.length)
+    },
+
     buyNode(id: string): boolean {
       if (!this.canAffordNode(id)) return false
       const def = getForgeNode(id)

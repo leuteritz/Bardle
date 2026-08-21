@@ -8,6 +8,7 @@ import {
   HERALD_QUEUE_MAX,
   NOTIFY_BADGE_TITLE,
 } from '@/config/constants'
+import { HERALDING_BADGE_KINDS } from '@/config/ui/notifyBadges'
 
 /**
  * Die beiden Regeln hinter dem `ready`-Herold — der kurzen Meldung, mit der sich
@@ -21,6 +22,7 @@ import {
  */
 
 const OPEN: BadgeHeraldGate = {
+  suppressed: false,
   armed: true,
   wasOpen: false,
   count: 1,
@@ -135,11 +137,24 @@ describe('useHerald — ambient weicht aus, Meilensteine nicht', () => {
   })
 })
 
+describe('shouldHeraldBadge — die Sperre des Badge Lab', () => {
+  it('schweigt, während das Badge Lab füllt', () => {
+    // „Fill All" reisst bis zu fünf Kanten in derselben Flush-Runde — ohne
+    // diese Sperre stünden fünf Banner übereinander.
+    expect(shouldHeraldBadge({ ...OPEN, suppressed: true })).toBe(false)
+  })
+
+  it('meldet wieder, sobald das Fenster zu ist', () => {
+    expect(shouldHeraldBadge({ ...OPEN, suppressed: false })).toBe(true)
+  })
+})
+
 describe('NOTIFY_BADGE_TITLE', () => {
   it('trägt für jede Herold-Quelle eine Überschrift', () => {
     // Die Schlagzeile des Herolds liest genau diese Tabelle — fehlt ein
-    // Eintrag, stünde im Banner `undefined`.
-    for (const kind of ['shop', 'forge', 'skill', 'planet', 'expedition'] as const) {
+    // Eintrag, stünde im Banner `undefined`. Die Quellen kommen aus der
+    // Registry, nicht aus einer zweiten Liste hier.
+    for (const kind of HERALDING_BADGE_KINDS) {
       expect(NOTIFY_BADGE_TITLE[kind]).toBeTruthy()
     }
   })

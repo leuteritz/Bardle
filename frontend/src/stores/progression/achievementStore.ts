@@ -326,6 +326,13 @@ export const useAchievementStore = defineStore('achievement', {
       if (ratesTouched) useShopStore().refreshRates()
     },
 
+    /** Badge Lab: n Bahnen als ungesehen markieren. Echte Katalog-IDs, damit die
+     *  Bahn im Codex auch hervorgehoben wird. */
+    adminSeedUnseen(n: number): number {
+      this.unseen = CHRONICLE_TRACKS.slice(0, Math.max(0, n)).map((t) => t.id)
+      return this.unseen.length
+    },
+
     /** Der Tab wurde gesehen — das Abzeichen in der Tab-Leiste erlischt. */
     markSeen(): void {
       if (this.unseen.length > 0) this.unseen = []

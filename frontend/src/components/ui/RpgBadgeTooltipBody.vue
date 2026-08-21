@@ -10,6 +10,7 @@ import { usePlanetShopStore, PLANET_ROLES } from '@/stores/world/planetShopStore
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useHerald } from '@/composables/ui/useHerald'
+import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import {
   CHAMP_TOOLTIP_MAX_VISIBLE,
@@ -51,9 +52,7 @@ const levelProgress = computed(() =>
 )
 
 /* ── expedition ─────────────────────────────────────────────────────── */
-const readyExpeditions = computed(() =>
-  expeditionStore.activeExpeditions.filter((e) => e.status !== 'active'),
-)
+const readyExpeditions = computed(() => expeditionStore.readyExpeditions)
 
 function collectAll() {
   const ready = [...readyExpeditions.value]
@@ -97,7 +96,10 @@ function pickChampion(name: string) {
 }
 
 /* ── skill ──────────────────────────────────────────────────────────── */
-const skillCount = computed(() => meepTree.buyableNodeCount)
+// Die Marke zählt UNGESEHENE, nicht kaufbare Knoten — der Tooltip zeigt beides,
+// sonst nennt er eine Zahl, die neben der Marke daneben steht.
+const skillCount = useNotifyBadgeCount('skill')
+const skillBuyableCount = computed(() => meepTree.buyableNodeCount)
 
 /* ── planet ─────────────────────────────────────────────────────────── */
 // Total level-ups affordable across all six slots (matches the header badge).
@@ -303,7 +305,9 @@ function buyAllUpgrades() {
           <span class="sk-tt__next">
             <strong>{{ skillCount }}</strong> skill{{ skillCount === 1 ? '' : 's' }} ready to learn
           </span>
-          <span class="sk-tt__meeps">{{ $formatNumber(gameStore.meeps) }} Meeps available</span>
+          <span class="sk-tt__meeps">
+            {{ $formatNumber(gameStore.meeps) }} Meeps · {{ skillBuyableCount }} affordable
+          </span>
         </div>
       </div>
       <div class="bt__hint">Open the Skill Tree to learn</div>

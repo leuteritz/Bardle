@@ -144,6 +144,21 @@ export const useMeepTreeStore = defineStore('meepTree', {
     },
 
     /**
+     * Badge Lab: genau n lernbare Knoten unquittiert lassen.
+     *
+     * Direkt statt über `acknowledgeNode`: die prüft je ID einzeln und käme auf
+     * dasselbe Ergebnis zu n-fachem Preis. Was hier geschrieben wird, IST
+     * buyable — `syncAcknowledged()` im Tick lässt es also stehen.
+     */
+    adminSetUnseen(n: number): number {
+      const buyable = MEEP_TREE_NODES.filter((x) => this.nodeState(x.id) === 'buyable').map(
+        (x) => x.id,
+      )
+      this.acknowledged = buyable.slice(Math.max(0, n))
+      return Math.min(Math.max(0, n), buyable.length)
+    },
+
+    /**
      * The effect bag as it WOULD read with this one node added — the basis of
      * every before/after row in the skill sheet. Never mutates `fx`.
      */
