@@ -5,7 +5,7 @@
          zuletzt die Schublade mit Gesperrtem. Eine Abteilungs-Rail stand
          einmal rechts daneben; sie ist gestrichen (Herleitung an
          `FORGE_OFFER_TITLE` in `constants/forge.ts`). -->
-    <ForgeTreePanel class="shop-tree-col" />
+    <ForgeTreePanel ref="treeRef" class="shop-tree-col" />
 
     <!-- Die Detailspalte fährt als EIN Stück seitlich hinaus; stehen bleibt die
          Griffleiste. Die BREITE der Spalte wechselt dabei in einem einzigen
@@ -46,6 +46,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
+import { onKeybinding } from '@/composables/system/useKeybindings'
 import { useHerald } from '@/composables/ui/useHerald'
 import {
   BARD_PROFILE_RAIL_MAX_PX,
@@ -117,6 +118,15 @@ watch(hoverId, (id) => {
  * dauerhaft am Fenster hängen und verbrauchte die Taste auch im Idle-Orbit.
  */
 const isVisible = computed(() => uiStore.bardActiveTab === 'shop')
+
+/**
+ * Das Recenter-Kürzel hängt aus demselben Grund hier wie Escape: der Tab bleibt
+ * gemountet, ein `onKeybinding` im Baum verbrauchte die Taste also auch im
+ * Idle-Orbit. Wer weiss, ob die Spalte sichtbar ist, meldet an — wer die Kamera
+ * hält, führt aus.
+ */
+const treeRef = ref<InstanceType<typeof ForgeTreePanel> | null>(null)
+let releaseRecenter: (() => void) | null = null
 
 function onEsc(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
@@ -252,6 +262,7 @@ watch(
   (visible) => {
     if (visible) {
       window.addEventListener('keydown', onEsc)
+      releaseRecenter ??= onKeybinding('forgeRecenter', () => treeRef.value?.recenterCamera())
       if (!shopBuilt.value && !loaderVisible.value) {
         loaderStartedAt.value = performance.now()
         loaderVisible.value = true
@@ -259,6 +270,8 @@ watch(
       return
     }
     window.removeEventListener('keydown', onEsc)
+    releaseRecenter?.()
+    releaseRecenter = null
     cancelReveal()
     loaderVisible.value = false
     // Wer mitten im Aufbau wegwechselt, hat die Fläche trotzdem stehen — ein
@@ -278,6 +291,8 @@ watch(
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onEsc)
+  releaseRecenter?.()
+  releaseRecenter = null
   cancelReveal()
   cancelInert()
   cancelAnimationFrame(mountFrame)

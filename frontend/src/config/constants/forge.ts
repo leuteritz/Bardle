@@ -3114,23 +3114,52 @@ export const FORGE_SPOTLIGHT_COMPASS_SIZE_PX = 32
  * schräger Drehung über den Rand. 24 gibt dazu gut einen Pixel Luft.
  */
 export const FORGE_SPOTLIGHT_COMPASS_INSET_PX = 24
-/**
- * Die Sperrfläche unten rechts — dort sitzt die Zoom-Leiste (`.tree-zoom`).
+/*
+ * ── Das KAMERA-DOCK unten rechts ────────────────────────────────────────────
  *
- * Sie hat zwei Leser, und beide meinen dasselbe: der Kompass darf nicht dorthin
+ * Zoom-Leiste und Recenter-Beacon stehen dort übereinander in EINEM Container
+ * (`.tree-camera-dock`). Zwei absolut gesetzte Ecken wären zwei Quellen für
+ * dieselbe Geometrie — und die Sperrfläche darunter muss beide umschliessen.
+ */
+/** Abstand des Docks zur Viewport-Kante. */
+export const FORGE_CAMERA_DOCK_INSET_PX = 14
+/** Luft zwischen Beacon und Zoom-Leiste. */
+export const FORGE_CAMERA_DOCK_GAP_PX = 8
+/** Aussenmass des Recenter-Beacons; das scoped CSS holt es sich per `v-bind`. */
+export const FORGE_RECENTER_BEACON = { w: 168, h: 52 } as const
+/** Radius des Auslenkungs-Rings im viewBox `0 0 36 36`. Er liegt um den Zeiger,
+ *  und der trägt die 24 px Untergrenze des Projekts (Icon-Regel 6) — enger
+ *  gefasst berührt die Zeigerspitze bei schräger Drehung die Linie. */
+export const FORGE_RECENTER_RING_R = 16
+/** 2·π·FORGE_RECENTER_RING_R — der volle Umfang, also der leere Ring. */
+export const FORGE_RECENTER_RING_CIRCUMFERENCE = 100.53
+/** Bis hierher gilt die Kamera als zentriert — Klemmung und Rundung lassen
+ *  `pan` nie exakt auf dem Mittelpunkt liegen. */
+export const FORGE_RECENTER_AT_REST_PX = 1.5
+
+/**
+ * Höhe der Zoom-Leiste im Dock: 18 Knöpfe plus zweimal 6 Polster ergibt 30.
+ * Dazu Kantenabstand und noch einmal so viel Luft. Ihre BREITE steht hier
+ * nicht mehr — sie teilt die des Docks, und das gibt das Beacon vor.
+ */
+const FORGE_ZOOM_BAR_H = 58
+
+/**
+ * Die Sperrfläche unten rechts — das ganze Dock, nicht nur die Zoom-Leiste.
+ *
+ * Sie hat drei Leser, und alle meinen dasselbe: der Kompass darf nicht dorthin
  * ausweichen, und ein Knoten, der dahinter liegt, gilt als NICHT im Bild — was
  * verdeckt ist, ist für den Spieler nicht vorhanden (dieselbe Regel wie beim
  * HUD-Freiraum).
  *
- * Gerechnet aus der Leiste: zweimal 18 Knöpfe, 56 Bahn, zweimal 6 Lücke,
- * zweimal 10 Polster ergibt 124 breit; 18 plus zweimal 6 ergibt 30 hoch. Dazu
- * die 14 px Abstand zur Kante und noch einmal so viel Luft.
- *
- * Sie ist ausdrücklich eine SPERRFLÄCHE und nicht das Mass der Leiste — sie
- * darf grosszügiger sein, und genau deshalb ist sie keine zweite Quelle für
- * deren Grösse.
+ * ABGELEITET und nicht neu gezählt: kommt ein Element ins Dock, wächst die
+ * Fläche mit. Sie ist ausdrücklich eine SPERRFLÄCHE und darf grosszügiger sein
+ * als das Dock — deshalb der doppelte Kantenabstand.
  */
-export const FORGE_SPOTLIGHT_COMPASS_KEEPOUT = { w: 152, h: 58 } as const
+export const FORGE_SPOTLIGHT_COMPASS_KEEPOUT = {
+  w: FORGE_RECENTER_BEACON.w + FORGE_CAMERA_DOCK_INSET_PX * 2,
+  h: FORGE_ZOOM_BAR_H + FORGE_CAMERA_DOCK_GAP_PX + FORGE_RECENTER_BEACON.h,
+} as const
 
 /**
  * Grund, warum ein Kernstrahl gerade nicht weitergeht: `maxAllowedLevel` lässt

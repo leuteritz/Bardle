@@ -20,16 +20,27 @@
       @click.capture="onClickCapture"
       @click="onBackgroundClick"
     >
-    <!-- Zoom control -->
-    <!-- `.stop`, damit ein Zoomschritt die Anheftung nicht abräumt: die
-         Zoom-Leiste liegt im Viewport, und genau beim Anheften will der Spieler
-         herauszoomen, um seine Voraussetzungen ins Bild zu holen. -->
-    <div class="tree-zoom" @click.stop>
-      <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
-      <div class="zoom-track">
-        <div class="zoom-knob" :style="{ left: zoomKnobLeft }" />
+    <!-- DAS KAMERA-DOCK. Recenter-Beacon über der Zoom-Leiste, eine Ecke, eine
+         Sperrfläche (`FORGE_SPOTLIGHT_COMPASS_KEEPOUT` ist daraus abgeleitet).
+
+         `.stop` liegt am Dock und nicht an der Leiste: es räumt sonst die
+         Anheftung ab, und genau beim Anheften will der Spieler herauszoomen
+         oder zurückfahren, um die Voraussetzungen ins Bild zu holen. -->
+    <div class="tree-camera-dock" @click.stop>
+      <ForgeRecenterBeacon
+        :cap="recenterCap"
+        :label="recenterLabel"
+        :offset-ratio="recenterOffset"
+        :angle-deg="recenterAngle"
+        :at-rest="recenterAtRest"
+      />
+      <div class="tree-zoom">
+        <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
+        <div class="zoom-track">
+          <div class="zoom-knob" :style="{ left: zoomKnobLeft }" />
+        </div>
+        <button class="zoom-btn" aria-label="Zoom in" @click="zoomBy(1)">＋</button>
       </div>
-      <button class="zoom-btn" aria-label="Zoom in" @click="zoomBy(1)">＋</button>
     </div>
 
     <!-- DER RAND-KOMPASS. Zeigt an der Viewport-Kante in die Richtung des
@@ -363,6 +374,7 @@ import {
   forgeContentCenter,
   forgeFitScale,
   forgeNodeScreenRadius,
+  forgePanLimit,
 } from '@/utils/ui/forgeCameraBounds'
 import type {
   ForgeNodeDef,
@@ -376,6 +388,7 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
 import ForgeNodeTooltip from './ForgeNodeTooltip.vue'
 import SunChimeBoost from './SunChimeBoost.vue'
+import ForgeRecenterBeacon from './ForgeRecenterBeacon.vue'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
@@ -434,6 +447,10 @@ import {
   FORGE_CAMERA_PAN_MIN_MS,
   FORGE_CAMERA_PAN_MAX_MS,
   FORGE_CAMERA_PAN_SPEED_PX_PER_MS,
+  FORGE_CAMERA_DOCK_GAP_PX,
+  FORGE_CAMERA_DOCK_INSET_PX,
+  FORGE_RECENTER_AT_REST_PX,
+  KEYBINDINGS,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -1596,6 +1613,63 @@ function panToFocus(): void {
 }
 
 /**
+ * Der Weg zurück — Kamera UND Zoom auf den Ausgangsstand.
+ *
+ * Bisher gab es ihn nur als Nebenwirkung: ganz herauszoomen macht
+ * `forgePanLimit()` zu null, und `clampPan()` zieht die Kamera dann zwangsweise
+ * auf `forgeContentCenter()`. Neun Klicks auf „−" sind aber keine Geste.
+ *
+ * Der Zoom wird ZUERST gesetzt: `clampPan()` klemmt gegen `forgePanLimit(view,
+ * scale)`, und in umgekehrter Reihenfolge klemmte die Fahrt noch gegen die
+ * alte, engere Grenze.
+ *
+ * Die Anheftung bleibt stehen — sie zu lösen ist Escapes Aufgabe, und zwei
+ * Zustände in einem Tastendruck wären ein Zufallsergebnis.
+ */
+function recenterCamera(): void {
+  const target = forgeContentCenter()
+  zoom.value = clampZoom(FORGE_TREE_ZOOM_DEFAULT)
+  movePan(target, panDurationFor(pan.value, target))
+}
+
+defineExpose({ recenterCamera })
+
+/* ── Was das Beacon anzeigt ────────────────────────────────────────────────
+ *
+ * Gemessen gegen den ANSCHLAG und nicht gegen eine geratene Strecke: 1,0 heisst
+ * „weiter geht es nicht". Passt der Baum ganz ins Bild, ist `forgePanLimit()`
+ * null — dann KANN die Kamera nicht abweichen, und der Ring bleibt leer.
+ */
+const recenterOffset = computed(() => {
+  const limit = forgePanLimit(viewportSize.value, totalScale.value)
+  const home = forgeContentCenter()
+  const dx = limit.x > 0 ? Math.abs(pan.value.x - home.x) / limit.x : 0
+  const dy = limit.y > 0 ? Math.abs(pan.value.y - home.y) / limit.y : 0
+  return Math.min(1, Math.max(dx, dy))
+})
+
+/** Richtung zur Netzmitte, 0° = nach rechts. Auf ganze Grad gerundet: der
+ *  Zeiger sitzt inline, und ein Zug an der Maus schriebe sonst jeden Frame
+ *  fünfzehn Nachkommastellen ins `transform`. */
+const recenterAngle = computed(() => {
+  const home = forgeContentCenter()
+  return Math.round((Math.atan2(home.y - pan.value.y, home.x - pan.value.x) * 180) / Math.PI)
+})
+
+const recenterAtRest = computed(() => {
+  const home = forgeContentCenter()
+  const off = Math.hypot(pan.value.x - home.x, pan.value.y - home.y)
+  return off < FORGE_RECENTER_AT_REST_PX && zoom.value === clampZoom(FORGE_TREE_ZOOM_DEFAULT)
+})
+
+const recenterBind = KEYBINDINGS.find((b) => b.id === 'forgeRecenter')
+const recenterCap = recenterBind?.cap ?? 'C'
+const recenterLabel = recenterBind?.label ?? 'Recenter'
+
+const dockInset = `${FORGE_CAMERA_DOCK_INSET_PX}px`
+const dockGap = `${FORGE_CAMERA_DOCK_GAP_PX}px`
+
+/**
  * Die NACHFÜHRUNG — so weit wie nötig, nicht so weit wie möglich.
  *
  * Sie ersetzt das alte Paar aus „steht im Bild → gar nichts" und „steht nicht
@@ -1910,15 +1984,28 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 /* ══════════════════════════════════════════════════
-   ZOOM
+   KAMERA-DOCK
 ══════════════════════════════════════════════════ */
-.tree-zoom {
+/* Kantenabstand und Lücke kommen aus den Konstanten und stehen hier nicht ein
+   zweites Mal als Literal — die Sperrfläche rechnet mit denselben Zahlen. */
+.tree-camera-dock {
   position: absolute;
-  bottom: 14px;
-  right: 14px;
+  bottom: v-bind(dockInset);
+  right: v-bind(dockInset);
   z-index: 20;
   display: flex;
+  flex-direction: column;
+  /* `stretch`: die Leiste teilt die Breite des Beacons. Zwei verschieden breite
+     Kästen übereinander lesen sich als Anhängsel, nicht als ein Bedienfeld —
+     und die Sperrfläche rechnet ohnehin mit der breiteren. */
+  align-items: stretch;
+  gap: v-bind(dockGap);
+}
+
+.tree-zoom {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
   padding: 6px 10px;
   background: #16110a;
@@ -1948,7 +2035,8 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 .zoom-track {
-  width: 56px;
+  flex: 1;
+  min-width: 56px;
   height: 4px;
   background: #2a1a08;
   border-radius: 2px;

@@ -234,6 +234,7 @@ export type KeybindId =
   | 'abilityW'
   | 'abilityE'
   | 'abilityR'
+  | 'forgeRecenter'
 
 export type KeybindCategoryId = 'game' | 'interface'
 

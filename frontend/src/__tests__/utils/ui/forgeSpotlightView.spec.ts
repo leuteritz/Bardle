@@ -163,10 +163,17 @@ describe('forgeComfortPan', () => {
   it('zentriert einen Knoten, der gar nicht in die Zone passt', () => {
     // Ohne diesen Fall schöbe die Rechnung ihn abwechselnd an die eine und an
     // die andere Kante — es gibt keine Lage, in der er ganz hineinpasst.
+    //
+    // Eigener, HOHER Viewport: ein Knoten dieser Grösse berührt in der Bildmitte
+    // sonst die Sperrfläche des Kamera-Docks, und deren Korrektur schöbe ihn
+    // wieder aus der Mitte. Beides ist richtig, aber hier steht der Mittenfall
+    // zur Prüfung — nicht sein Zusammentreffen mit dem Dock.
+    const tall: ForgeViewBox = { w: 800, h: 800 }
+    const zone = forgeComfortZone(tall)
     const r = 230
-    expect(r * 2).toBeGreaterThan(ZONE.right - ZONE.left)
+    expect(r * 2).toBeGreaterThan(zone.right - zone.left)
     const node = { x: CENTER + 120, y: CENTER + 90 }
-    const pan = forgeComfortPan(node, r, cam(CENTER, CENTER), VIEW)
+    const pan = forgeComfortPan(node, r, cam(CENTER, CENTER), tall)
     expect(pan).toEqual({ x: node.x, y: node.y })
   })
 
