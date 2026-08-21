@@ -1305,6 +1305,57 @@ export const FORGE_TREE_DRAG_THRESHOLD_PX = 5
  * das CSS holt sie sich deshalb per `v-bind` von hier.
  */
 export const FORGE_TREE_PAN_MS = 200
+
+/* ── Die KOMFORTZONE der Kamera ───────────────────────────────────────────────
+ *
+ * Die Kamera kannte zwei Antworten auf einen Fokuswechsel: steht der Knoten ganz
+ * im Bild, bleibt sie stehen — sonst reisst sie ihn in die MITTE. Beides ist
+ * derselbe Sprung an einer Kante: ein Knoten 25 px vor dem Rand bewegte nichts,
+ * derselbe Knoten zwei Pixel weiter draussen die ganze Bühne quer über den
+ * Schirm. Dazwischen fehlte, was eine Spielkamera ausmacht — so weit fahren wie
+ * NÖTIG, nicht so weit wie möglich.
+ *
+ * Die Zone ist der Bereich, in dem ein Knoten als „gut zu sehen" gilt. Innerhalb
+ * bewegt sich nichts; ausserhalb gleitet die Bühne genau so weit, bis er ihre
+ * Kante berührt. `forgeComfortPan()` rechnet das.
+ *
+ * Der Anteil ist ein Kompromiss zwischen zwei Fehlern. Zu gross (ab etwa 0,8)
+ * fällt die Zone mit „im Bild" zusammen und die Nachführung tut nie etwas — dann
+ * hätte man die alte Kante nur verschoben. Zu klein (unter 0,4) fährt fast jeder
+ * Klick, und die Zone ist eine umständliche Zentrierung. Bei 0,56 liegt sie auf
+ * Full HD mit offener Detailspalte (Viewport rund 1000 × 700) bei 560 × 392 —
+ * gross genug, dass ein Klick auf den Nachbarknoten nichts bewegt, klein genug,
+ * dass ein Knoten am Rand hereingeholt wird, bevor er angeschnitten ist.
+ *
+ * Zwei Zahlen und nicht eine: der Viewport des Baums ist deutlich breiter als
+ * hoch, und ein gemeinsamer Anteil hiesse, dass die Zone auf der knappen Achse
+ * denselben Spielraum beansprucht wie auf der reichen.
+ */
+export const FORGE_CAMERA_COMFORT_W = 0.56
+export const FORGE_CAMERA_COMFORT_H = 0.56
+
+/* ── Wie lange eine Kamerafahrt dauert ────────────────────────────────────────
+ *
+ * `FORGE_TREE_PAN_MS` bleibt die Dauer JEDER anderen Bewegung der Bühne — der
+ * Zoomschritte und des Ausgleichs beim Ein- und Ausklappen der Detailspalte. Die
+ * Fahrt zum Fokus bekommt dagegen eine Dauer, die mit der STRECKE wächst: eine
+ * Nachführung um vierzig Pixel und ein Schwenk quer über den Baum sind nicht
+ * dieselbe Bewegung, und mit einer festen Zahl wirkt die kurze träge und die
+ * lange gehetzt.
+ *
+ * Gerechnet auf der Bildschirm-Strecke, nicht auf der Bühnen-Strecke: was der
+ * Spieler als Tempo wahrnimmt, sind Pixel auf dem Schirm — bei halbem Zoom
+ * dauert derselbe Bühnenweg deshalb halb so lang, und das ist richtig so.
+ */
+export const FORGE_CAMERA_PAN_MIN_MS = 170
+export const FORGE_CAMERA_PAN_MAX_MS = 430
+/**
+ * Bildschirm-Pixel je Millisekunde. 1,7 heisst: die 560 px der Zone quert die
+ * Kamera in rund einer Drittelsekunde, und der weiteste Weg auf Full HD
+ * (Bildecke zu Bildecke, gut 1100 px) läuft in den Deckel.
+ */
+export const FORGE_CAMERA_PAN_SPEED_PX_PER_MS = 1.7
+
 /**
  * Der SAUM um die Inhalts-Hülle — was ausser den Knotenrändern noch ins Bild
  * gehört.
@@ -2617,7 +2668,6 @@ export const FORGE_FRESH_BADGE_OFFER_PX = 16
  * das Motiv des Knotens, auf das sie zeigt.
  */
 export const FORGE_FRESH_BADGE_NODE_PCT = 40
-
 
 /**
  * Glyph vor der Tooltip-Fußzeile „N affordable in total".

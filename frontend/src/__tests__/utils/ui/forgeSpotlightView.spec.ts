@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  forgeComfortPan,
+  forgeComfortZone,
   forgeCompassAt,
   forgeCompassReach,
   forgeNodeInView,
@@ -95,6 +97,124 @@ describe('forgeNodeInView', () => {
     expect(p.x + r).toBeGreaterThan(VIEW.w - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.w)
     expect(p.y + r).toBeGreaterThan(VIEW.h - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.h)
     expect(forgeNodeInView(node, r, cam(CENTER, CENTER), VIEW)).toBe(false)
+  })
+})
+
+/**
+ * Die NACHFÜHRUNG — die dritte Antwort neben dem Ja/Nein von `forgeNodeInView`.
+ *
+ * Geprüft wird vor allem das, was sie von der alten Fassung unterscheidet: dass
+ * sie den Knoten NICHT in die Bildmitte zieht, sondern genau bis an die Kante
+ * der Komfortzone — und dass sie gar nichts tut, solange er bequem dasteht.
+ */
+describe('forgeComfortPan', () => {
+  const ZONE = forgeComfortZone(VIEW)
+
+  /** Wo der Knoten landet, wenn die Kamera dem Vorschlag folgt. */
+  function after(node: { x: number; y: number }, pan: { x: number; y: number }, scale = 1) {
+    return forgeNodeScreenPoint(node, cam(pan.x, pan.y, scale), VIEW)
+  }
+
+  it('spannt die Zone mittig auf und lässt sie nicht über den Saum hinauswachsen', () => {
+    expect((ZONE.left + ZONE.right) / 2).toBeCloseTo(VIEW.w / 2)
+    expect((ZONE.top + ZONE.bottom) / 2).toBeCloseTo(VIEW.h / 2)
+    expect(ZONE.left).toBeGreaterThanOrEqual(FORGE_SPOTLIGHT_EDGE_MARGIN_PX)
+    expect(ZONE.bottom).toBeLessThanOrEqual(VIEW.h - FORGE_SPOTLIGHT_EDGE_MARGIN_PX)
+    // Und sie ist ECHT kleiner als das freie Feld — wäre sie es nicht, fiele sie
+    // mit „im Bild" zusammen und die Nachführung täte nie etwas.
+    expect(ZONE.right - ZONE.left).toBeLessThan(VIEW.w - FORGE_SPOTLIGHT_EDGE_MARGIN_PX * 2)
+  })
+
+  it('lässt die Bühne stehen, solange der Knoten in der Zone steht', () => {
+    expect(forgeComfortPan({ x: CENTER, y: CENTER }, 30, cam(CENTER, CENTER), VIEW)).toBeNull()
+  })
+
+  it('fährt nicht ins Blinde — ungemessener Viewport heisst stehenbleiben', () => {
+    expect(forgeComfortPan({ x: 0, y: 0 }, 30, cam(CENTER, CENTER), { w: 0, h: 0 })).toBeNull()
+  })
+
+  it('holt einen Knoten links draussen GENAU bis an die Zonenkante, nicht in die Mitte', () => {
+    const r = 20
+    // Bildschirmposition 100 — die linke Kante der Zone liegt bei 176.
+    const node = { x: CENTER - 300, y: CENTER }
+    const pan = forgeComfortPan(node, r, cam(CENTER, CENTER), VIEW)
+    expect(pan).not.toBeNull()
+
+    const p = after(node, pan!)
+    expect(p.x - r).toBeCloseTo(ZONE.left)
+    // Die Gegenprobe, und sie ist der eigentliche Inhalt dieser Spec: das alte
+    // Verhalten hätte hier die Bildmitte geliefert.
+    expect(p.x).not.toBeCloseTo(VIEW.w / 2)
+    // Die andere Achse stand bequem und bleibt unberührt.
+    expect(pan!.y).toBe(CENTER)
+  })
+
+  it('rechnet beide Achsen einzeln und jede minimal', () => {
+    const r = 15
+    const node = { x: CENTER + 380, y: CENTER + 260 }
+    const pan = forgeComfortPan(node, r, cam(CENTER, CENTER), VIEW)
+    expect(pan).not.toBeNull()
+
+    const p = after(node, pan!)
+    expect(p.x + r).toBeCloseTo(ZONE.right)
+    expect(p.y + r).toBeCloseTo(ZONE.bottom)
+  })
+
+  it('zentriert einen Knoten, der gar nicht in die Zone passt', () => {
+    // Ohne diesen Fall schöbe die Rechnung ihn abwechselnd an die eine und an
+    // die andere Kante — es gibt keine Lage, in der er ganz hineinpasst.
+    const r = 230
+    expect(r * 2).toBeGreaterThan(ZONE.right - ZONE.left)
+    const node = { x: CENTER + 120, y: CENTER + 90 }
+    const pan = forgeComfortPan(node, r, cam(CENTER, CENTER), VIEW)
+    expect(pan).toEqual({ x: node.x, y: node.y })
+  })
+
+  it('teilt den Bildschirmversatz durch den Massstab', () => {
+    const r = 20
+    // Derselbe Bildschirmpunkt wie oben (100), nur bei doppeltem Zoom: der
+    // Bühnenweg ist dann halb so lang.
+    const node = { x: CENTER - 150, y: CENTER }
+    const pan = forgeComfortPan(node, r, cam(CENTER, CENTER, 2), VIEW)
+    expect(pan).not.toBeNull()
+    expect(CENTER - pan!.x).toBeCloseTo(96 / 2)
+    expect(after(node, pan!, 2).x - r).toBeCloseTo(ZONE.left)
+  })
+
+  it('schiebt einen Knoten aus der Sperrfläche der Zoom-Leiste heraus', () => {
+    // Auf einem schmalen Viewport reicht die Zone bis in die Ecke, in der die
+    // Leiste sitzt. Verdeckt ist schlimmer als unbequem, also gewinnt sie.
+    const small: ForgeViewBox = { w: 400, h: 260 }
+    const zone = forgeComfortZone(small)
+    expect(zone.right).toBeGreaterThan(small.w - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.w)
+
+    const r = 10
+    const node = { x: CENTER + 100, y: CENTER + 65 }
+    const before = forgeNodeScreenPoint(node, cam(CENTER, CENTER), small)
+    // Vorbedingung: er liegt in der Sperrfläche.
+    expect(before.x + r).toBeGreaterThan(small.w - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.w)
+    expect(before.y + r).toBeGreaterThan(small.h - FORGE_SPOTLIGHT_COMPASS_KEEPOUT.h)
+
+    const pan = forgeComfortPan(node, r, cam(CENTER, CENTER), small)
+    expect(pan).not.toBeNull()
+    expect(forgeNodeInView(node, r, cam(pan!.x, pan!.y), small)).toBe(true)
+  })
+
+  it('holt jeden Knoten, den `forgeNodeInView` verwirft, in einem Zug ins Bild', () => {
+    // Die Zusage, auf der die Kamera ruht: eine Fahrt, danach steht er da.
+    const r = 24
+    const targets = [
+      { x: CENTER - 900, y: CENTER },
+      { x: CENTER + 900, y: CENTER - 700 },
+      { x: CENTER, y: CENTER + 800 },
+      { x: CENTER + 340, y: CENTER + 250 },
+    ]
+    for (const node of targets) {
+      expect(forgeNodeInView(node, r, cam(CENTER, CENTER), VIEW)).toBe(false)
+      const pan = forgeComfortPan(node, r, cam(CENTER, CENTER), VIEW)
+      expect(pan).not.toBeNull()
+      expect(forgeNodeInView(node, r, cam(pan!.x, pan!.y), VIEW)).toBe(true)
+    }
   })
 })
 

@@ -72,9 +72,10 @@
     <!-- Scaled tree stage -->
     <div
       class="tree-stage"
-      :class="{ 'tree-stage--dragging': isDragging, 'tree-stage--instant': panInstant }"
+      :class="{ 'tree-stage--dragging': isDragging }"
       :style="{
         transform: stageTransform,
+        transitionDuration: `${stageTransitionMs}ms`,
         '--inv-scale': (1 / totalScale).toFixed(4),
         '--forge-stage-size': `${FORGE_STAGE_SIZE}px`,
       }"
@@ -467,11 +468,17 @@ import {
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
-import { forgeClusterSpots, forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import {
+  forgeClusterSpots,
+  forgeEdges,
+  forgeTreePlacements,
+  type Point,
+} from '@/utils/ui/forgeTreeLayout'
 import { forgeClusterOf } from '@/config/progression/starForgeNet'
 import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
 import {
   forgeCompassAt,
+  forgeComfortPan,
   forgeNodeInView,
   forgeNodeScreenPoint,
   type ForgeCamera,
@@ -550,6 +557,9 @@ import {
   FORGE_SPOTLIGHT_COMPASS_ICON_PX,
   FORGE_SPOTLIGHT_COMPASS_SIZE_PX,
   FORGE_TREE_PAN_MS,
+  FORGE_CAMERA_PAN_MIN_MS,
+  FORGE_CAMERA_PAN_MAX_MS,
+  FORGE_CAMERA_PAN_SPEED_PX_PER_MS,
   FORGE_EDGE_LEGEND_ROWS,
 } from '@/config/constants'
 
@@ -1469,6 +1479,39 @@ let paneShift = false
 const panInstant = ref(false)
 let settleFrame = 0
 
+/**
+ * Wie lange die NÄCHSTE Bewegung der Bühne dauert.
+ *
+ * Stand als feste Zahl im `v-bind` der Transition. Seit die Kamerafahrt zum
+ * Fokus ihre Dauer aus der Strecke bezieht, wechselt sie — und dann gehört sie
+ * ans ELEMENT, nicht als Custom Property an den Komponentenrahmen: eine dort
+ * geänderte Variable zieht einen Style-Recalc über den ganzen Teilbaum, und
+ * darin liegen hundertfünfundfünfzig Knoten (Performance-Regel 3).
+ *
+ * Jede Bewegung, die nicht der Fokus ist — Zoomschritte, der Ausgleich des
+ * Spaltensprungs —, behält `FORGE_TREE_PAN_MS`; `movePan()` setzt den Wert und
+ * ist die einzige Stelle, die ihn ändert.
+ */
+const panDurationMs = ref(FORGE_TREE_PAN_MS)
+
+/**
+ * Was am Element steht — und damit die EINZIGE Antwort auf „fährt sie gerade".
+ *
+ * Zwei Zustände setzen sie auf null: der Zug an der Maus (sonst hängt der Baum
+ * dem Zeiger um eine Fahrtdauer hinterher, und das fühlt sich an wie ein
+ * Fehler) und der eine Frame, in dem der Breitensprung der Detailspalte
+ * ausgeglichen wird (sonst führe die Bühne die Kompensation als sichtbare Fahrt
+ * aus, und der Sprung wäre durch ein Schwenken ersetzt statt aufgehoben).
+ *
+ * Beides stand als `transition: none` in zwei Klassen — und genau das ginge
+ * jetzt nicht mehr: eine INLINE gesetzte `transition-duration` schlägt jede
+ * Regel aus dem Stylesheet, die Klassen wären wirkungslos geworden. Die Fälle
+ * gehören deshalb hierher, in die Zahl selbst.
+ */
+const stageTransitionMs = computed(() =>
+  isDragging.value || panInstant.value ? 0 : panDurationMs.value,
+)
+
 watch(detailsOpen, () => {
   paneShift = true
 })
@@ -1488,9 +1531,10 @@ onMounted(() => {
 
     if (!paneShift || prevW === 0) {
       zoom.value = clampZoom(zoom.value)
-      clampPan()
+      movePan(pan.value)
       return
     }
+    const narrower = rect.width < prevW
     paneShift = false
 
     panInstant.value = true
@@ -1506,7 +1550,19 @@ onMounted(() => {
     settleFrame = requestAnimationFrame(() => {
       panInstant.value = false
       zoom.value = clampZoom(zoom.value)
-      clampPan()
+      movePan(pan.value)
+      /* Und erst JETZT den Fokus nachführen.
+
+         Das ist der Fall, den man beim ersten Klick jedes Besuchs sieht: der
+         Klick im Baum fährt die Detailspalte aus, der Viewport verliert dabei
+         rund 450 px Breite — und der eben gewählte Knoten steht hinter der
+         Spalte. Der Kamerawächter hat da längst entschieden, und zwar gegen den
+         ALTEN, breiteren Viewport.
+
+         Nur beim SCHMALER-Werden. Klappt die Spalte zu, wird Fläche frei; was
+         vorher bequem stand, steht danach erst recht bequem, und eine Fahrt
+         wäre reine Bewegung ohne Anlass. */
+      if (narrower) comfortToFocus(pinnedId.value)
     })
   })
   resizeObserver.observe(viewportEl.value)
@@ -1557,6 +1613,42 @@ function clampPan(): void {
 }
 
 /**
+ * Die EINE Tür, durch die jede Bewegung der Bühne geht.
+ *
+ * Vorher schrieb jeder Weg `pan` selbst und rief `clampPan()` hinterher — vier
+ * Stellen, die dasselbe Paar bilden. Seit die Dauer nicht mehr feststeht, wäre
+ * das ein fünftes Feld an jeder dieser Stellen, und genau so laufen zwei Werte
+ * für eine Bewegung auseinander: eine Fahrt von 430 ms, danach ein Zoomschritt,
+ * der ihre Dauer geerbt hat.
+ *
+ * Ohne zweites Argument gilt `FORGE_TREE_PAN_MS` — die Dauer für alles, was
+ * nicht der Fokus ist. Der Zug an der Maus geht ebenfalls hier durch: er
+ * schreibt denselben Wert jeden Frame, und identische Zuweisungen an eine Ref
+ * lösen in Vue nichts aus.
+ */
+function movePan(next: Point, ms: number = FORGE_TREE_PAN_MS): void {
+  panDurationMs.value = ms
+  pan.value = next
+  clampPan()
+}
+
+/**
+ * Die Dauer einer Kamerafahrt aus ihrer STRECKE.
+ *
+ * Eine Nachführung um vierzig Pixel und ein Schwenk quer über den Baum sind
+ * nicht dieselbe Bewegung: mit einer festen Zahl wirkt die kurze träge und die
+ * lange gehetzt. Gerechnet auf dem SCHIRM, weil das Tempo dort wahrgenommen
+ * wird — bei halbem Zoom dauert derselbe Bühnenweg deshalb halb so lang.
+ */
+function panDurationFor(from: Point, to: Point): number {
+  const px = Math.hypot(to.x - from.x, to.y - from.y) * (totalScale.value || 1)
+  return Math.min(
+    FORGE_CAMERA_PAN_MAX_MS,
+    Math.max(FORGE_CAMERA_PAN_MIN_MS, px / FORGE_CAMERA_PAN_SPEED_PX_PER_MS),
+  )
+}
+
+/**
  * Pan und Zoom in EINEM `transform`.
  *
  * Die Reihenfolge ist der ganze Trick: die Verschiebung steht VOR `scale`, also
@@ -1580,7 +1672,10 @@ const zoomKnobLeft = computed(() => {
  *  dort ändert sich `pan` nicht. */
 function zoomBy(direction: number): void {
   zoom.value = clampZoom(zoom.value + direction * FORGE_TREE_ZOOM_STEP)
-  clampPan()
+  // Durch `movePan` und nicht durch `clampPan`: der Zoomschritt verschiebt am
+  // Anschlag sehr wohl den Bildmittelpunkt, und er soll dabei die Standarddauer
+  // tragen und nicht die der letzten Kamerafahrt.
+  movePan(pan.value)
 }
 
 /**
@@ -1606,8 +1701,7 @@ function onWheel(event: WheelEvent): void {
   const stageX = pan.value.x + offX / before
   const stageY = pan.value.y + offY / before
   zoom.value = after
-  pan.value = { x: stageX - offX / after, y: stageY - offY / after }
-  clampPan()
+  movePan({ x: stageX - offX / after, y: stageY - offY / after })
 }
 
 // ── Ziehen ─────────────────────────────────────────────────────
@@ -1642,8 +1736,7 @@ function onPointerMove(event: PointerEvent): void {
     ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
   }
   const s = totalScale.value || 1
-  pan.value = { x: dragStartPan.x - dx / s, y: dragStartPan.y - dy / s }
-  clampPan()
+  movePan({ x: dragStartPan.x - dx / s, y: dragStartPan.y - dy / s })
 }
 
 function onPointerEnd(event: PointerEvent): void {
@@ -1676,31 +1769,59 @@ function onBackgroundClick(): void {
  * diese Brücke zu bedienen: wer rechts eine Zeile anklickt, will sie links
  * SEHEN. Einmalig gesetzt, die vorhandene Transition auf `.tree-stage` trägt
  * die Bewegung — keine Frame-Schleife, kein `requestAnimationFrame`.
+ *
+ * Diese Fassung fährt in die MITTE und ist damit die ausdrückliche Antwort auf
+ * `refocus()`. Der gewöhnliche Fokuswechsel geht über `comfortToFocus()`.
  */
 function panToFocus(): void {
   const id = pinnedId.value
   if (id === null) return
   const node = nodeById.value.get(id)
   if (!node) return
-  pan.value = { x: node.x, y: node.y }
-  clampPan()
+  const target = { x: node.x, y: node.y }
+  movePan(target, panDurationFor(pan.value, target))
+  pingOnArrival(id)
 }
 
 /**
- * Beim WECHSEL des Fokus fährt sie nur, wenn nötig.
+ * Die NACHFÜHRUNG — so weit wie nötig, nicht so weit wie möglich.
  *
- * Bedingungslos war das richtig, solange Anheften die seltene Geste war. Seit
- * jeder Klick fokussiert, wäre es eine Bühne, die bei jedem Klick unter dem
- * Zeiger wegzieht — auch dann, wenn der getroffene Kreis längst mitten im Bild
- * steht. Dieselbe Zurückhaltung wie `block: 'nearest'` drüben in der Liste, und
- * dieselben vier Werte, mit denen `watch(listHoverId)` weiter unten rechnet.
+ * Sie ersetzt das alte Paar aus „steht im Bild → gar nichts" und „steht nicht
+ * im Bild → in die Mitte". Beides war derselbe Sprung an einer Kante: ein
+ * Knoten 25 px vor dem Rand bewegte nichts, zwei Pixel weiter draussen riss er
+ * die ganze Bühne quer über den Schirm.
+ *
+ * `forgeComfortPan()` beantwortet stattdessen, wie weit die Bühne gleiten muss,
+ * damit der Knoten die Kante der Komfortzone berührt — und `null`, wenn er
+ * ohnehin bequem dasteht. Dann bleibt alles stehen: kein `pan`-Schreiben, keine
+ * neu angestossene Transition, kein Ping.
  */
-watch(pinnedId, (id) => {
+function comfortToFocus(id: string | null): void {
   if (id === null) return
   const node = nodeById.value.get(id)
   if (!node) return
-  if (forgeNodeInView(node, nodeRadiusOnScreen(node), camera(), viewportSize.value)) return
-  panToFocus()
+  const target = forgeComfortPan(
+    node,
+    nodeRadiusOnScreen(node),
+    camera(),
+    viewportSize.value,
+  )
+  if (!target) return
+  movePan(target, panDurationFor(pan.value, target))
+  pingOnArrival(id)
+}
+
+/**
+ * Beim WECHSEL des Fokus führt sie nach.
+ *
+ * Bedingungsloses Zentrieren war richtig, solange Anheften die seltene Geste
+ * war. Seit jeder Klick fokussiert, wäre es eine Bühne, die bei jedem Klick
+ * unter dem Zeiger wegzieht — auch dann, wenn der getroffene Kreis längst
+ * mitten im Bild steht. Dieselbe Zurückhaltung wie `block: 'nearest'` drüben in
+ * der Liste, nur ohne deren Alles-oder-Nichts.
+ */
+watch(pinnedId, (id) => {
+  comfortToFocus(id)
 })
 
 /**
@@ -1709,7 +1830,8 @@ watch(pinnedId, (id) => {
  * `refocus()` ist die ausdrückliche Bitte — das Fadenkreuz der Fokusleiste, ein
  * zweiter Klick auf dieselbe Zeile. Wer sie ausspricht, hat den Knoten gerade
  * nicht vor Augen, und „steht doch schon im Bild" wäre auf sie die falsche
- * Antwort: gemeint ist die MITTE, nicht der Rand.
+ * Antwort: gemeint ist die MITTE, nicht der Rand — und deshalb auch nicht die
+ * Komfortzone, die ihn nur bis an ihre Kante holte.
  */
 watch(focusTick, () => {
   panToFocus()
@@ -1762,6 +1884,30 @@ function clearTravel(): void {
 }
 
 /**
+ * „Hier ist er" — der Ping am Ziel, sobald die Bühne steht.
+ *
+ * Er hing bisher allein am Zeiger auf der Liste. Seit der Klick nicht mehr
+ * entweder gar nicht oder quer über den Schirm fährt, braucht er ihn genauso:
+ * eine Nachführung um sechzig Pixel ist eine so kleine Bewegung, dass man ohne
+ * diesen Schlag am Kreis nicht sicher weiss, welcher der fünfundzwanzig
+ * Nachbarn nun gemeint ist.
+ *
+ * Gewartet wird die TATSÄCHLICHE Dauer der Fahrt (`panDurationMs`) und nicht
+ * mehr die feste Zahl — seit sie mit der Strecke wächst, wäre eine zweite
+ * Zahl daneben genau der Fehler, den `FORGE_TREE_PAN_MS` einmal vermeiden
+ * sollte. Reine Anzeige, deshalb `setTimeout` und nicht `gameTimeout()`.
+ */
+function pingOnArrival(id: string): void {
+  if (arrivalTimer !== null) clearTimeout(arrivalTimer)
+  arrivalTimer = setTimeout(() => {
+    arrivalTimer = null
+    // Gilt der Knoten noch? Ein Klick weiter, und der Schlag gehörte einem
+    // anderen Kreis.
+    if (spotlightId.value === id) arrivalTick.value += 1
+  }, panDurationMs.value)
+}
+
+/**
  * Der halbe Durchmesser des Knotens auf dem SCHIRM.
  *
  * Drei Faktoren, und alle drei sind nötig: seine Grössenklasse (ein Glimmer
@@ -1799,15 +1945,21 @@ watch(listHoverId, (id) => {
     panTimer = null
     // Der Zeiger ist weitergezogen, während wir gewartet haben.
     if (listHoverId.value !== id) return
-    pan.value = { x: node.x, y: node.y }
-    clampPan()
+    // Über dieselbe Komfortzone wie der Klick. Zwei Kamerasprachen in einem
+    // Baum wären die schlimmere Fassung: dieselbe Zeile, einmal überfahren und
+    // einmal angeklickt, führte sonst zu zwei verschiedenen Bildern.
+    const target = forgeComfortPan(
+      node,
+      nodeRadiusOnScreen(node),
+      camera(),
+      viewportSize.value,
+    )
     travelId.value = null
+    if (!target) return
+    movePan(target, panDurationFor(pan.value, target))
     // Der Ping erst NACH der Fahrt: gezündet man ihn sofort, platzte er noch
     // ausserhalb des Bildes, und von der Ankunft bliebe nichts zu sehen.
-    arrivalTimer = setTimeout(() => {
-      arrivalTimer = null
-      if (listHoverId.value === id) arrivalTick.value += 1
-    }, FORGE_TREE_PAN_MS)
+    pingOnArrival(id)
   }, FORGE_SPOTLIGHT_PAN_DELAY_MS)
 })
 
@@ -1857,10 +2009,12 @@ const compassStyle = computed(() => {
   }
 })
 
-/** Die Fahrtdauer und der Ringüberstand gehen per `v-bind` ins scoped CSS
- *  zurück — dort standen sie einmal als Literale, und JavaScript braucht sie
- *  jetzt beide. */
-const panMs = `${FORGE_TREE_PAN_MS}ms`
+/** Der Ringüberstand geht per `v-bind` ins scoped CSS zurück — dort stand er
+ *  einmal als Literal, und JavaScript braucht ihn jetzt auch.
+ *
+ *  Die Fahrtdauer stand hier ebenfalls und ist gefallen: sie wechselt seit der
+ *  Komfortzone mit jeder Fahrt und hängt deshalb inline am Bühnenelement
+ *  (`panDurationMs`), nicht als Custom Property am Komponentenrahmen. */
 const ringInset = `${-FORGE_SPOTLIGHT_RING_INSET_PX}px`
 const compassIconPx = FORGE_SPOTLIGHT_COMPASS_ICON_PX
 const compassSize = `${FORGE_SPOTLIGHT_COMPASS_SIZE_PX}px`
@@ -2012,29 +2166,32 @@ const nextPhasePreviewStyle = computed(() => ({
   width: var(--forge-stage-size);
   height: var(--forge-stage-size);
   /* Die Transition trägt Zoomschritte, die Kamerafahrt zur Anheftung UND die
-     zum Zeiger auf der Upgrade-Liste. Die Dauer steht in einer Konstante, weil
-     JavaScript sie kennen muss: der Ping am Ziel zündet erst, wenn sie
-     abgelaufen ist. */
-  transition: transform v-bind(panMs) ease;
+     zum Zeiger auf der Upgrade-Liste. Die DAUER steht inline am Element: sie
+     wechselt mit der Strecke, und eine Custom Property am Komponentenrahmen
+     zöge dafür jedes Mal einen Style-Recalc über hundertfünfundfünfzig Knoten
+     (Performance-Regel 3). JavaScript kennt sie ohnehin — der Ping am Ziel
+     zündet erst, wenn sie abgelaufen ist.
+
+     Die KURVE dagegen gehört ins CSS und ist eine Ausklang-Kurve, kein `ease`:
+     eine Kamera soll zügig anfahren und weich ankommen. `ease` bremst zu Beginn
+     genauso wie am Ende und liess damit jede Nachführung um wenige Pixel
+     zäh wirken. Weiterhin wird ausschliesslich `transform` animiert. */
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
   z-index: 1;
 }
 
-/* Beim Ziehen MUSS sie aus sein — sonst hängt der Baum der Maus um 200 ms
-   hinterher, und das fühlt sich an wie ein Fehler. `will-change` steht nur
-   hier und nicht dauerhaft: es gehört an Elemente, deren `transform`
-   WIRKLICH gerade pro Frame geschrieben wird (Performance-Regel 12). */
-.tree-stage--dragging {
-  transition: none;
-  will-change: transform;
-}
+/* Beim Ziehen MUSS die Fahrt aus sein — sonst hängt der Baum der Maus um eine
+   Fahrtdauer hinterher, und das fühlt sich an wie ein Fehler. Das ABSCHALTEN
+   steht nicht mehr hier, sondern in `stageTransitionMs`: die Dauer hängt inline
+   am Element und schlüge jedes `transition: none` aus dem Stylesheet. Diese
+   Klasse trägt nur noch das, was sie allein kann.
 
-/* Der Ausgleich des Breitensprungs beim Ein- und Ausklappen der Detailspalte:
-   EIN Frame ohne Transition, sonst führe die Bühne die Kompensation als
-   sichtbare Fahrt aus — und der Sprung wäre durch ein Schwenken ersetzt statt
-   aufgehoben. Kein `will-change`: das hier ist ein einzelner Frame, keine
-   laufende Bewegung (Performance-Regel 12). */
-.tree-stage--instant {
-  transition: none;
+   `will-change` steht nur hier und nicht dauerhaft: es gehört an Elemente,
+   deren `transform` WIRKLICH gerade pro Frame geschrieben wird
+   (Performance-Regel 12). */
+.tree-stage--dragging {
+  will-change: transform;
 }
 
 .tree-svg {
@@ -2909,6 +3066,17 @@ const nextPhasePreviewStyle = computed(() => ({
      ist die Auskunft, die Bewegung dorthin war nur die Höflichkeit. */
   .limb-field {
     transition: none;
+  }
+
+  /* Die Kamerafahrt ist die grösste Bewegung dieser Fläche — der ganze Baum
+     wandert. Sie findet weiterhin statt, nur eben sofort: das Ziel ist die
+     Auskunft, die Fahrt dorthin war die Höflichkeit.
+
+     `!important` und sonst nichts: die Dauer steht INLINE am Element (sie
+     wechselt mit der Strecke), und nur so kommt eine Regel aus dem Stylesheet
+     dagegen an. Die einzige Stelle im Baum, an der das nötig ist. */
+  .tree-stage {
+    transition-duration: 0s !important;
   }
 
   /* Und dieselbe Falle beim Kompass: seine Einblendung startet bei Deckkraft 0
