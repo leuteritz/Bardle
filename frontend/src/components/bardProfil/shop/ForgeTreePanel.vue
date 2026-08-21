@@ -20,21 +20,6 @@
       @click.capture="onClickCapture"
       @click="onBackgroundClick"
     >
-    <!-- DIE LEGENDE zur Kantensprache. Eigene Komponente; ihre Optik liegt
-         global in `rpg-theme.css`, weil ihre Proben DIESELBEN Klassen tragen
-         wie die Kanten hier im SVG.
-
-         GEFILTERT wird hier und nicht dort: gezeigt wird nur, wofür gerade
-         mindestens eine Kante steht. Alle sechs Zeilen dauerhaft zu führen
-         hiess, im frischen Spielstand „grown" und „maxed" zu erklären, obwohl
-         beide Striche nirgends im Bild sind — eine Legende, die mehr behauptet
-         als die Bühne hergibt, ist als Auskunft schlechter als keine.
-
-         Sie hängt im VIEWPORT und nicht in der Bühne. „Die Bühne ist wortlos"
-         gilt für das, was mit ihr skaliert und über den Knoten liegt — die
-         Zoom-Leiste, der Kompass und die Legende tragen sehr wohl Wörter. -->
-    <ForgeEdgeLegend :rows="visibleLegendRows" />
-
     <!-- Zoom control -->
     <!-- `.stop`, damit ein Zoomschritt die Anheftung nicht abräumt: die
          Zoom-Leiste liegt im Viewport, und genau beim Anheften will der Spieler
@@ -105,137 +90,20 @@
              DARAUSSEN: sie sind die Antwort auf das Zeigen und dürfen nie
              mitgedimmt werden. -->
         <g class="limb-field">
-          <!-- Die Rinnen der Kanten hinter einem TOR. Gegen eine Phasen- oder
-               Prestige-Sperre hilft kein Vorgänger; der Weg ist noch nicht
-               einmal Thema, und die blasse Rinne sagt genau das — sie hält die
-               Form des Netzes, ohne etwas zu versprechen. -->
-          <g
-            class="limb-bed limb-bed--gate"
-            stroke-linecap="round" stroke-linejoin="round" fill="none"
-          >
+          <!-- EIN Strichbild, ZWEI Zustände. Die Breite sagt die Ebene, die
+               Farbe sagt den Zustand — mehr trägt eine Kante nicht. Offen liegt
+               über geschlossen, damit an einer Kreuzung der begehbare Weg
+               gewinnt. -->
+          <g class="limb-closed" stroke-linecap="round" stroke-linejoin="round" fill="none">
             <path
-              v-for="limb in veinGroups.gate" :key="limb.key + '-gate'"
-              :d="limb.d" :stroke-width="limb.width"
+              v-for="limb in limbGroups.closed" :key="limb.key + '-c'"
+              :d="limb.d" :stroke-width="limbWidth(limb)"
             />
           </g>
-          <!-- Die RINNE. Sie ist die Struktur: woran ein Knoten hängt.
-               Rechtwinklig geführt und je Ebene dünner — die Strichstärke sitzt
-               deshalb am Pfad und nicht an der Gruppe. Der Weg selbst kommt aus
-               `forgeEdgeRoute.ts`: nur achsparallele Segmente, jeder Knick 90
-               Grad, und keiner läuft durch einen fremden Knoten.
-
-               Sie ist dunkler als früher (#4a3418). Das ist der Kern des
-               Umbaus: ein Grundstrich, der mit den Adern darauf um
-               Aufmerksamkeit konkurriert, macht aus fünf Zuständen einen. -->
-          <g class="limb-bed" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <g class="limb-open" stroke-linecap="round" stroke-linejoin="round" fill="none">
             <path
-              v-for="limb in bedLimbs" :key="limb.key + '-bed'"
-              :d="limb.d" :stroke-width="limb.width"
-            />
-          </g>
-          <!-- Der SCHEIN unter den ausgewachsenen Adern — ein zweiter, sehr
-               blasser Strich in der Knotenfarbe. Kein `drop-shadow`: ein Filter
-               rastert die Box jedes Pfades neu, und im Spätspiel sind das
-               dreistellig viele (Performance-Regel 2). Dasselbe Rezept wie die
-               Unterlage der Lanes in `RiftMinimap`. -->
-          <g class="limb-halo" stroke-linecap="round" stroke-linejoin="round" fill="none">
-            <path
-              v-for="limb in veinGroups.full" :key="limb.key + '-halo'"
-              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_HALO_FACTOR)"
-              :stroke="limb.color"
-            />
-          </g>
-          <!-- Die WEGE zwischen zwei Zonen. Sie schalten nichts frei und tragen
-               deshalb als einzige die lange Strichelung — drei Strichbilder,
-               drei Bedeutungen. Ist die Zone offen, nehmen sie ihre Leitfarbe
-               an; sonst bleiben sie schiefergrau. -->
-          <g
-            class="limb-bridge limb-bridge--closed"
-            stroke-linecap="round" stroke-linejoin="round" fill="none"
-          >
-            <path
-              v-for="limb in closedBridges" :key="limb.key + '-bridge'"
-              :d="limb.d" :stroke-width="limb.width"
-            />
-          </g>
-          <g
-            class="limb-bridge limb-bridge--open"
-            stroke-linecap="round" stroke-linejoin="round" fill="none"
-          >
-            <path
-              v-for="limb in openBridges" :key="limb.key + '-bridge-open'"
-              :d="limb.d" :stroke-width="limb.width"
-              :stroke="limb.accent"
-            />
-          </g>
-          <!-- DIE ADERN. Eine Kante beantwortet genau eine Frage — wie weit ist
-               dieser Weg? Fein gepunktet heisst versperrt, durchgezogen heisst
-               begehbar, und je weiter der Weg gegangen ist, desto mehr der
-               Rinne füllt er aus. Farbe und Strichbild stehen in der Klasse,
-               die Breite am Pfad: sie folgt der Ebene des Ziels. -->
-          <g
-            class="limb-vein--blocked"
-            stroke-linecap="round" stroke-linejoin="round" fill="none"
-          >
-            <path
-              v-for="limb in veinGroups.blocked" :key="limb.key + '-blocked'"
-              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_VEIN_FACTOR)"
-            />
-          </g>
-          <g
-            class="limb-vein--open"
-            stroke-linecap="round" stroke-linejoin="round" fill="none"
-          >
-            <path
-              v-for="limb in veinGroups.open" :key="limb.key + '-open'"
-              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_VEIN_FACTOR)"
-            />
-          </g>
-          <g
-            class="limb-vein--grown"
-            stroke-linecap="round" stroke-linejoin="round" fill="none"
-          >
-            <path
-              v-for="limb in veinGroups.grown" :key="limb.key + '-grown'"
-              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_LIT_FACTOR)"
-              :stroke="limb.color"
-            />
-          </g>
-          <g
-            class="limb-vein--full"
-            stroke-linecap="round" stroke-linejoin="round" fill="none"
-          >
-            <path
-              v-for="limb in veinGroups.full" :key="limb.key + '-full'"
-              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_FULL_FACTOR)"
-              :stroke="limb.color"
-            />
-          </g>
-          <!-- DIE KANTE ZU ETWAS, DAS MAN KAUFEN KANN. Zuletzt gezeichnet und
-               damit über allen anderen Adern: sie ist die einzige, die zum
-               Handeln auffordert, und sie überpinselt genau die Ader desselben
-               Weges (`open` oder `grown`), deren Aussage sie fortschreibt.
-
-               Zwei Ebenen wie beim ausgewachsenen Ziel — erst der breite,
-               blasse Schein, dann die Ader darauf. Kein `drop-shadow`: ein
-               Filter rastert die Box jedes Pfades neu (Performance-Regel 2).
-
-               Sie liegt INNERHALB von `.limb-field` und tritt beim Zeigen mit
-               zurück. Das ist Absicht: Kaufbarkeit ist ein Dauerzustand, keine
-               Antwort auf den Zeiger — anders als Bedingungskante und
-               Scheinwerferkette, die deshalb draussen stehen. -->
-          <g class="limb-ready-halo" stroke-linecap="round" stroke-linejoin="round" fill="none">
-            <path
-              v-for="limb in readyLimbs" :key="limb.key + '-ready-halo'"
-              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_HALO_FACTOR)"
-              :stroke="limb.color"
-            />
-          </g>
-          <g class="limb-vein--ready" stroke-linecap="round" stroke-linejoin="round" fill="none">
-            <path
-              v-for="limb in readyLimbs" :key="limb.key + '-ready'"
-              :d="limb.d" :stroke-width="veinWidth(limb, FORGE_LIMB_READY_FACTOR)"
-              :stroke="limb.color"
+              v-for="limb in limbGroups.open" :key="limb.key + '-o'"
+              :d="limb.d" :stroke-width="limbWidth(limb)" :stroke="limb.tint"
             />
           </g>
         </g>
@@ -515,7 +383,6 @@ import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
-import ForgeEdgeLegend from './ForgeEdgeLegend.vue'
 import ForgeNodeTooltip from './ForgeNodeTooltip.vue'
 import SunChimeBoost from './SunChimeBoost.vue'
 import {
@@ -536,11 +403,7 @@ import {
   FORGE_NODE_DIAMETER,
   FORGE_FRESH_BADGE_NODE_PCT,
   FORGE_FRESH_TITLE,
-  FORGE_LIMB_LIT_FACTOR,
-  FORGE_LIMB_VEIN_FACTOR,
-  FORGE_LIMB_FULL_FACTOR,
-  FORGE_LIMB_READY_FACTOR,
-  FORGE_LIMB_HALO_FACTOR,
+  FORGE_LIMB_STROKE_FACTOR,
   FORGE_LIMB_MIN_WIDTH,
   FORGE_LIMB_DIM_OPACITY,
   FORGE_REQ_DOT_SIZE,
@@ -580,7 +443,6 @@ import {
   FORGE_CAMERA_PAN_MIN_MS,
   FORGE_CAMERA_PAN_MAX_MS,
   FORGE_CAMERA_PAN_SPEED_PX_PER_MS,
-  FORGE_EDGE_LEGEND_ROWS,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -791,21 +653,6 @@ function nodePos(node: TreeNode): Record<string, string> {
   return { left: `${Math.round(node.x)}px`, top: `${Math.round(node.y)}px` }
 }
 
-/**
- * Was eine Struktur-Kante über ihr ZIEL sagt — und damit, wie sie aussieht.
- *
- * Eine Kante beantwortet genau eine Frage: wie weit ist dieser Weg? Fünf
- * Antworten, drei Strichbilder — fein gepunktet heisst versperrt, durchgezogen
- * heisst begehbar, und die Brücken zwischen den Zonen tragen als einzige die
- * lange Strichelung. Wer die drei einmal gesehen hat, verwechselt sie nicht.
- *
- * `gate` bekommt als einzige gar keine Ader: gegen ein Phasen- oder
- * Prestige-Tor hilft kein Vorgänger, der Weg ist noch nicht einmal Thema.
- * Übrig bleibt die blasse Rinne — das Netz behält seine Form, ohne etwas zu
- * versprechen.
- */
-type LimbVein = 'gate' | 'blocked' | 'open' | 'grown' | 'full'
-
 interface Limb {
   key: string
   /** Ein rechtwinkliger Streckenzug mit verrundeten Ecken — gerechnet in
@@ -887,20 +734,10 @@ const limbs = computed<Limb[]>(() => {
   return result
 })
 
-/** Nur die Struktur — sie trägt den Grundstrich. Bedingungen und Wege haben
- *  ihre eigene Ebene, weil sie etwas anderes sagen. */
+/** Nur die Struktur. Bedingungen hängen am Zeiger und haben ihre eigene Ebene. */
 const structureLimbs = computed(() => limbs.value.filter((l) => l.kind === 'parent'))
 
-/**
- * Die Wege zwischen zwei Zonen — und die Zone, in die sie führen.
- *
- * Beide Bausteine lagen schon da: `forgeClusterOf()` ist eine O(1)-Nachschlage
- * in der Karte, `zoneOpen()` beantwortet die Freischaltung inklusive des
- * zweiten Kronen-Tors. Neu ist nur, dass eine Brücke jetzt SAGT, wohin sie
- * führt: geschlossen bleibt sie schiefergrau, offen nimmt sie die Leitfarbe
- * ihres Ziel-Clusters an. Zwanzig Kanten tragen damit die Farben von fünf
- * Zonen — und die 155 Struktur-Kanten bleiben frei für den Zustand.
- */
+/** Die Wege zwischen zwei Zonen. Offen tragen sie die Leitfarbe ihres Ziels. */
 const bridgeLimbs = computed<BridgeLimb[]>(() =>
   limbs.value
     .filter((l) => l.kind === 'bridge')
@@ -914,97 +751,45 @@ const bridgeLimbs = computed<BridgeLimb[]>(() =>
     }),
 )
 
-const openBridges = computed(() => bridgeLimbs.value.filter((b) => b.open))
-const closedBridges = computed(() => bridgeLimbs.value.filter((b) => !b.open))
-
 /**
- * Die Struktur-Kanten, sortiert nach dem Zustand ihres Ziels.
+ * Jede Kante der Bühne, sortiert in die einzigen zwei Töpfe, die es gibt: der
+ * Weg ist zu, oder er ist offen.
  *
- * Hier stand `activeLimbs` — ein einziger Filter auf „Level > 0". Alles andere
- * sah gleich aus: die Kante zu einem gesperrten Knoten war nicht von der zu
- * einem freien, leeren zu unterscheiden, und beide trugen dieselbe Farbe wie
- * die zu einem ausgewachsenen. Die Bühne zeigte damit ihre FORM, aber nicht
- * ihren STAND.
+ * Hier standen fünf Töpfe plus eine sechste Auswahl für „kaufbar", und die
+ * Bühne trug dafür elf Ebenen in drei Strichbildern. Sie brauchte eine Legende,
+ * um lesbar zu sein — und eine Bildsprache, die eine Legende braucht, hat zu
+ * viele Wörter.
  *
- * EINE Schleife über 155 Kanten statt fünf `filter`-Läufe — dieselbe Rechnung
- * wie in `reqWreaths`, und aus demselben Grund: `entryById` ändert sich bei
- * einem Kauf oder Phasenwechsel, nie pro Frame.
- *
- * Die Weiche folgt der Zustandsleiter aus `useForgeUpgrades()` und ordnet nur
- * zwei Fälle bewusst anders ein: `capped` fällt bei Level > 0 zu `grown` und
- * sonst zu `open` — ein Deckel ist keine Sperre, das sagt schon das fehlende
- * Schloss am Kreis. Und `affordable` bekommt weiterhin keinen eigenen Topf —
- * aber aus einem anderen Grund, als hier einmal stand.
- *
- * Der alte Grund war: neunzig hervorgehobene Adern seien kein Signal mehr. Das
- * galt der Ausführung, nicht der Sache — gemeint waren neunzig Adern in EINEM
- * Grün. Die Kaufbar-Ader trägt stattdessen die Farbe ihres Ziels und ist damit
- * eine Karte statt einer Übertünchung; sie liegt in `readyLimbs`.
- *
- * Was sie hier heraushält, ist der TAKT: diese fünf Töpfe hängen an `state`,
- * `level` und `lockKind` und ändern sich beim KAUF. `canBuy` hängt an den
- * tickenden Chimes, und ein sechster Topf hätte alle Struktur-Pfade sekündlich
- * neu einsortiert.
+ * Kaufbarkeit ist bewusst KEIN Zustand mehr: sie hängt an den tickenden Chimes
+ * und hätte die Pfade sekündlich umsortiert. Sie steht am Knoten — Rand, Grund
+ * und Ready-Badge sagen sie längst.
  */
-const veinGroups = computed<Record<LimbVein, Limb[]>>(() => {
-  const out: Record<LimbVein, Limb[]> = {
-    gate: [],
-    blocked: [],
-    open: [],
-    grown: [],
-    full: [],
-  }
+interface DrawnLimb extends Limb {
+  tint: string
+}
+
+const limbGroups = computed<{ open: DrawnLimb[]; closed: DrawnLimb[] }>(() => {
+  const open: DrawnLimb[] = []
+  const closed: DrawnLimb[] = []
   const entries = entryById.value
   for (const limb of structureLimbs.value) {
     const entry = entries.get(limb.targetId)
-    let vein: LimbVein
-    if (!entry || entry.state === 'locked') {
-      // Dieselbe Weiche wie in `reqWreaths` und im Tooltip: gegen ein Phasen-
-      // oder Prestige-Tor hilft kein Vorgänger.
-      vein =
-        entry?.lockKind === 'phase' || entry?.lockKind === 'prestige' ? 'gate' : 'blocked'
-    } else if (entry.state === 'maxed') vein = 'full'
-    else if (entry.level > 0) vein = 'grown'
-    else vein = 'open'
-    out[vein].push(limb)
+    const drawn = { ...limb, tint: limb.color }
+    if (!entry || entry.state === 'locked') closed.push(drawn)
+    else open.push(drawn)
   }
-  return out
+  for (const bridge of bridgeLimbs.value) {
+    const drawn = { ...bridge, tint: bridge.accent }
+    ;(bridge.open ? open : closed).push(drawn)
+  }
+  return { open, closed }
 })
 
-/** Die Rinne unter allem — ausser unter den Tor-Kanten, die ihre eigene, blasse
- *  Ebene haben. Zwei Gruppen statt einer Deckkraft je Pfad: ein
- *  Präsentationsattribut wäre von keiner Regel mehr zu überschreiben. Die Töpfe
- *  liegen schon sortiert vor — ein zweiter Durchlauf über die Kanten wäre eine
- *  Rechnung für eine Antwort, die daneben steht. */
-/**
- * Die Kanten, an deren Ende etwas zu holen ist — je EINE je kaufbarem Knoten,
- * das letzte Stück vom Elternknoten.
- *
- * Eigene Auswahl statt eines sechsten Topfes in `veinGroups`, und das ist keine
- * Formsache: `veinGroups` liest `state`, `level` und `lockKind` — Größen, die
- * sich beim KAUF ändern und sonst nie. `canBuy` hängt an den tickenden Chimes.
- * Ein `ready`-Topf dort hätte alle Struktur-Pfade sekündlich zwischen Gruppen
- * umgehängt; so bleibt es bei EINER Liste, die Vue nach `key` patcht, während
- * die fünf Töpfe darunter unberührt stehen.
- *
- * Nur `structureLimbs`: ein Knoten kann mehrere eingehende Kanten haben
- * (Bedingungen, Brücken), aber nur eine sagt, woran er HÄNGT — dieselbe Wahl
- * wie in `limbByTarget`.
- */
-const readyLimbs = computed(() =>
-  structureLimbs.value.filter((limb) => entryById.value.get(limb.targetId)?.canBuy),
-)
-
-const bedLimbs = computed(() => {
-  const g = veinGroups.value
-  return [...g.blocked, ...g.open, ...g.grown, ...g.full]
-})
-
-/** Die Breite einer Ader. Der Boden verhindert, dass die feinste beim
- *  Herauszoomen unter einen halben Geräte-Pixel fällt und mit ihr der Zustand. */
-function veinWidth(limb: Limb, factor: number): number {
-  return Math.max(FORGE_LIMB_MIN_WIDTH, limb.width * factor)
+/** Der Boden verhindert, dass die feinste Kante beim Herauszoomen verschwindet. */
+function limbWidth(limb: Limb): number {
+  return Math.max(FORGE_LIMB_MIN_WIDTH, limb.width * FORGE_LIMB_STROKE_FACTOR)
 }
+
 /**
  * Die Bedingungskanten — und zwar nur die des GEZEIGTEN Knotens.
  *
@@ -1232,43 +1017,6 @@ const spotScale = String(FORGE_SPOTLIGHT_NODE_SCALE)
 const spotDimOpacity = String(FORGE_SPOTLIGHT_DIM_OPACITY)
 const spotPingMs = `${FORGE_SPOTLIGHT_PING_MS}ms`
 const limbDimOpacity = String(FORGE_LIMB_DIM_OPACITY)
-
-// ── Die Legende zur Kantensprache ─────────────────────────────────────────────
-/**
- * Nur die Zeilen, für die auf der Bühne gerade mindestens eine Kante steht.
- *
- * „Zu sehen" heisst hier: im NETZ vorhanden — nicht: im gerade sichtbaren
- * Ausschnitt. Die zweite Lesart müsste bei jedem Zug an der Bühne und bei jedem
- * Zoomschritt neu gerechnet werden, und eine Legende, deren Zeilen beim
- * Scrollen kommen und gehen, ist unruhiger als eine Zeile zu viel.
- *
- * Die Zähler stehen alle schon da und ändern sich nur bei einem Kauf oder
- * Phasenwechsel, nie pro Frame — dieselbe Eigenschaft, auf der `reqWreaths`
- * beruht.
- *
- * Die Zeilen-IDs und die Topfnamen heissen absichtlich verschieden: `sealed`
- * und `maxed` benennen, was der Spieler liest, `gate` und `full`, was der Code
- * sortiert. Die Zuordnung steht deshalb hier an EINER Stelle, statt sie durch
- * gleiche Namen zu erzwingen.
- *
- * Leer werden kann die Liste nicht — die 155 Struktur-Kanten liegen immer in
- * mindestens einem der fünf Töpfe.
- */
-const visibleLegendRows = computed(() => {
-  const g = veinGroups.value
-  const counts: Record<string, number> = {
-    sealed: g.gate.length,
-    blocked: g.blocked.length,
-    open: g.open.length,
-    grown: g.grown.length,
-    // Als einzige NICHT aus `veinGroups` — die Kaufbar-Ader ist eine eigene
-    // Auswahl (siehe `readyLimbs`) und keine sechste Sprosse der Zustandsleiter.
-    ready: readyLimbs.value.length,
-    maxed: g.full.length,
-    bridge: openBridges.value.length,
-  }
-  return FORGE_EDGE_LEGEND_ROWS.filter((row) => (counts[row.id] ?? 0) > 0)
-})
 
 // ── Zonen-Freischaltung ───────────────────────────────────────────────────────
 /**
@@ -2277,19 +2025,29 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 /* ══════════════════════════════════════════════════
-   DIE KANTEN — was davon HIER steht
+   DIE KANTENSPRACHE — ein Strich, zwei Zustände
    ══════════════════════════════════════════════════
 
-   Die Kantensprache selbst (`.limb-bed*`, `.limb-vein--*`, `.limb-bridge*`,
-   `.limb-halo`) liegt GLOBAL in `assets/rpg-theme.css`, Abschnitt „die
-   KANTENSPRACHE". Sie steht dort, weil die Legende (`ForgeEdgeLegend.vue`)
-   dieselben Klassen an ihre Proben hängt — sie zeigt die Striche selbst, nicht
-   Ersatzsymbole, und eine eigene Komponente erbt fremde scoped-Regeln nicht.
-   Wer eine Kantenfarbe ändern will, ändert sie dort, und die Legende geht mit.
+   Sie lag global in `rpg-theme.css`, solange die Legende dieselben Klassen an
+   ihre Proben hängte. Ohne Legende gibt es nur noch diesen einen Verwender.
 
-   Hier bleibt nur, was ALLEIN die Bühne betrifft: die Fokus-Dämpfung (sie
-   braucht `v-bind()` und damit einen Komponenten-Style) und die
-   Bedingungslinien des gezeigten Knotens. */
+   Alles hier ist STATISCH: kein `filter`, keine Animation, keine Custom
+   Property. Auf der Bühne stehen 175 Pfade dauerhaft im DOM, und jede dieser
+   drei Sachen wäre dort eine dreistellige Rechnung pro Frame
+   (Performance-Regeln 2, 3 und 11). */
+
+/* Der Weg ist zu — er hält die Form des Netzes, ohne etwas zu versprechen. */
+.limb-closed {
+  stroke: #241d12;
+}
+
+/* Der Weg ist offen. `stroke` kommt als Attribut vom Pfad: die Farbe des Ziels,
+   dieselbe, die dessen Rahmen und Grund tragen. Nicht volle Deckkraft — im
+   Spätspiel sind das rund neunzig gefärbte Linien, und die Kreise darauf sollen
+   lauter bleiben als die Fäden dazwischen. */
+.limb-open {
+  opacity: 0.75;
+}
 
 /* Das Kantenfeld tritt zurück, sobald auf einen Knoten gezeigt wird — EIN Wert
    auf EINER Ebene, also Compositor-Arbeit (Regel 1). Vorher dimmten nur die

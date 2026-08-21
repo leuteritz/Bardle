@@ -505,138 +505,19 @@ export const FORGE_LIMB_WIDTH: Record<ForgeUpgradeTier, number> = {
   bough: 3,
   glimmer: 2.4,
 }
-/** Der gefärbte Ast über dem Grundast. 2,5 zu 4 war das bisherige Verhältnis. */
-export const FORGE_LIMB_LIT_FACTOR = 0.62
-
-/* ── Die ADER auf dem Ast ──────────────────────────────────────────────
- *
- * Der Grundast ist die RINNE, die Ader darauf sagt den Zustand des Ziels. Die
- * Faktoren sind eine Reihenfolge, keine Geschmacksfrage: je weiter ein Weg
- * gegangen ist, desto mehr der Rinne füllt er aus. Versperrt und leer bleiben
- * bei der halben Breite, gewachsen nimmt `FORGE_LIMB_LIT_FACTOR`, ausgewachsen
- * füllt fast ganz. Man liest den Fortschritt damit auch dann, wenn die Farbe
- * beim Herauszoomen zu einem Punkt zerfällt.
- *
- * „Kaufbar" stand hier einmal ausdrücklich NICHT — mit dem Argument, im
- * Spätspiel seien bis zu neunzig Knoten gleichzeitig kaufbar und neunzig
- * hervorgehobene Adern wären kein Signal mehr, sondern der Normalzustand.
- *
- * Das Argument galt der damaligen Ausführung, nicht der Sache: gemeint waren
- * neunzig Adern in EINEM einheitlichen Grün, und die wären tatsächlich nur eine
- * Umfärbung gewesen. `FORGE_LIMB_READY_FACTOR` trägt stattdessen die Farbe des
- * ZIELS — dieselbe, die dessen Rahmen und Grund tragen. Neunzig verschieden
- * gefärbte Adern sind keine Übertünchung, sondern eine Karte: man sieht, WO
- * etwas zu holen ist und WELCHES Upgrade dort wartet.
- */
-/** Ader eines versperrten oder freien, aber leeren Ziels. */
-export const FORGE_LIMB_VEIN_FACTOR = 0.5
-/** Ader eines ausgewachsenen Ziels — sie füllt die Rinne fast ganz. */
-export const FORGE_LIMB_FULL_FACTOR = 0.8
 /**
- * Ader zu einem KAUFBAREN Ziel.
- *
- * Sie sitzt zwischen `LIT` (0,62, gewachsen) und `FULL` (0,8, ausgewachsen),
- * und die Ordnung ist Absicht: ein Weg, an dessen Ende man handeln kann, wiegt
- * mehr als ein begonnener und weniger als ein vollendeter. Was sie wirklich
- * heraushebt, ist ohnehin nicht die Breite, sondern volle Deckkraft plus der
- * Schein darunter — die Breite allein wäre auf einem Blatt nicht zu sehen.
- *
- * `__tests__/config/forgeEdgeLegend.spec.ts` hält die Leiter fest: wer einen
- * der beiden Nachbarn verschiebt, kehrt sonst still die Aussage um.
+ * Der EINE Kantenstrich. Es gibt keinen zweiten: die Breite sagt die Ebene, die
+ * Farbe den Zustand — mehr trägt eine Kante nicht.
  */
-export const FORGE_LIMB_READY_FACTOR = 0.72
+export const FORGE_LIMB_STROKE_FACTOR = 0.62
 /**
- * Der SCHEIN unter der vollen Ader. Ein zweiter, sehr blasser Strich statt eines
- * `drop-shadow`: ein Filter rastert die Box jedes Pfades neu, und im Spätspiel
- * sind das dreistellig viele (Performance-Regel 2).
- */
-export const FORGE_LIMB_HALO_FACTOR = 1.3
-/**
- * Der Boden jeder Ader in Bühnen-px. Bei `FORGE_TREE_ZOOM_FLOOR` (0,3) wird aus
- * der feinsten Glimmer-Ader (2,4 × 0,5 = 1,2) sonst 0,36 Geräte-px — sie
- * verschwindet, und mit ihr der Zustand. Gegengerechnet wird NICHT: ein
- * `vector-effect: non-scaling-stroke` bräche die Verjüngung nach aussen aus
- * `FORGE_LIMB_WIDTH`.
+ * Der Boden in Bühnen-px. Bei `FORGE_TREE_ZOOM_FLOOR` (0,3) fiele die feinste
+ * Glimmer-Kante sonst unter einen halben Geräte-Pixel. Gegengerechnet wird
+ * NICHT: `vector-effect: non-scaling-stroke` bräche die Verjüngung nach aussen.
  */
 export const FORGE_LIMB_MIN_WIDTH = 2
-/**
- * Wie weit das Kantenfeld zurücktritt, solange auf einen Knoten gezeigt wird.
- * Das Gegenstück zu `FORGE_SPOTLIGHT_DIM_OPACITY` an den Kreisen — die Kanten
- * blieben bisher als einzige stehen, und ein gedimmtes Netz aus vollen Linien
- * las sich nicht als Antwort, sondern als Gitter darüber.
- */
+/** Wie weit das Kantenfeld zurücktritt, solange auf einen Knoten gezeigt wird. */
 export const FORGE_LIMB_DIM_OPACITY = 0.3
-
-/* ── Die LEGENDE zur Kantensprache ─────────────────────────────────────
- *
- * Sie zeigt keine Farbquadrate mit Namen daneben. Genau daran ist die erste
- * Fassung des Ertrags-Kopfs gescheitert (er ist inzwischen ganz gefallen): eine
- * Probe,
- * die anders aussieht als die Sache, die sie erklärt, muss selbst erst erklärt
- * werden. Jede Zeile hier trägt deshalb DIESELBE CSS-Klasse wie die Kante auf
- * der Bühne — wer die Zeile ansieht, hat das Bild schon gesehen, und beide
- * können nicht auseinanderlaufen.
- *
- * Die Reihenfolge ist eine Aussage: erst die zwei Arten von „zu" (die Zone
- * fehlt, der Vorgänger fehlt), dann der offene Weg, dann die zwei Stufen des
- * Fortschritts. Die Brücke steht am Ende, weil sie als einzige nichts über
- * einen Knoten sagt.
- *
- * Die Rinne unter jeder Ader bekommt KEINE Zeile: sie ist der Untergrund, kein
- * Zustand — und eine Legende, die den Untergrund erklärt, erklärt nichts.
- *
- * Sie trägt WEDER Titel NOCH Schaltzeile. Beides stand einmal hier: eine
- * Kopfzeile „edges" mit einem Pfeil zum Wegklappen. Sie ist gefallen, als die
- * Legende anfing, sich auf das Vorhandene zu kürzen — im frischen Spielstand
- * sind es vier Zeilen, und ein Bedienelement für sechzig Pixel ist mehr
- * Bedienung als Auskunft. Was bleibt, sind Striche und Namen.
- */
-/**
- * Die Länge einer Probe in px.
- *
- * Sie hängt an der LÄNGSTEN Strichelung, nicht am Platz: die Brücke trägt
- * `18 14`, und auf 26 px wäre davon ein einziger Strich zu sehen — die Zeile
- * sagte dann „durchgezogen" und damit das Gegenteil dessen, was sie meint. Bei
- * 44 px stehen zwei Striche, und „lang gestrichelt" ist als Muster lesbar.
- */
-export const FORGE_EDGE_LEGEND_SWATCH_W = 44
-
-/** Eine Zeile der Legende. `cls` nennt die Klasse, die auch die Kante trägt. */
-export interface ForgeEdgeLegendRow {
-  id: string
-  label: string
-  cls: string
-  /** Strichstärke der Probe. Sie folgt der Aussage, nicht der Bühne: `grown`
-   *  und `full` unterscheiden sich dort in der Breite, und genau das ist es,
-   *  was diese zwei Zeilen zeigen müssen. */
-  width: number
-}
-
-/**
- * Der VOLLE Katalog — gezeigt wird davon nur, wofür auf der Bühne gerade
- * mindestens eine Kante steht (`visibleLegendRows` in `ForgeTreePanel.vue`).
- *
- * Die Reihenfolge bleibt dabei stehen, es fallen nur einzelne Zeilen aus. Sie
- * ist die Aussage: erst die zwei Arten von „zu", dann der offene Weg, dann die
- * zwei Stufen des Fortschritts — sortierte man die übrigen um, wäre die Leiter
- * beim nächsten Kauf eine andere.
- */
-export const FORGE_EDGE_LEGEND_ROWS: readonly ForgeEdgeLegendRow[] = [
-  { id: 'sealed', label: 'sealed', cls: 'limb-bed limb-bed--gate', width: 3 },
-  { id: 'blocked', label: 'blocked', cls: 'limb-vein--blocked', width: 2.4 },
-  { id: 'open', label: 'open', cls: 'limb-vein--open', width: 2.4 },
-  // Diese zwei tragen denselben Ton und sagen ihren Unterschied allein über die
-  // Breite. 2,8 zu 4 war zu wenig, um ihn auf 44 px zu sehen — das Verhältnis
-  // ist jetzt fast das doppelte und entspricht damit dem der Bühne, wo zur
-  // vollen Ader noch der Schein darunter kommt.
-  { id: 'grown', label: 'grown', cls: 'limb-vein--grown', width: 2.4 },
-  // Vor `maxed`, damit die Legende der Breiten-Leiter der Bühne folgt. Ihr
-  // Tupfer trägt — wie die zwei Nachbarn — stellvertretend Forge-Gold: auf der
-  // Bühne ist es die Farbe des jeweiligen Ziels, und die kennt die Legende nicht.
-  { id: 'ready', label: 'ready', cls: 'limb-vein--ready', width: 3.4 },
-  { id: 'maxed', label: 'maxed', cls: 'limb-vein--full', width: 4.6 },
-  { id: 'bridge', label: 'zone link', cls: 'limb-bridge limb-bridge--open', width: 3 },
-] as const
 
 /* ── Der BEDINGUNGS-KRANZ am gesperrten Knoten ─────────────────────────
  *
