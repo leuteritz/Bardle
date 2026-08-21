@@ -2526,7 +2526,7 @@ export const FORGE_BUY_ALL_ICON = 'ph:lightning-fill'
  * weil die Leiste ihre Zahlen als Pille und Preisblock zeigt und ein Screenreader
  * (oder ein sehr schmaler Viewport) sonst nur die nackten Ziffern bekäme.
  */
-export const FORGE_BUY_ALL_TITLE = `${FORGE_BUY_ALL_LABEL} · ${FORGE_COUNT_TOKEN} upgrades · ${FORGE_BUY_ALL_COST_TOKEN} chimes`
+export const FORGE_BUY_ALL_TITLE = `${FORGE_BUY_ALL_LABEL} · ${FORGE_COUNT_TOKEN} levels · ${FORGE_BUY_ALL_COST_TOKEN} chimes`
 /**
  * Kantenlänge des Blitz-Glyphs auf der Leiste. 20 statt 18: die 18er-Grenze ist
  * die, ab der gefüllte Glyphen zu Grau zerfallen, und die eine Primäraktion der
@@ -2535,13 +2535,15 @@ export const FORGE_BUY_ALL_TITLE = `${FORGE_BUY_ALL_LABEL} · ${FORGE_COUNT_TOKE
 export const FORGE_BUY_ALL_ICON_SIZE = 20
 /**
  * Schlagzeile des Sammelkaufs im Herold-Banner — die Marke trägt die Zahl der
- * gewachsenen Knoten.
+ * gewachsenen STUFEN, nicht die der berührten Knoten. Der Sammelkauf nimmt seit
+ * dem Umbau je Knoten alles, was Vorrat und Lager hergeben; "4 Upgrades Grown"
+ * nach vierzig gekauften Stufen nennte die kleinste der beiden Zahlen.
  *
  * Als Schlagzeile gesetzt und nicht als Satz („Grew {n} upgrades"): sie steht im
  * Banner an derselben Stelle wie der Name eines einzelnen Upgrades, und ein Name
  * fängt nicht mit einem Verb an.
  */
-export const FORGE_BUY_ALL_HERALD = `${FORGE_COUNT_TOKEN} Upgrades Grown`
+export const FORGE_BUY_ALL_HERALD = `${FORGE_COUNT_TOKEN} Levels Grown`
 /**
  * Wie viele Namen die Zeile unter der Sammelmeldung aufzählt, bevor sie auf
  * „+k more" umschaltet. Drei, weil die Zeile im Banner einzeilig bleibt und ein
@@ -2664,6 +2666,37 @@ export const FORGE_CORNER_BADGE_MIN_DIAMETER = 40
  * kein Knopf mehr, sondern eine Falle.
  */
 export const FORGE_BULK_BUY_CAP = 25
+
+/**
+ * Wie viele Stufen der SAMMELKAUF je Knoten und Durchlauf höchstens nimmt.
+ *
+ * Das ist ausdrücklich KEIN Balance-Deckel wie `FORGE_BULK_BUY_CAP`, sondern ein
+ * Schleifen-Boden. „Forge all ready" räumt seit dem Umbau alles ab, was Vorrat
+ * und Lager decken — und ein Bough hat keine Höchststufe, die Schleife käme also
+ * nur über den leeren Beutel zum Stehen. Bei `FORGE_BOUGH_COST_MULTIPLIER` (1,35)
+ * kostet Stufe 250 rund das 10^33-Fache der ersten; die Grenze ist praktisch
+ * unerreichbar, und greift sie doch, nimmt der nächste Durchlauf die nächsten 250.
+ *
+ * Deutlich höher als der Zeilen-Deckel, weil die beiden Knöpfe verschiedene
+ * Fragen beantworten: „×N" ist die feine Dosierung an EINEM Knoten, der
+ * Sammelkauf die grobe über alle.
+ */
+export const FORGE_BUY_ALL_NODE_CAP = 250
+
+/**
+ * Wie oft der Sammelkauf seine Reihe höchstens neu aufstellt.
+ *
+ * Ein Durchlauf reicht nicht: ein Kauf kann einen Knoten FREISCHALTEN (die
+ * Elternstufen-Bedingung in `nodeRequirements`), und der stand beim Planen noch
+ * gar nicht in der Reihe. Ohne den zweiten Durchlauf käme die Leiste unmittelbar
+ * nach dem Klick zurück — genau das, was der Knopf abschaffen soll.
+ *
+ * Die Zahl ist eine Notbremse, keine Grenze im Spielsinn: jeder Durchlauf muss
+ * Chimes verbrauchen, sonst bricht die Schleife von selbst ab. Acht deckt jede
+ * Freischaltkette, die der Baum kennt (Wurzel → Zweig → Blatt → Wacht → Bündnis →
+ * Krone → Bough sind sechs Stufen), mit Luft.
+ */
+export const FORGE_BUY_ALL_MAX_PASSES = 8
 
 /* Ein Empfehlungs-Panel („Next to grow") stand einmal über dieser Liste: EIN
    Knoten gross, immer der billigste bezahlbare, mit Beschreibungssatz,

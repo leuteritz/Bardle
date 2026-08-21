@@ -43,8 +43,12 @@
 
 <script setup lang="ts">
 /**
- * Der Sammelkauf der Forge-Spalte — je eine Stufe von allem, was Vorrat UND
- * Lager gerade decken.
+ * Der Sammelkauf der Forge-Spalte — ALLES, was Vorrat und Lager gerade decken.
+ *
+ * Die Zahl in der Pille zählt seit dem Umbau STUFEN, nicht Einträge: ein Knoten
+ * kann ein Dutzend davon auf sich vereinen. Der Klick räumt ab, bis nichts mehr
+ * kaufbar ist — und weil die Leiste an genau dieser Frage hängt, verschwindet
+ * sie danach von selbst, statt zum nächsten Klick einzuladen.
  *
  * Er sass bis zum Umbau in einer Kopfleiste ÜBER DEM BAUM, zusammen mit einem
  * Suchfeld und acht Ring-Filterchips. Beide sind gestrichen (Herleitung an
@@ -54,8 +58,9 @@
  *
  * Was die Leiste gegenüber dem alten Knopf KANN: sie nennt den Preis, bevor
  * geklickt wird. `buyAllPlan` rechnet den Lauf durch, ohne zu kaufen — dieselbe
- * Rangfolge (`readyQueue`), aus der `buyAllReady()` gleich seine Id-Liste baut.
- * Die beiden können damit nicht auseinanderlaufen.
+ * Simulation (`planBuyAll`), aus der `buyAllReady()` gleich seine Kaufliste
+ * baut. Die beiden können damit nicht auseinanderlaufen; der Plan zeigt den
+ * ERSTEN Durchlauf und ist damit eine Untergrenze (Herleitung dort).
  *
  * Kaufweg, Quittung und Verdichtung liegen vollständig woanders
  * (`useForgeUpgrades` / `useForgeHerald`) — hier steht nur, wie aus einer Zahl

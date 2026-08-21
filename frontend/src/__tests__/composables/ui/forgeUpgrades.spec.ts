@@ -66,6 +66,25 @@ function setAllRoots(level: number): void {
   solar.dmgPerClickLevel = level
 }
 
+/**
+ * Ein Beutel, der weit über die erste Runde hinaus trägt — für die Specs des
+ * Sammelkaufs, der je Eintrag ALLES nimmt, was Vorrat und Lager decken.
+ *
+ * `fillPurse()` reicht dafür nicht: 999 je Material deckt fünfzehn Zweige genau
+ * einmal, und die Stufenzahl wäre dann zufällig wieder die Zahl der Einträge.
+ */
+function fillDeepPurse(): void {
+  useGameStore().chimes = 1e15
+  useInventoryStore().collectedMaterials = {
+    stardust: 1e9,
+    moon_crystal: 1e9,
+    nebula_quartz: 1e9,
+    solar_essence: 1e9,
+    void_shard: 1e9,
+    dark_matter: 1e9,
+  }
+}
+
 function fillPurse(): void {
   useGameStore().chimes = 100_000_000
   useInventoryStore().collectedMaterials = {
@@ -83,6 +102,20 @@ function unlockBranches(): void {
   useSolarUpgradeStore().starPhase = FORGE_BRANCH_UNLOCK_PHASE
   setAllRoots(FORGE_BRANCH_PARENT_MIN_LEVEL)
   fillPurse()
+}
+
+/**
+ * Weit offene Sonne UND ein Beutel, der über die erste Runde hinaus trägt.
+ *
+ * Beides zusammen, weil beides einzeln nichts bringt: `nodeMaxLevel()` staffelt
+ * die Höchststufe nach Sonnenphase, und bei `FORGE_BRANCH_UNLOCK_PHASE` trägt
+ * JEDER Knoten genau eine Stufe — ein Sammelkauf sähe dort aus wie der alte,
+ * ganz gleich wie voll der Beutel ist.
+ */
+function unlockDeep(): void {
+  unlockBranches()
+  useSolarUpgradeStore().starPhase = FORGE_BOUGH_UNLOCK_PHASE
+  fillDeepPurse()
 }
 
 /** Dasselbe eine Ebene weiter — Blätter brauchen Phase 4 und einen gewachsenen Zweig. */
@@ -787,10 +820,13 @@ describe('useForgeUpgrades — Stapelkauf', () => {
     expect(forge.nodeLevel(BOUGH_ID)).toBe(0)
   })
 
-  /** Der Knopf in der Kopfleiste. Je EINE Stufe, günstigster zuerst — und das
-   *  Konto darf dabei nie ins Minus laufen. */
-  it('buyAllReady kauft je eine Stufe und überzieht nie', () => {
-    unlockBranches()
+  /**
+   * Der Knopf in der Kopfleiste. Er räumt AB — nicht je eine Stufe, sondern
+   * alles, was Vorrat und Lager decken, günstigster zuerst. Das Konto darf
+   * dabei nie ins Minus laufen.
+   */
+  it('buyAllReady kauft alles Bezahlbare und überzieht nie', () => {
+    unlockDeep()
     const game = useGameStore()
     const forge = useStarForgeStore()
     const { upgradeEntries, buyAllReady } = useForgeUpgrades()
@@ -799,14 +835,48 @@ describe('useForgeUpgrades — Stapelkauf', () => {
     expect(readyIds.length).toBeGreaterThan(1)
 
     const bought = buyAllReady()
-    expect(bought).toBeGreaterThan(0)
-    expect(bought).toBeLessThanOrEqual(readyIds.length)
+    // MEHR als je eine Stufe pro Eintrag — genau der Unterschied zum alten Knopf.
+    expect(bought).toBeGreaterThan(readyIds.length)
     expect(game.chimes).toBeGreaterThanOrEqual(0)
 
-    // Keiner der Zweige ist dabei über Stufe 1 hinausgewachsen.
-    for (const id of readyIds) {
-      if (getForgeNode(id)) expect(forge.nodeLevel(id)).toBeLessThanOrEqual(1)
-    }
+    // Mindestens ein Zweig ist dabei über Stufe 1 hinausgewachsen.
+    const grown = readyIds.filter((id) => getForgeNode(id) && forge.nodeLevel(id) > 1)
+    expect(grown.length).toBeGreaterThan(0)
+  })
+
+  /**
+   * Die Zusicherung, um die es dem Spieler geht: EIN Klick genügt.
+   *
+   * Sie ist stärker als „viel gekauft" und deshalb eine eigene Spec — sie
+   * bindet, dass der Knopf sich selbst abräumt. Bleibt auch nur ein Eintrag
+   * kaufbar, steht die Leiste nach dem Klick wieder da und lädt zum nächsten
+   * ein. Genau das war der Zustand vor dem Umbau.
+   */
+  it('lässt nach EINEM Klick nichts Kaufbares stehen', () => {
+    unlockDeep()
+    const { upgradeEntries, buyAllPlan, buyAllReady } = useForgeUpgrades()
+
+    expect(buyAllReady()).toBeGreaterThan(0)
+
+    expect(upgradeEntries.value.some((e) => e.canBuy)).toBe(false)
+    expect(buyAllPlan.value.count).toBe(0)
+    // Und ein zweiter Klick findet folgerichtig nichts mehr.
+    expect(buyAllReady()).toBe(0)
+  })
+
+  /**
+   * Der endlose Ring hat keine Höchststufe. Ohne Schleifen-Boden käme der
+   * Sammelkauf bei einem prallen Beutel nicht zum Stehen — geprüft wird, dass
+   * er terminiert und das Konto hält.
+   */
+  it('terminiert am endlosen Ring und überzieht auch dort nicht', () => {
+    unlockBranches()
+    useSolarUpgradeStore().starPhase = FORGE_BOUGH_UNLOCK_PHASE
+    const game = useGameStore()
+    game.chimes = Number.MAX_SAFE_INTEGER
+
+    expect(useForgeUpgrades().buyAllReady()).toBeGreaterThan(0)
+    expect(game.chimes).toBeGreaterThanOrEqual(0)
   })
 
   it('buyAllReady gibt 0 zurück, wenn nichts bereit ist', () => {
@@ -832,7 +902,13 @@ describe('useForgeUpgrades — Vorschau des Sammelkaufs', () => {
     setActivePinia(createPinia())
   })
 
-  it('buyAllPlan sagt genau voraus, was buyAllReady() tut', () => {
+  /**
+   * Die Vorschau zeigt den ERSTEN Durchlauf und ist damit eine Untergrenze:
+   * schaltet ein Kauf einen weiteren Knoten frei, nimmt `buyAllReady()` den in
+   * einem zweiten Durchlauf mit. Die Richtung ist das Geprüfte — sie darf
+   * niemals MEHR versprechen, als der Klick hält.
+   */
+  it('buyAllPlan verspricht nie mehr, als buyAllReady() hält', () => {
     unlockBranches()
     const game = useGameStore()
     const { buyAllPlan, buyAllReady } = useForgeUpgrades()
@@ -842,8 +918,19 @@ describe('useForgeUpgrades — Vorschau des Sammelkaufs', () => {
     expect(plan.chimeCost).toBeGreaterThan(0)
 
     const before = game.chimes
-    expect(buyAllReady()).toBe(plan.count)
-    expect(before - game.chimes).toBe(plan.chimeCost)
+    expect(buyAllReady()).toBeGreaterThanOrEqual(plan.count)
+    expect(before - game.chimes).toBeGreaterThanOrEqual(plan.chimeCost)
+  })
+
+  /** Die Zahl auf dem Knopf zählt STUFEN, nicht Einträge — bei einem Knoten,
+   *  der mehrere davon trägt, ist sie grösser als die Zahl der Kaufbaren. */
+  it('zählt Stufen, nicht Einträge', () => {
+    unlockDeep()
+    const { upgradeEntries, buyAllPlan } = useForgeUpgrades()
+
+    const ready = upgradeEntries.value.filter((e) => e.canBuy).length
+    expect(ready).toBeGreaterThan(1)
+    expect(buyAllPlan.value.count).toBeGreaterThan(ready)
   })
 
   it('nimmt bei knappem Vorrat die günstigsten und lässt den Rest stehen', () => {
@@ -892,7 +979,7 @@ describe('useForgeUpgrades — Vorschau des Sammelkaufs', () => {
     const plan = { ...buyAllPlan.value }
     const bought = buyAllReady()
 
-    expect(bought).toBe(plan.count)
+    expect(bought).toBeGreaterThanOrEqual(plan.count)
     // Der günstigere bekommt sie, der andere geht leer aus …
     expect(forge.nodeLevel(claimants[0].id)).toBe(1)
     expect(forge.nodeLevel(claimants[1].id)).toBe(0)

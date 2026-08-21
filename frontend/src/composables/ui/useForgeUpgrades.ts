@@ -29,6 +29,8 @@ import {
   FORGE_CROWN_STATE_FORGED,
   FORGE_CROWN_LOCK_REASON,
   FORGE_BULK_BUY_CAP,
+  FORGE_BUY_ALL_NODE_CAP,
+  FORGE_BUY_ALL_MAX_PASSES,
   FORGE_ENDLESS_SYMBOL,
   FORGE_GROW_LABEL,
   FORGE_LEVEL_PREFIX,
@@ -289,10 +291,35 @@ function valueText(def: ForgeNodeDef, value: number): string {
  * danach ablesen.
  */
 export interface ForgeBuyAllPlan {
-  /** Wie viele Einträge je EINE Stufe bekämen. */
+  /**
+   * Wie viele STUFEN insgesamt gekauft würden — nicht, wie viele Einträge davon
+   * berührt sind. Ein Knoten kann ein Dutzend davon auf sich vereinen, seit der
+   * Sammelkauf je Eintrag alles nimmt, was Vorrat und Lager decken.
+   */
   count: number
   /** Was das zusammen an Chimes kostet. */
   chimeCost: number
+}
+
+/** Was der Sammelkauf an EINEM Eintrag vorhat. */
+interface ForgeBuyAllStep {
+  id: string
+  /** Für die Quittung — der Name liegt beim Planen ohnehin vor. */
+  name: string
+  levels: number
+}
+
+/**
+ * Vorrat und Lager, wie eine Kaufsimulation sie mitführt.
+ *
+ * Beide Felder werden IN-PLACE gesenkt; die Kopie macht der Aufrufer
+ * (`freshBudget()`). Genau das ist der Zweck: mehrere Einträge nacheinander
+ * greifen auf denselben Beutel zu, und der zweite muss sehen, was der erste
+ * schon ausgegeben hat.
+ */
+interface ForgeBudget {
+  chimes: number
+  stock: Record<string, number>
 }
 
 export function useForgeUpgrades(): {
@@ -566,8 +593,16 @@ export function useForgeUpgrades(): {
    * der Stand von vorher, sein `desc` nennt noch die alte Wirkung.
    */
   function buyUpgrade(id: string, opts: { silent?: boolean } = {}): boolean {
-    const entry = entryById.value.get(id)
-    if (!entry) return false
+    /* Zwei Nachschläge in O(1) statt `entryById.value.get(id)`, und das ist keine
+       Kosmetik: `entryById` hängt an `upgradeEntries`, und das rechnet nach JEDEM
+       Kauf alle hundertfünfundfünfzig Einträge samt Kosten, Material- und
+       Bedingungslisten neu. Beim Sammelkauf über mehrere hundert Stufen lag genau
+       hier die Arbeit — der Kaufweg selbst braucht nur die Weiche „Kernstrahl
+       oder Baumknoten", und die steht im Katalog. Dieselbe Weiche wie in
+       `forgeFocusMeta()`. */
+    const def = getForgeNode(id)
+    const root = def ? undefined : ROOTS.find((meta) => meta.id === id)
+    if (!def && !root) return false
 
     /* Gekauft heißt gesehen — VOR dem Kauf quittiert, weil `acknowledgeShopEntry`
        nur greift, solange der Eintrag noch als kaufbar gilt. Für Zeile und Baum
@@ -575,8 +610,8 @@ export function useForgeUpgrades(): {
        Kopfleiste, bei dem der Zeiger nichts berührt. */
     forgeStore.acknowledgeShopEntry(id)
 
-    if (entry.tier === 'root') {
-      const branchId = id as SolarBranchId
+    if (root) {
+      const branchId = root.id
       const before = solarStore.branchLevel(branchId)
       solarStore.buyBranch(branchId)
       if (solarStore.branchLevel(branchId) === before) return false
@@ -603,10 +638,21 @@ export function useForgeUpgrades(): {
       : forgeStore.nodeLevel(entry.id)
   }
 
+  /** Ein frischer Beutel: der ECHTE Stand, als Kopie zum Verrechnen. */
+  function freshBudget(): ForgeBudget {
+    return { chimes: gameStore.chimes, stock: { ...inventoryStore.collectedMaterials } }
+  }
+
   /**
-   * Wie viele Stufen dieses Knotens Vorrat UND Lager gerade zusammen hergeben —
-   * OHNE etwas zu kaufen. Das ist die Zahl auf „Buy ×8" und in der Zeile
-   * daneben.
+   * Wie viele Stufen eines Eintrags ein MITGEFÜHRTER Beutel trägt — und was er
+   * dabei verbraucht. Gekauft wird nichts; gesenkt wird nur `budget`.
+   *
+   * Der mitgeführte Beutel ist der ganze Grund, aus dem die Schleife hier steht
+   * und nicht in ihren beiden Aufrufern: „Buy ×8" rechnet mit dem vollen Vorrat
+   * für EINEN Knoten, der Sammelkauf reicht denselben Beutel durch die ganze
+   * Reihe. Zwei Fassungen derselben Kostenschleife liefen beim nächsten
+   * Balance-Eingriff auseinander — und eine davon ist eine VORSCHAU, die dann
+   * still falsch wäre statt sichtbar kaputt.
    *
    * Gerechnet wird über die `…At`-Getter der Stores, nicht über eine zweite
    * Fassung der Kostenkurve: Chime-Preis, Materialmenge, Chronicle-Rabatt und
@@ -618,12 +664,17 @@ export function useForgeUpgrades(): {
    *     Sperre. Die kann durch den Kauf STEIGEN (wenn der Strahl der bislang
    *     niedrigste war), nie fallen — die Vorschau bleibt damit im sicheren
    *     Sinn ungenau: sie verspricht höchstens zu wenig, nie zu viel.
-   *   • `FORGE_BULK_BUY_CAP`, weil ein Bough gar keine Obergrenze hat und die
-   *     Schleife sonst nicht endete.
+   *   • `cap`, weil ein Bough gar keine Obergrenze hat und die Schleife sonst
+   *     nicht endete. Der Zeilenknopf reicht `FORGE_BULK_BUY_CAP` (Deckel im
+   *     Spielsinn), der Sammelkauf `FORGE_BUY_ALL_NODE_CAP` (blosser
+   *     Schleifen-Boden).
    */
-  function affordableLevels(id: string): number {
-    const entry = entryById.value.get(id)
-    if (!entry || !entry.canBuy) return 0
+  function takeLevels(
+    entry: ForgeUpgradeEntry,
+    budget: ForgeBudget,
+    cap: number,
+  ): { levels: number; chimeCost: number } {
+    if (!entry.canBuy) return { levels: 0, chimeCost: 0 }
 
     const isRoot = entry.tier === 'root'
     const level = currentLevel(entry)
@@ -632,30 +683,44 @@ export function useForgeUpgrades(): {
       : Number.isFinite(entry.maxLevel)
         ? entry.maxLevel
         : Infinity
-    const ceiling = Math.min(ringCeiling, level + FORGE_BULK_BUY_CAP)
+    const ceiling = Math.min(ringCeiling, level + cap)
 
-    let chimes = gameStore.chimes
-    const stock: Record<string, number> = { ...inventoryStore.collectedMaterials }
-    let count = 0
+    let levels = 0
+    let chimeCost = 0
 
     for (let step = level; step < ceiling; step++) {
       const gold = isRoot
-        ? solarStore.levelCost(id as SolarBranchId, step)
-        : forgeStore.nodeGoldCostAt(id, step)
-      if (chimes < gold) break
+        ? solarStore.levelCost(entry.id as SolarBranchId, step)
+        : forgeStore.nodeGoldCostAt(entry.id, step)
+      if (budget.chimes < gold) break
 
       const mats = isRoot
-        ? forgeStore.rayMaterialCostAt(id as SolarBranchId, step + 1)
-        : forgeStore.nodeMaterialCostAt(id, step + 1)
+        ? forgeStore.rayMaterialCostAt(entry.id as SolarBranchId, step + 1)
+        : forgeStore.nodeMaterialCostAt(entry.id, step + 1)
       const entries = Object.entries(mats)
-      if (entries.some(([matId, need]) => (stock[matId] ?? 0) < need)) break
+      if (entries.some(([matId, need]) => (budget.stock[matId] ?? 0) < need)) break
 
-      chimes -= gold
-      for (const [matId, need] of entries) stock[matId] = (stock[matId] ?? 0) - need
-      count++
+      budget.chimes -= gold
+      chimeCost += gold
+      for (const [matId, need] of entries) budget.stock[matId] = (budget.stock[matId] ?? 0) - need
+      levels++
     }
 
-    return count
+    return { levels, chimeCost }
+  }
+
+  /**
+   * Wie viele Stufen dieses Knotens Vorrat UND Lager gerade zusammen hergeben —
+   * OHNE etwas zu kaufen. Das ist die Zahl auf „Buy ×8" und in der Zeile
+   * daneben.
+   *
+   * Der Deckel bleibt `FORGE_BULK_BUY_CAP`: der Zeilenknopf ist die FEINE
+   * Dosierung an einem einzelnen Knoten, der Sammelkauf die grobe über alle.
+   */
+  function affordableLevels(id: string): number {
+    const entry = entryById.value.get(id)
+    if (!entry) return 0
+    return takeLevels(entry, freshBudget(), FORGE_BULK_BUY_CAP).levels
   }
 
   /**
@@ -702,63 +767,116 @@ export function useForgeUpgrades(): {
   }
 
   /**
-   * Was der Sammelkauf ausrichten würde — gerechnet, nicht gekauft.
+   * EIN Durchlauf des Sammelkaufs, gerechnet statt gekauft — je Eintrag alles,
+   * was der mitgeführte Beutel noch trägt.
    *
-   * Dasselbe Muster wie `affordableLevels()`: lokale Kopien von Vorrat und
-   * Lager, ein Durchlauf, kein Zugriff auf einen Store-Setter.
+   * Dasselbe Muster wie `affordableLevels()`, nur mit EINEM Beutel für die ganze
+   * Reihe: kein Zugriff auf einen Store-Setter, nichts wird verändert ausser den
+   * lokalen Kopien.
    *
-   * Warum die Zahl stimmt: `canBuy` deckt Sperre, Deckel und Gleichwuchs bereits
+   * Warum die Zahl trägt: `canBuy` deckt Sperre, Deckel und Gleichwuchs bereits
    * ab, und ein Kauf kann keinen anderen Eintrag SPERREN — nur unbezahlbar
    * machen. Die einzige Grösse, die sich während des Laufs ändert, sind Chimes
-   * und Materialien, und genau die führt die Schleife mit.
+   * und Materialien, und genau die führt der Beutel mit.
    *
-   * Übersprungen wird, nicht abgebrochen (`continue`, kein `break`) — dieselbe
-   * Entscheidung wie in `buyAllReady()`: ein teurer Knoten in der Mitte der
-   * Reihe darf die billigen dahinter nicht mitnehmen.
+   * Übersprungen wird, nicht abgebrochen (`continue`, kein `break`): ein teurer
+   * Knoten in der Mitte der Reihe darf die billigen dahinter nicht mitnehmen.
+   *
+   * Was der Durchlauf NICHT sehen kann, sind Knoten, die ein Kauf erst
+   * FREISCHALTET — die stehen noch gar nicht in `readyQueue()`. Deshalb ist der
+   * Plan die Zahl EINES Durchlaufs, und `buyAllReady()` wiederholt ihn.
    */
-  const buyAllPlan = computed<ForgeBuyAllPlan>(() => {
-    let chimes = gameStore.chimes
-    const stock: Record<string, number> = { ...inventoryStore.collectedMaterials }
+  function planBuyAll(): ForgeBuyAllPlan & { steps: ForgeBuyAllStep[] } {
+    const budget = freshBudget()
+    const steps: ForgeBuyAllStep[] = []
     let count = 0
     let chimeCost = 0
 
     for (const entry of readyQueue()) {
-      if (chimes < entry.goldCost) continue
-      if (entry.materials.some((mat) => (stock[mat.id] ?? 0) < mat.need)) continue
+      const took = takeLevels(entry, budget, FORGE_BUY_ALL_NODE_CAP)
+      if (took.levels === 0) continue
 
-      chimes -= entry.goldCost
-      chimeCost += entry.goldCost
-      for (const mat of entry.materials) stock[mat.id] = (stock[mat.id] ?? 0) - mat.need
-      count++
+      steps.push({ id: entry.id, name: entry.name, levels: took.levels })
+      count += took.levels
+      chimeCost += took.chimeCost
     }
 
+    return { count, chimeCost, steps }
+  }
+
+  /**
+   * Was auf dem Knopf steht, bevor geklickt wird — Stufenzahl und Chime-Preis.
+   *
+   * Es ist der ERSTE Durchlauf und damit eine UNTERGRENZE, keine Punktlandung
+   * mehr: schaltet ein Kauf einen weiteren Knoten frei, nimmt `buyAllReady()`
+   * den in einem zweiten Durchlauf mit, und es werden mehr Stufen als
+   * angekündigt. Die Richtung ist Absicht und dieselbe wie bei
+   * `affordableLevels()` — die Vorschau verspricht höchstens zu wenig, nie zu
+   * viel. Was WIRKLICH gewachsen ist, nennt danach die Quittung.
+   *
+   * Die Äquivalenz „Leiste da ⟺ irgendetwas kaufbar" bleibt davon unberührt:
+   * der günstigste kaufbare Eintrag steht vorn und trägt per Definition
+   * mindestens eine Stufe (`forgeUpgrades.spec.ts`).
+   */
+  const buyAllPlan = computed<ForgeBuyAllPlan>(() => {
+    const { count, chimeCost } = planBuyAll()
     return { count, chimeCost }
   })
 
   /**
-   * Je eine Stufe von allem, was Chimes UND Lager gerade decken — der Knopf am
-   * Kopf der Forge-Spalte.
+   * ALLES, was Chimes und Lager decken — der Knopf am Kopf der Forge-Spalte.
    *
-   * Die Reihenfolge steht als Id-Liste fest, bevor der erste Kauf läuft —
-   * `upgradeEntries` ist ein computed und sortierte sich sonst mitten in der
-   * Schleife um.
+   * Er nahm bis zum Umbau je EINE Stufe pro Eintrag. Wer einen dicken Vorrat
+   * hatte, drückte danach denselben Knopf wieder: dieselben Knoten waren sofort
+   * erneut bezahlbar, die Leiste blieb stehen. Ein Sammelkauf, den man mehrfach
+   * auslösen muss, sammelt nichts — er verteilt nur Klicks.
+   *
+   * Zwei Schleifen, und beide sind nötig:
+   *   • Je Eintrag so viele STUFEN, wie der Beutel trägt (`planBuyAll`).
+   *   • Der ganze Durchlauf so oft, wie er noch etwas holt. Ein Kauf kann einen
+   *     Knoten FREISCHALTEN (Elternstufen-Bedingung), und der stand beim Planen
+   *     noch nicht in der Reihe. Ohne den zweiten Durchlauf käme die Leiste
+   *     unmittelbar nach dem Klick zurück.
+   *
+   * Gerechnet und gekauft sind getrennt: der Plan sagt nur, WIE VIELE Stufen wo
+   * versucht werden — jede einzelne läuft danach durch `buyUpgrade` und damit
+   * durch die Prüfung des Stores. Kein Gate wird umgangen, das Konto kann nicht
+   * ins Minus laufen, und ein Plan, der sich verrechnet hätte, kauft schlicht
+   * weniger.
+   *
+   * `entryById` wird hier bewusst NICHT gelesen: das Computed rechnet nach jedem
+   * Kauf alle Einträge neu, und über mehrere hundert Stufen wäre das die
+   * teuerste Zeile des Klicks. Der Name für die Quittung fällt beim Planen
+   * ohnehin an und liegt im `step`.
    */
   function buyAllReady(): number {
-    const queue = readyQueue().map((entry) => entry.id)
-
     let bought = 0
-    // Die Namen fallen hier ohnehin an — die Quittung zählt sie auf, statt nur
-    // eine Zahl zu nennen. Reihenfolge ist die Kaufreihenfolge, günstigster zuerst.
+    /* Die Namen für die Quittung, in Kaufreihenfolge — günstigster zuerst und
+       jeder nur EINMAL: vierzig Stufen desselben Knotens dürfen die einzeilige
+       Zeile unter dem Banner nicht allein füllen. */
     const grown: string[] = []
-    for (const id of queue) {
-      // Der vorige Kauf hat Chimes und Lager gesenkt — was eben noch ging, geht
-      // jetzt vielleicht nicht mehr.
-      const entry = entryById.value.get(id)
-      if (!entry?.canBuy) continue
-      if (buyUpgrade(id, { silent: true })) {
-        bought++
-        grown.push(entry.name)
+    const seen = new Set<string>()
+
+    for (let pass = 0; pass < FORGE_BUY_ALL_MAX_PASSES; pass++) {
+      const plan = planBuyAll()
+      if (plan.count === 0) break
+
+      let inPass = 0
+      for (const step of plan.steps) {
+        let levels = 0
+        while (levels < step.levels && buyUpgrade(step.id, { silent: true })) levels++
+        if (levels === 0) continue
+
+        inPass += levels
+        if (!seen.has(step.name)) {
+          seen.add(step.name)
+          grown.push(step.name)
+        }
       }
+
+      // Nichts geholt heisst: der nächste Durchlauf holte auch nichts.
+      if (inPass === 0) break
+      bought += inPass
     }
 
     if (bought > 0) heraldBuyAll(bought, grown)
