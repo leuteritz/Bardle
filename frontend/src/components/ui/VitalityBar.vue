@@ -136,6 +136,15 @@ const props = withDefaults(
      * `right`  — rechts daneben in fester Spaltenbreite
      */
     labelPlacement?: 'inside' | 'above' | 'right' | 'none'
+    /**
+     * Wie der Satz IM Balken steht — nur für `inside` von Bedeutung; bei
+     * `above` steht die Zeile ohnehin mittig, bei `right` in eigener Spalte.
+     * `start`  — an der linken Kante: schmale Spalte mit fester Kante daneben
+     *            (Profilkopf), wo eine Mitte nur schwer auszumachen wäre
+     * `center` — mittig: breite Leiste, frei auf der Bühne, mit der Sonne
+     *            darunter als optischer Achse (Orbit)
+     */
+    labelAlign?: 'start' | 'center'
     /** > 0 hängt „+x/s" an — nur bei `inside`, sonst fehlt der Platz. */
     regenPerSec?: number
     /** Unsichtbare Messmuster hinter dem Wert; die Spalte nimmt die breiteste
@@ -156,6 +165,7 @@ const props = withDefaults(
   }>(),
   {
     labelPlacement: 'none',
+    labelAlign: 'start',
     regenPerSec: 0,
     widthProbes: false,
     leadIcon: undefined,
@@ -179,6 +189,7 @@ const stage = computed(() => sunVitalStage(hpRatio.value * 100))
 const rootClass = computed(() => [
   `vb--${stage.value}`,
   `vb--label-${props.labelPlacement}`,
+  `vb--align-${props.labelAlign}`,
   { 'vb--crit': stage.value === 'red' },
 ])
 
@@ -630,6 +641,35 @@ onUnmounted(() => {
    anderen Anordnungen klebt er rechtsbündig am Schrägstrich. */
 .vb--label-inside .vb-cur {
   justify-items: start;
+}
+
+/* ── Zentrierter Satz ─────────────────────────────────────────────────────
+   Drei Regeln, weil drei Dinge zusammen die Mitte ergeben. Alle verlangen
+   `.vb--align-center`; der linksbündige Default-Pfad bleibt unberührt. */
+.vb--align-center .vb-label {
+  justify-content: center;
+}
+
+/* Die Zelle des laufenden Werts gibt ihre Messmuster-Reserve nach LINKS ab
+   statt nach rechts. Sonst stünde zwischen Wert und Schrägstrich dauerhaft eine
+   Lücke in Breite der längsten je auftretenden Zahl — der Satz wäre mittig, aber
+   auseinandergezogen. Doppelte Klasse, damit die Regel die `inside`-Fassung
+   darüber unabhängig von der Reihenfolge im Stylesheet schlägt. */
+.vb--label-inside.vb--align-center .vb-cur {
+  justify-items: end;
+}
+
+/* Der dritte Wert klebt weiter an der rechten Kante. Bei linksbündigem Satz
+   genügt ihm dafür sein auto-Margin; bei zentriertem NICHT — der absorbiert den
+   freien Raum und zöge die Zahlen wieder nach links, die Zentrierung liefe ins
+   Leere. Absolut positioniert nimmt er gar keinen Platz im Fluss ein, und die
+   Mitte ist die echte Mitte des Balkens statt der Mitte des Rests. */
+.vb--align-center .vb-regen {
+  position: absolute;
+  right: var(--vb-label-pad, calc(var(--vb-hh) * 0.22));
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0;
 }
 
 /* Nur zur Breitenmessung da: nimmt Platz ein, wird aber nicht gezeichnet. */
