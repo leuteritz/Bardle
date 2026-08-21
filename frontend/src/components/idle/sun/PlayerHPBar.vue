@@ -11,7 +11,6 @@
       :regen-per-sec="regen"
       label-placement="inside"
       label-align="center"
-      width-probes
       spark
       :aria-label="`Sun health ${Math.ceil(playerStore.currentHP)} of ${playerStore.maxHP}`"
     />
@@ -149,10 +148,20 @@ onUnmounted(() => {
   --vb-label-sub-size: max(10px, calc(var(--vb-h) * 0.44));
   --vb-regen-size: max(9px, calc(var(--vb-h) * 0.34));
   --vb-tick-inset: max(2px, calc(var(--vb-h) * 0.2));
-  /* Die Messmuster (`width-probes`) geben die Spaltenbreite vor; eine
-     zusätzliche Reserve rückte den Wert nur von seinem Schrägstrich weg. Bei
-     mittigem Satz halten sie zusätzlich den ganzen Satz ruhig, der sonst bei
-     jedem Ziffernwechsel um die Mitte wanderte. */
+  /* WEDER Messmuster (`width-probes`) NOCH Reserve — beide halten die Spalte auf
+     der Breite des längsten je auftretenden Werts, und genau das verträgt sich
+     nicht mit einem mittigen Satz: der laufende Wert hat fast immer weniger
+     Stellen als das Maximum, klebt per `justify-items: end` am Schrägstrich, und
+     die reservierte Lücke bleibt links davon stehen. Gemessen stand „41/100" so
+     3 px rechts der Achse, obwohl seine Box exakt mittig sass.
+
+     Was die Reserve verhindern sollte — ein wandernder Satz —, verhindert hier
+     schon `font-variant-numeric: tabular-nums`: alle Ziffern sind gleich breit,
+     die Breite ändert sich also nur beim Wechsel der STELLENZAHL, nicht bei
+     jedem Tick. Dafür lohnt sich ein dauerhafter Versatz nicht.
+
+     Im Pause-Overlay bleiben die Muster: dort steht die Zahl neben dem Balken
+     und der Wert soll seine Kante halten, nicht eine Mitte treffen. */
   --vb-cur-reserve: 0;
 }
 

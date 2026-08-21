@@ -98,15 +98,26 @@
              Spalte nimmt die breiteste Darstellung. Damit steht der Schrägstrich
              fest, ohne dass irgendwo eine Zeichenbreite geschätzt werden müsste
              — der Browser misst die echten Glyphen der Schrift. -->
+        <!-- `v-ink-center.y` an jeder sichtbaren Zahl: MedievalSharp setzt Ziffern
+             fast vollständig über die Baseline, und `align-items: center` oben
+             zentriert die ZEILENBOX, nicht die Tinte darin. Weil Wert und
+             Maximum verschiedene Grade tragen, fällt ihr Versatz verschieden
+             aus — sie driften sichtbar auseinander. Nur die senkrechte Achse:
+             die waagerechte setzte jedes Stück einzeln auf seine eigene
+             Tintenmitte und zerrisse die Abstände der Zeile.
+             Die Messmuster bleiben ohne: sie sind unsichtbar und zählen nur
+             als Breite. -->
         <span class="vb-cur">
           <span v-for="(probe, i) in probes" :key="i" class="vb-probe" aria-hidden="true">{{
             probe
           }}</span>
-          <span class="vb-now">{{ formatNumber(Math.ceil(current)) }}</span>
+          <span v-ink-center.y class="vb-now">{{ formatNumber(Math.ceil(current)) }}</span>
         </span>
-        <span class="vb-sep">/</span>
-        <span class="vb-max">{{ formatNumber(max) }}</span>
-        <span v-if="regenPerSec > 0" class="vb-regen">+{{ formatNumber(regenPerSec) }}/s</span>
+        <span v-ink-center.y class="vb-sep">/</span>
+        <span v-ink-center.y class="vb-max">{{ formatNumber(max) }}</span>
+        <span v-if="regenPerSec > 0" v-ink-center.y class="vb-regen"
+          >+{{ formatNumber(regenPerSec) }}/s</span
+        >
       </div>
     </div>
   </div>
@@ -678,11 +689,23 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+/* Muster und Live-Wert MÜSSEN dieselbe Schrift tragen: sie liegen in derselben
+   Rasterzelle, und ein Muster ist nur dann ein gültiges Maß für die Spalte, wenn
+   es in genau der Schrift gesetzt ist, in der auch der Wert erscheint. Erbte es
+   stattdessen die Dokumentschrift — und das tat es, es stand hier keine Angabe —,
+   wäre die Spalte je nach Aufrufer zu breit oder zu schmal. Bei mittigem Satz
+   stünde die Zahl dadurch sichtbar neben der Achse, obwohl ihre Box mittig sitzt:
+   `justify-items: end` klebt sie an den rechten Rand der Zelle, und die
+   Überbreite bleibt links leer stehen. */
+.vb-probe,
 .vb-now {
   font-size: var(--vb-label-size, calc(var(--vb-hh) * 0.5));
   font-weight: 900;
-  color: var(--vb-txt);
   font-variant-numeric: tabular-nums;
+}
+
+.vb-now {
+  color: var(--vb-txt);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
