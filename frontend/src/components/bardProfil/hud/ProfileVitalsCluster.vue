@@ -102,6 +102,22 @@ const ariaLabel = computed(
   min-width: 0;
   cursor: default;
 }
+
+/* Die Leiste gibt ihre Breite NICHT ab, wenn die Kopfspalte eng wird.
+   Als Flex-Item schrumpfte sie von sich aus: auf 1366 CSS-Pixeln blieben der
+   Spalte 127px, und die Wurzel der Leiste fiel auf 115 — während ihr Balken
+   seine 120 aus `--vb-w` behielt. Die Zahlen zentrieren sich aber über die
+   WURZEL, der Balken ist das Kind darin; gemessen stand der Satz dadurch 2,5px
+   links der Balkenmitte, also genau die halbe Differenz. Bei linksbündigem Satz
+   fiel das nie auf, weil dort beide Kanten an derselben Stelle beginnen.
+
+   Was die Staffel unten sagt, gilt damit auch dann, wenn es knapp wird. Läuft
+   die Leiste über, greift die Reissleine, die der Kopf dafür hat: die Spalte
+   trägt `overflow: hidden` und beschneidet sich selbst, statt die Reiter
+   daneben zu verschieben (siehe `.rp-header-side` in `BardProfileMenu.vue`). */
+.pv-cluster > * {
+  flex-shrink: 0;
+}
 /* ── Tooltip ──────────────────────────────────────────────────────────────
    Die exakten Zahlen · eine Zeile. Mehr nicht. */
 .pv-tip {
@@ -228,6 +244,22 @@ const ariaLabel = computed(
      rückt weiter weg. */
   --vb-cur-reserve: 0;
 
+  /* Der dritte Wert steht grösser, als die Leiste ihn von sich aus setzen würde
+     (Default 0,25 · Höhe): auf Full HD wären das 12,5px neben einem 25px hohen
+     Hauptwert — lesbar nur, wenn man weiss, dass dort etwas steht. Mit 0,3 trägt
+     er denselben Grad wie das Maximum hinter dem Schrägstrich.
+
+     Zwei gleich grosse Zahlen in einer Zeile verwischen nicht: der Regen-Wert
+     ist grün und normal gesetzt, das Maximum cremeweiss und `font-weight: 800`.
+     Farbe und Gewicht tragen die Hierarchie hier, nicht der Grad — und die Farbe
+     ist ohnehin das, was ihn als Regeneration und nicht als zweite HP-Zahl
+     liest.
+
+     Kein Pixelboden wie im Orbit (`max(9px, …)`): dort wird die Leiste bis auf
+     18px hinunter gestaffelt, hier erscheint der Wert überhaupt erst ab 1700px
+     Fensterbreite — und da steht `--vb-h` schon auf 45. */
+  --vb-regen-size: calc(var(--vb-h) * 0.3);
+
   /* Unter 1700 passt die Regeneration nicht mehr in die Leiste, ohne dass
      entweder der Text abgeschnitten würde oder die Trennklinge daneben ihre Luft
      verlöre. Sie ist der dritte Wert und weicht deshalb zuerst — was sie sagt,
@@ -265,9 +297,20 @@ const ariaLabel = computed(
 }
 
 @media (min-width: 1700px) {
-  /* Ab hier trägt die Leiste ihren dritten Wert wieder. */
+  /* Ab hier trägt die Leiste ihren dritten Wert wieder — und das kostet auf
+     dieser und der nächsten Stufe zusätzliche BREITE, nicht nur Platz im Satz.
+     Der Regen-Wert steht bei mittigem Satz absolut an der rechten Innenkante und
+     wächst dem Satz ENTGEGEN, statt ihn zu verschieben; die beiden treffen sich
+     also in der Mitte. Gemessen mit dem längsten Wert, den der Regenerations-
+     Zweig hergibt („+45.5/s" — Zweigstufe mal Blattverstärker, verdoppelt durch
+     Eternal Orbit): auf 197px überlappten Satz und Zahl um 7px.
+
+     Die 21px kommen aus der Luft zur Trennklinge daneben, von der hier 29px
+     standen — mehr als auf jeder anderen Stufe. Es bleiben 8,5px, gut ein Pixel
+     weniger als die schmalste Stufe schon heute fährt. Weiter geht es nicht: die
+     Klinge klebte sonst am Balken, und genau davor warnt der Block oben. */
   .pv-cluster {
-    --vb-w: 197px;
+    --vb-w: 218px;
     --vb-h: 45px;
     padding: 0 4px 0 12px;
     --vb-regen-display: inline;
@@ -275,8 +318,11 @@ const ariaLabel = computed(
 }
 
 @media (min-width: 1800px) {
+  /* Dieselbe Rechnung eine Stufe weiter: 224px trugen den langen Regen-Wert um
+     5px nicht. Hier steht die Klinge weit genug weg, dass die 18px nicht ins
+     Gewicht fallen. */
   .pv-cluster {
-    --vb-w: 224px;
+    --vb-w: 242px;
     --vb-h: 50px;
     padding: 0 4px 0 14px;
   }
