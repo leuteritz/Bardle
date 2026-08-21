@@ -601,3 +601,37 @@ export interface ForgeVaultEntry {
   /** `✦ MAX` oder `✦ FUSED`. */
   badge: string
 }
+
+/**
+ * Was der Waechter in seine Sonne gesteckt hat — die Grundlage ihrer Optik.
+ *
+ * `t` ist der gesaettigte Anteil (0..1) und treibt stufenlose Werte; `stage`
+ * ist die diskrete Stufe und treibt alles, was an- oder ausgeht. Beides steht
+ * nebeneinander, weil ein Kauf sofort etwas heben soll, die Sonne aber nur in
+ * Stufen wirklich anders aussehen darf.
+ */
+export interface SolarSignatureAxis {
+  /** Rohe Summe aller Stufen auf dieser Achse. */
+  levels: number
+  /** Gesaettigt auf 0..1 — auch bei unbegrenzten Bough-Stufen. */
+  t: number
+  /** Index in `SOLAR_SIGNATURE_STAGES`. */
+  stage: number
+}
+
+export interface SolarSignature {
+  axes: Record<ForgeAxisId, SolarSignatureAxis>
+  /** Achslos: Relikte, Konstellationen und Aufbrueche zusammen. */
+  base: SolarSignatureAxis
+}
+
+/** Die rohen Stufen, aus denen `solarSignatureFrom()` rechnet. */
+export interface SolarSignatureInput {
+  rayLevels: Record<ForgeAxisId, number>
+  /** Alle Knotenbeutel des Forge-Stores — sie bleiben getrennt, weil die
+   *  Codex-Bahn „Sunsmith" nur die gedeckelten summieren darf. */
+  nodeLevelBags: readonly Record<string, number>[]
+  relicLevels: number
+  constellationCount: number
+  totalPrestiges: number
+}

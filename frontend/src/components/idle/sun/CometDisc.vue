@@ -11,6 +11,7 @@
 import { defineComponent, computed } from 'vue'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { COMET_PHASE_DATA, COMET_STAGE_GOLD } from '@/config/constants'
+import { cometGoldSignatureLift } from '@/utils/game/solarSignature'
 
 /**
  * The player's origin body before Spark: a wandering asteroid with Bard
@@ -37,7 +38,12 @@ export default defineComponent({
       '--comet-edge': COMET_PHASE_DATA.edge,
       '--comet-crater': COMET_PHASE_DATA.crater,
       '--comet-glow': COMET_PHASE_DATA.glow,
-      '--comet-gold': `${COMET_STAGE_GOLD[solarStore.cometStage]}`,
+      // Der Komet traegt sonst nichts von der Signatur: mit 64–104 px liegt er
+      // unter der Zierschwelle, und vor der Zuendung gibt es auch nichts zu
+      // zeigen — nur die fuenf Strahlen sind dort ueberhaupt kaufbar. Was ihn
+      // erreicht, ist die GRUNDsignatur: ein Komet im zehnten Universum ist
+      // schon etwas mehr vergoldet als einer im ersten.
+      '--comet-gold': `${Math.min(1, COMET_STAGE_GOLD[solarStore.cometStage] + cometGoldSignatureLift(solarStore.solarSignature))}`,
       '--comet-tumble': COMET_PHASE_DATA.tumbleSec,
       '--comet-pulse': COMET_PHASE_DATA.pulseSpeed,
     }))

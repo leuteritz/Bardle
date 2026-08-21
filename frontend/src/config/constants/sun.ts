@@ -574,3 +574,149 @@ export const COMET_DEBRIS_MIN_R = 3
 export const COMET_DEBRIS_MAX_R = 9
 /** Debris moves this much faster than regular background stars. */
 export const COMET_DEBRIS_SPEED_MULT = 1.6
+
+// ── Solar Signature — was der Wächter in die Sonne gesteckt hat, als Bild ────
+/*
+ * Die Sonne sagte bis hierher genau EINE Sache: in welcher Phase sie steht.
+ * Rund 570 gedeckelte Käufe plus unbegrenzte Bough-Stufen liefen an ihr vorbei,
+ * ohne eine einzige Bildänderung.
+ *
+ * Die Leiter darunter folgt `DRIFTER_FX_STAGES` und `CHAMPION_REGALIA_STAGES`:
+ * eine Tabelle aus Zahlen und Schaltern, keine Formel im Renderer. Und sie
+ * folgt deren Regel — die Eskalation läuft über Geometrie, Menge und
+ * Helligkeit, NIE über eine zweite Farbe. Die Phasenfarbe bleibt die Leitfarbe;
+ * die fünf Achsenfarben aus SOLAR_BRANCHES setzen nur Akzente. Sonst wird die
+ * Sonne bunt statt reicher.
+ *
+ * Kein Wert hier hängt an einer ELEMENTZAHL. Die Motive wachsen ausschliesslich
+ * in Werten, die eine bestehende Ebene mitnimmt (Gradientenstopps, Kachelmass,
+ * Wiederholzahl eines statischen `repeating-conic-gradient`) — die Zahl der
+ * DOM-Ebenen ist damit unabhängig davon, wie viel gekauft wurde.
+ */
+
+/**
+ * Ab welchem Scheibendurchmesser (px) die Zierebenen überhaupt entstehen.
+ *
+ * Vorbild `CHAMPION_REGALIA_ORNAMENT_MIN_SIZE` / `DRIFTER_ORNAMENT_MIN_SIZE`,
+ * und der Grund ist derselbe (Performance-Regel 7): eine Ebene, die keine zwei
+ * Pixel breit ausfällt, ist unsichtbar und wird trotzdem voll bezahlt.
+ *
+ * 140 liegt ÜBER dem grössten Orbit-Kometen (26 × 4 = 104) und UNTER der
+ * kleinsten Sternphase (Spark, 38 × 4 = 152) — der Komet trägt also nichts,
+ * und zwar passend: vor der Zündung sind nur die fünf Strahlen kaufbar.
+ * Der Shop liegt mit SHOP_SUN_MIN_DIAMETER (240) immer darüber.
+ *
+ * Geprüft wird IMMER gegen den autorisierten Durchmesser, nie gegen die
+ * Bildschirmgrösse: der Shop skaliert die Bühne per Zoom, und eine Bedingung
+ * an der Bildschirmgrösse baute die Ebenen bei jedem Zoomschritt ab und wieder
+ * auf — ein Ruckler genau dort, wo der Spieler ohnehin zieht.
+ */
+export const SOLAR_SIGNATURE_MIN_DIAMETER = 140
+
+/**
+ * Sättigungskonstante je Achse: `t = 1 − e^(−levels/K)`.
+ *
+ * 26 ist an der gedeckelten Tiefe geeicht — eine Achse trägt 6 (Strahl) + 18
+ * (Branch) + 15 (Leaf) + 12 (Ward) + 9 (Pact) + 3 (Crown) + 27…42 (Glimmer),
+ * also rund 90–105 Stufen. Bei K = 26 steht ein voll ausgebauter Ast damit auf
+ * t ≈ 0,97, während die ersten Käufe noch sichtbar etwas bewegen. Ring 7 ist
+ * ungedeckelt; ohne diese Kurve stünde die Sonne nach ein paar hundert
+ * Bough-Stufen auf einem Wert, den keine Tabelle mehr einholt.
+ */
+export const SOLAR_SIGNATURE_SATURATION_K = 26
+
+/** Dasselbe für die achslose Grundsignatur — sie speist sich aus deutlich
+ *  weniger Ereignissen (60 Relikt-Stufen + 13 Konstellationen + Aufbrüche). */
+export const SOLAR_SIGNATURE_BASE_SATURATION_K = 14
+
+export interface SolarSignatureStage {
+  /** Ab wie vielen Stufen auf der Achse diese Zeile gilt. */
+  minLevels: number
+  /** Kernfunken (chimesPerClick): Deckkraft der hellen Punkte im Kern. */
+  sparkAlpha: number
+  /** Schutzsaum (maxHp): Breite als Anteil der Scheibe, und seine Deckkraft. */
+  limbWidth: number
+  limbAlpha: number
+  /** Korona (maxHp): Deckkraft des dritten, äussersten Rings. */
+  coronaAlpha: number
+  /** Granulation (chimesPerSecond): Kachelmass in % der Scheibe — KLEINER
+   *  heisst DICHTER. Und die Deckkraft der Zellstruktur. */
+  granuleSizePct: number
+  granuleAlpha: number
+  /** Protuberanzen (dmgPerClick): Zahl der Bögen am Rand, ihre Höhe als Anteil
+   *  der Scheibe und ihre Deckkraft. Die Zahl steuert die Wiederholung EINES
+   *  statischen `repeating-conic-gradient`, nicht die Zahl der Elemente. */
+  prominenceArcs: number
+  prominenceHeight: number
+  prominenceAlpha: number
+  /** Sonnenwind (flightSpeed): Zuschlag auf `--line-power` in FlightMotes. */
+  wakeBonus: number
+}
+
+/**
+ * Sieben Stufen je Achse. Die Schwellen fallen so, dass die ersten drei im
+ * frühen Spiel erreicht werden (die ersten Strahlen und Branches) und die
+ * letzten beiden erst, wenn ein Ast wirklich ausgebaut ist.
+ *
+ * Stufe 0 ist die NACKTE Sonne: alle Werte auf 0, damit ein frischer Spielstand
+ * exakt so aussieht wie vor diesem Feature.
+ */
+export const SOLAR_SIGNATURE_STAGES: SolarSignatureStage[] = [
+  { minLevels: 0, sparkAlpha: 0, limbWidth: 0, limbAlpha: 0, coronaAlpha: 0, granuleSizePct: 0, granuleAlpha: 0, prominenceArcs: 0, prominenceHeight: 0, prominenceAlpha: 0, wakeBonus: 0 },
+  { minLevels: 3, sparkAlpha: 0.14, limbWidth: 0.010, limbAlpha: 0.16, coronaAlpha: 0.06, granuleSizePct: 30, granuleAlpha: 0.05, prominenceArcs: 3, prominenceHeight: 0.030, prominenceAlpha: 0.14, wakeBonus: 0.06 },
+  { minLevels: 9, sparkAlpha: 0.22, limbWidth: 0.014, limbAlpha: 0.22, coronaAlpha: 0.10, granuleSizePct: 25, granuleAlpha: 0.07, prominenceArcs: 5, prominenceHeight: 0.042, prominenceAlpha: 0.19, wakeBonus: 0.11 },
+  { minLevels: 20, sparkAlpha: 0.30, limbWidth: 0.018, limbAlpha: 0.28, coronaAlpha: 0.14, granuleSizePct: 21, granuleAlpha: 0.09, prominenceArcs: 7, prominenceHeight: 0.054, prominenceAlpha: 0.24, wakeBonus: 0.16 },
+  { minLevels: 36, sparkAlpha: 0.38, limbWidth: 0.022, limbAlpha: 0.34, coronaAlpha: 0.18, granuleSizePct: 18, granuleAlpha: 0.11, prominenceArcs: 9, prominenceHeight: 0.066, prominenceAlpha: 0.29, wakeBonus: 0.21 },
+  { minLevels: 58, sparkAlpha: 0.46, limbWidth: 0.026, limbAlpha: 0.40, coronaAlpha: 0.22, granuleSizePct: 15, granuleAlpha: 0.13, prominenceArcs: 11, prominenceHeight: 0.078, prominenceAlpha: 0.34, wakeBonus: 0.27 },
+  { minLevels: 86, sparkAlpha: 0.55, limbWidth: 0.030, limbAlpha: 0.46, coronaAlpha: 0.27, granuleSizePct: 12, granuleAlpha: 0.15, prominenceArcs: 13, prominenceHeight: 0.092, prominenceAlpha: 0.40, wakeBonus: 0.34 },
+]
+
+export interface SolarSignatureBaseStage {
+  minLevels: number
+  /** Wie hell der weisse Kern-Hotspot wird (Anteil, 0 = unverändert). */
+  coreLift: number
+  /** Zuschlag auf die Korona-Deckkraft. */
+  coronaLift: number
+  /** Zuschlag auf die Vergoldung des Kometen. */
+  cometGoldLift: number
+}
+
+/**
+ * Die achslose Grundsignatur: Relikte, Konstellationen und Aufbrüche.
+ *
+ * Sie bekommt bewusst KEINE eigene Ebene. Ein Relikt nennt keinen `parentId`,
+ * sondern `requires` — es einer Achse zuzuschlagen wäre geraten, nicht
+ * abgeleitet. Also hebt sie zwei Werte, die es ohnehin gibt: den weissen
+ * Kern-Hotspot und die Korona. Im Schwarzen Loch fällt sie auf `--bh-core`.
+ */
+export const SOLAR_SIGNATURE_BASE_STAGES: SolarSignatureBaseStage[] = [
+  { minLevels: 0, coreLift: 0, coronaLift: 0, cometGoldLift: 0 },
+  { minLevels: 2, coreLift: 0.03, coronaLift: 0.03, cometGoldLift: 0.04 },
+  { minLevels: 6, coreLift: 0.06, coronaLift: 0.06, cometGoldLift: 0.08 },
+  { minLevels: 14, coreLift: 0.09, coronaLift: 0.09, cometGoldLift: 0.12 },
+  { minLevels: 26, coreLift: 0.12, coronaLift: 0.12, cometGoldLift: 0.16 },
+  { minLevels: 44, coreLift: 0.15, coronaLift: 0.15, cometGoldLift: 0.20 },
+]
+
+/**
+ * Wie stark die fünf Achsen das Schwarze Loch verändern.
+ *
+ * Es bekommt KEINE neue Ebene — jede der fünf hat dort schon eine
+ * parametrisierte Custom Property, und die Faktoren hier sind ihr Zuschlag bei
+ * t = 1. `BLACK_HOLE_INSPIRAL_COUNT` bleibt ausdrücklich fest: eine an die
+ * Signatur gehängte Elementzahl wäre genau die Kosten, die dieses Feature
+ * ausschliesst.
+ */
+export const SOLAR_SIGNATURE_BH_JET_GAIN = 0.45
+export const SOLAR_SIGNATURE_BH_RING_GAIN = 0.35
+export const SOLAR_SIGNATURE_BH_HALO_GAIN = 0.22
+export const SOLAR_SIGNATURE_BH_MOTE_GAIN = 0.4
+export const SOLAR_SIGNATURE_BH_INNER_GAIN = 0.28
+export const SOLAR_SIGNATURE_BH_DOPPLER_GAIN = 0.3
+
+/**
+ * Der Kaufblitz. Übernommen von `FORGE_SUN_FLASH_MS`, das ihn als lokale Sache
+ * des Forge-Panels führte — jetzt gehört er der Sonne selbst, damit ihn der
+ * Idle-Orbit auch bekommt.
+ */
+export const SOLAR_SIGNATURE_PULSE_MS = 500

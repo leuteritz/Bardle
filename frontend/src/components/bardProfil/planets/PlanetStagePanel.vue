@@ -15,12 +15,11 @@ import {
   MATERIAL_RARITY_COLOR,
   PLANET_RESPAWN_MS,
   PLANET_TAB_SUN_MAX_DIAMETER,
-  STAR_PHASE_FINAL_INDEX,
 } from '@/config/constants'
 import { hpTier, hpPercentOf, planetBonusTextFor } from '@/utils/orbit/planetStatus'
 import { useHerald } from '@/composables/ui/useHerald'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
-import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
+import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import PlanetTargetPickerModal from './PlanetTargetPickerModal.vue'
 
 const props = defineProps<{
@@ -46,10 +45,9 @@ defineExpose({ orbitEl })
 
 /** Endphase: der Stern ist kollabiert, statt der Plasmascheibe steht hier das
  *  Schwarze Loch — mit demselben Footprint, damit der Planet weiter dahinter
- *  vorbeizieht. */
-const isCollapsed = computed(
-  () => !solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
-)
+ *  vorbeizieht. Nur noch für die Klasse am Container; welchen Körper man sieht,
+ *  entscheidet `PhaseSunDisc` selbst. */
+const isCollapsed = computed(() => solarStore.isCollapsedStar)
 
 const role = computed(() => props.planet.role!)
 const roleName = computed(() => PLANET_ROLES[role.value].name)
@@ -240,8 +238,7 @@ const configTarget = computed(() => {
       :class="{ 'ps-system--comet': solarStore.isCometState, 'ps-system--collapse': isCollapsed }"
     >
       <CometDisc v-if="solarStore.isCometState" :diameter="200" />
-      <BlackHoleDisc v-else-if="isCollapsed" :diameter="PLANET_TAB_SUN_MAX_DIAMETER" />
-      <div v-else class="ps-stage-sun" />
+      <PhaseSunDisc v-else :diameter="PLANET_TAB_SUN_MAX_DIAMETER" />
       <!-- The whole orbit wrapper is keyed per planet: the old planet fades
            out at ITS orbit position, the new one fades in at its own — no
            visible position jump. type="transition" required (the orbit
@@ -676,40 +673,13 @@ const configTarget = computed(() => {
   padding-top: clamp(8px, 1.4vh, 18px);
 }
 
-/* Big sun rendered in the CURRENT phase's colors (mirrors SunComponent palette) */
-.ps-stage-sun {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  /* Diameter scales with the current Sun-Phase (see sunPhaseStyle), capped by
-     the system container's smaller edge so it always fits the free space.
-     Smooth transition so phase changes grow/shrink the sun. */
+/* Responsive size override for the shared sun body (the component's diameter
+   prop is static px) — same pattern as .bh-root and .comet-root below.
+   z above the planet's "far" half so the planet can pass behind the sun. */
+:deep(.phase-sun-root) {
   width: min(var(--ps-sun-d, 380px), 96cqmin);
   height: min(var(--ps-sun-d, 380px), 96cqmin);
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  transition: width 1.2s ease, height 1.2s ease;
-  background:
-    radial-gradient(
-      circle at 42% 38%,
-      color-mix(in srgb, white 92%, var(--phase-core, #fff)) 0%,
-      transparent 22%
-    ),
-    /* opaque inner disk (out to ~52%) so the planet is hidden when behind it */
-    radial-gradient(
-      circle at 50% 50%,
-      var(--phase-core, #fff0e0) 0%,
-      var(--phase-mid, #ffd4a3) 34%,
-      var(--phase-edge, #cc5500) 52%,
-      color-mix(in srgb, var(--phase-edge, #cc5500) 45%, transparent) 70%,
-      transparent 86%
-    );
-  box-shadow:
-    0 0 90px color-mix(in srgb, var(--phase-glow, #ff8c42) 55%, transparent),
-    0 0 180px color-mix(in srgb, var(--phase-glow, #ff8c42) 28%, transparent);
-  /* z above the planet's "far" half so the planet can pass behind the sun */
   z-index: 1;
-  animation: ps-sun-pulse var(--pulse-speed, 5s) ease-in-out infinite;
 }
 
 /* ── Collapse mode: the black hole takes the sun's exact footprint ─────────── */
@@ -1642,11 +1612,6 @@ const configTarget = computed(() => {
   50% {
     filter: brightness(1.45);
   }
-}
-
-@keyframes ps-sun-pulse {
-  0%, 100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
 }
 
 /* Tilted ellipse (rx = --orb-x, ry = --orb-y). Front/lower arc (in front of sun)

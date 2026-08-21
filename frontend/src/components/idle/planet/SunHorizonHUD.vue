@@ -76,7 +76,6 @@ import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   STAR_PHASE_DATA,
-  STAR_PHASE_FINAL_INDEX,
   COMET_PHASE_DATA,
   STRIKER_BOSS_ANCHOR_Y_PCT,
   SUN_HORIZON_BAND_MIN_PX,
@@ -119,9 +118,7 @@ const phaseData = computed(() => STAR_PHASE_DATA[solarStore.starPhase] ?? STAR_P
 
 /** Endphase: die Kalotte am Horizont ist kein Plasma mehr, sondern der
  *  Ereignishorizont — schwarz, mit Photonensaum und Akkretionsband. */
-const isCollapsed = computed(
-  () => !solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
-)
+const isCollapsed = computed(() => solarStore.isCollapsedStar)
 
 /** 0 = Comet … 1 = Collapse — treibt Breite und Kammhöhe der Kalotte. */
 const phaseT = computed(() =>

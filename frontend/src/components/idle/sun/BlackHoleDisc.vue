@@ -32,6 +32,8 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { blackHoleSignatureVars } from '@/utils/game/solarSignature'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
@@ -79,6 +81,18 @@ export default defineComponent({
   setup(props) {
     const phase = STAR_PHASE_DATA[STAR_PHASE_FINAL_INDEX]
     const inspiralCount = BLACK_HOLE_INSPIRAL_COUNT
+    const solarStore = useSolarUpgradeStore()
+
+    /**
+     * Die Signatur als Faktor auf fuenf Werte, die es hier schon gibt.
+     *
+     * Der Kollaps bekommt KEINE neue Ebene: jede der fuenf Achsen hat in dieser
+     * Datei bereits eine Custom Property, die genau ihr Motiv traegt. Und
+     * `inspiralCount` bleibt fest — eine an die Signatur gehaengte Elementzahl
+     * waere genau die Kosten, die dieses Feature ausschliesst.
+     */
+    const sig = computed(() => blackHoleSignatureVars(solarStore.solarSignature))
+    const f = (key: string): number => Number(sig.value[key] ?? 1)
 
     const vars = computed((): Record<string, string> => ({
       '--bh-d': `${props.diameter}px`,
@@ -89,18 +103,20 @@ export default defineComponent({
       '--bh-shadow-f': `${BLACK_HOLE_SHADOW_FRACTION}`,
       // Fractions that feed `cqw` arrive as plain numbers — 1cqw is 1% of the
       // root's width, so `f * 100` is the same fraction the constant describes.
-      '--bh-ring-f': `${BLACK_HOLE_PHOTON_RING_FRACTION * 100}`,
+      '--bh-ring-f': `${BLACK_HOLE_PHOTON_RING_FRACTION * 100 * f('--sig-bh-ring')}`,
       // Mask stops read as a fraction of the disc's own radius, which equals the
       // fraction of the box diameter — see BLACK_HOLE_DISC_INNER_FRACTION.
-      '--bh-inner': `${BLACK_HOLE_DISC_INNER_FRACTION * 100}%`,
+      '--bh-inner': `${BLACK_HOLE_DISC_INNER_FRACTION * 100 * f('--sig-bh-inner')}%`,
       '--bh-tilt': `${BLACK_HOLE_DISC_TILT}`,
       '--bh-spin': `${BLACK_HOLE_DISC_SPIN_SEC}s`,
-      '--bh-halo-f': `${BLACK_HOLE_HALO_FRACTION}`,
-      '--bh-dop': `${BLACK_HOLE_DOPPLER_STRENGTH}`,
-      '--bh-jet-w': `${BLACK_HOLE_JET_WIDTH_FRACTION}`,
-      '--bh-jet-l': `${BLACK_HOLE_JET_LENGTH_FRACTION}`,
+      '--bh-halo-f': `${BLACK_HOLE_HALO_FRACTION * f('--sig-bh-halo')}`,
+      '--bh-dop': `${BLACK_HOLE_DOPPLER_STRENGTH * f('--sig-bh-dop')}`,
+      '--bh-jet-w': `${BLACK_HOLE_JET_WIDTH_FRACTION * f('--sig-bh-jet')}`,
+      '--bh-jet-l': `${BLACK_HOLE_JET_LENGTH_FRACTION * f('--sig-bh-jet')}`,
       '--bh-jet-pulse': `${BLACK_HOLE_JET_PULSE_SEC}s`,
       '--bh-inspiral': `${BLACK_HOLE_INSPIRAL_SEC}s`,
+      '--bh-mote-f': `${f('--sig-bh-mote')}`,
+      '--sig-core-lift': sig.value['--sig-core-lift'] ?? '0%',
     }))
 
     /** Motes share one keyframe and are spread over it by a negative delay. */
@@ -307,15 +323,18 @@ export default defineComponent({
   pointer-events: none;
 }
 
+/* Die Truemmer wachsen mit der Klick-Achse — in der GROESSE, nicht in der
+   Zahl: `BLACK_HOLE_INSPIRAL_COUNT` bleibt fest, sonst haenge die Ebenenzahl
+   an der Zahl gekaufter Upgrades. */
 .bh-mote {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 1.2cqw;
-  height: 1.2cqw;
+  width: calc(1.2cqw * var(--bh-mote-f, 1));
+  height: calc(1.2cqw * var(--bh-mote-f, 1));
   border-radius: 50%;
   background: var(--bh-core, #ffffff);
-  box-shadow: 0 0 2cqw var(--bh-glow, #b45cff);
+  box-shadow: 0 0 calc(2cqw * var(--bh-mote-f, 1)) var(--bh-glow, #b45cff);
   animation: bh-inspiral var(--bh-inspiral, 5.5s) linear infinite;
 }
 

@@ -28,6 +28,9 @@ import {
   ITEM_SLOT_COUNT,
   STAR_PHASE_FINAL_INDEX,
   TOTAL_SECTIONS,
+  SOLAR_BRANCHES,
+  SOLAR_SIGNATURE_STAGES,
+  SOLAR_SIGNATURE_BASE_STAGES,
 } from '@/config/constants'
 
 /*
@@ -224,6 +227,22 @@ describe('maxEverything', () => {
     expect(game.totalPrestiges).toBeGreaterThanOrEqual(ADMIN_MAX_UNIVERSE - 1)
     expect(providence.active, 'keine Vorsehung gezogen').not.toBeNull()
     expect(providence.activeEffects.cpsMultiplier ?? 1).toBeGreaterThan(1)
+  })
+
+  it('bringt jede Achse der Sonnensignatur auf die oberste Stufe', () => {
+    // Die EICHUNG der Sättigungskurve, und der einzige Ort, an dem sie fällt:
+    // steht eine Achse im Endzustand nicht ganz oben, ist `SOLAR_SIGNATURE_K`
+    // zu groß oder eine Schwelle in `SOLAR_SIGNATURE_STAGES` zu hoch — die
+    // Sonne erreichte dann ihr letztes Bild nie, und niemand sähe es.
+    maxEverything()
+    const sig = useSolarUpgradeStore().solarSignature
+    const top = SOLAR_SIGNATURE_STAGES.length - 1
+
+    for (const axis of SOLAR_BRANCHES.map((r) => r.id)) {
+      expect(sig.axes[axis].stage, `Achse ${axis} bleibt unter der obersten Stufe`).toBe(top)
+      expect(sig.axes[axis].t).toBeGreaterThan(0.9)
+    }
+    expect(sig.base.stage).toBe(SOLAR_SIGNATURE_BASE_STAGES.length - 1)
   })
 
   it('ist idempotent: ein zweiter Druck verändert den Endzustand nicht mehr', () => {

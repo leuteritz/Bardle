@@ -39,7 +39,7 @@ const { currentDisplayPhase } = useSunPhaseDisplay()
 /* ── Wer der Stern gerade ist ────────────────────────────────────────────── */
 
 const isComet = computed(() => solarStore.isCometState)
-const isFinal = computed(() => !isComet.value && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX)
+const isFinal = computed(() => solarStore.isCollapsedStar)
 
 const current = computed(() =>
   isComet.value ? COMET_PHASE_DATA : STAR_PHASE_DATA[solarStore.starPhase],

@@ -163,11 +163,9 @@
            Komet taumelt, die Plasmascheibe atmet, und eine Zahl, die mitdreht
            oder mitpulst, ist keine Anzeige mehr. Alle vier sind absolut in der
            Mitte des Wrappers verankert und tragen ihre Größe selbst. -->
-      <div class="sun-wrapper" :class="{ 'sun-flash': purchaseFlash }">
+      <div class="sun-wrapper">
         <CometDisc v-if="solarStore.isCometState" :diameter="bodyDiameter" />
-        <BlackHoleDisc v-else-if="isCollapsed" :diameter="bodyDiameter" />
-        <div v-else class="tree-stage-sun" />
-        <div class="sun-flash-veil" :style="sunFlashVeilStyle" />
+        <PhaseSunDisc v-else :diameter="bodyDiameter" />
         <div
           v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
           class="next-phase-preview"
@@ -389,7 +387,7 @@ import type {
   ForgeUpgradeTier,
 } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
-import BlackHoleDisc from '@/components/idle/sun/BlackHoleDisc.vue'
+import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
 import ForgeNodeTooltip from './ForgeNodeTooltip.vue'
@@ -397,7 +395,6 @@ import SunChimeBoost from './SunChimeBoost.vue'
 import KeybindChip from '@/components/keybinds/KeybindChip.vue'
 import {
   STAR_PHASE_DATA,
-  STAR_PHASE_FINAL_INDEX,
   COMET_PHASE_DATA,
   SHOP_SUN_MIN_DIAMETER,
   SHOP_SUN_MAX_DIAMETER,
@@ -435,7 +432,6 @@ import {
   FORGE_ENDLESS_SYMBOL,
   FORGE_BODY_EDGE_FRACTION,
   FORGE_SUN_EDGE_GAP,
-  FORGE_SUN_FLASH_MS,
   FORGE_SPOTLIGHT_NODE_SCALE,
   FORGE_SPOTLIGHT_DIM_OPACITY,
   FORGE_SPOTLIGHT_PING_MS,
@@ -479,10 +475,9 @@ const { detailsOpen, openDetails, closeDetails } = useForgeDetailsPane()
 const C = FORGE_STAGE_SIZE / 2
 
 /** Endphase: der Stern ist kollabiert — der Baum ist ausgewachsen, im Zentrum
- *  steht statt der Plasmascheibe das Schwarze Loch. */
-const isCollapsed = computed(
-  () => !solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
-)
+ *  steht statt der Plasmascheibe das Schwarze Loch. Nur noch für die GEOMETRIE
+ *  gelesen; welchen Körper man sieht, entscheidet `PhaseSunDisc` selbst. */
+const isCollapsed = computed(() => solarStore.isCollapsedStar)
 
 // ── Der Körper in der Mitte — seine Größe ist zugleich Geometrie ──────────────
 /* Steht VOR dem Knotenmodell, weil die Wurzel-Äste an seinem Rand ansetzen:
@@ -1178,15 +1173,13 @@ function isTooltipBelow(node: TreeNode): boolean {
 }
 
 // ── Interaction ───────────────────────────────────────────────────────────────
-const purchaseFlash = ref(false)
-
-function flashSun(): void {
-  purchaseFlash.value = true
-  // Rein visuell — kein Spielzustand hängt daran, also reale Zeit.
-  setTimeout(() => {
-    purchaseFlash.value = false
-  }, FORGE_SUN_FLASH_MS)
-}
+/*
+ * Der Kaufblitz stand hier einmal als `flashSun()` samt eigenem Schleier. Er
+ * gehört jetzt der Sonne selbst (`PhaseSunDisc`, `.sig-pulse`): hier blitzte
+ * nur die Baum-Sonne im Shop-Tab, und dieselbe Sonne im Idle-Orbit blieb
+ * stumm. Ausgelöst wird er in `solarUpgradeStore.markSignaturePulse()`, also
+ * an den Kaufwegen selbst — auch die, die nie durch dieses Panel laufen.
+ */
 
 /**
  * EINE Geste, EINE Bedeutung: **ein Klick fokussiert.** Gekauft wird erst mit
@@ -1245,7 +1238,6 @@ function handleNodeClick(node: TreeNode): void {
   // oder leerem Lager scheitert, ist keiner und darf den Fokus nicht mitnehmen.
   if (buyUpgrade(node.id)) {
     clearPin()
-    flashSun()
   }
 }
 
@@ -1914,17 +1906,6 @@ const stageStyle = computed(() => {
   }
 })
 
-/**
- * Der Kaufblitz deckt die Scheibe, die gerade steht — Komet, Plasma oder
- * Schwarzes Loch, alle drei tragen jetzt denselben `bodyDiameter`.
- * Die Dauer steht als Variable am Element, damit CSS und `flashSun()` dieselbe
- * Zahl lesen — sie wechselt nie, ist also kein Wert pro Frame.
- */
-const sunFlashVeilStyle = computed(() => {
-  const d = `${bodyDiameter.value}px`
-  return { width: d, height: d, '--sun-flash-ms': `${FORGE_SUN_FLASH_MS}ms` }
-})
-
 const nextPhasePreviewStyle = computed(() => ({
   background: `radial-gradient(circle at 38% 35%, ${nextStage.value.core} 0%, ${nextStage.value.mid} 45%, ${nextStage.value.edge} 100%)`,
   boxShadow: `0 0 40px 16px ${nextStage.value.glow1}88, 0 0 80px 30px ${nextStage.value.glow2}55`,
@@ -2194,73 +2175,14 @@ const nextPhasePreviewStyle = computed(() => ({
   pointer-events: none;
 }
 
-.tree-stage-sun {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--shop-sun-d, 200px);
-  height: var(--shop-sun-d, 200px);
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  transition: width 1.2s ease, height 1.2s ease;
-  background:
-    radial-gradient(
-      circle at 42% 38%,
-      color-mix(in srgb, white 92%, var(--phase-core, #fff)) 0%,
-      transparent 22%
-    ),
-    radial-gradient(
-      circle at 50% 50%,
-      var(--phase-core, #fff0e0) 0%,
-      var(--phase-mid, #ffd4a3) 34%,
-      var(--phase-edge, #cc5500) 52%,
-      color-mix(in srgb, var(--phase-edge, #cc5500) 45%, transparent) 70%,
-      transparent 86%
-    );
-  /* Die Korona wächst MIT dem Körper. Hier standen 90px und 180px absolut, und
-     bei 320px Scheibe las sich der Rand dadurch hart abgeschnitten — der Schein
-     ist das, was eine Sonne zur Sonne macht, und er muss im Verhältnis bleiben.
-     Beides ist ein STATISCHER Schatten; animiert sind an dieser Ebene nur
-     `transform` und `opacity` (Performance-Regel 2). */
-  box-shadow:
-    0 0 calc(var(--shop-sun-d, 200px) * 0.38)
-      color-mix(in srgb, var(--phase-glow, #ff8c42) 55%, transparent),
-    0 0 calc(var(--shop-sun-d, 200px) * 0.75)
-      color-mix(in srgb, var(--phase-glow, #ff8c42) 28%, transparent);
+/* Die Korona wächst MIT dem Körper. Fest gesetzte 90/180px lasen sich bei 320px
+   Scheibe hart abgeschnitten — der Schein ist das, was eine Sonne zur Sonne
+   macht, und er muss im Verhältnis bleiben. Beides bleibt ein STATISCHER
+   Schatten; animiert ist an der Scheibe nur `transform`/`opacity` (Regel 2). */
+:deep(.phase-sun-root) {
   z-index: 1;
-  animation: tree-sun-pulse var(--pulse-speed, 5s) ease-in-out infinite;
-}
-
-@keyframes tree-sun-pulse {
-  0%, 100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
-}
-
-/* Kaufblitz: ein heller Schleier, der nur seine Deckkraft ändert. Ein
-   `filter: brightness()` auf dem Wrapper hätte für seine 0,45 s Sonne und
-   Phasenvorschau gemeinsam auf eine eigene Rendering-Surface gezwungen —
-   dieselbe Aufhellung leistet die Ebene ohne Neurasterung
-   (Muster: ChampionOrbit.vue). */
-.sun-flash-veil {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: rgba(255, 245, 220, 0.34);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.sun-wrapper.sun-flash .sun-flash-veil {
-  animation: sun-flash-veil var(--sun-flash-ms, 450ms) ease-out;
-}
-
-@keyframes sun-flash-veil {
-  0%   { opacity: 0; }
-  35%  { opacity: 1; }
-  100% { opacity: 0; }
+  --sun-corona-a: calc(var(--shop-sun-d, 200px) * 0.38);
+  --sun-corona-b: calc(var(--shop-sun-d, 200px) * 0.75);
 }
 
 .next-phase-preview {
@@ -3002,10 +2924,6 @@ const nextPhasePreviewStyle = computed(() => ({
   .node-circle--ready .node-glow {
     animation: none;
     opacity: 1;
-  }
-
-  .sun-wrapper.sun-flash .sun-flash-veil {
-    animation: none;
   }
 
   /* Dieselbe Falle wie oben, schärfer: der Ping trägt `forwards` und endete bei

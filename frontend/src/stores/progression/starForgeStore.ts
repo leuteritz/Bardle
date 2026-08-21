@@ -11,6 +11,7 @@ import { useProvidenceStore } from '@/stores/progression/providenceStore'
 // und Actions — auf Modulebene berühren sich die beiden nicht. Dasselbe Muster
 // trägt bereits `voidStore ↔ inventoryStore`.
 import { useVoidStore } from '@/stores/world/voidStore'
+import { forgeNodeAxis } from '@/utils/game/solarSignature'
 import type {
   ForgeActiveBuff,
   ForgeBargainDef,
@@ -1765,6 +1766,7 @@ export const useStarForgeStore = defineStore('starForge', {
         if (id === 'adamantCore') usePlayerStore().maxHP += def.effectPerLevel
       }
       this.recalcRates()
+      useSolarUpgradeStore().markSignaturePulse(forgeNodeAxis(id) ?? null)
       return true
     },
 
@@ -1781,6 +1783,9 @@ export const useStarForgeStore = defineStore('starForge', {
         usePlayerStore().maxHP += def.effectPerLevel
       }
       this.recalcRates()
+      // Achslos: ein Relikt nennt keinen `parentId`, sondern `requires` — es
+      // einer Achse zuzuschlagen wäre geraten. Es speist die Grundsignatur.
+      useSolarUpgradeStore().markSignaturePulse(null)
       return true
     },
 
@@ -1794,6 +1799,7 @@ export const useStarForgeStore = defineStore('starForge', {
       gameStore.chimes -= def.goldCost
       this.forgedConstellations.push(id)
       this.recalcRates()
+      useSolarUpgradeStore().markSignaturePulse(null)
       return true
     },
 

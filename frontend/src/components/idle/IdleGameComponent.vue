@@ -140,9 +140,7 @@ export default defineComponent({
     const solarStore = useSolarUpgradeStore()
 
     /** Endphase: der Stern ist kollabiert — der Klickschein wird zum Ring. */
-    const isCollapsed = computed(
-      () => !solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
-    )
+    const isCollapsed = computed(() => solarStore.isCollapsedStar)
 
     /** Comet state: desaturate the gold aura by the un-gilded remainder. */
     const auraStageStyle = computed(() => {

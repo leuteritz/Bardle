@@ -33,6 +33,7 @@ import {
   FLIGHT_LINE_REACH_VARIANTS,
   FLIGHT_LINE_REACH_STEP,
 } from '@/config/constants'
+import { wakeSignatureBonus } from '@/utils/game/solarSignature'
 
 /**
  * Flight wake around the player's celestial body: the viewer sits behind the
@@ -70,7 +71,10 @@ export default defineComponent({
         '--line-color': isComet
           ? COMET_PHASE_DATA.glow
           : STAR_PHASE_DATA[solarStore.starPhase].phaseGlow,
-        '--line-power': `${1 + stage * FLIGHT_LINE_STAGE_BONUS}`,
+        // Der Sonnenwind ist die Flugachse der Signatur: die Phase gibt den
+        // Grundton, die gekauften Stufen legen darauf. Die ZAHL der Linien
+        // bleibt bei FLIGHT_LINE_COUNT — was waechst, ist ihre Kraft.
+        '--line-power': `${1 + stage * FLIGHT_LINE_STAGE_BONUS + wakeSignatureBonus(solarStore.solarSignature)}`,
         '--line-start-r': `${props.diameter * 0.4}px`,
         '--line-grow': `${FLIGHT_LINE_GROW_SCALE}`,
         '--line-thick': `${FLIGHT_LINE_THICKNESS}px`,

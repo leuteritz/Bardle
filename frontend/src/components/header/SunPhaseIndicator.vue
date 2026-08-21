@@ -5,7 +5,6 @@ import { useUiStore } from '@/stores/core/uiStore'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
-  STAR_PHASE_FINAL_INDEX,
   MS_PER_SECOND,
   STAR_EVOLUTION_TOOLTIP_WIDTH,
   HEADER_STAT_TOOLTIP_GAP_PX,
@@ -21,9 +20,7 @@ const uiStore = useUiStore()
 const isComet = computed(() => solarStore.isCometState)
 
 /** Endphase: der Orb zeigt kein Plasma mehr, sondern das Schwarze Loch. */
-const isCollapsed = computed(
-  () => !isComet.value && solarStore.starPhase >= STAR_PHASE_FINAL_INDEX,
-)
+const isCollapsed = computed(() => solarStore.isCollapsedStar)
 
 const phaseData = computed(() =>
   isComet.value ? COMET_PHASE_DATA : STAR_PHASE_DATA[solarStore.starPhase],

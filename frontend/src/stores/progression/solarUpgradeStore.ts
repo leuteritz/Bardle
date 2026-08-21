@@ -6,6 +6,8 @@ import { useCpsStore } from '@/stores/core/cpsStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
+import { solarSignatureFrom } from '@/utils/game/solarSignature'
+import type { ForgeAxisId, SolarSignature } from '@/types'
 import {
   SOLAR_FLIGHT_BASE_COST,
   SOLAR_FLIGHT_MULTIPLIER,
@@ -83,6 +85,22 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
      *  Deliberately not persisted (see usePersistence's explicit solar field
      *  list): reloading into the black hole must not replay the explosion. */
     supernovaTrigger: 0 as number,
+    /**
+     * Der Kaufblitz auf der Sonne — hochgezählt bei JEDEM Kauf, der die
+     * Signatur speist. Dasselbe Muster wie `supernovaTrigger`, aus demselben
+     * Grund nicht persistiert: ein Reload darf keinen Blitz nachholen.
+     *
+     * Er liegt hier und nicht im Forge-Panel, weil der Idle-Orbit ihn sonst
+     * nie sieht — der Panel-eigene `flashSun()` blitzte nur im Shop-Tab.
+     */
+    signaturePulseSeq: 0 as number,
+    /** Die Achse, deren Farbe der Blitz trägt. `null` heisst GEMISCHT und
+     *  zeigt die Phasenfarbe: bei einem Sammelkauf über mehrere Achsen wäre
+     *  „die Farbe des letzten Kaufs" eine willkürliche Auskunft. */
+    signaturePulseAxis: null as ForgeAxisId | null,
+    /** Bis wohin die Sonne den Blitz schon abgeholt hat — die Grenze, an der
+     *  ein Stapel endet und die nächste Achse wieder allein zählt. */
+    signaturePulseSeenSeq: 0 as number,
   }),
 
   getters: {
@@ -111,6 +129,46 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
         state.chimesPerSecondLevel,
         state.dmgPerClickLevel,
       ].filter((l) => l >= 1).length
+    },
+
+    /** Der Stern ist kollabiert — ein Schwarzes Loch, keine Plasmascheibe.
+     *  Stand vor diesem Getter siebenmal wortgleich im Code. */
+    isCollapsedStar(state): boolean {
+      return !state.isCometState && state.starPhase >= STAR_PHASE_FINAL_INDEX
+    },
+
+    /**
+     * Was der Wächter in seine Sonne gesteckt hat, als Zahl je Achse.
+     *
+     * Ein Getter und kein Feld: die Stufen liegen ohnehin im Spielstand, ein
+     * zweiter Zähler daneben liefe beim ersten Admin-Eingriff auseinander.
+     * Als Computed rechnet er ausserdem erst beim LESEN neu — ein Sammelkauf
+     * über mehrere hundert Stufen kostet damit eine Neuberechnung, nicht
+     * dreihundert.
+     */
+    solarSignature(state): SolarSignature {
+      const forge = useStarForgeStore()
+      return solarSignatureFrom({
+        rayLevels: {
+          flightSpeed: state.flightSpeedLevel,
+          maxHp: state.maxHpLevel,
+          chimesPerClick: state.chimesPerClickLevel,
+          chimesPerSecond: state.chimesPerSecondLevel,
+          dmgPerClick: state.dmgPerClickLevel,
+        },
+        nodeLevelBags: [
+          forge.branchLevels,
+          forge.leafLevels,
+          forge.wardLevels,
+          forge.pactLevels,
+          forge.boughLevels,
+          forge.crownLevels,
+          forge.glimmerLevels,
+        ],
+        relicLevels: Object.values(forge.relicLevels).reduce((sum, l) => sum + l, 0),
+        constellationCount: forge.forgedConstellations.length,
+        totalPrestiges: useGameStore().totalPrestiges,
+      })
     },
 
     minBranchLevel(state): number {
@@ -370,6 +428,29 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       if (id === 'chimesPerSecond' || id === 'flightSpeed') {
         useCpsStore().updateCurrentCPS(gameStore.chimesPerSecond)
       }
+
+      this.markSignaturePulse(id)
+    },
+
+    /**
+     * Ein Kauf ist auf der Sonne angekommen.
+     *
+     * Der Zähler bündelt sich von selbst — Vue verrechnet dreihundert
+     * Inkremente in einem Tick zu EINEM Watcher-Lauf. Was nicht von selbst
+     * geht, ist die FARBE: trifft ein Sammelkauf mehrere Achsen, fällt sie auf
+     * `null` und der Blitz zeigt die Phasenfarbe. „Die Achse des letzten
+     * Knotens" wäre sonst eine Auskunft, die niemand so gemeint hat.
+     */
+    markSignaturePulse(axis: ForgeAxisId | null): void {
+      const pending = this.signaturePulseSeq > this.signaturePulseSeenSeq
+      this.signaturePulseAxis = pending && this.signaturePulseAxis !== axis ? null : axis
+      this.signaturePulseSeq++
+    },
+
+    /** Die Sonne hat den Blitz abgeholt — ab hier gilt die nächste Achse
+     *  wieder als erste ihres Stapels. */
+    ackSignaturePulse(): void {
+      this.signaturePulseSeenSeq = this.signaturePulseSeq
     },
 
     upgradeStar(): void {
