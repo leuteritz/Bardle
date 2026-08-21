@@ -30,8 +30,8 @@ const treeHoverId = ref<string | null>(null)
  *
  * Damit ändert sich sein Charakter: er ist kein flüchtiger Griff mehr, sondern
  * die Auswahl, mit der der Spieler arbeitet. Gelöst wird sie deshalb nur noch
- * AUSDRÜCKLICH — Escape, ein Klick auf die leere Bühne, das Kreuz der
- * Fokusleiste oder ein geglückter Kauf. Ein zweiter Klick auf dasselbe Upgrade
+ * AUSDRÜCKLICH — Escape, ein Klick auf die leere Bühne oder ein geglückter
+ * Kauf. Ein zweiter Klick auf dasselbe Upgrade
  * löst NICHT; er holt es nur zurück ins Bild (siehe `focusNode`).
  */
 const pinnedId = ref<string | null>(null)
@@ -40,9 +40,9 @@ const pinnedId = ref<string | null>(null)
  * „Zeig ihn mir nochmal" — als Impuls, nicht als Zustand.
  *
  * Baum und Liste holen den fokussierten Knoten ins Bild, wenn `pinnedId`
- * WECHSELT. Genau das tut es aber nicht, wenn der Spieler dieselbe Zeile noch
- * einmal anklickt oder das Fadenkreuz der Fokusleiste drückt — und beides heißt
- * „hol ihn her". Ein Zähler ist die kleinste Form dafür: er trägt keinen Wert,
+ * WECHSELT. Genau das tut es aber nicht, wenn der Spieler dieselbe Zeile oder
+ * denselben Knoten noch einmal anklickt — und das heißt „hol ihn her". Ein
+ * Zähler ist die kleinste Form dafür: er trägt keinen Wert,
  * nur ein Ereignis, und jeder Leser entscheidet selbst, was er damit tut.
  */
 const focusTick = ref(0)

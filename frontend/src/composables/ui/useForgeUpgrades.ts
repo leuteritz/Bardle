@@ -207,67 +207,6 @@ export function forgeLevelParts(level: number, maxLevel: number): { big: string;
   }
 }
 
-/**
- * Was die Fokusleiste über den festgehaltenen Knoten wissen muss — und nicht
- * mehr.
- *
- * Warum nicht schlicht `entryById.value.get(id)`: `useForgeUpgrades()` ist eine
- * FABRIK. Jeder Aufruf baut eigene Computeds über hundertfünfundfünfzig
- * Einträge, jeder davon mit Kostenrechnung, Sperrgrund, Materialliste und
- * Bedingungsliste — und die hängen an den Chimes, ticken also jede Sekunde neu.
- * Vier Instanzen laufen bereits (Baum, Liste, Griffleiste, Sammelkauf); eine
- * fünfte für EINEN Namen und EINE Stufe wäre der teuerste Weg zur billigsten
- * Auskunft.
- *
- * Stattdessen zwei Nachschläge in O(1) — `getForgeNode` ist eine Map, die fünf
- * Kernstrahlen sind eine Liste der Länge fünf. Dieselbe Weiche wie zwischen
- * `rootEntry` und `nodeEntry` weiter unten, nur ohne alles, was Geld kostet.
- *
- * `null` bei unbekannter Id: der Fokus kann auf einem Knoten stehen, den es
- * nicht gibt, wenn ein Katalog-Eintrag zwischen zwei Ständen umbenannt wurde.
- * Die Leiste zeigt dann ihren Leer-Zustand statt einer leeren Zeile.
- */
-export interface ForgeFocusMeta {
-  id: string
-  name: string
-  icon: string
-  color: string
-  tierLabel: string
-  level: number
-  maxLevel: number
-}
-
-export function forgeFocusMeta(id: string | null): ForgeFocusMeta | null {
-  if (id === null) return null
-
-  const def = getForgeNode(id)
-  if (def) {
-    const forgeStore = useStarForgeStore()
-    return {
-      id,
-      name: def.name,
-      icon: def.icon,
-      color: def.color,
-      tierLabel: FORGE_UPGRADE_TIER_LABELS[def.tier],
-      level: forgeStore.nodeLevel(id),
-      maxLevel: forgeStore.nodeMaxLevel(id),
-    }
-  }
-
-  const root = SOLAR_BRANCHES.find((branch) => branch.id === id)
-  if (!root) return null
-  const solarStore = useSolarUpgradeStore()
-  return {
-    id,
-    name: root.name,
-    icon: root.icon,
-    color: root.color,
-    tierLabel: FORGE_UPGRADE_TIER_LABELS.root,
-    level: solarStore.branchLevel(root.id),
-    maxLevel: SOLAR_MAX_LEVELS,
-  }
-}
-
 /** Ganze Zahlen bleiben ganz, gebrochene bekommen eine Nachkommastelle. */
 function trimNumber(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1)

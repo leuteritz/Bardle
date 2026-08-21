@@ -529,8 +529,8 @@ watch(pinnedId, scrollToFocus)
 
 /**
  * „Zeig ihn mir nochmal" — dasselbe Rollen, ohne dass sich der Fokus geändert
- * hat. Ein zweiter Klick auf dieselbe Zeile oder das Fadenkreuz der Fokusleiste
- * kommen hier an; im Baum drüben hört derselbe Impuls auf die Kamera.
+ * hat. Ein zweiter Klick auf dieselbe Zeile oder denselben Knoten kommt hier
+ * an; im Baum drüben hört derselbe Impuls auf die Kamera.
  */
 watch(focusTick, scrollToFocus)
 

@@ -6,15 +6,8 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { meetForgeRequirements, setForgeLevel } from '@/__tests__/forgeTestUtils'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
-import {
-  FORGE_RELICS,
-  FORGE_CONSTELLATIONS,
-  FORGE_BARGAINS,
-} from '@/config/progression/starForge'
-import {
-  FORGE_VAULT_FUSED_BADGE,
-  FORGE_VAULT_MAX_BADGE,
-} from '@/config/constants'
+import { FORGE_RELICS, FORGE_CONSTELLATIONS, FORGE_BARGAINS } from '@/config/progression/starForge'
+import { FORGE_VAULT_FUSED_BADGE, FORGE_VAULT_MAX_BADGE } from '@/config/constants'
 
 /**
  * `useForgeOffers` entscheidet, was der Spieler von Relikten, Konstellationen
@@ -88,7 +81,8 @@ describe('useForgeOffers — Vollständigkeit', () => {
     expect(new Set(ids).size, 'ein Eintrag steht doppelt').toBe(ids.length)
 
     for (const relic of FORGE_RELICS) expect(ids, `Relikt ${relic.id} fehlt`).toContain(relic.id)
-    for (const con of FORGE_CONSTELLATIONS) expect(ids, `Konstellation ${con.id} fehlt`).toContain(con.id)
+    for (const con of FORGE_CONSTELLATIONS)
+      expect(ids, `Konstellation ${con.id} fehlt`).toContain(con.id)
   })
 
   it('führt jeden Katalogeintrag genau einmal, wenn alles offen und bezahlt ist', () => {
@@ -98,8 +92,14 @@ describe('useForgeOffers — Vollständigkeit', () => {
     fillPurse()
     stockBargain()
 
-    const { offers, vaultEntries } = useForgeOffers()
-    const ids = [...offers.value.map((o) => o.id), ...vaultEntries.value.map((v) => v.id)]
+    const { offers, bargainOffer, vaultEntries } = useForgeOffers()
+    // Der Handel steht nicht mehr im Streifen, gehört aber zum Bestand: ohne
+    // ihn zählte diese Rechnung einen Katalog weniger, als der Spieler sieht.
+    const ids = [
+      ...offers.value.map((o) => o.id),
+      ...(bargainOffer.value ? [bargainOffer.value.id] : []),
+      ...vaultEntries.value.map((v) => v.id),
+    ]
     expect(new Set(ids).size).toBe(ids.length)
     expect(ids).toHaveLength(FORGE_RELICS.length + FORGE_CONSTELLATIONS.length + 1)
     expect(forge.activeDeal).not.toBeNull()
@@ -109,9 +109,9 @@ describe('useForgeOffers — Vollständigkeit', () => {
     unlockRelic()
     unlockConstellation()
     stockBargain()
-    const { offers } = useForgeOffers()
+    const { offers, bargainOffer } = useForgeOffers()
 
-    for (const offer of offers.value) {
+    for (const offer of [...offers.value, bargainOffer.value].filter((o) => o !== null)) {
       expect(offer.name.length, `${offer.id} hat keinen Namen`).toBeGreaterThan(0)
       expect(offer.icon, `${offer.id} hat kein Zeichen`).toMatch(/^[a-z0-9-]+:[a-z0-9-]+$/)
       expect(offer.verb.length, `${offer.id} hat kein Verb`).toBeGreaterThan(0)
@@ -224,43 +224,54 @@ describe('useForgeOffers — Erscheinen hängt an der Freischaltung', () => {
     const offer = offers.value.find((o) => o.id === CONSTELLATION.id)
     expect(offer?.reqs).toHaveLength(2)
     expect(offer?.reqs.every((req) => req.met)).toBe(true)
-    expect(offer?.reqs.map((req) => req.id)).toEqual(
-      CONSTELLATION.requires.map((req) => req.id),
-    )
+    expect(offer?.reqs.map((req) => req.id)).toEqual(CONSTELLATION.requires.map((req) => req.id))
   })
 })
 
 describe('useForgeOffers — der Handel', () => {
-  it('steht immer als erste Zeile, auch wenn er unbezahlbar ist', () => {
+  it('steht immer bereit, auch wenn er unbezahlbar ist', () => {
+    unlockRelic()
+    fillPurse()
+    stockBargain()
+    const { bargainOffer } = useForgeOffers()
+
+    expect(bargainOffer.value?.kind).toBe('bargain')
+    expect(bargainOffer.value?.restockMs).not.toBeNull()
+
+    emptyPurse()
+    expect(bargainOffer.value?.kind).toBe('bargain')
+  })
+
+  /* Er hat seinen eigenen Platz im festen Kopf der Spalte (`ForgeBargainBar`).
+     Stünde er wieder im Streifen, rollte ausgerechnet das eine Angebot mit
+     einer ablaufenden Uhr wieder aus dem Bild — und dieser Fall fiele sonst
+     niemandem auf. */
+  it('steht NICHT im Streifen', () => {
     unlockRelic()
     fillPurse()
     stockBargain()
     const { offers } = useForgeOffers()
 
-    expect(offers.value[0]?.kind).toBe('bargain')
-    expect(offers.value[0]?.restockMs).not.toBeNull()
-
-    emptyPurse()
-    expect(offers.value[0]?.kind).toBe('bargain')
+    expect(offers.value.map((o) => o.kind)).not.toContain('bargain')
   })
 
   it('trägt als ID das AUSLIEGENDE Angebot, nicht die Abteilung', () => {
     stockBargain()
     const forge = useStarForgeStore()
-    const { offers } = useForgeOffers()
+    const { bargainOffer } = useForgeOffers()
 
-    expect(offers.value[0]?.id).toBe(forge.bargainDealId)
-    expect(FORGE_BARGAINS.map((b) => b.id)).toContain(offers.value[0]?.id)
+    expect(bargainOffer.value?.id).toBe(forge.bargainDealId)
+    expect(FORGE_BARGAINS.map((b) => b.id)).toContain(bargainOffer.value?.id)
   })
 
   it('meldet sich als verkauft, statt einen toten Kaufknopf zu zeigen', () => {
     stockBargain()
     const forge = useStarForgeStore()
     forge.bargainPurchased = true
-    const { offers } = useForgeOffers()
+    const { bargainOffer } = useForgeOffers()
 
-    expect(offers.value[0]?.sold).toBe(true)
-    expect(offers.value[0]?.ready).toBe(false)
+    expect(bargainOffer.value?.sold).toBe(true)
+    expect(bargainOffer.value?.ready).toBe(false)
   })
 })
 
@@ -275,11 +286,10 @@ describe('useForgeOffers — Reihenfolge', () => {
     stockBargain()
 
     const { offers } = useForgeOffers()
-    const rest = offers.value.filter((o) => o.kind !== 'bargain')
-    const firstSaving = rest.findIndex((o) => !o.ready)
+    const firstSaving = offers.value.findIndex((o) => !o.ready)
     if (firstSaving === -1) return
     expect(
-      rest.slice(firstSaving).some((o) => o.ready),
+      offers.value.slice(firstSaving).some((o) => o.ready),
       'nach der ersten sparenden Zeile darf keine kaufbare mehr kommen',
     ).toBe(false)
   })
@@ -304,6 +314,23 @@ describe('useForgeOffers — Kaufen', () => {
 
     expect(buyOffer(CONSTELLATION.id)).toBe(true)
     expect(forge.constellationForged(CONSTELLATION.id)).toBe(true)
+  })
+
+  /* Der Handel steht nicht mehr in `offers`, wohl aber in `offerById` — und
+     genau dort schlägt `buyOffer` nach. Fiele er aus der Karte, gäbe es keinen
+     Fehler, nur einen Kaufknopf, der nichts tut. */
+  it('kauft den Handel, obwohl er nicht im Streifen steht', () => {
+    fillPurse()
+    const forge = useStarForgeStore()
+    // NICHT `stockBargain()`: der würfelt, und ein Rift-Purge wäre ohne Wesen im
+    // Feld zu Recht nicht kaufbar. Ein Segen hängt an nichts ausser dem Preis.
+    forge.bargainDealId = FORGE_BARGAINS.find((b) => b.kind === 'buff')!.id
+    forge.bargainPurchased = false
+    const { offers, buyOffer } = useForgeOffers()
+
+    expect(offers.value.map((o) => o.id)).not.toContain(forge.bargainDealId)
+    expect(buyOffer(forge.bargainDealId)).toBe(true)
+    expect(forge.bargainPurchased).toBe(true)
   })
 
   it('kauft nichts, was der Streifen gar nicht führt', () => {

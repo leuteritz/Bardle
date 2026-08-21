@@ -59,8 +59,10 @@ import {
  *   • Relikt        — im Streifen, sobald `relicRequirementMet` und nicht maxed
  *   • Konstellation — im Streifen, sobald `constellationRequirementMet` und
  *                     nicht fusioniert
- *   • Handel        — IMMER im Streifen; er ist der einzige mit einer laufenden
- *                     Uhr, und die soll man sehen, ohne etwas zu öffnen
+ *   • Handel        — gar nicht im Streifen, sondern als `bargainOffer` im
+ *                     festen Kopf der Spalte (`ForgeBargainBar`): er ist der
+ *                     einzige mit einer laufenden Uhr, und die soll man sehen,
+ *                     ohne zu rollen
  *
  * Alles andere sinkt ins Archiv. Ganz wegzulassen ging nicht: der
  * Fortschrittsbalken „Moon Orbit 2/3" ist die einzige Auskunft, auf die der
@@ -128,6 +130,7 @@ export function useForgeOffers(): {
   offers: ComputedRef<ForgeOffer[]>
   offerById: ComputedRef<Map<string, ForgeOffer>>
   vaultEntries: ComputedRef<ForgeVaultEntry[]>
+  bargainOffer: ComputedRef<ForgeOffer | null>
   bargainExtras: ComputedRef<ForgeBargainExtras>
   freshIds: ComputedRef<Set<string>>
   buyOffer: (id: string) => boolean
@@ -278,12 +281,14 @@ export function useForgeOffers(): {
 
   // ── Der kosmische Handel ───────────────────────────────────────────────────
   /**
-   * Immer genau eine Zeile — auch wenn gerade nichts ausliegt.
+   * Die EINE Zeile des festen Kopfes, getrennt von `offers`.
    *
-   * Der Handel ist die einzige Dauerzeile des Streifens. Ohne ihn spränge der
-   * Streifen in der Höhe, sobald das letzte Relikt gekauft ist, und die Uhr
-   * hätte im ganzen Tab keinen Ort mehr (sie hing bis zum Umbau an der
-   * Fußkachel der Rail).
+   * Er war die erste Zeile des Streifens und rollte dort weg — ausgerechnet das
+   * einzige Angebot mit einer ablaufenden Uhr. Jetzt steht er über allem
+   * (`ForgeBargainBar`), und die Trennung an dieser Stelle ist der Grund, warum
+   * der Streifen darunter nichts davon wissen muss.
+   *
+   * In `offerById` bleibt er trotzdem: `buyOffer(id)` schlägt dort nach.
    */
   const bargainOffer = computed<ForgeOffer | null>(() => {
     const def = forgeStore.activeDeal
@@ -332,7 +337,9 @@ export function useForgeOffers(): {
 
   // ── Die Reihenfolge des Streifens ──────────────────────────────────────────
   /**
-   * Der Handel führt, dann alles Kaufbare, dann was noch spart.
+   * Erst alles Kaufbare, dann was noch spart — Relikte und Konstellationen.
+   *
+   * Der Handel steht NICHT darin; er hat seinen eigenen Platz über der Spalte.
    *
    * Innerhalb der beiden Töpfe bleibt die Katalogreihenfolge stehen: sie ändert
    * sich nie, während die Kaufbarkeit mit jedem Chime-Tick kippen kann. Sortiert
@@ -341,15 +348,21 @@ export function useForgeOffers(): {
    */
   const offers = computed<ForgeOffer[]>(() => {
     const rest = [...relicOffers.value, ...constellationOffers.value]
-    const deal = bargainOffer.value
-    return [
-      ...(deal ? [deal] : []),
-      ...rest.filter((offer) => offer.ready),
-      ...rest.filter((offer) => !offer.ready),
-    ]
+    return [...rest.filter((offer) => offer.ready), ...rest.filter((offer) => !offer.ready)]
   })
 
-  const offerById = computed(() => new Map(offers.value.map((offer) => [offer.id, offer])))
+  /**
+   * Alles Kaufbare unter seiner ID — der Streifen UND der Handel.
+   *
+   * Er ist weiter drin, obwohl er nicht mehr in `offers` steht: `buyOffer(id)`
+   * schlägt hier nach, und ein Kauf, der die Art des Angebots erst am Eintrag
+   * abliest, braucht ihn.
+   */
+  const offerById = computed(() => {
+    const deal = bargainOffer.value
+    const all = deal ? [...offers.value, deal] : offers.value
+    return new Map(all.map((offer) => [offer.id, offer]))
+  })
 
   // ── Das Archiv ─────────────────────────────────────────────────────────────
   /**
@@ -366,10 +379,9 @@ export function useForgeOffers(): {
        Balken. Vorher las der Relikt-Zweig zwei Felder direkt am Katalogeintrag
        und der Konstellations-Zweig zwei feste Knoten — zwei Fassungen fuer
        dieselbe Zeile. */
-    const vaultRow = (reqs: ForgeOfferReq[]): Pick<
-      ForgeVaultEntry,
-      'lockReason' | 'reqLine' | 'have' | 'need' | 'progress'
-    > => {
+    const vaultRow = (
+      reqs: ForgeOfferReq[],
+    ): Pick<ForgeVaultEntry, 'lockReason' | 'reqLine' | 'have' | 'need' | 'progress'> => {
       const weakest = weakestReq(reqs)
       return {
         lockReason: `${FORGE_VAULT_LOCK_PREFIX} ${weakest.name} ${FORGE_VAULT_LOCK_INFIX} ${weakest.need}`,
@@ -480,6 +492,7 @@ export function useForgeOffers(): {
     offers,
     offerById,
     vaultEntries,
+    bargainOffer,
     bargainExtras,
     freshIds,
     buyOffer,

@@ -113,12 +113,24 @@ import {
   FORGE_OFFER_WARES_LABEL,
 } from '@/config/constants'
 
-/** Die Kanten kommen fertig vom Aufrufer — gemessen wird nie hier. */
-const props = defineProps<{
-  offer: ForgeOffer | null
-  anchor: ForgeRowTipAnchor | null
-  extras: ForgeBargainExtras
-}>()
+/**
+ * Die Kanten kommen fertig vom Aufrufer — gemessen wird nie hier.
+ *
+ * `extras` ist optional, seit der Handel nicht mehr im Streifen steht: gelesen
+ * wird es ausschliesslich im `kind === 'bargain'`-Zweig, und dorthin kommt nur
+ * noch die Leiste im Kopf. Der Streifen soll nichts über den Handel wissen
+ * müssen, um seine Relikte zu beschreiben.
+ */
+const props = withDefaults(
+  defineProps<{
+    offer: ForgeOffer | null
+    anchor: ForgeRowTipAnchor | null
+    extras?: ForgeBargainExtras
+  }>(),
+  {
+    extras: () => ({ rewards: [], costs: [], wares: [], basePrice: 0, goldReward: 0 }),
+  },
+)
 
 /**
  * Die Ausrichtung braucht die eigene Höhe NICHT: liegt die Zeile in der oberen

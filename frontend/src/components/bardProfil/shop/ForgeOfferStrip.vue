@@ -1,8 +1,13 @@
 <template>
   <!-- Ein einziges `mouseleave` am Rahmen statt eines je Zeile: zwischen zwei
        Zeilen liegen 8px Lücke, und ein Handler je Eintrag ließe die Klammer bei
-       jedem Übergang kurz aufgehen — samt neu einsortierter Reihenfolge. -->
-  <section ref="wrapEl" class="fos" @mouseleave="leaveStrip">
+       jedem Übergang kurz aufgehen — samt neu einsortierter Reihenfolge.
+
+       Ganz weg, wenn nichts erreichbar ist. Der Handel war die Dauerzeile, die
+       das früher unmöglich machte; seit er im festen Kopf steht, kann der
+       Streifen leer sein — und ein „WITHIN REACH 0" über nichts wäre schlimmer
+       als kein Streifen. -->
+  <section v-if="shown.length > 0" ref="wrapEl" class="fos" @mouseleave="leaveStrip">
     <header class="fos-head">
       <Icon :icon="FORGE_OFFER_ICON" width="17" height="17" class="fos-head-ico" />
       <span class="fos-head-label">{{ FORGE_OFFER_TITLE }}</span>
@@ -10,31 +15,37 @@
       <span class="fos-head-rule" />
     </header>
 
+    <!-- `can-reroll` ist hier fest falsch: der Wurf gehört zum Handel, und den
+         führt dieser Streifen nicht mehr. Die Zeile zeigt den Knopf ohnehin nur
+         für `kind === 'bargain'`. -->
     <TransitionGroup name="fos-pop" tag="div" class="fos-list">
       <ForgeOfferRow
         v-for="offer in shown"
         :key="offer.id"
         :offer="offer"
         :fresh="freshIds.has(offer.id)"
-        :can-reroll="canReroll"
+        :can-reroll="false"
         @buy="handleBuy"
         @hover="enterRow"
-        @reroll="rerollBargain"
       />
     </TransitionGroup>
 
     <!-- Die volle Auskunft zur Zeile unter dem Zeiger. Geschwister des Streifens
          und `position: fixed` — läge es IN ihm, schöbe sein Erscheinen die Reihe
          unter dem Zeiger weg, und der Hover ginge im selben Zug wieder aus. -->
-    <ForgeOfferTooltip :offer="tipOffer" :anchor="tipAnchor" :extras="bargainExtras" />
+    <ForgeOfferTooltip :offer="tipOffer" :anchor="tipAnchor" />
   </section>
 </template>
 
 <script setup lang="ts">
 /**
  * Was die Star Forge JETZT hergibt, ohne dass man den Baum anfassen müsste —
- * Relikte, Konstellationen und der kosmische Handel als Zeilen ganz oben in der
- * Detailspalte.
+ * Relikte und Konstellationen als Zeilen über der Upgrade-Liste.
+ *
+ * Der kosmische Handel stand hier einmal als erste Zeile und rollte mit dem
+ * Streifen weg; er hat seinen eigenen Platz im festen Kopf der Spalte
+ * (`ForgeBargainBar`). Seither kann dieser Streifen leer sein und verschwindet
+ * dann ganz.
  *
  * Sie lagen bis zum Umbau hinter je einem Reiter der Abteilungs-Rail
  * (`ForgeSectionRail`, gestrichen). Warum das nicht trug und was die
@@ -69,8 +80,7 @@ import {
 } from '@/config/constants'
 
 const forgeStore = useStarForgeStore()
-const { offers, offerById, bargainExtras, freshIds, buyOffer, rerollBargain, canReroll } =
-  useForgeOffers()
+const { offers, offerById, freshIds, buyOffer } = useForgeOffers()
 
 // ── Eingefrorene Reihenfolge ─────────────────────────────────────────────────
 const frozenIds = ref<string[] | null>(null)

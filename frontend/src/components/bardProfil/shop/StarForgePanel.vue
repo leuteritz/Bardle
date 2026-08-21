@@ -1,7 +1,14 @@
 <template>
   <div class="sf-panel">
-    <!-- Laufende Segen des Händlers stehen über allem: sie sind das Einzige in
-         dieser Spalte mit einer Uhr, die abläuft, ohne dass man etwas tut. -->
+    <!-- Der Handel steht über allem, und zwar nicht als Rangfolge, sondern als
+         Ruhe: er ist das einzige DAUERHAFTE Stück dieses Kopfes. Die beiden
+         Leisten darunter sind bedingt — läge er unter ihnen, spränge sein
+         Kaufknopf jedes Mal weg, wenn eine von ihnen erscheint. -->
+    <ForgeBargainBar />
+
+    <!-- Laufende Segen des Händlers: das Einzige in dieser Spalte mit einer Uhr,
+         die abläuft, ohne dass man etwas tut — und oft genug das, was der Handel
+         eine Zeile höher eben verkauft hat. -->
     <div v-if="activeBuffs.length > 0" class="sf-buffs">
       <div v-for="buff in activeBuffs" :key="buff.id" class="blessing-chip">
         <Icon icon="ph:sparkle-fill" width="17" height="17" class="blessing-icon" />
@@ -19,13 +26,6 @@
          auf- oder zumacht. Stünde es oben, ruckte die Segensreihe bei jeder
          Schwelle mit. -->
     <ForgeBuyAllBar />
-
-    <!-- Was gerade festgehalten ist. Sie steht ÜBER dem Rollfeld und rollt
-         nicht mit: die Frage „was habe ich gewählt" stellt sich gerade dann,
-         wenn die zugehörige Zeile weggerollt ist. Feste Höhe, auch ohne
-         Auswahl — sonst schöbe jeder Klick die Liste um ihre Höhe, also genau
-         die Zeile, die der Spieler eben getroffen hat. -->
-    <ForgeFocusBar />
 
     <!-- ══ Scrolling body ════════════════════════════════════════
          Drei Blöcke, in der Reihenfolge, in der der Spieler sie braucht: was
@@ -60,16 +60,23 @@
  * 18px-Marke an einem Reiter, den der Spieler nicht offen hatte.
  *
  * Jetzt steht alles gleichzeitig da, und diese Komponente ist nur noch der
- * Rahmen darum: die laufenden Segen oben fest, darunter ein Scrollfeld mit den
- * drei Blöcken. Was sie zeigen, steht in ihnen selbst; was sie rechnen, in
+ * Rahmen darum: ein fester Kopf aus drei Leisten, darunter ein Scrollfeld mit
+ * den drei Blöcken. Was sie zeigen, steht in ihnen selbst; was sie rechnen, in
  * `useForgeOffers` und `useForgeUpgrades`.
+ *
+ * ── Die Reihenfolge des Kopfes ──────────────────────────────────────────────
+ * Nach Beständigkeit sortiert, nicht nach Wichtigkeit: Handel, Segen,
+ * Sammelkauf. Der Handel steht IMMER, die Segen wechseln stündlich, der
+ * Sammelkauf sooft die Chimes eine Kaufschwelle kreuzen — also ständig. Was
+ * häufig umschaltet, gehört nach unten, denn von dort schiebt es nur die Liste,
+ * die im selben Frame ohnehin ihren `READY TO GROW`-Block auf- oder zumacht.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { formatClock } from '@/utils/ui/format'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import ForgeBargainBar from './ForgeBargainBar.vue'
 import ForgeBuyAllBar from './ForgeBuyAllBar.vue'
-import ForgeFocusBar from './ForgeFocusBar.vue'
 import ForgeOfferStrip from './ForgeOfferStrip.vue'
 import ForgeUpgradesSection from './ForgeUpgradesSection.vue'
 import ForgeVaultSection from './ForgeVaultSection.vue'

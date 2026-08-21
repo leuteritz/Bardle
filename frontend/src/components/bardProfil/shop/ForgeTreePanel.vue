@@ -1827,8 +1827,8 @@ watch(pinnedId, (id) => {
 /**
  * Der Impuls dagegen fährt IMMER.
  *
- * `refocus()` ist die ausdrückliche Bitte — das Fadenkreuz der Fokusleiste, ein
- * zweiter Klick auf dieselbe Zeile. Wer sie ausspricht, hat den Knoten gerade
+ * `refocus()` ist die ausdrückliche Bitte — ein zweiter Klick auf dieselbe
+ * Zeile oder denselben Knoten. Wer sie ausspricht, hat den Knoten gerade
  * nicht vor Augen, und „steht doch schon im Bild" wäre auf sie die falsche
  * Antwort: gemeint ist die MITTE, nicht der Rand — und deshalb auch nicht die
  * Komfortzone, die ihn nur bis an ihre Kante holte.
