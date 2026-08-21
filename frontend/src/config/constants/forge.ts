@@ -2962,31 +2962,90 @@ export const FORGE_ROW_ICON_SIZE = 56
  * Stelle. Der Knopf trägt deshalb nur den Chime-Preis, nicht das Material —
  * zwei Materialpositionen messen auch rahmenlos ~150px und machten ihn breiter
  * als den Namen daneben.
+ *
+ * 150 stand hier, solange der Knopf zwei Zeilen trug (Verb oben, Preis klein
+ * darunter). Seit das Verb gefallen ist, ist der Preis der ganze Inhalt und
+ * steht WAAGERECHT neben dem Chime-Bild — beide teilen sich jetzt eine Zeile
+ * statt zwei, und dafür braucht die Fläche in der Breite, was sie in der Höhe
+ * gewonnen hat. Die 18 Pixel gehen `.fut-main` ab; dort lagen gemessen ~49px
+ * Reserve zwischen dem längsten Knotennamen („Host of Champions", 117px) und
+ * seiner Spalte.
  */
-export const FORGE_ROW_BUY_WIDTH_PX = 150
-/** Full HD ist zugleich der schmalste Desktop — dort sind 61 Pixel weniger da. */
-export const FORGE_ROW_BUY_WIDTH_COMPACT_PX = 140
+export const FORGE_ROW_BUY_WIDTH_PX = 168
+/**
+ * Full HD ist zugleich der schmalste Desktop — dort sind 61 Pixel weniger da.
+ *
+ * 150 und nicht 156: bei 156 fehlten dem längsten Namen der Liste
+ * („Starwarden's Lantern") gemessen genau 6 Pixel, und er bekam als einziger
+ * von dreiundvierzig Auslassungspunkte. Die sechs zurückgegebenen Pixel
+ * räumen ihn frei; der Preis kommt auch mit ihnen aus (Stufen an
+ * `FORGE_ROW_PRICE_FIT_STEPS`).
+ */
+export const FORGE_ROW_BUY_WIDTH_COMPACT_PX = 150
 /**
  * Der Anteil des Stapelknopfes an dieser Breite.
  *
- * Er nimmt sie dem `FORGE`-Knopf ab und NICHT der Zeile: der Block ist immer
+ * Er nimmt sie dem Preisknopf ab und NICHT der Zeile: der Block ist immer
  * gleich breit, gleich ob eine Stufe bezahlbar ist oder acht. Sonst rückte die
  * Kante jedes Mal, wenn die tickenden Chimes eine Schwelle überschreiten —
  * genau der Sprung, gegen den in `ForgeUpgradesSection` schon die eingefrorene
  * Reihenfolge steht.
+ *
+ * Vier Pixel mehr als früher: der Preis daneben ist gewachsen, und ein `×8` in
+ * 42px sah daneben aus wie ein Rest statt wie die zweite Hälfte derselben
+ * Handlung.
  */
-export const FORGE_ROW_BULK_WIDTH_PX = 42
-/** Was darauf steht. Nur die Zahl — „Buy ×8" passt in 42px nicht und stünde
- *  neben einem Knopf, der das Verb schon nennt. */
+export const FORGE_ROW_BULK_WIDTH_PX = 46
+/** Was darauf steht. Nur die Zahl — „Buy ×8" passt in 46px nicht und stünde
+ *  neben einem Knopf, der gar kein Verb mehr trägt. */
 export const FORGE_ROW_BULK_LABEL = `×${FORGE_COUNT_TOKEN}`
 /**
- * Der Knopf eines gedeckelten Kernstrahls. Er nennt den ZUSTAND; warum der
- * Deckel liegt, steht als Grund in derselben Zeile
- * (`FORGE_UPGRADE_CAPPED_REASON`) — auf dem Knopf stünde derselbe Satz ein
- * zweites Mal. Ein gedeckelter Knopf trägt als einziger KEINEN Preis: es ist
- * nichts zu bezahlen, solange der Deckel liegt.
+ * Der gedeckelte Kernstrahl — nur noch als NAME, nicht mehr als Aufschrift.
+ *
+ * Auf der Fläche stand dieses Wort, solange der Knopf überhaupt Wörter trug.
+ * Seit dort ausschließlich der Preis steht, zeigt der gedeckelte Knopf das
+ * Schloss (`FORGE_LOCK_ICON`) an genau der Stelle, an der sonst die Zahl sitzt
+ * — er ist der einzige, der KEINEN Preis hat: es ist nichts zu bezahlen,
+ * solange der Deckel liegt.
+ *
+ * Das Wort bleibt trotzdem gebraucht: es ist der `aria-label` dieses Knopfes.
+ * Ohne es hörte ein Screenreader dort „FORGE", wo sichtbar ein Schloss steht.
+ * Warum der Deckel liegt, sagt weiterhin der `title` (`FORGE_UPGRADE_CAPPED_REASON`)
+ * — auf der Fläche stünde derselbe Satz ein zweites Mal.
  */
 export const FORGE_TILE_CAPPED_LABEL = 'CAPPED'
+/**
+ * Das Schloss auf dem gedeckelten Kaufknopf — dort, wo sonst der Preis steht.
+ *
+ * Kleiner als das Chime-Bild daneben (28px) und nicht so gross wie die Zahl:
+ * es ist eine Auskunft, kein Wappen. Der Knopf färbt per `color`, das Glyph
+ * erbt die Farbe über `currentColor`.
+ */
+export const FORGE_ROW_BUY_LOCK_SIZE = 24
+/**
+ * Die Schriftstufen des Preises, nach ZEICHENZAHL der formatierten Zahl.
+ *
+ * Die Kauffläche ist mit Absicht fest breit (siehe `FORGE_ROW_BUY_WIDTH_PX`),
+ * der Preis aber nicht: `formatNumber` liefert zwischen „0" und „123.45Qa" —
+ * acht Zeichen. Eine feste grosse Schrift schnitte die lange Zahl ab, und ein
+ * halber Preis ist keiner. Gestuft statt abgeschnitten.
+ *
+ * Nach ZEICHEN und nicht nach gemessener Breite: die Stufe ist damit ein
+ * `computed` auf einer Zeichenkette statt einer Messung im Layout — bei
+ * fünfundvierzig Zeilen, deren Preise mit jedem Tick wandern können, ist das
+ * der Unterschied zwischen nichts und fünfundvierzig erzwungenen Reflows
+ * (Performance-Regel 3).
+ *
+ * Die Grenzen sind aufsteigend zu lesen: die erste Stufe, deren `maxChars`
+ * reicht, gewinnt; darüber greift `FORGE_ROW_PRICE_FIT_FALLBACK`.
+ */
+export const FORGE_ROW_PRICE_FIT_STEPS = [
+  { maxChars: 4, cls: 'fut-buy-price--xl' },
+  { maxChars: 5, cls: 'fut-buy-price--l' },
+  { maxChars: 6, cls: 'fut-buy-price--m' },
+] as const
+/** Alles ab sieben Zeichen — „1.23Qa", „123.45Qa". */
+export const FORGE_ROW_PRICE_FIT_FALLBACK = 'fut-buy-price--s'
 /**
  * Das Schloss an einem gesperrten Upgrade. Eine Bedeutung, ein Glyph: dasselbe
  * Icon trägt die gesperrte Relikt-Zeile in `StarForgePanel`.
@@ -3528,12 +3587,21 @@ export const FORGE_COST_LABEL = 'Cost'
 export const FORGE_SHORT_CHIMES_LABEL = 'Not enough Chimes'
 export const FORGE_SHORT_MATERIAL_PREFIX = 'Need '
 /**
- * Das Wort auf dem Kaufknopf.
+ * Das Wort für die Handlung „eine Stufe wachsen lassen".
  *
- * „✦ Grow" stand hier lange. Das Glyph ist weg, weil der Knopf jetzt Wort UND
- * Preis trägt und ein Zierstern zwischen beiden nur Höhe kostete; das Wort ist
  * FORGE, weil der Reiter Star Forge heisst, die Kaufquittung sich als `forged`
  * meldet und der Admin-Knopf „Max Forge". Eine Handlung, ein Wort.
+ *
+ * Auf dem Kaufknopf STEHT es nicht mehr. Es stand dort in jeder der
+ * fünfundvierzig Zeilen identisch — und sagte damit nichts, was der Reitername,
+ * die Sammelkaufleiste („Forge all ready") und die Quittung nicht schon sagen.
+ * Es nahm dabei die obere Hälfte der Fläche ein und drückte den Preis, die
+ * einzige Angabe, die sich von Zeile zu Zeile unterscheidet, in eine kleine
+ * blasse Zweitzeile. Der Knopf trägt jetzt nur noch den Preis.
+ *
+ * Gebraucht wird das Wort weiter an zwei Stellen: als `aria-label` desselben
+ * Knopfes (samt Stapelknopf) — die Fläche zeigt eine Zahl, ein Screenreader
+ * braucht das Verb dazu — und als Grundlage von `FORGE_BUY_ALL_LABEL`.
  *
  * Die ZIELSTUFE („→ Lv 13") stand einmal dahinter und ist gestrichen: die
  * grosse `Lv 12` links in derselben Zeile und der Wirkungssprung daneben sagen

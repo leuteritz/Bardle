@@ -32,8 +32,9 @@ import {
   FORGE_BUY_ALL_NODE_CAP,
   FORGE_BUY_ALL_MAX_PASSES,
   FORGE_ENDLESS_SYMBOL,
-  FORGE_GROW_LABEL,
   FORGE_LEVEL_PREFIX,
+  FORGE_ROW_PRICE_FIT_STEPS,
+  FORGE_ROW_PRICE_FIT_FALLBACK,
 } from '@/config/constants'
 
 /**
@@ -170,19 +171,29 @@ export function forgeUpgradeMayTravel(entry: ForgeUpgradeEntry | undefined): boo
 }
 
 /**
- * Was auf dem Kaufknopf steht.
+ * Welche Schriftstufe der Preis auf dem Kaufknopf bekommt.
  *
- * Nur noch das Verb — die Zielstufe („→ Lv 13") stand einmal dahinter und ist
- * gestrichen: die grosse `Lv 12` links in derselben Zeile und der
- * Wirkungssprung daneben sagen sie zweimal. Der volle Satz bleibt im `title`
- * des Knopfes, und zusammengesetzt wird er dort, wo der Name ohnehin steht.
+ * Auf dem Knopf steht seit dem Umbau NUR noch der Preis — kein Verb mehr, das
+ * ihm die halbe Fläche nahm. Damit ist er die grösste Zahl der Kauffläche, und
+ * genau deshalb braucht er eine Bremse: die Fläche ist fest breit (die Kanten
+ * sollen über die ganze Liste fluchten), die Zahl aber wächst von „948" auf
+ * „123.45Qa". Ohne Stufung schnitte die lange Zahl ab, und ein halber Preis ist
+ * keiner.
  *
- * Die Funktion bleibt trotzdem, statt die Konstante direkt zu lesen: sie ist
- * die Stelle, an der eine zustandsabhängige Beschriftung wieder einzöge, und
- * ihr Aufrufer soll dafür nicht umgebaut werden müssen.
+ * Hier und nicht in der Komponente, aus demselben Grund wie `forgeLevelParts`
+ * darunter: die Schwelle ist Inhalt, nicht Layout, und sie steht als Tabelle in
+ * den Konstanten (`FORGE_ROW_PRICE_FIT_STEPS`). Die Funktion ist die eine
+ * Stelle, die sie liest.
+ *
+ * Sie bekommt die LÄNGE und nicht die Zahl: der Aufrufer hat den formatierten
+ * Text ohnehin schon, und ein zweites `formatNumber` je Zeile wäre dieselbe
+ * Arbeit ein zweites Mal.
  */
-export function forgeGrowLabel(): string {
-  return FORGE_GROW_LABEL
+export function forgeRowPriceFit(len: number): string {
+  for (const step of FORGE_ROW_PRICE_FIT_STEPS) {
+    if (len <= step.maxChars) return step.cls
+  }
+  return FORGE_ROW_PRICE_FIT_FALLBACK
 }
 
 /**
