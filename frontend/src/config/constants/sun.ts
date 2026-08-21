@@ -102,6 +102,33 @@ export const SUN_HORIZON_HIT_FLASH_MS = 420
 /** Lebensdauer eines Schadens-Floats über dem Sonnen-Kamm (ms). */
 export const SUN_HORIZON_FLOAT_MS = 1200
 
+// ── HP-Leiste über der Idle-Orbit-Sonne ────────────────────────────────
+/**
+ * Ihre Breite folgt dem Sonnenradius, geklemmt — dieselbe Form wie beim
+ * HP-Streifen der Arena darüber, nur mit eigenen Zahlen: dort trägt die Kalotte
+ * die Leiste, hier die freie Bühne.
+ *
+ * Sie steht hier und nicht als `clamp()` im scoped CSS von `PlayerHPBar.vue`,
+ * weil die Regen-Schwelle unten an ihr hängt. Zwei Fassungen derselben Rechnung
+ * — eine im Stylesheet, eine im Vergleich — laufen beim ersten Nachjustieren
+ * auseinander, ohne dass es auffällt.
+ */
+export const SUN_ORBIT_HP_WIDTH_FACTOR = 3.5
+/** Untergrenze: bei kleiner Sonne müssen Emblem, Wert, Trenner und Maximum
+ *  nebeneinander IN den Balken passen. */
+export const SUN_ORBIT_HP_MIN_WIDTH_PX = 240
+export const SUN_ORBIT_HP_MAX_WIDTH_PX = 500
+/**
+ * Ab dieser Breite trägt die Leiste ihren DRITTEN Wert, die Regeneration.
+ *
+ * Die Schwelle hängt an der BREITE und nicht am Viewport: die Breite folgt dem
+ * Sonnenradius, eine Media Query würde bei kleiner Sonne auf 4K das Falsche
+ * messen und den Wert einblenden, wo kein Platz für ihn ist. (Der Profilkopf
+ * staffelt umgekehrt — dort ist die Leiste fest breit und der Viewport das
+ * einzige, was sich ändert.)
+ */
+export const SUN_ORBIT_HP_REGEN_MIN_WIDTH_PX = 290
+
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
 
