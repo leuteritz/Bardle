@@ -282,16 +282,6 @@ export const PAUSE_MATERIAL_ROWS = 2
 export const HP_HEALTHY_PERCENT = 50
 /** Darunter wird die Leiste rot und pulst — zugleich die Low-HP-Schwelle. */
 export const HP_CRIT_PERCENT = 25
-// Breitenreserve der HP-Zahl: Anteile des Maximums, die als unsichtbare
-// Messmuster mitgerendert werden. Aus dem Maximum allein lässt sich die Breite
-// nicht ableiten — formatNumber wechselt innerhalb einer Einheitenstufe die
-// Länge („2.6K" gegen „2.34K") und unterhalb davon nochmals („999"). Die
-// Stützstellen decken beide Fälle ab; die Spalte nimmt die breiteste.
-//
-// Ohne PAUSE_-Präfix: die Messmuster sind eine Eigenschaft der `VitalityBar`
-// (Prop `widthProbes`), nicht des Overlays, das sie zuerst gebraucht hat.
-export const HP_WIDTH_PROBES = [1, 0.99, 0.9, 0.75, 0.5, 0.25, 0.1]
-
 // Geisterspur der Vitalitätsleisten: der helle Streifen, den die
 // zurückschnellende Füllung freigibt, ist genau der Schaden dieses Treffers.
 // Sie läuft NUR beim Sinken nach — steigt der Wert, springt sie ohne Übergang

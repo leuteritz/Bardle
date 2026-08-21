@@ -94,23 +94,14 @@
             aria-hidden="true"
           />
         </slot>
-        <!-- Ein-Zellen-Raster: Messmuster und Live-Wert liegen übereinander, die
-             Spalte nimmt die breiteste Darstellung. Damit steht der Schrägstrich
-             fest, ohne dass irgendwo eine Zeichenbreite geschätzt werden müsste
-             — der Browser misst die echten Glyphen der Schrift. -->
         <!-- `v-ink-center.y` an jeder sichtbaren Zahl: MedievalSharp setzt Ziffern
              fast vollständig über die Baseline, und `align-items: center` oben
              zentriert die ZEILENBOX, nicht die Tinte darin. Weil Wert und
              Maximum verschiedene Grade tragen, fällt ihr Versatz verschieden
              aus — sie driften sichtbar auseinander. Nur die senkrechte Achse:
              die waagerechte setzte jedes Stück einzeln auf seine eigene
-             Tintenmitte und zerrisse die Abstände der Zeile.
-             Die Messmuster bleiben ohne: sie sind unsichtbar und zählen nur
-             als Breite. -->
+             Tintenmitte und zerrisse die Abstände der Zeile. -->
         <span class="vb-cur">
-          <span v-for="(probe, i) in probes" :key="i" class="vb-probe" aria-hidden="true">{{
-            probe
-          }}</span>
           <span v-ink-center.y class="vb-now">{{ formatNumber(Math.ceil(current)) }}</span>
         </span>
         <span v-ink-center.y class="vb-sep">/</span>
@@ -129,7 +120,6 @@ import { Icon } from '@iconify/vue'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { sunVitalStage } from '@/utils/ui/format'
 import {
-  HP_WIDTH_PROBES,
   PLAYER_HP_HIT_FLASH_MS,
   VITALITY_GHOST_FALL_DELAY_MS,
   VITALITY_GHOST_FALL_MS,
@@ -144,14 +134,10 @@ const props = withDefaults(
      * Wo die Zahlen stehen.
      * `inside` — zwei geclippte Ebenen IM Balken, Satz mittig (braucht Höhe)
      * `above`  — mittig darüber, optional mit Emblem (schmale Leisten)
-     * `right`  — rechts daneben in fester Spaltenbreite
      */
-    labelPlacement?: 'inside' | 'above' | 'right' | 'none'
+    labelPlacement?: 'inside' | 'above' | 'none'
     /** > 0 hängt „+x/s" an — nur bei `inside`, sonst fehlt der Platz. */
     regenPerSec?: number
-    /** Unsichtbare Messmuster hinter dem Wert; die Spalte nimmt die breiteste
-     *  je auftretende Darstellung und die Balkenkante wandert nicht mehr. */
-    widthProbes?: boolean
     /** Iconify-Name vor den Zahlen. Der Slot `#lead` schlägt ihn. */
     leadIcon?: string
     /** Dauerläufer-Glanz durch die Füllung. */
@@ -168,7 +154,6 @@ const props = withDefaults(
   {
     labelPlacement: 'none',
     regenPerSec: 0,
-    widthProbes: false,
     leadIcon: undefined,
     spark: false,
     critPulse: true,
@@ -192,12 +177,6 @@ const rootClass = computed(() => [
   `vb--label-${props.labelPlacement}`,
   { 'vb--crit': stage.value === 'red' },
 ])
-
-/** Leer, solange keine Messmuster bestellt sind — so bleibt das `v-for` im
- *  Template ohne begleitendes `v-if` am selben Element. */
-const probes = computed(() =>
-  props.widthProbes ? HP_WIDTH_PROBES.map((f) => formatNumber(Math.round(props.max * f))) : [],
-)
 
 const fillStyle = computed(() => ({ transform: `scaleX(${hpRatio.value})` }))
 
@@ -313,18 +292,6 @@ onUnmounted(() => {
   gap: var(--vb-label-gap, calc(var(--vb-hh) * 0.32));
 }
 
-/* `width: 100%` ist hier kein Zierrat, sondern die Bedingung dafür, dass die
-   Anordnung überhaupt funktioniert: der Track lebt von `flex: 1 1 0`, also von
-   dem, was neben der Zahl übrig bleibt. Steht die Leiste selbst als Flex-Item in
-   einem Flex-Container — so im Pause-Overlay —, schrumpft sie ohne diese Zeile
-   auf ihre Inhaltsbreite, und der Track bekommt exakt null Pixel. */
-.vb--label-right {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  gap: var(--vb-label-gap, calc(var(--vb-hh) * 0.32));
-}
-
 /* ── Der Track ────────────────────────────────────────────────────────────
    Der leere Teil ist nicht einfach schwarz: eine feine Schraffur liegt darin,
    damit die Fehlmenge als beschädigter Rumpf liest statt als Loch. Rein
@@ -351,10 +318,6 @@ onUnmounted(() => {
     inset 0 2px 8px rgba(0, 0, 0, 0.9),
     0 0 18px color-mix(in srgb, var(--vb-hi) 16%, transparent);
   transition: box-shadow 320ms ease;
-}
-
-.vb--label-right .vb-track {
-  flex: 1 1 0;
 }
 
 .vb-ghost,
@@ -596,10 +559,6 @@ onUnmounted(() => {
   inset: 0;
 }
 
-.vb--label-right .vb-labels {
-  flex-shrink: 0;
-}
-
 .vb-label {
   display: flex;
   align-items: center;
@@ -613,13 +572,13 @@ onUnmounted(() => {
   inset: 0;
   z-index: 5;
   padding: 0 var(--vb-label-pad, calc(var(--vb-hh) * 0.22));
-  /* Der Satz steht auf der MITTE des Balkens. Beide Stellen, die ihn `inside`
-     tragen, haben eine optische Achse, an der er sich ausrichten kann: im Orbit
-     die Sonnenscheibe darunter, im Profilkopf die Leiste selbst, die dort die
-     volle Kopfhöhe einnimmt. Eine linksbündige Fassung stand hier einmal
-     daneben — sie war auf schmale Leisten gerechnet, die es nicht mehr gibt.
-     Wer sie wieder braucht, braucht auch `--vb-cur-reserve` zurück: die beiden
-     hängen zusammen (siehe `.vb-cur`). */
+  /* Der Satz steht auf der MITTE des Balkens. Alle drei Stellen, die ihn
+     `inside` tragen, haben eine optische Achse, an der er sich ausrichten kann:
+     im Orbit die Sonnenscheibe darunter, im Profilkopf die Leiste selbst, im
+     Pause-Overlay der Sonnen-Hero über der panelbreiten Leiste. Eine
+     linksbündige Fassung stand hier einmal daneben — sie war auf schmale
+     Leisten gerechnet, die es nicht mehr gibt. Wer sie wieder braucht, braucht
+     auch `--vb-cur-reserve` zurück: die beiden hängen zusammen (`.vb-cur`). */
   justify-content: center;
   /* Synchron mit der Füllung: der Farbwechsel läuft mit der Kante, nicht hinter
      ihr her. Der einzige Wert dieser Datei, der nicht `transform` ist — auf
@@ -632,14 +591,13 @@ onUnmounted(() => {
 }
 
 /* Der laufende Wert bekommt eine Breitenreserve: ohne sie rückt der Trenner
-   dahinter jedes Mal seitwärts, wenn aus „12.4K" ein „9.8K" wird. Bei bestellten
-   Messmustern übernimmt deren Rasterzelle diese Aufgabe genauer.
+   dahinter jedes Mal seitwärts, wenn aus „12.4K" ein „9.8K" wird.
 
    Die Zelle klebt ihren Inhalt RECHTS an, die Reserve bleibt also links davon
-   stehen. Für die Anordnungen neben und über dem Balken ist das genau richtig —
-   der Wert hält seine Kante zum Schrägstrich. Ein mittiger Satz verträgt sie
-   dagegen NICHT: die leere Reserve zählt zur Breite des Satzes, seine Box sitzt
-   mittig, die sichtbaren Zeichen darin stehen aber rechts der Achse. Beide
+   stehen. Für die Anordnung über dem Balken ist das genau richtig — der Wert
+   hält seine Kante zum Schrägstrich. Ein mittiger Satz verträgt sie dagegen
+   NICHT: die leere Reserve zählt zur Breite des Satzes, seine Box sitzt mittig,
+   die sichtbaren Zeichen darin stehen aber rechts der Achse. Alle drei
    `inside`-Aufrufer setzen sie deshalb auf `0` und verlassen sich stattdessen
    auf `tabular-nums` unten — gleich breite Ziffern, der Satz wandert nur beim
    Wechsel der STELLENZAHL. Gemessen wurde das an der Orbit-Leiste; die
@@ -668,28 +626,10 @@ onUnmounted(() => {
   margin-left: 0;
 }
 
-/* Nur zur Breitenmessung da: nimmt Platz ein, wird aber nicht gezeichnet. */
-.vb-probe {
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* Muster und Live-Wert MÜSSEN dieselbe Schrift tragen: sie liegen in derselben
-   Rasterzelle, und ein Muster ist nur dann ein gültiges Maß für die Spalte, wenn
-   es in genau der Schrift gesetzt ist, in der auch der Wert erscheint. Erbte es
-   stattdessen die Dokumentschrift — und das tat es, es stand hier keine Angabe —,
-   wäre die Spalte je nach Aufrufer zu breit oder zu schmal. Bei mittigem Satz
-   stünde die Zahl dadurch sichtbar neben der Achse, obwohl ihre Box mittig sitzt:
-   `justify-items: end` klebt sie an den rechten Rand der Zelle, und die
-   Überbreite bleibt links leer stehen. */
-.vb-probe,
 .vb-now {
   font-size: var(--vb-label-size, calc(var(--vb-hh) * 0.5));
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-}
-
-.vb-now {
   color: var(--vb-txt);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
@@ -730,10 +670,9 @@ onUnmounted(() => {
   color: var(--vb-txt);
 }
 
-/* Steht die Beschriftung neben oder über dem Balken, liegt sie auf der Bühne
-   statt auf einer Füllung — dort trägt sie den Schein ihrer Zustandsfarbe. */
-.vb--label-above .vb-now,
-.vb--label-right .vb-now {
+/* Steht die Beschriftung über dem Balken, liegt sie auf der Bühne statt auf
+   einer Füllung — dort trägt sie den Schein ihrer Zustandsfarbe. */
+.vb--label-above .vb-now {
   text-shadow:
     0 0 16px color-mix(in srgb, var(--vb-txt) 45%, transparent),
     0 1px 3px rgba(0, 0, 0, 0.95);

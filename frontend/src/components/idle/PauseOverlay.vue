@@ -99,22 +99,17 @@
             {{ sunPhase.name }}
           </span>
 
-          <!-- Vitalität der Sonne — ohne Beschriftung und ohne Emblem: der
-               Balken läuft über die volle Panelbreite, die Zahl steht
-               unmittelbar an seiner Kante.
-
-               Der Streifen bleibt ein eigenes Element dieser Datei, obwohl die
-               Leiste darin ein fremdes Bauteil ist: seine HÖHE geht in die
-               Panelhöhe und damit in den Fit-Scale des GANZEN Overlays ein.
-               Was hier steht, muss hier stehen bleiben. -->
+          <!-- Der Streifen bleibt ein eigenes Element dieser Datei: seine HÖHE
+               geht in die Panelhöhe und damit in den Fit-Scale des GANZEN
+               Overlays ein. -->
           <div class="vital-strip">
             <VitalityBar
               :current="playerStore.currentHP"
               :max="playerStore.maxHP"
-              label-placement="right"
-              width-probes
+              :regen-per-sec="regen"
+              label-placement="inside"
               spark
-              :aria-label="`Health ${Math.round(playerStore.currentHP)} of ${playerStore.maxHP}`"
+              :aria-label="`Health ${Math.ceil(playerStore.currentHP)} of ${playerStore.maxHP}`"
             />
           </div>
 
@@ -510,6 +505,10 @@ const pauseDamage = computed(() =>
 const pauseRegen = computed(() =>
   Math.max(0, Math.round(playerStore.totalHpRegenerated - pauseStartRegen.value)),
 )
+
+/** Eine Nachkommastelle, wie in Orbit und Profilkopf. Der Ledger daneben zeigt
+ *  die Summe dieser Pause, die Leiste die laufende Rate. */
+const regen = computed(() => Math.round(playerStore.regenPerSec * 10) / 10)
 
 /**
  * Jeder Anstieg des Lebenszeit-Zählers ist genau ein Treffer — der Betrag steht
@@ -1292,39 +1291,34 @@ function particleStyle(i: number): Record<string, string> {
    getrennt. So bleibt sie die Lebensanzeige DER Sonne — die Struktur trägt der
    Balken selbst über seinen eingelassenen Rand.
 
-   Beschriftung und Herz-Emblem sind weg: beide sagten dasselbe wie die Zahl
-   daneben. Der Platz gehört jetzt dem Balken, der dafür fast doppelt so hoch
-   ist wie zuvor und über die volle Panelbreite läuft.
-
    Der Streifen besitzt nur noch die Maße — die gestapelten Ebenen stehen in
-   `components/ui/VitalityBar.vue`, wo sie sich alle vier Spieler-Leisten teilen.
-
-   Die 38px sind der Grund, warum dieses Element überhaupt noch existiert: sie
-   gehen in die Panelhöhe und damit in den Fit-Scale des GANZEN Overlays ein
-   (siehe `docs/hud-and-layout.md` — Breite ist billig, Höhe teuer). Die Zahl ist
-   absichtlich höher gesetzt als der Balken (28px): sie ist die einzige exakte
-   Ablesung der Vitalität im Overlay, und das Panel läuft skaliert (~0,64 auf
-   Full HD) — kleiner gesetzt bliebe davon real kaum mehr als ein Chip-Text. */
+   `components/ui/VitalityBar.vue`, wo sie sich alle vier Spieler-Leisten teilen. */
 .vital-strip {
-  display: flex;
-  align-items: center;
+  /* `block`, nicht `flex`: `inside` ist ein Block, und als Flex-Item ohne
+     Eigenbreite fiele der Track auf null zurück — seine `width: 100%` misst
+     dann gegen eine unbestimmte Breite. */
+  display: block;
   width: 100%;
-  height: 38px;
+  height: var(--vb-h);
   /* Die Leiste gehört optisch zur Sonne darüber, nicht zur Kachelreihe
      darunter — der halbe Panel-Gap rückt sie näher an das Phasen-Label. */
   margin-top: calc(-1 * clamp(6px, 1vh, 10px));
   padding: 0 2px;
 
-  --vb-h: 28px;
+  /* Die Höhe geht in die Panelhöhe und damit in den Fit-Scale des GANZEN
+     Overlays ein (`docs/hud-and-layout.md` — Breite ist billig, Höhe teuer). */
+  --vb-h: 44px;
   --vb-radius: 5px;
-  /* Eng: die Zahl soll unmittelbar an der Balkenkante beginnen, nicht am
-     rechten Panelrand kleben. */
-  --vb-label-gap: clamp(8px, 1.1vw, 12px);
-  --vb-label-size: clamp(1.4rem, 2.2vw, 1.9rem);
-  --vb-label-sub-size: 0.66em;
-  --vb-num-gap: 0px;
-  /* Die Messmuster geben die Spaltenbreite vor, eine zusätzliche Reserve würde
-     den Wert nur von seinem Schrägstrich wegrücken. */
+  /* Die Anteile des Orbits, der denselben Satz trägt — nicht die Vorgaben
+     (0,5 / 0,3 / 0,25): das Panel läuft skaliert (~0,61 auf Full HD), 44 · 0,5
+     blieben davon real 13px. Ohne Pixelböden wie dort: dieser Balken ist mit
+     44px doppelt so hoch, die Böden griffen nie. */
+  --vb-label-size: calc(var(--vb-h) * 0.64);
+  --vb-label-sub-size: calc(var(--vb-h) * 0.44);
+  --vb-regen-size: calc(var(--vb-h) * 0.34);
+  --vb-tick-inset: calc(var(--vb-h) * 0.2);
+  /* Mittiger Satz verträgt keine Reserve — sie zählt zur Satzbreite und stünde
+     leer links der Achse. */
   --vb-cur-reserve: 0;
 }
 

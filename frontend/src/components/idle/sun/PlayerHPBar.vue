@@ -150,22 +150,18 @@ onUnmounted(() => {
   --vb-label-sub-size: max(10px, calc(var(--vb-h) * 0.44));
   --vb-regen-size: max(9px, calc(var(--vb-h) * 0.34));
   --vb-tick-inset: max(2px, calc(var(--vb-h) * 0.2));
-  /* WEDER Messmuster (`width-probes`) NOCH Reserve — beide halten die Spalte auf
-     der Breite des längsten je auftretenden Werts, und genau das verträgt sich
-     nicht mit einem mittigen Satz: der laufende Wert hat fast immer weniger
-     Stellen als das Maximum, klebt per `justify-items: end` am Schrägstrich, und
-     die reservierte Lücke bleibt links davon stehen. Gemessen stand „41/100" so
-     3 px rechts der Achse, obwohl seine Box exakt mittig sass.
+  /* Keine Reserve — sie hält die Spalte auf der Breite des längsten je
+     auftretenden Werts, und das verträgt sich nicht mit einem mittigen Satz: der
+     laufende Wert hat fast immer weniger Stellen als das Maximum, klebt per
+     `justify-items: end` am Schrägstrich, und die reservierte Lücke bleibt links
+     davon stehen. Gemessen stand „41/100" so 3 px rechts der Achse, obwohl seine
+     Box exakt mittig sass.
 
      Was die Reserve verhindern sollte — ein wandernder Satz —, verhindert hier
      schon `font-variant-numeric: tabular-nums`: alle Ziffern sind gleich breit,
      die Breite ändert sich also nur beim Wechsel der STELLENZAHL, nicht bei
-     jedem Tick. Dafür lohnt sich ein dauerhafter Versatz nicht.
-
-     Im Pause-Overlay bleiben die Muster: dort steht die Zahl neben dem Balken
-     und der Wert soll seine Kante halten, nicht eine Mitte treffen. Der
-     Profilkopf dagegen setzt die Reserve aus genau demselben Grund wie hier auf
-     null — er trägt seinen Satz seit demselben Umbau mittig. */
+     jedem Tick. Profilkopf und Pause-Overlay setzen sie aus demselben Grund auf
+     null; nur die Arena (`above`) behält den Default. */
   --vb-cur-reserve: 0;
 }
 
