@@ -452,7 +452,7 @@ const {
   clearPin,
   resetForgeSpotlight,
 } = useForgeSpotlight()
-const { detailsOpen, openDetails } = useForgeDetailsPane()
+const { detailsOpen, openDetails, closeDetails } = useForgeDetailsPane()
 
 const C = FORGE_STAGE_SIZE / 2
 
@@ -1566,11 +1566,12 @@ function onClickCapture(event: MouseEvent): void {
   didDrag = false
 }
 
-/** Klick auf den freien Grund löst die Anheftung — aber nur, wenn es wirklich
- *  ein Klick war. */
+/** Klick auf den freien Grund löst Anheftung und Detailspalte — aber nur, wenn
+ *  es wirklich ein Klick war. */
 function onBackgroundClick(): void {
   if (didDrag) return
   clearPin()
+  closeDetails()
 }
 
 /**
