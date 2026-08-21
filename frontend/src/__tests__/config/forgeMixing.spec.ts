@@ -3,6 +3,7 @@ import { FORGE_GLIMMERS, FORGE_NODES, getForgeNode } from '@/config/progression/
 import { FORGE_CLUSTERS, forgeClusterOf } from '@/config/progression/starForgeNet'
 import {
   FORGE_BRANCH_MAX_LEVEL_CAP,
+  FORGE_CHIME_SPLIT_MAX_PHASE,
   FORGE_GLIMMER_AXIS_SHARE,
   FORGE_GLIMMER_FAMILY_ICON,
   FORGE_GLIMMER_MAX_LEVEL,
@@ -29,21 +30,24 @@ import type { ForgeEffectFamily, ForgeNodeDef } from '@/types'
  * ein Ort wieder nur eine Aussage trägt.
  */
 
-/** Auf welcher Kette ein Knoten liegt — benannt nach ihrem Zweig. */
+/** Woher ein Knoten kommt: die Kette, auf der er liegt (benannt nach ihrem
+ *  Zweig), und der Strahl darunter. */
 const BY_ID = new Map(FORGE_NODES.map((def) => [def.id, def]))
 const RAY_IDS = new Set<string>(SOLAR_BRANCHES.map((r) => r.id))
 
-function chainOf(nodeId: string): string {
+function originOf(nodeId: string): { chain: string; ray: string } {
   let cursor = nodeId
   const seen = new Set<string>()
   while (BY_ID.has(cursor) && !seen.has(cursor)) {
     const def = BY_ID.get(cursor)!
-    if (RAY_IDS.has(def.parentId)) return def.id
+    if (RAY_IDS.has(def.parentId)) return { chain: def.id, ray: def.parentId }
     seen.add(cursor)
     cursor = def.parentId
   }
-  return cursor
+  return { chain: cursor, ray: cursor }
 }
+
+const chainOf = (nodeId: string): string => originOf(nodeId).chain
 
 function membersOf(clusterId: string): ForgeNodeDef[] {
   const cluster = FORGE_CLUSTERS.find((c) => c.id === clusterId)!
@@ -100,11 +104,34 @@ describe('Star Forge — kein Ort trägt nur eine Aussage', () => {
 
   it('keine Wurzelachse hält einen Cluster allein', () => {
     // Die andere Hälfte derselben Frage. Die Familie sagt, WAS ein Knoten tut;
-    // die Achse sagt, WO er hängt. Früher fielen beide zusammen — genau das war
+    // die Kette sagt, WO er hängt. Früher fielen beide zusammen — genau das war
     // der Fehler, und beide Prüfungen zusammen schliessen ihn.
+    //
+    // Gezählt werden KETTEN, nicht Strahlen: seit der Chime-Trennung liegt im
+    // Anfang mancher Strahl ganz an einem Ort, seine drei Zweige bleiben aber
+    // drei Ketten.
     for (const cluster of FORGE_CLUSTERS) {
       const axes = new Set(membersOf(cluster.id).map((def) => chainOf(def.id)))
       expect(axes.size, `${cluster.id} liegt auf einer einzigen Kette`).toBeGreaterThanOrEqual(2)
+    }
+  })
+
+  it('kein Ort im Anfang trägt beide Chime-Achsen', () => {
+    // Die Gegenrichtung zu allem anderen in dieser Datei: hier wird nicht
+    // Mischung verlangt, sondern eine verboten. Chimes/Click und Chimes/Sec sind
+    // im Ring Nachbarn — ohne diese Prüfung hängen sie im selben Cluster, und der
+    // Anfang liest sich als EIN Wirtschaftsknoten statt als zwei Wege.
+    //
+    // Nur bis `FORGE_CHIME_SPLIT_MAX_PHASE`; weiter aussen verschränken die
+    // Kronen die beiden Achsen absichtlich, und die Begründung steht an der
+    // Konstante.
+    for (const cluster of FORGE_CLUSTERS) {
+      if (cluster.phase > FORGE_CHIME_SPLIT_MAX_PHASE) continue
+      const rays = new Set(membersOf(cluster.id).map((def) => originOf(def.id).ray))
+      expect(
+        rays.has('chimesPerClick') && rays.has('chimesPerSecond'),
+        `${cluster.id} trägt Chimes/Click und Chimes/Sec zugleich`,
+      ).toBe(false)
     }
   })
 })

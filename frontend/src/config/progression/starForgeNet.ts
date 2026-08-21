@@ -24,11 +24,18 @@ import type { ForgeBridgeDef, ForgeClusterDef } from '@/types'
 // seine Mitte öffnet — aber weil seine Nachbarn in beide Richtungen überlappen,
 // entsteht daraus kein Kreis, sondern ein Feld.
 //
-// **Und er greift über Achsgrenzen.** Das ist der Kern: ein Cluster der ersten
-// Zone liegt ZWISCHEN zwei Solar Rays und nimmt Knoten von beiden. Damit steht
-// neben dem Kampf die Wirtschaft, neben der Bewahrung die Reise — ohne dass ein
-// einziger `parentId` sich ändern müsste. Die Durchmischung ist eine Frage der
-// Karte, nicht des Katalogs.
+// **Und er greift über Achsgrenzen.** Das ist der Kern: ein Cluster liegt
+// ZWISCHEN zwei Solar Rays und nimmt Knoten von beiden. Damit steht neben dem
+// Kampf die Wirtschaft, neben der Bewahrung die Reise — ohne dass ein einziger
+// `parentId` sich ändern müsste. Die Durchmischung ist eine Frage der Karte,
+// nicht des Katalogs.
+//
+// **Eine Paarung ist ausgenommen: Chimes/Click neben Chimes/Sec.** Die beiden
+// sind im Ring Nachbarn, würden sich also von selbst treffen — und ein Ort, der
+// beide Wirtschaftsachsen trägt, liest sich als EIN Knoten statt als zwei Wege.
+// Bis Zone 2 hält die Karte sie deshalb auseinander, auch um den Preis, dass
+// dort drei Orte nur eine Achse tragen. `FORGE_CHIME_SPLIT_MAX_PHASE` sagt, wie
+// weit das reicht und warum nicht weiter.
 //
 // ── Die fünf Ebenen und ihr Versatz ──────────────────────────────────────────
 //
@@ -75,16 +82,17 @@ import type { ForgeBridgeDef, ForgeClusterDef } from '@/types'
  */
 export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
   // ── Zone 1 · Spark — die Zweige ────────────────────────────────────────────
-  // Jeder dieser fünf liegt ZWISCHEN zwei Solar Rays und nimmt von beiden: zwei
-  // Zweige vom näheren, einen vom ferneren. Damit trägt schon der erste Ring
-  // des Netzes nirgends nur eine Achse.
+  // Sie liegen ZWISCHEN zwei Solar Rays und nehmen von beiden — ausser wo die
+  // Chime-Trennung dazwischenfährt: `sunlitQuarry` trägt nur Chimes/Click,
+  // `tidefall` nur Chimes/Sec, und was dadurch frei wird, fällt an die Nachbarn.
+  // Deshalb sind die fünf hier verschieden gross.
   {
     id: 'emberReach',
     title: 'Ember Reach',
     phase: 0,
     angleDeg: 8,
     accent: '#e0784a',
-    members: ['aegis', 'wardensVigil', 'goldenEcho', 'emberTithe', 'vigilSpark'],
+    members: ['aegis', 'wardensVigil', 'regeneration', 'goldenEcho', 'emberTithe', 'vigilSpark'],
   },
   {
     id: 'sunlitQuarry',
@@ -92,7 +100,7 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     phase: 0,
     angleDeg: 74,
     accent: '#e8c040',
-    members: ['gildedHarvest', 'resonance', 'cometMiner', 'quarryGleam', 'sunlitDust'],
+    members: ['gildedHarvest', 'resonance', 'sunlitDust'],
   },
   {
     id: 'tidefall',
@@ -100,7 +108,14 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     phase: 0,
     angleDeg: 139,
     accent: '#58c0d0',
-    members: ['tidalDrift', 'quickening', 'warcry', 'tideEcho', 'hourGrain'],
+    members: [
+      'cometMiner',
+      'quarryGleam',
+      'tidalDrift',
+      'tideEcho',
+      'quickening',
+      'hourGrain',
+    ],
   },
   {
     id: 'warmarch',
@@ -108,7 +123,14 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     phase: 0,
     angleDeg: 212,
     accent: '#c06090',
-    members: ['sunderingWake', 'shatter', 'solarSails', 'marchEmber', 'sailSplinter'],
+    members: [
+      'warcry',
+      'sunderingWake',
+      'shatter',
+      'marchEmber',
+      'solarSails',
+      'sailSplinter',
+    ],
   },
   {
     id: 'sailward',
@@ -116,21 +138,30 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     phase: 0,
     angleDeg: 286,
     accent: '#88a8e8',
-    members: ['wayfindersCache', 'moonOrbit', 'regeneration', 'sailGlint', 'moonSilt'],
+    members: ['wayfindersCache', 'moonOrbit', 'sailGlint', 'moonSilt'],
   },
 
   // ── Zone 2 · Dawn — die Blätter ────────────────────────────────────────────
-  // Um 34° gegen die Zweige versetzt: jeder Blatt-Cluster hängt an ZWEI
+  // Um 34° gegen die Zweige versetzt: ein Blatt-Cluster hängt an ZWEI
   // Zweig-Clustern, und die Blätter darin verstärken Zweige verschiedener
   // Achsen. Das Blatt bleibt dabei an SEINEM Zweig — die Verstärker-Mechanik
   // ist unangetastet, nur der Weg dorthin ist kein Speichenstück mehr.
+  // Ausnahme ist `deepvein`: es nimmt allein von `tidefall`, weil sonst ein
+  // Chimes/Click-Blatt neben den Chimes/Sec-Blättern läge.
   {
     id: 'gladehollow',
     title: 'Glade Hollow',
     phase: 1,
     angleDeg: 42,
     accent: '#7fd048',
-    members: ['echoingBulwark', 'starboundCore', 'sunlitTrove', 'gladeSpark', 'hollowGleam'],
+    members: [
+      'echoingBulwark',
+      'starboundCore',
+      'sunlitTrove',
+      'echoChamber',
+      'gladeSpark',
+      'hollowGleam',
+    ],
   },
   {
     id: 'deepvein',
@@ -138,7 +169,7 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     phase: 1,
     angleDeg: 106,
     accent: '#d09848',
-    members: ['echoChamber', 'deepVein', 'tidewake', 'veinGrain', 'wakeEmber'],
+    members: ['deepVein', 'tidewake', 'veinGrain', 'wakeEmber'],
   },
   {
     id: 'stormwatch',
@@ -183,7 +214,7 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     phase: 2,
     angleDeg: 78,
     accent: '#e09858',
-    members: ['almsOfTheKeeper', 'chimeConduit', 'quarrymastersEye', 'almsSpark', 'conduitGrain'],
+    members: ['almsOfTheKeeper', 'chimeConduit', 'almsSpark', 'conduitGrain'],
   },
   {
     id: 'ashenreach',
@@ -191,7 +222,14 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     phase: 2,
     angleDeg: 145,
     accent: '#98b0c8',
-    members: ['kilnSubsidy', 'omenReader', 'heraldsFavor', 'kilnGleam', 'omenSilt'],
+    members: [
+      'kilnSubsidy',
+      'omenReader',
+      'quarrymastersEye',
+      'heraldsFavor',
+      'kilnGleam',
+      'omenSilt',
+    ],
   },
   {
     id: 'hollowgate',
@@ -397,19 +435,19 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
 export const FORGE_BRIDGES: readonly ForgeBridgeDef[] = [
   // Zone 1
   { from: 'goldenEcho', to: 'gildedHarvest' },
-  { from: 'cometMiner', to: 'tidalDrift' },
-  { from: 'warcry', to: 'sunderingWake' },
+  { from: 'resonance', to: 'cometMiner' },
+  { from: 'tidalDrift', to: 'warcry' },
   { from: 'solarSails', to: 'wayfindersCache' },
-  { from: 'regeneration', to: 'aegis' },
+  { from: 'moonOrbit', to: 'aegis' },
   // Zone 2
-  { from: 'sunlitTrove', to: 'echoChamber' },
+  { from: 'echoChamber', to: 'deepVein' },
   { from: 'tidewake', to: 'timeWeaver' },
   { from: 'riftshard', to: 'starquake' },
   { from: 'wanderersCrest', to: 'midnightTide' },
   { from: 'coinCascade', to: 'echoingBulwark' },
   // Zone 3
   { from: 'merchantsFavor', to: 'almsOfTheKeeper' },
-  { from: 'quarrymastersEye', to: 'kilnSubsidy' },
+  { from: 'chimeConduit', to: 'quarrymastersEye' },
   { from: 'heraldsFavor', to: 'hollowCore' },
   { from: 'pathfindersOath', to: 'wanderersBeacon' },
   { from: 'gravityWell', to: 'riftAnchor' },

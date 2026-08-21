@@ -7,8 +7,11 @@ import {
   FORGE_NODE_DIAMETER,
   FORGE_ROUTE_CLEARANCE_PX,
   FORGE_ROUTE_CORNER_R,
+  FORGE_ROUTE_PORT_PITCH_PX,
+  FORGE_BODY_EDGE_FRACTION,
   FORGE_STAGE_SIZE,
   FORGE_SUN_EDGE_GAP,
+  SHOP_SUN_MIN_DIAMETER,
   SHOP_SUN_MAX_DIAMETER,
 } from '@/config/constants'
 import type { ForgeUpgradeTier } from '@/types'
@@ -244,6 +247,81 @@ describe('Star Forge — das Routing', () => {
         const flatH = Math.abs(leg.ay - leg.by) < 0.2
         const flatV = Math.abs(leg.ax - leg.bx) < 0.2
         expect(flatH || flatV, `der Stummel zu ${id} läuft schräg`).toBe(true)
+      }
+    }
+  })
+
+  it('gibt jedem Strahl seinen EIGENEN Strang aus der Sonne', () => {
+    // `sideToward()` verteilt die fünf auf vier Achsen — Chimes/Click (54°) und
+    // Chimes/Sec (126°) liegen beide unter der Sonne und teilen sich damit die
+    // Südseite. Traten sie beide in deren MITTE aus, lag unter dem Körper ein
+    // Strich für zwei Strahlen, der sich erst weit darunter gabelte: der Spieler
+    // sah einen Ast, wo zwei Wege beginnen.
+    //
+    // Geprüft wird das Ergebnis, nicht der Rechenweg — die Zusage muss auch
+    // halten, wenn Sonnenradius oder Strahlwinkel wandern.
+    //
+    // Und sie wird über den GANZEN Radienbereich geprüft, nicht nur an der
+    // vollen Sonne: `portOf()` klemmt den Querversatz auf `radius * PORT_SPAN`,
+    // während die Strahlen fest auf `FORGE_RAY_DIST` stehen. Je kleiner der
+    // Körper, desto weiter muss der Port von der Richtung seines Strahls
+    // abweichen — der kleinste Fall ist also der harte, und er stand hier
+    // zuerst nicht drin. Die Radien kommen aus denselben Konstanten, aus denen
+    // `sunEdgeR` in `ForgeTreePanel.vue` sie rechnet.
+    const places = forgeTreePlacements()
+    const centre = { x: FORGE_STAGE_SIZE / 2, y: FORGE_STAGE_SIZE / 2 }
+    const radii = [
+      (SHOP_SUN_MIN_DIAMETER / 2) * FORGE_BODY_EDGE_FRACTION.comet + FORGE_SUN_EDGE_GAP,
+      (SHOP_SUN_MIN_DIAMETER / 2) * FORGE_BODY_EDGE_FRACTION.star + FORGE_SUN_EDGE_GAP,
+      (SHOP_SUN_MAX_DIAMETER / 2) * FORGE_BODY_EDGE_FRACTION.star + FORGE_SUN_EDGE_GAP,
+    ]
+
+    for (const edgeRadius of radii) {
+      const rTag = edgeRadius.toFixed(0)
+      const stubs: { id: string; start: { x: number; y: number }; legs: Leg[] }[] = []
+      for (const [id, at] of places) {
+        if (getForgeNode(id) !== undefined) continue // nur die fünf Strahlen
+        const { legs } = legsOf(forgeSunRoute(centre, edgeRadius, id, at).d)
+        stubs.push({ id, start: { x: legs[0].ax, y: legs[0].ay }, legs })
+      }
+      expect(stubs.length, 'es sind nicht fünf Strahlen').toBe(5)
+
+      for (let i = 0; i < stubs.length; i++) {
+        for (let j = i + 1; j < stubs.length; j++) {
+          const a = stubs[i]
+          const b = stubs[j]
+          const apart = Math.hypot(a.start.x - b.start.x, a.start.y - b.start.y)
+          expect(
+            apart,
+            `${a.id} und ${b.id} verlassen die Sonne (r=${rTag}) an derselben Stelle`,
+          ).toBeGreaterThan(FORGE_ROUTE_PORT_PITCH_PX)
+          // Und sie laufen auch danach nicht auf demselben Strich: zwei Glieder
+          // derselben Achse dürfen sich nicht überdecken.
+          for (const la of a.legs) {
+            for (const lb of b.legs) {
+              const bothV = Math.abs(la.ax - la.bx) < 0.2 && Math.abs(lb.ax - lb.bx) < 0.2
+              const bothH = Math.abs(la.ay - la.by) < 0.2 && Math.abs(lb.ay - lb.by) < 0.2
+              if (bothV && Math.abs(la.ax - lb.ax) < 0.2) {
+                const cover =
+                  Math.min(Math.max(la.ay, la.by), Math.max(lb.ay, lb.by)) -
+                  Math.max(Math.min(la.ay, la.by), Math.min(lb.ay, lb.by))
+                expect(
+                  cover,
+                  `${a.id} und ${b.id} teilen bei r=${rTag} ein senkrechtes Stück`,
+                ).toBeLessThanOrEqual(0)
+              }
+              if (bothH && Math.abs(la.ay - lb.ay) < 0.2) {
+                const cover =
+                  Math.min(Math.max(la.ax, la.bx), Math.max(lb.ax, lb.bx)) -
+                  Math.max(Math.min(la.ax, la.bx), Math.min(lb.ax, lb.bx))
+                expect(
+                  cover,
+                  `${a.id} und ${b.id} teilen bei r=${rTag} ein waagerechtes Stück`,
+                ).toBeLessThanOrEqual(0)
+              }
+            }
+          }
+        }
       }
     }
   })

@@ -935,6 +935,13 @@ export function forgeRoutes(): ReadonlyMap<string, ForgeRoute> {
  *
  * Auch sie laufen rechtwinklig. Ein radialer Strich wäre der einzige schräge im
  * ganzen Bild, und genau daran fiele er auf.
+ *
+ * Ihr Port sitzt dort, wo der STRAHL steht — nicht in der Mitte seiner Seite.
+ * `sideToward()` legt zwei der fünf auf dieselbe Achse (Chimes/Click 54° und
+ * Chimes/Sec 126° liegen beide unter der Sonne), und die träten sonst am
+ * gleichen Punkt aus: EIN Strich, der sich erst weit darunter gabelt. Genau
+ * dafür fächert `buildFan()` die Ports der Knoten; die Sonne bekommt es hier,
+ * denn sie ist RUND — ihr Rand hat auf keiner Seite eine Mitte.
  */
 export function forgeSunRoute(
   centre: Point,
@@ -949,6 +956,9 @@ export function forgeSunRoute(
   const side = sideToward(centre, to)
   const radiusB = radiusOf(toId)
   const book = new ChannelBook()
+  // Der Querversatz des Ziels; `portOf()` klemmt ihn auf `PORT_SPAN` und setzt
+  // den Punkt AUF den Kreis.
+  const spread = side === 'E' || side === 'W' ? to.y - centre.y : to.x - centre.x
 
   let best: Attempt | null = null
   const straight = straightOffsets(centre, to, side)
@@ -964,7 +974,7 @@ export function forgeSunRoute(
   }
   if (best === null) {
     best = bestOf(
-      { centre, radius: edgeRadius, side, offset: 0 },
+      { centre, radius: edgeRadius, side, offset: spread },
       { centre: to, radius: radiusB, side: sideToward(to, centre), offset: 0 },
       blockers,
       own,
@@ -973,7 +983,7 @@ export function forgeSunRoute(
     ).best
   }
   if (best === null) {
-    const [portA, stubA] = portOf(centre, edgeRadius, side, 0)
+    const [portA, stubA] = portOf(centre, edgeRadius, side, spread)
     const [portB, stubB] = portOf(to, radiusB, sideToward(to, centre), 0)
     const pts = tidy([portA, stubA, { x: stubB.x, y: stubA.y }, stubB, portB])
     best = { pts, turns: turnsOf(pts), score: 0 }

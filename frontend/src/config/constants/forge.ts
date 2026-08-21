@@ -1214,6 +1214,22 @@ export const FORGE_EDGE_MAX_PX = 320
  */
 export const FORGE_BRIDGE_MAX_PX = 360
 /**
+ * Bis zu welcher Zone die beiden Chime-Achsen getrennt bleiben.
+ *
+ * Chimes/Click und Chimes/Sec sind im Ring Nachbarn, ein Cluster nimmt Knoten
+ * seiner beiden Nachbarstrahlen — ohne diese Regel träfen sie sich zwangsläufig.
+ * Bis Zone 2 tun sie es nicht: der Anfang bleibt lesbar, weil jede Wirtschafts-
+ * achse ihren eigenen Ort hat.
+ *
+ * **Weiter aussen ist die Trennung nicht zu haben**, und der Grund steht im
+ * Katalog, nicht in der Karte: `tirelessQuarry` hängt an `prospectorsPact` (CpS)
+ * und fordert `resonantPact` (CpC), `sanctumVeil` genau umgekehrt. Eine
+ * Bedingungskante bleibt unter `FORGE_EDGE_MAX_PX`, also müssen die beiden
+ * Bündnisse nebeneinander liegen. Wer die Trennung nach aussen ziehen will,
+ * fängt bei diesen Konjunktionen an — das ist Balance, nicht Layout.
+ */
+export const FORGE_CHIME_SPLIT_MAX_PHASE = 2
+/**
  * Die Strichelung einer BEDINGUNGS-Kante.
  *
  * Gestrichelt und nicht durchgezogen, weil sie etwas anderes sagt als ein Ast:
