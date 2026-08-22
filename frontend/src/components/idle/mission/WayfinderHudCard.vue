@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { invalidateHudField } from '@/utils/ui/hudField'
@@ -112,6 +113,13 @@ onUnmounted(() => {
       <span class="wf-count">
         {{ formatNumber(face.progress) }}/{{ formatNumber(face.target) }}
       </span>
+
+      <!-- Der Lohn stand bisher nur im Tooltip — auf der einzigen dauerhaft
+           sichtbaren Karte des Spiels las man, was zu tun ist, nicht wofür. -->
+      <span class="wf-reward">
+        <Icon icon="game-icons:present" width="15" height="15" class="wf-reward__glyph" />
+        <span class="wf-reward__text">{{ flashing ? 'CLAIMED' : face.rewardLabel }}</span>
+      </span>
     </div>
   </Transition>
 </template>
@@ -128,14 +136,29 @@ onUnmounted(() => {
   width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 12px 14px;
-  background: #16140e;
-  border: 2px solid #5c3310;
+  gap: 5px;
+  padding: 14px 16px;
+  background: var(--rpg-bg-header);
+  border: 2px solid var(--rpg-wood);
   border-left: 3px solid var(--accent);
   border-radius: 4px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8);
+  box-shadow:
+    inset 0 0 0 1px var(--rpg-wood-inner),
+    0 6px 18px rgba(0, 0, 0, 0.8);
   overflow: hidden;
+}
+
+/* Die Goldlinie der Bottom-Bar — sie markiert das eine dauerhafte Glied der
+   Spalte. Statisch, nie animiert. */
+.wf-root::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #c89040, #5c3310);
+  pointer-events: none;
 }
 
 /* Der Fortschritt IST die Fläche: eigene Ebene, damit nur ihr `transform`
@@ -168,7 +191,7 @@ onUnmounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   height: 2.24em;
-  font-size: clamp(20px, 1.26vw, 24px);
+  font-size: clamp(22px, 1.4vw, 27px);
   font-weight: 800;
   line-height: 1.12;
   color: #f2ead2;
@@ -181,7 +204,7 @@ onUnmounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   height: 2.6em;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.3;
   color: #9a9184;
 }
@@ -189,12 +212,45 @@ onUnmounted(() => {
 .wf-count {
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.04em;
   color: #b89b5a;
   font-variant-numeric: tabular-nums;
+}
+
+/* Die Belohnung, abgesetzt am Fuß. Trennlinie als `border-top` am Element
+   selbst — eine eigene Ebene wäre für eine Haarlinie zu teuer. */
+.wf-reward {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(122, 78, 32, 0.45);
+}
+
+.wf-reward__glyph {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #7a9a6a;
+}
+
+/* Zwei Zeilen fest, aus demselben Grund wie Name und Aufgabe darüber: nach dem
+   Glyph bleiben auf Full HD 189 px, das längste Label misst 196. */
+.wf-reward__text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 2.5em;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1.25;
+  color: #7a9a6a;
 }
 
 /* Abschlussblitz — EIN Umschlag, keine laufende Animation. Kürzer als die
@@ -203,6 +259,11 @@ onUnmounted(() => {
   background: #6ec040;
   opacity: 0.38;
   transition-duration: 0.25s;
+}
+
+.wf-root--done .wf-reward__text,
+.wf-root--done .wf-reward__glyph {
+  color: #6ec040;
 }
 
 /* ── Ein-/Ausblenden ── */
@@ -233,40 +294,61 @@ onUnmounted(() => {
     top: 0.7rem;
     left: 1rem;
     width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 580px);
-    gap: 4px;
-    padding: 14px 17px;
+    gap: 6px;
+    padding: 16px 19px;
   }
   /* Ab hier trägt die Karte 509 px innen — gemessen passt dort jeder der 41
      Namen und jede Anweisung einzeilig, die zweite Zeile wäre nur Leerraum. */
   .wf-name {
     -webkit-line-clamp: 1;
     height: 1.12em;
-    font-size: clamp(26px, 1.5vw, 36px);
+    font-size: clamp(28px, 1.65vw, 39px);
   }
   .wf-task {
     -webkit-line-clamp: 1;
     height: 1.3em;
-    font-size: 17px;
+    font-size: 18px;
   }
   .wf-count {
-    font-size: 18px;
+    font-size: 19px;
+  }
+  /* Dieselbe Innenbreite trägt auch die längste Belohnung (196 px) einzeilig. */
+  .wf-reward {
+    gap: 7px;
+    padding-top: 8px;
+  }
+  .wf-reward__glyph {
+    width: 18px;
+    height: 18px;
+  }
+  .wf-reward__text {
+    -webkit-line-clamp: 1;
+    height: 1.25em;
+    font-size: 15px;
   }
 }
 
 @media (min-width: 3400px) {
   .wf-root {
     width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 700px);
-    gap: 5px;
-    padding: 17px 20px;
+    gap: 7px;
+    padding: 19px 23px;
   }
   .wf-name {
-    font-size: clamp(32px, 1.3vw, 46px);
+    font-size: clamp(35px, 1.45vw, 50px);
   }
   .wf-task {
-    font-size: 21px;
+    font-size: 23px;
   }
   .wf-count {
-    font-size: 22px;
+    font-size: 24px;
+  }
+  .wf-reward__glyph {
+    width: 21px;
+    height: 21px;
+  }
+  .wf-reward__text {
+    font-size: 18px;
   }
 }
 

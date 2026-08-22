@@ -261,11 +261,13 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px 12px;
-  background: #16140e;
-  border: 2px solid #5c3310;
+  background: var(--rpg-bg-header);
+  border: 2px solid var(--rpg-wood);
   border-left: 3px solid var(--severity);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  box-shadow:
+    inset 0 0 0 1px var(--rpg-wood-inner),
+    0 8px 24px rgba(0, 0, 0, 0.85);
   overflow: hidden;
   transition: top 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }

@@ -24,7 +24,7 @@ import {
 const W = 1920
 const H = 1000
 
-/** Full HD, gemessene Werte: Header von x=265 bis 1655, Karte 12…253 × 8…121. */
+/** Full HD, gemessene Werte: Header von x=265 bis 1655, Karte 12…253 × 8…209. */
 const METRICS: HudFieldMetrics = {
   viewportW: W,
   viewportH: H,
@@ -37,7 +37,7 @@ const METRICS: HudFieldMetrics = {
   keycapBar: 30,
   abilityBarTop: 0,
   abilityBarHalfW: 0,
-  wayfinderBottom: 121,
+  wayfinderBottom: 209,
   wayfinderRight: 253,
 }
 
@@ -78,12 +78,12 @@ describe('hudFreeBandAt with the mission card', () => {
   })
 
   it('keeps the deeper of card and header where the two overlap', () => {
-    // Bei x=265 beginnt der Header (Kante 86) — die Karte reicht dort mit 121
+    // Bei x=265 beginnt der Header (Kante 86) — die Karte reicht dort mit 209
     // tiefer und muss gewinnen. Sie endet allerdings schon bei 253, also greift
     // an dieser Spalte nur der Header.
     expect(hudFreeBandAt(265, METRICS).top).toBe(86)
     const wide: HudFieldMetrics = { ...METRICS, wayfinderRight: 300 }
-    expect(hudFreeBandAt(265, wide).top).toBe(121)
+    expect(hudFreeBandAt(265, wide).top).toBe(209)
   })
 
   it('makes a body dodge before its centre reaches the card', () => {

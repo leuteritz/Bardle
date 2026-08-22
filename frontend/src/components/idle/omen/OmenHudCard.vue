@@ -200,11 +200,13 @@ onUnmounted(() => {
   gap: 5px;
   /* Unten kein Padding: der Balken sitzt bündig auf der Kante. */
   padding: 8px 10px 0;
-  background: #16140e;
-  border: 2px solid #5c3310;
+  background: var(--rpg-bg-header);
+  border: 2px solid var(--rpg-wood);
   border-left: 3px solid var(--accent);
   border-radius: 4px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8);
+  box-shadow:
+    inset 0 0 0 1px var(--rpg-wood-inner),
+    0 6px 18px rgba(0, 0, 0, 0.8);
   overflow: hidden;
 }
 
