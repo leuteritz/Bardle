@@ -3,6 +3,7 @@ import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import RpgSearchBar from '../ui/RpgSearchBar.vue'
+import { highlightSegments } from '@/utils/ui/searchHighlight'
 import { encyclopediaData } from '@/config/encyclopedia'
 import type { EncyclopediaEntry } from '@/config/encyclopedia'
 import {
@@ -108,31 +109,6 @@ const visibleGroups = computed(() => {
     }))
     .filter((category) => category.entries.length > 0)
 })
-
-/* ── Search highlighting ── */
-
-interface TextSegment {
-  text: string
-  hit: boolean
-}
-
-function highlightSegments(text: string, query: string): TextSegment[] {
-  if (!query) return [{ text, hit: false }]
-  const lower = text.toLowerCase()
-  const segments: TextSegment[] = []
-  let index = 0
-  while (index < text.length) {
-    const found = lower.indexOf(query, index)
-    if (found < 0) {
-      segments.push({ text: text.slice(index), hit: false })
-      break
-    }
-    if (found > index) segments.push({ text: text.slice(index, found), hit: false })
-    segments.push({ text: text.slice(found, found + query.length), hit: true })
-    index = found + query.length
-  }
-  return segments
-}
 
 /* ── Actions ── */
 

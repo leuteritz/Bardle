@@ -2,6 +2,7 @@
 // Konstellationen und Schnäppchen) und der Meep Skill Tree.
 
 import type {
+  ForgeAxisId,
   ForgeBargainKind,
   ForgeEffectFamily,
   ForgeRelicRarity,
@@ -3130,18 +3131,42 @@ export const FORGE_ZOOM_BAR = { w: 168, h: 32 } as const
 /** Aussenmass der Kürzel-Zeile — grosszügig gegen die gemessenen rund 100×26,
  *  und zugleich das Platzhaltermass im Ladeschleier. */
 export const FORGE_KEY_HINT_ROW = { w: 132, h: 30 } as const
+/**
+ * Aussenmass der Suchleiste oben rechts. Höhe ist die des `md`-Feldes
+ * (`RpgSearchBar`).
+ *
+ * Die BREITE ist gemessen und nicht gewählt: am Zoomboden steht das ganze Netz
+ * fest im Bild, die Kamera kann dort nichts mehr wegschieben — was die Leiste
+ * verdeckt, bleibt verdeckt. `forgeCameraBounds.spec.ts` rechnet das für jeden
+ * der 155 Knoten nach und fällt ab 270 über `wayfarersHoard`. 248 hält den
+ * Abstand dazu.
+ */
+export const FORGE_SEARCH_BAR = { w: 248, h: 46 } as const
+/** Deckel der aufklappenden Vorschlagsfläche. Auf dem flachsten Viewport
+ *  (Full HD, ~640 px Bühnenhöhe) bleibt darunter die Zoom-Leiste frei. */
+export const FORGE_SEARCH_PANEL_MAX_H = 460
+/**
+ * Die Fläche darf BREITER sein als die Leiste darüber und hängt nach links
+ * über: sie steht nur bei Fokus offen, und solange fährt die Kamera nicht — die
+ * Sperrfläche deckt deshalb nur die Leiste.
+ */
+export const FORGE_SEARCH_PANEL_W = 300
 /** Bis hierher gilt die Kamera als zentriert — Klemmung und Rundung lassen
  *  `pan` nie exakt auf dem Mittelpunkt liegen. */
 export const FORGE_RECENTER_AT_REST_PX = 1.5
 
 /**
- * Die beiden SPERRFLÄCHEN. Drei Leser, und alle meinen dasselbe: der Kompass
+ * Die drei SPERRFLÄCHEN. Drei Leser, und alle meinen dasselbe: der Kompass
  * darf nicht dorthin ausweichen, und ein Knoten, der dahinter liegt, gilt als
  * NICHT im Bild.
  *
  * ABGELEITET und nicht neu gezählt: wächst ein Bedienfeld, wächst seine Fläche
  * mit. Sie darf grosszügiger sein als das, was dort steht — deshalb der
  * doppelte Kantenabstand.
+ *
+ * `topRight` deckt nur die LEISTE, nicht ihre Vorschlagsfläche: die steht nur
+ * offen, solange der Zeiger im Feld ist, und die Kamera fährt in dieser Zeit
+ * nicht.
  */
 export const FORGE_VIEWPORT_KEEPOUTS = {
   bottomRight: {
@@ -3151,6 +3176,10 @@ export const FORGE_VIEWPORT_KEEPOUTS = {
   bottomLeft: {
     w: FORGE_KEY_HINT_ROW.w + FORGE_VIEWPORT_INSET_PX * 2,
     h: FORGE_KEY_HINT_ROW.h + FORGE_VIEWPORT_INSET_PX * 2,
+  },
+  topRight: {
+    w: FORGE_SEARCH_BAR.w + FORGE_VIEWPORT_INSET_PX * 2,
+    h: FORGE_SEARCH_BAR.h + FORGE_VIEWPORT_INSET_PX * 2,
   },
 } as const
 
@@ -3686,3 +3715,61 @@ export const FORGE_SHOP_SKELETON_SUN_PCT = 11
  * der Sammelkauf dasselbe Wort trägt: eine Sache, ein Name.
  */
 export const FORGE_DETAILS_RAIL_LABEL = 'FORGE'
+
+/**
+ * Klartext zu `ForgeEffectFamily`. Die Icon-Map daneben
+ * (`FORGE_GLIMMER_FAMILY_ICON`) trug die fünfzehn Familien bisher allein — ein
+ * Chip braucht dazu ein Wort, und geraten wird es nicht: `void` heisst im Spiel
+ * „The Void", `ladder` heisst „Ranked".
+ */
+export const FORGE_FAMILY_LABEL: Record<ForgeEffectFamily, string> = {
+  travel: 'Travel',
+  drifter: 'Drifters',
+  idle: 'Idle',
+  guard: 'Guard',
+  void: 'The Void',
+  star: 'Stars',
+  click: 'Clicking',
+  market: 'Market',
+  harvest: 'Materials',
+  income: 'Income',
+  combat: 'Combat',
+  boss: 'Bosses',
+  ladder: 'Ranked',
+  fortune: 'Fortune',
+  ability: 'Abilities',
+}
+
+/**
+ * Die Zustands-Chips der Suche. Jeder zeigt auf ein Feld, das
+ * `ForgeUpgradeEntry` schon trägt — ein vierter Begriff für „kaufbar" neben
+ * `canBuy` und `state` wäre eine zweite Wahrheit.
+ */
+export const FORGE_SEARCH_STATE_CHIPS = [
+  { id: 'ready', label: 'Ready', icon: 'lucide:circle-check' },
+  { id: 'locked', label: 'Locked', icon: 'lucide:lock' },
+  { id: 'maxed', label: 'Maxed', icon: 'lucide:crown' },
+] as const
+
+/** Wie viele frühere Suchen die Vorschlagsfläche vorhält. */
+export const FORGE_SEARCH_RECENT_MAX = 5
+
+/**
+ * Die Kürzel, unter denen der Spieler eine Achse SUCHT — „cps", nicht
+ * „Chimes / Sec".
+ *
+ * Nicht aus `statLabel` abgeleitet, obwohl das verlockend nah liegt: dort heisst
+ * der Strahl `flightSpeed` „CpS Mult.", und eine Suche nach „cps" holte damit
+ * die halbe Reise-Achse mit herein.
+ */
+export const FORGE_AXIS_SEARCH_ALIAS: Record<ForgeAxisId, string> = {
+  flightSpeed: 'speed travel flight expedition',
+  maxHp: 'hp health survival regen',
+  chimesPerClick: 'cpc chimes per click clicking',
+  chimesPerSecond: 'cps chimes per second income idle',
+  dmgPerClick: 'dps dmg damage attack combat',
+}
+
+/** Icon-Kanten der Such-Chips. Die Achsen tragen `game-icons`-Motive und
+ *  brauchen ihre 20 px; Familie und Zustand sind gefüllte Geometrie. */
+export const FORGE_SEARCH_CHIP_ICON = { axis: 20, family: 16, state: 16 } as const

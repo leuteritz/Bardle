@@ -104,7 +104,14 @@
           <span class="fut-lvl">
             {{ levelParts.big }}<span class="fut-lvl-max">{{ levelParts.max }}</span>
           </span>
-          <span class="fut-name" :style="{ color: entry.color }">{{ entry.name }}</span>
+          <span class="fut-name" :style="{ color: entry.color }">
+            <span
+              v-for="(seg, i) in highlightSegments(entry.name, searchQuery)"
+              :key="i"
+              :class="{ 'fut-name-hit': seg.hit }"
+              >{{ seg.text }}</span
+            >
+          </span>
         </span>
 
         <!-- Ein gedeckelter Strahl hat einen Sprung, den er nicht nehmen
@@ -273,6 +280,8 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { useForgeSearch } from '@/composables/ui/useForgeSearch'
+import { highlightSegments } from '@/utils/ui/searchHighlight'
 import { forgeLevelParts, forgeRowPriceFit } from '@/composables/ui/useForgeUpgrades'
 import { formatNumber } from '@/config/ui/numberFormat'
 import ForgeCostRow from './ForgeCostRow.vue'
@@ -338,6 +347,8 @@ const props = withDefaults(
 defineEmits<{ (e: 'buy', id: string): void; (e: 'buyMany', id: string): void }>()
 
 const { hoverId, pinnedId, setListHover, focusNode } = useForgeSpotlight()
+/** Nur der FREITEXT hebt hervor — ein Facetten-Chip steht in keinem Namen. */
+const { normalizedQuery: searchQuery } = useForgeSearch()
 
 /** Diese Zeile ist die festgehaltene Auswahl. */
 const isFocused = computed(() => pinnedId.value === props.entry.id)
@@ -801,6 +812,11 @@ const buyTitle = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Derselbe Ton wie der Suchring am Knoten — was hier leuchtet, leuchtet dort. */
+.fut-name-hit {
+  color: #40c8e0;
 }
 
 /* ══════════════════════════════════════════════════

@@ -4,6 +4,15 @@
        ließen den Spotlight bei jedem Übergang kurz ausgehen — und die
        Reihenfolge dabei jedes Mal auftauen. -->
   <div ref="wrapEl" class="fu-wrap" @mouseenter="freezeOrder" @mouseleave="leaveList">
+    <!-- Was die Suche im Netz nebenan gerade durchlässt. Steht nur, solange
+         gesucht wird — sonst wäre es eine Zeile, die nie etwas sagt. -->
+    <div v-if="searchActive" class="fu-search-note">
+      <Icon icon="lucide:search" width="14" height="14" class="fu-search-ico" />
+      <span class="fu-search-count">{{ matchCount }}</span>
+      <span class="fu-search-total">of {{ totalCount }}</span>
+      <button class="fu-search-clear" type="button" @click="clearSearch">Clear</button>
+    </div>
+
     <!-- ══ Die Töpfe ════════════════════════════════════════════════
          Ready · Saving up · und zuletzt das eingeklappte Archiv. Ein leerer
          Topf fällt ganz weg — Gesperrtes steht hier gar nicht erst, siehe
@@ -64,10 +73,16 @@
     </section>
 
     <!-- Alle vier Töpfe leer — im frischen Spielstand der einzige Fall, und
-         später keiner mehr. -->
+         später keiner mehr. Bei laufender Suche steht der GRUND daneben: die
+         Spalte ist sonst leer, und warum, sähe man nur in der anderen
+         Bildhälfte. -->
     <div v-if="sections.length === 0" class="fu-none">
       <Icon :icon="FORGE_UPGRADE_EMPTY_ICON" width="26" height="26" class="fu-none-ico" />
-      <span class="fu-none-text">Nothing to grow yet.</span>
+      <template v-if="searchActive">
+        <span class="fu-none-text">{{ emptySearchText }}</span>
+        <button class="fu-none-clear" type="button" @click="clearSearch">Clear search</button>
+      </template>
+      <span v-else class="fu-none-text">Nothing to grow yet.</span>
     </div>
   </div>
 
@@ -124,6 +139,7 @@ import {
   useForgeUpgrades,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { useForgeSearch } from '@/composables/ui/useForgeSearch'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { forgeRowInView } from '@/utils/ui/forgeSpotlightView'
 import ForgeUpgradeTile from './ForgeUpgradeTile.vue'
@@ -152,6 +168,21 @@ const { upgradeEntries, entryById, freshIds, buyUpgrade, affordableLevels, buyMa
 const { treeHoverId, listHoverId, pinnedId, focusTick, setListHover, clearPin } =
   useForgeSpotlight()
 const { detailsOpen } = useForgeDetailsPane()
+const { searchActive, matchIds, matchCount, totalCount, clearSearch } = useForgeSearch()
+
+/**
+ * Zwei Gründe für eine leere Spalte, und sie verlangen Verschiedenes.
+ *
+ * Diese Liste zeigt Gesperrtes grundsätzlich nicht (siehe `sections`) — eine
+ * Suche kann also Treffer haben und hier trotzdem nichts hinterlassen. „Nichts
+ * gefunden" wäre dann schlicht falsch: die Knoten stehen leuchtend im Netz
+ * nebenan.
+ */
+const emptySearchText = computed(() =>
+  matchCount.value > 0
+    ? `${matchCount.value} matches, all still locked — they are lit in the tree.`
+    : 'No node matches this search.',
+)
 
 // ── Eingefrorene Reihenfolge ─────────────────────────────────────────────────
 /**
@@ -250,6 +281,9 @@ const sections = computed<UpgradeSection[]>(() => {
   }
 
   for (const entry of upgradeEntries.value) {
+    /* Die Suche schneidet VOR den Töpfen: sie ist eine Frage an den ganzen
+       Bestand, keine an einen von ihnen. */
+    if (searchActive.value && !matchIds.value.has(entry.id)) continue
     const bucket = bucketOf(entry)
     /* Gesperrtes gehört nicht in diese Spalte. Sie beantwortet „was kann ich
        JETZT kaufen" — und ein Knoten, dessen Elternteil noch fehlt oder dessen
@@ -656,6 +690,72 @@ onUnmounted(() => {
   font-size: 13.5px;
   font-weight: 700;
   color: rgba(232, 220, 192, 0.45);
+}
+
+.fu-none-clear {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #e8c040;
+  background: #1e1006;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.fu-none-clear:hover {
+  border-color: #7a4e20;
+}
+
+/* ══════════════════════════════════════════════════
+   TREFFERZEILE der Suche
+══════════════════════════════════════════════════ */
+.fu-search-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  background: #16140e;
+  border: 1px solid #2a3a40;
+  border-radius: 4px;
+}
+
+.fu-search-ico {
+  flex-shrink: 0;
+  color: #40c8e0;
+}
+
+.fu-search-count {
+  font-size: 14px;
+  font-weight: 900;
+  color: #40c8e0;
+  font-variant-numeric: tabular-nums;
+}
+
+.fu-search-total {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(232, 220, 192, 0.45);
+}
+
+.fu-search-clear {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #cc6050;
+  background: none;
+  border: 1px solid #4a3010;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.fu-search-clear:hover {
+  color: #e07060;
+  border-color: #7a4e20;
 }
 
 /* ══════════════════════════════════════════════════

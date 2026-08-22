@@ -45,6 +45,7 @@ import { Icon } from '@iconify/vue'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { useForgeSearch } from '@/composables/ui/useForgeSearch'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { onKeybinding } from '@/composables/system/useKeybindings'
 import { useHerald } from '@/composables/ui/useHerald'
@@ -78,6 +79,7 @@ const { announceReceipt } = useHerald()
  * daneben weiterhin bedienbar ist.
  */
 const { spotlightId, hoverId, pinned, clearPin, resetForgeSpotlight } = useForgeSpotlight()
+const { searchActive, clearSearch } = useForgeSearch()
 const { detailsOpen, closeDetails } = useForgeDetailsPane()
 
 watch(spotlightId, (id) => {
@@ -130,10 +132,19 @@ let releaseRecenter: (() => void) | null = null
 
 function onEsc(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
-  // Von innen nach aussen: erst die Anheftung, dann die Spalte, dann darf das
-  // Modal. Zwei Ebenen in EINEM Tastendruck wären ein Zufallsergebnis — der
-  // Spieler drückt einmal und verliert zwei Zustände, von denen er einen noch
-  // brauchte.
+  // Von innen nach aussen: erst die Suche, dann die Anheftung, dann die Spalte,
+  // dann darf das Modal. Zwei Ebenen in EINEM Tastendruck wären ein
+  // Zufallsergebnis — der Spieler drückt einmal und verliert zwei Zustände, von
+  // denen er einen noch brauchte.
+  //
+  // Die Suche steht vorn, weil sie BEIDE Spalten schneidet: liesse man die
+  // Anheftung zuerst fallen, stünde danach eine Liste, deren Kürzung niemand
+  // mehr erklärt.
+  if (searchActive.value) {
+    clearSearch()
+    event.preventDefault()
+    return
+  }
   if (pinned.value) {
     clearPin()
     // Verbraucht: das Modal darüber prüft `defaultPrevented` und bleibt stehen.
@@ -285,6 +296,9 @@ watch(
     // `detailsOpen` wird hier BEWUSST nicht mitgeräumt: es ist Sitzungs- und
     // nicht Besuchsgedächtnis (siehe `useForgeDetailsPane`).
     resetForgeSpotlight()
+    // Die Suche geht mit, die Liste der letzten Suchen bleibt: eine Frage ist
+    // beim nächsten Besuch beantwortet, ein Verlauf ist Bequemlichkeit.
+    clearSearch()
   },
   { immediate: true },
 )

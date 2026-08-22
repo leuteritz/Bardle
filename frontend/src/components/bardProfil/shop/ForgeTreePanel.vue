@@ -50,6 +50,10 @@
       <KeybindChip id="forgeRecenter" :lit="!recenterAtRest" />
     </div>
 
+    <!-- DIE SUCHLEISTE oben rechts, die dritte belegte Ecke
+         (`FORGE_VIEWPORT_KEEPOUTS.topRight`). -->
+    <ForgeSearchDock />
+
     <!-- DER RAND-KOMPASS. Zeigt an der Viewport-Kante in die Richtung des
          gemeinten Knotens, solange er ausserhalb liegt, und verschwindet in dem
          Moment, in dem die Fahrt ihn hereinholt.
@@ -204,6 +208,7 @@
               // Und was auf dem WEG dorthin liegt, ebenso wenig.
               'node-circle--trail': spotTrail.has(node.id),
               'node-circle--dim': isDimmed(node.id),
+              'node-circle--hit': isSearchHit(node.id),
             },
           ]"
           :style="{ '--node-color': node.color }"
@@ -212,6 +217,9 @@
           @mouseleave="setTreeHover(null)"
         >
           <span class="node-glow" aria-hidden="true" />
+          <!-- Der SUCHRING. Eigene, statische Ebene mit eigenem Ton — Gold ist
+               „kaufbar", Grün/Rot sind die Voraussetzung. -->
+          <span v-if="isSearchHit(node.id)" class="node-hit" aria-hidden="true" />
           <!-- Eine Ebene je Spotlight, nicht eine je Knoten: so existiert genau
                EINE statt fünfundzwanzig, und der Ping fängt bei jedem neuen
                Ziel von vorn an, weil das Element selbst neu ist.
@@ -358,6 +366,7 @@ import {
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { useForgeSearch } from '@/composables/ui/useForgeSearch'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import {
   forgeClusterSpots,
@@ -391,6 +400,7 @@ import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
 import ForgeNodeTooltip from './ForgeNodeTooltip.vue'
+import ForgeSearchDock from './ForgeSearchDock.vue'
 import SunChimeBoost from './SunChimeBoost.vue'
 import KeybindChip from '@/components/keybinds/KeybindChip.vue'
 import {
@@ -470,6 +480,7 @@ const {
   clearPin,
   resetForgeSpotlight,
 } = useForgeSpotlight()
+const { searchActive, matchIds } = useForgeSearch()
 const { detailsOpen, openDetails, closeDetails } = useForgeDetailsPane()
 
 const C = FORGE_STAGE_SIZE / 2
@@ -931,12 +942,18 @@ function isSpot(id: string): boolean {
  * Zeiger, sonst läge sie unter einem stehenden Fokus dauerhaft grau.
  */
 function isDimmed(id: string): boolean {
+  if (searchActive.value && !matchIds.value.has(id)) return true
   return (
     spotlightId.value !== null &&
     !isSpot(id) &&
     !spotReqs.value.has(id) &&
     !spotTrail.value.has(id)
   )
+}
+
+/** Nur bei laufender Suche — ohne sie trägt jeder Knoten den Ring. */
+function isSearchHit(id: string): boolean {
+  return searchActive.value && matchIds.value.has(id)
 }
 
 /** Nur die STRUKTUR-Kante je Ziel. Ein Knoten kann mehrere eingehende Kanten
@@ -2877,6 +2894,13 @@ const nextPhasePreviewStyle = computed(() => ({
   opacity: 1;
 }
 
+/* Ein Treffer steht voll da, auch wenn er gesperrt oder gedeckelt ist — sonst
+   suchte man etwas und bekäme es bei 0,5 Deckkraft zurück. Steht VOR `--dim`:
+   ein stehender Spotlight schlägt die Suche, sonst dämpfte er nichts mehr. */
+.node-circle--hit {
+  opacity: 1;
+}
+
 /* Zurücktreten. Klasse je Knoten, NICHT als geerbte Variable am Container
    (Performance-Regel 3). Steht nach `--locked` (0,5) und `--capped` (0,6) und
    gewinnt damit bei gleicher Spezifität über die Quellreihenfolge. */
@@ -2891,6 +2915,23 @@ const nextPhasePreviewStyle = computed(() => ({
 .node-circle--dim .node-glow {
   opacity: 0.25;
 }
+
+/* Der SUCHTREFFER. Eigener Ton, weil die drei belegten schon Bedeutung tragen:
+   Gold heisst kaufbar, Grün erfüllt, Rot offen. Statischer Schein, keine
+   Animation — bei einer Suche stehen leicht drei Dutzend Ringe gleichzeitig
+   (Performance-Regel 2). */
+.node-hit {
+  position: absolute;
+  inset: v-bind(ringInset);
+  border-radius: 50%;
+  border: 2px solid #40c8e0;
+  box-shadow:
+    0 0 12px rgba(64, 200, 224, 0.5),
+    inset 0 0 6px rgba(64, 200, 224, 0.25);
+  pointer-events: none;
+  z-index: -1;
+}
+
 
 /* ══════════════════════════════════════════════════
    RINGFILTER — was der Chip oben nicht durchlässt

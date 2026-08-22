@@ -112,10 +112,11 @@ export function forgeNodeInView(
   const e = chromeEdges(view)
   const underZoomBar = p.x + radiusPx > e.rx && p.y + radiusPx > e.ry
   const underKeyHints = p.x - radiusPx < e.lx && p.y + radiusPx > e.ly
-  return !underZoomBar && !underKeyHints
+  const underSearchBar = p.x + radiusPx > e.srx && p.y - radiusPx < e.sry
+  return !underZoomBar && !underKeyHints && !underSearchBar
 }
 
-/** Die Kanten der beiden Sperrflächen. */
+/** Die Kanten der drei Sperrflächen. */
 interface ForgeChromeEdges {
   /** Rechts davon liegt die Zoom-Leiste, unterhalb von `ry`. */
   rx: number
@@ -123,6 +124,9 @@ interface ForgeChromeEdges {
   /** Links davon liegt die Kürzel-Zeile, unterhalb von `ly`. */
   lx: number
   ly: number
+  /** Rechts davon liegt die Suchleiste, OBERHALB von `sry`. */
+  srx: number
+  sry: number
 }
 
 /**
@@ -135,11 +139,14 @@ interface ForgeChromeEdges {
 function chromeEdges(view: ForgeViewBox, pad = 0): ForgeChromeEdges {
   const right = FORGE_VIEWPORT_KEEPOUTS.bottomRight
   const left = FORGE_VIEWPORT_KEEPOUTS.bottomLeft
+  const search = FORGE_VIEWPORT_KEEPOUTS.topRight
   return {
     rx: view.w - (right.w + pad),
     ry: view.h - (right.h + pad),
     lx: left.w + pad,
     ly: view.h - (left.h + pad),
+    srx: view.w - (search.w + pad),
+    sry: search.h + pad,
   }
 }
 
@@ -249,6 +256,12 @@ export function forgeComfortPan(
     if (Math.abs(outX) < Math.abs(outY)) dx += outX
     else dy += outY
   }
+  if (p.x + dx + radiusPx > e.srx && p.y + dy - radiusPx < e.sry) {
+    const outX = e.srx - (p.x + dx + radiusPx)
+    const outY = e.sry - (p.y + dy - radiusPx)
+    if (Math.abs(outX) < Math.abs(outY)) dx += outX
+    else dy += outY
+  }
 
   if (dx === 0 && dy === 0) return null
 
@@ -323,6 +336,10 @@ export function forgeCompassAt(at: ForgeStagePoint, view: ForgeViewBox): ForgeCo
   if (x < e.lx && y > e.ly) {
     if (x < view.h - y) y = e.ly
     else x = e.lx
+  }
+  if (x > e.srx && y < e.sry) {
+    if (view.w - x < y) y = e.sry
+    else x = e.srx
   }
 
   return { x, y, angleDeg: (Math.atan2(dy, dx) * 180) / Math.PI }
