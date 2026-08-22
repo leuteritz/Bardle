@@ -447,17 +447,19 @@ export interface BadgeSeedResult {
 }
 
 /**
- * Wo Fähigkeitenleiste und Buff-Reihe gerade stehen. Beide werden von App.vue
- * per `<Teleport>` zwischen drei Docks umgehängt — dieselbe Instanz, nur Form
- * und Anker wechseln.
+ * Wo Fähigkeitenleiste und Buff-Reihe gerade stehen. App.vue hängt sie per
+ * `<Teleport>` um — dieselbe Instanz, nur Form und Anker wechseln.
  *
  * `free`  — am freien Bild: die Leiste über dem Scoreboard, die Buff-Reihe
  *           darüber gestapelt. Beide `position: fixed`.
  * `rail`  — in der Schiene des Star-Fight-Modals, als schmale Spalte.
- * `pause` — im Kit-Band des Pause-Overlays. Dort sind sie reine ANZEIGE: die
- *           Kacheln zünden nichts, weil das Spiel steht.
+ * `pause` — im Kit-Band des Pause-Overlays. **Nur die Buff-Reihe**: die
+ *           Fähigkeitenleiste wird dort nicht umgehängt, sondern gar nicht
+ *           gerendert (sie prüft `isPaused` selbst). Ihren Platz nimmt
+ *           `PauseKitPanel` ein — Zeilen statt Kacheln, weil im Overlay
+ *           nichts bedienbar ist.
  *
- * Drei benannte Werte statt zweier Booleans — `docked && paused` wäre ein
- * vierter Zustand, den es nicht gibt.
+ * Benannte Werte statt Booleans — `docked && paused` wäre ein Zustand, den es
+ * nicht gibt.
  */
 export type AbilityBarDock = 'free' | 'rail' | 'pause'

@@ -83,17 +83,70 @@
                    statisch. Vorher atmete ein `drop-shadow`-Filter direkt am
                    Bild — jeder Frame eine Neurasterung (siehe „Performance"
                    Regel 2). -->
-              <div class="chime-readout">
-                <span class="chime-orb">
-                  <span class="chime-orb__halo" aria-hidden="true" />
-                  <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
-                </span>
-                <span class="chime-stack">
-                  <span v-ink-center.y class="chime-value"
-                    >+{{ formatNumber(accumulatedChimes) }}</span
-                  >
-                  <span class="chime-cap">Chimes gathered</span>
-                </span>
+              <!-- ZWEI Ablesungen, nicht eine: was hereinkam, und wie weit es
+                   bis zum nächsten Meep noch trägt. Beide Füllstände laufen
+                   während der Pause weiter — die Produktion zahlt ein, auch
+                   wenn niemand klickt —, und deshalb gehören sie in dieselbe
+                   Zeile.
+
+                   Gezählt wird in CHIMES, nicht in Klicks. Die Klickstrecke
+                   (`clicksToNextMeep`) rechnet bewusst nur über den Klickwert
+                   und ist im Stillstand die falsche Größe; sie steht draußen
+                   an der Passiv-Kachel, wo geklickt wird. -->
+              <div
+                class="chime-readout"
+                :style="{
+                  '--readout-orb': `${PAUSE_READOUT_ORB_PX}px`,
+                  '--readout-gap': `${PAUSE_READOUT_GAP_PX}px`,
+                }"
+              >
+                <div class="chime-readout__part">
+                  <span class="chime-orb">
+                    <span class="chime-orb__halo" aria-hidden="true" />
+                    <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
+                  </span>
+                  <span class="chime-stack">
+                    <span class="chime-value-row">
+                      <!-- Kurzform, nicht formatNumber: die hängt immer zwei
+                           Nachkommastellen an („999.99K", sieben Zeichen) und
+                           macht die Zahl damit unbegrenzt breit. Dieselbe
+                           Stelle wie bei den Kill-Chips und beim SunLedger. -->
+                      <span v-ink-center.y class="chime-value"
+                        >+{{ formatNumberCompact(accumulatedChimes) }}</span
+                      >
+                    </span>
+                    <span class="chime-cap">Chimes gathered</span>
+                  </span>
+                </div>
+
+                <div class="chime-readout__part">
+                  <span class="chime-orb">
+                    <span class="chime-orb__halo chime-orb__halo--meep" aria-hidden="true" />
+                    <!-- Original, nicht `-128`: eine 256er Fassung des Meeps
+                         gibt es nicht, und 128 reicht bei 72 px Anzeige auf
+                         einem 2×-Schirm nicht. Der Chime daneben nimmt aus
+                         demselben Grund das Original. -->
+                    <img :src="MEEP_ART_IMAGE" alt="" class="chime-img" />
+                  </span>
+                  <span class="chime-stack">
+                    <span class="chime-value-row">
+                      <!-- Steht die Strecke auf 0, ist der Meep fällig — dann
+                           das Wort, nicht „0". -->
+                      <span v-ink-center.y class="chime-value chime-value--meep">{{
+                        chimesToNextMeep > 0 ? formatNumberCompact(chimesToNextMeep) : 'Ready'
+                      }}</span>
+                      <!-- Der Bestand steht NEBEN der Zahl, nicht unter ihr und
+                           nicht in der Beschriftung: als dritte Zeile machte er
+                           den Block 23 px höher (Fit-Scale), in der
+                           Beschriftung war die Zeile mit 370 px zu breit und
+                           brach um. -->
+                      <span class="chime-value-note"
+                        >· {{ formatNumberCompact(gameStore.pendingMeeps) }} pending</span
+                      >
+                    </span>
+                    <span class="chime-cap">To next meep</span>
+                  </span>
+                </div>
               </div>
 
               <!-- Kills aufgeschlüsselt: die Gesamtzahl steht im Kopf, darunter
@@ -307,12 +360,10 @@
           <section
             class="kit-band"
             :style="{
-              '--pause-kit-tile': `${PAUSE_KIT_TILE_PX}px`,
-              '--pause-kit-passive': `${PAUSE_KIT_PASSIVE_PX}px`,
               '--pause-kit-gap': `${PAUSE_KIT_GAP_PX}px`,
-              '--pause-kit-meep-w': `${PAUSE_KIT_MEEP_COL_W}px`,
               '--pause-kit-chip-h': `${PAUSE_KIT_EFFECT_CHIP_H}px`,
               '--pause-kit-band-h': `${PAUSE_KIT_BAND_H}px`,
+              '--pause-kit-effect-w': `${PAUSE_KIT_EFFECT_COL_W}px`,
             }"
           >
             <div class="kit-col">
@@ -326,10 +377,12 @@
                 />
                 Your kit
               </span>
-              <!-- Anzeige, kein Bedienfeld: die Kacheln zünden pausiert nichts
-                   (siehe `castAbility`). Was sie zeigen, läuft trotzdem weiter
-                   — Abklingzeiten enden auch im Stillstand. -->
-              <div id="pause-ability-dock" class="kit-dock" />
+              <!-- Anzeige, kein Bedienfeld — deshalb Zeilen statt Kacheln.
+                   Der Tick ist derselbe, der auch die Karten unten fortschreibt:
+                   Abklingzeiten enden auch im Stillstand. -->
+              <div class="kit-dock">
+                <PauseKitPanel :tick="starTick" />
+              </div>
             </div>
 
             <div class="kit-col kit-col--effects">
@@ -510,12 +563,13 @@ import {
   PAUSE_STAR_CARD_HEIGHT,
   PAUSE_STAR_CARD_GAP_PX,
   PAUSE_CALLOUT_ROWS,
-  PAUSE_KIT_TILE_PX,
-  PAUSE_KIT_PASSIVE_PX,
+  PAUSE_READOUT_ORB_PX,
+  PAUSE_READOUT_GAP_PX,
   PAUSE_KIT_GAP_PX,
-  PAUSE_KIT_MEEP_COL_W,
   PAUSE_KIT_EFFECT_CHIP_H,
+  PAUSE_KIT_EFFECT_COL_W,
   PAUSE_KIT_BAND_H,
+  MEEP_ART_IMAGE,
   PAUSE_STAR_HP_STEPS,
   STAR_TIMER_TICK_MS,
   VOID_SEVERITY_COLOR,
@@ -533,6 +587,7 @@ import {
 import { pauseDustStyle } from '@/utils/fx/particleField'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
+import PauseKitPanel from './PauseKitPanel.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import VitalityBar from '@/components/ui/VitalityBar.vue'
@@ -619,6 +674,15 @@ const levelSub = computed(() => `${formatNumberCompact(gameStore.chimesToNextLev
 
 const pauseStartChimes = ref(0)
 const pauseTick = ref(0)
+/**
+ * Der schnellere der beiden Takte (STAR_TIMER_TICK_MS). Er treibt bisher die
+ * Callout-Karten und jetzt zusätzlich die Abklingzeiten im Kit-Band — deren
+ * Zeitstempel liegen im Store und ändern sich nicht von selbst reaktiv.
+ *
+ * Ein rAF-Lauf dafür wäre in einem stehenden Spiel Verschwendung: vier Zahlen,
+ * die höchstens fünfmal je Sekunde eine Stelle wechseln.
+ */
+const starTick = ref(0)
 let pauseInterval: ReturnType<typeof setInterval> | null = null
 let starInterval: ReturnType<typeof setInterval> | null = null
 
@@ -723,7 +787,9 @@ watch(
       refreshResourceStars()
       refreshVoidThreat()
       refreshChampionCallout()
+      starTick.value = 0
       starInterval = setInterval(() => {
+        starTick.value++
         refreshResourceStars()
         refreshVoidThreat()
         refreshChampionCallout()
@@ -755,6 +821,17 @@ onUnmounted(() => {
 const accumulatedChimes = computed(() => {
   void pauseTick.value
   return Math.max(0, gameStore.chimes - pauseStartChimes.value)
+})
+
+/**
+ * Chimes bis zum nächsten anstehenden Meep. Der Getter im Store hängt an
+ * `chimesForNextUniverse` und sinkt damit auch pausiert weiter — die Produktion
+ * zahlt ein, ohne dass jemand klickt. Genau deshalb steht die Zahl hier und
+ * nicht die Klickstrecke.
+ */
+const chimesToNextMeep = computed(() => {
+  void pauseTick.value
+  return gameStore.chimesToNextMeep
 })
 
 // Während der Pause laufen Resource-Stars weiter: sie werden per Passivschaden
@@ -1554,11 +1631,31 @@ function particleStyle(i: number): Record<string, string> {
 
 /* ── Chime-Ablesung ───────────────────────────────────── */
 /* Die grösste Zahl des Panels — sie ist der Grund, warum man überhaupt
-   pausiert hat. Beschriftung darunter, klein: Zahlen dominieren. */
+   pausiert hat. Beschriftung darunter, klein: Zahlen dominieren.
+
+   Zwei Ablesungen nebeneinander, nicht untereinander: Höhe ist im Panel die
+   teure Achse, Breite hat die Bilanzspalte im Überfluss. Der Meep steht rechts
+   an der Spaltenkante, damit zwischen beiden eine echte Lücke bleibt und sie
+   nicht als ein Block gelesen werden. */
+/* Zwei GLEICH BREITE Hälften, jede aus fester Orb-Spalte und Text daneben.
+
+   Vorher waren beide inhaltsbreit und mit `space-between` an die Kanten
+   gedrückt: die rechte wuchs damit nach LINKS, ihr Bild wanderte also, sobald
+   die Zahl eine Stelle mehr bekam. Mit `1fr 1fr` steht jeder Orb an einer
+   festen Position, und der Text wächst nur in seine eigene Hälfte hinein. */
 .chime-readout {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--readout-gap);
+  width: 100%;
+  min-width: 0;
+}
+
+.chime-readout__part {
+  display: grid;
+  grid-template-columns: var(--readout-orb) minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
+  gap: var(--readout-gap);
   min-width: 0;
 }
 
@@ -1597,6 +1694,29 @@ function particleStyle(i: number): Record<string, string> {
   animation: chime-glow 3.4s ease-in-out infinite;
 }
 
+/* Meep-Orange statt Chime-Gold — dieselbe Sache trägt im ganzen Spiel dieselbe
+   Farbe (Header, Materialleiste, Ring der Passiv-Kachel). */
+.chime-orb__halo--meep {
+  background: radial-gradient(
+    circle,
+    rgba(253, 186, 116, 0.3) 0%,
+    rgba(253, 186, 116, 0.1) 45%,
+    transparent 70%
+  );
+}
+
+/* Doppelte Klasse, weil `.chime-value` weiter unten steht: bei gleicher
+   Spezifität gewinnt die spätere Regel, und der Meep-Wert stünde sonst in
+   4,5 rem mit der Reservierung des Chime-Werts — 286 px für eine Zahl, die
+   höchstens fünf Zeichen hat, und der Bestand daneben fiele auf null.
+
+   Ohne Vorzeichen ist eine Stelle weniger zu reservieren. */
+.chime-value.chime-value--meep {
+  min-width: 5ch;
+  font-size: 3.2rem;
+  color: #fdba74;
+}
+
 @keyframes chime-glow {
   0%,
   100% {
@@ -1614,23 +1734,63 @@ function particleStyle(i: number): Record<string, string> {
   min-width: 0;
 }
 
+/* Die Zahl und, beim Meep, ihr Zusatz — in EINER Zeile. */
+.chime-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Reservierte Breite: `formatNumberCompact` liefert höchstens fünf Zeichen,
+   mit dem Vorzeichen sechs. Nur deshalb bleibt der Zusatz rechts daneben
+   stehen, wenn die Zahl eine Stelle gewinnt — dasselbe Muster wie die
+   reservierte Uhr-Breite der Buff-Chips. */
 .chime-value {
+  flex: 0 0 auto;
+  min-width: 6ch;
   font-size: 4.5rem;
   font-weight: 800;
   line-height: 0.98;
   color: #f0d060;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   text-shadow:
     0 0 24px rgba(240, 208, 96, 0.4),
     0 3px 8px rgba(0, 0, 0, 0.9);
 }
 
+/* Klein und wenig gesperrt: mit der Sperrung der Beschriftung (0.24em) wäre er
+   wieder breiter als seine Spalte. Die Auslassung ist die Notbremse — ein
+   Umbruch machte den Block höher und ließe den Fit-Scale springen. */
+.chime-value-note {
+  /* Nicht schrumpfbar: als schrumpfendes Flex-Item gab sie Breite ab, obwohl
+     die Zeile Platz hatte, und wurde ellipsiert (gemessen 86 px für 108 px
+     Inhalt). Sie ist kurz und darf ihre Breite behalten. */
+  flex: 0 0 auto;
+  min-width: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(253, 186, 116, 0.6);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Sperrung 0,16em statt 0,24em: „CHIMES GATHERED" maß in MedievalSharp
+   gemessen 347 px und lief damit aus seiner Spalte. */
 .chime-cap {
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: rgba(216, 200, 160, 0.42);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Kill-Aufschlüsselung ─────────────────────────────── */
@@ -1874,16 +2034,19 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Das Kit-Band ─────────────────────────────────────────────────────────
-   Zwei Spalten, die verschieden gemessen werden: links nimmt die Kachelreihe
-   genau die Breite, die sie braucht (`auto`), rechts bekommen die Chips den
-   Rest. Andersherum — beide `1fr` — schrumpfte die Reihe auf schmalen Panels
-   und die Kacheln mit ihr, und genau das soll sie nicht.
+   Rechts eine FESTE Breite, links der Rest. Die Chips tragen einen Namen neben
+   ihrer Uhr und brauchen dafür eine verlässliche Spalte; die Fähigkeitszeilen
+   daneben vertragen jede Breite, die übrig bleibt.
+
+   Andersherum (`auto` links) misst das Raster nur die Mindestbreite des
+   Inhalts — die Zeilen fielen dann auf gut die Hälfte zusammen, während die
+   Chips Platz bekamen, den sie nicht brauchen.
 
    Die Trennlinie ist dieselbe Haarlinie wie zwischen Bilanz und Zustand: eine
    Linie, kein zweiter Kasten. */
 .kit-band {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) var(--pause-kit-effect-w);
   gap: var(--pause-kit-gap);
   width: 100%;
 }
@@ -1901,17 +2064,13 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* Fest reserviert, nicht mitwachsend: hier hängt der Fit-Scale des ganzen
-   Overlays daran. Die Kacheln sind flacher als die volle Effekt-Spalte und
-   stehen deshalb mittig in ihrem Feld — oben ausgerichtet risse zwischen
-   Reihe und Bandkante eine Lücke auf, die nach Fehler aussieht. */
+   Overlays daran. Beide Spalten füllen ihre Höhe ganz aus — die Zeilenhöhe im
+   Kit ist aus eben dieser Bandhöhe abgeleitet (PAUSE_KIT_ROW_H), damit sie
+   bündig mit den Effekt-Chips gegenüber abschließen. */
 .kit-dock {
   display: flex;
-  align-items: center;
-  height: var(--pause-kit-band-h);
-}
-
-.kit-col--effects .kit-dock {
   align-items: stretch;
+  height: var(--pause-kit-band-h);
 }
 
 /* ── Callouts ─────────────────────────────────────────── */

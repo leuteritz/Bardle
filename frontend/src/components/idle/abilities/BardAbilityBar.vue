@@ -7,25 +7,27 @@
     die niemand sieht (useKeybindings meldet beim Unmount selbst ab).
 
     Im Star Fight steht sie ANGEDOCKT in der Schiene des Modals (`dock: 'rail'`):
-    dort läge sie unten über Sonnen-Horizont und Spieler-HP. Pausiert steht sie
-    im Kit-Band des Pause-Overlays (`dock: 'pause'`) — im freien Bild läge sie
-    bei z-index 10001 ÜBER dem Overlay (9998), also mitten auf dem Panel.
-    App.vue setzt sie per `<Teleport>` um — dieselbe Instanz, also dieselbe
-    Tastenanmeldung und derselbe rAF-Lauf; nur Form und Anker wechseln.
+    dort läge sie unten über Sonnen-Horizont und Spieler-HP. App.vue setzt sie
+    per `<Teleport>` um — dieselbe Instanz, also dieselbe Tastenanmeldung und
+    derselbe rAF-Lauf; nur Form und Anker wechseln.
 
-    Pausiert gilt der `bardActiveTab`-Vorbehalt nicht: er hält die Tastatur von
-    einer unsichtbaren Leiste fern, und im Band zündet ohnehin nichts (siehe
-    `castAbility`). Ohne die Lockerung stünde das Band leer, sobald jemand mit
-    offenem Profil-Tab pausiert.
+    Pausiert verschwindet sie ganz: im freien Bild läge sie bei z-index 10001
+    ÜBER dem Overlay (9998), also mitten auf dem Panel. Ihren Platz nimmt dort
+    `PauseKitPanel` ein — Zeilen statt Kacheln, weil im Overlay nichts
+    bedienbar ist.
+
+    ACHTUNG, das `v-if` reicht dafür NICHT allein: es entfernt nur das Element,
+    die Komponente bleibt gemountet, und `onKeybinding` meldet erst beim
+    Unmount ab. Ohne die Sperre in `castAbility` zündete `q` weiter, während
+    das Spiel steht.
   -->
   <div
-    v-if="uiStore.bardActiveTab === null || props.dock === 'pause'"
+    v-if="uiStore.bardActiveTab === null && !isPaused"
     ref="barEl"
     class="ability-bar"
     :class="{
       'ability-bar--in': revealed,
       'ability-bar--docked': props.dock === 'rail',
-      'ability-bar--pause': props.dock === 'pause',
     }"
     role="toolbar"
     aria-label="Bard abilities"
@@ -33,7 +35,7 @@
     <!-- Was das letzte Wirken bewirkt hat, in einem Satz. Steht über allem
          anderen, weil es die Rückmeldung auf die gerade gedrückte Taste ist. -->
     <Transition name="ab-toast">
-      <div v-if="toast && props.dock !== 'pause'" class="ab-toast" :style="{ '--ab-color': toastColor }" role="status">
+      <div v-if="toast" class="ab-toast" :style="{ '--ab-color': toastColor }" role="status">
         <span v-ink-center.x.y class="ab-toast-key">{{ toastKey }}</span>
         <span v-ink-center.y class="ab-toast-text">{{ toast }}</span>
       </div>
@@ -153,32 +155,6 @@
         @hover="(on: boolean) => (hoveredId = on ? 'passive' : null)"
       />
 
-      <!-- Nur im Kit-Band: was die Passive gerade einbringt, in Worten. Der
-           Meep-Bestand steht sonst NUR im Header — und der liegt pausiert unter
-           dem Overlay, die Bilanzspalte daneben führt ihn nicht. Wer pausierte,
-           sah seinen laufenden Ertrag nirgends.
-
-           Er steht IN der Reihe und nicht als Nachbar des Docks im Overlay:
-           er gehört zur Passive, nicht zum Band. Alle drei Werte liegen ohnehin
-           hier — kein neuer Store-Zugriff, keine zweite Rechnung. -->
-      <div v-if="props.dock === 'pause'" class="ab-meep-col">
-        <span class="ab-meep-col__head">{{ BARD_PASSIVE.name }}</span>
-        <!-- Zwei Zahlen, und KEINE davon ist die Klickstrecke: die steht schon
-             im Ring der Kachel gleich daneben, und zweimal dieselbe Zahl im
-             Abstand von 20 px liest sich als Fehler.
-
-             Was hier steht, ist beides pausiert sonst nirgends zu sehen — der
-             laufende Ertrag hat im Overlay keine andere Stelle, und der
-             Bestand steht nur im Header, der unter dem Overlay liegt. -->
-        <span class="ab-meep-col__row">
-          <span class="ab-meep-col__value">{{ formatNumberCompact(gameStore.pendingMeeps) }}</span>
-          <span class="ab-meep-col__cap">Meeps<br />this run</span>
-        </span>
-        <span class="ab-meep-col__row ab-meep-col__row--held">
-          <span class="ab-meep-col__value">{{ formatNumberCompact(gameStore.meeps) }}</span>
-          <span class="ab-meep-col__cap">in hand</span>
-        </span>
-      </div>
 
       <span class="ab-divider" aria-hidden="true"></span>
 
@@ -200,11 +176,12 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import BardAbilityTile from './BardAbilityTile.vue'
 import BardPassiveTile from './BardPassiveTile.vue'
+import { useGamePause } from '@/composables/system/useGamePause'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { onKeybinding, triggerKeybind } from '@/composables/system/useKeybindings'
-import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import { formatNumber } from '@/config/ui/numberFormat'
 import { invalidateHudField } from '@/utils/ui/hudField'
 import {
   BARD_ABILITIES,
@@ -232,16 +209,16 @@ import { formatCooldownSeconds } from '@/utils/ui/format'
  * teleportiert (App.vue); stünde sie hier als Store-Zugriff, gäbe es sie
  * zweimal.
  *
- * `free`  — waagerecht unten am Bild, `position: fixed`
- * `rail`  — senkrecht in der Schiene des Star-Fight-Modals
- * `pause` — waagerecht im Kit-Band des Pause-Overlays, nur als ANZEIGE
+ * `free` — waagerecht unten am Bild, `position: fixed`
+ * `rail` — senkrecht in der Schiene des Star-Fight-Modals
  *
- * Drei benannte Werte statt zweier Booleans: `docked && paused` wäre ein
- * vierter Zustand, den es nicht gibt.
+ * Den dritten Wert (`pause`) kennt nur die Buff-Reihe: die Leiste wird
+ * pausiert nicht umgehängt, sondern gar nicht gerendert.
  */
 const props = withDefaults(defineProps<{ dock?: AbilityBarDock }>(), { dock: 'free' })
 
 const uiStore = useUiStore()
+const { isPaused } = useGamePause()
 const store = useBardAbilityStore()
 const gameStore = useGameStore()
 
@@ -490,11 +467,13 @@ watch(() => gameStore.level, ensureLoop)
 
 // ── Wirken ──────────────────────────────────────────────────────────────────
 function castAbility(id: BardAbilityId): void {
-  // Pausiert ist die Leiste eine Anzeige: das Spiel steht, also wirkt auch
-  // keine Fähigkeit. Die Sperre steht HIER und nicht am Klick-Handler — die
-  // Tastenanmeldungen laufen durch dieselbe Funktion, ein zweiter Riegel am
-  // Kachelrand ließe Q/W/E/R offen.
-  if (props.dock === 'pause') return
+  // Pausiert wirkt keine Fähigkeit — das Spiel steht. Die Sperre hängt an
+  // `isPaused` und nicht an der Sichtbarkeit: das `v-if` oben entfernt nur das
+  // Element, die Komponente bleibt gemountet, und `onKeybinding` meldet erst
+  // beim Unmount ab (`useKeybindings.ts`). Sie steht HIER und nicht am
+  // Klick-Handler — die Tastenanmeldungen laufen durch dieselbe Funktion, ein
+  // Riegel am Kachelrand ließe Q/W/E/R offen.
+  if (isPaused.value) return
   if (!store.cast(id)) return
   const els = tileEls.get(id)
   if (els?.tile) {
@@ -622,30 +601,6 @@ function placeTip(): void {
     return
   }
 
-  // Im Kit-Band steht die Leiste waagerecht wie im freien Bild, aber weder in
-  // der Bildmitte noch im unskalierten Raum: `.pause-panel` trägt ein
-  // `transform: scale()`. Client-Rects sind dort skaliert, `offsetWidth` ist es
-  // nicht — der Zweig unten mischte beides und liefe mit wachsendem Fit-Scale
-  // immer weiter daneben. Gerechnet wird deshalb im Layoutraum der Leiste, und
-  // der Faktor wird gemessen statt durchgereicht.
-  if (props.dock === 'pause') {
-    const bar = barEl.value
-    if (!bar) return
-    const barRect = bar.getBoundingClientRect()
-    const k = bar.offsetWidth > 0 ? barRect.width / bar.offsetWidth : 1
-    const tipW = tip.offsetWidth
-    const center = (rect.left + rect.width / 2 - barRect.left) / k
-
-    // Geklemmt wird gegen die LEISTE, nicht gegen den Viewport: das Panel
-    // schneidet ab (`overflow: hidden`), und die Kachelreihe ist auf jeder
-    // Stufe breiter als der Kasten — innerhalb ihrer Kanten steht er immer.
-    const left = Math.min(Math.max(center - tipW / 2, 0), bar.offsetWidth - tipW)
-
-    tip.style.top = ''
-    tip.style.left = `${Math.round(left)}px`
-    tip.style.setProperty('--ab-caret-dx', `${Math.round(center - (left + tipW / 2))}px`)
-    return
-  }
 
   tip.style.top = ''
   // Die Leiste ist `fixed; left: 50%` und um ihre halbe Breite zurückgeschoben:
@@ -911,6 +866,26 @@ watch(revealed, async () => {
   await nextTick()
   measureRow()
 })
+
+/**
+ * Verschwindet die Leiste (Pause, Profil-Tab), muss die HUD-Kontur das SOFORT
+ * sehen: `hudField.ts` klemmt Void- und Drifter-Spawns gegen `--ability-bar-h`
+ * und `--ability-bar-top`, und ein stehengebliebener Wert reservierte ein Band,
+ * das gar nicht mehr da ist. `onUnmounted` deckt den Fall nicht ab — das `v-if`
+ * sitzt am Wurzelelement, die Komponente bleibt gemountet.
+ */
+watch(
+  () => uiStore.bardActiveTab === null && !isPaused.value,
+  async (visible) => {
+    if (!visible) {
+      publishHeight(-ABILITY_BAR_STACK_GAP_PX)
+      publishEdges(null)
+      return
+    }
+    await nextTick()
+    measureRow()
+  },
+)
 
 // Beim An- und Abdocken wechseln Form und Anker — beide Maße stehen erst nach
 // dem nächsten Rendern fest.
@@ -1643,117 +1618,5 @@ onUnmounted(() => {
   .ab-tip-leave-active {
     transition: none;
   }
-}
-
-/* ── Im Kit-Band des Pause-Overlays ───────────────────────────────────────
-   Waagerecht wie im freien Bild, aber im Fluss des Panels statt am Bildrand.
-
-   Die Maße kommen als CSS-Variablen vom Dock, nicht aus einer zweiten Zahl
-   hier (PAUSE_KIT_TILE_PX und Nachbarn sind die eine Quelle). Doppelte
-   Spezifität gegen die Auflösungsstufen weiter oben: über dem Panel liegt
-   bereits useFitScale, eine zweite Staffelung skalierte doppelt — auf 4K
-   stünde die Kachel um Faktor 1,5 × 1,3 zu groß. */
-.ability-bar.ability-bar--pause {
-  --ab-size: var(--pause-kit-tile, 104px);
-  --ab-passive-size: var(--pause-kit-passive, 198px);
-  --ab-gap: var(--pause-kit-gap, 12px);
-  position: relative;
-  bottom: auto;
-  left: auto;
-  z-index: auto;
-  transform: none;
-  transition: opacity 320ms ease;
-}
-
-.ability-bar.ability-bar--pause.ability-bar--in {
-  transform: none;
-}
-
-/* Der Kasten ist im freien Bild Flex-Kind der Spalte — seine Höhe fällt in den
-   Fluss. Im Band ließe genau das die Bandhöhe beim Überfahren wachsen, und mit
-   ihr spränge der Fit-Scale des GANZEN Overlays. Er steht deshalb über der
-   Reihe und aus dem Fluss; `left` schreibt placeTip (Zweig `pause`). */
-.ability-bar--pause .ab-tip {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  left: 0;
-  margin-bottom: 0;
-}
-
-/* Anzeige, kein Knopf. `pointer-events` bleiben an — ohne Hover gäbe es auch
-   keinen Tooltip, und der ist hier der einzige Weg zu Rang und Wirkung. */
-.ability-bar--pause :deep(.ab-tile),
-.ability-bar--pause :deep(.ab-passive) {
-  cursor: default;
-}
-
-/* ── Die Meep-Spalte neben der Passive (nur im Kit-Band) ──────────────────
-   Die Passive ist dort der Anker: sie füllt die Bandhöhe, und rechts von ihr
-   steht in Worten, was sie gerade einbringt. Feste Breite, damit die Zahl beim
-   Wachsen nicht die ganze Kachelreihe seitwärts schiebt — dieselbe Begründung
-   wie bei der reservierten Uhr-Breite der Buff-Chips. */
-.ab-meep-col {
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  width: var(--pause-kit-meep-w, 180px);
-  min-width: 0;
-  pointer-events: none;
-  text-align: left;
-}
-
-.ab-meep-col__head {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.42);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Zahl links, Beschriftung rechts daneben — untereinander gestapelt bräuchte
-   jede Angabe drei Zeilen, und die Spalte steht neben einer 198 px hohen
-   Kachel, nicht unter ihr. */
-.ab-meep-col__row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-/* Meep-Orange wie im Header, in der Materialleiste und am Ring der Kachel —
-   dieselbe Sache trägt im ganzen Spiel dieselbe Farbe. */
-/* Reservierte Breite, rechtsbuendig: sonst haengt die Beschriftung der einen
-   Zeile weiter links als die der anderen, sobald die Zahlen verschieden viele
-   Stellen haben. Dieselbe Reservierung wie bei der Uhr der Buff-Chips. */
-.ab-meep-col__value {
-  flex: 0 0 auto;
-  min-width: 3.4ch;
-  text-align: right;
-  font-size: 2rem;
-  line-height: 0.95;
-  font-weight: 700;
-  color: #fdba74;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Der Bestand ist das Ruhigere von beiden: er bewegt sich während der Pause
-   nicht, der Ertrag schon. */
-.ab-meep-col__row--held .ab-meep-col__value {
-  font-size: 1.4rem;
-  color: rgba(253, 186, 116, 0.72);
-}
-
-.ab-meep-col__cap {
-  min-width: 0;
-  font-size: 0.68rem;
-  line-height: 1.15;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.5);
 }
 </style>

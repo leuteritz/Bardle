@@ -48,18 +48,20 @@ const starGroupStore = useStarGroupStore()
 const { isPaused } = useGamePause()
 
 /**
- * Fähigkeitenleiste und Buff-Reihe stehen an DREI Stellen, je nachdem, was
- * gerade das Bild bestimmt:
+ * Fähigkeitenleiste und Buff-Reihe stehen dort, wo gerade Platz für sie ist:
  *
- *   pause → im Kit-Band des Pause-Overlays
  *   rail  → in der Schiene des Star-Fight-Modals
  *   free  → unten am Bild, über dem Scoreboard
+ *   pause → im Kit-Band des Pause-Overlays — NUR die Buff-Reihe
  *
  * Im Star Fight lagen sie über Sonnen-Horizont und Spieler-HP. Pausiert lagen
- * sie über dem Overlay selbst: beide Leisten stehen bei z-index 10001, das
- * Overlay bei 9998 — sie schwebten also mitten auf dem Panel, samt Hover und
- * Klick. Die Pause hat Vorrang vor dem Star Fight, weil ihr Overlay über
- * beidem liegt.
+ * sie über dem Overlay selbst: beide stehen bei z-index 10001, das Overlay bei
+ * 9998 — sie schwebten also mitten auf dem Panel, samt Hover und Klick.
+ *
+ * Die Buff-Reihe zieht deshalb ins Band; die Fähigkeitenleiste verschwindet
+ * dort ganz (sie prüft `isPaused` selbst), weil das Overlay ihre Kacheln durch
+ * `PauseKitPanel` ersetzt — Zeilen statt Knöpfe, da nichts bedienbar ist.
+ * Die Pause hat Vorrang vor dem Star Fight, weil ihr Overlay über beidem liegt.
  *
  * `<Teleport>` SETZT die Komponente UM, es erzeugt sie nicht neu: die
  * Tastenanmeldung der Leiste, ihr rAF-Lauf für alle Cooldowns und das
@@ -108,20 +110,26 @@ watch(isPaused, async (paused) => {
     return
   }
   await nextTick()
-  pauseDocked.value = document.getElementById('pause-ability-dock') !== null
+  pauseDocked.value = document.getElementById('pause-buff-dock') !== null
 })
 
-/** Ein Wert, zwei Verbraucher — Ziel und Prop dürfen nie auseinanderlaufen. */
-const abilityDock = computed<AbilityBarDock>(() =>
+/** Die Buff-Reihe kennt alle drei Stellen, die Leiste nur zwei — pausiert wird
+ *  sie nicht umgehängt, sondern gar nicht gerendert. */
+const buffDock = computed<AbilityBarDock>(() =>
   pauseDocked.value ? 'pause' : railDocked.value ? 'rail' : 'free',
 )
+const abilityDock = computed<AbilityBarDock>(() => (railDocked.value ? 'rail' : 'free'))
 
 /** Die Dock-Kennungen ausgeschrieben statt aus dem Zustand zusammengesetzt:
- *  ein Template-String fände `#orbit-ability-dock` in keiner Suche wieder. */
-const ABILITY_DOCK_IDS: Record<AbilityBarDock, { ability: string; buff: string }> = {
-  free: { ability: '#orbit-ability-dock', buff: '#orbit-buff-dock' },
-  rail: { ability: '#sf-ability-dock', buff: '#sf-buff-dock' },
-  pause: { ability: '#pause-ability-dock', buff: '#pause-buff-dock' },
+ *  ein Template-String fände `#orbit-buff-dock` in keiner Suche wieder. */
+const BUFF_DOCK_IDS: Record<AbilityBarDock, string> = {
+  free: '#orbit-buff-dock',
+  rail: '#sf-buff-dock',
+  pause: '#pause-buff-dock',
+}
+const ABILITY_DOCK_IDS: Record<'free' | 'rail', string> = {
+  free: '#orbit-ability-dock',
+  rail: '#sf-ability-dock',
 }
 useGalaxyTheme()
 useSpaceMusic()
@@ -191,8 +199,8 @@ watch(
     <DrifterLayer />
     <DrifterInfoCard />
     <div id="orbit-buff-dock" class="bard-dock" />
-    <Teleport defer :to="ABILITY_DOCK_IDS[abilityDock].buff">
-      <ActiveBuffBar :dock="abilityDock" />
+    <Teleport defer :to="BUFF_DOCK_IDS[buffDock]">
+      <ActiveBuffBar :dock="buffDock" />
     </Teleport>
 
     <!-- The Void: der Riss steht im Orbit auf derselben Ebene wie die Drifter,
@@ -214,7 +222,7 @@ watch(
          Buff-Reihe über sich; der Stase-Schleier liegt über dem Orbit, aber
          unter jedem Modal. -->
     <div id="orbit-ability-dock" class="bard-dock" />
-    <Teleport defer :to="ABILITY_DOCK_IDS[abilityDock].ability">
+    <Teleport defer :to="ABILITY_DOCK_IDS[abilityDock]">
       <BardAbilityBar :dock="abilityDock" />
     </Teleport>
     <TemperedFateOverlay />
