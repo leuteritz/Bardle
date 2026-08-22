@@ -999,9 +999,11 @@ export const useGameStore = defineStore('game', {
     },
 
     // Credits offline Chimes and closes the modal
-    claimOfflineReward(multiplier: 1 | 2 = 1) {
-      const earned = this.offlineChimes * multiplier
+    /** `multiplier` kommt aus „The Crossing" und ist ein Bruch (1 … 2). */
+    claimOfflineReward(multiplier = 1) {
+      const earned = Math.floor(this.offlineChimes * multiplier)
       this.chimes += earned
+      this.chimesForNextUniverse += earned
       this.totalChimesEarned += earned
       this.chimesEarnedForLevel += earned
       this.offlineChimes = 0

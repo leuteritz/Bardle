@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { splitDuration } from '@/utils/ui/format'
-import {
-  OFFLINE_COUNTER_ANIM_MS,
-  OFFLINE_MINIGAME_START_DELAY_MS,
-} from '@/config/constants'
+import { OFFLINE_COUNTER_ANIM_MS, OFFLINE_CROSSING_START_DELAY_MS } from '@/config/constants'
 import { ref, watch, computed } from 'vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { formatNumber } from '@/config/ui/numberFormat'
-import OfflineMinigame from './OfflineMinigame.vue'
+import OfflineCrossing from './OfflineCrossing.vue'
 
 const gameStore = useGameStore()
 
@@ -19,14 +16,24 @@ const FLAVOUR_TEXTS = [
   'Silence is never truly empty.',
 ]
 
+const STAR_COUNT = 20
+
 const flavourText = ref(FLAVOUR_TEXTS[Math.floor(Math.random() * FLAVOUR_TEXTS.length)])
 const displayCount = ref(0)
 let animationId = 0
-let minigameTimer = 0
+let crossingTimer = 0
 
-type MinigamePhase = 'waiting' | 'playing' | 'won' | 'lost'
-const minigamePhase = ref<MinigamePhase>('waiting')
-const rewardMultiplier = ref<1 | 2>(1)
+/** Einmalig gewürfelt: im Template stünde `Math.random()` in einem Ausdruck und
+ *  liefe damit bei jedem Re-Render neu. */
+const stars = Array.from({ length: STAR_COUNT }, () => ({
+  x: `${Math.random() * 100}%`,
+  y: `${Math.random() * 100}%`,
+  s: `${0.5 + Math.random() * 1.2}px`,
+  d: `${Math.random() * 4}s`,
+  op: `${0.25 + Math.random() * 0.45}`,
+}))
+
+const crossingVisible = ref(false)
 
 function formatDuration(totalSeconds: number): string {
   const { hours: h, minutes: m, seconds: s } = splitDuration(totalSeconds)
@@ -67,38 +74,26 @@ watch(
     if (visible) {
       flavourText.value = FLAVOUR_TEXTS[Math.floor(Math.random() * FLAVOUR_TEXTS.length)]
       startCounterAnimation(gameStore.offlineChimes)
-      minigamePhase.value = 'waiting'
-      rewardMultiplier.value = 1
+      crossingVisible.value = false
       if (gameStore.offlineChimes > 0) {
-        minigameTimer = window.setTimeout(() => {
-          minigamePhase.value = 'playing'
-        }, OFFLINE_MINIGAME_START_DELAY_MS)
+        crossingTimer = window.setTimeout(() => {
+          crossingVisible.value = true
+        }, OFFLINE_CROSSING_START_DELAY_MS)
       }
     } else {
       cancelAnimationFrame(animationId)
-      clearTimeout(minigameTimer)
+      clearTimeout(crossingTimer)
       displayCount.value = 0
-      minigamePhase.value = 'waiting'
-      rewardMultiplier.value = 1
+      crossingVisible.value = false
     }
   },
   { immediate: true },
 )
 
-function onWin() {
-  rewardMultiplier.value = 2
-  minigamePhase.value = 'won'
-}
-
-function onSkip() {
-  rewardMultiplier.value = 1
-  minigamePhase.value = 'lost'
-}
-
-function claim() {
+function claim(multiplier: number) {
   cancelAnimationFrame(animationId)
-  clearTimeout(minigameTimer)
-  gameStore.claimOfflineReward(rewardMultiplier.value)
+  clearTimeout(crossingTimer)
+  gameStore.claimOfflineReward(multiplier)
 }
 </script>
 
@@ -107,27 +102,31 @@ function claim() {
     <Transition name="offline-fade">
       <div v-if="gameStore.showOfflineModal" class="offline-overlay">
         <div class="offline-modal">
-          <!-- Cosmic star particles -->
-          <div class="stars" aria-hidden="true">
-            <span
-              v-for="n in 20"
-              :key="n"
-              class="star"
-              :style="`--x:${Math.random() * 100}%;--y:${Math.random() * 100}%;--s:${0.5 + Math.random() * 1.2}px;--d:${Math.random() * 4}s;--op:${0.25 + Math.random() * 0.45}`"
-            />
-          </div>
+          <div class="offline-goldline"></div>
 
           <!-- Hero -->
           <div class="hero-section">
+            <div class="stars" aria-hidden="true">
+              <span
+                v-for="(star, n) in stars"
+                :key="n"
+                class="star"
+                :style="`--x:${star.x};--y:${star.y};--s:${star.s};--d:${star.d};--op:${star.op}`"
+              />
+            </div>
+
             <div class="away-eyebrow">
               Away for <span class="away-value">{{ formattedDuration }}</span>
             </div>
 
-            <div
-              class="chime-count"
-              :class="{ 'chime-count--zero': gameStore.offlineChimes === 0 }"
-            >
-              {{ formatNumber(displayCount) }}
+            <div class="count-wrap">
+              <span v-if="gameStore.offlineChimes > 0" class="count-halo" aria-hidden="true" />
+              <div
+                class="chime-count"
+                :class="{ 'chime-count--zero': gameStore.offlineChimes === 0 }"
+              >
+                {{ formatNumber(displayCount) }}
+              </div>
             </div>
 
             <div v-if="gameStore.offlineChimes > 0" class="chime-sublabel">Chimes collected</div>
@@ -138,45 +137,18 @@ function claim() {
             <p class="flavour">{{ flavourText }}</p>
           </div>
 
-          <!-- Minigame zone -->
           <Transition name="mg-slide" mode="out-in">
-            <div v-if="minigamePhase === 'playing'" class="minigame-zone">
-              <OfflineMinigame @win="onWin" @skip="onSkip" />
-            </div>
-            <div v-else-if="minigamePhase === 'won'" class="result-badge result-badge--win">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Double reward!
-            </div>
-            <div v-else-if="minigamePhase === 'lost'" class="result-badge result-badge--lose">
-              Normal reward
+            <OfflineCrossing
+              v-if="crossingVisible"
+              :chimes="gameStore.offlineChimes"
+              @claim="claim"
+            />
+            <div v-else class="fallback-foot">
+              <button class="claim-btn" type="button" @click="claim(1)">
+                <span class="claim-t">Claim</span>
+              </button>
             </div>
           </Transition>
-
-          <!-- Claim -->
-          <div class="footer">
-            <button
-              class="claim-btn"
-              :class="{
-                'claim-btn--double': minigamePhase === 'won',
-                'claim-btn--waiting': minigamePhase === 'playing',
-              }"
-              :disabled="minigamePhase === 'playing'"
-              @click="claim"
-            >
-              <span v-if="minigamePhase === 'won'">Claim ×2</span>
-              <span v-else-if="minigamePhase === 'playing'">Waiting…</span>
-              <span v-else>Claim</span>
-            </button>
-          </div>
         </div>
       </div>
     </Transition>
@@ -192,24 +164,30 @@ function claim() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.84);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.88);
 }
 
 /* ── Modal shell ───────────────────────────────────────── */
 .offline-modal {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(600px, 94vw);
   max-height: 94vh;
   overflow-y: auto;
-  background: var(--rpg-bg-deep, #111008);
-  border: 1px solid rgba(200, 144, 64, 0.35);
-  border-radius: 8px;
+  background: #111008;
+  border: 4px solid #7a4e20;
+  border-radius: 5px;
   box-shadow:
-    0 0 0 1px rgba(92, 51, 16, 0.5),
-    0 32px 80px rgba(0, 0, 0, 0.95),
-    inset 0 1px 0 rgba(232, 192, 64, 0.08);
-  padding: 0 0 32px;
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310,
+    0 24px 64px rgba(0, 0, 0, 0.9);
+}
+
+.offline-goldline {
+  flex-shrink: 0;
+  height: 3px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Cosmic stars ──────────────────────────────────────── */
@@ -218,7 +196,7 @@ function claim() {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .star {
@@ -228,7 +206,7 @@ function claim() {
   width: var(--s);
   height: var(--s);
   border-radius: 50%;
-  background: var(--rpg-gold, #e8c040);
+  background: #e8c040;
   opacity: var(--op);
   animation: twinkle var(--d) ease-in-out infinite alternate;
 }
@@ -251,11 +229,14 @@ function claim() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 44px 40px 8px;
-  gap: 10px;
+  padding: 34px 40px 18px;
+  gap: 8px;
+  background: #1e1006;
+  border-bottom: 3px solid #5c3310;
 }
 
 .away-eyebrow {
+  position: relative;
   font-size: 0.75rem;
   color: rgba(200, 185, 140, 0.4);
   text-transform: uppercase;
@@ -264,25 +245,56 @@ function claim() {
 
 .away-value {
   color: rgba(200, 160, 80, 0.85);
-  font-weight: 700;
+}
+
+.count-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Eigene Ebene mit statischem Schein — animiert wird nur ihre Deckkraft;
+   ein `text-shadow`-Keyframe rastert jeden Frame die ganze Zeile neu. */
+.count-halo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 260px;
+  height: 120px;
+  margin: -60px 0 0 -130px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(232, 192, 64, 0.4) 0%, transparent 68%);
+  pointer-events: none;
+  animation: count-breathe 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes count-breathe {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .chime-count {
+  position: relative;
   font-size: clamp(3.2rem, 10vw, 5rem);
-  font-weight: 900;
-  color: var(--rpg-gold, #e8c040);
+  color: #e8c040;
   line-height: 1;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  animation: count-glow 2s ease-in-out infinite;
+  text-shadow: 0 0 24px rgba(232, 192, 64, 0.4);
 }
 
 .chime-count--zero {
   color: rgba(200, 185, 140, 0.3);
-  animation: none;
+  text-shadow: none;
 }
 
 .chime-sublabel {
+  position: relative;
   font-size: 0.75rem;
   color: rgba(200, 185, 140, 0.45);
   text-transform: uppercase;
@@ -295,20 +307,9 @@ function claim() {
   letter-spacing: 0;
 }
 
-@keyframes count-glow {
-  0%,
-  100% {
-    text-shadow: 0 0 20px rgba(232, 192, 64, 0.4);
-  }
-  50% {
-    text-shadow:
-      0 0 40px rgba(232, 192, 64, 0.75),
-      0 0 80px rgba(232, 192, 64, 0.2);
-  }
-}
-
 /* ── Flavour ───────────────────────────────────────────── */
 .flavour {
+  position: relative;
   font-size: 0.8rem;
   color: rgba(200, 185, 140, 0.38);
   text-align: center;
@@ -316,109 +317,44 @@ function claim() {
   margin: 2px 0 0;
 }
 
-/* ── Minigame zone ─────────────────────────────────────── */
-.minigame-zone {
+/* ── Fallback-Fußleiste (kein Ertrag, oder vor den Toren) ── */
+.fallback-foot {
   position: relative;
   z-index: 1;
-  padding: 16px 32px 4px;
-}
-
-.result-badge {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 20px 32px 4px;
-  padding: 12px 16px;
-  border-radius: 5px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.result-badge--win {
-  background: rgba(80, 192, 40, 0.1);
-  border: 1px solid rgba(80, 192, 40, 0.3);
-  color: var(--rpg-green-border, #6ec040);
-  text-shadow: 0 0 12px rgba(110, 192, 64, 0.6);
-}
-
-.result-badge--lose {
-  background: rgba(200, 185, 140, 0.05);
-  border: 1px solid rgba(200, 185, 140, 0.12);
-  color: rgba(200, 185, 140, 0.45);
-}
-
-/* ── Footer / Claim ────────────────────────────────────── */
-.footer {
-  position: relative;
-  z-index: 1;
-  padding: 20px 32px 0;
+  padding: 16px 24px 20px;
 }
 
 .claim-btn {
   width: 100%;
-  padding: 16px 0;
-  border-radius: 5px;
-  border: none;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  padding: 15px 0;
+  border-radius: 4px;
+  border: 1px solid #6ec040;
   cursor: pointer;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  color: #fff;
+  box-shadow: 0 2px 16px rgba(42, 104, 20, 0.5);
   transition:
     filter 0.15s ease,
     transform 0.1s ease;
-  background: linear-gradient(
-    to bottom,
-    var(--rpg-green-top, #52b830),
-    var(--rpg-green-bottom, #2e7a1a)
-  );
-  color: #fff;
-  box-shadow: 0 2px 16px rgba(42, 104, 20, 0.5);
 }
 
-.claim-btn:hover:not(:disabled) {
+.claim-t {
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.claim-btn:hover {
   filter: brightness(1.18);
   transform: translateY(-1px);
 }
 
-.claim-btn:active:not(:disabled) {
+.claim-btn:active {
   filter: brightness(0.88);
   transform: translateY(0);
 }
 
-.claim-btn--double {
-  background: linear-gradient(to bottom, #66cc38, #38a018);
-  box-shadow:
-    0 2px 20px rgba(80, 200, 40, 0.65),
-    0 0 40px rgba(80, 200, 40, 0.2);
-  animation: pulse-green 1.4s ease-in-out infinite;
-}
-
-@keyframes pulse-green {
-  0%,
-  100% {
-    box-shadow:
-      0 2px 20px rgba(80, 200, 40, 0.65),
-      0 0 40px rgba(80, 200, 40, 0.2);
-  }
-  50% {
-    box-shadow:
-      0 2px 28px rgba(80, 200, 40, 0.9),
-      0 0 60px rgba(80, 200, 40, 0.35);
-  }
-}
-
-.claim-btn--waiting {
-  opacity: 0.35;
-  cursor: not-allowed;
-  animation: none;
-}
-
-/* ── Minigame transition ───────────────────────────────── */
+/* ── Übergang zu den Toren ─────────────────────────────── */
 .mg-slide-enter-active {
   transition:
     opacity 0.4s ease,
@@ -455,8 +391,7 @@ function claim() {
 /* ── Reduced motion ────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .star,
-  .chime-count,
-  .claim-btn--double {
+  .count-halo {
     animation: none;
   }
   .claim-btn,
@@ -465,6 +400,10 @@ function claim() {
   .mg-slide-enter-active,
   .mg-slide-leave-active {
     transition: opacity 0.15s;
+  }
+  .claim-btn:hover,
+  .claim-btn:active {
+    transform: none;
   }
 }
 </style>

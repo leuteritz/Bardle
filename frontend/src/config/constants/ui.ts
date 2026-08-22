@@ -19,24 +19,23 @@ import type { HeraldReceiptKind, HeraldReceiptKindDef, NotifyBadgeKind } from '@
  */
 export const IDLE_RESUME_DELAY_FRAMES = 2
 
-// ── Offline-Minispiel: Ring treffen ───────────────────────────────────────
-/** SVG-Einheiten im viewBox `0 0 280 280`. */
-export const OFFLINE_MINIGAME_CENTER = 140
-export const OFFLINE_MINIGAME_MAX_RADIUS = 126
-/** Trefferband als Anteil des Maximalradius — hier zählt der Klick. */
-export const OFFLINE_MINIGAME_BAND_MIN = 0.66
-export const OFFLINE_MINIGAME_BAND_MAX = 0.86
-/** Dauer eines Wellendurchlaufs und wie viele Versuche der Spieler hat. */
-export const OFFLINE_MINIGAME_PULSE_MS = 1700
-export const OFFLINE_MINIGAME_MAX_PULSES = 6
-/** Aufblenden der Welle am Anfang und ihr Verlöschen zum Rand hin. */
-export const OFFLINE_MINIGAME_FADE_IN_FRACTION = 0.08
-export const OFFLINE_MINIGAME_FADE_OUT_STRENGTH = 0.55
-/** Nachlauf, bevor das Ergebnis gemeldet wird — je nach Ausgang verschieden lang. */
-export const OFFLINE_MINIGAME_WIN_DELAY_MS = 800
-export const OFFLINE_MINIGAME_LOSE_DELAY_MS = 600
-export const OFFLINE_MINIGAME_TIMEOUT_DELAY_MS = 400
-export const OFFLINE_MINIGAME_SKIP_DELAY_MS = 300
+// ── Offline-Fenster „The Crossing": Tore öffnen oder banken ────────────────
+export const OFFLINE_CROSSING_GATES = 5
+/**
+ * Zuwachs je geöffnetem Tor. Absteigend, und das ist der ganze Entwurf: der
+ * Erwartungswert läuft 1.350 → 1.531 → 1.550 → 1.481, das Optimum liegt also
+ * bei zwei bis drei Toren und NICHT am Ende. Mit gleichmäßigen Stufen wäre
+ * „immer weiter" die richtige Antwort und das Fenster keine Entscheidung mehr.
+ * Die Summe ergibt den Deckel 2.0.
+ */
+export const OFFLINE_CROSSING_STEPS = [0.35, 0.3, 0.2, 0.15] as const
+/** Was das Void-Tor vom angesammelten Bonus übriglässt. */
+export const OFFLINE_CROSSING_VOID_KEEP = 0.5
+export const OFFLINE_CROSSING_MIN_MULT = 1
+/** Nachlauf, bevor das Ergebnis stehenbleibt — der Void-Treffer braucht länger,
+ *  weil dabei die übrigen Tore aufgedeckt werden. */
+export const OFFLINE_CROSSING_SETTLE_DELAY_MS = 650
+export const OFFLINE_CROSSING_VOID_DELAY_MS = 900
 
 /** Wie lange der Tier-Unlock in der Minimap aufblitzt. */
 export const MINIMAP_TIER_FLASH_MS = 2400
@@ -46,8 +45,8 @@ export const HEADER_MATERIALS_GRID_COLUMNS = 5
 
 /** Dauer, über die die Offline-Bilanz ihre Chime-Summe hochzählt. */
 export const OFFLINE_COUNTER_ANIM_MS = 2000
-/** Wartezeit, bis das Minispiel nach dem Öffnen der Bilanz erscheint. */
-export const OFFLINE_MINIGAME_START_DELAY_MS = 2100
+/** Wartezeit, bis die Tore nach dem Öffnen der Bilanz erscheinen. */
+export const OFFLINE_CROSSING_START_DELAY_MS = 2100
 
 // ── Header-Bogen: Sitzplätze der Badges ───────────────────────────────────
 /** Wie weit ein Badge über die Bogenlinie ragt, als Anteil seiner Höhe. */
@@ -734,7 +733,15 @@ export const NOTIFY_BADGE_TITLE: Record<NotifyBadgeKind, string> = {
 export type { NotifyBadgeKind }
 
 // Offline progress
-export const OFFLINE_CPS_RATE = 0.6
+/**
+ * Anteil der CpS, den die Abwesenheit trägt. 0.6 → 0.75 mit „The Crossing":
+ * das alte Minispiel zahlte ×2 bei Treffer und ×1 sonst, bei 340 ms Trefferfenster
+ * also ≈ 1.875 im Schnitt. Die Torleiter liegt bei ≈ 1.50 (Optimum 1.550, siehe
+ * OFFLINE_CROSSING_STEPS). 0.75 × 1.50 = 1.125 = 0.6 × 1.875 — der Ertrag bleibt
+ * für einen Spieler flach, der vorher fast immer traf, und steigt leicht für alle
+ * anderen. Wer die Stufen verschiebt, rechnet diese Zahl mit nach.
+ */
+export const OFFLINE_CPS_RATE = 0.75
 export const OFFLINE_MAX_HOURS = 10
 export const OFFLINE_MIN_SECONDS = 60
 
