@@ -32,7 +32,8 @@ const { activeView, lastClaimed } = storeToRefs(missionStore)
 interface CardFace {
   id: string
   name: string
-  unit: string
+  /** Was zu tun ist, mit eingesetzter Zielmenge. */
+  task: string
   color: string
   progress: number
   target: number
@@ -56,7 +57,7 @@ watch(
     flashed.value = {
       id: def.id,
       name: def.name,
-      unit: def.unit,
+      task: missionObjectiveLine(def),
       color: missionStore.chapterOf(def).color,
       progress: def.target,
       target: def.target,
@@ -79,7 +80,7 @@ const face = computed<CardFace | null>(() => {
   return {
     id: view.id,
     name: view.name,
-    unit: view.unit,
+    task: missionObjectiveLine(view),
     color: view.color,
     progress: view.progress,
     target: view.target,
@@ -165,8 +166,9 @@ onUnmounted(() => {
       ></span>
 
       <span class="wf-name">{{ face.name }}</span>
+      <span class="wf-task">{{ face.task }}</span>
       <span class="wf-count">
-        {{ formatNumber(face.progress) }} of {{ formatNumber(face.target) }} {{ face.unit }}
+        {{ formatNumber(face.progress) }}/{{ formatNumber(face.target) }}
       </span>
     </div>
   </Transition>
@@ -208,6 +210,7 @@ onUnmounted(() => {
 
 /* Über der Füllung — `position` allein reicht, keine eigene Ebene nötig. */
 .wf-name,
+.wf-task,
 .wf-count {
   position: relative;
   min-width: 0;
@@ -223,18 +226,28 @@ onUnmounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   height: 2.24em;
-  /* Der Deckel steht bei 26, nicht höher: darüber passt „The Caretaker's" nicht
-     mehr in eine Zeile und der Name bräuchte eine dritte. */
-  font-size: clamp(22px, 1.36vw, 26px);
+  font-size: clamp(20px, 1.26vw, 24px);
   font-weight: 800;
   line-height: 1.12;
   color: #f2ead2;
 }
 
+/* Die Anweisung — was der Spieler tun soll. Zwei Zeilen fest wie der Name
+   darüber, aus demselben Grund. */
+.wf-task {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  height: 2.6em;
+  font-size: 13px;
+  line-height: 1.3;
+  color: #9a9184;
+}
+
 .wf-count {
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.04em;
@@ -282,11 +295,16 @@ onUnmounted(() => {
     padding: 14px 17px;
   }
   /* Ab hier trägt die Karte 509 px innen — gemessen passt dort jeder der 41
-     Namen einzeilig, die zweite Zeile wäre nur Leerraum. */
+     Namen und jede Anweisung einzeilig, die zweite Zeile wäre nur Leerraum. */
   .wf-name {
     -webkit-line-clamp: 1;
     height: 1.12em;
     font-size: clamp(26px, 1.5vw, 36px);
+  }
+  .wf-task {
+    -webkit-line-clamp: 1;
+    height: 1.3em;
+    font-size: 17px;
   }
   .wf-count {
     font-size: 18px;
@@ -301,6 +319,9 @@ onUnmounted(() => {
   }
   .wf-name {
     font-size: clamp(32px, 1.3vw, 46px);
+  }
+  .wf-task {
+    font-size: 21px;
   }
   .wf-count {
     font-size: 22px;
